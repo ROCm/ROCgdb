@@ -530,11 +530,11 @@ find_thread_ptid (ptid_t ptid)
 struct thread_info *
 find_thread_ptid (inferior *inf, ptid_t ptid)
 {
-  for (thread_info *tp : inf->threads ())
-    if (tp->ptid == ptid)
-      return tp;
-
-  return NULL;
+  auto it = inf->thread_map.find (ptid);
+  if (it != inf->thread_map.end ())
+    return it->second;
+  else
+    return nullptr;
 }
 
 /* See gdbthread.h.  */
