@@ -1,4 +1,5 @@
 # Copyright (C) 1989-2019 Free Software Foundation, Inc.
+# Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -593,7 +594,7 @@ INTERNAL_LDFLAGS = \
 # LIBIBERTY appears twice on purpose.
 CLIBS = $(SIM) $(READLINE) $(OPCODES) $(BFD) $(ZLIB) $(INTL) $(LIBIBERTY) $(LIBDECNUMBER) \
 	$(XM_CLIBS) $(GDBTKLIBS) \
-	@LIBS@ @GUILE_LIBS@ @PYTHON_LIBS@ \
+	@LIBS@ @GUILE_LIBS@ @PYTHON_LIBS@ @ROCM_DBGAPI_LIBS@ \
 	$(LIBEXPAT) $(LIBLZMA) $(LIBBABELTRACE) $(LIBIPT) \
 	$(LIBIBERTY) $(WIN32LIBS) $(LIBGNU) $(LIBICONV) $(LIBMPFR) \
 	$(SRCHIGH_LIBS)
@@ -1193,6 +1194,7 @@ HFILES_NO_SRCDIR = \
 	amd64-linux-tdep.h \
 	amd64-nat.h \
 	amd64-tdep.h \
+	amdgcn-rocm-tdep.h \
 	annotate.h \
 	arc-tdep.h \
 	arch-utils.h \
@@ -1360,6 +1362,7 @@ HFILES_NO_SRCDIR = \
 	remote-notif.h \
 	riscv-fbsd-tdep.h \
 	riscv-tdep.h \
+	rocm-tdep.h \
 	rs6000-aix-tdep.h \
 	rs6000-tdep.h \
 	s390-linux-tdep.h \
@@ -2184,6 +2187,7 @@ ALLDEPFILES = \
 	amd64-obsd-tdep.c \
 	amd64-sol2-tdep.c \
 	amd64-tdep.c \
+	amdgcn-rocm-tdep.c \
 	arc-tdep.c \
 	arm.c \
 	arm-bsd-tdep.c \
@@ -2302,6 +2306,7 @@ ALLDEPFILES = \
 	riscv-linux-nat.c \
 	riscv-linux-tdep.c \
 	riscv-tdep.c \
+	rocm-tdep.c \
 	rl78-tdep.c \
 	rs6000-lynx178-tdep.c \
 	rs6000-nat.c \
@@ -2321,6 +2326,7 @@ ALLDEPFILES = \
 	sh-tdep.c \
 	sol2-tdep.c \
 	solib-aix.c \
+	solib-rocm.c \
 	solib-spu.c \
 	solib-svr4.c \
 	sparc-linux-nat.c \
