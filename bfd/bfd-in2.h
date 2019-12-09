@@ -8,6 +8,7 @@
 /* Main header file for the bfd library -- portable access to object files.
 
    Copyright (C) 1990-2019 Free Software Foundation, Inc.
+   Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.
 
@@ -1926,6 +1927,18 @@ enum bfd_architecture
 #define bfd_mach_ck803         5
 #define bfd_mach_ck807         6
 #define bfd_mach_ck810         7
+  bfd_arch_amdgcn,     /* AMD GPU Architecture. Must match EF_AMDGPU_MACH_* */
+#define bfd_mach_amdgcn_unknown 0x000
+#define bfd_mach_amdgcn_gfx801  0x028
+#define bfd_mach_amdgcn_gfx802  0x029
+#define bfd_mach_amdgcn_gfx803  0x02a
+#define bfd_mach_amdgcn_gfx810  0x02b
+#define bfd_mach_amdgcn_gfx900  0x02c
+#define bfd_mach_amdgcn_gfx902  0x02d
+#define bfd_mach_amdgcn_gfx904  0x02e
+#define bfd_mach_amdgcn_gfx906  0x02f
+#define bfd_mach_amdgcn_gfx908  0x030
+#define bfd_mach_amdgcn_gfx909  0x031
   bfd_arch_last
   };
 

@@ -1,0 +1,82 @@
+# Copyright 2019 Free Software Foundation, Inc.
+# Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+set testfile "bit_extract_asm"
+set srcfile ${srcdir}/${subdir}/${testfile}.S
+set objfile [standard_output_file ${testfile}.o]
+set binfile [standard_output_file ${testfile}]
+
+# Set device info
+set ISA "vega10"
+
+# Check if skip hip tests
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+# Assemble the hip program
+set asm-flags ""
+set debug-flags ""
+if {[target_assemble $srcfile $objfile "${asm-flags} ${debug-flags}"] != ""} then {
+    untested "failed to assemble"
+    return -1
+}
+
+# Link the hip program
+# TODO: The link flags may need some pruning
+set link-flags "-z relro --hash-style=gnu --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/8/crtbegin.o -L/usr/lib/gcc/x86_64-linux-gnu/8 -L/usr/lib/x86_64-linux-gnu -L/lib/x86_64-linux-gnu -L/lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib -L/opt/rocm/llvm/lib -L/lib -L/usr/lib -lhip_hcc -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/8/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o -L/opt/rocm/lib -lstdc++"
+if {[target_link $objfile $binfile "${link-flags}"] != "" } then {
+     untested "failed to link"
+     return -1
+}
+
+gdb_exit
+gdb_start
+
+# Load the hip program
+if {[gdb_load ${binfile}] == -1} {
+    verbose "failed to load program ${testfile}."
+    return -1
+}
+
+# Run to main and break
+if ![runto_main] {
+    fail "can't run to main and break in program ${testfile}."
+    return -1
+}
+
+# Set breakpoing in device code
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_continue_to_breakpoint "bit_extract_kernel"
+
+# Check rocm info devices
+# vega10 56 sample output "1  43:00.0  vega10      4              56            4       10"
+gdb_test_sequence "info rocm devices" "info rocm devices" {
+    {Id\s+PCI Slot\s+Device Name\s+Shader Engines\s+Compute Units\s+SIMD/CU\s+Wavefronts/SIMD}
+    {\d\s+\d+:\d+\.\d\s+\w+\d+\s+\d+\s+\d+\s+\d+\s+\d}
+}
+
+# Check continue at device breakpoint in all-stop mode
+gdb_test "c" ".+hit\\s+Breakpoint.+bit_extract_kernel\\(.*"
+
+# Check info threads
+gdb_test_sequence "info threads" "info threads" {
+    "\\d+\\s+Thread"
+}
+
+gdb_exit

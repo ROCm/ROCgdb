@@ -1,6 +1,7 @@
 /* GDB CLI commands.
 
    Copyright (C) 2000-2019 Free Software Foundation, Inc.
+   Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1433,6 +1434,7 @@ static void
 disassemble_command (const char *arg, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
+  struct obj_section *section;
   CORE_ADDR low, high;
   const char *name;
   CORE_ADDR pc;
@@ -1484,6 +1486,14 @@ disassemble_command (const char *arg, int from_tty)
     }
 
   pc = value_as_address (parse_to_comma_and_eval (&p));
+
+  /* ROCM: get the gdbarch from the objfile, if found */
+  section = find_pc_overlay (pc);
+  if (section == NULL)
+    section = find_pc_section (pc);
+  if (section != NULL)
+    gdbarch = get_objfile_arch (section->objfile);
+
   if (p[0] == ',')
     ++p;
   if (p[0] == '\0')

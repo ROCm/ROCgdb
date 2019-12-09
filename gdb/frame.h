@@ -1,6 +1,7 @@
 /* Definitions for dealing with stack frames, for GDB, the GNU debugger.
 
    Copyright (C) 1986-2019 Free Software Foundation, Inc.
+   Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -195,7 +196,8 @@ extern const struct frame_id sentinel_frame_id;
 
 /* This means "there is no frame ID, but there is a frame".  It should be
    replaced by best-effort frame IDs for the outermost frame, somehow.
-   The implementation is only special_addr_p set.  */
+   The implementation is only special_addr_p, and possibly
+   artificial_depth, set.  */
 extern const struct frame_id outer_frame_id;
 
 /* Flag to control debugging.  */
@@ -237,8 +239,8 @@ extern struct frame_id
 extern struct frame_id frame_id_build_wild (CORE_ADDR stack_addr);
 
 /* Returns non-zero when L is a valid frame (a valid frame has a
-   non-zero .base).  The outermost frame is valid even without an
-   ID.  */
+   non-zero .base).  The outermost frame and any frames inlined into it
+   are valid even without an ID.  */
 extern int frame_id_p (struct frame_id l);
 
 /* Returns non-zero when L is a valid frame representing a frame made up by GDB

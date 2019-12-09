@@ -1,0 +1,175 @@
+# Copyright (C) 2019 Free Software Foundation, Inc.
+# Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+set testfile "bit_extract_compile"
+set srcfile ${srcdir}/${subdir}/${testfile}.cpp
+set objfile [standard_output_file ${testfile}.o]
+set binfile [standard_output_file ${testfile}]
+
+set breakpoint_loc 35
+set wave_id {(0,0,0)/2}
+set rocm_threadno {1.3}
+set threadid {7}
+
+# Check if skip hip tests
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+# Compile the hip program
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+gdb_start
+
+# Load the hip program
+if {[gdb_load ${binfile}] == -1} {
+    verbose "failed to load program ${testfile}."
+    return -1
+}
+
+# Run to main and break
+if ![runto_main] {
+    fail "can't run to main and break in program ${testfile}."
+    return -1
+}
+
+#TEST1
+#break <device_function_name>
+#break bit_extract_kernel
+# Set breakpoing in device code
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+
+# Do continue to check the breakpoint is created at device
+gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+clean_restart ${binfile}
+
+
+#TEST2
+#tbreak <device_function_name>
+#tbreak bit_extract_kernel
+gdb_breakpoint "bit_extract_kernel" "allow-pending" "temporary"
+gdb_test "run" {.+hit\sTemporary\sbreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+#controlling the timeout of the test as continue on device thread taking around 20-30s
+set timeout 30
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+clean_restart ${binfile}
+
+#TEST3
+#break <file>:<lineNO>
+#e.g. break bit_extract_compile:35
+gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+clean_restart ${binfile}
+
+#TEST4
+#break <lineNo>
+#e.g break 35
+gdb_test "break $breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+clean_restart ${binfile}
+
+#Code to fetch threadno and corresponding wave_id
+#Set breakpoing in device code
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sbit_extract_kernel\s\(.*\)\sat.*}
+send_gdb "info threads\n"
+gdb_expect -re  "\\s+(\\d+)\\s+ROCm Thread\\s+(\\d+\.\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
+  set threadid "$expect_out(1,string)"
+  set rocm_threadno "$expect_out(2,string)"
+  set wave_id  "$expect_out(3,string)"
+}
+
+verbose $rocm_threadno
+verbose $threadid
+verbose $wave_id
+regsub -all {[]*+.|()^$\[\\]} $wave_id {\\&} wave_id_re
+verbose $wave_id_re
+
+clean_restart ${binfile}
+
+set timeout 40
+#TEST5
+#break <file>:<lineNO> <device thread condition>
+#e.g. break bit_extract_compile:35 if $_thread==<threadno>
+gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+
+clean_restart ${binfile}
+#TEST6
+#break <file>:<lineNO> <device thread condition>
+#e.g. break bit_extract_compile:35 if $_streq($_wave_id,(0,0,1)/2)
+gdb_test "break $srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" ".+$wave_id_re.+Thread.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+
+
+clean_restart ${binfile}
+
+#TEST7
+#enable\disable the breakpoint in device thread
+#break <device_function_name>
+#break bit_extract_kernel
+#run //to hit the breakpoint in device thread
+#disable <breakpoint no>
+#continue //to exit inferior normally
+#run //to check that test running without hitting any breakpoint as it disabled
+#enable <breakpoint no>
+##run //to hit the breakpoint in device thread after enabling the breakpoint
+
+# Set breakpoing in device code
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+
+# Do continue to check the breakpoint is created at device
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "disable 1"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "enable 1"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+clean_restart ${binfile}
+
+#TEST8
+#clear the breakpoint in device thread
+#break <file>:<lineNO>
+#e.g. break bit_extract_compile:35
+gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "clear $breakpoint_loc"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+
+
+
+gdb_exit
+
+
+
+
+
+
