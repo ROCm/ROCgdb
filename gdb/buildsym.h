@@ -258,7 +258,7 @@ struct buildsym_compunit
 
   void record_debugformat (const char *format)
   {
-    m_debugformat = format;
+    m_debugformat = make_unique_xstrdup (format);
   }
 
   void record_producer (const char *producer)
@@ -325,9 +325,8 @@ private:
      the same lifetime as objfile.  */
   const char *m_producer = nullptr;
 
-  /* Space for this is not malloc'd, and is assumed to have at least
-     the same lifetime as objfile.  */
-  const char *m_debugformat = nullptr;
+  /* Space for this is malloc'd.  */
+  gdb::unique_xmalloc_ptr<char> m_debugformat;
 
   /* The compunit we are building.  */
   struct compunit_symtab *m_compunit_symtab = nullptr;

@@ -2,6 +2,7 @@
 		      for now.  */
 /* Basic, host-specific, and target-specific definitions for GDB.
    Copyright (C) 1986-2019 Free Software Foundation, Inc.
+   Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -496,6 +497,7 @@ enum gdb_osabi
   GDB_OSABI_NEWLIB,
   GDB_OSABI_SDE,
   GDB_OSABI_PIKEOS,
+  GDB_OSABI_AMDGPU_HSA,
 
   GDB_OSABI_INVALID		/* keep this last */
 };

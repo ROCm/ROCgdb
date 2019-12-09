@@ -1,6 +1,7 @@
 /* Cache and manage frames for GDB, the GNU debugger.
 
    Copyright (C) 1986-2019 Free Software Foundation, Inc.
+   Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -694,8 +695,8 @@ frame_id_p (struct frame_id l)
 
   /* The frame is valid iff it has a valid stack address.  */
   p = l.stack_status != FID_STACK_INVALID;
-  /* outer_frame_id is also valid.  */
-  if (!p && memcmp (&l, &outer_frame_id, sizeof (l)) == 0)
+  /* outer_frame_id and functions inlined into it are also valid.  */
+  if (!p && l.special_addr_p)
     p = 1;
   if (frame_debug)
     {
@@ -722,12 +723,13 @@ frame_id_eq (struct frame_id l, struct frame_id r)
 
   if (l.stack_status == FID_STACK_INVALID && l.special_addr_p
       && r.stack_status == FID_STACK_INVALID && r.special_addr_p)
-    /* The outermost frame marker is equal to itself.  This is the
-       dodgy thing about outer_frame_id, since between execution steps
+    /* The outermost frame marker, and any inline frame markers
+       derived from it, are equal to themselves.  This is the dodgy
+       thing about outer_frame_id, since between execution steps
        we might step into another function - from which we can't
        unwind either.  More thought required to get rid of
        outer_frame_id.  */
-    eq = 1;
+    eq = l.artificial_depth == r.artificial_depth;
   else if (l.stack_status == FID_STACK_INVALID
 	   || r.stack_status == FID_STACK_INVALID)
     /* Like a NaN, if either ID is invalid, the result is false.

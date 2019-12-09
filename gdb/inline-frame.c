@@ -1,6 +1,7 @@
 /* Inline frame unwinder for GDB.
 
    Copyright (C) 2008-2019 Free Software Foundation, Inc.
+   Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -153,10 +154,6 @@ inline_frame_this_id (struct frame_info *this_frame,
      of null_frame_id (between "no/any frame" and "the outermost
      frame").  This will take work.  */
   gdb_assert (frame_id_p (*this_id));
-
-  /* For now, require we don't match outer_frame_id either (see
-     comment above).  */
-  gdb_assert (!frame_id_eq (*this_id, outer_frame_id));
 
   /* Future work NOTE: Alexandre Oliva applied a patch to GCC 4.3
      which generates DW_AT_entry_pc for inlined functions when

@@ -1,5 +1,7 @@
 /* Generic target-file-type support for the BFD library.
    Copyright (C) 1990-2019 Free Software Foundation, Inc.
+   Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
+
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -665,6 +667,7 @@ extern const bfd_target aarch64_elf64_be_cloudabi_vec;
 extern const bfd_target aarch64_elf64_le_vec;
 extern const bfd_target aarch64_elf64_le_cloudabi_vec;
 extern const bfd_target aarch64_mach_o_vec;
+extern const bfd_target amdgcn_elf64_le_vec;
 extern const bfd_target alpha_ecoff_le_vec;
 extern const bfd_target alpha_elf64_vec;
 extern const bfd_target alpha_elf64_fbsd_vec;
@@ -983,6 +986,10 @@ static const bfd_target * const _bfd_target_vector[] =
 	&aarch64_elf64_le_vec,
 	&aarch64_elf64_le_cloudabi_vec,
 	&aarch64_mach_o_vec,
+#endif
+
+#ifdef BFD64
+	&amdgcn_elf64_le_vec,
 #endif
 
 #ifdef BFD64
