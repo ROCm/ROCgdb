@@ -52,18 +52,20 @@ intel_state;
 #define O_dword_ptr O_md26
 /* qword ptr X_add_symbol */
 #define O_qword_ptr O_md25
-/* oword ptr X_add_symbol */
-#define O_oword_ptr O_md24
+/* mmword ptr X_add_symbol */
+#define O_mmword_ptr O_qword_ptr
 /* fword ptr X_add_symbol */
-#define O_fword_ptr O_md23
+#define O_fword_ptr O_md24
 /* tbyte ptr X_add_symbol */
-#define O_tbyte_ptr O_md22
+#define O_tbyte_ptr O_md23
+/* oword ptr X_add_symbol */
+#define O_oword_ptr O_md22
 /* xmmword ptr X_add_symbol */
-#define O_xmmword_ptr O_md21
+#define O_xmmword_ptr O_oword_ptr
 /* ymmword ptr X_add_symbol */
-#define O_ymmword_ptr O_md20
+#define O_ymmword_ptr O_md21
 /* zmmword ptr X_add_symbol */
-#define O_zmmword_ptr O_md19
+#define O_zmmword_ptr O_md20
 
 static struct
   {
@@ -105,6 +107,7 @@ const i386_types[] =
     I386_TYPE(dword, 4),
     I386_TYPE(fword, 6),
     I386_TYPE(qword, 8),
+    I386_TYPE(mmword, 8),
     I386_TYPE(tbyte, 10),
     I386_TYPE(oword, 16),
     I386_TYPE(xmmword, 16),
@@ -383,10 +386,9 @@ static int i386_intel_simplify (expressionS *e)
     case O_word_ptr:
     case O_dword_ptr:
     case O_fword_ptr:
-    case O_qword_ptr:
+    case O_qword_ptr: /* O_mmword_ptr */
     case O_tbyte_ptr:
-    case O_oword_ptr:
-    case O_xmmword_ptr:
+    case O_oword_ptr: /* O_xmmword_ptr */
     case O_ymmword_ptr:
     case O_zmmword_ptr:
     case O_near_ptr:
@@ -639,12 +641,7 @@ i386_intel_operand (char *operand_string, int got_a_float)
 
 	case O_word_ptr:
 	  i.types[this_operand].bitfield.word = 1;
-	  if ((current_templates->start->name[0] == 'l'
-	       && current_templates->start->name[2] == 's'
-	       && current_templates->start->name[3] == 0)
-	      || current_templates->start->base_opcode == 0x62 /* bound */)
-	    suffix = BYTE_MNEM_SUFFIX; /* so it will cause an error */
-	  else if (got_a_float == 2)	/* "fi..." */
+	  if (got_a_float == 2)	/* "fi..." */
 	    suffix = SHORT_MNEM_SUFFIX;
 	  else
 	    suffix = WORD_MNEM_SUFFIX;
@@ -681,11 +678,9 @@ i386_intel_operand (char *operand_string, int got_a_float)
 		add_prefix (DATA_PREFIX_OPCODE);
 	      suffix = LONG_DOUBLE_MNEM_SUFFIX;
 	    }
-	  else
-	    suffix = BYTE_MNEM_SUFFIX; /* so it will cause an error */
 	  break;
 
-	case O_qword_ptr:
+	case O_qword_ptr: /* O_mmword_ptr */
 	  i.types[this_operand].bitfield.qword = 1;
 	  if (current_templates->start->base_opcode == 0x62 /* bound */
 	      || got_a_float == 1)	/* "f..." */
@@ -698,21 +693,15 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	  i.types[this_operand].bitfield.tbyte = 1;
 	  if (got_a_float == 1)
 	    suffix = LONG_DOUBLE_MNEM_SUFFIX;
-	  else if (current_templates->start->operand_types[0].bitfield.fword
-		   || current_templates->start->operand_types[0].bitfield.tbyte)
-	    {
-	      /* l[defgs]s, [ls][gi]dt */
-	      if (flag_code == CODE_64BIT)
-		suffix = QWORD_MNEM_SUFFIX;
-	      else
-		i.types[this_operand].bitfield.byte = 1; /* cause an error */
-	    }
+	  else if ((current_templates->start->operand_types[0].bitfield.fword
+		    || current_templates->start->operand_types[0].bitfield.tbyte)
+		   && flag_code == CODE_64BIT)
+	    suffix = QWORD_MNEM_SUFFIX; /* l[fgs]s, [ls][gi]dt */
 	  else
-	    suffix = BYTE_MNEM_SUFFIX; /* so it will cause an error */
+	    i.types[this_operand].bitfield.byte = 1; /* cause an error */
 	  break;
 
-	case O_oword_ptr:
-	case O_xmmword_ptr:
+	case O_oword_ptr: /* O_xmmword_ptr */
 	  i.types[this_operand].bitfield.xmmword = 1;
 	  break;
 
@@ -730,9 +719,12 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	case O_near_ptr:
 	  if (current_templates->start->opcode_modifier.jump != JUMP
 	      && current_templates->start->opcode_modifier.jump != JUMP_DWORD)
-	    suffix = got_a_float /* so it will cause an error */
-		     ? BYTE_MNEM_SUFFIX
-		     : LONG_DOUBLE_MNEM_SUFFIX;
+	    {
+	      /* cause an error */
+	      i.types[this_operand].bitfield.byte = 1;
+	      i.types[this_operand].bitfield.tbyte = 1;
+	      suffix = i.suffix;
+	    }
 	  break;
 
 	default:

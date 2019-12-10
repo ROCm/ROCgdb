@@ -1,3 +1,46 @@
+2019-12-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386-intel.c (O_oword_ptr): Move.
+	(O_xmmword_ptr): Alias to O_oword_ptr.
+	(O_fword_ptr, O_tbyte_ptr, O_ymmword_ptr, O_zmmword_ptr): Adjust
+	expansion.
+	(i386_intel_simplify, i386_intel_operand): Fold O_oword_ptr and
+	O_xmmword_ptr cases, leaving comments.
+
+2019-12-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386-intel.c (O_mmword_ptr): Define.
+	(i386_types): Add mmword entry.
+	(i386_intel_simplify, i386_intel_operand): Add comment.
+	* testsuite/gas/i386/intel-expr.s: Also test mmword and zmmword.
+	* testsuite/gas/i386/intelok.s: Also test "mmword ptr".
+	* testsuite/gas/i386/intel-expr.d, testsuite/gas/i386/intelok.d,
+	testsuite/gas/i386/intelok.e: Adjust expectations.
+
+2019-12-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386-intel.c (i386_intel_operand): Set "byte"
+	attribute suffix instead of suffix for floating point insns when
+	handling O_near_ptr / O_far_ptr.
+	* testsuite/gas/i386/intelbad.s: Add FPU tests.
+	* testsuite/gas/i386/intelbad.l: Adjust expectations.
+
+2019-12-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386-intel.c (i386_intel_operand): Set "byte"
+	attribute suffix instead of suffix uniformly for insns not
+	possibly accepting "tbyte ptr" explicitly.
+
+2019-12-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386-intel.c (i386_intel_operand): Don't set suffix
+	for floating point insns when handling O_fword_ptr.
+
+2019-12-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386-intel.c (i386_intel_operand): Don't special
+	case LDS et al when handling O_word_ptr.
+
 2019-12-08  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/gas/aarch64/bfloat16.d: Match 32-bit and 64-bit output.
