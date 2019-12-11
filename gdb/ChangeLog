@@ -1,3 +1,32 @@
+2019-12-11  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* NEWS: Document -raw-values option and the related setting commands.
+	* printcmd.c (print_command_parse_format): Do not set opts->raw off,
+	only set it on when /r is given.
+	* valprint.c (value_print_option_defs): New element raw-values.
+	* Makefile.in: Add the new file.
+
+2019-12-10  Christian Biesinger  <cbiesinger@google.com>
+
+	* gdbsupport/safe-strerror.c: Supress the unused function warning
+	for select_strerror_r.
+
+2019-12-10  Christian Biesinger  <cbiesinger@google.com>
+
+	* config.in: Regenerate.
+	* configure: Regenerate.
+	* gdbsupport/agent.c (gdb_connect_sync_socket): Call
+	safe_strerror instead of strerror.
+	* gdbsupport/common.m4: Don't check for strerror.
+	* gdbsupport/safe-strerror.c: Support both the glibc version
+	of strerror_r and the XSI version.
+
+2019-12-10  Tom Tromey  <tromey@adacore.com>
+
+	* ada-typeprint.c (print_choices): Use a single "?".
+	(print_variant_part): Print "?" if the discriminant name
+	is not known.
+
 2019-12-10  George Barrett  <bob@bob131.so>
 
 	Fix scripted probe breakpoints.

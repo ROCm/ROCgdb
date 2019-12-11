@@ -1,3 +1,112 @@
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* arc-dis.c (BITS): Don't truncate high bits with shifts.
+	* nios2-dis.c (nios2_print_insn_arg): Don't sign extend with shifts.
+	* tic54x-dis.c (print_instruction): Likewise.
+	* tilegx-opc.c (parse_insn_tilegx): Likewise.
+	* tilepro-opc.c (parse_insn_tilepro): Likewise.
+	* visium-dis.c (disassem_class0): Likewise.
+	* pdp11-dis.c (sign_extend): Likewise.
+	(SIGN_BITS): Delete.
+	* epiphany-ibld.c: Regenerate.
+	* lm32-ibld.c: Regenerate.
+	* m32c-ibld.c: Regenerate.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* ns32k-dis.c (sign_extend): Correct last patch.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* vax-dis.c (NEXTLONG): Avoid signed overflow.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* v850-dis.c (get_operand_value): Use unsigned arithmetic.  Don't
+	sign extend using shifts.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* tic6x-dis.c (tic6x_extract_32): Avoid signed overflow.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* tic4x-dis.c (tic4x_print_register): Formatting.  Don't segfault
+	on NULL registertable entry.
+	(tic4x_hash_opcode): Use unsigned arithmetic.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* s12z-opc.c (z_decode_signed_value): Avoid signed overflow.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* ns32k-dis.c (bit_extract): Use unsigned arithmetic.
+	(bit_extract_simple, sign_extend): Likewise.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* nios2-dis.c (nios2_print_insn_arg): Use 1u << 31.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* moxie-dis.c (INST2OFFSET): Don't sign extend using shifts.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* m68k-dis.c (COERCE32): Cast value first.
+	(NEXTLONG, NEXTULONG): Avoid signed overflow.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* h8300-dis.c (extract_immediate): Avoid signed overflow.
+	(bfd_h8_disassemble): Likewise.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* d30v-dis.c (print_insn): Make opind unsigned.  Don't access
+	past end of operands array.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* csky-dis.c (csky_chars_to_number): Rewrite.  Avoid signed
+	overflow when collecting bytes of a number.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* cris-dis.c (print_with_operands): Avoid signed integer
+	overflow when collecting bytes of a 32-bit integer.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* cr16-dis.c (EXTRACT, SBM): Rewrite.
+	(cr16_match_opcode): Delete duplicate bcond test.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* bfin-dis.c (HOST_LONG_WORD_SIZE, XFIELD): Delete.
+	(SIGNBIT): New.
+	(MASKBITS, SIGNEXTEND): Rewrite.
+	(fmtconst): Don't use ? expression now that SIGNEXTEND uses
+	unsigned arithmetic, instead assign result of SIGNEXTEND back
+	to x.
+	(fmtconst_val): Use 1u in shift expression.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* arc-dis.c (find_format_from_table): Use ull constant when
+	shifting by up to 32.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	PR 25270
+	* aarch64-dis.c (aarch64_decode_variant_using_iclass): Return
+	false when field is zero for sve_size_tsz_bhs.
+
+2019-12-11  Alan Modra  <amodra@gmail.com>
+
+	* epiphany-ibld.c: Regenerate.
+
 2019-12-10  Alan Modra  <amodra@gmail.com>
 
 	PR 24960
