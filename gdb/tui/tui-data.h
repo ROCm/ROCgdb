@@ -30,12 +30,6 @@ struct tui_cmd_window;
 struct tui_source_window_base;
 struct tui_source_window;
 
-/* This is a point definition.  */
-struct tui_point
-{
-  int x, y;
-};
-
 /* A deleter that calls delwin.  */
 struct curses_deleter
 {
@@ -82,6 +76,18 @@ public:
     return "";
   }
 
+  /* Compute the maximum height of this window.  */
+  virtual int max_height () const = 0;
+
+  /* Compute the minimum height of this window.  */
+  virtual int min_height () const = 0;
+
+  /* Return true if this window can be boxed.  */
+  virtual bool can_box () const
+  {
+    return false;
+  }
+
   /* Resize this window.  The parameters are used to set the window's
      size and position.  */
   virtual void resize (int height, int width,
@@ -102,7 +108,8 @@ public:
   /* Window height.  */
   int height = 0;
   /* Origin of window.  */
-  struct tui_point origin = {0, 0};
+  int x = 0;
+  int y = 0;
   /* Viewport height.  */
   int viewport_height = 0;
 };
@@ -173,8 +180,12 @@ public:
   {
   }
 
-  /* Compute the maximum height of this window.  */
-  virtual int max_height () const;
+  int max_height () const override;
+
+  int min_height () const override
+  {
+    return MIN_WIN_HEIGHT;
+  }
 
   /* Called after the tab width has been changed.  */
   virtual void update_tab_width ()
@@ -201,7 +212,7 @@ public:
     return true;
   }
 
-  virtual bool can_box () const
+  bool can_box () const override
   {
     return true;
   }

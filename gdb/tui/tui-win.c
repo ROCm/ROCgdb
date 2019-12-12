@@ -56,9 +56,6 @@
 
 #include <signal.h>
 
-static enum tui_status tui_adjust_win_heights (struct tui_win_info *, 
-					       int);
-static int new_height_ok (struct tui_win_info *, int);
 static void tui_set_tab_width_command (const char *, int);
 static void tui_refresh_all_command (const char *, int);
 static void tui_all_windows_info (const char *, int);
@@ -536,13 +533,7 @@ tui_resize_all (void)
   height_diff = screenheight - tui_term_height ();
   if (height_diff || width_diff)
     {
-      enum tui_layout_type cur_layout = tui_current_layout ();
       struct tui_win_info *win_with_focus = tui_win_with_focus ();
-      struct tui_win_info *first_win;
-      struct tui_win_info *second_win;
-      tui_source_window_base *src_win;
-      struct tui_locator_window *locator = tui_locator_win_info_ptr ();
-      int new_height, split_diff, cmd_split_diff, num_wins_displayed = 2;
 
 #ifdef HAVE_RESIZE_TERM
       resize_term (screenheight, screenwidth);
@@ -553,108 +544,12 @@ tui_resize_all (void)
       tui_update_gdb_sizes ();
       tui_set_term_height_to (screenheight);
       tui_set_term_width_to (screenwidth);
-      if (cur_layout == SRC_DISASSEM_COMMAND 
-	  || cur_layout == SRC_DATA_COMMAND
-	  || cur_layout == DISASSEM_DATA_COMMAND)
-	num_wins_displayed++;
-      split_diff = height_diff / num_wins_displayed;
-      cmd_split_diff = split_diff;
-      if (height_diff % num_wins_displayed)
-	{
-	  if (height_diff < 0)
-	    cmd_split_diff--;
-	  else
-           cmd_split_diff++;
-       }
-      /* Now adjust each window.  */
+
       /* erase + clearok are used instead of a straightforward clear as
          AIX 5.3 does not define clear.  */
       erase ();
       clearok (curscr, TRUE);
-      switch (cur_layout)
-       {
-	case SRC_COMMAND:
-	case DISASSEM_COMMAND:
-	  src_win = *(tui_source_windows ().begin ());
-	  /* Check for invalid heights.  */
-	  if (height_diff == 0)
-	    new_height = src_win->height;
-	  else if ((src_win->height + split_diff) >=
-		   (screenheight - MIN_CMD_WIN_HEIGHT - 1))
-	    new_height = screenheight - MIN_CMD_WIN_HEIGHT - 1;
-	  else if ((src_win->height + split_diff) <= 0)
-	    new_height = MIN_WIN_HEIGHT;
-	  else
-	    new_height = src_win->height + split_diff;
-
-	  src_win->resize (new_height, screenwidth, 0, 0);
-
-	  locator->resize (1, screenwidth, 0, new_height);
-
-	  new_height = screenheight - (new_height + 1);
-	  TUI_CMD_WIN->resize (new_height, screenwidth,
-			       0, locator->origin.y + 1);
-	  break;
-	default:
-	  if (cur_layout == SRC_DISASSEM_COMMAND)
-	    {
-	      src_win = TUI_SRC_WIN;
-	      first_win = src_win;
-	      second_win = TUI_DISASM_WIN;
-	    }
-	  else
-	    {
-	      first_win = TUI_DATA_WIN;
-	      src_win = *(tui_source_windows ().begin ());
-	      second_win = src_win;
-	    }
-	  /* Change the first window's height/width.  */
-	  /* Check for invalid heights.  */
-	  if (height_diff == 0)
-	    new_height = first_win->height;
-	  else if ((first_win->height +
-		    second_win->height + (split_diff * 2)) >=
-		   (screenheight - MIN_CMD_WIN_HEIGHT - 1))
-	    new_height = (screenheight - MIN_CMD_WIN_HEIGHT - 1) / 2;
-	  else if ((first_win->height + split_diff) <= 0)
-	    new_height = MIN_WIN_HEIGHT;
-	  else
-	    new_height = first_win->height + split_diff;
-
-	  first_win->resize (new_height, screenwidth, 0, 0);
-
-	  /* Change the second window's height/width.  */
-	  /* Check for invalid heights.  */
-	  if (height_diff == 0)
-	    new_height = second_win->height;
-	  else if ((first_win->height +
-		    second_win->height + (split_diff * 2)) >=
-		   (screenheight - MIN_CMD_WIN_HEIGHT - 1))
-	    {
-	      new_height = screenheight - MIN_CMD_WIN_HEIGHT - 1;
-	      if (new_height % 2)
-		new_height = (new_height / 2) + 1;
-	      else
-		new_height /= 2;
-	    }
-	  else if ((second_win->height + split_diff) <= 0)
-	    new_height = MIN_WIN_HEIGHT;
-	  else
-	    new_height = second_win->height + split_diff;
-
-	  second_win->resize (new_height, screenwidth,
-			      0, first_win->height - 1);
-
-	  locator->resize (1, screenwidth,
-			   0, second_win->origin.y + new_height);
-
-	  /* Change the command window's height/width.  */
-	  new_height = screenheight - (locator->origin.y + 1);
-	  TUI_CMD_WIN->resize (new_height, screenwidth,
-			       0, locator->origin.y + 1);
-	  break;
-	}
-
+      tui_apply_current_layout ();
       tui_delete_invisible_windows ();
       /* Turn keypad back on, unless focus is in the command
 	 window.  */
@@ -1034,12 +929,8 @@ tui_set_win_height_command (const char *arg, int from_tty)
 
 		  /* Now change the window's height, and adjust
 		     all other windows around it.  */
-		  if (tui_adjust_win_heights (win_info,
-					      new_height) == TUI_FAILURE)
-		    warning (_("Invalid window height specified.\n%s"),
-			     WIN_HEIGHT_USAGE);
-		  else
-		    tui_update_gdb_sizes ();
+		  tui_adjust_window_height (win_info, new_height);
+		  tui_update_gdb_sizes ();
 		}
 	      else
 		warning (_("Invalid window height specified.\n%s"),
@@ -1053,170 +944,6 @@ tui_set_win_height_command (const char *arg, int from_tty)
     printf_filtered (WIN_HEIGHT_USAGE);
 }
 
-/* Function to adjust all window heights around the primary.   */
-static enum tui_status
-tui_adjust_win_heights (struct tui_win_info *primary_win_info,
-			int new_height)
-{
-  enum tui_status status = TUI_FAILURE;
-
-  if (new_height_ok (primary_win_info, new_height))
-    {
-      status = TUI_SUCCESS;
-      if (new_height != primary_win_info->height)
-	{
-	  int diff;
-	  struct tui_win_info *win_info;
-	  struct tui_locator_window *locator = tui_locator_win_info_ptr ();
-	  enum tui_layout_type cur_layout = tui_current_layout ();
-	  int width = tui_term_width ();
-
-	  diff = (new_height - primary_win_info->height) * (-1);
-	  if (cur_layout == SRC_COMMAND 
-	      || cur_layout == DISASSEM_COMMAND)
-	    {
-	      struct tui_win_info *src_win_info;
-
-	      primary_win_info->resize (new_height, width,
-					0, primary_win_info->origin.y);
-	      if (primary_win_info->type == CMD_WIN)
-		{
-		  win_info = *(tui_source_windows ().begin ());
-		  src_win_info = win_info;
-		}
-	      else
-		{
-		  win_info = tui_win_list[CMD_WIN];
-		  src_win_info = primary_win_info;
-		}
-	      win_info->resize (win_info->height + diff, width,
-				0, win_info->origin.y);
-	      TUI_CMD_WIN->origin.y = locator->origin.y + 1;
-	      if ((src_win_info->type == SRC_WIN
-		   || src_win_info->type == DISASSEM_WIN))
-		{
-		  tui_source_window_base *src_base
-		    = (tui_source_window_base *) src_win_info;
-		  if (src_base->content.empty ())
-		    src_base->erase_source_content ();
-		}
-	    }
-	  else
-	    {
-	      struct tui_win_info *first_win;
-	      struct tui_source_window_base *second_win;
-	      tui_source_window_base *src1;
-
-	      if (cur_layout == SRC_DISASSEM_COMMAND)
-		{
-		  src1 = TUI_SRC_WIN;
-		  first_win = src1;
-		  second_win = TUI_DISASM_WIN;
-		}
-	      else
-		{
-		  src1 = nullptr;
-		  first_win = TUI_DATA_WIN;
-		  second_win = *(tui_source_windows ().begin ());
-		}
-	      if (primary_win_info == TUI_CMD_WIN)
-		{ /* Split the change in height across the 1st & 2nd
-		     windows, adjusting them as well.  */
-		  /* Subtract the locator.  */
-		  int first_split_diff = diff / 2;
-		  int second_split_diff = first_split_diff;
-
-		  if (diff % 2)
-		    {
-		      if (first_win->height >
-			  second_win->height)
-			if (diff < 0)
-			  first_split_diff--;
-			else
-			  first_split_diff++;
-		      else
-			{
-			  if (diff < 0)
-			    second_split_diff--;
-			  else
-			    second_split_diff++;
-			}
-		    }
-		  /* Make sure that the minimum heights are
-		     honored.  */
-		  while ((first_win->height + first_split_diff) < 3)
-		    {
-		      first_split_diff++;
-		      second_split_diff--;
-		    }
-		  while ((second_win->height + second_split_diff) < 3)
-		    {
-		      second_split_diff++;
-		      first_split_diff--;
-		    }
-		  first_win->resize (first_win->height + first_split_diff,
-				     width,
-				     0, first_win->origin.y);
-		  second_win->resize (second_win->height + second_split_diff,
-				      width,
-				      0, first_win->height - 1);
-		  locator->resize (1, width,
-				   0, (second_win->origin.y
-				       + second_win->height + 1));
-
-		  TUI_CMD_WIN->resize (new_height, width,
-				       0, locator->origin.y + 1);
-		}
-	      else
-		{
-		  if ((TUI_CMD_WIN->height + diff) < 1)
-		    { /* If there is no way to increase the command
-			 window take real estate from the 1st or 2nd
-			 window.  */
-		      if ((TUI_CMD_WIN->height + diff) < 1)
-			{
-			  int i;
-
-			  for (i = TUI_CMD_WIN->height + diff;
-			       (i < 1); i++)
-			    if (primary_win_info == first_win)
-			      second_win->height--;
-			    else
-			      first_win->height--;
-			}
-		    }
-		  if (primary_win_info == first_win)
-		    first_win->resize (new_height, width, 0, 0);
-		  else
-		    first_win->resize (first_win->height, width, 0, 0);
-		  second_win->origin.y = first_win->height - 1;
-		  if (primary_win_info == second_win)
-		    second_win->resize (new_height, width,
-					0, first_win->height - 1);
-		  else
-		    second_win->resize (second_win->height, width,
-					0, first_win->height - 1);
-		  locator->resize (1, width,
-				   0, (second_win->origin.y
-				       + second_win->height + 1));
-		  TUI_CMD_WIN->origin.y = locator->origin.y + 1;
-		  if ((TUI_CMD_WIN->height + diff) < 1)
-		    TUI_CMD_WIN->resize (1, width, 0, locator->origin.y + 1);
-		  else
-		    TUI_CMD_WIN->resize (TUI_CMD_WIN->height + diff, width,
-					 0, locator->origin.y + 1);
-		}
-	      if (src1 != nullptr && src1->content.empty ())
-		src1->erase_source_content ();
-	      if (second_win->content.empty ())
-		second_win->erase_source_content ();
-	    }
-	}
-    }
-
-  return status;
-}
-
 /* See tui-data.h.  */
 
 int
@@ -1224,112 +951,6 @@ tui_win_info::max_height () const
 {
   return tui_term_height () - 2;
 }
-
-static int
-new_height_ok (struct tui_win_info *primary_win_info, 
-	       int new_height)
-{
-  int ok = (new_height < tui_term_height ());
-
-  if (ok)
-    {
-      int diff;
-      enum tui_layout_type cur_layout = tui_current_layout ();
-
-      diff = (new_height - primary_win_info->height) * (-1);
-      if (cur_layout == SRC_COMMAND || cur_layout == DISASSEM_COMMAND)
-	{
-	  ok = (new_height <= primary_win_info->max_height ()
-		&& new_height >= MIN_CMD_WIN_HEIGHT);
-	  if (ok)
-	    {			/* Check the total height.  */
-	      struct tui_win_info *win_info;
-
-	      if (primary_win_info == TUI_CMD_WIN)
-		win_info = *(tui_source_windows ().begin ());
-	      else
-		win_info = TUI_CMD_WIN;
-	      ok = ((new_height +
-		     (win_info->height + diff)) <= tui_term_height ());
-	    }
-	}
-      else
-	{
-	  int cur_total_height, total_height, min_height = 0;
-	  struct tui_win_info *first_win;
-	  struct tui_win_info *second_win;
-
-	  if (cur_layout == SRC_DISASSEM_COMMAND)
-	    {
-	      first_win = TUI_SRC_WIN;
-	      second_win = TUI_DISASM_WIN;
-	    }
-	  else
-	    {
-	      first_win = TUI_DATA_WIN;
-	      second_win = *(tui_source_windows ().begin ());
-	    }
-	  /* We could simply add all the heights to obtain the same
-	     result but below is more explicit since we subtract 1 for
-	     the line that the first and second windows share, and add
-	     one for the locator.  */
-	  total_height = cur_total_height =
-	    (first_win->height + second_win->height - 1)
-	    + TUI_CMD_WIN->height + 1;	/* Locator. */
-	  if (primary_win_info == TUI_CMD_WIN)
-	    {
-	      /* Locator included since first & second win share a line.  */
-	      ok = ((first_win->height +
-		     second_win->height + diff) >=
-		    (MIN_WIN_HEIGHT * 2) 
-		    && new_height >= MIN_CMD_WIN_HEIGHT);
-	      if (ok)
-		{
-		  total_height = new_height + 
-		    (first_win->height +
-		     second_win->height + diff);
-		  min_height = MIN_CMD_WIN_HEIGHT;
-		}
-	    }
-	  else
-	    {
-	      min_height = MIN_WIN_HEIGHT;
-
-	      /* First see if we can increase/decrease the command
-	         window.  And make sure that the command window is at
-	         least 1 line.  */
-	      ok = ((TUI_CMD_WIN->height + diff) > 0);
-	      if (!ok)
-		{ /* Looks like we have to increase/decrease one of
-		     the other windows.  */
-		  if (primary_win_info == first_win)
-		    ok = (second_win->height + diff) >= min_height;
-		  else
-		    ok = (first_win->height + diff) >= min_height;
-		}
-	      if (ok)
-		{
-		  if (primary_win_info == first_win)
-		    total_height = new_height +
-		      second_win->height +
-		      TUI_CMD_WIN->height + diff;
-		  else
-		    total_height = new_height +
-		      first_win->height +
-		      TUI_CMD_WIN->height + diff;
-		}
-	    }
-	  /* Now make sure that the proposed total height doesn't
-	     exceed the old total height.  */
-	  if (ok)
-	    ok = (new_height >= min_height 
-		  && total_height <= cur_total_height);
-	}
-    }
-
-  return ok;
-}
-
 
 static void
 parse_scrolling_args (const char *arg, 

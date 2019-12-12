@@ -1,3 +1,47 @@
+2019-12-12  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-aarch64.c (get_aarch64_insn): Avoid signed overflow.
+	* config/tc-metag.c (parse_dalu): Likewise.
+	* config/tc-tic4x.c (md_pcrel_from): Likewise.
+	* config/tc-tic6x.c (tic6x_output_unwinding): Likewise.
+	* config/tc-csky.c (parse_fexp): Use an unsigned char temp buffer.
+	Don't use register keyword.  Avoid signed overflow and remove now
+	unneccesary char masks.  Formatting.
+	* config/tc-ia64.c (operand_match): Don't use shifts to sign extend.
+	* config/tc-mep.c (mep_apply_fix): Likewise.
+	* config/tc-pru.c (md_apply_fix): Likewise.
+	* config/tc-riscv.c (load_const): Likewise.
+	* config/tc-nios2.c (md_apply_fix): Likewise.  Don't potentially
+	truncate fixup before right shift.  Tidy BFD_RELOC_NIOS2_HIADJ16
+	calculation.
+
+2019-12-12  Alan Modra  <amodra@gmail.com>
+
+	* config/obj-evax.c (crc32, encode_32, encode_16, decode_16):
+	Remove unnecessary prototypes.
+	(number_of_codings): Delete, use ARRAY_SIZE instead throughout.
+	(codings, decodings): Make arrays of unsigned char.
+	(crc32): Use unsigned variables.  Delete unnecessary mask.
+	(encode_32, encode_16): Return unsigned char*, and make static
+	buffer an unsigned char array.
+	(decode_16): Make arg an unsigned char*.  Remove useless casts.
+	(shorten_identifier): Use unsigned char crc_chars.
+	(is_truncated_identifier): Make ptr an unsigned char*.
+
+2019-12-11  Wilco Dijkstra  <wdijkstr@arm.com>
+
+	* config/tc-arm.c (warn_on_restrict_it): Add new variable.
+	(it_fsm_post_encode): Check warn_on_restrict_it.
+	(arm_option_table): Add -mwarn-restrict-it/-mno-warn-restrict-it.
+	* testsuite/gas/arm/armv8-2-fp16-scalar-bad.d: Add -mwarn-restrict-it.
+	* testsuite/gas/arm/armv8-2-fp16-scalar-bad-ext.d: Likewise.
+	* testsuite/gas/arm/armv8-a-bad.d: Likewise.
+	* testsuite/gas/arm/armv8-a-it-bad.d: Likewise.
+	* testsuite/gas/arm/armv8-r-bad.d: Likewise.
+	* testsuite/gas/arm/armv8-r-it-bad.d: Likewise.
+	* testsuite/gas/arm/sp-pc-validations-bad-t-v8a.d: Likewise.
+	* testsuite/gas/arm/udf.d: Likewise.
+
 2018-12-11  Jan Beulich  <jbeulich@suse.com>
 
 	* config/tc-i386.c (md_assemble): Extend SSE check conditional.

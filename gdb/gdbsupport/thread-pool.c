@@ -36,8 +36,26 @@
 #endif
 
 #ifdef USE_PTHREAD_SETNAME_NP
+
 #include <pthread.h>
-#endif
+
+/* Handle platform discrepancies in pthread_setname_np: macOS uses a
+   single-argument form, while Linux uses a two-argument form.  This
+   wrapper handles the difference.  */
+
+ATTRIBUTE_UNUSED static void
+set_thread_name (int (*set_name) (pthread_t, const char *), const char *name)
+{
+  set_name (pthread_self (), name);
+}
+
+ATTRIBUTE_UNUSED static void
+set_thread_name (void (*set_name) (const char *), const char *name)
+{
+  set_name (name);
+}
+
+#endif	/* USE_PTHREAD_SETNAME_NP */
 
 namespace gdb
 {
@@ -75,9 +93,6 @@ thread_pool::set_thread_count (size_t num_threads)
       for (size_t i = m_thread_count; i < num_threads; ++i)
 	{
 	  std::thread thread (&thread_pool::thread_function, this);
-#ifdef USE_PTHREAD_SETNAME_NP
-	  pthread_setname_np (thread.native_handle (), "gdb worker");
-#endif
 	  thread.detach ();
 	}
     }
@@ -115,6 +130,12 @@ thread_pool::post_task (std::function<void ()> func)
 void
 thread_pool::thread_function ()
 {
+#ifdef USE_PTHREAD_SETNAME_NP
+  /* This must be done here, because on macOS one can only set the
+     name of the current thread.  */
+  set_thread_name (pthread_setname_np, "gdb worker");
+#endif
+
   /* Ensure that SIGSEGV is delivered to an alternate signal
      stack.  */
   gdb::alternate_signal_stack signal_stack;
