@@ -786,8 +786,8 @@ jit_object_close_impl (struct gdb_symbol_callbacks *cb,
 
   priv_data = (jit_dbg_reader_data *) cb->priv_data;
 
-  objfile = new struct objfile (NULL, "<< JIT compiled code >>",
-				OBJF_NOT_FILENAME);
+  objfile = objfile::make (nullptr, "<< JIT compiled code >>",
+			   OBJF_NOT_FILENAME);
   objfile->per_bfd->gdbarch = target_gdbarch ();
 
   j = NULL;
@@ -808,7 +808,6 @@ static int
 jit_reader_try_read_symtab (struct jit_code_entry *code_entry,
                             CORE_ADDR entry_addr)
 {
-  gdb_byte *gdb_mem;
   int status;
   jit_dbg_reader_data priv_data;
   struct gdb_reader_funcs *funcs;
@@ -831,12 +830,12 @@ jit_reader_try_read_symtab (struct jit_code_entry *code_entry,
   if (!loaded_jit_reader)
     return 0;
 
-  gdb_mem = (gdb_byte *) xmalloc (code_entry->symfile_size);
+  gdb::byte_vector gdb_mem (code_entry->symfile_size);
 
   status = 1;
   try
     {
-      if (target_read_memory (code_entry->symfile_addr, gdb_mem,
+      if (target_read_memory (code_entry->symfile_addr, gdb_mem.data (),
 			      code_entry->symfile_size))
 	status = 0;
     }
@@ -848,12 +847,12 @@ jit_reader_try_read_symtab (struct jit_code_entry *code_entry,
   if (status)
     {
       funcs = loaded_jit_reader->functions;
-      if (funcs->read (funcs, &callbacks, gdb_mem, code_entry->symfile_size)
+      if (funcs->read (funcs, &callbacks, gdb_mem.data (),
+		       code_entry->symfile_size)
           != GDB_SUCCESS)
         status = 0;
     }
 
-  xfree (gdb_mem);
   if (jit_debug && status == 0)
     fprintf_unfiltered (gdb_stdlog,
                         "Could not read symtab using the loaded JIT reader.\n");
@@ -950,18 +949,6 @@ jit_register_code (struct gdbarch *gdbarch,
 
   if (!success)
     jit_bfd_try_read_symtab (code_entry, entry_addr, gdbarch);
-}
-
-/* This function unregisters JITed code and frees the corresponding
-   objfile.  */
-
-static void
-jit_unregister_code (struct objfile *objfile)
-{
-  if (jit_debug)
-    fprintf_unfiltered (gdb_stdlog, "jit_unregister_code (%s)\n",
-			host_address_to_string (objfile));
-  delete objfile;
 }
 
 /* Look up the objfile with this code entry address.  */
@@ -1381,7 +1368,7 @@ jit_inferior_exit_hook (struct inferior *inf)
 	= (struct jit_objfile_data *) objfile_data (objf, jit_objfile_data);
 
       if (objf_data != NULL && objf_data->addr != 0)
-	jit_unregister_code (objf);
+	objf->unlink ();
     }
 }
 
@@ -1415,7 +1402,7 @@ jit_event_handler (struct gdbarch *gdbarch)
 			     "entry at address: %s\n"),
 			   paddress (gdbarch, entry_addr));
       else
-        jit_unregister_code (objf);
+        objf->unlink ();
 
       break;
     default:

@@ -1,3 +1,142 @@
+2019-12-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/25274
+	* config/tc-i386.c (optimize_encoding): Also check R12-R15
+	registers for "test $imm7, %r64/%r32/%r16 -> test $imm7, %r8"
+	optimization.
+	* testsuite/gas/i386/x86-64-optimize-3.s: Add tests for test
+	with r12.
+	* testsuite/gas/i386/x86-64-optimize-3.d: Updated.
+	* testsuite/gas/i386/x86-64-optimize-3b.d: Likewise.
+
+2019-12-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/gas/i386/align-branch-1.s: New file.
+	* testsuite/gas/i386/align-branch-1a.d: Likewise.
+	* testsuite/gas/i386/align-branch-1b.d: Likewise.
+	* testsuite/gas/i386/align-branch-1c.d: Likewise.
+	* testsuite/gas/i386/align-branch-1d.d: Likewise.
+	* testsuite/gas/i386/align-branch-1e.d: Likewise.
+	* testsuite/gas/i386/align-branch-1f.d: Likewise.
+	* testsuite/gas/i386/align-branch-1g.d: Likewise.
+	* testsuite/gas/i386/align-branch-1h.d: Likewise.
+	* testsuite/gas/i386/align-branch-2.s: Likewise.
+	* testsuite/gas/i386/align-branch-2a.d: Likewise.
+	* testsuite/gas/i386/align-branch-2b.d: Likewise.
+	* testsuite/gas/i386/align-branch-2c.d: Likewise.
+	* testsuite/gas/i386/align-branch-3.d: Likewise.
+	* testsuite/gas/i386/align-branch-3.s: Likewise.
+	* testsuite/gas/i386/align-branch-4.s: Likewise.
+	* testsuite/gas/i386/align-branch-4a.d: Likewise.
+	* testsuite/gas/i386/align-branch-4b.d: Likewise.
+	* testsuite/gas/i386/align-branch-5.d: Likewise.
+	* testsuite/gas/i386/align-branch-5.s: Likewise.
+	* testsuite/gas/i386/align-branch-6.d: Likewise.
+	* testsuite/gas/i386/align-branch-6.s: Likewise.
+	* testsuite/gas/i386/align-branch-7.d: Likewise.
+	* testsuite/gas/i386/align-branch-7.s: Likewise.
+	* testsuite/gas/i386/align-branch-8.d: Likewise.
+	* testsuite/gas/i386/align-branch-8.s: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1.s: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1a.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1b.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1c.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1d.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1e.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1f.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1g.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-1h.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-2.s: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-2a.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-2b.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-2c.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-3.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-3.s: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-4.s: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-4a.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-4b.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-5.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-6.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-7.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-7.s: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-8.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-8.s: Likewise.
+	* testsuite/gas/i386/i386.exp: Run new tests.
+
+2019-12-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (OPTION_MBRANCHES_WITH_32B_BOUNDARIES): New.
+	(md_longopts): Add -mbranches-within-32B-boundaries.
+	(md_parse_option): Handle -mbranches-within-32B-boundaries.
+	(md_show_usage): Add -mbranches-within-32B-boundaries.
+
+2019-12-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (_i386_insn): Add has_gotpc_tls_reloc.
+	(tls_get_addr): New.
+	(last_insn): New.
+	(align_branch_power): New.
+	(align_branch_kind): New.
+	(align_branch_bit): New.
+	(align_branch): New.
+	(MAX_FUSED_JCC_PADDING_SIZE): New.
+	(align_branch_prefix_size): New.
+	(BRANCH_PADDING): New.
+	(BRANCH_PREFIX): New.
+	(FUSED_JCC_PADDING): New.
+	(i386_generate_nops): Support BRANCH_PADDING and FUSED_JCC_PADDING.
+	(md_begin): Abort if align_branch_prefix_size <
+	MAX_FUSED_JCC_PADDING_SIZE.
+	(md_assemble): Set last_insn.
+	(maybe_fused_with_jcc_p): New.
+	(add_fused_jcc_padding_frag_p): New.
+	(add_branch_prefix_frag_p): New.
+	(add_branch_padding_frag_p): New.
+	(output_insn): Generate a BRANCH_PADDING, FUSED_JCC_PADDING or
+	BRANCH_PREFIX frag and terminate each frag to align branches.
+	(output_disp): Set i.has_gotpc_tls_reloc to TRUE for GOTPC and
+	relaxable TLS relocations.
+	(output_imm): Likewise.
+	(i386_next_non_empty_frag): New.
+	(i386_next_jcc_frag): New.
+	(i386_classify_machine_dependent_frag): New.
+	(i386_branch_padding_size): New.
+	(i386_generic_table_relax_frag): New.
+	(md_estimate_size_before_relax): Handle COND_JUMP_PADDING,
+	FUSED_JCC_PADDING and COND_JUMP_PREFIX frags.
+	(md_convert_frag): Handle BRANCH_PADDING, BRANCH_PREFIX and
+	FUSED_JCC_PADDING frags.
+	(OPTION_MALIGN_BRANCH_BOUNDARY): New.
+	(OPTION_MALIGN_BRANCH_PREFIX_SIZE): New.
+	(OPTION_MALIGN_BRANCH): New.
+	(md_longopts): Add -malign-branch-boundary=,
+	-malign-branch-prefix-size= and -malign-branch=.
+	(md_parse_option): Handle -malign-branch-boundary=,
+	-malign-branch-prefix-size= and -malign-branch=.
+	(md_show_usage): Display -malign-branch-boundary=,
+	-malign-branch-prefix-size= and -malign-branch=.
+	(i386_target_format): Set tls_get_addr.
+	(i386_cons_align): New.
+	* config/tc-i386.h (i386_cons_align): New.
+	(md_cons_align): New.
+	(i386_generic_table_relax_frag): New.
+	(md_generic_table_relax_frag): New.
+	(i386_tc_frag_data): Add u, padding_address, length,
+	max_prefix_length, prefix_length, default_prefix, cmp_size,
+	classified and branch_type.
+	(TC_FRAG_INIT): Initialize u, padding_address, length,
+	max_prefix_length, prefix_length, default_prefix, cmp_size,
+	classified and branch_type.
+	* doc/c-i386.texi: Document -malign-branch-boundary=,
+	-malign-branch= and -malign-branch-prefix-size=.
+
+2019-12-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* write.c (md_generic_table_relax_frag): New.  Defined to
+	relax_frag if not defined.
+	(relax_segment): Call md_generic_table_relax_frag instead of
+	relax_frag.
+
 2019-12-12  Alan Modra  <amodra@gmail.com>
 
 	* config/tc-aarch64.c (get_aarch64_insn): Avoid signed overflow.

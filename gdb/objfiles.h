@@ -28,12 +28,14 @@
 #include "registry.h"
 #include "gdb_bfd.h"
 #include "psymtab.h"
+#include <atomic>
 #include <bitset>
 #include <vector>
 #include "gdbsupport/next-iterator.h"
 #include "gdbsupport/safe-iterator.h"
 #include "bcache.h"
 #include "gdbarch.h"
+#include "gdbsupport/refcounted-object.h"
 
 struct htab;
 struct objfile_data;
@@ -394,8 +396,28 @@ private:
 
 struct objfile
 {
+private:
+
+  /* The only way to create an objfile is to call objfile::make.  */
   objfile (bfd *, const char *, objfile_flags);
+
+public:
+
+  /* Normally you should not call delete.  Instead, call 'unlink' to
+     remove it from the program space's list.  In some cases, you may
+     need to hold a reference to an objfile that is independent of its
+     existence on the program space's list; for this case, the
+     destructor must be public so that shared_ptr can reference
+     it.  */
   ~objfile ();
+
+  /* Create an objfile.  */
+  static objfile *make (bfd *bfd_, const char *name_, objfile_flags flags_,
+			objfile *parent = nullptr);
+
+  /* Remove an objfile from the current program space, and free
+     it.  */
+  void unlink ();
 
   DISABLE_COPY_AND_ASSIGN (objfile);
 
@@ -471,12 +493,6 @@ struct objfile
   }
 
 
-  /* All struct objfile's are chained together by their next pointers.
-     The program space field "objfiles"  (frequently referenced via
-     the macro "object_files") points to the first link in this chain.  */
-
-  struct objfile *next = nullptr;
-
   /* The object file's original name as specified by the user,
      made absolute, and tilde-expanded.  However, it is not canonicalized
      (i.e., it has not been passed through gdb_realpath).
@@ -502,7 +518,7 @@ struct objfile
 
   /* The partial symbol tables.  */
 
-  std::shared_ptr<psymtab_storage> partial_symtabs;
+  std::unique_ptr<psymtab_storage> partial_symtabs;
 
   /* The object file's BFD.  Can be null if the objfile contains only
      minimal symbols, e.g. the run time common symbols for SunOS4.  */
@@ -627,6 +643,20 @@ struct objfile
   htab_up static_links;
 };
 
+/* A deleter for objfile.  */
+
+struct objfile_deleter
+{
+  void operator() (objfile *ptr) const
+  {
+    ptr->unlink ();
+  }
+};
+
+/* A unique pointer that holds an objfile.  */
+
+typedef std::unique_ptr<objfile, objfile_deleter> objfile_up;
+
 /* Declarations for functions defined in objfiles.c */
 
 extern struct gdbarch *get_objfile_arch (const struct objfile *);
@@ -637,11 +667,7 @@ extern CORE_ADDR entry_point_address (void);
 
 extern void build_objfile_section_table (struct objfile *);
 
-extern void add_separate_debug_objfile (struct objfile *, struct objfile *);
-
 extern void free_objfile_separate_debug (struct objfile *);
-
-extern void free_all_objfiles (void);
 
 extern void objfile_relocate (struct objfile *, const struct section_offsets *);
 extern void objfile_rebase (struct objfile *, CORE_ADDR);
@@ -745,10 +771,6 @@ extern void default_iterate_over_objfiles_in_search_order
    want to die here.  Let the users of SECT_OFF_BSS deal with an
    uninitialized section index.  */
 #define SECT_OFF_BSS(objfile) (objfile)->sect_index_bss
-
-/* Answer whether there is more than one object file loaded.  */
-
-#define MULTI_OBJFILE_P() (object_files && object_files->next)
 
 /* Reset the per-BFD storage area on OBJ.  */
 

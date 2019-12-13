@@ -1,3 +1,148 @@
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* objfiles.h (struct objfile) <partial_symtabs>: Now a
+	unique_ptr.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* progspace.h (objfile_list): New typedef.
+	(class unwrapping_objfile_iterator)
+	(struct unwrapping_objfile_range): Newl
+	(struct program_space) <objfiles_range>: Change type.
+	<objfiles>: Change return type.
+	<add_objfile>: Change type of "objfile" parameter.
+	<objfiles_list>: Now a list of shared_ptr.
+	* progspace.c (program_space::add_objfile): Change type of
+	"objfile".  Update.
+	(program_space::remove_objfile): Update.
+	* objfiles.h (struct objfile) <~objfile>: Make public.
+	* objfiles.c (objfile::make): Update.
+	(objfile::unlink): Don't call delete.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (symbol_file_clear): Update.
+	* progspace.h (struct program_space) <free_all_objfiles>: Declare
+	method.
+	* progspace.c (program_space::free_all_objfiles): New method.
+	* objfiles.h (free_all_objfiles): Don't declare.
+	* objfiles.c (free_all_objfiles): Move to program_space.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* progspace.c (program_space::add_objfile)
+	(program_space::remove_objfile): Update.
+	(program_space::multi_objfile_p): Remove.
+	* objfiles.h (struct objfile) <next>: Remove.
+	* objfiles.c (objfile::objfile): Update.
+	(put_objfile_before): Update.
+	(unlink_objfile): Update.
+	* progspace.h (object_files): Remove.
+	(struct program_space) <objfiles_head>: Remove.
+	<objfiles_list>: New member.
+	<objfiles_range, objfiles_safe_range>: Change type.
+	(objfiles): Change return type.
+	(objfiles_safe): Update.
+	(multi_objfile_p): Rewrite and inline.
+	(object_files): Remove macro.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* gdbsupport/safe-iterator.h (basic_safe_iterator): Simplify.  Add
+	second constructor.
+	(basic_safe_range): New class.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* progspace.c (program_space::multi_objfile_p): New method.
+	* printcmd.c (info_symbol_command): Update.
+	* maint.c (maintenance_translate_address): Update.
+	* objfiles.h (MULTI_OBJFILE_P): Remove.
+	* progspace.h (struct program_space) <multi_objfile_p>: New
+	method.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* progspace.h (struct program_space) <remove_objfile>: Declare.
+	* progspace.c (program_space::remove_objfile): New method.
+	* objfiles.c (unlink_objfile): Remove.
+	(objfile::unlink): Call remove_objfile.
+	(objfile): Don't call unlink_objfile.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* progspace.h (struct program_space) <add_objfile>: Declare
+	method.
+	* progspace.c (program_space::add_objfile): New method.
+	* objfiles.c (~objfile): Don't unlink objfile.
+	(put_objfile_before): Remove.
+	(add_separate_debug_objfile): Don't call put_objfile_before.
+	(objfile::make): Call add_objfile.  Set new_objfiles_available on
+	the per-program-space data.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (syms_from_objfile_1): Use objfile_up.
+	(syms_from_objfile_1, remove_symbol_file_command): Call unlink
+	method.
+	(reread_symbols): Use objfile_up.
+	* solib.c (update_solib_list, reload_shared_libraries_1): Call
+	unlink method.
+	* objfiles.h (struct objfile) <~objfile>: Now private.
+	<unlink>: New method.
+	(struct objfile_deleter): New.
+	(objfile_up): New typedef.
+	* objfiles.c (objfile::unlink): New method.
+	(free_objfile_separate_debug, free_all_objfiles)
+	(objfile_purge_solibs): Use it.
+	* jit.c (jit_unregister_code): Remove.
+	(jit_inferior_exit_hook, jit_event_handler): Call unlink on
+	objfile.
+	* compile/compile-object-run.c (do_module_cleanup): Call unlink on
+	objfile.
+	* compile/compile-object-load.c (compile_object_load): Use
+	objfile_up.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (symbol_file_add_with_addrs): Pass "parent" to
+	objfile::make.
+	* objfiles.h (struct objjfile) <make>: No longer inline.
+	(add_separate_debug_objfile): Don't declare.
+	* objfiles.c (add_separate_debug_objfile): Now static.
+	(objfile::make): Move from objfiles.h.  Call
+	add_separate_debug_objfile.  Add "parent" parameter.
+
+2019-12-12  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (symbol_file_add_with_addrs): Use objfile::make.
+	* objfiles.h (struct objfile): Make constructor private.
+	<make>: New static method.
+	* jit.c (jit_object_close_impl): Update.
+
+2019-12-12  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (jit_reader_try_read_symtab): Replace xmalloc/xfree with
+	gdb::byte_vector.
+
+2019-12-12  Tom Tromey  <tromey@adacore.com>
+
+	* xml-support.c (xml_fetch_content_from_file): Don't call
+	malloc_failure.
+	* utils.h (class gdb_argv): Remove malloc_failure comment.
+	* utils.c (gdb_argv::reset): Don't call malloc_failure.
+
+2019-12-12  Tom Tromey  <tromey@adacore.com>
+
+	* Makefile.in (ALL_TARGET_OBS): Add riscv-ravenscar-thread.o.
+	(HFILES_NO_SRCDIR): Add riscv-ravenscar-thread.h.
+	(ALLDEPFILES): Add riscv-ravenscar-thread.c.
+	* configure.tgt (riscv-*-*): Add riscv-ravenscar-thread.o.
+	* riscv-ravenscar-thread.c: New file.
+	* riscv-ravenscar-thread.h: New file.
+	* riscv-tdep.c (riscv_gdbarch_init): Call
+	register_riscv_ravenscar_ops.
+
 2019-12-12  Tom Tromey  <tromey@adacore.com>
 
 	* gdbsupport/thread-pool.c (set_thread_name): Use

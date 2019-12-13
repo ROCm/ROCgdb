@@ -23,8 +23,10 @@
 #include "arch-utils.h"
 #include "gdbcore.h"
 #include "solib.h"
+#include "solist.h"
 #include "gdbthread.h"
 #include "inferior.h"
+#include <algorithm>
 
 /* The last program space number assigned.  */
 int last_program_space_num = 0;
@@ -151,6 +153,60 @@ program_space::~program_space ()
   clear_program_space_solib_cache (this);
     /* Discard any data modules have associated with the PSPACE.  */
   program_space_free_data (this);
+}
+
+/* See progspace.h.  */
+
+void
+program_space::free_all_objfiles ()
+{
+  struct so_list *so;
+
+  /* Any objfile reference would become stale.  */
+  for (so = master_so_list (); so; so = so->next)
+    gdb_assert (so->objfile == NULL);
+
+  while (!objfiles_list.empty ())
+    objfiles_list.front ()->unlink ();
+
+  clear_symtab_users (0);
+}
+
+/* See progspace.h.  */
+
+void
+program_space::add_objfile (std::shared_ptr<objfile> &&objfile,
+			    struct objfile *before)
+{
+  if (before == nullptr)
+    objfiles_list.push_back (std::move (objfile));
+  else
+    {
+      auto iter = std::find_if (objfiles_list.begin (), objfiles_list.end (),
+				[=] (const std::shared_ptr<::objfile> &objf)
+				{
+				  return objf.get () == before;
+				});
+      gdb_assert (iter != objfiles_list.end ());
+      objfiles_list.insert (iter, std::move (objfile));
+    }
+}
+
+/* See progspace.h.  */
+
+void
+program_space::remove_objfile (struct objfile *objfile)
+{
+  auto iter = std::find_if (objfiles_list.begin (), objfiles_list.end (),
+			    [=] (const std::shared_ptr<::objfile> &objf)
+			    {
+			      return objf.get () == objfile;
+			    });
+  gdb_assert (iter != objfiles_list.end ());
+  objfiles_list.erase (iter);
+
+  if (objfile == symfile_object_file)
+    symfile_object_file = NULL;
 }
 
 /* Copies program space SRC to DEST.  Copies the main executable file,

@@ -54,6 +54,7 @@
 #include "btrace.h"
 #include "gdbsupport/pathstuff.h"
 
+#include <algorithm>
 #include <vector>
 
 /* Keep a registry of per-objfile data-pointers required by other GDB
@@ -371,23 +372,6 @@ objfile::objfile (bfd *abfd, const char *name, objfile_flags flags_)
     }
 
   per_bfd = get_objfile_bfd_data (this, abfd);
-
-  /* Add this file onto the tail of the linked list of other such files.  */
-
-  if (object_files == NULL)
-    object_files = this;
-  else
-    {
-      struct objfile *last_one;
-
-      for (last_one = object_files;
-	   last_one->next;
-	   last_one = last_one->next);
-      last_one->next = this;
-    }
-
-  /* Rebuild section map next time we need it.  */
-  get_objfile_pspace_data (pspace)->new_objfiles_available = 1;
 }
 
 /* Retrieve the gdbarch associated with OBJFILE.  */
@@ -473,54 +457,9 @@ separate_debug_iterator::operator++ ()
   return *this;
 }
 
-/* Unlink OBJFILE from the list of known objfiles.  */
-
-static void
-unlink_objfile (struct objfile *objfile)
-{
-  struct objfile **objpp;
-
-  for (objpp = &object_files; *objpp != NULL; objpp = &((*objpp)->next))
-    {
-      if (*objpp == objfile)
-	{
-	  *objpp = (*objpp)->next;
-	  objfile->next = NULL;
-	  return;
-	}
-    }
-
-  internal_error (__FILE__, __LINE__,
-		  _("unlink_objfile: objfile already unlinked"));
-}
-
-/* Put one object file before a specified on in the global list.
-   This can be used to make sure an object file is destroyed before
-   another when using objfiles_safe to free all objfiles.  */
-static void
-put_objfile_before (struct objfile *objfile, struct objfile *before_this)
-{
-  struct objfile **objp;
-
-  unlink_objfile (objfile);
-  
-  for (objp = &object_files; *objp != NULL; objp = &((*objp)->next))
-    {
-      if (*objp == before_this)
-	{
-	  objfile->next = *objp;
-	  *objp = objfile;
-	  return;
-	}
-    }
-  
-  internal_error (__FILE__, __LINE__,
-		  _("put_objfile_before: before objfile not in list"));
-}
-
 /* Add OBJFILE as a separate debug objfile of PARENT.  */
 
-void
+static void
 add_separate_debug_objfile (struct objfile *objfile, struct objfile *parent)
 {
   gdb_assert (objfile && parent);
@@ -535,10 +474,35 @@ add_separate_debug_objfile (struct objfile *objfile, struct objfile *parent)
   objfile->separate_debug_objfile_backlink = parent;
   objfile->separate_debug_objfile_link = parent->separate_debug_objfile;
   parent->separate_debug_objfile = objfile;
+}
 
-  /* Put the separate debug object before the normal one, this is so that
-     usage of objfiles_safe will stay safe.  */
-  put_objfile_before (objfile, parent);
+/* See objfiles.h.  */
+
+objfile *
+objfile::make (bfd *bfd_, const char *name_, objfile_flags flags_,
+	       objfile *parent)
+{
+  objfile *result = new objfile (bfd_, name_, flags_);
+  if (parent != nullptr)
+    add_separate_debug_objfile (result, parent);
+
+  /* Using std::make_shared might be a bit nicer here, but that would
+     require making the constructor public.  */
+  current_program_space->add_objfile (std::shared_ptr<objfile> (result),
+				      parent);
+
+  /* Rebuild section map next time we need it.  */
+  get_objfile_pspace_data (current_program_space)->new_objfiles_available = 1;
+
+  return result;
+}
+
+/* See objfiles.h.  */
+
+void
+objfile::unlink ()
+{
+  current_program_space->remove_objfile (this);
 }
 
 /* Free all separate debug objfile of OBJFILE, but don't free OBJFILE
@@ -552,7 +516,7 @@ free_objfile_separate_debug (struct objfile *objfile)
   for (child = objfile->separate_debug_objfile; child;)
     {
       struct objfile *next_child = child->separate_debug_objfile_link;
-      delete child;
+      child->unlink ();
       child = next_child;
     }
 }
@@ -628,13 +592,6 @@ objfile::~objfile ()
   else
     delete per_bfd;
 
-  /* Remove it from the chain of all objfiles.  */
-
-  unlink_objfile (this);
-
-  if (this == symfile_objfile)
-    symfile_objfile = NULL;
-
   /* Before the symbol table code was redone to make it easier to
      selectively load and remove information particular to a specific
      linkage unit, gdb used to do these things whenever the monolithic
@@ -663,21 +620,6 @@ objfile::~objfile ()
   get_objfile_pspace_data (pspace)->section_map_dirty = 1;
 }
 
-/* Free all the object files at once and clean up their users.  */
-
-void
-free_all_objfiles (void)
-{
-  struct so_list *so;
-
-  /* Any objfile reference would become stale.  */
-  for (so = master_so_list (); so; so = so->next)
-    gdb_assert (so->objfile == NULL);
-
-  for (objfile *objfile : current_program_space->objfiles_safe ())
-    delete objfile;
-  clear_symtab_users (0);
-}
 
 /* A helper function for objfile_relocate1 that relocates a single
    symbol.  */
@@ -984,7 +926,7 @@ objfile_purge_solibs (void)
 	 be soon.  */
 
       if (!(objf->flags & OBJF_USERLOADED) && (objf->flags & OBJF_SHARED))
-	delete objf;
+	objf->unlink ();
     }
 }
 
