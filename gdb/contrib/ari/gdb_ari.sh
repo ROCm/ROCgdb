@@ -52,7 +52,7 @@ usage ()
 Error: $1
 
 Usage:
-    $0 --print-doc --print-idx -Wall -Werror -W<category> <file> ...
+    $0 --print-doc --print-idx -Wall -Werror -WCATEGORY FILE ...
 Options:
   --print-doc    Print a list of all potential problems, then exit.
   --print-idx    Include the problems IDX (index or key) in every message.
@@ -60,7 +60,8 @@ Options:
   -Werror        Treat all problems as errors.
   -Wall          Report all problems.
   -Wari          Report problems that should be fixed in new code.
-  -W<category>   Report problems in the specifed category.  Valid categories
+  -WCATEGORY     Report problems in the specifed category.  The category
+                 can be prefixed with "no-".  Valid categories
                  are: ${all}
 EOF
     exit 1
@@ -102,6 +103,10 @@ fi
 # Validate all errors and warnings.
 for w in ${warning} ${error}
 do
+    case "$w" in
+	no-*) w=`echo x$w | sed -e 's/xno-//'`;;
+    esac
+
     case " ${all} " in
     *" ${w} "* ) ;;
     * ) usage "Unknown option -W${w}" ;;
@@ -123,11 +128,19 @@ do
 done
 for w in ${warning}
 do
-    warnings="${warnings} warning[ari_${w}] = 1;"
+    val=1
+    case "$w" in
+	no-*) w=`echo x$w | sed -e 's/xno-//'`; val=0 ;;
+    esac
+    warnings="${warnings} warning[ari_${w}] = $val;"
 done
 for e in ${error}
 do
-    errors="${errors} error[ari_${e}]  = 1;"
+    val=1
+    case "$e" in
+	no-*) e=`echo x$e | sed -e 's/xno-//'`; val=0 ;;
+    esac
+    errors="${errors} error[ari_${e}]  = $val;"
 done
 
 if [ "$AWK" = "" ] ; then
@@ -574,22 +587,9 @@ Do not use strerror(), instead use safe_strerror()"
 BEGIN { doc["long long"] = "\
 Do not use `long long'\'', instead use LONGEST"
     category["long long"] = ari_code
-    # defs.h needs two such patterns for LONGEST and ULONGEST definitions
-    fix("long long", "gdb/defs.h", 2)
 }
 /(^|[^_[:alnum:]])long[[:space:]]+long([^_[:alnum:]]|$)/ {
     fail("long long")
-}
-
-BEGIN { doc["ATTRIBUTE_UNUSED"] = "\
-Do not use ATTRIBUTE_UNUSED, do not bother (GDB is compiled with -Werror and, \
-consequently, is not able to tolerate false warnings.  Since -Wunused-param \
-produces such warnings, neither that warning flag nor ATTRIBUTE_UNUSED \
-are used by GDB"
-    category["ATTRIBUTE_UNUSED"] = ari_regression
-}
-/(^|[^_[:alnum:]])ATTRIBUTE_UNUSED([^_[:alnum:]]|$)/ {
-    fail("ATTRIBUTE_UNUSED")
 }
 
 BEGIN { doc["ATTR_FORMAT"] = "\
@@ -619,21 +619,6 @@ Do not use NORETURN, use ATTRIBUTE_NORETURN instead"
 
 # General problems
 
-BEGIN { doc["multiple messages"] = "\
-Do not use multiple calls to warning or error, instead use a single call"
-    category["multiple messages"] = ari_gettext
-}
-FNR == 1 {
-    warning_fnr = -1
-}
-/(^|[^_[:alnum:]])(warning|error)[[:space:]]*\(/ {
-    if (FNR == warning_fnr + 1) {
-	fail("multiple messages")
-    } else {
-	warning_fnr = FNR
-    }
-}
-
 # Commented out, but left inside sources, just in case.
 # BEGIN { doc["inline"] = "\
 # Do not use the inline attribute; \
@@ -658,7 +643,6 @@ FNR == 1 {
 BEGIN { doc["abort"] = "\
 Do not use abort, instead use internal_error; GDB should never abort"
     category["abort"] = ari_regression
-    fix("abort", "gdb/utils.c", 3)
 }
 /(^|[^_[:alnum:]])abort[[:space:]]*\(/ {
     fail("abort")
@@ -822,7 +806,6 @@ get_frame_locals_address, or get_frame_args_address."
 BEGIN { doc["floatformat_to_double"] = "\
 Do not use floatformat_to_double() from libierty, \
 instead use floatformat_to_doublest()"
-    fix("floatformat_to_double", "gdb/doublest.c", 1)
     category["floatformat_to_double"] = ari_regression
 }
 /(^|[^_[:alnum:]])floatformat_to_double[[:space:]]*\(/ {
@@ -831,7 +814,7 @@ instead use floatformat_to_doublest()"
 
 BEGIN { doc["floatformat_from_double"] = "\
 Do not use floatformat_from_double() from libierty, \
-instead use floatformat_from_doublest()"
+instead use host_float_ops<T>::from_target()"
     category["floatformat_from_double"] = ari_regression
 }
 /(^|[^_[:alnum:]])floatformat_from_double[[:space:]]*\(/ {
@@ -1110,18 +1093,6 @@ Do not use strnicmp(), instead use strncasecmp()"
     fail("strnicmp")
 }
 
-# Boolean expressions and conditionals
-
-BEGIN { doc["boolean"] = "\
-Do not use `boolean'\'',  use `bool'\'' instead"
-    category["boolean"] = ari_regression
-}
-/(^|[^_[:alnum:]])boolean([^_[:alnum:]]|$)/ {
-    if (is_yacc_or_lex == 0) {
-       fail("boolean")
-    }
-}
-
 # Typedefs that are either redundant or can be reduced to `struct
 # type *''.
 # Must be placed before if assignment otherwise ARI exceptions
@@ -1141,20 +1112,6 @@ Do not use strlen dirent.d_name, instead use NAMELEN"
 }
 /(^|[^_[:alnum:]])strlen[[:space:]]*\(.*[^_[:alnum:]]d_name([^_[:alnum:]]|$)/ {
     fail("strlen d_name")
-}
-
-BEGIN { doc["var_boolean"] = "\
-Replace var_boolean with add_setshow_boolean_cmd"
-    category["var_boolean"] = ari_regression
-    fix("var_boolean", "gdb/command.h", 1)
-    # fix only uses the last directory level
-    fix("var_boolean", "cli/cli-decode.c", 2)
-}
-/(^|[^_[:alnum:]])var_boolean([^_[:alnum:]]|$)/ {
-    if (($0 !~ /(^|[^_[:alnum:]])case *var_boolean:/) \
-        && ($0 !~ /(^|[^_[:alnum:]])[=!]= *var_boolean/)) {
-	fail("var_boolean")
-    }
 }
 
 BEGIN { doc["generic_use_struct_convention"] = "\
