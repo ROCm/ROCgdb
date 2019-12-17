@@ -1,3 +1,54 @@
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* aarch64-dis.c (sign_extend): Return uint64_t.  Rewrite without
+	conditional.
+	(aarch64_ext_imm): Avoid signed overflow.
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* microblaze-dis.c (read_insn_microblaze): Avoid signed overflow.
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* nios2-dis.c (nios2_print_insn_arg): Avoid signed overflow
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* xstormy16-ibld.c: Regenerate.
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* score-dis.c (print_insn_score16): Move rpush/rpop imm field
+	value adjustment so that it doesn't affect reg field too.
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* crx-dis.c (EXTRACT, SBM): Avoid signed overflow.
+	(get_number_of_operands, getargtype, getbits, getregname),
+	(getcopregname, getprocregname, gettrapstring, getcinvstring),
+	(getregliststring, get_word_at_PC, get_words_at_PC, build_mask),
+	(powerof2, match_opcode, make_instruction, print_arguments),
+	(print_arg): Delete forward declarations, moving static to..
+	(getregname, getcopregname, getregliststring): ..these definitions.
+	(build_mask): Return unsigned int mask.
+	(match_opcode): Use unsigned int vars.
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* bfin-dis.c (fmtconst, fmtconst_val): Avoid signed overflow.
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* nds32-dis.c (print_insn16, print_insn32): Remove forward decls.
+	(struct objdump_disasm_info): Delete.
+	(nds32_parse_audio_ext, nds32_parse_opcode): Cast result of
+	N32_IMMS to unsigned before shifting left.
+
+2019-12-16  Alan Modra  <amodra@gmail.com>
+
+	* moxie-dis.c (INST2OFFSET): Don't left shift a signed value.
+	(print_insn_moxie): Remove unnecessary cast.
+
 2019-12-12  Alan Modra  <amodra@gmail.com>
 
 	* csky-dis.c (csky_chars_to_number): Remove abort and unnecessary

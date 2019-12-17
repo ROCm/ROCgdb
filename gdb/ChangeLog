@@ -1,3 +1,164 @@
+2019-12-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* infcmd.c (prepare_one_step): Step over skipped inline functions.
+	* infrun.c (inline_frame_is_marked_for_skip): New helper function.
+	(process_event_stop_test): Keep stepping over skipped inline functions.
+
+2019-12-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (struct gdb_block) <next>: Remove field.
+	(struct gdb_symtab) <~gdb_symtab>: Remove.
+	<blocks>: Change type to std::forward_list<gdb_block>.
+	(compare_block): Remove.
+	(jit_block_open_impl): Adjust to std::forward_list.  Place the new
+	block at the beginning, don't mind about sorting.
+	(finalize_symtab): Adjust to std::forward_list, sort the blocks list
+	before using it.
+
+2019-12-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (struct gdb_block): Add constructor, initialize
+	real_block and next fields.
+	<name>: Change type to gdb::unique_xmalloc_ptr.
+	(struct gdb_symtab) <~gdb_symtab>: Free blocks with delete.
+	(jit_block_open_impl): Allocate gdb_block with new.
+	(finalize_symtab): Adjust to gdb::unique_xmalloc_ptr.
+
+2019-12-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c: Include forward_list.
+	(struct gdb_symtab) <next>: Remove field.
+	(struct gdb_object) <symtabs>: Change type to
+	std::forward_list<gdb_symtab>.
+	(jit_object_open_impl): Allocate gdb_object with new.
+	(jit_symtab_open_impl): Adjust to std::forward_list.
+	(finalize_symtab): Don't delete symtab.
+	(jit_object_close_impl):  Adjust to std::forward_list.  Free
+	gdb_object with delete.
+
+2019-12-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (struct gdb_symtab): Add constructor, destructor,
+	initialize fields.
+	<linetable>: Change type to unique_xmalloc_ptr.
+	<file_name>: Change type to std::string.
+	(jit_symtab_open_impl): Allocate gdb_symtab with new.
+	(jit_symtab_line_mapping_add_impl): Adjust.
+	(finalize_symtab): Adjust, call delete on stab.
+
+2019-12-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (finalize_symtab): Set gdb_block_iter_tmp in loop.
+
+2019-12-16  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_nat_target::attach): Update.
+	* remote.c (extended_remote_target::attach): Update.
+	* procfs.c (procfs_target::attach): Update.
+	* nto-procfs.c (nto_procfs_target::attach): Update.
+	(nto_procfs_target::create_inferior): Update.
+	* inf-ptrace.c (inf_ptrace_target::attach): Update.
+	* gnu-nat.c (gnu_nat_target::attach): Update.
+	(gnu_nat_target::detach): Update.
+	* darwin-nat.c (darwin_nat_target::attach): Update.
+	* corefile.c (get_exec_file): Constify result.  Remove extraneous
+	return.
+	* bsd-kvm.c (bsd_kvm_target_open): Update.
+	* gdbsupport/common-inferior.h (get_exec_file): Constify result.
+
+2019-12-16  Christian Biesinger  <cbiesinger@google.com>
+
+	* gdbsupport/common-defs.h: Remove workaround for a gnulib bug
+	(we no longer need to include time.h before pathmax.h)
+
+2019-12-15  Christian Biesinger  <cbiesinger@google.com>
+
+	* ada-exp.y (write_ambiguous_var): Update.
+	* coffread.c (process_coff_symbol): Update.
+	* ctfread.c (ctf_add_enum_member_cb): Update.
+	(new_symbol): Update.
+	* dwarf2read.c (fixup_go_packaging): Update.
+	(new_symbol): Update.
+	* language.c (language_alloc_type_symbol): Update.
+	* mdebugread.c (new_symbol): Update.
+	* minsyms.c (minimal_symbol_reader::record_full): Update.
+	* psymtab.c (add_psymbol_to_bcache): Update.
+	* stabsread.c (define_symbol): Update.
+	(read_enum_type): Update.
+	* symtab.c (symbol_set_language): Make this a member function...
+	(general_symbol_info::set_language): ... here.
+	* symtab.h (struct general_symbol_info) <set_language>: New function.
+	(SYMBOL_SET_LANGUAGE): Remove.
+	(symbol_set_language): Remove.
+
+2019-12-15  Christian Biesinger  <cbiesinger@google.com>
+
+	* ada-lang.c (ada_add_block_symbols): Update.
+	(ada_collect_symbol_completion_matches): Update.
+	* ax-gdb.c (gen_expr): Update.
+	* block.c (block_lookup_symbol): Update.
+	(block_lookup_symbol_primary): Update.
+	(block_find_symbol): Update.
+	* cp-namespace.c (cp_lookup_symbol_imports_or_template): Update.
+	* dbxread.c (process_one_symbol): Update.
+	* dictionary.c (insert_symbol_hashed): Update.
+	(collate_pending_symbols_by_language): Update.
+	(mdict_add_symbol): Update.
+	* dwarf-index-write.c (write_psymbols): Update.
+	* dwarf2read.c (fixup_go_packaging): Update.
+	* findvar.c (read_var_value): Update.
+	* ft32-tdep.c (ft32_skip_prologue): Update.
+	* go-lang.c (go_symbol_package_name): Update.
+	* language.h (scoped_switch_to_sym_language_if_auto::
+	scoped_switch_to_sym_language_if_auto): Update.
+	* linespec.c (find_method): Update.
+	(find_label_symbols_in_block): Update.
+	* mdebugread.c (parse_symbol): Update.
+	* mi/mi-cmd-stack.c (list_arg_or_local): Update.
+	* minsyms.c (add_minsym_to_demangled_hash_table): Update.
+	(minimal_symbol_reader::install): Update.
+	* moxie-tdep.c (moxie_skip_prologue): Update.
+	* parse.c (parse_exp_in_context): Update.
+	* psymtab.c (psymbol_name_matches): Update.
+	(match_partial_symbol): Update.
+	(lookup_partial_symbol): Update.
+	(psymbol_hash): Update.
+	(psymbol_compare): Update.
+	* python/py-framefilter.c (extract_sym): Update.
+	(py_print_single_arg): Update.
+	* stabsread.c (define_symbol): Update.
+	* stack.c (print_frame_arg): Update.
+	(find_frame_funname): Update.
+	(info_frame_command_core): Update.
+	* symfile.c (set_initial_language): Update.
+	* symtab.c (symbol_set_demangled_name): Update.
+	(symbol_get_demangled_name): Update.
+	(symbol_set_language): Update.
+	(symbol_find_demangled_name): Update.
+	(symbol_set_names): Update.
+	(general_symbol_info::natural_name): Update.
+	(general_symbol_info::demangled_name): Update.
+	(general_symbol_info::search_name): Update.
+	(symbol_matches_search_name): Update.
+	(eq_symbol_entry): Update.
+	(iterate_over_symbols): Update.
+	(completion_list_add_symbol): Update.
+	(completion_list_add_msymbol): Update.
+	(completion_list_add_fields): Update.
+	* symtab.h (struct general_symbol_info) <language>: New function.
+	<language>: Rename to...
+	<m_language>: ...this.
+	(SYMBOL_LANGUAGE): Remove.
+	(MSYMBOL_LANGUAGE): Remove.
+	(struct symbol) <ctor>: Update.
+	* xstormy16-tdep.c (xstormy16_skip_prologue): Update.
+
+2019-12-15  Christian Biesinger  <cbiesinger@google.com>
+
+	* ada-exp.y (write_ambiguous_var): Call symbol_set_language to
+	set the language of sym.
+	* language.c (language_alloc_type_symbol): Likewise.
+
 2019-12-14  Sergio Durigan Junior  <sergiodj@redhat.com>
 
 	https://bugzilla.redhat.com/show_bug.cgi?id=1728147

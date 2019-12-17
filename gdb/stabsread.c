@@ -700,8 +700,8 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
       SYMBOL_LINE (sym) = 0;	/* unknown */
     }
 
-  SYMBOL_SET_LANGUAGE (sym, get_current_subfile ()->language,
-		       &objfile->objfile_obstack);
+  sym->set_language (get_current_subfile ()->language,
+		     &objfile->objfile_obstack);
 
   if (is_cplus_marker (string[0]))
     {
@@ -740,7 +740,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
     normal:
       std::string new_name;
 
-      if (SYMBOL_LANGUAGE (sym) == language_cplus)
+      if (sym->language () == language_cplus)
 	{
 	  char *name = (char *) alloca (p - string + 1);
 
@@ -758,7 +758,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
 	SYMBOL_SET_NAMES (sym, gdb::string_view (string, p - string), true,
 			  objfile);
 
-      if (SYMBOL_LANGUAGE (sym) == language_cplus)
+      if (sym->language () == language_cplus)
 	cp_scan_for_anonymous_namespaces (get_buildsym_compunit (), sym,
 					  objfile);
 
@@ -1225,7 +1225,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
          This is important to do, because of forward references:
          The cleanup of undefined types stored in undef_types only uses
          STRUCT_DOMAIN symbols to perform the replacement.  */
-      synonym = (SYMBOL_LANGUAGE (sym) == language_ada && p[-2] != 'T');
+      synonym = (sym->language () == language_ada && p[-2] != 'T');
 
       /* Typedef */
       SYMBOL_TYPE (sym) = read_type (&p, objfile);
@@ -3638,8 +3638,8 @@ read_enum_type (const char **pp, struct type *type,
 
       sym = allocate_symbol (objfile);
       sym->set_linkage_name (name);
-      SYMBOL_SET_LANGUAGE (sym, get_current_subfile ()->language,
-			   &objfile->objfile_obstack);
+      sym->set_language (get_current_subfile ()->language,
+			 &objfile->objfile_obstack);
       SYMBOL_ACLASS_INDEX (sym) = LOC_CONST;
       SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
       SYMBOL_VALUE (sym) = n;
