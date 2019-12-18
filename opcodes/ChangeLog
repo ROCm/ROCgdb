@@ -1,3 +1,36 @@
+2019-12-17  Alan Modra  <amodra@gmail.com>
+
+	* visium-dis.c (print_insn_visium): Avoid signed overflow.
+
+2019-12-17  Alan Modra  <amodra@gmail.com>
+
+	* aarch64-opc.c (value_fit_signed_field_p): Avoid signed overflow.
+	(value_fit_unsigned_field_p): Likewise.
+	(aarch64_wide_constant_p): Likewise.
+	(operand_general_constraint_met_p): Likewise.
+	* aarch64-opc.h (aarch64_wide_constant_p): Update prototype.
+
+2019-12-17  Alan Modra  <amodra@gmail.com>
+
+	* nds32-dis.c (nds32_mask_opcode): Avoid signed overflow.
+	(print_insn_nds32): Use uint64_t for "given" and "given1".
+
+2019-12-17  Alan Modra  <amodra@gmail.com>
+
+	* tic80-dis.c: Delete file.
+	* tic80-opc.c: Delete file.
+	* disassemble.c: Remove tic80 support.
+	* disassemble.h: Likewise.
+	* Makefile.am: Likewise.
+	* configure.ac: Likewise.
+	* Makefile.in: Regenerate.
+	* configure: Regenerate.
+	* po/POTFILES.in: Regenerate.
+
+2019-12-17  Alan Modra  <amodra@gmail.com>
+
+	* bpf-ibld.c: Regenerate.
+
 2019-12-16  Alan Modra  <amodra@gmail.com>
 
 	* aarch64-dis.c (sign_extend): Return uint64_t.  Rewrite without
