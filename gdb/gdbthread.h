@@ -251,7 +251,6 @@ public:
   /* Mark this thread as running and notify observers.  */
   void set_running (bool running);
 
-  struct thread_info *next = NULL;
   ptid_t ptid;			/* "Actual process id";
 				    In fact, this may be overloaded with 
 				    kernel thread id, etc.  */
@@ -429,13 +428,20 @@ extern struct thread_info *add_thread_silent (ptid_t ptid);
 extern struct thread_info *add_thread_with_info (ptid_t ptid,
 						 struct private_thread_info *);
 
-/* Delete an existing thread list entry.  */
+/* Delete an existing thread, removing the entry from its inferior's thread
+   map.  */
 extern void delete_thread (struct thread_info *thread);
+
+/* Like the above, but don't remove the entry from the inferior thread map.  */
+extern void delete_thread_noremove(struct thread_info *thread);
 
 /* Delete an existing thread list entry, and be quiet about it.  Used
    after the process this thread having belonged to having already
    exited, for example.  */
 extern void delete_thread_silent (struct thread_info *thread);
+
+/* Like the above, but don't remove the entry from the inferior thread map.  */
+extern void delete_thread_silent_noremove (thread_info *thread);
 
 /* Delete a step_resume_breakpoint from the thread database.  */
 extern void delete_step_resume_breakpoint (struct thread_info *);

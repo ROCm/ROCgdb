@@ -148,8 +148,8 @@ delete_inferior (struct inferior *todel)
   if (!inf)
     return;
 
-  for (thread_info *tp : inf->threads_safe ())
-    delete_thread_silent (tp);
+  for (thread_info *tp : inf->threads ())
+    delete_thread_silent_noremove (tp);
 
   if (infprev)
     infprev->next = inf->next;
@@ -180,13 +180,15 @@ exit_inferior_1 (struct inferior *inftoex, int silent)
   if (!inf)
     return;
 
-  for (thread_info *tp : inf->threads_safe ())
+  for (thread_info *tp : inf->threads ())
     {
       if (silent)
-	delete_thread_silent (tp);
+	delete_thread_silent_noremove (tp);
       else
-	delete_thread (tp);
+	delete_thread_noremove (tp);
     }
+
+  inf->thread_map.clear ();
 
   gdb::observers::inferior_exit.notify (inf);
 
@@ -590,7 +592,7 @@ inferior_command (const char *args, int from_tty)
     {
       if (inf != current_inferior ())
 	{
-	  thread_info *tp = any_thread_of_inferior (inf);
+	  thread_info *tp = first_thread_of_inferior (inf);
 	  if (tp == NULL)
 	    error (_("Inferior has no threads."));
 

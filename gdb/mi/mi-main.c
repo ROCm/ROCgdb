@@ -252,15 +252,6 @@ proceed_thread (struct thread_info *thread, int pid)
   proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
 }
 
-static int
-proceed_thread_callback (struct thread_info *thread, void *arg)
-{
-  int pid = *(int *)arg;
-
-  proceed_thread (thread, pid);
-  return 0;
-}
-
 static void
 exec_continue (char **argv, int argc)
 {
@@ -286,7 +277,24 @@ exec_continue (char **argv, int argc)
 
 	      pid = inf->pid;
 	    }
-	  iterate_over_threads (proceed_thread_callback, &pid);
+
+	  /* Proceed the threads in global number order.  This is not necessary,
+	     it's just to avoid breaking some tests like gdb.mi/mi-nsintrall.exp
+	     that expect the *running notifications in that order.  In the end,
+	     we should instead fix the test to accept the notifications in any
+	     order.  */
+	  std::vector<thread_info *> threads;
+	  for (thread_info *tp : all_threads ())
+	    threads.push_back (tp);
+
+	  std::sort (threads.begin (), threads.end (),
+		     [] (thread_info *a, thread_info *b)
+		     {
+		       return a->global_num < b->global_num;
+		     });
+
+	  for (thread_info *tp : threads)
+	    proceed_thread (tp, pid);
 	}
       else
 	{

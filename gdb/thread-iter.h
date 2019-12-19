@@ -22,6 +22,7 @@
 #include "gdbsupport/filtered-iterator.h"
 #include "gdbsupport/next-iterator.h"
 #include "gdbsupport/safe-iterator.h"
+#include "thread-map.h"
 
 /* A forward iterator that iterates over a given inferior's
    threads.  */
@@ -50,10 +51,10 @@ public:
 
   /* Create a one-past-end iterator.  */
   all_threads_iterator ()
-    : m_thr (nullptr)
+    : m_inf (nullptr)
   {}
 
-  thread_info *operator* () const { return m_thr; }
+  thread_info *operator* () const;
 
   all_threads_iterator &operator++ ()
   {
@@ -62,20 +63,34 @@ public:
   }
 
   bool operator== (const all_threads_iterator &other) const
-  { return m_thr == other.m_thr; }
+  {
+    if (m_inf != other.m_inf)
+      return false;
+
+    /* Inferiors of both iterators are equal.  */
+    if (m_inf == NULL) {
+	/* They are both ended iterators.  */
+	return true;
+    } else {
+	/* Do they both point to the same thread?  */
+	return m_thr_iter == other.m_thr_iter;
+    }
+  }
 
   bool operator!= (const all_threads_iterator &other) const
-  { return m_thr != other.m_thr; }
+  {
+    return !(*this == other);
+  }
 
 private:
   /* Advance to the next thread.  */
   void advance ();
 
 private:
-  /* The current inferior and thread.  M_THR is NULL if we reached the
+  /* The current inferior and thread.  M_INF is NULL if we reached the
      end of the threads list of the last inferior.  */
   inferior *m_inf;
-  thread_info *m_thr;
+  ptid_thread_map::const_iterator m_thr_iter;
 };
 
 /* Iterate over all threads that match a given PTID.  */
@@ -97,11 +112,10 @@ public:
   /* Create a one-past-end iterator.  */
   all_matching_threads_iterator ()
     : m_inf (nullptr),
-      m_thr (nullptr),
       m_filter_ptid (minus_one_ptid)
   {}
 
-  thread_info *operator* () const { return m_thr; }
+  thread_info *operator* () const;
 
   all_matching_threads_iterator &operator++ ()
   {
@@ -110,10 +124,24 @@ public:
   }
 
   bool operator== (const all_matching_threads_iterator &other) const
-  { return m_thr == other.m_thr; }
+  {
+    if (m_inf != other.m_inf)
+      return false;
+
+    /* Inferiors of both iterators are equal.  */
+    if (m_inf == NULL) {
+	/* They are both ended iterators.  */
+	return true;
+    } else {
+	/* Do they both point to the same thread?  */
+	return m_thr_iter == other.m_thr_iter;
+    }
+  }
 
   bool operator!= (const all_matching_threads_iterator &other) const
-  { return m_thr != other.m_thr; }
+  {
+    return !(* this == other);
+  }
 
 private:
   /* Advance to next thread, skipping filtered threads.  */
@@ -128,7 +156,7 @@ private:
   inferior *m_inf;
 
   /* The current thread.  */
-  thread_info *m_thr;
+  ptid_thread_map::const_iterator m_thr_iter;
 
   /* The filter.  */
   ptid_t m_filter_ptid;

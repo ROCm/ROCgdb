@@ -55,6 +55,7 @@ struct thread_info;
 
 #include "gdbsupport/common-inferior.h"
 #include "gdbthread.h"
+#include "thread-map.h"
 
 struct infcall_suspend_state;
 struct infcall_control_state;
@@ -343,7 +344,7 @@ public:
   struct inferior *next = NULL;
 
   /* This inferior's thread list.  */
-  thread_info *thread_list = nullptr;
+  ptid_thread_map thread_map;
 
   /* Returns a range adapter covering the inferior's threads,
      including exited threads.  Used like this:
@@ -351,8 +352,8 @@ public:
        for (thread_info *thr : inf->threads ())
 	 { .... }
   */
-  inf_threads_range threads ()
-  { return inf_threads_range (this->thread_list); }
+  all_thread_map_range threads ()
+  { return all_thread_map_range (this->thread_map); }
 
   /* Returns a range adapter covering the inferior's non-exited
      threads.  Used like this:
@@ -360,19 +361,8 @@ public:
        for (thread_info *thr : inf->non_exited_threads ())
 	 { .... }
   */
-  inf_non_exited_threads_range non_exited_threads ()
-  { return inf_non_exited_threads_range (this->thread_list); }
-
-  /* Like inferior::threads(), but returns a range adapter that can be
-     used with range-for, safely.  I.e., it is safe to delete the
-     currently-iterated thread, like this:
-
-     for (thread_info *t : inf->threads_safe ())
-       if (some_condition ())
-	 delete f;
-  */
-  inline safe_inf_threads_range threads_safe ()
-  { return safe_inf_threads_range (this->thread_list); }
+  non_exited_thread_map_range non_exited_threads ()
+  { return non_exited_thread_map_range (this->thread_map); }
 
   /* Convenient handle (GDB inferior id).  Unique across all
      inferiors.  */

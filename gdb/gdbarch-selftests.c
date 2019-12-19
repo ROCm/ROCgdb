@@ -86,9 +86,7 @@ register_to_value_test (struct gdbarch *gdbarch)
   mock_inferior.gdbarch = gdbarch;
   mock_inferior.aspace = &mock_aspace;
   thread_info mock_thread (&mock_inferior, mock_ptid);
-
-  scoped_restore restore_thread_list
-    = make_scoped_restore (&mock_inferior.thread_list, &mock_thread);
+  mock_inferior.thread_map[mock_ptid] = &mock_thread;
 
   /* Add the mock inferior to the inferior list so that look ups by
      target+ptid can find it.  */

@@ -27,8 +27,13 @@ all_threads_iterator::all_threads_iterator (begin_t)
 {
   /* Advance M_INF/M_THR to the first thread's position.  */
   for (m_inf = inferior_list; m_inf != NULL; m_inf = m_inf->next)
-    if ((m_thr = m_inf->thread_list) != NULL)
-      return;
+    {
+      if (!m_inf->thread_map.empty())
+	{
+	  this->m_thr_iter = m_inf->thread_map.cbegin ();
+	  return;
+	}
+    }
 }
 
 /* See thread-iter.h.  */
@@ -43,14 +48,22 @@ all_threads_iterator::advance ()
 
   for (; m_inf != NULL; m_inf = m_inf->next)
     {
-      m_thr = m_inf->thread_list;
-      while (m_thr != NULL)
+      m_thr_iter = m_inf->thread_map.cbegin ();
+      while (m_thr_iter != m_inf->thread_map.cend ())
 	{
 	  return;
 	start:
-	  m_thr = m_thr->next;
+	  ++m_thr_iter;
 	}
     }
+}
+
+thread_info *all_threads_iterator::operator* () const
+{
+  gdb_assert (m_inf != NULL);
+  gdb_assert (m_thr_iter != m_inf->thread_map.cend ());
+
+  return m_thr_iter->second;
 }
 
 /* See thread-iter.h.  */
@@ -68,12 +81,19 @@ all_matching_threads_iterator::all_matching_threads_iterator
   (ptid_t filter_ptid)
   : m_filter_ptid (filter_ptid)
 {
-  m_thr = nullptr;
   for (m_inf = inferior_list; m_inf != NULL; m_inf = m_inf->next)
-    if (m_inf_matches ())
-      for (m_thr = m_inf->thread_list; m_thr != NULL; m_thr = m_thr->next)
-	if (m_thr->ptid.matches (m_filter_ptid))
-	  return;
+    {
+      if (!m_inf->thread_map.empty () && m_inf_matches ())
+	{
+	  for (m_thr_iter = m_inf->thread_map.cbegin ();
+	       m_thr_iter != m_inf->thread_map.cend ();
+	       m_thr_iter++)
+	    {
+	      if (m_thr_iter->second->ptid.matches (m_filter_ptid))
+		return;
+	    }
+	}
+    }
 }
 
 /* See thread-iter.h.  */
@@ -89,13 +109,20 @@ all_matching_threads_iterator::advance ()
   for (; m_inf != NULL; m_inf = m_inf->next)
     if (m_inf_matches ())
       {
-	m_thr = m_inf->thread_list;
-	while (m_thr != NULL)
+	m_thr_iter = m_inf->thread_map.cbegin ();
+	while (m_thr_iter != m_inf->thread_map.cend ())
 	  {
-	    if (m_thr->ptid.matches (m_filter_ptid))
+	    if (m_thr_iter->second->ptid.matches (m_filter_ptid))
 	      return;
 	  start:
-	    m_thr = m_thr->next;
+	    ++m_thr_iter;
 	  }
       }
+}
+
+thread_info *all_matching_threads_iterator::operator* () const
+{
+  gdb_assert (m_inf != nullptr);
+
+  return m_thr_iter->second;
 }
