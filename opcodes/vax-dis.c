@@ -240,8 +240,18 @@ print_insn_mode (const char *d,
         (*info->fprintf_func) (info->stream, "$0x%x", mode);
       break;
     case 0x40: /* Index:			base-addr[Rn] */
-      p += print_insn_mode (d, size, p0 + 1, addr + 1, info);
-      (*info->fprintf_func) (info->stream, "[%s]", reg_names[reg]);
+      {
+	unsigned char *q = p0 + 1;
+	unsigned char nextmode = NEXTBYTE (q);
+	if (nextmode < 0x60 || nextmode == 0x8f)
+	  /* Literal, index, register, or immediate is invalid.  In
+	     particular don't recurse into another index mode which
+	     might overflow the_buffer.   */
+	  (*info->fprintf_func) (info->stream, "[invalid base]");
+	else
+	  p += print_insn_mode (d, size, p0 + 1, addr + 1, info);
+	(*info->fprintf_func) (info->stream, "[%s]", reg_names[reg]);
+      }
       break;
     case 0x50: /* Register:			Rn */
       (*info->fprintf_func) (info->stream, "%s", reg_names[reg]);
@@ -440,7 +450,8 @@ print_insn_vax (bfd_vma memaddr, disassemble_info *info)
       int offset;
 
       FETCH_DATA (info, buffer + 4);
-      offset = buffer[3] << 24 | buffer[2] << 16 | buffer[1] << 8 | buffer[0];
+      offset = ((unsigned) buffer[3] << 24 | buffer[2] << 16
+		| buffer[1] << 8 | buffer[0]);
       (*info->fprintf_func) (info->stream, ".long 0x%08x", offset);
 
       return 4;
