@@ -53,9 +53,9 @@ if ![runto_main] {
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
-# Check rocm info devices
+# Check info agents
 # vega10 56 sample output "1  43:00.0  vega10      4              56            4       10"
-gdb_test_sequence "info rocm devices" "info rocm devices" {
+gdb_test_sequence "info agents" "info agents" {
     {Id\s+PCI Slot\s+Device Name\s+Shader Engines\s+Compute Units\s+SIMD/CU\s+Wavefronts/SIMD}
     {\d\s+\d+:\d+\.\d\s+\w+\d+\s+\d+\s+\d+\s+\d+\s+\d}
 }
