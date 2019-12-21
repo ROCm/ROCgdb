@@ -258,28 +258,26 @@ tui_locator_window::set_locator_fullname (const char *fullname)
 
 bool
 tui_locator_window::set_locator_info (struct gdbarch *gdbarch_in,
-				      const char *fullname,
-				      const char *procname, 
-				      int lineno,
-				      CORE_ADDR addr_in)
+				      const struct symtab_and_line &sal,
+				      const char *procname)
 {
   bool locator_changed_p = false;
 
-  if (procname == NULL)
-    procname = "";
+  gdb_assert (procname != NULL);
 
-  if (fullname == NULL)
-    fullname = "";
+  const char *fullname = (sal.symtab == nullptr
+			  ? "??"
+			  : symtab_to_fullname (sal.symtab));
 
   locator_changed_p |= proc_name != procname;
-  locator_changed_p |= lineno != line_no;
-  locator_changed_p |= addr_in != addr;
+  locator_changed_p |= sal.line != line_no;
+  locator_changed_p |= sal.pc != addr;
   locator_changed_p |= gdbarch_in != gdbarch;
   locator_changed_p |= full_name != fullname;
 
   proc_name = procname;
-  line_no = lineno;
-  addr = addr_in;
+  line_no = sal.line;
+  addr = sal.pc;
   gdbarch = gdbarch_in;
   set_locator_fullname (fullname);
 
@@ -288,20 +286,25 @@ tui_locator_window::set_locator_info (struct gdbarch *gdbarch_in,
 
 /* Update only the full_name portion of the locator.  */
 void
-tui_update_locator_fullname (const char *fullname)
+tui_update_locator_fullname (struct symtab *symtab)
 {
   struct tui_locator_window *locator = tui_locator_win_info_ptr ();
 
+  const char *fullname;
+  if (symtab != nullptr)
+    fullname = symtab_to_fullname (symtab);
+  else
+    fullname = "??";
   locator->set_locator_fullname (fullname);
 }
 
 /* Function to print the frame information for the TUI.  The windows are
    refreshed only if frame information has changed since the last refresh.
 
-   Return 1 if frame information has changed (and windows subsequently
-   refreshed), 0 otherwise.  */
+   Return true if frame information has changed (and windows
+   subsequently refreshed), false otherwise.  */
 
-int
+bool
 tui_show_frame_info (struct frame_info *fi)
 {
   bool locator_changed_p;
@@ -309,57 +312,45 @@ tui_show_frame_info (struct frame_info *fi)
 
   if (fi)
     {
-      CORE_ADDR pc;
-
       symtab_and_line sal = find_frame_sal (fi);
 
-      const char *fullname = nullptr;
-      if (sal.symtab != nullptr)
-	fullname = symtab_to_fullname (sal.symtab);
-
-      if (get_frame_pc_if_available (fi, &pc))
-	locator_changed_p
-	  = locator->set_locator_info (get_frame_arch (fi),
-				       (sal.symtab == 0
-					? "??" : fullname),
-				       tui_get_function_from_frame (fi),
-				       sal.line,
-				       pc);
+      const char *func_name;
+      /* find_frame_sal does not always set PC, but we want to ensure
+	 that it is available in the SAL.  */
+      if (get_frame_pc_if_available (fi, &sal.pc))
+	func_name = tui_get_function_from_frame (fi);
       else
-	locator_changed_p
-	  = locator->set_locator_info (get_frame_arch (fi),
-				       "??", _("<unavailable>"), sal.line, 0);
+	func_name = _("<unavailable>");
+
+      locator_changed_p = locator->set_locator_info (get_frame_arch (fi),
+						     sal, func_name);
 
       /* If the locator information has not changed, then frame information has
 	 not changed.  If frame information has not changed, then the windows'
 	 contents will not change.  So don't bother refreshing the windows.  */
       if (!locator_changed_p)
-	return 0;
+	return false;
 
       for (struct tui_source_window_base *win_info : tui_source_windows ())
 	{
-	  win_info->maybe_update (fi, sal, locator->line_no, locator->addr);
+	  win_info->maybe_update (fi, sal);
 	  win_info->update_exec_info ();
 	}
-
-      return 1;
     }
   else
     {
-      locator_changed_p
-	= locator->set_locator_info (NULL, NULL, NULL, 0, (CORE_ADDR) 0);
+      symtab_and_line sal {};
+
+      locator_changed_p = locator->set_locator_info (NULL, sal, "");
 
       if (!locator_changed_p)
-	return 0;
+	return false;
 
       for (struct tui_source_window_base *win_info : tui_source_windows ())
-	{
-	  win_info->erase_source_content ();
-	  win_info->update_exec_info ();
-	}
-
-      return 1;
+	win_info->erase_source_content ();
     }
+
+  return true;
 }
 
 void

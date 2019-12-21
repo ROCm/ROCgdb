@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Ensure that "list" will switch to the source view.
+# Ensure that "list" before starting the TUI will affect the view.
 
 load_lib "tuiterm.exp"
 
@@ -24,14 +24,11 @@ if {[build_executable "failed to prepare" ${testfile} ${srcfile}] == -1} {
 }
 
 Term::clean_restart 24 80 $testfile
+
+gdb_test "list main"
+
 if {![Term::enter_tui]} {
     unsupported "TUI not supported"
 }
 
 Term::check_contents "initial source listing" "21 *return 0"
-
-Term::command "layout asm"
-Term::check_contents "asm window shows main" "$hex <main>"
-
-Term::command "list main"
-Term::check_contents "list main" "21 *return 0"

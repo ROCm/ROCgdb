@@ -44,9 +44,7 @@ struct tui_disasm_window : public tui_source_window_base
 
   bool location_matches_p (struct bp_location *loc, int line_no) override;
 
-  void maybe_update (struct frame_info *fi, symtab_and_line sal,
-		     int line_no, CORE_ADDR addr)
-    override;
+  void maybe_update (struct frame_info *fi, symtab_and_line sal) override;
 
   void erase_source_content () override
   {
@@ -57,10 +55,8 @@ protected:
 
   void do_scroll_vertical (int num_to_scroll) override;
 
-  enum tui_status set_contents
-    (struct gdbarch *gdbarch,
-     struct symtab *s,
-     struct tui_line_or_address line_or_addr) override;
+  bool set_contents (struct gdbarch *gdbarch,
+		     const struct symtab_and_line &sal) override;
 
 private:
   /* Answer whether a particular line number or address is displayed
@@ -68,8 +64,6 @@ private:
   bool addr_is_displayed (CORE_ADDR addr) const;
 };
 
-extern void tui_show_disassem (struct gdbarch *, CORE_ADDR);
-extern void tui_show_disassem_and_update_source (struct gdbarch *, CORE_ADDR);
 extern void tui_get_begin_asm_address (struct gdbarch **, CORE_ADDR *);
 
 #endif /* TUI_TUI_DISASM_H */

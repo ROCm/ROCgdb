@@ -1,3 +1,29 @@
+2019-12-20  Simon Marchi  <simon.marchi@efficios.com>
+
+	* lib/sym-info-cmds.exp (GDBInfoSymbols::check_no_entry): Add
+	(another) quote in test name.
+
+2019-12-20  Simon Marchi  <simon.marchi@efficios.com>
+
+	* lib/sym-info-cmds.exp (GDBInfoModuleSymbols::check_no_entry):
+	Add quote in test name.
+
+2019-12-20  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.cp/pass-by-ref.cc: Delete.  Generated in the output
+	directory instead.
+	* gdb.cp/pass-by-ref.exp: Extend with more cases.
+	* gdb.cp/pass-by-ref-2.cc: New file.
+	* gdb.cp/pass-by-ref-2.exp: New file.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* gdb.tui/list-before.exp: New file.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* gdb.tui/list.exp: Check for source on initial listing.
+
 2019-12-11  Tom Tromey  <tromey@adacore.com>
 
 	* gdb.xml/tdesc-arch.exp (set_arch): Add "trans_mode" parameter.

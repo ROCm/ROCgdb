@@ -49,26 +49,19 @@ struct tui_source_window : public tui_source_window_base
 
   bool showing_source_p (const char *filename) const;
 
-  void maybe_update (struct frame_info *fi, symtab_and_line sal,
-		     int line_no, CORE_ADDR addr)
-    override;
+  void maybe_update (struct frame_info *fi, symtab_and_line sal) override;
 
   void erase_source_content () override
   {
     do_erase_source_content (_("[ No Source Available ]"));
   }
 
-  void show_symtab_source (struct gdbarch *, struct symtab *,
-			   struct tui_line_or_address);
-
 protected:
 
   void do_scroll_vertical (int num_to_scroll) override;
 
-  enum tui_status set_contents
-    (struct gdbarch *gdbarch,
-     struct symtab *s,
-     struct tui_line_or_address line_or_addr) override;
+  bool set_contents (struct gdbarch *gdbarch,
+		     const struct symtab_and_line &sal) override;
 
 private:
 

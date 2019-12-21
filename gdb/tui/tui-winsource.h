@@ -87,10 +87,8 @@ protected:
 
   void rerender () override;
 
-  virtual enum tui_status set_contents
-    (struct gdbarch *gdbarch,
-     struct symtab *s,
-     struct tui_line_or_address line_or_addr) = 0;
+  virtual bool set_contents (struct gdbarch *gdbarch,
+			     const struct symtab_and_line &sal) = 0;
 
 public:
 
@@ -109,15 +107,12 @@ public:
 
   /* Update the window to display the given location.  Does nothing if
      the location is already displayed.  */
-  virtual void maybe_update (struct frame_info *fi, symtab_and_line sal,
-			     int line_no, CORE_ADDR addr) = 0;
+  virtual void maybe_update (struct frame_info *fi, symtab_and_line sal) = 0;
 
   void update_source_window_as_is  (struct gdbarch *gdbarch,
-				    struct symtab *s,
-				    struct tui_line_or_address line_or_addr);
+				    const struct symtab_and_line &sal);
   void update_source_window (struct gdbarch *gdbarch,
-			     struct symtab *s,
-			     struct tui_line_or_address line_or_addr);
+			     const struct symtab_and_line &sal);
 
   /* Scan the source window and the breakpoints to update the
      break_mode information for each line.  Returns true if something
@@ -232,8 +227,7 @@ extern void tui_update_all_breakpoint_info (struct breakpoint *being_deleted);
 /* Function to display the "main" routine.  */
 extern void tui_display_main (void);
 extern void tui_update_source_windows_with_addr (struct gdbarch *, CORE_ADDR);
-extern void tui_update_source_windows_with_line (struct symtab *, 
-						 int);
+extern void tui_update_source_windows_with_line (struct symtab_and_line sal);
 
 /* Extract some source text from PTR.  LINE_NO is the line number.  If
    it is positive, it is printed at the start of the line.  FIRST_COL

@@ -513,6 +513,8 @@ tui_enable (void)
 
   if (deprecated_safe_get_selected_frame ())
     tui_show_frame_info (deprecated_safe_get_selected_frame ());
+  else
+    tui_display_main ();
 
   /* Restore TUI keymap.  */
   tui_set_key_mode (tui_current_key_mode);
@@ -625,18 +627,6 @@ tui_reset (void)
   mode.sg_flags |= XTABS | ECHO | CRMOD | ANYP;
 }
 #endif
-
-void
-tui_show_source (const char *fullname, int line)
-{
-  struct symtab_and_line cursal = get_current_source_symtab_and_line ();
-
-  /* Make sure that the source window is displayed.  */
-  tui_add_win_to_layout (SRC_WIN);
-
-  tui_update_source_windows_with_line (cursal.symtab, line);
-  tui_update_locator_fullname (fullname);
-}
 
 void
 tui_show_assembly (struct gdbarch *gdbarch, CORE_ADDR addr)

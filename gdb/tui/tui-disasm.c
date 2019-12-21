@@ -198,10 +198,9 @@ tui_find_disassembly_address (struct gdbarch *gdbarch, CORE_ADDR pc, int from)
 }
 
 /* Function to set the disassembly window's content.  */
-enum tui_status
+bool
 tui_disasm_window::set_contents (struct gdbarch *arch,
-				 struct symtab *s,
-				 struct tui_line_or_address line_or_addr)
+				 const struct symtab_and_line &sal)
 {
   int i;
   int offset = horizontal_offset;
@@ -211,10 +210,9 @@ tui_disasm_window::set_contents (struct gdbarch *arch,
   int tab_len = tui_tab_width;
   int insn_pos;
 
-  gdb_assert (line_or_addr.loa == LOA_ADDRESS);
-  CORE_ADDR pc = line_or_addr.u.addr;
+  CORE_ADDR pc = sal.pc;
   if (pc == 0)
-    return TUI_FAILURE;
+    return false;
 
   gdbarch = arch;
   start_line_or_addr.loa = LOA_ADDRESS;
@@ -251,85 +249,37 @@ tui_disasm_window::set_contents (struct gdbarch *arch,
       src->line_or_addr.u.addr = asm_lines[i].addr;
       src->is_exec_point = asm_lines[i].addr == cur_pc;
     }
-  return TUI_SUCCESS;
+  return true;
 }
 
-
-/* Function to display the disassembly window with disassembled code.  */
-void
-tui_show_disassem (struct gdbarch *gdbarch, CORE_ADDR start_addr)
-{
-  struct symtab *s = find_pc_line_symtab (start_addr);
-  struct tui_win_info *win_with_focus = tui_win_with_focus ();
-  struct tui_line_or_address val;
-
-  gdb_assert (TUI_DISASM_WIN != nullptr && TUI_DISASM_WIN->is_visible ());
-
-  val.loa = LOA_ADDRESS;
-  val.u.addr = start_addr;
-  TUI_DISASM_WIN->update_source_window (gdbarch, s, val);
-
-  /* If the focus was in the src win, put it in the asm win, if the
-     source view isn't split.  */
-  if (tui_current_layout () != SRC_DISASSEM_COMMAND 
-      && win_with_focus == TUI_SRC_WIN)
-    tui_set_win_focus_to (TUI_DISASM_WIN);
-}
-
-
-/* Function to display the disassembly window.  */
-void
-tui_show_disassem_and_update_source (struct gdbarch *gdbarch,
-				     CORE_ADDR start_addr)
-{
-  struct symtab_and_line sal;
-
-  tui_show_disassem (gdbarch, start_addr);
-  if (tui_current_layout () == SRC_DISASSEM_COMMAND)
-    {
-      struct tui_line_or_address val;
-
-      /* Update what is in the source window if it is displayed too,
-         note that it follows what is in the disassembly window and
-         visa-versa.  */
-      sal = find_pc_line (start_addr, 0);
-      val.loa = LOA_LINE;
-      val.u.line_no = sal.line;
-      TUI_SRC_WIN->update_source_window (gdbarch, sal.symtab, val);
-      if (sal.symtab)
-	{
-	  set_current_source_symtab_and_line (sal);
-	  tui_update_locator_fullname (symtab_to_fullname (sal.symtab));
-	}
-      else
-	tui_update_locator_fullname ("?");
-    }
-}
 
 void
 tui_get_begin_asm_address (struct gdbarch **gdbarch_p, CORE_ADDR *addr_p)
 {
   struct tui_locator_window *locator;
   struct gdbarch *gdbarch = get_current_arch ();
-  CORE_ADDR addr;
+  CORE_ADDR addr = 0;
 
   locator = tui_locator_win_info_ptr ();
 
   if (locator->addr == 0)
     {
-      struct bound_minimal_symbol main_symbol;
+      if (have_full_symbols () || have_partial_symbols ())
+	{
+	  set_default_source_symtab_and_line ();
+	  struct symtab_and_line sal = get_current_source_symtab_and_line ();
 
-      /* Find address of the start of program.
-         Note: this should be language specific.  */
-      main_symbol = lookup_minimal_symbol ("main", NULL, NULL);
-      if (main_symbol.minsym == 0)
-        main_symbol = lookup_minimal_symbol ("MAIN", NULL, NULL);
-      if (main_symbol.minsym == 0)
-        main_symbol = lookup_minimal_symbol ("_start", NULL, NULL);
-      if (main_symbol.minsym)
-        addr = BMSYMBOL_VALUE_ADDRESS (main_symbol);
-      else
-        addr = 0;
+	  if (sal.symtab != nullptr)
+	    find_line_pc (sal.symtab, sal.line, &addr);
+	}
+
+      if (addr == 0)
+	{
+	  struct bound_minimal_symbol main_symbol
+	    = lookup_minimal_symbol (main_name (), nullptr, nullptr);
+	  if (main_symbol.minsym != nullptr)
+	    addr = BMSYMBOL_VALUE_ADDRESS (main_symbol);
+	}
     }
   else				/* The target is executing.  */
     {
@@ -374,17 +324,17 @@ tui_disasm_window::do_scroll_vertical (int num_to_scroll)
   if (!content.empty ())
     {
       CORE_ADDR pc;
-      struct tui_line_or_address val;
 
-      pc = content[0].line_or_addr.u.addr;
+      pc = start_line_or_addr.u.addr;
       if (num_to_scroll >= 0)
 	num_to_scroll++;
       else
 	--num_to_scroll;
 
-      val.loa = LOA_ADDRESS;
-      val.u.addr = tui_find_disassembly_address (gdbarch, pc, num_to_scroll);
-      update_source_window_as_is (gdbarch, NULL, val);
+      symtab_and_line sal {};
+      sal.pspace = current_program_space;
+      sal.pc = tui_find_disassembly_address (gdbarch, pc, num_to_scroll);
+      update_source_window_as_is (gdbarch, sal);
     }
 }
 
@@ -414,31 +364,33 @@ tui_disasm_window::addr_is_displayed (CORE_ADDR addr) const
 }
 
 void
-tui_disasm_window::maybe_update (struct frame_info *fi, symtab_and_line sal,
-				 int line_no, CORE_ADDR addr)
+tui_disasm_window::maybe_update (struct frame_info *fi, symtab_and_line sal)
 {
   CORE_ADDR low;
 
-  if (find_pc_partial_function (get_frame_pc (fi),
-				NULL, &low, NULL) == 0)
+  struct gdbarch *frame_arch = get_frame_arch (fi);
+
+  if (find_pc_partial_function (sal.pc, NULL, &low, NULL) == 0)
     {
       /* There is no symbol available for current PC.  There is no
 	 safe way how to "disassemble backwards".  */
-      low = get_frame_pc (fi);
+      low = sal.pc;
     }
   else
-    low = tui_get_low_disassembly_address (get_frame_arch (fi),
-					   low, get_frame_pc (fi));
+    low = tui_get_low_disassembly_address (frame_arch, low, sal.pc);
 
   struct tui_line_or_address a;
 
   a.loa = LOA_ADDRESS;
   a.u.addr = low;
-  if (!addr_is_displayed (addr))
-    update_source_window (get_frame_arch (fi), sal.symtab, a);
+  if (!addr_is_displayed (sal.pc))
+    {
+      sal.pc = low;
+      update_source_window (frame_arch, sal);
+    }
   else
     {
-      a.u.addr = addr;
+      a.u.addr = sal.pc;
       set_is_exec_point_at (a);
     }
 }

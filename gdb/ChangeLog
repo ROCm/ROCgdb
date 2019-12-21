@@ -1,3 +1,284 @@
+2019-12-20  Weimin Pan  <weimin.pan@oracle.com>
+	* ctfread.c (ctf_file_key): Change type to objfile_key.
+	(struct ctf_context): Remove typedef.
+	(get_objfile_text_range): Use ANOFFSET to get text base.
+
+2019-12-20  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* dwarf2read.c (is_valid_DW_AT_calling_convention_for_subroutine):
+	New function.
+	(read_subroutine_type): Validate the parsed
+	DW_AT_calling_convention value before assigning it to a
+	subroutine's calling_convention attribute.
+	* gdbtypes.h (struct func_type) <calling_convention>: Use
+	an enum bitfield as its type, instead of plain unsigned.
+
+2019-12-20  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	PR gdb/25054
+	* infcall.c (call_function_by_hand_dummy): Update the argument-
+	passing section for call-by-value parameters.
+	(struct destructor_info): New struct.
+	(call_destructors): New auxiliary function.
+
+2019-12-20  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gnu-v3-abi.c (enum definition_style): New enum type.
+	(get_def_style): New function.
+	(is_user_provided_def): New function.
+	(is_implicit_def): New function.
+	(is_copy_or_move_constructor_type): New function.
+	(is_copy_constructor_type): New function.
+	(is_move_constructor_type): New function.
+	(gnuv3_pass_by_reference): Collect language_pass_by_ref_info
+	for a given type.
+
+2019-12-20  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* language.h (struct language_pass_by_ref_info): New struct.
+	(struct language_defn)<la_pass_by_reference>: Change the signature
+	to return a language_pass_by_ref_info instead of an int.
+	(language_pass_by_reference): Ditto.
+	(default_pass_by_reference): Ditto.
+	Adjust the users listed below.
+	* arch-utils.c (default_return_in_first_hidden_param_p):
+	Update.
+	* cp-abi.c (cp_pass_by_reference): Update.
+	* cp-abi.h (cp_pass_by_reference): Update declaration.
+	(struct cp_abi_ops)<pass_by_reference>: Update.
+	* gnu-v3-abi.c (gnuv3_pass_by_reference): Update.
+	* infcall.c (call_function_by_hand_dummy): Update.
+	* language.c (language_pass_by_reference): Update.
+	(default_pass_by_reference): Update.
+	* tic6x-tdep.c (tic6x_return_value): Update.
+
+2019-12-20  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* dwarf2read.c (dwarf2_add_member_fn): Read the DW_AT_defaulted
+	and DW_AT_deleted attributes of a function.
+	(read_structure_type): Read the DW_AT_calling_convention attribute
+	of a type.
+	(is_valid_DW_AT_defaulted): New function.
+	(is_valid_DW_AT_calling_convention_for_type): New function.
+	* gdbtypes.h: Include dwarf2.h.
+	(struct fn_field)<defaulted>: New field to store the
+	DW_AT_defaulted attribute.
+	(struct fn_field)<is_deleted>: New field to store the
+	DW_AT_deleted attribute.
+	(struct cplus_struct_type)<calling_convention>: New field to store
+	the DW_AT_calling_convention attribute.
+	(TYPE_FN_FIELD_DEFAULTED): New macro.
+	(TYPE_FN_FIELD_DELETED): New macro.
+	(TYPE_CPLUS_CALLING_CONVENTION): New macro.
+	* gdbtypes.c (dump_fn_fieldlists): Update for the changes made
+	to the .h file.
+	(print_cplus_stuff): Likewise.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_show_source): Remove.
+	* tui/tui.h (tui_show_source): Don't declare.
+	* tui/tui-out.c (tui_ui_out::do_field_string): Don't call
+	tui_show_source.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-stack.h (tui_show_frame_info): Return bool.
+	* tui/tui-stack.c (tui_show_frame_info): Return bool.
+	* tui/tui-hooks.c (tui_refresh_frame_and_register_information):
+	Update.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	PR tui/18932:
+	* tui/tui-hooks.c (tui_refresh_frame_and_register_information):
+	Rename parameters.  Handle the not-from-stack-frame case.
+	(from_stack, from_source_symtab): New globals.
+	(tui_before_prompt, tui_normal_stop): Update.
+	(tui_context_changed, tui_symtab_changed): New functions.
+	(tui_attach_detach_observers): Attach new observers.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* source.c (struct current_source_location) <set, symtab, line>:
+	New methods.
+	<m_symtab, m_line>: Rename.  Now private.
+	(get_current_source_symtab_and_line)
+	(set_default_source_symtab_and_line)
+	(set_current_source_symtab_and_line)
+	(clear_current_source_symtab_and_line, select_source_symtab)
+	(info_source_command, print_source_lines_base)
+	(info_line_command, search_command_helper): Update.
+	* observable.h (current_source_symtab_and_line_changed): Declare
+	observable.
+	* observable.c (current_source_symtab_and_line_changed): Define
+	observable.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-hooks.c (tui_before_prompt): Change parameter to bool.
+	(tui_before_prompt, tui_normal_stop): Update.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c
+	(tui_source_window_base::update_source_window_as_is): Don't call
+	set_current_source_symtab_and_line.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-stack.h (struct tui_locator_window) <set_locator_info>:
+	Take a symtab_and_line.
+	* tui/tui-stack.c (tui_locator_window::set_locator_info): Take a
+	symtab_and_line.
+	(tui_show_frame_info): Update.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-stack.c (tui_show_frame_info): Don't call
+	update_exec_info.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_enable): Call tui_display_main.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-disasm.c (tui_get_begin_asm_address): Use
+	get_current_source_symtab_and_line, and main_name.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_show_source): Update.
+	* tui/tui-winsource.h (tui_update_source_windows_with_line): Update.
+	* tui/tui-winsource.c (tui_update_source_windows_with_line): Take
+	a symtab_symbol_info, not a separate symtab and line.  Simplify.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c (tui_update_source_windows_with_addr):
+	Simplify.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.h (struct tui_source_window_base)
+	<set_contents, update_source_window_as_is, update_source_window>:
+	Take a sal, not a separate symtab and tui_line_or_address.
+	* tui/tui-winsource.c (tui_source_window_base::update_source_window)
+	(tui_source_window_base::update_source_window_as_is): Take a sal,
+	not a separate symtab and tui_line_or_address.
+	(tui_update_source_windows_with_addr)
+	(tui_update_source_windows_with_line)
+	(tui_source_window_base::rerender)
+	(tui_source_window_base::refill): Update.
+	* tui/tui-source.h (struct tui_source_window) <set_contents>: Take
+	a sal, not a separate symtab and tui_line_or_address.
+	* tui/tui-source.c (tui_source_window::set_contents): Take a sal,
+	not a separate symtab and tui_line_or_address.
+	(tui_source_window::maybe_update): Update.
+	* tui/tui-disasm.h (struct tui_disasm_window) <set_contents>: Take
+	a sal, not a separate symtab and tui_line_or_address.
+	* tui/tui-disasm.c (tui_disasm_window::set_contents): Take a sal,
+	not a separate symtab and tui_line_or_address.
+	(tui_disasm_window::do_scroll_vertical)
+	(tui_disasm_window::maybe_update): Update.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c (tui_source_window_base::refill): Use
+	start_line_or_addr.
+	* tui/tui-source.c (tui_source_window::do_scroll_vertical): Use
+	start_line_or_addr.
+	* tui/tui-disasm.c (tui_disasm_window::do_scroll_vertical): Use
+	start_line_or_addr.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.h (struct tui_source_window_base)
+	<set_contents>: Return bool.
+	* tui/tui-winsource.c
+	(tui_source_window_base::update_source_window_as_is): Update.
+	* tui/tui-source.h (struct tui_source_window) <set_contents>:
+	Return bool.
+	* tui/tui-source.c (tui_source_window::set_contents): Return
+	bool.  Simplify.
+	* tui/tui-disasm.h (struct tui_disasm_window) <set_contents>:
+	Return bool.
+	* tui/tui-disasm.c (tui_disasm_window::set_contents): Return
+	bool.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c (tui_update_source_windows_with_addr)
+	(tui_update_source_windows_with_line): Call update_source_window.
+	* tui/tui-source.h (struct tui_source_window)
+	<show_symtab_source>: Don't declare.
+	* tui/tui-source.c (tui_source_window::show_symtab_source):
+	Remove.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c (tui_update_source_windows_with_addr): Call
+	update_source_window directly.
+	* tui/tui-disasm.h (tui_show_disassem): Don't declare.
+	* tui/tui-disasm.c (tui_show_disassem): Remove.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c
+	(tui_source_window_base::update_source_window_as_is): Don't switch focus.
+	* tui/tui-disasm.c (tui_show_disassem): Don't switch focus.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.h (struct tui_source_window_base)
+	<maybe_update>: Remove line_no and addr parameters.
+	* tui/tui-stack.c (tui_show_frame_info): Set PC on sal.  Update.
+	* tui/tui-source.h (struct tui_source_window) <maybe_update>:
+	Update.
+	* tui/tui-source.c (tui_source_window::maybe_update): Remove
+	line_no and addr parameters.
+	* tui/tui-disasm.h (struct tui_disasm_window) <maybe_update>:
+	Update.
+	* tui/tui-disasm.c (tui_disasm_window::maybe_update): Remove
+	line_no and addr parameters.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c (tui_source_window_base::set_is_exec_point_at)
+	(tui_source_window_base::update_breakpoint_info): Remove asserts.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c (tui_update_source_windows_with_addr): Call
+	tui_show_disassem.
+	* tui/tui-disasm.h (tui_show_disassem_and_update_source): Don't
+	declare.
+	* tui/tui-disasm.c (tui_show_disassem_and_update_source): Remove.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.h (tui_show_source): Remove parameters.
+	* tui/tui.c (tui_show_source): Remove parameters.
+	* tui/tui-out.c (tui_ui_out::do_field_string): Update.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_show_source): Update.
+	* tui/tui-winsource.c (tui_display_main): Update.
+	* tui/tui-stack.h (tui_update_locator_fullname): Change parameter
+	to symtab.
+	* tui/tui-stack.c (tui_update_locator_fullname): Change parameter
+	to symtab.
+	* tui/tui-disasm.c (tui_show_disassem_and_update_source): Update.
+
+2019-12-20  Tom Tromey  <tom@tromey.com>
+
+	PR tui/23619:
+	* tui/tui-io.c (tui_rl_saved_prompt): Remove.
+	(tui_redisplay_readline): Use rl_display_prompt.
+	(tui_prep_terminal): Update.
+
 2019-12-19  Christian Biesinger  <cbiesinger@google.com>
 
 	* configure: Regenerate.

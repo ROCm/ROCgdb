@@ -54,9 +54,8 @@ struct tui_locator_window : public tui_gen_win_info
      Returns true if any of the locator's fields were actually
      changed, and false otherwise.  */
   bool set_locator_info (struct gdbarch *gdbarch,
-			 const char *fullname,
-			 const char *procname,
-			 int lineno, CORE_ADDR addr);
+			 const struct symtab_and_line &sal,
+			 const char *procname);
 
   /* Set the full_name portion of the locator.  */
   void set_locator_fullname (const char *fullname);
@@ -77,8 +76,8 @@ private:
   std::string make_status_line () const;
 };
 
-extern void tui_update_locator_fullname (const char *);
+extern void tui_update_locator_fullname (struct symtab *symtab);
 extern void tui_show_locator_content (void);
-extern int tui_show_frame_info (struct frame_info *);
+extern bool tui_show_frame_info (struct frame_info *);
 
 #endif /* TUI_TUI_STACK_H */
