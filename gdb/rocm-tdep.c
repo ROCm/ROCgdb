@@ -440,11 +440,11 @@ rocm_target_ops::pid_to_str (ptid_t ptid)
              AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
              sizeof (wave_in_group), &wave_in_group)
              != AMD_DBGAPI_STATUS_SUCCESS)
-    return "ROCm Thread";
+    return "AMDGPU Thread";
   else
     {
-      static char buf[32];
-      xsnprintf (buf, sizeof (buf), "ROCm Thread %ld.%ld (%d,%d,%d)/%d",
+      static char buf[64];
+      xsnprintf (buf, sizeof (buf), "AMDGPU Thread %ld.%ld (%d,%d,%d)/%d",
                  dispatch_id.handle, wave_id.handle, group_ids[2],
                  group_ids[1], group_ids[0], wave_in_group);
       return buf;
