@@ -303,7 +303,8 @@ amdgcn_rocm_displaced_step_fixup (struct gdbarch *gdbarch,
       closure->process_id, closure->wave_id, closure->displaced_stepping_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"), status);
+    error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"),
+           status);
 
   /* We may have written some registers, so flush the register cache.  */
   registers_changed_ptid (regcache->ptid ());
@@ -322,9 +323,9 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
       (gdb_byte *)xmalloc (instruction_size));
 
   instruction_size
-      = target_read (current_top_target (), TARGET_OBJECT_MEMORY, NULL,
+      = target_read (current_top_target (), TARGET_OBJECT_CODE_MEMORY, NULL,
                      buffer.get (), memaddr, instruction_size);
-  if (!instruction_size)
+  if (instruction_size == TARGET_XFER_E_IO || instruction_size == 0)
     {
       (*di->memory_error_func) (-1, memaddr, di);
       return -1;
@@ -582,8 +583,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   gdb_byte *breakpoint_instruction_bytes;
   if (amd_dbgapi_architecture_get_info (
           architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION,
-          sizeof (breakpoint_instruction_bytes),
-          &breakpoint_instruction_bytes)
+          sizeof (breakpoint_instruction_bytes), &breakpoint_instruction_bytes)
       != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_architecture_get_info failed"));
 
