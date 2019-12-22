@@ -76,10 +76,10 @@ struct rocm_notify_shared_library_info
 struct rocm_inferior_info
 {
   /* The amd_dbgapi_process_id for this inferior.  */
-  amd_dbgapi_process_id_t process_id;
+  amd_dbgapi_process_id_t process_id{ AMD_DBGAPI_PROCESS_NONE };
 
   /* The amd_dbgapi_notifier_t for this inferior.  */
-  amd_dbgapi_notifier_t notifier;
+  amd_dbgapi_notifier_t notifier{ -1 };
 
   /* True if commit_resume should all-start the GPU queues.  */
   bool commit_resume_all_start;
@@ -1210,7 +1210,8 @@ rocm_target_inferior_exit (struct inferior *inf)
 
   amd_dbgapi_deactivated.notify ();
 
-  delete_file_handler (info->notifier);
+  if (info->notifier != -1)
+    delete_file_handler (info->notifier);
 
   amd_dbgapi_process_detach (info->process_id);
 
