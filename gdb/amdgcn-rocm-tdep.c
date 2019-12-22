@@ -303,7 +303,7 @@ amdgcn_rocm_displaced_step_fixup (struct gdbarch *gdbarch,
       closure->process_id, closure->wave_id, closure->displaced_stepping_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d"), status);
+    error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"), status);
 
   /* We may have written some registers, so flush the register cache.  */
   registers_changed_ptid (regcache->ptid ());

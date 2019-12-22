@@ -35,7 +35,7 @@
 #include <functional>
 #include <string>
 
-#define ROCM_DSO_NAME_PREFIX "ROCm-supplied DSO [loaded from memory "
+#define ROCM_DSO_NAME_PREFIX "AMDGPU shared object [loaded from memory "
 
 #define ROCM_DSO_NAME_SUFFIX "]"
 
