@@ -250,6 +250,7 @@ get_rocm_inferior_info (struct inferior *inferior)
   if (!info)
     {
       info = XCNEW (struct rocm_inferior_info);
+      info->notifier = -1;
       info->breakpoint_map
           = new std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
                      struct breakpoint *>;
@@ -1225,7 +1226,8 @@ rocm_target_inferior_exit (struct inferior *inf)
 
   amd_dbgapi_deactivated.notify ();
 
-  delete_file_handler (info->notifier);
+  if (info->notifier != -1)
+    delete_file_handler (info->notifier);
 
   amd_dbgapi_process_detach (info->process_id);
 
