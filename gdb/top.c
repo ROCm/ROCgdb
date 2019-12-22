@@ -1474,7 +1474,7 @@ This GDB was configured as follows:\n\
 "));
 #else
     fprintf_filtered (stream, _("\
-             --without-babeltrace\n\
+             --without-babeltrace\n		\
 "));
 #endif
 #if HAVE_LIBIPT
@@ -1493,6 +1493,15 @@ This GDB was configured as follows:\n\
 #else
     fprintf_filtered (stream, _("\
              --without-mpfr\n\
+"));
+#endif
+#if HAVE_LIBXXHASH
+    fprintf_filtered (stream, _("\
+             --with-xxhash\n\
+"));
+#else
+    fprintf_filtered (stream, _("\
+             --without-xxhash\n\
 "));
 #endif
 #ifdef WITH_PYTHON_PATH
