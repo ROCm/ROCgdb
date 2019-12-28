@@ -151,8 +151,6 @@ tui_source_window::do_scroll_vertical (int num_to_scroll)
       const std::vector<off_t> *offsets;
       if (g_source_cache.get_line_charpos (s, &offsets)
 	  && l.u.line_no > offsets->size ())
-	/* line = s->nlines - win_info->content_size + 1; */
-	/* elz: fix for dts 23398.  */
 	l.u.line_no = start_line_or_addr.u.line_no;
       if (l.u.line_no <= 0)
 	l.u.line_no = 1;
@@ -193,7 +191,7 @@ tui_source_window::line_is_displayed (int line) const
 void
 tui_source_window::maybe_update (struct frame_info *fi, symtab_and_line sal)
 {
-  int start_line = (sal.line - (viewport_height / 2)) + 1;
+  int start_line = (sal.line - ((height - 2) / 2)) + 1;
   if (start_line <= 0)
     start_line = 1;
 

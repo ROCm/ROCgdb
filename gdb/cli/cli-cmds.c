@@ -1339,7 +1339,9 @@ print_disassembly (struct gdbarch *gdbarch, const char *name,
 		   gdb_disassembly_flags flags)
 {
 #if defined(TUI)
-  if (!tui_is_window_visible (DISASSEM_WIN))
+  if (tui_is_window_visible (DISASSEM_WIN))
+    tui_show_assembly (gdbarch, low);
+  else
 #endif
     {
       printf_filtered ("Dump of assembler code ");
@@ -1369,12 +1371,6 @@ print_disassembly (struct gdbarch *gdbarch, const char *name,
 	}
       printf_filtered ("End of assembler dump.\n");
     }
-#if defined(TUI)
-  else
-    {
-      tui_show_assembly (gdbarch, low);
-    }
-#endif
 }
 
 /* Subroutine of disassemble_command to simplify it.

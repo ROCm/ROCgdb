@@ -182,6 +182,7 @@ static char *parse_insn (char *, char *);
 static char *parse_operands (char *, const char *);
 static void swap_operands (void);
 static void swap_2_operands (int, int);
+static enum flag_code i386_addressing_mode (void);
 static void optimize_imm (void);
 static void optimize_disp (void);
 static const insn_template *match_template (char);
@@ -5883,51 +5884,50 @@ match_template (char mnem_suffix)
 	    break;
 	}
 
-      /* Address size prefix will turn Disp64/Disp32/Disp16 operand
-	 into Disp32/Disp16/Disp32 operand.  */
-      if (i.prefix[ADDR_PREFIX] != 0)
-	  {
-	    /* There should be only one Disp operand.  */
-	    switch (flag_code)
+      if (!t->opcode_modifier.jump
+	  || t->opcode_modifier.jump == JUMP_ABSOLUTE)
+	{
+	  /* There should be only one Disp operand.  */
+	  for (j = 0; j < MAX_OPERANDS; j++)
+	    if (operand_type_check (operand_types[j], disp))
+	      break;
+	  if (j < MAX_OPERANDS)
 	    {
-	    case CODE_16BIT:
-	      for (j = 0; j < MAX_OPERANDS; j++)
+	      bfd_boolean override = (i.prefix[ADDR_PREFIX] != 0);
+
+	      addr_prefix_disp = j;
+
+	      /* Address size prefix will turn Disp64/Disp32S/Disp32/Disp16
+		 operand into Disp32/Disp32/Disp16/Disp32 operand.  */
+	      switch (flag_code)
 		{
-		  if (operand_types[j].bitfield.disp16)
+		case CODE_16BIT:
+		  override = !override;
+		  /* Fall through.  */
+		case CODE_32BIT:
+		  if (operand_types[j].bitfield.disp32
+		      && operand_types[j].bitfield.disp16)
 		    {
-		      addr_prefix_disp = j;
-		      operand_types[j].bitfield.disp32 = 1;
-		      operand_types[j].bitfield.disp16 = 0;
-		      break;
+		      operand_types[j].bitfield.disp16 = override;
+		      operand_types[j].bitfield.disp32 = !override;
 		    }
-		}
-	      break;
-	    case CODE_32BIT:
-	      for (j = 0; j < MAX_OPERANDS; j++)
-		{
-		  if (operand_types[j].bitfield.disp32)
+		  operand_types[j].bitfield.disp32s = 0;
+		  operand_types[j].bitfield.disp64 = 0;
+		  break;
+
+		case CODE_64BIT:
+		  if (operand_types[j].bitfield.disp32s
+		      || operand_types[j].bitfield.disp64)
 		    {
-		      addr_prefix_disp = j;
-		      operand_types[j].bitfield.disp32 = 0;
-		      operand_types[j].bitfield.disp16 = 1;
-		      break;
+		      operand_types[j].bitfield.disp64 &= !override;
+		      operand_types[j].bitfield.disp32s &= !override;
+		      operand_types[j].bitfield.disp32 = override;
 		    }
+		  operand_types[j].bitfield.disp16 = 0;
+		  break;
 		}
-	      break;
-	    case CODE_64BIT:
-	      for (j = 0; j < MAX_OPERANDS; j++)
-		{
-		  if (operand_types[j].bitfield.disp64)
-		    {
-		      addr_prefix_disp = j;
-		      operand_types[j].bitfield.disp64 = 0;
-		      operand_types[j].bitfield.disp32 = 1;
-		      break;
-		    }
-		}
-	      break;
 	    }
-	  }
+	}
 
       /* Force 0x8b encoding for "mov foo@GOT, %eax".  */
       if (i.reloc[0] == BFD_RELOC_386_GOT32 && t->base_opcode == 0xa0)
@@ -7861,6 +7861,18 @@ build_modrm_byte (void)
   return default_seg;
 }
 
+static unsigned int
+flip_code16 (unsigned int code16)
+{
+  gas_assert (i.tm.operands == 1);
+
+  return !(i.prefix[REX_PREFIX] & REX_W)
+	 && (code16 ? i.tm.operand_types[0].bitfield.disp32
+		      || i.tm.operand_types[0].bitfield.disp32s
+		    : i.tm.operand_types[0].bitfield.disp16)
+	 ? CODE16 : 0;
+}
+
 static void
 output_branch (void)
 {
@@ -7880,7 +7892,7 @@ output_branch (void)
     {
       prefix = 1;
       i.prefixes -= 1;
-      code16 ^= CODE16;
+      code16 ^= flip_code16(code16);
     }
   /* Pentium4 branch hints.  */
   if (i.prefix[SEG_PREFIX] == CS_PREFIX_OPCODE /* not taken */
@@ -7898,12 +7910,12 @@ output_branch (void)
   /* BND prefixed jump.  */
   if (i.prefix[BND_PREFIX] != 0)
     {
-      FRAG_APPEND_1_CHAR (i.prefix[BND_PREFIX]);
-      i.prefixes -= 1;
+      prefix++;
+      i.prefixes--;
     }
 
-  if (i.prefixes != 0 && !intel_syntax)
-    as_warn (_("skipping prefixes on this instruction"));
+  if (i.prefixes != 0)
+    as_warn (_("skipping prefixes on `%s'"), i.tm.name);
 
   /* It's always a symbol;  End frag & setup for relax.
      Make sure there is enough room in this frag for the largest
@@ -7918,6 +7930,8 @@ output_branch (void)
   if (i.prefix[SEG_PREFIX] == CS_PREFIX_OPCODE
       || i.prefix[SEG_PREFIX] == DS_PREFIX_OPCODE)
     *p++ = i.prefix[SEG_PREFIX];
+  if (i.prefix[BND_PREFIX] != 0)
+    *p++ = BND_PREFIX_OPCODE;
   if (i.prefix[REX_PREFIX] != 0)
     *p++ = i.prefix[REX_PREFIX];
   *p = i.tm.base_opcode;
@@ -8022,18 +8036,12 @@ output_jump (void)
 	{
 	  FRAG_APPEND_1_CHAR (DATA_PREFIX_OPCODE);
 	  i.prefixes -= 1;
-	  code16 ^= CODE16;
+	  code16 ^= flip_code16(code16);
 	}
 
       size = 4;
       if (code16)
 	size = 2;
-    }
-
-  if (i.prefix[REX_PREFIX] != 0)
-    {
-      FRAG_APPEND_1_CHAR (i.prefix[REX_PREFIX]);
-      i.prefixes -= 1;
     }
 
   /* BND prefixed jump.  */
@@ -8043,8 +8051,14 @@ output_jump (void)
       i.prefixes -= 1;
     }
 
-  if (i.prefixes != 0 && !intel_syntax)
-    as_warn (_("skipping prefixes on this instruction"));
+  if (i.prefix[REX_PREFIX] != 0)
+    {
+      FRAG_APPEND_1_CHAR (i.prefix[REX_PREFIX]);
+      i.prefixes -= 1;
+    }
+
+  if (i.prefixes != 0)
+    as_warn (_("skipping prefixes on `%s'"), i.tm.name);
 
   p = frag_more (i.tm.opcode_length + size);
   switch (i.tm.opcode_length)
@@ -8097,18 +8111,15 @@ output_interseg_jump (void)
       i.prefixes -= 1;
       code16 ^= CODE16;
     }
-  if (i.prefix[REX_PREFIX] != 0)
-    {
-      prefix++;
-      i.prefixes -= 1;
-    }
+
+  gas_assert (!i.prefix[REX_PREFIX]);
 
   size = 4;
   if (code16)
     size = 2;
 
-  if (i.prefixes != 0 && !intel_syntax)
-    as_warn (_("skipping prefixes on this instruction"));
+  if (i.prefixes != 0)
+    as_warn (_("skipping prefixes on `%s'"), i.tm.name);
 
   /* 1 opcode; 2 segment; offset  */
   p = frag_more (prefix + 1 + 2 + size);
@@ -9937,10 +9948,11 @@ i386_displacement (char *disp_start, char *disp_end)
 
   operand_type_set (&bigdisp, 0);
   if (i.jumpabsolute
+      || i.types[this_operand].bitfield.baseindex
       || (current_templates->start->opcode_modifier.jump != JUMP
 	  && current_templates->start->opcode_modifier.jump != JUMP_DWORD))
     {
-      bigdisp.bitfield.disp32 = 1;
+      i386_addressing_mode ();
       override = (i.prefix[ADDR_PREFIX] != 0);
       if (flag_code == CODE_64BIT)
 	{
@@ -9949,27 +9961,47 @@ i386_displacement (char *disp_start, char *disp_end)
 	      bigdisp.bitfield.disp32s = 1;
 	      bigdisp.bitfield.disp64 = 1;
 	    }
+	  else
+	    bigdisp.bitfield.disp32 = 1;
 	}
       else if ((flag_code == CODE_16BIT) ^ override)
-	{
-	  bigdisp.bitfield.disp32 = 0;
 	  bigdisp.bitfield.disp16 = 1;
-	}
+      else
+	  bigdisp.bitfield.disp32 = 1;
     }
   else
     {
-      /* For PC-relative branches, the width of the displacement
-	 is dependent upon data size, not address size.  */
+      /* For PC-relative branches, the width of the displacement may be
+	 dependent upon data size, but is never dependent upon address size.
+	 Also make sure to not unintentionally match against a non-PC-relative
+	 branch template.  */
+      static templates aux_templates;
+      const insn_template *t = current_templates->start;
+      bfd_boolean has_intel64 = FALSE;
+
+      aux_templates.start = t;
+      while (++t < current_templates->end)
+	{
+	  if (t->opcode_modifier.jump
+	      != current_templates->start->opcode_modifier.jump)
+	    break;
+	  if (t->opcode_modifier.intel64)
+	    has_intel64 = TRUE;
+	}
+      if (t < current_templates->end)
+	{
+	  aux_templates.end = t;
+	  current_templates = &aux_templates;
+	}
+
       override = (i.prefix[DATA_PREFIX] != 0);
       if (flag_code == CODE_64BIT)
 	{
-	  if (override || i.suffix == WORD_MNEM_SUFFIX)
+	  if ((override || i.suffix == WORD_MNEM_SUFFIX)
+	      && (!intel64 || !has_intel64))
 	    bigdisp.bitfield.disp16 = 1;
 	  else
-	    {
-	      bigdisp.bitfield.disp32 = 1;
-	      bigdisp.bitfield.disp32s = 1;
-	    }
+	    bigdisp.bitfield.disp32s = 1;
 	}
       else
 	{
@@ -10141,6 +10173,11 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
       ret = 0;
     }
 #endif
+
+  if (current_templates->start->opcode_modifier.jump == JUMP_BYTE
+      /* Constants get taken care of by optimize_disp().  */
+      && exp->X_op != O_constant)
+    i.types[this_operand].bitfield.disp8 = 1;
 
   /* Check if this is a displacement only operand.  */
   bigdisp = i.types[this_operand];

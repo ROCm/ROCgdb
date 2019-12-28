@@ -44,9 +44,6 @@
 #include <ctype.h>
 #include <signal.h>
 #include <fcntl.h>
-#if 0
-#include <termio.h>
-#endif
 #include <setjmp.h>
 
 #include "gdb_curses.h"
@@ -58,8 +55,8 @@
 #include "readline/readline.h"
 
 /* Tells whether the TUI is active or not.  */
-int tui_active = 0;
-static int tui_finish_init = 1;
+bool tui_active = false;
+static bool tui_finish_init = true;
 
 enum tui_key_mode tui_current_key_mode = TUI_COMMAND_MODE;
 
@@ -482,7 +479,7 @@ tui_enable (void)
       tui_set_win_focus_to (TUI_SRC_WIN);
       keypad (TUI_CMD_WIN->handle.get (), TRUE);
       wrefresh (TUI_CMD_WIN->handle.get ());
-      tui_finish_init = 0;
+      tui_finish_init = false;
     }
   else
     {
@@ -501,7 +498,7 @@ tui_enable (void)
 
   tui_setup_io (1);
 
-  tui_active = 1;
+  tui_active = true;
 
   /* Resize windows before anything might display/refresh a
      window.  */
@@ -555,7 +552,7 @@ tui_disable (void)
   /* Update gdb's knowledge of its terminal.  */
   gdb_save_tty_state ();
 
-  tui_active = 0;
+  tui_active = false;
   tui_update_gdb_sizes ();
 }
 
@@ -575,59 +572,6 @@ tui_disable_command (const char *args, int from_tty)
   tui_disable ();
 }
 
-#if 0
-/* Solaris <sys/termios.h> defines CTRL.  */
-#ifndef CTRL
-#define CTRL(x)         (x & ~0140)
-#endif
-
-#define FILEDES         2
-#define CHK(val, dft)   (val<=0 ? dft : val)
-
-static void
-tui_reset (void)
-{
-  struct termio mode;
-
-  /* Reset the teletype mode bits to a sensible state.
-     Copied tset.c.  */
-#if defined (TIOCGETC)
-  struct tchars tbuf;
-#endif /* TIOCGETC */
-#ifdef UCB_NTTY
-  struct ltchars ltc;
-
-  if (ldisc == NTTYDISC)
-    {
-      ioctl (FILEDES, TIOCGLTC, &ltc);
-      ltc.t_suspc = CHK (ltc.t_suspc, CTRL ('Z'));
-      ltc.t_dsuspc = CHK (ltc.t_dsuspc, CTRL ('Y'));
-      ltc.t_rprntc = CHK (ltc.t_rprntc, CTRL ('R'));
-      ltc.t_flushc = CHK (ltc.t_flushc, CTRL ('O'));
-      ltc.t_werasc = CHK (ltc.t_werasc, CTRL ('W'));
-      ltc.t_lnextc = CHK (ltc.t_lnextc, CTRL ('V'));
-      ioctl (FILEDES, TIOCSLTC, &ltc);
-    }
-#endif /* UCB_NTTY */
-#ifdef TIOCGETC
-  ioctl (FILEDES, TIOCGETC, &tbuf);
-  tbuf.t_intrc = CHK (tbuf.t_intrc, CTRL ('?'));
-  tbuf.t_quitc = CHK (tbuf.t_quitc, CTRL ('\\'));
-  tbuf.t_startc = CHK (tbuf.t_startc, CTRL ('Q'));
-  tbuf.t_stopc = CHK (tbuf.t_stopc, CTRL ('S'));
-  tbuf.t_eofc = CHK (tbuf.t_eofc, CTRL ('D'));
-  /* brkc is left alone.  */
-  ioctl (FILEDES, TIOCSETC, &tbuf);
-#endif /* TIOCGETC */
-  mode.sg_flags &= ~(RAW
-#ifdef CBREAK
-		     | CBREAK
-#endif /* CBREAK */
-		     | VTDELAY | ALLDELAY);
-  mode.sg_flags |= XTABS | ECHO | CRMOD | ANYP;
-}
-#endif
-
 void
 tui_show_assembly (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
@@ -638,7 +582,7 @@ tui_show_assembly (struct gdbarch *gdbarch, CORE_ADDR addr)
 bool
 tui_is_window_visible (enum tui_win_type type)
 {
-  if (tui_active == 0)
+  if (!tui_active)
     return false;
 
   if (tui_win_list[type] == 0)

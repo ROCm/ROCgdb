@@ -1,3 +1,66 @@
+2019-12-27  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-source.c (tui_source_window::do_scroll_vertical): Remove
+	commented-out code.
+	* tui/tui.c: Remove #if 0 code.
+
+2019-12-27  Tom Tromey  <tom@tromey.com>
+
+	* cli/cli-cmds.c (print_disassembly): Reorder "if".
+
+2019-12-27  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_active): Now bool.
+	(tui_finish_init): Likewise.
+	(tui_enable): Update.
+	(tui_disable): Update.
+	(tui_is_window_visible): Update.
+	* tui/tui.h (tui_active): Now bool.
+
+2019-12-27  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-source.c (tui_source_window::maybe_update): Update.
+	* tui/tui-regs.c (tui_data_window::display_registers_from):
+	Update.
+	* tui/tui-layout.c (tui_gen_win_info::resize): Update.
+	* tui/tui-data.h (struct tui_gen_win_info) <viewport_height>:
+	Remove.
+	* tui/tui-command.c (tui_cmd_window::resize): Update.
+
+2019-12-26  Christian Biesinger  <cbiesinger@google.com>
+
+	* ada-lang.c (ada_decode_symbol): Update.
+	* buildsym.c (add_symbol_to_list): Update.
+	* coffread.c (process_coff_symbol): Update.
+	* ctfread.c (ctf_add_enum_member_cb): Update.
+	(new_symbol): Update.
+	(ctf_add_var_cb): Update.
+	* dwarf2read.c (fixup_go_packaging): Update.
+	(dwarf2_compute_name): Update.
+	(new_symbol): Update.
+	* jit.c (finalize_symtab): Update.
+	* language.c (language_alloc_type_symbol): Update.
+	* mdebugread.c (new_symbol): Update.
+	* minsyms.c (minimal_symbol_reader::record_full): Update.
+	(minimal_symbol_reader::install): Update.
+	* psymtab.c (print_partial_symbols): Update.
+	(psymbol_hash): Update.
+	(psymbol_compare): Update.
+	(add_psymbol_to_bcache): Update.
+	(maintenance_check_psymtabs): Update.
+	* stabsread.c (define_symbol): Update.
+	* symtab.c (symbol_set_names): Rename to...
+	(general_symbol_info::compute_and_set_names): ...this.
+	(general_symbol_info::natural_name): Update.
+	(general_symbol_info::search_name): Update.
+	(fixup_section): Update.
+	* symtab.h (struct general_symbol_info) <name>: Rename to...
+	<m_name>: ...this.
+	<compute_and_set_names>: Rename from...
+	(symbol_set_names): ...this.
+	(SYMBOL_SET_NAMES): Remove.
+	(struct symbol) <ctor>: Update.
+
 2019-12-26  Christian Biesinger  <cbiesinger@google.com>
 
 	* NEWS: Mention that multithreaded symbol loading is now on by
