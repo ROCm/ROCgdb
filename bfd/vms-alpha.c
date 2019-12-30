@@ -595,10 +595,13 @@ _bfd_vms_slurp_eisd (bfd *abfd, unsigned int offset)
 	  if (rec_size < offsetof (struct vms_eisd, gblnam))
 	    return FALSE;
 	  else if (rec_size < sizeof (struct vms_eisd))
-	    name = _bfd_vms_save_counted_string (eisd->gblnam,
+	    name = _bfd_vms_save_counted_string (abfd, eisd->gblnam,
 						 rec_size - offsetof (struct vms_eisd, gblnam));
 	  else
-	    name = _bfd_vms_save_counted_string (eisd->gblnam, EISD__K_GBLNAMLEN);
+	    name = _bfd_vms_save_counted_string (abfd, eisd->gblnam,
+						 EISD__K_GBLNAMLEN);
+	  if (name == NULL)
+	    return FALSE;
 	  bfd_flags |= SEC_COFF_SHARED_LIBRARY;
 	  bfd_flags &= ~(SEC_ALLOC | SEC_LOAD);
 	}
@@ -610,7 +613,9 @@ _bfd_vms_slurp_eisd (bfd *abfd, unsigned int offset)
 	{
 	  const char *pfx;
 
-	  name = (char*) bfd_alloc (abfd, 32);
+	  name = (char *) bfd_alloc (abfd, 32);
+	  if (name == NULL)
+	    return FALSE;
 	  if (flags & EISD__M_DZRO)
 	    pfx = "BSS";
 	  else if (flags & EISD__M_EXE)
@@ -924,36 +929,39 @@ _bfd_vms_slurp_ehdr (bfd *abfd)
       PRIV (hdr_data).hdr_l_recsiz = bfd_getl32 (vms_rec + 16);
       if ((vms_rec + 20 + vms_rec[20] + 1) >= end)
 	goto fail;
-      PRIV (hdr_data).hdr_t_name   = _bfd_vms_save_counted_string (vms_rec + 20, vms_rec[20]);
+      PRIV (hdr_data).hdr_t_name
+	= _bfd_vms_save_counted_string (abfd, vms_rec + 20, vms_rec[20]);
       ptr = vms_rec + 20 + vms_rec[20] + 1;
       if ((ptr + *ptr + 1) >= end)
 	goto fail;
-      PRIV (hdr_data).hdr_t_version =_bfd_vms_save_counted_string (ptr, *ptr);
+      PRIV (hdr_data).hdr_t_version
+	= _bfd_vms_save_counted_string (abfd, ptr, *ptr);
       ptr += *ptr + 1;
       if (ptr + 17 >= end)
 	goto fail;
-      PRIV (hdr_data).hdr_t_date = _bfd_vms_save_sized_string (ptr, 17);
+      PRIV (hdr_data).hdr_t_date
+	= _bfd_vms_save_sized_string (abfd, ptr, 17);
       break;
 
     case EMH__C_LNM:
       if (vms_rec + PRIV (recrd.rec_size - 6) > end)
 	goto fail;
-      PRIV (hdr_data).hdr_c_lnm =
-	_bfd_vms_save_sized_string (vms_rec, PRIV (recrd.rec_size - 6));
+      PRIV (hdr_data).hdr_c_lnm
+	= _bfd_vms_save_sized_string (abfd, vms_rec, PRIV (recrd.rec_size - 6));
       break;
 
     case EMH__C_SRC:
       if (vms_rec + PRIV (recrd.rec_size - 6) > end)
 	goto fail;
-      PRIV (hdr_data).hdr_c_src =
-	_bfd_vms_save_sized_string (vms_rec, PRIV (recrd.rec_size - 6));
+      PRIV (hdr_data).hdr_c_src
+	= _bfd_vms_save_sized_string (abfd, vms_rec, PRIV (recrd.rec_size - 6));
       break;
 
     case EMH__C_TTL:
       if (vms_rec + PRIV (recrd.rec_size - 6) > end)
 	goto fail;
-      PRIV (hdr_data).hdr_c_ttl =
-	_bfd_vms_save_sized_string (vms_rec, PRIV (recrd.rec_size - 6));
+      PRIV (hdr_data).hdr_c_ttl
+	= _bfd_vms_save_sized_string (abfd, vms_rec, PRIV (recrd.rec_size - 6));
       break;
 
     case EMH__C_CPR:
@@ -1172,7 +1180,7 @@ _bfd_vms_slurp_egsd (bfd *abfd)
   int gsd_type;
   unsigned int gsd_size;
   unsigned char *vms_rec;
-  unsigned long base_addr;
+  bfd_vma base_addr;
 
   vms_debug2 ((2, "EGSD\n"));
 
@@ -1188,7 +1196,7 @@ _bfd_vms_slurp_egsd (bfd *abfd)
   PRIV (recrd.rec_size) -= 8;
 
   /* Calculate base address for each section.  */
-  base_addr = 0L;
+  base_addr = 0;
 
   while (PRIV (recrd.rec_size) > 4)
     {
@@ -1236,9 +1244,10 @@ _bfd_vms_slurp_egsd (bfd *abfd)
 	    else
 	      {
 		char *name;
-		unsigned long align_addr;
+		bfd_vma align_addr;
 
-		name = _bfd_vms_save_counted_string (&egps->namlng, gsd_size - 4);
+		name = _bfd_vms_save_counted_string (abfd, &egps->namlng,
+						     gsd_size - 4);
 
 		section = bfd_make_section (abfd, name);
 		if (!section)
@@ -1246,12 +1255,13 @@ _bfd_vms_slurp_egsd (bfd *abfd)
 
 		section->filepos = 0;
 		section->size = bfd_getl32 (egps->alloc);
-		section->alignment_power = egps->align;
+		section->alignment_power = egps->align & 31;
 
 		vms_section_data (section)->flags = vms_flags;
 		vms_section_data (section)->no_flags = 0;
 
-		new_flags = vms_secflag_by_name (evax_section_flags, name,
+		new_flags = vms_secflag_by_name (evax_section_flags,
+						 section->name,
 						 section->size > 0);
 		if (section->size > 0)
 		  new_flags |= SEC_LOAD;
@@ -1273,10 +1283,9 @@ _bfd_vms_slurp_egsd (bfd *abfd)
 		  return FALSE;
 
 		/* Give a non-overlapping vma to non absolute sections.  */
-		align_addr = (1 << section->alignment_power);
-		if ((base_addr % align_addr) != 0)
-		  base_addr += (align_addr - (base_addr % align_addr));
-		section->vma = (bfd_vma)base_addr;
+		align_addr = (bfd_vma) 1 << section->alignment_power;
+		base_addr = (base_addr + align_addr - 1) & -align_addr;
+		section->vma = base_addr;
 		base_addr += section->size;
 	      }
 
@@ -4228,7 +4237,7 @@ parse_module (bfd *abfd, struct module *module, unsigned char *ptr,
 	{
 	case DST__K_MODBEG:
 	  module->name
-	    = _bfd_vms_save_counted_string (ptr + DST_S_B_MODBEG_NAME,
+	    = _bfd_vms_save_counted_string (abfd, ptr + DST_S_B_MODBEG_NAME,
 					    maxptr - (ptr + DST_S_B_MODBEG_NAME));
 
 	  curr_pc = 0;
@@ -4246,7 +4255,7 @@ parse_module (bfd *abfd, struct module *module, unsigned char *ptr,
 	  funcinfo = (struct funcinfo *)
 	    bfd_zalloc (abfd, sizeof (struct funcinfo));
 	  funcinfo->name
-	    = _bfd_vms_save_counted_string (ptr + DST_S_B_RTNBEG_NAME,
+	    = _bfd_vms_save_counted_string (abfd, ptr + DST_S_B_RTNBEG_NAME,
 					    maxptr - (ptr + DST_S_B_RTNBEG_NAME));
 	  funcinfo->low = bfd_getl32 (ptr + DST_S_L_RTNBEG_ADDRESS);
 	  funcinfo->next = module->func_table;
@@ -4297,11 +4306,10 @@ parse_module (bfd *abfd, struct module *module, unsigned char *ptr,
 		  {
 		    unsigned int fileid
 		      = bfd_getl16 (src_ptr + DST_S_W_SRC_DF_FILEID);
-		    char *filename
-		      = _bfd_vms_save_counted_string (src_ptr + DST_S_B_SRC_DF_FILENAME,
-						      (ptr + rec_length) -
-						      (src_ptr + DST_S_B_SRC_DF_FILENAME)
-						      );
+		    char *filename = _bfd_vms_save_counted_string
+		      (abfd,
+		       src_ptr + DST_S_B_SRC_DF_FILENAME,
+		       ptr + rec_length - (src_ptr + DST_S_B_SRC_DF_FILENAME));
 
 		    while (fileid >= module->file_table_count)
 		      {
@@ -6639,7 +6647,7 @@ evax_bfd_print_relocation_records (FILE *file, const unsigned char *rel,
 	  fprintf (file, _("   bitmap: 0x%08x (count: %u):\n"), val, count);
 
 	  for (k = 0; k < 32; k++)
-	    if (val & (1 << k))
+	    if (val & (1u << k))
 	      {
 		if (n == 0)
 		  fputs ("   ", file);
@@ -8360,6 +8368,27 @@ alpha_vms_link_hash_newfunc (struct bfd_hash_entry *entry,
   return (struct bfd_hash_entry *) ret;
 }
 
+static void
+alpha_vms_bfd_link_hash_table_free (bfd *abfd)
+{
+  struct alpha_vms_link_hash_table *t;
+  unsigned i;
+
+  t = (struct alpha_vms_link_hash_table *) abfd->link.hash;
+  for (i = 0; i < VEC_COUNT (t->shrlibs); i++)
+    {
+      struct alpha_vms_shlib_el *shlib;
+
+      shlib = &VEC_EL (t->shrlibs, struct alpha_vms_shlib_el, i);
+      free (&VEC_EL (shlib->ca, bfd_vma, 0));
+      free (&VEC_EL (shlib->lp, bfd_vma, 0));
+      free (&VEC_EL (shlib->qr, struct alpha_vms_vma_ref, 0));
+    }
+  free (&VEC_EL (t->shrlibs, struct alpha_vms_shlib_el, 0));
+
+  _bfd_generic_link_hash_table_free (abfd);
+}
+
 /* Create an Alpha/VMS link hash table.  */
 
 static struct bfd_link_hash_table *
@@ -8381,6 +8410,7 @@ alpha_vms_bfd_link_hash_table_create (bfd *abfd)
 
   VEC_INIT (ret->shrlibs);
   ret->fixup = NULL;
+  ret->root.hash_table_free = alpha_vms_bfd_link_hash_table_free;
 
   return &ret->root;
 }
@@ -9307,35 +9337,32 @@ vms_close_and_cleanup (bfd * abfd)
   if (abfd == NULL || abfd->tdata.any == NULL)
     return TRUE;
 
-  if (abfd->format == bfd_archive)
+  if (abfd->format == bfd_object)
     {
-      bfd_release (abfd, abfd->tdata.any);
-      abfd->tdata.any = NULL;
-      return TRUE;
-    }
+      struct module *module;
 
-  if (PRIV (recrd.buf) != NULL)
-    free (PRIV (recrd.buf));
+      free (PRIV (recrd.buf));
+      free (PRIV (sections));
+      free (PRIV (syms));
+      free (PRIV (dst_ptr_offsets));
 
-  if (PRIV (sections) != NULL)
-    free (PRIV (sections));
-
-  bfd_release (abfd, abfd->tdata.any);
-  abfd->tdata.any = NULL;
+      for (module = PRIV (modules); module; module = module->next)
+	free (module->file_table);
 
 #ifdef VMS
-  if (abfd->direction == write_direction)
-    {
-      /* Last step on VMS is to convert the file to variable record length
-	 format.  */
-      if (!bfd_cache_close (abfd))
-	return FALSE;
-      if (!_bfd_vms_convert_to_var_unix_filename (abfd->filename))
-	return FALSE;
-    }
+      if (abfd->direction == write_direction)
+	{
+	  /* Last step on VMS is to convert the file to variable record length
+	     format.  */
+	  if (!bfd_cache_close (abfd))
+	    return FALSE;
+	  if (!_bfd_vms_convert_to_var_unix_filename (abfd->filename))
+	    return FALSE;
+	}
 #endif
+    }
 
-  return TRUE;
+  return _bfd_generic_close_and_cleanup (abfd);
 }
 
 /* Called when a new section is created.  */
