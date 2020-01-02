@@ -1,6 +1,6 @@
 /* Everything about breakpoints, for GDB.
 
-   Copyright (C) 1986-2019 Free Software Foundation, Inc.
+   Copyright (C) 1986-2020 Free Software Foundation, Inc.
    Copyright (C) 2019 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
