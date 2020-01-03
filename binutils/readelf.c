@@ -164,6 +164,7 @@
 #include "elf/xgate.h"
 #include "elf/xstormy16.h"
 #include "elf/xtensa.h"
+#include "elf/z80.h"
 
 #include "getopt.h"
 #include "libiberty.h"
@@ -1587,6 +1588,10 @@ dump_relocations (Filedata *          filedata,
 	    rtype = elf_nfp3200_reloc_type (type);
 	  else
 	    rtype = elf_nfp_reloc_type (type);
+	  break;
+
+	case EM_Z80:
+	  rtype = elf_z80_reloc_type (type);
 	  break;
 
 	case EM_AMDGPU:
@@ -3778,6 +3783,21 @@ get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 
 	  if (e_flags & ~ EF_MSP430_MACH)
 	    strcat (buf, _(": unknown extra flag bits also present"));
+	  break;
+
+	case EM_Z80:
+	  switch (e_flags & EF_Z80_MACH_MSK)
+	    {
+	    case EF_Z80_MACH_Z80: strcat (buf, ", Z80"); break;
+	    case EF_Z80_MACH_Z180: strcat (buf, ", Z180"); break;
+	    case EF_Z80_MACH_R800: strcat (buf, ", R800"); break;
+	    case EF_Z80_MACH_EZ80_Z80: strcat (buf, ", EZ80"); break;
+	    case EF_Z80_MACH_EZ80_ADL: strcat (buf, ", EZ80, ADL"); break;
+	    case EF_Z80_MACH_GBZ80: strcat (buf, ", GBZ80"); break;
+	    default:
+	      strcat (buf, _(", unknown")); break;
+	    }
+	  break;
 	}
     }
 
@@ -12758,6 +12778,8 @@ is_32bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
     case EM_XTENSA_OLD:
     case EM_XTENSA:
       return reloc_type == 1; /* R_XTENSA_32.  */
+    case EM_Z80:
+      return reloc_type == 6; /* R_Z80_32.  */
     default:
       {
 	static unsigned int prev_warn = 0;
@@ -12940,6 +12962,8 @@ is_24bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 4; /* R_MN10200_24.  */
     case EM_FT32:
       return reloc_type == 5; /* R_FT32_20.  */
+    case EM_Z80:
+      return reloc_type == 5; /* R_Z80_24. */
     default:
       return FALSE;
     }
@@ -13011,6 +13035,8 @@ is_16bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 2; /* R_XC16C_ABS_16.  */
     case EM_XGATE:
       return reloc_type == 3; /* R_XGATE_16.  */
+    case EM_Z80:
+      return reloc_type == 4; /* R_Z80_16.  */
     default:
       return FALSE;
     }
@@ -13026,6 +13052,8 @@ is_8bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
     {
     case EM_RISCV:
       return reloc_type == 54; /* R_RISCV_SET8.  */
+    case EM_Z80:
+      return reloc_type == 1;  /* R_Z80_8.  */
     default:
       return FALSE;
     }
@@ -13233,6 +13261,7 @@ is_none_reloc (Filedata * filedata, unsigned int reloc_type)
     case EM_TI_C6000:/* R_C6000_NONE.  */
     case EM_X86_64:  /* R_X86_64_NONE.  */
     case EM_XC16X:
+    case EM_Z80:     /* R_Z80_NONE. */
     case EM_WEBASSEMBLY: /* R_WASM32_NONE.  */
       return reloc_type == 0;
 

@@ -357,6 +357,7 @@ BFD32_BACKENDS = \
 	elf32-xgate.lo \
 	elf32-xstormy16.lo \
 	elf32-xtensa.lo \
+	elf32-z80.lo \
 	elf32.lo \
 	elflink.lo \
 	elfxx-sparc.lo \
@@ -492,6 +493,7 @@ BFD32_BACKENDS_CFILES = \
 	elf32-xgate.c \
 	elf32-xstormy16.c \
 	elf32-xtensa.c \
+	elf32-z80.c \
 	elf32.c \
 	elflink.c \
 	elfxx-sparc.c \
