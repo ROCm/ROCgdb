@@ -1,3 +1,38 @@
+2020-01-03  Sergey Belyashov  <sergey.belyashov@gmail.com>
+
+	PR 25311
+	* as.h (TC_STRING_ESCAPES): Provide a default definition.
+	* app.c (do_scrub_chars): Use TC_STRING_ESCAPES instead of
+	NO_STRING_ESCAPES.
+	* read.c (next_char_of_string): Likewise.
+	* config/tc-ppc.h (TC_STRING_ESCAPES): Define.
+	* config/tc-z80.h (TC_STRING_ESCAPES): Define.
+
+2020-01-03  Nick Clifton  <nickc@redhat.com>
+
+	* po/sv.po: Updated Swedish translation.
+
+2020-01-03  Jan Beulich  <jbeulich@suse.com>
+
+	* testsuite/gas/aarch64/f64mm.s: Scale index of LD1RO{H,W,D}.
+	* testsuite/gas/aarch64/f64mm.d: Adjust expectations.
+
+2020-01-03  Jan Beulich  <jbeulich@suse.com>
+
+	* testsuite/gas/aarch64/i8mm.s: Add 128-bit form tests for
+	by-element usdot. Add 64-bit form tests for by-element sudot.
+	* testsuite/gas/aarch64/i8mm.d: Adjust expectations.
+
+2020-01-03  Jan Beulich  <jbeulich@suse.com>
+
+	* testsuite/gas/aarch64/f64mm.s: Drop 'i' from uzip<n>.
+	* testsuite/gas/aarch64/f64mm.d: Adjust expectations.
+
+2020-01-03  Jan Beulich  <jbeulich@suse.com>
+
+	* testsuite/gas/aarch64/f64mm.d,
+	testsuite/gas/aarch64/sve-movprfx-mm.d: Adjust expectations.
+
 2020-01-02  Sergey Belyashov  <sergey.belyashov@gmail.com>
 
 	* config/tc-z80.c: Add new architectures: Z180 and eZ80. Add
