@@ -1,3 +1,29 @@
+2020-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbarch.sh: Update copyright year range of generated files.
+
+2020-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	Update copyright year range in all the GDB files automatically
+	handled by our copyright.py script.
+
+2020-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* copyright.py: Convert to Python 3.
+
+2020-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* copyright.py: Adapt after move of gnulib directory from gdb
+	directory to toplevel directory.
+
+2020-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* copyright.py (main): Exit if run from the wrong directory.
+
+2020-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* top.c (print_gdb_version): Change copyright year to 2020.
+
 2019-12-26  Christian Biesinger  <cbiesinger@google.com>
 
 	* configure: Regenerate.
