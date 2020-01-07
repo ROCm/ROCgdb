@@ -1,3 +1,64 @@
+2020-01-02  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* cli/cli-style.c: Set cli_styling to 'true' in the Cygwin build.
+
+2020-01-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* stack.c (print_frame_info): Move disassemble_next_line code
+	inside source_print block.
+
+2020-01-06  Eli Zaretskii  <eliz@gnu.org>
+
+	* gdbsupport/gdb_wait.c: Include <signal.h> instead of
+	gdb/signals.h, as we are now using native signal symbols.
+
+2020-01-06  Shahab Vahedi  <shahab@synopsys.com>
+
+	* tui/tui-disasm.c (tui_disasm_window::addr_is_displayed): Avoid
+	overflow by an early check of content vs threshold.
+        * tui/tui-source.c (tui_source_window::line_is_displayed):
+	Likewise.
+
+2020-01-06  Eli Zaretskii  <eliz@gnu.org>
+
+	* NEWS: Mention the recent fix of $_exitsignal on MS-Windows.
+
+2020-01-02  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* coff-pe-read.c (read_pe_exported_syms): Don't try to read the
+	export table if no section contains it's RVA.
+
+2020-01-06  Eli Zaretskii  <eliz@gnu.org>
+
+	* windows-tdep.c: Fix a typo in WINDOWS_SIGABRT.
+
+2020-01-06  Hannes Domani  <ssbssa@yahoo.de>
+
+	* source.c (print_source_lines_base): Set last_line_listed.
+
+2020-01-06  Shahab Vahedi  <shahab@synopsys.com>
+
+	* tui/tui-disasm.c: Remove trailing spaces.
+
+2020-01-06  Eli Zaretskii  <eliz@gnu.org>
+	    Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (COMMON_SFILES): Add gdbsupport/gdb_wait.c.
+	* windows-tdep.c: New enumeration of WINDOWS_SIG* signals.
+	(windows_gdb_signal_to_target): New function, uses the above
+	enumeration to convert GDB internal signal codes to equivalent
+	Windows codes.
+	(windows_init_abi): Call set_gdbarch_gdb_signal_to_target.
+	* windows-nat.c: Include "gdb_wait.h".
+	(get_windows_debug_event): Extract the fatal exception from the
+	exit status and convert to the equivalent Posix signal number.
+	* cli/cli-cmds.c (exit_status_set_internal_vars): Account for the
+	possibility that WTERMSIG returns GDB_SIGNAL_UNKNOWN.
+	* gdbsupport/gdb_wait.c: New file, implements
+	windows_status_to_termsig.
+	* gdbsupport/gdb_wait.h (WIFEXITED, WIFSIGNALED, WEXITSTATUS)
+	(WTERMSIG) [__MINGW32__]: Separate definitions for MinGW.
+
 2020-01-05  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* tui/tui-layout.c (tui_add_win_to_layout): Use tui_set_layout not

@@ -1,3 +1,39 @@
+2020-01-07  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-mips-elf/eh-frame5.s,
+	* testsuite/ld-mips-elf/ehdr_start-new.s,
+	* testsuite/ld-mips-elf/ehdr_start-o32.s,
+	* testsuite/ld-mips-elf/mips16-call-global-1.s,
+	* testsuite/ld-mips-elf/mips16-intermix-1.s,
+	* testsuite/ld-mips-elf/mips16-pic-1b.s,
+	* testsuite/ld-mips-elf/mips16-pic-4c.s,
+	* testsuite/ld-mips-elf/no-shared-1-n64.s,
+	* testsuite/ld-mips-elf/no-shared-1-o32.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-1b-micromips.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-1b.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-2a.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-3b.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-4b.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-5a.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-6-n32c.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-6-n64c.s,
+	* testsuite/ld-mips-elf/pic-and-nonpic-6-o32c.s,
+	* testsuite/ld-mips-elf/pie.s,
+	* testsuite/ld-mips-elf/relax-jalr.s: Revert 2019-12-17 change.
+
+2020-01-06  Nick Clifton  <nickc@redhat.com>
+
+	PR 25327
+	* testsuite/ld-elf/shared.exp: Add -fcommon option to compiler
+	command line when building libcomm1.o and pr13250 tests.
+	* testsuite/ld-plugin/lto.exp: Likewise for pr20267 tests.
+
+2020-01-06  Nick Clifton  <nickc@redhat.com>
+
+	PR 25326
+	* testsuite/ld-elf/shared.exp: Add -fcommon option to compiler
+	command line when building pr19579 binaries.
+
 2020-01-03  Hannes Domani  <ssbssa@yahoo.de>
 
 	* emultempl/pe.em: Add new option --enable-reloc-section.
