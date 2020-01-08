@@ -25,15 +25,6 @@
 
 struct thread_info;
 
-struct hash_ptid
-{
-  size_t operator() (const ptid_t &ptid) const
-  {
-    std::hash<long> long_hash;
-    return long_hash(ptid.pid()) + long_hash(ptid.lwp()) + long_hash(ptid.tid());
-  }
-};
-
 using ptid_thread_map = std::unordered_map<ptid_t, thread_info *, hash_ptid>;
 
 struct all_thread_map_range_iterator

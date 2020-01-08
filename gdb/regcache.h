@@ -389,11 +389,8 @@ public:
    debug.  */
   void debug_print_register (const char *func, int regno);
 
-  static void regcache_thread_ptid_changed (ptid_t old_ptid, ptid_t new_ptid);
 protected:
   regcache (gdbarch *gdbarch, const address_space *aspace_);
-
-  static std::forward_list<regcache *> current_regcache;
 
 private:
 
