@@ -1,3 +1,42 @@
+2020-01-10  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/elf/pr14891.s: Don't start directives in first column.
+	* testsuite/gas/elf/pr21661.d: Don't run on hpux.
+
+2020-01-03  Sergey Belyashov  <sergey.belyashov@gmail.com>
+
+	PR 25224
+	* config/tc-z80.c (emit_ld_m_rr): Use integer types when checking
+	opcode byte values.
+	(emit_ld_r_r): Likewise.
+	(emit_ld_rr_m): Likewise.
+	(emit_ld_rr_nn): Likewise.
+
+2020-01-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (optimize_encoding): Add
+	is_any_vex_encoding() invocations. Drop respective
+	i.tm.extension_opcode == None checks.
+
+2020-01-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (md_assemble): Check RegRex is clear during
+	REX transformations. Correct comment indentation.
+
+2020-01-09  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (optimize_encoding): Generalize register
+	transformation for TEST optimization.
+
+2020-01-09  Jan Beulich  <jbeulich@suse.com>
+
+	* testsuite/gas/i386/x86-64-sysenter-amd.s,
+	testsuite/gas/i386/x86-64-sysenter-amd.d,
+	testsuite/gas/i386/x86-64-sysenter-amd.l,
+	testsuite/gas/i386/x86-64-sysenter-intel.d,
+	testsuite/gas/i386/x86-64-sysenter-mixed.d: New.
+	* testsuite/gas/i386/i386.exp: Run new tests.
+
 2020-01-08  Nick Clifton  <nickc@redhat.com>
 
 	PR 25284

@@ -388,8 +388,10 @@ namespace eval Term {
 	_clear_lines 0 $_rows
     }
 
-    # Accept some output from gdb and update the screen.
-    proc _accept {wait_for} {
+    # Accept some output from gdb and update the screen.  WAIT_FOR is
+    # a regexp matching the line to wait for.  Return 0 on timeout, 1
+    # on success.
+    proc wait_for {wait_for} {
 	global expect_out
 	global gdb_prompt
 	variable _cur_x
@@ -424,7 +426,7 @@ namespace eval Term {
 		timeout {
 		    # Assume a timeout means we somehow missed the
 		    # expected result, and carry on.
-		    return
+		    return 0
 		}
 	    }
 
@@ -443,6 +445,8 @@ namespace eval Term {
 		set wait_for $prompt_wait_for
 	    }
 	}
+
+	return 1
     }
 
     # Like ::clean_restart, but ensures that gdb starts in an
@@ -462,15 +466,25 @@ namespace eval Term {
 	}
     }
 
-    # Start the TUI.  Returns 1 on success, 0 if TUI tests should be
-    # skipped.
-    proc enter_tui {} {
+    # Setup ready for starting the tui, but don't actually start it.
+    # Returns 1 on success, 0 if TUI tests should be skipped.
+    proc prepare_for_tui {} {
 	if {[skip_tui_tests]} {
 	    return 0
 	}
 
 	gdb_test_no_output "set tui border-kind ascii"
 	gdb_test_no_output "maint set tui-resize-message on"
+	return 1
+    }
+
+    # Start the TUI.  Returns 1 on success, 0 if TUI tests should be
+    # skipped.
+    proc enter_tui {} {
+	if {![prepare_for_tui]} {
+	    return 0
+	}
+
 	command "tui enable"
 	return 1
     }
@@ -480,7 +494,7 @@ namespace eval Term {
     # be supplied by this function.
     proc command {cmd} {
 	send_gdb "$cmd\n"
-	_accept [string_to_regexp $cmd]
+	wait_for [string_to_regexp $cmd]
     }
 
     # Return the text of screen line N, without attributes.  Lines are
@@ -590,15 +604,46 @@ namespace eval Term {
 	}
     }
 
+    # Check the contents of a box on the screen.  This is a little
+    # like check_contents, but doens't check the whole screen
+    # contents, only the contents of a single box.  This procedure
+    # includes (effectively) a call to check_box to ensure there is a
+    # box where expected, if there is then the contents of the box are
+    # matched against REGEXP.
+    proc check_box_contents {test_name x y width height regexp} {
+	variable _chars
+
+	set why [_check_box $x $y $width $height]
+	if {$why != ""} {
+	    dump_screen
+	    fail "$test_name (box check: $why)"
+	    return
+	}
+
+	# Now grab the contents of the box, join each line together
+	# with a newline character and match against REGEXP.
+	set result ""
+	for {set yy [expr {$y + 1}]} {$yy < [expr {$y + $height - 1}]} {incr yy} {
+	    for {set xx [expr {$x + 1}]} {$xx < [expr {$x + $width - 1}]} {incr xx} {
+		append result [lindex $_chars($xx,$yy) 0]
+	    }
+	    append result "\n"
+	}
+
+	if {![gdb_assert {[regexp -- $regexp $result]} $test_name]} {
+	    dump_screen
+	}
+    }
+
     # A debugging function to dump the current screen, with line
     # numbers.
     proc dump_screen {} {
 	variable _rows
 	variable _cols
-	verbose "Screen Dump ($_cols x $_rows):"
+	verbose -log "Screen Dump ($_cols x $_rows):"
 	for {set y 0} {$y < $_rows} {incr y} {
 	    set fmt [format %5d $y]
-	    verbose "$fmt [get_line $y]"
+	    verbose -log "$fmt [get_line $y]"
 	}
     }
 
@@ -641,14 +686,14 @@ namespace eval Term {
 	# Due to the strange column resizing behavior, and because we
 	# don't care about this intermediate resize, we don't check
 	# the size here.
-	_accept "@@ resize done $_resize_count"
+	wait_for "@@ resize done $_resize_count"
 	incr _resize_count
 	# Somehow the number of columns transmitted to gdb is one less
 	# than what we request from expect.  We hide this weird
 	# details from the caller.
 	_do_resize $_rows $cols
 	stty columns [expr {$_cols + 1}] < $gdb_spawn_name
-	_accept "@@ resize done $_resize_count, size = ${_cols}x${rows}"
+	wait_for "@@ resize done $_resize_count, size = ${_cols}x${rows}"
 	incr _resize_count
     }
 }

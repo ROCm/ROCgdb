@@ -3990,13 +3990,13 @@ optimize_encoding (void)
   unsigned int j;
 
   if (optimize_for_space
+      && !is_any_vex_encoding (&i.tm)
       && i.reg_operands == 1
       && i.imm_operands == 1
       && !i.types[1].bitfield.byte
       && i.op[0].imms->X_op == O_constant
       && fits_in_imm7 (i.op[0].imms->X_add_number)
-      && ((i.tm.base_opcode == 0xa8
-	   && i.tm.extension_opcode == None)
+      && (i.tm.base_opcode == 0xa8
 	  || (i.tm.base_opcode == 0xf6
 	      && i.tm.extension_opcode == 0x0)))
     {
@@ -4009,20 +4009,20 @@ optimize_encoding (void)
 	  i.types[1].bitfield.byte = 1;
 	  /* Ignore the suffix.  */
 	  i.suffix = 0;
-	  if (base_regnum >= 4)
-	    {
-	      /* Handle SP, BP, SI, DI and R12-R15 registers.  */
-	      if (i.types[1].bitfield.word)
-		j = 16;
-	      else if (i.types[1].bitfield.dword)
-		j = 32;
-	      else
-		j = 48;
-	      i.op[1].regs -= j;
-	    }
+	  /* Convert to byte registers.  */
+	  if (i.types[1].bitfield.word)
+	    j = 16;
+	  else if (i.types[1].bitfield.dword)
+	    j = 32;
+	  else
+	    j = 48;
+	  if (!(i.op[1].regs->reg_flags & RegRex) && base_regnum < 4)
+	    j += 8;
+	  i.op[1].regs -= j;
 	}
     }
   else if (flag_code == CODE_64BIT
+	   && !is_any_vex_encoding (&i.tm)
 	   && ((i.types[1].bitfield.qword
 		&& i.reg_operands == 1
 		&& i.imm_operands == 1
@@ -4031,9 +4031,8 @@ optimize_encoding (void)
 		     && i.tm.extension_opcode == None
 		     && fits_in_unsigned_long (i.op[0].imms->X_add_number))
 		    || (fits_in_imm31 (i.op[0].imms->X_add_number)
-			&& (((i.tm.base_opcode == 0x24
-			      || i.tm.base_opcode == 0xa8)
-			     && i.tm.extension_opcode == None)
+			&& ((i.tm.base_opcode == 0x24
+			     || i.tm.base_opcode == 0xa8)
 			    || (i.tm.base_opcode == 0x80
 				&& i.tm.extension_opcode == 0x4)
 			    || ((i.tm.base_opcode == 0xf6
@@ -4045,13 +4044,11 @@ optimize_encoding (void)
 	       || (i.types[0].bitfield.qword
 		   && ((i.reg_operands == 2
 			&& i.op[0].regs == i.op[1].regs
-			&& ((i.tm.base_opcode == 0x30
-			     || i.tm.base_opcode == 0x28)
-			    && i.tm.extension_opcode == None))
+			&& (i.tm.base_opcode == 0x30
+			    || i.tm.base_opcode == 0x28))
 		       || (i.reg_operands == 1
 			   && i.operands == 1
-			   && i.tm.base_opcode == 0x30
-			   && i.tm.extension_opcode == None)))))
+			   && i.tm.base_opcode == 0x30)))))
     {
       /* Optimize: -O:
 	   andq $imm31, %r64   -> andl $imm31, %r32
@@ -4092,6 +4089,7 @@ optimize_encoding (void)
     }
   else if (optimize > 1
 	   && !optimize_for_space
+	   && !is_any_vex_encoding (&i.tm)
 	   && i.reg_operands == 2
 	   && i.op[0].regs == i.op[1].regs
 	   && ((i.tm.base_opcode & ~(Opcode_D | 1)) == 0x8
@@ -4575,6 +4573,7 @@ md_assemble (char *line)
 	  if (i.types[x].bitfield.class == Reg && i.types[x].bitfield.byte
 	      && (i.op[x].regs->reg_flags & RegRex64) == 0)
 	    {
+	      gas_assert (!(i.op[x].regs->reg_flags & RegRex));
 	      /* In case it is "hi" register, give up.  */
 	      if (i.op[x].regs->reg_num > 3)
 		as_bad (_("can't encode register '%s%s' in an "
@@ -4593,7 +4592,7 @@ md_assemble (char *line)
   if (i.rex == 0 && i.rex_encoding)
     {
       /* Check if we can add a REX_OPCODE byte.  Look for 8 bit operand
-         that uses legacy register.  If it is "hi" register, don't add
+	 that uses legacy register.  If it is "hi" register, don't add
 	 the REX_OPCODE byte.  */
       int x;
       for (x = 0; x < 2; x++)
@@ -4602,6 +4601,7 @@ md_assemble (char *line)
 	    && (i.op[x].regs->reg_flags & RegRex64) == 0
 	    && i.op[x].regs->reg_num > 3)
 	  {
+	    gas_assert (!(i.op[x].regs->reg_flags & RegRex));
 	    i.rex_encoding = FALSE;
 	    break;
 	  }
