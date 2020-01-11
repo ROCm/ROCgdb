@@ -1,3 +1,87 @@
+2020-01-10  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.multi/multi-target.exp (setup): Factor out "info
+	connections" and "info inferiors" tests to ...
+	(test_info_inferiors): ... this new procedure.
+	(top level): Run new "info-inferiors" tests.
+
+2020-01-10  Pedro Alves  <palves@redhat.com>
+
+	* gdb.server/bkpt-other-inferior.exp: New file.
+
+2020-01-10  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/kill-detach-inferiors-cmd.exp: Adjust expected output
+	of "add-inferior".
+	* gdb.base/quit-live.exp: Likewise.
+	* gdb.base/remote-exec-file.exp: Likewise.
+	* gdb.guile/scm-progspace.exp: Likewise.
+	* gdb.linespec/linespec.exp: Likewise.
+	* gdb.mi/new-ui-mi-sync.exp: Likewise.
+	* gdb.mi/user-selected-context-sync.exp: Likewise.
+	* gdb.multi/multi-target.exp (setup): Add "info connection" and
+	"info inferiors" tests.
+	* gdb.multi/remove-inferiors.exp: Adjust expected output of
+	"add-inferior".
+	* gdb.multi/watchpoint-multi.exp: Likewise.
+	* gdb.python/py-inferior.exp: Likewise.
+	* gdb.server/extended-remote-restart.exp: Likewise.
+	* gdb.threads/fork-plus-threads.exp: Adjust expected output of
+	"info inferiors".
+	* gdb.threads/forking-threads-plus-breakpoint.exp: Likewise.
+	* gdb.trace/report.exp: Likewise.
+
+2020-01-10  Pedro Alves  <palves@redhat.com>
+
+	* gdb.multi/multi-target.c: New file.
+	* gdb.multi/multi-target.exp: New file.
+	* lib/gdbserver-support.exp (gdb_target_cmd): Handle "Non-stop
+	mode requested, but remote does not support non-stop".
+
+2020-01-10  Pedro Alves  <palves@redhat.com>
+
+	* gdb.server/extended-remote-restart.exp (test_reload): Explicitly
+	disconnect before reconnecting.
+
+2020-01-10  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+	    Pedro Alves	 <palves@redhat.com>
+
+	* gdb.server/connect-without-multi-process.exp: Also test
+	continuing to end.
+
+2020-01-10  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/remote-exec-file.exp: New file.
+
+2020-01-10  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/fork-running-state.exp (do_test): Adjust expected
+	output.
+	* gdb.threads/async.c: New.
+	* gdb.threads/async.exp: New.
+	* gdb.multi/tids-gid-reset.c: New.
+	* gdb.multi/tids-gid-reset.exp: New.
+
+2020-01-10  George Barrett  <bob@bob131.so>
+
+	* gdb.base/stap-probe.c (relocation_marker): Add dummy variable
+	to help in finding the image relocation offset.
+	* gdb.base/stap-probe.exp (stap_test): Accept arbitrary compile
+	options in arguments.
+	(stap_test_no_debuginfo): Likewise.
+	(stap-probe-nosem-noopt-pie, stap-probe-nosem-noopt-nopie): Add
+	test variants.
+	(stap_test): Add null semaphore relocation test.
+
+2020-01-10  George Barrett  <bob@bob131.so>
+
+	* gdb.base/stap-probe.c: Rename USE_PROBES to USE_SEMAPHORES.
+	* gdb.base/stap-probe.exp: Likewise.
+	(stap_test): Pass argument as an additional flag.
+	(stap_test_no_debuginfo): Likewise.
+	(stap_test): Check `info probes stap' output for semaphore
+	addresses if the test binary is supposed to have them.
+
 2020-01-09  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.tui/basic.exp: Add more scrolling tests.

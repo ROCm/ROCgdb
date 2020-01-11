@@ -15,7 +15,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if USE_PROBES
+#if USE_SEMAPHORES
 
 #define _SDT_HAS_SEMAPHORES
 __extension__ unsigned short test_user_semaphore __attribute__ ((unused)) __attribute__ ((section (".probes")));
@@ -30,6 +30,8 @@ __extension__ unsigned short test_pstr_semaphore __attribute__ ((unused)) __attr
 
 __extension__ unsigned short test_ps_semaphore __attribute__ ((unused)) __attribute__ ((section (".probes")));
 #else
+
+int relocation_marker __attribute__ ((unused));
 
 #define TEST 1
 #define TEST2 1

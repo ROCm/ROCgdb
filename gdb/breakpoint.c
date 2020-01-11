@@ -393,7 +393,7 @@ breakpoints_should_be_inserted_now (void)
 	 no threads under GDB's control yet.  */
       return 1;
     }
-  else if (target_has_execution)
+  else
     {
       if (always_inserted_mode)
 	{
@@ -402,8 +402,10 @@ breakpoints_should_be_inserted_now (void)
 	  return 1;
 	}
 
-      if (threads_are_executing ())
-	return 1;
+      for (inferior *inf : all_inferiors ())
+	if (inf->has_execution ()
+	    && threads_are_executing (inf->process_target ()))
+	  return 1;
 
       /* Don't remove breakpoints yet if, even though all threads are
 	 stopped, we still have events to process.  */
@@ -2891,7 +2893,7 @@ update_inserted_breakpoint_locations (void)
 	 if we aren't attached to any process yet, we should still
 	 insert breakpoints.  */
       if (!gdbarch_has_global_breakpoints (target_gdbarch ())
-	  && inferior_ptid == null_ptid)
+	  && (inferior_ptid == null_ptid || !target_has_execution))
 	continue;
 
       val = insert_bp_location (bl, &tmp_error_stream, &disabled_breaks,
@@ -2947,7 +2949,7 @@ insert_breakpoint_locations (void)
 	 if we aren't attached to any process yet, we should still
 	 insert breakpoints.  */
       if (!gdbarch_has_global_breakpoints (target_gdbarch ())
-	  && inferior_ptid == null_ptid)
+	  && (inferior_ptid == null_ptid || !target_has_execution))
 	continue;
 
       val = insert_bp_location (bl, &tmp_error_stream, &disabled_breaks,
@@ -11909,7 +11911,18 @@ update_global_location_list (enum ugll_insert_mode insert_mode)
 		 around.  We simply always ignore hardware watchpoint
 		 traps we can no longer explain.  */
 
-	      old_loc->events_till_retirement = 3 * (thread_count () + 1);
+	      process_stratum_target *proc_target = nullptr;
+	      for (inferior *inf : all_inferiors ())
+		if (inf->pspace == old_loc->pspace)
+		  {
+		    proc_target = inf->process_target ();
+		    break;
+		  }
+	      if (proc_target != nullptr)
+		old_loc->events_till_retirement
+		  = 3 * (thread_count (proc_target) + 1);
+	      else
+		old_loc->events_till_retirement = 1;
 	      old_loc->owner = NULL;
 
 	      moribund_locations.push_back (old_loc);
