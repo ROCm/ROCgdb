@@ -350,13 +350,9 @@ rocm_target_ops::thread_alive (ptid_t ptid)
 
   /* Check that the wave_id is valid.  */
 
-  inferior *inf = find_inferior_ptid (ptid);
-  if (!inf)
-    return false;
-
   amd_dbgapi_wave_state_t state;
   return amd_dbgapi_wave_get_info (
-             get_amd_dbgapi_process_id (inf), get_amd_dbgapi_wave_id (ptid),
+             get_amd_dbgapi_process_id (), get_amd_dbgapi_wave_id (ptid),
              AMD_DBGAPI_WAVE_INFO_STATE, sizeof (state), &state)
          == AMD_DBGAPI_STATUS_SUCCESS;
 }
@@ -367,7 +363,7 @@ rocm_target_ops::thread_name (thread_info *tp)
   if (!ptid_is_gpu (tp->ptid))
     return beneath ()->thread_name (tp);
 
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (tp->inf);
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
   amd_dbgapi_dispatch_id_t dispatch_id;
   amd_dbgapi_global_address_t kernel_addr;
@@ -577,7 +573,7 @@ rocm_target_stop_one_wave (ptid_t ptid)
   if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
     {
       /* the wave must have exited, set the thread status to reflect that.  */
-      auto *tp = find_thread_ptid (ptid);
+      auto *tp = find_thread_ptid (current_inferior (), ptid);
       gdb_assert (tp);
 
       tp->state = THREAD_EXITED;
@@ -828,18 +824,19 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   std::tie (event_wave_id, stop_reason) = info->wave_stop_events.front ();
   info->wave_stop_events.pop_front ();
 
-  ptid_t event_ptid (current_inferior ()->pid, 1, event_wave_id.handle);
+  struct inferior *inf = current_inferior ();
+  ptid_t event_ptid (inf->pid, 1, event_wave_id.handle);
 
-  if (!find_thread_ptid (event_ptid))
+  if (!find_thread_ptid (inf->process_target (), event_ptid))
     {
-      add_thread_silent (event_ptid);
-      set_running (event_ptid, 1);
-      set_executing (event_ptid, 1);
+      add_thread_silent (inf->process_target (), event_ptid);
+      set_running (inf->process_target (), event_ptid, 1);
+      set_executing (inf->process_target (), event_ptid, 1);
     }
 
   /* Since we are manipulating the register cache for the event thread,
      make sure it is the current thread.  */
-  switch_to_thread (event_ptid);
+  switch_to_thread (inf->process_target (), event_ptid);
 
   /* By caching the PC now, we avoid having to suspend/resume the queue
      later when we need to access it.  */
@@ -849,7 +846,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
                                 &stop_pc)
       == AMD_DBGAPI_STATUS_SUCCESS)
     {
-      struct regcache *regcache = get_thread_regcache (event_ptid);
+      struct regcache *regcache = get_thread_regcache_for_ptid (event_ptid);
       regcache->raw_supply (gdbarch_pc_regnum (regcache->arch ()), &stop_pc);
     }
   ws->kind = TARGET_WAITKIND_STOPPED;
@@ -889,7 +886,7 @@ rocm_target_ops::stopped_by_sw_breakpoint ()
 
   /* FIXME: we should check that the wave is not single-stepping.  */
 
-  struct regcache *regcache = get_thread_regcache (inferior_ptid);
+  struct regcache *regcache = get_thread_regcache_for_ptid (inferior_ptid);
 
   CORE_ADDR bkpt_pc = regcache_read_pc (regcache)
                       - gdbarch_decr_pc_after_break (regcache->arch ());
@@ -921,8 +918,7 @@ rocm_target_ops::fetch_registers (struct regcache *regcache, int regno)
       return;
     }
 
-  inferior *inf = find_inferior_ptid (regcache->ptid ());
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
 
   gdb_byte raw[AMDGCN_MAX_REGISTER_SIZE];
@@ -955,8 +951,7 @@ rocm_target_ops::store_registers (struct regcache *regcache, int regno)
       return;
     }
 
-  inferior *inf = find_inferior_ptid (regcache->ptid ());
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
 
   regcache->raw_collect (regno, &raw);
@@ -1075,9 +1070,9 @@ rocm_target_ops::update_thread_list ()
               != AMD_DBGAPI_STATUS_SUCCESS)
             continue;
 
-          add_thread_silent (wave_ptid);
-          set_running (wave_ptid, 1);
-          set_executing (wave_ptid, 1);
+          add_thread_silent (inf->process_target (), wave_ptid);
+          set_running (inf->process_target (), wave_ptid, 1);
+          set_executing (inf->process_target (), wave_ptid, 1);
         }
     }
 
@@ -1558,15 +1553,14 @@ get_debug_amd_dbgapi_log_level ()
 
 static void
 set_debug_amd_dbgapi_log_level (const char *args, int from_tty,
-                                 struct cmd_list_element *c)
+                                struct cmd_list_element *c)
 {
   amd_dbgapi_set_log_level (get_debug_amd_dbgapi_log_level ());
 }
 
 static void
 show_debug_amd_dbgapi_log_level (struct ui_file *file, int from_tty,
-                                  struct cmd_list_element *c,
-                                  const char *value)
+                                 struct cmd_list_element *c, const char *value)
 {
   fprintf_filtered (file, _ ("The amd-dbgapi log level is %s.\n"), value);
 }
@@ -1589,8 +1583,7 @@ info_agents_command (const char *args, int from_tty)
 
   if (!count && !uiout->is_mi_like_p ())
     {
-      uiout->field_string (NULL,
-                           _ ("No agents are currently active.\n"));
+      uiout->field_string (NULL, _ ("No agents are currently active.\n"));
       return;
     }
 
@@ -1718,16 +1711,15 @@ _initialize_rocm_tdep (void)
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
-  add_prefix_cmd (
-      "amd-dbgapi", no_class, set_debug_amd_dbgapi,
-      _ ("Generic command for setting amd-dbgapi debugging flags"),
-      &set_debug_amd_dbgapi_list, "set debug amd-dbgapi ", 0, &setdebuglist);
+  add_prefix_cmd ("amd-dbgapi", no_class, set_debug_amd_dbgapi,
+                  _ ("Generic command for setting amd-dbgapi debugging flags"),
+                  &set_debug_amd_dbgapi_list, "set debug amd-dbgapi ", 0,
+                  &setdebuglist);
 
-  add_prefix_cmd (
-      "amd-dbgapi", no_class, show_debug_amd_dbgapi,
-      _ ("Generic command for showing amd-dbgapi debugging flags"),
-      &show_debug_amd_dbgapi_list, "show debug amd-dbgapi ", 0,
-      &showdebuglist);
+  add_prefix_cmd ("amd-dbgapi", no_class, show_debug_amd_dbgapi,
+                  _ ("Generic command for showing amd-dbgapi debugging flags"),
+                  &show_debug_amd_dbgapi_list, "show debug amd-dbgapi ", 0,
+                  &showdebuglist);
 
   add_setshow_enum_cmd (
       "log-level", class_maintenance, debug_amd_dbgapi_log_level_enums,

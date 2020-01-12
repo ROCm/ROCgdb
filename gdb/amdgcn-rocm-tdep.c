@@ -307,7 +307,7 @@ amdgcn_rocm_displaced_step_fixup (struct gdbarch *gdbarch,
            status);
 
   /* We may have written some registers, so flush the register cache.  */
-  registers_changed_ptid (regcache->ptid ());
+  registers_changed_ptid (regcache->target (), regcache->ptid ());
 }
 
 static int
