@@ -1,3 +1,28 @@
+2020-01-13  Alan Modra  <amodra@gmail.com>
+
+	* score-dis.c: Formatting.
+	* score7-dis.c: Formatting.
+
+2020-01-13  Alan Modra  <amodra@gmail.com>
+
+	* score-dis.c (print_insn_score48): Use unsigned variables for
+	unsigned values.  Don't left shift negative values.
+	(print_insn_score32): Likewise.
+	* score7-dis.c (print_insn_score32, print_insn_score16): Likewise.
+
+2020-01-13  Alan Modra  <amodra@gmail.com>
+
+	* tic4x-dis.c (tic4x_print_register): Remove dead code.
+
+2020-01-13  Alan Modra  <amodra@gmail.com>
+
+	* fr30-ibld.c: Regenerate.
+
+2020-01-13  Alan Modra  <amodra@gmail.com>
+
+	* xgate-dis.c (print_insn): Don't left shift signed value.
+	(ripBits): Formatting, use 1u.
+
 2020-01-10  Alan Modra  <amodra@gmail.com>
 
 	* tilepro-opc.c (parse_insn_tilepro): Make opval unsigned.
