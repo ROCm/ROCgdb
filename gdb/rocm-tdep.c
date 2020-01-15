@@ -263,6 +263,11 @@ get_amd_dbgapi_process_id (struct inferior *inferior)
 }
 
 static void
+rocm_breakpoint_re_set (struct breakpoint *b)
+{
+}
+
+static void
 rocm_breakpoint_check_status (struct bpstats *bs)
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
@@ -1038,16 +1043,23 @@ rocm_target_ops::update_thread_list ()
 {
   for (inferior *inf : all_inferiors ())
     {
-      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+      amd_dbgapi_process_id_t process_id;
       amd_dbgapi_wave_id_t *wave_list;
       size_t count;
+
+      process_id = get_amd_dbgapi_process_id (inf);
+      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+        {
+          /* The inferior may not be attached yet.  */
+          continue;
+        }
 
       amd_dbgapi_changed_t changed;
       amd_dbgapi_status_t status;
       if ((status
            = amd_dbgapi_wave_list (process_id, &count, &wave_list, &changed))
           != AMD_DBGAPI_STATUS_SUCCESS)
-        error (_ ("amd_dbgapi_wave_list failed (rc=%d"), status);
+        error (_ ("amd_dbgapi_wave_list failed (rc=%d)"), status);
 
       if (changed == AMD_DBGAPI_CHANGED_NO)
         continue;
@@ -1067,13 +1079,14 @@ rocm_target_ops::update_thread_list ()
       for (auto &&tid : threads)
         {
           ptid_t wave_ptid (inf->pid, 1, tid);
+          /* FIXME: is this really needed?
           amd_dbgapi_wave_state_t state;
 
           if (amd_dbgapi_wave_get_info (
                   process_id, get_amd_dbgapi_wave_id (wave_ptid),
                   AMD_DBGAPI_WAVE_INFO_STATE, sizeof (state), &state)
               != AMD_DBGAPI_STATUS_SUCCESS)
-            continue;
+            continue;*/
 
           add_thread_silent (wave_ptid);
           set_running (wave_ptid, 1);
@@ -1353,6 +1366,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
           {
             rocm_breakpoint_ops = bkpt_breakpoint_ops;
             rocm_breakpoint_ops.check_status = rocm_breakpoint_check_status;
+            rocm_breakpoint_ops.re_set = rocm_breakpoint_re_set;
           }
 
         auto it = info->breakpoint_map.find (breakpoint_id.handle);
