@@ -1241,10 +1241,10 @@ static cli_style_option verbose_style ("rocm_verbose", ui_file_style::BLUE);
 
 static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   /* allocate_memory.  */
-  .allocate_memory = xmalloc,
+  .allocate_memory = malloc,
 
   /* deallocate_memory.  */
-  .deallocate_memory = xfree,
+  .deallocate_memory = free,
 
   /* get_os_pid.  */
   .get_os_pid = [] (amd_dbgapi_client_process_id_t client_process_id,
