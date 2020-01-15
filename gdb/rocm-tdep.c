@@ -201,7 +201,7 @@ static int rocm_event_pipe[2] = { -1, -1 };
 
 /* Flush the event pipe.  */
 
-void
+static void
 async_file_flush (void)
 {
   int ret;
