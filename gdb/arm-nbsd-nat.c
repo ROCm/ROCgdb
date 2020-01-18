@@ -397,7 +397,7 @@ arm_nbsd_nat_target::store_registers (struct regcache *regcache, int regno)
 
 static void
 fetch_elfcore_registers (struct regcache *regcache,
-			 char *core_reg_sect, unsigned core_reg_size,
+			 gdb_byte *core_reg_sect, unsigned core_reg_size,
 			 int which, CORE_ADDR ignore)
 {
   struct reg gregset;
@@ -444,8 +444,9 @@ static struct core_fns arm_netbsd_elfcore_fns =
   NULL
 };
 
+void _initialize_arm_netbsd_nat ();
 void
-_initialize_arm_netbsd_nat (void)
+_initialize_arm_netbsd_nat ()
 {
   add_inf_child_target (&the_arm_netbsd_nat_target);
 

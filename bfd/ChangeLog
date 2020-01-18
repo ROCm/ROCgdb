@@ -1,3 +1,37 @@
+2020-01-17  Christian Biesinger  <cbiesinger@google.com>
+
+	* coff-arm.c: Fix spelling error (seperate).
+	* elfxx-riscv.c (riscv_parse_sv_or_non_std_ext): Fix spelling
+	error (seperate).
+	* sysdep.h (strnlen): Fix spelling error (seperate).
+
+2020-01-15  Lars Brinkhoff  <lars@nocrew.org>
+
+	PR 20694
+	* pdp11.c (TARGET_PAGE_SIZE): Set to 8192.
+
+2020-01-15  Alan Modra  <amodra@gmail.com>
+
+	PR 25384
+	* elf64-ppc.c (ELIMINATE_COPY_RELOCS): Update comment.
+	(ppc64_elf_adjust_dynamic_symbol): Don't allow .dynbss copies
+	of function symbols unless dot symbols are present.  Do warn
+	whenever one is created, regardles of whether a PLT entry is
+	also emitted for the function symbol.
+
+2020-01-14  Alan Modra  <amodra@gmail.com>
+
+	* som.c (som_bfd_count_ar_symbols): Error when file position
+	of symbols on chains is not strictly increasing.
+
+2020-01-14  Alan Modra  <amodra@gmail.com>
+
+	* vms.h (VMS_DEBUG): Define as 0.
+	* vms-alpha.c (image_write): Move debug output after bounds check.
+	Tidy bounds check.
+	(_bfd_vms_slurp_eihd): Warning fix.
+	(_bfd_vms_slurp_etir): Init variables to avoid bogus warnings.
+
 2020-01-13  Alan Modra  <amodra@gmail.com>
 
 	* vms-alpha.c (_bfd_vms_slurp_egsd): Ensure minimum size even

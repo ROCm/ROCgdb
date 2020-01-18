@@ -1,3 +1,90 @@
+2020-01-17  Christian Biesinger  <cbiesinger@google.com>
+
+	* opintl.h: Fix spelling error (seperate).
+
+2020-01-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-opc.tbl: Add {vex} pseudo prefix.
+	* i386-tbl.h: Regenerated.
+
+2020-01-16  Andre Vieira  <andre.simoesdiasvieira@arm.com>
+
+	PR 25376
+	* opcodes/arm-dis.c (coprocessor_opcodes): Use CORE_HIGH for MVE bits.
+	(neon_opcodes): Likewise.
+	(select_arm_features): Make sure we enable MVE bits when selecting
+	armv8.1-m.main.  Make sure we do not enable MVE bits when not selecting
+	any architecture.
+
+2020-01-16  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl: Drop stale comment from XOP section.
+
+2020-01-16  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl (movq): Add VexWIG to SSE2AVX XMM->XMM forms.
+	(extractps): Add VexWIG to SSE2AVX forms.
+	* i386-tbl.h: Re-generate.
+
+2020-01-16  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl (pextrq, pinsrq): Drop IgnoreSize and Qword. Drop
+	Size64 from and use VexW1 on SSE2AVX forms.
+	(vpextrq, vpinsrq): Drop IgnoreSize and Qword. Drop Size64 from
+	VEX-encoded forms. Add Cpu64 to EVEX-encoded forms. Use VexW1.
+	* i386-tbl.h: Re-generate.
+
+2020-01-15  Alan Modra  <amodra@gmail.com>
+
+	* tic4x-dis.c (tic4x_version): Make unsigned long.
+	(optab, optab_special, registernames): New file scope vars.
+	(tic4x_print_register): Set up registernames rather than
+	malloc'd registertable.
+	(tic4x_disassemble): Delete optable and optable_special.  Use
+	optab and optab_special instead.  Throw away old optab,
+	optab_special and registernames when info->mach changes.
+
+2020-01-14  Sergey Belyashov  <sergey.belyashov@gmail.com>
+
+	PR 25377
+	* z80-dis.c (suffix): Use .db instruction to generate double
+	prefix.
+
+2020-01-14  Alan Modra  <amodra@gmail.com>
+
+	* z8k-dis.c (unpack_instr): Formatting.  Cast unsigned short
+	values to unsigned before shifting.
+
+2020-01-13  Thomas Troeger  <tstroege@gmx.de>
+
+	* arm-dis.c (print_insn_arm): Fill in insn info fields for control
+	flow instructions.
+	(print_insn_thumb16, print_insn_thumb32): Likewise.
+	(print_insn): Initialize the insn info.
+	* i386-dis.c (print_insn): Initialize the insn info fields, and
+	detect jumps.
+
+2012-01-13  Claudiu Zissulescu <claziss@gmail.com>
+
+	* arc-opc.c (C_NE): Make it required.
+
+2012-01-13  Claudiu Zissulescu <claziss@gmail.com>
+
+        * opcode/arc-dis.c (regnames): Correct ACCL/ACCH naming, fix typo
+	reserved register name.
+
+2020-01-13  Alan Modra  <amodra@gmail.com>
+
+	* ns32k-dis.c (Is_gen): Use strchr, add 'f'.
+	(print_insn_ns32k): Adjust ioffset for 'f' index_offset.
+
+2020-01-13  Alan Modra  <amodra@gmail.com>
+
+	* wasm32-dis.c (print_insn_wasm32): Localise variables.  Store
+	result of wasm_read_leb128 in a uint64_t and check that bits
+	are not lost when copying to other locals.  Use uint32_t for
+	most locals.  Use PRId64 when printing int64_t.
+
 2020-01-13  Alan Modra  <amodra@gmail.com>
 
 	* score-dis.c: Formatting.

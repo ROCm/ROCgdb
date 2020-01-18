@@ -1,3 +1,72 @@
+2020-01-14  Tom Tromey  <tom@tromey.com>
+
+	* configure: Rebuild.
+	* configure.ac: Remove any checks that were added to common.m4.
+	* acinclude.m4: Include lib-ld.m4, lib-prefix.m4, and
+	lib-link.m4.
+
+2020-01-14  Tom Tromey  <tom@tromey.com>
+
+	* server.h: Include config.h.
+	* gdbreplay.c: Include config.h.
+	* configure: Rebuild.
+	* configure.ac: Don't source common.host.
+	* acinclude.m4: Update path.
+	* Makefile.in (INCSUPPORT): New variable.
+	(INCLUDE_CFLAGS): Add INCSUPPORT.
+	(SFILES): Update paths.
+	(version-generated.c): Update path to create-version.sh.
+	(gdbsupport/%-ipa.o, gdbsupport/%.o): Update paths.
+
+2020-01-14  Tom Tromey  <tom@tromey.com>
+
+	* configure.ac (LIBS): Use WIN32APILIBS.
+	(USE_WIN32API): Don't define.
+	* configure: Rebuild.
+
+2020-01-14  Tom Tromey  <tom@tromey.com>
+
+	* configure: Rebuild.
+
+2020-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* Makefile.in (%-generated.c): Remove rule for files from
+	regformats/i386.
+
+2020-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* configure: Re-generate.
+
+2020-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* tracepoint.h (IP_AGENT_EXPORT_FUNC) [!IN_PROCESS_AGENT]:
+	Define to static.
+	* tracepoint.c (stop_tracing, flush_trace_buffer,
+	about_to_request_buffer_space, get_trace_state_variable_value,
+	set_trace_state_variable_value, gdb_collect): Add declaration.
+
+2020-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* linux-x86-low.c (x86_linux_regs_info, amd64_emit_eq_goto,
+	amd64_emit_ne_goto, amd64_emit_lt_goto, amd64_emit_le_goto,
+	amd64_emit_gt_goto, amd64_emit_ge_goto, amd64_emit_ge_goto,
+	i386_emit_eq_goto, i386_emit_ne_goto, i386_emit_lt_goto,
+	i386_emit_le_goto, i386_emit_gt_goto, i386_emit_ge_goto): Make
+	static.
+
+2020-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* inferiors.c: Include gdbsupport/common-inferior.h.
+
+2020-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* hostio-errno.c: Include hostio.h.
+
+2020-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* Makefile.in (%-generated.c): Make $(regdat_sh) a regular
+	prerequisite.
+
 2020-01-12  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* linux-arm-tdesc.c: Include linux-arm-tdesc.h.

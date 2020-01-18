@@ -2960,8 +2960,9 @@ the rest of the stack trace."),
   },
 };
 
+void _initialize_frame ();
 void
-_initialize_frame (void)
+_initialize_frame ()
 {
   obstack_init (&frame_cache_obstack);
 

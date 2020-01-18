@@ -2430,8 +2430,8 @@ resume_1 (enum gdb_signal sig)
   if (tp->control.trap_expected || bpstat_should_step ())
     tp->control.may_range_step = 0;
 
-  /* If enabled, step over breakpoints by executing a copy of the
-     instruction at a different address.
+  /* If displaced stepping is enabled, step over breakpoints by executing a
+     copy of the instruction at a different address.
 
      We can't use displaced stepping when we have a signal to deliver;
      the comments for displaced_step_prepare explain why.  The
@@ -2519,7 +2519,7 @@ resume_1 (enum gdb_signal sig)
       && step_over_info_valid_p ())
     {
       /* If we have nested signals or a pending signal is delivered
-	 immediately after a handler returns, might might already have
+	 immediately after a handler returns, might already have
 	 a step-resume breakpoint set on the earlier handler.  We cannot
 	 set another step-resume breakpoint; just continue on until the
 	 original breakpoint is hit.  */
@@ -5298,8 +5298,6 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
       stop_waiting (ecs);
       return;
 
-      /* The following are the only cases in which we keep going;
-         the above cases end in a continue or goto.  */
     case TARGET_WAITKIND_FORKED:
     case TARGET_WAITKIND_VFORKED:
       /* Check whether the inferior is displaced stepping.  */
@@ -9325,8 +9323,9 @@ infrun_async_inferior_event_handler (gdb_client_data data)
   inferior_event_handler (INF_REG_EVENT, NULL);
 }
 
+void _initialize_infrun ();
 void
-_initialize_infrun (void)
+_initialize_infrun ()
 {
   struct cmd_list_element *c;
 

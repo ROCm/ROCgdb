@@ -441,7 +441,8 @@ post_create_inferior (struct target_ops *target, int from_tty)
   thr->suspend.stop_pc = 0;
   try
     {
-      thr->suspend.stop_pc = regcache_read_pc (get_current_regcache ());
+      regcache *rc = get_thread_regcache (thr);
+      thr->suspend.stop_pc = regcache_read_pc (rc);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -3162,8 +3163,9 @@ use \"set args\" without arguments.\n\
 \n\
 To start the inferior without using a shell, use \"set startup-with-shell off\"."
 
+void _initialize_infcmd ();
 void
-_initialize_infcmd (void)
+_initialize_infcmd ()
 {
   static struct cmd_list_element *info_proc_cmdlist;
   struct cmd_list_element *c = NULL;

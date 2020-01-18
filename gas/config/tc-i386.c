@@ -419,7 +419,7 @@ struct _i386_insn
     enum
       {
 	vex_encoding_default = 0,
-	vex_encoding_vex2,
+	vex_encoding_vex,
 	vex_encoding_vex3,
 	vex_encoding_evex
       } vec_encoding;
@@ -4722,8 +4722,8 @@ parse_insn (char *line, char *mnemonic)
 		  i.dir_encoding = dir_encoding_store;
 		  break;
 		case 0x4:
-		  /* {vex2} */
-		  i.vec_encoding = vex_encoding_vex2;
+		  /* {vex} */
+		  i.vec_encoding = vex_encoding_vex;
 		  break;
 		case 0x5:
 		  /* {vex3} */
@@ -5745,9 +5745,7 @@ match_template (char mnem_suffix)
   i386_opcode_modifier suffix_check;
   i386_operand_type operand_types [MAX_OPERANDS];
   int addr_prefix_disp;
-  unsigned int j;
-  unsigned int found_cpu_match, size_match;
-  unsigned int check_register;
+  unsigned int j, size_match, check_register;
   enum i386_error specific_error = 0;
 
 #if MAX_OPERANDS != 5
@@ -5799,9 +5797,7 @@ match_template (char mnem_suffix)
 
       /* Check processor support.  */
       i.error = unsupported;
-      found_cpu_match = (cpu_flags_match (t)
-			 == CPU_FLAGS_PERFECT_MATCH);
-      if (!found_cpu_match)
+      if (cpu_flags_match (t) != CPU_FLAGS_PERFECT_MATCH)
 	continue;
 
       /* Check AT&T mnemonic.   */
@@ -6124,8 +6120,6 @@ check_reverse:
 	  /* Found either forward/reverse 2, 3 or 4 operand match here:
 	     slip through to break.  */
 	}
-      if (!found_cpu_match)
-	continue;
 
       /* Check if vector and VEX operands are valid.  */
       if (check_VecOperands (t) || VEX_check_operands (t))

@@ -1,3 +1,33 @@
+2020-01-16  Christian Biesinger  <cbiesinger@google.com>
+
+	* lib/gdb.exp: Fix spelling error (seperatelly).
+
+2020-01-14  Tom Tromey  <tom@tromey.com>
+
+	PR symtab/12535:
+	* gdb.python/python.exp: Test decode_line with empty string
+	argument.
+
+2020-01-14  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* gdb.base/skip-inline.exp: Extend test.
+
+2020-01-13  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.dwarf2/dw2-bad-elf-other.S: New file.
+	* gdb.dwarf2/dw2-bad-elf.c: New file.
+	* gdb.dwarf2/dw2-bad-elf.exp: New file.
+
+2020-01-13  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/dwarf.exp (Dwarf::lines): Reset _line_saw_program and
+	_line_saw_file.
+
+2020-01-13  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/tuiterm.exp (Term::_check_box): Check some parts of the top
+	border.
+
 2020-01-10  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 
 	* gdb.multi/multi-target.exp (setup): Factor out "info
@@ -2423,6 +2453,10 @@
 	* gdb.cp/meth-typedefs.exp: Add new tests for `test_incomplete'
 	functions.
 
+2019-04-25  Ali Tamur  <tamur@google.com>
+
+	* lib/dwarf.exp (_handle_DW_FORM): Add DW_FORM_strx.
+
 2019-04-25  Sergio Durigan Junior  <sergiodj@redhat.com>
 
 	PR corefiles/11608
@@ -4446,6 +4480,13 @@
 
 	PR gdb/23104
 	* gdb.base/info-shared.exp: Replace libs=-ldl with shlib_load.
+
+2018-04-22  Rajendra SY  <rajendra.sy@gmail.com>
+
+	PR gdb/23095
+	* gdb.base/break-probes.exp: Pass shlib_load to
+	prepare_for_testing.  Set normal_bp to r_debug_state if target is
+	bsd.
 
 2018-04-19  Richard Bunt  <richard.bunt@arm.com>
 

@@ -15415,8 +15415,9 @@ static struct cmd_list_element *enablebreaklist = NULL;
 
 cmd_list_element *commands_cmd_element = nullptr;
 
+void _initialize_breakpoint ();
 void
-_initialize_breakpoint (void)
+_initialize_breakpoint ()
 {
   struct cmd_list_element *c;
 

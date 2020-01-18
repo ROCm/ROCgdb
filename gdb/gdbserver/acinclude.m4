@@ -15,10 +15,15 @@ m4_include(../../config/acx.m4)
 m4_include(../../config/depstand.m4)
 m4_include(../../config/lead-dot.m4)
 
+dnl Needed for common.m4
+dnl For AC_LIB_HAVE_LINKFLAGS.
+m4_include(../../config/lib-ld.m4)
+m4_include(../../config/lib-prefix.m4)
+m4_include(../../config/lib-link.m4)
 dnl codeset.m4 is needed for common.m4, but not for
 dnl anything else in gdbserver.
 m4_include(../../config/codeset.m4)
-m4_include(../gdbsupport/common.m4)
+m4_include(../../gdbsupport/common.m4)
 
 dnl For libiberty_INIT.
 m4_include(../libiberty.m4)

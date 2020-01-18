@@ -810,6 +810,15 @@ gdbpy_decode_line (PyObject *self, PyObject *args)
   if (! PyArg_ParseTuple (args, "|s", &arg))
     return NULL;
 
+  /* Treat a string consisting of just whitespace the same as
+     NULL.  */
+  if (arg != NULL)
+    {
+      arg = skip_spaces (arg);
+      if (*arg == '\0')
+	arg = NULL;
+    }
+
   if (arg != NULL)
     location = string_to_event_location_basic (&arg, python_language,
 					       symbol_name_match_type::WILD);
@@ -1555,6 +1564,7 @@ finalize_python (void *ignore)
 /* This is called via the PyImport_AppendInittab mechanism called
    during initialization, to make the built-in _gdb module known to
    Python.  */
+PyMODINIT_FUNC init__gdb_module (void);
 PyMODINIT_FUNC
 init__gdb_module (void)
 {
@@ -1730,8 +1740,9 @@ do_start_initialization ()
 /* See python.h.  */
 cmd_list_element *python_cmd_element = nullptr;
 
+void _initialize_python ();
 void
-_initialize_python (void)
+_initialize_python ()
 {
   add_com ("python-interactive", class_obscure,
 	   python_interactive_command,
