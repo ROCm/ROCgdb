@@ -1,3 +1,82 @@
+2020-01-19  Tom Tromey  <tom@tromey.com>
+
+	* disasm.c (~gdb_disassembler): New destructor.
+	(gdb_buffered_insn_length): Call disassemble_free_target.
+	* disasm.h (class gdb_disassembler): Declare destructor.  Use
+	DISABLE_COPY_AND_ASSIGN.
+
+2020-01-19  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (abbrev_table_up): Move typedef earlier.
+	(die_reader_func_ftype): Remove.
+	(cutu_reader): New class.
+	(dw2_get_file_names_reader): Remove "data" parameter.
+	(dw2_get_file_names): Use cutu_reader.
+	(create_debug_type_hash_table): Update.
+	(read_cutu_die_from_dwo): Update comment.
+	(lookup_dwo_unit): Add dwo_name parameter.
+	(cutu_reader::init_tu_and_read_dwo_dies): Now a method.  Remove
+	die_reader_func_ftype and data parameters.
+	(cutu_reader::cutu_reader): Rename from init_cutu_and_read_dies.
+	Remove die_reader_func_ftype and data parameters.
+	(~cutu_reader): New; from init_cutu_and_read_dies.
+	(cutu_reader::cutu_reader): Rename from
+	init_cutu_and_read_dies_no_follow.  Remove die_reader_func_ftype
+	and data parameters.
+	(init_cutu_and_read_dies_simple): Remove.
+	(struct process_psymtab_comp_unit_data): Remove.
+	(process_psymtab_comp_unit_reader): Remove data parameter; add
+	want_partial_unit and pretend_language parameters.
+	(process_psymtab_comp_unit): Use cutu_reader.
+	(build_type_psymtabs_reader): Remove data parameter.
+	(build_type_psymtabs_1): Use cutu_reader.
+	(process_skeletonless_type_unit): Likewise.
+	(load_partial_comp_unit_reader): Remove.
+	(load_partial_comp_unit): Use cutu_reader.
+	(load_full_comp_unit_reader): Remove.
+	(load_full_comp_unit): Use cutu_reader.
+	(struct create_dwo_cu_data): Remove.
+	(create_dwo_cu_reader): Remove datap parameter; add dwo_file and
+	dwo_unit parameters.
+	(create_cus_hash_table): Use cutu_reader.
+	(struct dwarf2_read_addr_index_data): Remove.
+	(dwarf2_read_addr_index_reader): Remove.
+	(dwarf2_read_addr_index): Use cutu_reader.
+	(read_signatured_type_reader): Remove.
+	(read_signatured_type): Use cutu_reader.
+
+2020-01-19  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_show_assembly): Use tui_suppress_output.
+	* tui/tui-wingeneral.h (class tui_suppress_output): New.
+	(tui_wrefresh): Declare.
+	* tui/tui-wingeneral.c (suppress_output): New global.
+	(tui_suppress_output, ~tui_suppress_output): New constructor and
+	destructor.
+	(tui_wrefresh): New function.
+	(tui_gen_win_info::refresh_window): Use tui_wrefresh.
+	(tui_gen_win_info::make_window): Call wnoutrefresh when needed.
+	* tui/tui-regs.h (struct tui_data_window) <no_refresh>: Declare
+	method.
+	* tui/tui-regs.c (tui_data_window::erase_data_content): Call
+	tui_wrefresh.
+	(tui_data_window::no_refresh): New method.
+	(tui_data_item_window::refresh_window): Call tui_wrefresh.
+	(tui_reg_command): Use tui_suppress_output
+	* tui/tui-layout.c (tui_set_layout): Use tui_suppress_output.
+	* tui/tui-data.h (struct tui_gen_win_info) <no_refresh>: New
+	method.
+	* tui/tui-command.c (tui_refresh_cmd_win): Call tui_wrefresh.
+
+2020-01-19  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.c (tui_update_source_windows_with_line):
+	Handle case where symtab is null.
+
+2020-01-19  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-fork.c (one_fork_p): Simplify.
+
 2020-01-17  Simon Marchi  <simon.marchi@efficios.com>
 
 	* top.c (struct qt_args): Remove.
