@@ -1,3 +1,34 @@
+2020-01-20  Nick Clifton  <nickc@redhat.com>
+
+	* po/pt.po: Updates Portuguese translation.
+	* po/ru.po: Updated Russian translation.
+	* po/uk.po: Updated Ukranian translation.
+
+2020-01-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/25416
+	* elf64-x86-64.c (elf_x86_64_check_tls_transition): Support
+	"rex leal x@tlsdesc(%rip), %reg" and "call *x@tlsdesc(%eax)" in
+	X32 mode.
+	(elf_x86_64_relocate_section): In x32 mode, for GDesc -> LE
+	transition, relax "rex leal x@tlsdesc(%rip), %reg" to
+	"rex movl $x@tpoff, %reg", for GDesc -> IE transition, relax
+	"rex leal x@tlsdesc(%rip), %reg" to
+	"rex movl x@gottpoff(%rip), %eax".  For both transitions, relax
+	"call *(%eax)" to "nopl (%rax)".
+
+2020-01-20  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (LD_R11_0R3, CMPDI_R11_0, STD_R11_0R1, LD_R11_0R1),
+	(MTLR_R11): Don't define.
+	(LD_R0_0R3, CMPDI_R0_0): Define.
+	(build_tls_get_addr_stub): Don't use r11 in stub.
+
+2020-01-20  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (ppc_elf_hash_entry): New function, use throughout file.
+	(defined_sym_val, is_tls_get_addr): Likewise.
+
 2020-01-18  Nick Clifton  <nickc@redhat.com>
 
 	* version.m4 (BFD_VERSION): Set to 2.34.50.
