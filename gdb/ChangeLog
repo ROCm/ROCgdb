@@ -1,3 +1,53 @@
+2020-01-21  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbarch.sh: Add declaration for _initialize_gdbarch.
+
+2020-01-21  Simon Marchi  <simon.marchi@efficios.com>
+
+	* remote-sim.c (check_for_duplicate_sim_descriptor): Remove.
+	(get_sim_inferior_data): Remove use of iterate_over_inferiors,
+	replace with range-based for.
+	(gdbsim_interrupt_inferior): Remove.
+	(gdbsim_target::interrupt): Replace iterate_over_inferiors use
+	with a range-based for.  Inline code from
+	gdbsim_interrupt_inferior.
+
+2020-01-21  Simon Marchi  <simon.marchi@efficios.com>
+
+	* infrun.c (proceed): Fix indentation.
+
+2020-01-21  Tom Tromey  <tromey@adacore.com>
+
+	* source-cache.c (source_cache::ensure): Call ext_lang_colorize.
+	* python/python.c (python_extension_ops): Update.
+	(gdbpy_colorize): New function.
+	* python/lib/gdb/__init__.py (colorize): New function.
+	* extension.h (ext_lang_colorize): Declare.
+	* extension.c (ext_lang_colorize): New function.
+	* extension-priv.h (struct extension_language_ops) <colorize>: New
+	member.
+	* cli/cli-style.c (_initialize_cli_style): Update help text.
+
+2020-01-21  Luis Machado  <luis.machado@linaro.org>
+
+	* aarch64-tdep.c (struct aarch64_displaced_step_closure)
+	<cond>: Change type to bool.
+	(aarch64_displaced_step_b_cond): Update cond to use bool type.
+	(aarch64_displaced_step_cb): Likewise.
+	(aarch64_displaced_step_tb): Likewise.
+
+2020-01-21  Luis Machado  <luis.machado@linaro.org>
+
+	* aarch64-tdep.c (aarch64_displaced_step_fixup): Add more debugging
+	output.
+
+2020-01-21  Luis Machado  <luis.machado@linaro.org>
+
+	* aarch64-tdep.c (struct aarch64_displaced_step_closure )
+	<pc_adjust>: Adjust the documentation.
+	(aarch64_displaced_step_fixup): Check if PC really moved before
+	adjusting it.
+
 2020-01-19  Tom Tromey  <tom@tromey.com>
 
 	* disasm.c (~gdb_disassembler): New destructor.

@@ -2735,9 +2735,10 @@ struct aarch64_displaced_step_closure : public displaced_step_closure
 {
   /* It is true when condition instruction, such as B.CON, TBZ, etc,
      is being displaced stepping.  */
-  int cond = 0;
+  bool cond = false;
 
-  /* PC adjustment offset after displaced stepping.  */
+  /* PC adjustment offset after displaced stepping.  If 0, then we don't
+     write the PC back, assuming the PC is already the right address.  */
   int32_t pc_adjust = 0;
 };
 
@@ -2815,7 +2816,7 @@ aarch64_displaced_step_b_cond (const unsigned cond, const int32_t offset,
   */
 
   emit_bcond (dsd->insn_buf, cond, 8);
-  dsd->dsc->cond = 1;
+  dsd->dsc->cond = true;
   dsd->dsc->pc_adjust = offset;
   dsd->insn_count = 1;
 }
@@ -2850,7 +2851,7 @@ aarch64_displaced_step_cb (const int32_t offset, const int is_cbnz,
   */
   emit_cb (dsd->insn_buf, is_cbnz, aarch64_register (rn, is64), 8);
   dsd->insn_count = 1;
-  dsd->dsc->cond = 1;
+  dsd->dsc->cond = true;
   dsd->dsc->pc_adjust = offset;
 }
 
@@ -2875,7 +2876,7 @@ aarch64_displaced_step_tb (const int32_t offset, int is_tbnz,
   */
   emit_tb (dsd->insn_buf, is_tbnz, bit, aarch64_register (rt, 1), 8);
   dsd->insn_count = 1;
-  dsd->dsc->cond = 1;
+  dsd->dsc->cond = true;
   dsd->dsc->pc_adjust = offset;
 }
 
@@ -3032,11 +3033,20 @@ aarch64_displaced_step_fixup (struct gdbarch *gdbarch,
 {
   aarch64_displaced_step_closure *dsc = (aarch64_displaced_step_closure *) dsc_;
 
+  ULONGEST pc;
+
+  regcache_cooked_read_unsigned (regs, AARCH64_PC_REGNUM, &pc);
+
+  if (debug_displaced)
+    debug_printf ("Displaced: PC after stepping: %s (was %s).\n",
+		  paddress (gdbarch, pc), paddress (gdbarch, to));
+
   if (dsc->cond)
     {
-      ULONGEST pc;
+      if (debug_displaced)
+	debug_printf ("Displaced: [Conditional] pc_adjust before: %d\n",
+		      dsc->pc_adjust);
 
-      regcache_cooked_read_unsigned (regs, AARCH64_PC_REGNUM, &pc);
       if (pc - to == 8)
 	{
 	  /* Condition is true.  */
@@ -3048,13 +3058,35 @@ aarch64_displaced_step_fixup (struct gdbarch *gdbarch,
 	}
       else
 	gdb_assert_not_reached ("Unexpected PC value after displaced stepping");
+
+      if (debug_displaced)
+	debug_printf ("Displaced: [Conditional] pc_adjust after: %d\n",
+		      dsc->pc_adjust);
     }
+
+  if (debug_displaced)
+    debug_printf ("Displaced: %s PC by %d\n",
+		  dsc->pc_adjust? "adjusting" : "not adjusting",
+		  dsc->pc_adjust);
+
 
   if (dsc->pc_adjust != 0)
     {
+      /* Make sure the previous instruction was executed (that is, the PC
+	 has changed).  If the PC didn't change, then discard the adjustment
+	 offset.  Otherwise we may skip an instruction before its execution
+	 took place.  */
+      if ((pc - to) == 0)
+	{
+	  if (debug_displaced)
+	    debug_printf ("Displaced: PC did not move. Discarding PC "
+			  "adjustment.\n");
+	  dsc->pc_adjust = 0;
+	}
+
       if (debug_displaced)
 	{
-	  debug_printf ("displaced: fixup: set PC to %s:%d\n",
+	  debug_printf ("Displaced: fixup: set PC to %s:%d\n",
 			paddress (gdbarch, from), dsc->pc_adjust);
 	}
       regcache_cooked_write_unsigned (regs, AARCH64_PC_REGNUM,
