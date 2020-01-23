@@ -1,3 +1,48 @@
+2020-01-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/25416
+	* testsuite/ld-x86-64/tls.exp: Skip GNU2 TLS tests only without
+	compiler support.
+
+2020-01-22  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-powerpc/tlsdesc3.d,
+	* testsuite/ld-powerpc/tlsdesc3.wf,
+	* testsuite/ld-powerpc/tlsdesc4.d,
+	* testsuite/ld-powerpc/tlsdesc4.s,
+	* testsuite/ld-powerpc/tlsdesc4.wf: New tests.
+	* testsuite/ld-powerpc/powerpc.exp: Run them.
+
+2020-01-22  Alan Modra  <amodra@gmail.com>
+
+	* emultempl/ppc64elf.em (ppc64_opt, PARSE_AND_LIST_LONGOPTS),
+	(PARSE_AND_LIST_OPTIONS, PARSE_AND_LIST_ARGS_CASES): Support
+	--tls-get-addr-regsave and --no-tls-get-addr-regsave.
+	(params): Init new field.
+	* ld.texi (--tls-get-addr-regsave, --no-tls-get-addr-regsave):
+	Document.
+	* testsuite/ld-powerpc/tlsdesc.s,
+	* testsuite/ld-powerpc/tlsdesc.d,
+	* testsuite/ld-powerpc/tlsdesc.wf,
+	* testsuite/ld-powerpc/tlsdesc2.d,
+	* testsuite/ld-powerpc/tlsdesc2.wf,
+	* testsuite/ld-powerpc/tlsexenors.d,
+	* testsuite/ld-powerpc/tlsexenors.r,
+	* testsuite/ld-powerpc/tlsexers.d,
+	* testsuite/ld-powerpc/tlsexers.r,
+	* testsuite/ld-powerpc/tlsexetocnors.d,
+	* testsuite/ld-powerpc/tlsexetocrs.d,
+	* testsuite/ld-powerpc/tlsexetocrs.r,
+	* testsuite/ld-powerpc/tlsopt6.d,
+	* testsuite/ld-powerpc/tlsopt6.wf: New.
+	* testsuite/ld-powerpc/powerpc.exp: Run new tests.
+
+2020-01-22  Yuri Chornoivan  <yurchor@mageia.org>
+
+	PR 25417
+	* ldlang.c (ldlang_open_ctf): Fix error message typo.
+	* emultempl/z80elf.em (z80_elf_after_open): Likewise.
+
 2020-01-21  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* testsuite/ld-elf/pr23900-1.d: Adjusted.
