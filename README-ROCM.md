@@ -9,12 +9,12 @@ is included with the ROCm release as the ROCdbgapi library.
 
 Standard GDB commands can be used for both CPU and GPU code debugging. For more
 information about ROCgdb, please refer to the *ROCgdb User Manual* which is
-installed as both texinfo files and as a single PDF file in ``/opt/rocm/doc``.
-In particular, refer to the *Debugging Heterogeneous Programs* chapter for
-general information, and the *AMD GPU* subsection of the *Architectures* section
-in the *Configuration-Specific Information* chapter. The *AMD GPU* subsection
-also provides the list of features not currently implemented, and known current
-restrictions.
+installed as both texinfo files and as a single PDF file in
+``/opt/rocm/share/doc/gdb`. In particular, refer to the *Debugging Heterogeneous
+Programs* chapter for general information, and the *AMD GPU* subsection of the
+*Architectures* section in the *Configuration-Specific Information* chapter. The
+*AMD GPU* subsection also provides the list of features not currently
+implemented, and known current restrictions.
 
 For more information about ROCm, please refer to:
 
