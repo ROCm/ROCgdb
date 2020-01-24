@@ -7,20 +7,16 @@ ROCm platform of an x86-based host architecture together with the AMD
 commercially available GPU architectures supported by the AMD Debugger API which
 is included with the ROCm release as the ROCdbgapi library.
 
-All standard GDB commands can be used for both CPU and GPU code debugging. In particular:
+Standard GDB commands can be used for both CPU and GPU code debugging. For more
+information about ROCgdb, please refer to the *ROCgdb User Manual* which is
+installed as both texinfo files and as a single PDF file in ``/opt/rocm/doc``.
+In particular, refer to the *Debugging Heterogeneous Programs* chapter for
+general information, and the *AMD GPU* subsection of the *Architectures* section
+in the *Configuration-Specific Information* chapter. The *AMD GPU* subsection
+also provides the list of features not currently implemented, and known current
+restrictions.
 
-- The ``info threads`` command lists both CPU threads and GPU waves.
-- The ``info sharedlibrary`` command lists both loaded CPU and GPU code objects.
-- The new ``info agents`` command lists the heterogenous agents once the program
-  has started.
-
-The ``_wave_id`` convenience variable can be used when the focused thread is a
-GPU wave. It returns a string with the following format ``x,y,z/w`` where `x`,
-``y``, and ``z`` are the grid position of the wave's work-group in the dispatch,
-and ``w`` is the wave's number within the work-group.
-
-For more information about ROCm and ROCgdb, please refer to the Release Notes
-which includes current restrictions:
+For more information about ROCm, please refer to:
 
 - https://github.com/RadeonOpenCompute/ROCm
 
@@ -81,6 +77,10 @@ The built ROCgdb executable will be placed in:
 
 - ``build/gdb/gdb``
 
+The texinfo *User Manual* will be placed in:
+
+- ``build/gdb/doc/gdb.info``
+
 To install ROCgdb:
 
 ````shell
@@ -97,3 +97,13 @@ be installed. These can be installed as part of the ROCm release by the
 
 - ``librocm-dbgapi.so.0``
 - ``libamd_comgr.so.1``
+
+The PDF *User Manual* can be generated with:
+
+````shell
+make pdf
+````
+
+The generated PDF will be placed in:
+
+- ``build/gdb/doc/gdb.pdf``
