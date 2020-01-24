@@ -26263,18 +26263,21 @@ Debugging}) when @acronym{AMD}'s
 @url{https://rocm-documentation.readthedocs.io/, @acronym{ROCm, Radeon
 Open Compute platforM}} for HIP-Clang is installed.
 
-The following AMD commercial GPUs are supported:
+The following AMD GPU chips are supported:
 
 @itemize @bullet{}
 
 @item
-AMD GPUs previously code-named ``Vega 10'', also denoted as gfx900
+``Vega 10'' which is displayed as @samp{vega10} by @value{GDBN} and
+denoted as @samp{gfx900} by the compiler.
 
 @item
-AMD GPUs previously code-named ``Vega 20'', also denoted as gfx906
+``Vega 7nm'' which is displayed as @samp{vega20} by @value{GDBN} and
+denoted as @samp{gfx906} by the compiler.
 
 @item
-AMD GPUs code-named ``Arcturus'', also denoted as gfx908
+``Arcturus'' which is displayed as @samp{arcturus} by @value{GDBN} and
+denoted as @samp{gfx908} by the compiler.
 
 @end itemize
 
@@ -26291,8 +26294,8 @@ When compiling, the @w{@option{-ggdb}} option should be used to
 produce debugging information suitable for use by @value{GDBN}.  The
 @w{@option{--amdgpu-target}} option is used to specify the AMD GPUs
 that the executable is required to support.  For example, to compile a
-HIP program that can utilize ``Vega 10'', ``Vega 20'', and
-``Arcturus'' AMD GPUs, with no optimization:
+HIP program that can utilize ``Vega 10'', ``Vega 7nm'', and
+``Arcturus'' AMD GPU chips, with no optimization:
 
 @smallexample
 hipcc -O0 -ggdb --amdgpu-target=gfx900 --amdgpu-target=gfx906 \
