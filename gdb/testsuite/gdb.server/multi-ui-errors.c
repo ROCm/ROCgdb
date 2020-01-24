@@ -1,6 +1,6 @@
-/* Copyright (C) 2008-2020 Free Software Foundation, Inc.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2019-2020 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,22 +15,18 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef WINDOWS_TDEP_H
-#define WINDOWS_TDEP_H
+#include <stdio.h>
+#include <unistd.h>
 
-struct obstack;
-struct gdbarch;
+int
+main (void)
+{
+  int i;
 
-extern struct cmd_list_element *info_w32_cmdlist;
+  printf ("@@XX@@ Inferior Starting @@XX@@\n");
 
-extern void init_w32_command_list (void);
+  for (i = 0; i < 120; ++i)
+    sleep (1);
 
-extern void windows_xfer_shared_library (const char* so_name,
-					 CORE_ADDR load_addr,
-					 CORE_ADDR *text_offset_cached,
-					 struct gdbarch *gdbarch,
-					 struct obstack *obstack);
-
-extern void windows_init_abi (struct gdbarch_info info,
-			      struct gdbarch *gdbarch);
-#endif
+  return 0;
+}

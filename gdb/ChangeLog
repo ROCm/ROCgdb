@@ -1,3 +1,146 @@
+2020-01-24  Christian Biesinger  <cbiesinger@google.com>
+
+	* aarch64-fbsd-tdep.c (aarch64_fbsd_iterate_over_regset_sections):
+	Update comment.
+	* aarch64-linux-tdep.c (aarch64_linux_iterate_over_regset_sections):
+	Likewise.
+	* arm-fbsd-tdep.c (arm_fbsd_iterate_over_regset_sections): Likewise.
+	* gdbcore.h (deprecated_add_core_fns): Update comment to point to
+	the correct replacement (iterate_over_regset_sections).
+	* riscv-fbsd-tdep.c (riscv_fbsd_iterate_over_regset_sections):
+	Update comment.
+
+2020-01-24  Graham Markall  <graham.markall@embecosm.com>
+
+	PR gdb/23718
+	* gdb/python/python.c (execute_gdb_command): Call
+	async_enable_stdin in catch block.
+
+2020-01-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* event-loop.c (start_event_loop): Wrap async_enable_stdin with
+	SWITCH_THRU_ALL_UIS.
+
+2020-01-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR tui/9765
+	* minsyms.c (lookup_minimal_symbol_by_pc_section): Update header
+	comment, add extra parameter, and update to store previous symbol
+	when appropriate.
+	* minsyms.h (lookup_minimal_symbol_by_pc_section): Update comment,
+	add extra parameter.
+	* tui/tui-disasm.c (tui_disassemble): Update header comment,
+	remove unneeded parameter, add try/catch around gdb_print_insn,
+	rewrite to add items to asm_lines vector.
+	(tui_find_backward_disassembly_start_address): New function.
+	(tui_find_disassembly_address): Updated throughout.
+	(tui_disasm_window::set_contents): Update for changes to
+	tui_disassemble.
+	(tui_disasm_window::do_scroll_vertical): No need to adjust the
+	number of lines to scroll.
+
+2020-01-23  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* objfiles.h (ALL_OBJFILE_OSECTIONS): Move up.
+	(SECT_OFF_DATA): Likewise.
+	(SECT_OFF_RODATA): Likewise.
+	(SECT_OFF_TEXT): Likewise.
+	(SECT_OFF_BSS): Likewise.
+	(struct objfile) <text_section_offset, data_section_offset>: New
+	methods.
+	* amd64-windows-tdep.c (amd64_windows_find_unwind_info): Use
+	objfile::text_section_offset.
+	* coff-pe-read.c (add_pe_forwarded_sym): Likewise.
+	* coffread.c (coff_symtab_read): Likewise.
+	(enter_linenos): Likewise.
+	(process_coff_symbol): Likewise.
+	* ctfread.c (get_objfile_text_range): Likewise.
+	* dtrace-probe.c (dtrace_probe::get_relocated_address):
+	Use objfile::data_section_offset.
+	* dwarf2-frame.c (execute_cfa_program): Use
+	objfile::text_section_offset.
+	(dwarf2_frame_find_fde): Likewise.
+	* dwarf2read.c (create_addrmap_from_index): Likewise.
+	(create_addrmap_from_aranges): Likewise.
+	(dw2_find_pc_sect_compunit_symtab): Likewise.
+	(process_psymtab_comp_unit_reader): Likewise.
+	(add_partial_symbol): Likewise.
+	(add_partial_subprogram): Likewise.
+	(process_full_comp_unit): Likewise.
+	(read_file_scope): Likewise.
+	(read_func_scope): Likewise.
+	(read_lexical_block_scope): Likewise.
+	(read_call_site_scope): Likewise.
+	(dwarf2_rnglists_process): Likewise.
+	(dwarf2_ranges_process): Likewise.
+	(dwarf2_ranges_read): Likewise.
+	(dwarf_decode_lines_1): Likewise.
+	(new_symbol): Likewise.
+	(dwarf2_fetch_die_loc_sect_off): Likewise.
+	(dwarf2_per_cu_text_offset): Likewise.
+	* hppa-bsd-tdep.c (hppabsd_find_global_pointer): Likewise.
+	* hppa-tdep.c (read_unwind_info): Likewise.
+	* ia64-tdep.c (ia64_find_unwind_table): Likewise.
+	* psympriv.h (struct partial_symtab): Likewise.
+	* psymtab.c (find_pc_sect_psymtab): Likewise.
+	* solib-svr4.c (enable_break): Likewise.
+	* stap-probe.c (relocate_address): Use
+	objfile::data_section_offset.
+	* xcoffread.c (enter_line_range): Use
+	objfile::text_section_offset.
+	(read_xcoff_symtab): Likewise.
+
+2020-01-23  Simon Marchi  <simon.marchi@efficios.com>
+
+	* darwin-nat.c (darwin_nat_target::wait_1): Move `inf`
+	declaration to narrower scopes.
+
+2020-01-23  Simon Marchi  <simon.marchi@efficios.com>
+
+	* darwin-nat.h (struct darwin_exception_msg, enum
+	darwin_msg_state, struct darwin_thread_info, darwin_thread_t):
+	Move up.
+	(class darwin_nat_target) <wait_1, check_new_threads,
+	decode_exception_message, decode_message, stop_inferior,
+	init_thread_list, ptrace_him, cancel_breakpoint>: Declare.
+	* darwin-nat.c (darwin_check_new_threads): Rename to...
+	(darwin_nat_target::check_new_threads): ... this.
+	(darwin_suspend_inferior_it): Remove.
+	(darwin_decode_exception_message): Rename to...
+	(darwin_nat_target::decode_exception_message): ... this.
+	(darwin_nat_target::resume): Pass target to find_inferior_ptid.
+	(darwin_decode_message): Rename to...
+	(darwin_nat_target::decode_message): ... this.
+	(cancel_breakpoint): Rename to...
+	(darwin_nat_target::cancel_breakpoint): ... this.
+	(darwin_wait): Rename to...
+	(darwin_nat_target::wait_1): ... this.  Use range-based for loop
+	instead of iterate_over_inferiors.
+	(darwin_nat_target::wait): Call wait_1 instead of darwin_wait.
+	(darwin_stop_inferior): Rename to...
+	(darwin_nat_target::stop_inferior): ... this.
+	(darwin_nat_target::kill): Call wait_1 instead of darwin_wait.
+	(darwin_init_thread_list): Rename to...
+	(darwin_nat_target::init_thread_list): ... this.
+	(darwin_ptrace_him): Rename to...
+	(darwin_nat_target::ptrace_him): ... this.
+	(darwin_nat_target::create_inferior): Pass lambda function to
+	fork_inferior.
+	(darwin_nat_target::detach): Call stop_inferior instead of
+	darwin_stop_inferior.
+	* fork-inferior.h (fork_inferior): Change init_trace_fun
+	parameter to gdb::function_view.
+	* fork-inferior.c (fork_inferior): Likewise.
+
+2020-01-23  Hannes Domani  <ssbssa@yahoo.de>
+
+	* i386-cygwin-tdep.c (core_process_module_section): Update.
+	* windows-nat.c (struct lm_info_windows): Add text_offset.
+	(windows_xfer_shared_libraries): Update.
+	* windows-tdep.c (windows_xfer_shared_library):
+	Add text_offset_cached argument.
+	* windows-tdep.h (windows_xfer_shared_library): Update.
+
 2020-01-21  Simon Marchi  <simon.marchi@efficios.com>
 
 	* gdbarch.sh: Add declaration for _initialize_gdbarch.
