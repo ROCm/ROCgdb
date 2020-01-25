@@ -1,3 +1,59 @@
+2020-01-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* frame.c (find_frame_sal): Move call to get_next_frame into more
+	inner scope.
+	* inline-frame.c (inilne_state) <inline_state>: Update argument
+	types.
+	(inilne_state) <skipped_symbol>: Rename to...
+	(inilne_state) <skipped_symbols>: ...this, and change to a vector.
+	(skip_inline_frames): Build vector of skipped symbols and use this
+	to reate the inline_state.
+	(inline_skipped_symbol): Add a comment and some assertions, fetch
+	skipped symbol from the list.
+
+2020-01-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* buildsym.c (lte_is_less_than): Delete.
+	(buildsym_compunit::end_symtab_with_blockvector): Create local
+	lambda function to sort line table entries, and use
+	std::stable_sort instead of std::sort.
+	* symtab.c (find_pc_sect_line): Skip backward over end of sequence
+	markers when looking for a previous line.
+
+2020-01-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* dwarf2read.c (lnp_state_machine::record_line): Include
+	end_sequence parameter in debug print out.  Record the line if we
+	are at an end_sequence marker even if it's not the start of a
+	statement.
+	* symmisc.c (maintenance_print_one_line_table): Print end of
+	sequence markers with 'END' not '0'.
+
+2020-01-24  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/25410
+	* thread.c (scoped_restore_current_thread::restore): Use
+	switch_to_inferior_no_thread.
+	* exec.c: Include "progspace-and-thread.h".
+	(add_target_sections, remove_target_sections):
+	scoped_restore_current_pspace_and_thread instead of
+	scoped_restore_current_thread.
+	* infrun.c (handle_vfork_child_exec_or_exit): Assign the pspace
+	and aspace to the inferior before calling clone_program_space.
+	Remove stale comment.
+
+2020-01-24  Christian Biesinger  <cbiesinger@google.com>
+
+	* arm-nbsd-nat.c (arm_nbsd_nat_target::fetch_registers): Rename to...
+	(arm_netbsd_nat_target::fetch_registers): ...this.
+	(arm_nbsd_nat_target::store_registers): Rename to...
+	(arm_netbsd_nat_target::store_registers): ...this.
+
+2020-01-24  Christian Biesinger  <cbiesinger@google.com>
+
+	* arm-nbsd-nat.c: Define _KERNTYPES to get the declaration of
+	register_t.
+
 2020-01-24  Christian Biesinger  <cbiesinger@google.com>
 
 	* aarch64-fbsd-tdep.c (aarch64_fbsd_iterate_over_regset_sections):

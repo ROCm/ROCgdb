@@ -17,6 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+/* We define this to get types like register_t.  */
+#define _KERNTYPES
 #include "defs.h"
 #include "gdbcore.h"
 #include "inferior.h"
@@ -190,7 +192,7 @@ fetch_fp_regs (struct regcache *regcache)
 }
 
 void
-arm_nbsd_nat_target::fetch_registers (struct regcache *regcache, int regno)
+arm_netbsd_nat_target::fetch_registers (struct regcache *regcache, int regno)
 {
   if (regno >= 0)
     {
@@ -379,7 +381,7 @@ store_fp_regs (const struct regcache *regcache)
 }
 
 void
-arm_nbsd_nat_target::store_registers (struct regcache *regcache, int regno)
+arm_netbsd_nat_target::store_registers (struct regcache *regcache, int regno)
 {
   if (regno >= 0)
     {
