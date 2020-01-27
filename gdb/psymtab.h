@@ -83,11 +83,10 @@ public:
     return OBSTACK_CALLOC (obstack (), number, struct partial_symtab *);
   }
 
-  /* Allocate a new psymtab on the psymtab obstack.  The new psymtab
-     will be linked in to the "psymtabs" list, but otherwise all other
-     fields will be zero.  */
+  /* Install a psymtab on the psymtab list.  This transfers ownership
+     of PST to this object.  */
 
-  struct partial_symtab *allocate_psymtab ();
+  void install_psymtab (partial_symtab *pst);
 
   typedef next_adapter<struct partial_symtab> partial_symtab_range;
 
@@ -129,10 +128,6 @@ public:
   std::vector<partial_symbol *> static_psymbols;
 
 private:
-
-  /* List of freed partial symtabs, available for re-use.  */
-
-  struct partial_symtab *free_psymtabs = nullptr;
 
   /* The obstack where allocations are made.  This is lazily allocated
      so that we don't waste memory when there are no psymtabs.  */

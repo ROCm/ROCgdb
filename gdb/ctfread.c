@@ -88,9 +88,9 @@ static const struct objfile_key<htab, htab_deleter> ctf_tid_key;
 
 struct ctf_fp_info
 {
-    explicit ctf_fp_info (ctf_file_t *cfp) : fp (cfp) {}
-    ~ctf_fp_info ();
-    ctf_file_t *fp;
+  explicit ctf_fp_info (ctf_file_t *cfp) : fp (cfp) {}
+  ~ctf_fp_info ();
+  ctf_file_t *fp;
 };
 
 /* Cleanup function for the ctf_file_key data.  */
@@ -113,6 +113,20 @@ struct ctf_context
   ctf_file_t *fp;
   struct objfile *of;
   struct buildsym_compunit *builder;
+};
+
+/* A partial symtab, specialized for this module.  */
+struct ctf_psymtab : public standard_psymtab
+{
+  ctf_psymtab (const char *filename, struct objfile *objfile, CORE_ADDR addr)
+    : standard_psymtab (filename, objfile, addr)
+  {
+  }
+
+  void read_symtab (struct objfile *) override;
+  void expand_psymtab (struct objfile *) override;
+
+  struct ctf_context *context;
 };
 
 /* The routines that read and process fields/members of a C struct, union,
@@ -146,8 +160,6 @@ struct ctf_field_info
 
 
 /* Local function prototypes */
-
-static void psymtab_to_symtab (struct partial_symtab *);
 
 static int ctf_add_type_cb (ctf_id_t tid, void *arg);
 
@@ -1171,12 +1183,12 @@ get_objfile_text_range (struct objfile *of, int *tsize)
 /* Start a symtab for OBJFILE in CTF format.  */
 
 static void
-ctf_start_symtab (struct partial_symtab *pst,
+ctf_start_symtab (ctf_psymtab *pst,
 		  struct objfile *of, CORE_ADDR text_offset)
 {
   struct ctf_context *ccp;
 
-  ccp = (struct ctf_context *) pst->read_symtab_private;
+  ccp = pst->context;
   ccp->builder = new buildsym_compunit
 		       (of, of->original_name, NULL,
 		       language_c, text_offset);
@@ -1188,12 +1200,12 @@ ctf_start_symtab (struct partial_symtab *pst,
    the .text section number.  */
 
 static struct compunit_symtab *
-ctf_end_symtab (struct partial_symtab *pst,
+ctf_end_symtab (ctf_psymtab *pst,
 		CORE_ADDR end_addr, int section)
 {
   struct ctf_context *ccp;
 
-  ccp = (struct ctf_context *) pst->read_symtab_private;
+  ccp = pst->context;
   struct compunit_symtab *result
     = ccp->builder->end_symtab (end_addr, section);
   delete ccp->builder;
@@ -1203,15 +1215,15 @@ ctf_end_symtab (struct partial_symtab *pst,
 
 /* Read in full symbols for PST, and anything it depends on.  */
 
-static void
-psymtab_to_symtab (struct partial_symtab *pst)
+void
+ctf_psymtab::expand_psymtab (struct objfile *objfile)
 {
   struct symbol *sym;
   struct ctf_context *ccp;
 
-  gdb_assert (!pst->readin);
+  gdb_assert (!readin);
 
-  ccp = (struct ctf_context *) pst->read_symtab_private;
+  ccp = context;
 
   /* Iterate over entries in data types section.  */
   if (ctf_type_iter (ccp->fp, ctf_add_type_cb, ccp) == CTF_ERR)
@@ -1241,37 +1253,37 @@ psymtab_to_symtab (struct partial_symtab *pst)
       set_symbol_address (ccp->of, sym, sym->linkage_name ());
     }
 
-  pst->readin = 1;
+  readin = true;
 }
 
 /* Expand partial symbol table PST into a full symbol table.
    PST is not NULL.  */
 
-static void
-ctf_read_symtab (struct partial_symtab *pst, struct objfile *objfile)
+void
+ctf_psymtab::read_symtab (struct objfile *objfile)
 {
-  if (pst->readin)
-    warning (_("bug: psymtab for %s is already read in."), pst->filename);
+  if (readin)
+    warning (_("bug: psymtab for %s is already read in."), filename);
   else
     {
       if (info_verbose)
 	{
-	  printf_filtered (_("Reading in CTF data for %s..."), pst->filename);
+	  printf_filtered (_("Reading in CTF data for %s..."), filename);
 	  gdb_flush (gdb_stdout);
 	}
 
       /* Start a symtab.  */
-      CORE_ADDR text_offset;        /* Start of text segment.  */
+      CORE_ADDR offset;        /* Start of text segment.  */
       int tsize;
 
-      text_offset = get_objfile_text_range (objfile, &tsize);
-      ctf_start_symtab (pst, objfile, text_offset);
-      psymtab_to_symtab (pst);
+      offset = get_objfile_text_range (objfile, &tsize);
+      ctf_start_symtab (this, objfile, offset);
+      expand_psymtab (objfile);
 
-      pst->set_text_low (text_offset);
-      pst->set_text_high (text_offset + tsize);
-      pst->compunit_symtab = ctf_end_symtab (pst, text_offset + tsize,
-					     SECT_OFF_TEXT (objfile));
+      set_text_low (offset);
+      set_text_high (offset + tsize);
+      compunit_symtab = ctf_end_symtab (this, offset + tsize,
+					SECT_OFF_TEXT (objfile));
 
       /* Finish up the debug error message.  */
       if (info_verbose)
@@ -1291,21 +1303,20 @@ ctf_read_symtab (struct partial_symtab *pst, struct objfile *objfile)
    partial_symtab remains around.  They are allocated on an obstack,
    objfile_obstack.  */
 
-static struct partial_symtab *
+static ctf_psymtab *
 create_partial_symtab (const char *name,
 		       ctf_file_t *cfp,
 		       struct objfile *objfile)
 {
-  struct partial_symtab *pst;
+  ctf_psymtab *pst;
   struct ctf_context *ccx;
 
-  pst = start_psymtab_common (objfile, name, 0);
+  pst = new ctf_psymtab (name, objfile, 0);
 
   ccx = XOBNEW (&objfile->objfile_obstack, struct ctf_context);
   ccx->fp = cfp;
   ccx->of = objfile;
-  pst->read_symtab_private = (void *) ccx;
-  pst->read_symtab = ctf_read_symtab;
+  pst->context = ccx;
 
   return pst;
 }
@@ -1393,7 +1404,7 @@ scan_partial_symbols (ctf_file_t *cfp, struct objfile *of)
   struct ctf_context ccx;
   bfd *abfd = of->obfd;
   const char *name = bfd_get_filename (abfd);
-  struct partial_symtab *pst = create_partial_symtab (name, cfp, of);
+  ctf_psymtab *pst = create_partial_symtab (name, cfp, of);
 
   ccx.fp = cfp;
   ccx.of = of;
@@ -1473,10 +1484,4 @@ elfctf_build_psymtabs (struct objfile *of)
   ctf_file_key.emplace (of, fp);
 
   scan_partial_symbols (fp, of);
-}
-
-void _initialize_ctfread ();
-void
-_initialize_ctfread ()
-{
 }

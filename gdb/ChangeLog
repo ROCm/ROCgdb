@@ -1,3 +1,185 @@
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* ctfread.c (struct ctf_fp_info): Reindent.
+	(_initialize_ctfread): Remove.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (partial_map_expand_apply)
+	(psym_find_pc_sect_compunit_symtab, psym_lookup_symbol)
+	(psymtab_to_symtab, psym_find_last_source_symtab, dump_psymtab)
+	(psym_print_stats, psym_expand_symtabs_for_function)
+	(psym_map_symbol_filenames, psym_map_matching_symbols)
+	(psym_expand_symtabs_matching)
+	(partial_symtab::read_dependencies, maintenance_info_psymtabs)
+	(maintenance_check_psymtabs): Use new methods.
+	* psympriv.h (struct partial_symtab) <readin_p,
+	get_compunit_symtab>: New methods.
+	<readin, compunit_symtab>: Remove members.
+	(struct standard_psymtab): New.
+	(struct legacy_psymtab): Derive from standard_psymtab.
+	* dwarf2read.h (struct dwarf2_psymtab): Derive from
+	standard_psymtab.
+	* ctfread.c (struct ctf_psymtab): Derive from standard_psymtab.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_psymtab_to_symtab_1): Call
+	read_dependencies.  Add assert.
+	* psymtab.c (partial_symtab::read_dependencies): New method.
+	* psympriv.h (struct partial_symtab) <read_dependencies>: New
+	method.
+	* mdebugread.c (psymtab_to_symtab_1): Call read_dependencies.
+	* dwarf2read.c (dwarf2_psymtab::expand_psymtab): Call
+	read_dependencies.
+	* dbxread.c (dbx_psymtab_to_symtab_1): Call read_dependencies.
+	Add assert.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_psymtab_to_symtab_1): Change argument order.
+	Call expand_psymtab.
+	(xcoff_read_symtab): Call expand_psymtab.
+	(xcoff_start_psymtab, xcoff_end_psymtab): Set
+	legacy_expand_psymtab.
+	* psympriv.h (struct partial_symtab) <expand_psymtab>: New
+	method.
+	(struct legacy_psymtab) <expand_psymtab>: Implement.
+	<legacy_expand_psymtab>: New member.
+	* mdebugread.c (mdebug_read_symtab): Call expand_psymtab.
+	(parse_partial_symbols): Set legacy_expand_psymtab.
+	(psymtab_to_symtab_1): Change argument order.  Call
+	expand_psymtab.
+	(new_psymtab): Set legacy_expand_psymtab.
+	* dwarf2read.h (struct dwarf2_psymtab) <expand_psymtab>: Declare.
+	* dwarf2read.c (dwarf2_psymtab::read_symtab): Call
+	expand_psymtab.
+	(dwarf2_psymtab::expand_psymtab): Rename from
+	psymtab_to_symtab_1.  Call expand_psymtab.
+	* dbxread.c (start_psymtab): Set legacy_expand_psymtab.
+	(dbx_end_psymtab): Likewise.
+	(dbx_psymtab_to_symtab_1): Change argument order. Call
+	expand_psymtab.
+	(dbx_read_symtab): Call expand_psymtab.
+	* ctfread.c (struct ctf_psymtab) <expand_psymtab>: Declare.
+	(ctf_psymtab::expand_psymtab): Rename from psymtab_to_symtab.
+	(ctf_psymtab::read_symtab): Call expand_psymtab.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_read_symtab): Remove prints.  Add assert.
+	* psymtab.c (psymtab_to_symtab): Print verbose "Reading"
+	messages.
+	* mdebugread.c (mdebug_read_symtab): Remove prints.
+	* dwarf2read.c (dwarf2_psymtab::read_symtab): Remove prints.  Add
+	assert.
+	* dbxread.c (dbx_read_symtab): Remove prints.  Add assert.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (this_symtab_psymtab, read_xcoff_symtab)
+	(xcoff_psymtab_to_symtab_1, xcoff_read_symtab)
+	(xcoff_start_psymtab, xcoff_end_psymtab, scan_xcoff_symtab): Use
+	legacy_symtab.
+	* stabsread.h (dbx_end_psymtab): Use legacy_symtab.
+	* psymtab.c (psymtab_to_symtab): Call method.
+	(dump_psymtab): Update.
+	* psympriv.h (struct partial_symtab): Add virtual destructor.
+	<read_symtab>: New method.
+	(struct legacy_symtab): New.
+	* mdebugread.c (mdebug_read_symtab): Use legacy_psymtab.
+	(struct pst_map) <pst>: Now a legacy_psymtab.
+	(parse_procedure, parse_partial_symbols, psymtab_to_symtab_1)
+	(new_psymtab): Use legacy_psymtab.
+	* dwarf2read.h (struct dwarf2_psymtab): New.
+	(struct dwarf2_per_cu_data) <psymtab>: Use it.
+	* dwarf2read.c (dwarf2_create_include_psymtab)
+	(dwarf2_build_include_psymtabs, create_type_unit_group)
+	(create_partial_symtab, process_psymtab_comp_unit_reader)
+	(build_type_psymtabs_reader, build_type_psymtab_dependencies)
+	(set_partial_user): Use dwarf2_psymtab.
+	(dwarf2_psymtab::read_symtab): Rename from dwarf2_read_symtab.
+	(psymtab_to_symtab_1, process_full_comp_unit)
+	(process_full_type_unit, dwarf2_ranges_read)
+	(dwarf2_get_pc_bounds, psymtab_include_file_name)
+	(dwarf_decode_lines): Use dwarf2_psymtab.
+	* dwarf-index-write.c (psym_index_map): Use dwarf2_psymtab.
+	(add_address_entry_worker, write_one_signatured_type)
+	(recursively_count_psymbols, recursively_write_psymbols)
+	(write_one_signatured_type, psyms_seen_size, write_gdbindex)
+	(write_debug_names): Likewise.
+	* dbxread.c (struct header_file_location): Take a legacy_psymtab.
+	<pst>: Now a legacy_psymtab.
+	(find_corresponding_bincl_psymtab): Return a legacy_psymtab.
+	(read_dbx_symtab, start_psymtab, dbx_end_psymtab)
+	(dbx_psymtab_to_symtab_1, read_ofile_symtab): Use legacy_psymtab.
+	* ctfread.c (struct ctf_psymtab): New.
+	(ctf_start_symtab, ctf_end_symtab, psymtab_to_symtab): Take a
+	ctf_psymtab.
+	(ctf_psymtab::read_symtab): Rename from ctf_read_symtab.
+	(create_partial_symtab): Return a ctf_psymtab.
+	(scan_partial_symbols): Update.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_start_psymtab): Use new.
+	* psymtab.c (partial_symtab::partial_symtab): New constructor,
+	renamed from start_psymtab_common.
+	* psympriv.h (struct partial_symtab): Add new constructor.
+	(start_psymtab_common): Don't declare.
+	* mdebugread.c (parse_partial_symbols): Use new.
+	* dwarf2read.c (create_partial_symtab): Use new.
+	* dbxread.c (start_psymtab): Use new.
+	* ctfread.c (create_partial_symtab): Use new.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_end_psymtab): Use new.
+	* psymtab.c (start_psymtab_common): Use new.
+	(partial_symtab::partial_symtab): Rename from allocate_psymtab.
+	Update.
+	* psympriv.h (struct partial_symtab): Add parameters to
+	constructor.  Don't inline.
+	(allocate_psymtab): Don't declare.
+	* mdebugread.c (new_psymtab): Use new.
+	* dwarf2read.c (dwarf2_create_include_psymtab): Use new.
+	* dbxread.c (dbx_end_psymtab): Use new.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.h (class psymtab_storage) <install_psymtab>: Rename from
+	allocate_psymtab.  Update documentation.
+	* psymtab.c (psymtab_storage::install_psymtab): Rename from
+	allocate_psymtab.  Do not use new.
+	(allocate_psymtab): Use new.  Update.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_psymtab_to_symtab_1): Update.
+	* psymtab.c (psym_print_stats): Update.
+	* psympriv.h (struct partial_symtab) <readin,
+	psymtabs_addrmap_supported, anonymous>: Now bool.
+	* mdebugread.c (psymtab_to_symtab_1): Update.
+	* dwarf2read.c (create_type_unit_group, create_partial_symtab)
+	(build_type_psymtabs_reader, psymtab_to_symtab_1)
+	(process_full_comp_unit, process_full_type_unit): Update.
+	* dbxread.c (dbx_psymtab_to_symtab_1): Update.
+	* ctfread.c (psymtab_to_symtab): Update.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* mdebugread.c (parse_partial_symbols): Use discard_psymtab.
+	* psymtab.h (class psymtab_storage) <free_psymtabs>: Remove.
+	* psymtab.c (psymtab_storage): Delete psymtabs.
+	(psymtab_storage::allocate_psymtab): Use new.
+	(psymtab_storage::discard_psymtab): Use delete.
+	* psympriv.h (struct partial_symtab): Add constructor and
+	initializers.
+
+2020-01-26  Tom Tromey  <tom@tromey.com>
+
+	* machoread.c: Do not include psympriv.h.
+
 2020-01-25  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
 
 	* NEWS: Mention the new option and the set/show commands.

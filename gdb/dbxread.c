@@ -245,7 +245,7 @@ find_text_range (bfd * sym_bfd, struct objfile *objfile)
 struct header_file_location
 {
   header_file_location (const char *name_, int instance_,
-			struct partial_symtab *pst_)
+			legacy_psymtab *pst_)
     : name (name_),
       instance (instance_),
       pst (pst_)
@@ -254,7 +254,7 @@ struct header_file_location
 
   const char *name;		/* Name of header file */
   int instance;			/* See above */
-  struct partial_symtab *pst;	/* Partial symtab that has the
+  legacy_psymtab *pst;	/* Partial symtab that has the
 				   BINCL/EINCL defs for this file.  */
 };
 
@@ -263,16 +263,16 @@ static std::vector<struct header_file_location> *bincl_list;
 
 /* Local function prototypes.  */
 
-static void read_ofile_symtab (struct objfile *, struct partial_symtab *);
+static void read_ofile_symtab (struct objfile *, legacy_psymtab *);
 
-static void dbx_read_symtab (struct partial_symtab *self,
+static void dbx_read_symtab (legacy_psymtab *self,
 			     struct objfile *objfile);
 
-static void dbx_psymtab_to_symtab_1 (struct objfile *, struct partial_symtab *);
+static void dbx_psymtab_to_symtab_1 (legacy_psymtab *, struct objfile *);
 
 static void read_dbx_symtab (minimal_symbol_reader &, struct objfile *);
 
-static struct partial_symtab *find_corresponding_bincl_psymtab (const char *,
+static legacy_psymtab *find_corresponding_bincl_psymtab (const char *,
 								int);
 
 static const char *dbx_next_symbol_text (struct objfile *);
@@ -297,7 +297,7 @@ static void add_old_header_file (const char *, int);
 
 static void add_this_object_header_file (int);
 
-static struct partial_symtab *start_psymtab (struct objfile *, const char *,
+static legacy_psymtab *start_psymtab (struct objfile *, const char *,
 					     CORE_ADDR, int);
 
 /* Free up old header file tables.  */
@@ -857,7 +857,7 @@ dbx_next_symbol_text (struct objfile *objfile)
    bincl in the list.  Return the partial symtab associated
    with that header_file_location.  */
 
-static struct partial_symtab *
+static legacy_psymtab *
 find_corresponding_bincl_psymtab (const char *name, int instance)
 {
   for (const header_file_location &bincl : *bincl_list)
@@ -866,7 +866,7 @@ find_corresponding_bincl_psymtab (const char *name, int instance)
       return bincl.pst;
 
   repeated_header_complaint (name, symnum);
-  return (struct partial_symtab *) 0;
+  return (legacy_psymtab *) 0;
 }
 
 /* Set namestring based on nlist.  If the string table index is invalid, 
@@ -968,7 +968,7 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
   int data_sect_index;
 
   /* Current partial symtab.  */
-  struct partial_symtab *pst;
+  legacy_psymtab *pst;
 
   /* List of current psymtab's include files.  */
   const char **psymtab_include_list;
@@ -976,7 +976,7 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
   int includes_used;
 
   /* Index within current psymtab dependency list.  */
-  struct partial_symtab **dependency_list;
+  legacy_psymtab **dependency_list;
   int dependencies_used, dependencies_allocated;
 
   text_addr = DBX_TEXT_ADDR (objfile);
@@ -989,7 +989,7 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
 
   stringtab_global = DBX_STRINGTAB (objfile);
 
-  pst = (struct partial_symtab *) 0;
+  pst = (legacy_psymtab *) 0;
 
   includes_allocated = 30;
   includes_used = 0;
@@ -999,8 +999,8 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
   dependencies_allocated = 30;
   dependencies_used = 0;
   dependency_list =
-    (struct partial_symtab **) alloca (dependencies_allocated *
-				       sizeof (struct partial_symtab *));
+    (legacy_psymtab **) alloca (dependencies_allocated *
+				sizeof (legacy_psymtab *));
 
   /* Init bincl list */
   std::vector<struct header_file_location> bincl_storage;
@@ -1136,7 +1136,7 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
 				   ? nlist.n_value : pst->raw_text_high (),
 				   dependency_list, dependencies_used,
 				   textlow_not_set);
-		  pst = (struct partial_symtab *) 0;
+		  pst = (legacy_psymtab *) 0;
 		  includes_used = 0;
 		  dependencies_used = 0;
 		  has_line_numbers = 0;
@@ -1251,7 +1251,7 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
 				      ? valu : pst->raw_text_high ()),
 				     dependency_list, dependencies_used,
 				     prev_textlow_not_set);
-		    pst = (struct partial_symtab *) 0;
+		    pst = (legacy_psymtab *) 0;
 		    includes_used = 0;
 		    dependencies_used = 0;
 		    has_line_numbers = 0;
@@ -1762,7 +1762,7 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
 	  /* Find the corresponding bincl and mark that psymtab on the
 	     psymtab dependency list.  */
 	  {
-	    struct partial_symtab *needed_pst =
+	    legacy_psymtab *needed_pst =
 	      find_corresponding_bincl_psymtab (namestring, nlist.n_value);
 
 	    /* If this include file was defined earlier in this file,
@@ -1789,15 +1789,15 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
 		dependency_list[dependencies_used++] = needed_pst;
 		if (dependencies_used >= dependencies_allocated)
 		  {
-		    struct partial_symtab **orig = dependency_list;
+		    legacy_psymtab **orig = dependency_list;
 
 		    dependency_list =
-		      (struct partial_symtab **)
+		      (legacy_psymtab **)
 		      alloca ((dependencies_allocated *= 2)
-			      * sizeof (struct partial_symtab *));
+			      * sizeof (legacy_psymtab *));
 		    memcpy (dependency_list, orig,
 			    (dependencies_used
-			     * sizeof (struct partial_symtab *)));
+			     * sizeof (legacy_psymtab *)));
 #ifdef DEBUG_INFO
 		    fprintf_unfiltered (gdb_stderr,
 					"Had to reallocate "
@@ -1823,7 +1823,7 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
 			       symnum * symbol_size,
 			       (CORE_ADDR) 0, dependency_list,
 			       dependencies_used, textlow_not_set);
-	      pst = (struct partial_symtab *) 0;
+	      pst = (legacy_psymtab *) 0;
 	      includes_used = 0;
 	      dependencies_used = 0;
 	      has_line_numbers = 0;
@@ -1899,17 +1899,17 @@ read_dbx_symtab (minimal_symbol_reader &reader, struct objfile *objfile)
    is the address relative to which its symbols are (incremental) or 0
    (normal).  */
 
-static struct partial_symtab *
+static legacy_psymtab *
 start_psymtab (struct objfile *objfile, const char *filename, CORE_ADDR textlow,
 	       int ldsymoff)
 {
-  struct partial_symtab *result =
-    start_psymtab_common (objfile, filename, textlow);
+  legacy_psymtab *result = new legacy_psymtab (filename, objfile, textlow);
 
   result->read_symtab_private =
     XOBNEW (&objfile->objfile_obstack, struct symloc);
   LDSYMOFF (result) = ldsymoff;
-  result->read_symtab = dbx_read_symtab;
+  result->legacy_read_symtab = dbx_read_symtab;
+  result->legacy_expand_psymtab = dbx_psymtab_to_symtab_1;
   SYMBOL_SIZE (result) = symbol_size;
   SYMBOL_OFFSET (result) = symbol_table_offset;
   STRING_OFFSET (result) = string_table_offset;
@@ -1927,11 +1927,11 @@ start_psymtab (struct objfile *objfile, const char *filename, CORE_ADDR textlow,
 
    FIXME:  List variables and peculiarities of same.  */
 
-struct partial_symtab *
-dbx_end_psymtab (struct objfile *objfile, struct partial_symtab *pst,
+legacy_psymtab *
+dbx_end_psymtab (struct objfile *objfile, legacy_psymtab *pst,
 		 const char **include_list, int num_includes,
 		 int capping_symbol_offset, CORE_ADDR capping_text,
-		 struct partial_symtab **dependency_list,
+		 legacy_psymtab **dependency_list,
 		 int number_dependencies,
 		 int textlow_not_set)
 {
@@ -2017,15 +2017,15 @@ dbx_end_psymtab (struct objfile *objfile, struct partial_symtab *pst,
       pst->dependencies
 	= objfile->partial_symtabs->allocate_dependencies (number_dependencies);
       memcpy (pst->dependencies, dependency_list,
-	      number_dependencies * sizeof (struct partial_symtab *));
+	      number_dependencies * sizeof (legacy_psymtab *));
     }
   else
     pst->dependencies = 0;
 
   for (i = 0; i < num_includes; i++)
     {
-      struct partial_symtab *subpst =
-	allocate_psymtab (include_list[i], objfile);
+      legacy_psymtab *subpst =
+	new legacy_psymtab (include_list[i], objfile);
 
       subpst->read_symtab_private =
 	XOBNEW (&objfile->objfile_obstack, struct symloc);
@@ -2039,7 +2039,8 @@ dbx_end_psymtab (struct objfile *objfile, struct partial_symtab *pst,
       subpst->dependencies[0] = pst;
       subpst->number_of_dependencies = 1;
 
-      subpst->read_symtab = pst->read_symtab;
+      subpst->legacy_read_symtab = pst->legacy_read_symtab;
+      subpst->legacy_expand_psymtab = pst->legacy_expand_psymtab;
     }
 
   if (num_includes == 0
@@ -2065,35 +2066,12 @@ dbx_end_psymtab (struct objfile *objfile, struct partial_symtab *pst,
 }
 
 static void
-dbx_psymtab_to_symtab_1 (struct objfile *objfile, struct partial_symtab *pst)
+dbx_psymtab_to_symtab_1 (legacy_psymtab *pst, struct objfile *objfile)
 {
-  int i;
-
-  if (pst->readin)
-    {
-      fprintf_unfiltered (gdb_stderr, "Psymtab for %s already read in.  "
-			  "Shouldn't happen.\n",
-			  pst->filename);
-      return;
-    }
+  gdb_assert (!pst->readin);
 
   /* Read in all partial symtabs on which this one is dependent.  */
-  for (i = 0; i < pst->number_of_dependencies; i++)
-    if (!pst->dependencies[i]->readin)
-      {
-	/* Inform about additional files that need to be read in.  */
-	if (info_verbose)
-	  {
-	    fputs_filtered (" ", gdb_stdout);
-	    wrap_here ("");
-	    fputs_filtered ("and ", gdb_stdout);
-	    wrap_here ("");
-	    printf_filtered ("%s...", pst->dependencies[i]->filename);
-	    wrap_here ("");	/* Flush output.  */
-	    gdb_flush (gdb_stdout);
-	  }
-	dbx_psymtab_to_symtab_1 (objfile, pst->dependencies[i]);
-      }
+  pst->read_dependencies (objfile);
 
   if (LDSYMLEN (pst))		/* Otherwise it's a dummy.  */
     {
@@ -2108,33 +2086,19 @@ dbx_psymtab_to_symtab_1 (struct objfile *objfile, struct partial_symtab *pst)
       read_ofile_symtab (objfile, pst);
     }
 
-  pst->readin = 1;
+  pst->readin = true;
 }
 
 /* Read in all of the symbols for a given psymtab for real.
    Be verbose about it if the user wants that.  SELF is not NULL.  */
 
 static void
-dbx_read_symtab (struct partial_symtab *self, struct objfile *objfile)
+dbx_read_symtab (legacy_psymtab *self, struct objfile *objfile)
 {
-  if (self->readin)
-    {
-      fprintf_unfiltered (gdb_stderr, "Psymtab for %s already read in.  "
-			  "Shouldn't happen.\n",
-			  self->filename);
-      return;
-    }
+  gdb_assert (!self->readin);
 
   if (LDSYMLEN (self) || self->number_of_dependencies)
     {
-      /* Print the message now, before reading the string table,
-         to avoid disconcerting pauses.  */
-      if (info_verbose)
-	{
-	  printf_filtered ("Reading in symbols for %s...", self->filename);
-	  gdb_flush (gdb_stdout);
-	}
-
       next_symbol_text_func = dbx_next_symbol_text;
 
       {
@@ -2149,23 +2113,19 @@ dbx_read_symtab (struct partial_symtab *self, struct objfile *objfile)
 	    data_holder.reset (stabs_data);
 	  }
 
-	dbx_psymtab_to_symtab_1 (objfile, self);
+	self->expand_psymtab (objfile);
       }
 
       /* Match with global symbols.  This only needs to be done once,
          after all of the symtabs and dependencies have been read in.   */
       scan_file_globals (objfile);
-
-      /* Finish up the debug error message.  */
-      if (info_verbose)
-	printf_filtered ("done.\n");
     }
 }
 
 /* Read in a defined section of a specific object file's symbols.  */
 
 static void
-read_ofile_symtab (struct objfile *objfile, struct partial_symtab *pst)
+read_ofile_symtab (struct objfile *objfile, legacy_psymtab *pst)
 {
   const char *namestring;
   struct external_nlist *bufp;
