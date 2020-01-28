@@ -146,7 +146,6 @@ ALL_MACHINES = \
 	cpu-or1k.lo \
 	cpu-pdp11.lo \
 	cpu-pj.lo \
-	cpu-plugin.lo \
 	cpu-powerpc.lo \
 	cpu-pru.lo \
 	cpu-rs6000.lo \
@@ -232,7 +231,6 @@ ALL_MACHINES_CFILES = \
 	cpu-or1k.c \
 	cpu-pdp11.c \
 	cpu-pj.c \
-	cpu-plugin.c \
 	cpu-powerpc.c \
 	cpu-pru.c \
 	cpu-rs6000.c \
