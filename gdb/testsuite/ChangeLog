@@ -1,3 +1,22 @@
+2020-01-29  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.arch/aarch64-brk-patterns.c: New source file.
+	* gdb.arch/aarch64-brk-patterns.exp: New test.
+
+2020-01-29  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.cp/pass-by-ref-2.exp: Mark some tests as XFAIL based on the
+	GCC/Clang version.
+	* gdb.cp/pass-by-ref.exp: Ditto.
+
+2020-01-29  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.threads/watchpoint-fork-child.c: Guard prints with #if DEBUG.
+	* gdb.threads/watchpoint-fork-mt.c: Same.
+	* gdb.threads/watchpoint-fork-parent.c: Same.
+	* gdb.threads/watchpoint-fork-st.c: Same.
+	* gdb.threads/watchpoint-fork.exp: Compile with DEBUG=0.
+
 2020-01-27  Luis Machado  <luis.machado@linaro.org>
 
 	* gdb.base/step-over-syscall.exp (setup): Check if we're already
