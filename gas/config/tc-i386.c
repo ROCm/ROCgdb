@@ -6368,10 +6368,7 @@ process_suffix (void)
       else
 	abort ();
     }
-  else if (i.tm.opcode_modifier.defaultsize
-	   && !i.suffix
-	   /* exclude fldenv/frstor/fsave/fstenv */
-	   && i.tm.opcode_modifier.no_ssuf)
+  else if (i.tm.opcode_modifier.defaultsize && !i.suffix)
     {
       i.suffix = stackop_size;
       if (stackop_size == LONG_MNEM_SUFFIX)
@@ -6420,8 +6417,14 @@ process_suffix (void)
     }
 
   if (!i.suffix
-      && !i.tm.opcode_modifier.defaultsize
-      && !i.tm.opcode_modifier.ignoresize)
+      && (!i.tm.opcode_modifier.defaultsize
+	  /* Also cover lret/retf/iret in 64-bit mode.  */
+	  || (flag_code == CODE_64BIT
+	      && !i.tm.opcode_modifier.no_lsuf
+	      && !i.tm.opcode_modifier.no_qsuf))
+      && !i.tm.opcode_modifier.ignoresize
+      /* Accept FLDENV et al without suffix.  */
+      && (i.tm.opcode_modifier.no_ssuf || i.tm.opcode_modifier.floatmf))
     {
       unsigned int suffixes;
 
@@ -6440,7 +6443,9 @@ process_suffix (void)
       /* Are multiple suffixes allowed?  */
       if (suffixes & (suffixes - 1))
 	{
-	  if (intel_syntax)
+	  if (intel_syntax
+	      && (!i.tm.opcode_modifier.defaultsize
+		  || operand_check == check_error))
 	    {
 	      as_bad (_("ambiguous operand size for `%s'"), i.tm.name);
 	      return 0;
@@ -6452,9 +6457,12 @@ process_suffix (void)
 	      return 0;
 	    }
 	  if (operand_check == check_warning)
-	    as_warn (_("no instruction mnemonic suffix given and "
-		       "no register operands; using default for `%s'"),
-		     i.tm.name);
+	    as_warn (_("%s; using default for `%s'"),
+		       intel_syntax
+		       ? _("ambiguous operand size")
+		       : _("no instruction mnemonic suffix given and "
+			   "no register operands"),
+		       i.tm.name);
 
 	  if (i.tm.opcode_modifier.floatmf)
 	    i.suffix = SHORT_MNEM_SUFFIX;
@@ -9053,13 +9061,14 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 			  && i.rm.regmem == 5))
 		  && (i.rm.mode == 2
 		      || (i.rm.mode == 0 && i.rm.regmem == 5))
+		  && !is_any_vex_encoding(&i.tm)
 		  && ((i.operands == 1
 		       && i.tm.base_opcode == 0xff
 		       && (i.rm.reg == 2 || i.rm.reg == 4))
 		      || (i.operands == 2
 			  && (i.tm.base_opcode == 0x8b
 			      || i.tm.base_opcode == 0x85
-			      || (i.tm.base_opcode & 0xc7) == 0x03))))
+			      || (i.tm.base_opcode & ~0x38) == 0x03))))
 		{
 		  if (object_64bit)
 		    {

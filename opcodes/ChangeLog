@@ -1,3 +1,32 @@
+2020-01-30  Alan Modra  <amodra@gmail.com>
+
+	* m32c-ibld.c: Regenerate.
+
+2020-01-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* bpf-opc.c: Regenerate.
+
+2020-01-30  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (X86_64_C2, X86_64_C3): New enumerators.
+	(dis386): Use them to replace C2/C3 table entries.
+	(x86_64_table): Add X86_64_C2 and X86_64_C3 entries.
+	* i386-opc.tbl (ret): Split Cpu64 entries into AMD64 and Intel64
+	ones. Use Size64 instead of DefaultSize on Intel64 ones.
+	* i386-tbl.h: Re-generate.
+
+2020-01-30  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl (call): Drop DefaultSize from Intel64 JumpDword
+	forms.
+	(fldenv, fnstenv, fstenv, fnsave, fsave, frstor): Drop
+	DefaultSize.
+	* i386-tbl.h: Re-generate.
+
+2020-01-30  Alan Modra  <amodra@gmail.com>
+
+	* tic4x-dis.c (tic4x_dp): Make unsigned.
+
 2020-01-27  H.J. Lu  <hongjiu.lu@intel.com>
 	    Jan Beulich  <jbeulich@suse.com>
 

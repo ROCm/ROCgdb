@@ -1,3 +1,48 @@
+2020-01-31  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.am (elf32-target.h, elf64-target.h): Don't use a temp
+	file.  Use $< and $@ in rules.
+	(elf32-aarch64.c, elf64-aarch64.c): Likewise.
+	(elf32-ia64.c, elf64-ia64.c): Likewise.
+	(elf32-riscv.c, elf64-riscv.c): Likewise.
+	(peigen.c, pepigen.c, pex64igen.c): Likewise.
+	(elf32-aarch64.c, elf64-aarch64.c): Don't emit $srcdir on #line.
+	(elf32-riscv.c, elf64-riscv.c): Likewise, and use $(SED).
+	(elf32-ia64.c, elf64-ia64.c): Do emit #line.
+	(peigen.c, pepigen.c, pex64igen.c): Likewise.
+	* Makefile.in: Regenerate.
+
+2020-01-31  Alan Modra  <amodra@gmail.com>
+
+	PR 4110
+	* elf.c (setup_group): Don't clear entire section contents,
+	just the padding after group flags.  Release alloc'd memory
+	after a seek or read failure.
+
+2020-01-16  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* peXXigen.c (pe_is_repro): New function.
+	(_bfd_XX_print_private_bfd_data_common): Note timestamp is
+	actually a build hash if PE_IMAGE_DEBUG_TYPE_REPRO is present.
+
+2020-01-16  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* peXXigen.c (debug_type_names): Add names for new debug data type
+	values.
+
+2020-01-16  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* peXXigen.c (pe_print_debugdata): Fix the iteration variable for
+	inner loop.  Fix a memory leak.
+
+2020-01-30  Alan Modra  <amodra@gmail.com>
+
+	* coffgen.c (coff_real_object_p): Don't clear obj_coff_keep_syms
+	or obj_coff_keep_strings here.
+	(coff_get_normalized_symtab): Free external syms directly.
+	* xcofflink.c (xcoff_link_input_bfd): Restore obj_coff_keep_syms
+	on error exit path.
+
 2020-01-27  Jim Wilson  <jimw@sifive.com>
 
 	* cpu-riscv.c (riscv_scan): New.
