@@ -24989,6 +24989,12 @@ static const struct asm_opcode insns[] =
  mcCE(fstd,	d000b00, 2, (RVD, ADDRGLDC),  vfp_dp_ldst),
  mcCE(flds,	d100a00, 2, (RVS, ADDRGLDC),  vfp_sp_ldst),
  mcCE(fsts,	d000a00, 2, (RVS, ADDRGLDC),  vfp_sp_ldst),
+
+  /* Memory operations.	 */
+ mcCE(fldmias,	c900a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmia),
+ mcCE(fldmdbs,	d300a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmdb),
+ mcCE(fstmias,	c800a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmia),
+ mcCE(fstmdbs,	d200a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmdb),
 #undef THUMB_VARIANT
 
   /* Moves and type conversions.  */
@@ -25003,17 +25009,13 @@ static const struct asm_opcode insns[] =
  cCE("fmxr",	ee00a10, 2, (RVC, RR),	      rn_rd),
 
   /* Memory operations.	 */
- cCE("fldmias",	c900a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmia),
  cCE("fldmfds",	c900a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmia),
- cCE("fldmdbs",	d300a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmdb),
  cCE("fldmeas",	d300a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmdb),
  cCE("fldmiax",	c900b00, 2, (RRnpctw, VRDLST),    vfp_xp_ldstmia),
  cCE("fldmfdx",	c900b00, 2, (RRnpctw, VRDLST),    vfp_xp_ldstmia),
  cCE("fldmdbx",	d300b00, 2, (RRnpctw, VRDLST),    vfp_xp_ldstmdb),
  cCE("fldmeax",	d300b00, 2, (RRnpctw, VRDLST),    vfp_xp_ldstmdb),
- cCE("fstmias",	c800a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmia),
  cCE("fstmeas",	c800a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmia),
- cCE("fstmdbs",	d200a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmdb),
  cCE("fstmfds",	d200a00, 2, (RRnpctw, VRSLST),    vfp_sp_ldstmdb),
  cCE("fstmiax",	c800b00, 2, (RRnpctw, VRDLST),    vfp_xp_ldstmia),
  cCE("fstmeax",	c800b00, 2, (RRnpctw, VRDLST),    vfp_xp_ldstmia),
@@ -31280,17 +31282,18 @@ static const struct arm_ext_table armv86a_ext_table[] =
 
 static const struct arm_ext_table armv8m_main_ext_table[] =
 {
-  ARM_EXT ("dsp", ARM_FEATURE_CORE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP),
-		  ARM_FEATURE_CORE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP)),
+  ARM_EXT ("dsp", ARM_FEATURE_CORE_LOW (ARM_AEXT_V8M_MAIN_DSP),
+		  ARM_FEATURE_CORE_LOW (ARM_AEXT_V8M_MAIN_DSP)),
   ARM_EXT ("fp", FPU_ARCH_VFP_V5_SP_D16, ALL_FP),
   ARM_ADD ("fp.dp", FPU_ARCH_VFP_V5D16),
   { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
 };
 
+
 static const struct arm_ext_table armv8_1m_main_ext_table[] =
 {
-  ARM_EXT ("dsp", ARM_FEATURE_CORE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP),
-		  ARM_FEATURE_CORE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP)),
+  ARM_EXT ("dsp", ARM_FEATURE_CORE_LOW (ARM_AEXT_V8M_MAIN_DSP),
+		  ARM_FEATURE_CORE_LOW (ARM_AEXT_V8M_MAIN_DSP)),
   ARM_EXT ("fp",
 	   ARM_FEATURE (0, ARM_EXT2_FP16_INST,
 			FPU_VFP_V5_SP_D16 | FPU_VFP_EXT_FP16 | FPU_VFP_EXT_FMA),
@@ -31298,10 +31301,11 @@ static const struct arm_ext_table armv8_1m_main_ext_table[] =
   ARM_ADD ("fp.dp",
 	   ARM_FEATURE (0, ARM_EXT2_FP16_INST,
 			FPU_VFP_V5D16 | FPU_VFP_EXT_FP16 | FPU_VFP_EXT_FMA)),
-  ARM_EXT ("mve", ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE),
+  ARM_EXT ("mve", ARM_FEATURE (ARM_AEXT_V8M_MAIN_DSP, ARM_EXT2_MVE, 0),
 	   ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE | ARM_EXT2_MVE_FP)),
   ARM_ADD ("mve.fp",
-	   ARM_FEATURE (0, ARM_EXT2_FP16_INST | ARM_EXT2_MVE | ARM_EXT2_MVE_FP,
+	   ARM_FEATURE (ARM_AEXT_V8M_MAIN_DSP,
+			ARM_EXT2_FP16_INST | ARM_EXT2_MVE | ARM_EXT2_MVE_FP,
 			FPU_VFP_V5_SP_D16 | FPU_VFP_EXT_FP16 | FPU_VFP_EXT_FMA)),
   { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
 };

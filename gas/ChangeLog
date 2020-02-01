@@ -1,3 +1,48 @@
+2020-01-31  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* config/tc-nios2.c (nios2_cons): Handle %gotoff as well as
+	%tls_ldo.
+
+2020-01-31  Andre Vieira  <andre.simoesdiasvieira@arm.com>
+
+	PR gas/25472
+	* config/tc-arm.c (armv8m_main_ext_table): Refactored +dsp adding.
+	(armv8_1m_main_ext_table): Refactored +dsp adding and enabled dsp for
+	+mve.
+	* testsuite/gas/arm/mve_dsp.d: New test.
+
+2020-01-31  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-s390.c (s390_elf_suffix): Return ELF_SUFFIX_NONE
+	rather than BFD_RELOC_NONE.
+
+2020-01-31  Srinath Parvathaneni  <srinath.parvathaneni@arm.com>
+
+	* config/tc-arm.c (fldmias): Moved inside "THUMB_VARIANT & arm_ext_v6t2"
+	to support VLDMIA instruction for MVE.
+	(fldmdbs): Moved inside "THUMB_VARIANT & arm_ext_v6t2" to support VLDMDB
+	instruction for MVE.
+	(fstmias): Moved inside "THUMB_VARIANT & arm_ext_v6t2" to support VSTMIA
+	instruction for MVE.
+	(fstmdbs): Moved inside "THUMB_VARIANT & arm_ext_v6t2" to support VSTMDB
+	instruction for MVE.
+	* testsuite/gas/arm/mve-ldst.d: New test.
+	* testsuite/gas/arm/mve-ldst.s: Likewise.
+
+2020-01-31  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated French translation.
+	* po/ru.po: Updated Russian translation.
+
+2020-01-31  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* testsuite/gas/aarch64/sve-bfloat-movprfx.s: Use .h rather than
+	.s for the movprfx.
+	* testsuite/gas/aarch64/sve-bfloat-movprfx.d: Update accordingly.
+	* testsuite/gas/aarch64/sve-movprfx_28.d,
+	* testsuite/gas/aarch64/sve-movprfx_28.l,
+	* testsuite/gas/aarch64/sve-movprfx_28.s: New test.
+
 2020-01-30  Jan Beulich  <jbeulich@suse.com>
 
 	* config/tc-i386.c (output_disp): Tighten base_opcode check.
