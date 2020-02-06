@@ -1,27 +1,40 @@
 ROCm Debugger (ROCgdb)
 ======================
 
-This is ROCgdb, the ROCm source-level debugger for Linux, based on GDB, the GNU
-source-level debugger. It includes support for heterogenous debugging on the
-ROCm platform of an x86-based host architecture together with the AMD
-commercially available GPU architectures supported by the AMD Debugger API which
-is included with the ROCm release as the ROCdbgapi library.
+The ROCm Debugger (ROCgdb) is the ROCm source-level debugger for Linux, based on
+the GNU Debugger (GDB). It enables heterogenous debugging on the ROCm platform
+of an x86-based host architecture along with AMD GPU architectures supported by
+the AMD Debugger API Library (ROCdbgapi). The AMD Debugger API Library
+(ROCdbgapi) is included with the ROCm release.
 
-Standard GDB commands can be used for both CPU and GPU code debugging. For more
-information about ROCgdb, please refer to the *ROCgdb User Manual* which is
-installed as both texinfo files and as a single PDF file in
-``/opt/rocm/share/doc/gdb`. In particular, refer to the *Debugging Heterogeneous
-Programs* chapter for general information, and the *AMD GPU* subsection of the
-*Architectures* section in the *Configuration-Specific Information* chapter. The
-*AMD GPU* subsection also provides the list of features not currently
-implemented, and known current restrictions.
+The current ROCm Debugger (ROCgdb) is an initial prototype that focusses on
+source line debugging and does not provide symbolic variable debugging
+capabilities. The user guide presents features and commands that may be
+implemented in future versions.
 
-For more information about ROCm, please refer to:
+For more information about ROCm, see:
 
 - https://github.com/RadeonOpenCompute/ROCm
 
-For more information about GDB, please refer to the README file in this folder
-or check the GDB home page at:
+You can use the standard GDB commands for both CPU and GPU code debugging. For
+more information about ROCgdb, refer to the *ROCgdb User Guide* which is
+installed at:
+
+- ``/opt/rocm/share/info/gdb.info`` as a texinfo file
+- ``/opt/rocm/share/doc/gdb/gdb.pdf`` as a PDF file
+
+You can refer to the following chapters in the *ROCgdb User Guide* for more
+specific information about debugging heterogenous programs on ROCm:
+
+- *Debugging Heterogeneous Programs* provides general information about
+  debugging heterogenous programs.
+- *Configuration-Specific Information > Architectures > AMD GPU* provides
+  specific information about debugging heterogenous programs on ROCm with
+  supported AMD GPU chips. This section also lists the features, commands, and
+  known issues that may be implemented and resolved in future releases.
+
+For more information about the GNU Debugger (GDB), refer to the ``README`` file
+in this folder or check the GNU Debugger (GDB) web site at:
 
 - http://www.gnu.org/software/gdb
 
