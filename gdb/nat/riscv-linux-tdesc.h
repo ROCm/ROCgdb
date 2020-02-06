@@ -1,6 +1,5 @@
-/* Target-dependent code for NetBSD/powerpc.
-
-   Copyright (C) 2004-2020 Free Software Foundation, Inc.
+/* GNU/Linux/RISC-V native target description support for GDB.
+   Copyright (C) 2020 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,16 +16,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef PPC_NBSD_TDEP_H
-#define PPC_NBSD_TDEP_H
+#ifndef NAT_RISCV_LINUX_TDESC_H
+#define NAT_RISCV_LINUX_TDESC_H
 
-struct regset;
+struct target_desc;
 
-/* Register offsets for NetBSD/powerpc.  */
-extern struct ppc_reg_offsets ppcnbsd_reg_offsets;
+/* Return a target description for the LWP identified by TID.  */
+const struct target_desc *riscv_linux_read_description (int tid);
 
-/* Register sets for NetBSD/powerpc.  */
-extern const struct regset ppcnbsd_gregset;
-extern const struct regset ppcnbsd_fpregset;
-
-#endif /* PPC_NBSD_TDEP_H */
+#endif /* NAT_RISCV_LINUX_TDESC_H */
