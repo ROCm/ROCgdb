@@ -3378,7 +3378,7 @@ Turns on or off display of @code{libthread_db}-related events.
 Use @code{1} to enable, @code{0} to disable.
 @end table
 
-@xref{Heterogeneous Debugging} for additional infomation related to
+@xref{Heterogeneous Debugging} for additional information related to
 threads in heterogeneous systems.
 
 @node Forks
