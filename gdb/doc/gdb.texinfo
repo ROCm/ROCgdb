@@ -51,7 +51,6 @@
 
 @copying
 @c man begin COPYRIGHT
-@indent
 Copyright @copyright{} 1988-2020 Free Software Foundation, Inc.
 
 Copyright @copyright{} 2020 Advanced Micro Devices, Inc. All rights reserved.
@@ -3653,7 +3652,7 @@ Turns on or off display of @code{libthread_db}-related events.
 Use @code{1} to enable, @code{0} to disable.
 @end table
 
-@xref{Heterogeneous Debugging} for additional infomation related to
+@xref{Heterogeneous Debugging} for additional information related to
 threads in heterogeneous systems.
 
 @node Forks
