@@ -13316,7 +13316,7 @@ _bfd_elf_gc_mark_debug_special_section_group (asection *grp)
 
 bfd_boolean
 _bfd_elf_gc_mark_extra_sections (struct bfd_link_info *info,
-				 elf_gc_mark_hook_fn mark_hook ATTRIBUTE_UNUSED)
+				 elf_gc_mark_hook_fn mark_hook)
 {
   bfd *ibfd;
 
@@ -13345,11 +13345,33 @@ _bfd_elf_gc_mark_extra_sections (struct bfd_link_info *info,
 		   && (isec->flags & SEC_ALLOC) != 0
 		   && elf_section_type (isec) != SHT_NOTE)
 	    some_kept = TRUE;
+	  else
+	    {
+	      /* Since all sections, except for backend specific ones,
+		 have been garbage collected, call mark_hook on this
+		 section if any of its linked-to sections is marked.  */
+	      asection *linked_to_sec = elf_linked_to_section (isec);
+	      for (; linked_to_sec != NULL;
+		   linked_to_sec = elf_linked_to_section (linked_to_sec))
+		if (linked_to_sec->gc_mark)
+		  {
+		    if (!_bfd_elf_gc_mark (info, isec, mark_hook))
+		      return FALSE;
+		    break;
+		  }
+	    }
 
 	  if (!debug_frag_seen
 	      && (isec->flags & SEC_DEBUGGING)
 	      && CONST_STRNEQ (isec->name, ".debug_line."))
 	    debug_frag_seen = TRUE;
+	  else if (strcmp (bfd_section_name (isec),
+			   "__patchable_function_entries") == 0
+		   && elf_linked_to_section (isec) == NULL)
+	      info->callbacks->einfo (_("%F%P: %pB(%pA): error: "
+					"need linked-to section "
+					"for --gc-sections\n"),
+				      isec->owner, isec);
 	}
 
       /* If no non-note alloc section in this file will be kept, then
@@ -13359,14 +13381,16 @@ _bfd_elf_gc_mark_extra_sections (struct bfd_link_info *info,
 
       /* Keep debug and special sections like .comment when they are
 	 not part of a group.  Also keep section groups that contain
-	 just debug sections or special sections.  */
+	 just debug sections or special sections.  NB: Sections with
+	 linked-to section has been handled above.  */
       for (isec = ibfd->sections; isec != NULL; isec = isec->next)
 	{
 	  if ((isec->flags & SEC_GROUP) != 0)
 	    _bfd_elf_gc_mark_debug_special_section_group (isec);
 	  else if (((isec->flags & SEC_DEBUGGING) != 0
 		    || (isec->flags & (SEC_ALLOC | SEC_LOAD | SEC_RELOC)) == 0)
-		   && elf_next_in_group (isec) == NULL)
+		   && elf_next_in_group (isec) == NULL
+		   && elf_linked_to_section (isec) == NULL)
 	    isec->gc_mark = 1;
 	  if (isec->gc_mark && (isec->flags & SEC_DEBUGGING) != 0)
 	    has_kept_debug_info = TRUE;
