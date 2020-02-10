@@ -7,7 +7,7 @@ of an x86-based host architecture along with AMD GPU architectures supported by
 the AMD Debugger API Library (ROCdbgapi). The AMD Debugger API Library
 (ROCdbgapi) is included with the ROCm release.
 
-The current ROCm Debugger (ROCgdb) is an initial prototype that focusses on
+The current ROCm Debugger (ROCgdb) is an initial prototype that focuses on
 source line debugging and does not provide symbolic variable debugging
 capabilities. The user guide presents features and commands that may be
 implemented in future versions.
