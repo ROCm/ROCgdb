@@ -19,15 +19,16 @@
 
 #include "defs.h"
 #include "dwarf2.h"
-#include "dwarf2expr.h"
-#include "dwarf2loc.h"
+#include "dwarf2/expr.h"
+#include "dwarf2/loc.h"
+#include "dwarf2/read.h"
 #include "ui-file.h"
 #include "utils.h"
 #include "compile-internal.h"
 #include "compile-c.h"
 #include "compile.h"
 #include "block.h"
-#include "dwarf2-frame.h"
+#include "dwarf2/frame.h"
 #include "gdbsupport/gdb_vecs.h"
 #include "value.h"
 #include "gdbarch.h"
@@ -718,7 +719,7 @@ do_compile_dwarf_expr_to_c (int indent, string_file *stream,
 	     index, not an address.  We don't support things like
 	     branching between the address and the TLS op.  */
 	  if (op_ptr >= op_end || *op_ptr != DW_OP_GNU_push_tls_address)
-	    uoffset += dwarf2_per_cu_text_offset (per_cu);
+	    uoffset += per_cu->text_offset ();
 	  push (indent, stream, uoffset);
 	  break;
 

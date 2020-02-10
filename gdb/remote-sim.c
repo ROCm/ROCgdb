@@ -360,7 +360,7 @@ gdb_os_write_stdout (host_callback *p, const char *buf, int len)
 static void
 gdb_os_flush_stdout (host_callback *p)
 {
-  gdb_flush (gdb_stdtarg);
+  ui_file_flush (gdb_stdtarg);
 }
 
 /* GDB version of os_write_stderr callback.  */
@@ -375,7 +375,7 @@ gdb_os_write_stderr (host_callback *p, const char *buf, int len)
     {
       b[0] = buf[i];
       b[1] = 0;
-      fputs_unfiltered (b, gdb_stdtargerr);
+      ui_file_puts (gdb_stdtargerr, b);
     }
   return len;
 }
@@ -385,7 +385,7 @@ gdb_os_write_stderr (host_callback *p, const char *buf, int len)
 static void
 gdb_os_flush_stderr (host_callback *p)
 {
-  gdb_flush (gdb_stdtargerr);
+  ui_file_flush (gdb_stdtargerr);
 }
 
 /* GDB version of printf_filtered callback.  */

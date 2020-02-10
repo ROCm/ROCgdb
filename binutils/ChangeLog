@@ -1,3 +1,19 @@
+2020-02-07  Nick Clifton  <nickc@redhat.com>
+
+	* README-how-to-make-a-release: Add note about updating the
+	GAS/NEWS URL in the next release.
+
+2020-02-07  Sergey Belyashov  <sergey.belyashov@gmail.com>
+
+	PR 25469
+	* readelf.c (get_machine_flags): Add support for Z80N machine
+	number.
+
+2020-02-07  Nick Clifton  <nickc@redhat.com>
+
+	* dwarf.c (display_debug_lines_decoded): Force a NUL termination
+	of the truncated file name.
+
 2020-02-06  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* objdump.c (print_jump_visualisation): New function.

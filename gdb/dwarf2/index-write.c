@@ -19,7 +19,7 @@
 
 #include "defs.h"
 
-#include "dwarf-index-write.h"
+#include "dwarf2/index-write.h"
 
 #include "addrmap.h"
 #include "cli/cli-decode.h"
@@ -29,9 +29,9 @@
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/scoped_fd.h"
 #include "complaints.h"
-#include "dwarf-index-common.h"
+#include "dwarf2/index-common.h"
 #include "dwarf2.h"
-#include "dwarf2read.h"
+#include "dwarf2/read.h"
 #include "gdb/gdb-index.h"
 #include "gdbcmd.h"
 #include "objfiles.h"
@@ -960,8 +960,7 @@ private:
       : m_abfd (dwarf2_per_objfile->objfile->obfd),
 	m_dwarf2_per_objfile (dwarf2_per_objfile)
     {
-      dwarf2_read_section (dwarf2_per_objfile->objfile,
-			   &dwarf2_per_objfile->str);
+      dwarf2_per_objfile->str.read (dwarf2_per_objfile->objfile);
       if (dwarf2_per_objfile->str.buffer == NULL)
 	return;
       for (const gdb_byte *data = dwarf2_per_objfile->str.buffer;
@@ -1462,7 +1461,7 @@ write_gdbindex (struct dwarf2_per_objfile *dwarf2_per_objfile, FILE *out_file,
       sig_data.objfile = objfile;
       sig_data.symtab = &symtab;
       sig_data.cu_index = dwarf2_per_objfile->all_comp_units.size ();
-      htab_traverse_noresize (dwarf2_per_objfile->signatured_types,
+      htab_traverse_noresize (dwarf2_per_objfile->signatured_types.get (),
 			      write_one_signatured_type, &sig_data);
     }
 
@@ -1535,7 +1534,7 @@ write_debug_names (struct dwarf2_per_objfile *dwarf2_per_objfile,
       /* It is used only for gdb_index.  */
       sig_data.info.symtab = nullptr;
       sig_data.info.cu_index = 0;
-      htab_traverse_noresize (dwarf2_per_objfile->signatured_types,
+      htab_traverse_noresize (dwarf2_per_objfile->signatured_types.get (),
 			      debug_names::write_one_signatured_type,
 			      &sig_data);
     }

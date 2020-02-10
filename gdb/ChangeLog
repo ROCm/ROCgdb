@@ -1,3 +1,542 @@
+2020-02-09  Tom de Vries  <tdevries@suse.de>
+
+	* dwarf2read.c (process_psymtab_comp_unit_reader): Append CU offset to
+	filename if it matches "<artificial>".
+
+2020-02-09  Hannes Domani  <ssbssa@yahoo.de>
+
+	* windows-tdep.c (struct enum_value_name): New struct.
+	(create_enum): New function.
+	(windows_get_siginfo_type): Create and use enum types.
+
+2020-02-09  Hannes Domani  <ssbssa@yahoo.de>
+
+	* NEWS: Mention $_siginfo support for Windows.
+	* windows-nat.c (handle_exception): Set siginfo_er.
+	(windows_nat_target::mourn_inferior): Reset siginfo_er.
+	(windows_xfer_siginfo): New function.
+	(windows_nat_target::xfer_partial): Call windows_xfer_siginfo.
+	* windows-tdep.c (struct windows_gdbarch_data): New struct.
+	(init_windows_gdbarch_data): New function.
+	(get_windows_gdbarch_data): New function.
+	(windows_get_siginfo_type): New function.
+	(windows_init_abi): Register windows_get_siginfo_type.
+	(_initialize_windows_tdep): Register init_windows_gdbarch_data.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (class cutu_reader) <cutu_reader,
+	init_tu_and_read_dwo_dies>: Remove "keep" parameter.
+	<keep>: Declare method.
+	<m_keep>: Remove member.
+	<~cutu_reader>: Remove.
+	(cutu_reader::init_tu_and_read_dwo_dies): Update.
+	(cutu_reader::cutu_reader): Update.
+	(cutu_reader::keep): Rename from ~cutu_reader.
+	(process_psymtab_comp_unit, build_type_psymtabs_1)
+	(process_skeletonless_type_unit, load_partial_comp_unit)
+	(load_full_comp_unit, dwarf2_read_addr_index)
+	(read_signatured_type): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (process_psymtab_comp_unit_reader): Remove
+	"want_partial_unit" parameter.
+	(process_psymtab_comp_unit): Change want_partial_unit to bool.
+	Inline check for DW_TAG_partial_unit.
+	(dwarf2_build_psymtabs_hard, scan_partial_symbols): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_n_bytes, read_direct_string): Move to
+	read.c.
+	* dwarf2/leb.h (read_n_bytes, read_direct_string): Move from
+	read.c.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_address): Move to comp-unit.c.
+	(dwarf2_rnglists_process, dwarf2_ranges_process)
+	(read_attribute_value, dwarf_decode_lines_1)
+	(var_decode_location, decode_locdesc): Update.
+	* dwarf2/comp-unit.c (comp_unit_head::read_address): Move from
+	read.c.  Remove "cu" parameter.
+	* dwarf2/comp-unit.h (struct comp_unit_head) <read_address>: New
+	method.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_attribute_value, read_indirect_string)
+	(read_indirect_line_string): Update.
+	* dwarf2/comp-unit.c (read_offset): Remove.
+	(read_comp_unit_head): Update.
+	* dwarf2/comp-unit.h (struct comp_unit_head) <read_offset>: New
+	method.
+	(read_offset): Don't declare.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* Makefile.in (COMMON_SFILES): Add dwarf2/comp-unit.c.
+	* dwarf2/read.c (struct comp_unit_head): Move to
+	dwarf2/comp-unit.h.
+	(enum class rcuh_kind): Move to comp-unit.h.
+	(get_cu_length, offset_in_cu_p): Now methods on comp_unit_head.
+	(read_comp_unit_head, error_check_comp_unit_head)
+	(read_and_check_comp_unit_head): Move to comp-unit.c.
+	(read_offset, dwarf_unit_type_name): Likewise.
+	(create_debug_type_hash_table, read_cutu_die_from_dwo)
+	(cutu_reader::cutu_reader, read_call_site_scope)
+	(find_partial_die, follow_die_offset): Update.
+	* dwarf2/comp-unit.h: New file, from dwarf2read.c.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_offset_1): Move to leb.c.
+	(read_abbrev_offset, read_offset, dwarf_decode_line_header)
+	(dwarf_decode_macro_bytes): Update.
+	* dwarf2/leb.c (read_offset): Rename; move from read.c.
+	* dwarf2/leb.h (read_offset): Declare.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_section_size): Remove.
+	(error_check_comp_unit_head, dwarf2_symbol_mark_computed):
+	Update.
+	* dwarf2/section.h (struct dwarf2_section_info) <get_size>: New method.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_initial_length): Move to leb.c.
+	* dwarf2/leb.h (read_initial_length): Declare.
+	* dwarf2/leb.c (read_initial_length): Move from read.c.  Add
+	handle_nonstd parameter.
+	* dwarf2/frame.c (read_initial_length): Remove.
+	(decode_frame_entry_1): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/loc.c (dwarf2_find_location_expression)
+	(dwarf_evaluate_loc_desc::get_tls_address)
+	(dwarf_evaluate_loc_desc::push_dwarf_reg_entry_value)
+	(rw_pieced_value, dwarf2_evaluate_loc_desc_full)
+	(dwarf2_locexpr_baton_eval, dwarf2_evaluate_property)
+	(dwarf2_compile_property_to_c)
+	(dwarf2_loc_desc_get_symbol_read_needs)
+	(dwarf2_compile_expr_to_ax, locexpr_describe_location)
+	(locexpr_tracepoint_var_ref, locexpr_generate_c_location)
+	(loclist_describe_location, loclist_tracepoint_var_ref)
+	(loclist_generate_c_location): Update.
+	* compile/compile-loc2c.c (do_compile_dwarf_expr_to_c): Update.
+	* dwarf2/loc.h (dwarf2_per_cu_objfile, dwarf2_per_cu_addr_size)
+	(dwarf2_per_cu_ref_addr_size, dwarf2_per_cu_offset_size)
+	(dwarf2_per_cu_text_offset, dwarf2_version): Don't declare.
+	* dwarf2/read.c (dwarf2_per_cu_data::objfile)
+	(dwarf2_per_cu_data::addr_size)
+	(dwarf2_per_cu_data::ref_addr_size)
+	(dwarf2_per_cu_data::text_offset)
+	(dwarf2_per_cu_data::addr_type): Now methods.
+	(per_cu_header_read_in): Make per_cu "const".
+	(dwarf2_version): Remove.
+	(dwarf2_per_cu_data::int_type): Now a method.
+	(dwarf2_per_cu_data::_addr_sized_int_type): Likewise.
+	(set_die_type, read_array_type, read_subrange_index_type)
+	(read_tag_string_type, read_subrange_type): Update.
+	* dwarf2/read.h (struct dwarf2_per_cu_data) <addr_size,
+	offset_size, ref_addr_size, text_offset, addr_type, version,
+	objfile, int_type, addr_sized_int_type>: Declare methods.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct dwarf2_per_cu_data) <imported_symtabs>:
+	Move earlier.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (dwarf_line_debug): Declare.
+	* Makefile.in (COMMON_SFILES): Add dwarf2/line-header.c.
+	* dwarf2/read.c: Move line_header code to new files.
+	(dwarf_line_debug): No longer static.
+	* dwarf2/line-header.c: New file.
+	* dwarf2/line-header.h: New file.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (struct line_header) <file_full_name,
+	file_file_name>: Return unique_xmalloc_ptr.
+	(line_header::file_file_name): Update.
+	(line_header::file_full_name): Update.
+	(dw2_get_file_names_reader): Update.
+	(macro_start_file): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (struct line_header) <file_full_name,
+	file_file_name>: Declare methods.
+	(dw2_get_file_names_reader): Update.
+	(file_file_name): Now a method.
+	(file_full_name): Likewise.
+	(macro_start_file): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf_always_disassemble)
+	(show_dwarf_always_disassemble): Move to loc.c.
+	(_initialize_dwarf2_read): Move "always-disassemble" registration
+	to loc.c.
+	* dwarf2/read.h (dwarf_always_disassemble): Don't declare.
+	* dwarf2/loc.c (dwarf_always_disassemble): Move from read.c.  Now
+	static.
+	(show_dwarf_always_disassemble): Move from read.c.
+	(_initialize_dwarf2loc): Move always-disassemble from read.c.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (~dwarf2_per_objfile): Update.
+	(create_quick_file_names_table): Return htab_up.
+	(dw2_get_file_names_reader, dw2_forget_cached_source_info):
+	Update.
+	* dwarf2/read.h (struct dwarf2_per_objfile)
+	<quick_file_names_table>: Now htab_up.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/abbrev.c (abbrev_table::read): Simplify.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/abbrev.c (abbrev_table): Move constructor from header.
+	Rewrite.
+	(abbrev_table::add_abbrev, abbrev_table::lookup_abbrev): Rewrite.
+	* dwarf2/abbrev.h (struct abbrev_info) <next>: Remove.
+	(abbrev_table::abbrev_table): No longer inline.
+	(ABBREV_HASH_SIZE): Remove.
+	(abbrev_table::m_abbrevs): Now an htab_up.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_cutu_die_from_dwo): Update.
+	(cutu_reader): Update.
+	(build_type_psymtabs_1): Update.
+	* dwarf2/abbrev.c (abbrev_table::read): Rename.
+	(abbrev_table::alloc_abbrev): Update.
+	* dwarf2/abbrev.h (abbrev_table_up): Move earlier.
+	(abbrev_table::read): New static method, renamed from
+	abbrev_table_read_table.
+	(abbrev_table::alloc_abbrev)
+	(abbrev_table::add_abbrev): Now private.
+	(abbrev_table::abbrev_table): Now private.
+	(abbrev_table::m_abbrev_obstack): Now private.  Rename.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (set_die_type, get_die_type_at_offset): Update.
+	* dwarf2/read.h (struct dwarf2_per_objfile) <die_type_hash>: Now
+	htab_up.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (struct dwp_file) <loaded_cus, loaded_tus>: Now
+	htab_up.
+	(lookup_dwo_unit_in_dwp): Update.
+	(allocate_dwp_loaded_cutus_table): Return htab_up.  Don't allocate
+	on obstack.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (allocate_dwo_file_hash_table): Don't allocate on
+	obstack.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (~dwarf2_per_objfile): Don't delete
+	line_header_hash.
+	(handle_DW_AT_stmt_list): Update.  Don't allocate on obstack.
+	* dwarf2/read.h (struct dwarf2_per_objfile) <line_header_hash>:
+	Change type to htab_up.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (allocate_type_unit_groups_table): Return
+	htab_up.  Don't allocate on obstack.
+	(get_type_unit_group, dwarf2_build_psymtabs_hard): Update.
+	* dwarf2/read.h (struct dwarf2_per_objfile) <type_unit_groups>:
+	Change type to htab_up.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct dwarf2_per_objfile) <signatured_types>:
+	Change type to htab_up.
+	* dwarf2/read.c (create_signatured_type_table_from_index)
+	(create_signatured_type_table_from_debug_names)
+	(create_all_type_units, add_type_unit)
+	(lookup_dwo_signatured_type, lookup_signatured_type)
+	(process_skeletonless_type_unit): Update.
+	(create_debug_type_hash_table, create_debug_types_hash_table):
+	Change type of types_htab.
+	(allocate_signatured_type_table, allocate_dwo_unit_table): Return
+	htab_up.  Don't allocate on obstack.
+	(create_cus_hash_table): Change type of cus_htab parameter.
+	(struct dwo_file) <cus, tus>: Now htab_up.
+	(lookup_dwo_signatured_type, lookup_dwo_cutu)
+	(process_dwo_file_for_skeletonless_type_units, lookup_dwo_cutu)
+	(queue_and_load_all_dwo_tus): Update.
+	* dwarf2/index-write.c (write_gdbindex): Update.
+	(write_debug_names): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct dwarf2_queue_item): Move from
+	dwarf2/read.c.  Remove "next" member.  Add constructor ntad
+	destructor.
+	(struct dwarf2_per_objfile) <queue>: New member.
+	* dwarf2/read.c (struct dwarf2_queue_item): Move to
+	dwarf2/read.h.
+	(dwarf2_queue, dwarf2_queue_tail): Remove.
+	(class dwarf2_queue_guard): Add parameter to constructor.  Use
+	DISABLE_COPY_AND_ASSIGN.
+	<m_per_objfile>: New member.
+	<~dwarf2_queue_guard>: Rewrite.
+	(dw2_do_instantiate_symtab, queue_comp_unit, process_queue):
+	Update.
+	(~dwarf2_queue_item): New.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (struct die_info) <has_children>: New member.
+	(dw2_get_file_names_reader): Remove has_children.
+	(dw2_get_file_names): Update.
+	(read_cutu_die_from_dwo): Remove has_children.
+	(cutu_reader::init_tu_and_read_dwo_dies)
+	(cutu_reader::cutu_reader): Update.
+	(process_psymtab_comp_unit_reader, build_type_psymtabs_reader):
+	Remove has_children.
+	(build_type_psymtabs_1, process_skeletonless_type_unit)
+	(load_partial_comp_unit, load_full_comp_unit): Update.
+	(create_dwo_cu_reader): Remove has_children.
+	(create_cus_hash_table, read_die_and_children): Update.
+	(read_full_die_1,read_full_die): Remove has_children.
+	(read_signatured_type): Update.
+	(class cutu_reader) <has_children>: Remove.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/expr.c: Rename from dwarf2expr.c.
+	* dwarf2/expr.h: Rename from dwarf2expr.h.
+	* dwarf2/frame-tailcall.c: Rename from dwarf2-frame-tailcall.c.
+	* dwarf2/frame-tailcall.h: Rename from dwarf2-frame-tailcall.h.
+	* dwarf2/frame.c: Rename from dwarf2-frame.c.
+	* dwarf2/frame.h: Rename from dwarf2-frame.h.
+	* dwarf2/index-cache.c: Rename from dwarf-index-cache.c.
+	* dwarf2/index-cache.h: Rename from dwarf-index-cache.h.
+	* dwarf2/index-common.c: Rename from dwarf-index-common.c.
+	* dwarf2/index-common.h: Rename from dwarf-index-common.h.
+	* dwarf2/index-write.c: Rename from dwarf-index-write.c.
+	* dwarf2/index-write.h: Rename from dwarf-index-write.h.
+	* dwarf2/loc.c: Rename from dwarf2loc.c.
+	* dwarf2/loc.h: Rename from dwarf2loc.h.
+	* dwarf2/read.c: Rename from dwarf2read.c.
+	* dwarf2/read.h: Rename from dwarf2read.h.
+	* dwarf2/abbrev.c, aarch64-tdep.c, alpha-tdep.c,
+	amd64-darwin-tdep.c, arc-tdep.c, arm-tdep.c, bfin-tdep.c,
+	compile/compile-c-symbols.c, compile/compile-cplus-symbols.c,
+	compile/compile-loc2c.c, cris-tdep.c, csky-tdep.c, findvar.c,
+	gdbtypes.c, guile/scm-type.c, h8300-tdep.c, hppa-bsd-tdep.c,
+	hppa-linux-tdep.c, i386-darwin-tdep.c, i386-linux-tdep.c,
+	i386-tdep.c, iq2000-tdep.c, m32c-tdep.c, m68hc11-tdep.c,
+	m68k-tdep.c, microblaze-tdep.c, mips-tdep.c, mn10300-tdep.c,
+	msp430-tdep.c, nds32-tdep.c, nios2-tdep.c, or1k-tdep.c,
+	riscv-tdep.c, rl78-tdep.c, rs6000-tdep.c, rx-tdep.c, s12z-tdep.c,
+	s390-tdep.c, score-tdep.c, sh-tdep.c, sparc-linux-tdep.c,
+	sparc-tdep.c, sparc64-linux-tdep.c, sparc64-tdep.c, tic6x-tdep.c,
+	tilegx-tdep.c, v850-tdep.c, xstormy16-tdep.c, xtensa-tdep.c:
+	Update.
+	* Makefile.in (COMMON_SFILES): Update.
+	(HFILES_NO_SRCDIR): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (struct die_reader_specs) <comp_dir>: Remove.
+	(init_cu_die_reader, read_cutu_die_from_dwo): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.h (struct die_info): Don't declare.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.h (die_info_ptr): Remove typedef.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (read_call_site_scope)
+	(handle_data_member_location, dwarf2_add_member_fn)
+	(mark_common_block_symbol_computed, read_common_block)
+	(attr_to_dynamic_prop, partial_die_info::read)
+	(var_decode_location, dwarf2_fetch_die_loc_sect_off)
+	(dwarf2_symbol_mark_computed, set_die_type): Update.
+	* dwarf2/attribute.h (struct attribute) <form_is_block>: Declare
+	method.
+	(attr_form_is_block): Don't declare.
+	* dwarf2/attribute.c (attribute::form_is_block): Now a method.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (dwarf2_find_base_address, )
+	(read_call_site_scope, rust_containing_type)
+	(dwarf2_get_pc_bounds, dwarf2_record_block_ranges)
+	(handle_data_member_location, dwarf2_add_member_fn)
+	(get_alignment, read_structure_type, process_structure_scope)
+	(mark_common_block_symbol_computed, read_common_block)
+	(read_tag_string_type, attr_to_dynamic_prop, read_subrange_type)
+	(partial_die_info::read, read_attribute_value, new_symbol)
+	(lookup_die_type, dwarf2_get_ref_die_offset)
+	(dwarf2_get_attr_constant_value, follow_die_ref_or_sig)
+	(dwarf2_fetch_die_loc_sect_off, get_DW_AT_signature_type)
+	(dwarf2_symbol_mark_computed): Update.
+	* dwarf2/attribute.h (struct attribute) <value_as_address,
+	form_is_section_offset, form_is_constant, form_is_ref>: Declare
+	methods.
+	(value_as_address, attr_form_is_section_offset)
+	(attr_form_is_constant, attr_form_is_ref): Don't declare.
+	* dwarf2/attribute.c (attribute::value_as_address)
+	(attribute::form_is_section_offset, attribute::form_is_constant)
+	(attribute::form_is_ref): Now methods.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (struct attribute, DW_STRING)
+	(DW_STRING_IS_CANONICAL, DW_UNSND, DW_BLOCK, DW_SND, DW_ADDR)
+	(DW_SIGNATURE, struct dwarf_block, attr_value_as_address)
+	(attr_form_is_block, attr_form_is_section_offset)
+	(attr_form_is_constant, attr_form_is_ref): Move.
+	* dwarf2/attribute.h: New file.
+	* dwarf2/attribute.c: New file, from dwarf2read.c.
+	* Makefile.in (COMMON_SFILES): Add dwarf2/attribute.c.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (abbrev_table_up, struct abbrev_info)
+	(struct attr_abbrev, ABBREV_HASH_SIZE, struct abbrev_table):
+	Move.
+	(read_cutu_die_from_dwo, build_type_psymtabs_1): Update.
+	(abbrev_table::alloc_abbrev, abbrev_table::add_abbrev)
+	(abbrev_table::lookup_abbrev, abbrev_table_read_table): Move to
+	abbrev.c.
+	* dwarf2/abbrev.h: New file.
+	* dwarf2/abbrev.c: New file, from dwarf2read.c.
+	* Makefile.in (COMMON_SFILES): Add dwarf2/abbrev.c.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (dwarf2_section_buffer_overflow_complaint)
+	(dwarf2_section_size, dwarf2_get_section_info)
+	(create_signatured_type_table_from_debug_names)
+	(create_addrmap_from_aranges, read_debug_names_from_section)
+	(get_gdb_index_contents_from_section, read_comp_unit_head)
+	(error_check_comp_unit_head, read_abbrev_offset)
+	(create_debug_type_hash_table, init_cu_die_reader)
+	(read_cutu_die_from_dwo, dwarf2_build_psymtabs_hard)
+	(read_comp_units_from_section, create_cus_hash_table)
+	(create_dwp_hash_table, create_dwo_unit_in_dwp_v1)
+	(create_dwp_v2_section, dwarf2_rnglists_process)
+	(dwarf2_ranges_process, read_die_and_siblings, read_full_die)
+	(abbrev_table_read_table, read_indirect_string_at_offset_from)
+	(read_indirect_string_from_dwz, read_addr_index_1)
+	(read_str_index, dwarf_decode_line_header, skip_form_bytes)
+	(dwarf_decode_macro_bytes, dwarf_decode_macros)
+	(fill_in_loclist_baton): Update.
+	* dwarf2/section.h (struct dwarf2_section_info) <get_name,
+	get_containing_section, get_bfd_owner, get_bfd_section,
+	get_file_name, get_id, get_flags, empty, read>: Declare methods.
+	(dwarf2_read_section, get_section_name, get_section_file_name)
+	(get_containing_section, get_section_bfd_owner)
+	(get_section_bfd_section, get_section_name, get_section_file_name)
+	(get_section_id, get_section_flags, dwarf2_section_empty_p): Don't
+	declare.
+	* dwarf2/section.c (dwarf2_section_info::get_containing_section)
+	(dwarf2_section_info::get_bfd_owner)
+	(dwarf2_section_info::get_bfd_section)
+	(dwarf2_section_info::get_name)
+	(dwarf2_section_info::get_file_name, dwarf2_section_info::get_id)
+	(dwarf2_section_info::get_flags, dwarf2_section_info::empty)
+	(dwarf2_section_info::read): Now methods.
+	* dwarf-index-write.c (class debug_names): Update.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.h (struct dwarf2_section_info, dwarf2_read_section):
+	Move to dwarf2/section.h.
+	* dwarf2read.c (get_containing_section, get_section_bfd_owner)
+	(get_section_bfd_section, get_section_name)
+	(get_section_file_name, get_section_id, get_section_flags)
+	(dwarf2_section_empty_p, dwarf2_read_section): Moe to
+	dwarf2/section.c.
+	* dwarf2/section.h: New file.
+	* dwarf2/section.c: New file, from dwarf2read.c.
+	* Makefile.in (COMMON_SFILES): Add dwarf2/section.c.
+
+2020-02-08  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.h (read_unsigned_leb128): Don't declare.
+	* dwarf2read.c (read_1_byte, read_1_signed_byte, read_2_bytes)
+	(read_2_signed_bytes, read_3_bytes, read_4_bytes)
+	(read_4_signed_bytes, read_8_bytes): Move to dwarf2/leb.h.
+	(read_unsigned_leb128, read_signed_leb128): Move to dwarf2/leb.c.
+	* dwarf2/leb.h: New file, from dwarf2read.c.
+	* dwarf2/leb.c: New file, from dwarf2read.c.
+	* dwarf2-frame.c (read_1_byte, read_4_bytes, read_8_bytes):
+	Remove.
+	* Makefile.in (CONFIG_SRC_SUBDIR): Add dwarf2.
+	(COMMON_SFILES): Add dwarf2/leb.c.
+
+2020-02-08  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 9.1 released.
+
+2020-02-05  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+	PR gdb/25190:
+        * gdb/remote-sim.c (gdb_os_write_stderr): Update.
+        * gdb/remote.c (remote_console_output): Update.
+        * gdb/ui-file.c (fputs_unfiltered): Rename to...
+        (ui_file_puts): ...this.
+        * gdb/ui-file.h (ui_file_puts): Add declaration.
+        * gdb/utils.c (emit_style_escape): Update.
+        (flush_wrap_buffer): Update.
+        (fputs_maybe_filtered): Update.
+        (fputs_unfiltered): Add function.
+
+2020-02-05  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+        * gdb/event-loop.c (gdb_wait_for_event): Update.
+        * gdb/printcmd.c (printf_command): Update.
+        * gdb/remote-fileio.c (remote_fileio_func_write): Update.
+        * gdb/remote-sim.c (gdb_os_flush_stdout): Update.
+        (gdb_os_flush_stderr): Update.
+        * gdb/remote.c (remote_console_output): Update.
+        * gdb/ui-file.c (gdb_flush): Rename to...
+        (ui_file_flush): ...this.
+        (stderr_file::write): Update.
+        (stderr_file::puts): Update.
+        * gdb/ui-file.h (gdb_flush): Rename to...
+        (ui_file_flush): ...this.
+        * gdb/utils.c (gdb_flush): Add function.
+        * gdb/utils.h (gdb_flush): Add declaration.
+
+2020-02-07  Tom Tromey  <tromey@adacore.com>
+
+	PR breakpoints/24915:
+	* source.c (find_and_open_source): Do not check basenames_may_differ.
+
+2020-02-07  Tom Tromey  <tom@tromey.com>
+
+	* README: Update gdbserver documentation.
+	* gdbserver: Move to top level.
+	* configure.tgt (build_gdbserver): Remove.
+	* configure.ac: Remove --enable-gdbserver.
+	* configure: Rebuild.
+	* Makefile.in (distclean): Don't mention gdbserver.
+
 2020-02-06  Shahab Vahedi  <shahab@synopsys.com>
 
 	* source-cache.c (source_cache::ensure): Surround
