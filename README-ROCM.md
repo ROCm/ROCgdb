@@ -58,11 +58,11 @@ Building ROCgdb has the following prerequisites:
      libbabeltrace-dev libbabeltrace-ctf-dev
    ````
 
-4. For Centos 7.6 the following adds the needed packages:
+4. For CentOS 7.6 the following adds the needed packages:
 
    ````shell
    yum install -y epel-release centos-release-scl
-   yum install -y bison flex gcc make texinfo gcc-c++ \
+   yum install -y bison flex gcc make texinfo texinfo-tex gcc-c++ \
      zlib-devel expat-devel python-devel xz-devel \
      libbabeltrace-devel ncurses-devel
    ````
