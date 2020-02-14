@@ -1180,7 +1180,7 @@ static const noarch_entry cpu_noarch[] =
   { STRING_COMMA_LEN ("nossse3"),  CPU_ANY_SSSE3_FLAGS },
   { STRING_COMMA_LEN ("nosse4.1"),  CPU_ANY_SSE4_1_FLAGS },
   { STRING_COMMA_LEN ("nosse4.2"),  CPU_ANY_SSE4_2_FLAGS },
-  { STRING_COMMA_LEN ("nosse4"),  CPU_ANY_SSE4_1_FLAGS },
+  { STRING_COMMA_LEN ("nosse4"),  CPU_ANY_SSE4_FLAGS },
   { STRING_COMMA_LEN ("noavx"),  CPU_ANY_AVX_FLAGS },
   { STRING_COMMA_LEN ("noavx2"),  CPU_ANY_AVX2_FLAGS },
   { STRING_COMMA_LEN ("noavx512f"), CPU_ANY_AVX512F_FLAGS },
@@ -3398,7 +3398,6 @@ tc_i386_fix_adjustable (fixS *fixP ATTRIBUTE_UNUSED)
   if (fixP->fx_r_type == BFD_RELOC_SIZE32
       || fixP->fx_r_type == BFD_RELOC_SIZE64
       || fixP->fx_r_type == BFD_RELOC_386_GOTOFF
-      || fixP->fx_r_type == BFD_RELOC_386_PLT32
       || fixP->fx_r_type == BFD_RELOC_386_GOT32
       || fixP->fx_r_type == BFD_RELOC_386_GOT32X
       || fixP->fx_r_type == BFD_RELOC_386_TLS_GD
@@ -3411,7 +3410,6 @@ tc_i386_fix_adjustable (fixS *fixP ATTRIBUTE_UNUSED)
       || fixP->fx_r_type == BFD_RELOC_386_TLS_LE
       || fixP->fx_r_type == BFD_RELOC_386_TLS_GOTDESC
       || fixP->fx_r_type == BFD_RELOC_386_TLS_DESC_CALL
-      || fixP->fx_r_type == BFD_RELOC_X86_64_PLT32
       || fixP->fx_r_type == BFD_RELOC_X86_64_GOT32
       || fixP->fx_r_type == BFD_RELOC_X86_64_GOTPCREL
       || fixP->fx_r_type == BFD_RELOC_X86_64_GOTPCRELX
