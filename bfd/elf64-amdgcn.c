@@ -84,6 +84,9 @@ bfd_amdgcn_get_mach_from_notes (bfd *abfd)
             case 906: mach = bfd_mach_amdgcn_gfx906; break;
             case 908: mach = bfd_mach_amdgcn_gfx908; break;
             case 909: mach = bfd_mach_amdgcn_gfx909; break;
+            case 1010: mach = bfd_mach_amdgcn_gfx1010; break;
+            case 1011: mach = bfd_mach_amdgcn_gfx1011; break;
+            case 1012: mach = bfd_mach_amdgcn_gfx1012; break;
             default:  mach = bfd_mach_amdgcn_unknown; break;
             }
         }
