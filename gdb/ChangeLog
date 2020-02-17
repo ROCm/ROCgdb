@@ -1,3 +1,96 @@
+2020-02-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* aarch64-tdep.c (aarch64_displaced_step_copy_insn): Use
+	displaced_step_closure_up.
+	* aarch64-tdep.h (aarch64_displaced_step_copy_insn): Likewise.
+	(struct displaced_step_closure_up):
+	* amd64-tdep.c (amd64_displaced_step_copy_insn): Likewise.
+	* amd64-tdep.h (amd64_displaced_step_copy_insn): Likewise.
+	* arm-linux-tdep.c (arm_linux_displaced_step_copy_insn):
+	Likewise.
+	* gdbarch.sh (displaced_step_copy_insn): Likewise.
+	* gdbarch.c, gdbarch.h: Re-generate.
+	* i386-linux-tdep.c (i386_linux_displaced_step_copy_insn): Use
+	displaced_step_closure_up.
+	* i386-tdep.c (i386_displaced_step_copy_insn): Likewise.
+	* i386-tdep.h (i386_displaced_step_copy_insn): Likewise.
+	* infrun.h (displaced_step_closure_up): New type alias.
+	(struct displaced_step_inferior_state) <step_closure>: Change
+	type to displaced_step_closure_up.
+	* rs6000-tdep.c (ppc_displaced_step_copy_insn): Use
+	displaced_step_closure_up.
+	* s390-tdep.c (s390_displaced_step_copy_insn): Likewise.
+
+2020-02-14  Tom Tromey  <tom@tromey.com>
+
+	* minidebug.c (gnu_debug_key): New global.
+	(find_separate_debug_file_in_section): Use it.
+
+2020-02-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbarch.sh (displaced_step_copy_insn): Change return type to an
+	std::unique_ptr.
+	* gdbarch.c: Re-generate.
+	* gdbarch.h: Re-generate.
+	* infrun.c (displaced_step_prepare_throw): Adjust to std::unique_ptr
+	change.
+	* aarch64-tdep.c (aarch64_displaced_step_copy_insn): Change return
+	type to std::unique_ptr.
+	* aarch64-tdep.h (aarch64_displaced_step_copy_insn): Likewise.
+	* amd64-tdep.c (amd64_displaced_step_copy_insn): Likewise.
+	* amd64-tdep.h (amd64_displaced_step_copy_insn): Likewise.
+	* arm-linux-tdep.c (arm_linux_displaced_step_copy_insn): Likewise.
+	* i386-linux-tdep.c (i386_linux_displaced_step_copy_insn): Likewise.
+	* i386-tdep.c (i386_displaced_step_copy_insn): Likewise.
+	* i386-tdep.h (i386_displaced_step_copy_insn): Likewise.
+	* rs6000-tdep.c (ppc_displaced_step_copy_insn): Likewise.
+	* s390-tdep.c (s390_displaced_step_copy_insn): Likewise.
+
+2020-02-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* infrun.c (get_displaced_step_closure_by_addr): Adjust to
+	std::unique_ptr.
+	(displaced_step_clear): Rename to...
+	(displaced_step_reset): ... this.  Just call displaced->reset ().
+	(displaced_step_clear_cleanup): Rename to...
+	(displaced_step_reset_cleanup): ... this.
+	(displaced_step_prepare_throw): Adjust to std::unique_ptr.
+	(displaced_step_fixup): Likewise.
+	(resume_1): Likewise.
+	(handle_inferior_event): Restore child's memory before calling
+	displaced_step_fixup on the parent.
+	* infrun.h (displaced_step_inferior_state) <reset>: Adjust
+	to std::unique_ptr.
+	<step_closure>: Change type to std::unique_ptr.
+
+2020-02-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* arm-tdep.c: Include count-one-bits.h.
+	(cleanup_block_store_pc): Use count_one_bits.
+	(cleanup_block_load_pc): Use count_one_bits.
+	(arm_copy_block_xfer): Use count_one_bits.
+	(thumb2_copy_block_xfer): Use count_one_bits.
+	(thumb_copy_pop_pc_16bit): Use count_one_bits.
+	* arch/arm-get-next-pcs.c: Include count-one-bits.h.
+	(thumb_get_next_pcs_raw): Use count_one_bits.
+	(arm_get_next_pcs_raw): Use count_one_bits_l.
+	* arch/arm.c (bitcount): Remove.
+	* arch/arm.h (bitcount): Remove.
+
+2020-02-14  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/frame-tailcall.c (dwarf2_tailcall_sniffer_first):
+	Update.
+	* dwarf2/loc.h (call_site_find_chain): Return unique_xmalloc_ptr.
+	* dwarf2/loc.c (call_site_find_chain_1): Return
+	unique_xmalloc_ptr.
+	(call_site_find_chain): Likewise.
+
+2020-02-14  Richard Biener  <rguenther@suse.de>
+
+	* dwarf2/read.c (lnp_state_machine::handle_special_opcode): Apply CSE
+	on expression with division operators.
+
 2020-02-13  Alok Kumar Sharma  <AlokKumar.Sharma@amd.com>
 
 	* MAINTAINERS (Write After Approval): Adding myself.

@@ -277,11 +277,12 @@ amdgcn_rocm_displaced_step_location (struct gdbarch *gdbarch)
   return stepping_id.handle;
 }
 
-static struct displaced_step_closure *
+static displaced_step_closure_up
 amdgcn_rocm_displaced_step_copy_insn (struct gdbarch *gdbarch, CORE_ADDR from,
                                       CORE_ADDR to, struct regcache *regcache)
 {
-  rocm_displaced_step_closure *closure = new rocm_displaced_step_closure;
+  std::unique_ptr<rocm_displaced_step_closure> closure (
+      new rocm_displaced_step_closure);
 
   closure->process_id = get_amd_dbgapi_process_id ();
   closure->wave_id = get_amd_dbgapi_wave_id (inferior_ptid);

@@ -983,6 +983,8 @@ static const arch_entry cpu_arch[] =
     CPU_SSE2_FLAGS, 0 },
   { STRING_COMMA_LEN (".sse3"), PROCESSOR_UNKNOWN,
     CPU_SSE3_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse4a"), PROCESSOR_UNKNOWN,
+    CPU_SSE4A_FLAGS, 0 },
   { STRING_COMMA_LEN (".ssse3"), PROCESSOR_UNKNOWN,
     CPU_SSSE3_FLAGS, 0 },
   { STRING_COMMA_LEN (".sse4.1"), PROCESSOR_UNKNOWN,
@@ -1177,10 +1179,11 @@ static const noarch_entry cpu_noarch[] =
   { STRING_COMMA_LEN ("nosse"),  CPU_ANY_SSE_FLAGS },
   { STRING_COMMA_LEN ("nosse2"),  CPU_ANY_SSE2_FLAGS },
   { STRING_COMMA_LEN ("nosse3"),  CPU_ANY_SSE3_FLAGS },
+  { STRING_COMMA_LEN ("nosse4a"),  CPU_ANY_SSE4A_FLAGS },
   { STRING_COMMA_LEN ("nossse3"),  CPU_ANY_SSSE3_FLAGS },
   { STRING_COMMA_LEN ("nosse4.1"),  CPU_ANY_SSE4_1_FLAGS },
   { STRING_COMMA_LEN ("nosse4.2"),  CPU_ANY_SSE4_2_FLAGS },
-  { STRING_COMMA_LEN ("nosse4"),  CPU_ANY_SSE4_FLAGS },
+  { STRING_COMMA_LEN ("nosse4"),  CPU_ANY_SSE4_1_FLAGS },
   { STRING_COMMA_LEN ("noavx"),  CPU_ANY_AVX_FLAGS },
   { STRING_COMMA_LEN ("noavx2"),  CPU_ANY_AVX2_FLAGS },
   { STRING_COMMA_LEN ("noavx512f"), CPU_ANY_AVX512F_FLAGS },
@@ -4379,22 +4382,6 @@ md_assemble (char *line)
        : as_bad) (_("SSE instruction `%s' is used"), i.tm.name);
     }
 
-  /* Zap movzx and movsx suffix.  The suffix has been set from
-     "word ptr" or "byte ptr" on the source operand in Intel syntax
-     or extracted from mnemonic in AT&T syntax.  But we'll use
-     the destination register to choose the suffix for encoding.  */
-  if ((i.tm.base_opcode & ~9) == 0x0fb6)
-    {
-      /* In Intel syntax, there must be a suffix.  In AT&T syntax, if
-	 there is no suffix, the default will be byte extension.  */
-      if (i.reg_operands != 2
-	  && !i.suffix
-	  && intel_syntax)
-	as_bad (_("ambiguous operand size for `%s'"), i.tm.name);
-
-      i.suffix = 0;
-    }
-
   if (i.tm.opcode_modifier.fwait)
     if (!add_prefix (FWAIT_OPCODE))
       return;
@@ -6311,6 +6298,15 @@ process_suffix (void)
   else if (i.reg_operands
 	   && (i.operands > 1 || i.types[0].bitfield.class == Reg))
     {
+      unsigned int numop = i.operands;
+
+      /* movsx/movzx want only their source operand considered here, for the
+	 ambiguity checking below.  The suffix will be replaced afterwards
+	 to represent the destination (register).  */
+      if (((i.tm.base_opcode | 8) == 0xfbe && i.tm.opcode_modifier.w)
+	  || (i.tm.base_opcode == 0x63 && i.tm.cpu_flags.bitfield.cpu64))
+	--i.operands;
+
       /* If there's no instruction mnemonic suffix we try to invent one
 	 based on GPR operands.  */
       if (!i.suffix)
@@ -6339,6 +6335,12 @@ process_suffix (void)
 		  continue;
 		break;
 	      }
+
+	  /* As an exception, movsx/movzx silently default to a byte source
+	     in AT&T mode.  */
+	  if ((i.tm.base_opcode | 8) == 0xfbe && i.tm.opcode_modifier.w
+	      && !i.suffix && !intel_syntax)
+	    i.suffix = BYTE_MNEM_SUFFIX;
 	}
       else if (i.suffix == BYTE_MNEM_SUFFIX)
 	{
@@ -6385,6 +6387,9 @@ process_suffix (void)
 	;
       else
 	abort ();
+
+      /* Undo the movsx/movzx change done above.  */
+      i.operands = numop;
     }
   else if (i.tm.opcode_modifier.defaultsize && !i.suffix)
     {
@@ -6538,6 +6543,10 @@ process_suffix (void)
 
 	  if (i.tm.opcode_modifier.floatmf)
 	    i.suffix = SHORT_MNEM_SUFFIX;
+	  else if ((i.tm.base_opcode | 8) == 0xfbe
+		   || (i.tm.base_opcode == 0x63
+		       && i.tm.cpu_flags.bitfield.cpu64))
+	    /* handled below */;
 	  else if (evex)
 	    i.tm.opcode_modifier.evex = evex;
 	  else if (flag_code == CODE_16BIT)
@@ -6546,6 +6555,32 @@ process_suffix (void)
 	    i.suffix = LONG_MNEM_SUFFIX;
 	  else
 	    i.suffix = QWORD_MNEM_SUFFIX;
+	}
+    }
+
+  if ((i.tm.base_opcode | 8) == 0xfbe
+      || (i.tm.base_opcode == 0x63 && i.tm.cpu_flags.bitfield.cpu64))
+    {
+      /* In Intel syntax, movsx/movzx must have a "suffix" (checked above).
+	 In AT&T syntax, if there is no suffix (warned about above), the default
+	 will be byte extension.  */
+      if (i.tm.opcode_modifier.w && i.suffix && i.suffix != BYTE_MNEM_SUFFIX)
+	i.tm.base_opcode |= 1;
+
+      /* For further processing, the suffix should represent the destination
+	 (register).  This is already the case when one was used with
+	 mov[sz][bw]*, but we need to replace it for mov[sz]x, or if there was
+	 no suffix to begin with.  */
+      if (i.tm.opcode_modifier.w || i.tm.base_opcode == 0x63 || !i.suffix)
+	{
+	  if (i.types[1].bitfield.word)
+	    i.suffix = WORD_MNEM_SUFFIX;
+	  else if (i.types[1].bitfield.qword)
+	    i.suffix = QWORD_MNEM_SUFFIX;
+	  else
+	    i.suffix = LONG_MNEM_SUFFIX;
+
+	  i.tm.opcode_modifier.w = 0;
 	}
     }
 
@@ -6755,9 +6790,7 @@ check_long_reg (void)
 	     && i.tm.operand_types[op].bitfield.dword)
       {
 	if (intel_syntax
-	    && (i.tm.opcode_modifier.toqword
-		/* Also convert to QWORD for MOVSXD.  */
-		|| i.tm.base_opcode == 0x63)
+	    && i.tm.opcode_modifier.toqword
 	    && i.types[0].bitfield.class != RegSIMD)
 	  {
 	    /* Convert to QWORD.  We want REX byte. */
@@ -7164,17 +7197,27 @@ duplicate:
 	}
     }
 
-  if (i.tm.base_opcode == 0x8d /* lea */
-      && i.seg[0]
-      && !quiet_warnings)
-    as_warn (_("segment override on `%s' is ineffectual"), i.tm.name);
+  if ((i.seg[0] || i.prefix[SEG_PREFIX])
+      && i.tm.base_opcode == 0x8d /* lea */
+      && !is_any_vex_encoding(&i.tm))
+    {
+      if (!quiet_warnings)
+	as_warn (_("segment override on `%s' is ineffectual"), i.tm.name);
+      if (optimize)
+	{
+	  i.seg[0] = NULL;
+	  i.prefix[SEG_PREFIX] = 0;
+	}
+    }
 
   /* If a segment was explicitly specified, and the specified segment
-     is not the default, use an opcode prefix to select it.  If we
-     never figured out what the default segment is, then default_seg
-     will be zero at this point, and the specified segment prefix will
-     always be used.  */
-  if ((i.seg[0]) && (i.seg[0] != default_seg))
+     is neither the default nor the one already recorded from a prefix,
+     use an opcode prefix to select it.  If we never figured out what
+     the default segment is, then default_seg will be zero at this
+     point, and the specified segment prefix will always be used.  */
+  if (i.seg[0]
+      && i.seg[0] != default_seg
+      && i.seg[0]->seg_prefix != i.prefix[SEG_PREFIX])
     {
       if (!add_prefix (i.seg[0]->seg_prefix))
 	return 0;
