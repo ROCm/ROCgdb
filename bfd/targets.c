@@ -1717,7 +1717,7 @@ const char **
 bfd_target_list (void)
 {
   int vec_length = 0;
-  bfd_size_type amt;
+  size_t amt;
   const bfd_target * const *target;
   const  char **name_list, **name_ptr;
 

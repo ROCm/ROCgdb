@@ -459,7 +459,7 @@ NAME (aout, some_aout_object_p) (bfd *abfd,
 {
   struct aout_data_struct *rawptr, *oldrawptr;
   const bfd_target *result;
-  bfd_size_type amt = sizeof (struct aout_data_struct);
+  size_t amt = sizeof (struct aout_data_struct);
 
   rawptr = bfd_zalloc (abfd, amt);
   if (rawptr == NULL)
@@ -647,7 +647,7 @@ bfd_boolean
 NAME (aout, mkobject) (bfd *abfd)
 {
   struct aout_data_struct  *rawptr;
-  bfd_size_type amt = sizeof (struct aout_data_struct);
+  size_t amt = sizeof (struct aout_data_struct);
 
   bfd_set_error (bfd_error_system_call);
 
@@ -1182,17 +1182,13 @@ aout_get_external_symbols (bfd *abfd)
       /* We allocate using malloc to make the values easy to free
 	 later on.  If we put them on the objalloc it might not be
 	 possible to free them.  */
-      syms = bfd_malloc (count * EXTERNAL_NLIST_SIZE);
+      if (bfd_seek (abfd, obj_sym_filepos (abfd), SEEK_SET) != 0)
+	return FALSE;
+      syms = (struct external_nlist *)
+	_bfd_malloc_and_read (abfd, count * EXTERNAL_NLIST_SIZE,
+			      count * EXTERNAL_NLIST_SIZE);
       if (syms == NULL && count != 0)
 	return FALSE;
-
-      if (bfd_seek (abfd, obj_sym_filepos (abfd), SEEK_SET) != 0
-	  || (bfd_bread (syms, exec_hdr (abfd)->a_syms, abfd)
-	      != exec_hdr (abfd)->a_syms))
-	{
-	  free (syms);
-	  return FALSE;
-	}
 #endif
 
       obj_aout_external_syms (abfd) = syms;
@@ -1413,7 +1409,7 @@ translate_to_native_sym_flags (bfd *abfd,
 asymbol *
 NAME (aout, make_empty_symbol) (bfd *abfd)
 {
-  bfd_size_type amt = sizeof (aout_symbol_type);
+  size_t amt = sizeof (aout_symbol_type);
   aout_symbol_type *new_symbol_type = bfd_zalloc (abfd, amt);
 
   if (!new_symbol_type)
@@ -1829,19 +1825,11 @@ NAME (aout, slurp_reloc_table) (bfd *abfd, sec_ptr asect, asymbol **symbols)
 
   if (bfd_seek (abfd, asect->rel_filepos, SEEK_SET) != 0)
     return FALSE;
-
-  each_size = obj_reloc_entry_size (abfd);
-
-  relocs = bfd_malloc (reloc_size);
+  relocs = _bfd_malloc_and_read (abfd, reloc_size, reloc_size);
   if (relocs == NULL && reloc_size != 0)
     return FALSE;
 
-  if (bfd_bread (relocs, reloc_size, abfd) != reloc_size)
-    {
-      free (relocs);
-      return FALSE;
-    }
-
+  each_size = obj_reloc_entry_size (abfd);
   count = reloc_size / each_size;
 
   /* Count the number of NON-ZERO relocs, this is the count we want.  */
@@ -2443,7 +2431,7 @@ struct bfd_link_hash_table *
 NAME (aout, link_hash_table_create) (bfd *abfd)
 {
   struct aout_link_hash_table *ret;
-  bfd_size_type amt = sizeof (struct aout_link_hash_table);
+  size_t amt = sizeof (struct aout_link_hash_table);
 
   ret = bfd_malloc (amt);
   if (ret == NULL)
@@ -2889,7 +2877,7 @@ aout_link_write_other_symbol (struct bfd_hash_entry *bh, void *data)
   bfd_vma val;
   struct external_nlist outsym;
   bfd_size_type indx;
-  bfd_size_type amt;
+  size_t amt;
 
   if (h->root.type == bfd_link_hash_warning)
     {

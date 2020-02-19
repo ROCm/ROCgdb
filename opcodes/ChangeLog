@@ -1,3 +1,52 @@
+2020-02-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-gen.c (cpu_flag_init): Replace CpuABM with
+	CpuLZCNT|CpuPOPCNT.  Add CpuPOPCNT to CPU_SSE4_2_FLAGS.  Add
+	CPU_POPCNT_FLAGS.
+	(cpu_flags): Remove CpuABM.  Add CpuPOPCNT.
+	* i386-opc.h (CpuABM): Removed.
+	(CpuPOPCNT): New.
+	(i386_cpu_flags): Remove cpuabm.  Add cpupopcnt.
+	* i386-opc.tbl: Replace CpuABM|CpuSSE4_2 with CpuPOPCNT on
+	popcnt.  Remove CpuABM from lzcnt.
+	* i386-init.h: Regenerated.
+	* i386-tbl.h: Likewise.
+
+2020-02-17  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl (vcvtsi2sd, vcvtsi2ss, vcvtusi2sd, vcvtusi2ss):
+	Fold CpuNo64 and Cpu64 templates. Use VexLIG/EVexLIG and VexW0/
+	VexW1 instead of open-coding them.
+	* i386-tbl.h: Re-generate.
+
+2020-02-17  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl (AddrPrefixOpReg): Define.
+	(monitor, invlpga, vmload, vmrun, vmsave, clzero, monitorx,
+	umonitor, movdir64b, enqcmd, enqcmds): Fold Cpu64 and CpuNo64
+	templates. Drop NoRex64.
+	* i386-tbl.h: Re-generate.
+
+2020-02-17  Jan Beulich  <jbeulich@suse.com>
+
+	PR gas/6518
+	* i386-opc.tbl (vcvtpd2dq, vcvtpd2ps, vcvttpd2dq, vcvtpd2udq,
+	vcvttpd2udq, vcvtqq2ps, vcvtuqq2ps): Split XMM/YMM source forms
+	into Intel syntax instance (with Unpsecified) and AT&T one
+	(without).
+	(vcvtneps2bf16): Likewise, along with folding the two so far
+	separate ones.
+	* i386-tbl.h: Re-generate.
+
+2020-02-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-gen.c (cpu_flag_init): Remove CPU_ANY_SSE3_FLAGS from
+	CPU_ANY_SSE4A_FLAGS.
+
+2020-02-17  Alan Modra  <amodra@gmail.com>
+
+	* i386-gen.c (cpu_flag_init): Correct last change.
+
 2020-02-16  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* i386-gen.c (cpu_flag_init): Add CPU_ANY_SSE4A_FLAGS.  Remove
