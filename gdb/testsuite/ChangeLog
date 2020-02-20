@@ -1,3 +1,53 @@
+2020-02-20  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (support_go_compile): New gdb_caching_proc.
+	(gdb_simple_compile): Handle compile_flags go by using .go extension
+	for source file.
+	* gdb.go/chan.exp: Use support_go_compile.
+	* gdb.go/handcall.exp: Same.
+	* gdb.go/hello.exp: Same.
+	* gdb.go/integers.exp: Same.
+	* gdb.go/max-depth.exp: Same.
+	* gdb.go/methods.exp: Same.
+	* gdb.go/package.exp: Same.
+	* gdb.go/strings.exp: Same.
+	* gdb.go/types.exp: Same.
+	* gdb.go/unsafe.exp: Same.
+
+2020-02-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.python/lib-types.exp: Make xfail more strict.
+
+2020-02-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/funcall_ref.exp: Replace xfail setup by unsupported check.
+
+2020-02-19  Doug Evans  <dje@google.com>
+
+	PR rust/25535
+	* gdb.rust/simple.exp: Add test.
+	* gdb.rust/simple.rs: Add test.
+
+2020-02-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/corefile-buildid.exp (check_exec_file): Match info files
+	output line-by-line.
+
+2020-02-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.cp/cpexprs.exp: Remove c++/14186 kfail.
+
+2020-02-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/solib-overlap.exp: Use exec instead of system to execute
+	prelink.
+
+2020-02-19  Tom de Vries  <tdevries@suse.de>
+
+	* lib/cache.exp (ignore_pass, gdb_do_cache_wrap): New proc.
+	(gdb_do_cache): Use gdb_do_cache_wrap.
+	* gdb.base/gdb-caching-proc.exp (test_proc): Use gdb_do_cache_wrap.
+
 2020-02-19  Tom de Vries  <tdevries@suse.de>
 
 	* lib/dtrace.exp (dtrace_build_usdt_test_program): Use quiet as
