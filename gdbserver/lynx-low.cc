@@ -248,14 +248,14 @@ lynx_ptrace_fun ()
 
 /* Implement the create_inferior method of the target_ops vector.  */
 
-static int
-lynx_create_inferior (const char *program,
-		      const std::vector<char *> &program_args)
+int
+lynx_process_target::create_inferior (const char *program,
+				      const std::vector<char *> &program_args)
 {
   int pid;
   std::string str_program_args = stringify_argv (program_args);
 
-  lynx_debug ("lynx_create_inferior ()");
+  lynx_debug ("create_inferior ()");
 
   pid = fork_inferior (program,
 		       str_program_args.c_str (),
@@ -309,8 +309,8 @@ lynx_add_threads_after_attach (int pid)
 
 /* Implement the attach target_ops method.  */
 
-static int
-lynx_attach (unsigned long pid)
+int
+lynx_process_target::attach (unsigned long pid)
 {
   ptid_t ptid = lynx_ptid_t (pid, 0);
 
@@ -326,8 +326,8 @@ lynx_attach (unsigned long pid)
 
 /* Implement the resume target_ops method.  */
 
-static void
-lynx_resume (struct thread_resume *resume_info, size_t n)
+void
+lynx_process_target::resume (thread_resume *resume_info, size_t n)
 {
   ptid_t ptid = resume_info[0].thread;
   const int request
@@ -505,12 +505,13 @@ retry:
 /* A wrapper around lynx_wait_1 that also prints debug traces when
    such debug traces have been activated.  */
 
-static ptid_t
-lynx_wait (ptid_t ptid, struct target_waitstatus *status, int options)
+ptid_t
+lynx_process_target::wait (ptid_t ptid, target_waitstatus *status,
+			   int options)
 {
   ptid_t new_ptid;
 
-  lynx_debug ("lynx_wait (pid = %d, tid = %ld)",
+  lynx_debug ("wait (pid = %d, tid = %ld)",
               lynx_ptid_get_pid (ptid), lynx_ptid_get_tid (ptid));
   new_ptid = lynx_wait_1 (ptid, status, options);
   lynx_debug ("          -> (pid=%d, tid=%ld, status->kind = %d)",
@@ -521,34 +522,34 @@ lynx_wait (ptid_t ptid, struct target_waitstatus *status, int options)
 
 /* Implement the kill target_ops method.  */
 
-static int
-lynx_kill (process_info *process)
+int
+lynx_process_target::kill (process_info *process)
 {
   ptid_t ptid = lynx_ptid_t (process->pid, 0);
   struct target_waitstatus status;
 
   lynx_ptrace (PTRACE_KILL, ptid, 0, 0, 0);
   lynx_wait (ptid, &status, 0);
-  the_target->mourn (process);
+  mourn (process);
   return 0;
 }
 
 /* Implement the detach target_ops method.  */
 
-static int
-lynx_detach (process_info *process)
+int
+lynx_process_target::detach (process_info *process)
 {
   ptid_t ptid = lynx_ptid_t (process->pid, 0);
 
   lynx_ptrace (PTRACE_DETACH, ptid, 0, 0, 0);
-  the_target->mourn (process);
+  mourn (process);
   return 0;
 }
 
 /* Implement the mourn target_ops method.  */
 
-static void
-lynx_mourn (struct process_info *proc)
+void
+lynx_process_target::mourn (struct process_info *proc)
 {
   for_each_thread (proc->pid, remove_thread);
 
@@ -561,8 +562,8 @@ lynx_mourn (struct process_info *proc)
 
 /* Implement the join target_ops method.  */
 
-static void
-lynx_join (int pid)
+void
+lynx_process_target::join (int pid)
 {
   /* The PTRACE_DETACH is sufficient to detach from the process.
      So no need to do anything extra.  */
@@ -570,8 +571,8 @@ lynx_join (int pid)
 
 /* Implement the thread_alive target_ops method.  */
 
-static int
-lynx_thread_alive (ptid_t ptid)
+bool
+lynx_process_target::thread_alive (ptid_t ptid)
 {
   /* The list of threads is updated at the end of each wait, so it
      should be up to date.  No need to re-fetch it.  */
@@ -580,13 +581,13 @@ lynx_thread_alive (ptid_t ptid)
 
 /* Implement the fetch_registers target_ops method.  */
 
-static void
-lynx_fetch_registers (struct regcache *regcache, int regno)
+void
+lynx_process_target::fetch_registers (regcache *regcache, int regno)
 {
   struct lynx_regset_info *regset = lynx_target_regsets;
   ptid_t inferior_ptid = ptid_of (current_thread);
 
-  lynx_debug ("lynx_fetch_registers (regno = %d)", regno);
+  lynx_debug ("fetch_registers (regno = %d)", regno);
 
   while (regset->size >= 0)
     {
@@ -605,13 +606,13 @@ lynx_fetch_registers (struct regcache *regcache, int regno)
 
 /* Implement the store_registers target_ops method.  */
 
-static void
-lynx_store_registers (struct regcache *regcache, int regno)
+void
+lynx_process_target::store_registers (regcache *regcache, int regno)
 {
   struct lynx_regset_info *regset = lynx_target_regsets;
   ptid_t inferior_ptid = ptid_of (current_thread);
 
-  lynx_debug ("lynx_store_registers (regno = %d)", regno);
+  lynx_debug ("store_registers (regno = %d)", regno);
 
   while (regset->size >= 0)
     {
@@ -637,8 +638,9 @@ lynx_store_registers (struct regcache *regcache, int regno)
 
 /* Implement the read_memory target_ops method.  */
 
-static int
-lynx_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
+int
+lynx_process_target::read_memory (CORE_ADDR memaddr, unsigned char *myaddr,
+				  int len)
 {
   /* On LynxOS, memory reads needs to be performed in chunks the size
      of int types, and they should also be aligned accordingly.  */
@@ -670,8 +672,9 @@ lynx_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
 
 /* Implement the write_memory target_ops method.  */
 
-static int
-lynx_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
+int
+lynx_process_target::write_memory (CORE_ADDR memaddr,
+				   const unsigned char *myaddr, int len)
 {
   /* On LynxOS, memory writes needs to be performed in chunks the size
      of int types, and they should also be aligned accordingly.  */
@@ -693,7 +696,7 @@ lynx_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
 	{
 	  /* We need to read the memory at this address in order to preserve
 	     the data that we are not overwriting.  */
-	  lynx_read_memory (addr, (unsigned char *) &buf, xfer_size);
+	  read_memory (addr, (unsigned char *) &buf, xfer_size);
 	  if (errno)
 	    return errno;
 	}
@@ -711,66 +714,34 @@ lynx_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
 
 /* Implement the kill_request target_ops method.  */
 
-static void
-lynx_request_interrupt (void)
+void
+lynx_process_target::request_interrupt ()
 {
   ptid_t inferior_ptid = ptid_of (get_first_thread ());
 
   kill (lynx_ptid_get_pid (inferior_ptid), SIGINT);
 }
 
-/* The LynxOS target_ops vector.  */
+bool
+lynx_process_target::supports_hardware_single_step ()
+{
+  return true;
+}
 
-static process_stratum_target lynx_target_ops = {
-  lynx_create_inferior,
-  NULL,  /* post_create_inferior */
-  lynx_attach,
-  lynx_kill,
-  lynx_detach,
-  lynx_mourn,
-  lynx_join,
-  lynx_thread_alive,
-  lynx_resume,
-  lynx_wait,
-  lynx_fetch_registers,
-  lynx_store_registers,
-  NULL,  /* prepare_to_access_memory */
-  NULL,  /* done_accessing_memory */
-  lynx_read_memory,
-  lynx_write_memory,
-  NULL,  /* look_up_symbols */
-  lynx_request_interrupt,
-  NULL,  /* read_auxv */
-  NULL,  /* supports_z_point_type */
-  NULL,  /* insert_point */
-  NULL,  /* remove_point */
-  NULL,  /* stopped_by_sw_breakpoint */
-  NULL,  /* supports_stopped_by_sw_breakpoint */
-  NULL,  /* stopped_by_hw_breakpoint */
-  NULL,  /* supports_stopped_by_hw_breakpoint */
-  target_can_do_hardware_single_step,
-  NULL,  /* stopped_by_watchpoint */
-  NULL,  /* stopped_data_address */
-  NULL,  /* read_offsets */
-  NULL,  /* get_tls_address */
-  NULL,  /* hostio_last_error */
-  NULL,  /* qxfer_osdata */
-  NULL,  /* qxfer_siginfo */
-  NULL,  /* supports_non_stop */
-  NULL,  /* async */
-  NULL,  /* start_non_stop */
-  NULL,  /* supports_multi_process */
-  NULL,  /* supports_fork_events */
-  NULL,  /* supports_vfork_events */
-  NULL,  /* supports_exec_events */
-  NULL,  /* handle_new_gdb_connection */
-  NULL,  /* handle_monitor_command */
-};
+const gdb_byte *
+lynx_process_target::sw_breakpoint_from_kind (int kind, int *size)
+{
+  error (_("Target does not implement the sw_breakpoint_from_kind op"));
+}
+
+/* The LynxOS target ops object.  */
+
+static lynx_process_target the_lynx_target;
 
 void
 initialize_low (void)
 {
-  set_target_ops (&lynx_target_ops);
+  set_target_ops (&the_lynx_target);
   the_low_target.arch_setup ();
 }
 

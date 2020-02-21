@@ -350,9 +350,9 @@ nto_read_auxv_from_initial_stack (CORE_ADDR initial_stack,
 /* Start inferior specified by PROGRAM, using PROGRAM_ARGS as its
    arguments.  */
 
-static int
-nto_create_inferior (const char *program,
-		     const std::vector<char *> &program_args)
+int
+nto_process_target::create_inferior (const char *program,
+				     const std::vector<char *> &program_args)
 {
   struct inheritance inherit;
   pid_t pid;
@@ -385,8 +385,8 @@ nto_create_inferior (const char *program,
 
 /* Attach to process PID.  */
 
-static int
-nto_attach (unsigned long pid)
+int
+nto_process_target::attach (unsigned long pid)
 {
   TRACE ("%s %ld\n", __func__, pid);
   if (do_attach (pid) != pid)
@@ -396,8 +396,8 @@ nto_attach (unsigned long pid)
 
 /* Send signal to process PID.  */
 
-static int
-nto_kill (process_info *proc)
+int
+nto_process_target::kill (process_info *proc)
 {
   int pid = proc->pid;
 
@@ -409,26 +409,32 @@ nto_kill (process_info *proc)
 
 /* Detach from process PID.  */
 
-static int
-nto_detach (process_info *proc)
+int
+nto_process_target::detach (process_info *proc)
 {
   TRACE ("%s %d\n", __func__, proc->pid);
   do_detach ();
   return 0;
 }
 
-static void
-nto_mourn (struct process_info *process)
+void
+nto_process_target::mourn (struct process_info *process)
 {
   remove_process (process);
 }
 
+void
+nto_process_target::join (int pid)
+{
+  error (_("nto target does not implement the join op"));
+}
+
 /* Check if the given thread is alive.  
 
-   Return 1 if alive, 0 otherwise.  */
+   Return true if alive, false otherwise.  */
 
-static int
-nto_thread_alive (ptid_t ptid)
+bool
+nto_process_target::thread_alive (ptid_t ptid)
 {
   int res;
 
@@ -445,8 +451,8 @@ nto_thread_alive (ptid_t ptid)
 
 /* Resume inferior's execution.  */
 
-static void
-nto_resume (struct thread_resume *resume_info, size_t n)
+void
+nto_process_target::resume (thread_resume *resume_info, size_t n)
 {
   /* We can only work in all-stop mode.  */
   procfs_status status;
@@ -512,9 +518,9 @@ nto_resume (struct thread_resume *resume_info, size_t n)
 
    Return ptid of thread that caused the event.  */
 
-static ptid_t
-nto_wait (ptid_t ptid,
-	  struct target_waitstatus *ourstatus, int target_options)
+ptid_t
+nto_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
+			  int target_options)
 {
   sigset_t set;
   siginfo_t info;
@@ -617,8 +623,8 @@ nto_wait (ptid_t ptid,
 /* Fetch inferior's registers for currently selected thread (CURRENT_INFERIOR).
    If REGNO is -1, fetch all registers, or REGNO register only otherwise.  */
 
-static void
-nto_fetch_registers (struct regcache *regcache, int regno)
+void
+nto_process_target::fetch_registers (regcache *regcache, int regno)
 {
   int regsize;
   procfs_greg greg;
@@ -665,8 +671,8 @@ nto_fetch_registers (struct regcache *regcache, int regno)
 /* Store registers for currently selected thread (CURRENT_INFERIOR).  
    We always store all registers, regardless of REGNO.  */
 
-static void
-nto_store_registers (struct regcache *regcache, int regno)
+void
+nto_process_target::store_registers (regcache *regcache, int regno)
 {
   procfs_greg greg;
   int err;
@@ -700,8 +706,9 @@ nto_store_registers (struct regcache *regcache, int regno)
 
    Return 0 on success -1 otherwise.  */
 
-static int
-nto_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
+int
+nto_process_target::read_memory (CORE_ADDR memaddr, unsigned char *myaddr,
+				 int len)
 {
   TRACE ("%s memaddr:0x%08lx, len:%d\n", __func__, memaddr, len);
 
@@ -719,8 +726,9 @@ nto_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
 
    Return 0 on success -1 otherwise.  */
 
-static int
-nto_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
+int
+nto_process_target::write_memory (CORE_ADDR memaddr,
+				  const unsigned char *myaddr, int len)
 {
   int len_written;
 
@@ -738,13 +746,19 @@ nto_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
 
 /* Stop inferior.  We always stop all threads.  */
 
-static void
-nto_request_interrupt (void)
+void
+nto_process_target::request_interrupt ()
 {
   TRACE ("%s\n", __func__);
   nto_set_thread (ptid_t (nto_inferior.pid, 1, 0));
   if (EOK != devctl (nto_inferior.ctl_fd, DCMD_PROC_STOP, NULL, 0, 0))
     TRACE ("Error stopping inferior.\n");
+}
+
+bool
+nto_process_target::supports_read_auxv ()
+{
+  return true;
 }
 
 /* Read auxiliary vector from inferior's memory into gdbserver's buffer
@@ -753,8 +767,9 @@ nto_request_interrupt (void)
    Return number of bytes stored in MYADDR buffer, 0 if OFFSET > 0
    or -1 on error.  */
 
-static int
-nto_read_auxv (CORE_ADDR offset, unsigned char *myaddr, unsigned int len)
+int
+nto_process_target::read_auxv (CORE_ADDR offset, unsigned char *myaddr,
+			       unsigned int len)
 {
   int err;
   CORE_ADDR initial_stack;
@@ -774,8 +789,8 @@ nto_read_auxv (CORE_ADDR offset, unsigned char *myaddr, unsigned int len)
   return nto_read_auxv_from_initial_stack (initial_stack, myaddr, len);
 }
 
-static int
-nto_supports_z_point_type (char z_type)
+bool
+nto_process_target::supports_z_point_type (char z_type)
 {
   switch (z_type)
     {
@@ -784,17 +799,17 @@ nto_supports_z_point_type (char z_type)
     case Z_PACKET_WRITE_WP:
     case Z_PACKET_READ_WP:
     case Z_PACKET_ACCESS_WP:
-      return 1;
+      return true;
     default:
-      return 0;
+      return false;
     }
 }
 
 /* Insert {break/watch}point at address ADDR.  SIZE is not used.  */
 
-static int
-nto_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
-		  int size, struct raw_breakpoint *bp)
+int
+nto_process_target::insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
+				  int size, raw_breakpoint *bp)
 {
   int wtype = _DEBUG_BREAK_HW; /* Always request HW.  */
 
@@ -824,9 +839,9 @@ nto_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
 
 /* Remove {break/watch}point at address ADDR.  SIZE is not used.  */
 
-static int
-nto_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
-		  int size, struct raw_breakpoint *bp)
+int
+nto_process_target::remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
+				  int size, raw_breakpoint *bp)
 {
   int wtype = _DEBUG_BREAK_HW; /* Always request HW.  */
 
@@ -854,15 +869,21 @@ nto_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
   return nto_breakpoint (addr, wtype, -1);
 }
 
+bool
+nto_process_target::supports_hardware_single_step ()
+{
+  return true;
+}
+
 /* Check if the reason of stop for current thread (CURRENT_INFERIOR) is
    a watchpoint.
 
-   Return 1 if stopped by watchpoint, 0 otherwise.  */
+   Return true if stopped by watchpoint, false otherwise.  */
 
-static int
-nto_stopped_by_watchpoint (void)
+bool
+nto_process_target::stopped_by_watchpoint ()
 {
-  int ret = 0;
+  bool ret = false;
 
   TRACE ("%s\n", __func__);
   if (nto_inferior.ctl_fd != -1 && current_thread != NULL)
@@ -878,7 +899,7 @@ nto_stopped_by_watchpoint (void)
 	  err = devctl (nto_inferior.ctl_fd, DCMD_PROC_STATUS, &status,
 			sizeof (status), 0);
 	  if (err == EOK && (status.flags & watchmask))
-	    ret = 1;
+	    ret = true;
 	}
     }
   TRACE ("%s: %s\n", __func__, ret ? "yes" : "no");
@@ -889,8 +910,8 @@ nto_stopped_by_watchpoint (void)
 
    Return inferior's instruction pointer value, or 0 on error.  */ 
 
-static CORE_ADDR
-nto_stopped_data_address (void)
+CORE_ADDR
+nto_process_target::stopped_data_address ()
 {
   CORE_ADDR ret = (CORE_ADDR)0;
 
@@ -912,99 +933,18 @@ nto_stopped_data_address (void)
   return ret;
 }
 
-/* We do not currently support non-stop.  */
-
-static int
-nto_supports_non_stop (void)
-{
-  TRACE ("%s\n", __func__);
-  return 0;
-}
-
 /* Implementation of the target_ops method "sw_breakpoint_from_kind".  */
 
-static const gdb_byte *
-nto_sw_breakpoint_from_kind (int kind, int *size)
+const gdb_byte *
+nto_process_target::sw_breakpoint_from_kind (int kind, int *size)
 {
   *size = the_low_target.breakpoint_len;
   return the_low_target.breakpoint;
 }
 
+/* The QNX Neutrino target ops object.  */
 
-static process_stratum_target nto_target_ops = {
-  nto_create_inferior,
-  NULL,  /* post_create_inferior */
-  nto_attach,
-  nto_kill,
-  nto_detach,
-  nto_mourn,
-  NULL, /* nto_join */
-  nto_thread_alive,
-  nto_resume,
-  nto_wait,
-  nto_fetch_registers,
-  nto_store_registers,
-  NULL, /* prepare_to_access_memory */
-  NULL, /* done_accessing_memory */
-  nto_read_memory,
-  nto_write_memory,
-  NULL, /* nto_look_up_symbols */
-  nto_request_interrupt,
-  nto_read_auxv,
-  nto_supports_z_point_type,
-  nto_insert_point,
-  nto_remove_point,
-  NULL, /* stopped_by_sw_breakpoint */
-  NULL, /* supports_stopped_by_sw_breakpoint */
-  NULL, /* stopped_by_hw_breakpoint */
-  NULL, /* supports_stopped_by_hw_breakpoint */
-  target_can_do_hardware_single_step,
-  nto_stopped_by_watchpoint,
-  nto_stopped_data_address,
-  NULL, /* nto_read_offsets */
-  NULL, /* thread_db_set_tls_address */
-  hostio_last_error_from_errno,
-  NULL, /* nto_qxfer_osdata */
-  NULL, /* xfer_siginfo */
-  nto_supports_non_stop,
-  NULL, /* async */
-  NULL, /* start_non_stop */
-  NULL, /* supports_multi_process */
-  NULL, /* supports_fork_events */
-  NULL, /* supports_vfork_events */
-  NULL, /* supports_exec_events */
-  NULL, /* handle_new_gdb_connection */
-  NULL, /* handle_monitor_command */
-  NULL, /* core_of_thread */
-  NULL, /* read_loadmap */
-  NULL, /* process_qsupported */
-  NULL, /* supports_tracepoints */
-  NULL, /* read_pc */
-  NULL, /* write_pc */
-  NULL, /* thread_stopped */
-  NULL, /* get_tib_address */
-  NULL, /* pause_all */
-  NULL, /* unpause_all */
-  NULL, /* stabilize_threads */
-  NULL, /* install_fast_tracepoint_jump_pad */
-  NULL, /* emit_ops */
-  NULL, /* supports_disable_randomization */
-  NULL, /* get_min_fast_tracepoint_insn_len */
-  NULL, /* qxfer_libraries_svr4 */
-  NULL, /* support_agent */
-  NULL, /* enable_btrace */
-  NULL, /* disable_btrace */
-  NULL, /* read_btrace */
-  NULL, /* read_btrace_conf */
-  NULL, /* supports_range_stepping */
-  NULL, /* pid_to_exec_file */
-  NULL, /* multifs_open */
-  NULL, /* multifs_unlink */
-  NULL, /* multifs_readlink */
-  NULL, /* breakpoint_kind_from_pc */
-  nto_sw_breakpoint_from_kind,
-};
-
+static nto_process_target the_nto_target;
 
 /* Global function called by server.c.  Initializes QNX Neutrino
    gdbserver.  */
@@ -1015,7 +955,7 @@ initialize_low (void)
   sigset_t set;
 
   TRACE ("%s\n", __func__);
-  set_target_ops (&nto_target_ops);
+  set_target_ops (&the_nto_target);
 
   /* We use SIGUSR1 to gain control after we block waiting for a process.
      We use sigwaitevent to wait.  */

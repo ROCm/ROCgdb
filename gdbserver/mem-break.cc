@@ -380,8 +380,8 @@ insert_memory_breakpoint (struct raw_breakpoint *bp)
     {
       memcpy (bp->old_data, buf, bp_size (bp));
 
-      err = (*the_target->write_memory) (bp->pc, bp_opcode (bp),
-					 bp_size (bp));
+      err = the_target->write_memory (bp->pc, bp_opcode (bp),
+				      bp_size (bp));
       if (err != 0)
 	{
 	  if (debug_threads)
@@ -890,8 +890,8 @@ delete_raw_breakpoint (struct process_info *proc, struct raw_breakpoint *todel)
 
 	      *bp_link = bp->next;
 
-	      ret = the_target->remove_point (bp->raw_type, bp->pc, bp->kind,
-					      bp);
+	      ret = the_target->remove_point (bp->raw_type, bp->pc,
+					      bp->kind, bp);
 	      if (ret != 0)
 		{
 		  /* Something went wrong, relink the breakpoint.  */
@@ -1005,7 +1005,6 @@ static int
 z_type_supported (char z_type)
 {
   return (z_type >= '0' && z_type <= '4'
-	  && the_target->supports_z_point_type != NULL
 	  && the_target->supports_z_point_type (z_type));
 }
 
@@ -1857,7 +1856,7 @@ validate_inserted_breakpoint (struct raw_breakpoint *bp)
   gdb_assert (bp->raw_type == raw_bkpt_type_sw);
 
   buf = (unsigned char *) alloca (bp_size (bp));
-  err = (*the_target->read_memory) (bp->pc, buf, bp_size (bp));
+  err = the_target->read_memory (bp->pc, buf, bp_size (bp));
   if (err || memcmp (buf, bp_opcode (bp), bp_size (bp)) != 0)
     {
       /* Tag it as gone.  */

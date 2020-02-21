@@ -45,7 +45,6 @@
 #include <sys/uio.h>
 #include "gdbsupport/filestuff.h"
 #include "tracepoint.h"
-#include "hostio.h"
 #include <inttypes.h>
 #include "gdbsupport/common-inferior.h"
 #include "nat/fork-inferior.h"
@@ -98,6 +97,14 @@
 #define PT_DATA_ADDR     (0x10004*4)
 #define PT_TEXT_END_ADDR (0x10008*4)
 #endif
+#endif
+
+#if (defined(__UCLIBC__)		\
+     && defined(HAS_NOMMU)		\
+     && defined(PT_TEXT_ADDR)		\
+     && defined(PT_DATA_ADDR)		\
+     && defined(PT_TEXT_END_ADDR))
+#define SUPPORTS_READ_OFFSETS
 #endif
 
 #ifdef HAVE_LINUX_BTRACE
@@ -262,7 +269,6 @@ static int stabilizing_threads;
 
 static void linux_resume_one_lwp (struct lwp_info *lwp,
 				  int step, int signal, siginfo_t *info);
-static void linux_resume (struct thread_resume *resume_info, size_t n);
 static void stop_all_lwps (int suspend, struct lwp_info *except);
 static void unstop_all_lwps (int unsuspend, struct lwp_info *except);
 static void unsuspend_all_lwps (struct lwp_info *except);
@@ -270,8 +276,6 @@ static int linux_wait_for_event_filtered (ptid_t wait_ptid, ptid_t filter_ptid,
 					  int *wstat, int options);
 static int linux_wait_for_event (ptid_t ptid, int *wstat, int options);
 static struct lwp_info *add_lwp (ptid_t ptid);
-static void linux_mourn (struct process_info *process);
-static int linux_stopped_by_watchpoint (void);
 static void mark_lwp_dead (struct lwp_info *lwp, int wstat);
 static int lwp_is_marked_dead (struct lwp_info *lwp);
 static void proceed_all_lwps (void);
@@ -707,7 +711,7 @@ handle_extended_wait (struct lwp_info **orig_event_lwp, int wstat)
       syscalls_to_catch = std::move (proc->syscalls_to_catch);
 
       /* Delete the execing process and all its threads.  */
-      linux_mourn (proc);
+      the_target->mourn (proc);
       current_thread = NULL;
 
       /* Create a new process/lwp/thread.  */
@@ -996,9 +1000,9 @@ linux_ptrace_fun ()
    PROGRAM is the name of the program to be started, and PROGRAM_ARGS
    are its arguments.  */
 
-static int
-linux_create_inferior (const char *program,
-		       const std::vector<char *> &program_args)
+int
+linux_process_target::create_inferior (const char *program,
+				       const std::vector<char *> &program_args)
 {
   client_state &cs = get_client_state ();
   struct lwp_info *new_lwp;
@@ -1029,8 +1033,8 @@ linux_create_inferior (const char *program,
 
 /* Implement the post_create_inferior target_ops method.  */
 
-static void
-linux_post_create_inferior (void)
+void
+linux_process_target::post_create_inferior ()
 {
   struct lwp_info *lwp = get_thread_lwp (current_thread);
 
@@ -1181,8 +1185,8 @@ static void async_file_mark (void);
 /* Attach to PID.  If PID is the tgid, attach to it and all
    of its threads.  */
 
-static int
-linux_attach (unsigned long pid)
+int
+linux_process_target::attach (unsigned long pid)
 {
   struct process_info *proc;
   struct thread_info *initial_thread;
@@ -1386,8 +1390,8 @@ kill_one_lwp_callback (thread_info *thread, int pid)
   kill_wait_lwp (lwp);
 }
 
-static int
-linux_kill (process_info *process)
+int
+linux_process_target::kill (process_info *process)
 {
   int pid = process->pid;
 
@@ -1413,7 +1417,7 @@ linux_kill (process_info *process)
   else
     kill_wait_lwp (lwp);
 
-  the_target->mourn (process);
+  mourn (process);
 
   /* Since we presently can only stop all lwps of all processes, we
      need to unstop lwps of other processes.  */
@@ -1603,8 +1607,8 @@ linux_detach_lwp_callback (thread_info *thread)
   linux_detach_one_lwp (lwp);
 }
 
-static int
-linux_detach (process_info *process)
+int
+linux_process_target::detach (process_info *process)
 {
   struct lwp_info *main_lwp;
 
@@ -1624,7 +1628,7 @@ linux_detach (process_info *process)
 #endif
 
   /* Stabilize threads (move out of jump pads).  */
-  stabilize_threads ();
+  target_stabilize_threads ();
 
   /* Detach from the clone lwps first.  If the thread group exits just
      while we're detaching, we must reap the clone lwps before we're
@@ -1634,7 +1638,7 @@ linux_detach (process_info *process)
   main_lwp = find_lwp_pid (ptid_t (process->pid));
   linux_detach_one_lwp (main_lwp);
 
-  the_target->mourn (process);
+  mourn (process);
 
   /* Since we presently can only stop all lwps of all processes, we
      need to unstop lwps of other processes.  */
@@ -1644,8 +1648,8 @@ linux_detach (process_info *process)
 
 /* Remove all LWPs that belong to process PROC from the lwp list.  */
 
-static void
-linux_mourn (struct process_info *process)
+void
+linux_process_target::mourn (process_info *process)
 {
   struct process_info_private *priv;
 
@@ -1670,8 +1674,8 @@ linux_mourn (struct process_info *process)
   remove_process (process);
 }
 
-static void
-linux_join (int pid)
+void
+linux_process_target::join (int pid)
 {
   int status, ret;
 
@@ -1682,9 +1686,10 @@ linux_join (int pid)
   } while (ret != -1 || errno != ECHILD);
 }
 
-/* Return nonzero if the given thread is still alive.  */
-static int
-linux_thread_alive (ptid_t ptid)
+/* Return true if the given thread is still alive.  */
+
+bool
+linux_process_target::thread_alive (ptid_t ptid)
 {
   struct lwp_info *lwp = find_lwp_pid (ptid);
 
@@ -2929,8 +2934,8 @@ static ptid_t linux_wait_1 (ptid_t ptid,
    since for something else in the new run, the thread would now
    execute the wrong / random instructions.  */
 
-static void
-linux_stabilize_threads (void)
+void
+linux_process_target::stabilize_threads ()
 {
   thread_info *thread_stuck = find_thread (stuck_in_jump_pad_callback);
 
@@ -3716,7 +3721,7 @@ linux_wait_1 (ptid_t ptid,
 
       /* Stabilize threads (move out of jump pads).  */
       if (!non_stop)
-	stabilize_threads ();
+	target_stabilize_threads ();
     }
   else
     {
@@ -3834,9 +3839,10 @@ async_file_mark (void)
      be awakened anyway.  */
 }
 
-static ptid_t
-linux_wait (ptid_t ptid,
-	    struct target_waitstatus *ourstatus, int target_options)
+ptid_t
+linux_process_target::wait (ptid_t ptid,
+			    target_waitstatus *ourstatus,
+			    int target_options)
 {
   ptid_t event_ptid;
 
@@ -4005,7 +4011,7 @@ wait_for_sigstop (void)
 				       &wstat, __WALL);
   gdb_assert (ret == -1);
 
-  if (saved_thread == NULL || linux_thread_alive (saved_tid))
+  if (saved_thread == NULL || mythread_alive (saved_tid))
     current_thread = saved_thread;
   else
     {
@@ -5002,8 +5008,8 @@ linux_resume_one_thread (thread_info *thread, bool leave_all_stopped)
   lwp->resume = NULL;
 }
 
-static void
-linux_resume (struct thread_resume *resume_info, size_t n)
+void
+linux_process_target::resume (thread_resume *resume_info, size_t n)
 {
   struct thread_info *need_step_over = NULL;
 
@@ -5650,8 +5656,8 @@ usr_store_inferior_registers (const struct regs_info *regs_info,
 #endif
 
 
-static void
-linux_fetch_registers (struct regcache *regcache, int regno)
+void
+linux_process_target::fetch_registers (regcache *regcache, int regno)
 {
   int use_regsets;
   int all = 0;
@@ -5683,8 +5689,8 @@ linux_fetch_registers (struct regcache *regcache, int regno)
     }
 }
 
-static void
-linux_store_registers (struct regcache *regcache, int regno)
+void
+linux_process_target::store_registers (regcache *regcache, int regno)
 {
   int use_regsets;
   int all = 0;
@@ -5709,11 +5715,20 @@ linux_store_registers (struct regcache *regcache, int regno)
 }
 
 
-/* Copy LEN bytes from inferior's memory starting at MEMADDR
-   to debugger memory starting at MYADDR.  */
+/* A wrapper for the read_memory target op.  */
 
 static int
 linux_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
+{
+  return the_target->read_memory (memaddr, myaddr, len);
+}
+
+/* Copy LEN bytes from inferior's memory starting at MEMADDR
+   to debugger memory starting at MYADDR.  */
+
+int
+linux_process_target::read_memory (CORE_ADDR memaddr,
+				   unsigned char *myaddr, int len)
 {
   int pid = lwpid_of (current_thread);
   PTRACE_XFER_TYPE *buffer;
@@ -5801,8 +5816,9 @@ linux_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
    memory at MEMADDR.  On failure (cannot write to the inferior)
    returns the value of errno.  Always succeeds if LEN is zero.  */
 
-static int
-linux_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
+int
+linux_process_target::write_memory (CORE_ADDR memaddr,
+				    const unsigned char *myaddr, int len)
 {
   int i;
   /* Round starting address down to longword boundary.  */
@@ -5888,8 +5904,8 @@ linux_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
   return 0;
 }
 
-static void
-linux_look_up_symbols (void)
+void
+linux_process_target::look_up_symbols ()
 {
 #ifdef USE_THREAD_DB
   struct process_info *proc = current_process ();
@@ -5901,19 +5917,26 @@ linux_look_up_symbols (void)
 #endif
 }
 
-static void
-linux_request_interrupt (void)
+void
+linux_process_target::request_interrupt ()
 {
   /* Send a SIGINT to the process group.  This acts just like the user
      typed a ^C on the controlling terminal.  */
-  kill (-signal_pid, SIGINT);
+  ::kill (-signal_pid, SIGINT);
+}
+
+bool
+linux_process_target::supports_read_auxv ()
+{
+  return true;
 }
 
 /* Copy LEN bytes from inferior's auxiliary vector starting at OFFSET
    to debugger memory starting at MYADDR.  */
 
-static int
-linux_read_auxv (CORE_ADDR offset, unsigned char *myaddr, unsigned int len)
+int
+linux_process_target::read_auxv (CORE_ADDR offset, unsigned char *myaddr,
+				 unsigned int len)
 {
   char filename[PATH_MAX];
   int fd, n;
@@ -5940,16 +5963,16 @@ linux_read_auxv (CORE_ADDR offset, unsigned char *myaddr, unsigned int len)
    pass on the function call if the target has registered a
    corresponding function.  */
 
-static int
-linux_supports_z_point_type (char z_type)
+bool
+linux_process_target::supports_z_point_type (char z_type)
 {
   return (the_low_target.supports_z_point_type != NULL
 	  && the_low_target.supports_z_point_type (z_type));
 }
 
-static int
-linux_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
-		    int size, struct raw_breakpoint *bp)
+int
+linux_process_target::insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
+				    int size, raw_breakpoint *bp)
 {
   if (type == raw_bkpt_type_sw)
     return insert_memory_breakpoint (bp);
@@ -5960,9 +5983,9 @@ linux_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
     return 1;
 }
 
-static int
-linux_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
-		    int size, struct raw_breakpoint *bp)
+int
+linux_process_target::remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
+				    int size, raw_breakpoint *bp)
 {
   if (type == raw_bkpt_type_sw)
     return remove_memory_breakpoint (bp);
@@ -5973,91 +5996,98 @@ linux_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
     return 1;
 }
 
-/* Implement the to_stopped_by_sw_breakpoint target_ops
+/* Implement the stopped_by_sw_breakpoint target_ops
    method.  */
 
-static int
-linux_stopped_by_sw_breakpoint (void)
+bool
+linux_process_target::stopped_by_sw_breakpoint ()
 {
   struct lwp_info *lwp = get_thread_lwp (current_thread);
 
   return (lwp->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT);
 }
 
-/* Implement the to_supports_stopped_by_sw_breakpoint target_ops
+/* Implement the supports_stopped_by_sw_breakpoint target_ops
    method.  */
 
-static int
-linux_supports_stopped_by_sw_breakpoint (void)
+bool
+linux_process_target::supports_stopped_by_sw_breakpoint ()
 {
   return USE_SIGTRAP_SIGINFO;
 }
 
-/* Implement the to_stopped_by_hw_breakpoint target_ops
+/* Implement the stopped_by_hw_breakpoint target_ops
    method.  */
 
-static int
-linux_stopped_by_hw_breakpoint (void)
+bool
+linux_process_target::stopped_by_hw_breakpoint ()
 {
   struct lwp_info *lwp = get_thread_lwp (current_thread);
 
   return (lwp->stop_reason == TARGET_STOPPED_BY_HW_BREAKPOINT);
 }
 
-/* Implement the to_supports_stopped_by_hw_breakpoint target_ops
+/* Implement the supports_stopped_by_hw_breakpoint target_ops
    method.  */
 
-static int
-linux_supports_stopped_by_hw_breakpoint (void)
+bool
+linux_process_target::supports_stopped_by_hw_breakpoint ()
 {
   return USE_SIGTRAP_SIGINFO;
 }
 
 /* Implement the supports_hardware_single_step target_ops method.  */
 
-static int
-linux_supports_hardware_single_step (void)
+bool
+linux_process_target::supports_hardware_single_step ()
 {
   return can_hardware_single_step ();
 }
 
-static int
-linux_supports_software_single_step (void)
+bool
+linux_process_target::supports_software_single_step ()
 {
   return can_software_single_step ();
 }
 
-static int
-linux_stopped_by_watchpoint (void)
+bool
+linux_process_target::stopped_by_watchpoint ()
 {
   struct lwp_info *lwp = get_thread_lwp (current_thread);
 
   return lwp->stop_reason == TARGET_STOPPED_BY_WATCHPOINT;
 }
 
-static CORE_ADDR
-linux_stopped_data_address (void)
+CORE_ADDR
+linux_process_target::stopped_data_address ()
 {
   struct lwp_info *lwp = get_thread_lwp (current_thread);
 
   return lwp->stopped_data_address;
 }
 
-#if defined(__UCLIBC__) && defined(HAS_NOMMU)	      \
-    && defined(PT_TEXT_ADDR) && defined(PT_DATA_ADDR) \
-    && defined(PT_TEXT_END_ADDR)
-
 /* This is only used for targets that define PT_TEXT_ADDR,
    PT_DATA_ADDR and PT_TEXT_END_ADDR.  If those are not defined, supposedly
    the target has different ways of acquiring this information, like
    loadmaps.  */
 
+bool
+linux_process_target::supports_read_offsets ()
+{
+#ifdef SUPPORTS_READ_OFFSETS
+  return true;
+#else
+  return false;
+#endif
+}
+
 /* Under uClinux, programs are loaded at non-zero offsets, which we need
    to tell gdb about.  */
 
-static int
-linux_read_offsets (CORE_ADDR *text_p, CORE_ADDR *data_p)
+int
+linux_process_target::read_offsets (CORE_ADDR *text_p, CORE_ADDR *data_p)
 {
+#ifdef SUPPORTS_READ_OFFSETS
   unsigned long text, text_end, data;
   int pid = lwpid_of (current_thread);
 
@@ -6086,14 +6116,46 @@ linux_read_offsets (CORE_ADDR *text_p, CORE_ADDR *data_p)
 
       return 1;
     }
- return 0;
-}
+  return 0;
+#else
+  gdb_assert_not_reached ("target op read_offsets not supported");
 #endif
+}
 
-static int
-linux_qxfer_osdata (const char *annex,
-		    unsigned char *readbuf, unsigned const char *writebuf,
-		    CORE_ADDR offset, int len)
+bool
+linux_process_target::supports_get_tls_address ()
+{
+#ifdef USE_THREAD_DB
+  return true;
+#else
+  return false;
+#endif
+}
+
+int
+linux_process_target::get_tls_address (thread_info *thread,
+				       CORE_ADDR offset,
+				       CORE_ADDR load_module,
+				       CORE_ADDR *address)
+{
+#ifdef USE_THREAD_DB
+  return thread_db_get_tls_address (thread, offset, load_module, address);
+#else
+  return -1;
+#endif
+}
+
+bool
+linux_process_target::supports_qxfer_osdata ()
+{
+  return true;
+}
+
+int
+linux_process_target::qxfer_osdata (const char *annex,
+				    unsigned char *readbuf,
+				    unsigned const char *writebuf,
+				    CORE_ADDR offset, int len)
 {
   return linux_common_xfer_osdata (annex, readbuf, offset, len);
 }
@@ -6120,9 +6182,17 @@ siginfo_fixup (siginfo_t *siginfo, gdb_byte *inf_siginfo, int direction)
     }
 }
 
-static int
-linux_xfer_siginfo (const char *annex, unsigned char *readbuf,
-		    unsigned const char *writebuf, CORE_ADDR offset, int len)
+bool
+linux_process_target::supports_qxfer_siginfo ()
+{
+  return true;
+}
+
+int
+linux_process_target::qxfer_siginfo (const char *annex,
+				     unsigned char *readbuf,
+				     unsigned const char *writebuf,
+				     CORE_ADDR offset, int len)
 {
   int pid;
   siginfo_t siginfo;
@@ -6195,16 +6265,16 @@ sigchld_handler (int signo)
   errno = old_errno;
 }
 
-static int
-linux_supports_non_stop (void)
+bool
+linux_process_target::supports_non_stop ()
 {
-  return 1;
+  return true;
 }
 
-static int
-linux_async (int enable)
+bool
+linux_process_target::async (bool enable)
 {
-  int previous = target_is_async_p ();
+  bool previous = target_is_async_p ();
 
   if (debug_threads)
     debug_printf ("linux_async (%d), previous=%d\n",
@@ -6256,44 +6326,44 @@ linux_async (int enable)
   return previous;
 }
 
-static int
-linux_start_non_stop (int nonstop)
+int
+linux_process_target::start_non_stop (bool nonstop)
 {
   /* Register or unregister from event-loop accordingly.  */
-  linux_async (nonstop);
+  target_async (nonstop);
 
-  if (target_is_async_p () != (nonstop != 0))
+  if (target_is_async_p () != (nonstop != false))
     return -1;
 
   return 0;
 }
 
-static int
-linux_supports_multi_process (void)
+bool
+linux_process_target::supports_multi_process ()
 {
-  return 1;
+  return true;
 }
 
 /* Check if fork events are supported.  */
 
-static int
-linux_supports_fork_events (void)
+bool
+linux_process_target::supports_fork_events ()
 {
   return linux_supports_tracefork ();
 }
 
 /* Check if vfork events are supported.  */
 
-static int
-linux_supports_vfork_events (void)
+bool
+linux_process_target::supports_vfork_events ()
 {
   return linux_supports_tracefork ();
 }
 
 /* Check if exec events are supported.  */
 
-static int
-linux_supports_exec_events (void)
+bool
+linux_process_target::supports_exec_events ()
 {
   return linux_supports_traceexec ();
 }
@@ -6302,8 +6372,8 @@ linux_supports_exec_events (void)
    ptrace flags for all inferiors.  This is in case the new GDB connection
    doesn't support the same set of events that the previous one did.  */
 
-static void
-linux_handle_new_gdb_connection (void)
+void
+linux_process_target::handle_new_gdb_connection ()
 {
   /* Request that all the lwps reset their ptrace options.  */
   for_each_thread ([] (thread_info *thread)
@@ -6328,31 +6398,85 @@ linux_handle_new_gdb_connection (void)
     });
 }
 
-static int
-linux_supports_disable_randomization (void)
+int
+linux_process_target::handle_monitor_command (char *mon)
 {
-#ifdef HAVE_PERSONALITY
-  return 1;
+#ifdef USE_THREAD_DB
+  return thread_db_handle_monitor_command (mon);
 #else
   return 0;
 #endif
 }
 
-static int
-linux_supports_agent (void)
+int
+linux_process_target::core_of_thread (ptid_t ptid)
 {
-  return 1;
+  return linux_common_core_of_thread (ptid);
 }
 
-static int
-linux_supports_range_stepping (void)
+bool
+linux_process_target::supports_disable_randomization ()
+{
+#ifdef HAVE_PERSONALITY
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool
+linux_process_target::supports_agent ()
+{
+  return true;
+}
+
+bool
+linux_process_target::supports_range_stepping ()
 {
   if (can_software_single_step ())
-    return 1;
+    return true;
   if (*the_low_target.supports_range_stepping == NULL)
-    return 0;
+    return false;
 
   return (*the_low_target.supports_range_stepping) ();
+}
+
+bool
+linux_process_target::supports_pid_to_exec_file ()
+{
+  return true;
+}
+
+char *
+linux_process_target::pid_to_exec_file (int pid)
+{
+  return linux_proc_pid_to_exec_file (pid);
+}
+
+bool
+linux_process_target::supports_multifs ()
+{
+  return true;
+}
+
+int
+linux_process_target::multifs_open (int pid, const char *filename,
+				    int flags, mode_t mode)
+{
+  return linux_mntns_open_cloexec (pid, filename, flags, mode);
+}
+
+int
+linux_process_target::multifs_unlink (int pid, const char *filename)
+{
+  return linux_mntns_unlink (pid, filename);
+}
+
+ssize_t
+linux_process_target::multifs_readlink (int pid, const char *filename,
+					char *buf, size_t bufsiz)
+{
+  return linux_mntns_readlink (pid, filename, buf, bufsiz);
 }
 
 #if defined PT_GETDSBT || defined PTRACE_GETFDPIC
@@ -6397,9 +6521,15 @@ struct target_loadmap
 #  define LINUX_LOADMAP_INTERP	PTRACE_GETFDPIC_INTERP
 # endif
 
-static int
-linux_read_loadmap (const char *annex, CORE_ADDR offset,
-		    unsigned char *myaddr, unsigned int len)
+bool
+linux_process_target::supports_read_loadmap ()
+{
+  return true;
+}
+
+int
+linux_process_target::read_loadmap (const char *annex, CORE_ADDR offset,
+				    unsigned char *myaddr, unsigned int len)
 {
   int pid = lwpid_of (current_thread);
   int addr = -1;
@@ -6429,26 +6559,24 @@ linux_read_loadmap (const char *annex, CORE_ADDR offset,
   memcpy (myaddr, (char *) data + offset, copy_length);
   return copy_length;
 }
-#else
-# define linux_read_loadmap NULL
 #endif /* defined PT_GETDSBT || defined PTRACE_GETFDPIC */
 
-static void
-linux_process_qsupported (char **features, int count)
+void
+linux_process_target::process_qsupported (char **features, int count)
 {
   if (the_low_target.process_qsupported != NULL)
     the_low_target.process_qsupported (features, count);
 }
 
-static int
-linux_supports_catch_syscall (void)
+bool
+linux_process_target::supports_catch_syscall ()
 {
   return (the_low_target.get_syscall_trapinfo != NULL
 	  && linux_supports_tracesysgood ());
 }
 
-static int
-linux_get_ipa_tdesc_idx (void)
+int
+linux_process_target::get_ipa_tdesc_idx ()
 {
   if (the_low_target.get_ipa_tdesc_idx == NULL)
     return 0;
@@ -6456,17 +6584,17 @@ linux_get_ipa_tdesc_idx (void)
   return (*the_low_target.get_ipa_tdesc_idx) ();
 }
 
-static int
-linux_supports_tracepoints (void)
+bool
+linux_process_target::supports_tracepoints ()
 {
   if (*the_low_target.supports_tracepoints == NULL)
-    return 0;
+    return false;
 
   return (*the_low_target.supports_tracepoints) ();
 }
 
-static CORE_ADDR
-linux_read_pc (struct regcache *regcache)
+CORE_ADDR
+linux_process_target::read_pc (regcache *regcache)
 {
   if (the_low_target.get_pc == NULL)
     return 0;
@@ -6474,24 +6602,30 @@ linux_read_pc (struct regcache *regcache)
   return (*the_low_target.get_pc) (regcache);
 }
 
-static void
-linux_write_pc (struct regcache *regcache, CORE_ADDR pc)
+void
+linux_process_target::write_pc (regcache *regcache, CORE_ADDR pc)
 {
   gdb_assert (the_low_target.set_pc != NULL);
 
   (*the_low_target.set_pc) (regcache, pc);
 }
 
-static int
-linux_thread_stopped (struct thread_info *thread)
+bool
+linux_process_target::supports_thread_stopped ()
+{
+  return true;
+}
+
+bool
+linux_process_target::thread_stopped (thread_info *thread)
 {
   return get_thread_lwp (thread)->stopped;
 }
 
 /* This exposes stop-all-threads functionality to other modules.  */
 
-static void
-linux_pause_all (int freeze)
+void
+linux_process_target::pause_all (bool freeze)
 {
   stop_all_lwps (freeze, NULL);
 }
@@ -6499,44 +6633,45 @@ linux_pause_all (int freeze)
 /* This exposes unstop-all-threads functionality to other gdbserver
    modules.  */
 
-static void
-linux_unpause_all (int unfreeze)
+void
+linux_process_target::unpause_all (bool unfreeze)
 {
   unstop_all_lwps (unfreeze, NULL);
 }
 
-static int
-linux_prepare_to_access_memory (void)
+int
+linux_process_target::prepare_to_access_memory ()
 {
   /* Neither ptrace nor /proc/PID/mem allow accessing memory through a
      running LWP.  */
   if (non_stop)
-    linux_pause_all (1);
+    target_pause_all (true);
   return 0;
 }
 
-static void
-linux_done_accessing_memory (void)
+void
+linux_process_target::done_accessing_memory ()
 {
   /* Neither ptrace nor /proc/PID/mem allow accessing memory through a
      running LWP.  */
   if (non_stop)
-    linux_unpause_all (1);
+    target_unpause_all (true);
 }
 
-static int
-linux_install_fast_tracepoint_jump_pad (CORE_ADDR tpoint, CORE_ADDR tpaddr,
-					CORE_ADDR collector,
-					CORE_ADDR lockaddr,
-					ULONGEST orig_size,
-					CORE_ADDR *jump_entry,
-					CORE_ADDR *trampoline,
-					ULONGEST *trampoline_size,
-					unsigned char *jjump_pad_insn,
-					ULONGEST *jjump_pad_insn_size,
-					CORE_ADDR *adjusted_insn_addr,
-					CORE_ADDR *adjusted_insn_addr_end,
-					char *err)
+bool
+linux_process_target::supports_fast_tracepoints ()
+{
+  return the_low_target.install_fast_tracepoint_jump_pad != nullptr;
+}
+
+int
+linux_process_target::install_fast_tracepoint_jump_pad
+  (CORE_ADDR tpoint, CORE_ADDR tpaddr, CORE_ADDR collector,
+   CORE_ADDR lockaddr, ULONGEST orig_size, CORE_ADDR *jump_entry,
+   CORE_ADDR *trampoline, ULONGEST *trampoline_size,
+   unsigned char *jjump_pad_insn, ULONGEST *jjump_pad_insn_size,
+   CORE_ADDR *adjusted_insn_addr, CORE_ADDR *adjusted_insn_addr_end,
+   char *err)
 {
   return (*the_low_target.install_fast_tracepoint_jump_pad)
     (tpoint, tpaddr, collector, lockaddr, orig_size,
@@ -6546,8 +6681,8 @@ linux_install_fast_tracepoint_jump_pad (CORE_ADDR tpoint, CORE_ADDR tpaddr,
      err);
 }
 
-static struct emit_ops *
-linux_emit_ops (void)
+emit_ops *
+linux_process_target::emit_ops ()
 {
   if (the_low_target.emit_ops != NULL)
     return (*the_low_target.emit_ops) ();
@@ -6555,8 +6690,8 @@ linux_emit_ops (void)
     return NULL;
 }
 
-static int
-linux_get_min_fast_tracepoint_insn_len (void)
+int
+linux_process_target::get_min_fast_tracepoint_insn_len ()
 {
   return (*the_low_target.get_min_fast_tracepoint_insn_len) ();
 }
@@ -6834,6 +6969,12 @@ read_one_ptr (CORE_ADDR memaddr, CORE_ADDR *ptr, int ptr_size)
   return ret;
 }
 
+bool
+linux_process_target::supports_qxfer_libraries_svr4 ()
+{
+  return true;
+}
+
 struct link_map_offsets
   {
     /* Offset and size of r_debug.r_version.  */
@@ -6860,10 +7001,11 @@ struct link_map_offsets
 
 /* Construct qXfer:libraries-svr4:read reply.  */
 
-static int
-linux_qxfer_libraries_svr4 (const char *annex, unsigned char *readbuf,
-			    unsigned const char *writebuf,
-			    CORE_ADDR offset, int len)
+int
+linux_process_target::qxfer_libraries_svr4 (const char *annex,
+					    unsigned char *readbuf,
+					    unsigned const char *writebuf,
+					    CORE_ADDR offset, int len)
 {
   struct process_info_private *const priv = current_process ()->priv;
   char filename[PATH_MAX];
@@ -7049,10 +7191,17 @@ linux_qxfer_libraries_svr4 (const char *annex, unsigned char *readbuf,
 
 #ifdef HAVE_LINUX_BTRACE
 
+btrace_target_info *
+linux_process_target::enable_btrace (ptid_t ptid,
+				     const btrace_config *conf)
+{
+  return linux_enable_btrace (ptid, conf);
+}
+
 /* See to_disable_btrace target method.  */
 
-static int
-linux_low_disable_btrace (struct btrace_target_info *tinfo)
+int
+linux_process_target::disable_btrace (btrace_target_info *tinfo)
 {
   enum btrace_error err;
 
@@ -7111,9 +7260,10 @@ linux_low_encode_raw (struct buffer *buffer, const gdb_byte *data,
 
 /* See to_read_btrace target method.  */
 
-static int
-linux_low_read_btrace (struct btrace_target_info *tinfo, struct buffer *buffer,
-		       enum btrace_read_type type)
+int
+linux_process_target::read_btrace (btrace_target_info *tinfo,
+				   buffer *buffer,
+				   enum btrace_read_type type)
 {
   struct btrace_data btrace;
   enum btrace_error err;
@@ -7170,9 +7320,9 @@ linux_low_read_btrace (struct btrace_target_info *tinfo, struct buffer *buffer,
 
 /* See to_btrace_conf target method.  */
 
-static int
-linux_low_btrace_conf (const struct btrace_target_info *tinfo,
-		       struct buffer *buffer)
+int
+linux_process_target::read_btrace_conf (const btrace_target_info *tinfo,
+					buffer *buffer)
 {
   const struct btrace_config *conf;
 
@@ -7216,19 +7366,19 @@ current_lwp_ptid (void)
 
 /* Implementation of the target_ops method "breakpoint_kind_from_pc".  */
 
-static int
-linux_breakpoint_kind_from_pc (CORE_ADDR *pcptr)
+int
+linux_process_target::breakpoint_kind_from_pc (CORE_ADDR *pcptr)
 {
   if (the_low_target.breakpoint_kind_from_pc != NULL)
     return (*the_low_target.breakpoint_kind_from_pc) (pcptr);
   else
-    return default_breakpoint_kind_from_pc (pcptr);
+    return process_stratum_target::breakpoint_kind_from_pc (pcptr);
 }
 
 /* Implementation of the target_ops method "sw_breakpoint_from_kind".  */
 
-static const gdb_byte *
-linux_sw_breakpoint_from_kind (int kind, int *size)
+const gdb_byte *
+linux_process_target::sw_breakpoint_from_kind (int kind, int *size)
 {
   gdb_assert (the_low_target.sw_breakpoint_from_kind != NULL);
 
@@ -7238,14 +7388,29 @@ linux_sw_breakpoint_from_kind (int kind, int *size)
 /* Implementation of the target_ops method
    "breakpoint_kind_from_current_state".  */
 
-static int
-linux_breakpoint_kind_from_current_state (CORE_ADDR *pcptr)
+int
+linux_process_target::breakpoint_kind_from_current_state (CORE_ADDR *pcptr)
 {
   if (the_low_target.breakpoint_kind_from_current_state != NULL)
     return (*the_low_target.breakpoint_kind_from_current_state) (pcptr);
   else
-    return linux_breakpoint_kind_from_pc (pcptr);
+    return breakpoint_kind_from_pc (pcptr);
 }
+
+const char *
+linux_process_target::thread_name (ptid_t thread)
+{
+  return linux_proc_tid_get_name (thread);
+}
+
+#if USE_THREAD_DB
+bool
+linux_process_target::thread_handle (ptid_t ptid, gdb_byte **handle,
+				     int *handle_len)
+{
+  return thread_db_thread_handle (ptid, handle, handle_len);
+}
+#endif
 
 /* Default implementation of linux_target_ops method "set_pc" for
    32-bit pc register which is literally named "pc".  */
@@ -7307,7 +7472,7 @@ linux_get_auxv (int wordsize, CORE_ADDR match, CORE_ADDR *valp)
 
   gdb_assert (wordsize == 4 || wordsize == 8);
 
-  while ((*the_target->read_auxv) (offset, data, 2 * wordsize) == 2 * wordsize)
+  while (the_target->read_auxv (offset, data, 2 * wordsize) == 2 * wordsize)
     {
       if (wordsize == 4)
 	{
@@ -7354,110 +7519,9 @@ linux_get_hwcap2 (int wordsize)
   return hwcap2;
 }
 
-static process_stratum_target linux_target_ops = {
-  linux_create_inferior,
-  linux_post_create_inferior,
-  linux_attach,
-  linux_kill,
-  linux_detach,
-  linux_mourn,
-  linux_join,
-  linux_thread_alive,
-  linux_resume,
-  linux_wait,
-  linux_fetch_registers,
-  linux_store_registers,
-  linux_prepare_to_access_memory,
-  linux_done_accessing_memory,
-  linux_read_memory,
-  linux_write_memory,
-  linux_look_up_symbols,
-  linux_request_interrupt,
-  linux_read_auxv,
-  linux_supports_z_point_type,
-  linux_insert_point,
-  linux_remove_point,
-  linux_stopped_by_sw_breakpoint,
-  linux_supports_stopped_by_sw_breakpoint,
-  linux_stopped_by_hw_breakpoint,
-  linux_supports_stopped_by_hw_breakpoint,
-  linux_supports_hardware_single_step,
-  linux_stopped_by_watchpoint,
-  linux_stopped_data_address,
-#if defined(__UCLIBC__) && defined(HAS_NOMMU)	      \
-    && defined(PT_TEXT_ADDR) && defined(PT_DATA_ADDR) \
-    && defined(PT_TEXT_END_ADDR)
-  linux_read_offsets,
-#else
-  NULL,
-#endif
-#ifdef USE_THREAD_DB
-  thread_db_get_tls_address,
-#else
-  NULL,
-#endif
-  hostio_last_error_from_errno,
-  linux_qxfer_osdata,
-  linux_xfer_siginfo,
-  linux_supports_non_stop,
-  linux_async,
-  linux_start_non_stop,
-  linux_supports_multi_process,
-  linux_supports_fork_events,
-  linux_supports_vfork_events,
-  linux_supports_exec_events,
-  linux_handle_new_gdb_connection,
-#ifdef USE_THREAD_DB
-  thread_db_handle_monitor_command,
-#else
-  NULL,
-#endif
-  linux_common_core_of_thread,
-  linux_read_loadmap,
-  linux_process_qsupported,
-  linux_supports_tracepoints,
-  linux_read_pc,
-  linux_write_pc,
-  linux_thread_stopped,
-  NULL,
-  linux_pause_all,
-  linux_unpause_all,
-  linux_stabilize_threads,
-  linux_install_fast_tracepoint_jump_pad,
-  linux_emit_ops,
-  linux_supports_disable_randomization,
-  linux_get_min_fast_tracepoint_insn_len,
-  linux_qxfer_libraries_svr4,
-  linux_supports_agent,
-#ifdef HAVE_LINUX_BTRACE
-  linux_enable_btrace,
-  linux_low_disable_btrace,
-  linux_low_read_btrace,
-  linux_low_btrace_conf,
-#else
-  NULL,
-  NULL,
-  NULL,
-  NULL,
-#endif
-  linux_supports_range_stepping,
-  linux_proc_pid_to_exec_file,
-  linux_mntns_open_cloexec,
-  linux_mntns_unlink,
-  linux_mntns_readlink,
-  linux_breakpoint_kind_from_pc,
-  linux_sw_breakpoint_from_kind,
-  linux_proc_tid_get_name,
-  linux_breakpoint_kind_from_current_state,
-  linux_supports_software_single_step,
-  linux_supports_catch_syscall,
-  linux_get_ipa_tdesc_idx,
-#if USE_THREAD_DB
-  thread_db_thread_handle,
-#else
-  NULL,
-#endif
-};
+/* The linux target ops object.  */
+
+static linux_process_target the_linux_target;
 
 #ifdef HAVE_LINUX_REGSETS
 void
@@ -7476,7 +7540,7 @@ initialize_low (void)
   struct sigaction sigchld_action;
 
   memset (&sigchld_action, 0, sizeof (sigchld_action));
-  set_target_ops (&linux_target_ops);
+  set_target_ops (&the_linux_target);
 
   linux_ptrace_init_warnings ();
   linux_proc_init_warnings ();

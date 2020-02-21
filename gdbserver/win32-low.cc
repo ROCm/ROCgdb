@@ -103,9 +103,6 @@ typedef BOOL (WINAPI *winapi_DebugSetProcessKillOnExit) (BOOL KillOnExit);
 typedef BOOL (WINAPI *winapi_DebugBreakProcess) (HANDLE);
 typedef BOOL (WINAPI *winapi_GenerateConsoleCtrlEvent) (DWORD, DWORD);
 
-static ptid_t win32_wait (ptid_t ptid, struct target_waitstatus *ourstatus,
-			  int options);
-static void win32_resume (struct thread_resume *resume_info, size_t n);
 #ifndef _WIN32_WCE
 static void win32_add_all_dlls (void);
 #endif
@@ -257,16 +254,16 @@ child_delete_thread (DWORD pid, DWORD tid)
 /* These watchpoint related wrapper functions simply pass on the function call
    if the low target has registered a corresponding function.  */
 
-static int
-win32_supports_z_point_type (char z_type)
+bool
+win32_process_target::supports_z_point_type (char z_type)
 {
   return (the_low_target.supports_z_point_type != NULL
 	  && the_low_target.supports_z_point_type (z_type));
 }
 
-static int
-win32_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
-		    int size, struct raw_breakpoint *bp)
+int
+win32_process_target::insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
+				    int size, raw_breakpoint *bp)
 {
   if (the_low_target.insert_point != NULL)
     return the_low_target.insert_point (type, addr, size, bp);
@@ -275,9 +272,9 @@ win32_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
     return 1;
 }
 
-static int
-win32_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
-		    int size, struct raw_breakpoint *bp)
+int
+win32_process_target::remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
+				    int size, raw_breakpoint *bp)
 {
   if (the_low_target.remove_point != NULL)
     return the_low_target.remove_point (type, addr, size, bp);
@@ -286,17 +283,17 @@ win32_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
     return 1;
 }
 
-static int
-win32_stopped_by_watchpoint (void)
+bool
+win32_process_target::stopped_by_watchpoint ()
 {
   if (the_low_target.stopped_by_watchpoint != NULL)
     return the_low_target.stopped_by_watchpoint ();
   else
-    return 0;
+    return false;
 }
 
-static CORE_ADDR
-win32_stopped_data_address (void)
+CORE_ADDR
+win32_process_target::stopped_data_address ()
 {
   if (the_low_target.stopped_data_address != NULL)
     return the_low_target.stopped_data_address ();
@@ -380,7 +377,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
     {
       struct target_waitstatus status;
 
-      win32_wait (minus_one_ptid, &status, 0);
+      the_target->wait (minus_one_ptid, &status, 0);
 
       /* Note win32_wait doesn't return thread events.  */
       if (status.kind != TARGET_WAITKIND_LOADED)
@@ -396,7 +393,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 	resume.kind = resume_continue;
 	resume.sig = 0;
 
-	win32_resume (&resume, 1);
+	the_target->resume (&resume, 1);
       }
     }
 
@@ -633,9 +630,9 @@ Could not convert the expanded inferior cwd to wide-char."));
    PROGRAM_ARGS is the vector containing the inferior's args.
    Returns the new PID on success, -1 on failure.  Registers the new
    process with the process list.  */
-static int
-win32_create_inferior (const char *program,
-		       const std::vector<char *> &program_args)
+int
+win32_process_target::create_inferior (const char *program,
+				       const std::vector<char *> &program_args)
 {
   client_state &cs = get_client_state ();
 #ifndef USE_WIN32API
@@ -715,7 +712,7 @@ win32_create_inferior (const char *program,
 
   /* Wait till we are at 1st instruction in program, return new pid
      (assuming success).  */
-  cs.last_ptid = win32_wait (ptid_t (current_process_id), &cs.last_status, 0);
+  cs.last_ptid = wait (ptid_t (current_process_id), &cs.last_status, 0);
 
   /* Necessary for handle_v_kill.  */
   signal_pid = current_process_id;
@@ -726,8 +723,8 @@ win32_create_inferior (const char *program,
 /* Attach to a running process.
    PID is the process ID to attach to, specified by the user
    or a higher layer.  */
-static int
-win32_attach (unsigned long pid)
+int
+win32_process_target::attach (unsigned long pid)
 {
   HANDLE h;
   winapi_DebugSetProcessKillOnExit DebugSetProcessKillOnExit = NULL;
@@ -819,8 +816,8 @@ win32_clear_inferiors (void)
 
 /* Implementation of target_ops::kill.  */
 
-static int
-win32_kill (process_info *process)
+int
+win32_process_target::kill (process_info *process)
 {
   TerminateProcess (current_process_handle, 0);
   for (;;)
@@ -843,8 +840,8 @@ win32_kill (process_info *process)
 
 /* Implementation of target_ops::detach.  */
 
-static int
-win32_detach (process_info *process)
+int
+win32_process_target::detach (process_info *process)
 {
   winapi_DebugActiveProcessStop DebugActiveProcessStop = NULL;
   winapi_DebugSetProcessKillOnExit DebugSetProcessKillOnExit = NULL;
@@ -865,7 +862,7 @@ win32_detach (process_info *process)
     resume.thread = minus_one_ptid;
     resume.kind = resume_continue;
     resume.sig = 0;
-    win32_resume (&resume, 1);
+    this->resume (&resume, 1);
   }
 
   if (!DebugActiveProcessStop (current_process_id))
@@ -878,16 +875,16 @@ win32_detach (process_info *process)
   return 0;
 }
 
-static void
-win32_mourn (struct process_info *process)
+void
+win32_process_target::mourn (struct process_info *process)
 {
   remove_process (process);
 }
 
 /* Implementation of target_ops::join.  */
 
-static void
-win32_join (int pid)
+void
+win32_process_target::join (int pid)
 {
   HANDLE h = OpenProcess (PROCESS_ALL_ACCESS, FALSE, pid);
   if (h != NULL)
@@ -897,9 +894,9 @@ win32_join (int pid)
     }
 }
 
-/* Return 1 iff the thread with thread ID TID is alive.  */
-static int
-win32_thread_alive (ptid_t ptid)
+/* Return true iff the thread with thread ID TID is alive.  */
+bool
+win32_process_target::thread_alive (ptid_t ptid)
 {
   /* Our thread list is reliable; don't bother to poll target
      threads.  */
@@ -908,8 +905,8 @@ win32_thread_alive (ptid_t ptid)
 
 /* Resume the inferior process.  RESUME_INFO describes how we want
    to resume.  */
-static void
-win32_resume (struct thread_resume *resume_info, size_t n)
+void
+win32_process_target::resume (thread_resume *resume_info, size_t n)
 {
   DWORD tid;
   enum gdb_signal sig;
@@ -1611,8 +1608,9 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 /* Wait for the inferior process to change state.
    STATUS will be filled in with a response code to send to GDB.
    Returns the signal which caused the process to stop. */
-static ptid_t
-win32_wait (ptid_t ptid, struct target_waitstatus *ourstatus, int options)
+ptid_t
+win32_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
+			    int options)
 {
   struct regcache *regcache;
 
@@ -1661,16 +1659,16 @@ win32_wait (ptid_t ptid, struct target_waitstatus *ourstatus, int options)
 
 /* Fetch registers from the inferior process.
    If REGNO is -1, fetch all registers; otherwise, fetch at least REGNO.  */
-static void
-win32_fetch_inferior_registers (struct regcache *regcache, int regno)
+void
+win32_process_target::fetch_registers (regcache *regcache, int regno)
 {
   child_fetch_inferior_registers (regcache, regno);
 }
 
 /* Store registers to the inferior process.
    If REGNO is -1, store all registers; otherwise, store at least REGNO.  */
-static void
-win32_store_inferior_registers (struct regcache *regcache, int regno)
+void
+win32_process_target::store_registers (regcache *regcache, int regno)
 {
   child_store_inferior_registers (regcache, regno);
 }
@@ -1678,8 +1676,9 @@ win32_store_inferior_registers (struct regcache *regcache, int regno)
 /* Read memory from the inferior process.  This should generally be
    called through read_inferior_memory, which handles breakpoint shadowing.
    Read LEN bytes at MEMADDR into a buffer at MYADDR.  */
-static int
-win32_read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
+int
+win32_process_target::read_memory (CORE_ADDR memaddr, unsigned char *myaddr,
+				   int len)
 {
   return child_xfer_memory (memaddr, (char *) myaddr, len, 0, 0) != len;
 }
@@ -1688,16 +1687,16 @@ win32_read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
    called through write_inferior_memory, which handles breakpoint shadowing.
    Write LEN bytes from the buffer at MYADDR to MEMADDR.
    Returns 0 on success and errno on failure.  */
-static int
-win32_write_inferior_memory (CORE_ADDR memaddr, const unsigned char *myaddr,
-			     int len)
+int
+win32_process_target::write_memory (CORE_ADDR memaddr,
+				    const unsigned char *myaddr, int len)
 {
   return child_xfer_memory (memaddr, (char *) myaddr, len, 1, 0) != len;
 }
 
 /* Send an interrupt request to the inferior process. */
-static void
-win32_request_interrupt (void)
+void
+win32_process_target::request_interrupt ()
 {
   winapi_DebugBreakProcess DebugBreakProcess;
   winapi_GenerateConsoleCtrlEvent GenerateConsoleCtrlEvent;
@@ -1727,6 +1726,12 @@ win32_request_interrupt (void)
 
   /* Last resort, suspend all threads manually.  */
   soft_interrupt_requested = 1;
+}
+
+bool
+win32_process_target::supports_hardware_single_step ()
+{
+  return true;
 }
 
 #ifdef _WIN32_WCE
@@ -1779,8 +1784,8 @@ win32_error_to_fileio_error (DWORD err)
   return FILEIO_EUNKNOWN;
 }
 
-static void
-wince_hostio_last_error (char *buf)
+void
+win32_process_target::hostio_last_error (char *buf)
 {
   DWORD winerr = GetLastError ();
   int fileio_err = win32_error_to_fileio_error (winerr);
@@ -1788,11 +1793,19 @@ wince_hostio_last_error (char *buf)
 }
 #endif
 
+bool
+win32_process_target::supports_qxfer_siginfo ()
+{
+  return true;
+}
+
 /* Write Windows signal info.  */
 
-static int
-win32_xfer_siginfo (const char *annex, unsigned char *readbuf,
-		    unsigned const char *writebuf, CORE_ADDR offset, int len)
+int
+win32_process_target::qxfer_siginfo (const char *annex,
+				     unsigned char *readbuf,
+				     unsigned const char *writebuf,
+				     CORE_ADDR offset, int len)
 {
   if (siginfo_er.ExceptionCode == 0)
     return -1;
@@ -1811,10 +1824,16 @@ win32_xfer_siginfo (const char *annex, unsigned char *readbuf,
   return len;
 }
 
+bool
+win32_process_target::supports_get_tib_address ()
+{
+  return true;
+}
+
 /* Write Windows OS Thread Information Block address.  */
 
-static int
-win32_get_tib_address (ptid_t ptid, CORE_ADDR *addr)
+int
+win32_process_target::get_tib_address (ptid_t ptid, CORE_ADDR *addr)
 {
   win32_thread_info *th;
   th = thread_rec (ptid, 0);
@@ -1827,95 +1846,21 @@ win32_get_tib_address (ptid_t ptid, CORE_ADDR *addr)
 
 /* Implementation of the target_ops method "sw_breakpoint_from_kind".  */
 
-static const gdb_byte *
-win32_sw_breakpoint_from_kind (int kind, int *size)
+const gdb_byte *
+win32_process_target::sw_breakpoint_from_kind (int kind, int *size)
 {
   *size = the_low_target.breakpoint_len;
   return the_low_target.breakpoint;
 }
 
-static process_stratum_target win32_target_ops = {
-  win32_create_inferior,
-  NULL,  /* post_create_inferior */
-  win32_attach,
-  win32_kill,
-  win32_detach,
-  win32_mourn,
-  win32_join,
-  win32_thread_alive,
-  win32_resume,
-  win32_wait,
-  win32_fetch_inferior_registers,
-  win32_store_inferior_registers,
-  NULL, /* prepare_to_access_memory */
-  NULL, /* done_accessing_memory */
-  win32_read_inferior_memory,
-  win32_write_inferior_memory,
-  NULL, /* lookup_symbols */
-  win32_request_interrupt,
-  NULL, /* read_auxv */
-  win32_supports_z_point_type,
-  win32_insert_point,
-  win32_remove_point,
-  NULL, /* stopped_by_sw_breakpoint */
-  NULL, /* supports_stopped_by_sw_breakpoint */
-  NULL, /* stopped_by_hw_breakpoint */
-  NULL, /* supports_stopped_by_hw_breakpoint */
-  target_can_do_hardware_single_step,
-  win32_stopped_by_watchpoint,
-  win32_stopped_data_address,
-  NULL, /* read_offsets */
-  NULL, /* get_tls_address */
-#ifdef _WIN32_WCE
-  wince_hostio_last_error,
-#else
-  hostio_last_error_from_errno,
-#endif
-  NULL, /* qxfer_osdata */
-  win32_xfer_siginfo,
-  NULL, /* supports_non_stop */
-  NULL, /* async */
-  NULL, /* start_non_stop */
-  NULL, /* supports_multi_process */
-  NULL, /* supports_fork_events */
-  NULL, /* supports_vfork_events */
-  NULL, /* supports_exec_events */
-  NULL, /* handle_new_gdb_connection */
-  NULL, /* handle_monitor_command */
-  NULL, /* core_of_thread */
-  NULL, /* read_loadmap */
-  NULL, /* process_qsupported */
-  NULL, /* supports_tracepoints */
-  NULL, /* read_pc */
-  NULL, /* write_pc */
-  NULL, /* thread_stopped */
-  win32_get_tib_address,
-  NULL, /* pause_all */
-  NULL, /* unpause_all */
-  NULL, /* stabilize_threads */
-  NULL, /* install_fast_tracepoint_jump_pad */
-  NULL, /* emit_ops */
-  NULL, /* supports_disable_randomization */
-  NULL, /* get_min_fast_tracepoint_insn_len */
-  NULL, /* qxfer_libraries_svr4 */
-  NULL, /* support_agent */
-  NULL, /* enable_btrace */
-  NULL, /* disable_btrace */
-  NULL, /* read_btrace */
-  NULL, /* read_btrace_conf */
-  NULL, /* supports_range_stepping */
-  NULL, /* pid_to_exec_file */
-  NULL, /* multifs_open */
-  NULL, /* multifs_unlink */
-  NULL, /* multifs_readlink */
-  NULL, /* breakpoint_kind_from_pc */
-  win32_sw_breakpoint_from_kind,
-};
+/* The win32 target ops object.  */
+
+static win32_process_target the_win32_target;
 
 /* Initialize the Win32 backend.  */
 void
 initialize_low (void)
 {
-  set_target_ops (&win32_target_ops);
+  set_target_ops (&the_win32_target);
   the_low_target.arch_setup ();
 }
