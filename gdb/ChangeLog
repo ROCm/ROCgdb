@@ -1,3 +1,318 @@
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/loc.h (dwarf2_compile_expr_to_ax): Don't declare.
+	* dwarf2/loc.c (dwarf2_compile_expr_to_ax): Now static.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-data.h (TUI_DISASM_WIN): Cast to tui_disasm_window.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-win.c (_initialize_tui_win): Add usage text.
+	* tui/tui-stack.c (_initialize_tui_stack): Add usage text.
+	* tui/tui-regs.c (_initialize_tui_regs): Add usage text.
+	* tui/tui.c (_initialize_tui): Add usage text.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-win.c (tui_set_focus_command)
+	(tui_set_win_height_command): Use error_no_arg.
+	(_initialize_tui_win): Update help text.
+	(FOCUS_USAGE, WIN_HEIGHT_USAGE): Don't define.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-layout.c (extract_display_start_addr): Rewrite.
+	* tui/tui-disasm.h (struct tui_disasm_window)
+	<display_start_addr>: Declare.
+	* tui/tui-source.h (struct tui_source_window)
+	<display_start_addr>: Declare.
+	* tui/tui-winsource.h (struct tui_source_window_base)
+	<show_source_line, display_start_addr>: New methods.
+	<m_horizontal_offset, m_start_line_or_addr, m_gdbarch, m_content>:
+	Rename and move to protected section.
+	* tui/tui-winsource.c (tui_source_window_base::update_source_window)
+	(tui_source_window_base::do_erase_source_content): Update.
+	(tui_source_window_base::show_source_line): Now a method.
+	(tui_source_window_base::show_source_content)
+	(tui_source_window_base::tui_source_window_base)
+	(tui_source_window_base::rerender)
+	(tui_source_window_base::refill)
+	(tui_source_window_base::do_scroll_horizontal)
+	(tui_source_window_base::set_is_exec_point_at)
+	(tui_source_window_base::update_breakpoint_info)
+	(tui_source_window_base::update_exec_info): Update.
+	* tui/tui-source.c (tui_source_window::set_contents)
+	(tui_source_window::showing_source_p)
+	(tui_source_window::do_scroll_vertical)
+	(tui_source_window::location_matches_p)
+	(tui_source_window::line_is_displayed): Update.
+	(tui_source_window::display_start_addr): New method.
+	* tui/tui-disasm.c (tui_disasm_window::set_contents)
+	(tui_disasm_window::do_scroll_vertical)
+	(tui_disasm_window::location_matches_p): Update.
+	(tui_disasm_window::display_start_addr): New method.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* NEWS: Add entry for gdb.register_window_type.
+	* tui/tui-layout.h (window_factory): New typedef.
+	(tui_register_window): Declare.
+	* tui/tui-layout.c (saved_tui_windows): New global.
+	(tui_apply_current_layout): Use it.
+	(tui_register_window): New function.
+	* python/python.c (do_start_initialization): Call
+	gdbpy_initialize_tui.
+	(python_GdbMethods): Add "register_window_type" function.
+	* python/python-internal.h (gdbpy_register_tui_window)
+	(gdbpy_initialize_tui): Declare.
+	* python/py-tui.c: New file.
+	* Makefile.in (SUBDIR_PYTHON_SRCS): Add py-tui.c.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-io.c (do_tui_putc): Don't omit annotations.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-win.c (tui_set_win_focus_to): Move to tui-data.c.
+	* tui/tui-data.h (tui_set_win_with_focus): Don't declare.
+	* tui/tui-data.c (tui_set_win_with_focus): Remove.
+	(tui_set_win_focus_to): Move from tui-win.c.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-layout.c (make_standard_window, get_locator_window): New
+	functions.
+	(known_window_types): New global.
+	(tui_get_window_by_name): Reimplement.
+	(initialize_known_windows): New function.
+	(validate_window_name): Rewrite.
+	(_initialize_tui_layout): Call initialize_known_windows.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.h (enum tui_win_type) <LOCATOR_WIN, DATA_ITEM_WIN>:
+	Remove constants.
+	* tui/tui-winsource.h (struct tui_source_window_base)
+	<tui_source_window_base>: Remove parameter.
+	* tui/tui-winsource.c
+	(tui_source_window_base::tui_source_window_base): Remove
+	parameter.
+	(tui_source_window_base::refill): Update.
+	* tui/tui-stack.h (struct tui_locator_window)
+	<tui_locator_window>: Update.
+	* tui/tui-source.h (struct tui_source_window) <tui_source_window>:
+	Default the constructor.
+	* tui/tui-regs.h (struct tui_data_item_window)
+	<tui_data_item_window>: Default the constructor.
+	(struct tui_data_window) <tui_data_window>: Likewise.
+	* tui/tui-disasm.h (struct tui_disasm_window) <tui_disasm_window>:
+	Default the constructor.
+	* tui/tui-data.h (struct tui_gen_win_info) <tui_gen_win_info>:
+	Default the constructor.
+	<type>: Remove.
+	(struct tui_win_info) <tui_win_info>: Default the constructor.
+	* tui/tui-data.c (tui_win_info::tui_win_info): Remove.
+	* tui/tui-command.h (struct tui_cmd_window) <tui_cmd_window>:
+	Default the constructor.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-wingeneral.h (tui_make_all_invisible): Don't declare.
+	* tui/tui-wingeneral.c (tui_make_all_invisible): Remove.
+	* tui/tui-win.c (tui_resize_all): Don't call
+	tui_delete_invisible_windows.
+	* tui/tui-layout.c (tui_apply_current_layout): Delete windows when
+	done.
+	(tui_set_layout): Update.
+	(tui_add_win_to_layout): Don't call tui_delete_invisible_windows.
+	* tui/tui-data.h (tui_delete_invisible_windows): Don't declare.
+	* tui/tui-data.c (tui_delete_invisible_windows): Remove.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-win.c (tui_partial_win_by_name): Handle ambiguity
+	correctly.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-data.c (tui_next_win, tui_prev_win): Reimplement.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-winsource.h (struct tui_source_window_iterator)
+	<inner_iterator>: New etytypedef.
+	<tui_source_window_iterator>: Take "end" parameter.
+	<tui_source_window_iterator>: Take iterator.
+	<operator*, advance>: Update.
+	<m_iter>: Change type.
+	<m_end>: New field.
+	(struct tui_source_windows) <begin, end>: Update.
+	* tui/tui-layout.c (tui_windows): New global.
+	(tui_apply_current_layout): Clear tui_windows.
+	(tui_layout_window::apply): Update tui_windows.
+	* tui/tui-data.h (tui_windows): Declare.
+	(all_tui_windows): Now inline function.
+	(class tui_window_iterator, struct all_tui_windows): Remove.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	PR tui/17850:
+	* tui/tui-win.c (tui_gen_win_info::max_width): New method.
+	* tui/tui-layout.h (class tui_layout_base) <get_sizes>: Add
+	"height" argument.
+	(class tui_layout_window) <get_sizes>: Likewise.
+	(class tui_layout_split) <tui_layout_split>: Add "vertical"
+	argument.
+	<get_sizes>: Add "height" argument.
+	<m_vertical>: New field.
+	* tui/tui-layout.c (tui_layout_split::clone): Update.
+	(tui_layout_split::get_sizes): Add "height" argument.
+	(tui_layout_split::adjust_size, tui_layout_split::apply): Update.
+	(tui_new_layout_command): Parse "-horizontal".
+	(_initialize_tui_layout): Update help string.
+	(tui_layout_split::specification): Add "-horizontal" when needed.
+	* tui/tui-layout.c (tui_layout_window::get_sizes): Add "height"
+	argument.
+	* tui/tui-data.h (struct tui_gen_win_info) <max_width, min_width>:
+	New methods.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-layout.h (enum tui_adjust_result): New.
+	(class tui_layout_base) <adjust_size>: Return tui_adjust_result.
+	(class tui_layout_window) <adjust_size>: Return
+	tui_adjust_result.  Rewrite.
+	(class tui_layout_split) <adjust_size>: Return tui_adjust_result.
+	* tui/tui-layout.c (tui_layout_split::adjust_size): Update.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-layout.h (class tui_layout_split) <add_split>: Change
+	parameter and return types.
+	(class tui_layout_base) <specification>: Add "depth".
+	(class tui_layout_window) <specification>: Add "depth".
+	(class tui_layout_split) <specification>: Add "depth".
+	* tui/tui-layout.c (tui_layout_split::add_split): Change parameter
+	and return types.
+	(tui_new_layout_command): Parse sub-layouts.
+	(_initialize_tui_layout): Update help string.
+	(tui_layout_window::specification): Add "depth".
+	(add_layout_command): Update.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* NEWS: Add "tui new-layout" item.
+	* tui/tui-layout.c (add_layout_command): Return cmd_list_element.
+	Add new-layout command to help text.
+	(validate_window_name): New function.
+	(tui_new_layout_command): New function.
+	(_initialize_tui_layout): Register "new-layout".
+	(tui_layout_window::specification): New method.
+	(tui_layout_window::specification): New method.
+	* tui/tui-layout.h (class tui_layout_base) <specification>: New
+	method.
+	(class tui_layout_window) <specification>: New method.
+	(class tui_layout_split) <specification>: New method.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_enable): Call tui_set_initial_layout.
+	* tui/tui-win.c (window_name_completer): Update comment.
+	* tui/tui-layout.h (class tui_layout_base) <replace_window>:
+	Declare method.
+	(class tui_layout_window) <replace_window>: Likewise.
+	(class tui_layout_split) <replace_window>: Likewise.
+	(tui_set_layout): Don't declare.
+	(tui_set_initial_layout): Declare function.
+	* tui/tui-layout.c (layouts, applied_skeleton, src_regs_layout)
+	(asm_regs_layout): New globals.
+	(tui_current_layout, show_layout): Remove.
+	(tui_set_layout, tui_add_win_to_layout): Rewrite.
+	(find_layout, tui_apply_layout): New function.
+	(layout_completer): Remove.
+	(tui_next_layout): Reimplement.
+	(tui_next_layout_command): New function.
+	(tui_set_initial_layout, tui_prev_layout_command): New functions.
+	(tui_regs_layout): Reimplement.
+	(tui_regs_layout_command): New function.
+	(extract_display_start_addr): Rewrite.
+	(next_layout, prev_layout): Remove.
+	(tui_layout_window::replace_window): New method.
+	(tui_layout_split::replace_window): New method.
+	(destroy_layout): New function.
+	(layout_list): New global.
+	(add_layout_command): New function.
+	(initialize_layouts): Update.
+	(tui_layout_command): New function.
+	(_initialize_tui_layout): Install "layout" commands.
+	* tui/tui-data.h (enum tui_layout_type): Remove.
+	(tui_current_layout): Don't declare.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.c (tui_reg_layout): Remove.
+	(tui_reg_command): Use tui_regs_layout.
+	* tui/tui-layout.h (tui_reg_command): Declare.
+	* tui/tui-layout.c (tui_reg_command): New function.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_rl_delete_other_windows): Call
+	tui_remove_some_windows.
+	* tui/tui-layout.h (class tui_layout_base) <remove_windows>:
+	Declare method.
+	(class tui_layout_window) <remove_windows>: New method.
+	(class tui_layout_split) <remove_windows>: Declare.
+	(tui_remove_some_windows): Declare.
+	* tui/tui-layout.c (tui_remove_some_windows): New function.
+	(tui_layout_split::remove_windows): New method.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui.c (tui_rl_change_windows): Call tui_next_layout.
+	* tui/tui-layout.h (tui_next_layout): Declare.
+	* tui/tui-layout.c (tui_next_layout): New function.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.c (tui_data_window::display_registers_from): Use
+	correct coordinates.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-layout.h (tui_add_win_to_layout): Add comment.
+	* tui/tui-layout.c (tui_add_win_to_layout): Add assert.  Remove
+	DATA_WIN case.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-disasm.c (tui_get_low_disassembly_address): Use
+	TUI_DISASM_WIN, not tui_win_list.
+
+2020-02-22  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_val_print_enum_1)
+	(val_print_type_code_flags): Style member names.
+	* rust-lang.c (val_print_struct, rust_print_enum)
+	(rust_print_struct_def, rust_internal_print_type): Style member
+	names.
+	* p-valprint.c (pascal_object_print_value_fields): Style member
+	names.  Only call fprintf_symbol_filtered for static members.
+	* m2-typeprint.c (m2_record_fields, m2_enum): Style member names.
+	* f-valprint.c (f_val_print): Style member names.
+	* f-typeprint.c (f_type_print_base): Style member names.
+	* cp-valprint.c (cp_print_value_fields): Style member names.  Only
+	call fprintf_symbol_filtered for static members.
+	(cp_print_class_member): Style member names.
+	* c-typeprint.c (c_print_type_1, c_type_print_base_1): Style
+	member names.
+	* ada-valprint.c (ada_print_scalar): Style enum names.
+	(ada_val_print_enum): Likewise.
+	* ada-typeprint.c (print_enum_type): Style enum names.
+
 2020-02-21  Tom Tromey  <tom@tromey.com>
 
 	* psympriv.h (struct partial_symtab): Update comment.
