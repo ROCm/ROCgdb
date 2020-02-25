@@ -1,3 +1,40 @@
+2020-02-25  Joel Brobecker  <brobecker@adacore.com>
+
+	* copypright.py (EXCLUDE_LIST): Add 'gnulib/config.in' and
+	'gnulib/Makefile.in' to the list.
+
+2020-02-24  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct type_unit_unshareable) <num_symtabs>:
+	Remove.
+	* dwarf2/read.c (dwarf2_cu::setup_type_unit_groups): Use
+	XOBNEWVEC.
+
+2020-02-24  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct dwarf2_per_cu_data) <type_unit_group_p>:
+	New method.
+	* dwarf2/read.c (IS_TYPE_UNIT_GROUP): Remove.
+	(dw2_do_instantiate_symtab, dw2_get_file_names)
+	(build_type_psymtab_dependencies, load_full_type_unit): Update.
+
+2020-02-24  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2read.c (dwarf2_build_psymtabs_hard): Use
+	make_scoped_restore.
+	(dwarf2_psymtab::read_symtab): Don't clear
+	reading_partial_symbols.
+
+2020-02-24  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/25592
+	* stack.c (iterate_over_block_locals): Handle LOC_CONST.
+
+2020-02-24  Tom de Vries  <tdevries@suse.de>
+
+	* tui/tui-layout.c (_initialize_tui_layout): Fix help messages for
+	commands layout next/prev/regs.
+
 2020-02-22  Tom Tromey  <tom@tromey.com>
 
 	* dwarf2/loc.h (dwarf2_compile_expr_to_ax): Don't declare.
