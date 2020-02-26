@@ -523,6 +523,20 @@ struct dwz_file
 extern struct dwz_file *dwarf2_get_dwz_file
     (struct dwarf2_per_objfile *dwarf2_per_objfile);
 
+/* Return the type of the DIE at DIE_OFFSET in the CU named by
+   PER_CU.  */
+
+struct type *dwarf2_get_die_type (cu_offset die_offset,
+				  struct dwarf2_per_cu_data *per_cu);
+
+/* Given an index in .debug_addr, fetch the value.
+   NOTE: This can be called during dwarf expression evaluation,
+   long after the debug information has been read, and thus per_cu->cu
+   may no longer exist.  */
+
+CORE_ADDR dwarf2_read_addr_index (dwarf2_per_cu_data *per_cu,
+				  unsigned int addr_index);
+
 /* When non-zero, dump line number entries as they are read in.  */
 extern unsigned int dwarf_line_debug;
 

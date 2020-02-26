@@ -1,3 +1,19 @@
+2020-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/derived-type-striding.exp: Add a new test.
+	* gdb.fortran/derived-type-striding.f90: Add pointer variable for
+	new test.
+
+2020-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/cached-source-file.exp: Avoid source file paths in test
+	names.
+
+2020-02-25  Tom de Vries  <tdevries@suse.de>
+
+	PR go/18926
+	* gdb.go/methods.exp: Remove gcc/93866 xfail.
+
 2020-02-24  Tom de Vries  <tdevries@suse.de>
 
 	PR gdb/25592

@@ -18868,14 +18868,10 @@ read_addr_index_from_leb128 (struct dwarf2_cu *cu, const gdb_byte *info_ptr,
   return read_addr_index (cu, addr_index);
 }
 
-/* Given an index in .debug_addr, fetch the value.
-   NOTE: This can be called during dwarf expression evaluation,
-   long after the debug information has been read, and thus per_cu->cu
-   may no longer exist.  */
+/* See read.h.  */
 
 CORE_ADDR
-dwarf2_read_addr_index (struct dwarf2_per_cu_data *per_cu,
-			unsigned int addr_index)
+dwarf2_read_addr_index (dwarf2_per_cu_data *per_cu, unsigned int addr_index)
 {
   struct dwarf2_per_objfile *dwarf2_per_objfile = per_cu->dwarf2_per_objfile;
   struct dwarf2_cu *cu = per_cu->cu;
@@ -22511,8 +22507,7 @@ dwarf2_fetch_die_type_sect_off (sect_offset sect_off,
   return die_type (die, cu);
 }
 
-/* Return the type of the DIE at DIE_OFFSET in the CU named by
-   PER_CU.  */
+/* See read.h.  */
 
 struct type *
 dwarf2_get_die_type (cu_offset die_offset,

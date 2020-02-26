@@ -1,3 +1,92 @@
+2020-02-26  Alan Modra  <amodra@gmail.com>
+
+	* vms-lib.c (vms_lib_read_index): Release correct buffer.
+
+2020-02-26  Alan Modra  <amodra@gmail.com>
+
+	* elf32-rx.c (rx_elf_relocate_section): Use bfd_malloc rather than
+	malloc.  Check for NULL return from bfd_malloc.
+	(rx_table_find, rx_table_map): Likewise.
+	(rx_set_section_contents): Check bfd_alloc return.
+	(rx_dump_symtab): Don't alloc internal_syms or external_syms.
+
+2020-02-26  Alan Modra  <amodra@gmail.com>
+
+	* aoutx.h: Indent labels correctly.  Format error strings.
+	* archive.c: Likewise.
+	* archive64.c: Likewise.
+	* coff-arm.c: Likewise.
+	* coff-rs6000.c: Likewise.
+	* coff-stgo32.c: Likewise.
+	* cpu-arm.c: Likewise.
+	* dwarf2.c: Likewise.
+	* elf-ifunc.c: Likewise.
+	* elf-properties.c: Likewise.
+	* elf-s390-common.c: Likewise.
+	* elf-strtab.c: Likewise.
+	* elf.c: Likewise.
+	* elf32-arm.c: Likewise.
+	* elf32-bfin.c: Likewise.
+	* elf32-cr16.c: Likewise.
+	* elf32-csky.c: Likewise.
+	* elf32-i386.c: Likewise.
+	* elf32-m68k.c: Likewise.
+	* elf32-msp430.c: Likewise.
+	* elf32-nds32.c: Likewise.
+	* elf32-nios2.c: Likewise.
+	* elf32-pru.c: Likewise.
+	* elf32-xtensa.c: Likewise.
+	* elf64-ia64-vms.c: Likewise.
+	* elf64-x86-64.c: Likewise.
+	* elfcode.h: Likewise.
+	* elfcore.h: Likewise.
+	* elflink.c: Likewise.
+	* elfnn-aarch64.c: Likewise.
+	* elfnn-ia64.c: Likewise.
+	* elfnn-riscv.c: Likewise.
+	* elfxx-mips.c: Likewise.
+	* elfxx-sparc.c: Likewise.
+	* elfxx-x86.c: Likewise.
+	* i386lynx.c: Likewise.
+	* merge.c: Likewise.
+	* pdp11.c: Likewise.
+	* plugin.c: Likewise.
+	* reloc.c: Likewise.
+
+2020-02-26  Alan Modra  <amodra@gmail.com>
+
+	PR 25593
+	* elf-bfd.h (struct elf_link_hash_table): Rename "loaded" to
+	"dyn_loaded".
+	(bfd_elf_add_dt_needed_tag): Declare.
+	* elf-strtab.c (_bfd_elf_strtab_restore): Handle NULL buf.
+	* elflink.c (bfd_elf_add_dt_needed_tag): Make global and rename
+	from elf_add_dt_needed_tag.  Remove soname and doit param.
+	(elf_link_add_object_symbols): Don't use elf_add_dt_needed_tag
+	to see whether as-needed lib is already loaded, use dyn_loaded
+	list instead.  When saving and restoring around as-needed lib
+	handle possibility that dynstr has not been initialised.  Don't
+	add DT_NEEDED tags here.  Limit dyn_loaded list to dynamic libs.
+	Mark libs loaded via DT_NEEDED entries of other libs with
+	DYN_NO_NEEDED if they should not be mentioned in DT_NEEDED of
+	the output.
+	(elf_link_check_versioned_symbol): Remove now unneccesary
+	DYNAMIC check when traversing dyn_loaded list.
+
+2020-02-26  Alan Modra  <amodra@gmail.com>
+
+	* bfdio.c (bfd_get_file_size): Ignore bogus archive element sizes.
+
+2020-02-25  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/25584
+	* plugin.c (need_lto_wrapper_p): New.
+	(bfd_plugin_set_program_name): Add an int argument to set
+	need_lto_wrapper_p.
+	(get_lto_wrapper): Return FALSE if need_lto_wrapper_p isn't
+	set.
+	* plugin.h (bfd_plugin_set_program_name): Add an int argument.
+
 2020-02-24  Alan Modra  <amodra@gmail.com>
 
 	* vms-lib.c (_bfd_vms_lib_archive_p): Correct overflow checks.

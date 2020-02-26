@@ -1052,7 +1052,8 @@ read_a_source_file (const char *name)
 		  {
 		    char *s2 = s;
 
-		    strncpy (original_case_string, s2, sizeof (original_case_string));
+		    strncpy (original_case_string, s2,
+			     sizeof (original_case_string) - 1);
 		    original_case_string[sizeof (original_case_string) - 1] = 0;
 
 		    while (*s2)
@@ -5810,7 +5811,7 @@ s_incbin (int x ATTRIBUTE_UNUSED)
 	as_warn (_("truncated file `%s', %ld of %ld bytes read"),
 		 path, bytes, count);
     }
-done:
+ done:
   if (binfile != NULL)
     fclose (binfile);
   if (path)
@@ -5874,7 +5875,7 @@ s_include (int arg ATTRIBUTE_UNUSED)
 
   free (path);
   path = filename;
-gotit:
+ gotit:
   /* malloc Storage leak when file is found on path.  FIXME-SOMEDAY.  */
   register_dependency (path);
   input_scrub_insert_file (path);

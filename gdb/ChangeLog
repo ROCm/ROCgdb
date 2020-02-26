@@ -1,3 +1,25 @@
+2020-02-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* dwarf2/loc.h (dwarf2_read_addr_index): Move...
+	* dwarf2/read.h (dwarf2_read_addr_index): ... here.
+	* dwarf2/read.c (dwarf2_read_addr_index): Move doc to header.
+
+2020-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdbtypes.c (create_array_type_with_stride): Handle negative
+	array strides.
+	* valarith.c (value_subscripted_rvalue): Likewise.
+
+2020-02-25  Luis Machado  <luis.machado@linaro.org>
+
+	* aarch64-tdep.c (aarch64_vnv_type): Fix comment typo.
+
+2020-02-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* loc.h (dwarf2_get_die_type): Move to...
+	* read.h (dwarf2_get_die_type): ... here.
+	* read.c (dwarf2_get_die_type): Move doc to header.
+
 2020-02-25  Joel Brobecker  <brobecker@adacore.com>
 
 	* copypright.py (EXCLUDE_LIST): Add 'gnulib/config.in' and
