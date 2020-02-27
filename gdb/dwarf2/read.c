@@ -84,6 +84,7 @@
 #include "rust-lang.h"
 #include "gdbsupport/pathstuff.h"
 #include "count-one-bits.h"
+#include "debuginfod-support.h"
 
 /* When == 1, print basic high level tracing messages.
    When > 1, be more verbose.
@@ -2147,6 +2148,29 @@ dwarf2_get_dwz_file (struct dwarf2_per_objfile *dwarf2_per_objfile)
 
   if (dwz_bfd == NULL)
     dwz_bfd = build_id_to_debug_bfd (buildid_len, buildid);
+
+  if (dwz_bfd == nullptr)
+    {
+      gdb::unique_xmalloc_ptr<char> alt_filename;
+      const char *origname = dwarf2_per_objfile->objfile->original_name;
+
+      scoped_fd fd (debuginfod_debuginfo_query (buildid,
+						buildid_len,
+						origname,
+						&alt_filename));
+
+      if (fd.get () >= 0)
+	{
+	  /* File successfully retrieved from server.  */
+	  dwz_bfd = gdb_bfd_open (alt_filename.get (), gnutarget, -1);
+
+	  if (dwz_bfd == nullptr)
+	    warning (_("File \"%s\" from debuginfod cannot be opened as bfd"),
+		     alt_filename.get ());
+	  else if (!build_id_verify (dwz_bfd.get (), buildid_len, buildid))
+	    dwz_bfd.reset (nullptr);
+	}
+    }
 
   if (dwz_bfd == NULL)
     error (_("could not find '.gnu_debugaltlink' file for %s"),
@@ -5895,6 +5919,44 @@ read_abbrev_offset (struct dwarf2_per_objfile *dwarf2_per_objfile,
   return (sect_offset) read_offset (abfd, info_ptr, offset_size);
 }
 
+/* A partial symtab that is used only for include files.  */
+struct dwarf2_include_psymtab : public partial_symtab
+{
+  dwarf2_include_psymtab (const char *filename, struct objfile *objfile)
+    : partial_symtab (filename, objfile)
+  {
+  }
+
+  void read_symtab (struct objfile *objfile) override
+  {
+    expand_psymtab (objfile);
+  }
+
+  void expand_psymtab (struct objfile *objfile) override
+  {
+    if (m_readin)
+      return;
+    /* It's an include file, no symbols to read for it.
+       Everything is in the parent symtab.  */
+    read_dependencies (objfile);
+    m_readin = true;
+  }
+
+  bool readin_p () const override
+  {
+    return m_readin;
+  }
+
+  struct compunit_symtab *get_compunit_symtab () const override
+  {
+    return nullptr;
+  }
+
+private:
+
+  bool m_readin = false;
+};
+
 /* Allocate a new partial symtab for file named NAME and mark this new
    partial symtab as being an include of PST.  */
 
@@ -5902,7 +5964,7 @@ static void
 dwarf2_create_include_psymtab (const char *name, dwarf2_psymtab *pst,
                                struct objfile *objfile)
 {
-  dwarf2_psymtab *subpst = new dwarf2_psymtab (name, objfile);
+  dwarf2_include_psymtab *subpst = new dwarf2_include_psymtab (name, objfile);
 
   if (!IS_ABSOLUTE_PATH (subpst->filename))
     {
@@ -5913,11 +5975,6 @@ dwarf2_create_include_psymtab (const char *name, dwarf2_psymtab *pst,
   subpst->dependencies = objfile->partial_symtabs->allocate_dependencies (1);
   subpst->dependencies[0] = pst;
   subpst->number_of_dependencies = 1;
-
-  /* No private part is necessary for include psymtabs.  This property
-     can be used to differentiate between such include psymtabs and
-     the regular ones.  */
-  subpst->per_cu_data = nullptr;
 }
 
 /* Read the Line Number Program data and extract the list of files
@@ -8828,24 +8885,13 @@ process_queue (struct dwarf2_per_objfile *dwarf2_per_objfile)
 void
 dwarf2_psymtab::expand_psymtab (struct objfile *objfile)
 {
-  struct dwarf2_per_cu_data *per_cu;
-
   if (readin)
     return;
 
   read_dependencies (objfile);
 
-  per_cu = per_cu_data;
-
-  if (per_cu == NULL)
-    {
-      /* It's an include file, no symbols to read for it.
-         Everything is in the parent symtab.  */
-      readin = true;
-      return;
-    }
-
-  dw2_do_instantiate_symtab (per_cu, false);
+  dw2_do_instantiate_symtab (per_cu_data, false);
+  gdb_assert (get_compunit_symtab () != nullptr);
 }
 
 /* Trivial hash function for die_info: the hash value of a DIE
@@ -22212,14 +22258,11 @@ follow_die_ref (struct die_info *src_die, const struct attribute *attr,
   return die;
 }
 
-/* Return DWARF block referenced by DW_AT_location of DIE at SECT_OFF at PER_CU.
-   Returned value is intended for DW_OP_call*.  Returned
-   dwarf2_locexpr_baton->data has lifetime of
-   PER_CU->DWARF2_PER_OBJFILE->OBJFILE.  */
+/* See read.h.  */
 
 struct dwarf2_locexpr_baton
 dwarf2_fetch_die_loc_sect_off (sect_offset sect_off,
-			       struct dwarf2_per_cu_data *per_cu,
+			       dwarf2_per_cu_data *per_cu,
 			       CORE_ADDR (*get_frame_pc) (void *baton),
 			       void *baton, bool resolve_abstract_p)
 {
@@ -22318,12 +22361,11 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off,
   return retval;
 }
 
-/* Like dwarf2_fetch_die_loc_sect_off, but take a CU
-   offset.  */
+/* See read.h.  */
 
 struct dwarf2_locexpr_baton
 dwarf2_fetch_die_loc_cu_off (cu_offset offset_in_cu,
-			     struct dwarf2_per_cu_data *per_cu,
+			     dwarf2_per_cu_data *per_cu,
 			     CORE_ADDR (*get_frame_pc) (void *baton),
 			     void *baton)
 {
@@ -22351,15 +22393,12 @@ write_constant_as_bytes (struct obstack *obstack,
   return result;
 }
 
-/* If the DIE at OFFSET in PER_CU has a DW_AT_const_value, return a
-   pointer to the constant bytes and set LEN to the length of the
-   data.  If memory is needed, allocate it on OBSTACK.  If the DIE
-   does not have a DW_AT_const_value, return NULL.  */
+/* See read.h.  */
 
 const gdb_byte *
 dwarf2_fetch_constant_bytes (sect_offset sect_off,
-			     struct dwarf2_per_cu_data *per_cu,
-			     struct obstack *obstack,
+			     dwarf2_per_cu_data *per_cu,
+			     obstack *obstack,
 			     LONGEST *len)
 {
   struct dwarf2_cu *cu;
@@ -22484,12 +22523,11 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
   return result;
 }
 
-/* Return the type of the die at OFFSET in PER_CU.  Return NULL if no
-   valid type for this die is found.  */
+/* See read.h.  */
 
 struct type *
 dwarf2_fetch_die_type_sect_off (sect_offset sect_off,
-				struct dwarf2_per_cu_data *per_cu)
+				dwarf2_per_cu_data *per_cu)
 {
   struct dwarf2_cu *cu;
   struct die_info *die;

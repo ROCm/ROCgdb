@@ -1,3 +1,62 @@
+2020-02-26  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (struct dwarf2_include_psymtab): New.
+	(dwarf2_create_include_psymtab): Use dwarf2_include_psymtab.
+	(dwarf2_psymtab::expand_psymtab, dwarf2_psymtab::readin_p)
+	(dwarf2_psymtab::get_compunit_symtab): Remove null checks for
+	per_cu_data.
+
+2020-02-26  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/index-write.c (psym_index_map): Change type.
+	(add_address_entry_worker, write_one_signatured_type)
+	(recursively_count_psymbols, recursively_write_psymbols)
+	(class debug_names, psyms_seen_size, write_gdbindex)
+	(write_debug_names): Use partial_symtab, not dwarf2_psymtab.
+
+2020-02-26  Aaron Merey  <amerey@redhat.com>
+
+	* Makefile.in: Handle optional debuginfod support.
+	* NEWS: Update.
+	* README: Add --with-debuginfod summary.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+	* configure.ac: Handle optional debuginfod support.
+	* debuginfod-support.c: debuginfod helper functions.
+	* debuginfod-support.h: Ditto.
+	* doc/gdb.texinfo: Add --with-debuginfod to configure options
+	summary.
+	* dwarf2/read.c (dwarf2_get_dwz_file): Query debuginfod servers
+	when a dwz file cannot be found.
+	* elfread.c (elf_symfile_read): Query debuginfod servers when a
+	debuginfo file cannot be found.
+	* source.c (open_source_file): Query debuginfod servers when a
+	source file cannot be found.
+	* top.c (print_gdb_configuration): Include
+	--{with,without}-debuginfod in the output.
+
+2020-02-26  Jérémie Galarneau  <jeremie.galarneau@efficios.com>
+
+	* thread.c (thr_try_catch_cmd): Print thread name.
+
+2020-02-26  Simon Marchi  <simon.marchi@efficios.com>
+
+	* dwarf2/loc.h (dwarf2_fetch_die_loc_sect_off,
+	dwarf2_fetch_die_loc_cu_off, dwarf2_fetch_constant_bytes,
+	dwarf2_fetch_die_type_sect_off): Move to...
+	* dwarf2/read.h (dwarf2_fetch_die_loc_sect_off,
+	dwarf2_fetch_die_loc_cu_off, dwarf2_fetch_constant_bytes,
+	dwarf2_fetch_die_type_sect_off): ... here.
+	* dwarf2/read.c (dwarf2_fetch_die_loc_sect_off,
+	dwarf2_fetch_die_loc_cu_off, dwarf2_fetch_constant_bytes,
+	dwarf2_fetch_die_type_sect_off): Move doc to header file.
+
+2020-02-26  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/25603
+	* symfile.c (set_initial_language): Exit-early if
+	language_mode == language_mode_manual.
+
 2020-02-25  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* dwarf2/loc.h (dwarf2_read_addr_index): Move...
