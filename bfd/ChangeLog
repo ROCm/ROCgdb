@@ -1,3 +1,38 @@
+2020-02-28  Alan Modra  <amodra@gmail.com>
+
+	* vms-lib.c (_bfd_vms_lib_archive_p): Free memory on error paths.
+
+2020-02-28  Alan Modra  <amodra@gmail.com>
+
+	* vms-alpha.c (alpha_vms_object_p): Use _bfd_malloc_and_read.
+	Remove duplicate undersize check.
+
+2020-02-27  Alan Modra  <amodra@gmail.com>
+
+	PR 24511
+	* mmo.c (mmo_scan): Set SEC_DATA for .data.
+
+2020-02-27  Alan Modra  <amodra@gmail.com>
+
+	PR 24511
+	* syms.c (stt): Trim off all but 'e', 'i' and 'p' entries.
+	(coff_section_type): Adjust comment.
+	(decode_section_type): Likewise.  Call coff_section_type before
+	decode_section_type.
+	(bfd_decode_symclass): Use 'c' for common sections other than
+	the standard one.
+
+2020-02-27  Alan Modra  <amodra@gmail.com>
+
+	* coff-rs6000.c (_bfd_xcoff_read_ar_hdr): Put all data in one
+	malloc'd block.
+
+2020-02-27  Alan Modra  <amodra@gmail.com>
+
+	* bfd.c (bfd_stat_arch_elt): Use vector of containing archive,
+	if file is an archive element.
+	* bfd-in2.h: Regenerate.
+
 2020-02-26  Alan Modra  <amodra@gmail.com>
 
 	* archive.c (do_slurp_bsd_armap): Increase minimum parsed_size, and
