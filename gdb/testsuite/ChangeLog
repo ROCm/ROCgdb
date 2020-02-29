@@ -1,3 +1,31 @@
+2020-02-28  Simon Marchi  <simon.marchi@efficios.com>
+
+	* lib/trace-support.exp (get_in_proc_agent): Adjust path to
+	libinproctrace.so.
+
+2020-02-28  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.arch/aarch64-fp.exp: Switch from "info registers" command
+	to "p/x".
+
+2020-02-28  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.arch/aarch64-dbreg-contents.c: Include stdlib.h, unistd.h,
+	asm/ptrace.h and error.h.
+
+2020-02-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/c-linkage-name.c (main): Call do_something_other_cu.
+	(struct wrapper, do_something, mundane/symada__cS): Move ...
+	* gdb.base/c-linkage-name-2.c: ... here.  New source file.
+	* gdb.base/c-linkage-name.exp: Add verification of psymtab expansion.
+	Update "print symada__cS before partial symtab expansion" regexp.
+	Update breakpoint location.  Flush symbol cache after expansion.
+
+2020-02-28  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.arch/aarch64-pauth.exp: Recognize optional PAC output.
+
 2020-02-27  Tom de Vries  <tdevries@suse.de>
 
 	* config/sid.exp: Remove unused globals.
