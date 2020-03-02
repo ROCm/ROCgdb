@@ -1,3 +1,72 @@
+2020-03-02  Alan Modra  <amodra@gmail.com>
+
+	* coff-alpha.c (alpha_ecoff_le_vec): Add SEC_SMALL_DATA to
+	applicable section flags.
+	* coff-mips.c (mips_ecoff_le_vec, mips_ecoff_be_vec): Likewise.
+	(mips_ecoff_bele_vec): Likewise.
+	* coffcode.h (sec_to_styp_flags): Set SEC_SMALL_DATA for .sdata
+	and .sbss sections.
+	* ecoff.c (_bfd_ecoff_new_section_hook): Likewise.
+	(_bfd_ecoff_styp_to_sec_flags): Likewise.
+
+2020-03-02  Alan Modra  <amodra@gmail.com>
+
+	* elf32-m32r.c (m32r_elf_section_flags): New function.
+	(elf_backend_section_flags): Define.
+	* elf32-nds32.c (nds32_elf_section_flags): New function.
+	(elf_backend_section_flags): Define.
+	* elf32-ppc.c (ppc_elf_section_from_shdr): Set SEC_SMALL_DATA for
+	.sbss and .sdata sections.
+	* elf32-v850.c (v850_elf_section_from_shdr): Set SEC_SMALL_DATA
+	for SHF_V850_GPREL sections.
+	* elf64-alpha.c (elf64_alpha_section_from_shdr): Delete outdated
+	FIXME.
+	* elf64-hppa.c (elf64_hppa_section_from_shdr): Set SEC_SMALL_DATA
+	for SHF_PARISC_SHORT sections.
+	* elf64-ppc.c (ppc64_elf_section_flags): New function.
+	(elf_backend_section_flags): Define.
+	* elfxx-mips.c (_bfd_mips_elf_section_from_shdr): Set SEC_SMALL_DATA
+	for SHF_MIPS_GPREL sections.  Delete FIXME.
+
+2020-03-02  Alan Modra  <amodra@gmail.com>
+
+	* elf-bfd.h (elf_backend_section_flags): Remove flagword* param.
+	* elf.c (_bfd_elf_make_section_from_shdr): Set section flags before
+	calling elf_backend_section_flags with adjusted params.  Use
+	newsect->flags past that point.
+	(_bfd_elf_new_section_hook): Always set sh_type and sh_flags for
+	special sections.
+	(_bfd_elf_init_private_section_data): Allow normal sh_type sections
+	to have their type overridden, and all sh_flags but processor and
+	os specific.
+	* elf32-arm.c (elf32_arm_section_flags): Adjust for changed params.
+	* elf32-mep.c (mep_elf_section_flags): Likewise.
+	* elf32-nios2.c (nios2_elf32_section_flags): Likewise.
+	* elf64-alpha.c (elf64_alpha_section_flags): Likewise.
+	* elf64-ia64-vms.c (elf64_ia64_section_flags): Likewise.
+	* elfnn-ia64.c (elfNN_ia64_section_flags): Likewise.
+	* elfnn-aarch64.c (elfNN_aarch64_size_stubs): Exclude the linker
+	stub BFD and non-aarch64 input files when scanning for stubs.
+
+2020-03-02  Alan Modra  <amodra@gmail.com>
+
+	* coff-alpha.c (alpha_ecoff_get_elt_at_filepos): Provide an upper
+	limit to decompressed element size.
+
+2020-03-02  Alan Modra  <amodra@gmail.com>
+
+	* vms-lib.c (vms_traverse_index): Add recur_count param and
+	update calls.  Fail on excessive recursion.
+
+2020-03-02  Alan Modra  <amodra@gmail.com>
+
+	* vms-alpha.c (vms_get_remaining_object_record): Use
+	bfd_realloc_or_free rather than bfd_realloc.
+	(add_symbol_entry, vector_grow1, alpha_vms_slurp_relocs): Likewise.
+	(dst_define_location, parse_module): Likewise, and check realloc
+	return status before using memory.  Return status from function
+	adjusting all callers.
+
 2020-02-28  Alan Modra  <amodra@gmail.com>
 
 	* vms-lib.c (_bfd_vms_lib_archive_p): Free memory on error paths.
