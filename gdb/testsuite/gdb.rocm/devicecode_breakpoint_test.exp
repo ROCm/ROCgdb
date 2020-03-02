@@ -94,7 +94,7 @@ clean_restart ${binfile}
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sbit_extract_kernel\s\(.*\)\sat.*}
 send_gdb "info threads\n"
-gdb_expect -re  "\\s+(\\d+)\\s+ROCm Thread\\s+(\\d+\.\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
+gdb_expect -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\.\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
   set threadid "$expect_out(1,string)"
   set rocm_threadno "$expect_out(2,string)"
   set wave_id  "$expect_out(3,string)"
