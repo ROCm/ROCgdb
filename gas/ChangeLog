@@ -1,3 +1,27 @@
+2020-03-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/25622
+	* testsuite/gas/i386/i386.exp: Run x86-64-default-suffix and
+	x86-64-default-suffix-avx.
+	* testsuite/gas/i386/noreg64.s: Remove cvtsi2sd, cvtsi2ss,
+	vcvtsi2sd, vcvtsi2ss, vcvtusi2sd and vcvtusi2ss entries.
+	* testsuite/gas/i386/noreg64.d: Updated.
+	* testsuite/gas/i386/noreg64.l: Likewise.
+	* testsuite/gas/i386/x86-64-default-suffix-avx.d: New file.
+	* testsuite/gas/i386/x86-64-default-suffix.d: Likewise.
+	* testsuite/gas/i386/x86-64-default-suffix.s: Likewise.
+
+2020-03-03  Sergey Belyashov  <sergey.belyashov@gmail.com>
+
+	PR 25604
+	* config/tc-z80.c (contains_register): Prevent an illegal memory
+	access when checking an expression for a register name.
+
+2020-03-03  Alan Modra  <amodra@gmail.com>
+
+	* config/obj-coff.h: Remove vestiges of coff-m68k and pe-mips
+	support.
+
 2020-03-02  Alan Modra  <amodra@gmail.com>
 
 	* config/tc-m32r.c (md_begin): Set SEC_SMALL_DATA on .scommon section.

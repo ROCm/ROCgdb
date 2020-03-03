@@ -1,3 +1,41 @@
+2020-03-03  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/gdb2549.exp: Fix "register values t" check-read1 timeout.
+
+2020-03-03  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/list-thread-groups-available.exp: Use -prompt syntax for
+	gdb_test_multiple call.
+
+2020-03-03  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/mi-sym-info.exp: Add missing -prompt "$mi_gdb_prompt$" to
+	gdb_test_multiple calls.
+
+2020-03-02  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/default.exp: Remove test of 'set history filename'.
+	* gdb.base/gdbinit-history.exp: Add tests for setting the history
+	filename to the empty string.
+	* lib/gdb.exp (gdb_init): Unset environment variables GDBHISTFILE
+	and GDBHISTSIZE.
+
+2020-03-02  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.server/stop-reply-no-thread.exp: Add test where T packet is
+	disabled.
+
+2020-03-02  Pedro Alves  <palves@redhat.com>
+	      Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_test_multiple): Handle prompt_regexp option using
+	-prompt prefix, before user_code argument.  Add -lbl option likewise.
+	(skip_python_tests_prompt, skip_libstdcxx_probe_tests_prompt)
+	(gdb_is_target_1): Add -prompt prefix and move to before user_code
+	argument.
+	* gdb.base/corefile-buildid.exp: Use -lbl option.  Rewrite regexps to
+	have "\r\n" at start-of-line, instead of at end-of-line.
+
 2020-02-28  Simon Marchi  <simon.marchi@efficios.com>
 
 	* lib/trace-support.exp (get_in_proc_agent): Adjust path to

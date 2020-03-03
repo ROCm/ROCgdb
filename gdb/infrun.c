@@ -1557,8 +1557,7 @@ infrun_inferior_exit (struct inferior *inf)
    doesn't support it, GDB will instead use the traditional
    hold-and-step approach.  If AUTO (which is the default), GDB will
    decide which technique to use to step over breakpoints depending on
-   which of all-stop or non-stop mode is active --- displaced stepping
-   in non-stop mode; hold-and-step in all-stop mode.  */
+   whether the target works in a non-stop way (see use_displaced_stepping).  */
 
 static enum auto_boolean can_use_displaced_stepping = AUTO_BOOLEAN_AUTO;
 
@@ -1578,23 +1577,53 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
 			"to step over breakpoints is %s.\n"), value);
 }
 
+/* Return true if the gdbarch implements the required methods to use
+   displaced stepping.  */
+
+static bool
+gdbarch_supports_displaced_stepping (gdbarch *arch)
+{
+  /* Only check for the presence of step_copy_insn.  Other required methods
+     are checked by the gdbarch validation.  */
+  return gdbarch_displaced_step_copy_insn_p (arch);
+}
+
 /* Return non-zero if displaced stepping can/should be used to step
    over breakpoints of thread TP.  */
 
-static int
-use_displaced_stepping (struct thread_info *tp)
+static bool
+use_displaced_stepping (thread_info *tp)
 {
-  struct regcache *regcache = get_thread_regcache (tp);
-  struct gdbarch *gdbarch = regcache->arch ();
+  /* If the user disabled it explicitly, don't use displaced stepping.  */
+  if (can_use_displaced_stepping == AUTO_BOOLEAN_FALSE)
+    return false;
+
+  /* If "auto", only use displaced stepping if the target operates in a non-stop
+     way.  */
+  if (can_use_displaced_stepping == AUTO_BOOLEAN_AUTO
+      && !target_is_non_stop_p ())
+    return false;
+
+  gdbarch *gdbarch = get_thread_regcache (tp)->arch ();
+
+  /* If the architecture doesn't implement displaced stepping, don't use
+     it.  */
+  if (!gdbarch_supports_displaced_stepping (gdbarch))
+    return false;
+
+  /* If recording, don't use displaced stepping.  */
+  if (find_record_target () != nullptr)
+    return false;
+
   displaced_step_inferior_state *displaced_state
     = get_displaced_stepping_state (tp->inf);
 
-  return (((can_use_displaced_stepping == AUTO_BOOLEAN_AUTO
-	    && target_is_non_stop_p ())
-	   || can_use_displaced_stepping == AUTO_BOOLEAN_TRUE)
-	  && gdbarch_displaced_step_copy_insn_p (gdbarch)
-	  && find_record_target () == NULL
-	  && !displaced_state->failed_before);
+  /* If displaced stepping failed before for this inferior, don't bother trying
+     again.  */
+  if (displaced_state->failed_before)
+    return false;
+
+  return true;
 }
 
 /* Simple function wrapper around displaced_step_inferior_state::reset.  */
@@ -1651,7 +1680,7 @@ displaced_step_prepare_throw (thread_info *tp)
 
   /* We should never reach this function if the architecture does not
      support displaced stepping.  */
-  gdb_assert (gdbarch_displaced_step_copy_insn_p (gdbarch));
+  gdb_assert (gdbarch_supports_displaced_stepping (gdbarch));
 
   /* Nor if the thread isn't meant to step over a breakpoint.  */
   gdb_assert (tp->control.trap_expected);
@@ -3457,6 +3486,12 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
   ptid_t event_ptid;
   struct thread_info *tp;
 
+  /* We know that we are looking for an event in the target of inferior
+     INF, but we don't know which thread the event might come from.  As
+     such we want to make sure that INFERIOR_PTID is reset so that none of
+     the wait code relies on it - doing so is always a mistake.  */
+  switch_to_inferior_no_thread (inf);
+
   /* First check if there is a resumed thread with a wait status
      pending.  */
   if (ptid == minus_one_ptid || ptid.is_pid ())
@@ -3652,8 +3687,6 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 
   auto do_wait = [&] (inferior *inf)
   {
-    switch_to_inferior_no_thread (inf);
-
     ecs->ptid = do_target_wait_1 (inf, wait_ptid, &ecs->ws, options);
     ecs->target = inf->process_target ();
     return (ecs->ws.kind != TARGET_WAITKIND_IGNORE);
