@@ -17,7 +17,7 @@
 
 load_lib rocm.exp
 
-set testfile "bit_extract_compile"
+set testfile "show-info"
 set srcfile ${srcdir}/${subdir}/${testfile}.cpp
 set objfile [standard_output_file ${testfile}.o]
 set binfile [standard_output_file ${testfile}]
