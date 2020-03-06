@@ -1,3 +1,90 @@
+2020-03-04  Tom Tromey  <tom@tromey.com>
+
+	* symmisc.c (print_symbol_bcache_statistics)
+	(print_objfile_statistics): Update.
+	* symfile.c (allocate_symtab): Use intern.
+	* psymtab.c (partial_symtab::partial_symtab): Use intern.
+	* objfiles.h (struct objfile_per_bfd_storage) <filename_cache,
+	macro_cache>: Remove.
+	<string_cache>: New member.
+	(struct objfile) <intern>: New methods.
+	* elfread.c (elf_symtab_read): Use intern.
+	* dwarf2/read.c (fixup_go_packaging): Intern package name.
+	(dwarf2_compute_name, dwarf2_physname)
+	(create_dwo_unit_in_dwp_v1, create_dwo_unit_in_dwp_v2): Intern
+	names.
+	(guess_partial_die_structure_name): Update.
+	(partial_die_info::fixup): Intern name.
+	(dwarf2_canonicalize_name): Change parameter to objfile.  Intern
+	name.
+	(dwarf2_name): Intern name.  Update.
+	* buildsym.c (buildsym_compunit::get_macro_table): Use
+	string_cache.
+
+2020-03-04  Tom Tromey  <tom@tromey.com>
+
+	* jit.c (bfd_open_from_target_memory): Make "target" const.
+	* corefile.c (gnutarget): Now const.
+	* gdbcore.h (gnutarget): Now const.
+
+2020-03-04  Hannes Domani  <ssbssa@yahoo.de>
+
+	* NEWS: Mention support for WOW64 processes.
+	* amd64-windows-nat.c (amd64_mappings): Rename and remove static.
+	(amd64_windows_segment_register_p): Remove static.
+	(_initialize_amd64_windows_nat): Update.
+	* configure.nat <windows> (NATDEPFILES): Add i386-windows-nat.o.
+	* i386-windows-nat.c (context_offset): Update.
+	(i386_mappings): Rename and remove static.
+	(i386_windows_segment_register_p): Remove static.
+	(_initialize_i386_windows_nat): Update.
+	* windows-nat.c (STATUS_WX86_BREAKPOINT): New macro.
+	(STATUS_WX86_SINGLE_STEP): New macro.
+	(EnumProcessModulesEx): New macro.
+	(Wow64SuspendThread): New macro.
+	(Wow64GetThreadContext): New macro.
+	(Wow64SetThreadContext): New macro.
+	(Wow64GetThreadSelectorEntry): New macro.
+	(windows_set_context_register_offsets): Add static.
+	(windows_set_segment_register_p): Likewise.
+	(windows_add_thread): Adapt for WOW64 processes.
+	(windows_fetch_one_register): Likewise.
+	(windows_nat_target::fetch_registers): Likewise.
+	(windows_store_one_register): Likewise.
+	(display_selector): Likewise.
+	(display_selectors): Likewise.
+	(handle_exception): Likewise.
+	(windows_continue): Likewise.
+	(windows_nat_target::resume): Likewise.
+	(windows_add_all_dlls): Likewise.
+	(do_initial_windows_stuff): Likewise.
+	(windows_nat_target::attach): Likewise.
+	(windows_get_exec_module_filename): Likewise.
+	(windows_nat_target::create_inferior): Likewise.
+	(windows_xfer_siginfo): Likewise.
+	(_initialize_loadable): Initialize Wow64SuspendThread,
+	Wow64GetThreadContext, Wow64SetThreadContext,
+	Wow64GetThreadSelectorEntry and EnumProcessModulesEx.
+	* windows-nat.h (windows_set_context_register_offsets):
+	Remove declaration.
+	(windows_set_segment_register_p): Likewise.
+	(i386_windows_segment_register_p): Add declaration.
+	(amd64_windows_segment_register_p): Likewise.
+
+2020-03-04  Luis Machado  <luis.machado@linaro.org>
+
+	Revert aa66aac47b4dd38f9524ddb5546c08cc09930d37 due to regressions
+	in "info registers" for AArch64/ARM.
+
+	The change caused "info registers" to not print GPR's.
+
+	gdb/ChangeLog:
+
+	2020-02-01  Shahab Vahedi  <shahab@synopsys.com>
+
+	* target-descriptions.c (tdesc_register_in_reggroup_p): Return 0
+	when reg->group is empty and reggroup is not.
+
 2020-03-03  Tom Tromey  <tromey@adacore.com>
 
 	* dwarf2/frame.c (struct dwarf2_frame_cache)
