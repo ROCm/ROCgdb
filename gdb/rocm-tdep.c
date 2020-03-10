@@ -84,6 +84,9 @@ struct rocm_inferior_info
   /* True if commit_resume should all-start the GPU queues.  */
   bool commit_resume_all_start;
 
+  /* True is the inferior has exited.  */
+  bool has_exited{ false };
+
   std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
                      struct breakpoint *>
       breakpoint_map;
@@ -1215,6 +1218,7 @@ static void
 rocm_target_inferior_exit (struct inferior *inf)
 {
   auto *info = get_rocm_inferior_info (inf);
+  info->has_exited = true;
 
   amd_dbgapi_deactivated.notify ();
 
@@ -1245,6 +1249,10 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   .get_os_pid = [] (amd_dbgapi_client_process_id_t client_process_id,
                     pid_t *pid) -> amd_dbgapi_status_t {
     inferior *inf = static_cast<inferior *> (client_process_id);
+    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+
+    if (info->has_exited)
+      return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
 
     *pid = inf->pid;
     return AMD_DBGAPI_STATUS_SUCCESS;
