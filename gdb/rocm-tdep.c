@@ -476,7 +476,7 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
                  AMD_DBGAPI_ARCHITECTURE_INFO_DEFAULT_GLOBAL_ADDRESS_SPACE,
                  sizeof (address_space_id), &address_space_id)
                  != AMD_DBGAPI_STATUS_SUCCESS)
-        error (_ ("Couldn't get default global address space"));
+        return TARGET_XFER_EOF;
 
       size_t len = requested_len;
       amd_dbgapi_status_t status;
@@ -489,12 +489,7 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
             process_id, wave_id, 0, address_space_id, offset, &len, writebuf);
 
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
-        {
-          if (status != AMD_DBGAPI_STATUS_ERROR_MEMORY_ACCESS)
-            error (_ ("amd_dbgapi_%s_memory failed (rc=%d"),
-                   readbuf ? "read" : "write", status);
-          return TARGET_XFER_EOF;
-        }
+        return TARGET_XFER_EOF;
 
       *xfered_len = len;
       return TARGET_XFER_OK;
