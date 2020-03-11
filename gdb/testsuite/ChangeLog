@@ -1,3 +1,25 @@
+2020-03-11  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/access_to_packed_array.exp: Test printing of expanded
+	symtabs.
+
+2020-03-10  Andrew Burgess  <andrew.burgess@embecosm.com>
+	    Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* gdb.cp/step-and-next-inline.cc: New file.
+	* gdb.cp/step-and-next-inline.exp: New file.
+	* gdb.cp/step-and-next-inline.h: New file.
+	* gdb.dwarf2/dw2-is-stmt.c: New file.
+	* gdb.dwarf2/dw2-is-stmt.exp: New file.
+	* gdb.dwarf2/dw2-is-stmt-2.c: New file.
+	* gdb.dwarf2/dw2-is-stmt-2.exp: New file.
+	* gdb.dwarf2/dw2-ranges-base.exp: Update line table pattern.
+
+2020-03-10  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/dwarf.exp (Dwarf::lines) Add support for modifying the
+	is-stmt flag in the line table.
+
 2020-03-09  Tom de Vries  <tdevries@suse.de>
 
 	* lib/gdb.exp (cached_file): Create cache dir.
