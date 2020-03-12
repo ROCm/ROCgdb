@@ -1,3 +1,96 @@
+2020-03-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* NEWS: Mention x86 assembler options for CVE-2020-0551.
+
+2020-03-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/gas/i386/i386.exp: Run new tests.
+	* testsuite/gas/i386/lfence-byte.d: New file.
+	* testsuite/gas/i386/lfence-byte.e: Likewise.
+	* testsuite/gas/i386/lfence-byte.s: Likewise.
+	* testsuite/gas/i386/lfence-indbr-a.d: Likewise.
+	* testsuite/gas/i386/lfence-indbr-b.d: Likewise.
+	* testsuite/gas/i386/lfence-indbr-c.d: Likewise.
+	* testsuite/gas/i386/lfence-indbr.e: Likewise.
+	* testsuite/gas/i386/lfence-indbr.s: Likewise.
+	* testsuite/gas/i386/lfence-load.d: Likewise.
+	* testsuite/gas/i386/lfence-load.s: Likewise.
+	* testsuite/gas/i386/lfence-ret-a.d: Likewise.
+	* testsuite/gas/i386/lfence-ret-b.d: Likewise.
+	* testsuite/gas/i386/lfence-ret.s: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-byte.d: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-byte.e: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-byte.s: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-indbr-a.d: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-indbr-b.d: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-indbr-c.d: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-indbr.e: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-indbr.s: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-load.d: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-load.s: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-ret-a.d: Likewise.
+	* testsuite/gas/i386/x86-64-lfence-ret-b.d: Likewise.
+
+2020-03-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (lfence_after_load): New.
+	(lfence_before_indirect_branch_kind): New.
+	(lfence_before_indirect_branch): New.
+	(lfence_before_ret_kind): New.
+	(lfence_before_ret): New.
+	(last_insn): New.
+	(load_insn_p): New.
+	(insert_lfence_after): New.
+	(insert_lfence_before): New.
+	(md_assemble): Call insert_lfence_before and insert_lfence_after.
+	Set last_insn.
+	(OPTION_MLFENCE_AFTER_LOAD): New.
+	(OPTION_MLFENCE_BEFORE_INDIRECT_BRANCH): New.
+	(OPTION_MLFENCE_BEFORE_RET): New.
+	(md_longopts): Add -mlfence-after-load=,
+	-mlfence-before-indirect-branch= and -mlfence-before-ret=.
+	(md_parse_option): Handle -mlfence-after-load=,
+	-mlfence-before-indirect-branch= and -mlfence-before-ret=.
+	(md_show_usage): Display -mlfence-after-load=,
+	-mlfence-before-indirect-branch= and -mlfence-before-ret=.
+	(i386_cons_align): New.
+	* config/tc-i386.h (i386_cons_align): New.
+	(md_cons_align): New.
+	* doc/c-i386.texi: Document -mlfence-after-load=,
+	-mlfence-before-indirect-branch= and -mlfence-before-ret=.
+
+2020-03-11  Nick Clifton  <nickc@redhat.com>
+
+	PR 25611
+	PR 25614
+	* dwarf2dbg.c (DWARF2_FILE_TIME_NAME): Default to -1.
+	(DWARF2_FILE_SIZE_NAME): Default to -1.
+	(DWARF2_LINE_VERSION): Default to the current dwarf level or 3,
+	whichever is higher.
+	(DWARF2_LINE_MAX_OPS_PER_INSN): Provide a default value of 1.
+	(NUM_MD5_BYTES): Define.
+	(struct file entry): Add md5 field.
+	(get_filenum): Delete and replace with...
+	(get_basename): New function.
+	(get_directory_table_entry): New function.
+	(allocate_filenum): New function.
+	(allocate_filename_to_slot): New function.
+	(dwarf2_where): Use new functions.
+	(dwarf2_directive_filename): Add support for extended .file
+	pseudo-op.
+	(dwarf2_directive_loc): Allow the use of file number zero with
+	DWARF 5 or higher.
+	(out_file_list): Rename to...
+	(out_dir_and_file_list): Add DWARF 5 support.
+	(out_debug_line): Emit extra values into the section header for
+	DWARF 5.
+	(out_debug_str): Allow for file 0 to be used with DWARF 5.
+	* doc/as.texi (.file): Update the description of this pseudo-op.
+	* testsuite/gas/elf-dwarf-5-file0.s: Add more lines.
+	* testsuite/gas/elf-dwarf-5-file0.d: Update expected dump output.
+	* testsuite/gas/lns/lns-diag-1.l: Update expected error message.
+	* NEWS: Mention the new feature.
+
 2020-03-10  Alan Modra  <amodra@gmail.com>
 
 	* config/tc-csky.c (get_operand_value): Rewrite 1 << 31 expressions
