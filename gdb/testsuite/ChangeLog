@@ -1,3 +1,77 @@
+2020-03-13  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/mi-sym-info.exp: Fix buffer full errors, and timeouts.
+
+2020-03-13  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/mi-sym-info.exp: Make matching more precise.
+
+2020-03-13  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25646
+	* gdb.dwarf2/imported-unit.exp: Add test.
+
+2020-03-13  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/mi-sym-info-2.c (another_char_t, another_short_t): New typedef.
+	(var1, var2): New variable.
+	* gdb.mi/mi-sym-info.exp: Add --name to various commands to restrict
+	matching symbols.
+
+2020-03-13  Tom de Vries  <tdevries@suse.de>
+
+	* lib/tuiterm.exp (Term::command_no_prompt_prefix): New proc.
+	(Term::command): Use prompt prefix.
+	(Term::enter_tui): Use command_no_prompt_prefix instead of prefix.
+	* gdb.tui/tui-layout-asm-short-prog.exp: Use
+	command_no_prompt_prefix instead of prefix.
+	* gdb.tui/tui-layout-asm.exp: Same.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.base/break-interp.exp: Use foreach_with_prefix.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.arch/amd64-disp-step-avx.S: Add nops after _start.
+	* gdb.arch/amd64-disp-step-avx.exp: Enable "set debug displaced
+	on" while stepping over the test instruction, match printed
+	message.
+
+2020-03-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/info-types.exp: Use exp_continue during matching of output
+	of "info types".
+
+2020-03-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.threads/execl.exp: Delete breakpoint after hitting it.
+
+2020-03-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.fortran/module.exp: Use exp_continue during matching of output
+	of "info variable -n".
+
+2020-03-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-ranges-base.exp: Limit "maint info line-table" to
+	gdb.dwarf2/dw2-ranges-base.c.
+
+2020-03-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.linespec/explicit.exp: Fix "complete non-unique file name" test
+	in presence of GLIBC debuginfo.
+
+2020-03-12  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_core_cmd): Use string_to_regexp for regexp-matching
+	$core.
+
+2020-03-12  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_core_cmd): Make "No such file or directory" regexp
+	more precise.
+
 2020-03-11  Simon Marchi  <simon.marchi@efficios.com>
 
 	* lib/gdb.exp (standard_output_file): Use `pwd -W` to convert

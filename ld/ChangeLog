@@ -1,3 +1,62 @@
+2020-03-13  Christophe Lyon  <christophe.lyon@linaro.org>
+
+	* ldlang.c (lang_add_section): Add support for
+	non_contiguous_regions.
+	(size_input_section): Likewise.
+	(lang_size_sections_1): Likewise.
+	(process_insert_statements): Likewise.
+	* ldlex.h (option_values): Add OPTION_NON_CONTIGUOUS_REGIONS and
+	OPTION_NON_CONTIGUOUS_REGIONS_WARNINGS.
+	* lexsup.c (ld_options): Add entries for
+	--enable-non-contiguous-regions and
+	--enable-non-contiguous-regions-warnings.
+	(parse_args): Handle it.
+	* NEWS: Add --enable-non-contiguous-regions and
+	--enable-non-contiguous-regions-warnings.
+	* ld.texi: Add --enable-non-contiguous-regions and
+	--enable-non-contiguous-regions-warnings documentation.
+	* emultempl/armelf.em (elf32_arm_add_stub_section): Add
+	SEC_LINKER_CREATED flag.
+	* emultempl/xtensaelf.em (ld_build_required_section_dependence):
+	Emit an error when --enable-non-contiguous-regions is used.
+	* testsuite/ld-elf/non-contiguous.d: New.
+	* testsuite/ld-elf/non-contiguous.ld: New.
+	* testsuite/ld-elf/non-contiguous.s: New.
+	* testsuite/ld-arm/arm-elf.exp: Run the new tests.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm.s: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm.d: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm.ld: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm2.d: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm3.ld: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm3.d: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm3.ld: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm4.d: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm4.ld: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm5.d: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm5.ld: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm6.d: New.
+	* testsuite/ld-arm/arm-elf/non-contiguous-arm6.ld: New.
+	* testsuite/ld-powerpc/powerpc.exp: Run new tests.
+	* testsuite/ld-powerpc/non-contiguous-powerpc.d: New.
+	* testsuite/ld-powerpc/non-contiguous-powerpc.ld: New.
+	* testsuite/ld-powerpc/non-contiguous-powerpc.sd: New.
+	* testsuite/ld-powerpc/non-contiguous-powerpc64.d: New.
+
+2020-03-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/24920
+	* emulparams/elf32_x86_64.sh: Use static.sh.
+	* emulparams/elf_i386.sh: Likewise.
+	* emulparams/elf_x86_64.sh: Likewise.
+	* emulparams/static.sh: New file.
+	* emultempl/elf-x86.em: Include "ldlex.h".
+	* testsuite/ld-elf/pr24920.err: New file.
+	* testsuite/ld-elf/linux-x86.exp: Run ld/24920 tests.
+
+2020-03-13  Christian Eggers  <ceggers@gmx.de>
+
+	* ldexp.c (fold_name): Return SIZEOF_HEADERS in bytes.
+
 2020-03-11  Alan Modra  <amodra@gmail.com>
 
 	* ldelf.c (elf_orphan_compatible): Return false when two sections

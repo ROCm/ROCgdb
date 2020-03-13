@@ -1,3 +1,112 @@
+2020-03-13  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25646
+	* psymtab.c (partial_symtab::partial_symtab): Don't set
+	globals_offset and statics_offset.  Push element onto
+	current_global_psymbols and current_static_psymbols stacks.
+	(concat): New function.
+	(end_psymtab_common): Set globals_offset and statics_offset.  Pop
+	element from current_global_psymbols and current_static_psymbols
+	stacks.  Concat popped elements to global_psymbols and
+	static_symbols.
+	(add_psymbol_to_list): Use current_global_psymbols and
+	current_static_psymbols stacks.
+	* psymtab.h (class psymtab_storage): Add current_global_psymbols and
+	current_static_psymbols fields.
+
+2020-03-12  Christian Biesinger  <cbiesinger@google.com>
+
+	* corelow.c (sniff_core_bfd): Remove.
+	(class core_target) <m_core_vec>: Remove.
+	(core_target::core_target): Update.
+	(core_file_fns): Remove.
+	(deprecated_add_core_fns): Remove.
+	(default_core_sniffer): Remove.
+	(sniff_core_bfd): Remove.
+	(default_check_format): Remove.
+	(gdb_check_format): Remove.
+	(core_target_open): Update.
+	(core_target::get_core_register_section): Update.
+	(get_core_registers_cb): Update.
+	(core_target::fetch_registers): Update.
+	* gdbcore.h (struct core_fns): Remove.
+	(deprecated_add_core_fns): Remove.
+	(default_core_sniffer): Remove.
+	(default_check_format): Remove.
+
+2020-03-12  Tom Tromey  <tom@tromey.com>
+
+	* arm-tdep.c (struct arm_mapping_symbol) <value>: Now a
+	CORE_ADDR.
+	(struct arm_exidx_entry) <addr>: Now a CORE_ADDR.
+
+2020-03-12  Tom Tromey  <tom@tromey.com>
+
+	* remote.c (remote_target::download_tracepoint)
+	(remote_target::enable_tracepoint)
+	(remote_target::disable_tracepoint): Use phex, not sprintf_vma.
+	* breakpoint.c (print_recreate_masked_watchpoint): Use phex, not
+	sprintf_vma.
+
+2020-03-12  Tom Tromey  <tom@tromey.com>
+
+	* symfile-mem.c: Update CORE_ADDR size assert.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* selftest.m4: Move to gdbsupport/.
+	* acinclude.m4: Update path to selftest.m4.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* Makefile.in (SUBDIR_UNITTESTS_SRCS): Rename to...
+	(SELFTESTS_SRCS): ... this.  Add disasm-selftests.c,
+	gdbarch-selfselftests.c and selftest-arch.c.
+	(SUBDIR_UNITTESTS_OBS): Rename to...
+	(SELFTESTS_OBS): ... this.
+	(COMMON_SFILES): Remove disasm-selftests.c and
+	gdbarch-selftests.c.
+	* configure.ac: Don't add selftest-arch.{c,o} to
+	CONFIG_{SRCS,OBS}.
+	* disasm-selftests.c, gdbarch-selftests.c: Remove GDB_SELF_TEST
+	preprocessor conditions.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* configure.ac: Don't source bfd/development.sh.
+	* selftest.m4: Modify comment.
+	* configure: Re-generate.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* selftest.m4 (GDB_AC_SELFTEST): Error out if $development is
+	not "true" or "false".
+	* configure: Re-generate.
+
+2020-03-12  Christian Biesinger  <cbiesinger@google.com>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Add new arm-nbsd-tdep.h file.
+	* arm-nbsd-nat.c (arm_supply_gregset): Moved to arm-nbsd-tdep and
+	renamed to arm_nbsd_supply_gregset.
+	(fetch_register): Update to call arm_nbsd_supply_gregset.
+	(fetch_regs): Remove in favor of fetch_register with a -1 regno.
+	(arm_netbsd_nat_target::fetch_registers): Update.
+	(fetch_elfcore_registers): Removed.
+	(_initialize_arm_netbsd_nat): Removed call to deprecated_add_core_fns.
+	* arm-nbsd-tdep.c (struct arm_nbsd_reg): New struct.
+	(arm_nbsd_supply_gregset): Moved from arm-nbsd-nat.c and updated to
+	not require NetBSD system headers.
+	(arm_nbsd_regset): New struct.
+	(arm_nbsd_iterate_over_regset_sections): New function.
+	(arm_netbsd_init_abi_common): Updated to call
+	set_gdbarch_iterate_over_regset_sections.
+	* arm-nbsd-tdep.h: New file.
+
+2020-03-11  Kevin Buettner  <kevinb@redhat.com>
+
+	* symtab.c (find_pc_sect_line): Add check which prevents infinite
+	recursion.
+	
 2020-03-11  Simon Marchi  <simon.marchi@efficios.com>
 
 	* configure: Re-generate.

@@ -10406,7 +10406,6 @@ static void
 print_recreate_masked_watchpoint (struct breakpoint *b, struct ui_file *fp)
 {
   struct watchpoint *w = (struct watchpoint *) b;
-  char tmp[40];
 
   switch (b->type)
     {
@@ -10424,8 +10423,8 @@ print_recreate_masked_watchpoint (struct breakpoint *b, struct ui_file *fp)
 		      _("Invalid hardware watchpoint type."));
     }
 
-  sprintf_vma (tmp, w->hw_wp_mask);
-  fprintf_unfiltered (fp, " %s mask 0x%s", w->exp_string, tmp);
+  fprintf_unfiltered (fp, " %s mask 0x%s", w->exp_string,
+		      phex (w->hw_wp_mask, sizeof (CORE_ADDR)));
   print_recreate_thread (b, fp);
 }
 

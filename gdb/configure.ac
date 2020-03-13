@@ -25,9 +25,6 @@ AC_INIT(main.c)
 AC_CONFIG_HEADERS(config.h:config.in, [echo > stamp-h])
 AM_MAINTAINER_MODE
 
-# Set the 'development' global.
-. $srcdir/../bfd/development.sh
-
 AC_PROG_CC
 AC_PROG_CXX
 
@@ -2164,8 +2161,8 @@ AC_DEFINE(GDB_DEFAULT_HOST_CHARSET, "UTF-8",
           [Define to be a string naming the default host character set.])
 
 GDB_AC_SELFTEST([
-  CONFIG_OBS="$CONFIG_OBS \$(SUBDIR_UNITTESTS_OBS) selftest-arch.o"
-  CONFIG_SRCS="$CONFIG_SRCS \$(SUBDIR_UNITTESTS_SRCS) selftest-arch.c"
+  CONFIG_OBS="$CONFIG_OBS \$(SELFTESTS_OBS)"
+  CONFIG_SRCS="$CONFIG_SRCS \$(SELFTESTS_SRCS)"
 ])
 
 GDB_AC_TRANSFORM([gdb], [GDB_TRANSFORM_NAME])

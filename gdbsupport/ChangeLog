@@ -1,3 +1,24 @@
+2020-03-12  Tom Tromey  <tom@tromey.com>
+
+	* common-types.h: Remove GDBSERVER code.
+	(gdb_byte, CORE_ADDR, LONGEST, ULONGEST): Redefine.
+	* common-defs.h: Remove GDBSERVER code.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* selftest.m4: Moved from gdb/.
+	* acinclude.m4: Update path to selftest.m4.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* configure.ac: Don't source bfd/development.sh.
+	* common.m4: Source bfd/development.sh.
+	* configure: Re-generate.
+
+2020-03-12  Simon Marchi  <simon.marchi@efficios.com>
+
+	* configure: Re-generate.
+
 2020-03-11  Simon Marchi  <simon.marchi@efficios.com>
 
 	* configure: Re-generate.
