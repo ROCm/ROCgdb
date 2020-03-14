@@ -1,3 +1,393 @@
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* value.h (val_print): Don't declare.
+	* valprint.h (val_print_array_elements)
+	(val_print_scalar_formatted, generic_val_print): Don't declare.
+	* valprint.c (generic_val_print_array): Take a struct value.
+	(generic_val_print_ptr, generic_val_print_memberptr)
+	(generic_val_print_bool, generic_val_print_int)
+	(generic_val_print_char, generic_val_print_complex)
+	(generic_val_print): Remove.
+	(generic_value_print): Update.
+	(do_val_print): Remove unused parameters.  Don't call
+	la_val_print.
+	(val_print): Remove.
+	(common_val_print): Update.  Don't call value_check_printable.
+	(val_print_scalar_formatted, val_print_array_elements): Remove.
+	* rust-lang.c (rust_val_print): Remove.
+	(rust_language_defn): Update.
+	* p-valprint.c (pascal_val_print): Remove.
+	(pascal_value_print_inner): Update.
+	(pascal_object_print_val_fields, pascal_object_print_val):
+	Remove.
+	(pascal_object_print_static_field): Update.
+	* p-lang.h (pascal_val_print): Don't declare.
+	* p-lang.c (pascal_language_defn): Update.
+	* opencl-lang.c (opencl_language_defn): Update.
+	* objc-lang.c (objc_language_defn): Update.
+	* m2-valprint.c (m2_print_unbounded_array, m2_val_print): Remove.
+	* m2-lang.h (m2_val_print): Don't declare.
+	* m2-lang.c (m2_language_defn): Update.
+	* language.h (struct language_defn) <la_val_print>: Remove.
+	* language.c (unk_lang_value_print_inner): Rename.  Change
+	argument types.
+	(unknown_language_defn, auto_language_defn): Update.
+	* go-valprint.c (go_val_print): Remove.
+	* go-lang.h (go_val_print): Don't declare.
+	* go-lang.c (go_language_defn): Update.
+	* f-valprint.c (f_val_print): Remove.
+	* f-lang.h (f_value_print): Don't declare.
+	* f-lang.c (f_language_defn): Update.
+	* d-valprint.c (d_val_print): Remove.
+	* d-lang.h (d_value_print): Don't declare.
+	* d-lang.c (d_language_defn): Update.
+	* cp-valprint.c (cp_print_value_fields)
+	(cp_print_value_fields_rtti, cp_print_value): Remove.
+	(cp_print_static_field): Update.
+	* c-valprint.c (c_val_print_array, c_val_print_ptr)
+	(c_val_print_struct, c_val_print_union, c_val_print_int)
+	(c_val_print_memberptr, c_val_print): Remove.
+	* c-lang.h (c_val_print_array, cp_print_value_fields)
+	(cp_print_value_fields_rtti): Don't declare.
+	* c-lang.c (c_language_defn, cplus_language_defn)
+	(asm_language_defn, minimal_language_defn): Update.
+	* ada-valprint.c (ada_val_print_ptr, ada_val_print_num): Remove.
+	(ada_val_print_enum): Take a struct value.
+	(ada_val_print_flt, ada_val_print_array, ada_val_print_1)
+	(ada_val_print): Remove.
+	(ada_value_print_1): Update.
+	(printable_val_type): Remove.
+	* ada-lang.h (ada_val_print): Don't declare.
+	* ada-lang.c (ada_language_defn): Update.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (do_val_print): Update.
+	* python/python-internal.h (gdbpy_apply_val_pretty_printer): Take
+	a struct value.
+	(value_to_value_object_no_release): Declare.
+	* python/py-value.c (value_to_value_object_no_release): New
+	function.
+	* python/py-prettyprint.c (gdbpy_apply_val_pretty_printer): Take a
+	struct value.
+	* guile/scm-value.c (vlscm_scm_from_value_no_release): New
+	function.
+	* guile/scm-pretty-print.c (gdbscm_apply_val_pretty_printer): Take
+	a struct value.
+	* guile/guile-internal.h (vlscm_scm_from_value_no_release):
+	Declare.
+	(gdbscm_apply_val_pretty_printer): Take a struct value.
+	* extension.h (apply_ext_lang_val_pretty_printer): Take a struct
+	value.
+	* extension.c (apply_ext_lang_val_pretty_printer): Take a struct
+	value.
+	* extension-priv.h (struct extension_language_ops)
+	<apply_val_pretty_printer>: Take a struct value.
+	* cp-valprint.c (cp_print_value): Create a struct value.
+	(cp_print_value): Update.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (print_field_values): Call common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (val_print_packed_array_elements): Remove
+	bitoffset and val parameters.  Call common_val_print.
+	(ada_val_print_string): Remove offset, address, and original_value
+	parameters.
+	(ada_val_print_array): Update.
+	(ada_value_print_array): New function.
+	(ada_value_print_1): Call it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (ada_value_print): Use common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (ada_val_print_ref): Use common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (ada_value_print_num): New function.
+	(ada_value_print_1): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (ada_value_print_1) <TYPE_CODE_FLT>: Rewrite.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (ada_value_print_ptr): New function.
+	(ada_value_print_1): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (ada_val_print_gnat_array): Take a struct value;
+	call common_val_print.
+	(ada_val_print_1): Update.
+	(ada_value_print_1): New function.
+	(ada_value_print_inner): Rewrite.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* cp-valprint.c (cp_print_value_fields): Update.
+	(cp_print_value): New function.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* m2-valprint.c (m2_value_print_inner): Use
+	cp_print_value_fields.
+	* cp-valprint.c	(cp_print_value_fields): New function.
+	* c-valprint.c (c_value_print_struct): New function.
+	(c_value_print_inner): Use c_value_print_struct.
+	* c-lang.h (cp_print_value_fields): Declare.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_value_print_array): New function.
+	(c_value_print_inner): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_value_print_memberptr): New function.
+	(c_value_print_inner): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_value_print_int): New function.
+	(c_value_print_inner): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_value_print_ptr): New function.
+	(c_value_print_inner): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_value_print_inner): Rewrite.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_value_print_complex): New function.
+	(generic_value_print): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_val_print_float): Don't call
+	val_print_scalar_formatted.
+	(generic_val_print, generic_value_print): Update.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_value_print_char): New function
+	(generic_value_print): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_value_print_int): New function.
+	(generic_value_print): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_value_print_bool): New function.
+	(generic_value_print): Use it.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_val_print_func): Simplify.
+	(generic_val_print, generic_value_print): Update.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_val_print_flags): Remove.
+	(generic_val_print, generic_value_print): Update.
+	(val_print_type_code_flags): Add original_value parameter.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_val_print): Update.
+	(generic_value_print): Update.
+	* valprint.c (generic_val_print_enum): Don't call
+	val_print_scalar_formatted.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_value_print): Call generic_value_print_ptr.
+	* valprint.c (generic_value_print_ptr): New function.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_value_print): Rewrite.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* p-valprint.c (pascal_object_print_value_fields)
+	(pascal_object_print_value): New functions.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* p-valprint.c (pascal_value_print_inner): Rewrite.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* f-valprint.c (f_value_print_innner): Rewrite.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* m2-valprint.c (m2_print_unbounded_array): New overload.
+	(m2_print_unbounded_array): Update.
+	(m2_print_array_contents): Take a struct value.
+	(m2_value_print_inner): Rewrite.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* d-valprint.c (dynamic_array_type): Call d_value_print_inner.
+	(d_value_print_inner): New function.
+	* d-lang.h (d_value_print_inner): Declare.
+	* d-lang.c (d_language_defn): Use d_value_print_inner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* go-valprint.c (go_value_print_inner): New function.
+	* go-lang.h (go_value_print_inner): Declare.
+	* go-lang.c (go_language_defn): Use go_value_print_inner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* rust-lang.c (val_print_struct, rust_print_enum): Use the value
+	API.
+	(rust_val_print): Rewrite.
+	(rust_value_print_inner): New function, from rust_val_print.
+	(rust_language_defn): Use rust_value_print_inner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* ada-valprint.c (ada_value_print_inner): New function.
+	* ada-lang.h (ada_value_print_inner): Declare.
+	* ada-lang.c (ada_language_defn): Use ada_value_print_inner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* f-valprint.c (f_value_print_innner): New function.
+	* f-lang.h (f_value_print_innner): Declare.
+	* f-lang.c (f_language_defn): Use f_value_print_innner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* p-valprint.c (pascal_value_print_inner): New function.
+	* p-lang.h (pascal_value_print_inner): Declare.
+	* p-lang.c (pascal_language_defn): Use pascal_value_print_inner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* m2-valprint.c (m2_value_print_inner): New function.
+	* m2-lang.h (m2_value_print_inner): Declare.
+	* m2-lang.c (m2_language_defn): Use m2_value_print_inner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* opencl-lang.c (opencl_language_defn): Use c_value_print_inner.
+	* objc-lang.c (objc_language_defn): Use c_value_print_inner.
+	* c-valprint.c (c_value_print_inner): New function.
+	* c-lang.h (c_value_print_inner): Declare.
+	* c-lang.c (c_language_defn, cplus_language_defn)
+	(asm_language_defn, minimal_language_defn): Use
+	c_value_print_inner.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* p-valprint.c (pascal_object_print_value_fields): Now static.
+	* p-lang.h (pascal_object_print_value_fields): Don't declare.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_val_print_array): Simplify.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (value_print_array_elements): New function.
+	* valprint.h (value_print_array_elements): Declare.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* printcmd.c (print_formatted): Use value_print_scalar_formatted.
+	* mips-tdep.c (mips_print_register): Use
+	value_print_scalar_formatted.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.h (value_print_scalar_formatted): Declare.
+	* valprint.c (value_print_scalar_formatted): New function.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.h (generic_value_print): Declare.
+	* valprint.c (generic_value_print): New function.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (do_val_print): Call la_value_print_inner, if
+	available.
+	* rust-lang.c (rust_language_defn): Update.
+	* p-lang.c (pascal_language_defn): Update.
+	* opencl-lang.c (opencl_language_defn): Update.
+	* objc-lang.c (objc_language_defn): Update.
+	* m2-lang.c (m2_language_defn): Update.
+	* language.h (struct language_defn) <la_value_print_inner>: New
+	member.
+	* language.c (unknown_language_defn, auto_language_defn): Update.
+	* go-lang.c (go_language_defn): Update.
+	* f-lang.c (f_language_defn): Update.
+	* d-lang.c (d_language_defn): Update.
+	* c-lang.c (c_language_defn, cplus_language_defn)
+	(asm_language_defn, minimal_language_defn): Update.
+	* ada-lang.c (ada_language_defn): Update.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_value_print): Use common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* cp-valprint.c (cp_print_static_field): Use common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* f-valprint.c (f77_print_array_1, f_val_print): Use
+	common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* riscv-tdep.c (riscv_print_one_register_info): Use
+	common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* mi/mi-main.c (output_register): Use common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* infcmd.c (default_print_one_register_info): Use
+	common_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.h (common_val_print_checked): Declare.
+	* valprint.c (common_val_print_checked): New function.
+	* stack.c (print_frame_arg): Use common_val_print_checked.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (do_val_print): New function, from val_print.
+	(val_print): Use do_val_print.
+	(common_val_print): Use do_val_print.
+
+2020-03-13  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (value_print): Use scoped_value_mark.
+
 2020-03-13  Tom de Vries  <tdevries@suse.de>
 
 	PR symtab/25646
