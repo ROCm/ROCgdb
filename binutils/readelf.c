@@ -13718,7 +13718,7 @@ dump_section_as_strings (Elf_Internal_Shdr * section, Filedata * filedata)
 	    {
 	      warn (_("section '%s' has unsupported compress type: %d\n"),
 		    printable_section_name (filedata, section), chdr.ch_type);
-	      return FALSE;
+	      goto error_out;
 	    }
 	  uncompressed_size = chdr.ch_size;
 	  start += compression_header_size;
@@ -13750,7 +13750,7 @@ dump_section_as_strings (Elf_Internal_Shdr * section, Filedata * filedata)
 	    {
 	      error (_("Unable to decompress section %s\n"),
 		     printable_section_name (filedata, section));
-	      return FALSE;
+	      goto error_out;
 	    }
 	}
       else
@@ -13886,6 +13886,10 @@ dump_section_as_strings (Elf_Internal_Shdr * section, Filedata * filedata)
 
   putchar ('\n');
   return TRUE;
+
+error_out:
+  free (real_start);
+  return FALSE;
 }
 
 static bfd_boolean
@@ -13925,7 +13929,7 @@ dump_section_as_bytes (Elf_Internal_Shdr *  section,
 	    {
 	      warn (_("section '%s' has unsupported compress type: %d\n"),
 		    printable_section_name (filedata, section), chdr.ch_type);
-	      return FALSE;
+	      goto error_out;
 	    }
 	  uncompressed_size = chdr.ch_size;
 	  start += compression_header_size;
@@ -13960,7 +13964,7 @@ dump_section_as_bytes (Elf_Internal_Shdr *  section,
 	      error (_("Unable to decompress section %s\n"),
 		     printable_section_name (filedata, section));
 	      /* FIXME: Print the section anyway ?  */
-	      return FALSE;
+	      goto error_out;
 	    }
 	}
       else
@@ -13970,7 +13974,7 @@ dump_section_as_bytes (Elf_Internal_Shdr *  section,
   if (relocate)
     {
       if (! apply_relocations (filedata, section, start, section_size, NULL, NULL))
-	return FALSE;
+	goto error_out;
     }
   else
     {
@@ -14040,6 +14044,10 @@ dump_section_as_bytes (Elf_Internal_Shdr *  section,
 
   putchar ('\n');
   return TRUE;
+
+ error_out:
+  free (real_start);
+  return FALSE;
 }
 
 static ctf_sect_t *
@@ -14353,7 +14361,10 @@ get_build_id (void * data)
       if (align < 4)
         align = 4;
       else if (align != 4 && align != 8)
-        continue;
+	{
+	  free (enote);
+	  continue;
+	}
 
       end = (char *) enote + length;
       data_remaining = end - (char *) enote;
@@ -14366,6 +14377,7 @@ get_build_id (void * data)
 	      warn (_("\
 malformed note encountered in section %s whilst scanning for build-id note\n"),
 		    printable_section_name (filedata, shdr));
+	      free (enote);
               continue;
             }
           data_remaining -= min_notesz;
@@ -14392,6 +14404,7 @@ malformed note encountered in section %s whilst scanning for build-id note\n"),
 	      warn (_("\
 malformed note encountered in section %s whilst scanning for build-id note\n"),
 		    printable_section_name (filedata, shdr));
+	      free (enote);
               continue;
             }
           data_remaining -= min_notesz;
@@ -14416,6 +14429,7 @@ malformed note encountered in section %s whilst scanning for build-id note\n"),
 	  warn (_("\
 malformed note encountered in section %s whilst scanning for build-id note\n"),
 		printable_section_name (filedata, shdr));
+	  free (enote);
           continue;
         }
 
@@ -14430,14 +14444,19 @@ malformed note encountered in section %s whilst scanning for build-id note\n"),
 
           build_id = malloc (inote.descsz * 2 + 1);
           if (build_id == NULL)
-	    return NULL;
+	    {
+	      free (enote);
+	      return NULL;
+	    }
 
           for (j = 0; j < inote.descsz; ++j)
             sprintf (build_id + (j * 2), "%02x", inote.descdata[j] & 0xff);
           build_id[inote.descsz * 2] = '\0';
+	  free (enote);
 
           return (unsigned char *) build_id;
         }
+      free (enote);
     }
 
   return NULL;
@@ -19545,7 +19564,10 @@ process_notes_at (Filedata *           filedata,
       if (pnotes)
 	{
 	  if (! apply_relocations (filedata, section, (unsigned char *) pnotes, length, NULL, NULL))
-	    return FALSE;
+	    {
+	      free (pnotes);
+	      return FALSE;
+	    }
 	}
     }
   else
@@ -20345,7 +20367,8 @@ process_archive (Filedata * filedata, bfd_boolean is_thin_archive)
   nested_arch.longnames = NULL;
 
   if (setup_archive (&arch, filedata->file_name, filedata->handle,
-		     is_thin_archive, do_archive_index) != 0)
+		     filedata->file_size, is_thin_archive,
+		     do_archive_index) != 0)
     {
       ret = FALSE;
       goto out;
@@ -20668,7 +20691,9 @@ process_file (char * file_name)
   free (filedata);
 
   free (ba_cache.strtab);
+  ba_cache.strtab = NULL;
   free (ba_cache.symtab);
+  ba_cache.symtab = NULL;
   ba_cache.filedata = NULL;
 
   return ret;
