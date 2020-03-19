@@ -1,3 +1,226 @@
+2020-03-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* remote.c (remote_target::process_stop_reply): Handle events for
+	all threads differently.
+
+2020-03-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* completer.c (completion_tracker::remove_completion): Define new
+	function.
+	* completer.h (completion_tracker::remove_completion): Declare new
+	function.
+	* symtab.c (completion_list_add_symbol): Remove aliasing msymbols
+	when adding a C++ function symbol.
+
+2020-03-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* completer.c (completion_tracker::completion_hash_entry): Define
+	new class.
+	(advance_to_filename_complete_word_point): Call
+	recompute_lowest_common_denominator.
+	(completion_tracker::completion_tracker): Call discard_completions
+	to setup the hash table.
+	(completion_tracker::discard_completions): Allow for being called
+	from the constructor, pass new equal function, and element deleter
+	when constructing the hash table.  Initialise new class member
+	variables.
+	(completion_tracker::maybe_add_completion): Remove use of
+	m_entries_vec, and store more information into m_entries_hash.
+	(completion_tracker::recompute_lcd_visitor): New function, most
+	content taken from...
+	(completion_tracker::recompute_lowest_common_denominator):
+	...here, this now just visits each item in the hash calling the
+	above visitor.
+	(completion_tracker::build_completion_result): Remove use of
+	m_entries_vec, call recompute_lowest_common_denominator.
+	* completer.h (completion_tracker::have_completions): Remove use
+	of m_entries_vec.
+	(completion_tracker::completion_hash_entry): Declare new class.
+	(completion_tracker::recompute_lowest_common_denominator): Change
+	function signature.
+	(completion_tracker::recompute_lcd_visitor): Declare new function.
+	(completion_tracker::m_entries_vec): Delete.
+	(completion_tracker::m_entries_hash): Initialize to NULL.
+	(completion_tracker::m_lowest_common_denominator_valid): New
+	member variable.
+	(completion_tracker::m_lowest_common_denominator_max_length): New
+	member variable.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* regformats/regdef.h: Put reg in gdb namespace.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* i386-bsd-nat.c (gdb_ptrace): New.
+	* (i386bsd_fetch_inferior_registers,
+	i386bsd_store_inferior_registers) Switch from pid_t to ptid_t.
+	* (i386bsd_fetch_inferior_registers,
+	i386bsd_store_inferior_registers) Use gdb_ptrace.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* amd64-bsd-nat.c (gdb_ptrace): New.
+	* (amd64bsd_fetch_inferior_registers,
+	amd64bsd_store_inferior_registers) Switch from pid_t to ptid_t.
+	* (amd64bsd_fetch_inferior_registers,
+	amd64bsd_store_inferior_registers) Use gdb_ptrace.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* user-regs.c (user_reg::read): Rename to...
+	(user_reg::xread): ...this.
+	* (append_user_reg): Rename argument `read' to `xread'.
+	* (user_reg_add_builtin): Likewise.
+	* (user_reg_add): Likewise.
+	* (value_of_user_reg): Likewise.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* sparc-nat.c (gdb_ptrace): New.
+	* sparc-nat.c (sparc_fetch_inferior_registers)
+	(sparc_store_inferior_registers) Remove obsolete comment.
+	* sparc-nat.c (sparc_fetch_inferior_registers)
+	(sparc_store_inferior_registers) Switch from pid_t to ptid_t.
+	* sparc-nat.c (sparc_fetch_inferior_registers)
+	(sparc_store_inferior_registers) Use gdb_ptrace.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* sh-nbsd-nat.c (fetch_registers): New variable lwp and pass
+	it to the ptrace call.
+	* sh-nbsd-nat.c (store_registers): Likewise.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* sh-nbsd-nat.c (sh_nbsd_nat_target): Inherit from
+	nbsd_nat_target instead of inf_ptrace_target.
+	* sh-nbsd-nat.c: Include "nbsd-nat.h", as we are now using
+	nbsd_nat_target.
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* amd64-bsd-nat.c: Include amd64-bsd-nat.h".
+
+2020-03-17  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-nat.c: Include <sys/types.h>, <sys/ptrace.h> and
+	<sys/sysctl.h>.
+	* nbsd-nat.c (nbsd_nat_target::pid_to_exec_file): Rewrite.
+
+2020-03-17  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/23710
+	* dwarf2/read.h (struct dwarf2_per_cu_data): Add unit_type and lang
+	fields.
+	* dwarf2/read.c (process_psymtab_comp_unit): Initialize unit_type and lang
+	fields.
+	(process_imported_unit_die): Skip import of c++ CUs.
+
+2020-03-16  Tom Tromey  <tom@tromey.com>
+
+	* p-valprint.c (pascal_object_print_value): Initialize
+	base_value.
+
+2020-03-16  Anton Kolesov  <anton.kolesov@synopsys.com>
+	    Shahab Vahedi  <shahab@synopsys.com>
+
+	* Makefile.in: Add arch/arc.o
+	* configure.tgt: Likewise.
+	* arc-tdep.c (arc_tdesc_init): Use arc_read_description.
+	(_initialize_arc_tdep): Don't initialize old target descriptions.
+        (arc_read_description): New function to cache target descriptions.
+	* arc-tdep.h (arc_read_description): Add proto type.
+	* arch/arc.c: New file.
+	* arch/arc.h: Likewise.
+	* features/Makefile: Replace old target descriptions with new.
+	* features/arc-arcompact.c: Remove.
+	* features/arc-arcompact.xml: Likewise.
+	* features/arc-v2.c: Likewise
+	* features/arc-v2.xml: Likewise
+	* features/arc/aux-arcompact.xml: New file.
+	* features/arc/aux-v2.xml: Likewise.
+	* features/arc/core-arcompact.xml: Likewise.
+	* features/arc/core-v2.xml: Likewise.
+	* features/arc/aux-arcompact.c: Generate.
+	* features/arc/aux-v2.c: Likewise.
+	* features/arc/core-arcompact.c: Likewise.
+	* features/arc/core-v2.c: Likewise.
+	* target-descriptions (maint_print_c_tdesc_cmd): Support ARC features.
+
+2020-03-16  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/25663:
+	* dwarf2/read.c (dwarf2_name): Strip leading namespaces after
+	putting value into bcache.
+
+2020-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/21500
+	* amd64-windows-tdep.c (amd64_windows_init_abi): Rename
+	to...
+	(amd64_windows_init_abi_common): ... this.  Don't set size of
+	long type.
+	(amd64_windows_init_abi): New function.
+	(amd64_cygwin_init_abi): New function.
+	(_initialize_amd64_windows_tdep): Use amd64_cygwin_init_abi for
+	the Cygwin OS ABI.
+	* i386-windows-tdep.c (_initialize_i386_windows_tdep): Clarify
+	comment.
+
+2020-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* windows-tdep.h (is_linked_with_cygwin_dll): New declaration.
+	* windows-tdep.c (CYGWIN_DLL_NAME): New.
+	(pe_import_directory_entry): New struct type.
+	(is_linked_with_cygwin_dll): New function.
+	* amd64-windows-tdep.c (amd64_windows_osabi_sniffer): Select
+	GDB_OSABI_CYGWIN if the BFD is linked with the Cygwin DLL.
+	* i386-windows-tdep.c (i386_windows_osabi_sniffer): Likewise.
+
+2020-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* i386-windows-tdep.c: Mass-rename "cygwin" to "windows", except
+	i386_cygwin_core_osabi_sniffer.
+
+2020-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* i386-cygwin-tdep.c: Rename to...
+	* i386-windows-tdep.c: ... this.
+	* Makefile.in (ALL_TARGET_OBS): Rename i386-cygwin-tdep.c to
+	i386-windows-tdep.c.
+	* configure.tgt: Likewise.
+
+2020-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* osabi.h (enum gdb_osabi): Add GDB_OSABI_WINDOWS.
+	* osabi.c (gdb_osabi_names): Add "Windows".
+	* i386-cygwin-tdep.c (i386_cygwin_osabi_sniffer): Return
+	GDB_OSABI_WINDOWS when the binary's target is "pei-i386".
+	(i386_cygwin_core_osabi_sniffer): New function, extracted from
+	i386_cygwin_osabi_sniffer.
+	(_initialize_i386_cygwin_tdep): Register OS ABI
+	GDB_OSABI_WINDOWS for i386.
+	* amd64-windows-tdep.c (amd64_windows_osabi_sniffer): Return
+	GDB_OSABI_WINDOWS when the binary's target is "pei-x86-64".
+	(_initialize_amd64_windows_tdep): Register OS ABI GDB_OSABI_WINDOWS
+	for x86-64.
+	* configure.tgt: Use GDB_OSABI_WINDOWS as the default OS ABI
+	when the target matches '*-*-mingw*'.
+
+2020-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* defs.h (enum gdb_osabi): Move to...
+	* osabi.h (enum gdb_osabi): ... here.
+	* gdbarch.sh: Include osabi.h in gdbarch.h.
+	* gdbarch.h: Re-generate.
+
+2020-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* amd64-windows-tdep.c (amd64_windows_osabi_sniffer): New
+	function.
+	(_initialize_amd64_windows_tdep): Register osabi sniffer.
+
 2020-03-14  Tom Tromey  <tom@tromey.com>
 
 	* c-typeprint.c (cp_type_print_method_args): Print "__restrict__"

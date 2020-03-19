@@ -7426,6 +7426,18 @@ process_psymtab_comp_unit (struct dwarf2_per_cu_data *this_cu,
 
   cutu_reader reader (this_cu, NULL, 0, false);
 
+  switch (reader.comp_unit_die->tag)
+    {
+    case DW_TAG_compile_unit:
+      this_cu->unit_type = DW_UT_compile;
+      break;
+    case DW_TAG_partial_unit:
+      this_cu->unit_type = DW_UT_partial;
+      break;
+    default:
+      abort ();
+    }
+
   if (reader.dummy_p)
     {
       /* Nothing.  */
@@ -7438,6 +7450,8 @@ process_psymtab_comp_unit (struct dwarf2_per_cu_data *this_cu,
     process_psymtab_comp_unit_reader (&reader, reader.info_ptr,
 				      reader.comp_unit_die,
 				      pretend_language);
+
+  this_cu->lang = this_cu->cu->language;
 
   /* Age out any secondary CUs.  */
   age_cached_comp_units (this_cu->dwarf2_per_objfile);
@@ -9759,6 +9773,14 @@ process_imported_unit_die (struct die_info *die, struct dwarf2_cu *cu)
       dwarf2_per_cu_data *per_cu
 	= dwarf2_find_containing_comp_unit (sect_off, is_dwz,
 					    cu->per_cu->dwarf2_per_objfile);
+
+      /* We're importing a C++ compilation unit with tag DW_TAG_compile_unit
+	 into another compilation unit, at root level.  Regard this as a hint,
+	 and ignore it.  */
+      if (die->parent && die->parent->parent == NULL
+	  && per_cu->unit_type == DW_UT_compile
+	  && per_cu->lang == language_cplus)
+	return;
 
       /* If necessary, add it to the queue and load its DIEs.  */
       if (maybe_queue_comp_unit (cu, per_cu, cu->language))
@@ -21800,19 +21822,17 @@ dwarf2_name (struct die_info *die, struct dwarf2_cu *cu)
 	      if (demangled == nullptr)
 		return nullptr;
 
-	      const char *base;
-
 	      DW_STRING (attr) = objfile->intern (demangled.get ());
 	      DW_STRING_IS_CANONICAL (attr) = 1;
-
-	      /* Strip any leading namespaces/classes, keep only the base name.
-		 DW_AT_name for named DIEs does not contain the prefixes.  */
-	      base = strrchr (DW_STRING (attr), ':');
-	      if (base && base > DW_STRING (attr) && base[-1] == ':')
-		return &base[1];
-	      else
-		return DW_STRING (attr);
 	    }
+
+	  /* Strip any leading namespaces/classes, keep only the base name.
+	     DW_AT_name for named DIEs does not contain the prefixes.  */
+	  const char *base = strrchr (DW_STRING (attr), ':');
+	  if (base && base > DW_STRING (attr) && base[-1] == ':')
+	    return &base[1];
+	  else
+	    return DW_STRING (attr);
 	}
       break;
 

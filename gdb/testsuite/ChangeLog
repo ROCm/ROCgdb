@@ -1,3 +1,36 @@
+2020-03-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.server/exit-multiple-threads.c: New file.
+	* gdb.server/exit-multiple-threads.exp: New file.
+
+2020-03-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/mixed-lang-stack.c: New file.
+	* gdb.fortran/mixed-lang-stack.cpp: New file.
+	* gdb.fortran/mixed-lang-stack.exp: New file.
+	* gdb.fortran/mixed-lang-stack.f90: New file.
+
+2020-03-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.linespec/cp-completion-aliases.cc: New file.
+	* gdb.linespec/cp-completion-aliases.exp: New file.
+
+2020-03-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.opt/inline-locals.exp: Add kfail PR number.  Make kfail matching
+	more precise.
+
+2020-03-18  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/break-inline-psymtab-2.c: New test.
+	* gdb.dwarf2/break-inline-psymtab.c: New test.
+	* gdb.dwarf2/break-inline-psymtab.exp: New file.
+
+2020-03-16  Tom de Vries  <tdevries@suse.de>
+
+	* lib/cache.exp (gdb_do_cache): Add and handle local variables
+	cache_verify and cache_verify_proc.
+
 2020-03-15  Tom de Vries  <tdevries@suse.de>
 
 	* gdb.server/solib-list.exp: Handle

@@ -1,3 +1,53 @@
+2020-03-19  Sebastian Huber  <sebastian.huber@embedded-brains.de>
+
+	* elfxx-riscv.c (riscv_parse_subset): Don't use C99.
+
+2020-03-18  Nick Clifton  <nickc@redhat.com>
+
+	PR 25673
+	* elf.c (_bfd_elf_write_secondary_reloc_section): Fix illegal
+	memory access when processing a corrupt secondary reloc section.
+
+2020-03-18  Christophe Lyon  <christophe.lyon@linaro.org>
+
+	* elf32-arm.c (arm_build_one_stub): Emit a fatal error message
+	instead of calling abort.
+	* elf32-csky.c (csky_build_one_stub): Likewise.
+	* elf32-hppa.c (hppa_build_one_stub): Likewise.
+	* elf32-m68hc11.c (m68hc11_elf_build_one_stub): Likewise.
+	* elf32-m68hc12.c (m68hc12_elf_build_one_stub): Likewise.
+	* elf32-metag.c (metag_build_one_stub): Likewise.
+	* elf32-nios2.c (nios2_build_one_stub): Likewise.
+	* elf64-ppc.c (ppc_build_one_stub): Likewise.
+	(ppc_size_one_stub): Likewise.
+	* elfnn-aarch64.c (aarch64_build_one_stub): Likewise.
+
+2020-03-17  Nick Clifton  <nickc@redhat.com>
+
+	PR 25688
+	* elf.c (_bfd_elf_copy_special_section_fields): Replace assertions
+	with error messages.
+
+2020-03-17  Nick Clifton  <nickc@redhat.com>
+
+	PR 25687
+	* elf.c (_bfd_elf_slurp_secondary_reloc_section): Remove redundant
+	free.  Add free on another failure path.
+
+2020-03-16  Alan Modra  <amodra@gmail.com>
+
+	PR 25675
+	* elf.c (elf_sort_segments): Don't call bfd_octets_per_byte unless
+	we have a non-zero section count.  Do lma comparison in octets.
+
+2020-03-16  Alan Modra  <amodra@gmail.com>
+
+	* vms-alpha.c (dst_restore_location): Validate index into
+	dst_ptr_offsets array before accessing.  Return status.
+	(dst_retrieve_location): Similarly, making "loc" parameter a
+	pointer to return value.
+	(_bfd_vms_slurp_etir): Update calls to above functions.
+
 2020-03-14  Kamil Rytarowski  <n54@gmx.com>
 
 	* configure.ac: Include netbsd-core.lo for all NetBSD arm and mips

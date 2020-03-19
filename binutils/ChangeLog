@@ -1,3 +1,43 @@
+2020-03-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* readelf.c (process_symbol_table): Use unsigned long for si.
+
+2020-03-19  Alan Modra  <amodra@gmail.com>
+
+	* elfcomm.c: Don't include bfd.h or bucomm.h.
+	(program_name): Declare.
+	(process_archive_index_and_symbols): Replace bfd_boolean with int,
+	and substitute FALSE and TRUE.
+	(setup_archive, setup_nested_archive): Likewise.
+	* elfcomm.h: Likewise.
+
+2020-03-19  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (process_archive): Always return via path freeing
+	memory.  Formatting.
+
+2020-03-19  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (process_netbsd_elf_note): Validate descsz before
+	accessing descdata.  Formatting.
+
+2020-03-19  Alan Modra  <amodra@gmail.com>
+
+	* elfcomm.c (setup_archive): Make file_size an off_t.  Comment.
+	* elfcomm.h (setup_archive): Update prototype.
+
+2020-03-16  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (get_symbols): New function.
+	(process_relocs, ia64_process_unwind, hppa_process_unwind),
+	(arm_process_unwind, get_symbol_for_build_attribute): Use it.
+
+2020-03-16  Alan Modra  <amodra@gmail.com>
+
+	* unwind-ia64.c (unw_decode_uleb128): Prevent overlarge shifts.
+	Detect shift overflows and check that terminating byte is found.
+	Print an error on a bad uleb128.
+
 2020-03-14  Alan Modra  <amodra@gmail.com>
 
 	* readelf.c (process_file): Clean ba_cache.
