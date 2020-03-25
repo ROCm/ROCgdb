@@ -1955,7 +1955,7 @@ struct elf_obj_tdata
   struct sdt_note *sdt_note_head;
 
   Elf_Internal_Shdr **group_sect_ptr;
-  int num_group;
+  unsigned int num_group;
 
   /* Index into group_sect_ptr, updated by setup_group when finding a
      section's group.  Used to optimize subsequent group searches.  */
@@ -2079,7 +2079,7 @@ extern bfd_boolean _bfd_elf_copy_private_bfd_data
 extern bfd_boolean _bfd_elf_print_private_bfd_data
   (bfd *, void *);
 const char * _bfd_elf_get_symbol_version_string
-  (bfd *, asymbol *, bfd_boolean *);
+  (bfd *, asymbol *, bfd_boolean, bfd_boolean *);
 extern void bfd_elf_print_symbol
   (bfd *, void *, asymbol *, bfd_print_symbol_type);
 

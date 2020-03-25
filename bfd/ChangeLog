@@ -1,3 +1,52 @@
+2020-03-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/25708
+	* elf-bfd.h (_bfd_elf_get_symbol_version_name): Renamed to ...
+	(_bfd_elf_get_symbol_version_string): This.
+	* elf.c (_bfd_elf_get_symbol_version_name): Renamed to ...
+	(_bfd_elf_get_symbol_version_string): This.
+	(bfd_elf_print_symbol): Pass TRUE to
+	_bfd_elf_get_symbol_version_string.
+	* libbfd-in.h (_bfd_nosymbols_get_symbol_version_string): Add a
+	bfd_boolean argument.
+	* syms.c (_bfd_nosymbols_get_symbol_version_string): Likewise.
+	* targets.c  (_bfd_get_symbol_version_string): Likewise.
+	(bfd_get_symbol_version_string): Likewise.
+	* bfd-in2.h: Regenerated.
+
+2020-03-24  Nick Clifton  <nickc@redhat.com>
+	    Jaydeep Chauhan  <jaydeepchauhan1494@gmail.com>
+
+	PR 25713
+	* bfdio.c (_bfd_real_fopen): Add code to handle long filenames on
+	Win32 systems.
+
+2020-03-24  Nick Clifton  <nickc@redhat.com>
+
+	PR 25681
+	* elf.c (_bfd_elf_map_sections_to_segments): When looking for a
+	segment to use for PT_GNU_RELRO, ignore empty sections in a
+	segment's current list.
+
+2020-03-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/25717
+	* elf-bfd.h (elf_obj_tdata): Change num_group to unsigned int.
+
+2020-03-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/25708
+	* elf-bfd.h (_bfd_elf_get_symbol_version_name): New.
+	* elf.c (_bfd_elf_get_symbol_version_name): New function.  Based
+	on the previous _bfd_elf_get_symbol_version_string.
+	(_bfd_elf_get_symbol_version_string): Use it.
+
+2020-03-24  Alan Modra  <amodra@gmail.com>
+
+	* archive.c (_bfd_generic_read_ar_hdr_mag): Sanity check extended
+	name size.  Use bfd_malloc rather than bfd_zmalloc, clearing just
+	struct areltdata.
+
 2020-03-23  Sebastian Huber  <sebastian.huber@embedded-brains.de>
 
 	* elflink.c (_bfd_elf_tls_setup): Mention .tdata in comment.
