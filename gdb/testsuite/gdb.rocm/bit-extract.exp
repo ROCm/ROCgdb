@@ -15,8 +15,8 @@
 
 load_lib rocm.exp
 
-set testfile "bit_extract_asm"
-set srcfile ${srcdir}/${subdir}/${testfile}.S
+set testfile "bit-extract"
+set srcfile ${srcdir}/${subdir}/${testfile}.cpp
 set objfile [standard_output_file ${testfile}.o]
 set binfile [standard_output_file ${testfile}]
 
@@ -29,20 +29,9 @@ if [skip_hipcc_tests] {
     return 0
 }
 
-# Assemble the hip program
-set asm-flags ""
-set debug-flags ""
-if {[target_assemble $srcfile $objfile "${asm-flags} ${debug-flags}"] != ""} then {
-    untested "failed to assemble"
+# Compile the hip program
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
     return -1
-}
-
-# Link the hip program
-# TODO: The link flags may need some pruning
-set link-flags "-z relro --hash-style=gnu --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/8/crtbegin.o -L/usr/lib/gcc/x86_64-linux-gnu/8 -L/usr/lib/x86_64-linux-gnu -L/lib/x86_64-linux-gnu -L/lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib -L/opt/rocm/llvm/lib -L/lib -L/usr/lib -lhip_hcc -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/8/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o -L/opt/rocm/lib -lstdc++"
-if {[target_link $objfile $binfile "${link-flags}"] != "" } then {
-     untested "failed to link"
-     return -1
 }
 
 gdb_exit
@@ -64,7 +53,7 @@ if ![runto_main] {
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
-# Check  info agents
+# Check info agents
 # vega10 56 sample output "1  43:00.0  vega10      4              56            4       10"
 gdb_test_sequence "info agents" "info agents" {
     {Id\s+PCI Slot\s+Device Name\s+Shader Engines\s+Compute Units\s+SIMD/CU\s+Wavefronts/SIMD}
