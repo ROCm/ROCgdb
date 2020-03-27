@@ -1004,6 +1004,7 @@ COMMON_SFILES = \
 	dwarf2/abbrev.c \
 	dwarf2/attribute.c \
 	dwarf2/comp-unit.c \
+	dwarf2/dwz.c \
 	dwarf2/expr.c \
 	dwarf2/frame-tailcall.c \
 	dwarf2/frame.c \
@@ -1013,8 +1014,10 @@ COMMON_SFILES = \
 	dwarf2/leb.c \
 	dwarf2/line-header.c \
 	dwarf2/loc.c \
+	dwarf2/macro.c \
 	dwarf2/read.c \
 	dwarf2/section.c \
+	dwarf2/stringify.c \
 	eval.c \
 	event-loop.c \
 	event-top.c \

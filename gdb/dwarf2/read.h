@@ -110,6 +110,14 @@ struct dwarf2_per_objfile
 
   /* Free all cached compilation units.  */
   void free_cached_comp_units ();
+
+  /* Return pointer to string at .debug_line_str offset as read from BUF.
+     BUF is assumed to be in a compilation unit described by CU_HEADER.
+     Return *BYTES_READ_PTR count of bytes read from BUF.  */
+  const char *read_line_string (const gdb_byte *buf,
+				const struct comp_unit_head *cu_header,
+				unsigned int *bytes_read_ptr);
+
 private:
   /* This function is mapped across the sections and remembers the
      offset and size of each of the debugging sections we are
@@ -489,37 +497,6 @@ struct signatured_type
   /* Containing DWO unit.
      This field is valid iff per_cu.reading_dwo_directly.  */
   struct dwo_unit *dwo_unit;
-};
-
-/* This represents a '.dwz' file.  */
-
-struct dwz_file
-{
-  dwz_file (gdb_bfd_ref_ptr &&bfd)
-    : dwz_bfd (std::move (bfd))
-  {
-  }
-
-  const char *filename () const
-  {
-    return bfd_get_filename (this->dwz_bfd.get ());
-  }
-
-  /* A dwz file can only contain a few sections.  */
-  struct dwarf2_section_info abbrev {};
-  struct dwarf2_section_info info {};
-  struct dwarf2_section_info str {};
-  struct dwarf2_section_info line {};
-  struct dwarf2_section_info macro {};
-  struct dwarf2_section_info gdb_index {};
-  struct dwarf2_section_info debug_names {};
-
-  /* The dwz's BFD.  */
-  gdb_bfd_ref_ptr dwz_bfd;
-
-  /* If we loaded the index from an external file, this contains the
-     resources associated to the open file, memory mapping, etc.  */
-  std::unique_ptr<index_cache_resource> index_cache_res;
 };
 
 /* Open the separate '.dwz' debug file, if needed.  Return NULL if
