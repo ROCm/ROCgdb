@@ -81,6 +81,7 @@ struct inferior;
 #include "command.h"
 #include "disasm.h"
 #include "tracepoint.h"
+#include "displaced-stepping.h"
 
 #include "gdbsupport/break-common.h" /* For enum target_hw_bp_type.  */
 
@@ -1260,6 +1261,13 @@ struct target_ops
     /* Cleanup after generating a core file.  */
     virtual void done_generating_core ()
       TARGET_DEFAULT_IGNORE ();
+
+    virtual displaced_step_prepare_status displaced_step_prepare (thread_info *thread,
+								  CORE_ADDR &displaced_pc)
+      TARGET_DEFAULT_FUNC (default_displaced_step_prepare);
+
+    virtual displaced_step_finish_status displaced_step_finish (thread_info *thread, gdb_signal sig)
+      TARGET_DEFAULT_FUNC (default_displaced_step_finish);
   };
 
 /* Deleter for std::unique_ptr.  See comments in

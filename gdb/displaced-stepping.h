@@ -25,6 +25,7 @@
 
 struct gdbarch;
 struct thread_info;
+struct target_ops;
 
 /* True if we are debugging displaced stepping.  */
 
@@ -211,5 +212,13 @@ private:
 
   std::vector<displaced_step_buffer> m_buffers;
 };
+
+displaced_step_prepare_status
+  default_displaced_step_prepare (target_ops *target, thread_info *thread,
+				  CORE_ADDR &displaced_pc);
+
+displaced_step_finish_status
+  default_displaced_step_finish (target_ops *target, thread_info *thread,
+				 gdb_signal sig);
 
 #endif /* DISPLACED_STEPPING_H */

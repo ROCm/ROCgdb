@@ -1677,7 +1677,7 @@ displaced_step_prepare_throw (thread_info *tp)
   CORE_ADDR displaced_pc;
 
   displaced_step_prepare_status status
-    = gdbarch_displaced_step_prepare (gdbarch, tp, displaced_pc);
+    = tp->inf->top_target ()->displaced_step_prepare (tp, displaced_pc);
 
   if (status == DISPLACED_STEP_PREPARE_STATUS_CANT)
     {
@@ -1785,8 +1785,9 @@ displaced_step_finish (thread_info *event_thread, enum gdb_signal signal)
 
   /* Do the fixup, and release the resources acquired to do the displaced
      step. */
-  return gdbarch_displaced_step_finish (displaced->get_original_gdbarch (),
-					event_thread, signal);
+  return
+    event_thread->inf->top_target ()->displaced_step_finish (event_thread,
+							     signal);
 }
 
 /* Data to be passed around while handling an event.  This data is
