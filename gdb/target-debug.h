@@ -82,6 +82,8 @@
   target_debug_do_print (host_address_to_string (*(X)))
 #define target_debug_print_enum_gdb_signal(X)	\
   target_debug_do_print (gdb_signal_to_name (X))
+#define target_debug_print_gdb_signal(X)	\
+  target_debug_do_print (gdb_signal_to_name (X))
 #define target_debug_print_ULONGEST(X)		\
   target_debug_do_print (hex_string (X))
 #define target_debug_print_ULONGEST_p(X)	\
@@ -188,6 +190,10 @@
   target_debug_do_print ((X).c_str ())
 #define target_debug_print_gdb_byte_vector(X)	\
   target_debug_do_print (host_address_to_string (X.data ()))
+#define target_debug_print_displaced_step_finish_status(X) \
+  target_debug_do_print (host_address_to_string (X))
+#define target_debug_print_displaced_step_prepare_status(X) \
+  target_debug_do_print (host_address_to_string (X))
 
 static void
 target_debug_print_struct_target_waitstatus_p (struct target_waitstatus *status)

@@ -173,6 +173,8 @@ struct dummy_target : public target_ops
   const struct frame_unwind *get_tailcall_unwinder () override;
   void prepare_to_generate_core () override;
   void done_generating_core () override;
+  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc) override;
+  displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
 
 struct debug_target : public target_ops
@@ -344,6 +346,8 @@ struct debug_target : public target_ops
   const struct frame_unwind *get_tailcall_unwinder () override;
   void prepare_to_generate_core () override;
   void done_generating_core () override;
+  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc) override;
+  displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
 
 void
@@ -4411,5 +4415,59 @@ debug_target::done_generating_core ()
   this->beneath ()->done_generating_core ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->done_generating_core (", this->beneath ()->shortname ());
   fputs_unfiltered (")\n", gdb_stdlog);
+}
+
+displaced_step_prepare_status
+target_ops::displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc)
+{
+  return this->beneath ()->displaced_step_prepare (arg0, displaced_pc);
+}
+
+displaced_step_prepare_status
+dummy_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc)
+{
+  return default_displaced_step_prepare (this, arg0, displaced_pc);
+}
+
+displaced_step_prepare_status
+debug_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc)
+{
+  displaced_step_prepare_status result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->displaced_step_prepare (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->displaced_step_prepare (arg0, displaced_pc);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->displaced_step_prepare (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_displaced_step_prepare_status (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+displaced_step_finish_status
+target_ops::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+{
+  return this->beneath ()->displaced_step_finish (arg0, arg1);
+}
+
+displaced_step_finish_status
+dummy_target::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+{
+  return default_displaced_step_finish (this, arg0, arg1);
+}
+
+displaced_step_finish_status
+debug_target::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+{
+  displaced_step_finish_status result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->displaced_step_finish (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->displaced_step_finish (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->displaced_step_finish (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_gdb_signal (arg1);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_displaced_step_finish_status (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
 }
 
