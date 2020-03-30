@@ -253,8 +253,8 @@ static void sort_blocks (struct symtab *);
 
 static legacy_psymtab *new_psymtab (const char *, struct objfile *);
 
-static void psymtab_to_symtab_1 (legacy_psymtab *pst,
-				 struct objfile *objfile);
+static void mdebug_expand_psymtab (legacy_psymtab *pst,
+				  struct objfile *objfile);
 
 static void add_block (struct block *, struct symtab *);
 
@@ -2613,7 +2613,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 
       /* The way to turn this into a symtab is to call...  */
       pst->legacy_read_symtab = mdebug_read_symtab;
-      pst->legacy_expand_psymtab = psymtab_to_symtab_1;
+      pst->legacy_expand_psymtab = mdebug_expand_psymtab;
 
       /* Set up language for the pst.
          The language from the FDR is used if it is unambigious (e.g. cfront
@@ -3835,7 +3835,7 @@ mdebug_next_symbol_text (struct objfile *objfile)
    The flow of control and even the memory allocation differs.  FIXME.  */
 
 static void
-psymtab_to_symtab_1 (legacy_psymtab *pst, struct objfile *objfile)
+mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 {
   bfd_size_type external_sym_size;
   bfd_size_type external_pdr_size;
@@ -3856,7 +3856,7 @@ psymtab_to_symtab_1 (legacy_psymtab *pst, struct objfile *objfile)
   /* Read in all partial symtabs on which this one is dependent.
      NOTE that we do have circular dependencies, sigh.  We solved
      that by setting pst->readin before this point.  */
-  pst->read_dependencies (objfile);
+  pst->expand_dependencies (objfile);
 
   /* Do nothing if this is a dummy psymtab.  */
 
@@ -4645,7 +4645,7 @@ new_psymtab (const char *name, struct objfile *objfile)
 
   /* The way to turn this into a symtab is to call...  */
   psymtab->legacy_read_symtab = mdebug_read_symtab;
-  psymtab->legacy_expand_psymtab = psymtab_to_symtab_1;
+  psymtab->legacy_expand_psymtab = mdebug_expand_psymtab;
   return (psymtab);
 }
 
