@@ -22,6 +22,7 @@
 
 #include "arch-utils.h"
 #include "elf-bfd.h"
+#include "gdb/fileio.h"
 #include "gdbcore.h"
 #include "inferior.h"
 #include "objfiles.h"
@@ -34,10 +35,7 @@
 
 #include <functional>
 #include <string>
-
-#define ROCM_DSO_NAME_PREFIX "AMDGPU shared object [loaded from memory "
-
-#define ROCM_DSO_NAME_SUFFIX "]"
+#include <unordered_map>
 
 /* ROCm-specific inferior data.  */
 
@@ -156,75 +154,209 @@ rocm_solib_current_sos (void)
   return head;
 }
 
-struct target_elf_image
+struct rocm_code_object_stream
 {
-  /* The base address of the ELF file image in the inferior's memory.  */
-  CORE_ADDR base_addr;
+  /* The target file descriptor for this stream  */
+  int fd;
+
+  /* The offset of the ELF file image in the target file.  */
+  ULONGEST offset;
 
   /* The size of the ELF file image.  */
   ULONGEST size;
 };
 
 static void *
-rocm_bfd_iovec_open (bfd *nbfd, void *open_closure)
+rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 {
-  return open_closure;
+  std::string uri (bfd_get_filename (abfd));
+
+  std::string protocol_delim ("://");
+  size_t protocol_end = uri.find (protocol_delim);
+  std::string protocol = uri.substr (0, protocol_end);
+  protocol_end += protocol_delim.length ();
+
+  std::transform (protocol.begin (), protocol.end (), protocol.begin (),
+                  [] (unsigned char c) { return std::tolower (c); });
+  if (protocol != "file")
+    {
+      warning (_ ("`%s': protocol not supported: %s"), uri.c_str (),
+               protocol.c_str ());
+      bfd_set_error (bfd_error_bad_value);
+      return nullptr;
+    }
+
+  std::string path;
+  size_t path_end = uri.find_first_of ("#?", protocol_end);
+  if (path_end != std::string::npos)
+    path = uri.substr (protocol_end, path_end++ - protocol_end);
+  else
+    path = uri.substr (protocol_end);
+
+  /* %-decode the string.  */
+  std::string decoded_path;
+  decoded_path.reserve (path.length ());
+  for (size_t i = 0; i < path.length (); ++i)
+    if (path[i] == '%' && std::isxdigit (path[i + 1])
+        && std::isxdigit (path[i + 2]))
+      {
+        decoded_path += std::stoi (path.substr (i + 1, 2), 0, 16);
+        i += 2;
+      }
+    else
+      decoded_path += path[i];
+
+  /* Tokenize the query/fragment.  */
+  std::vector<std::string> tokens;
+  size_t pos, last = path_end;
+  while ((pos = uri.find ('&', last)) != std::string::npos)
+    {
+      tokens.emplace_back (uri.substr (last, pos - last));
+      last = pos + 1;
+    }
+  if (last != std::string::npos)
+    tokens.emplace_back (uri.substr (last));
+
+  /* Create a tag-value map from the tokenized query/fragment.  */
+  std::unordered_map<std::string, std::string> params;
+  std::for_each (tokens.begin (), tokens.end (), [&] (std::string &token) {
+    size_t delim = token.find ('=');
+    if (delim != std::string::npos)
+      params.emplace (token.substr (0, delim), token.substr (delim + 1));
+  });
+
+  gdb::unique_xmalloc_ptr<rocm_code_object_stream> stream (
+      XCNEW (rocm_code_object_stream));
+  try
+    {
+      auto offset_it = params.find ("offset");
+      if (offset_it != params.end ())
+        stream->offset = std::stoul (offset_it->second, nullptr, 0);
+
+      auto size_it = params.find ("size");
+      if (size_it != params.end ())
+        if (!(stream->size = std::stoul (size_it->second, nullptr, 0)))
+          {
+            bfd_set_error (bfd_error_bad_value);
+            return nullptr;
+          }
+    }
+  catch (...)
+    {
+      bfd_set_error (bfd_error_bad_value);
+      return nullptr;
+    }
+
+  int fd, target_errno;
+  fd = target_fileio_open (static_cast<struct inferior *> (inferior),
+                           decoded_path.c_str (), FILEIO_O_RDONLY, 0,
+                           &target_errno);
+  if (fd == -1)
+    {
+      /* FIXME: Should we set errno?  Move fileio_errno_to_host from gdb_bfd.c
+         to fileio.cc  */
+      /* errno = fileio_errno_to_host (target_errno); */
+      bfd_set_error (bfd_error_system_call);
+      return nullptr;
+    }
+
+  stream->fd = fd;
+  return stream.release ();
 }
 
 static int
-rocm_bfd_iovec_close (bfd *nbfd, void *stream)
+rocm_bfd_iovec_close (bfd *nbfd, void *data)
 {
+  auto *stream = static_cast<rocm_code_object_stream *> (data);
+
+  int target_errno;
+  target_fileio_close (stream->fd, &target_errno);
+
   xfree (stream);
   return 0;
 }
 
 static file_ptr
-rocm_bfd_iovec_pread (bfd *abfd, void *stream, void *buf, file_ptr nbytes,
+rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
                       file_ptr offset)
 {
-  CORE_ADDR addr = ((target_elf_image *)stream)->base_addr;
+  auto *stream = static_cast<rocm_code_object_stream *> (data);
+  int target_errno;
 
-  if (target_read_memory (addr + offset, (gdb_byte *)buf, nbytes) != 0)
+  file_ptr nbytes = 0;
+  while (size > 0)
     {
-      bfd_set_error (bfd_error_invalid_operation);
-      return -1;
+      QUIT;
+
+      file_ptr bytes_read = target_fileio_pread (
+          stream->fd, static_cast<gdb_byte *> (buf) + nbytes, size,
+          stream->offset + offset + nbytes, &target_errno);
+
+      if (bytes_read == 0)
+        break;
+
+      if (bytes_read < 0)
+        {
+          /* FIXME: Should we set errno?  */
+          /* errno = fileio_errno_to_host (target_errno); */
+          bfd_set_error (bfd_error_system_call);
+          return -1;
+        }
+
+      nbytes += bytes_read;
+      size -= bytes_read;
     }
 
   return nbytes;
 }
 
 static int
-rocm_bfd_iovec_stat (bfd *abfd, void *stream, struct stat *sb)
+rocm_bfd_iovec_stat (bfd *abfd, void *data, struct stat *sb)
 {
+  auto *stream = static_cast<rocm_code_object_stream *> (data);
+  int target_errno;
+
+  /* If stream->size is 0, the URI size parameter was not set.  */
+  if (!stream->size)
+    {
+      struct stat stat;
+      if (target_fileio_fstat (stream->fd, &stat, &target_errno) < 0)
+        {
+          /* FIXME: Should we set errno?  */
+          /* errno = fileio_errno_to_host (target_errno); */
+          bfd_set_error (bfd_error_system_call);
+          return -1;
+        }
+
+      /* Check that the offset is valid.  */
+      if (stream->offset >= stat.st_size)
+        {
+          bfd_set_error (bfd_error_bad_value);
+          return -1;
+        }
+
+      stream->size = stat.st_size - stream->offset;
+    }
+
   memset (sb, '\0', sizeof (struct stat));
-  sb->st_size = ((struct target_elf_image *)stream)->size;
+  sb->st_size = stream->size;
   return 0;
 }
 
 static gdb_bfd_ref_ptr
 rocm_solib_bfd_open (const char *pathname)
 {
-  struct target_elf_image *open_closure;
-  CORE_ADDR addr, end;
-
-  /* Handle regular SVR4 libraries.  */
-  if (strstr (pathname, ROCM_DSO_NAME_PREFIX) != pathname)
+  /* Handle regular files with SVR4 open.  */
+  if (!strstr (pathname, "://"))
     return svr4_so_ops.bfd_open (pathname);
 
-  /* Decode the start and end addresses.  */
-  if (sscanf (pathname + sizeof (ROCM_DSO_NAME_PREFIX) - 1, "0x%lx..0x%lx",
-              &addr, &end)
-      != 2)
-    internal_error (__FILE__, __LINE__, "ROCm-GDB Error: bad DSO name: `%s'",
-                    pathname);
-
-  open_closure = XNEW (struct target_elf_image);
-  open_closure->base_addr = addr;
-  open_closure->size = end - addr;
-
   gdb_bfd_ref_ptr abfd (gdb_bfd_openr_iovec (
-      pathname, "elf64-amdgcn", rocm_bfd_iovec_open, open_closure,
+      pathname, "elf64-amdgcn", rocm_bfd_iovec_open, current_inferior (),
       rocm_bfd_iovec_pread, rocm_bfd_iovec_close, rocm_bfd_iovec_stat));
+
+  if (abfd == nullptr)
+    error (_ ("Could not open `%s' as an executable file: %s"), pathname,
+           bfd_errmsg (bfd_get_error ()));
 
   /* Check bfd format.  */
   if (!bfd_check_format (abfd.get (), bfd_object))
@@ -259,6 +391,9 @@ static void
 rocm_update_solib_list ()
 {
   amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
+  if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+    return;
+
   solib_info *info = get_solib_info ();
   amd_dbgapi_status_t status;
 
@@ -296,35 +431,10 @@ rocm_update_solib_list ()
                  != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 
-      /* FIXME: We need to properly decode the URI.  */
-
-      std::string uri (uri_bytes);
+      strncpy (so->so_name, uri_bytes, sizeof (so->so_name));
+      so->so_name[sizeof (so->so_name) - 1] = '\0';
       xfree (uri_bytes);
 
-      size_t address_pos = uri.find ("://");
-      if (address_pos == std::string::npos)
-        continue;
-      address_pos += 3;
-
-      size_t fragment_pos = uri.find ('#', address_pos);
-      if (address_pos == std::string::npos)
-        continue;
-
-      std::string fragment = uri.substr (fragment_pos);
-
-      /* Decode the offset and size.  */
-      amd_dbgapi_global_address_t mem_addr;
-      amd_dbgapi_size_t mem_size;
-
-      if (sscanf (fragment.c_str (), "#offset=0x%lx&size=0x%lx", &mem_addr,
-                  &mem_size)
-          != 2)
-        internal_error (__FILE__, __LINE__,
-                        "ROCm-GDB Error: bad DSO name: `%s'", uri.c_str ());
-
-      xsnprintf (so->so_name, sizeof so->so_name,
-                 ROCM_DSO_NAME_PREFIX "%s..%s" ROCM_DSO_NAME_SUFFIX,
-                 hex_string (mem_addr), hex_string (mem_addr + mem_size));
       strcpy (so->so_original_name, so->so_name);
 
       so->next = nullptr;
