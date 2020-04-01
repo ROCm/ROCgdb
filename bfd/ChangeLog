@@ -1,3 +1,18 @@
+2020-04-01  Tamar Christina  <tamar.christina@arm.com>
+
+	PR ld/16017
+	* elf32-arm.c (elf32_arm_populate_plt_entry): Set LSB of the PLT0
+	address in the GOT if in thumb only mode.
+
+2020-04-01  Tamar Christina  <tamar.christina@arm.com>
+
+	* elf32-arm.c (elf32_thumb2_plt_entry): Fix PC-rel offset.
+
+2020-04-01  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* mmo.c (mmo_scan): Create .text section only when needed, not
+	from the start.
+
 2020-03-31  Alan Modra  <amodra@gmail.com>
 
 	* coff-alpha.c (alpha_ecoff_get_elt_at_filepos): Correct bfd_bread
