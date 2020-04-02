@@ -1,3 +1,47 @@
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* gdb.base/complex-parts.exp: Add type tests.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* gdb.base/complex-parts.exp: Add arithmetic tests.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* gdb.compile/compile.exp: Update.
+	* gdb.compile/compile-cplus.exp: Update.
+	* gdb.base/varargs.exp: Update.
+	* gdb.base/floatn.exp: Update.
+	* gdb.base/endianity.exp: Update.
+	* gdb.base/callfuncs.exp (do_function_calls): Update.
+	* gdb.base/funcargs.exp (complex_args, complex_integral_args)
+	(complex_float_integral_args): Update.
+	* gdb.base/complex.exp: Update.
+	* gdb.base/complex-parts.exp: Update.
+
+2020-04-01  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.rust/union.rs: New file.
+	* gdb.rust/union.exp: New file.
+	* gdb.rust/simple.rs (Union, Union2): Move to union.rs.
+	(main): Update.
+	* gdb.rust/simple.exp: Move union tests to union.exp.
+
+2020-04-01  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.rust/simple.rs (main): Remove "y0".
+
+2020-04-01  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.multi/stop-all-on-exit.c: New test.
+	* gdb.multi/stop-all-on-exit.exp: New file.
+
+2020-04-01  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR gdb/24789
+	* gdb.cp/misc.cc: Add integer reference variable.
+	* gdb.cp/misc.exp: Add test.
+
 2020-04-01  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 
 	* gdb.server/stop-reply-no-thread.exp: Enhance the test

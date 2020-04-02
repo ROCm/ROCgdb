@@ -1,3 +1,93 @@
+2020-04-01  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* windows-tdep.c (is_linked_with_cygwin_dll): Fix style.
+
+2020-04-01  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* buildsym.c (record_line): Fix undefined behavior and preserve
+	lines at eof.
+
+2020-04-01  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* buildsym.c (record_line): Fix the resizing condition.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* value.h (value_literal_complex): Add comment.
+	* valops.c (value_literal_complex): Refer to value.h.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* c-exp.y (FLOAT_KEYWORD, COMPLEX): New tokens.
+	(scalar_type): New rule, from typebase.
+	(typebase): Use scalar_type.  Recognize complex types.
+	(field_name): Handle FLOAT_KEYWORD.
+	(ident_tokens): Add _Complex and __complex__.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	PR exp/25299:
+	* valarith.c (promotion_type, complex_binop): New functions.
+	(scalar_binop): Handle complex numbers.  Use promotion_type.
+	(value_pos, value_neg, value_complement): Handle complex numbers.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* c-exp.y (COMPLEX_INT, COMPLEX_FLOAT): New tokens.
+	(exp) <COMPLEX_INT, COMPLEX_FLOAT>: New rules.
+	(parse_number): Handle complex numbers.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* c-valprint.c (c_decorations): Change complex suffix to "i".
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_value_print_complex): Use accessors.
+	* value.h (value_real_part, value_imaginary_part): Declare.
+	* valops.c (value_real_part, value_imaginary_part): New
+	functions.
+	* value.c (creal_internal_fn, cimag_internal_fn): Use accessors.
+
+2020-04-01  Tom Tromey  <tom@tromey.com>
+
+	* stabsread.c (rs6000_builtin_type, read_sun_floating_type)
+	(read_range_type): Update.
+	* mdebugread.c (basic_type): Update.
+	* go-lang.c (build_go_types): Use init_complex_type.
+	* gdbtypes.h (struct main_type) <complex_type>: New member.
+	(init_complex_type): Update.
+	(arch_complex_type): Don't declare.
+	* gdbtypes.c (init_complex_type): Remove "objfile" parameter.
+	Make name if none given.  Use alloc_type_copy.  Look for cached
+	complex type.
+	(arch_complex_type): Remove.
+	(gdbtypes_post_init): Use init_complex_type.
+	* f-lang.c (build_fortran_types): Use init_complex_type.
+	* dwarf2/read.c (read_base_type): Update.
+	* d-lang.c (build_d_types): Use init_complex_type.
+	* ctfread.c (read_base_type): Update.
+
+2020-04-01  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infrun.c (stop_all_threads): Update assertion, plus when
+	stopping threads, take into account that we might be trying
+	to stop an all-stop target.
+	(stop_waiting): Call 'stop_all_threads' if there exists a
+	non-stop target.
+
+2020-04-01  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* target.h (exists_non_stop_target): New function declaration.
+	* target.c (exists_non_stop_target): New function.
+
+2020-04-01  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR gdb/24789
+	* eval.c (is_integral_or_integral_reference): New function.
+	(evaluate_subexp_standard): Allow integer references in
+	pointer arithmetic.
+
 2020-04-01  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 
 	* remote.c (remote_target::remote_parse_stop_reply): Remove the
