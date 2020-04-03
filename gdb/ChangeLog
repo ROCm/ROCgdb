@@ -1,3 +1,58 @@
+2020-04-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb_bfd.h: Include gdbsupport/byte-vector.h.
+	(gdb_bfd_get_full_section_contents): New declaration.
+	* gdb_bfd.c (gdb_bfd_get_full_section_contents): New function.
+	* windows-tdep.c (is_linked_with_cygwin_dll): Use
+	gdb_bfd_get_full_section_contents.
+
+2020-04-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* exec.c (build_section_table): Replace internal_error with
+	gdb_assert.
+	(section_table_xfer_memory_partial): Likewise.
+	* mdebugread.c (parse_partial_symbols): Likewise.
+	* psymtab.c (lookup_partial_symbol): Likewise.
+	* utils.c (wrap_here): Likewise.
+
+2020-04-02  Tom Tromey  <tromey@adacore.com>
+
+	* f-lang.c (build_fortran_types): Use arch_type to initialize
+	builtin_complex_s32 in the TYPE_CODE_ERROR case.
+
+2020-04-02  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (partial_die_info::read): Do not create a vector
+	of attributes.
+
+2020-04-02  Andrew Burgess  <andrew.burgess@embecosm.com>
+	    Bernd Edlinger <bernd.edlinger@hotmail.de>
+	    Tom Tromey  <tromey@adacore.com>
+
+	* buildsym.c (buildsym_compunit::record_line): Remove
+	deduplication code.
+
+2020-04-02  Tom de Vries  <tdevries@suse.de>
+
+	PR ada/24671
+	* dwarf2/read.c (dw2_map_matching_symbols): Handle -readnow.
+
+2020-04-02  Tom de Vries  <tdevries@suse.de>
+
+	* dwarf2/read.c (dwarf2_gdb_index_functions,
+	dwarf2_debug_names_functions): Init lookup_global_symbol_language with
+	NULL.
+	* psymtab.c (psym_lookup_global_symbol_language): New function.
+	(psym_functions): Init psym_lookup_global_symbol_language with
+	psym_lookup_global_symbol_language.
+	* symfile-debug.c (debug_sym_quick_functions): Init
+	lookup_global_symbol_language with NULL.
+	* symfile.c (set_initial_language): Remove fixme comment.
+	* symfile.h (struct quick_symbol_functions): Add
+	lookup_global_symbol_language.
+	* symtab.c (find_quick_global_symbol_language): New function.
+	(find_main_name): Use find_quick_global_symbol_language.
+
 2020-04-01  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* windows-tdep.c (is_linked_with_cygwin_dll): Fix style.

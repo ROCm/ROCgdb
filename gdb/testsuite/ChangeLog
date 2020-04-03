@@ -1,3 +1,47 @@
+2020-04-02  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.dwarf2/dw2-inline-small-func-lbls.c: New file.
+	* gdb.dwarf2/dw2-inline-small-func.c: New file.
+	* gdb.dwarf2/dw2-inline-small-func.exp: New file.
+	* gdb.dwarf2/dw2-inline-small-func.h: New file.
+	* gdb.opt/inline-small-func.c: New file.
+	* gdb.opt/inline-small-func.exp: New file.
+	* gdb.opt/inline-small-func.h: New file.
+
+2020-04-02  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/dwarf.exp (Dwarf::lines::program::DW_LNS_set_file): New
+	function.
+
+2020-04-02  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/dwarf.exp (function_range): Allow compiler options to be
+	specified.
+
+2020-04-02  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/break-inline-psymtab-2.c (bar): Add
+	__attribute__((always_inline)).
+	* gdb.dwarf2/break-inline-psymtab.exp: Don't use -O2.
+
+2020-04-02  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdbserver-support.exp (gdbserver_exit): Factor out of ...
+	(gdbserver_gdb_exit): ... here.  Add timeout warning.
+	* gdb.multi/multi-target.exp (server_spawn_ids): New global var.
+	(connect_target_extended_remote): Append new server_spawn_id to
+	server_spawn_ids.
+	(cleanup): New proc.
+	(setup, <toplevel>): Call cleanup.
+
+2020-04-02  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/main-psymtab.exp: New file.
+
+2020-04-02  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.fortran/mixed-lang-stack.exp: Accept new complex printing style.
+
 2020-04-01  Tom Tromey  <tom@tromey.com>
 
 	* gdb.base/complex-parts.exp: Add type tests.

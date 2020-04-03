@@ -3593,9 +3593,35 @@ dw2_map_matching_symbols
    gdb::function_view<symbol_found_callback_ftype> callback,
    symbol_compare_ftype *ordered_compare)
 {
-  /* Currently unimplemented; used for Ada.  The function can be called if the
-     current language is Ada for a non-Ada objfile using GNU index.  As Ada
-     does not look for non-Ada symbols this function should just return.  */
+  /* Used for Ada.  */
+  struct dwarf2_per_objfile *dwarf2_per_objfile
+    = get_dwarf2_per_objfile (objfile);
+
+  if (dwarf2_per_objfile->index_table != nullptr)
+    {
+      /* Ada currently doesn't support .gdb_index (see PR24713).  We can get
+	 here though if the current language is Ada for a non-Ada objfile
+	 using GNU index.  As Ada does not look for non-Ada symbols this
+	 function should just return.  */
+      return;
+    }
+
+  /* We have -readnow: no .gdb_index, but no partial symtabs either.  So,
+     inline psym_map_matching_symbols here, assuming all partial symtabs have
+     been read in.  */
+  const int block_kind = global ? GLOBAL_BLOCK : STATIC_BLOCK;
+
+  for (compunit_symtab *cust : objfile->compunits ())
+    {
+      const struct block *block;
+
+      if (cust == NULL)
+	continue;
+      block = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust), block_kind);
+      if (!iterate_over_symbols_terminated (block, name,
+					    domain, callback))
+	return;
+    }
 }
 
 /* Starting from a search name, return the string that finds the upper
@@ -4709,6 +4735,7 @@ const struct quick_symbol_functions dwarf2_gdb_index_functions =
   dw2_forget_cached_source_info,
   dw2_map_symtabs_matching_filename,
   dw2_lookup_symbol,
+  NULL,
   dw2_print_stats,
   dw2_dump,
   dw2_expand_symtabs_for_function,
@@ -5591,6 +5618,7 @@ const struct quick_symbol_functions dwarf2_debug_names_functions =
   dw2_forget_cached_source_info,
   dw2_map_symtabs_matching_filename,
   dw2_debug_names_lookup_symbol,
+  NULL,
   dw2_print_stats,
   dw2_debug_names_dump,
   dw2_debug_names_expand_symtabs_for_function,
@@ -17852,18 +17880,17 @@ partial_die_info::read (const struct die_reader_specs *reader,
   int has_high_pc_attr = 0;
   int high_pc_relative = 0;
 
-  std::vector<struct attribute> attr_vec (abbrev.num_attrs);
   for (i = 0; i < abbrev.num_attrs; ++i)
     {
+      attribute attr;
       bool need_reprocess;
-      info_ptr = read_attribute (reader, &attr_vec[i], &abbrev.attrs[i],
+      info_ptr = read_attribute (reader, &attr, &abbrev.attrs[i],
 				 info_ptr, &need_reprocess);
       /* String and address offsets that need to do the reprocessing have
          already been read at this point, so there is no need to wait until
 	 the loop terminates to do the reprocessing.  */
       if (need_reprocess)
-	read_attribute_reprocess (reader, &attr_vec[i]);
-      attribute &attr = attr_vec[i];
+	read_attribute_reprocess (reader, &attr);
       /* Store the data if it is of an attribute we want to keep in a
          partial symbol table.  */
       switch (attr.name)
