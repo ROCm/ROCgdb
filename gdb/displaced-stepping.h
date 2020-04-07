@@ -213,6 +213,8 @@ private:
   std::vector<displaced_step_buffer> m_buffers;
 };
 
+bool default_supports_displaced_step (target_ops *target, thread_info *thread);
+
 displaced_step_prepare_status
   default_displaced_step_prepare (target_ops *target, thread_info *thread,
 				  CORE_ADDR &displaced_pc);
