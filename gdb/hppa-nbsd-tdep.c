@@ -27,6 +27,7 @@
 
 #include "hppa-tdep.h"
 #include "hppa-bsd-tdep.h"
+#include "nbsd-tdep.h"
 #include "gdbarch.h"
 
 /* From <machine/mcontext.h>.  */
@@ -200,6 +201,8 @@ hppanbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
   /* Obviously NetBSD is BSD-based.  */
   hppabsd_init_abi (info, gdbarch);
+
+  nbsd_init_abi (info, gdbarch);
 
   /* Core file support.  */
   set_gdbarch_iterate_over_regset_sections

@@ -1,3 +1,109 @@
+2020-04-07  Nitika Achra  <Nitika.Achra@amd.com>
+
+	* dwarf2/loc.c (loclist_describe_location): Call the function decode_debug_loclists_
+	addresses if DWARF version is 5 or more because DW_LLE_start* or DW_LLE_offset_pair
+	with DW_LLE_base_addressx are being emitted in DWARFv5.
+	Add the newly added kind DW_LOC_OFFSET_PAIR also.
+	The length of location description is an unsigned ULEB integer in DWARFv5 instead of
+	unsigned integer.
+
+2020-04-07  Nitika Achra  <Nitika.Achra@amd.com>
+
+	* dwarf2/loc.c (enum debug_loc_kind): Add a new kind DEBUG_LOC_OFFSET_PAIR.
+	(dwarf2_find_location_expression): Call the function decode_debug_loclists_
+	addresses if DWARF version is 5 or more. DW_LLE_start* or DW_LLE_offset_pair
+	with DW_LLE_base_addressx are being emitted in DWARFv5 instead of DW_LLE_GNU*.
+	Add applicable base address if the entry is DW_LLE_offset_pair from DWO.
+	(decode_debug_loclists_addresses): Return DEBUG_LOC_OFFSET_PAIR instead of
+	DEBUG_LOC_START_END in case of DW_LLE_offset_pair.
+
+
+2020-04-07  Nitika Achra  <Nitika.Achra@amd.com>
+
+	* dwarf2/read.c (cu_debug_loc_section): Added the declaration for the function.
+	(read_loclist_index): New function definition.
+	(lookup_loclist_base): New function definition.
+	(read_loclist_header): New function definition.
+	(dwarf2_cu): Add loclist_base and loclist_header field.
+	(dwarf2_locate_dwo_sections): Handle .debug_loclists.dwo section.
+	(read_full_die_1): Read the value of DW_AT_loclists_base.
+	(read_attribute_reprocess): Handle DW_FORM_loclistx.
+	(read_attribute_value): Handle DW_FORM_loclistx.
+	(skip_one_die): Handle DW_FORM_loclistx.
+	(loclist_header): New structure declaration.
+	* dwarf2/attribute.c (form_is_section_offset): Handle DW_FORM_loclistx.
+
+2020-04-07  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* dwarf2/read.h (struct dwarf2_psymtab): Remove two-parameters
+	constructor.  Remove `addr` parameter from other constructor and
+	add `per_cu` parameter.
+	* dwarf2/read.c (create_partial_symtab): Update.
+
+2020-04-07  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25796
+	* dwarf2/read.c (can_have_DW_AT_const_value_p): New function.
+	(partial_die_info::fixup): Inherit has_const_value.
+
+2020-04-07  Tom de Vries  <tdevries@suse.de>
+
+	* psymtab.c (maintenance_check_psymtabs): Skip static LOC_BLOCK
+	symbols without address.
+
+2020-04-06  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-nat.h (struct thread_info): Add forward declaration.
+	(nbsd_nat_target::thread_alive): Add.
+	(nbsd_nat_target::thread_name): Likewise.
+	(nbsd_nat_target::update_thread_list): Likewise.
+	(update_thread_list::post_attach): Likewise.
+	(post_attach::pid_to_str): Likewise.
+	* nbsd-nat.c: Include "gdbthread.h" and "inferior.h".
+	(nbsd_thread_lister): Add.
+	(nbsd_nat_target::thread_alive): Likewise.
+	(nbsd_nat_target::thread_name): Likewise.
+	(nbsd_add_threads): Likewise.
+	(update_thread_list::post_attach): Likewise.
+	(nbsd_nat_target::update_thread_list): Likewise.
+	(post_attach::pid_to_str): Likewise.
+
+2020-04-06  Tom Tromey  <tromey@adacore.com>
+
+	* ada-valprint.c (print_variant_part): Extract the variant field.
+	(print_field_values): Use the field as the outer value when
+	recursing.
+
+2020-04-06  Tom Tromey  <tromey@adacore.com>
+
+	* sh-nbsd-tdep.c: Include nbsd-tdep.h.
+	* ppc-nbsd-tdep.c: Include nbsd-tdep.h.
+	* mips-nbsd-tdep.c (mipsnbsd_init_abi): Add missing ";".
+	* arm-nbsd-tdep.c: Include nbsd-tdep.h.
+	* hppa-nbsd-tdep.c: Include nbsd-tdep.h.
+
+2020-04-06  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (read_base_type) <DW_ATE_complex_float>: Handle
+	TYPE_CODE_ERROR.
+
+2020-04-06  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-tdep.c: Include "gdbarch.h".
+	Define enum with NetBSD signal numbers.
+	(nbsd_gdb_signal_from_target, nbsd_gdb_signal_to_target): New.
+	* alpha-nbsd-tdep.c (alphanbsd_init_abi): Call nbsd_init_abi().
+	* amd64-nbsd-tdep.c (amd64nbsd_init_abi): Likewise.
+	* arm-nbsd-tdep.c (arm_netbsd_elf_init_abi): Likewise.
+	* hppa-nbsd-tdep.c (hppanbsd_init_abi): Likewise.
+	* i386-nbsd-tdep.c (i386nbsd_init_abi): Likewise.
+	* mips-nbsd-tdep.c (nbsd_init_abi): Likewise.
+	* ppc-nbsd-tdep.c (ppcnbsd_init_abi): Likewise.
+	* sh-nbsd-tdep.c (shnbsd_init_abi): Likewise.
+	* sparc-nbsd-tdep.c (sparc32nbsd_init_abi): Likewise.
+	* sparc64-nbsd-tdep.c (sparc64nbsd_init_abi): Likewise.
+	* vax-nbsd-tdep.c (vaxnbsd_elf_init_abi): Likewise.
+
 2020-04-03  Hannes Domani  <ssbssa@yahoo.de>
 
 	PR gdb/25325

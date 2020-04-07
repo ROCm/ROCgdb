@@ -92,6 +92,11 @@ enum debug_loc_kind
      as in .debug_loc.  */
   DEBUG_LOC_START_LENGTH = 3,
 
+  /* This is followed by two unsigned LEB128 operands. The values of these
+     operands are the starting and ending offsets, respectively, relative to
+     the applicable base address.  */
+  DEBUG_LOC_OFFSET_PAIR = 4,
+
   /* An internal value indicating there is insufficient data.  */
   DEBUG_LOC_BUFFER_OVERFLOW = -1,
 
@@ -232,7 +237,7 @@ decode_debug_loclists_addresses (struct dwarf2_per_cu_data *per_cu,
 	return DEBUG_LOC_BUFFER_OVERFLOW;
       *high = u64;
       *new_ptr = loc_ptr;
-      return DEBUG_LOC_START_END;
+      return DEBUG_LOC_OFFSET_PAIR;
     /* Following cases are not supported yet.  */
     case DW_LLE_startx_endx:
     case DW_LLE_start_end:
@@ -332,7 +337,7 @@ dwarf2_find_location_expression (struct dwarf2_loclist_baton *baton,
       enum debug_loc_kind kind;
       const gdb_byte *new_ptr = NULL; /* init for gcc -Wall */
 
-      if (baton->from_dwo)
+      if (baton->per_cu->version () < 5 && baton->from_dwo)
 	kind = decode_debug_loc_dwo_addresses (baton->per_cu,
 					       loc_ptr, buf_end, &new_ptr,
 					       &low, &high, byte_order);
@@ -358,6 +363,7 @@ dwarf2_find_location_expression (struct dwarf2_loclist_baton *baton,
 	  continue;
 	case DEBUG_LOC_START_END:
 	case DEBUG_LOC_START_LENGTH:
+	case DEBUG_LOC_OFFSET_PAIR:
 	  break;
 	case DEBUG_LOC_BUFFER_OVERFLOW:
 	case DEBUG_LOC_INVALID_ENTRY:
@@ -369,9 +375,11 @@ dwarf2_find_location_expression (struct dwarf2_loclist_baton *baton,
 
       /* Otherwise, a location expression entry.
 	 If the entry is from a DWO, don't add base address: the entry is from
-	 .debug_addr which already has the DWARF "base address".  We still add
-	 base_offset in case we're debugging a PIE executable.  */
-      if (baton->from_dwo)
+	 .debug_addr which already has the DWARF "base address". We still add
+	 base_offset in case we're debugging a PIE executable. However, if the
+	 entry is DW_LLE_offset_pair from a DWO, add the base address as the
+	 operands are offsets relative to the applicable base address.  */
+      if (baton->from_dwo && kind != DEBUG_LOC_OFFSET_PAIR)
 	{
 	  low += base_offset;
 	  high += base_offset;
@@ -4451,15 +4459,20 @@ loclist_describe_location (struct symbol *symbol, CORE_ADDR addr,
       enum debug_loc_kind kind;
       const gdb_byte *new_ptr = NULL; /* init for gcc -Wall */
 
-      if (dlbaton->from_dwo)
+      if (dlbaton->per_cu->version () < 5 && dlbaton->from_dwo)
 	kind = decode_debug_loc_dwo_addresses (dlbaton->per_cu,
 					       loc_ptr, buf_end, &new_ptr,
 					       &low, &high, byte_order);
-      else
+      else if (dlbaton->per_cu->version () < 5)
 	kind = decode_debug_loc_addresses (loc_ptr, buf_end, &new_ptr,
 					   &low, &high,
 					   byte_order, addr_size,
 					   signed_addr_p);
+      else
+	kind = decode_debug_loclists_addresses (dlbaton->per_cu,
+						loc_ptr, buf_end, &new_ptr,
+						&low, &high, byte_order,
+						addr_size, signed_addr_p);
       loc_ptr = new_ptr;
       switch (kind)
 	{
@@ -4473,6 +4486,7 @@ loclist_describe_location (struct symbol *symbol, CORE_ADDR addr,
 	  continue;
 	case DEBUG_LOC_START_END:
 	case DEBUG_LOC_START_LENGTH:
+	case DEBUG_LOC_OFFSET_PAIR:
 	  break;
 	case DEBUG_LOC_BUFFER_OVERFLOW:
 	case DEBUG_LOC_INVALID_ENTRY:
@@ -4489,8 +4503,17 @@ loclist_describe_location (struct symbol *symbol, CORE_ADDR addr,
       low = gdbarch_adjust_dwarf2_addr (gdbarch, low);
       high = gdbarch_adjust_dwarf2_addr (gdbarch, high);
 
-      length = extract_unsigned_integer (loc_ptr, 2, byte_order);
-      loc_ptr += 2;
+      if (dlbaton->per_cu->version () < 5)
+	 {
+	   length = extract_unsigned_integer (loc_ptr, 2, byte_order);
+	   loc_ptr += 2;
+	 }
+      else
+	 {
+	   unsigned int bytes_read;
+	   length = read_unsigned_leb128 (NULL, loc_ptr, &bytes_read);
+	   loc_ptr += bytes_read;
+	 }
 
       /* (It would improve readability to print only the minimum
 	 necessary digits of the second number of the range.)  */

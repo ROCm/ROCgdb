@@ -22,6 +22,7 @@
 #include "osabi.h"
 
 #include "vax-tdep.h"
+#include "nbsd-tdep.h"
 #include "solib-svr4.h"
 
 /* NetBSD ELF.  */
@@ -29,6 +30,8 @@
 static void
 vaxnbsd_elf_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
+  nbsd_init_abi (info, gdbarch);
+
   /* NetBSD ELF uses SVR4-style shared libraries.  */
   set_solib_svr4_fetch_link_map_offsets
     (gdbarch, svr4_ilp32_fetch_link_map_offsets);

@@ -1,8 +1,6 @@
-/* Native-dependent code for NetBSD.
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 2006-2020 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+   Copyright 2020 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,24 +15,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef NBSD_NAT_H
-#define NBSD_NAT_H
-
-#include "inf-ptrace.h"
-
-struct thread_info;
-
-/* A prototype NetBSD target.  */
-
-struct nbsd_nat_target : public inf_ptrace_target
+static inline int __attribute__((__always_inline__))
+foo (void)
 {
-  char *pid_to_exec_file (int pid) override;
+  return 0;
+}
 
-  bool thread_alive (ptid_t ptid) override;
-  const char *thread_name (struct thread_info *thr) override;
-  void post_attach (int pid) override;
-  void update_thread_list () override;
-  std::string pid_to_str (ptid_t ptid) override;
-};
-
-#endif /* nbsd-nat.h */
+int
+main (void)
+{
+  return foo ();
+}
