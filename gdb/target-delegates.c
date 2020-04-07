@@ -173,6 +173,7 @@ struct dummy_target : public target_ops
   const struct frame_unwind *get_tailcall_unwinder () override;
   void prepare_to_generate_core () override;
   void done_generating_core () override;
+  bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
@@ -346,6 +347,7 @@ struct debug_target : public target_ops
   const struct frame_unwind *get_tailcall_unwinder () override;
   void prepare_to_generate_core () override;
   void done_generating_core () override;
+  bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
@@ -4415,6 +4417,32 @@ debug_target::done_generating_core ()
   this->beneath ()->done_generating_core ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->done_generating_core (", this->beneath ()->shortname ());
   fputs_unfiltered (")\n", gdb_stdlog);
+}
+
+bool
+target_ops::supports_displaced_step (thread_info *arg0)
+{
+  return this->beneath ()->supports_displaced_step (arg0);
+}
+
+bool
+dummy_target::supports_displaced_step (thread_info *arg0)
+{
+  return default_supports_displaced_step (this, arg0);
+}
+
+bool
+debug_target::supports_displaced_step (thread_info *arg0)
+{
+  bool result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->supports_displaced_step (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->supports_displaced_step (arg0);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->supports_displaced_step (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_bool (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
 }
 
 displaced_step_prepare_status

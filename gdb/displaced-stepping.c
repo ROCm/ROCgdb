@@ -304,6 +304,15 @@ When non-zero, displaced stepping specific debugging is enabled."),
 			    &setdebuglist, &showdebuglist);
 }
 
+bool
+default_supports_displaced_step (target_ops *target, thread_info *thread)
+{
+  /* Only check for the presence of `prepare`.  The gdbarch verification ensures
+     that if `prepare` is provided, so is `finish`.  */
+  gdbarch *arch = get_thread_regcache (thread)->arch ();
+  return gdbarch_displaced_step_prepare_p (arch);
+}
+
 displaced_step_prepare_status
 default_displaced_step_prepare (target_ops *target, thread_info *thread,
 				CORE_ADDR &displaced_pc)
