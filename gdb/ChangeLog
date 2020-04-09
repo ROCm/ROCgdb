@@ -1,3 +1,254 @@
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* nat/windows-nat.h (last_wait_event): Don't declare.
+	(wait_for_debug_event): Update comment.
+	* nat/windows-nat.c (last_wait_event): Now static.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (wait_for_debug_event): Move to
+	nat/windows-nat.c.
+	* nat/windows-nat.h (wait_for_debug_event): Declare.
+	* nat/windows-nat.c (wait_for_debug_event): Move from
+	windows-nat.c.  No longer static.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (get_windows_debug_event): Use
+	fetch_pending_stop.
+	* nat/windows-nat.h (fetch_pending_stop): Declare.
+	* nat/windows-nat.c (fetch_pending_stop): New function.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_continue): Use matching_pending_stop and
+	continue_last_debug_event.
+	* nat/windows-nat.h (matching_pending_stop)
+	(continue_last_debug_event): Declare.
+	* nat/windows-nat.c (DEBUG_EVENTS): New define.
+	(matching_pending_stop, continue_last_debug_event): New
+	functions.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (MS_VC_EXCEPTION): Move to nat/windows-nat.c.
+	(handle_exception_result): Move to nat/windows-nat.h.
+	(DEBUG_EXCEPTION_SIMPLE): Remove.
+	(windows_nat::handle_ms_vc_exception): New function.
+	(handle_exception): Move to nat/windows-nat.c.
+	(get_windows_debug_event): Update.
+	(STATUS_WX86_BREAKPOINT, STATUS_WX86_SINGLE_STEP): Move to
+	nat/windows-nat.c.
+	* nat/windows-nat.h (handle_ms_vc_exception): Declare.
+	(handle_exception_result): Move from windows-nat.c.
+	(handle_exception): Declare.
+	* nat/windows-nat.c (MS_VC_EXCEPTION, handle_exception)
+	(STATUS_WX86_SINGLE_STEP, STATUS_WX86_BREAKPOINT): Move from
+	windows-nat.c.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (exception_count, event_count): Remove.
+	(handle_exception, get_windows_debug_event)
+	(do_initial_windows_stuff): Update.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_nat::handle_load_dll)
+	(windows_nat::handle_unload_dll): Rename.  No longer static.
+	* nat/windows-nat.h (handle_load_dll, handle_unload_dll):
+	Declare.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* complaints.h (stop_whining): Declare at top-level.
+	(complaint): Don't declare stop_whining.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_nat::handle_output_debug_string):
+	Rename.  No longer static.
+	* nat/windows-nat.h (handle_output_debug_string): Declare.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (current_process_handle, current_process_id)
+	(main_thread_id, last_sig, current_event, last_wait_event)
+	(current_windows_thread, desired_stop_thread_id, pending_stops)
+	(struct pending_stop, siginfo_er): Move to nat/windows-nat.c.
+	(display_selectors, fake_create_process)
+	(get_windows_debug_event): Update.
+	* nat/windows-nat.h (current_process_handle, current_process_id)
+	(main_thread_id, last_sig, current_event, last_wait_event)
+	(current_windows_thread, desired_stop_thread_id, pending_stops)
+	(struct pending_stop, siginfo_er): Move from windows-nat.c.
+	* nat/windows-nat.c (current_process_handle, current_process_id)
+	(main_thread_id, last_sig, current_event, last_wait_event)
+	(current_windows_thread, desired_stop_thread_id, pending_stops)
+	(siginfo_er): New globals.  Move from windows-nat.c.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (get_image_name): Move to nat/windows-nat.c.
+	(handle_load_dll): Update.
+	* nat/windows-nat.c (get_image_name): Move from windows-nat.c.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (enum thread_disposition_type): Move to
+	nat/windows-nat.h.
+	(windows_nat::thread_rec): Rename from thread_rec.  No longer
+	static.
+	(windows_add_thread, windows_nat_target::fetch_registers)
+	(windows_nat_target::store_registers, handle_exception)
+	(windows_nat_target::resume, get_windows_debug_event)
+	(windows_nat_target::get_tib_address)
+	(windows_nat_target::thread_name)
+	(windows_nat_target::thread_alive): Update.
+	* nat/windows-nat.h (enum thread_disposition_type): Move from
+	windows-nat.c.
+	(thread_rec): Declare.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c: Add "using namespace".
+	* nat/windows-nat.h: Wrap contents in windows_nat namespace.
+	* nat/windows-nat.c: Wrap contents in windows_nat namespace.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* nat/windows-nat.h (struct windows_thread_info): Declare
+	destructor.
+	* nat/windows-nat.c (~windows_thread_info): New.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/22992
+	* windows-nat.c (current_event): Update comment.
+	(last_wait_event, desired_stop_thread_id): New globals.
+	(struct pending_stop): New.
+	(pending_stops): New global.
+	(windows_nat_target) <stopped_by_sw_breakpoint>
+	<supports_stopped_by_sw_breakpoint>: New methods.
+	(windows_fetch_one_register): Add assertions.  Adjust PC.
+	(windows_continue): Handle pending stops.  Suspend other threads
+	when stepping.  Use last_wait_event
+	(wait_for_debug_event): New function.
+	(get_windows_debug_event): Use wait_for_debug_event.  Handle
+	pending stops.  Queue spurious stops.
+	(windows_nat_target::wait): Set stopped_at_software_breakpoint.
+	(windows_nat_target::kill): Use wait_for_debug_event.
+	* nat/windows-nat.h (struct windows_thread_info)
+	<stopped_at_software_breakpoint>: New field.
+	* nat/windows-nat.c (windows_thread_info::resume): Clear
+	stopped_at_software_breakpoint.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (enum thread_disposition_type): New.
+	(thread_rec): Replace "get_context" parameter with "disposition";
+	change type.
+	(windows_add_thread, windows_nat_target::fetch_registers)
+	(windows_nat_target::store_registers, handle_exception)
+	(windows_nat_target::resume, get_windows_debug_event)
+	(windows_nat_target::get_tib_address)
+	(windows_nat_target::thread_name)
+	(windows_nat_target::thread_alive): Update.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (thread_rec): Use windows_thread_info::suspend.
+	(windows_continue): Use windows_continue::resume.
+	* nat/windows-nat.h (struct windows_thread_info) <suspend,
+	resume>: Declare new methods.
+	* nat/windows-nat.c: New file.
+	* configure.nat (NATDEPFILES): Add nat/windows-nat.o when needed.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_add_thread, windows_delete_thread)
+	(windows_nat_target::fetch_registers)
+	(windows_nat_target::store_registers, fake_create_process)
+	(windows_nat_target::resume, windows_nat_target::resume)
+	(get_windows_debug_event, windows_nat_target::wait)
+	(windows_nat_target::pid_to_str)
+	(windows_nat_target::get_tib_address)
+	(windows_nat_target::get_ada_task_ptid)
+	(windows_nat_target::thread_name)
+	(windows_nat_target::thread_alive): Use lwp, not tid.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (handle_exception)
+	(windows_nat_target::thread_name): Update.
+	* nat/windows-nat.h (windows_thread_info): Remove destructor.
+	<name>: Now unique_xmalloc_ptr.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (thread_rec)
+	(windows_nat_target::fetch_registers): Update.
+	* nat/windows-nat.h (struct windows_thread_info) <suspended>:
+	Update comment.
+	<debug_registers_changed, reload_context>: Now bool.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_add_thread): Use new.
+	(windows_init_thread_list, windows_delete_thread): Use delete.
+	(get_windows_debug_event): Update.
+	* nat/windows-nat.h (struct windows_thread_info): Add constructor,
+	destructor, and initializers.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (struct windows_thread_info): Remove.
+	* nat/windows-nat.h: New file.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (struct windows_thread_info) <tid>: Rename from "id".
+	(thread_rec, windows_add_thread, windows_delete_thread)
+	(windows_continue): Update.
+
+2020-04-08  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (struct windows_thread_info): Remove typedef.
+	(thread_head): Remove.
+	(thread_list): New global.
+	(thread_rec, windows_add_thread, windows_init_thread_list)
+	(windows_delete_thread, windows_continue): Update.
+
+2020-04-08  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* windows-tdep.h (windows_init_abi): Add comment.
+	(cygwin_init_abi): New declaration.
+	* windows-tdep.c: Split signal enumeration in two, one for
+	Windows and one for Cygwin.
+	(windows_gdb_signal_to_target): Only deal with signal of the
+	Windows OS ABI.
+	(cygwin_gdb_signal_to_target): New function.
+	(windows_init_abi): Rename to windows_init_abi_common, don't set
+	gdb_signal_to_target gdbarch method.  Add new new function with
+	this name.
+	(cygwin_init_abi): New function.
+	* amd64-windows-tdep.c (amd64_windows_init_abi_common): Add
+	comment.  Don't call windows_init_abi.
+	(amd64_windows_init_abi): Add comment, call windows_init_abi.
+	(amd64_cygwin_init_abi): Add comment, call cygwin_init_abi.
+	* i386-windows-tdep.c (i386_windows_init_abi): Rename to
+	i386_windows_init_abi_common, don't call windows_init_abi.  Add
+	a new function of this name.
+	(i386_cygwin_init_abi): New function.
+	(_initialize_i386_windows_tdep): Bind i386_cygwin_init_abi to
+	OS ABI Cygwin.
+
+2020-04-08  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* dwarf2/read.c (read_gdb_index_from_buffer): Remove objfile
+	parameter.c.
+	(dwarf2_read_gdb_index): Update.
+
 2020-04-07  Kamil Rytarowski  <n54@gmx.com>
 
 	* nbsd-tdep.c: Include "objfiles.h".
