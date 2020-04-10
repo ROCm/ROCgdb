@@ -1,3 +1,35 @@
+2020-04-10  Tom de Vries  <tdevries@suse.de>
+
+	PR cli/25808
+	* python/lib/gdb/__init__.py: Initialize lexer with stripnl=False.
+
+2020-04-09  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* MAINTAINERS (Global Maintainers): Add Tom de Vries.
+	(Write After Approval): Remove Tom de Vries.
+
+2020-04-09  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	revert partially:
+	2020-04-01  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+        * buildsym.c (record_line): Fix undefined behavior and preserve
+        lines at eof.
+
+2020-04-09  Kamil Rytarowski  <n54@gmx.com>
+
+	* auxv.h (svr4_auxv_parse): New.
+	* auxv.c (default_auxv_parse): Split into default_auxv_parse
+	and generic_auxv_parse.
+	(svr4_auxv_parse): Add.
+	* obsd-tdep.c: Include "auxv.h".
+	(obsd_auxv_parse): Remove.
+	(obsd_init_abi): Remove comment.
+	(obsd_init_abi): Change set_gdbarch_auxv_parse passed argument
+	from `obsd_auxv_parse' to `svr4_auxv_parse'.
+	* nbsd-tdep.c: Include "auxv.h".
+	(nbsd_init_abi): Call set_gdbarch_auxv_parse.
+
 2020-04-08  Tom Tromey  <tromey@adacore.com>
 
 	* nat/windows-nat.h (last_wait_event): Don't declare.
