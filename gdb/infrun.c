@@ -57,7 +57,7 @@
 #include "target-dcache.h"
 #include "terminal.h"
 #include "solist.h"
-#include "event-loop.h"
+#include "gdbsupport/event-loop.h"
 #include "thread-fsm.h"
 #include "gdbsupport/enum-flags.h"
 #include "progspace-and-thread.h"
@@ -65,8 +65,9 @@
 #include "arch-utils.h"
 #include "gdbsupport/scope-exit.h"
 #include "gdbsupport/forward-scope-exit.h"
-#include "gdb_select.h"
+#include "gdbsupport/gdb_select.h"
 #include <unordered_map>
+#include "async-event.h"
 
 /* Prototypes for local functions */
 

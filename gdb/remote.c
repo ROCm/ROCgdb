@@ -49,7 +49,7 @@
 
 #include "gdbsupport/gdb_sys_time.h"
 
-#include "event-loop.h"
+#include "gdbsupport/event-loop.h"
 #include "event-top.h"
 #include "inf-loop.h"
 
@@ -77,6 +77,7 @@
 #include "gdbsupport/byte-vector.h"
 #include <algorithm>
 #include <unordered_map>
+#include "async-event.h"
 
 /* The remote target.  */
 

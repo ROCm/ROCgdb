@@ -33,8 +33,9 @@
 #include "cli/cli-style.h"
 #include "top.h"
 #include "source.h"
-#include "event-loop.h"
+#include "gdbsupport/event-loop.h"
 #include "gdbcmd.h"
+#include "async-event.h"
 
 #include "tui/tui.h"
 #include "tui/tui-io.h"

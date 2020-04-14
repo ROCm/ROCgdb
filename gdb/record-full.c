@@ -31,13 +31,14 @@
 #include "record-full.h"
 #include "elf-bfd.h"
 #include "gcore.h"
-#include "event-loop.h"
+#include "gdbsupport/event-loop.h"
 #include "inf-loop.h"
 #include "gdb_bfd.h"
 #include "observable.h"
 #include "infrun.h"
 #include "gdbsupport/gdb_unlinker.h"
 #include "gdbsupport/byte-vector.h"
+#include "async-event.h"
 
 #include <signal.h>
 

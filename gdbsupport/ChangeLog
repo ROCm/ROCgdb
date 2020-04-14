@@ -1,3 +1,26 @@
+2020-04-13  Tom Tromey  <tom@tromey.com>
+
+	* event-loop.c: Move comment.  Remove obsolete 	comment.
+
+2020-04-13  Tom Tromey  <tom@tromey.com>
+
+	* event-loop.h: Move from ../gdb/.
+	* event-loop.cc: Move from ../gdb/.
+
+2020-04-13  Tom Tromey  <tom@tromey.com>
+
+	* errors.h (flush_streams): Declare.
+
+2020-04-13  Tom Tromey  <tom@tromey.com>
+
+	* gdb_select.h: Move from ../gdb/.
+
+2020-04-13  Tom Tromey  <tom@tromey.com>
+
+	* config.in, configure: Rebuild.
+	* common.m4 (GDB_AC_COMMON): Check for poll.h, sys/poll.h,
+	sys/select.h, and poll.
+
 2020-03-31  Tom Tromey  <tromey@adacore.com>
 
 	* btrace-common.cc (btrace_data_append): Conditionally call
