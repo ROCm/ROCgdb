@@ -1,3 +1,40 @@
+2020-04-14  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-nat.c (nbsd_pid_to_kinfo_proc2): New.
+	(nbsd_nat_target::info_proc): Add do_status.
+
+2020-04-14  Simon Marchi  <simon.marchi@polymtl.ca>
+	    Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25718
+	* psympriv.h (struct partial_symtab::read_symtab)
+	(struct partial_symtab::expand_psymtab)
+	(struct partial_symtab::read_dependencies): Update comments.
+	* dwarf2/read.c (struct dwarf2_include_psymtab::read_symtab): Call
+	read_symtab for includer.
+	(struct dwarf2_include_psymtab::expand_psymtab): Assert false.
+	(struct dwarf2_include_psymtab::readin_p): Call readin_p () for includer.
+	(struct dwarf2_include_psymtab::m_readin): Remove.
+	(struct dwarf2_include_psymtab::includer): New member function.
+	(dwarf2_psymtab::expand_psymtab): Assert !readin.
+
+2020-04-14  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25720
+	* symmisc.c (maintenance_expand_symtabs): Call expand_symtabs_matching
+	with NULL symbol_matcher and lookup_name.
+	* psymtab.c (psym_expand_symtabs_matching): Handle NULL symbol_matcher
+	and lookup_name.
+	* dwarf2/read.c (dw2_expand_symtabs_matching)
+	(dw2_debug_names_expand_symtabs_matching): Same.
+	* symfile.h (struct quick_symbol_functions::expand_symtabs_matching):
+	Make lookup_name a pointer.  Update comment.
+	* symtab.c (global_symbol_searcher::expand_symtabs): Handle
+	lookup_name being a pointer.
+	* symfile.c (expand_symtabs_matching): Same.
+	* symfile-debug.c (debug_qf_expand_symtabs_matching): Same.
+	* linespec.c (iterate_over_all_matching_symtabs): Same.
+
 2020-04-13  Tom Tromey  <tom@tromey.com>
 
 	* run-on-main-thread.c: Update include.
