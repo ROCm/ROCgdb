@@ -1,6 +1,7 @@
 /* Frame unwinder for frames with DWARF Call Frame Information.
 
    Copyright (C) 2003-2020 Free Software Foundation, Inc.
+   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Mark Kettenis.
 
@@ -204,6 +205,32 @@ read_addr_from_reg (struct frame_info *this_frame, int reg)
   return address_from_register (regnum, this_frame);
 }
 
+static void
+read_frame_closure_value (struct value *v)
+{
+  rw_closure_value (v, NULL);
+}
+
+static void
+write_frame_closure_value (struct value *to, struct value *from)
+{
+  rw_closure_value (to, from);
+}
+
+/* Functions for accessing a composite value described by DW_OP_piece.  */
+static const struct lval_funcs frame_closure_value_funcs = {
+  read_frame_closure_value,
+  write_frame_closure_value,
+  /* Implicit pointers callbacks are not needed because they are not
+     supported in the CFI information.   */
+  NULL,
+  NULL,
+  NULL,
+  copy_value_closure,
+  free_value_closure
+};
+
+
 /* Execute the required actions for both the DW_CFA_restore and
 DW_CFA_restore_extended instructions.  */
 static void
@@ -245,22 +272,19 @@ public:
 
   struct frame_info *this_frame;
 
-  CORE_ADDR read_addr_from_reg (int reg) override
+  struct frame_info *get_context_frame () override
+   {
+    return this_frame;
+   }
+
+  struct dwarf2_per_cu_data *get_per_cu (void) override
   {
-    return ::read_addr_from_reg (this_frame, reg);
+    return NULL;
   }
 
-  struct value *get_reg_value (struct type *type, int reg) override
+  const struct lval_funcs *get_closure_callbacks () override
   {
-    struct gdbarch *gdbarch = get_frame_arch (this_frame);
-    int regnum = dwarf_reg_to_regnum_or_error (gdbarch, reg);
-
-    return value_from_register (type, regnum, this_frame);
-  }
-
-  void read_mem (gdb_byte *buf, CORE_ADDR addr, size_t len) override
-  {
-    read_memory (addr, buf, len);
+    return &frame_closure_value_funcs;
   }
 
   void get_frame_base (const gdb_byte **start, size_t *length) override
@@ -316,10 +340,10 @@ public:
 static CORE_ADDR
 execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
 		  struct frame_info *this_frame, CORE_ADDR initial,
-		  int initial_in_stack_memory, dwarf2_per_objfile *per_objfile)
-{
-  CORE_ADDR result;
+		  int initial_in_stack_memory, dwarf2_per_objfile *per_objfile,
+		  struct type* type = nullptr, bool as_lval = true)
 
+{
   dwarf_expr_executor ctx (per_objfile);
   scoped_value_mark free_values;
 
@@ -331,20 +355,7 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
   ctx.push_address (initial, initial_in_stack_memory);
   ctx.eval (exp, len);
 
-  if (ctx.location == DWARF_VALUE_MEMORY)
-    result = ctx.fetch_address (0);
-  else if (ctx.location == DWARF_VALUE_REGISTER)
-    result = ctx.read_addr_from_reg (value_as_long (ctx.fetch (0)));
-  else
-    {
-      /* This is actually invalid DWARF, but if we ever do run across
-	 it somehow, we might as well support it.  So, instead, report
-	 it as unimplemented.  */
-      error (_("\
-Not implemented: computing unwound register using explicit value operator"));
-    }
-
-  return result;
+  return value_address (ctx.fetch_value (as_lval, type));
 }
 
 

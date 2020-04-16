@@ -689,6 +689,9 @@ extern struct value *value_field_bitfield (struct type *type, int fieldno,
 
 extern void pack_long (gdb_byte *buf, struct type *type, LONGEST num);
 
+extern void pack_unsigned_long (gdb_byte *buf, struct type *type,
+				ULONGEST num);
+
 extern struct value *value_from_longest (struct type *type, LONGEST num);
 extern struct value *value_from_ulongest (struct type *type, ULONGEST num);
 extern struct value *value_from_pointer (struct type *type, CORE_ADDR addr);
