@@ -1,3 +1,26 @@
+2020-04-15  Kamil Rytarowski  <n54@gmx.com>
+
+	* obsd-nat.c (obsd_nat_target::update_thread_list): Pass "this" to
+	thread functions.
+	(obsd_nat_target::wait): Likewise.
+
+2020-04-15  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (DEBUG_EXEC, DEBUG_EVENTS, DEBUG_MEM)
+	(DEBUG_EXCEPT): Use debug_printf.
+
+2020-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* completer.c (class completion_tracker::completion_hash_entry)
+	<hash_name>: New member function.
+	(completion_tracker::discard_completions): New callback to hash a
+	completion_hash_entry, pass this to htab_create_alloc.
+
+2016-01-20  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* windows-nat.c (windows_make_so): Warn rather than stopping with
+	an error if realpath() fails.
+
 2020-04-14  Kamil Rytarowski  <n54@gmx.com>
 
 	* nbsd-nat.c (nbsd_pid_to_kinfo_proc2): New.
