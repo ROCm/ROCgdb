@@ -1,3 +1,55 @@
+2020-04-16  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-nat.c (inf_ptrace_target::auxv_parse): Remove.
+	* nbsd-nat.h (inf_ptrace_target::auxv_parse): Likewise.
+
+2020-04-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* windows-tdep.c (is_linked_with_cygwin_dll): Add filename to
+	warning messages.
+
+2020-04-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* windows-tdep.c (is_linked_with_cygwin_dll): Consider case where
+	import table is not at beginning of .idata section.
+
+2020-04-16  Pedro Alves  <palves@redhat.com>
+
+	* inferior.c (delete_inferior): Use delete operator directly
+	instead of delete_program_space.
+	* progspace.c (add_program_space): New, factored out from
+	program_space::program_space.
+	(remove_program_space): New, factored out from
+	delete_program_space.
+	(program_space::program_space): Remove intro comment.  Rewrite.
+	(program_space::~program_space): Remove intro comment.  Call
+	remove_program_space.
+	(delete_program_space): Delete.
+	* progspace.h (program_space::program_space): Make explicit.  Move
+	intro comment here, adjusted.
+	(program_space::~program_space): Move intro comment here,
+	adjusted.
+	(delete_program_space): Remove.
+
+2020-04-16  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_nat::handle_access_violation): New
+	function.
+	* nat/windows-nat.h (handle_access_violation): Declare.
+	* nat/windows-nat.c (handle_exception): Move Cygwin code to
+	windows-nat.c.  Call handle_access_violation.
+
+2020-04-16  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25791
+	* dwarf2/index-write.c (write_gdbindex): Generate CU table entries for
+	CUs without psymtab.
+
+2020-04-16  Kevin Buettner  <kevinb@redhat.com>
+
+	* python/python.c (do_start_initialization): Don't call
+	PyEval_InitThreads for Python 3.9 and beyond.
+
 2020-04-15  Kamil Rytarowski  <n54@gmx.com>
 
 	* obsd-nat.c (obsd_nat_target::update_thread_list): Pass "this" to

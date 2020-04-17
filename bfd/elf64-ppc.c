@@ -4774,14 +4774,6 @@ ppc64_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    if (!update_local_sym_info (abfd, symtab_hdr, r_symndx,
 					rel->r_addend, tls_type))
 	      return FALSE;
-
-	  /* We may also need a plt entry if the symbol turns out to be
-	     an ifunc.  */
-	  if (h != NULL && !bfd_link_pic (info) && abiversion (abfd) != 1)
-	    {
-	      if (!update_plt_info (abfd, &h->plt.plist, rel->r_addend))
-		return FALSE;
-	    }
 	  break;
 
 	case R_PPC64_PLT16_HA:
@@ -9369,6 +9361,9 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
 	      if (sym_sec == NULL
 		  || sym_sec->output_section == NULL
 		  || discarded_section (sym_sec))
+		continue;
+
+	      if ((h ? h->type : ELF_ST_TYPE (sym->st_info)) == STT_GNU_IFUNC)
 		continue;
 
 	      if (!SYMBOL_REFERENCES_LOCAL (info, h))
@@ -15886,6 +15881,8 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	  break;
 
 	case R_PPC64_GOT16_DS:
+	  if ((h ? h->elf.type : ELF_ST_TYPE (sym->st_info)) == STT_GNU_IFUNC)
+	    break;
 	  from = TOCstart + htab->sec_info[input_section->id].toc_off;
 	  if (relocation + addend - from + 0x8000 < 0x10000
 	      && SYMBOL_REFERENCES_LOCAL (info, &h->elf))
@@ -15903,6 +15900,8 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 
 	case R_PPC64_GOT16_LO_DS:
 	case R_PPC64_GOT16_HA:
+	  if ((h ? h->elf.type : ELF_ST_TYPE (sym->st_info)) == STT_GNU_IFUNC)
+	    break;
 	  from = TOCstart + htab->sec_info[input_section->id].toc_off;
 	  if (relocation + addend - from + 0x80008000ULL < 0x100000000ULL
 	      && SYMBOL_REFERENCES_LOCAL (info, &h->elf))
@@ -15924,6 +15923,8 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	  break;
 
 	case R_PPC64_GOT_PCREL34:
+	  if ((h ? h->elf.type : ELF_ST_TYPE (sym->st_info)) == STT_GNU_IFUNC)
+	    break;
 	  from = (rel->r_offset
 		  + input_section->output_section->vma
 		  + input_section->output_offset);
