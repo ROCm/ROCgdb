@@ -1709,9 +1709,20 @@ extern initialize_file_ftype _initialize_rocm_tdep;
 void
 _initialize_rocm_tdep (void)
 {
+  /* Make sure the loaded debugger library version is greater than or equal to
+     the one used to build ROCgdb.  */
+  uint32_t major, minor, patch;
+  amd_dbgapi_get_version (&major, &minor, &patch);
+  if (major != AMD_DBGAPI_VERSION_MAJOR || minor < AMD_DBGAPI_VERSION_MINOR)
+    error (
+        _ ("amd-dbgapi library version mismatch, got %d.%d.%d, need %d.%d+"),
+        major, minor, patch, AMD_DBGAPI_VERSION_MAJOR,
+        AMD_DBGAPI_VERSION_MINOR);
+
   /* Initialize the ROCm Debug API.  */
-  if (amd_dbgapi_initialize (&dbgapi_callbacks) != AMD_DBGAPI_STATUS_SUCCESS)
-    return;
+  amd_dbgapi_status_t status = amd_dbgapi_initialize (&dbgapi_callbacks);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("amd-dbgapi failed to initialize (rc=%d)"), status);
 
   /* Set the initial log level.  */
   amd_dbgapi_set_log_level (get_debug_amd_dbgapi_log_level ());
