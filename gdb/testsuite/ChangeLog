@@ -1,3 +1,27 @@
+2020-04-20  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/nested-subp1.exp: Use support_nested_function_tests.
+	* gdb.base/nested-subp2.exp: Likewise.
+	* gdb.base/nested-subp3.exp: Likewise.
+
+2020-04-20  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/nested-subp1.exp: Disable test when using clang.
+	* gdb.base/nested-subp2.exp: Likewise.
+	* gdb.base/nested-subp3.exp: Likewise.
+
+2020-04-20  Gary Benson <gbenson@redhat.com>
+
+	* gdb.cp/exception.cc: Fix compilation error with clang.
+
+2020-04-20  Gary Benson <gbenson@redhat.com>
+
+	* gdb.trace/tspeed.c: Fix compilation error with clang.
+
+2020-04-20  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/jit-main.c: Fix compilation error with clang.
+
 2020-04-17  Kamil Rytarowski  <n54@gmx.com>
 
 	* gdb.base/attach-twice.c: Include "sys/types.h".
@@ -1941,7 +1965,7 @@
 
 2019-09-29  Tom de Vries  <tdevries@suse.de>
 
-        * gdb.dwarf2/gdb-index.exp: Handle new location of .dwz file.
+	* gdb.dwarf2/gdb-index.exp: Handle new location of .dwz file.
 
 2019-09-29  Tom de Vries  <tdevries@suse.de>
 
@@ -2436,7 +2460,7 @@
 2019-07-29  Tom de Vries  <tdevries@suse.de>
 
 	* gdb.base/maint.exp: Use "\r\n" instead of "\[\r\n\]+" in "maint
-          print registers" regexps.
+	print registers" regexps.
 
 2019-07-29  Tom de Vries  <tdevries@suse.de>
 

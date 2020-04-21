@@ -2568,7 +2568,7 @@ create_addrmap_from_index (struct dwarf2_per_objfile *dwarf2_per_objfile,
 			   struct mapped_index *index)
 {
   struct objfile *objfile = dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   const gdb_byte *iter, *end;
   struct addrmap *mutable_map;
   CORE_ADDR baseaddr;
@@ -2625,7 +2625,7 @@ create_addrmap_from_aranges (struct dwarf2_per_objfile *dwarf2_per_objfile,
 {
   struct objfile *objfile = dwarf2_per_objfile->objfile;
   bfd *abfd = objfile->obfd;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   const CORE_ADDR baseaddr = objfile->text_section_offset ();
 
   auto_obstack temp_obstack;
@@ -4691,7 +4691,7 @@ dw2_find_pc_sect_compunit_symtab (struct objfile *objfile,
 
   if (warn_if_readin && data->v.quick->compunit_symtab)
     warning (_("(Internal error: pc %s in read in CU, but not in symtab.)"),
-	     paddress (get_objfile_arch (objfile), pc));
+	     paddress (objfile->arch (), pc));
 
   result
     = recursively_find_pc_sect_compunit_symtab (dw2_instantiate_symtab (data,
@@ -4821,7 +4821,7 @@ read_debug_names_from_section (struct objfile *objfile,
 
   section->read (objfile);
 
-  map.dwarf5_byte_order = gdbarch_byte_order (get_objfile_arch (objfile));
+  map.dwarf5_byte_order = gdbarch_byte_order (objfile->arch ());
 
   const gdb_byte *addr = section->buffer;
 
@@ -7254,7 +7254,7 @@ process_psymtab_comp_unit_reader (const struct die_reader_specs *reader,
 {
   struct dwarf2_cu *cu = reader->cu;
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   struct dwarf2_per_cu_data *per_cu = cu->per_cu;
   CORE_ADDR baseaddr;
   CORE_ADDR best_lowpc = 0, best_highpc = 0;
@@ -8168,7 +8168,7 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
   struct dwarf2_per_objfile *dwarf2_per_objfile
     = cu->per_cu->dwarf2_per_objfile;
   struct objfile *objfile = dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   CORE_ADDR addr = 0;
   const char *actual_name = NULL;
   CORE_ADDR baseaddr;
@@ -8411,7 +8411,7 @@ add_partial_subprogram (struct partial_die_info *pdi,
 	  if (set_addrmap)
 	    {
 	      struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-	      struct gdbarch *gdbarch = get_objfile_arch (objfile);
+	      struct gdbarch *gdbarch = objfile->arch ();
 	      CORE_ADDR baseaddr;
 	      CORE_ADDR this_highpc;
 	      CORE_ADDR this_lowpc;
@@ -9547,7 +9547,7 @@ process_full_comp_unit (struct dwarf2_per_cu_data *per_cu,
   struct dwarf2_cu *cu = per_cu->cu;
   struct dwarf2_per_objfile *dwarf2_per_objfile = per_cu->dwarf2_per_objfile;
   struct objfile *objfile = dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   CORE_ADDR lowpc, highpc;
   struct compunit_symtab *cust;
   CORE_ADDR baseaddr;
@@ -10752,7 +10752,7 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
   struct dwarf2_per_objfile *dwarf2_per_objfile
     = cu->per_cu->dwarf2_per_objfile;
   struct objfile *objfile = dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   CORE_ADDR lowpc = ((CORE_ADDR) -1);
   CORE_ADDR highpc = ((CORE_ADDR) 0);
   struct attribute *attr;
@@ -12831,7 +12831,7 @@ static void
 read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   struct context_stack *newobj;
   CORE_ADDR lowpc;
   CORE_ADDR highpc;
@@ -13032,7 +13032,7 @@ static void
 read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   CORE_ADDR lowpc, highpc;
   struct die_info *child_die;
   CORE_ADDR baseaddr;
@@ -13103,7 +13103,7 @@ static void
 read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   CORE_ADDR pc, baseaddr;
   struct attribute *attr;
   struct call_site *call_site, call_site_local;
@@ -13748,7 +13748,7 @@ dwarf2_ranges_read (unsigned offset, CORE_ADDR *low_return,
 		    dwarf2_psymtab *ranges_pst)
 {
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   const CORE_ADDR baseaddr = objfile->text_section_offset ();
   int low_set = 0;
   CORE_ADDR low = 0;
@@ -13992,7 +13992,7 @@ dwarf2_record_block_ranges (struct die_info *die, struct block *block,
                             CORE_ADDR baseaddr, struct dwarf2_cu *cu)
 {
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   struct attribute *attr;
   struct attribute *attr_high;
 
@@ -14180,7 +14180,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		  struct dwarf2_cu *cu)
 {
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   struct nextfield *new_field;
   struct attribute *attr;
   struct field *fp;
@@ -15946,7 +15946,7 @@ mark_common_block_symbol_computed (struct symbol *sym,
   struct dwarf2_locexpr_baton *baton;
   gdb_byte *ptr;
   unsigned int cu_off;
-  enum bfd_endian byte_order = gdbarch_byte_order (get_objfile_arch (objfile));
+  enum bfd_endian byte_order = gdbarch_byte_order (objfile->arch ());
   LONGEST offset = 0;
 
   gdb_assert (common_loc && member_loc);
@@ -16254,7 +16254,7 @@ static struct type *
 read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct gdbarch *gdbarch
-    = get_objfile_arch (cu->per_cu->dwarf2_per_objfile->objfile);
+    = cu->per_cu->dwarf2_per_objfile->objfile->arch ();
   struct comp_unit_head *cu_header = &cu->header;
   struct type *type;
   struct attribute *attr_byte_size;
@@ -16513,7 +16513,7 @@ static struct type *
 read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   struct type *type, *range_type, *index_type, *char_type;
   struct attribute *attr;
   struct dynamic_prop prop;
@@ -16831,7 +16831,7 @@ static struct type *
 dwarf2_init_float_type (struct objfile *objfile, int bits, const char *name,
 			const char *name_hint, enum bfd_endian byte_order)
 {
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   const struct floatformat **format;
   struct type *type;
 
@@ -16879,7 +16879,7 @@ dwarf2_init_complex_target_type (struct dwarf2_cu *cu,
 				 int bits, const char *name_hint,
 				 enum bfd_endian byte_order)
 {
-  gdbarch *gdbarch = get_objfile_arch (objfile);
+  gdbarch *gdbarch = objfile->arch ();
   struct type *tt = nullptr;
 
   /* Try to find a suitable floating point builtin type of size BITS.
@@ -16952,7 +16952,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
   if (!name)
     complaint (_("DW_AT_name missing from DW_TAG_base_type"));
 
-  arch = get_objfile_arch (objfile);
+  arch = objfile->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (arch);
 
   attr = dwarf2_attr (die, DW_AT_endianity, cu);
@@ -18174,7 +18174,7 @@ partial_die_info::read (const struct die_reader_specs *reader,
       if (lowpc == 0 && !dwarf2_per_objfile->has_section_at_zero)
 	{
 	  struct objfile *objfile = dwarf2_per_objfile->objfile;
-	  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+	  struct gdbarch *gdbarch = objfile->arch ();
 
 	  complaint (_("DW_AT_low_pc %s is zero "
 		       "for DIE at %s [in module %s]"),
@@ -18186,7 +18186,7 @@ partial_die_info::read (const struct die_reader_specs *reader,
       else if (lowpc >= highpc)
 	{
 	  struct objfile *objfile = dwarf2_per_objfile->objfile;
-	  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+	  struct gdbarch *gdbarch = objfile->arch ();
 
 	  complaint (_("DW_AT_low_pc %s is not < DW_AT_high_pc %s "
 		       "for DIE at %s [in module %s]"),
@@ -18590,7 +18590,6 @@ read_attribute_value (const struct die_reader_specs *reader,
   struct dwarf2_per_objfile *dwarf2_per_objfile
     = cu->per_cu->dwarf2_per_objfile;
   struct objfile *objfile = dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
   bfd *abfd = reader->abfd;
   struct comp_unit_head *cu_header = &cu->header;
   unsigned int bytes_read;
@@ -18614,9 +18613,12 @@ read_attribute_value (const struct die_reader_specs *reader,
       info_ptr += bytes_read;
       break;
     case DW_FORM_addr:
-      DW_ADDR (attr) = cu->header.read_address (abfd, info_ptr, &bytes_read);
-      DW_ADDR (attr) = gdbarch_adjust_dwarf2_addr (gdbarch, DW_ADDR (attr));
-      info_ptr += bytes_read;
+      {
+	struct gdbarch *gdbarch = objfile->arch ();
+	DW_ADDR (attr) = cu->header.read_address (abfd, info_ptr, &bytes_read);
+	DW_ADDR (attr) = gdbarch_adjust_dwarf2_addr (gdbarch, DW_ADDR (attr));
+	info_ptr += bytes_read;
+      }
       break;
     case DW_FORM_block2:
       blk = dwarf_alloc_block (cu);
@@ -19828,7 +19830,7 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
   CORE_ADDR baseaddr;
   struct objfile *objfile = cu->per_cu->dwarf2_per_objfile->objfile;
   bfd *abfd = objfile->obfd;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   /* True if we're recording line info (as opposed to building partial
      symtabs and just interested in finding include files mentioned by
      the line number program).  */
@@ -20252,7 +20254,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
   struct dwarf2_per_objfile *dwarf2_per_objfile
     = cu->per_cu->dwarf2_per_objfile;
   struct objfile *objfile = dwarf2_per_objfile->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  struct gdbarch *gdbarch = objfile->arch ();
   struct symbol *sym = NULL;
   const char *name;
   struct attribute *attr = NULL;
@@ -21899,7 +21901,7 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off,
     {
       CORE_ADDR pc = (*get_frame_pc) (baton);
       CORE_ADDR baseaddr = objfile->text_section_offset ();
-      struct gdbarch *gdbarch = get_objfile_arch (objfile);
+      struct gdbarch *gdbarch = objfile->arch ();
 
       for (const auto &cand_off
 	     : dwarf2_per_objfile->abstract_to_concrete[die->sect_off])
