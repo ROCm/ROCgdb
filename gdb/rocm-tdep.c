@@ -75,6 +75,9 @@ struct rocm_notify_shared_library_info
 
 struct rocm_inferior_info
 {
+  /* True if the target is activated.  */
+  bool activated{ false };
+
   /* The amd_dbgapi_process_id for this inferior.  */
   amd_dbgapi_process_id_t process_id{ AMD_DBGAPI_PROCESS_NONE };
 
@@ -84,7 +87,7 @@ struct rocm_inferior_info
   /* True if commit_resume should all-start the GPU queues.  */
   bool commit_resume_all_start;
 
-  /* True is the inferior has exited.  */
+  /* True if the inferior has exited.  */
   bool has_exited{ false };
 
   std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
@@ -131,6 +134,7 @@ struct rocm_target_ops final : public target_ops
 
   void close () override;
   void mourn_inferior () override;
+  void detach (inferior *inf, int from_tty) override;
 
   void async (int enable) override;
 
@@ -731,15 +735,18 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 
         switch (runtime_state)
           {
+          case AMD_DBGAPI_RUNTIME_STATE_LOADED_UNSUPPORTED:
+            warning (_ ("ROCgdb: low-level runtime version not supported"));
+            break;
+
           case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUPPORTED:
             amd_dbgapi_activated.notify ();
-            break;
-          case AMD_DBGAPI_RUNTIME_STATE_LOADED_UNSUPPORTED:
-            warning (_ ("ROCm-GDB: low-level runtime version not supported"));
+            info->activated = true;
             break;
 
           case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
-            amd_dbgapi_deactivated.notify ();
+            if (info->activated)
+              amd_dbgapi_deactivated.notify ();
             break;
           }
       }
@@ -911,11 +918,32 @@ rocm_target_ops::close ()
 void
 rocm_target_ops::mourn_inferior ()
 {
+  auto *info = get_rocm_inferior_info ();
+  info->has_exited = true;
+
+  if (info->activated)
+    amd_dbgapi_deactivated.notify ();
+  amd_dbgapi_process_detach (info->process_id);
+  info->process_id = AMD_DBGAPI_PROCESS_NONE;
+
+  beneath ()->mourn_inferior ();
+
   /* FIXME: only unpush on the last activation.  */
   /* Disengage the ROCm target_ops.  */
   unpush_target (&rocm_ops);
+}
 
-  beneath ()->mourn_inferior ();
+void
+rocm_target_ops::detach (inferior *inf, int from_tty)
+{
+  auto *info = get_rocm_inferior_info ();
+
+  if (info->activated)
+    amd_dbgapi_deactivated.notify ();
+  amd_dbgapi_process_detach (info->process_id);
+  info->process_id = AMD_DBGAPI_PROCESS_NONE;
+
+  beneath ()->detach (inf, from_tty);
 }
 
 void
@@ -1118,6 +1146,10 @@ rocm_target_solib_loaded (struct so_list *solib)
             get_amd_dbgapi_process_id (),
             amd_dbgapi_shared_library_id_t{ value.first },
             AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED);
+
+        /* The rocm target may not be engaged yet, we need to process the
+          events now in case there is a runtime event pending.  */
+        rocm_process_event_queue ();
       }
 }
 
@@ -1165,8 +1197,7 @@ rocm_target_inferior_created (struct target_ops *target, int from_tty)
 
   if (!target_can_async_p ())
     {
-      warning (
-          _ ("ROCm-GDB requires target-async, GPU debugging is disabled"));
+      warning (_ ("ROCgdb requires target-async, GPU debugging is disabled"));
       return;
     }
 
@@ -1224,14 +1255,12 @@ static void
 rocm_target_inferior_exit (struct inferior *inf)
 {
   auto *info = get_rocm_inferior_info (inf);
-  info->has_exited = true;
-
-  amd_dbgapi_deactivated.notify ();
 
   if (info->notifier != -1)
     delete_file_handler (info->notifier);
 
-  amd_dbgapi_process_detach (info->process_id);
+  if (info->process_id.handle != AMD_DBGAPI_PROCESS_NONE.handle)
+    amd_dbgapi_process_detach (info->process_id);
 
   /* Delete the breakpoints that are still active.  */
   for (auto &&value : info->breakpoint_map)
