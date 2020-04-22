@@ -1,3 +1,29 @@
+2020-04-21  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/advance.c (func): New argument, to match call site.
+	(func2, func3): Add return statements.
+
+2020-04-21  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.multi/run-only-second-inf.c: New file.
+	* gdb.multi/run-only-second-inf.exp: New file.
+
+2020-04-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/multi-inferior.c: New test.
+	* gdb.btrace/multi-inferior.exp: New file.
+
+2020-04-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/enable-new-thread.c: New test.
+	* gdb.btrace/enable-new-thread.exp: New file.
+
+2020-04-21  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/25471
+	* gdb.threads/killed-outside.c: New test.
+	* gdb.threads/killed-outside.exp: New file.
+
 2020-04-20  Gary Benson <gbenson@redhat.com>
 
 	* gdb.base/nested-subp1.exp: Use support_nested_function_tests.

@@ -284,6 +284,11 @@ require_btrace (void)
 static void
 record_btrace_enable_warn (struct thread_info *tp)
 {
+  /* Ignore this thread if its inferior is not recorded by us.  */
+  target_ops *rec = tp->inf->target_at (record_stratum);
+  if (rec != &record_btrace_ops)
+    return;
+
   try
     {
       btrace_enable (tp, &record_btrace_conf);
@@ -387,7 +392,7 @@ record_btrace_target_open (const char *args, int from_tty)
   if (!target_has_execution)
     error (_("The program is not being run."));
 
-  for (thread_info *tp : all_non_exited_threads ())
+  for (thread_info *tp : current_inferior ()->non_exited_threads ())
     if (args == NULL || *args == 0 || number_is_in_list (args, tp->global_num))
       {
 	btrace_enable (tp, &record_btrace_conf);
@@ -409,7 +414,7 @@ record_btrace_target::stop_recording ()
 
   record_btrace_auto_disable ();
 
-  for (thread_info *tp : all_non_exited_threads ())
+  for (thread_info *tp : current_inferior ()->non_exited_threads ())
     if (tp->btrace.target != NULL)
       btrace_disable (tp);
 }
@@ -443,7 +448,7 @@ record_btrace_target::close ()
 
   /* We should have already stopped recording.
      Tear down btrace in case we have not.  */
-  for (thread_info *tp : all_non_exited_threads ())
+  for (thread_info *tp : current_inferior ()->non_exited_threads ())
     btrace_teardown (tp);
 }
 
@@ -1532,11 +1537,16 @@ record_btrace_target::remove_breakpoint (struct gdbarch *gdbarch,
 void
 record_btrace_target::fetch_registers (struct regcache *regcache, int regno)
 {
-  thread_info *tp = find_thread_ptid (regcache->target (), regcache->ptid ());
-  gdb_assert (tp != NULL);
+  btrace_insn_iterator *replay = nullptr;
 
-  btrace_insn_iterator *replay = tp->btrace.replay;
-  if (replay != NULL && !record_btrace_generating_corefile)
+  /* Thread-db may ask for a thread's registers before GDB knows about the
+     thread.  We forward the request to the target beneath in this
+     case.  */
+  thread_info *tp = find_thread_ptid (regcache->target (), regcache->ptid ());
+  if (tp != nullptr)
+    replay =  tp->btrace.replay;
+
+  if (replay != nullptr && !record_btrace_generating_corefile)
     {
       const struct btrace_insn *insn;
       struct gdbarch *gdbarch;
@@ -2625,7 +2635,7 @@ record_btrace_target::wait (ptid_t ptid, struct target_waitstatus *status,
   /* Stop all other threads. */
   if (!target_is_non_stop_p ())
     {
-      for (thread_info *tp : all_non_exited_threads ())
+      for (thread_info *tp : current_inferior ()->non_exited_threads ())
 	record_btrace_cancel_resume (tp);
     }
 
@@ -2862,7 +2872,7 @@ record_btrace_target::goto_record (ULONGEST insn)
 void
 record_btrace_target::record_stop_replaying ()
 {
-  for (thread_info *tp : all_non_exited_threads ())
+  for (thread_info *tp : current_inferior ()->non_exited_threads ())
     record_btrace_stop_replaying (tp);
 }
 

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2016-2020 Free Software Foundation, Inc.
+   Copyright 2020 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,12 +15,50 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Simple standalone program using the JIT API.  */
+#include <pthread.h>
+#include <unistd.h>
+#include <stdlib.h>
 
-#include "jit-simple-jit.c"
+pid_t pid;
+
+static pthread_barrier_t threads_started_barrier;
+
+static void
+all_started (void)
+{
+}
+
+static void *
+fun (void *dummy)
+{
+  int i;
+
+  pthread_barrier_wait (&threads_started_barrier);
+
+  for (i = 0; i < 180; i++)
+    sleep (1);
+
+  pthread_exit (NULL);
+}
 
 int
 main (void)
 {
-  return 0;
+  int i;
+  pthread_t thread;
+
+  pid = getpid ();
+
+  pthread_barrier_init (&threads_started_barrier, NULL, 2);
+
+  pthread_create (&thread, NULL, fun, NULL);
+
+  pthread_barrier_wait (&threads_started_barrier);
+
+  all_started ();
+
+  for (i = 0; i < 180; i++)
+    sleep (1);
+
+  exit (EXIT_SUCCESS);
 }

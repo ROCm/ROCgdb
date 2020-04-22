@@ -1,3 +1,38 @@
+2020-04-21  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infrun.c (displaced_step_fixup): Switch to the event_thread
+	before calling displaced_step_restore, not after.
+
+2020-04-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* record-btrace.c (record_btrace_enable_warn): Ignore thread if
+	its inferior is not recorded by us.
+	(record_btrace_target_open): Replace call to
+	all_non_exited_threads () with call to current_inferior
+	()->non_exited_threads ().
+	(record_btrace_target::stop_recording): Likewise.
+	(record_btrace_target::close): Likewise.
+	(record_btrace_target::wait): Likewise.
+	(record_btrace_target::record_stop_replaying): Likewise.
+
+2020-04-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* btrace.c (btrace_enable): Throw an error on double enables and
+	when enabling recording fails.
+	(btrace_disable): Throw an error if the thread is not recorded.
+
+2020-04-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* record-btrace.c (record_btrace_target::fetch_registers): Forward
+	request if we do not have a thread_info.
+
+2020-04-21  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/25471
+	* thread.c
+	(scoped_restore_current_thread::scoped_restore_current_thread): Catch
+	exception in get_frame_id.
+
 2020-04-20  Tom Tromey  <tromey@adacore.com>
 
 	* python/python.c (struct gdbpy_event): Mark move constructor as

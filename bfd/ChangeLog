@@ -1,3 +1,35 @@
+2020-04-21  Tamar Christina  <tamar.christina@arm.com>
+
+	PR binutils/24753
+	* compress.c (bfd_get_full_section_contents): Exclude sections with no
+	content.
+
+2020-04-21  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/25849
+	* elf-bfd.h (elf_backend_data): Add
+	elf_backend_strip_zero_sized_dynamic_sections.
+	(_bfd_elf_strip_zero_sized_dynamic_sections): New prototype.
+	* elf64-alpha.c (elf_backend_strip_zero_sized_dynamic_sections):
+	New macro.
+	* elflink.c (_bfd_elf_strip_zero_sized_dynamic_sections): New
+	function.
+	* elfxx-target.h (elf_backend_strip_zero_sized_dynamic_sections):
+	New macro.
+	(elfNN_bed): Add elf_backend_strip_zero_sized_dynamic_sections.
+
+2020-04-21  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf64-alpha.c (alpha_elf_reloc_entry): Replace reltext with
+	sec.
+	(elf64_alpha_check_relocs): Set sec instead of reltext.  Warn
+	DT_TEXTREL with -M.
+	(elf64_alpha_calc_dynrel_sizes): Warn DT_TEXTREL with -M.
+
+2020-04-21  Nick Clifton  <nickc@redhat.com>
+
+	* po/sr.po: Updated Serbian translation.
+
 2020-04-21  Alan Modra  <amodra@gmail.com>
 
 	* elf32-sh.c (sh_elf_relocate_section): Remove STO_SH5_ISA32
