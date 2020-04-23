@@ -1,3 +1,31 @@
+2020-04-22  Max Filippov  <jcmvbkbc@gmail.com>
+
+	PR ld/25861
+	* testsuite/ld-xtensa/relax-loc.d: New test definition.
+	* testsuite/ld-xtensa/relax-loc.s: New test source.
+	* testsuite/ld-xtensa/xtensa.exp (relax-loc): New test.
+
+2020-04-22  Fangrui Song <maskray@google.com>
+
+	PR ld/25806
+	* ldlang.h (struct lang_input_statement_struct): Add extra_search_path.
+	* ldlang.c (current_input_file): New.
+	(ldirname): New.
+	(new_afile): Add from_filename parameter.  Set extra_search_path.
+	(lang_add_input_file): Pass current_input_file to new_afile.
+	(load_symbols): Set current_input_file.
+	* ldfile.c (ldfile_open_file): If extra_search_path has been set
+	then scan it for the file that needs to be opened.
+	* ld.texi: Document the new behaviour.
+	* NEWS: Mention the new feature.
+
+2020-04-22  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-scripts/default-script1.d: Correct mingw skip.
+	* testsuite/ld-scripts/default-script2.d: Likewise.
+	* testsuite/ld-scripts/default-script3.d: Likewise.
+	* testsuite/ld-scripts/default-script4.d: Likewise.
+
 2020-04-21  Stephen Casner  <casner@acm.org>
 
 	PR 25829
@@ -16,7 +44,7 @@
 	* testsuite/ld-scripts/empty-address-2b.d: Likewise.
 	* testsuite/ld-misc/start.s: .long -> .dc.a to allow relocation to
 	fit target address size.
- 	* testsuite/ld-scripts/empty-address-1.s: Likewise.
+	* testsuite/ld-scripts/empty-address-1.s: Likewise.
 	* testsuite/ld-scripts/empty-address-2.s: Likewise.
 
 2020-04-21  H.J. Lu  <hongjiu.lu@intel.com>
