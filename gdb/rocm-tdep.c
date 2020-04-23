@@ -375,40 +375,39 @@ rocm_target_ops::thread_name (thread_info *tp)
   if (!ptid_is_gpu (tp->ptid))
     return beneath ()->thread_name (tp);
 
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (tp->inf);
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
-  amd_dbgapi_dispatch_id_t dispatch_id;
-  amd_dbgapi_global_address_t kernel_addr;
+  /* Return the process's comm value—that is, the command name associated with
+     the process.  */
 
-  if (amd_dbgapi_wave_get_info (process_id, wave_id,
-                                AMD_DBGAPI_WAVE_INFO_DISPATCH,
-                                sizeof (dispatch_id), &dispatch_id)
-          != AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_dispatch_get_info (
-             process_id, dispatch_id,
-             AMD_DBGAPI_DISPATCH_INFO_KERNEL_ENTRY_ADDRESS,
-             sizeof (kernel_addr), &kernel_addr)
-             != AMD_DBGAPI_STATUS_SUCCESS)
-    return NULL;
+  char comm_path[128];
+  xsnprintf (comm_path, sizeof (comm_path), "/proc/%ld/comm",
+             (long)tp->ptid.pid ());
 
-  struct bound_minimal_symbol msymbol
-      = lookup_minimal_symbol_by_pc_section (kernel_addr, nullptr);
+  gdb_file_up comm_file = gdb_fopen_cloexec (comm_path, "r");
+  if (!comm_file)
+    return nullptr;
 
-  if (msymbol.minsym != NULL)
+#if !defined(TASK_COMM_LEN)
+#define TASK_COMM_LEN 16 /* As defined in the kernel's sched.h.  */
+#endif
+
+  static char comm_buf[TASK_COMM_LEN];
+  const char *comm_value;
+
+  comm_value = fgets (comm_buf, sizeof (comm_buf), comm_file.get ());
+  comm_buf[sizeof (comm_buf) - 1] = '\0';
+
+  /* Make sure there is no newline at the end.  */
+  if (comm_value)
     {
-      static char buf[256];
-      char *endp;
-
-      xsnprintf (buf, sizeof (buf), "%s", msymbol.minsym->print_name ());
-
-      /* Strip the arguments from the demangled function name.  */
-      if ((endp = strchr (buf, '(')))
-        *endp = '\0';
-
-      return buf;
+      for (int i = 0; i < sizeof (comm_buf); i++)
+        if (comm_buf[i] == '\n')
+          {
+            comm_buf[i] = '\0';
+            break;
+          }
     }
 
-  return NULL;
+  return comm_value;
 }
 
 std::string
