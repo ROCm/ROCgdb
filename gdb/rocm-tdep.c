@@ -129,6 +129,7 @@ struct rocm_target_ops final : public target_ops
     return arch_stratum;
   }
 
+  void close () override;
   void mourn_inferior () override;
 
   void async (int enable) override;
@@ -655,10 +656,10 @@ rocm_target_ops::async (int enable)
     }
   else
     {
-      delete_file_handler (rocm_event_pipe[0]);
-
       if (rocm_event_pipe[0] == -1)
         return;
+
+      delete_file_handler (rocm_event_pipe[0]);
 
       ::close (rocm_event_pipe[0]);
       ::close (rocm_event_pipe[1]);
@@ -894,6 +895,14 @@ rocm_target_ops::stopped_by_sw_breakpoint ()
                       - gdbarch_decr_pc_after_break (regcache->arch ());
 
   return software_breakpoint_inserted_here_p (regcache->aspace (), bkpt_pc);
+}
+
+void
+rocm_target_ops::close ()
+{
+  /* Unregister from the event loop.  */
+  async (0);
+  beneath ()->close ();
 }
 
 void
