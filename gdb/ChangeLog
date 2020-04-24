@@ -1,3 +1,67 @@
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* nat/windows-nat.h (struct windows_thread_info)
+	<pc_adjusted>: New member.
+	* windows-nat.c (windows_fetch_one_register): Check
+	pc_adjusted.
+	(windows_nat_target::get_windows_debug_event)
+	(windows_nat_target::wait): Set pc_adjusted.
+
+2020-04-24  Tom de Vries  <tdevries@suse.de>
+
+	* contrib/cc-with-tweaks.sh: Remove <exec>.gdb-index file handling.
+	Run gdb-add-index inside temp dir.
+
+2020-04-23  Tom Tromey  <tromey@adacore.com>
+
+	* windows-tdep.c (is_linked_with_cygwin_dll): Always update "iter"
+	in loop.
+
+2020-04-23  Luis Machado  <luis.machado@linaro.org>
+
+	* dwarf2/frame-tailcall.c (dwarf2_tailcall_sniffer_first): Use
+	get_frame_register instead of gdbarch_unwind_pc.
+
+2020-04-23  Tom de Vries  <tdevries@suse.de>
+
+	* symtab.c (lookup_global_symbol): Prefer def over decl.
+
+2020-04-23  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25807
+	* block.c (best_symbol, better_symbol): Promote to external.
+	* block.h (best_symbol, better_symbol): Declare.
+	* symtab.c (lookup_symbol_in_objfile_symtabs): Prefer def over
+	decl.
+
+2020-04-23  Tom Tromey  <tromey@adacore.com>
+
+	PR ada/25837:
+	* dwarf2/read.c (dw2_expand_symtabs_matching_symbol): Store a
+	"const char *", not a "const std::string &".
+	<name_and_matcher::operator==>: Update.
+	* unittests/lookup_name_info-selftests.c: Change type of
+	"result".
+
+2020-04-23  Tom Tromey  <tom@tromey.com>
+
+	* inferior.h (iterate_over_inferiors): Don't declare.
+	* inferior.c (iterate_over_inferiors): Remove.
+	* darwin-nat.c (find_inferior_task_it, find_inferior_pid_it):
+	Remove.
+	(darwin_find_inferior_by_task, darwin_find_inferior_by_pid): Don't
+	use iterate_over_inferiors.
+	(darwin_resume_inferior_it)
+	(struct resume_inferior_threads_param)
+	(darwin_resume_inferior_threads_it): Remove.
+	(darwin_nat_target::resume): Don't use iterate_over_inferiors.
+
+2020-04-23  Tom de Vries  <tdevries@suse.de>
+
+	* blockframe.c (find_pc_partial_function): Use
+	find_pc_sect_compunit_symtab rather than
+	objfile->sf->qf->find_pc_sect_compunit_symtab.
+
 2020-04-22  Tom de Vries  <tdevries@suse.de>
 
 	PR symtab/25764
