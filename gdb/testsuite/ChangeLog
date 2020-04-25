@@ -1,3 +1,68 @@
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	PR symtab/12707:
+	* gdb.python/py-symbol.exp: Update expected results for
+	linkage_name test.
+	* gdb.cp/print-demangle.exp: New file.
+	* gdb.base/c-linkage-name.exp: Fix test.
+	* gdb.guile/scm-symbol.exp: Update expected results for
+	linkage_name test.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* gdb.dwarf2/dw2-namespaceless-anonymous.S: Remove.
+	* gdb.dwarf2/dw2-namespaceless-anonymous.c: New file.
+	* gdb.dwarf2/dw2-namespaceless-anonymous.exp: Use DWARF
+	assembler.
+
+2020-04-24  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-bad-mips-linkage-name.exp: Set language of CU to
+	C++.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/frame_arg_lang.exp: Run with multiple -fgnat-encodings
+	values.
+	* gdb.ada/funcall_ref.exp: Run with multiple -fgnat-encodings
+	values.  Update test for minimal encodings.
+	* gdb.ada/lang_switch.exp: Update test for minimal encodings.
+	* gdb.ada/var_rec_arr.exp: Run with multiple -fgnat-encodings
+	values.  Update test for minimal encodings.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	PR python/23662:
+	* gdb.ada/variant.exp: Add Python checks.
+	* gdb.rust/simple.exp: Add dynamic type checks.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/mi_var_array.exp: Try all -fgnat-encodings settings.
+	Make array type matching more lax.
+	* gdb.ada/mi_var_union.exp: Try all -fgnat-encodings settings.
+	* gdb.ada/mi_variant.exp: New file.
+	* gdb.ada/mi_variant/pck.ads: New file.
+	* gdb.ada/mi_variant/pkg.adb: New file.
+	* gdb.ada/packed_tagged.exp: Try all -fgnat-encodings settings.
+	* gdb.ada/unchecked_union.exp: Try all -fgnat-encodings settings.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/variant.exp: Add dynamic field offset tests.
+	* gdb.ada/variant/pck.ads (Nested_And_Variable): New type.
+	* gdb.ada/variant/pkg.adb: Add new variables.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/variant.exp: New file
+	* gdb.ada/variant/pkg.adb: New file
+	* gdb.ada/variant/pck.adb: New file
+
+2020-04-24  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (clean_restart): Reset errcnt and warncnt.
+
 2020-04-24  Tom de Vries  <tdevries@suse.de>
 
 	* gdb.dwarf2/dwzbuildid.exp: Add quiet to dwzbuildid-mismatch compile

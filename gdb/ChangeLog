@@ -1,3 +1,215 @@
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* symtab.h (symbol_get_demangled_name): Don't declare.
+	* symtab.c (symbol_get_demangled_name): Remove.
+	(general_symbol_info::natural_name)
+	(general_symbol_info::demangled_name): Update.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	PR rust/25025:
+	* dwarf2/read.c (dwarf2_physname): Do not demangle for Rust.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	PR symtab/12707:
+	* dwarf2/read.c (add_partial_symbol): Use the linkage name if it
+	exists.
+	(new_symbol): Likewise.
+	* compile/compile-object-load.c (get_out_value_type): Use
+	symbol_matches_search_name.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (add_partial_symbol): Do not call
+	compute_and_set_names.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (add_partial_symbol): Use new add_psymbol_to_list
+	overload.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (add_psymbol_to_bcache): Simplify calling convention.
+	(add_psymbol_to_list): New overload.  Make old overload call new
+	one.
+	* psympriv.h (add_psymbol_to_list): New overload.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (partial_die_info::read) <case
+	DW_AT_linkage_name>: Use value_as_string.
+	(dwarf2_string_attr): Use value_as_string.
+	* dwarf2/attribute.h (struct attribute) <value_as_string>: Declare
+	method.
+	* dwarf2/attribute.c (attribute::value_as_string): New method.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (general_symbol_info::natural_name)
+	(general_symbol_info::demangled_name): Check for language_rust.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dw2_linkage_name): Move Rust "{" hack here...
+	(dwarf2_physname): ... from here.
+	(partial_die_info::read): Add Rust "{" hack.
+
+2020-04-24  Tom Tromey  <tom@tromey.com>
+
+	* symtab.h (struct general_symbol_info) <set_demangled_name>: New
+	method.
+	(symbol_set_demangled_name): Don't declare.
+	* symtab.c (general_symbol_info::set_demangled_name): Rename from
+	symbol_set_demangled_name.
+	(general_symbol_info::set_language)
+	(general_symbol_info::compute_and_set_names): Update.
+	* minsyms.c (minimal_symbol_reader::install): Update.
+	* dwarf2/read.c (new_symbol): Update.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	PR python/23662:
+	* python/py-type.c (convert_field): Handle
+	FIELD_LOC_KIND_DWARF_BLOCK.
+	(typy_get_sizeof): Handle TYPE_HAS_DYNAMIC_LENGTH.
+	(typy_get_dynamic): Nw function.
+	(type_object_getset): Add "dynamic".
+	* NEWS: Add entry.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* ada-typeprint.c (print_choices, print_variant_part)
+	(print_record_field_types_dynamic): New functions.
+	(print_record_field_types): Use print_record_field_types_dynamic.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (handle_data_member_location): New overload.
+	(dwarf2_add_field): Use it.
+	(decode_locdesc): Add "computed" parameter.  Update comment.
+	* gdbtypes.c (is_dynamic_type_internal): Also look for
+	FIELD_LOC_KIND_DWARF_BLOCK.
+	(resolve_dynamic_struct): Handle FIELD_LOC_KIND_DWARF_BLOCK.
+	* gdbtypes.c (is_dynamic_type_internal): Add special case for C++
+	virtual base classes.
+	* gnu-v3-abi.c (gnuv3_baseclass_offset): Handle
+	FIELD_LOC_KIND_DWARF_BLOCK.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (read_structure_type): Handle dynamic length.
+	* gdbtypes.c (is_dynamic_type_internal): Check
+	TYPE_HAS_DYNAMIC_LENGTH.
+	(resolve_dynamic_type_internal): Use TYPE_DYNAMIC_LENGTH.
+	* gdbtypes.h (TYPE_HAS_DYNAMIC_LENGTH, TYPE_DYNAMIC_LENGTH):
+	New macros.
+	(enum dynamic_prop_node_kind) <DYN_PROP_BYTE_SIZE>: New
+	constant.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (struct variant_field): Rewrite.
+	(struct variant_part_builder): New.
+	(struct nextfield): Remove "variant" field.  Add "offset".
+	(struct field_info): Add "current_variant_part" and
+	"variant_parts".
+	(alloc_discriminant_info): Remove.
+	(alloc_rust_variant): New function.
+	(quirk_rust_enum): Update.
+	(dwarf2_add_field): Set "offset" member.  Don't handle
+	DW_TAG_variant_part.
+	(offset_map_type): New typedef.
+	(convert_variant_range, create_one_variant)
+	(create_one_variant_part, create_variant_parts)
+	(add_variant_property): New functions.
+	(dwarf2_attach_fields_to_type): Call add_variant_property.
+	(read_structure_type): Don't handle DW_TAG_variant_part.
+	(handle_variant_part, handle_variant): New functions.
+	(handle_struct_member_die): Use them.
+	(process_structure_scope): Don't handle variant parts.
+	* gdbtypes.h (TYPE_FLAG_DISCRIMINATED_UNION): Remove.
+	(struct discriminant_info): Remove.
+	(enum dynamic_prop_node_kind) <DYN_PROP_DISCRIMINATED>: Remove.
+	(struct main_type) <flag_discriminated_union>: Remove.
+	* rust-lang.c (rust_enum_p, rust_empty_enum_p): Rewrite.
+	(rust_enum_variant): Return int.  Remove "contents".  Rewrite.
+	(rust_print_enum, rust_print_struct_def, rust_evaluate_subexp):
+	Update.
+	* valops.c (value_union_variant): Remove.
+	* value.h (value_union_variant): Don't declare.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_discrete_type_high_bound, ada_discrete_type_low)
+	(ada_value_primitive_packed_val): Update.
+	* ada-valprint.c (ada_value_print_1): Update.
+	* dwarf2/loc.c (evaluate_for_locexpr_baton): New struct.
+	(dwarf2_locexpr_baton_eval): Take a property_addr_info rather than
+	just an address.  Use evaluate_for_locexpr_baton.
+	(dwarf2_evaluate_property): Update.
+	* dwarf2/loc.h (struct property_addr_info) <valaddr>: Now an
+	array_view.
+	* findvar.c (default_read_var_value): Update.
+	* gdbtypes.c (compute_variant_fields_inner)
+	(resolve_dynamic_type_internal): Update.
+	(resolve_dynamic_type): Change type of valaddr parameter.
+	* gdbtypes.h (resolve_dynamic_type): Update.
+	* valarith.c (value_subscripted_rvalue): Update.
+	* value.c (value_from_contents_and_address): Update.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/loc.c (dwarf2_locexpr_baton_eval): Add
+	"push_initial_value" parameter.
+	(dwarf2_evaluate_property): Likewise.
+	* dwarf2/loc.h (dwarf2_evaluate_property): Update.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* gdbtypes.c (is_dynamic_type_internal): Check for variant parts.
+	(variant::matches, compute_variant_fields_recurse)
+	(compute_variant_fields_inner, compute_variant_fields): New
+	functions.
+	(resolve_dynamic_struct): Check for DYN_PROP_VARIANT_PARTS.
+	Use resolved_type after type is made.
+	(operator==): Add new cases.
+	* gdbtypes.h (TYPE_HAS_VARIANT_PARTS): New macro.
+	(struct discriminant_range, struct variant, struct variant_part):
+	New.
+	(union dynamic_prop_data) <variant_parts, original_type>: New
+	members.
+	(enum dynamic_prop_node_kind) <DYN_PROP_VARIANT_PARTS>: New constant.
+	(enum dynamic_prop_kind) <PROP_TYPE, PROP_VARIANT_PARTS>: New
+	constants.
+	* value.c (unpack_bits_as_long): Now public.
+	* value.h (unpack_bits_as_long): Declare.
+
+2020-04-24  Tom Tromey  <tromey@adacore.com>
+
+	* rs6000-tdep.c (struct ppc_variant): Rename from "variant".
+	(variants, find_variant_by_arch, rs6000_gdbarch_init): Update.
+
+2020-04-24  Hannes Domani  <ssbssa@yahoo.de>
+
+	* windows-tdep.c (exception_values): Add WOW64 exception numbers.
+
+2020-04-24  Kamil Rytarowski  <n54@gmx.com>
+
+	* inf-ptrace.h (follow_fork, insert_fork_catchpoint)
+	(remove_fork_catchpoint, post_startup_inferior)
+	(post_attach): Move...
+	* obsd-nat.h (follow_fork, insert_fork_catchpoint)
+	(remove_fork_catchpoint, post_startup_inferior)
+	(post_attach): ...here.
+	* inf-ptrace.c (follow_fork, insert_fork_catchpoint)
+	(remove_fork_catchpoint, post_startup_inferior)
+	(post_attach): Move...
+	* obsd-nat.c (follow_fork, insert_fork_catchpoint)
+	(remove_fork_catchpoint, post_startup_inferior)
+	(post_attach): ...here.
+
 2020-04-24  Tom Tromey  <tromey@adacore.com>
 
 	* nat/windows-nat.h (struct windows_thread_info)
