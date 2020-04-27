@@ -10062,7 +10062,6 @@ get_num_dynamic_syms (Filedata * filedata)
       bfd_vma i, maxchain = 0xffffffff, bitmaskwords;
       bfd_vma buckets_vma;
       unsigned long hn;
-      bfd_boolean gnu_hash_error = FALSE;
 
       if (fseek (filedata->handle,
 		 (filedata->archive_file_offset
@@ -10072,14 +10071,12 @@ get_num_dynamic_syms (Filedata * filedata)
 		 SEEK_SET))
 	{
 	  error (_("Unable to seek to start of dynamic information\n"));
-	  gnu_hash_error = TRUE;
 	  goto no_gnu_hash;
 	}
 
       if (fread (nb, 16, 1, filedata->handle) != 1)
 	{
 	  error (_("Failed to read in number of buckets\n"));
-	  gnu_hash_error = TRUE;
 	  goto no_gnu_hash;
 	}
 
@@ -10098,7 +10095,6 @@ get_num_dynamic_syms (Filedata * filedata)
 		 SEEK_SET))
 	{
 	  error (_("Unable to seek to start of dynamic information\n"));
-	  gnu_hash_error = TRUE;
 	  goto no_gnu_hash;
 	}
 
@@ -10106,29 +10102,20 @@ get_num_dynamic_syms (Filedata * filedata)
 	= get_dynamic_data (filedata, filedata->ngnubuckets, 4);
 
       if (filedata->gnubuckets == NULL)
-	{
-	  gnu_hash_error = TRUE;
-	  goto no_gnu_hash;
-	}
+	goto no_gnu_hash;
 
       for (i = 0; i < filedata->ngnubuckets; i++)
 	if (filedata->gnubuckets[i] != 0)
 	  {
 	    if (filedata->gnubuckets[i] < filedata->gnusymidx)
-	      {
-		gnu_hash_error = TRUE;
-		goto no_gnu_hash;
-	      }
+	      goto no_gnu_hash;
 
 	    if (maxchain == 0xffffffff || filedata->gnubuckets[i] > maxchain)
 	      maxchain = filedata->gnubuckets[i];
 	  }
 
       if (maxchain == 0xffffffff)
-	{
-	  gnu_hash_error = TRUE;
-	  goto no_gnu_hash;
-	}
+	goto no_gnu_hash;
 
       maxchain -= filedata->gnusymidx;
 
@@ -10141,7 +10128,6 @@ get_num_dynamic_syms (Filedata * filedata)
 		 SEEK_SET))
 	{
 	  error (_("Unable to seek to start of dynamic information\n"));
-	  gnu_hash_error = TRUE;
 	  goto no_gnu_hash;
 	}
 
@@ -10150,15 +10136,11 @@ get_num_dynamic_syms (Filedata * filedata)
 	  if (fread (nb, 4, 1, filedata->handle) != 1)
 	    {
 	      error (_("Failed to determine last chain length\n"));
-	      gnu_hash_error = TRUE;
 	      goto no_gnu_hash;
 	    }
 
 	  if (maxchain + 1 == 0)
-	    {
-	      gnu_hash_error = TRUE;
-	      goto no_gnu_hash;
-	    }
+	    goto no_gnu_hash;
 
 	  ++maxchain;
 	}
@@ -10172,7 +10154,6 @@ get_num_dynamic_syms (Filedata * filedata)
 		 SEEK_SET))
 	{
 	  error (_("Unable to seek to start of dynamic information\n"));
-	  gnu_hash_error = TRUE;
 	  goto no_gnu_hash;
 	}
 
@@ -10180,10 +10161,7 @@ get_num_dynamic_syms (Filedata * filedata)
       filedata->ngnuchains = maxchain;
 
       if (filedata->gnuchains == NULL)
-	{
-	  gnu_hash_error = TRUE;
-	  goto no_gnu_hash;
-	}
+	goto no_gnu_hash;
 
       if (filedata->dynamic_info_DT_MIPS_XHASH)
 	{
@@ -10195,11 +10173,12 @@ get_num_dynamic_syms (Filedata * filedata)
 		     SEEK_SET))
 	    {
 	      error (_("Unable to seek to start of dynamic information\n"));
-	      gnu_hash_error = TRUE;
 	      goto no_gnu_hash;
 	    }
 
 	  filedata->mipsxlat = get_dynamic_data (filedata, maxchain, 4);
+	  if (filedata->mipsxlat == NULL)
+	    goto no_gnu_hash;
 	}
 
       for (hn = 0; hn < filedata->ngnubuckets; ++hn)
@@ -10226,9 +10205,9 @@ get_num_dynamic_syms (Filedata * filedata)
 		   && (filedata->gnuchains[off++] & 1) == 0);
 	  }
 
-    no_gnu_hash:
-      if (gnu_hash_error)
+      if (num_of_syms == 0)
 	{
+	no_gnu_hash:
 	  if (filedata->mipsxlat)
 	    {
 	      free (filedata->mipsxlat);
