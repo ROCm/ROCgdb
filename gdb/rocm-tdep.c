@@ -854,11 +854,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
     }
   ws->kind = TARGET_WAITKIND_STOPPED;
 
-  if (stop_reason
-      & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
-         | AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP))
-    ws->value.sig = GDB_SIGNAL_TRAP;
-  else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
+  if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
     ws->value.sig = GDB_SIGNAL_SEGV;
   else if (stop_reason
            & (AMD_DBGAPI_WAVE_STOP_REASON_FP_INPUT_DENORMAL
@@ -869,6 +865,13 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
               | AMD_DBGAPI_WAVE_STOP_REASON_FP_INVALID_OPERATION
               | AMD_DBGAPI_WAVE_STOP_REASON_INT_DIVIDE_BY_0))
     ws->value.sig = GDB_SIGNAL_FPE;
+  else if (stop_reason
+      & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
+         | AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP
+         | AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP
+         | AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP
+         | AMD_DBGAPI_WAVE_STOP_REASON_TRAP))
+    ws->value.sig = GDB_SIGNAL_TRAP;
   else
     ws->value.sig = GDB_SIGNAL_0;
 
