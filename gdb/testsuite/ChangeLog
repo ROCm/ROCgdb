@@ -1,3 +1,25 @@
+2020-04-28  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.threads/stop-with-handle.exp: Fix typo in comment
+	(theads -> threads).
+
+2020-04-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.opt/inline-cmds.exp: Set KFAIL PR.
+
+2020-04-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/info-macros.exp: Remove KFAIL.  Add missing trailing ".*".
+
+2020-04-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/array_ptr_renaming.exp: Add PR number in KFAIL.
+
+2020-04-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/main-foo.c: New test.
+	* gdb.dwarf2/struct-with-sig.exp: New file.
+
 2020-04-25  Tom de Vries  <tdevries@suse.de>
 
 	* boards/debug-types.exp: New file.
