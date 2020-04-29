@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Copyright (C) 2018-2020 Free Software Foundation, Inc.
+# Copyright (C) 2020 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Usage: update-freebsd.sh <path-to-syscall.h>
-# Update the freebsd.xml file.
+# Usage: update-netbsd.sh <path-to-syscall.h>
+# Update the netbsd.xml file.
 #
-# FreeBSD uses the same list of system calls on all architectures.
+# NetBSD uses the same list of system calls on all architectures.
 # The list is defined in the sys/kern/syscalls.master file in the
-# FreeBSD source tree.  This file is used as an input to generate
-# several files that are also stored in FreeBSD's source tree.  This
+# NetBSD source tree.  This file is used as an input to generate
+# several files that are also stored in NetBSD's source tree.  This
 # script parses one of those generated files (sys/sys/syscall.h)
 # rather than syscalls.master as syscall.h is easier to parse.
 
@@ -33,10 +33,10 @@ if [ $# -ne 1 ]; then
    exit 1
 fi
 
-cat > freebsd.xml.tmp <<EOF
+cat > netbsd.xml.tmp <<EOF
 <?xml version="1.0"?> <!-- THIS FILE IS GENERATED -*- buffer-read-only: t -*-  -->
 <!-- vi:set ro: -->
-<!-- Copyright (C) 2009-2018 Free Software Foundation, Inc.
+<!-- Copyright (C) 2020 Free Software Foundation, Inc.
 
      Copying and distribution of this file, with or without modification,
      are permitted in any medium without royalty provided the copyright
@@ -48,31 +48,31 @@ cat > freebsd.xml.tmp <<EOF
 
      /usr/src/sys/sys/syscall.h
 
-     The file mentioned above belongs to the FreeBSD Kernel.  -->
+     The file mentioned above belongs to the NetBSD Kernel.  -->
 
 <syscalls_info>
 EOF
 
 awk '
-/MAXSYSCALL/ {
+/MAXSYSCALL/ || /_SYS_SYSCALL_H_/ || /MAXSYSARGS/ || /syscall/ || /NSYSENT/ {
     next
 }
 /^#define/ {
     sub(/^SYS_/,"",$2);
     printf "  <syscall name=\"%s\" number=\"%s\"", $2, $3
-    if (sub(/^freebsd[0-9]*_/,"",$2) != 0)
+    if (sub(/^netbsd[0-9]*_/,"",$2) != 0)
         printf " alias=\"%s\"", $2
     printf "/>\n"
 }
 /\/\* [0-9]* is obsolete [a-z_]* \*\// {
     printf "  <syscall name=\"%s\" number=\"%s\"/>\n", $5, $2
 }
-/\/\* [0-9]* is freebsd[0-9]* [a-z_]* \*\// {
+/\/\* [0-9]* is netbsd[0-9]* [a-z_]* \*\// {
     printf "  <syscall name=\"%s_%s\" number=\"%s\" alias=\"%s\"/>\n", $4, $5, $2, $5
-}' "$1" >> freebsd.xml.tmp
+}' "$1" >> netbsd.xml.tmp
 
-cat >> freebsd.xml.tmp <<EOF
+cat >> netbsd.xml.tmp <<EOF
 </syscalls_info>
 EOF
 
-../../move-if-change freebsd.xml.tmp freebsd.xml
+../../move-if-change netbsd.xml.tmp netbsd.xml

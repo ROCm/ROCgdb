@@ -10922,6 +10922,7 @@ dwarf2_cu::setup_type_unit_groups (struct die_info *die)
 			    COMPUNIT_DIRNAME (cust),
 			    compunit_language (cust),
 			    0, cust));
+	  list_in_scope = get_builder ()->get_file_symbols ();
 	}
       return;
     }
@@ -10973,6 +10974,7 @@ dwarf2_cu::setup_type_unit_groups (struct die_info *die)
 			COMPUNIT_DIRNAME (cust),
 			compunit_language (cust),
 			0, cust));
+      list_in_scope = get_builder ()->get_file_symbols ();
 
       auto &file_names = line_header->file_names ();
       for (i = 0; i < file_names.size (); ++i)
@@ -14514,7 +14516,8 @@ dwarf2_add_type_defn (struct field_info *fip, struct die_info *die,
 
 /* A convenience typedef that's used when finding the discriminant
    field for a variant part.  */
-typedef std::unordered_map<sect_offset, int> offset_map_type;
+typedef std::unordered_map<sect_offset, int, gdb::hash_enum<sect_offset>>
+  offset_map_type;
 
 /* Compute the discriminant range for a given variant.  OBSTACK is
    where the results will be stored.  VARIANT is the variant to

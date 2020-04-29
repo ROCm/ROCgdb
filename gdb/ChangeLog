@@ -1,3 +1,32 @@
+2020-04-28  Kamil Rytarowski  <n54@gmx.com>
+
+	* syscalls/update-netbsd.sh: New file.
+	* syscalls/netbsd.xml: Regenerate.
+	* data-directory/Makefile.in: Register `netbsd.xml' in
+	`SYSCALLS_FILES'.
+
+2020-04-28  Simon Marchi  <simon.marchi@efficios.com>
+
+	* syscalls/update-freebsd.sh: Add double quotes.
+
+2020-04-28  Tom Tromey  <tom@tromey.com>
+
+	* NEWS: Update.
+	* python/py-cmd.c (gdbpy_initialize_commands): Add COMMAND_TUI.
+	(cmdpy_init): Allow class_tui.
+
+2020-04-28 Mark Williams <mark@myosotissp.com>
+
+	PR gdb/24480
+	* dwarf2read.c: Add missing assingments to list_in_scope when
+	start_symtab was already called.
+
+2020-04-28  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/25881
+	* dwarf2/read.c (offset_map_type): Use
+	gdb:hash_enum<sect_offset> as hash function.
+
 2020-04-28  Tom de Vries  <tdevries@suse.de>
 
 	* dwarf2/read.c (process_structure_scope): Add symbol for struct decl
