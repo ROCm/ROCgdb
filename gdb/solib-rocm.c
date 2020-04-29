@@ -481,6 +481,7 @@ rocm_solib_dbgapi_deactivated ()
 {
   /* Disengage the ROCm so_ops.  */
   set_solib_ops (target_gdbarch (), &svr4_so_ops);
+  rocm_update_solib_list ();
 }
 
 static void
