@@ -299,8 +299,10 @@ rocm_breakpoint_check_status (struct bpstats *bs)
   amd_dbgapi_breakpoint_id_t breakpoint_id{ it->first };
   amd_dbgapi_breakpoint_action_t action;
 
-  status = amd_dbgapi_report_breakpoint_hit (process_id, breakpoint_id,
-                                             inferior_thread (), &action);
+  status = amd_dbgapi_report_breakpoint_hit (
+      process_id, breakpoint_id,
+      reinterpret_cast<amd_dbgapi_client_thread_id_t> (inferior_thread ()),
+      &action);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_report_breakpoint_hit failed: breakpoint_%ld "
@@ -1208,7 +1210,9 @@ rocm_target_inferior_created (struct target_ops *target, int from_tty)
 
   gdb_assert (info->wave_stop_events.empty ());
 
-  status = amd_dbgapi_process_attach (inf, &info->process_id);
+  status = amd_dbgapi_process_attach (
+               reinterpret_cast<amd_dbgapi_client_process_id_t> (inf),
+               &info->process_id);
 
   if (status == AMD_DBGAPI_STATUS_ERROR_VERSION_MISMATCH)
     warning (_ ("The version of the kernel driver does not match the version "
@@ -1288,7 +1292,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   /* get_os_pid.  */
   .get_os_pid = [] (amd_dbgapi_client_process_id_t client_process_id,
                     pid_t *pid) -> amd_dbgapi_status_t {
-    inferior *inf = static_cast<inferior *> (client_process_id);
+    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
     struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
     if (info->has_exited)
@@ -1304,7 +1308,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
         const char *library_name, amd_dbgapi_shared_library_id_t library_id,
         amd_dbgapi_shared_library_state_t *library_state)
       -> amd_dbgapi_status_t {
-    inferior *inf = static_cast<inferior *> (client_process_id);
+    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
     struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
     if (!library_name || !library_state)
@@ -1353,7 +1357,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   .disable_notify_shared_library
   = [] (amd_dbgapi_client_process_id_t client_process_id,
         amd_dbgapi_shared_library_id_t library_id) -> amd_dbgapi_status_t {
-    inferior *inf = static_cast<inferior *> (client_process_id);
+    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
     struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
     auto it = info->notify_solib_map.find (library_id.handle);
@@ -1369,7 +1373,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
       [] (amd_dbgapi_client_process_id_t client_process_id,
           amd_dbgapi_shared_library_id_t library_id, const char *symbol_name,
           amd_dbgapi_global_address_t *address) {
-        inferior *inf = static_cast<inferior *> (client_process_id);
+        inferior *inf = reinterpret_cast<inferior *> (client_process_id);
         struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
         auto it = info->notify_solib_map.find (library_id.handle);
@@ -1399,7 +1403,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
           amd_dbgapi_shared_library_id_t shared_library_id,
           amd_dbgapi_global_address_t address,
           amd_dbgapi_breakpoint_id_t breakpoint_id) {
-        inferior *inf = static_cast<inferior *> (client_process_id);
+        inferior *inf = reinterpret_cast<inferior *> (client_process_id);
         struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
         /* Initialize the breakpoint ops lazily since we depend on
@@ -1456,7 +1460,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   .remove_breakpoint =
       [] (amd_dbgapi_client_process_id_t client_process_id,
           amd_dbgapi_breakpoint_id_t breakpoint_id) {
-        inferior *inf = static_cast<inferior *> (client_process_id);
+        inferior *inf = reinterpret_cast<inferior *> (client_process_id);
         struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
         auto it = info->breakpoint_map.find (breakpoint_id.handle);
@@ -1474,7 +1478,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
       [] (amd_dbgapi_client_process_id_t client_process_id,
           amd_dbgapi_breakpoint_id_t breakpoint_id,
           amd_dbgapi_breakpoint_state_t breakpoint_state) {
-        inferior *inf = static_cast<inferior *> (client_process_id);
+        inferior *inf = reinterpret_cast<inferior *> (client_process_id);
         struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
         auto it = info->breakpoint_map.find (breakpoint_id.handle);
