@@ -1,3 +1,22 @@
+2020-04-29  Max Filippov  <jcmvbkbc@gmail.com>
+
+	* config/tc-xtensa.c (XTENSA_MARCH_EARLIEST): Define macro as 0
+	if it's not defined.
+	(microarch_earliest): New static variable.
+	(xg_translate_idioms): Translate "simcall" to "simcall 0" when
+	simcall opcode has mandatory parameter.
+	(xg_init_global_config): Initialize microarch_earliest.
+
+2020-04-29  Nick Clifton  <nickc@redhat.com>
+
+	PR 22699
+	* config/tc-sh.c (build_Mytes): Change operand type IMM0_8 to
+	IMM0_8S and add support for IMM0_8U.
+	* testsuite/gas/sh/sh4a.s: Add test of a logical insn using an
+	unsigned 8-bit immediate.
+	* testsuite/gas/sh/sh4a.d: Extended expected disassembly.
+	* testsuite/gas/sh/sh4al-dsp.d: Update expected disassembly.
+
 2020-04-27  Tamar Christina  <tamar.christina@arm.com>
 
 	* NEWS: Add news entry for big-obj.

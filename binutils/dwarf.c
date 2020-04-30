@@ -2008,7 +2008,7 @@ read_and_print_leb128 (unsigned char *        data,
   int status;
   dwarf_vma val = read_leb128 (data, end, is_signed, bytes_read, &status);
   if (status != 0)
-    report_leb_status (status);
+    report_leb_status (status, __FILE__, __LINE__);
   else
     printf ("%s", dwarf_vmatoa (is_signed ? "d" : "u", val));
 }
@@ -6923,6 +6923,7 @@ display_debug_ranges (struct dwarf_section *section,
   int is_rnglists = strstr (section->name, "debug_rnglists") != NULL;
   /* Initialize it due to a false compiler warning.  */
   unsigned char address_size = 0;
+  dwarf_vma last_offset = 0;
 
   if (bytes == 0)
     {
@@ -7077,6 +7078,15 @@ display_debug_ranges (struct dwarf_section *section,
 		(unsigned long) offset, i);
 	  continue;
 	}
+
+      /* If multiple DWARF entities reference the same range then we will
+         have multiple entries in the `range_entries' list for the same
+         offset.  Thanks to the sort above these will all be consecutive in
+         the `range_entries' list, so we can easily ignore duplicates
+         here.  */
+      if (i > 0 && last_offset == offset)
+        continue;
+      last_offset = offset;
 
       if (dwarf_check != 0 && i > 0)
 	{

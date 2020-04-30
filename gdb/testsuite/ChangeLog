@@ -1,3 +1,26 @@
+2020-04-29  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.base/break.exp: Use with_test_prefix.
+
+2020-04-29  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (debug_types): New proc.
+	* gdb.guile/scm-symtab.exp: Add xfail for PR gcc/90232.
+	* gdb.python/py-symtab.exp: Same.
+
+2020-04-29  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR gdb/17320
+	* gdb.base/pretty-array.c: New test.
+	* gdb.base/pretty-array.exp: New file.
+
+2020-04-29  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25889
+	* gdb.cp/cpexprs.exp: Adapt for inclusion.
+	* gdb.cp/cpexprs-debug-types.exp: New file.  Set -fdebug-types-section
+	and include cpexprs.exp.
+
 2020-04-28 Mark Williams <mark@myosotissp.com>
 
 	PR gdb/24480
