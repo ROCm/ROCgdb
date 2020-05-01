@@ -41,7 +41,8 @@ in this folder or check the GNU Debugger (GDB) web site at:
 Build the ROCm Debugger
 -----------------------
 
-ROCgdb can be built on Ubuntu 16.04, Ubuntu 18.04, and Centos 7.6.
+ROCgdb can be built on Ubuntu 16.04, Ubuntu 18.04, Centos 8.1, RHEL 8.1, and SLES
+15 Service Pack 1.
 
 Building ROCgdb has the following prerequisites:
 
@@ -53,18 +54,24 @@ Building ROCgdb has the following prerequisites:
 3. For Ubuntu 16.04 and Ubuntu 18.04 the following adds the needed packages:
 
    ````shell
-   apt install bison flex gcc make ncurses-dev texinfo g++ \
-     zlib1g-dev libexpat-dev libpython2.7-dev python2.7-minimal liblzma-dev \
+   apt install bison flex gcc make ncurses-dev texinfo g++ zlib1g-dev \
+     libexpat-dev libpython2.7-dev python2.7-minimal liblzma-dev \
      libbabeltrace-dev libbabeltrace-ctf-dev
    ````
 
-4. For CentOS 7.6 the following adds the needed packages:
+4. For CentOS 8.1 and RHEL 8.1 the following adds the needed packages:
 
    ````shell
-   yum install -y epel-release centos-release-scl
-   yum install -y bison flex gcc make texinfo texinfo-tex gcc-c++ \
-     zlib-devel expat-devel python-devel xz-devel \
-     libbabeltrace-devel ncurses-devel
+   yum install -y epel-release centos-release-scl bison flex gcc make \
+     texinfo texinfo-tex gcc-c++ zlib-devel expat-devel python-devel \
+     xz-devel libbabeltrace-devel ncurses-devel
+   ````
+
+5. For SLES 15 Service Pack 1 the following adds the needed packages:
+
+   ````shell
+   zypper in bison flex gcc make texinfo gcc-c++ zlib-devel libexpat-devel \
+     python-devel xz-devel babeltrace-devel ncurses-devel
    ````
 
 An example command-line to build ROCgdb on Linux is:
