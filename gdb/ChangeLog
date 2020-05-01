@@ -1,3 +1,33 @@
+2020-04-30  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-nat.c (nbsd_enable_proc_events)
+	(nbsd_nat_target::post_startup_inferior): Add.
+	(nbsd_nat_target::post_attach): Call `nbsd_enable_proc_events'.
+	(nbsd_nat_target::update_thread_list): Rewrite.
+	(nbsd_nat_target::wait): Handle "PTRACE_LWP_EXIT" and
+	"PTRACE_LWP_CREATE".
+	* nbsd-nat.h (nbsd_nat_target::post_startup_inferior): Add.
+
+2020-04-30  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+	* stack.c (_initialize_stack): Remove duplicated creation
+	of "frame" command and "f" alias.
+
+2020-04-30  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR gdb/18706
+	* gdbtypes.c (check_typedef): Calculate size of array of
+	stubbed type.
+
+2020-04-30  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR gdb/15559
+	* i386-tdep.c (i386_push_dummy_call): Call
+	i386_thiscall_push_dummy_call.
+	(i386_thiscall_push_dummy_call): New function.
+	* i386-tdep.h (i386_thiscall_push_dummy_call): Declare.
+	* i386-windows-tdep.c (i386_windows_push_dummy_call): New function.
+	(i386_windows_init_abi): Call set_gdbarch_push_dummy_call.
+
 2020-04-29  Simon Marchi  <simon.marchi@efficios.com>
 
 	* gdbarch.sh (do_read): Add shellcheck disable directive for
@@ -29,10 +59,6 @@
 
 	* gdbarch.sh: Use %s with printf, instead of variables in the
 	format string.
-
-2020-04-29  Sterling Augustine <saugustine@google.com>
-
-       * dwarf2/read.c (setup_type_unit_groups): Set list_in_scope.
 
 2020-04-29  Tom Tromey  <tromey@adacore.com>
 
