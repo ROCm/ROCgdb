@@ -1032,11 +1032,11 @@ if TLS_GNU2_DIALECT
 
 check_PROGRAMS += tls_shared_gnu2_gd_to_ie_test
 
-tls_test_gnu2.o: tls_test.cc
+tls_test_gnu2.o: tls_test.cc gcctestdir/as
 	$(CXXCOMPILE) -c -fpic -mtls-dialect=gnu2 -o $@ $<
-tls_test_file2_gnu2.o: tls_test_file2.cc
+tls_test_file2_gnu2.o: tls_test_file2.cc gcctestdir/as
 	$(CXXCOMPILE) -c -fpic -mtls-dialect=gnu2 -o $@ $<
-tls_test_c_gnu2.o: tls_test_c.c
+tls_test_c_gnu2.o: tls_test_c.c gcctestdir/as
 	$(COMPILE) -c -fpic -mtls-dialect=gnu2 $(TLS_TEST_C_CFLAGS) -o $@ $<
 tls_test_gnu2_shared2.so: tls_test_file2_gnu2.o gcctestdir/ld
 	$(CXXLINK) -shared tls_test_file2_gnu2.o
@@ -1200,6 +1200,17 @@ x86_64_indirect_jump_to_direct1.o: x86_64_indirect_jump_to_direct1.s
 x86_64_indirect_jump_to_direct1: x86_64_indirect_jump_to_direct1.o gcctestdir/ld
 	gcctestdir/ld -o $@ $<
 x86_64_indirect_jump_to_direct1.stdout: x86_64_indirect_jump_to_direct1
+	$(TEST_OBJDUMP) -dw $< > $@
+
+check_SCRIPTS += x86_64_gd_to_le.sh
+check_DATA += x86_64_gd_to_le.stdout
+MOSTLYCLEANFILES += x86_64_gd_to_le
+
+x86_64_gd_to_le.o: x86_64_gd_to_le.s
+	$(TEST_AS) --64 -o $@ $<
+x86_64_gd_to_le: x86_64_gd_to_le.o gcctestdir/ld
+	gcctestdir/ld -o $@ $<
+x86_64_gd_to_le.stdout: x86_64_gd_to_le
 	$(TEST_OBJDUMP) -dw $< > $@
 
 check_SCRIPTS += x86_64_overflow_pc32.sh

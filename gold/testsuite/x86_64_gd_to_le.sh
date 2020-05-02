@@ -1,9 +1,8 @@
 #!/bin/sh
 
-# ver_test_pr16504.sh -- test that undef gets correct version with LTO.
+# x86_64_gd_to_ie.sh -- a test for GDesc -> IE conversion.
 
-# Copyright (C) 2018-2020 Free Software Foundation, Inc.
-# Written by Cary Coutant <ccoutant@gmail.com>.
+# Copyright (C) 2020 Free Software Foundation, Inc.
 
 # This file is part of gold.
 
@@ -22,20 +21,6 @@
 # Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
 # MA 02110-1301, USA.
 
-check()
-{
-    if ! egrep -q "$2" "$1"
-    then
-	echo "Did not find expected symbol in $1:"
-	echo "   $2"
-	echo ""
-	echo "Actual output below:"
-	cat "$1"
-	exit 1
-    fi
-}
+set -e
 
-check ver_test_pr16504.stdout " FUNC .* UND  *foo@VER2"
-check ver_test_pr16504.stdout " (IFUNC|<OS specific>: 10) .* foo@@VER1"
-
-exit 0
+grep -q "mov[ \t]\+\$0x[a-f0-9]\+,%r9" x86_64_gd_to_le.stdout
