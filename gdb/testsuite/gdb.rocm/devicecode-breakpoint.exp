@@ -164,6 +164,49 @@ gdb_test "clear $breakpoint_loc"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 
+clean_restart ${binfile}
+#TEST9
+#delete all the breakpoints in device thread
+#break <file>:<lineNO>
+#e.g. break bit_extract_compile:35
+gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+#gdb_test "delete 1"
+delete_breakpoints
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+clean_restart ${binfile}
+#TEST10
+#delete single breakpoint in device thread
+#break <file>:<lineNO>
+#e.g. break bit_extract_compile:35
+gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "delete 1"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+clean_restart ${binfile}
+#TEST11
+#disable the breakpoint in device thread and then delete_breakpoints
+#break <device_function_name>
+#break bit_extract_kernel
+#run //to hit the breakpoint in device thread
+#disable <breakpoint no>
+#continue //to exit inferior normally
+#delete breakpoints
+##run //to hit the breakpoint in device thread after enabling the breakpoint
+
+# Set breakpoing in device code
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+
+# Do continue to check the breakpoint is created at device
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "disable 1"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+delete_breakpoints
+gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 
 gdb_exit
