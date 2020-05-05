@@ -21909,6 +21909,13 @@ target system.
 @chapter Debugging Heterogeneous Programs
 @cindex heterogeneous debugging
 
+@cartouche
+@quotation
+@emph{Note:} The commands presented in this chapter are not currently fully
+implemented.  @xref{AMD GPU} for the current support available.
+@end quotation
+@end cartouche
+
 @cindex heterogeneous system
 @cindex heterogeneous program
 In some operating systems, such as Linux with @acronym{AMD}'s
@@ -22837,13 +22844,22 @@ The @code{tbreak} command can be used so only one heterogeneous lane
 will report the breakpoint.  Before continuing execution, the
 breakpoint will need to be set again if necessary.
 
-The @code{set scheduler-locking on} command together with the
-@w{@option{-lane}} breakpoint option can be used to lock @value{GDBN}
-to only resume the current thread, and only report breakoints for a
-fixed heterogeneous lane index.  This avoids the overhead of resuming
-a large number of threads every time resuming from a breakpoint, and
-also avoids the focus being switched to other threads that hit the
-breakpoints.  Note however that other threads will not be executed.
+The @code{set scheduler-locking on} command (@pxref{Non-Stop Mode})
+together with the @w{@option{-lane}} breakpoint option can be used to
+lock @value{GDBN} to only resume the current thread, and only report
+breakoints for a fixed heterogeneous lane index.  This avoids the
+overhead of resuming a large number of threads every time resuming
+from a breakpoint, and also avoids the focus being switched to other
+threads that hit the breakpoints.  Note however that other threads
+will not be executed.
+
+The scheduler locking commands can also be helpful to prevent
+@value{GDBN} switching to other threads while concentrating on
+debugging one particular thread.  The non-stop mode can be hepful to
+prevent the @code{continue} command from resuming other threads that
+are intentionally halted or from cancelling a single step command that
+is in progress by another thread and resuming it instead.
+@xref{Non-Stop Mode}.
 
 @c TODO:
 @c Change command parsing so convienence variable
@@ -26301,9 +26317,9 @@ hipcc -O0 -ggdb --amdgpu-target=gfx900 --amdgpu-target=gfx906 \
         --amdgpu-target=gfx908 bit_extract.cpp -o bit_extract
 @end smallexample
 
-The AMD GPU ROCm for HIP-Clang release compiler maps HIP source
-language work-items to the lanes of an AMD GPU wavefront, which are
-represented in @value{GDBN} as heterogeneous lanes.
+The AMD GPU ROCm compiler maps HIP source language work-items to the
+lanes of an AMD GPU wavefront, which are represented in @value{GDBN}
+as heterogeneous lanes.
 
 @item Assembly Code
 Assembly code kernels are supported.
@@ -26311,8 +26327,8 @@ Assembly code kernels are supported.
 @item Other Languages
 Other languages, including OpenCL and Fortran, are currently supported
 as the minimal pseudo-language, provided they are compiled specifying
-the AMD GPU Code Object V3 and DWARF 4 formats.  @xref{Unsupported
-Languages}.
+at least the AMD GPU Code Object V3 and DWARF 4 formats.
+@xref{Unsupported Languages}.
 
 @end table
 
@@ -26558,7 +26574,7 @@ If you want to print the log to both the console and a file, ommit the
 @c Disabling may very marginally improve wavefront launch latency.
 
 @value{GDBN} @acronym{AMD GPU} support is currently a prototype and
-has the following restrictions.  Future releases may remove these
+has the following restrictions.  Future releases aim to address these
 restrictions.
 
 @enumerate
@@ -26622,15 +26638,24 @@ the threads's number within the heterogeneous work-group
 
 @end table
 
-Only the @code{global} address space is implemented.  Memory cannot be
-read or written in the @code{group} or @code{private} address spaces.
 The address space qualification of addresses described in
-@ref{Heterogeneous Debugging} is not implemented.
+@ref{Heterogeneous Debugging} is not implemented.  However, the
+default address space for AMD GPU threads is @code{generic}.  This
+allows a generic address to be used to read or write in the
+@code{global}, @code{group}, or @code{private} address spaces.  For
+the ROCm release the AMD GPU generic address value for @code{global}
+addresses is the same, for @code{group} addresses it has the most
+significant 32-bits of the address set to 0x00010000, and for
+@code{private} addresses is has the host significant 32-bits of the
+address set to 0x00020000.  A generic private address only accesses
+lane 0 of the currently focused wavefront.  A group address accesses
+the @code{group} segment memory shared by all wavefronts that are
+members of the same work-group as the currently focused wavefront.
 
 @item
-The AMD GPU ROCm for HIP-Clang release compiler currently does not yet
-support generating valid DWARF information for symbolic variables and
-call frame information.  As a consequence:
+The AMD GPU ROCm release compiler currently does not yet support
+generating valid DWARF information for symbolic variables and call
+frame information.  As a consequence:
 
 @itemize @bullet{}
 
@@ -26658,39 +26683,43 @@ work-item ID of a heterogeneous lane is not available.
 
 @end itemize
 
-The AMD GPU ROCm for HIP-Clang release compiler currently adds the
+The AMD GPU ROCm compiler currently adds the
 @w{@option{-gline-tables-only}} @w{@option{-disable-O0-noinline}}
-@w{@option{-disable-O0-optnone}} options when the @w{@option{-ggdb}}
-option is specified.  These ensure source line information is
-generated, but not invalid DWARF, and full inlining is performed, even
-at @w{@option{-O0}}, so the backtrace will be available even without
-CFI information.  If these options are not used the invalid DWARF may
-cause @value{GDBN} to report that it is unable to read memory (such as
-when reading arguments in a backtrace), and may limit the backtrace to
-only the top frame.
+@w{@option{-disable-O0-optnone}}
+@w{@option{-amdgpu-spill-cfi-saved-regs}} options when the
+@w{@option{-ggdb}} option is specified.  These ensure source line
+information is generated, but not invalid DWARF, full inlining is
+performed, even at @w{@option{-O0}}, and registers not currently
+supported by the CFI generation are saved so the CFI information is
+correct.  If these options are not used the invalid DWARF may cause
+@value{GDBN} to report that it is unable to read memory (such as when
+reading arguments in a backtrace), and may limit the backtrace to only
+the top frame.
 
-Note that even with @w{@option{-ggdb}}, functions marked
-@code{noinline} may result in function call frames which will prevent
-a full backtrace.  If function calls are not inlined, the @code{next}
-command may report errors inserting breakpoints when stepping over
-calls due to the invalid CFI information.
+@value{GDBN} does not currently support the AMD GPU compiler
+genenerated CFI information.  The options to force full inlining allow
+the backtrace to be available even without the CFI support.  Note that
+even with @w{@option{-ggdb}}, functions marked @code{noinline} may
+result in function call frames which will prevent a full backtrace.
+If function calls are not inlined, the @code{next} command may report
+errors inserting breakpoints when stepping over calls due to the
+missing CFI support.
 
 @item
-Only AMD GPU Code Object V3 is supported.  This is the default for the
-AMD GPU ROCm for HIP-Clang release compiler.  The following error will
-be reported for incompatible code objects:
+Only AMD GPU Code Object V3 and above is supported.  This is the
+default for the AMD GPU ROCm release compiler.  The following error
+will be reported for incompatible code objects:
 
 @smallexample
-warning: `ROCm-supplied DSO [loaded from memory 0x2361160..0x236d9b8]': ELF file ABI version (o) is not supported.
-warning: Could not load shared library symbols for ROCm-supplied DSO [loaded from memory 0x2361160..0x236d9b8].
+Error while mapping shared library sections:
+`file:///rocm/bit_extract#offset=6751&size=3136': ELF file ABI version (0) is not supported.
 @end smallexample
 
 @item
 DWARF 5 is not yet supported.  There is no support for compressed or split
 DWARF.
 
-DWARF 4 is the default for the AMD GPU ROCm for HIP-Clang release
-compiler.
+DWARF 4 is the default for the AMD GPU ROCm release compiler.
 
 @item
 No support yet for AMD GPU core dumps.
@@ -26711,7 +26740,7 @@ wavefronts missing breakpoints.
 
 @item
 The performance of resuming from a breakpoint when a large number of
-threads have hit a breakpoint can currently take up to 25 seconds on a
+threads have hit a breakpoint can currently take up to 10 seconds on a
 fully occupied single AMD GPU device.  The techniques described in
 @xref{Heterogeneous Debugging} can be used to mitigate this.  Once
 continued from the first breakpoint hit, the responsiveness of
@@ -26754,18 +26783,17 @@ that specify disjoint AMD GPU devices.  This is because the
 devices for all inferiors it is debugging.
 
 The @code{HIP_VISIBLE_DEVICES} environment variable can also be used
-to limit the visible GPUs used by the HIP-Clang VDI runtime.  For
-example,
+to limit the visible GPUs used by the HIP runtime.  For example,
 
 @smallexample
 export HIP_VISIBLE_DEVICES=0
 @end smallexample
 
 @item
-Currently the @code{flat_scratch}, @code{vcc}, and @code{xnack_mask}
-special scalar registers are only accessible using their scalar
-register numbers and not by their register names.  This will not match
-the assembly source text which uses register names.
+Currently the @code{flat_scratch} and @code{xnack_mask} special scalar
+registers are only accessible using their scalar register numbers and
+not by their register names.  This will not match the assembly source
+text which uses register names.
 
 @item
 The @code{until} command does not work when multiple AMD GPUs are
@@ -26774,22 +26802,31 @@ objects that have the same breakpoint set.  The work around is to use
 @samp{tbreak @var{line}; continue}.
 
 @item
-Restarting a program in @value{GDBN} may result in the followig error
-message when setting breakpoints:
+The HIP runtime currently performs deferred code object loading by
+default.  AMD GPU code objects are not loaded until the first kernel
+is launched.  Before then, all breakpoints have to be set as pending
+breakpoints using source line positions.
+
+The @code{HIP_DISABLE_LAZY_KERNEL_LOADING} environment variable can be
+used to disable deferred code object loading by the HIP runtime.  This
+allows breakpoints to be set in AMD GPU code as soon as the inferior
+reaches the @code{main} funtion.
+
+For example,
 
 @smallexample
-warning: Can't read data for section '.debug_ranges' in file 'ROCm-supplied DSO [loaded from memory 0xbe5c00..0xbe98a8]'
+export HIP_DISABLE_LAZY_KERNEL_LOADING=1
 @end smallexample
 
-This is due to the ROCm runtime not finalizing the loader code object
-list.  Performing the @code{info sharedlibrary} command before setting
-the breakpoint ensures the code object list is updated and avoids the
-error.
-
 @item
-Currently when debugging on a ``Arcturus'' AMD GPU, @value{GDBN} may
-randomly report it is unable to halt a thread and report a fatal error
-in the @emph{dmesg} log resulting in the AMD GPU hanging.
+Memory violations are reported to the wavefronts that cause them.
+However, the program location at which they are reported by be after
+the source statement that caused them.  The ROCm runtime can currently
+cause the inferior to terminate before the memory violation is
+reported.  This can be avoided by setting a breakpoint in @code{abort}
+and using the non-stop mode (@pxref{Non-Stop Mode}).  This will
+prevent the ROCm runtime from terminating the inferior, while allowing
+@value{GDBN} to report the memory violation.
 
 @item
 @value{GDBN} does not support following a forked process.
@@ -26803,11 +26840,18 @@ language extension support for C, C++, or Fortran.
 
 @item
 Does not support the AMD GPU ROCm for HIP-HCC release compiler or
-runtime.
+runtime available as part of releases before ROCm 3.5.
 
 @item
 AMD GPU does not currently support the compiler address, memory, or
 thread sanitizers.
+
+@item
+AMD GPU does not currently support calling inferior functions.
+
+@item
+@value{GDBN} support for AMD GPU is not currently available under
+virtualization.
 
 @end enumerate
 
