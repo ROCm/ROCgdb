@@ -1,3 +1,39 @@
+2020-05-05  Nick Clifton  <nickc@redhat.com>
+
+	* dwarf.c (do_checks): New global variable.
+	(display_formatted_table): Warn about an unexpected number of
+	columns in the table, if checks are enabled.  Do not complain
+	about the lack of data following the number of entries in the
+	table if the table is empty.
+	(display_debug_lines_decoded): Only warn about an unexpected
+	number of columns in a table if checks are enabled.
+	* dwarf.h (do_checks): Add a prototype.
+	* elfcomm.c (error): Remove weak attribute.
+	(warn): Likewise.
+	* readelf.c (do_checks): Delete.
+	(warn): Delete.
+	(process_section_headers): Only warn about empty sections if
+	checks are enabled.
+
+2020-05-04  Fangrui Song   <maskray@google.com>
+
+	* objcopy.c (copy_object): Allow empty section.
+	* testsuite/binutils-all/update-section.exp: Add test.
+
+2020-05-04  Nick Clifton  <nickc@redhat.com>
+
+	PR 25917
+	* dwarf.c (display_debug_lines_decoded): Warn if encountering a
+	supicious number of entries for DWARF-5 format directory and file
+	name tables.  Do not display file name table header if the table
+	is empty.  Do not allocate space for empty tables.
+
+2020-05-04  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (process_nds32_specific): Check size of .nds32_e_flags
+	section.  Don't assume endian of host matches nds32 target.  Free
+	buffer.
+
 2020-05-01  Alan Modra  <amodra@gmail.com>
 	    Haim Shimonovich  <Haim.Shimonovich@ceva-dsp.com>
 

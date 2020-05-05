@@ -1,3 +1,33 @@
+2020-05-05  Nick Clifton  <nickc@redhat.com>
+
+	* dwarf2dbg.c (out_dir_and_file_list): Add comments describing the
+	construction of a DWARF-5 directory name table.
+	* testsuite/gas/elf/pr25917.d: Update expected output.
+
+2020-05-05  Gunther Nikl <gnikl@justmail.de>
+
+	* config/tc-rx.c (elf_flags): Initialize for non-linux targets.
+	(md_parse_option): Remove initialization of elf_flags.
+
+2020-05-04  Andre Vieira  <andre.simoesdiasvieira@arm.com>
+
+	PR gas/25863
+	* config/tc-arm.c (do_mve_vmull): Fix scalar and NEON parsing of vmul.
+	* testsuite/gas/arm/mve-scalar-vmult-it.d: New test.
+	* testsuite/gas/arm/mve-scalar-vmult-it.s: New test.
+
+2020-05-04  Nick Clifton  <nickc@redhat.com>
+
+	PR 25917
+	* dwarf2dbg.c (out_dir_and_file_list): Check for the directory
+	table's existence before looking at its entries.
+	Also do not emit a default directory entry if there are no
+	directories in use.
+
+	* testsuite/gas/elf/pr25917.s: New test source file.
+	* testsuite/gas/elf/pr25917.d: New test driver.
+	* testsuite/gas/elf/elf.exp (run_elf_list_test): Run the new test.
+
 2020-04-30  Alex Coplan  <alex.coplan@arm.com>
 
 	* config/tc-aarch64.c (fix_insn): Implement for
