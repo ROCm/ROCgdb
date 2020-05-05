@@ -341,13 +341,21 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
     return -1;
 
   char *instruction_text = nullptr;
-  amd_dbgapi_global_address_t *operands = nullptr;
-  amd_dbgapi_size_t operand_count = 0;
+
+  auto symbolizer
+      = [] (amd_dbgapi_symbolizer_id_t id, amd_dbgapi_global_address_t address,
+            char **symbol_text) -> amd_dbgapi_status_t {
+    string_file string;
+    print_address (reinterpret_cast<struct gdbarch *> (id), address, &string);
+    *symbol_text = xstrdup (string.c_str ());
+    return AMD_DBGAPI_STATUS_SUCCESS;
+  };
 
   if (amd_dbgapi_disassemble_instruction (
           architecture_id, static_cast<amd_dbgapi_global_address_t> (memaddr),
-          &instruction_size, buffer.get (), &instruction_text, &operand_count,
-          &operands)
+          &instruction_size, buffer.get (), &instruction_text,
+          reinterpret_cast<amd_dbgapi_symbolizer_id_t> (self->arch ()),
+          symbolizer)
       != AMD_DBGAPI_STATUS_SUCCESS)
     {
       size_t alignment;
@@ -366,16 +374,8 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
   /* Print the instruction.  */
   (*di->fprintf_func) (di->stream, "%s", instruction_text);
 
-  /* Print the operands.  */
-  for (size_t i = 0; i < operand_count; ++i)
-    {
-      (*di->fprintf_func) (di->stream, (i == 0) ? "  # " : ", ");
-      (*di->print_address_func) (static_cast<bfd_vma> (operands[i]), di);
-    }
-
   /* Free the memory allocated by the amd-dbgapi.  */
   xfree (instruction_text);
-  xfree (operands);
 
   return static_cast<int> (instruction_size);
 }
