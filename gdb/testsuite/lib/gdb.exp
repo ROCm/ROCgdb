@@ -7026,6 +7026,17 @@ gdb_caching_proc supports_mpx_check_pointer_bounds {
     } executable $flags]
 }
 
+# Return 1 if compiler supports -fcf-protection=.  Otherwise,
+# return 0.
+
+gdb_caching_proc supports_fcf_protection {
+    return [gdb_can_simple_compile supports_fcf_protection {
+	int main () {
+	    return 0;
+	}
+  } executable "additional_flags=-fcf-protection=full"]
+}
+
 # Return 1 if symbols were read in using -readnow.  Otherwise, return 0.
 
 proc readnow { } {
@@ -7141,6 +7152,38 @@ proc debug_types { } {
     }
 
     return 0
+}
+
+# Return the addresses in the line table for FILE for which is_stmt is true.
+
+proc is_stmt_addresses { file } {
+    global decimal
+    global hex
+
+    set is_stmt [list]
+
+    gdb_test_multiple "maint info line-table $file" "" {
+	-re "\r\n$decimal\[ \t\]+$decimal\[ \t\]+($hex)\[ \t\]+Y\[^\r\n\]*" {
+	    lappend is_stmt $expect_out(1,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+
+    return $is_stmt
+}
+
+# Return 1 if hex number VAL is an element of HEXLIST.
+
+proc hex_in_list { val hexlist } {
+    # Normalize val by removing 0x prefix, and leading zeros.
+    set val [regsub ^0x $val ""]
+    set val [regsub ^0+ $val "0"]
+
+    set re 0x0*$val
+    set index [lsearch -regexp $hexlist $re]
+    return [expr $index != -1]
 }
 
 # Always load compatibility stuff.

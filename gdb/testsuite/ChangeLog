@@ -1,3 +1,50 @@
+2020-05-06  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.arch/amd64-prologue-skip-cf-protection.exp: New file.
+	* gdb.arch/amd64-prologue-skip-cf-protection.c: New file.
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.reverse/consecutive-precsave.exp: Handle if instruction after
+	breakpoint is at a "recommended breakpoint location".
+	* gdb.reverse/consecutive-reverse.exp: Same.
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/watchpoint-reuse-slot.exp (stepi): Print $pc to get current
+	address.
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/watchpoint-reuse-slot.exp: Fix incorrect assignment.
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/store.exp (check_set, up_set): Allowing missing location
+	info for r.
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/shlib-call.exp: Add extra step to reach shmain.c:42, if
+	necessary.
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* lib/unbuffer_output.c (gdb_unbuffer_output): Change return type to
+	void.
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (is_stmt_addresses, hex_in_list): New proc, factored out
+	of ...
+	* gdb.base/async.exp: ... here.
+	* gdb.base/consecutive.exp: Handle if 2nd breakpoint is at a
+	"recommended breakpoint location".
+
+2020-05-06  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.compile/compile-ifunc.exp: Use -Wno-attribute-alias.
+
 2020-05-04  Tom de Vries  <tdevries@suse.de>
 
 	* gdb.base/async.exp: Check whether instruction addresses are a

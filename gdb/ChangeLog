@@ -1,3 +1,50 @@
+2020-05-07  Simon Marchi  <simon.marchi@efficios.com>
+
+	* async-event.c (struct async_signal_handler, struct
+	async_event_handler): Reformat, remove typedef.
+
+2020-05-07  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_DYN_PROP_LIST): Remove.  Update all users
+	access thistype->main_type->dyn_prop_list directly.
+
+2020-05-07  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <remove_dyn_prop>: New method.
+	(remove_dyn_prop): Remove.  Update all users to use
+	type::remove_dyn_prop.
+	* gdbtypes.c (remove_dyn_prop): Rename to...
+	(type::remove_dyn_prop): ... this.
+
+2020-05-07  Simon Marchi via Gdb-patches  <gdb-patches@sourceware.org>
+
+	* gdbtypes.h (struct type) <add_dyn_prop>: New method.
+	(add_dyn_prop): Remove.  Update all users to use
+	type::add_dyn_prop.
+	* gdbtypes.c (add_dyn_prop): Rename to...
+	(type::add_dyn_prop): ... this.
+
+2020-05-07  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <get_dyn_prop>: New method.
+	(get_dyn_prop): Remove.  Update all users to use
+	type::dyn_prop.
+	* gdbtypes.c (get_dyn_prop): Rename to...
+	(type::dyn_prop): ... this.
+
+2020-05-06  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct main_type) <flag_static>: Remove.
+
+2020-05-06  Simon Marchi  <simon.marchi@efficios.com>
+
+	* amd64-tdep.c (amd64_analyze_prologue): Check for `endbr64`
+	instruction, skip it if it's there.
+
+2020-05-05  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct main_type) <flag_incomplete>: Remove.
+
 2020-05-04  Simon Marchi  <simon.marchi@efficios.com>
 
 	* gdbtypes.h (TYPE_INCOMPLETE): Remove.

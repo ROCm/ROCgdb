@@ -9219,7 +9219,7 @@ alloc_rust_variant (struct obstack *obstack, struct type *type,
   prop.kind = PROP_VARIANT_PARTS;
   prop.data.variant_parts = prop_value;
 
-  add_dyn_prop (DYN_PROP_VARIANT_PARTS, prop, type);
+  type->add_dyn_prop (DYN_PROP_VARIANT_PARTS, prop);
 }
 
 /* Some versions of rustc emitted enums in an unusual way.
@@ -14707,7 +14707,7 @@ add_variant_property (struct field_info *fip, struct type *type,
     = ((gdb::array_view<variant_part> *)
        obstack_copy (&objfile->objfile_obstack, &parts, sizeof (parts)));
 
-  add_dyn_prop (DYN_PROP_VARIANT_PARTS, prop, type);
+  type->add_dyn_prop (DYN_PROP_VARIANT_PARTS, prop);
 }
 
 /* Create the vector of fields, and attach it to the type.  */
@@ -15356,7 +15356,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
 	  struct dynamic_prop prop;
 	  if (attr_to_dynamic_prop (attr, die, cu, &prop,
 				    cu->per_cu->addr_type ()))
-	    add_dyn_prop (DYN_PROP_BYTE_SIZE, prop, type);
+	    type->add_dyn_prop (DYN_PROP_BYTE_SIZE, prop);
           TYPE_LENGTH (type) = 0;
 	}
     }
@@ -23606,7 +23606,7 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
     {
       struct type *prop_type = cu->per_cu->addr_sized_int_type (false);
       if (attr_to_dynamic_prop (attr, die, cu, &prop, prop_type))
-        add_dyn_prop (DYN_PROP_ALLOCATED, prop, type);
+        type->add_dyn_prop (DYN_PROP_ALLOCATED, prop);
     }
   else if (attr != NULL)
     {
@@ -23621,7 +23621,7 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
     {
       struct type *prop_type = cu->per_cu->addr_sized_int_type (false);
       if (attr_to_dynamic_prop (attr, die, cu, &prop, prop_type))
-        add_dyn_prop (DYN_PROP_ASSOCIATED, prop, type);
+        type->add_dyn_prop (DYN_PROP_ASSOCIATED, prop);
     }
   else if (attr != NULL)
     {
@@ -23634,7 +23634,7 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
   attr = dwarf2_attr (die, DW_AT_data_location, cu);
   if (attr_to_dynamic_prop (attr, die, cu, &prop,
 			    cu->per_cu->addr_type ()))
-    add_dyn_prop (DYN_PROP_DATA_LOCATION, prop, type);
+    type->add_dyn_prop (DYN_PROP_DATA_LOCATION, prop);
 
   if (dwarf2_per_objfile->die_type_hash == NULL)
     dwarf2_per_objfile->die_type_hash

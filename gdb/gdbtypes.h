@@ -339,15 +339,15 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 
 /* * True if this type is allocatable.  */
 #define TYPE_IS_ALLOCATABLE(t) \
-  (get_dyn_prop (DYN_PROP_ALLOCATED, t) != NULL)
+  ((t)->dyn_prop (DYN_PROP_ALLOCATED) != NULL)
 
 /* * True if this type has variant parts.  */
 #define TYPE_HAS_VARIANT_PARTS(t) \
-  (get_dyn_prop (DYN_PROP_VARIANT_PARTS, t) != nullptr)
+  ((t)->dyn_prop (DYN_PROP_VARIANT_PARTS) != nullptr)
 
 /* * True if this type has a dynamic length.  */
 #define TYPE_HAS_DYNAMIC_LENGTH(t) \
-  (get_dyn_prop (DYN_PROP_BYTE_SIZE, t) != nullptr)
+  ((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)
 
 /* * Instruction-space delimited type.  This is for Harvard architectures
    which have separate instruction and data address spaces (and perhaps
@@ -763,9 +763,7 @@ struct main_type
   unsigned int flag_nosign : 1;
   unsigned int flag_stub : 1;
   unsigned int flag_target_stub : 1;
-  unsigned int flag_static : 1;
   unsigned int flag_prototyped : 1;
-  unsigned int flag_incomplete : 1;
   unsigned int flag_varargs : 1;
   unsigned int flag_vector : 1;
   unsigned int flag_stub_supported : 1;
@@ -876,6 +874,19 @@ struct main_type
 
 struct type
 {
+  /* * Return the dynamic property of the requested KIND from this type's
+     list of dynamic properties.  */
+  dynamic_prop *dyn_prop (dynamic_prop_node_kind kind) const;
+
+  /* * Given a dynamic property PROP of a given KIND, add this dynamic
+     property to this type.
+
+     This function assumes that this type is objfile-owned.  */
+  void add_dyn_prop (dynamic_prop_node_kind kind, dynamic_prop prop);
+
+  /* * Remove dynamic property of kind KIND from this type, if it exists.  */
+  void remove_dyn_prop (dynamic_prop_node_kind kind);
+
   /* * Type that is a pointer to this type.
      NULL if no such pointer-to type is known yet.
      The debugger may add the address of such a type
@@ -1435,7 +1446,7 @@ extern bool set_type_align (struct type *, ULONGEST);
 
 /* Property accessors for the type data location.  */
 #define TYPE_DATA_LOCATION(thistype) \
-  get_dyn_prop (DYN_PROP_DATA_LOCATION, thistype)
+  ((thistype)->dyn_prop (DYN_PROP_DATA_LOCATION))
 #define TYPE_DATA_LOCATION_BATON(thistype) \
   TYPE_DATA_LOCATION (thistype)->data.baton
 #define TYPE_DATA_LOCATION_ADDR(thistype) \
@@ -1443,17 +1454,15 @@ extern bool set_type_align (struct type *, ULONGEST);
 #define TYPE_DATA_LOCATION_KIND(thistype) \
   TYPE_DATA_LOCATION (thistype)->kind
 #define TYPE_DYNAMIC_LENGTH(thistype) \
-  get_dyn_prop (DYN_PROP_BYTE_SIZE, thistype)
+  ((thistype)->dyn_prop (DYN_PROP_BYTE_SIZE))
 
 /* Property accessors for the type allocated/associated.  */
 #define TYPE_ALLOCATED_PROP(thistype) \
-  get_dyn_prop (DYN_PROP_ALLOCATED, thistype)
+  ((thistype)->dyn_prop (DYN_PROP_ALLOCATED))
 #define TYPE_ASSOCIATED_PROP(thistype) \
-  get_dyn_prop (DYN_PROP_ASSOCIATED, thistype)
+  ((thistype)->dyn_prop (DYN_PROP_ASSOCIATED))
 
 /* Attribute accessors for dynamic properties.  */
-#define TYPE_DYN_PROP_LIST(thistype) \
-  TYPE_MAIN_TYPE(thistype)->dyn_prop_list
 #define TYPE_DYN_PROP_BATON(dynprop) \
   dynprop->data.baton
 #define TYPE_DYN_PROP_ADDR(dynprop) \
@@ -2094,22 +2103,6 @@ extern struct type *resolve_dynamic_type
 
 /* * Predicate if the type has dynamic values, which are not resolved yet.  */
 extern int is_dynamic_type (struct type *type);
-
-/* * Return the dynamic property of the requested KIND from TYPE's
-   list of dynamic properties.  */
-extern struct dynamic_prop *get_dyn_prop
-  (enum dynamic_prop_node_kind kind, const struct type *type);
-
-/* * Given a dynamic property PROP of a given KIND, add this dynamic
-   property to the given TYPE.
-
-   This function assumes that TYPE is objfile-owned.  */
-extern void add_dyn_prop
-  (enum dynamic_prop_node_kind kind, struct dynamic_prop prop,
-   struct type *type);
-
-extern void remove_dyn_prop (enum dynamic_prop_node_kind prop_kind,
-                             struct type *type);
 
 extern struct type *check_typedef (struct type *);
 

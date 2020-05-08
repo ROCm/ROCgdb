@@ -1188,7 +1188,7 @@ update_static_array_size (struct type *type)
 
   struct type *range_type = TYPE_INDEX_TYPE (type);
 
-  if (get_dyn_prop (DYN_PROP_BYTE_STRIDE, type) == nullptr
+  if (type->dyn_prop (DYN_PROP_BYTE_STRIDE) == nullptr
       && has_static_range (TYPE_RANGE_DATA (range_type))
       && (!type_not_associated (type)
 	  && !type_not_allocated (type)))
@@ -1286,7 +1286,7 @@ create_array_type_with_stride (struct type *result_type,
     (struct field *) TYPE_ZALLOC (result_type, sizeof (struct field));
   TYPE_INDEX_TYPE (result_type) = range_type;
   if (byte_stride_prop != NULL)
-    add_dyn_prop (DYN_PROP_BYTE_STRIDE, *byte_stride_prop, result_type);
+    result_type->add_dyn_prop (DYN_PROP_BYTE_STRIDE, *byte_stride_prop);
   else if (bit_stride > 0)
     TYPE_FIELD_BITSIZE (result_type, 0) = bit_stride;
 
@@ -1957,7 +1957,7 @@ stub_noname_complaint (void)
 static int
 array_type_has_dynamic_stride (struct type *type)
 {
-  struct dynamic_prop *prop = get_dyn_prop (DYN_PROP_BYTE_STRIDE, type);
+  struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
 
   return (prop != NULL && prop->kind != PROP_CONST);
 }
@@ -1990,7 +1990,7 @@ is_dynamic_type_internal (struct type *type, int top_level)
   if (TYPE_ALLOCATED_PROP (type))
     return 1;
 
-  struct dynamic_prop *prop = get_dyn_prop (DYN_PROP_VARIANT_PARTS, type);
+  struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_VARIANT_PARTS);
   if (prop != nullptr && prop->kind != PROP_TYPE)
     return 1;
 
@@ -2199,12 +2199,12 @@ resolve_dynamic_array_or_string (struct type *type,
   else
     elt_type = TYPE_TARGET_TYPE (type);
 
-  prop = get_dyn_prop (DYN_PROP_BYTE_STRIDE, type);
+  prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
   if (prop != NULL)
     {
       if (dwarf2_evaluate_property (prop, NULL, addr_stack, &value))
 	{
-	  remove_dyn_prop (DYN_PROP_BYTE_STRIDE, type);
+	  type->remove_dyn_prop (DYN_PROP_BYTE_STRIDE);
 	  bit_stride = (unsigned int) (value * 8);
 	}
       else
@@ -2436,8 +2436,7 @@ resolve_dynamic_struct (struct type *type,
 
   resolved_type = copy_type (type);
 
-  struct dynamic_prop *variant_prop = get_dyn_prop (DYN_PROP_VARIANT_PARTS,
-						    resolved_type);
+  dynamic_prop *variant_prop = resolved_type->dyn_prop (DYN_PROP_VARIANT_PARTS);
   if (variant_prop != nullptr && variant_prop->kind == PROP_VARIANT_PARTS)
     {
       compute_variant_fields (type, resolved_type, addr_stack,
@@ -2622,7 +2621,7 @@ resolve_dynamic_type_internal (struct type *type,
   if (type_length.has_value ())
     {
       TYPE_LENGTH (resolved_type) = *type_length;
-      remove_dyn_prop (DYN_PROP_BYTE_SIZE, resolved_type);
+      resolved_type->remove_dyn_prop (DYN_PROP_BYTE_SIZE);
     }
 
   /* Resolve data_location attribute.  */
@@ -2652,10 +2651,10 @@ resolve_dynamic_type (struct type *type,
 
 /* See gdbtypes.h  */
 
-struct dynamic_prop *
-get_dyn_prop (enum dynamic_prop_node_kind prop_kind, const struct type *type)
+dynamic_prop *
+type::dyn_prop (dynamic_prop_node_kind prop_kind) const
 {
-  struct dynamic_prop_list *node = TYPE_DYN_PROP_LIST (type);
+  dynamic_prop_list *node = this->main_type->dyn_prop_list;
 
   while (node != NULL)
     {
@@ -2669,43 +2668,41 @@ get_dyn_prop (enum dynamic_prop_node_kind prop_kind, const struct type *type)
 /* See gdbtypes.h  */
 
 void
-add_dyn_prop (enum dynamic_prop_node_kind prop_kind, struct dynamic_prop prop,
-              struct type *type)
+type::add_dyn_prop (dynamic_prop_node_kind prop_kind, dynamic_prop prop)
 {
   struct dynamic_prop_list *temp;
 
-  gdb_assert (TYPE_OBJFILE_OWNED (type));
+  gdb_assert (TYPE_OBJFILE_OWNED (this));
 
-  temp = XOBNEW (&TYPE_OBJFILE (type)->objfile_obstack,
+  temp = XOBNEW (&TYPE_OBJFILE (this)->objfile_obstack,
 		 struct dynamic_prop_list);
   temp->prop_kind = prop_kind;
   temp->prop = prop;
-  temp->next = TYPE_DYN_PROP_LIST (type);
+  temp->next = this->main_type->dyn_prop_list;
 
-  TYPE_DYN_PROP_LIST (type) = temp;
+  this->main_type->dyn_prop_list = temp;
 }
 
-/* Remove dynamic property from TYPE in case it exists.  */
+/* See gdbtypes.h.  */
 
 void
-remove_dyn_prop (enum dynamic_prop_node_kind prop_kind,
-                 struct type *type)
+type::remove_dyn_prop (dynamic_prop_node_kind kind)
 {
   struct dynamic_prop_list *prev_node, *curr_node;
 
-  curr_node = TYPE_DYN_PROP_LIST (type);
+  curr_node = this->main_type->dyn_prop_list;
   prev_node = NULL;
 
   while (NULL != curr_node)
     {
-      if (curr_node->prop_kind == prop_kind)
+      if (curr_node->prop_kind == kind)
 	{
 	  /* Update the linked list but don't free anything.
 	     The property was allocated on objstack and it is not known
 	     if we are on top of it.  Nevertheless, everything is released
 	     when the complete objstack is freed.  */
 	  if (NULL == prev_node)
-	    TYPE_DYN_PROP_LIST (type) = curr_node->next;
+	    this->main_type->dyn_prop_list = curr_node->next;
 	  else
 	    prev_node->next = curr_node->next;
 
@@ -5353,10 +5350,10 @@ copy_type_recursive (struct objfile *objfile,
       *TYPE_RANGE_DATA (new_type) = *TYPE_RANGE_DATA (type);
     }
 
-  if (TYPE_DYN_PROP_LIST (type) != NULL)
-    TYPE_DYN_PROP_LIST (new_type)
+  if (type->main_type->dyn_prop_list != NULL)
+    new_type->main_type->dyn_prop_list
       = copy_dynamic_prop_list (&objfile->objfile_obstack,
-				TYPE_DYN_PROP_LIST (type));
+				type->main_type->dyn_prop_list);
 
 
   /* Copy pointers to other types.  */
@@ -5421,10 +5418,10 @@ copy_type (const struct type *type)
   TYPE_LENGTH (new_type) = TYPE_LENGTH (type);
   memcpy (TYPE_MAIN_TYPE (new_type), TYPE_MAIN_TYPE (type),
 	  sizeof (struct main_type));
-  if (TYPE_DYN_PROP_LIST (type) != NULL)
-    TYPE_DYN_PROP_LIST (new_type)
+  if (type->main_type->dyn_prop_list != NULL)
+    new_type->main_type->dyn_prop_list
       = copy_dynamic_prop_list (&TYPE_OBJFILE (type) -> objfile_obstack,
-				TYPE_DYN_PROP_LIST (type));
+				type->main_type->dyn_prop_list);
 
   return new_type;
 }

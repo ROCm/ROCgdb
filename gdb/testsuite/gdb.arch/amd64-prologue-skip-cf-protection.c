@@ -1,6 +1,6 @@
-/* Copyright (C) 2008-2020 Free Software Foundation, Inc.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2020 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,25 +15,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Force output to unbuffered mode if not connected to a terminal.  */
-
-#include <stdio.h>
-#ifndef __MINGW32__
-#include <unistd.h>
-#endif
-
-static void
-gdb_unbuffer_output (void)
+int main (void)
 {
-  /* Always force this for Windows testing.  To a native Windows
-     program running under a Cygwin shell/ssh, stdin is really a
-     Windows pipe, thus not a tty and its outputs ends up fully
-     buffered.  */
-#ifndef __MINGW32__
-  if (!isatty (fileno (stdin)))
-#endif
-    {
-      setvbuf (stdout, NULL, _IONBF, BUFSIZ);
-      setvbuf (stderr, NULL, _IONBF, BUFSIZ);
-    }
+  return 0;
 }
