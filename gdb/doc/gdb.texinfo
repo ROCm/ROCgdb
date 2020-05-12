@@ -26718,16 +26718,18 @@ default.  AMD GPU code objects are not loaded until the first kernel
 is launched.  Before then, all breakpoints have to be set as pending
 breakpoints using source line positions.
 
-The @code{HIP_DISABLE_LAZY_KERNEL_LOADING} environment variable can be
-used to disable deferred code object loading by the HIP runtime.  This
-allows breakpoints to be set in AMD GPU code as soon as the inferior
-reaches the @code{main} funtion.
-
-For example,
-
-@smallexample
-export HIP_DISABLE_LAZY_KERNEL_LOADING=1
-@end smallexample
+@c TODO: Add control for deferred code object loading:
+@c
+@c The @code{HIP_DISABLE_LAZY_KERNEL_LOADING} environment variable can be
+@c used to disable deferred code object loading by the HIP runtime.  This
+@c allows breakpoints to be set in AMD GPU code as soon as the inferior
+@c reaches the @code{main} funtion.
+@c
+@c For example,
+@c
+@c @smallexample
+@c export HIP_DISABLE_LAZY_KERNEL_LOADING=1
+@c @end smallexample
 
 @item
 Memory violations are reported to the wavefronts that cause them.
