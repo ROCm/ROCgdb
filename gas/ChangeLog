@@ -1,3 +1,112 @@
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/scalarquad.d,
+	* testsuite/gas/ppc/scalarquad.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/rightmost.d,
+	* testsuite/gas/ppc/rightmost.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/xvtlsbb.d,
+	* testsuite/gas/ppc/xvtlsbb.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/stringop.d,
+	* testsuite/gas/ppc/stringop.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Peter Bergner  <bergner@linux.ibm.com>
+
+	* testsuite/gas/ppc/set_bool.d,
+	* testsuite/gas/ppc/set_bool.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/bitmanip.d,
+	* testsuite/gas/ppc/bitmanip.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/genpcv.d,
+	* testsuite/gas/ppc/genpcv.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/maskmanip.d,
+	* testsuite/gas/ppc/maskmanip.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+	    Peter Bergner  <bergner@linux.ibm.com>
+
+	* config/tc-ppc.c (pre_defined_registers): Add accumulators.
+	(md_assemble): Check acc specified in correct operand.
+	* testsuite/gas/ppc/outerprod.d,
+	* testsuite/gas/ppc/outerprod.s,
+	* testsuite/gas/ppc/vsx4.d,
+	* testsuite/gas/ppc/vsx4.s: New tests.
+	* testsuite/gas/ppc/ppc.exp: Run them.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/simd_perm.d,
+	* testsuite/gas/ppc/simd_perm.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/int128.d,
+	* testsuite/gas/ppc/int128.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/vsx_32byte.d,
+	* testsuite/gas/ppc/vsx_32byte.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/ppc/vec_mul.s,
+	* testsuite/gas/ppc/vec_mul.d: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Peter Bergner  <bergner@linux.ibm.com>
+
+	* testsuite/gas/ppc/byte_rev.d,
+	* testsuite/gas/ppc/byte_rev.s: New test.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Peter Bergner  <bergner@linux.ibm.com>
+
+	* testsuite/gas/ppc/power10.d: Add paste. tests.
+	* testsuite/gas/ppc/power10.s: Likewise.
+
+2020-05-11  Peter Bergner  <bergner@linux.ibm.com>
+
+	* testsuite/gas/ppc/power10.s: New test.
+	* testsuite/gas/ppc/power10.d: Likewise.
+	* testsuite/gas/ppc/ppc.exp: Run it.
+
+2020-05-11  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-ppc.c (md_assemble): Update for PPC_OPCODE_POWER10
+	renaming.
+	* testsuite/gas/ppc/prefix-align.d: Use -mpower10/-Mpower10 in
+	place of -mfuture/-Mfuture.
+	* testsuite/gas/ppc/prefix-pcrel.d: Likewise.
+	* testsuite/gas/ppc/prefix-reloc.d: Likewise.
+
 2020-05-06  Nick Clifton  <nickc@redhat.com>
 
 	* po/sv.po: Updated Swedish translation.

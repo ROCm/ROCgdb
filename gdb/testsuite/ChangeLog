@@ -1,3 +1,119 @@
+2020-05-11  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.base/jit-so.exp (one_jit_test): Change test name.
+
+2020-05-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/check-test-names.exp (all_test_names): New module variable.
+	(counts): Add 'duplicates' field.
+	(_check_duplicates): New procedure.
+	(check): Also check for duplicates.
+	(do_log_summary): Print duplicates count.
+	(do_reset_vars): Reset counter for duplicate test names, and
+	discard all know test names.
+
+2020-05-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/gdb.exp: Include check-test-names.exp library.
+	* lib/check-test-names.exp: New file.
+
+2020-05-11  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/packed_tagged.exp: Change kfail into xfail.
+
+2020-05-11  Keith Seitz  <keiths@redhat.com>
+
+	* gdb.ada/attr_ref_and_charlit.exp: Fix typo.
+
+2020-05-11  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.cp/cpexprs.exp: Move everything except flags setting ...
+	* gdb.cp/cpexprs.exp.in: .. here.
+	* gdb.cp/cpexprs-debug-types.exp: Include cpexprs.exp.in instead of
+	cpexprs.exp.
+
+2020-05-11  Keith Seitz  <keiths@redhat.com>
+
+	* gdb.ada/arrayparam.exp: Resolve duplicate and tail parentheses
+	test names.
+	* gdb.ada/arrayptr.exp: Likewise.
+	* gdb.ada/assign_arr.exp: Likewise.
+	* gdb.ada/attr_ref_and_charlit.exp: Likewise.
+	* gdb.ada/bp_on_var.exp: Likewise.
+	* gdb.ada/call_pn.exp: Likewise.
+	* gdb.ada/complete.exp: Likewise.
+	* gdb.ada/fun_overload_menu.exp: Likewise.
+	* gdb.ada/funcall_param.exp: Likewise.
+	* gdb.ada/funcall_ref.exp: Likewise.
+	* gdb.ada/packed_array_assign.exp: Likewise.
+	* gdb.ada/same_component_name.exp: Likewise.
+	* gdb.ada/type_coercion.exp: Likewise.
+	* gdb.ada/unc_arr_ptr_in_var_rec.exp: Likewise.
+	* gdb.ada/variant_record_packed_array.exp: Likewise.
+
+2020-05-11  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25941
+	* gdb.dwarf2/clang-debug-names.exp.in: New include exp file, factored
+	out of ...
+	* gdb.dwarf2/clang-debug-names.exp: ... here.
+	* gdb.dwarf2/clang-debug-names-2.exp: New file.  Include
+	clang-debug-names.exp.in.
+	* gdb.dwarf2/clang-debug-names-2-foo.c: New test.
+	* gdb.dwarf2/clang-debug-names-2.c: New test.
+
+2020-05-10  Alok Kumar Sharma  <alokkumar.sharma@amd.com>
+
+	* lib/fortran.exp (fortran_main): New Proc, handle flang MAIN_,
+	(fortran_runto_main): New Proc, fortran version of runto_main.
+	* gdb.fortran/array-bounds-high.exp: Handle flang MAIN_
+	* gdb.fortran/array-bounds.exp: Likewise.
+	* gdb.fortran/array-slices.exp: Likewise.
+	* gdb.fortran/block-data.exp: Likewise.
+	* gdb.fortran/charset.exp: Likewise.
+	* gdb.fortran/common-block.exp: Likewise.
+	* gdb.fortran/complex.exp: Likewise.
+	* gdb.fortran/derived-type-function.exp: Likewise.
+	* gdb.fortran/derived-type.exp: Likewise.
+	* gdb.fortran/info-modules.exp: Likewise.
+	* gdb.fortran/info-types.exp: Likewise.
+	* gdb.fortran/intrinsics.exp: Likewise.
+	* gdb.fortran/library-module.exp: Likewise.
+	* gdb.fortran/logical.exp: Likewise.
+	* gdb.fortran/max-depth.exp: Likewise.
+	* gdb.fortran/module.exp: Likewise.
+	* gdb.fortran/multi-dim.exp: Likewise.
+	* gdb.fortran/nested-funcs.exp: Likewise.
+	* gdb.fortran/print-formatted.exp: Likewise.
+	* gdb.fortran/print_type.exp: Likewise.
+	* gdb.fortran/printing-types.exp: Likewise.
+	* gdb.fortran/ptr-indentation.exp: Likewise.
+	* gdb.fortran/ptype-on-functions.exp: Likewise.
+	* gdb.fortran/subarray.exp: Likewise.
+	* gdb.fortran/vla-alloc-assoc.exp: Likewise.
+	* gdb.fortran/vla-datatypes.exp: Likewise.
+	* gdb.fortran/vla-history.exp: Likewise.
+	* gdb.fortran/vla-ptr-info.exp: Likewise.
+	* gdb.fortran/vla-ptype-sub.exp: Likewise.
+	* gdb.fortran/vla-ptype.exp: Likewise.
+	* gdb.fortran/vla-sizeof.exp: Likewise.
+	* gdb.fortran/vla-type.exp: Likewise.
+	* gdb.fortran/vla-value-sub-arbitrary.exp: Likewise.
+	* gdb.fortran/vla-value-sub-finish.exp: Likewise.
+	* gdb.fortran/vla-value-sub.exp: Likewise.
+	* gdb.fortran/vla-value.exp: Likewise.
+	* gdb.fortran/whatis_type.exp: Likewise.
+	* gdb.mi/mi-var-child-f.exp: Likewise.
+
+2020-05-09  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/clang-debug-names.exp: Remove PR25952 kfail.
+
+2020-05-08  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/clang-debug-names.c: New test.
+	* gdb.dwarf2/clang-debug-names.exp: New file.
+
 2020-05-06  Simon Marchi  <simon.marchi@efficios.com>
 
 	* gdb.arch/amd64-prologue-skip-cf-protection.exp: New file.

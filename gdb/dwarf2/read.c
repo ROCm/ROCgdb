@@ -5023,6 +5023,26 @@ create_cus_from_debug_names_list (struct dwarf2_per_objfile *dwarf2_per_objfile,
 				  dwarf2_section_info &section,
 				  bool is_dwz)
 {
+  if (!map.augmentation_is_gdb)
+    {
+    for (uint32_t i = 0; i < map.cu_count; ++i)
+      {
+	sect_offset sect_off
+	  = (sect_offset) (extract_unsigned_integer
+			   (map.cu_table_reordered + i * map.offset_size,
+			    map.offset_size,
+			    map.dwarf5_byte_order));
+	/* We don't know the length of the CU, because the CU list in a
+	   .debug_names index can be incomplete, so we can't use the start of
+	   the next CU as end of this CU.  We create the CUs here with length 0,
+	   and in cutu_reader::cutu_reader we'll fill in the actual length.  */
+	dwarf2_per_cu_data *per_cu
+	  = create_cu_from_index_list (dwarf2_per_objfile, &section, is_dwz,
+				       sect_off, 0);
+	dwarf2_per_objfile->all_comp_units.push_back (per_cu);
+      }
+    }
+
   sect_offset sect_off_prev;
   for (uint32_t i = 0; i <= map.cu_count; ++i)
     {
@@ -5353,6 +5373,18 @@ dw2_debug_names_iterator::next ()
 	  ull = read_unsigned_leb128 (abfd, m_addr, &bytes_read);
 	  m_addr += bytes_read;
 	  break;
+	case DW_FORM_ref4:
+	  ull = read_4_bytes (abfd, m_addr);
+	  m_addr += 4;
+	  break;
+	case DW_FORM_ref8:
+	  ull = read_8_bytes (abfd, m_addr);
+	  m_addr += 8;
+	  break;
+	case DW_FORM_ref_sig8:
+	  ull = read_8_bytes (abfd, m_addr);
+	  m_addr += 8;
+	  break;
 	default:
 	  complaint (_("Unsupported .debug_names form %s [in module %s]"),
 		     dwarf_form_name (attr.form),
@@ -5384,6 +5416,12 @@ dw2_debug_names_iterator::next ()
 	      continue;
 	    }
 	  per_cu = &dwarf2_per_objfile->get_tu (ull)->per_cu;
+	  break;
+	case DW_IDX_die_offset:
+	  /* In a per-CU index (as opposed to a per-module index), index
+	     entries without CU attribute implicitly refer to the single CU.  */
+	  if (per_cu == NULL)
+	    per_cu = dwarf2_per_objfile->get_cu (0);
 	  break;
 	case DW_IDX_GNU_internal:
 	  if (!m_map.augmentation_is_gdb)
@@ -6929,7 +6967,10 @@ cutu_reader::cutu_reader (struct dwarf2_per_cu_data *this_cu,
 						    rcuh_kind::COMPILE);
 
 	  gdb_assert (this_cu->sect_off == cu->header.sect_off);
-	  gdb_assert (this_cu->length == cu->header.get_length ());
+	  if (this_cu->length == 0)
+	    this_cu->length = cu->header.get_length ();
+	  else
+	    gdb_assert (this_cu->length == cu->header.get_length ());
 	  this_cu->dwarf_version = cu->header.version;
 	}
     }
@@ -13103,7 +13144,16 @@ read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
       for (child_die = die->child;
 	   child_die != NULL && child_die->tag;
 	   child_die = child_die->sibling)
-	process_die (child_die, cu);
+	{
+	  /* We might already be processing this DIE.  This can happen
+	     in an unusual circumstance -- where a subroutine A
+	     appears lexically in another subroutine B, but A actually
+	     inlines B.  The recursion is broken here, rather than in
+	     inherit_abstract_dies, because it seems better to simply
+	     drop concrete children here.  */
+	  if (!child_die->in_process)
+	    process_die (child_die, cu);
+	}
       return;
     case PC_BOUNDS_INVALID:
       return;
@@ -21737,13 +21787,11 @@ dwarf2_canonicalize_name (const char *name, struct dwarf2_cu *cu,
 {
   if (name && cu->language == language_cplus)
     {
-      std::string canon_name = cp_canonicalize_string (name);
+      gdb::unique_xmalloc_ptr<char> canon_name
+	= cp_canonicalize_string (name);
 
-      if (!canon_name.empty ())
-	{
-	  if (canon_name != name)
-	    name = objfile->intern (canon_name);
-	}
+      if (canon_name != nullptr)
+	name = objfile->intern (canon_name.get ());
     }
 
   return name;

@@ -1,3 +1,171 @@
+2020-05-11  Tom Tromey  <tromey@adacore.com>
+
+	* cli/cli-cmds.c (info_command): Restore.
+	(_initialize_cli_cmds): Use add_prefix_command for "info".
+	* gdb-gdb.gdb.in: Restore breakpoint on info_command.
+
+2020-05-11  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_value_primitive_field): Now public.
+	* ada-lang.h (ada_value_primitive_field): Declare.
+	* ada-valprint.c (print_field_values): Use
+	ada_value_primitive_field for wrapper fields.
+
+2020-05-11  Tom de Vries  <tdevries@suse.de>
+
+	* dwarf2/index-write.c (debug_names::psymbol_tag): Handle
+	MODULE_DOMAIN.
+
+2020-05-11  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25941
+	* dwarf2/read.c (create_cus_from_debug_names_list): Initialize CUs
+	with length 0, if not gdb-produced.
+	(cutu_reader::cutu_reader): Set CU length to actual length if 0.
+
+2020-05-09  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/25955
+	* break-catch-throw.c (check_status_exception_catchpoint): Fix name
+	calculation.
+
+2020-05-09  Tom Tromey  <tom@tromey.com>
+
+	* top.c (server_command): Now bool.
+	* top.h (server_command): Now bool.
+
+2020-05-08  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (read_lexical_block_scope): Don't process a DIE
+	already being processed.
+
+2020-05-08  Tom Tromey  <tom@tromey.com>
+
+	* printcmd.c (struct display) <next>: Remove.
+	<display>: New constructor.
+	<exp_string>: Now a std::string.
+	<enabled_p>: Now a bool.
+	(display_number): Move definition earlier.
+	(displays): Rename from display_chain.  Now a std::vector.
+	(ALL_DISPLAYS, ALL_DISPLAYS_SAFE): Remove.
+	(display_command): Update.
+	(do_one_display, disable_display)
+	(enable_disable_display_command, do_enable_disable_display):
+	Update.
+	(free_display): Remove.
+	(clear_displays): Rewrite.
+	(delete_display): Update.
+	(map_display_numbers): Use function_view.  Remove "data"
+	parameter.  Update.
+	(do_delete_display): Remove.
+	(undisplay_command): Update.
+	(do_one_display, do_displays, disable_display)
+	(info_display_command): Update.
+	(do_enable_disable_display): Remove.
+	(enable_disable_display_command)
+	(clear_dangling_display_expressions): Update.
+
+2020-05-08  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (set_symbol_cache_size)
+	(maintenance_print_symbol_cache, maintenance_flush_symbol_cache)
+	(maintenance_print_symbol_cache_statistics): Update.
+	* symmisc.c (print_symbol_bcache_statistics)
+	(print_objfile_statistics, maintenance_print_objfiles)
+	(maintenance_info_symtabs, maintenance_check_symtabs)
+	(maintenance_expand_symtabs, maintenance_info_line_tables):
+	Update.
+	* symfile-debug.c (set_debug_symfile): Update.
+	* source.c (forget_cached_source_info): Update.
+	* python/python.c (gdbpy_progspaces): Update.
+	* psymtab.c (maintenance_info_psymtabs): Update.
+	* probe.c (parse_probes): Update.
+	* linespec.c (iterate_over_all_matching_symtabs)
+	(collect_symtabs_from_filename, search_minsyms_for_name): Update.
+	* guile/scm-progspace.c (gdbscm_progspaces): Update.
+	* exec.c (exec_target::close): Update.
+	* ada-tasks.c (ada_tasks_new_objfile_observer): Update.
+	* breakpoint.c (print_one_breakpoint_location)
+	(create_longjmp_master_breakpoint)
+	(create_std_terminate_master_breakpoint): Update.
+	* progspace.c (program_spaces): Now a std::vector.
+	(maybe_new_address_space): Update.
+	(add_program_space): Remove.
+	(program_space::program_space): Update.
+	(remove_program_space): Update.
+	(number_of_program_spaces): Remove.
+	(print_program_space, update_address_spaces): Update.
+	* progspace.h (program_spaces): Change type.
+	(ALL_PSPACES): Remove.
+	(number_of_program_spaces): Don't declare.
+	(struct program_space) <next>: Remove.
+
+2020-05-08  Tom Tromey  <tom@tromey.com>
+
+	* mi/mi-cmd-file.c (mi_cmd_file_list_shared_libraries): Update.
+	* solib-svr4.c (svr4_fetch_objfile_link_map): Update.
+	(enable_break): Update.
+	* solib-frv.c (frv_fdpic_find_global_pointer): Update.
+	(frv_fdpic_find_canonical_descriptor): Update.
+	(frv_fetch_objfile_link_map): Update.
+	* progspace.c (program_space::free_all_objfiles): Update.
+	(program_space::solibs): New method.
+	* progspace.h (struct program_space) <solibs>: New method.
+	* solist.h (master_so_list): Don't declare.
+	(ALL_SO_LIBS): Remove.
+	* solib.h (so_list_head): Remove.
+	(update_solib_list): Update comment.
+	* solib.c (master_so_list): Remove.
+	(solib_used, update_solib_list, solib_add)
+	(info_sharedlibrary_command, clear_solib)
+	(reload_shared_libraries_1, remove_user_added_objfile): Update.
+
+2020-05-08  Tom Tromey  <tom@tromey.com>
+
+	* extension.c (extension_languages): Now a std::array.
+	(ALL_EXTENSION_LANGUAGES): Remove.
+	(get_ext_lang_defn, get_ext_lang_of_file)
+	(eval_ext_lang_from_control_command): Update.
+	(finish_ext_lang_initialization)
+	(auto_load_ext_lang_scripts_for_objfile)
+	(ext_lang_type_printers::ext_lang_type_printers)
+	(apply_ext_lang_type_printers)
+	(ext_lang_type_printers::~ext_lang_type_printers)
+	(apply_ext_lang_val_pretty_printer, apply_ext_lang_frame_filter)
+	(preserve_ext_lang_values, get_breakpoint_cond_ext_lang)
+	(breakpoint_ext_lang_cond_says_stop, check_quit_flag)
+	(get_matching_xmethod_workers, ext_lang_colorize)
+	(ext_lang_before_prompt): Update.
+	(ALL_ENABLED_EXTENSION_LANGUAGES): Remove.
+
+2020-05-08  Tom Tromey  <tom@tromey.com>
+
+	* symtab.h (class demangle_result_storage) <set_malloc_ptr>: New
+	overload.
+	<swap_string, m_string>: Remove.
+	* symtab.c (demangle_for_lookup, completion_list_add_symbol):
+	Update.
+	* stabsread.c (define_symbol, read_type): Update.
+	* linespec.c (find_linespec_symbols): Update.
+	* gnu-v3-abi.c (gnuv3_get_typeid): Update.
+	* dwarf2/read.c (dwarf2_canonicalize_name): Update.
+	* dbxread.c (read_dbx_symtab): Update.
+	* cp-support.h (cp_canonicalize_string_full)
+	(cp_canonicalize_string, cp_canonicalize_string_no_typedefs):
+	Return unique_xmalloc_ptr.
+	* cp-support.c (inspect_type): Update.
+	(cp_canonicalize_string_full): Return unique_xmalloc_ptr.
+	(cp_canonicalize_string_no_typedefs, cp_canonicalize_string):
+	Likewise.
+	* c-typeprint.c (print_name_maybe_canonical): Update.
+	* break-catch-throw.c (check_status_exception_catchpoint):
+	Update.
+
+2020-05-08  Tom de Vries  <tdevries@suse.de>
+
+	* infrun.c (follow_fork): Copy current_line and current_symtab to
+	child thread.
+
 2020-05-07  Simon Marchi  <simon.marchi@efficios.com>
 
 	* async-event.c (struct async_signal_handler, struct
