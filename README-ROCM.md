@@ -1,18 +1,17 @@
-ROCm Debugger (ROCgdb)
-======================
+AMD ROCm Debugger (ROCgdb)
+==========================
 
-The ROCm Debugger (ROCgdb) is the ROCm source-level debugger for Linux, based on
-the GNU Debugger (GDB). It enables heterogenous debugging on the ROCm platform
-of an x86-based host architecture along with AMD GPU architectures supported by
-the AMD Debugger API Library (ROCdbgapi). The AMD Debugger API Library
-(ROCdbgapi) is included with the ROCm release.
+The AMD ROCm Debugger (ROCgdb) is the AMD ROCm source-level debugger for Linux,
+based on the GNU Debugger (GDB). It enables heterogeneous debugging on the AMD
+ROCm platform of an x86-based host architecture along with AMD GPU architectures
+supported by the AMD Debugger API Library (ROCdbgapi). The AMD Debugger API
+Library (ROCdbgapi) is included with the AMD ROCm release.
 
-The current ROCm Debugger (ROCgdb) is an initial prototype that focuses on
-source line debugging and does not provide symbolic variable debugging
-capabilities. The user guide presents features and commands that may be
-implemented in future versions.
+The current AMD ROCm Debugger (ROCgdb) is an initial prototype that focuses on
+source line debugging. Symbolic variable debugging capabilities are not
+currently supported.
 
-For more information about ROCm, see:
+For more information about AMD ROCm, see:
 
 - https://github.com/RadeonOpenCompute/ROCm
 
@@ -24,22 +23,23 @@ installed at:
 - ``/opt/rocm/share/doc/gdb/gdb.pdf`` as a PDF file
 
 You can refer to the following chapters in the *ROCgdb User Guide* for more
-specific information about debugging heterogenous programs on ROCm:
+specific information about debugging heterogeneous programs on AMD ROCm:
 
 - *Debugging Heterogeneous Programs* provides general information about
-  debugging heterogenous programs.
+  debugging heterogeneous programs. It presents features and commands that are
+  not currently implemented but provisionally planned for future versions.
 - *Configuration-Specific Information > Architectures > AMD GPU* provides
-  specific information about debugging heterogenous programs on ROCm with
-  supported AMD GPU chips. This section also lists the features, commands, and
-  known issues that may be implemented and resolved in future releases.
+  specific information about debugging heterogeneous programs on AMD ROCm with
+  supported AMD GPU chips. This section also lists the implementation status and
+  known issues of the current version.
 
 For more information about the GNU Debugger (GDB), refer to the ``README`` file
 in this folder or check the GNU Debugger (GDB) web site at:
 
 - http://www.gnu.org/software/gdb
 
-Build the ROCm Debugger
------------------------
+Build the AMD ROCm Debugger
+---------------------------
 
 ROCgdb can be built on Ubuntu 16.04, Ubuntu 18.04, Centos 8.1, RHEL 8.1, and SLES
 15 Service Pack 1.
@@ -49,7 +49,7 @@ Building ROCgdb has the following prerequisites:
 1. A C++11 compiler such as GCC 4.8 or Clang 3.3.
 
 2. AMD Debugger API Library (ROCdbgapi) which can be installed as part of the
-   ROCm release by the ``rocm-dbgapi`` package.
+   AMD ROCm release by the ``rocm-dbgapi`` package.
 
 3. For Ubuntu 16.04 and Ubuntu 18.04 the following adds the needed packages:
 
@@ -63,8 +63,10 @@ Building ROCgdb has the following prerequisites:
 
    ````shell
    yum install -y epel-release centos-release-scl bison flex gcc make \
-     texinfo texinfo-tex gcc-c++ zlib-devel expat-devel python-devel \
+     texinfo texinfo-tex gcc-c++ zlib-devel expat-devel python2-devel \
      xz-devel libbabeltrace-devel ncurses-devel
+   wget http://repo.okay.com.mx/centos/8/x86_64/release/libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm \
+   && rpm -ivh --nodeps libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm
    ````
 
 5. For SLES 15 Service Pack 1 the following adds the needed packages:
@@ -112,7 +114,7 @@ The installed ROCgdb will be placed in:
 - ``<prefix>/bin/rocgdb``
 
 To execute ROCgdb, the ROCdbgapi library and its dependent ROCcomgr library must
-be installed. These can be installed as part of the ROCm release by the
+be installed. These can be installed as part of the AMD ROCm release by the
 ``rocm-dbgapi`` package:
 
 - ``librocm-dbgapi.so.0``
