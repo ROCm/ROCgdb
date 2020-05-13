@@ -1,3 +1,53 @@
+2020-05-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/check-test-names.exp: Disable when testing is being run in
+	parallel.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/jit-elf.exp: Fix string concat.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* lib/jit-elf-helpers.exp: Don't use undefined variables in untested
+	messages.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.multi/multi-term-settings.exp: Use with_test_prefix.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/catch_ex.exp: Use with_test_prefix.
+	* gdb.ada/mi_catch_ex.exp: Same.
+	* gdb.ada/mi_catch_ex_hand.exp: Same.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.fortran/complex.exp: Use with_test_prefix.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.trace/passcount.exp: Fix test-names.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.pascal/gdb11492.exp: Use with_test_prefix.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.gdb/complaints.exp: Use with_test_prefix.
+	* gdb.xml/tdesc-regs.exp: Same.
+	* gdb.opt/inline-locals.exp: Fix test name.
+
+2020-05-12  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/comp-unit-lang.exp: Use with_test_prefix.
+	* gdb.dwarf2/dw2-bad-parameter-type.exp: Same.
+	* gdb.dwarf2/implref-struct.exp: Same.
+	* gdb.dwarf2/varval.exp: Ensure get_sizeof is called once per type.
+	* gdb.dwarf2/data-loc.exp: Same.  Remove duplicate test.
+
 2020-05-11  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* gdb.base/jit-so.exp (one_jit_test): Change test name.
