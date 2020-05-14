@@ -1,3 +1,13 @@
+2020-05-13  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (align_value): Remove.
+	(ada_template_to_fixed_record_type_1): Use align_up.
+
+2020-05-13  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* async-event.c: Update the copyright year.
+	* async-event.h: Update the copyright year.
+
 2020-05-12  Simon Marchi  <simon.marchi@efficios.com>
 
 	* objfiles.h (is_addr_in_objfile,
