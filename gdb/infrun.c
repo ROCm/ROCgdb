@@ -4305,7 +4305,7 @@ stop_all_threads (void)
 	{
 	  ptid_t event_ptid;
 	  struct target_waitstatus ws;
-	  int need_wait = 0;
+	  int waits_needed = 0;
 
 	  update_thread_list ();
 
@@ -4337,7 +4337,7 @@ stop_all_threads (void)
 		    }
 
 		  if (t->stop_requested)
-		    need_wait = 1;
+		    waits_needed++;
 		}
 	      else
 		{
@@ -4352,7 +4352,7 @@ stop_all_threads (void)
 		}
 	    }
 
-	  if (!need_wait)
+	  if (waits_needed == 0)
 	    break;
 
 	  /* If we find new threads on the second iteration, restart
@@ -4361,109 +4361,113 @@ stop_all_threads (void)
 	  if (pass > 0)
 	    pass = -1;
 
-	  event_ptid = wait_one (&ws);
-	  if (debug_infrun)
+	  for (int i = 0; i < waits_needed; i++)
 	    {
-	      fprintf_unfiltered (gdb_stdlog,
-				  "infrun: stop_all_threads %s %s\n",
-				  target_waitstatus_to_string (&ws).c_str (),
-				  target_pid_to_str (event_ptid).c_str ());
-	    }
-
-	  if (ws.kind == TARGET_WAITKIND_NO_RESUMED
-	      || ws.kind == TARGET_WAITKIND_THREAD_EXITED
-	      || ws.kind == TARGET_WAITKIND_EXITED
-	      || ws.kind == TARGET_WAITKIND_SIGNALLED)
-	    {
-	      /* All resumed threads exited
-		 or one thread/process exited/signalled.  */
-	    }
-	  else
-	    {
-	      thread_info *t = find_thread_ptid (event_ptid);
-	      if (t == NULL)
-		t = add_thread (event_ptid);
-
-	      t->stop_requested = 0;
-	      t->executing = 0;
-	      t->resumed = 0;
-	      t->control.may_range_step = 0;
-
-	      /* This may be the first time we see the inferior report
-		 a stop.  */
-	      inferior *inf = find_inferior_ptid (event_ptid);
-	      if (inf->needs_setup)
+	      event_ptid = wait_one (&ws);
+	      if (debug_infrun)
 		{
-		  switch_to_thread_no_regs (t);
-		  setup_inferior (0);
+		  fprintf_unfiltered (gdb_stdlog,
+				      "infrun: stop_all_threads %s %s\n",
+				      target_waitstatus_to_string (&ws).c_str (),
+				      target_pid_to_str (event_ptid).c_str ());
 		}
 
-	      if (ws.kind == TARGET_WAITKIND_STOPPED
-		  && ws.value.sig == GDB_SIGNAL_0)
+	      if (ws.kind == TARGET_WAITKIND_NO_RESUMED
+		  || ws.kind == TARGET_WAITKIND_THREAD_EXITED
+		  || ws.kind == TARGET_WAITKIND_EXITED
+		  || ws.kind == TARGET_WAITKIND_SIGNALLED)
 		{
-		  /* We caught the event that we intended to catch, so
-		     there's no event pending.  */
-		  t->suspend.waitstatus.kind = TARGET_WAITKIND_IGNORE;
-		  t->suspend.waitstatus_pending_p = 0;
-
-		  if (displaced_step_fixup (t, GDB_SIGNAL_0) < 0)
-		    {
-		      /* Add it back to the step-over queue.  */
-		      if (debug_infrun)
-			{
-			  fprintf_unfiltered (gdb_stdlog,
-					      "infrun: displaced-step of %s "
-					      "canceled: adding back to the "
-					      "step-over queue\n",
-					      target_pid_to_str (t->ptid).c_str ());
-			}
-		      t->control.trap_expected = 0;
-		      thread_step_over_chain_enqueue (t);
-		    }
+		  /* All resumed threads exited
+		     or one thread/process exited/signalled.  */
+		  break;
 		}
 	      else
 		{
-		  enum gdb_signal sig;
-		  struct regcache *regcache;
+		  thread_info *t = find_thread_ptid (event_ptid);
+		  if (t == NULL)
+		    t = add_thread (event_ptid);
 
-		  if (debug_infrun)
+		  t->stop_requested = 0;
+		  t->executing = 0;
+		  t->resumed = 0;
+		  t->control.may_range_step = 0;
+
+		  /* This may be the first time we see the inferior report
+		     a stop.  */
+		  inferior *inf = find_inferior_ptid (event_ptid);
+		  if (inf->needs_setup)
 		    {
-		      std::string statstr = target_waitstatus_to_string (&ws);
-
-		      fprintf_unfiltered (gdb_stdlog,
-					  "infrun: target_wait %s, saving "
-					  "status for %d.%ld.%ld\n",
-					  statstr.c_str (),
-					  t->ptid.pid (),
-					  t->ptid.lwp (),
-					  t->ptid.tid ());
+		      switch_to_thread_no_regs (t);
+		      setup_inferior (0);
 		    }
 
-		  /* Record for later.  */
-		  save_waitstatus (t, &ws);
-
-		  sig = (ws.kind == TARGET_WAITKIND_STOPPED
-			 ? ws.value.sig : GDB_SIGNAL_0);
-
-		  if (displaced_step_fixup (t, sig) < 0)
+		  if (ws.kind == TARGET_WAITKIND_STOPPED
+		      && ws.value.sig == GDB_SIGNAL_0)
 		    {
-		      /* Add it back to the step-over queue.  */
-		      t->control.trap_expected = 0;
-		      thread_step_over_chain_enqueue (t);
+		      /* We caught the event that we intended to catch, so
+			 there's no event pending.  */
+		      t->suspend.waitstatus.kind = TARGET_WAITKIND_IGNORE;
+		      t->suspend.waitstatus_pending_p = 0;
+
+		      if (displaced_step_fixup (t, GDB_SIGNAL_0) < 0)
+			{
+			  /* Add it back to the step-over queue.  */
+			  if (debug_infrun)
+			    {
+			      fprintf_unfiltered (gdb_stdlog,
+						  "infrun: displaced-step of %s "
+						  "canceled: adding back to the "
+						  "step-over queue\n",
+						  target_pid_to_str (t->ptid).c_str ());
+			    }
+			  t->control.trap_expected = 0;
+			  thread_step_over_chain_enqueue (t);
+			}
 		    }
-
-		  regcache = get_thread_regcache (t);
-		  t->suspend.stop_pc = regcache_read_pc (regcache);
-
-		  if (debug_infrun)
+		  else
 		    {
-		      fprintf_unfiltered (gdb_stdlog,
-					  "infrun: saved stop_pc=%s for %s "
-					  "(currently_stepping=%d)\n",
-					  paddress (target_gdbarch (),
-						    t->suspend.stop_pc),
-					  target_pid_to_str (t->ptid).c_str (),
-					  currently_stepping (t));
+		      enum gdb_signal sig;
+		      struct regcache *regcache;
+
+		      if (debug_infrun)
+			{
+			  std::string statstr = target_waitstatus_to_string (&ws);
+
+			  fprintf_unfiltered (gdb_stdlog,
+					      "infrun: target_wait %s, saving "
+					      "status for %d.%ld.%ld\n",
+					      statstr.c_str (),
+					      t->ptid.pid (),
+					      t->ptid.lwp (),
+					      t->ptid.tid ());
+			}
+
+		      /* Record for later.  */
+		      save_waitstatus (t, &ws);
+
+		      sig = (ws.kind == TARGET_WAITKIND_STOPPED
+			     ? ws.value.sig : GDB_SIGNAL_0);
+
+		      if (displaced_step_fixup (t, sig) < 0)
+			{
+			  /* Add it back to the step-over queue.  */
+			  t->control.trap_expected = 0;
+			  thread_step_over_chain_enqueue (t);
+			}
+
+		      regcache = get_thread_regcache (t);
+		      t->suspend.stop_pc = regcache_read_pc (regcache);
+
+		      if (debug_infrun)
+			{
+			  fprintf_unfiltered (gdb_stdlog,
+					      "infrun: saved stop_pc=%s for %s "
+					      "(currently_stepping=%d)\n",
+					      paddress (target_gdbarch (),
+							t->suspend.stop_pc),
+					      target_pid_to_str (t->ptid).c_str (),
+					      currently_stepping (t));
+			}
 		    }
 		}
 	    }
