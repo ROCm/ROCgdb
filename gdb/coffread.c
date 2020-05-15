@@ -1494,7 +1494,7 @@ patch_opaque_types (struct symtab *s)
          from different files with the same name.  */
       if (SYMBOL_CLASS (real_sym) == LOC_TYPEDEF
 	  && SYMBOL_DOMAIN (real_sym) == VAR_DOMAIN
-	  && TYPE_CODE (SYMBOL_TYPE (real_sym)) == TYPE_CODE_PTR
+	  && SYMBOL_TYPE (real_sym)->code () == TYPE_CODE_PTR
 	  && TYPE_LENGTH (TYPE_TARGET_TYPE (SYMBOL_TYPE (real_sym))) != 0)
 	{
 	  const char *name = real_sym->linkage_name ();
@@ -1660,8 +1660,8 @@ process_coff_symbol (struct coff_symbol *cs,
 	  /* If type has no name, give it one.  */
 	  if (TYPE_NAME (SYMBOL_TYPE (sym)) == 0)
 	    {
-	      if (TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_PTR
-		  || TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_FUNC)
+	      if (SYMBOL_TYPE (sym)->code () == TYPE_CODE_PTR
+		  || SYMBOL_TYPE (sym)->code () == TYPE_CODE_FUNC)
 		{
 		  /* If we are giving a name to a type such as
 		     "pointer to foo" or "function returning foo", we
@@ -1694,10 +1694,10 @@ process_coff_symbol (struct coff_symbol *cs,
 	     not an empty structured type, though; the forward
 	     references work themselves out via the magic of
 	     coff_lookup_type.  */
-	  if (TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_PTR
+	  if (SYMBOL_TYPE (sym)->code () == TYPE_CODE_PTR
 	      && TYPE_LENGTH (TYPE_TARGET_TYPE (SYMBOL_TYPE (sym))) == 0
-	      && TYPE_CODE (TYPE_TARGET_TYPE (SYMBOL_TYPE (sym)))
-	         != TYPE_CODE_UNDEF)
+	      && TYPE_TARGET_TYPE (SYMBOL_TYPE (sym))->code ()
+	      != TYPE_CODE_UNDEF)
 	    {
 	      int i = hashname (sym->linkage_name ());
 
@@ -1880,7 +1880,7 @@ decode_base_type (struct coff_symbol *cs,
 	{
 	  /* Anonymous structure type.  */
 	  type = coff_alloc_type (cs->c_symnum);
-	  TYPE_CODE (type) = TYPE_CODE_STRUCT;
+	  type->set_code (TYPE_CODE_STRUCT);
 	  TYPE_NAME (type) = NULL;
 	  INIT_CPLUS_SPECIFIC (type);
 	  TYPE_LENGTH (type) = 0;
@@ -1914,7 +1914,7 @@ decode_base_type (struct coff_symbol *cs,
 					aux->x_sym.x_fcnary.x_fcn.x_endndx.l,
 					objfile);
 	}
-      TYPE_CODE (type) = TYPE_CODE_UNION;
+      type->set_code (TYPE_CODE_UNION);
       return type;
 
     case T_ENUM:
@@ -1922,7 +1922,7 @@ decode_base_type (struct coff_symbol *cs,
 	{
 	  /* Anonymous enum type.  */
 	  type = coff_alloc_type (cs->c_symnum);
-	  TYPE_CODE (type) = TYPE_CODE_ENUM;
+	  type->set_code (TYPE_CODE_ENUM);
 	  TYPE_NAME (type) = NULL;
 	  TYPE_LENGTH (type) = 0;
 	  TYPE_FIELDS (type) = 0;
@@ -1990,7 +1990,7 @@ coff_read_struct_type (int index, int length, int lastsym,
   int done = 0;
 
   type = coff_alloc_type (index);
-  TYPE_CODE (type) = TYPE_CODE_STRUCT;
+  type->set_code (TYPE_CODE_STRUCT);
   INIT_CPLUS_SPECIFIC (type);
   TYPE_LENGTH (type) = length;
 
@@ -2121,7 +2121,7 @@ coff_read_enum_type (int index, int length, int lastsym,
     TYPE_LENGTH (type) = length;
   else /* Assume ints.  */
     TYPE_LENGTH (type) = gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT;
-  TYPE_CODE (type) = TYPE_CODE_ENUM;
+  type->set_code (TYPE_CODE_ENUM);
   TYPE_NFIELDS (type) = nsyms;
   TYPE_FIELDS (type) = (struct field *)
     TYPE_ALLOC (type, sizeof (struct field) * nsyms);

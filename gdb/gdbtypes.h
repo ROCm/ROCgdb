@@ -335,7 +335,7 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 /* * True if this type represents either an lvalue or lvalue reference type.  */
 
 #define TYPE_IS_REFERENCE(t) \
-  (TYPE_CODE (t) == TYPE_CODE_REF || TYPE_CODE (t) == TYPE_CODE_RVALUE_REF)
+  ((t)->code () == TYPE_CODE_REF || (t)->code () == TYPE_CODE_RVALUE_REF)
 
 /* * True if this type is allocatable.  */
 #define TYPE_IS_ALLOCATABLE(t) \
@@ -874,6 +874,21 @@ struct main_type
 
 struct type
 {
+  /* Get the type code of this type. 
+
+     Note that the code can be TYPE_CODE_TYPEDEF, so if you want the real
+     type, you need to do `check_typedef (type)->code ()`.  */
+  type_code code () const
+  {
+    return this->main_type->code;
+  }
+
+  /* Set the type code of this type.  */
+  void set_code (type_code code)
+  {
+    this->main_type->code = code;
+  }
+
   /* * Return the dynamic property of the requested KIND from this type's
      list of dynamic properties.  */
   dynamic_prop *dyn_prop (dynamic_prop_node_kind kind) const;
@@ -1420,9 +1435,6 @@ extern unsigned type_align (struct type *);
    space in struct type.  */
 extern bool set_type_align (struct type *, ULONGEST);
 
-/* * Note that TYPE_CODE can be TYPE_CODE_TYPEDEF, so if you want the real
-   type, you need to do TYPE_CODE (check_type (this_type)).  */
-#define TYPE_CODE(thistype) TYPE_MAIN_TYPE(thistype)->code
 #define TYPE_NFIELDS(thistype) TYPE_MAIN_TYPE(thistype)->nfields
 #define TYPE_FIELDS(thistype) TYPE_MAIN_TYPE(thistype)->flds_bnds.fields
 
@@ -1668,8 +1680,8 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
   TYPE_NESTED_TYPES_FIELD (thistype, n).is_private
 
 #define TYPE_IS_OPAQUE(thistype) \
-  (((TYPE_CODE (thistype) == TYPE_CODE_STRUCT) \
-    || (TYPE_CODE (thistype) == TYPE_CODE_UNION)) \
+  ((((thistype)->code () == TYPE_CODE_STRUCT) \
+    || ((thistype)->code () == TYPE_CODE_UNION)) \
    && (TYPE_NFIELDS (thistype) == 0) \
    && (!HAVE_CPLUS_STRUCT (thistype) \
        || TYPE_NFN_FIELDS (thistype) == 0) \

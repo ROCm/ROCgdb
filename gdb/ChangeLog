@@ -1,3 +1,77 @@
+2020-05-14  Kevin Buettner  <kevinb@redhat.com>
+
+	* nat/linux-btrace.c (btrace_this_cpu): Add check for AMD
+	processors.
+	(cpu_supports_bts): Add CV_AMD case.
+
+2020-05-14  Laurent Morichetti  <Laurent.Morichetti@amd.com>
+	    Simon Marchi  <simon.marchi@efficios.com>
+
+	* infrun.c (stop_all_threads): Collect multiple wait events at
+	each pass.
+
+2020-05-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_CODE): Remove.  Change all call sites to use
+	type::code instead.
+
+2020-05-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <code, set_code>: New methods.
+	(TYPE_CODE): Use type::code.  Change all call sites used to set
+	the code to use type::set_code instead.
+
+2020-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+	    Tom de Vries  <tdevries@suse.de>
+	    Pedro Alves  <palves@redhat.com>
+
+	PR threads/25478
+	* infrun.c (stop_all_threads): Do NOT ignore
+	TARGET_WAITKIND_NO_RESUMED, TARGET_WAITKIND_THREAD_EXITED,
+	TARGET_WAITKIND_EXITED, TARGET_WAITKIND_SIGNALLED wait statuses
+	received.
+	(handle_no_resumed): Remove code handling a live inferior with no
+	threads.
+	* remote.c (has_single_non_exited_thread): New.
+	(remote_target::update_thread_list): Do not delete a thread if is
+	the last thread of the process.
+	* thread.c (thread_select): Call delete_exited_threads instead of
+	prune_threads.
+
+2020-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infrun.c (stop_all_threads): Enable/disable thread events of all
+	targets.  Move a debug message denoting the end of the function
+	into the SCOPED_EXIT block.
+
+2020-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* process-stratum-target.h: Include <set>.
+	(all_non_exited_process_targets, switch_to_target_no_thread): New
+	function declarations.
+	* process-stratum-target.c (all_non_exited_process_targets)
+	(switch_to_target_no_thread): New function implementations.
+
+2020-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infrun.c (handle_inferior_event): Extract out a piece of code
+	into...
+	(mark_non_executing_threads): ...this new function.
+
+2020-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infrun.c (resume_1): Move a 'regcache_read_pc' call down to first
+	use.
+
+2020-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* regcache.c (regcache_read_pc_protected): New function
+	implementation that returns 0 if the PC cannot read via
+	'regcache_read_pc'.
+	* infrun.c (proceed): Call 'regcache_read_pc_protected'
+	instead of 'regcache_read_pc'.
+	(keep_going_pass_signal): Ditto.
+
 2020-05-13  Tom Tromey  <tromey@adacore.com>
 
 	* ada-lang.c (align_value): Remove.

@@ -460,7 +460,7 @@ new_symbol (struct ctf_context *ccp, struct type *type, ctf_id_t tid)
 	    SYMBOL_ACLASS_INDEX (sym) = LOC_STATIC;
 	    break;
 	  case CTF_K_CONST:
-	    if (TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_VOID)
+	    if (SYMBOL_TYPE (sym)->code () == TYPE_CODE_VOID)
 	      SYMBOL_TYPE (sym) = objfile_type (objfile)->builtin_int;
 	    break;
 	  case CTF_K_TYPEDEF:
@@ -600,9 +600,9 @@ read_structure_type (struct ctf_context *ccp, ctf_id_t tid)
 
   kind = ctf_type_kind (fp, tid);
   if (kind == CTF_K_UNION)
-    TYPE_CODE (type) = TYPE_CODE_UNION;
+    type->set_code (TYPE_CODE_UNION);
   else
-    TYPE_CODE (type) = TYPE_CODE_STRUCT;
+    type->set_code (TYPE_CODE_STRUCT);
 
   TYPE_LENGTH (type) = ctf_type_size (fp, tid);
   set_type_align (type, ctf_type_align (fp, tid));
@@ -656,7 +656,7 @@ read_func_kind_type (struct ctf_context *ccp, ctf_id_t tid)
   if (name != NULL && strlen (name.get ()) != 0)
     TYPE_NAME (type) = obstack_strdup (&of->objfile_obstack, name.get ());
 
-  TYPE_CODE (type) = TYPE_CODE_FUNC;
+  type->set_code (TYPE_CODE_FUNC);
   ctf_func_type_info (fp, tid, &cfi);
   rettype = get_tid_type (of, cfi.ctc_return);
   TYPE_TARGET_TYPE (type) = rettype;
@@ -682,7 +682,7 @@ read_enum_type (struct ctf_context *ccp, ctf_id_t tid)
   if (name != NULL && strlen (name.get ()) != 0)
     TYPE_NAME (type) = obstack_strdup (&of->objfile_obstack, name.get ());
 
-  TYPE_CODE (type) = TYPE_CODE_ENUM;
+  type->set_code (TYPE_CODE_ENUM);
   TYPE_LENGTH (type) = ctf_type_size (fp, tid);
   ctf_func_type_info (fp, tid, &fi);
   target_type = get_tid_type (of, fi.ctc_return);
@@ -726,7 +726,7 @@ add_array_cv_type (struct ctf_context *ccp,
   base_type = copy_type (base_type);
   inner_array = base_type;
 
-  while (TYPE_CODE (TYPE_TARGET_TYPE (inner_array)) == TYPE_CODE_ARRAY)
+  while (TYPE_TARGET_TYPE (inner_array)->code () == TYPE_CODE_ARRAY)
     {
       TYPE_TARGET_TYPE (inner_array)
 	= copy_type (TYPE_TARGET_TYPE (inner_array));
