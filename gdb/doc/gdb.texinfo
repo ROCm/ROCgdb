@@ -26721,7 +26721,7 @@ breakpoints using source line positions.
 The @code{HIP_ENABLE_LAZY_KERNEL_LOADING} environment variable can be
 used to disable deferred code object loading by the HIP runtime.  This
 allows breakpoints to be set in AMD GPU code as soon as the inferior
-reaches the @code{main} funtion.
+reaches the @code{main} function.
 
 For example,
 
