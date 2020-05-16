@@ -1917,7 +1917,7 @@ lookup_language_this (const struct language_defn *lang,
 
   if (symbol_lookup_debug > 1)
     {
-      struct objfile *objfile = lookup_objfile_from_block (block);
+      struct objfile *objfile = block_objfile (block);
 
       fprintf_unfiltered (gdb_stdlog,
 			  "lookup_language_this (%s, %s (objfile %s))",
@@ -2012,7 +2012,8 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
 
   if (symbol_lookup_debug)
     {
-      struct objfile *objfile = lookup_objfile_from_block (block);
+      struct objfile *objfile = (block == nullptr
+				 ? nullptr : block_objfile (block));
 
       fprintf_unfiltered (gdb_stdlog,
 			  "lookup_symbol_aux (%s, %s (objfile %s), %s, %s)\n",
@@ -2157,32 +2158,6 @@ lookup_local_symbol (const char *name,
 
 /* See symtab.h.  */
 
-struct objfile *
-lookup_objfile_from_block (const struct block *block)
-{
-  if (block == NULL)
-    return NULL;
-
-  block = block_global_block (block);
-  /* Look through all blockvectors.  */
-  for (objfile *obj : current_program_space->objfiles ())
-    {
-      for (compunit_symtab *cust : obj->compunits ())
-	if (block == BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust),
-					GLOBAL_BLOCK))
-	  {
-	    if (obj->separate_debug_objfile_backlink)
-	      obj = obj->separate_debug_objfile_backlink;
-
-	    return obj;
-	  }
-    }
-
-  return NULL;
-}
-
-/* See symtab.h.  */
-
 struct symbol *
 lookup_symbol_in_block (const char *name, symbol_name_match_type match_type,
 			const struct block *block,
@@ -2192,7 +2167,8 @@ lookup_symbol_in_block (const char *name, symbol_name_match_type match_type,
 
   if (symbol_lookup_debug > 1)
     {
-      struct objfile *objfile = lookup_objfile_from_block (block);
+      struct objfile *objfile = (block == nullptr
+				 ? nullptr : block_objfile (block));
 
       fprintf_unfiltered (gdb_stdlog,
 			  "lookup_symbol_in_block (%s, %s (objfile %s), %s)",
@@ -2482,7 +2458,8 @@ lookup_symbol_in_static_block (const char *name,
 
   if (symbol_lookup_debug)
     {
-      struct objfile *objfile = lookup_objfile_from_block (static_block);
+      struct objfile *objfile = (block == nullptr
+				 ? nullptr : block_objfile (block));
 
       fprintf_unfiltered (gdb_stdlog,
 			  "lookup_symbol_in_static_block (%s, %s (objfile %s),"
@@ -2704,7 +2681,14 @@ lookup_global_symbol (const char *name,
 	return { sym, global_block };
     }
 
-  struct objfile *objfile = lookup_objfile_from_block (block);
+  struct objfile *objfile = nullptr;
+  if (block != nullptr)
+    {
+      objfile = block_objfile (block);
+      if (objfile->separate_debug_objfile_backlink != nullptr)
+	objfile = objfile->separate_debug_objfile_backlink;
+    }
+
   block_symbol bs
     = lookup_global_or_static_symbol (name, GLOBAL_BLOCK, objfile, domain);
   if (better_symbol (sym, bs.symbol, domain) == sym)
@@ -6354,42 +6338,6 @@ initialize_ordinary_address_classes (void)
 }
 
 
-
-/* Initialize the symbol SYM, and mark it as being owned by an objfile.  */
-
-void
-initialize_objfile_symbol (struct symbol *sym)
-{
-  SYMBOL_OBJFILE_OWNED (sym) = 1;
-  SYMBOL_SECTION (sym) = -1;
-}
-
-/* Allocate and initialize a new 'struct symbol' on OBJFILE's
-   obstack.  */
-
-struct symbol *
-allocate_symbol (struct objfile *objfile)
-{
-  struct symbol *result = new (&objfile->objfile_obstack) symbol ();
-
-  initialize_objfile_symbol (result);
-
-  return result;
-}
-
-/* Allocate and initialize a new 'struct template_symbol' on OBJFILE's
-   obstack.  */
-
-struct template_symbol *
-allocate_template_symbol (struct objfile *objfile)
-{
-  struct template_symbol *result;
-
-  result = new (&objfile->objfile_obstack) template_symbol ();
-  initialize_objfile_symbol (result);
-
-  return result;
-}
 
 /* See symtab.h.  */
 

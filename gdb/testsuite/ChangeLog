@@ -1,3 +1,116 @@
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* gdb.base/alias.exp: Verify 'help aliases' shows user defined aliases.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* gdb.base/help.exp: Test apropos and help for commands
+	having aliases.  Fixed comments not starting with an
+	upper-case letter or not finishing with a dot.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* gdb.base/alias.exp: Update help output check.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* gdb.base/default.exp: Update output following fixes.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* gdb.base/alias.exp: Test aliases starting with a prefix of
+	another alias.
+
+2020-05-15  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/info-os.c (main): Add return statement.
+	* gdb.base/info_minsym.c (minsym_fun): Likewise.
+	* gdb.base/large-frame-2.c (func): Likewise.
+	* gdb.base/pr10179-a.c (foo1, bar1): Likewise.
+	* gdb.base/pr10179-b.c (foo2): Likewise.
+	* gdb.base/valgrind-disp-step.c (foo): Likewise.
+	* gdb.base/watch-cond.c (func): Likewise.
+	* gdb.multi/goodbye.c (verylongfun): Likewise.
+	* gdb.multi/hello.c (commonfun): Likewise.
+	* gdb.python/py-finish-breakpoint.c (call_longjmp): Likewise.
+	* gdb.threads/fork-plus-threads.c (thread_func): Likewise.
+	* gdb.threads/forking-threads-plus-breakpoint.c (thread_forks):
+	Likewise.
+	* gdb.threads/hand-call-new-thread.c (foo): Likewise.
+	* gdb.threads/interrupt-while-step-over.c (child_function):
+	Likewise.
+	* gdb.trace/actions-changed.c (end): Likewise.
+
+2020-05-15  Gary Benson <gbenson@redhat.com>
+
+	* gdb.opencl/callfuncs.exp: Report when test skipped.
+	* gdb.opencl/convs_casts.exp: Likewise.
+	* gdb.opencl/datatypes.exp: Likewise.
+	* gdb.opencl/operators.exp: Likewise.
+	* gdb.opencl/vec_comps.exp: Likewise.
+
+2020-05-15  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/align.exp.in: Rename to ...
+	* gdb.base/align.exp.tcl: ... this.
+	* gdb.base/align-c++.exp: Update.
+	* gdb.base/align-c.exp: Update.
+	* gdb.base/all-architectures.exp.in: Rename to ...
+	* gdb.base/all-architectures.exp: ... this.
+	* gdb.base/all-architectures-0.exp: Update.
+	* gdb.base/all-architectures-1.exp: Update.
+	* gdb.base/all-architectures-2.exp: Update.
+	* gdb.base/all-architectures-3.exp: Update.
+	* gdb.base/all-architectures-4.exp: Update.
+	* gdb.base/all-architectures-5.exp: Update.
+	* gdb.base/all-architectures-6.exp: Update.
+	* gdb.base/all-architectures-7.exp: Update.
+	* gdb.base/infcall-nested-structs.exp.in: Rename to ...
+	* gdb.base/infcall-nested-structs.exp.tcl: ... this.
+	* gdb.base/infcall-nested-structs-c++.exp: Update.
+	* gdb.base/infcall-nested-structs-c.exp: Update.
+	* gdb.base/info-types.exp.in: Rename to ...
+	* gdb.base/info-types.exp.tcl: ... this.
+	* gdb.base/info-types-c++.exp: Update.
+	* gdb.base/info-types-c.exp: Update.
+	* gdb.base/max-depth.exp.in: Rename to ...
+	* gdb.base/max-depth.exp.tcl: ... this.
+	* gdb.base/max-depth-c++.exp: Update.
+	* gdb.base/max-depth-c.exp: Update.
+	* gdb.cp/cpexprs.exp.in: Rename to ...
+	* gdb.cp/cpexprs.exp.tcl: ... this.
+	* gdb.cp/cpexprs-debug-types.exp: Update.
+	* gdb.cp/cpexprs.exp: Update.
+	* gdb.cp/infcall-nodebug.exp.in: Rename to ...
+	* gdb.cp/infcall-nodebug.exp.tcl: ... this.
+	* gdb.cp/infcall-nodebug-c++-d0.exp: Update.
+	* gdb.cp/infcall-nodebug-c++-d1.exp: Update.
+	* gdb.cp/infcall-nodebug-c-d0.exp: Update.
+	* gdb.cp/infcall-nodebug-c-d1.exp: Update.
+	* gdb.dwarf2/clang-debug-names.exp.in: Rename to ...
+	* gdb.dwarf2/clang-debug-names.exp.tcl: ... this.
+	* gdb.dwarf2/clang-debug-names-2.exp: Update.
+	* gdb.dwarf2/clang-debug-names.exp: Update.
+
+2020-05-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/check-test-names.exp: Remove code that prevents this file
+	loading when tests are run in parallel.
+
+2020-05-15  Pedro Alves  <palves@redhat.com>
+
+	* gdb.multi/multi-kill.exp (start_inferior): Remove
+	'testpid' parameter.  Refer to namespace variable directly.
+	(testpid): Declare as namespace variable.
+
+2020-05-15  Pedro Alves  <palves@redhat.com>
+
+	* gdb.multi/multi-kill.exp: Wrap in namespace.
+	(start_inferior): Add TESTPID parameter.  Use it instead of the
+	testpid global.
+	(top level): Define empty TESTPID array, and pass it down to
+	start_inferior.
+
 2020-05-14  Tom de Vries  <tdevries@suse.de>
 
 	* gdb.fortran/nested-funcs-2.exp: Use gdb_test_stdio to test inferior

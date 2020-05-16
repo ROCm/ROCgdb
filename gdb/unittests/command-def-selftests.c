@@ -1,4 +1,4 @@
-/* Self tests for help doc for GDB, the GNU debugger.
+/* Self tests for GDB command definitions for GDB, the GNU debugger.
 
    Copyright (C) 2019-2020 Free Software Foundation, Inc.
 
@@ -22,7 +22,12 @@
 #include "cli/cli-decode.h"
 #include "gdbsupport/selftest.h"
 
+#include <map>
+
 namespace selftests {
+
+/* Verify some invariants of GDB commands documentation.  */
+
 namespace help_doc_tests {
 
 static unsigned int nr_failed_invariants;
@@ -96,13 +101,116 @@ help_doc_invariants_tests ()
 }
 
 } /* namespace help_doc_tests */
+
+/* Verify some invariants of GDB command structure.  */
+
+namespace command_structure_tests {
+
+/* Nr of commands in which a duplicated list is found.  */
+unsigned int nr_duplicates = 0;
+/* Nr of commands in a list having no valid prefix cmd.  */
+unsigned int nr_invalid_prefixcmd = 0;
+
+/* A map associating a list with the prefix leading to it.  */
+
+std::map<cmd_list_element **, const char *> lists;
+
+/* Store each command list in lists, associated with the prefix to reach it.  A
+   list must only be found once.
+
+   Verifies that all elements of the list have the same non-null prefix
+   command.  */
+
+static void
+traverse_command_structure (struct cmd_list_element **list,
+			    const char *prefix)
+{
+  struct cmd_list_element *c, *prefixcmd;
+
+  auto dupl = lists.find (list);
+  if (dupl != lists.end ())
+    {
+      fprintf_filtered (gdb_stdout,
+			"list %p duplicated,"
+			" reachable via prefix '%s' and '%s'."
+			"  Duplicated list first command is '%s'\n",
+			list,
+			prefix, dupl->second,
+			(*list)->name);
+      nr_duplicates++;
+      return;
+    }
+
+  lists.insert ({list, prefix});
+
+  /* All commands of *list must have a prefix command equal to PREFIXCMD,
+     the prefix command of the first command.  */
+  if (*list == nullptr)
+    prefixcmd = nullptr; /* A prefix command with an empty subcommand list.  */
+  else
+    prefixcmd = (*list)->prefix;
+
+  /* Walk through the commands.  */
+  for (c = *list; c; c = c->next)
+    {
+      /* If this command has subcommands and is not an alias,
+	 traverse the subcommands.  */
+      if (c->prefixlist != NULL && c->cmd_pointer == nullptr)
+	{
+	  /* Recursively call ourselves on the subcommand list,
+	     passing the right prefix in.  */
+	  traverse_command_structure (c->prefixlist, c->prefixname);
+	}
+      if (prefixcmd != c->prefix
+	  || (prefixcmd == nullptr && *list != cmdlist))
+	{
+	  if (c->prefix == nullptr)
+	    fprintf_filtered (gdb_stdout,
+			      "list %p reachable via prefix '%s'."
+			      "  command '%s' has null prefixcmd\n",
+			      list,
+			      prefix, c->name);
+	  else
+	    fprintf_filtered (gdb_stdout,
+			      "list %p reachable via prefix '%s'."
+			      "  command '%s' has a different prefixcmd\n",
+			      list,
+			      prefix, c->name);
+	  nr_invalid_prefixcmd++;
+	}
+    }
+}
+
+/* Verify that a list of commands is present in the tree only once.  */
+
+static void
+command_structure_invariants_tests ()
+{
+  nr_duplicates = 0;
+  nr_invalid_prefixcmd = 0;
+
+  traverse_command_structure (&cmdlist, "");
+
+  /* Release memory, be ready to be re-run.  */
+  lists.clear ();
+
+  SELF_CHECK (nr_duplicates == 0);
+  SELF_CHECK (nr_invalid_prefixcmd == 0);
+}
+
+}
+
 } /* namespace selftests */
 
-void _initialize_help_doc_selftests ();
+void _initialize_command_def_selftests ();
 void
-_initialize_help_doc_selftests ()
+_initialize_command_def_selftests ()
 {
   selftests::register_test
     ("help_doc_invariants",
      selftests::help_doc_tests::help_doc_invariants_tests);
+
+  selftests::register_test
+    ("command_structure_invariants",
+     selftests::command_structure_tests::command_structure_invariants_tests);
 }

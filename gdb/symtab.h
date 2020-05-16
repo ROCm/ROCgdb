@@ -1107,7 +1107,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
     /* Class-initialization of bitfields is only allowed in C++20.  */
     : domain (UNDEF_DOMAIN),
       aclass_index (0),
-      is_objfile_owned (0),
+      is_objfile_owned (1),
       is_argument (0),
       is_inlined (0),
       maybe_copied (0),
@@ -1120,11 +1120,13 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
       language_specific.obstack = nullptr;
       m_language = language_unknown;
       ada_mangled = 0;
-      section = 0;
+      section = -1;
       /* GCC 4.8.5 (on CentOS 7) does not correctly compile class-
          initialization of unions, so we initialize it manually here.  */
       owner.symtab = nullptr;
     }
+
+  symbol (const symbol &) = default;
 
   /* Data type of value */
 
@@ -2236,10 +2238,6 @@ bool producer_is_realview (const char *producer);
 void fixup_section (struct general_symbol_info *ginfo,
 		    CORE_ADDR addr, struct objfile *objfile);
 
-/* Look up objfile containing BLOCK.  */
-
-struct objfile *lookup_objfile_from_block (const struct block *block);
-
 extern unsigned int symtab_create_debug;
 
 extern unsigned int symbol_lookup_debug;
@@ -2330,12 +2328,6 @@ private:
 const char *
   demangle_for_lookup (const char *name, enum language lang,
 		       demangle_result_storage &storage);
-
-struct symbol *allocate_symbol (struct objfile *);
-
-void initialize_objfile_symbol (struct symbol *);
-
-struct template_symbol *allocate_template_symbol (struct objfile *);
 
 /* Test to see if the symbol of language SYMBOL_LANGUAGE specified by
    SYMNAME (which is already demangled for C++ symbols) matches

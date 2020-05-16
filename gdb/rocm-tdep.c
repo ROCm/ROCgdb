@@ -1581,7 +1581,7 @@ set_debug_amd_dbgapi (const char *arg, int from_tty)
 static void
 show_debug_amd_dbgapi (const char *args, int from_tty)
 {
-  cmd_show_list (show_debug_amd_dbgapi_list, from_tty, "");
+  cmd_show_list (show_debug_amd_dbgapi_list, from_tty);
 }
 
 constexpr char amd_dbgapi_log_level_off[] = "off";

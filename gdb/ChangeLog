@@ -1,3 +1,157 @@
+2020-05-15  Simon Marchi  <simon.marchi@efficios.com>
+
+	* sparc64-tdep.c (adi_stat_t): Remove typedef (leaving struct).
+	(sparc64_adi_info): Likewise.
+
+2020-05-15  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (lookup_language_this, lookup_symbol_aux): Use
+	block_objfile.
+	(lookup_objfile_from_block): Remove.
+	(lookup_symbol_in_block, lookup_symbol_in_static_block)
+	(lookup_global_symbol): Use block_objfile.
+	* symtab.h (lookup_objfile_from_block): Don't declare.
+	* printcmd.c (clear_dangling_display_expressions): Use
+	block_objfile.
+	* parse.c (operator_check_standard): Use block_objfile.
+
+2020-05-15  Tom Tromey  <tom@tromey.com>
+
+	* language.c (language_alloc_type_symbol): Set
+	SYMBOL_SECTION.
+	* symtab.c (initialize_objfile_symbol): Remove.
+	(allocate_symbol): Remove.
+	(allocate_template_symbol): Remove.
+	* dwarf2/read.c (fixup_go_packaging): Use "new".
+	(new_symbol): Use "new".
+	(read_variable): Don't call initialize_objfile_symbol.  Use
+	"new".
+	(read_func_scope): Use "new".
+	* xcoffread.c (process_xcoff_symbol): Don't call
+	initialize_objfile_symbol.
+	(SYMBOL_DUP): Remove.
+	* coffread.c (process_coff_symbol, coff_read_enum_type): Use
+	"new".
+	* symtab.h (allocate_symbol, initialize_objfile_symbol)
+	(allocate_template_symbol): Don't declare.
+	(struct symbol): Add copy constructor.  Change defaults.
+	* jit.c (finalize_symtab): Use "new".
+	* ctfread.c (ctf_add_enum_member_cb, new_symbol, ctf_add_var_cb):
+	Use "new".
+	* stabsread.c (patch_block_stabs, define_symbol, read_enum_type)
+	(common_block_end): Use "new".
+	* mdebugread.c (parse_symbol): Use "new".
+	(new_symbol): Likewise.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* NEWS: Mention changes to help and apropos.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* command.h (enum command_class): Improve comments, document
+	that class_alias is for user-defined aliases, give the class
+	name for each class, remove unused class_xdb.
+	* cli/cli-decode.c (add_com_alias): Document THECLASS intended usage.
+	* breakpoint.c (_initialize_breakpoint): Replace class_alias
+	by a precise class.
+	* infcmd.c (_initialize_infcmd): Likewise.
+	* reverse.c (_initialize_reverse): Likewise.
+	* stack.c (_initialize_stack): Likewise.
+	* symfile.c (_initialize_symfile): Likewise.
+	* tracepoint.c (_initialize_tracepoint): Likewise.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* cli/cli-decode.c (apropos_cmd): Produce output for aliases
+	when their aliased command is traversed.
+	(help_cmd): Add fput_command_names_styled call to
+	output command name and aliases when command has an alias.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* cli/cli-decode.h (help_cmd_list): Remove declaration.
+	* cli/cli-decode.c (help_cmd_list): Declare as static,
+	remove prefix argument, use bool for recurse arg, rework to show the aliases of
+	a command together with the command.
+	(fput_command_name_styled, fput_command_names_styled): New functions.
+	(print_help_for_command): Remove prefix arg, use bool for recurse arg, use
+	fput_command_name_styled.
+	(help_list, help_all): Update callers to remove prefix arg and use bool recurse.
+	* cli/cli-cmds.c (_initialize_cli_cmds): Update alias_command doc.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* cli/cli-setshow.h (cmd_show_list): Remove prefix argument.
+	* cli/cli-decode.c (do_show_prefix_cmd): Likewise.
+	* command.h (cmd_show_list): Likewise.
+	* dwarf2/index-cache.c (show_index_cache_command): Likewise.
+	* cli/cli-setshow.c (cmd_show_list): Use the prefix to produce the output.  Skip aliases.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* unittests/command-def-selftests.c (traverse_command_structure):
+	Verify all commands of a list have the same prefix command and
+	that only the top cmdlist commands have a null prefix.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* cli/cli-decode.c (lookup_cmd_for_prefix): Return the aliased command
+	as prefix, not one of its aliases.
+	(set_cmd_prefix): Remove.
+	(do_add_cmd): Centralize the setting of the prefix of a command, when
+	command is defined after its full chain of prefix commands.
+	(add_alias_cmd): Remove call to set_cmd_prefix, as do_add_cmd does it.
+	(add_setshow_cmd_full): Likewise.
+	(update_prefix_field_of_prefixed_commands): New function.
+	(add_prefix_cmd): Replace non working call to set_cmd_prefix by
+	update_prefix_field_of_prefixed_commands.
+	* gdb/remote-fileio.c (initialize_remote_fileio): Use the real
+	addresses of remote_set_cmdlist and remote_show_cmdlist given
+	as argument, not the address of an argument.
+	* gdb/remote-fileio.h (initialize_remote_fileio): Likewise.
+	* gdb/remote.c (_initialize_remote): Likewise.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* cli/cli-cmds.c (alias_command): Check for an existing alias
+	using lookup_cmd_composition, as valid_command_p is too strict
+	and forbids aliases that are the prefix of an existing alias
+	or command.
+	* cli/cli-decode.c (lookup_cmd_composition): Ensure a prefix
+	command is properly recognised as a valid command.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* unittests/help-doc-selftests.c: Rename to
+	unittests/command-def-selftests.c
+	* unittests/command-def-selftests.c (help_doc_tests): Update some
+	comments.
+	(command_structure_tests, traverse_command_structure): New namespace
+	and function.
+	(command_structure_invariants_tests): New function.
+	(_initialize_command_def_selftests) Renamed from
+	_initialize_help_doc_selftests, register command_structure_invariants
+	selftest.
+
+2020-05-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* cli/cli-cmds.c (_initialize_cli_cmds): Define 'info set' as
+	an alias of 'show'.
+
+2020-05-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.h: (ada_is_gnat_encoded_fixed_point_type): Renames
+	ada_is_fixed_point_type.  Update all callers.
+	(gnat_encoded_fixed_point_delta): Renames ada_delta.  Update
+	all callers.
+	* ada-lang.c (gnat_encoded_fixed_type_info): Renames fixed_type_info.
+	Update all callers.
+	* ada-typeprint.c (print_gnat_encoded_fixed_point_type): Renames
+	print_fixed_point_type.  Update all callers.
+	* ada-valprint.c (ada_value_print_num): Replace call to
+	ada_is_fixed_point_type by ada_is_gnat_encoded_fixed_point_type.
+
 2020-05-14  Kevin Buettner  <kevinb@redhat.com>
 
 	* nat/linux-btrace.c (btrace_this_cpu): Add check for AMD
