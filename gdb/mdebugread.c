@@ -1010,10 +1010,10 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	   (.Fxx or .xxfake or empty) for unnamed struct/union/enums.
 	   Alpha cc puts out an sh->iss of zero for those.  */
 	if (sh->iss == 0 || name[0] == '.' || name[0] == '\0')
-	  TYPE_NAME (t) = NULL;
+	  t->set_name (NULL);
 	else
-	  TYPE_NAME (t) = obconcat (&mdebugread_objfile->objfile_obstack,
-				    name, (char *) NULL);
+	  t->set_name (obconcat (&mdebugread_objfile->objfile_obstack,
+				 name, (char *) NULL));
 
 	t->set_code (type_code);
 	TYPE_LENGTH (t) = sh->value;
@@ -1296,7 +1296,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
 
       /* Incomplete definitions of structs should not get a name.  */
-      if (TYPE_NAME (SYMBOL_TYPE (s)) == NULL
+      if (SYMBOL_TYPE (s)->name () == NULL
 	  && (TYPE_NFIELDS (SYMBOL_TYPE (s)) != 0
 	      || (SYMBOL_TYPE (s)->code () != TYPE_CODE_STRUCT
 		  && SYMBOL_TYPE (s)->code () != TYPE_CODE_UNION)))
@@ -1324,7 +1324,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	         for anything except pointers or functions.  */
 	    }
 	  else
-	    TYPE_NAME (SYMBOL_TYPE (s)) = s->linkage_name ();
+	    SYMBOL_TYPE (s)->set_name (s->linkage_name ());
 	}
       break;
 
@@ -1674,11 +1674,11 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
 	  /* Do not set the tag name if it is a compiler generated tag name
 	     (.Fxx or .xxfake or empty) for unnamed struct/union/enums.  */
 	  if (name[0] == '.' || name[0] == '\0')
-	    TYPE_NAME (tp) = NULL;
-	  else if (TYPE_NAME (tp) == NULL
-		   || strcmp (TYPE_NAME (tp), name) != 0)
-	    TYPE_NAME (tp)
-	      = obstack_strdup (&mdebugread_objfile->objfile_obstack, name);
+	    tp->set_name (NULL);
+	  else if (tp->name () == NULL
+		   || strcmp (tp->name (), name) != 0)
+	    tp->set_name (obstack_strdup (&mdebugread_objfile->objfile_obstack,
+					  name));
 	}
     }
 
@@ -1711,10 +1711,10 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
 	      bad_tag_guess_complaint (sym_name);
 	      tp->set_code (type_code);
 	    }
-	  if (TYPE_NAME (tp) == NULL
-	      || strcmp (TYPE_NAME (tp), name) != 0)
-	    TYPE_NAME (tp)
-	      = obstack_strdup (&mdebugread_objfile->objfile_obstack, name);
+	  if (tp->name () == NULL
+	      || strcmp (tp->name (), name) != 0)
+	    tp->set_name (obstack_strdup (&mdebugread_objfile->objfile_obstack,
+					  name));
 	}
     }
   if (t->bt == btTypedef)
@@ -4736,7 +4736,7 @@ new_type (char *name)
   struct type *t;
 
   t = alloc_type (mdebugread_objfile);
-  TYPE_NAME (t) = name;
+  t->set_name (name);
   INIT_CPLUS_SPECIFIC (t);
   return t;
 }

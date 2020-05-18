@@ -889,6 +889,18 @@ struct type
     this->main_type->code = code;
   }
 
+  /* Get the name of this type.  */
+  const char *name () const
+  {
+    return this->main_type->name;
+  }
+
+  /* Set the name of this type.  */
+  void set_name (const char *name)
+  {
+    this->main_type->name = name;
+  }
+
   /* * Return the dynamic property of the requested KIND from this type's
      list of dynamic properties.  */
   dynamic_prop *dyn_prop (dynamic_prop_node_kind kind) const;
@@ -1404,7 +1416,6 @@ extern void allocate_gnat_aux_type (struct type *);
 
 #define TYPE_INSTANCE_FLAGS(thistype) (thistype)->instance_flags
 #define TYPE_MAIN_TYPE(thistype) (thistype)->main_type
-#define TYPE_NAME(thistype) TYPE_MAIN_TYPE(thistype)->name
 #define TYPE_TARGET_TYPE(thistype) TYPE_MAIN_TYPE(thistype)->target_type
 #define TYPE_POINTER_TYPE(thistype) (thistype)->pointer_type
 #define TYPE_REFERENCE_TYPE(thistype) (thistype)->reference_type
@@ -1691,13 +1702,13 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
    if the type has no name.  */
 
 #define TYPE_SAFE_NAME(type) \
-  (TYPE_NAME (type) ? TYPE_NAME (type) : _("<unnamed type>"))
+  (type->name () != nullptr ? type->name () : _("<unnamed type>"))
 
 /* * A helper macro that returns the name of an error type.  If the
    type has a name, it is used; otherwise, a default is used.  */
 
 #define TYPE_ERROR_NAME(type) \
-  (TYPE_NAME (type) ? TYPE_NAME (type) : _("<error type>"))
+  (type->name () ? type->name () : _("<error type>"))
 
 /* Given TYPE, return its floatformat.  */
 const struct floatformat *floatformat_from_type (const struct type *type);

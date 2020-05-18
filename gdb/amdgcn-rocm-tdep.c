@@ -92,9 +92,9 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
           gdb_type_from_type_name (gdbarch, type_name.substr (0, pos)),
           std::stoi (type_name.substr (pos + 1)));
 
-      TYPE_NAME (vector_type)
-          = tdep->vector_type_map.emplace (type_name, vector_type)
-                .first->first.c_str ();
+      vector_type->set_name (
+          tdep->vector_type_map.emplace (type_name, vector_type)
+              .first->first.c_str ());
 
       return vector_type;
     }

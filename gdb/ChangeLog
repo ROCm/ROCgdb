@@ -1,3 +1,32 @@
+2020-05-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_NAME): Remove.  Change all cal sites to use
+	type::name instead.
+
+2020-05-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <name, set_name>: New methods.
+	(TYPE_CODE): Use type::name.  Change all call sites used to set
+	the name to use type::set_name instead.
+
+2020-05-16  Tom Tromey  <tom@tromey.com>
+
+	* top.c (quit_force): Update.
+	* infrun.c (handle_no_resumed): Update.
+	* top.h (all_uis): New function.
+	(ALL_UIS): Remove.
+
+2020-05-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* mips-linux-tdep.c (mips_linux_in_dynsym_stub): Fix condition.
+
+2020-05-16  Pedro Alves  <palves@redhat.com>
+
+	* ia64-linux-nat.c
+	(ia64_linux_nat_target) <enable_watchpoints_in_psr(ptid_t)>:
+	Declare method.
+	(enable_watchpoints_in_psr): Now a method of ia64_linux_nat_target.
+
 2020-05-15  Simon Marchi  <simon.marchi@efficios.com>
 
 	* sparc64-tdep.c (adi_stat_t): Remove typedef (leaving struct).

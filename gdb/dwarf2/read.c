@@ -9343,13 +9343,13 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	 field at index 1 and the data-less field at index 2.  */
       TYPE_FIELD (type, 1) = saved_field;
       TYPE_FIELD_NAME (type, 1)
-	= rust_last_path_segment (TYPE_NAME (TYPE_FIELD_TYPE (type, 1)));
-      TYPE_NAME (TYPE_FIELD_TYPE (type, 1))
-	= rust_fully_qualify (&objfile->objfile_obstack, TYPE_NAME (type),
-			      TYPE_FIELD_NAME (type, 1));
+	= rust_last_path_segment (TYPE_FIELD_TYPE (type, 1)->name ());
+      TYPE_FIELD_TYPE (type, 1)->set_name
+	(rust_fully_qualify (&objfile->objfile_obstack, type->name (),
+			     TYPE_FIELD_NAME (type, 1)));
 
       const char *dataless_name
-	= rust_fully_qualify (&objfile->objfile_obstack, TYPE_NAME (type),
+	= rust_fully_qualify (&objfile->objfile_obstack, type->name (),
 			      name);
       struct type *dataless_type = init_type (objfile, TYPE_CODE_VOID, 0,
 					      dataless_name);
@@ -9373,11 +9373,11 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 
       struct type *field_type = TYPE_FIELD_TYPE (type, 0);
       const char *variant_name
-	= rust_last_path_segment (TYPE_NAME (field_type));
+	= rust_last_path_segment (field_type->name ());
       TYPE_FIELD_NAME (type, 0) = variant_name;
-      TYPE_NAME (field_type)
-	= rust_fully_qualify (&objfile->objfile_obstack,
-			      TYPE_NAME (type), variant_name);
+      field_type->set_name
+	(rust_fully_qualify (&objfile->objfile_obstack,
+			     type->name (), variant_name));
     }
   else
     {
@@ -9461,7 +9461,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	     That name can be used to look up the correct
 	     discriminant.  */
 	  const char *variant_name
-	    = rust_last_path_segment (TYPE_NAME (TYPE_FIELD_TYPE (type, i)));
+	    = rust_last_path_segment (TYPE_FIELD_TYPE (type, i)->name ());
 
 	  auto iter = discriminant_map.find (variant_name);
 	  if (iter != discriminant_map.end ())
@@ -9478,9 +9478,9 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	      ++TYPE_FIELDS (sub_type);
 	    }
 	  TYPE_FIELD_NAME (type, i) = variant_name;
-	  TYPE_NAME (sub_type)
-	    = rust_fully_qualify (&objfile->objfile_obstack,
-				  TYPE_NAME (type), variant_name);
+	  sub_type->set_name
+	    (rust_fully_qualify (&objfile->objfile_obstack,
+				 type->name (), variant_name));
 	}
 
       /* Indicate that this is a variant type.  */
@@ -14495,7 +14495,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       handle_data_member_location (die, cu, fp);
       FIELD_BITSIZE (*fp) = 0;
       FIELD_TYPE (*fp) = die_type (die, cu);
-      FIELD_NAME (*fp) = TYPE_NAME (fp->type);
+      FIELD_NAME (*fp) = fp->type->name ();
     }
   else
     gdb_assert_not_reached ("missing case in dwarf2_add_field");
@@ -15357,13 +15357,13 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
 	  if (get_die_type (die, cu) != NULL)
 	    return get_die_type (die, cu);
 
-	  TYPE_NAME (type) = full_name;
+	  type->set_name (full_name);
 	}
       else
 	{
 	  /* The name is already allocated along with this objfile, so
 	     we don't need to duplicate it for the type.  */
-	  TYPE_NAME (type) = name;
+	  type->set_name (name);
 	}
     }
 
@@ -15704,7 +15704,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 		  if (i < TYPE_N_BASECLASSES (t))
 		    complaint (_("virtual function table pointer "
 				 "not found when defining class '%s'"),
-			       TYPE_NAME (type) ? TYPE_NAME (type) : "");
+			       type->name () ? type->name () : "");
 		}
 	      else
 		{
@@ -15940,7 +15940,7 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
   type->set_code (TYPE_CODE_ENUM);
   name = dwarf2_full_name (NULL, die, cu);
   if (name != NULL)
-    TYPE_NAME (type) = name;
+    type->set_name (name);
 
   attr = dwarf2_attr (die, DW_AT_type, cu);
   if (attr != NULL)
@@ -16187,7 +16187,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 
   name = dwarf2_name (die, cu);
   if (name)
-    TYPE_NAME (type) = name;
+    type->set_name (name);
 
   maybe_set_alignment (cu, die, type);
 
@@ -16498,7 +16498,7 @@ read_namespace (struct die_info *die, struct dwarf2_cu *cu)
 
 	  std::vector<const char *> excludes;
 	  add_using_directive (using_directives (cu),
-			       previous_prefix, TYPE_NAME (type), NULL,
+			       previous_prefix, type->name (), NULL,
 			       NULL, excludes, 0, &objfile->objfile_obstack);
 	}
     }
@@ -17261,7 +17261,7 @@ dwarf2_init_complex_target_type (struct dwarf2_cu *cu,
   if (tt != nullptr && TYPE_LENGTH (tt) * TARGET_CHAR_BIT != bits)
     tt = nullptr;
 
-  const char *name = (tt == nullptr) ? nullptr : TYPE_NAME (tt);
+  const char *name = (tt == nullptr) ? nullptr : tt->name ();
   return dwarf2_init_float_type (objfile, bits, name, name_hint, byte_order);
 }
 
@@ -17329,7 +17329,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	      {
 		struct obstack *obstack
 		  = &cu->per_cu->dwarf2_per_objfile->objfile->objfile_obstack;
-		name = obconcat (obstack, "_Complex ", TYPE_NAME (type),
+		name = obconcat (obstack, "_Complex ", type->name (),
 				 nullptr);
 	      }
 	    type = init_type (objfile, TYPE_CODE_ERROR, bits, name);
@@ -17758,7 +17758,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   name = dwarf2_name (die, cu);
   if (name)
-    TYPE_NAME (range_type) = name;
+    range_type->set_name (name);
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
@@ -17781,7 +17781,7 @@ read_unspecified_type (struct die_info *die, struct dwarf2_cu *cu)
 
   type = init_type (cu->per_cu->dwarf2_per_objfile->objfile, TYPE_CODE_VOID,0,
 		    NULL);
-  TYPE_NAME (type) = dwarf2_name (die, cu);
+  type->set_name (dwarf2_name (die, cu));
 
   /* In Ada, an unspecified type is typically used when the description
      of the type is deferred to a different unit.  When encountering
@@ -20905,8 +20905,8 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		    /* The symbol's name is already allocated along
 		       with this objfile, so we don't need to
 		       duplicate it for the type.  */
-		    if (TYPE_NAME (SYMBOL_TYPE (sym)) == 0)
-		      TYPE_NAME (SYMBOL_TYPE (sym)) = sym->search_name ();
+		    if (SYMBOL_TYPE (sym)->name () == 0)
+		      SYMBOL_TYPE (sym)->set_name (sym->search_name ());
 		  }
 	      }
 	  }
@@ -21657,18 +21657,18 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
 	   DW_TAG_namespace DIEs with a name of "::" for the global namespace.
 	   Work around this problem here.  */
 	if (cu->language == language_cplus
-	    && strcmp (TYPE_NAME (parent_type), "::") == 0)
+	    && strcmp (parent_type->name (), "::") == 0)
 	  return "";
 	/* We give a name to even anonymous namespaces.  */
-	return TYPE_NAME (parent_type);
+	return parent_type->name ();
       case DW_TAG_class_type:
       case DW_TAG_interface_type:
       case DW_TAG_structure_type:
       case DW_TAG_union_type:
       case DW_TAG_module:
 	parent_type = read_type_die (parent, cu);
-	if (TYPE_NAME (parent_type) != NULL)
-	  return TYPE_NAME (parent_type);
+	if (parent_type->name () != NULL)
+	  return parent_type->name ();
 	else
 	  /* An anonymous structure is only allowed non-static data
 	     members; no typedefs, no member functions, et cetera.
@@ -21703,8 +21703,8 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
 	parent_type = read_type_die (parent, cu);
 	if (TYPE_DECLARED_CLASS (parent_type))
 	  {
-	    if (TYPE_NAME (parent_type) != NULL)
-	      return TYPE_NAME (parent_type);
+	    if (parent_type->name () != NULL)
+	      return parent_type->name ();
 	    return "";
 	  }
 	/* Fall through.  */
