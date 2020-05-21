@@ -1,15 +1,18 @@
 # Copyright (C) 2019-2020 Free Software Foundation, Inc.
 # Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-#
+
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#
+
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -73,6 +76,7 @@ clean_restart ${binfile}
 
 #Turn on non-stop mode
 gdb_test_no_output "set non-stop on"
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_breakpoint "VectorAdd" "allow-pending"
 send_gdb "run\n"
 set test_name "run"
@@ -108,7 +112,7 @@ gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 # vega20 sample output "1  b1:00.0  vega20      4              60            4       10"
 gdb_test_sequence "info agents" "info agents" {
  {Id\s+PCI Slot\s+Device Name\s+Shader Engines\s+Compute Units\s+SIMD/CU\s+Wavefronts/SIMD}
- {\d\s+\d+:\d+\.\d\s+\w+\d+\s+\d+\s+\d+\s+\d+\s+\d}
+ {\d\s+\w+:\d+\.\d\s+\w+\s+\d+\s+\d+\s+\d+\s+\d+}
 }
 
 
@@ -143,11 +147,11 @@ gdb_test_sequence "show convenience" "show convenience" {
 #From                To                  Syms Read   Shared Object Library
 #0x00007ffbdfe05000  0x00007ffbdfe07a2c  Yes (*)     AMDGPU shared object [loaded from memory 0xab9900..0xac3470]
 #0x00007ffbdc201000  0x00007ffbdc201c94  Yes         AMDGPU shared object [loaded from memory 0x9b71d0..0x9bae28]
-gdb_test_sequence "info sharedlibrary" "info sharedlibrary" {
- {From\s+To\s+Syms\s+Read\s+Shared Object Library}
- {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s\(\*\)\s+AMDGPU shared object.}
- {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s+AMDGPU shared object.}
-}
+#gdb_test_sequence "info sharedlibrary" "info sharedlibrary" {
+# {From\s+To\s+Syms\s+Read\s+Shared Object Library}
+# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s\(\*\)\s+AMDGPU shared object.}
+# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s+AMDGPU shared object.}
+#}
 
 
 #info break
@@ -187,9 +191,10 @@ gdb_expect 60 {
 #gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 
 sleep 5
-gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
 gdb_test "clear VectorAdd"
-gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
+gdb_test "start" {.+hit\sTemporary\sbreakpoint\s[\d].*}
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 gdb_breakpoint "VectorAdd" "allow-pending"
 send_gdb "run\n"
@@ -211,10 +216,10 @@ gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test_no_output "set non-stop off"
 gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
-gdb_test "disable 2"
+gdb_test "disable 3"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
-gdb_test "enable 2"
+gdb_test "enable 3"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sVectorAdd\s\(.*\)\sat.*}
 gdb_test "clear VectorAdd"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
