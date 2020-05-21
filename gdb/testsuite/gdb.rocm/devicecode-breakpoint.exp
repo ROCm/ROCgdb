@@ -1,15 +1,18 @@
 # Copyright (C) 2019-2020 Free Software Foundation, Inc.
 # Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-#
+
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#
+
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -76,6 +79,7 @@ clean_restart ${binfile}
 #TEST3
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
@@ -84,6 +88,7 @@ clean_restart ${binfile}
 #TEST4
 #break <lineNo>
 #e.g break 35
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
@@ -112,6 +117,7 @@ set timeout 40
 #TEST5
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_thread==<threadno>
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" "Breakpoint .* at .*${testfile}.*"
 gdb_test "run" ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
@@ -121,6 +127,7 @@ clean_restart ${binfile}
 #TEST6
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_streq($_wave_id,(0,0,1)/2)
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" "Breakpoint .* at .*${testfile}.*"
 gdb_test "run" ".+$wave_id_re.+Thread.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
@@ -157,6 +164,7 @@ clean_restart ${binfile}
 #clear the breakpoint in device thread
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
@@ -169,6 +177,7 @@ clean_restart ${binfile}
 #delete all the breakpoints in device thread
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
@@ -181,6 +190,7 @@ clean_restart ${binfile}
 #delete single breakpoint in device thread
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
