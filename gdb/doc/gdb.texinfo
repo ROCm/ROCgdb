@@ -26716,12 +26716,22 @@ objects that have the same breakpoint set.  The work around is to use
 The HIP runtime currently performs deferred code object loading by
 default.  AMD GPU code objects are not loaded until the first kernel
 is launched.  Before then, all breakpoints have to be set as pending
-breakpoints using source line positions.
+breakpoints.
+
+If source line positions are used that only correspond to source lines
+in unloaded code objects, then @value{GDBN} may not set pending
+breakpoints, and instead set breakpoints in unpredictable places of
+the loaded code objects if they contain code from the same file.  This
+can result in unexpected breakpoint hits being reported.  When the
+code object containing the source lines is loaded, the incorrect
+breakpoints will be remomoved and replaced by the correct ones.  This
+problem can be avoided by only setting breakpoints in unloaded code
+objects using symbol or function names.
 
 The @code{HIP_ENABLE_DEFERRED_LOADING} environment variable can be
 used to disable deferred code object loading by the HIP runtime.  This
-allows breakpoints to be set in AMD GPU code as soon as the inferior
-reaches the @code{main} function.
+ensures all code objects will be loaded when the inferior reaches the
+beginning of the @code{main} function.
 
 For example,
 
@@ -26738,6 +26748,9 @@ reported.  This can be avoided by setting a breakpoint in @code{abort}
 and using the non-stop mode (@pxref{Non-Stop Mode}).  This will
 prevent the ROCm runtime from terminating the inferior, while allowing
 @value{GDBN} to report the memory violation.
+
+@item
+AMD GPU does not currently support calling inferior functions.
 
 @item
 @value{GDBN} does not support following a forked process.
@@ -26758,11 +26771,13 @@ AMD GPU does not currently support the compiler address, memory, or
 thread sanitizers.
 
 @item
-AMD GPU does not currently support calling inferior functions.
-
-@item
 @value{GDBN} support for AMD GPU is not currently available under
 virtualization.
+
+@item
+Performing an instruction single step when an AMD GPU wavefront is
+positioned on an @code{S_ENDPGM} instruction may cause the AMD GPU
+hardware to hang.
 
 @end enumerate
 
