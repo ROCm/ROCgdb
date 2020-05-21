@@ -249,7 +249,7 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 
   int fd, target_errno;
   fd = target_fileio_open (static_cast<struct inferior *> (inferior),
-                           decoded_path.c_str (), FILEIO_O_RDONLY, 0,
+                           decoded_path.c_str (), FILEIO_O_RDONLY, false, 0,
                            &target_errno);
   if (fd == -1)
     {

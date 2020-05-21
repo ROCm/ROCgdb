@@ -2393,9 +2393,8 @@ riscv_elf_relocate_section (bfd *output_bfd,
       if (msg && r != bfd_reloc_dangerous)
 	info->callbacks->einfo (msg);
 
-      /* Free the unused `msg_buf` if needed.  */
-      if (msg_buf)
-	free (msg_buf);
+      /* Free the unused `msg_buf`.  */
+      free (msg_buf);
 
       /* We already reported the error via a callback, so don't try to report
 	 it again by returning false.  That leads to spurious errors.  */
@@ -2810,7 +2809,7 @@ riscv_merge_std_ext (bfd *ibfd,
   if (!riscv_i_or_e_p (ibfd, out_arch, out))
     return FALSE;
 
-  if (in->name[0] != out->name[0])
+  if (strcasecmp (in->name, out->name) != 0)
     {
       /* TODO: We might allow merge 'i' with 'e'.  */
       _bfd_error_handler
@@ -2983,13 +2982,17 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch)
   riscv_parse_subset_t rpe_in;
   riscv_parse_subset_t rpe_out;
 
+  /* Only assembler needs to check the default version of ISA, so just set
+     the rpe_in.get_default_version and rpe_out.get_default_version to NULL.  */
   rpe_in.subset_list = &in_subsets;
   rpe_in.error_handler = _bfd_error_handler;
   rpe_in.xlen = &xlen_in;
+  rpe_in.get_default_version = NULL;
 
   rpe_out.subset_list = &out_subsets;
   rpe_out.error_handler = _bfd_error_handler;
   rpe_out.xlen = &xlen_out;
+  rpe_out.get_default_version = NULL;
 
   if (in_arch == NULL && out_arch == NULL)
     return NULL;

@@ -1,3 +1,37 @@
+2020-05-20  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/26016
+	* gdb.base/coredump-filter.c (do_mmap): Check mmap ret val
+	against MAP_FAILED.
+	* gdb.base/coremaker.c (mmapdata): Likewise.
+	* gdb.base/jit-reader-host.c (main): Likewise.
+	* gdb.base/sym-file-loader.c (load): Likewise.
+	(load_shlib): Likewise.
+
+2020-05-20  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/array_char_idx.exp: Recognize initialized array.
+
+2020-05-20  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25833
+	* gdb.base/with-mf-inc.c: New test.
+	* gdb.base/with-mf-main.c: New test.
+	* gdb.base/with-mf.exp: New file.
+
+2020-05-19  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.rust/simple.exp: Restore missing test result.
+
+2020-05-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/gdb-caching-proc.exp: Fix typo.
+
+2020-05-19  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.rust/simple.exp: Add some test descriptions.
+	(test_one_slice): Use with_test_prefix.
+
 2020-05-18  Tom de Vries  <tdevries@suse.de>
 
 	* gdb.base/gdb-caching-proc.exp: Use with_test_prefix.

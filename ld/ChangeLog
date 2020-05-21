@@ -1,3 +1,51 @@
+2020-05-21  Alan Modra  <amodra@gmail.com>
+
+	* deffilep.y: Replace "if (x) free (x)" with "free (x)" thoughout.
+	* emultempl/elf.em: Likewise.
+	* emultempl/msp430.em: Likewise.
+	* emultempl/pe.em: Likewise.
+	* emultempl/pep.em: Likewise.
+	* emultempl/ppc64elf.em: Likewise.
+	* emultempl/xtensaelf.em: Likewise.
+	* ldelf.c: Likewise.
+	* ldfile.c: Likewise.
+	* ldmain.c: Likewise.
+	* ldmisc.c: Likewise.
+	* lexsup.c: Likewise.
+	* pe-dll.c: Likewise.
+
+2020-05-20  Nelson Chu  <nelson.chu@sifive.com>
+
+	* testsuite/ld-riscv-elf/attr-merge-arch-01.d: Updated
+        priv attributes according to the -mpriv-spec option.
+	* testsuite/ld-riscv-elf/attr-merge-arch-02.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-arch-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-a.s: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-b.s: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-stack-align.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-01.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-02.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-04.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-05.d: Likewise.
+
+2020-05-20  Alan Modra  <amodra@gmail.com>
+
+	PR 25993
+	* emultempl/pe.em (gld_${EMULATION_NAME}_after_open): Don't copy
+	other_bfd_filename for bfd_set_filename, and test result of
+	bfd_set_filename call.  Don't create a new is->filename, simply
+	copy from bfd filename.  Free new_name after bfd_set_filename.
+	* emultempl/pep.em (gld_${EMULATION_NAME}_after_open): Likewise.
+
+2020-05-19  Siddhesh Poyarekar  <siddesh.poyarekar@arm.com>
+
+	* testsuite/ld-aarch64/aarch64-elf.exp: New test
+	emit-relocs-560.
+	* testsuite/ld-aarch64/emit-relocs-560.d: New file.
+	* testsuite/ld-aarch64/emit-relocs-560.s: New file.
+
 2020-05-19  Alan Modra  <amodra@gmail.com>
 
 	* emultempl/beos.em (sort_by_file_name): Use bfd_get_filename

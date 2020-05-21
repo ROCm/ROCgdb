@@ -1,3 +1,39 @@
+2020-05-21  Alan Modra  <amodra@gmail.com>
+
+	* addr2line.c: Replace "if (x) free (x)" with "free (x)" throughout.
+	* dlltool.c: Likewise.
+	* elfcomm.c: Likewise.
+	* rddbg.c: Likewise.
+	* readelf.c: Likewise.
+	* stabs.c: Likewise.
+	* windmc.c: Likewise.
+	* windres.c: Likewise.
+	* wrstabs.c: Likewise.
+
+2020-05-21  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (get_num_dynamic_syms): Bounds check mipsxlat array
+	access.
+
+2020-05-20  Nelson Chu  <nelson.chu@sifive.com>
+
+	* dwarf.c: Updated since DECLARE_CSR is changed.
+
+2020-05-19  H.J. Lu  <hjl.tools@gmail.com>
+
+	PR binutils/25809
+	* readelf.c (process_program_headers): Warn if the PT_DYNAMIC
+	segment doesn't match the .dynamic section and checks are
+	enabled.
+	(struct filedata): Add dynamic_symtab_section and
+	dynamic_strtab_section fields.
+	(process_section_headers): Set dynamic_symtab_section to the
+	.dynsym section.  Set dynamic_strtab_section to the .dynstr
+	section.
+	(process_dynamic_section): Warn if the .dynsym section doesn't
+	match DT_SYMTAB and DT_SYMENT or the .dynstr section doesn't
+	DT_STRTAB and DT_STRSZ.  But only if checks are enabled.
+
 2020-05-19  Alan Modra  <amodra@gmail.com>
 
 	* ar.c (map_over_members, get_pos_bfd, delete_members, move_members),

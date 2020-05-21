@@ -1,3 +1,124 @@
+2020-05-20  Simon Marchi  <simon.marchi@efficios.com>
+
+	* symfile.c (reread_symbols): Clear objfile's section_offsets
+	vector and section indices, re-compute them by calling
+	sym_offsets.
+
+2020-05-20  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (bound_name, MAX_ADA_DIMENS): Remove.
+        (desc_one_bound, desc_index_type): Compute field name.
+
+2020-05-20  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/25833
+	* dwarf2/read.c (dw2_map_matching_symbols): Handle .gdb_index.
+
+2020-05-20  Alan Modra  <amodra@gmail.com>
+
+	PR 25993
+	* solib-darwin.c (darwin_bfd_open): Don't strdup pathname for
+	bfd_set_filename.
+	* solib-aix.c (solib_aix_bfd_open): Use std::string for name
+	passed to bfd_set_filename.
+	* symfile-mem.c (add_vsyscall_page): Likewise for string
+	passed to symbol_file_add_from_memory.
+	(symbol_file_add_from_memory): Make name param a const char* and
+	don't strdup.
+
+2020-05-20  Alan Modra  <amodra@gmail.com>
+
+	* coff-pe-read.c (read_pe_exported_syms): Use bfd_get_filename
+	rather than accessing bfd->filename directly.
+	* dtrace-probe.c (dtrace_static_probe_ops::get_probes): Likewise,
+	and use bfd_section_name.
+	* dwarf2/frame.c (decode_frame_entry): Likewise.
+	* exec.c (exec_set_section_address): Likewise.
+	* solib-aix.c (solib_aix_bfd_open): Likewise.
+	* stap-probe.c (get_stap_base_address): Likewise.
+	* symfile.c (reread_symbols): Likewise.
+
+2020-05-19  Tom Tromey  <tromey@adacore.com>
+
+	* sparc64-tdep.c (adi_tag_fd): Update call to target_fileio_open.
+
+2020-05-19  Simon Marchi  <simon.marchi@efficios.com>
+
+	* dwarf2/read.c (quirk_rust_enum): Allocate enough fields.
+
+2020-05-19  Pedro Alves  <palves@redhat.com>
+
+	* NEWS (set exec-file-mismatch): Adjust entry.
+	* exec.c: Include "build-id.h".
+	(validate_exec_file): Try to match build IDs instead of filenames.
+	* gdb_bfd.c (struct gdb_bfd_open_closure): New.
+	(gdb_bfd_iovec_fileio_open): Adjust to use gdb_bfd_open_closure
+	and pass down 'warn_if_slow'.
+	(gdb_bfd_open): Add 'warn_if_slow' parameter.  Use
+	gdb_bfd_open_closure to pass it down.
+	* gdb_bfd.h (gdb_bfd_open): Add 'warn_if_slow' parameter.
+
+2020-05-19  Pedro Alves  <palves@redhat.com>
+
+	* gdb_bfd.c (gdb_bfd_iovec_fileio_open): Adjust.
+	* target.c (target_fileio_open_1): Rename to target_fileio_open
+	and make extern.  Use bool.
+	(target_fileio_open, target_fileio_open_warn_if_slow): Delete.
+	(target_fileio_read_alloc_1): Adjust.
+	* target.h (target_fileio_open): Add 'warn_if_slow' parameter.
+	(target_fileio_open_warn_if_slow): Delete declaration.
+
+2020-05-19  Pedro Alves  <palves@redhat.com>
+
+	* gdb_bfd.h: (gdb_bfd_open): Default to 'fd' parameter to -1.
+	Adjust all callers.
+
+2020-05-19  Yoshinori Sato  <ysato@users.sourceforge.jp>
+
+	* h8300-tdep.c (h8300_is_argument_spill): Change how we check
+	whether disp is negative.
+
+2020-05-19  Simon Marchi  <simon.marchi@efficios.com>
+
+	* symfile.h (struct symfile_segment_data)
+	<~symfile_segment_data>: Remove.
+	<segment_info>: Change to std::vector.
+	* symfile.c (default_symfile_segments): Update.
+	* elfread.c (elf_symfile_segments): Update.
+
+2020-05-19  Simon Marchi  <simon.marchi@efficios.com>
+
+	* symfile.h (struct symfile_segment_data) <struct segment>: New.
+	<segments>: New.
+	<segment_bases, segment_sizes>: Remove.
+	* symfile.c (default_symfile_segments): Update.
+	* elfread.c (elf_symfile_segments): Update.
+	* remote.c (remote_target::get_offsets): Update.
+	* solib-target.c (solib_target_relocate_section_addresses):
+	Update.
+
+2020-05-19  Simon Marchi  <simon.marchi@efficios.com>
+
+	* symfile.h (struct symfile_segment_data): Initialize fields.
+	<~symfile_segment_data>: Add.
+	(symfile_segment_data_up): New.
+	(struct sym_fns) <sym_segments>: Return a
+	symfile_segment_data_up.
+	(default_symfile_segments): Return a symfile_segment_data_up.
+	(free_symfile_segment_data): Remove.
+	(get_symfile_segment_data): Return a symfile_segment_data_up.
+	* symfile.c (default_symfile_segments): Likewise.
+	(get_symfile_segment_data): Likewise.
+	(free_symfile_segment_data): Remove.
+	(symfile_find_segment_sections): Update.
+	* elfread.c (elf_symfile_segments): Return a
+	symfile_segment_data_up.
+	* remote.c (remote_target::get_offsets): Update.
+	* solib-target.c (solib_target_relocate_section_addresses):
+	Update.
+	* symfile-debug.c (debug_sym_segments): Return a
+	symfile_segment_data_up.
+
 2020-05-18  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	PR build/25981
