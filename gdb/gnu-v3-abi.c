@@ -165,8 +165,8 @@ build_gdb_vtable_type (struct gdbarch *arch)
   gdb_assert (field == (field_list + 4));
 
   t = arch_type (arch, TYPE_CODE_STRUCT, offset * TARGET_CHAR_BIT, NULL);
-  TYPE_NFIELDS (t) = field - field_list;
-  TYPE_FIELDS (t) = field_list;
+  t->set_num_fields (field - field_list);
+  t->set_fields (field_list);
   t->set_name ("gdb_gnu_v3_abi_vtable");
   INIT_CPLUS_SPECIFIC (t);
 
@@ -1054,8 +1054,8 @@ build_std_type_info_type (struct gdbarch *arch)
   gdb_assert (field == (field_list + 2));
 
   t = arch_type (arch, TYPE_CODE_STRUCT, offset * TARGET_CHAR_BIT, NULL);
-  TYPE_NFIELDS (t) = field - field_list;
-  TYPE_FIELDS (t) = field_list;
+  t->set_num_fields (field - field_list);
+  t->set_fields (field_list);
   t->set_name ("gdb_gnu_v3_type_info");
   INIT_CPLUS_SPECIFIC (t);
 
@@ -1326,7 +1326,7 @@ is_copy_or_move_constructor_type (struct type *class_type,
 				  type_code expected)
 {
   /* The method should take at least two arguments...  */
-  if (TYPE_NFIELDS (method_type) < 2)
+  if (method_type->num_fields () < 2)
     return false;
 
   /* ...and the second argument should be the same as the class
@@ -1343,7 +1343,7 @@ is_copy_or_move_constructor_type (struct type *class_type,
   /* ...and if any of the remaining arguments don't have a default value
      then this is not a copy or move constructor, but just a
      constructor.  */
-  for (int i = 2; i < TYPE_NFIELDS (method_type); i++)
+  for (int i = 2; i < method_type->num_fields (); i++)
     {
       arg_type = TYPE_FIELD_TYPE (method_type, i);
       /* FIXME aktemur/2019-10-31: As of this date, neither
@@ -1527,7 +1527,7 @@ gnuv3_pass_by_reference (struct type *type)
      are constructed whenever this class is.  We do not need to worry
      about recursive loops here, since we are only looking at members
      of complete class type.  Also ignore any static members.  */
-  for (fieldnum = 0; fieldnum < TYPE_NFIELDS (type); fieldnum++)
+  for (fieldnum = 0; fieldnum < type->num_fields (); fieldnum++)
     if (!field_is_static (&TYPE_FIELD (type, fieldnum)))
       {
 	struct type *field_type = TYPE_FIELD_TYPE (type, fieldnum);

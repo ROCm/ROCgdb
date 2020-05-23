@@ -901,6 +901,36 @@ struct type
     this->main_type->name = name;
   }
 
+  /* Get the number of fields of this type.  */
+  int num_fields () const
+  {
+    return this->main_type->nfields;
+  }
+
+  /* Set the number of fields of this type.  */
+  void set_num_fields (int num_fields)
+  {
+    this->main_type->nfields = num_fields;
+  }
+
+  /* Get the fields array of this type.  */
+  struct field *fields () const
+  {
+    return this->main_type->flds_bnds.fields;
+  }
+
+  /* Get the field at index IDX.  */
+  struct field &field (int idx) const
+  {
+    return this->fields ()[idx];
+  }
+
+  /* Set the fields array of this type.  */
+  void set_fields (struct field *fields)
+  {
+    this->main_type->flds_bnds.fields = fields;
+  }
+
   /* * Return the dynamic property of the requested KIND from this type's
      list of dynamic properties.  */
   dynamic_prop *dyn_prop (dynamic_prop_node_kind kind) const;
@@ -1446,9 +1476,6 @@ extern unsigned type_align (struct type *);
    space in struct type.  */
 extern bool set_type_align (struct type *, ULONGEST);
 
-#define TYPE_NFIELDS(thistype) TYPE_MAIN_TYPE(thistype)->nfields
-#define TYPE_FIELDS(thistype) TYPE_MAIN_TYPE(thistype)->flds_bnds.fields
-
 #define TYPE_INDEX_TYPE(type) TYPE_FIELD_TYPE (type, 0)
 #define TYPE_RANGE_DATA(thistype) TYPE_MAIN_TYPE(thistype)->flds_bnds.bounds
 #define TYPE_LOW_BOUND(range_type) \
@@ -1644,7 +1671,7 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 #define TYPE_FN_FIELD(thisfn, n) (thisfn)[n]
 #define TYPE_FN_FIELD_PHYSNAME(thisfn, n) (thisfn)[n].physname
 #define TYPE_FN_FIELD_TYPE(thisfn, n) (thisfn)[n].type
-#define TYPE_FN_FIELD_ARGS(thisfn, n) TYPE_FIELDS ((thisfn)[n].type)
+#define TYPE_FN_FIELD_ARGS(thisfn, n) (((thisfn)[n].type)->fields ())
 #define TYPE_FN_FIELD_CONST(thisfn, n) ((thisfn)[n].is_const)
 #define TYPE_FN_FIELD_VOLATILE(thisfn, n) ((thisfn)[n].is_volatile)
 #define TYPE_FN_FIELD_PRIVATE(thisfn, n) ((thisfn)[n].is_private)
@@ -1693,7 +1720,7 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 #define TYPE_IS_OPAQUE(thistype) \
   ((((thistype)->code () == TYPE_CODE_STRUCT) \
     || ((thistype)->code () == TYPE_CODE_UNION)) \
-   && (TYPE_NFIELDS (thistype) == 0) \
+   && ((thistype)->num_fields () == 0) \
    && (!HAVE_CPLUS_STRUCT (thistype) \
        || TYPE_NFN_FIELDS (thistype) == 0) \
    && (TYPE_STUB (thistype) || !TYPE_STUB_SUPPORTED (thistype)))

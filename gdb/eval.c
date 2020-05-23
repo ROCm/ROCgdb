@@ -295,11 +295,11 @@ evaluate_struct_tuple (struct value *struct_val,
 
       fieldno++;
       /* Skip static fields.  */
-      while (fieldno < TYPE_NFIELDS (struct_type)
+      while (fieldno < struct_type->num_fields ()
 	     && field_is_static (&TYPE_FIELD (struct_type,
 					      fieldno)))
 	fieldno++;
-      if (fieldno >= TYPE_NFIELDS (struct_type))
+      if (fieldno >= struct_type->num_fields ())
 	error (_("too many initializers"));
       field_type = TYPE_FIELD_TYPE (struct_type, fieldno);
       if (field_type->code () == TYPE_CODE_UNION
@@ -682,9 +682,9 @@ fake_method::fake_method (type_instance_flags flags,
      neither an objfile nor a gdbarch.  As a result we must manually
      allocate memory for auxiliary fields, and free the memory ourselves
      when we are done with it.  */
-  TYPE_NFIELDS (type) = num_types;
-  TYPE_FIELDS (type) = (struct field *)
-    xzalloc (sizeof (struct field) * num_types);
+  type->set_num_fields (num_types);
+  type->set_fields
+    ((struct field *) xzalloc (sizeof (struct field) * num_types));
 
   while (num_types-- > 0)
     TYPE_FIELD_TYPE (type, num_types) = param_types[num_types];
@@ -692,7 +692,7 @@ fake_method::fake_method (type_instance_flags flags,
 
 fake_method::~fake_method ()
 {
-  xfree (TYPE_FIELDS (&m_type));
+  xfree (m_type.fields ());
 }
 
 /* Helper for evaluating an OP_VAR_VALUE.  */
@@ -1058,7 +1058,7 @@ evaluate_funcall (type *expect_type, expression *exp, int *pos,
 	    type = TYPE_TARGET_TYPE (type);
 	  if (type && type->code () == TYPE_CODE_FUNC)
 	    {
-	      for (; tem <= nargs && tem <= TYPE_NFIELDS (type); tem++)
+	      for (; tem <= nargs && tem <= type->num_fields (); tem++)
 		{
 		  argvec[tem] = evaluate_subexp (TYPE_FIELD_TYPE (type,
 								  tem - 1),

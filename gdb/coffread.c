@@ -1452,16 +1452,14 @@ patch_type (struct type *type, struct type *real_type)
 {
   struct type *target = TYPE_TARGET_TYPE (type);
   struct type *real_target = TYPE_TARGET_TYPE (real_type);
-  int field_size = TYPE_NFIELDS (real_target) * sizeof (struct field);
+  int field_size = real_target->num_fields () * sizeof (struct field);
 
   TYPE_LENGTH (target) = TYPE_LENGTH (real_target);
-  TYPE_NFIELDS (target) = TYPE_NFIELDS (real_target);
-  TYPE_FIELDS (target) = (struct field *) TYPE_ALLOC (target,
-						      field_size);
+  target->set_num_fields (real_target->num_fields ());
 
-  memcpy (TYPE_FIELDS (target), 
-	  TYPE_FIELDS (real_target), 
-	  field_size);
+  field *fields = (struct field *) TYPE_ALLOC (target, field_size);
+  memcpy (fields, real_target->fields (), field_size);
+  target->set_fields (fields);
 
   if (real_target->name ())
     {
@@ -1882,8 +1880,8 @@ decode_base_type (struct coff_symbol *cs,
 	  type->set_name (NULL);
 	  INIT_CPLUS_SPECIFIC (type);
 	  TYPE_LENGTH (type) = 0;
-	  TYPE_FIELDS (type) = 0;
-	  TYPE_NFIELDS (type) = 0;
+	  type->set_fields (nullptr);
+	  type->set_num_fields (0);
 	}
       else
 	{
@@ -1902,8 +1900,8 @@ decode_base_type (struct coff_symbol *cs,
 	  type->set_name (NULL);
 	  INIT_CPLUS_SPECIFIC (type);
 	  TYPE_LENGTH (type) = 0;
-	  TYPE_FIELDS (type) = 0;
-	  TYPE_NFIELDS (type) = 0;
+	  type->set_fields (nullptr);
+	  type->set_num_fields (0);
 	}
       else
 	{
@@ -1923,8 +1921,8 @@ decode_base_type (struct coff_symbol *cs,
 	  type->set_code (TYPE_CODE_ENUM);
 	  type->set_name (NULL);
 	  TYPE_LENGTH (type) = 0;
-	  TYPE_FIELDS (type) = 0;
-	  TYPE_NFIELDS (type) = 0;
+	  type->set_fields (nullptr);
+	  type->set_num_fields (0);
 	}
       else
 	{
@@ -2040,9 +2038,9 @@ coff_read_struct_type (int index, int length, int lastsym,
     }
   /* Now create the vector of fields, and record how big it is.  */
 
-  TYPE_NFIELDS (type) = nfields;
-  TYPE_FIELDS (type) = (struct field *)
-    TYPE_ALLOC (type, sizeof (struct field) * nfields);
+  type->set_num_fields (nfields);
+  type->set_fields
+    ((struct field *) TYPE_ALLOC (type, sizeof (struct field) * nfields));
 
   /* Copy the saved-up fields into the field vector.  */
 
@@ -2120,9 +2118,9 @@ coff_read_enum_type (int index, int length, int lastsym,
   else /* Assume ints.  */
     TYPE_LENGTH (type) = gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT;
   type->set_code (TYPE_CODE_ENUM);
-  TYPE_NFIELDS (type) = nsyms;
-  TYPE_FIELDS (type) = (struct field *)
-    TYPE_ALLOC (type, sizeof (struct field) * nsyms);
+  type->set_num_fields (nsyms);
+  type->set_fields
+    ((struct field *) TYPE_ALLOC (type, sizeof (struct field) * nsyms));
 
   /* Find the symbols for the values and put them into the type.
      The symbols can be found in the symlist that we put them on

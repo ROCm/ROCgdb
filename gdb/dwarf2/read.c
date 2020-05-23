@@ -9250,17 +9250,17 @@ alloc_rust_variant (struct obstack *obstack, struct type *type,
   /* When DISCRIMINANT_INDEX == -1, we have a univariant enum.  Those
      must be handled by the caller.  */
   gdb_assert (discriminant_index >= 0
-	      && discriminant_index < TYPE_NFIELDS (type));
+	      && discriminant_index < type->num_fields ());
   gdb_assert (default_index == -1
-	      || (default_index >= 0 && default_index < TYPE_NFIELDS (type)));
+	      || (default_index >= 0 && default_index < type->num_fields ()));
 
   /* We have one variant for each non-discriminant field.  */
-  int n_variants = TYPE_NFIELDS (type) - 1;
+  int n_variants = type->num_fields () - 1;
 
   variant *variants = new (obstack) variant[n_variants];
   int var_idx = 0;
   int range_idx = 0;
-  for (int i = 0; i < TYPE_NFIELDS (type); ++i)
+  for (int i = 0; i < type->num_fields (); ++i)
     {
       if (i == discriminant_index)
 	continue;
@@ -9325,11 +9325,11 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
   gdb_assert (type->code () == TYPE_CODE_UNION);
 
   /* We don't need to deal with empty enums.  */
-  if (TYPE_NFIELDS (type) == 0)
+  if (type->num_fields () == 0)
     return;
 
 #define RUST_ENUM_PREFIX "RUST$ENCODED$ENUM$"
-  if (TYPE_NFIELDS (type) == 1
+  if (type->num_fields () == 1
       && startswith (TYPE_FIELD_NAME (type, 0), RUST_ENUM_PREFIX))
     {
       const char *name = TYPE_FIELD_NAME (type, 0) + strlen (RUST_ENUM_PREFIX);
@@ -9344,7 +9344,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	  unsigned long index = strtoul (name, &tail, 10);
 	  name = tail;
 	  if (*name != '$'
-	      || index >= TYPE_NFIELDS (field_type)
+	      || index >= field_type->num_fields ()
 	      || (TYPE_FIELD_LOC_KIND (field_type, index)
 		  != FIELD_LOC_KIND_BITPOS))
 	    {
@@ -9363,11 +9363,11 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       /* Smash this type to be a structure type.  We have to do this
 	 because the type has already been recorded.  */
       type->set_code (TYPE_CODE_STRUCT);
-      TYPE_NFIELDS (type) = 3;
+      type->set_num_fields (3);
       /* Save the field we care about.  */
       struct field saved_field = TYPE_FIELD (type, 0);
-      TYPE_FIELDS (type)
-	= (struct field *) TYPE_ZALLOC (type, 3 * sizeof (struct field));
+      type->set_fields
+	((struct field *) TYPE_ZALLOC (type, 3 * sizeof (struct field)));
 
       /* Put the discriminant at index 0.  */
       TYPE_FIELD_TYPE (type, 0) = field_type;
@@ -9401,7 +9401,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
     }
   /* A union with a single anonymous field is probably an old-style
      univariant enum.  */
-  else if (TYPE_NFIELDS (type) == 1 && streq (TYPE_FIELD_NAME (type, 0), ""))
+  else if (type->num_fields () == 1 && streq (TYPE_FIELD_NAME (type, 0), ""))
     {
       /* Smash this type to be a structure type.  We have to do this
 	 because the type has already been recorded.  */
@@ -9418,7 +9418,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
   else
     {
       struct type *disr_type = nullptr;
-      for (int i = 0; i < TYPE_NFIELDS (type); ++i)
+      for (int i = 0; i < type->num_fields (); ++i)
 	{
 	  disr_type = TYPE_FIELD_TYPE (type, i);
 
@@ -9427,7 +9427,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	      /* All fields of a true enum will be structs.  */
 	      return;
 	    }
-	  else if (TYPE_NFIELDS (disr_type) == 0)
+	  else if (disr_type->num_fields () == 0)
 	    {
 	      /* Could be data-less variant, so keep going.  */
 	      disr_type = nullptr;
@@ -9457,12 +9457,12 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       /* Make space for the discriminant field.  */
       struct field *disr_field = &TYPE_FIELD (disr_type, 0);
       field *new_fields
-	= (struct field *) TYPE_ZALLOC (type, ((TYPE_NFIELDS (type) + 1)
+	= (struct field *) TYPE_ZALLOC (type, ((type->num_fields () + 1)
 					       * sizeof (struct field)));
-      memcpy (new_fields + 1, TYPE_FIELDS (type),
-	      TYPE_NFIELDS (type) * sizeof (struct field));
-      TYPE_FIELDS (type) = new_fields;
-      TYPE_NFIELDS (type) = TYPE_NFIELDS (type) + 1;
+      memcpy (new_fields + 1, type->fields (),
+	      type->num_fields () * sizeof (struct field));
+      type->set_fields (new_fields);
+      type->set_num_fields (type->num_fields () + 1);
 
       /* Install the discriminant at index 0 in the union.  */
       TYPE_FIELD (type, 0) = *disr_field;
@@ -9473,7 +9473,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	 variant name.  For convenience we build a map here.  */
       struct type *enum_type = FIELD_TYPE (*disr_field);
       std::unordered_map<std::string, ULONGEST> discriminant_map;
-      for (int i = 0; i < TYPE_NFIELDS (enum_type); ++i)
+      for (int i = 0; i < enum_type->num_fields (); ++i)
 	{
 	  if (TYPE_FIELD_LOC_KIND (enum_type, i) == FIELD_LOC_KIND_ENUMVAL)
 	    {
@@ -9483,7 +9483,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	    }
 	}
 
-      int n_fields = TYPE_NFIELDS (type);
+      int n_fields = type->num_fields ();
       /* We don't need a range entry for the discriminant, but we do
 	 need one for every other field, as there is no default
 	 variant.  */
@@ -9508,10 +9508,10 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 
 	  /* Remove the discriminant field, if it exists.  */
 	  struct type *sub_type = TYPE_FIELD_TYPE (type, i);
-	  if (TYPE_NFIELDS (sub_type) > 0)
+	  if (sub_type->num_fields () > 0)
 	    {
-	      --TYPE_NFIELDS (sub_type);
-	      ++TYPE_FIELDS (sub_type);
+	      sub_type->set_num_fields (sub_type->num_fields () - 1);
+	      sub_type->set_fields (sub_type->fields () + 1);
 	    }
 	  TYPE_FIELD_NAME (type, i) = variant_name;
 	  sub_type->set_name
@@ -10334,7 +10334,7 @@ dwarf2_compute_name (const char *name,
 		     marks unnamed (and thus unused) parameters as
 		     artificial; there is no way to differentiate
 		     the two cases.  */
-		  if (TYPE_NFIELDS (type) > 0
+		  if (type->num_fields () > 0
 		      && TYPE_FIELD_ARTIFICIAL (type, 0)
 		      && TYPE_FIELD_TYPE (type, 0)->code () == TYPE_CODE_PTR
 		      && TYPE_CONST (TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (type,
@@ -14805,9 +14805,9 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
 
   /* Record the field count, allocate space for the array of fields,
      and create blank accessibility bitfields if necessary.  */
-  TYPE_NFIELDS (type) = nfields;
-  TYPE_FIELDS (type) = (struct field *)
-    TYPE_ZALLOC (type, sizeof (struct field) * nfields);
+  type->set_num_fields (nfields);
+  type->set_fields
+    ((struct field *) TYPE_ZALLOC (type, sizeof (struct field) * nfields));
 
   if (fip->non_public_fields && cu->language != language_ada)
     {
@@ -14997,14 +14997,14 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
   this_type = read_type_die (die, cu);
   if (this_type && this_type->code () == TYPE_CODE_FUNC)
     {
-      int nparams = TYPE_NFIELDS (this_type);
+      int nparams = this_type->num_fields ();
 
       /* TYPE is the domain of this method, and THIS_TYPE is the type
 	   of the method itself (TYPE_CODE_METHOD).  */
       smash_to_method_type (fnp->type, type,
 			    TYPE_TARGET_TYPE (this_type),
-			    TYPE_FIELDS (this_type),
-			    TYPE_NFIELDS (this_type),
+			    this_type->fields (),
+			    this_type->num_fields (),
 			    TYPE_VARARGS (this_type));
 
       /* Handle static member functions.
@@ -15096,7 +15096,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
 	      /* If there is no `this' field and no DW_AT_containing_type,
 		 we cannot actually find a base class context for the
 		 vtable!  */
-	      if (TYPE_NFIELDS (this_type) == 0
+	      if (this_type->num_fields () == 0
 		  || !TYPE_FIELD_ARTIFICIAL (this_type, 0))
 		{
 		  complaint (_("cannot determine context for virtual member "
@@ -15193,7 +15193,7 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
   struct type *pfn_type, *self_type, *new_type;
 
   /* Check for a structure with no name and two children.  */
-  if (type->code () != TYPE_CODE_STRUCT || TYPE_NFIELDS (type) != 2)
+  if (type->code () != TYPE_CODE_STRUCT || type->num_fields () != 2)
     return;
 
   /* Check for __pfn and __delta members.  */
@@ -15212,7 +15212,7 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
 
   /* Look for the "this" argument.  */
   pfn_type = TYPE_TARGET_TYPE (pfn_type);
-  if (TYPE_NFIELDS (pfn_type) == 0
+  if (pfn_type->num_fields () == 0
       /* || TYPE_FIELD_TYPE (pfn_type, 0) == NULL */
       || TYPE_FIELD_TYPE (pfn_type, 0)->code () != TYPE_CODE_PTR)
     return;
@@ -15220,7 +15220,7 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
   self_type = TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (pfn_type, 0));
   new_type = alloc_type (objfile);
   smash_to_method_type (new_type, self_type, TYPE_TARGET_TYPE (pfn_type),
-			TYPE_FIELDS (pfn_type), TYPE_NFIELDS (pfn_type),
+			pfn_type->fields (), pfn_type->num_fields (),
 			TYPE_VARARGS (pfn_type));
   smash_to_methodptr_type (type, new_type);
 }
@@ -15723,7 +15723,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 		  int i;
 
 		  /* Our own class provides vtbl ptr.  */
-		  for (i = TYPE_NFIELDS (t) - 1;
+		  for (i = t->num_fields () - 1;
 		       i >= TYPE_N_BASECLASSES (t);
 		       --i)
 		    {
@@ -15756,7 +15756,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 
 	      int i;
 
-	      for (i = TYPE_NFIELDS (type) - 1;
+	      for (i = type->num_fields () - 1;
 		   i >= TYPE_N_BASECLASSES (type);
 		   --i)
 		{
@@ -15934,10 +15934,11 @@ update_enumeration_type_from_children (struct die_info *die,
 
   if (!fields.empty ())
     {
-      TYPE_NFIELDS (type) = fields.size ();
-      TYPE_FIELDS (type) = (struct field *)
-	TYPE_ALLOC (type, sizeof (struct field) * fields.size ());
-      memcpy (TYPE_FIELDS (type), fields.data (),
+      type->set_num_fields (fields.size ());
+      type->set_fields
+	((struct field *)
+	 TYPE_ALLOC (type, sizeof (struct field) * fields.size ()));
+      memcpy (type->fields (), fields.data (),
 	      sizeof (struct field) * fields.size ());
     }
 
@@ -16723,7 +16724,7 @@ read_tag_ptr_to_member_type (struct die_info *die, struct dwarf2_cu *cu)
 	= alloc_type (cu->per_cu->dwarf2_per_objfile->objfile);
 
       smash_to_method_type (new_type, domain, TYPE_TARGET_TYPE (to_type),
-			    TYPE_FIELDS (to_type), TYPE_NFIELDS (to_type),
+			    to_type->fields (), to_type->num_fields (),
 			    TYPE_VARARGS (to_type));
       type = lookup_methodptr_type (new_type);
     }
@@ -17085,9 +17086,9 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 	}
 
       /* Allocate storage for parameters and fill them in.  */
-      TYPE_NFIELDS (ftype) = nparams;
-      TYPE_FIELDS (ftype) = (struct field *)
-	TYPE_ZALLOC (ftype, nparams * sizeof (struct field));
+      ftype->set_num_fields (nparams);
+      ftype->set_fields
+	((struct field *) TYPE_ZALLOC (ftype, nparams * sizeof (struct field)));
 
       /* TYPE_FIELD_TYPE must never be NULL.  Pre-fill the array to ensure it
 	 even if we error out during the parameters reading below.  */

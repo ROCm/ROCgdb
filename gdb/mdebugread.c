@@ -1017,10 +1017,9 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
 	t->set_code (type_code);
 	TYPE_LENGTH (t) = sh->value;
-	TYPE_NFIELDS (t) = nfields;
-	TYPE_FIELDS (t) = f = ((struct field *)
-			       TYPE_ALLOC (t,
-					   nfields * sizeof (struct field)));
+	t->set_num_fields (nfields);
+	f = ((struct field *) TYPE_ALLOC (t, nfields * sizeof (struct field)));
+	t->set_fields (f);
 
 	if (type_code == TYPE_CODE_ENUM)
 	  {
@@ -1036,7 +1035,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	       are hopefully rare enough.
 	       Alpha cc -migrate has a sh.value field of zero, we adjust
 	       that too.  */
-	    if (TYPE_LENGTH (t) == TYPE_NFIELDS (t)
+	    if (TYPE_LENGTH (t) == t->num_fields ()
 		|| TYPE_LENGTH (t) == 0)
 	      TYPE_LENGTH (t) = gdbarch_int_bit (gdbarch) / HOST_CHAR_BIT;
 	    for (ext_tsym = ext_sh + external_sym_size;
@@ -1085,7 +1084,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
 	/* gcc puts out an empty struct for an opaque struct definitions,
 	   do not create a symbol for it either.  */
-	if (TYPE_NFIELDS (t) == 0)
+	if (t->num_fields () == 0)
 	  {
 	    TYPE_STUB (t) = 1;
 	    break;
@@ -1174,7 +1173,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		}
 	    }
 
-	  if (TYPE_NFIELDS (ftype) <= 0)
+	  if (ftype->num_fields () <= 0)
 	    {
 	      /* No parameter type information is recorded with the function's
 	         type.  Set that from the type of the parameter symbols.  */
@@ -1186,9 +1185,10 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		{
 		  struct block_iterator iter;
 
-		  TYPE_NFIELDS (ftype) = nparams;
-		  TYPE_FIELDS (ftype) = (struct field *)
-		    TYPE_ALLOC (ftype, nparams * sizeof (struct field));
+		  ftype->set_num_fields (nparams);
+		  ftype->set_fields
+		    ((struct field *)
+		     TYPE_ALLOC (ftype, nparams * sizeof (struct field)));
 
 		  iparams = 0;
 		  ALL_BLOCK_SYMBOLS (cblock, iter, sym)
@@ -1233,8 +1233,8 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
     case stMember:		/* member of struct or union */
       {
-	struct field *f
-	  = &TYPE_FIELDS (top_stack->cur_type)[top_stack->cur_field++];
+	struct field *f = &top_stack->cur_type->field (top_stack->cur_field);
+	top_stack->cur_field++;
 	FIELD_NAME (*f) = name;
 	SET_FIELD_BITPOS (*f, sh->value);
 	bitsize = 0;
@@ -1297,7 +1297,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
       /* Incomplete definitions of structs should not get a name.  */
       if (SYMBOL_TYPE (s)->name () == NULL
-	  && (TYPE_NFIELDS (SYMBOL_TYPE (s)) != 0
+	  && (SYMBOL_TYPE (s)->num_fields () != 0
 	      || (SYMBOL_TYPE (s)->code () != TYPE_CODE_STRUCT
 		  && SYMBOL_TYPE (s)->code () != TYPE_CODE_UNION)))
 	{
@@ -1733,7 +1733,7 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
   /* Deal with range types.  */
   if (t->bt == btRange)
     {
-      TYPE_NFIELDS (tp) = 0;
+      tp->set_num_fields (0);
       TYPE_RANGE_DATA (tp) = ((struct range_bounds *)
 			  TYPE_ZALLOC (tp, sizeof (struct range_bounds)));
       TYPE_LOW_BOUND (tp) = AUX_GET_DNLOW (bigend, ax);

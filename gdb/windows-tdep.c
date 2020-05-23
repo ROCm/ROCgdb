@@ -751,9 +751,9 @@ create_enum (struct gdbarch *gdbarch, int bit, const char *name,
   int i;
 
   type = arch_type (gdbarch, TYPE_CODE_ENUM, bit, name);
-  TYPE_NFIELDS (type) = count;
-  TYPE_FIELDS (type) = (struct field *)
-    TYPE_ZALLOC (type, sizeof (struct field) * count);
+  type->set_num_fields (count);
+  type->set_fields
+    ((struct field *) TYPE_ZALLOC (type, sizeof (struct field) * count));
   TYPE_UNSIGNED (type) = 1;
 
   for (i = 0; i < count; i++)

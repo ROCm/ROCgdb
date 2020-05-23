@@ -562,9 +562,9 @@ lookup_function_type_with_arguments (struct type *type,
 	TYPE_PROTOTYPED (fn) = 1;
     }
 
-  TYPE_NFIELDS (fn) = nparams;
-  TYPE_FIELDS (fn)
-    = (struct field *) TYPE_ZALLOC (fn, nparams * sizeof (struct field));
+  fn->set_num_fields (nparams);
+  fn->set_fields
+    ((struct field *) TYPE_ZALLOC (fn, nparams * sizeof (struct field)));
   for (i = 0; i < nparams; ++i)
     TYPE_FIELD_TYPE (fn, i) = param_types[i];
 
@@ -1040,14 +1040,14 @@ get_discrete_bounds (struct type *type, LONGEST *lowp, LONGEST *highp)
       *highp = TYPE_HIGH_BOUND (type);
       return 1;
     case TYPE_CODE_ENUM:
-      if (TYPE_NFIELDS (type) > 0)
+      if (type->num_fields () > 0)
 	{
 	  /* The enums may not be sorted by value, so search all
 	     entries.  */
 	  int i;
 
 	  *lowp = *highp = TYPE_FIELD_ENUMVAL (type, 0);
-	  for (i = 0; i < TYPE_NFIELDS (type); i++)
+	  for (i = 0; i < type->num_fields (); i++)
 	    {
 	      if (TYPE_FIELD_ENUMVAL (type, i) < *lowp)
 		*lowp = TYPE_FIELD_ENUMVAL (type, i);
@@ -1159,7 +1159,7 @@ discrete_position (struct type *type, LONGEST val, LONGEST *pos)
     {
       int i;
 
-      for (i = 0; i < TYPE_NFIELDS (type); i += 1)
+      for (i = 0; i < type->num_fields (); i += 1)
         {
           if (val == TYPE_FIELD_ENUMVAL (type, i))
 	    {
@@ -1281,9 +1281,9 @@ create_array_type_with_stride (struct type *result_type,
   result_type->set_code (TYPE_CODE_ARRAY);
   TYPE_TARGET_TYPE (result_type) = element_type;
 
-  TYPE_NFIELDS (result_type) = 1;
-  TYPE_FIELDS (result_type) =
-    (struct field *) TYPE_ZALLOC (result_type, sizeof (struct field));
+  result_type->set_num_fields (1);
+  result_type->set_fields
+    ((struct field *) TYPE_ZALLOC (result_type, sizeof (struct field)));
   TYPE_INDEX_TYPE (result_type) = range_type;
   if (byte_stride_prop != NULL)
     result_type->add_dyn_prop (DYN_PROP_BYTE_STRIDE, *byte_stride_prop);
@@ -1380,9 +1380,9 @@ create_set_type (struct type *result_type, struct type *domain_type)
     result_type = alloc_type_copy (domain_type);
 
   result_type->set_code (TYPE_CODE_SET);
-  TYPE_NFIELDS (result_type) = 1;
-  TYPE_FIELDS (result_type)
-    = (struct field *) TYPE_ZALLOC (result_type, sizeof (struct field));
+  result_type->set_num_fields (1);
+  result_type->set_fields
+    ((struct field *) TYPE_ZALLOC (result_type, sizeof (struct field)));
 
   if (!TYPE_STUB (domain_type))
     {
@@ -1549,8 +1549,8 @@ smash_to_method_type (struct type *type, struct type *self_type,
   type->set_code (TYPE_CODE_METHOD);
   TYPE_TARGET_TYPE (type) = to_type;
   set_type_self_type (type, self_type);
-  TYPE_FIELDS (type) = args;
-  TYPE_NFIELDS (type) = nargs;
+  type->set_fields (args);
+  type->set_num_fields (nargs);
   if (varargs)
     TYPE_VARARGS (type) = 1;
   TYPE_LENGTH (type) = 1;	/* In practice, this is never needed.  */
@@ -1751,7 +1751,7 @@ lookup_struct_elt (struct type *type, const char *name, int noerr)
 	     type_name.c_str ());
     }
 
-  for (i = TYPE_NFIELDS (type) - 1; i >= TYPE_N_BASECLASSES (type); i--)
+  for (i = type->num_fields () - 1; i >= TYPE_N_BASECLASSES (type); i--)
     {
       const char *t_field_name = TYPE_FIELD_NAME (type, i);
 
@@ -2015,7 +2015,7 @@ is_dynamic_type_internal (struct type *type, int top_level)
 	 treated as one here.  */
     case TYPE_CODE_ARRAY:
       {
-	gdb_assert (TYPE_NFIELDS (type) == 1);
+	gdb_assert (type->num_fields () == 1);
 
 	/* The array is dynamic if either the bounds are dynamic...  */
 	if (is_dynamic_type_internal (TYPE_INDEX_TYPE (type), 0))
@@ -2036,7 +2036,7 @@ is_dynamic_type_internal (struct type *type, int top_level)
 
 	bool is_cplus = HAVE_CPLUS_STRUCT (type);
 
-	for (i = 0; i < TYPE_NFIELDS (type); ++i)
+	for (i = 0; i < type->num_fields (); ++i)
 	  {
 	    /* Static fields can be ignored here.  */
 	    if (field_is_static (&TYPE_FIELD (type, i)))
@@ -2238,14 +2238,14 @@ resolve_dynamic_union (struct type *type,
   gdb_assert (type->code () == TYPE_CODE_UNION);
 
   resolved_type = copy_type (type);
-  TYPE_FIELDS (resolved_type)
-    = (struct field *) TYPE_ALLOC (resolved_type,
-				   TYPE_NFIELDS (resolved_type)
-				   * sizeof (struct field));
-  memcpy (TYPE_FIELDS (resolved_type),
-	  TYPE_FIELDS (type),
-	  TYPE_NFIELDS (resolved_type) * sizeof (struct field));
-  for (i = 0; i < TYPE_NFIELDS (resolved_type); ++i)
+  resolved_type->set_fields
+    ((struct field *)
+     TYPE_ALLOC (resolved_type,
+		 resolved_type->num_fields () * sizeof (struct field)));
+  memcpy (resolved_type->fields (),
+	  type->fields (),
+	  resolved_type->num_fields () * sizeof (struct field));
+  for (i = 0; i < resolved_type->num_fields (); ++i)
     {
       struct type *t;
 
@@ -2396,20 +2396,21 @@ compute_variant_fields (struct type *type,
 			const gdb::array_view<variant_part> &parts)
 {
   /* Assume all fields are included by default.  */
-  std::vector<bool> flags (TYPE_NFIELDS (resolved_type), true);
+  std::vector<bool> flags (resolved_type->num_fields (), true);
 
   /* Now disable fields based on the variants that control them.  */
   for (const auto &part : parts)
     compute_variant_fields_inner (type, addr_stack, part, flags);
 
-  TYPE_NFIELDS (resolved_type) = std::count (flags.begin (), flags.end (),
-					     true);
-  TYPE_FIELDS (resolved_type)
-    = (struct field *) TYPE_ALLOC (resolved_type,
-				   TYPE_NFIELDS (resolved_type)
-				   * sizeof (struct field));
+  resolved_type->set_num_fields
+    (std::count (flags.begin (), flags.end (), true));
+  resolved_type->set_fields
+    ((struct field *)
+     TYPE_ALLOC (resolved_type,
+		 resolved_type->num_fields () * sizeof (struct field)));
+
   int out = 0;
-  for (int i = 0; i < TYPE_NFIELDS (type); ++i)
+  for (int i = 0; i < type->num_fields (); ++i)
     {
       if (!flags[i])
 	continue;
@@ -2432,7 +2433,7 @@ resolve_dynamic_struct (struct type *type,
   unsigned resolved_type_bit_length = 0;
 
   gdb_assert (type->code () == TYPE_CODE_STRUCT);
-  gdb_assert (TYPE_NFIELDS (type) > 0);
+  gdb_assert (type->num_fields () > 0);
 
   resolved_type = copy_type (type);
 
@@ -2448,16 +2449,16 @@ resolve_dynamic_struct (struct type *type,
     }
   else
     {
-      TYPE_FIELDS (resolved_type)
-	= (struct field *) TYPE_ALLOC (resolved_type,
-				       TYPE_NFIELDS (resolved_type)
-				       * sizeof (struct field));
-      memcpy (TYPE_FIELDS (resolved_type),
-	      TYPE_FIELDS (type),
-	      TYPE_NFIELDS (resolved_type) * sizeof (struct field));
+      resolved_type->set_fields
+	((struct field *)
+	 TYPE_ALLOC (resolved_type,
+		     resolved_type->num_fields () * sizeof (struct field)));
+      memcpy (resolved_type->fields (),
+	      type->fields (),
+	      resolved_type->num_fields () * sizeof (struct field));
     }
 
-  for (i = 0; i < TYPE_NFIELDS (resolved_type); ++i)
+  for (i = 0; i < resolved_type->num_fields (); ++i)
     {
       unsigned new_bit_length;
       struct property_addr_info pinfo;
@@ -3388,7 +3389,7 @@ type_align (struct type *type)
     case TYPE_CODE_UNION:
       {
 	int number_of_non_static_fields = 0;
-	for (unsigned i = 0; i < TYPE_NFIELDS (type); ++i)
+	for (unsigned i = 0; i < type->num_fields (); ++i)
 	  {
 	    if (!field_is_static (&TYPE_FIELD (type, i)))
 	      {
@@ -3530,7 +3531,7 @@ is_scalar_type_recursive (struct type *t)
     return 1;
   /* Are we dealing with an array or string of known dimensions?  */
   else if ((t->code () == TYPE_CODE_ARRAY
-	    || t->code () == TYPE_CODE_STRING) && TYPE_NFIELDS (t) == 1
+	    || t->code () == TYPE_CODE_STRING) && t->num_fields () == 1
 	   && TYPE_INDEX_TYPE(t)->code () == TYPE_CODE_RANGE)
     {
       LONGEST low_bound, high_bound;
@@ -3541,11 +3542,11 @@ is_scalar_type_recursive (struct type *t)
       return high_bound == low_bound && is_scalar_type_recursive (elt_type);
     }
   /* Are we dealing with a struct with one element?  */
-  else if (t->code () == TYPE_CODE_STRUCT && TYPE_NFIELDS (t) == 1)
+  else if (t->code () == TYPE_CODE_STRUCT && t->num_fields () == 1)
     return is_scalar_type_recursive (TYPE_FIELD_TYPE (t, 0));
   else if (t->code () == TYPE_CODE_UNION)
     {
-      int i, n = TYPE_NFIELDS (t);
+      int i, n = t->num_fields ();
 
       /* If all elements of the union are scalar, then the union is scalar.  */
       for (i = 0; i < n; i++)
@@ -3943,13 +3944,13 @@ types_equal (struct type *a, struct type *b)
     {
       int i;
 
-      if (TYPE_NFIELDS (a) != TYPE_NFIELDS (b))
+      if (a->num_fields () != b->num_fields ())
 	return false;
       
       if (!types_equal (TYPE_TARGET_TYPE (a), TYPE_TARGET_TYPE (b)))
 	return false;
 
-      for (i = 0; i < TYPE_NFIELDS (a); ++i)
+      for (i = 0; i < a->num_fields (); ++i)
 	if (!types_equal (TYPE_FIELD_TYPE (a, i), TYPE_FIELD_TYPE (b, i)))
 	  return false;
 
@@ -4008,7 +4009,7 @@ check_types_equal (struct type *type1, struct type *type2,
       || TYPE_VECTOR (type1) != TYPE_VECTOR (type2)
       || TYPE_NOTTEXT (type1) != TYPE_NOTTEXT (type2)
       || TYPE_INSTANCE_FLAGS (type1) != TYPE_INSTANCE_FLAGS (type2)
-      || TYPE_NFIELDS (type1) != TYPE_NFIELDS (type2))
+      || type1->num_fields () != type2->num_fields ())
     return false;
 
   if (!compare_maybe_null_strings (type1->name (), type2->name ()))
@@ -4025,7 +4026,7 @@ check_types_equal (struct type *type1, struct type *type2,
     {
       int i;
 
-      for (i = 0; i < TYPE_NFIELDS (type1); ++i)
+      for (i = 0; i < type1->num_fields (); ++i)
 	{
 	  const struct field *field1 = &TYPE_FIELD (type1, i);
 	  const struct field *field2 = &TYPE_FIELD (type2, i);
@@ -4762,7 +4763,7 @@ dump_fn_fieldlists (struct type *type, int spaces)
 				  gdb_stdout);
 	  printf_filtered ("\n");
 	  print_args (TYPE_FN_FIELD_ARGS (f, overload_idx),
-		      TYPE_NFIELDS (TYPE_FN_FIELD_TYPE (f, overload_idx)),
+		      TYPE_FN_FIELD_TYPE (f, overload_idx)->num_fields (),
 		      spaces + 8 + 2);
 	  printfi_filtered (spaces + 8, "fcontext ");
 	  gdb_print_host_address (TYPE_FN_FIELD_FCONTEXT (f, overload_idx),
@@ -4815,30 +4816,30 @@ print_cplus_stuff (struct type *type, int spaces)
 			TYPE_N_BASECLASSES (type));
       puts_filtered ("\n");
     }
-  if (TYPE_NFIELDS (type) > 0)
+  if (type->num_fields () > 0)
     {
       if (TYPE_FIELD_PRIVATE_BITS (type) != NULL)
 	{
 	  printfi_filtered (spaces, 
 			    "private_field_bits (%d bits at *",
-			    TYPE_NFIELDS (type));
+			    type->num_fields ());
 	  gdb_print_host_address (TYPE_FIELD_PRIVATE_BITS (type), 
 				  gdb_stdout);
 	  printf_filtered (")");
 	  print_bit_vector (TYPE_FIELD_PRIVATE_BITS (type),
-			    TYPE_NFIELDS (type));
+			    type->num_fields ());
 	  puts_filtered ("\n");
 	}
       if (TYPE_FIELD_PROTECTED_BITS (type) != NULL)
 	{
 	  printfi_filtered (spaces, 
 			    "protected_field_bits (%d bits at *",
-			    TYPE_NFIELDS (type));
+			    type->num_fields ());
 	  gdb_print_host_address (TYPE_FIELD_PROTECTED_BITS (type), 
 				  gdb_stdout);
 	  printf_filtered (")");
 	  print_bit_vector (TYPE_FIELD_PROTECTED_BITS (type),
-			    TYPE_NFIELDS (type));
+			    type->num_fields ());
 	  puts_filtered ("\n");
 	}
     }
@@ -4878,7 +4879,7 @@ recursive_dump_type (struct type *type, int spaces)
   if (spaces == 0)
     obstack_begin (&dont_print_type_obstack, 0);
 
-  if (TYPE_NFIELDS (type) > 0
+  if (type->num_fields () > 0
       || (HAVE_CPLUS_STRUCT (type) && TYPE_NFN_FIELDS (type) > 0))
     {
       struct type **first_dont_print
@@ -5101,10 +5102,10 @@ recursive_dump_type (struct type *type, int spaces)
       puts_filtered (" TYPE_NOTTEXT");
     }
   puts_filtered ("\n");
-  printfi_filtered (spaces, "nfields %d ", TYPE_NFIELDS (type));
-  gdb_print_host_address (TYPE_FIELDS (type), gdb_stdout);
+  printfi_filtered (spaces, "nfields %d ", type->num_fields ());
+  gdb_print_host_address (type->fields (), gdb_stdout);
   puts_filtered ("\n");
-  for (idx = 0; idx < TYPE_NFIELDS (type); idx++)
+  for (idx = 0; idx < type->num_fields (); idx++)
     {
       if (type->code () == TYPE_CODE_ENUM)
 	printfi_filtered (spaces + 2,
@@ -5296,13 +5297,15 @@ copy_type_recursive (struct objfile *objfile,
   TYPE_LENGTH (new_type) = TYPE_LENGTH (type);
 
   /* Copy the fields.  */
-  if (TYPE_NFIELDS (type))
+  if (type->num_fields ())
     {
       int i, nfields;
 
-      nfields = TYPE_NFIELDS (type);
-      TYPE_FIELDS (new_type) = (struct field *)
-        TYPE_ZALLOC (new_type, nfields * sizeof (struct field));
+      nfields = type->num_fields ();
+      new_type->set_fields
+	((struct field *)
+	 TYPE_ZALLOC (new_type, nfields * sizeof (struct field)));
+
       for (i = 0; i < nfields; i++)
 	{
 	  TYPE_FIELD_ARTIFICIAL (new_type, i) = 
@@ -5558,10 +5561,10 @@ arch_flags_type (struct gdbarch *gdbarch, const char *name, int bit)
 
   type = arch_type (gdbarch, TYPE_CODE_FLAGS, bit, name);
   TYPE_UNSIGNED (type) = 1;
-  TYPE_NFIELDS (type) = 0;
+  type->set_num_fields (0);
   /* Pre-allocate enough space assuming every field is one bit.  */
-  TYPE_FIELDS (type)
-    = (struct field *) TYPE_ZALLOC (type, bit * sizeof (struct field));
+  type->set_fields
+    ((struct field *) TYPE_ZALLOC (type, bit * sizeof (struct field)));
 
   return type;
 }
@@ -5575,10 +5578,10 @@ append_flags_type_field (struct type *type, int start_bitpos, int nr_bits,
 			 struct type *field_type, const char *name)
 {
   int type_bitsize = TYPE_LENGTH (type) * TARGET_CHAR_BIT;
-  int field_nr = TYPE_NFIELDS (type);
+  int field_nr = type->num_fields ();
 
   gdb_assert (type->code () == TYPE_CODE_FLAGS);
-  gdb_assert (TYPE_NFIELDS (type) + 1 <= type_bitsize);
+  gdb_assert (type->num_fields () + 1 <= type_bitsize);
   gdb_assert (start_bitpos >= 0 && start_bitpos < type_bitsize);
   gdb_assert (nr_bits >= 1 && nr_bits <= type_bitsize);
   gdb_assert (name != NULL);
@@ -5587,7 +5590,7 @@ append_flags_type_field (struct type *type, int start_bitpos, int nr_bits,
   TYPE_FIELD_TYPE (type, field_nr) = field_type;
   SET_FIELD_BITPOS (TYPE_FIELD (type, field_nr), start_bitpos);
   TYPE_FIELD_BITSIZE (type, field_nr) = nr_bits;
-  ++TYPE_NFIELDS (type);
+  type->set_num_fields (type->num_fields () + 1);
 }
 
 /* Special version of append_flags_type_field to add a flag field.
@@ -5630,10 +5633,10 @@ append_composite_type_field_raw (struct type *t, const char *name,
 {
   struct field *f;
 
-  TYPE_NFIELDS (t) = TYPE_NFIELDS (t) + 1;
-  TYPE_FIELDS (t) = XRESIZEVEC (struct field, TYPE_FIELDS (t),
-				TYPE_NFIELDS (t));
-  f = &(TYPE_FIELDS (t)[TYPE_NFIELDS (t) - 1]);
+  t->set_num_fields (t->num_fields () + 1);
+  t->set_fields (XRESIZEVEC (struct field, t->fields (),
+			     t->num_fields ()));
+  f = &t->field (t->num_fields () - 1);
   memset (f, 0, sizeof f[0]);
   FIELD_TYPE (f[0]) = field;
   FIELD_NAME (f[0]) = name;
@@ -5657,7 +5660,7 @@ append_composite_type_field_aligned (struct type *t, const char *name,
   else if (t->code () == TYPE_CODE_STRUCT)
     {
       TYPE_LENGTH (t) = TYPE_LENGTH (t) + TYPE_LENGTH (field);
-      if (TYPE_NFIELDS (t) > 1)
+      if (t->num_fields () > 1)
 	{
 	  SET_FIELD_BITPOS (f[0],
 			    (FIELD_BITPOS (f[-1])
