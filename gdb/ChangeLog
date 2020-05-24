@@ -1,3 +1,40 @@
+2020-05-23  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (TYPE_FIELD): Remove.  Replace all uses with
+	type::field.
+
+2020-05-23  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 9.2 released.
+
+2020-05-23  Tom Tromey  <tom@tromey.com>
+
+	* NEWS: Add entry for completion styling.
+	* completer.c (_rl_completion_prefix_display_length): Move
+	declaration earlier.
+	(gdb_fnprint): Use completion_style.
+	(gdb_display_match_list_1): Likewise.
+	* cli/cli-style.c (completion_prefix_style)
+	(completion_difference_style, completion_suffix_style): New
+	globals.
+	(_initialize_cli_style): Register new globals.
+	* cli/cli-style.h (completion_prefix_style)
+	(completion_difference_style, completion_suffix_style): Declare.
+
+2020-05-23  Pedro Alves  <palves@redhat.com>
+
+	* utils.c: Include "gdbsupport/gdb-safe-ctype.h".
+	(parse_escape): Use ISDIGIT instead of isdigit.
+	(puts_debug): Use gdb_isprint instead of isprint.
+	(fprintf_symbol_filtered): Use ISALNUM instead of isalnum.
+	(cp_skip_operator_token, skip_ws, strncmp_iw_with_mode): Use
+	ISSPACE instead of isspace.
+	(strncmp_iw_with_mode): Use TOLOWER instead of tolower and ISSPACE
+	instead of isspace.
+	(strcmp_iw_ordered): Use ISSPACE instead of isspace.
+	(string_to_core_addr): Use TOLOWER instead of tolower, ISXDIGIT
+	instead of isxdigit and ISDIGIT instead of isdigit.
+
 2020-05-22  Simon Marchi  <simon.marchi@efficios.com>
 
 	* gdbtypes.h (struct type) <field>: New method.
