@@ -1,3 +1,19 @@
+2020-05-24  Fangrui Song <maskray@google.com>
+
+	PR ld/26018
+	* lexsup.c (parse_args): Simplify.
+	* testsuite/ld-elf/dl4e.out: New.
+	* testsuite/ld-elf/shared.exp: Updated for PR ld/26018 tests.
+
+2020-05-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26018
+	* testsuite/ld-i386/i386.exp: Add a -Bsymbolic-functions test.
+	* testsuite/ld-x86-64/x86-64.exp: Likewise.
+	* testsuite/ld-i386/pr26018.d: New file.
+	* testsuite/ld-x86-64/pr26018.d: Likewise.
+	* testsuite/ld-x86-64/pr26018.s: Likewise.
+
 2020-05-21  Alan Modra  <amodra@gmail.com>
 
 	* deffilep.y: Replace "if (x) free (x)" with "free (x)" thoughout.
