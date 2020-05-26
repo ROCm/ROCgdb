@@ -1,3 +1,56 @@
+2020-05-25  Tom de Vries  <tdevries@suse.de>
+
+	* boards/gold-gdb-index.exp: New file.
+
+2020-05-25  Simon Marchi  <simon.marchi@efficios.com>
+
+	* boards/simavr.exp: New file.
+
+2020-05-25  Simon Marchi  <simon.marchi@efficios.com>
+
+	* lib/gdb.exp (gdb_run_cmd): Return success or failure.
+	* gdb.base/inferior-args.exp: New file.
+	* gdb.base/inferior-args.c: New file.
+
+2020-05-25  Simon Marchi  <simon.marchi@efficios.com>
+
+	* lib/gdb.exp (gdb_run_cmd): Change argument from args to
+	inferior_args.  Pass it to gdb_reload.
+	(gdb_start_cmd, gdb_starti_cmd): Change argument from args to
+	inferior_args.
+	(gdb_reload): Add inferior_args argument.
+	* config/gdbserver.exp (gdb_reload): Add inferior_args argument,
+	pass it to gdbserver_run.
+	* boards/native-gdbserver.exp: Do not set noargs.
+	* boards/native-extended-gdbserver.exp (gdb_reload): Add
+	inferior_args argument.
+	* boards/stdio-gdbserver-base.exp (gdb_reload): Likewise.
+	* gdb.base/a2-run.exp: Check for use_gdb_stub.
+	* gdb.base/args.exp: Likewise.
+
+2020-05-25  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (exec_is_pie): Add comment.
+
+2020-05-25  Tom de Vries  <tdevries@suse.de>
+
+	* lib/jit-elf-helpers.exp (compile_and_download_n_jit_so): Use $f
+	instead of $binfile in the untested message.
+
+2020-05-25  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26031
+	* lib/gdb.exp (exec_is_pie): Test readelf -h output.
+
+2020-05-25  Tom de Vries  <tdevries@suse.de>
+
+	* boards/gold.exp: New file.
+
+2020-05-23  Tom Tromey  <tom@tromey.com>
+
+	* gdb.base/style.exp: Remove completion styling test.
+	* lib/gdb-utils.exp (style): Remove completion styles.
+
 2020-05-23  Tom Tromey  <tom@tromey.com>
 
 	* gdb.base/style.exp: Add completion styling test.
