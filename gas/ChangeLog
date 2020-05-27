@@ -1,3 +1,67 @@
+2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/gas/i386/align-branch-9.d: Updated for PECOFF.
+	* testsuite/gas/i386/inval-avx512f.s: Add .p2align for PECOFF.
+	* testsuite/gas/i386/inval-avx512f.l: Updated.
+
+2020-05-26  Stefan Schulze Frielinghaus  <stefansf@linux.ibm.com>
+
+	* testsuite/gas/s390/zarch-z13.d: Add regexp checks for vector
+	load/store instruction variants with alignment hints.
+	* testsuite/gas/s390/zarch-z13.s: Emit new vector load/store
+	instruction variants with alignment hints.
+
+2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26044
+	* config/tc-xgate.c (md_apply_fix): Check BFD_RELOC_XGATE_PCREL_X
+	instead of R_XGATE_PCREL_X.
+	(xgate_parse_operand): Replace R_XGATE_PCREL_X with
+	BFD_RELOC_XGATE_PCREL_X.
+
+2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26044
+	* config/tc-visium.c (md_convert_frag): Replace fragP->fr_literal
+	with &fragP->fr_literal[0].
+
+2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26044
+	* config/tc-vax.c (md_estimate_size_before_relax): Replace
+	fragP->fr_literal with &fragP->fr_literal[0].
+	(md_convert_frag): Likewise.
+
+2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26044
+	* config/tc-v850.c (md_convert_frag): Replace fragP->fr_literal
+	with &fragP->fr_literal[0].
+
+2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26044
+	* config/tc-crx.c (getreg_image): Change argument type to int.
+	(md_convert_frag): Replace fragP->fr_literal with
+	&fragP->fr_literal[0].
+
+2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26044
+	* onfig/tc-score.c (s3_do_macro_bcmp): Replace overlapping
+	sprintf with memmove.
+
+2020-05-25  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-mcore.c (md_convert_frag): Replace fragP->fr_literal
+	with &fragP->fr_literal[0].
+
+2020-05-25  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26041
+	* config/tc-cr16.c (md_assemble): Use memmove to concatenate
+	2 overlapping strings.
+
 2020-05-25  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* config/tc-cr16.c (md_convert_frag): Replace fragP->fr_literal
