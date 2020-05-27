@@ -26201,10 +26201,6 @@ denoted as @samp{gfx900} by the compiler.
 ``Vega 7nm'' which is displayed as @samp{vega20} by @value{GDBN} and
 denoted as @samp{gfx906} by the compiler.
 
-@item
-``Arcturus'' which is displayed as @samp{arcturus} by @value{GDBN} and
-denoted as @samp{gfx908} by the compiler.
-
 @end itemize
 
 @value{GDBN} supports the following source languages:
@@ -26220,12 +26216,12 @@ When compiling, the @w{@option{-ggdb}} option should be used to
 produce debugging information suitable for use by @value{GDBN}.  The
 @w{@option{--amdgpu-target}} option is used to specify the AMD GPUs
 that the executable is required to support.  For example, to compile a
-HIP program that can utilize ``Vega 10'', ``Vega 7nm'', and
-``Arcturus'' AMD GPU chips, with no optimization:
+HIP program that can utilize ``Vega 10'' and ``Vega 7nm'' AMD GPU
+chips, with no optimization:
 
 @smallexample
 hipcc -O0 -ggdb --amdgpu-target=gfx900 --amdgpu-target=gfx906 \
-        --amdgpu-target=gfx908 bit_extract.cpp -o bit_extract
+        bit_extract.cpp -o bit_extract
 @end smallexample
 
 The AMD GPU ROCm compiler maps HIP source language work-items to the
