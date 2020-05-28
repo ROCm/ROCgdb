@@ -555,7 +555,6 @@ DESCRIPTION
 .#define bfd_mach_amdgcn_gfx904  0x02e
 .#define bfd_mach_amdgcn_gfx906  0x02f
 .#define bfd_mach_amdgcn_gfx908  0x030
-.#define bfd_mach_amdgcn_gfx909  0x031
 .#define bfd_mach_amdgcn_gfx1010 0x033
 .#define bfd_mach_amdgcn_gfx1011 0x034
 .#define bfd_mach_amdgcn_gfx1012 0x035
