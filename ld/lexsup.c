@@ -359,7 +359,7 @@ static const struct ld_option ld_options[] =
   { {"init", required_argument, NULL, OPTION_INIT},
     '\0', N_("SYMBOL"), N_("Call SYMBOL at load-time"), ONE_DASH },
   { {"Map", required_argument, NULL, OPTION_MAP},
-    '\0', N_("FILE"), N_("Write a map file"), ONE_DASH },
+    '\0', N_("FILE/DIR"), N_("Write a linker map to FILE or DIR/<outputname>.map"), ONE_DASH },
   { {"no-define-common", no_argument, NULL, OPTION_NO_DEFINE_COMMON},
     '\0', NULL, N_("Do not define Common storage"), TWO_DASHES },
   { {"no-demangle", no_argument, NULL, OPTION_NO_DEMANGLE },
@@ -516,9 +516,11 @@ static const struct ld_option ld_options[] =
   { {"warn-section-align", no_argument, NULL, OPTION_WARN_SECTION_ALIGN},
     '\0', NULL, N_("Warn if start of section changes due to alignment"),
     TWO_DASHES },
-  { {"warn-shared-textrel", no_argument, NULL, OPTION_WARN_SHARED_TEXTREL},
-    '\0', NULL, N_("Warn if shared object has DT_TEXTREL"),
+  { {"warn-textrel", no_argument, NULL, OPTION_WARN_TEXTREL},
+    '\0', NULL, N_("Warn if outpout has DT_TEXTREL"),
     TWO_DASHES },
+  { {"warn-shared-textrel", no_argument, NULL, OPTION_WARN_TEXTREL},
+    '\0', NULL, NULL, NO_HELP },
   { {"warn-alternate-em", no_argument, NULL, OPTION_WARN_ALTERNATE_EM},
     '\0', NULL, N_("Warn if an object has alternate ELF machine code"),
     TWO_DASHES },
@@ -1438,8 +1440,8 @@ parse_args (unsigned argc, char **argv)
 	case OPTION_WARN_SECTION_ALIGN:
 	  config.warn_section_align = TRUE;
 	  break;
-	case OPTION_WARN_SHARED_TEXTREL:
-	  link_info.warn_shared_textrel = TRUE;
+	case OPTION_WARN_TEXTREL:
+	  link_info.textrel_check = textrel_check_warning;
 	  break;
 	case OPTION_WARN_ALTERNATE_EM:
 	  link_info.warn_alternate_em = TRUE;
@@ -1590,6 +1592,41 @@ parse_args (unsigned argc, char **argv)
 	case OPTION_PRINT_MAP_DISCARDED:
 	  config.print_map_discarded = TRUE;
 	  break;
+	}
+    }
+
+  /* Run a couple of checks on the map filename.  */
+  if (config.map_filename)
+    {
+      if (config.map_filename[0] == 0)
+	{
+	  einfo (_("%P: no file/directory name provided for map output; ignored\n"));
+	  config.map_filename = NULL;
+	}
+      else
+	{
+	  struct stat s;
+
+	  /* If the map filename is actually a directory then create
+	     a file inside it, based upon the output filename.  */
+	  if (stat (config.map_filename, &s) >= 0
+	      && S_ISDIR (s.st_mode))
+	    {
+	      char * new_name;
+
+	      /* FIXME: This is a (trivial) memory leak.  */
+	      if (asprintf (&new_name, "%s/%s.map",
+			    config.map_filename, output_filename) < 0)
+		{
+		  /* If this alloc fails then something is probably very
+		     wrong.  Better to halt now rather than continue on
+		     into more problems.  */
+		  einfo (_("%P%F: cannot create name for linker map file: %E\n"));
+		  new_name = NULL;
+		}
+
+	      config.map_filename = new_name;
+	    }
 	}
     }
 
@@ -1846,12 +1883,26 @@ elf_shlib_list_options (FILE *file)
   -z nocommon                 Generate common symbols with STT_OBJECT type\n"));
   fprintf (file, _("\
   -z stack-size=SIZE          Set size of stack segment\n"));
-  fprintf (file, _("\
-  -z text                     Treat DT_TEXTREL in shared object as error\n"));
-  fprintf (file, _("\
-  -z notext                   Don't treat DT_TEXTREL in shared object as error\n"));
-  fprintf (file, _("\
-  -z textoff                  Don't treat DT_TEXTREL in shared object as error\n"));
+  if (link_info.textrel_check == textrel_check_error)
+    fprintf (file, _("\
+  -z text                     Treat DT_TEXTREL in output as error (default)\n"));
+  else
+    fprintf (file, _("\
+  -z text                     Treat DT_TEXTREL in output as error\n"));
+  if (link_info.textrel_check == textrel_check_none)
+    {
+      fprintf (file, _("\
+  -z notext                   Don't treat DT_TEXTREL in output as error (default)\n"));
+      fprintf (file, _("\
+  -z textoff                  Don't treat DT_TEXTREL in output as error (default)\n"));
+    }
+  else
+    {
+      fprintf (file, _("\
+  -z notext                   Don't treat DT_TEXTREL in output as error\n"));
+      fprintf (file, _("\
+  -z textoff                  Don't treat DT_TEXTREL in output as error\n"));
+    }
 }
 
 static void

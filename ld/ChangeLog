@@ -1,3 +1,46 @@
+2020-05-28  Nick Clifton  <nickc@redhat.com>
+
+	* lexsup.c (parse_args): Generate an error if a name is not
+	provided to the -Map option.
+	(ld_options): Mention that the -Map option supports a directory
+	name as an argument.
+	* NEWS: Remove mention of support for an empty string as an
+	argument to -Map.
+	* ld.texi: Likewise.
+
+2020-05-27  Hans-Peter Nilsson  <hp@axis.com>
+
+	PR ld/22909
+	* testsuite/ld-elf/pr19539.d: Don't xfail for cris*-*-*.
+
+2020-05-27  Rasmus Villemoes <rv@rasmusvillemoes.dk>
+	    Nick Clifton  <nickc@redhat.com>
+
+	* lexsup.c (parse_args): If the map filename is defined but empty
+	create a name based upon the output file name.  If the name is
+	defined but refers to a directory create a file inside the
+	directory based on the output file name.
+	* ld.texi: Document the new feature.
+	* testsuite/ld-script/map-address.exp: Add test of new feature.
+	* NEWS: Mention the new feature.
+
+2020-05-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/22909
+	* NEWS: Mention --warn-textrel.
+	* ld.texi: Update -z text/notext/textoff.  Add --warn-textrel.
+	Remove --warn-shared-textrel.
+	* ldlex.h (option_values): Rename OPTION_WARN_SHARED_TEXTREL to
+	OPTION_WARN_TEXTREL.
+	* lexsup.c (ld_options): Add --warn-textrel.  Obsolete
+	--warn-shared-textrel.
+	(parse_args): Updated.
+	(elf_shlib_list_options): Check link_info.textrel_check.
+	* emultempl/elf.em: Updated.
+	* testsuite/ld-elf/pr19539.d: Replace -z notext with
+	--warn-textrel.  Expect a warning.
+	* testsuite/ld-i386/warn1.d: Update expected warning.
+
 2020-05-26  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* testsuite/ld-ifunc/ifunc-23a-x86.d: Skip *-*-lynxos *-*-nto*.
