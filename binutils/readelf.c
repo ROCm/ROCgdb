@@ -3296,7 +3296,6 @@ get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 	    case EF_AMDGPU_MACH_AMDGCN_GFX904 : strcat (buf, ", gfx904"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX906 : strcat (buf, ", gfx906"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX908 : strcat (buf, ", gfx908"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX909 : strcat (buf, ", gfx909"); break;
 	    default: strcat (buf, _(", <unknown AMDGPU gpu type>")); break;
 	    }
 
