@@ -1,3 +1,22 @@
+2020-05-29  Gary Benson <gbenson@redhat.com>
+
+	* gdb.compile/compile-cplus.exp (additional_flags): Also
+	set when building with clang.
+	(additional_flags, srcfilesoptions): Pass -Wno-deprecated
+	when building with clang.
+
+2020-05-29  Gary Benson <gbenson@redhat.com>
+
+	* gdb.arch/i386-avx.exp (additional_flags): Also set when
+	building with clang.
+	* gdb.arch/i386-sse.exp (additional_flags): Likewise.
+
+2020-05-29  Gary Benson <gbenson@redhat.com>
+
+	* gdb.cp/koenig.exp (prepare_for_testing): Add
+	additional_flags=-Wno-unused-comparison.
+	* gdb.cp/operator.exp (prepare_for_testing): Likewise.
+
 2020-05-28  Gary Benson <gbenson@redhat.com>
 
 	* gdb.base/sigaltstack.c (catcher): Add default case to switch
