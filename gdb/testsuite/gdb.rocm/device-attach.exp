@@ -1,0 +1,197 @@
+# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+# Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+set testfile "device-attach"
+set srcfile ${srcdir}/${subdir}/${testfile}.cpp
+set objfile [standard_output_file ${testfile}.o]
+set binfile [standard_output_file ${testfile}]
+set escapedbinfile  [string_to_regexp $binfile]
+
+set breakpoint_loc 35
+set wave_id {(0,0,0)/2}
+set rocm_threadno {1.3}
+set threadid {7}
+
+if {![can_spawn_for_attach]} {
+    return 0
+}
+
+# Check if skip hip tests.
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+# Compile the hip program.
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Test to do attach with pid from command line.
+# For example rocgdb --pid <pid>.
+proc_with_prefix process_attach_cmdline_tests {} {
+    global gdb_prompt
+    global binfile
+    global escapedbinfile
+    global verbose
+    global GDB
+    global INTERNAL_GDBFLAGS
+    global GDBFLAGS
+    global timeout
+    global decimal
+
+    if ![isnative] then {
+        unsupported "command attach test"
+        return 0
+    }
+
+    set test_spawn_id [spawn_wait_for_attach $binfile]
+    set testpid [spawn_id_get_pid $test_spawn_id]
+    gdb_exit
+
+    set res [gdb_spawn_with_cmdline_opts \
+      "-quiet -iex \"set height 0\" -iex \"set width 0\" --pid=$testpid"]
+    set test "attaching rocgdb with pid"
+    gdb_test_multiple "" $test {
+        -re "Attaching to process $testpid\r\n.*\r\n$gdb_prompt $" {
+            pass "$test"
+        }
+    }
+
+    gdb_test "detach" \
+    "Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
+    "detach the process"
+
+    # Get rid of the process.
+    kill_wait_spawned_process $test_spawn_id
+}
+
+# Tests to do attach/detach in gdb console.
+proc_with_prefix process_attach_tests {} {
+    global gdb_prompt
+    global binfile
+    global escapedbinfile
+    global srcfile
+    global testfile
+    global subdir
+    global timeout
+    global decimal
+
+    clean_restart $binfile
+
+    # Start the program running and then wait for a bit, to be sure
+    # that it can be attached to.
+
+    set test_spawn_id [spawn_wait_for_attach $binfile]
+    set testpid [spawn_id_get_pid $test_spawn_id]
+
+    # Verify that we can attach to the process by first giving its
+    # executable name via the file command, and using attach with the
+    # process ID.
+
+    # (Actually, the test system appears to do this automatically for
+    # us.  So, we must also be prepared to be asked if we want to
+    # discard an existing set of symbols.)
+
+    set test "set file, before attach"
+    gdb_test_multiple "file $binfile" "$test" {
+        -re "Load new symbol table from.*y or n. $" {
+            gdb_test "y" "Reading symbols from $escapedbinfile\.\.\.*" \
+            "$test (re-read)"
+        }
+        -re "Reading symbols from $escapedbinfile\.\.\.*$gdb_prompt $" {
+            pass "$test"
+        }
+    }
+
+    set test "attach, after setting file"
+    gdb_test_multiple "attach $testpid" "$test" {
+        -re "Attaching to program.*`?$escapedbinfile'?, process $testpid.*$gdb_prompt $" {
+            pass "$test"
+        }
+    }
+
+
+    # Detach the process.
+
+    gdb_test "detach" \
+    "Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
+    "detach, with file"
+
+    # Wait a bit for gdb to finish detaching
+
+    exec sleep 5
+
+    # Purge the symbols from gdb's brain.  (We want to be certain the
+    # next attach, which won't be preceded by a "file" command, is
+    # really getting the executable file without our help.)
+
+    set old_timeout $timeout
+    set timeout 15 
+    set test "attach, purging symbols after detach"
+    gdb_test_multiple "file" "$test" {
+        -re "No executable file now.*Discard symbol table.*y or n. $" {
+            gdb_test "y" "No symbol file now." "$test"
+        }
+    }
+    set timeout $old_timeout
+
+    # Verify that we can attach to the process just by giving the
+    # process ID.
+
+    set test "attach, without file"
+    gdb_test_multiple "attach $testpid" "$test" {
+        -re "Attaching to process $testpid.*$gdb_prompt $" {
+            pass "$test"
+        }
+    }
+
+    set test "info threads"
+    set found_amdgpu_thread 0
+    send_gdb "info threads\n"
+    gdb_expect {
+        -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\.\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $"\
+        {
+            set threadid "$expect_out(1,string)"
+            set rocm_threadno "$expect_out(2,string)"
+            set wave_id  "$expect_out(3,string)"
+            set found_amdgpu_thread 1
+            pass "$test"
+        }
+        -re "$gdb_prompt $" { fail "No AMDGPU thread" }
+        timeout { fail "(timeout) for info threads" }
+    }
+
+    if {$found_amdgpu_thread == 1} {
+        gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
+
+        # Show architecture info while debugging in device code.
+        # Sample output "The target architecture is set automatically (currently amdgcn:gfx906)".
+        gdb_test_sequence "show architecture" "show architecture" {
+            {The target architecture is set automatically\s\(currently amdgcn:gfx\d+\)}
+        }
+    }
+
+    gdb_test "detach" \
+    "Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
+    "detach, without file"
+
+    kill_wait_spawned_process $test_spawn_id
+}
+
+process_attach_tests
+process_attach_cmdline_tests
