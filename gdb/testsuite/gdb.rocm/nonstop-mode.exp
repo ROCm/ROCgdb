@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#exp_internal 1
+# exp_internal 1
 
 load_lib rocm.exp
 
@@ -55,8 +55,8 @@ if ![runto_main] {
 }
 
 
-#Code to fetch threadno and corresponding wave_id
-#Set breakpoing in device code
+# Code to fetch threadno and corresponding wave_id.
+# Set breakpoint in device code.
 gdb_breakpoint "VectorAdd" "allow-pending"
 gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 send_gdb "info threads\n"
@@ -74,40 +74,44 @@ verbose $wave_id_re
 
 clean_restart ${binfile}
 
-#Turn on non-stop mode
+# Turn on non-stop mode.
+
+# In nonstop mode gdb prompt is not the last string to consider in regex
+# as it is lost between the other threads.
+# For example
+# Thread 5 "nonstop-mode" hit Breakpoint 1, VectorAdd () at ../../../git/gdb/testsuite/gdb.rocm/nonstop-mode.cpp:51
+# 51    int tid = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+# (gdb)
+# Thread 6 "nonstop-mode" hit Breakpoint 1, VectorAdd () at ../../../git/gdb/testsuite/gdb.rocm/nonstop-mode.cpp:51
+# 51    int tid = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+
 gdb_test_no_output "set non-stop on"
 gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_breakpoint "VectorAdd" "allow-pending"
+set test_name "run to VectorAdd Breakpoint"
 send_gdb "run\n"
-set test_name "run"
 gdb_expect 60 {
- -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-  #print "$expect_out(buffer)"
-  pass "run" }
+  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
-#gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 
-#in non-stop mode when we do run after puting breakpoint in kernel all threads gets created
-#so we need to wait until all thread info get display on gdb console.
+# In non-stop mode when we do run after puting breakpoint in kernel all threads gets created
+# so we need to wait until all thread info get display on gdb console.
 sleep 5
- 
-gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
+
+gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+set test_name "run to VectorAdd Breakpoint after inferior exit"
 send_gdb "run\n"
-set test_name "run"
 gdb_expect 60 {
- -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-  #print "$expect_out(buffer)"
-  pass "run" }
+  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
-#gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 sleep 5
 gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 
 
-# Check info agents
+# Check "info agents".
 # vega10 sample output "1  43:00.0  vega10      4              56            4       10"
 # vega20 sample output "1  b1:00.0  vega20      4              60            4       10"
 gdb_test_sequence "info agents" "info agents" {
@@ -116,8 +120,8 @@ gdb_test_sequence "info agents" "info agents" {
 }
 
 
-#Check info threads
-#sample output
+# Check "info threads".
+# Sample output:
 #* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
 #  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
@@ -128,8 +132,8 @@ gdb_test_sequence "info threads" "info threads" {
 sleep 5
 
 
-#Show architecture info while debugging in device code
-#Sample output "The target architecture is set automatically (currently amdgcn:gfx906)"
+# Show architecture info while debugging in device code.
+# Sample output "The target architecture is set automatically (currently amdgcn:gfx906)"
 gdb_test_sequence "show architecture" "show architecture" {
  {The target architecture is set automatically\s\(currently amdgcn:gfx\d+\)}
 }
@@ -142,25 +146,23 @@ gdb_test_sequence "show convenience" "show convenience" {
 }
 
 
-#info sharedlibrary
-#sample output
-#From                To                  Syms Read   Shared Object Library
-#0x00007ffbdfe05000  0x00007ffbdfe07a2c  Yes (*)     AMDGPU shared object [loaded from memory 0xab9900..0xac3470]
-#0x00007ffbdc201000  0x00007ffbdc201c94  Yes         AMDGPU shared object [loaded from memory 0x9b71d0..0x9bae28]
-#gdb_test_sequence "info sharedlibrary" "info sharedlibrary" {
+# Check "info sharedlibrary"
+# Sample output
+# From                To                  Syms Read   Shared Object Library
+# 0x00007ffbdfe05000  0x00007ffbdfe07a2c  Yes (*)     AMDGPU shared object [loaded from memory 0xab9900..0xac3470]
+# 0x00007ffbdc201000  0x00007ffbdc201c94  Yes         AMDGPU shared object [loaded from memory 0x9b71d0..0x9bae28]
+# gdb_test_sequence "info sharedlibrary" "info sharedlibrary" {
 # {From\s+To\s+Syms\s+Read\s+Shared Object Library}
 # {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s\(\*\)\s+AMDGPU shared object.}
 # {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s+AMDGPU shared object.}
-#}
+# }
 
 
-#info break
-#sample output
-#Num     Type           Disp Enb Address            What
-#1       breakpoint     keep y   0x0000000000400d49 in main(int, char**) at bit_extract.cpp:54
-#        breakpoint already hit 1 time
-#2       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
-#        breakpoint already hit 1 time
+# Check "info break".
+# Sample output:
+# Num     Type           Disp Enb Address            What
+# 1       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
+#         breakpoint already hit 1 time
 gdb_test_sequence "info break" "info break" {
  {Num\s+Type\s+Disp\sEnb Address\s+What}
  {\d+\s+breakpoint\s+keep\s+y}
@@ -168,27 +170,24 @@ gdb_test_sequence "info break" "info break" {
 }
 
 
-#info inferiors
-#  Num  Description       Executable
-#* 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
+# Check "info inferiors".
+#   Num  Description       Executable
+# * 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
 gdb_test_sequence "info inferiors" "info inferiors" {
  {\s+Num\s+Description\s+Executable}
  {\*\s\d+\s+process\s+\d+}
 }
 
 gdb_test "disable 1"
-gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+} 
+gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
 gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test "enable 1"
+set test_name "run to VectorAdd after disable/enable Breakpoint No"
 send_gdb "run\n"
-set test_name "run"
 gdb_expect 60 {
- -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-  #print "$expect_out(buffer)"
-  pass "run" }
+  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
-#gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 
 sleep 5
 gdb_test "clear VectorAdd"
@@ -197,22 +196,19 @@ gdb_test "start" {.+hit\sTemporary\sbreakpoint\s[\d].*}
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 gdb_breakpoint "VectorAdd" "allow-pending"
+set test_name "Again setting Breakpoint and running to Breakpoint after inferior exit"
 send_gdb "run\n"
-set test_name "run"
 gdb_expect 60 {
- -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-  #print "$expect_out(buffer)"
-  pass "run" }
+  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
-#gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 
 sleep 5
 
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 
-#Switch to all stop mode
+# Switch to all stop mode.
 gdb_test_no_output "set non-stop off"
 gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
