@@ -111,7 +111,7 @@ extern char *proc_string (struct proc *proc);
 	      __proc_pid (__proc), __proc->tid, \
 	      host_address_to_string (__proc) , ##args); } while (0)
 
-extern int gnu_debug_flag;
+extern bool gnu_debug_flag;
 
 #define debug(msg, args...) \
  do { if (gnu_debug_flag) \
@@ -149,5 +149,8 @@ struct gnu_nat_target : public inf_child_target
   std::string pid_to_str (ptid_t) override;
   void stop (ptid_t) override;
 };
+
+/* The final/concrete instance.  */
+extern gnu_nat_target *gnu_target;
 
 #endif /* GNU_NAT_H */

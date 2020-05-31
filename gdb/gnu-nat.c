@@ -64,6 +64,7 @@ extern "C"
 #include "language.h"
 #include "target.h"
 #include "gdbsupport/gdb_wait.h"
+#include "gdbarch.h"
 #include "gdbcmd.h"
 #include "gdbcore.h"
 #include "gdbthread.h"
@@ -83,6 +84,8 @@ extern "C"
 #include "exc_request_U.h"
 #include "msg_U.h"
 }
+
+struct gnu_nat_target *gnu_target;
 
 static process_t proc_server = MACH_PORT_NULL;
 
@@ -1106,12 +1109,12 @@ inf_validate_procs (struct inf *inf)
 	    if (inferior_ptid == ptid_t (inf->pid))
 	      /* This is the first time we're hearing about thread
 		 ids, after a fork-child.  */
-	      thread_change_ptid (inferior_ptid, ptid);
+	      thread_change_ptid (gnu_target, inferior_ptid, ptid);
 	    else if (inf->pending_execs != 0)
 	      /* This is a shell thread.  */
-	      add_thread_silent (ptid);
+	      add_thread_silent (gnu_target, ptid);
 	    else
-	      add_thread (ptid);
+	      add_thread (gnu_target, ptid);
 	  }
       }
 
@@ -2143,20 +2146,21 @@ gnu_nat_target::create_inferior (const char *exec_file,
 
   inf_debug (inf, "creating inferior");
 
+  if (!target_is_pushed (this))
+    push_target (this);
+
   pid = fork_inferior (exec_file, allargs, env, gnu_ptrace_me,
                        NULL, NULL, NULL, NULL);
 
   /* We have something that executes now.  We'll be running through
      the shell at this point (if startup-with-shell is true), but the
      pid shouldn't change.  */
-  add_thread_silent (ptid_t (pid));
+  add_thread_silent (gnu_target, ptid_t (pid));
 
   /* Attach to the now stopped child, which is actually a shell...  */
   inf_debug (inf, "attaching to child: %d", pid);
 
   inf_attach (inf, pid);
-
-  push_target (this);
 
   inf->pending_execs = 1;
   inf->nomsg = 1;
@@ -2167,7 +2171,7 @@ gnu_nat_target::create_inferior (const char *exec_file,
   inf_resume (inf);
 
   /* We now have thread info.  */
-  thread_change_ptid (inferior_ptid,
+  thread_change_ptid (gnu_target, inferior_ptid,
 		      ptid_t (inf->pid, inf_pick_first_thread (), 0));
 
   gdb_startup_inferior (pid, START_INFERIOR_TRAPS_EXPECTED);
@@ -2273,7 +2277,7 @@ gnu_nat_target::detach (inferior *inf, int from_tty)
   inf_detach (gnu_current_inf);
 
   inferior_ptid = null_ptid;
-  detach_inferior (find_inferior_pid (pid));
+  detach_inferior (find_inferior_pid (gnu_target, pid));
 
   maybe_unpush_target ();
 }
@@ -2551,7 +2555,6 @@ gnu_xfer_auxv (gdb_byte *readbuf, const gdb_byte *writebuf,
 		    ? gnu_current_inf->task->port : 0)
 		 : 0);
   process_t proc;
-  int res;
   kern_return_t err;
   vm_address_t entry;
   ElfW(auxv_t) auxv[2];
@@ -2641,7 +2644,6 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
       mach_port_t object_name;
       vm_offset_t offset;
       vm_size_t region_length = VM_MAX_ADDRESS - region_address;
-      vm_address_t old_address = region_address;
 
       err = vm_region (task,
 		       &region_address,

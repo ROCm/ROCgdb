@@ -1,3 +1,68 @@
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* i386-gnu-tdep.c: Include "gdbcore.h"
+	(gnu_sigtramp_code, i386_gnu_sc_reg_offset): New arrays.
+	(GNU_SIGTRAMP_LEN, GNU_SIGTRAMP_TAIL,
+	I386_GNU_SIGCONTEXT_THREAD_STATE_OFFSET): New macros
+	(i386_gnu_sigtramp_start, i386_gnu_sigtramp_p,
+	i386_gnu_sigcontext_addr): New functions
+	(i386gnu_init_abi): Register i386_gnu_sigtramp_p,
+	i386_gnu_sigcontext_addr, and i386_gnu_sc_reg_offset in the gdbarch
+	tdep.
+
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* gnu-nat.c (gnu_nat_target::create_inferior): Move push_target call
+	before fork_inferior call. Avoid calling it if target_is_pushed returns
+	true.
+
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* gnu-nat.h (gnu_target): New variable declaration.
+	* i386-gnu-nat.c (_initialize_i386gnu_nat): Initialize
+	gnu_target.
+	* gnu-nat.c (gnu_target): New variable.
+	(inf_validate_procs): Pass gnu_target to thread_change_ptid,
+	add_thread_silent, and add_thread calls.
+	(gnu_nat_target::create_inferior): Pass gnu_target to
+	add_thread_silent, thread_change_ptid call.
+	(gnu_nat_target::detach): Pass gnu_target to detach_inferior
+	call.
+
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* gnu-nat.c (gnu_xfer_auxv): Remove unused `res' variable.
+	(gnu_nat_target::find_memory_regions): Remove unused
+	`old_address' variable.
+
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* gnu-nat.c: Include "gdbarch.h".
+
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* reply_mig_hack.awk (Error return): Cast function through
+	void *, to bypass compiler function call check.
+
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* config/i386/i386gnu.mn (%_reply_S.c): Add dependency on
+	$(srcdir)/reply_mig_hack.awk.
+
+2020-05-30  Samuel Thibault  <samuel.thibault@ens-lyon.org>
+
+	* gnu-nat.h (gnu_debug_flag): Set type to bool.
+
+2020-05-30  Jonny Grant  <jg@jguk.org>
+
+	* configure.ac (ACX_BUGURL): change bug URL to https.
+
+2020-05-30  Pedro Alves  <palves@redhat.com>
+
+	* cp-support.c (replace_typedefs_template): New.
+	(replace_typedefs_qualified_name): Handle
+	DEMANGLE_COMPONENT_TEMPLATE.
+
 2020-05-29  Simon Marchi  <simon.marchi@efficios.com>
 
 	* dwarf2/comp-unit.c, dwarf2/comp-unit.h, dwarf2/index-cache.c,
