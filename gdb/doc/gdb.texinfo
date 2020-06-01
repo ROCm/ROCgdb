@@ -26349,7 +26349,7 @@ are reported as a wavefront size-bit unsigned integer value.  The
 @code{flat_scratch} pseudo register is reported as a 64-bit unsigned
 integer value.
 
-The @code{info sharedlibrary} command will the AMD GPU code objects
+The @code{info sharedlibrary} command will show the AMD GPU code objects
 together with the CPU code objects.  For example:
 
 @smallexample
@@ -26842,7 +26842,23 @@ prevent the ROCm runtime from terminating the inferior, while allowing
 @value{GDBN} to report the memory violation.
 
 @item
-AMD GPU does not support watchpoints.
+@value{GDBN} supports watchpoints, but limits the capabilities to the lowest
+common denominator of the heterogeneous agents in the system.  Hardware
+supported watchpoints are used when possible, otherwise software emulation is
+used.  Software emulation involves using-single stepping and reading memory to
+determine if values have changed, and as a result performs substantially slower
+than hardware watchpoints.
+
+The AMD GPU supported architectures provide a maximum of 4 hardware write
+watchpoints.  Precise read watchpoints or access watchpoints are not supported.
+
+The x86 architecture provides 4 hardware watchpoints that can monitor up to 32
+bytes.
+
+When @value{GDBN} is used with x86 and AMD GPU devices, hardware watchpoints are
+therefore limited to 4 write watchpoints of up to 32 bytes.  Software emulation
+will be used if more than 4 watchpoints are requested, or if watchpoints larger
+than 32 bytes are requested.
 
 @item
 AMD GPU does not currently support calling inferior functions.
