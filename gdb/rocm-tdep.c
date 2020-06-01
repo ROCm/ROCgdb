@@ -46,6 +46,7 @@
 
 #include <dlfcn.h>
 #include <list>
+#include <map>
 #include <set>
 #include <signal.h>
 #include <stdarg.h>
@@ -93,6 +94,9 @@ struct rocm_inferior_info
   std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
                      struct breakpoint *>
       breakpoint_map;
+
+  std::map<CORE_ADDR, std::pair<CORE_ADDR, amd_dbgapi_watchpoint_id_t>>
+      watchpoint_map;
 
   /* List of pending events the rocm target retrieved from the dbgapi.  */
   std::list<std::pair<amd_dbgapi_wave_id_t, amd_dbgapi_wave_stop_reason_t>>
@@ -164,19 +168,12 @@ struct rocm_target_ops final : public target_ops
                                         ULONGEST offset, ULONGEST len,
                                         ULONGEST *xfered_len) override;
 
-  bool
-  stopped_by_watchpoint () override
-  {
-    return !ptid_is_gpu (inferior_ptid)
-           && beneath ()->stopped_by_watchpoint ();
-  }
-
-  bool
-  stopped_data_address (CORE_ADDR *addr_p) override
-  {
-    return !ptid_is_gpu (inferior_ptid)
-           && beneath ()->stopped_data_address (addr_p);
-  }
+  int insert_watchpoint (CORE_ADDR addr, int len, enum target_hw_bp_type type,
+                         struct expression *cond) override;
+  int remove_watchpoint (CORE_ADDR addr, int len, enum target_hw_bp_type type,
+                         struct expression *cond) override;
+  bool stopped_by_watchpoint () override;
+  bool stopped_data_address (CORE_ADDR *addr_p) override;
 
   bool
   supports_stopped_by_sw_breakpoint () override
@@ -518,6 +515,96 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
   else
     return beneath ()->xfer_partial (object, annex, readbuf, writebuf, offset,
                                      requested_len, xfered_len);
+}
+
+int
+rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
+                                    enum target_hw_bp_type type,
+                                    struct expression *cond)
+{
+  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+
+  if (type != hw_write /* for now, we only allow write watchpoints.  */
+      || beneath ()->insert_watchpoint (addr, len, type, cond))
+    return 1;
+
+  amd_dbgapi_watchpoint_id_t watch_id;
+  amd_dbgapi_global_address_t adjusted_address;
+  amd_dbgapi_size_t adjusted_size;
+
+  if (amd_dbgapi_set_watchpoint (info->process_id, addr, len,
+                                 AMD_DBGAPI_WATCHPOINT_KIND_STORE_AND_RMW,
+                                 &watch_id, &adjusted_address, &adjusted_size)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      /* We failed to insert the GPU watchpoint, so remove the CPU watchpoint
+         before returning an error.  */
+      beneath ()->remove_watchpoint (addr, len, type, cond);
+      return 1;
+    }
+
+  if (!info->watchpoint_map
+           .emplace (addr, std::make_pair (addr + len, watch_id))
+           .second)
+    {
+      amd_dbgapi_remove_watchpoint (info->process_id, watch_id);
+      beneath ()->remove_watchpoint (addr, len, type, cond);
+      return 1;
+    }
+
+  return 0;
+}
+
+int
+rocm_target_ops::remove_watchpoint (CORE_ADDR addr, int len,
+                                    enum target_hw_bp_type type,
+                                    struct expression *cond)
+{
+  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  gdb_assert (type == hw_write);
+
+  if (beneath ()->remove_watchpoint (addr, len, type, cond))
+    return 1;
+
+  /* Find the watch_id for the addr..addr+len range.  */
+  auto it = info->watchpoint_map.upper_bound (addr);
+  if (it == info->watchpoint_map.begin ())
+    return 1;
+
+  std::advance (it, -1);
+  if (addr >= it->first && (addr + len) <= it->second.first)
+    {
+      amd_dbgapi_watchpoint_id_t watch_id = it->second.second;
+      info->watchpoint_map.erase (it);
+      return amd_dbgapi_remove_watchpoint (info->process_id, watch_id)
+             != AMD_DBGAPI_STATUS_SUCCESS;
+    }
+
+  return 1;
+}
+
+bool
+rocm_target_ops::stopped_by_watchpoint ()
+{
+  if (!ptid_is_gpu (inferior_ptid))
+    return beneath ()->stopped_by_watchpoint ();
+
+  amd_dbgapi_watchpoint_list_t watchpoints;
+  if (amd_dbgapi_wave_get_info (
+          get_amd_dbgapi_process_id (), get_amd_dbgapi_wave_id (inferior_ptid),
+          AMD_DBGAPI_WAVE_INFO_WATCHPOINTS, sizeof (watchpoints), &watchpoints)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return false;
+
+  free (watchpoints.watchpoint_ids);
+  return watchpoints.count != 0;
+}
+
+bool
+rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
+{
+  return !ptid_is_gpu (inferior_ptid)
+         && beneath ()->stopped_data_address (addr_p);
 }
 
 void
@@ -887,11 +974,12 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
               | AMD_DBGAPI_WAVE_STOP_REASON_INT_DIVIDE_BY_0))
     ws->value.sig = GDB_SIGNAL_FPE;
   else if (stop_reason
-      & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
-         | AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP
-         | AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP
-         | AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP
-         | AMD_DBGAPI_WAVE_STOP_REASON_TRAP))
+           & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
+              | AMD_DBGAPI_WAVE_STOP_REASON_WATCHPOINT
+              | AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP
+              | AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP
+              | AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP
+              | AMD_DBGAPI_WAVE_STOP_REASON_TRAP))
     ws->value.sig = GDB_SIGNAL_TRAP;
   else
     ws->value.sig = GDB_SIGNAL_0;
@@ -1218,8 +1306,8 @@ rocm_target_inferior_created (struct target_ops *target, int from_tty)
   gdb_assert (info->wave_stop_events.empty ());
 
   status = amd_dbgapi_process_attach (
-               reinterpret_cast<amd_dbgapi_client_process_id_t> (inf),
-               &info->process_id);
+      reinterpret_cast<amd_dbgapi_client_process_id_t> (inf),
+      &info->process_id);
 
   if (status == AMD_DBGAPI_STATUS_ERROR_VERSION_MISMATCH)
     warning (_ ("The version of the kernel driver does not match the version "
