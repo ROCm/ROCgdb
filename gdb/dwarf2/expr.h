@@ -111,14 +111,28 @@ public:
                      computed_closure {entry}, m_frame_id (frame_id)
                      {m_kind = Composite;}
 
+  composite_closure (dwarf_entry *entry, struct frame_info *frame) :
+                     computed_closure {entry}, m_frame (frame)
+                     {m_kind = Composite;}
+
   struct frame_id get_frame_id (void) const
   {
     return m_frame_id;
   }
 
+  struct frame_info *get_frame (void) const
+  {
+    return m_frame;
+  }
+
 private:
   /* Frame ID context of the composite.  */
   struct frame_id m_frame_id;
+
+  /* In the case of frame expression evaluator the frame_id
+     is not safe to use because the frame itself is being built.
+     Only in these cases we set and use frame info directly.  */
+  struct frame_info *m_frame = NULL;
 };
 
 /* The expression evaluator works with a dwarf_expr_context, describing
@@ -253,6 +267,10 @@ private:
   void push (dwarf_entry *entry);
   bool stack_empty_p () const;
   dwarf_entry *add_piece (ULONGEST size, ULONGEST bit_offset);
+  dwarf_entry *create_select_composite (ULONGEST piece_bit_size,
+                                        ULONGEST pieces_count);
+  dwarf_entry *create_extend_composite (ULONGEST piece_bit_size,
+                                        ULONGEST pieces_count);
   void execute_stack_op (const gdb_byte *op_ptr, const gdb_byte *op_end);
   dwarf_entry *fetch (int n);
   void pop ();
@@ -371,5 +389,8 @@ extern void rw_closure_value (struct value *v, struct value *from);
 extern void *copy_value_closure (const struct value *v);
 
 extern void free_value_closure (struct value *v);
+
+extern CORE_ADDR aspace_address_to_flat_address (CORE_ADDR address,
+                                                 unsigned int address_space);
 
 #endif /* dwarf2expr.h */

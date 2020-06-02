@@ -356,6 +356,29 @@ compute_stack_depth_worker (int start, int *need_tempvar,
 	  (*info)[offset].label = 1;
 	  break;
 
+	case DW_OP_LLVM_offset:
+	case DW_OP_LLVM_bit_offset:
+	case DW_OP_LLVM_form_aspace_address:
+	  --stack_depth;
+	  break;
+
+	case DW_OP_LLVM_call_frame_entry_reg:
+	case DW_OP_LLVM_undefined:
+	  ++stack_depth;
+	  break;
+
+	case DW_OP_LLVM_select_bit_piece:
+	  stack_depth -= 2;
+	  break;
+
+	case DW_OP_LLVM_aspace_bregx:
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
+	  op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
+	  break;
+
+	case DW_OP_LLVM_extend:
+	case DW_OP_LLVM_piece_end:
+	case DW_OP_LLVM_offset_constu:
 	case DW_OP_nop:
 	  break;
 

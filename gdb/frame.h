@@ -621,7 +621,7 @@ extern void frame_register (struct frame_info *frame, int regnum,
    frame.  Note: this call makes the frame's state undefined.  The
    register and frame caches must be flushed.  */
 extern void put_frame_register (struct frame_info *frame, int regnum,
-				const gdb_byte *buf);
+				const gdb_byte *buf, LONGEST offset = 0);
 
 /* Read LEN bytes from one or multiple registers starting with REGNUM
    in frame FRAME, starting at OFFSET, into BUF.  If the register

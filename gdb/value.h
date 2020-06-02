@@ -719,7 +719,8 @@ extern void read_frame_register_value (struct value *value,
 				       struct frame_info *frame);
 
 extern struct value *value_from_register (struct type *type, int regnum,
-					  struct frame_info *frame);
+					  struct frame_info *frame,
+					  LONGEST offset = 0);
 
 extern CORE_ADDR address_from_register (int regnum,
 					struct frame_info *frame);
