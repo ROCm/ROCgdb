@@ -165,44 +165,6 @@ enum f_primitive_types {
   nr_f_primitive_types
 };
 
-static void
-f_language_arch_info (struct gdbarch *gdbarch,
-		      struct language_arch_info *lai)
-{
-  const struct builtin_f_type *builtin = builtin_f_type (gdbarch);
-
-  lai->string_char_type = builtin->builtin_character;
-  lai->primitive_type_vector
-    = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_f_primitive_types + 1,
-                              struct type *);
-
-  lai->primitive_type_vector [f_primitive_type_character]
-    = builtin->builtin_character;
-  lai->primitive_type_vector [f_primitive_type_logical]
-    = builtin->builtin_logical;
-  lai->primitive_type_vector [f_primitive_type_logical_s1]
-    = builtin->builtin_logical_s1;
-  lai->primitive_type_vector [f_primitive_type_logical_s2]
-    = builtin->builtin_logical_s2;
-  lai->primitive_type_vector [f_primitive_type_logical_s8]
-    = builtin->builtin_logical_s8;
-  lai->primitive_type_vector [f_primitive_type_real]
-    = builtin->builtin_real;
-  lai->primitive_type_vector [f_primitive_type_real_s8]
-    = builtin->builtin_real_s8;
-  lai->primitive_type_vector [f_primitive_type_real_s16]
-    = builtin->builtin_real_s16;
-  lai->primitive_type_vector [f_primitive_type_complex_s8]
-    = builtin->builtin_complex_s8;
-  lai->primitive_type_vector [f_primitive_type_complex_s16]
-    = builtin->builtin_complex_s16;
-  lai->primitive_type_vector [f_primitive_type_void]
-    = builtin->builtin_void;
-
-  lai->bool_type_symbol = "logical";
-  lai->bool_type_default = builtin->builtin_logical_s2;
-}
-
 /* Remove the modules separator :: from the default break list.  */
 
 static const char *
@@ -628,7 +590,9 @@ static const struct exp_descriptor exp_descriptor_f =
   evaluate_subexp_f
 };
 
-extern const struct language_defn f_language_defn =
+/* Constant data that describes the Fortran language.  */
+
+extern const struct language_data f_language_data =
 {
   "fortran",
   "Fortran",
@@ -644,24 +608,12 @@ extern const struct language_defn f_language_defn =
   f_printchar,			/* Print character constant */
   f_printstr,			/* function to print string constant */
   f_emit_char,			/* Function to print a single character */
-  f_print_type,			/* Print a type using appropriate syntax */
   f_print_typedef,		/* Print a typedef using appropriate syntax */
   f_value_print_innner,		/* la_value_print_inner */
   c_value_print,		/* FIXME */
-  default_read_var_value,	/* la_read_var_value */
-  NULL,				/* Language specific skip_trampoline */
   NULL,                    	/* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
   cp_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  basic_lookup_transparent_type,/* lookup_transparent_type */
-
-  /* We could support demangling here to provide module namespaces
-     also for inferiors with only minimal symbol table (ELF symbols).
-     Just the mangling standard is not standardized across compilers
-     and there is no DW_AT_producer available for inferiors with only
-     the ELF symbols to check the mangling kind.  */
-  NULL,				/* Language specific symbol demangler */
-  NULL,
   NULL,				/* Language specific
 				   class_name_from_physname */
   f_op_print_tab,		/* expression operators for printing */
@@ -669,19 +621,92 @@ extern const struct language_defn f_language_defn =
   1,				/* String lower bound */
   f_word_break_characters,
   f_collect_symbol_completion_matches,
-  f_language_arch_info,
-  default_print_array_index,
-  default_pass_by_reference,
   c_watch_location_expression,
   cp_get_symbol_name_matcher,	/* la_get_symbol_name_matcher */
-  iterate_over_symbols,
-  cp_search_name_hash,
   &default_varobj_ops,
-  NULL,
   NULL,
   f_is_string_type_p,
   "(...)"			/* la_struct_too_deep_ellipsis */
 };
+
+/* Class representing the Fortran language.  */
+
+class f_language : public language_defn
+{
+public:
+  f_language ()
+    : language_defn (language_fortran, f_language_data)
+  { /* Nothing.  */ }
+
+  /* See language.h.  */
+  void language_arch_info (struct gdbarch *gdbarch,
+			   struct language_arch_info *lai) const override
+  {
+    const struct builtin_f_type *builtin = builtin_f_type (gdbarch);
+
+    lai->string_char_type = builtin->builtin_character;
+    lai->primitive_type_vector
+      = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_f_primitive_types + 1,
+				struct type *);
+
+    lai->primitive_type_vector [f_primitive_type_character]
+      = builtin->builtin_character;
+    lai->primitive_type_vector [f_primitive_type_logical]
+      = builtin->builtin_logical;
+    lai->primitive_type_vector [f_primitive_type_logical_s1]
+      = builtin->builtin_logical_s1;
+    lai->primitive_type_vector [f_primitive_type_logical_s2]
+      = builtin->builtin_logical_s2;
+    lai->primitive_type_vector [f_primitive_type_logical_s8]
+      = builtin->builtin_logical_s8;
+    lai->primitive_type_vector [f_primitive_type_real]
+      = builtin->builtin_real;
+    lai->primitive_type_vector [f_primitive_type_real_s8]
+      = builtin->builtin_real_s8;
+    lai->primitive_type_vector [f_primitive_type_real_s16]
+      = builtin->builtin_real_s16;
+    lai->primitive_type_vector [f_primitive_type_complex_s8]
+      = builtin->builtin_complex_s8;
+    lai->primitive_type_vector [f_primitive_type_complex_s16]
+      = builtin->builtin_complex_s16;
+    lai->primitive_type_vector [f_primitive_type_void]
+      = builtin->builtin_void;
+
+    lai->bool_type_symbol = "logical";
+    lai->bool_type_default = builtin->builtin_logical_s2;
+  }
+
+  /* See language.h.  */
+  unsigned int search_name_hash (const char *name) const override
+  {
+    return cp_search_name_hash (name);
+  }
+
+  /* See language.h.  */
+
+  char *demangle (const char *mangled, int options) const override
+  {
+      /* We could support demangling here to provide module namespaces
+	 also for inferiors with only minimal symbol table (ELF symbols).
+	 Just the mangling standard is not standardized across compilers
+	 and there is no DW_AT_producer available for inferiors with only
+	 the ELF symbols to check the mangling kind.  */
+    return nullptr;
+  }
+
+  /* See language.h.  */
+
+  void print_type (struct type *type, const char *varstring,
+		   struct ui_file *stream, int show, int level,
+		   const struct type_print_options *flags) const override
+  {
+    f_print_type (type, varstring, stream, show, level, flags);
+  }
+};
+
+/* Single instance of the Fortran language class.  */
+
+static f_language f_language_defn;
 
 static void *
 build_fortran_types (struct gdbarch *gdbarch)

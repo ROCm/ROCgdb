@@ -215,9 +215,6 @@ static int ada_resolve_function (struct block_symbol *, int,
 
 static int ada_is_direct_array_type (struct type *);
 
-static void ada_language_arch_info (struct gdbarch *,
-				    struct language_arch_info *);
-
 static struct value *ada_index_struct_field (int, struct value *, int,
 					     struct type *);
 
@@ -495,19 +492,6 @@ static const char *
 ada_get_gdb_completer_word_break_characters (void)
 {
   return ada_completer_word_break_characters;
-}
-
-/* Print an array element index using the Ada syntax.  */
-
-static void
-ada_print_array_index (struct type *index_type, LONGEST index,
-		       struct ui_file *stream,
-                       const struct value_print_options *options)
-{
-  struct value *index_value = val_atr (index_type, index);
-
-  LA_VALUE_PRINT (index_value, stream, options);
-  fprintf_filtered (stream, " => ");
 }
 
 /* la_watch_location_expression for Ada.  */
@@ -1391,45 +1375,6 @@ static char *
 ada_la_decode (const char *encoded, int options)
 {
   return xstrdup (ada_decode (encoded).c_str ());
-}
-
-/* Implement la_sniff_from_mangled_name for Ada.  */
-
-static int
-ada_sniff_from_mangled_name (const char *mangled, char **out)
-{
-  std::string demangled = ada_decode (mangled);
-
-  *out = NULL;
-
-  if (demangled != mangled && demangled[0] != '<')
-    {
-      /* Set the gsymbol language to Ada, but still return 0.
-	 Two reasons for that:
-
-	 1. For Ada, we prefer computing the symbol's decoded name
-	 on the fly rather than pre-compute it, in order to save
-	 memory (Ada projects are typically very large).
-
-	 2. There are some areas in the definition of the GNAT
-	 encoding where, with a bit of bad luck, we might be able
-	 to decode a non-Ada symbol, generating an incorrect
-	 demangled name (Eg: names ending with "TB" for instance
-	 are identified as task bodies and so stripped from
-	 the decoded name returned).
-
-	 Returning 1, here, but not setting *DEMANGLED, helps us get a
-	 little bit of the best of both worlds.  Because we're last,
-	 we should not affect any of the other languages that were
-	 able to demangle the symbol before us; we get to correctly
-	 tag Ada symbols as such; and even if we incorrectly tagged a
-	 non-Ada symbol, which should be rare, any routing through the
-	 Ada language should be transparent (Ada tries to behave much
-	 like C/C++ with non-Ada symbols).  */
-      return 1;
-    }
-
-  return 0;
 }
 
 
@@ -5697,7 +5642,7 @@ ada_add_all_symbols (struct obstack *obstackp,
       else
 	{
 	  /* In the !full_search case we're are being called by
-	     ada_iterate_over_symbols, and we don't want to search
+	     iterate_over_symbols, and we don't want to search
 	     superblocks.  */
 	  ada_add_block_symbols (obstackp, block, lookup_name, domain, NULL);
 	}
@@ -5796,28 +5741,6 @@ ada_lookup_symbol_list (const char *name, const struct block *block,
   lookup_name_info lookup_name (name, name_match_type);
 
   return ada_lookup_symbol_list_worker (lookup_name, block, domain, results, 1);
-}
-
-/* Implementation of the la_iterate_over_symbols method.  */
-
-static bool
-ada_iterate_over_symbols
-  (const struct block *block, const lookup_name_info &name,
-   domain_enum domain,
-   gdb::function_view<symbol_found_callback_ftype> callback)
-{
-  int ndefs, i;
-  std::vector<struct block_symbol> results;
-
-  ndefs = ada_lookup_symbol_list_worker (name, block, domain, &results, 0);
-
-  for (i = 0; i < ndefs; ++i)
-    {
-      if (!callback (&results[i]))
-	return false;
-    }
-
-  return true;
 }
 
 /* The result is as for ada_lookup_symbol_list with FULL_SEARCH set
@@ -13796,70 +13719,6 @@ enum ada_primitive_types {
   nr_ada_primitive_types
 };
 
-static void
-ada_language_arch_info (struct gdbarch *gdbarch,
-			struct language_arch_info *lai)
-{
-  const struct builtin_type *builtin = builtin_type (gdbarch);
-
-  lai->primitive_type_vector
-    = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_ada_primitive_types + 1,
-			      struct type *);
-
-  lai->primitive_type_vector [ada_primitive_type_int]
-    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
-			 0, "integer");
-  lai->primitive_type_vector [ada_primitive_type_long]
-    = arch_integer_type (gdbarch, gdbarch_long_bit (gdbarch),
-			 0, "long_integer");
-  lai->primitive_type_vector [ada_primitive_type_short]
-    = arch_integer_type (gdbarch, gdbarch_short_bit (gdbarch),
-			 0, "short_integer");
-  lai->string_char_type
-    = lai->primitive_type_vector [ada_primitive_type_char]
-    = arch_character_type (gdbarch, TARGET_CHAR_BIT, 0, "character");
-  lai->primitive_type_vector [ada_primitive_type_float]
-    = arch_float_type (gdbarch, gdbarch_float_bit (gdbarch),
-		       "float", gdbarch_float_format (gdbarch));
-  lai->primitive_type_vector [ada_primitive_type_double]
-    = arch_float_type (gdbarch, gdbarch_double_bit (gdbarch),
-		       "long_float", gdbarch_double_format (gdbarch));
-  lai->primitive_type_vector [ada_primitive_type_long_long]
-    = arch_integer_type (gdbarch, gdbarch_long_long_bit (gdbarch),
-			 0, "long_long_integer");
-  lai->primitive_type_vector [ada_primitive_type_long_double]
-    = arch_float_type (gdbarch, gdbarch_long_double_bit (gdbarch),
-		       "long_long_float", gdbarch_long_double_format (gdbarch));
-  lai->primitive_type_vector [ada_primitive_type_natural]
-    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
-			 0, "natural");
-  lai->primitive_type_vector [ada_primitive_type_positive]
-    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
-			 0, "positive");
-  lai->primitive_type_vector [ada_primitive_type_void]
-    = builtin->builtin_void;
-
-  lai->primitive_type_vector [ada_primitive_type_system_address]
-    = lookup_pointer_type (arch_type (gdbarch, TYPE_CODE_VOID, TARGET_CHAR_BIT,
-				      "void"));
-  lai->primitive_type_vector [ada_primitive_type_system_address]
-    ->set_name ("system__address");
-
-  /* Create the equivalent of the System.Storage_Elements.Storage_Offset
-     type.  This is a signed integral type whose size is the same as
-     the size of addresses.  */
-  {
-    unsigned int addr_length = TYPE_LENGTH
-      (lai->primitive_type_vector [ada_primitive_type_system_address]);
-
-    lai->primitive_type_vector [ada_primitive_type_storage_offset]
-      = arch_integer_type (gdbarch, addr_length * HOST_CHAR_BIT, 0,
-			   "storage_offset");
-  }
-
-  lai->bool_type_symbol = NULL;
-  lai->bool_type_default = builtin->builtin_bool;
-}
 
 				/* Language vector */
 
@@ -14036,32 +13895,15 @@ ada_get_symbol_name_matcher (const lookup_name_info &lookup_name)
     }
 }
 
-/* Implement the "la_read_var_value" language_defn method for Ada.  */
-
-static struct value *
-ada_read_var_value (struct symbol *var, const struct block *var_block,
-		    struct frame_info *frame)
-{
-  /* The only case where default_read_var_value is not sufficient
-     is when VAR is a renaming...  */
-  if (frame != nullptr)
-    {
-      const struct block *frame_block = get_frame_block (frame, NULL);
-      if (frame_block != nullptr && ada_is_renaming_symbol (var))
-	return ada_read_renaming_var_value (var, frame_block);
-    }
-
-  /* This is a typical case where we expect the default_read_var_value
-     function to work.  */
-  return default_read_var_value (var, var_block, frame);
-}
-
 static const char *ada_extensions[] =
 {
   ".adb", ".ads", ".a", ".ada", ".dg", NULL
 };
 
-extern const struct language_defn ada_language_defn = {
+/* Constant data that describes the Ada language.  */
+
+extern const struct language_data ada_language_data =
+{
   "ada",                        /* Language name */
   "Ada",
   language_ada,
@@ -14077,18 +13919,12 @@ extern const struct language_defn ada_language_defn = {
   ada_printchar,                /* Print a character constant */
   ada_printstr,                 /* Function to print string constant */
   emit_char,                    /* Function to print single char (not used) */
-  ada_print_type,               /* Print a type using appropriate syntax */
   ada_print_typedef,            /* Print a typedef using appropriate syntax */
   ada_value_print_inner,	/* la_value_print_inner */
   ada_value_print,              /* Print a top-level value */
-  ada_read_var_value,		/* la_read_var_value */
-  NULL,                         /* Language specific skip_trampoline */
   NULL,                         /* name_of_this */
   true,                         /* la_store_sym_names_in_linkage_form_p */
   ada_lookup_symbol_nonlocal,   /* Looking up non-local symbols.  */
-  basic_lookup_transparent_type,        /* lookup_transparent_type */
-  ada_la_decode,                /* Language specific symbol demangler */
-  ada_sniff_from_mangled_name,
   NULL,                         /* Language specific
 				   class_name_from_physname */
   ada_op_print_tab,             /* expression operators for printing */
@@ -14096,19 +13932,198 @@ extern const struct language_defn ada_language_defn = {
   1,                            /* String lower bound */
   ada_get_gdb_completer_word_break_characters,
   ada_collect_symbol_completion_matches,
-  ada_language_arch_info,
-  ada_print_array_index,
-  default_pass_by_reference,
   ada_watch_location_expression,
   ada_get_symbol_name_matcher,	/* la_get_symbol_name_matcher */
-  ada_iterate_over_symbols,
-  default_search_name_hash,
   &ada_varobj_ops,
-  NULL,
   NULL,
   ada_is_string_type,
   "(...)"			/* la_struct_too_deep_ellipsis */
 };
+
+/* Class representing the Ada language.  */
+
+class ada_language : public language_defn
+{
+public:
+  ada_language ()
+    : language_defn (language_ada, ada_language_data)
+  { /* Nothing.  */ }
+
+  /* Print an array element index using the Ada syntax.  */
+
+  void print_array_index (struct type *index_type,
+			  LONGEST index,
+			  struct ui_file *stream,
+			  const value_print_options *options) const override
+  {
+    struct value *index_value = val_atr (index_type, index);
+
+    LA_VALUE_PRINT (index_value, stream, options);
+    fprintf_filtered (stream, " => ");
+  }
+
+  /* Implement the "read_var_value" language_defn method for Ada.  */
+
+  struct value *read_var_value (struct symbol *var,
+				const struct block *var_block,
+				struct frame_info *frame) const override
+  {
+    /* The only case where default_read_var_value is not sufficient
+       is when VAR is a renaming...  */
+    if (frame != nullptr)
+      {
+	const struct block *frame_block = get_frame_block (frame, NULL);
+	if (frame_block != nullptr && ada_is_renaming_symbol (var))
+	  return ada_read_renaming_var_value (var, frame_block);
+      }
+
+    /* This is a typical case where we expect the default_read_var_value
+       function to work.  */
+    return language_defn::read_var_value (var, var_block, frame);
+  }
+
+  /* See language.h.  */
+  void language_arch_info (struct gdbarch *gdbarch,
+			   struct language_arch_info *lai) const override
+  {
+    const struct builtin_type *builtin = builtin_type (gdbarch);
+
+    lai->primitive_type_vector
+      = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_ada_primitive_types + 1,
+				struct type *);
+
+    lai->primitive_type_vector [ada_primitive_type_int]
+      = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+			   0, "integer");
+    lai->primitive_type_vector [ada_primitive_type_long]
+      = arch_integer_type (gdbarch, gdbarch_long_bit (gdbarch),
+			   0, "long_integer");
+    lai->primitive_type_vector [ada_primitive_type_short]
+      = arch_integer_type (gdbarch, gdbarch_short_bit (gdbarch),
+			   0, "short_integer");
+    lai->string_char_type
+      = lai->primitive_type_vector [ada_primitive_type_char]
+      = arch_character_type (gdbarch, TARGET_CHAR_BIT, 0, "character");
+    lai->primitive_type_vector [ada_primitive_type_float]
+      = arch_float_type (gdbarch, gdbarch_float_bit (gdbarch),
+			 "float", gdbarch_float_format (gdbarch));
+    lai->primitive_type_vector [ada_primitive_type_double]
+      = arch_float_type (gdbarch, gdbarch_double_bit (gdbarch),
+			 "long_float", gdbarch_double_format (gdbarch));
+    lai->primitive_type_vector [ada_primitive_type_long_long]
+      = arch_integer_type (gdbarch, gdbarch_long_long_bit (gdbarch),
+			   0, "long_long_integer");
+    lai->primitive_type_vector [ada_primitive_type_long_double]
+      = arch_float_type (gdbarch, gdbarch_long_double_bit (gdbarch),
+			 "long_long_float", gdbarch_long_double_format (gdbarch));
+    lai->primitive_type_vector [ada_primitive_type_natural]
+      = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+			   0, "natural");
+    lai->primitive_type_vector [ada_primitive_type_positive]
+      = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+			   0, "positive");
+    lai->primitive_type_vector [ada_primitive_type_void]
+      = builtin->builtin_void;
+
+    lai->primitive_type_vector [ada_primitive_type_system_address]
+      = lookup_pointer_type (arch_type (gdbarch, TYPE_CODE_VOID, TARGET_CHAR_BIT,
+					"void"));
+    lai->primitive_type_vector [ada_primitive_type_system_address]
+      ->set_name ("system__address");
+
+    /* Create the equivalent of the System.Storage_Elements.Storage_Offset
+       type.  This is a signed integral type whose size is the same as
+       the size of addresses.  */
+    {
+      unsigned int addr_length = TYPE_LENGTH
+	(lai->primitive_type_vector [ada_primitive_type_system_address]);
+
+      lai->primitive_type_vector [ada_primitive_type_storage_offset]
+	= arch_integer_type (gdbarch, addr_length * HOST_CHAR_BIT, 0,
+			     "storage_offset");
+    }
+
+    lai->bool_type_symbol = NULL;
+    lai->bool_type_default = builtin->builtin_bool;
+  }
+
+  /* See language.h.  */
+
+  bool iterate_over_symbols
+	(const struct block *block, const lookup_name_info &name,
+	 domain_enum domain,
+	 gdb::function_view<symbol_found_callback_ftype> callback) const override
+  {
+    std::vector<struct block_symbol> results;
+
+    ada_lookup_symbol_list_worker (name, block, domain, &results, 0);
+    for (block_symbol &sym : results)
+      {
+	if (!callback (&sym))
+	  return false;
+      }
+
+    return true;
+  }
+
+  /* See language.h.  */
+  bool sniff_from_mangled_name (const char *mangled,
+				char **out) const override
+  {
+    std::string demangled = ada_decode (mangled);
+
+    *out = NULL;
+
+    if (demangled != mangled && demangled[0] != '<')
+      {
+	/* Set the gsymbol language to Ada, but still return 0.
+	   Two reasons for that:
+
+	   1. For Ada, we prefer computing the symbol's decoded name
+	   on the fly rather than pre-compute it, in order to save
+	   memory (Ada projects are typically very large).
+
+	   2. There are some areas in the definition of the GNAT
+	   encoding where, with a bit of bad luck, we might be able
+	   to decode a non-Ada symbol, generating an incorrect
+	   demangled name (Eg: names ending with "TB" for instance
+	   are identified as task bodies and so stripped from
+	   the decoded name returned).
+
+	   Returning true, here, but not setting *DEMANGLED, helps us get
+	   a little bit of the best of both worlds.  Because we're last,
+	   we should not affect any of the other languages that were
+	   able to demangle the symbol before us; we get to correctly
+	   tag Ada symbols as such; and even if we incorrectly tagged a
+	   non-Ada symbol, which should be rare, any routing through the
+	   Ada language should be transparent (Ada tries to behave much
+	   like C/C++ with non-Ada symbols).  */
+	return true;
+      }
+
+    return false;
+  }
+
+  /* See language.h.  */
+
+  char *demangle (const char *mangled, int options) const override
+  {
+    return ada_la_decode (mangled, options);
+  }
+
+  /* See language.h.  */
+
+  void print_type (struct type *type, const char *varstring,
+		   struct ui_file *stream, int show, int level,
+		   const struct type_print_options *flags) const override
+  {
+    ada_print_type (type, varstring, stream, show, level, flags);
+  }
+};
+
+/* Single instance of the Ada language class.  */
+
+static ada_language ada_language_defn;
 
 /* Command-list for the "set/show ada" prefix command.  */
 static struct cmd_list_element *set_ada_list;

@@ -951,16 +951,6 @@ rust_internal_print_type (struct type *type, const char *varstring,
     }
 }
 
-static void
-rust_print_type (struct type *type, const char *varstring,
-		 struct ui_file *stream, int show, int level,
-		 const struct type_print_options *flags)
-{
-  print_offset_data podata;
-  rust_internal_print_type (type, varstring, stream, show, level,
-			    flags, false, &podata);
-}
-
 
 
 /* Like arch_composite_type, but uses TYPE to decide how to allocate
@@ -1065,51 +1055,6 @@ enum rust_primitive_types
   rust_primitive_str,
   nr_rust_primitive_types
 };
-
-/* la_language_arch_info implementation for Rust.  */
-
-static void
-rust_language_arch_info (struct gdbarch *gdbarch,
-			 struct language_arch_info *lai)
-{
-  const struct builtin_type *builtin = builtin_type (gdbarch);
-  struct type *tem;
-  struct type **types;
-  unsigned int length;
-
-  types = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_rust_primitive_types + 1,
-				  struct type *);
-
-  types[rust_primitive_bool] = arch_boolean_type (gdbarch, 8, 1, "bool");
-  types[rust_primitive_char] = arch_character_type (gdbarch, 32, 1, "char");
-  types[rust_primitive_i8] = arch_integer_type (gdbarch, 8, 0, "i8");
-  types[rust_primitive_u8] = arch_integer_type (gdbarch, 8, 1, "u8");
-  types[rust_primitive_i16] = arch_integer_type (gdbarch, 16, 0, "i16");
-  types[rust_primitive_u16] = arch_integer_type (gdbarch, 16, 1, "u16");
-  types[rust_primitive_i32] = arch_integer_type (gdbarch, 32, 0, "i32");
-  types[rust_primitive_u32] = arch_integer_type (gdbarch, 32, 1, "u32");
-  types[rust_primitive_i64] = arch_integer_type (gdbarch, 64, 0, "i64");
-  types[rust_primitive_u64] = arch_integer_type (gdbarch, 64, 1, "u64");
-
-  length = 8 * TYPE_LENGTH (builtin->builtin_data_ptr);
-  types[rust_primitive_isize] = arch_integer_type (gdbarch, length, 0, "isize");
-  types[rust_primitive_usize] = arch_integer_type (gdbarch, length, 1, "usize");
-
-  types[rust_primitive_f32] = arch_float_type (gdbarch, 32, "f32",
-					       floatformats_ieee_single);
-  types[rust_primitive_f64] = arch_float_type (gdbarch, 64, "f64",
-					       floatformats_ieee_double);
-
-  types[rust_primitive_unit] = arch_integer_type (gdbarch, 0, 1, "()");
-
-  tem = make_cv_type (1, 0, types[rust_primitive_u8], NULL);
-  types[rust_primitive_str] = rust_slice_type ("&str", tem,
-					       types[rust_primitive_usize]);
-
-  lai->primitive_type_vector = types;
-  lai->bool_type_default = types[rust_primitive_bool];
-  lai->string_char_type = types[rust_primitive_u8];
-}
 
 
 
@@ -2061,17 +2006,6 @@ rust_lookup_symbol_nonlocal (const struct language_defn *langdef,
 
 
 
-/* la_sniff_from_mangled_name for Rust.  */
-
-static int
-rust_sniff_from_mangled_name (const char *mangled, char **demangled)
-{
-  *demangled = gdb_demangle (mangled, DMGL_PARAMS | DMGL_ANSI);
-  return *demangled != NULL;
-}
-
-
-
 /* la_watch_location_expression for Rust.  */
 
 static gdb::unique_xmalloc_ptr<char>
@@ -2101,7 +2035,9 @@ static const char *rust_extensions[] =
   ".rs", NULL
 };
 
-extern const struct language_defn rust_language_defn =
+/* Constant data representing the Rust language.  */
+
+extern const struct language_data rust_language_data =
 {
   "rust",
   "Rust",
@@ -2117,18 +2053,12 @@ extern const struct language_defn rust_language_defn =
   rust_printchar,		/* Print a character constant */
   rust_printstr,		/* Function to print string constant */
   rust_emitchar,		/* Print a single char */
-  rust_print_type,		/* Print a type using appropriate syntax */
   rust_print_typedef,		/* Print a typedef using appropriate syntax */
   rust_value_print_inner,	/* la_value_print_inner */
   c_value_print,		/* Print a top-level value */
-  default_read_var_value,	/* la_read_var_value */
-  NULL,				/* Language specific skip_trampoline */
   NULL,				/* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
   rust_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  basic_lookup_transparent_type,/* lookup_transparent_type */
-  gdb_demangle,			/* Language specific symbol demangler */
-  rust_sniff_from_mangled_name,
   NULL,				/* Language specific
 				   class_name_from_physname */
   c_op_print_tab,		/* expression operators for printing */
@@ -2136,16 +2066,91 @@ extern const struct language_defn rust_language_defn =
   0,				/* String lower bound */
   default_word_break_characters,
   default_collect_symbol_completion_matches,
-  rust_language_arch_info,
-  default_print_array_index,
-  default_pass_by_reference,
   rust_watch_location_expression,
   NULL,				/* la_get_symbol_name_matcher */
-  iterate_over_symbols,
-  default_search_name_hash,
   &default_varobj_ops,
-  NULL,
   NULL,
   rust_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
+
+/* Class representing the Rust language.  */
+
+class rust_language : public language_defn
+{
+public:
+  rust_language ()
+    : language_defn (language_rust, rust_language_data)
+  { /* Nothing.  */ }
+
+  /* See language.h.  */
+  void language_arch_info (struct gdbarch *gdbarch,
+			   struct language_arch_info *lai) const override
+  {
+    const struct builtin_type *builtin = builtin_type (gdbarch);
+
+    struct type **types
+      = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_rust_primitive_types + 1,
+				struct type *);
+
+    types[rust_primitive_bool] = arch_boolean_type (gdbarch, 8, 1, "bool");
+    types[rust_primitive_char] = arch_character_type (gdbarch, 32, 1, "char");
+    types[rust_primitive_i8] = arch_integer_type (gdbarch, 8, 0, "i8");
+    types[rust_primitive_u8] = arch_integer_type (gdbarch, 8, 1, "u8");
+    types[rust_primitive_i16] = arch_integer_type (gdbarch, 16, 0, "i16");
+    types[rust_primitive_u16] = arch_integer_type (gdbarch, 16, 1, "u16");
+    types[rust_primitive_i32] = arch_integer_type (gdbarch, 32, 0, "i32");
+    types[rust_primitive_u32] = arch_integer_type (gdbarch, 32, 1, "u32");
+    types[rust_primitive_i64] = arch_integer_type (gdbarch, 64, 0, "i64");
+    types[rust_primitive_u64] = arch_integer_type (gdbarch, 64, 1, "u64");
+
+    unsigned int length = 8 * TYPE_LENGTH (builtin->builtin_data_ptr);
+    types[rust_primitive_isize] = arch_integer_type (gdbarch, length, 0, "isize");
+    types[rust_primitive_usize] = arch_integer_type (gdbarch, length, 1, "usize");
+
+    types[rust_primitive_f32] = arch_float_type (gdbarch, 32, "f32",
+						 floatformats_ieee_single);
+    types[rust_primitive_f64] = arch_float_type (gdbarch, 64, "f64",
+						 floatformats_ieee_double);
+
+    types[rust_primitive_unit] = arch_integer_type (gdbarch, 0, 1, "()");
+
+    struct type *tem = make_cv_type (1, 0, types[rust_primitive_u8], NULL);
+    types[rust_primitive_str] = rust_slice_type ("&str", tem,
+						 types[rust_primitive_usize]);
+
+    lai->primitive_type_vector = types;
+    lai->bool_type_default = types[rust_primitive_bool];
+    lai->string_char_type = types[rust_primitive_u8];
+  }
+
+  /* See language.h.  */
+  bool sniff_from_mangled_name (const char *mangled,
+				char **demangled) const override
+  {
+    *demangled = gdb_demangle (mangled, DMGL_PARAMS | DMGL_ANSI);
+    return *demangled != NULL;
+  }
+
+  /* See language.h.  */
+
+  char *demangle (const char *mangled, int options) const override
+  {
+    return gdb_demangle (mangled, options);
+  }
+
+  /* See language.h.  */
+
+  void print_type (struct type *type, const char *varstring,
+		   struct ui_file *stream, int show, int level,
+		   const struct type_print_options *flags) const override
+  {
+    print_offset_data podata;
+    rust_internal_print_type (type, varstring, stream, show, level,
+			      flags, false, &podata);
+  }
+};
+
+/* Single instance of the Rust language class.  */
+
+static rust_language rust_language_defn;
