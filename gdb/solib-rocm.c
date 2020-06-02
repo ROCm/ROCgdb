@@ -156,13 +156,16 @@ rocm_solib_current_sos (void)
 
 struct rocm_code_object_stream
 {
-  /* The target file descriptor for this stream  */
+  /* The target file descriptor for this stream if the URI is a file. For
+    memory URIs, fd is set to -1.  */
   int fd;
 
-  /* The offset of the ELF file image in the target file.  */
+  /* The offset (or address) of the ELF file image in the target file (or
+     memory).  */
   ULONGEST offset;
 
-  /* The size of the ELF file image.  */
+  /* The size of the ELF file image.  size is optional for file URIs, but
+     required for memory URIs.  */
   ULONGEST size;
 };
 
@@ -178,13 +181,6 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 
   std::transform (protocol.begin (), protocol.end (), protocol.begin (),
                   [] (unsigned char c) { return std::tolower (c); });
-  if (protocol != "file")
-    {
-      warning (_ ("`%s': protocol not supported: %s"), uri.c_str (),
-               protocol.c_str ());
-      bfd_set_error (bfd_error_bad_value);
-      return nullptr;
-    }
 
   std::string path;
   size_t path_end = uri.find_first_of ("#?", protocol_end);
@@ -240,6 +236,39 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
             bfd_set_error (bfd_error_bad_value);
             return nullptr;
           }
+
+      if (protocol == "file")
+        {
+          int target_errno;
+          stream->fd = target_fileio_open (
+              static_cast<struct inferior *> (inferior), decoded_path.c_str (),
+              FILEIO_O_RDONLY, false, 0, &target_errno);
+
+          if (stream->fd == -1)
+            {
+              /* FIXME: Should we set errno?  Move fileio_errno_to_host from
+                 gdb_bfd.c to fileio.cc  */
+              /* errno = fileio_errno_to_host (target_errno); */
+              bfd_set_error (bfd_error_system_call);
+              return nullptr;
+            }
+
+          return stream.release ();
+        }
+      else if (protocol == "memory")
+        {
+          pid_t pid = std::stoul (path);
+          if (pid != static_cast<struct inferior *> (inferior)->pid)
+            {
+              warning (_ ("`%s': code object is from another inferior"),
+                       uri.c_str ());
+              bfd_set_error (bfd_error_bad_value);
+              return nullptr;
+            }
+
+          stream->fd = -1;
+          return stream.release ();
+        }
     }
   catch (...)
     {
@@ -247,21 +276,10 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
       return nullptr;
     }
 
-  int fd, target_errno;
-  fd = target_fileio_open (static_cast<struct inferior *> (inferior),
-                           decoded_path.c_str (), FILEIO_O_RDONLY, false, 0,
-                           &target_errno);
-  if (fd == -1)
-    {
-      /* FIXME: Should we set errno?  Move fileio_errno_to_host from gdb_bfd.c
-         to fileio.cc  */
-      /* errno = fileio_errno_to_host (target_errno); */
-      bfd_set_error (bfd_error_system_call);
-      return nullptr;
-    }
-
-  stream->fd = fd;
-  return stream.release ();
+  warning (_ ("`%s': protocol not supported: %s"), uri.c_str (),
+           protocol.c_str ());
+  bfd_set_error (bfd_error_bad_value);
+  return nullptr;
 }
 
 static int
@@ -269,8 +287,11 @@ rocm_bfd_iovec_close (bfd *nbfd, void *data)
 {
   auto *stream = static_cast<rocm_code_object_stream *> (data);
 
-  int target_errno;
-  target_fileio_close (stream->fd, &target_errno);
+  if (stream->fd != -1)
+    {
+      int target_errno;
+      target_fileio_close (stream->fd, &target_errno);
+    }
 
   xfree (stream);
   return 0;
@@ -283,6 +304,20 @@ rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
   auto *stream = static_cast<rocm_code_object_stream *> (data);
   int target_errno;
 
+  /* If stream->fd is not valid, we read the code object from the inferior's
+     memory.  */
+  if (stream->fd == -1)
+    {
+      if (target_read_memory (stream->offset + offset, (gdb_byte *)buf, size)
+          != 0)
+        {
+          bfd_set_error (bfd_error_invalid_operation);
+          return -1;
+        }
+      return size;
+    }
+
+  /* stream->fd is valid, read from the target's file.  */
   file_ptr nbytes = 0;
   while (size > 0)
     {
@@ -319,6 +354,9 @@ rocm_bfd_iovec_stat (bfd *abfd, void *data, struct stat *sb)
   /* If stream->size is 0, the URI size parameter was not set.  */
   if (!stream->size)
     {
+      gdb_assert (stream->fd != -1
+                  && "the size parameter is only optional for file URIs");
+
       struct stat stat;
       if (target_fileio_fstat (stream->fd, &stat, &target_errno) < 0)
         {
