@@ -1700,7 +1700,8 @@ dwarf_expr_context::dwarf_entry_deref (dwarf_entry *entry,
       LONGEST this_size = bits_to_bytes (bit_suboffset, size * 8);
       /* Using two buffers here because the copy_bitwise doesn't
          seem to support in place copy.  */
-      gdb::byte_vector temp_buf (this_size), temp_buf_bitwise (this_size);
+      gdb::byte_vector temp_buf_bitwise (this_size);
+      temp_buf.resize (this_size);
 
       /* We shouldn't have the case where we read from a passed in memory
          and the same memory being marked as stack or in some other address
@@ -1785,7 +1786,7 @@ dwarf_expr_context::dwarf_entry_to_gdb_value (dwarf_entry *entry,
                                               LONGEST subobj_offset)
 {
   struct gdbarch *gdbarch = get_type_arch (type);
-  struct value *retval;
+  struct value *retval = NULL;
 
   if (subobj_type == nullptr)
     subobj_type = type;
@@ -2528,7 +2529,7 @@ free_value_closure (struct value *v)
 CORE_ADDR
 aspace_address_to_flat_address (CORE_ADDR address, unsigned int address_space)
 {
-  return address | ((LONGEST) address_space) << ROCM_ASPACE_BIT_OFFSET;
+  return address | ((ULONGEST) address_space) << ROCM_ASPACE_BIT_OFFSET;
 }
 
 /* The engine for the expression evaluator.  Using the context in this
