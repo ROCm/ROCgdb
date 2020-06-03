@@ -1649,6 +1649,40 @@ decode_location_expression (unsigned char * data,
 	  printf ("DW_OP_PGI_omp_thread_num");
 	  break;
 
+	case DW_OP_LLVM_undefined:
+	  printf ("DW_OP_LLVM_undefined");
+	  break;
+
+	case DW_OP_LLVM_select_bit_piece:
+	  printf ("DW_OP_LLVM_select_bit_piece: ");
+	  uvalue = read_uleb128 (data, &bytes_read, end);
+	  data += bytes_read;
+	  printf (_("piece size: %s "), dwarf_vmatoa ("u", uvalue));
+	  uvalue = read_uleb128 (data, &bytes_read, end);
+	  data += bytes_read;
+	  printf (_("pieces count: %s "), dwarf_vmatoa ("u", uvalue));
+	  break;
+
+	case DW_OP_LLVM_extend:
+	  printf ("DW_OP_LLVM_extend: ");
+	  uvalue = read_uleb128 (data, &bytes_read, end);
+	  data += bytes_read;
+	  printf (_("piece size: %s "), dwarf_vmatoa ("u", uvalue));
+	  uvalue = read_uleb128 (data, &bytes_read, end);
+	  data += bytes_read;
+	  printf (_("pieces count: %s "), dwarf_vmatoa ("u", uvalue));
+	  break;
+
+	case DW_OP_LLVM_aspace_bregx:
+	  uvalue = read_uleb128 (data, &bytes_read, end);
+	  data += bytes_read;
+	  uvalue = read_sleb128 (data, &bytes_read, end);
+	  data += bytes_read;
+	  printf ("DW_OP_LLVM_aspace_bregx: %s (%s) %s",
+		  dwarf_vmatoa ("u", uvalue), regname (uvalue, 1),
+		  dwarf_vmatoa ("d", svalue));
+	  break;
+
 	default:
 	  if (op >= DW_OP_lo_user
 	      && op <= DW_OP_hi_user)
@@ -7353,6 +7387,7 @@ typedef struct Frame_Chunk
   dwarf_vma pc_range;
   unsigned int cfa_reg;
   dwarf_vma cfa_offset;
+  unsigned int cfa_aspace;
   unsigned int ra;
   unsigned char fde_encoding;
   unsigned char cfa_exp;
@@ -7786,6 +7821,9 @@ frame_display_row (Frame_Chunk *fc, int *need_col_headers, unsigned int *max_reg
   print_dwarf_vma (fc->pc_begin, eh_addr_size);
   if (fc->cfa_exp)
     strcpy (tmp, "exp");
+  else if (fc->cfa_aspace)
+    sprintf (tmp, "%s%+d in address space %d", regname (fc->cfa_reg, 1),
+             (int) fc->cfa_offset, fc->cfa_aspace);
   else
     sprintf (tmp, "%s%+d", regname (fc->cfa_reg, 1), (int) fc->cfa_offset);
   printf ("%-8s ", tmp);
@@ -8245,6 +8283,7 @@ display_debug_frames (struct dwarf_section *section,
 	      fc->data_factor = cie->data_factor;
 	      fc->cfa_reg = cie->cfa_reg;
 	      fc->cfa_offset = cie->cfa_offset;
+	      fc->cfa_aspace = cie->cfa_aspace;
 	      fc->ra = cie->ra;
 	      if (frame_need_space (fc, max_regs > 0 ? max_regs - 1: 0) < 0)
 		{
@@ -8414,6 +8453,11 @@ display_debug_frames (struct dwarf_section *section,
 		    }
 		  else
 		    start = new_start;
+		  break;
+		case DW_CFA_def_aspace_cfa:
+		  SKIP_ULEB ();
+		  SKIP_ULEB ();
+		  SKIP_ULEB ();
 		  break;
 		case DW_CFA_expression:
 		case DW_CFA_val_expression:
@@ -8700,6 +8744,7 @@ display_debug_frames (struct dwarf_section *section,
 		printf ("  DW_CFA_remember_state\n");
 	      rs = (Frame_Chunk *) xmalloc (sizeof (Frame_Chunk));
 	      rs->cfa_offset = fc->cfa_offset;
+	      rs->cfa_aspace = fc->cfa_aspace;
 	      rs->cfa_reg = fc->cfa_reg;
 	      rs->ra = fc->ra;
 	      rs->cfa_exp = fc->cfa_exp;
@@ -8721,6 +8766,7 @@ display_debug_frames (struct dwarf_section *section,
 		{
 		  remembered_state = rs->next;
 		  fc->cfa_offset = rs->cfa_offset;
+		  fc->cfa_aspace = rs->cfa_aspace;
 		  fc->cfa_reg = rs->cfa_reg;
 		  fc->ra = rs->ra;
 		  fc->cfa_exp = rs->cfa_exp;
@@ -8785,6 +8831,17 @@ display_debug_frames (struct dwarf_section *section,
 		}
 	      fc->cfa_exp = 1;
 	      start += ul;
+	      break;
+
+	    case DW_CFA_def_aspace_cfa:
+	      READ_ULEB (fc->cfa_reg);
+	      READ_ULEB (fc->cfa_offset);
+	      READ_ULEB (fc->cfa_aspace);
+	      fc->cfa_exp = 0;
+	      if (! do_debug_frames_interp)
+	        printf ("  DW_CFA_def_aspace_cfa: %s ofs %d in aspace %d\n",
+	                regname (fc->cfa_reg, 0), (int) fc->cfa_offset,
+	                fc->cfa_aspace);
 	      break;
 
 	    case DW_CFA_expression:

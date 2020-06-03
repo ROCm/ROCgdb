@@ -1,6 +1,7 @@
 /* DWARF 2 location expression support for GDB.
 
    Copyright (C) 2003-2020 Free Software Foundation, Inc.
+   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -105,7 +106,8 @@ struct value *dwarf2_evaluate_loc_desc (struct type *type,
 					struct frame_info *frame,
 					const gdb_byte *data,
 					size_t size,
-					struct dwarf2_per_cu_data *per_cu);
+					struct dwarf2_per_cu_data *per_cu,
+					bool as_lval = true);
 
 /* A chain of addresses that might be needed to resolve a dynamic
    property.  */

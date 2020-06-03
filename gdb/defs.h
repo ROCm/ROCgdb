@@ -651,6 +651,15 @@ enum user_selected_what_flag
   };
 DEF_ENUM_FLAGS_TYPE (enum user_selected_what_flag, user_selected_what);
 
+/* FIXME: Needs to be removed when address space support is implemented.  */
+#ifndef ROCM_ASPACE_BIT_OFFSET
+#define ROCM_ASPACE_BIT_OFFSET 56
+#endif
+
+#ifndef ROCM_ASPACE_MASK
+#define ROCM_ASPACE_MASK 0xff00000000000000
+#endif
+
 #include "utils.h"
 
 #endif /* #ifndef DEFS_H */

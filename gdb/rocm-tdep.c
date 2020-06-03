@@ -493,6 +493,18 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
 
       size_t len = requested_len;
       amd_dbgapi_status_t status;
+      uint64_t address_space =  (offset & ROCM_ASPACE_MASK) >> ROCM_ASPACE_BIT_OFFSET;
+
+      if (address_space)
+        {
+          if (amd_dbgapi_dwarf_address_space_to_address_space (
+                  architecture_id,
+                  address_space,
+                  &address_space_id))
+            return TARGET_XFER_EOF;
+
+          offset &= ~ROCM_ASPACE_MASK;
+        }
 
       if (readbuf)
         status = amd_dbgapi_read_memory (
