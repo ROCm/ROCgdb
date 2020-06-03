@@ -56,6 +56,7 @@ if { ![isnative] || ![check_compiler_available] } {
 global PLT_CFLAGS
 # Add $NOPIE_CFLAGS and $NOPIE_LDFLAGS if non-PIE is required.
 global NOPIE_CFLAGS NOPIE_LDFLAGS
+global NOSANTIZE_CFLAGS
 
 run_ld_link_exec_tests [list \
     [list \
@@ -65,7 +66,7 @@ run_ld_link_exec_tests [list \
 	{ linux-x86.S pr23428.c dummy.s } \
 	"pr23428" \
 	"pass.out" \
-	"$NOPIE_CFLAGS -fno-asynchronous-unwind-tables" \
+	"$NOPIE_CFLAGS $NOSANTIZE_CFLAGS -fno-asynchronous-unwind-tables" \
 	"asm" \
     ] \
 ]
@@ -134,6 +135,7 @@ proc check_pr25749a {testname srcfilea srcfileb cflags ldflags lderror} {
     }
 
     exec cp $srcdir/$subdir/$srcfilea $srcfilea
+    exec chmod +w $srcfilea
     set pr25749_bin "$objcopy -B $output_arch -I binary -O $output_target $srcfilea tmpdir/pr25749-bin.o"
     send_log "$pr25749_bin\n"
     set got [remote_exec host "$pr25749_bin"]
@@ -237,6 +239,7 @@ proc check_pr25749b {testname srcfilea srcfileb cflags ldflags dsoldflags} {
     }
 
     exec cp $srcdir/$subdir/$srcfilea $srcfilea
+    exec chmod +w $srcfilea
     set pr25749_bin "$objcopy -B $output_arch -I binary -O $output_target $srcfilea tmpdir/pr25749-bin.o"
     send_log "$pr25749_bin\n"
     set got [remote_exec host "$pr25749_bin"]

@@ -2390,41 +2390,6 @@ elf_metag_copy_indirect_symbol (struct bfd_link_info *info,
   hh_dir = metag_elf_hash_entry (eh_dir);
   hh_ind = metag_elf_hash_entry (eh_ind);
 
-  if (eh_ind->dyn_relocs != NULL)
-    {
-      if (eh_dir->dyn_relocs != NULL)
-	{
-	  struct elf_dyn_relocs **hdh_pp;
-	  struct elf_dyn_relocs *hdh_p;
-
-	  if (eh_ind->root.type == bfd_link_hash_indirect)
-	    abort ();
-
-	  /* Add reloc counts against the weak sym to the strong sym
-	     list.  Merge any entries against the same section.  */
-	  for (hdh_pp = &eh_ind->dyn_relocs; (hdh_p = *hdh_pp) != NULL; )
-	    {
-	      struct elf_dyn_relocs *hdh_q;
-
-	      for (hdh_q = eh_dir->dyn_relocs; hdh_q != NULL;
-		   hdh_q = hdh_q->next)
-		if (hdh_q->sec == hdh_p->sec)
-		  {
-		    hdh_q->pc_count += hdh_p->pc_count;
-		    hdh_q->count += hdh_p->count;
-		    *hdh_pp = hdh_p->next;
-		    break;
-		  }
-	      if (hdh_q == NULL)
-		hdh_pp = &hdh_p->next;
-	    }
-	  *hdh_pp = eh_dir->dyn_relocs;
-	}
-
-      eh_dir->dyn_relocs = eh_ind->dyn_relocs;
-      eh_ind->dyn_relocs = NULL;
-    }
-
   if (eh_ind->root.type == bfd_link_hash_indirect
       && eh_dir->got.refcount <= 0)
     {
@@ -2433,23 +2398,6 @@ elf_metag_copy_indirect_symbol (struct bfd_link_info *info,
     }
 
   _bfd_elf_link_hash_copy_indirect (info, eh_dir, eh_ind);
-}
-
-/* Find dynamic relocs for H that apply to read-only sections.  */
-
-static asection *
-readonly_dynrelocs (struct elf_link_hash_entry *h)
-{
-  struct elf_dyn_relocs *p;
-
-  for (p = h->dyn_relocs; p != NULL; p = p->next)
-    {
-      asection *s = p->sec->output_section;
-
-      if (s != NULL && (s->flags & SEC_READONLY) != 0)
-	return p->sec;
-    }
-  return NULL;
 }
 
 /* Adjust a symbol defined by a dynamic object and referenced by a
@@ -2527,7 +2475,7 @@ elf_metag_adjust_dynamic_symbol (struct bfd_link_info *info,
 
   /* If we don't find any dynamic relocs in read-only sections, then
      we'll be keeping the dynamic relocs and avoiding the copy reloc.  */
-  if (!readonly_dynrelocs (eh))
+  if (!_bfd_elf_readonly_dynrelocs (eh))
     {
       eh->non_got_ref = 0;
       return TRUE;
@@ -2767,33 +2715,6 @@ allocate_dynrelocs (struct elf_link_hash_entry *eh, void *inf)
   return TRUE;
 }
 
-/* Set DF_TEXTREL if we find any dynamic relocs that apply to
-   read-only sections.  */
-
-static bfd_boolean
-maybe_set_textrel (struct elf_link_hash_entry *h, void *info_p)
-{
-  asection *sec;
-
-  if (h->root.type == bfd_link_hash_indirect)
-    return TRUE;
-
-  sec = readonly_dynrelocs (h);
-  if (sec != NULL)
-    {
-      struct bfd_link_info *info = (struct bfd_link_info *) info_p;
-
-      info->flags |= DF_TEXTREL;
-      info->callbacks->minfo
-	(_("%pB: dynamic relocation against `%pT' in read-only section `%pA'\n"),
-	 sec->owner, h->root.root.string, sec);
-
-      /* Not an error, just cut short the traversal.  */
-      return FALSE;
-    }
-  return TRUE;
-}
-
 /* Set the sizes of the dynamic sections.  */
 
 static bfd_boolean
@@ -3018,7 +2939,8 @@ elf_metag_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  /* If any dynamic relocs apply to a read-only section,
 	     then we need a DT_TEXTREL entry.  */
 	  if ((info->flags & DF_TEXTREL) == 0)
-	    elf_link_hash_traverse (&htab->etab, maybe_set_textrel, info);
+	    elf_link_hash_traverse (&htab->etab,
+				    _bfd_elf_maybe_set_textrel, info);
 
 	  if ((info->flags & DF_TEXTREL) != 0)
 	    {

@@ -2547,25 +2547,6 @@ or1k_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
     }
 }
 
-/* Find dynamic relocs for H that apply to read-only sections.  */
-
-static asection *
-readonly_dynrelocs (struct elf_link_hash_entry *h)
-{
-  struct elf_dyn_relocs *sec_relocs;
-
-  for (sec_relocs = h->dyn_relocs;
-       sec_relocs != NULL;
-       sec_relocs = sec_relocs->next)
-    {
-      asection *s = sec_relocs->sec->output_section;
-
-      if (s != NULL && (s->flags & SEC_READONLY) != 0)
-	return sec_relocs->sec;
-    }
-  return NULL;
-}
-
 /* Adjust a symbol defined by a dynamic object and referenced by a
    regular object.  The current definition is in some section of the
    dynamic object, but we're not including those sections.  We have to
@@ -2652,7 +2633,7 @@ or1k_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 
   /* If we don't find any dynamic relocs in read-only sections, then
      we'll be keeping the dynamic relocs and avoiding the copy reloc.  */
-  if (!readonly_dynrelocs (h))
+  if (!_bfd_elf_readonly_dynrelocs (h))
     {
       h->non_got_ref = 0;
       return TRUE;
@@ -2938,33 +2919,6 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void * inf)
   return TRUE;
 }
 
-/* Set DF_TEXTREL if we find any dynamic relocs that apply to
-   read-only sections.  */
-
-static bfd_boolean
-maybe_set_textrel (struct elf_link_hash_entry *h, void *info_p)
-{
-  asection *sec;
-
-  if (h->root.type == bfd_link_hash_indirect)
-    return TRUE;
-
-  sec = readonly_dynrelocs (h);
-  if (sec != NULL)
-    {
-      struct bfd_link_info *info = (struct bfd_link_info *) info_p;
-
-      info->flags |= DF_TEXTREL;
-      info->callbacks->minfo
-	(_("%pB: dynamic relocation against `%pT' in read-only section `%pA'\n"),
-	 sec->owner, h->root.root.string, sec);
-
-      /* Not an error, just cut short the traversal.  */
-      return FALSE;
-    }
-  return TRUE;
-}
-
 /* Set the sizes of the dynamic sections.  */
 
 static bfd_boolean
@@ -3169,7 +3123,8 @@ or1k_elf_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	 /* If any dynamic relocs apply to a read-only section,
 	    then we need a DT_TEXTREL entry.  */
 	 if ((info->flags & DF_TEXTREL) == 0)
-	   elf_link_hash_traverse (&htab->root, maybe_set_textrel, info);
+	   elf_link_hash_traverse (&htab->root,
+				   _bfd_elf_maybe_set_textrel, info);
 
 	 if ((info->flags & DF_TEXTREL) != 0)
 	   {
@@ -3195,37 +3150,6 @@ or1k_elf_copy_indirect_symbol (struct bfd_link_info *info,
 
   edir = (struct elf_or1k_link_hash_entry *) dir;
   eind = (struct elf_or1k_link_hash_entry *) ind;
-
-  if (ind->dyn_relocs != NULL)
-    {
-      if (dir->dyn_relocs != NULL)
-	{
-	  struct elf_dyn_relocs **pp;
-	  struct elf_dyn_relocs *p;
-
-	  /* Add reloc counts against the indirect sym to the direct sym
-	     list.  Merge any entries against the same section.  */
-	  for (pp = &ind->dyn_relocs; (p = *pp) != NULL;)
-	    {
-	      struct elf_dyn_relocs *q;
-
-	      for (q = dir->dyn_relocs; q != NULL; q = q->next)
-		if (q->sec == p->sec)
-		  {
-		    q->pc_count += p->pc_count;
-		    q->count += p->count;
-		    *pp = p->next;
-		    break;
-		  }
-	      if (q == NULL)
-		pp = &p->next;
-	    }
-	  *pp = dir->dyn_relocs;
-	}
-
-      dir->dyn_relocs = ind->dyn_relocs;
-      ind->dyn_relocs = NULL;
-    }
 
   if (ind->root.type == bfd_link_hash_indirect)
     {

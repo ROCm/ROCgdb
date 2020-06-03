@@ -1040,42 +1040,6 @@ elf32_hppa_copy_indirect_symbol (struct bfd_link_info *info,
   hh_dir = hppa_elf_hash_entry (eh_dir);
   hh_ind = hppa_elf_hash_entry (eh_ind);
 
-  if (eh_ind->dyn_relocs != NULL
-      && eh_ind->root.type == bfd_link_hash_indirect)
-    {
-      if (eh_dir->dyn_relocs != NULL)
-	{
-	  struct elf_dyn_relocs **hdh_pp;
-	  struct elf_dyn_relocs *hdh_p;
-
-	  /* Add reloc counts against the indirect sym to the direct sym
-	     list.  Merge any entries against the same section.  */
-	  for (hdh_pp = &eh_ind->dyn_relocs; (hdh_p = *hdh_pp) != NULL; )
-	    {
-	      struct elf_dyn_relocs *hdh_q;
-
-	      for (hdh_q = eh_dir->dyn_relocs;
-		   hdh_q != NULL;
-		   hdh_q = hdh_q->next)
-		if (hdh_q->sec == hdh_p->sec)
-		  {
-#if RELATIVE_DYNRELOCS
-		    hdh_q->pc_count += hdh_p->pc_count;
-#endif
-		    hdh_q->count += hdh_p->count;
-		    *hdh_pp = hdh_p->next;
-		    break;
-		  }
-	      if (hdh_q == NULL)
-		hdh_pp = &hdh_p->next;
-	    }
-	  *hdh_pp = eh_dir->dyn_relocs;
-	}
-
-      eh_dir->dyn_relocs = eh_ind->dyn_relocs;
-      eh_ind->dyn_relocs = NULL;
-    }
-
   if (eh_ind->root.type == bfd_link_hash_indirect)
     {
       hh_dir->plabel |= hh_ind->plabel;
@@ -1654,23 +1618,6 @@ elf32_hppa_hide_symbol (struct bfd_link_info *info,
     }
 }
 
-/* Find any dynamic relocs that apply to read-only sections.  */
-
-static asection *
-readonly_dynrelocs (struct elf_link_hash_entry *eh)
-{
-  struct elf_dyn_relocs *hdh_p;
-
-  for (hdh_p = eh->dyn_relocs; hdh_p != NULL; hdh_p = hdh_p->next)
-    {
-      asection *sec = hdh_p->sec->output_section;
-
-      if (sec != NULL && (sec->flags & SEC_READONLY) != 0)
-	return hdh_p->sec;
-    }
-  return NULL;
-}
-
 /* Return true if we have dynamic relocs against H or any of its weak
    aliases, that apply to read-only sections.  Cannot be used after
    size_dynamic_sections.  */
@@ -1681,7 +1628,7 @@ alias_readonly_dynrelocs (struct elf_link_hash_entry *eh)
   struct elf32_hppa_link_hash_entry *hh = hppa_elf_hash_entry (eh);
   do
     {
-      if (readonly_dynrelocs (&hh->eh))
+      if (_bfd_elf_readonly_dynrelocs (&hh->eh))
 	return TRUE;
       hh = hppa_elf_hash_entry (hh->eh.u.alias);
     } while (hh != NULL && &hh->eh != eh);
@@ -2095,33 +2042,6 @@ clobber_millicode_symbols (struct elf_link_hash_entry *eh,
   return TRUE;
 }
 
-/* Set DF_TEXTREL if we find any dynamic relocs that apply to
-   read-only sections.  */
-
-static bfd_boolean
-maybe_set_textrel (struct elf_link_hash_entry *eh, void *inf)
-{
-  asection *sec;
-
-  if (eh->root.type == bfd_link_hash_indirect)
-    return TRUE;
-
-  sec = readonly_dynrelocs (eh);
-  if (sec != NULL)
-    {
-      struct bfd_link_info *info = (struct bfd_link_info *) inf;
-
-      info->flags |= DF_TEXTREL;
-      info->callbacks->minfo
-	(_("%pB: dynamic relocation against `%pT' in read-only section `%pA'\n"),
-	 sec->owner, eh->root.root.string, sec);
-
-      /* Not an error, just cut short the traversal.  */
-      return FALSE;
-    }
-  return TRUE;
-}
-
 /* Set the sizes of the dynamic sections.  */
 
 static bfd_boolean
@@ -2399,7 +2319,8 @@ elf32_hppa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  /* If any dynamic relocs apply to a read-only section,
 	     then we need a DT_TEXTREL entry.  */
 	  if ((info->flags & DF_TEXTREL) == 0)
-	    elf_link_hash_traverse (&htab->etab, maybe_set_textrel, info);
+	    elf_link_hash_traverse (&htab->etab,
+				    _bfd_elf_maybe_set_textrel, info);
 
 	  if ((info->flags & DF_TEXTREL) != 0)
 	    {
