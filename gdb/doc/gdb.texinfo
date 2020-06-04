@@ -26294,9 +26294,10 @@ denoted as @samp{gfx900} by the compiler.
 ``Vega 7nm'' which is displayed as @samp{vega20} by @value{GDBN} and
 denoted as @samp{gfx906} by the compiler.
 
-@item
-``Arcturus'' which is displayed as @samp{arcturus} by @value{GDBN} and
-denoted as @samp{gfx908} by the compiler.
+@c TODO:
+@c @item
+@c ``Arcturus'' which is displayed as @samp{arcturus} by @value{GDBN} and
+@c denoted as @samp{gfx908} by the compiler.
 
 @end itemize
 
@@ -26313,12 +26314,12 @@ When compiling, the @w{@option{-ggdb}} option should be used to
 produce debugging information suitable for use by @value{GDBN}.  The
 @w{@option{--amdgpu-target}} option is used to specify the AMD GPUs
 that the executable is required to support.  For example, to compile a
-HIP program that can utilize ``Vega 10'', ``Vega 7nm'', and
-``Arcturus'' AMD GPU chips, with no optimization:
+HIP program that can utilize ``Vega 10'' and ``Vega 7nm'' AMD GPU
+chips, with no optimization:
 
 @smallexample
 hipcc -O0 -ggdb --amdgpu-target=gfx900 --amdgpu-target=gfx906 \
-        --amdgpu-target=gfx908 bit_extract.cpp -o bit_extract
+        bit_extract.cpp -o bit_extract
 @end smallexample
 
 The AMD GPU ROCm compiler maps HIP source language work-items to the
@@ -26414,6 +26415,68 @@ integer value.  The @code{vcc} and @code{xnack_mask} pseudo registers
 are reported as a wavefront size-bit unsigned integer value.  The
 @code{flat_scratch} pseudo register is reported as a 64-bit unsigned
 integer value.
+
+The @code{info sharedlibrary} command will the AMD GPU code objects
+together with the CPU code objects.  For example:
+
+@smallexample
+(@value{GDBP}) info sharedlibrary
+From                To                  Syms Read   Shared Object Library
+0x00007fd120664ac0  0x00007fd120682790  Yes (*)     /lib64/ld-linux-x86-64.so.2
+...
+0x00007fd0125d8ec0  0x00007fd015f21630  Yes (*)     /opt/rocm-3.5.0/hip/lib/../../lib/libamd_comgr.so
+0x00007fd11d74e870  0x00007fd11d75a868  Yes (*)     /lib/x86_64-linux-gnu/libtinfo.so.5
+0x00007fd11d001000  0x00007fd11d00173c  Yes         file:///home/rocm/examples/bit_extract#offset=6477&size=10832
+0x00007fd11d008000  0x00007fd11d00adc0  Yes (*)     memory://95557/mem#offset=0x7fd0083e7f60&size=41416
+(*): Shared library is missing debugging information.
+(@value{GDBP})
+@end smallexample
+
+The code object path for AMD GPU code objects is shown as a
+@acronym{URI, Universal Location Identifier} with a syntax defined by
+the following BNF syntax:
+
+@smallexample
+code_object_uri ::== file_uri | memory_uri
+file_uri        ::== "file://" file_path [ range_specifier ]
+memory_uri      ::== "memory://" process_id range_specifier
+range_specifier ::== [ "#" | "?" ] "offset=" number "&" "size=" number
+file_path       ::== URI_ENCODED_OS_FILE_PATH
+process_id      ::== DECIMAL_NUMBER
+number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+@end smallexample
+
+@noindent
+Where:
+
+@table @var
+
+@item number
+A C integral literal where hexadecimal values are prefixed by
+@samp{0x} or @samp{0X}, and octal values by @samp{0}.
+
+@item file_path
+The file's path specified as a URI encoded UTF-8 string.  In URI
+encoding, every character that is not in the regular expression
+@samp{[a-zA-Z0-9/_.~-]} is encoded as two uppercase hexidecimal digits
+proceeded by @samp{%}.  Directories in the path are separated by
+@samp{/}.
+
+@item offset
+A 0-based byte offset to the start of the code object.  For a file
+URI, it is from the start of the file specified by the
+@var{file_path}, and if omitted defaults to 0. For a memory URI, it is
+the memory address and is required.
+
+@item size
+The number of bytes in the code object.  For a file URI, if omitted it
+defaults to the size of the file.  It is required for a memory URI.
+
+@item process_id
+The identity of the process owning the memory.  For Linux it is the C
+unsigned integral decimal literal for the process @var{pid}.
+
+@end table
 
 AMD GPU code objects are loaded into each AMD GPU device separately.
 The @code{info sharedlibrary} command will therefore show the same
@@ -26832,6 +26895,9 @@ For example,
 export HIP_ENABLE_DEFERRED_LOADING=0
 @end smallexample
 
+@emph{Note:}  If deferred code object loading is disabled and the
+application performs a @code{fork}, then the program may crash.
+
 @item
 Memory violations are reported to the wavefronts that cause them.
 However, the program location at which they are reported by be after
@@ -26841,6 +26907,9 @@ reported.  This can be avoided by setting a breakpoint in @code{abort}
 and using the non-stop mode (@pxref{Non-Stop Mode}).  This will
 prevent the ROCm runtime from terminating the inferior, while allowing
 @value{GDBN} to report the memory violation.
+
+@item
+AMD GPU does not support watchpoints.
 
 @item
 AMD GPU does not currently support calling inferior functions.
