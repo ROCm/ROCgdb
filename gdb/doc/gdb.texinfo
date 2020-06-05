@@ -53,8 +53,6 @@
 @c man begin COPYRIGHT
 Copyright @copyright{} 1988-2020 Free Software Foundation, Inc.
 
-Copyright @copyright{} 2020 Advanced Micro Devices, Inc. All rights reserved.
-
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
 any later version published by the Free Software Foundation; with the
@@ -65,7 +63,35 @@ and with the Back-Cover Texts as in (a) below.
 (a) The FSF's Back-Cover Text is: ``You are free to copy and modify
 this GNU Manual.  Buying copies from GNU Press supports the FSF in
 developing GNU and promoting software freedom.''
-@c man end
+
+@emph{Disclaimer}
+
+The information contained herein is for informational purposes only,
+and is subject to change without notice.  While every precaution has
+been taken in the preparation of this document, it may contain
+technical inaccuracies, omissions and typographical errors, and AMD is
+under no obligation to update or otherwise correct this information.
+Advanced Micro Devices, Inc. makes no representations or warranties
+with respect to the accuracy or completeness of the contents of this
+document, and assumes no liability of any kind, including the implied
+warranties of noninfringement, merchantability or fitness for
+particular purposes, with respect to the operation or use of AMD
+hardware, software or other products described herein.  No license,
+including implied or arising by estoppel, to any intellectual property
+rights is granted by this document.  Terms and limitations applicable
+to the purchase or use of AMD’s products are as set forth in a signed
+agreement between the parties or in AMD's Standard Terms and
+Conditions of Sale.
+
+AMD, the AMD Arrow logo are trademarks of Advanced Micro Devices, Inc.
+PCIe@registeredsymbol{} is a registered trademark of PCI-SIG
+Corporation.  Linux is the registered trademark of Linus Torvalds in
+the U.S. and other countries.  Other product names used in this
+publication are for identification purposes only and may be trademarks
+of their respective companies.
+
+Copyright @copyright{} 2019-2020 Advanced Micro Devices, Inc. All
+rights reserved.
 @end copying
 
 @ifnottex
