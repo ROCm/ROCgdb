@@ -1,3 +1,22 @@
+2020-06-04  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.dwarf2/share-psymtabs-bt.exp: New file.
+	* gdb.dwarf2/share-psymtabs-bt.c: New file.
+	* gdb.dwarf2/share-psymtabs-bt-2.c: New file.
+
+2020-06-04  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_file_cmd): Avoid path names in error messages.
+
+2020-06-04  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_file_cmd): Replace incomplete gdb_expect by
+	exp_continue.
+
+2020-06-04  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_file_cmd): Use perror instead of fail.
+
 2020-06-03  Tom de Vries  <tdevries@suse.de>
 
 	PR symtab/26046

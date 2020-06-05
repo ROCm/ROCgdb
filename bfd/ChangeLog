@@ -1,3 +1,62 @@
+2020-06-04  Stephen Casner  <casner@acm.org>
+
+	Extend pdp11-aout symbol table format to accommodate .stab
+	symbols and implement correct handling of them.
+
+	* pdp11.c (pdp11_external_nlist): Repurposed e_unused to e_desc.
+	(N_STAB, is_stab): Needed new function is_stab to disambiguate
+	normal vs. .stab symbol table type values, replacing N_STAB mask.
+	(translate_from_native_sym_flags): Determine correct section for
+	different .stab types.
+	(translate_to_native_sym_flags): Leave .stab types intact.
+	(translate_symbol_table): Error if symbol indicates overlay;
+	store desc field from .stab symbols.
+	(write_syms): Output desc field with symbol.
+	(aout_link_check_ar_symbols): Skip .stab symbols.
+	(aout_link_add_symbols): Correctly distinguish .stab symbols.
+	(aout_link_write_other_symbol): Write 0 for desk and ovly fields.
+	(aout_link_write_symbols): Write 0 for desk and ovly fields;
+	correctly distinguish .stab symbols and select calculate their
+	section and value; and copy desc and ovly fields from input symbol
+	to output symbol.
+
+2020-06-04  Stephen Casner  <casner@acm.org>
+
+	* aoutx.h (translate_symbol_table): Comment had external and
+	internal swapped.
+	* pdp11.c (translate_symbol_table): Likewise.
+
+2020-06-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elfxx-x86.h (elf_x86_link_hash_table): Remove target_id.
+	(is_x86_elf): Check elf.hash_table_id instead of target_id.
+	* elfxx-x86.c (_bfd_x86_elf_link_hash_table_create): Updated.
+
+2020-06-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26080
+	* elf-m10300.c (mn10300_elf_relocate_section): Resolve relocation
+	in debug section against symbol defined in shared library to 0.
+	* elf32-i386.c (elf_i386_check_relocs): Remove SEC_ALLOC check.
+	* elf32-lm32.c (lm32_elf_check_relocs): Likewise.
+	* elf32-m32r.c (m32r_elf_check_relocs): Likewise.
+	* elf32-nds32.c (nds32_elf_check_relocs): Likewise.
+	* elf32-nios2.c (nios2_elf32_check_relocs): Likewise.
+	* elf32-or1k.c (or1k_elf_check_relocs): Likewise.
+	* elf32-ppc.c (ppc_elf_check_relocs): Likewise.
+	* elf32-sh.c (sh_elf_check_relocs): Likewise.
+	* elf32-xtensa.c (elf_xtensa_check_relocs): Likewise.
+	* elf64-alpha.c (elf64_alpha_check_relocs): Likewise.
+	* elf64-ppc.c (ppc64_elf_check_relocs): Likewise.
+	* elf64-x86-64.c (elf_x86_64_check_relocs): Likewise.
+	* elfxx-mips.c (_bfd_mips_elf_check_relocs): Likewise.
+	* elf32-vax.c (elf_vax_check_relocs): Set non_got_ref for non-GOT
+	reference.
+	(elf_vax_adjust_dynamic_symbol): Generate a copy reloc only if
+	there is non-GOT reference.
+	* elflink.c (_bfd_elf_link_check_relocs): Skip non-loaded,
+	non-alloced sections.
+
 2020-06-03  Stephen Casner  <casner@acm.org>
 
 	Copy several years of fixes from bfd/aoutx.h to bfd/pdp11.c.

@@ -119,8 +119,8 @@ const CGEN_ATTR_TABLE bpf_cgen_insn_attr_table[] =
 /* Instruction set variants.  */
 
 static const CGEN_ISA bpf_cgen_isa_table[] = {
-  { "ebpfle", 64, 8, 64, 128 },
-  { "ebpfbe", 64, 8, 64, 128 },
+  { "ebpfle", 64, 64, 64, 128 },
+  { "ebpfbe", 64, 64, 64, 128 },
   { 0, 0, 0, 0, 0 }
 };
 
@@ -1701,6 +1701,7 @@ bpf_cgen_rebuild_tables (CGEN_CPU_TABLE *cd)
    CGEN_CPU_OPEN_MACHS:   bitmap of values in enum mach_attr
    CGEN_CPU_OPEN_BFDMACH: specify 1 mach using bfd name
    CGEN_CPU_OPEN_ENDIAN:  specify endian choice
+   CGEN_CPU_OPEN_INSN_ENDIAN: specify instruction endian choice
    CGEN_CPU_OPEN_END:     terminates arguments
 
    ??? Simultaneous multiple isas might not make sense, but it's not (yet)
@@ -1714,6 +1715,7 @@ bpf_cgen_cpu_open (enum cgen_cpu_open_arg arg_type, ...)
   CGEN_BITSET *isas = 0;  /* 0 = "unspecified" */
   unsigned int machs = 0; /* 0 = "unspecified" */
   enum cgen_endian endian = CGEN_ENDIAN_UNKNOWN;
+  enum cgen_endian insn_endian = CGEN_ENDIAN_UNKNOWN;
   va_list ap;
 
   if (! init_p)
@@ -1748,6 +1750,9 @@ bpf_cgen_cpu_open (enum cgen_cpu_open_arg arg_type, ...)
 	case CGEN_CPU_OPEN_ENDIAN :
 	  endian = va_arg (ap, enum cgen_endian);
 	  break;
+	case CGEN_CPU_OPEN_INSN_ENDIAN :
+	  insn_endian = va_arg (ap, enum cgen_endian);
+	  break;
 	default :
 	  opcodes_error_handler
 	    (/* xgettext:c-format */
@@ -1777,11 +1782,8 @@ bpf_cgen_cpu_open (enum cgen_cpu_open_arg arg_type, ...)
   cd->isas = cgen_bitset_copy (isas);
   cd->machs = machs;
   cd->endian = endian;
-  /* FIXME: for the sparc case we can determine insn-endianness statically.
-     The worry here is where both data and insn endian can be independently
-     chosen, in which case this function will need another argument.
-     Actually, will want to allow for more arguments in the future anyway.  */
-  cd->insn_endian = endian;
+  cd->insn_endian
+    = (insn_endian == CGEN_ENDIAN_UNKNOWN ? endian : insn_endian);
 
   /* Table (re)builder.  */
   cd->rebuild_tables = bpf_cgen_rebuild_tables;

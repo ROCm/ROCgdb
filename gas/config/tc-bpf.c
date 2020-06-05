@@ -174,6 +174,8 @@ md_begin (void)
   gas_cgen_cpu_desc = bpf_cgen_cpu_open (CGEN_CPU_OPEN_ENDIAN,
                                          target_big_endian ?
                                          CGEN_ENDIAN_BIG : CGEN_ENDIAN_LITTLE,
+                                         CGEN_CPU_OPEN_INSN_ENDIAN,
+                                         CGEN_ENDIAN_LITTLE,
                                          CGEN_CPU_OPEN_ISAS,
                                          bpf_isa,
                                          CGEN_CPU_OPEN_END);
@@ -323,8 +325,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
              Note that the CALL instruction has only one operand, so
              this code is executed only once per instruction.  */
           where = fixP->fx_frag->fr_literal + fixP->fx_where;
-          cgen_put_insn_value (gas_cgen_cpu_desc, (unsigned char *) where + 1, 8,
-                               target_big_endian ? 0x01 : 0x10);
+          where[1] = target_big_endian ? 0x01 : 0x10;
           /* Fallthrough.  */
         case BPF_OPERAND_DISP16:
           /* The PC-relative displacement fields in jump instructions
@@ -353,10 +354,6 @@ md_assemble (char *str)
   CGEN_INSN_INT buffer[CGEN_MAX_INSN_SIZE / sizeof (CGEN_INT_INSN_P)];
 #else
   unsigned char buffer[CGEN_MAX_INSN_SIZE];
-  memset (buffer, 0, CGEN_MAX_INSN_SIZE); /* XXX to remove when CGEN
-                                             is fixed to handle
-                                             opcodes-in-words
-                                             properly.  */
 #endif
 
   gas_cgen_init_parse ();
