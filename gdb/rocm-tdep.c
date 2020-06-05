@@ -1718,7 +1718,7 @@ info_agents_command (const char *args, int from_tty)
       /* location  */
       uint32_t location_id;
       if ((status = amd_dbgapi_agent_get_info (
-               process_id, agent_list[i], AMD_DBGAPI_AGENT_INFO_PCIE_SLOT,
+               process_id, agent_list[i], AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
                sizeof (location_id), &location_id))
           != AMD_DBGAPI_STATUS_SUCCESS)
         {
