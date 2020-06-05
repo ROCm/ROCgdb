@@ -449,7 +449,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Frame Interpretation.  */
   set_gdbarch_skip_prologue (gdbarch, amdgcn_skip_prologue);
-  set_gdbarch_inner_than (gdbarch, core_addr_lessthan);
+  set_gdbarch_inner_than (gdbarch, core_addr_greaterthan);
   dwarf2_append_unwinders (gdbarch);
   frame_unwind_append_unwinder (gdbarch, &amdgcn_frame_unwind);
   set_gdbarch_dummy_id (gdbarch, amdgcn_dummy_id);
