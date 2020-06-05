@@ -19,15 +19,14 @@ and limitations applicable to the purchase or use of AMD’s products are as set
 forth in a signed agreement between the parties or in AMD’s Standard Terms and
 Conditions of Sale.
 
-AMD, the AMD Arrow logo are trademarks of Advanced Micro Devices, Inc.  Google®
-is a registered trademark of Google LLC. PCIe® is a registered trademark of
-PCI-SIG Corporation.  Linux is the registered trademark of Linus Torvalds in the
-U.S. and other countries.  Red Hat and the Shadowman logo are registered
-trademarks of Red Hat, Inc. www.redhat.com in the U.S. and other countries. SUSE
-is a registered trademark of SUSE LLC in the United Stated and other countries.
-Ubuntu and the Ubuntu logo are registered trademarks of Canonical Ltd.  Other
-product names used in this publication are for identification purposes only and
-may be trademarks of their respective companies.
+AMD, the AMD Arrow logo are trademarks of Advanced Micro Devices, Inc.  Linux®
+is the registered trademark of Linus Torvalds in the U.S. and other countries.
+RedHat® and the Shadowman logo are registered trademarks of Red Hat, Inc.
+www.redhat.com in the U.S. and other countries.  SUSE® is a registered trademark
+of SUSE LLC in the United Stated and other countries.  Ubuntu® and the Ubuntu
+logo are registered trademarks of Canonical Ltd.  Other product names used in
+this publication are for identification purposes only and may be trademarks of
+their respective companies.
 
 Copyright (c) 2019-2020 Advanced Micro Devices, Inc.  All rights reserved.
 

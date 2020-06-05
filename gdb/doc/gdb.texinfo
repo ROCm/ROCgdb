@@ -84,11 +84,11 @@ agreement between the parties or in AMD's Standard Terms and
 Conditions of Sale.
 
 AMD, the AMD Arrow logo are trademarks of Advanced Micro Devices, Inc.
-PCIe@registeredsymbol{} is a registered trademark of PCI-SIG
-Corporation.  Linux is the registered trademark of Linus Torvalds in
-the U.S. and other countries.  Other product names used in this
-publication are for identification purposes only and may be trademarks
-of their respective companies.
+Linux@registeredsymbol{} is the registered trademark of Linus Torvalds
+in the U.S. and other countries.  PCIe@registeredsymbol{} is a
+registered trademark of PCI-SIG Corporation.  Other product names used
+in this publication are for identification purposes only and may be
+trademarks of their respective companies.
 
 Copyright @copyright{} 2019-2020 Advanced Micro Devices, Inc. All
 rights reserved.
