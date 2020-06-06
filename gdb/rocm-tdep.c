@@ -1671,19 +1671,6 @@ static const struct internalvar_funcs rocm_wave_id_funcs
 struct cmd_list_element *set_debug_amd_dbgapi_list;
 struct cmd_list_element *show_debug_amd_dbgapi_list;
 
-static void
-set_debug_amd_dbgapi (const char *arg, int from_tty)
-{
-  help_list (set_debug_amd_dbgapi_list, "set debug amd-dbgapi ",
-             (enum command_class) - 1, gdb_stdout);
-}
-
-static void
-show_debug_amd_dbgapi (const char *args, int from_tty)
-{
-  cmd_show_list (show_debug_amd_dbgapi_list, from_tty);
-}
-
 constexpr char amd_dbgapi_log_level_off[] = "off";
 constexpr char amd_dbgapi_log_level_error[] = "error";
 constexpr char amd_dbgapi_log_level_warning[] = "warning";
@@ -1883,15 +1870,16 @@ _initialize_rocm_tdep (void)
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
-  add_prefix_cmd ("amd-dbgapi", no_class, set_debug_amd_dbgapi,
-                  _ ("Generic command for setting amd-dbgapi debugging flags"),
-                  &set_debug_amd_dbgapi_list, "set debug amd-dbgapi ", 0,
-                  &setdebuglist);
+  add_basic_prefix_cmd (
+      "amd-dbgapi", no_class,
+      _ ("Generic command for setting amd-dbgapi debugging flags"),
+      &set_debug_amd_dbgapi_list, "set debug amd-dbgapi ", 0, &setdebuglist);
 
-  add_prefix_cmd ("amd-dbgapi", no_class, show_debug_amd_dbgapi,
-                  _ ("Generic command for showing amd-dbgapi debugging flags"),
-                  &show_debug_amd_dbgapi_list, "show debug amd-dbgapi ", 0,
-                  &showdebuglist);
+  add_show_prefix_cmd (
+      "amd-dbgapi", no_class,
+      _ ("Generic command for showing amd-dbgapi debugging flags"),
+      &show_debug_amd_dbgapi_list, "show debug amd-dbgapi ", 0,
+      &showdebuglist);
 
   add_setshow_enum_cmd (
       "log-level", class_maintenance, debug_amd_dbgapi_log_level_enums,

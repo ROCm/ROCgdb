@@ -72,22 +72,24 @@ bfd_amdgcn_get_mach_from_notes (bfd *abfd)
           minor = bfd_get_32 (abfd, ptr + 24);
           patch = bfd_get_32 (abfd, ptr + 28);
 
-          switch (major * 100 + minor * 10 + patch)
+#define GFX(major, minor, patch) (((major) << 16) + ((minor) << 8) + (patch))
+          switch (GFX (major, minor, patch))
             {
-            case 801: mach = bfd_mach_amdgcn_gfx801; break;
-            case 802: mach = bfd_mach_amdgcn_gfx802; break;
-            case 803: mach = bfd_mach_amdgcn_gfx803; break;
-            case 810: mach = bfd_mach_amdgcn_gfx810; break;
-            case 900: mach = bfd_mach_amdgcn_gfx900; break;
-            case 902: mach = bfd_mach_amdgcn_gfx902; break;
-            case 904: mach = bfd_mach_amdgcn_gfx904; break;
-            case 906: mach = bfd_mach_amdgcn_gfx906; break;
-            case 908: mach = bfd_mach_amdgcn_gfx908; break;
-            case 1010: mach = bfd_mach_amdgcn_gfx1010; break;
-            case 1011: mach = bfd_mach_amdgcn_gfx1011; break;
-            case 1012: mach = bfd_mach_amdgcn_gfx1012; break;
+            case GFX (8, 0, 1): mach = bfd_mach_amdgcn_gfx801; break;
+            case GFX (8, 0, 2): mach = bfd_mach_amdgcn_gfx802; break;
+            case GFX (8, 0, 3): mach = bfd_mach_amdgcn_gfx803; break;
+            case GFX (8, 1, 0): mach = bfd_mach_amdgcn_gfx810; break;
+            case GFX (9, 0, 0): mach = bfd_mach_amdgcn_gfx900; break;
+            case GFX (9, 0, 2): mach = bfd_mach_amdgcn_gfx902; break;
+            case GFX (9, 0, 4): mach = bfd_mach_amdgcn_gfx904; break;
+            case GFX (9, 0, 6): mach = bfd_mach_amdgcn_gfx906; break;
+            case GFX (9, 0, 8): mach = bfd_mach_amdgcn_gfx908; break;
+            case GFX (10, 1, 0): mach = bfd_mach_amdgcn_gfx1010; break;
+            case GFX (10, 1, 1): mach = bfd_mach_amdgcn_gfx1011; break;
+            case GFX (10, 1, 2): mach = bfd_mach_amdgcn_gfx1012; break;
             default:  mach = bfd_mach_amdgcn_unknown; break;
             }
+#undef GFX
         }
 
       ptr += 12 + ((namesz + 3) & ~3) + ((descsz + 3) & ~3);
