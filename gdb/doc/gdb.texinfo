@@ -3678,8 +3678,8 @@ Turns on or off display of @code{libthread_db}-related events.
 Use @code{1} to enable, @code{0} to disable.
 @end table
 
-@xref{Heterogeneous Debugging} for additional information related to
-threads in heterogeneous systems.
+See @ref{Heterogeneous Debugging} for additional information related
+to threads in heterogeneous systems.
 
 @node Forks
 @section Debugging Forks
@@ -21855,7 +21855,7 @@ target system.
 @cartouche
 @quotation
 @emph{Note:} The commands presented in this chapter are not currently fully
-implemented.  @xref{AMD GPU} for the current support available.
+implemented.  See @ref{AMD GPU} for the current support available.
 @end quotation
 @end cartouche
 
@@ -22729,7 +22729,7 @@ column before the @emph{Address} column if any breakoint has a
 @c the @code{maint print reggroups} command which also should not be a
 @c maintenace command for the same reason.
 @item maint print address-spaces @r{[}@var{file}@r{]}
-@code {maint print address-spaces} displays the address space names
+@code{maint print address-spaces} displays the address space names
 supported by each target achitecture.  The optional argument
 @var{file} tells to what file to write the information.
 
@@ -26742,7 +26742,7 @@ wavefronts missing breakpoints.
 The performance of resuming from a breakpoint when a large number of
 threads have hit a breakpoint can currently take up to 10 seconds on a
 fully occupied single AMD GPU device.  The techniques described in
-@xref{Heterogeneous Debugging} can be used to mitigate this.  Once
+@ref{Heterogeneous Debugging} can be used to mitigate this.  Once
 continued from the first breakpoint hit, the responsiveness of
 commands normally is better.  Other techniques that can improve
 responsiveness are:
