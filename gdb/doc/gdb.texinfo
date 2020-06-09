@@ -26304,9 +26304,9 @@ BDCCSR register.
 
 @value{GDBN} provides support for systems that have heterogeneous
 agents associated with @acronym{AMD GPU} devices (@pxref{Heterogeneous
-Debugging}) when @acronym{AMD}'s
-@url{https://rocm-documentation.readthedocs.io/, @acronym{ROCm, Radeon
-Open Compute platforM}} for HIP-Clang is installed.
+Debugging}) when @acronym{AMD}'s @url{https://rocmdocs.amd.com/,
+@acronym{ROCm, Radeon Open Compute platforM}} for HIP-Clang is
+installed.
 
 The following AMD GPU chips are supported:
 
