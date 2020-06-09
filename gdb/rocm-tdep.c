@@ -175,20 +175,8 @@ struct rocm_target_ops final : public target_ops
   bool stopped_by_watchpoint () override;
   bool stopped_data_address (CORE_ADDR *addr_p) override;
 
-  bool
-  supports_stopped_by_sw_breakpoint () override
-  {
-    return true;
-  }
-
   bool stopped_by_sw_breakpoint () override;
-
-  bool
-  stopped_by_hw_breakpoint () override
-  {
-    return !ptid_is_gpu (inferior_ptid)
-           && beneath ()->stopped_by_hw_breakpoint ();
-  }
+  bool stopped_by_hw_breakpoint () override;
 };
 
 /* ROCm's target vector.  */
@@ -996,17 +984,25 @@ bool
 rocm_target_ops::stopped_by_sw_breakpoint ()
 {
   if (!ptid_is_gpu (inferior_ptid))
-    return beneath ()->supports_stopped_by_sw_breakpoint ()
-           && beneath ()->stopped_by_sw_breakpoint ();
+    return beneath ()->stopped_by_sw_breakpoint ();
 
-  /* FIXME: we should check that the wave is not single-stepping.  */
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
 
-  struct regcache *regcache = get_thread_regcache_for_ptid (inferior_ptid);
+  amd_dbgapi_wave_stop_reason_t stop_reason;
+  return (amd_dbgapi_wave_get_info (process_id, wave_id,
+                                    AMD_DBGAPI_WAVE_INFO_STOP_REASON,
+                                    sizeof (stop_reason), &stop_reason)
+          == AMD_DBGAPI_STATUS_SUCCESS)
+         && (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0;
+}
 
-  CORE_ADDR bkpt_pc = regcache_read_pc (regcache)
-                      - gdbarch_decr_pc_after_break (regcache->arch ());
-
-  return software_breakpoint_inserted_here_p (regcache->aspace (), bkpt_pc);
+bool
+rocm_target_ops::stopped_by_hw_breakpoint ()
+{
+  /* The rocm target does not support hw breakpoints.  */
+  return !ptid_is_gpu (inferior_ptid)
+         && beneath ()->stopped_by_hw_breakpoint ();
 }
 
 void
