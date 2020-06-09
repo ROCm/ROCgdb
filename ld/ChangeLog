@@ -1,3 +1,56 @@
+2020-06-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/ld-elf/shared.exp: Pass $LFLAGS to PR ld/21703
+	shared test.
+
+2020-06-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/ld-elf/shared.exp: Xfail pr20995/pr20995-2 for
+	tic6x-*-*.
+
+2020-06-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/ld-elf/pr11304.d: Skip tic6x-*-elf.
+
+2020-06-06  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-elf/comm-data.exp: Don't xfail arm or bfin-linux.
+
+2020-06-06  Alan Modra  <amodra@gmail.com>
+
+	* lexsup.c (ld_options): Accept -plugin and -plugin-opt when
+	!ENABLE_PLUGINS.
+	* testsuite/lib/ld-lib.exp (check_plugin_api_available): Adjust.
+
+2020-06-05  Nelson Chu  <nelson.chu@sifive.com>
+
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec.d: Rename to
+	attr-merge-priv-spec-01.d.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-c.s: Set spec to 1.11.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-d.s: Empty priv spec set.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-02.d: New testcase.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-02.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-04.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-05.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-06.d: Likewise.
+	* testsuite/ld-riscv-elf/ld-riscv-elf.exp: Updated.
+
+2020-06-05  Nelson Chu  <nelson.chu@sifive.com>
+
+	* testsuite/ld-riscv-elf/attr-merge-arch-01.d: The CSR isn't used,
+	so ignore the -mpriv-spec setting.
+	* testsuite/ld-riscv-elf/attr-merge-arch-02.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-arch-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-stack-align.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-01.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-02.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-04.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-strict-align-05.d: Likewise.
+	* testsuite/ld-riscv-elf/call-relax.d: Add -mno-arch-attr.
+
 2020-06-04  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR ld/26080

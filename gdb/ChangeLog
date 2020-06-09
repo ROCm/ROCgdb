@@ -1,3 +1,23 @@
+2020-06-07  Tom Tromey  <tom@tromey.com>
+
+	* valprint.c (generic_val_print_float): Remove "embedded_offset"
+	parameter.
+	(generic_value_print): Update.
+
+2020-06-05  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	Revert commit 982a38f60b0.
+	* python/py-tui.c (gdbpy_tui_set_title): Restore use of get.
+
+2020-06-05  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-tui.c (gdbpy_tui_set_title): Use release, not get, to
+	avoid use after free.
+
+2020-06-05  Tom de Vries  <tdevries@suse.de>
+
+	* NEWS: Fix typos.
+
 2020-06-04  Simon Marchi  <simon.marchi@efficios.com>
 
 	* dwarf2/read.c (dwarf2_read_gdb_index): Save partial_symtabs in
