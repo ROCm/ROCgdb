@@ -390,7 +390,7 @@ value_cast (struct type *type, struct value *arg2)
 
       if (element_length > 0 && TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (type))
 	{
-	  struct type *range_type = TYPE_INDEX_TYPE (type);
+	  struct type *range_type = type->index_type ();
 	  int val_length = TYPE_LENGTH (type2);
 	  LONGEST low_bound, high_bound, new_length;
 
@@ -1707,7 +1707,7 @@ typecmp (int staticp, int varargs, int nargs,
     t2 ++;
 
   for (i = 0;
-       (i < nargs) && t1[i].type->code () != TYPE_CODE_VOID;
+       (i < nargs) && t1[i].type ()->code () != TYPE_CODE_VOID;
        i++)
     {
       struct type *tt1, *tt2;
@@ -1715,7 +1715,7 @@ typecmp (int staticp, int varargs, int nargs,
       if (!t2[i])
 	return i + 1;
 
-      tt1 = check_typedef (t1[i].type);
+      tt1 = check_typedef (t1[i].type ());
       tt2 = check_typedef (value_type (t2[i]));
 
       if (TYPE_IS_REFERENCE (tt1)
@@ -1754,7 +1754,7 @@ typecmp (int staticp, int varargs, int nargs,
       /* We should be doing much hairier argument matching (see
          section 13.2 of the ARM), but as a quick kludge, just check
          for the same type code.  */
-      if (t1[i].type->code () != value_type (t2[i])->code ())
+      if (t1[i].type ()->code () != value_type (t2[i])->code ())
 	return i + 1;
     }
   if (varargs || t2[i] == NULL)
@@ -1824,7 +1824,7 @@ do_search_struct_field (const char *name, struct value *arg1, LONGEST offset,
 	if (t_field_name
 	    && t_field_name[0] == '\0')
 	  {
-	    struct type *field_type = TYPE_FIELD_TYPE (type, i);
+	    struct type *field_type = type->field (i).type ();
 
 	    if (field_type->code () == TYPE_CODE_UNION
 		|| field_type->code () == TYPE_CODE_STRUCT)
@@ -2223,7 +2223,7 @@ value_struct_elt_bitpos (struct value **argp, int bitpos, struct type *ftype,
     {
       if (!field_is_static (&t->field (i))
 	  && bitpos == TYPE_FIELD_BITPOS (t, i)
-	  && types_equal (ftype, TYPE_FIELD_TYPE (t, i)))
+	  && types_equal (ftype, t->field (i).type ()))
 	return value_primitive_field (*argp, 0, i, t);
     }
 
@@ -2967,9 +2967,8 @@ find_oload_champ (gdb::array_view<value *> args,
 	  for (jj = 0; jj < nparms; jj++)
 	    {
 	      type *t = (methods != NULL
-			 ? (TYPE_FN_FIELD_ARGS (methods, ix)[jj].type)
-			 : TYPE_FIELD_TYPE (SYMBOL_TYPE (functions[ix]),
-					    jj));
+			 ? (TYPE_FN_FIELD_ARGS (methods, ix)[jj].type ())
+			 : SYMBOL_TYPE (functions[ix])->field (jj).type ());
 	      parm_types.push_back (t);
 	    }
 	}
@@ -3206,7 +3205,7 @@ compare_parameters (struct type *t1, struct type *t2, int skip_artificial)
   /* Special case: a method taking void.  T1 will contain no
      non-artificial fields, and T2 will contain TYPE_CODE_VOID.  */
   if ((t1->num_fields () - start) == 0 && t2->num_fields () == 1
-      && TYPE_FIELD_TYPE (t2, 0)->code () == TYPE_CODE_VOID)
+      && t2->field (0).type ()->code () == TYPE_CODE_VOID)
     return 1;
 
   if ((t1->num_fields () - start) == t2->num_fields ())
@@ -3215,8 +3214,8 @@ compare_parameters (struct type *t1, struct type *t2, int skip_artificial)
 
       for (i = 0; i < t2->num_fields (); ++i)
 	{
-	  if (compare_ranks (rank_one_type (TYPE_FIELD_TYPE (t1, start + i),
-					    TYPE_FIELD_TYPE (t2, i), NULL),
+	  if (compare_ranks (rank_one_type (t1->field (start + i).type (),
+					    t2->field (i).type (), NULL),
 	                     EXACT_MATCH_BADNESS) != 0)
 	    return 0;
 	}
@@ -3240,7 +3239,7 @@ get_baseclass_offset (struct type *vt, struct type *cls,
 {
   for (int i = 0; i < TYPE_N_BASECLASSES (vt); i++)
     {
-      struct type *t = TYPE_FIELD_TYPE (vt, i);
+      struct type *t = vt->field (i).type ();
       if (types_equal (t, cls))
         {
           if (BASETYPE_VIA_VIRTUAL (vt, i))
@@ -3311,10 +3310,10 @@ value_struct_elt_for_reference (struct type *domain, int offset,
 
 	  if (want_address)
 	    return value_from_longest
-	      (lookup_memberptr_type (TYPE_FIELD_TYPE (t, i), domain),
+	      (lookup_memberptr_type (t->field (i).type (), domain),
 	       offset + (LONGEST) (TYPE_FIELD_BITPOS (t, i) >> 3));
 	  else if (noside != EVAL_NORMAL)
-	    return allocate_value (TYPE_FIELD_TYPE (t, i));
+	    return allocate_value (t->field (i).type ());
 	  else
 	    {
 	      /* Try to evaluate NAME as a qualified name with implicit
@@ -3769,7 +3768,7 @@ value_slice (struct value *array, int lowbound, int length)
   if (type_not_associated (array_type))
     error (_("array not associated"));
 
-  range_type = TYPE_INDEX_TYPE (array_type);
+  range_type = array_type->index_type ();
   if (get_discrete_bounds (range_type, &lowerbound, &upperbound) < 0)
     error (_("slice from bad array or bitstring"));
 

@@ -826,8 +826,8 @@ gdbscm_type_range (SCM self)
     {
     case TYPE_CODE_ARRAY:
     case TYPE_CODE_STRING:
-      low = TYPE_LOW_BOUND (TYPE_INDEX_TYPE (type));
-      high = TYPE_HIGH_BOUND (TYPE_INDEX_TYPE (type));
+      low = TYPE_LOW_BOUND (type->index_type ());
+      high = TYPE_HIGH_BOUND (type->index_type ());
       break;
     case TYPE_CODE_RANGE:
       low = TYPE_LOW_BOUND (type);
@@ -1147,8 +1147,8 @@ gdbscm_field_type (SCM self)
   struct field *field = tyscm_field_smob_to_field (f_smob);
 
   /* A field can have a NULL type in some situations.  */
-  if (FIELD_TYPE (*field))
-    return tyscm_scm_from_type (FIELD_TYPE (*field));
+  if (field->type ())
+    return tyscm_scm_from_type (field->type ());
   return SCM_BOOL_F;
 }
 

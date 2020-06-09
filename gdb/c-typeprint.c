@@ -302,7 +302,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
 	  if (FIELD_ARTIFICIAL (arg))
 	    continue;
 
-	  c_print_type (arg.type, "", stream, 0, 0, flags);
+	  c_print_type (arg.type (), "", stream, 0, 0, flags);
 
 	  if (i == nargs && varargs)
 	    fprintf_filtered (stream, ", ...");
@@ -327,8 +327,8 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
       struct type *domain;
 
       gdb_assert (nargs > 0);
-      gdb_assert (args[0].type->code () == TYPE_CODE_PTR);
-      domain = TYPE_TARGET_TYPE (args[0].type);
+      gdb_assert (args[0].type ()->code () == TYPE_CODE_PTR);
+      domain = TYPE_TARGET_TYPE (args[0].type ());
 
       if (TYPE_CONST (domain))
 	fprintf_filtered (stream, " const");
@@ -573,7 +573,7 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 	  wrap_here ("    ");
 	}
 
-      param_type = TYPE_FIELD_TYPE (type, i);
+      param_type = type->field (i).type ();
 
       if (language == language_cplus && linkage_name)
 	{
@@ -780,8 +780,8 @@ c_type_print_varspec_suffix (struct type *type,
 	fprintf_filtered (stream, (is_vector ?
 				   " __attribute__ ((vector_size(" : "["));
 	/* Bounds are not yet resolved, print a bounds placeholder instead.  */
-	if (TYPE_HIGH_BOUND_KIND (TYPE_INDEX_TYPE (type)) == PROP_LOCEXPR
-	    || TYPE_HIGH_BOUND_KIND (TYPE_INDEX_TYPE (type)) == PROP_LOCLIST)
+	if (TYPE_HIGH_BOUND_KIND (type->index_type ()) == PROP_LOCEXPR
+	    || TYPE_HIGH_BOUND_KIND (type->index_type ()) == PROP_LOCLIST)
 	  fprintf_filtered (stream, "variable length");
 	else if (get_array_bounds (type, &low_bound, &high_bound))
 	  fprintf_filtered (stream, "%s", 
@@ -1179,8 +1179,8 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 	  int newshow = show - 1;
 
 	  if (!is_static && flags->print_offsets
-	      && (TYPE_FIELD_TYPE (type, i)->code () == TYPE_CODE_STRUCT
-		  || TYPE_FIELD_TYPE (type, i)->code () == TYPE_CODE_UNION))
+	      && (type->field (i).type ()->code () == TYPE_CODE_STRUCT
+		  || type->field (i).type ()->code () == TYPE_CODE_UNION))
 	    {
 	      /* If we're printing offsets and this field's type is
 		 either a struct or an union, then we're interested in
@@ -1200,10 +1200,10 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 		 the whole struct/union.  */
 	      local_podata.end_bitpos
 		= podata->end_bitpos
-		  - TYPE_LENGTH (TYPE_FIELD_TYPE (type, i)) * TARGET_CHAR_BIT;
+		  - TYPE_LENGTH (type->field (i).type ()) * TARGET_CHAR_BIT;
 	    }
 
-	  c_print_type_1 (TYPE_FIELD_TYPE (type, i),
+	  c_print_type_1 (type->field (i).type (),
 			  TYPE_FIELD_NAME (type, i),
 			  stream, newshow, level + 4,
 			  language, &local_flags, &local_podata);
@@ -1645,7 +1645,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 		print_spaces_filtered (level + 4, stream);
 		/* We pass "show" here and not "show - 1" to get enum types
 		   printed.  There's no other way to see them.  */
-		c_print_type_1 (TYPE_FIELD_TYPE (type, i),
+		c_print_type_1 (type->field (i).type (),
 				TYPE_FIELD_NAME (type, i),
 				stream, show, level + 4,
 				language, &local_flags, podata);

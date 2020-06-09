@@ -9419,8 +9419,7 @@ alloc_rust_variant (struct obstack *obstack, struct type *type,
 
   variant_part *part = new (obstack) variant_part;
   part->discriminant_index = discriminant_index;
-  part->is_unsigned = TYPE_UNSIGNED (TYPE_FIELD_TYPE (type,
-						      discriminant_index));
+  part->is_unsigned = TYPE_UNSIGNED (type->field (discriminant_index).type ());
   part->variants = gdb::array_view<variant> (variants, n_variants);
 
   void *storage = obstack_alloc (obstack, sizeof (gdb::array_view<variant_part>));
@@ -9472,7 +9471,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       /* Decode the field name to find the offset of the
 	 discriminant.  */
       ULONGEST bit_offset = 0;
-      struct type *field_type = TYPE_FIELD_TYPE (type, 0);
+      struct type *field_type = type->field (0).type ();
       while (name[0] >= '0' && name[0] <= '9')
 	{
 	  char *tail;
@@ -9492,7 +9491,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	  ++name;
 
 	  bit_offset += TYPE_FIELD_BITPOS (field_type, index);
-	  field_type = TYPE_FIELD_TYPE (field_type, index);
+	  field_type = field_type->field (index).type ();
 	}
 
       /* Smash this type to be a structure type.  We have to do this
@@ -9505,7 +9504,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	((struct field *) TYPE_ZALLOC (type, 3 * sizeof (struct field)));
 
       /* Put the discriminant at index 0.  */
-      TYPE_FIELD_TYPE (type, 0) = field_type;
+      type->field (0).set_type (field_type);
       TYPE_FIELD_ARTIFICIAL (type, 0) = 1;
       TYPE_FIELD_NAME (type, 0) = "<<discriminant>>";
       SET_FIELD_BITPOS (type->field (0), bit_offset);
@@ -9514,8 +9513,8 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	 field at index 1 and the data-less field at index 2.  */
       type->field (1) = saved_field;
       TYPE_FIELD_NAME (type, 1)
-	= rust_last_path_segment (TYPE_FIELD_TYPE (type, 1)->name ());
-      TYPE_FIELD_TYPE (type, 1)->set_name
+	= rust_last_path_segment (type->field (1).type ()->name ());
+      type->field (1).type ()->set_name
 	(rust_fully_qualify (&objfile->objfile_obstack, type->name (),
 			     TYPE_FIELD_NAME (type, 1)));
 
@@ -9524,7 +9523,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 			      name);
       struct type *dataless_type = init_type (objfile, TYPE_CODE_VOID, 0,
 					      dataless_name);
-      TYPE_FIELD_TYPE (type, 2) = dataless_type;
+      type->field (2).set_type (dataless_type);
       /* NAME points into the original discriminant name, which
 	 already has the correct lifetime.  */
       TYPE_FIELD_NAME (type, 2) = name;
@@ -9542,7 +9541,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	 because the type has already been recorded.  */
       type->set_code (TYPE_CODE_STRUCT);
 
-      struct type *field_type = TYPE_FIELD_TYPE (type, 0);
+      struct type *field_type = type->field (0).type ();
       const char *variant_name
 	= rust_last_path_segment (field_type->name ());
       TYPE_FIELD_NAME (type, 0) = variant_name;
@@ -9555,7 +9554,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       struct type *disr_type = nullptr;
       for (int i = 0; i < type->num_fields (); ++i)
 	{
-	  disr_type = TYPE_FIELD_TYPE (type, i);
+	  disr_type = type->field (i).type ();
 
 	  if (disr_type->code () != TYPE_CODE_STRUCT)
 	    {
@@ -9606,7 +9605,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 
       /* We need a way to find the correct discriminant given a
 	 variant name.  For convenience we build a map here.  */
-      struct type *enum_type = FIELD_TYPE (*disr_field);
+      struct type *enum_type = disr_field->type ();
       std::unordered_map<std::string, ULONGEST> discriminant_map;
       for (int i = 0; i < enum_type->num_fields (); ++i)
 	{
@@ -9632,7 +9631,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	     That name can be used to look up the correct
 	     discriminant.  */
 	  const char *variant_name
-	    = rust_last_path_segment (TYPE_FIELD_TYPE (type, i)->name ());
+	    = rust_last_path_segment (type->field (i).type ()->name ());
 
 	  auto iter = discriminant_map.find (variant_name);
 	  if (iter != discriminant_map.end ())
@@ -9642,7 +9641,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	    }
 
 	  /* Remove the discriminant field, if it exists.  */
-	  struct type *sub_type = TYPE_FIELD_TYPE (type, i);
+	  struct type *sub_type = type->field (i).type ();
 	  if (sub_type->num_fields () > 0)
 	    {
 	      sub_type->set_num_fields (sub_type->num_fields () - 1);
@@ -10483,9 +10482,8 @@ dwarf2_compute_name (const char *name,
 		     the two cases.  */
 		  if (type->num_fields () > 0
 		      && TYPE_FIELD_ARTIFICIAL (type, 0)
-		      && TYPE_FIELD_TYPE (type, 0)->code () == TYPE_CODE_PTR
-		      && TYPE_CONST (TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (type,
-									0))))
+		      && type->field (0).type ()->code () == TYPE_CODE_PTR
+		      && TYPE_CONST (TYPE_TARGET_TYPE (type->field (0).type ())))
 		    buf.puts (" const");
 		}
 	    }
@@ -14540,7 +14538,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       /* Data member other than a C++ static data member.  */
 
       /* Get type of field.  */
-      fp->type = die_type (die, cu);
+      fp->set_type (die_type (die, cu));
 
       SET_FIELD_BITPOS (*fp, 0);
 
@@ -14594,7 +14592,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		     the bit field must be inferred from the type
 		     attribute of the data member containing the
 		     bit field.  */
-		  anonymous_size = TYPE_LENGTH (fp->type);
+		  anonymous_size = TYPE_LENGTH (fp->type ());
 		}
 	      SET_FIELD_BITPOS (*fp,
 				(FIELD_BITPOS (*fp)
@@ -14660,7 +14658,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       /* The name is already allocated along with this objfile, so we don't
 	 need to duplicate it for the type.  */
       SET_FIELD_PHYSNAME (*fp, physname ? physname : "");
-      FIELD_TYPE (*fp) = die_type (die, cu);
+      fp->set_type (die_type (die, cu));
       FIELD_NAME (*fp) = fieldname;
     }
   else if (die->tag == DW_TAG_inheritance)
@@ -14668,8 +14666,8 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       /* C++ base class field.  */
       handle_data_member_location (die, cu, fp);
       FIELD_BITSIZE (*fp) = 0;
-      FIELD_TYPE (*fp) = die_type (die, cu);
-      FIELD_NAME (*fp) = fp->type->name ();
+      fp->set_type (die_type (die, cu));
+      FIELD_NAME (*fp) = fp->type ()->name ();
     }
   else
     gdb_assert_not_reached ("missing case in dwarf2_add_field");
@@ -14868,8 +14866,7 @@ create_one_variant_part (variant_part &result,
     {
       result.discriminant_index = iter->second;
       result.is_unsigned
-	= TYPE_UNSIGNED (FIELD_TYPE
-			 (fi->fields[result.discriminant_index].field));
+	= TYPE_UNSIGNED (fi->fields[result.discriminant_index].field.type ());
     }
 
   size_t n = builder.variants.size ();
@@ -15244,7 +15241,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
 	      else
 		{
 		  fnp->fcontext
-		    = TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (this_type, 0));
+		    = TYPE_TARGET_TYPE (this_type->field (0).type ());
 		}
 	    }
 	}
@@ -15342,7 +15339,7 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
     return;
 
   /* Find the type of the method.  */
-  pfn_type = TYPE_FIELD_TYPE (type, 0);
+  pfn_type = type->field (0).type ();
   if (pfn_type == NULL
       || pfn_type->code () != TYPE_CODE_PTR
       || TYPE_TARGET_TYPE (pfn_type)->code () != TYPE_CODE_FUNC)
@@ -15351,11 +15348,11 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
   /* Look for the "this" argument.  */
   pfn_type = TYPE_TARGET_TYPE (pfn_type);
   if (pfn_type->num_fields () == 0
-      /* || TYPE_FIELD_TYPE (pfn_type, 0) == NULL */
-      || TYPE_FIELD_TYPE (pfn_type, 0)->code () != TYPE_CODE_PTR)
+      /* || pfn_type->field (0).type () == NULL */
+      || pfn_type->field (0).type ()->code () != TYPE_CODE_PTR)
     return;
 
-  self_type = TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (pfn_type, 0));
+  self_type = TYPE_TARGET_TYPE (pfn_type->field (0).type ());
   new_type = alloc_type (objfile);
   smash_to_method_type (new_type, self_type, TYPE_TARGET_TYPE (pfn_type),
 			pfn_type->fields (), pfn_type->num_fields (),
@@ -17228,7 +17225,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
       /* TYPE_FIELD_TYPE must never be NULL.  Pre-fill the array to ensure it
 	 even if we error out during the parameters reading below.  */
       for (iparams = 0; iparams < nparams; iparams++)
-	TYPE_FIELD_TYPE (ftype, iparams) = void_type;
+	ftype->field (iparams).set_type (void_type);
 
       iparams = 0;
       child_die = die->child;
@@ -17285,7 +17282,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 					     arg_type, 0);
 		}
 
-	      TYPE_FIELD_TYPE (ftype, iparams) = arg_type;
+	      ftype->field (iparams).set_type (arg_type);
 	      iparams++;
 	    }
 	  child_die = child_die->sibling;

@@ -635,6 +635,16 @@ union field_location
 
 struct field
 {
+  struct type *type () const
+  {
+    return this->m_type;
+  }
+
+  void set_type (struct type *type)
+  {
+    this->m_type = type;
+  }
+
   union field_location loc;
 
   /* * For a function or member type, this is 1 if the argument is
@@ -660,7 +670,7 @@ struct field
      - In a function or member type, type of this argument.
      - In an array type, the domain-type of the array.  */
 
-  struct type *type;
+  struct type *m_type;
 
   /* * Name of field, value or argument.
      NULL for range bounds, array domains, and member function
@@ -931,6 +941,16 @@ struct type
   void set_fields (struct field *fields)
   {
     this->main_type->flds_bnds.fields = fields;
+  }
+
+  type *index_type () const
+  {
+    return this->field (0).type ();
+  }
+
+  void set_index_type (type *index_type)
+  {
+    this->field (0).set_type (index_type);
   }
 
   /* * Return the dynamic property of the requested KIND from this type's
@@ -1482,7 +1502,6 @@ extern unsigned type_align (struct type *);
    space in struct type.  */
 extern bool set_type_align (struct type *, ULONGEST);
 
-#define TYPE_INDEX_TYPE(type) TYPE_FIELD_TYPE (type, 0)
 #define TYPE_RANGE_DATA(thistype) TYPE_MAIN_TYPE(thistype)->flds_bnds.bounds
 #define TYPE_LOW_BOUND(range_type) \
   TYPE_RANGE_DATA(range_type)->low.data.const_val
@@ -1531,18 +1550,18 @@ extern bool set_type_align (struct type *, ULONGEST);
    index type.  */
 
 #define TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED(arraytype) \
-   TYPE_HIGH_BOUND_UNDEFINED(TYPE_INDEX_TYPE(arraytype))
+   TYPE_HIGH_BOUND_UNDEFINED((arraytype)->index_type ())
 #define TYPE_ARRAY_LOWER_BOUND_IS_UNDEFINED(arraytype) \
-   TYPE_LOW_BOUND_UNDEFINED(TYPE_INDEX_TYPE(arraytype))
+   TYPE_LOW_BOUND_UNDEFINED((arraytype)->index_type ())
 
 #define TYPE_ARRAY_UPPER_BOUND_VALUE(arraytype) \
-   (TYPE_HIGH_BOUND(TYPE_INDEX_TYPE((arraytype))))
+   (TYPE_HIGH_BOUND((arraytype)->index_type ()))
 
 #define TYPE_ARRAY_LOWER_BOUND_VALUE(arraytype) \
-   (TYPE_LOW_BOUND(TYPE_INDEX_TYPE((arraytype))))
+   (TYPE_LOW_BOUND((arraytype)->index_type ()))
 
 #define TYPE_ARRAY_BIT_STRIDE(arraytype) \
-  (TYPE_BIT_STRIDE(TYPE_INDEX_TYPE((arraytype))))
+  (TYPE_BIT_STRIDE(((arraytype)->index_type ())))
 
 /* C++ */
 
@@ -1579,7 +1598,7 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 #define TYPE_CALLING_CONVENTION(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.func_stuff->calling_convention
 #define TYPE_NO_RETURN(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.func_stuff->is_noreturn
 #define TYPE_TAIL_CALL_LIST(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.func_stuff->tail_call_list
-#define TYPE_BASECLASS(thistype,index) TYPE_FIELD_TYPE(thistype, index)
+#define TYPE_BASECLASS(thistype,index) ((thistype)->field (index).type ())
 #define TYPE_N_BASECLASSES(thistype) TYPE_CPLUS_SPECIFIC(thistype)->n_baseclasses
 #define TYPE_BASECLASS_NAME(thistype,index) TYPE_FIELD_NAME(thistype, index)
 #define TYPE_BASECLASS_BITPOS(thistype,index) TYPE_FIELD_BITPOS(thistype,index)
@@ -1591,7 +1610,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
   (TYPE_CPLUS_SPECIFIC(thistype)->virtual_field_bits == NULL ? 0 \
     : B_TST(TYPE_CPLUS_SPECIFIC(thistype)->virtual_field_bits, (index)))
 
-#define FIELD_TYPE(thisfld) ((thisfld).type)
 #define FIELD_NAME(thisfld) ((thisfld).name)
 #define FIELD_LOC_KIND(thisfld) ((thisfld).loc_kind)
 #define FIELD_BITPOS_LVAL(thisfld) ((thisfld).loc.bitpos)
@@ -1619,7 +1637,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 #define FIELD_ARTIFICIAL(thisfld) ((thisfld).artificial)
 #define FIELD_BITSIZE(thisfld) ((thisfld).bitsize)
 
-#define TYPE_FIELD_TYPE(thistype, n) FIELD_TYPE((thistype)->field (n))
 #define TYPE_FIELD_NAME(thistype, n) FIELD_NAME((thistype)->field (n))
 #define TYPE_FIELD_LOC_KIND(thistype, n) FIELD_LOC_KIND ((thistype)->field (n))
 #define TYPE_FIELD_BITPOS(thistype, n) FIELD_BITPOS ((thistype)->field (n))

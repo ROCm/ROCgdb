@@ -566,7 +566,7 @@ lookup_function_type_with_arguments (struct type *type,
   fn->set_fields
     ((struct field *) TYPE_ZALLOC (fn, nparams * sizeof (struct field)));
   for (i = 0; i < nparams; ++i)
-    TYPE_FIELD_TYPE (fn, i) = param_types[i];
+    fn->field (i).set_type (param_types[i]);
 
   return fn;
 }
@@ -1117,7 +1117,7 @@ get_discrete_bounds (struct type *type, LONGEST *lowp, LONGEST *highp)
 int
 get_array_bounds (struct type *type, LONGEST *low_bound, LONGEST *high_bound)
 {
-  struct type *index = TYPE_INDEX_TYPE (type);
+  struct type *index = type->index_type ();
   LONGEST low = 0;
   LONGEST high = 0;
   int res;
@@ -1195,7 +1195,7 @@ update_static_array_size (struct type *type)
 {
   gdb_assert (type->code () == TYPE_CODE_ARRAY);
 
-  struct type *range_type = TYPE_INDEX_TYPE (type);
+  struct type *range_type = type->index_type ();
 
   if (type->dyn_prop (DYN_PROP_BYTE_STRIDE) == nullptr
       && has_static_range (TYPE_RANGE_DATA (range_type))
@@ -1293,7 +1293,7 @@ create_array_type_with_stride (struct type *result_type,
   result_type->set_num_fields (1);
   result_type->set_fields
     ((struct field *) TYPE_ZALLOC (result_type, sizeof (struct field)));
-  TYPE_INDEX_TYPE (result_type) = range_type;
+  result_type->set_index_type (range_type);
   if (byte_stride_prop != NULL)
     result_type->add_dyn_prop (DYN_PROP_BYTE_STRIDE, *byte_stride_prop);
   else if (bit_stride > 0)
@@ -1405,7 +1405,7 @@ create_set_type (struct type *result_type, struct type *domain_type)
       if (low_bound >= 0)
 	TYPE_UNSIGNED (result_type) = 1;
     }
-  TYPE_FIELD_TYPE (result_type, 0) = domain_type;
+  result_type->field (0).set_type (domain_type);
 
   return result_type;
 }
@@ -1771,7 +1771,7 @@ lookup_struct_elt (struct type *type, const char *name, int noerr)
      else if (!t_field_name || *t_field_name == '\0')
 	{
 	  struct_elt elt
-	    = lookup_struct_elt (TYPE_FIELD_TYPE (type, i), name, 1);
+	    = lookup_struct_elt (type->field (i).type (), name, 1);
 	  if (elt.field != NULL)
 	    {
 	      elt.offset += TYPE_FIELD_BITPOS (type, i);
@@ -1802,7 +1802,7 @@ lookup_struct_elt_type (struct type *type, const char *name, int noerr)
 {
   struct_elt elt = lookup_struct_elt (type, name, noerr);
   if (elt.field != NULL)
-    return FIELD_TYPE (*elt.field);
+    return elt.field->type ();
   else
     return NULL;
 }
@@ -2027,7 +2027,7 @@ is_dynamic_type_internal (struct type *type, int top_level)
 	gdb_assert (type->num_fields () == 1);
 
 	/* The array is dynamic if either the bounds are dynamic...  */
-	if (is_dynamic_type_internal (TYPE_INDEX_TYPE (type), 0))
+	if (is_dynamic_type_internal (type->index_type (), 0))
 	  return 1;
 	/* ... or the elements it contains have a dynamic contents...  */
 	if (is_dynamic_type_internal (TYPE_TARGET_TYPE (type), 0))
@@ -2051,7 +2051,7 @@ is_dynamic_type_internal (struct type *type, int top_level)
 	    if (field_is_static (&type->field (i)))
 	      continue;
 	    /* If the field has dynamic type, then so does TYPE.  */
-	    if (is_dynamic_type_internal (TYPE_FIELD_TYPE (type, i), 0))
+	    if (is_dynamic_type_internal (type->field (i).type (), 0))
 	      return 1;
 	    /* If the field is at a fixed offset, then it is not
 	       dynamic.  */
@@ -2183,7 +2183,7 @@ resolve_dynamic_array_or_string (struct type *type,
   type = copy_type (type);
 
   elt_type = type;
-  range_type = check_typedef (TYPE_INDEX_TYPE (elt_type));
+  range_type = check_typedef (elt_type->index_type ());
   range_type = resolve_dynamic_range (range_type, addr_stack);
 
   /* Resolve allocated/associated here before creating a new array type, which
@@ -2261,9 +2261,9 @@ resolve_dynamic_union (struct type *type,
       if (field_is_static (&type->field (i)))
 	continue;
 
-      t = resolve_dynamic_type_internal (TYPE_FIELD_TYPE (resolved_type, i),
+      t = resolve_dynamic_type_internal (resolved_type->field (i).type (),
 					 addr_stack, 0);
-      TYPE_FIELD_TYPE (resolved_type, i) = t;
+      resolved_type->field (i).set_type (t);
       if (TYPE_LENGTH (t) > max_len)
 	max_len = TYPE_LENGTH (t);
     }
@@ -2358,7 +2358,7 @@ compute_variant_fields_inner (struct type *type,
 	  LONGEST bitsize = TYPE_FIELD_BITSIZE (type, idx);
 	  LONGEST size = bitsize / 8;
 	  if (size == 0)
-	    size = TYPE_LENGTH (TYPE_FIELD_TYPE (type, idx));
+	    size = TYPE_LENGTH (type->field (idx).type ());
 
 	  gdb_byte bits[sizeof (ULONGEST)];
 	  read_memory (addr, bits, size);
@@ -2366,7 +2366,7 @@ compute_variant_fields_inner (struct type *type,
 	  LONGEST bitpos = (TYPE_FIELD_BITPOS (type, idx)
 			    % TARGET_CHAR_BIT);
 
-	  discr_value = unpack_bits_as_long (TYPE_FIELD_TYPE (type, idx),
+	  discr_value = unpack_bits_as_long (type->field (idx).type (),
 					     bits, bitpos, bitsize);
 	}
     }
@@ -2479,7 +2479,7 @@ resolve_dynamic_struct (struct type *type,
 	{
 	  struct dwarf2_property_baton baton;
 	  baton.property_type
-	    = lookup_pointer_type (TYPE_FIELD_TYPE (resolved_type, i));
+	    = lookup_pointer_type (resolved_type->field (i).type ());
 	  baton.locexpr = *TYPE_FIELD_DWARF_BLOCK (resolved_type, i);
 
 	  struct dynamic_prop prop;
@@ -2504,16 +2504,16 @@ resolve_dynamic_struct (struct type *type,
 	error (_("Cannot determine struct field location"
 		 " (invalid location kind)"));
 
-      pinfo.type = check_typedef (TYPE_FIELD_TYPE (resolved_type, i));
+      pinfo.type = check_typedef (resolved_type->field (i).type ());
       pinfo.valaddr = addr_stack->valaddr;
       pinfo.addr
 	= (addr_stack->addr
 	   + (TYPE_FIELD_BITPOS (resolved_type, i) / TARGET_CHAR_BIT));
       pinfo.next = addr_stack;
 
-      TYPE_FIELD_TYPE (resolved_type, i)
-	= resolve_dynamic_type_internal (TYPE_FIELD_TYPE (resolved_type, i),
-					 &pinfo, 0);
+      resolved_type->field (i).set_type
+	(resolve_dynamic_type_internal (resolved_type->field (i).type (),
+					&pinfo, 0));
       gdb_assert (TYPE_FIELD_LOC_KIND (resolved_type, i)
 		  == FIELD_LOC_KIND_BITPOS);
 
@@ -2521,7 +2521,7 @@ resolve_dynamic_struct (struct type *type,
       if (TYPE_FIELD_BITSIZE (resolved_type, i) != 0)
 	new_bit_length += TYPE_FIELD_BITSIZE (resolved_type, i);
       else
-	new_bit_length += (TYPE_LENGTH (TYPE_FIELD_TYPE (resolved_type, i))
+	new_bit_length += (TYPE_LENGTH (resolved_type->field (i).type ())
 			   * TARGET_CHAR_BIT);
 
       /* Normally, we would use the position and size of the last field
@@ -3011,7 +3011,7 @@ check_stub_method (struct type *type, int method_id, int signature_id)
     argcount = 0;
   else
     {
-      argtypes[0].type = lookup_pointer_type (type);
+      argtypes[0].set_type (lookup_pointer_type (type));
       argcount = 1;
     }
 
@@ -3027,8 +3027,8 @@ check_stub_method (struct type *type, int method_id, int signature_id)
 	      if (strncmp (argtypetext, "...", p - argtypetext) != 0
 		  && strncmp (argtypetext, "void", p - argtypetext) != 0)
 		{
-		  argtypes[argcount].type =
-		    safe_parse_type (gdbarch, argtypetext, p - argtypetext);
+		  argtypes[argcount].set_type
+		    (safe_parse_type (gdbarch, argtypetext, p - argtypetext));
 		  argcount += 1;
 		}
 	      argtypetext = p + 1;
@@ -3403,7 +3403,7 @@ type_align (struct type *type)
 	    if (!field_is_static (&type->field (i)))
 	      {
 		number_of_non_static_fields++;
-		ULONGEST f_align = type_align (TYPE_FIELD_TYPE (type, i));
+		ULONGEST f_align = type_align (type->field (i).type ());
 		if (f_align == 0)
 		  {
 		    /* Don't pretend we know something we don't.  */
@@ -3541,25 +3541,25 @@ is_scalar_type_recursive (struct type *t)
   /* Are we dealing with an array or string of known dimensions?  */
   else if ((t->code () == TYPE_CODE_ARRAY
 	    || t->code () == TYPE_CODE_STRING) && t->num_fields () == 1
-	   && TYPE_INDEX_TYPE(t)->code () == TYPE_CODE_RANGE)
+	   && t->index_type ()->code () == TYPE_CODE_RANGE)
     {
       LONGEST low_bound, high_bound;
       struct type *elt_type = check_typedef (TYPE_TARGET_TYPE (t));
 
-      get_discrete_bounds (TYPE_INDEX_TYPE (t), &low_bound, &high_bound);
+      get_discrete_bounds (t->index_type (), &low_bound, &high_bound);
 
       return high_bound == low_bound && is_scalar_type_recursive (elt_type);
     }
   /* Are we dealing with a struct with one element?  */
   else if (t->code () == TYPE_CODE_STRUCT && t->num_fields () == 1)
-    return is_scalar_type_recursive (TYPE_FIELD_TYPE (t, 0));
+    return is_scalar_type_recursive (t->field (0).type ());
   else if (t->code () == TYPE_CODE_UNION)
     {
       int i, n = t->num_fields ();
 
       /* If all elements of the union are scalar, then the union is scalar.  */
       for (i = 0; i < n; i++)
-	if (!is_scalar_type_recursive (TYPE_FIELD_TYPE (t, i)))
+	if (!is_scalar_type_recursive (t->field (i).type ()))
 	  return 0;
 
       return 1;
@@ -3960,7 +3960,7 @@ types_equal (struct type *a, struct type *b)
 	return false;
 
       for (i = 0; i < a->num_fields (); ++i)
-	if (!types_equal (TYPE_FIELD_TYPE (a, i), TYPE_FIELD_TYPE (b, i)))
+	if (!types_equal (a->field (i).type (), b->field (i).type ()))
 	  return false;
 
       return true;
@@ -4085,7 +4085,7 @@ check_types_equal (struct type *type1, struct type *type2,
 			      FIELD_LOC_KIND (*field1));
 	    }
 
-	  worklist->emplace_back (FIELD_TYPE (*field1), FIELD_TYPE (*field2));
+	  worklist->emplace_back (field1->type (), field2->type ());
 	}
     }
 
@@ -4553,8 +4553,8 @@ rank_one_type_parm_set (struct type *parm, struct type *arg, struct value *value
     {
       /* Not in C++ */
     case TYPE_CODE_SET:
-      return rank_one_type (TYPE_FIELD_TYPE (parm, 0),
-			    TYPE_FIELD_TYPE (arg, 0), NULL);
+      return rank_one_type (parm->field (0).type (),
+			    arg->field (0).type (), NULL);
     default:
       return INCOMPATIBLE_TYPE_BADNESS;
     }
@@ -4712,7 +4712,7 @@ print_args (struct field *args, int nargs, int spaces)
 	{
 	  printfi_filtered (spaces, "[%d] name '%s'\n", i,
 			    args[i].name != NULL ? args[i].name : "<NULL>");
-	  recursive_dump_type (args[i].type, spaces + 2);
+	  recursive_dump_type (args[i].type (), spaces + 2);
 	}
     }
 }
@@ -5125,16 +5125,16 @@ recursive_dump_type (struct type *type, int spaces)
 			  "[%d] bitpos %s bitsize %d type ",
 			  idx, plongest (TYPE_FIELD_BITPOS (type, idx)),
 			  TYPE_FIELD_BITSIZE (type, idx));
-      gdb_print_host_address (TYPE_FIELD_TYPE (type, idx), gdb_stdout);
+      gdb_print_host_address (type->field (idx).type (), gdb_stdout);
       printf_filtered (" name '%s' (",
 		       TYPE_FIELD_NAME (type, idx) != NULL
 		       ? TYPE_FIELD_NAME (type, idx)
 		       : "<NULL>");
       gdb_print_host_address (TYPE_FIELD_NAME (type, idx), gdb_stdout);
       printf_filtered (")\n");
-      if (TYPE_FIELD_TYPE (type, idx) != NULL)
+      if (type->field (idx).type () != NULL)
 	{
-	  recursive_dump_type (TYPE_FIELD_TYPE (type, idx), spaces + 4);
+	  recursive_dump_type (type->field (idx).type (), spaces + 4);
 	}
     }
   if (type->code () == TYPE_CODE_RANGE)
@@ -5320,10 +5320,10 @@ copy_type_recursive (struct objfile *objfile,
 	  TYPE_FIELD_ARTIFICIAL (new_type, i) = 
 	    TYPE_FIELD_ARTIFICIAL (type, i);
 	  TYPE_FIELD_BITSIZE (new_type, i) = TYPE_FIELD_BITSIZE (type, i);
-	  if (TYPE_FIELD_TYPE (type, i))
-	    TYPE_FIELD_TYPE (new_type, i)
-	      = copy_type_recursive (objfile, TYPE_FIELD_TYPE (type, i),
-				     copied_types);
+	  if (type->field (i).type ())
+	    new_type->field (i).set_type
+	      (copy_type_recursive (objfile, type->field (i).type (),
+				    copied_types));
 	  if (TYPE_FIELD_NAME (type, i))
 	    TYPE_FIELD_NAME (new_type, i) = 
 	      xstrdup (TYPE_FIELD_NAME (type, i));
@@ -5596,7 +5596,7 @@ append_flags_type_field (struct type *type, int start_bitpos, int nr_bits,
   gdb_assert (name != NULL);
 
   TYPE_FIELD_NAME (type, field_nr) = xstrdup (name);
-  TYPE_FIELD_TYPE (type, field_nr) = field_type;
+  type->field (field_nr).set_type (field_type);
   SET_FIELD_BITPOS (type->field (field_nr), start_bitpos);
   TYPE_FIELD_BITSIZE (type, field_nr) = nr_bits;
   type->set_num_fields (type->num_fields () + 1);
@@ -5647,7 +5647,7 @@ append_composite_type_field_raw (struct type *t, const char *name,
 			     t->num_fields ()));
   f = &t->field (t->num_fields () - 1);
   memset (f, 0, sizeof f[0]);
-  FIELD_TYPE (f[0]) = field;
+  f[0].set_type (field);
   FIELD_NAME (f[0]) = name;
   return f;
 }
@@ -5673,7 +5673,7 @@ append_composite_type_field_aligned (struct type *t, const char *name,
 	{
 	  SET_FIELD_BITPOS (f[0],
 			    (FIELD_BITPOS (f[-1])
-			     + (TYPE_LENGTH (FIELD_TYPE (f[-1]))
+			     + (TYPE_LENGTH (f[-1].type ())
 				* TARGET_CHAR_BIT)));
 
 	  if (alignment)

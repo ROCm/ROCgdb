@@ -300,7 +300,7 @@ evaluate_struct_tuple (struct value *struct_val,
 	fieldno++;
       if (fieldno >= struct_type->num_fields ())
 	error (_("too many initializers"));
-      field_type = TYPE_FIELD_TYPE (struct_type, fieldno);
+      field_type = struct_type->field (fieldno).type ();
       if (field_type->code () == TYPE_CODE_UNION
 	  && TYPE_FIELD_NAME (struct_type, fieldno)[0] == '0')
 	error (_("don't know which variant you want to set"));
@@ -314,7 +314,7 @@ evaluate_struct_tuple (struct value *struct_val,
 	 subfieldno is the index of the actual real (named inner) field
 	 in substruct_type.  */
 
-      field_type = TYPE_FIELD_TYPE (struct_type, fieldno);
+      field_type = struct_type->field (fieldno).type ();
       if (val == 0)
 	val = evaluate_subexp (field_type, exp, pos, noside);
 
@@ -377,7 +377,7 @@ value_f90_subarray (struct value *array,
 {
   int pc = (*pos) + 1;
   LONGEST low_bound, high_bound;
-  struct type *range = check_typedef (TYPE_INDEX_TYPE (value_type (array)));
+  struct type *range = check_typedef (value_type (array)->index_type ());
   enum range_type range_type
     = (enum range_type) longest_to_int (exp->elts[pc].longconst);
  
@@ -686,7 +686,7 @@ fake_method::fake_method (type_instance_flags flags,
     ((struct field *) xzalloc (sizeof (struct field) * num_types));
 
   while (num_types-- > 0)
-    TYPE_FIELD_TYPE (type, num_types) = param_types[num_types];
+    type->field (num_types).set_type (param_types[num_types]);
 }
 
 fake_method::~fake_method ()
@@ -1059,8 +1059,7 @@ evaluate_funcall (type *expect_type, expression *exp, int *pos,
 	    {
 	      for (; tem <= nargs && tem <= type->num_fields (); tem++)
 		{
-		  argvec[tem] = evaluate_subexp (TYPE_FIELD_TYPE (type,
-								  tem - 1),
+		  argvec[tem] = evaluate_subexp (type->field (tem - 1).type (),
 						 exp, pos, noside);
 		}
 	    }
@@ -1459,7 +1458,7 @@ evaluate_subexp_standard (struct type *expect_type,
       if (expect_type != NULL_TYPE && noside != EVAL_SKIP
 	  && type->code () == TYPE_CODE_ARRAY)
 	{
-	  struct type *range_type = TYPE_INDEX_TYPE (type);
+	  struct type *range_type = type->index_type ();
 	  struct type *element_type = TYPE_TARGET_TYPE (type);
 	  struct value *array = allocate_value (expect_type);
 	  int element_size = TYPE_LENGTH (check_typedef (element_type));
@@ -1509,7 +1508,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	{
 	  struct value *set = allocate_value (expect_type);
 	  gdb_byte *valaddr = value_contents_raw (set);
-	  struct type *element_type = TYPE_INDEX_TYPE (type);
+	  struct type *element_type = type->index_type ();
 	  struct type *check_type = element_type;
 	  LONGEST low_bound, high_bound;
 
@@ -3212,8 +3211,8 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 	  val = evaluate_subexp (NULL_TYPE, exp, pos, EVAL_NORMAL);
 	  type = value_type (val);
 	  if (type->code () == TYPE_CODE_ARRAY
-              && is_dynamic_type (TYPE_INDEX_TYPE (type))
-              && TYPE_HIGH_BOUND_UNDEFINED (TYPE_INDEX_TYPE (type)))
+              && is_dynamic_type (type->index_type ())
+              && TYPE_HIGH_BOUND_UNDEFINED (type->index_type ()))
 	    return allocate_optimized_out_value (size_type);
 	}
       else
@@ -3253,7 +3252,7 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 	      type = check_typedef (TYPE_TARGET_TYPE (type));
 	      if (type->code () == TYPE_CODE_ARRAY)
 		{
-		  type = TYPE_INDEX_TYPE (type);
+		  type = type->index_type ();
 		  /* Only re-evaluate the right hand side if the resulting type
 		     is a variable length type.  */
 		  if (TYPE_RANGE_DATA (type)->flag_bound_evaluated)

@@ -572,6 +572,9 @@ struct elf_link_hash_table
      section symbols.  */
   bfd_boolean is_relocatable_executable;
 
+  /* TRUE if there are IFUNC resolvers.  */
+  bfd_boolean ifunc_resolvers;
+
   /* The BFD used to hold special sections created by the linker.
      This will be the first BFD found which requires these sections to
      be created.  */
@@ -651,6 +654,17 @@ struct elf_link_hash_table
   /* Cached first output tls section and size of PT_TLS segment.  */
   asection *tls_sec;
   bfd_size_type tls_size;  /* Bytes.  */
+
+  /* The offset into splt of the PLT entry for the TLS descriptor
+     resolver.  Special values are 0, if not necessary (or not found
+     to be necessary yet), and -1 if needed but not determined
+     yet.  */
+  bfd_vma tlsdesc_plt;
+
+  /* The GOT offset for the lazy trampoline.  Communicated to the
+     loader via DT_TLSDESC_GOT.  The magic value (bfd_vma) -1
+     indicates an offset is not allocated.  */
+  bfd_vma tlsdesc_got;
 
   /* Target OS for linker output.  */
   enum elf_target_os target_os;
@@ -2866,8 +2880,8 @@ extern bfd_boolean _bfd_elf_create_ifunc_sections
   (bfd *, struct bfd_link_info *);
 extern bfd_boolean _bfd_elf_allocate_ifunc_dyn_relocs
   (struct bfd_link_info *, struct elf_link_hash_entry *,
-   struct elf_dyn_relocs **, bfd_boolean *, unsigned int,
-   unsigned int, unsigned int, bfd_boolean);
+   struct elf_dyn_relocs **, unsigned int, unsigned int,
+   unsigned int, bfd_boolean);
 
 extern void elf_append_rela (bfd *, asection *, Elf_Internal_Rela *);
 extern void elf_append_rel (bfd *, asection *, Elf_Internal_Rela *);

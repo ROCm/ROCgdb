@@ -453,7 +453,7 @@ static gcc_type
 compile_cplus_convert_array (compile_cplus_instance *instance,
 			     struct type *type)
 {
-  struct type *range = TYPE_INDEX_TYPE (type);
+  struct type *range = type->index_type ();
   gcc_type element_type = instance->convert_type (TYPE_TARGET_TYPE (type));
 
   if (TYPE_LOW_BOUND_KIND (range) != PROP_CONST)
@@ -593,7 +593,7 @@ compile_cplus_convert_struct_or_union_members
 	field_name = nullptr;
 
       gcc_type field_type
-	= instance->convert_type (TYPE_FIELD_TYPE (type, i));
+	= instance->convert_type (type->field (i).type ());
 
       if (field_is_static (&type->field (i)))
 	{
@@ -648,7 +648,7 @@ compile_cplus_convert_struct_or_union_members
 	    | get_field_access_flag (type, i);
 
 	  if (bitsize == 0)
-	    bitsize = 8 * TYPE_LENGTH (TYPE_FIELD_TYPE (type, i));
+	    bitsize = 8 * TYPE_LENGTH (type->field (i).type ());
 
 	  instance->plugin ().build_field
 	    (field_name, field_type, field_flags, bitsize,
@@ -998,7 +998,7 @@ compile_cplus_convert_func (compile_cplus_instance *instance,
       else
 	{
 	  array.elements[i - artificials]
-	    = instance->convert_type (TYPE_FIELD_TYPE (type, i));
+	    = instance->convert_type (type->field (i).type ());
 	}
     }
 
