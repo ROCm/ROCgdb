@@ -26813,7 +26813,7 @@ breakpoints, and instead set breakpoints in unpredictable places of
 the loaded code objects if they contain code from the same file.  This
 can result in unexpected breakpoint hits being reported.  When the
 code object containing the source lines is loaded, the incorrect
-breakpoints will be remomoved and replaced by the correct ones.  This
+breakpoints will be removed and replaced by the correct ones.  This
 problem can be avoided by only setting breakpoints in unloaded code
 objects using symbol or function names.
 
