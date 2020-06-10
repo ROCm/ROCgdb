@@ -26833,13 +26833,26 @@ application performs a @code{fork}, then the program may crash.
 
 @item
 Memory violations are reported to the wavefronts that cause them.
-However, the program location at which they are reported by be after
+However, the program location at which they are reported may be after
 the source statement that caused them.  The ROCm runtime can currently
 cause the inferior to terminate before the memory violation is
 reported.  This can be avoided by setting a breakpoint in @code{abort}
 and using the non-stop mode (@pxref{Non-Stop Mode}).  This will
 prevent the ROCm runtime from terminating the inferior, while allowing
 @value{GDBN} to report the memory violation.
+
+@item
+@value{GDBN} may report errors if execution is continued after the
+ROCm runtime aborts the application.  For example:
+
+@smallexample
+warning: unable to open /proc file '/proc/1234/status'
+@end smallexample
+
+This can happen due to memory violations in the AMD GPU code as
+described in the previous item.  To prevent the errors, do not
+continue the application after the ROCm runtime has invoked
+@code{abort}.
 
 @item
 @value{GDBN} supports watchpoints, but limits the capabilities to the lowest
