@@ -69,7 +69,6 @@ struct rocm_notify_shared_library_info
 {
   std::string compare; /* Compare loaded library names with this string.  */
   struct so_list *solib;
-  bool is_loaded;
 };
 
 /* ROCm-specific inferior data.  */
@@ -478,14 +477,13 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
 
       size_t len = requested_len;
       amd_dbgapi_status_t status;
-      uint64_t address_space =  (offset & ROCM_ASPACE_MASK) >> ROCM_ASPACE_BIT_OFFSET;
+      uint64_t address_space
+          = (offset & ROCM_ASPACE_MASK) >> ROCM_ASPACE_BIT_OFFSET;
 
       if (address_space)
         {
           if (amd_dbgapi_dwarf_address_space_to_address_space (
-                  architecture_id,
-                  address_space,
-                  &address_space_id))
+                  architecture_id, address_space, &address_space_id))
             return TARGET_XFER_EOF;
 
           offset &= ~ROCM_ASPACE_MASK;
@@ -1236,24 +1234,29 @@ rocm_target_ops::update_thread_list ()
 static void
 rocm_target_solib_loaded (struct so_list *solib)
 {
+  std::string so_name (solib->so_name);
+
+  auto pos = so_name.find_last_of ('/');
+  std::string library_name
+      = so_name.substr (pos == std::string::npos ? 0 : (pos + 1));
+
   /* Notify the amd_dbgapi that a shared library has been loaded.  */
   for (auto &&value : get_rocm_inferior_info ()->notify_solib_map)
-    /* TODO: If we want to support file name wildcards, change this code.  */
-    if (::strstr (solib->so_original_name, value.second.compare.c_str ())
-        && !value.second.is_loaded)
-      {
-        value.second.solib = solib;
-        value.second.is_loaded = true;
+    {
+      if (!value.second.solib && library_name == value.second.compare)
+        {
+          value.second.solib = solib;
 
-        amd_dbgapi_report_shared_library (
-            get_amd_dbgapi_process_id (),
-            amd_dbgapi_shared_library_id_t{ value.first },
-            AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED);
+          amd_dbgapi_report_shared_library (
+              get_amd_dbgapi_process_id (),
+              amd_dbgapi_shared_library_id_t{ value.first },
+              AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED);
 
-        /* The rocm target may not be engaged yet, we need to process the
-          events now in case there is a runtime event pending.  */
-        rocm_process_event_queue ();
-      }
+          /* The rocm target may not be engaged yet, we need to process the
+            events now in case there is a runtime event pending.  */
+          rocm_process_event_queue ();
+        }
+    }
 }
 
 static void
@@ -1262,8 +1265,7 @@ rocm_target_solib_unloaded (struct so_list *solib)
   /* Notify the amd_dbgapi that a shared library will unload.  */
   for (auto &&value : get_rocm_inferior_info ()->notify_solib_map)
     /* TODO: If we want to support file name wildcards, change this code.  */
-    if (::strstr (solib->so_original_name, value.second.compare.c_str ())
-        && value.second.is_loaded)
+    if (solib == value.second.solib)
       {
         struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
@@ -1287,7 +1289,6 @@ rocm_target_solib_unloaded (struct so_list *solib)
             ++it;
 
         value.second.solib = nullptr;
-        value.second.is_loaded = false;
       }
 }
 
@@ -1410,23 +1411,6 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
     if (!library_name || !library_state)
       return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
 
-    if (info->notify_solib_map.find (library_id.handle)
-        != info->notify_solib_map.end ())
-      {
-        /* This library id is already registered.  */
-        return AMD_DBGAPI_STATUS_ERROR;
-      }
-
-    /* Check whether the library is already loaded.  */
-    bool is_loaded = false;
-    struct so_list *solib;
-    for (solib = inf->pspace->so_list; solib; solib = solib->next)
-      if (::strstr (solib->so_original_name, library_name))
-        {
-          is_loaded = true;
-          break;
-        }
-
     /* Check that the library_name is valid.  If must not be empty, and
        should not have wildcard characters.  */
     if (*library_name == '\0'
@@ -1434,17 +1418,30 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
                != std::string::npos)
       return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
 
+    /* Check whether the library is already loaded.  */
+    struct so_list *solib;
+    for (solib = inf->pspace->so_list; solib; solib = solib->next)
+      {
+        std::string so_name (solib->so_name);
+
+        auto pos = so_name.find_last_of ('/');
+        if (so_name.substr (pos == std::string::npos ? 0 : (pos + 1))
+            == library_name)
+          break;
+      }
+
     /* Add a new entry in the notify_solib_map.  */
     if (!info->notify_solib_map
              .emplace (std::piecewise_construct,
                        std::forward_as_tuple (library_id.handle),
                        std::forward_as_tuple (rocm_notify_shared_library_info{
-                           library_name, solib, is_loaded }))
+                           library_name, solib }))
              .second)
       return AMD_DBGAPI_STATUS_ERROR;
 
-    *library_state = is_loaded ? AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED
-                               : AMD_DBGAPI_SHARED_LIBRARY_STATE_UNLOADED;
+    *library_state = solib != nullptr
+                         ? AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED
+                         : AMD_DBGAPI_SHARED_LIBRARY_STATE_UNLOADED;
 
     return AMD_DBGAPI_STATUS_SUCCESS;
   },
@@ -1613,16 +1610,16 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
     switch (level)
       {
       case AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR:
-        fputs_unfiltered ("[amd-dbgapi]: ", out_file);
+        fputs_unfiltered ("amd-dbgapi: ", out_file);
         break;
       case AMD_DBGAPI_LOG_LEVEL_WARNING:
-        fputs_styled ("[amd-dbgapi]: ", warning_style.style (), out_file);
+        fputs_styled ("amd-dbgapi: ", warning_style.style (), out_file);
         break;
       case AMD_DBGAPI_LOG_LEVEL_INFO:
-        fputs_styled ("[amd-dbgapi]: ", info_style.style (), out_file);
+        fputs_styled ("amd-dbgapi: ", info_style.style (), out_file);
         break;
       case AMD_DBGAPI_LOG_LEVEL_VERBOSE:
-        fputs_styled ("[amd-dbgapi]: ", verbose_style.style (), out_file);
+        fputs_styled ("amd-dbgapi: ", verbose_style.style (), out_file);
         break;
       }
 
