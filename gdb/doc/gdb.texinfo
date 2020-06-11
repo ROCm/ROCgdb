@@ -26967,6 +26967,11 @@ will be used if more than 4 watchpoints are requested, or if watchpoints larger
 than 32 bytes are requested.
 
 @item
+When @samp{Ctrl-C} is used to interrupt executing threads,
+@value{GDBN} does not currently refresh the list of AMD GPU threads
+and therefore may not display or stop all the AMD GPU threads.
+
+@item
 AMD GPU does not currently support calling inferior functions.
 
 @item
