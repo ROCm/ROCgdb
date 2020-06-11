@@ -1,3 +1,21 @@
+2020-06-11  Alan Modra  <amodra@gmail.com>
+
+	PR 26107
+	* pdp11.c (is_stab): Replace legacy "index" function with "strchr".
+
+2020-06-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elfnn-ia64.c (elfNN_ia64_link_hash_table): Remove reltext.
+	(allocate_dynrel_entries): Set DF_TEXTREL instead of reltext.
+	(elfNN_ia64_size_dynamic_sections): Check DF_TEXTREL instead
+	of reltext.
+
+2020-06-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26094
+	* elflink.c (bfd_elf_define_start_stop): Handle common symbols.
+	Clear verinfo.verdef.
+
 2020-06-09  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR ld/18801

@@ -138,7 +138,7 @@ Version @value{GDBVN}.
 @page
 
 @ifnottex
-@node Top, Summary, (dir), (dir)
+@node Top, Summary
 
 @top Debugging with @value{GDBN}
 

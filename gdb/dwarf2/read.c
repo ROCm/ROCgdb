@@ -3437,7 +3437,24 @@ struct dw2_symtab_iterator
   int global_seen;
 };
 
-/* Initialize the index symtab iterator ITER.  */
+/* Initialize the index symtab iterator ITER, common part.  */
+
+static void
+dw2_symtab_iter_init_common (struct dw2_symtab_iterator *iter,
+			     dwarf2_per_objfile *per_objfile,
+			     gdb::optional<block_enum> block_index,
+			     domain_enum domain)
+{
+  iter->per_objfile = per_objfile;
+  iter->block_index = block_index;
+  iter->domain = domain;
+  iter->next = 0;
+  iter->global_seen = 0;
+  iter->vec = NULL;
+  iter->length = 0;
+}
+
+/* Initialize the index symtab iterator ITER, const char *NAME variant.  */
 
 static void
 dw2_symtab_iter_init (struct dw2_symtab_iterator *iter,
@@ -3446,22 +3463,38 @@ dw2_symtab_iter_init (struct dw2_symtab_iterator *iter,
 		      domain_enum domain,
 		      const char *name)
 {
-  iter->per_objfile = per_objfile;
-  iter->block_index = block_index;
-  iter->domain = domain;
-  iter->next = 0;
-  iter->global_seen = 0;
+  dw2_symtab_iter_init_common (iter, per_objfile, block_index, domain);
 
   mapped_index *index = per_objfile->per_bfd->index_table.get ();
-
   /* index is NULL if OBJF_READNOW.  */
-  if (index != NULL && find_slot_in_mapped_hash (index, name, &iter->vec))
+  if (index == NULL)
+    return;
+
+  if (find_slot_in_mapped_hash (index, name, &iter->vec))
     iter->length = MAYBE_SWAP (*iter->vec);
-  else
-    {
-      iter->vec = NULL;
-      iter->length = 0;
-    }
+}
+
+/* Initialize the index symtab iterator ITER, offset_type NAMEI variant.  */
+
+static void
+dw2_symtab_iter_init (struct dw2_symtab_iterator *iter,
+		      dwarf2_per_objfile *per_objfile,
+		      gdb::optional<block_enum> block_index,
+		      domain_enum domain, offset_type namei)
+{
+  dw2_symtab_iter_init_common (iter, per_objfile, block_index, domain);
+
+  mapped_index *index = per_objfile->per_bfd->index_table.get ();
+  /* index is NULL if OBJF_READNOW.  */
+  if (index == NULL)
+    return;
+
+  gdb_assert (!index->symbol_name_slot_invalid (namei));
+  const auto &bucket = index->symbol_table[namei];
+
+  iter->vec = (offset_type *) (index->constant_pool
+			       + MAYBE_SWAP (bucket.vec));
+  iter->length = MAYBE_SWAP (*iter->vec);
 }
 
 /* Return the next matching CU or NULL if there are no more.  */
@@ -3746,9 +3779,6 @@ dw2_map_matching_symbols
 
   if (per_objfile->per_bfd->index_table != nullptr)
     {
-      /* Ada currently doesn't support .gdb_index (see PR24713).  We can get
-	 here though if the current language is Ada for a non-Ada objfile
-	 using GNU index.  */
       mapped_index &index = *per_objfile->per_bfd->index_table;
 
       const char *match_name = name.ada ().lookup_name ().c_str ();
@@ -3766,7 +3796,7 @@ dw2_map_matching_symbols
 	struct dwarf2_per_cu_data *per_cu;
 
 	dw2_symtab_iter_init (&iter, per_objfile, block_kind, domain,
-			      match_name);
+			      namei);
 	while ((per_cu = dw2_symtab_iter_next (&iter)) != NULL)
 	  dw2_expand_symtabs_matching_one (per_cu, per_objfile, nullptr,
 					   nullptr);
