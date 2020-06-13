@@ -180,12 +180,8 @@ SFILES = \
 	$(srcdir)/inferiors.cc \
 	$(srcdir)/linux-aarch64-low.cc \
 	$(srcdir)/linux-arm-low.cc \
-	$(srcdir)/linux-bfin-low.cc \
-	$(srcdir)/linux-cris-low.cc \
-	$(srcdir)/linux-crisv32-low.cc \
 	$(srcdir)/linux-ia64-low.cc \
 	$(srcdir)/linux-low.cc \
-	$(srcdir)/linux-m32r-low.cc \
 	$(srcdir)/linux-m68k-low.cc \
 	$(srcdir)/linux-mips-low.cc \
 	$(srcdir)/linux-nios2-low.cc \
@@ -194,7 +190,6 @@ SFILES = \
 	$(srcdir)/linux-s390-low.cc \
 	$(srcdir)/linux-sh-low.cc \
 	$(srcdir)/linux-sparc-low.cc \
-	$(srcdir)/linux-tile-low.cc \
 	$(srcdir)/linux-x86-low.cc \
 	$(srcdir)/linux-xtensa-low.cc \
 	$(srcdir)/mem-break.cc \
@@ -207,10 +202,8 @@ SFILES = \
 	$(srcdir)/target.cc \
 	$(srcdir)/thread-db.cc \
 	$(srcdir)/utils.cc \
-	$(srcdir)/win32-arm-low.cc \
 	$(srcdir)/win32-i386-low.cc \
 	$(srcdir)/win32-low.cc \
-	$(srcdir)/wincecompat.cc \
 	$(srcdir)/x86-low.cc \
 	$(srcdir)/../gdb/alloc.c \
 	$(srcdir)/../gdb/arch/arm.c \

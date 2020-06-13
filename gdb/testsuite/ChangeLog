@@ -1,3 +1,48 @@
+2020-06-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+	    Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_known_globals, gdb_persistent_globals): New global.
+	(gdb_persistent_global, gdb_persistent_global_no_decl): New proc.
+	(gdb_setup_known_globals): New proc.
+	(gdb_cleanup_globals): New proc.
+	* lib/gdb.exp (load_lib): New override proc.
+	(gdb_stdin_log_init): Set var in_file as persistent global.
+	* lib/pascal.exp (gdb_stdin_log_init): Set vars
+	pascal_compiler_is_gpc, pascal_compiler_is_fpc, gpc_compiler and
+	fpc_compiler as persistent global.
+
+2020-06-12  Tom de Vries  <tdevries@suse.de>
+
+	* lib/tuiterm.exp (spawn): Rename to ...
+	(tui_spawn): ... this.
+	(toplevel): Move rename of spawn ...
+	(gdb_init_tuiterm): ... here.  New proc.
+	(gdb_finish_tuiterm): New proc.
+	* lib/gdb.exp (gdb_finish_hooks): New global var.
+	(gdb_finish): Handle gdb_finish_hooks.
+	(tuiterm_env): New proc.
+	* gdb.python/tui-window.exp: Replace load_lib tuiterm.exp with
+	tuiterm_env.
+	* gdb.tui/basic.exp: Same.
+	* gdb.tui/corefile-run.exp: Same.
+	* gdb.tui/empty.exp: Same.
+	* gdb.tui/list-before.exp: Same.
+	* gdb.tui/list.exp: Same.
+	* gdb.tui/main.exp: Same.
+	* gdb.tui/new-layout.exp: Same.
+	* gdb.tui/regs.exp: Same.
+	* gdb.tui/resize.exp: Same.
+	* gdb.tui/tui-layout-asm-short-prog.exp: Same.
+	* gdb.tui/tui-layout-asm.exp: Same.
+	* gdb.tui/tui-missing-src.exp: Same.
+	* gdb.tui/winheight.exp: Same.
+
+2020-06-12  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26110
+	* lib/gdb.exp (gdb_init): Revert dejagnu's override of ::unknown.
+	(gdb_finish): Reinstall dejagnu's override of ::unknown.
+
 2020-06-11  Tom Tromey  <tom@tromey.com>
 
 	PR gdb/18318:
