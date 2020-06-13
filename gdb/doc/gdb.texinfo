@@ -26965,6 +26965,12 @@ will be used if more than 4 watchpoints are requested, or if watchpoints larger
 than 32 bytes are requested.
 
 @item
+When single stepping there can be times when @value{GDBN} appears to
+wait indefinitely for the single step to complete.  If this happens,
+@samp{Ctrl-C} can be used to cancel the single step command so it can
+be tried again.
+
+@item
 AMD GPU does not currently support calling inferior functions.
 
 @item
