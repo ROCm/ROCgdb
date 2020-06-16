@@ -5813,7 +5813,15 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 	  if (h == NULL)
 	    continue;
 
-	  if (h->root.type == bfd_link_hash_common)
+	  if (h->root.type == bfd_link_hash_undefined)
+	    {
+	      /* If the archive element has already been loaded then one
+		 of the symbols defined by that element might have been
+		 made undefined due to being in a discarded section.  */
+	      if (h->indx == -3)
+		continue;
+	    }
+	  else if (h->root.type == bfd_link_hash_common)
 	    {
 	      /* We currently have a common symbol.  The archive map contains
 		 a reference to this symbol, so we may want to include it.  We
@@ -5830,7 +5838,7 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 	      if (! elf_link_is_defined_archive_symbol (abfd, symdef))
 		continue;
 	    }
-	  else if (h->root.type != bfd_link_hash_undefined)
+	  else
 	    {
 	      if (h->root.type != bfd_link_hash_undefweak)
 		/* Symbol must be defined.  Don't check it again.  */
@@ -14829,7 +14837,8 @@ bfd_elf_define_start_stop (struct bfd_link_info *info,
       else
 	{
 	  if (ELF_ST_VISIBILITY (h->other) == STV_DEFAULT)
-	    h->other = (h->other & ~ELF_ST_VISIBILITY (-1)) | STV_PROTECTED;
+	    h->other = ((h->other & ~ELF_ST_VISIBILITY (-1))
+			| info->start_stop_visibility);
 	  if (was_dynamic)
 	    bfd_elf_link_record_dynamic_symbol (info, h);
 	}

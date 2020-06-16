@@ -1373,6 +1373,19 @@ Specify a stack size for an ELF @code{PT_GNU_STACK} segment.
 Specifying zero will override any default non-zero sized
 @code{PT_GNU_STACK} segment creation.
 
+@item start-stop-visibility=@var{value}
+@cindex visibility
+@cindex ELF symbol visibility
+Specify the ELF symbol visibility for synthesized
+@code{__start_SECNAME} and @code{__stop_SECNAME} symbols (@pxref{Input
+Section Example}).  @var{value} must be exactly @samp{default},
+@samp{internal}, @samp{hidden}, or @samp{protected}.  If no @samp{-z
+start-stop-visibility} option is given, @samp{protected} is used for
+compatibility with historical practice.  However, it's highly
+recommended to use @samp{-z start-stop-visibility=hidden} in new
+programs and shared libraries so that these symbols are not exported
+between shared objects, which is not usually what's intended.
+
 @item text
 @itemx notext
 @itemx textoff
@@ -8552,6 +8565,17 @@ more than performance.  With this option, the linker will not insert
 no-ops or widen density instructions to preserve branch target
 alignment.  There may still be some cases where no-ops are required to
 preserve the correctness of the code.
+
+@item --abi-windowed
+@itemx --abi-call0
+Choose ABI for the output object and for the generated PLT code.
+PLT code inserted by the linker must match ABI of the output object
+because windowed and call0 ABI use incompatible function call
+conventions.
+Default ABI is chosen by the ABI tag in the @code{.xtensa.info} section
+of the first input object.
+A warning is issued if ABI tags of input objects do not match each other
+or the chosen output object ABI.
 @end table
 
 @ifclear GENERIC

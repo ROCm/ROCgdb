@@ -1,3 +1,60 @@
+2020-06-15  Max Filippov  <jcmvbkbc@gmail.com>
+
+	* emultempl/xtensaelf.em (XSHAL_ABI): Remove macro definition.
+	(XTHAL_ABI_UNDEFINED, XTHAL_ABI_WINDOWED, XTHAL_ABI_CALL0): New
+	macros.
+	(elf32xtensa_abi): New declaration.
+	(xt_config_info_unpack_and_check): Set elf32xtensa_abi if it is
+	undefined.  Use xtensa_abi_choice instead of XSHAL_ABI to test
+	ABI tag consistency.
+	(xtensa_add_config_info): Use xtensa_abi_choice instead of
+	XSHAL_ABI to format ABI tag.
+	(PARSE_AND_LIST_PROLOGUE): Define OPTION_ABI_WINDOWED,
+	OPTION_ABI_CALL0 and declare elf32xtensa_abi.
+	(PARSE_AND_LIST_LONGOPTS): Add entries for --abi-windowed and
+	--abi-call0.
+	(PARSE_AND_LIST_OPTIONS): Add help text for --abi-windowed and
+	--abi-call0.
+	(PARSE_AND_LIST_ARGS_CASES): Add handlers for --abi-windowed and
+	--abi-call0.
+	* ld.texi: Add description for options --abi-windowed and
+	--abi-call0.
+
+2020-06-15  Roland McGrath  <mcgrathr@google.com>
+
+	* NEWS: Mention -z start-stop-visibility=... option for ELF.
+	* ld.texi (Options): Document -z start-stop-visibility=... option.
+	* ldmain.c (main): Initialize link_info.start_stop_visibility.
+	* emultempl/elf.em (gld${EMULATION_NAME}_handle_option):
+	Parse -z start-stop-visibility=... option.
+
+2020-06-15  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-scripts/include.exp: Don't load ld-lib.exp.
+	* testsuite/ld-scripts/phdrs3.exp: Likewise.
+	* testsuite/ld-scripts/rgn-at.exp: Likewise.
+	* testsuite/ld-scripts/rgn-over.exp: Likewise.
+	* testsuite/ld-scripts/sort.exp: Likewise.
+	* testsuite/ld-discard/discard.exp: Likewise.  Use is_elf_format.
+
+2020-06-15  Alan Modra  <amodra@gmail.com>
+
+	PR 26103
+	* testsuite/ld-linkonce/ref1.s,
+	* testsuite/ld-linkonce/ref2.s,
+	* testsuite/ld-linkonce/sym1.s,
+	* testsuite/ld-linkonce/sym2.s,
+	* testsuite/ld-linkonce/sym3.s: New test files.
+	* testsuite/ld-linkonce/linkonce.exp: Run tests for PE too.
+	Add pr26103 test.  Remove unnecessary load_lib.
+
+2020-06-15  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-linkonce/zeroeh_x.s: Rename from x.s.
+	* testsuite/ld-linkonce/zeroeh_y.s: Rename from y.s.
+	* testsuite/ld-linkonce/zeroehl32.d: Adjust for renaming.  Support
+	big-endian output.  Run for powerpc.
+
 2020-06-11  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/ld-plugin/lto.exp (lto_link_tests): Move lto-6,

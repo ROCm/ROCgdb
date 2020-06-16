@@ -1,3 +1,41 @@
+2020-06-15  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_nat::handle_output_debug_string):
+	Update.
+	(windows_nat::handle_ms_vc_exception): Update.
+	* target.h (target_read_string): Change API.
+	* target.c (target_read_string): Change API.
+	* solib-svr4.c (open_symbol_file_object, svr4_read_so_list):
+	Update.
+	* solib-frv.c (frv_current_sos): Update.
+	* solib-dsbt.c (dsbt_current_sos): Update.
+	* solib-darwin.c (darwin_current_sos): Update.
+	* linux-thread-db.c (inferior_has_bug): Update.
+	* expprint.c (print_subexp_standard): Update.
+	* ada-lang.c (ada_main_name, ada_tag_name_from_tsd)
+	(ada_exception_message_1): Update.
+
+2020-06-15  Tom Tromey  <tromey@adacore.com>
+
+	* linux-tdep.c (dump_mapping_p): Use target_read_memory.
+
+2020-06-15  Tom Tromey  <tromey@adacore.com>
+
+	* valprint.c (read_string): Update comment.
+	* target.c (MIN): Remove.
+	(target_read_string): Rewrite.
+
+2020-06-15  Tom Tromey  <tromey@adacore.com>
+
+	* corefile.c (read_memory_string): Remove.
+	* ada-valprint.c (ada_value_print_ptr): Update.
+	* ada-lang.h (ada_tag_name): Change return type.
+	* ada-lang.c (type_from_tag): Update.
+	(ada_tag_name_from_tsd): Change return type.  Use
+	target_read_string.
+	(ada_tag_name): Likewise.
+	* gdbcore.h (read_memory_string): Don't declare.
+
 2020-06-14  Hannes Domani  <ssbssa@yahoo.de>
 
 	* symtab.c (rbreak_command): Ignore Windows drive colon.
