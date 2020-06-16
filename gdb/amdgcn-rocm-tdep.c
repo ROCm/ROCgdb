@@ -74,6 +74,15 @@ amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   return gdbarch_tdep (gdbarch)->regnum_map[register_id];
 }
 
+
+static enum return_value_convention
+amdgcn_return_value (struct gdbarch *gdbarch, struct value *function,
+                     struct type *type, struct regcache *regcache,
+                     gdb_byte *readbuf, const gdb_byte *writebuf)
+{
+  return RETURN_VALUE_STRUCT_CONVENTION;
+}
+
 static struct type *
 gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 {
@@ -547,6 +556,8 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_fp0_regnum (gdbarch, -1);
 
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, amdgcn_dwarf_reg_to_regnum);
+
+  set_gdbarch_return_value (gdbarch, amdgcn_return_value);
 
   /* Register Representation.  */
   set_gdbarch_register_name (gdbarch, amdgcn_register_name);
