@@ -458,6 +458,19 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
       if (object != TARGET_OBJECT_MEMORY)
         return TARGET_XFER_E_IO;
 
+      /* FIXME: We current have no way to specify the address space, so it is
+         encoded in the "unused" bits of a canonical address.  */
+      uint64_t dwarf_address_space
+          = (offset & ROCM_ASPACE_MASK) >> ROCM_ASPACE_BIT_OFFSET;
+
+      amd_dbgapi_segment_address_t segment_address
+          = offset & ~ROCM_ASPACE_MASK;
+
+      /* FIXME: Default to the generic address space to allow the examine
+         command to work with flat addresses wihout special syntax.  */
+      if (!dwarf_address_space)
+        dwarf_address_space = /*DW_ASPACE_AMDGPU_generic*/ 1;
+
       amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
       amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
 
@@ -468,33 +481,21 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
                                     AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
                                     sizeof (architecture_id), &architecture_id)
               != AMD_DBGAPI_STATUS_SUCCESS
-          || amd_dbgapi_architecture_get_info (
-                 architecture_id,
-                 AMD_DBGAPI_ARCHITECTURE_INFO_DEFAULT_GLOBAL_ADDRESS_SPACE,
-                 sizeof (address_space_id), &address_space_id)
+          || amd_dbgapi_dwarf_address_space_to_address_space (
+                 architecture_id, dwarf_address_space, &address_space_id)
                  != AMD_DBGAPI_STATUS_SUCCESS)
         return TARGET_XFER_EOF;
 
       size_t len = requested_len;
       amd_dbgapi_status_t status;
-      uint64_t address_space
-          = (offset & ROCM_ASPACE_MASK) >> ROCM_ASPACE_BIT_OFFSET;
-
-      if (address_space)
-        {
-          if (amd_dbgapi_dwarf_address_space_to_address_space (
-                  architecture_id, address_space, &address_space_id))
-            return TARGET_XFER_EOF;
-
-          offset &= ~ROCM_ASPACE_MASK;
-        }
-
       if (readbuf)
-        status = amd_dbgapi_read_memory (
-            process_id, wave_id, 0, address_space_id, offset, &len, readbuf);
+        status
+            = amd_dbgapi_read_memory (process_id, wave_id, 0, address_space_id,
+                                      segment_address, &len, readbuf);
       else
-        status = amd_dbgapi_write_memory (
-            process_id, wave_id, 0, address_space_id, offset, &len, writebuf);
+        status = amd_dbgapi_write_memory (process_id, wave_id, 0,
+                                          address_space_id, segment_address,
+                                          &len, writebuf);
 
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
         return TARGET_XFER_EOF;
