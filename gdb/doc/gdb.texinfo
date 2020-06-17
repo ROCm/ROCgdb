@@ -26855,23 +26855,32 @@ continue the application after the ROCm runtime has invoked
 @code{abort}.
 
 @item
-@value{GDBN} supports watchpoints, but limits the capabilities to the lowest
-common denominator of the heterogeneous agents in the system.  Hardware
-supported watchpoints are used when possible, otherwise software emulation is
-used.  Software emulation involves using-single stepping and reading memory to
-determine if values have changed, and as a result performs substantially slower
-than hardware watchpoints.
+@value{GDBN} supports watchpoints, but limits the capabilities to the
+lowest common denominator of the heterogeneous agents in the system.
+Hardware supported watchpoints are used when possible, otherwise
+software emulation is used.  Software emulation involves using-single
+stepping and reading memory to determine if values have changed, and
+as a result performs substantially slower than hardware watchpoints.
 
-The AMD GPU supported architectures provide a maximum of 4 hardware write
-watchpoints.  Precise read watchpoints or access watchpoints are not supported.
+The AMD GPU supported architectures provide a maximum of 4 hardware
+write watchpoints.  Precise read watchpoints or access watchpoints are
+not supported.
 
-The x86 architecture provides 4 hardware watchpoints that can monitor up to 32
-bytes.
+The x86 architecture provides 4 hardware watchpoints that can monitor
+up to 32 bytes.
 
-When @value{GDBN} is used with x86 and AMD GPU devices, hardware watchpoints are
-therefore limited to 4 write watchpoints of up to 32 bytes.  Software emulation
-will be used if more than 4 watchpoints are requested, or if watchpoints larger
-than 32 bytes are requested.
+When @value{GDBN} is used with x86 and AMD GPU devices, hardware
+watchpoints are therefore limited to 4 write watchpoints of up to 32
+bytes.  Software emulation will be used if more than 4 watchpoints are
+requested, or if watchpoints larger than 32 bytes are requested.
+
+Currently, watchpoints are only created on the CPU, and not the AMD
+GPU, until the ROCm runtime is initialized.  With deferred code object
+loading disabled this does not happen until the inferior reaches the
+beginning of the @code{main} function.  With deferred code object
+loading enabled this does not happen until the first kernel is
+executed.  This also means that, when the inferior is re-run,
+watchpoints are only re-activated on the CPU, not on the AMD GPU.
 
 @item
 When single stepping there can be times when @value{GDBN} appears to
