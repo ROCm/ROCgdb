@@ -1263,7 +1263,8 @@ static const noarch_entry cpu_noarch[] =
   { STRING_COMMA_LEN ("nomovdiri"), CPU_ANY_MOVDIRI_FLAGS },
   { STRING_COMMA_LEN ("nomovdir64b"), CPU_ANY_MOVDIR64B_FLAGS },
   { STRING_COMMA_LEN ("noavx512_bf16"), CPU_ANY_AVX512_BF16_FLAGS },
-  { STRING_COMMA_LEN ("noavx512_vp2intersect"), CPU_ANY_SHSTK_FLAGS },
+  { STRING_COMMA_LEN ("noavx512_vp2intersect"),
+    CPU_ANY_AVX512_VP2INTERSECT_FLAGS },
   { STRING_COMMA_LEN ("noenqcmd"), CPU_ANY_ENQCMD_FLAGS },
   { STRING_COMMA_LEN ("noserialize"), CPU_ANY_SERIALIZE_FLAGS },
   { STRING_COMMA_LEN ("notsxldtrk"), CPU_ANY_TSXLDTRK_FLAGS },
@@ -4753,7 +4754,6 @@ md_assemble (char *line)
 	  || i.tm.cpu_flags.bitfield.cpussse3
 	  || i.tm.cpu_flags.bitfield.cpusse4_1
 	  || i.tm.cpu_flags.bitfield.cpusse4_2
-	  || i.tm.cpu_flags.bitfield.cpusse4a
 	  || i.tm.cpu_flags.bitfield.cpupclmul
 	  || i.tm.cpu_flags.bitfield.cpuaes
 	  || i.tm.cpu_flags.bitfield.cpusha

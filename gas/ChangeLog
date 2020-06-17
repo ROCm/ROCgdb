@@ -1,3 +1,24 @@
+2020-06-16  Lili Cui  <lili.cui@intel.com>
+
+	* config/tc-i386.c (cpu_arch): Correct noavx512_vp2intersect
+	cpu_arch to CPU_ANY_VP2INTERSECT_FLAGS.
+	* doc/c-i386.texi: Add avx512_vp2intersect.
+
+2020-06-16  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (md_assemble): Drop SSE4a from SSE check
+	conditional.
+	* testsuite/gas/i386/sse-check.s: Adjust comment.
+	* testsuite/gas/i386/sse-check-error.l,
+	testsuite/gas/i386/sse-check-warn.e,
+	testsuite/gas/i386/x86-64-sse-check-error.l: Adjust
+	expectations.
+
+2020-06-16  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-tic30.h: Remove OBJ_AOUT support.
+	* configure.tgt: Delete tic30-*-*aout* entry.
+
 2020-06-15  Max Filippov  <jcmvbkbc@gmail.com>
 
 	* config/tc-xtensa.c (XTHAL_ABI_WINDOWED, XTHAL_ABI_CALL0): New

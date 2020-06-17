@@ -1,3 +1,32 @@
+2020-06-16  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-data.h (STATUS_NAME): New macro.
+	* tui/tui-layout.c (tui_remove_some_windows)
+	(initialize_known_windows, tui_register_window)
+	(tui_layout_split::remove_windows, initialize_layouts)
+	(tui_new_layout_command): Don't use hard-coded window names.
+
+2020-06-16  Tom Tromey  <tom@tromey.com>
+
+	PR tui/25348:
+	* tui/tui.c (tui_ensure_readline_initialized): Rename from
+	tui_initialize_readline.  Only run once.  Call rl_initialize.
+	* tui/tui.h (tui_ensure_readline_initialized): Rename from
+	tui_initialize_readline.
+	* tui/tui-io.c (tui_setup_io): Call
+	tui_ensure_readline_initialized.
+	* tui/tui-interp.c (tui_interp::init): Update.
+
+2020-06-16  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-layout.c (tui_layout_split::remove_windows): Fix logic.
+	Also preserve the status window.
+
+2020-06-16  Tom Tromey  <tom@tromey.com>
+
+	* python/py-tui.c (tui_py_window::~tui_py_window): Handle case
+	where m_window==nullptr.
+
 2020-06-15  Tom Tromey  <tromey@adacore.com>
 
 	* windows-nat.c (windows_nat::handle_output_debug_string):
