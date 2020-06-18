@@ -1487,7 +1487,11 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
       },
 
   /* set_breakpoint callback.  */
+#if AMD_DBGAPI_VERSION_MAJOR == 0 && AMD_DBGAPI_VERSION_MINOR < 25
   .add_breakpoint =
+#else
+  .insert_breakpoint =
+#endif
       [] (amd_dbgapi_client_process_id_t client_process_id,
           amd_dbgapi_shared_library_id_t shared_library_id,
           amd_dbgapi_global_address_t address,
@@ -1562,6 +1566,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
         return AMD_DBGAPI_STATUS_SUCCESS;
       },
 
+#if AMD_DBGAPI_VERSION_MAJOR == 0 && AMD_DBGAPI_VERSION_MINOR < 25
   /* set_breakpoint_state callback.  */
   .set_breakpoint_state =
       [] (amd_dbgapi_client_process_id_t client_process_id,
@@ -1583,6 +1588,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 
         return AMD_DBGAPI_STATUS_SUCCESS;
       },
+#endif
 
   .log_message
   = [] (amd_dbgapi_log_level_t level, const char *message) -> void {
