@@ -1487,11 +1487,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
       },
 
   /* set_breakpoint callback.  */
-#if AMD_DBGAPI_VERSION_MAJOR == 0 && AMD_DBGAPI_VERSION_MINOR < 25
-  .add_breakpoint =
-#else
   .insert_breakpoint =
-#endif
       [] (amd_dbgapi_client_process_id_t client_process_id,
           amd_dbgapi_shared_library_id_t shared_library_id,
           amd_dbgapi_global_address_t address,
@@ -1565,30 +1561,6 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 
         return AMD_DBGAPI_STATUS_SUCCESS;
       },
-
-#if AMD_DBGAPI_VERSION_MAJOR == 0 && AMD_DBGAPI_VERSION_MINOR < 25
-  /* set_breakpoint_state callback.  */
-  .set_breakpoint_state =
-      [] (amd_dbgapi_client_process_id_t client_process_id,
-          amd_dbgapi_breakpoint_id_t breakpoint_id,
-          amd_dbgapi_breakpoint_state_t breakpoint_state) {
-        inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-        struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
-
-        auto it = info->breakpoint_map.find (breakpoint_id.handle);
-        if (it == info->breakpoint_map.end ())
-          return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
-
-        if (breakpoint_state == AMD_DBGAPI_BREAKPOINT_STATE_ENABLE)
-          it->second->enable_state = bp_enabled;
-        else if (breakpoint_state == AMD_DBGAPI_BREAKPOINT_STATE_DISABLE)
-          it->second->enable_state = bp_disabled;
-        else
-          return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
-
-        return AMD_DBGAPI_STATUS_SUCCESS;
-      },
-#endif
 
   .log_message
   = [] (amd_dbgapi_log_level_t level, const char *message) -> void {
