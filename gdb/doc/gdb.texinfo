@@ -83,12 +83,13 @@ to the purchase or use of AMD’s products are as set forth in a signed
 agreement between the parties or in AMD's Standard Terms and
 Conditions of Sale.
 
-AMD, the AMD Arrow logo are trademarks of Advanced Micro Devices, Inc.
-Linux@registeredsymbol{} is the registered trademark of Linus Torvalds
-in the U.S. and other countries.  PCIe@registeredsymbol{} is a
-registered trademark of PCI-SIG Corporation.  Other product names used
-in this publication are for identification purposes only and may be
-trademarks of their respective companies.
+AMD@registeredsymbol{}, the AMD Arrow logo, ROCm@registeredsymbol{}
+and combinations thereof are trademarks of Advanced Micro Devices,
+Inc.  Linux@registeredsymbol{} is the registered trademark of Linus
+Torvalds in the U.S. and other countries.  PCIe@registeredsymbol{} is
+a registered trademark of PCI-SIG Corporation.  Other product names
+used in this publication are for identification purposes only and may
+be trademarks of their respective companies.
 
 Copyright @copyright{} 2019-2020 Advanced Micro Devices, Inc. All
 rights reserved.
@@ -588,10 +589,10 @@ Alessandro Forin and Per Bothner.  More recent ports have been the work
 of Jeremy Bennett, Franck Jullien, Stefan Wallentowitz and
 Stafford Horne.
 
-Initial support for heterogeneous program debugging and the
-@acronym{AMD GPU} targets was developed by the following people at the
-Advanced Micro Devices company: Scott Linder, Laurent Morichetti,
-Qingchuan Shi, Tony Tye, and Zoran Zaric.
+Initial support for heterogeneous program debugging and @acronym{AMD
+GPU} targets was developed by the following people at the Advanced
+Micro Devices company: Scott Linder, Laurent Morichetti, Qingchuan
+Shi, Tony Tye, and Zoran Zaric.
 
 @node Sample Session
 @chapter A Sample @value{GDBN} Session
@@ -21862,7 +21863,7 @@ implemented.  See @ref{AMD GPU} for the current support available.
 @cindex heterogeneous system
 @cindex heterogeneous program
 In some operating systems, such as Linux with @acronym{AMD}'s
-@acronym{ROCm, Radeon Open Compute platforM} installed, a single
+@acronym{ROCm, Radeon Open Compute Ecosystem} installed, a single
 program may have multiple threads in the same process, executing on
 different devices which may have different target architectures.  Such
 a system is termed a @dfn{heterogeneous system} and a program that
@@ -26210,10 +26211,10 @@ BDCCSR register.
 @cindex @acronym{AMD GPU} support
 
 @value{GDBN} provides support for systems that have heterogeneous
-agents associated with @acronym{AMD GPU} devices (@pxref{Heterogeneous
-Debugging}) when @acronym{AMD}'s @url{https://rocmdocs.amd.com/,
-@acronym{ROCm, Radeon Open Compute platforM}} for HIP-Clang is
-installed.
+agents associated with commercially available @acronym{AMD GPU}
+devices (@pxref{Heterogeneous Debugging}) when @acronym{AMD}'s
+@url{https://rocmdocs.amd.com/, @acronym{ROCm, Radeon Open Compute
+Ecosystem}} is installed.
 
 The following AMD GPU chips are supported:
 
@@ -26248,7 +26249,7 @@ produce debugging information suitable for use by @value{GDBN}.  The
 @w{@option{--amdgpu-target}} option is used to specify the AMD GPUs
 that the executable is required to support.  For example, to compile a
 HIP program that can utilize ``Vega 10'' and ``Vega 7nm'' AMD GPU
-chips, with no optimization:
+devices, with no optimization:
 
 @smallexample
 hipcc -O0 -ggdb --amdgpu-target=gfx900 --amdgpu-target=gfx906 \
