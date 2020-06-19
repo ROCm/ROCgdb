@@ -1644,16 +1644,6 @@ extern struct block_symbol lookup_symbol_search_name (const char *search_name,
 						      const struct block *block,
 						      domain_enum domain);
 
-/* A default version of lookup_symbol_nonlocal for use by languages
-   that can't think of anything better to do.
-   This implements the C lookup rules.  */
-
-extern struct block_symbol
-  basic_lookup_symbol_nonlocal (const struct language_defn *langdef,
-				const char *,
-				const struct block *,
-				const domain_enum);
-
 /* Some helper functions for languages that need to write their own
    lookup_symbol_nonlocal functions.  */
 
@@ -1952,13 +1942,6 @@ extern void default_collect_symbol_completion_matches_break_on
    symbol_name_match_type name_match_type,
    const char *text, const char *word, const char *break_on,
    enum type_code code);
-extern void default_collect_symbol_completion_matches
-  (completion_tracker &tracker,
-   complete_symbol_mode,
-   symbol_name_match_type name_match_type,
-   const char *,
-   const char *,
-   enum type_code);
 extern void collect_symbol_completion_matches
   (completion_tracker &tracker,
    complete_symbol_mode mode,

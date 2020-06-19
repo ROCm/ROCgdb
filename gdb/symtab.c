@@ -1016,7 +1016,7 @@ symbol_matches_search_name (const struct general_symbol_info *gsymbol,
 			    const lookup_name_info &name)
 {
   symbol_name_matcher_ftype *name_match
-    = get_symbol_name_matcher (language_def (gsymbol->language ()), name);
+    = language_def (gsymbol->language ())->get_symbol_name_matcher (name);
   return name_match (gsymbol->search_name (), name, NULL);
 }
 
@@ -2086,7 +2086,7 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
   /* Now do whatever is appropriate for LANGUAGE to look
      up static and global variables.  */
 
-  result = langdef->la_lookup_symbol_nonlocal (langdef, name, block, domain);
+  result = langdef->lookup_symbol_nonlocal (name, block, domain);
   if (result.symbol != NULL)
     {
       if (symbol_lookup_debug)
@@ -2401,13 +2401,12 @@ lookup_symbol_via_quick_fns (struct objfile *objfile,
   return result;
 }
 
-/* See symtab.h.  */
+/* See language.h.  */
 
 struct block_symbol
-basic_lookup_symbol_nonlocal (const struct language_defn *langdef,
-			      const char *name,
-			      const struct block *block,
-			      const domain_enum domain)
+language_defn::lookup_symbol_nonlocal (const char *name,
+				       const struct block *block,
+				       const domain_enum domain) const
 {
   struct block_symbol result;
 
@@ -2433,7 +2432,7 @@ basic_lookup_symbol_nonlocal (const struct language_defn *langdef,
 	gdbarch = target_gdbarch ();
       else
 	gdbarch = block_gdbarch (block);
-      result.symbol = language_lookup_primitive_type_as_symbol (langdef,
+      result.symbol = language_lookup_primitive_type_as_symbol (this,
 								gdbarch, name);
       result.block = NULL;
       if (result.symbol != NULL)
@@ -5258,7 +5257,7 @@ compare_symbol_name (const char *symbol_name, language symbol_language,
   const language_defn *lang = language_def (symbol_language);
 
   symbol_name_matcher_ftype *name_match
-    = get_symbol_name_matcher (lang, lookup_name);
+    = lang->get_symbol_name_matcher (lookup_name);
 
   return name_match (symbol_name, lookup_name, &match_res);
 }
@@ -5806,19 +5805,6 @@ default_collect_symbol_completion_matches_break_on
     }
 }
 
-void
-default_collect_symbol_completion_matches (completion_tracker &tracker,
-					   complete_symbol_mode mode,
-					   symbol_name_match_type name_match_type,
-					   const char *text, const char *word,
-					   enum type_code code)
-{
-  return default_collect_symbol_completion_matches_break_on (tracker, mode,
-							     name_match_type,
-							     text, word, "",
-							     code);
-}
-
 /* Collect all symbols (regardless of class) which begin by matching
    TEXT.  */
 
@@ -5828,10 +5814,10 @@ collect_symbol_completion_matches (completion_tracker &tracker,
 				   symbol_name_match_type name_match_type,
 				   const char *text, const char *word)
 {
-  current_language->la_collect_symbol_completion_matches (tracker, mode,
-							  name_match_type,
-							  text, word,
-							  TYPE_CODE_UNDEF);
+  current_language->collect_symbol_completion_matches (tracker, mode,
+						       name_match_type,
+						       text, word,
+						       TYPE_CODE_UNDEF);
 }
 
 /* Like collect_symbol_completion_matches, but only collect
@@ -5848,9 +5834,9 @@ collect_symbol_completion_matches_type (completion_tracker &tracker,
   gdb_assert (code == TYPE_CODE_UNION
 	      || code == TYPE_CODE_STRUCT
 	      || code == TYPE_CODE_ENUM);
-  current_language->la_collect_symbol_completion_matches (tracker, mode,
-							  name_match_type,
-							  text, word, code);
+  current_language->collect_symbol_completion_matches (tracker, mode,
+						       name_match_type,
+						       text, word, code);
 }
 
 /* Like collect_symbol_completion_matches, but collects a list of

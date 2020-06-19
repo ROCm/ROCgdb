@@ -488,23 +488,6 @@ add_angle_brackets (const char *str)
   return string_printf ("<%s>", str);
 }
 
-static const char *
-ada_get_gdb_completer_word_break_characters (void)
-{
-  return ada_completer_word_break_characters;
-}
-
-/* la_watch_location_expression for Ada.  */
-
-static gdb::unique_xmalloc_ptr<char>
-ada_watch_location_expression (struct type *type, CORE_ADDR addr)
-{
-  type = check_typedef (TYPE_TARGET_TYPE (check_typedef (type)));
-  std::string name = type_to_string (type);
-  return gdb::unique_xmalloc_ptr<char>
-    (xstrprintf ("{%s} %s", name.c_str (), core_addr_to_string (addr)));
-}
-
 /* Assuming V points to an array of S objects,  make sure that it contains at
    least M objects, updating V and S as necessary.  */
 
@@ -5781,46 +5764,6 @@ ada_lookup_symbol (const char *name, const struct block *block0,
   return info;
 }
 
-static struct block_symbol
-ada_lookup_symbol_nonlocal (const struct language_defn *langdef,
-			    const char *name,
-                            const struct block *block,
-                            const domain_enum domain)
-{
-  struct block_symbol sym;
-
-  sym = ada_lookup_symbol (name, block_static_block (block), domain);
-  if (sym.symbol != NULL)
-    return sym;
-
-  /* If we haven't found a match at this point, try the primitive
-     types.  In other languages, this search is performed before
-     searching for global symbols in order to short-circuit that
-     global-symbol search if it happens that the name corresponds
-     to a primitive type.  But we cannot do the same in Ada, because
-     it is perfectly legitimate for a program to declare a type which
-     has the same name as a standard type.  If looking up a type in
-     that situation, we have traditionally ignored the primitive type
-     in favor of user-defined types.  This is why, unlike most other
-     languages, we search the primitive types this late and only after
-     having searched the global symbols without success.  */
-
-  if (domain == VAR_DOMAIN)
-    {
-      struct gdbarch *gdbarch;
-
-      if (block == NULL)
-	gdbarch = target_gdbarch ();
-      else
-	gdbarch = block_gdbarch (block);
-      sym.symbol = language_lookup_primitive_type_as_symbol (langdef, gdbarch, name);
-      if (sym.symbol != NULL)
-	return sym;
-    }
-
-  return {};
-}
-
 
 /* True iff STR is a possible encoded suffix of a normal Ada name
    that is to be ignored for matching purposes.  Suffixes of parallel
@@ -6276,134 +6219,6 @@ ada_lookup_name_info::matches
     }
 
   return true;
-}
-
-/* Add the list of possible symbol names completing TEXT to TRACKER.
-   WORD is the entire command on which completion is made.  */
-
-static void
-ada_collect_symbol_completion_matches (completion_tracker &tracker,
-				       complete_symbol_mode mode,
-				       symbol_name_match_type name_match_type,
-				       const char *text, const char *word,
-				       enum type_code code)
-{
-  struct symbol *sym;
-  const struct block *b, *surrounding_static_block = 0;
-  struct block_iterator iter;
-
-  gdb_assert (code == TYPE_CODE_UNDEF);
-
-  lookup_name_info lookup_name (text, name_match_type, true);
-
-  /* First, look at the partial symtab symbols.  */
-  expand_symtabs_matching (NULL,
-			   lookup_name,
-			   NULL,
-			   NULL,
-			   ALL_DOMAIN);
-
-  /* At this point scan through the misc symbol vectors and add each
-     symbol you find to the list.  Eventually we want to ignore
-     anything that isn't a text symbol (everything else will be
-     handled by the psymtab code above).  */
-
-  for (objfile *objfile : current_program_space->objfiles ())
-    {
-      for (minimal_symbol *msymbol : objfile->msymbols ())
-	{
-	  QUIT;
-
-	  if (completion_skip_symbol (mode, msymbol))
-	    continue;
-
-	  language symbol_language = msymbol->language ();
-
-	  /* Ada minimal symbols won't have their language set to Ada.  If
-	     we let completion_list_add_name compare using the
-	     default/C-like matcher, then when completing e.g., symbols in a
-	     package named "pck", we'd match internal Ada symbols like
-	     "pckS", which are invalid in an Ada expression, unless you wrap
-	     them in '<' '>' to request a verbatim match.
-
-	     Unfortunately, some Ada encoded names successfully demangle as
-	     C++ symbols (using an old mangling scheme), such as "name__2Xn"
-	     -> "Xn::name(void)" and thus some Ada minimal symbols end up
-	     with the wrong language set.  Paper over that issue here.  */
-	  if (symbol_language == language_auto
-	      || symbol_language == language_cplus)
-	    symbol_language = language_ada;
-
-	  completion_list_add_name (tracker,
-				    symbol_language,
-				    msymbol->linkage_name (),
-				    lookup_name, text, word);
-	}
-    }
-
-  /* Search upwards from currently selected frame (so that we can
-     complete on local vars.  */
-
-  for (b = get_selected_block (0); b != NULL; b = BLOCK_SUPERBLOCK (b))
-    {
-      if (!BLOCK_SUPERBLOCK (b))
-        surrounding_static_block = b;   /* For elmin of dups */
-
-      ALL_BLOCK_SYMBOLS (b, iter, sym)
-      {
-	if (completion_skip_symbol (mode, sym))
-	  continue;
-
-	completion_list_add_name (tracker,
-				  sym->language (),
-				  sym->linkage_name (),
-				  lookup_name, text, word);
-      }
-    }
-
-  /* Go through the symtabs and check the externs and statics for
-     symbols which match.  */
-
-  for (objfile *objfile : current_program_space->objfiles ())
-    {
-      for (compunit_symtab *s : objfile->compunits ())
-	{
-	  QUIT;
-	  b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (s), GLOBAL_BLOCK);
-	  ALL_BLOCK_SYMBOLS (b, iter, sym)
-	    {
-	      if (completion_skip_symbol (mode, sym))
-		continue;
-
-	      completion_list_add_name (tracker,
-					sym->language (),
-					sym->linkage_name (),
-					lookup_name, text, word);
-	    }
-	}
-    }
-
-  for (objfile *objfile : current_program_space->objfiles ())
-    {
-      for (compunit_symtab *s : objfile->compunits ())
-	{
-	  QUIT;
-	  b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (s), STATIC_BLOCK);
-	  /* Don't do this block twice.  */
-	  if (b == surrounding_static_block)
-	    continue;
-	  ALL_BLOCK_SYMBOLS (b, iter, sym)
-	    {
-	      if (completion_skip_symbol (mode, sym))
-		continue;
-
-	      completion_list_add_name (tracker,
-					sym->language (),
-					sym->linkage_name (),
-					lookup_name, text, word);
-	    }
-	}
-    }
 }
 
                                 /* Field Access */
@@ -13862,7 +13677,7 @@ literal_symbol_name_matcher (const char *symbol_search_name,
     return false;
 }
 
-/* Implement the "la_get_symbol_name_matcher" language_defn method for
+/* Implement the "get_symbol_name_matcher" language_defn method for
    Ada.  */
 
 static symbol_name_matcher_ftype *
@@ -13909,22 +13724,12 @@ extern const struct language_data ada_language_data =
   ada_printstr,                 /* Function to print string constant */
   emit_char,                    /* Function to print single char (not used) */
   ada_print_typedef,            /* Print a typedef using appropriate syntax */
-  ada_value_print_inner,	/* la_value_print_inner */
-  ada_value_print,              /* Print a top-level value */
   NULL,                         /* name_of_this */
   true,                         /* la_store_sym_names_in_linkage_form_p */
-  ada_lookup_symbol_nonlocal,   /* Looking up non-local symbols.  */
-  NULL,                         /* Language specific
-				   class_name_from_physname */
   ada_op_print_tab,             /* expression operators for printing */
   0,                            /* c-style arrays */
   1,                            /* String lower bound */
-  ada_get_gdb_completer_word_break_characters,
-  ada_collect_symbol_completion_matches,
-  ada_watch_location_expression,
-  ada_get_symbol_name_matcher,	/* la_get_symbol_name_matcher */
   &ada_varobj_ops,
-  NULL,
   ada_is_string_type,
   "(...)"			/* la_struct_too_deep_ellipsis */
 };
@@ -14107,6 +13912,217 @@ public:
 		   const struct type_print_options *flags) const override
   {
     ada_print_type (type, varstring, stream, show, level, flags);
+  }
+
+  /* See language.h.  */
+
+  const char *word_break_characters (void) const override
+  {
+    return ada_completer_word_break_characters;
+  }
+
+  /* See language.h.  */
+
+  void collect_symbol_completion_matches (completion_tracker &tracker,
+					  complete_symbol_mode mode,
+					  symbol_name_match_type name_match_type,
+					  const char *text, const char *word,
+					  enum type_code code) const override
+  {
+    struct symbol *sym;
+    const struct block *b, *surrounding_static_block = 0;
+    struct block_iterator iter;
+
+    gdb_assert (code == TYPE_CODE_UNDEF);
+
+    lookup_name_info lookup_name (text, name_match_type, true);
+
+    /* First, look at the partial symtab symbols.  */
+    expand_symtabs_matching (NULL,
+			     lookup_name,
+			     NULL,
+			     NULL,
+			     ALL_DOMAIN);
+
+    /* At this point scan through the misc symbol vectors and add each
+       symbol you find to the list.  Eventually we want to ignore
+       anything that isn't a text symbol (everything else will be
+       handled by the psymtab code above).  */
+
+    for (objfile *objfile : current_program_space->objfiles ())
+      {
+	for (minimal_symbol *msymbol : objfile->msymbols ())
+	  {
+	    QUIT;
+
+	    if (completion_skip_symbol (mode, msymbol))
+	      continue;
+
+	    language symbol_language = msymbol->language ();
+
+	    /* Ada minimal symbols won't have their language set to Ada.  If
+	       we let completion_list_add_name compare using the
+	       default/C-like matcher, then when completing e.g., symbols in a
+	       package named "pck", we'd match internal Ada symbols like
+	       "pckS", which are invalid in an Ada expression, unless you wrap
+	       them in '<' '>' to request a verbatim match.
+
+	       Unfortunately, some Ada encoded names successfully demangle as
+	       C++ symbols (using an old mangling scheme), such as "name__2Xn"
+	       -> "Xn::name(void)" and thus some Ada minimal symbols end up
+	       with the wrong language set.  Paper over that issue here.  */
+	    if (symbol_language == language_auto
+		|| symbol_language == language_cplus)
+	      symbol_language = language_ada;
+
+	    completion_list_add_name (tracker,
+				      symbol_language,
+				      msymbol->linkage_name (),
+				      lookup_name, text, word);
+	  }
+      }
+
+    /* Search upwards from currently selected frame (so that we can
+       complete on local vars.  */
+
+    for (b = get_selected_block (0); b != NULL; b = BLOCK_SUPERBLOCK (b))
+      {
+	if (!BLOCK_SUPERBLOCK (b))
+	  surrounding_static_block = b;   /* For elmin of dups */
+
+	ALL_BLOCK_SYMBOLS (b, iter, sym)
+	  {
+	    if (completion_skip_symbol (mode, sym))
+	      continue;
+
+	    completion_list_add_name (tracker,
+				      sym->language (),
+				      sym->linkage_name (),
+				      lookup_name, text, word);
+	  }
+      }
+
+    /* Go through the symtabs and check the externs and statics for
+       symbols which match.  */
+
+    for (objfile *objfile : current_program_space->objfiles ())
+      {
+	for (compunit_symtab *s : objfile->compunits ())
+	  {
+	    QUIT;
+	    b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (s), GLOBAL_BLOCK);
+	    ALL_BLOCK_SYMBOLS (b, iter, sym)
+	      {
+		if (completion_skip_symbol (mode, sym))
+		  continue;
+
+		completion_list_add_name (tracker,
+					  sym->language (),
+					  sym->linkage_name (),
+					  lookup_name, text, word);
+	      }
+	  }
+      }
+
+    for (objfile *objfile : current_program_space->objfiles ())
+      {
+	for (compunit_symtab *s : objfile->compunits ())
+	  {
+	    QUIT;
+	    b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (s), STATIC_BLOCK);
+	    /* Don't do this block twice.  */
+	    if (b == surrounding_static_block)
+	      continue;
+	    ALL_BLOCK_SYMBOLS (b, iter, sym)
+	      {
+		if (completion_skip_symbol (mode, sym))
+		  continue;
+
+		completion_list_add_name (tracker,
+					  sym->language (),
+					  sym->linkage_name (),
+					  lookup_name, text, word);
+	      }
+	  }
+      }
+  }
+
+  /* See language.h.  */
+
+  gdb::unique_xmalloc_ptr<char> watch_location_expression
+	(struct type *type, CORE_ADDR addr) const override
+  {
+    type = check_typedef (TYPE_TARGET_TYPE (check_typedef (type)));
+    std::string name = type_to_string (type);
+    return gdb::unique_xmalloc_ptr<char>
+      (xstrprintf ("{%s} %s", name.c_str (), core_addr_to_string (addr)));
+  }
+
+  /* See language.h.  */
+
+  void value_print (struct value *val, struct ui_file *stream,
+		    const struct value_print_options *options) const override
+  {
+    return ada_value_print (val, stream, options);
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    return ada_value_print_inner (val, stream, recurse, options);
+  }
+
+  /* See language.h.  */
+
+  struct block_symbol lookup_symbol_nonlocal
+	(const char *name, const struct block *block,
+	 const domain_enum domain) const override
+  {
+    struct block_symbol sym;
+
+    sym = ada_lookup_symbol (name, block_static_block (block), domain);
+    if (sym.symbol != NULL)
+      return sym;
+
+    /* If we haven't found a match at this point, try the primitive
+       types.  In other languages, this search is performed before
+       searching for global symbols in order to short-circuit that
+       global-symbol search if it happens that the name corresponds
+       to a primitive type.  But we cannot do the same in Ada, because
+       it is perfectly legitimate for a program to declare a type which
+       has the same name as a standard type.  If looking up a type in
+       that situation, we have traditionally ignored the primitive type
+       in favor of user-defined types.  This is why, unlike most other
+       languages, we search the primitive types this late and only after
+       having searched the global symbols without success.  */
+
+    if (domain == VAR_DOMAIN)
+      {
+	struct gdbarch *gdbarch;
+
+	if (block == NULL)
+	  gdbarch = target_gdbarch ();
+	else
+	  gdbarch = block_gdbarch (block);
+	sym.symbol
+	  = language_lookup_primitive_type_as_symbol (this, gdbarch, name);
+	if (sym.symbol != NULL)
+	  return sym;
+      }
+
+    return {};
+  }
+
+protected:
+  /* See language.h.  */
+
+  symbol_name_matcher_ftype *get_symbol_name_matcher_inner
+	(const lookup_name_info &lookup_name) const override
+  {
+    return ada_get_symbol_name_matcher (lookup_name);
   }
 };
 

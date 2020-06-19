@@ -116,9 +116,6 @@ extern void c_emit_char (int c, struct type *type,
 
 extern const struct op_print c_op_print_tab[];
 
-extern gdb::unique_xmalloc_ptr<char> c_watch_location_expression
-     (struct type *type, CORE_ADDR addr);
-
 /* These are in c-typeprint.c: */
 
 extern void c_type_print_base (struct type *, struct ui_file *,
@@ -172,7 +169,7 @@ extern compile_instance *cplus_get_compile_context ();
 /* This takes the user-supplied text and returns a new bit of code to
    compile.
 
-   This is used as the la_compute_program language method; see that
+   This is used as the compute_program language method; see that
    for a description of the arguments.  */
 
 extern std::string c_compute_program (compile_instance *inst,
@@ -183,7 +180,7 @@ extern std::string c_compute_program (compile_instance *inst,
 
 /* This takes the user-supplied text and returns a new bit of code to compile.
 
-   This is used as the la_compute_program language method; see that
+   This is used as the compute_program language method; see that
    for a description of the arguments.  */
 
 extern std::string cplus_compute_program (compile_instance *inst,

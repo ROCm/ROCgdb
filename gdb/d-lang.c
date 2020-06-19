@@ -149,22 +149,12 @@ extern const struct language_data d_language_data =
   c_emit_char,			/* Print a single char.  */
   c_print_typedef,		/* Print a typedef using appropriate
 				   syntax.  */
-  d_value_print_inner,		/* la_value_print_inner */
-  c_value_print,		/* Print a top-level value.  */
   "this",
   false,			/* la_store_sym_names_in_linkage_form_p */
-  d_lookup_symbol_nonlocal,
-  NULL,				/* Language specific
-				   class_name_from_physname.  */
   d_op_print_tab,		/* Expression operators for printing.  */
   1,				/* C-style arrays.  */
   0,				/* String lower bound.  */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   c_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -264,6 +254,24 @@ public:
 		   const struct type_print_options *flags) const override
   {
     c_print_type (type, varstring, stream, show, level, flags);
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    return d_value_print_inner (val, stream, recurse, options);
+  }
+
+  /* See language.h.  */
+
+  struct block_symbol lookup_symbol_nonlocal
+	(const char *name, const struct block *block,
+	 const domain_enum domain) const override
+  {
+    return d_lookup_symbol_nonlocal (this, name, block, domain);
   }
 };
 

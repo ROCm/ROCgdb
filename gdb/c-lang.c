@@ -727,17 +727,6 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
   return evaluate_subexp_standard (expect_type, exp, pos, noside);
 }
 
-/* la_watch_location_expression for C.  */
-
-gdb::unique_xmalloc_ptr<char>
-c_watch_location_expression (struct type *type, CORE_ADDR addr)
-{
-  type = check_typedef (TYPE_TARGET_TYPE (check_typedef (type)));
-  std::string name = type_to_string (type);
-  return gdb::unique_xmalloc_ptr<char>
-    (xstrprintf ("* (%s *) %s", name.c_str (), core_addr_to_string (addr)));
-}
-
 /* See c-lang.h.  */
 
 bool
@@ -906,22 +895,12 @@ extern const struct language_data c_language_data =
   c_printstr,			/* Function to print string constant */
   c_emit_char,			/* Print a single char */
   c_print_typedef,		/* Print a typedef using appropriate syntax */
-  c_value_print_inner,		/* la_value_print_inner */
-  c_value_print,		/* Print a top-level value */
   NULL,				/* name_of_this */
   true,				/* la_store_sym_names_in_linkage_form_p */
-  basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  NULL,				/* Language specific
-				   class_name_from_physname */
   c_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &c_varobj_ops,
-  c_compute_program,
   c_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -946,6 +925,16 @@ public:
   compile_instance *get_compile_instance () const override
   {
     return c_get_compile_context ();
+  }
+
+  /* See language.h.  */
+  std::string compute_program (compile_instance *inst,
+			       const char *input,
+			       struct gdbarch *gdbarch,
+			       const struct block *expr_block,
+			       CORE_ADDR expr_pc) const override
+  {
+    return c_compute_program (inst, input, gdbarch, expr_block, expr_pc);
   }
 
   /* See language.h.  */
@@ -1014,22 +1003,12 @@ extern const struct language_data cplus_language_data =
   c_printstr,			/* Function to print string constant */
   c_emit_char,			/* Print a single char */
   c_print_typedef,		/* Print a typedef using appropriate syntax */
-  c_value_print_inner,		/* la_value_print_inner */
-  c_value_print,		/* Print a top-level value */
   "this",                       /* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
-  cp_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  cp_class_name_from_physname,  /* Language specific
-				   class_name_from_physname */
   c_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  cp_get_symbol_name_matcher,
   &cplus_varobj_ops,
-  cplus_compute_program,
   c_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -1127,6 +1106,16 @@ public:
   }
 
   /* See language.h.  */
+  std::string compute_program (compile_instance *inst,
+			       const char *input,
+			       struct gdbarch *gdbarch,
+			       const struct block *expr_block,
+			       CORE_ADDR expr_pc) const override
+  {
+    return cplus_compute_program (inst, input, gdbarch, expr_block, expr_pc);
+  }
+
+  /* See language.h.  */
   unsigned int search_name_hash (const char *name) const override
   {
     return cp_search_name_hash (name);
@@ -1163,6 +1152,32 @@ public:
   {
     return cplus_skip_trampoline (fi, pc);
   }
+
+  /* See language.h.  */
+
+  char *class_name_from_physname (const char *physname) const override
+  {
+    return cp_class_name_from_physname (physname);
+  }
+
+  /* See language.h.  */
+
+  struct block_symbol lookup_symbol_nonlocal
+	(const char *name, const struct block *block,
+	 const domain_enum domain) const override
+  {
+    return cp_lookup_symbol_nonlocal (this, name, block, domain);
+  }
+
+protected:
+
+  /* See language.h.  */
+
+  symbol_name_matcher_ftype *get_symbol_name_matcher_inner
+	(const lookup_name_info &lookup_name) const override
+  {
+    return cp_get_symbol_name_matcher (lookup_name);
+  }
 };
 
 /* The single instance of the C++ language class.  */
@@ -1193,22 +1208,12 @@ extern const struct language_data asm_language_data =
   c_printstr,			/* Function to print string constant */
   c_emit_char,			/* Print a single char */
   c_print_typedef,		/* Print a typedef using appropriate syntax */
-  c_value_print_inner,		/* la_value_print_inner */
-  c_value_print,		/* Print a top-level value */
   NULL,				/* name_of_this */
   true,				/* la_store_sym_names_in_linkage_form_p */
-  basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  NULL,				/* Language specific
-				   class_name_from_physname */
   c_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   c_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -1266,22 +1271,12 @@ extern const struct language_data minimal_language_data =
   c_printstr,			/* Function to print string constant */
   c_emit_char,			/* Print a single char */
   c_print_typedef,		/* Print a typedef using appropriate syntax */
-  c_value_print_inner,		/* la_value_print_inner */
-  c_value_print,		/* Print a top-level value */
   NULL,				/* name_of_this */
   true,				/* la_store_sym_names_in_linkage_form_p */
-  basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  NULL,				/* Language specific
-				   class_name_from_physname */
   c_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   c_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };

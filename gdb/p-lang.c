@@ -399,21 +399,12 @@ extern const struct language_data pascal_language_data =
   pascal_printstr,		/* Function to print string constant */
   pascal_emit_char,		/* Print a single char */
   pascal_print_typedef,		/* Print a typedef using appropriate syntax */
-  pascal_value_print_inner,	/* la_value_print_inner */
-  pascal_value_print,		/* Print a top-level value */
   "this",		        /* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
-  basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  NULL,				/* Language specific class_name_from_physname */
   pascal_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_compare_symbol_for_completion */
   &default_varobj_ops,
-  NULL,
   pascal_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -483,6 +474,23 @@ public:
 		   const struct type_print_options *flags) const override
   {
     pascal_print_type (type, varstring, stream, show, level, flags);
+  }
+
+  /* See language.h.  */
+
+  void value_print (struct value *val, struct ui_file *stream,
+		    const struct value_print_options *options) const override
+  {
+    return pascal_value_print (val, stream, options);
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    return pascal_value_print_inner (val, stream, recurse, options);
   }
 };
 

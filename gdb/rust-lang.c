@@ -1961,65 +1961,6 @@ rust_operator_check (struct expression *exp, int pos,
 
 
 
-/* Implementation of la_lookup_symbol_nonlocal for Rust.  */
-
-static struct block_symbol
-rust_lookup_symbol_nonlocal (const struct language_defn *langdef,
-			     const char *name,
-			     const struct block *block,
-			     const domain_enum domain)
-{
-  struct block_symbol result = {};
-
-  if (symbol_lookup_debug)
-    {
-      fprintf_unfiltered (gdb_stdlog,
-			  "rust_lookup_symbol_non_local"
-			  " (%s, %s (scope %s), %s)\n",
-			  name, host_address_to_string (block),
-			  block_scope (block), domain_name (domain));
-    }
-
-  /* Look up bare names in the block's scope.  */
-  std::string scopedname;
-  if (name[cp_find_first_component (name)] == '\0')
-    {
-      const char *scope = block_scope (block);
-
-      if (scope[0] != '\0')
-	{
-	  scopedname = std::string (scope) + "::" + name;
-	  name = scopedname.c_str ();
-	}
-      else
-	name = NULL;
-    }
-
-  if (name != NULL)
-    {
-      result = lookup_symbol_in_static_block (name, block, domain);
-      if (result.symbol == NULL)
-	result = lookup_global_symbol (name, block, domain);
-    }
-  return result;
-}
-
-
-
-/* la_watch_location_expression for Rust.  */
-
-static gdb::unique_xmalloc_ptr<char>
-rust_watch_location_expression (struct type *type, CORE_ADDR addr)
-{
-  type = check_typedef (TYPE_TARGET_TYPE (check_typedef (type)));
-  std::string name = type_to_string (type);
-  return gdb::unique_xmalloc_ptr<char>
-    (xstrprintf ("*(%s as *mut %s)", core_addr_to_string (addr),
-		 name.c_str ()));
-}
-
-
-
 static const struct exp_descriptor exp_descriptor_rust = 
 {
   rust_print_subexp,
@@ -2054,22 +1995,12 @@ extern const struct language_data rust_language_data =
   rust_printstr,		/* Function to print string constant */
   rust_emitchar,		/* Print a single char */
   rust_print_typedef,		/* Print a typedef using appropriate syntax */
-  rust_value_print_inner,	/* la_value_print_inner */
-  c_value_print,		/* Print a top-level value */
   NULL,				/* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
-  rust_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  NULL,				/* Language specific
-				   class_name_from_physname */
   c_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  rust_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   rust_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -2148,6 +2079,68 @@ public:
     print_offset_data podata;
     rust_internal_print_type (type, varstring, stream, show, level,
 			      flags, false, &podata);
+  }
+
+  /* See language.h.  */
+
+  gdb::unique_xmalloc_ptr<char> watch_location_expression
+	(struct type *type, CORE_ADDR addr) const override
+  {
+    type = check_typedef (TYPE_TARGET_TYPE (check_typedef (type)));
+    std::string name = type_to_string (type);
+    return gdb::unique_xmalloc_ptr<char>
+      (xstrprintf ("*(%s as *mut %s)", core_addr_to_string (addr),
+		   name.c_str ()));
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    return rust_value_print_inner (val, stream, recurse, options);
+  }
+
+  /* See language.h.  */
+
+  struct block_symbol lookup_symbol_nonlocal
+	(const char *name, const struct block *block,
+	 const domain_enum domain) const override
+  {
+    struct block_symbol result = {};
+
+    if (symbol_lookup_debug)
+      {
+	fprintf_unfiltered (gdb_stdlog,
+			    "rust_lookup_symbol_non_local"
+			    " (%s, %s (scope %s), %s)\n",
+			    name, host_address_to_string (block),
+			    block_scope (block), domain_name (domain));
+      }
+
+    /* Look up bare names in the block's scope.  */
+    std::string scopedname;
+    if (name[cp_find_first_component (name)] == '\0')
+      {
+	const char *scope = block_scope (block);
+
+	if (scope[0] != '\0')
+	  {
+	    scopedname = std::string (scope) + "::" + name;
+	    name = scopedname.c_str ();
+	  }
+	else
+	  name = NULL;
+      }
+
+    if (name != NULL)
+      {
+	result = lookup_symbol_in_static_block (name, block, domain);
+	if (result.symbol == NULL)
+	  result = lookup_global_symbol (name, block, domain);
+      }
+    return result;
   }
 };
 

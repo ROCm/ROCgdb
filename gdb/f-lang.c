@@ -165,45 +165,6 @@ enum f_primitive_types {
   nr_f_primitive_types
 };
 
-/* Remove the modules separator :: from the default break list.  */
-
-static const char *
-f_word_break_characters (void)
-{
-  static char *retval;
-
-  if (!retval)
-    {
-      char *s;
-
-      retval = xstrdup (default_word_break_characters ());
-      s = strchr (retval, ':');
-      if (s)
-	{
-	  char *last_char = &s[strlen (s) - 1];
-
-	  *s = *last_char;
-	  *last_char = 0;
-	}
-    }
-  return retval;
-}
-
-/* Consider the modules separator :: as a valid symbol name character
-   class.  */
-
-static void
-f_collect_symbol_completion_matches (completion_tracker &tracker,
-				     complete_symbol_mode mode,
-				     symbol_name_match_type compare_name,
-				     const char *text, const char *word,
-				     enum type_code code)
-{
-  default_collect_symbol_completion_matches_break_on (tracker, mode,
-						      compare_name,
-						      text, word, ":", code);
-}
-
 /* Special expression evaluation cases for Fortran.  */
 
 static struct value *
@@ -609,22 +570,12 @@ extern const struct language_data f_language_data =
   f_printstr,			/* function to print string constant */
   f_emit_char,			/* Function to print a single character */
   f_print_typedef,		/* Print a typedef using appropriate syntax */
-  f_value_print_innner,		/* la_value_print_inner */
-  c_value_print,		/* FIXME */
   NULL,                    	/* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
-  cp_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  NULL,				/* Language specific
-				   class_name_from_physname */
   f_op_print_tab,		/* expression operators for printing */
   0,				/* arrays are first-class (not c-style) */
   1,				/* String lower bound */
-  f_word_break_characters,
-  f_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  cp_get_symbol_name_matcher,	/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   f_is_string_type_p,
   "(...)"			/* la_struct_too_deep_ellipsis */
 };
@@ -701,6 +652,75 @@ public:
 		   const struct type_print_options *flags) const override
   {
     f_print_type (type, varstring, stream, show, level, flags);
+  }
+
+  /* See language.h.  This just returns default set of word break
+     characters but with the modules separator `::' removed.  */
+
+  const char *word_break_characters (void) const override
+  {
+    static char *retval;
+
+    if (!retval)
+      {
+	char *s;
+
+	retval = xstrdup (language_defn::word_break_characters ());
+	s = strchr (retval, ':');
+	if (s)
+	  {
+	    char *last_char = &s[strlen (s) - 1];
+
+	    *s = *last_char;
+	    *last_char = 0;
+	  }
+      }
+    return retval;
+  }
+
+
+  /* See language.h.  */
+
+  void collect_symbol_completion_matches (completion_tracker &tracker,
+					  complete_symbol_mode mode,
+					  symbol_name_match_type name_match_type,
+					  const char *text, const char *word,
+					  enum type_code code) const override
+  {
+    /* Consider the modules separator :: as a valid symbol name character
+       class.  */
+    default_collect_symbol_completion_matches_break_on (tracker, mode,
+							name_match_type,
+							text, word, ":",
+							code);
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    return f_value_print_inner (val, stream, recurse, options);
+  }
+
+  /* See language.h.  */
+
+  struct block_symbol lookup_symbol_nonlocal
+	(const char *name, const struct block *block,
+	 const domain_enum domain) const override
+  {
+    return cp_lookup_symbol_nonlocal (this, name, block, domain);
+  }
+
+protected:
+
+  /* See language.h.  */
+
+  symbol_name_matcher_ftype *get_symbol_name_matcher_inner
+	(const lookup_name_info &lookup_name) const override
+  {
+    return cp_get_symbol_name_matcher (lookup_name);
   }
 };
 

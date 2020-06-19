@@ -169,6 +169,9 @@ struct language_pass_by_ref_info
   bool destructible = true;
 };
 
+/* Splitting strings into words.  */
+extern const char *default_word_break_characters (void);
+
 /* Structure tying together assorted information about a language.
 
    As we move over from the old structure based languages to a class
@@ -255,18 +258,6 @@ struct language_data
     void (*la_print_typedef) (struct type *type, struct symbol *new_symbol,
 			      struct ui_file *stream);
 
-    /* Print a value using syntax appropriate for this language.
-       RECURSE is the recursion depth.  It is zero-based.  */
-
-    void (*la_value_print_inner) (struct value *, struct ui_file *,
-				  int recurse,
-				  const struct value_print_options *);
-
-    /* Print a top-level value using syntax appropriate for this language.  */
-
-    void (*la_value_print) (struct value *, struct ui_file *,
-			    const struct value_print_options *);
-
     /* Now come some hooks for lookup_symbol.  */
 
     /* If this is non-NULL, specifies the name that of the implicit
@@ -294,19 +285,6 @@ struct language_data
 
     const bool la_store_sym_names_in_linkage_form_p;
 
-    /* This is a function that lookup_symbol will call when it gets to
-       the part of symbol lookup where C looks up static and global
-       variables.  */
-
-    struct block_symbol (*la_lookup_symbol_nonlocal)
-      (const struct language_defn *,
-       const char *,
-       const struct block *,
-       const domain_enum);
-
-    /* Return class name of a mangled method name or NULL.  */
-    char *(*la_class_name_from_physname) (const char *physname);
-
     /* Table for printing expressions.  */
 
     const struct op_print *la_op_print_tab;
@@ -319,63 +297,8 @@ struct language_data
     /* Index to use for extracting the first element of a string.  */
     char string_lower_bound;
 
-    /* The list of characters forming word boundaries.  */
-    const char *(*la_word_break_characters) (void);
-
-    /* Add to the completion tracker all symbols which are possible
-       completions for TEXT.  WORD is the entire command on which the
-       completion is being made.  If CODE is TYPE_CODE_UNDEF, then all
-       symbols should be examined; otherwise, only STRUCT_DOMAIN
-       symbols whose type has a code of CODE should be matched.  */
-    void (*la_collect_symbol_completion_matches)
-      (completion_tracker &tracker,
-       complete_symbol_mode mode,
-       symbol_name_match_type match_type,
-       const char *text,
-       const char *word,
-       enum type_code code);
-
-    /* Return an expression that can be used for a location
-       watchpoint.  TYPE is a pointer type that points to the memory
-       to watch, and ADDR is the address of the watched memory.  */
-    gdb::unique_xmalloc_ptr<char> (*la_watch_location_expression)
-         (struct type *type, CORE_ADDR addr);
-
-    /* Return a pointer to the function that should be used to match a
-       symbol name against LOOKUP_NAME, according to this language's
-       rules.  The matching algorithm depends on LOOKUP_NAME.  For
-       example, on Ada, the matching algorithm depends on the symbol
-       name (wild/full/verbatim matching), and on whether we're doing
-       a normal lookup or a completion match lookup.
-
-       This field may be NULL, in which case
-       default_symbol_name_matcher is used to perform the
-       matching.  */
-    symbol_name_matcher_ftype *(*la_get_symbol_name_matcher)
-      (const lookup_name_info &);
-
     /* Various operations on varobj.  */
     const struct lang_varobj_ops *la_varobj_ops;
-
-    /* This method must be defined if 'la_get_gcc_context' is defined.
-       If 'la_get_gcc_context' is not defined, then this method is
-       ignored.
-
-       This takes the user-supplied text and returns a new bit of code
-       to compile.
-
-       INST is the compiler instance being used.
-       INPUT is the user's input text.
-       GDBARCH is the architecture to use.
-       EXPR_BLOCK is the block in which the expression is being
-       parsed.
-       EXPR_PC is the PC at which the expression is being parsed.  */
-
-    std::string (*la_compute_program) (compile_instance *inst,
-				       const char *input,
-				       struct gdbarch *gdbarch,
-				       const struct block *expr_block,
-				       CORE_ADDR expr_pc);
 
     /* Return true if TYPE is a string type.  */
     bool (*la_is_string_type_p) (struct type *type);
@@ -466,6 +389,20 @@ struct language_defn : language_data
     return ::iterate_over_symbols (block, name, domain, callback);
   }
 
+  /* Return a pointer to the function that should be used to match a
+     symbol name against LOOKUP_NAME, according to this language's
+     rules.  The matching algorithm depends on LOOKUP_NAME.  For
+     example, on Ada, the matching algorithm depends on the symbol
+     name (wild/full/verbatim matching), and on whether we're doing
+     a normal lookup or a completion match lookup.
+
+     As Ada wants to capture symbol matching for all languages in some
+     cases, then this method is a non-overridable interface.  Languages
+     should override GET_SYMBOL_NAME_MATCHER_INNER if they need to.  */
+
+  symbol_name_matcher_ftype *get_symbol_name_matcher
+	(const lookup_name_info &lookup_name) const;
+
   /* If this language allows compilation from the gdb command line, then
      this method will return an instance of struct gcc_context appropriate
      to the language.  If compilation for this language is generally
@@ -477,6 +414,28 @@ struct language_defn : language_data
   virtual compile_instance *get_compile_instance () const
   {
     return nullptr;
+  }
+
+  /* This method must be overridden if 'get_compile_instance' is
+     overridden.
+
+     This takes the user-supplied text and returns a new bit of code
+     to compile.
+
+     INST is the compiler instance being used.
+     INPUT is the user's input text.
+     GDBARCH is the architecture to use.
+     EXPR_BLOCK is the block in which the expression is being
+     parsed.
+     EXPR_PC is the PC at which the expression is being parsed.  */
+
+  virtual std::string compute_program (compile_instance *inst,
+				       const char *input,
+				       struct gdbarch *gdbarch,
+				       const struct block *expr_block,
+				       CORE_ADDR expr_pc) const
+  {
+    gdb_assert_not_reached ("language_defn::compute_program");
   }
 
   /* Hash the given symbol search name.  */
@@ -523,8 +482,71 @@ struct language_defn : language_data
     return (CORE_ADDR) 0;
   }
 
+  /* Return class name of a mangled method name or NULL.  */
+  virtual char *class_name_from_physname (const char *physname) const
+  {
+    return nullptr;
+  }
+
+  /* The list of characters forming word boundaries.  */
+  virtual const char *word_break_characters (void) const
+  {
+    return default_word_break_characters ();
+  }
+
+  /* Add to the completion tracker all symbols which are possible
+     completions for TEXT.  WORD is the entire command on which the
+     completion is being made.  If CODE is TYPE_CODE_UNDEF, then all
+     symbols should be examined; otherwise, only STRUCT_DOMAIN symbols
+     whose type has a code of CODE should be matched.  */
+
+  virtual void collect_symbol_completion_matches
+	(completion_tracker &tracker,
+	 complete_symbol_mode mode,
+	 symbol_name_match_type name_match_type,
+	 const char *text,
+	 const char *word,
+	 enum type_code code) const
+  {
+    return default_collect_symbol_completion_matches_break_on
+      (tracker, mode, name_match_type, text, word, "", code);
+  }
+
+  /* This is a function that lookup_symbol will call when it gets to
+     the part of symbol lookup where C looks up static and global
+     variables.  This default implements the basic C lookup rules.  */
+
+  virtual struct block_symbol lookup_symbol_nonlocal
+	(const char *name,
+	 const struct block *block,
+	 const domain_enum domain) const;
+
+  /* Return an expression that can be used for a location
+     watchpoint.  TYPE is a pointer type that points to the memory
+     to watch, and ADDR is the address of the watched memory.  */
+  virtual gdb::unique_xmalloc_ptr<char> watch_location_expression
+	(struct type *type, CORE_ADDR addr) const;
+
   /* List of all known languages.  */
   static const struct language_defn *languages[nr_languages];
+
+  /* Print a top-level value using syntax appropriate for this language.  */
+  virtual void value_print (struct value *val, struct ui_file *stream,
+			    const struct value_print_options *options) const;
+
+  /* Print a value using syntax appropriate for this language.  RECURSE is
+     the recursion depth.  It is zero-based.  */
+  virtual void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const;
+
+protected:
+
+  /* This is the overridable part of the GET_SYMBOL_NAME_MATCHER method.
+     See that method for a description of the arguments.  */
+
+  virtual symbol_name_matcher_ftype *get_symbol_name_matcher_inner
+	  (const lookup_name_info &lookup_name) const;
 };
 
 /* Pointer to the language_defn for our current language.  This pointer
@@ -617,7 +639,7 @@ extern enum language set_language (enum language);
   (current_language->la_print_typedef(type,new_symbol,stream))
 
 #define LA_VALUE_PRINT(val,stream,options) \
-  (current_language->la_value_print(val,stream,options))
+  (current_language->value_print (val,stream,options))
 
 #define LA_PRINT_CHAR(ch, type, stream) \
   (current_language->la_printchar(ch, type, stream))
@@ -677,13 +699,6 @@ extern CORE_ADDR skip_language_trampoline (struct frame_info *, CORE_ADDR pc);
 extern char *language_demangle (const struct language_defn *current_language, 
 				const char *mangled, int options);
 
-/* Return class name from physname, or NULL.  */
-extern char *language_class_name_from_physname (const struct language_defn *,
-					        const char *physname);
-
-/* Splitting strings into words.  */
-extern const char *default_word_break_characters (void);
-
 /* Return information about whether TYPE should be passed
    (and returned) by reference at the language level.  */
 struct language_pass_by_ref_info language_pass_by_reference (struct type *type);
@@ -696,13 +711,6 @@ void c_get_string (struct value *value,
 		   gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
 		   int *length, struct type **char_type,
 		   const char **charset);
-
-/* The default implementation of la_symbol_name_matcher.  Matches with
-   strncmp_iw.  */
-extern bool default_symbol_name_matcher
-  (const char *symbol_search_name,
-   const lookup_name_info &lookup_name,
-   completion_match_result *comp_match_res);
 
 /* Get LANG's symbol_name_matcher method for LOOKUP_NAME.  Returns
    default_symbol_name_matcher if not set.  LANG is used as a hint;

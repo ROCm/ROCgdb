@@ -368,22 +368,12 @@ extern const struct language_data m2_language_data =
   m2_printstr,			/* function to print string constant */
   m2_emit_char,			/* Function to print a single character */
   m2_print_typedef,		/* Print a typedef using appropriate syntax */
-  m2_value_print_inner,		/* la_value_print_inner */
-  c_value_print,		/* Print a top-level value */
   NULL,		                /* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
-  basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  NULL,				/* Language specific
-				   class_name_from_physname */
   m2_op_print_tab,		/* expression operators for printing */
   0,				/* arrays are first-class (not c-style) */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   m2_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -430,6 +420,15 @@ public:
 		   const struct type_print_options *flags) const override
   {
     m2_print_type (type, varstring, stream, show, level, flags);
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    return m2_value_print_inner (val, stream, recurse, options);
   }
 };
 

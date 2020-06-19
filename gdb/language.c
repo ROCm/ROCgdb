@@ -57,9 +57,6 @@ static void unk_lang_emit_char (int c, struct type *type,
 static void unk_lang_printchar (int c, struct type *type,
 				struct ui_file *stream);
 
-static void unk_lang_value_print (struct value *, struct ui_file *,
-				  const struct value_print_options *);
-
 /* The current (default at startup) state of type and range checking.
    (If the modes are set to "auto", though, these are changed based
    on the default language at startup, and then again based on the
@@ -589,16 +586,6 @@ language_demangle (const struct language_defn *current_language,
   return NULL;
 }
 
-/* Return class name from physname or NULL.  */
-char *
-language_class_name_from_physname (const struct language_defn *lang,
-				   const char *physname)
-{
-  if (lang != NULL && lang->la_class_name_from_physname)
-    return lang->la_class_name_from_physname (physname);
-  return NULL;
-}
-
 /* Return information about whether TYPE should be passed
    (and returned) by reference at the language level.  */
 
@@ -634,7 +621,40 @@ language_defn::print_array_index (struct type *index_type, LONGEST index,
 
 /* See language.h.  */
 
-bool
+gdb::unique_xmalloc_ptr<char>
+language_defn::watch_location_expression (struct type *type,
+					  CORE_ADDR addr) const
+{
+  /* Generates an expression that assumes a C like syntax is valid.  */
+  type = check_typedef (TYPE_TARGET_TYPE (check_typedef (type)));
+  std::string name = type_to_string (type);
+  return gdb::unique_xmalloc_ptr<char>
+    (xstrprintf ("* (%s *) %s", name.c_str (), core_addr_to_string (addr)));
+}
+
+/* See language.h.  */
+
+void
+language_defn::value_print (struct value *val, struct ui_file *stream,
+	       const struct value_print_options *options) const
+{
+  return c_value_print (val, stream, options);
+}
+
+/* See language.h.  */
+
+void
+language_defn::value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const
+{
+  return c_value_print_inner (val, stream, recurse, options);
+}
+
+/* The default implementation of the get_symbol_name_matcher_inner method
+   from the language_defn class.  Matches with strncmp_iw.  */
+
+static bool
 default_symbol_name_matcher (const char *symbol_search_name,
 			     const lookup_name_info &lookup_name,
 			     completion_match_result *comp_match_res)
@@ -659,6 +679,31 @@ default_symbol_name_matcher (const char *symbol_search_name,
 
 /* See language.h.  */
 
+symbol_name_matcher_ftype *
+language_defn::get_symbol_name_matcher
+	(const lookup_name_info &lookup_name) const
+{
+  /* If currently in Ada mode, and the lookup name is wrapped in
+     '<...>', hijack all symbol name comparisons using the Ada
+     matcher, which handles the verbatim matching.  */
+  if (current_language->la_language == language_ada
+      && lookup_name.ada ().verbatim_p ())
+    return current_language->get_symbol_name_matcher_inner (lookup_name);
+
+  return this->get_symbol_name_matcher_inner (lookup_name);
+}
+
+/* See language.h.  */
+
+symbol_name_matcher_ftype *
+language_defn::get_symbol_name_matcher_inner
+	(const lookup_name_info &lookup_name) const
+{
+  return default_symbol_name_matcher;
+}
+
+/* See language.h.  */
+
 bool
 default_is_string_type_p (struct type *type)
 {
@@ -669,24 +714,6 @@ default_is_string_type_p (struct type *type)
       type = check_typedef (type);
     }
   return (type->code ()  == TYPE_CODE_STRING);
-}
-
-/* See language.h.  */
-
-symbol_name_matcher_ftype *
-get_symbol_name_matcher (const language_defn *lang,
-			 const lookup_name_info &lookup_name)
-{
-  /* If currently in Ada mode, and the lookup name is wrapped in
-     '<...>', hijack all symbol name comparisons using the Ada
-     matcher, which handles the verbatim matching.  */
-  if (current_language->la_language == language_ada
-      && lookup_name.ada ().verbatim_p ())
-    return current_language->la_get_symbol_name_matcher (lookup_name);
-
-  if (lang->la_get_symbol_name_matcher != nullptr)
-    return lang->la_get_symbol_name_matcher (lookup_name);
-  return default_symbol_name_matcher;
 }
 
 /* Define the language that is no language.  */
@@ -720,28 +747,6 @@ unk_lang_printstr (struct ui_file *stream, struct type *type,
 {
   error (_("internal error - unimplemented "
 	   "function unk_lang_printstr called."));
-}
-
-static void
-unk_lang_value_print_inner (struct value *val,
-			    struct ui_file *stream, int recurse,
-			    const struct value_print_options *options)
-{
-  error (_("internal error - unimplemented "
-	   "function unk_lang_value_print_inner called."));
-}
-
-static void
-unk_lang_value_print (struct value *val, struct ui_file *stream,
-		      const struct value_print_options *options)
-{
-  error (_("internal error - unimplemented "
-	   "function unk_lang_value_print called."));
-}
-
-static char *unk_lang_class_name (const char *mangled)
-{
-  return NULL;
 }
 
 static const struct op_print unk_op_print_tab[] =
@@ -778,22 +783,12 @@ extern const struct language_data unknown_language_data =
   unk_lang_printstr,
   unk_lang_emit_char,
   default_print_typedef,	/* Print a typedef using appropriate syntax */
-  unk_lang_value_print_inner,	/* la_value_print_inner */
-  unk_lang_value_print,		/* Print a top-level value */
   "this",        	    	/* name_of_this */
   true,				/* store_sym_names_in_linkage_form_p */
-  basic_lookup_symbol_nonlocal, /* lookup_symbol_nonlocal */
-  unk_lang_class_name,		/* Language specific
-				   class_name_from_physname */
   unk_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   default_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -830,6 +825,23 @@ public:
     /* The unknown language just uses the C++ demangler.  */
     return gdb_demangle (mangled, options);
   }
+
+  /* See language.h.  */
+
+  void value_print (struct value *val, struct ui_file *stream,
+		    const struct value_print_options *options) const override
+  {
+    error (_("unimplemented unknown_language::value_print called"));
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    error (_("unimplemented unknown_language::value_print_inner called"));
+  }
 };
 
 /* Single instance of the unknown language class.  */
@@ -855,22 +867,12 @@ extern const struct language_data auto_language_data =
   unk_lang_printstr,
   unk_lang_emit_char,
   default_print_typedef,	/* Print a typedef using appropriate syntax */
-  unk_lang_value_print_inner,	/* la_value_print_inner */
-  unk_lang_value_print,		/* Print a top-level value */
   "this",		        /* name_of_this */
   false,			/* store_sym_names_in_linkage_form_p */
-  basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
-  unk_lang_class_name,		/* Language specific
-				   class_name_from_physname */
   unk_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
-  default_word_break_characters,
-  default_collect_symbol_completion_matches,
-  c_watch_location_expression,
-  NULL,				/* la_get_symbol_name_matcher */
   &default_varobj_ops,
-  NULL,
   default_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
@@ -906,6 +908,23 @@ public:
   {
     /* The auto language just uses the C++ demangler.  */
     return gdb_demangle (mangled, options);
+  }
+
+  /* See language.h.  */
+
+  void value_print (struct value *val, struct ui_file *stream,
+		    const struct value_print_options *options) const override
+  {
+    error (_("unimplemented auto_language::value_print called"));
+  }
+
+  /* See language.h.  */
+
+  void value_print_inner
+	(struct value *val, struct ui_file *stream, int recurse,
+	 const struct value_print_options *options) const override
+  {
+    error (_("unimplemented auto_language::value_print_inner called"));
   }
 };
 

@@ -1,3 +1,635 @@
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/25412
+	* gdbthread.h (delete_thread, delete_thread_silent)
+	(find_thread_ptid): Update comments.
+	* thread.c (current_thread_): New global.
+	(is_current_thread): Move higher, and reimplement.
+	(inferior_thread): Reimplement.
+	(set_thread_exited): Use bool.  Add assertions.
+	(add_thread_silent): Simplify thread-reuse handling by always
+	calling delete_thread.
+	(delete_thread): Remove intro comment.
+	(find_thread_ptid): Skip exited threads.
+	(switch_to_thread_no_regs): Write to current_thread_.
+	(switch_to_no_thread): Check CURRENT_THREAD_ instead of
+	INFERIOR_PTID.  Clear current_thread_.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* aix-thread.c (pd_update): Use switch_to_thread.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* ravenscar-thread.c (ravenscar_thread_target): Update.
+	(ravenscar_thread_target::update_inferior_ptid): Rename to ...
+	(ravenscar_thread_target::add_active_thread): ... this.  Don't
+	set m_base_ptid here.  Update to avoid referencing inferior_ptid.
+	(ravenscar_thread_target::wait): Don't write to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* nat/windows-nat.c (current_windows_thread): Remove.
+	* nat/windows-nat.h (current_windows_thread): Remove.
+	* windows-nat.c (windows_nat_target::stopped_by_sw_breakpoint):
+	Adjust.
+	(display_selectors): Adjust to fetch the current
+	windows_thread_info based on inferior_ptid.
+	(fake_create_process): No longer write to current_windows_thread.
+	(windows_nat_target::get_windows_debug_event):
+	Don't set inferior_ptid or current_windows_thread.
+	(windows_nat_target::wait): Adjust to not rely on
+	current_windows_thread.
+	(do_initial_windows_stuff): Now a method of windows_nat_target.
+	Switch to the last_ptid thread.
+	(windows_nat_target::attach): Adjust.
+	(windows_nat_target::detach): Use switch_to_no_thread instead of
+	writing to inferior_ptid directly.
+	(windows_nat_target::create_inferior): Adjust.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* windows-nat.c (do_initial_windows_stuff): No longer set inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* go32-nat.c (go32_nat_target::create_inferior): Switch to thread
+	after creating it, instead of writing to inferior_ptid.  Don't
+	write to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* fork-child.c (postfork_hook): Don't write to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* bsd-kvm.c (bsd_kvm_target_open): Switch to thread after adding
+	it, instead of writing to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* btrace.c (btrace_fetch): Use switch_to_thread instead of writing
+	to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* bsd-kvm.c (bsd_kvm_target::close): Use switch_to_no_thread
+	instead of writing to inferior_ptid directly.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* corelow.c (core_target::close): Use switch_to_no_thread instead
+	of writing to inferior_ptid directly.
+	(add_to_thread_list, core_target_open): Use switch_to_thread
+	instead of writing to inferior_ptid directly.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* darwin-nat.c (darwin_nat_target::decode_message): Don't write to
+	inferior_ptid.
+	(darwin_nat_target::stop_inferior, darwin_nat_target::kill): Avoid
+	inferior_ptid.
+	(darwin_attach_pid): Use switch_to_no_thread instead of writing to
+	inferior_ptid directly.
+	(darwin_nat_target::init_thread_list): Switch to thread, instead
+	of writing to inferior_ptid.
+	(darwin_nat_target::attach): Don't write to inferior_ptid.
+	(darwin_nat_target::get_ada_task_ptid): Avoid inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* gnu-nat.c (gnu_nat_target::create_inferior): Switch to the added
+	thread.
+	(gnu_nat_target::attach): Don't write to inferior_ptid directly.
+	Instead use switch_to_thread.
+	(gnu_nat_target::detach): Use switch_to_no_thread
+	instead of writing to inferior_ptid directly.  Used passed-in
+	inferior instead of looking up the inferior by pid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* go32-nat.c (go32_nat_target::create_inferior): Don't write to
+	inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* nto-procfs.c (nto_procfs_target::update_thread_list): Avoid
+	inferior_ptid.
+	(nto_procfs_target::attach): Avoid inferior_ptid.  Switch to
+	thread.
+	(nto_procfs_target::detach): Avoid referencing
+	inferior_ptid.  Use switch_to_no_thread instead of writing to
+	inferior_ptid directly.
+	(nto_procfs_target::mourn_inferior): Use switch_to_no_thread
+	instead of writing to inferior_ptid directly.
+	(nto_procfs_target::create_inferior): Avoid inferior_ptid.  Switch
+	to thread.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* remote-sim.c (gdbsim_target::create_inferior): Switch to thread
+	after creating it, instead of writing to inferior_ptid.
+	(gdbsim_target_open): Use switch_to_no_thread instead of writing
+	to inferior_ptid directly.
+	(gdbsim_target::wait): Don't write to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* remote.c (remote_target::remote_notice_new_inferior): Use
+	switch_to_thread instead of writing to inferior_ptid directly.
+	(remote_target::add_current_inferior_and_thread): Use
+	switch_to_no_thread instead of writing to inferior_ptid directly.
+	(extended_remote_target::attach): Use switch_to_inferior_no_thread
+	and switch_to_thread instead of using set_current_inferior or
+	writing to inferior_ptid directly.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* tracectf.c (ctf_target_open): Switch to added thread instead of
+	writing to inferior_ptid directly.
+	(ctf_target::close): Use switch_to_no_thread instead of writing to
+	inferior_ptid directly.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* tracefile-tfile.c (tfile_target_open): Don't write to
+	inferior_ptid directly, instead switch to added thread.
+	(tfile_target::close): Use switch_to_no_thread instead of writing
+	to inferior_ptid directly.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* procfs.c (procfs_target::attach): Don't write to inferior_ptid.
+	(procfs_target::detach): Use switch_to_no_thread
+	instead of writing to inferior_ptid directly.
+	(do_attach): Change return type to void.  Switch to the added
+	thread.
+	(procfs_target::create_inferior): Switch to the added thread.
+	(procfs_do_thread_registers): Don't write to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* infrun.c (generic_mourn_inferior): Use switch_to_thread instead
+	of writing to inferior_ptid.
+	(scoped_restore_exited_inferior): Delete.
+	(handle_vfork_child_exec_or_exit): Simplify using
+	scoped_restore_current_pspace_and_thread.  Use switch_to_thread
+	instead of writing to inferior_ptid.
+	(THREAD_STOPPED_BY): Delete.
+	(thread_stopped_by_watchpoint, thread_stopped_by_sw_breakpoint)
+	(thread_stopped_by_hw_breakpoint): Delete.
+	(save_waitstatus): Use
+	scoped_restore_current_thread+switch_to_thread, and call
+	target_stopped_by_watchpoint instead of
+	thread_stopped_by_watchpoint, target_stopped_by_sw_breakpoint
+	instead of thread_stopped_by_sw_breakpoint, and
+	target_stopped_by_hw_breakpoint instead of
+	thread_stopped_by_hw_breakpoint.
+	(handle_inferior_event)
+	<TARGET_WAITKIND_EXITED/TARGET_WAITKIND_SIGNALLED>: Don't write to
+	inferior_ptid directly, nor
+	set_current_inferior/set_current_program_space.  Use
+	switch_to_thread / switch_to_inferior_no_thread instead.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* target.c (generic_mourn_inferior): Use switch_to_no_thread
+	instead of writing to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* inf-ptrace.c (inf_ptrace_target::create_inferior): Switch to the
+	added thread.
+	(inf_ptrace_target::attach): Don't write to inferior_ptid.  Switch
+	to the added thread.
+	(inf_ptrace_target::detach_success): Use switch_to_no_thread
+	instead of writing to inferior_ptid.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* gdbarch-selftests.c: Include "progspace-and-thread.h".
+	(register_to_value_test): Mock a program_space too.  Heap-allocate
+	the address space.  Don't write to inferior_ptid.  Use
+	switch_to_thread instead.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* linux-tdep.c (find_signalled_thread(thread_info *,void *)):
+	Delete.
+	(find_signalled_thread()): New, factored out from
+	linux_make_corefile_notes and adjusted to handle exited threads.
+	(linux_make_corefile_notes): Adjust to use the new
+	find_signalled_thread.
+
+2020-06-18  Pedro Alves  <palves@redhat.com>
+
+	* linux-tdep.c (btrace_fetch): Save/restore current thread instead
+	of saving/restoring inferior_ptid.
+
+2020-06-17  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-win.h (tui_scroll_forward, tui_scroll_backward)
+	(tui_scroll_left, tui_scroll_right, struct tui_win_info): Don't
+	declare.
+	* tui/tui-data.h (MIN_CMD_WIN_HEIGHT): Remove.
+
+2020-06-15  Simon Marchi  <simon.marchi@efficios.com>
+
+	* dwarf2/read.c (dwarf2_initialize_objfile): Check for presence
+	of partial symtabs.
+
+2020-06-17  Simon Marchi  <simon.marchi@efficios.com>
+
+	* regformats/reg-arm.dat: Remove.
+	* regformats/reg-bfin.dat: Remove.
+	* regformats/reg-cris.dat: Remove.
+	* regformats/reg-crisv32.dat: Remove.
+	* regformats/reg-m32r.dat: Remove.
+	* regformats/reg-tilegx.dat: Remove.
+	* regformats/reg-tilegx32.dat: Remove.
+
+2020-06-17  Simon Marchi  <simon.marchi@efficios.com>
+
+	* features/Makefile (WHICH): Remove arm files.
+	* regformats/arm/arm-with-iwmmxt.dat: Remove.
+	* regformats/arm/arm-with-neon.dat: Remove.
+	* regformats/arm/arm-with-vfpv2.dat: Remove.
+	* regformats/arm/arm-with-vfpv3.dat: Remove.
+
+2020-06-17  Simon Marchi  <simon.marchi@efficios.com>
+
+	* features/Makefile (XMLTOC): Remove rx.xml.
+
+2020-06-17  Pedro Alves  <palves@redhat.com>
+
+	* gdbthread.h (thread_control_state) <trap_expected> Update
+	comments.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_lookup_symbol_nonlocal): Rename to
+	ada_language::lookup_symbol_nonlocal.
+	(ada_language_data): Delete la_lookup_symbol_nonlocal initializer.
+	(ada_language::lookup_symbol_nonlocal): New member function,
+	implementation from ada_lookup_symbol_nonlocal.
+	* c-lang.c (c_language_data): Delete la_lookup_symbol_nonlocal
+	initializer.
+	(cplus_language_data): Delete la_lookup_symbol_nonlocal
+	initializer.
+	(cplus_language::lookup_symbol_nonlocal): New member function.
+	(asm_language_data): Delete la_lookup_symbol_nonlocal initializer.
+	(minimal_language_data) Likewise.
+	* cp-namespace.c (cp_lookup_nested_symbol): Update comment.
+	* d-lang.c (d_language_data): Delete la_lookup_symbol_nonlocal
+	initializer.
+	(d_language::lookup_symbol_nonlocal): New member function.
+	* f-lang.c (f_language_data): Delete la_lookup_symbol_nonlocal
+	initializer.
+	(f_language::lookup_symbol_nonlocal): New member function.
+	* go-lang.c (go_language_data): Delete la_lookup_symbol_nonlocal
+	initializer.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete la_lookup_symbol_nonlocal
+	field.
+	(language_defn::lookup_symbol_nonlocal): New member function.
+	* m2-lang.c (m2_language_data): Delete la_lookup_symbol_nonlocal
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_lookup_symbol_nonlocal): Rename to
+	rust_language::lookup_symbol_nonlocal.
+	(rust_language_data): Delete la_lookup_symbol_nonlocal
+	initializer.
+	(rust_language::lookup_symbol_nonlocal): New member function,
+	implementation from rust_lookup_symbol_nonlocal.
+	* symtab.c (lookup_symbol_aux): Update call to
+	lookup_symbol_nonlocal.
+	(basic_lookup_symbol_nonlocal): Rename to...
+	(language_defn::lookup_symbol_nonlocal): ...this, and update
+	header comment.  Remove language_defn parameter, and replace with
+	uses of `this'.
+	* symtab.h (basic_lookup_symbol_nonlocal): Delete declaration.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Delete la_value_print_inner
+	initializer.
+	(ada_language::value_print_inner): New member function.
+	* c-lang.c (c_language_data): Delete la_value_print_inner
+	initializer.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	(d_language::value_print_inner): New member function.
+	* f-lang.c (f_language_data): Delete la_value_print_inner
+	initializer.
+	(f_language::value_print_inner): New member function.
+	* f-lang.h (f_value_print_innner): Rename to...
+	(f_value_print_inner): ...this (note spelling of 'inner').
+	* f-valprint.c (f_value_print_innner): Rename to...
+	(f_value_print_inner): ...this (note spelling of 'inner').
+	* go-lang.c (go_language_data): Delete la_value_print_inner
+	initializer.
+	(go_language::value_print_inner): New member function.
+	* language.c (language_defn::value_print_inner): Define new member
+	function.
+	(unk_lang_value_print_inner): Delete.
+	(unknown_language_data): Delete la_value_print_inner initializer.
+	(unknown_language::value_print_inner): New member function.
+	(auto_language_data): Delete la_value_print_inner initializer.
+	(auto_language::value_print_inner): New member function.
+	* language.h (language_data): Delete la_value_print_inner field.
+	(language_defn::value_print_inner): Delcare new member function.
+	* m2-lang.c (m2_language_data): Delete la_value_print_inner
+	initializer.
+	(m2_language::value_print_inner): New member function.
+	* objc-lang.c (objc_language_data): Delete la_value_print_inner
+	initializer.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	(pascal_language::value_print_inner): New member function.
+	* rust-lang.c (rust_language_data): Delete la_value_print_inner
+	initializer.
+	(rust_language::value_print_inner): New member function.
+	* valprint.c (do_val_print): Update call to value_print_inner.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Delete la_value_print
+	initializer.
+	(ada_language::value_print): New member function.
+	* c-lang.c (c_language_data): Delete la_value_print initializer.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* f-lang.c (f_language_data): Likewise.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (unk_lang_value_print): Delete.
+	(language_defn::value_print): Define new member function.
+	(unknown_language_data): Delete la_value_print initializer.
+	(unknown_language::value_print): New member function.
+	(auto_language_data): Delete la_value_print initializer.
+	(auto_language::value_print): New member function.
+	* language.h (language_data): Delete la_value_print field.
+	(language_defn::value_print): Declare new member function.
+	(LA_VALUE_PRINT): Update call to value_print.
+	* m2-lang.c (m2_language_data): Delete la_value_print initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	(pascal_language::value_print): New member function.
+	* rust-lang.c (rust_language_data): Delete la_value_print
+	initializer.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_watch_location_expression): Rename to
+	ada_language::watch_location_expression.
+	(ada_language_data): Delete la_watch_location_expression
+	initializer.
+	(ada_language::watch_location_expression): New member function,
+	implementation from ada_watch_location_expression.
+	* breakpoint.c (watch_command_1): Update call to
+	watch_location_expression.
+	* c-lang.c (c_watch_location_expression): Rename to
+	language_defn::watch_location_expression.
+	(c_language_data): Delete la_watch_location_expression
+	initializer.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* c-lang.h (c_watch_location_expression): Delete declaration.
+	* d-lang.c (d_language_data): Delete la_watch_location_expression
+	initializer.
+	* f-lang.c (f_language_data): Likewise.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (language_defn::watch_location_expression): Member
+	function implementation from c_watch_location_expression.
+	(unknown_language_data): Delete la_watch_location_expression
+	initializer.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete la_watch_location_expression
+	field.
+	(language_defn::watch_location_expression): Declare new member
+	function.
+	* m2-lang.c (m2_language_data): Delete
+	la_watch_location_expression initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_watch_location_expression): Rename to
+	rust_language::watch_location_expression.
+	(rust_language_data): Delete la_watch_location_expression
+	initializer.
+	(rust_language::watch_location_expression): New member function,
+	implementation from rust_watch_location_expression.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_collect_symbol_completion_matches): Rename to
+	ada_language::collect_symbol_completion_matches.
+	(ada_language_data): Delete la_collect_symbol_completion_matches
+	initializer.
+	(ada_language::collect_symbol_completion_matches): New member
+	function, implementation from
+	ada_collect_symbol_completion_matches.
+	* c-lang.c (c_language_data): Delete
+	la_collect_symbol_completion_matches initializer.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* f-lang.c (f_collect_symbol_completion_matches): Rename to
+	f_language::collect_symbol_completion_matches.
+	(f_language_data): Delete la_collect_symbol_completion_matches
+	initializer.
+	(f_language::collect_symbol_completion_matches) New member
+	function, implementation from f_collect_symbol_completion_matches.
+	* go-lang.c (go_language_data): Delete
+	la_collect_symbol_completion_matches initializer.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete
+	la_collect_symbol_completion_matches field.
+	(language_defn::collect_symbol_completion_matches): New member
+	function.
+	* m2-lang.c (m2_language_data): Delete
+	la_collect_symbol_completion_matches initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+	* symtab.c (default_collect_symbol_completion_matches): Delete.
+	(collect_symbol_completion_matches): Update call to
+	collect_symbol_completion_matches.
+	(collect_symbol_completion_matches_type): Likewise.
+	* symtab.h (default_collect_symbol_completion_matches): Delete
+	declaration.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_get_gdb_completer_word_break_characters): Delete.
+	(ada_language_data): Delete la_word_break_characters initializer.
+	(ada_language::word_break_characters): New member function.
+	* c-lang.c (c_language_data): Delete la_word_break_characters
+	initializer.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* completer.c: Update global comment.
+	(advance_to_expression_complete_word_point): Update call to
+	word_break_characters.
+	(complete_files_symbols): Likewise.
+	(complete_line_internal_1): Likewise.
+	(default_completer_handle_brkchars): Likewise.
+	(skip_quoted_chars): Likewise.
+	* d-lang.c (d_language_data): Delete la_word_break_characters
+	initializer.
+	* f-lang.c (f_word_break_characters): Delete.
+	(f_language_data): Delete la_word_break_characters initializer.
+	(f_language::word_break_characters): New member function.
+	* go-lang.c (go_language_data): Delete la_word_break_characters
+	initializer.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (default_word_break_characters): Move declaration to
+	earlier in the file.
+	(language_data): Delete la_word_break_characters field.
+	(language_defn::word_break_characters): New member function.
+	* m2-lang.c (m2_language_data): Delete la_word_break_characters
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_get_symbol_name_matcher): Update header comment.
+	(ada_language_data): Delete la_get_symbol_name_matcher
+	initializer.
+	(language_defn::get_symbol_name_matcher_inner): New member
+	function.
+	* c-lang.c (c_language_data): Delete la_get_symbol_name_matcher
+	initializer.
+	(cplus_language_data): Likewise.
+	(cplus_language::get_symbol_name_matcher_inner): New member
+	function.
+	(asm_language_data): Delete la_get_symbol_name_matcher initializer.
+	(minimal_language_data): Likewise.
+	* cp-support.h (cp_get_symbol_name_matcher): Update header comment.
+	* d-lang.c (d_language_data): Delete la_get_symbol_name_matcher
+	initializer.
+	* dictionary.c (iter_match_first_hashed): Update call to
+	get_symbol_name_matcher.
+	(iter_match_next_hashed): Likewise.
+	(iter_match_next_linear): Likewise.
+	* dwarf2/read.c (dw2_expand_symtabs_matching_symbol): Likewise.
+	* f-lang.c (f_language_data): Delete la_get_symbol_name_matcher
+	initializer.
+	(f_language::get_symbol_name_matcher_inner): New member function.
+	* go-lang.c (go_language_data): Delete la_get_symbol_name_matcher
+	initializer.
+	* language.c (default_symbol_name_matcher): Update header comment,
+	make static.
+	(language_defn::get_symbol_name_matcher): New definition.
+	(language_defn::get_symbol_name_matcher_inner): Likewise.
+	(get_symbol_name_matcher): Delete.
+	(unknown_language_data): Delete la_get_symbol_name_matcher
+	initializer.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete la_get_symbol_name_matcher
+	field.
+	(language_defn::get_symbol_name_matcher): New member function.
+	(language_defn::get_symbol_name_matcher_inner): Likewise.
+	(default_symbol_name_matcher): Delete declaration.
+	* linespec.c (find_methods): Update call to
+	get_symbol_name_matcher.
+	* m2-lang.c (m2_language_data): Delete la_get_symbol_name_matcher
+	initializer.
+	* minsyms.c (lookup_minimal_symbol): Update call to
+	get_symbol_name_matcher.
+	(iterate_over_minimal_symbols): Likewise.
+	* objc-lang.c (objc_language_data): Delete
+	la_get_symbol_name_matcher initializer.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* psymtab.c (psymbol_name_matches): Update call to
+	get_symbol_name_matcher.
+	* rust-lang.c (rust_language_data): Delete
+	la_get_symbol_name_matcher initializer.
+	* symtab.c (symbol_matches_search_name): Update call to
+	get_symbol_name_matcher.
+	(compare_symbol_name): Likewise.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Delete la_compute_program
+	initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(c_language::compute_program): New member function.
+	(cplus_language_data): Delete la_compute_program initializer.
+	(cplus_language::compute_program): New member function.
+	(asm_language_data): Delete la_compute_program initializer.
+	(minimal_language_data): Likewise.
+	* c-lang.h (c_compute_program): Update comment.
+	(cplus_compute_program): Likewise.
+	* compile/compile-c-support.c (c_compute_program): Likewise.
+	(cplus_compute_program): Likewise.
+	* compile/compile.c (compile_to_object): Update call to
+	la_compute_program.
+	* d-lang.c (d_language_data): Delete la_compute_program
+	initializer.
+	* f-lang.c (f_language_data): Likewise.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete la_compute_program field.
+	(language_defn::compute_program): New member function.
+	* m2-lang.c (m2_language_data): Delete la_compute_program
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+
+2020-06-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data) Delete
+	la_class_name_from_physname initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(cplus_language_data): Likewise.
+	(cplus_language::class_name_from_physname): New member function.
+	(asm_language_data): Delete la_class_name_from_physname
+	initializer.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* dwarf2/read.c (guess_partial_die_structure_name): Update to call
+	method on language_defn class.
+	(guess_full_die_structure_name): Likewise.
+	* f-lang.c (f_language_data): Delete la_class_name_from_physname
+	initializer.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (language_class_name_from_physname): Delete.
+	(unk_lang_class_name): Delete.
+	(unknown_language_data): Delete la_class_name_from_physname
+	initializer.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete la_class_name_from_physname
+	field.
+	(language_defn::class_name_from_physname): New function.
+	(language_class_name_from_physname): Delete declaration.
+	* m2-lang.c (m2_language_data): Delete la_class_name_from_physname
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+
 2020-06-16  Tom Tromey  <tom@tromey.com>
 
 	* tui/tui-data.h (STATUS_NAME): New macro.
