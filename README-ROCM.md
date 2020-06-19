@@ -19,25 +19,27 @@ and limitations applicable to the purchase or use of AMD’s products are as set
 forth in a signed agreement between the parties or in AMD’s Standard Terms and
 Conditions of Sale.
 
-AMD, the AMD Arrow logo are trademarks of Advanced Micro Devices, Inc.  Linux®
-is the registered trademark of Linus Torvalds in the U.S. and other countries.
-RedHat® and the Shadowman logo are registered trademarks of Red Hat, Inc.
-www.redhat.com in the U.S. and other countries.  SUSE® is a registered trademark
-of SUSE LLC in the United Stated and other countries.  Ubuntu® and the Ubuntu
-logo are registered trademarks of Canonical Ltd.  Other product names used in
-this publication are for identification purposes only and may be trademarks of
-their respective companies.
+AMD®, the AMD Arrow logo, ROCm® and combinations thereof are trademarks of
+Advanced Micro Devices, Inc.  Linux® is the registered trademark of Linus
+Torvalds in the U.S. and other countries.  RedHat® and the Shadowman logo are
+registered trademarks of Red Hat, Inc. www.redhat.com in the U.S. and other
+countries.  SUSE® is a registered trademark of SUSE LLC in the United Stated
+and other countries.  Ubuntu® and the Ubuntu logo are registered trademarks of
+Canonical Ltd.  Other product names used in this publication are for
+identification purposes only and may be trademarks of their respective
+companies.
 
 Copyright (c) 2019-2020 Advanced Micro Devices, Inc.  All rights reserved.
 
 Introduction
 ------------
 
-The AMD ROCm Debugger (ROCgdb) is the AMD ROCm source-level debugger for Linux,
-based on the GNU Debugger (GDB). It enables heterogeneous debugging on the AMD
-ROCm platform of an x86-based host architecture along with AMD GPU architectures
-supported by the AMD Debugger API Library (ROCdbgapi). The AMD Debugger API
-Library (ROCdbgapi) is included with the AMD ROCm release.
+The AMD ROCm Debugger (ROCgdb) is the AMD source-level debugger for Linux,
+based on the GNU Debugger (GDB). It enables heterogeneous debugging in the AMD
+Radeon Open Compute Ecosystem (ROCm) comprising of an x86-based host
+architecture along with commercially available AMD GPU architectures supported
+by the AMD Debugger API Library (ROCdbgapi). The AMD Debugger API Library
+(ROCdbgapi) is included with the AMD ROCm release.
 
 The current AMD ROCm Debugger (ROCgdb) is an initial prototype that focuses on
 source line debugging. Symbolic variable debugging capabilities are not
