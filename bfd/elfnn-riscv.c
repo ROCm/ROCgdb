@@ -2987,9 +2987,7 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info)
   obj_attribute *in_attr;
   obj_attribute *out_attr;
   bfd_boolean result = TRUE;
-  bfd_boolean priv_may_conflict = FALSE;
-  bfd_boolean in_priv_zero = TRUE;
-  bfd_boolean out_priv_zero = TRUE;
+  bfd_boolean priv_attrs_merged = FALSE;
   const char *sec_name = get_elf_backend_data (ibfd)->obj_attrs_section;
   unsigned int i;
 
@@ -3048,41 +3046,67 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info)
       case Tag_RISCV_priv_spec:
       case Tag_RISCV_priv_spec_minor:
       case Tag_RISCV_priv_spec_revision:
-	if (in_attr[i].i != 0)
-	  in_priv_zero = FALSE;
-	if (out_attr[i].i != 0)
-	  out_priv_zero = FALSE;
-	if (out_attr[i].i != in_attr[i].i)
-	  priv_may_conflict = TRUE;
-
-	/* We check the priv version conflict when parsing the
-	   revision version.  */
-	if (i != Tag_RISCV_priv_spec_revision)
-	  break;
-
-	/* Allow to link the object without the priv setting.  */
-	if (out_priv_zero)
+	/* If we have handled the priv attributes, then skip it.  */
+	if (!priv_attrs_merged)
 	  {
-	    out_attr[i].i = in_attr[i].i;
-	    out_attr[Tag_RISCV_priv_spec].i =
-		in_attr[Tag_RISCV_priv_spec].i;
-	    out_attr[Tag_RISCV_priv_spec_minor].i =
-		in_attr[Tag_RISCV_priv_spec_minor].i;
-	  }
-	else if (!in_priv_zero
-		 && priv_may_conflict)
-	  {
-	    _bfd_error_handler
-	      (_("error: %pB use privilege spec version %u.%u.%u but "
-		 "the output use version %u.%u.%u."),
-	       ibfd,
-	       in_attr[Tag_RISCV_priv_spec].i,
-	       in_attr[Tag_RISCV_priv_spec_minor].i,
-	       in_attr[i].i,
-	       out_attr[Tag_RISCV_priv_spec].i,
-	       out_attr[Tag_RISCV_priv_spec_minor].i,
-	       out_attr[i].i);
-	    result = FALSE;
+	    unsigned int Tag_a = Tag_RISCV_priv_spec;
+	    unsigned int Tag_b = Tag_RISCV_priv_spec_minor;
+	    unsigned int Tag_c = Tag_RISCV_priv_spec_revision;
+	    enum riscv_priv_spec_class in_priv_spec;
+	    enum riscv_priv_spec_class out_priv_spec;
+
+	    /* Get the priv spec class from elf attribute numbers.  */
+	    riscv_get_priv_spec_class_from_numbers (in_attr[Tag_a].i,
+						    in_attr[Tag_b].i,
+						    in_attr[Tag_c].i,
+						    &in_priv_spec);
+	    riscv_get_priv_spec_class_from_numbers (out_attr[Tag_a].i,
+						    out_attr[Tag_b].i,
+						    out_attr[Tag_c].i,
+						    &out_priv_spec);
+
+	    /* Allow to link the object without the priv specs.  */
+	    if (out_priv_spec == PRIV_SPEC_CLASS_NONE)
+	      {
+		out_attr[Tag_a].i = in_attr[Tag_a].i;
+		out_attr[Tag_b].i = in_attr[Tag_b].i;
+		out_attr[Tag_c].i = in_attr[Tag_c].i;
+	      }
+	    else if (in_priv_spec != PRIV_SPEC_CLASS_NONE
+		     && in_priv_spec != out_priv_spec)
+	      {
+		_bfd_error_handler
+		  (_("warning: %pB use privilege spec version %u.%u.%u but "
+		     "the output use version %u.%u.%u."),
+		   ibfd,
+		   in_attr[Tag_a].i,
+		   in_attr[Tag_b].i,
+		   in_attr[Tag_c].i,
+		   out_attr[Tag_a].i,
+		   out_attr[Tag_b].i,
+		   out_attr[Tag_c].i);
+
+		/* The priv spec v1.9.1 can be linked with other spec
+		   versions since the conflicts.  We plan to drop the
+		   v1.9.1 in a year or two, so this confict should be
+		   removed in the future.  */
+		if (in_priv_spec == PRIV_SPEC_CLASS_1P9P1
+		    || out_priv_spec == PRIV_SPEC_CLASS_1P9P1)
+		  {
+		    _bfd_error_handler
+		      (_("warning: privilege spec version 1.9.1 can not be "
+			 "linked with other spec versions."));
+		  }
+
+		/* Update the output priv attributes to the newest.  */
+		if (in_priv_spec > out_priv_spec)
+		  {
+		    out_attr[Tag_a].i = in_attr[Tag_a].i;
+		    out_attr[Tag_b].i = in_attr[Tag_b].i;
+		    out_attr[Tag_c].i = in_attr[Tag_c].i;
+		  }
+	      }
+	    priv_attrs_merged = TRUE;
 	  }
 	break;
 
