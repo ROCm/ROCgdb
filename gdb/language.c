@@ -47,15 +47,7 @@
 #include <algorithm>
 #include "gdbarch.h"
 
-static int unk_lang_parser (struct parser_state *);
-
 static void set_range_case (void);
-
-static void unk_lang_emit_char (int c, struct type *type,
-				struct ui_file *stream, int quoter);
-
-static void unk_lang_printchar (int c, struct type *type,
-				struct ui_file *stream);
 
 /* The current (default at startup) state of type and range checking.
    (If the modes are set to "auto", though, these are changed based
@@ -643,12 +635,67 @@ language_defn::value_print (struct value *val, struct ui_file *stream,
 
 /* See language.h.  */
 
+int
+language_defn::parser (struct parser_state *ps) const
+{
+  return c_parse (ps);
+}
+
+/* See language.h.  */
+
 void
 language_defn::value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
 	 const struct value_print_options *options) const
 {
   return c_value_print_inner (val, stream, recurse, options);
+}
+
+/* See language.h.  */
+
+void
+language_defn::emitchar (int ch, struct type *chtype,
+			 struct ui_file * stream, int quoter) const
+{
+  c_emit_char (ch, chtype, stream, quoter);
+}
+
+/* See language.h.  */
+
+void
+language_defn::printchar (int ch, struct type *chtype,
+			  struct ui_file * stream) const
+{
+  c_printchar (ch, chtype, stream);
+}
+
+/* See language.h.  */
+
+void
+language_defn::printstr (struct ui_file *stream, struct type *elttype,
+			 const gdb_byte *string, unsigned int length,
+			 const char *encoding, int force_ellipses,
+			 const struct value_print_options *options) const
+{
+  c_printstr (stream, elttype, string, length, encoding, force_ellipses,
+	      options);
+}
+
+/* See language.h.  */
+
+void
+language_defn::print_typedef (struct type *type, struct symbol *new_symbol,
+			      struct ui_file *stream) const
+{
+  c_print_typedef (type, new_symbol, stream);
+}
+
+/* See language.h.  */
+
+bool
+language_defn::is_string_type_p (struct type *type) const
+{
+  return c_is_string_type_p (type);
 }
 
 /* The default implementation of the get_symbol_name_matcher_inner method
@@ -702,9 +749,10 @@ language_defn::get_symbol_name_matcher_inner
   return default_symbol_name_matcher;
 }
 
-/* See language.h.  */
+/* Return true if TYPE is a string type, otherwise return false.  This
+   default implementation only detects TYPE_CODE_STRING.  */
 
-bool
+static bool
 default_is_string_type_p (struct type *type)
 {
   type = check_typedef (type);
@@ -714,39 +762,6 @@ default_is_string_type_p (struct type *type)
       type = check_typedef (type);
     }
   return (type->code ()  == TYPE_CODE_STRING);
-}
-
-/* Define the language that is no language.  */
-
-static int
-unk_lang_parser (struct parser_state *ps)
-{
-  return 1;
-}
-
-static void
-unk_lang_emit_char (int c, struct type *type, struct ui_file *stream,
-		    int quoter)
-{
-  error (_("internal error - unimplemented "
-	   "function unk_lang_emit_char called."));
-}
-
-static void
-unk_lang_printchar (int c, struct type *type, struct ui_file *stream)
-{
-  error (_("internal error - unimplemented "
-	   "function unk_lang_printchar called."));
-}
-
-static void
-unk_lang_printstr (struct ui_file *stream, struct type *type,
-		   const gdb_byte *string, unsigned int length,
-		   const char *encoding, int force_ellipses,
-		   const struct value_print_options *options)
-{
-  error (_("internal error - unimplemented "
-	   "function unk_lang_printstr called."));
 }
 
 static const struct op_print unk_op_print_tab[] =
@@ -777,19 +792,12 @@ extern const struct language_data unknown_language_data =
   macro_expansion_no,
   NULL,
   &exp_descriptor_standard,
-  unk_lang_parser,
-  null_post_parser,
-  unk_lang_printchar,		/* Print character constant */
-  unk_lang_printstr,
-  unk_lang_emit_char,
-  default_print_typedef,	/* Print a typedef using appropriate syntax */
   "this",        	    	/* name_of_this */
   true,				/* store_sym_names_in_linkage_form_p */
   unk_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
   &default_varobj_ops,
-  default_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
 
@@ -842,6 +850,55 @@ public:
   {
     error (_("unimplemented unknown_language::value_print_inner called"));
   }
+
+  /* See language.h.  */
+
+  int parser (struct parser_state *ps) const override
+  {
+    /* No parsing is done, just claim success.  */
+    return 1;
+  }
+
+  /* See language.h.  */
+
+  void emitchar (int ch, struct type *chtype,
+		 struct ui_file *stream, int quoter) const override
+  {
+    error (_("unimplemented unknown_language::emitchar called"));
+  }
+
+  /* See language.h.  */
+
+  void printchar (int ch, struct type *chtype,
+		  struct ui_file *stream) const override
+  {
+    error (_("unimplemented unknown_language::printchar called"));
+  }
+
+  /* See language.h.  */
+
+  void printstr (struct ui_file *stream, struct type *elttype,
+		 const gdb_byte *string, unsigned int length,
+		 const char *encoding, int force_ellipses,
+		 const struct value_print_options *options) const override
+  {
+    error (_("unimplemented unknown_language::printstr called"));
+  }
+
+  /* See language.h.  */
+
+  void print_typedef (struct type *type, struct symbol *new_symbol,
+		      struct ui_file *stream) const override
+  {
+    error (_("unimplemented unknown_language::print_typedef called"));
+  }
+
+  /* See language.h.  */
+
+  bool is_string_type_p (struct type *type) const override
+  {
+    return default_is_string_type_p (type);
+  }
 };
 
 /* Single instance of the unknown language class.  */
@@ -861,19 +918,12 @@ extern const struct language_data auto_language_data =
   macro_expansion_no,
   NULL,
   &exp_descriptor_standard,
-  unk_lang_parser,
-  null_post_parser,
-  unk_lang_printchar,		/* Print character constant */
-  unk_lang_printstr,
-  unk_lang_emit_char,
-  default_print_typedef,	/* Print a typedef using appropriate syntax */
   "this",		        /* name_of_this */
   false,			/* store_sym_names_in_linkage_form_p */
   unk_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
   &default_varobj_ops,
-  default_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
 
@@ -925,6 +975,55 @@ public:
 	 const struct value_print_options *options) const override
   {
     error (_("unimplemented auto_language::value_print_inner called"));
+  }
+
+  /* See language.h.  */
+
+  int parser (struct parser_state *ps) const override
+  {
+    /* No parsing is done, just claim success.  */
+    return 1;
+  }
+
+  /* See language.h.  */
+
+  void emitchar (int ch, struct type *chtype,
+		 struct ui_file *stream, int quoter) const override
+  {
+    error (_("unimplemented auto_language::emitchar called"));
+  }
+
+  /* See language.h.  */
+
+  void printchar (int ch, struct type *chtype,
+		  struct ui_file *stream) const override
+  {
+    error (_("unimplemented auto_language::printchar called"));
+  }
+
+  /* See language.h.  */
+
+  void printstr (struct ui_file *stream, struct type *elttype,
+		 const gdb_byte *string, unsigned int length,
+		 const char *encoding, int force_ellipses,
+		 const struct value_print_options *options) const override
+  {
+    error (_("unimplemented auto_language::printstr called"));
+  }
+
+  /* See language.h.  */
+
+  void print_typedef (struct type *type, struct symbol *new_symbol,
+		      struct ui_file *stream) const override
+  {
+    error (_("unimplemented auto_language::print_typedef called"));
+  }
+
+  /* See language.h.  */
+
+  bool is_string_type_p (struct type *type) const override
+  {
+    return default_is_string_type_p (type);
   }
 };
 

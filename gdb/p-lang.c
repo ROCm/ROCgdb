@@ -152,16 +152,6 @@ is_pascal_string_type (struct type *type,int *length_pos,
   return 0;
 }
 
-/* This is a wrapper around IS_PASCAL_STRING_TYPE that returns true if TYPE
-   is a string.  */
-
-static bool
-pascal_is_string_type_p (struct type *type)
-{
-  return is_pascal_string_type (type, nullptr, nullptr, nullptr,
-				nullptr, nullptr) > 0;
-}
-
 static void pascal_one_char (int, struct ui_file *, int *);
 
 /* Print the character C on STREAM as part of the contents of a literal
@@ -192,23 +182,6 @@ pascal_one_char (int c, struct ui_file *stream, int *in_quotes)
     }
 }
 
-static void pascal_emit_char (int c, struct type *type,
-			      struct ui_file *stream, int quoter);
-
-/* Print the character C on STREAM as part of the contents of a literal
-   string whose delimiter is QUOTER.  Note that that format for printing
-   characters and strings is language specific.  */
-
-static void
-pascal_emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
-{
-  int in_quotes = 0;
-
-  pascal_one_char (c, stream, &in_quotes);
-  if (in_quotes)
-    fputs_filtered ("'", stream);
-}
-
 void
 pascal_printchar (int c, struct type *type, struct ui_file *stream)
 {
@@ -219,106 +192,6 @@ pascal_printchar (int c, struct type *type, struct ui_file *stream)
     fputs_filtered ("'", stream);
 }
 
-/* Print the character string STRING, printing at most LENGTH characters.
-   Printing stops early if the number hits print_max; repeat counts
-   are printed as appropriate.  Print ellipses at the end if we
-   had to stop before printing LENGTH characters, or if FORCE_ELLIPSES.  */
-
-void
-pascal_printstr (struct ui_file *stream, struct type *type,
-		 const gdb_byte *string, unsigned int length,
-		 const char *encoding, int force_ellipses,
-		 const struct value_print_options *options)
-{
-  enum bfd_endian byte_order = type_byte_order (type);
-  unsigned int i;
-  unsigned int things_printed = 0;
-  int in_quotes = 0;
-  int need_comma = 0;
-  int width;
-
-  /* Preserve TYPE's original type, just set its LENGTH.  */
-  check_typedef (type);
-  width = TYPE_LENGTH (type);
-
-  /* If the string was not truncated due to `set print elements', and
-     the last byte of it is a null, we don't print that, in traditional C
-     style.  */
-  if ((!force_ellipses) && length > 0
-	&& extract_unsigned_integer (string + (length - 1) * width, width,
-				     byte_order) == 0)
-    length--;
-
-  if (length == 0)
-    {
-      fputs_filtered ("''", stream);
-      return;
-    }
-
-  for (i = 0; i < length && things_printed < options->print_max; ++i)
-    {
-      /* Position of the character we are examining
-         to see whether it is repeated.  */
-      unsigned int rep1;
-      /* Number of repetitions we have detected so far.  */
-      unsigned int reps;
-      unsigned long int current_char;
-
-      QUIT;
-
-      if (need_comma)
-	{
-	  fputs_filtered (", ", stream);
-	  need_comma = 0;
-	}
-
-      current_char = extract_unsigned_integer (string + i * width, width,
-					       byte_order);
-
-      rep1 = i + 1;
-      reps = 1;
-      while (rep1 < length
-	     && extract_unsigned_integer (string + rep1 * width, width,
-					  byte_order) == current_char)
-	{
-	  ++rep1;
-	  ++reps;
-	}
-
-      if (reps > options->repeat_count_threshold)
-	{
-	  if (in_quotes)
-	    {
-	      fputs_filtered ("', ", stream);
-	      in_quotes = 0;
-	    }
-	  pascal_printchar (current_char, type, stream);
-	  fprintf_filtered (stream, " %p[<repeats %u times>%p]",
-			    metadata_style.style ().ptr (),
-			    reps, nullptr);
-	  i = rep1 - 1;
-	  things_printed += options->repeat_count_threshold;
-	  need_comma = 1;
-	}
-      else
-	{
-	  if ((!in_quotes) && (PRINT_LITERAL_FORM (current_char)))
-	    {
-	      fputs_filtered ("'", stream);
-	      in_quotes = 1;
-	    }
-	  pascal_one_char (current_char, stream, &in_quotes);
-	  ++things_printed;
-	}
-    }
-
-  /* Terminate the quotes if necessary.  */
-  if (in_quotes)
-    fputs_filtered ("'", stream);
-
-  if (force_ellipses || i < length)
-    fputs_filtered ("...", stream);
-}
 
 
 /* Table mapping opcodes into strings for printing operators
@@ -393,19 +266,12 @@ extern const struct language_data pascal_language_data =
   macro_expansion_no,
   p_extensions,
   &exp_descriptor_standard,
-  pascal_parse,
-  null_post_parser,
-  pascal_printchar,		/* Print a character constant */
-  pascal_printstr,		/* Function to print string constant */
-  pascal_emit_char,		/* Print a single char */
-  pascal_print_typedef,		/* Print a typedef using appropriate syntax */
   "this",		        /* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
   pascal_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
   &default_varobj_ops,
-  pascal_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
 
@@ -491,6 +357,146 @@ public:
 	 const struct value_print_options *options) const override
   {
     return pascal_value_print_inner (val, stream, recurse, options);
+  }
+
+  /* See language.h.  */
+
+  int parser (struct parser_state *ps) const override
+  {
+    return pascal_parse (ps);
+  }
+
+  /* See language.h.  */
+
+  void emitchar (int ch, struct type *chtype,
+		 struct ui_file *stream, int quoter) const override
+  {
+    int in_quotes = 0;
+
+    pascal_one_char (ch, stream, &in_quotes);
+    if (in_quotes)
+      fputs_filtered ("'", stream);
+  }
+
+  /* See language.h.  */
+
+  void printchar (int ch, struct type *chtype,
+		  struct ui_file *stream) const override
+  {
+    pascal_printchar (ch, chtype, stream);
+  }
+
+  /* See language.h.  */
+
+  void printstr (struct ui_file *stream, struct type *elttype,
+		 const gdb_byte *string, unsigned int length,
+		 const char *encoding, int force_ellipses,
+		 const struct value_print_options *options) const override
+  {
+    enum bfd_endian byte_order = type_byte_order (elttype);
+    unsigned int i;
+    unsigned int things_printed = 0;
+    int in_quotes = 0;
+    int need_comma = 0;
+    int width;
+
+    /* Preserve ELTTYPE's original type, just set its LENGTH.  */
+    check_typedef (elttype);
+    width = TYPE_LENGTH (elttype);
+
+    /* If the string was not truncated due to `set print elements', and
+       the last byte of it is a null, we don't print that, in traditional C
+       style.  */
+    if ((!force_ellipses) && length > 0
+	&& extract_unsigned_integer (string + (length - 1) * width, width,
+				     byte_order) == 0)
+      length--;
+
+    if (length == 0)
+      {
+	fputs_filtered ("''", stream);
+	return;
+      }
+
+    for (i = 0; i < length && things_printed < options->print_max; ++i)
+      {
+	/* Position of the character we are examining
+	   to see whether it is repeated.  */
+	unsigned int rep1;
+	/* Number of repetitions we have detected so far.  */
+	unsigned int reps;
+	unsigned long int current_char;
+
+	QUIT;
+
+	if (need_comma)
+	  {
+	    fputs_filtered (", ", stream);
+	    need_comma = 0;
+	  }
+
+	current_char = extract_unsigned_integer (string + i * width, width,
+						 byte_order);
+
+	rep1 = i + 1;
+	reps = 1;
+	while (rep1 < length
+	       && extract_unsigned_integer (string + rep1 * width, width,
+					    byte_order) == current_char)
+	  {
+	    ++rep1;
+	    ++reps;
+	  }
+
+	if (reps > options->repeat_count_threshold)
+	  {
+	    if (in_quotes)
+	      {
+		fputs_filtered ("', ", stream);
+		in_quotes = 0;
+	      }
+	    pascal_printchar (current_char, elttype, stream);
+	    fprintf_filtered (stream, " %p[<repeats %u times>%p]",
+			      metadata_style.style ().ptr (),
+			      reps, nullptr);
+	    i = rep1 - 1;
+	    things_printed += options->repeat_count_threshold;
+	    need_comma = 1;
+	  }
+	else
+	  {
+	    if ((!in_quotes) && (PRINT_LITERAL_FORM (current_char)))
+	      {
+		fputs_filtered ("'", stream);
+		in_quotes = 1;
+	      }
+	    pascal_one_char (current_char, stream, &in_quotes);
+	    ++things_printed;
+	  }
+      }
+
+    /* Terminate the quotes if necessary.  */
+    if (in_quotes)
+      fputs_filtered ("'", stream);
+
+    if (force_ellipses || i < length)
+      fputs_filtered ("...", stream);
+  }
+
+  /* See language.h.  */
+
+  void print_typedef (struct type *type, struct symbol *new_symbol,
+		      struct ui_file *stream) const override
+  {
+    pascal_print_typedef (type, new_symbol, stream);
+  }
+
+  /* See language.h.  */
+
+  bool is_string_type_p (struct type *type) const override
+  {
+    return is_pascal_string_type (type, nullptr, nullptr, nullptr,
+				  nullptr, nullptr) > 0;
   }
 };
 

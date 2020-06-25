@@ -3360,28 +3360,6 @@ See set/show multiple-symbol."));
   return n_chosen;
 }
 
-/* Same as evaluate_type (*EXP), but resolves ambiguous symbol
-   references (marked by OP_VAR_VALUE nodes in which the symbol has an
-   undefined namespace) and converts operators that are
-   user-defined into appropriate function calls.  If CONTEXT_TYPE is
-   non-null, it provides a preferred result type [at the moment, only
-   type void has any effect---causing procedures to be preferred over
-   functions in calls].  A null CONTEXT_TYPE indicates that a non-void
-   return type is preferred.  May change (expand) *EXP.  */
-
-static void
-resolve (expression_up *expp, int void_context_p, int parse_completion,
-	 innermost_block_tracker *tracker)
-{
-  struct type *context_type = NULL;
-  int pc = 0;
-
-  if (void_context_p)
-    context_type = builtin_type ((*expp)->gdbarch)->builtin_void;
-
-  resolve_subexp (expp, &pc, 1, context_type, parse_completion, tracker);
-}
-
 /* Resolve the operator of the subexpression beginning at
    position *POS of *EXPP.  "Resolving" consists of replacing
    the symbols that have undefined namespaces in OP_VAR_VALUE nodes
@@ -13526,21 +13504,6 @@ enum ada_primitive_types {
 
 				/* Language vector */
 
-/* Not really used, but needed in the ada_language_defn.  */
-
-static void
-emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
-{
-  ada_emit_char (c, type, stream, quoter, 1);
-}
-
-static int
-parse (struct parser_state *ps)
-{
-  warnings_issued = 0;
-  return ada_parse (ps);
-}
-
 static const struct exp_descriptor ada_exp_descriptor = {
   ada_print_subexp,
   ada_operator_length,
@@ -13718,19 +13681,12 @@ extern const struct language_data ada_language_data =
   macro_expansion_no,
   ada_extensions,
   &ada_exp_descriptor,
-  parse,
-  resolve,
-  ada_printchar,                /* Print a character constant */
-  ada_printstr,                 /* Function to print string constant */
-  emit_char,                    /* Function to print single char (not used) */
-  ada_print_typedef,            /* Print a typedef using appropriate syntax */
   NULL,                         /* name_of_this */
   true,                         /* la_store_sym_names_in_linkage_form_p */
   ada_op_print_tab,             /* expression operators for printing */
   0,                            /* c-style arrays */
   1,                            /* String lower bound */
   &ada_varobj_ops,
-  ada_is_string_type,
   "(...)"			/* la_struct_too_deep_ellipsis */
 };
 
@@ -14115,6 +14071,80 @@ public:
 
     return {};
   }
+
+  /* See language.h.  */
+
+  int parser (struct parser_state *ps) const override
+  {
+    warnings_issued = 0;
+    return ada_parse (ps);
+  }
+
+  /* See language.h.
+
+     Same as evaluate_type (*EXP), but resolves ambiguous symbol references
+     (marked by OP_VAR_VALUE nodes in which the symbol has an undefined
+     namespace) and converts operators that are user-defined into
+     appropriate function calls.  If CONTEXT_TYPE is non-null, it provides
+     a preferred result type [at the moment, only type void has any
+     effect---causing procedures to be preferred over functions in calls].
+     A null CONTEXT_TYPE indicates that a non-void return type is
+     preferred.  May change (expand) *EXP.  */
+
+  void post_parser (expression_up *expp, int void_context_p, int completing,
+		    innermost_block_tracker *tracker) const override
+  {
+    struct type *context_type = NULL;
+    int pc = 0;
+
+    if (void_context_p)
+      context_type = builtin_type ((*expp)->gdbarch)->builtin_void;
+
+    resolve_subexp (expp, &pc, 1, context_type, completing, tracker);
+  }
+
+  /* See language.h.  */
+
+  void emitchar (int ch, struct type *chtype,
+		 struct ui_file *stream, int quoter) const override
+  {
+    ada_emit_char (ch, chtype, stream, quoter, 1);
+  }
+
+  /* See language.h.  */
+
+  void printchar (int ch, struct type *chtype,
+		  struct ui_file *stream) const override
+  {
+    ada_printchar (ch, chtype, stream);
+  }
+
+  /* See language.h.  */
+
+  void printstr (struct ui_file *stream, struct type *elttype,
+		 const gdb_byte *string, unsigned int length,
+		 const char *encoding, int force_ellipses,
+		 const struct value_print_options *options) const override
+  {
+    ada_printstr (stream, elttype, string, length, encoding,
+		  force_ellipses, options);
+  }
+
+  /* See language.h.  */
+
+  void print_typedef (struct type *type, struct symbol *new_symbol,
+		      struct ui_file *stream) const override
+  {
+    ada_print_typedef (type, new_symbol, stream);
+  }
+
+  /* See language.h.  */
+
+  bool is_string_type_p (struct type *type) const override
+  {
+    return ada_is_string_type (type);
+  }
+
 
 protected:
   /* See language.h.  */

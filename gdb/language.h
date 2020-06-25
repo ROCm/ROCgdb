@@ -225,39 +225,6 @@ struct language_data
 
     const struct exp_descriptor *la_exp_desc;
 
-    /* Parser function.  */
-
-    int (*la_parser) (struct parser_state *);
-
-    /* Given an expression *EXPP created by prefixifying the result of
-       la_parser, perform any remaining processing necessary to complete
-       its translation.  *EXPP may change; la_post_parser is responsible 
-       for releasing its previous contents, if necessary.  If 
-       VOID_CONTEXT_P, then no value is expected from the expression.
-       If COMPLETING is non-zero, then the expression has been parsed
-       for completion, not evaluation.  */
-
-    void (*la_post_parser) (expression_up *expp, int void_context_p,
-			    int completing, innermost_block_tracker *tracker);
-
-    void (*la_printchar) (int ch, struct type *chtype,
-			  struct ui_file * stream);
-
-    void (*la_printstr) (struct ui_file * stream, struct type *elttype,
-			 const gdb_byte *string, unsigned int length,
-			 const char *encoding, int force_ellipses,
-			 const struct value_print_options *);
-
-    void (*la_emitchar) (int ch, struct type *chtype,
-			 struct ui_file * stream, int quoter);
-
-    /* Print a typedef using syntax appropriate for this language.
-       TYPE is the underlying type.  NEW_SYMBOL is the symbol naming
-       the type.  STREAM is the output stream on which to print.  */
-
-    void (*la_print_typedef) (struct type *type, struct symbol *new_symbol,
-			      struct ui_file *stream);
-
     /* Now come some hooks for lookup_symbol.  */
 
     /* If this is non-NULL, specifies the name that of the implicit
@@ -299,9 +266,6 @@ struct language_data
 
     /* Various operations on varobj.  */
     const struct lang_varobj_ops *la_varobj_ops;
-
-    /* Return true if TYPE is a string type.  */
-    bool (*la_is_string_type_p) (struct type *type);
 
     /* This string is used by the 'set print max-depth' setting.  When GDB
        replaces a struct or union (during value printing) that is "too
@@ -540,6 +504,55 @@ struct language_defn : language_data
 	(struct value *val, struct ui_file *stream, int recurse,
 	 const struct value_print_options *options) const;
 
+  /* Parser function.  */
+
+  virtual int parser (struct parser_state *ps) const;
+
+  /* Given an expression *EXPP created by prefixifying the result of
+     la_parser, perform any remaining processing necessary to complete its
+     translation.  *EXPP may change; la_post_parser is responsible for
+     releasing its previous contents, if necessary.  If VOID_CONTEXT_P,
+     then no value is expected from the expression.  If COMPLETING is
+     non-zero, then the expression has been parsed for completion, not
+     evaluation.  */
+
+  virtual void post_parser (expression_up *expp, int void_context_p,
+			    int completing,
+			    innermost_block_tracker *tracker) const
+  {
+    /* By default the post-parser does nothing.  */
+  }
+
+  /* Print the character CH (of type CHTYPE) on STREAM as part of the
+     contents of a literal string whose delimiter is QUOTER.  */
+
+  virtual void emitchar (int ch, struct type *chtype,
+			 struct ui_file *stream, int quoter) const;
+
+  virtual void printchar (int ch, struct type *chtype,
+			  struct ui_file * stream) const;
+
+/* Print the character string STRING, printing at most LENGTH characters.
+   Printing stops early if the number hits print_max; repeat counts
+   are printed as appropriate.  Print ellipses at the end if we
+   had to stop before printing LENGTH characters, or if FORCE_ELLIPSES.  */
+
+  virtual void printstr (struct ui_file *stream, struct type *elttype,
+			 const gdb_byte *string, unsigned int length,
+			 const char *encoding, int force_ellipses,
+			 const struct value_print_options *options) const;
+
+
+  /* Print a typedef using syntax appropriate for this language.
+     TYPE is the underlying type.  NEW_SYMBOL is the symbol naming
+     the type.  STREAM is the output stream on which to print.  */
+
+  virtual void print_typedef (struct type *type, struct symbol *new_symbol,
+			      struct ui_file *stream) const;
+
+  /* Return true if TYPE is a string type.  */
+  virtual bool is_string_type_p (struct type *type) const;
+
 protected:
 
   /* This is the overridable part of the GET_SYMBOL_NAME_MATCHER method.
@@ -636,18 +649,18 @@ extern enum language set_language (enum language);
   (current_language->print_type(type,varstring,stream,show,level,flags))
 
 #define LA_PRINT_TYPEDEF(type,new_symbol,stream) \
-  (current_language->la_print_typedef(type,new_symbol,stream))
+  (current_language->print_typedef (type,new_symbol,stream))
 
 #define LA_VALUE_PRINT(val,stream,options) \
   (current_language->value_print (val,stream,options))
 
 #define LA_PRINT_CHAR(ch, type, stream) \
-  (current_language->la_printchar(ch, type, stream))
+  (current_language->printchar (ch, type, stream))
 #define LA_PRINT_STRING(stream, elttype, string, length, encoding, force_ellipses, options) \
-  (current_language->la_printstr(stream, elttype, string, length, \
-				 encoding, force_ellipses,options))
+  (current_language->printstr (stream, elttype, string, length, \
+			       encoding, force_ellipses,options))
 #define LA_EMIT_CHAR(ch, type, stream, quoter) \
-  (current_language->la_emitchar(ch, type, stream, quoter))
+  (current_language->emitchar (ch, type, stream, quoter))
 
 #define LA_PRINT_ARRAY_INDEX(index_type, index_value, stream, options)	\
   (current_language->print_array_index(index_type, index_value, stream, \
@@ -670,10 +683,6 @@ extern enum language set_language (enum language);
 /* Type predicates */
 
 extern int pointer_type (struct type *);
-
-/* Return true if TYPE is a string type, otherwise return false.  This
-   default implementation only detects TYPE_CODE_STRING.  */
-extern bool default_is_string_type_p (struct type *type);
 
 /* Error messages */
 
@@ -702,10 +711,6 @@ extern char *language_demangle (const struct language_defn *current_language,
 /* Return information about whether TYPE should be passed
    (and returned) by reference at the language level.  */
 struct language_pass_by_ref_info language_pass_by_reference (struct type *type);
-
-/* The default implementation of la_print_typedef.  */
-void default_print_typedef (struct type *type, struct symbol *new_symbol,
-			    struct ui_file *stream);
 
 void c_get_string (struct value *value,
 		   gdb::unique_xmalloc_ptr<gdb_byte> *buffer,

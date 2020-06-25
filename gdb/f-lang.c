@@ -41,10 +41,6 @@
 
 /* Local functions */
 
-static void f_printchar (int c, struct type *type, struct ui_file * stream);
-static void f_emit_char (int c, struct type *type,
-			 struct ui_file * stream, int quoter);
-
 /* Return the encoding that should be used for the character type
    TYPE.  */
 
@@ -72,53 +68,6 @@ f_get_encoding (struct type *type)
   return encoding;
 }
 
-/* Print the character C on STREAM as part of the contents of a literal
-   string whose delimiter is QUOTER.  Note that that format for printing
-   characters and strings is language specific.
-   FIXME:  This is a copy of the same function from c-exp.y.  It should
-   be replaced with a true F77 version.  */
-
-static void
-f_emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
-{
-  const char *encoding = f_get_encoding (type);
-
-  generic_emit_char (c, type, stream, quoter, encoding);
-}
-
-/* Implementation of la_printchar.  */
-
-static void
-f_printchar (int c, struct type *type, struct ui_file *stream)
-{
-  fputs_filtered ("'", stream);
-  LA_EMIT_CHAR (c, type, stream, '\'');
-  fputs_filtered ("'", stream);
-}
-
-/* Print the character string STRING, printing at most LENGTH characters.
-   Printing stops early if the number hits print_max; repeat counts
-   are printed as appropriate.  Print ellipses at the end if we
-   had to stop before printing LENGTH characters, or if FORCE_ELLIPSES.
-   FIXME:  This is a copy of the same function from c-exp.y.  It should
-   be replaced with a true F77 version.  */
-
-static void
-f_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
-	    unsigned int length, const char *encoding, int force_ellipses,
-	    const struct value_print_options *options)
-{
-  const char *type_encoding = f_get_encoding (type);
-
-  if (TYPE_LENGTH (type) == 4)
-    fputs_filtered ("4_", stream);
-
-  if (!encoding || !*encoding)
-    encoding = type_encoding;
-
-  generic_printstr (stream, type, string, length, encoding,
-		    force_ellipses, '\'', 0, options);
-}
 
 
 /* Table of operators and their precedences for printing expressions.  */
@@ -342,17 +291,6 @@ evaluate_subexp_f (struct type *expect_type, struct expression *exp,
   return nullptr;
 }
 
-/* Return true if TYPE is a string.  */
-
-static bool
-f_is_string_type_p (struct type *type)
-{
-  type = check_typedef (type);
-  return (type->code () == TYPE_CODE_STRING
-	  || (type->code () == TYPE_CODE_ARRAY
-	      && TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_CHAR));
-}
-
 /* Special expression lengths for Fortran.  */
 
 static void
@@ -564,19 +502,12 @@ extern const struct language_data f_language_data =
   macro_expansion_no,
   f_extensions,
   &exp_descriptor_f,
-  f_parse,			/* parser */
-  null_post_parser,
-  f_printchar,			/* Print character constant */
-  f_printstr,			/* function to print string constant */
-  f_emit_char,			/* Function to print a single character */
-  f_print_typedef,		/* Print a typedef using appropriate syntax */
   NULL,                    	/* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
   f_op_print_tab,		/* expression operators for printing */
   0,				/* arrays are first-class (not c-style) */
   1,				/* String lower bound */
   &default_varobj_ops,
-  f_is_string_type_p,
   "(...)"			/* la_struct_too_deep_ellipsis */
 };
 
@@ -711,6 +642,69 @@ public:
 	 const domain_enum domain) const override
   {
     return cp_lookup_symbol_nonlocal (this, name, block, domain);
+  }
+
+  /* See language.h.  */
+
+  int parser (struct parser_state *ps) const override
+  {
+    return f_parse (ps);
+  }
+
+  /* See language.h.  */
+
+  void emitchar (int ch, struct type *chtype,
+		 struct ui_file *stream, int quoter) const override
+  {
+    const char *encoding = f_get_encoding (chtype);
+    generic_emit_char (ch, chtype, stream, quoter, encoding);
+  }
+
+  /* See language.h.  */
+
+  void printchar (int ch, struct type *chtype,
+		  struct ui_file *stream) const override
+  {
+    fputs_filtered ("'", stream);
+    LA_EMIT_CHAR (ch, chtype, stream, '\'');
+    fputs_filtered ("'", stream);
+  }
+
+  /* See language.h.  */
+
+  void printstr (struct ui_file *stream, struct type *elttype,
+		 const gdb_byte *string, unsigned int length,
+		 const char *encoding, int force_ellipses,
+		 const struct value_print_options *options) const override
+  {
+    const char *type_encoding = f_get_encoding (elttype);
+
+    if (TYPE_LENGTH (elttype) == 4)
+      fputs_filtered ("4_", stream);
+
+    if (!encoding || !*encoding)
+      encoding = type_encoding;
+
+    generic_printstr (stream, elttype, string, length, encoding,
+		      force_ellipses, '\'', 0, options);
+  }
+
+  /* See language.h.  */
+
+  void print_typedef (struct type *type, struct symbol *new_symbol,
+		      struct ui_file *stream) const override
+  {
+    f_print_typedef (type, new_symbol, stream);
+  }
+
+  /* See language.h.  */
+
+  bool is_string_type_p (struct type *type) const override
+  {
+    type = check_typedef (type);
+    return (type->code () == TYPE_CODE_STRING
+	    || (type->code () == TYPE_CODE_ARRAY
+		&& TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_CHAR));
   }
 
 protected:

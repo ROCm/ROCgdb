@@ -226,26 +226,6 @@ rust_chartype_p (struct type *type)
 	  && TYPE_UNSIGNED (type));
 }
 
-/* Return true if TYPE is a string type.  */
-
-static bool
-rust_is_string_type_p (struct type *type)
-{
-  LONGEST low_bound, high_bound;
-
-  type = check_typedef (type);
-  return ((type->code () == TYPE_CODE_STRING)
-	  || (type->code () == TYPE_CODE_PTR
-	      && (TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_ARRAY
-		  && rust_u8_type_p (TYPE_TARGET_TYPE (TYPE_TARGET_TYPE (type)))
-		  && get_array_bounds (TYPE_TARGET_TYPE (type), &low_bound,
-				       &high_bound)))
-	  || (type->code () == TYPE_CODE_STRUCT
-	      && !rust_enum_p (type)
-	      && rust_slice_type_p (type)
-	      && strcmp (type->name (), "&str") == 0));
-}
-
 /* If VALUE represents a trait object pointer, return the underlying
    pointer with the correct (i.e., runtime) type.  Otherwise, return
    NULL.  */
@@ -281,43 +261,7 @@ rust_get_trait_object_pointer (struct value *value)
 
 
 
-/* la_emitchar implementation for Rust.  */
-
-static void
-rust_emitchar (int c, struct type *type, struct ui_file *stream, int quoter)
-{
-  if (!rust_chartype_p (type))
-    generic_emit_char (c, type, stream, quoter,
-		       target_charset (get_type_arch (type)));
-  else if (c == '\\' || c == quoter)
-    fprintf_filtered (stream, "\\%c", c);
-  else if (c == '\n')
-    fputs_filtered ("\\n", stream);
-  else if (c == '\r')
-    fputs_filtered ("\\r", stream);
-  else if (c == '\t')
-    fputs_filtered ("\\t", stream);
-  else if (c == '\0')
-    fputs_filtered ("\\0", stream);
-  else if (c >= 32 && c <= 127 && isprint (c))
-    fputc_filtered (c, stream);
-  else if (c <= 255)
-    fprintf_filtered (stream, "\\x%02x", c);
-  else
-    fprintf_filtered (stream, "\\u{%06x}", c);
-}
-
-/* la_printchar implementation for Rust.  */
-
-static void
-rust_printchar (int c, struct type *type, struct ui_file *stream)
-{
-  fputs_filtered ("'", stream);
-  LA_EMIT_CHAR (c, type, stream, '\'');
-  fputs_filtered ("'", stream);
-}
-
-/* la_printstr implementation for Rust.  */
+/* language_defn::printstr implementation for Rust.  */
 
 static void
 rust_printstr (struct ui_file *stream, struct type *type,
@@ -799,19 +743,6 @@ rust_print_struct_def (struct type *type, const char *varstring,
   if (!for_rust_enum || flags->print_offsets)
     print_spaces_filtered (level, stream);
   fputs_filtered (is_tuple_struct ? ")" : "}", stream);
-}
-
-/* la_print_typedef implementation for Rust.  */
-
-static void
-rust_print_typedef (struct type *type,
-		    struct symbol *new_symbol,
-		    struct ui_file *stream)
-{
-  type = check_typedef (type);
-  fprintf_filtered (stream, "type %s = ", new_symbol->print_name ());
-  type_print (type, "", stream, 0);
-  fprintf_filtered (stream, ";");
 }
 
 /* la_print_type implementation for Rust.  */
@@ -1989,19 +1920,12 @@ extern const struct language_data rust_language_data =
   macro_expansion_no,
   rust_extensions,
   &exp_descriptor_rust,
-  rust_parse,
-  null_post_parser,
-  rust_printchar,		/* Print a character constant */
-  rust_printstr,		/* Function to print string constant */
-  rust_emitchar,		/* Print a single char */
-  rust_print_typedef,		/* Print a typedef using appropriate syntax */
   NULL,				/* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
   c_op_print_tab,		/* expression operators for printing */
   1,				/* c-style arrays */
   0,				/* String lower bound */
   &default_varobj_ops,
-  rust_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
 
@@ -2141,6 +2065,90 @@ public:
 	  result = lookup_global_symbol (name, block, domain);
       }
     return result;
+  }
+
+  /* See language.h.  */
+
+  int parser (struct parser_state *ps) const override
+  {
+    return rust_parse (ps);
+  }
+
+  /* See language.h.  */
+
+  void emitchar (int ch, struct type *chtype,
+		 struct ui_file *stream, int quoter) const override
+  {
+    if (!rust_chartype_p (chtype))
+      generic_emit_char (ch, chtype, stream, quoter,
+			 target_charset (get_type_arch (chtype)));
+    else if (ch == '\\' || ch == quoter)
+      fprintf_filtered (stream, "\\%c", ch);
+    else if (ch == '\n')
+      fputs_filtered ("\\n", stream);
+    else if (ch == '\r')
+      fputs_filtered ("\\r", stream);
+    else if (ch == '\t')
+      fputs_filtered ("\\t", stream);
+    else if (ch == '\0')
+      fputs_filtered ("\\0", stream);
+    else if (ch >= 32 && ch <= 127 && isprint (ch))
+      fputc_filtered (ch, stream);
+    else if (ch <= 255)
+      fprintf_filtered (stream, "\\x%02x", ch);
+    else
+      fprintf_filtered (stream, "\\u{%06x}", ch);
+  }
+
+  /* See language.h.  */
+
+  void printchar (int ch, struct type *chtype,
+		  struct ui_file *stream) const override
+  {
+    fputs_filtered ("'", stream);
+    LA_EMIT_CHAR (ch, chtype, stream, '\'');
+    fputs_filtered ("'", stream);
+  }
+
+  /* See language.h.  */
+
+  void printstr (struct ui_file *stream, struct type *elttype,
+		 const gdb_byte *string, unsigned int length,
+		 const char *encoding, int force_ellipses,
+		 const struct value_print_options *options) const override
+  {
+    rust_printstr (stream, elttype, string, length, encoding,
+		   force_ellipses, options);
+  }
+
+  /* See language.h.  */
+
+  void print_typedef (struct type *type, struct symbol *new_symbol,
+		      struct ui_file *stream) const override
+  {
+    type = check_typedef (type);
+    fprintf_filtered (stream, "type %s = ", new_symbol->print_name ());
+    type_print (type, "", stream, 0);
+    fprintf_filtered (stream, ";");
+  }
+
+  /* See language.h.  */
+
+  bool is_string_type_p (struct type *type) const override
+  {
+    LONGEST low_bound, high_bound;
+
+    type = check_typedef (type);
+    return ((type->code () == TYPE_CODE_STRING)
+	    || (type->code () == TYPE_CODE_PTR
+		&& (TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_ARRAY
+		    && rust_u8_type_p (TYPE_TARGET_TYPE (TYPE_TARGET_TYPE (type)))
+		    && get_array_bounds (TYPE_TARGET_TYPE (type), &low_bound,
+					 &high_bound)))
+	    || (type->code () == TYPE_CODE_STRUCT
+		&& !rust_enum_p (type)
+		&& rust_slice_type_p (type)
+		&& strcmp (type->name (), "&str") == 0));
   }
 };
 

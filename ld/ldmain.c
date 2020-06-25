@@ -160,6 +160,53 @@ static bfd_error_handler_type default_bfd_error_handler;
 
 struct bfd_link_info link_info;
 
+struct dependency_file
+{
+  struct dependency_file *next;
+  char *name;
+};
+
+static struct dependency_file *dependency_files, *dependency_files_tail;
+
+void
+track_dependency_files (const char *filename)
+{
+  struct dependency_file *dep
+    = (struct dependency_file *) xmalloc (sizeof (*dep));
+  dep->name = xstrdup (filename);
+  dep->next = NULL;
+  if (dependency_files == NULL)
+    dependency_files = dep;
+  else
+    dependency_files_tail->next = dep;
+  dependency_files_tail = dep;
+}
+
+static void
+write_dependency_file (void)
+{
+  FILE *out;
+  struct dependency_file *dep;
+
+  out = fopen (config.dependency_file, FOPEN_WT);
+  if (out == NULL)
+    {
+      einfo (_("%F%P: cannot open dependency file %s: %E\n"),
+	     config.dependency_file);
+    }
+
+  fprintf (out, "%s:", output_filename);
+
+  for (dep = dependency_files; dep != NULL; dep = dep->next)
+    fprintf (out, " \\\n  %s", dep->name);
+
+  fprintf (out, "\n");
+  for (dep = dependency_files; dep != NULL; dep = dep->next)
+    fprintf (out, "\n%s:\n", dep->name);
+
+  fclose (out);
+}
+
 static void
 ld_cleanup (void)
 {
@@ -239,7 +286,7 @@ main (int argc, char **argv)
       /* is_sysrooted_pathname() relies on no trailing dirsep.  */
       if (ld_canon_sysroot_len > 0
 	  && IS_DIR_SEPARATOR (ld_canon_sysroot [ld_canon_sysroot_len - 1]))
-        ld_canon_sysroot [--ld_canon_sysroot_len] = '\0';
+	ld_canon_sysroot [--ld_canon_sysroot_len] = '\0';
     }
   else
     ld_canon_sysroot_len = -1;
@@ -480,6 +527,9 @@ main (int argc, char **argv)
 #endif
   ldexp_finish ();
   lang_finish ();
+
+  if (config.dependency_file != NULL)
+    write_dependency_file ();
 
   /* Even if we're producing relocatable output, some non-fatal errors should
      be reported in the exit status.  (What non-fatal errors, if any, do we
@@ -822,10 +872,6 @@ add_archive_element (struct bfd_link_info *info,
   input->local_sym_name = bfd_get_filename (abfd);
   input->the_bfd = abfd;
 
-  parent = bfd_usrdata (abfd->my_archive);
-  if (parent != NULL && !parent->flags.reload)
-    parent->next = input;
-
   /* Save the original data for trace files/tries below, as plugins
      (if enabled) may possibly alter it to point to a replacement
      BFD, but we still want to output the original BFD filename.  */
@@ -852,6 +898,23 @@ add_archive_element (struct bfd_link_info *info,
 	}
     }
 #endif /* BFD_SUPPORTS_PLUGINS */
+
+  if (link_info.input_bfds_tail == &input->the_bfd->link.next
+      || input->the_bfd->link.next != NULL)
+    {
+      /* We have already loaded this element, and are attempting to
+	 load it again.  This can happen when the archive map doesn't
+	 match actual symbols defined by the element.  */
+      free (input);
+      bfd_set_error (bfd_error_malformed_archive);
+      return FALSE;
+    }
+
+  /* Set the file_chain pointer of archives to the last element loaded
+     from the archive.  See ldlang.c:find_rescan_insertion.  */
+  parent = bfd_usrdata (abfd->my_archive);
+  if (parent != NULL && !parent->flags.reload)
+    parent->next = input;
 
   ldlang_add_file (input);
 

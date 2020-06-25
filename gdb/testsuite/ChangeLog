@@ -1,3 +1,54 @@
+2020-06-24  Pedro Alves  <palves@redhat.com>
+
+	* gdb.arch/amd64-entry-value-paramref.exp: Use
+	prepare_for_testing_full and don't pass "c++" for the .S file
+	build spec.
+	* gdb.compile/compile-cplus.exp: Don't compile $srcfile3 with
+	$options, since it's an assembly file.  Remove -Wno-deprecated.
+	* lib/gdb.exp (gdb_compile): Pass "-x c++" explicitly when
+	compiling C++ programs.
+
+2020-06-24  Pedro Alves  <palves@redhat.com>
+
+	* lib/gdb.exp (gdb_compile): Update intro comment.  If C/C++ with
+	Clang, add "-Wno-unknown-warning-option" to the options.
+
+2020-06-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.xml/tdesc-reload.c: New file.
+	* gdb.xml/tdesc-reload.exp: New file.
+	* gdb.xml/maint-xml-dump-01.xml: New file.
+	* gdb.xml/maint-xml-dump-02.xml: New file.
+	* gdb.xml/maint-xml-dump.exp: New file.
+
+2020-06-23  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* lib/completion-support.exp (test_gdb_completion_offers_commands):
+	Adjust for omitted commands when TUI is disabled.
+
+2020-06-23  Gary Benson <gbenson@redhat.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	* gdb.cp/namespace.cc: Improve -Wunused-value fix.
+	* gdb.cp/nsimport.cc: Likewise.
+	* gdb.cp/nsnested.cc: Likewise.
+	* gdb.cp/nsnoimports.cc: Likewise.
+	* gdb.cp/nsusing.cc: Likewise.
+	* gdb.cp/smartp.cc: Likewise.
+	* gdb.python/py-pp-integral.c: Likewise.
+	* gdb.python/py-pp-re-notag.c: Likewise.
+
+2020-06-23  Gary Benson <gbenson@redhat.com>
+
+	* gdb.cp/namespace.cc: Avoid build failure with -Wunused-value.
+	* gdb.cp/nsimport.cc: Likewise.
+	* gdb.cp/nsnested.cc: Likewise.
+	* gdb.cp/nsnoimports.cc: Likewise.
+	* gdb.cp/nsusing.cc: Likewise.
+	* gdb.cp/smartp.cc: Likewise.
+	* gdb.python/py-pp-integral.c: Likewise.
+	* gdb.python/py-pp-re-notag.c: Likewise.
+
 2020-06-22  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
 
 	* gdb.base/default-args.exp: New test.

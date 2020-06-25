@@ -1,3 +1,63 @@
+2020-06-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26165
+	* lexsup.c (ld_options): Correct --dependency-file order.
+
+2020-06-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26083
+	* testsuite/ld-csky/tls-ie-v1.d: Updated.
+	* testsuite/ld-csky/tls-ie.d: Likewise.
+
+2020-06-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26083
+	* testsuite/ld-cris/libdso-15b.d: Updated.
+	* testsuite/ld-cris/libdso-1c.d: Likewise.
+	* testsuite/ld-cris/libdso-1d.d: Likewise.
+	* testsuite/ld-cris/libdso-15c.d: New file.
+
+2020-06-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26163
+	* ldexp.c (exp_fold_tree_1): Set non_ir_ref_regular on the source
+	for assignment.
+	* testsuite/ld-plugin/lto.exp: Run ld/26163 test.
+	* testsuite/ld-plugin/pr26163a.c: New file.
+	* testsuite/ld-plugin/pr26163b.c: Likewise.
+
+2020-06-24  Alan Modra  <amodra@gmail.com>
+
+	* lexsup.c (elf_shlib_list_options): Properly format help message.
+	(elf_plt_unwind_list_options): Likewise.
+	* emultempl/cskyelf.em (PARSE_AND_LIST_OPTIONS): Likewise.
+
+2020-06-23  Roland McGrath  <mcgrathr@google.com>
+
+	PR 22843
+	* NEWS: Note --dependency-file.
+	* ld.texi (Options): Document --dependency-file.
+	* ldlex.h (enum option_values): Add OPTION_DEPENDENCY_FILE.
+	* ld.h (ld_config_type): New member dependency_file.
+	* lexsup.c (ld_options, parse_args): Parse --dependency-file.
+	* ldmain.c (struct dependency_file): New type.
+	(dependency_files, dependency_files_tail): New static variables.
+	(track_dependency_files): New function.
+	(write_dependency_file): New function.
+	(main): Call it when --dependency-file was passed.
+	* ldfile.c (ldfile_try_open_bfd): Call track_dependency_files.
+	(ldfile_open_command_file_1): Likewise.
+	* ldelf.c (ldelf_try_needed): Likewise.
+	* pe-dll.c (pe_implied_import_dll): Likewise.
+
+2020-06-23  Alan Modra  <amodra@gmail.com>
+
+	PR 26150
+	* ldlang.c (ldlang_add_file): Assert that we aren't adding the
+	current end of link.next list again too.
+	* ldmain.c (add_archive_element): Don't load archive elements
+	again that have already been loaded.
+
 2020-06-23  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/ld-elf/shared.exp (pr14170): Clear xfail for

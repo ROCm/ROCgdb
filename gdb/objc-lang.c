@@ -337,19 +337,12 @@ extern const struct language_data objc_language_data =
   macro_expansion_c,
   objc_extensions,
   &exp_descriptor_standard,
-  c_parse,
-  null_post_parser,
-  c_printchar,		       /* Print a character constant */
-  c_printstr,		       /* Function to print string constant */
-  c_emit_char,
-  c_print_typedef,		/* Print a typedef using appropriate syntax */
   "self",		        /* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
   objc_op_print_tab,		/* Expression operators for printing */
   1,				/* C-style arrays */
   0,				/* String lower bound */
   &default_varobj_ops,
-  c_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
 

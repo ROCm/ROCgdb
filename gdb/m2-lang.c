@@ -30,59 +30,6 @@
 #include "gdbarch.h"
 
 static void m2_printchar (int, struct type *, struct ui_file *);
-static void m2_emit_char (int, struct type *, struct ui_file *, int);
-
-/* Print the character C on STREAM as part of the contents of a literal
-   string whose delimiter is QUOTER.  Note that that format for printing
-   characters and strings is language specific.
-   FIXME:  This is a copy of the same function from c-exp.y.  It should
-   be replaced with a true Modula version.  */
-
-static void
-m2_emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
-{
-
-  c &= 0xFF;			/* Avoid sign bit follies.  */
-
-  if (PRINT_LITERAL_FORM (c))
-    {
-      if (c == '\\' || c == quoter)
-	{
-	  fputs_filtered ("\\", stream);
-	}
-      fprintf_filtered (stream, "%c", c);
-    }
-  else
-    {
-      switch (c)
-	{
-	case '\n':
-	  fputs_filtered ("\\n", stream);
-	  break;
-	case '\b':
-	  fputs_filtered ("\\b", stream);
-	  break;
-	case '\t':
-	  fputs_filtered ("\\t", stream);
-	  break;
-	case '\f':
-	  fputs_filtered ("\\f", stream);
-	  break;
-	case '\r':
-	  fputs_filtered ("\\r", stream);
-	  break;
-	case '\033':
-	  fputs_filtered ("\\e", stream);
-	  break;
-	case '\007':
-	  fputs_filtered ("\\a", stream);
-	  break;
-	default:
-	  fprintf_filtered (stream, "\\%.3o", (unsigned int) c);
-	  break;
-	}
-    }
-}
 
 /* FIXME:  This is a copy of the same function from c-exp.y.  It should
    be replaced with a true Modula version.  */
@@ -93,107 +40,6 @@ m2_printchar (int c, struct type *type, struct ui_file *stream)
   fputs_filtered ("'", stream);
   LA_EMIT_CHAR (c, type, stream, '\'');
   fputs_filtered ("'", stream);
-}
-
-/* Print the character string STRING, printing at most LENGTH characters.
-   Printing stops early if the number hits print_max; repeat counts
-   are printed as appropriate.  Print ellipses at the end if we
-   had to stop before printing LENGTH characters, or if FORCE_ELLIPSES.
-   FIXME:  This is a copy of the same function from c-exp.y.  It should
-   be replaced with a true Modula version.  */
-
-static void
-m2_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
-	     unsigned int length, const char *encoding, int force_ellipses,
-	     const struct value_print_options *options)
-{
-  unsigned int i;
-  unsigned int things_printed = 0;
-  int in_quotes = 0;
-  int need_comma = 0;
-
-  if (length == 0)
-    {
-      fputs_filtered ("\"\"", gdb_stdout);
-      return;
-    }
-
-  for (i = 0; i < length && things_printed < options->print_max; ++i)
-    {
-      /* Position of the character we are examining
-         to see whether it is repeated.  */
-      unsigned int rep1;
-      /* Number of repetitions we have detected so far.  */
-      unsigned int reps;
-
-      QUIT;
-
-      if (need_comma)
-	{
-	  fputs_filtered (", ", stream);
-	  need_comma = 0;
-	}
-
-      rep1 = i + 1;
-      reps = 1;
-      while (rep1 < length && string[rep1] == string[i])
-	{
-	  ++rep1;
-	  ++reps;
-	}
-
-      if (reps > options->repeat_count_threshold)
-	{
-	  if (in_quotes)
-	    {
-	      fputs_filtered ("\", ", stream);
-	      in_quotes = 0;
-	    }
-	  m2_printchar (string[i], type, stream);
-	  fprintf_filtered (stream, " <repeats %u times>", reps);
-	  i = rep1 - 1;
-	  things_printed += options->repeat_count_threshold;
-	  need_comma = 1;
-	}
-      else
-	{
-	  if (!in_quotes)
-	    {
-	      fputs_filtered ("\"", stream);
-	      in_quotes = 1;
-	    }
-	  LA_EMIT_CHAR (string[i], type, stream, '"');
-	  ++things_printed;
-	}
-    }
-
-  /* Terminate the quotes if necessary.  */
-  if (in_quotes)
-    fputs_filtered ("\"", stream);
-
-  if (force_ellipses || i < length)
-    fputs_filtered ("...", stream);
-}
-
-/* Return true if TYPE is a string.  */
-
-static bool
-m2_is_string_type_p (struct type *type)
-{
-  type = check_typedef (type);
-  if (type->code () == TYPE_CODE_ARRAY
-      && TYPE_LENGTH (type) > 0
-      && TYPE_LENGTH (TYPE_TARGET_TYPE (type)) > 0)
-    {
-      struct type *elttype = check_typedef (TYPE_TARGET_TYPE (type));
-
-      if (TYPE_LENGTH (elttype) == 1
-	  && (elttype->code () == TYPE_CODE_INT
-	      || elttype->code () == TYPE_CODE_CHAR))
-	return true;
-    }
-
-  return false;
 }
 
 static struct value *
@@ -362,19 +208,12 @@ extern const struct language_data m2_language_data =
   macro_expansion_no,
   NULL,
   &exp_descriptor_modula2,
-  m2_parse,			/* parser */
-  null_post_parser,
-  m2_printchar,			/* Print character constant */
-  m2_printstr,			/* function to print string constant */
-  m2_emit_char,			/* Function to print a single character */
-  m2_print_typedef,		/* Print a typedef using appropriate syntax */
   NULL,		                /* name_of_this */
   false,			/* la_store_sym_names_in_linkage_form_p */
   m2_op_print_tab,		/* expression operators for printing */
   0,				/* arrays are first-class (not c-style) */
   0,				/* String lower bound */
   &default_varobj_ops,
-  m2_is_string_type_p,
   "{...}"			/* la_struct_too_deep_ellipsis */
 };
 
@@ -429,6 +268,169 @@ public:
 	 const struct value_print_options *options) const override
   {
     return m2_value_print_inner (val, stream, recurse, options);
+  }
+
+  /* See language.h.  */
+
+  int parser (struct parser_state *ps) const override
+  {
+    return m2_parse (ps);
+  }
+
+  /* See language.h.  */
+
+  void emitchar (int ch, struct type *chtype,
+		 struct ui_file *stream, int quoter) const override
+  {
+    ch &= 0xFF;			/* Avoid sign bit follies.  */
+
+    if (PRINT_LITERAL_FORM (ch))
+      {
+	if (ch == '\\' || ch == quoter)
+	  fputs_filtered ("\\", stream);
+	fprintf_filtered (stream, "%c", ch);
+      }
+    else
+      {
+	switch (ch)
+	  {
+	  case '\n':
+	    fputs_filtered ("\\n", stream);
+	    break;
+	  case '\b':
+	    fputs_filtered ("\\b", stream);
+	    break;
+	  case '\t':
+	    fputs_filtered ("\\t", stream);
+	    break;
+	  case '\f':
+	    fputs_filtered ("\\f", stream);
+	    break;
+	  case '\r':
+	    fputs_filtered ("\\r", stream);
+	    break;
+	  case '\033':
+	    fputs_filtered ("\\e", stream);
+	    break;
+	  case '\007':
+	    fputs_filtered ("\\a", stream);
+	    break;
+	  default:
+	    fprintf_filtered (stream, "\\%.3o", (unsigned int) ch);
+	    break;
+	  }
+      }
+  }
+
+  /* See language.h.  */
+
+  void printchar (int ch, struct type *chtype,
+		  struct ui_file *stream) const override
+  {
+    m2_printchar (ch, chtype, stream);
+  }
+
+  /* See language.h.  */
+
+  void printstr (struct ui_file *stream, struct type *elttype,
+		 const gdb_byte *string, unsigned int length,
+		 const char *encoding, int force_ellipses,
+		 const struct value_print_options *options) const override
+  {
+    unsigned int i;
+    unsigned int things_printed = 0;
+    int in_quotes = 0;
+    int need_comma = 0;
+
+    if (length == 0)
+      {
+	fputs_filtered ("\"\"", gdb_stdout);
+	return;
+      }
+
+    for (i = 0; i < length && things_printed < options->print_max; ++i)
+      {
+	/* Position of the character we are examining
+	   to see whether it is repeated.  */
+	unsigned int rep1;
+	/* Number of repetitions we have detected so far.  */
+	unsigned int reps;
+
+	QUIT;
+
+	if (need_comma)
+	  {
+	    fputs_filtered (", ", stream);
+	    need_comma = 0;
+	  }
+
+	rep1 = i + 1;
+	reps = 1;
+	while (rep1 < length && string[rep1] == string[i])
+	  {
+	    ++rep1;
+	    ++reps;
+	  }
+
+	if (reps > options->repeat_count_threshold)
+	  {
+	    if (in_quotes)
+	      {
+		fputs_filtered ("\", ", stream);
+		in_quotes = 0;
+	      }
+	    m2_printchar (string[i], elttype, stream);
+	    fprintf_filtered (stream, " <repeats %u times>", reps);
+	    i = rep1 - 1;
+	    things_printed += options->repeat_count_threshold;
+	    need_comma = 1;
+	  }
+	else
+	  {
+	    if (!in_quotes)
+	      {
+		fputs_filtered ("\"", stream);
+		in_quotes = 1;
+	      }
+	    LA_EMIT_CHAR (string[i], elttype, stream, '"');
+	    ++things_printed;
+	  }
+      }
+
+    /* Terminate the quotes if necessary.  */
+    if (in_quotes)
+      fputs_filtered ("\"", stream);
+
+    if (force_ellipses || i < length)
+      fputs_filtered ("...", stream);
+  }
+
+  /* See language.h.  */
+
+  void print_typedef (struct type *type, struct symbol *new_symbol,
+		      struct ui_file *stream) const override
+  {
+    m2_print_typedef (type, new_symbol, stream);
+  }
+
+  /* See language.h.  */
+
+  bool is_string_type_p (struct type *type) const override
+  {
+    type = check_typedef (type);
+    if (type->code () == TYPE_CODE_ARRAY
+	&& TYPE_LENGTH (type) > 0
+	&& TYPE_LENGTH (TYPE_TARGET_TYPE (type)) > 0)
+      {
+	struct type *elttype = check_typedef (TYPE_TARGET_TYPE (type));
+
+	if (TYPE_LENGTH (elttype) == 1
+	    && (elttype->code () == TYPE_CODE_INT
+		|| elttype->code () == TYPE_CODE_CHAR))
+	  return true;
+      }
+
+    return false;
   }
 };
 
