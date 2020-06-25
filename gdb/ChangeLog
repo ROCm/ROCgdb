@@ -1,3 +1,59 @@
+2020-05-23  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 9.2.
+
+2020-05-23  Christian Biesinger  <cbiesinger@google.com>
+
+	Pushed by Joel Brobecker  <brobecker@adacore.com>
+
+	PR build/26029:
+	* sparc-nat.h (struct sparc_target) <xfer_partial>: Fix base class
+	function call.
+
+2020-05-19  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR build/25981
+	* i386-sol2-nat.c [PR_MODEL_NATIVE != PR_MODEL_LP64] (regmap):
+	Hardcode register numbers.
+
+	PR build/25981
+	* procfs.c [(__i386__ || __x86_64__) && sun] (proc_get_LDT_entry,
+	procfs_find_LDT_entry): Remove.
+	* procfs.h [(__i386__ || __x86_64__) && sun] (struct ssd,
+	procfs_find_LDT_entry): Remove.
+	* sol-thread.c [(__i386__ || __x86_64__) && sun] (ps_lgetLDT):
+	Remove.
+
+2020-05-17  Tom Tromey  <tromey@adacore.com>
+
+	Pushed by Joel Brobecker  <brobecker@adacore.com>
+	PR symtab/26003
+	* symfile.c (symbol_file_add_separate): Preserve OBJF_MAINLINE.
+
+2020-03-03  Sergio Durigan Junior  <sergiodj@redhat.com>
+
+	PR gdb/25650
+	* printcmd.c (print_c_string): Check also for TYPE_CODE_PTR
+	when verifying if dealing with a convenience variable.
+
+2020-02-22  Eli Zaretskii  <eliz@gnu.org>
+
+	PR gdb/25586
+	* tui/tui-win.c (new_height_ok, tui_adjust_win_heights): Rename
+	'locator' to 'status_line', to better match terminology in the
+	manual.
+	(tui_adjust_win_heights): Resize the status_line window to match
+	the new dimensions of the command and source/disassembly windows.
+	Reported by Aleksey Midenkov <midenok@gmail.com>.
+
+2020-02-08  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 9.1.90.DATE-git.
+
+2020-02-08  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 9.1 released.
+
 2020-02-08  Joel Brobecker  <brobecker@adacore.com>
 
 	* version.in: Set GDB version number to 9.1.
