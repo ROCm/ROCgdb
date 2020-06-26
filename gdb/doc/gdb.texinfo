@@ -45,7 +45,7 @@
 @c manuals to an info tree.
 @dircategory Software development
 @direntry
-* ROCgdb: (gdb).                  The ROCm GNU debugger.
+* ROCgdb: (gdb).                  The AMD ROCm GNU debugger.
 @c * gdbserver: (gdb) Server.        The GNU debugging server.
 @end direntry
 
@@ -91,7 +91,7 @@ a registered trademark of PCI-SIG Corporation.  Other product names
 used in this publication are for identification purposes only and may
 be trademarks of their respective companies.
 
-Copyright @copyright{} 2019-2020 Advanced Micro Devices, Inc. All
+Copyright @copyright{} 2019-2020 Advanced Micro Devices, Inc.  All
 rights reserved.
 @end copying
 
@@ -22037,12 +22037,12 @@ implemented.  See @ref{AMD GPU} for the current support available.
 
 @cindex heterogeneous system
 @cindex heterogeneous program
-In some operating systems, such as Linux with @acronym{AMD}'s
-@acronym{ROCm, Radeon Open Compute Ecosystem} installed, a single
-program may have multiple threads in the same process, executing on
-different devices which may have different target architectures.  Such
-a system is termed a @dfn{heterogeneous system} and a program that
-uses the multiple devices is termed a @dfn{heterogeneous program}.
+In some operating systems, such as Linux with the @acronym{AMD ROCm}
+platform installed, a single program may have multiple threads in the
+same process, executing on different devices which may have different
+target architectures.  Such a system is termed a @dfn{heterogeneous
+system} and a program that uses the multiple devices is termed a
+@dfn{heterogeneous program}.
 
 @cindex heterogeneous agent
 The multiple devices of a heterogeneous system are termed
@@ -22697,9 +22697,9 @@ expression support.
 
 As well as being the complement to the @code{lane name} command, this
 command also allows you to identify a heterogeneous lane by its target
-@var{lane_systag}.  For instance, on @acronym{AMD ROCm}, the target
-@var{lane_systag} is the heterogeneous agent, heterogeneous queue,
-heterogeneous dispatch, heterogeneous work-group position and
+@var{lane_systag}.  For instance, on the @acronym{AMD ROCm} platform,
+the target @var{lane_systag} is the heterogeneous agent, heterogeneous
+queue, heterogeneous dispatch, heterogeneous work-group position and
 heterogeneous work-item position.
 
 @smallexample
@@ -26393,9 +26393,9 @@ BDCCSR register.
 
 @value{GDBN} provides support for systems that have heterogeneous
 agents associated with commercially available @acronym{AMD GPU}
-devices (@pxref{Heterogeneous Debugging}) when @acronym{AMD}'s
-@url{https://rocmdocs.amd.com/, @acronym{ROCm, Radeon Open Compute
-Ecosystem}} is installed.
+devices (@pxref{Heterogeneous Debugging}) when the
+@url{https://rocmdocs.amd.com/, @acronym{AMD ROCm}} platform is
+installed.
 
 The following AMD GPU chips are supported:
 
@@ -26437,9 +26437,9 @@ hipcc -O0 -ggdb --amdgpu-target=gfx900 --amdgpu-target=gfx906 \
         bit_extract.cpp -o bit_extract
 @end smallexample
 
-The AMD GPU ROCm compiler maps HIP source language work-items to the
-lanes of an AMD GPU wavefront, which are represented in @value{GDBN}
-as heterogeneous lanes.
+The @acronym{AMD ROCm} compiler maps HIP source language device
+function work-items to the lanes of an AMD GPU wavefront, which are
+represented in @value{GDBN} as heterogeneous lanes.
 
 @item Assembly Code
 Assembly code kernels are supported.
@@ -26803,8 +26803,8 @@ Where:
 @table @var
 
 @item dispatch-num
-the thread's per-heterogeneous queue ROCm AQL packet number of the
-associated dispatch packet
+the thread's per-heterogeneous queue @acronym{AMD ROCm} AQL packet
+number of the associated dispatch packet
 
 @item wave-num
 the thread's per-inferior AMD GPU target wavefront number
@@ -26825,9 +26825,9 @@ The address space qualification of addresses described in
 default address space for AMD GPU threads is @code{generic}.  This
 allows a generic address to be used to read or write in the
 @code{global}, @code{group}, or @code{private} address spaces.  For
-the ROCm release the AMD GPU generic address value for @code{global}
-addresses is the same, for @code{group} addresses it has the most
-significant 32-bits of the address set to 0x00010000, and for
+the @acronym{AMD ROCm} platform the AMD GPU generic address value for
+@code{global} addresses is the same, for @code{group} addresses it has
+the most significant 32-bits of the address set to 0x00010000, and for
 @code{private} addresses is has the host significant 32-bits of the
 address set to 0x00020000.  A generic private address only accesses
 lane 0 of the currently focused wavefront.  A group address accesses
@@ -26835,9 +26835,9 @@ the @code{group} segment memory shared by all wavefronts that are
 members of the same work-group as the currently focused wavefront.
 
 @item
-The AMD GPU ROCm release compiler currently does not yet support
-generating valid DWARF information for symbolic variables and call
-frame information.  As a consequence:
+The @acronym{AMD ROCm} compiler currently does not support generating
+valid AMD GPU DWARF information for symbolic variables and call frame
+information.  As a consequence:
 
 @itemize @bullet{}
 
@@ -26865,32 +26865,21 @@ work-item ID of a heterogeneous lane is not available.
 
 @end itemize
 
-The AMD GPU ROCm compiler currently adds the
-@w{@option{-gline-tables-only}} @w{@option{-disable-O0-noinline}}
-@w{@option{-disable-O0-optnone}}
-@w{@option{-amdgpu-spill-cfi-saved-regs}} options when the
+The @acronym{AMD ROCm} compiler currently adds the
+@w{@option{-gline-tables-only}}, @w{@option{-mllvm
+-disable-dwarf-locations}}, and @w{@option{-mllvm
+-amdgpu-spill-cfi-saved-regs}} options for AMD GPU when the
 @w{@option{-ggdb}} option is specified.  These ensure source line
-information is generated, but not invalid DWARF, full inlining is
-performed, even at @w{@option{-O0}}, and registers not currently
-supported by the CFI generation are saved so the CFI information is
-correct.  If these options are not used the invalid DWARF may cause
-@value{GDBN} to report that it is unable to read memory (such as when
-reading arguments in a backtrace), and may limit the backtrace to only
-the top frame.
-
-@value{GDBN} does not currently support the AMD GPU compiler
-genenerated CFI information.  The options to force full inlining allow
-the backtrace to be available even without the CFI support.  Note that
-even with @w{@option{-ggdb}}, functions marked @code{noinline} may
-result in function call frames which will prevent a full backtrace.
-If function calls are not inlined, the @code{next} command may report
-errors inserting breakpoints when stepping over calls due to the
-missing CFI support.
+information is generated, but not invalid DWARF for source variables,
+and registers not currently supported by the CFI generation are saved
+so the CFI information is correct.  If these options are not used, the
+invalid DWARF may cause @value{GDBN} to report that it is unable to
+read memory (such as when reading arguments in a backtrace).
 
 @item
 Only AMD GPU Code Object V3 and above is supported.  This is the
-default for the AMD GPU ROCm release compiler.  The following error
-will be reported for incompatible code objects:
+default for the @acronym{AMD ROCm} compiler.  The following error will
+be reported for incompatible code objects:
 
 @smallexample
 Error while mapping shared library sections:
@@ -26901,13 +26890,10 @@ Error while mapping shared library sections:
 DWARF 5 is not yet supported.  There is no support for compressed or split
 DWARF.
 
-DWARF 4 is the default for the AMD GPU ROCm release compiler.
+DWARF 4 is the default for the @acronym{AMD ROCm} compiler.
 
 @item
 No support yet for AMD GPU core dumps.
-
-@item
-The @code{watch} command is not yet support on AMD GPU devices.
 
 @item
 When in all-stop mode, AMD GPU does not currently prevent new
@@ -26972,12 +26958,6 @@ export HIP_VISIBLE_DEVICES=0
 @end smallexample
 
 @item
-Currently the @code{flat_scratch} and @code{xnack_mask} special scalar
-registers are only accessible using their scalar register numbers and
-not by their register names.  This will not match the assembly source
-text which uses register names.
-
-@item
 The @code{until} command does not work when multiple AMD GPUs are
 present as @value{GDBN} has limitations when there are multiple code
 objects that have the same breakpoint set.  The work around is to use
@@ -27016,16 +26996,16 @@ application performs a @code{fork}, then the program may crash.
 @item
 Memory violations are reported to the wavefronts that cause them.
 However, the program location at which they are reported may be after
-the source statement that caused them.  The ROCm runtime can currently
-cause the inferior to terminate before the memory violation is
-reported.  This can be avoided by setting a breakpoint in @code{abort}
-and using the non-stop mode (@pxref{Non-Stop Mode}).  This will
-prevent the ROCm runtime from terminating the inferior, while allowing
-@value{GDBN} to report the memory violation.
+the source statement that caused them.  The @acronym{AMD ROCm} runtime
+can currently cause the inferior to terminate before the memory
+violation is reported.  This can be avoided by setting a breakpoint in
+@code{abort} and using the non-stop mode (@pxref{Non-Stop Mode}).
+This will prevent the @acronym{AMD ROCm} runtime from terminating the
+inferior, while allowing @value{GDBN} to report the memory violation.
 
 @item
 @value{GDBN} may report errors if execution is continued after the
-ROCm runtime aborts the application.  For example:
+@acronym{AMD ROCm} runtime aborts the application.  For example:
 
 @smallexample
 warning: unable to open /proc file '/proc/1234/status'
@@ -27033,8 +27013,8 @@ warning: unable to open /proc file '/proc/1234/status'
 
 This can happen due to memory violations in the AMD GPU code as
 described in the previous item.  To prevent the errors, do not
-continue the application after the ROCm runtime has invoked
-@code{abort}.
+continue the application after the @acronym{AMD ROCm} runtime has
+invoked @code{abort}.
 
 @item
 @value{GDBN} supports watchpoints, but limits the capabilities to the
@@ -27057,18 +27037,35 @@ bytes.  Software emulation will be used if more than 4 watchpoints are
 requested, or if watchpoints larger than 32 bytes are requested.
 
 Currently, watchpoints are only created on the CPU, and not the AMD
-GPU, until the ROCm runtime is initialized.  With deferred code object
-loading disabled this does not happen until the inferior reaches the
-beginning of the @code{main} function.  With deferred code object
-loading enabled this does not happen until the first kernel is
-executed.  This also means that, when the inferior is re-run,
-watchpoints are only re-activated on the CPU, not on the AMD GPU.
+GPU, until the @acronym{AMD ROCm} runtime is initialized.  With
+deferred code object loading disabled this does not happen until the
+inferior reaches the beginning of the @code{main} function.  With
+deferred code object loading enabled this does not happen until the
+first kernel is executed.  This also means that, when the inferior is
+re-run, watchpoints are only re-activated on the CPU, not on the AMD
+GPU.
 
 @item
 When single stepping there can be times when @value{GDBN} appears to
 wait indefinitely for the single step to complete.  If this happens,
 @samp{Ctrl-C} can be used to cancel the single step command so it can
 be tried again.
+
+@item
+The HIP runtime currently loads code objects from memory, including
+when loading modules from a file, which results in code object URIs
+being reported as @samp{memory://}.
+
+The @code{HSA_LOADER_ENABLE_MMAP_URI} environment variable can be used
+to request that the @acronym{AMD ROCm} runtime attempt to determine
+the file containing the code object memory so that @samp{file://} URIs
+can be reported.
+
+For example,
+
+@smallexample
+export HSA_LOADER_ENABLE_MMAP_URI=1
+@end smallexample
 
 @item
 AMD GPU does not currently support calling inferior functions.
@@ -27084,8 +27081,8 @@ No language specific support for Fortran or OpenCL.  No OpenMP
 language extension support for C, C++, or Fortran.
 
 @item
-Does not support the AMD GPU ROCm for HIP-HCC release compiler or
-runtime available as part of releases before ROCm 3.5.
+Does not support the @acronym{AMD ROCm} HCC compiler or runtime
+available as part of releases before ROCm 3.5.
 
 @item
 AMD GPU does not currently support the compiler address, memory, or
