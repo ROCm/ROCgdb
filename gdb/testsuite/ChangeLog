@@ -1,3 +1,60 @@
+2020-06-26  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* lib/gdb.exp (gdb_test_multiline): New, moved from gdb-guile.exp,
+	have a input seq nr in each pass message.
+        * lib/gdb-guile.exp (gdb_test_multiline): Move to gdb.exp.
+	* lib/gdb-python.exp (gdb_py_test_multiple): Remove.
+	* gdb.python/python.exp: Make test names unique,
+	use gdb_test_multiline instead of gdb_py_test_multiple,
+	use $gdb_test_name.
+	* gdb.guile/guile.exp: Make test names unique, use $gdb_test_name
+
+2020-06-26  Nick Alcock  <nick.alcock@oracle.com>
+
+	* configure.ac: Add --enable-libctf.
+	* aclocal.m4: sinclude ../config/enable.m4.
+	* Makefile.in (site.exp): Add enable_libctf to site.exp.
+	* lib/gdb.exp (skip_ctf_tests): Use it.
+	* gdb.base/ctf-constvars.exp: Error message tweak.
+	* gdb.base/ctf-ptype.exp: Likewise.
+	* configure: Regenerate.
+
+2020-06-26  Gary Benson <gbenson@redhat.com>
+
+	* gdb.cp/try_catch.cc: Include string.h.
+	(main): Replace comparison against string literal with
+	strcmp, avoiding build failure with -Wstring-compare.
+	Add "marker test-complete".
+	* gdb.cp/try_catch.exp: Run the test to the above marker,
+	then verify that the value of "test" is still true.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.arch/riscv-tdesc-regs.exp: New test cases.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.arch/riscv-tdesc-regs.exp: Extend test case.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.arch/riscv-tdesc-loading-01.xml: New file.
+	* gdb.arch/riscv-tdesc-loading-02.xml: New file.
+	* gdb.arch/riscv-tdesc-loading-03.xml: New file.
+	* gdb.arch/riscv-tdesc-loading-04.xml: New file.
+	* gdb.arch/riscv-tdesc-loading.exp: New file.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.arch/riscv-tdesc-regs.exp: Extend test case.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.arch/riscv-tdesc-regs-32.xml: New file.
+	* gdb.arch/riscv-tdesc-regs-64.xml: New file.
+	* gdb.arch/riscv-tdesc-regs.c: New file.
+	* gdb.arch/riscv-tdesc-regs.exp: New file.
+
 2020-06-24  Pedro Alves  <palves@redhat.com>
 
 	* gdb.arch/amd64-entry-value-paramref.exp: Use

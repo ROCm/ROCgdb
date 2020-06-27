@@ -59,6 +59,13 @@ extern "C"
 #define _libctf_unused_ __attribute__ ((__unused__))
 #define _libctf_malloc_ __attribute__((__malloc__))
 
+#else
+
+#define _libctf_printflike_(string_index,first_to_check)
+#define _libctf_unlikely_(x) (x)
+#define _libctf_unused_
+#define _libctf_malloc_
+
 #endif
 
 /* libctf in-memory state.  */
@@ -309,6 +316,7 @@ struct ctf_archive_internal
   struct ctf_archive *ctfi_archive;
   ctf_sect_t ctfi_symsect;
   ctf_sect_t ctfi_strsect;
+  int ctfi_free_symsect;
   void *ctfi_data;
   bfd *ctfi_abfd;		    /* Optional source of section data.  */
   void (*ctfi_bfd_close) (struct ctf_archive_internal *);
@@ -399,7 +407,7 @@ extern void ctf_list_prepend (ctf_list_t *, void *);
 extern void ctf_list_delete (ctf_list_t *, void *);
 extern int ctf_list_empty_p (ctf_list_t *lp);
 
-extern int ctf_dtd_insert (ctf_file_t *, ctf_dtdef_t *, int);
+extern int ctf_dtd_insert (ctf_file_t *, ctf_dtdef_t *, int flag, int kind);
 extern void ctf_dtd_delete (ctf_file_t *, ctf_dtdef_t *);
 extern ctf_dtdef_t *ctf_dtd_lookup (const ctf_file_t *, ctf_id_t);
 extern ctf_dtdef_t *ctf_dynamic_type (const ctf_file_t *, ctf_id_t);
@@ -435,8 +443,11 @@ extern void ctf_str_rollback (ctf_file_t *, ctf_snapshot_id_t);
 extern void ctf_str_purge_refs (ctf_file_t *);
 extern ctf_strs_writable_t ctf_str_write_strtab (ctf_file_t *);
 
+extern struct ctf_archive_internal *ctf_new_archive_internal
+	(int is_archive, struct ctf_archive *arc,
+	 ctf_file_t *fp, const ctf_sect_t *symsect,
+	 const ctf_sect_t *strsect, int *errp);
 extern struct ctf_archive *ctf_arc_open_internal (const char *, int *);
-extern struct ctf_archive *ctf_arc_bufopen (const void *, size_t, int *);
 extern void ctf_arc_close_internal (struct ctf_archive *);
 extern void *ctf_set_open_errno (int *, int);
 extern unsigned long ctf_set_errno (ctf_file_t *, int);

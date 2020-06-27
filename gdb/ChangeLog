@@ -1,3 +1,188 @@
+2020-06-26  Nick Alcock  <nick.alcock@oracle.com>
+
+	* configure.ac: Add --enable-libctf: handle --disable-static
+	properly.
+	* acinclude.m4: sinclude ../config/enable.m4.
+	* Makefile.in (aclocal_m4_deps): Adjust accordingly.
+	(LIBCTF): Substitute in.
+	(CTF_DEPS): New, likewise.
+	(CLIBS): libctf needs symbols from libbfd: move earlier.
+	(CDEPS): Use CTF_DEPS, not LIBCTF, now LIBCTF can include rpath
+	flags.
+	* ctfread.c: Surround in ENABLE_LIBCTF.
+	(elfctf_build_psymtabs) [!ENABLE_LIBCTF]: New stub.
+	* configure: Regenerate.
+	* config.in: Likewise.
+
+2020-06-25  Simon Marchi  <simon.marchi@efficios.com>
+
+	* infcmd.c (set_inferior_io_terminal): Use make_unique_xstrdup.
+
+2020-06-25  Simon Marchi  <simon.marchi@efficios.com>
+
+	* inferior.h (struct inferior) <terminal>: Change type to
+	gdb::unique_xmalloc_ptr<char>.
+	* inferior.c (inferior::~inferior): Don't free inf->terminal.
+	* infcmd.c (set_inferior_io_terminal): Don't free terminal
+	field, adjust to unique pointer.
+	(get_inferior_io_terminal): Adjust to unique pointer.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (riscv_print_registers_info): Loop over all
+	registers, not just the known core set of registers.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (riscv_register_name): Return NULL for duplicate
+	fflags, frm, and fcsr registers.
+	(riscv_register_reggroup_p): Remove unknown CSRs from save and
+	restore groups.
+	(riscv_tdesc_unknown_reg): New function.
+	(riscv_gdbarch_init): Pass riscv_tdesc_unknown_reg to
+	tdesc_use_registers.
+	* riscv-tdep.h (struct gdbarch_tdep): Add
+	unknown_csrs_first_regnum, unknown_csrs_count,
+	duplicate_fflags_regnum, duplicate_frm_regnum, and
+	duplicate_fcsr_regnum fields.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* target-descriptions.c (tdesc_use_registers): Add new parameter a
+	callback, use the callback (when not null) to help number unknown
+	registers.
+	* target-descriptions.h (tdesc_unknown_register_ftype): New typedef.
+	(tdesc_use_registers): Add extra parameter to declaration.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (value_of_riscv_user_reg): Moved to here from later
+	in the file.
+	(class riscv_pending_register_alias): Likewise.
+	(riscv_register_feature::register_info): Change 'required_p' field
+	to 'required', and change its type.  Add 'check' member function.
+	(riscv_register_feature::register_info::check): Define new member
+	function.
+	(riscv_xreg_feature): Change initialisation of 'required' field.
+	(riscv_freg_feature): Likewise.
+	(riscv_virtual_feature): Likewise.
+	(riscv_csr_feature): Likewise.
+	(riscv_check_tdesc_feature): Take extra parameter, the csr
+	tdesc_feature, rewrite the function to use the new
+	riscv_register_feature::register_info::check function.
+	(riscv_gdbarch_init): Pass the csr tdesc_feature where needed.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* features/Makefile: Remove all references to the deleted files
+	below.
+	* features/riscv/32bit-csr.c: Deleted.
+	* features/riscv/32bit-csr.xml: Deleted.
+	* features/riscv/64bit-csr.c: Deleted.
+	* features/riscv/64bit-csr.xml: Deleted.
+	* features/riscv/rebuild-csr-xml.sh: Deleted.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (struct riscv_register_feature::register_info): Fix
+	whitespace error for declaration of names member variable.
+	(struct riscv_register_feature): Add new prefer_first_name member
+	variable, and fix whitespace error in declaration of registers.
+	(riscv_xreg_feature): Initialize prefer_first_name field.
+	(riscv_freg_feature): Likewise.
+	(riscv_virtual_feature): Likewise.
+	(riscv_csr_feature): Likewise.
+	(riscv_register_name): Expand on comments.  Remove register name
+	modifications for CSR and virtual registers.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (struct riscv_register_feature): Fix whitespace
+	errors.
+
+2020-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (riscv_create_csr_aliases): Handle csr aliases from
+	riscv-opc.h.
+	(class riscv_pending_register_alias): New class.
+	(riscv_check_tdesc_feature): Take vector of pending aliases and
+	populate it as appropriate.
+	(riscv_setup_register_aliases): Delete.
+	(riscv_gdbarch_init): Create vector of pending aliases and pass it
+	to riscv_check_tdesc_feature in all cases.  Use the vector to
+	create the register aliases.
+
+2020-06-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* sol2-tdep.c (sol2_static_transform_name): Remove.
+	(sol2_init_abi): Don't register it.
+	* gdbarch.sh (static_transform_name): Remove.
+	* gdbarch.c, gdbarch.h: Regenerate.
+
+	* dbxread.c (read_dbx_symtab) <'S'>: Remove call to
+	gdbarch_static_transform_name.
+	* mdebugread.c (parse_partial_symbols) <'S'>: Likewise.
+	* stabsread.c (define_symbol) <'X'>: Remove.
+	(define_symbol) <'S'>: Remove gdbarch_static_transform_name
+	handling.
+	<'V'>: Likewise.
+	* xcoffread.c (scan_xcoff_symtab): Remove gdbarch.
+	<'S'>: Remove call to gdbarch_static_transform_name.
+
+2020-06-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* procfs.c (procfs_pre_trace): New function.
+	(procfs_target::create_inferior): Pass it to fork_inferior.
+
+2020-06-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.tgt <sparc-*-linux*> (gdb_target_obs): Remove
+	sparc-sol2-tdep.o, sol2-tdep.o, sparc64-sol2-tdep.o.
+	<sparc64-*-linux*> (gdb_target_obs): Remove sparc64-sol2-tdep.o,
+	sol2-tdep.o, sparc-sol2-tdep.o.
+	* sparc-sol2-tdep.c (sparc32_sol2_init_abi): Make static.
+	* sparc-tdep.h (sparc32_sol2_init_abi): Remove.
+	* sparc64-sol2-tdep.c (sparc64_sol2_init_abi): Make static.
+	* sparc64-tdep.h (sparc64_sol2_init_abi): Remove.
+
+2020-06-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* amd64-sol2-tdep.c (amd64_sol2_sigtramp_p): Remove.
+	(amd64_sol2_init_abi): Use sol2_sigtramp_p.
+	Call sol2_init_abi.
+ 	Remove calls to set_gdbarch_skip_solib_resolver,
+	set_gdbarch_core_pid_to_str.
+	* i386-sol2-tdep.c (i386_sol2_sigtramp_p): Remove.
+	(i386_sol2_static_transform_name): Remove.
+	(i386_sol2_init_abi): Call sol2_init_abi.
+	Remove calls to set_gdbarch_sofun_address_maybe_missing,
+	set_gdbarch_static_transform_name,
+	set_gdbarch_skip_solib_resolver, set_gdbarch_core_pid_to_str.
+	Use sol2_sigtramp_p.
+	* sol2-tdep.c (sol2_pc_in_sigtramp): New function.
+	(sol2_sigtramp_p): New function.
+	(sol2_static_transform_name): New function.
+	(sol2_skip_solib_resolver, sol2_core_pid_to_str): Make static.
+	(sol2_init_abi): New function.
+	* sol2-tdep.h (sol2_sigtramp_p, sol2_init_abi): Declare.
+	(sol2_skip_solib_resolver, sol2_core_pid_to_str): Remove.
+	* sparc-sol2-tdep.c (sparc_sol2_pc_in_sigtramp): Remove.
+	(sparc32_sol2_sigtramp_frame_sniffer): Just call sol2_sigtramp_p.
+	(sparc_sol2_static_transform_name): Remove.
+	(sparc32_sol2_init_abi): Call sol2_init_abi.
+	Remove calls to set_gdbarch_sofun_address_maybe_missing,
+	set_gdbarch_static_transform_name,
+	set_gdbarch_skip_solib_resolver,
+	set_gdbarch_core_pid_to_str.
+	* sparc-tdep.h (sparc_sol2_pc_in_sigtramp)
+	(sparc_sol2_static_transform_name): Remove
+	* sparc64-sol2-tdep.c (sparc64_sol2_sigtramp_frame_sniffer): Just
+	call sol2_sigtramp_p.
+	(sparc64_sol2_init_abi): Call sol2_init_abi.
+	Remove calls to set_gdbarch_sofun_address_maybe_missing,
+	set_gdbarch_static_transform_name,
+	set_gdbarch_skip_solib_resolver, set_gdbarch_core_pid_to_str.
+
 2020-06-24  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
 
 	* symfile-add-flags.h: New flag SYMFILE_ALWAYS_CONFIRM.

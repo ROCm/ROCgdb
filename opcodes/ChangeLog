@@ -1,3 +1,53 @@
+2020-06-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-opc.tbl: Add a blank line.
+
+2020-06-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-gen.c (opcode_modifiers): Replace VecSIB with SIB.
+	(VecSIB128): Renamed to ...
+	(VECSIB128): This.
+	(VecSIB256): Renamed to ...
+	(VECSIB256): This.
+	(VecSIB512): Renamed to ...
+	(VECSIB512): This.
+	(VecSIB): Renamed to ...
+	(SIB): This.
+	(i386_opcode_modifier): Replace vecsib with sib.
+	* i386-opc.tbl (VecSIB128): New.
+	(VecSIB256): Likewise.
+	(VecSIB512): Likewise.
+	Replace VecSIB=1, VecSIB=2 and VecSIB=3 with VecSIB128, VecSIB256
+	and VecSIB512, respectively.
+
+2020-06-26  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c: Adjust description of I macro.
+	(x86_64_table): Drop use of I.
+	(float_mem): Replace use of I.
+	(putop): Remove handling of I. Adjust setting/clearing of "alt".
+
+2020-06-26  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c: (print_insn): Avoid straight assignment to
+	priv.orig_sizeflag when processing -M sub-options.
+
+2020-06-25  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c: Adjust description of J macro.
+	(dis386, x86_64_table, mod_table): Replace J.
+	(putop): Remove handling of J.
+
+2020-06-25  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c: (float_mem): Reduce alternatives for fstpt and fldpt.
+
+2020-06-25  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c: Adjust description of "LQ" macro.
+	(dis386_twobyte): Use LQ for sysret.
+	(putop): Adjust handling of LQ.
+
 2020-06-22  Nelson Chu  <nelson.chu@sifive.com>
 
 	* riscv-opc.c: Move the structures and functions to bfd/elfxx-riscv.c.

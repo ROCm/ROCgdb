@@ -2250,9 +2250,8 @@ struct dis386 {
    'F' => print 'w' or 'l' depending on address size prefix (loop insns)
    'G' => print 'w' or 'l' depending on operand size prefix (i/o insns)
    'H' => print ",pt" or ",pn" branch hint
-   'I' => honor following macro letter even in Intel mode (implemented only
-	  for some of the macro letters)
-   'J' => print 'l'
+   'I' unused.
+   'J' unused.
    'K' => print 'd' or 'q' if rex prefix is present.
    'L' => print 'l' if suffix_always is true
    'M' => print 'r' if intel_mnemonic is false.
@@ -2290,8 +2289,9 @@ struct dis386 {
    "XZ" => print 'x', 'y', or 'z' if suffix_always is true or no
 	   register operands and no broadcast.
    "XW" => print 's', 'd' depending on the VEX.W bit (for FMA)
-   "LQ" => print 'l' ('d' in Intel mode) or 'q' for memory operand
-	   or suffix_always is true
+   "LQ" => print 'l' ('d' in Intel mode) or 'q' for memory
+	   operand or no operand at all in 64bit mode, or if suffix_always
+	   is true.
    "LB" => print "abs" in 64bit mode and behave as 'B' otherwise
    "LS" => print "abs" in 64bit mode and behave as 'S' otherwise
    "LV" => print "abs" for 64bit operand and behave as 'S' otherwise
@@ -2535,8 +2535,8 @@ static const struct dis386 dis386[] = {
   /* c8 */
   { "enterT",		{ Iw, Ib }, 0 },
   { "leaveT",		{ XX }, 0 },
-  { "Jret{|f}P",	{ Iw }, 0 },
-  { "Jret{|f}P",	{ XX }, 0 },
+  { "{l|}ret{|f}P",	{ Iw }, 0 },
+  { "{l|}ret{|f}P",	{ XX }, 0 },
   { "int3",		{ XX }, 0 },
   { "int",		{ Ib }, 0 },
   { X86_64_TABLE (X86_64_CE) },
@@ -2606,7 +2606,7 @@ static const struct dis386 dis386_twobyte[] = {
   { Bad_Opcode },
   { "syscall",		{ XX }, 0 },
   { "clts",		{ XX }, 0 },
-  { "sysret%LP",		{ XX }, 0 },
+  { "sysret%LQ",		{ XX }, 0 },
   /* 08 */
   { "invd",		{ XX }, 0 },
   { PREFIX_TABLE (PREFIX_0F09) },
@@ -6856,7 +6856,7 @@ static const struct dis386 x86_64_table[][2] = {
 
   /* X86_64_9A */
   {
-    { "Jcall{T|}", { Ap }, 0 },
+    { "{l|}call{T|}", { Ap }, 0 },
   },
 
   /* X86_64_C2 */
@@ -6912,18 +6912,18 @@ static const struct dis386 x86_64_table[][2] = {
 
   /* X86_64_EA */
   {
-    { "Jjmp{T|}", { Ap }, 0 },
+    { "{l|}jmp{T|}", { Ap }, 0 },
   },
 
   /* X86_64_0F01_REG_0 */
   {
-    { "sgdt{Q|IQ}", { M }, 0 },
+    { "sgdt{Q|Q}", { M }, 0 },
     { "sgdt", { M }, 0 },
   },
 
   /* X86_64_0F01_REG_1 */
   {
-    { "sidt{Q|IQ}", { M }, 0 },
+    { "sidt{Q|Q}", { M }, 0 },
     { "sidt", { M }, 0 },
   },
 
@@ -10179,11 +10179,11 @@ static const struct dis386 mod_table[][2] = {
   },
   {
     /* MOD_FF_REG_3 */
-    { "Jcall^", { indirEp }, 0 },
+    { "{l|}call^", { indirEp }, 0 },
   },
   {
     /* MOD_FF_REG_5 */
-    { "Jjmp^", { indirEp }, 0 },
+    { "{l|}jmp^", { indirEp }, 0 },
   },
   {
     /* MOD_0F01_REG_0 */
@@ -11850,17 +11850,17 @@ print_insn (bfd_vma pc, disassemble_info *info)
       else if (CONST_STRNEQ (p, "x86-64"))
 	{
 	  address_mode = mode_64bit;
-	  priv.orig_sizeflag = AFLAG | DFLAG;
+	  priv.orig_sizeflag |= AFLAG | DFLAG;
 	}
       else if (CONST_STRNEQ (p, "i386"))
 	{
 	  address_mode = mode_32bit;
-	  priv.orig_sizeflag = AFLAG | DFLAG;
+	  priv.orig_sizeflag |= AFLAG | DFLAG;
 	}
       else if (CONST_STRNEQ (p, "i8086"))
 	{
 	  address_mode = mode_16bit;
-	  priv.orig_sizeflag = 0;
+	  priv.orig_sizeflag &= ~(AFLAG | DFLAG);
 	}
       else if (CONST_STRNEQ (p, "intel"))
 	{
@@ -12322,9 +12322,9 @@ static const char *float_mem[] = {
   "(bad)",
   "fst{s|}",
   "fstp{s|}",
-  "fldenvIC",
+  "fldenv{C|C}",
   "fldcw",
-  "fNstenvIC",
+  "fNstenv{C|C}",
   "fNstcw",
   /* da */
   "fiadd{l|}",
@@ -12341,9 +12341,9 @@ static const char *float_mem[] = {
   "fist{l|}",
   "fistp{l|}",
   "(bad)",
-  "fld{t||t|}",
+  "fld{t|}",
   "(bad)",
-  "fstp{t||t|}",
+  "fstp{t|}",
   /* dc */
   "fadd{l|}",
   "fmul{l|}",
@@ -12358,9 +12358,9 @@ static const char *float_mem[] = {
   "fisttp{ll|}",
   "fst{l||}",
   "fstp{l|}",
-  "frstorIC",
+  "frstor{C|C}",
   "(bad)",
-  "fNsaveIC",
+  "fNsave{C|C}",
   "fNstsw",
   /* de */
   "fiadd{s|}",
@@ -12734,11 +12734,9 @@ putop (const char *in_template, int sizeflag)
 	      while (*++p != '|')
 		if (*p == '}' || *p == '\0')
 		  abort ();
+	      alt = 1;
 	    }
-	  /* Fall through.  */
-	case 'I':
-	  alt = 1;
-	  continue;
+	  break;
 	case '|':
 	  while (*++p != '}')
 	    {
@@ -12747,6 +12745,7 @@ putop (const char *in_template, int sizeflag)
 	    }
 	  break;
 	case '}':
+	  alt = 0;
 	  break;
 	case 'A':
 	  if (intel_syntax)
@@ -12865,11 +12864,6 @@ putop (const char *in_template, int sizeflag)
 	      else
 		*obufp++ = 'n';
 	    }
-	  break;
-	case 'J':
-	  if (intel_syntax)
-	    break;
-	  *obufp++ = 'l';
 	  break;
 	case 'K':
 	  USED_REX (REX_W);
@@ -13066,7 +13060,7 @@ putop (const char *in_template, int sizeflag)
 		  SAVE_LAST (*p);
 		  break;
 		}
-	      if (intel_syntax
+	      if ((intel_syntax && need_modrm)
 		  || (modrm.mod == 3 && !(sizeflag & SUFFIX_ALWAYS)))
 		break;
 	      if ((rex & REX_W))
@@ -13074,8 +13068,9 @@ putop (const char *in_template, int sizeflag)
 		  USED_REX (REX_W);
 		  *obufp++ = 'q';
 		}
-	      else
-		*obufp++ = 'l';
+	      else if((address_mode == mode_64bit && need_modrm)
+		      || (sizeflag & SUFFIX_ALWAYS))
+		*obufp++ = intel_syntax? 'd' : 'l';
 	    }
 	  break;
 	case 'R':
@@ -13286,7 +13281,6 @@ putop (const char *in_template, int sizeflag)
 	    }
 	  break;
 	}
-      alt = 0;
     }
   *obufp = 0;
   mnemonicendp = obufp;
