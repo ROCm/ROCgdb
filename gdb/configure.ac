@@ -275,7 +275,7 @@ if test x"$ac_cv_header_amd_dbgapi_h" = xyes \
   fi
 
   CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
-  ROCM_DBGAPI_LIBS="-L$with_rocm_dbgapi/lib -lrocm-dbgapi"
+  ROCM_DBGAPI_LIBS="-Wl,--rpath,\$\${LD_RUN_PATH:-$with_rocm_dbgapi/lib} $with_rocm_dbgapi/lib/librocm-dbgapi.so"
   AC_SUBST(ROCM_DBGAPI_LIBS)
 else
   if test x"$require_rocm_dbgapi" = xyes; then
