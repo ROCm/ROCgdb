@@ -26847,13 +26847,15 @@ The AMD GPU supported architectures provide a maximum of 4 hardware
 write watchpoints.  Precise read watchpoints or access watchpoints are
 not supported.
 
-The x86 architecture provides 4 hardware watchpoints that can monitor
-up to 32 bytes.
+The x86 architecture provides 4 hardware watchpoints that can each
+monitor up to 8 bytes.
 
 When @value{GDBN} is used with x86 and AMD GPU devices, hardware
-watchpoints are therefore limited to 4 write watchpoints of up to 32
-bytes.  Software emulation will be used if more than 4 watchpoints are
-requested, or if watchpoints larger than 32 bytes are requested.
+watchpoints are therefore limited to at most 4 write watchpoints that
+have a collective size of up to 32 bytes.  The collective size is
+calculated by adding the size of each watchpoint rounded up to a
+multiple of 8 bytes.  Software emulation will be used for watchpoints
+that exceed the hardware limitations.
 
 Currently, watchpoints are only created on the CPU, and not the AMD
 GPU, until the @acronym{AMD ROCm} runtime is initialized.  With
