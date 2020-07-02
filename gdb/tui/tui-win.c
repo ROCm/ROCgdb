@@ -753,6 +753,8 @@ tui_refresh_all_command (const char *arg, int from_tty)
   tui_refresh_all_win ();
 }
 
+#define DEFAULT_TAB_LEN         8
+
 /* The tab width that should be used by the TUI.  */
 
 unsigned int tui_tab_width = DEFAULT_TAB_LEN;
@@ -919,7 +921,7 @@ tui_win_info::max_height () const
 /* See tui-data.h.  */
 
 int
-tui_gen_win_info::max_width () const
+tui_win_info::max_width () const
 {
   return tui_term_width () - 2;
 }

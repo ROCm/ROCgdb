@@ -1,3 +1,118 @@
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-data.h (struct tui_win_info) <name>: Now pure virtual.
+	* tui/tui-stack.h (struct tui_locator_window) <name>: New method.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-wingeneral.c (tui_win_info::refresh_window): Move from
+	tui_gen_win_info.
+	(tui_win_info::make_window): Merge with
+	tui_gen_win_info::make_window.
+	(tui_win_info::make_visible): Move from tui_gen_win_info.
+	* tui/tui-win.c (tui_win_info::max_width): Move from
+	tui_gen_win_info.
+	* tui/tui-layout.h (class tui_layout_window) <m_window>: Change
+	type.
+	<window_factory>: Likewise.
+	* tui/tui-layout.c (tui_win_info::resize): Move from
+	tui_gen_win_info.
+	(make_standard_window): Change return type.
+	(get_locator_window, tui_get_window_by_name): Likewise.
+	(tui_layout_window::apply): Remove a cast.
+	* tui/tui-data.h (MIN_WIN_HEIGHT): Move earlier.
+	(struct tui_win_info): Merge with tui_gen_win_info.
+	(struct tui_gen_win_info): Remove.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-stack.h (struct tui_locator_window): Derive from
+	tui_win_info.
+	<do_scroll_horizontal, do_scroll_vertical>: New methods.
+	<can_box>: New method.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-stack.h (struct tui_locator_window): Remove body.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.c (tui_data_window::display_registers_from)
+	(tui_data_window::display_registers_from)
+	(tui_data_window::first_data_item_displayed)
+	(tui_data_window::delete_data_content_windows): Update.
+	(tui_data_window::refresh_window, tui_data_window::no_refresh):
+	Remove.
+	(tui_data_window::check_register_values): Update.
+	(tui_data_item_window::rerender): Add parameters.  Update.
+	(tui_data_item_window::refresh_window): Remove.
+	* tui/tui-data.h (struct tui_gen_win_info) <no_refresh>: No longer
+	virtual.
+	* tui/tui-regs.h (struct tui_data_item_window): Don't derive from
+	tui_gen_win_info.
+	<refresh_window, max_height, min_height>: Remove.
+	<rerender>: Add parameters.
+	<x, y, visible>: New members.
+	(struct tui_data_window) <refresh_window, no_refresh>: Remove.
+	<m_item_width>: New member.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.c (tui_data_window::show_register_group)
+	(tui_data_window::check_register_values): Update.
+	* tui/tui-regs.h (struct tui_data_item_window) <regno>: Rename
+	from item_no.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.c (tui_data_window::show_register_group): Remove
+	useless "if".
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.c (tui_data_window::show_register_group): Update.
+	* tui/tui-regs.h (struct tui_data_item_window) <name>: Remove.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-stack.c (SINGLE_KEY): Move from tui-data.h
+	* tui/tui-winsource.h (enum tui_line_or_address_kind)
+	(struct tui_line_or_address): Move from tui-data.h.
+	* tui/tui-win.c (DEFAULT_TAB_LEN): Move from tui-data.h.
+	* tui/tui-data.h (DEFAULT_TAB_LEN): Move to tui-win.c.
+	(tui_cmd_window, tui_source_window_base, tui_source_window)
+	(tui_disasm_window): Don't declare.
+	(enum tui_line_or_address_kind, struct tui_line_or_address): Move
+	to tui-winsource.h.
+	(SINGLE_KEY): Move to tui-stack.c.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.h (struct tui_data_item_window) <content>: Now a
+	std::string.
+	* tui/tui-regs.c (class tab_expansion_file): New.
+	(tab_expansion_file::write): New method.
+	(tui_register_format): Change return type.  Use
+	tab_expansion_file.
+	(tui_get_register, tui_data_window::display_registers_from)
+	(tui_data_item_window::rerender): Update.
+	* tui/tui-io.h (tui_expand_tabs): Don't declare.
+	* tui/tui-io.c (tui_expand_tabs): Remove.
+
+2020-07-01  Tom Tromey  <tom@tromey.com>
+
+	* tui/tui-regs.c (tui_reggroup_completer): Use complete_on_enum.
+
+2020-07-01  Fangrui Song  <maskray@google.com>
+
+	* dwarf2/read.c (lnp_state_machine::check_line_address): Test -1.
+
+2020-07-01  Alok Kumar Sharma  <AlokKumar.Sharma@amd.com>
+
+	* dwarf2/read.c (set_die_type): Removed conditions to restrict
+	forms for DW_AT_associated and DW_AT_allocated attributes,
+	which is already checked in function attr_to_dynamic_prop.
+
 2020-06-30  Tom Tromey  <tromey@adacore.com>
 
 	* dwarf2/read.c (quirk_rust_enum): Correctly call
