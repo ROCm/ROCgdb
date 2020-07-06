@@ -423,6 +423,7 @@ public:
   void commit_resumed () override;
   void resume (ptid_t, int, enum gdb_signal) override;
   ptid_t wait (ptid_t, struct target_waitstatus *, int) override;
+  bool has_events () override;
 
   void fetch_registers (struct regcache *, int) override;
   void store_registers (struct regcache *, int) override;
@@ -6389,8 +6390,6 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
 {
   struct remote_state *rs = get_remote_state ();
 
-  gdb_assert (!this->commit_resumed_state);
-
   /* When connected in non-stop mode, the core resumes threads
      individually.  Resuming remote threads directly in target_resume
      would thus result in sending one packet per thread.  Instead, to
@@ -6797,6 +6796,24 @@ remote_target::commit_resumed ()
   vcont_builder.flush ();
 }
 
+bool
+remote_target::has_events ()
+{
+  if (target_can_async_p ())
+    {
+      remote_state *rs = get_remote_state ();
+
+      if (async_event_handler_marked (rs->remote_async_inferior_event_token))
+	return true;
+
+      /* Note that BUFCNT can be negative, indicating sticky
+	 error.  */
+      if (rs->remote_desc->bufcnt != 0)
+	return true;
+    }
+  return false;
+}
+
 /* Non-stop version of target_stop.  Uses `vCont;t' to stop a remote
    thread, all threads of a remote process, or all threads of all
    processes.  */
@@ -6807,8 +6824,6 @@ remote_target::remote_stop_ns (ptid_t ptid)
   struct remote_state *rs = get_remote_state ();
   char *p = rs->buf.data ();
   char *endp = p + get_remote_packet_size ();
-
-  gdb_assert (!this->commit_resumed_state);
 
   /* If any thread that needs to stop was resumed but pending a vCont
      resume, generate a phony stop_reply.  However, first check
@@ -7983,8 +7998,6 @@ remote_target::wait_ns (ptid_t ptid, struct target_waitstatus *status, int optio
   struct stop_reply *stop_reply;
   int ret;
   int is_notif = 0;
-
-  gdb_assert (!this->commit_resumed_state);
 
   /* If in non-stop mode, get out of getpkt even if a
      notification is received.	*/

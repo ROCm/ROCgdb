@@ -83,6 +83,7 @@ struct dummy_target : public target_ops
   bool is_async_p () override;
   void async (int arg0) override;
   int async_wait_fd () override;
+  bool has_events () override;
   void thread_events (int arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
@@ -256,6 +257,7 @@ struct debug_target : public target_ops
   bool is_async_p () override;
   void async (int arg0) override;
   int async_wait_fd () override;
+  bool has_events () override;
   void thread_events (int arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
@@ -2173,6 +2175,31 @@ debug_target::async_wait_fd ()
   fprintf_unfiltered (gdb_stdlog, "<- %s->async_wait_fd (", this->beneath ()->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_int (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+bool
+target_ops::has_events ()
+{
+  return this->beneath ()->has_events ();
+}
+
+bool
+dummy_target::has_events ()
+{
+  return false;
+}
+
+bool
+debug_target::has_events ()
+{
+  bool result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->has_events (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->has_events ();
+  fprintf_unfiltered (gdb_stdlog, "<- %s->has_events (", this->beneath ()->shortname ());
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }

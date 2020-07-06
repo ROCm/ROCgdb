@@ -2765,6 +2765,8 @@ schedlock_applies (struct thread_info *tp)
 static void
 maybe_set_commit_resumed_all_process_targets ()
 {
+  scoped_restore_current_thread restore_thread;
+
   for (process_stratum_target *target : all_non_exited_process_targets ())
     {
       gdb_assert (!target->commit_resumed_state);
@@ -2794,8 +2796,17 @@ maybe_set_commit_resumed_all_process_targets ()
       if (has_thread_with_pending_status)
 	{
 	  infrun_debug_printf ("not requesting commit-resumed for target %s, a"
-			       "thread has a pending waitstatus",
+			       " thread has a pending waitstatus",
 			       target->shortname ());
+	  continue;
+	}
+
+      switch_to_target_no_thread (target);
+
+      if (target_has_events ())
+	{
+	  infrun_debug_printf ("not requesting commit-resumed for target %s, "
+			       "target has events", target->shortname ());
 	  continue;
 	}
 
@@ -5003,8 +5014,12 @@ stop_all_threads (void)
 	  if (pass > 0)
 	    pass = -1;
 
+	  infrun_debug_printf ("stop_all_threads %d waits needed", waits_needed);
+
 	  for (int i = 0; i < waits_needed; i++)
 	    {
+	      infrun_debug_printf ("stop_all_threads wait #%d", i);
+
 	      wait_one_event event = wait_one ();
 	      if (handle_one (event))
 		break;

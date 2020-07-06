@@ -21,6 +21,7 @@
 
 #include "ser-event.h"
 #include "top.h"
+#include "infrun.h"
 
 /* PROC is a function to be invoked when the READY flag is set.  This
    happens when there has been a signal and the corresponding signal
@@ -306,6 +307,14 @@ clear_async_event_handler (async_event_handler *async_handler_ptr)
   event_loop_debug_printf ("clearing async event handler `%s`",
 			   async_handler_ptr->name);
   async_handler_ptr->ready = 0;
+}
+
+/* See event-loop.h.  */
+
+bool
+async_event_handler_marked (async_event_handler *handler)
+{
+  return handler->ready;
 }
 
 /* Check if asynchronous event handlers are ready, and call the

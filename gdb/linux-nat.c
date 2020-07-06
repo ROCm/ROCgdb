@@ -4148,6 +4148,13 @@ linux_nat_target::async_wait_fd ()
   return linux_nat_event_pipe[0];
 }
 
+bool
+linux_nat_target::has_events ()
+{
+  return (linux_nat_async_event_handler != nullptr
+	  && async_event_handler_marked (linux_nat_async_event_handler));
+}
+
 /* target_async implementation.  */
 
 void

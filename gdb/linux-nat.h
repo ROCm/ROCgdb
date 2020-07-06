@@ -90,6 +90,7 @@ public:
 
   int async_wait_fd () override;
   void async (int) override;
+  bool has_events () override;
 
   void close () override;
 
