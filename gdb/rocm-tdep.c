@@ -721,7 +721,7 @@ handle_target_event (int error, gdb_client_data client_data)
     amd_dbgapi_process_set_progress (process_id, AMD_DBGAPI_PROGRESS_NORMAL);
 
   if (!info->wave_stop_events.empty ())
-    inferior_event_handler (INF_REG_EVENT, nullptr);
+    inferior_event_handler (INF_REG_EVENT);
 }
 
 void

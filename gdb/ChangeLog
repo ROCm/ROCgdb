@@ -1,3 +1,58 @@
+2020-07-05  Tom de Vries  <tdevries@suse.de>
+
+	PR build/26187
+	* inferior.h (struct infcall_suspend_state_deleter): If available, use
+	std::uncaught_exceptions instead of deprecated
+	std::uncaught_exception.
+
+2020-07-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* macroexp.h (macro_stringify): Return
+	gdb::unique_xmalloc_ptr<char>.
+	* macroexp.c (macro_stringify): Likewise.
+	* macrotab.c (fixup_definition): Update.
+
+2020-07-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* c-exp.y (scan_macro_expansion): Don't free `expansion`.
+	(lex_one_token): Update.
+	* macroexp.c (struct macro_buffer) <release>: Return
+	gdb::unique_xmalloc_ptr<char>.
+	(macro_stringify): Update.
+	(macro_expand): Update.
+	(macro_expand_next): Return gdb::unique_xmalloc_ptr<char>.
+	* macroexp.h (macro_expand_next): Likewise.
+
+2020-07-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* macroexp.h (macro_lookup_ftype): Remove.
+	(macro_expand, macro_expand_once, macro_expand_next): Remove
+	lookup function parameters, add scope parameter.
+	* macroexp.c (scan, substitute_args, expand, maybe_expand,
+	macro_expand, macro_expand_once, macro_expand_next): Likewise.
+	* macroscope.h (standard_macro_lookup): Change parameter type
+	to macro_scope.
+	* macroscope.c (standard_macro_lookup): Likewise.
+	* c-exp.y (lex_one_token): Update.
+	* macrocmd.c (macro_expand_command): Likewise.
+	(macro_expand_once_command): Likewise.
+
+2020-07-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* inf-loop.c (inferior_event_handler): Remove client_data param.
+	* inf-loop.h (inferior_event_handler): Likewise.
+	* infcmd.c (step_1): Adjust.
+	* infrun.c (proceed): Adjust.
+	(fetch_inferior_event): Remove client_data param.
+	(infrun_async_inferior_event_handler): Adjust.
+	* infrun.h (fetch_inferior_event): Remove `void *` param.
+	* linux-nat.c (handle_target_event): Adjust.
+	* record-btrace.c (record_btrace_handle_async_inferior_event):
+	Adjust.
+	* record-full.c (record_full_async_inferior_event_handler):
+	Adjust.
+	* remote.c (remote_async_inferior_event_handler): Adjust.
+
 2020-07-01  Tom Tromey  <tom@tromey.com>
 
 	* tui/tui-data.h (struct tui_win_info) <name>: Now pure virtual.
