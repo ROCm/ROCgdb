@@ -164,6 +164,7 @@ optional arguments while skipping others.  Example:
                                 using Python.
 * Lazy Strings In Python::      Python representation of lazy strings.
 * Architectures In Python::     Python representation of architectures.
+* Registers In Python::         Python representation of registers.
 * TUI Windows In Python::       Implementing new TUI windows.
 @end menu
 
@@ -2519,6 +2520,12 @@ Each attribute value should be an instance of @code{gdb.Value}.
 
 @end defun
 
+@defun PendingFrame.architecture ()
+Return the @code{gdb.Architecture} (@pxref{Architectures In Python})
+for this @code{gdb.PendingFrame}.  This represents the architecture of
+the particular frame being unwound.
+@end defun
+
 @subheading Unwinder Output: UnwindInfo
 
 Use @code{PendingFrame.create_unwind_info} method described above to
@@ -4679,6 +4686,7 @@ Return the frame's symtab and line object.
 @xref{Symbol Tables In Python}.
 @end defun
 
+@anchor{gdbpy_frame_read_register}
 @defun Frame.read_register (register)
 Return the value of @var{register} in this frame.  The @var{register}
 argument must be a string (e.g., @code{'sp'} or @code{'rax'}).
@@ -5709,6 +5717,69 @@ instruction in bytes.
 
 @end table
 @end defun
+
+@anchor{gdbpy_architecture_registers}
+@defun Architecture.registers (@r{[} @var{reggroup} @r{]})
+Return a @code{gdb.RegisterDescriptorIterator} (@pxref{Registers In
+Python}) for all of the registers in @var{reggroup}, a string that is
+the name of a register group.  If @var{reggroup} is omitted, or is the
+empty string, then the register group @samp{all} is assumed.
+@end defun
+
+@anchor{gdbpy_architecture_reggroups}
+@defun Architecture.register_groups ()
+Return a @code{gdb.RegisterGroupsIterator} (@pxref{Registers In
+Python}) for all of the register groups available for the
+@code{gdb.Architecture}.
+@end defun
+
+@node Registers In Python
+@subsubsection Registers In Python
+@cindex Registers In Python
+
+Python code can request from a @code{gdb.Architecture} information
+about the set of registers available
+(@pxref{gdbpy_architecture_registers,,@code{Architecture.registers}}).
+The register information is returned as a
+@code{gdb.RegisterDescriptorIterator}, which is an iterator that in
+turn returns @code{gdb.RegisterDescriptor} objects.
+
+A @code{gdb.RegisterDescriptor} does not provide the value of a
+register (@pxref{gdbpy_frame_read_register,,@code{Frame.read_register}}
+for reading a register's value), instead the @code{RegisterDescriptor}
+is a way to discover which registers are available for a particular
+architecture.
+
+A @code{gdb.RegisterDescriptor} has the following read-only properties:
+
+@defvar RegisterDescriptor.name
+The name of this register.
+@end defvar
+
+Python code can also request from a @code{gdb.Architecture}
+information about the set of register groups available on a given
+architecture
+(@pxref{gdbpy_architecture_reggroups,,@code{Architecture.register_groups}}).
+
+Every register can be a member of zero or more register groups.  Some
+register groups are used internally within @value{GDBN} to control
+things like which registers must be saved when calling into the
+program being debugged (@pxref{Calling,,Calling Program Functions}).
+Other register groups exist to allow users to easily see related sets
+of registers in commands like @code{info registers}
+(@pxref{info_registers_reggroup,,@code{info registers
+@var{reggroup}}}).
+
+The register groups information is returned as a
+@code{gdb.RegisterGroupsIterator}, which is an iterator that in turn
+returns @code{gdb.RegisterGroup} objects.
+
+A @code{gdb.RegisterGroup} object has the following read-only
+properties:
+
+@defvar RegisterGroup.name
+A string that is the name of this register group.
+@end defvar
 
 @node TUI Windows In Python
 @subsubsection Implementing new TUI windows

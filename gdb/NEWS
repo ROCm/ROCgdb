@@ -117,6 +117,19 @@ GNU/Linux/RISC-V (gdbserver)	riscv*-*-linux*
   ** Commands written in Python can be in the "TUI" help class by
      registering with the new constant gdb.COMMAND_TUI.
 
+  ** New method gdb.PendingFrame.architecture () to retrieve the
+     architecture of the pending frame.
+
+  ** New gdb.Architecture.registers method that returns a
+     gdb.RegisterDescriptorIterator object, an iterator that returns
+     gdb.RegisterDescriptor objects.  The new RegisterDescriptor is a
+     way to query the registers available for an architecture.
+
+  ** New gdb.Architecture.register_groups method that returns a
+     gdb.RegisterGroupIterator object, an iterator that returns
+     gdb.RegisterGroup objects.  The new RegisterGroup is a way to
+     discover the available register groups.
+
 *** Changes in GDB 9
 
 * 'thread-exited' event is now available in the annotations interface.

@@ -1,3 +1,24 @@
+2020-07-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.texi (Registers): Add @anchor for 'info registers
+	<reggroup>' command.
+	* python.texi (Architectures In Python): Document new
+	register_groups method.
+	(Registers In Python): Document two new object types related to
+	register groups.
+
+2020-07-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python.texi (Python API): Add new section to the menu.
+	(Frames In Python): Add new @anchor.
+	(Architectures In Python): Document new registers method.
+	(Registers In Python): New section.
+
+2020-07-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python.texi (Unwinding Frames in Python): Document
+	PendingFrame.architecture method.
+
 2020-06-26  Eli Zaretskii  <eliz@gnu.org>
 
 	* gdb.texinfo (Shell Commands): More accurate description of use

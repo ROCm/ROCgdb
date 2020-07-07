@@ -1,3 +1,29 @@
+2020-07-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR python/22748
+	* gdb.opt/inline-frame-tailcall.c: New file.
+	* gdb.opt/inline-frame-tailcall.exp: New file.
+	* gdb.python/py-unwind-inline.c: New file.
+	* gdb.python/py-unwind-inline.exp: New file.
+	* gdb.python/py-unwind-inline.py: New file.
+
+2020-07-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-arch-reg-groups.exp: New file.
+
+2020-07-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-arch-reg-names.exp: New file.
+
+2020-07-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-unwind.py (TestUnwinder::__call__): Add test for
+	gdb.PendingFrame.architecture method.
+
+2020-07-06  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-ranges-base.exp: Test line-table order.
+
 2020-07-03  Pedro Alves  <palves@redhat.com>
 
 	* gdb.base/structs2.c (main): Adjust second parem_reg call to
