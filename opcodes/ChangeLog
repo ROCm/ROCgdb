@@ -1,3 +1,97 @@
+2020-07-08  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (OP_LWPCB_E, OP_LWP_E): Delete.
+	(REG_XOP_LWPCB, REG_XOP_LWP, REG_XOP_TBM_01, REG_XOP_TBM_02):
+	Rename to ...
+	(REG_0FXOP_09_12_M_1_L_0, REG_0FXOP_0A_12_L_0,
+	REG_0FXOP_09_01_L_0, REG_0FXOP_09_02_L_0): ... these
+	respectively.
+	(MOD_VEX_0FXOP_09_12, VEX_LEN_0FXOP_08_85, VEX_LEN_0FXOP_08_86,
+	VEX_LEN_0FXOP_08_87, VEX_LEN_0FXOP_08_8E, VEX_LEN_0FXOP_08_8F,
+	VEX_LEN_0FXOP_08_95, VEX_LEN_0FXOP_08_96, VEX_LEN_0FXOP_08_97,
+	VEX_LEN_0FXOP_08_9E, VEX_LEN_0FXOP_08_9F, VEX_LEN_0FXOP_08_A3,
+	VEX_LEN_0FXOP_08_A6, VEX_LEN_0FXOP_08_B6, VEX_LEN_0FXOP_08_C0,
+	VEX_LEN_0FXOP_08_C1, VEX_LEN_0FXOP_08_C2, VEX_LEN_0FXOP_08_C3,
+	VEX_LEN_0FXOP_09_01, VEX_LEN_0FXOP_09_02, VEX_LEN_0FXOP_09_12_M_1,
+	VEX_LEN_0FXOP_09_90, VEX_LEN_0FXOP_09_91, VEX_LEN_0FXOP_09_92,
+	VEX_LEN_0FXOP_09_93, VEX_LEN_0FXOP_09_94, VEX_LEN_0FXOP_09_95,
+	VEX_LEN_0FXOP_09_96, VEX_LEN_0FXOP_09_97, VEX_LEN_0FXOP_09_98,
+	VEX_LEN_0FXOP_09_99, VEX_LEN_0FXOP_09_9A, VEX_LEN_0FXOP_09_9B,
+	VEX_LEN_0FXOP_09_C1, VEX_LEN_0FXOP_09_C2, VEX_LEN_0FXOP_09_C3,
+	VEX_LEN_0FXOP_09_C6, VEX_LEN_0FXOP_09_C7, VEX_LEN_0FXOP_09_CB,
+	VEX_LEN_0FXOP_09_D1, VEX_LEN_0FXOP_09_D2, VEX_LEN_0FXOP_09_D3,
+	VEX_LEN_0FXOP_09_D6, VEX_LEN_0FXOP_09_D7, VEX_LEN_0FXOP_09_DB,
+	VEX_LEN_0FXOP_09_E1, VEX_LEN_0FXOP_09_E2, VEX_LEN_0FXOP_09_E3,
+	VEX_LEN_0FXOP_0A_12, VEX_W_0FXOP_08_85_L_0,
+	VEX_W_0FXOP_08_86_L_0, VEX_W_0FXOP_08_87_L_0,
+	VEX_W_0FXOP_08_8E_L_0, VEX_W_0FXOP_08_8F_L_0,
+	VEX_W_0FXOP_08_95_L_0, VEX_W_0FXOP_08_96_L_0,
+	VEX_W_0FXOP_08_97_L_0, VEX_W_0FXOP_08_9E_L_0,
+	VEX_W_0FXOP_08_9F_L_0, VEX_W_0FXOP_08_A6_L_0,
+	VEX_W_0FXOP_08_B6_L_0, VEX_W_0FXOP_08_C0_L_0,
+	VEX_W_0FXOP_08_C1_L_0, VEX_W_0FXOP_08_C2_L_0,
+	VEX_W_0FXOP_08_C3_L_0, VEX_W_0FXOP_08_CC_L_0,
+	VEX_W_0FXOP_08_CD_L_0, VEX_W_0FXOP_08_CE_L_0,
+	VEX_W_0FXOP_08_CF_L_0, VEX_W_0FXOP_08_EC_L_0,
+	VEX_W_0FXOP_08_ED_L_0, VEX_W_0FXOP_08_EE_L_0,
+	VEX_W_0FXOP_08_EF_L_0, VEX_W_0FXOP_09_C1_L_0,
+	VEX_W_0FXOP_09_C2_L_0, VEX_W_0FXOP_09_C3_L_0,
+	VEX_W_0FXOP_09_C6_L_0, VEX_W_0FXOP_09_C7_L_0,
+	VEX_W_0FXOP_09_CB_L_0, VEX_W_0FXOP_09_D1_L_0,
+	VEX_W_0FXOP_09_D2_L_0, VEX_W_0FXOP_09_D3_L_0,
+	VEX_W_0FXOP_09_D6_L_0, VEX_W_0FXOP_09_D7_L_0,
+	VEX_W_0FXOP_09_DB_L_0, VEX_W_0FXOP_09_E1_L_0,
+	VEX_W_0FXOP_09_E2_L_0, VEX_W_0FXOP_09_E3_L_0): New enumerators.
+	(reg_table): Re-order XOP entries. Adjust their operands.
+	(xop_table): Replace 08_85, 08_86, 08_87, 08_8E, 08_8F, 08_95,
+	08_96, 08_97, 08_9E, 08_9F, 08_A3, 08_A6, 08_B6, 08_C0, 08_C1,
+	08_C2, 08_C3, 09_01, 09_02, 09_12, 09_90, 09_91, 09_92, 09_93,
+	09_94, 09_95, 09_96, 09_97, 09_98, 09_99, 09_9A, 09_9B, 09_C1,
+	09_C2, 09_C3, 09_C6, 09_C7, 09_CB, 09_D1, 09_D2, 09_D3, 09_D6,
+	09_D7, 09_DB, 09_E1, 09_E2, 09_E3, and VEX_LEN_0FXOP_0A_12
+	entries by references ...
+	(vex_len_table): ... to resepctive new entries here. For several
+	new and existing entries reference ...
+	(vex_w_table): ... new entries here.
+	(mod_table): New MOD_VEX_0FXOP_09_12 entry.
+
+2020-07-08  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (XMVexScalarI4): Define.
+	(VEX_LEN_0F3A6A_P_2, VEX_LEN_0F3A6B_P_2, VEX_LEN_0F3A6E_P_2,
+	VEX_LEN_0F3A6F_P_2, VEX_LEN_0F3A7A_P_2, VEX_LEN_0F3A7B_P_2,
+	VEX_LEN_0F3A7E_P_2, VEX_LEN_0F3A7F_P_2): Delete.
+	(vex_len_table): Move scalar FMA4 entries ...
+	(prefix_table): ... here.
+	(OP_REG_VexI4): Handle scalar_mode.
+	* i386-opc.tbl: Use VexLIG for scalar FMA4 insns.
+	* i386-tbl.h: Re-generate.
+
+2020-07-08  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (OP_Vex_2src_1, OP_Vex_2src_2, Vex_2src_1,
+	Vex_2src_2): Delete.
+	(OP_VexW, VexW): New.
+	(xop_table): Use EXx for rotates by immediate. Use EXx and VexW
+	for shifts and rotates by register.
+
+2020-07-08  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (OP_EX_VexImmW, OP_XMM_VexW, EXVexImmW, XMVexW,
+	VEX_W_0F3A48_P_2, VEX_W_0F3A49_P_2, vex_w_done, get_vex_imm8,
+	OP_EX_VexReg): Delete.
+	(OP_VexI4, VexI4): New.
+	(vex_w_table): Move vpermil2ps and vpermil2pd entries ...
+	(prefix_table): ... here.
+	(print_insn): Drop setting of vex_w_done.
+
+2020-07-08  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (OP_EX_VexW, EXVexW, EXdVexW, EXqVexW): Delete.
+	(prefix_table, vex_len_table): Replace operands for FMA4 insns.
+	(xop_table): Replace operands of 4-operand insns.
+	(OP_REG_VexI4): Move VEX.W based operand swaping here.
+
 2020-07-07  Claudiu Zissulescu  <claziss@synopsys.com>
 
 	* arc-opc.c (insert_rbd): New function.
