@@ -1240,10 +1240,10 @@ incomplete CFI data; unspecified registers (e.g., %s) at %s"),
   if (fs.retaddr_column < fs.regs.reg.size ()
       && fs.regs.reg[fs.retaddr_column].how == DWARF2_FRAME_REG_UNDEFINED)
     cache->undefined_retaddr = 1;
-
-  dwarf2_tailcall_sniffer_first (this_frame, &cache->tailcall_cache,
-				 (entry_cfa_sp_offset_p
-				  ? &entry_cfa_sp_offset : NULL));
+  else
+    dwarf2_tailcall_sniffer_first (this_frame, &cache->tailcall_cache,
+				   (entry_cfa_sp_offset_p
+				    ? &entry_cfa_sp_offset : NULL));
 
   return cache;
 }
