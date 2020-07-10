@@ -823,10 +823,6 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 
         switch (runtime_state)
           {
-          case AMD_DBGAPI_RUNTIME_STATE_LOADED_UNSUPPORTED:
-            warning (_ ("ROCgdb: low-level runtime version not supported"));
-            break;
-
           case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUPPORTED:
             amd_dbgapi_activated.notify ();
             info->activated = true;
@@ -835,6 +831,15 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
           case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
             if (info->activated)
               amd_dbgapi_deactivated.notify ();
+            break;
+
+          case AMD_DBGAPI_RUNTIME_STATE_LOADED_VERSION_UNSUPPORTED:
+            error (_ ("ROCgdb: low-level runtime version not supported"));
+            break;
+
+          case AMD_DBGAPI_RUNTIME_STATE_LOADED_DEBUGGING_UNSUPPORTED:
+            error (_ ("ROCgdb: unable to enable GPU debugging "
+                      "(another ROCgdb may be running)"));
             break;
           }
       }
