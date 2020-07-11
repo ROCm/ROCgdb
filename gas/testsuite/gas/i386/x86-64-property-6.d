@@ -1,4 +1,5 @@
-#name: i386 property 5
+#name: x86-64 property 6
+#source: property-6.s
 #as: -mx86-used-note=yes --generate-missing-build-notes=no
 #readelf: -n
 

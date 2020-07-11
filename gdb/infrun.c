@@ -3602,23 +3602,9 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
   return event_ptid;
 }
 
-/* Returns true if INF has any resumed thread with a status
-   pending.  */
-
-static bool
-threads_are_resumed_pending_p (inferior *inf)
-{
-  for (thread_info *tp : inf->non_exited_threads ())
-    if (tp->resumed
-	&& tp->suspend.waitstatus_pending_p)
-      return true;
-
-  return false;
-}
-
 /* Wrapper for target_wait that first checks whether threads have
    pending statuses to report before actually asking the target for
-   more events. Polls for events from all inferiors/targets.  */
+   more events.  Polls for events from all inferiors/targets.  */
 
 static bool
 do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
@@ -3626,20 +3612,18 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
   int num_inferiors = 0;
   int random_selector;
 
-  /* For fairness, we pick the first inferior/target to poll at
-     random, and then continue polling the rest of the inferior list
-     starting from that one in a circular fashion until the whole list
-     is polled once.  */
+  /* For fairness, we pick the first inferior/target to poll at random
+     out of all inferiors that may report events, and then continue
+     polling the rest of the inferior list starting from that one in a
+     circular fashion until the whole list is polled once.  */
 
   auto inferior_matches = [&wait_ptid] (inferior *inf)
     {
       return (inf->process_target () != NULL
-	      && (threads_are_executing (inf->process_target ())
-		  || threads_are_resumed_pending_p (inf))
 	      && ptid_t (inf->pid).matches (wait_ptid));
     };
 
-  /* First see how many resumed inferiors we have.  */
+  /* First see how many matching inferiors we have.  */
   for (inferior *inf : all_inferiors ())
     if (inferior_matches (inf))
       num_inferiors++;
@@ -3650,7 +3634,7 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
       return false;
     }
 
-  /* Now randomly pick an inferior out of those that were resumed.  */
+  /* Now randomly pick an inferior out of those that matched.  */
   random_selector = (int)
     ((num_inferiors * (double) rand ()) / (RAND_MAX + 1.0));
 
@@ -3659,7 +3643,7 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 			"infrun: Found %d inferiors, starting at #%d\n",
 			num_inferiors, random_selector);
 
-  /* Select the Nth inferior that was resumed.  */
+  /* Select the Nth inferior that matched.  */
 
   inferior *selected = nullptr;
 
@@ -3671,7 +3655,7 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
 	  break;
 	}
 
-  /* Now poll for events out of each of the resumed inferior's
+  /* Now poll for events out of each of the matching inferior's
      targets, starting from the selected one.  */
 
   auto do_wait = [&] (inferior *inf)
@@ -3681,8 +3665,8 @@ do_target_wait (ptid_t wait_ptid, execution_control_state *ecs, int options)
     return (ecs->ws.kind != TARGET_WAITKIND_IGNORE);
   };
 
-  /* Needed in all-stop+target-non-stop mode, because we end up here
-     spuriously after the target is all stopped and we've already
+  /* Needed in 'all-stop + target-non-stop' mode, because we end up
+     here spuriously after the target is all stopped and we've already
      reported the stop to the user, polling for events.  */
   scoped_restore_current_thread restore_thread;
 
@@ -5069,23 +5053,77 @@ handle_no_resumed (struct execution_control_state *ecs)
      have resumed threads _now_.  In the example above, this removes
      thread 3 from the thread list.  If thread 2 was re-resumed, we
      ignore this event.  If we find no thread resumed, then we cancel
-     the synchronous command show "no unwaited-for " to the user.  */
-  update_thread_list ();
+     the synchronous command and show "no unwaited-for " to the
+     user.  */
 
-  for (thread_info *thread : all_non_exited_threads (ecs->target))
+  inferior *curr_inf = current_inferior ();
+
+  scoped_restore_current_thread restore_thread;
+
+  for (auto *target : all_non_exited_process_targets ())
     {
-      if (thread->executing
-	  || thread->suspend.waitstatus_pending_p)
+      switch_to_target_no_thread (target);
+      update_thread_list ();
+    }
+
+  /* If:
+
+       - the current target has no thread executing, and
+       - the current inferior is native, and
+       - the current inferior is the one which has the terminal, and
+       - we did nothing,
+
+     then a Ctrl-C from this point on would remain stuck in the
+     kernel, until a thread resumes and dequeues it.  That would
+     result in the GDB CLI not reacting to Ctrl-C, not able to
+     interrupt the program.  To address this, if the current inferior
+     no longer has any thread executing, we give the terminal to some
+     other inferior that has at least one thread executing.  */
+  bool swap_terminal = true;
+
+  /* Whether to ignore this TARGET_WAITKIND_NO_RESUMED event, or
+     whether to report it to the user.  */
+  bool ignore_event = false;
+
+  for (thread_info *thread : all_non_exited_threads ())
+    {
+      if (swap_terminal && thread->executing)
 	{
-	  /* There were no unwaited-for children left in the target at
-	     some point, but there are now.  Just ignore.  */
+	  if (thread->inf != curr_inf)
+	    {
+	      target_terminal::ours ();
+
+	      switch_to_thread (thread);
+	      target_terminal::inferior ();
+	    }
+	  swap_terminal = false;
+	}
+
+      if (!ignore_event
+	  && (thread->executing
+	      || thread->suspend.waitstatus_pending_p))
+	{
+	  /* Either there were no unwaited-for children left in the
+	     target at some point, but there are now, or some target
+	     other than the eventing one has unwaited-for children
+	     left.  Just ignore.  */
 	  if (debug_infrun)
 	    fprintf_unfiltered (gdb_stdlog,
 				"infrun: TARGET_WAITKIND_NO_RESUMED "
 				"(ignoring: found resumed)\n");
-	  prepare_to_wait (ecs);
-	  return 1;
+
+	  ignore_event = true;
 	}
+
+      if (ignore_event && !swap_terminal)
+	break;
+    }
+
+  if (ignore_event)
+    {
+      switch_to_inferior_no_thread (curr_inf);
+      prepare_to_wait (ecs);
+      return 1;
     }
 
   /* Go ahead and report the event.  */
@@ -8122,7 +8160,11 @@ prepare_to_wait (struct execution_control_state *ecs)
 
   ecs->wait_some_more = 1;
 
-  if (!target_is_async_p ())
+  /* If the target can't async, emulate it by marking the infrun event
+     handler such that as soon as we get back to the event-loop, we
+     immediately end up in fetch_inferior_event again calling
+     target_wait.  */
+  if (!target_can_async_p ())
     mark_infrun_async_event_handler ();
 }
 
