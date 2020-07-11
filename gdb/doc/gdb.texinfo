@@ -22111,13 +22111,13 @@ heterogeneous system.
 On some heterogeneous systems there can be heterogeneous agents that
 support @acronym{SIMD, Single Instruction Multiple Data} or
 @acronym{SIMT, Single Instruction Multiple Threads} machine
-instructions.  On these target achitectures, a single machine
+instructions.  On these target architectures, a single machine
 instruction can operate in parallel on multiple @dfn{heterogeneous
 lanes}.
 
 @cindex divergent control flow
 Source languages used by heterogeneous programs can be implemented on
-target achitectures that support multiple heterogeneous lanes by
+target architectures that support multiple heterogeneous lanes by
 mapping a source language thread of execution onto a heterogeneous
 lane of a single target architecture thread.  Control flow in the
 source language may be implemented by controlling which heterogeneous
@@ -22125,7 +22125,7 @@ lanes are active.  If the source language control flow may result in
 some heterogeneous lanes becoming inactive while some remain active,
 the control flow is said to be @dfn{divergent}.  Typically, the
 machine code may execute different divergent paths for different sets
-of heterogeneous lanes, before the control flow recoverges and all
+of heterogeneous lanes, before the control flow reconverges and all
 heterogeneous lanes become active.
 
 Just because a target architecture supports multiple lanes, does not
@@ -22137,8 +22137,8 @@ corresponds to a source language that does do such a mapping.
 @anchor{Address Space}
 @cindex address space
 On some heterogeneous systems there can be heterogeneous agents with
-target achitectures that support multiple @dfn{address spaces}.  In
-these target achitectures, there may be memory that is physically
+target architectures that support multiple @dfn{address spaces}.  In
+these target architectures, there may be memory that is physically
 disjoint from regular global virtual memory.  There can also be cases
 when the same underlying memory can be accessed using linear addresses
 that map to the underlying physical memory in an interleaved manner.
@@ -22284,16 +22284,12 @@ expressions, command scripts, and so forth.
 @vindex $_gqueue@r{, convenience variable}
 @vindex $_dispatch@r{, convenience variable}
 @vindex $_gdispatch@r{, convenience variable}
-@vindex $_lane@r{, convenience variable}
-@vindex $_glane@r{, convenience variable}
 @item $_agent
 @itemx $_gagent
 @itemx $_queue
 @itemx $_gqueue
 @itemx $_dispatch
 @itemx $_gdispatch
-@itemx $_lane
-@itemx $_glane
 There are debugger convenience variables that contain the number of
 each heterogeneous entity associated with the current thread if it was
 created by a heterogeneous dispatch, or 0 otherwise.  @code{$_agent},
@@ -22731,8 +22727,8 @@ Lane 2 has lane id 'ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4)
 @c Ways for commands that list lanes and threads to aggregate the
 @c output would be beneficial in heterogeneous systems that tend to
 @c have very large counts.  For example, all lanes that have adjacent
-@c dispatch postions, and that are at the same source postion, could
-@c be displayed as a single row that specifies the range of postions.
+@c dispatch positions, and that are at the same source position, could
+@c be displayed as a single row that specifies the range of positions.
 @c Perhaps target or user defined functions could be allowed to guide
 @c the aggregation, and return the aggregated range.  That would allow
 @c different heterogeneous system to be supported that had different
@@ -22742,10 +22738,10 @@ Lane 2 has lane id 'ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4)
 @item lane apply @r{[}@var{thread-id-list} @r{|} all @r{[}-ascending@r{]]} @r{[}@var{flag}@r{]@dots{}} @var{command}
 @itemx laas [@var{option}]@dots{} @var{command}
 @itemx lfaas [@var{option}]@dots{} @var{command}
-@code{lane apply}, @code{laas}, and @code{lfass} commands are simalar
+@code{lane apply}, @code{laas}, and @code{lfass} commands are similar
 to their thread counterparts @code{thread apply}, @code{taas}, and
-@code{tfaas} respectively, except they operatate on heterogeneous
-lanes.  @xref{Threads}.
+@code{tfaas} respectively, except they operate on heterogeneous lanes.
+@xref{Threads}.
 
 @item backtrace [@var{option}]@dots{} [@var{qualifier}]@dots{} [@var{count}]
 @itemx frame @r{[} @var{frame-selection-spec} @r{]}
@@ -22888,7 +22884,7 @@ limits @value{GDBN} to only process breakpoints if the heterogeneous
 lane has a heterogeneous lane index that matches @var{lane-index}.
 
 The @code{info break} and @code{info watch} commands add a @emph{Lane}
-column before the @emph{Address} column if any breakoint has a
+column before the @emph{Address} column if any breakpoint has a
 @var{lane-index} specified that displays the heterogeneous lane index.
 
 @c FIXME-implementors!!  Should there be way to request all pending
@@ -22897,8 +22893,8 @@ column before the @emph{Address} column if any breakoint has a
 @c having to continue a very large number of times to get all the
 @c threads/lanes that have unprocessed breakpoints to be processed.
 @c
-@c In addition, a way to list all the theards/lanes that are halted at
-@c a breakpoint.  If this was avaiable as a conveniece function, then
+@c In addition, a way to list all the threads/lanes that are halted at
+@c a breakpoint.  If this was available as a convenience function, then
 @c the @code{thread apply} and @code{lane apply} commands could be
 @c used to perform a command on all such threads in one action.
 
@@ -22907,10 +22903,10 @@ column before the @emph{Address} column if any breakoint has a
 @c displaying imformation about available address spaces that can be
 @c used.  It has been defined as a @code{maint} command only to match
 @c the @code{maint print reggroups} command which also should not be a
-@c maintenace command for the same reason.
+@c maintenance command for the same reason.
 @item maint print address-spaces @r{[}@var{file}@r{]}
 @code{maint print address-spaces} displays the address space names
-supported by each target achitecture.  The optional argument
+supported by each target architecture.  The optional argument
 @var{file} tells to what file to write the information.
 
 The address spaces info looks like this:
@@ -22970,7 +22966,7 @@ breakpoint will need to be set again if necessary.
 The @code{set scheduler-locking on} command (@pxref{Non-Stop Mode})
 together with the @w{@option{-lane}} breakpoint option can be used to
 lock @value{GDBN} to only resume the current thread, and only report
-breakoints for a fixed heterogeneous lane index.  This avoids the
+breakpoints for a fixed heterogeneous lane index.  This avoids the
 overhead of resuming a large number of threads every time resuming
 from a breakpoint, and also avoids the focus being switched to other
 threads that hit the breakpoints.  Note however that other threads
