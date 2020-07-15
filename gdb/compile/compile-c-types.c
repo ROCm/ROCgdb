@@ -44,15 +44,15 @@ convert_array (compile_c_instance *context, struct type *type)
 
   element_type = context->convert_type (TYPE_TARGET_TYPE (type));
 
-  if (TYPE_LOW_BOUND_KIND (range) != PROP_CONST)
+  if (range->bounds ()->low.kind () != PROP_CONST)
     return context->plugin ().error (_("array type with non-constant"
 				       " lower bound is not supported"));
-  if (TYPE_LOW_BOUND (range) != 0)
+  if (range->bounds ()->low.const_val () != 0)
     return context->plugin ().error (_("cannot convert array type with "
 				       "non-zero lower bound to C"));
 
-  if (TYPE_HIGH_BOUND_KIND (range) == PROP_LOCEXPR
-      || TYPE_HIGH_BOUND_KIND (range) == PROP_LOCLIST)
+  if (range->bounds ()->high.kind () == PROP_LOCEXPR
+      || range->bounds ()->high.kind () == PROP_LOCLIST)
     {
       gcc_type result;
 
@@ -61,7 +61,7 @@ convert_array (compile_c_instance *context, struct type *type)
 					   " is not supported"));
 
       std::string upper_bound
-	= c_get_range_decl_name (&TYPE_RANGE_DATA (range)->high);
+	= c_get_range_decl_name (&range->bounds ()->high);
       result = context->plugin ().build_vla_array_type (element_type,
 							upper_bound.c_str ());
       return result;

@@ -191,7 +191,7 @@ value_subscripted_rvalue (struct value *array, LONGEST index, LONGEST lowerbound
 
   /* Fetch the bit stride and convert it to a byte stride, assuming 8 bits
      in a byte.  */
-  LONGEST stride = TYPE_ARRAY_BIT_STRIDE (array_type);
+  LONGEST stride = array_type->bit_stride ();
   if (stride != 0)
     {
       struct gdbarch *arch = get_type_arch (elt_type);
@@ -200,12 +200,13 @@ value_subscripted_rvalue (struct value *array, LONGEST index, LONGEST lowerbound
     }
 
   LONGEST elt_offs = elt_size * (index - lowerbound);
+  bool array_upper_bound_undefined
+    = array_type->bounds ()->high.kind () == PROP_UNDEFINED;
 
   if (index < lowerbound
-      || (!TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (array_type)
-          && elt_offs >= type_length_units (array_type))
-      || (VALUE_LVAL (array) != lval_memory
-          && TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (array_type)))
+      || (!array_upper_bound_undefined
+	  && elt_offs >= type_length_units (array_type))
+      || (VALUE_LVAL (array) != lval_memory && array_upper_bound_undefined))
     {
       if (type_not_associated (array_type))
         error (_("no such vector element (vector not associated)"));

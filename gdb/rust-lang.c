@@ -653,8 +653,8 @@ rust_print_struct_def (struct type *type, const char *varstring,
 	{
 	  fputs_filtered ("enum ", stream);
 	  dynamic_prop *prop = type->dyn_prop (DYN_PROP_VARIANT_PARTS);
-	  if (prop != nullptr && prop->kind == PROP_TYPE)
-	    type = prop->data.original_type;
+	  if (prop != nullptr && prop->kind () == PROP_TYPE)
+	    type = prop->original_type ();
 	}
       else if (type->code () == TYPE_CODE_STRUCT)
 	fputs_filtered ("struct ", stream);
@@ -813,8 +813,8 @@ rust_internal_print_type (struct type *type, const char *varstring,
 				  stream, show - 1, level, flags, false,
 				  podata);
 
-	if (TYPE_HIGH_BOUND_KIND (type->index_type ()) == PROP_LOCEXPR
-	    || TYPE_HIGH_BOUND_KIND (type->index_type ()) == PROP_LOCLIST)
+	if (type->bounds ()->high.kind () == PROP_LOCEXPR
+	    || type->bounds ()->high.kind () == PROP_LOCLIST)
 	  fprintf_filtered (stream, "; variable length");
 	else if (get_array_bounds (type, &low_bound, &high_bound))
 	  fprintf_filtered (stream, "; %s",

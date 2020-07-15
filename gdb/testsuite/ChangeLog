@@ -1,3 +1,75 @@
+2020-07-15  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.trace/entry-values.exp: Expect "call" instead of "callq" if
+	is_amd64_regs_target.
+
+2020-07-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/ptype-on-functions.exp: Add more tests.
+	* gdb.fortran/ptype-on-functions.f90: Likewise.
+
+2020-07-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* lib/dwarf.exp (Dwarf::cu, Dwarf::tu, Dwarf::lines): Change valid
+	values in documentation for addr_size to 4 and 8.
+
+2020-07-14  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.arch/amd64-osabi.exp: Update.
+	* gdb.arch/arm-disassembler-options.exp: Update.
+	* gdb.arch/powerpc-disassembler-options.exp: Update.
+	* gdb.arch/ppc64-symtab-cordic.exp: Update.
+	* gdb.arch/s390-disassembler-options.exp: Update.
+	* gdb.base/all-architectures.exp.tcl: Update.
+	* gdb.base/attach-pie-noexec.exp: Update.
+	* gdb.base/catch-syscall.exp: Update.
+	* gdb.xml/tdesc-arch.exp: Update.
+
+2020-07-14  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.threads/clone-new-thread-event.c (gettid): Rename to ...
+	(local_gettid): ... this.
+	(fn): Update.
+
+2020-07-13  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.base/info_sources.exp: Skip directory match tests on
+	remote hosts.
+
+2020-07-13  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/savedregs.exp (caller): Use parentheses to
+	make expected expression evaluation ordering explicit.
+
+2020-07-13  Gary Benson <gbenson@redhat.com>
+
+	* gdb.arch/i386-sse.c (have_sse) <edx>: Make unsigned.
+
+2020-07-13  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/bigcore.c (main): Use a volatile pointer when
+	attempting to trigger a SIGSEGV.
+	* gdb.base/gcore-relro-pie.c (break_here): Likewise.
+	* gdb.base/gcore-tls-pie.c (break_here): Likewise.
+	* gdb.base/savedregs.c (thrower): Likewise.
+	* gdb.mi/mi-syn-frame.c (bar): Likewise.
+
+2020-07-13  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/vla-datatypes.c (vla_factory): Factor out sections
+	defining and using VLA structure fields into...
+	* gdb.base/vla-struct-fields.c: New file.
+	* gdb.base/vla-datatypes.exp: Factor out VLA structure field
+	tests into...
+	* gdb.base/vla-struct-fields.exp: New file.
+
+2020-07-13  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (have_fuse_ld_gold): New caching proc.
+	* gdb.base/gcore-tls-pie.exp: Use have_fuse_ld_gold.
+	* gdb.base/gold-gdb-index.exp: Same.
+	* gdb.base/morestack.exp: Same.
+
 2020-07-11  Daniel Xu  <dxu@dxuuu.xyz>
 
 	PR rust/26121

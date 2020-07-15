@@ -223,7 +223,7 @@ f_type_print_varspec_suffix (struct type *type, struct ui_file *stream,
 	  /* Make sure that, if we have an assumed size array, we
 	       print out a warning and print the upperbound as '*'.  */
 
-	  if (TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (type))
+	  if (type->bounds ()->high.kind () == PROP_UNDEFINED)
 	    fprintf_filtered (stream, "*");
 	  else
 	    {
@@ -406,16 +406,20 @@ f_type_print_base (struct type *type, struct ui_file *stream, int show,
       break;
 
     case TYPE_CODE_STRING:
-      /* Strings may have dynamic upperbounds (lengths) like arrays.  */
+      /* Strings may have dynamic upperbounds (lengths) like arrays.  We
+	 check specifically for the PROP_CONST case to indicate that the
+	 dynamic type has been resolved.  If we arrive here having been
+	 asked to print the type of a value with a dynamic type then the
+	 bounds will not have been resolved.  */
 
-      if (TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (type))
-	fprintfi_filtered (level, stream, "character*(*)");
-      else
+      if (type->bounds ()->high.kind () == PROP_CONST)
 	{
 	  LONGEST upper_bound = f77_get_upperbound (type);
 
 	  fprintf_filtered (stream, "character*%s", pulongest (upper_bound));
 	}
+      else
+	fprintfi_filtered (level, stream, "character*(*)");
       break;
 
     case TYPE_CODE_STRUCT:

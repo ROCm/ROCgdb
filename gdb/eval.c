@@ -384,12 +384,12 @@ value_f90_subarray (struct value *array,
   *pos += 3;
 
   if (range_type == LOW_BOUND_DEFAULT || range_type == BOTH_BOUND_DEFAULT)
-    low_bound = TYPE_LOW_BOUND (range);
+    low_bound = range->bounds ()->low.const_val ();
   else
     low_bound = value_as_long (evaluate_subexp (NULL_TYPE, exp, pos, noside));
 
   if (range_type == HIGH_BOUND_DEFAULT || range_type == BOTH_BOUND_DEFAULT)
-    high_bound = TYPE_HIGH_BOUND (range);
+    high_bound = range->bounds ()->high.const_val ();
   else
     high_bound = value_as_long (evaluate_subexp (NULL_TYPE, exp, pos, noside));
 
@@ -3212,7 +3212,7 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 	  type = value_type (val);
 	  if (type->code () == TYPE_CODE_ARRAY
               && is_dynamic_type (type->index_type ())
-              && TYPE_HIGH_BOUND_UNDEFINED (type->index_type ()))
+              && type->bounds ()->high.kind () == PROP_UNDEFINED)
 	    return allocate_optimized_out_value (size_type);
 	}
       else
@@ -3255,7 +3255,7 @@ evaluate_subexp_for_sizeof (struct expression *exp, int *pos,
 		  type = type->index_type ();
 		  /* Only re-evaluate the right hand side if the resulting type
 		     is a variable length type.  */
-		  if (TYPE_RANGE_DATA (type)->flag_bound_evaluated)
+		  if (type->bounds ()->flag_bound_evaluated)
 		    {
 		      val = evaluate_subexp (NULL_TYPE, exp, pos, EVAL_NORMAL);
 		      return value_from_longest
