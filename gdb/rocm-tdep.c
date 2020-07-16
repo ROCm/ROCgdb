@@ -1314,10 +1314,7 @@ rocm_target_inferior_created (struct target_ops *target, int from_tty)
       &info->process_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    {
-      warning (_ ("Could not attach to process %d"), inf->pid);
-      return;
-    }
+    error (_ ("Could not attach to process %d"), inf->pid);
 
   if (amd_dbgapi_process_get_info (info->process_id,
                                    AMD_DBGAPI_PROCESS_INFO_NOTIFIER,
