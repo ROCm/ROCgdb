@@ -827,7 +827,7 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 
         switch (runtime_state)
           {
-          case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUPPORTED:
+          case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS:
             amd_dbgapi_activated.notify ();
             info->activated = true;
             break;
@@ -837,13 +837,9 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
               amd_dbgapi_deactivated.notify ();
             break;
 
-          case AMD_DBGAPI_RUNTIME_STATE_LOADED_VERSION_UNSUPPORTED:
-            error (_ ("ROCgdb: low-level runtime version not supported"));
-            break;
-
-          case AMD_DBGAPI_RUNTIME_STATE_LOADED_DEBUGGING_UNSUPPORTED:
+          case AMD_DBGAPI_RUNTIME_STATE_LOADED_ERROR_RESTRICTION:
             error (_ ("ROCgdb: unable to enable GPU debugging "
-                      "(another ROCgdb may be running)"));
+                      "due to a restriction error"));
             break;
           }
       }
@@ -1317,10 +1313,6 @@ rocm_target_inferior_created (struct target_ops *target, int from_tty)
       reinterpret_cast<amd_dbgapi_client_process_id_t> (inf),
       &info->process_id);
 
-  if (status == AMD_DBGAPI_STATUS_ERROR_VERSION_MISMATCH)
-    warning (_ ("The version of the kernel driver does not match the version "
-                "required by the ROCm debugger library"));
-
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     {
       warning (_ ("Could not attach to process %d"), inf->pid);
@@ -1680,7 +1672,7 @@ constexpr const char *debug_amd_dbgapi_log_level_enums[]
         [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = amd_dbgapi_log_level_verbose,
         nullptr };
 
-static const char *debug_amd_dbgapi_log_level = amd_dbgapi_log_level_error;
+static const char *debug_amd_dbgapi_log_level = amd_dbgapi_log_level_warning;
 
 static amd_dbgapi_log_level_t
 get_debug_amd_dbgapi_log_level ()
