@@ -1,3 +1,32 @@
+2020-07-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26263
+	* testsuite/ld-i386/i386.exp: Run PR gas/26263 test.
+	* testsuite/ld-x86-64/x86-64.exp: Likewise.
+	* testsuite/ld-i386/pr26263.d: New file.
+	* testsuite/ld-x86-64/pr26263.d: Likewise.
+	* testsuite/ld-x86-64/pr26263.s: Likewise.
+
+2020-07-19  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* scripttempl/elf.sc (ETEXT_LAST_IN_RODATA_SEGMENT): New variable.
+	* emulparams/elf64mmix.sh (ETEXT_LAST_IN_RODATA_SEGMENT): Define.
+	* testsuite/ld-mmix/sec-1.d: Adjust.
+
+2020-07-19  Alan Modra  <amodra@gmail.com>
+
+	* emultempl/ppc64elf.em (power10-stubs): Accept optional "auto" arg.
+	* ld.texi (power10-stubs): Update.
+	* testsuite/ld-powerpc/callstub-1.d: Force --power10-stubs.
+	* testsuite/ld-powerpc/callstub-2.d: Relax branch offset comparison.
+	* testsuite/ld-powerpc/callstub-4.d: New test.
+	* testsuite/ld-powerpc/notoc.d: Force --no-power10-stubs.
+	* testsuite/ld-powerpc/notoc3.d,
+	* testsuite/ld-powerpc/notoc3.s,
+	* testsuite/ld-powerpc/notoc3.wf: New test.
+	* testsuite/ld-powerpc/powerpc.exp: Run new tests.  Pass
+	--no-power10-stubs for notoc link.
+
 2020-07-17  Hans-Peter Nilsson  <hp@bitrange.com>
 
 	* scripttempt/mmo.sc: Move .init first in .text output section.
