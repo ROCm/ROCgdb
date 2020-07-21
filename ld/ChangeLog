@@ -1,3 +1,25 @@
+2020-07-20  Nick Clifton  <nickc@redhat.com>
+
+	* testsuite/ld-powerpc/powerpc.exp (ppcelftests): Use section name
+	.PPC.EMB.apuinfo instead of section number 2 in apuinfo tests.
+
+2020-07-20  Alan Modra  <amodra@gmail.com>
+
+	PR 26265
+	* ldlang.c (undef_from_cmdline): Delete.
+	(ldlang_add_undef): Mark "cmdline" param unused.
+	(lang_end): Traverse gc_sym_list to determine whether a symbol root
+	has been specified.  Update error message.
+	* testsuite/ld-gc/noent.d: Adjust for changed error message.
+
+2020-07-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26263
+	* testsuite/ld-i386/pr26263.d: Updated.
+	* testsuite/ld-x86-64/pr26263.d: Likewise.
+	* testsuite/ld-x86-64/x86-64.exp: Run gas/26263 test for all ELF
+	targets.
+
 2020-07-19  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR gas/26263
