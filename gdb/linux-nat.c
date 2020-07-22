@@ -69,6 +69,7 @@
 #include "gdbsupport/scope-exit.h"
 #include "gdbsupport/gdb-sigmask.h"
 #include "gdbsupport/common-debug.h"
+#include "async-event.h"
 
 /* This comment documents high-level logic of this file.
 
@@ -222,6 +223,25 @@ static int report_thread_events;
 
 /* Async mode support.  */
 
+static async_event_handler *linux_nat_async_event_handler = nullptr;
+
+/* Mark the linux-nat target's event handler as ready, indicating to the infrun
+   loop that we have events to report.  */
+
+static void
+async_event_handler_mark_ready ()
+{
+  gdb_assert (linux_nat_async_event_handler != nullptr);
+  mark_async_event_handler (linux_nat_async_event_handler);
+}
+
+static void
+async_event_handler_clear ()
+{
+  gdb_assert (linux_nat_async_event_handler != nullptr);
+  clear_async_event_handler (linux_nat_async_event_handler);
+}
+
 /* The read/write ends of the pipe registered as waitable file in the
    event loop.  */
 static int linux_nat_event_pipe[2] = { -1, -1 };
@@ -232,7 +252,7 @@ static int linux_nat_event_pipe[2] = { -1, -1 };
 /* Flush the event pipe.  */
 
 static void
-async_file_flush (void)
+async_pipe_flush ()
 {
   int ret;
   char buf;
@@ -249,14 +269,14 @@ async_file_flush (void)
    something to process.  */
 
 static void
-async_file_mark (void)
+async_pipe_mark ()
 {
   int ret;
 
   /* It doesn't really matter what the pipe contains, as long we end
      up with something in it.  Might as well flush the previous
      left-overs.  */
-  async_file_flush ();
+  async_pipe_flush ();
 
   do
     {
@@ -266,6 +286,19 @@ async_file_mark (void)
 
   /* Ignore EAGAIN.  If the pipe is full, the event loop will already
      be awakened anyway.  */
+}
+
+/* Called after we woke up the event loop by writing into
+   `linux_nat_event_pipe`.  */
+
+static void
+handle_event_pipe (int error, gdb_client_data client_data)
+{
+  /* Flush the pipe, so we don't get called again.  */
+  async_pipe_flush ();
+
+  /* Make the infrun loop pull events from us.  */
+  async_event_handler_mark_ready ();
 }
 
 static int kill_lwp (int lwpid, int signo);
@@ -601,7 +634,7 @@ linux_nat_target::follow_fork (bool follow_child, bool detach_fork)
 	      /* If we're in async mode, need to tell the event loop
 		 there's something here to process.  */
 	      if (target_is_async_p ())
-		async_file_mark ();
+		async_event_handler_mark_ready ();
 	    }
 	}
     }
@@ -1728,7 +1761,7 @@ linux_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	{
 	  target_async (1);
 	  /* Tell the event loop we have something to process.  */
-	  async_file_mark ();
+	  async_event_handler_mark_ready ();
 	}
       return;
     }
@@ -3417,9 +3450,8 @@ linux_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
   linux_nat_debug_printf ("[%s], [%s]", target_pid_to_str (ptid).c_str (),
 			  target_options_to_string (target_options).c_str ());
 
-  /* Flush the async file first.  */
   if (target_is_async_p ())
-    async_file_flush ();
+    async_event_handler_clear ();
 
   /* Resume LWPs that are currently stopped without any pending status
      to report, but are resumed from the core's perspective.  LWPs get
@@ -3444,7 +3476,7 @@ linux_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
       && ((ourstatus->kind != TARGET_WAITKIND_IGNORE
 	   && ourstatus->kind != TARGET_WAITKIND_NO_RESUMED)
 	  || ptid != minus_one_ptid))
-    async_file_mark ();
+    async_event_handler_mark_ready ();
 
   return event_ptid;
 }
@@ -4052,7 +4084,7 @@ sigchld_handler (int signo)
 
   if (signo == SIGCHLD
       && linux_nat_event_pipe[0] != -1)
-    async_file_mark (); /* Let the event loop know that there are
+    async_pipe_mark (); /* Let the event loop know that there are
 			   events to handle.  */
 
   errno = old_errno;
@@ -4061,7 +4093,7 @@ sigchld_handler (int signo)
 /* Callback registered with the target events file descriptor.  */
 
 static void
-handle_target_event (int error, gdb_client_data client_data)
+handle_target_event (gdb_client_data client_data)
 {
   inferior_event_handler (INF_REG_EVENT);
 }
@@ -4089,6 +4121,10 @@ linux_async_pipe (int enable)
 
 	  fcntl (linux_nat_event_pipe[0], F_SETFL, O_NONBLOCK);
 	  fcntl (linux_nat_event_pipe[1], F_SETFL, O_NONBLOCK);
+
+	  linux_nat_async_event_handler
+	    = create_async_event_handler (handle_target_event, nullptr,
+					  "linux-nat");
 	}
       else
 	{
@@ -4096,6 +4132,8 @@ linux_async_pipe (int enable)
 	  close (linux_nat_event_pipe[1]);
 	  linux_nat_event_pipe[0] = -1;
 	  linux_nat_event_pipe[1] = -1;
+
+	  delete_async_event_handler (&linux_nat_async_event_handler);
 	}
 
       restore_child_signals_mask (&prev_mask);
@@ -4120,11 +4158,11 @@ linux_nat_target::async (int enable)
       if (!linux_async_pipe (1))
 	{
 	  add_file_handler (linux_nat_event_pipe[0],
-			    handle_target_event, NULL,
+			    handle_event_pipe, NULL,
 			    "linux-nat");
 	  /* There may be pending events to handle.  Tell the event loop
 	     to poll them.  */
-	  async_file_mark ();
+	  async_event_handler_mark_ready ();
 	}
     }
   else
