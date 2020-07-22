@@ -321,16 +321,15 @@ typedef int (gdbarch_ax_pseudo_register_push_stack_ftype) (struct gdbarch *gdbar
 extern int gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
 extern void set_gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, gdbarch_ax_pseudo_register_push_stack_ftype *ax_pseudo_register_push_stack);
 
-/* Some targets/architectures can do extra processing/display of
-   segmentation faults.  E.g., Intel MPX boundary faults.
-   Call the architecture dependent function to handle the fault.
+/* Some architectures can display additional information for specific
+   signals.
    UIOUT is the output stream where the handler will place information. */
 
-extern int gdbarch_handle_segmentation_fault_p (struct gdbarch *gdbarch);
+extern int gdbarch_report_signal_info_p (struct gdbarch *gdbarch);
 
-typedef void (gdbarch_handle_segmentation_fault_ftype) (struct gdbarch *gdbarch, struct ui_out *uiout);
-extern void gdbarch_handle_segmentation_fault (struct gdbarch *gdbarch, struct ui_out *uiout);
-extern void set_gdbarch_handle_segmentation_fault (struct gdbarch *gdbarch, gdbarch_handle_segmentation_fault_ftype *handle_segmentation_fault);
+typedef void (gdbarch_report_signal_info_ftype) (struct gdbarch *gdbarch, struct ui_out *uiout, enum gdb_signal siggnal);
+extern void gdbarch_report_signal_info (struct gdbarch *gdbarch, struct ui_out *uiout, enum gdb_signal siggnal);
+extern void set_gdbarch_report_signal_info (struct gdbarch *gdbarch, gdbarch_report_signal_info_ftype *report_signal_info);
 
 /* GDB's standard (or well known) register numbers.  These can map onto
    a real register or a pseudo (computed) register or not be defined at

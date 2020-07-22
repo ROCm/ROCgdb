@@ -1,3 +1,81 @@
+2020-07-21  John Baldwin  <jhb@FreeBSD.org>
+
+	* gdbarch.c: Regenerate.
+	* gdbarch.h: Regenerate.
+	* gdbarch.sh (handle_segmentation_fault): Remove method.
+	* infrun.c (handle_segmentation_fault): Remove.
+	(print_signal_received_reason): Remove call to
+	handle_segmentation_fault.
+
+2020-07-21  John Baldwin  <jhb@FreeBSD.org>
+
+	* sparc64-linux-tdep.c (sparc64_linux_handle_segmentation_fault):
+	Rename to sparc64_linux_report_signal_info and add siggnal
+	argument.
+	(sparc64_linux_init_abi): Use sparc64_linux_report_signal_info
+	instead of sparc64_linux_handle_segmentation_fault.
+
+2020-07-21  John Baldwin  <jhb@FreeBSD.org>
+
+	* amd64-linux-tdep.c (amd64_linux_init_abi_common): Use
+	i386_linux_report_signal_info instead of
+	i386_linux_handle_segmentation_fault.
+	* i386-linux-tdep.c (i386_linux_handle_segmentation_fault): Rename
+	to i386_linux_report_signal_info and add siggnal argument.
+	(i386_linux_init_abi): Use i386_linux_report_signal_info instead
+	of i386_linux_handle_segmentation_fault.
+	* i386-linux-tdep.h (i386_linux_handle_segmentation_fault): Rename
+	to i386_linux_report_signal_info and add siggnal argument.
+
+2020-07-21  John Baldwin  <jhb@FreeBSD.org>
+
+	* corelow.c (core_target_open): Invoke gdbarch report_signal_info
+	hook if present.
+
+2020-07-21  John Baldwin  <jhb@FreeBSD.org>
+
+	* gdbarch.c: Regenerate.
+	* gdbarch.h: Regenerate.
+	* gdbarch.sh (report_signal_info): New method.
+	* infrun.c (print_signal_received_reason): Invoke gdbarch
+	report_signal_info hook if present.
+
+2020-07-21  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-registers.c : Add 'unordered_map' include.
+	(gdbpy_new_reggroup): Renamed to...
+	(gdbpy_get_reggroup): ...this.  Update to only create register
+	group descriptors when needed.
+	(gdbpy_reggroup_iter_next): Update.
+
+2020-07-21  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-registers.c (gdbpy_register_object_data): New static
+	global.
+	(gdbpy_register_object_data_init): New function.
+	(gdbpy_new_register_descriptor): Renamed to...
+	(gdbpy_get_register_descriptor): ...this, and update to reuse
+	existing register descriptors where possible.
+	(gdbpy_register_descriptor_iter_next): Update.
+	(gdbpy_initialize_registers): Register new gdbarch data.
+
+2020-07-21  Simon Marchi  <simon.marchi@efficios.com>
+
+	* linux-nat.c (stopped_pids): Make static.
+
+2020-07-21  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR ada/26235
+	* gdbtypes.c (ada_discrete_type_low_bound,
+	ada_discrete_type_high_bound): Handle undefined bounds.
+
+2020-07-21  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-nat.h (nbsd_nat_target::supports_multi_process): New
+	declaration.
+	* nbsd-nat.c (nbsd_nat_target::supports_multi_process): New
+	function.
+
 2020-07-20  John Baldwin  <jhb@FreeBSD.org>
 
 	* fbsd-tdep.c (fbsd_skip_solib_resolver): New function.

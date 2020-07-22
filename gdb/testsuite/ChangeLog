@@ -1,3 +1,37 @@
+2020-07-21  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-arch-reg-groups.exp: Additional tests.
+
+2020-07-21  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-arch-reg-names.exp: Additional tests.
+
+2020-07-21  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.reverse/solib-precsave.exp: Handle additional "recommended
+	breakpoint locations".
+	* gdb.reverse/solib-reverse.exp: Same.
+
+2020-07-21  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.reverse/step-reverse.c (callee): Merge statements.
+
+2020-07-21  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.fortran/info-modules.exp (info module variables): Allow missing
+	line numbers for some variables.
+
+2020-07-21  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.opt/inline-locals.c (init_array): New func.
+	(func1): Use init_array.
+	* gdb.opt/inline-locals.exp: Update pattern.
+
+2020-07-21  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.debuginfod/fetch_src_and_symbols.exp: Use save_vars for env
+	vars.  Fix PATH and DUPLICATE errors.  Cleanup whitespace.
+
 2020-07-20  Ludovic Courtès  <ludo@gnu.org>
 
 	* gdb.guile/source2.scm: Add #f first argument to 'format'.
