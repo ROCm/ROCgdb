@@ -1,3 +1,148 @@
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/ctf.exp: Skip on non-ELF for now.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldlang.c (ldlang_open_ctf): Set SEC_EXCLUDE on all but the
+	first input .ctf section.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* configure.ac (enable_libctf): Substitute it.
+	* Makefile.am (enablings.exp): New.
+	(EXTRA_DEJAGNU_SITE_CONFIG): Add it.
+	(DISTCLEANFILES): Likewise.
+	* Makefile.in: Regenerate.
+	* configure: Likewise.
+	* testsuite/lib/ld-lib.exp (compile_one_cc): New.
+	(check_ctf_available): Likewise.
+	(skip_ctf_tests): Likewise.
+	* testsuite/ld-ctf/ctf.exp: Call skip_ctf_tests.
+
+2020-07-22  Egeyar Bagcioglu  <egeyar.bagcioglu@oracle.com>
+
+	* testsuite/ld-ctf/ctf.exp: New file.
+	* testsuite/ld-ctf/A-2.c: New file.
+	* testsuite/ld-ctf/A.c: New file.
+	* testsuite/ld-ctf/B-2.c: New file.
+	* testsuite/ld-ctf/B.c: New file.
+	* testsuite/ld-ctf/C-2.c: New file.
+	* testsuite/ld-ctf/C.c: New file.
+	* testsuite/ld-ctf/array-char.c: New file.
+	* testsuite/ld-ctf/array-int.c: New file.
+	* testsuite/ld-ctf/array.d: New file.
+	* testsuite/ld-ctf/child-float.c: New file.
+	* testsuite/ld-ctf/child-int.c: New file.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-1.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-2.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-1.parent.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-1.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-2.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-2.parent.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-1.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-2.d: New file.
+	* testsuite/ld-ctf/conflicting-cycle-3.parent.d: New file.
+	* testsuite/ld-ctf/conflicting-enums.d: New file.
+	* testsuite/ld-ctf/conflicting-typedefs.d: New file.
+	* testsuite/ld-ctf/cross-tu-1.c: New file.
+	* testsuite/ld-ctf/cross-tu-2.c: New file.
+	* testsuite/ld-ctf/cross-tu-conflicting-2.c: New file.
+	* testsuite/ld-ctf/cross-tu-cyclic-1.c: New file.
+	* testsuite/ld-ctf/cross-tu-cyclic-2.c: New file.
+	* testsuite/ld-ctf/cross-tu-cyclic-3.c: New file.
+	* testsuite/ld-ctf/cross-tu-cyclic-4.c: New file.
+	* testsuite/ld-ctf/cross-tu-cyclic-conflicting.d: New file.
+	* testsuite/ld-ctf/cross-tu-cyclic-nonconflicting.d: New file.
+	* testsuite/ld-ctf/cross-tu-into-cycle.d: New file.
+	* testsuite/ld-ctf/cross-tu-noncyclic.d: New file.
+	* testsuite/ld-ctf/cycle-1.c: New file.
+	* testsuite/ld-ctf/cycle-1.d: New file.
+	* testsuite/ld-ctf/cycle-2.A.d: New file.
+	* testsuite/ld-ctf/cycle-2.B.d: New file.
+	* testsuite/ld-ctf/cycle-2.C.d: New file.
+	* testsuite/ld-ctf/diag-ctf-version-0.d: New file.
+	* testsuite/ld-ctf/diag-ctf-version-0.s: New file.
+	* testsuite/ld-ctf/diag-ctf-version-2-unsupported-feature.d: New file.
+	* testsuite/ld-ctf/diag-ctf-version-2-unsupported-feature.s: New file.
+	* testsuite/ld-ctf/diag-ctf-version-f.d: New file.
+	* testsuite/ld-ctf/diag-ctf-version-f.s: New file.
+	* testsuite/ld-ctf/diag-cttname-invalid.d: New file.
+	* testsuite/ld-ctf/diag-cttname-invalid.s: New file.
+	* testsuite/ld-ctf/diag-cttname-null.d: New file.
+	* testsuite/ld-ctf/diag-cttname-null.s: New file.
+	* testsuite/ld-ctf/diag-cuname.d: New file.
+	* testsuite/ld-ctf/diag-cuname.s: New file.
+	* testsuite/ld-ctf/diag-decompression-failure.d: New file.
+	* testsuite/ld-ctf/diag-decompression-failure.s: New file.
+	* testsuite/ld-ctf/diag-parlabel.d: New file.
+	* testsuite/ld-ctf/diag-parlabel.s: New file.
+	* testsuite/ld-ctf/diag-parname.d: New file.
+	* testsuite/ld-ctf/diag-parname.s: New file.
+	* testsuite/ld-ctf/diag-unsupported-flag.d: New file.
+	* testsuite/ld-ctf/diag-unsupported-flag.s: New file.
+	* testsuite/ld-ctf/diag-wrong-magic-number-mixed.d: New file.
+	* testsuite/ld-ctf/diag-wrong-magic-number.d: New file.
+	* testsuite/ld-ctf/diag-wrong-magic-number.s: New file.
+	* testsuite/ld-ctf/enum-2.c: New file.
+	* testsuite/ld-ctf/enum.c: New file.
+	* testsuite/ld-ctf/function.c: New file.
+	* testsuite/ld-ctf/function.d: New file.
+	* testsuite/ld-ctf/slice.c: New file.
+	* testsuite/ld-ctf/slice.d: New file.
+	* testsuite/ld-ctf/super-sub-cycles.c: New file.
+	* testsuite/ld-ctf/super-sub-cycles.d: New file.
+	* testsuite/ld-ctf/typedef-int.c: New file.
+	* testsuite/ld-ctf/typedef-long.c: New file.
+	* testsuite/ld-ctf/union-1.c: New file.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldlex.h (option_values) <OPTION_CTF_VARIABLES,
+	OPTION_NO_CTF_VARIABLES, OPTION_CTF_SHARE_TYPES>: New.
+	* ld.h (ld_config_type) <ctf_variables, ctf_share_duplicated>:
+	New fields.
+	* ldlang.c (lang_merge_ctf): Use them.
+	* lexsup.c (ld_options): Add ctf-variables, no-ctf-variables,
+	ctf-share-types.
+	(parse_args) <OPTION_CTF_VARIABLES, OPTION_NO_CTF_VARIABLES,
+	OPTION_CTF_SHARE_TYPES>: New cases.
+	* ld.texi: Document new options.
+	* NEWS: Likewise.
+
+2020-07-22  Egeyar Bagcioglu  <egeyar.bagcioglu@oracle.com>
+
+	* ldlang.c (lang_merge_ctf): Turn errors into warnings.
+	Fix a comment typo.
+	(lang_write_ctf): Turn an error into a warning.
+	(ldlang_open_ctf): Reformat warnings. Fix printing file names.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldlang.c (lang_ctf_errs_warnings): New, print CTF errors
+	and warnings.  Assert when libctf asserts.
+	(lang_merge_ctf): Call it.
+	(land_write_ctf): Likewise.
+
+2020-07-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26262
+	PR ld/26267
+	* ldlang.c (lang_process): Set lto_all_symbols_read after all
+	LTO IR symbols have been read.
+	* plugin.c (plugin_notice): Override the IR definition only if
+	all LTO IR symbols have been read or the new definition is
+	non-weak and the the IR definition is weak
+	* testsuite/ld-plugin/lto.exp: Run PR ld/26262 and ld/26267
+	tests.
+	* testsuite/ld-plugin/pr26262a.c: New file.
+	* testsuite/ld-plugin/pr26262b.c: Likewise.
+	* testsuite/ld-plugin/pr26262c.c: Likewise.
+	* testsuite/ld-plugin/pr26267.err: Likewise.
+	* testsuite/ld-plugin/pr26267a.c: Likewise.
+	* testsuite/ld-plugin/pr26267b.c: Likewise.
+	* testsuite/ld-plugin/pr26267c.c: Likewise.
+
 2020-07-20  Nick Clifton  <nickc@redhat.com>
 
 	* testsuite/ld-powerpc/powerpc.exp (ppcelftests): Use section name

@@ -692,17 +692,11 @@ init_types (ctf_file_t *fp, ctf_header_t *cth)
       if (vbytes < 0)
 	return ECTF_CORRUPT;
 
+      /* For forward declarations, ctt_type is the CTF_K_* kind for the tag,
+	 so bump that population count too.  */
       if (kind == CTF_K_FORWARD)
-	{
-	  /* For forward declarations, ctt_type is the CTF_K_* kind for the tag,
-	     so bump that population count too.  If ctt_type is unknown, treat
-	     the tag as a struct.  */
+	pop[tp->ctt_type]++;
 
-	  if (tp->ctt_type == CTF_K_UNKNOWN || tp->ctt_type >= CTF_K_MAX)
-	    pop[CTF_K_STRUCT]++;
-	  else
-	    pop[tp->ctt_type]++;
-	}
       tp = (ctf_type_t *) ((uintptr_t) tp + increment + vbytes);
       pop[kind]++;
     }
@@ -1390,6 +1384,9 @@ ctf_bufopen_internal (const ctf_sect_t *ctfsect, const ctf_sect_t *symsect,
   if (pp->ctp_version < CTF_VERSION_3)
     hdrsz = sizeof (ctf_header_v2_t);
 
+  if (_libctf_unlikely_ (pp->ctp_flags > CTF_F_MAX))
+    return (ctf_set_open_errno (errp, ECTF_FLAGS));
+
   if (ctfsect->cts_size < hdrsz)
     return (ctf_set_open_errno (errp, ECTF_NOCTFBUF));
 
@@ -1626,6 +1623,17 @@ bad:
   return NULL;
 }
 
+/* Bump the refcount on the specified CTF container, to allow export of
+   ctf_file_t's from iterators that open and close the ctf_file_t around the
+   loop.  (This does not extend their lifetime beyond that of the ctf_archive_t
+   in which they are contained.)  */
+
+void
+ctf_ref (ctf_file_t *fp)
+{
+  fp->ctf_refcnt++;
+}
+
 /* Close the specified CTF container and free associated data structures.  Note
    that ctf_file_close() is a reference counted operation: if the specified file
    is the parent of other active containers, its reference count will be greater
@@ -1636,6 +1644,7 @@ ctf_file_close (ctf_file_t *fp)
 {
   ctf_dtdef_t *dtd, *ntd;
   ctf_dvdef_t *dvd, *nvd;
+  ctf_err_warning_t *err, *nerr;
 
   if (fp == NULL)
     return;		   /* Allow ctf_file_close(NULL) to simplify caller code.  */
@@ -1648,9 +1657,17 @@ ctf_file_close (ctf_file_t *fp)
       return;
     }
 
+  /* It is possible to recurse back in here, notably if dicts in the
+     ctf_link_inputs or ctf_link_outputs cite this dict as a parent without
+     using ctf_import_unref.  Do nothing in that case.  */
+  if (fp->ctf_refcnt == 0)
+    return;
+
+  fp->ctf_refcnt--;
   free (fp->ctf_dyncuname);
   free (fp->ctf_dynparname);
-  ctf_file_close (fp->ctf_parent);
+  if (fp->ctf_parent && !fp->ctf_parent_unreffed)
+    ctf_file_close (fp->ctf_parent);
 
   for (dtd = ctf_list_next (&fp->ctf_dtdefs); dtd != NULL; dtd = ntd)
     {
@@ -1699,8 +1716,19 @@ ctf_file_close (ctf_file_t *fp)
   ctf_dynhash_destroy (fp->ctf_link_inputs);
   ctf_dynhash_destroy (fp->ctf_link_outputs);
   ctf_dynhash_destroy (fp->ctf_link_type_mapping);
-  ctf_dynhash_destroy (fp->ctf_link_cu_mapping);
+  ctf_dynhash_destroy (fp->ctf_link_in_cu_mapping);
+  ctf_dynhash_destroy (fp->ctf_link_out_cu_mapping);
   ctf_dynhash_destroy (fp->ctf_add_processing);
+  ctf_dedup_fini (fp, NULL, 0);
+  ctf_dynset_destroy (fp->ctf_dedup_atoms_alloc);
+
+  for (err = ctf_list_next (&fp->ctf_errs_warnings); err != NULL; err = nerr)
+    {
+      nerr = ctf_list_next (err);
+      ctf_list_delete (&fp->ctf_errs_warnings, err);
+      free (err->cew_text);
+      free (err);
+    }
 
   free (fp->ctf_sxlate);
   free (fp->ctf_txlate);
@@ -1799,12 +1827,9 @@ ctf_import (ctf_file_t *fp, ctf_file_t *pfp)
   if (pfp != NULL && pfp->ctf_dmodel != fp->ctf_dmodel)
     return (ctf_set_errno (fp, ECTF_DMODEL));
 
-  if (fp->ctf_parent != NULL)
-    {
-      fp->ctf_parent->ctf_refcnt--;
-      ctf_file_close (fp->ctf_parent);
-      fp->ctf_parent = NULL;
-    }
+  if (fp->ctf_parent && !fp->ctf_parent_unreffed)
+    ctf_file_close (fp->ctf_parent);
+  fp->ctf_parent = NULL;
 
   if (pfp != NULL)
     {
@@ -1816,6 +1841,40 @@ ctf_import (ctf_file_t *fp, ctf_file_t *pfp)
 
       fp->ctf_flags |= LCTF_CHILD;
       pfp->ctf_refcnt++;
+      fp->ctf_parent_unreffed = 0;
+    }
+
+  fp->ctf_parent = pfp;
+  return 0;
+}
+
+/* Like ctf_import, but does not increment the refcount on the imported parent
+   or close it at any point: as a result it can go away at any time and the
+   caller must do all freeing itself.  Used internally to avoid refcount
+   loops.  */
+int
+ctf_import_unref (ctf_file_t *fp, ctf_file_t *pfp)
+{
+  if (fp == NULL || fp == pfp || (pfp != NULL && pfp->ctf_refcnt == 0))
+    return (ctf_set_errno (fp, EINVAL));
+
+  if (pfp != NULL && pfp->ctf_dmodel != fp->ctf_dmodel)
+    return (ctf_set_errno (fp, ECTF_DMODEL));
+
+  if (fp->ctf_parent && !fp->ctf_parent_unreffed)
+    ctf_file_close (fp->ctf_parent);
+  fp->ctf_parent = NULL;
+
+  if (pfp != NULL)
+    {
+      int err;
+
+      if (fp->ctf_parname == NULL)
+	if ((err = ctf_parent_name_set (fp, "PARENT")) < 0)
+	  return err;
+
+      fp->ctf_flags |= LCTF_CHILD;
+      fp->ctf_parent_unreffed = 1;
     }
 
   fp->ctf_parent = pfp;

@@ -5452,8 +5452,9 @@ handle_jit_event (void)
 
   frame = get_current_frame ();
   gdbarch = get_frame_arch (frame);
+  objfile *jiter = symbol_objfile (get_frame_function (frame));
 
-  jit_event_handler (gdbarch);
+  jit_event_handler (gdbarch, jiter);
 
   target_terminal::inferior ();
 }

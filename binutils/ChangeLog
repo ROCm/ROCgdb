@@ -1,3 +1,25 @@
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/lib/binutils-common.exp (run_dump_test): Add 'cc'
+	option.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* objdump.c (dump_ctf_archive_member): Remove linefeeds.
+	(dump_ctf): Likewise.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* objdump.c (ctf_archive_member): Print CTF errors and warnings.
+	* readelf.c (dump_ctf_archive_member): Likewise.
+
+2020-07-22  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c (parse_args): Silence potential warnings about a
+	memory resource leak when allocating space for ctf option values.
+	(dump_section_as_ctf): Fix typo checking dump_ctf_strtab_name
+	variable.
+
 2020-07-21  Nick Clifton  <nickc@redhat.com>
 
 	* po/sv.po: Updated Swedish translation.

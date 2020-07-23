@@ -1,3 +1,47 @@
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* gdb.base/corefile2.exp: New file.
+	* gdb.base/coremaker2.exp: New file.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* gdb.base/coredump-filter.exp: Add second
+	non-Private-Shared-Anon-File test.
+	(test_disasm): Rename binfile for test which is expected
+	to fail.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* gdb.base/corefile.exp: Add test "accessing read-only mmapped
+	data in core file".
+	* gdb.base/coremaker.c (buf2ro): New global.
+	(mmapdata): Add a read-only mmap mapping.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	PR corefiles/25631
+	* gdb.base/corefile.exp (accessing anonymous, unwritten-to mmap data):
+	New test.
+	* gdb.base/coremaker.c (buf3): New global.
+	(mmapdata): Add mmap call which uses MAP_ANONYMOUS and MAP_PRIVATE
+	flags.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* gdb.base/coremaker.c (filler_ro): New global constant.
+
+2020-07-22  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/mi_prot.exp: New file.
+	* gdb.ada/mi_prot/pkg.adb: New file.
+	* gdb.ada/mi_prot/pkg.ads: New file.
+	* gdb.ada/mi_prot/prot.adb: New file.
+
+2020-07-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/jit-reader-simple.exp: Add a scenario for a binary that
+	loads two JITers.
+
 2020-07-21  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.python/py-arch-reg-groups.exp: Additional tests.

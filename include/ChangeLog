@@ -1,3 +1,93 @@
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (CTF_LINK_NONDEDUP): New, turn off the
+	deduplicator.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (CTF_LINK_OMIT_VARIABLES_SECTION): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (CTF_LINK_SHARE_DUPLICATED): No longer unimplemented.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ctf_link_variable_filter_t): New.
+	(ctf_link_set_variable_filter): Likewise.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (CTF_LINK_EMPTY_CU_MAPPINGS): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ECTF_NEEDSBFD): New.
+	(ECTF_NERR): Adjust.
+	(ctf_link): Rename share_mode arg to flags.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ECTF_INTERNAL): Adjust error text.
+	(ctf_errwarning_next): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ECTF_FLAGS): New.
+	(ECTF_NERR): Adjust.
+	* ctf.h (CTF_F_MAX): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ECTF_NEXT_END): New error.
+	(ECTF_NEXT_WRONGFUN): Likewise.
+	(ECTF_NEXT_WRONGFP): Likewise.
+	(ECTF_NERR): Adjust.
+	(ctf_next_t): New.
+	(ctf_next_create): New prototype.
+	(ctf_next_destroy): Likewise.
+	(ctf_next_copy): Likewise.
+	(ctf_member_next): Likewise.
+	(ctf_enum_next): Likewise.
+	(ctf_type_next): Likewise.
+	(ctf_label_next): Likewise.
+	(ctf_variable_next): Likewise.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ctf_ref): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ctf_archive_count): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ctf_member_count): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ctf_type_kind_forwarded): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.c (ctf_type_name_raw): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ECTF_*): Improve comments.
+	(ECTF_NERR): New.
+
+2020-07-22  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h: Fix typos in comments.
+
+2020-07-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26262
+	PR ld/26267
+	* bfdlink.h (bfd_link_info): Add lto_all_symbols_read.
+
 2020-07-11  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* elf/common.h (GNU_PROPERTY_X86_FEATURE_2_TMM): New.

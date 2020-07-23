@@ -3693,19 +3693,22 @@ ldlang_open_ctf (void)
       if ((file->the_ctf = ctf_bfdopen (file->the_bfd, &err)) == NULL)
 	{
 	  if (err != ECTF_NOCTFDATA)
-	    einfo (_("%P: warning: CTF section in `%pI' not loaded: "
-		     "its types will be discarded: `%s'\n"), file,
+	    einfo (_("%P: warning: CTF section in %pB not loaded; "
+		     "its types will be discarded: `%s'\n"), file->the_bfd,
 		     ctf_errmsg (err));
 	  continue;
 	}
 
       /* Prevent the contents of this section from being written, while
-	 requiring the section itself to be duplicated in the output.  */
+	 requiring the section itself to be duplicated in the output, but only
+	 once.  */
       /* This section must exist if ctf_bfdopen() succeeded.  */
       sect = bfd_get_section_by_name (file->the_bfd, ".ctf");
       sect->size = 0;
       sect->flags |= SEC_NEVER_LOAD | SEC_HAS_CONTENTS | SEC_LINKER_CREATED;
 
+      if (any_ctf)
+	sect->flags |= SEC_EXCLUDE;
       any_ctf = 1;
     }
 
@@ -3725,6 +3728,29 @@ ldlang_open_ctf (void)
     ctf_close (errfile->the_ctf);
 }
 
+/* Emit CTF errors and warnings.  */
+static void
+lang_ctf_errs_warnings (ctf_file_t *fp)
+{
+  ctf_next_t *i = NULL;
+  char *text;
+  int is_warning;
+
+  while ((text = ctf_errwarning_next (fp, &i, &is_warning)) != NULL)
+    {
+      einfo (_("%s: `%s'\n"), is_warning ? _("CTF warning"): _("CTF error"),
+	     text);
+      free (text);
+    }
+  if (ctf_errno (fp) != ECTF_NEXT_END)
+    {
+      einfo (_("CTF error: cannot get CTF errors: `%s'\n"),
+	     ctf_errmsg (ctf_errno (fp)));
+    }
+
+  ASSERT (ctf_errno (fp) != ECTF_INTERNAL);
+}
+
 /* Merge together CTF sections.  After this, only the symtab-dependent
    function and data object sections need adjustment.  */
 
@@ -3732,6 +3758,7 @@ static void
 lang_merge_ctf (void)
 {
   asection *output_sect;
+  int flags = 0;
 
   if (!ctf_output)
     return;
@@ -3757,20 +3784,28 @@ lang_merge_ctf (void)
       if (!file->the_ctf)
 	continue;
 
-      /* Takes ownership of file->u.the_ctfa.  */
+      /* Takes ownership of file->the_ctf.  */
       if (ctf_link_add_ctf (ctf_output, file->the_ctf, file->filename) < 0)
 	{
-	  einfo (_("%F%P: cannot link with CTF in %pB: %s\n"), file->the_bfd,
-		 ctf_errmsg (ctf_errno (ctf_output)));
+	  einfo (_("%P: warning: CTF section in %pB cannot be linked: `%s'\n"),
+		 file->the_bfd, ctf_errmsg (ctf_errno (ctf_output)));
 	  ctf_close (file->the_ctf);
 	  file->the_ctf = NULL;
 	  continue;
 	}
     }
 
-  if (ctf_link (ctf_output, CTF_LINK_SHARE_UNCONFLICTED) < 0)
+  if (!config.ctf_share_duplicated)
+    flags = CTF_LINK_SHARE_UNCONFLICTED;
+  else
+    flags = CTF_LINK_SHARE_DUPLICATED;
+  if (!config.ctf_variables)
+    flags |= CTF_LINK_OMIT_VARIABLES_SECTION;
+
+  if (ctf_link (ctf_output, flags) < 0)
     {
-      einfo (_("%F%P: CTF linking failed; output will have no CTF section: %s\n"),
+      einfo (_("%P: warning: CTF linking failed; "
+	       "output will have no CTF section: `%s'\n"),
 	     ctf_errmsg (ctf_errno (ctf_output)));
       if (output_sect)
 	{
@@ -3778,6 +3813,7 @@ lang_merge_ctf (void)
 	  output_sect->flags |= SEC_EXCLUDE;
 	}
     }
+  lang_ctf_errs_warnings (ctf_output);
 }
 
 /* Let the emulation examine the symbol table and strtab to help it optimize the
@@ -3826,11 +3862,14 @@ lang_write_ctf (int late)
 
       if (!output_sect->contents)
 	{
-	  einfo (_("%F%P: CTF section emission failed; output will have no "
-		   "CTF section: %s\n"), ctf_errmsg (ctf_errno (ctf_output)));
+	  einfo (_("%P: warning: CTF section emission failed; "
+		   "output will have no CTF section: `%s'\n"),
+		 ctf_errmsg (ctf_errno (ctf_output)));
 	  output_sect->size = 0;
 	  output_sect->flags |= SEC_EXCLUDE;
 	}
+
+      lang_ctf_errs_warnings (ctf_output);
     }
 
   /* This also closes every CTF input file used in the link.  */
@@ -3864,8 +3903,8 @@ ldlang_open_ctf (void)
 
       if ((sect = bfd_get_section_by_name (file->the_bfd, ".ctf")) != NULL)
 	{
-	    einfo (_("%P: warning: CTF section in `%pI' not linkable: "
-		     "%P was built without support for CTF\n"), file);
+	    einfo (_("%P: warning: CTF section in %pB not linkable: "
+		     "%P was built without support for CTF\n"), file->the_bfd);
 	    sect->size = 0;
 	    sect->flags |= SEC_EXCLUDE;
 	}
@@ -7886,6 +7925,7 @@ lang_process (void)
       if (plugin_call_all_symbols_read ())
 	einfo (_("%F%P: %s: plugin reported error after all symbols read\n"),
 	       plugin_error_plugin ());
+      link_info.lto_all_symbols_read = TRUE;
       /* Open any newly added files, updating the file chains.  */
       plugin_undefs = link_info.hash->undefs_tail;
       open_input_bfds (*added.tail, OPEN_BFD_NORMAL);

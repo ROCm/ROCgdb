@@ -67,6 +67,12 @@ AC_FUNC_MMAP
 AC_SEARCH_LIBS(dlopen, dl)
 AM_ZLIB
 
+GCC_ENABLE([libctf-hash-debugging], [no], [], [Enable expensive debugging of CTF deduplication type hashing])
+if test "${enable_libctf_hash_debugging}" = yes; then
+    AC_DEFINE(ENABLE_LIBCTF_HASH_DEBUGGING, 1, [Enable expensive debugging of CTF deduplication type hashing])
+fi
+AM_CONDITIONAL(ENABLE_LIBCTF_HASH_DEBUGGING, test "${enable_libctf_hash_debugging}" = yes)
+
 # Similar to GDB_AC_CHECK_BFD.
 OLD_CFLAGS=$CFLAGS
 OLD_LDFLAGS=$LDFLAGS
@@ -100,9 +106,9 @@ AC_C_BIGENDIAN
 AC_CHECK_HEADERS(byteswap.h endian.h)
 AC_CHECK_FUNCS(pread)
 
-AC_CHECK_DECLS([asprintf])
 dnl Check for bswap_{16,32,64}
 AC_CHECK_DECLS([bswap_16, bswap_32, bswap_64], [], [], [[#include <byteswap.h>]])
+AC_CHECK_DECLS([asprintf, vasprintf, stpcpy])
 
 dnl Check for qsort_r.  (Taken from gnulib.)
 AC_CHECK_FUNCS_ONCE([qsort_r])

@@ -1,3 +1,188 @@
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* NEWS (New commands): Mention new command
+	"maintenance print core-file-backed-mappings".
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* corelow.c (gdbcmd.h): Include.
+	(core_target::info_proc_mappings): New method.
+	(get_current_core_target): New function.
+	(maintenance_print_core_file_backed_mappings): New function.
+	(_initialize_corelow): Add core-file-backed-mappings to
+	"maint print" commands.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+    
+	* linux-tdep.c (dump_note_entry_p): New function.
+	(linux_dump_mapping_p_ftype): New typedef.
+	(linux_find_memory_regions_full): Add new parameter,
+	should_dump_mapping_p.
+	(linux_find_memory_regions): Adjust call to
+	linux_find_memory_regions_full.
+	(linux_make_mappings_core_file_notes): Use dump_note_entry_p in
+	call to linux_find_memory_regions_full.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* corelow.c (solist.h, unordered_map): Include.
+	(class core_target): Add field m_core_file_mappings and
+	method build_file_mappings.
+	(core_target::core_target): Call build_file_mappings.
+	(core_target::~core_target): Free memory associated with
+	m_core_file_mappings.
+	(core_target::build_file_mappings): New method.
+	(core_target::xfer_partial): Use m_core_file_mappings
+	for memory transfers.
+	* linux-tdep.c (linux_read_core_file_mappings): New
+	function.
+	(linux_core_info_proc_mappings): Rewrite to use
+	linux_read_core_file_mappings.
+	(linux_init_abi): Register linux_read_core_file_mappings.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* arch-utils.c (default_read_core_file_mappings): New function.
+	* arch-utils.c (default_read_core_file_mappings): Declare.
+	* gdbarch.sh (read_core_file_mappings): New gdbarch method.
+	* gdbarch.h, gdbarch.c: Regenerate.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	PR corefiles/25631
+	* corelow.c (core_target:xfer_partial):  Revise
+	TARGET_OBJECT_MEMORY case to consider non-SEC_HAS_CONTENTS
+	case after first checking the stratum beneath the core
+	target.
+	(has_all_memory): Return true.
+	* target.c (raw_memory_xfer_partial): Revise comment
+	regarding use of has_all_memory.
+
+2020-07-22  Kevin Buettner  <kevinb@redhat.com>
+
+	* exec.h (section_table_xfer_memory): Revise declaration,
+	replacing section name parameter with an optional callback
+	predicate.
+	* exec.c (section_table_xfer_memory): Likewise.
+	* bfd-target.c, exec.c, target.c, corelow.c: Adjust all callers
+	of section_table_xfer_memory.
+
+2020-07-22  Tom Tromey  <tromey@adacore.com>
+
+	* mi/mi-cmd-stack.c (list_args_or_locals): Use
+	lookup_symbol_search_name.
+
+2020-07-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-registers.c (gdbpy_register_object_data_init): Remove
+	redundant local variable.
+	(gdbpy_get_register_descriptor): Extract descriptor vector as a
+	reference, not pointer, update code accordingly.
+
+2020-07-22  Simon Marchi  <simon.marchi@polymtl.ca>
+	    Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* objfiles.h (struct objfile) <skip_jit_symbol_lookup>: New field.
+	* jit.c (jit_breakpoint_re_set_internal): Use the
+	`skip_jit_symbol_lookup` field.
+
+2020-07-22  Simon Marchi  <simon.marchi@polymtl.ca>
+	    Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* jit.c (jit_read_descriptor): Define the descriptor address once,
+	use twice.
+	(jit_breakpoint_deleted): Move the declaration of the loop variable
+	`iter` into the loop header.
+	(jit_breakpoint_re_set_internal): Move the declaration of the local
+	variable `objf_data` to the first point of definition.
+	(jit_event_handler): Move the declaration of local variables
+	`code_entry`, `entry_addr`, and `objf` to their first point of use.
+	Rename `objf` to `jited`.
+
+2020-07-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.h (struct jiter_objfile_data) <jiter_objfile_data, objfile>:
+	Remove.
+	* jit.c (get_jiter_objfile_data): Update.
+
+2020-07-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+	    Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (struct jit_program_space_data): Remove.
+	(jit_program_space_key): Remove.
+	(jiter_objfile_data::~jiter_objfile_data): Remove program space
+	stuff.
+	(get_jit_program_space_data): Remove.
+	(jit_breakpoint_deleted): Iterate on all of the program space's
+	objfiles.
+	(jit_inferior_init): Likewise.
+	(jit_breakpoint_re_set_internal): Likewise.  Also change return
+	type to void.
+	(jit_breakpoint_re_set): Pass current_program_space to
+	jit_breakpoint_re_set_internal.
+
+2020-07-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.h (struct jiter_objfile_data) <cached_code_address,
+	jit_breakpoint>: Move to here from ...
+	* jit.c (jit_program_space_data): ... here.
+	(jiter_objfile_data::~jiter_objfile_data): Update.
+	(jit_breakpoint_deleted): Update.
+	(jit_breakpoint_re_set_internal): Update.
+
+2020-07-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (jiter_objfile_data::~jiter_objfile_data): Remove some
+	checks.
+	(jit_read_descriptor): Remove NULL check.
+	(jit_event_handler): Add an assertion.
+
+2020-07-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.h (struct jit_objfile_data):  Split into...
+	(struct jiter_objfile_data): ... this ...
+	(struct jited_objfile_data): ... and this.
+	* objfiles.h (struct objfile) <jit_data>: Remove.
+	<jiter_data, jited_data>: New fields.
+	* jit.c (jit_objfile_data::~jit_objfile_data): Rename to ...
+	(jiter_objfile_data::~jiter_objfile_data): ... this.
+	(get_jit_objfile_data): Rename to ...
+	(get_jiter_objfile_data): ... this.
+	(add_objfile_entry): Update.
+	(jit_read_descriptor): Use get_jiter_objfile_data.
+	(jit_find_objf_with_entry_addr): Use objfile's jited_data field.
+	(jit_breakpoint_re_set_internal): Use get_jiter_objfile_data.
+	(jit_inferior_exit_hook): Use objfile's jited_data field.
+
+2020-07-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.h: Forward-declare `struct minimal_symbol`.
+	(struct jit_objfile_data): Migrate to here from jit.c; also add a
+	constructor, destructor, and an objfile* field.
+	* jit.c (jit_objfile_data): Remove.
+	(struct jit_objfile_data): Migrate from here to jit.h.
+	(jit_objfile_data::~jit_objfile_data): New destructor
+	implementation with code moved from free_objfile_data.
+	(free_objfile_data): Delete.
+	(get_jit_objfile_data): Update to use the jit_data field of objfile.
+	(jit_find_objf_with_entry_addr): Ditto.
+	(jit_inferior_exit_hook): Ditto.
+	(_initialize_jit): Remove the call to
+	register_objfile_data_with_cleanup.
+	* objfiles.h (struct objfile) <jit_data>: New field.
+
+2020-07-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* jit.h: Forward-declare `struct objfile`.
+	(jit_event_handler): Add a second parameter, the JITer objfile.
+	* jit.c (jit_read_descriptor): Change the signature to take the
+	JITer objfile as an argument instead of the jit_program_space_data.
+	(jit_inferior_init): Update the call to jit_read_descriptor.
+	(jit_event_handler): Use the new JITer objfile argument when calling
+	jit_read_descriptor.
+	* breakpoint.c (handle_jit_event): Update the call to
+	jit_event_handler to pass the JITer objfile.
+
 2020-07-21  John Baldwin  <jhb@FreeBSD.org>
 
 	* gdbarch.c: Regenerate.

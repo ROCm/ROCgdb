@@ -126,6 +126,7 @@ ctf_create (int *errp)
   fp->ctf_dtoldid = 0;
   fp->ctf_snapshots = 1;
   fp->ctf_snapshot_lu = 0;
+  fp->ctf_flags |= LCTF_DIRTY;
 
   ctf_set_ctl_hashes (fp);
   ctf_setmodel (fp, CTF_MODEL_NATIVE);
@@ -373,7 +374,7 @@ ctf_serialize (ctf_file_t *fp)
       ctf_varent_t *var = &dvarents[i];
 
       ctf_str_add_ref (fp, dvd->dvd_name, &var->ctv_name);
-      var->ctv_type = dvd->dvd_type;
+      var->ctv_type = (uint32_t) dvd->dvd_type;
     }
   assert (i == nvars);
 
@@ -448,7 +449,7 @@ ctf_serialize (ctf_file_t *fp)
 	    uint32_t argc;
 
 	    for (argc = 0; argc < vlen; argc++)
-	      *argv++ = (uint32_t) dtd->dtd_u.dtu_argv[argc];
+	      *argv++ = dtd->dtd_u.dtu_argv[argc];
 
 	    if (vlen & 1)
 	      *argv++ = 0;	/* Pad to 4-byte boundary.  */
@@ -515,8 +516,9 @@ ctf_serialize (ctf_file_t *fp)
     }
 
   (void) ctf_setmodel (nfp, ctf_getmodel (fp));
-  (void) ctf_import (nfp, fp->ctf_parent);
 
+  nfp->ctf_parent = fp->ctf_parent;
+  nfp->ctf_parent_unreffed = fp->ctf_parent_unreffed;
   nfp->ctf_refcnt = fp->ctf_refcnt;
   nfp->ctf_flags |= fp->ctf_flags & ~LCTF_DIRTY;
   if (nfp->ctf_dynbase == NULL)
@@ -533,12 +535,20 @@ ctf_serialize (ctf_file_t *fp)
   nfp->ctf_ptrtab_len = fp->ctf_ptrtab_len;
   nfp->ctf_link_inputs = fp->ctf_link_inputs;
   nfp->ctf_link_outputs = fp->ctf_link_outputs;
+  nfp->ctf_errs_warnings = fp->ctf_errs_warnings;
   nfp->ctf_str_prov_offset = fp->ctf_str_prov_offset;
   nfp->ctf_syn_ext_strtab = fp->ctf_syn_ext_strtab;
-  nfp->ctf_link_cu_mapping = fp->ctf_link_cu_mapping;
+  nfp->ctf_link_in_cu_mapping = fp->ctf_link_in_cu_mapping;
+  nfp->ctf_link_out_cu_mapping = fp->ctf_link_out_cu_mapping;
   nfp->ctf_link_type_mapping = fp->ctf_link_type_mapping;
   nfp->ctf_link_memb_name_changer = fp->ctf_link_memb_name_changer;
   nfp->ctf_link_memb_name_changer_arg = fp->ctf_link_memb_name_changer_arg;
+  nfp->ctf_link_variable_filter = fp->ctf_link_variable_filter;
+  nfp->ctf_link_variable_filter_arg = fp->ctf_link_variable_filter_arg;
+  nfp->ctf_link_flags = fp->ctf_link_flags;
+  nfp->ctf_dedup_atoms = fp->ctf_dedup_atoms;
+  nfp->ctf_dedup_atoms_alloc = fp->ctf_dedup_atoms_alloc;
+  memcpy (&nfp->ctf_dedup, &fp->ctf_dedup, sizeof (fp->ctf_dedup));
 
   nfp->ctf_snapshot_lu = fp->ctf_snapshots;
 
@@ -555,17 +565,23 @@ ctf_serialize (ctf_file_t *fp)
   fp->ctf_str_atoms = NULL;
   fp->ctf_prov_strtab = NULL;
   memset (&fp->ctf_dtdefs, 0, sizeof (ctf_list_t));
+  memset (&fp->ctf_errs_warnings, 0, sizeof (ctf_list_t));
   fp->ctf_add_processing = NULL;
   fp->ctf_ptrtab = NULL;
   fp->ctf_link_inputs = NULL;
   fp->ctf_link_outputs = NULL;
   fp->ctf_syn_ext_strtab = NULL;
-  fp->ctf_link_cu_mapping = NULL;
+  fp->ctf_link_in_cu_mapping = NULL;
+  fp->ctf_link_out_cu_mapping = NULL;
   fp->ctf_link_type_mapping = NULL;
+  fp->ctf_dedup_atoms = NULL;
+  fp->ctf_dedup_atoms_alloc = NULL;
+  fp->ctf_parent_unreffed = 1;
 
   fp->ctf_dvhash = NULL;
   memset (&fp->ctf_dvdefs, 0, sizeof (ctf_list_t));
   memset (fp->ctf_lookups, 0, sizeof (fp->ctf_lookups));
+  memset (&fp->ctf_dedup, 0, sizeof (fp->ctf_dedup));
   fp->ctf_structs.ctn_writable = NULL;
   fp->ctf_unions.ctn_writable = NULL;
   fp->ctf_enums.ctn_writable = NULL;
@@ -601,16 +617,19 @@ int
 ctf_dtd_insert (ctf_file_t *fp, ctf_dtdef_t *dtd, int flag, int kind)
 {
   const char *name;
-  if (ctf_dynhash_insert (fp->ctf_dthash, (void *) dtd->dtd_type, dtd) < 0)
+  if (ctf_dynhash_insert (fp->ctf_dthash, (void *) (uintptr_t) dtd->dtd_type,
+			  dtd) < 0)
     return -1;
 
   if (flag == CTF_ADD_ROOT && dtd->dtd_data.ctt_name
       && (name = ctf_strraw (fp, dtd->dtd_data.ctt_name)) != NULL)
     {
       if (ctf_dynhash_insert (ctf_name_table (fp, kind)->ctn_writable,
-			      (char *) name, (void *) dtd->dtd_type) < 0)
+			      (char *) name, (void *) (uintptr_t)
+			      dtd->dtd_type) < 0)
 	{
-	  ctf_dynhash_remove (fp->ctf_dthash, (void *) dtd->dtd_type);
+	  ctf_dynhash_remove (fp->ctf_dthash, (void *) (uintptr_t)
+			      dtd->dtd_type);
 	  return -1;
 	}
     }
@@ -626,7 +645,7 @@ ctf_dtd_delete (ctf_file_t *fp, ctf_dtdef_t *dtd)
   int name_kind = kind;
   const char *name;
 
-  ctf_dynhash_remove (fp->ctf_dthash, (void *) dtd->dtd_type);
+  ctf_dynhash_remove (fp->ctf_dthash, (void *) (uintptr_t) dtd->dtd_type);
 
   switch (kind)
     {
@@ -666,7 +685,8 @@ ctf_dtd_delete (ctf_file_t *fp, ctf_dtdef_t *dtd)
 ctf_dtdef_t *
 ctf_dtd_lookup (const ctf_file_t *fp, ctf_id_t type)
 {
-  return (ctf_dtdef_t *) ctf_dynhash_lookup (fp->ctf_dthash, (void *) type);
+  return (ctf_dtdef_t *)
+    ctf_dynhash_lookup (fp->ctf_dthash, (void *) (uintptr_t) type);
 }
 
 ctf_dtdef_t *
@@ -778,7 +798,7 @@ ctf_rollback (ctf_file_t *fp, ctf_snapshot_id_t id)
 	  ctf_str_remove_ref (fp, name, &dtd->dtd_data.ctt_name);
 	}
 
-      ctf_dynhash_remove (fp->ctf_dthash, (void *) dtd->dtd_type);
+      ctf_dynhash_remove (fp->ctf_dthash, (void *) (uintptr_t) dtd->dtd_type);
       ctf_dtd_delete (fp, dtd);
     }
 
@@ -868,7 +888,7 @@ clp2 (size_t x)
   return (x + 1);
 }
 
-static ctf_id_t
+ctf_id_t
 ctf_add_encoded (ctf_file_t *fp, uint32_t flag,
 		 const char *name, const ctf_encoding_t *ep, uint32_t kind)
 {
@@ -889,7 +909,7 @@ ctf_add_encoded (ctf_file_t *fp, uint32_t flag,
   return type;
 }
 
-static ctf_id_t
+ctf_id_t
 ctf_add_reftype (ctf_file_t *fp, uint32_t flag, ctf_id_t ref, uint32_t kind)
 {
   ctf_dtdef_t *dtd;
@@ -900,7 +920,7 @@ ctf_add_reftype (ctf_file_t *fp, uint32_t flag, ctf_id_t ref, uint32_t kind)
   if (ref == CTF_ERR || ref > CTF_MAX_TYPE)
     return (ctf_set_errno (fp, EINVAL));
 
-  if (ctf_lookup_by_id (&tmp, ref) == NULL)
+  if (ref != 0 && ctf_lookup_by_id (&tmp, ref) == NULL)
     return CTF_ERR;		/* errno is set for us.  */
 
   if ((type = ctf_add_generic (fp, flag, NULL, kind, &dtd)) == CTF_ERR)
@@ -943,6 +963,7 @@ ctf_add_slice (ctf_file_t *fp, uint32_t flag, ctf_id_t ref,
 	       const ctf_encoding_t *ep)
 {
   ctf_dtdef_t *dtd;
+  ctf_id_t resolved_ref = ref;
   ctf_id_t type;
   int kind;
   const ctf_type_t *tp;
@@ -957,12 +978,19 @@ ctf_add_slice (ctf_file_t *fp, uint32_t flag, ctf_id_t ref,
   if (ref == CTF_ERR || ref > CTF_MAX_TYPE)
     return (ctf_set_errno (fp, EINVAL));
 
-  if ((tp = ctf_lookup_by_id (&tmp, ref)) == NULL)
+  if (ref != 0 && ((tp = ctf_lookup_by_id (&tmp, ref)) == NULL))
     return CTF_ERR;		/* errno is set for us.  */
 
-  kind = ctf_type_kind_unsliced (tmp, ref);
+  /* Make sure we ultimately point to an integral type.  We also allow slices to
+     point to the unimplemented type, for now, because the compiler can emit
+     such slices, though they're not very much use.  */
+
+  resolved_ref = ctf_type_resolve_unsliced (tmp, ref);
+  kind = ctf_type_kind_unsliced (tmp, resolved_ref);
+
   if ((kind != CTF_K_INTEGER) && (kind != CTF_K_FLOAT) &&
-      (kind != CTF_K_ENUM))
+      (kind != CTF_K_ENUM)
+      && (ref != 0))
     return (ctf_set_errno (fp, ECTF_NOTINTFP));
 
   if ((type = ctf_add_generic (fp, flag, NULL, CTF_K_SLICE, &dtd)) == CTF_ERR)
@@ -971,7 +999,7 @@ ctf_add_slice (ctf_file_t *fp, uint32_t flag, ctf_id_t ref,
   dtd->dtd_data.ctt_info = CTF_TYPE_INFO (CTF_K_SLICE, flag, 0);
   dtd->dtd_data.ctt_size = clp2 (P2ROUNDUP (ep->cte_bits, CHAR_BIT)
 				 / CHAR_BIT);
-  dtd->dtd_u.dtu_slice.cts_type = ref;
+  dtd->dtd_u.dtu_slice.cts_type = (uint32_t) ref;
   dtd->dtd_u.dtu_slice.cts_bits = ep->cte_bits;
   dtd->dtd_u.dtu_slice.cts_offset = ep->cte_offset;
 
@@ -1008,7 +1036,8 @@ ctf_add_array (ctf_file_t *fp, uint32_t flag, const ctf_arinfo_t *arp)
   if (arp == NULL)
     return (ctf_set_errno (fp, EINVAL));
 
-  if (ctf_lookup_by_id (&tmp, arp->ctr_contents) == NULL)
+  if (arp->ctr_contents != 0
+      && ctf_lookup_by_id (&tmp, arp->ctr_contents) == NULL)
     return CTF_ERR;		/* errno is set for us.  */
 
   tmp = fp;
@@ -1050,7 +1079,7 @@ ctf_add_function (ctf_file_t *fp, uint32_t flag,
   ctf_dtdef_t *dtd;
   ctf_id_t type;
   uint32_t vlen;
-  ctf_id_t *vdat = NULL;
+  uint32_t *vdat = NULL;
   ctf_file_t *tmp = fp;
   size_t i;
 
@@ -1062,21 +1091,26 @@ ctf_add_function (ctf_file_t *fp, uint32_t flag,
   if (ctc->ctc_flags & CTF_FUNC_VARARG)
     vlen++;	       /* Add trailing zero to indicate varargs (see below).  */
 
-  if (ctf_lookup_by_id (&tmp, ctc->ctc_return) == NULL)
+  if (ctc->ctc_return != 0
+      && ctf_lookup_by_id (&tmp, ctc->ctc_return) == NULL)
     return CTF_ERR;		/* errno is set for us.  */
-
-  for (i = 0; i < ctc->ctc_argc; i++)
-    {
-      tmp = fp;
-      if (ctf_lookup_by_id (&tmp, argv[i]) == NULL)
-	return CTF_ERR;		/* errno is set for us.  */
-    }
 
   if (vlen > CTF_MAX_VLEN)
     return (ctf_set_errno (fp, EOVERFLOW));
 
   if (vlen != 0 && (vdat = malloc (sizeof (ctf_id_t) * vlen)) == NULL)
     return (ctf_set_errno (fp, EAGAIN));
+
+  for (i = 0; i < ctc->ctc_argc; i++)
+    {
+      tmp = fp;
+      if (argv[i] != 0 && ctf_lookup_by_id (&tmp, argv[i]) == NULL)
+	{
+	  free (vdat);
+	  return CTF_ERR;	   /* errno is set for us.  */
+	}
+      vdat[i] = (uint32_t) argv[i];
+    }
 
   if ((type = ctf_add_generic (fp, flag, NULL, CTF_K_FUNCTION,
 			       &dtd)) == CTF_ERR)
@@ -1088,7 +1122,6 @@ ctf_add_function (ctf_file_t *fp, uint32_t flag,
   dtd->dtd_data.ctt_info = CTF_TYPE_INFO (CTF_K_FUNCTION, flag, vlen);
   dtd->dtd_data.ctt_type = (uint32_t) ctc->ctc_return;
 
-  memcpy (vdat, argv, sizeof (ctf_id_t) * ctc->ctc_argc);
   if (ctc->ctc_flags & CTF_FUNC_VARARG)
     vdat[vlen - 1] = 0;		   /* Add trailing zero to indicate varargs.  */
   dtd->dtd_u.dtu_argv = vdat;
@@ -1227,7 +1260,7 @@ ctf_add_forward (ctf_file_t *fp, uint32_t flag, const char *name,
   ctf_dtdef_t *dtd;
   ctf_id_t type = 0;
 
-  if (kind != CTF_K_STRUCT && kind != CTF_K_UNION && kind != CTF_K_ENUM)
+  if (!ctf_forwardable_kind (kind))
     return (ctf_set_errno (fp, ECTF_NOTSUE));
 
   /* If the type is already defined or exists as a forward tag, just
@@ -1259,7 +1292,7 @@ ctf_add_typedef (ctf_file_t *fp, uint32_t flag, const char *name,
   if (ref == CTF_ERR || ref > CTF_MAX_TYPE)
     return (ctf_set_errno (fp, EINVAL));
 
-  if (ctf_lookup_by_id (&tmp, ref) == NULL)
+  if (ref != 0 && ctf_lookup_by_id (&tmp, ref) == NULL)
     return CTF_ERR;		/* errno is set for us.  */
 
   if ((type = ctf_add_generic (fp, flag, name, CTF_K_TYPEDEF,
@@ -1365,6 +1398,9 @@ ctf_add_member_offset (ctf_file_t *fp, ctf_id_t souid, const char *name,
   if (dtd == NULL)
     return (ctf_set_errno (fp, ECTF_BADID));
 
+  if (name != NULL && name[0] == '\0')
+    name = NULL;
+
   kind = LCTF_INFO_KIND (fp, dtd->dtd_data.ctt_info);
   root = LCTF_INFO_ISROOT (fp, dtd->dtd_data.ctt_info);
   vlen = LCTF_INFO_VLEN (fp, dtd->dtd_data.ctt_info);
@@ -1387,7 +1423,20 @@ ctf_add_member_offset (ctf_file_t *fp, ctf_id_t souid, const char *name,
 
   if ((msize = ctf_type_size (fp, type)) < 0 ||
       (malign = ctf_type_align (fp, type)) < 0)
-    return -1;			/* errno is set for us.  */
+    {
+      /* The unimplemented type, and any type that resolves to it, has no size
+	 and no alignment: it can correspond to any number of compiler-inserted
+	 types.  */
+
+      if (ctf_errno (fp) == ECTF_NONREPRESENTABLE)
+	{
+	  msize = 0;
+	  malign = 0;
+	  ctf_set_errno (fp, 0);
+	}
+      else
+	return -1;		/* errno is set for us.  */
+    }
 
   if ((dmd = malloc (sizeof (ctf_dmdef_t))) == NULL)
     return (ctf_set_errno (fp, EAGAIN));
@@ -1414,6 +1463,16 @@ ctf_add_member_offset (ctf_file_t *fp, ctf_id_t souid, const char *name,
 
 	  ctf_encoding_t linfo;
 	  ssize_t lsize;
+
+	  /* Propagate any error from ctf_type_resolve.  If the last member was
+	     of unimplemented type, this may be -ECTF_NONREPRESENTABLE: we
+	     cannot insert right after such a member without explicit offset
+	     specification, because its alignment and size is not known.  */
+	  if (ltype == CTF_ERR)
+	    {
+	      free (dmd);
+	      return -1;	/* errno is set for us.  */
+	    }
 
 	  if (ctf_type_encoding (fp, ltype, &linfo) == 0)
 	    off += linfo.cte_bits;
@@ -1569,6 +1628,11 @@ membcmp (const char *name, ctf_id_t type _libctf_unused_, unsigned long offset,
 {
   ctf_bundle_t *ctb = arg;
   ctf_membinfo_t ctm;
+
+  /* Don't check nameless members (e.g. anonymous structs/unions) against each
+     other.  */
+  if (name[0] == 0)
+    return 0;
 
   if (ctf_member_info (ctb->ctb_file, ctb->ctb_type, name, &ctm) < 0)
     {

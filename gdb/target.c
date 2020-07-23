@@ -925,8 +925,11 @@ raw_memory_xfer_partial (struct target_ops *ops, gdb_byte *readbuf,
       if (res == TARGET_XFER_UNAVAILABLE)
 	break;
 
-      /* We want to continue past core files to executables, but not
-	 past a running target's memory.  */
+      /* Don't continue past targets which have all the memory.
+         At one time, this code was necessary to read data from
+	 executables / shared libraries when data for the requested
+	 addresses weren't available in the core file.  But now the
+	 core target handles this case itself.  */
       if (ops->has_all_memory ())
 	break;
 
@@ -980,11 +983,17 @@ memory_xfer_partial_1 (struct target_ops *ops, enum target_object object,
 	  const char *section_name = section->the_bfd_section->name;
 
 	  memaddr = overlay_mapped_address (memaddr, section);
+
+	  auto match_cb = [=] (const struct target_section *s)
+	    {
+	      return (strcmp (section_name, s->the_bfd_section->name) == 0);
+	    };
+
 	  return section_table_xfer_memory_partial (readbuf, writebuf,
 						    memaddr, len, xfered_len,
 						    table->sections,
 						    table->sections_end,
-						    section_name);
+						    match_cb);
 	}
     }
 
@@ -1002,8 +1011,7 @@ memory_xfer_partial_1 (struct target_ops *ops, enum target_object object,
 	  return section_table_xfer_memory_partial (readbuf, writebuf,
 						    memaddr, len, xfered_len,
 						    table->sections,
-						    table->sections_end,
-						    NULL);
+						    table->sections_end);
 	}
     }
 
