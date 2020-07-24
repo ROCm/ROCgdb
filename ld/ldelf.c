@@ -1043,7 +1043,8 @@ ldelf_after_open (int use_libpath, int native, int is_linux, int is_freebsd,
   /* Do not allow executable files to be used as inputs to the link.  */
   for (abfd = link_info.input_bfds; abfd; abfd = abfd->link.next)
     {
-      if (elf_tdata (abfd) != NULL
+      if (!bfd_input_just_syms (abfd)
+	  && elf_tdata (abfd) != NULL
 	  && elf_tdata (abfd)->elf_header != NULL
 	  /* FIXME: Maybe check for other non-supportable types as well ?  */
 	  && elf_tdata (abfd)->elf_header->e_type == ET_EXEC)
@@ -1077,13 +1078,6 @@ ldelf_after_open (int use_libpath, int native, int is_linux, int is_freebsd,
       for (abfd = link_info.input_bfds; abfd; abfd = abfd->link.next)
 	{
 	  int type = 0;
-
-	  if (bfd_link_executable (& link_info)
-	      && elf_tdata (abfd)->elf_header->e_type == ET_EXEC)
-	    {
-	      einfo (_("%F%P: cannot use executable file '%pB' as input to a link\n"),
-		     abfd);
-	    }
 
 	  if (bfd_input_just_syms (abfd))
 	    continue;
