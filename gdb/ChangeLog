@@ -1,3 +1,26 @@
+2020-07-27  John Baldwin  <jhb@FreeBSD.org>
+
+	* fbsd-nat.h: Include <osreldate.h>.  Define USE_SIGTRAP_SIGINFO
+	for all architectures on FreeBSD 11.3 and later.
+
+2020-07-27  Tom Tromey  <tromey@adacore.com>
+
+	* gcore.h (load_corefile): Don't declare.
+
+2020-07-27  Tom de Vries  <tdevries@suse.de>
+
+	* configure.ac: Fix sys/sockets.h -> sys/socket.h typo.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2020-07-26  Eli Zaretskii  <eliz@gnu.org>
+
+	* configure.ac (AC_CHECK_HEADERS): Check for sys/socket.h and
+	ws2tcpip.h.  When checking whether socklen_t type is defined, use
+	ws2tcpip.h if it is available and sys/socket.h isn't.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+
 2020-07-25  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	PR fortran/23051

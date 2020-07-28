@@ -1285,6 +1285,9 @@ AC_CHECK_HEADERS(term.h, [], [],
 #endif
 ])
 
+AC_CHECK_HEADERS([sys/socket.h])
+AC_CHECK_HEADERS([ws2tcpip.h])
+
 # ------------------------- #
 # Checks for declarations.  #
 # ------------------------- #
@@ -1300,7 +1303,11 @@ AM_LC_MESSAGES
 
 AC_CHECK_TYPES(socklen_t, [], [],
 [#include <sys/types.h>
-#include <sys/socket.h>
+#if HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#elif HAVE_WS2TCPIP_H
+# include <ws2tcpip.h>
+#endif
 ])
 
 # ------------------------------------- #
