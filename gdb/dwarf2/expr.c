@@ -3245,7 +3245,8 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	                                                this->ref_addr_size,
 	                                                byte_order);
 	    op_ptr += this->ref_addr_size;
-	    value = this->dwarf_variable_value (die_offset);
+	    value = value_cast (address_type,
+				this->dwarf_variable_value (die_offset));
 	    type = value_type (value);
 
 	    result_entry = gdb_value_to_dwarf_entry (value);

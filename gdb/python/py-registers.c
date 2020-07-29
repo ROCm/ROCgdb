@@ -23,6 +23,7 @@
 #include "disasm.h"
 #include "reggroups.h"
 #include "python-internal.h"
+#include "user-regs.h"
 #include <unordered_map>
 
 /* Token to access per-gdbarch data related to register descriptors.  */
@@ -337,6 +338,91 @@ gdbpy_register_descriptor_iter_next (PyObject *self)
   while (true);
 }
 
+/* Implement:
+
+   gdb.RegisterDescriptorIterator.find (self, name) -> gdb.RegisterDescriptor
+
+   Look up a descriptor for register with NAME.  If no matching register is
+   found then return None.  */
+
+static PyObject *
+register_descriptor_iter_find (PyObject *self, PyObject *args, PyObject *kw)
+{
+  static const char *keywords[] = { "name", NULL };
+  const char *register_name = NULL;
+
+  register_descriptor_iterator_object *iter_obj
+    = (register_descriptor_iterator_object *) self;
+  struct gdbarch *gdbarch = iter_obj->gdbarch;
+
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s", keywords,
+					&register_name))
+    return NULL;
+
+  if (register_name != NULL && *register_name != '\0')
+    {
+      int regnum = user_reg_map_name_to_regnum (gdbarch, register_name,
+						strlen (register_name));
+      if (regnum >= 0)
+	return gdbpy_get_register_descriptor (gdbarch, regnum).release ();
+    }
+
+  Py_RETURN_NONE;
+}
+
+/* See python-internal.h.  */
+
+bool
+gdbpy_parse_register_id (struct gdbarch *gdbarch, PyObject *pyo_reg_id,
+			 int *reg_num)
+{
+  gdb_assert (pyo_reg_id != NULL);
+
+  /* The register could be a string, its name.  */
+  if (gdbpy_is_string (pyo_reg_id))
+    {
+      gdb::unique_xmalloc_ptr<char> reg_name (gdbpy_obj_to_string (pyo_reg_id));
+
+      if (reg_name != NULL)
+	{
+	  *reg_num = user_reg_map_name_to_regnum (gdbarch, reg_name.get (),
+						  strlen (reg_name.get ()));
+	  return *reg_num >= 0;
+	}
+    }
+  /* The register could be its internal GDB register number.  */
+  else if (PyInt_Check (pyo_reg_id))
+    {
+      long value;
+      if (gdb_py_int_as_long (pyo_reg_id, &value) && (int) value == value)
+        {
+	  if (user_reg_map_regnum_to_name (gdbarch, value) != NULL)
+	    {
+	      *reg_num = (int) value;
+	      return true;
+	    }
+        }
+    }
+  /* The register could be a gdb.RegisterDescriptor object.  */
+  else if (PyObject_IsInstance (pyo_reg_id,
+			   (PyObject *) &register_descriptor_object_type))
+    {
+      register_descriptor_object *reg
+	= (register_descriptor_object *) pyo_reg_id;
+      if (reg->gdbarch == gdbarch)
+	{
+	  *reg_num = reg->regnum;
+	  return true;
+	}
+      else
+	PyErr_SetString (PyExc_ValueError,
+			 _("Invalid Architecture in RegisterDescriptor"));
+    }
+
+  gdb_assert (PyErr_Occurred ());
+  return false;
+}
+
 /* Initializes the new Python classes from this file in the gdb module.  */
 
 int
@@ -377,6 +463,15 @@ gdbpy_initialize_registers ()
 	   (PyObject *) &register_descriptor_iterator_object_type));
 }
 
+static PyMethodDef register_descriptor_iterator_object_methods [] = {
+  { "find", (PyCFunction) register_descriptor_iter_find,
+    METH_VARARGS | METH_KEYWORDS,
+    "registers (name) -> gdb.RegisterDescriptor.\n\
+Return a register descriptor for the register NAME, or None if no register\n\
+with that name exists in this iterator." },
+  {NULL}  /* Sentinel */
+};
+
 PyTypeObject register_descriptor_iterator_object_type = {
   PyVarObject_HEAD_INIT (NULL, 0)
   "gdb.RegisterDescriptorIterator",	  	/*tp_name*/
@@ -405,7 +500,7 @@ PyTypeObject register_descriptor_iterator_object_type = {
   0,				  /*tp_weaklistoffset */
   gdbpy_register_descriptor_iter,	  /*tp_iter */
   gdbpy_register_descriptor_iter_next,  /*tp_iternext */
-  0				  /*tp_methods */
+  register_descriptor_iterator_object_methods		/*tp_methods */
 };
 
 static gdb_PyGetSetDef gdbpy_register_descriptor_getset[] = {

@@ -1,3 +1,23 @@
+2020-07-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR symtab/26270:
+	* gdb.cp/disasm-func-name.cc: New file.
+	* gdb.cp/disasm-func-name.exp: New file.
+
+2020-07-28  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.dwarf2/varval.exp (setup_exec): Add 'or' instruction to
+	'varval' location.
+
+2020-07-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-unwind.py: Update to make use of a register
+	descriptor.
+
+2020-07-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-arch-reg-names.exp: Add additional tests.
+
 2020-07-25  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	PR fortran/23051

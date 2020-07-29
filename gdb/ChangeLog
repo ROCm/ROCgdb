@@ -1,3 +1,71 @@
+2020-07-28  Tom Tromey  <tromey@adacore.com>
+
+	PR symtab/26270:
+	* symtab.h (find_pc_partial_function_sym): Declare.
+	* cli/cli-cmds.c (disassemble_command): Use
+	find_pc_partial_function_sym.  Check asm_demangle.
+	* blockframe.c (cache_pc_function_sym): New global.
+	(cache_pc_function_name): Remove.
+	(clear_pc_function_cache): Update.
+	(find_pc_partial_function_sym): New function, from
+	find_pc_partial_function.
+	(find_pc_partial_function): Rewrite using
+	find_pc_partial_function_sym.
+
+2020-07-28  Tom Tromey  <tromey@adacore.com>
+
+	* cli/cli-cmds.c (_initialize_cli_cmds): Rearrange "disassemble"
+	help.  Add usage.
+
+2020-07-28  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/expr.c (dwarf_expr_context::execute_stack_op)
+	<DW_OP_GNU_variable_value>: Cast to address type.
+
+2020-07-28  Kamil Rytarowski  <n54@gmx.com>
+
+	* nbsd-nat.h (nbsd_nat_target::xfer_partial): New declaration.
+	* nbsd-nat.c (nbsd_nat_target::xfer_partial): New function.
+	* nbsd-tdep.c (nbsd_gdbarch_data_handle, struct nbsd_gdbarch_data)
+	(init_nbsd_gdbarch_data, get_nbsd_gdbarch_data)
+	(nbsd_get_siginfo_type): New.
+	(nbsd_init_abi): Install gdbarch "get_siginfo_type" method.
+	(_initialize_nbsd_tdep): New.
+
+2020-07-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/26301
+	* configure: Regenerated.
+
+2020-07-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/26301
+	* configure: Regenerated.
+
+2020-07-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-frame.c: Remove 'user-regs.h' include.
+	(frapy_read_register): Rewrite to make use of
+	gdbpy_parse_register_id.
+	* python/py-registers.c (gdbpy_parse_register_id): New function,
+	moved here from python/py-unwind.c.  Updated the return type, and
+	also accepts register descriptor objects.
+	* python/py-unwind.c: Remove 'user-regs.h' include.
+	(pyuw_parse_register_id): Moved to python/py-registers.c.
+	(unwind_infopy_add_saved_register): Update to use
+	gdbpy_parse_register_id.
+	(pending_framepy_read_register): Likewise.
+	* python/python-internal.h (gdbpy_parse_register_id): Declare.
+
+2020-07-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-registers.c: Add 'user-regs.h' include.
+	(register_descriptor_iter_find): New function.
+	(register_descriptor_iterator_object_methods): New static global
+	methods array.
+	(register_descriptor_iterator_object_type): Add pointer to methods
+	array.
+
 2020-07-27  John Baldwin  <jhb@FreeBSD.org>
 
 	* fbsd-nat.h: Include <osreldate.h>.  Define USE_SIGTRAP_SIGINFO
