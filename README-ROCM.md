@@ -59,7 +59,7 @@ Building ROCgdb has the following prerequisites:
 
    ````shell
    apt install bison flex gcc make ncurses-dev texinfo g++ zlib1g-dev \
-     libexpat-dev libpython2.7-dev python2.7-minimal liblzma-dev \
+     libexpat-dev libpython3.6-dev python3.6-minimal liblzma-dev \
      libbabeltrace-dev libbabeltrace-ctf-dev
    ````
 
@@ -67,7 +67,7 @@ Building ROCgdb has the following prerequisites:
 
    ````shell
    yum install -y epel-release centos-release-scl bison flex gcc make \
-     texinfo texinfo-tex gcc-c++ zlib-devel expat-devel python2-devel \
+     texinfo texinfo-tex gcc-c++ zlib-devel expat-devel python3-devel \
      xz-devel libbabeltrace-devel ncurses-devel
    wget http://repo.okay.com.mx/centos/8/x86_64/release/libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm \
    && rpm -ivh --nodeps libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm
@@ -77,7 +77,7 @@ Building ROCgdb has the following prerequisites:
 
    ````shell
    zypper in bison flex gcc make texinfo gcc-c++ zlib-devel libexpat-devel \
-     python-devel xz-devel babeltrace-devel ncurses-devel
+     python3-devel xz-devel babeltrace-devel ncurses-devel
    ````
 
 An example command-line to build ROCgdb on Linux is:
@@ -90,7 +90,7 @@ cd build
   --enable-64-bit-bfd --enable-targets="x86_64-linux-gnu,amdgcn-amd-amdhsa" \
   --disable-ld --disable-gas --disable-gdbserver --disable-sim --enable-tui \
   --disable-gdbtk --disable-shared --with-expat --with-system-zlib \
-  --without-guile --with-babeltrace --with-lzma --with-python
+  --without-guile --with-babeltrace --with-lzma --with-python=python3
 make
 ````
 
