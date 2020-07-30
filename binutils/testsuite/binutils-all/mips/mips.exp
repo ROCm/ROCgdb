@@ -218,6 +218,7 @@ if {[istarget *-*-openbsd*] } {
     set abi_asflags(o32) -32
     set irixemul 1
 }
+set tmips [expr $irixemul ? {""} : {"t"}]
 
 run_dump_test_o32 "mips-ase-1"
 run_dump_test_o32 "mips-ase-2"
@@ -247,3 +248,13 @@ run_dump_test_n64 "mips-note-2r-n64"
 
 run_dump_test_o32 "mips-reginfo"
 run_dump_test_n32 "mips-reginfo-n32"
+
+run_dump_test_o32 "global-local-symtab-o32${tmips}"
+run_dump_test_n32 "global-local-symtab-n32${tmips}"
+run_dump_test_n64 "global-local-symtab-n64"
+run_dump_test_o32 "global-local-symtab-sort-o32${tmips}"
+run_dump_test_n32 "global-local-symtab-sort-n32${tmips}"
+run_dump_test_n64 "global-local-symtab-sort-n64${tmips}"
+run_dump_test_o32 "global-local-symtab-final-o32" useld
+run_dump_test_n32 "global-local-symtab-final-n32" useld
+run_dump_test_n64 "global-local-symtab-final-n64" useld
