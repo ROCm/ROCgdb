@@ -1,3 +1,41 @@
+2020-07-30  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR ada/26318
+	* ada-lang.c (ada_modulus): Return 0 if property is not of const
+	kind.
+
+2020-07-30  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* breakpoint.c (set_breakpoint_condition): Do minor refactoring.
+
+2020-07-30  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* breakpoint.c (set_breakpoint_condition): Update the condition
+	expressions after checking that the input condition string parses
+	successfully and does not contain junk at the end.
+
+2020-07-30  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* breakpoint.c (set_breakpoint_condition): Update the
+	condition string after parsing the new condition successfully.
+
+2020-07-30  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* proc-api.c (_STRUCTURED_PROC): Don't define.
+	* proc-events.c: Likewise.
+	* proc-flags.c: Likewise.
+	* proc-why.c: Likewise.
+	* procfs.c: Likewise.
+
+	* Makefile.in (INTERNAL_CPPFLAGS): Add LARGEFILE_CPPFLAGS.
+	* configure, config.in: Regenerate.
+
+2020-07-30  Tom de Vries  <tdevries@suse.de>
+
+	PR build/26320
+	* ui-style.h (struct ui_file_style::color): Wrap m_value and
+	m_red/m_green/m_blue in a union.
+
 2020-07-29  Tom de Vries  <tdevries@suse.de>
 
 	PR tdep/26280

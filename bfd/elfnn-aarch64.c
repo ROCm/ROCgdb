@@ -2643,9 +2643,6 @@ struct elf_aarch64_link_hash_table
   /* The bytes of the subsequent PLT entry.  */
   const bfd_byte *plt_entry;
 
-  /* Small local sym cache.  */
-  struct sym_cache sym_cache;
-
   /* For convenience in allocate_dynrelocs.  */
   bfd *obfd;
 
@@ -7610,7 +7607,7 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
       if (r_symndx < symtab_hdr->sh_info)
 	{
 	  /* A local symbol.  */
-	  isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+	  isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
 					abfd, r_symndx);
 	  if (isym == NULL)
 	    return FALSE;
@@ -7837,7 +7834,7 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		asection *s;
 		void **vpp;
 
-		isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+		isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
 					      abfd, r_symndx);
 		if (isym == NULL)
 		  return FALSE;
@@ -9512,8 +9509,11 @@ elfNN_aarch64_init_small_plt0_entry (bfd *output_bfd ATTRIBUTE_UNUSED,
 
   memcpy (htab->root.splt->contents, htab->plt0_entry,
 	  htab->plt_header_size);
-  elf_section_data (htab->root.splt->output_section)->this_hdr.sh_entsize =
-    htab->plt_header_size;
+
+  /* PR 26312: Explicitly set the sh_entsize to 0 so that
+     consumers do not think that the section contains fixed
+     sized objects.  */
+  elf_section_data (htab->root.splt->output_section)->this_hdr.sh_entsize = 0;
 
   plt_got_2nd_ent = (htab->root.sgotplt->output_section->vma
 		  + htab->root.sgotplt->output_offset
@@ -9614,10 +9614,6 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
   if (htab->root.splt && htab->root.splt->size > 0)
     {
       elfNN_aarch64_init_small_plt0_entry (output_bfd, htab);
-
-      elf_section_data (htab->root.splt->output_section)->
-	this_hdr.sh_entsize = htab->plt_entry_size;
-
 
       if (htab->root.tlsdesc_plt && !(info->flags & DF_BIND_NOW))
 	{

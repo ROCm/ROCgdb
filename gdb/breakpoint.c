@@ -838,68 +838,75 @@ void
 set_breakpoint_condition (struct breakpoint *b, const char *exp,
 			  int from_tty)
 {
-  xfree (b->cond_string);
-  b->cond_string = NULL;
-
-  if (is_watchpoint (b))
-    {
-      struct watchpoint *w = (struct watchpoint *) b;
-
-      w->cond_exp.reset ();
-    }
-  else
-    {
-      struct bp_location *loc;
-
-      for (loc = b->loc; loc; loc = loc->next)
-	{
-	  loc->cond.reset ();
-
-	  /* No need to free the condition agent expression
-	     bytecode (if we have one).  We will handle this
-	     when we go through update_global_location_list.  */
-	}
-    }
-
   if (*exp == 0)
     {
+      xfree (b->cond_string);
+      b->cond_string = nullptr;
+
+      if (is_watchpoint (b))
+	static_cast<watchpoint *> (b)->cond_exp.reset ();
+      else
+	{
+	  for (bp_location *loc = b->loc; loc != nullptr; loc = loc->next)
+	    {
+	      loc->cond.reset ();
+
+	      /* No need to free the condition agent expression
+		 bytecode (if we have one).  We will handle this
+		 when we go through update_global_location_list.  */
+	    }
+	}
+
       if (from_tty)
 	printf_filtered (_("Breakpoint %d now unconditional.\n"), b->number);
     }
   else
     {
-      const char *arg = exp;
-
-      /* I don't know if it matters whether this is the string the user
-	 typed in or the decompiled expression.  */
-      b->cond_string = xstrdup (arg);
-      b->condition_not_parsed = 0;
-
       if (is_watchpoint (b))
 	{
-	  struct watchpoint *w = (struct watchpoint *) b;
-
 	  innermost_block_tracker tracker;
-	  arg = exp;
-	  w->cond_exp = parse_exp_1 (&arg, 0, 0, 0, &tracker);
-	  if (*arg)
+	  const char *arg = exp;
+	  expression_up new_exp = parse_exp_1 (&arg, 0, 0, 0, &tracker);
+	  if (*arg != 0)
 	    error (_("Junk at end of expression"));
+	  watchpoint *w = static_cast<watchpoint *> (b);
+	  w->cond_exp = std::move (new_exp);
 	  w->cond_exp_valid_block = tracker.block ();
 	}
       else
 	{
-	  struct bp_location *loc;
-
-	  for (loc = b->loc; loc; loc = loc->next)
+	  /* Parse and set condition expressions.  We make two passes.
+	     In the first, we parse the condition string to see if it
+	     is valid in all locations.  If so, the condition would be
+	     accepted.  So we go ahead and set the locations'
+	     conditions.  In case a failing case is found, we throw
+	     the error and the condition string will be rejected.
+	     This two-pass approach is taken to avoid setting the
+	     state of locations in case of a reject.  */
+	  for (bp_location *loc = b->loc; loc != nullptr; loc = loc->next)
 	    {
-	      arg = exp;
+	      const char *arg = exp;
+	      parse_exp_1 (&arg, loc->address,
+			   block_for_pc (loc->address), 0);
+	      if (*arg != 0)
+		error (_("Junk at end of expression"));
+	    }
+
+	  /* If we reach here, the condition is valid at all locations.  */
+	  for (bp_location *loc = b->loc; loc != nullptr; loc = loc->next)
+	    {
+	      const char *arg = exp;
 	      loc->cond =
 		parse_exp_1 (&arg, loc->address,
 			     block_for_pc (loc->address), 0);
-	      if (*arg)
-		error (_("Junk at end of expression"));
 	    }
 	}
+
+      /* We know that the new condition parsed successfully.  The
+	 condition string of the breakpoint can be safely updated.  */
+      xfree (b->cond_string);
+      b->cond_string = xstrdup (exp);
+      b->condition_not_parsed = 0;
     }
   mark_breakpoint_modified (b);
 
