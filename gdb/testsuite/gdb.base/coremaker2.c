@@ -39,20 +39,17 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <inttypes.h>
 
 /* These are globals so that we can find them easily when debugging
    the core file.  */
 long pagesize;
-unsigned long long addr;
+uintptr_t addr;
 char *mbuf_ro;
 char *mbuf_rw;
 
-/* 24 KiB buffer.  */
-char buf_rw[24 * 1024];
-
-/* 24 KiB worth of data.  For this test case, we can't allocate a
-   buffer and then fill it; we want GDB to have to read this data
-   from the executable; it should NOT find it in the core file.  */
+/* 256 KiB buffer.  */
+char buf_rw[256 * 1024];
 
 #define C5_16 \
   0xc5, 0xc5, 0xc5, 0xc5, \
@@ -69,15 +66,22 @@ char buf_rw[24 * 1024];
 #define C5_1k \
   C5_256, C5_256, C5_256, C5_256
 
-#define C5_24k \
-  C5_1k, C5_1k, C5_1k, C5_1k, \
-  C5_1k, C5_1k, C5_1k, C5_1k, \
-  C5_1k, C5_1k, C5_1k, C5_1k, \
-  C5_1k, C5_1k, C5_1k, C5_1k, \
+#define C5_8k \
   C5_1k, C5_1k, C5_1k, C5_1k, \
   C5_1k, C5_1k, C5_1k, C5_1k
 
-const char buf_ro[] = { C5_24k };
+#define C5_64k \
+  C5_8k, C5_8k, C5_8k, C5_8k, \
+  C5_8k, C5_8k, C5_8k, C5_8k
+
+#define C5_256k \
+  C5_64k, C5_64k, C5_64k, C5_64k
+
+/* 256 KiB worth of data.  For this test case, we can't allocate a
+   buffer and then fill it; we want GDB to have to read this data
+   from the executable; it should NOT find it in the core file.  */
+
+const char buf_ro[] = { C5_256k };
 
 int
 main (int argc, char **argv)
@@ -103,10 +107,10 @@ main (int argc, char **argv)
     }
 
   /* Compute an address that should be within buf_ro.  Complain if not.  */
-  addr = ((unsigned long long) buf_ro + pagesize) & ~(pagesize - 1);
+  addr = ((uintptr_t) buf_ro + pagesize) & ~(pagesize - 1);
 
-  if (addr <= (unsigned long long) buf_ro
-      || addr >= (unsigned long long) buf_ro + sizeof (buf_ro))
+  if (addr <= (uintptr_t) buf_ro
+      || addr >= (uintptr_t) buf_ro + sizeof (buf_ro))
     {
       fprintf (stderr, "Unable to compute a suitable address within buf_ro.\n");
       exit (1);
@@ -127,10 +131,10 @@ main (int argc, char **argv)
 
   /* Compute an mmap address within buf_rw.  Complain if it's somewhere
      else.  */
-  addr = ((unsigned long long) buf_rw + pagesize) & ~(pagesize - 1);
+  addr = ((uintptr_t) buf_rw + pagesize) & ~(pagesize - 1);
 
-  if (addr <= (unsigned long long) buf_rw
-      || addr >= (unsigned long long) buf_rw + sizeof (buf_rw))
+  if (addr <= (uintptr_t) buf_rw
+      || addr >= (uintptr_t) buf_rw + sizeof (buf_rw))
     {
       fprintf (stderr, "Unable to compute a suitable address within buf_rw.\n");
       exit (1);
