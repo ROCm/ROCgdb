@@ -473,7 +473,11 @@ rocm_update_solib_list ()
       so->so_name[sizeof (so->so_name) - 1] = '\0';
       xfree (uri_bytes);
 
-      strcpy (so->so_original_name, so->so_name);
+      /* Make so_original_name unique so that code objects with the same URI
+         but different load addresses are seen by gdb core as different shared
+         objects.  */
+      xsnprintf (so->so_original_name, sizeof (so->so_original_name),
+                 "code_object_%ld", code_object_list[i].handle);
 
       so->next = nullptr;
       *link = so;
