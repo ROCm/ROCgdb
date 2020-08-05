@@ -526,7 +526,12 @@ rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
   if (amd_dbgapi_set_watchpoint (info->process_id, addr, len,
                                  AMD_DBGAPI_WATCHPOINT_KIND_STORE_AND_RMW,
                                  &watch_id, &adjusted_address, &adjusted_size)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+          != AMD_DBGAPI_STATUS_SUCCESS
+      /* FIXME: A reduced range watchpoint may have been inserted, which would
+        require additional watchpoints to be inserted to cover the requested
+        range.  */
+      || adjusted_address > addr
+      || (adjusted_address + adjusted_size) < (addr + len))
     {
       /* We failed to insert the GPU watchpoint, so remove the CPU watchpoint
          before returning an error.  */
@@ -594,8 +599,42 @@ rocm_target_ops::stopped_by_watchpoint ()
 bool
 rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
 {
-  return !ptid_is_gpu (inferior_ptid)
-         && beneath ()->stopped_data_address (addr_p);
+  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+
+  if (!ptid_is_gpu (inferior_ptid))
+    return beneath ()->stopped_data_address (addr_p);
+
+  amd_dbgapi_watchpoint_list_t watchpoints;
+  if (amd_dbgapi_wave_get_info (
+          get_amd_dbgapi_process_id (), get_amd_dbgapi_wave_id (inferior_ptid),
+          AMD_DBGAPI_WAVE_INFO_WATCHPOINTS, sizeof (watchpoints), &watchpoints)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return false;
+
+  /* Compute the intersection between the triggered watchpoint ranges.  */
+  CORE_ADDR start = std::numeric_limits<CORE_ADDR>::min ();
+  CORE_ADDR finish = std::numeric_limits<CORE_ADDR>::max ();
+  for (size_t i = 0; i < watchpoints.count; ++i)
+    {
+      amd_dbgapi_watchpoint_id_t watchpoint = watchpoints.watchpoint_ids[i];
+      auto it = std::find_if (
+          info->watchpoint_map.begin (), info->watchpoint_map.end (),
+          [watchpoint] (
+              const decltype (info->watchpoint_map)::value_type &value) {
+            return value.second.second.handle == watchpoint.handle;
+          });
+      if (it != info->watchpoint_map.end ())
+        {
+          start = std::max (start, it->first);
+          finish = std::min (finish, it->second.first);
+        }
+    }
+  free (watchpoints.watchpoint_ids);
+
+  /* infrun does not seem to care about the exact address, anything within
+     the watched address range is good enough to identify the watchpoint.  */
+  *addr_p = start;
+  return start < finish;
 }
 
 void
