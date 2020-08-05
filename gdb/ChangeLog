@@ -1,3 +1,70 @@
+2020-08-04  Simon Marchi  <simon.marchi@efficios.com>
+
+	* frame.h (frame_id_p): Return bool.
+	(frame_id_artificial_p): Return bool.
+	(frame_id_eq): Return bool.
+	(has_stack_frames): Return bool.
+	(get_selected_frame): Fix typo in comment.
+	(get_frame_pc_if_available): Return bool.
+	(get_frame_address_in_block_if_available): Return bool.
+	(get_frame_func_if_available): Return bool.
+	(read_frame_register_unsigned): Return bool.
+	(get_frame_register_bytes): Return bool.
+	(safe_frame_unwind_memory): Return bool.
+	(deprecated_frame_register_read): Return bool.
+	(frame_unwinder_is): Return bool.
+	* frame.c (struct frame_info) <prev_arch::p>: Change type to
+	bool.
+	<this_id::p>: Likewise.
+	<prev_p>: Likewise.
+	(frame_stash_add): Return bool.
+	(get_frame_id): Use bool.
+	(frame_id_build_special) Use bool.
+	(frame_id_build_unavailable_stack): Use bool.
+	(frame_id_build): Use bool.
+	(frame_id_p): Return bool, use true/false instead of 1/0.
+	(frame_id_artificial_p): Likewise.
+	(frame_id_eq): Likewise.
+	(frame_id_inner): Likewise.
+	(get_frame_func_if_available): Likewise.
+	(read_frame_register_unsigned): Likewise.
+	(deprecated_frame_register_read): Likewise.
+	(get_frame_register_bytes): Likewise.
+	(has_stack_frames): Likewise.
+	(inside_main_func): Likewise.
+	(inside_entry_func): Likewise.
+	(get_frame_pc_if_available): Likewise.
+	(get_frame_address_in_block_if_available): Likewise.
+	(frame_unwinder_is): Likewise.
+	(safe_frame_unwind_memory): Likewise.
+	(frame_unwind_arch): Likewise.
+
+2020-08-04  Simon Marchi  <simon.marchi@efficios.com>
+
+	* frame.c (frame_info) <prev_func> <p>: Rename to status, change
+	type to cached_copy_status.
+	(fprintf_frame): Adjust.
+	(get_frame_func_if_available): Adjust.
+	(frame_cleanup_after_sniffer): Adjust.
+
+2020-08-04  Mark Wielaard  <mark@klomp.org>
+
+	* MAINTAINERS (Write After Approval): Update email address.
+
+2020-08-04  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (TYPE_DYN_PROP_ADDR): Remove, replace uses with
+	dynamic_prop::const_val.
+
+2020-08-04  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (TYPE_DYN_PROP_KIND): Remove, replace uses with
+	dynamic_prop::kind.
+
+2020-08-04  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (TYPE_DYN_PROP_BATON): Remove.
+
 2020-08-04  Jose E. Marchesi  <jose.marchesi@oracle.com>
 
 	* configure.tgt: Set gdb_sim for bpf-*-* targets.
