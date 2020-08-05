@@ -1,3 +1,24 @@
+2020-08-03  Alan Modra  <amodra@gmail.com>
+
+	* ldlex.l (yy_create_string_buffer): Use xmalloc rather than malloc.
+	* lexsup.c (parse_args): Likewise.
+
+2020-08-03  Alan Modra  <amodra@gmail.com>
+
+	PR 26328
+	* configure.ac: AC_CHECK_DECLS asprintf.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+
+2020-08-03  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-elfvers/vers.exp (objdump_symstuff): Remove unused
+	variable.  Init list_a and list_b to empty.
+	(objdump_dynsymstuff): Likewise, and remove undefined list_a
+	handling.
+	* testsuite/ld-elfweak/elfweak.exp (objdump_symstuff): Similarly.
+	(objdump_dynsymstuff): Similarly.
+
 2020-07-31  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* testsuite/ld-elf/indirect.exp: Append -fno-lto to CC.

@@ -589,6 +589,10 @@ Alessandro Forin and Per Bothner.  More recent ports have been the work
 of Jeremy Bennett, Franck Jullien, Stefan Wallentowitz and
 Stafford Horne.
 
+Weimin Pan, David Faust and Jose E. Marchesi contributed support for
+the Linux kernel BPF virtual architecture.  This work was sponsored by
+Oracle.
+
 Initial support for heterogeneous program debugging and @acronym{AMD
 GPU} targets was developed by the following people at the Advanced
 Micro Devices company: Scott Linder, Laurent Morichetti, Qingchuan
@@ -25533,6 +25537,7 @@ acceptable commands.
 @menu
 * ARC::                         Synopsys ARC
 * ARM::                         ARM
+* BPF::                         eBPF
 * M68K::                        Motorola M68K
 * MicroBlaze::			Xilinx MicroBlaze
 * MIPS Embedded::               MIPS Embedded
@@ -25664,6 +25669,22 @@ The default value is @code{all}.
 @item redboot
 @item all
 @end table
+@end table
+@end table
+
+@node BPF
+@subsection BPF
+
+@table @code
+@item target sim @r{[}@var{simargs}@r{]} @dots{}
+The @value{GDBN} BPF simulator accepts the following optional arguments.
+
+@table @code
+@item --skb-data-offset=@var{offset}
+Tell the simulator the offset, measured in bytes, of the
+@code{skb_data} field in the kernel @code{struct sk_buff} structure.
+This offset is used by some BPF specific-purpose load/store
+instructions.  Defaults to 0.
 @end table
 @end table
 

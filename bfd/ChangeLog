@@ -1,3 +1,19 @@
+2020-08-03  Alan Modra  <amodra@gmail.com>
+
+	* vms-lib.c (vms_traverse_index): Sanity check size remaining
+	before accessing vms_idx or vms_elfidx.
+
+2020-08-03  Alan Modra  <amodra@gmail.com>
+
+	PR 26330
+	* elf.c (_bfd_elf_get_symtab_upper_bound): Sanity check symbol table
+	size against file size.  Correct LONG_MAX limit check.
+	(_bfd_elf_get_dynamic_symtab_upper_bound): Likewise.
+	(_bfd_elf_get_reloc_upper_bound): Don't check file size if writing.
+	(_bfd_elf_get_dynamic_reloc_upper_bound): Likewise.
+	* elf64-x86-64-.c (elf_x86_64_get_synthetic_symtab): Use
+	bfd_malloc_and_get_section.
+
 2020-07-31  Alan Modra  <amodra@gmail.com>
 
 	PR 26314

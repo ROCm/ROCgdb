@@ -18901,9 +18901,7 @@ find_partial_die (sect_offset sect_off, int offset_in_dwz, struct dwarf2_cu *cu)
     }
 
   if (pd == NULL)
-    internal_error (__FILE__, __LINE__,
-		    _("could not find partial DIE %s "
-		      "in cache [from module %s]\n"),
+    error (_("Dwarf Error: Cannot not find DIE at %s [from module %s]\n"),
 		    sect_offset_str (sect_off), bfd_get_filename (objfile->obfd));
   return { cu, pd };
 }
@@ -20592,6 +20590,13 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
 	      extended_end = line_ptr + extended_len;
 	      extended_op = read_1_byte (abfd, line_ptr);
 	      line_ptr += 1;
+	      if (DW_LNE_lo_user <= extended_op
+		  && extended_op <= DW_LNE_hi_user)
+		{
+		  /* Vendor extension, ignore.  */
+		  line_ptr = extended_end;
+		  break;
+		}
 	      switch (extended_op)
 		{
 		case DW_LNE_end_sequence:

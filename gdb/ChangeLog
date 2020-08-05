@@ -1,3 +1,37 @@
+2020-08-04  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* configure.tgt: Set gdb_sim for bpf-*-* targets.
+
+2020-08-04  Weimin Pan <weimin.pan@oracle.com>
+	    Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* configure.tgt: Add entry for bpf-*-*.
+	* Makefile.in (ALL_TARGET_OBS): Add bpf-tdep.o
+	(ALLDEPFILES): Add bpf-tdep.c.
+	* bpf-tdep.c: New file.
+	* MAINTAINERS: Add bpf target and maintainer.
+	* NEWS: Mention the support for the new target.
+
+2020-08-04  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/23270
+	* dwarf2/read.c (find_partial_die): Change internal error into Dwarf
+	Error.
+
+2020-08-03  John Baldwin  <jhb@FreeBSD.org>
+
+	* syscalls/freebsd.xml: Regenerate.
+
+2020-08-03  John Baldwin  <jhb@FreeBSD.org>
+
+	* syscalls/update-freebsd.sh: Fix usage and year range.
+
+2020-08-03  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/26333
+	* dwarf2/read.c (dwarf_decode_lines_1): Ignore
+	DW_LNE_lo_user/DW_LNE_hi_user range.
+
 2020-07-30  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	PR ada/26318
