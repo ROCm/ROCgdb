@@ -1,3 +1,71 @@
+2020-08-06  Caroline Tice <cmtice@google.com>
+
+        * dwarf2/read.c (struct dwo_file): Update comment on 'sections' field.
+        (struct dwp_sections): Update field comments.  Add loclists and
+        rnglists fields.
+        (struct virtual_v2_dwo_sections): Rename struct to
+        'virtual_v2_or_v5_dwo_sections'; update comments at top of struct; add
+        size & offset fields for loclists and rnglists.
+        (struct dwp_hash_table): Add a 'v5' struct field to the union section.
+        (create_debug_type_hash_table): Add 'DW_UT_split_type' to the check for
+        skipping dummy type units.
+        (create_dwp_hash_table): Update the large comment above the function to
+        discuss Version 5 DWP files as well, with references.  Update all the
+        version checks in the function to check for version 5 as well.  Add new
+        section at the end to create dwp hash table for version 5.
+        (create_dwp_v2_section): Rename function to
+        'create_dwp_v2_or_v5_section'.  Update function comment appropriately.
+        Add V5 to error message text.
+        (create_dwo_unit_in_dwp_v2): Change calls to create_dwp_v2_section
+        into calls to create_dwp_v2_or_v5_section.
+        (create_dwo_unit_in_dwp_v5): New function.
+        (lookup_dwo_unit_in_dwp): Update conditional statement to explicitly
+        check for version2; add else clause to handle version 5.
+        (open_and_init_dwo_file): Add code to check dwarf version & only call
+        create_debug_types_hash_table (with sections.types) if version is not 5;
+        else call create_debug_type_hash_table, with sections.info.
+        (dwarf2_locate_v2_dwp_sections): Update function comment to mention
+        version 5.
+        (dwarf2_locate_v5_dwp_sections): New function.
+        (open_and_init_dwp_file): Add else-if clause for version 5 to call
+        bfd_map_over_sections with dwarf2_locate_v5_dwp_sections.
+
+2020-08-06  Simon Marchi  <simon.marchi@efficios.com>
+
+	* regcache.h (class regcache): Remove friend
+	registers_changed_ptid.
+	<regcache_thread_ptid_changed>: Remove.
+	<regcaches>: Remove.
+	* regcache.c (regcache::regcaches): Rename to...
+	(regcaches): ... this.  Make static.
+	(get_thread_arch_aspace_regcache): Update.
+	(regcache::regcache_thread_ptid_changed): Rename to...
+	(regcache_thread_ptid_changed): ... this.  Update.
+	(class regcache_access): Remove.
+	(regcaches_test): Update.
+	(_initialize_regcache): Update.
+	* sparc64-tdep.c, dwarf2/index-write.c, record-btrace.c: Include
+	<forward_list>.
+
+2020-08-06  Simon Marchi  <simon.marchi@efficios.com>
+
+	* regcache.h (class regcache) <current_regcache>: Rename to...
+	<regcaches>: ... this.  Move doc here.
+	* regcache.c (regcache::current_regcache) Rename to...
+	(regcache::regcaches): ... this.  Move doc to header.
+	(get_thread_arch_aspace_regcache): Update.
+	(regcache::regcache_thread_ptid_changed): Update.
+	(registers_changed_ptid): Update.
+	(class regcache_access) <current_regcache_size>: Rename to...
+	<regcaches_size>: ... this.
+	(current_regcache_test): Rename to...
+	(regcaches_test): ... this.
+	(_initialize_regcache): Update.
+
+2020-08-06  Victor Collod  <vcollod@nvidia.com>
+
+	* amd64-tdep.c (amd64_analyze_prologue): Fix incorrect comment.
+
 2020-08-05  Kevin Buettner  <kevinb@redhat.com>
 
 	* corelow.c (core_target::build_file_mappings): Don't output
