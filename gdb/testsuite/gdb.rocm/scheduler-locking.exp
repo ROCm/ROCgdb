@@ -52,7 +52,7 @@ if ![runto_main] {
 }
 
 # Set the symbolic breakpont in device code and turn on scheduler-locking.
-# Run "next" and "clear <location>" commands. 
+# Run "next" and "clear <location>" commands.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 gdb_test_no_output "set scheduler-locking on"
@@ -67,7 +67,7 @@ gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 
 # Set the symbolic breakpont in device code and turn on scheduler-locking.
-# Run "next", step, enable/disable <breakpont no>,continue commands. 
+# Run "next", step, enable/disable <breakpont no>,continue commands.
 clean_restart ${binfile}
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
@@ -109,8 +109,8 @@ gdb_test_sequence "info agents" "info agents" {
 # * 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
 #   6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
-    {\sId\s+Target\s+Id\s+Frame}
-    {.+\s+\d+\s+AMDGPU\sThread\s\d+\.\d+\s.*}
+    {Id\s+Target\s+Id\s+Frame}
+    {\d+\s+AMDGPU\sThread\s\d+\.\d+\s}
 }
 
 sleep 5
@@ -124,7 +124,7 @@ gdb_test_sequence "show architecture" "show architecture" {
 
 
 gdb_test_sequence "show convenience" "show convenience" {
-    {.+\$_thread = \d+.+}
+    {\$_thread = \d+}
     {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
 
 }
@@ -148,7 +148,7 @@ gdb_test_sequence "info break" "info break" {
 #   Num  Description       Executable
 # * 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
 gdb_test_sequence "info inferiors" "info inferiors" {
-    {\s+Num\s+Description\s+Executable}
+    {Num\s+Description\s+Executable}
     {\*\s\d+\s+process\s+\d+}
 }
 
