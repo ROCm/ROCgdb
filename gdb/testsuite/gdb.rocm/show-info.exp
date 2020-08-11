@@ -70,8 +70,8 @@ gdb_test_sequence "info agents" "info agents" {
 #* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
 #  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
- {\sId\s+Target\s+Id\s+Frame}
- {.+\s+\d+\s+AMDGPU\sThread\s\d+\.\d+\s\(\d+,\d+,\d+\)/\d+.*}
+ {Id\s+Target\s+Id\s+Frame}
+ {\d+\s+AMDGPU\sThread\s\d+\.\d+\s\(\d+,\d+,\d+\)/\d+}
 }
 
 #Test3
@@ -83,7 +83,7 @@ gdb_test_sequence "show architecture" "show architecture" {
 
 #Test4
 gdb_test_sequence "show convenience" "show convenience" {
- {.+\$_thread = \d+.+}
+ {\$_thread = \d+}
  {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
 
 }
@@ -121,7 +121,7 @@ gdb_test_sequence "info break" "info break" {
 #  Num  Description       Executable
 #* 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
 gdb_test_sequence "info inferiors" "info inferiors" {
- {\s+Num\s+Description\s+Executable}
+ {Num\s+Description\s+Executable}
  {\*\s\d+\s+process\s+\d+}
 }
 
