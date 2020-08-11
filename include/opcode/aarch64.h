@@ -943,6 +943,8 @@ extern const struct aarch64_name_value_pair aarch64_barrier_options [16];
 extern const struct aarch64_name_value_pair aarch64_prfops [32];
 extern const struct aarch64_name_value_pair aarch64_hint_options [];
 
+#define AARCH64_MAX_SYSREG_NAME_LEN 32
+
 typedef struct
 {
   const char *  name;
@@ -956,9 +958,7 @@ typedef struct
 
 extern const aarch64_sys_reg aarch64_sys_regs [];
 extern const aarch64_sys_reg aarch64_pstatefields [];
-extern bfd_boolean aarch64_sys_reg_deprecated_p (const aarch64_sys_reg *);
-extern bfd_boolean aarch64_sys_reg_supported_p (const aarch64_feature_set,
-						const aarch64_sys_reg *);
+extern bfd_boolean aarch64_sys_reg_deprecated_p (const uint32_t);
 extern bfd_boolean aarch64_pstatefield_supported_p (const aarch64_feature_set,
 						    const aarch64_sys_reg *);
 
@@ -971,8 +971,8 @@ typedef struct
 
 extern bfd_boolean aarch64_sys_ins_reg_has_xt (const aarch64_sys_ins_reg *);
 extern bfd_boolean
-aarch64_sys_ins_reg_supported_p (const aarch64_feature_set,
-				 const aarch64_sys_ins_reg *);
+aarch64_sys_ins_reg_supported_p (const aarch64_feature_set, aarch64_insn,
+                                 uint32_t, aarch64_feature_set);
 
 extern const aarch64_sys_ins_reg aarch64_sys_regs_ic [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_dc [];
