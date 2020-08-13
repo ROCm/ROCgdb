@@ -10127,18 +10127,26 @@ elfcore_grok_lwpstatus (bfd *abfd, Elf_Internal_Note *note)
 }
 #endif /* defined (HAVE_LWPSTATUS_T) */
 
+/* These constants, and the structure offsets used below, are defined by
+   Cygwin's core_dump.h */
+#define NOTE_INFO_PROCESS  1
+#define NOTE_INFO_THREAD   2
+#define NOTE_INFO_MODULE   3
+#define NOTE_INFO_MODULE64 4
+
 static bfd_boolean
 elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 {
   char buf[30];
   char *name;
   size_t len;
+  size_t name_size;
   asection *sect;
-  int type;
+  unsigned int type;
   int is_active_thread;
   bfd_vma base_addr;
 
-  if (note->descsz < 728)
+  if (note->descsz < 4)
     return TRUE;
 
   if (! CONST_STRNEQ (note->namedata, "win32"))
@@ -10146,20 +10154,40 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 
   type = bfd_get_32 (abfd, note->descdata);
 
+  struct {
+    const char *type_name;
+    unsigned long min_size;
+  } size_check[] =
+      {
+       { "NOTE_INFO_PROCESS", 12 },
+       { "NOTE_INFO_THREAD", 12 },
+       { "NOTE_INFO_MODULE", 12 },
+       { "NOTE_INFO_MODULE64", 16 },
+      };
+
+  if (type > (sizeof(size_check)/sizeof(size_check[0])))
+      return TRUE;
+
+  if (note->descsz < size_check[type - 1].min_size)
+    {
+      _bfd_error_handler (_("%pB: warning: win32pstatus %s of size %lu bytes is too small"),
+                          abfd, size_check[type - 1].type_name, note->descsz);
+      return TRUE;
+    }
+
   switch (type)
     {
-    case 1 /* NOTE_INFO_PROCESS */:
+    case NOTE_INFO_PROCESS:
       /* FIXME: need to add ->core->command.  */
-      /* process_info.pid */
-      elf_tdata (abfd)->core->pid = bfd_get_32 (abfd, note->descdata + 8);
-      /* process_info.signal */
-      elf_tdata (abfd)->core->signal = bfd_get_32 (abfd, note->descdata + 12);
+      elf_tdata (abfd)->core->pid = bfd_get_32 (abfd, note->descdata + 4);
+      elf_tdata (abfd)->core->signal = bfd_get_32 (abfd, note->descdata + 8);
       break;
 
-    case 2 /* NOTE_INFO_THREAD */:
-      /* Make a ".reg/999" section.  */
+    case NOTE_INFO_THREAD:
+      /* Make a ".reg/<tid>" section containing the Win32 API thread CONTEXT
+         structure. */
       /* thread_info.tid */
-      sprintf (buf, ".reg/%ld", (long) bfd_get_32 (abfd, note->descdata + 8));
+      sprintf (buf, ".reg/%ld", (long) bfd_get_32 (abfd, note->descdata + 4));
 
       len = strlen (buf) + 1;
       name = (char *) bfd_alloc (abfd, len);
@@ -10173,7 +10201,7 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 	return FALSE;
 
       /* sizeof (thread_info.thread_context) */
-      sect->size = 716;
+      sect->size = note->descsz - 12;
       /* offsetof (thread_info.thread_context) */
       sect->filepos = note->descpos + 12;
       sect->alignment_power = 2;
@@ -10186,11 +10214,25 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 	  return FALSE;
       break;
 
-    case 3 /* NOTE_INFO_MODULE */:
+    case NOTE_INFO_MODULE:
+    case NOTE_INFO_MODULE64:
       /* Make a ".module/xxxxxxxx" section.  */
-      /* module_info.base_address */
-      base_addr = bfd_get_32 (abfd, note->descdata + 4);
-      sprintf (buf, ".module/%08lx", (unsigned long) base_addr);
+      if (type == NOTE_INFO_MODULE)
+        {
+          /* module_info.base_address */
+          base_addr = bfd_get_32 (abfd, note->descdata + 4);
+          sprintf (buf, ".module/%08lx", (unsigned long) base_addr);
+          /* module_info.module_name_size */
+          name_size = bfd_get_32 (abfd, note->descdata + 8);
+        }
+      else /* NOTE_INFO_MODULE64 */
+        {
+          /* module_info.base_address */
+          base_addr = bfd_get_64 (abfd, note->descdata + 4);
+          sprintf (buf, ".module/%016lx", (unsigned long) base_addr);
+          /* module_info.module_name_size */
+          name_size = bfd_get_32 (abfd, note->descdata + 12);
+        }
 
       len = strlen (buf) + 1;
       name = (char *) bfd_alloc (abfd, len);
@@ -10203,6 +10245,13 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 
       if (sect == NULL)
 	return FALSE;
+
+      if (note->descsz < 12 + name_size)
+        {
+          _bfd_error_handler (_("%pB: win32pstatus NOTE_INFO_MODULE of size %lu is too small to contain a name of size %zu"),
+                              abfd, note->descsz, name_size);
+          return TRUE;
+        }
 
       sect->size = note->descsz;
       sect->filepos = note->descpos;

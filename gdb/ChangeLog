@@ -1,3 +1,20 @@
+2020-08-12  Luis Machado  <luis.machado@linaro.org>
+
+	* value.c (check_type_length_before_alloc): Use ULONGEST to store a
+	type's length.
+	Use %s and pulongest to print the length.
+
+2020-08-12  Pedro Alves  <palves@redhat.com>
+
+	* NEWS: Move "Multi-target debugging support" item to the
+	"Changes since GDB 9" section.
+
+2020-08-12  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/26336
+	* progspace.c (program_space::remove_objfile): Invalidate the
+	frame cache.
+
 2020-08-11  Tom de Vries  <tdevries@suse.de>
 
 	* MAINTAINERS: Mark ms1 as deleted.

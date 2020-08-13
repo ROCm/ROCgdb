@@ -1,3 +1,67 @@
+2020-08-13  Alan Modra  <amodra@gmail.com>
+
+	* config.bfd: Obsolete arm*-*-symbianelf*.
+
+2020-08-13  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.h (struct ppc64_elf_params): Add no_pcrel_opt.
+	* elf64-ppc.c (ppc64_elf_relocate_section): Disable GOT reloc
+	optimizations when --no-toc-optimize.  Disable R_PPC64_PCREL_OPT
+	optimization when --no-pcrel-optimize.
+
+2020-08-13  Alan Modra  <amodra@gmail.com>
+
+	PR 26348
+	* bfd.c (struct bfd): Add read_only.
+	* elfcode.h (elf_swap_shdr_in): Test both sh_offset and sh_size.
+	Set read_only on warning.
+	(elf_object_p): Sanity check program header alignment.  Set
+	read_only on warning.
+	* bfd-in2.h: Regenerate.
+
+2020-08-12  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (elfcore_grok_win32pstatus): Use unsigned int for
+	win32pstatus note type to avoid signedness comparison warning.
+
+2020-07-21  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (elfcore_grok_win32pstatus): Warn on malformed
+	win32pstatus notes, and return TRUE so we continue rather than
+	stopping as if it was an error.
+
+2020-07-01  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (elfcore_grok_win32pstatus): Handle NOTE_INFO_MODULE64.
+
+2020-07-11  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (elfcore_grok_win32pstatus): Don't apply size constraint
+	for NOTE_INFO_THREAD to all win32pstatus ELF notes, instead apply
+	appropriate size constraint for each win32pstatus note type.
+
+2020-07-01  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (elfcore_grok_win32pstatus): Don't hardcode the size of
+	the Win32 API thread CONTEXT type read from a NOTE_INFO_THREAD
+	win32pstatus note.
+
+2020-07-11  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (NOTE_INFO{_PROCESS,_THREAD,_MODULE}): Define.
+	(elfcore_grok_win32pstatus): Use.
+
+2020-07-01  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (elfcore_grok_win32pstatus): Fix the offset used to read
+	the tid from a win32pstatus NOTE_INFO_THREAD ELF note.  Fix
+	offsets used to read NOTE_INFO_PROCESS.
+
+2020-08-12  Nick Clifton  <nickc@redhat.com>
+
+	* po/ru.po: Updated Russian translation.
+	* po/sr.po: Updated Serbian translation.
+
 2020-08-07  David Faust  <david.faust@oracle.com>
 
 	* elf64-bpf.c (bpf_elf_relocate_section): Ensure signed division for
