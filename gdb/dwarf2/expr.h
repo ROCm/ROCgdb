@@ -25,111 +25,35 @@
 #include "leb128.h"
 #include "gdbtypes.h"
 
+class dwarf_entry;
+class dwarf_entry_factory;
 struct dwarf2_per_objfile;
-
-/* The location of a value.  */
-enum dwarf_value_location
-{
-  /* The piece is in memory.
-     The value on the dwarf stack is its address.  */
-  DWARF_VALUE_MEMORY,
-
-  /* The piece is in a register.
-     The value on the dwarf stack is the register number.  */
-  DWARF_VALUE_REGISTER,
-
-  /* The piece is on the dwarf stack.  */
-  DWARF_VALUE_STACK,
-
-  /* The piece is a literal.  */
-  DWARF_VALUE_LITERAL,
-
-  /* The piece was optimized out.  */
-  DWARF_VALUE_OPTIMIZED_OUT,
-
-  /* The piece is an implicit pointer.  */
-  DWARF_VALUE_IMPLICIT_POINTER
-};
-
-/* A piece of an object, as recorded by DW_OP_piece or DW_OP_bit_piece.  */
-struct dwarf_expr_piece
-{
-  enum dwarf_value_location location;
-
-  union
-  {
-    struct
-    {
-      /* This piece's address, for DWARF_VALUE_MEMORY pieces.  */
-      CORE_ADDR addr;
-      /* Non-zero if the piece is known to be in memory and on
-	 the program's stack.  */
-      bool in_stack_memory;
-    } mem;
-
-    /* The piece's register number, for DWARF_VALUE_REGISTER pieces.  */
-    int regno;
-
-    /* The piece's literal value, for DWARF_VALUE_STACK pieces.  */
-    struct value *value;
-
-    struct
-    {
-      /* A pointer to the data making up this piece,
-	 for DWARF_VALUE_LITERAL pieces.  */
-      const gdb_byte *data;
-      /* The length of the available data.  */
-      ULONGEST length;
-    } literal;
-
-    /* Used for DWARF_VALUE_IMPLICIT_POINTER.  */
-    struct
-    {
-      /* The referent DIE from DW_OP_implicit_pointer.  */
-      sect_offset die_sect_off;
-      /* The byte offset into the resulting data.  */
-      LONGEST offset;
-    } ptr;
-  } v;
-
-  /* The length of the piece, in bits.  */
-  ULONGEST size;
-  /* The piece offset, in bits.  */
-  ULONGEST offset;
-};
-
-/* The dwarf expression stack.  */
-
-struct dwarf_stack_value
-{
-  dwarf_stack_value (struct value *value_, int in_stack_memory_)
-  : value (value_), in_stack_memory (in_stack_memory_)
-  {}
-
-  struct value *value;
-
-  /* True if the piece is in memory and is known to be on the program's stack.
-     It is always ok to set this to zero.  This is used, for example, to
-     optimize memory access from the target.  It can vastly speed up backtraces
-     on long latency connections when "set stack-cache on".  */
-  bool in_stack_memory;
-};
 
 /* The expression evaluator works with a dwarf_expr_context, describing
    its current state and its callbacks.  */
 struct dwarf_expr_context
 {
-  dwarf_expr_context (dwarf2_per_objfile *per_objfile);
-  virtual ~dwarf_expr_context () = default;
+  /* We should ever only pass in the PER_OBJFILE and the ADDR_SIZE
+     information should be retrievable from there.  The PER_OBJFILE
+     contains a pointer to the PER_BFD information anyway and the
+     address size information must be the same for the whole BFD.   */
 
-  void push_address (CORE_ADDR value, bool in_stack_memory);
-  void eval (const gdb_byte *addr, size_t len);
-  struct value *fetch (int n);
-  CORE_ADDR fetch_address (int n);
-  bool fetch_in_stack_memory (int n);
+  dwarf_expr_context (struct dwarf2_per_objfile *per_objfile,
+		      int addr_size);
+  virtual ~dwarf_expr_context ();
 
+  void push_address (CORE_ADDR addr, bool in_stack_memory);
+  struct value *eval_exp (const gdb_byte *addr, size_t len, bool as_lval,
+			  struct dwarf2_per_cu_data *per_cu,
+			  struct frame_info *frame,
+			  const struct property_addr_info *addr_info = nullptr,
+			  struct type *type = nullptr,
+			  struct type *subobj_type = nullptr,
+			  LONGEST subobj_offset = 0);
+
+private:
   /* The stack of values.  */
-  std::vector<dwarf_stack_value> stack;
+  std::vector<dwarf_entry *> stack;
 
   /* Target architecture to use for address operations.  */
   struct gdbarch *gdbarch;
@@ -146,119 +70,48 @@ struct dwarf_expr_context
      depth we'll tolerate before raising an error.  */
   int recursion_depth, max_recursion_depth;
 
-  /* Location of the value.  */
-  enum dwarf_value_location location;
-
-  /* For DWARF_VALUE_LITERAL, the current literal value's length and
-     data.  For DWARF_VALUE_IMPLICIT_POINTER, LEN is the offset of the
-     target DIE of sect_offset kind.  */
-  ULONGEST len;
-  const gdb_byte *data;
-
-  /* Initialization status of variable: Non-zero if variable has been
-     initialized; zero otherwise.  */
-  int initialized;
-
-  /* A vector of pieces.
-
-     Each time DW_OP_piece is executed, we add a new element to the
-     end of this array, recording the current top of the stack, the
-     current location, and the size given as the operand to
-     DW_OP_piece.  We then pop the top value from the stack, reset the
-     location, and resume evaluation.
-
-     The Dwarf spec doesn't say whether DW_OP_piece pops the top value
-     from the stack.  We do, ensuring that clients of this interface
-     expecting to see a value left on the top of the stack (say, code
-     evaluating frame base expressions or CFA's specified with
-     DW_CFA_def_cfa_expression) will get an error if the expression
-     actually marks all the values it computes as pieces.
-
-     If an expression never uses DW_OP_piece, num_pieces will be zero.
-     (It would be nice to present these cases as expressions yielding
-     a single piece, so that callers need not distinguish between the
-     no-DW_OP_piece and one-DW_OP_piece cases.  But expressions with
-     no DW_OP_piece operations have no value to place in a piece's
-     'size' field; the size comes from the surrounding data.  So the
-     two cases need to be handled separately.)  */
-  std::vector<dwarf_expr_piece> pieces;
-
   /* We evaluate the expression in the context of this objfile.  */
   dwarf2_per_objfile *per_objfile;
 
-  /* Return the value of register number REGNUM (a DWARF register number),
-     read as an address.  */
-  virtual CORE_ADDR read_addr_from_reg (int regnum) = 0;
+  /* Frame information used for the evaluation.  */
+  struct frame_info *frame;
 
-  /* Return a value of type TYPE, stored in register number REGNUM
-     of the frame associated to the given BATON.
+  /* Compilation unit used for the evaluation.  */
+  struct dwarf2_per_cu_data *per_cu;
 
-     REGNUM is a DWARF register number.  */
-  virtual struct value *get_reg_value (struct type *type, int regnum) = 0;
+  /* Property address info used for the evaluation.  */
+  const struct property_addr_info *addr_info;
 
-  /* Read LENGTH bytes at ADDR into BUF.  */
-  virtual void read_mem (gdb_byte *buf, CORE_ADDR addr, size_t length) = 0;
+  /* Factory in charge of the dwarf entry's life cycle.  */
+  dwarf_entry_factory *entry_factory;
 
-  /* Return the location expression for the frame base attribute, in
-     START and LENGTH.  The result must be live until the current
-     expression evaluation is complete.  */
-  virtual void get_frame_base (const gdb_byte **start, size_t *length) = 0;
-
-  /* Return the CFA for the frame.  */
-  virtual CORE_ADDR get_frame_cfa () = 0;
-
-  /* Return the PC for the frame.  */
-  virtual CORE_ADDR get_frame_pc ()
-  {
-    error (_("%s is invalid in this context"), "DW_OP_implicit_pointer");
-  }
-
-  /* Return the thread-local storage address for
-     DW_OP_GNU_push_tls_address or DW_OP_form_tls_address.  */
-  virtual CORE_ADDR get_tls_address (CORE_ADDR offset) = 0;
-
-  /* Execute DW_AT_location expression for the DWARF expression
-     subroutine in the DIE at DIE_CU_OFF in the CU.  Do not touch
-     STACK while it being passed to and returned from the called DWARF
-     subroutine.  */
-  virtual void dwarf_call (cu_offset die_cu_off) = 0;
-
-  /* Execute "variable value" operation on the DIE at SECT_OFF.  */
-  virtual struct value *dwarf_variable_value (sect_offset sect_off) = 0;
-
-  /* Return the base type given by the indicated DIE at DIE_CU_OFF.
-     This can throw an exception if the DIE is invalid or does not
-     represent a base type.  SIZE is non-zero if this function should
-     verify that the resulting type has the correct size.  */
-  virtual struct type *get_base_type (cu_offset die_cu_off, int size)
-  {
-    /* Anything will do.  */
-    return builtin_type (this->gdbarch)->builtin_int;
-  }
-
-  /* Push on DWARF stack an entry evaluated for DW_TAG_call_site's
-     parameter matching KIND and KIND_U at the caller of specified BATON.
-     If DEREF_SIZE is not -1 then use DW_AT_call_data_value instead of
-     DW_AT_call_value.  */
-  virtual void push_dwarf_reg_entry_value (enum call_site_parameter_kind kind,
-					   union call_site_parameter_u kind_u,
-					   int deref_size) = 0;
-
-  /* Return the address indexed by DW_OP_addrx or DW_OP_GNU_addr_index.
-     This can throw an exception if the index is out of range.  */
-  virtual CORE_ADDR get_addr_index (unsigned int index) = 0;
-
-  /* Return the `object address' for DW_OP_push_object_address.  */
-  virtual CORE_ADDR get_object_address () = 0;
-
-private:
-
+  void eval (const gdb_byte *addr, size_t len);
   struct type *address_type () const;
-  void push (struct value *value, bool in_stack_memory);
+  void push (dwarf_entry *value);
   bool stack_empty_p () const;
-  void add_piece (ULONGEST size, ULONGEST offset);
+  dwarf_entry *add_piece (ULONGEST bit_size, ULONGEST bit_offset);
   void execute_stack_op (const gdb_byte *op_ptr, const gdb_byte *op_end);
   void pop ();
+  dwarf_entry *fetch (int n);
+  CORE_ADDR fetch_address (int n);
+  bool fetch_in_stack_memory (int n);
+  struct value *fetch_result (struct type *type,
+			      struct type *subobj_type,
+			      LONGEST subobj_offset,
+			      bool as_lval);
+  void get_frame_base (const gdb_byte **start, size_t *length);
+  struct type *get_base_type (cu_offset die_cu_off, int size);
+  void dwarf_call (cu_offset die_cu_off);
+  void push_dwarf_reg_entry_value (enum call_site_parameter_kind kind,
+				   union call_site_parameter_u kind_u,
+				   int deref_size);
+  dwarf_entry* dwarf_entry_deref (dwarf_entry *entry, struct type *type,
+				  size_t size = 0);
+  dwarf_entry *gdb_value_to_dwarf_entry (struct value *value);
+  struct value *dwarf_entry_to_gdb_value (dwarf_entry *entry,
+					  struct type *type,
+					  struct type *subobj_type = nullptr,
+					  LONGEST subobj_offset = 0);
 };
 
 void dwarf_expr_require_composition (const gdb_byte *, const gdb_byte *,
