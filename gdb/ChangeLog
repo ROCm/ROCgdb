@@ -1,3 +1,22 @@
+2020-08-13  Kamil Rytarowski  <n54@gmx.com>
+
+	* target.h (supports_dumpcore, dumpcore): New
+	function declarations.
+	* target.c (supports_dumpcore, dumpcore): New
+	functions.
+	* target-delegates.c: Rebuild.
+	* gcore.c (gcore_command): Use target_supports_dumpcore ()
+	and target_dumpcore ().
+
+2020-08-13  Aaron Merey  <amerey@redhat.com>
+
+	* debuginfod-support.c: Replace global variables with user_data.
+
+2020-08-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* maint.c (maintenance_selftest): Split args and pass array_view
+	to run_tests.
+
 2020-08-12  Luis Machado  <luis.machado@linaro.org>
 
 	* value.c (check_type_length_before_alloc): Use ULONGEST to store a
