@@ -1354,7 +1354,7 @@ _bfd_m32r_elf_symbol_processing (bfd *abfd ATTRIBUTE_UNUSED, asymbol *asym)
 	{
 	  /* Initialize the small common section.  */
 	  m32r_elf_scom_section.name = ".scommon";
-	  m32r_elf_scom_section.flags = SEC_IS_COMMON;
+	  m32r_elf_scom_section.flags = SEC_IS_COMMON | SEC_SMALL_DATA;
 	  m32r_elf_scom_section.output_section = &m32r_elf_scom_section;
 	  m32r_elf_scom_section.symbol = &m32r_elf_scom_symbol;
 	  m32r_elf_scom_section.symbol_ptr_ptr = &m32r_elf_scom_symbol_ptr;
@@ -1434,7 +1434,7 @@ m32r_elf_add_symbol_hook (bfd *abfd,
     {
     case SHN_M32R_SCOMMON:
       *secp = bfd_make_section_old_way (abfd, ".scommon");
-      (*secp)->flags |= SEC_IS_COMMON;
+      (*secp)->flags |= SEC_IS_COMMON | SEC_SMALL_DATA;
       *valp = sym->st_size;
       break;
     }

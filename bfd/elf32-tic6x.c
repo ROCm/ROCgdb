@@ -2952,7 +2952,7 @@ elf32_tic6x_add_symbol_hook (bfd *abfd,
     {
     case SHN_TIC6X_SCOMMON:
       *secp = bfd_make_section_old_way (abfd, ".scommon");
-      (*secp)->flags |= SEC_IS_COMMON;
+      (*secp)->flags |= SEC_IS_COMMON | SEC_SMALL_DATA;
       *valp = sym->st_size;
       bfd_set_section_alignment (*secp, bfd_log2 (sym->st_value));
       break;
@@ -2974,7 +2974,7 @@ elf32_tic6x_symbol_processing (bfd *abfd ATTRIBUTE_UNUSED, asymbol *asym)
 	{
 	  /* Initialize the small common section.  */
 	  tic6x_elf_scom_section.name = ".scommon";
-	  tic6x_elf_scom_section.flags = SEC_IS_COMMON;
+	  tic6x_elf_scom_section.flags = SEC_IS_COMMON | SEC_SMALL_DATA;
 	  tic6x_elf_scom_section.output_section = &tic6x_elf_scom_section;
 	  tic6x_elf_scom_section.symbol = &tic6x_elf_scom_symbol;
 	  tic6x_elf_scom_section.symbol_ptr_ptr = &tic6x_elf_scom_symbol_ptr;

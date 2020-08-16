@@ -7113,7 +7113,7 @@ _bfd_mips_elf_symbol_processing (bfd *abfd, asymbol *asym)
 	{
 	  /* Initialize the small common section.  */
 	  mips_elf_scom_section.name = ".scommon";
-	  mips_elf_scom_section.flags = SEC_IS_COMMON;
+	  mips_elf_scom_section.flags = SEC_IS_COMMON | SEC_SMALL_DATA;
 	  mips_elf_scom_section.output_section = &mips_elf_scom_section;
 	  mips_elf_scom_section.symbol = &mips_elf_scom_symbol;
 	  mips_elf_scom_section.symbol_ptr_ptr = &mips_elf_scom_symbol_ptr;
@@ -7800,7 +7800,7 @@ _bfd_mips_elf_add_symbol_hook (bfd *abfd, struct bfd_link_info *info,
       /* Fall through.  */
     case SHN_MIPS_SCOMMON:
       *secp = bfd_make_section_old_way (abfd, ".scommon");
-      (*secp)->flags |= SEC_IS_COMMON;
+      (*secp)->flags |= SEC_IS_COMMON | SEC_SMALL_DATA;
       *valp = sym->st_size;
       break;
 
