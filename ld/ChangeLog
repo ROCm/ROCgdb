@@ -1,3 +1,23 @@
+2020-08-16  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-powerpc/inline.s,
+	* testsuite/ld-powerpc/inline-1.d,
+	* testsuite/ld-powerpc/inline-2.d,
+	* testsuite/ld-powerpc/inline-3.d,
+	* testsuite/ld-powerpc/inline-4.d,
+	* testsuite/ld-powerpc/inlinepcrel.s,
+	* testsuite/ld-powerpc/inlinepcrel-1.d,
+	* testsuite/ld-powerpc/inlinepcrel-2.d,
+	* testsuite/ld-powerpc/inlinepcrel-3.d: New tests.
+	* testsuite/ld-powerpc/powerpc.exp: Run them.
+
+2020-08-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/26389
+	* testsuite/ld-plugin/lto.exp: Run PR binutils/26389 test.
+	* testsuite/ld-plugin/pr26389.c: New file.
+	* testsuite/ld-plugin/pr26389.d: Likewise.
+
 2020-08-14  Tamar Christina  <tamar.christina@arm.com>
 
 	* testsuite/ld-arm/thumb-plt-got.d: Relax regexpr.
