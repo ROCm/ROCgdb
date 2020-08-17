@@ -2051,10 +2051,10 @@ dwarf_expr_context::create_select_composite (ULONGEST piece_bit_size,
       else
     piece = static_cast<dwarf_location *> (entry_factory->copy_entry (zero));
 
-      piece->add_bit_offset (i * piece_bit_size);
       composite_entry->add_piece (piece, piece_bit_size);
     }
 
+  composite_entry->set_completed (true);
   return composite_entry;
 }
 
