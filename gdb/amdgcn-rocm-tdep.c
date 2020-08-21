@@ -74,7 +74,6 @@ amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   return gdbarch_tdep (gdbarch)->regnum_map[register_id];
 }
 
-
 static enum return_value_convention
 amdgcn_return_value (struct gdbarch *gdbarch, struct value *function,
                      struct type *type, struct regcache *regcache,
@@ -129,15 +128,17 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 static struct type *
 amdgcn_register_type (struct gdbarch *gdbarch, int regnum)
 {
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
+  amd_dbgapi_architecture_id_t architecture_id;
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-
   char *bytes;
-  if (amd_dbgapi_wave_register_get_info (
-          process_id, wave_id, tdep->register_ids[regnum],
-          AMD_DBGAPI_REGISTER_INFO_TYPE, sizeof (bytes), &bytes)
-      == AMD_DBGAPI_STATUS_SUCCESS)
+
+  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
+                                   &architecture_id)
+          == AMD_DBGAPI_STATUS_SUCCESS
+      && amd_dbgapi_architecture_register_get_info (
+             architecture_id, tdep->register_ids[regnum],
+             AMD_DBGAPI_REGISTER_INFO_TYPE, sizeof (bytes), &bytes)
+             == AMD_DBGAPI_STATUS_SUCCESS)
     {
       std::string type_name (bytes);
       xfree (bytes);
