@@ -319,11 +319,14 @@ reg_buffer::assert_regnum (int regnum) const
 using ptid_regcache_map
   = std::unordered_multimap<ptid_t, regcache_up, hash_ptid>;
 
-/* Type to map a target to a ptid_regcache_map, holding the regcaches for the
-   threads defined by that target.  */
+/* Type holding regcaches for a given pid.  */
 
-using target_ptid_regcache_map
-  = std::unordered_map<process_stratum_target *, ptid_regcache_map>;
+using pid_ptid_regcache_map = std::unordered_map<int, ptid_regcache_map>;
+
+/* Type holding regcaches for a given target.  */
+
+using target_pid_ptid_regcache_map
+  = std::unordered_map<process_stratum_target *, pid_ptid_regcache_map>;
 
 /* Global structure containing the existing regcaches.  */
 
@@ -331,7 +334,7 @@ using target_ptid_regcache_map
    recording if the register values have been changed (eg. by the
    user).  Therefore all registers must be written back to the
    target when appropriate.  */
-static target_ptid_regcache_map regcaches;
+static target_pid_ptid_regcache_map regcaches;
 
 struct regcache *
 get_thread_arch_aspace_regcache (process_stratum_target *target,
@@ -340,8 +343,11 @@ get_thread_arch_aspace_regcache (process_stratum_target *target,
 {
   gdb_assert (target != nullptr);
 
-  /* Find the ptid -> regcache map for this target.  */
-  auto &ptid_regc_map = regcaches[target];
+  /* Find the map for this target.  */
+  pid_ptid_regcache_map &pid_ptid_regc_map = regcaches[target];
+
+  /* Find the map for this pid.  */
+  ptid_regcache_map &ptid_regc_map = pid_ptid_regc_map[ptid.pid ()];
 
   /* Check first if a regcache for this arch already exists.  */
   auto range = ptid_regc_map.equal_range (ptid);
@@ -436,12 +442,19 @@ static void
 regcache_thread_ptid_changed (process_stratum_target *target,
 			      ptid_t old_ptid, ptid_t new_ptid)
 {
-  auto ptid_regc_map_it = regcaches.find (target);
-
-  if (ptid_regc_map_it == regcaches.end ())
+  /* Look up map for target.  */
+  auto pid_ptid_regc_map_it = regcaches.find (target);
+  if (pid_ptid_regc_map_it == regcaches.end ())
     return;
 
-  auto &ptid_regc_map = ptid_regc_map_it->second;
+ /* Look up map for pid.  */
+  pid_ptid_regcache_map &pid_ptid_regc_map = pid_ptid_regc_map_it->second;
+  auto ptid_regc_map_it = pid_ptid_regc_map.find (old_ptid.pid ());
+  if (ptid_regc_map_it == pid_ptid_regc_map.end ())
+    return;
+
+  /* Update all regcaches belonging to old_ptid.  */
+  ptid_regcache_map &ptid_regc_map = ptid_regc_map_it->second;
   auto range = ptid_regc_map.equal_range (old_ptid);
   for (auto it = range.first; it != range.second;)
     {
@@ -478,15 +491,43 @@ registers_changed_ptid (process_stratum_target *target, ptid_t ptid)
       /* Delete all the regcaches of all targets.  */
       regcaches.clear ();
     }
+  else if (ptid.is_pid ())
+    {
+      /* Non-NULL target and pid ptid, delete all regcaches belonging
+	 to this (TARGET, PID).  */
+
+      /* Look up map for target.  */
+      auto pid_ptid_regc_map_it = regcaches.find (target);
+      if (pid_ptid_regc_map_it != regcaches.end ())
+	{
+	  pid_ptid_regcache_map &pid_ptid_regc_map
+	    = pid_ptid_regc_map_it->second;
+
+	  pid_ptid_regc_map.erase (ptid.pid ());
+	}
+    }
   else if (ptid != minus_one_ptid)
     {
       /* Non-NULL target and non-minus_one_ptid, delete all regcaches belonging
-	to this (TARGET, PTID).  */
-      auto ptid_regc_map_it = regcaches.find (target);
-      if (ptid_regc_map_it != regcaches.end ())
+	 to this (TARGET, PTID).  */
+
+      /* Look up map for target.  */
+      auto pid_ptid_regc_map_it = regcaches.find (target);
+      if (pid_ptid_regc_map_it != regcaches.end ())
 	{
-	  auto &ptid_regc_map = ptid_regc_map_it->second;
-	  ptid_regc_map.erase (ptid);
+	  pid_ptid_regcache_map &pid_ptid_regc_map
+	    = pid_ptid_regc_map_it->second;
+
+	  /* Look up map for pid.  */
+	  auto ptid_regc_map_it
+	    = pid_ptid_regc_map.find (ptid.pid ());
+	  if (ptid_regc_map_it != pid_ptid_regc_map.end ())
+	    {
+	      ptid_regcache_map &ptid_regc_map
+		= ptid_regc_map_it->second;
+
+	      ptid_regc_map.erase (ptid);
+	    }
 	}
     }
   else
@@ -1479,92 +1520,199 @@ static size_t
 regcaches_size ()
 {
   size_t size = 0;
-  for (auto it = regcaches.begin (); it != regcaches.end (); ++it)
+
+  for (auto pid_ptid_regc_map_it = regcaches.cbegin ();
+       pid_ptid_regc_map_it != regcaches.cend ();
+       ++pid_ptid_regc_map_it)
     {
-      auto &ptid_regc_map = it->second;
-      size += ptid_regc_map.size ();
+      const pid_ptid_regcache_map &pid_ptid_regc_map
+	= pid_ptid_regc_map_it->second;
+
+      for (auto ptid_regc_map_it = pid_ptid_regc_map.cbegin ();
+	   ptid_regc_map_it != pid_ptid_regc_map.cend ();
+	   ++ptid_regc_map_it)
+	{
+	  const ptid_regcache_map &ptid_regc_map
+	    = ptid_regc_map_it->second;
+
+	  size += ptid_regc_map.size ();
+	}
     }
 
   return size;
 }
 
+/* Return the count of regcaches for (TARGET, PTID) in REGCACHES.  */
+
+static int
+regcache_count (process_stratum_target *target, ptid_t ptid)
+{
+  /* Look up map for target.  */
+  auto pid_ptid_regc_map_it = regcaches.find (target);
+  if (pid_ptid_regc_map_it != regcaches.end ())
+    {
+      pid_ptid_regcache_map &pid_ptid_regc_map = pid_ptid_regc_map_it->second;
+
+      /* Look map for pid.  */
+      auto ptid_regc_map_it = pid_ptid_regc_map.find (ptid.pid ());
+      if (ptid_regc_map_it != pid_ptid_regc_map.end ())
+	{
+	  ptid_regcache_map &ptid_regc_map = ptid_regc_map_it->second;
+	  auto range = ptid_regc_map.equal_range (ptid);
+
+	  return std::distance (range.first, range.second);
+	}
+    }
+
+  return 0;
+};
+
 /* Wrapper around get_thread_arch_aspace_regcache that does some self checks.  */
 
 static void
-test_get_thread_arch_aspace_regcache (process_stratum_target *target,
-				      ptid_t ptid, struct gdbarch *gdbarch,
-				      address_space *aspace)
+get_thread_arch_aspace_regcache_and_check (process_stratum_target *target,
+					   ptid_t ptid)
 {
-  struct regcache *regcache
-    = get_thread_arch_aspace_regcache (target, ptid, gdbarch, aspace);
+  /* We currently only test with a single gdbarch.  Any gdbarch will do, so use
+     the current inferior's gdbarch.  Also use the current inferior's address
+     space.  */
+  gdbarch *arch = current_inferior ()->gdbarch;
+  address_space *aspace = current_inferior ()->aspace;
+  regcache *regcache
+    = get_thread_arch_aspace_regcache (target, ptid, arch, aspace);
+
   SELF_CHECK (regcache != NULL);
   SELF_CHECK (regcache->target () == target);
   SELF_CHECK (regcache->ptid () == ptid);
+  SELF_CHECK (regcache->arch () == arch);
   SELF_CHECK (regcache->aspace () == aspace);
 }
 
-static void
-regcaches_test ()
-{
-  /* It is empty at the start.  */
-  SELF_CHECK (regcaches_size () == 0);
+/* The data that the regcaches selftests must hold onto for the duration of the
+   test.  */
 
-  ptid_t ptid1 (1), ptid2 (2), ptid3 (3);
+struct regcache_test_data
+{
+  regcache_test_data ()
+  {
+    /* Ensure the regcaches container is empty at the start.  */
+    registers_changed ();
+  }
+
+  ~regcache_test_data ()
+  {
+    /* Make sure to leave the global regcaches container empty.  */
+    registers_changed ();
+  }
 
   test_target_ops test_target1;
   test_target_ops test_target2;
+};
 
-  /* Get regcache from (target1,ptid1), a new regcache is added to
-     REGCACHES.  */
-  test_get_thread_arch_aspace_regcache (&test_target1, ptid1,
-					target_gdbarch (),
-					NULL);
-  SELF_CHECK (regcaches_size () == 1);
+using regcache_test_data_up = std::unique_ptr<regcache_test_data>;
 
-  /* Get regcache from (target1,ptid2), a new regcache is added to
-     REGCACHES.  */
-  test_get_thread_arch_aspace_regcache (&test_target1, ptid2,
-					target_gdbarch (),
-					NULL);
-  SELF_CHECK (regcaches_size () == 2);
+/* Set up a few regcaches from two different targets, for use in
+   regcache-management tests.
 
-  /* Get regcache from (target1,ptid3), a new regcache is added to
-     REGCACHES.  */
-  test_get_thread_arch_aspace_regcache (&test_target1, ptid3,
-					target_gdbarch (),
-					NULL);
-  SELF_CHECK (regcaches_size () == 3);
+   Return a pointer, because the `regcache_test_data` type is not moveable.  */
 
-  /* Get regcache from (target1,ptid2) again, nothing is added to
-     REGCACHES.  */
-  test_get_thread_arch_aspace_regcache (&test_target1, ptid2,
-					target_gdbarch (),
-					NULL);
-  SELF_CHECK (regcaches_size () == 3);
+static regcache_test_data_up
+populate_regcaches_for_test ()
+{
+  regcache_test_data_up data (new regcache_test_data);
+  size_t expected_regcache_size = 0;
 
-  /* Get regcache from (target2,ptid2), a new regcache is added to
-     REGCACHES, since this time we're using a different target.  */
-  test_get_thread_arch_aspace_regcache (&test_target2, ptid2,
-					target_gdbarch (),
-					NULL);
-  SELF_CHECK (regcaches_size () == 4);
+  SELF_CHECK (regcaches_size () == 0);
 
-  /* Mark that (target1,ptid2) changed.  The regcache of (target1,
-     ptid2) should be removed from REGCACHES.  */
-  registers_changed_ptid (&test_target1, ptid2);
-  SELF_CHECK (regcaches_size () == 3);
+  /* Populate the regcache container with a few regcaches for the two test
+     targets. */
+  for (int pid : { 1, 2 })
+    {
+      for (long lwp : { 1, 2, 3 })
+	{
+	  get_thread_arch_aspace_regcache_and_check
+	    (&data->test_target1, ptid_t (pid, lwp));
+	  expected_regcache_size++;
+	  SELF_CHECK (regcaches_size () == expected_regcache_size);
 
-  /* Get the regcache from (target2,ptid2) again, confirming the
-     registers_changed_ptid call above did not delete it.  */
-  test_get_thread_arch_aspace_regcache (&test_target2, ptid2,
-					target_gdbarch (),
-					NULL);
-  SELF_CHECK (regcaches_size () == 3);
+	  get_thread_arch_aspace_regcache_and_check
+	    (&data->test_target2, ptid_t (pid, lwp));
+	  expected_regcache_size++;
+	  SELF_CHECK (regcaches_size () == expected_regcache_size);
+	}
+    }
 
-  /* Confirm that marking all regcaches of all targets as changed
-     clears REGCACHES.  */
+  return data;
+}
+
+static void
+get_thread_arch_aspace_regcache_test ()
+{
+  /* populate_regcaches_for_test already tests most of the
+     get_thread_arch_aspace_regcache functionality.  */
+  regcache_test_data_up data = populate_regcaches_for_test ();
+  size_t regcaches_size_before = regcaches_size ();
+
+  /* Test that getting an existing regcache doesn't create a new one.  */
+  get_thread_arch_aspace_regcache_and_check (&data->test_target1, ptid_t (2, 2));
+  SELF_CHECK (regcaches_size () == regcaches_size_before);
+}
+
+  /* Test marking all regcaches of all targets as changed.  */
+
+static void
+registers_changed_ptid_all_test ()
+{
+  regcache_test_data_up data = populate_regcaches_for_test ();
+
   registers_changed_ptid (nullptr, minus_one_ptid);
   SELF_CHECK (regcaches_size () == 0);
+}
+
+/* Test marking regcaches of a specific target as changed.  */
+
+static void
+registers_changed_ptid_target_test ()
+{
+  regcache_test_data_up data = populate_regcaches_for_test ();
+
+  registers_changed_ptid (&data->test_target1, minus_one_ptid);
+  SELF_CHECK (regcaches_size () == 6);
+
+  /* Check that we deleted the regcache for the right target.  */
+  SELF_CHECK (regcache_count (&data->test_target1, ptid_t (2, 2)) == 0);
+  SELF_CHECK (regcache_count (&data->test_target2, ptid_t (2, 2)) == 1);
+}
+
+/* Test marking regcaches of a specific (target, pid) as changed.  */
+
+static void
+registers_changed_ptid_target_pid_test ()
+{
+  regcache_test_data_up data = populate_regcaches_for_test ();
+
+  registers_changed_ptid (&data->test_target1, ptid_t (2));
+  SELF_CHECK (regcaches_size () == 9);
+
+  /* Regcaches from target1 should not exist, while regcaches from target2
+     should exist.  */
+  SELF_CHECK (regcache_count (&data->test_target1, ptid_t (2, 2)) == 0);
+  SELF_CHECK (regcache_count (&data->test_target2, ptid_t (2, 2)) == 1);
+}
+
+/* Test marking regcaches of a specific (target, ptid) as changed.  */
+
+static void
+registers_changed_ptid_target_ptid_test ()
+{
+  regcache_test_data_up data = populate_regcaches_for_test ();
+
+  registers_changed_ptid (&data->test_target1, ptid_t (2, 2));
+  SELF_CHECK (regcaches_size () == 11);
+
+  /* Check that we deleted the regcache for the right target.  */
+  SELF_CHECK (regcache_count (&data->test_target1, ptid_t (2, 2)) == 0);
+  SELF_CHECK (regcache_count (&data->test_target2, ptid_t (2, 2)) == 1);
 }
 
 class target_ops_no_register : public test_target_ops
@@ -1902,20 +2050,6 @@ regcache_thread_ptid_changed ()
   get_thread_arch_aspace_regcache (&target2.mock_target, old_ptid, arch,
 				   nullptr);
 
-  /* Return the count of regcaches for (TARGET, PTID) in REGCACHES.  */
-  auto regcache_count = [] (process_stratum_target *target, ptid_t ptid)
-    -> int
-    {
-      auto ptid_regc_map_it = regcaches.find (target);
-      if (ptid_regc_map_it != regcaches.end ())
-	{
-	  auto &ptid_regc_map = ptid_regc_map_it->second;
-	  auto range = ptid_regc_map.equal_range (ptid);
-	  return std::distance (range.first, range.second);
-	}
-      return 0;
-    };
-
   gdb_assert (regcaches.size () == 2);
   gdb_assert (regcache_count (&target1.mock_target, old_ptid) == 1);
   gdb_assert (regcache_count (&target1.mock_target, new_ptid) == 0);
@@ -1952,7 +2086,16 @@ _initialize_regcache ()
 	   _("Force gdb to flush its register cache (maintainer command)."));
 
 #if GDB_SELF_TEST
-  selftests::register_test ("regcaches", selftests::regcaches_test);
+  selftests::register_test ("get_thread_arch_aspace_regcache",
+  			    selftests::get_thread_arch_aspace_regcache_test);
+  selftests::register_test ("registers_changed_ptid_all",
+			    selftests::registers_changed_ptid_all_test);
+  selftests::register_test ("registers_changed_ptid_target",
+  			    selftests::registers_changed_ptid_target_test);
+  selftests::register_test ("registers_changed_ptid_target_pid",
+  			    selftests::registers_changed_ptid_target_pid_test);
+  selftests::register_test ("registers_changed_ptid_target_ptid",
+			    selftests::registers_changed_ptid_target_ptid_test);
 
   selftests::register_test_foreach_arch ("regcache::cooked_read_test",
 					 selftests::cooked_read_test);
