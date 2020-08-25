@@ -564,12 +564,14 @@ const struct csky_arch_info csky_archs[] =
   {"ck801",  CSKY_ARCH_801,  bfd_mach_ck801},
   {"ck802",  CSKY_ARCH_802,  bfd_mach_ck802},
   {"ck803",  CSKY_ARCH_803,  bfd_mach_ck803},
-#define CSKY_ARCH_807_BASE    CSKY_ARCH_807 | CSKY_ARCH_DSP
-#define CSKY_ARCH_810_BASE    CSKY_ARCH_810 | CSKY_ARCH_DSP
-  {"ck807",  CSKY_ARCH_807_BASE,  bfd_mach_ck807},
-  {"ck810",  CSKY_ARCH_810_BASE,  bfd_mach_ck810},
+  {"ck807",  CSKY_ARCH_807,  bfd_mach_ck807},
+  {"ck810",  CSKY_ARCH_810,  bfd_mach_ck810},
+  {"ck860",  CSKY_ARCH_860,  bfd_mach_ck860},
   {NULL, 0, 0}
 };
+
+#define CSKY_ARCH_807_BASE    CSKY_ARCH_807 | CSKY_ARCH_DSP
+#define CSKY_ARCH_810_BASE    CSKY_ARCH_810 | CSKY_ARCH_DSP
 
 /* C-SKY cpus table.  */
 const struct csky_cpu_info csky_cpus[] =
@@ -604,6 +606,7 @@ const struct csky_cpu_info csky_cpus[] =
   /* CK803 series.  */
 #define CSKY_ISA_803    (CSKY_ISA_802 | CSKYV2_ISA_2E3 | CSKY_ISA_MP)
 #define CSKY_ISA_803R1  (CSKY_ISA_803 | CSKYV2_ISA_3E3R1)
+#define CSKY_ISA_803R2  (CSKY_ISA_803 | CSKYV2_ISA_3E3R1 | CSKYV2_ISA_3E3R2)
 #define CSKY_ISA_FLOAT_803 (CSKY_ISA_FLOAT_E1 | CSKY_ISA_FLOAT_1E3)
   {"ck803", CSKY_ARCH_803, CSKY_ISA_803 },
   {"ck803h", CSKY_ARCH_803, CSKY_ISA_803 },
@@ -636,6 +639,22 @@ const struct csky_cpu_info csky_cpus[] =
   {"ck803eftr1", CSKY_ARCH_803 | CSKY_ARCH_DSP | CSKY_ARCH_FLOAT, CSKY_ISA_803R1 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_FLOAT_803 | CSKY_ISA_TRUST},
   {"ck803ehftr1", CSKY_ARCH_803 | CSKY_ARCH_DSP | CSKY_ARCH_FLOAT, CSKY_ISA_803R1 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_FLOAT_803 | CSKY_ISA_TRUST},
 
+  {"ck803r2", CSKY_ARCH_803, CSKY_ISA_803R2},
+  {"ck803hr2", CSKY_ARCH_803, CSKY_ISA_803R2},
+  {"ck803tr2", CSKY_ARCH_803, CSKY_ISA_803R2 | CSKY_ISA_TRUST},
+  {"ck803htr2", CSKY_ARCH_803, CSKY_ISA_803R2 | CSKY_ISA_TRUST},
+  {"ck803fr2", CSKY_ARCH_803 | CSKY_ARCH_FLOAT, CSKY_ISA_803R2 | CSKY_ISA_FLOAT_803},
+  {"ck803fhr2", CSKY_ARCH_803 | CSKY_ARCH_FLOAT, CSKY_ISA_803R2 | CSKY_ISA_FLOAT_803},
+  {"ck803er2", CSKY_ARCH_803 | CSKY_ARCH_DSP, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE},
+  {"ck803ehr2", CSKY_ARCH_803 | CSKY_ARCH_DSP, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE},
+  {"ck803etr2", CSKY_ARCH_803 | CSKY_ARCH_DSP, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_TRUST},
+  {"ck803ehtr2", CSKY_ARCH_803 | CSKY_ARCH_DSP, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_TRUST},
+  {"ck803efr2", CSKY_ARCH_803 | CSKY_ARCH_DSP | CSKY_ARCH_FLOAT, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_FLOAT_803},
+  {"ck803efhr2", CSKY_ARCH_803 | CSKY_ARCH_DSP | CSKY_ARCH_FLOAT, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_FLOAT_803},
+  {"ck803ftr2", CSKY_ARCH_803 | CSKY_ARCH_FLOAT, CSKY_ISA_803R2 | CSKY_ISA_FLOAT_803 | CSKY_ISA_TRUST},
+  {"ck803eftr2", CSKY_ARCH_803 | CSKY_ARCH_DSP | CSKY_ARCH_FLOAT, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_FLOAT_803 | CSKY_ISA_TRUST},
+  {"ck803efhtr2", CSKY_ARCH_803 | CSKY_ARCH_DSP | CSKY_ARCH_FLOAT, CSKY_ISA_803R2 | CSKY_ISA_DSP_ENHANCE | CSKY_ISA_FLOAT_803 | CSKY_ISA_TRUST},
+
   {"ck803s", CSKY_ARCH_803, CSKY_ISA_803R1 },
   {"ck803se", CSKY_ARCH_803 | CSKY_ARCH_DSP, CSKY_ISA_803R1 | CSKYV2_ISA_DSP},
   {"ck803sj", CSKY_ARCH_803 | CSKY_ARCH_JAVA, CSKY_ISA_803R1 | CSKY_ISA_JAVA},
@@ -665,6 +684,11 @@ const struct csky_cpu_info csky_cpus[] =
   {"ck810tv", CSKY_ARCH_810_BASE, CSKY_ISA_810 | CSKYV2_ISA_DSP | CSKY_ISA_TRUST},
   {"ck810ft", CSKY_ARCH_810_BASE | CSKY_ARCH_FLOAT, CSKY_ISA_810 | CSKYV2_ISA_DSP | CSKY_ISA_VDSP | CSKY_ISA_FLOAT_810 | CSKY_ISA_TRUST},
   {"ck810ftv", CSKY_ARCH_810_BASE | CSKY_ARCH_FLOAT, CSKY_ISA_810 | CSKYV2_ISA_DSP | CSKY_ISA_VDSP | CSKY_ISA_FLOAT_810 | CSKY_ISA_TRUST},
+
+  /* CK860 Series.  */
+#define CSKY_ISA_860    (CSKY_ISA_810 | CSKYV2_ISA_10E60)
+#define CSKY_ISA_FLOAT_860 (CSKY_ISA_FLOAT_810)
+  {"ck860", CSKY_ARCH_860, CSKY_ISA_860},
 
   {NULL, 0, 0}
 };
@@ -1190,7 +1214,14 @@ md_begin (void)
 	as_warn (_("-mcpu conflict with other model parameters, using -mcpu"));
     }
   else if (arch_flag != 0)
-    mach_flag |= arch_flag | flags;
+    {
+      if ((arch_flag & CSKY_ARCH_MASK) == CSKY_ARCH_810
+	  || ((arch_flag & CSKY_ARCH_MASK) == CSKY_ARCH_807)) {
+	  /* CK807 and CK810 have DSP instruction by default.  */
+	  mach_flag |= CSKY_ARCH_DSP;
+      }
+      mach_flag |= arch_flag | flags;
+    }
   else
     {
 #ifdef TARGET_WITH_CPU
@@ -1250,16 +1281,34 @@ md_begin (void)
     {
       if (IS_CSKY_ARCH_803 (mach_flag))
 	{
-	  /* In 803, dspv1 is conflict with dspv2. We keep dspv2.  */
-	  if ((dsp_flag & CSKY_DSP_FLAG_V1) && (dsp_flag & CSKY_DSP_FLAG_V2))
-	    as_warn (_("option -mdsp conflicts with -medsp, only enabling -medsp"));
-	  isa_flag &= ~(CSKY_ISA_MAC_DSP | CSKY_ISA_DSP);
-	  isa_flag |= CSKY_ISA_DSP_ENHANCE;
+	  if ((dsp_flag & CSKY_DSP_FLAG_V1))
+	    {
+	      isa_flag |= (CSKY_ISA_MAC_DSP | CSKY_ISA_DSP);
+	      isa_flag &= ~CSKY_ISA_DSP_ENHANCE;
+	    }
+
+	  if ((dsp_flag & CSKY_DSP_FLAG_V2))
+	    {
+	      isa_flag &= ~(CSKY_ISA_MAC_DSP | CSKY_ISA_DSP);
+	      isa_flag |= CSKY_ISA_DSP_ENHANCE;
+	    }
+
+	  if ((dsp_flag & CSKY_DSP_FLAG_V1)
+	      && (dsp_flag & CSKY_DSP_FLAG_V2))
+	    {
+	      /* In 803, dspv1 is conflict with dspv2. We keep dspv2.  */
+	      as_warn ("option -mdsp conflicts with -medsp, only enabling -medsp");
+	      isa_flag &= ~(CSKY_ISA_MAC_DSP | CSKY_ISA_DSP);
+	      isa_flag |= CSKY_ISA_DSP_ENHANCE;
+	    }
 	}
       else
 	{
-	  isa_flag &= ~CSKY_ISA_DSP_ENHANCE;
-	  as_warn (_("-medsp option is only supported by ck803s, ignoring -medsp"));
+	  if (dsp_flag & CSKY_DSP_FLAG_V2)
+	    {
+	      isa_flag &= ~CSKY_ISA_DSP_ENHANCE;
+	      as_warn ("-medsp option is only supported by ck803s, ignoring -medsp");
+	    }
 	}
       ;
     }
@@ -2330,7 +2379,8 @@ csky_get_freg_val (char *str, int *len)
 {
   int reg = 0;
   char *s = NULL;
-  if ((str[0] == 'v' || str[0] == 'f') && (str[1] == 'r'))
+  if ((TOLOWER(str[0]) == 'v' || TOLOWER(str[0]) == 'f')
+      && (TOLOWER(str[1]) == 'r'))
     {
       /* It is fpu register.  */
       s = &str[2];
@@ -4905,6 +4955,7 @@ md_apply_fix (fixS   *fixP,
 	   struct tls_addend *ta = &(fixP->tc_fix_data);
 	   fixP->fx_offset = (fixP->fx_frag->fr_address + fixP->fx_where
 			      - (ta->frag->fr_address + ta->offset));
+	   *valP = fixP->fx_offset;
 	 }
 	 /* Fall through.  */
        case BFD_RELOC_CKCORE_TLS_LE32:
@@ -4966,6 +5017,7 @@ md_apply_fix (fixS   *fixP,
 	struct tls_addend *ta = &(fixP->tc_fix_data);
 	fixP->fx_offset = (fixP->fx_frag->fr_address + fixP->fx_where
 			   - (ta->frag->fr_address + ta->offset));
+	*valP = fixP->fx_offset;
       }
       /* Fall through.  */
     case BFD_RELOC_CKCORE_TLS_LE32:

@@ -3255,9 +3255,10 @@ struct elf32_arm_link_hash_entry
     (info)))
 
 /* Get the ARM elf linker hash table from a link_info structure.  */
-#define elf32_arm_hash_table(info) \
-  (elf_hash_table_id ((struct elf_link_hash_table *) ((info)->hash)) \
-  == ARM_ELF_DATA ? ((struct elf32_arm_link_hash_table *) ((info)->hash)) : NULL)
+#define elf32_arm_hash_table(p) \
+  ((is_elf_hash_table ((p)->hash)					\
+    && elf_hash_table_id (elf_hash_table (p)) == ARM_ELF_DATA)		\
+   ? (struct elf32_arm_link_hash_table *) (p)->hash : NULL)
 
 #define arm_stub_hash_lookup(table, string, create, copy) \
   ((struct elf32_arm_stub_hash_entry *) \
@@ -10347,16 +10348,22 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
 
   if (globals->use_rel)
     {
-      addend = bfd_get_32 (input_bfd, hit_data) & howto->src_mask;
+      bfd_vma sign;
 
-      if (addend & ((howto->src_mask + 1) >> 1))
+      switch (howto->size)
 	{
-	  signed_addend = -1;
-	  signed_addend &= ~ howto->src_mask;
-	  signed_addend |= addend;
+	case 0: addend = bfd_get_8 (input_bfd, hit_data); break;
+	case 1: addend = bfd_get_16 (input_bfd, hit_data); break;
+	case 2: addend = bfd_get_32 (input_bfd, hit_data); break;
+	default: addend = 0; break;
 	}
-      else
-	signed_addend = addend;
+      /* Note: the addend and signed_addend calculated here are
+	 incorrect for any split field.  */
+      addend &= howto->src_mask;
+      sign = howto->src_mask & ~(howto->src_mask >> 1);
+      signed_addend = (addend ^ sign) - sign;
+      signed_addend = (bfd_vma) signed_addend << howto->rightshift;
+      addend <<= howto->rightshift;
     }
   else
     addend = signed_addend = rel->r_addend;
@@ -10751,11 +10758,7 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
 	  value -= (input_section->output_section->vma
 		    + input_section->output_offset);
 	  value -= rel->r_offset;
-	  if (globals->use_rel)
-	    value += (signed_addend << howto->size);
-	  else
-	    /* RELA addends do not have to be adjusted by howto->size.  */
-	    value += signed_addend;
+	  value += signed_addend;
 
 	  signed_addend = value;
 	  signed_addend >>= howto->rightshift;
@@ -10859,9 +10862,6 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
       return bfd_reloc_ok;
 
     case R_ARM_ABS8:
-      /* PR 16202: Refectch the addend using the correct size.  */
-      if (globals->use_rel)
-	addend = bfd_get_8 (input_bfd, hit_data);
       value += addend;
 
       /* There is no way to tell whether the user intended to use a signed or
@@ -10874,9 +10874,6 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
       return bfd_reloc_ok;
 
     case R_ARM_ABS16:
-      /* PR 16202: Refectch the addend using the correct size.  */
-      if (globals->use_rel)
-	addend = bfd_get_16 (input_bfd, hit_data);
       value += addend;
 
       /* See comment for R_ARM_ABS8.  */
@@ -11355,25 +11352,12 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
 
 	/* CZB cannot jump backward.  */
 	if (r_type == R_ARM_THM_JUMP6)
-	  reloc_signed_min = 0;
-
-	if (globals->use_rel)
 	  {
-	    /* Need to refetch addend.  */
-	    addend = bfd_get_16 (input_bfd, hit_data) & howto->src_mask;
-	    if (addend & ((howto->src_mask + 1) >> 1))
-	      {
-		signed_addend = -1;
-		signed_addend &= ~ howto->src_mask;
-		signed_addend |= addend;
-	      }
-	    else
-	      signed_addend = addend;
-	    /* The value in the insn has been right shifted.  We need to
-	       undo this, so that we can perform the address calculation
-	       in terms of bytes.  */
-	    signed_addend <<= howto->rightshift;
+	    reloc_signed_min = 0;
+	    if (globals->use_rel)
+	      signed_addend = ((addend & 0x200) >> 3) | ((addend & 0xf8) >> 2);
 	  }
+
 	relocation = value + signed_addend;
 
 	relocation -= (input_section->output_section->vma

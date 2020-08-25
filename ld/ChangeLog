@@ -1,3 +1,33 @@
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-libs/libs.exp: Don't run on sh-pe, tic30 or tic54x.
+	* testsuite/ld-scripts/data.d: xfail tic4x and tic54x.
+	* testsuite/ld-scripts/empty-address-2a.d: xfail tic54x.
+	* testsuite/ld-scripts/empty-address-2b.d: Likewise.
+	* testsuite/ld-scripts/include-1.d: xfail tic4x and tic54x.
+	* testsuite/ld-scripts/provide-1.d: xfail tic54x.
+	* testsuite/ld-scripts/provide-2.d: Likewise.
+	* testsuite/ld-scripts/provide-4.d: Likewise.
+
+2020-08-24  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-sparc/tlssunbin32.rd: Update for new readelf output.
+	* testsuite/ld-sparc/tlssunbin64.rd: Likewise.
+
+2020-08-24  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-powerpc/tls32.d: Update for TPREL_HA/LO optimisation.
+	* testsuite/ld-powerpc/tlsexe32.d: Likewise.
+	* testsuite/ld-powerpc/tlsldopt32.d: Likewise.
+	* testsuite/ld-powerpc/tlsmark32.d: Likewise.
+	* testsuite/ld-powerpc/tlsopt4_32.d: Likewise.
+	* testsuite/ld-powerpc/tprel.s,
+	* testsuite/ld-powerpc/tprel.d,
+	* testsuite/ld-powerpc/tprel32.d: New tests.
+	* testsuite/ld-powerpc/tprelbad.s,
+	* testsuite/ld-powerpc/tprelbad.d: New test.
+	* testsuite/ld-powerpc/powerpc.exp: Run them.
+
 2020-08-22  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR ld/26382

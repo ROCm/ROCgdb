@@ -1,3 +1,34 @@
+2020-08-25  Gaius Mulley  <gaiusmod2@gmail.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR m2/26372
+        * m2-exp.y (exp): Improve comment for non_empty_arglist case, add
+	an assert.  Remove single element array indexing pattern as the
+	MULTI_SUBSCRIPT support will handle this case too.
+
+2020-08-24  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* value.h (valprint_check_validity): Move declaration from
+	here...
+	* valprint.h (valprint_check_validity): ... to here.
+
+2020-08-24  Simon Marchi  <simon.marchi@efficios.com>
+
+	* debug.h: New file.
+	* debug.c (debug_prefixed_vprintf): New function.
+	* infrun.c (infrun_debug_printf_1): Use debug_prefixed_vprintf.
+	* linux-nat.c (linux_nat_debug_printf_1): Likewise.
+
+2020-08-24  Simon Marchi  <simon.marchi@efficios.com>
+
+	* infrun.h (infrun_debug_printf_1): New function declaration.
+	(infrun_debug_printf): New macro.
+	* infrun.c (infrun_debug_printf_1): Use infrun_debug_printf
+	throughout.
+	(infrun_debug_printf): New function.
+	* breakpoint.c (should_be_inserted): Use infrun_debug_printf.
+	(handle_jit_event): Likewise.
+
 2020-08-21  Mark Wielaard  <mark@klomp.org>
 
 	* ada-lex.l: Extend register warnings diagnostics comment for g++.

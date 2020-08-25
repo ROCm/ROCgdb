@@ -128,8 +128,9 @@ struct elf_mn10300_obj_tdata
 /* Get the MN10300 ELF linker hash table from a link_info structure.  */
 
 #define elf32_mn10300_hash_table(p) \
-  (elf_hash_table_id ((struct elf_link_hash_table *) ((p)->hash)) \
-  == MN10300_ELF_DATA ? ((struct elf32_mn10300_link_hash_table *) ((p)->hash)) : NULL)
+  ((is_elf_hash_table ((p)->hash)					\
+    && elf_hash_table_id (elf_hash_table (p)) == MN10300_ELF_DATA)	\
+   ? (struct elf32_mn10300_link_hash_table *) (p)->hash : NULL)
 
 #define elf32_mn10300_link_hash_traverse(table, func, info)		\
   (elf_link_hash_traverse						\
@@ -3931,7 +3932,7 @@ mn10300_elf_relax_section (bfd *abfd,
 	  /* See if the value will fit in 24 bits.
 	     We allow any 16bit match here.  We prune those we can't
 	     handle below.  */
-	  if ((long) value < 0x7fffff && (long) value > -0x800000)
+	  if (value + 0x800000 < 0x1000000 && irel->r_offset >= 3)
 	    {
 	      unsigned char code;
 
@@ -4002,7 +4003,7 @@ mn10300_elf_relax_section (bfd *abfd,
 	  /* See if the value will fit in 16 bits.
 	     We allow any 16bit match here.  We prune those we can't
 	     handle below.  */
-	  if ((long) value < 0x7fff && (long) value > -0x8000)
+	  if (value + 0x8000 < 0x10000 && irel->r_offset >= 2)
 	    {
 	      unsigned char code;
 

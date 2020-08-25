@@ -801,8 +801,6 @@ initialise_reg_hash_table (htab_t *hash_table,
   const reg_entry *rreg;
 
   *hash_table = str_htab_create ();
-  if (*hash_table == NULL)
-    as_fatal (_("Virtual memory exhausted"));
 
   for (rreg = register_table;
        rreg < (register_table + num_entries);
@@ -820,8 +818,7 @@ md_begin (void)
   int i = 0;
 
   /* Set up a hash table for the instructions.  */
-  if ((cr16_inst_hash = str_htab_create ()) == NULL)
-    as_fatal (_("Virtual memory exhausted"));
+  cr16_inst_hash = str_htab_create ();
 
   while (cr16_instruction[i].mnemonic != NULL)
     {
@@ -1516,15 +1513,12 @@ static char *
 get_b_cc (char * op)
 {
   unsigned int i;
-  char op1[5];
 
-  for (i = 1; i < strlen (op); i++)
-     op1[i-1] = op[i];
-
-  op1[i-1] = '\0';
+  if (op[1] == 0 || (op[2] != 0 && op[3] != 0))
+    return NULL;
 
   for (i = 0; i < cr16_num_cc ; i++)
-    if (streq (op1, cr16_b_cond_tab[i]))
+    if (streq (op + 1, cr16_b_cond_tab[i]))
       return (char *) cr16_b_cond_tab[i];
 
    return NULL;

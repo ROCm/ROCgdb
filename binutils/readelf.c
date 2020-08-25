@@ -14006,7 +14006,7 @@ dump_section_as_strings (Elf_Internal_Shdr * section, Filedata * filedata)
 
 	  if (maxlen > 0)
 	    {
-	      char c;
+	      char c = 0;
 
 	      while (maxlen)
 		{

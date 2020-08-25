@@ -1953,6 +1953,7 @@ enum bfd_architecture
 #define bfd_mach_ck803         5
 #define bfd_mach_ck807         6
 #define bfd_mach_ck810         7
+#define bfd_mach_ck860         8
   bfd_arch_amdgcn,     /* AMD GPU Architecture. Must match EF_AMDGPU_MACH_* */
 #define bfd_mach_amdgcn_unknown 0x000
 #define bfd_mach_amdgcn_gfx801  0x028

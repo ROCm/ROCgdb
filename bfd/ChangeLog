@@ -1,3 +1,144 @@
+2020-08-25  Mark Wielaard  <mark@klomp.org>
+
+	*  dwarf2.c (struct dwarf2_debug_file): Add dwarf_rnglists_buffer
+	and dwarf_rnglists_size fields.
+	(dwarf_debug_sections): Add debug_rnglists.
+	(dwarf_debug_section_enum): Likewise.
+	(read_debug_rnglists): New function.
+	(read_rangelist): New function to call either read_ranges or
+	read_rnglists. Rename original function to...
+	(read_ranges): ...this.
+	(read_rnglists): New function.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26505
+	* elf32-xstormy16.c (xstormy16_elf_relax_section): Check
+	is_elf_hash_table before accessing elf fields.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26482
+	* coff-rs6000.c (_bfd_xcoff_sizeof_headers): Ignore sections that
+	won't be output.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26463
+	* elf32-m32c.c (m32c_elf_relax_section): Check is_elf_hash_table
+	before accessing elf fields.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26452
+	* som.c (som_compute_checksum): XOR 32-bit words in header,
+	not unsigned long sized words.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26430
+	* elf-nacl.c (nacl_modify_segment_map): Correct alloc size and
+	amount copied for elf_segment_map defined with one element
+	sections array.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26422
+	* elf32-arm.c (elf32_arm_final_link_relocate): Use the appropriate
+	bfd_get_x size function to read addends out of fields.  Apply
+	rightshift adjustment too.  Don't apply the now unnecessary
+	howto->size shift to branch REL addends.  Don't refetch R_ARM_ABS8
+	and R_ARM_ABS16 addends.  Don't refetch thumb branch addends.
+	Correct R_ARM_THM_JUMP6 addend.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26419
+	* elf-m10300.c (mn10300_elf_relax_section): Don't attempt access
+	before start of section.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	* elf-m10300.c (elf32_mn10300_hash_table): Test is_elf_hash_table
+	before accessing elf_hash_table_id.
+	* elf32-arc.c (elf_arc_hash_table): Likewise.
+	* elf32-arm.c (elf32_arm_hash_table): Likewise.
+	* elf32-avr.c (avr_link_hash_table): Likewise.
+	* elf32-bfin.c (bfinfdpic_hash_table): Likewise.
+	* elf32-cris.c (elf_cris_hash_table): Likewise.
+	* elf32-csky.c (csky_elf_hash_table): Likewise.
+	* elf32-frv.c (frvfdpic_hash_table): Likewise.
+	* elf32-hppa.c (hppa_link_hash_table): Likewise.
+	* elf32-lm32.c (lm32_elf_hash_table): Likewise.
+	* elf32-m32r.c (m32r_elf_hash_table): Likewise.
+	* elf32-m68hc1x.h (m68hc11_elf_hash_table): Likewise.
+	* elf32-m68k.c (elf_m68k_hash_table): Likewise.
+	* elf32-metag.c (metag_link_hash_table): Likewise.
+	* elf32-microblaze.c (elf32_mb_hash_table): Likewise.
+	* elf32-nds32.h (nds32_elf_hash_table): Likewise.
+	* elf32-or1k.c (or1k_elf_hash_table): Likewise.
+	* elf32-s390.c (elf_s390_hash_table): Likewise.
+	* elf32-sh.c (sh_elf_hash_table): Likewise.
+	* elf32-spu.c (spu_hash_table): Likewise.
+	* elf32-tilepro.c (tilepro_elf_hash_table): Likewise.
+	* elf32-xtensa.c (elf_xtensa_hash_table): Likewise.
+	* elf64-alpha.c (alpha_elf_hash_table): Likewise.
+	* elf64-hppa.c (hppa_link_hash_table): Likewise.
+	* elf64-ia64-vms.c (elf64_ia64_hash_table): Likewise.
+	* elf64-s390.c (elf_s390_hash_table): Likewise.
+	* elfnn-ia64.c (elfNN_ia64_hash_table): Likewise.
+	* elfnn-riscv.c (riscv_elf_hash_table): Likewise.
+	* elfxx-mips.c (mips_elf_hash_table): Likewise.
+	* elfxx-sparc.h (_bfd_sparc_elf_hash_table): Likewise.
+	* elfxx-tilegx.c (tilegx_elf_hash_table): Likewise.
+
+2020-08-21  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* elf.c (elfcore_grok_win32pstatus): Change name_size to unsigned
+	int. Use '%u' format with  _bfd_error_handler to render it.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26489
+	* elf64-ppc.c (ppc64_elf_size_stubs): Test code_sec->has_toc_reloc
+	and code_sec->makes_toc_func_call before sec_info[code_sec->id].
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26492
+	* elf64-ppc.c (ppc_hash_table): Test is_elf_hash_table before
+	accessing elf_hash_table_id.
+
+2020-08-25  Alan Modra  <amodra@gmail.com>
+
+	PR 26483
+	* elf32-ppc.c (ppc_elf_hash_table): Test is_elf_hash_table before
+	accessing elf_hash_table_id.
+
+2020-08-24  Mark Wielaard  <mark@klomp.org>
+
+	* dwarf2.c (read_attribute_value): Handle DW_FORM_data16.
+	(read_formatted_entries): Likewise. And skip zero entry.
+
+2020-08-24  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* bfd-in2.h (bfd_mach_ck860): New.
+	* cpu-csky.c (arch_info_struct): Add item for CK860.
+
+2020-08-24  Alan Modra  <amodra@gmail.com>
+
+	* elf32-ppc.c (ppc_elf_check_relocs): Set has_tls_reloc for
+	high part tprel16 relocs.
+	(ppc_elf_tls_optimize): Sanity check high part tprel16 relocs.
+	Clear do_tls_opt on odd instructions.
+	(ppc_elf_relocate_section): Move TPREL16_HA/LO optimisation later.
+	Don't sanity check them here.
+	* elf64-ppc.c (ppc64_elf_check_relocs): Set has_tls_reloc for
+	high part tprel16 relocs.
+	(ppc64_elf_tls_optimize): Sanity check high part tprel16 relocs.
+	Clear do_tls_opt on odd instructions.
+	(ppc64_elf_relocate_section): Don't sanity check TPREL16_HA.
+
 2020-08-23  John David Anglin  <danglin@gcc.gnu.org>
 
 	PR binutils/26357
