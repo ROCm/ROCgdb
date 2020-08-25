@@ -45,7 +45,7 @@ in this folder or check the GNU Debugger (GDB) web site at:
 Build the AMD ROCm Debugger
 ---------------------------
 
-ROCgdb can be built on Ubuntu 16.04, Ubuntu 18.04, Centos 8.1, RHEL 8.1, and SLES
+ROCgdb can be built on Ubuntu 18.04, Ubuntu 20.04, Centos 8.1, RHEL 8.1, and SLES
 15 Service Pack 1.
 
 Building ROCgdb has the following prerequisites:
@@ -55,12 +55,12 @@ Building ROCgdb has the following prerequisites:
 2. AMD Debugger API Library (ROCdbgapi) which can be installed as part of the
    AMD ROCm release by the ``rocm-dbgapi`` package.
 
-3. For Ubuntu 16.04 and Ubuntu 18.04 the following adds the needed packages:
+3. For Ubuntu 18.04 and Ubuntu 20.04 the following adds the needed packages:
 
    ````shell
    apt install bison flex gcc make ncurses-dev texinfo g++ zlib1g-dev \
-     libexpat-dev libpython3.6-dev python3.6-minimal liblzma-dev \
-     libbabeltrace-dev libbabeltrace-ctf-dev
+     libexpat-dev python3-dev liblzma-dev libbabeltrace-dev \
+     libbabeltrace-ctf-dev
    ````
 
 4. For CentOS 8.1 and RHEL 8.1 the following adds the needed packages:
