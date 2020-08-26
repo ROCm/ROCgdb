@@ -1,8 +1,22 @@
+2020-08-25  Shahab Vahedi  <shahab@synopsys.com>
+
+	* gdb.arch/arc-tdesc-cpu.xml: Use new feature names.
+
+2020-08-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26532
+	* gdb.threads/stepi-random-signal.exp: Update pattern.
+
+2020-08-25  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/26532
+	* gdb.base/ui-redirect.exp: Update pattern.
+
 2020-08-25  Gary Benson <gbenson@redhat.com>
 
 	* gdb.dwarf2/dw2-dir-file-name.exp: Use system assembler
 	when compiling with clang.
-	* gdb.dwarf2/dw2-restore.exp: Likewise
+	* gdb.dwarf2/dw2-restore.exp: Likewise.
 
 2020-08-25  Gary Benson <gbenson@redhat.com>
 
