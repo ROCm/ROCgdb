@@ -1,3 +1,25 @@
+2020-08-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/ld-elf/indirect.exp: Append $NOSANTIZE_CFLAGS to CC.
+	* testsuite/ld-elf/shared.exp: Likewise.
+	* testsuite/ld-elfcomm/elfcomm.exp: Likewise.
+	* testsuite/ld-elfvers/vers.exp: Likewise.
+	* testsuite/ld-elfvsb/elfvsb.exp: Likewise.
+	* testsuite/ld-elfweak/elfweak.exp: Likewise.
+	* testsuite/ld-plugin/lto.exp: Likewise.
+	* testsuite/ld-plugin/plugin.exp: Likewise.
+	* testsuite/ld-scripts/crossref.exp: Likewise.
+
+2020-08-26  Alan Modra  <amodra@gmail.com>
+
+	PR 26499
+	* emultempl/spuelf.em (spu_elf_relink): Check for NULL tmp_file_list.
+
+2020-08-26  Alan Modra  <amodra@gmail.com>
+
+	PR 26431
+	* pe-dll.c (auto_export): Don't call bsearch with zero count.
+
 2020-08-25  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/ld-libs/libs.exp: Don't run on sh-pe, tic30 or tic54x.
