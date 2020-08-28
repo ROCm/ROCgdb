@@ -1,3 +1,35 @@
+2020-08-27  Pedro Alves  <pedro@palves.net>
+
+	PR gdb/26524
+	* breakpoint.c (until_break_fsm) <location_breakpoint,
+	caller_breakpoint>: Delete fields.
+	<breakpoints>: New field.
+	<until_break_fsm>: Adjust to save a breakpoint vector instead of
+	two individual breakpoints.
+	(until_break_fsm::should_stop): Loop over breakpoints in the
+	breakpoint vector.
+	(until_break_fsm::clean_up): Adjust to clear the breakpoints
+	vector.
+	(until_break_command): Handle location expanding into multiple
+	sals.
+
+2020-08-27  Pedro Alves  <pedro@palves.net>
+
+	PR gdb/26523
+	* inline-frame.c (stopped_by_user_bp_inline_frame): Also consider
+	bp_until breakpoints user-specified locations.  Update intro
+	comment.
+
+2020-08-27  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb_bfd.h (gdb_bfd_section_iterator, gdb_bfd_section_range,
+	gdb_bfd_sections): New.
+	* maint.c (print_bfd_section_info): Change param type to
+	maint_print_section_data.
+	(print_objfile_section_info): Likewise.
+	(print_bfd_section_info_maybe_relocated): Likewise.
+	(maintenance_info_sections): Use gdb_bfd_sections.
+
 2020-08-25  Shahab Vahedi  <shahab@synopsys.com>
 
 	* MAINTAINERS: Add ARC target and maintainer.
@@ -55,7 +87,7 @@
 	    Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	PR m2/26372
-        * m2-exp.y (exp): Improve comment for non_empty_arglist case, add
+	* m2-exp.y (exp): Improve comment for non_empty_arglist case, add
 	an assert.  Remove single element array indexing pattern as the
 	MULTI_SUBSCRIPT support will handle this case too.
 

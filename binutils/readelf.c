@@ -4305,7 +4305,7 @@ get_tic6x_section_type_name (unsigned int sh_type)
 }
 
 static const char *
-get_msp430x_section_type_name (unsigned int sh_type)
+get_msp430_section_type_name (unsigned int sh_type)
 {
   switch (sh_type)
     {
@@ -4422,7 +4422,7 @@ get_section_type_name (Filedata * filedata, unsigned int sh_type)
 	      result = get_tic6x_section_type_name (sh_type);
 	      break;
 	    case EM_MSP430:
-	      result = get_msp430x_section_type_name (sh_type);
+	      result = get_msp430_section_type_name (sh_type);
 	      break;
 	    case EM_NFP:
 	      result = get_nfp_section_type_name (sh_type);
@@ -14275,6 +14275,26 @@ dump_ctf_indent_lines (ctf_sect_names_t sect ATTRIBUTE_UNUSED,
   return new_s;
 }
 
+/* Dump CTF errors/warnings.  */
+static void
+dump_ctf_errs (ctf_file_t *fp)
+{
+  ctf_next_t *it = NULL;
+  char *errtext;
+  int is_warning;
+  int err;
+
+  /* Dump accumulated errors and warnings.  */
+  while ((errtext = ctf_errwarning_next (fp, &it, &is_warning, &err)) != NULL)
+    {
+      error (_("%s: %s"), is_warning ? _("warning"): _("error"),
+	     errtext);
+      free (errtext);
+    }
+  if (err != ECTF_NEXT_END)
+    error (_("CTF error: cannot get CTF errors: `%s'"), ctf_errmsg (err));
+}
+
 /* Dump one CTF archive member.  */
 
 static int
@@ -14285,9 +14305,6 @@ dump_ctf_archive_member (ctf_file_t *ctf, const char *name, void *arg)
 			  "Function objects", "Variables", "Types", "Strings",
 			  ""};
   const char **thing;
-  ctf_next_t *it = NULL;
-  char *errtext;
-  int is_warning;
   size_t i;
   int err = 0;
 
@@ -14328,18 +14345,7 @@ dump_ctf_archive_member (ctf_file_t *ctf, const char *name, void *arg)
     }
 
  out:
-  /* Dump accumulated errors and warnings.  */
-  while ((errtext = ctf_errwarning_next (ctf, &it, &is_warning)) != NULL)
-    {
-      error (_("%s: `%s'\n"), is_warning ? _("warning"): _("error"),
-	     errtext);
-      free (errtext);
-    }
-  if (ctf_errno (ctf) != ECTF_NEXT_END)
-    {
-      error (_("CTF error: cannot get CTF errors: `%s'\n"),
-	     ctf_errmsg (ctf_errno (ctf)));
-    }
+  dump_ctf_errs (ctf);
   return err;
 }
 
@@ -14426,6 +14432,7 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
 
   if ((ctfa = ctf_arc_bufopen (&ctfsect, symsectp, strsectp, &err)) == NULL)
     {
+      dump_ctf_errs (NULL);
       error (_("CTF open failure: %s\n"), ctf_errmsg (err));
       goto fail;
     }
@@ -14435,6 +14442,7 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
       if ((parenta = ctf_arc_bufopen (&parentsect, symsectp, strsectp,
 				      &err)) == NULL)
 	{
+	  dump_ctf_errs (NULL);
 	  error (_("CTF open failure: %s\n"), ctf_errmsg (err));
 	  goto fail;
 	}
@@ -14448,6 +14456,7 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
      put CTFs and their parents in archives together.)  */
   if ((parent = ctf_arc_open_by_name (lookparent, NULL, &err)) == NULL)
     {
+      dump_ctf_errs (NULL);
       error (_("CTF open failure: %s\n"), ctf_errmsg (err));
       goto fail;
     }
@@ -16203,7 +16212,7 @@ display_raw_attribute (unsigned char * p, unsigned char const * const end)
 }
 
 static unsigned char *
-display_msp430x_attribute (unsigned char * p,
+display_msp430_attribute (unsigned char * p,
 			   const unsigned char * const end)
 {
   unsigned int val;
@@ -20223,7 +20232,7 @@ process_arch_specific (Filedata * filedata)
 
     case EM_MSP430:
      return process_attributes (filedata, "mspabi", SHT_MSP430_ATTRIBUTES,
-				display_msp430x_attribute,
+				display_msp430_attribute,
 				display_msp430_gnu_attribute);
 
     case EM_RISCV:

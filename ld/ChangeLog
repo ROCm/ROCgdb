@@ -1,3 +1,60 @@
+2020-08-28  Nelson Chu  <nelson.chu@sifive.com>
+
+	testsuite/ld-riscv-elf/lib-nopic-01a.s: Use R_RISCV_JAL rather
+	than R_RISCV_CALL.
+	testsuite/ld-riscv-elf/lib-nopic-01b.d: Likewise.
+	testsuite/ld-riscv-elf/lib-nopic-01b.s: Likewise.
+
+2020-08-27  Jozef Lawrynowicz  <jozef.l@mittosystems.com>
+
+	* emultempl/msp430.em: Remove unused variable "buf".
+
+2020-08-27  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldlang.c (dump_ctf_errs): Unquote CTF error messages.
+	(ldlang_open_ctf): Likewise.
+	(lang_merge_ctf): Likewise.
+	(lang_write_ctf): Likewise.
+	* testsuite/ld-ctf/diag-ctf-version-f.d: Adjust.
+	* testsuite/ld-ctf/diag-cttname-invalid.d: Adjust.
+	* testsuite/ld-ctf/diag-decompression-failure.d: Adjust.
+	* testsuite/ld-ctf/diag-parname.d: Adjust.
+	* testsuite/ld-ctf/diag-unsupported-flag.d: Adjust.
+	* testsuite/ld-ctf/diag-wrong-magic-number-mixed.d: Adjust.
+	* testsuite/ld-ctf/diag-wrong-magic-number.d: Adjust.
+
+2020-08-27  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldlang.c (lang_ctf_errs_warnings): Support calls with NULL fp.
+	Adjust for new err parameter to ctf_errwarning_next.  Only
+	check for assertion failures when fp is non-NULL.
+	(ldlang_open_ctf): Call it on open errors.
+	* testsuite/ld-ctf/ctf.exp: Always use the C locale to avoid
+	breaking the diags tests.
+
+2020-08-27  Jeremy Drake  <sourceware-bugzilla@jdrake.com>
+
+	PR 19011
+	* emultempl/pe.em (DEFAULT_DLL_CHARACTERISTICS): Define.
+	(pe_dll_characteristics): Initialise to DEFAULT_DLL_CHARACTERISTICS.
+	(add_options): Add options to disable DLL characteristics.
+	(list_options): List the new options.
+	(handle_options): Handle the new options.
+	* emultempl/pep.em: Similar changes to above.
+	(NT_EXE_IMAGE_BASE): Default to an address above 4G.
+	(NT_DLL_IMAGE_BASE, NT_DLL_AUTO_IMAGE_BASE,
+	(NT_DLL_AUTO_IMAGE_MASK): Likewise.
+	* ld.texi: Document the new options.
+	* pe-dll.c (pe_dll_enable_reloc_section): Change to default to
+	true.
+	(generate_reloc): Do nothing if there is no reloc section.
+	(pe_exe_fill_sections): Only assign the reloc section contents if
+	the section exists.
+	* testsuite/ld-pe/pe.exp: Add the --disable-reloc-section flag to
+	the .secrel32 tests.
+	* testsuite/ld-scripts/provide-8.d: Expect for fail on PE targets.
+	* NEWS: Mention the change in DLL generation.
+
 2020-08-26  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* testsuite/ld-elf/indirect.exp: Append $NOSANTIZE_CFLAGS to CC.

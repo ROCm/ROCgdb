@@ -1,3 +1,46 @@
+2020-08-28  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c (riscv_elf_check_relocs): Treat R_RISCV_CALL
+	and R_RISCV_CALL_PLT as the same in the riscv_elf_check_relocs.
+	(riscv_elf_relocate_section): Remove the R_RISCV_CALL for the
+	unresolved reloc checks.
+
+2020-08-27  John David Anglin  <danglin@gcc.gnu.org>
+
+	PR 26356
+	* som.c (som_bfd_copy_private_section_data): Issue error when a
+	subspace is specified without its containing space.
+
+2020-08-27  Alan Modra  <amodra@gmail.com>
+
+	PR 26469
+	* elflink.c: Include limits.h.
+	(CHAR_BIT): Provide fallback define.
+	(set_symbol_value): Correct complex reloc comment.
+	(undefined_reference): Set bfd_error.
+	(BINARY_OP_HEAD, BINARY_OP_TAIL): Split out from..
+	(BINARY_OP): ..this.
+	(eval_symbol): Limit shifts.  Force unsigned for left shift.
+	Catch divide by zero.
+	* configure.ac (AC_CHECK_HEADERS): Combine, sort and add limits.h.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+
+2020-08-27  Alan Modra  <amodra@gmail.com>
+
+	PR 26462
+	* reloc.c (bfd_check_overflow): Return early if zero bitsize.
+
+2020-08-27  Alan Modra  <amodra@gmail.com>
+
+	* elf32-arm.c (elf32_arm_final_link_relocate): Don't segfault
+	on sym_sec not being output.
+
+2020-08-27  Alan Modra  <amodra@gmail.com>
+
+	PR 26416
+	* elf64-alpha.c (elf64_alpha_relax_tls_get_addr): Correct "dynamic".
+
 2020-08-26  Nick Clifton  <nickc@redhat.com>
 
 	PR 26433
