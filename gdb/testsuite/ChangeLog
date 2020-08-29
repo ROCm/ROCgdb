@@ -1,3 +1,14 @@
+2020-08-28  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/advance-until-multiple-locations.exp
+	(advance_overload, until_overload): Adjust to match the
+	frame/function header instead of the source line text.
+
+2020-08-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/label-without-address.c: New test.
+	* gdb.base/label-without-address.exp: New file.
+
 2020-08-27  Pedro Alves  <pedro@palves.net>
 
 	PR gdb/26523

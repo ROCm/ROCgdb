@@ -1,3 +1,44 @@
+2020-08-28  Jozef Lawrynowicz  <jozef.l@mittosystems.com>
+
+	* emultempl/msp430.em (input_section_exists): New.
+	(check_array_section_alignment): New.
+	(gld${EMULATION_NAME}_finish): New.
+	* scripttempl/elf32msp430.sc: Add ALIGN directives before the
+	definition of __*_array_start symbols.
+	* testsuite/ld-msp430-elf/finiarray-warn.ld: New test.
+	* testsuite/ld-msp430-elf/finiarray-warn.r: New test.
+	* testsuite/ld-msp430-elf/initarray-nowarn.ld: New test.
+	* testsuite/ld-msp430-elf/initarray-warn.ld: New test.
+	* testsuite/ld-msp430-elf/initarray-warn.r: New test.
+	* testsuite/ld-msp430-elf/initarray.s: New test.
+	* testsuite/ld-msp430-elf/msp430-elf.exp: Run new tests.
+	* testsuite/ld-msp430-elf/preinitarray-warn.ld: New test.
+	* testsuite/ld-msp430-elf/preinitarray-warn.r: New test.
+
+2020-08-28  Jozef Lawrynowicz  <jozef.l@mittosystems.com>
+
+	* ldmisc.c (vfinfo): Support new "%pU" format specifier.
+
+2020-08-28  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* emulparams/cskyelf.sh: Support attribute section.
+	* testsuite/ld-csky/tls-le-v1.d: Match .csky.attributes section.
+	* ld/testsuite/ld-csky/tls-le.d: Likewise.
+	* testsuite/ld-elf/non-contiguous.ld: Ignore .csky.attributes
+	section.
+
+2020-08-28  Nick Clifton  <nickc@redhat.com>
+
+	PR 19011
+	* testsuite/lib/ld-lib.exp (ld_link_defsyms): For PE based targets
+	define the __main and ___main symbols in terms of the main symbol.
+
+2020-08-28  Alan Modra  <amodra@gmail.com>
+
+	PR 19011
+	* testsuite/ld-plugin/plugin.exp: Use modified CFLAGS throughout
+	file.  Add --image-base for pecoff.
+
 2020-08-28  Nelson Chu  <nelson.chu@sifive.com>
 
 	testsuite/ld-riscv-elf/lib-nopic-01a.s: Use R_RISCV_JAL rather

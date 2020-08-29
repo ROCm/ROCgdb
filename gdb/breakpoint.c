@@ -90,7 +90,7 @@ static void map_breakpoint_numbers (const char *,
 static void breakpoint_re_set_default (struct breakpoint *);
 
 static void
-  create_sals_from_location_default (const struct event_location *location,
+  create_sals_from_location_default (struct event_location *location,
 				     struct linespec_result *canonical,
 				     enum bptype type_wanted);
 
@@ -105,7 +105,7 @@ static void create_breakpoints_sal_default (struct gdbarch *,
 					    int, int, int, unsigned);
 
 static std::vector<symtab_and_line> decode_location_default
-  (struct breakpoint *b, const struct event_location *location,
+  (struct breakpoint *b, struct event_location *location,
    struct program_space *search_pspace);
 
 static int can_use_hardware_watchpoint
@@ -8954,7 +8954,7 @@ create_breakpoints_sal (struct gdbarch *gdbarch,
    the caller's responsibility to free them.  */
 
 static void
-parse_breakpoint_sals (const struct event_location *location,
+parse_breakpoint_sals (struct event_location *location,
 		       struct linespec_result *canonical)
 {
   struct symtab_and_line cursal;
@@ -9219,7 +9219,7 @@ breakpoint_ops_for_event_location (const struct event_location *location,
 
 int
 create_breakpoint (struct gdbarch *gdbarch,
-		   const struct event_location *location,
+		   struct event_location *location,
 		   const char *cond_string,
 		   int thread, const char *extra_string,
 		   int parse_extra,
@@ -12272,7 +12272,7 @@ base_breakpoint_print_recreate (struct breakpoint *b, struct ui_file *fp)
 
 static void
 base_breakpoint_create_sals_from_location
-  (const struct event_location *location,
+  (struct event_location *location,
    struct linespec_result *canonical,
    enum bptype type_wanted)
 {
@@ -12297,7 +12297,7 @@ base_breakpoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 
 static std::vector<symtab_and_line>
 base_breakpoint_decode_location (struct breakpoint *b,
-				 const struct event_location *location,
+				 struct event_location *location,
 				 struct program_space *search_pspace)
 {
   internal_error_pure_virtual_called ();
@@ -12520,7 +12520,7 @@ bkpt_print_recreate (struct breakpoint *tp, struct ui_file *fp)
 }
 
 static void
-bkpt_create_sals_from_location (const struct event_location *location,
+bkpt_create_sals_from_location (struct event_location *location,
 				struct linespec_result *canonical,
 				enum bptype type_wanted)
 {
@@ -12551,7 +12551,7 @@ bkpt_create_breakpoints_sal (struct gdbarch *gdbarch,
 
 static std::vector<symtab_and_line>
 bkpt_decode_location (struct breakpoint *b,
-		      const struct event_location *location,
+		      struct event_location *location,
 		      struct program_space *search_pspace)
 {
   return decode_location_default (b, location, search_pspace);
@@ -12724,7 +12724,7 @@ bkpt_probe_remove_location (struct bp_location *bl,
 }
 
 static void
-bkpt_probe_create_sals_from_location (const struct event_location *location,
+bkpt_probe_create_sals_from_location (struct event_location *location,
 				      struct linespec_result *canonical,
 				      enum bptype type_wanted)
 {
@@ -12738,7 +12738,7 @@ bkpt_probe_create_sals_from_location (const struct event_location *location,
 
 static std::vector<symtab_and_line>
 bkpt_probe_decode_location (struct breakpoint *b,
-			    const struct event_location *location,
+			    struct event_location *location,
 			    struct program_space *search_pspace)
 {
   std::vector<symtab_and_line> sals = parse_probes (location, search_pspace, NULL);
@@ -12832,7 +12832,7 @@ tracepoint_print_recreate (struct breakpoint *self, struct ui_file *fp)
 }
 
 static void
-tracepoint_create_sals_from_location (const struct event_location *location,
+tracepoint_create_sals_from_location (struct event_location *location,
 				      struct linespec_result *canonical,
 				      enum bptype type_wanted)
 {
@@ -12863,7 +12863,7 @@ tracepoint_create_breakpoints_sal (struct gdbarch *gdbarch,
 
 static std::vector<symtab_and_line>
 tracepoint_decode_location (struct breakpoint *b,
-			    const struct event_location *location,
+			    struct event_location *location,
 			    struct program_space *search_pspace)
 {
   return decode_location_default (b, location, search_pspace);
@@ -12875,7 +12875,7 @@ struct breakpoint_ops tracepoint_breakpoint_ops;
 
 static void
 tracepoint_probe_create_sals_from_location
-  (const struct event_location *location,
+  (struct event_location *location,
    struct linespec_result *canonical,
    enum bptype type_wanted)
 {
@@ -12885,7 +12885,7 @@ tracepoint_probe_create_sals_from_location
 
 static std::vector<symtab_and_line>
 tracepoint_probe_decode_location (struct breakpoint *b,
-				  const struct event_location *location,
+				  struct event_location *location,
 				  struct program_space *search_pspace)
 {
   /* We use the same method for breakpoint on probes.  */
@@ -12966,7 +12966,7 @@ dprintf_after_condition_true (struct bpstats *bs)
    markers (`-m').  */
 
 static void
-strace_marker_create_sals_from_location (const struct event_location *location,
+strace_marker_create_sals_from_location (struct event_location *location,
 					 struct linespec_result *canonical,
 					 enum bptype type_wanted)
 {
@@ -13036,7 +13036,7 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 
 static std::vector<symtab_and_line>
 strace_marker_decode_location (struct breakpoint *b,
-			       const struct event_location *location,
+			       struct event_location *location,
 			       struct program_space *search_pspace)
 {
   struct tracepoint *tp = (struct tracepoint *) b;
@@ -13719,7 +13719,7 @@ breakpoint_re_set_default (struct breakpoint *b)
    calls parse_breakpoint_sals.  Return 1 for success, zero for failure.  */
 
 static void
-create_sals_from_location_default (const struct event_location *location,
+create_sals_from_location_default (struct event_location *location,
 				   struct linespec_result *canonical,
 				   enum bptype type_wanted)
 {
@@ -13756,7 +13756,7 @@ create_breakpoints_sal_default (struct gdbarch *gdbarch,
 
 static std::vector<symtab_and_line>
 decode_location_default (struct breakpoint *b,
-			 const struct event_location *location,
+			 struct event_location *location,
 			 struct program_space *search_pspace)
 {
   struct linespec_result canonical;
