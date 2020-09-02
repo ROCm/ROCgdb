@@ -259,6 +259,18 @@ AS_HELP_STRING([--with-rocm-dbgapi=PATH],
 save_CPPFLAGS=${CPPFLAGS}
 CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
 AC_CHECK_HEADERS(amd-dbgapi.h)
+
+if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_h" = xyes; then
+  AC_MSG_CHECKING([for the correct version of amd-dbgapi.h])
+  AC_TRY_COMPILE([#include "amd-dbgapi.h"],[
+#define AMD_DBGAPI_VERSION_NUM(M, m, p) (((M) << 24L) | ((m) << 12) | (p))
+#define VERSION_NUM AMD_DBGAPI_VERSION_NUM \
+  (AMD_DBGAPI_VERSION_MAJOR, AMD_DBGAPI_VERSION_MINOR, AMD_DBGAPI_VERSION_PATCH)
+#if VERSION_NUM < AMD_DBGAPI_VERSION_NUM (0,32,0)
+# error
+#endif
+], [AC_MSG_RESULT([yes])], [AC_MSG_ERROR([amdgcn*-*-* requires version 0.32+])])
+fi
 CPPFLAGS=${save_CPPFLAGS}
 
 save_LIBS=${LIBS}
