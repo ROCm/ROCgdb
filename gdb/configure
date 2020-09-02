@@ -6841,6 +6841,36 @@ fi
 
 done
 
+
+if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_h" = xyes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for the correct version of amd-dbgapi.h" >&5
+$as_echo_n "checking for the correct version of amd-dbgapi.h... " >&6; }
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "amd-dbgapi.h"
+int
+main ()
+{
+
+#define AMD_DBGAPI_VERSION_NUM(M, m, p) (((M) << 24L) | ((m) << 12) | (p))
+#define VERSION_NUM AMD_DBGAPI_VERSION_NUM \
+  (AMD_DBGAPI_VERSION_MAJOR, AMD_DBGAPI_VERSION_MINOR, AMD_DBGAPI_VERSION_PATCH)
+#if VERSION_NUM < AMD_DBGAPI_VERSION_NUM (0,32,0)
+# error
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  as_fn_error $? "amdgcn*-*-* requires version 0.32+" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
 CPPFLAGS=${save_CPPFLAGS}
 
 save_LIBS=${LIBS}
