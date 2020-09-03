@@ -46,6 +46,7 @@
 #include "valprint.h"
 #include "cli/cli-option.h"
 #include "dwarf2/loc.h"
+#include "exceptions.h"
 
 /* The sentinel frame terminates the innermost end of the frame chain.
    If unwound, it returns the information needed to construct an
@@ -1829,7 +1830,7 @@ lookup_selected_frame (struct frame_id a_frame_id, int frame_level)
      frame.  */
   if (frame_level == -1)
     {
-      select_frame (get_current_frame ());
+      select_frame (get_current_active_frame ());
       return;
     }
 
@@ -1876,7 +1877,7 @@ lookup_selected_frame (struct frame_id a_frame_id, int frame_level)
 
   /* Nothing else to do, the frame layout really changed.  Select the
      innermost stack frame.  */
-  select_frame (get_current_frame ());
+  select_frame (get_current_active_frame ());
 
   /* Warn the user.  */
   if (frame_level > 0 && !current_uiout->is_mi_like_p ())
@@ -1916,6 +1917,47 @@ has_stack_frames ()
     }
 
   return true;
+}
+
+/* See frame.h.  */
+
+bool
+is_inactive_frame (frame_info_ptr frame)
+{
+  value *pc = get_frame_lane_pc_val (frame);
+  return (pc != nullptr && pc->optimized_out ());
+}
+
+/* See frame.h.  */
+
+frame_info_ptr
+skip_inactive_frames (frame_info_ptr frame)
+{
+  try
+    {
+      while (frame != nullptr && is_inactive_frame (frame))
+	frame = get_prev_frame (frame);
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      /* This try/catch was necessary because the AMDGPU unwinder and
+	 unwind info used to be badly broken.  May want to revisit at
+	 some point.  */
+      exception_print (gdb_stderr, ex);
+    }
+  return frame;
+}
+
+/* See frame.h.  */
+
+frame_info_ptr
+get_current_active_frame ()
+{
+  frame_info_ptr curr = get_current_frame ();
+  frame_info_ptr frame = skip_inactive_frames (curr);
+  if (frame != nullptr)
+    return frame;
+  return curr;
 }
 
 /* See frame.h.  */
@@ -2108,6 +2150,17 @@ get_next_frame (const frame_info_ptr &this_frame)
     return frame_info_ptr (this_frame->next);
   else
     return NULL;
+}
+
+/* See frame.h.  */
+
+frame_info_ptr
+get_next_active_frame (frame_info_ptr this_frame)
+{
+  frame_info_ptr frame = get_next_frame (this_frame);
+  while (frame != nullptr && is_inactive_frame (frame))
+    frame = get_next_frame (frame);
+  return frame;
 }
 
 /* Return the frame that THIS_FRAME calls.  If THIS_FRAME is the
@@ -2782,6 +2835,17 @@ get_prev_frame (const frame_info_ptr &this_frame)
     }
 
   return get_prev_frame_always (this_frame);
+}
+
+/* See frame.h.  */
+
+frame_info_ptr
+get_prev_active_frame (struct frame_info_ptr this_frame)
+{
+  frame_info_ptr frame = get_prev_frame (this_frame);
+  while (frame != nullptr && is_inactive_frame (frame))
+    frame = get_prev_frame (frame);
+  return frame;
 }
 
 CORE_ADDR

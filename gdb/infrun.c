@@ -9744,10 +9744,10 @@ normal_stop ()
 	     does which means there's now no selected frame.  */
 	}
 
-      select_frame (get_current_frame ());
+      select_frame (get_current_active_frame ());
 
       /* Set the current source location.  */
-      set_current_sal_from_frame (get_current_frame ());
+      set_current_sal_from_frame (get_selected_frame (nullptr));
     }
 
   /* Look up the hook_stop and run it (CLI internally handles problem

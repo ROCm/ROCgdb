@@ -1805,30 +1805,31 @@ leading_innermost_frame (int level)
 static frame_info_ptr
 trailing_outermost_frame (int count)
 {
-  frame_info_ptr current;
-  frame_info_ptr trailing;
-
-  trailing = get_current_frame ();
+  frame_info_ptr frame = get_current_frame ();
 
   gdb_assert (count > 0);
+  gdb_assert (frame != nullptr);
 
-  current = trailing;
-  while (current != nullptr && count--)
+  /* Find the innermost active frame.  */
+  frame_info_ptr prev;
+  while (frame != nullptr)
     {
       QUIT;
-      current = get_prev_frame (current);
-    }
 
-  /* Will stop when CURRENT reaches the top of the stack.
-     TRAILING will be COUNT below it.  */
-  while (current != nullptr)
+      prev = frame;
+      frame = get_prev_active_frame (frame);
+    }
+  frame = prev;
+
+  /* Find the COUNT active frame below the innermost active frame.  */
+  while (frame != nullptr && count > 1)
     {
       QUIT;
-      trailing = get_prev_frame (trailing);
-      current = get_prev_frame (current);
+      frame = get_next_active_frame (frame);
+      --count;
     }
 
-  return trailing;
+  return frame;
 }
 
 /* The core of all the "select-frame" sub-commands.  Just wraps a call to
@@ -2037,7 +2038,7 @@ backtrace_command_1 (const frame_print_options &fp_opts,
       else
 	gdb_assert (0);
 
-      result = apply_ext_lang_frame_filter (get_current_frame (), flags,
+      result = apply_ext_lang_frame_filter (get_current_active_frame (), flags,
 					    arg_type, current_uiout,
 					    py_start, py_end);
     }
@@ -2059,9 +2060,13 @@ backtrace_command_1 (const frame_print_options &fp_opts,
 	  count = -1;
 	}
       else
-	trailing = get_current_frame ();
+	{
+	  trailing = get_current_active_frame ();
+	  if (trailing != get_current_frame ())
+	    warning (_("lane is divergent, skipping inactive frames"));
+	}
 
-      for (fi = trailing; fi && count--; fi = get_prev_frame (fi))
+      for (fi = trailing; fi && count--; fi = get_prev_active_frame (fi))
 	{
 	  QUIT;
 
@@ -2579,23 +2584,26 @@ get_selected_block (CORE_ADDR *addr_in_block)
   return get_frame_block (get_selected_frame (NULL), addr_in_block);
 }
 
-/* Find a frame a certain number of levels away from FRAME.
-   LEVEL_OFFSET_PTR points to an int containing the number of levels.
-   Positive means go to earlier frames (up); negative, the reverse.
-   The int that contains the number of levels is counted toward
-   zero as the frames for those levels are found.
-   If the top or bottom frame is reached, that frame is returned,
-   but the final value of *LEVEL_OFFSET_PTR is nonzero and indicates
-   how much farther the original request asked to go.  */
+/* See frame.h.  */
 
 frame_info_ptr
-find_relative_frame (frame_info_ptr frame, int *level_offset_ptr)
+find_relative_frame (frame_info_ptr frame, int *level_offset_ptr,
+		     bool skip_inactive_frames)
 {
   /* Going up is simple: just call get_prev_frame enough times or
      until the initial frame is reached.  */
   while (*level_offset_ptr > 0)
     {
       frame_info_ptr prev = get_prev_frame (frame);
+      if (skip_inactive_frames)
+	{
+	  frame_info_ptr prev_org = prev;
+	  while (prev != nullptr && is_inactive_frame (prev))
+	    prev = get_prev_frame (prev);
+
+	  if (prev != nullptr && prev_org != prev)
+	    warning (_("skipped inactive frames"));
+	}
 
       if (!prev)
 	break;
@@ -2607,6 +2615,9 @@ find_relative_frame (frame_info_ptr frame, int *level_offset_ptr)
   while (*level_offset_ptr < 0)
     {
       frame_info_ptr next = get_next_frame (frame);
+      if (skip_inactive_frames)
+	while (next != nullptr && is_inactive_frame (next))
+	  next = get_next_frame (next);
 
       if (!next)
 	break;
@@ -2629,7 +2640,8 @@ up_silently_base (const char *count_exp)
   if (count_exp)
     count = parse_and_eval_long (count_exp);
 
-  frame = find_relative_frame (get_selected_frame ("No stack."), &count);
+  frame = find_relative_frame (get_selected_frame ("No stack."), &count,
+			       true);
   if (count != 0 && count_exp == NULL)
     error (_("Initial frame selected; you cannot go up."));
   select_frame (frame);
@@ -2660,7 +2672,8 @@ down_silently_base (const char *count_exp)
   if (count_exp)
     count = -parse_and_eval_long (count_exp);
 
-  frame = find_relative_frame (get_selected_frame ("No stack."), &count);
+  frame = find_relative_frame (get_selected_frame ("No stack."), &count,
+			       true);
   if (count != 0 && count_exp == NULL)
     {
       /* We only do this if COUNT_EXP is not specified.  That way
@@ -2821,7 +2834,7 @@ return_command (const char *retval_exp, int from_tty)
   if (get_frame_type (get_current_frame ()) == DUMMY_FRAME)
     frame_pop (get_current_frame ());
 
-  select_frame (get_current_frame ());
+  select_frame (get_current_active_frame ());
   /* If interactive, print the frame that is now current.  */
   if (from_tty)
     print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
@@ -2845,7 +2858,7 @@ find_frame_for_function (const char *function_name)
 
   gdb_assert (function_name != NULL);
 
-  frame = get_current_frame ();
+  frame = get_current_active_frame ();
   std::vector<symtab_and_line> sals
     = decode_line_with_current_source (function_name,
 				       DECODE_LINE_FUNFIRSTLINE);
@@ -2869,7 +2882,8 @@ find_frame_for_function (const char *function_name)
       if (!found)
 	{
 	  level = 1;
-	  frame = find_relative_frame (frame, &level);
+	  frame = find_relative_frame (frame, &level,
+				       true);
 	}
     }
   while (!found && level == 0);

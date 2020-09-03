@@ -425,6 +425,18 @@ operator!= (const frame_info_ptr &self, const frame_info *other)
    error.  */
 extern frame_info_ptr get_current_frame (void);
 
+/* Like get_current_frame, but when focused on a SIMD lane, skips
+   frames where the lane was not active.  */
+extern frame_info_ptr get_current_active_frame ();
+
+/* Skip frames that are inactive for the current lane.  Returns the
+   first previous frame that is active, or the outermost frame if none
+   is found.  */
+extern frame_info_ptr skip_inactive_frames (frame_info_ptr frame);
+
+/* True if FRAME is inactive for the current lane.  */
+extern bool is_inactive_frame (frame_info_ptr frame);
+
 /* Does the current target interface have enough state to be able to
    query the current inferior for frame info, and is the inferior in a
    state where that is possible?  */
@@ -478,6 +490,11 @@ extern void restore_selected_frame (frame_id frame_id, int frame_level)
    (more outer, older) frame.  */
 extern frame_info_ptr get_prev_frame (const frame_info_ptr &);
 extern frame_info_ptr get_next_frame (const frame_info_ptr &);
+
+/* Like get_prev_frame and get_next_frame, but when focused on a SIMD
+   lane, skip frames where the lane was inactive.  */
+extern frame_info_ptr get_prev_active_frame (frame_info_ptr);
+extern frame_info_ptr get_next_active_frame (frame_info_ptr);
 
 /* Like get_next_frame(), but allows return of the sentinel frame.  NULL
    is never returned.  */
@@ -882,7 +899,20 @@ extern const struct block *get_frame_function_block (const frame_info_ptr &);
 
 extern CORE_ADDR get_pc_function_start (CORE_ADDR);
 
-extern frame_info_ptr find_relative_frame (frame_info_ptr, int *);
+/* Find a frame a certain number of levels away from FRAME.
+   LEVEL_OFFSET_PTR points to an int containing the number of levels.
+   Positive means go to earlier frames (up); negative, the reverse.
+   The int that contains the number of levels is counted toward zero
+   as the frames for those levels are found.  If the top or bottom
+   frame is reached, that frame is returned, but the final value of
+   *LEVEL_OFFSET_PTR is nonzero and indicates how much farther the
+   original request asked to go.  Skips inactive frames iff
+   SKIP_INACTIVE_FRAMES is true.  */
+
+extern struct frame_info_ptr find_relative_frame
+  (frame_info_ptr frame,
+   int *level_offset_ptr,
+   bool skip_inactive_frames = false);
 
 /* Wrapper over print_stack_frame modifying current_uiout with UIOUT for
    the function call.  */

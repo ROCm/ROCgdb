@@ -2356,7 +2356,7 @@ lane_apply_all_command (const char *cmd, int from_tty)
       if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
 	continue;
 
-      frame_info_ptr curr_frame = get_current_frame ();
+      frame_info_ptr curr_frame = get_current_active_frame ();
       select_frame (curr_frame);
 
       thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);
@@ -2491,7 +2491,7 @@ lane_apply_command (const char *id_list, int from_tty)
       if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
 	continue;
 
-      frame_info_ptr curr_frame = get_current_frame ();
+      frame_info_ptr curr_frame = get_current_active_frame ();
       select_frame (curr_frame);
 
       thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);
@@ -2607,7 +2607,10 @@ switch_to_lane (int lane)
 
   tp->set_current_simd_lane (lane);
 
-  select_frame (get_current_frame ());
+  frame_info_ptr frame = get_current_active_frame ();
+  if (frame != get_current_frame ())
+    warning (_("lane is divergent, selecting first active frame."));
+  select_frame (frame);
 }
 
 /* Switch to the specified lane, or print the current lane.  */
