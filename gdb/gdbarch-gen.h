@@ -368,6 +368,12 @@ typedef simd_lanes_mask_t (gdbarch_active_lanes_mask_ftype) (struct gdbarch *gdb
 extern simd_lanes_mask_t gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp);
 extern void set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch, gdbarch_active_lanes_mask_ftype *active_lanes_mask);
 
+/* Return the number of lanes supported by the thread. */
+
+typedef int (gdbarch_supported_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern int gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch, gdbarch_supported_lanes_count_ftype *supported_lanes_count);
+
 /* Return true if the code of FRAME is writable. */
 
 typedef int (gdbarch_code_of_frame_writable_ftype) (struct gdbarch *gdbarch, const frame_info_ptr &frame);

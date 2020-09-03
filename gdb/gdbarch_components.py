@@ -697,6 +697,17 @@ Return the active SIMD lanes mask for a thread TP.
 
 Method(
     comment="""
+Return the number of lanes supported by the thread.
+""",
+    type="int",
+    name="supported_lanes_count",
+    params=[("thread_info *", "tp")],
+    predefault="default_supported_lanes_count",
+    invalid=False,
+)
+
+Method(
+    comment="""
 Return true if the code of FRAME is writable.
 """,
     type="int",

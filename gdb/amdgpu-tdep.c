@@ -1783,6 +1783,17 @@ amdgpu_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
   return exec_mask;
 }
 
+static int
+amdgpu_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  size_t count;
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, count)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return 0;
+
+  return count;
+}
+
 static bool
 amdgpu_supports_arch_info (const struct bfd_arch_info *info)
 {
@@ -2012,6 +2023,7 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Lane debugging.  */
   set_gdbarch_active_lanes_mask (gdbarch, amdgpu_active_lanes_mask);
+  set_gdbarch_supported_lanes_count (gdbarch, amdgpu_supported_lanes_count);
 
   status = amd_dbgapi_architecture_get_info
     (architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION_SIZE,
