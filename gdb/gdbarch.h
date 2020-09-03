@@ -430,6 +430,12 @@ typedef simd_lanes_mask_t (gdbarch_active_lanes_mask_ftype) (struct gdbarch *gdb
 extern simd_lanes_mask_t gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp);
 extern void set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch, gdbarch_active_lanes_mask_ftype *active_lanes_mask);
 
+/* Return the number of lanes supported by the thread. */
+
+typedef int (gdbarch_supported_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern int gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch, gdbarch_supported_lanes_count_ftype *supported_lanes_count);
+
 /* Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
    deprecated_fp_regnum. */
 

@@ -458,6 +458,9 @@ m;struct frame_id;dummy_id;struct frame_info *this_frame;this_frame;;default_dum
 # Return the active SIMD lanes mask for a thread TP.
 M;simd_lanes_mask_t;active_lanes_mask;thread_info *tp;tp
 
+# Return the number of lanes supported by the thread.
+m;int;supported_lanes_count;thread_info *tp;tp;;default_supported_lanes_count;;0
+
 # Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
 # deprecated_fp_regnum.
 v;int;deprecated_fp_regnum;;;-1;-1;;0
