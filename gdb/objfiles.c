@@ -188,6 +188,60 @@ static_link_htab_entry_eq (const void *p1, const void *p2)
   return e1->block == e2->block;
 }
 
+/* Register PROP as a dynamic property for BLOCK in the HTAB map,
+   which is part of OBJFILE.  Must not be called more than once for
+   each BLOCK.  */
+
+static void
+objfile_register_block_prop (struct objfile *objfile,
+			     htab_up *htab,
+			     const struct block *block,
+			     const struct dynamic_prop *prop)
+{
+  void **slot;
+  struct static_link_htab_entry lookup_entry;
+  struct static_link_htab_entry *entry;
+
+  if (*htab == nullptr)
+    htab->reset (htab_create_alloc
+      (1, &static_link_htab_entry_hash, static_link_htab_entry_eq, nullptr,
+       xcalloc, xfree));
+
+  /* Create a slot for the mapping, make sure it's the first mapping
+     for this block and then create the mapping itself.  */
+  lookup_entry.block = block;
+  slot = htab_find_slot (htab->get (), &lookup_entry, INSERT);
+  gdb_assert (*slot == nullptr);
+
+  entry = XOBNEW (&objfile->objfile_obstack, static_link_htab_entry);
+  entry->block = block;
+  entry->static_link = prop;
+  *slot = (void *) entry;
+}
+
+/* Look for a dynamic_prop for BLOCK, which is part of OBJFILE.
+   Return NULL if none was found.  */
+
+static const dynamic_prop *
+objfile_lookup_block_prop (struct objfile *objfile,
+			   htab_up *htab,
+			   const struct block *block)
+{
+  struct static_link_htab_entry *entry;
+  struct static_link_htab_entry lookup_entry;
+
+  if (*htab == nullptr)
+    return nullptr;
+  lookup_entry.block = block;
+  entry = ((struct static_link_htab_entry *)
+	   htab_find (htab->get (), &lookup_entry));
+  if (entry == nullptr)
+    return nullptr;
+
+  gdb_assert (entry->block == block);
+  return entry->static_link;
+}
+
 /* Register STATIC_LINK as the static link for BLOCK, which is part of OBJFILE.
    Must not be called more than once for each BLOCK.  */
 
@@ -196,25 +250,10 @@ objfile_register_static_link (struct objfile *objfile,
 			      const struct block *block,
 			      const struct dynamic_prop *static_link)
 {
-  void **slot;
-  struct static_link_htab_entry lookup_entry;
-  struct static_link_htab_entry *entry;
-
-  if (objfile->static_links == NULL)
-    objfile->static_links.reset (htab_create_alloc
-      (1, &static_link_htab_entry_hash, static_link_htab_entry_eq, NULL,
-       xcalloc, xfree));
-
-  /* Create a slot for the mapping, make sure it's the first mapping for this
-     block and then create the mapping itself.  */
-  lookup_entry.block = block;
-  slot = htab_find_slot (objfile->static_links.get (), &lookup_entry, INSERT);
-  gdb_assert (*slot == NULL);
-
-  entry = XOBNEW (&objfile->objfile_obstack, static_link_htab_entry);
-  entry->block = block;
-  entry->static_link = static_link;
-  *slot = (void *) entry;
+  objfile_register_block_prop (objfile,
+			       &objfile->static_links,
+			       block,
+			       static_link);
 }
 
 /* Look for a static link for BLOCK, which is part of OBJFILE.  Return NULL if
@@ -224,19 +263,36 @@ const struct dynamic_prop *
 objfile_lookup_static_link (struct objfile *objfile,
 			    const struct block *block)
 {
-  struct static_link_htab_entry *entry;
-  struct static_link_htab_entry lookup_entry;
+  return objfile_lookup_block_prop (objfile,
+				    &objfile->static_links,
+				    block);
+}
 
-  if (objfile->static_links == NULL)
-    return NULL;
-  lookup_entry.block = block;
-  entry = ((struct static_link_htab_entry *)
-	   htab_find (objfile->static_links.get (), &lookup_entry));
-  if (entry == NULL)
-    return NULL;
+/* Register LANE_PC as the lane PC expression for FUNCTION, which is
+   part of OBJFILE.  Must not be called more than once for each
+   BLOCK.  */
 
-  gdb_assert (entry->block == block);
-  return entry->static_link;
+void
+objfile_register_lane_pc (struct objfile *objfile,
+			  const block *function,
+			  const dynamic_prop *lane_pc)
+{
+  objfile_register_block_prop (objfile,
+			       &objfile->lane_pcs,
+			       function,
+			       lane_pc);
+}
+
+/* Look for a lane PC expression for FUNCTION, which is part of
+   OBJFILE.  Return NULL if none was found.  */
+
+const dynamic_prop *
+objfile_lookup_lane_pc (struct objfile *objfile,
+			const block *function)
+{
+  return objfile_lookup_block_prop (objfile,
+				    &objfile->lane_pcs,
+				    function);
 }
 
 

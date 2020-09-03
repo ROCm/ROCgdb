@@ -111,10 +111,10 @@ get_pc_function_start (CORE_ADDR pc)
   return 0;
 }
 
-/* Return the symbol for the function executing in frame FRAME.  */
+/* Return the block for the function executing in frame FRAME.  */
 
-struct symbol *
-get_frame_function (const frame_info_ptr &frame)
+const struct block *
+get_frame_function_block (const frame_info_ptr &frame)
 {
   const struct block *bl = get_frame_block (frame, 0);
 
@@ -124,7 +124,18 @@ get_frame_function (const frame_info_ptr &frame)
   while (bl->function () == NULL && bl->superblock () != NULL)
     bl = bl->superblock ();
 
-  return bl->function ();
+  return bl;
+}
+
+/* Return the symbol for the function executing in frame FRAME.  */
+
+struct symbol *
+get_frame_function (const frame_info_ptr &frame)
+{
+  const block *bl = get_frame_function_block (frame);
+  if (bl != nullptr)
+    return bl->function ();
+  return nullptr;
 }
 
 

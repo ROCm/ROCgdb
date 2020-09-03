@@ -24,6 +24,10 @@
 #include "gdbtypes.h"
 #include "value.h"
 #include "gdbarch.h"
+#include "block.h"
+#include "objfiles.h"
+#include "dwarf2/loc.h"
+#include "gdbthread.h"
 
 static struct value *
 value_of_builtin_frame_fp_reg (const frame_info_ptr &frame, const void *baton)
@@ -93,6 +97,29 @@ value_of_builtin_frame_ps_reg (const frame_info_ptr &frame, const void *baton)
   error (_("Standard register ``$ps'' is not available for this target"));
 }
 
+/* Return the value of the $lane_pc virtual register.  */
+
+static struct value *
+value_of_builtin_frame_lane_pc_reg (const frame_info_ptr &frame,
+				    const void *baton)
+{
+  value *pc = get_frame_lane_pc_val (frame);
+  if (pc != nullptr && !pc->optimized_out ())
+    return pc;
+
+  /* If we don't have an DW_AT_LLVM_lanes attribute, return $pc.  */
+  return value_of_builtin_frame_pc_reg (frame, baton);
+}
+
+/* Return the value of the $__lane_pc_array virtual register.  */
+
+static struct value *
+value_of_builtin_frame_lane_pc_array_reg (const frame_info_ptr &frame,
+					  const void *baton)
+{
+  return get_frame_lane_pc_array_val (frame);
+}
+
 void _initialize_frame_reg ();
 void
 _initialize_frame_reg ()
@@ -104,4 +131,20 @@ _initialize_frame_reg ()
   user_reg_add_builtin ("pc", value_of_builtin_frame_pc_reg, NULL);
   user_reg_add_builtin ("sp", value_of_builtin_frame_sp_reg, NULL);
   user_reg_add_builtin ("ps", value_of_builtin_frame_ps_reg, NULL);
+
+  /* The lane's contextual PC.  If the thread does not have lanes, or
+     if the lane is active, then this returns $pc.  */
+  user_reg_add_builtin ("lane_pc", value_of_builtin_frame_lane_pc_reg,
+			nullptr);
+
+  /* Internal/maintainer version of $lane_pc that returns the whole
+     array value returned by evaluating DW_AT_LLVM_lane_pc.  This is
+     considered an internal variable -- lanes that were inactive on
+     entry will have a __lane_pc_array entry of <optimized out>, which
+     probably isn't what users would expect.  For such lanes, to find
+     the lane PC, we'd need to evaluate DW_AT_LLVM_lane_pc in the
+     caller frame (recursively, until we find a non-optimized-out
+     value).  */
+  user_reg_add_builtin ("__lane_pc_array",
+			value_of_builtin_frame_lane_pc_array_reg, nullptr);
 }

@@ -1573,34 +1573,32 @@ dwarf2_evaluate_loc_desc (struct type *type, const frame_info_ptr &frame,
 					per_objfile, NULL, 0, as_lval);
 }
 
-/* Evaluates a dwarf expression and stores the result in VAL,
-   expecting that the dwarf expression only produces a single
-   CORE_ADDR.  FRAME is the frame in which the expression is
-   evaluated.  ADDR_STACK is a context (location of a variable) and
-   might be needed to evaluate the location expression.
+/* Evaluates a DWARF expression and returns the result as a value.
+   FRAME is the frame in which the expression is evaluated.
+   RESULT_TYPE is the type of the resulting value.  ADDR_STACK is a
+   context (location of a variable) and might be needed to evaluate
+   the location expression.
 
    PUSH_VALUES is an array of values to be pushed to the expression stack
    before evaluation starts.  PUSH_VALUES[0] is pushed first, then
    PUSH_VALUES[1], and so on.
 
-   Returns 1 on success, 0 otherwise.  */
+   Returns the value on success, NULL otherwise.  */
 
-static int
-dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
-			   const frame_info_ptr &frame,
-			   const struct property_addr_info *addr_stack,
-			   CORE_ADDR *valp,
-			   gdb::array_view<CORE_ADDR> push_values,
-			   bool *is_reference)
+static struct value *
+dwarf2_locexpr_baton_eval_value (const struct dwarf2_locexpr_baton *dlbaton,
+				 const frame_info_ptr &frame,
+				 struct type *result_type,
+				 const struct property_addr_info *addr_stack,
+				 gdb::array_view<CORE_ADDR> push_values)
 {
   if (dlbaton == NULL || dlbaton->size == 0)
-    return 0;
+    return nullptr;
 
   dwarf2_per_objfile *per_objfile = dlbaton->per_objfile;
   dwarf2_per_cu_data *per_cu = dlbaton->per_cu;
 
   value *result;
-  scoped_value_mark free_values;
   std::vector<value *> init_values;
 
   /* Place any initial values onto the expression stack.  */
@@ -1618,23 +1616,53 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
       result
 	= dwarf2_evaluate (dlbaton->data, dlbaton->size, true, per_objfile,
 			   per_cu, frame, per_cu->addr_size (), &init_values,
-			   addr_stack);
+			   addr_stack, result_type);
     }
   catch (const gdb_exception_error &ex)
     {
       if (ex.error == NOT_AVAILABLE_ERROR)
 	{
-	  return 0;
+	  return nullptr;
 	}
       else if (ex.error == NO_ENTRY_VALUE_ERROR)
 	{
 	  if (entry_values_debug)
 	    exception_print (gdb_stdout, ex);
-	  return 0;
+	  return nullptr;
 	}
       else
 	throw;
     }
+
+  return result;
+}
+
+/* Evaluates a DWARF expression and stores the result in VAL,
+   expecting that the DWARF expression only produces a single
+   CORE_ADDR.  FRAME is the frame in which the expression is
+   evaluated.  ADDR_STACK is a context (location of a variable) and
+   might be needed to evaluate the location expression.
+
+   PUSH_VALUES is an array of values to be pushed to the expression stack
+   before evaluation starts.  PUSH_VALUES[0] is pushed first, then
+   PUSH_VALUES[1], and so on.
+
+   Returns true on success, false otherwise.  */
+
+static bool
+dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
+			   frame_info_ptr frame,
+			   const struct property_addr_info *addr_stack,
+			   CORE_ADDR *valp,
+			   gdb::array_view<CORE_ADDR> push_values,
+			   bool *is_reference)
+{
+  scoped_value_mark free_values;
+  value *result = dwarf2_locexpr_baton_eval_value (dlbaton, frame, nullptr,
+						   addr_stack,
+						   push_values);
+  if (result == nullptr)
+    return false;
 
   if (result->lval () == lval_memory)
     *valp = result->address ();
@@ -1646,7 +1674,74 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
       *valp = value_as_address (result);
     }
 
-  return 1;
+  return true;
+}
+
+/* See dwarf2loc.h.  */
+
+value *
+dwarf2_evaluate_property_genexpr (const struct dynamic_prop *prop,
+				  frame_info_ptr frame,
+				  struct type *result_type)
+{
+  if (prop == nullptr)
+    return nullptr;
+
+  if (frame == nullptr && has_stack_frames ())
+    frame = get_selected_frame (nullptr);
+
+  auto *baton = (dwarf2_property_baton *) prop->baton ();
+  gdb_assert (baton->property_type != nullptr);
+
+  switch (prop->kind ())
+    {
+    case PROP_LOCEXPR:
+      gdb_assert (!baton->locexpr.is_reference);
+      return dwarf2_locexpr_baton_eval_value (&baton->locexpr, frame,
+					      result_type, nullptr, {});
+    case PROP_LOCLIST:
+      {
+	CORE_ADDR pc;
+	if (frame == nullptr
+	    || !get_frame_address_in_block_if_available (frame, &pc))
+	  return nullptr;
+
+	size_t size;
+	const gdb_byte *data
+	  = dwarf2_find_location_expression (&baton->loclist, &size, pc);
+	if (data != nullptr)
+	  return dwarf2_evaluate_loc_desc (result_type, frame, data,
+					   size, baton->loclist.per_cu,
+					   baton->loclist.per_objfile);
+	return nullptr;
+      }
+    }
+
+  gdb_assert_not_reached ("unhandled kind");
+}
+
+/* See dwarf2/loc.h.  */
+
+void
+dwarf2_address_maybe_sign_extend (struct type *type,
+				  int addr_size,
+				  CORE_ADDR *address)
+{
+  if (type->length () < sizeof (CORE_ADDR)
+      && !type->is_unsigned ())
+    {
+      /* If we have a valid return candidate and it's value
+	 is signed, we have to sign-extend the value because
+	 CORE_ADDR on 64bit machine has 8 bytes but address
+	 size of an 32bit application is bytes.  */
+      const int addr_size_bits = addr_size * TARGET_CHAR_BIT;
+      const CORE_ADDR neg_mask
+	= (~((CORE_ADDR) 0) << (addr_size_bits - 1));
+
+      /* Check if signed bit is set and sign-extend values.  */
+      if (*address & neg_mask)
+	*address |= neg_mask;
+    }
 }
 
 /* See dwarf2/loc.h.  */
@@ -1691,23 +1786,10 @@ dwarf2_evaluate_property (const dynamic_prop *prop,
 		gdb_assert (baton->property_type != NULL);
 
 		struct type *type = check_typedef (baton->property_type);
-		if (type->length () < sizeof (CORE_ADDR)
-		    && !type->is_unsigned ())
-		  {
-		    /* If we have a valid return candidate and it's value
-		       is signed, we have to sign-extend the value because
-		       CORE_ADDR on 64bit machine has 8 bytes but address
-		       size of an 32bit application is bytes.  */
-		    const int addr_size
-		      = (baton->locexpr.per_cu->addr_size ()
-			 * TARGET_CHAR_BIT);
-		    const CORE_ADDR neg_mask
-		      = (~((CORE_ADDR) 0) <<  (addr_size - 1));
-
-		    /* Check if signed bit is set and sign-extend values.  */
-		    if (*value & neg_mask)
-		      *value |= neg_mask;
-		  }
+		dwarf2_address_maybe_sign_extend
+		  (type,
+		   baton->locexpr.per_cu->addr_size (),
+		   value);
 	      }
 	    return true;
 	  }

@@ -507,6 +507,16 @@ extern CORE_ADDR get_frame_pc (const frame_info_ptr &);
 
 extern bool get_frame_pc_if_available (const frame_info_ptr &frame, CORE_ADDR *pc);
 
+/* When debugging a SIMD lane, this returns the current lane's
+   conceptual source PC.  For an inactive divergent lane, returns an
+   optimized out value if the divergence happened in an earlier frame.
+   When not debugging a SIMD lane, returns NULL.  */
+extern value *get_frame_lane_pc_val (frame_info_ptr frame);
+
+/* Same as get_frame_lane_pc_val, but returns an array with one
+   element per lane.  */
+extern value *get_frame_lane_pc_array_val (frame_info_ptr frame);
+
 /* An address (not necessarily aligned to an instruction boundary)
    that falls within THIS frame's code block.
 
@@ -866,6 +876,9 @@ extern const struct block *get_frame_block (const frame_info_ptr &,
 extern const struct block *get_selected_block (CORE_ADDR *addr_in_block);
 
 extern struct symbol *get_frame_function (const frame_info_ptr &);
+
+/* Return the block for the function executing in frame FRAME.  */
+extern const struct block *get_frame_function_block (const frame_info_ptr &);
 
 extern CORE_ADDR get_pc_function_start (CORE_ADDR);
 

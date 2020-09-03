@@ -875,6 +875,10 @@ public:
      mechanism as ELF should set this flag too.  This flag is used in
      conjunction with the minimal_symbol::maybe_copied method.  */
   bool object_format_has_copy_relocs = false;
+
+  /* Associate a DW_AT_LLVM_lane_pc expression to all functions that
+     have one.  */
+  htab_up lane_pcs;
 };
 
 /* A deleter for objfile.  */
@@ -1024,5 +1028,13 @@ extern void objfile_register_static_link
 
 extern const struct dynamic_prop *objfile_lookup_static_link
   (struct objfile *objfile, const struct block *block);
+
+extern void objfile_register_lane_pc
+  (struct objfile *objfile,
+   const struct block *function,
+   const struct dynamic_prop *lane_pc);
+
+extern const dynamic_prop *objfile_lookup_lane_pc
+  (struct objfile *objfile, const block *function);
 
 #endif /* !defined (OBJFILES_H) */

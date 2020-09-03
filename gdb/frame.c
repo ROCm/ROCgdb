@@ -2812,6 +2812,108 @@ get_frame_pc_if_available (const frame_info_ptr &frame, CORE_ADDR *pc)
   return true;
 }
 
+/* Assuming PROP is a PROP_LOCEXPR or PROP_LOCLIST holding a generic
+   expression, return the property's type.  */
+
+static type *
+get_prop_genexpr_type (const dynamic_prop *prop)
+{
+  gdb_assert (prop->kind () == PROP_LOCEXPR || prop->kind () == PROP_LOCLIST);
+  auto *baton = (const dwarf2_property_baton *) prop->baton ();
+  return baton->property_type;
+}
+
+/* Helper for get_frame_lane_pc_val and get_frame_lane_pc_array_val.  */
+
+static value *
+get_frame_lane_pc_val_1 (frame_info_ptr frame, bool want_array)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+
+  const block *func = get_frame_function_block (frame);
+  if (func != nullptr)
+    {
+      objfile *objf = func->objfile ();
+      const dynamic_prop *prop = objfile_lookup_lane_pc (objf, func);
+      if (prop != nullptr)
+	{
+	  /* From the proposal:
+	     "The resulting location description L is for a thread
+	     lane count sized vector of generic type elements.  The
+	     thread lane count is the value of the DW_AT_LLVM_lanes
+	     attribute."  */
+
+	  /* The property's type is the element's type, not the whole
+	     array type.  Get it and build the array type.  */
+	  type *addr_type = get_prop_genexpr_type (prop);
+	  int addr_size = addr_type->length ();
+
+	  /* XXX: This should evaluate DW_AT_LLVM_lanes instead, but
+	     we don't read that in yet.  */
+	  int lane_count = gdbarch_supported_lanes_count (gdbarch,
+							  inferior_thread ());
+
+	  type *array_type = lookup_array_range_type (addr_type,
+						      0, lane_count - 1);
+
+	  value *lane_pc_array = dwarf2_evaluate_property_genexpr (prop, frame,
+								   array_type);
+	  if (lane_pc_array != nullptr)
+	    {
+	      if (want_array)
+		return lane_pc_array;
+
+	      /* Extract the lane PC of the current lane from the
+		 array, and return a value of function pointer type,
+		 just like $pc.  */
+
+	      int index = inferior_thread ()->current_simd_lane ();
+	      value *lane_pc = value_subscript (lane_pc_array, index);
+
+	      type *func_ptr_type = builtin_type (gdbarch)->builtin_func_ptr;
+
+	      if (lane_pc->optimized_out ())
+		return value::allocate_optimized_out (func_ptr_type);
+	      else if (!lane_pc->entirely_available ())
+		return value::allocate_unavailable (func_ptr_type);
+	      else
+		{
+		  CORE_ADDR addr = value_as_address (lane_pc);
+
+		  /* Maybe sign-extend, like PROP_LOCEXPR does as
+		     well.  */
+		  dwarf2_address_maybe_sign_extend (addr_type, addr_size, &addr);
+
+		  struct value *val = value::allocate (func_ptr_type);
+		  gdb_byte *buf = val->contents_raw ().data ();
+
+		  gdbarch_address_to_pointer (gdbarch, func_ptr_type,
+					      buf, addr);
+		  return val;
+		}
+	    }
+	}
+    }
+
+  return nullptr;
+}
+
+/* See frame.h.  */
+
+value *
+get_frame_lane_pc_val (frame_info_ptr frame)
+{
+  return get_frame_lane_pc_val_1 (frame, false);
+}
+
+/* See frame.h.  */
+
+value *
+get_frame_lane_pc_array_val (frame_info_ptr frame)
+{
+  return get_frame_lane_pc_val_1 (frame, true);
+}
+
 /* Return an address that falls within THIS_FRAME's code block.  */
 
 CORE_ADDR

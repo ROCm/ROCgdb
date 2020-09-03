@@ -125,6 +125,30 @@ bool dwarf2_evaluate_property (const struct dynamic_prop *prop,
 			       CORE_ADDR *value,
 			       gdb::array_view<CORE_ADDR> push_values = {});
 
+/* Evaluate a PROP_LOCEXPR/PROP_LOCLIST property as a generic
+   expression, and return the resulting value.  RESULT_TYPE is the
+   type of the resulting value.
+
+   FRAME is the frame in which the property is evaluated; if NULL, the
+   selected frame (if any) is used instead.
+
+   Returns a value if PROP could be evaluated, otherwise returns
+   NULL.  */
+
+value *dwarf2_evaluate_property_genexpr (const dynamic_prop *prop,
+					 frame_info_ptr frame,
+					 struct type *result_type);
+
+/* When evaluating an expression extracting an address and we have a
+   valid return candidate and its value is signed, we have to
+   sign-extend the value because CORE_ADDR on 64bit machine has 8
+   bytes but address size of an 32bit application is 4 bytes.  This
+   function sign extends ADDRESS in place, if appropriate.  */
+
+void dwarf2_address_maybe_sign_extend (struct type *type,
+				       int addr_size,
+				       CORE_ADDR *address);
+
 /* A helper for the compiler interface that compiles a single dynamic
    property to C code.
 

@@ -10001,6 +10001,24 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 			    cu->addr_type ());
     }
 
+  /* If there's a conceptual program location expression, record
+     it.  */
+  attr = dwarf2_attr (die, DW_AT_LLVM_lane_pc, cu);
+  if (attr != nullptr)
+    {
+      /* Note we record the vector element type as the property's
+	 type, not the whole vector/array element type.  This is just
+	 so that the property evaluation code has convenient access to
+	 the DWARF generic type for this CU.  */
+      dynamic_prop prop;
+      if (attr_to_dynamic_prop (attr, die, cu, &prop, cu->addr_type ()))
+	{
+	  newobj->lane_pc
+	    = XOBNEW (&objfile->objfile_obstack, struct dynamic_prop);
+	  *newobj->lane_pc = prop;
+	}
+    }
+
   cu->list_in_scope = cu->get_builder ()->get_local_symbols ();
 
   if (die->child != NULL)
@@ -10067,6 +10085,9 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   dwarf2_record_block_ranges (die, block, cu);
 
   gdbarch_make_symbol_special (gdbarch, cstk.name, objfile);
+
+  if (cstk.lane_pc != nullptr)
+    objfile_register_lane_pc (objfile, block, cstk.lane_pc);
 
   /* Attach template arguments to function.  */
   if (!template_args.empty ())
@@ -15485,6 +15506,7 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
       switch (attr->name)
 	{
 	case DW_AT_string_length:
+	case DW_AT_LLVM_lane_pc:
 	  baton = XOBNEW (obstack, struct dwarf2_property_baton);
 	  baton->property_type = default_type;
 	  fill_in_loclist_baton (cu, &baton->loclist, attr);
