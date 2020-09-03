@@ -48,6 +48,7 @@
 #include "gdbsupport/gdb_optional.h"
 #include "inline-frame.h"
 #include "stack.h"
+#include "gdbarch.h"
 
 /* Definition of struct thread_info exported to gdbthread.h.  */
 
@@ -57,6 +58,88 @@ static int highest_thread_num;
 
 /* The current/selected thread.  */
 static thread_info *current_thread_;
+
+/* See gdbthread.h.  */
+
+bool
+thread_info::has_simd_lanes ()
+{
+  scoped_restore_current_thread restore_thread;
+  switch_to_thread (this);
+  gdbarch *arch = target_thread_architecture (this->ptid);
+  return gdbarch_active_lanes_mask_p (arch) != 0;
+}
+
+/* See gdbthread.h.  */
+
+simd_lanes_mask_t
+thread_info::active_simd_lanes_mask ()
+{
+  gdb_assert (this->inf != nullptr);
+
+  scoped_restore_current_thread restore_thread;
+  switch_to_inferior_no_thread (this->inf);
+  gdbarch *arch = target_thread_architecture (this->ptid);
+
+  if (gdbarch_active_lanes_mask_p (arch))
+    return gdbarch_active_lanes_mask (arch, this);
+
+  /* Default: only one lane is active, lane 0.  */
+  return 1;
+}
+
+/* See gdbthread.h.  */
+
+int
+thread_info::current_simd_lane ()
+{
+  return m_current_simd_lane;
+}
+
+/* See gdbthread.h.  */
+
+void
+thread_info::set_current_simd_lane (int lane)
+{
+  gdb_assert (lane >= 0);
+
+  m_current_simd_lane = lane;
+}
+
+/* See gdbthread.h.  */
+
+bool
+thread_info::is_simd_lane_active (int lane)
+{
+  simd_lanes_mask_t mask = active_simd_lanes_mask ();
+  return (mask & ((simd_lanes_mask_t) 1 << lane)) != 0;
+}
+
+/* See gdbthread.h.  */
+
+int
+find_first_active_simd_lane (simd_lanes_mask_t mask)
+{
+  int result = -1;
+
+  for_active_lanes (mask, [&] (int lane)
+    {
+      result = lane;
+
+      /* We need to call this function only once.  */
+      return false;
+    });
+
+  return result;
+}
+
+/* See gdbthread.h.  */
+
+bool
+is_simd_lane_active (simd_lanes_mask_t mask, int lane)
+{
+  return ((mask >> lane) & 0x1) == 0x1;
+}
 
 /* Returns true if THR is the current thread.  */
 
@@ -997,9 +1080,13 @@ should_print_thread (const char *requested_threads, int default_inf_num,
    column, for TP.  */
 
 static std::string
-thread_target_id_str (thread_info *tp)
+thread_target_id_str (thread_info *tp, int lane = -1)
 {
-  std::string target_id = target_pid_to_str (tp->ptid);
+  std::string target_id;
+  if (lane != -1)
+    target_id = target_lane_to_str (tp, lane);
+  else
+    target_id = target_pid_to_str (tp->ptid);
   const char *extra_info = target_extra_thread_info (tp);
   const char *name = tp->name != nullptr ? tp->name : target_thread_name (tp);
 
@@ -1378,6 +1465,18 @@ scoped_restore_current_thread::scoped_restore_current_thread ()
       m_was_stopped = m_thread->state == THREAD_STOPPED;
       save_selected_frame (&m_selected_frame_id, &m_selected_frame_level);
     }
+}
+
+scoped_restore_current_simd_lane::scoped_restore_current_simd_lane
+  (thread_info *thr)
+  : m_thr (thread_info_ref::new_reference (thr)),
+    m_current_simd_lane (thr->current_simd_lane ())
+{
+}
+
+scoped_restore_current_simd_lane::~scoped_restore_current_simd_lane ()
+{
+  m_thr->set_current_simd_lane (m_current_simd_lane);
 }
 
 /* See gdbthread.h.  */
@@ -1796,9 +1895,22 @@ thread_command (const char *tidstr, int from_tty)
 			     print_thread_id (tp),
 			     target_pid_to_str (inferior_ptid).c_str ());
 	  else
-	    printf_filtered (_("[Current thread is %s (%s)]\n"),
-			     print_thread_id (tp),
-			     target_pid_to_str (inferior_ptid).c_str ());
+	    {
+	      if (tp->has_simd_lanes ())
+		{
+		  int lane = tp->current_simd_lane ();
+
+		  printf_filtered (_("[Current thread is %s, lane %d (%s)]\n"),
+				   print_thread_id (tp), lane,
+				   target_lane_to_str (tp, lane).c_str ());
+		}
+	      else
+		{
+		  printf_filtered (_("[Current thread is %s (%s)]\n"),
+				   print_thread_id (tp),
+				   target_pid_to_str (inferior_ptid).c_str ());
+		}
+	    }
 	}
       else
 	error (_("No stack."));
@@ -1946,9 +2058,15 @@ print_selected_thread_frame (struct ui_out *uiout,
 	{
 	  uiout->text ("[Switching to thread ");
 	  uiout->field_string ("new-thread-id", print_thread_id (tp));
+	  if (tp->has_simd_lanes ())
+	    uiout->text (string_printf (", lane %d", tp->current_simd_lane ()));
 	  uiout->text (" (");
-	  uiout->text (target_pid_to_str (inferior_ptid));
-	  uiout->text (")]");
+	  if (!uiout->is_mi_like_p () && tp->has_simd_lanes ())
+	    uiout->text (target_lane_to_str (tp, tp->current_simd_lane ()));
+	  else
+	    uiout->text (target_pid_to_str (inferior_ptid));
+	  uiout->text (")");
+	  uiout->text ("]");
 	}
     }
 

@@ -93,11 +93,8 @@ gdb_test_multiple "info threads" "info threads" {
     }
 }
 
-set wave_id_re [string_to_regexp $wave_id]
-
 verbose -log "threadid=$threadid"
 verbose -log "wave_id=$wave_id"
-verbose -log "wave_id_re=$wave_id_re"
 
 clean_restart ${binfile}
 
@@ -116,7 +113,7 @@ clean_restart ${binfile}
 #e.g. break bit_extract_compile:35 if $_streq($_wave_id,(0,0,1)/2)
 gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" ".+$wave_id_re.+Thread.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
+gdb_test "run" "Thread.+hit.+Breakpoint.*${testfile}.cpp:$breakpoint_loc.*"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 

@@ -105,12 +105,12 @@ gdb_breakpoint "VectorAdd" "allow-pending"
 
 run_and_wait "run to VectorAdd Breakpoint"
 
-gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
+gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 run_and_wait "run to VectorAdd Breakpoint after inferior exit"
 
-gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
+gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
 
 # Check "info agents".
 # vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"

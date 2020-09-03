@@ -156,7 +156,8 @@ proc_with_prefix process_attach_tests {} {
     }
 
     if {$threadid != ""} {
-        gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
+        gdb_test "thread $threadid" \
+	    "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
 
         # Show architecture info while debugging in device code.
         # Sample output "The target architecture is set automatically (currently amdgcn:gfx906)".
