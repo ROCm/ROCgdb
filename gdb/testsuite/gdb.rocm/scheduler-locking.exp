@@ -133,7 +133,7 @@ gdb_test_sequence "info inferiors" "info inferiors" {
 }
 
 # Switch to AMDGPU thread id.
-gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
+gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
 
 # Turn on step scheduler-locking and check "next" , "clear <location>"
 # "continue" commands in it.

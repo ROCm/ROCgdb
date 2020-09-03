@@ -141,11 +141,12 @@ show_step_stop_if_no_debug (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("Mode of the step operation is %s.\n"), value);
 }
 
-/* proceed and normal_stop use this to notify the user when the
-   inferior stopped in a different thread than it had been running
-   in.  */
+/* proceed and normal_stop use these to notify the user when the
+   inferior stopped in a different thread/lane than it had been
+   running in.  */
 
 static ptid_t previous_inferior_ptid;
+static int previous_lane;
 
 /* If set (default for legacy reasons), when following a fork, GDB
    will detach from one of the fork branches, child or parent.
@@ -3044,8 +3045,9 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       return;
     }
 
-  /* We'll update this if & when we switch to a new thread.  */
+  /* We'll update these if & when we switch to a new thread/lane.  */
   previous_inferior_ptid = inferior_ptid;
+  previous_lane = inferior_thread ()->current_simd_lane ();
 
   regcache = get_current_regcache ();
   gdbarch = regcache->arch ();
@@ -3310,6 +3312,10 @@ init_wait_for_inferior (void)
   nullify_last_target_wait_ptid ();
 
   previous_inferior_ptid = inferior_ptid;
+  if (inferior_ptid != null_ptid)
+    previous_lane = inferior_thread ()->current_simd_lane ();
+  else
+    previous_lane = -1;
 }
 
 
@@ -6424,6 +6430,38 @@ handle_signal_stop (struct execution_control_state *ecs)
   process_event_stop_test (ecs);
 }
 
+/* Switch to an active lane that caused the stop.  If we stopped for a
+   breakpoint, use the breakpoint's lane mask to determine candidate
+   active lanes, as it may have been further restricted from the
+   thread's execution mask.  Otherwise, use the thread's execution
+   mask.  If the previous current lane is still active, do not change
+   lanes.  Otherwise, select the first active lane.  If all lanes are
+   masked out, leave the previous current lane selected.  */
+
+static void
+switch_to_active_lane (thread_info *thr)
+{
+  simd_lanes_mask_t mask;
+  if (thr->control.stop_bpstat != nullptr)
+    mask = thr->control.stop_bpstat->simd_lane_mask;
+  else
+    mask = thr->active_simd_lanes_mask ();
+
+  if (mask != 0)
+    {
+      int current_simd_lane = thr->current_simd_lane ();
+      /* If previous SIMD lane matches the SIMD lane mask, do not
+	 change it.  Otherwise, find a new one.  */
+      if (!is_simd_lane_active (mask, current_simd_lane))
+	{
+	  /* If a specific SIMD lane caused the stop, then switch the
+	     thread to this lane.  */
+	  int first_lane = find_first_active_simd_lane (mask);
+	  thr->set_current_simd_lane (first_lane);
+	}
+    }
+}
+
 /* Come here when we've got some debug event / signal we can explain
    (IOW, not a random signal), and test whether it should cause a
    stop, or whether we should resume the inferior (transparently).
@@ -8474,6 +8512,12 @@ normal_stop (void)
      instead of after.  */
   update_thread_list ();
 
+  if (target_has_execution ()
+      && last.kind != TARGET_WAITKIND_SIGNALLED
+      && last.kind != TARGET_WAITKIND_EXITED
+      && last.kind != TARGET_WAITKIND_NO_RESUMED)
+    switch_to_active_lane (inferior_thread ());
+
   if (last.kind == TARGET_WAITKIND_STOPPED && stopped_by_random_signal)
     gdb::observers::signal_received.notify (inferior_thread ()->stop_signal ());
 
@@ -8494,20 +8538,38 @@ normal_stop (void)
      after this event is handled, so we're not really switching, only
      informing of a stop.  */
   if (!non_stop
-      && previous_inferior_ptid != inferior_ptid
       && target_has_execution ()
+      && (previous_inferior_ptid != inferior_ptid
+	  || previous_lane != inferior_thread ()->current_simd_lane ())
       && last.kind != TARGET_WAITKIND_SIGNALLED
       && last.kind != TARGET_WAITKIND_EXITED
       && last.kind != TARGET_WAITKIND_NO_RESUMED)
     {
+      thread_info *thr = inferior_thread ();
+
       SWITCH_THRU_ALL_UIS ()
 	{
 	  target_terminal::ours_for_output ();
-	  printf_filtered (_("[Switching to %s]\n"),
-			   target_pid_to_str (inferior_ptid).c_str ());
+
+	  if (thr->has_simd_lanes ())
+	    {
+	      int lane = thr->current_simd_lane ();
+
+	      printf_filtered (_("[Switching to thread %s, lane %d (%s)]\n"),
+			       print_thread_id (thr), lane,
+			       target_lane_to_str (thr, lane).c_str ());
+	    }
+	  else
+	    {
+	      printf_filtered (_("[Switching to thread %s (%s)]\n"),
+			       print_thread_id (thr),
+			       target_pid_to_str (thr->ptid).c_str ());
+	    }
+
 	  annotate_thread_changed ();
 	}
       previous_inferior_ptid = inferior_ptid;
+      previous_lane = thr->current_simd_lane ();
     }
 
   if (last.kind == TARGET_WAITKIND_NO_RESUMED)

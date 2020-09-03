@@ -27,6 +27,7 @@ struct symtab;
 #include "frame.h"
 #include "ui-out.h"
 #include "btrace.h"
+#include "gdbarch.h"
 #include "target/waitstatus.h"
 #include "cli/cli-utils.h"
 #include "gdbsupport/refcounted-object.h"
@@ -491,6 +492,40 @@ private:
   /* State of inferior thread to restore after GDB is done with an inferior
      call.  See `struct thread_suspend_state'.  */
   thread_suspend_state m_suspend;
+
+  /* Currently selected SIMD lane.
+
+     If SIMD is supported by the architecture, changing this attribute
+     switches the focus between different SIMD lanes within a thread.
+     This field is tigthly bound to the active SIMD lanes mask, which
+     indicates lanes that are currently active.
+
+     If SIMD is not supported, we pretend there's only one lane, with
+     index 0.
+
+     In thread_info, SIMD_LANE_NUM should stay non-negative.  Related
+     fields outside thread_info, such as the lane variable in
+     parse_thread_id or breakpoint::simd_lane_num could be negative,
+     with value '-1' meaning, that we do not care about SIMD lane
+     number or do not want to change the currently selected SIMD
+     lane.  */
+  int m_current_simd_lane = 0;
+
+public:
+  /* Return true if this thread has SIMD lanes.  */
+  bool has_simd_lanes ();
+
+  /* Return active lanes mask for this thread.  */
+  simd_lanes_mask_t active_simd_lanes_mask ();
+
+  /* Return the current simd lane.  */
+  int current_simd_lane ();
+
+  /* Set the current simd lane.  */
+  void set_current_simd_lane (int lane);
+
+  /* Return true if LANE is active in this thread.  */
+  bool is_simd_lane_active (int lane);
 };
 
 using thread_info_resumed_with_pending_wait_status_node
@@ -789,6 +824,19 @@ private:
   enum language m_lang;
 };
 
+/* Save/restore current lane.  */
+class scoped_restore_current_simd_lane
+{
+public:
+  /* THR specifies the thread for which the current SIMD lane is
+     saved/restored.  */
+  explicit scoped_restore_current_simd_lane (thread_info *thr);
+  ~scoped_restore_current_simd_lane ();
+private:
+  thread_info_ref m_thr;
+  int m_current_simd_lane;
+};
+
 /* Returns a pointer into the thread_info corresponding to
    INFERIOR_PTID.  INFERIOR_PTID *must* be in the thread list.  */
 extern struct thread_info* inferior_thread (void);
@@ -920,5 +968,37 @@ extern void print_selected_thread_frame (struct ui_out *uiout,
    was parsed from.  This is used in the error message if THR is not
    alive anymore.  */
 extern void thread_select (const char *tidstr, class thread_info *thr);
+
+/* Return the number of the first active lane in MASK or -1 if MASK is
+   0.  */
+extern int find_first_active_simd_lane (simd_lanes_mask_t mask);
+
+/* Return true if LANE is unmasked in MASK.  */
+extern bool is_simd_lane_active (simd_lanes_mask_t mask, int lane);
+
+/* Execute function FUNC for all active lanes in MASK.  FUNC should
+   have the following prototype:
+
+    bool func (int lane_num, ...)
+
+   LANE_NUM is the currently iterated lane.  ARGS are passed to FUNC.
+   If FUNC returns false, the loop breaks.  */
+template<typename Func, typename... Args>
+void
+for_active_lanes (simd_lanes_mask_t mask, Func func, Args &...args)
+{
+  int lane = 0;
+
+  while (mask != 0)
+    {
+      if ((mask & 1) != 0)
+	{
+	  if (!func (lane, args...))
+	    break;
+	}
+      ++lane;
+      mask >>= 1;
+    }
+}
 
 #endif /* GDBTHREAD_H */

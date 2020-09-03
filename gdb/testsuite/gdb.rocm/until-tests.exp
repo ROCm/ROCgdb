@@ -117,7 +117,7 @@ gdb_test_no_output "set non-stop on"
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 run_and_wait "run to bit_extract_kernel Breakpoint"
 
-gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
+gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
 gdb_test "info line" "Line $breakpoint_loc.*"
 gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
 gdb_test "info line" "Line [expr $breakpoint_loc+3].*"

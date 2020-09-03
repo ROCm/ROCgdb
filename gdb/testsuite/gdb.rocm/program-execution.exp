@@ -108,7 +108,8 @@ proc test {mode} {
 	gdb_test_no_output "set non-stop on"
     }
 
-    set bp_hit_re {hit Breakpoint [\d]+, bit_extract_kernel \([^\r\n]*\)\sat}
+    set any "\[^\r\n\]*"
+    set bp_hit_re "hit Breakpoint $::decimal, with SIMD lanes \\\[$any\\\], bit_extract_kernel \\\($any\\\)\\\sat"
 
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
 
