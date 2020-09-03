@@ -745,7 +745,7 @@ set_step_frame (thread_info *tp)
   symtab_and_line sal = find_frame_sal (frame);
   set_step_info (tp, frame, sal);
 
-  CORE_ADDR pc = get_frame_pc (frame);
+  CORE_ADDR pc = get_frame_lane_pc (frame);
   tp->control.step_start_function = find_pc_function (pc);
 }
 
@@ -966,7 +966,7 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 		}
 	    }
 
-	  pc = get_frame_pc (frame);
+	  pc = get_frame_lane_pc (frame);
 	  find_pc_line_pc_range (pc,
 				 &tp->control.step_range_start,
 				 &tp->control.step_range_end);
@@ -1351,7 +1351,7 @@ until_next_command (int from_tty)
      than the current line (if in symbolic section) or pc (if
      not).  */
 
-  pc = get_frame_pc (frame);
+  pc = get_frame_lane_pc (frame);
   func = find_pc_function (pc);
 
   if (!func)
@@ -1728,8 +1728,8 @@ finish_forward (struct finish_command_fsm *sm, const frame_info_ptr &frame)
   struct symtab_and_line sal;
   struct thread_info *tp = inferior_thread ();
 
-  sal = find_pc_line (get_frame_pc (frame), 0);
-  sal.pc = get_frame_pc (frame);
+  sal = find_pc_line (get_frame_lane_pc (frame), 0);
+  sal.pc = get_frame_lane_pc (frame);
 
   sm->breakpoint = set_momentary_breakpoint (gdbarch, sal,
 					     get_stack_frame_id (frame),
@@ -1793,8 +1793,8 @@ finish_command (const char *arg, int from_tty)
   if (arg)
     error (_("The \"finish\" command does not take any arguments."));
 
-  frame = get_prev_frame (get_selected_frame (_("No selected frame.")));
-  if (frame == 0)
+  frame = get_prev_active_frame (get_selected_frame (_("No selected frame.")));
+  if (frame == nullptr)
     error (_("\"finish\" not meaningful in the outermost frame."));
 
   clear_proceed_status (0);
@@ -1816,7 +1816,7 @@ finish_command (const char *arg, int from_tty)
 	 step_range_end, because then infrun will think this is nexti,
 	 and not step over the rest of this inlined function call.  */
       set_step_info (tp, frame, {});
-      tp->control.step_range_start = get_frame_pc (frame);
+      tp->control.step_range_start = get_frame_lane_pc (frame);
       tp->control.step_range_end = tp->control.step_range_start;
       tp->control.step_over_calls = STEP_OVER_ALL;
 
@@ -1834,7 +1834,7 @@ finish_command (const char *arg, int from_tty)
 
   /* Find the function we will return from.  */
   frame_info_ptr callee_frame = get_selected_frame (nullptr);
-  sm->function = find_pc_function (get_frame_pc (callee_frame));
+  sm->function = get_frame_function (callee_frame);
   sm->return_buf = 0;    /* Initialize buffer address is not available.  */
 
   /* Determine the return convention.  If it is RETURN_VALUE_STRUCT_CONVENTION,

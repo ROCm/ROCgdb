@@ -773,11 +773,9 @@ pc_prefix (CORE_ADDR addr)
 {
   if (has_stack_frames ())
     {
-      frame_info_ptr frame;
       CORE_ADDR pc;
-
-      frame = get_selected_frame (NULL);
-      if (get_frame_pc_if_available (frame, &pc) && pc == addr)
+      frame_info_ptr frame = get_selected_frame (NULL);
+      if (get_frame_lane_pc_if_available (frame, &pc) && pc == addr)
 	return "=> ";
     }
   return "   ";

@@ -348,7 +348,7 @@ skip_inline_frames (thread_info *thread, bpstat *stop_chain)
   /* This function is called right after reinitializing the frame
      cache.  We try not to do more unwinding than absolutely
      necessary, for performance.  */
-  CORE_ADDR this_pc = get_frame_pc (get_current_frame ());
+  CORE_ADDR this_pc = get_frame_lane_pc (get_current_frame ());
   frame_block = block_for_pc (this_pc);
 
   if (frame_block != NULL)

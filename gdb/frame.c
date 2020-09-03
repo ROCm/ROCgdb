@@ -2887,6 +2887,31 @@ get_prop_genexpr_type (const dynamic_prop *prop)
   return baton->property_type;
 }
 
+/* See frame.h.  */
+
+bool
+get_frame_lane_pc_if_available (frame_info_ptr frame, CORE_ADDR *pc)
+{
+  int res = get_frame_pc_if_available (frame, pc);
+
+  if (!res)
+    return false;
+
+  try
+    {
+      *pc = get_frame_lane_pc (frame);
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      if (ex.error == NOT_AVAILABLE_ERROR)
+	return false;
+      else
+	throw;
+    }
+
+  return true;
+}
+
 /* Helper for get_frame_lane_pc_val and get_frame_lane_pc_array_val.  */
 
 static value *
@@ -2976,6 +3001,29 @@ value *
 get_frame_lane_pc_array_val (frame_info_ptr frame)
 {
   return get_frame_lane_pc_val_1 (frame, true);
+}
+
+/* See frame.h.  */
+
+CORE_ADDR
+get_frame_lane_pc (frame_info_ptr frame)
+{
+  value *source_pc = nullptr;
+
+  try
+    {
+      source_pc = get_frame_lane_pc_val (frame);
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      /* We get here if the lane_pc expression uses
+	 DW_OP_LLVM_call_frame_entry_reg and unwinding to the previous
+	 frame throws.  */
+    }
+
+  if (source_pc != nullptr && !source_pc->optimized_out ())
+    return value_as_address (source_pc);
+  return get_frame_pc (frame);
 }
 
 /* Return an address that falls within THIS_FRAME's code block.  */
@@ -3093,7 +3141,7 @@ find_frame_sal (const frame_info_ptr &frame)
 	/* If the symbol does not have a location, we don't know where
 	   the call site is.  Do not pretend to.  This is jarring, but
 	   we can't do much better.  */
-	sal.pc = get_frame_pc (frame);
+	sal.pc = get_frame_lane_pc (frame);
 
       sal.pspace = get_frame_program_space (frame);
       return sal;
@@ -3108,8 +3156,19 @@ find_frame_sal (const frame_info_ptr &frame)
      PC and such a PC indicates the current (rather than next)
      instruction/line, consequently, for such cases, want to get the
      line containing fi->pc.  */
+  CORE_ADDR lane_pc;
+  if (!get_frame_lane_pc_if_available (frame, &lane_pc))
+    return {};
+
   if (!get_frame_pc_if_available (frame, &pc))
     return {};
+
+  if (lane_pc != pc)
+    {
+      /* For divergent lanes, always show the line containing the
+	 logical PC.  */
+      return find_pc_line (lane_pc, 0);
+    }
 
   notcurrent = (pc != get_frame_address_in_block (frame));
   return find_pc_line (pc, notcurrent);
@@ -3349,6 +3408,24 @@ get_frame_language (const frame_info_ptr &frame)
     }
 
   return language_unknown;
+}
+
+/* See frame.h.  */
+
+compunit_symtab *
+get_frame_compunit_symtab (frame_info_ptr frame)
+{
+  CORE_ADDR pc = get_frame_pc (frame);
+  return find_pc_compunit_symtab (pc);
+}
+
+/* See frame.h.  */
+
+symtab *
+get_frame_symtab (frame_info_ptr frame)
+{
+  CORE_ADDR pc = get_frame_pc (frame);
+  return find_pc_line_symtab (pc);
 }
 
 /* Stack pointer methods.  */

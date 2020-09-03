@@ -303,7 +303,7 @@ varobj_create (const char *objname,
       if (fi != NULL)
 	{
 	  block = get_frame_block (fi, 0);
-	  pc = get_frame_pc (fi);
+	  pc = get_frame_lane_pc (fi);
 	}
 
       p = expression;
@@ -1972,7 +1972,7 @@ check_scope (const struct varobj *var)
 
   if (fi)
     {
-      CORE_ADDR pc = get_frame_pc (fi);
+      CORE_ADDR pc = get_frame_lane_pc (fi);
 
       if (pc <  var->root->valid_block->start () ||
 	  pc >= var->root->valid_block->end ())

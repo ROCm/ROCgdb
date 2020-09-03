@@ -561,10 +561,10 @@ show_compile_gcc (struct ui_file *file, int from_tty,
    put into DW_AT_producer - see GCC function gen_producer_string.  */
 
 static const char *
-get_selected_pc_producer_options (void)
+get_selected_frame_producer_options (void)
 {
-  CORE_ADDR pc = get_frame_pc (get_selected_frame (NULL));
-  struct compunit_symtab *symtab = find_pc_compunit_symtab (pc);
+  compunit_symtab *symtab
+    = get_frame_compunit_symtab (get_selected_frame (NULL));
   const char *cs;
 
   if (symtab == NULL || symtab->producer () == NULL
@@ -632,7 +632,7 @@ get_args (const compile_instance *compiler, struct gdbarch *gdbarch)
   if (!gcc_options.empty ())
     result = gdb_argv (gcc_options.c_str ());
 
-  cs_producer_options = get_selected_pc_producer_options ();
+  cs_producer_options = get_selected_frame_producer_options ();
   if (cs_producer_options != NULL)
     {
       gdb_argv argv_producer (cs_producer_options);

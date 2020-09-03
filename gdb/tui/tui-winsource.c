@@ -456,7 +456,7 @@ tui_source_window_base::rerender ()
       frame_info_ptr frame = deprecated_safe_get_selected_frame ();
       struct gdbarch *gdbarch = get_frame_arch (frame);
 
-      struct symtab *s = find_pc_line_symtab (get_frame_pc (frame));
+      struct symtab *s = get_frame_symtab (frame);
       if (this != tui_src_win ())
 	find_line_pc (s, cursal.line, &cursal.pc);
 
@@ -497,7 +497,7 @@ tui_source_window_base::refill ()
 	{
 	  frame_info_ptr fi = deprecated_safe_get_selected_frame ();
 	  if (fi != nullptr)
-	    sal = find_pc_line (get_frame_pc (fi), 0);
+	    sal = find_pc_line (get_frame_lane_pc (fi), 0);
 	}
     }
 

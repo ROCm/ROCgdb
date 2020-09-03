@@ -240,7 +240,7 @@ frapy_pc (PyObject *self, PyObject *args)
     {
       FRAPY_REQUIRE_VALID (self, frame);
 
-      pc = get_frame_pc (frame);
+      pc = get_frame_lane_pc (frame);
     }
   catch (const gdb_exception &except)
     {

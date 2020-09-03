@@ -213,7 +213,7 @@ tui_get_function_from_frame (const frame_info_ptr &fi)
   static char name[256];
   string_file stream;
 
-  print_address_symbolic (get_frame_arch (fi), get_frame_pc (fi),
+  print_address_symbolic (get_frame_arch (fi), get_frame_lane_pc (fi),
 			  &stream, demangle, "");
 
   /* Use simple heuristics to isolate the function name.  The symbol
@@ -273,7 +273,7 @@ tui_show_frame_info (const frame_info_ptr &fi)
       const char *func_name;
       /* find_frame_sal does not always set PC, but we want to ensure
 	 that it is available in the SAL.  */
-      if (get_frame_pc_if_available (fi, &sal.pc))
+      if (get_frame_lane_pc_if_available (fi, &sal.pc))
 	func_name = tui_get_function_from_frame (fi);
       else
 	func_name = _("<unavailable>");

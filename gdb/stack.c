@@ -328,7 +328,7 @@ frame_show_address (const frame_info_ptr &frame,
       return false;
     }
 
-  return get_frame_pc (frame) != sal.pc || !sal.is_stmt;
+  return get_frame_lane_pc (frame) != sal.pc || !sal.is_stmt;
 }
 
 /* See frame.h.  */
@@ -1039,7 +1039,7 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
       ui_out_emit_tuple tuple_emitter (uiout, "frame");
 
       annotate_frame_begin (print_level ? frame_relative_level (frame) : 0,
-			    gdbarch, get_frame_pc (frame));
+			    gdbarch, get_frame_lane_pc (frame));
 
       /* Do this regardless of SOURCE because we don't have any source
 	 to list for this frame.  */
@@ -1052,7 +1052,7 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
       if (uiout->is_mi_like_p ())
 	{
 	  annotate_frame_address ();
-	  print_pc (uiout, gdbarch, frame, get_frame_pc (frame));
+	  print_pc (uiout, gdbarch, frame, get_frame_lane_pc (frame));
 	  annotate_frame_address_end ();
 	}
 
@@ -1081,7 +1081,8 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
       if (disassemble_next_line == AUTO_BOOLEAN_AUTO
 	  || disassemble_next_line == AUTO_BOOLEAN_TRUE)
 	do_gdb_disassembly (get_frame_arch (frame), 1,
-			    get_frame_pc (frame), get_frame_pc (frame) + 1);
+			    get_frame_lane_pc (frame),
+			    get_frame_lane_pc (frame) + 1);
 
       return;
     }
@@ -1110,7 +1111,8 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
        || disassemble_next_line == AUTO_BOOLEAN_TRUE)
       && source_print && !sal.symtab)
     do_gdb_disassembly (get_frame_arch (frame), 1,
-			get_frame_pc (frame), get_frame_pc (frame) + 1);
+			get_frame_lane_pc (frame),
+			get_frame_lane_pc (frame) + 1);
 
   if (source_print && sal.symtab)
     {
@@ -1118,7 +1120,7 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
 			   && frame_show_address (frame, sal));
       if (annotation_level > 0
 	  && annotate_source_line (sal.symtab, sal.line, mid_statement,
-				   get_frame_pc (frame)))
+				   get_frame_lane_pc (frame)))
 	{
 	  /* The call to ANNOTATE_SOURCE_LINE already printed the
 	     annotation for this source line, so we avoid the two cases
@@ -1152,7 +1154,7 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
 	     ability to decide for themselves if it is desired.  */
 	  if (opts.addressprint && mid_statement)
 	    {
-	      print_pc (uiout, gdbarch, frame, get_frame_pc (frame));
+	      print_pc (uiout, gdbarch, frame, get_frame_lane_pc (frame));
 	      uiout->text ("\t");
 	    }
 
@@ -1169,7 +1171,7 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
     {
       CORE_ADDR pc;
 
-      if (get_frame_pc_if_available (frame, &pc))
+      if (get_frame_lane_pc_if_available (frame, &pc))
 	last_displayed_symtab_info.set (sal.pspace, pc, sal.symtab, sal.line);
       else
 	last_displayed_symtab_info.invalidate ();
@@ -1331,7 +1333,7 @@ print_frame (struct ui_out *uiout,
   CORE_ADDR pc = 0;
   int pc_p;
 
-  pc_p = get_frame_pc_if_available (frame, &pc);
+  pc_p = get_frame_lane_pc_if_available (frame, &pc);
 
   gdb::unique_xmalloc_ptr<char> funname
     = find_frame_funname (frame, &funlang, &func);
@@ -1506,7 +1508,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
        get_frame_pc().  */
     pc_regname = "pc";
 
-  frame_pc_p = get_frame_pc_if_available (fi, &frame_pc);
+  frame_pc_p = get_frame_lane_pc_if_available (fi, &frame_pc);
   func = get_frame_function (fi);
   symtab_and_line sal = find_frame_sal (fi);
   s = sal.symtab;
@@ -1539,7 +1541,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 	  funlang = msymbol.minsym->language ();
 	}
     }
-  calling_frame_info = get_prev_frame (fi);
+  calling_frame_info = get_prev_active_frame (fi);
 
   if (selected_frame_p && frame_relative_level (fi) >= 0)
     {
@@ -1554,7 +1556,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
   gdb_printf (":\n");
   gdb_printf (" %s = ", pc_regname);
   if (frame_pc_p)
-    gdb_puts (paddress (gdbarch, get_frame_pc (fi)));
+    gdb_puts (paddress (gdbarch, get_frame_lane_pc (fi)));
   else
     fputs_styled ("<unavailable>", metadata_style.style (), gdb_stdout);
 
@@ -1627,16 +1629,17 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
       gdb_puts (paspace_and_addr
 		  (gdbarch, get_frame_base (calling_frame_info)).c_str ());
     }
-  if (get_next_frame (fi) && calling_frame_info)
+  if (get_next_active_frame (fi) && calling_frame_info)
     gdb_puts (",");
   gdb_stdout->wrap_here (3);
-  if (get_next_frame (fi))
+  if (get_next_active_frame (fi))
     {
+      CORE_ADDR caller_fb_addr = get_frame_base (get_next_active_frame (fi));
+
       gdb_printf (" caller of frame at ");
-      gdb_puts (paspace_and_addr
-		  (gdbarch, get_frame_base (get_next_frame (fi))).c_str ());
+      gdb_puts (paspace_and_addr (gdbarch, caller_fb_addr).c_str ());
     }
-  if (get_next_frame (fi) || calling_frame_info)
+  if (get_next_active_frame (fi) || calling_frame_info)
     gdb_puts ("\n");
 
   if (s)

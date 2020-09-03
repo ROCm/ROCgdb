@@ -175,7 +175,6 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
   struct frame_id frame_id;
   PyObject *internal = NULL;
   int internal_bp = 0;
-  CORE_ADDR pc;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|OO", keywords,
 					&frame_obj, &internal))
@@ -196,7 +195,7 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	}
       else
 	{
-	  prev_frame = get_prev_frame (frame);
+	  prev_frame = get_prev_active_frame (frame);
 	  if (prev_frame == 0)
 	    {
 	      PyErr_SetString (PyExc_ValueError,
@@ -250,10 +249,8 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
   try
     {
-      if (get_frame_pc_if_available (frame, &pc))
-	{
-	  struct symbol *function = find_pc_function (pc);
-	  if (function != nullptr)
+	  struct symbol *function = get_frame_function (frame);
+	  if (function != NULL)
 	    {
 	      struct type *ret_type =
 		check_typedef (function->type ()->target_type ());
@@ -274,7 +271,6 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 		  PyErr_Clear ();
 		}
 	    }
-	}
     }
   catch (const gdb_exception_forced_quit &except)
     {

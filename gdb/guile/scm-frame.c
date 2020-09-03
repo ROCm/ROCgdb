@@ -572,7 +572,7 @@ gdbscm_frame_pc (SCM self)
       frame_info_ptr frame = frscm_frame_smob_to_frame (f_smob);
       if (frame != NULL)
 	{
-	  pc = get_frame_pc (frame);
+	  pc = get_frame_lane_pc (frame);
 	  found = true;
 	}
     }

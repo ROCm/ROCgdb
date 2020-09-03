@@ -214,7 +214,7 @@ set_traceframe_context (const frame_info_ptr &trace_frame)
 
   /* Save as globals for internal use.  */
   if (trace_frame != NULL
-      && get_frame_pc_if_available (trace_frame, &trace_pc))
+      && get_frame_lane_pc_if_available (trace_frame, &trace_pc))
     {
       traceframe_sal = find_pc_line (trace_pc, 0);
       traceframe_fun = find_pc_function (trace_pc);
@@ -2334,7 +2334,7 @@ tfind_line_command (const char *args, int from_tty)
   symtab_and_line sal;
   if (args == 0 || *args == 0)
     {
-      sal = find_pc_line (get_frame_pc (get_current_frame ()), 0);
+      sal = find_pc_line (get_frame_lane_pc (get_current_frame ()), 0);
     }
   else
     {

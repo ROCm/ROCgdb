@@ -83,6 +83,8 @@ struct gdbarch;
 struct ui_file;
 struct ui_out;
 struct frame_print_options;
+struct compunit_symtab;
+struct symtab;
 
 /* The frame object.  */
 
@@ -513,10 +515,10 @@ extern frame_info_ptr frame_find_by_id (frame_id id);
 
 /* Base attributes of a frame: */
 
-/* The frame's `resume' address.  Where the program will resume in
-   this frame.
-
-   This replaced: frame->pc; */
+/* The frame's physical `resume' address.  Where the program will
+   resume in this frame.  Note this returns the physical PC register.
+   When debugging a SIMD lane, there's also a source/logical PC resume
+   address.  See get_frame_lane_pc.  */
 extern CORE_ADDR get_frame_pc (const frame_info_ptr &);
 
 /* Same as get_frame_pc, but return a boolean indication of whether
@@ -524,15 +526,25 @@ extern CORE_ADDR get_frame_pc (const frame_info_ptr &);
 
 extern bool get_frame_pc_if_available (const frame_info_ptr &frame, CORE_ADDR *pc);
 
-/* When debugging a SIMD lane, this returns the current lane's
-   conceptual source PC.  For an inactive divergent lane, returns an
-   optimized out value if the divergence happened in an earlier frame.
-   When not debugging a SIMD lane, returns NULL.  */
+/* The frame's source/logical `resume' address.  Where the program
+   will resume in this frame.  Note this returns the source/logical PC
+   register, not the physical register.  See get_frame_pc for the
+   physical PC.  */
+extern CORE_ADDR get_frame_lane_pc (frame_info_ptr frame);
+
+/* The frame's source/logical `resume' address.  Where the program
+   will resume in this frame.  Note this returns the source/logical PC
+   register, not the physical register.  See get_frame_pc for the
+   physical PC.  For lanes inactive on entry to the frame, this
+   returns an optimized out value.  */
 extern value *get_frame_lane_pc_val (frame_info_ptr frame);
 
 /* Same as get_frame_lane_pc_val, but returns an array with one
    element per lane.  */
 extern value *get_frame_lane_pc_array_val (frame_info_ptr frame);
+
+extern bool get_frame_lane_pc_if_available (frame_info_ptr frame,
+					    CORE_ADDR *pc);
 
 /* An address (not necessarily aligned to an instruction boundary)
    that falls within THIS frame's code block.
@@ -1073,6 +1085,14 @@ extern bool frame_unwinder_is (const frame_info_ptr &fi, const frame_unwind *unw
 /* Return the language of FRAME.  */
 
 extern enum language get_frame_language (const frame_info_ptr &frame);
+
+/* Return the compunit_symtab of FRAME.  */
+
+extern compunit_symtab *get_frame_compunit_symtab (frame_info_ptr frame);
+
+/* Return the symtab of FRAME.  */
+
+extern symtab *get_frame_symtab (frame_info_ptr frame);
 
 /* Return the first non-tailcall frame above FRAME or FRAME if it is not a
    tailcall frame.  Return NULL if FRAME is the start of a tailcall-only
