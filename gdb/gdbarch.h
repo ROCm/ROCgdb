@@ -142,6 +142,9 @@ using read_core_file_mappings_loop_ftype =
 			   const char *filename,
 			   const bfd_build_id *build_id)>;
 
+/* 64-bits is sufficient for all known architectures.  */
+typedef uint64_t simd_lanes_mask_t;
+
 /* Possible values for gdbarch_call_dummy_location.  */
 enum call_dummy_location_type
 {

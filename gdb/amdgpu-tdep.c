@@ -1770,6 +1770,19 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
   return aliases;
 }
 
+static simd_lanes_mask_t
+amdgpu_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
+{
+  static_assert (sizeof (simd_lanes_mask_t) >= sizeof (uint64_t));
+
+  uint64_t exec_mask;
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_EXEC_MASK, exec_mask)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return 0;
+
+  return exec_mask;
+}
+
 static bool
 amdgpu_supports_arch_info (const struct bfd_arch_info *info)
 {
@@ -1996,6 +2009,9 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     error (_("amd_dbgapi_architecture_get_info failed"));
 
   set_gdbarch_max_insn_length (gdbarch, max_insn_length);
+
+  /* Lane debugging.  */
+  set_gdbarch_active_lanes_mask (gdbarch, amdgpu_active_lanes_mask);
 
   status = amd_dbgapi_architecture_get_info
     (architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION_SIZE,

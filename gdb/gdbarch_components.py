@@ -686,6 +686,17 @@ Method(
 
 Method(
     comment="""
+Return the active SIMD lanes mask for a thread TP.
+""",
+    type="simd_lanes_mask_t",
+    name="active_lanes_mask",
+    params=[("thread_info *", "tp")],
+    predicate=True,
+    invalid=True,
+)
+
+Method(
+    comment="""
 Return true if the code of FRAME is writable.
 """,
     type="int",
