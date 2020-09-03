@@ -454,6 +454,10 @@ M;struct type *;register_type;int reg_nr;reg_nr
 # should match the address at which the breakpoint was set in the dummy
 # frame.
 m;struct frame_id;dummy_id;struct frame_info *this_frame;this_frame;;default_dummy_id;;0
+
+# Return the active SIMD lanes mask for a thread TP.
+M;simd_lanes_mask_t;active_lanes_mask;thread_info *tp;tp
+
 # Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
 # deprecated_fp_regnum.
 v;int;deprecated_fp_regnum;;;-1;-1;;0
@@ -1421,6 +1425,9 @@ enum class memtag_type
      accesses via pointers containing logical tags.  */
   allocation,
 };
+
+/* 64-bits is sufficient for all known architectures.  */
+typedef uint64_t simd_lanes_mask_t;
 
 EOF
 
