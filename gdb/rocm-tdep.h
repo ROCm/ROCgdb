@@ -101,4 +101,47 @@ get_amd_dbgapi_wave_id (ptid_t ptid)
   };
 }
 
+/* Convenience wrapper around amd_dbgapi_wave_get_info that avoids
+   manually specifying RES's size and accepts a thread pointer instead
+   of a wave id.  */
+
+template<typename Res>
+static amd_dbgapi_status_t
+wave_get_info (thread_info *tp, amd_dbgapi_wave_info_t query, Res &res)
+{
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
+
+  return amd_dbgapi_wave_get_info (wave_id, query, sizeof (res), &res);
+}
+
+/* Like wave_get_info above, but throws an error if the dbgapi call
+   fails.  */
+
+template<typename Res>
+static void
+wave_get_info_throw (thread_info *tp, amd_dbgapi_wave_info_t query, Res &res)
+{
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
+
+  if (amd_dbgapi_wave_get_info (wave_id, query, sizeof (res), &res)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("amd_dbgapi_wave_get_info for wave_%ld failed "),
+	   wave_id.handle);
+}
+
+/* Convenience wrapper around amd_dbgapi_dispatch_get_info that avoids
+   manually specifying RES's size and throws an error if the dbgapi
+   call fails.  */
+
+template<typename Res>
+static void
+dispatch_get_info_throw (amd_dbgapi_dispatch_id_t dispatch_id,
+			 amd_dbgapi_dispatch_info_t query, Res &res)
+{
+  if (amd_dbgapi_dispatch_get_info (dispatch_id, query, sizeof (res), &res)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("amd_dbgapi_dispatch_get_info for dispatch_%ld failed "),
+	   dispatch_id.handle);
+}
+
 #endif /* rocm-tdep.h */
