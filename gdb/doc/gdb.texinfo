@@ -3544,8 +3544,11 @@ isn't compatible with the program.
 The @value{GDBN} thread debugging facility allows you to observe all
 threads while your program runs---but whenever @value{GDBN} takes
 control, one thread in particular is always the focus of debugging.
-This thread is called the @dfn{current thread}.  Debugging commands show
-program information from the perspective of the current thread.
+This thread is called the @dfn{current thread}.  If SIMD/SIMT lanes
+are available (@xref{heterogeneous lane}), you can switch the focus
+between different lanes within a thread.  Debugging commands show
+program information from the perspective of the current thread and, if
+applicable, of the current lane within this thread.
 
 @cindex @code{New} @var{systag} message
 @cindex thread identifier (system)
@@ -12479,20 +12482,16 @@ The target system's heterogeneous dispatch identifier (@var{disatch_systag})
 string of the heterogeneous dispatch of the current thread.
 
 @item $_lane
-The per-inferior heterogeneous lane number of the current
-heterogeneous lane of the current thread.  @xref{Heterogeneous
-Debugging}.
+The per-thread lane index of the current heterogeneous lane of the
+current thread.  @xref{lane ID}.
 
-@c FIXME-implementors!!  Should there be @code{$_lane_index},
-@c @code{$_lane_active} and @code{$_lane_count} convenience variables?
-@c Note that the lane count needs to take into account when a grid
-@c size is not a multiple of the work-group size (resulting in partial
-@c work-groups on the dimension edges of the grid), and the work-group
-@c size is not a multiple of the wavefront size.
+@item $_lane_count
+The number of heterogeneous lanes in the thread, taking into account
+lanes which have not been assigned to a heterogeneous work-group.
+@xref{Heterogeneous Debugging}.
 
-@item $_glane
-The global heterogeneous lane number of the current heterogeneous
-lane.  @xref{Heterogeneous Debugging}.
+@c FIXME-implementors!!  Should there be a @code{$_lane_active}
+@c convenience variable?
 
 @item $_lane_systag
 The target system's heterogeneous lane identifier (@var{lane_systag}) string of
@@ -22476,6 +22475,7 @@ scheduling, memory visibility between the threads of a heterogeneous
 dispatch and other threads, or other services supported by the
 heterogeneous system.
 
+@anchor{heterogeneous lane}
 @cindex heterogeneous lane
 On some heterogeneous systems there can be heterogeneous agents that
 support @acronym{SIMD, Single Instruction Multiple Data} or
@@ -22483,6 +22483,15 @@ support @acronym{SIMD, Single Instruction Multiple Data} or
 instructions.  On these target architectures, a single machine
 instruction can operate in parallel on multiple @dfn{heterogeneous
 lanes}.
+
+@anchor{unused heterogeneous lane}
+@cindex unused heterogeneous lane
+When an heterogeneous lane is not associated with any work-group, it
+is said to be unused.  For example, the left over lanes when the
+work-group size is not a multiple of the lanes in a SIMD/SIMT thread,
+or when the grid size is not a multiple of the work-group size
+(resulting in partial work-groups on the dimension edges of the grid).
+@value{GDBN} hides unused lanes by default.
 
 @cindex divergent control flow
 Source languages used by heterogeneous programs can be implemented on
@@ -22637,6 +22646,30 @@ when you're debugging multiple inferiors.
 
 @end itemize
 
+@anchor{lane ID}
+@cindex lane ID
+Each lane of a thread is assigned a single number, also known as
+@dfn{lane ID}.  This is a single integer, which is an index number
+starting at 0, going up to the number of hardware-supported lanes per
+thread.  This ID is unique per thread, not global, and thus multiple
+threads can have lanes with the same ID.
+
+@anchor{lane ID list}
+@cindex lane ID list
+Some commands accept a space-separated @dfn{lane ID list} as argument.
+A list element can be:
+
+@enumerate
+@item
+A lane ID as shown in the first field of the @samp{info lanes}
+display.  E.g., @samp{1}.
+
+@item
+A range of lane IDs, as in @var{lane1}-@var{lane2}.  E.g.,
+@samp{0-20}.
+
+@end enumerate
+
 The following debugger convenience variables (@pxref{Convenience
 Vars,,Convenience Variables}) are related to heterogeneous debugging.
 You may find these useful in writing breakpoint conditional
@@ -22663,15 +22696,10 @@ created by a heterogeneous dispatch, or 0 otherwise.  @code{$_agent},
 per-inferior heterogeneous entity number.
 
 @vindex $_lane@r{, convenience variable}
-@vindex $_glane@r{, convenience variable}
 @item $_lane
-@itemx $_glane
-The heterogeneous lane number of the current lane of the current thread.
-@code{$_lane} contains the corresponding per-inferior heterogeneous lane
-number.  While @code{$_glane} contains the corresponding global
-heterogeneous lane number.  If the current thread does not have multiple
-heterogeneous lanes, it is treated as if it has a single heterogeneous
-lane number.
+The heterogeneous lane number of the current lane of the current
+thread.  If the current thread does not support SIMD/SIMT lanes, it is
+treated as if it has a single lane.
 
 @vindex $_dispatch_pos@r{, convenience variable}
 @item $_dispatch_pos
@@ -23085,7 +23113,6 @@ thread you selected, followed by its current stack frame summary.
 @itemx taas [@var{option}]@dots{} @var{command}
 @itemx tfaas [@var{option}]@dots{} @var{command}
 @itemx thread name @r{[}@var{name}@r{]}
-@itemx thread find @var{regexp}
 These commands operate the same way for all threads, regardless of
 whether or not the thread is associated with a heterogeneous dispatch.
 
@@ -23096,36 +23123,58 @@ on each lane of a thread.
 
 @xref{Threads}.
 
+@item thread find @var{regexp}
+In addition to searching thread information, if a thread's frame has
+multiple heterogeneous lanes then the command also searches the
+thread's lanes for those whose name or @var{systag} matches the
+supplied regular expression.
+
+@xref{Threads}.
+
 @cindex lane identifier (system)
-@item info lanes @r{[}-gid@r{]} @var{lane-id}
-Display information about one or more heterogeneous lanes.  With no
-arguments displays information about all heterogeneous lanes.  You can
-specify the list of heterogeneous lanes that you want to display using
-the heterogeneous lane ID list syntax (@pxref{heterogeneous entity ID
+@item info lanes @r{[}-all | -active | -inactived@r{]} @var{lane-id-list}
+Display information about one or more heterogeneous lanes of the
+current thread.  With no arguments displays information about all used
+lanes of the current thread.  You can specify the list of lanes that
+you want to display using the lane ID list syntax (@pxref{lane ID
 list}).
+
+By default, @value{GDBN} lists all the used lanes of the thread; lanes
+which are not associated with any work-group (@pxref{unused
+heterogeneous lane}) are not displayed.  The following options can be
+used to fine-tune this behavior:
+
+@table @code
+@item -all
+All lanes, including active, inactive and unused lanes.
+@item -active
+Only active lanes.
+@item -inactive
+Only used inactive lanes.
+@end table
 
 @value{GDBN} displays for each heterogeneous lane (in this order):
 
 @enumerate
 @item
-The heterogeneous lane ID assigned by @value{GDBN}.  @xref{qualified
-heterogeneous entity numbers}.
+The heterogeneous lane ID assigned by @value{GDBN}.  @xref{lane ID}.
+
+@c @item
+@c The thread number assigned by @value{GDBN} for the thread that
+@c contains the heterogeneous lane.  This is displayed as a global thread
+@c number if the @w{@option{-gid}} option was specified, otherwise as a
+@c per-inferior thread number.
 
 @item
-The global heterogeneous lane ID, if the @w{@option{-gid}} option was
-specified.  @xref{global heterogeneous entity numbers}.
-
-@item
-The thread number assigned by @value{GDBN} for the thread that
-contains the heterogeneous lane.  This is displayed as a global thread
-number if the @w{@option{-gid}} option was specified, otherwise as a
-per-inferior thread number.  If the thread has multiple heterogeneous
-lanes then this is followed by a slash and the heterogeneous lane
-index of the heterogeneous lane within the thread with the first lane
-being 1.
-
-@item
-An indication of whether the heterogeneous lane is active or inactive.
+The state of the heterogeneous lane.  If a thread is stopped, then its
+lanes can be either in the @samp{A} (active), or @samp{I} (inactive)
+states.  An unused lane (@pxref{unused heterogeneous lane}) is always
+shown in the @samp{U} (unused) state.  When a thread is running (as
+opposed to stopped), whether one of its lanes is active or inactive
+can't be determined, as the thread is executing instructions and may
+be constinuously changing its lanes between active and inactive
+states.  Therefore, when a thread is running, all its used lanes are
+in the @samp{R} (running) state.
 
 @anchor{target system lane identifier}
 @item
@@ -23143,8 +23192,11 @@ The heterogeneous lane's name, if one is assigned by the user (see
 
 @item
 The current stack frame summary for that heterogeneous lane.  If the
-heterogeneous lane is inactive this is the source position at which the
-heterogeneous lane will resume.
+heterogeneous lane is inactive, and it can be determined from the
+debug information, this is the source position at which the
+heterogeneous lane will resume.  If, on the other hand, it cannot be
+determined, it is ``(inactive)''.  If the lane is running, it is
+``(running)''.
 @end enumerate
 
 @noindent
@@ -23156,58 +23208,51 @@ For example,
 @c end table here to get a little more width for example
 
 @smallexample
-(@value{GDBP}) info lanes
-  Id  Thread  Active  Target Id                                          Frame
-* 1   4       Y       process 35 thread 13                               main (argc=1, argv=0x7ffffff8)
-  2   5/2     Y       AMDGPU Lane 1:2:3:463/2 (2,3,4) work-item(1,2,4)   0x34e5 in saxpy ()
-  3   6/12    N       AMDGPU Lane 1:2:4:456/12 (2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
-@end smallexample
-
-If you're debugging multiple inferiors, @value{GDBN} displays
-heterogeneous lane IDs using the qualified
-@var{inferior-num}.@var{lane-num} format.  Otherwise, only
-@var{lane-num} is shown.
-
-If you specify the @w{@option{-gid}} option, @value{GDBN} displays a
-column indicating each heterogeneous lane's global heterogeneous lane
-ID, and displays the thread's global thread number:
-
-@smallexample
-(@value{GDBP}) info lanes -gid
-  Id   GId  Thread  Active  Target Id                                          Frame
-* 1.1  1    4       Y       process 35 thread 13                               main (argc=1, argv=0x7ffffff8)
-  1.2  3    5/2     Y       AMDGPU Lane 1:2:3:463/2 (2,3,4) work-item(1,2,4)   0x34e5 in saxpy ()
-  2.1  1    4       Y       process 65 thread 1                                main (argc=1, argv=0x7ffffff8)
-  2.2  4    6/12    N       AMDGPU Lane 1:2:4:456/12 (2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
+(@value{GDBP}) info lanes 1-2
+  Id  State   Target Id                                Frame
+* 1   A       AMDGPU Lane 1:2:3:463/2 (2,3,4)[1,2,4]   0x34e5 in saxpy ()
+  2   I       AMDGPU Lane 1:2:4:456/12 (2,4,4)[1,2,3]  (inactive)
 @end smallexample
 
 @table @code
 @kindex lane
-@item lane @r{[}-gid@r{]} @var{lane-id}
-Make heterogeneous lane ID @var{lane-id} the current heterogeneous
-lane and the thread that contains the heterogeneous lane the current
-thread.  The command argument @var{lane-id} is the @value{GDBN}
-heterogeneous lane ID: if the @w{@option{-gid}} option is given it is
-a global heterogeneous lane identifier, as shown in the second field
-of the @code{info lanes -gid} display; otherwise it is a per-inferior
-heterogeneous lane identifier, with or without an inferior qualifier
-(e.g., @samp{2.1} or @samp{1}), as shown in the first field of the
-@code{info lanes} display.
+@item lane @var{lane-id}
+
+Make lane ID @var{lane-id} the current lane of the current thread.
+The command argument @var{lane-id} is the @value{GDBN} per-thread lane
+ID (@pxref{lane ID}), as shown in the first field of the @code{info
+lanes} display.
 
 @value{GDBN} responds by displaying the system identifier of the
 heterogeneous lane you selected, and its current stack frame summary:
 
 @smallexample
 (@value{GDBP}) lane 2
-[Switching to lane 2 (Thread 0xb7fdab70 (LWP 12747))]
+[Switching to thread 5, lane 2 (AMDGPU Lane 1:1:1:1/2 (0,0,0)[2,0,0])]
 #0  some_function (ignore=0x0) at example.c:8
 8	    printf ("hello\n");
 @end smallexample
 
 @noindent
-As with the @samp{[New @dots{}]} message, the form of the text after
-@samp{Switching to} depends on your system's conventions for identifying
-heterogeneous lanes.
+As with the @samp{[New @dots{}]} message, the form of the text in
+parentheses after @samp{Switching to} depends on your system's
+conventions for identifying heterogeneous lanes.
+
+If you switch to an inactive lane, @value{GDBN} displays a warning, so
+that you are made aware that values of local variables, function
+arguments, etc. will have meaningless values.  For example:
+
+@smallexample
+(gdb) lane 1
+[Switching to thread 6, lane 1 (AMDGPU Lane 1:1:1:2/1 (0,0,0)[65,0,0])]
+warning: Current lane is inactive.
+#0  some_function (ignore=0x0) at example.c:8
+8	    printf ("hello\n");
+@end smallexample
+
+@xref{stepping lanes, description of how execution commands and
+heterogeneous debugging interact} for what happens if you run a
+stepping command with an inactive lane selected.
 
 @kindex lane name
 @cindex name a heterogeneous lane
@@ -23266,13 +23311,30 @@ Lane 2 has lane id 'ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4)
 @c ways to represent dispatch positions.  There may even be multiple
 @c ways to aggregate on some system.
 
-@item lane apply @r{[}@var{thread-id-list} @r{|} all @r{[}-ascending@r{]]} @r{[}@var{flag}@r{]@dots{}} @var{command}
+@item lane apply @r{[}@var{lane-id-list} @r{|} all@r{]} @r{[}-all | -active | -inactive@r{]} @r{[}@var{flag}@r{]@dots{}} @var{command}
 @itemx laas [@var{option}]@dots{} @var{command}
 @itemx lfaas [@var{option}]@dots{} @var{command}
 @code{lane apply}, @code{laas}, and @code{lfass} commands are similar
 to their thread counterparts @code{thread apply}, @code{taas}, and
 @code{tfaas} respectively, except they operate on heterogeneous lanes.
 @xref{Threads}.
+
+By default, @value{GDBN} operates on all the used lanes of the thread.
+The following flags can be used to fine-tune this behavior:
+
+@table @code
+@item -all
+All lanes, including active, inactive and unused lanes.
+@item -active
+Only active lanes.
+@item -inactive
+Only used inactive lanes.
+@end table
+
+The @var{flag} arguments control what output to produce and how to
+handle errors raised when applying @var{command} to a lane.  See
+@code{info threads} command (@pxref{Threads}) for available flags and
+their meaning.
 
 @item backtrace [@var{option}]@dots{} [@var{qualifier}]@dots{} [@var{count}]
 @itemx frame @r{[} @var{frame-selection-spec} @r{]}
@@ -23337,18 +23399,27 @@ architecture.
 The @code{print} command evaluates the source language expression in
 the context of the current heterogeneous lane.
 
+@anchor{stepping lanes}
 @item step
 @itemx next
 @itemx finish
 @itemx until
 @itemx stepi
 @itemx nexti
-If the current heterogeneous lane is set to an inactive heterogeneous
-lane, then the @code{step}, @code{next}, @code{finish} and
-@code{until} commands (@pxref{Continuing and Stepping, ,Continuing and
-Stepping}) may cause other heterogeneous lanes of the same thread to
-advance so that the current heterogeneous lane becomes active.  This
-may result in other heterogeneous lanes completing whole functions.
+Execution commands such as @code{step}, @code{next}, @code{finish} and
+@code{until} (@pxref{Continuing and Stepping, ,Continuing and
+Stepping}) automatically skip over code regions where the current
+heterogeneous lane becomes inactive.  Similarly, if the current
+heterogeneous lane is inactive when the execution command is entered,
+@value{GDBN} advances the thread until the current lane becomes
+active.
+
+At the hardware level, all lanes of a thread execute instructions in
+lock-step, though some lanes may be set inactive (as result of special
+instructions emitted by the compiler) so that instructions do not have
+an effect in them.  Thus, stepping a lane may cause other active
+heterogeneous lanes of the same thread to also execute code.  This may
+even result in other heterogeneous lanes completing whole functions.
 
 If the current heterogeneous lane is set to an inactive heterogeneous
 lane, then the @code{stepi} and @code{nexti} commands
@@ -23371,8 +23442,7 @@ other heterogeneous lanes of the same thread will advance.
 @itemx tcatch @r{[}-lane @var{lane-index}@r{]} @var{event}
 When a breakpoint, watchpoint, or catchpoint (@pxref{Breakpoints,
 ,Breakpoints; Watchpoints; and Catchpoints}) is hit by a frame of a
-thread with multiple heterogeneous lanes, each active lane is treated
-independently:
+thread with multiple heterogeneous lanes:
 
 @itemize @bullet
 
@@ -23381,27 +23451,41 @@ The breakpoint condition, if present, is evaluated for each active
 heterogeneous lane.
 
 @item
-The breakpoint command, if present, is evaluated for each active
-heterogeneous lane that evaluates the breakpoint condition to true.
+The breakpoint command, if present, is executed for the first active
+heterogeneous lane that evaluates the breakpoint condition as true.
+If you want to execute the command for other lanes, you can use the
+@code{lane apply} command.
 
 @item
-If the breakpoint causes the heterogeneous lane to halt then he
-current heterogeneous lane is set to the halting heterogeneous lane
-and @value{GDBN} responds by displaying the system identifier of the
-heterogeneous lane selected.
+If the breakpoint causes heterogeneous lanes to halt then the current
+heterogeneous lane is set to the first lane in the set of lanes that
+are active, and that evaluate the breakpoint condition as true (if
+there's a breakpoint condition).  @value{GDBN} responds by displaying
+the system identifier of the heterogeneous lane selected.  The
+breakpoint hit notification mentions the intersection of which
+heterogeneous lanes were active and evaluated the condition as true,
+like so:
 
-@item
-If the breakpoint is a temporary breakpoint, then it will be removed,
-and so any remaining heterogeneous lanes will not report the
-breakpoint.
+@smallexample
+(gdb) c
+Continuing.
+[Switching to thread 5, lane 1 (AMDGPU Lane 1:1:1:1/1 (0,0,0)[1,0,0])]
 
-@item
-In non-stop mode all heterogeneous lanes that halt at the breakpoint
-will be reported.
+Thread 5 hit Breakpoint 2, with lanes [1-10 13], func () at example.cpp:48
+@end smallexample
 
-@item
-In all-stop mode, continuing from the breakpoint will cause the next
-heterogeneous ative lane that hit the breakpoint to be processed.
+@c @item
+@c If the breakpoint is a temporary breakpoint, then it will be removed,
+@c and so any remaining heterogeneous lanes will not report the
+@c breakpoint.
+
+@c @item
+@c In non-stop mode all heterogeneous lanes that halt at the breakpoint
+@c will be reported.
+
+@c @item
+@c In all-stop mode, continuing from the breakpoint will cause the next
+@c heterogeneous active lane that hit the breakpoint to be processed.
 
 @end itemize
 
@@ -23417,6 +23501,23 @@ lane has a heterogeneous lane index that matches @var{lane-index}.
 The @code{info break} and @code{info watch} commands add a @emph{Lane}
 column before the @emph{Address} column if any breakpoint has a
 @var{lane-index} specified that displays the heterogeneous lane index.
+
+@kindex maint set lane-divergence-support
+@item maint set lane-divergence-support
+@kindex maint show lane-divergence-support
+@item maint show lane-divergence-support
+Control whether or not @value{GDBN} understands lane divergence.
+
+When set to @samp{on}, which is the default, execution commands such
+as @code{step}, @code{next}, @code{finish} and @code{until}
+automatically skip over code regions where the selected lane is
+inactive, and @value{GDBN} ignores breakpoint hits that trigger with
+all lanes inactive.
+
+When set to @samp{off}, execution commands ignore lane active/inactive
+state, and may thus present stops in code regions where the selected
+lane is inactive.  Also, breakpoint hits are reported even if all
+lanes are inactive.
 
 @c FIXME-implementors!!  Should there be way to request all pending
 @c breakpoints to be processed?  This may result in multiple
@@ -27863,6 +27964,16 @@ and registers not currently supported by the CFI generation are saved
 so the CFI information is correct.  If these options are not used, the
 invalid DWARF may cause @value{GDBN} to report that it is unable to
 read memory (such as when reading arguments in a backtrace).
+
+@item
+@value{GDBN} does not currently make use of debug information
+describing an inactive lane's logical current PC (and the @acronym{AMD
+ROCm} compiler currently does not generate it).  Such debug
+information informs the debugger about what the instruction an
+inactive lane will execute next once it becomes active.  Thus,
+currently, source locations displayed for inactive lanes always point
+to the wave's physical PC.  This is the same PC address as the PC of
+the lanes that are active.
 
 @item
 Only @acronym{AMD GPU} Code Object V3 and above is supported.  This is
