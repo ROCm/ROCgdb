@@ -682,6 +682,17 @@ amdgcn_rocm_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
   return exec_mask;
 }
 
+static int
+amdgcn_rocm_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  size_t count;
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, count)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return 0;
+
+  return count;
+}
+
 static struct gdbarch *
 amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -878,6 +889,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Lane debugging.  */
   set_gdbarch_active_lanes_mask (gdbarch, amdgcn_rocm_active_lanes_mask);
+  set_gdbarch_supported_lanes_count (gdbarch, amdgcn_rocm_supported_lanes_count);
 
   if (amd_dbgapi_architecture_get_info (
 	architecture_id,

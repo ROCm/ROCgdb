@@ -1156,6 +1156,14 @@ default_dwarf_address_space_to_address_space_id (LONGEST dwarf_addr_space)
   return (arch_addr_space_id) dwarf_addr_space;
 }
 
+/* See arch-utils.h.  */
+
+int
+default_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  return 0;
+}
+
 void _initialize_gdbarch_utils ();
 void
 _initialize_gdbarch_utils ()
