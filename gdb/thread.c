@@ -1584,6 +1584,12 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
 	  return "A";
 	}
 
+      if (get_frame_lane_pc_val (get_current_frame ()) != nullptr)
+	{
+	  /* Divergent.  */
+	  return "D";
+	}
+
       /* Inactive.  */
       return "I";
     };
@@ -1603,19 +1609,32 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
 	}
       else
 	{
-	  if (tp->is_simd_lane_active (lane))
+	  if (!tp->is_simd_lane_active (lane)
+	      && get_frame_lane_pc_val (get_current_frame ()) == nullptr)
 	    {
-	      frame_info_ptr curr_frame = get_current_frame ();
-
-	      print_stack_frame (curr_frame,
-				 /* For MI output, print frame level.  */
-				 uiout->is_mi_like_p (),
-				 LOCATION, 0);
+	      /* Lanes in this row are inactive, and we don't have
+		 logical PC info.  */
+	      uiout->text ("(inactive)\n");
 	    }
 	  else
 	    {
-	      /* Lanes in this row are inactive.  */
-	      uiout->text ("(inactive)\n");
+	      frame_info_ptr curr_active_frame
+		= skip_inactive_frames (get_current_frame ());
+	      if (curr_active_frame != nullptr)
+		{
+		  /* Lanes in this row are divergent.  */
+		  print_stack_frame (curr_active_frame,
+				     /* For MI output, print frame level.  */
+				     uiout->is_mi_like_p (),
+				     LOCATION, 0);
+		}
+	      else
+		{
+		  /* Lanes in this row are inactive in all frames.
+		     I.e., the lane was already inactive when the
+		     thread was started.  */
+		  uiout->text ("(inactive)\n");
+		}
 	    }
 	}
     }
