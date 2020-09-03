@@ -1440,6 +1440,12 @@ struct bpstat
     /* Tell bpstat_print and print_bp_stop_message how to print stuff
        associated with this element of the bpstat chain.  */
     enum bp_print_how print_it;
+
+    /* Which SIMD lanes where active when the breakpoint was hit.  If
+       the breakpoint is conditional, then this is further restricted
+       to which lanes the breakpoint conditional evaluated true
+       for.  */
+    simd_lanes_mask_t simd_lane_mask;
   };
 
 enum inf_context

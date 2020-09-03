@@ -119,8 +119,11 @@ enum exec_direction_kind
 extern enum exec_direction_kind execution_direction;
 
 /* Call this to point 'previous_thread' at the thread returned by
-   inferior_thread, or at nullptr, if there's no selected thread.  */
-extern void update_previous_thread ();
+   inferior_thread, or at nullptr, if there's no selected thread.
+
+   Update 'previous_lane' to the value returned by
+   thread_info::current_simd_lane, or -1 if there's no selected thread.  */
+extern void update_previous_thread_and_lane ();
 
 /* Get a weak reference to 'previous_thread'.  */
 extern thread_info *get_previous_thread ();
