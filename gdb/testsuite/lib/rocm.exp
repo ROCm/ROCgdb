@@ -497,3 +497,100 @@ proc rocm_generate_core_file { corefile_path } {
     }
     return 0
 }
+
+# Extract the offload bundle from INPUT and write it to OUTPUT.
+
+proc hip_extract_offload_bundle {input output} {
+    set hip_fatbin [standard_temp_file bundled[pid].hip_fatbin]
+
+    # Unfortunately, clang-offload-bundler doesn't know how to
+    # unbundle hipv4 fat binary objects, so we get to unbundle
+    # ourselves.  Fortunately, it's nothing complicated.  The bundle
+    # format is described here:
+    # https://clang.llvm.org/docs/ClangOffloadBundler.html
+
+    # Use the system's objcopy, as there's no
+    # "amdgcn-amd-amdhsa-objcopy".
+    remote_exec host "objcopy -O binary --only-section=.hip_fatbin\
+		      $input $hip_fatbin"
+
+    set fp [open $hip_fatbin "r"]
+    fconfigure $fp -translation binary
+    set data [read $fp]
+    close $fp
+
+    verbose -log "size of bundled data: [string length $data]"
+
+    # The index into DATA the 'get' procs next read from.
+    set idx 0
+
+    # Get SIZE bytes starting at IDX.
+    proc get {size} {
+	upvar data data
+	upvar idx idx
+
+	verbose -log "get, idx=$idx, size=$size"
+
+	if {$size == 0} {
+	    return {}
+	}
+
+	set last [expr {$idx + $size - 1}]
+
+	set res [string range $data $idx $last]
+
+	incr idx $size
+
+	return $res
+    }
+
+    # Get an 8-byte long little endian unsigned integer starting at
+    # IDX.
+    proc get_uint64 {} {
+	upvar data data
+	upvar idx idx
+
+	set res_str [get 8]
+
+	if {[binary scan $res_str "w" res_num] != 1} {
+	    error "binary scan failed"
+	}
+	return $res_num
+    }
+
+    set magic [get 24]
+    if {$magic != "__CLANG_OFFLOAD_BUNDLE__"} {
+	return -1
+    }
+
+    set number_of_bundles [get_uint64]
+    verbose -log "number_of_bundles: $number_of_bundles"
+
+    for {set bundle 0} {$bundle < $number_of_bundles} {incr bundle} {
+	set offset [get_uint64]
+	set size [get_uint64]
+
+	set entry_id_len [get_uint64]
+	set entry_id [get $entry_id_len]
+
+	verbose -log "bundle: $bundle, offset=0x[format %X $offset],\
+		      size=$size, entry_id_len=$entry_id_len,\
+		      entry_id=$entry_id"
+
+	if {[string compare -length 6 $entry_id "hipv4-"] == 0} {
+	    set last [expr {$offset + $size - 1}]
+	    set device_obj [string range $data $offset $last]
+
+	    set fp [open $output "w"]
+	    fconfigure $fp -translation binary
+	    puts -nonewline $fp $device_obj
+	    close $fp
+
+	    # Success.
+	    verbose -log "extracted $output"
+	    return $offset
+	}
+    }
+
+    return -1
+}

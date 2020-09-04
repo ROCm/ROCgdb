@@ -205,7 +205,7 @@ proc init_shared_gdb {} {
 # Cluster of four procs:
 # - shared_gdb_enable
 # - shared_gdb_disable
-# - shared_gdb_start_use SRC OPTIONS
+# - shared_gdb_start_use SRC OPTIONS EXE
 # - shared_gdb_end_use
 #
 # Can be used like so:
@@ -276,7 +276,7 @@ proc share_gdb { src options } {
 
 # See above.
 
-proc shared_gdb_start_use { src options } {
+proc shared_gdb_start_use { src options {exe ""} } {
     set me shared_gdb_start_use
 
     init_shared_gdb
@@ -296,9 +296,12 @@ proc shared_gdb_start_use { src options } {
     }
 
     if { $do_start } {
-	set exe [standard_temp_file func_addr.x]
 
-	gdb_compile $src $exe executable $options
+	if {$exe == ""} {
+	    set exe [standard_temp_file func_addr.x]
+
+	    gdb_compile $src $exe executable $options
+	}
 
 	gdb_exit
 	gdb_start
@@ -370,26 +373,39 @@ proc with_shared_gdb { body } {
 proc function_range { func src {options {debug}} } {
     global decimal gdb_prompt
 
-    shared_gdb_start_use $src $options
+    set amdgcn [istarget "amdgcn-amd-amdhsa"]
 
-    if [istarget "amdgcn-amd-amdhsa"] {
-	# For AMDGCN, we need to run the program, so we have access to
-	# the device code.
-	if {![runto_main]} {
-	    fail "cannot run to main"
-	    return
+    init_shared_gdb
+    if {!$::shared_gdb_started && $amdgcn} {
+
+	set exe [standard_temp_file function_range_exe[pid].x]
+
+	gdb_compile $src $exe executable $options
+
+	# Unbundle the device code.  The result is a shared library,
+	# which we load into GDB directly (thus no host code is
+	# loaded), which then gives us unrelocated addresses, just
+	# what we need.
+	set bundled_so [standard_output_file function_range_bundled_so[pid].so]
+	if {[hip_extract_offload_bundle $exe $bundled_so] == -1} {
+	    return "failed to extract bundle"
 	}
 
+	set exe $bundled_so
+    }
+
+    shared_gdb_start_use $src $options $exe
+
+    if {$amdgcn} {
 	# The tests are compiled with HIP, which is a C++ variant.
 	# Turn on demangling to make the symbol names closer to C
 	# names.
 	gdb_test_no_output -nopass "set print asm-demangle on"
 	gdb_test_no_output -nopass "set print demangle on"
+    }
 
-	# The label offset computation doesn't work correct for GCN --
-	# GDB finds the host label first instead of the device label
-	# even though we're in device context.  That should probably
-	# be improved in GDB somehow, but for our purposes here, plain
+    if {$amdgcn} {
+	# We don't need to do the label offset computation, plain
 	# printing the function works to find the function's start
 	# address.
 	set func_start ""
@@ -409,6 +425,7 @@ proc function_range { func src {options {debug}} } {
 		set func_label_offset $expect_out(1,string)
 	    }
 	}
+	set func_start [expr {"${func}_label - $func_label_offset"}]
     }
 
     # Compute the function length.
@@ -442,45 +459,14 @@ proc function_range { func src {options {debug}} } {
 	}
     }
 
-    if [istarget "amdgcn-amd-amdhsa"] {
-
-	# Find out the start address of the device code DSO, to
-	# subtract it from the function's start address.  IOW, we want
-	# the function's unrelocated start address relative to the
-	# start of the device's text segment.
-
-	set dso_start ""
-	set ws "\[ \t\]\+"
-	set test "info shared"
-	gdb_test_multiple $test $test {
-	    -re "($hex)${ws}$hex${ws}Yes${ws}file:///.*$gdb_prompt $" {
-		set dso_start $expect_out(1,string)
-	    }
-	}
-
-	# XXX: Need to add 0x1000, but I'm not sure exactly why...
-	set adj_func_start [expr $func_start - $dso_start + 0x1000]
-
-	verbose -log "func_start = $func_start"
-	verbose -log "dso_start = $dso_start"
-	verbose -log "adj_func_start = $adj_func_start"
-
-	shared_gdb_end_use
-
-	if {$adj_func_start < 0} {
-	    # This happens when the function wasn't emitted for the
-	    # device, so the disassemble above finds the host function
-	    # instead.
-	    perror "could not find function start, probably function was not emitted"
-	    return ""
-	}
-
-	return [list $adj_func_start $func_length]
-    } else {
-	shared_gdb_end_use
-	return [list "${func}_label - $func_label_offset" $func_length]
+    if {$func_start < 0} {
+	perror "could not find function \"$func\" start, function not emitted?"
+	return ""
     }
 
+    shared_gdb_end_use
+
+    return [list $func_start $func_length]
 }
 
 # Extract the start, length, and end for function called NAME and
