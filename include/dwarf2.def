@@ -474,6 +474,9 @@ DW_AT (DW_AT_upc_threads_scaled, 0x3210)
 DW_AT (DW_AT_PGI_lbase, 0x3a00)
 DW_AT (DW_AT_PGI_soffset, 0x3a01)
 DW_AT (DW_AT_PGI_lstride, 0x3a02)
+/* LLVM extensions for heterogeneous targets.  See
+   https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html.  */
+DW_AT (DW_AT_LLVM_lane_pc, 0x3e0b)
 /* Apple extensions.  */
 DW_AT (DW_AT_APPLE_optimized, 0x3fe1)
 DW_AT (DW_AT_APPLE_flags, 0x3fe2)
