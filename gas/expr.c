@@ -224,8 +224,8 @@ static valueT
 generic_bignum_to_int32 (void)
 {
   valueT number =
-	   ((generic_bignum[1] & LITTLENUM_MASK) << LITTLENUM_NUMBER_OF_BITS)
-	   | (generic_bignum[0] & LITTLENUM_MASK);
+    ((((valueT) generic_bignum[1] & LITTLENUM_MASK) << LITTLENUM_NUMBER_OF_BITS)
+     | ((valueT) generic_bignum[0] & LITTLENUM_MASK));
   number &= 0xffffffff;
   return number;
 }
@@ -1722,7 +1722,7 @@ add_to_result (expressionS *resultP, offsetT amount, int rhs_highbit)
   valueT ures = resultP->X_add_number;
   valueT uamount = amount;
 
-  resultP->X_add_number += amount;
+  resultP->X_add_number += uamount;
 
   resultP->X_extrabit ^= rhs_highbit;
 
@@ -1738,7 +1738,7 @@ subtract_from_result (expressionS *resultP, offsetT amount, int rhs_highbit)
   valueT ures = resultP->X_add_number;
   valueT uamount = amount;
 
-  resultP->X_add_number -= amount;
+  resultP->X_add_number -= uamount;
 
   resultP->X_extrabit ^= rhs_highbit;
 

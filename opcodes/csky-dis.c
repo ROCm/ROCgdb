@@ -342,6 +342,7 @@ csky_output_operand (char *str, struct operand const *oprnd,
       strcat (str, buf);
       break;
     case OPRND_TYPE_VREG:
+      dis_info.value = value;
       sprintf (buf, "vr%d", (int)value);
       strcat (str, buf);
       break;
@@ -943,7 +944,7 @@ print_insn_csky (bfd_vma memaddr, struct disassemble_info *info)
   CSKY_INST_TYPE inst = 0;
   int status;
   char str[256];
-  long given;
+  unsigned long given;
   int is_data = FALSE;
   void (*printer) (bfd_vma, struct disassemble_info *, long);
   unsigned int  size = 4;

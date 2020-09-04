@@ -199,7 +199,7 @@ riscv_make_plt_header (bfd *output_bfd, bfd_vma gotplt_addr, bfd_vma addr,
   entry[0] = RISCV_UTYPE (AUIPC, X_T2, gotplt_offset_high);
   entry[1] = RISCV_RTYPE (SUB, X_T1, X_T1, X_T3);
   entry[2] = RISCV_ITYPE (LREG, X_T3, X_T2, gotplt_offset_low);
-  entry[3] = RISCV_ITYPE (ADDI, X_T1, X_T1, -(PLT_HEADER_SIZE + 12));
+  entry[3] = RISCV_ITYPE (ADDI, X_T1, X_T1, (uint32_t) -(PLT_HEADER_SIZE + 12));
   entry[4] = RISCV_ITYPE (ADDI, X_T0, X_T2, gotplt_offset_low);
   entry[5] = RISCV_ITYPE (SRLI, X_T1, X_T1, 4 - RISCV_ELF_LOG_WORD_BYTES);
   entry[6] = RISCV_ITYPE (LREG, X_T0, X_T0, RISCV_ELF_WORD_BYTES);
@@ -2618,19 +2618,42 @@ riscv_std_ext_p (const char *name)
   return (strlen (name) == 1) && (name[0] != 'x') && (name[0] != 's');
 }
 
-/* Error handler when version mis-match.  */
+/* Check if the versions are compatible.  */
 
-static void
+static bfd_boolean
 riscv_version_mismatch (bfd *ibfd,
 			struct riscv_subset_t *in,
 			struct riscv_subset_t *out)
 {
-  _bfd_error_handler
-    (_("error: %pB: Mis-matched ISA version for '%s' extension. "
-       "%d.%d vs %d.%d"),
-       ibfd, in->name,
-       in->major_version, in->minor_version,
-       out->major_version, out->minor_version);
+  if (in == NULL || out == NULL)
+    return TRUE;
+
+  /* Since there are no version conflicts for now, we just report
+     warning when the versions are mis-matched.  */
+  if (in->major_version != out->major_version
+      || in->minor_version != out->minor_version)
+    {
+      _bfd_error_handler
+	(_("warning: %pB: mis-matched ISA version %d.%d for '%s' "
+	   "extension, the output version is %d.%d"),
+	 ibfd,
+	 in->major_version,
+	 in->minor_version,
+	 in->name,
+	 out->major_version,
+	 out->minor_version);
+
+      /* Update the output ISA versions to the newest ones.  */
+      if ((in->major_version > out->major_version)
+	  || (in->major_version == out->major_version
+	      && in->minor_version > out->minor_version))
+	{
+	  out->major_version = in->major_version;
+	  out->minor_version = in->minor_version;
+	}
+    }
+
+  return TRUE;
 }
 
 /* Return true if subset is 'i' or 'e'.  */
@@ -2644,8 +2667,8 @@ riscv_i_or_e_p (bfd *ibfd,
       && (strcasecmp (subset->name, "i") != 0))
     {
       _bfd_error_handler
-	(_("error: %pB: corrupted ISA string '%s'. "
-	   "First letter should be 'i' or 'e' but got '%s'."),
+	(_("error: %pB: corrupted ISA string '%s'.  "
+	   "First letter should be 'i' or 'e' but got '%s'"),
 	   ibfd, arch, subset->name);
       return FALSE;
     }
@@ -2688,20 +2711,15 @@ riscv_merge_std_ext (bfd *ibfd,
     {
       /* TODO: We might allow merge 'i' with 'e'.  */
       _bfd_error_handler
-	(_("error: %pB: Mis-matched ISA string to merge '%s' and '%s'."),
+	(_("error: %pB: mis-matched ISA string to merge '%s' and '%s'"),
 	 ibfd, in->name, out->name);
       return FALSE;
     }
-  else if ((in->major_version != out->major_version) ||
-	   (in->minor_version != out->minor_version))
-    {
-      /* TODO: Allow different merge policy.  */
-      riscv_version_mismatch (ibfd, in, out);
-      return FALSE;
-    }
+  else if (!riscv_version_mismatch (ibfd, in, out))
+    return FALSE;
   else
     riscv_add_subset (&merged_subsets,
-		      in->name, in->major_version, in->minor_version);
+		      out->name, out->major_version, out->minor_version);
 
   in = in->next;
   out = out->next;
@@ -2718,17 +2736,10 @@ riscv_merge_std_ext (bfd *ibfd,
       if (find_in == NULL && find_out == NULL)
 	continue;
 
-      /* Check version is same or not.  */
-      /* TODO: Allow different merge policy.  */
-      if ((find_in != NULL && find_out != NULL)
-	  && ((find_in->major_version != find_out->major_version)
-	      || (find_in->minor_version != find_out->minor_version)))
-	{
-	  riscv_version_mismatch (ibfd, in, out);
-	  return FALSE;
-	}
+      if (!riscv_version_mismatch (ibfd, find_in, find_out))
+	return FALSE;
 
-      struct riscv_subset_t *merged = find_in ? find_in : find_out;
+      struct riscv_subset_t *merged = find_out ? find_out : find_in;
       riscv_add_subset (&merged_subsets, merged->name,
 			merged->major_version, merged->minor_version);
     }
@@ -2812,12 +2823,8 @@ riscv_merge_multi_letter_ext (bfd *ibfd,
       else
 	{
 	  /* Both present, check version and increment both.  */
-	  if ((in->major_version != out->major_version)
-	      || (in->minor_version != out->minor_version))
-	    {
-	      riscv_version_mismatch (ibfd, in, out);
-	      return FALSE;
-	    }
+	  if (!riscv_version_mismatch (ibfd, in, out))
+	    return FALSE;
 
 	  riscv_add_subset (&merged_subsets, out->name, out->major_version,
 			    out->minor_version);
@@ -2890,7 +2897,7 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch)
     {
       _bfd_error_handler
 	(_("error: %pB: ISA string of input (%s) doesn't match "
-	   "output (%s)."), ibfd, in_arch, out_arch);
+	   "output (%s)"), ibfd, in_arch, out_arch);
       return NULL;
     }
 
@@ -2910,15 +2917,15 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch)
     {
       _bfd_error_handler
 	(_("error: %pB: XLEN of input (%u) doesn't match "
-	   "output (%u)."), ibfd, xlen_in, xlen_out);
+	   "output (%u)"), ibfd, xlen_in, xlen_out);
       return NULL;
     }
 
   if (xlen_in != ARCH_SIZE)
     {
       _bfd_error_handler
-	(_("error: %pB: Unsupported XLEN (%u), you might be "
-	   "using wrong emulation."), ibfd, xlen_in);
+	(_("error: %pB: unsupported XLEN (%u), you might be "
+	   "using wrong emulation"), ibfd, xlen_in);
       return NULL;
     }
 
@@ -3032,7 +3039,7 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info)
 	      {
 		_bfd_error_handler
 		  (_("warning: %pB use privilege spec version %u.%u.%u but "
-		     "the output use version %u.%u.%u."),
+		     "the output use version %u.%u.%u"),
 		   ibfd,
 		   in_attr[Tag_a].i,
 		   in_attr[Tag_b].i,
@@ -3041,7 +3048,7 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info)
 		   out_attr[Tag_b].i,
 		   out_attr[Tag_c].i);
 
-		/* The priv spec v1.9.1 can be linked with other spec
+		/* The priv spec v1.9.1 can not be linked with other spec
 		   versions since the conflicts.  We plan to drop the
 		   v1.9.1 in a year or two, so this confict should be
 		   removed in the future.  */
@@ -3050,10 +3057,10 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info)
 		  {
 		    _bfd_error_handler
 		      (_("warning: privilege spec version 1.9.1 can not be "
-			 "linked with other spec versions."));
+			 "linked with other spec versions"));
 		  }
 
-		/* Update the output priv attributes to the newest.  */
+		/* Update the output priv spec to the newest one.  */
 		if (in_priv_spec > out_priv_spec)
 		  {
 		    out_attr[Tag_a].i = in_attr[Tag_a].i;
@@ -3078,7 +3085,7 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info)
 	  {
 	    _bfd_error_handler
 	      (_("error: %pB use %u-byte stack aligned but the output "
-		 "use %u-byte stack aligned."),
+		 "use %u-byte stack aligned"),
 	       ibfd, in_attr[i].i, out_attr[i].i);
 	    result = FALSE;
 	  }
@@ -3455,7 +3462,7 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
 		       bfd_boolean undefined_weak ATTRIBUTE_UNUSED)
 {
   bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
-  bfd_signed_vma foff = symval - (sec_addr (sec) + rel->r_offset);
+  bfd_vma foff = symval - (sec_addr (sec) + rel->r_offset);
   bfd_boolean near_zero = (symval + RISCV_IMM_REACH/2) < RISCV_IMM_REACH;
   bfd_vma auipc, jalr;
   int rd, r_type, len = 4, rvc = elf_elfheader (abfd)->e_flags & EF_RISCV_RVC;
@@ -3469,7 +3476,7 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
       if (sym_sec->output_section == sec->output_section
 	  && sym_sec->output_section != bfd_abs_section_ptr)
 	max_alignment = (bfd_vma) 1 << sym_sec->output_section->alignment_power;
-      foff += (foff < 0 ? -max_alignment : max_alignment);
+      foff += ((bfd_signed_vma) foff < 0 ? -max_alignment : max_alignment);
     }
 
   /* See if this function call can be shortened.  */

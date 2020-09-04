@@ -1391,7 +1391,7 @@ static reloc_howto_type elf32_arm_howto_table_1[] =
 	 0,			/* bitsize */
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
-	 complain_overflow_bitfield,/* complain_on_overflow */
+	 complain_overflow_dont,/* complain_on_overflow */
 	 bfd_elf_generic_reloc,	/* special_function */
 	 "R_ARM_TLS_DESCSEQ",	/* name */
 	 FALSE,			/* partial_inplace */
@@ -1683,7 +1683,7 @@ static reloc_howto_type elf32_arm_howto_table_1[] =
 	 0,			/* bitsize */
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
-	 complain_overflow_bitfield,/* complain_on_overflow */
+	 complain_overflow_dont,/* complain_on_overflow */
 	 bfd_elf_generic_reloc,	/* special_function */
 	 "R_ARM_THM_TLS_DESCSEQ",/* name */
 	 FALSE,			/* partial_inplace */
@@ -3593,27 +3593,40 @@ elf32_arm_allocate_local_sym_info (bfd *abfd)
 
       num_syms = elf_tdata (abfd)->symtab_hdr.sh_info;
       size = num_syms * (sizeof (bfd_signed_vma)
-			 + sizeof (struct arm_local_iplt_info *)
 			 + sizeof (bfd_vma)
-			 + sizeof (char)
-			 + sizeof (struct fdpic_local));
+			 + sizeof (struct arm_local_iplt_info *)
+			 + sizeof (struct fdpic_local)
+			 + sizeof (char));
       data = bfd_zalloc (abfd, size);
       if (data == NULL)
 	return FALSE;
 
-      elf32_arm_local_fdpic_cnts (abfd) = (struct fdpic_local *) data;
-      data += num_syms * sizeof (struct fdpic_local);
-
+      /* It is important that these all be allocated in descending
+	 order of required alignment, so that arrays allocated later
+	 will be sufficiently aligned.  */
       elf_local_got_refcounts (abfd) = (bfd_signed_vma *) data;
       data += num_syms * sizeof (bfd_signed_vma);
-
-      elf32_arm_local_iplt (abfd) = (struct arm_local_iplt_info **) data;
-      data += num_syms * sizeof (struct arm_local_iplt_info *);
 
       elf32_arm_local_tlsdesc_gotent (abfd) = (bfd_vma *) data;
       data += num_syms * sizeof (bfd_vma);
 
+      elf32_arm_local_iplt (abfd) = (struct arm_local_iplt_info **) data;
+      data += num_syms * sizeof (struct arm_local_iplt_info *);
+
+      elf32_arm_local_fdpic_cnts (abfd) = (struct fdpic_local *) data;
+      data += num_syms * sizeof (struct fdpic_local);
+
       elf32_arm_local_got_tls_type (abfd) = data;
+#if GCC_VERSION >= 3000
+      BFD_ASSERT (__alignof__ (*elf32_arm_local_tlsdesc_gotent (abfd))
+		  <= __alignof__ (*elf_local_got_refcounts (abfd)));
+      BFD_ASSERT (__alignof__ (*elf32_arm_local_iplt (abfd))
+		  <= __alignof__ (*elf32_arm_local_tlsdesc_gotent (abfd)));
+      BFD_ASSERT (__alignof__ (*elf32_arm_local_fdpic_cnts (abfd))
+		  <= __alignof__ (*elf32_arm_local_iplt (abfd)));
+      BFD_ASSERT (__alignof__ (*elf32_arm_local_got_tls_type (abfd))
+		  <= __alignof__ (*elf32_arm_local_fdpic_cnts (abfd)));
+#endif
     }
   return TRUE;
 }
@@ -10234,7 +10247,7 @@ calculate_group_reloc_mask (bfd_vma value, int n, bfd_vma *final_residual)
 	  /* Determine the most significant bit in the residual and
 	     align the resulting value to a 2-bit boundary.  */
 	  for (msb = 30; msb >= 0; msb -= 2)
-	    if (residual & (3 << msb))
+	    if (residual & (3u << msb))
 	      break;
 
 	  /* The desired shift is now (msb - 6), or zero, whichever

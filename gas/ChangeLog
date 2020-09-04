@@ -1,3 +1,225 @@
+2020-09-01  Mark Wielaard  <mark@klomp.org>
+
+	* dwarf2dbg.c (out_debug_abbrev): Use DW_FORM_sec_offset for DWARF
+	version 4 or higher.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* expr.c (add_to_result, subtract_from_result): Use unsigned
+	addition and subtraction.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-z80.c (is_overflow): Avoid too large shift.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-sparc.c (in_signed_range): Use an unsigned type for
+	sign mask.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-nios2.c (md_apply_fix): Avoid too large shift.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-mips.c (load_register): Avoid too large shift.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-d30v.c (parallel_ok): Use 1UL for left shift expression.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/rx-parse.y (rx_intop): Avoid too large shifts.
+	(rx_intop, rx_uintop, rx_disp3op, rx_disp5op, displacement),
+	(rtsd_immediate): Use correctly typed unsigned variables.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/obj-macho.c (obj_mach_o_zerofill): Correct type of
+	constant shifted left.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/bfin-lex.l: Use an unsigned type for "value".
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-pdp11.c (md_number_to_chars): Condition nbytes=8 code
+	on BFD64.
+
+2020-09-02  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* config/tc-csky.c (csky_cpus): Add ck803r3.
+	(CSKY_ISA_803R3): Define.
+	(CSKY_ISA_803R2): Refine, use CSKY_ISA_803R1.
+
+2020-09-02  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* testsuite/gas/csky/cskyv2_dsp.d : Fix Encode of mulsws.
+
+2020-09-02  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* config/tc-csky.c (struct literal): New member bignum.
+	(dump_literals): Handle big constant.
+	(enter_literal): Likewise.
+	(parse_type_freg): Handle vector register.
+
+2020-09-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* doc/as.texi: Document the .tls_common directive.
+
+2020-09-01  Alan Modra  <amodra@gmail.com>
+
+	PR 26420
+	PR 26421
+	PR 26425
+	PR 26427
+	* config/tc-arm.c (struct arm_it): Make size, size_req, cond and
+	uncond_value unsigned.
+	(parse_vfp_reg_list): Make setmask unsigned, vpr_str_len size_t.
+	(parse_big_immediate): Cast generic_bignum elements to unsigned.
+	(encode_thumb32_immediate): Shift left 0xffU.
+	(double_to_single): Make sign unsigned.  Tidy.
+	(move_or_literal_pool): Cast LITTLE_NUM elements to uint64_t or
+	valueT.
+	(vfp_or_neon_is_neon): Adjust inst.uncond_value expression.
+	(md_assemble): Likewise.
+	(handle_pred_state): Make cond unsigned.
+	(thumb32_negate_data_op): Make variables unsigned.
+	(md_apply_fix): Make value and newval unsigned, adjust uses.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26510
+	* config/tc-z8k.c (buffer): Use unsigned char.
+	(apply_fix): Use unsigned char* pointers.
+	(build_bytes): Likewise and mask nibbles when packing.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26503
+	* config/tc-v850.c (parse_register_list): Shift 1u left.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26502
+	* config/tc-tic6x.c (md_apply_fix): Use unsigned variables.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26497
+	* config/tc-sh.c (assemble_ppi): Use unsigned variables.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26495
+	* config/tc-score.c (s3_apply_fix): Use unsigned variables.
+	* config/tc-score7.c (s7_apply_fix): Likewise.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26480
+	* config/tc-nios2.c (nios2_parse_reglist): Shift 1UL left.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26479
+	* config/tc-nios2.c (md_chars_to_number): Cast buf[i] before shifting.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26472
+	PR 26473
+	PR 26474
+	* config/tc-mips.c (operand_reg_mask): Shift 1u left.
+	(load_register): Shift 0xffffU left.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26471
+	* config/tc-metag.c (md_chars_to_number): Make retval unsigned.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26468
+	* config/tc-mep.c (md_convert_frag): Use uint32_t for addend and
+	other variables.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26493
+	* config/tc-riscv.c (riscv_ip): Cast X_add_number passed to
+	VALID_* macros to unsigned.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-crx.c: Formatting.
+	(CRX_PRINT): Wrap params in parentheses.  Remove parens from uses
+	throughout file.
+	(reset_vars, get_register, get_copregister, get_optype, get_opbits),
+	(get_opflags, get_number_of_operands, parse_operand, gettrap),
+	(handle_LoadStor, getconstant, check_range, getreg_image),
+	(parse_operands, parse_insn, print_operand, print_constant),
+	(exponent2scale, mask_reg, process_label_constant, set_operand),
+	(assemble_insn, print_insn): Delete unnecessary forward declaration.
+	(print_insn): Make static.
+	(print_constant): Make "constant" unsigned.
+	(assemble_insn): Tidy REVERSE_MATCH index calc.
+	* expr.c (generic_bignum_to_int32): Cast elements to valueT.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26509
+	* config/tc-z80.c (is_overflow): Use 1UL in mask shift expression.
+
+2020-08-30  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-tic4x.c (tic4x_gen_to_words): Rewrite mantissa
+	overflow test without UB.  Avoid other UB shifts by making them
+	unsigned.
+
+2020-08-31  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* config/tc-csky.c (csky_error_state): New member 'arg_int'.
+	(SET_ERROR_NUMBER): Rename to SET_ERROR_STRING.
+	(SET_ERROR_INTEGER): New.
+	(err_formats): Add error format for ERROR_FREG_OVER_RANGE and
+	ERROR_VREG_OVER_RANGE.
+	(csky_show_error): Pass an integer argument for some error
+	numbers.
+	(parse_exp): Call SET_ERROR_STRING instead of SET_ERROR_NUMBER.
+	(parse_rt): Likewise.
+	(parse_type_ctrlreg): Likewise.
+	(csky_get_reg_val): Likewise.
+	(is_reglist_legal): Likewise.
+	(is_freglist_legal): Likewise.
+	(is_reglist_dash_comma_legal): Likewise.
+	(is_reg_lshift_illegal): Likewise.
+	(is_psr_bit): Likewise.
+	(parse_type_cpreg): Likewise.
+	(parse_type_cpcreg): Likewise.
+	(parse_type_areg): Likewise.
+	(parse_type_freg): Likewise.
+	(parse_ldst_imm): Likewise and call SET_ERROR_INTEGER.
+	(get_operand_value): Likewise.
+	(parse_operands_op): Likewise and call is_imm_within_range,
+	is_imm_within_range_ext and is_oimm_within_range.
+	(md_assemble): Likewise.
+	(is_imm_within_range): New.
+	(is_imm_within_range_ext): Rename from is_imm_over_range.
+	(is_oimm_within_range): Rename from is_oimm_over_range.
+	(v2_work_add_sub): Call SET_ERROR_INTEGER.
+	(csky_rolc): call is_imm_within_range instead of
+	is_imm_over_range.
+
+2020-08-31  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* config/tc-csky.c (md_begin): Add warning when -mdsp and
+	-mcpu=ck803ern are both added.
+	(parse_ldst_imm): Fix error message.
+
 2020-08-30  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/gas/cr16/cbitb_test.d: Update expected output.

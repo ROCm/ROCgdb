@@ -1,3 +1,50 @@
+2020-09-03  Alok Kumar Sharma  <AlokKumar.Sharma@amd.com>
+
+	* lib/fortran.exp (fortran_complex8): New proc.
+	(fortran_complex16): New proc.
+	* gdb.fortran/complex.exp: Use routines from fortran.exp
+	* gdb.fortran/pointer-to-pointer.exp: Likewise.
+	* gdb.fortran/vla-ptr-info.exp: Likewise.
+
+2020-09-03  Tom de Vries  <tdevries@suse.de>
+
+	PR breakpoint/26546
+	* gdb.base/label-without-address.exp: Runto main first.
+
+2020-09-02  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/mi_var_access.exp: Test children of access variable.
+	* gdb.ada/mi_var_access/mi_access.adb: Add new stop markers.
+	* gdb.ada/mi_var_array.exp: Update.
+
+2020-08-31  Kevin Buettner  <kevinb@redhat.com>
+
+	* gdb.base/corefile.exp (warning-free): XFAIL test when running
+	on docker w/ AUFS storage driver.
+
+2020-08-31  Kevin Buettner  <kevinb@redhat.com>
+
+	* gdb.base/corefile2.exp (renamed binfile): New tests.
+
+2020-08-31  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.dwarf2/dw2-reg-undefined.exp: Remove spurious #.
+
+2020-08-31  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.dwarf2/frame-inlined-in-outer-frame.exp: New file.
+	* gdb.dwarf2/frame-inlined-in-outer-frame.S: New file.
+
+2020-08-31  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.dwarf2/dw2-reg-undefined.exp: Test "set debug frame 1"
+	output, printing a "not saved" value from history and printing a
+	convenience variable created from a "not saved" value.
+
+2020-08-31  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/eh_return.exp: Use nopie.
+
 2020-08-28  Pedro Alves  <pedro@palves.net>
 
 	* gdb.base/advance-until-multiple-locations.exp

@@ -1191,40 +1191,40 @@ struct fnfieldlist
    pass lists of data member fields and lists of member function fields
    in an instance of a field_info structure, as defined below.  */
 struct field_info
+{
+  /* List of data member and baseclasses fields.  */
+  std::vector<struct nextfield> fields;
+  std::vector<struct nextfield> baseclasses;
+
+  /* Set if the accessibility of one of the fields is not public.  */
+  bool non_public_fields = false;
+
+  /* Member function fieldlist array, contains name of possibly overloaded
+     member function, number of overloaded member functions and a pointer
+     to the head of the member function field chain.  */
+  std::vector<struct fnfieldlist> fnfieldlists;
+
+  /* typedefs defined inside this class.  TYPEDEF_FIELD_LIST contains head of
+     a NULL terminated list of TYPEDEF_FIELD_LIST_COUNT elements.  */
+  std::vector<struct decl_field> typedef_field_list;
+
+  /* Nested types defined by this class and the number of elements in this
+     list.  */
+  std::vector<struct decl_field> nested_types_list;
+
+  /* If non-null, this is the variant part we are currently
+     reading.  */
+  variant_part_builder *current_variant_part = nullptr;
+  /* This holds all the top-level variant parts attached to the type
+     we're reading.  */
+  std::vector<variant_part_builder> variant_parts;
+
+  /* Return the total number of fields (including baseclasses).  */
+  int nfields () const
   {
-    /* List of data member and baseclasses fields.  */
-    std::vector<struct nextfield> fields;
-    std::vector<struct nextfield> baseclasses;
-
-    /* Set if the accessibility of one of the fields is not public.  */
-    int non_public_fields = 0;
-
-    /* Member function fieldlist array, contains name of possibly overloaded
-       member function, number of overloaded member functions and a pointer
-       to the head of the member function field chain.  */
-    std::vector<struct fnfieldlist> fnfieldlists;
-
-    /* typedefs defined inside this class.  TYPEDEF_FIELD_LIST contains head of
-       a NULL terminated list of TYPEDEF_FIELD_LIST_COUNT elements.  */
-    std::vector<struct decl_field> typedef_field_list;
-
-    /* Nested types defined by this class and the number of elements in this
-       list.  */
-    std::vector<struct decl_field> nested_types_list;
-
-    /* If non-null, this is the variant part we are currently
-       reading.  */
-    variant_part_builder *current_variant_part = nullptr;
-    /* This holds all the top-level variant parts attached to the type
-       we're reading.  */
-    std::vector<variant_part_builder> variant_parts;
-
-    /* Return the total number of fields (including baseclasses).  */
-    int nfields () const
-    {
-      return fields.size () + baseclasses.size ();
-    }
-  };
+    return fields.size () + baseclasses.size ();
+  }
+};
 
 /* Loaded secondary compilation units are kept in memory until they
    have not been referenced for the processing of this many
@@ -15016,7 +15016,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
   else
     new_field->accessibility = dwarf2_default_access_attribute (die, cu);
   if (new_field->accessibility != DW_ACCESS_public)
-    fip->non_public_fields = 1;
+    fip->non_public_fields = true;
 
   attr = dwarf2_attr (die, DW_AT_virtuality, cu);
   if (attr != nullptr)
@@ -15113,7 +15113,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 	{
 	  FIELD_ARTIFICIAL (*fp) = 1;
 	  new_field->accessibility = DW_ACCESS_private;
-	  fip->non_public_fields = 1;
+	  fip->non_public_fields = true;
 	}
     }
   else if (die->tag == DW_TAG_member || die->tag == DW_TAG_variable)
@@ -21448,10 +21448,12 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      addr = attr->value_as_address ();
 	      addr = gdbarch_adjust_dwarf2_addr (gdbarch, addr + baseaddr);
 	      SET_SYMBOL_VALUE_ADDRESS (sym, addr);
+	      SYMBOL_ACLASS_INDEX (sym) = LOC_LABEL;
 	    }
+	  else
+	    SYMBOL_ACLASS_INDEX (sym) = LOC_OPTIMIZED_OUT;
 	  SYMBOL_TYPE (sym) = objfile_type (objfile)->builtin_core_addr;
 	  SYMBOL_DOMAIN (sym) = LABEL_DOMAIN;
-	  SYMBOL_ACLASS_INDEX (sym) = LOC_LABEL;
 	  add_symbol_to_list (sym, cu->list_in_scope);
 	  break;
 	case DW_TAG_subprogram:

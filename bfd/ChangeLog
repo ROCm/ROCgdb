@@ -1,3 +1,115 @@
+2020-09-03  Nick Clifton  <nickc@redhat.com>
+
+	PR 26521
+	* elf.c (_bfd_elf_write_secondary_reloc_section): Check for
+	secondary reloc sections with a zero sh_entsize field.
+
+2020-09-03  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c (riscv_i_or_e_p): Minor cleanup for warnings/errors.
+	(riscv_merge_std_ext): Likewise.
+	(riscv_merge_arch_attr_info): Likewise.
+	(riscv_merge_attributes): Likewise and fix comment typos.
+
+2020-09-03  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c (riscv_version_mismatch): Change the return type
+	from void to bfd_boolean.  Report warnings rather than errors
+	when the ISA versions are mis-matched.  Afterwards, remember to
+	update the output ISA versions to the newest ones.
+	(riscv_merge_std_ext): Allow to link objects with different
+	standard ISA versions.  Try to add output ISA versions to
+	merged_subsets first.
+	(riscv_merge_multi_letter_ext): Likewise.  But for standard additional
+	ISA and non-standard ISA versions.
+
+2020-09-03  Kito Cheng  <kito.cheng@sifive.com>
+
+	* elfnn-riscv.c (riscv_merge_std_ext): Fix to report the correct
+	error message when the versions of extension are mis-matched.
+	* elfxx-riscv.c (riscv_parse_subset): Don't issue the error when
+	the string is empty.
+
+2020-09-03  Alan Modra  <amodra@gmail.com>
+
+	* xcofflink.c (xcoff_get_archive_info): Allocate xcoff_archive_info
+	on the output bfd objalloc memory.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* elfnn-aarch64.c (elfNN_aarch64_relocate_section): Correct type
+	of constant shifted left.
+
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* elf32-pru.c (pru_elf32_do_ldi32_relocate): Use an unsigned
+	type for "relocation".
+
+2020-09-01  Alan Modra  <amodra@gmail.com>
+
+	* reloc.c (N_ONES): Handle N=0.
+	* elf32-arm.c (elf32_arm_howto_table_1): Set complain_overflow_dont
+	for R_ARM_TLS_DESCSEQ and R_ARM_THM_TLS_DESCSEQ.
+
+2020-09-01  Alan Modra  <amodra@gmail.com>
+
+	PR 26429
+	* elf32-arm.c (elf32_arm_allocate_local_sym_info): Allocate arrays
+	in descending order of alignment.
+
+2020-09-01  Alan Modra  <amodra@gmail.com>
+
+	PR 26423
+	* elf32-arm.c (calculate_group_reloc_mask): Use 3u in shift.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26493
+	* elfnn-riscv.c (riscv_make_plt_header): Cast PLT_HEADER_SIZE to
+	unsigned when using with RISCV_ITYPE.
+	(_bfd_riscv_relax_call): Use an unsigned foff.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26476
+	PR 26477
+	* elfxx-mips.c (CRINFO_CTYPE, CRINFO_RTYPE, CRINFO_DIST2TO),
+	(CRINFO_RELVADDR): Make unsigned.
+	(mips_elf_nullify_got_load): Use unsigned constant when shifting
+	into sign bit.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26466
+	* mep-relocs.pl (emit_apply): Handle HI16S adjustment.  Use "u"
+	variable and rewrite signed overflow check.
+	* elf32-mep.c: Regenerate.
+	(mep_final_link_relocate): Delete "s".
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26461
+	* elfxx-ia64.c (ia64_elf_install_value): Make expressions unsigned
+	that might shift values into sign bit.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26445
+	* elf32-csky.c (csky_relocate_contents): Make relocation a bfd_vma,
+	and similarly for variables dealing with overflow.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26442
+	* elf32-crx.c (crx_elf_final_link_relocate): Calculate reloc_bits
+	without undefined behaviour.  Tidy excess casts.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	* elf-m10300.c (mn10300_elf_relax_delete_bytes): Calculate
+	alignment from reloc addend after reloc type R_MN10300_ALIGN is
+	found.
+
 2020-08-30  Alan Modra  <amodra@gmail.com>
 
 	PR 26435

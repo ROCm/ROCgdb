@@ -86,8 +86,7 @@ struct frame_print_options;
 
 enum frame_id_stack_status
 {
-  /* Stack address is invalid.  E.g., this frame is the outermost
-     (i.e., _start), and the stack hasn't been setup yet.  */
+  /* Stack address is invalid.  */
   FID_STACK_INVALID = 0,
 
   /* Stack address is valid, and is found in the stack_addr field.  */
@@ -95,6 +94,12 @@ enum frame_id_stack_status
 
   /* Sentinel frame.  */
   FID_STACK_SENTINEL = 2,
+
+  /* Outer frame.  Since a frame's stack address is typically defined as the
+     value the stack pointer had prior to the activation of the frame, an outer
+     frame doesn't have a stack address.  The frame ids of frames inlined in the
+     outer frame are also of this type.  */
+  FID_STACK_OUTER = 3,
 
   /* Stack address is unavailable.  I.e., there's a valid stack, but
      we don't know where it is (because memory or registers we'd
@@ -196,8 +201,7 @@ extern const struct frame_id sentinel_frame_id;
 
 /* This means "there is no frame ID, but there is a frame".  It should be
    replaced by best-effort frame IDs for the outermost frame, somehow.
-   The implementation is only special_addr_p, and possibly
-   artificial_depth, set.  */
+   The implementation is only special_addr_p set.  */
 extern const struct frame_id outer_frame_id;
 
 /* Flag to control debugging.  */
@@ -238,9 +242,7 @@ extern struct frame_id
    as the special identifier address are set to indicate wild cards.  */
 extern struct frame_id frame_id_build_wild (CORE_ADDR stack_addr);
 
-/* Returns non-zero when L is a valid frame (a valid frame has a
-   non-zero .base).  The outermost frame and any frames inlined into it
-   are valid even without an ID.  */
+/* Returns true when L is a valid frame.  */
 extern bool frame_id_p (frame_id l);
 
 /* Returns true when L is a valid frame representing a frame made up by GDB

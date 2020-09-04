@@ -1,3 +1,30 @@
+2020-09-02  Alan Modra  <amodra@gmail.com>
+
+	* opcode/v850.h (struct v850_operand <insert>): Make param op an
+	unsigned long.
+
+2020-09-02  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* opcode/csky.h (CSKYV2_ISA_3E3R3): Define.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26493
+	* opcode/riscv.h (OP_MASK_CSR, OP_MASK_CUSTOM_IMM)
+	(OP_MASK_FUNCT7, OP_MASK_RS3): Make unsigned.
+
+2020-08-31  Alan Modra  <amodra@gmail.com>
+
+	PR 26457
+	* som/aout.h (SOM_SUBSPACE_ACCESS_CONTROL_BITS_MASK): Make unsigned.
+	(SOM_SUBSPACE_MEMORY_RESIDENT, SOM_SUBSPACE_DUP_COMMON)
+	(SOM_SUBSPACE_IS_COMMON, SOM_SUBSPACE_IS_LOADABLE)
+	(SOM_SUBSPACE_QUADRANT_MASK, SOM_SUBSPACE_INITIALLY_FROZEN)
+	(SOM_SUBSPACE_IS_FIRST, SOM_SUBSPACE_CODE_ONLY)
+	(SOM_SUBSPACE_SORT_KEY_MASK, SOM_SUBSPACE_REPLICATE_INIT)
+	(SOM_SUBSPACE_CONTINUATION, SOM_SUBSPACE_IS_TSPECIFIC)
+	(SOM_SUBSPACE_IS_COMDAT): Likewise.
+
 2020-08-28  Cooper Qu  <cooper.qu@linux.alibaba.com>
 
 	* elf/csky.h (SHT_CSKY_ATTRIBUTES): Define.
