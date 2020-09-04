@@ -22,6 +22,116 @@ proc skip_hipcc_tests { } {
     return 0
 }
 
+# ROCM_PATH is used by hipcc as well.
+if {[info exists env(ROCM_PATH)]} {
+    set rocm_path $env(ROCM_PATH)
+} else {
+    set rocm_path "/opt/rocm"
+}
+
+# Get the gpu target to be passed to e.g., -mcpu=.
+#
+# If HCC_AMDGPU_TARGET is set in the environment, use it.  Otherwise,
+# try reading it from the system using the rocm_agent_enumerator
+# utility.
+
+proc hcc_amdgpu_target {} {
+    global gdb_hip_gpu
+    global rocm_path
+
+    if {![info exists gdb_hip_gpu]} {
+	# Look for HCC_AMDGPU_TARGET (same env var hipcc uses).  If
+	# that fails, try using rocm_agent_enumerator (again, same as
+	# hipcc does).
+	if {[info exists env(HCC_AMDGPU_TARGET)]} {
+	    set targets = $env(HCC_AMDGPU_TARGET);
+	} else {
+	    set result \
+		[remote_exec host \
+		     "${rocm_path}/bin/rocm_agent_enumerator -t GPU"]
+	    if {[lindex $result 0] != 0} {
+		error "rocm_agent_enumerator failed"
+	    }
+	    set targets [lindex $result 1]
+	}
+
+	set gdb_hip_gpu ""
+	foreach val $targets {
+	    # Ignore the 'gfx000' target reported by
+	    # rocm_agent_enumerator.
+	    if {$val != "gfx000"} {
+		set gdb_hip_gpu $val
+		break
+	    }
+	}
+
+	if {$gdb_hip_gpu == ""} {
+	    error "No valid AMD GPU target specified or found.\
+		   Please specify a valid target using the\
+		   HCC_AMDGPU_TARGET environment variable."
+	}
+    }
+
+    return $gdb_hip_gpu
+}
+
+# The empty host object put in bundles when compiling assembly files.
+# As a speed optimization, avoid recompiling it over and over for each
+# testcase program.
+global gdb_saved_hip_empty_host_obj
+set gdb_saved_hip_empty_host_obj ""
+
+# Assemble SOURCE and put the resulting object in an offload bundle at
+# DEST.  OPTIONS are regular gdb_compile options.
+
+proc rocm_assemble {source dest {options ""}} {
+    global objdir
+
+    set gpu_target [hcc_amdgpu_target]
+
+    global rocm_path
+    global gdb_saved_hip_empty_host_obj
+
+    set asm_options "early_flags=-O0\
+				 -target amdgcn-amd-amdhsa\
+				 -mcpu=$gpu_target -nogpulib\
+				 -fno-autolink\
+				 -faddrsig"
+    lappend options "hip"
+    lappend options $asm_options
+
+    # Assemble the device side of the bundle.
+    set tmp_o [standard_temp_file [file tail $dest].tmp.o]
+    set res [gdb_compile $source $tmp_o object $options]
+    if {$res != ""} {
+	return $res
+    }
+
+    # Assemble an empty .o for the host side of the bundle.  Only do
+    # it once as an optimization.
+    if { $gdb_saved_hip_empty_host_obj == "" } {
+	verbose "compiling empty host object"
+	set empty_src [standard_temp_file empty-host.c]
+	set gdb_saved_hip_empty_host_obj ${objdir}/empty-host.o
+	set f [open $empty_src "w"]
+	close $f
+	set res [gdb_compile $empty_src $gdb_saved_hip_empty_host_obj object hip]
+	if {$res != ""} {
+	    return $res
+	}
+    }
+
+    # Bundle device and host objects.
+    set res [remote_exec host \
+		 "${rocm_path}/llvm/bin/clang-offload-bundler\
+				-type=o\
+				-targets=hip-amdgcn-amd-amdhsa-${gpu_target},host-x86_64-unknown-linux-gnu\
+				-outputs=$dest\
+				-inputs=$tmp_o,$gdb_saved_hip_empty_host_obj"]
+    # We're done.
+    return [lindex $res 1]
+}
+
 # The lock file used to ensure that only one GDB has access to the GPU
 # at a time.
 set gpu_lock_filename $objdir/gpu-parallel.lock
