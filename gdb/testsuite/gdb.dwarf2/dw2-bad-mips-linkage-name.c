@@ -24,18 +24,22 @@ main (void)
   return 0;
 }
 
-/* dummy f function, DWARF will describe arguments and type differently.  */
+/* Dummy func_1 function, DWARF will describe arguments and type
+   differently.  */
+
 int
-f (char *x)
+func_1 (char *x)
 {
-  asm ("f_label: .globl f_label");
+  asm ("func_1_label: .globl func_1_label");
   return 0;
 }
 
-/* dummy g function, DWARF will describe arguments and type differently.  */
+/* Dummy func_2 function, DWARF will describe arguments and type
+   differently.  */
+
 int
-g (char *x)
+func_2 (char *x)
 {
-  asm ("g_label: .globl g_label");
+  asm ("func_2_label: .globl func_2_label");
   return 0;
 }

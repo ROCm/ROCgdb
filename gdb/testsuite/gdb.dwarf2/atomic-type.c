@@ -15,11 +15,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* dummy f function, DWARF will describe arguments and type differently.  */
+/* Dummy func function, DWARF will describe arguments and type
+   differently.  */
+
 int
-f (char *x)
+func (char *x)
 {
-  asm ("f_label: .globl f_label");
+  asm ("func_label: .globl func_label");
   return 0;
 }
 
@@ -30,6 +32,6 @@ main (void)
 {
   asm ("main_label: .globl main_label");
 
-  f (0);
+  func (0);
   return 0;
 }
