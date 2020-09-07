@@ -1,3 +1,20 @@
+2020-09-04  Alan Modra  <amodra@gmail.com>
+
+	PR 26574
+	* elfcode.h (elf_object_p): Sanity check section header offset.
+	* elf.c (_bfd_elf_slurp_secondary_reloc_section): Sanity check
+	sh_entsize.
+
+2020-09-04  Alan Modra  <amodra@gmail.com>
+
+	PR 15146
+	PR 26314
+	PR 26530
+	* elflink.c (elf_link_add_object_symbols): Do set def_regular
+	and ref_regular for IR symbols.  Don't clear dynsym, allowing
+	IR symbols to load --as-needed shared libraries, but prevent
+	IR symbols from becoming dynamic.
+
 2020-09-03  Nick Clifton  <nickc@redhat.com>
 
 	PR 26521
