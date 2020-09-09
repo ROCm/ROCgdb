@@ -1,3 +1,72 @@
+2020-09-07  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* csky-opc.h (csky_v2_opcodes): Change mvtc and mulsw's
+	ISA flag.
+
+2020-09-07  Cooper Qu  <cooper.qu@linux.alibaba.com>
+
+	* csky-dis.c (csky_output_operand): Add handlers for
+	OPRND_TYPE_HFLOAT_FMOVI, OPRND_TYPE_SFLOAT_FMOVI and
+	OPRND_TYPE_DFLOAT_FMOVI. Refine OPRND_TYPE_FREGLIST_DASH
+	to support FPUV3 instructions.
+	* csky-opc.h (enum operand_type): New enum OPRND_TYPE_IMM9b,
+	OPRND_TYPE_HFLOAT_FMOVI, OPRND_TYPE_SFLOAT_FMOVI and
+	OPRND_TYPE_DFLOAT_FMOVI.
+	(OPRND_MASK_4_5, OPRND_MASK_6, OPRND_MASK_6_7, OPRND_MASK_6_8,
+	 OPRND_MASK_7, OPRND_MASK_7_8, OPRND_MASK_17_24,
+	 OPRND_MASK_20, OPRND_MASK_20_21, OPRND_MASK_20_22,
+	 OPRND_MASK_20_23, OPRND_MASK_20_24, OPRND_MASK_20_25,
+	 OPRND_MASK_0_3or5_8, OPRND_MASK_0_3or6_7, OPRND_MASK_0_3or25,
+	 OPRND_MASK_0_4or21_24, OPRND_MASK_5or20_21,
+	 OPRND_MASK_5or20_22, OPRND_MASK_5or20_23, OPRND_MASK_5or20_24,
+	 OPRND_MASK_5or20_25, OPRND_MASK_8_9or21_25,
+	 OPRND_MASK_8_9or16_25, OPRND_MASK_4_6or20, OPRND_MASK_5_7or20,
+	 OPRND_MASK_4_5or20or25, OPRND_MASK_4_6or20or25,
+	 OPRND_MASK_4_7or20or25, OPRND_MASK_6_9or17_24,
+	 OPRND_MASK_6_7or20, OPRND_MASK_6or20, OPRND_MASK_7or20,
+	 OPRND_MASK_5or8_9or16_25, OPRND_MASK_5or8_9or20_25): Define.
+	(csky_v2_opcodes): Add FPUV3 instructions.
+
+2020-09-08  Alex Coplan  <alex.coplan@arm.com>
+
+	* aarch64-dis.c (print_operands): Pass CPU features to
+	aarch64_print_operand().
+	* aarch64-opc.c (aarch64_print_operand): Use CPU features to determine
+	preferred disassembly of system registers.
+	(SR_RNG): Refactor to use new SR_FEAT2 macro.
+	(SR_FEAT2): New.
+	(SR_V8_1_A): New.
+	(SR_V8_4_A): New.
+	(SR_V8_A): New.
+	(SR_V8_R): New.
+	(SR_EXPAND_ELx): New.
+	(SR_EXPAND_EL12): New.
+	(aarch64_sys_regs): Specify which registers are only on
+	A-profile, add R-profile system registers.
+	(ENC_BARLAR): New.
+	(PRBARn_ELx): New.
+	(PRLARn_ELx): New.
+	(aarch64_sys_ins_reg_supported_p): Reject EL3 registers for
+	Armv8-R AArch64.
+
+2020-09-08  Alex Coplan  <alex.coplan@arm.com>
+
+	* aarch64-tbl.h (aarch64_feature_v8_r): New.
+	(ARMV8_R): New.
+	(V8_R_INSN): New.
+	(aarch64_opcode_table): Add dfb.
+	* aarch64-opc-2.c: Regenerate.
+	* aarch64-asm-2.c: Regenerate.
+	* aarch64-dis-2.c: Regenerate.
+
+2020-09-08  Alex Coplan  <alex.coplan@arm.com>
+
+	* aarch64-dis.c (arch_variant): New.
+	(determine_disassembling_preference): Disassemble according to
+	arch variant.
+	(select_aarch64_variant): New.
+	(print_insn_aarch64): Set feature set.
+
 2020-09-02  Alan Modra  <amodra@gmail.com>
 
 	* v850-opc.c (insert_i5div1, insert_i5div2, insert_i5div3),

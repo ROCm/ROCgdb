@@ -1931,6 +1931,7 @@ enum bfd_architecture
 #define bfd_mach_tilegx32      2
   bfd_arch_aarch64,   /* AArch64.  */
 #define bfd_mach_aarch64 0
+#define bfd_mach_aarch64_8R    1
 #define bfd_mach_aarch64_ilp32 32
   bfd_arch_nios2,     /* Nios II.  */
 #define bfd_mach_nios2         0
@@ -5128,6 +5129,8 @@ then it may be truncated to 8 bits.  */
   BFD_RELOC_MSP430_ABS_HI16,
   BFD_RELOC_MSP430_PREL31,
   BFD_RELOC_MSP430_SYM_DIFF,
+  BFD_RELOC_MSP430_SET_ULEB128,
+  BFD_RELOC_MSP430_SUB_ULEB128,
 
 /* Relocations used by the Altera Nios II core.  */
   BFD_RELOC_NIOS2_S16,

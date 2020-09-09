@@ -1,3 +1,21 @@
+2020-09-09  Alan Modra  <amodra@gmail.com>
+
+	PR 26578
+	* dwarf.c (parse_gnu_debugaltlink): Don't alloc build_id_data.
+	(load_separate_debug_files): Use a stack var for build_id_data.
+
+2020-09-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26587
+	* testsuite/binutils-all/objcopy.exp: Pass --disable-reloc-section
+	to ld on PE targets for PR 25662 test.
+
+2020-09-08  Jozef Lawrynowicz  <jozef.l@mittosystems.com>
+	Kuan-Lin Chen  <kuanlinchentw@gmail.com>
+
+	* readelf.c (target_specific_reloc_handling): Handle
+	R_MSP430{,X}_GNU_{SET,SUB}_ULEB128.
+
 2020-09-02  Alan Modra  <amodra@gmail.com>
 
 	* objdump.c (disassemble_bytes): Use an unsigned type for "addend".

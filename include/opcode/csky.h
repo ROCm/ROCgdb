@@ -47,6 +47,7 @@
 #define CSKY_ISA_DSP        (1L << 20)
 #define CSKY_ISA_DSP_1E2    (1L << 21)
 #define CSKY_ISA_DSP_ENHANCE (1L << 22)
+#define CSKY_ISA_DSPE60     (1L << 23)
 
 /* Base float instruction (803f & 810f).  */
 #define CSKY_ISA_FLOAT_E1   (1L << 25)
@@ -56,6 +57,8 @@
 #define CSKY_ISA_FLOAT_1E3  (1L << 27)
 /* 807 support (803f & 807f).  */
 #define CSKY_ISA_FLOAT_3E4  (1L << 28)
+/* 860 support.  */
+#define CSKY_ISA_FLOAT_7E60 (1L << 36)
 /* Vector DSP support.  */
 #define CSKY_ISA_VDSP       (1L << 29)
 #define CSKY_ISA_VDSP_2     (1L << 30)

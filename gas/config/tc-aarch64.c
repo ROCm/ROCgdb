@@ -4141,8 +4141,8 @@ parse_sys_reg (char **str, htab_t sys_regs,
 	as_bad (_("selected processor does not support PSTATE field "
 		  "name '%s'"), buf);
       if (!pstatefield_p
-	  && !aarch64_sys_ins_reg_supported_p (cpu_variant, o->value,
-					       o->flags, o->features))
+	  && !aarch64_sys_ins_reg_supported_p (cpu_variant, o->name,
+					       o->value, o->flags, o->features))
 	as_bad (_("selected processor does not support system register "
 		  "name '%s'"), buf);
       if (aarch64_sys_reg_deprecated_p (o->flags))
@@ -4183,7 +4183,8 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs)
   if (!o)
     return NULL;
 
-  if (!aarch64_sys_ins_reg_supported_p (cpu_variant, o->value, o->flags, 0))
+  if (!aarch64_sys_ins_reg_supported_p (cpu_variant,
+					o->name, o->value, o->flags, 0))
     as_bad (_("selected processor does not support system register "
 	      "name '%s'"), buf);
   if (aarch64_sys_reg_deprecated_p (o->flags))
@@ -4715,7 +4716,7 @@ print_operands (char *buf, const aarch64_opcode *opcode,
 
       /* Generate the operand string in STR.  */
       aarch64_print_operand (str, sizeof (str), 0, opcode, opnds, i, NULL, NULL,
-			     NULL);
+			     NULL, cpu_variant);
 
       /* Delimiter.  */
       if (str[0] != '\0')
@@ -8975,6 +8976,7 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
   {"xgene1", AARCH64_ARCH_V8, "APM X-Gene 1"},
   {"xgene2", AARCH64_FEATURE (AARCH64_ARCH_V8,
 			      AARCH64_FEATURE_CRC), "APM X-Gene 2"},
+  {"cortex-r82", AARCH64_ARCH_V8_R, "Cortex-R82"},
   {"generic", AARCH64_ARCH_V8, NULL},
 
   {NULL, AARCH64_ARCH_NONE, NULL}
@@ -8997,6 +8999,7 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"armv8.4-a", AARCH64_ARCH_V8_4},
   {"armv8.5-a", AARCH64_ARCH_V8_5},
   {"armv8.6-a", AARCH64_ARCH_V8_6},
+  {"armv8-r",	AARCH64_ARCH_V8_R},
   {NULL, AARCH64_ARCH_NONE}
 };
 
