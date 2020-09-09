@@ -1740,6 +1740,20 @@ info_agents_command (const char *args, int from_tty)
       return;
     }
 
+  std::sort (&agent_list[0], &agent_list[count],
+             [] (amd_dbgapi_agent_id_t lhs, amd_dbgapi_agent_id_t rhs) {
+               return lhs.handle < rhs.handle;
+             });
+
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
+  amd_dbgapi_agent_id_t current_agent_id;
+
+  if (amd_dbgapi_wave_get_info (process_id, wave_id,
+                                AMD_DBGAPI_WAVE_INFO_AGENT,
+                                sizeof (current_agent_id), &current_agent_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    current_agent_id = AMD_DBGAPI_AGENT_NONE;
+
   /* Calculate the maximum size needed to print the agents names.  */
   std::vector<std::string> agent_names (count);
 
@@ -1756,7 +1770,7 @@ info_agents_command (const char *args, int from_tty)
           if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_AGENT_ID)
             agent_names[i] = "N/A";
           else
-            error (_ ("amd_dbgapi_agent_get_info failed (rc=%d"), status);
+            error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
         }
       else
         {
@@ -1770,14 +1784,14 @@ info_agents_command (const char *args, int from_tty)
   /* Header:  */
   ui_out_emit_table table_emmitter (uiout, 7, count, "InfoRocmDevicesTable");
 
+  uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (2, ui_left, "agent_id", "Id");
-  uiout->table_header (8, ui_left, "location_id", "PCI Slot");
+  uiout->table_header (9, ui_left, "target_id", "Target Id");
   uiout->table_header (std::max (11ul, max_name_len), ui_left, "name",
                        "Device Name");
-  uiout->table_header (14, ui_left, "num_se", "Shader Engines");
-  uiout->table_header (13, ui_left, "num_cu", "Compute Units");
-  uiout->table_header (7, ui_left, "simd", "SIMD/CU");
-  uiout->table_header (15, ui_left, "waves", "Wavefronts/SIMD");
+  uiout->table_header (5, ui_left, "cores", "Cores");
+  uiout->table_header (7, ui_left, "threads", "Threads");
+  uiout->table_header (8, ui_left, "location_id", "PCI Slot");
   uiout->table_body ();
 
   /* Rows:  */
@@ -1785,52 +1799,62 @@ info_agents_command (const char *args, int from_tty)
     {
       ui_out_emit_tuple tuple_emitter (uiout, "InfoRocmDevicesRow");
 
-      /* agent  */
+      /* current  */
+      if (agent_list[i].handle == current_agent_id.handle)
+        uiout->field_string ("current", "*");
+      else
+        uiout->field_skip ("current");
+
+      /* agent_id  */
       uiout->field_signed ("agent_id", agent_list[i].handle);
 
+      /* target_id  */
+      amd_dbgapi_os_agent_id_t target_id;
+      if ((status = amd_dbgapi_agent_get_info (process_id, agent_list[i],
+                                               AMD_DBGAPI_AGENT_INFO_OS_ID,
+                                               sizeof (target_id), &target_id))
+          != AMD_DBGAPI_STATUS_SUCCESS)
+        error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+      else
+        uiout->field_signed ("target_id", target_id);
+
+      /* name  */
+      uiout->field_string ("name", agent_names[i]);
+
+      /* cores  */
+      size_t cores;
+      if ((status = amd_dbgapi_agent_get_info (
+               process_id, agent_list[i],
+               AMD_DBGAPI_AGENT_INFO_EXECUTION_UNIT_COUNT, sizeof (cores),
+               &cores))
+          != AMD_DBGAPI_STATUS_SUCCESS)
+        error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+      else
+        uiout->field_signed ("cores", cores);
+
+      /* threads  */
+      size_t threads;
+      if ((status = amd_dbgapi_agent_get_info (
+               process_id, agent_list[i],
+               AMD_DBGAPI_AGENT_INFO_MAX_WAVES_PER_EXECUTION_UNIT,
+               sizeof (threads), &threads))
+          != AMD_DBGAPI_STATUS_SUCCESS)
+        error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+      else
+        uiout->field_signed ("threads", cores * threads);
+
       /* location  */
-      uint32_t location_id;
+      uint16_t location_id;
       if ((status = amd_dbgapi_agent_get_info (
                process_id, agent_list[i], AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
                sizeof (location_id), &location_id))
           != AMD_DBGAPI_STATUS_SUCCESS)
-        {
-          if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_AGENT_ID)
-            uiout->field_string ("location_id", "N/A");
-          else
-            error (_ ("amd_dbgapi_agent_get_info failed (rc=%d"), status);
-        }
+        error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
       else
         uiout->field_string (
             "location_id",
             string_printf ("%02x:%02x.%d", (location_id >> 8) & 0xFF,
                            (location_id >> 3) & 0x1F, location_id & 0x7));
-
-      /* name  */
-      uiout->field_string ("name", agent_names[i]);
-
-      /* num_se, num_cu, simd, waves  */
-
-#define UIOUT_FIELD_INT(name, query)                                          \
-  uint32_t name;                                                              \
-  if ((status = amd_dbgapi_agent_get_info (process_id, agent_list[i], query,  \
-                                           sizeof (name), &name))             \
-      != AMD_DBGAPI_STATUS_SUCCESS)                                           \
-    {                                                                         \
-      if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_AGENT_ID)                 \
-        uiout->field_string (#name, "N/A");                                   \
-      else                                                                    \
-        error (_ ("amd_dbgapi_agent_get_info failed (rc=%d"), status);        \
-    }                                                                         \
-  else                                                                        \
-    uiout->field_signed (#name, name);
-
-      UIOUT_FIELD_INT (num_se, AMD_DBGAPI_AGENT_INFO_SHADER_ENGINE_COUNT);
-      UIOUT_FIELD_INT (num_cu, AMD_DBGAPI_AGENT_INFO_COMPUTE_UNIT_COUNT);
-      UIOUT_FIELD_INT (simd, AMD_DBGAPI_AGENT_INFO_NUM_SIMD_PER_COMPUTE_UNIT);
-      UIOUT_FIELD_INT (waves, AMD_DBGAPI_AGENT_INFO_MAX_WAVES_PER_SIMD);
-
-#undef UIOUT_FIELD_INT
 
       uiout->text ("\n");
     }
