@@ -3280,6 +3280,8 @@ get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 	    case EF_AMDGPU_MACH_AMDGCN_GFX1010 : strcat (buf, ", gfx1010"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX1011 : strcat (buf, ", gfx1011"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX1012 : strcat (buf, ", gfx1012"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX1030 : strcat (buf, ", gfx1030"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX1031 : strcat (buf, ", gfx1031"); break;
 	    default: strcat (buf, _(", <unknown AMDGPU gpu type>")); break;
 	    }
 

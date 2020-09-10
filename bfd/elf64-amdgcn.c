@@ -87,6 +87,8 @@ bfd_amdgcn_get_mach_from_notes (bfd *abfd)
             case GFX (10, 1, 0): mach = bfd_mach_amdgcn_gfx1010; break;
             case GFX (10, 1, 1): mach = bfd_mach_amdgcn_gfx1011; break;
             case GFX (10, 1, 2): mach = bfd_mach_amdgcn_gfx1012; break;
+            case GFX (10, 3, 0): mach = bfd_mach_amdgcn_gfx1030; break;
+            case GFX (10, 3, 1): mach = bfd_mach_amdgcn_gfx1031; break;
             default:  mach = bfd_mach_amdgcn_unknown; break;
             }
 #undef GFX

@@ -558,6 +558,8 @@ DESCRIPTION
 .#define bfd_mach_amdgcn_gfx1010 0x033
 .#define bfd_mach_amdgcn_gfx1011 0x034
 .#define bfd_mach_amdgcn_gfx1012 0x035
+.#define bfd_mach_amdgcn_gfx1030 0x036
+.#define bfd_mach_amdgcn_gfx1031 0x037
 .  bfd_arch_last
 .  };
 */
