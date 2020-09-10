@@ -85,6 +85,8 @@
 #define EF_AMDGPU_MACH_AMDGCN_GFX1010 0x033
 #define EF_AMDGPU_MACH_AMDGCN_GFX1011 0x034
 #define EF_AMDGPU_MACH_AMDGCN_GFX1012 0x035
+#define EF_AMDGPU_MACH_AMDGCN_GFX1030 0x036
+#define EF_AMDGPU_MACH_AMDGCN_GFX1031 0x037
 
 /* Reserved for AMDGCN-based processors. */
 #define EF_AMDGPU_MACH_AMDGCN_RESERVED0 0x027
@@ -92,7 +94,7 @@
 
 /* First/last AMDGCN-based processors. */
 #define EF_AMDGPU_MACH_AMDGCN_FIRST EF_AMDGPU_MACH_AMDGCN_GFX600
-#define EF_AMDGPU_MACH_AMDGCN_LAST EF_AMDGPU_MACH_AMDGCN_GFX1012
+#define EF_AMDGPU_MACH_AMDGCN_LAST EF_AMDGPU_MACH_AMDGCN_GFX1031
 
 /* Indicates if the "xnack" target feature is enabled for all code contained */
 /* in the object. */

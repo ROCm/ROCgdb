@@ -26592,6 +26592,26 @@ denoted as @samp{gfx906} by the compiler.
 @c @item
 @c ``Arcturus'' which is displayed as @samp{arcturus} by @value{GDBN} and
 @c denoted as @samp{gfx908} by the compiler.
+@c
+@c @item
+@c ``Navi 10'' which is displayed as @samp{navi10} by @value{GDBN} and
+@c denoted as @samp{gfx1010} by the compiler.
+@c
+@c @item
+@c ``Navi 12'' which is displayed as @samp{navi12} by @value{GDBN} and
+@c denoted as @samp{gfx1011} by the compiler.
+@c
+@c @item
+@c ``Navi 14'' which is displayed as @samp{navi14} by @value{GDBN} and
+@c denoted as @samp{gfx1012} by the compiler.
+@c
+@c @item
+@c ``TBA'' which is displayed as @samp{sienna_cichlid} by @value{GDBN} and
+@c denoted as @samp{gfx1030} by the compiler.
+@c
+@c @item
+@c ``TBA'' which is displayed as @samp{navy_flounder} by @value{GDBN} and
+@c denoted as @samp{gfx1031} by the compiler.
 
 @end itemize
 
