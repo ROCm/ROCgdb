@@ -26,7 +26,7 @@ set objfile [standard_output_file ${testfile}.o]
 set binfile [standard_output_file ${testfile}]
 
 set wave_id {(0,0,0)/0}
-set rocm_threadno {1.5}
+set rocm_threadno {1:1:1:5}
 set threadid {16}
 
 # Check if skip hip tests
@@ -60,7 +60,7 @@ if ![runto_main] {
 gdb_breakpoint "VectorAdd" "allow-pending"
 gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 send_gdb "info threads\n"
-gdb_expect -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\.\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
+gdb_expect -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\:\\d+:\\d+:\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
   set threadid "$expect_out(1,string)"
   set rocm_threadno "$expect_out(2,string)"
   set wave_id  "$expect_out(3,string)"
@@ -112,11 +112,11 @@ gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 
 
 # Check "info agents".
-# vega10 sample output "1  43:00.0  vega10      4              56            4       10"
-# vega20 sample output "1  b1:00.0  vega20      4              60            4       10"
+# vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"
+# vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
 gdb_test_sequence "info agents" "info agents" {
- {Id\s+PCI Slot\s+Device Name\s+Shader Engines\s+Compute Units\s+SIMD/CU\s+Wavefronts/SIMD}
- {\d\s+\w+:\d+\.\d\s+\w+\s+\d+\s+\d+\s+\d+\s+\d+}
+ {Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+PCI Slot}
+ {\d+\s+\([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
 }
 
 
@@ -126,7 +126,7 @@ gdb_test_sequence "info agents" "info agents" {
 #  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
  {Id\s+Target\s+Id\s+Frame}
- {\d+\s+AMDGPU\sThread\s\d+\.\d}
+ {\d+\s+AMDGPU\sThread\s\d+\:\d+:\d+:\d+}
 }
 
 sleep 5
