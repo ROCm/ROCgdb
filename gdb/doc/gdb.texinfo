@@ -22193,9 +22193,8 @@ multiple architectures
 
 @item debugger convenience variables for heterogeneous entities
 
-@item @code{set architecture}, @code{show architecture}, @code{x/i},
-@code{disassemble}, commands to disassemble multiple architectures in
-the same inferior
+@item @code{show architecture}, @code{x/i}, @code{disassemble}, commands
+to disassemble multiple architectures in the same inferior
 
 @item @code{info threads}, @code{thread}, commands support threads
 executing on multiple heterogeneous agents
@@ -22481,12 +22480,12 @@ For example,
 
 @smallexample
 (@value{GDBP}) info agents
-  Id Target Id Device Name Cores Threads PCI Slot
-* 1  45151     vega20      240   2400    0a:00.0
-  2  39113     vega20      240   2400    44:00.0
+  Id   Target Id     Device Name Cores Threads PCI Slot
+* 1    (GPUID 45151) vega20      240   2400    0a:00.0
+  2    (GPUID 39113) vega20      240   2400    44:00.0
 @end smallexample
 
-@item info queues @r{[}-gid@r{]} @r{[}@var{queue-id-list}@r{]}
+@item info queues @r{[}@var{queue-id-list}@r{]}
 @kindex info queues
 The @code{info queues} command lists the following information for each
 heterogeneous queue (in this order):
@@ -22494,14 +22493,6 @@ heterogeneous queue (in this order):
 @enumerate
 @item
 The per-inferior heterogeneous queue number assigned by @value{GDBN}.
-
-@item
-The global heterogeneous queue number assigned by @value{GDBN}, if the
-@w{@option{-gid}} option was specified.
-
-@item
-The number of the heterogeneous agent with which the heterogeneous queue is
-associated.
 
 @item
 The target system’s heterogeneous queue identifier.
@@ -22538,13 +22529,13 @@ For example,
 
 @smallexample
 (@value{GDBP}) info queues
-  Id   Agent Target Id Type    Read   Write  Size     Address
-* 1    1     1         HSA (M)               65536    0x00007ffff7f60000
-  2    1     2         ?                     1048576  0x00007ffde4e00000
-  3    1     0         HSA (M)               262144   0x00007ffff7f00000
+  Id   Target Id   Type         Read   Write  Size     Address
+* 1    1:1 (QID 1) HSA (Multi)  0      2      65536    0x00007ffff7f60000
+  2    1:2 (QID 2) DMA                        1048576  0x00007ffde4e00000
+  3    1:3 (QID 0) HSA (Multi)  4      4      262144   0x00007ffff7f00000
 @end smallexample
 
-@item info dispatches @r{[}-gid@r{]} @r{[}@var{dispatch-id-list}@r{]}
+@item info dispatches @r{[}-full@r{]} @r{[}@var{dispatch-id-list}@r{]}
 @kindex info dispatches
 The @code{info dispatches} command lists the following information for each
 heterogeneous dispatch (in this order):
@@ -22554,45 +22545,45 @@ heterogeneous dispatch (in this order):
 The per-inferior heterogeneous dispatch number assigned by @value{GDBN}.
 
 @item
-The global heterogeneous dispatch number assigned by @value{GDBN}, if the
-@w{@option{-gid}} option was specified.
-
-@item
-The number of the queue with which the dispatch is associated.
-
-@item
 The target system’s identifier of the dispatch packet that initiated the
 dispatch.
 
 @item
-The x, y, and z grid dimensions of the heterogeneous dispatch.  The number of
-dimensions displayed matches the dimensionality of the heterogeneous dispatch.
-
-@item
-The x, y, and z heterogeneous work-group dimensions of the heterogeneous
+The x, y, and z grid dimensions in terms of work-items of the heterogeneous
 dispatch.  The number of dimensions displayed matches the dimensionality of the
 heterogeneous dispatch.
 
 @item
-The size in bytes of address spaces associated with the heterogeneous dispatch.
-The address spaces are target architecture dependent.
+The x, y, and z heterogeneous work-group dimensions in terms of work-items of
+the heterogeneous dispatch.  The number of dimensions displayed matches the
+dimensionality of the heterogeneous dispatch.
 
 @item
 The fences associated with the heterogeneous dispatch packet.  The kinds of
 fences are target architecture dependent.
 
 @item
+The size in bytes of address spaces associated with the heterogeneous dispatch.
+The address spaces are target architecture dependent.  Only displayed if the
+@option{-full} option is specified.
+
+@item
 The global memory address of the kernel descriptor for the heterogeneous
-dispatch.  The descriptor is target architecture dependent.
+dispatch.  The descriptor is target architecture dependent.  Only displayed if
+the @option{-full} option is specified.
 
 @item
 The global memory address of the kernel arguments for the heterogeneous
-dispatch.
+dispatch.  Only displayed if the @option{-full} option is specified.
 
 @item
 The global memory address of the completion event for the heterogeneous
 dispatch.  Omitted if the heterogeneous dispatch has no completion event.  The
-event is target architecture and operating system dependent.
+event is target architecture and operating system dependent.  Only displayed if
+the @option{-full} option is specified.
+
+@item
+The kernel function prototype.
 
 @end enumerate
 
@@ -22607,11 +22598,9 @@ the heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID list}).
 For example,
 
 @smallexample
-(@value{GDBP}) info dispatches
-      Id Agent Queue Target Id Grid       Workgroup Shared Private Fence   Kernel Desc    Kernel Args    Completion
-      1  1     3     120       [1024]     [256]     32768  0       B       0x7ffee6000000 0x7ffee1000000 0x55551001000
-    * 2  1     3     121       [1024,1,1] [256,1,1] 32768  0       B|As|Rs 0x7ffee5a00000 0x7ffee2000000 0x55551002000
-      3  1     1     1         [256,1,1]  [64,1,1]  0      0       B|Aa    0x7ffee5a00000 0x7ffee3000000 0x55551003000
+(@value{GDBP}) info dispatches -full
+  Id   Target Id     Grid      Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
+* 1    1:1:1 (PID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
 @end smallexample
 
 @item info packets @r{[}-gid@r{]} @r{[}@var{queue-id-list}@r{]}
@@ -26660,10 +26649,10 @@ agents} command are:
 @table @emph
 
 @item HSA
-An HSA AQL queue.  The @samp{(S)} suffix indicates it uses the single-producer
-protocol, @samp{(M)} suffix indicates the multi-producer protocol, and
-@samp{(Coop)} suffix indicates the multi-producer cooperative dispatch
-protocol.
+An HSA AQL queue.  The @samp{(Single)} suffix indicates it uses the
+single-producer protocol, @samp{(Multi)} suffix indicates the multi-producer
+protocol, and @samp{(Coop)} suffix indicates the multi-producer cooperative
+dispatch protocol.
 
 @item PM4
 An AMD PM4 queue.
@@ -26675,9 +26664,6 @@ A DMA queue.
 An XGMI queue.
 
 @end table
-
-@acronym{AMD GPU} only supports the HSA queue type currently.  Other queue
-types are displayed as @samp{?}.
 
 @acronym{AMD GPU} supports the following address spaces for the @samp{info
 dispatches} command:
@@ -27004,15 +26990,15 @@ restrictions.
 @item
 The debugger convenience variables, convenience functions, and
 commands described in @ref{Heterogeneous Debugging} are not yet
-implemented.  The exception is the @code{info agents} command, which
-only currently supports the textual MI interface and does not have a
-Python binding.
+implemented.  The exceptions are the @code{info agents}, @code{info queues},
+and @code{info dispatches} commands, which only currently support the textual
+CLI interface and do not have Python bindings.
 
 However, the debugger convenience variable @code{$_wave_id} is
 available which returns a string that has the format:
 
 @smallexample
-(@var{work-group-z},@var{work-group-y},@var{work-group-x})/@var{work-group-thread-index}
+(@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
 @end smallexample
 
 Where:
@@ -27035,19 +27021,24 @@ differs from that described above, and currently has the following
 format:
 
 @smallexample
-AMDGPU Thread @var{dispatch-num}.@var{wave-num} (@var{work-group-z},@var{work-group-y},@var{work-group-x})/@var{work-group-thread-index}
+AMDGPU Thread @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
 @end smallexample
 
 Where:
 
 @table @var
 
-@item dispatch-num
-the thread's per-heterogeneous queue @acronym{AMD ROCm} AQL packet
-number of the associated dispatch packet
+@item agent-id
+the thread's heterogeneous agent ID.
 
-@item wave-num
-the thread's per-inferior AMD GPU target wavefront number
+@item queue-id
+the thread's heterogeneous queue ID.
+
+@item dispatch-id
+the thread' dispatch packet ID.
+
+@item wave-id
+the thread's per-inferior AMD GPU target wavefront ID.
 
 @item work-group-x
 @itemx work-group-y
