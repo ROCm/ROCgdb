@@ -3105,13 +3105,14 @@ i386_zmm_type (struct gdbarch *gdbarch)
 #if 0
       union __gdb_builtin_type_vec512i
       {
-	int128_t uint128[4];
-	int64_t v4_int64[8];
-	int32_t v8_int32[16];
-	int16_t v16_int16[32];
-	int8_t v32_int8[64];
-	double v4_double[8];
-	float v8_float[16];
+	int128_t v4_int128[4];
+	int64_t v8_int64[8];
+	int32_t v16_int32[16];
+	int16_t v32_int16[32];
+	int8_t v64_int8[64];
+	double v8_double[8];
+	float v16_float[16];
+	bfloat16_t v32_bfloat16[32];
       };
 #endif
 
@@ -3119,6 +3120,8 @@ i386_zmm_type (struct gdbarch *gdbarch)
 
       t = arch_composite_type (gdbarch,
 			       "__gdb_builtin_type_vec512i", TYPE_CODE_UNION);
+      append_composite_type_field (t, "v32_bfloat16",
+				   init_vector_type (bt->builtin_bfloat16, 32));
       append_composite_type_field (t, "v16_float",
 				   init_vector_type (bt->builtin_float, 16));
       append_composite_type_field (t, "v8_double",
@@ -3158,13 +3161,14 @@ i386_ymm_type (struct gdbarch *gdbarch)
 #if 0
       union __gdb_builtin_type_vec256i
       {
-        int128_t uint128[2];
-        int64_t v2_int64[4];
-        int32_t v4_int32[8];
-        int16_t v8_int16[16];
-        int8_t v16_int8[32];
-        double v2_double[4];
-        float v4_float[8];
+        int128_t v2_int128[2];
+        int64_t v4_int64[4];
+        int32_t v8_int32[8];
+        int16_t v16_int16[16];
+        int8_t v32_int8[32];
+        double v4_double[4];
+        float v8_float[8];
+        bfloat16_t v16_bfloat16[16];
       };
 #endif
 
@@ -3172,6 +3176,8 @@ i386_ymm_type (struct gdbarch *gdbarch)
 
       t = arch_composite_type (gdbarch,
 			       "__gdb_builtin_type_vec256i", TYPE_CODE_UNION);
+      append_composite_type_field (t, "v16_bfloat16",
+				   init_vector_type (bt->builtin_bfloat16, 16));
       append_composite_type_field (t, "v8_float",
 				   init_vector_type (bt->builtin_float, 8));
       append_composite_type_field (t, "v4_double",
@@ -8486,6 +8492,9 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      bits, a `long double' actually takes up 96, probably to enforce
      alignment.  */
   set_gdbarch_long_double_bit (gdbarch, 96);
+
+  /* Support of bfloat16 format.  */
+  set_gdbarch_bfloat16_format (gdbarch, floatformats_bfloat16);
 
   /* Support for floating-point data type variants.  */
   set_gdbarch_floatformat_for_type (gdbarch, i386_floatformat_for_type);
