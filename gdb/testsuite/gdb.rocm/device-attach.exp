@@ -164,7 +164,7 @@ proc_with_prefix process_attach_tests {} {
     set found_amdgpu_thread 0
     send_gdb "info threads\n"
     gdb_expect {
-        -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\.\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $"\
+        -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\:\\d+\:\\d+\:\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $"\
         {
             set threadid "$expect_out(1,string)"
             set rocm_threadno "$expect_out(2,string)"
