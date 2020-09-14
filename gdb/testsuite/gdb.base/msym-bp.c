@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2011-2020 Free Software Foundation, Inc.
+   Copyright 2020 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,44 +15,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-class C {
-public:
-  C() {}
-  ~C() {}
-};
-
-typedef struct {
-  C m;
-} t;
-
-t v;
-
-namespace X {
-  class C2 {
-  public:
-    C2() {}
-  };
-
-  typedef struct {
-    C2 m;
-  } t2;
-
-  t2 v2;
+static void
+foo (void)
+{
 }
 
-template<class T>
-class C3 {
-public:
-  ~C3() {}
-};
-
-typedef struct {
-  C3<int> m;
-} t3;
-
-t3 v3;
-
-int main()
+int
+main (void)
 {
   return 0;
 }
