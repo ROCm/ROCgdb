@@ -22226,52 +22226,183 @@ The following commands are related to heterogeneous debugging:
 @table @code
 
 @item info agents @r{[}-gid@r{]} @r{[}@var{agent-id-list}@r{]}
-@itemx info queues @r{[}-gid@r{]} @r{[}@var{queue-id-list}@r{]}
-@itemx info dispatches @r{[}-gid@r{]} @r{[}@var{dispatch-id-list}@r{]}
 @kindex info agents
-@kindex info queues
-@kindex info dispatches
-@code{info agents}, @code{info queues} and @code{info dispatches}
-commands display information about one or more heterogeneous agents,
-heterogeneous queues and executing heterogeneous dispatches
-respectively.  With no arguments displays information about all
-corresponding heterogeneous entities.  You can specify the list of
-heterogeneous entities that you want to display using the
-heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID
-list}).
-
-@value{GDBN} displays for each heterogeneous entity (in this order):
+The @code{info agents} command lists the following information for each
+heterogeneous agent (in this order):
 
 @enumerate
 @item
-the per-inferior heterogeneous entity number assigned by @value{GDBN}
+The per-inferior heterogeneous agent number assigned by @value{GDBN}.
 
 @item
-the global heterogeneous entity number assigned by @value{GDBN}, if
-the @w{@option{-gid}} option was specified
+The global heterogeneous agent number assigned by @value{GDBN}, if the
+@w{@option{-gid}} option was specified.
 
 @item
-for the @code{info queues} and @code{info dispatches} commands, the
-associated heterogeneous agent number assigned by @value{GDBN},
-displayed as a global ID if the @w{@option{-gid}} option was
-specified, otherwise displayed as the per-inferior ID
+The target system’s heterogeneous agent identifier.
 
 @item
-for the @code{info dispatches} command, the associated heterogeneous
-queue number assigned by @value{GDBN}, displayed as a global ID if the
-@w{@option{-gid}} option was specified, otherwise displayed as the
-per-inferior ID
+The target system’s device name.
 
 @item
-additional information about the heterogeneous entity that varies
-depending on the heterogeneous system and may vary depending on the
-target architecture of the heterogeneous entity
-(@pxref{Architectures})
+The number of compute unit cores.
+
+@item
+The total number of threads.  The number of threads that a core can execute
+concurrently is dependent on the target architecture of the device.
+
+@item
+The @acronym{PCI} slot number in @acronym{BDF, Bus:Device.Function} notation.
 
 @end enumerate
 
-Some heterogeneous agents may not be listed until the inferior has
-started execution of the program.
+@noindent
+An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous agent number
+indicates the heterogeneous agent executing the current thread.
+
+Some heterogeneous agents may not be listed until the inferior has started
+execution of the program.
+
+With no arguments displays information about all heterogeneous agents.  You can
+specify the list of heterogeneous agents that you want to display using the
+heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID list}).
+
+For example,
+
+@smallexample
+(@value{GDBP}) info agents
+  Id Target Id Device Name Cores Threads PCI Slot
+* 1  45151     vega20      240   2400    0a:00.0
+  2  39113     vega20      240   2400    44:00.0
+@end smallexample
+
+@item info queues @r{[}-gid@r{]} @r{[}@var{queue-id-list}@r{]}
+@kindex info queues
+The @code{info queues} command lists the following information for each
+heterogeneous queue (in this order):
+
+@enumerate
+@item
+The per-inferior heterogeneous queue number assigned by @value{GDBN}.
+
+@item
+The global heterogeneous queue number assigned by @value{GDBN}, if the
+@w{@option{-gid}} option was specified.
+
+@item
+The number of the heterogeneous agent with which the heterogeneous queue is
+associated.
+
+@item
+The target system’s heterogeneous queue identifier.
+
+@item
+The type of the heterogeneous queue.  The meaning of the queue types is target
+architecture and operating system depentent.
+
+@item
+The target system’s heterogeneous packet identifier for the next packet that
+will be read from the heterogeneous queue by the device.
+
+@item
+The target system’s heterogeneous packet identifier for the next packet that
+will be written to the heterogeneous queue for submission to the device.
+
+@item
+The size in bytes of the heterogeneous queue packet buffer.
+
+@item
+The global memory address of the heterogeneous queue packet buffer.
+
+@end enumerate
+
+@noindent
+An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous queue number
+indicates the heterogeneous queue executing the current thread.
+
+With no arguments displays information about all heterogeneous queues.  You can
+specify the list of heterogeneous queues that you want to display using the
+heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID list}).
+
+For example,
+
+@smallexample
+(@value{GDBP}) info queues
+  Id   Agent Target Id Type    Read   Write  Size     Address
+* 1    1     1         HSA (M)               65536    0x00007ffff7f60000
+  2    1     2         ?                     1048576  0x00007ffde4e00000
+  3    1     0         HSA (M)               262144   0x00007ffff7f00000
+@end smallexample
+
+@item info dispatches @r{[}-gid@r{]} @r{[}@var{dispatch-id-list}@r{]}
+@kindex info dispatches
+The @code{info dispatches} command lists the following information for each
+heterogeneous dispatch (in this order):
+
+@enumerate
+@item
+The per-inferior heterogeneous dispatch number assigned by @value{GDBN}.
+
+@item
+The global heterogeneous dispatch number assigned by @value{GDBN}, if the
+@w{@option{-gid}} option was specified.
+
+@item
+The number of the queue with which the dispatch is associated.
+
+@item
+The target system’s identifier of the dispatch packet that initiated the
+dispatch.
+
+@item
+The x, y, and z grid dimensions of the heterogeneous dispatch.  The number of
+dimensions displayed matches the dimensionality of the heterogeneous dispatch.
+
+@item
+The x, y, and z heterogeneous work-group dimensions of the heterogeneous
+dispatch.  The number of dimensions displayed matches the dimensionality of the
+heterogeneous dispatch.
+
+@item
+The size in bytes of address spaces associated with the heterogeneous dispatch.
+The address spaces are target architecture dependent.
+
+@item
+The fences associated with the heterogeneous dispatch packet.  The kinds of
+fences are target architecture dependent.
+
+@item
+The global memory address of the kernel descriptor for the heterogeneous
+dispatch.  The descriptor is target architecture dependent.
+
+@item
+The global memory address of the kernel arguments for the heterogeneous
+dispatch.
+
+@item
+The global memory address of the completion event for the heterogeneous
+dispatch.  Omitted if the heterogeneous dispatch has no completion event.  The
+event is target architecture and operating system dependent.
+
+@end enumerate
+
+@noindent
+An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous dispatch
+number indicates the heterogeneous dispatch executing the current thread.
+
+With no arguments displays information about all heterogeneous dispatches.  You
+can specify the list of heterogeneous dispatches that you want to display using
+the heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID list}).
+
+For example,
+
+@smallexample
+(@value{GDBP}) info dispatches
+      Id Agent Queue Target Id Grid       Workgroup Shared Private Fence   Kernel Desc    Kernel Args    Completion
+      1  1     3     120       [1024]     [256]     32768  0       B       0x7ffee6000000 0x7ffee1000000 0x55551001000
+    * 2  1     3     121       [1024,1,1] [256,1,1] 32768  0       B|As|Rs 0x7ffee5a00000 0x7ffee2000000 0x55551002000
+      3  1     1     1         [256,1,1]  [64,1,1]  0      0       B|Aa    0x7ffee5a00000 0x7ffee3000000 0x55551003000
+@end smallexample
 
 @item info packets @r{[}-gid@r{]} @r{[}@var{queue-id-list}@r{]}
 @kindex info packets
@@ -26267,52 +26398,93 @@ at least the AMD GPU Code Object V3 and DWARF 4 formats.
 
 @end table
 
-The @code{info agents} command (@pxref{Heterogeneous Debugging}) lists
-the following information for each @acronym{AMD GPU} heterogeneous
-agent (in this order):
+@acronym{AMD GPU} heterogeneous agents are not listed by the @samp{info agents}
+command until the inferior has started executing the program.
 
-@enumerate
-@item
-the per-inferior heterogeneous agent number assigned by @value{GDBN}
+The @acronym{AMD GPU} heterogeneous queue types reported by the @samp{info
+agents} command are:
 
-@item
-the global heterogeneous agent number assigned by @value{GDBN}, if the
-@w{@option{-gid}} option was specified
+@table @emph
 
-@item
-the @acronym{PCIe} slot number in @acronym{BDF, Bus:Device.Function}
-notation
+@item HSA
+An HSA AQL queue.  The @samp{(S)} suffix indicates it uses the single-producer
+protocol, @samp{(M)} suffix indicates the multi-producer protocol, and
+@samp{(Coop)} suffix indicates the multi-producer cooperative dispatch
+protocol.
 
-@item
-the device name
+@item PM4
+An AMD PM4 queue.
 
-@item
-the number of shader engines
+@item DMA
+A DMA queue.
 
-@item
-the number of @acronym{CU, Compute Unit}
+@item XGMI
+An XGMI queue.
 
-@item
-the number of @acronym{SIMD, Single Instruction Multiple Data} units per @acronym{CU}
+@end table
 
-@item
-the number of wavefronts per @acronym{SIMD}
+@acronym{AMD GPU} only supports the HSA queue type currently.  Other queue
+types are displayed as @samp{?}.
 
-@end enumerate
+@acronym{AMD GPU} supports the following address spaces for the @samp{info
+dispatches} command:
 
-For example,
+@table @emph
+
+@item Shared
+Per work-group storage.
+
+@item Private
+Per work-item storage.
+
+@end table
+
+The @samp{info dispatches} command uses the following BNF syntax for
+@acronym{AMD GPU} heterogeneous dispatch fences:
 
 @smallexample
-(@value{GDBP}) info agents
-Id PCI Slot Device Name Shader Engines Compute Units SIMD/CU Wavefronts/SIMD
-1  43:00.0  vega10      4              56            4       10
+fence     ::== [ barrier ] [ separator ] [ acquire ]  [ separator ] [ release ]
+separator ::== "|"
+barrier   ::== "B"
+acquire   ::== "A" scope
+release   ::== "R" scope
+scope     ::== system | agent
+system    ::== "s"
+agent     ::== "a"
 @end smallexample
 
-@acronym{AMD GPU} heterogeneous agents are not listed until the
-inferior has started executing the program.
+@noindent
+Where:
 
-The @code{info queues}, @code{info dispatches}, and @code{info
-packets} commands are not yet supported by @acronym{AMD GPU}.
+@table @var
+
+@item separator
+The elements are separated by @samp{|}.
+
+@item barrier
+If present indicates the next heterogeneous packet will not be initiated until
+heterogeneous dispatch completes.
+
+@item acquire
+Indicates an acquire memory fence was performed before initiating the
+heterogeneous dispatch.
+
+@item release
+Indicates a release memory fence will be performed when the heterogeneous
+dispatch completes.
+
+@item system
+Indicates the memory fence is performed at the system memory scope.
+
+@item agent
+Indicates the memory fence is performed at the agent memory scope.
+
+@end table
+
+The @code{info agents}, @code{info queues}, and @code{info dispatches} commands
+do not yet support the @w{@option{-gid}} option.
+
+The @code{info packets} command is not yet supported by @acronym{AMD GPU}.
 
 An AMD GPU wavefront is represented in @value{GDBN} as a thread.
 
