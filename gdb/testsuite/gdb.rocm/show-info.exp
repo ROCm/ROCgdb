@@ -1,0 +1,134 @@
+# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+# Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+set testfile "show-info"
+set srcfile ${srcdir}/${subdir}/${testfile}.cpp
+set objfile [standard_output_file ${testfile}.o]
+set binfile [standard_output_file ${testfile}]
+
+
+# Check if skip hip tests
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+# Compile the hip program
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+gdb_start
+
+# Load the hip program
+if {[gdb_load ${binfile}] == -1} {
+    verbose "failed to load program ${testfile}."
+    return -1
+}
+
+
+# Run to main and break
+if ![runto_main] {
+    fail "can't run to main and break in program ${testfile}."
+    return -1
+}
+
+
+#Set breakpoint in device code
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_continue_to_breakpoint "bit_extract_kernel"
+
+#Test1
+# Check info agents
+# vega10 sample output "1  43:00.0  vega10      4              56            4       10"
+# vega20 sample output "1  b1:00.0  vega20      4              60            4       10"
+gdb_test_sequence "info agents" "info agents" {
+ {Id\s+PCI Slot\s+Device Name\s+Shader Engines\s+Compute Units\s+SIMD/CU\s+Wavefronts/SIMD}
+ {\d\s+\w+:\d+\.\d\s+\w+\s+\d+\s+\d+\s+\d+\s+\d+}
+}
+
+#Test2
+#Check info threads
+#sample output
+#* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
+#  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
+gdb_test_sequence "info threads" "info threads" {
+ {Id\s+Target\s+Id\s+Frame}
+ {\d+\s+AMDGPU\sThread\s\d+\.\d+\s\(\d+,\d+,\d+\)/\d+}
+}
+
+#Test3
+#Show architecture info while debugging in device code
+#Sample output "The target architecture is set automatically (currently amdgcn:gfx906)"
+gdb_test_sequence "show architecture" "show architecture" {
+ {The target architecture is set automatically\s\(currently amdgcn:gfx\d+\)}
+}
+
+#Test4
+gdb_test_sequence "show convenience" "show convenience" {
+ {\$_thread = \d+}
+ {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
+
+}
+
+#Test5
+#info sharedlibrary
+#sample output
+#From                To                  Syms Read   Shared Object Library
+#0x00007ffbdfe05000  0x00007ffbdfe07a2c  Yes (*)     AMDGPU shared object [loaded from memory 0xab9900..0xac3470]
+#0x00007ffbdc201000  0x00007ffbdc201c94  Yes         AMDGPU shared object [loaded from memory 0x9b71d0..0x9bae28]
+#Disabled test until complete fix for CODE URI is not in
+#gdb_test_sequence "info sharedlibrary" "info sharedlibrary" {
+# {From\s+To\s+Syms\s+Read\s+Shared Object Library}
+# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s\(\*\)\s+AMDGPU shared object.}
+# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s+AMDGPU shared object.}
+#}
+
+
+#Test6
+#info break
+#sample output
+#Num     Type           Disp Enb Address            What
+#1       breakpoint     keep y   0x0000000000400d49 in main(int, char**) at bit_extract.cpp:54
+#        breakpoint already hit 1 time
+#2       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
+#        breakpoint already hit 1 time
+gdb_test_sequence "info break" "info break" {
+ {Num\s+Type\s+Disp\sEnb Address\s+What}
+ {\d+\s+breakpoint\s+keep\s+y}
+ {breakpoint already hit\s\d+\stime}
+}
+
+#Test7
+#info inferiors
+#  Num  Description       Executable
+#* 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
+gdb_test_sequence "info inferiors" "info inferiors" {
+ {Num\s+Description\s+Executable}
+ {\*\s\d+\s+process\s+\d+}
+}
+
+set timeout 40
+gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"
+gdb_test "continue" {.+Inferior\s\d+.+\sexited\snormally.+}
+
+
+
+gdb_exit

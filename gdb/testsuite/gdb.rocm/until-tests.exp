@@ -1,0 +1,125 @@
+# Copyright (C) 2019-2020 Free Software Foundation, Inc.
+# Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+set testfile "until-tests"
+set srcfile ${srcdir}/${subdir}/${testfile}.cpp
+set objfile [standard_output_file ${testfile}.o]
+set binfile [standard_output_file ${testfile}]
+
+set breakpoint_loc 35
+set threadid {16}
+
+# Check if skip hip tests
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+# Compile the hip program
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+gdb_start
+
+# Load the hip program
+if {[gdb_load ${binfile}] == -1} {
+    verbose "failed to load program ${testfile}."
+    return -1
+}
+
+# Run to main and break
+if ![runto_main] {
+    fail "can't run to main and break in program ${testfile}."
+    return -1
+}
+
+
+# Set breakpoint in device code function in hip.
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+# Until tests and other tests after turning on scheduler-locking.
+gdb_test_no_output "set scheduler-locking on"
+gdb_test "info line" "Line $breakpoint_loc.*"
+gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
+gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
+gdb_test_no_output "set scheduler-locking off"
+gdb_test "clear bit_extract_kernel"
+set timeout 60
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+# Until tests without specifying location.
+clean_restart ${binfile}
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test_no_output "set scheduler-locking on"
+gdb_test "info line" "Line $breakpoint_loc.*"
+gdb_test "until" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
+gdb_test "info line" "Line [expr $breakpoint_loc+1].*"
+gdb_test_no_output "set scheduler-locking off"
+gdb_test "clear bit_extract_kernel"
+set timeout 60
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+
+# Until tests and other tests after setting conditional breakpoint on AMDGPU thread.
+set timeout 40
+clean_restart ${binfile}
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
+gdb_test "info line" "Line $breakpoint_loc.*"
+gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
+gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+
+# Until and other tests in non-stop mode.
+clean_restart ${binfile}
+gdb_test_no_output "set non-stop on"
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+
+set test_name "run to bit_extract_kernel Breakpoint"
+send_gdb "run\n"
+gdb_expect 60 {
+  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
+  timeout {fail "(timeout) $test_name"}
+}
+
+# In non-stop mode when we do run after puting breakpoint in kernel all threads gets created
+# so we need to wait until all thread info get display on gdb console.
+sleep 5
+
+gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
+gdb_test "info line" "Line $breakpoint_loc.*"
+gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
+gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
+set timeout 60
+gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+
+gdb_exit
+
+
+
+
+
+

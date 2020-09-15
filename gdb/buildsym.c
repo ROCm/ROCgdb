@@ -1,5 +1,6 @@
 /* Support routines for building symbol tables in GDB's internal format.
    Copyright (C) 1986-2020 Free Software Foundation, Inc.
+   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1025,7 +1026,8 @@ buildsym_compunit::end_symtab_with_blockvector (struct block *static_block,
     }
 
   /* Save the debug format string (if any) in the symtab.  */
-  COMPUNIT_DEBUGFORMAT (cu) = m_debugformat;
+  COMPUNIT_DEBUGFORMAT (cu) = obstack_strdup (&m_objfile->objfile_obstack,
+                                              m_debugformat.get ());
 
   /* Similarly for the producer.  */
   COMPUNIT_PRODUCER (cu) = m_producer;

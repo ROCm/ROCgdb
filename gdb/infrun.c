@@ -2,6 +2,7 @@
    process.
 
    Copyright (C) 1986-2020 Free Software Foundation, Inc.
+   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -5711,7 +5712,12 @@ finish_step_over (struct execution_control_state *ecs)
       context_switch (ecs);
       insert_breakpoints ();
 
-      restart_threads (ecs->event_thread);
+      {
+        scoped_restore save_defer_tc
+          = make_scoped_defer_target_commit_resume ();
+        restart_threads (ecs->event_thread);
+      }
+      target_commit_resume ();
 
       /* If we have events pending, go through handle_inferior_event
 	 again, picking up a pending event at random.  This avoids

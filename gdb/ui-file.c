@@ -1,6 +1,7 @@
 /* UI_FILE - a generic STDIO like output stream.
 
    Copyright (C) 1999-2020 Free Software Foundation, Inc.
+   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
