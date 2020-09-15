@@ -2761,7 +2761,7 @@ unpack_long (struct type *type, const gdb_byte *valaddr)
   enum bfd_endian byte_order = type_byte_order (type);
   enum type_code code = type->code ();
   int len = TYPE_LENGTH (type);
-  int nosign = TYPE_UNSIGNED (type);
+  int nosign = type->is_unsigned ();
 
   switch (code)
     {
@@ -3145,7 +3145,7 @@ unpack_bits_as_long (struct type *field_type, const gdb_byte *valaddr,
     {
       valmask = (((ULONGEST) 1) << bitsize) - 1;
       val &= valmask;
-      if (!TYPE_UNSIGNED (field_type))
+      if (!field_type->is_unsigned ())
 	{
 	  if (val & (valmask ^ (valmask >> 1)))
 	    {
@@ -3687,7 +3687,7 @@ coerce_array (struct value *arg)
   switch (type->code ())
     {
     case TYPE_CODE_ARRAY:
-      if (!TYPE_VECTOR (type) && current_language->c_style_arrays)
+      if (!type->is_vector () && current_language->c_style_arrays)
 	arg = value_coerce_array (arg);
       break;
     case TYPE_CODE_FUNC:

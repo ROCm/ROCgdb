@@ -69,7 +69,7 @@
 
 /* Register names.  */
 
-static const char *i386_register_names[] =
+static const char * const i386_register_names[] =
 {
   "eax",   "ecx",    "edx",   "ebx",
   "esp",   "ebp",    "esi",   "edi",
@@ -84,56 +84,56 @@ static const char *i386_register_names[] =
   "mxcsr"
 };
 
-static const char *i386_zmm_names[] =
+static const char * const i386_zmm_names[] =
 {
   "zmm0",  "zmm1",   "zmm2",  "zmm3",
   "zmm4",  "zmm5",   "zmm6",  "zmm7"
 };
 
-static const char *i386_zmmh_names[] =
+static const char * const i386_zmmh_names[] =
 {
   "zmm0h",  "zmm1h",   "zmm2h",  "zmm3h",
   "zmm4h",  "zmm5h",   "zmm6h",  "zmm7h"
 };
 
-static const char *i386_k_names[] =
+static const char * const i386_k_names[] =
 {
   "k0",  "k1",   "k2",  "k3",
   "k4",  "k5",   "k6",  "k7"
 };
 
-static const char *i386_ymm_names[] =
+static const char * const i386_ymm_names[] =
 {
   "ymm0",  "ymm1",   "ymm2",  "ymm3",
   "ymm4",  "ymm5",   "ymm6",  "ymm7",
 };
 
-static const char *i386_ymmh_names[] =
+static const char * const i386_ymmh_names[] =
 {
   "ymm0h",  "ymm1h",   "ymm2h",  "ymm3h",
   "ymm4h",  "ymm5h",   "ymm6h",  "ymm7h",
 };
 
-static const char *i386_mpx_names[] =
+static const char * const i386_mpx_names[] =
 {
   "bnd0raw", "bnd1raw", "bnd2raw", "bnd3raw", "bndcfgu", "bndstatus"
 };
 
-static const char* i386_pkeys_names[] =
+static const char * const i386_pkeys_names[] =
 {
   "pkru"
 };
 
 /* Register names for MPX pseudo-registers.  */
 
-static const char *i386_bnd_names[] =
+static const char * const i386_bnd_names[] =
 {
   "bnd0", "bnd1", "bnd2", "bnd3"
 };
 
 /* Register names for MMX pseudo-registers.  */
 
-static const char *i386_mmx_names[] =
+static const char * const i386_mmx_names[] =
 {
   "mm0", "mm1", "mm2", "mm3",
   "mm4", "mm5", "mm6", "mm7"
@@ -141,7 +141,7 @@ static const char *i386_mmx_names[] =
 
 /* Register names for byte pseudo-registers.  */
 
-static const char *i386_byte_names[] =
+static const char * const i386_byte_names[] =
 {
   "al", "cl", "dl", "bl", 
   "ah", "ch", "dh", "bh"
@@ -149,7 +149,7 @@ static const char *i386_byte_names[] =
 
 /* Register names for word pseudo-registers.  */
 
-static const char *i386_word_names[] =
+static const char * const i386_word_names[] =
 {
   "ax", "cx", "dx", "bx",
   "", "bp", "si", "di"
@@ -2636,7 +2636,7 @@ i386_16_byte_align_p (struct type *type)
 {
   type = check_typedef (type);
   if ((type->code () == TYPE_CODE_DECFLOAT
-       || (type->code () == TYPE_CODE_ARRAY && TYPE_VECTOR (type)))
+       || (type->code () == TYPE_CODE_ARRAY && type->is_vector ()))
       && TYPE_LENGTH (type) == 16)
     return 1;
   if (type->code () == TYPE_CODE_ARRAY)
@@ -3137,7 +3137,7 @@ i386_zmm_type (struct gdbarch *gdbarch)
       append_composite_type_field (t, "v4_int128",
 				   init_vector_type (bt->builtin_int128, 4));
 
-      TYPE_VECTOR (t) = 1;
+      t->set_is_vector (true);
       t->set_name ("builtin_type_vec512i");
       tdep->i386_zmm_type = t;
     }
@@ -3193,7 +3193,7 @@ i386_ymm_type (struct gdbarch *gdbarch)
       append_composite_type_field (t, "v2_int128",
 				   init_vector_type (bt->builtin_int128, 2));
 
-      TYPE_VECTOR (t) = 1;
+      t->set_is_vector (true);
       t->set_name ("builtin_type_vec256i");
       tdep->i386_ymm_type = t;
     }
@@ -3235,7 +3235,7 @@ i386_mmx_type (struct gdbarch *gdbarch)
       append_composite_type_field (t, "v8_int8",
 				   init_vector_type (bt->builtin_int8, 8));
 
-      TYPE_VECTOR (t) = 1;
+      t->set_is_vector (true);
       t->set_name ("builtin_type_vec64i");
       tdep->i386_mmx_type = t;
     }

@@ -162,7 +162,7 @@ csky_write_pc (regcache *regcache, CORE_ADDR val)
 
 /* C-Sky ABI register names.  */
 
-static const char *csky_register_names[] =
+static const char * const csky_register_names[] =
 {
   /* General registers 0 - 31.  */
   "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -266,7 +266,7 @@ csky_vector_type (struct gdbarch *gdbarch)
   append_composite_type_field (t, "u8",
 			       init_vector_type (bt->builtin_int8, 16));
 
-  TYPE_VECTOR (t) = 1;
+  t->set_is_vector (true);
   t->set_name ("builtin_type_vec128i");
 
   return t;

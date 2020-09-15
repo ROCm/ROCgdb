@@ -220,7 +220,7 @@ value_arg_coerce (struct gdbarch *gdbarch, struct value *arg,
          they are vectors, in which case we want to leave them alone,
          because they are passed by value.  */
       if (current_language->c_style_arrays)
-	if (!TYPE_VECTOR (type))
+	if (!type->is_vector ())
 	  type = lookup_pointer_type (TYPE_TARGET_TYPE (type));
       break;
     case TYPE_CODE_UNDEF:
@@ -275,7 +275,7 @@ find_function_addr (struct value *function,
   if (ftype->code () == TYPE_CODE_FUNC
       || ftype->code () == TYPE_CODE_METHOD)
     {
-      if (TYPE_GNU_IFUNC (ftype))
+      if (ftype->is_gnu_ifunc ())
 	{
 	  CORE_ADDR resolver_addr = funaddr;
 
@@ -1043,7 +1043,7 @@ call_function_by_hand_dummy (struct value *function,
 	  prototyped = 1;
 	}
       else if (i < ftype->num_fields ())
-	prototyped = TYPE_PROTOTYPED (ftype);
+	prototyped = ftype->is_prototyped ();
       else
 	prototyped = 0;
 

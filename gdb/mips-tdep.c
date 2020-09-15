@@ -578,7 +578,7 @@ enum
 
 /* Generic MIPS.  */
 
-static const char *mips_generic_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
+static const char * const mips_generic_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
   "sr", "lo", "hi", "bad", "cause", "pc",
   "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7",
   "f8", "f9", "f10", "f11", "f12", "f13", "f14", "f15",
@@ -589,7 +589,7 @@ static const char *mips_generic_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
 
 /* Names of tx39 registers.  */
 
-static const char *mips_tx39_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
+static const char * const mips_tx39_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
   "sr", "lo", "hi", "bad", "cause", "pc",
   "", "", "", "", "", "", "", "",
   "", "", "", "", "", "", "", "",
@@ -601,7 +601,7 @@ static const char *mips_tx39_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
 };
 
 /* Names of registers with Linux kernels.  */
-static const char *mips_linux_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
+static const char * const mips_linux_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
   "sr", "lo", "hi", "bad", "cause", "pc",
   "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7",
   "f8", "f9", "f10", "f11", "f12", "f13", "f14", "f15",
@@ -686,7 +686,7 @@ mips_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   int pseudo = regnum / gdbarch_num_regs (gdbarch);
   if (reggroup == all_reggroup)
     return pseudo;
-  vector_p = TYPE_VECTOR (register_type (gdbarch, regnum));
+  vector_p = register_type (gdbarch, regnum)->is_vector ();
   float_p = register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT;
   /* FIXME: cagney/2003-04-13: Can't yet use gdbarch_num_regs
      (gdbarch), as not all architectures are multi-arch.  */
@@ -5091,7 +5091,7 @@ mips_n32n64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 			   || typecode == TYPE_CODE_INT))
 		      || (partial_len < 4
 			  && typecode == TYPE_CODE_INT
-			  && !TYPE_UNSIGNED (arg_type)))
+			  && !arg_type->is_unsigned ()))
 		    regval = extract_signed_integer (val, partial_len,
 						     byte_order);
 		  else
@@ -8049,7 +8049,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   enum mips_fpu_type fpu_type;
   struct tdesc_arch_data *tdesc_data = NULL;
   int elf_fpu_type = Val_GNU_MIPS_ABI_FP_ANY;
-  const char **reg_names;
+  const char * const *reg_names;
   struct mips_regnum mips_regnum, *regnum;
   enum mips_isa mips_isa;
   int dspacc;

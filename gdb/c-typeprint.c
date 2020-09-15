@@ -133,7 +133,7 @@ c_print_type_1 (struct type *type,
 	      && (code == TYPE_CODE_PTR || code == TYPE_CODE_FUNC
 		  || code == TYPE_CODE_METHOD
 		  || (code == TYPE_CODE_ARRAY
-		      && !TYPE_VECTOR (type))
+		      && !type->is_vector ())
 		  || code == TYPE_CODE_MEMBERPTR
 		  || code == TYPE_CODE_METHODPTR
 		  || TYPE_IS_REFERENCE (type))))
@@ -279,7 +279,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
 {
   struct field *args = mtype->fields ();
   int nargs = mtype->num_fields ();
-  int varargs = TYPE_VARARGS (mtype);
+  int varargs = mtype->has_varargs ();
   int i;
 
   fprintf_symbol_filtered (stream, prefix,
@@ -526,8 +526,9 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  address_space_id = address_space_int_to_name (get_type_arch (type),
-						TYPE_INSTANCE_FLAGS (type));
+  address_space_id
+    = address_space_type_instance_flags_to_name (get_type_arch (type),
+						 type->instance_flags ());
   if (address_space_id)
     {
       if (did_print_modifier || need_pre_space)
@@ -591,12 +592,12 @@ c_type_print_args (struct type *type, struct ui_file *stream,
       printed_any = 1;
     }
 
-  if (printed_any && TYPE_VARARGS (type))
+  if (printed_any && type->has_varargs ())
     {
       /* Print out a trailing ellipsis for varargs functions.  Ignore
 	 TYPE_VARARGS if the function has no named arguments; that
 	 represents unprototyped (K&R style) C functions.  */
-      if (printed_any && TYPE_VARARGS (type))
+      if (printed_any && type->has_varargs ())
 	{
 	  fprintf_filtered (stream, ", ");
 	  wrap_here ("    ");
@@ -604,7 +605,7 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 	}
     }
   else if (!printed_any
-	   && (TYPE_PROTOTYPED (type) || language == language_cplus))
+	   && (type->is_prototyped () || language == language_cplus))
     fprintf_filtered (stream, "void");
 
   fprintf_filtered (stream, ")");
@@ -772,7 +773,7 @@ c_type_print_varspec_suffix (struct type *type,
     case TYPE_CODE_ARRAY:
       {
 	LONGEST low_bound, high_bound;
-	int is_vector = TYPE_VECTOR (type);
+	int is_vector = type->is_vector ();
 
 	if (passed_a_ptr)
 	  fprintf_filtered (stream, ")");
@@ -1118,7 +1119,7 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
       if (type->num_fields () == 0 && TYPE_NFN_FIELDS (type) == 0
 	  && TYPE_TYPEDEF_FIELD_COUNT (type) == 0)
 	{
-	  if (TYPE_STUB (type))
+	  if (type->is_stub ())
 	    fprintfi_filtered (level + 4, stream,
 			       _("%p[<incomplete type>%p]\n"),
 			       metadata_style.style ().ptr (), nullptr);
@@ -1629,7 +1630,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 	    fprintf_filtered (stream, "{\n");
 	    if (type->num_fields () == 0)
 	      {
-		if (TYPE_STUB (type))
+		if (type->is_stub ())
 		  fprintfi_filtered (level + 4, stream,
 				     _("%p[<incomplete type>%p]\n"),
 				     metadata_style.style ().ptr (), nullptr);

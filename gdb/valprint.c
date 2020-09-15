@@ -769,7 +769,7 @@ generic_value_print_char (struct value *value, struct ui_file *stream,
       const gdb_byte *valaddr = value_contents_for_printing (value);
 
       LONGEST val = unpack_long (type, valaddr);
-      if (TYPE_UNSIGNED (type))
+      if (type->is_unsigned ())
 	fprintf_filtered (stream, "%u", (unsigned int) val);
       else
 	fprintf_filtered (stream, "%d", (int) val);
@@ -947,7 +947,7 @@ do_val_print (struct value *value, struct ui_file *stream, int recurse,
      only a stub and we can't find and substitute its complete type, then
      print appropriate string and return.  */
 
-  if (TYPE_STUB (real_type))
+  if (real_type->is_stub ())
     {
       fprintf_styled (stream, metadata_style.style (), _("<incomplete type>"));
       return;

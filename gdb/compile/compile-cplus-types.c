@@ -475,7 +475,7 @@ compile_cplus_convert_array (compile_cplus_instance *instance,
   if (range->bounds ()->high.kind () == PROP_LOCEXPR
       || range->bounds ()->high.kind () == PROP_LOCLIST)
     {
-      if (TYPE_VECTOR (type))
+      if (type->is_vector ())
 	{
 	  const char *s = _("variably-sized vector type is not supported");
 
@@ -499,7 +499,7 @@ compile_cplus_convert_array (compile_cplus_instance *instance,
 	  count = high_bound + 1;
 	}
 
-      if (TYPE_VECTOR (type))
+      if (type->is_vector ())
 	return instance->plugin ().build_vector_type (element_type, count);
 
       return instance->plugin ().build_array_type (element_type, count);
@@ -668,7 +668,7 @@ compile_cplus_convert_method (compile_cplus_instance *instance,
      type and corresponding qualifier flags.  */
   gcc_type func_type = compile_cplus_convert_func (instance, method_type, true);
   gcc_type class_type = instance->convert_type (parent_type);
-  gcc_cp_qualifiers_flags quals = (enum gcc_cp_qualifiers) 0;
+  gcc_cp_qualifiers_flags quals = 0;
 
   if (TYPE_CONST (method_type))
     quals |= GCC_CP_QUALIFIER_CONST;
@@ -681,7 +681,7 @@ compile_cplus_convert_method (compile_cplus_instance *instance,
   gcc_cp_ref_qualifiers_flags rquals = GCC_CP_REF_QUAL_NONE;
 
   return instance->plugin ().build_method_type
-    (class_type, func_type, quals, rquals);
+    (class_type, func_type, quals.raw (), rquals.raw ());
 }
 
 /* Convert a member or method pointer represented by TYPE.  */
@@ -745,7 +745,7 @@ compile_cplus_convert_struct_or_union_methods (compile_cplus_instance *instance,
 		     (sym_kind
 		      | get_method_access_flag (type, i, j)
 		      | GCC_CP_FLAG_VIRTUAL_FUNCTION
-		      | GCC_CP_FLAG_PURE_VIRTUAL_FUNCTION),
+		      | GCC_CP_FLAG_PURE_VIRTUAL_FUNCTION).raw (),
 		     method_type, nullptr, 0, nullptr, 0);
 		  continue;
 		}
@@ -787,7 +787,7 @@ compile_cplus_convert_struct_or_union_methods (compile_cplus_instance *instance,
 
 	  instance->plugin ().build_decl
 	    (kind, overloaded_name.get (),
-	     sym_kind | get_method_access_flag (type, i, j),
+	     (sym_kind | get_method_access_flag (type, i, j)).raw (),
 	     method_type, nullptr, address, filename, line);
 	}
     }
@@ -929,7 +929,7 @@ compile_cplus_convert_enum (compile_cplus_instance *instance, struct type *type,
   instance->enter_scope (std::move (scope));
 
   gcc_type int_type
-    = instance->plugin ().get_int_type (TYPE_UNSIGNED (type),
+    = instance->plugin ().get_int_type (type->is_unsigned (),
 					TYPE_LENGTH (type), nullptr);
   gcc_type result
     = instance->plugin ().start_enum_type (name.get (), int_type,
@@ -964,7 +964,7 @@ static gcc_type
 compile_cplus_convert_func (compile_cplus_instance *instance,
 			    struct type *type, bool strip_artificial)
 {
-  int is_varargs = TYPE_VARARGS (type);
+  int is_varargs = type->has_varargs ();
   struct type *target_type = TYPE_TARGET_TYPE (type);
 
   /* Functions with no debug info have no return type.  Ideally we'd
@@ -1015,14 +1015,14 @@ compile_cplus_convert_func (compile_cplus_instance *instance,
 static gcc_type
 compile_cplus_convert_int (compile_cplus_instance *instance, struct type *type)
 {
-  if (TYPE_NOSIGN (type))
+  if (type->has_no_signedness ())
     {
       gdb_assert (TYPE_LENGTH (type) == 1);
       return instance->plugin ().get_char_type ();
     }
 
   return instance->plugin ().get_int_type
-    (TYPE_UNSIGNED (type), TYPE_LENGTH (type), type->name ());
+    (type->is_unsigned (), TYPE_LENGTH (type), type->name ());
 }
 
 /* Convert a floating-point type to its gcc representation.  */
@@ -1060,7 +1060,7 @@ compile_cplus_instance::convert_qualified_base (gcc_type base,
   gcc_type result = base;
 
   if (quals != 0)
-    result = plugin ().build_qualified_type (base, quals);
+    result = plugin ().build_qualified_type (base, quals.raw ());
 
   return result;
 }
@@ -1135,9 +1135,9 @@ convert_type_cplus_basic (compile_cplus_instance *instance,
 {
   /* If we are converting a qualified type, first convert the
      unqualified type and then apply the qualifiers.  */
-  if ((TYPE_INSTANCE_FLAGS (type) & (TYPE_INSTANCE_FLAG_CONST
-				     | TYPE_INSTANCE_FLAG_VOLATILE
-				     | TYPE_INSTANCE_FLAG_RESTRICT)) != 0)
+  if ((type->instance_flags () & (TYPE_INSTANCE_FLAG_CONST
+				  | TYPE_INSTANCE_FLAG_VOLATILE
+				  | TYPE_INSTANCE_FLAG_RESTRICT)) != 0)
     return compile_cplus_convert_qualified (instance, type);
 
   switch (type->code ())

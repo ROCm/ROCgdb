@@ -674,7 +674,7 @@ riscv_fpreg_d_type (struct gdbarch *gdbarch)
 			       "__gdb_builtin_type_fpreg_d", TYPE_CODE_UNION);
       append_composite_type_field (t, "float", bt->builtin_float);
       append_composite_type_field (t, "double", bt->builtin_double);
-      TYPE_VECTOR (t) = 1;
+      t->set_is_vector (true);
       t->set_name ("builtin_type_fpreg_d");
       tdep->riscv_fpreg_d_type = t;
     }
@@ -935,7 +935,7 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
 	    {
 	      /* If not a vector register, print it also according to its
 		 natural format.  */
-	      if (TYPE_VECTOR (regtype) == 0)
+	      if (regtype->is_vector () == 0)
 		{
 		  get_user_print_options (&opts);
 		  opts.deref_ref = 1;
@@ -1772,7 +1772,7 @@ static ULONGEST
 riscv_type_align (gdbarch *gdbarch, type *type)
 {
   type = check_typedef (type);
-  if (type->code () == TYPE_CODE_ARRAY && TYPE_VECTOR (type))
+  if (type->code () == TYPE_CODE_ARRAY && type->is_vector ())
     return std::min (TYPE_LENGTH (type), (ULONGEST) BIGGEST_ALIGNMENT);
 
   /* Anything else will be aligned by the generic code.  */
@@ -2589,7 +2589,7 @@ riscv_push_dummy_call (struct gdbarch *gdbarch,
       arg_type = check_typedef (value_type (arg_value));
 
       riscv_arg_location (gdbarch, info, &call_info, arg_type,
-			  TYPE_VARARGS (ftype) && i >= ftype->num_fields ());
+			  ftype->has_varargs () && i >= ftype->num_fields ());
 
       if (info->type != arg_type)
 	arg_value = value_cast (info->type, arg_value);

@@ -1,3 +1,379 @@
+2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* debuginfod-support.c (debuginfod_client_deleter): New.
+	(debuginfod_client_up): New.
+	(debuginfod_init): Return debuginfod_client_up.
+	(debuginfod_source_query): Adjust.
+	(debuginfod_debuginfo_query): Adjust.
+
+2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* debuginfod-support.c (debuginfod_source_query): Use
+	make_unique_xstrdup.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_INSTANCE_FLAGS): Remove, replace all uses
+	with `type::instance_flags`.
+
+2020-09-14  Michael Mullin  <masmullin@gmail.com>
+
+	* xml-tdesc.c [!defined(HAVE_LIBEXPAT)] (tdesc_parse_xml):
+	Remove baton parameter.
+
+2020-09-14  Pedro Alves  <pedro@palves.net>
+
+	* Makefile.in (SELFTESTS_SRCS): Add
+	unittests/enum-flags-selftests.c.
+	* btrace.c (ftrace_update_caller, ftrace_fixup_calle): Use
+	btrace_function_flags instead of enum btrace_function_flag.
+	* compile/compile-c-types.c (convert_qualified): Use
+	enum_flags::raw.
+	* compile/compile-cplus-symbols.c (convert_one_symbol)
+	(convert_symbol_bmsym):
+	* compile/compile-cplus-types.c (compile_cplus_convert_method)
+	(compile_cplus_convert_struct_or_union_methods)
+	(compile_cplus_instance::convert_qualified_base):
+	* go-exp.y (parse_string_or_char): Add cast to int.
+	* unittests/enum-flags-selftests.c: New file.
+	* record-btrace.c (btrace_thread_flag_to_str): Change parameter's
+	type to btrace_thread_flags from btrace_thread_flag.
+	(record_btrace_cancel_resume, record_btrace_step_thread): Change
+	local's type to btrace_thread_flags from btrace_thread_flag.  Add
+	cast in DEBUG call.
+
+2020-09-14  Pedro Alves  <pedro@palves.net>
+
+	* c-typeprint.c (c_type_print_modifier): Adjust to rename.
+	* gdbtypes.c (address_space_name_to_int): Rename to ...
+	(address_space_name_to_type_instance_flags): ... this.
+	(address_space_int_to_name): Rename to ...
+	(address_space_type_instance_flags_to_name): ... this.
+	* gdbtypes.h (address_space_name_to_int): Rename to ...
+	(address_space_name_to_type_instance_flags): ... this.
+	(address_space_int_to_name): Rename to ...
+	(address_space_type_instance_flags_to_name): ... this.
+	* type-stack.c (type_stack::insert): Adjust to rename.
+	* type-stack.h (type_stack::insert): Likewise.
+
+2020-09-14  Pedro Alves  <pedro@palves.net>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* avr-tdep.c (avr_address_class_type_flags): Return
+	type_instance_flags.
+	(avr_address_class_type_flags_to_name): Take a
+	type_instance_flags.
+	(avr_address_class_name_to_type_flags): Return bool and take a
+	type_instance_flags.
+	* d-lang.c (build_d_types): Use type::set_instance_flags.
+	* ft32-tdep.c (ft32_address_class_type_flags): Return
+	type_instance_flags.
+	(ft32_address_class_type_flags_to_name): Take a
+	type_instance_flags.
+	(ft32_address_class_name_to_type_flags): Return bool and take a
+	type_instance_flags.
+	(ft32_gdbarch_init): Use type::set_instance_flags.
+	* eval.c (fake_method::fake_method): Use type::set_instance_flags.
+	* gdbarch.h, gdbarch.c: Regenerate.
+	* gdbarch.sh (address_class_type_flags): Use type_instance_flags.
+	(address_class_name_to_type_flags): Use type_instance_flags and
+	bool.
+	* gdbtypes.c (address_space_name_to_int)
+	(address_space_int_to_name, make_qualified_type): Use
+	type_instance_flags.
+	(make_qualified_type): Use type_instance_flags and
+	type::set_instance_flags.
+	(make_type_with_address_space, make_cv_type, make_vector_type)
+	(check_typedef): Use type_instance_flags.
+	(recursive_dump_type): Cast type_instance_flags to unsigned for
+	printing.
+	(copy_type_recursive): Use type::set_instance_flags.
+	(gdbtypes_post_init): Use type::set_instance_flags.
+	* gdbtypes.h (struct type) <instance_flags>: Rename to ...
+	<m_instance_flags>: ... this.
+	<instance_flags, set_instance_flags>: New methods.
+	(TYPE_INSTANCE_FLAGS): Use the instance_flags method.
+	(SET_TYPE_INSTANCE_FLAGS): New.
+	(address_space_name_to_int, address_space_int_to_name)
+	(make_type_with_address_space): Pass flags using
+	type_instance_flags instead of int.
+	* stabsread.c (cleanup_undefined_types_noname): Use
+	type::set_instance_flags.
+	* s390-tdep.c (s390_address_class_type_flags): Return
+	type_instance_flags.
+	(s390_address_class_type_flags_to_name): Take a
+	type_instance_flags.
+	(s390_address_class_name_to_type_flags): Return bool and take a
+	type_instance_flags.
+	* type-stack.c (type_stack::follow_types): Use
+	type_instance_flags.
+	* dwarf2/read.c (read_tag_pointer_type): Use type_instance_flags.
+
+2020-09-14  Tom Tromey  <tromey@adacore.com>
+
+	* x86-tdep.h (x86_in_indirect_branch_thunk): Update.
+	* x86-tdep.c (x86_is_thunk_register_name)
+	(x86_in_indirect_branch_thunk): Update.
+	* sparc64-tdep.c (sparc64_fpu_register_names)
+	(sparc64_cp0_register_names, sparc64_register_names)
+	(sparc64_pseudo_register_names): Now const.
+	* sparc-tdep.h (struct gdbarch_tdep) <fpu_register_names,
+	cp0_registers_num>: Now const.
+	* sparc-tdep.c (sparc_core_register_names)
+	(sparc32_fpu_register_names, sparc32_cp0_register_names)
+	(sparc32_pseudo_register_names): Now const.
+	(validate_tdesc_registers): Update.
+	* rust-lang.c (rust_extensions): Now const.
+	* p-lang.c (p_extensions): Now const.
+	* objc-lang.c (objc_extensions): Now const.
+	* nto-tdep.c (nto_thread_state_str): Now const.
+	* moxie-tdep.c (moxie_register_names): Now const.
+	* mips-tdep.h (struct gdbarch_tdep) <mips_processor_reg_names>:
+	Now const.
+	* mips-tdep.c (mips_generic_reg_names, mips_tx39_reg_names)
+	(mips_linux_reg_names): Now const.
+	(mips_gdbarch_init): Update.
+	* microblaze-tdep.c (microblaze_register_names): Now const.
+	* m68k-tdep.c (m68k_register_names): Now const.
+	* m32r-tdep.c (m32r_register_names): Now const.
+	* ia64-tdep.c (ia64_register_names): Now const.
+	* i386-tdep.h (struct gdbarch_tdep) <register_names,
+	ymmh_register_names, ymm16h_regnum, mpx_register_names,
+	k_register_names, zmmh_register_names, xmm_avx512_register_names,
+	ymm_avx512_register_names, pkeys_register_names>: Now const.
+	* i386-tdep.c (i386_register_names, i386_zmm_names)
+	(i386_zmmh_names, i386_k_names, i386_ymm_names, i386_ymmh_names)
+	(i386_mpx_names, i386_pkeys_names, i386_bnd_names)
+	(i386_mmx_names, i386_byte_names, i386_word_names): Now const.
+	* f-lang.c (f_extensions): Now const.
+	* d-lang.c (d_extensions): Now const.
+	* csky-tdep.c (csky_register_names): Now const.
+	* charset.c (default_charset_names, charset_enum): Now const.
+	(_initialize_charset): Update.
+	* c-lang.c (c_extensions, cplus_extensions, asm_extensions): Now
+	const.
+	* bsd-uthread.c (bsd_uthread_solib_names): Now const.
+	(bsd_uthread_solib_loaded): Update.
+	(bsd_uthread_state): Now const.
+	* amd64-tdep.c (amd64_register_names, amd64_ymm_names)
+	(amd64_ymm_avx512_names, amd64_ymmh_names)
+	(amd64_ymmh_avx512_names, amd64_mpx_names, amd64_k_names)
+	(amd64_zmmh_names, amd64_zmm_names, amd64_xmm_avx512_names)
+	(amd64_pkeys_names, amd64_byte_names, amd64_word_names)
+	(amd64_dword_names): Now const.
+	* agent.c (can_use_agent_enum): Now const.
+	* ada-tasks.c (task_states, long_task_states): Now const.
+	* ada-lang.c (known_runtime_file_name_patterns)
+	(known_auxiliary_function_name_patterns, attribute_names)
+	(standard_exc, ada_extensions): Now const.
+
+2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* bcache.h (struct bcache) <bcache>: Remove constructor.
+	<m_hash_function, m_compare_function>: Remove.
+	<~bcache>: Make virtual.
+	<compare>: Remove static method, introduce virtual method.
+	<default_hash>: Remove.
+	<hash>: New virtual method.
+	* bcache.c (bcache::expand_hash_table): Update.
+	(bcache::insert): Update.
+	(bcache::hash): New.
+	(bcache::compare): Update comment and parameter names.
+	* gdbtypes.c (types_deeply_equal): Update.
+	* psymtab.h (struct psymbol_bcache): New struct.
+	(class psymtab_storage) <psymtab_storage>: Make default.
+	<psymbol_cache>: Change type to psymbol_bcache.
+	* psymtab.c (psymtab_storage::psymtab_storage): Remove.
+	(psymbol_hash): Change to...
+	(psymbol_bcache::hash): ... this.
+	(psymbol_compare): Change to...
+	(psymbol_bcache::compare): ... this.
+
+2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-nat.c (linux_nat_wait_1): Don't use inferior_ptid when
+	checking for initial lwp.
+
+2020-09-14  Tom Tromey  <tromey@adacore.com>
+
+	* m68k-tdep.c (m68k_extract_return_value): Use
+	pointer_result_regnum.
+	(m68k_store_return_value): Likewise.
+	(m68k_reg_struct_return_p): Handle vectors and arrays.
+	(m68k_return_value): Handle arrays.
+	(m68k_svr4_return_value): Fix single-element aggregate handling.
+	Handle long double.  Adjust for embedded ABI.
+	(m68k_svr4_init_abi): Set pointer_result_regnum.
+	(m68k_embedded_init_abi): New function.
+	(m68k_gdbarch_init): Handle Tag_GNU_M68K_ABI_FP.
+	(m68k_osabi_sniffer): New function.
+	(_initialize_m68k_tdep): Register osabi sniffer.
+	* m68k-tdep.h (struct gdbarch_tdep) <pointer_result_regnum>: New
+	member.
+
+2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* xml-support.c (xml_fetch_content_from_file): Replace xfree
+	with gdb::unique_xmalloc_ptr<char>.
+
+2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* xml-support.h (xml_fetch_another): Change type to be a
+	function_view.
+	(xml_process_xincludes): Remove baton parameter.
+	(xml_fetch_content_from_file): Change baton parameter to
+	dirname.
+	* xml-support.c (struct xinclude_parsing_data)
+	<xinclude_parsing_data>: Remove baton parameter.
+	<fetcher_baton>: Remove.
+	(xinclude_start_include): Adjust.
+	(xml_process_xincludes): Adjust.
+	(xml_fetch_content_from_file): Replace baton parameter with
+	dirname.
+	* xml-syscall.c (syscall_parse_xml): Remove baton parameter.
+	(xml_init_syscalls_info): Use a lambda.
+	* xml-tdesc.c (tdesc_parse_xml): Remove baton parameter.
+	(file_read_description_xml): Use a lambda.
+	(fetch_available_features_from_target): Change baton parameter
+	to target_ops.
+	(target_read_description_xml): Use a lambda.
+	(target_fetch_description_xml): Use a lambda.
+	(string_read_description_xml): Update.
+
+2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (TYPE_ENDIANITY_NOT_DEFAULT): Remove, replace all
+	uses with type::endianity_is_not_default.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <endianity_is_not_default,
+	set_endianity_is_not_default>: New methods.
+	(TYPE_ENDIANITY_NOT_DEFAULT): Use
+	type::endianity_is_not_default, change all write call sites to
+	use type::set_endianity_is_not_default.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_FIXED_INSTANCE): Remove, replace all
+	uses with type::is_fixed_instance.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_fixed_instance,
+	set_is_fixed_instance>: New methods.
+	(TYPE_FIXED_INSTANCE): Use type::is_fixed_instance, change all
+	write call sites to use type::set_is_fixed_instance.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_GNU_IFUNC): Remove, replace all
+	uses with type::is_gnu_ifunc.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_gnu_ifunc, set_is_gnu_ifunc>: New methods.
+	(TYPE_GNU_IFUNC): Use type::is_gnu_ifunc, change all write call sites to
+	use type::set_is_gnu_ifunc.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_STUB_SUPPORTED): Remove, replace all
+	uses with type::stub_is_supported.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <stub_is_supported, set_stub_is_supported>: New methods.
+	(TYPE_STUB_SUPPORTED): Use type::stub_is_supported, change all write call sites to
+	use type::set_stub_is_supported.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_VECTOR): Remove, replace all
+	uses with type::is_vector.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_vector, set_is_vector>: New methods.
+	(TYPE_VECTOR): Use type::is_vector, change all write call sites to
+	use type::set_is_vector.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_VARARGS): Remove, replace all
+	uses with type::has_varargs.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <has_varargs, set_has_varargs>: New methods.
+	(TYPE_VARARGS): Use type::has_varargs, change all write call sites to
+	use type::set_has_varargs.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_PROTOTYPED): Remove, replace all
+	uses with type::is_prototyped.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_prototyped, set_is_prototyped>:
+	New methods.
+	(TYPE_PROTOTYPED): Use type::is_prototyped, change all write
+	call sites to use type::set_is_prototyped.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_TARGET_STUB): Remove, replace all
+	uses with type::target_is_stub.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <target_is_stub, set_target_is_stub>:
+	New methods.
+	(TYPE_TARGET_STUB): Use type::is_stub, change all write call
+	sites to use type::set_target_is_stub.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_STUB): Remove, replace all
+	uses with type::is_stub.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_stub, set_is_stub>: New methods.
+	(TYPE_STUB): Use type::is_stub, change all write call sites to
+	use type::set_is_stub.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_NOSIGN): Remove, replace all uses with
+	type::has_no_signedness.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <has_no_signedness,
+	set_has_no_signedness>: New methods.
+	(TYPE_NOSIGN): Use type::has_no_signedness, change all write
+	call sites to use type::set_has_no_signedness.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_UNSIGNED): Remove, replace all uses with
+	type::is_unsigned.
+
+2020-09-14  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_unsigned, set_is_unsigned>: New
+	methods.
+	(TYPE_UNSIGNED): Use type::is_unsigned.  Change all write call
+	sites to use type::set_is_unsigned.
+
+2020-09-14  Fredrik Hederstierna  <fredrik.hederstierna@verisure.com>
+            Adam Renquinha <arenquinha@cimeq.qc.ca>
+
+        * arm-tdep.c (arm_m_exception_cache): Try use correct stack
+        pointer and stack frame offset when unwinding.
+
 2020-09-13  Pedro Alves  <pedro@palves.net>
 
 	* NEWS: Document "-break-insert --qualified".

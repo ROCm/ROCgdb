@@ -2195,7 +2195,7 @@ base_types_equal_p (struct type *t1, struct type *t2)
 {
   if (t1->code () != t2->code ())
     return 0;
-  if (TYPE_UNSIGNED (t1) != TYPE_UNSIGNED (t2))
+  if (t1->is_unsigned () != t2->is_unsigned ())
     return 0;
   return TYPE_LENGTH (t1) == TYPE_LENGTH (t2);
 }
@@ -3068,7 +3068,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    case DW_OP_shr:
 	      dwarf_require_integral (arg1->get_type ());
 	      dwarf_require_integral (arg2->get_type ());
-	      if (!TYPE_UNSIGNED (arg1->get_type ()))
+	      if (!arg1->get_type ()->is_unsigned ())
 	        {
 	          struct type *utype
 	              = get_unsigned_type (this->gdbarch, arg1->get_type ());
@@ -3086,7 +3086,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    case DW_OP_shra:
 	      dwarf_require_integral (arg1->get_type ());
 	      dwarf_require_integral (arg2->get_type ());
-	      if (TYPE_UNSIGNED (arg1->get_type ()))
+	      if (arg1->get_type ()->is_unsigned ())
 	        {
 	          struct type *stype = get_signed_type (this->gdbarch,
 	                                                arg1->get_type ());

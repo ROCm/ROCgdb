@@ -43,7 +43,7 @@ adjust_type_signedness (struct type *type)
 {
   if (type != NULL && type->code () == TYPE_CODE_RANGE
       && type->bounds ()->low.const_val () >= 0)
-    TYPE_UNSIGNED (type) = 1;
+    type->set_is_unsigned (true);
 }
 
 /* Assuming TYPE is a simple array type, prints its lower bound on STREAM,
@@ -398,7 +398,7 @@ ada_print_scalar (struct type *type, LONGEST val, struct ui_file *stream)
       break;
 
     case TYPE_CODE_INT:
-      print_longest (stream, TYPE_UNSIGNED (type) ? 'u' : 'd', 0, val);
+      print_longest (stream, type->is_unsigned () ? 'u' : 'd', 0, val);
       break;
 
     case TYPE_CODE_CHAR:
@@ -1129,7 +1129,7 @@ ada_value_print (struct value *val0, struct ui_file *stream,
          type is indicated by the quoted string anyway.  */
       if (TYPE_LENGTH (TYPE_TARGET_TYPE (type)) != sizeof (char)
 	  || TYPE_TARGET_TYPE (type)->code () != TYPE_CODE_INT
-	  || TYPE_UNSIGNED (TYPE_TARGET_TYPE (type)))
+	  || TYPE_TARGET_TYPE (type)->is_unsigned ())
 	{
 	  fprintf_filtered (stream, "(");
 	  type_print (type, "", stream, -1);

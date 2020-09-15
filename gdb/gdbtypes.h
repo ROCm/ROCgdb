@@ -210,84 +210,10 @@ enum type_instance_flag_value : unsigned
 
 DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 
-/* * Unsigned integer type.  If this is not set for a TYPE_CODE_INT,
-   the type is signed (unless TYPE_NOSIGN (below) is set).  */
-
-#define TYPE_UNSIGNED(t)	(TYPE_MAIN_TYPE (t)->flag_unsigned)
-
-/* * No sign for this type.  In C++, "char", "signed char", and
-   "unsigned char" are distinct types; so we need an extra flag to
-   indicate the absence of a sign!  */
-
-#define TYPE_NOSIGN(t)		(TYPE_MAIN_TYPE (t)->flag_nosign)
-
-/* * A compiler may supply dwarf instrumentation
-   that indicates the desired endian interpretation of the variable
-   differs from the native endian representation. */
-
-#define TYPE_ENDIANITY_NOT_DEFAULT(t) (TYPE_MAIN_TYPE (t)->flag_endianity_not_default)
-
-/* * This appears in a type's flags word if it is a stub type (e.g.,
-   if someone referenced a type that wasn't defined in a source file
-   via (struct sir_not_appearing_in_this_film *)).  */
-
-#define TYPE_STUB(t)		(TYPE_MAIN_TYPE (t)->flag_stub)
-
-/* * The target type of this type is a stub type, and this type needs
-   to be updated if it gets un-stubbed in check_typedef.  Used for
-   arrays and ranges, in which TYPE_LENGTH of the array/range gets set
-   based on the TYPE_LENGTH of the target type.  Also, set for
-   TYPE_CODE_TYPEDEF.  */
-
-#define TYPE_TARGET_STUB(t)	(TYPE_MAIN_TYPE (t)->flag_target_stub)
-
-/* * This is a function type which appears to have a prototype.  We
-   need this for function calls in order to tell us if it's necessary
-   to coerce the args, or to just do the standard conversions.  This
-   is used with a short field.  */
-
-#define TYPE_PROTOTYPED(t)	(TYPE_MAIN_TYPE (t)->flag_prototyped)
-
-/* * FIXME drow/2002-06-03:  Only used for methods, but applies as well
-   to functions.  */
-
-#define TYPE_VARARGS(t)		(TYPE_MAIN_TYPE (t)->flag_varargs)
-
-/* * Identify a vector type.  Gcc is handling this by adding an extra
-   attribute to the array type.  We slurp that in as a new flag of a
-   type.  This is used only in dwarf2read.c.  */
-#define TYPE_VECTOR(t)		(TYPE_MAIN_TYPE (t)->flag_vector)
-
-/* * The debugging formats (especially STABS) do not contain enough
-   information to represent all Ada types---especially those whose
-   size depends on dynamic quantities.  Therefore, the GNAT Ada
-   compiler includes extra information in the form of additional type
-   definitions connected by naming conventions.  This flag indicates
-   that the type is an ordinary (unencoded) GDB type that has been
-   created from the necessary run-time information, and does not need
-   further interpretation.  Optionally marks ordinary, fixed-size GDB
-   type.  */
-
-#define TYPE_FIXED_INSTANCE(t) (TYPE_MAIN_TYPE (t)->flag_fixed_instance)
-
-/* * This debug target supports TYPE_STUB(t).  In the unsupported case
-   we have to rely on NFIELDS to be zero etc., see TYPE_IS_OPAQUE().
-   TYPE_STUB(t) with !TYPE_STUB_SUPPORTED(t) may exist if we only
-   guessed the TYPE_STUB(t) value (see dwarfread.c).  */
-
-#define TYPE_STUB_SUPPORTED(t)   (TYPE_MAIN_TYPE (t)->flag_stub_supported)
-
 /* * Not textual.  By default, GDB treats all single byte integers as
    characters (or elements of strings) unless this flag is set.  */
 
-#define TYPE_NOTTEXT(t)	(TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_NOTTEXT)
-
-/* * Used only for TYPE_CODE_FUNC where it specifies the real function
-   address is returned by this function call.  TYPE_TARGET_TYPE
-   determines the final returned function type to be presented to
-   user.  */
-
-#define TYPE_GNU_IFUNC(t)	(TYPE_MAIN_TYPE (t)->flag_gnu_ifunc)
+#define TYPE_NOTTEXT(t)	(((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_NOTTEXT)
 
 /* * Type owner.  If TYPE_OBJFILE_OWNED is true, the type is owned by
    the objfile retrieved as TYPE_OBJFILE.  Otherwise, the type is
@@ -314,25 +240,25 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 /* * Constant type.  If this is set, the corresponding type has a
    const modifier.  */
 
-#define TYPE_CONST(t) ((TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_CONST) != 0)
+#define TYPE_CONST(t) ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_CONST) != 0)
 
 /* * Volatile type.  If this is set, the corresponding type has a
    volatile modifier.  */
 
 #define TYPE_VOLATILE(t) \
-  ((TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_VOLATILE) != 0)
+  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_VOLATILE) != 0)
 
 /* * Restrict type.  If this is set, the corresponding type has a
    restrict modifier.  */
 
 #define TYPE_RESTRICT(t) \
-  ((TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_RESTRICT) != 0)
+  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_RESTRICT) != 0)
 
 /* * Atomic type.  If this is set, the corresponding type has an
    _Atomic modifier.  */
 
 #define TYPE_ATOMIC(t) \
-  ((TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_ATOMIC) != 0)
+  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_ATOMIC) != 0)
 
 /* * True if this type represents either an lvalue or lvalue reference type.  */
 
@@ -371,10 +297,10 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
    is instruction space, and for data objects is data memory.  */
 
 #define TYPE_CODE_SPACE(t) \
-  ((TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_CODE_SPACE) != 0)
+  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_CODE_SPACE) != 0)
 
 #define TYPE_DATA_SPACE(t) \
-  ((TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_DATA_SPACE) != 0)
+  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_DATA_SPACE) != 0)
 
 /* * Address class flags.  Some environments provide for pointers
    whose size is different from that of a normal pointer or address
@@ -383,13 +309,13 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
    target specific ways to represent these different types of address
    classes.  */
 
-#define TYPE_ADDRESS_CLASS_1(t) (TYPE_INSTANCE_FLAGS(t) \
+#define TYPE_ADDRESS_CLASS_1(t) (((t)->instance_flags ()) \
                                  & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
-#define TYPE_ADDRESS_CLASS_2(t) (TYPE_INSTANCE_FLAGS(t) \
+#define TYPE_ADDRESS_CLASS_2(t) (((t)->instance_flags ()) \
 				 & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
 #define TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL \
   (TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
-#define TYPE_ADDRESS_CLASS_ALL(t) (TYPE_INSTANCE_FLAGS(t) \
+#define TYPE_ADDRESS_CLASS_ALL(t) (((t)->instance_flags ()) \
 				   & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
 
 /* * Information about a single discriminant.  */
@@ -855,18 +781,18 @@ struct main_type
      because they packs nicely here.  See the TYPE_* macros for
      documentation about these fields.  */
 
-  unsigned int flag_unsigned : 1;
-  unsigned int flag_nosign : 1;
-  unsigned int flag_stub : 1;
-  unsigned int flag_target_stub : 1;
-  unsigned int flag_prototyped : 1;
-  unsigned int flag_varargs : 1;
-  unsigned int flag_vector : 1;
-  unsigned int flag_stub_supported : 1;
-  unsigned int flag_gnu_ifunc : 1;
-  unsigned int flag_fixed_instance : 1;
+  unsigned int m_flag_unsigned : 1;
+  unsigned int m_flag_nosign : 1;
+  unsigned int m_flag_stub : 1;
+  unsigned int m_flag_target_stub : 1;
+  unsigned int m_flag_prototyped : 1;
+  unsigned int m_flag_varargs : 1;
+  unsigned int m_flag_vector : 1;
+  unsigned int m_flag_stub_supported : 1;
+  unsigned int m_flag_gnu_ifunc : 1;
+  unsigned int m_flag_fixed_instance : 1;
   unsigned int flag_objfile_owned : 1;
-  unsigned int flag_endianity_not_default : 1;
+  unsigned int m_flag_endianity_not_default : 1;
 
   /* * True if this type was declared with "class" rather than
      "struct".  */
@@ -1037,6 +963,18 @@ struct type
     this->field (0).set_type (index_type);
   }
 
+  /* Return the instance flags converted to the correct type.  */
+  const type_instance_flags instance_flags () const
+  {
+    return (enum type_instance_flag_value) this->m_instance_flags;
+  }
+
+  /* Set the instance flags.  */
+  void set_instance_flags (type_instance_flags flags)
+  {
+    this->m_instance_flags = flags;
+  }
+
   /* Get the bounds bounds of this type.  The type must be a range type.  */
   range_bounds *bounds () const
   {
@@ -1066,6 +1004,169 @@ struct type
   ULONGEST bit_stride () const
   {
     return this->bounds ()->bit_stride ();
+  }
+
+  /* Unsigned integer type.  If this is not set for a TYPE_CODE_INT,
+     the type is signed (unless TYPE_NOSIGN is set).  */
+
+  bool is_unsigned () const
+  {
+    return this->main_type->m_flag_unsigned;
+  }
+
+  void set_is_unsigned (bool is_unsigned)
+  {
+    this->main_type->m_flag_unsigned = is_unsigned;
+  }
+
+  /* No sign for this type.  In C++, "char", "signed char", and
+     "unsigned char" are distinct types; so we need an extra flag to
+     indicate the absence of a sign!  */
+
+  bool has_no_signedness () const
+  {
+    return this->main_type->m_flag_nosign;
+  }
+
+  void set_has_no_signedness (bool has_no_signedness)
+  {
+    this->main_type->m_flag_nosign = has_no_signedness;
+  }
+
+  /* This appears in a type's flags word if it is a stub type (e.g.,
+     if someone referenced a type that wasn't defined in a source file
+     via (struct sir_not_appearing_in_this_film *)).  */
+
+  bool is_stub () const
+  {
+    return this->main_type->m_flag_stub;
+  }
+
+  void set_is_stub (bool is_stub)
+  {
+    this->main_type->m_flag_stub = is_stub;
+  }
+
+  /* The target type of this type is a stub type, and this type needs
+     to be updated if it gets un-stubbed in check_typedef.  Used for
+     arrays and ranges, in which TYPE_LENGTH of the array/range gets set
+     based on the TYPE_LENGTH of the target type.  Also, set for
+     TYPE_CODE_TYPEDEF.  */
+
+  bool target_is_stub () const
+  {
+    return this->main_type->m_flag_target_stub;
+  }
+
+  void set_target_is_stub (bool target_is_stub)
+  {
+    this->main_type->m_flag_target_stub = target_is_stub;
+  }
+
+  /* This is a function type which appears to have a prototype.  We
+     need this for function calls in order to tell us if it's necessary
+     to coerce the args, or to just do the standard conversions.  This
+     is used with a short field.  */
+
+  bool is_prototyped () const
+  {
+    return this->main_type->m_flag_prototyped;
+  }
+
+  void set_is_prototyped (bool is_prototyped)
+  {
+    this->main_type->m_flag_prototyped = is_prototyped;
+  }
+
+  /* FIXME drow/2002-06-03:  Only used for methods, but applies as well
+     to functions.  */
+
+  bool has_varargs () const
+  {
+    return this->main_type->m_flag_varargs;
+  }
+
+  void set_has_varargs (bool has_varargs)
+  {
+    this->main_type->m_flag_varargs = has_varargs;
+  }
+
+  /* Identify a vector type.  Gcc is handling this by adding an extra
+     attribute to the array type.  We slurp that in as a new flag of a
+     type.  This is used only in dwarf2read.c.  */
+
+  bool is_vector () const
+  {
+    return this->main_type->m_flag_vector;
+  }
+
+  void set_is_vector (bool is_vector)
+  {
+    this->main_type->m_flag_vector = is_vector;
+  }
+
+  /* This debug target supports TYPE_STUB(t).  In the unsupported case
+     we have to rely on NFIELDS to be zero etc., see TYPE_IS_OPAQUE().
+     TYPE_STUB(t) with !TYPE_STUB_SUPPORTED(t) may exist if we only
+     guessed the TYPE_STUB(t) value (see dwarfread.c).  */
+
+  bool stub_is_supported () const
+  {
+    return this->main_type->m_flag_stub_supported;
+  }
+
+  void set_stub_is_supported (bool stub_is_supported)
+  {
+    this->main_type->m_flag_stub_supported = stub_is_supported;
+  }
+
+  /* Used only for TYPE_CODE_FUNC where it specifies the real function
+     address is returned by this function call.  TYPE_TARGET_TYPE
+     determines the final returned function type to be presented to
+     user.  */
+
+  bool is_gnu_ifunc () const
+  {
+    return this->main_type->m_flag_gnu_ifunc;
+  }
+
+  void set_is_gnu_ifunc (bool is_gnu_ifunc)
+  {
+    this->main_type->m_flag_gnu_ifunc = is_gnu_ifunc;
+  }
+
+  /* The debugging formats (especially STABS) do not contain enough
+     information to represent all Ada types---especially those whose
+     size depends on dynamic quantities.  Therefore, the GNAT Ada
+     compiler includes extra information in the form of additional type
+     definitions connected by naming conventions.  This flag indicates
+     that the type is an ordinary (unencoded) GDB type that has been
+     created from the necessary run-time information, and does not need
+     further interpretation.  Optionally marks ordinary, fixed-size GDB
+     type.  */
+
+  bool is_fixed_instance () const
+  {
+    return this->main_type->m_flag_fixed_instance;
+  }
+
+  void set_is_fixed_instance (bool is_fixed_instance)
+  {
+    this->main_type->m_flag_fixed_instance = is_fixed_instance;
+  }
+
+  /* A compiler may supply dwarf instrumentation that indicates the desired
+     endian interpretation of the variable differs from the native endian
+     representation. */
+
+  bool endianity_is_not_default () const
+  {
+    return this->main_type->m_flag_endianity_not_default;
+  }
+
+  void set_endianity_is_not_default (bool endianity_is_not_default)
+  {
+    this->main_type->m_flag_endianity_not_default = endianity_is_not_default;
   }
 
   /* * Return the dynamic property of the requested KIND from this type's
@@ -1123,7 +1224,7 @@ struct type
      instance flags are completely inherited from the target type.  No
      qualifiers can be cleared by the typedef.  See also
      check_typedef.  */
-  unsigned instance_flags : 9;
+  unsigned m_instance_flags : 9;
 
   /* * Length of storage for a value of this type.  The value is the
      expression in host bytes of what sizeof(type) would return.  This
@@ -1575,7 +1676,7 @@ extern void allocate_gnat_aux_type (struct type *);
 #define ADA_TYPE_P(type)					\
   (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_GNAT_STUFF	\
     || (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_NONE	\
-	&& TYPE_FIXED_INSTANCE (type)))
+	&& (type)->is_fixed_instance ()))
 
 #define INIT_FUNC_SPECIFIC(type)					       \
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FUNC,			       \
@@ -1583,7 +1684,6 @@ extern void allocate_gnat_aux_type (struct type *);
      TYPE_ZALLOC (type,							       \
 		  sizeof (*TYPE_MAIN_TYPE (type)->type_specific.func_stuff)))
 
-#define TYPE_INSTANCE_FLAGS(thistype) (thistype)->instance_flags
 #define TYPE_MAIN_TYPE(thistype) (thistype)->main_type
 #define TYPE_TARGET_TYPE(thistype) TYPE_MAIN_TYPE(thistype)->target_type
 #define TYPE_POINTER_TYPE(thistype) (thistype)->pointer_type
@@ -1815,7 +1915,7 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
    && ((thistype)->num_fields () == 0) \
    && (!HAVE_CPLUS_STRUCT (thistype) \
        || TYPE_NFN_FIELDS (thistype) == 0) \
-   && (TYPE_STUB (thistype) || !TYPE_STUB_SUPPORTED (thistype)))
+   && ((thistype)->is_stub () || !(thistype)->stub_is_supported ()))
 
 /* * A helper macro that returns the name of a type or "unnamed type"
    if the type has no name.  */
@@ -2116,12 +2216,14 @@ extern struct type *make_atomic_type (struct type *);
 
 extern void replace_type (struct type *, struct type *);
 
-extern int address_space_name_to_int (struct gdbarch *, const char *);
+extern type_instance_flags address_space_name_to_type_instance_flags
+  (struct gdbarch *, const char *);
 
-extern const char *address_space_int_to_name (struct gdbarch *, int);
+extern const char *address_space_type_instance_flags_to_name
+  (struct gdbarch *, type_instance_flags);
 
-extern struct type *make_type_with_address_space (struct type *type, 
-						  int space_identifier);
+extern struct type *make_type_with_address_space
+  (struct type *type, type_instance_flags space_identifier);
 
 extern struct type *lookup_memberptr_type (struct type *, struct type *);
 

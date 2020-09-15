@@ -500,8 +500,8 @@ binop_promote (const struct language_defn *language, struct gdbarch *gdbarch,
       const struct builtin_type *builtin = builtin_type (gdbarch);
       unsigned int promoted_len1 = TYPE_LENGTH (type1);
       unsigned int promoted_len2 = TYPE_LENGTH (type2);
-      int is_unsigned1 = TYPE_UNSIGNED (type1);
-      int is_unsigned2 = TYPE_UNSIGNED (type2);
+      int is_unsigned1 = type1->is_unsigned ();
+      int is_unsigned2 = type2->is_unsigned ();
       unsigned int result_len;
       int unsigned_operation;
 
@@ -622,7 +622,7 @@ ptrmath_type_p (const struct language_defn *lang, struct type *type)
       return 1;
 
     case TYPE_CODE_ARRAY:
-      return TYPE_VECTOR (type) ? 0 : lang->c_style_arrays;
+      return type->is_vector () ? 0 : lang->c_style_arrays;
 
     default:
       return 0;
@@ -659,13 +659,13 @@ fake_method::fake_method (type_instance_flags flags,
   TYPE_LENGTH (type) = 1;
   type->set_code (TYPE_CODE_METHOD);
   TYPE_CHAIN (type) = type;
-  TYPE_INSTANCE_FLAGS (type) = flags;
+  type->set_instance_flags (flags);
   if (num_types > 0)
     {
       if (param_types[num_types - 1] == NULL)
 	{
 	  --num_types;
-	  TYPE_VARARGS (type) = 1;
+	  type->set_has_varargs (true);
 	}
       else if (check_typedef (param_types[num_types - 1])->code ()
 	       == TYPE_CODE_VOID)
@@ -673,7 +673,7 @@ fake_method::fake_method (type_instance_flags flags,
 	  --num_types;
 	  /* Caller should have ensured this.  */
 	  gdb_assert (num_types == 0);
-	  TYPE_PROTOTYPED (type) = 1;
+	  type->set_is_prototyped (true);
 	}
     }
 
@@ -735,7 +735,7 @@ evaluate_var_msym_value (enum noside noside,
   CORE_ADDR address;
   type *the_type = find_minsym_type_and_address (msymbol, objfile, &address);
 
-  if (noside == EVAL_AVOID_SIDE_EFFECTS && !TYPE_GNU_IFUNC (the_type))
+  if (noside == EVAL_AVOID_SIDE_EFFECTS && !the_type->is_gnu_ifunc ())
     return value_zero (the_type, not_lval);
   else
     return value_at_lazy (the_type, address);
@@ -793,7 +793,7 @@ eval_call (expression *exp, enum noside noside,
       else if (ftype->code () == TYPE_CODE_FUNC
 	       || ftype->code () == TYPE_CODE_METHOD)
 	{
-	  if (TYPE_GNU_IFUNC (ftype))
+	  if (ftype->is_gnu_ifunc ())
 	    {
 	      CORE_ADDR address = value_address (argvec[0]);
 	      type *resolved_type = find_gnu_ifunc_target_type (address);
@@ -3137,7 +3137,7 @@ evaluate_subexp_with_coercion (struct expression *exp,
       var = exp->elts[pc + 2].symbol;
       type = check_typedef (SYMBOL_TYPE (var));
       if (type->code () == TYPE_CODE_ARRAY
-	  && !TYPE_VECTOR (type)
+	  && !type->is_vector ()
 	  && CAST_IS_CONVERSION (exp->language_defn))
 	{
 	  (*pos) += 4;

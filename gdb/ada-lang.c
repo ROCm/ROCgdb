@@ -315,11 +315,11 @@ static int warning_limit = 2;
    expression evaluation.  */
 static int warnings_issued = 0;
 
-static const char *known_runtime_file_name_patterns[] = {
+static const char * const known_runtime_file_name_patterns[] = {
   ADA_KNOWN_RUNTIME_FILE_NAME_PATTERNS NULL
 };
 
-static const char *known_auxiliary_function_name_patterns[] = {
+static const char * const known_auxiliary_function_name_patterns[] = {
   ADA_KNOWN_AUXILIARY_FUNCTION_NAME_PATTERNS NULL
 };
 
@@ -701,7 +701,7 @@ umax_of_size (int size)
 static LONGEST
 max_of_type (struct type *t)
 {
-  if (TYPE_UNSIGNED (t))
+  if (t->is_unsigned ())
     return (LONGEST) umax_of_size (TYPE_LENGTH (t));
   else
     return max_of_size (TYPE_LENGTH (t));
@@ -711,7 +711,7 @@ max_of_type (struct type *t)
 static LONGEST
 min_of_type (struct type *t)
 {
-  if (TYPE_UNSIGNED (t)) 
+  if (t->is_unsigned ())
     return 0;
   else
     return min_of_size (TYPE_LENGTH (t));
@@ -1592,7 +1592,7 @@ desc_bounds (struct value *arr)
 	{
 	  struct type *target_type = TYPE_TARGET_TYPE (p_bounds_type);
 
-	  if (TYPE_STUB (target_type))
+	  if (target_type->is_stub ())
 	    p_bounds = value_cast (lookup_pointer_type
 				   (ada_check_typedef (target_type)),
 				   p_bounds);
@@ -2108,7 +2108,7 @@ constrained_packed_array_type (struct type *type, long *elt_bits)
         (*elt_bits + HOST_CHAR_BIT - 1) / HOST_CHAR_BIT;
     }
 
-  TYPE_FIXED_INSTANCE (new_type) = 1;
+  new_type->set_is_fixed_instance (true);
   return new_type;
 }
 
@@ -2276,7 +2276,7 @@ has_negatives (struct type *type)
     default:
       return 0;
     case TYPE_CODE_INT:
-      return !TYPE_UNSIGNED (type);
+      return !type->is_unsigned ();
     case TYPE_CODE_RANGE:
       return type->bounds ()->low.const_val () - type->bounds ()->bias < 0;
     }
@@ -2938,7 +2938,7 @@ ada_array_bound_from_type (struct type *arr_type, int n, int which)
   else
     type = arr_type;
 
-  if (TYPE_FIXED_INSTANCE (type))
+  if (type->is_fixed_instance ())
     {
       /* The array has already been fixed, so we do not need to
 	 check the parallel ___XA type again.  That encoding has
@@ -5010,13 +5010,13 @@ remove_extra_symbols (std::vector<struct block_symbol> *syms)
       /* If two symbols have the same name and one of them is a stub type,
          the get rid of the stub.  */
 
-      if (TYPE_STUB (SYMBOL_TYPE ((*syms)[i].symbol))
+      if (SYMBOL_TYPE ((*syms)[i].symbol)->is_stub ()
           && (*syms)[i].symbol->linkage_name () != NULL)
         {
           for (j = 0; j < syms->size (); j++)
             {
               if (j != i
-                  && !TYPE_STUB (SYMBOL_TYPE ((*syms)[j].symbol))
+                  && !SYMBOL_TYPE ((*syms)[j].symbol)->is_stub ()
                   && (*syms)[j].symbol->linkage_name () != NULL
                   && strcmp ((*syms)[i].symbol->linkage_name (),
                              (*syms)[j].symbol->linkage_name ()) == 0)
@@ -7820,7 +7820,7 @@ ada_template_to_fixed_record_type_1 (struct type *type,
   rtype->set_fields
    ((struct field *) TYPE_ZALLOC (rtype, nfields * sizeof (struct field)));
   rtype->set_name (ada_type_name (type));
-  TYPE_FIXED_INSTANCE (rtype) = 1;
+  rtype->set_is_fixed_instance (true);
 
   off = 0;
   bit_len = 0;
@@ -8054,7 +8054,7 @@ template_to_static_fixed_type (struct type *type0)
   int f;
 
   /* No need no do anything if the input type is already fixed.  */
-  if (TYPE_FIXED_INSTANCE (type0))
+  if (type0->is_fixed_instance ())
     return type0;
 
   /* Likewise if we already have computed the static approximation.  */
@@ -8100,7 +8100,7 @@ template_to_static_fixed_type (struct type *type0)
 	      type->set_fields (fields);
 
 	      type->set_name (ada_type_name (type0));
-	      TYPE_FIXED_INSTANCE (type) = 1;
+	      type->set_is_fixed_instance (true);
 	      TYPE_LENGTH (type) = 0;
 	    }
 	  type->field (f).set_type (new_type);
@@ -8151,7 +8151,7 @@ to_record_with_fixed_variant_part (struct type *type, const gdb_byte *valaddr,
   rtype->set_fields (fields);
 
   rtype->set_name (ada_type_name (type));
-  TYPE_FIXED_INSTANCE (rtype) = 1;
+  rtype->set_is_fixed_instance (true);
   TYPE_LENGTH (rtype) = TYPE_LENGTH (type);
 
   branch_type = to_fixed_variant_branch_type
@@ -8207,7 +8207,7 @@ to_fixed_record_type (struct type *type0, const gdb_byte *valaddr,
 {
   struct type *templ_type;
 
-  if (TYPE_FIXED_INSTANCE (type0))
+  if (type0->is_fixed_instance ())
     return type0;
 
   templ_type = dynamic_template_type (type0);
@@ -8223,7 +8223,7 @@ to_fixed_record_type (struct type *type0, const gdb_byte *valaddr,
     }
   else
     {
-      TYPE_FIXED_INSTANCE (type0) = 1;
+      type0->set_is_fixed_instance (true);
       return type0;
     }
 
@@ -8363,7 +8363,7 @@ to_fixed_array_type (struct type *type0, struct value *dval,
   static const char *xa_suffix = "___XA";
 
   type0 = ada_check_typedef (type0);
-  if (TYPE_FIXED_INSTANCE (type0))
+  if (type0->is_fixed_instance ())
     return type0;
 
   constrained_packed_array_p = ada_is_constrained_packed_array_type (type0);
@@ -8489,7 +8489,7 @@ to_fixed_array_type (struct type *type0, struct value *dval,
         TYPE_LENGTH (result)++;
     }
 
-  TYPE_FIXED_INSTANCE (result) = 1;
+  result->set_is_fixed_instance (true);
   return result;
 }
 
@@ -8604,7 +8604,7 @@ ada_to_fixed_type_1 (struct type *type, const gdb_byte *valaddr,
                    Consider the case of an array, for instance, where the size
                    of the array is computed from the number of elements in
                    our array multiplied by the size of its element.  */
-                TYPE_STUB (fixed_record_type) = 0;
+		fixed_record_type->set_is_stub (false);
               }
           }
         return fixed_record_type;
@@ -8683,7 +8683,7 @@ to_static_fixed_type (struct type *type0)
   if (type0 == NULL)
     return NULL;
 
-  if (TYPE_FIXED_INSTANCE (type0))
+  if (type0->is_fixed_instance ())
     return type0;
 
   type0 = ada_check_typedef (type0);
@@ -8762,7 +8762,7 @@ ada_check_typedef (struct type *type)
 
   type = check_typedef (type);
   if (type == NULL || type->code () != TYPE_CODE_ENUM
-      || !TYPE_STUB (type)
+      || !type->is_stub ()
       || type->name () == NULL)
     return type;
   else
@@ -8828,7 +8828,7 @@ ada_to_fixed_value (struct value *val)
 /* Table mapping attribute numbers to names.
    NOTE: Keep up to date with enum ada_attribute definition in ada-lang.h.  */
 
-static const char *attribute_names[] = {
+static const char * const attribute_names[] = {
   "<?>",
 
   "first",
@@ -9354,7 +9354,7 @@ ada_value_binop (struct value *arg1, struct value *arg2, enum exp_opcode op)
   if (v2 == 0)
     error (_("second operand of %s must not be zero."), op_string (op));
 
-  if (TYPE_UNSIGNED (type1) || op == BINOP_MOD)
+  if (type1->is_unsigned () || op == BINOP_MOD)
     return value_binop (arg1, arg2, op);
 
   v1 = value_as_long (arg1);
@@ -11444,7 +11444,7 @@ ada_is_modular_type (struct type *type)
 
   return (subranged_type != NULL && type->code () == TYPE_CODE_RANGE
           && subranged_type->code () == TYPE_CODE_INT
-          && TYPE_UNSIGNED (subranged_type));
+          && subranged_type->is_unsigned ());
 }
 
 /* Assuming ada_is_modular_type (TYPE), the modulus of TYPE.  */
@@ -11503,7 +11503,7 @@ ada_modulus (struct type *type)
    an Ada83 compiler). As such, we do not include Numeric_Error from
    this list of standard exceptions.  */
 
-static const char *standard_exc[] = {
+static const char * const standard_exc[] = {
   "constraint_error",
   "program_error",
   "storage_error",
@@ -13704,7 +13704,7 @@ ada_get_symbol_name_matcher (const lookup_name_info &lookup_name)
     }
 }
 
-static const char *ada_extensions[] =
+static const char * const ada_extensions[] =
 {
   ".adb", ".ads", ".a", ".ada", ".dg", NULL
 };

@@ -958,7 +958,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
          than the "declared-as" type for unprototyped functions, so
          we treat all functions as if they were prototyped.  This is used
          primarily for promotion when calling the function from GDB.  */
-      TYPE_PROTOTYPED (SYMBOL_TYPE (sym)) = 1;
+      SYMBOL_TYPE (sym)->set_is_prototyped (true);
 
       /* fall into process_prototype_types.  */
 
@@ -1005,7 +1005,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
 	      TYPE_FIELD_ARTIFICIAL (ftype, nparams++) = 0;
 	    }
 	  ftype->set_num_fields (nparams);
-	  TYPE_PROTOTYPED (ftype) = 1;
+	  ftype->set_is_prototyped (true);
 	}
       break;
 
@@ -1091,9 +1091,9 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
 	      && SYMBOL_TYPE (sym)->code () == TYPE_CODE_INT)
 	    {
 	      SYMBOL_TYPE (sym) =
-		TYPE_UNSIGNED (SYMBOL_TYPE (sym))
-		? objfile_type (objfile)->builtin_unsigned_int
-		: objfile_type (objfile)->builtin_int;
+		(SYMBOL_TYPE (sym)->is_unsigned ()
+		 ? objfile_type (objfile)->builtin_unsigned_int
+		 : objfile_type (objfile)->builtin_int);
 	    }
 	  break;
 	}
@@ -1650,7 +1650,7 @@ again:
 	type->set_code (code);
 	type->set_name (type_name);
 	INIT_CPLUS_SPECIFIC (type);
-	TYPE_STUB (type) = 1;
+	type->set_is_stub (true);
 
 	add_undefined_type (type, typenums);
 	return type;
@@ -1716,7 +1716,7 @@ again:
 	  }
 	else
 	  {
-	    TYPE_TARGET_STUB (type) = 1;
+	    type->set_target_is_stub (true);
 	    TYPE_TARGET_TYPE (type) = xtype;
 	  }
       }
@@ -1813,7 +1813,7 @@ again:
             func_type->field (i).set_type (t->type);
         }
         func_type->set_num_fields (num_args);
-        TYPE_PROTOTYPED (func_type) = 1;
+	func_type->set_is_prototyped (true);
 
         type = func_type;
         break;
@@ -2066,7 +2066,7 @@ rs6000_builtin_type (int typenum, struct objfile *objfile)
       break;
     case 2:
       rettype = init_integer_type (objfile, 8, 0, "char");
-      TYPE_NOSIGN (rettype) = 1;
+      rettype->set_has_no_signedness (true);
       break;
     case 3:
       rettype = init_integer_type (objfile, 16, 0, "short");
@@ -2336,7 +2336,7 @@ read_member_functions (struct stab_field_info *fip, const char **pp,
 			== TYPE_CODE_METHOD);
 
 	  /* If this is just a stub, then we don't have the real name here.  */
-	  if (TYPE_STUB (new_sublist->fn_field.type))
+	  if (new_sublist->fn_field.type->is_stub ())
 	    {
 	      if (!TYPE_SELF_TYPE (new_sublist->fn_field.type))
 		set_type_self_type (new_sublist->fn_field.type, type);
@@ -3429,7 +3429,7 @@ read_struct_type (const char **pp, struct type *type, enum type_code type_code,
      scribbling on existing structure type objects when new definitions
      appear.  */
   if (! (type->code () == TYPE_CODE_UNDEF
-         || TYPE_STUB (type)))
+         || type->is_stub ()))
     {
       complain_about_struct_wipeout (type);
 
@@ -3439,7 +3439,7 @@ read_struct_type (const char **pp, struct type *type, enum type_code type_code,
 
   INIT_CPLUS_SPECIFIC (type);
   type->set_code (type_code);
-  TYPE_STUB (type) = 0;
+  type->set_is_stub (false);
 
   /* First comes the total size in bytes.  */
 
@@ -3614,9 +3614,9 @@ read_enum_type (const char **pp, struct type *type,
   TYPE_LENGTH (type) = gdbarch_int_bit (gdbarch) / HOST_CHAR_BIT;
   set_length_in_type_chain (type);
   type->set_code (TYPE_CODE_ENUM);
-  TYPE_STUB (type) = 0;
+  type->set_is_stub (false);
   if (unsigned_enum)
-    TYPE_UNSIGNED (type) = 1;
+    type->set_is_unsigned (true);
   type->set_num_fields (nsyms);
   type->set_fields
     ((struct field *)
@@ -3731,7 +3731,8 @@ read_sun_builtin_type (const char **pp, int typenums[2], struct objfile *objfile
       struct type *type = init_type (objfile, TYPE_CODE_VOID,
 				     TARGET_CHAR_BIT, NULL);
       if (unsigned_type)
-        TYPE_UNSIGNED (type) = 1;
+	type->set_is_unsigned (true);
+
       return type;
     }
 
@@ -4089,7 +4090,7 @@ read_range_type (const char **pp, int typenums[2], int type_size,
     {
       struct type *type = init_integer_type (objfile, TARGET_CHAR_BIT,
 					     0, NULL);
-      TYPE_NOSIGN (type) = 1;
+      type->set_has_no_signedness (true);
       return type;
     }
   /* We used to do this only for subrange of self or subrange of int.  */
@@ -4397,7 +4398,7 @@ cleanup_undefined_types_noname (struct objfile *objfile)
              and needs to be copied over from the reference type.
              Since replace_type expects them to be identical, we need
              to set these flags manually before hand.  */
-          TYPE_INSTANCE_FLAGS (nat.type) = TYPE_INSTANCE_FLAGS (*type);
+          nat.type->set_instance_flags ((*type)->instance_flags ());
           replace_type (nat.type, *type);
         }
     }
@@ -4452,7 +4453,7 @@ cleanup_undefined_types_1 (void)
 	       as well as in check_typedef to deal with the (legitimate in
 	       C though not C++) case of several types with the same name
 	       in different source files.  */
-	    if (TYPE_STUB (*type))
+	    if ((*type)->is_stub ())
 	      {
 		struct pending *ppt;
 		int i;
@@ -4472,12 +4473,11 @@ cleanup_undefined_types_1 (void)
 
 			if (SYMBOL_CLASS (sym) == LOC_TYPEDEF
 			    && SYMBOL_DOMAIN (sym) == STRUCT_DOMAIN
-			    && (SYMBOL_TYPE (sym)->code () ==
-				(*type)->code ())
-			    && (TYPE_INSTANCE_FLAGS (*type) ==
-				TYPE_INSTANCE_FLAGS (SYMBOL_TYPE (sym)))
+			    && (SYMBOL_TYPE (sym)->code () == (*type)->code ())
+			    && ((*type)->instance_flags ()
+				== SYMBOL_TYPE (sym)->instance_flags ())
 			    && strcmp (sym->linkage_name (), type_name) == 0)
-                          replace_type (*type, SYMBOL_TYPE (sym));
+			  replace_type (*type, SYMBOL_TYPE (sym));
 		      }
 		  }
 	      }

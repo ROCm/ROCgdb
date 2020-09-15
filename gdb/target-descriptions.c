@@ -263,8 +263,8 @@ make_gdb_type (struct gdbarch *gdbarch, struct tdesc_type *ttype)
 	  /* If any of the children of a union are vectors, flag the
 	     union as a vector also.  This allows e.g. a union of two
 	     vector types to show up automatically in "info vector".  */
-	  if (TYPE_VECTOR (field_gdb_type))
-	    TYPE_VECTOR (m_type) = 1;
+	  if (field_gdb_type->is_vector ())
+	    m_type->set_is_vector (true);
 	}
     }
 
@@ -289,7 +289,8 @@ make_gdb_type (struct gdbarch *gdbarch, struct tdesc_type *ttype)
       m_type = arch_type (m_gdbarch, TYPE_CODE_ENUM, e->size * TARGET_CHAR_BIT,
 			  e->name.c_str ());
 
-      TYPE_UNSIGNED (m_type) = 1;
+      m_type->set_is_unsigned (true);
+
       for (const tdesc_type_field &f : e->fields)
 	{
 	  struct field *fld

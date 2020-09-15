@@ -75,7 +75,7 @@ s390_type_align (gdbarch *gdbarch, struct type *t)
 	  return 8;
 
 	case TYPE_CODE_ARRAY:
-	  if (TYPE_VECTOR (t))
+	  if (t->is_vector ())
 	    return 8;
 	  break;
 	}
@@ -1583,7 +1583,7 @@ s390_addr_bits_remove (struct gdbarch *gdbarch, CORE_ADDR addr)
 /* Implement addr_class_type_flags gdbarch method.
    Only used for ABI_LINUX_ZSERIES.  */
 
-static int
+static type_instance_flags
 s390_address_class_type_flags (int byte_size, int dwarf2_addr_class)
 {
   if (byte_size == 4)
@@ -1596,7 +1596,8 @@ s390_address_class_type_flags (int byte_size, int dwarf2_addr_class)
    Only used for ABI_LINUX_ZSERIES.  */
 
 static const char *
-s390_address_class_type_flags_to_name (struct gdbarch *gdbarch, int type_flags)
+s390_address_class_type_flags_to_name (struct gdbarch *gdbarch,
+				       type_instance_flags type_flags)
 {
   if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
     return "mode32";
@@ -1607,18 +1608,18 @@ s390_address_class_type_flags_to_name (struct gdbarch *gdbarch, int type_flags)
 /* Implement addr_class_name_to_type_flags gdbarch method.
    Only used for ABI_LINUX_ZSERIES.  */
 
-static int
+static bool
 s390_address_class_name_to_type_flags (struct gdbarch *gdbarch,
 				       const char *name,
-				       int *type_flags_ptr)
+				       type_instance_flags *type_flags_ptr)
 {
   if (strcmp (name, "mode32") == 0)
     {
       *type_flags_ptr = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
-      return 1;
+      return true;
     }
   else
-    return 0;
+    return false;
 }
 
 /* Inferior function calls.  */
@@ -1697,7 +1698,7 @@ s390_function_arg_vector (struct type *type)
   /* Structs containing just a vector are passed like a vector.  */
   type = s390_effective_inner_type (type, TYPE_LENGTH (type));
 
-  return type->code () == TYPE_CODE_ARRAY && TYPE_VECTOR (type);
+  return type->code () == TYPE_CODE_ARRAY && type->is_vector ();
 }
 
 /* Determine whether N is a power of two.  */
@@ -1818,7 +1819,7 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 	  /* Place value in least significant bits of the register or
 	     memory word and sign- or zero-extend to full word size.
 	     This also applies to a struct or union.  */
-	  val = TYPE_UNSIGNED (type)
+	  val = type->is_unsigned ()
 	    ? extract_unsigned_integer (value_contents (arg),
 					length, byte_order)
 	    : extract_signed_integer (value_contents (arg),
@@ -1939,7 +1940,7 @@ s390_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
      and arg_state.argp with the size of the parameter area.  */
   for (i = 0; i < nargs; i++)
     s390_handle_arg (&arg_state, args[i], tdep, word_size, byte_order,
-		     TYPE_VARARGS (ftype) && i >= ftype->num_fields ());
+		     ftype->has_varargs () && i >= ftype->num_fields ());
 
   param_area_start = align_down (arg_state.copy - arg_state.argp, 8);
 
@@ -1966,7 +1967,7 @@ s390_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* Write all parameters.  */
   for (i = 0; i < nargs; i++)
     s390_handle_arg (&arg_state, args[i], tdep, word_size, byte_order,
-		     TYPE_VARARGS (ftype) && i >= ftype->num_fields ());
+		     ftype->has_varargs () && i >= ftype->num_fields ());
 
   /* Store return PSWA.  In 31-bit mode, keep addressing mode bit.  */
   if (word_size == 4)
@@ -2046,7 +2047,7 @@ s390_register_return_value (struct gdbarch *gdbarch, struct type *type,
       if (out != NULL)
 	regcache->cooked_read_part (S390_R2_REGNUM, word_size - length, length,
 				    out);
-      else if (TYPE_UNSIGNED (type))
+      else if (type->is_unsigned ())
 	regcache_cooked_write_unsigned
 	  (regcache, S390_R2_REGNUM,
 	   extract_unsigned_integer (in, length, byte_order));
@@ -2093,7 +2094,7 @@ s390_return_value (struct gdbarch *gdbarch, struct value *function,
       break;
     case TYPE_CODE_ARRAY:
       rvc = (gdbarch_tdep (gdbarch)->vector_abi == S390_VECTOR_ABI_128
-	     && TYPE_LENGTH (type) <= 16 && TYPE_VECTOR (type))
+	     && TYPE_LENGTH (type) <= 16 && type->is_vector ())
 	? RETURN_VALUE_REGISTER_CONVENTION
 	: RETURN_VALUE_STRUCT_CONVENTION;
       break;

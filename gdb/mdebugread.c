@@ -786,7 +786,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       /* All functions in C++ have prototypes.  For C we don't have enough
          information in the debug info.  */
       if (s->language () == language_cplus)
-	TYPE_PROTOTYPED (SYMBOL_TYPE (s)) = 1;
+	SYMBOL_TYPE (s)->set_is_prototyped (true);
 
       /* Create and enter a new lexical context.  */
       b = new_block (FUNCTION_BLOCK, s->language ());
@@ -1072,7 +1072,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		f++;
 	      }
 	    if (unsigned_enum)
-	      TYPE_UNSIGNED (t) = 1;
+	      t->set_is_unsigned (true);
 	  }
 	/* Make this the current type.  */
 	top_stack->cur_type = t;
@@ -1086,7 +1086,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	   do not create a symbol for it either.  */
 	if (t->num_fields () == 0)
 	  {
-	    TYPE_STUB (t) = 1;
+	    t->set_is_stub (true);
 	    break;
 	  }
 
@@ -1387,7 +1387,7 @@ basic_type (int bt, struct objfile *objfile)
 
     case btChar:
       tp = init_integer_type (objfile, 8, 0, "char");
-      TYPE_NOSIGN (tp) = 1;
+      tp->set_has_no_signedness (true);
       break;
 
     case btUChar:
@@ -1866,7 +1866,7 @@ upgrade_type (int fd, struct type **tpp, int tq, union aux_ext *ax, int bigend,
 
       /* TYPE_TARGET_STUB now takes care of the zero TYPE_LENGTH problem.  */
       if (TYPE_LENGTH (*tpp) == 0)
-	TYPE_TARGET_STUB (t) = 1;
+	t->set_target_is_stub (true);
 
       *tpp = t;
       return 4 + off;
@@ -4274,7 +4274,7 @@ cross_ref (int fd, union aux_ext *ax, struct type **tpp,
     {
       *pname = "<undefined>";
       *tpp = init_type (mdebugread_objfile, type_code, 0, NULL);
-      TYPE_STUB (*tpp) = 1;
+      (*tpp)->set_is_stub (true);
       return result;
     }
 
