@@ -1,5 +1,6 @@
 /* OS ABI variant handling for GDB.
    Copyright (C) 2001-2020 Free Software Foundation, Inc.
+   Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
    
    This file is part of GDB.
 
