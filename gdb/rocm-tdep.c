@@ -120,7 +120,7 @@ static const target_info rocm_ops_info
     = { "rocm", N_ ("ROCm GPU debugging support"),
         N_ ("ROCm GPU debugging support") };
 
-static amd_dbgapi_log_level_t get_debug_amd_dbgapi_log_level ();
+static amd_dbgapi_log_level_t get_debug_amdgpu_log_level ();
 
 struct rocm_target_ops final : public target_ops
 {
@@ -1599,7 +1599,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   = [] (amd_dbgapi_log_level_t level, const char *message) -> void {
     gdb::optional<target_terminal::scoped_restore_terminal_state> tstate;
 
-    if (level > get_debug_amd_dbgapi_log_level ())
+    if (level > get_debug_amdgpu_log_level ())
       return;
 
     if (target_supports_terminal_ours ())
@@ -1673,8 +1673,8 @@ static const struct internalvar_funcs rocm_wave_id_funcs
     = { rocm_wave_id_make_value, NULL, NULL };
 
 /* List of set/show debug amd_dbgapi commands.  */
-struct cmd_list_element *set_debug_amd_dbgapi_list;
-struct cmd_list_element *show_debug_amd_dbgapi_list;
+struct cmd_list_element *set_debug_amdgpu_list;
+struct cmd_list_element *show_debug_amdgpu_list;
 
 constexpr char amd_dbgapi_log_level_off[] = "off";
 constexpr char amd_dbgapi_log_level_error[] = "error";
@@ -1682,7 +1682,7 @@ constexpr char amd_dbgapi_log_level_warning[] = "warning";
 constexpr char amd_dbgapi_log_level_info[] = "info";
 constexpr char amd_dbgapi_log_level_verbose[] = "verbose";
 
-constexpr const char *debug_amd_dbgapi_log_level_enums[]
+constexpr const char *debug_amdgpu_log_level_enums[]
     = { [AMD_DBGAPI_LOG_LEVEL_NONE] = amd_dbgapi_log_level_off,
         [AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR] = amd_dbgapi_log_level_error,
         [AMD_DBGAPI_LOG_LEVEL_WARNING] = amd_dbgapi_log_level_warning,
@@ -1690,32 +1690,32 @@ constexpr const char *debug_amd_dbgapi_log_level_enums[]
         [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = amd_dbgapi_log_level_verbose,
         nullptr };
 
-static const char *debug_amd_dbgapi_log_level = amd_dbgapi_log_level_warning;
+static const char *debug_amdgpu_log_level = amd_dbgapi_log_level_warning;
 
 static amd_dbgapi_log_level_t
-get_debug_amd_dbgapi_log_level ()
+get_debug_amdgpu_log_level ()
 {
   size_t pos;
-  for (pos = 0; debug_amd_dbgapi_log_level_enums[pos]; ++pos)
-    if (debug_amd_dbgapi_log_level == debug_amd_dbgapi_log_level_enums[pos])
+  for (pos = 0; debug_amdgpu_log_level_enums[pos]; ++pos)
+    if (debug_amdgpu_log_level == debug_amdgpu_log_level_enums[pos])
       break;
 
-  gdb_assert (debug_amd_dbgapi_log_level_enums[pos]);
+  gdb_assert (debug_amdgpu_log_level_enums[pos]);
   return static_cast<amd_dbgapi_log_level_t> (pos);
 }
 
 static void
-set_debug_amd_dbgapi_log_level (const char *args, int from_tty,
+set_debug_amdgpu_log_level (const char *args, int from_tty,
                                 struct cmd_list_element *c)
 {
-  amd_dbgapi_set_log_level (get_debug_amd_dbgapi_log_level ());
+  amd_dbgapi_set_log_level (get_debug_amdgpu_log_level ());
 }
 
 static void
-show_debug_amd_dbgapi_log_level (struct ui_file *file, int from_tty,
+show_debug_amdgpu_log_level (struct ui_file *file, int from_tty,
                                  struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _ ("The amd-dbgapi log level is %s.\n"), value);
+  fprintf_filtered (file, _ ("The amdgpu log level is %s.\n"), value);
 }
 
 static void
@@ -1885,7 +1885,7 @@ _initialize_rocm_tdep (void)
     error (_ ("amd-dbgapi failed to initialize (rc=%d)"), status);
 
   /* Set the initial log level.  */
-  amd_dbgapi_set_log_level (get_debug_amd_dbgapi_log_level ());
+  amd_dbgapi_set_log_level (get_debug_amdgpu_log_level ());
 
   /* Install observers.  */
   gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup);
@@ -1900,27 +1900,27 @@ _initialize_rocm_tdep (void)
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
   add_basic_prefix_cmd (
-      "amd-dbgapi", no_class,
-      _ ("Generic command for setting amd-dbgapi debugging flags"),
-      &set_debug_amd_dbgapi_list, "set debug amd-dbgapi ", 0, &setdebuglist);
+      "amdgpu", no_class,
+      _ ("Generic command for setting amdgpu debugging flags"),
+      &set_debug_amdgpu_list, "set debug amdgpu ", 0, &setdebuglist);
 
   add_show_prefix_cmd (
-      "amd-dbgapi", no_class,
-      _ ("Generic command for showing amd-dbgapi debugging flags"),
-      &show_debug_amd_dbgapi_list, "show debug amd-dbgapi ", 0,
+      "amdgpu", no_class,
+      _ ("Generic command for showing amdgpu debugging flags"),
+      &show_debug_amdgpu_list, "show debug amdgpu ", 0,
       &showdebuglist);
 
   add_setshow_enum_cmd (
-      "log-level", class_maintenance, debug_amd_dbgapi_log_level_enums,
-      &debug_amd_dbgapi_log_level, _ ("Set the amd-dbgapi log level."),
-      _ ("Show the amd-dbgapi log level."),
+      "log-level", class_maintenance, debug_amdgpu_log_level_enums,
+      &debug_amdgpu_log_level, _ ("Set the amdgpu log level."),
+      _ ("Show the amdgpu log level."),
       _ ("off     == no logging is enabled\n"
          "error   == fatal errors are reported\n"
          "warning == fatal errors and warnings are reported\n"
          "info    == fatal errors, warnings, and info messages are reported\n"
          "verbose == all messages are reported"),
-      set_debug_amd_dbgapi_log_level, show_debug_amd_dbgapi_log_level,
-      &set_debug_amd_dbgapi_list, &show_debug_amd_dbgapi_list);
+      set_debug_amdgpu_log_level, show_debug_amdgpu_log_level,
+      &set_debug_amdgpu_list, &show_debug_amdgpu_list);
 
   add_cmd ("agents", class_info, info_agents_command,
            _ ("Info about currently active agents."), &infolist);
