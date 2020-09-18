@@ -1,3 +1,36 @@
+2020-09-18  Pedro Alves  <pedro@palves.net>
+
+	PR gdb/26631
+	* gdb.multi/multi-target-thread-find.exp: New file.
+
+2020-09-18  Pedro Alves  <pedro@palves.net>
+
+	* gdb.multi/multi-target-continue.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-info-inferiors.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-interrupt.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-no-resumed.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-ping-pong-next.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target.exp.tcl: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target.exp: Delete.
+
+2020-09-16  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/26598:
+	* gdb.base/skipcxx.exp: New file.
+	* gdb.base/skipcxx.cc: New file.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	PR rust/26197:
+	* lib/rust-support.exp (rust_llvm_version): New proc.
+	* gdb.rust/simple.exp: Check rust_llvm_version.
+
 2020-09-11  Moritz Riesterer  <moritz.riesterer@intel.com>
 	    Felix Willgerodt  <Felix.Willgerodt@intel.com>
 
