@@ -12021,6 +12021,10 @@ The global heterogeneous agent number of the current thread, or 0 if not
 associated with a heterogeneous dispatch.  @xref{Heterogeneous
 Debugging}.
 
+@item $_agent_systag
+The target system's heterogeneous agent identifier (@var{agent_systag}) string
+of the heterogeneous agent of the current thread.
+
 @item $_queue
 The per-inferior heterogeneous queue number of the current thread, or 0
 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
@@ -12031,6 +12035,10 @@ The global heterogeneous queue number of the current thread, or 0 if not
 associated with a heterogeneous dispatch.  @xref{Heterogeneous
 Debugging}.
 
+@item $_queue_systag
+The target system's heterogeneous queue identifier (@var{queue_systag}) string
+of the heterogeneous queue of the current thread.
+
 @item $_dispatch
 The per-inferior heterogeneous dispatch number of the current thread, or
 0 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
@@ -12040,6 +12048,10 @@ Debugging}.
 The global heterogeneous dispatch number of the current thread, or 0 if
 not associated with a heterogeneous dispatch.  @xref{Heterogeneous
 Debugging}.
+
+@item $_dispatch_systag
+The target system's heterogeneous dispatch identifier (@var{disatch_systag})
+string of the heterogeneous dispatch of the current thread.
 
 @item $_lane
 The per-inferior heterogeneous lane number of the current
@@ -12058,9 +12070,9 @@ The global heterogeneous lane number of the current heterogeneous
 lane.  @xref{Heterogeneous Debugging}.
 
 @item $_lane_systag
-The target system's heterogeneous lane identifier (@var{lane_systag})
-string of the current lane in the current thread.  @xref{target system
-lane identifier}.
+The target system's heterogeneous lane identifier (@var{lane_systag}) string of
+the current heterogeneous lane in the current thread.  @xref{target system lane
+identifier}.
 
 @item $_lane_name
 The heterogeneous lane name string of the current heterogeneous lane, or
@@ -12374,11 +12386,11 @@ list}.
 @c tuple rather than a string?
 
 For example, the following command lists all threads that are part of
-the heterogeneous work-group with dispatch position @samp{(1,2,3)}
+the heterogeneous work-group with dispatch position @samp{[1,2,3]}
 (@pxref{Heterogeneous Debugging}):
 
 @smallexample
-(@value{GDBP}) info threads $_thread_find ("work-group(1,2,3)")
+(@value{GDBP}) info threads $_thread_find ("[1,2,3]")
 @end smallexample
 
 @item $_thread_find_first_gid(@var{regex})
@@ -12395,10 +12407,10 @@ number}.
 
 For example, the following command sets the current thread to one of
 the threads that are part of the heterogeneous work-group with
-dispatch position @samp{(1,2,3)} (@pxref{Heterogeneous Debugging}):
+dispatch position @samp{[1,2,3]} (@pxref{Heterogeneous Debugging}):
 
 @smallexample
-(@value{GDBP}) thread -gid $_thread_find_first_gid ("work-group(1,2,3)")
+(@value{GDBP}) thread -gid $_thread_find_first_gid ("[1,2,3]")
 @end smallexample
 
 @item $_lane_find(@var{regex})
@@ -21993,6 +22005,9 @@ executing on multiple heterogeneous agents
 @code{info dispatches}, commands to inquire about the heterogeneous
 system
 
+@item @code{agent find}, @code{queue find}, @code{dispatch find}, commands to
+find heterogeneous entities
+
 @item @code{info lanes}, @code{lane}, commands support source language
 threads of execution that are mapped to SIMD-like lanes of a thread
 
@@ -22160,6 +22175,19 @@ The target system's heterogeneous lane identifier (@var{lane_systag})
 string of the current heterogeneous lane.  @xref{target system lane
 identifier}.
 
+@vindex $_agent_systag{, convenience variable}
+The target system's heterogeneous agent identifier (@var{agent_systag}) string
+of the heterogeneous agent of the current thread.
+
+@vindex $_queue_systag{, convenience variable}
+The target system's heterogeneous queue identifier (@var{queue_systag}) string
+of the heterogeneous queue of the current thread.
+
+@vindex $_dispatch_systag@r{, convenience variable}
+@item $_dispatch_systag
+The target system's heterogeneous dispatch identifier (@var{dispatch_systag})
+string of the heterogeneous dispatch of the current thread.
+
 @end table
 
 The following debugger convenience functions (@pxref{Convenience
@@ -22198,7 +22226,7 @@ are part of a heterogeneous work-group with work-group position
 @samp{(1,2,3)} (@pxref{Heterogeneous Debugging}):
 
 @smallexample
-(@value{GDBP}) info lanes $_thread_find ("work-item(1,2,3)")
+(@value{GDBP}) info lanes $_thread_find ("(1,2,3)")
 @end smallexample
 
 @item $_lane_find_first_gid(@var{regex})
@@ -22212,10 +22240,10 @@ numbers}.
 
 For example, the following command sets the current heterogeneous lane
 to one of the heterogeneous lanes that are part of a heterogeneous
-work-group with work-item position @samp{(1,2,3)}:
+work-group with work-item position @samp{[1,2,3]}:
 
 @smallexample
-(@value{GDBP}) lane -gid $_lane_find_first_gid ("work-item(1,2,3)")
+(@value{GDBP}) lane -gid $_lane_find_first_gid ("[1,2,3]")
 @end smallexample
 
 @end table
@@ -22270,9 +22298,9 @@ For example,
 
 @smallexample
 (@value{GDBP}) info agents
-  Id   Target Id     Device Name Cores Threads PCI Slot
-* 1    (GPUID 45151) vega20      240   2400    0a:00.0
-  2    (GPUID 39113) vega20      240   2400    44:00.0
+  Id   Target Id                  Device Name Cores Threads PCI Slot
+* 1    AMDGPU Agent (GPUID 45151) vega20      240   2400    0a:00.0
+  2    AMDGPU Agent (GPUID 39113) vega20      240   2400    44:00.0
 @end smallexample
 
 @item info queues @r{[}@var{queue-id-list}@r{]}
@@ -22319,10 +22347,10 @@ For example,
 
 @smallexample
 (@value{GDBP}) info queues
-  Id   Target Id   Type         Read   Write  Size     Address
-* 1    1:1 (QID 1) HSA (Multi)  0      2      65536    0x00007ffff7f60000
-  2    1:2 (QID 2) DMA                        1048576  0x00007ffde4e00000
-  3    1:3 (QID 0) HSA (Multi)  4      4      262144   0x00007ffff7f00000
+  Id   Target Id                Type         Read   Write  Size     Address
+* 1    AMDGPU Queue 1:1 (QID 1) HSA (Multi)  0      2      65536    0x00007ffff7f60000
+  2    AMDGPU Queue 1:2 (QID 2) DMA                        1048576  0x00007ffde4e00000
+  3    AMDGPU Queue 1:3 (QID 0) HSA (Multi)  4      4      262144   0x00007ffff7f00000
 @end smallexample
 
 @item info dispatches @r{[}-full@r{]} @r{[}@var{dispatch-id-list}@r{]}
@@ -22389,11 +22417,21 @@ For example,
 
 @smallexample
 (@value{GDBP}) info dispatches -full
-  Id   Target Id     Grid      Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
-* 1    1:1:1 (PID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
+  Id   Target Id                     Grid      Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
+* 1    AMDGPU Dispatch 1:1:1 (PID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
 @end smallexample
 
-@item info packets @r{[}-gid@r{]} @r{[}@var{queue-id-list}@r{]}
+@item agent find @var{regexp}
+@cindex search for a heterogeneous agent
+@itemx queue find @var{regexp}
+@cindex search for a heterogeneous queue
+@itemx dispatch find @var{regexp}
+@cindex search for a heterogeneous dispatch
+These commands operate the same way as the @samp{thread find} command
+(@pxref{thread find, ,@samp{thread find}}) except that they use the target
+system’s heterogeneous agent, queue, and dispatch identifiers respectively.
+
+@item info packets @r{[}@var{queue-id-list}@r{]}
 @kindex info packets
 Display information about the heterogeneous packets on one or more
 heterogeneous queues.  With no arguments displays information about
@@ -22415,13 +22453,11 @@ heterogeneous agent, with the oldest packet first.
 @enumerate
 @item
 the associated heterogeneous agent number assigned by @value{GDBN},
-displayed as a global ID if the @w{@option{-gid}} option was
-specified, otherwise displayed as the per-inferior ID
+displayed as a global ID
 
 @item
 the associated heterogeneous queue number assigned by @value{GDBN},
-displayed as a global ID if the @w{@option{-gid}} option was
-specified, otherwise displayed as the per-inferior ID
+displayed as a global ID
 
 @item
 the packet position in the heterogeneous queue, with the oldest one
@@ -22468,10 +22504,14 @@ For example,
 
 @smallexample
 (@value{GDBP}) info threads
-  Id  Lanes  Target Id                                                       Frame
-* 1          process 35 thread 13                                            main (argc=1, argv=0x7ffffff8)
-  2   2/64   ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4)/1  0x34e5 in saxpy ()
-  3   64/64  ROCm process 65 agent 1 queue 2 dispatch 4 work-group(2,4,4)/2  0x34e5 in saxpy ()
+  Id  Lanes  Target Id                                       Frame
+  1          Thread 0x7ffff7fc4cc0 (LWP 74764) "bit_extract" 0x00007ffff6b56f37 in sched_yield () from /lib/x86_64-linux-gnu/libc.so.6
+  2          Thread 0x7ffff59cb700 (LWP 74773) "bit_extract" 0x00007ffff6b696d7 in ioctl () from /lib/x86_64-linux-gnu/libc.so.6
+  4          Thread 0x7ffff7fc1700 (LWP 74775) "bit_extract" 0x00007ffff6b696d7 in ioctl () from /lib/x86_64-linux-gnu/libc.so.6
+* 5   62/64  AMDGPU Thread 1:1:1:1 (0,0,0)/0 "bit_extract"   bit_extract_kernel (C_d=0x7ffde8800000, A_d=0x7ffde8e00000, N=4000000) at bit_extract.cpp:38
+  6   2/64   AMDGPU Thread 1:1:1:2 (0,0,0)/1 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+  7   64/64  AMDGPU Thread 1:1:1:3 (1,0,0)/0 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+  8   8/64   AMDGPU Thread 1:1:1:4 (1,0,0)/1 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
 @end smallexample
 
 @table @code
@@ -22495,8 +22535,8 @@ thread you selected, followed by its current stack frame summary.
 @item thread apply @r{[}@var{thread-id-list} @r{|} all @r{[}-ascending@r{]]} @r{[}@var{flag}@r{]@dots{}} @var{command}
 @itemx taas [@var{option}]@dots{} @var{command}
 @itemx tfaas [@var{option}]@dots{} @var{command}
-@itemx thread name
-@itemx thread find
+@itemx thread name @r{[}@var{name}@r{]}
+@itemx thread find @var{regexp}
 These commands operate the same way for all threads, regardless of
 whether or not the thread is associated with a heterogeneous dispatch.
 
@@ -22567,10 +22607,10 @@ For example,
 
 @smallexample
 (@value{GDBP}) info lanes
-  Id  Thread  Active  Target Id                                                                      Frame
-* 1   4       Y       process 35 thread 13                                                           main (argc=1, argv=0x7ffffff8)
-  2   5/2     Y       ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4) work-item(1,2,4)  0x34e5 in saxpy ()
-  3   6/12    N       ROCm process 65 agent 1 queue 2 dispatch 4 work-group(2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
+  Id  Thread  Active  Target Id                                          Frame
+* 1   4       Y       process 35 thread 13                               main (argc=1, argv=0x7ffffff8)
+  2   5/2     Y       AMDGPU Lane 1:2:3:463/2 (2,3,4) work-item(1,2,4)   0x34e5 in saxpy ()
+  3   6/12    N       AMDGPU Lane 1:2:4:456/12 (2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
 @end smallexample
 
 If you're debugging multiple inferiors, @value{GDBN} displays
@@ -22584,11 +22624,11 @@ ID, and displays the thread's global thread number:
 
 @smallexample
 (@value{GDBP}) info lanes -gid
-  Id   GId  Thread  Active  Target Id                                                                      Frame
-* 1.1  1    4       Y       process 35 thread 13                                                           main (argc=1, argv=0x7ffffff8)
-  1.2  3    5/2     Y       ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4) work-item(1,2,4)  0x34e5 in saxpy ()
-  2.1  1    4       Y       process 65 thread 1                                                            main (argc=1, argv=0x7ffffff8)
-  2.2  4    6/12    N       ROCm process 65 agent 1 queue 2 dispatch 4 work-group(2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
+  Id   GId  Thread  Active  Target Id                                          Frame
+* 1.1  1    4       Y       process 35 thread 13                               main (argc=1, argv=0x7ffffff8)
+  1.2  3    5/2     Y       AMDGPU Lane 1:2:3:463/2 (2,3,4) work-item(1,2,4)   0x34e5 in saxpy ()
+  2.1  1    4       Y       process 65 thread 1                                main (argc=1, argv=0x7ffffff8)
+  2.2  4    6/12    N       AMDGPU Lane 1:2:4:456/12 (2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
 @end smallexample
 
 @table @code
@@ -22647,8 +22687,8 @@ heterogeneous work-item position.
 (@value{GDBP}) lane find "work-group(2,3,4)"
 Lane 2 has lane id 'ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4) work-item(1,2,4)'
 (@value{GDBP}) info lane 2
-  Id  Thread  Active  Target Id                                                                      Frame
-  2   5/2     Y       ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4) work-item(1,2,4)  0x34e5 in saxpy ()
+  Id  Thread  Active  Target Id                                Frame
+  2   5/2     Y       AMDGPU Lane 1:2:3:324/2 (2,3,4)[]1,2,4]  0x34e5 in saxpy ()
 @end smallexample
 
 @c FIXME-implementors!!  Perhaps better ways to find lanes and threads
@@ -26487,11 +26527,6 @@ Indicates the memory fence is performed at the agent memory scope.
 
 @end table
 
-The @code{info agents}, @code{info queues}, and @code{info dispatches} commands
-do not yet support the @w{@option{-gid}} option.
-
-The @code{info packets} command is not yet supported by @acronym{AMD GPU}.
-
 An AMD GPU wavefront is represented in @value{GDBN} as a thread.
 
 @acronym{AMD GPU} supports the following @var{reggroup} values for the
@@ -26596,28 +26631,67 @@ If the source language runtime defers loading code objects until
 kernels are launched, then setting breakpoints may result in pending
 breakpoints that will be set when the code object is finally loaded.
 
-Threads created on @acronym{AMD GPU} heterogeneous agents have the
-following identifier formats:
+The @acronym{AMD GPU} heterogeneous entities have the following target
+identifier and convenience variable formats:
 
 @table @asis
 
-@item @var{systag}
-The target system's thread identifier (@var{systag}) string has the
+@item @emph{Agent Target ID}
+The @acronym{AMD GPU} agent target identifier @var{agent_systag} string has the
 following format:
 
 @smallexample
-ROCm process @var{process-num} agent @var{agent-num} queue @var{queue-num} dispatch @var{dispatch-num} work-group(@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+AMDGPU Agent (GPUID @var{target-agent-id})
 @end smallexample
 
-@c TODO: What order should coordinates be: x,y,z or z,y,x?
+It is used in the @samp{Target ID} column of the @samp{info agents} command and
+is available using the @var{$_agent_systag} convenience variable.
 
-@item @var{lane_systag}
-The target system's heterogeneous lane identifier (@var{lane_systag})
-string has the following format:
+@item @emph{Queue Target ID}
+The @acronym{AMD GPU} queue target identifier @var{queue_systag} string has the
+following format:
 
 @smallexample
-ROCm process @var{process-num} agent @var{agent-num} queue @var{queue-num} dispatch @var{dispatch-num} work-group(@var{work-group-x},@var{work-group-y},@var{work-group-z}) work-item(@var{work-item-x},@var{work-item-y},@var{work-item-z})
+AMDGPU Queue @var{agent-id}:@var{queue-id} (QID @var{target-queue-id})
 @end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info queues} command and
+is available using the @var{$_queue_systag} convenience variable.
+
+@item @emph{Dispatch Target ID}
+The @acronym{AMD GPU} dispatch target identifier @var{dispatch_systag} string
+has the following format:
+
+@smallexample
+AMDGPU Dispatch @var{agent-id}:@var{queue-id}:@var{dispatch-id} (PID @var{target-packet-id})
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info dispatches} command
+and is available using the @var{$_dispatch_systag} convenience variable.  The
+@var{target-packet-id} corresponds to the dispatch packet that initiated the
+dispatch.
+
+@item @emph{Thread Target ID}
+The @acronym{AMD GPU} thread target identifier (@var{systag}) string has the
+following format:
+
+@smallexample
+AMDGPU Thread @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info threads} command
+and is available using the @var{$_thread_systag} convenience variable.
+
+@item @emph{Lane Target ID}
+The @acronym{AMD GPU} lane target identifier (@var{lane_systag}) string has the
+following format:
+
+@smallexample
+AMDGPU Lane @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id}/@var{lane-index} (@var{work-group-x},@var{work-group-y},@var{work-group-z})[@var{work-item-x},@var{work-item-y},@var{work-item-z}]
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info lanes} command and
+is available using the @var{$_lane_systag} convenience variable.
 
 @item @code{$_dispatch_pos}
 The string returned by the @code{$_dispatch_pos} debugger convenience
@@ -26640,7 +26714,7 @@ The string returned by the @code{$_lane_workgroup_pos} debugger
 convenience variable has the following format:
 
 @smallexample
-(@var{work-item-x},@var{work-item-y},@var{work-item-z})
+[@var{work-item-x},@var{work-item-y},@var{work-item-z}]
 @end smallexample
 
 @end table
@@ -26650,30 +26724,39 @@ Where:
 
 @table @var
 
-@item process-num
-the inferior process LWP number
+@item agent-id
+@itemx queue-id
+@itemx dispatch-id
+@itemx wave-id
+The @acronym{AMD GPU} target agent identifier, queue identifier, dispatch
+identifier, and wave identifier respectively.  The identifiers are global across
+all inferiors.
 
-@item agent-num
-@itemx queue-num
-@itemx dispatch-num
-the per-inferior heterogeneous agent number, the per-inferior
-heterogeneous queue number, and the per-inferior heterogeneous
-dispatch number associated with the thread respectively
+@item target-agent-id
+@itemx target-queue-id
+The @acronym{AMD GPU} target driver agent identifier and queue identifier
+identifier respectively.  The identifiers are per process.
+
+@item target-packet-id
+The @acronym{AMD GPU} target driver packet identifier.  The identifier is per
+queue.
 
 @item work-group-x
 @itemx work-group-y
 @itemx work-group-z
-the grid position of the thread's work-group within the heterogeneous
-dispatch
+The grid position of the thread's work-group within the heterogeneous dispatch.
 
 @item work-group-thread-index
-the threads's number within the heterogeneous work-group
+The thread's number within the heterogeneous work-group.
+
+@item lane-index
+The heterogeneous lane index within the thread.
 
 @item work-item-x
 @itemx work-item-y
 @itemx work-item-z
-the position of the heterogeneous lane's work-item within the
-heterogeneous work-group
+The position of the heterogeneous lane's work-item within the heterogeneous
+work-group.
 
 @end table
 
@@ -26775,46 +26858,11 @@ Where:
 @item work-group-x
 @itemx work-group-y
 @itemx work-group-z
-the grid position of the thread's work-group within the heterogeneous
-dispatch
+The grid position of the thread's work-group within the heterogeneous
+dispatch.
 
 @item work-group-thread-index
-the threads's number within the heterogeneous work-group
-
-@end table
-
-The AMD GPU system's thread identifier (@var{systag}) string format
-differs from that described above, and currently has the following
-format:
-
-@smallexample
-AMDGPU Thread @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
-@end smallexample
-
-Where:
-
-@table @var
-
-@item agent-id
-the thread's heterogeneous agent ID.
-
-@item queue-id
-the thread's heterogeneous queue ID.
-
-@item dispatch-id
-the thread' dispatch packet ID.
-
-@item wave-id
-the thread's per-inferior AMD GPU target wavefront ID.
-
-@item work-group-x
-@itemx work-group-y
-@itemx work-group-z
-the grid position of the thread's work-group within the heterogeneous
-dispatch
-
-@item work-group-thread-index
-the threads's number within the heterogeneous work-group
+The thread's number within the heterogeneous work-group.
 
 @end table
 
