@@ -1,6 +1,7 @@
 /* Read ELF (Executable and Linking Format) object files for GDB.
 
    Copyright (C) 1991-2021 Free Software Foundation, Inc.
+   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Written by Fred Fish at Cygnus Support.
 
@@ -20,6 +21,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "gdb-hip-test-mode.h"
 #include "bfd.h"
 #include "elf-bfd.h"
 #include "elf/common.h"
@@ -205,6 +207,8 @@ record_minimal_symbol (minimal_symbol_reader &reader,
   if (ms_type == mst_text || ms_type == mst_file_text
       || ms_type == mst_text_gnu_ifunc)
     address = gdbarch_addr_bits_remove (gdbarch, address);
+
+  name = gdb_hip_test_mode_frob_names (objfile, name);
 
   /* We only setup section information for allocatable sections.  Usually
      we'd only expect to find msymbols for allocatable sections, but if the

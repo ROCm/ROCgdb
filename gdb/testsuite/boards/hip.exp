@@ -96,6 +96,11 @@ load_board_description "local-board"
 # So we can override skip_gdbserver_tests.
 load_lib gdbserver-support.exp
 
+# Tell GDB to enable the HIP test mode.  This renames the main and
+# gdb_hip_test_name functions to provide the illusion that the
+# kernel's main is the real main.
+set ::env(GDB_HIP_TEST_MODE) 1
+
 proc skip_gdbserver_tests {} {
     return 1
 }

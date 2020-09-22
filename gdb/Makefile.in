@@ -1059,6 +1059,7 @@ COMMON_SFILES = \
 	frame-unwind.c \
 	gcore.c \
 	gdb-demangle.c \
+	gdb-hip-test-mode.c \
 	gdb_bfd.c \
 	gdb_obstack.c \
 	gdb_regex.c \
