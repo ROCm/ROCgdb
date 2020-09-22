@@ -22175,11 +22175,11 @@ The target system's heterogeneous lane identifier (@var{lane_systag})
 string of the current heterogeneous lane.  @xref{target system lane
 identifier}.
 
-@vindex $_agent_systag{, convenience variable}
+@vindex $_agent_systag@r{, convenience variable}
 The target system's heterogeneous agent identifier (@var{agent_systag}) string
 of the heterogeneous agent of the current thread.
 
-@vindex $_queue_systag{, convenience variable}
+@vindex $_queue_systag@r{, convenience variable}
 The target system's heterogeneous queue identifier (@var{queue_systag}) string
 of the heterogeneous queue of the current thread.
 
