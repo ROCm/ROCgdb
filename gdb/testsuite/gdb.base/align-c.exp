@@ -1,4 +1,5 @@
 # Copyright 2018-2021 Free Software Foundation, Inc.
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +18,13 @@
 
 # This tests that C11 _Alignof works in gdb, and that it agrees with the
 # compiler.
+
+if [istarget "amdgcn-amd-amdhsa"] {
+    # We always compile as C++, so no use running this testcase (and
+    # failing).  gdb.base/align-c++.exp already covers testing in C++
+    # mode.
+    return
+}
 
 set lang c
 
