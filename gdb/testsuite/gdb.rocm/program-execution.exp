@@ -42,6 +42,8 @@ if {[gdb_load ${binfile}] == -1} {
     return -1
 }
 
+with_rocm_gpu_lock {
+
 # Set symbolic breakpoint in device code and do "run", "start"
 # and "quit" in it.
 with_test_prefix "all stop mode" {
@@ -184,9 +186,4 @@ with_test_prefix "non-stop mode" {
 }
 
 gdb_exit
-
-
-
-
-
-
+}

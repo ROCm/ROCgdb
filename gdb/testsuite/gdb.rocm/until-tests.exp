@@ -45,6 +45,8 @@ if {[gdb_load ${binfile}] == -1} {
     return -1
 }
 
+with_rocm_gpu_lock {
+
 # Run to main and break
 if ![runto_main] {
     fail "can't run to main and break in program ${testfile}."
@@ -117,9 +119,4 @@ gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 
 gdb_exit
-
-
-
-
-
-
+}

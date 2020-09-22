@@ -229,6 +229,7 @@ check-single-racy:
 
 check-parallel:
 	-rm -rf cache outputs temp
+	-rm -f gpu-parallel.lock
 	$(MAKE) -k do-check-parallel; \
 	result=$$?; \
 	$(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
