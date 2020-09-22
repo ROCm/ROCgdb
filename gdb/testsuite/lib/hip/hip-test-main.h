@@ -1,4 +1,6 @@
-/* Copyright (C) 2008-2021 Free Software Foundation, Inc.
+/* GDB HIP testing header defining main.
+
+   Copyright (C) 2021 Free Software Foundation, Inc.
    Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -16,27 +18,16 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Force output to unbuffered mode if not connected to a terminal.  */
+#ifndef GDB_HIP_TEST_MAIN_H
+#define GDB_HIP_TEST_MAIN_H
 
-#include <stdio.h>
-#ifndef __MINGW32__
-#include <unistd.h>
-#endif
+/* The driver doesn't know which overload is used by each testcase.
+   To address that, we make each possible overload weak, and then the
+   driver checks which one was actually defined.  */
+int __device__ __attribute__((weak)) gdb_hip_test_main (int argc, char **argv, char **envp);
+int __device__ __attribute__((weak)) gdb_hip_test_main (int argc, char **argv);
+int __device__ __attribute__((weak)) gdb_hip_test_main (int argc, const char **argv);
+int __device__ __attribute__((weak)) gdb_hip_test_main (int argc, char *const *argv);
+int __device__ __attribute__((weak)) gdb_hip_test_main ();
 
-static void
-gdb_unbuffer_output (void)
-{
-#ifndef __AMDGPU__
-  /* Always force this for Windows testing.  To a native Windows
-     program running under a Cygwin shell/ssh, stdin is really a
-     Windows pipe, thus not a tty and its outputs ends up fully
-     buffered.  */
-#ifndef __MINGW32__
-  if (!isatty (fileno (stdin)))
 #endif
-    {
-      setvbuf (stdout, NULL, _IONBF, BUFSIZ);
-      setvbuf (stderr, NULL, _IONBF, BUFSIZ);
-    }
-#endif
-}
