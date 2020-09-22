@@ -41,14 +41,13 @@ rocm_is_amdgcn_gdbarch (struct gdbarch *arch)
 static const char *
 amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
 {
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
   amd_dbgapi_size_t unused;
-  if (amd_dbgapi_wave_register_get_info (
-          process_id, wave_id, tdep->register_ids[regnum],
-          AMD_DBGAPI_REGISTER_INFO_SIZE, sizeof (unused), &unused)
+  if (amd_dbgapi_wave_register_get_info (wave_id, tdep->register_ids[regnum],
+                                         AMD_DBGAPI_REGISTER_INFO_SIZE,
+                                         sizeof (unused), &unused)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return "";
 
@@ -160,17 +159,10 @@ amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   if (it == tdep->register_class_map.end ())
     return group == all_reggroup;
 
-  amd_dbgapi_architecture_id_t architecture_id;
-
-  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-                                   &architecture_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    return group == all_reggroup;
-
   amd_dbgapi_register_class_state_t state;
 
   if (amd_dbgapi_register_is_in_register_class (
-          architecture_id, tdep->register_ids[regnum], it->second, &state)
+          it->second, tdep->register_ids[regnum], &state)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return group == all_reggroup;
 
@@ -263,7 +255,6 @@ static const struct frame_unwind amdgcn_frame_unwind = {
 
 struct rocm_displaced_step_closure : public displaced_step_closure
 {
-  amd_dbgapi_process_id_t process_id;
   amd_dbgapi_wave_id_t wave_id;
   amd_dbgapi_displaced_stepping_id_t displaced_stepping_id;
 };
@@ -282,8 +273,7 @@ amdgcn_rocm_displaced_step_location (struct gdbarch *gdbarch)
 
   amd_dbgapi_displaced_stepping_id_t stepping_id;
   if (amd_dbgapi_displaced_stepping_start (
-          get_amd_dbgapi_process_id (), get_amd_dbgapi_wave_id (inferior_ptid),
-          buffer.get (), &stepping_id)
+          get_amd_dbgapi_wave_id (inferior_ptid), buffer.get (), &stepping_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return 0;
 
@@ -297,7 +287,6 @@ amdgcn_rocm_displaced_step_copy_insn (struct gdbarch *gdbarch, CORE_ADDR from,
   std::unique_ptr<rocm_displaced_step_closure> closure (
       new rocm_displaced_step_closure);
 
-  closure->process_id = get_amd_dbgapi_process_id ();
   closure->wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
   closure->displaced_stepping_id = { to };
 
@@ -314,7 +303,7 @@ amdgcn_rocm_displaced_step_fixup (struct gdbarch *gdbarch,
       = reinterpret_cast<rocm_displaced_step_closure *> (closure_);
 
   amd_dbgapi_status_t status = amd_dbgapi_displaced_stepping_complete (
-      closure->process_id, closure->wave_id, closure->displaced_stepping_id);
+      closure->wave_id, closure->displaced_stepping_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"),
@@ -487,8 +476,8 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     {
       char *bytes;
       if (amd_dbgapi_architecture_register_class_get_info (
-              architecture_id, register_class_ids[i],
-              AMD_DBGAPI_REGISTER_CLASS_INFO_NAME, sizeof (bytes), &bytes)
+              register_class_ids[i], AMD_DBGAPI_REGISTER_CLASS_INFO_NAME,
+              sizeof (bytes), &bytes)
           != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 

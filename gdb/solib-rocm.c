@@ -458,14 +458,12 @@ rocm_update_solib_list ()
       char *uri_bytes;
 
       if (amd_dbgapi_code_object_get_info (
-              process_id, code_object_list[i],
-              AMD_DBGAPI_CODE_OBJECT_INFO_LOAD_ADDRESS, sizeof (li->l_addr),
-              &li->l_addr)
+              code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_LOAD_ADDRESS,
+              sizeof (li->l_addr), &li->l_addr)
               != AMD_DBGAPI_STATUS_SUCCESS
           || amd_dbgapi_code_object_get_info (
-                 process_id, code_object_list[i],
-                 AMD_DBGAPI_CODE_OBJECT_INFO_URI_NAME, sizeof (uri_bytes),
-                 &uri_bytes)
+                 code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_URI_NAME,
+                 sizeof (uri_bytes), &uri_bytes)
                  != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 
