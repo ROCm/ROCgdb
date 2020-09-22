@@ -22,7 +22,8 @@ proc dwarf2_support {} {
 	|| [istarget *-*-elf*]
 	|| [istarget *-*-openbsd*]
 	|| [istarget arm*-*-eabi*]
-	|| [istarget powerpc-*-eabi*]} {
+	|| [istarget powerpc-*-eabi*]
+	|| [istarget amdgcn-amd-amdhsa]} {
 	return 1
     }
 
@@ -230,19 +231,56 @@ proc function_range { func src {options {debug}} } {
 
     set exe [standard_temp_file func_addr[pid].x]
 
-    gdb_compile $src $exe executable $options
+    if {[gdb_compile $src $exe executable $options] != ""} {
+	perror "failed to extract function start, compilation failed"
+	return ""
+    }
 
     gdb_exit
     gdb_start
     gdb_load "$exe"
 
-    # Compute the label offset, and we can get the function start address
-    # by "${func}_label - $func_label_offset".
-    set func_label_offset ""
-    set test "p ${func}_label - ${func}"
-    gdb_test_multiple $test $test {
-	-re ".* = ($decimal)\r\n$gdb_prompt $" {
-	    set func_label_offset $expect_out(1,string)
+    # Maybe match function parameters, in case we have a C++ symbol.
+    # Note we want a non-capturing group here to avoid confusing
+    # captures below.
+    set params "(?:\\(.*\\))?"
+
+    if [istarget "amdgcn-amd-amdhsa"] {
+	# For AMDGCN, we need to run the program, so we have access to
+	# the device code.
+	if {![runto_main]} {
+	    fail "cannot run to main"
+	    return
+	}
+
+	# The tests are compiled with HIP, which is a C++ variant.
+	# Turn on demangling to make the symbol names closer to C
+	# names.
+	gdb_test_no_output "set print asm-demangle on" ""
+	gdb_test_no_output "set print demangle on" ""
+
+	# The label offset computation doesn't work correct for GCN --
+	# GDB finds the host label first instead of the device label
+	# even though we're in device context.  That should probably
+	# be improved in GDB somehow, but for our purposes here, plain
+	# printing the function works to find the function's start
+	# address.
+	set func_start ""
+	set test "p /u &${func}"
+	gdb_test_multiple $test $test {
+	    -re ".* = ($decimal)\r\n$gdb_prompt $" {
+		set func_start $expect_out(1,string)
+	    }
+	}
+    } else {
+	# Compute the label offset, and we can get the function start address
+	# by "${func}_label - $func_label_offset".
+	set func_label_offset ""
+	set test "p ${func}_label - ${func}"
+	gdb_test_multiple $test $test {
+	    -re ".* = ($decimal)\r\n$gdb_prompt $" {
+		set func_label_offset $expect_out(1,string)
+	    }
 	}
     }
 
@@ -258,13 +296,14 @@ proc function_range { func src {options {debug}} } {
 
     # Compute the size of the last instruction.
     if { $func_length == 0 } then {
-	set func_pattern "$func"
+	set func_pattern "$func$params"
     } else {
-	set func_pattern "$func\\+$func_length"
+	set func_pattern "$func$params\\+$func_length"
     }
+
     set test "x/2i $func+$func_length"
     gdb_test_multiple $test $test {
-	-re ".*($hex) <$func_pattern>:\[^\r\n\]+\r\n\[ \]+($hex).*\.\r\n$gdb_prompt $" {
+	-re ".*($hex) <$func_pattern.*>:\[^\r\n\]+\r\n\[ \]+($hex).*\.\r\n$gdb_prompt $" {
 	    set start $expect_out(1,string)
 	    set end $expect_out(2,string)
 
@@ -272,7 +311,43 @@ proc function_range { func src {options {debug}} } {
 	}
     }
 
-    return [list "${func}_label - $func_label_offset" $func_length]
+    if [istarget "amdgcn-amd-amdhsa"] {
+
+	# Find out the start address of the device code DSO, to
+	# subtract it from the function's start address.  IOW, we want
+	# the function's unrelocated start address relative to the
+	# start of the device's text segment.
+
+	set dso_start ""
+	set ws "\[ \t\]\+"
+	set test "info shared"
+	gdb_test_multiple $test $test {
+	    -re "($hex)${ws}$hex${ws}Yes${ws}file:///.*$gdb_prompt $" {
+		set dso_start $expect_out(1,string)
+	    }
+	}
+
+	# XXX: Need to add 0x1000, but I'm not sure exactly why...
+	set adj_func_start [expr $func_start - $dso_start + 0x1000]
+
+	verbose -log "func_start = $func_start"
+	verbose -log "dso_start = $dso_start"
+	verbose -log "adj_func_start = $adj_func_start"
+
+	gdb_exit
+
+	if {$adj_func_start < 0} {
+	    # This happens when the function wasn't emitted for the
+	    # device, so the disassemble above finds the host function
+	    # instead.
+	    perror "could not find function start, probably function was not emitted"
+	    return ""
+	}
+
+	return [list $adj_func_start $func_length]
+    } else {
+	return [list "${func}_label - $func_label_offset" $func_length]
+    }
 }
 
 # Extract the start, length, and end for function called NAME and

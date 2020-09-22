@@ -93,6 +93,54 @@ set target_triplet amdgcn-amd-amdhsa
 # This is needed otherwise dejagnu tries to rsh to host "hip".
 load_board_description "local-board"
 
+# ROCM_PATH is used by hipcc as well.
+if {[info exists env(ROCM_PATH)]} {
+    set gdb_hip_rocm_path $env(ROCM_PATH)
+} else {
+    set gdb_hip_rocm_path "/opt/rocm"
+}
+
+# Get the gpu target to be passed to e.g., -mcpu=.
+proc hip_amdgpu_target {} {
+    global gdb_hip_gpu
+    global gdb_hip_rocm_path
+
+    if {![info exists gdb_hip_gpu]} {
+	# Look for HCC_AMDGPU_TARGET (same env var hipcc uses).  If
+	# that fails, try using rocm_agent_enumerator (again, same as
+	# hipcc does).
+	if {[info exists env(HCC_AMDGPU_TARGET)]} {
+	    set targets = $env(HCC_AMDGPU_TARGET);
+	} else {
+	    set result \
+		[remote_exec host \
+		     "${gdb_hip_rocm_path}/bin/rocm_agent_enumerator -t GPU"]
+	    if {[lindex $result 0] != 0} {
+		error "rocm_agent_enumerator failed"
+	    }
+	    set targets [lindex $result 1]
+	}
+
+	set gdb_hip_gpu ""
+	foreach val $targets {
+	    # Ignore the 'gfx000' target reported by
+	    # rocm_agent_enumerator.
+	    if {$val != "gfx000"} {
+		set gdb_hip_gpu $val
+		break
+	    }
+	}
+
+	if {$gdb_hip_gpu == ""} {
+	    error "No valid AMD GPU target specified or found.\
+		   Please specify a valid target using the\
+		   HCC_AMDGPU_TARGET environment variable."
+	}
+    }
+
+    return $gdb_hip_gpu
+}
+
 # So we can override skip_gdbserver_tests.
 load_lib gdbserver-support.exp
 
@@ -348,6 +396,53 @@ proc gdb_compile {source dest type options} {
 	    # "executable" case above.
 	    if {[llength $source] != 1} {
 		error "more than one source file?"
+	    }
+
+	    # See if we're actually compiling an assembly file.
+	    set src [lindex $source 0]
+	    if {[file extension $src] == ".S" || [file extension $src] == ".s"} {
+		set gpu_target [hip_amdgpu_target]
+
+		global gdb_hip_rocm_path
+		global gdb_saved_hip_empty_host_obj
+
+		set asm_options "early_flags=-O0\
+				 -target amdgcn-amd-amdhsa\
+				 -mcpu=$gpu_target -nogpulib\
+				 -fno-autolink\
+				 -faddrsig"
+		lappend options $asm_options
+
+		# Assemble the device side of the bundle.
+		set tmp_o [standard_temp_file [file tail $dest].tmp.o]
+		set res [hip_org_gdb_compile $source $tmp_o $type $options]
+		if {$res != ""} {
+		    return $res
+		}
+
+		# Assemble an empty .o for the host side of the
+		# bundle.  Only do it once as an optimization.
+		if { $gdb_saved_hip_empty_host_obj == "" } {
+		    verbose "compiling empty host object"
+		    set empty_src [standard_temp_file empty-host.c]
+		    set gdb_saved_hip_empty_host_obj ${objdir}/empty-host.o
+		    set f [open $empty_src "w"]
+		    close $f
+		    set res [hip_org_gdb_compile $empty_src $gdb_saved_hip_empty_host_obj object {}]
+		    if {$res != ""} {
+			return $res
+		    }
+		}
+
+		# Bundle device and host objects.
+		set res [remote_exec host \
+			     "${gdb_hip_rocm_path}/llvm/bin/clang-offload-bundler\
+				-type=o\
+				-targets=hip-amdgcn-amd-amdhsa-${gpu_target},host-x86_64-unknown-linux-gnu\
+				-outputs=$dest\
+				-inputs=$tmp_o,$gdb_saved_hip_empty_host_obj"]
+		# We're done.
+		return [lindex $res 1]
 	    }
 
 	    # We need explicit -O0, because hipcc optimizes by
