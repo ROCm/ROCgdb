@@ -441,7 +441,7 @@ rocm_update_solib_list ()
   amd_dbgapi_code_object_id_t *code_object_list;
   size_t count;
 
-  if ((status = amd_dbgapi_code_object_list (process_id, &count,
+  if ((status = amd_dbgapi_process_code_object_list (process_id, &count,
                                              &code_object_list, nullptr))
       != AMD_DBGAPI_STATUS_SUCCESS)
     {

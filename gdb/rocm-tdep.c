@@ -1296,8 +1296,8 @@ rocm_target_ops::update_thread_list ()
 
       amd_dbgapi_changed_t changed;
       amd_dbgapi_status_t status;
-      if ((status
-           = amd_dbgapi_wave_list (process_id, &count, &wave_list, &changed))
+      if ((status = amd_dbgapi_process_wave_list (process_id, &count,
+                                                  &wave_list, &changed))
           != AMD_DBGAPI_STATUS_SUCCESS)
         error (_ ("amd_dbgapi_wave_list failed (rc=%d)"), status);
 
@@ -1819,8 +1819,11 @@ info_agents_command (const char *args, int from_tty)
       amd_dbgapi_agent_id_t *agent_list;
       size_t agent_count;
 
-      if (amd_dbgapi_agent_list (process_id, &agent_count, &agent_list,
-                                 nullptr)
+      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+        continue;
+
+      if (amd_dbgapi_process_agent_list (process_id, &agent_count, &agent_list,
+                                         nullptr)
           != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 
@@ -2003,8 +2006,11 @@ info_queues_command (const char *args, int from_tty)
       amd_dbgapi_queue_id_t *queue_list;
       size_t queue_count;
 
-      if (amd_dbgapi_queue_list (process_id, &queue_count, &queue_list,
-                                 nullptr)
+      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+        continue;
+
+      if (amd_dbgapi_process_queue_list (process_id, &queue_count, &queue_list,
+                                         nullptr)
           != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 
@@ -2277,8 +2283,11 @@ info_dispatches_command (const char *args, int from_tty)
       amd_dbgapi_dispatch_id_t *dispatch_list;
       size_t dispatch_count;
 
-      if (amd_dbgapi_dispatch_list (process_id, &dispatch_count,
-                                    &dispatch_list, nullptr)
+      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+        continue;
+
+      if (amd_dbgapi_process_dispatch_list (process_id, &dispatch_count,
+                                            &dispatch_list, nullptr)
           != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 
