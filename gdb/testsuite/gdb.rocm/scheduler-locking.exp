@@ -100,7 +100,7 @@ gdb_test_no_output "set scheduler-locking on"
 # vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
 gdb_test_sequence "info agents" "info agents" {
     {\s+Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+PCI Slot}
-    {\d+\s+\([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+    {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
 }
 
 # Check "info threads".
