@@ -262,8 +262,9 @@ target_id_string (amd_dbgapi_process_id_t process_id,
     error (_ ("amd_dbgapi_dispatch_get_info for dispatch_%ld failed "),
            dispatch_id.handle);
 
-  return string_printf ("%ld:%ld:%ld (PID %ld)", agent_id.handle,
-                        queue_id.handle, dispatch_id.handle, os_id);
+  return string_printf ("AMDGPU Dispatch %ld:%ld:%ld (PID %ld)",
+                        agent_id.handle, queue_id.handle, dispatch_id.handle,
+                        os_id);
 }
 
 /* Return the target id string for a given queue.  */
@@ -285,8 +286,8 @@ target_id_string (amd_dbgapi_process_id_t process_id,
     error (_ ("amd_dbgapi_queue_get_info for queue_%ld failed "),
            queue_id.handle);
 
-  return string_printf ("%ld:%ld (QID %ld)", agent_id.handle, queue_id.handle,
-                        os_id);
+  return string_printf ("AMDGPU Queue %ld:%ld (QID %ld)", agent_id.handle,
+                        queue_id.handle, os_id);
 }
 
 /* Return the target id string for a given agent.  */
@@ -302,7 +303,7 @@ target_id_string (amd_dbgapi_process_id_t process_id,
     error (_ ("amd_dbgapi_agent_get_info for agent_%ld failed "),
            agent_id.handle);
 
-  return string_printf ("(GPUID %ld)", os_id);
+  return string_printf ("AMDGPU Agent (GPUID %ld)", os_id);
 }
 
 /* Flush the event pipe.  */
