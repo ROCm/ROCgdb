@@ -44,11 +44,9 @@ amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  amd_dbgapi_size_t unused;
-  if (amd_dbgapi_wave_register_get_info (wave_id, tdep->register_ids[regnum],
-                                         AMD_DBGAPI_REGISTER_INFO_SIZE,
-                                         sizeof (unused), &unused)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  amd_dbgapi_register_exists_t register_exists;
+  if (amd_dbgapi_wave_register_exists (wave_id, tdep->register_ids[regnum], &register_exists)
+      != AMD_DBGAPI_STATUS_SUCCESS || register_exists != AMD_DBGAPI_REGISTER_PRESENT)
     return "";
 
   return tdep->register_names[regnum].c_str ();
@@ -127,17 +125,13 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 static struct type *
 amdgcn_register_type (struct gdbarch *gdbarch, int regnum)
 {
-  amd_dbgapi_architecture_id_t architecture_id;
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   char *bytes;
 
-  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-                                   &architecture_id)
-          == AMD_DBGAPI_STATUS_SUCCESS
-      && amd_dbgapi_architecture_register_get_info (
-             architecture_id, tdep->register_ids[regnum],
-             AMD_DBGAPI_REGISTER_INFO_TYPE, sizeof (bytes), &bytes)
-             == AMD_DBGAPI_STATUS_SUCCESS)
+  if (amd_dbgapi_register_get_info (tdep->register_ids[regnum],
+                                    AMD_DBGAPI_REGISTER_INFO_TYPE,
+                                    sizeof (bytes), &bytes)
+      == AMD_DBGAPI_STATUS_SUCCESS)
     {
       std::string type_name (bytes);
       xfree (bytes);
@@ -524,9 +518,9 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
         return nullptr;
 
       char *bytes;
-      if (amd_dbgapi_architecture_register_get_info (
-              architecture_id, tdep->register_ids[i],
-              AMD_DBGAPI_REGISTER_INFO_NAME, sizeof (bytes), &bytes)
+      if (amd_dbgapi_register_get_info (tdep->register_ids[i],
+                                        AMD_DBGAPI_REGISTER_INFO_NAME,
+                                        sizeof (bytes), &bytes)
           != AMD_DBGAPI_STATUS_SUCCESS)
         continue;
 
