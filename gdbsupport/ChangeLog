@@ -1,3 +1,7 @@
+2020-09-24  Simon Marchi  <simon.marchi@efficios.com>
+
+	* event-loop.c (struct file_handler): Remove typedef, re-format.
+
 2020-09-10  Kamil Rytarowski  <n54@gmx.com>
 
 	* eintr.h: New file.
