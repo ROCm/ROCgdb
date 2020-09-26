@@ -471,13 +471,6 @@ operator_check_f (struct expression *exp, int pos,
   return 0;
 }
 
-static const char * const f_extensions[] =
-{
-  ".f", ".F", ".for", ".FOR", ".ftn", ".FTN", ".fpp", ".FPP",
-  ".f90", ".F90", ".f95", ".F95", ".f03", ".F03", ".f08", ".F08",
-  NULL
-};
-
 /* Expression processing for Fortran.  */
 static const struct exp_descriptor exp_descriptor_f =
 {
@@ -489,36 +482,35 @@ static const struct exp_descriptor exp_descriptor_f =
   evaluate_subexp_f
 };
 
-/* Constant data that describes the Fortran language.  */
-
-extern const struct language_data f_language_data =
-{
-  "fortran",
-  "Fortran",
-  language_fortran,
-  range_check_on,
-  case_sensitive_off,
-  array_column_major,
-  macro_expansion_no,
-  f_extensions,
-  &exp_descriptor_f,
-  NULL,                    	/* name_of_this */
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  f_op_print_tab,		/* expression operators for printing */
-  0,				/* arrays are first-class (not c-style) */
-  1,				/* String lower bound */
-  &default_varobj_ops,
-  "(...)"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the Fortran language.  */
 
 class f_language : public language_defn
 {
 public:
   f_language ()
-    : language_defn (language_fortran, f_language_data)
+    : language_defn (language_fortran)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "fortran"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Fortran"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions = {
+      ".f", ".F", ".for", ".FOR", ".ftn", ".FTN", ".fpp", ".FPP",
+      ".f90", ".F90", ".f95", ".F95", ".f03", ".F03", ".f08", ".F08"
+    };
+    return extensions;
+  }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -706,6 +698,41 @@ public:
 	    || (type->code () == TYPE_CODE_ARRAY
 		&& TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_CHAR));
   }
+
+  /* See language.h.  */
+
+  const char *struct_too_deep_ellipsis () const override
+  { return "(...)"; }
+
+  /* See language.h.  */
+
+  bool c_style_arrays_p () const override
+  { return false; }
+
+  /* See language.h.  */
+
+  bool range_checking_on_by_default () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  enum case_sensitivity case_sensitivity () const override
+  { return case_sensitive_off; }
+
+  /* See language.h.  */
+
+  enum array_ordering array_ordering () const override
+  { return array_column_major; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_f; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return f_op_print_tab; }
 
 protected:
 

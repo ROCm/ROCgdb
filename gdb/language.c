@@ -49,14 +49,32 @@
 
 static void set_range_case (void);
 
+/* range_mode ==
+   range_mode_auto:   range_check set automatically to default of language.
+   range_mode_manual: range_check set manually by user.  */
+
+enum range_mode
+  {
+    range_mode_auto, range_mode_manual
+  };
+
+/* case_mode ==
+   case_mode_auto:   case_sensitivity set upon selection of scope.
+   case_mode_manual: case_sensitivity set only by user.  */
+
+enum case_mode
+  {
+    case_mode_auto, case_mode_manual
+  };
+
 /* The current (default at startup) state of type and range checking.
    (If the modes are set to "auto", though, these are changed based
    on the default language at startup, and then again based on the
    language of the first source file.  */
 
-enum range_mode range_mode = range_mode_auto;
+static enum range_mode range_mode = range_mode_auto;
 enum range_check range_check = range_check_off;
-enum case_mode case_mode = case_mode_auto;
+static enum case_mode case_mode = case_mode_auto;
 enum case_sensitivity case_sensitivity = case_sensitive_on;
 
 /* The current language and language_mode (see language.h).  */
@@ -98,11 +116,11 @@ show_language_command (struct ui_file *file, int from_tty,
     fprintf_filtered (gdb_stdout,
 		      _("The current source language is "
 			"\"auto; currently %s\".\n"),
-		      current_language->la_name);
+		      current_language->name ());
   else
     fprintf_filtered (gdb_stdout,
 		      _("The current source language is \"%s\".\n"),
-		      current_language->la_name);
+		      current_language->name ());
 
   if (has_stack_frames ())
     {
@@ -131,7 +149,7 @@ set_language_command (const char *ignore,
   /* Search the list of languages for a match.  */
   for (const auto &lang : language_defn::languages)
     {
-      if (strcmp (lang->la_name, language) == 0)
+      if (strcmp (lang->name (), language) == 0)
 	{
 	  /* Found it!  Go into manual mode, and use this language.  */
 	  if (lang->la_language == language_auto)
@@ -209,7 +227,9 @@ show_range_command (struct ui_file *file, int from_tty,
     fprintf_filtered (gdb_stdout, _("Range checking is \"%s\".\n"),
 		      value);
 
-  if (range_check != current_language->la_range_check)
+  if (range_check == range_check_warn
+      || ((range_check == range_check_on)
+	  != current_language->range_checking_on_by_default ()))
     warning (_("the current range check setting "
 	       "does not match the language.\n"));
 }
@@ -245,7 +265,9 @@ set_range_command (const char *ignore,
       internal_error (__FILE__, __LINE__,
 		      _("Unrecognized range check setting: \"%s\""), range);
     }
-  if (range_check != current_language->la_range_check)
+  if (range_check == range_check_warn
+      || ((range_check == range_check_on)
+	  != current_language->range_checking_on_by_default ()))
     warning (_("the current range check setting "
 	       "does not match the language.\n"));
 }
@@ -283,7 +305,7 @@ show_case_command (struct ui_file *file, int from_tty,
 		      _("Case sensitivity in name search is \"%s\".\n"),
 		      value);
 
-  if (case_sensitivity != current_language->la_case_sensitivity)
+  if (case_sensitivity != current_language->case_sensitivity ())
     warning (_("the current case sensitivity setting does not match "
 	       "the language.\n"));
 }
@@ -316,7 +338,7 @@ set_case_command (const char *ignore, int from_tty, struct cmd_list_element *c)
 		       case_sensitive);
      }
 
-   if (case_sensitivity != current_language->la_case_sensitivity)
+   if (case_sensitivity != current_language->case_sensitivity ())
      warning (_("the current case sensitivity setting does not match "
 		"the language.\n"));
 }
@@ -329,10 +351,11 @@ static void
 set_range_case (void)
 {
   if (range_mode == range_mode_auto)
-    range_check = current_language->la_range_check;
+    range_check = (current_language->range_checking_on_by_default ()
+		   ? range_check_on : range_check_off);
 
   if (case_mode == case_mode_auto)
-    case_sensitivity = current_language->la_case_sensitivity;
+    case_sensitivity = current_language->case_sensitivity ();
 }
 
 /* Set current language to (enum language) LANG.  Returns previous
@@ -442,7 +465,7 @@ enum language
 language_enum (const char *str)
 {
   for (const auto &lang : language_defn::languages)
-    if (strcmp (lang->la_name, str) == 0)
+    if (strcmp (lang->name (), str) == 0)
       return lang->la_language;
 
   if (strcmp (str, "local") == 0)
@@ -466,7 +489,7 @@ language_def (enum language lang)
 const char *
 language_str (enum language lang)
 {
-  return language_def (lang)->la_name;
+  return language_def (lang)->name ();
 }
 
 
@@ -486,9 +509,9 @@ add_set_language_command ()
   /* Display "auto", "local" and "unknown" first, and then the rest,
      alpha sorted.  */
   const char **language_names_p = language_names;
-  *language_names_p++ = language_def (language_auto)->la_name;
+  *language_names_p++ = language_def (language_auto)->name ();
   *language_names_p++ = "local";
-  *language_names_p++ = language_def (language_unknown)->la_name;
+  *language_names_p++ = language_def (language_unknown)->name ();
   const char **sort_begin = language_names_p;
   for (const auto &lang : language_defn::languages)
     {
@@ -496,19 +519,15 @@ add_set_language_command ()
       if (lang->la_language == language_auto
 	  || lang->la_language == language_unknown)
 	continue;
-      *language_names_p++ = lang->la_name;
+      *language_names_p++ = lang->name ();
     }
   *language_names_p = NULL;
   std::sort (sort_begin, language_names_p, compare_cstrings);
 
   /* Add the filename extensions.  */
   for (const auto &lang : language_defn::languages)
-    if (lang->la_filename_extensions != NULL)
-      {
-	for (size_t i = 0; lang->la_filename_extensions[i] != NULL; ++i)
-	  add_filename_language (lang->la_filename_extensions[i],
-				 lang->la_language);
-      }
+    for (const char * const &ext : lang->filename_extensions ())
+      add_filename_language (ext, lang->la_language);
 
   /* Build the "help set language" docs.  */
   string_file doc;
@@ -524,15 +543,11 @@ add_set_language_command ()
 	  || lang->la_language == language_auto)
 	continue;
 
-      /* FIXME: i18n: for now assume that the human-readable name is
-	 just a capitalization of the internal name.  */
       /* Note that we add the newline at the front, so we don't wind
 	 up with a trailing newline.  */
-      doc.printf ("\n%-16s Use the %c%s language",
-		  lang->la_name,
-		  /* Capitalize first letter of language name.  */
-		  toupper (lang->la_name[0]),
-		  lang->la_name + 1);
+      doc.printf ("\n%-16s Use the %s language",
+		  lang->name (),
+		  lang->natural_name ());
     }
 
   add_setshow_enum_cmd ("language", class_support,
@@ -749,6 +764,24 @@ language_defn::get_symbol_name_matcher_inner
   return default_symbol_name_matcher;
 }
 
+/* See language.h.  */
+
+const struct lang_varobj_ops *
+language_defn::varobj_ops () const
+{
+  /* The ops for the C language are suitable for the vast majority of the
+     supported languages.  */
+  return &c_varobj_ops;
+}
+
+/* See language.h.  */
+
+const struct exp_descriptor *
+language_defn::expression_ops () const
+{
+  return &exp_descriptor_standard;
+}
+
 /* Return true if TYPE is a string type, otherwise return false.  This
    default implementation only detects TYPE_CODE_STRING.  */
 
@@ -779,36 +812,24 @@ unknown_language_arch_info (struct gdbarch *gdbarch,
 						       struct type *);
 }
 
-/* Constant data that describes the unknown language.  */
-
-extern const struct language_data unknown_language_data =
-{
-  "unknown",
-  "Unknown",
-  language_unknown,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_no,
-  NULL,
-  &exp_descriptor_standard,
-  "this",        	    	/* name_of_this */
-  true,				/* store_sym_names_in_linkage_form_p */
-  unk_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the unknown language.  */
 
 class unknown_language : public language_defn
 {
 public:
   unknown_language ()
-    : language_defn (language_unknown, unknown_language_data)
+    : language_defn (language_unknown)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "unknown"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Unknown"; }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -899,33 +920,26 @@ public:
   {
     return default_is_string_type_p (type);
   }
+
+  /* See language.h.  */
+
+  const char *name_of_this () const override
+  { return "this"; }
+
+  /* See language.h.  */
+
+  bool store_sym_names_in_linkage_form_p () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return unk_op_print_tab; }
 };
 
 /* Single instance of the unknown language class.  */
 
 static unknown_language unknown_language_defn;
-
-/* Constant data for the fake "auto" language.  */
-
-extern const struct language_data auto_language_data =
-{
-  "auto",
-  "Auto",
-  language_auto,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_no,
-  NULL,
-  &exp_descriptor_standard,
-  "this",		        /* name_of_this */
-  false,			/* store_sym_names_in_linkage_form_p */
-  unk_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
 
 /* Class representing the fake "auto" language.  */
 
@@ -933,8 +947,18 @@ class auto_language : public language_defn
 {
 public:
   auto_language ()
-    : language_defn (language_auto, auto_language_data)
+    : language_defn (language_auto)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "auto"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Auto"; }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -1025,6 +1049,16 @@ public:
   {
     return default_is_string_type_p (type);
   }
+
+  /* See language.h.  */
+
+  const char *name_of_this () const override
+  { return "this"; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return unk_op_print_tab; }
 };
 
 /* Single instance of the fake "auto" language.  */
@@ -1203,7 +1237,7 @@ language_lookup_primitive_type_as_symbol (const struct language_defn *la,
       fprintf_unfiltered (gdb_stdlog,
 			  "language_lookup_primitive_type_as_symbol"
 			  " (%s, %s, %s)",
-			  la->la_name, host_address_to_string (gdbarch), name);
+			  la->name (), host_address_to_string (gdbarch), name);
     }
 
   typep = language_lookup_primitive_type_1 (lai, name);

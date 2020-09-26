@@ -1897,41 +1897,32 @@ static const struct exp_descriptor exp_descriptor_rust =
   rust_evaluate_subexp
 };
 
-static const char * const rust_extensions[] =
-{
-  ".rs", NULL
-};
-
-/* Constant data representing the Rust language.  */
-
-extern const struct language_data rust_language_data =
-{
-  "rust",
-  "Rust",
-  language_rust,
-  range_check_on,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_no,
-  rust_extensions,
-  &exp_descriptor_rust,
-  NULL,				/* name_of_this */
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  c_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the Rust language.  */
 
 class rust_language : public language_defn
 {
 public:
   rust_language ()
-    : language_defn (language_rust, rust_language_data)
+    : language_defn (language_rust)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "rust"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Rust"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions = { ".rs" };
+    return extensions;
+  }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -2145,6 +2136,21 @@ public:
 		&& rust_slice_type_p (type)
 		&& strcmp (type->name (), "&str") == 0));
   }
+
+  /* See language.h.  */
+
+  bool range_checking_on_by_default () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_rust; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return c_op_print_tab; }
 };
 
 /* Single instance of the Rust language class.  */

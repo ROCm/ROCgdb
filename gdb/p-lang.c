@@ -248,41 +248,33 @@ enum pascal_primitive_types {
   nr_pascal_primitive_types
 };
 
-static const char * const p_extensions[] =
-{
-  ".pas", ".p", ".pp", NULL
-};
-
-/* Constant data representing the Pascal language.  */
-
-extern const struct language_data pascal_language_data =
-{
-  "pascal",			/* Language name */
-  "Pascal",
-  language_pascal,
-  range_check_on,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_no,
-  p_extensions,
-  &exp_descriptor_standard,
-  "this",		        /* name_of_this */
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  pascal_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the Pascal language.  */
 
 class pascal_language : public language_defn
 {
 public:
   pascal_language ()
-    : language_defn (language_pascal, pascal_language_data)
+    : language_defn (language_pascal)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "pascal"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Pascal"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions
+      = { ".pas", ".p", ".pp" };
+    return extensions;
+  }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -498,6 +490,21 @@ public:
     return is_pascal_string_type (type, nullptr, nullptr, nullptr,
 				  nullptr, nullptr) > 0;
   }
+
+  /* See language.h.  */
+
+  const char *name_of_this () const override
+  { return "this"; }
+
+  /* See language.h.  */
+
+  bool range_checking_on_by_default () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return pascal_op_print_tab; }
 };
 
 /* Single instance of the Pascal language class.  */

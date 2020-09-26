@@ -124,41 +124,32 @@ enum d_primitive_types {
   nr_d_primitive_types
 };
 
-static const char * const d_extensions[] =
-{
-  ".d", NULL
-};
-
-/* Constant data that describes the D language.  */
-
-extern const struct language_data d_language_data =
-{
-  "d",
-  "D",
-  language_d,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_no,
-  d_extensions,
-  &exp_descriptor_c,
-  "this",
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  d_op_print_tab,		/* Expression operators for printing.  */
-  1,				/* C-style arrays.  */
-  0,				/* String lower bound.  */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the D language.  */
 
 class d_language : public language_defn
 {
 public:
   d_language ()
-    : language_defn (language_d, d_language_data)
+    : language_defn (language_d)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "d"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "D"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions = { ".d" };
+    return extensions;
+  }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -272,6 +263,21 @@ public:
   {
     return d_parse (ps);
   }
+
+  /* See language.h.  */
+
+  const char *name_of_this () const override
+  { return "this"; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_c; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return d_op_print_tab; }
 };
 
 /* Single instance of the D language class.  */

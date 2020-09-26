@@ -195,36 +195,24 @@ const struct exp_descriptor exp_descriptor_modula2 =
   evaluate_subexp_modula2
 };
 
-/* Constant data describing the M2 language.  */
-
-extern const struct language_data m2_language_data =
-{
-  "modula-2",
-  "Modula-2",
-  language_m2,
-  range_check_on,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_no,
-  NULL,
-  &exp_descriptor_modula2,
-  NULL,		                /* name_of_this */
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  m2_op_print_tab,		/* expression operators for printing */
-  0,				/* arrays are first-class (not c-style) */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the M2 language.  */
 
 class m2_language : public language_defn
 {
 public:
   m2_language ()
-    : language_defn (language_m2, m2_language_data)
+    : language_defn (language_m2)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "modula-2"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Modula-2"; }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -432,6 +420,32 @@ public:
 
     return false;
   }
+
+  /* See language.h.  */
+
+  bool c_style_arrays_p () const override
+  { return false; }
+
+  /* See language.h.  Despite not having C-style arrays, Modula-2 uses 0
+     for its string lower bounds.  */
+
+  char string_lower_bound () const override
+  { return 0; }
+
+  /* See language.h.  */
+
+  bool range_checking_on_by_default () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_modula2; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return m2_op_print_tab; }
 };
 
 /* Single instance of the M2 language.  */

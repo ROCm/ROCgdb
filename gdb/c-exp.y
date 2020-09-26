@@ -3013,7 +3013,7 @@ static int popping;
 
 /* Temporary storage for c_lex; this holds symbol names as they are
    built up.  */
-auto_obstack name_obstack;
+static auto_obstack name_obstack;
 
 /* Classify a NAME token.  The contents of the token are in `yylval'.
    Updates yylval and returns the new token type.  BLOCK is the block
@@ -3036,7 +3036,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
   memset (&is_a_field_of_this, 0, sizeof (is_a_field_of_this));
 
   bsym = lookup_symbol (copy.c_str (), block, VAR_DOMAIN,
-			par_state->language ()->la_name_of_this
+			par_state->language ()->name_of_this ()
 			? &is_a_field_of_this : NULL);
 
   if (bsym.symbol && SYMBOL_CLASS (bsym.symbol) == LOC_BLOCK)

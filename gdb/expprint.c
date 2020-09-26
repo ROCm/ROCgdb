@@ -50,7 +50,8 @@ void
 print_subexp (struct expression *exp, int *pos,
 	      struct ui_file *stream, enum precedence prec)
 {
-  exp->language_defn->la_exp_desc->print_subexp (exp, pos, stream, prec);
+  exp->language_defn->expression_ops ()->print_subexp (exp, pos, stream,
+						       prec);
 }
 
 /* Standard implementation of print_subexp for use in language_defn
@@ -72,7 +73,7 @@ print_subexp_standard (struct expression *exp, int *pos,
   struct value *val;
   char *tempstr = NULL;
 
-  op_print_tab = exp->language_defn->la_op_print_tab;
+  op_print_tab = exp->language_defn->opcode_print_table ();
   pc = (*pos)++;
   opcode = exp->elts[pc].opcode;
   switch (opcode)
@@ -504,12 +505,12 @@ print_subexp_standard (struct expression *exp, int *pos,
 
     case OP_THIS:
       ++(*pos);
-      if (exp->language_defn->la_name_of_this)
-	fputs_filtered (exp->language_defn->la_name_of_this, stream);
+      if (exp->language_defn->name_of_this () != NULL)
+	fputs_filtered (exp->language_defn->name_of_this (), stream);
       else
 	fprintf_styled (stream, metadata_style.style (),
 			_("<language %s has no 'this'>"),
-			exp->language_defn->la_name);
+			exp->language_defn->name ());
       return;
 
       /* Modula-2 ops */
@@ -668,7 +669,7 @@ op_string (enum exp_opcode op)
   int tem;
   const struct op_print *op_print_tab;
 
-  op_print_tab = current_language->la_op_print_tab;
+  op_print_tab = current_language->opcode_print_table ();
   for (tem = 0; op_print_tab[tem].opcode != OP_NULL; tem++)
     if (op_print_tab[tem].opcode == op)
       return op_print_tab[tem].string;
@@ -692,7 +693,7 @@ op_name (struct expression *exp, enum exp_opcode opcode)
 		 unsigned (opcode));
       return cell;
     }
-  return exp->language_defn->la_exp_desc->op_name (opcode);
+  return exp->language_defn->expression_ops ()->op_name (opcode);
 }
 
 /* Default name for the standard operator OPCODE (i.e., one defined in
@@ -734,7 +735,7 @@ dump_raw_expression (struct expression *exp, struct ui_file *stream,
   if (note)
     fprintf_filtered (stream, ", %s:", note);
   fprintf_filtered (stream, "\n\tLanguage %s, %d elements, %ld bytes each.\n",
-		    exp->language_defn->la_name, exp->nelts,
+		    exp->language_defn->name (), exp->nelts,
 		    (long) sizeof (union exp_element));
   fprintf_filtered (stream, "\t%5s  %20s  %16s  %s\n", "Index", "Opcode",
 		    "Hex Value", "String Value");
@@ -793,7 +794,8 @@ dump_subexp (struct expression *exp, struct ui_file *stream, int elt)
 static int
 dump_subexp_body (struct expression *exp, struct ui_file *stream, int elt)
 {
-  return exp->language_defn->la_exp_desc->dump_subexp_body (exp, stream, elt);
+  return exp->language_defn->expression_ops ()->dump_subexp_body (exp, stream,
+								  elt);
 }
 
 /* Default value for subexp_body in exp_descriptor vector.  */
@@ -1159,7 +1161,7 @@ dump_prefix_expression (struct expression *exp, struct ui_file *stream)
   fputs_filtered (", after conversion to prefix form:\nExpression: `", stream);
   print_expression (exp, stream);
   fprintf_filtered (stream, "'\n\tLanguage %s, %d elements, %ld bytes each.\n",
-		    exp->language_defn->la_name, exp->nelts,
+		    exp->language_defn->name (), exp->nelts,
 		    (long) sizeof (union exp_element));
   fputs_filtered ("\n", stream);
 

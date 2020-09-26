@@ -1233,13 +1233,23 @@ commands_command_1 (const char *arg, int from_tty,
 
   if (arg == NULL || !*arg)
     {
+      /* Argument not explicitly given.  Synthesize it.  */
       if (breakpoint_count - prev_breakpoint_count > 1)
 	new_arg = string_printf ("%d-%d", prev_breakpoint_count + 1,
 				 breakpoint_count);
       else if (breakpoint_count > 0)
 	new_arg = string_printf ("%d", breakpoint_count);
-      arg = new_arg.c_str ();
     }
+  else
+    {
+      /* Create a copy of ARG.  This is needed because the "commands"
+	 command may be coming from a script.  In that case, the read
+	 line buffer is going to be overwritten in the lambda of
+	 'map_breakpoint_numbers' below when reading the next line
+	 before we are are done parsing the breakpoint numbers.  */
+      new_arg = arg;
+    }
+  arg = new_arg.c_str ();
 
   map_breakpoint_numbers
     (arg, [&] (breakpoint *b)
@@ -7861,7 +7871,7 @@ struct solib_catchpoint : public breakpoint
   ~solib_catchpoint () override;
 
   /* True for "catch load", false for "catch unload".  */
-  unsigned char is_load;
+  bool is_load;
 
   /* Regular expression to match, if any.  COMPILED is only valid when
      REGEX is non-NULL.  */
@@ -8033,15 +8043,10 @@ print_recreate_catch_solib (struct breakpoint *b, struct ui_file *fp)
 
 static struct breakpoint_ops catch_solib_breakpoint_ops;
 
-/* Shared helper function (MI and CLI) for creating and installing
-   a shared object event catchpoint.  If IS_LOAD is non-zero then
-   the events to be caught are load events, otherwise they are
-   unload events.  If IS_TEMP is non-zero the catchpoint is a
-   temporary one.  If ENABLED is non-zero the catchpoint is
-   created in an enabled state.  */
+/* See breakpoint.h.  */
 
 void
-add_solib_catchpoint (const char *arg, int is_load, int is_temp, int enabled)
+add_solib_catchpoint (const char *arg, bool is_load, bool is_temp, bool enabled)
 {
   struct gdbarch *gdbarch = get_current_arch ();
 
@@ -8074,12 +8079,10 @@ static void
 catch_load_or_unload (const char *arg, int from_tty, int is_load,
 		      struct cmd_list_element *command)
 {
-  int tempflag;
   const int enabled = 1;
+  bool temp = get_cmd_context (command) == CATCH_TEMPORARY;
 
-  tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
-
-  add_solib_catchpoint (arg, is_load, tempflag, enabled);
+  add_solib_catchpoint (arg, is_load, temp, enabled);
 }
 
 static void
@@ -8096,14 +8099,11 @@ catch_unload_command_1 (const char *arg, int from_tty,
   catch_load_or_unload (arg, from_tty, 0, command);
 }
 
-/* Initialize a new breakpoint of the bp_catchpoint kind.  If TEMPFLAG
-   is non-zero, then make the breakpoint temporary.  If COND_STRING is
-   not NULL, then store it in the breakpoint.  OPS, if not NULL, is
-   the breakpoint_ops structure associated to the catchpoint.  */
+/* See breakpoint.h.  */
 
 void
 init_catchpoint (struct breakpoint *b,
-		 struct gdbarch *gdbarch, int tempflag,
+		 struct gdbarch *gdbarch, bool temp,
 		 const char *cond_string,
 		 const struct breakpoint_ops *ops)
 {
@@ -8113,7 +8113,7 @@ init_catchpoint (struct breakpoint *b,
   init_raw_breakpoint (b, gdbarch, sal, bp_catchpoint, ops);
 
   b->cond_string = (cond_string == NULL) ? NULL : xstrdup (cond_string);
-  b->disposition = tempflag ? disp_del : disp_donttouch;
+  b->disposition = temp ? disp_del : disp_donttouch;
 }
 
 void
@@ -8133,12 +8133,12 @@ install_breakpoint (int internal, std::unique_ptr<breakpoint> &&arg, int update_
 
 static void
 create_fork_vfork_event_catchpoint (struct gdbarch *gdbarch,
-				    int tempflag, const char *cond_string,
+				    bool temp, const char *cond_string,
                                     const struct breakpoint_ops *ops)
 {
   std::unique_ptr<fork_catchpoint> c (new fork_catchpoint ());
 
-  init_catchpoint (c.get (), gdbarch, tempflag, cond_string, ops);
+  init_catchpoint (c.get (), gdbarch, temp, cond_string, ops);
 
   c->forked_inferior_pid = null_ptid;
 
@@ -11144,11 +11144,10 @@ catch_fork_command_1 (const char *arg, int from_tty,
   struct gdbarch *gdbarch = get_current_arch ();
   const char *cond_string = NULL;
   catch_fork_kind fork_kind;
-  int tempflag;
 
   fork_kind = (catch_fork_kind) (uintptr_t) get_cmd_context (command);
-  tempflag = (fork_kind == catch_fork_temporary
-	      || fork_kind == catch_vfork_temporary);
+  bool temp = (fork_kind == catch_fork_temporary
+	       || fork_kind == catch_vfork_temporary);
 
   if (!arg)
     arg = "";
@@ -11170,12 +11169,12 @@ catch_fork_command_1 (const char *arg, int from_tty,
     {
     case catch_fork_temporary:
     case catch_fork_permanent:
-      create_fork_vfork_event_catchpoint (gdbarch, tempflag, cond_string,
+      create_fork_vfork_event_catchpoint (gdbarch, temp, cond_string,
                                           &catch_fork_breakpoint_ops);
       break;
     case catch_vfork_temporary:
     case catch_vfork_permanent:
-      create_fork_vfork_event_catchpoint (gdbarch, tempflag, cond_string,
+      create_fork_vfork_event_catchpoint (gdbarch, temp, cond_string,
                                           &catch_vfork_breakpoint_ops);
       break;
     default:
@@ -11189,10 +11188,8 @@ catch_exec_command_1 (const char *arg, int from_tty,
 		      struct cmd_list_element *command)
 {
   struct gdbarch *gdbarch = get_current_arch ();
-  int tempflag;
   const char *cond_string = NULL;
-
-  tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+  bool temp = get_cmd_context (command) == CATCH_TEMPORARY;
 
   if (!arg)
     arg = "";
@@ -11209,7 +11206,7 @@ catch_exec_command_1 (const char *arg, int from_tty,
     error (_("Junk at end of arguments."));
 
   std::unique_ptr<exec_catchpoint> c (new exec_catchpoint ());
-  init_catchpoint (c.get (), gdbarch, tempflag, cond_string,
+  init_catchpoint (c.get (), gdbarch, temp, cond_string,
 		   &catch_exec_breakpoint_ops);
   c->exec_pathname = NULL;
 

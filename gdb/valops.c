@@ -414,7 +414,7 @@ value_cast (struct type *type, struct value *arg2)
 	}
     }
 
-  if (current_language->c_style_arrays
+  if (current_language->c_style_arrays_p ()
       && type2->code () == TYPE_CODE_ARRAY
       && !type2->is_vector ())
     arg2 = value_coerce_array (arg2);
@@ -1258,7 +1258,7 @@ value_assign (struct value *toval, struct value *fromval)
   return val;
 }
 
-/* Extend a value VAL to COUNT repetitions of its type.  */
+/* Extend a value ARG1 to COUNT repetitions of its type.  */
 
 struct value *
 value_repeat (struct value *arg1, int count)
@@ -1622,7 +1622,7 @@ value_array (int lowbound, int highbound, struct value **elemvec)
   arraytype = lookup_array_range_type (value_enclosing_type (elemvec[0]),
 				       lowbound, highbound);
 
-  if (!current_language->c_style_arrays)
+  if (!current_language->c_style_arrays_p ())
     {
       val = allocate_value (arraytype);
       for (idx = 0; idx < nelem; idx++)
@@ -1644,7 +1644,7 @@ struct value *
 value_cstring (const char *ptr, ssize_t len, struct type *char_type)
 {
   struct value *val;
-  int lowbound = current_language->string_lower_bound;
+  int lowbound = current_language->string_lower_bound ();
   ssize_t highbound = len / TYPE_LENGTH (char_type);
   struct type *stringtype
     = lookup_array_range_type (char_type, lowbound, highbound + lowbound - 1);
@@ -1667,7 +1667,7 @@ struct value *
 value_string (const char *ptr, ssize_t len, struct type *char_type)
 {
   struct value *val;
-  int lowbound = current_language->string_lower_bound;
+  int lowbound = current_language->string_lower_bound ();
   ssize_t highbound = len / TYPE_LENGTH (char_type);
   struct type *stringtype
     = lookup_string_range_type (char_type, lowbound, highbound + lowbound - 1);
@@ -3716,7 +3716,7 @@ value_of_this (const struct language_defn *lang)
   const struct block *b;
   struct frame_info *frame;
 
-  if (!lang->la_name_of_this)
+  if (lang->name_of_this () == NULL)
     error (_("no `this' in current language"));
 
   frame = get_selected_frame (_("no frame selected"));
@@ -3726,7 +3726,7 @@ value_of_this (const struct language_defn *lang)
   sym = lookup_language_this (lang, b);
   if (sym.symbol == NULL)
     error (_("current stack frame does not contain a variable named `%s'"),
-	   lang->la_name_of_this);
+	   lang->name_of_this ());
 
   return read_var_value (sym.symbol, sym.block, frame);
 }

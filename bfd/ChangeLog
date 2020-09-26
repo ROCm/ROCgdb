@@ -1,3 +1,28 @@
+2020-09-17  Mikael Pettersson  <mikpelinux@gmail.com>
+
+	PR ld/18808
+	* elfxx-sparc.c (_bfd_sparc_elf_relocate_section): Skip IFUNC
+	relocations in debug sections, change abort to _bfd_error_handler.
+
+2020-09-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26583
+	* config.bfd (targ64_selvecs, targ_selvecs): Add x86_64_pe_vec
+	to x86_64_pei_vec.
+	* reloc.c: Include "coff/internal.h".
+	(bfd_perform_relocation): Adjust relocation for PE/x86-64 inputs.
+
+2020-09-16  Alan Modra  <amodra@gmail.com>
+
+	* elf-bfd.h (elf_symbol_from): Remove unused ABFD parameter.
+	* elf.c (ignore_section_sym, _bfd_elf_copy_private_symbol_data),
+	(swap_out_syms): Adjust elf_symbol_from invocation.
+
+2020-09-16  Alan Modra  <amodra@gmail.com>
+
+	PR 26623
+	* elf-bfd.h (elf_symbol_from): Exclude synthetic symbols.
+
 2020-09-15  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* coff-x86_64.c (howto_table): Display PE relocation names.

@@ -1003,35 +1003,24 @@ const struct exp_descriptor exp_descriptor_opencl =
   evaluate_subexp_opencl
 };
 
-/* Constant data representing the OpenCL language.  */
-extern const struct language_data opencl_language_data =
-{
-  "opencl",			/* Language name */
-  "OpenCL C",
-  language_opencl,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_c,
-  NULL,
-  &exp_descriptor_opencl,
-  NULL,                         /* name_of_this */
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  c_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the OpenCL language.  */
 
 class opencl_language : public language_defn
 {
 public:
   opencl_language ()
-    : language_defn (language_opencl, opencl_language_data)
+    : language_defn (language_opencl)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "opencl"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "OpenCL C"; }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -1069,6 +1058,21 @@ public:
 
     c_print_type (type, varstring, stream, show, level, flags);
   }
+
+  /* See language.h.  */
+
+  enum macro_expansion macro_expansion () const override
+  { return macro_expansion_c; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_opencl; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return c_op_print_tab; }
 };
 
 /* Single instance of the OpenCL language class.  */

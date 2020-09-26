@@ -13704,42 +13704,33 @@ ada_get_symbol_name_matcher (const lookup_name_info &lookup_name)
     }
 }
 
-static const char * const ada_extensions[] =
-{
-  ".adb", ".ads", ".a", ".ada", ".dg", NULL
-};
-
-/* Constant data that describes the Ada language.  */
-
-extern const struct language_data ada_language_data =
-{
-  "ada",                        /* Language name */
-  "Ada",
-  language_ada,
-  range_check_off,
-  case_sensitive_on,            /* Yes, Ada is case-insensitive, but
-                                   that's not quite what this means.  */
-  array_row_major,
-  macro_expansion_no,
-  ada_extensions,
-  &ada_exp_descriptor,
-  NULL,                         /* name_of_this */
-  true,                         /* la_store_sym_names_in_linkage_form_p */
-  ada_op_print_tab,             /* expression operators for printing */
-  0,                            /* c-style arrays */
-  1,                            /* String lower bound */
-  &ada_varobj_ops,
-  "(...)"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the Ada language.  */
 
 class ada_language : public language_defn
 {
 public:
   ada_language ()
-    : language_defn (language_ada, ada_language_data)
+    : language_defn (language_ada)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "ada"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Ada"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions
+      = { ".adb", ".ads", ".a", ".ada", ".dg" };
+    return extensions;
+  }
 
   /* Print an array element index using the Ada syntax.  */
 
@@ -14187,6 +14178,35 @@ public:
     return ada_is_string_type (type);
   }
 
+  /* See language.h.  */
+
+  const char *struct_too_deep_ellipsis () const override
+  { return "(...)"; }
+
+  /* See language.h.  */
+
+  bool c_style_arrays_p () const override
+  { return false; }
+
+  /* See language.h.  */
+
+  bool store_sym_names_in_linkage_form_p () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  const struct lang_varobj_ops *varobj_ops () const override
+  { return &ada_varobj_ops; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &ada_exp_descriptor; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return ada_op_print_tab; }
 
 protected:
   /* See language.h.  */

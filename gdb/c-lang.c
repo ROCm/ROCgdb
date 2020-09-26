@@ -871,41 +871,32 @@ const struct exp_descriptor exp_descriptor_c =
   evaluate_subexp_c
 };
 
-static const char * const c_extensions[] =
-{
-  ".c", NULL
-};
-
-/* Constant data that describes the C language.  */
-
-extern const struct language_data c_language_data =
-{
-  "c",				/* Language name */
-  "C",
-  language_c,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_c,
-  c_extensions,
-  &exp_descriptor_c,
-  NULL,				/* name_of_this */
-  true,				/* la_store_sym_names_in_linkage_form_p */
-  c_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &c_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the C language.  */
 
 class c_language : public language_defn
 {
 public:
   c_language ()
-    : language_defn (language_c, c_language_data)
+    : language_defn (language_c)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "c"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "C"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions = { ".c" };
+    return extensions;
+  }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -938,6 +929,26 @@ public:
   {
     c_print_type (type, varstring, stream, show, level, flags);
   }
+
+  /* See language.h.  */
+
+  bool store_sym_names_in_linkage_form_p () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  enum macro_expansion macro_expansion () const override
+  { return macro_expansion_c; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_c; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return c_op_print_tab; }
 };
 
 /* Single instance of the C language class.  */
@@ -972,41 +983,33 @@ enum cplus_primitive_types {
   nr_cplus_primitive_types
 };
 
-static const char * const cplus_extensions[] =
-{
-  ".C", ".cc", ".cp", ".cpp", ".cxx", ".c++", NULL
-};
-
-/* Constant data that describes the C++ language.  */
-
-extern const struct language_data cplus_language_data =
-{
-  "c++",			/* Language name */
-  "C++",
-  language_cplus,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_c,
-  cplus_extensions,
-  &exp_descriptor_c,
-  "this",                       /* name_of_this */
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  c_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &cplus_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* A class for the C++ language.  */
 
 class cplus_language : public language_defn
 {
 public:
   cplus_language ()
-    : language_defn (language_cplus, cplus_language_data)
+    : language_defn (language_cplus)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "c++"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "C++"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions
+      = { ".C", ".cc", ".cp", ".cpp", ".cxx", ".c++" };
+    return extensions;
+  }
 
   /* See language.h.  */
 
@@ -1155,6 +1158,31 @@ public:
     return cp_lookup_symbol_nonlocal (this, name, block, domain);
   }
 
+  /* See language.h.  */
+
+  const char *name_of_this () const override
+  { return "this"; }
+
+  /* See language.h.  */
+
+  enum macro_expansion macro_expansion () const override
+  { return macro_expansion_c; }
+
+  /* See language.h.  */
+
+  const struct lang_varobj_ops *varobj_ops () const override
+  { return &cplus_varobj_ops; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_c; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return c_op_print_tab; }
+
 protected:
 
   /* See language.h.  */
@@ -1170,41 +1198,33 @@ protected:
 
 static cplus_language cplus_language_defn;
 
-static const char * const asm_extensions[] =
-{
-  ".s", ".sx", ".S", NULL
-};
-
-/* Constant data that describes the ASM language.  */
-
-extern const struct language_data asm_language_data =
-{
-  "asm",			/* Language name */
-  "assembly",
-  language_asm,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_c,
-  asm_extensions,
-  &exp_descriptor_c,
-  NULL,				/* name_of_this */
-  true,				/* la_store_sym_names_in_linkage_form_p */
-  c_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* A class for the ASM language.  */
 
 class asm_language : public language_defn
 {
 public:
   asm_language ()
-    : language_defn (language_asm, asm_language_data)
+    : language_defn (language_asm)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "asm"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Assembly"; }
+
+  /* See language.h.  */
+
+  const std::vector<const char *> &filename_extensions () const override
+  {
+    static const std::vector<const char *> extensions
+      = { ".s", ".sx", ".S" };
+    return extensions;
+  }
 
   /* See language.h.
 
@@ -1223,44 +1243,52 @@ public:
   {
     c_print_type (type, varstring, stream, show, level, flags);
   }
+
+  /* See language.h.  */
+
+  bool store_sym_names_in_linkage_form_p () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  enum macro_expansion macro_expansion () const override
+  { return macro_expansion_c; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_c; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return c_op_print_tab; }
 };
 
 /* The single instance of the ASM language class.  */
 static asm_language asm_language_defn;
 
-/* The following language_defn does not represent a real language.
-   It just provides a minimal support a-la-C that should allow users
-   to do some simple operations when debugging applications that use
+/* A class for the minimal language.  This does not represent a real
+   language.  It just provides a minimal support a-la-C that should allow
+   users to do some simple operations when debugging applications that use
    a language currently not supported by GDB.  */
-
-extern const struct language_data minimal_language_data =
-{
-  "minimal",			/* Language name */
-  "Minimal",
-  language_minimal,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_c,
-  NULL,
-  &exp_descriptor_c,
-  NULL,				/* name_of_this */
-  true,				/* la_store_sym_names_in_linkage_form_p */
-  c_op_print_tab,		/* expression operators for printing */
-  1,				/* c-style arrays */
-  0,				/* String lower bound */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
-/* A class for the minimal language.  */
 
 class minimal_language : public language_defn
 {
 public:
   minimal_language ()
-    : language_defn (language_minimal, minimal_language_data)
+    : language_defn (language_minimal)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "minimal"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Minimal"; }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -1277,6 +1305,26 @@ public:
   {
     c_print_type (type, varstring, stream, show, level, flags);
   }
+
+  /* See language.h.  */
+
+  bool store_sym_names_in_linkage_form_p () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  enum macro_expansion macro_expansion () const override
+  { return macro_expansion_c; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_c; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return c_op_print_tab; }
 };
 
 /* The single instance of the minimal language class.  */

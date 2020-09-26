@@ -10636,15 +10636,9 @@ dwarf2_physname (const char *name, struct die_info *die, struct dwarf2_cu *cu)
   if (mangled != NULL)
     {
 
-      if (language_def (cu->language)->la_store_sym_names_in_linkage_form_p)
+      if (language_def (cu->language)->store_sym_names_in_linkage_form_p ())
 	{
 	  /* Do nothing (do not demangle the symbol name).  */
-	}
-      else if (cu->language == language_go)
-	{
-	  /* This is a lie, but we already lie to the caller new_symbol.
-	     new_symbol assumes we return the mangled name.
-	     This just undoes that lie until things are cleaned up.  */
 	}
       else
 	{
@@ -16890,7 +16884,7 @@ read_array_order (struct die_info *die, struct dwarf2_cu *cu)
       return DW_ORD_row_major;
     }
 
-  switch (cu->language_defn->la_array_ordering)
+  switch (cu->language_defn->array_ordering ())
     {
     case array_column_major:
       return DW_ORD_col_major;

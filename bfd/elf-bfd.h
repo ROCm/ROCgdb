@@ -793,8 +793,9 @@ struct elf_size_info {
     (bfd *, const Elf_Internal_Rela *, bfd_byte *);
 };
 
-#define elf_symbol_from(ABFD,S) \
-  (((S)->the_bfd != NULL					\
+#define elf_symbol_from(S) \
+  ((((S)->flags & BSF_SYNTHETIC) == 0				\
+    && (S)->the_bfd != NULL					\
     && (S)->the_bfd->xvec->flavour == bfd_target_elf_flavour	\
     && (S)->the_bfd->tdata.elf_obj_data != 0)			\
    ? (elf_symbol_type *) (S)					\

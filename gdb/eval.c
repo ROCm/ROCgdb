@@ -74,7 +74,7 @@ evaluate_subexp (struct type *expect_type, struct expression *exp,
       && !thread_stack_temporaries_enabled_p (inferior_thread ()))
     stack_temporaries.emplace (inferior_thread ());
 
-  retval = (*exp->language_defn->la_exp_desc->evaluate_exp)
+  retval = (*exp->language_defn->expression_ops ()->evaluate_exp)
     (expect_type, exp, pos, noside);
 
   if (stack_temporaries.has_value ()
@@ -622,7 +622,7 @@ ptrmath_type_p (const struct language_defn *lang, struct type *type)
       return 1;
 
     case TYPE_CODE_ARRAY:
-      return type->is_vector () ? 0 : lang->c_style_arrays;
+      return type->is_vector () ? 0 : lang->c_style_arrays_p ();
 
     default:
       return 0;

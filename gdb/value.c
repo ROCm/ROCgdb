@@ -1042,7 +1042,10 @@ allocate_value (struct type *type)
 struct value *
 allocate_repeat_value (struct type *type, int count)
 {
-  int low_bound = current_language->string_lower_bound;		/* ??? */
+  /* Despite the fact that we are really creating an array of TYPE here, we
+     use the string lower bound as the array lower bound.  This seems to
+     work fine for now.  */
+  int low_bound = current_language->string_lower_bound ();
   /* FIXME-type-allocation: need a way to free this type when we are
      done with it.  */
   struct type *array_type
@@ -3688,7 +3691,7 @@ coerce_array (struct value *arg)
   switch (type->code ())
     {
     case TYPE_CODE_ARRAY:
-      if (!type->is_vector () && current_language->c_style_arrays)
+      if (!type->is_vector () && current_language->c_style_arrays_p ())
 	arg = value_coerce_array (arg);
       break;
     case TYPE_CODE_FUNC:

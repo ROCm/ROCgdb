@@ -1,3 +1,703 @@
+2020-09-17  Tom Tromey  <tromey@adacore.com>
+
+	* c-exp.y (name_obstack): Now static.
+
+2020-09-17  Chungyi Chi  <demonic@csie.io>
+
+	* riscv-tdep.c (riscv-insn::decode): Fix recorded insn type.
+
+2020-09-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* breakpoint.h (init_catchpoint): Change int parameter to bool.
+	(add_solib_catchpoint): Likewise.
+	* breakpoint.c (struct solib_catchpoint) <is_load>: Change type
+	to bool.
+	(add_solib_catchpoint): Change int parameter/variable to bool.
+	(catch_load_or_unload): Likewise.
+	(init_catchpoint): Likewise.
+	(create_fork_vfork_event_catchpoint): Likewise.
+	(catch_fork_command_1): Likewise.
+	(catch_exec_command_1): Likewise.
+
+2020-09-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb-gdb.py.in (class StructTypePrettyPrinter) <to_string>:
+	Change instance_flags to m_instance_flags.
+
+2020-09-16  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/26598:
+	* infrun.c (fill_in_stop_func): Use find_pc_partial_function_sym.
+
+2020-09-16  John Baldwin  <jhb@FreeBSD.org>
+
+	* fbsd-nat.c (fbsd_nat_target::wait): Always check for
+	PL_FLAG_EXEC.
+	(fbsd_nat_target::insert_exec_catchpoint)
+	(fbsd_nat_target::remove_exec_catchpoint): Always define.
+	* fbsd-nat.h (fbsd_nat_target::insert_exec_catchpoint)
+	(fbsd_nat_target::remove_exec_catchpoint): Always declare.
+
+2020-09-16  John Baldwin  <jhb@FreeBSD.org>
+
+	* configure.ac: Remove check for kinfo_getvmmap().
+	* configure, config.in: Regenerate.
+	* fbsd-nat.c (fbsd_read_mapping): Remove
+	(fbsd_nat_target::find_memory_regions): Remove the procfs version.
+	(fbsd_nat_target::info_proc): Assume kinfo_getfile() and
+	kinfo_get_vmmap() are always present.
+
+2020-09-16  John Baldwin  <jhb@FreeBSD.org>
+
+	* fbsd-nat.c: Always include support for
+	TARGET_OBJECT_SIGNAL_INFO.
+
+2020-09-16  John Baldwin  <jhb@FreeBSD.org>
+
+	* fbsd-nat.c (fbsd_nat_target::pid_to_exec_file): Always use
+	sysctl and remove procfs fallback.
+
+2020-09-16  John Baldwin  <jhb@FreeBSD.org>
+
+	* fbsd-nat.c: Assume PT_LWPINFO is always defined.
+	* fbsd-nat.h: Likewise.
+
+2020-09-16  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* breakpoint.c (commands_command_1): Make a copy of the 'arg'
+	argument.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Delete.
+	(ada_language): Remove references to ada_language_data.
+	* c-lang.c (c_language_data): Delete.
+	(c_language): Remove references to c_language_data.
+	(cplus_language_data): Delete.
+	(cplus_language): Remove references to cplus_language_data.
+	(asm_language_data): Delete.
+	(asm_language): Remove references to asm_language_data.
+	(minimal_language_data): Delete.
+	(minimal_language): Remove references to minimal_language_data.
+	* d-lang.c (d_language_data): Delete.
+	(d_language): Remove references to d_language_data.
+	* f-lang.c (f_language_data): Delete.
+	(f_language): Remove references to f_language_data.
+	* go-lang.c (go_language_data): Delete.
+	(go_language): Remove references to go_language_data.
+	* language.c (unknown_language_data): Delete.
+	(unknown_language): Remove references to unknown_language_data.
+	(auto_language_data): Delete.
+	(auto_language): Remove references to auto_language_data.
+	* language.h (language_data): Delete struct.
+	(language_defn): No longer inherit from language_data.
+	* m2-lang.c (m2_language_data): Delete.
+	(m2_language): Remove references to m2_language_data.
+	* objc-lang.c (objc_language_data): Delete.
+	(objc_language): Remove references to objc_language_data.
+	* opencl-lang.c (opencl_language_data): Delete.
+	(opencl_language): Remove references to opencl_language_data.
+	* p-lang.c (pascal_language_data): Delete.
+	(pascal_language): Remove references to pascal_language_data.
+	* rust-lang.c (rust_language_data): Delete.
+	(rust_language): Remove references to rust_language_data.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_op_print_tab
+	initializer.
+	(ada_language::opcode_print_table): New member function.
+	* c-lang.c (c_language_data): Remove la_op_print_tab initializer.
+	(c_language::opcode_print_table): New member function.
+	(cplus_language_data): Remove la_op_print_tab initializer.
+	(cplus_language::opcode_print_table): New member function.
+	(asm_language_data): Remove la_op_print_tab initializer.
+	(asm_language::opcode_print_table): New member function.
+	(minimal_language_data): Remove la_op_print_tab initializer.
+	(minimal_language::opcode_print_table): New member function.
+	* d-lang.c (d_language_data): Remove la_op_print_tab initializer.
+	(d_language::opcode_print_table): New member function.
+	* expprint.c (print_subexp_standard): Update call to
+	opcode_print_table.
+	(op_string): Likewise.
+	* f-lang.c (f_language_data): Remove la_op_print_tab initializer.
+	(f_language::opcode_print_table): New member function.
+	* go-lang.c (go_language_data): Remove la_op_print_tab
+	initializer.
+	(go_language::opcode_print_table): New member function.
+	* language.c (unknown_language_data): Remove la_op_print_tab
+	initializer.
+	(unknown_language::opcode_print_table): New member function.
+	(auto_language_data): Remove la_op_print_tab initializer.
+	(auto_language::opcode_print_table): New member function.
+	* language.h (language_data): Remove la_op_print_tab field.
+	(language_defn::opcode_print_table): Declare new member function.
+	* m2-lang.c (m2_language_data): Remove la_op_print_tab
+	initializer.
+	(m2_language::opcode_print_table): New member function.
+	* objc-lang.c (objc_language_data): Remove la_op_print_tab
+	initializer.
+	(objc_language::opcode_print_table): New member function.
+	* opencl-lang.c (opencl_language_data): Remove la_op_print_tab
+	initializer.
+	(opencl_language::opcode_print_table): New member function.
+	* p-lang.c (pascal_language_data): Remove la_op_print_tab
+	initializer.
+	(pascal_language::opcode_print_table): New member function.
+	* rust-lang.c (rust_language_data): Remove la_op_print_tab
+	initializer.
+	(rust_language::opcode_print_table): New member function.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_exp_desc initializer.
+	(ada_language::expression_ops): New member function.
+	* c-lang.c (c_language_data): Remove la_exp_desc initializer.
+	(c_language::expression_ops): New member function.
+	(cplus_language_data): Remove la_exp_desc initializer.
+	(cplus_language::expression_ops): New member function.
+	(asm_language_data): Remove la_exp_desc initializer.
+	(asm_language::expression_ops): New member function.
+	(minimal_language_data): Remove la_exp_desc initializer.
+	(minimal_language::expression_ops): New member function.
+	* d-lang.c (d_language_data): Remove la_exp_desc initializer.
+	(d_language::expression_ops): New member function.
+	* eval.c (evaluate_subexp): Update call to expression_ops.
+	* expprint.c (print_subexp): Likewise.
+	(op_name): Likewise.
+	(dump_subexp_body): Likewise.
+	* f-lang.c (f_language_data): Remove la_exp_desc initializer.
+	(f_language::expression_ops): New member function.
+	* go-lang.c (go_language_data): Remove la_exp_desc initializer.
+	(go_language::expression_ops): New member function.
+	* language.c (language_defn::expression_ops): New function.
+	(unknown_language_data): Remove la_exp_desc initializer.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Remove la_exp_desc field.
+	(language_defn::expression_ops): Declare new member function.
+	* m2-lang.c (m2_language_data): Remove la_exp_desc initializer.
+	(m2_language::expression_ops): New member function.
+	* objc-lang.c (objc_language_data): Remove la_exp_desc
+	initializer.
+	* opencl-lang.c (opencl_language_data): Remove la_exp_desc
+	initializer.
+	(opencl_language::expression_ops): New member function.
+	* p-lang.c (pascal_language_data): Remove la_exp_desc initializer.
+	* parse.c (operator_length): Update call to expression_ops.
+	(exp_iterate): Likewise.
+	* rust-lang.c (rust_language_data): Remove la_exp_desc
+	initializer.
+	(ruse_language::expression_ops): New member function.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_varobj_ops
+	initializer.
+	(ada_language::varobj_ops): New member function.
+	* c-lang.c (c_language_data): Remove la_varobj_ops
+	initializer.
+	(cplus_language_data): Likewise.
+	(cplus_language::varobj_ops): New member function.
+	(asm_language_data): Remove la_varobj_ops initializer.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* f-lang.c (f_language_data): Likewise.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (language_defn::varobj_ops): New function.
+	(unknown_language_data): Remove la_varobj_ops
+	initializer.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Remove la_varobj_ops field.
+	(language_defn::varobj_ops): Declare new member function.
+	* m2-lang.c (m2_language_data): Remove la_varobj_ops initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+	* varobj.c (varobj_create): Update call to varobj_ops.
+	* varobj.h (default_varobj_ops): Delete define.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_macro_expansion
+	initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(c_language::macro_expansion): New member function.
+	(cplus_language_data): Likewise.
+	(cplus_language::macro_expansion): New member function.
+	(asm_language_data): Likewise.
+	(asm_language::macro_expansion): New member function.
+	(minimal_language_data): Likewise.
+	(minimal_language::macro_expansion): New member function.
+	* d-lang.c (d_language_data): Remove la_macro_expansion
+	initializer.
+	* f-lang.c (f_language_data): Likewise.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Remove la_macro_expansion field.
+	(language_defn::macro_expansion): New member function.
+	* m2-lang.c (m2_language_data): Remove la_macro_expansion
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	(objc_language::macro_expansion): New member function.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	(opencl_language::macro_expansion): New member function.
+	* p-lang.c (pascal_language_data): Remove la_macro_expansion
+	initializer.
+	* rust-lang.c (rust_language_data): Likewise.
+	* symtab.c (default_collect_symbol_completion_matches_break_on):
+	Update call to macro_expansion.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_array_ordering
+	initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* dwarf2/read.c (read_array_order): Update for call to
+	array_ordering.
+	* f-lang.c (f_language_data): Remove la_array_ordering
+	initializer.
+	(f_language::array_ordering): New member function.
+	* go-lang.c (go_language_data): Remove la_array_ordering
+	initializer.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete la_array_ordering field.
+	(language_defn::array_ordering): New member function.
+	* m2-lang.c (m2_language_data): Remove la_array_ordering
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_case_sensitivity
+	initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* f-lang.c (f_language_data): Likewise.
+	(f_language::case_sensitivity): New member function.
+	* go-lang.c (go_language_data): Remove la_case_sensitivity
+	initializer.
+	* language.c (enum case_mode): Moved here from language.h.
+	(case_mode): Make static.
+	(show_case_command): Update for case_sensitivity being a method.
+	(set_case_command): Likewise.
+	(set_range_case): Likewise.
+	(unknown_language_data): Remove la_case_sensitivity initializer.
+	(auto_language_data): Likewise.
+	* language.h (case_mode): Delete, move enum declaration to
+	language.c.
+	(language_data): Delete la_case_sensitivity field.
+	(language_defn::case_sensitivity): New member function.
+	* m2-lang.c (m2_language_data): Remove la_case_sensitivity
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_range_check
+	initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* f-lang.c (f_language_data): Likewise.
+	(f_language::range_checking_on_by_default): New member function.
+	* go-lang.c (go_language_data): Remove la_range_check initializer.
+	* language.c (enum range_mode): Moved here from language.h.
+	(range_mode): Made static.
+	(show_range_command): Update to use
+	range_checking_on_by_default.
+	(set_range_command): Likewise.
+	(set_range_case): Likewise.
+	(unknown_language_data): Remove la_range_check initializer.
+	(auto_language_data): Likewise.
+	* language.h (range_mode): Delete.  Enum definition moved to
+	language.c.
+	(language_data): Remove la_range_check field.
+	(language_defn::range_checking_on_by_default): New member
+	function.
+	* m2-lang.c (m2_language_data): Remove la_range_check initializer.
+	(m2_language::range_checking_on_by_default): New member function.
+	* objc-lang.c (objc_language_data): Remove la_range_check
+	initializer.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	(pascal_language::range_checking_on_by_default): New member
+	function.
+	* rust-lang.c (rust_language_data): Remove la_range_check
+	initializer.
+	(rust_language::range_checking_on_by_default): New member
+	function.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* dwarf2/read.c (dwarf2_physname): Remove special case for
+	language_go.
+	* go-lang.c (go_language::store_sym_names_in_linkage_form_p): New
+	member function.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	(ada_language::store_sym_names_in_linkage_form_p): New member
+	function.
+	* c-lang.c (c_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	(c_language::store_sym_names_in_linkage_form_p): New member
+	function.
+	(cplus_language_data): Remove la_store_sym_names_in_linkage_form_p
+	initializer.
+	(asm_language_data): Likewise.
+	(asm_language::store_sym_names_in_linkage_form_p): New member
+	function.
+	(minimal_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	(minimal_language::store_sym_names_in_linkage_form_p): New member
+	function.
+	* d-lang.c (d_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	* dwarf2/read.c (dwarf2_physname): Update call to
+	store_sym_names_in_linkage_form_p.
+	* f-lang.c (f_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	* go-lang.c (go_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	* language.c (unknown_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	(unknown_language::store_sym_names_in_linkage_form_p): New member
+	function.
+	(auto_language_data): Remove la_store_sym_names_in_linkage_form_p
+	initializer.
+	(auto_language::store_sym_names_in_linkage_form_p): New member
+	function.
+	* language.h (language_data): Remove
+	la_store_sym_names_in_linkage_form_p member variable.
+	(language_defn::store_sym_names_in_linkage_form_p): New member
+	function.
+	* m2-lang.c (m2_language_data): Remove
+	la_store_sym_names_in_linkage_form_p initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove string_lower_bound
+	initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* f-lang.c (f_language_data): Likewise.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Remove string_lower_bound field.
+	(language_defn::string_lower_bound): New member function.
+	* m2-lang.c (m2_language_data): Remove string_lower_bound
+	initializer.
+	(m2_language::string_lower_bound): New member function.
+	* objc-lang.c (objc_language_data): Remove string_lower_bound
+	initializer.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+	* valops.c (value_cstring): Update call to string_lower_bound.
+	(value_string): Likewise.
+	* value.c (allocate_repeated_value): Likewise.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* valops.c (value_repeat): Fix incorrect argument name in comment.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove c_style_arrays
+	initializer.
+	(ada_language::c_style_arrays_p): New member fuction.
+	* c-lang.c (c_language_data): Remove c_style_arrays
+	initializer.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* eval.c (ptrmath_type_p): Update call to c_style_arrays_p.
+	* f-lang.c (f_language_data): Remove c_style_arrays initializer.
+	(f_language::c_style_arrays_p): New member function.
+	* go-lang.c (go_language_data): Remove c_style_arrays initializer.
+	* infcall.c (value_arg_coerce): Update call to c_style_arrays_p.
+	* language.c (unknown_language_data): Remove c_style_arrays
+	initializer.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Remove c_style_arrays field.
+	(language_defn::c_style_arrays_p): New member function.
+	* m2-lang.c (m2_language_data): Remove c_style_arrays initializer.
+	(m2_language::c_style_arrays_p): New member function.
+	* objc-lang.c (objc_language_data): Remove c_style_arrays
+	initializer.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+	* valarith.c (value_subscript): Update call to c_style_arrays_p,
+	and update local variable to a bool.
+	* valops.c (value_cast): Update call to c_style_arrays_p.
+	(value_array): Likewise.
+	* value.c (coerce_array): Likewise.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_language initializer.
+	* c-lang.c (c_language_data): Likewise.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	* f-lang.c (f_language_data): Likewise.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Remove la_language field.
+	(language_defn::language_defn): Initialise la_language field.
+	(language_defn::la_language): New member variable.
+	* m2-lang.c (m2_language_data): Remove la_language field.
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_extensions): Delete, moved into
+	ada_language::filename_extensions.
+	(ada_language_data): Remove la_filename_extensions initializer.
+	(ada_language::filename_extensions): New member function.
+	* c-lang.c (c_extensions): Delete, moved into
+	c_language::filename_extensions.
+	(c_language_data): Remove la_filename_extensions initializer.
+	(c_language::filename_extensions): New member function.
+	(cplus_extensions): Delete, moved into
+	cplus_language::filename_extensions.
+	(cplus_language_data): Remove la_filename_extensions initializer.
+	(cplus_language::filename_extensions): New member function.
+	(asm_extensions): Delete, moved into
+	asm_language::filename_extensions.
+	(asm_language_data): Remove la_filename_extensions initializer.
+	(asm_language::filename_extensions): New member function.
+	(minimal_language_data): Remove la_filename_extensions
+	initializer.
+	* d-lang.c (d_extensions): Delete, moved into
+	d_language::filename_extensions.
+	(d_language_data): Remove la_filename_extensions initializer.
+	(d_language::filename_extensions): New member function.
+	* f-lang.c (f_extensions): Delete, moved into
+	f_language::filename_extensions.
+	(f_language_data): Remove la_filename_extensions initializer.
+	(f_language::filename_extensions): New member function.
+	* go-lang.c (go_language_data): Remove la_filename_extensions
+	initializer.
+	* language.c (add_set_language_command): Update now that
+	filename_extensions returns a vector.
+	(unknown_language_data): Remove la_filename_extensions
+	initializer.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Remove la_filename_extensions field.
+	(language_defn::filename_extensions): New member function.
+	* m2-lang.c (m2_language_data): Remove la_filename_extensions
+	initializer.
+	* objc-lang.c (objc_extensions): Delete, moved into
+	objc_language::filename_extensions.
+	(objc_language_data): Remove la_filename_extensions initializer.
+	(objc_language::filename_extensions): New member function.
+	* opencl-lang.c (opencl_language_data): Remove
+	la_filename_extensions initializer.
+	* p-lang.c (pascal_extensions): Delete, moved into
+	pascal_language::filename_extensions.
+	(pascal_language_data): Remove la_filename_extensions initializer.
+	(pascal_language::filename_extensions): New member function.
+	* rust-lang.c (rust_extensions): Delete, moved into
+	rust_language::filename_extensions.
+	(rust_language_data): Remove la_filename_extensions initializer.
+	(rust_language::filename_extensions): New member function.
+	* symfile.c (add_filename_language): Add new assert.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_name and
+	la_natural_name initializers.
+	(ada_language::name): New member function.
+	(ada_language::natural_name): New member function.
+	* c-lang.c (c_language_data): Remove la_name and
+	la_natural_name initializers.
+	(c_language::name): New member function.
+	(c_language::natural_name): New member function.
+	(cplus_language_data): Remove la_name and
+	la_natural_name initializers.
+	(cplus_language::name): New member function.
+	(cplus_language::natural_name): New member function.
+	(asm_language_data): Remove la_name and
+	la_natural_name initializers.
+	(asm_language::name): New member function.
+	(asm_language::natural_name): New member function.
+	(minimal_language_data): Remove la_name and
+	la_natural_name initializers.
+	(minimal_language::name): New member function.
+	(minimal_language::natural_name): New member function.
+	* compile/compile.c (compile_to_object): Update call to
+	lanugage_defn::name.
+	* d-lang.c (d_language_data): Remove la_name and
+	la_natural_name initializers.
+	(d_language::name): New member function.
+	(d_language::natural_name): New member function.
+	* expprint.c (print_subexp_standard): Update call to
+	language_defn::name.
+	(dump_raw_expression): Likewise
+	(dump_prefix_expression): Likewise.
+	* f-lang.c (f_language_data): Remove la_name and
+	la_natural_name initializers.
+	(f_language::name): New member function.
+	(f_language::natural_name): New member function.
+	* go-lang.c (go_language_data): Remove la_name and
+	la_natural_name initializers.
+	(go_language::name): New member function.
+	(go_language::natural_name): New member function.
+	* language.c (show_language_command): Update call to
+	language_defn::name.
+	(set_language_command): Likewise.
+	(language_enum): Likewise.
+	(language_str): Likewise.
+	(add_set_language_command): Likewise, use
+	language_defn::natural_name in the doc string.
+	(unknown_language_data): Remove la_name and
+	la_natural_name initializers.
+	(unknown_language::name): New member function.
+	(unknown_language::natural_name): New member function.
+	(auto_language_data): Remove la_name and
+	la_natural_name initializers.
+	(auto_language::name): New member function.
+	(auto_language::natural_name): New member function.
+	(language_lookup_primitive_type_as_symbol): Update call to
+	language_defn::name.
+	* language.h (language_data): Remove la_name and la_natural_name
+	member variables.
+	(language_defn::name): New member function.
+	(language_defn::natural_name): New member function.
+	* m2-lang.c (m2_language_data): Remove la_name and
+	la_natural_name initializers.
+	(m2_language::name): New member function.
+	(m2_language::natural_name): New member function.
+	* mi/mi-cmd-var.c (mi_cmd_var_info_expression): Update call to
+	language_defn::natural_name.
+	* objc-lang.c (objc_language_data): Remove la_name and
+	la_natural_name initializers.
+	(objc_language::name): New member function.
+	(objc_language::natural_name): New member function.
+	* opencl-lang.c (opencl_language_data): Remove la_name and
+	la_natural_name initializers.
+	(opencl_language::name): New member function.
+	(opencl_language::natural_name): New member function.
+	* p-lang.c (pascal_language_data): Remove la_name and
+	la_natural_name initializers.
+	(pascal_language::name): New member function.
+	(pascal_language::natural_name): New member function.
+	* rust-lang.c (rust_language_data): Remove la_name and
+	la_natural_name initializers.
+	(rust_language::name): New member function.
+	(rust_language::natural_name): New member function.
+	* symtab.c (lookup_language_this): Update call to
+	language_defn::name.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove la_name_of_this
+	initializer.
+	* ax-gdb.c (gen_expr): Update call to name_of_this.
+	* c-exp.y (classify_name): Likewise.
+	* c-lang.c (c_language_data): Remove la_name_of_this initializer.
+	(cplus_language_data): Likewise.
+	(cplus_language::name_of_this): New member function.
+	(asm_language_data): Remove la_name_of_this initializer.
+	(minimal_language_data): Likewise.
+	* d-lang.c (d_language_data): Likewise.
+	(d_language::name_of_this): New member function.
+	* expprint.c (print_subexp_standard): Update call to name_of_this.
+	* f-lang.c (f_language_data): Remove la_name_of_this initializer.
+	* go-lang.c (go_language_data): Likewise.
+	* language.c (unknown_language_data): Likewise.
+	(unknown_language::name_of_this): New member function.
+	(auto_language_data): Remove la_name_of_this initializer.
+	(auto_language::name_of_this): New member function.
+	* language.h (language_data): Delete la_name_of_this member
+	variable.
+	(language_defn::name_of_this): New member function.
+	* m2-lang.c (m2_language_data): Remove la_name_of_this
+	initializer.
+	* objc-lang.c (objc_language_data): Likewise.
+	(objc_language::name_of_this): New member function.
+	* opencl-lang.c (opencl_language_data): Remove la_name_of_this
+	initializer.
+	* p-lang.c (pascal_language_data): Likewise.
+	(pascal_language::name_of_this): New member function.
+	* rust-lang.c (rust_language_data): Remove la_name_of_this
+	initializer.
+	* symtab.c (lookup_language_this): Update call to name_of_this.
+	(lookup_symbol_aux): Likewise.
+	* valops.c (value_of_this): Likewise.
+
+2020-09-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language_data): Remove
+	la_struct_too_deep_ellipsis initializer.
+	(ada_language::struct_too_deep_ellipsis): New member function.
+	* c-lang.c (c_language_data): Remove la_struct_too_deep_ellipsis
+	initializer.
+	(cplus_language_data): Likewise.
+	(asm_language_data): Likewise.
+	(minimal_language_data): Likewise.
+	* cp-valprint.c (cp_print_value): Update call to
+	struct_too_deep_ellipsis.
+	* d-lang.c (d_language_data): Remove la_struct_too_deep_ellipsis
+	initializer.
+	* f-lang.c (f_language_data): Likewise.
+	(f_language::struct_too_deep_ellipsis): New member function.
+	* go-lang.c (go_language_data): Remove la_struct_too_deep_ellipsis
+	initializer.
+	* language.c (unknown_language_data): Likewise.
+	(auto_language_data): Likewise.
+	* language.h (language_data): Delete la_struct_too_deep_ellipsis
+	member variable.
+	(language_defn::struct_too_deep_ellipsis): New member function.
+	* m2-lang.c (m2_language_data): Remove la_struct_too_deep_ellipsis
+	initializer.Q
+	* objc-lang.c (objc_language_data): Likewise.
+	* opencl-lang.c (opencl_language_data): Likewise.
+	* p-lang.c (pascal_language_data): Likewise.
+	* rust-lang.c (rust_language_data): Likewise.
+	* valprint.c (val_print_check_max_depth): Update call to
+	struct_too_deep_ellipsis.
+
+2020-09-16  Felix Willgerodt  <felix.willgerodt@intel.com>
+
+	* MAINTAINERS (Write After Approval): Add myself.
+
 2020-09-15  Tom Tromey  <tom@tromey.com>
 
 	* f-valprint.c (f_value_print_inner) <case TYPE_CODE_INT>:

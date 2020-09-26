@@ -1,3 +1,41 @@
+2020-09-16  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/26598:
+	* gdb.base/skipcxx.exp: New file.
+	* gdb.base/skipcxx.cc: New file.
+
+2020-09-16  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26617
+	* gdb.dlang/watch-loc.c: Only add .debug_aranges if
+        WITH_DEBUG_SECTIONS is defined.
+	(xstr, str): New macro.
+	(.debug_aranges): Use DMAIN_START_0/1/2 and DMAIN_LENGTH
+	to get start and size of _Dmain.
+	* gdb.dlang/watch-loc.exp: Pass DMAIN_START_0/1/2 and DMAIN_LENGTH
+	using additional_flags.
+
+2020-09-16  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/bp-cmds-sourced-script.c: New file.
+	* gdb.base/bp-cmds-sourced-script.exp: New test.
+	* gdb.base/bp-cmds-sourced-script.gdb: New file.
+
+2020-09-16  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdbserver-support.exp (gdbserver_exit): Make sure we
+	get the gdb prompt after issuing "monitor exit".
+
+2020-09-16  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26624
+	* lib/gdb.exp (gdb_assert): Catch errors in condition evaluation.
+
+2020-09-16  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26618
+	* gdb.tui/new-layout.exp: Escape unbalanced braces.
+
 2020-09-15  Tom Tromey  <tromey@adacore.com>
 
 	PR rust/26197:

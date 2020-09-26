@@ -42,16 +42,6 @@ class innermost_block_tracker;
 
 #define MAX_FORTRAN_DIMS  7	/* Maximum number of F77 array dims.  */
 
-/* range_mode ==
-   range_mode_auto:   range_check set automatically to default of language.
-   range_mode_manual: range_check set manually by user.  */
-
-extern enum range_mode
-  {
-    range_mode_auto, range_mode_manual
-  }
-range_mode;
-
 /* range_check ==
    range_check_on:    Ranges are checked in GDB expressions, producing errors.
    range_check_warn:  Ranges are checked, producing warnings.
@@ -62,16 +52,6 @@ extern enum range_check
     range_check_off, range_check_warn, range_check_on
   }
 range_check;
-
-/* case_mode ==
-   case_mode_auto:   case_sensitivity set upon selection of scope.
-   case_mode_manual: case_sensitivity set only by user.  */
-
-extern enum case_mode
-  {
-    case_mode_auto, case_mode_manual
-  }
-case_mode;
 
 /* array_ordering ==
    array_row_major:     Arrays are in row major order.
@@ -172,118 +152,39 @@ struct language_pass_by_ref_info
 /* Splitting strings into words.  */
 extern const char *default_word_break_characters (void);
 
-/* Structure tying together assorted information about a language.
-
-   As we move over from the old structure based languages to a class
-   hierarchy of languages this structure will continue to contain a
-   mixture of both data and function pointers.
-
-   Once the class hierarchy of languages in place the first task is to
-   remove the function pointers from this structure and convert them into
-   member functions on the different language classes.
-
-   The current plan it to keep the constant data that describes a language
-   in this structure, and have each language pass in an instance of this
-   structure at construction time.  */
-
-struct language_data
-  {
-    /* Name of the language.  */
-
-    const char *la_name;
-
-    /* Natural or official name of the language.  */
-
-    const char *la_natural_name;
-
-    /* its symtab language-enum (defs.h).  */
-
-    enum language la_language;
-
-    /* Default range checking.  */
-
-    enum range_check la_range_check;
-
-    /* Default case sensitivity.  */
-    enum case_sensitivity la_case_sensitivity;
-
-    /* Multi-dimensional array ordering.  */
-    enum array_ordering la_array_ordering;
-
-    /* Style of macro expansion, if any, supported by this language.  */
-    enum macro_expansion la_macro_expansion;
-
-    /* A NULL-terminated array of file extensions for this language.
-       The extension must include the ".", like ".c".  If this
-       language doesn't need to provide any filename extensions, this
-       may be NULL.  */
-
-    const char *const *la_filename_extensions;
-
-    /* Definitions related to expression printing, prefixifying, and
-       dumping.  */
-
-    const struct exp_descriptor *la_exp_desc;
-
-    /* Now come some hooks for lookup_symbol.  */
-
-    /* If this is non-NULL, specifies the name that of the implicit
-       local variable that refers to the current object instance.  */
-
-    const char *la_name_of_this;
-
-    /* True if the symbols names should be stored in GDB's data structures
-       for minimal/partial/full symbols using their linkage (aka mangled)
-       form; false if the symbol names should be demangled first.
-
-       Most languages implement symbol lookup by comparing the demangled
-       names, in which case it is advantageous to store that information
-       already demangled, and so would set this field to false.
-
-       On the other hand, some languages have opted for doing symbol
-       lookups by comparing mangled names instead, for reasons usually
-       specific to the language.  Those languages should set this field
-       to true.
-
-       And finally, other languages such as C or Asm do not have
-       the concept of mangled vs demangled name, so those languages
-       should set this field to true as well, to prevent any accidental
-       demangling through an unrelated language's demangler.  */
-
-    const bool la_store_sym_names_in_linkage_form_p;
-
-    /* Table for printing expressions.  */
-
-    const struct op_print *la_op_print_tab;
-
-    /* Zero if the language has first-class arrays.  True if there are no
-       array values, and array objects decay to pointers, as in C.  */
-
-    char c_style_arrays;
-
-    /* Index to use for extracting the first element of a string.  */
-    char string_lower_bound;
-
-    /* Various operations on varobj.  */
-    const struct lang_varobj_ops *la_varobj_ops;
-
-    /* This string is used by the 'set print max-depth' setting.  When GDB
-       replaces a struct or union (during value printing) that is "too
-       deep" this string is displayed instead.  */
-    const char *la_struct_too_deep_ellipsis;
-
-  };
-
 /* Base class from which all other language classes derive.  */
 
-struct language_defn : language_data
+struct language_defn
 {
-  language_defn (enum language lang, const language_data &init_data)
-    : language_data (init_data)
+  language_defn (enum language lang)
+    : la_language (lang)
   {
     /* We should only ever create one instance of each language.  */
     gdb_assert (languages[lang] == nullptr);
     languages[lang] = this;
+  }
+
+  /* Which language this is.  */
+
+  const enum language la_language;
+
+  /* Name of the language.  */
+
+  virtual const char *name () const = 0;
+
+  /* Natural or official name of the language.  */
+
+  virtual const char *natural_name () const = 0;
+
+  /* Return a vector of file extensions for this language.  The extension
+     must include the ".", like ".c".  If this language doesn't need to
+     provide any filename extensions, this may be an empty vector (which is
+     the default).  */
+
+  virtual const std::vector<const char *> &filename_extensions () const
+  {
+    static const std::vector<const char *> no_extensions;
+    return no_extensions;
   }
 
   /* Print the index of an element of an array.  This default
@@ -552,6 +453,101 @@ struct language_defn : language_data
 
   /* Return true if TYPE is a string type.  */
   virtual bool is_string_type_p (struct type *type) const;
+
+  /* Return a string that is used by the 'set print max-depth' setting.
+     When GDB replaces a struct or union (during value printing) that is
+     "too deep" this string is displayed instead.  The default value here
+     suits most languages.  If overriding then the string here should
+     ideally be similar in style to the default; an opener, three '.', and
+     a closer.  */
+
+  virtual const char *struct_too_deep_ellipsis () const
+  { return "{...}"; }
+
+  /* If this returns non-NULL then the string returned specifies the name
+     of the implicit local variable that refers to the current object
+     instance.  Return NULL (the default) for languages that have no name
+     for the current object instance.  */
+
+  virtual const char *name_of_this () const
+  { return nullptr; }
+
+  /* Return false if the language has first-class arrays.  Return true if
+     there are no array values, and array objects decay to pointers, as in
+     C.  The default is true as currently most supported languages behave
+     in this manor.  */
+
+  virtual bool c_style_arrays_p () const
+  { return true; }
+
+  /* Return the index to use for extracting the first element of a string,
+     or as the lower bound when creating a new string.  The default of
+     choosing 0 or 1 based on C_STYLE_ARRAYS_P works for all currently
+     supported languages except Modula-2.  */
+
+  virtual char string_lower_bound () const
+  { return c_style_arrays_p () ? 0 : 1; }
+
+  /* Returns true if the symbols names should be stored in GDB's data
+     structures for minimal/partial/full symbols using their linkage (aka
+     mangled) form; false if the symbol names should be demangled first.
+
+     Most languages implement symbol lookup by comparing the demangled
+     names, in which case it is advantageous to store that information
+     already demangled, and so would return false, which is the default.
+
+     On the other hand, some languages have opted for doing symbol lookups
+     by comparing mangled names instead, for reasons usually specific to
+     the language.  Those languages should override this function and
+     return true.
+
+     And finally, other languages such as C or Asm do not have the concept
+     of mangled vs demangled name, so those languages should also override
+     this function and return true, to prevent any accidental demangling
+     through an unrelated language's demangler.  */
+
+  virtual bool store_sym_names_in_linkage_form_p () const
+  { return false; }
+
+  /* Default range checking preference.  The return value from this
+     function provides the automatic setting for 'set check range'.  As a
+     consequence a user is free to override this setting if they want.  */
+
+  virtual bool range_checking_on_by_default () const
+  { return false; }
+
+  /* Is this language case sensitive?  The return value from this function
+     provides the automativ setting for 'set case-sensitive', as a
+     consequence, a user is free to override this setting if they want.  */
+
+  virtual enum case_sensitivity case_sensitivity () const
+  { return case_sensitive_on; }
+
+
+  /* Multi-dimensional array ordering.  */
+
+  virtual enum array_ordering array_ordering () const
+  { return array_row_major; }
+
+  /* Style of macro expansion, if any, supported by this language.  The
+     default is no macro expansion.  */
+
+  virtual enum macro_expansion macro_expansion () const
+  { return macro_expansion_no; }
+
+  /* Return a structure containing various operations on varobj specific
+     for this language.  */
+
+  virtual const struct lang_varobj_ops *varobj_ops () const;
+
+  /* Definitions related to expression printing, prefixifying, and
+     dumping.  */
+
+  virtual const struct exp_descriptor *expression_ops () const;
+
+  /* Table for printing expressions.  */
+
+  virtual const struct op_print *opcode_print_table () const = 0;
 
 protected:
 

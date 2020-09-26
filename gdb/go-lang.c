@@ -504,36 +504,24 @@ enum go_primitive_types {
   nr_go_primitive_types
 };
 
-/* Constant data that describes the Go language.  */
-
-extern const struct language_data go_language_data =
-{
-  "go",
-  "Go",
-  language_go,
-  range_check_off,
-  case_sensitive_on,
-  array_row_major,
-  macro_expansion_no,
-  NULL,
-  &exp_descriptor_c,
-  NULL,				/* name_of_this */
-  false,			/* la_store_sym_names_in_linkage_form_p */
-  go_op_print_tab,		/* Expression operators for printing.  */
-  1,				/* C-style arrays.  */
-  0,				/* String lower bound.  */
-  &default_varobj_ops,
-  "{...}"			/* la_struct_too_deep_ellipsis */
-};
-
 /* Class representing the Go language.  */
 
 class go_language : public language_defn
 {
 public:
   go_language ()
-    : language_defn (language_go, go_language_data)
+    : language_defn (language_go)
   { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "go"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "Go"; }
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -637,6 +625,20 @@ public:
 	    && go_classify_struct_type (type) == GO_TYPE_STRING);
   }
 
+  /* See language.h.  */
+
+  bool store_sym_names_in_linkage_form_p () const override
+  { return true; }
+
+  /* See language.h.  */
+
+  const struct exp_descriptor *expression_ops () const override
+  { return &exp_descriptor_c; }
+
+  /* See language.h.  */
+
+  const struct op_print *opcode_print_table () const override
+  { return go_op_print_tab; }
 };
 
 /* Single instance of the Go language class.  */
