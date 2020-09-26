@@ -2231,10 +2231,10 @@ read_and_display_attr_value (unsigned long           attribute,
     case DW_FORM_ref_addr:
       if (dwarf_version == 2)
 	SAFE_BYTE_GET_AND_INC (uvalue, data, pointer_size, end);
-      else if (dwarf_version == 3 || dwarf_version == 4)
+      else if (dwarf_version > 2)
 	SAFE_BYTE_GET_AND_INC (uvalue, data, offset_size, end);
       else
-	error (_("Internal error: DWARF version is not 2, 3 or 4.\n"));
+	error (_("Internal error: DW_FORM_ref_addr is not supported in DWARF version 1.\n"));
 
       break;
 
@@ -3390,6 +3390,10 @@ process_debug_info (struct dwarf_section *           section,
 		  dwarf_vmatoa ("x", compunit.cu_length),
 		  offset_size == 8 ? "64-bit" : "32-bit");
 	  printf (_("   Version:       %d\n"), compunit.cu_version);
+	  if (compunit.cu_version >= 5)
+	    printf (_("   Unit Type:     %s (%x)\n"),
+		    get_DW_UT_name (compunit.cu_unit_type) ?: "???",
+		    compunit.cu_unit_type);
 	  printf (_("   Abbrev Offset: 0x%s\n"),
 		  dwarf_vmatoa ("x", compunit.cu_abbrev_offset));
 	  printf (_("   Pointer Size:  %d\n"), compunit.cu_pointer_size);
@@ -3448,6 +3452,7 @@ process_debug_info (struct dwarf_section *           section,
 	}
 
       if (compunit.cu_unit_type != DW_UT_compile
+	  && compunit.cu_unit_type != DW_UT_partial
 	  && compunit.cu_unit_type != DW_UT_type)
 	{
 	  warn (_("CU at offset %s contains corrupt or "

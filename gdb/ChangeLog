@@ -1,3 +1,110 @@
+2020-09-24  Tom Tromey  <tromey@adacore.com>
+
+	PR tui/26638:
+	* tui/tui-stack.h (struct tui_locator_window) <can_focus>: New
+	method.
+	* tui/tui-data.h (struct tui_win_info) <can_focus>: New method.
+	* tui/tui-data.c (tui_next_win): Exclude non-focusable windows.
+	(tui_prev_win): Rewrite.
+
+2020-09-23  Hannes Domani  <ssbssa@yahoo.de>
+
+	* nat/windows-nat.c (handle_exception): Handle 64bit breakpoints
+	in WOW64 processes as SIGINT.
+	* nat/windows-nat.h: Make wow64_process a shared variable.
+	* windows-nat.c: Remove static wow64_process variable.
+
+2020-09-23  Tom Tromey  <tom@tromey.com>
+
+	PR symtab/25470:
+	* value.c (unpack_long, pack_long, pack_unsigned_long): Handle bit
+	offset and bit size.
+	* printcmd.c (print_scalar_formatted): Handle zero-length
+	integer.
+	(print_scalar_formatted): Use bit_size_differs_p.
+	* gdbtypes.h (enum type_specific_kind) <TYPE_SPECIFIC_INT>: New
+	constant.
+	(union type_specific): <int_stuff>: New member.
+	(struct type) <bit_size_differs_p, bit_size, bit_offset>: New
+	methods.
+	* gdbtypes.c (init_integer_type, init_boolean_type): Initialize
+	TYPE_SPECIFIC_FIELD.
+	(recursive_dump_type, copy_type_recursive): Update.
+	* dwarf2/read.c (read_base_type): Handle DW_AT_bit_size and
+	DW_AT_data_bit_offset.
+
+2020-09-23  Tom Tromey  <tom@tromey.com>
+
+	* utils.h (class gdb_argv): Add move operators.
+	<append>: New methods.
+	* compile/compile.c (build_argc_argv): Remove.
+	(compile_args_argc): Remove.
+	(compile_args_argv): Change type.
+	(set_compile_args): Simplify.
+	(append_args): Remove.
+	(filter_args): Remove argcp parameter.
+	(get_args): Return gdb_argv.  Simplify.
+	(compile_to_object): Update.
+
+2020-09-23  Tom Tromey  <tom@tromey.com>
+
+	* compile/compile-object-run.c (do_module_cleanup)
+	<~do_module_cleanup> :Remove.
+	(do_module_cleanup): Update.
+	* compile/compile-object-load.h (struct munmap_list): Add move
+	assignment operator.
+	<source_file>: Now a std::string.
+	<munmap_list>: Rename.  No longer a pointer.
+	* compile/compile-object-load.c (struct setup_sections_data): Add
+	constructor.
+	<setup_one_section>: Declare.
+	<munmap_list>: Move earlier.
+	<m_bfd>: New member.
+	<m_last_size, m_last_section_first, m_last_prot,
+	m_last_max_alignment>: Rename, add initializers where needed.
+	(setup_sections_data::setup_one_section): Rename from
+	setup_sections.  Update.
+	(compile_object_load): Update.  Don't use bfd_map_over_sections.
+
+2020-09-23  Tom Tromey  <tom@tromey.com>
+
+	* compile/compile-object-run.c (struct do_module_cleanup): Add
+	parameters to constructor.  Update destructor.
+	<source_file, scope, scope_data, out_value_type, out_value_addr,
+	munmap_list_head, objfile_name_string>: Remove.
+	<module>: New member.
+	(do_module_cleanup): Update.
+	(compile_object_run): Update.
+
+2020-09-23  Tom Tromey  <tom@tromey.com>
+
+	* compile/compile.c (eval_compile_command): Update.
+	* compile/compile-object-run.h (compile_object_run): Take a
+	compile_module_up.
+	* compile/compile-object-run.c (compile_object_run): Take a
+	compile_module_up.
+	* compile/compile-object-load.h (struct compile_module): Add
+	constructor, destructor.
+	(compile_module_up): New typedef.
+	(compile_object_load): Return compile_object_up.
+	* compile/compile-object-load.c (compile_object_load): Return
+	compile_module_up.
+
+2020-09-23  Tom Tromey  <tom@tromey.com>
+
+	* compile/compile-object-run.c (struct do_module_cleanup): Add
+	constructor, destructor.
+	<objfile_name_string>: Don't use struct hack.
+	(do_module_cleanup): Use delete.
+	(compile_object_run): Use new.
+
+2020-09-23  Tom Tromey  <tom@tromey.com>
+
+	* compile/compile-cplus-types.c
+	(compile_cplus_convert_struct_or_union): Use std::vector.
+	(compile_cplus_convert_func): Likewise.
+	* compile/compile-c-types.c (convert_func): Use std::vector.
+
 2020-09-21  Tom Tromey  <tromey@adacore.com>
 
 	* sparc-tdep.c (sparc32_skip_prologue): Use
