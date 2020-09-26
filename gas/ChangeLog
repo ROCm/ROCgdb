@@ -1,3 +1,26 @@
+2020-09-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/gas/cfi/reloc-pe-i386.d: Updated.
+	* testsuite/gas/i386/x86-64-w64-pcrel.d: Likewise.
+
+2020-09-15  Alan Modra  <amodra@gmail.com>
+
+	PR 26610
+	* config/tc-arm.c (move_or_literal_pool): Correct extraction of
+	bignum.  Use unsigned "v"
+	(is_double_a_single): Make "v" and "mantissa" unsigned.  Formatting.
+	(double_to_single): Likewise.
+
+2020-09-15  Nick Clifton  <nickc@redhat.com>
+
+	* read.c (s_nop): Preserve the input_line_pointer around the call
+	to md_assemble.
+	* config/tc-s12z.c (md_assemble): Revert previous delta.
+
+2020-09-15  David Faust  <david.faust@oracle.com>
+
+	* config/tc-bpf.h (md_single_noop_insn): Use 'ja 0' for no-op.
+
 2020-09-14  Nick Clifton  <nickc@redhat.com>
 
 	* read.c (s_nop): New function.  Handles the .nop directive.

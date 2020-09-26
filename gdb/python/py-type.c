@@ -157,7 +157,7 @@ typy_get_code (PyObject *self, void *closure)
 {
   struct type *type = ((type_object *) self)->type;
 
-  return PyInt_FromLong (type->code ());
+  return gdb_py_object_from_longest (type->code ()).release ();
 }
 
 /* Helper function for typy_fields which converts a single field to a
@@ -183,8 +183,7 @@ convert_field (struct type *type, int field)
 
       if (type->code () == TYPE_CODE_ENUM)
 	{
-	  arg.reset (gdb_py_long_from_longest (TYPE_FIELD_ENUMVAL (type,
-								   field)));
+	  arg = gdb_py_object_from_longest (TYPE_FIELD_ENUMVAL (type, field));
 	  attrstring = "enumval";
 	}
       else
@@ -192,8 +191,7 @@ convert_field (struct type *type, int field)
 	  if (TYPE_FIELD_LOC_KIND (type, field) == FIELD_LOC_KIND_DWARF_BLOCK)
 	    arg = gdbpy_ref<>::new_reference (Py_None);
 	  else
-	    arg.reset (gdb_py_long_from_longest (TYPE_FIELD_BITPOS (type,
-								    field)));
+	    arg = gdb_py_object_from_longest (TYPE_FIELD_BITPOS (type, field));
 	  attrstring = "bitpos";
 	}
 
@@ -235,7 +233,7 @@ convert_field (struct type *type, int field)
   if (PyObject_SetAttrString (result.get (), "is_base_class", arg.get ()) < 0)
     return NULL;
 
-  arg.reset (PyLong_FromLong (TYPE_FIELD_BITSIZE (type, field)));
+  arg = gdb_py_object_from_longest (TYPE_FIELD_BITSIZE (type, field));
   if (arg == NULL)
     return NULL;
   if (PyObject_SetAttrString (result.get (), "bitsize", arg.get ()) < 0)
@@ -598,11 +596,11 @@ typy_range (PyObject *self, PyObject *args)
       break;
     }
 
-  gdbpy_ref<> low_bound (PyLong_FromLong (low));
+  gdbpy_ref<> low_bound = gdb_py_object_from_longest (low);
   if (low_bound == NULL)
     return NULL;
 
-  gdbpy_ref<> high_bound (PyLong_FromLong (high));
+  gdbpy_ref<> high_bound = gdb_py_object_from_longest (high);
   if (high_bound == NULL)
     return NULL;
 
@@ -725,7 +723,7 @@ typy_get_sizeof (PyObject *self, void *closure)
 
   if (size_varies)
     Py_RETURN_NONE;
-  return gdb_py_long_from_longest (TYPE_LENGTH (type));
+  return gdb_py_object_from_longest (TYPE_LENGTH (type)).release ();
 }
 
 /* Return the alignment of the type represented by SELF, in bytes.  */

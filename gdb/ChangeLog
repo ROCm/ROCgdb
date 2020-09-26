@@ -1,3 +1,124 @@
+2020-09-15  Tom Tromey  <tom@tromey.com>
+
+	* f-valprint.c (f_value_print_inner) <case TYPE_CODE_INT>:
+	Remove.
+
+2020-09-15  Tom Tromey  <tom@tromey.com>
+
+	* rust-lang.c (rust_value_print_inner): Remove TYPE_CODE_MEMBERPTR
+	and TYPE_CODE_METHODPTR cases.
+	* c-valprint.c (c_value_print_memberptr): Move to valprint.c.
+	(c_value_print_inner): Update.
+	* valprint.c (generic_value_print_memberptr): New function, from
+	c_value_print_memberptr.
+	(generic_value_print): Use it.  Call cplus_print_method_ptr.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* python/python-internal.h (PyInt_FromLong): Remove define.
+	* python/py-value.c (convert_value_from_python): Use
+	gdb_py_object_from_longest.
+	* python/py-type.c (typy_get_code): Use
+	gdb_py_object_from_longest.
+	* python/py-symtab.c (salpy_get_line): Use
+	gdb_py_object_from_longest.
+	* python/py-symbol.c (sympy_get_addr_class, sympy_line): Use
+	gdb_py_object_from_longest.
+	* python/py-record.c (recpy_gap_reason_code): Use
+	gdb_py_object_from_longest.
+	* python/py-record-btrace.c (recpy_bt_insn_size)
+	(recpy_bt_func_level, btpy_list_count): Use
+	gdb_py_object_from_longest.
+	* python/py-infthread.c (gdbpy_create_ptid_object): Use
+	gdb_py_object_from_longest.  Fix error handling.
+	* python/py-framefilter.c (bootstrap_python_frame_filters): Use
+	gdb_py_object_from_longest.
+	* python/py-frame.c (frapy_type, frapy_unwind_stop_reason): Use
+	gdb_py_object_from_longest.
+	* python/py-breakpoint.c (bppy_get_type, bppy_get_number)
+	(bppy_get_thread, bppy_get_task, bppy_get_hit_count)
+	(bppy_get_ignore_count): Use gdb_py_object_from_longest.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* python/python.c (gdbpy_parameter_value): Use
+	gdb_py_object_from_ulongest.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* python/py-infevents.c (create_register_changed_event_object):
+	Use gdb_py_object_from_longest.
+	* python/py-exitedevent.c (create_exited_event_object): Use
+	gdb_py_object_from_longest.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* python/python.c (gdbpy_parameter_value): Use
+	gdb_py_object_from_longest.
+	* python/py-type.c (convert_field, typy_range): Use
+	gdb_py_object_from_longest.
+	* python/py-tui.c (gdbpy_tui_width, gdbpy_tui_height): Use
+	gdb_py_object_from_longest.
+	* python/py-lazy-string.c (stpy_get_length): Use
+	gdb_py_object_from_longest.
+	* python/py-infthread.c (thpy_get_num, thpy_get_global_num): Use
+	gdb_py_object_from_longest.
+	* python/py-infevents.c (create_memory_changed_event_object): Use
+	gdb_py_object_from_longest.
+	* python/py-inferior.c (infpy_get_num): Use
+	gdb_py_object_from_longest.
+	(infpy_get_pid): Likewise.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* python/python-internal.h (gdb_py_long_from_ulongest): Remove
+	defines.
+	* python/py-value.c (valpy_long): Use
+	gdb_py_object_from_ulongest.
+	* python/py-symtab.c (salpy_get_pc): Use
+	gdb_py_object_from_ulongest.
+	(salpy_get_last): Likewise.
+	* python/py-record-btrace.c (recpy_bt_insn_pc): Use
+	gdb_py_object_from_ulongest.
+	* python/py-lazy-string.c (stpy_get_address): Use
+	gdb_py_object_from_ulongest.
+	* python/py-frame.c (frapy_pc): Use gdb_py_object_from_ulongest.
+	* python/py-arch.c (archpy_disassemble): Use
+	gdb_py_object_from_ulongest and gdb_py_object_from_longest.  Fix
+	error handling.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* python/python-internal.h (gdb_py_long_from_longest): Remove
+	defines.
+	* python/py-value.c (valpy_long): Use gdb_py_object_from_longest.
+	* python/py-type.c (convert_field, typy_get_sizeof): Use
+	gdb_py_object_from_longest.
+	* python/py-record-btrace.c (btpy_list_index): Use
+	gdb_py_object_from_longest.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* python/python-internal.h (PyInt_FromSsize_t): Remove define.
+	* python/py-record.c (recpy_element_number): Use
+	gdb_py_object_from_longest.
+	(recpy_gap_number): Likewise.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* top.c (ui::ui): Update.
+	(highest_ui_num): Remove.
+	* top.h (struct ui) <num>: Remove.
+
+2020-09-15  Tom Tromey  <tromey@adacore.com>
+
+	* unittests/memory-map-selftests.c (valid_mem_map): Now array.
+	* ui-style.c (ansi_regex_text): Now array.
+	* rust-exp.y (number_regex_text): Now array.
+	* linespec.c (linespec_quote_characters): Now array.
+	* jit.c (jit_break_name, jit_descriptor_name, reader_init_fn_sym):
+	Now arrays.
+
 2020-09-14  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* debuginfod-support.c (debuginfod_client_deleter): New.

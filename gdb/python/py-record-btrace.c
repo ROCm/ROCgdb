@@ -232,7 +232,7 @@ recpy_bt_insn_pc (PyObject *self, void *closure)
   if (insn == NULL)
     return NULL;
 
-  return gdb_py_long_from_ulongest (insn->pc);
+  return gdb_py_object_from_ulongest (insn->pc).release ();
 }
 
 /* Implementation of RecordInstruction.size [int] for btrace.
@@ -246,7 +246,7 @@ recpy_bt_insn_size (PyObject *self, void *closure)
   if (insn == NULL)
     return NULL;
 
-  return PyInt_FromLong (insn->size);
+  return gdb_py_object_from_longest (insn->size).release ();
 }
 
 /* Implementation of RecordInstruction.is_speculative [bool] for btrace.
@@ -342,7 +342,8 @@ recpy_bt_func_level (PyObject *self, void *closure)
     return NULL;
 
   tinfo = ((recpy_element_object *) self)->thread;
-  return PyInt_FromLong (tinfo->btrace.level + func->level);
+  return gdb_py_object_from_longest (tinfo->btrace.level
+				     + func->level).release ();
 }
 
 /* Implementation of RecordFunctionSegment.symbol [gdb.Symbol] for btrace.
@@ -556,7 +557,7 @@ btpy_list_index (PyObject *self, PyObject *value)
   if (index < 0)
     return PyErr_Format (PyExc_ValueError, _("Not in list."));
 
-  return gdb_py_long_from_longest (index);
+  return gdb_py_object_from_longest (index).release ();
 }
 
 /* Implementation of BtraceList.count (self, value) -> int.  */
@@ -566,7 +567,8 @@ btpy_list_count (PyObject *self, PyObject *value)
 {
   /* We know that if an element is in the list, it is so exactly one time,
      enabling us to reuse the "is element of" check.  */
-  return PyInt_FromLong (btpy_list_contains (self, value));
+  return gdb_py_object_from_longest (btpy_list_contains (self,
+							 value)).release ();
 }
 
 /* Python rich compare function to allow for equality and inequality checks

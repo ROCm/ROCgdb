@@ -1731,9 +1731,9 @@ valpy_long (PyObject *self)
     }
 
   if (type->is_unsigned ())
-    return gdb_py_long_from_ulongest (l);
+    return gdb_py_object_from_ulongest (l).release ();
   else
-    return gdb_py_long_from_longest (l);
+    return gdb_py_object_from_longest (l).release ();
 }
 
 /* Implements conversion to float.  */
@@ -1860,7 +1860,7 @@ convert_value_from_python (PyObject *obj)
 	      if (PyErr_ExceptionMatches (PyExc_OverflowError))
 		{
 		  gdbpy_err_fetch fetched_error;
-		  gdbpy_ref<> zero (PyInt_FromLong (0));
+		  gdbpy_ref<> zero = gdb_py_object_from_longest (0);
 
 		  /* Check whether obj is positive.  */
 		  if (PyObject_RichCompareBool (obj, zero.get (), Py_GT) > 0)

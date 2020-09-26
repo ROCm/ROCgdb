@@ -96,8 +96,6 @@
 #define Py_TPFLAGS_CHECKTYPES 0
 
 #define PyInt_Check PyLong_Check
-#define PyInt_FromLong PyLong_FromLong
-#define PyInt_FromSsize_t PyLong_FromSsize_t
 #define PyInt_AsLong PyLong_AsLong
 #define PyInt_AsSsize_t PyLong_AsSsize_t
 
@@ -127,8 +125,6 @@
 #define GDB_PY_LLU_ARG "K"
 typedef PY_LONG_LONG gdb_py_longest;
 typedef unsigned PY_LONG_LONG gdb_py_ulongest;
-#define gdb_py_long_from_longest PyLong_FromLongLong
-#define gdb_py_long_from_ulongest PyLong_FromUnsignedLongLong
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLongLong
 
 #else /* HAVE_LONG_LONG */
@@ -137,8 +133,6 @@ typedef unsigned PY_LONG_LONG gdb_py_ulongest;
 #define GDB_PY_LLU_ARG "K"
 typedef long gdb_py_longest;
 typedef unsigned long gdb_py_ulongest;
-#define gdb_py_long_from_longest PyLong_FromLong
-#define gdb_py_long_from_ulongest PyLong_FromUnsignedLong
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLong
 
 #endif /* HAVE_LONG_LONG */
