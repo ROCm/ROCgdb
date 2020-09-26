@@ -147,7 +147,7 @@ struct rocm_target_ops final : public target_ops
 
   void async (int enable) override;
 
-  ptid_t wait (ptid_t, struct target_waitstatus *, int) override;
+  ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
   void resume (ptid_t, int, enum gdb_signal) override;
   void commit_resume () override;
   void stop (ptid_t ptid) override;
@@ -1010,7 +1010,7 @@ rocm_process_event_queue (amd_dbgapi_event_kind_t until_event_kind)
 
 ptid_t
 rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
-                       int target_options)
+                       target_wait_flags target_options)
 {
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
