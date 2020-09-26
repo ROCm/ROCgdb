@@ -1,3 +1,133 @@
+2020-09-18  Pedro Alves  <pedro@palves.net>
+
+	PR gdb/26631
+	* gdb.multi/multi-target-thread-find.exp: New file.
+
+2020-09-18  Pedro Alves  <pedro@palves.net>
+
+	* gdb.multi/multi-target-continue.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-info-inferiors.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-interrupt.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-no-resumed.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target-ping-pong-next.exp: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target.exp.tcl: New file, factored out from
+	multi-target.exp.
+	* gdb.multi/multi-target.exp: Delete.
+
+2020-09-18  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/array-slices.exp: Add missing message data.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.cp/call-c-1.c (foo) [__cplusplus]: Add extern "C".
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.python/py-frame-inline.exp: Adjust to optionally expect a
+	full prototype.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.python/py-as-string.c: Add cast.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/sizeof.c (fill): Add cast.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/share-env-with-gdbserver.c (main): Add cast.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/prologue.c [__cplusplus] (marker): Explicitly specify
+	linkage name.
+	* gdb.base/prologue.exp: Use print /d.
+	* gdb.base/symbol-alias.exp: Handle C++ output.
+	* gdb.base/symbol-alias2.c: Handle C++ output.
+	[__cplusplus] (func): Explicitly specify linkage name.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.python/py-nested-maps.c (struct key_t): Rename to...
+	(struct my_key_t): ... this.  Adjust all references.
+	(struct value_t): Rename to ...
+	(struct my_value_t): ... this.  Adjust all references.
+	(create_map, add_map_element, create_map_map)
+	(add_map_map_element): Add casts.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.python/py-framefilter-mi.c (funca): Add casts.
+	* gdb.python/py-framefilter.c.c (funca, func2): Add casts.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.mi/var-cmd.c (do_anonymous_type_tests): Add cast.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/exprs.c: Replace 'this' with 'self' throughout.
+	* gdb.base/ptype.c: : Replace 'this' with 'self' throughout.
+	(charfoo, intfoo): Define full prototype.
+	* gdb.base/ptype1.c (charfoo): Define full prototype.
+	* gdb.base/setvar.c: Replace 'this' with 'self' throughout.
+	* gdb.base/whatis.c: Replace 'this' with 'self' throughout.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/charset.c [__cplusplus] (wchar_t, char16_t, char32_t):
+	Don't define.
+	(utf_32_string): Compile for both C and C++.
+	* gdb.base/charset.exp: Use "print /d".
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/watchpoint.c (buf): Make it 31 bytes.
+	(nullptr): Rename to ...
+	(null_ptr): ... this.
+	* gdb.base/watchpoint.exp: Adjust to rename.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/printcmds.c (three, flag_enum_without_zero)
+	(three_not_flag): Add casts.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/examine-backward.c (Barrier, TestStrings): Now unsigned
+	char array.
+	(main): Add references to Barrier, TestStrings, TestStringsH and
+	TestStringsW.
+	* gdb.base/examine-backward.exp: Issue "set print asm-demangle on"
+	and expect a full prototype in C++.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/nested-addr.c (main): Add cast.
+	* gdb.base/nested-addr.exp: Use "print /d".
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/break.exp (func): New.  Use it throughout when
+	expecting a function name.
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/display.exp: Issue "set print asm-demangle on".
+
+2020-09-17  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/find.c: Include <string.h>.
+	(init_bufs): Add cast.
+	* gdb.base/find.exp: Issue "set print asm-demangle on".
+
 2020-09-16  Tom Tromey  <tromey@adacore.com>
 
 	PR gdb/26598:
