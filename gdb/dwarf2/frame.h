@@ -83,6 +83,7 @@ struct dwarf2_frame_state_reg
 			 int regnum);
   } loc;
   enum dwarf2_frame_reg_rule how;
+  bool evaluated;
 };
 
 enum cfa_how_kind
@@ -102,9 +103,9 @@ struct dwarf2_frame_state_reg_info
 
   /* Copy constructor.  */
   dwarf2_frame_state_reg_info (const dwarf2_frame_state_reg_info &src)
-    : reg (src.reg), cfa_offset (src.cfa_offset),
-      cfa_reg (src.cfa_reg), cfa_how (src.cfa_how), cfa_exp (src.cfa_exp),
-      prev (src.prev)
+    : reg (src.reg), cfa_offset (src.cfa_offset), cfa_reg (src.cfa_reg),
+      cfa_aspace (src.cfa_aspace), cfa_how (src.cfa_how),
+      cfa_exp (src.cfa_exp), prev (src.prev)
   {
   }
 
@@ -119,8 +120,8 @@ struct dwarf2_frame_state_reg_info
   /* Move constructor.  */
   dwarf2_frame_state_reg_info (dwarf2_frame_state_reg_info &&rhs) noexcept
     : reg (std::move (rhs.reg)), cfa_offset (rhs.cfa_offset),
-      cfa_reg (rhs.cfa_reg), cfa_how (rhs.cfa_how), cfa_exp (rhs.cfa_exp),
-      prev (rhs.prev)
+      cfa_reg (rhs.cfa_reg), cfa_aspace (rhs.cfa_aspace),
+      cfa_how (rhs.cfa_how), cfa_exp (rhs.cfa_exp), prev (rhs.prev)
   {
     rhs.prev = nullptr;
   }
@@ -141,6 +142,7 @@ struct dwarf2_frame_state_reg_info
 
   LONGEST cfa_offset = 0;
   ULONGEST cfa_reg = 0;
+  ULONGEST cfa_aspace = 0;
   enum cfa_how_kind cfa_how = CFA_UNSET;
   const gdb_byte *cfa_exp = NULL;
 
@@ -155,6 +157,7 @@ private:
 
     swap (lhs.reg, rhs.reg);
     swap (lhs.cfa_offset, rhs.cfa_offset);
+    swap (lhs.cfa_aspace, rhs.cfa_aspace);
     swap (lhs.cfa_reg, rhs.cfa_reg);
     swap (lhs.cfa_how, rhs.cfa_how);
     swap (lhs.cfa_exp, rhs.cfa_exp);

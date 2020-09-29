@@ -90,6 +90,10 @@ private:
   void push (dwarf_entry *value);
   bool stack_empty_p () const;
   dwarf_entry *add_piece (ULONGEST bit_size, ULONGEST bit_offset);
+  dwarf_entry *create_select_composite (ULONGEST piece_bit_size,
+					ULONGEST pieces_count);
+  dwarf_entry *create_extend_composite (ULONGEST piece_bit_size,
+					ULONGEST pieces_count);
   void execute_stack_op (const gdb_byte *op_ptr, const gdb_byte *op_end);
   void pop ();
   dwarf_entry *fetch (int n);
@@ -175,5 +179,8 @@ extern const gdb_byte *safe_read_sleb128 (const gdb_byte *buf,
 
 extern const gdb_byte *safe_skip_leb128 (const gdb_byte *buf,
 					 const gdb_byte *buf_end);
+
+extern CORE_ADDR aspace_address_to_flat_address (CORE_ADDR address,
+						 unsigned int address_space);
 
 #endif /* dwarf2expr.h */
