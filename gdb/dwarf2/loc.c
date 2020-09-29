@@ -1835,6 +1835,7 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	case DW_OP_constu:
 	case DW_OP_plus_uconst:
 	case DW_OP_piece:
+	case DW_OP_LLVM_offset_constu:
 	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
 	  break;
 
@@ -1843,6 +1844,8 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	  break;
 
 	case DW_OP_bit_piece:
+	case DW_OP_LLVM_select_bit_piece:
+	case DW_OP_LLVM_extend:
 	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
 	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
 	  break;
@@ -1950,6 +1953,8 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	case DW_OP_GNU_parameter_ref:
 	case DW_OP_regval_type:
 	case DW_OP_GNU_regval_type:
+	case DW_OP_LLVM_call_frame_entry_reg:
+	case DW_OP_LLVM_aspace_bregx:
 	  symbol_needs = SYMBOL_NEEDS_FRAME;
 	  break;
 
@@ -3563,6 +3568,48 @@ disassemble_dwarf_expression (struct ui_file *stream,
 					 gdbarch_byte_order (arch));
 	  data += offset_size;
 	  fprintf_filtered (stream, " offset %s", phex_nz (ul, offset_size));
+	  break;
+
+	case DW_OP_LLVM_offset_constu:
+	  data = safe_read_uleb128 (data, end, &ul);
+	  fprintf_filtered (stream, " %s", pulongest (ul));
+	  break;
+
+	case DW_OP_LLVM_select_bit_piece:
+	  {
+	    uint64_t count;
+
+	    data = safe_read_uleb128 (data, end, &ul);
+	    data = safe_read_uleb128 (data, end, &count);
+	    fprintf_filtered (stream, " piece size %s (bits) pieces count %s",
+			      pulongest (ul), pulongest (count));
+	  }
+	  break;
+
+	case DW_OP_LLVM_extend:
+	  {
+	    uint64_t count;
+
+	    data = safe_read_uleb128 (data, end, &ul);
+	    data = safe_read_uleb128 (data, end, &count);
+	    fprintf_filtered (stream, " piece size %s (bits) pieces count %s",
+	                      pulongest (ul), pulongest (count));
+	  }
+	  break;
+
+	case DW_OP_LLVM_call_frame_entry_reg:
+	  data = safe_read_uleb128 (data, end, &ul);
+	  fprintf_filtered (stream, " register %s [$%s]",
+			    pulongest (ul), locexpr_regname (arch, (int) ul));
+	  break;
+
+	case DW_OP_LLVM_aspace_bregx:
+	  data = safe_read_uleb128 (data, end, &ul);
+	  data = safe_read_sleb128 (data, end, &l);
+	  fprintf_filtered (stream, " register %s [$%s] offset %s",
+			    pulongest (ul),
+			    locexpr_regname (arch, (int) ul),
+			    plongest (l));
 	  break;
 	}
 
