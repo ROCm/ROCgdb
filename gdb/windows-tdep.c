@@ -435,7 +435,7 @@ static const struct lval_funcs tlb_value_funcs =
 static struct value *
 tlb_make_value (struct gdbarch *gdbarch, struct internalvar *var, void *ignore)
 {
-  if (target_has_stack && inferior_ptid != null_ptid)
+  if (target_has_stack () && inferior_ptid != null_ptid)
     {
       struct type *type = windows_get_tlb_type (gdbarch);
       return allocate_computed_value (type, &tlb_value_funcs, NULL);
@@ -902,7 +902,7 @@ windows_solib_create_inferior_hook (int from_tty)
     }
   CORE_ADDR tlb;
   gdb_byte buf[8];
-  if (target_has_execution
+  if (target_has_execution ()
       && target_get_tib_address (inferior_ptid, &tlb)
       && !target_read_memory (tlb + peb_offset, buf, ptr_bytes))
     {

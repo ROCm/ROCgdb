@@ -170,17 +170,7 @@ show_targetdebug (struct ui_file *file, int from_tty,
 }
 
 int
-target_has_all_memory_1 (void)
-{
-  for (target_ops *t = current_top_target (); t != NULL; t = t->beneath ())
-    if (t->has_all_memory ())
-      return 1;
-
-  return 0;
-}
-
-int
-target_has_memory_1 (void)
+target_has_memory ()
 {
   for (target_ops *t = current_top_target (); t != NULL; t = t->beneath ())
     if (t->has_memory ())
@@ -190,7 +180,7 @@ target_has_memory_1 (void)
 }
 
 int
-target_has_stack_1 (void)
+target_has_stack ()
 {
   for (target_ops *t = current_top_target (); t != NULL; t = t->beneath ())
     if (t->has_stack ())
@@ -200,7 +190,7 @@ target_has_stack_1 (void)
 }
 
 int
-target_has_registers_1 (void)
+target_has_registers ()
 {
   for (target_ops *t = current_top_target (); t != NULL; t = t->beneath ())
     if (t->has_registers ())
@@ -210,8 +200,11 @@ target_has_registers_1 (void)
 }
 
 bool
-target_has_execution_1 (inferior *inf)
+target_has_execution (inferior *inf)
 {
+  if (inf == nullptr)
+    inf = current_inferior ();
+
   for (target_ops *t = inf->top_target ();
        t != nullptr;
        t = inf->find_target_beneath (t))
@@ -219,12 +212,6 @@ target_has_execution_1 (inferior *inf)
       return true;
 
   return false;
-}
-
-int
-target_has_execution_current (void)
-{
-  return target_has_execution_1 (current_inferior ());
 }
 
 /* This is used to implement the various target commands.  */
@@ -535,7 +522,7 @@ default_get_ada_task_ptid (struct target_ops *self, long lwp, long tid)
 static enum exec_direction_kind
 default_execution_direction (struct target_ops *self)
 {
-  if (!target_can_execute_reverse)
+  if (!target_can_execute_reverse ())
     return EXEC_FORWARD;
   else if (!target_can_async_p ())
     return EXEC_FORWARD;
@@ -1924,12 +1911,12 @@ target_preopen (int from_tty)
   if (current_inferior ()->pid != 0)
     {
       if (!from_tty
-	  || !target_has_execution
+	  || !target_has_execution ()
 	  || query (_("A program is being debugged already.  Kill it? ")))
 	{
 	  /* Core inferiors actually should be detached, not
 	     killed.  */
-	  if (target_has_execution)
+	  if (target_has_execution ())
 	    target_kill ();
 	  else
 	    target_detach (current_inferior (), 0);
@@ -3942,7 +3929,7 @@ static void
 set_target_permissions (const char *args, int from_tty,
 			struct cmd_list_element *c)
 {
-  if (target_has_execution)
+  if (target_has_execution ())
     {
       update_target_permissions ();
       error (_("Cannot change this setting while the inferior is running."));

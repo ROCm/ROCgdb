@@ -1,3 +1,24 @@
+2020-09-27  Tom Tromey  <tom@tromey.com>
+
+	* gdb.tui/new-layout.exp: Use with_test_prefix.
+
+2020-09-26  Gareth Rees <grees@undo.io>  (tiny change)
+
+	PR python/26586
+	* gdb.python/python.exp: add test cases for the from_tty
+	argument to gdb.execute.
+
+2020-09-25  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/infcall-nested-structs.exp.tcl: Add
+	additional_flags=-Wno-tautological-compare for C++
+	tests when compiling using Clang.
+
+2020-09-25  Gary Benson <gbenson@redhat.com>
+
+	* lib/gdb.exp (gdb_compile): Pass "-x c++" earlier, and only
+	for .c files.
+
 2020-09-24  Tom Tromey  <tromey@adacore.com>
 
 	PR tui/26638:

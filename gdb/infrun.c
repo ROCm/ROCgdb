@@ -219,7 +219,7 @@ static void
 set_non_stop (const char *args, int from_tty,
 	      struct cmd_list_element *c)
 {
-  if (target_has_execution)
+  if (target_has_execution ())
     {
       non_stop_1 = non_stop;
       error (_("Cannot change this setting while the inferior is running."));
@@ -248,7 +248,7 @@ static void
 set_observer_mode (const char *args, int from_tty,
 		   struct cmd_list_element *c)
 {
-  if (target_has_execution)
+  if (target_has_execution ())
     {
       observer_mode_1 = observer_mode;
       error (_("Cannot change this setting while the inferior is running."));
@@ -1890,7 +1890,7 @@ displaced_step_fixup (thread_info *event_thread, enum gdb_signal signal)
   if (signal == GDB_SIGNAL_TRAP
       && !(target_stopped_by_watchpoint ()
 	   && (gdbarch_have_nonsteppable_watchpoint (displaced->step_gdbarch)
-	       || target_have_steppable_watchpoint)))
+	       || target_have_steppable_watchpoint ())))
     {
       /* Fix up the resulting state.  */
       gdbarch_displaced_step_fixup (displaced->step_gdbarch,
@@ -2100,7 +2100,7 @@ show_scheduler_mode (struct ui_file *file, int from_tty,
 static void
 set_schedlock_func (const char *args, int from_tty, struct cmd_list_element *c)
 {
-  if (!target_can_lock_scheduler)
+  if (!target_can_lock_scheduler ())
     {
       scheduler_mode = schedlock_off;
       error (_("Target '%s' cannot support this command."), target_shortname);
@@ -2812,7 +2812,7 @@ thread_still_needs_step_over (struct thread_info *tp)
     what |= STEP_OVER_BREAKPOINT;
 
   if (tp->stepping_over_watchpoint
-      && !target_have_steppable_watchpoint)
+      && !target_have_steppable_watchpoint ())
     what |= STEP_OVER_WATCHPOINT;
 
   return what;
@@ -2885,7 +2885,7 @@ check_multi_target_resumption (process_stratum_target *resume_target)
 	{
 	  switch_to_inferior_no_thread (inf);
 
-	  if (!target_has_execution)
+	  if (!target_has_execution ())
 	    continue;
 
 	  process_stratum_target *proc_target
@@ -3309,7 +3309,7 @@ typedef void (*for_each_just_stopped_thread_callback_func)
 static void
 for_each_just_stopped_thread (for_each_just_stopped_thread_callback_func func)
 {
-  if (!target_has_execution || inferior_ptid == null_ptid)
+  if (!target_has_execution () || inferior_ptid == null_ptid)
     return;
 
   if (target_is_non_stop_p ())
@@ -5939,7 +5939,7 @@ handle_signal_stop (struct execution_control_state *ecs)
   /* If necessary, step over this watchpoint.  We'll be back to display
      it in a moment.  */
   if (stopped_by_watchpoint
-      && (target_have_steppable_watchpoint
+      && (target_have_steppable_watchpoint ()
 	  || gdbarch_have_nonsteppable_watchpoint (gdbarch)))
     {
       /* At this point, we are stopped at an instruction which has
@@ -8152,7 +8152,7 @@ print_stop_event (struct ui_out *uiout, bool displays)
 void
 maybe_remove_breakpoints (void)
 {
-  if (!breakpoints_should_be_inserted_now () && target_has_execution)
+  if (!breakpoints_should_be_inserted_now () && target_has_execution ())
     {
       if (remove_breakpoints ())
 	{
@@ -8308,7 +8308,7 @@ normal_stop (void)
      informing of a stop.  */
   if (!non_stop
       && previous_inferior_ptid != inferior_ptid
-      && target_has_execution
+      && target_has_execution ()
       && last.kind != TARGET_WAITKIND_SIGNALLED
       && last.kind != TARGET_WAITKIND_EXITED
       && last.kind != TARGET_WAITKIND_NO_RESUMED)
@@ -8413,7 +8413,7 @@ normal_stop (void)
 
   annotate_stopped ();
 
-  if (target_has_execution)
+  if (target_has_execution ())
     {
       if (last.kind != TARGET_WAITKIND_SIGNALLED
 	  && last.kind != TARGET_WAITKIND_EXITED
@@ -8849,7 +8849,7 @@ static struct value *
 siginfo_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 		    void *ignore)
 {
-  if (target_has_stack
+  if (target_has_stack ()
       && inferior_ptid != null_ptid
       && gdbarch_get_siginfo_type_p (gdbarch))
     {
@@ -8929,7 +8929,7 @@ public:
 
     /* The inferior can be gone if the user types "print exit(0)"
        (and perhaps other times).  */
-    if (target_has_execution)
+    if (target_has_execution ())
       /* NB: The register write goes through to the target.  */
       regcache->restore (registers ());
   }
@@ -9084,7 +9084,7 @@ restore_infcall_control_state (struct infcall_control_state *inf_status)
   stop_stack_dummy = inf_status->stop_stack_dummy;
   stopped_by_random_signal = inf_status->stopped_by_random_signal;
 
-  if (target_has_stack)
+  if (target_has_stack ())
     {
       /* The point of the try/catch is that if the stack is clobbered,
          walking the stack might encounter a garbage pointer and
@@ -9151,7 +9151,7 @@ static void
 set_exec_direction_func (const char *args, int from_tty,
 			 struct cmd_list_element *cmd)
 {
-  if (target_can_execute_reverse)
+  if (target_can_execute_reverse ())
     {
       if (!strcmp (exec_direction, exec_forward))
 	execution_direction = EXEC_FORWARD;

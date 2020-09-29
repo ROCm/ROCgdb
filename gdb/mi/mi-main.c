@@ -321,7 +321,7 @@ exec_reverse_continue (char **argv, int argc)
   if (dir == EXEC_REVERSE)
     error (_("Already in reverse mode."));
 
-  if (!target_can_execute_reverse)
+  if (!target_can_execute_reverse ())
     error (_("Target %s does not support this command."), target_shortname);
 
   scoped_restore save_exec_dir = make_scoped_restore (&execution_direction,
@@ -1150,7 +1150,7 @@ mi_cmd_data_write_register_values (const char *command, char **argv, int argc)
     error (_("-data-write-register-values: Usage: -data-write-register-"
 	     "values <format> [<regnum1> <value1>...<regnumN> <valueN>]"));
 
-  if (!target_has_registers)
+  if (!target_has_registers ())
     error (_("-data-write-register-values: No registers."));
 
   if (!(argc - 1))
@@ -1684,7 +1684,7 @@ mi_cmd_list_target_features (const char *command, char **argv, int argc)
       ui_out_emit_list list_emitter (uiout, "features");
       if (mi_async_p ())
 	uiout->field_string (NULL, "async");
-      if (target_can_execute_reverse)
+      if (target_can_execute_reverse ())
 	uiout->field_string (NULL, "reverse");
       return;
     }
