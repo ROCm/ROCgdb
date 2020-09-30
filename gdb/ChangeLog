@@ -1,3 +1,202 @@
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (lookup_dwo_id, get_type_unit_group)
+	(read_file_scope, dwarf2_get_pc_bounds)
+	(dwarf2_record_block_ranges, dwarf2_add_field, get_alignment)
+	(read_structure_type, handle_struct_member_die)
+	(read_enumeration_type, read_array_type, read_set_type)
+	(read_tag_pointer_type, read_tag_reference_type)
+	(read_subroutine_type, read_base_type, read_subrange_type)
+	(read_full_die_1, partial_die_info::read)
+	(partial_die_info::read, by, new_symbol)
+	(dwarf2_const_value_data, dwarf2_const_value_attr)
+	(dump_die_shallow, dwarf2_fetch_constant_bytes)
+	(prepare_one_comp_unit): Update.
+	* dwarf2/attribute.h (DW_UNSND): Remove.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_func_scope, prototyped_function_p)
+	(read_subroutine_type, partial_die_info::read)
+	(dwarf2_flag_true_p, new_symbol, dump_die_shallow)
+	(dwarf2_add_member_fn): Update.
+	* dwarf2/attribute.h (struct attribute) <as_boolean>: Declare.
+	* dwarf2/attribute.c (attribute::as_boolean): New method.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_add_field, dwarf2_add_member_fn): Update.
+	* dwarf2/attribute.h (struct attribute) <as_virtuality>: New
+	method.
+	* dwarf2/attribute.c (attribute::as_virtuality): New method.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/die.h (struct die_info) <addr_base, ranges_base>: Check
+	the attribute's form.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (is_valid_DW_AT_defaulted): Move to attribute.c.
+	(dwarf2_add_member_fn): Update.
+	* dwarf2/attribute.h (struct attribute) <defaulted>: Declare.
+	* dwarf2/attribute.c (attribute::defaulted): New method, from
+	is_valid_DW_AT_defaulted.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dw2_get_file_names_reader)
+	(dwarf2_build_include_psymtabs, handle_DW_AT_stmt_list)
+	(dwarf2_cu::setup_type_unit_groups, fill_in_loclist_baton)
+	(dwarf2_symbol_mark_computed): Use as_unsigned.
+	* dwarf2/attribute.h (struct attribute) <as_unsigned>: New
+	method.
+	<form_is_section_offset>: Update comment.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_access_attribute): Rename from
+	dwarf2_default_access_attribute.  Look up attribute.
+	(dwarf2_add_field, dwarf2_add_type_defn, dwarf2_add_member_fn):
+	Update.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (skip_one_die): Update.
+	(read_full_die_1): Change how reprocessing is done.
+	(partial_die_info::read): Update.
+	(read_attribute_value): Remove need_reprocess parameter.
+	(read_attribute): Likewise.
+	* dwarf2/attribute.h (struct attribute) <requires_reprocessing_p>:
+	New method.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_attribute_reprocess, read_attribute_value)
+	(dwarf2_const_value_attr, dump_die_shallow)
+	(dwarf2_fetch_constant_bytes): Update.
+	* dwarf2/attribute.h (struct attribute) <form_is_ref>: Update
+	comment.
+	<set_address>: New method.
+	(DW_ADDR): Remove.
+	* dwarf2/attribute.c (attribute::form_is_ref): Update comment.
+	(attribute::as_string, attribute::as_address): Add assert.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_cutu_die_from_dwo): Use OBSTACK_ZALLOC.
+	(read_attribute_reprocess, read_attribute_value): Update.
+	(read_attribute): Clear requires_reprocessing.
+	* dwarf2/attribute.h (struct attribute) <as_unsigned_reprocess,
+	form_requires_reprocessing>: New methods.
+	<string_init>: Clear requires_reprocessing.
+	<set_unsigned_reprocess>: New method.
+	<name>: Shrink by one bit.
+	<requires_reprocessing>: New member.
+	* dwarf2/attribute.c (attribute::form_requires_reprocessing): New
+	method.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_attribute_value): Update.
+	* dwarf2/attribute.h (struct attribute) <form_is_unsigned,
+	set_unsigned>: New methods.
+	* dwarf2/attribute.c (attribute::form_is_unsigned): New method.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (get_alignment, read_array_order)
+	(read_attribute_value, dwarf2_const_value_attr)
+	(dump_die_shallow, dwarf2_fetch_constant_bytes): Update.
+	* dwarf2/attribute.h (struct attribute) <as_signed, set_signed>:
+	New methods.
+	(DW_SND): Remove.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_attribute_value, lookup_die_type)
+	(dump_die_shallow, follow_die_sig, get_DW_AT_signature_type):
+	Update.
+	* dwarf2/attribute.h (struct attribute) <as_signature,
+	set_signature>: New methods.
+	(DW_SIGNATURE): Remove.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_call_site_scope)
+	(handle_data_member_location, dwarf2_add_member_fn)
+	(mark_common_block_symbol_computed, attr_to_dynamic_prop)
+	(partial_die_info::read, read_attribute_value)
+	(var_decode_location, dwarf2_const_value_attr, dump_die_shallow)
+	(dwarf2_fetch_die_loc_sect_off, dwarf2_fetch_constant_bytes)
+	(dwarf2_symbol_mark_computed): Update.
+	* dwarf2/attribute.h (struct attribute) <as_block, set_block>: New
+	methods.
+	(DW_BLOCK): Remove.
+	* dwarf2/attribute.c (attribute::form_is_block): Add
+	DW_FORM_data16.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_cutu_die_from_dwo)
+	(read_attribute_reprocess, read_attribute_value, read_attribute)
+	(dwarf2_const_value_attr, dwarf2_name, dump_die_shallow)
+	(dwarf2_fetch_constant_bytes): Update.
+	* dwarf2/attribute.h (struct attribute) <form_is_string>: Declare.
+	<set_string_noncanonical, set_string_canonical>: New methods.
+	<string_is_canonical>: Update comment.
+	<canonical_string_p>: Add assert.
+	(DW_STRING, DW_STRING_IS_CANONICAL): Remove.
+	* dwarf2/attribute.c (attribute::form_is_string): New method.
+	(attribute::string): Use it.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (anonymous_struct_prefix, dwarf2_name)
+	(dump_die_shallow): Use canonical_string_p.
+	* dwarf2/attribute.h (struct attribute) <canonical_string_p>: New
+	method.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (partial_die_info::read)
+	(dwarf2_const_value_attr, anonymous_struct_prefix, )
+	(dwarf2_name, dwarf2_fetch_constant_bytes): Use
+	attribute::as_string.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/attribute.c (attribute::address): Don't use DW_UNSND or
+	DW_ADDR.
+	(attribute::string): Don't use DW_STRING.
+	(attribute::get_ref_die_offset): Don't use DW_UNSND.
+	(attribute::constant_value): Don't use DW_UNSND or DW_SND.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_find_base_address, read_call_site_scope)
+	(dwarf2_get_pc_bounds, dwarf2_record_block_ranges)
+	(partial_die_info::read, dwarf2_string_attr, new_symbol): Update.
+	* dwarf2/attribute.h (struct attribute): Rename methods.
+	* dwarf2/attribute.c (attribute::as_address): Rename from
+	value_as_address.
+	(attribute::as_string): Rename from value_as_string.
+
+2020-09-29  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (partial_die_info::read) <case
+	DW_AT_linkage_name>: Use value_as_string.
+	(dwarf2_string_attr): Use value_as_string.
+	* dwarf2/attribute.h (struct attribute) <value_as_string>: Declare
+	method.
+	* dwarf2/attribute.c (attribute::value_as_string): New method.
+
+2020-09-29  Pedro Alves  <pedro@palves.net>
+
+	* unittests/enum-flags-selftests.c: Check whether __GNUC__ is
+	defined before using '#pragma GCC diagnostic' instead of checking
+	__clang__.
+
 2020-09-28  Tom Tromey  <tom@tromey.com>
 
 	* infrun.c (displaced_step_fixup, thread_still_needs_step_over)
