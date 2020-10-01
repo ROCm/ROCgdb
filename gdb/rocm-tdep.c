@@ -255,7 +255,7 @@ target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
     error (_ ("amd_dbgapi_dispatch_get_info for dispatch_%ld failed "),
            dispatch_id.handle);
 
-  return string_printf ("AMDGPU Dispatch %ld:%ld:%ld (PID %ld)",
+  return string_printf ("AMDGPU Dispatch %ld:%ld:%ld (PKID %ld)",
                         agent_id.handle, queue_id.handle, dispatch_id.handle,
                         os_id);
 }
