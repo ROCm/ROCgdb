@@ -22417,8 +22417,8 @@ For example,
 
 @smallexample
 (@value{GDBP}) info dispatches -full
-  Id   Target Id                     Grid      Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
-* 1    AMDGPU Dispatch 1:1:1 (PID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
+  Id   Target Id                      Grid      Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
+* 1    AMDGPU Dispatch 1:1:1 (PKID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
 @end smallexample
 
 @item queue find @var{regexp}
@@ -26661,7 +26661,7 @@ The @acronym{AMD GPU} dispatch target identifier @var{dispatch_systag} string
 has the following format:
 
 @smallexample
-AMDGPU Dispatch @var{agent-id}:@var{queue-id}:@var{dispatch-id} (PID @var{target-packet-id})
+AMDGPU Dispatch @var{agent-id}:@var{queue-id}:@var{dispatch-id} (PKID @var{target-packet-id})
 @end smallexample
 
 It is used in the @samp{Target ID} column of the @samp{info dispatches} command
