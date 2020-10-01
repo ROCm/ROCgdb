@@ -1913,7 +1913,7 @@ info_agents_command (const char *args, int from_tty)
 
       for (auto &&agent_id : agents)
         {
-          ui_out_emit_tuple tuple_emitter (uiout, "InfoRocmAgentsRow");
+          ui_out_emit_tuple tuple_emitter (uiout, nullptr);
 
           /* current  */
           if (!uiout->is_mi_like_p ())
@@ -2093,7 +2093,7 @@ info_queues_command (const char *args, int from_tty)
 
       for (auto &&queue_id : queues)
         {
-          ui_out_emit_tuple tuple_emitter (uiout, "InfoRocmQueuesRow");
+          ui_out_emit_tuple tuple_emitter (uiout, nullptr);
 
           if (!uiout->is_mi_like_p ())
             {
@@ -2498,7 +2498,7 @@ info_dispatches_command (const char *args, int from_tty)
 
       for (auto &&dispatch_id : dispatches)
         {
-          ui_out_emit_tuple tuple_emitter (uiout, "InfoRocmDispatchesRow");
+          ui_out_emit_tuple tuple_emitter (uiout, nullptr);
 
           if (!uiout->is_mi_like_p ())
             {
@@ -2665,7 +2665,7 @@ info_dispatches_command (const char *args, int from_tty)
 
           auto msymbol
               = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
-          if (msymbol.minsym)
+          if (msymbol.minsym && !uiout->is_mi_like_p ())
             uiout->field_string ("kernel-function",
                                  msymbol.minsym->print_name ());
           else
