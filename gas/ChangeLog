@@ -1,3 +1,37 @@
+2020-09-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/26685
+	* config/tc-i386.c (process_suffix): Check the register operand
+	for the address size prefix if the memory operand is symbol(%rip).
+	* testsuite/gas/i386/x86-64-enqcmd.s: Add tests with RIP-relative
+	addressing.
+	* testsuite/gas/i386/x86-64-movdir.s: Likewise.
+	* testsuite/gas/i386/x86-64-enqcmd-intel.d: Updated.
+	* testsuite/gas/i386/x86-64-enqcmd.d: Likewise.
+	* testsuite/gas/i386/x86-64-movdir-intel.d: Likewise.
+	* testsuite/gas/i386/x86-64-movdir.d: Likewise.
+
+2020-09-30  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
+
+	* config/tc-aarch64.c: Add Cortex-A78 and Cortex-A78AE cores.
+	* doc/c-aarch64.texi: Update docs.
+	* NEWS: Update news.
+
+2020-09-30  Alex Coplan  <alex.coplan@arm.com>
+
+	* NEWS: Mention recent Arm processor support.
+
+2020-09-30  Alex Coplan  <alex.coplan@arm.com>
+
+	* config/tc-aarch64.c (aarch64_cpus): Add neoverse-n2.
+	* doc/c-aarch64.texi: Document support for Neoverse N2.
+
+2020-09-30  Alan Modra  <amodra@gmail.com>
+
+	* config/obj-elf.c (obj_elf_change_section): Rename variable to
+	avoid shadowing warning.
+	* symbols.c (symbol_entry_find): Init all symbol_flags fields.
+
 2020-09-29  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
 
 	* NEWS: TRBE, ETE, ETMv4 and Cortex-X1 news updates.

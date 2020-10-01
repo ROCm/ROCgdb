@@ -8934,6 +8934,20 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
 				    | AARCH64_FEATURE_DOTPROD
 				    | AARCH64_FEATURE_SSBS),
 				    "Cortex-A65AE"},
+  {"cortex-a78", AARCH64_FEATURE (AARCH64_ARCH_V8_2,
+                 AARCH64_FEATURE_F16
+                 | AARCH64_FEATURE_RCPC
+                 | AARCH64_FEATURE_DOTPROD
+                 | AARCH64_FEATURE_SSBS
+                 | AARCH64_FEATURE_PROFILE),
+   "Cortex-A78"},
+  {"cortex-a78ae", AARCH64_FEATURE (AARCH64_ARCH_V8_2,
+                   AARCH64_FEATURE_F16
+                   | AARCH64_FEATURE_RCPC
+                   | AARCH64_FEATURE_DOTPROD
+                   | AARCH64_FEATURE_SSBS
+                   | AARCH64_FEATURE_PROFILE),
+   "Cortex-A78AE"},
   {"ares", AARCH64_FEATURE (AARCH64_ARCH_V8_2,
 				  AARCH64_FEATURE_RCPC | AARCH64_FEATURE_F16
 				  | AARCH64_FEATURE_DOTPROD
@@ -8956,6 +8970,16 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
 				  | AARCH64_FEATURE_DOTPROD
 				  | AARCH64_FEATURE_PROFILE),
 				  "Neoverse N1"},
+  {"neoverse-n2", AARCH64_FEATURE (AARCH64_ARCH_V8_5,
+				   AARCH64_FEATURE_BFLOAT16
+				 | AARCH64_FEATURE_I8MM
+				 | AARCH64_FEATURE_F16
+				 | AARCH64_FEATURE_SVE
+				 | AARCH64_FEATURE_SVE2
+				 | AARCH64_FEATURE_SVE2_BITPERM
+				 | AARCH64_FEATURE_MEMTAG
+				 | AARCH64_FEATURE_RNG),
+				 "Neoverse N2"},
   {"neoverse-v1", AARCH64_FEATURE (AARCH64_ARCH_V8_4,
 			    AARCH64_FEATURE_PROFILE
 			  | AARCH64_FEATURE_CVADP

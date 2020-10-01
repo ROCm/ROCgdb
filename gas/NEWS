@@ -1,4 +1,6 @@
 -*- text -*-
+* Add support for Cortex-A78 and Cortex-A78AE for AArch64.
+
 * Add support for ETMv4 (Embedded Trace Macrocell) system registers for
   AArch64.
 
@@ -9,6 +11,11 @@
 * Add support for Cortex-X1 for AArch64.
 
 * Add support for Cortex-X1 for ARM.
+
+* Add support for Arm's Cortex-R82, Neoverse V1, and Neoverse N2
+  processors.
+
+* Add support for Armv8-R AArch64.
 
 * Add support for Intel TDX instructions.
 
