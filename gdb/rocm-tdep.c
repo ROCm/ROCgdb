@@ -1970,6 +1970,8 @@ info_agents_command (const char *args, int from_tty)
   gdb_flush (gdb_stdout);
 }
 
+static struct cmd_list_element *queue_list;
+
 static void
 info_queues_command (const char *args, int from_tty)
 {
@@ -2168,6 +2170,52 @@ info_queues_command (const char *args, int from_tty)
   gdb_flush (gdb_stdout);
 }
 
+static void
+queue_find_command (const char *arg, int from_tty)
+{
+  if (!arg || !*arg)
+    error (_ ("Command requires an argument."));
+
+  const char *tmp = re_comp (arg);
+  if (tmp)
+    error (_ ("Invalid regexp (%s): %s"), tmp, arg);
+
+  size_t matches = 0;
+  for (inferior *inf : all_inferiors ())
+    {
+      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+      amd_dbgapi_queue_id_t *queue_list;
+      size_t queue_count;
+
+      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+        continue;
+
+      if (amd_dbgapi_process_queue_list (process_id, &queue_count, &queue_list,
+                                         nullptr)
+          != AMD_DBGAPI_STATUS_SUCCESS)
+        continue;
+
+      std::vector<amd_dbgapi_queue_id_t> queues (&queue_list[0],
+                                                 &queue_list[queue_count]);
+
+      xfree (queue_list);
+
+      for (auto &&queue_id : queues)
+        {
+          std::string target_id = target_id_string (queue_id);
+          if (re_exec (target_id.c_str ()))
+            {
+              printf_filtered (_ ("Queue %ld has Target Id '%s'\n"),
+                               queue_id.handle, target_id.c_str ());
+              ++matches;
+            }
+        }
+    }
+
+  if (!matches)
+    printf_filtered (_ ("No queues match '%s'\n"), arg);
+}
+
 template <typename T>
 static std::string
 ndim_string (uint32_t dims, T *sizes)
@@ -2202,6 +2250,8 @@ num_digits (T value)
     }
   return digits;
 }
+
+static struct cmd_list_element *dispatch_list;
 
 struct info_dispatches_opts
 {
@@ -2242,6 +2292,7 @@ info_dispatches_command_completer (struct cmd_list_element *ignore,
       tracker.add_completion (make_unique_xstrdup ("ID"));
     }
 }
+
 static void
 info_dispatches_command (const char *args, int from_tty)
 {
@@ -2604,6 +2655,72 @@ info_dispatches_command (const char *args, int from_tty)
   gdb_flush (gdb_stdout);
 }
 
+static void
+dispatch_find_command (const char *arg, int from_tty)
+{
+  amd_dbgapi_status_t status;
+
+  if (!arg || !*arg)
+    error (_ ("Command requires an argument."));
+
+  const char *tmp = re_comp (arg);
+  if (tmp)
+    error (_ ("Invalid regexp (%s): %s"), tmp, arg);
+
+  size_t matches = 0;
+  for (inferior *inf : all_inferiors ())
+    {
+      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+      amd_dbgapi_dispatch_id_t *dispatch_list;
+      size_t dispatch_count;
+
+      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+        continue;
+
+      if (amd_dbgapi_process_dispatch_list (process_id, &dispatch_count,
+                                            &dispatch_list, nullptr)
+          != AMD_DBGAPI_STATUS_SUCCESS)
+        continue;
+
+      std::vector<amd_dbgapi_dispatch_id_t> dispatches (
+          &dispatch_list[0], &dispatch_list[dispatch_count]);
+
+      xfree (dispatch_list);
+
+      for (auto &&dispatch_id : dispatches)
+        {
+          std::string target_id = target_id_string (dispatch_id);
+          if (re_exec (target_id.c_str ()))
+            {
+              printf_filtered (_ ("Dispatch %ld has Target Id '%s'\n"),
+                               dispatch_id.handle, target_id.c_str ());
+              ++matches;
+            }
+
+          amd_dbgapi_global_address_t kernel_code;
+          if ((status = amd_dbgapi_dispatch_get_info (
+                   dispatch_id,
+                   AMD_DBGAPI_DISPATCH_INFO_KERNEL_CODE_ENTRY_ADDRESS,
+                   sizeof (kernel_code), &kernel_code))
+              != AMD_DBGAPI_STATUS_SUCCESS)
+            error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
+
+          auto msymbol
+              = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
+          if (msymbol.minsym && re_exec (msymbol.minsym->print_name ()))
+            {
+              printf_filtered (_ ("Dispatch %ld has Kernel Function '%s'\n"),
+                               dispatch_id.handle,
+                               msymbol.minsym->print_name ());
+              ++matches;
+            }
+        }
+    }
+
+  if (!matches)
+    printf_filtered (_ ("No dispatches match '%s'\n"), arg);
+}
+
 /* -Wmissing-prototypes */
 extern initialize_file_ftype _initialize_rocm_tdep;
 
@@ -2663,27 +2780,48 @@ _initialize_rocm_tdep (void)
       &set_debug_amdgpu_list, &show_debug_amdgpu_list);
 
   add_cmd ("agents", class_info, info_agents_command,
-           _ ("(Display currently active agents.\n\
+           _ ("(Display currently active heterogeneous agents.\n\
 Usage: info agents [ID]...\n\
 \n\
 If ID is given, it is a space-separated list of IDs of agents to display.\n\
 Otherwise, all agents are displayed."),
            &infolist);
 
+  add_basic_prefix_cmd ("queue", class_run,
+                        _ ("Commands that operate on heterogeneous queues."),
+                        &queue_list, "queue ", 0, &cmdlist);
+
+  add_cmd ("find", class_run, queue_find_command, _ ("\
+Find heterogeneous queues that match a regular expression.\n\
+Usage: queue find REGEXP\n\
+Will display queue IDs whose Target ID matches REGEXP."),
+           &queue_list);
+
   add_cmd ("queues", class_info, info_queues_command,
-           _ ("Display currently active queues.\n\
+           _ ("Display currently active heterogeneous queues.\n\
 Usage: info queues [ID]...\n\
 \n\
 If ID is given, it is a space-separated list of IDs of queues to display.\n\
 Otherwise, all queues are displayed."),
            &infolist);
 
+  add_basic_prefix_cmd (
+      "dispatch", class_run,
+      _ ("Commands that operate on heterogeneous dispatches."), &dispatch_list,
+      "dispatch ", 0, &cmdlist);
+
+  add_cmd ("find", class_run, dispatch_find_command, _ ("\
+Find heterogeneous dispatches that match a regular expression.\n\
+Usage: dispatch find REGEXP\n\
+Will display dispatch IDs whose Target ID or Kernel Function matches REGEXP."),
+           &dispatch_list);
+
   const auto info_dispatches_opts
       = make_info_dispatches_options_def_group (nullptr);
 
   static std::string info_dispatches_help
       = gdb::option::build_help (_ ("\
-Display currently active dispatches.\n\
+Display currently active heterogeneous dispatches.\n\
 Usage: info dispatches [ID]...\n\
 \n\
 Options:\n\
