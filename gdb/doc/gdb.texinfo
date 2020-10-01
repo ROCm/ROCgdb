@@ -22005,8 +22005,8 @@ executing on multiple heterogeneous agents
 @code{info dispatches}, commands to inquire about the heterogeneous
 system
 
-@item @code{agent find}, @code{queue find}, @code{dispatch find}, commands to
-find heterogeneous entities
+@item @code{queue find}, @code{dispatch find}, commands to find heterogeneous
+entities
 
 @item @code{info lanes}, @code{lane}, commands support source language
 threads of execution that are mapped to SIMD-like lanes of a thread
@@ -22421,9 +22421,7 @@ For example,
 * 1    AMDGPU Dispatch 1:1:1 (PID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
 @end smallexample
 
-@item agent find @var{regexp}
-@cindex search for a heterogeneous agent
-@itemx queue find @var{regexp}
+@item queue find @var{regexp}
 @cindex search for a heterogeneous queue
 @itemx dispatch find @var{regexp}
 @cindex search for a heterogeneous dispatch
@@ -26841,8 +26839,9 @@ restrictions.
 The debugger convenience variables, convenience functions, and
 commands described in @ref{Heterogeneous Debugging} are not yet
 implemented.  The exceptions are the @code{info agents}, @code{info queues},
-and @code{info dispatches} commands, which only currently support the textual
-CLI interface and do not have Python bindings.
+@code{info dispatches}, @code{queue find}, and @code{dispatch find} commands,
+which only currently support the textual CLI interface and do not have Python
+bindings.
 
 However, the debugger convenience variable @code{$_wave_id} is
 available which returns a string that has the format:
