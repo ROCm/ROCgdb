@@ -859,7 +859,8 @@ rocm_target_ops::async (int enable)
       ::fcntl (rocm_event_pipe[0], F_SETFL, O_NONBLOCK);
       ::fcntl (rocm_event_pipe[1], F_SETFL, O_NONBLOCK);
 
-      add_file_handler (rocm_event_pipe[0], handle_target_event, nullptr);
+      add_file_handler (rocm_event_pipe[0], handle_target_event, nullptr,
+			"rocm-tdep");
 
       /* There may be pending events to handle.  Tell the event loop
 	 to poll them.  */
@@ -1470,7 +1471,7 @@ rocm_target_inferior_created (struct target_ops *target, int from_tty)
       /* Signal our async handler.  */
       async_file_mark ();
     },
-    info);
+    info, "rocm-tdep");
 
   /* Attaching to the inferior may have generated runtime events, process
      them now.  */
