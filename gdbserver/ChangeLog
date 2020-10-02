@@ -1,3 +1,10 @@
+2020-10-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-low.cc (linux_process_target::async): Pass name to
+	add_file_handler.
+	* remote-utils.cc (handle_accept_event): Likewise.
+	(remote_open): Likewise.
+
 2020-10-07  Anton Kolesov  <anton.kolesov@synopsys.com>
 
 	* configure.srv: Support ARC architecture.
