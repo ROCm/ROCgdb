@@ -250,66 +250,6 @@ static const struct frame_unwind amdgcn_frame_unwind = {
   NULL,
 };
 
-struct rocm_displaced_step_closure : public displaced_step_closure
-{
-  amd_dbgapi_wave_id_t wave_id;
-  amd_dbgapi_displaced_stepping_id_t displaced_stepping_id;
-};
-
-static CORE_ADDR
-amdgcn_rocm_displaced_step_location (struct gdbarch *gdbarch)
-{
-  size_t size = gdbarch_tdep (gdbarch)->breakpoint_instruction_size;
-  gdb::unique_xmalloc_ptr<gdb_byte> buffer (
-    static_cast<gdb_byte *> (xmalloc (size)));
-
-  /* Read the bytes that were overwritten by the breakpoint instruction.  */
-  if (target_read_memory (regcache_read_pc (get_current_regcache ()),
-			  buffer.get (), size))
-    return 0;
-
-  amd_dbgapi_displaced_stepping_id_t stepping_id;
-  if (amd_dbgapi_displaced_stepping_start (
-	get_amd_dbgapi_wave_id (inferior_ptid), buffer.get (), &stepping_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    return 0;
-
-  return stepping_id.handle;
-}
-
-static displaced_step_closure_up
-amdgcn_rocm_displaced_step_copy_insn (struct gdbarch *gdbarch, CORE_ADDR from,
-				      CORE_ADDR to, struct regcache *regcache)
-{
-  std::unique_ptr<rocm_displaced_step_closure> closure (
-    new rocm_displaced_step_closure);
-
-  closure->wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
-  closure->displaced_stepping_id = { to };
-
-  return closure;
-}
-
-static void
-amdgcn_rocm_displaced_step_fixup (struct gdbarch *gdbarch,
-				  struct displaced_step_closure *closure_,
-				  CORE_ADDR from, CORE_ADDR to,
-				  struct regcache *regcache)
-{
-  rocm_displaced_step_closure *closure
-    = reinterpret_cast<rocm_displaced_step_closure *> (closure_);
-
-  amd_dbgapi_status_t status = amd_dbgapi_displaced_stepping_complete (
-    closure->wave_id, closure->displaced_stepping_id);
-
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"),
-	   status);
-
-  /* We may have written some registers, so flush the register cache.  */
-  registers_changed_ptid (regcache->target (), regcache->ptid ());
-}
-
 static int
 print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
 {
@@ -562,14 +502,6 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Disassembly.  */
   set_gdbarch_print_insn (gdbarch, print_insn_amdgcn);
-
-  /* Displaced stepping.  */
-  set_gdbarch_displaced_step_location (gdbarch,
-				       amdgcn_rocm_displaced_step_location);
-
-  set_gdbarch_displaced_step_copy_insn (gdbarch,
-					amdgcn_rocm_displaced_step_copy_insn);
-  set_gdbarch_displaced_step_fixup (gdbarch, amdgcn_rocm_displaced_step_fixup);
 
   /* Instructions.  */
   amd_dbgapi_size_t max_insn_length = 0;

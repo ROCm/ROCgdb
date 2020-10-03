@@ -24,6 +24,7 @@
 #include "arch-utils.h"
 #include "cli/cli-style.h"
 #include "demangle.h"
+#include "displaced-stepping.h"
 #include "environ.h"
 #include "filenames.h"
 #include "gdb-demangle.h"
@@ -112,6 +113,10 @@ struct rocm_inferior_info
   std::unordered_map<decltype (amd_dbgapi_shared_library_id_t::handle),
 		     struct rocm_notify_shared_library_info>
     notify_solib_map;
+
+  std::unordered_map<thread_info *,
+		     decltype (amd_dbgapi_displaced_stepping_id_t::handle)>
+    stepping_id_map;
 };
 
 static amd_dbgapi_event_id_t
@@ -182,6 +187,21 @@ struct rocm_target_ops final : public target_ops
 
   bool stopped_by_sw_breakpoint () override;
   bool stopped_by_hw_breakpoint () override;
+
+  bool
+  supports_displaced_step (thread_info *thread) override
+  {
+    if (!ptid_is_gpu (thread->ptid))
+      return beneath ()->supports_displaced_step (thread);
+    return true;
+  }
+
+  displaced_step_prepare_status
+  displaced_step_prepare (thread_info *thread,
+			  CORE_ADDR &displaced_pc) override;
+
+  displaced_step_finish_status displaced_step_finish (thread_info *thread,
+						      gdb_signal sig) override;
 };
 
 /* ROCm's target vector.  */
@@ -1345,6 +1365,116 @@ rocm_target_ops::update_thread_list ()
 
   /* Give the beneath target a chance to do extra processing.  */
   this->beneath ()->update_thread_list ();
+}
+
+displaced_step_prepare_status
+rocm_target_ops::displaced_step_prepare (thread_info *thread,
+					 CORE_ADDR &displaced_pc)
+{
+  if (!ptid_is_gpu (thread->ptid))
+    return beneath ()->displaced_step_prepare (thread, displaced_pc);
+
+  gdb_assert (!thread->displaced_step_state.in_progress ());
+
+  /* Read the bytes that were overwritten by the breakpoint instruction.  */
+  CORE_ADDR original_pc = regcache_read_pc (get_thread_regcache (thread));
+
+  gdbarch *arch = get_thread_regcache (thread)->arch ();
+  size_t size = gdbarch_tdep (arch)->breakpoint_instruction_size;
+  gdb::unique_xmalloc_ptr<gdb_byte> overwritten_bytes (
+    static_cast<gdb_byte *> (xmalloc (size)));
+
+  /* Read the instruction bytes overwritten by the breakpoint.   */
+  int err = target_read_memory (original_pc, overwritten_bytes.get (), size);
+  if (err != 0)
+    throw_error (MEMORY_ERROR, _ ("Error accessing memory address %s (%s)."),
+		 paddress (arch, original_pc), safe_strerror (err));
+
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
+  amd_dbgapi_displaced_stepping_id_t stepping_id;
+
+  amd_dbgapi_status_t status = amd_dbgapi_displaced_stepping_start (
+    wave_id, overwritten_bytes.get (), &stepping_id);
+
+  if (status == AMD_DBGAPI_STATUS_ERROR_DISPLACED_STEPPING_BUFFER_UNAVAILABLE)
+    return DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE;
+  else if (status == AMD_DBGAPI_STATUS_ERROR_ILLEGAL_INSTRUCTION)
+    return DISPLACED_STEP_PREPARE_STATUS_CANT;
+  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("amd_dbgapi_displaced_stepping_start failed (rc=%d)"), status);
+
+  struct rocm_inferior_info *info = get_rocm_inferior_info (thread->inf);
+  if (!info->stepping_id_map.emplace (thread, stepping_id.handle).second)
+    {
+      amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
+      error (_ ("Could not insert the displaced stepping id in the map"));
+    }
+
+  status = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_PC,
+				     sizeof (displaced_pc), &displaced_pc);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
+      error (_ ("amd_dbgapi_wave_get_info failed (rc=%d)"), status);
+    }
+
+  displaced_debug_printf ("selected buffer at %#lx", displaced_pc);
+
+  /* FIXME: Tell infrun not to try preparing another displaced step for this
+     inferior.  Currently, concurrent displaced steps causes a performance
+     degradation as each displaced step triggers 2 queue suspends and resumes.
+     An upcoming change to expose forward progress in core gdb will address
+     this issue.  */
+  thread->inf->displaced_step_state.unavailable = true;
+
+  /* We may have written some registers, so flush the register cache.  */
+  registers_changed_thread (thread);
+
+  return DISPLACED_STEP_PREPARE_STATUS_OK;
+}
+
+displaced_step_finish_status
+rocm_target_ops::displaced_step_finish (thread_info *thread, gdb_signal sig)
+{
+  if (!ptid_is_gpu (thread->ptid))
+    return beneath ()->displaced_step_finish (thread, sig);
+
+  gdb_assert (thread->displaced_step_state.in_progress ());
+
+  /* Find the stepping_id for this thread.  */
+  struct rocm_inferior_info *info = get_rocm_inferior_info (thread->inf);
+  auto it = info->stepping_id_map.find (thread);
+  gdb_assert (it != info->stepping_id_map.end ());
+
+  amd_dbgapi_displaced_stepping_id_t stepping_id{ it->second };
+  info->stepping_id_map.erase (it);
+
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
+
+  amd_dbgapi_wave_stop_reason_t stop_reason;
+  amd_dbgapi_status_t status
+    = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STOP_REASON,
+				sizeof (stop_reason), &stop_reason);
+
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
+	   status);
+
+  status = amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
+
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"),
+	   status);
+
+  /* FIXME: See comment in displaced_step_prepare.  */
+  thread->inf->displaced_step_state.unavailable = false;
+
+  /* We may have written some registers, so flush the register cache.  */
+  registers_changed_thread (thread);
+
+  return (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP) != 0
+	   ? DISPLACED_STEP_FINISH_STATUS_OK
+	   : DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED;
 }
 
 static void
