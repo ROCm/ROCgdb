@@ -976,7 +976,7 @@ rocm_process_event_queue (amd_dbgapi_event_kind_t until_event_kind)
       amd_dbgapi_event_id_t event_id;
       amd_dbgapi_event_kind_t event_kind;
 
-      amd_dbgapi_status_t status = amd_dbgapi_next_pending_event (
+      amd_dbgapi_status_t status = amd_dbgapi_process_next_pending_event (
           info->process_id, &event_id, &event_kind);
 
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
