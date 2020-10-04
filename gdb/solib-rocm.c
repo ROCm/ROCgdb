@@ -525,7 +525,7 @@ rocm_solib_dbgapi_deactivated ()
 }
 
 static void
-rocm_solib_target_inferior_created (struct target_ops *target, int from_tty)
+rocm_solib_target_inferior_created ()
 {
   rocm_free_solib_list (get_solib_info ());
   rocm_update_solib_list ();

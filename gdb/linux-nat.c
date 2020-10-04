@@ -68,7 +68,7 @@
 #include "gdbsupport/fileio.h"
 #include "gdbsupport/scope-exit.h"
 #include "gdbsupport/gdb-sigmask.h"
-#include "debug.h"
+#include "gdbsupport/common-debug.h"
 
 /* This comment documents high-level logic of this file.
 
@@ -4123,7 +4123,8 @@ linux_nat_target::async (int enable)
       if (!linux_async_pipe (1))
 	{
 	  add_file_handler (linux_nat_event_pipe[0],
-			    handle_target_event, NULL);
+			    handle_target_event, NULL,
+			    "linux-nat");
 	  /* There may be pending events to handle.  Tell the event loop
 	     to poll them.  */
 	  async_file_mark ();

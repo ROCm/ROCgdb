@@ -71,7 +71,7 @@
 #include "gdbsupport/selftest.h"
 #include "scoped-mock-context.h"
 #include "test-target.h"
-#include "debug.h"
+#include "gdbsupport/common-debug.h"
 
 /* Prototypes for local functions */
 
@@ -3186,7 +3186,7 @@ start_remote (int from_tty)
   /* Now that the inferior has stopped, do any bookkeeping like
      loading shared libraries.  We want to do this before normal_stop,
      so that the displayed frame is up to date.  */
-  post_create_inferior (current_top_target (), from_tty);
+  post_create_inferior (from_tty);
 
   normal_stop ();
 }
@@ -9284,7 +9284,8 @@ _initialize_infrun ()
 
   /* Register extra event sources in the event loop.  */
   infrun_async_inferior_event_token
-    = create_async_event_handler (infrun_async_inferior_event_handler, NULL);
+    = create_async_event_handler (infrun_async_inferior_event_handler, NULL,
+				  "infrun");
 
   add_info ("signals", info_signals_command, _("\
 What debugger does when program gets various signals.\n\

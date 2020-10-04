@@ -1,3 +1,70 @@
+2020-10-02  Tom Tromey  <tromey@adacore.com>
+
+	* skip.c (skiplist_entry::skiplist_entry): Unconditionally use
+	REG_EXTENDED.
+
+2020-10-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* aix-thread.c (aix_thread_inferior_created): Remove parameters.
+	* procfs.c (procfs_inferior_created): Remove.
+	(_initialize_procfs): Don't register procfs_inferior_created.
+
+2020-10-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* async-event.c (invoke_async_signal_handlers): Add debug
+	print.
+	(check_async_event_handlers): Likewise.
+	* event-top.c (show_debug_event_loop): New function.
+	(_initialize_event_top): Register "set debug event-loop"
+	setting.
+
+2020-10-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* debug.c (debug_prefixed_vprintf): Move to gdbsupport.
+	* debug.h: Remove.
+	* infrun.c: Include gdbsupport/common-debug.h.
+	* linux-nat.c: Likewise.
+
+2020-10-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* async-event.h (create_async_signal_handler): Add name
+	parameter.
+	(create_async_event_handler): Likewise.
+	* async-event.c (struct async_signal_handler) <name>: New field.
+	(struct async_event_handler) <name>: New field.
+	(create_async_signal_handler): Assign name.
+	(create_async_event_handler): Assign name.
+	* event-top.c (async_init_signals): Pass name when creating
+	handler.
+	* infrun.c (_initialize_infrun): Likewise.
+	* record-btrace.c (record_btrace_push_target): Likewise.
+	* record-full.c (record_full_open): Likewise.
+	* remote-notif.c (remote_notif_state_allocate): Likewise.
+	* remote.c (remote_target::open_1): Likewise.
+	* tui/tui-win.c (tui_initialize_win): Likewise.
+
+2020-10-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* async-event.c (initialize_async_signal_handlers): Pass name to
+	add_file_handler
+	* event-top.c (ui_register_input_event_handler): Likewise.
+	* linux-nat.c (linux_nat_target::async): Likewise.
+	* run-on-main-thread.c (_initialize_run_on_main_thread):
+	Likewise
+	* ser-base.c (reschedule): Likewise.
+	(ser_base_async): Likewise.
+	* tui/tui-io.c: Likewise.
+	* top.h (struct ui) <num>: New field.
+	* top.c (highest_ui_num): New variable.
+	(ui::ui): Initialize num.
+
+2020-10-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* observable.h <inferior_created>: Remove parameters.  Update all
+	listeners.
+	* inferior.h (post_create_inferior): Remove target parameter.
+	Update all callers.
+
 2020-10-02  Nitika Achra  <Nitika.Achra@amd.com>
 
 	* dwarf2/macro.c (dwarf_decode_macro_bytes): Handle DW_MACRO_define_strx
