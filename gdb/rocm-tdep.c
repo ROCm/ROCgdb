@@ -1704,6 +1704,26 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   }
 };
 
+static void
+rocm_target_inferior_appeared (struct inferior *inf)
+{
+  /* FIXME: This should check whether the rocm_ops target is pushed onto the
+     inferior's process stack.  */
+  if (!any_thread_p ())
+    {
+      /* Finalize and re-initalize the debugger API so that the handle ID
+         numbers will all start from the beginning again.  */
+
+      amd_dbgapi_status_t status = amd_dbgapi_finalize ();
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+        error (_ ("amd-dbgapi failed to finalize (rc=%d)"), status);
+
+      status = amd_dbgapi_initialize (&dbgapi_callbacks);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+        error (_ ("amd-dbgapi failed to initialize (rc=%d)"), status);
+    }
+}
+
 /* Implementation of `_wave_id' variable.  */
 
 static struct value *
@@ -2750,6 +2770,7 @@ _initialize_rocm_tdep (void)
   gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup);
   gdb::observers::solib_loaded.attach (rocm_target_solib_loaded);
   gdb::observers::solib_unloaded.attach (rocm_target_solib_unloaded);
+  gdb::observers::inferior_appeared.attach (rocm_target_inferior_appeared);
   gdb::observers::inferior_created.attach (rocm_target_inferior_created);
   gdb::observers::inferior_exit.attach (rocm_target_inferior_exit);
 
