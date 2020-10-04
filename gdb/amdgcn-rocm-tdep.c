@@ -693,6 +693,63 @@ amdgcn_rocm_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
   return count;
 }
 
+/* A client debugger can check if the lane is part of a valid
+   work-group by checking that the lane is in the range of the
+   associated work-group within the grid, accounting for partial
+   work-groups.  */
+
+static int
+amdgcn_rocm_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  amd_dbgapi_dispatch_id_t dispatch_id;
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH, dispatch_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      /* The dispatch associated with a wave is not available.  A wave
+	 may not have an associated dispatch if attaching to a process
+	 with already existing waves.  In that case, all we can do is
+	 claim that all lanes are used.  */
+      return amdgcn_rocm_supported_lanes_count (gdbarch, tp);
+    }
+
+  uint32_t grid_sizes[3];
+  dispatch_get_info_throw (dispatch_id,
+			   AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
+			   grid_sizes);
+
+  uint16_t work_group_sizes[3];
+  dispatch_get_info_throw (dispatch_id,
+			   AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
+			   work_group_sizes);
+
+  uint32_t group_ids[3];
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD, group_ids);
+
+  uint32_t wave_in_group;
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+		       wave_in_group);
+
+  size_t lane_count;
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, lane_count);
+
+  size_t work_group_item_sizes[3];
+  for (int i = 0; i < 3; i++)
+    {
+      size_t item_start = group_ids[i] * work_group_sizes[i];
+      size_t item_end = item_start + work_group_sizes[i];
+      if (item_end > grid_sizes[i])
+	item_end = grid_sizes[i];
+      work_group_item_sizes[i] = item_end - item_start;
+    }
+
+  size_t work_items = (work_group_item_sizes[0]
+		       * work_group_item_sizes[1]
+		       * work_group_item_sizes[2]);
+
+  size_t work_items_left = work_items - wave_in_group * lane_count;
+  return std::min (work_items_left, lane_count);
+}
+
 static struct gdbarch *
 amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -890,6 +947,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Lane debugging.  */
   set_gdbarch_active_lanes_mask (gdbarch, amdgcn_rocm_active_lanes_mask);
   set_gdbarch_supported_lanes_count (gdbarch, amdgcn_rocm_supported_lanes_count);
+  set_gdbarch_used_lanes_count (gdbarch, amdgcn_rocm_used_lanes_count);
 
   if (amd_dbgapi_architecture_get_info (
 	architecture_id,
