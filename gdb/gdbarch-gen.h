@@ -374,6 +374,13 @@ typedef int (gdbarch_supported_lanes_count_ftype) (struct gdbarch *gdbarch, thre
 extern int gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
 extern void set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch, gdbarch_supported_lanes_count_ftype *supported_lanes_count);
 
+/* Return the number of lanes used by the thread, accounting for
+   partial work-groups.  Defaults to the number of supported lanes. */
+
+typedef int (gdbarch_used_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern int gdbarch_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_used_lanes_count (struct gdbarch *gdbarch, gdbarch_used_lanes_count_ftype *used_lanes_count);
+
 /* Return true if the code of FRAME is writable. */
 
 typedef int (gdbarch_code_of_frame_writable_ftype) (struct gdbarch *gdbarch, const frame_info_ptr &frame);

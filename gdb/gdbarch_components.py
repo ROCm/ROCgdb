@@ -708,6 +708,18 @@ Return the number of lanes supported by the thread.
 
 Method(
     comment="""
+Return the number of lanes used by the thread, accounting for
+partial work-groups.  Defaults to the number of supported lanes.
+""",
+    type="int",
+    name="used_lanes_count",
+    params=[("thread_info *", "tp")],
+    predefault="gdbarch_supported_lanes_count",
+    invalid=False,
+)
+
+Method(
+    comment="""
 Return true if the code of FRAME is writable.
 """,
     type="int",
