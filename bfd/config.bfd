@@ -258,12 +258,12 @@ case "${targ}" in
     targ_selvecs=aarch64_elf64_be_cloudabi_vec
     want64=true
     ;;
-  aarch64-*-linux*)
+  aarch64-*-linux* | aarch64-*-netbsd*)
     targ_defvec=aarch64_elf64_le_vec
     targ_selvecs="aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec"
     want64=true
     ;;
-  aarch64_be-*-linux*)
+  aarch64_be-*-linux* | aarch64_be-*-netbsd*)
     targ_defvec=aarch64_elf64_be_vec
     targ_selvecs="aarch64_elf64_le_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_be_vec arm_elf32_le_vec"
     want64=true
@@ -1088,6 +1088,11 @@ case "${targ}" in
     ;;
   powerpc64-*-freebsd*)
     targ_defvec=powerpc_elf64_fbsd_vec
+    targ_selvecs="powerpc_elf64_vec powerpc_elf32_vec powerpc_elf32_fbsd_vec powerpc_elf32_le_vec rs6000_xcoff_vec rs6000_xcoff64_vec rs6000_xcoff64_aix_vec"
+    want64=true
+    ;;
+  powerpc64le-*-freebsd*)
+    targ_defvec=powerpc_elf64_fbsd_le_vec
     targ_selvecs="powerpc_elf64_vec powerpc_elf32_vec powerpc_elf32_fbsd_vec powerpc_elf32_le_vec rs6000_xcoff_vec rs6000_xcoff64_vec rs6000_xcoff64_aix_vec"
     want64=true
     ;;

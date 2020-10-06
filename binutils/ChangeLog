@@ -1,3 +1,18 @@
+2020-10-06  Nick Clifton  <nickc@redhat.com>
+
+	* objcopy.c (copy_object): Compare input and output sections by
+	pointer rather than name.
+
+2020-10-05  Nick Clifton  <nickc@redhat.com>
+
+	PR 26698
+	* windmc.c (mc_unify_path): Fix typo checking character at end of
+	pathname.
+
+2020-10-05  Samanta Navarro  <ferivoz@riseup.net>
+
+	* doc/binutils.texi: Fix spelling mistakes.
+
 2020-09-29  Mark Wielaard  <mark@klomp.org>
 
 	* dwarf.c (display_loclists_list): Handle DW_LLE_start_end and

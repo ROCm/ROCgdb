@@ -1,3 +1,30 @@
+2020-10-06  Brandon Bergren  <bdragon@FreeBSD.org>
+
+	* Makefile.am (ALL_64_EMULATION_SOURCES): Add eelf64lppc_fbsd.c.
+	Include $(DEPDIR)/eelf64lppc_fbsd.Pc.
+	* configure.tgt: Add powerpc64le-*-freebsd*.
+	* emulparams/elf64lppc_fbsd.sh: New file.
+	* Makefile.in: Regenerate.
+	* po/BLD-POTFILES.in: Regenerate.
+
+2020-10-05  T.K. Chia  <u1049321969@caramail.com>
+
+	PR gas/26694
+	* testsuite/ld-i386/ljmp.s,
+	* testsuite/ld-i386/ljmp1.d,
+	* testsuite/ld-i386/ljmp1.s,
+	* testsuite/ld-i386/ljmp2.d,
+	* testsuite/ld-i386/ljmp2.s,
+	* testsuite/ld-x86-64/ljmp1.d,
+	* testsuite/ld-x86-64/ljmp2.d: New testcases.
+	* testsuite/ld-i386/i386.exp,
+	* testsuite/ld-x86-64/x86-64.exp: Run them.
+
+2020-10-05  Nick Clifton  <nickc@redhat.com>
+
+	* lexsup.c (parse_args): Generate an error or warning message when
+	multiple short options are used together.
+
 2020-10-01  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR 26681

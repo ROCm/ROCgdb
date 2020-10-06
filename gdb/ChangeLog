@@ -1,3 +1,35 @@
+2020-10-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* symtab.c (find_pc_line): Return unmapped addresses when the
+	requested address is also unmapped.
+
+2020-10-05  Simon Marchi  <simon.marchi@efficios.com>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Remove tui/tui-windata.h, add
+	tui/tui-out.h.
+
+2020-10-05  Simon Marchi  <simon.marchi@efficios.com>
+
+	* amd64-windows-tdep.c (amd64_windows_return_value): Use
+	type::is_vector instead of TYPE_VECTOR.
+
+2020-10-05  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* auto-load.c (auto_load_objfile_script_1): Don't use
+	debugfile_holder as temporary variable when stripping drive
+	letter.
+
+2020-10-05  Hannes Domani  <ssbssa@yahoo.de>
+
+	* amd64-windows-tdep.c (amd64_windows_passed_by_integer_register):
+	Add TYPE_CODE_COMPLEX.
+	(amd64_windows_return_value): Fix types returned via XMM0.
+
+2020-10-05  Alan Hayward  <alan.hayward@arm.com>
+
+	* MAINTAINERS (Responsible Maintainers): Add Luis Machado to
+	AArch64/ARM maintainers.
+
 2020-10-04  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* NEWS: Mention set/show debug event-loop.

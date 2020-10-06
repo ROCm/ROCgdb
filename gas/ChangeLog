@@ -1,3 +1,81 @@
+2020-10-06  Alex Coplan  <alex.coplan@arm.com>
+
+	PR 26699
+	* config/tc-aarch64.c (asm_barrier_opt): Delete.
+	(parse_barrier): Fix bogus type punning.
+	* testsuite/gas/aarch64/system.d: Update disassembly.
+	* testsuite/gas/aarch64/system.s: Add isb sy test.
+
+2020-10-06  Sergey Belyashav  <sergey.belyashov@gmail.com>
+
+	PR 26692
+	* config/tc-z80.c (md_begin): Ensure that xpressions are empty
+	before using them.
+	(unify_indexed): Likewise.
+	(z80_start_line_hook): Improve hash sign handling when SDCC
+	compatibility mode enabled.
+	(md_parse_exp_not_indexed): Improve indirect addressing
+	detection.
+	(md_pseudo_table): Accept hd64 as an alias of z810.
+
+2020-10-06  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/elf/sh-link-zero.s: Don't start directives in
+	first column.  Don't use numeric labels.
+
+2020-10-05  Kamil Rytarowski  <n54@gmx.com>
+
+	* configure.tgt (aarch64*-*-netbsd*): Add target.
+
+2020-10-05  Samanta Navarro  <ferivoz@riseup.net>
+
+	* doc/as.texi: Fix spelling mistakes.
+	* doc/c-wasm32.texi: Likewise.
+
+2020-10-05  T.K. Chia  <u1049321969@caramail.com>
+
+	PR gas/26694
+	* NEWS: Updated for i386 lcall and ljmp change.
+	* config/tc-i386.c (output_interseg_jump): Allow non-absolute
+	segment operand for immediate lcall and ljmp.
+	* testsuite/gas/i386/jump.d,
+	* testsuite/gas/i386/jump.s,
+	* testsuite/gas/i386/jump16.d,
+	* testsuite/gas/i386/jump16.e,
+	* testsuite/gas/i386/jump16.s: Add tests for non-absolute
+	segment operand for immediate ljmp.
+
+2020-10-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/26704
+	* testsuite/gas/i386/noreg64-data16.d: Expect sysretl instead of
+	sysret.
+	* testsuite/gas/i386/noreg64.d: Likewise.
+	* testsuite/gas/i386/x86-64-intel64.d: Likewise.
+	* testsuite/gas/i386/x86-64-opcode.d: Likewise.
+
+2020-10-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/26705
+	* testsuite/gas/i386/x86-64-suffix.s: Add "mov %rsp,%rbp" before
+	sysretq.
+	* testsuite/gas/i386/x86-64-suffix-intel.d: Updated.
+	* testsuite/gas/i386/x86-64-suffix.d: Likewise.
+
+2020-10-05  Nick Clifton  <nickc@redhat.com>
+
+	PR 26253
+	* config/obj-elf.c (obj_elf_section): Accept a numeric value for
+	the "o" section flag.  Interpret it as a section index.  Allow an
+	index of zero.
+	* doc/as.texi: Document the new behaviour.
+	* NEWS: Mention the new feature.  Tidy entries.
+	* testsuite/gas/elf/sh-link-zero.s: New test.
+	* testsuite/gas/elf/sh-link-zero.d: New test driver.
+	* testsuite/gas/elf/elf.exp: Run the new test.
+	* testsuite/gas/elf/section21.l: Updated expected assembler
+	output.
+
 2020-10-03  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR gas/26685
