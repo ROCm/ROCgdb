@@ -716,7 +716,6 @@ DW_OP (DW_OP_LLVM_aspace_bregx, 0xe8)
 DW_OP_DUP (DW_OP_LLVM_piece_end, 0xea)
 DW_OP (DW_OP_LLVM_extend, 0xeb)
 DW_OP (DW_OP_LLVM_select_bit_piece, 0xec)
-
 DW_END_OP
 
 DW_FIRST_ATE (DW_ATE_void, 0x0)

@@ -678,7 +678,6 @@ extern struct value *value_field_bitfield (struct type *type, int fieldno,
 					   const struct value *val);
 
 extern void pack_long (gdb_byte *buf, struct type *type, LONGEST num);
-
 extern void pack_unsigned_long (gdb_byte *buf, struct type *type,
 				ULONGEST num);
 
@@ -711,6 +710,7 @@ extern void read_frame_register_value (struct value *value,
 extern struct value *value_from_register (struct type *type, int regnum,
 					  struct frame_info *frame,
 					  LONGEST offset = 0);
+
 
 extern CORE_ADDR address_from_register (int regnum,
 					struct frame_info *frame);

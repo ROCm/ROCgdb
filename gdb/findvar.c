@@ -1002,7 +1002,7 @@ address_from_register (int regnum, struct frame_info *frame)
     }
 
   /* FIXME: Here we need a way for a arch to give back the
-            matching pointer type depending on the address space.  */
+	    matching pointer type depending on the address space.  */
   type = register_type (gdbarch, regnum);
 
   value = gdbarch_value_from_register (gdbarch, type, regnum, null_frame_id);

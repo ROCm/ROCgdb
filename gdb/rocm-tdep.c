@@ -562,6 +562,7 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
 
       size_t len = requested_len;
       amd_dbgapi_status_t status;
+
       if (readbuf)
         status
             = amd_dbgapi_read_memory (process_id, wave_id, 0, address_space_id,

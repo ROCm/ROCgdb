@@ -7838,7 +7838,7 @@ frame_display_row (Frame_Chunk *fc, int *need_col_headers, unsigned int *max_reg
     strcpy (tmp, "exp");
   else if (fc->cfa_aspace)
     sprintf (tmp, "%s%+d in address space %d", regname (fc->cfa_reg, 1),
-             (int) fc->cfa_offset, fc->cfa_aspace);
+	     (int) fc->cfa_offset, fc->cfa_aspace);
   else
     sprintf (tmp, "%s%+d", regname (fc->cfa_reg, 1), (int) fc->cfa_offset);
   printf ("%-8s ", tmp);
@@ -8852,9 +8852,9 @@ display_debug_frames (struct dwarf_section *section,
 	      READ_ULEB (fc->cfa_aspace, start, end);
 	      fc->cfa_exp = 0;
 	      if (! do_debug_frames_interp)
-	        printf ("  DW_CFA_def_aspace_cfa: %s ofs %d in aspace %d\n",
-	                regname (fc->cfa_reg, 0), (int) fc->cfa_offset,
-	                fc->cfa_aspace);
+		printf ("  DW_CFA_def_aspace_cfa: %s ofs %d in aspace %d\n",
+			regname (fc->cfa_reg, 0), (int) fc->cfa_offset,
+			fc->cfa_aspace);
 	      break;
 
 	    case DW_CFA_expression:

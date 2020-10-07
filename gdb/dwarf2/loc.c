@@ -1,7 +1,6 @@
 /* DWARF 2 location expression support for GDB.
 
    Copyright (C) 2003-2020 Free Software Foundation, Inc.
-   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Daniel Jacobowitz, MontaVista Software, Inc.
 
@@ -42,35 +41,17 @@
 #include "dwarf2/leb.h"
 #include "compile/compile.h"
 #include "gdbsupport/selftest.h"
+#include "selftest-arch.h"
 #include <algorithm>
 #include <vector>
 #include <unordered_set>
 #include "gdbsupport/underlying.h"
 #include "gdbsupport/byte-vector.h"
 
-static struct value *dwarf2_evaluate_loc_desc_full (struct type *type,
-						    struct frame_info *frame,
-						    const gdb_byte *data,
-						    size_t size,
-						    struct dwarf2_per_cu_data *per_cu,
-						    dwarf2_per_objfile *per_objfile,
-						    struct type *subobj_type,
-						    LONGEST subobj_byte_offset,
-						    bool as_lval = true);
-
-static struct call_site_parameter *dwarf_expr_reg_to_entry_parameter
-    (struct frame_info *frame,
-     enum call_site_parameter_kind kind,
-     union call_site_parameter_u kind_u,
-     dwarf2_per_cu_data **per_cu_return,
-     dwarf2_per_objfile **per_objfile_return);
-
-static struct value *indirect_synthetic_pointer
-  (sect_offset die, LONGEST byte_offset,
-   dwarf2_per_cu_data *per_cu,
-   dwarf2_per_objfile *per_objfile,
-   struct frame_info *frame,
-   struct type *type, bool resolve_abstract_p = false);
+static struct value *dwarf2_evaluate_loc_desc_full
+  (struct type *type, struct frame_info *frame, const gdb_byte *data,
+   size_t size, dwarf2_per_cu_data *per_cu, dwarf2_per_objfile *per_objfile,
+   struct type *subobj_type, LONGEST subobj_byte_offset, bool as_lval = true);
 
 /* Until these have formal names, we define these here.
    ref: http://gcc.gnu.org/wiki/DebugFission
@@ -112,30 +93,12 @@ enum debug_loc_kind
 /* Helper function which throws an error if a synthetic pointer is
    invalid.  */
 
-static void
+void
 invalid_synthetic_pointer (void)
 {
   error (_("access outside bounds of object "
 	   "referenced via synthetic pointer"));
 }
-
-static void read_closure_value (struct value *v);
-static void write_closure_value (struct value *to, struct value *from);
-static int check_synthetic_pointer (const struct value *value,
-                                    LONGEST bit_offset, int bit_length);
-static struct value *indirect_closure_value (struct value *value);
-static struct value *coerce_closure_ref (const struct value *value);
-
-/* Functions for accessing a variable described by DW_OP_piece.  */
-static const struct lval_funcs loc_desc_closure_value_funcs = {
-  read_closure_value,
-  write_closure_value,
-  indirect_closure_value,
-  coerce_closure_ref,
-  check_synthetic_pointer,
-  copy_value_closure,
-  free_value_closure
-};
 
 /* Decode the addresses in a non-dwo .debug_loc entry.
    A pointer to the next byte to examine is returned in *NEW_PTR.
@@ -624,239 +587,6 @@ func_get_frame_base_dwarf_block (struct symbol *framefunc, CORE_ADDR pc,
 	   framefunc->natural_name ());
 }
 
-static void
-per_cu_dwarf_call (struct dwarf_expr_context *ctx, cu_offset die_offset,
-		   dwarf2_per_cu_data *per_cu, dwarf2_per_objfile *per_objfile)
-{
-  struct dwarf2_locexpr_baton block;
-
-  auto get_frame_pc_from_ctx = [ctx] ()
-    {
-      return ctx->get_frame_pc ();
-    };
-
-  block = dwarf2_fetch_die_loc_cu_off (die_offset, per_cu, per_objfile,
-				       get_frame_pc_from_ctx);
-
-  /* DW_OP_call_ref is currently not supported.  */
-  gdb_assert (block.per_cu == per_cu);
-
-  ctx->eval (block.data, block.size);
-}
-
-/* Given context CTX, section offset SECT_OFF, and compilation unit
-   data PER_CU, execute the "variable value" operation on the DIE
-   found at SECT_OFF.  */
-
-static struct value *
-sect_variable_value (struct dwarf_expr_context *ctx, sect_offset sect_off,
-		     dwarf2_per_cu_data *per_cu,
-		     dwarf2_per_objfile *per_objfile)
-{
-  struct type *die_type
-    = dwarf2_fetch_die_type_sect_off (sect_off, per_cu, per_objfile);
-
-  if (die_type == NULL)
-    error (_("Bad DW_OP_GNU_variable_value DIE."));
-
-  /* Note: Things still work when the following test is removed.  This
-     test and error is here to conform to the proposed specification.  */
-  if (die_type->code () != TYPE_CODE_INT
-      && die_type->code () != TYPE_CODE_PTR)
-    error (_("Type of DW_OP_GNU_variable_value DIE must be an integer or pointer."));
-
-  struct type *type = lookup_pointer_type (die_type);
-  struct frame_info *frame = get_selected_frame (_("No frame selected."));
-  return indirect_synthetic_pointer (sect_off, 0, per_cu, per_objfile, frame,
-				     type, true);
-}
-
-class dwarf_evaluate_loc_desc : public dwarf_expr_context
-{
-public:
-  dwarf_evaluate_loc_desc (dwarf2_per_objfile *per_objfile)
-    : dwarf_expr_context (per_objfile)
-  {}
-
-  struct frame_info *frame;
-  struct dwarf2_per_cu_data *per_cu;
-  CORE_ADDR obj_address;
-
-  /* Helper function for dwarf2_evaluate_loc_desc.  Computes the CFA for
-     the frame in BATON.  */
-
-  CORE_ADDR get_frame_cfa () override
-  {
-    return dwarf2_frame_cfa (frame);
-  }
-
-  /* Helper function for dwarf2_evaluate_loc_desc.  Computes the PC for
-     the frame in BATON.  */
-
-  CORE_ADDR get_frame_pc () override
-  {
-    return get_frame_address_in_block (frame);
-  }
-
-  /* Using the objfile specified in BATON, find the address for the
-     current thread's thread-local storage with offset OFFSET.  */
-  CORE_ADDR get_tls_address (CORE_ADDR offset) override
-  {
-    return target_translate_tls_address (per_objfile->objfile, offset);
-  }
-
-  /* Helper interface of per_cu_dwarf_call for
-     dwarf2_evaluate_loc_desc.  */
-
-  void dwarf_call (cu_offset die_offset) override
-  {
-    per_cu_dwarf_call (this, die_offset, per_cu, per_objfile);
-  }
-
-  /* Helper interface of sect_variable_value for
-     dwarf2_evaluate_loc_desc.  */
-
-  struct value *dwarf_variable_value (sect_offset sect_off) override
-  {
-    return sect_variable_value (this, sect_off, per_cu, per_objfile);
-  }
-
-  struct type *get_base_type (cu_offset die_offset, int size) override
-  {
-    struct type *result = dwarf2_get_die_type (die_offset, per_cu, per_objfile);
-    if (result == NULL)
-      error (_("Could not find type for DW_OP_const_type"));
-    if (size != 0 && TYPE_LENGTH (result) != size)
-      error (_("DW_OP_const_type has different sizes for type and data"));
-    return result;
-  }
-
-  /* Callback function for dwarf2_evaluate_loc_desc.
-     Fetch the address indexed by DW_OP_addrx or DW_OP_GNU_addr_index.  */
-
-  CORE_ADDR get_addr_index (unsigned int index) override
-  {
-    return dwarf2_read_addr_index (per_cu, per_objfile, index);
-  }
-
-  /* Callback function for get_object_address. Return the address of the VLA
-     object.  */
-
-  CORE_ADDR get_object_address () override
-  {
-    if (obj_address == 0)
-      error (_("Location address is not set."));
-    return obj_address;
-  }
-
-  /* Execute DWARF block of call_site_parameter which matches KIND and
-     KIND_U.  Choose DEREF_SIZE value of that parameter.  Search
-     caller of this objects's frame.
-
-     The caller can be from a different CU - per_cu_dwarf_call
-     implementation can be more simple as it does not support cross-CU
-     DWARF executions.  */
-
-  void push_dwarf_reg_entry_value (enum call_site_parameter_kind kind,
-				   union call_site_parameter_u kind_u,
-				   int deref_size) override
-  {
-    struct frame_info *caller_frame;
-    dwarf2_per_cu_data *caller_per_cu;
-    dwarf2_per_objfile *caller_per_objfile;
-    struct call_site_parameter *parameter;
-    const gdb_byte *data_src;
-    size_t size;
-
-    caller_frame = get_prev_frame (frame);
-
-    parameter = dwarf_expr_reg_to_entry_parameter (frame, kind, kind_u,
-						   &caller_per_cu,
-						   &caller_per_objfile);
-    data_src = deref_size == -1 ? parameter->value : parameter->data_value;
-    size = deref_size == -1 ? parameter->value_size : parameter->data_value_size;
-
-    /* DEREF_SIZE size is not verified here.  */
-    if (data_src == NULL)
-      throw_error (NO_ENTRY_VALUE_ERROR,
-		   _("Cannot resolve DW_AT_call_data_value"));
-
-    /* We are about to evaluate an expression in the context of the caller
-       of the current frame.  This evaluation context may be different from
-       the current (callee's) context), so temporarily set the caller's context.
-
-       It is possible for the caller to be from a different objfile from the
-       callee if the call is made through a function pointer.  */
-    scoped_restore save_frame = make_scoped_restore (&this->frame,
-						     caller_frame);
-    scoped_restore save_per_cu = make_scoped_restore (&this->per_cu,
-						      caller_per_cu);
-    scoped_restore save_obj_addr = make_scoped_restore (&this->obj_address,
-							(CORE_ADDR) 0);
-    scoped_restore save_per_objfile = make_scoped_restore (&this->per_objfile,
-							   caller_per_objfile);
-
-    scoped_restore save_arch = make_scoped_restore (&this->gdbarch);
-    this->gdbarch = this->per_objfile->objfile->arch ();
-    scoped_restore save_addr_size = make_scoped_restore (&this->addr_size);
-    this->addr_size = this->per_cu->addr_size ();
-
-    this->eval (data_src, size);
-  }
-
-  /* Using the frame specified in BATON, find the location expression
-     describing the frame base.  Return a pointer to it in START and
-     its length in LENGTH.  */
-  void get_frame_base (const gdb_byte **start, size_t * length) override
-  {
-    /* FIXME: cagney/2003-03-26: This code should be using
-       get_frame_base_address(), and then implement a dwarf2 specific
-       this_base method.  */
-    struct symbol *framefunc;
-    const struct block *bl = get_frame_block (frame, NULL);
-
-    if (bl == NULL)
-      error (_("frame address is not available."));
-
-    /* Use block_linkage_function, which returns a real (not inlined)
-       function, instead of get_frame_function, which may return an
-       inlined function.  */
-    framefunc = block_linkage_function (bl);
-
-    /* If we found a frame-relative symbol then it was certainly within
-       some function associated with a frame. If we can't find the frame,
-       something has gone wrong.  */
-    gdb_assert (framefunc != NULL);
-
-    func_get_frame_base_dwarf_block (framefunc,
-				     get_frame_address_in_block (frame),
-				     start, length);
-  }
-
-
-  struct frame_info* get_context_frame (void) override
-  {
-    return frame;
-  }
-
-  struct dwarf2_per_cu_data *get_per_cu (void) override
-  {
-    return per_cu;
-  }
-
-  const struct lval_funcs *get_closure_callbacks () override
-  {
-    return &loc_desc_closure_value_funcs;
-  }
-
-  struct value *deref_implicit_pointer (sect_offset die_offset, LONGEST offset,
-                                        struct type *type) override
-  {
-    return indirect_synthetic_pointer (die_offset, offset, per_cu,
-                                       per_objfile, frame, type);
-  }
-};
-
 /* See dwarf2loc.h.  */
 
 unsigned int entry_values_debug = 0;
@@ -1335,13 +1065,7 @@ call_site_parameter_matches (struct call_site_parameter *parameter,
   return 0;
 }
 
-/* Fetch call_site_parameter from caller matching KIND and KIND_U.
-   FRAME is for callee.
-
-   Function always returns non-NULL, it throws NO_ENTRY_VALUE_ERROR
-   otherwise.  */
-
-static struct call_site_parameter *
+struct call_site_parameter *
 dwarf_expr_reg_to_entry_parameter (struct frame_info *frame,
 				   enum call_site_parameter_kind kind,
 				   union call_site_parameter_u kind_u,
@@ -1469,8 +1193,8 @@ dwarf_entry_parameter_to_value (struct call_site_parameter *parameter,
     throw_error (NO_ENTRY_VALUE_ERROR,
 		 _("Cannot resolve DW_AT_call_data_value"));
 
-  return dwarf2_evaluate_loc_desc (type, caller_frame, data_src,
-                                   size, per_cu, per_objfile, false);
+  return dwarf2_evaluate_loc_desc (type, caller_frame, data_src, size, per_cu,
+				   per_objfile, false);
 }
 
 /* VALUE must be of type lval_computed with entry_data_value_funcs.  Perform
@@ -1612,33 +1336,6 @@ value_of_dwarf_block_entry (struct type *type, struct frame_info *frame,
 		 "only for single DW_OP_reg* or for DW_OP_fbreg(*)"));
 }
 
-static void
-read_closure_value (struct value *v)
-{
-  rw_closure_value (v, NULL);
-}
-
-static void
-write_closure_value (struct value *to, struct value *from)
-{
-  rw_closure_value (to, from);
-}
-
-/* An implementation of an lval_funcs method to see whether a value is
-   a synthetic pointer.  */
-
-static int
-check_synthetic_pointer (const struct value *value, LONGEST bit_offset,
-                         int bit_length)
-{
-  computed_closure *closure
-      = (computed_closure *) value_computed_closure (value);
-  if (closure->is_closure (computed_closure::ImplicitPtr))
-    return 1;
-  else
-    return 0;
-}
-
 /* Fetch a DW_AT_const_value through a synthetic pointer.  */
 
 static struct value *
@@ -1674,7 +1371,7 @@ fetch_const_value_from_synthetic_pointer (sect_offset die, LONGEST byte_offset,
 
 /* Fetch the value pointed to by a synthetic pointer.  */
 
-static struct value *
+struct value *
 indirect_synthetic_pointer (sect_offset die, LONGEST byte_offset,
 			    dwarf2_per_cu_data *per_cu,
 			    dwarf2_per_objfile *per_objfile,
@@ -1711,91 +1408,6 @@ indirect_synthetic_pointer (sect_offset die, LONGEST byte_offset,
 						     per_objfile, type);
 }
 
-/* An implementation of an lval_funcs method to indirect through a
-   pointer.  This handles the synthetic pointer case when needed.  */
-
-static struct value *
-indirect_closure_value (struct value *value)
-{
-  implicit_pointer_closure *pointer_closure;
-  computed_closure *closure
-      = (computed_closure *) value_computed_closure (value);
-  struct type *type;
-  struct frame_info *frame;
-  LONGEST byte_offset;
-  enum bfd_endian byte_order;
-
-  type = check_typedef (value_type (value));
-  if (type->code () != TYPE_CODE_PTR)
-    return NULL;
-
-  if (!closure->is_closure (computed_closure::ImplicitPtr))
-    return NULL;
-
-  pointer_closure =
-      static_cast<implicit_pointer_closure*> (closure);
-  frame = get_selected_frame (_("No frame selected."));
-
-  /* This is an offset requested by GDB, such as value subscripts.
-     However, due to how synthetic pointers are implemented, this is
-     always presented to us as a pointer type.  This means we have to
-     sign-extend it manually as appropriate.  Use raw
-     extract_signed_integer directly rather than value_as_address and
-     sign extend afterwards on architectures that would need it
-     (mostly everywhere except MIPS, which has signed addresses) as
-     the later would go through gdbarch_pointer_to_address and thus
-     return a CORE_ADDR with high bits set on architectures that
-     encode address spaces and other things in CORE_ADDR.  */
-  byte_order = gdbarch_byte_order (get_frame_arch (frame));
-  byte_offset = extract_signed_integer (value_contents (value),
-					TYPE_LENGTH (type), byte_order);
-  byte_offset += pointer_closure->get_offset ();
-
-  return indirect_synthetic_pointer (pointer_closure->get_die_offset (),
-                                     byte_offset,
-                                     pointer_closure->get_per_cu (),
-                                     pointer_closure->get_per_objfile (),
-                                     frame, type);
-}
-
-/* Implementation of the coerce_ref method of lval_funcs for synthetic C++
-   references.  */
-
-static struct value *
-coerce_closure_ref (const struct value *value)
-{
-  struct type *type = check_typedef (value_type (value));
-
-  if (value_bits_synthetic_pointer (value, value_embedded_offset (value),
-      TARGET_CHAR_BIT * TYPE_LENGTH (type)))
-    {
-      implicit_pointer_closure *pointer_closure;
-      computed_closure *closure
-          = (computed_closure *) value_computed_closure (value);
-      struct frame_info *frame
-          = get_selected_frame (_("No frame selected."));
-
-      if (!closure->is_closure (computed_closure::ImplicitPtr))
-        return NULL;
-
-      pointer_closure =
-          static_cast<implicit_pointer_closure*> (closure);
-
-      /* gdb represents synthetic pointers as pieced values with a single
-         piece.  */
-      return indirect_synthetic_pointer (pointer_closure->get_die_offset (),
-                                         pointer_closure->get_offset (),
-                                         pointer_closure->get_per_cu (),
-                                         pointer_closure->get_per_objfile (),
-                                         frame, type);
-    }
-  else
-    {
-      /* Else: not a synthetic reference; do nothing.  */
-      return NULL;
-    }
-}
-
 /* Evaluate a location description, starting at DATA and with length
    SIZE, to find the current location of variable of TYPE in the
    context of FRAME.  If SUBOBJ_TYPE is non-NULL, return instead the
@@ -1824,20 +1436,14 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
   if (size == 0)
     return allocate_optimized_out_value (subobj_type);
 
-  dwarf_evaluate_loc_desc ctx (per_objfile);
-  ctx.frame = frame;
-  ctx.per_cu = per_cu;
-  ctx.obj_address = 0;
+  dwarf_expr_context ctx (per_objfile, per_cu->addr_size ());
 
   scoped_value_mark free_values;
 
-  ctx.gdbarch = per_objfile->objfile->arch ();
-  ctx.addr_size = per_cu->addr_size ();
-  ctx.ref_addr_size = per_cu->ref_addr_size ();
-
   try
     {
-      ctx.eval (data, size);
+      retval = ctx.eval_exp (data, size, as_lval, per_cu, frame, nullptr,
+			     type, subobj_type, subobj_byte_offset);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1856,11 +1462,9 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
 	  free_values.free_to_mark ();
 	  return allocate_optimized_out_value (subobj_type);
 	}
-	  else
-	    throw;
+      else
+	throw;
     }
-
-  retval = ctx.fetch_value (as_lval, type, subobj_type, subobj_byte_offset);
 
   /* We need to clean up all the values that are not needed any more.
      The problem with a value_ref_ptr class is that it disconnects the
@@ -1879,52 +1483,12 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
 struct value *
 dwarf2_evaluate_loc_desc (struct type *type, struct frame_info *frame,
 			  const gdb_byte *data, size_t size,
-			  struct dwarf2_per_cu_data *per_cu,
+			  dwarf2_per_cu_data *per_cu,
 			  dwarf2_per_objfile *per_objfile, bool as_lval)
 {
   return dwarf2_evaluate_loc_desc_full (type, frame, data, size, per_cu,
 					per_objfile, NULL, 0, as_lval);
 }
-
-/* A specialization of dwarf_evaluate_loc_desc that is used by
-   dwarf2_locexpr_baton_eval.  This subclass exists to handle the case
-   where a caller of dwarf2_locexpr_baton_eval passes in some data,
-   but with the address being 0.  In this situation, we arrange for
-   memory reads to come from the passed-in buffer.  */
-
-struct evaluate_for_locexpr_baton : public dwarf_evaluate_loc_desc
-{
-  evaluate_for_locexpr_baton (dwarf2_per_objfile *per_objfile)
-    : dwarf_evaluate_loc_desc (per_objfile)
-  {}
-
-  /* The data that was passed in.  */
-  gdb::array_view<const gdb_byte> data_view;
-
-  CORE_ADDR get_object_address () override
-  {
-    if (data_view.data () == nullptr && obj_address == 0)
-      error (_("Location address is not set."));
-    return obj_address;
-  }
-
-
-  bool read_passed_in_mem (gdb_byte *buf, CORE_ADDR addr, size_t len) override
-  {
-    if (len == 0)
-      return false;
-
-    /* Prefer the passed-in memory, if it exists.  */
-    CORE_ADDR offset = addr - obj_address;
-    if (offset < data_view.size () && offset + len <= data_view.size ())
-      {
-	memcpy (buf, data_view.data (), len);
-	return true;
-      }
-
-    return false;
-  }
-};
 
 /* Evaluates a dwarf expression and stores the result in VAL,
    expecting that the dwarf expression only produces a single
@@ -1948,28 +1512,24 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
     return 0;
 
   dwarf2_per_objfile *per_objfile = dlbaton->per_objfile;
-  evaluate_for_locexpr_baton ctx (per_objfile);
+  struct dwarf2_per_cu_data *per_cu = dlbaton->per_cu;
+  dwarf_expr_context ctx (per_objfile, per_cu->addr_size ());
 
-  ctx.frame = frame;
-  ctx.per_cu = dlbaton->per_cu;
-  if (addr_stack == nullptr)
-    ctx.obj_address = 0;
-  else
-    {
-      ctx.obj_address = addr_stack->addr;
-      ctx.data_view = addr_stack->valaddr;
-    }
-
-  ctx.gdbarch = per_objfile->objfile->arch ();
-  ctx.addr_size = dlbaton->per_cu->addr_size ();
-  ctx.ref_addr_size = dlbaton->per_cu->ref_addr_size ();
+  struct value *result;
+  scoped_value_mark free_values;
 
   if (push_initial_value)
-    ctx.push_address (ctx.obj_address, false);
+    {
+      if (addr_stack != nullptr)
+    ctx.push_address (addr_stack->addr, false);
+      else
+    ctx.push_address (0, false);
+    }
 
   try
     {
-      ctx.eval (dlbaton->data, dlbaton->size);
+      result = ctx.eval_exp (dlbaton->data, dlbaton->size,
+			     true, per_cu, frame, addr_stack);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1987,7 +1547,14 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 	throw;
     }
 
-  *valp = value_address (ctx.fetch_value ());
+  if (value_optimized_out (result))
+    return 0;
+
+  if (VALUE_LVAL (result) == lval_memory)
+    *valp = value_address (result);
+  else
+    *valp = value_as_address (result);
+
   return 1;
 }
 
@@ -2153,153 +1720,410 @@ dwarf2_compile_property_to_c (string_file *stream,
 			     data, data + size, per_cu, per_objfile);
 }
 
-static const struct lval_funcs needs_eval_pieced_value_funcs = {
-  NULL,
-  NULL,
-  NULL,
-  NULL,
-  NULL,
-  copy_value_closure,
-  free_value_closure
-};
-
-/* Helper functions and baton for dwarf2_loc_desc_get_symbol_read_needs.  */
-
-class symbol_needs_eval_context : public dwarf_expr_context
-{
-public:
-  symbol_needs_eval_context (dwarf2_per_objfile *per_objfile)
-    : dwarf_expr_context (per_objfile)
-  {}
-
-  enum symbol_needs_kind needs;
-  struct dwarf2_per_cu_data *per_cu;
-
-  struct frame_info* get_context_frame (void) override
-  {
-    return NULL;
-  }
-
-  struct dwarf2_per_cu_data *get_per_cu (void) override
-  {
-    return per_cu;
-  }
-
-  /* Frame-relative accesses do require a frame.  */
-  void get_frame_base (const gdb_byte **start, size_t *length) override
-  {
-    static gdb_byte lit0 = DW_OP_lit0;
-
-    *start = &lit0;
-    *length = 1;
-
-    needs = SYMBOL_NEEDS_FRAME;
-  }
-
-  /* CFA accesses require a frame.  */
-  CORE_ADDR get_frame_cfa () override
-  {
-    needs = SYMBOL_NEEDS_FRAME;
-    return 1;
-  }
-
-  CORE_ADDR get_frame_pc () override
-  {
-    needs = SYMBOL_NEEDS_FRAME;
-    return 1;
-  }
-
-  /* Thread-local accesses require registers, but not a frame.  */
-  CORE_ADDR get_tls_address (CORE_ADDR offset) override
-  {
-    if (needs <= SYMBOL_NEEDS_REGISTERS)
-      needs = SYMBOL_NEEDS_REGISTERS;
-    return 1;
-  }
-
-  /* Helper interface of per_cu_dwarf_call for
-     dwarf2_loc_desc_get_symbol_read_needs.  */
-
-  void dwarf_call (cu_offset die_offset) override
-  {
-    per_cu_dwarf_call (this, die_offset, per_cu, per_objfile);
-  }
-
-  /* Helper interface of sect_variable_value for
-     dwarf2_loc_desc_get_symbol_read_needs.  */
-
-  struct value *dwarf_variable_value (sect_offset sect_off) override
-  {
-    return sect_variable_value (this, sect_off, per_cu, per_objfile);
-  }
-
-  /* DW_OP_entry_value accesses require a caller, therefore a
-     frame.  */
-
-  void push_dwarf_reg_entry_value (enum call_site_parameter_kind kind,
-				   union call_site_parameter_u kind_u,
-				   int deref_size) override
-  {
-    needs = SYMBOL_NEEDS_FRAME;
-
-    /* The expression may require some stub values on DWARF stack.  */
-    push_address (0, 0);
-  }
-
-  /* DW_OP_addrx and DW_OP_GNU_addr_index doesn't require a frame.  */
-
-  CORE_ADDR get_addr_index (unsigned int index) override
-  {
-    /* Nothing to do.  */
-    return 1;
-  }
-
-  /* DW_OP_push_object_address has a frame already passed through.  */
-
-  CORE_ADDR get_object_address () override
-  {
-    /* Nothing to do.  */
-    return 1;
-  }
-
-  const struct lval_funcs *get_closure_callbacks () override
-  {
-    return &needs_eval_pieced_value_funcs;
-  }
-
-  void eval_needs_frame (void) override
-  {
-    needs = SYMBOL_NEEDS_FRAME;
-    return;
-  }
-
-  bool context_can_deref (void) override
-  {
-    return false;
-  }
-};
-
 /* Compute the correct symbol_needs_kind value for the location
    expression at DATA (length SIZE).  */
 
 static enum symbol_needs_kind
-dwarf2_loc_desc_get_symbol_read_needs (const gdb_byte *data, size_t size,
-				       dwarf2_per_cu_data *per_cu,
-				       dwarf2_per_objfile *per_objfile)
+dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
+			     dwarf2_per_cu_data *per_cu,
+			     dwarf2_per_objfile *per_objfile,
+			     bfd_endian byte_order,
+			     int addr_size,
+			     int ref_addr_size,
+			     int depth = 0)
 {
-  scoped_value_mark free_values;
+  const gdb_byte *expr_end = expr.data () + expr.size ();
+  const gdb_byte *op_ptr = expr.data ();
+  enum symbol_needs_kind symbol_needs = SYMBOL_NEEDS_NONE;
+  const int max_depth = 256;
 
-  symbol_needs_eval_context ctx (per_objfile);
+  if (depth > max_depth)
+    error (_("DWARF-2 expression error: Loop detected (%d)."), depth);
 
-  ctx.needs = SYMBOL_NEEDS_NONE;
-  ctx.per_cu = per_cu;
-  ctx.gdbarch = per_objfile->objfile->arch ();
-  ctx.addr_size = per_cu->addr_size ();
-  ctx.ref_addr_size = per_cu->ref_addr_size ();
+  depth++;
 
-  ctx.eval (data, size);
-  /* This needs to improve when the second phase is implemented.  */
-  return ctx.needs;
+  while (op_ptr < expr_end)
+    {
+      enum dwarf_location_atom op
+	= (enum dwarf_location_atom) *op_ptr++;
+      uint64_t uoffset;
+      int64_t offset;
+
+      /* The DWARF expression might have a bug causing an infinite
+	 loop.  In that case, quitting is the only way out.  */
+      QUIT;
+
+      switch (op)
+	{
+	case DW_OP_lit0:
+	case DW_OP_lit1:
+	case DW_OP_lit2:
+	case DW_OP_lit3:
+	case DW_OP_lit4:
+	case DW_OP_lit5:
+	case DW_OP_lit6:
+	case DW_OP_lit7:
+	case DW_OP_lit8:
+	case DW_OP_lit9:
+	case DW_OP_lit10:
+	case DW_OP_lit11:
+	case DW_OP_lit12:
+	case DW_OP_lit13:
+	case DW_OP_lit14:
+	case DW_OP_lit15:
+	case DW_OP_lit16:
+	case DW_OP_lit17:
+	case DW_OP_lit18:
+	case DW_OP_lit19:
+	case DW_OP_lit20:
+	case DW_OP_lit21:
+	case DW_OP_lit22:
+	case DW_OP_lit23:
+	case DW_OP_lit24:
+	case DW_OP_lit25:
+	case DW_OP_lit26:
+	case DW_OP_lit27:
+	case DW_OP_lit28:
+	case DW_OP_lit29:
+	case DW_OP_lit30:
+	case DW_OP_lit31:
+	case DW_OP_stack_value:
+	case DW_OP_dup:
+	case DW_OP_drop:
+	case DW_OP_swap:
+	case DW_OP_over:
+	case DW_OP_rot:
+	case DW_OP_deref:
+	case DW_OP_abs:
+	case DW_OP_neg:
+	case DW_OP_not:
+	case DW_OP_and:
+	case DW_OP_div:
+	case DW_OP_minus:
+	case DW_OP_mod:
+	case DW_OP_mul:
+	case DW_OP_or:
+	case DW_OP_plus:
+	case DW_OP_shl:
+	case DW_OP_shr:
+	case DW_OP_shra:
+	case DW_OP_xor:
+	case DW_OP_le:
+	case DW_OP_ge:
+	case DW_OP_eq:
+	case DW_OP_lt:
+	case DW_OP_gt:
+	case DW_OP_ne:
+	case DW_OP_GNU_push_tls_address:
+	case DW_OP_nop:
+	case DW_OP_GNU_uninit:
+	case DW_OP_push_object_address:
+	  break;
+
+	case DW_OP_form_tls_address:
+	  if (symbol_needs <= SYMBOL_NEEDS_REGISTERS)
+	    symbol_needs = SYMBOL_NEEDS_REGISTERS;
+	  break;
+
+	case DW_OP_convert:
+	case DW_OP_GNU_convert:
+	case DW_OP_reinterpret:
+	case DW_OP_GNU_reinterpret:
+	case DW_OP_addrx:
+	case DW_OP_GNU_addr_index:
+	case DW_OP_GNU_const_index:
+	case DW_OP_constu:
+	case DW_OP_plus_uconst:
+	case DW_OP_piece:
+	case DW_OP_LLVM_offset_constu:
+	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
+	  break;
+
+	case DW_OP_consts:
+	  op_ptr = safe_read_sleb128 (op_ptr, expr_end, &offset);
+	  break;
+
+	case DW_OP_bit_piece:
+	case DW_OP_LLVM_select_bit_piece:
+	case DW_OP_LLVM_extend:
+	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
+	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
+	  break;
+
+	case DW_OP_deref_type:
+	case DW_OP_GNU_deref_type:
+	  op_ptr++;
+	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
+	  break;
+
+	case DW_OP_addr:
+	  op_ptr += addr_size;
+	  break;
+
+	case DW_OP_const1u:
+	case DW_OP_const1s:
+	  op_ptr += 1;
+	  break;
+
+	case DW_OP_const2u:
+	case DW_OP_const2s:
+	  op_ptr += 2;
+	  break;
+
+	case DW_OP_const4s:
+	case DW_OP_const4u:
+	  op_ptr += 4;
+	  break;
+
+	case DW_OP_const8s:
+	case DW_OP_const8u:
+	  op_ptr += 8;
+	  break;
+
+	case DW_OP_reg0:
+	case DW_OP_reg1:
+	case DW_OP_reg2:
+	case DW_OP_reg3:
+	case DW_OP_reg4:
+	case DW_OP_reg5:
+	case DW_OP_reg6:
+	case DW_OP_reg7:
+	case DW_OP_reg8:
+	case DW_OP_reg9:
+	case DW_OP_reg10:
+	case DW_OP_reg11:
+	case DW_OP_reg12:
+	case DW_OP_reg13:
+	case DW_OP_reg14:
+	case DW_OP_reg15:
+	case DW_OP_reg16:
+	case DW_OP_reg17:
+	case DW_OP_reg18:
+	case DW_OP_reg19:
+	case DW_OP_reg20:
+	case DW_OP_reg21:
+	case DW_OP_reg22:
+	case DW_OP_reg23:
+	case DW_OP_reg24:
+	case DW_OP_reg25:
+	case DW_OP_reg26:
+	case DW_OP_reg27:
+	case DW_OP_reg28:
+	case DW_OP_reg29:
+	case DW_OP_reg30:
+	case DW_OP_reg31:
+	case DW_OP_regx:
+	case DW_OP_breg0:
+	case DW_OP_breg1:
+	case DW_OP_breg2:
+	case DW_OP_breg3:
+	case DW_OP_breg4:
+	case DW_OP_breg5:
+	case DW_OP_breg6:
+	case DW_OP_breg7:
+	case DW_OP_breg8:
+	case DW_OP_breg9:
+	case DW_OP_breg10:
+	case DW_OP_breg11:
+	case DW_OP_breg12:
+	case DW_OP_breg13:
+	case DW_OP_breg14:
+	case DW_OP_breg15:
+	case DW_OP_breg16:
+	case DW_OP_breg17:
+	case DW_OP_breg18:
+	case DW_OP_breg19:
+	case DW_OP_breg20:
+	case DW_OP_breg21:
+	case DW_OP_breg22:
+	case DW_OP_breg23:
+	case DW_OP_breg24:
+	case DW_OP_breg25:
+	case DW_OP_breg26:
+	case DW_OP_breg27:
+	case DW_OP_breg28:
+	case DW_OP_breg29:
+	case DW_OP_breg30:
+	case DW_OP_breg31:
+	case DW_OP_bregx:
+	case DW_OP_fbreg:
+	case DW_OP_call_frame_cfa:
+	case DW_OP_entry_value:
+	case DW_OP_GNU_entry_value:
+	case DW_OP_GNU_parameter_ref:
+	case DW_OP_regval_type:
+	case DW_OP_GNU_regval_type:
+	case DW_OP_LLVM_call_frame_entry_reg:
+	case DW_OP_LLVM_aspace_bregx:
+	  symbol_needs = SYMBOL_NEEDS_FRAME;
+	  break;
+
+	case DW_OP_implicit_value:
+	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
+	  op_ptr += uoffset;
+	  break;
+
+	case DW_OP_implicit_pointer:
+	case DW_OP_GNU_implicit_pointer:
+	  op_ptr += ref_addr_size;
+	  op_ptr = safe_read_sleb128 (op_ptr, expr_end, &offset);
+	  break;
+
+	case DW_OP_deref_size:
+	case DW_OP_pick:
+	  op_ptr++;
+	  break;
+
+	case DW_OP_skip:
+	  op_ptr += 2;
+	  break;
+
+	case DW_OP_bra:
+	  op_ptr += 2;
+	  break;
+
+	case DW_OP_call2:
+	  {
+	    cu_offset cu_off
+	      = (cu_offset) extract_unsigned_integer (op_ptr, 2, byte_order);
+	    op_ptr += 2;
+
+	    auto get_frame_pc = [&symbol_needs] ()
+	      {
+		symbol_needs = SYMBOL_NEEDS_FRAME;
+		return 0;
+	      };
+
+	    struct dwarf2_locexpr_baton baton
+	      = dwarf2_fetch_die_loc_cu_off (cu_off, per_cu,
+					     per_objfile,
+					     get_frame_pc);
+
+	    /* If SYMBOL_NEEDS_FRAME is returned from the previous call,
+	       we dont have to check the baton content.  */
+	    if (symbol_needs != SYMBOL_NEEDS_FRAME)
+	      {
+		gdbarch *arch = baton.per_objfile->objfile->arch ();
+		gdb::array_view<const gdb_byte> sub_expr (baton.data,
+							  baton.size);
+		symbol_needs
+		  = dwarf2_get_symbol_read_needs (sub_expr,
+						  baton.per_cu,
+						  baton.per_objfile,
+						  gdbarch_byte_order (arch),
+						  baton.per_cu->addr_size (),
+						  baton.per_cu->ref_addr_size (),
+						  depth);
+	      }
+	    break;
+	  }
+
+	case DW_OP_call4:
+	  {
+	    cu_offset cu_off
+	      = (cu_offset) extract_unsigned_integer (op_ptr, 4, byte_order);
+	    op_ptr += 4;
+
+	    auto get_frame_pc = [&symbol_needs] ()
+	      {
+		symbol_needs = SYMBOL_NEEDS_FRAME;
+		return 0;
+	      };
+
+	    struct dwarf2_locexpr_baton baton
+	      = dwarf2_fetch_die_loc_cu_off (cu_off, per_cu,
+					     per_objfile,
+					     get_frame_pc);
+
+	    /* If SYMBOL_NEEDS_FRAME is returned from the previous call,
+	       we dont have to check the baton content.  */
+	    if (symbol_needs != SYMBOL_NEEDS_FRAME)
+	      {
+		gdbarch *arch = baton.per_objfile->objfile->arch ();
+		gdb::array_view<const gdb_byte> sub_expr (baton.data,
+							  baton.size);
+		symbol_needs
+		  = dwarf2_get_symbol_read_needs (sub_expr,
+						  baton.per_cu,
+						  baton.per_objfile,
+						  gdbarch_byte_order (arch),
+						  baton.per_cu->addr_size (),
+						  baton.per_cu->ref_addr_size (),
+						  depth);
+	      }
+	    break;
+	  }
+
+	case DW_OP_GNU_variable_value:
+	  {
+	    sect_offset sect_off
+	      = (sect_offset) extract_unsigned_integer (op_ptr,
+							ref_addr_size,
+							byte_order);
+	    op_ptr += ref_addr_size;
+
+	    struct type *die_type
+	      = dwarf2_fetch_die_type_sect_off (sect_off, per_cu,
+						per_objfile);
+
+	    if (die_type == NULL)
+	      error (_("Bad DW_OP_GNU_variable_value DIE."));
+
+	    /* Note: Things still work when the following test is
+	       removed.  This test and error is here to conform to the
+	       proposed specification.  */
+	    if (die_type->code () != TYPE_CODE_INT
+	       && die_type->code () != TYPE_CODE_PTR)
+	      error (_("Type of DW_OP_GNU_variable_value DIE must be "
+		       "an integer or pointer."));
+
+	    auto get_frame_pc = [&symbol_needs] ()
+	      {
+		symbol_needs = SYMBOL_NEEDS_FRAME;
+		return 0;
+	      };
+
+	    struct dwarf2_locexpr_baton baton
+	      = dwarf2_fetch_die_loc_sect_off (sect_off, per_cu,
+					       per_objfile,
+					       get_frame_pc, true);
+
+	    /* If SYMBOL_NEEDS_FRAME is returned from the previous call,
+	       we dont have to check the baton content.  */
+	    if (symbol_needs != SYMBOL_NEEDS_FRAME)
+	      {
+		gdbarch *arch = baton.per_objfile->objfile->arch ();
+		gdb::array_view<const gdb_byte> sub_expr (baton.data,
+							  baton.size);
+		symbol_needs
+		  = dwarf2_get_symbol_read_needs (sub_expr,
+						  baton.per_cu,
+						  baton.per_objfile,
+						  gdbarch_byte_order (arch),
+						  baton.per_cu->addr_size (),
+						  baton.per_cu->ref_addr_size (),
+						  depth);
+	      }
+	    break;
+	  }
+
+	case DW_OP_const_type:
+	case DW_OP_GNU_const_type:
+	  op_ptr = safe_read_uleb128 (op_ptr, expr_end, &uoffset);
+	  offset = *op_ptr++;
+	  op_ptr += offset;
+	  break;
+
+	default:
+	  error (_("Unhandled DWARF expression opcode 0x%x"), op);
+	}
+      /* If it is known that a frame information is
+	 needed we can stop parsing the expression.  */
+      if (symbol_needs == SYMBOL_NEEDS_FRAME)
+	break;
+    }
+
+  return symbol_needs;
 }
 
 /* A helper function that throws an unimplemented error mentioning a
@@ -3141,9 +2965,15 @@ locexpr_get_symbol_read_needs (struct symbol *symbol)
   struct dwarf2_locexpr_baton *dlbaton
     = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (symbol);
 
-  return dwarf2_loc_desc_get_symbol_read_needs (dlbaton->data, dlbaton->size,
-						dlbaton->per_cu,
-						dlbaton->per_objfile);
+  gdbarch *arch = dlbaton->per_objfile->objfile->arch ();
+  gdb::array_view<const gdb_byte> expr (dlbaton->data, dlbaton->size);
+
+  return dwarf2_get_symbol_read_needs (expr,
+				       dlbaton->per_cu,
+				       dlbaton->per_objfile,
+				       gdbarch_byte_order (arch),
+				       dlbaton->per_cu->addr_size (),
+				       dlbaton->per_cu->ref_addr_size ());
 }
 
 /* Return true if DATA points to the end of a piece.  END is one past
@@ -3752,7 +3582,7 @@ disassemble_dwarf_expression (struct ui_file *stream,
 	    data = safe_read_uleb128 (data, end, &ul);
 	    data = safe_read_uleb128 (data, end, &count);
 	    fprintf_filtered (stream, " piece size %s (bits) pieces count %s",
-	                      pulongest (ul), pulongest (count));
+			      pulongest (ul), pulongest (count));
 	  }
 	  break;
 
@@ -3770,7 +3600,7 @@ disassemble_dwarf_expression (struct ui_file *stream,
 	case DW_OP_LLVM_call_frame_entry_reg:
 	  data = safe_read_uleb128 (data, end, &ul);
 	  fprintf_filtered (stream, " register %s [$%s]",
-	                    pulongest (ul), locexpr_regname (arch, (int) ul));
+			    pulongest (ul), locexpr_regname (arch, (int) ul));
 	  break;
 
 	case DW_OP_LLVM_aspace_bregx:
@@ -3781,7 +3611,6 @@ disassemble_dwarf_expression (struct ui_file *stream,
 			    locexpr_regname (arch, (int) ul),
 			    plongest (l));
 	  break;
-
 	}
 
       fprintf_filtered (stream, "\n");
@@ -4204,6 +4033,77 @@ const struct symbol_computed_ops dwarf2_loclist_funcs = {
   loclist_generate_c_location
 };
 
+#if GDB_SELF_TEST
+
+namespace selftests {
+
+/* Unit test for the symbol needs check mechanism.
+
+   This mechanism is not expected to access the target. This
+   means that a conditional expressions that depends on a target
+   access needs to be evaluated in full.
+
+   This test is testing if the zero resulting branch is ignored.  */
+
+static void
+symbol_needs_cond_zero ()
+{
+  const gdb_byte dwarf_expr[] {
+    0x97,           /* DW_OP_push_object_address */
+    0x28, 0x5, 0x0, /* DW_OP_bra 5 */
+    0x70, 0x0,      /* DW_OP_breg0 0 */
+    0x2f, 0x1, 0x0, /* DW_OP_skip 1 */
+    0x30,           /* DW_OP_lit0 */
+    0x9f,           /* DW_OP_stack_value */
+  };
+
+  symbol_needs_kind symbol_needs
+    = dwarf2_get_symbol_read_needs (dwarf_expr,
+				    NULL /* per_objfile */,
+				    NULL /* per_cu */,
+				    BFD_ENDIAN_LITTLE,
+				    4 /* addr_size */,
+				    4 /* ref_addr_size */);
+
+  SELF_CHECK (symbol_needs == SYMBOL_NEEDS_FRAME);
+}
+
+/* Unit test for the symbol needs check mechanism.
+
+   This mechanism is not expected to access the target. This
+   means that a conditional expressions that depends on a target
+   access needs to be evaluated in full.
+
+   This test is testing if the nonzero resulting branch is ignored.  */
+
+static void
+symbol_needs_cond_nonzero ()
+{
+  const gdb_byte dwarf_expr[] {
+    0x97,           /* DW_OP_push_object_address */
+    0x30,           /* DW_OP_lit0 */
+    0x29,           /* DW_OP_eq */
+    0x28, 0x5, 0x0, /* DW_OP_bra 5 */
+    0x70, 0x0,      /* DW_OP_breg0 0 */
+    0x2f, 0x1, 0x0, /* DW_OP_skip 1 */
+    0x30,           /* DW_OP_lit0 */
+    0x9f,           /* DW_OP_stack_value */
+  };
+
+  symbol_needs_kind symbol_needs
+    = dwarf2_get_symbol_read_needs (dwarf_expr,
+				    NULL /* per_objfile */,
+				    NULL /* per_cu */,
+				    BFD_ENDIAN_LITTLE,
+				    4 /* addr_size */,
+				    4 /* ref_addr_size */);
+
+  SELF_CHECK (symbol_needs == SYMBOL_NEEDS_FRAME);
+}
+
+} // namespace selftests
+#endif /* GDB_SELF_TEST */
+
 void _initialize_dwarf2loc ();
 void
 _initialize_dwarf2loc ()
@@ -4232,4 +4132,11 @@ conversational style, when possible."),
 			   show_dwarf_always_disassemble,
 			   &set_dwarf_cmdlist,
 			   &show_dwarf_cmdlist);
+
+#if GDB_SELF_TEST
+  selftests::register_test ("symbol_needs_cond_zero",
+			    selftests::symbol_needs_cond_zero);
+  selftests::register_test ("symbol_needs_cond_nonzero",
+			    selftests::symbol_needs_cond_nonzero);
+#endif
 }

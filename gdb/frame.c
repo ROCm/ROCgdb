@@ -1440,11 +1440,11 @@ put_frame_register (struct frame_info *frame, int regnum,
       }
     case lval_register:
       {
-        /* Register written can be bigger then the value we are writing.  */
+	/* Register written can be bigger then the value we are writing.  */
 	gdb::byte_vector temp_buf (register_size (gdbarch, realnum));
 	get_current_regcache ()->cooked_read (realnum, temp_buf.data ());
 	memcpy ((char *) temp_buf.data () + offset, buf,
-	        register_size (gdbarch, regnum));
+		register_size (gdbarch, regnum));
 	get_current_regcache ()->cooked_write (realnum, temp_buf.data ());
 	break;
       }
@@ -1584,8 +1584,8 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
 	curr_len = len;
 
       /*  Compute value is a special new case for DWARF 6.
-          The problem is that the computed callback mechanism only
-          supports a struct value arguments, so we need to make one.  */
+	  The problem is that the computed callback mechanism only
+	  supports a struct value arguments, so we need to make one.  */
       if (value != NULL && VALUE_LVAL (value) == lval_computed)
 	{
 	  struct value *from_value;
@@ -1593,11 +1593,11 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
 	  struct type * reg_type = register_type (gdbarch, regnum);
 
 	  if (funcs->write == NULL)
-        error (_("Attempt to assign to an unmodifiable value."));
+	    error (_("Attempt to assign to an unmodifiable value."));
 
 	  from_value = allocate_value (reg_type);
 	  memcpy (value_contents_raw (from_value), myaddr,
-	          TYPE_LENGTH (reg_type));
+		  TYPE_LENGTH (reg_type));
 
 	  set_value_offset (value, added_offset + offset);
 
@@ -1619,7 +1619,7 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
 	}
 
       if (value != NULL)
-        release_value (value);
+	release_value (value);
 
       myaddr += curr_len;
       len -= curr_len;
