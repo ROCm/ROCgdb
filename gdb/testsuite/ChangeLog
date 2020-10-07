@@ -1,3 +1,29 @@
+2020-09-28  Gareth Rees <grees@undo.io>  (tiny change)
+
+	PR python/26586
+	* gdb.python/python.exp: add test cases for the from_tty
+	argument to gdb.execute.
+
+2020-09-25  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/bp-cmds-sourced-script.c: New file.
+	* gdb.base/bp-cmds-sourced-script.exp: New test.
+	* gdb.base/bp-cmds-sourced-script.gdb: New file.
+
+2020-09-24  Tom Tromey  <tromey@adacore.com>
+
+	PR tui/26638:
+	* gdb.tui/list.exp: Check output of "focus next".
+
+2020-09-18  Victor Collod  <vcollod@nvidia.com>
+
+	PR gdb/26635
+	* gdb.arch/amd64-prologue-skip-cf-protection.exp: Make the test
+	compatible with i386, and move it to...
+	* gdb.arch/i386-prologue-skip-cf-protection.exp: ... here.
+	* gdb.arch/amd64-prologue-skip-cf-protection.c: Move to...
+	* gdb.arch/i386-prologue-skip-cf-protection.c: ... here.
+
 2020-09-18  Pedro Alves  <pedro@palves.net>
 
 	PR gdb/26631
