@@ -1,3 +1,54 @@
+2020-10-07  Tom Tromey  <tromey@adacore.com>
+
+	* unittests/search-memory-selftests.c: New file.
+	* Makefile.in (SELFTESTS_SRCS): Add
+	unittests/search-memory-selftests.c.
+
+2020-10-07  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/16930:
+	* findcmd.c (_initialize_mem_search): Mention that the range is
+	inclusive.
+
+2020-10-07  Tom Tromey  <tromey@adacore.com>
+
+	* target.h (simple_search_memory): Don't declare.
+	* target.c (simple_search_memory): Move to gdbsupport.
+	(default_search_memory): Update.
+	* remote.c (remote_target::search_memory): Update.
+
+2020-10-07  Simon Marchi  <simon.marchi@efficios.com>
+
+	* Makefile.in (COMPILE): Add CXXFLAGS.
+	(INTERNAL_CFLAGS_BASE): Remove CXXFLAGS.
+	(check-headers): Add CXXFLAGS.
+
+2020-10-07  Anton Kolesov  <anton.kolesov@synopsys.com>
+
+	* arc-linux-tdep.h: New file.
+	* arc-linux-tdep.c (arc_linux_core_reg_offsets,
+	arc_linux_supply_gregset, arc_linux_supply_v2_regset,
+	arc_linux_collect_gregset, arc_linux_collect_v2_regset,
+	arc_linux_gregset, arc_linux_v2_regset,
+	arc_linux_iterate_over_regset_sections,
+	arc_linux_core_read_description): Implement.
+	(arc_linux_init_osabi): Set iterate_over_regset_sections.
+	* arc-tdep.h (ARC_OFFSET_NO_REGISTER): Declare.
+	(arc_gdbarch_features_create): Add.
+	* arc-tdep.c (arc_gdbarch_features_create): Not static anymore.
+
+2020-10-07  Shahab Vahedi  <shahab@synopsys.com>
+
+	* arch/arc.h: Rename "arc_gdbarch_features" to
+	"arc_arch_features".
+	* arc-tdep.h: Likewise.
+	* arc-tdep.c: Likewise.
+
+2020-10-07  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infcmd.c (attach_command): Remove the redundant call to
+	`clear_proceed_status`.
+
 2020-10-07  Kamil Rytarowski  <n54@gmx.com>
 
 	* nat/netbsd-nat.c (write_memory, read_memory): Update.
