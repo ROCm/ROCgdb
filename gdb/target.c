@@ -2625,6 +2625,12 @@ target_pid_to_str (ptid_t ptid)
   return current_inferior ()->top_target ()->pid_to_str (ptid);
 }
 
+std::string
+target_lane_to_str (thread_info *thr, int lane)
+{
+  return current_inferior ()->top_target ()->lane_to_str (thr, lane);
+}
+
 const char *
 target_thread_name (struct thread_info *info)
 {
@@ -3677,6 +3683,12 @@ static std::string
 default_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
   return normal_pid_to_str (ptid);
+}
+
+static std::string
+default_lane_to_str (struct target_ops *ops, thread_info *thr, int lane)
+{
+  return target_pid_to_str (thr->ptid);
 }
 
 /* Error-catcher for target_find_memory_regions.  */
