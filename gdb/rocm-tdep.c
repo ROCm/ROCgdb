@@ -1339,6 +1339,11 @@ rocm_target_ops::update_thread_list ()
 static void
 rocm_target_solib_loaded (struct so_list *solib)
 {
+  /* If the inferior is not running on the native target (e.g. it is running
+     on a remote target), we don't want to deal with it.  */
+  if (current_inferior ()->process_target () != get_native_target ())
+    return;
+
   std::string so_name (solib->so_name);
 
   auto pos = so_name.find_last_of ('/');
@@ -1400,6 +1405,12 @@ static void
 rocm_target_inferior_created (struct target_ops *target, int from_tty)
 {
   struct inferior *inf = current_inferior ();
+
+  /* If the inferior is not running on the native target (e.g. it is running
+     on a remote target), we don't want to deal with it.  */
+  if (inf->process_target () != get_native_target ())
+    return;
+
   auto *info = get_rocm_inferior_info (inf);
   amd_dbgapi_status_t status;
 
