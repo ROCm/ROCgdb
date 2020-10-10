@@ -1,3 +1,56 @@
+2020-10-09  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (advance_wild_match): Rewrite the function's
+	description.  Change the type of target0, t0 and t1 to char.
+
+2020-10-09  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (dwarf2_add_field): Handle signed offsets.
+
+2020-10-09  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.h (ada_encode): Return std::string.
+	* ada-lang.c (ada_encode_1): Return std::string.
+	(ada_encode): Likewise.
+	(type_from_tag, ada_lookup_name_info::ada_lookup_name_info):
+	Update.
+	* ada-exp.y (block_lookup, write_var_or_type): Update.
+
+2020-10-09  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR exp/26714
+	* printcmd.c (print_formatted): Handle void results as
+	unformatted prints.
+
+2020-10-09  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* arch/aarch32.c (aarch32_create_target_description): Release the
+	target_desc_up as late as possible.
+	* arch/aarch64.c (aarch64_create_target_description): Likewise.
+	* arch/amd64.c (amd64_create_target_description): Likewise.
+	* arch/arc.c (arc_create_target_description): Return a
+	target_desc_up, don't release it.
+	* arch/arc.h (arc_create_target_description): Update declaration.
+	(arc_lookup_target_description): Move target_desc_up into the
+	cache, and return a borrowed pointer.
+	* arch/arm.c (arm_create_target_description): Release the
+	target_desc_up as late as possible.
+	* arch/i386.c (i386_create_target_description): Likewise.
+	* arch/riscv.h (riscv_create_target_description): Update
+	declaration to match definition.
+	* arch/tic6x.c (tic6x_create_target_description): Release the
+	target_desc_up as late as possible.
+
+2020-10-09  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* Makefile.in: Include Makefile.gnulib.inc.  Don't define LIBGNU
+	or INCGNU.  Make use of LIBGNU_EXTRA_LIBS when linking.
+
+2020-10-09  Jan Vrany  <jan.vrany@labware.com>
+
+	* source.c (directory_command): Notify observers that "directories"
+	parameter has changed.
+
 2020-10-08  Tom Tromey  <tom@tromey.com>
 
 	* cli/cli-cmds.c (print_disassembly): Style function name and
