@@ -34,15 +34,9 @@ struct objfile;
 #define exec_bfd_mtime current_program_space->ebfd_mtime
 #define exec_filename current_program_space->pspace_exec_filename
 
-/* Builds a section table, given args BFD, SECTABLE_PTR, SECEND_PTR.
-   Returns 0 if OK, 1 on error.  */
+/* Builds a section table, given args BFD.  */
 
-extern int build_section_table (struct bfd *, struct target_section **,
-				struct target_section **);
-
-/* Remove all entries from TABLE.  */
-
-extern void clear_section_table (struct target_section_table *table);
+extern target_section_table build_section_table (struct bfd *);
 
 /* The current inferior is a child vforked and its program space is
    shared with its parent.  This pushes the exec target on the
@@ -86,8 +80,7 @@ extern enum target_xfer_status
   section_table_xfer_memory_partial (gdb_byte *,
 				     const gdb_byte *,
 				     ULONGEST, ULONGEST, ULONGEST *,
-				     struct target_section *,
-				     struct target_section *,
+				     const target_section_table &,
 				     gdb::function_view<bool
 				       (const struct target_section *)> match_cb
 				         = nullptr);
@@ -111,8 +104,7 @@ extern void remove_target_sections (void *owner);
    current set of target sections.  */
 
 extern void add_target_sections (void *owner,
-				 struct target_section *sections,
-				 struct target_section *sections_end);
+				 const target_section_table &sections);
 
 /* Add the sections of OBJFILE to the current set of target sections.
  * OBJFILE owns the new target sections.  */
@@ -123,7 +115,7 @@ extern void add_target_sections_of_objfile (struct objfile *objfile);
    special cased --- it's filename is omitted; if it is the executable
    file, its entry point is printed.  */
 
-extern void print_section_info (struct target_section_table *table,
+extern void print_section_info (target_section_table *table,
 				bfd *abfd);
 
 extern void exec_close (void);

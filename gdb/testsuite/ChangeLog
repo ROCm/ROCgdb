@@ -1,3 +1,59 @@
+2020-10-13  Alan Modra  <amodra@gmail.com>
+
+	* gdb.arch/powerpc-altivec.s,
+	* gdb.arch/powerpc-power7.s,
+	* gdb.arch/powerpc-power8.s,
+	* gdb.arch/powerpc-power9.s,
+	* gdb.arch/powerpc-vsx.s,
+	* gdb.arch/powerpc-vsx2.s: Remove duplicate instructions.
+	* gdb.arch/powerpc-altivec.exp,
+	* gdb.arch/powerpc-power7.exp,
+	* gdb.arch/powerpc-power8.exp,
+	* gdb.arch/powerpc-power9.exp,
+	* gdb.arch/powerpc-vsx.exp,
+	* gdb.arch/powerpc-vsx2.exp: Likewise, and update expected
+	disassembly of mfvsrd/mtvsrd.
+
+2020-10-13  Alan Modra  <amodra@gmail.com>
+
+	* gdb.arch/arm-disassembler-options.exp: Adjust expected
+	"target architecture" output.
+	* gdb.arch/powerpc-d128-regs.exp: Likewise.
+	* gdb.arch/powerpc-disassembler-options.exp: Likewise.
+	* gdb.arch/ppc64-symtab-cordic.exp: Likewise.
+	* gdb.arch/s390-disassembler-options.exp: Likewise.
+
+2020-10-12  Pedro Alves  <pedro@palves.net>
+
+	PR exp/26602
+	PR c++/26550
+	* gdb.cp/ambiguous.cc (marker1): Delete.
+	(main): Initialize all the fields of the locals.  Replace marker1
+	call with a "set breakpoint here" marker.
+	* gdb.cp/ambiguous.exp: Modernize.  Use gdb_continue_to_breakpoint
+	instead of running to marker1.  Add tests printing all the
+	variables and all the fields of the variables.
+	(test_ambiguous): New proc, expecting the new GDB output when a
+	field access is ambiguous.  Change all "warning: X ambiguous"
+	tests to use it.
+
+2020-10-12  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/msym-bp.c (foo): Add __attribute__ ((used)).
+	* gdb.base/msym-bp-2.c (foo): Likewise.
+	* gdb.base/msym-lang.c (foo): Likewise.
+	* gdb.base/msym-lang-main.c (foo): Likewise.
+	* gdb.base/symtab-search-order-1.c (static_global): Likewise.
+	* gdb.guile/scm-pretty-print.c (eval_func): Likewise.
+	* gdb.mi/mi-sym-info-1.c (global_f1): Likewise.
+	* gdb.mi/mi-sym-info-2.c (global_f1, var1, var2): Likewise.
+	* gdb.multi/watchpoint-multi-exit.c (globalvar): Likewise.
+	* gdb.python/py-as-string.c (enum_valid, enum_invalid): Likewise.
+	* gdb.python/py-objfile.c (static_var): Likewise.
+	* gdb.python/py-symbol.c (rr): Likewise.
+	* gdb.python/py-symbol-2.c (anon, rr): Likewise.
+	* gdb.mi/mi-sym-info.exp (lineno1, lineno2): Updated.
+
 2020-10-11  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.fortran/mixed-lang-stack.exp (run_tests): Update expected
