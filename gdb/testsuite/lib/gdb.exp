@@ -690,7 +690,7 @@ proc runto { function args } {
 # If you don't want that, use gdb_start_cmd.
 
 proc runto_main { } {
-    return [runto main no-message]
+    return [runto main no-message qualified]
 }
 
 ### Continue, and expect to hit a breakpoint.
@@ -5950,7 +5950,7 @@ gdb_caching_proc gdb_has_argv0 {
 	gdb_load "$exe"
 
 	# Set breakpoint on main.
-	gdb_test_multiple "break main" "break main" {
+	gdb_test_multiple "break -q main" "break -q main" {
 	    -re "Breakpoint.*${gdb_prompt} $" {
 	    }
 	    -re "${gdb_prompt} $" {

@@ -1023,28 +1023,41 @@ proc mi_run_with_cli {args} {
     return [eval mi_run_cmd_full 0 $args]
 }
 
-#
-# Just like run-to-main but works with the MI interface
-#
+# Starts fresh GDB binary and loads an optional executable into GDB.
+# Usage: mi_clean_restart [executable]
+# EXECUTABLE is the basename of the binary.
+# Return -1 if starting gdb or loading the executable failed.
 
-proc mi_run_to_main { } {
-    global suppress_flag
-    if { $suppress_flag } {
+proc mi_clean_restart { args } {
+    global srcdir
+    global subdir
+    global errcnt
+    global warncnt
+
+    if { [llength $args] > 1 } {
+	error "bad number of args: [llength $args]"
+    }
+
+    gdb_exit
+
+    # This is a clean restart, so reset error and warning count.
+    set errcnt 0
+    set warncnt 0
+
+    if {[mi_gdb_start]} {
 	return -1
     }
 
-    global srcdir
-    global subdir
-    global binfile
-    global srcfile
-
-    mi_delete_breakpoints
     mi_gdb_reinitialize_dir $srcdir/$subdir
-    mi_gdb_load ${binfile}
 
-    mi_runto main
+    if { [llength $args] >= 1 } {
+	set executable [lindex $args 0]
+	set binfile [standard_output_file ${executable}]
+	return [mi_gdb_load ${binfile}]
+    }
+
+    return 0
 }
-
 
 # Just like gdb's "runto" proc, it will run the target to a given
 # function.  The big difference here between mi_runto and mi_execute_to
@@ -1055,8 +1068,12 @@ proc mi_run_to_main { } {
 # It returns:
 #   -1  if test suppressed, failed, timedout
 #    0  if test passed
+#
+# Supported options:
+#
+#  -qualified -- pass --qualified to -break-insert
 
-proc mi_runto_helper {func run_or_continue} {
+proc mi_runto_helper {func run_or_continue args} {
   global suppress_flag
   if { $suppress_flag } {
     return -1
@@ -1065,10 +1082,16 @@ proc mi_runto_helper {func run_or_continue} {
   global mi_gdb_prompt expect_out
   global hex decimal fullname_syntax
 
+  parse_args {{qualified}}
+
   set test "mi runto $func"
   set bp [mi_make_breakpoint -type breakpoint -disp del \
 	      -func $func\(\\\(.*\\\)\)?]
-  mi_gdb_test "200-break-insert -t $func" "200\\^done,$bp" \
+  set extra_opts ""
+  if {$qualified} {
+      append extra_opts "--qualified"
+  }
+  mi_gdb_test "200-break-insert $extra_opts -t $func" "200\\^done,$bp" \
       "breakpoint at $func"
 
   if {$run_or_continue == "run"} {
@@ -1084,6 +1107,12 @@ proc mi_runto_helper {func run_or_continue} {
 
 proc mi_runto {func} {
     return [mi_runto_helper $func "run"]
+}
+
+# Just like runto_main but works with the MI interface.
+
+proc mi_runto_main {} {
+    return [mi_runto_helper "main" "run" -qualified]
 }
 
 # Next to the next statement

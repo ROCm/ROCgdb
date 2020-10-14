@@ -1,3 +1,150 @@
+2020-10-13  Pedro Alves  <pedro@palves.net>
+
+	* lib/mi-support.exp (mi_clean_restart): New.
+	(mi_run_to_main): Delete.
+	All callers adjust to use mi_clean_restart / mi_runto_main.
+
+2020-10-13  Pedro Alves  <pedro@palves.net>
+
+	* config/monitor.exp: Use "list -q".
+	* gdb.arch/gdb1558.exp: Use "break -q".
+	* gdb.arch/i386-permbkpt.exp: Use "break -q".
+	* gdb.arch/i386-prologue-skip-cf-protection.exp: Use "break -q".
+	* gdb.base/break.exp: Use "break -q", "list -q" and "tbreak -q".
+	* gdb.base/commands.exp: Use "break -q".
+	* gdb.base/condbreak.exp: Use "break -q".
+	* gdb.base/ctf-ptype.exp: Use "list -q".
+	* gdb.base/define.exp: Use "break -q".
+	* gdb.base/del.exp: Use "break -q".
+	* gdb.base/fullname.exp: Use "break -q".
+	* gdb.base/hbreak-in-shr-unsupported.exp: Use "hbreak -q".
+	* gdb.base/hbreak-unmapped.exp: Use "hbreak -q".
+	* gdb.base/hbreak2.exp: Use "hbreak -q" and "list -q".
+	* gdb.base/hw-sw-break-same-address.exp: Use "break -q" and
+	"hbreak -q".
+	* gdb.base/included.exp: Use "list -q".
+	* gdb.base/label.exp: Use "break -q".
+	* gdb.base/lineinc.exp: Use "break -q".
+	* gdb.base/list.exp: Use "list -q".
+	* gdb.base/macscp.exp: Use "list -q".
+	* gdb.base/pending.exp: Use "break -q".
+	* gdb.base/prologue-include.exp: Use "break -q".
+	* gdb.base/ptype.exp: Use "list -q".
+	* gdb.base/sepdebug.exp: Use "break -q", "list -q" and "tbreak -q".
+	* gdb.base/server-del-break.exp: Use "break -q".
+	* gdb.base/style.exp: Use "break -q".
+	* gdb.base/symbol-without-target_section.exp: Use "list -q".
+	* gdb.base/watchpoint-reuse-slot.exp: Use "hbreak -q".
+	* gdb.cp/exception.exp: Use "tbreak -q".
+	* gdb.dwarf2/dw2-error.exp: Use "break -q".
+	* gdb.dwarf2/fission-mix.exp: Use "break -q".
+	* gdb.dwarf2/fission-reread.exp: Use "break -q".
+	* gdb.dwarf2/pr13961.exp: Use "break -q".
+	* gdb.linespec/explicit.exp: Use "list -q".
+	* gdb.linespec/linespec.exp: Use "break -q".
+	* gdb.mi/mi-simplerun.exp: Use "--qualified".
+	* gdb.python/py-mi-objfile-gdb.py: Use "list -q".
+	* gdb.server/bkpt-other-inferior.exp: Use "break -q".
+	* gdb.server/connect-without-multi-process.exp: Use "break -q".
+	* gdb.trace/change-loc.exp: Use "break -q".
+	* gdb.trace/pending.exp: Use "break -q".
+	* gdb.tui/basic.exp: Use "list -q".
+	* gdb.tui/list-before.exp: Use "list -q".
+	* gdb.tui/list.exp: Use "list -q".
+	* lib/gdb.exp (gdb_has_argv0): Use "break -q".
+
+2020-10-13  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/ui-redirect.exp: Expect "break -qualified main" in
+	saved breakpoints file.
+	* gdb.guile/scm-breakpoint.exp: Expect "-qualified main" when
+	inspecting breakpoint list.
+	* lib/gdb.exp (runto_main): Add "qualified" to options.
+	* lib/mi-support.exp (mi_runto_helper): Add 'qualified' parameter,
+	and handle it.
+	(mi_runto_main): Pass 1 as qualified argument.
+
+2020-10-13  Pedro Alves  <pedro@palves.net>
+
+	* lib/mi-support.exp (mi_runto_main): New proc.
+	(mi_run_to_main): Use it.
+	* gdb.mi/mi-catch-cpp-exceptions.exp: Likewise.
+	* gdb.mi/mi-var-cmd.exp: Likewise.
+	* gdb.mi/mi-var-invalidate.exp: Likewise.
+	* mi-var-list-children-invalid-grandchild.exp: Likewise.
+	* gdb.mi/mi2-amd64-entry-value.exp: Likewise.
+	* gdb.mi/new-ui-mi-sync.exp: Likewise.
+	* gdb.mi/user-selected-context-sync.exp: Likewise.
+	* gdb.opt/inline-cmds.exp: Likewise.
+	* gdb.python/py-framefilter-mi.exp: Likewise.
+	* gdb.python/py-mi.exp: Likewise.
+
+2020-10-13  Pedro Alves  <pedro@palves.net>
+
+	* gdb.ada/fun_in_declare.exp: Use "runto_main" instead of
+	"runto main".
+	* gdb.ada/small_reg_param.exp: Likewise.
+	* gdb.arch/powerpc-d128-regs.exp: Likewise.
+	* gdb.base/annota1.exp: Likewise.
+	* gdb.base/anon.exp: Likewise.
+	* gdb.base/breakpoint-in-ro-region.exp: Likewise.
+	* gdb.base/dprintf-non-stop.exp: Likewise.
+	* gdb.base/dprintf.exp: Likewise.
+	* gdb.base/gdb11530.exp: Likewise.
+	* gdb.base/gdb11531.exp: Likewise.
+	* gdb.base/gnu_vector.exp: Likewise.
+	* gdb.base/interrupt-noterm.exp: Likewise.
+	* gdb.base/memattr.exp: Likewise.
+	* gdb.base/step-over-syscall.exp: Likewise.
+	* gdb.base/watch-cond-infcall.exp: Likewise.
+	* gdb.base/watch-read.exp: Likewise.
+	* gdb.base/watch-vfork.exp: Likewise.
+	* gdb.base/watch_thread_num.exp: Likewise.
+	* gdb.base/watchpoint-stops-at-right-insn.exp: Likewise.
+	* gdb.guile/scm-frame-inline.exp: Likewise.
+	* gdb.linespec/explicit.exp: Likewise.
+	* gdb.opt/inline-break.exp: Likewise.
+	* gdb.python/py-frame-inline.exp: Likewise.
+	* gdb.reverse/break-precsave.exp: Likewise.
+	* gdb.reverse/break-reverse.exp: Likewise.
+	* gdb.reverse/consecutive-precsave.exp: Likewise.
+	* gdb.reverse/consecutive-reverse.exp: Likewise.
+	* gdb.reverse/finish-precsave.exp: Likewise.
+	* gdb.reverse/finish-reverse.exp: Likewise.
+	* gdb.reverse/fstatat-reverse.exp: Likewise.
+	* gdb.reverse/getresuid-reverse.exp: Likewise.
+	* gdb.reverse/i386-precsave.exp: Likewise.
+	* gdb.reverse/i386-reverse.exp: Likewise.
+	* gdb.reverse/i386-sse-reverse.exp: Likewise.
+	* gdb.reverse/i387-env-reverse.exp: Likewise.
+	* gdb.reverse/i387-stack-reverse.exp: Likewise.
+	* gdb.reverse/insn-reverse.exp: Likewise.
+	* gdb.reverse/machinestate-precsave.exp: Likewise.
+	* gdb.reverse/machinestate.exp: Likewise.
+	* gdb.reverse/pipe-reverse.exp: Likewise.
+	* gdb.reverse/readv-reverse.exp: Likewise.
+	* gdb.reverse/recvmsg-reverse.exp: Likewise.
+	* gdb.reverse/rerun-prec.exp: Likewise.
+	* gdb.reverse/s390-mvcle.exp: Likewise.
+	* gdb.reverse/solib-precsave.exp: Likewise.
+	* gdb.reverse/solib-reverse.exp: Likewise.
+	* gdb.reverse/step-precsave.exp: Likewise.
+	* gdb.reverse/step-reverse.exp: Likewise.
+	* gdb.reverse/time-reverse.exp: Likewise.
+	* gdb.reverse/until-precsave.exp: Likewise.
+	* gdb.reverse/until-reverse.exp: Likewise.
+	* gdb.reverse/waitpid-reverse.exp: Likewise.
+	* gdb.reverse/watch-precsave.exp: Likewise.
+	* gdb.reverse/watch-reverse.exp: Likewise.
+	* gdb.threads/kill.exp: Likewise.
+	* gdb.threads/tid-reuse.exp: Likewise.
+
+2020-10-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26642
+	* gdb.base/maint-target-async-off.c: New test.
+	* gdb.base/maint-target-async-off.exp: New test.
+
 2020-10-13  Alan Modra  <amodra@gmail.com>
 
 	* gdb.arch/powerpc-altivec.s,
