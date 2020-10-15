@@ -212,6 +212,10 @@ enum
   CpuAVX512_VP2INTERSECT,
   /* TDX Instructions support required.  */
   CpuTDX,
+  /* Intel AVX VNNI Instructions support required.  */
+  CpuAVX_VNNI,
+  /* Intel AVX Instructions support via {vex} prefix required.  */
+  CpuVEX_PREFIX,
   /* mwaitx instruction required */
   CpuMWAITX,
   /* Clzero instruction required */
@@ -243,6 +247,8 @@ enum
   CpuPCONFIG,
   /* WAITPKG instructions required */
   CpuWAITPKG,
+  /* UINTR instructions required */
+  CpuUINTR,
   /* CLDEMOTE instruction required */
   CpuCLDEMOTE,
   /* MOVDIRI instruction support required */
@@ -265,6 +271,8 @@ enum
   CpuKL,
   /* WideKL instruction support required */
   CpuWideKL,
+  /* HRESET instruction required */
+  CpuHRESET,
   /* 64bit support required  */
   Cpu64,
   /* Not supported in the 64bit mode  */
@@ -378,6 +386,8 @@ typedef union i386_cpu_flags
       unsigned int cpuavx512_bf16:1;
       unsigned int cpuavx512_vp2intersect:1;
       unsigned int cputdx:1;
+      unsigned int cpuavx_vnni:1;
+      unsigned int cpuvex_prefix:1;
       unsigned int cpumwaitx:1;
       unsigned int cpuclzero:1;
       unsigned int cpuospke:1;
@@ -394,6 +404,7 @@ typedef union i386_cpu_flags
       unsigned int cpuwbnoinvd:1;
       unsigned int cpupconfig:1;
       unsigned int cpuwaitpkg:1;
+      unsigned int cpuuintr:1;
       unsigned int cpucldemote:1;
       unsigned int cpumovdiri:1;
       unsigned int cpumovdir64b:1;
@@ -405,6 +416,7 @@ typedef union i386_cpu_flags
       unsigned int cputsxldtrk:1;
       unsigned int cpukl:1;
       unsigned int cpuwidekl:1;
+      unsigned int cpuhreset:1;
       unsigned int cpu64:1;
       unsigned int cpuno64:1;
 #ifdef CpuUnused

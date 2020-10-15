@@ -1,3 +1,48 @@
+2020-10-14  H.J. Lu  <hongjiu.lu@intel.com>
+	    Lili Cui  <lili.cui@intel.com>
+
+	* NEWS: Add Intel AVX VNNI.
+	* config/tc-i386.c (cpu_arch): Add .avx_vnni and noavx_vnni.
+	(cpu_flags_match): Support CpuVEX_PREFIX.
+	* doc/c-i386.texi: Document .avx_vnni, noavx_vnni and how to
+	encode Intel VNNI instructions with VEX prefix.
+	* testsuite/gas/i386/avx-vnni.d: New file.
+	* testsuite/gas/i386/avx-vnni.s: Likewise.
+	* testsuite/gas/i386/x86-64-avx-vnni.d: Likewise.
+	* testsuite/gas/i386/x86-64-avx-vnni.s: Likewise.
+	* testsuite/gas/i386/i386.exp: Run AVX VNNI tests.
+
+2020-10-14  Lili Cui  <lili.cui@intel.com>
+
+	* NEWS: Add Intel HRESET.
+	* config/tc-i386.c (cpu_arch): Add .hreset.
+	(cpu_noarch): Likewise.
+	* doc/c-i386.texi: Document .hreset, nohreset.
+	* testsuite/gas/i386/i386.exp: Run HRESET tests.
+	* testsuite/gas/i386/hreset.d: New file.
+	* testsuite/gas/i386/x86-64-hreset.d: Likewise.
+	* testsuite/gas/i386/hreset.s: Likewise.
+
+2020-10-14  Lili Cui  <lili.cui@intel.com>
+
+	* NEWS: Add Intel UINTR.
+	* config/tc-i386.c (cpu_arch): Add .uintr.
+	(cpu_noarch): Likewise.
+	* doc/c-i386.texi: Document .uintr and nouintr.
+	* testsuite/gas/i386/i386.exp: Run UINTR tests.
+	* testsuite/gas/i386/x86-64-uintr.d: Likewise.
+	* testsuite/gas/i386/x86-64-uintr.s: Likewise.
+
+2020-10-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (load_insn_p): Check opcodeprefix == 0 for
+	base_opcode == 0xfc7.
+	(match_template): Likewise.
+	(process_suffix): Check opcodeprefix == PREFIX_0XF2 for CRC32.
+	(check_byte_reg): Likewise.
+	(output_insn): Don't add the 0xf3 prefix twice for PadLock
+	instructions.  Don't add prefix from non-VEX/EVEX base_opcode.
+
 2020-10-13  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* config/tc-i386.c (build_vex_prefix): Replace vexopcode with

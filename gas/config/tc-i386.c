@@ -1180,6 +1180,8 @@ static const arch_entry cpu_arch[] =
     CPU_AVX512_VNNI_FLAGS, 0 },
   { STRING_COMMA_LEN (".avx512_bitalg"), PROCESSOR_UNKNOWN,
     CPU_AVX512_BITALG_FLAGS, 0 },
+  { STRING_COMMA_LEN (".avx_vnni"), PROCESSOR_UNKNOWN,
+    CPU_AVX_VNNI_FLAGS, 0 },
   { STRING_COMMA_LEN (".clzero"), PROCESSOR_UNKNOWN,
     CPU_CLZERO_FLAGS, 0 },
   { STRING_COMMA_LEN (".mwaitx"), PROCESSOR_UNKNOWN,
@@ -1240,6 +1242,10 @@ static const arch_entry cpu_arch[] =
     CPU_KL_FLAGS, 0 },
   { STRING_COMMA_LEN (".widekl"), PROCESSOR_UNKNOWN,
     CPU_WIDEKL_FLAGS, 0 },
+  { STRING_COMMA_LEN (".uintr"), PROCESSOR_UNKNOWN,
+    CPU_UINTR_FLAGS, 0 },
+  { STRING_COMMA_LEN (".hreset"), PROCESSOR_UNKNOWN,
+    CPU_HRESET_FLAGS, 0 },
 };
 
 static const noarch_entry cpu_noarch[] =
@@ -1276,6 +1282,7 @@ static const noarch_entry cpu_noarch[] =
   { STRING_COMMA_LEN ("noavx512_vbmi2"), CPU_ANY_AVX512_VBMI2_FLAGS },
   { STRING_COMMA_LEN ("noavx512_vnni"), CPU_ANY_AVX512_VNNI_FLAGS },
   { STRING_COMMA_LEN ("noavx512_bitalg"), CPU_ANY_AVX512_BITALG_FLAGS },
+  { STRING_COMMA_LEN ("noavx_vnni"), CPU_ANY_AVX_VNNI_FLAGS },
   { STRING_COMMA_LEN ("noibt"), CPU_ANY_IBT_FLAGS },
   { STRING_COMMA_LEN ("noshstk"), CPU_ANY_SHSTK_FLAGS },
   { STRING_COMMA_LEN ("noamx_int8"), CPU_ANY_AMX_INT8_FLAGS },
@@ -1292,6 +1299,8 @@ static const noarch_entry cpu_noarch[] =
   { STRING_COMMA_LEN ("notsxldtrk"), CPU_ANY_TSXLDTRK_FLAGS },
   { STRING_COMMA_LEN ("nokl"), CPU_ANY_KL_FLAGS },
   { STRING_COMMA_LEN ("nowidekl"), CPU_ANY_WIDEKL_FLAGS },
+  { STRING_COMMA_LEN ("nouintr"), CPU_ANY_UINTR_FLAGS },
+  { STRING_COMMA_LEN ("nohreset"), CPU_ANY_HRESET_FLAGS },
 };
 
 #ifdef I386COFF
@@ -1964,7 +1973,14 @@ cpu_flags_match (const insn_template *t)
       cpu = cpu_flags_and (x, cpu);
       if (!cpu_flags_all_zero (&cpu))
 	{
-	  if (x.bitfield.cpuavx)
+	  if (x.bitfield.cpuvex_prefix)
+	    {
+	      /* We need to check a few extra flags with VEX_PREFIX.  */
+	      if (i.vec_encoding == vex_encoding_vex
+		  || i.vec_encoding == vex_encoding_vex3)
+		match |= CPU_FLAGS_ARCH_MATCH;
+	    }
+	  else if (x.bitfield.cpuavx)
 	    {
 	      /* We need to check a few extra flags with AVX.  */
 	      if (cpu.bitfield.cpuavx
@@ -4434,6 +4450,7 @@ load_insn_p (void)
 
       /* cmpxchg8b, cmpxchg16b, xrstors.  */
       if (i.tm.base_opcode == 0xfc7
+	  && i.tm.opcode_modifier.opcodeprefix == 0
 	  && (i.tm.extension_opcode == 1 || i.tm.extension_opcode == 3))
 	return 1;
 
@@ -4453,6 +4470,7 @@ load_insn_p (void)
 
       /* vmptrld */
       if (i.tm.base_opcode == 0xfc7
+	  && i.tm.opcode_modifier.opcodeprefix == 0
 	  && i.tm.extension_opcode == 6)
 	return 1;
 
@@ -6313,8 +6331,9 @@ match_template (char mnem_suffix)
       j = i.imm_operands + (t->operands > i.imm_operands + 1);
       if (((i.suffix == QWORD_MNEM_SUFFIX
 	    && flag_code != CODE_64BIT
-	    && (t->base_opcode != 0x0fc7
-		|| t->extension_opcode != 1 /* cmpxchg8b */))
+	    && !(t->base_opcode == 0xfc7
+		 && i.tm.opcode_modifier.opcodeprefix == 0
+		 && t->extension_opcode == 1) /* cmpxchg8b */)
 	   || (i.suffix == LONG_MNEM_SUFFIX
 	       && !cpu_arch_flags.bitfield.cpui386))
 	  && (intel_syntax
@@ -6759,6 +6778,8 @@ check_string (void)
 static int
 process_suffix (void)
 {
+  bfd_boolean is_crc32 = FALSE;
+
   /* If matched instruction specifies an explicit instruction mnemonic
      suffix, use it.  */
   if (i.tm.opcode_modifier.size == SIZE16)
@@ -6772,6 +6793,9 @@ process_suffix (void)
 	   && !i.tm.opcode_modifier.addrprefixopreg)
     {
       unsigned int numop = i.operands;
+      /* CRC32 */
+      is_crc32 = (i.tm.base_opcode == 0xf38f0
+		  && i.tm.opcode_modifier.opcodeprefix == PREFIX_0XF2);
 
       /* movsx/movzx want only their source operand considered here, for the
 	 ambiguity checking below.  The suffix will be replaced afterwards
@@ -6781,8 +6805,7 @@ process_suffix (void)
 	--i.operands;
 
       /* crc32 needs REX.W set regardless of suffix / source operand size.  */
-      if (i.tm.base_opcode == 0xf20f38f0
-          && i.tm.operand_types[1].bitfield.qword)
+      if (is_crc32 && i.tm.operand_types[1].bitfield.qword)
         i.rex |= REX_W;
 
       /* If there's no instruction mnemonic suffix we try to invent one
@@ -6793,7 +6816,7 @@ process_suffix (void)
 	     Destination register type is more significant than source
 	     register type.  crc32 in SSE4.2 prefers source register
 	     type. */
-	  unsigned int op = i.tm.base_opcode != 0xf20f38f0 ? i.operands : 1;
+	  unsigned int op = is_crc32 ? 1 : i.operands;
 
 	  while (op--)
 	    if (i.tm.operand_types[op].bitfield.instance == InstanceNone
@@ -7143,7 +7166,7 @@ process_suffix (void)
 		      || i.tm.operand_types[0].bitfield.instance == RegD
 		      || i.tm.operand_types[1].bitfield.instance == RegD
 		      /* CRC32 */
-		      || i.tm.base_opcode == 0xf20f38f0))))
+		      || is_crc32))))
 	i.tm.base_opcode |= 1;
       break;
     }
@@ -7257,7 +7280,9 @@ check_byte_reg (void)
 	continue;
 
       /* crc32 only wants its source operand checked here.  */
-      if (i.tm.base_opcode == 0xf20f38f0 && op)
+      if (i.tm.base_opcode == 0xf38f0
+	  && i.tm.opcode_modifier.opcodeprefix == PREFIX_0XF2
+	  && op != 0)
 	continue;
 
       /* Any other register is bad.  */
@@ -9302,7 +9327,6 @@ output_insn (void)
       char *p;
       unsigned char *q;
       unsigned int j;
-      unsigned int prefix;
       enum mf_cmp_kind mf_cmp;
 
       if (avoid_fence
@@ -9382,28 +9406,15 @@ output_insn (void)
 	      add_prefix (0xf2);
 	      break;
 	    case PREFIX_0XF3:
-	      add_prefix (0xf3);
+	      if (!i.tm.cpu_flags.bitfield.cpupadlock
+		  || (i.prefix[REP_PREFIX] != 0xf3))
+		add_prefix (0xf3);
 	      break;
 	    case PREFIX_NONE:
 	      switch (i.tm.opcode_length)
 		{
 		case 3:
-		  if (i.tm.base_opcode & 0xff000000)
-		    {
-		      prefix = (i.tm.base_opcode >> 24) & 0xff;
-		      if (!i.tm.cpu_flags.bitfield.cpupadlock
-			  || prefix != REPE_PREFIX_OPCODE
-			  || (i.prefix[REP_PREFIX] != REPE_PREFIX_OPCODE))
-			add_prefix (prefix);
-		    }
-		  break;
 		case 2:
-		  if ((i.tm.base_opcode & 0xff0000) != 0)
-		    {
-		      prefix = (i.tm.base_opcode >> 16) & 0xff;
-		      add_prefix (prefix);
-		    }
-		  break;
 		case 1:
 		  break;
 		case 0:
