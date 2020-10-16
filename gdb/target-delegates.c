@@ -70,6 +70,8 @@ struct dummy_target : public target_ops
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
   std::string lane_to_str (thread_info *arg0, int arg1) override;
+  std::string thread_workgroup_pos_str (thread_info *arg0) override;
+  std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::byte_vector thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -249,6 +251,8 @@ struct debug_target : public target_ops
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
   std::string lane_to_str (thread_info *arg0, int arg1) override;
+  std::string thread_workgroup_pos_str (thread_info *arg0) override;
+  std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::byte_vector thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -1871,6 +1875,60 @@ debug_target::lane_to_str (thread_info *arg0, int arg1)
   fprintf_unfiltered (gdb_stdlog, "-> %s->lane_to_str (...)\n", this->beneath ()->shortname ());
   result = this->beneath ()->lane_to_str (arg0, arg1);
   fprintf_unfiltered (gdb_stdlog, "<- %s->lane_to_str (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_int (arg1);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_std_string (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+std::string
+target_ops::thread_workgroup_pos_str (thread_info *arg0)
+{
+  return this->beneath ()->thread_workgroup_pos_str (arg0);
+}
+
+std::string
+dummy_target::thread_workgroup_pos_str (thread_info *arg0)
+{
+  return default_thread_workgroup_pos_str (this, arg0);
+}
+
+std::string
+debug_target::thread_workgroup_pos_str (thread_info *arg0)
+{
+  std::string result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->thread_workgroup_pos_str (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->thread_workgroup_pos_str (arg0);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->thread_workgroup_pos_str (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_std_string (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+std::string
+target_ops::lane_workgroup_pos_str (thread_info *arg0, int arg1)
+{
+  return this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
+}
+
+std::string
+dummy_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
+{
+  return default_lane_workgroup_pos_str (this, arg0, arg1);
+}
+
+std::string
+debug_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
+{
+  std::string result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->lane_workgroup_pos_str (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->lane_workgroup_pos_str (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_int (arg1);

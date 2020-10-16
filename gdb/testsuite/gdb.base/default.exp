@@ -582,6 +582,8 @@ set show_conv_list \
     { \
 	{$_sdata = void} \
 	{$_siginfo = void} \
+	{$_lane_workgroup_pos = ""} \
+	{$_thread_workgroup_pos = ""} \
 	{$_lane_count = 0} \
 	{$_lane = 0} \
 	{$_thread = 0} \

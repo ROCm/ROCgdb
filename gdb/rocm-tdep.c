@@ -175,6 +175,9 @@ struct rocm_target_ops final : public target_ops
 
   std::string lane_to_str (thread_info *thr, int lane) override;
 
+  std::string thread_workgroup_pos_str (thread_info *thr) override;
+  std::string lane_workgroup_pos_str (thread_info *thr, int lane) override;
+
   const char *thread_name (thread_info *tp) override;
 
   const char *extra_thread_info (thread_info *tp) override;
@@ -346,6 +349,19 @@ rocm_target_id_string (amd_dbgapi_agent_id_t agent_id)
 	   agent_id.handle);
 
   return string_printf ("AMDGPU Agent (GPUID %ld)", os_id);
+}
+
+/* Return the thread/wave's workgroup position as a string.  */
+
+static std::string
+thread_workgroup_pos_string (thread_info *tp)
+{
+  uint32_t wave_in_group;
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+		     wave_in_group) != AMD_DBGAPI_STATUS_SUCCESS)
+    return "?";
+
+  return string_printf ("%u", wave_in_group);
 }
 
 /* Convert flat ID FLATID to coordinates and store them in COORD_ID.
@@ -701,6 +717,28 @@ rocm_target_ops::lane_to_str (thread_info *thr, int lane)
     return beneath ()->lane_to_str (thr, lane);
 
   return lane_target_id_string (thr, lane);
+}
+
+/* Implementation of target_workgroup_pos_str.  */
+
+std::string
+rocm_target_ops::thread_workgroup_pos_str (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->thread_workgroup_pos_str (thr);
+
+  return thread_workgroup_pos_string (thr);
+}
+
+/* Implementation of target_lane_workgroup_pos_str.  */
+
+std::string
+rocm_target_ops::lane_workgroup_pos_str (thread_info *thr, int lane)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->lane_workgroup_pos_str (thr, lane);
+
+  return lane_workgroup_pos_string (thr, lane);
 }
 
 const char *

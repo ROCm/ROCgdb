@@ -49,6 +49,7 @@
 #include "inline-frame.h"
 #include "stack.h"
 #include "gdbarch.h"
+#include "arch-utils.h"
 
 /* Definition of struct thread_info exported to gdbthread.h.  */
 
@@ -2854,6 +2855,75 @@ static const struct internalvar_funcs lane_count_funcs =
   NULL
 };
 
+/* Helper for thread/lane string convenience variables.  Return a new
+   string value as returned by GET_STR.  Returns the empty string if
+   no thread is selected, or no threads exist.  */
+
+static struct value *
+make_thread_string_value (struct gdbarch *gdbarch, internalvar *var,
+			  gdb::function_view<std::string ()> get_str)
+{
+  std::string pos;
+
+  if (inferior_ptid != null_ptid)
+    pos = get_str ();
+
+  value *val = value_cstring (pos.c_str (), pos.size () + 1,
+			      builtin_type (gdbarch)->builtin_char);
+
+  /* Make sure GDB doesn't try to push the string to the inferior.  */
+  VALUE_LVAL (val) = lval_internalvar;
+  return val;
+}
+
+/* Return a new string value for the current thread's workgroup
+   position.  Returns the empty string if no thread is selected, or no
+   threads exist.  */
+
+static struct value *
+thread_workgroup_pos_make_value (struct gdbarch *gdbarch, internalvar *var,
+				 void *ignore)
+{
+  return make_thread_string_value (gdbarch, var, [] ()
+	   {
+	     return target_thread_workgroup_pos_str (inferior_thread ());
+	   });
+}
+
+/* Implementation of the `$_thread_workgroup_pos' variable.  */
+
+static const struct internalvar_funcs thread_workgroup_pos_funcs =
+{
+  thread_workgroup_pos_make_value,
+  NULL,
+  NULL
+};
+
+/* Return a new string value for the current lane's workgroup
+   position.  Returns the empty string if no thread is selected, or no
+   threads exist.  */
+
+static struct value *
+lane_workgroup_pos_make_value (struct gdbarch *gdbarch, internalvar *var,
+			       void *ignore)
+{
+  return make_thread_string_value (gdbarch, var, [] ()
+	   {
+	     thread_info *thr = inferior_thread ();
+	     return target_lane_workgroup_pos_str (thr,
+						   thr->current_simd_lane ());
+	   });
+}
+
+/* Implementation of the `$_lane_workgroup_pos' variable.  */
+
+static const struct internalvar_funcs lane_workgroup_pos_funcs =
+{
+  lane_workgroup_pos_make_value,
+  NULL,
+  NULL
+};
+
 void _initialize_thread ();
 void
 _initialize_thread ()
@@ -3032,4 +3102,9 @@ Show printing of thread events (such as thread start and exit)."), NULL,
 
   create_internalvar_type_lazy ("_lane", &lane_funcs, nullptr);
   create_internalvar_type_lazy ("_lane_count", &lane_count_funcs, nullptr);
+
+  create_internalvar_type_lazy ("_thread_workgroup_pos",
+				&thread_workgroup_pos_funcs, nullptr);
+  create_internalvar_type_lazy ("_lane_workgroup_pos",
+				&lane_workgroup_pos_funcs, nullptr);
 }
