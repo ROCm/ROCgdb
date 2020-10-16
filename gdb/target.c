@@ -2631,6 +2631,18 @@ target_lane_to_str (thread_info *thr, int lane)
   return current_inferior ()->top_target ()->lane_to_str (thr, lane);
 }
 
+std::string
+target_thread_workgroup_pos_str (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->thread_workgroup_pos_str (thr);
+}
+
+std::string
+target_lane_workgroup_pos_str (thread_info *thr, int lane)
+{
+  return current_inferior ()->top_target ()->lane_workgroup_pos_str (thr, lane);
+}
+
 const char *
 target_thread_name (struct thread_info *info)
 {
@@ -3689,6 +3701,18 @@ static std::string
 default_lane_to_str (struct target_ops *ops, thread_info *thr, int lane)
 {
   return target_pid_to_str (thr->ptid);
+}
+
+static std::string
+default_thread_workgroup_pos_str (struct target_ops *ops, thread_info *thr)
+{
+  return {};
+}
+
+static std::string
+default_lane_workgroup_pos_str (struct target_ops *ops, thread_info *thr, int lane)
+{
+  return {};
 }
 
 /* Error-catcher for target_find_memory_regions.  */
