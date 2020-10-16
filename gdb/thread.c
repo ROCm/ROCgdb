@@ -2563,12 +2563,33 @@ thread_find_command (const char *arg, int from_tty)
 	  match++;
 	}
 
-      std::string name = target_pid_to_str (tp->ptid);
-      if (!name.empty () && re_exec (name.c_str ()))
+      if (tp->has_simd_lanes ())
 	{
-	  printf_filtered (_("Thread %s has target id '%s'\n"),
-			   print_thread_id (tp), name.c_str ());
-	  match++;
+	  gdbarch *arch = target_thread_architecture (tp->ptid);
+	  int lane_count = gdbarch_used_lanes_count (arch, tp);
+
+	  scoped_restore_current_simd_lane restore_lane (tp);
+
+	  for (int lane = 0; lane < lane_count; ++lane)
+	    {
+	      std::string name = target_lane_to_str (tp, lane);
+	      if (!name.empty () && re_exec (name.c_str ()))
+		{
+		  printf_filtered (_("Thread %s, lane %d has target id '%s'\n"),
+				   print_thread_id (tp), lane, name.c_str ());
+		  match++;
+		}
+	    }
+	}
+      else
+	{
+	  std::string name = target_pid_to_str (tp->ptid);
+	  if (!name.empty () && re_exec (name.c_str ()))
+	    {
+	      printf_filtered (_("Thread %s has target id '%s'\n"),
+			       print_thread_id (tp), name.c_str ());
+	      match++;
+	    }
 	}
 
       tmp = target_extra_thread_info (tp);
