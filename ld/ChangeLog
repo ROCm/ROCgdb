@@ -1,3 +1,108 @@
+2020-10-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ldlang.c (lang_process): Add extra call to
+	lang_do_memory_regions, and pass parameter.
+	(lang_do_memory_regions): Add parameter, only define origin and
+	length when requested.  Reindent.
+	* testsuite/ld-scripts/provide-10.d: New file.
+	* testsuite/ld-scripts/provide-10.map: New file.
+	* testsuite/ld-scripts/provide-11.d: New file.
+	* testsuite/ld-scripts/provide-11.map: New file.
+	* testsuite/ld-scripts/provide-12.d: New file.
+	* testsuite/ld-scripts/provide-12.map: New file.
+	* testsuite/ld-scripts/provide-9.d: New file.
+	* testsuite/ld-scripts/provide-9.map: New file.
+	* testsuite/ld-scripts/provide-9.t: New file.
+
+2020-10-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ld.texi (Options): Extend the description of --defsym.
+
+2020-10-16  Nick Clifton  <nickc@redhat.com>
+
+	PR 26626
+	* ldmain.c (undefined_symbol): If an error handlign script is
+	available, call it.
+	* ldfile.c  (error_handling_script): Declare.
+	(ldfile_open_file): If a library cannot be found and an error
+	handling script is available, call it.
+	* ldmain.h  (error_handling_script): Prototype.
+	* ldlex.h (OPTION_ERROR_HANDLING_SCRIPT): Define.
+	* lexsup.c (ld_options): Add --error-handling-script.
+	(parse_args): Add support for --errror-handling-script.
+	* ld.texi: Document the new feature.
+	* configure.ac: Add --error-handling-script option to disable
+	support for the new feature.
+	* NEWS: Mention the new feature.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2020-10-16  Nelson Chu  <nelson.chu@sifive.com>
+
+	* testsuite/ld-riscv-elf/ifunc-plt-got-overwrite.s: New testcase.
+	* testsuite/ld-riscv-elf/ifunc-plt-got-overwrite.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-got-overwrite-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-got-overwrite-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-got-overwrite-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ld-riscv-elf.exp: Updated.
+
+2020-10-16  Nelson Chu  <nelson.chu@sifive.com>
+
+	* emulparams/elf32lriscv-defs.sh: Add IREL_IN_PLT.
+	* testsuite/ld-ifunc/ifunc.exp: Enable ifunc tests for RISC-V.
+	* testsuite/ld-riscv-elf/ld-riscv-elf.exp (run_dump_test_ifunc):
+	New dump test for ifunc.  There are two arguments, 'target` and
+	`output`.  The `target` is rv32 or rv64, and the `output` is used
+	to choose which output you want to test (exe, pie or .so).
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-01.s: New testcase.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-01.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-01-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-01-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-01-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-02.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-02.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-02-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-02-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-call-02-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-data.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-data.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-data-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-data-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-data-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-got.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-got.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-got-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-got-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-got-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-pcrel.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-pcrel.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-pcrel-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-pcrel-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-reloc-pcrel-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-nonplt.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-nonplt.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-nonplt-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-nonplt-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-nonplt-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-01.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-01.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-01-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-01-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-01-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-02.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-02.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-02-exe.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-02-pic.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-plt-02-pie.rd: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-resolver.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-caller.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-exe.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-pic.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-pie.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-caller-pcrel.s: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-pcrel-pic.d: Likewise.
+	* testsuite/ld-riscv-elf/ifunc-seperate-pcrel-pie.d: Likewise.
+
 2020-10-09  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR gas/26703

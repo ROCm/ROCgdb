@@ -1705,6 +1705,15 @@ using the linker command language from a script (@pxref{Assignments}).
 @emph{Note:} there should be no white space between @var{symbol}, the
 equals sign (``@key{=}''), and @var{expression}.
 
+The linker processes @samp{--defsym} arguments and @samp{-T} arguments
+in order, placing @samp{--defsym} before @samp{-T} will define the
+symbol before the linker script from @samp{-T} is processed, while
+placing @samp{--defsym} after @samp{-T} will define the symbol after
+the linker script has been processed.  This difference has
+consequences for expressions within the linker script that use the
+@samp{--defsym} symbols, which order is correct will depend on what
+you are trying to achieve.
+
 @cindex demangling, from command line
 @kindex --demangle[=@var{style}]
 @kindex --no-demangle
@@ -1922,6 +1931,21 @@ select whichever function is most appropriate for the current
 architecture.  This is used, for example, to dynamically select an
 appropriate memset function.
 @end itemize
+
+@kindex --error-handling-script=@var{scriptname}
+@item --error-handling-script=@var{scriptname}
+If this option is provided then the linker will invoke
+@var{scriptname} whenever an error is encountered.  Currently however
+only two kinds of error are supported: missing symbols and missing
+libraries.  Two arguments will be passed to script: the keyword
+``missing-symbol'' or `missing-lib'' and the @var{name} of the 
+missing symbol or library.  The intention is that the script will
+provide suggestions to the user as to where the symbol or library
+might be found.  After the script has finished then the normal linker
+error message will be displayed.
+
+The availability of this option is controlled by a configure time
+switch, so it may not be present in specific implementations.
 
 @kindex --no-undefined-version
 @item --no-undefined-version
