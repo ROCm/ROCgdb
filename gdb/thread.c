@@ -2795,6 +2795,65 @@ static const struct internalvar_funcs gthread_funcs =
 /* Commands with a prefix of `lane'.  */
 struct cmd_list_element *lane_cmd_list = NULL;
 
+/* Return a new value for the selected lane's index.  Return a value
+   of 0 if no thread is selected, or no threads exist.  */
+
+static struct value *
+lane_make_value (struct gdbarch *gdbarch, internalvar *var, void *ignore)
+{
+  int int_val;
+
+  if (inferior_ptid == null_ptid)
+    int_val = 0;
+  else
+    {
+      thread_info *thr = inferior_thread ();
+      int_val = thr->current_simd_lane ();
+    }
+
+  return value_from_longest (builtin_type (gdbarch)->builtin_int, int_val);
+}
+
+/* Implementation of the `lane' variable.  */
+
+static const struct internalvar_funcs lane_funcs =
+{
+  lane_make_value,
+  NULL,
+  NULL
+};
+
+/* Return a new value for the frame's used lanes count, taking partial
+   work-groups into account.  Return a value of 0 if no thread is
+   selected or the frame's architecture does not support SIMD
+   lanes.  */
+
+static struct value *
+lane_count_make_value (struct gdbarch *gdbarch, internalvar *var, void *ignore)
+{
+  int int_val;
+
+  if (inferior_ptid == null_ptid)
+    int_val = 0;
+  else
+    {
+      thread_info *thr = inferior_thread ();
+      struct gdbarch *arch = get_frame_arch (get_selected_frame (nullptr));
+      int_val = gdbarch_used_lanes_count (arch, thr);
+    }
+
+  return value_from_longest (builtin_type (gdbarch)->builtin_int, int_val);
+}
+
+/* Implementation of the `lane_count' variable.  */
+
+static const struct internalvar_funcs lane_count_funcs =
+{
+  lane_count_make_value,
+  NULL,
+  NULL
+};
+
 void _initialize_thread ();
 void
 _initialize_thread ()
@@ -2970,4 +3029,7 @@ Show printing of thread events (such as thread start and exit)."), NULL,
 
   create_internalvar_type_lazy ("_thread", &thread_funcs, NULL);
   create_internalvar_type_lazy ("_gthread", &gthread_funcs, NULL);
+
+  create_internalvar_type_lazy ("_lane", &lane_funcs, nullptr);
+  create_internalvar_type_lazy ("_lane_count", &lane_count_funcs, nullptr);
 }
