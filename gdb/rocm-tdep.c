@@ -175,6 +175,7 @@ struct rocm_target_ops final : public target_ops
 
   std::string lane_to_str (thread_info *thr, int lane) override;
 
+  std::string dispatch_pos_str (thread_info *thr) override;
   std::string thread_workgroup_pos_str (thread_info *thr) override;
   std::string lane_workgroup_pos_str (thread_info *thr, int lane) override;
 
@@ -315,6 +316,25 @@ rocm_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
   return string_printf ("AMDGPU Dispatch %ld:%ld:%ld (PKID %ld)",
 			agent_id.handle, queue_id.handle, dispatch_id.handle,
 			os_id);
+}
+
+/* Return the dispatch position string for a given thread.  */
+
+static std::string
+dispatch_pos_string (thread_info *tp)
+{
+  uint32_t group_ids[3];
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD, group_ids)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return "(?,?,?)/?";
+
+  uint32_t wave_in_group;
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+		       wave_in_group);
+
+  return string_printf ("(%d,%d,%d)/%d",
+			group_ids[0], group_ids[1], group_ids[2],
+			wave_in_group);
 }
 
 /* Return the target id string for a given queue.  */
@@ -720,6 +740,15 @@ rocm_target_ops::lane_to_str (thread_info *thr, int lane)
 }
 
 /* Implementation of target_workgroup_pos_str.  */
+
+std::string
+rocm_target_ops::dispatch_pos_str (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->dispatch_pos_str (thr);
+
+  return dispatch_pos_string (thr);
+}
 
 std::string
 rocm_target_ops::thread_workgroup_pos_str (thread_info *thr)
