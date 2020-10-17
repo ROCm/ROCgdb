@@ -2611,6 +2611,12 @@ target_lane_to_str (thread_info *thr, int lane)
 }
 
 std::string
+target_dispatch_pos_str (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->dispatch_pos_str (thr);
+}
+
+std::string
 target_thread_workgroup_pos_str (thread_info *thr)
 {
   return current_inferior ()->top_target ()->thread_workgroup_pos_str (thr);
@@ -3708,6 +3714,12 @@ static std::string
 default_lane_to_str (struct target_ops *ops, thread_info *thr, int lane)
 {
   return target_pid_to_str (thr->ptid);
+}
+
+static std::string
+default_dispatch_pos_str (struct target_ops *ops, thread_info *thr)
+{
+  return {};
 }
 
 static std::string

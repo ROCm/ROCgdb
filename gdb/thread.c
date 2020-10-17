@@ -3107,6 +3107,28 @@ static const struct internalvar_funcs thread_workgroup_pos_funcs =
    threads exist.  */
 
 static struct value *
+dispatch_pos_make_value (struct gdbarch *gdbarch, internalvar *var,
+			 void *ignore)
+{
+  return make_thread_string_value (gdbarch, var, [] ()
+	   {
+	     return target_dispatch_pos_str (inferior_thread ());
+	   });
+}
+
+/* Implementation of the `$_thread_workgroup_pos' variable.  */
+
+static const struct internalvar_funcs dispatch_pos_funcs =
+{
+  dispatch_pos_make_value,
+  NULL,
+};
+
+/* Return a new string value for the current lane's workgroup
+   position.  Returns the empty string if no thread is selected, or no
+   threads exist.  */
+
+static struct value *
 lane_workgroup_pos_make_value (struct gdbarch *gdbarch, internalvar *var,
 			       void *ignore)
 {
@@ -3319,4 +3341,5 @@ When on messages about thread creation and deletion are printed."),
 				&thread_workgroup_pos_funcs, nullptr);
   create_internalvar_type_lazy ("_lane_workgroup_pos",
 				&lane_workgroup_pos_funcs, nullptr);
+  create_internalvar_type_lazy ("_dispatch_pos", &dispatch_pos_funcs, nullptr);
 }
