@@ -3028,8 +3028,6 @@ static struct cmd_list_element *show_backtrace_cmdlist;
 
 using boolean_option_def
   = gdb::option::boolean_option_def<set_backtrace_options>;
-using uinteger_option_def
-  = gdb::option::uinteger_option_def<set_backtrace_options>;
 
 const gdb::option::option_def set_backtrace_option_defs[] = {
 

@@ -1,3 +1,27 @@
+2020-10-19  Tom Tromey  <tromey@adacore.com>
+
+	PR tui/26719
+	* tui/tui-winsource.h (struct tui_source_window_base)
+	<refresh_window>: Rename from refresh_pad.
+	* tui/tui-winsource.c (tui_source_window_base::refresh_window):
+	Rename from refresh_pad.
+	(tui_source_window_base::show_source_content)
+	(tui_source_window_base::do_scroll_horizontal): Update.
+
+2020-10-19  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* thread.c (_initialize_thread): Fine-tune the help text of
+	'info threads'.
+
+2020-10-19  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* frame.c: Remove the unused 'uinteger_option_def' type alias.
+
+2020-10-14  Mihails Strasuns  <mihails.strasuns@intel.com>
+
+	* breakpoint.c (handle_jit_event): Add an argument, change how
+	`jit_event_handler` is called.
+
 2020-10-17  Tom Tromey  <tom@tromey.com>
 
 	* xcoffread.c (xcoff_end_psymtab): Use partial_symtab::empty.

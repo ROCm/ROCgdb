@@ -1,3 +1,52 @@
+2020-10-20  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/pr13961.S: Remove superfluous end-of-siblings marker.
+
+2020-10-20  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/arr-stride.c: Remove.
+	* gdb.dwarf2/arr-stride.exp: Use main.c.
+	* gdb.dwarf2/arr-subrange.c: Remove.
+	* gdb.dwarf2/arr-subrange.exp: Use main.c.
+	* gdb.dwarf2/bad-regnum.c: Remove.
+	* gdb.dwarf2/bad-regnum.exp: Use main.c.
+	* gdb.dwarf2/corrupt.c: Remove.
+	* gdb.dwarf2/corrupt.exp: Use main.c.
+	* gdb.dwarf2/dw2-bad-elf.c: Remove.
+	* gdb.dwarf2/dw2-bad-elf.exp: Use main.c.
+	* gdb.dwarf2/dw2-icycle.c: Remove.
+	* gdb.dwarf2/dw2-icycle.exp: Use main.c.
+	* gdb.dwarf2/formdata16.c: Remove.
+	* gdb.dwarf2/formdata16.exp: Use main.c.
+	* gdb.dwarf2/implptrconst.c: Remove.
+	* gdb.dwarf2/implptrconst.exp: Use main.c.
+	* gdb.dwarf2/info-locals-optimized-out.c: Remove.
+	* gdb.dwarf2/info-locals-optimized-out.exp: Use main.c.
+	* gdb.dwarf2/opaque-type-lookup.c: Remove.
+	* gdb.dwarf2/opaque-type-lookup.exp: Use main.c.
+
+2020-10-20  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/ada-valprint-error.exp: Remove redundant mention of .exp
+	file.
+	* gdb.dwarf2/dw2-dir-file-name.exp: Same.
+
+2020-10-20  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-error.exp: Use $gdb_test_file_name.
+	* gdb.dwarf2/dw2-line-number-zero.exp: Same.
+	* gdb.dwarf2/dw2-main-no-line-number.exp: Same.
+	* gdb.dwarf2/dw2-ranges-base.exp: Same.
+	* gdb.dwarf2/dw2-ranges.exp: Same.
+	* gdb.dwarf2/dw2-vendor-extended-opcode.exp: Same.
+	* gdb.dwarf2/var-access.exp: Same.
+
+2020-10-19  Tom Tromey  <tromey@adacore.com>
+
+	PR tui/26719
+	* gdb.tui/list.exp: Check source window contents after focus
+	change.
+
 2020-10-17  Tom de Vries  <tdevries@suse.de>
 
 	PR symtab/26317
