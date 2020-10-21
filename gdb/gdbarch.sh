@@ -794,7 +794,7 @@ M;displaced_step_closure_up;displaced_step_copy_insn;CORE_ADDR from, CORE_ADDR t
 #
 # The default implementation returns false on all targets that
 # provide a gdbarch_software_single_step routine, and true otherwise.
-m;int;displaced_step_hw_singlestep;struct displaced_step_closure *closure;closure;;default_displaced_step_hw_singlestep;;0
+m;bool;displaced_step_hw_singlestep;struct displaced_step_closure *closure;closure;;default_displaced_step_hw_singlestep;;0
 
 # Fix up the state resulting from successfully single-stepping a
 # displaced instruction, to give the result we would have gotten from
@@ -1388,7 +1388,7 @@ do
     if class_is_predicate_p
     then
 	printf "\n"
-	printf "extern int gdbarch_%s_p (struct gdbarch *gdbarch);\n" "$function"
+	printf "extern bool gdbarch_%s_p (struct gdbarch *gdbarch);\n" "$function"
     fi
     if class_is_variable_p
     then
@@ -2063,7 +2063,7 @@ do
     if class_is_predicate_p
     then
 	printf "\n"
-	printf "int\n"
+	printf "bool\n"
 	printf "gdbarch_%s_p (struct gdbarch *gdbarch)\n" "$function"
 	printf "{\n"
         printf "  gdb_assert (gdbarch != NULL);\n"
