@@ -26,6 +26,7 @@
 #include "frame-base.h"
 #include "frame-unwind.h"
 #include "gdbarch.h"
+#include "gdbsupport/gdb_unique_ptr.h"
 #include "inferior.h"
 #include "osabi.h"
 #include "reggroups.h"
