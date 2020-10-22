@@ -1897,7 +1897,7 @@ skip_attr_bytes (unsigned long          form,
     case DW_FORM_ref_addr:
       if (dwarf_version == 2)
 	SAFE_BYTE_GET_AND_INC (uvalue, data, pointer_size, end);
-      else if (dwarf_version == 3 || dwarf_version == 4)
+      else if (dwarf_version > 2)
 	SAFE_BYTE_GET_AND_INC (uvalue, data, offset_size, end);
       else
 	return NULL;
@@ -1949,6 +1949,7 @@ skip_attr_bytes (unsigned long          form,
 
     case DW_FORM_ref8:
     case DW_FORM_data8:
+    case DW_FORM_ref_sig8:
       data += 8;
       break;
 
@@ -1963,6 +1964,7 @@ skip_attr_bytes (unsigned long          form,
     case DW_FORM_block:
     case DW_FORM_exprloc:
       READ_ULEB (uvalue, data, end);
+      data += uvalue;
       break;
 
     case DW_FORM_block1:
@@ -1980,12 +1982,12 @@ skip_attr_bytes (unsigned long          form,
       data += 4 + uvalue;
       break;
 
-    case DW_FORM_ref_sig8:
-      data += 8;
-      break;
-
     case DW_FORM_indirect:
-      /* FIXME: Handle this form.  */
+      READ_ULEB (form, data, end);
+      if (form == DW_FORM_implicit_const)
+	SKIP_ULEB (data, end);
+      return skip_attr_bytes (form, data, end, pointer_size, offset_size, dwarf_version, value_return);
+
     default:
       return NULL;
     }
@@ -2007,7 +2009,7 @@ get_type_signedness (unsigned char *        start,
 		     dwarf_vma              offset_size,
 		     int                    dwarf_version,
 		     bfd_boolean *          is_signed,
-		     bfd_boolean	    is_nested)
+		     unsigned int	    nesting)
 {
   unsigned long   abbrev_number;
   abbrev_entry *  entry;
@@ -2025,6 +2027,14 @@ get_type_signedness (unsigned char *        start,
   if (entry == NULL)
     /* FIXME: Issue a warning ?  */
     return;
+
+#define MAX_NESTING 20
+  if (nesting > MAX_NESTING)
+    {
+      /* FIXME: Warn - or is this expected ?
+	 NB/ We need to avoid infinite recursion.  */
+      return;
+    }
 
   for (attr = entry->first_attr;
        attr != NULL && attr->attribute;
@@ -2048,16 +2058,12 @@ get_type_signedness (unsigned char *        start,
 #endif
 	case DW_AT_type:
 	  /* Recurse.  */
-	  if (is_nested)
-	    {
-	      /* FIXME: Warn - or is this expected ?
-		 NB/ We need to avoid infinite recursion.  */
-	      return;
-	    }
 	  if (uvalue >= (size_t) (end - start))
 	    return;
-	  get_type_signedness (start, start + uvalue, end, pointer_size,
-			       offset_size, dwarf_version, is_signed, TRUE);
+	  /* We cannot correctly process DW_FORM_ref_addr at the moment.  */
+	  if (attr->form != DW_FORM_ref_addr)
+	    get_type_signedness (start, start + uvalue, end, pointer_size,
+				 offset_size, dwarf_version, is_signed, nesting + 1);
 	  break;
 
 	case DW_AT_encoding:
@@ -2235,7 +2241,6 @@ read_and_display_attr_value (unsigned long           attribute,
 	SAFE_BYTE_GET_AND_INC (uvalue, data, offset_size, end);
       else
 	error (_("Internal error: DW_FORM_ref_addr is not supported in DWARF version 1.\n"));
-
       break;
 
     case DW_FORM_addr:
@@ -2692,8 +2697,10 @@ read_and_display_attr_value (unsigned long           attribute,
 	{
 	  bfd_boolean is_signed = FALSE;
 
-	  get_type_signedness (start, start + uvalue, end, pointer_size,
-			       offset_size, dwarf_version, & is_signed, FALSE);
+	  /* We cannot correctly process DW_FORM_ref_addr at the moment.  */
+	  if (form != DW_FORM_ref_addr)
+	    get_type_signedness (start, start + uvalue, end, pointer_size,
+				 offset_size, dwarf_version, & is_signed, 0);
 	  level_type_signed[level] = is_signed;
 	}
       break;
