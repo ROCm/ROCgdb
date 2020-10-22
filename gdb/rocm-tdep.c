@@ -2677,7 +2677,8 @@ info_dispatches_command (const char *args, int from_tty)
               = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
           if (msymbol.minsym && !uiout->is_mi_like_p ())
             uiout->field_string ("kernel-function",
-                                 msymbol.minsym->print_name ());
+                                 msymbol.minsym->print_name (),
+                                 function_name_style.style ());
           else
             uiout->field_core_addr ("kernel-function", gdbarch, kernel_code);
 
