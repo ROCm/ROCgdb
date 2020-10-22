@@ -492,15 +492,6 @@ rocm_update_solib_list ()
      breakpoint_re_set.  */
   target_terminal::ours_for_output ();
 
-  solib_add (NULL, 0, auto_solib_add);
-
-  /* Switch it back.  */
-  target_terminal::inferior ();
-}
-
-static void
-rocm_solib_dbgapi_activated ()
-{
   if (rocm_solib_ops.current_sos == NULL)
     {
       /* Override what we need to */
@@ -511,18 +502,15 @@ rocm_solib_dbgapi_activated ()
       rocm_solib_ops.bfd_open = rocm_solib_bfd_open;
       rocm_solib_ops.relocate_section_addresses
 	= rocm_solib_relocate_section_addresses;
+
+      /* Engage the ROCm so_ops.  */
+      set_solib_ops (target_gdbarch (), &rocm_solib_ops);
     }
 
-  /* Engage the ROCm so_ops.  */
-  set_solib_ops (target_gdbarch (), &rocm_solib_ops);
-}
+  solib_add (NULL, 0, auto_solib_add);
 
-static void
-rocm_solib_dbgapi_deactivated ()
-{
-  /* Disengage the ROCm so_ops.  */
-  set_solib_ops (target_gdbarch (), &svr4_so_ops);
-  rocm_update_solib_list ();
+  /* Switch it back.  */
+  target_terminal::inferior ();
 }
 
 static void
@@ -539,8 +527,6 @@ void
 _initialize_rocm_solib (void)
 {
   /* Install our observers.  */
-  amd_dbgapi_activated.attach (rocm_solib_dbgapi_activated);
-  amd_dbgapi_deactivated.attach (rocm_solib_dbgapi_deactivated);
   amd_dbgapi_code_object_list_updated.attach (rocm_update_solib_list);
 
   /* FIXME: remove this when we can clear the solist in
