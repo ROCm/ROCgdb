@@ -13721,7 +13721,7 @@ public:
   {
     struct value *index_value = val_atr (index_type, index);
 
-    LA_VALUE_PRINT (index_value, stream, options);
+    value_print (index_value, stream, options);
     fprintf_filtered (stream, " => ");
   }
 
@@ -13869,7 +13869,7 @@ public:
 
   /* See language.h.  */
 
-  char *demangle (const char *mangled, int options) const override
+  char *demangle_symbol (const char *mangled, int options) const override
   {
     return ada_la_decode (mangled, options);
   }

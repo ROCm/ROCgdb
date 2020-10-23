@@ -284,29 +284,69 @@ arglist	:	arglist ',' exp   %prec ABOVE_COMMA
 			{ pstate->arglist_len++; }
 	;
 
+arglist	:	arglist ',' subrange   %prec ABOVE_COMMA
+			{ pstate->arglist_len++; }
+	;
+
 /* There are four sorts of subrange types in F90.  */
 
 subrange:	exp ':' exp	%prec ABOVE_COMMA
-			{ write_exp_elt_opcode (pstate, OP_RANGE); 
-			  write_exp_elt_longcst (pstate, NONE_BOUND_DEFAULT);
+			{ write_exp_elt_opcode (pstate, OP_RANGE);
+			  write_exp_elt_longcst (pstate, RANGE_STANDARD);
 			  write_exp_elt_opcode (pstate, OP_RANGE); }
 	;
 
 subrange:	exp ':'	%prec ABOVE_COMMA
 			{ write_exp_elt_opcode (pstate, OP_RANGE);
-			  write_exp_elt_longcst (pstate, HIGH_BOUND_DEFAULT);
+			  write_exp_elt_longcst (pstate,
+						 RANGE_HIGH_BOUND_DEFAULT);
 			  write_exp_elt_opcode (pstate, OP_RANGE); }
 	;
 
 subrange:	':' exp	%prec ABOVE_COMMA
 			{ write_exp_elt_opcode (pstate, OP_RANGE);
-			  write_exp_elt_longcst (pstate, LOW_BOUND_DEFAULT);
+			  write_exp_elt_longcst (pstate,
+						 RANGE_LOW_BOUND_DEFAULT);
 			  write_exp_elt_opcode (pstate, OP_RANGE); }
 	;
 
 subrange:	':'	%prec ABOVE_COMMA
 			{ write_exp_elt_opcode (pstate, OP_RANGE);
-			  write_exp_elt_longcst (pstate, BOTH_BOUND_DEFAULT);
+			  write_exp_elt_longcst (pstate,
+						 (RANGE_LOW_BOUND_DEFAULT
+						  | RANGE_HIGH_BOUND_DEFAULT));
+			  write_exp_elt_opcode (pstate, OP_RANGE); }
+	;
+
+/* And each of the four subrange types can also have a stride.  */
+subrange:	exp ':' exp ':' exp	%prec ABOVE_COMMA
+			{ write_exp_elt_opcode (pstate, OP_RANGE);
+			  write_exp_elt_longcst (pstate, RANGE_HAS_STRIDE);
+			  write_exp_elt_opcode (pstate, OP_RANGE); }
+	;
+
+subrange:	exp ':' ':' exp	%prec ABOVE_COMMA
+			{ write_exp_elt_opcode (pstate, OP_RANGE);
+			  write_exp_elt_longcst (pstate,
+						 (RANGE_HIGH_BOUND_DEFAULT
+						  | RANGE_HAS_STRIDE));
+			  write_exp_elt_opcode (pstate, OP_RANGE); }
+	;
+
+subrange:	':' exp ':' exp	%prec ABOVE_COMMA
+			{ write_exp_elt_opcode (pstate, OP_RANGE);
+			  write_exp_elt_longcst (pstate,
+						 (RANGE_LOW_BOUND_DEFAULT
+						  | RANGE_HAS_STRIDE));
+			  write_exp_elt_opcode (pstate, OP_RANGE); }
+	;
+
+subrange:	':' ':' exp	%prec ABOVE_COMMA
+			{ write_exp_elt_opcode (pstate, OP_RANGE);
+			  write_exp_elt_longcst (pstate,
+						 (RANGE_LOW_BOUND_DEFAULT
+						  | RANGE_HIGH_BOUND_DEFAULT
+						  | RANGE_HAS_STRIDE));
 			  write_exp_elt_opcode (pstate, OP_RANGE); }
 	;
 
@@ -1343,7 +1383,7 @@ yylex (void)
 }
 
 int
-f_parse (struct parser_state *par_state)
+f_language::parser (struct parser_state *par_state) const
 {
   /* Setting up the parser state.  */
   scoped_restore pstate_restore = make_scoped_restore (&pstate);

@@ -1,3 +1,11 @@
+2020-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* po/es.po: Remove the duplicated entry.
+
+2020-10-20  Dr. David Alan Gilbert  <dgilbert@redhat.com>
+
+	* po/es.po: Fix printf format.
+
 2020-10-20  Ganesh Gopalasubramanian  <Ganesh.Gopalasubramanian@amd.com>
 
 	* i386-dis.c (rm_table): Add tlbsync, snp, invlpgb.

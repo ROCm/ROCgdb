@@ -328,15 +328,19 @@ struct language_defn
   }
 
   /* Return demangled language symbol version of MANGLED, or NULL.  */
-  virtual char *demangle (const char *mangled, int options) const
+  virtual char *demangle_symbol (const char *mangled, int options) const
   {
     return nullptr;
   }
 
-  /* Print a type using syntax appropriate for this language.  */
+  /* Print TYPE to STREAM using syntax appropriate for this language.
+     LEVEL is the depth to indent lines by.  VARSTRING, if not NULL or the
+     empty string, is the name of a variable and TYPE should be printed in
+     the form of a declaration of a variable named VARSTRING.  */
 
-  virtual void print_type (struct type *, const char *, struct ui_file *, int,
-			   int, const struct type_print_options *) const = 0;
+  virtual void print_type (struct type *type, const char *varstring,
+			   struct ui_file *stream, int show, int level,
+			   const struct type_print_options *flags) const = 0;
 
   /* PC is possibly an unknown languages trampoline.
      If that PC falls in a trampoline belonging to this language, return
@@ -644,12 +648,6 @@ extern enum language set_language (enum language);
 #define LA_PRINT_TYPE(type,varstring,stream,show,level,flags)		\
   (current_language->print_type(type,varstring,stream,show,level,flags))
 
-#define LA_PRINT_TYPEDEF(type,new_symbol,stream) \
-  (current_language->print_typedef (type,new_symbol,stream))
-
-#define LA_VALUE_PRINT(val,stream,options) \
-  (current_language->value_print (val,stream,options))
-
 #define LA_PRINT_CHAR(ch, type, stream) \
   (current_language->printchar (ch, type, stream))
 #define LA_PRINT_STRING(stream, elttype, string, length, encoding, force_ellipses, options) \
@@ -657,13 +655,6 @@ extern enum language set_language (enum language);
 			       encoding, force_ellipses,options))
 #define LA_EMIT_CHAR(ch, type, stream, quoter) \
   (current_language->emitchar (ch, type, stream, quoter))
-
-#define LA_PRINT_ARRAY_INDEX(index_type, index_value, stream, options)	\
-  (current_language->print_array_index(index_type, index_value, stream, \
-				       options))
-
-#define LA_ITERATE_OVER_SYMBOLS(BLOCK, NAME, DOMAIN, CALLBACK) \
-  (current_language->iterate_over_symbols (BLOCK, NAME, DOMAIN, CALLBACK))
 
 /* Test a character to decide whether it can be printed in literal form
    or needs to be printed in another representation.  For example,

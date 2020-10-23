@@ -398,6 +398,13 @@ if { ![info exists NOSANITIZE_CFLAGS] } then {
     }
 }
 
+if { ![info exists NOLTO_CFLAGS] } then {
+    set NOLTO_CFLAGS ""
+    if [compiler_supports "-fno-lto"] {
+	set NOLTO_CFLAGS "-fno-lto"
+    }
+}
+
 # Provide dummy libraries that alpha-vms-ld always loads
 if { [istarget alpha*-*-*vms*] } {
     set src tmpdir/empty.s
@@ -416,4 +423,21 @@ if { [istarget alpha*-*-*vms*] } {
 	unset i missing_libs
     }
     unset f src
+}
+
+set plugin_names {
+    liblto_plugin.so
+    liblto_plugin-0.dll
+    cyglto_plugin-0.dll
+}
+set plug_opt ""
+foreach plug $plugin_names {
+    set plug_so [run_host_cmd $CC "--print-prog-name $plug"]
+    if { $plug_so eq $plug } then {
+	set plug_so [run_host_cmd $CC "--print-file-name $plug"]
+    }
+    if { $plug_so ne $plug } then {
+	set plug_opt "--plugin $plug_so"
+	break
+    }
 }

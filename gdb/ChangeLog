@@ -1,3 +1,246 @@
+2020-10-23  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-typeprint.c (ada_print_type): Remove superfluous second call
+	to ada_check_typedef.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.y (f_parse): Rename to...
+	(f_language::parser): ...this.
+	* f-lang.c (f_get_encoding): Rename to...
+	(f_language::get_encoding): ...this.
+	(f_op_print_tab): Rename to...
+	(f_language::op_print_tab): ...this.
+	(exp_descriptor_f): Rename to...
+	(f_language::exp_descriptor_tab): ...this.
+	(class f_language): Moved to f-lang.h.
+	(f_language::language_arch_info): New function, moved out of class
+	declaration.
+	(f_language::search_name_hash): Likewise.
+	(f_language::lookup_symbol_nonlocal): Likewise.
+	(f_language::get_symbol_name_matcher_inner): Likewise.
+	* f-lang.h: Add 'valprint.h' include.
+	(class f_language): Moved here from f-lang.c.
+	* f-typeprint.c (f_type_print_args): Delete commented out
+	declaration.
+	(f_print_typedef): Rename to...
+	(f_language::print_typedef): ...this.
+	(f_print_type): Rename to...
+	(f_language::print_type): ...this.
+	(f_type_print_varspec_prefix): Delete declaration and rename to...
+	(f_language::f_type_print_varspec_prefix): ...this.
+	(f_type_print_varspec_suffix): Delete declaration and rename to...
+	(f_language::f_type_print_varspec_suffix): ...this.
+	(f_type_print_base): Delete declaration and rename to...
+	(f_language::f_type_print_base): ...this.
+	* f-valprint.c (f_value_print_inner): Rename to...
+	(f_language::value_print_inner): ...this.
+	* parse.c: Delete 'f-lang.h' include.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* language.h (language_defn::print_type): Add variable names in
+	declaration, and update header comment.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language::demangle): Rename to...
+	(ada_language::demangle_symbol): ...this.
+	* c-lang.c (cplus_language::demangle): Rename to...
+	(cplus_language::demangle_symbol): ...this.
+	* d-lang.c (d_language::demangle): Rename to...
+	(d_language::demangle_symbol): ...this.
+	* f-lang.c (f_language::demangle): Rename to...
+	(f_language::demangle_symbol): ...this.
+	* go-lang.c (go_language::demangle): Rename to...
+	(go_language::demangle_symbol): ...this.
+	* language.c (language_demangle): Update call to demangle_symbol.
+	(auto_or_unknown_language::demangle): Rename to...
+	(auto_or_unknown_language::demangle_symbol): ...this.
+	* language.h (language_defn::demangle): Rename to...
+	(language_defn::demangle_symbol): ...this.
+	* objc-lang.c (objc_language::demangle): Rename to...
+	(objc_language::demangle_symbol): ...this.
+	* rust-lang.c (rust_language::demangle): Rename to...
+	(rust_language::demangle_symbol): ...this.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* language.h (LA_ITERATE_OVER_SYMBOLS): Delete.
+	(iterate_over_file_blocks): Replace use of macro with the macros
+	definition.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* language.h (LA_PRINT_ARRAY_INDEX): Delete.
+	* valprint.c (maybe_print_array_index): Replace use of macro with
+	the macros definition.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (ada_language::print_array_index): Call value_print
+	directly.
+	* language.c (language_defn::print_array_index): Likewise.
+	* language.h (LA_VALUE_PRINT): Delete.
+	* valprint.c (value_print): Call value_print on the
+	current_language directly.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* language.h (LA_PRINT_TYPEDEF): Delete.
+	* typeprint.c (typedef_print): Call print_typedef directly on the
+	current_language object.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* m2-exp.y (m2_parse): Rename to...
+	(m2_language::parser): ...this.  Update function signature.
+	* m2-lang.c (m2_printchar): Renamed to m2_language::printchar.
+	(m2_op_print): Rename to...
+	(m2_language::op_print_tab): ...this, and make const.
+	(exp_descriptor_modula2): Rename to...
+	(m2_language::exp_descriptor_modula2): ...this.
+	(class m2_language): Move to m2-lang.h.
+	(m2_language::language_arch_info): New function, moved out of
+	class declaration.
+	(m2_language::printchar): New function, body from m2_printchar.
+	(m2_language::printstr): New function, moved out of class
+	declaration.
+	(m2_language::emitchar): Likewise.
+	* m2-lang.h (m2_parse): Delete declaration.
+	(m2_print_typedef): Delete declaration.
+	(m2_value_print_inner): Delete declaration.
+	(class m2_language): Class declaration moved from m2-lang.c,
+	larger functions are left in m2-lang.c.
+	* m2-typeprint.c (m2_print_typedef): Rename to...
+	(m2_language::print_typedef): ...this, and update function
+	signature.
+	* m2-valprint.c (m2_value_print_inner): Rename to...
+	(m2_language::value_print_inner): ...this, replace use of
+	LA_PRINT_STRING with a direct call to printstr member function,
+	and update recursive call.
+
+2020-10-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* language.c (default_is_string_type_p): Delete, implementation
+	moved into auto_or_unknown_language::is_string_type_p.
+	(unk_op_print_tab): Moved into
+	auto_or_unknown_language::opcode_print_table.
+	(unknown_language_arch_info): Delete, implementation moved into
+	auto_or_unknown_language::language_arch_info.
+	(class auto_or_unknown_language): New class, member functions
+	copied from unknown_language class, with some updates.
+	(class unknown_language): Most member functions moved into
+	auto_or_unknown_language class.  Inherit from
+	auto_or_unknown_language class.
+	(class auto_language): Inherit from auto_or_unknown_language.
+	Delete most member functions.
+
+2020-10-22  Hannes Domani  <ssbssa@yahoo.de>
+
+	* stabsread.c (read_member_functions): Remove gdb_assert.
+
+2020-10-22  Hannes Domani  <ssbssa@yahoo.de>
+
+	* gdbtypes.c (init_complex_type): Check target type name.
+
+2020-10-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target-debug.h (target_debug_print_struct_target_ops_p):
+	Remove.
+	(target_debug_print_async_callback_ftype_p): Remove.
+	(target_debug_print_struct_trace_state_variable_p): Remove.
+	(target_debug_print_struct_traceframe_info_p): Remove.
+	(target_debug_print_VEC__btrace_block_s__pp): Remove.
+	(target_debug_print_enum_btrace_format): Remove.
+	(target_debug_print_enum_info_proc_what): Remove.
+	(target_debug_print_thread_info_pp): Remove.
+
+2020-10-22  Simon Marchi  <simon.marchi@efficios.com>
+
+	* target.h (struct target_ops) <make_corefile_notes>:
+	Change return type to unique pointer.
+	* target.c (dummy_make_corefile_notes): Likewise.
+	* exec.c (struct exec_target) <make_corefile_notes>:
+	Likewise.
+	(exec_target::make_corefile_notes): Likewise.
+	* procfs.c (class procfs_target) <make_corefile_notes>:
+	Likewise.
+	(procfs_do_thread_registers): Adjust to unique pointer.
+	(struct procfs_corefile_thread_data): Add constructor.
+	<note_data>: Change type to unique pointer.
+	(procfs_corefile_thread_callback): Adjust to unique pointer.
+	(procfs_target::make_corefile_notes): Change return type to
+	unique pointer.
+	* target-delegates.c: Re-generate.
+	* gcore.c (write_gcore_file_1): Adjust.
+	* target-debug.h (target_debug_print_gdb_unique_xmalloc_ptr_char):
+	New.
+
+2020-10-22  Tom de Vries  <tdevries@suse.de>
+
+	* block.c (find_block_in_blockvector): Make sure the returned block
+	contains pc.
+
+2020-10-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26693
+	* dwarf2/read.c (load_full_comp_unit): Add existing_cu
+	parameter.
+	(load_cu): Pass existing CU.
+	(process_imported_unit_die): Likewise.
+	(follow_die_offset): Likewise.
+
+2020-10-22  Luis Machado  <luis.machado@linaro.org>
+
+	* corelow.c (core_target::xfer_partial): Also check for an empty
+	m_core_unavailable_mappings vector.
+
+2020-10-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* expprint.c (dump_subexp_body_standard): Print RANGE_HAS_STRIDE.
+	* expression.h (enum range_type): Add RANGE_HAS_STRIDE.
+	* f-exp.y (arglist): Allow for a series of subranges.
+	(subrange): Add cases for subranges with strides.
+	* f-lang.c (value_f90_subarray): Catch use of array strides and
+	throw an error.
+	* parse.c (operator_length_standard): Handle RANGE_HAS_STRIDE.
+
+2020-10-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* expprint.c (print_subexp_standard): Change enum range_type to
+	range_flag and rename variables to match.
+	(dump_subexp_body_standard): Likewise.
+	* expression.h (enum range_type): Rename to...
+	(enum range_flag): ...this.
+	(range_types): Rename to...
+	(range_flags): ...this.
+	* f-lang.c (value_f90_subarray): Change enum range_type to
+	range_flag and rename variables to match.
+	* parse.c (operator_length_standard): Likewise.
+	* rust-exp.y (rust_parser::convert_ast_to_expression): Change enum
+	range_type to range_flag.
+	* rust-lang.c (rust_evaluate_funcall): Likewise.
+	(rust_range): Likewise.
+	(rust_compute_range): Likewise.
+	(rust_subscript): Likewise.
+
+2020-10-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* expprint.c (print_subexp_standard): Update to reflect changes to
+	enum range_type.
+	(dump_subexp_body_standard): Likewise.
+	* expression.h (enum range_type): Convert to a bit field enum, and
+	make the enum unsigned.
+	* f-exp.y (subrange): Update to reflect changes to enum
+	range_type.
+	* f-lang.c (value_f90_subarray): Likewise.
+	* parse.c (operator_length_standard): Likewise.
+	* rust-exp.y (rust_parser::convert_ast_to_expression): Likewise.
+	* rust-lang.c (rust_range): Likewise.
+	(rust_compute_range): Likewise.
+	(rust_subscript): Likewise.
+
 2020-10-21  Simon Marchi  <simon.marchi@efficios.com>
 
 	* infrun.c (displaced_step_in_progress_thread): Fix comment.
