@@ -1883,11 +1883,10 @@ mach_type_to_arc_isa (const unsigned long mach)
     }
 }
 
-/* Common construction code for ARC_GDBARCH_FEATURES struct.  If there
-   is no ABFD, then a FEATURE with default values is returned.  */
+/* See arc-tdep.h.  */
 
-static arc_gdbarch_features
-arc_gdbarch_features_create (const bfd *abfd, const unsigned long mach)
+arc_arch_features
+arc_arch_features_create (const bfd *abfd, const unsigned long mach)
 {
   /* Use 4 as a fallback value.  */
   int reg_size = 4;
@@ -1915,7 +1914,7 @@ arc_gdbarch_features_create (const bfd *abfd, const unsigned long mach)
      case).  */
   arc_isa isa = mach_type_to_arc_isa (mach);
 
-  return arc_gdbarch_features (reg_size, isa);
+  return arc_arch_features (reg_size, isa);
 }
 
 /* Look for obsolete core feature names in TDESC.  */
@@ -2085,9 +2084,9 @@ arc_tdesc_init (struct gdbarch_info info, const struct target_desc **tdesc,
   /* If target doesn't provide a description, use the default ones.  */
   if (!tdesc_has_registers (tdesc_loc))
     {
-      arc_gdbarch_features features
-	= arc_gdbarch_features_create (info.abfd,
-				       info.bfd_arch_info->mach);
+      arc_arch_features features
+	= arc_arch_features_create (info.abfd,
+				    info.bfd_arch_info->mach);
       tdesc_loc = arc_lookup_target_description (features);
     }
   gdb_assert (tdesc_loc != nullptr);

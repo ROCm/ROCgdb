@@ -1,3 +1,58 @@
+2020-10-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 10.1.
+
+2020-10-22  Hannes Domani  <ssbssa@yahoo.de>
+
+	* gdbtypes.c (init_complex_type): Check target type name.
+
+2020-10-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26693
+	* dwarf2/read.c (load_full_comp_unit): Add existing_cu
+	parameter.
+	(load_cu): Pass existing CU.
+	(process_imported_unit_die): Likewise.
+	(follow_die_offset): Likewise.
+
+2020-10-14  Mihails Strasuns  <mihails.strasuns@intel.com>
+
+	* breakpoint.c (handle_jit_event): Add an argument, change how
+	`jit_event_handler` is called.
+
+2020-10-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26642
+	* infrun.c (do_target_wait_1): Clear TARGET_WNOHANG if the
+	target can't do async.
+	* target.c (target_wait): Assert that we don't pass
+	TARGET_WNOHANG to a target that can't async.
+
+2020-10-08  Shahab Vahedi  <shahab@synopsys.com>
+
+	* NEWS: Mention ARC support in GDBserver.
+
+2020-10-07  Anton Kolesov  <anton.kolesov@synopsys.com>
+
+	* arc-linux-tdep.h: New file.
+	* arc-linux-tdep.c (arc_linux_core_reg_offsets,
+	arc_linux_supply_gregset, arc_linux_supply_v2_regset,
+	arc_linux_collect_gregset, arc_linux_collect_v2_regset,
+	arc_linux_gregset, arc_linux_v2_regset,
+	arc_linux_iterate_over_regset_sections,
+	arc_linux_core_read_description): Implement.
+	(arc_linux_init_osabi): Set iterate_over_regset_sections.
+	* arc-tdep.h (ARC_OFFSET_NO_REGISTER): Declare.
+	(arc_gdbarch_features_create): Add.
+	* arc-tdep.c (arc_gdbarch_features_create): Not static anymore.
+
+2020-10-07  Shahab Vahedi  <shahab@synopsys.com>
+
+	* arch/arc.h: Rename "arc_gdbarch_features" to
+	"arc_arch_features".
+	* arc-tdep.h: Likewise.
+	* arc-tdep.c: Likewise.
+
 2020-09-28  Gareth Rees <grees@undo.io>  (tiny change)
 
 	PR python/26586
