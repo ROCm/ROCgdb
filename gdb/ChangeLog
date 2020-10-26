@@ -1,3 +1,45 @@
+2020-10-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* acinclude.m4: Update ptrace.m4 path.
+	* ptrace.m4: Moved to gdbsupport.
+
+2020-10-24  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* symfile-mem.c (add_vsyscall_page): Use inferior parameter
+	instead of target_gdbarch.
+
+2020-10-24  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (jit_reader_load_command): Pass current inferior.
+	(jit_inferior_init): Change parameter type to inferior, use it.
+	(jit_inferior_created): Remove.
+	(jit_inferior_created_hook): Pass inferior parameter down.
+	(_initialize_jit): Use jit_inferior_created_hook instead of
+	jit_inferior_created.
+	* jit.h (jit_inferior_created_hook): Add inferior parameter.
+	* infrun.c (follow_exec): Pass inferior to
+	jit_inferior_created_hook.
+
+2020-10-24  Simon Marchi  <simon.marchi@efficios.com>
+
+	* linux-thread-db.c (check_pid_namespace_match): Add inferior
+	parameter and use it.
+	(thread_db_inferior_created): Pass inferior argument.
+
+2020-10-24  Simon Marchi  <simon.marchi@efficios.com>
+
+	* aix-thread.c (aix_thread_inferior_created): Add inferior
+	parameter.
+	* bsd-uthread.c (bsd_uthread_inferior_created): Likewise.
+	* dummy-frame.c (cleanup_dummy_frames): Likewise.
+	* jit.c (jit_inferior_created): Likewise.
+	* linux-thread-db.c (thread_db_inferior_created): Likewise.
+	* m68k-linux-tdep.c (m68k_linux_inferior_created): Likewise.
+	* observable.h (inferior_created): Likewise.
+	* ravenscar-thread.c (ravenscar_inferior_created): Likewise.
+	* symfile-mem.c (add_vsyscall_page): Likewise.
+	* infcmd.c (post_create_inferior): Pass inferior argument.
+
 2020-10-24  Joel Brobecker  <brobecker@adacore.com>
 
 	GDB 10.1 released.

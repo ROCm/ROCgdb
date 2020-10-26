@@ -69,9 +69,10 @@ rocm_free_solib_list (struct solib_info *info)
 /* Fetch the solib_info data for the current inferior.  */
 
 static struct solib_info *
-get_solib_info (void)
+get_solib_info (inferior *inf = nullptr)
 {
-  struct inferior *inf = current_inferior ();
+  if (!inf)
+    inf = current_inferior ();
 
   struct solib_info *info = rocm_solib_data.get (inf);
   if (info == NULL)
@@ -525,9 +526,9 @@ rocm_solib_dbgapi_deactivated ()
 }
 
 static void
-rocm_solib_target_inferior_created ()
+rocm_solib_target_inferior_created (inferior *inf)
 {
-  rocm_free_solib_list (get_solib_info ());
+  rocm_free_solib_list (get_solib_info (inf));
   rocm_update_solib_list ();
 }
 

@@ -1403,10 +1403,8 @@ rocm_target_solib_unloaded (struct so_list *solib)
 }
 
 static void
-rocm_target_inferior_created ()
+rocm_target_inferior_created (inferior *inf)
 {
-  struct inferior *inf = current_inferior ();
-
   /* If the inferior is not running on the native target (e.g. it is running
      on a remote target), we don't want to deal with it.  */
   if (inf->process_target () != get_native_target ())
