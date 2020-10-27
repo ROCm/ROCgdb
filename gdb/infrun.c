@@ -213,6 +213,21 @@ maint_show_lane_divergence_support (ui_file *file, int from_tty,
   gdb_printf (file, _("Lane divergence debugging support is %s.\n"), value);
 }
 
+/* Whether we skip divergent lane code regions by setting a breakpoint
+   at the logical lane PC and running to it.  If off, we skip
+   divergent code regions by single-stepping instead.  */
+static bool maint_skip_divergent_regions_with_bp = true;
+
+static void
+maint_show_skip_divergent_regions_with_bp (struct ui_file *file, int from_tty,
+					   cmd_list_element *c, const char *value)
+{
+  gdb_printf (file,
+	      _("Skipping over divergent lane regions "
+		"with a breakpoint is %s.\n"),
+	      value);
+}
+
 /* Support for disabling address space randomization.  */
 
 bool disable_randomization = true;
@@ -7776,6 +7791,43 @@ process_event_stop_test (struct execution_control_state *ecs)
 	 target_lane_to_str (ecs->event_thread,
 			     ecs->event_thread->current_simd_lane ()).c_str ());
 
+      /* If we have lane PC info, use it to skip the divergent region
+	 much quicker -- set a breakpoint where the lane will start
+	 executing (its logical/lane pc), and run to it.  Don't do
+	 this if the logical PC is the same as the physical PC in the
+	 current frame -- just single-step in that case.  We'd just
+	 immediately hit the breakpoint at PC, which, other than being
+	 inefficient useless work, because the the breakpoint is
+	 lane-specific and execution mask is off at this PC (otherwise
+	 we wouldn't be here), so the breakpoints module would ignore
+	 the breakpoint hit, we'd fail to see a
+	 BPSTAT_WHAT_STEP_RESUME for it and consequently we'd lose
+	 control of the thread.  */
+      if (maint_skip_divergent_regions_with_bp)
+	{
+	  frame_info_ptr active_frame = get_current_active_frame ();
+	  if (get_current_frame () != active_frame
+	      || get_frame_lane_pc (active_frame) != get_frame_pc (active_frame))
+	    {
+	      symtab_and_line sr_sal;
+	      sr_sal.pc = get_frame_lane_pc (active_frame);
+	      sr_sal.pspace = get_frame_program_space (active_frame);
+
+	      infrun_debug_printf ("setting step-resume breakpoint for "
+				   "divergent lane %d",
+				   ecs->event_thread->current_simd_lane ());
+
+	      insert_step_resume_breakpoint_at_sal (gdbarch, sr_sal,
+						    get_frame_id (active_frame));
+
+	      /* Make the breakpoint lane-specific so that we don't
+		 end up switching to a different (then-)active
+		 lane.  */
+	      auto *sr_bp = ecs->event_thread->control.step_resume_breakpoint;
+	      sr_bp->lane = ecs->event_thread->current_simd_lane ();
+	    }
+	}
+
       keep_going (ecs);
       return;
     }
@@ -10926,6 +10978,17 @@ Show lane divergence debugging support."), _("\
 When non-zero, lane divergence debugging is enabled."),
 			   nullptr,
 			   maint_show_lane_divergence_support,
+			   &maintenance_set_cmdlist,
+			   &maintenance_show_cmdlist);
+
+  add_setshow_boolean_cmd ("skip-divergent-regions-with-breakpoint",
+			   class_maintenance,
+			   &maint_skip_divergent_regions_with_bp,  _("\
+Set whether divergent regions are skipped with a breakpoint."), _("\
+Show whether divergent regions are skipped with a breakpoint."), _("\
+When non-zero, divergent regions are skipped with a breakpoint."),
+			   nullptr,
+			   maint_show_skip_divergent_regions_with_bp,
 			   &maintenance_set_cmdlist,
 			   &maintenance_show_cmdlist);
 
