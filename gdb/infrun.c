@@ -7758,6 +7758,21 @@ process_event_stop_test (struct execution_control_state *ecs)
       return;
     }
 
+  /* If this lane is divergent, keep stepping until it becomes
+     active.  */
+  if (maint_lane_divergence_support
+      && (!ecs->event_thread->is_simd_lane_active
+	  (ecs->event_thread->current_simd_lane ())))
+    {
+      infrun_debug_printf
+	("stepping divergent lane %s",
+	 target_lane_to_str (ecs->event_thread,
+			     ecs->event_thread->current_simd_lane ()).c_str ());
+
+      keep_going (ecs);
+      return;
+    }
+
   fill_in_stop_func (gdbarch, ecs);
 
   /* If stepping through a line, keep going if still within it.
