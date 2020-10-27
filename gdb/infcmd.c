@@ -740,7 +740,7 @@ set_step_frame (thread_info *tp)
      inferior_ptid value.  */
   gdb_assert (inferior_ptid == tp->ptid);
 
-  frame_info_ptr frame = get_current_frame ();
+  frame_info_ptr frame = get_current_active_frame ();
 
   symtab_and_line sal = find_frame_sal (frame);
   set_step_info (tp, frame, sal);
@@ -817,7 +817,8 @@ step_command_fsm_prepare (struct step_command_fsm *sm,
 
   /* Leave the si command alone.  */
   if (!sm->single_inst || sm->skip_subroutines)
-    set_longjmp_breakpoint (thread, get_frame_id (get_current_frame ()));
+    set_longjmp_breakpoint (thread,
+			    get_frame_id (get_current_active_frame ()));
 
   thread->control.stepping_command = 1;
 }
@@ -928,7 +929,7 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 
   if (sm->count > 0)
     {
-      frame_info_ptr frame = get_current_frame ();
+      frame_info_ptr frame = get_current_active_frame ();
 
       set_step_frame (tp);
 
@@ -951,7 +952,7 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 
 	      step_into_inline_frame (tp);
 
-	      frame = get_current_frame ();
+	      frame = get_current_active_frame ();
 	      sal = find_frame_sal (frame);
 	      sym = get_frame_function (frame);
 
@@ -998,7 +999,8 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 		}
 	    }
 
-	  tp->control.may_range_step = 1;
+	  tp->control.may_range_step
+	    = tp->is_simd_lane_active (tp->current_simd_lane ());
 
 	  /* If we have no line info, switch to stepi mode.  */
 	  if (tp->control.step_range_end == 0 && step_stop_if_no_debug)
@@ -1094,7 +1096,7 @@ jump_command (const char *arg, int from_tty)
   resolve_sal_pc (&sal);	/* May error out.  */
 
   /* See if we are trying to jump to another function.  */
-  fn = get_frame_function (get_current_frame ());
+  fn = get_frame_function (get_current_active_frame ());
   sfn = find_pc_sect_containing_function (sal.pc,
 					  find_pc_mapped_section (sal.pc));
   if (fn != nullptr && sfn != fn)
@@ -1345,7 +1347,7 @@ until_next_command (int from_tty)
   clear_proceed_status (0);
   set_step_frame (tp);
 
-  frame = get_current_frame ();
+  frame = get_current_active_frame ();
 
   /* Step until either exited from this function or greater
      than the current line (if in symbolic section) or pc (if
