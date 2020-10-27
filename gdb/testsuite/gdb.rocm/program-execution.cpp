@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     CHECK(hipMemcpy(A_d, A_h, Nbytes, hipMemcpyHostToDevice));
 
     printf("info: launch 'bit_extract_kernel' \n");
-    const unsigned blocks = 512;
+    const unsigned blocks = 4;
     const unsigned threadsPerBlock = 256;
     hipLaunchKernelGGL(bit_extract_kernel, dim3(blocks), dim3(threadsPerBlock), 0, 0, C_d, A_d, N);
 
