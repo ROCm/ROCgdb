@@ -2395,6 +2395,8 @@ static const aarch64_feature_set aarch64_feature_sve2bitperm =
   AARCH64_FEATURE (AARCH64_FEATURE_SVE2 | AARCH64_FEATURE_SVE2_BITPERM, 0);
 static const aarch64_feature_set aarch64_feature_v8_6 =
   AARCH64_FEATURE (AARCH64_FEATURE_V8_6, 0);
+static const aarch64_feature_set aarch64_feature_v8_7 =
+  AARCH64_FEATURE (AARCH64_FEATURE_V8_7, 0);
 static const aarch64_feature_set aarch64_feature_i8mm =
   AARCH64_FEATURE (AARCH64_FEATURE_V8_2 | AARCH64_FEATURE_I8MM, 0);
 static const aarch64_feature_set aarch64_feature_i8mm_sve =
@@ -2408,6 +2410,8 @@ static const aarch64_feature_set aarch64_feature_f64mm_sve =
        | AARCH64_FEATURE_SVE, 0);
 static const aarch64_feature_set aarch64_feature_v8_r =
   AARCH64_FEATURE (AARCH64_FEATURE_V8_R, 0);
+static const aarch64_feature_set aarch64_feature_csre =
+  AARCH64_FEATURE (AARCH64_FEATURE_CSRE, 0);
 
 
 #define CORE		&aarch64_feature_v8
@@ -2453,6 +2457,8 @@ static const aarch64_feature_set aarch64_feature_v8_r =
 #define F64MM_SVE     &aarch64_feature_f64mm_sve
 #define I8MM      &aarch64_feature_i8mm
 #define ARMV8_R	  &aarch64_feature_v8_r
+#define ARMV8_7	  &aarch64_feature_v8_7
+#define CSRE	  &aarch64_feature_csre
 
 #define CORE_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, CORE, OPS, QUALS, FLAGS, 0, 0, NULL }
@@ -2558,6 +2564,11 @@ static const aarch64_feature_set aarch64_feature_v8_r =
   { NAME, OPCODE, MASK, CLASS, 0, F32MM_SVE, OPS, QUALS, FLAGS, CONSTRAINTS, TIED, NULL }
 #define V8_R_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, ARMV8_R, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define V8_7_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, ARMV8_7, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define _CSRE_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, CSRE, OPS, QUALS, FLAGS, 0, 0, NULL }
+
 
 struct aarch64_opcode aarch64_opcode_table[] =
 {
@@ -3828,6 +3839,8 @@ struct aarch64_opcode aarch64_opcode_table[] =
   _TME_INSN ("tcommit", 0xd503307f, 0xffffffff, 0, 0, OP0 (), {}, 0),
   _TME_INSN ("ttest", 0xd5233160, 0xffffffe0, 0, 0, OP1 (Rd), QL_I1X, 0),
   _TME_INSN ("tcancel", 0xd4600000, 0xffe0001f, 0, 0, OP1 (TME_UIMM16), QL_IMM_NIL, 0),
+  /* CSRE Instructions.  */
+  _CSRE_INSN ("csr", 0xd50b721f, 0xffffffff, 0, OP1 (CSRE_CSR), {}, 0),
   /* System.  */
   CORE_INSN ("msr", 0xd500401f, 0xfff8f01f, ic_system, 0, OP2 (PSTATEFIELD, UIMM4), {}, F_SYS_WRITE),
   CORE_INSN ("hint",0xd503201f, 0xfffff01f, ic_system, 0, OP1 (UIMM7), {}, F_HAS_ALIAS),
@@ -3850,6 +3863,7 @@ struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("tsb", 0xd503225f, 0xffffffff, ic_system, 0, OP1 (BARRIER_PSB), {}, F_ALIAS),
   CORE_INSN ("clrex", 0xd503305f, 0xfffff0ff, ic_system, 0, OP1 (UIMM4), {}, F_OPD0_OPT | F_DEFAULT (0xF)),
   CORE_INSN ("dsb", 0xd503309f, 0xfffff0ff, ic_system, 0, OP1 (BARRIER), {}, F_HAS_ALIAS),
+  V8_7_INSN ("dsb", 0xd503323f, 0xfffff3ff, ic_system, OP1 (BARRIER_DSB_NXS), {}, F_HAS_ALIAS),
   V8_R_INSN ("dfb", 0xd5033c9f, 0xffffffff, ic_system, OP0 (), {}, F_ALIAS),
   CORE_INSN ("ssbb", 0xd503309f, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
   CORE_INSN ("pssbb", 0xd503349f, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
@@ -3861,6 +3875,7 @@ struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("dc",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_DC, Rt), QL_SRC_X, F_ALIAS),
   CORE_INSN ("ic",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_IC, Rt_SYS), QL_SRC_X, F_ALIAS | F_OPD1_OPT | F_DEFAULT (0x1F)),
   CORE_INSN ("tlbi",0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_TLBI, Rt_SYS), QL_SRC_X, F_ALIAS | F_OPD1_OPT | F_DEFAULT (0x1F)),
+  V8_7_INSN ("wfet", 0xd5031000, 0xffffffe0, ic_system, OP1 (Rd), QL_I1X, F_HAS_ALIAS),
   PREDRES_INSN ("cfp", 0xd50b7380, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),
   PREDRES_INSN ("dvp", 0xd50b73a0, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),
   PREDRES_INSN ("cpp", 0xd50b73e0, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),
@@ -5320,6 +5335,8 @@ struct aarch64_opcode aarch64_opcode_table[] =
       "a Speculation Restriction option name (RCTX)")			\
     Y(SYSTEM, barrier, "BARRIER", 0, F(),				\
       "a barrier option name")						\
+    Y(SYSTEM, barrier_dsb_nxs, "BARRIER_DSB_NXS", 0, F(),				\
+      "the DSB nXS option qualifier name SY, ISH, NSH, OSH or an optional 5-bit unsigned immediate")	\
     Y(SYSTEM, barrier, "BARRIER_ISB", 0, F(),				\
       "the ISB option name SY or an optional 4-bit unsigned immediate")	\
     Y(SYSTEM, prfop, "PRFOP", 0, F(),					\

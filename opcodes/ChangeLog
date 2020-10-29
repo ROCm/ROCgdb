@@ -1,3 +1,19 @@
+2020-10-26  Cooper Qu <cooper.qu@linux.alibaba.com>
+
+	* csky-opc.h (csky_v2_opcodes): Change plsl.u16 to plsl.16.
+
+2020-10-26  Cooper Qu <cooper.qu@linux.alibaba.com>
+
+	* csky-dis.c (csky_output_operand): Add handler for
+	OPRND_TYPE_IMM5b_VSH and OPRND_TYPE_VREG_WITH_INDEX.
+	* csky-opc.h (OPRND_TYPE_VREG_WITH_INDEX): New enum.
+	(OPRND_TYPE_IMM5b_VSH): New enum. (csky_v2_opcodes): Fix and add
+	some instructions for VDSPV1.
+
+2020-10-26  Lili Cui  <lili.cui@intel.com>
+
+	* i386-dis.c: Change "XV" to print "{vex}" pseudo prefix. 
+
 2020-10-22  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* po/es.po: Remove the duplicated entry.

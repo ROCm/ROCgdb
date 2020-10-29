@@ -1852,7 +1852,7 @@ md_begin (void)
     str_hash_insert (csky_macros_hash,
 		     v2_lrw_macro_opcode.name, &v2_lrw_macro_opcode, 0);
   /* Set e_flag to ELF Head.  */
-  bfd_set_private_flags (stdoutput, mach_flag & ~(0xffff));
+  bfd_set_private_flags (stdoutput, mach_flag | CSKY_VERSION_V1);
   /* Set bfd_mach to bfd backend data.  */
   bfd_set_arch_mach (stdoutput, bfd_arch_csky, bfd_mach_flag);
 
@@ -2022,7 +2022,8 @@ dump_literals (int isforce)
 	emit_expr (& p->e, 4);
 
       if (p->e.X_op == O_big)
-	i += ((p->e.X_add_number  * CHARS_PER_LITTLENUM) >> 2);
+	i += (p->e.X_add_number & 1) +
+	  ((p->e.X_add_number  * CHARS_PER_LITTLENUM) >> 2);
       else
 	i += (p->isdouble ? 2 : 1);
     }
@@ -3673,6 +3674,17 @@ get_operand_value (struct csky_opcode_info *op,
 	}
       return TRUE;
 
+    case OPRND_TYPE_IMM5b_VSH:
+    /* For vshri.T and vshli.T.  */
+      if (is_imm_within_range (oper, 0, 31))
+	{
+	  int val = csky_insn.val[csky_insn.idx - 1];
+	  val =  (val << 1) | (val >> 4);
+	  val &= 0x1f;
+	  csky_insn.val[csky_insn.idx - 1] = val;
+	  return TRUE;
+	}
+      return FALSE;
       case OPRND_TYPE_IMM8b_BMASKI:
       /* For csky v2 bmask, which will transfer to 16bits movi.  */
 	if (is_imm_within_range (oper, 1, 8))
@@ -4240,6 +4252,7 @@ get_operand_value (struct csky_opcode_info *op,
     case OPRND_TYPE_AREG_WITH_LSHIFT_FPU:
       return is_reg_lshift_illegal (oper, 1);
     case OPRND_TYPE_FREG_WITH_INDEX:
+    case OPRND_TYPE_VREG_WITH_INDEX:
       if (parse_type_freg (oper, 0))
 	{
 	  if (**oper == '[')

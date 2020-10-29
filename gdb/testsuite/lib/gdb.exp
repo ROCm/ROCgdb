@@ -125,7 +125,13 @@ set BUILD_DATA_DIRECTORY "[pwd]/../data-directory"
 # INTERNAL_GDBFLAGS contains flags that the testsuite requires.
 global INTERNAL_GDBFLAGS
 if ![info exists INTERNAL_GDBFLAGS] {
-    set INTERNAL_GDBFLAGS "-nw -nx -data-directory $BUILD_DATA_DIRECTORY"
+    set INTERNAL_GDBFLAGS \
+	[join [list \
+		   "-nw" \
+		   "-nx" \
+		   "-data-directory $BUILD_DATA_DIRECTORY" \
+		   {-iex "set height 0"} \
+		   {-iex "set width 0"}]]
 }
 
 # The variable gdb_prompt is a regexp which matches the gdb prompt.
@@ -1798,6 +1804,9 @@ proc default_gdb_exit {} {
 #            compiled in
 #   fail     file was not loaded
 #
+# This procedure also set the global variable GDB_FILE_CMD_MSG to the
+# output of the file command in case of success.
+#
 # I tried returning this information as part of the return value,
 # but ran into a mess because of the many re-implementations of
 # gdb_load in config/*.exp.
@@ -1815,7 +1824,7 @@ proc gdb_file_cmd { arg } {
 
     # Set whether debug info was found.
     # Default to "fail".
-    global gdb_file_cmd_debug_info
+    global gdb_file_cmd_debug_info gdb_file_cmd_msg
     set gdb_file_cmd_debug_info "fail"
 
     if [is_remote host] {
@@ -1845,18 +1854,21 @@ proc gdb_file_cmd { arg } {
     set new_symbol_table 0
     set basename [file tail $arg]
     gdb_expect 120 {
-	-re "Reading symbols from.*LZMA support was disabled.*$gdb_prompt $" {
+	-re "(Reading symbols from.*LZMA support was disabled.*$gdb_prompt $)" {
 	    verbose "\t\tLoaded $arg into $GDB; .gnu_debugdata found but no LZMA available"
+	    set gdb_file_cmd_msg $expect_out(1,string)
 	    set gdb_file_cmd_debug_info "lzma"
 	    return 0
 	}
-	-re "Reading symbols from.*no debugging symbols found.*$gdb_prompt $" {
+	-re "(Reading symbols from.*no debugging symbols found.*$gdb_prompt $)" {
 	    verbose "\t\tLoaded $arg into $GDB with no debugging symbols"
+	    set gdb_file_cmd_msg $expect_out(1,string)
 	    set gdb_file_cmd_debug_info "nodebug"
 	    return 0
 	}
-        -re "Reading symbols from.*$gdb_prompt $" {
+        -re "(Reading symbols from.*$gdb_prompt $)" {
             verbose "\t\tLoaded $arg into $GDB"
+	    set gdb_file_cmd_msg $expect_out(1,string)
 	    set gdb_file_cmd_debug_info "debug"
 	    return 0
         }
@@ -5215,7 +5227,7 @@ proc standard_output_file {basename} {
 
 proc standard_output_file_with_gdb_instance {basename} {
     global gdb_instances
-    set count [expr $gdb_instances - 1 ]
+    set count $gdb_instances
 
     if {$count == 0} {
       return [standard_output_file $basename]
@@ -7218,8 +7230,10 @@ proc gdb_stdin_log_write { message {type standard} } {
         }
     }
 
-    #Write to the log
+    # Write to the log and make sure the output is there, even in case
+    # of crash.
     puts -nonewline $in_file "$message"
+    flush $in_file
 }
 
 # Write the command line used to invocate gdb to the cmd file.
@@ -7312,8 +7326,13 @@ gdb_caching_proc supports_fcf_protection {
 
 # Return 1 if symbols were read in using -readnow.  Otherwise, return 0.
 
-proc readnow { } {
-    set cmd "maint print objfiles"
+proc readnow { args } {
+    if { [llength $args] == 1 } {
+	set re [lindex $args 0]
+    } else {
+	set re ""
+    }
+    set cmd "maint print objfiles $re"
     gdb_test_multiple $cmd "" {
 	-re -wrap "\r\n.gdb_index: faked for \"readnow\"\r\n.*" {
 	    return 1

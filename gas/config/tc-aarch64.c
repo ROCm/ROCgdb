@@ -4036,6 +4036,29 @@ parse_barrier_psb (char **str,
   return 0;
 }
 
+/* Parse an operand for CSR (CSRE instruction).  */
+
+static int
+parse_csr_operand (char **str)
+{
+  char *p, *q;
+
+  p = q = *str;
+  while (ISALPHA (*q))
+    q++;
+
+  /* Instruction has only one operand PDEC which encodes Rt field of the
+     operation to 0b11111.  */
+  if (strcasecmp(p, "pdec"))
+  {
+    set_syntax_error (_("CSR instruction accepts only PDEC"));
+    return PARSE_FAIL;
+  }
+
+  *str = q;
+  return 0;
+}
+
 /* Parse an operand for BTI.  Set *HINT_OPT to the hint-option record
    return 0 if successful.  Otherwise return PARSE_FAIL.  */
 
@@ -6686,10 +6709,47 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	      backtrack_pos = 0;
 	      goto failure;
 	    }
+	  if (val != PARSE_FAIL
+	      && operands[i] == AARCH64_OPND_BARRIER)
+	    {
+	      /* Regular barriers accept options CRm (C0-C15).
+	         DSB nXS barrier variant accepts values > 15.  */
+	      po_imm_or_fail (0, 15);
+	    }
 	  /* This is an extension to accept a 0..15 immediate.  */
 	  if (val == PARSE_FAIL)
 	    po_imm_or_fail (0, 15);
 	  info->barrier = aarch64_barrier_options + val;
+	  break;
+
+	case AARCH64_OPND_BARRIER_DSB_NXS:
+	  val = parse_barrier (&str);
+	  if (val != PARSE_FAIL)
+	    {
+	      /* DSB nXS barrier variant accept only <option>nXS qualifiers.  */
+	      if (!(val == 16 || val == 20 || val == 24 || val == 28))
+	        {
+	          set_syntax_error (_("the specified option is not accepted in DSB"));
+	          /* Turn off backtrack as this optional operand is present.  */
+	          backtrack_pos = 0;
+	          goto failure;
+	        }
+	    }
+	  else
+	    {
+	      /* DSB nXS barrier variant accept 5-bit unsigned immediate, with
+	         possible values 16, 20, 24 or 28 , encoded as val<3:2>.  */
+	      if (! parse_constant_immediate (&str, &val, imm_reg_type))
+	        goto failure;
+	      if (!(val == 16 || val == 20 || val == 24 || val == 28))
+	        {
+	          set_syntax_error (_("immediate value must be 16, 20, 24, 28"));
+	          goto failure;
+	        }
+	    }
+	  /* Option index is encoded as 2-bit value in val<3:2>.  */
+	  val = (val >> 2) - 4;
+	  info->barrier = aarch64_barrier_dsb_nxs_options + val;
 	  break;
 
 	case AARCH64_OPND_PRFOP:
@@ -6708,6 +6768,12 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_BTI_TARGET:
 	  val = parse_bti_operand (&str, &(info->hint_option));
+	  if (val == PARSE_FAIL)
+	    goto failure;
+	  break;
+
+	case AARCH64_OPND_CSRE_CSR:
+	  val = parse_csr_operand (&str);
 	  if (val == PARSE_FAIL)
 	    goto failure;
 	  break;
@@ -8782,6 +8848,16 @@ md_begin (void)
 			   (void *) (aarch64_barrier_options + i));
     }
 
+  for (i = 0; i < ARRAY_SIZE (aarch64_barrier_dsb_nxs_options); i++)
+    {
+      const char *name = aarch64_barrier_dsb_nxs_options[i].name;
+      checked_hash_insert (aarch64_barrier_opt_hsh, name,
+			   (void *) (aarch64_barrier_dsb_nxs_options + i));
+      /* Also hash the name in the upper case.  */
+      checked_hash_insert (aarch64_barrier_opt_hsh, get_upper_str (name),
+			   (void *) (aarch64_barrier_dsb_nxs_options + i));
+    }
+
   for (i = 0; i < ARRAY_SIZE (aarch64_prfops); i++)
     {
       const char* name = aarch64_prfops[i].name;
@@ -9033,6 +9109,7 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"armv8.4-a", AARCH64_ARCH_V8_4},
   {"armv8.5-a", AARCH64_ARCH_V8_5},
   {"armv8.6-a", AARCH64_ARCH_V8_6},
+  {"armv8.7-a", AARCH64_ARCH_V8_7},
   {"armv8-r",	AARCH64_ARCH_V8_R},
   {NULL, AARCH64_ARCH_NONE}
 };
@@ -9123,6 +9200,8 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
 			AARCH64_FEATURE (AARCH64_FEATURE_SVE, 0)},
   {"f64mm",		AARCH64_FEATURE (AARCH64_FEATURE_F64MM, 0),
 			AARCH64_FEATURE (AARCH64_FEATURE_SVE, 0)},
+  {"csre",		AARCH64_FEATURE (AARCH64_FEATURE_CSRE, 0),
+			AARCH64_ARCH_NONE},
   {NULL,		AARCH64_ARCH_NONE, AARCH64_ARCH_NONE},
 };
 

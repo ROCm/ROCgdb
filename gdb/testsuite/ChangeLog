@@ -1,3 +1,127 @@
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.python/py-symbol.exp: Add KFAILs for -readnow.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/exec_changed.exp: Add KFAILs for -readnow.
+	* gdb.base/reread.exp: Same.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (readnow): Handle arg.
+	* gdb.rust/traits.exp: Add KFAILs for -readnow.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/relocate.exp: Update regexp for -readnow.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-error.exp: Mark failure break in main as known with
+	-readnow.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/26772
+	* gdb.dwarf2/dw2-ranges-overlap.c: New test.
+	* gdb.dwarf2/dw2-ranges-overlap.exp: New file.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_file_cmd): Set gdb_file_cmd_msg.
+	* gdb.cp/nsalias.exp: Set complaints limit before file cmd.  Expect
+	complaint during file command for -readnow.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.cp/nsalias.exp: Fix typo in test name.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-filename.exp: Update regexp for -readnow.
+
+2020-10-28  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-stack-boundary.exp: KFAILing the complaints for
+	-readnow.
+
+2020-10-27  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/multi-forks.exp: Use exp_continue to fix timeout.
+
+2020-10-27  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/maint.exp: Update for -readnow.
+
+2020-10-27  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.cp/psymtab-parameter.exp: Don't expect unexpanded CU for
+	-readnow.
+
+2020-10-14  Gary Benson <gbenson@redhat.com>
+
+	* gdb.python/py-format-string.exp (test_deref_refs): Treat
+	"_vptr$Base" as correct, in addition to "_vptr.Base".
+	(test_mixed): Likewise.
+
+2020-10-27  Gary Benson <gbenson@redhat.com>
+
+	* gdb.mi/mi-fortran-modules.exp: Check skip_fortran_tests.
+	* gdb.mi/mi-vla-fortran.exp: Likewise.  Also fix a comment.
+
+2020-10-27  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/condbreak.exp: Update the completion tests to
+	consider the '-force' flag.
+
+2020-10-27  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/list-ambiguous-readnow.exp: New file.
+
+2020-10-27  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/condbreak-multi-context.exp: Expand to test forcing
+	the condition.
+	* gdb.linespec/cpcompletion.exp: Update to consider the
+	'-force-condition' keyword.
+	* gdb.linespec/explicit.exp: Ditto.
+	* lib/completion-support.exp: Ditto.
+
+2020-10-27  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/condbreak-multi-context.cc: New file.
+	* gdb.base/condbreak-multi-context.exp: New file.
+
+2020-10-26  Tom Tromey  <tom@tromey.com>
+
+	* lib/mi-support.exp (default_mi_gdb_start): Call
+	gdb_stdin_log_init.
+	* lib/gdb.exp (standard_output_file_with_gdb_instance): Don't
+	subtract one from gdb_instances.
+	(gdb_stdin_log_write): Flush in_file.
+
+2020-10-26  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/enqueued-cu-base-addr.exp: New file.
+
+2020-10-26  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/unsigned_range/foo.adb: New file.
+	* gdb.ada/unsigned_range/pack.adb: New file.
+	* gdb.ada/unsigned_range/pack.ads: New file.
+	* gdb.ada/unsigned_range.exp: New file.
+
+2020-10-26  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (INTERNAL_GDBFLAGS): Set heigth and width.
+
+2020-10-26  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/dw2-objfile-overlap-inner.S: Specify default base address
+	for CU.
+	* gdb.dwarf2/dw2-objfile-overlap-outer.S: Same.
+
 2020-10-23  Tom de Vries  <tdevries@suse.de>
 
 	* lib/dwarf.exp (Dwarf::_guess_form): Return "" by default instead of
