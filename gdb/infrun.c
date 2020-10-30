@@ -2460,15 +2460,11 @@ resume_1 (enum gdb_signal sig)
 	}
       else if (prepared > 0)
 	{
-	  struct displaced_step_inferior_state *displaced;
-
 	  /* Update pc to reflect the new address from which we will
 	     execute instructions due to displaced stepping.  */
 	  pc = regcache_read_pc (get_thread_regcache (tp));
 
-	  displaced = get_displaced_stepping_state (tp->inf);
-	  step = gdbarch_displaced_step_hw_singlestep
-	    (gdbarch, displaced->step_closure.get ());
+	  step = gdbarch_displaced_step_hw_singlestep (gdbarch);
 	}
     }
 
@@ -3870,6 +3866,12 @@ fetch_inferior_event ()
      way, warnings, debug output, etc. are always consistently sent to
      the main console.  */
   scoped_restore save_ui = make_scoped_restore (&current_ui, main_ui);
+
+  /* Temporarily disable pagination.  Otherwise, the user would be
+     given an option to press 'q' to quit, which would cause an early
+     exit and could leave GDB in a half-baked state.  */
+  scoped_restore save_pagination
+    = make_scoped_restore (&pagination_enabled, false);
 
   /* End up with readline processing input, if necessary.  */
   {
@@ -9013,8 +9015,10 @@ struct infcall_control_state
   enum stop_stack_kind stop_stack_dummy = STOP_NONE;
   int stopped_by_random_signal = 0;
 
-  /* ID if the selected frame when the inferior function call was made.  */
+  /* ID and level of the selected frame when the inferior function
+     call was made.  */
   struct frame_id selected_frame_id {};
+  int selected_frame_level = -1;
 };
 
 /* Save all of the information associated with the inferior<==>gdb
@@ -9043,25 +9047,10 @@ save_infcall_control_state ()
   inf_status->stop_stack_dummy = stop_stack_dummy;
   inf_status->stopped_by_random_signal = stopped_by_random_signal;
 
-  inf_status->selected_frame_id = get_frame_id (get_selected_frame (NULL));
+  save_selected_frame (&inf_status->selected_frame_id,
+		       &inf_status->selected_frame_level);
 
   return inf_status;
-}
-
-static void
-restore_selected_frame (const frame_id &fid)
-{
-  frame_info *frame = frame_find_by_id (fid);
-
-  /* If inf_status->selected_frame_id is NULL, there was no previously
-     selected frame.  */
-  if (frame == NULL)
-    {
-      warning (_("Unable to restore previously selected frame."));
-      return;
-    }
-
-  select_frame (frame);
 }
 
 /* Restore inferior session state to INF_STATUS.  */
@@ -9091,21 +9080,8 @@ restore_infcall_control_state (struct infcall_control_state *inf_status)
 
   if (target_has_stack ())
     {
-      /* The point of the try/catch is that if the stack is clobbered,
-         walking the stack might encounter a garbage pointer and
-         error() trying to dereference it.  */
-      try
-	{
-	  restore_selected_frame (inf_status->selected_frame_id);
-	}
-      catch (const gdb_exception_error &ex)
-	{
-	  exception_fprintf (gdb_stderr, ex,
-			     "Unable to restore previously selected frame:\n");
-	  /* Error in restoring the selected frame.  Select the
-	     innermost frame.  */
-	  select_frame (get_current_frame ());
-	}
+      restore_selected_frame (inf_status->selected_frame_id,
+			      inf_status->selected_frame_level);
     }
 
   delete inf_status;

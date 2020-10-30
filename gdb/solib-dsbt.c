@@ -424,7 +424,7 @@ scan_dyntag (int dyntag, bfd *abfd, CORE_ADDR *ptr)
     return 0;
 
   bool found = false;
-  for (target_section &target_section : *current_target_sections)
+  for (target_section &target_section : current_program_space->target_sections)
     if (sect == target_section.the_bfd_section)
       {
 	dyn_addr = target_section.addr;
@@ -552,7 +552,7 @@ lm_base (void)
     return info->lm_base_cache;
 
   got_sym = lookup_minimal_symbol ("_GLOBAL_OFFSET_TABLE_", NULL,
-				   symfile_objfile);
+				   current_program_space->symfile_object_file);
 
   if (got_sym.minsym != 0)
     {
@@ -562,7 +562,7 @@ lm_base (void)
 			    "lm_base: get addr %x by _GLOBAL_OFFSET_TABLE_.\n",
 			    (unsigned int) addr);
     }
-  else if (scan_dyntag (DT_PLTGOT, exec_bfd, &addr))
+  else if (scan_dyntag (DT_PLTGOT, current_program_space->exec_bfd (), &addr))
     {
       struct int_elf32_dsbt_loadmap *ldm;
 
@@ -778,7 +778,7 @@ enable_break (void)
   asection *interp_sect;
   struct dsbt_info *info;
 
-  if (exec_bfd == NULL)
+  if (current_program_space->exec_bfd () == NULL)
     return 0;
 
   if (!target_has_execution ())
@@ -793,7 +793,8 @@ enable_break (void)
 
   /* Find the .interp section; if not found, warn the user and drop
      into the old breakpoint at symbol code.  */
-  interp_sect = bfd_get_section_by_name (exec_bfd, ".interp");
+  interp_sect = bfd_get_section_by_name (current_program_space->exec_bfd (),
+					 ".interp");
   if (interp_sect)
     {
       unsigned int interp_sect_size;
@@ -806,8 +807,8 @@ enable_break (void)
 	 the contents specify the dynamic linker this program uses.  */
       interp_sect_size = bfd_section_size (interp_sect);
       buf = (char *) alloca (interp_sect_size);
-      bfd_get_section_contents (exec_bfd, interp_sect,
-				buf, 0, interp_sect_size);
+      bfd_get_section_contents (current_program_space->exec_bfd (),
+				interp_sect, buf, 0, interp_sect_size);
 
       /* Now we need to figure out where the dynamic linker was
 	 loaded so that we can load its symbols and place a breakpoint
@@ -908,21 +909,22 @@ dsbt_relocate_main_executable (void)
   info->main_executable_lm_info = new lm_info_dsbt;
   info->main_executable_lm_info->map = ldm;
 
-  section_offsets new_offsets (symfile_objfile->section_offsets.size ());
+  objfile *objf = current_program_space->symfile_object_file;
+  section_offsets new_offsets (objf->section_offsets.size ());
   changed = 0;
 
-  ALL_OBJFILE_OSECTIONS (symfile_objfile, osect)
+  ALL_OBJFILE_OSECTIONS (objf, osect)
     {
       CORE_ADDR orig_addr, addr, offset;
       int osect_idx;
       int seg;
 
-      osect_idx = osect - symfile_objfile->sections;
+      osect_idx = osect - objf->sections;
 
       /* Current address of section.  */
       addr = obj_section_addr (osect);
       /* Offset from where this section started.  */
-      offset = symfile_objfile->section_offsets[osect_idx];
+      offset = objf->section_offsets[osect_idx];
       /* Original address prior to any past relocations.  */
       orig_addr = addr - offset;
 
@@ -942,10 +944,10 @@ dsbt_relocate_main_executable (void)
     }
 
   if (changed)
-    objfile_relocate (symfile_objfile, new_offsets);
+    objfile_relocate (objf, new_offsets);
 
-  /* Now that symfile_objfile has been relocated, we can compute the
-     GOT value and stash it away.  */
+  /* Now that OBJF has been relocated, we can compute the GOT value
+     and stash it away.  */
 }
 
 /* When gdb starts up the inferior, it nurses it along (through the

@@ -578,7 +578,7 @@ solib_map_sections (struct so_list *so)
      section tables.  Do this immediately after mapping the object so
      that later nodes in the list can query this object, as is needed
      in solib-osf.c.  */
-  add_target_sections (so, *so->sections);
+  current_program_space->add_target_sections (so, *so->sections);
 
   return 1;
 }
@@ -729,7 +729,8 @@ update_solib_list (int from_tty)
       /* If we are attaching to a running process for which we
 	 have not opened a symbol file, we may be able to get its
 	 symbols now!  */
-      if (inf->attach_flag && symfile_objfile == NULL)
+      if (inf->attach_flag
+	  && current_program_space->symfile_object_file == NULL)
 	{
 	  try
 	    {
@@ -823,7 +824,7 @@ update_solib_list (int from_tty)
 
 	  /* Some targets' section tables might be referring to
 	     sections from so->abfd; remove them.  */
-	  remove_target_sections (gdb);
+	  current_program_space->remove_target_sections (gdb);
 
 	  free_so (gdb);
 	  gdb = *gdb_link;
@@ -1174,7 +1175,7 @@ clear_solib (void)
 
       current_program_space->so_list = so->next;
       gdb::observers::solib_unloaded.notify (so);
-      remove_target_sections (so);
+      current_program_space->remove_target_sections (so);
       free_so (so);
     }
 
@@ -1251,7 +1252,7 @@ handle_solib_event (void)
   if (ops->handle_event != NULL)
     ops->handle_event ();
 
-  clear_program_space_solib_cache (current_inferior ()->pspace);
+  current_inferior ()->pspace->clear_solib_cache ();
 
   /* Check for any newly added shared libraries if we're supposed to
      be adding them automatically.  Switch terminal for any messages
@@ -1294,7 +1295,7 @@ reload_shared_libraries_1 (int from_tty)
 	  if (so->objfile && ! (so->objfile->flags & OBJF_USERLOADED)
 	      && !solib_used (so))
 	    so->objfile->unlink ();
-	  remove_target_sections (so);
+	  current_program_space->remove_target_sections (so);
 	  clear_so (so);
 	}
 

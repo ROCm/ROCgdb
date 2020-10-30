@@ -486,7 +486,7 @@ rocm_update_solib_list ()
   xfree (code_object_list);
 
   /* Force GDB to reload the solibs.  */
-  clear_program_space_solib_cache (current_inferior ()->pspace);
+  current_inferior ()->pspace->clear_solib_cache ();
 
   /* Switch terminal for any messages produced by
      breakpoint_re_set.  */

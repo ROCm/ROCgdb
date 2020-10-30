@@ -18725,12 +18725,6 @@ print_amd_note (Elf_Internal_Note *pnote)
 static void
 decode_x86_isa (unsigned int bitmask)
 {
-  if (!bitmask)
-    {
-      printf (_("x86-64-baseline"));
-      return;
-    }
-
   while (bitmask)
     {
       unsigned int bit = bitmask & (- bitmask);
@@ -18738,6 +18732,9 @@ decode_x86_isa (unsigned int bitmask)
       bitmask &= ~ bit;
       switch (bit)
 	{
+	case GNU_PROPERTY_X86_ISA_1_BASELINE:
+	  printf ("x86-64-baseline");
+	  break;
 	case GNU_PROPERTY_X86_ISA_1_V2:
 	  printf ("x86-64-v2");
 	  break;

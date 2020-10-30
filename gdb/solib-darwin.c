@@ -192,12 +192,13 @@ find_program_interpreter (void)
 {
   char *buf = NULL;
 
-  /* If we have an exec_bfd, get the interpreter from the load commands.  */
-  if (exec_bfd)
+  /* If we have an current exec_bfd, get the interpreter from the load
+     commands.  */
+  if (current_program_space->exec_bfd ())
     {
       bfd_mach_o_load_command *cmd;
 
-      if (bfd_mach_o_lookup_command (exec_bfd,
+      if (bfd_mach_o_lookup_command (current_program_space->exec_bfd (),
                                      BFD_MACH_O_LC_LOAD_DYLINKER, &cmd) == 1)
         return cmd->command.dylinker.name_str;
     }
@@ -538,16 +539,17 @@ darwin_solib_create_inferior_hook (int from_tty)
       load_addr = darwin_read_exec_load_addr_at_init (info);
     }
 
-  if (load_addr != 0 && symfile_objfile != NULL)
+  if (load_addr != 0 && current_program_space->symfile_object_file != NULL)
     {
       CORE_ADDR vmaddr;
 
       /* Find the base address of the executable.  */
-      vmaddr = bfd_mach_o_get_base_address (exec_bfd);
+      vmaddr = bfd_mach_o_get_base_address (current_program_space->exec_bfd ());
 
       /* Relocate.  */
       if (vmaddr != load_addr)
-	objfile_rebase (symfile_objfile, load_addr - vmaddr);
+	objfile_rebase (current_program_space->symfile_object_file,
+			load_addr - vmaddr);
     }
 
   /* Set solib notifier (to reload list of shared libraries).  */
@@ -557,7 +559,8 @@ darwin_solib_create_inferior_hook (int from_tty)
     {
       /* Dyld hasn't yet relocated itself, so the notifier address may
 	 be incorrect (as it has to be relocated).  */
-      CORE_ADDR start = bfd_get_start_address (exec_bfd);
+      CORE_ADDR start
+	= bfd_get_start_address (current_program_space->exec_bfd ());
       if (start == 0)
 	notifier = 0;
       else

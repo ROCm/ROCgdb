@@ -929,10 +929,10 @@ syms_from_objfile_1 (struct objfile *objfile,
 
       /* Since no error yet, throw away the old symbol table.  */
 
-      if (symfile_objfile != NULL)
+      if (current_program_space->symfile_object_file != NULL)
 	{
-	  symfile_objfile->unlink ();
-	  gdb_assert (symfile_objfile == NULL);
+	  current_program_space->symfile_object_file->unlink ();
+	  gdb_assert (current_program_space->symfile_object_file == NULL);
 	}
 
       /* Currently we keep symbols from the add-symbol-file command.
@@ -995,7 +995,7 @@ finish_new_objfile (struct objfile *objfile, symfile_add_flags add_flags)
   if (add_flags & SYMFILE_MAINLINE)
     {
       /* OK, make it the "real" symbol file.  */
-      symfile_objfile = objfile;
+      current_program_space->symfile_object_file = objfile;
 
       clear_symtab_users (add_flags);
     }
@@ -1216,9 +1216,9 @@ symbol_file_clear (int from_tty)
 {
   if ((have_full_symbols () || have_partial_symbols ())
       && from_tty
-      && (symfile_objfile
+      && (current_program_space->symfile_object_file
 	  ? !query (_("Discard symbol table from `%s'? "),
-		    objfile_name (symfile_objfile))
+		    objfile_name (current_program_space->symfile_object_file))
 	  : !query (_("Discard symbol table? "))))
     error (_("Not confirmed."));
 
@@ -1230,7 +1230,7 @@ symbol_file_clear (int from_tty)
 
   clear_symtab_users (0);
 
-  gdb_assert (symfile_objfile == NULL);
+  gdb_assert (current_program_space->symfile_object_file == NULL);
   if (from_tty)
     printf_filtered (_("No symbol file now.\n"));
 }
@@ -2323,7 +2323,7 @@ add_symbol_file_command (const char *args, int from_tty)
   if (seen_offset)
     set_objfile_default_section_offset (objf, section_addrs, offset);
 
-  add_target_sections_of_objfile (objf);
+  current_program_space->add_target_sections (objf);
 
   /* Getting new symbols may change our opinion about what is
      frameless.  */
@@ -2460,9 +2460,9 @@ reread_symbols (void)
 	  /* We need to do this whenever any symbols go away.  */
 	  clear_symtab_users_cleanup defer_clear_users (0);
 
-	  if (exec_bfd != NULL
+	  if (current_program_space->exec_bfd () != NULL
 	      && filename_cmp (bfd_get_filename (objfile->obfd),
-			       bfd_get_filename (exec_bfd)) == 0)
+			       bfd_get_filename (current_program_space->exec_bfd ())) == 0)
 	    {
 	      /* Reload EXEC_BFD without asking anything.  */
 
@@ -2555,7 +2555,7 @@ reread_symbols (void)
 	  /* What the hell is sym_new_init for, anyway?  The concept of
 	     distinguishing between the main file and additional files
 	     in this way seems rather dubious.  */
-	  if (objfile == symfile_objfile)
+	  if (objfile == current_program_space->symfile_object_file)
 	    {
 	      (*objfile->sf->sym_new_init) (objfile);
 	    }
@@ -3709,7 +3709,7 @@ symfile_free_objfile (struct objfile *objfile)
 {
   /* Remove the target sections owned by this objfile.  */
   if (objfile != NULL)
-    remove_target_sections ((void *) objfile);
+    current_program_space->remove_target_sections ((void *) objfile);
 }
 
 /* Wrapper around the quick_symbol_functions expand_symtabs_matching "method".

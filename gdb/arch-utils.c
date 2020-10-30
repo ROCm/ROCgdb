@@ -39,8 +39,7 @@
 #include "dis-asm.h"
 
 bool
-default_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
-				      struct displaced_step_closure *closure)
+default_displaced_step_hw_singlestep (struct gdbarch *gdbarch)
 {
   return !gdbarch_software_single_step_p (gdbarch);
 }
@@ -527,7 +526,7 @@ gdbarch_update_p (struct gdbarch_info info)
 
   /* Check for the current file.  */
   if (info.abfd == NULL)
-    info.abfd = exec_bfd;
+    info.abfd = current_program_space->exec_bfd ();
   if (info.abfd == NULL)
     info.abfd = core_bfd;
 
@@ -989,7 +988,7 @@ default_print_insn (bfd_vma memaddr, disassemble_info *info)
   disassembler_ftype disassemble_fn;
 
   disassemble_fn = disassembler (info->arch, info->endian == BFD_ENDIAN_BIG,
-				 info->mach, exec_bfd);
+				 info->mach, current_program_space->exec_bfd ());
 
   gdb_assert (disassemble_fn != NULL);
   return (*disassemble_fn) (memaddr, info);

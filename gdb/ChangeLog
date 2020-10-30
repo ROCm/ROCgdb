@@ -1,3 +1,273 @@
+2020-10-30  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infrun.c (fetch_inferior_event): Temporarily disable pagination.
+
+2020-10-30  Pedro Alves  <pedro@palves.net>
+
+	* thread.c (lookup_selected_frame): Move ...
+	* frame.c (lookup_selected_frame): ... here.
+
+2020-10-30  Pedro Alves  <pedro@palves.net>
+
+	* blockframe.c (block_innermost_frame): Use get_selected_frame.
+	* frame.c
+	(scoped_restore_selected_frame::scoped_restore_selected_frame):
+	Use save_selected_frame.  Save language as well.
+	(scoped_restore_selected_frame::~scoped_restore_selected_frame):
+	Use restore_selected_frame, and restore language as well.
+	(selected_frame_id, selected_frame_level): New.
+	(selected_frame): Update comments.
+	(save_selected_frame, restore_selected_frame): New.
+	(get_selected_frame): Use lookup_selected_frame.
+	(get_selected_frame_if_set): Delete.
+	(select_frame): Record selected_frame_level and selected_frame_id.
+	* frame.h (scoped_restore_selected_frame) <m_level, m_lang>: New
+	fields.
+	(get_selected_frame): Make 'message' parameter optional.
+	(get_selected_frame_if_set): Delete declaration.
+	(select_frame): Update comments.
+	(save_selected_frame, restore_selected_frame)
+	(lookup_selected_frame): Declare.
+	* gdbthread.h (scoped_restore_current_thread) <m_lang>: New field.
+	* infrun.c (struct infcall_control_state) <selected_frame_level>:
+	New field.
+	(save_infcall_control_state): Use save_selected_frame.
+	(restore_selected_frame): Delete.
+	(restore_infcall_control_state): Use restore_selected_frame.
+	* stack.c (select_frame_command_core, frame_command_core): Use
+	get_selected_frame.
+	* thread.c (restore_selected_frame): Rename to ...
+	(lookup_selected_frame): ... this and make extern.  Select the
+	current frame if the frame level is -1.
+	(scoped_restore_current_thread::restore): Also restore the
+	language.
+	(scoped_restore_current_thread::~scoped_restore_current_thread):
+	Don't try/catch.
+	(scoped_restore_current_thread::scoped_restore_current_thread):
+	Save the language as well.  Use save_selected_frame.
+
+2020-10-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbarch.sh (displaced_step_hw_singlestep): Adjust
+	documentation.
+	* gdbarch.h: Re-generate.
+
+2020-10-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbarch.sh (displaced_step_hw_singlestep): Remove closure
+	parameter.
+	* aarch64-tdep.c (aarch64_displaced_step_hw_singlestep):
+	Likewise.
+	* aarch64-tdep.h (aarch64_displaced_step_hw_singlestep):
+	Likewise.
+	* arch-utils.c (default_displaced_step_hw_singlestep):
+	Likewise.
+	* arch-utils.h (default_displaced_step_hw_singlestep):
+	Likewise.
+	* rs6000-tdep.c (ppc_displaced_step_hw_singlestep):
+	Likewise.
+	* s390-tdep.c (s390_displaced_step_hw_singlestep):
+	Likewise.
+	* gdbarch.c: Re-generate.
+	* gdbarch.h: Re-generate.
+	* infrun.c (resume_1): Adjust.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* progspace.c (program_space::~program_space): Don't call
+	exec_close.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* exec.c (exec_target::close): Don't change current program
+	space.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (add_symbol_file_command): Update.
+	* exec.c (program_space::add_target_sections): Rename.
+	* symfile-mem.c (symbol_file_add_from_memory): Update.
+	* progspace.h (struct program_space) <add_target_sections>:
+	Declare new overload.
+	* exec.h (add_target_sections_of_objfile): Don't declare.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* solib.c (solib_map_sections): Update.
+	* exec.c (program_space::add_target_sections): Now a method.
+	(exec_file_attach): Update.
+	* exec.h (add_target_sections): Don't declare.
+	* progspace.h (struct program_space) <add_target_sections>:
+	Declare.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* progspace.h (struct program_space) <remove_target_sections>:
+	Declare.
+	* exec.c (program_space::remove_target_sections): Now a method.
+	* exec.h (remove_target_sections): Don't declare.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* inferior.c (delete_inferior): Update.
+	* progspace.c (program_space::empty): Rename from
+	program_space_empty_p.  Return bool.
+	* progspace.h (struct program_space) <empty>: New method.
+	(program_space_empty_p): Don't declare.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* progspace.c (program_space::~program_space): Don't call
+	clear_program_space_solib_cache.
+	(program_space::clear_solib_cache): Rename from
+	clear_solib_cache.
+	* solib.c (handle_solib_event): Update.
+	* progspace.h (struct program_space) <clear_solib_cache>: New
+	method.
+	(clear_program_space_solib_cache): Don't declare.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* windows-tdep.c (windows_solib_create_inferior_hook): Update.
+	* target.c (info_target_command): Update.
+	* symfile.c (syms_from_objfile_1, finish_new_objfile)
+	(symbol_file_clear, reread_symbols): Update.
+	* symfile-mem.c (add_symbol_file_from_memory_command): Update.
+	* stabsread.c (scan_file_globals): Update.
+	* solib.c (update_solib_list): Update.
+	* solib-svr4.c (elf_locate_base, open_symbol_file_object)
+	(svr4_fetch_objfile_link_map, enable_break)
+	(svr4_relocate_main_executable)
+	(svr4_iterate_over_objfiles_in_search_order): Update.
+	* solib-frv.c (lm_base, enable_break)
+	(frv_relocate_main_executable): Update.
+	(main_got, frv_fdpic_find_canonical_descriptor): Update.
+	(frv_fetch_objfile_link_map): Update.
+	* solib-dsbt.c (lm_base, dsbt_relocate_main_executable): Update.
+	* solib-darwin.c (darwin_solib_create_inferior_hook): Update.
+	* solib-aix.c (solib_aix_solib_create_inferior_hook): Update.
+	* remote.c (remote_target::get_offsets): Update.
+	(remote_target::start_remote)
+	(extended_remote_target::post_attach): Update.
+	* objfiles.c (entry_point_address_query): Update.
+	* nto-procfs.c (nto_procfs_target::create_inferior): Update.
+	* minsyms.c (get_symbol_leading_char): Update.
+	* frame.c (inside_main_func): Update.
+	* progspace.h (symfile_objfile): Remove macro.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* exec.c (exec_file_attach): Update.
+	* progspace.c (program_space::exec_close): Update.
+	* progspace.h (struct program_space) <ebfd>: Now a
+	gdb_bfd_ref_ptr.
+	<set_exec_bfd>: Change argument type.
+	<exec_bfd>: Update.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* windows-tdep.c (windows_solib_create_inferior_hook): Update.
+	* symfile.c (reread_symbols): Update.
+	* symfile-mem.c (add_symbol_file_from_memory_command)
+	(add_vsyscall_page): Update.
+	* source-cache.c (source_cache::get_plain_source_lines): Update.
+	* solib-svr4.c (find_program_interpreter, elf_locate_base)
+	(svr4_current_sos_direct, svr4_exec_displacement)
+	(svr4_relocate_main_executable): Update.
+	(svr4_iterate_over_objfiles_in_search_order): Update.
+	* solib-frv.c (enable_break2, enable_break): Update.
+	* solib-dsbt.c (lm_base, enable_break): Update.
+	* solib-darwin.c (find_program_interpreter)
+	(darwin_solib_create_inferior_hook): Update.
+	* sol-thread.c (rw_common, ps_pdmodel): Update.
+	* rs6000-nat.c (rs6000_nat_target::create_inferior): Update.
+	* remote.c (compare_sections_command)
+	(remote_target::trace_set_readonly_regions): Update.
+	* remote-sim.c (get_sim_inferior_data)
+	(gdbsim_target::create_inferior, gdbsim_target::create_inferior): Update.
+	(gdbsim_target_open, gdbsim_target::files_info): Update.
+	* exec.h (exec_bfd): Remove macro.
+	* progspace.c (initialize_progspace): Update.
+	* proc-service.c (ps_addr_to_core_addr, core_addr_to_ps_addr):
+	Update.
+	* nto-procfs.c (nto_procfs_target::post_attach)
+	(nto_procfs_target::create_inferior): Update.
+	* maint.c (maintenance_info_sections): Update.
+	* linux-thread-db.c (thread_db_target::get_thread_local_address):
+	Update.
+	* infcmd.c (post_create_inferior): Update.
+	* gcore.c (default_gcore_arch, default_gcore_target): Update.
+	(objfile_find_memory_regions): Update.
+	* exec.c (validate_exec_file, exec_file_attach)
+	(exec_read_partial_read_only, print_section_info): Update.
+	* corelow.c (core_target_open): Update.
+	* corefile.c (reopen_exec_file, validate_files): Update.
+	* arm-tdep.c (gdb_print_insn_arm): Update.
+	* arch-utils.c (gdbarch_update_p, default_print_insn): Update.
+	* progspace.h (struct program_space) <exec_bfd, set_exec_bfd>: New
+	methods.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* progspace.h (current_target_sections): Remove macro.
+	* solib-svr4.c (scan_dyntag): Update.
+	* solib-dsbt.c (scan_dyntag): Update.
+	* exec.c (exec_target::close): Update.
+	(add_target_sections, add_target_sections_of_objfile)
+	(remove_target_sections, exec_target::get_section_table)
+	(exec_target::files_info, set_section_command)
+	(exec_set_section_address, exec_target::has_memory)
+	(exec_target::has_memory): Update.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* source-cache.c (source_cache::get_plain_source_lines): Use
+	current_program_space.
+	* corefile.c (reopen_exec_file): Use current_program_space.
+	* exec.c (exec_file_attach): Use current_program_space.
+	* exec.h (exec_bfd_mtime): Remove.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* gcore.c (default_gcore_mach): Remove.
+	(create_gcore_bfd): Update.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* progspace.c (program_space::exec_close): New method, from
+	exec_close in exec.c.
+	* exec.c (exec_close): Move to progspace.c.
+	(exec_target::close, exec_file_attach): Update.
+	* progspace.h (struct program_space) <exec_close>: Declare
+	method.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* progspace.h (struct program_space) <exec_filename>: Rename from
+	pspace_exec_filename.  Now a unique_xmalloc_ptr.
+	* inferior.c (print_selected_inferior): Update.
+	(print_inferior): Update.
+	* mi/mi-main.c (print_one_inferior): Update.
+	* exec.h (exec_filename): Remove macro.
+	* corefile.c (get_exec_file): Update.
+	* exec.c (exec_close): Update.
+	(exec_file_attach): Update.
+	* progspace.c (clone_program_space): Update.
+	(print_program_space): Update.
+
+2020-10-29  Tom Tromey  <tom@tromey.com>
+
+	* target-section.h (struct target_section): Add constructor.
+	* exec.c (build_section_table, add_target_sections_of_objfile):
+	Update.
+	* corelow.c (core_target::build_file_mappings): Update.
+
+2020-10-29  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	PR gdb/19318
+	* inferior.c (detach_inferior_command): Restore the current thread.
+	(kill_inferior_command): Ditto.
+
 2020-10-28  Tom de Vries  <tdevries@suse.de>
 
 	PR symtab/26772

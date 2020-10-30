@@ -30,10 +30,6 @@ struct target_ops;
 struct bfd;
 struct objfile;
 
-#define exec_bfd current_program_space->ebfd
-#define exec_bfd_mtime current_program_space->ebfd_mtime
-#define exec_filename current_program_space->pspace_exec_filename
-
 /* Builds a section table, given args BFD.  */
 
 extern target_section_table build_section_table (struct bfd *);
@@ -96,29 +92,12 @@ extern enum target_xfer_status
 /* Set the loaded address of a section.  */
 extern void exec_set_section_address (const char *, int, CORE_ADDR);
 
-/* Remove all target sections owned by OWNER.  */
-
-extern void remove_target_sections (void *owner);
-
-/* Add the sections array defined by [SECTIONS..SECTIONS_END[ to the
-   current set of target sections.  */
-
-extern void add_target_sections (void *owner,
-				 const target_section_table &sections);
-
-/* Add the sections of OBJFILE to the current set of target sections.
- * OBJFILE owns the new target sections.  */
-
-extern void add_target_sections_of_objfile (struct objfile *objfile);
-
 /* Prints info about all sections defined in the TABLE.  ABFD is
    special cased --- it's filename is omitted; if it is the executable
    file, its entry point is printed.  */
 
 extern void print_section_info (target_section_table *table,
 				bfd *abfd);
-
-extern void exec_close (void);
 
 /* Helper function that attempts to open the symbol file at EXEC_FILE_HOST.
    If successful, it proceeds to add the symbol file as the main symbol file.

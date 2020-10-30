@@ -1,3 +1,22 @@
+2020-10-30  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/paginate-after-ctrl-c-running.exp: Update with no pagination
+	behavior.
+	* gdb.base/paginate-bg-execution.exp: Ditto.
+	* gdb.base/paginate-inferior-exit.exp: Ditto.
+	* gdb.base/double-prompt-target-event-error.c: Remove.
+	* gdb.base/double-prompt-target-event-error.exp: Remove.
+
+2020-10-29  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/kill-detach-inferiors-cmd.exp: Check that 'kill
+	inferiors' and 'detach inferiors' do not change the current
+	inferior.
+
+2020-10-29  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.threads/tls.exp: Fix DUPLICATEs.
+
 2020-10-28  Tom de Vries  <tdevries@suse.de>
 
 	* gdb.python/py-symbol.exp: Add KFAILs for -readnow.

@@ -56,7 +56,7 @@
 #include <signal.h>
 #include "serial.h"
 
-#include "gdbcore.h" /* for exec_bfd */
+#include "gdbcore.h"
 
 #include "remote-fileio.h"
 #include "gdb/fileio.h"
@@ -4107,7 +4107,7 @@ remote_target::get_offsets ()
   int lose, num_segments = 0, do_sections, do_segments;
   CORE_ADDR text_addr, data_addr, bss_addr, segments[2];
 
-  if (symfile_objfile == NULL)
+  if (current_program_space->symfile_object_file == NULL)
     return;
 
   putpkt ("qOffsets");
@@ -4183,10 +4183,10 @@ remote_target::get_offsets ()
   else if (*ptr != '\0')
     warning (_("Target reported unsupported offsets: %s"), buf);
 
-  section_offsets offs = symfile_objfile->section_offsets;
+  objfile *objf = current_program_space->symfile_object_file;
+  section_offsets offs = objf->section_offsets;
 
-  symfile_segment_data_up data
-    = get_symfile_segment_data (symfile_objfile->obfd);
+  symfile_segment_data_up data = get_symfile_segment_data (objf->obfd);
   do_segments = (data != NULL);
   do_sections = num_segments == 0;
 
@@ -4221,7 +4221,7 @@ remote_target::get_offsets ()
 
   if (do_segments)
     {
-      int ret = symfile_map_offsets_to_segments (symfile_objfile->obfd,
+      int ret = symfile_map_offsets_to_segments (objf->obfd,
 						 data.get (), offs,
 						 num_segments, segments);
 
@@ -4235,18 +4235,18 @@ remote_target::get_offsets ()
 
   if (do_sections)
     {
-      offs[SECT_OFF_TEXT (symfile_objfile)] = text_addr;
+      offs[SECT_OFF_TEXT (objf)] = text_addr;
 
       /* This is a temporary kludge to force data and bss to use the
 	 same offsets because that's what nlmconv does now.  The real
 	 solution requires changes to the stub and remote.c that I
 	 don't have time to do right now.  */
 
-      offs[SECT_OFF_DATA (symfile_objfile)] = data_addr;
-      offs[SECT_OFF_BSS (symfile_objfile)] = data_addr;
+      offs[SECT_OFF_DATA (objf)] = data_addr;
+      offs[SECT_OFF_BSS (objf)] = data_addr;
     }
 
-  objfile_relocate (symfile_objfile, offs);
+  objfile_relocate (objf, offs);
 }
 
 /* Send interrupt_sequence to remote target.  */
@@ -4846,7 +4846,8 @@ remote_target::start_remote (int from_tty, int extended_p)
   /* If we connected to a live target, do some additional setup.  */
   if (target_has_execution ())
     {
-      if (symfile_objfile) 	/* No use without a symbol-file.  */
+      /* No use without a symbol-file.  */
+      if (current_program_space->symfile_object_file)
 	remote_check_symbols ();
     }
 
@@ -5983,7 +5984,7 @@ extended_remote_target::post_attach (int pid)
      binary is not using shared libraries, the vsyscall page is not
      present (on Linux) and the binary itself hadn't changed since the
      debugging process was started.  */
-  if (symfile_objfile != NULL)
+  if (current_program_space->symfile_object_file != NULL)
     remote_check_symbols();
 }
 
@@ -10770,7 +10771,7 @@ compare_sections_command (const char *args, int from_tty)
   int res;
   int read_only = 0;
 
-  if (!exec_bfd)
+  if (!current_program_space->exec_bfd ())
     error (_("command cannot be used without an exec file"));
 
   if (args != NULL && strcmp (args, "-r") == 0)
@@ -10779,7 +10780,7 @@ compare_sections_command (const char *args, int from_tty)
       args = NULL;
     }
 
-  for (s = exec_bfd->sections; s; s = s->next)
+  for (s = current_program_space->exec_bfd ()->sections; s; s = s->next)
     {
       if (!(s->flags & SEC_LOAD))
 	continue;		/* Skip non-loadable section.  */
@@ -10799,7 +10800,8 @@ compare_sections_command (const char *args, int from_tty)
       lma = s->lma;
 
       gdb::byte_vector sectdata (size);
-      bfd_get_section_contents (exec_bfd, s, sectdata.data (), 0, size);
+      bfd_get_section_contents (current_program_space->exec_bfd (), s,
+				sectdata.data (), 0, size);
 
       res = target_verify_memory (sectdata.data (), lma, size);
 
@@ -13180,14 +13182,14 @@ remote_target::trace_set_readonly_regions ()
   int anysecs = 0;
   int offset = 0;
 
-  if (!exec_bfd)
+  if (!current_program_space->exec_bfd ())
     return;			/* No information to give.  */
 
   struct remote_state *rs = get_remote_state ();
 
   strcpy (rs->buf.data (), "QTro");
   offset = strlen (rs->buf.data ());
-  for (s = exec_bfd->sections; s; s = s->next)
+  for (s = current_program_space->exec_bfd ()->sections; s; s = s->next)
     {
       char tmp1[40], tmp2[40];
       int sec_length;

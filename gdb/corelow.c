@@ -266,12 +266,7 @@ core_target::build_file_mappings ()
 	bfd_set_section_alignment (sec, 2);
 
 	/* Set target_section fields.  */
-	m_core_file_mappings.emplace_back ();
-	target_section &ts = m_core_file_mappings.back ();
-	ts.addr = start;
-	ts.endaddr = end;
-	ts.owner = nullptr;
-	ts.the_bfd_section = sec;
+	m_core_file_mappings.emplace_back (start, end, sec);
       });
 
   normalize_mem_ranges (&m_core_unavailable_mappings);
@@ -459,7 +454,7 @@ core_target_open (const char *arg, int from_tty)
      core file.  We don't do this unconditionally since an exec file
      typically contains more information that helps us determine the
      architecture than a core file.  */
-  if (!exec_bfd)
+  if (!current_program_space->exec_bfd ())
     set_gdbarch_from_file (core_bfd);
 
   push_target (std::move (target_holder));
@@ -500,7 +495,7 @@ core_target_open (const char *arg, int from_tty)
       switch_to_thread (thread);
     }
 
-  if (exec_bfd == nullptr)
+  if (current_program_space->exec_bfd () == nullptr)
     locate_exec_from_corefile_build_id (core_bfd, from_tty);
 
   post_create_inferior (from_tty);

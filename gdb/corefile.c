@@ -108,14 +108,16 @@ reopen_exec_file (void)
   struct stat st;
 
   /* Don't do anything if there isn't an exec file.  */
-  if (exec_bfd == NULL)
+  if (current_program_space->exec_bfd () == NULL)
     return;
 
   /* If the timestamp of the exec file has changed, reopen it.  */
-  std::string filename = bfd_get_filename (exec_bfd);
+  std::string filename = bfd_get_filename (current_program_space->exec_bfd ());
   res = stat (filename.c_str (), &st);
 
-  if (res == 0 && exec_bfd_mtime && exec_bfd_mtime != st.st_mtime)
+  if (res == 0
+      && current_program_space->ebfd_mtime
+      && current_program_space->ebfd_mtime != st.st_mtime)
     exec_file_attach (filename.c_str (), 0);
   else
     /* If we accessed the file since last opening it, close it now;
@@ -130,11 +132,13 @@ reopen_exec_file (void)
 void
 validate_files (void)
 {
-  if (exec_bfd && core_bfd)
+  if (current_program_space->exec_bfd () && core_bfd)
     {
-      if (!core_file_matches_executable_p (core_bfd, exec_bfd))
+      if (!core_file_matches_executable_p (core_bfd,
+					   current_program_space->exec_bfd ()))
 	warning (_("core file may not match specified executable file."));
-      else if (bfd_get_mtime (exec_bfd) > bfd_get_mtime (core_bfd))
+      else if (bfd_get_mtime (current_program_space->exec_bfd ())
+	       > bfd_get_mtime (core_bfd))
 	warning (_("exec file is newer than core file."));
     }
 }
@@ -144,8 +148,8 @@ validate_files (void)
 const char *
 get_exec_file (int err)
 {
-  if (exec_filename)
-    return exec_filename;
+  if (current_program_space->exec_filename != nullptr)
+    return current_program_space->exec_filename.get ();
   if (!err)
     return NULL;
 

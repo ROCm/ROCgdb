@@ -46,7 +46,6 @@
 
 static const char *default_gcore_target (void);
 static enum bfd_architecture default_gcore_arch (void);
-static unsigned long default_gcore_mach (void);
 static int gcore_memory_sections (bfd *);
 
 /* create_gcore_bfd -- helper for gcore_command (exported).
@@ -60,7 +59,7 @@ create_gcore_bfd (const char *filename)
   if (obfd == NULL)
     error (_("Failed to open '%s' for output."), filename);
   bfd_set_format (obfd.get (), bfd_core);
-  bfd_set_arch_mach (obfd.get (), default_gcore_arch (), default_gcore_mach ());
+  bfd_set_arch_mach (obfd.get (), default_gcore_arch (), 0);
   return obfd;
 }
 
@@ -165,24 +164,6 @@ gcore_command (const char *args, int from_tty)
   fprintf_filtered (gdb_stdout, "Saved corefile %s\n", corefilename.get ());
 }
 
-static unsigned long
-default_gcore_mach (void)
-{
-#if 1	/* See if this even matters...  */
-  return 0;
-#else
-
-  const struct bfd_arch_info *bfdarch = gdbarch_bfd_arch_info (target_gdbarch ());
-
-  if (bfdarch != NULL)
-    return bfdarch->mach;
-  if (exec_bfd == NULL)
-    error (_("Can't find default bfd machine type (need execfile)."));
-
-  return bfd_get_mach (exec_bfd);
-#endif /* 1 */
-}
-
 static enum bfd_architecture
 default_gcore_arch (void)
 {
@@ -190,10 +171,10 @@ default_gcore_arch (void)
 
   if (bfdarch != NULL)
     return bfdarch->arch;
-  if (exec_bfd == NULL)
+  if (current_program_space->exec_bfd () == NULL)
     error (_("Can't find bfd architecture for corefile (need execfile)."));
 
-  return bfd_get_arch (exec_bfd);
+  return bfd_get_arch (current_program_space->exec_bfd ());
 }
 
 static const char *
@@ -203,12 +184,12 @@ default_gcore_target (void)
   if (gdbarch_gcore_bfd_target_p (target_gdbarch ()))
     return gdbarch_gcore_bfd_target (target_gdbarch ());
 
-  /* Otherwise, try to fall back to the exec_bfd target.  This will probably
+  /* Otherwise, try to fall back to the exec target.  This will probably
      not work for non-ELF targets.  */
-  if (exec_bfd == NULL)
+  if (current_program_space->exec_bfd () == NULL)
     return NULL;
   else
-    return bfd_get_target (exec_bfd);
+    return bfd_get_target (current_program_space->exec_bfd ());
 }
 
 /* Derive a reasonable stack segment by unwinding the target stack,
@@ -519,7 +500,8 @@ objfile_find_memory_regions (struct target_ops *self,
 	     obfd);
 
   /* Make a heap segment.  */
-  if (derive_heap_segment (exec_bfd, &temp_bottom, &temp_top))
+  if (derive_heap_segment (current_program_space->exec_bfd (), &temp_bottom,
+			   &temp_top))
     (*func) (temp_bottom, temp_top - temp_bottom,
 	     1, /* Heap section will be readable.  */
 	     1, /* Heap section will be writable.  */
