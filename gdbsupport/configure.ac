@@ -19,7 +19,16 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT([gdbsupport], 1.0)
 AC_CONFIG_SRCDIR(common-defs.h)
 AC_CONFIG_HEADER(config.h:config.in)
-AC_CANONICAL_SYSTEM
+
+# Set build, build_cpu, build_vendor and build_os.
+AC_CANONICAL_BUILD
+
+# Set host, host_cpu, host_vendor, and host_os.
+AC_CANONICAL_HOST
+
+# Set target, target_cpu, target_vendor, and target_os.
+AC_CANONICAL_TARGET
+
 AM_MAINTAINER_MODE
 AC_CONFIG_AUX_DIR(..)
 AM_INIT_AUTOMAKE
@@ -31,7 +40,6 @@ AC_PROG_RANLIB
 
 AC_USE_SYSTEM_EXTENSIONS
 ACX_LARGEFILE
-AM_PROG_CC_STDC
 
 # We require a C++11 compiler.  Check if one is available, and if
 # necessary, set CXX_DIALECT to some -std=xxx switch.

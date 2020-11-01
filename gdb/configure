@@ -2991,6 +2991,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
 ac_config_headers="$ac_config_headers config.h:config.in"
 
 
@@ -5029,88 +5030,6 @@ rm -rf conftest*
 fi
 
 
-
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${CC-cc} option to accept ANSI C" >&5
-$as_echo_n "checking for ${CC-cc} option to accept ANSI C... " >&6; }
-if ${am_cv_prog_cc_stdc+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  am_cv_prog_cc_stdc=no
-ac_save_CC="$CC"
-# Don't try gcc -ansi; that turns off useful extensions and
-# breaks some systems' header files.
-# AIX			-qlanglvl=ansi
-# Ultrix and OSF/1	-std1
-# HP-UX 10.20 and later	-Ae
-# HP-UX older versions	-Aa -D_HPUX_SOURCE
-# SVR4			-Xc -D__EXTENSIONS__
-for ac_arg in "" -qlanglvl=ansi -std1 -Ae "-Aa -D_HPUX_SOURCE" "-Xc -D__EXTENSIONS__"
-do
-  CC="$ac_save_CC $ac_arg"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdarg.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-/* Most of the following tests are stolen from RCS 5.7's src/conf.sh.  */
-struct buf { int x; };
-FILE * (*rcsopen) (struct buf *, struct stat *, int);
-static char *e (p, i)
-     char **p;
-     int i;
-{
-  return p[i];
-}
-static char *f (char * (*g) (char **, int), char **p, ...)
-{
-  char *s;
-  va_list v;
-  va_start (v,p);
-  s = g (p, va_arg (v,int));
-  va_end (v);
-  return s;
-}
-int test (int i, double x);
-struct s1 {int (*f) (int a);};
-struct s2 {int (*f) (double a);};
-int pairnames (int, char **, FILE *(*)(struct buf *, struct stat *, int), int, int);
-int argc;
-char **argv;
-
-int
-main ()
-{
-
-return f (e, argv, 0) != argv[0]  ||  f (e, argv, 1) != argv[1];
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  am_cv_prog_cc_stdc="$ac_arg"; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-done
-CC="$ac_save_CC"
-
-fi
-
-if test -z "$am_cv_prog_cc_stdc"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: none needed" >&5
-$as_echo "none needed" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $am_cv_prog_cc_stdc" >&5
-$as_echo "$am_cv_prog_cc_stdc" >&6; }
-fi
-case "x$am_cv_prog_cc_stdc" in
-  x|xno) ;;
-  *) CC="$CC $am_cv_prog_cc_stdc" ;;
-esac
-
 # Expand $ac_aux_dir to an absolute path.
 am_aux_dir=`cd "$ac_aux_dir" && pwd`
 
@@ -5252,6 +5171,15 @@ ac_config_guess="$SHELL $ac_aux_dir/config.guess"  # Please don't use this var.
 ac_config_sub="$SHELL $ac_aux_dir/config.sub"  # Please don't use this var.
 ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
+
+
+# Set build, build_cpu, build_vendor and build_os.
+
+
+# Set host, host_cpu, host_vendor, and host_os.
+
+
+# Set target, target_cpu, target_vendor, and target_os.
 
 
 test "$program_prefix" != NONE &&
@@ -7399,12 +7327,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdlib.h>
-extern char _etext;
-
+	 extern char _etext;
 int
 main ()
 {
 free (&_etext);
+
   ;
   return 0;
 }
@@ -7413,9 +7341,11 @@ if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_var__etext=yes
 else
   ac_cv_var__etext=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_var__etext" >&5
 $as_echo "$ac_cv_var__etext" >&6; }
@@ -7432,12 +7362,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdlib.h>
-extern char etext;
-
+	 extern char etext;
 int
 main ()
 {
 free (&etext);
+
   ;
   return 0;
 }
@@ -7446,9 +7376,11 @@ if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_var_etext=yes
 else
   ac_cv_var_etext=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_var_etext" >&5
 $as_echo "$ac_cv_var_etext" >&6; }
@@ -7485,8 +7417,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   ac_cv_cc_supports_pg=yes
 else
   ac_cv_cc_supports_pg=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_cc_supports_pg" >&5
 $as_echo "$ac_cv_cc_supports_pg" >&6; }
@@ -9391,7 +9325,7 @@ fi
 
 
 if test "$with_system_readline" = yes; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether system readline is new enough" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether system readline is new enough" >&5
 $as_echo_n "checking whether system readline is new enough... " >&6; }
 if ${gdb_cv_readline_ok+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -9399,13 +9333,14 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
-#include <readline/readline.h>
+	   #include <readline/readline.h>
 int
 main ()
 {
 #if RL_VERSION_MAJOR < 7
-# error "readline version 7 required"
-#endif
+	   # error "readline version 7 required"
+	   #endif
+
   ;
   return 0;
 }
@@ -9414,8 +9349,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_readline_ok=yes
 else
   gdb_cv_readline_ok=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_readline_ok" >&5
 $as_echo "$gdb_cv_readline_ok" >&6; }
@@ -10851,7 +10788,7 @@ fi
 
 
       if test "${python_prog_path}" = missing; then
-        as_fn_error $? "unable to find python program ${python_prog}" "$LINENO" 5
+	as_fn_error $? "unable to find python program ${python_prog}" "$LINENO" 5
       fi
       ;;
     esac
@@ -10865,21 +10802,21 @@ fi
     if test $? != 0; then
       have_python_config=failed
       if test "${with_python}" != auto; then
-        as_fn_error $? "failure running python-config --includes" "$LINENO" 5
+	as_fn_error $? "failure running python-config --includes" "$LINENO" 5
       fi
     fi
     python_libs=`${python_prog} ${srcdir}/python/python-config.py --ldflags`
     if test $? != 0; then
       have_python_config=failed
       if test "${with_python}" != auto; then
-        as_fn_error $? "failure running python-config --ldflags" "$LINENO" 5
+	as_fn_error $? "failure running python-config --ldflags" "$LINENO" 5
       fi
     fi
     python_prefix=`${python_prog} ${srcdir}/python/python-config.py --exec-prefix`
     if test $? != 0; then
       have_python_config=failed
       if test "${with_python}" != auto; then
-        as_fn_error $? "failure running python-config --exec-prefix" "$LINENO" 5
+	as_fn_error $? "failure running python-config --exec-prefix" "$LINENO" 5
       fi
     fi
   else
@@ -14431,13 +14368,14 @@ if ${gdb_cv_func_sigsetjmp+:} false; then :
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
-  #include <setjmp.h>
-
+#include <setjmp.h>
 int
 main ()
 {
-sigjmp_buf env; while (! sigsetjmp (env, 1)) siglongjmp (env, 1);
+sigjmp_buf env;
+           while (! sigsetjmp (env, 1))
+             siglongjmp (env, 1);
+
   ;
   return 0;
 }
@@ -14446,8 +14384,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_func_sigsetjmp=yes
 else
   gdb_cv_func_sigsetjmp=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_func_sigsetjmp" >&5
 $as_echo "$gdb_cv_func_sigsetjmp" >&6; }
@@ -15365,11 +15305,12 @@ if ${gdb_cv_func_ptrace_ret+:} false; then :
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-$gdb_ptrace_headers
+ $gdb_ptrace_headers
 int
 main ()
 {
 extern long ptrace (enum __ptrace_request, ...);
+
   ;
   return 0;
 }
@@ -15384,6 +15325,7 @@ int
 main ()
 {
 extern int ptrace ();
+
   ;
   return 0;
 }
@@ -15392,17 +15334,22 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_func_ptrace_ret='int'
 else
   gdb_cv_func_ptrace_ret='long'
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_func_ptrace_ret" >&5
 $as_echo "$gdb_cv_func_ptrace_ret" >&6; }
 
+
 cat >>confdefs.h <<_ACEOF
 #define PTRACE_TYPE_RET $gdb_cv_func_ptrace_ret
 _ACEOF
+
 
 # Check argument types.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking types of arguments for ptrace" >&5
@@ -15410,7 +15357,6 @@ $as_echo_n "checking types of arguments for ptrace... " >&6; }
 if ${gdb_cv_func_ptrace_args+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
@@ -15418,6 +15364,7 @@ int
 main ()
 {
 extern long ptrace (enum __ptrace_request, ...);
+
   ;
   return 0;
 }
@@ -15425,20 +15372,17 @@ _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_func_ptrace_args='enum __ptrace_request,int,long,long'
 else
-
-for gdb_arg1 in 'int' 'long'; do
- for gdb_arg2 in 'pid_t' 'int' 'long'; do
-  for gdb_arg3 in 'int *' 'caddr_t' 'int' 'long' 'void *'; do
-   for gdb_arg4 in 'int' 'long' 'void *'; do
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  for gdb_arg1 in 'int' 'long'; do
+	for gdb_arg2 in 'pid_t' 'int' 'long'; do
+	  for gdb_arg3 in 'int *' 'caddr_t' 'int' 'long' 'void *'; do
+	    for gdb_arg4 in 'int' 'long' 'void *'; do
+	      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
 int
 main ()
 {
-
-extern $gdb_cv_func_ptrace_ret
-  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4);
+extern $gdb_cv_func_ptrace_ret ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4);
 
   ;
   return 0;
@@ -15446,43 +15390,45 @@ extern $gdb_cv_func_ptrace_ret
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4";
-    break 4;
+		 break 4;
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    for gdb_arg5 in 'int *' 'int' 'long'; do
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+
+	      for gdb_arg5 in 'int *' 'int' 'long'; do
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $gdb_ptrace_headers
 int
 main ()
 {
-
-extern $gdb_cv_func_ptrace_ret
-  ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4, $gdb_arg5);
+extern $gdb_cv_func_ptrace_ret ptrace ($gdb_arg1, $gdb_arg2, $gdb_arg3, $gdb_arg4, $gdb_arg5);
 
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
-
-gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4,$gdb_arg5";
-    break 5;
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    done
-   done
-  done
- done
-done
-# Provide a safe default value.
-: ${gdb_cv_func_ptrace_args='int,int,long,long'}
+  gdb_cv_func_ptrace_args="$gdb_arg1,$gdb_arg2,$gdb_arg3,$gdb_arg4,$gdb_arg5";
+		   break 5;
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	      done
+	    done
+	  done
+	done
+      done
+      # Provide a safe default value.
+      : ${gdb_cv_func_ptrace_args='int,int,long,long'}
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_func_ptrace_args" >&5
 $as_echo "$gdb_cv_func_ptrace_args" >&6; }
+
 ac_save_IFS=$IFS; IFS=','
 set dummy `echo "$gdb_cv_func_ptrace_args" | sed 's/\*/\*/g'`
 IFS=$ac_save_IFS
@@ -15560,17 +15506,14 @@ if ${ac_cv_func_setpgrp_void+:} false; then :
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
 #include <unistd.h>
-
 int
 main ()
 {
-
-  if (setpgrp(1,1) == -1)
-    exit (0);
-  else
-    exit (1);
+if (setpgrp(1,1) == -1)
+	     exit (0);
+	   else
+	     exit (1);
 
   ;
   return 0;
@@ -15580,8 +15523,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   ac_cv_func_setpgrp_void=no
 else
   ac_cv_func_setpgrp_void=yes
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_setpgrp_void" >&5
 $as_echo "$ac_cv_func_setpgrp_void" >&6; }
@@ -15608,9 +15553,10 @@ int
 main ()
 {
 #define REGEX_INTERFACE_VERSION 1
-#if _GNU_REGEX_INTERFACE_VERSION != REGEX_INTERFACE_VERSION
-# error "Version mismatch"
-#endif
+	 #if _GNU_REGEX_INTERFACE_VERSION != REGEX_INTERFACE_VERSION
+	 # error "Version mismatch"
+	 #endif
+
   ;
   return 0;
 }
@@ -15619,8 +15565,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_have_gnu_regex=yes
 else
   gdb_cv_have_gnu_regex=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_have_gnu_regex" >&5
 $as_echo "$gdb_cv_have_gnu_regex" >&6; }
@@ -15666,12 +15614,13 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <sys/param.h>
-#define _KMEMUSER
-#include <sys/lwp.h>
+	 #define _KMEMUSER
+	 #include <sys/lwp.h>
 int
 main ()
 {
 struct lwp l;
+
   ;
   return 0;
 }
@@ -15680,8 +15629,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_struct_lwp=yes
 else
   gdb_cv_struct_lwp=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_struct_lwp" >&5
 $as_echo "$gdb_cv_struct_lwp" >&6; }
@@ -15700,11 +15651,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <sys/types.h>
-#include <machine/reg.h>
+	 #include <machine/reg.h>
 int
 main ()
 {
 struct reg r;
+
   ;
   return 0;
 }
@@ -15713,8 +15665,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_struct_reg=yes
 else
   gdb_cv_struct_reg=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_struct_reg" >&5
 $as_echo "$gdb_cv_struct_reg" >&6; }
@@ -15771,8 +15725,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_have_ptrace_getregs=yes
 else
   gdb_cv_have_ptrace_getregs=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_have_ptrace_getregs" >&5
@@ -15804,8 +15760,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_have_ptrace_getfpxregs=yes
 else
   gdb_cv_have_ptrace_getfpxregs=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_have_ptrace_getfpxregs" >&5
@@ -15825,11 +15783,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <sys/types.h>
-#include <sys/ptrace.h>
+	 #include <sys/ptrace.h>
 int
 main ()
 {
 PT_GETDBREGS;
+
   ;
   return 0;
 }
@@ -15838,8 +15797,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_have_pt_getdbregs=yes
 else
   gdb_cv_have_pt_getdbregs=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_have_pt_getdbregs" >&5
@@ -15859,11 +15820,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <sys/types.h>
-#include <sys/ptrace.h>
+	 #include <sys/ptrace.h>
 int
 main ()
 {
 PT_GETXMMREGS;
+
   ;
   return 0;
 }
@@ -15872,8 +15834,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_have_pt_getxmmregs=yes
 else
   gdb_cv_have_pt_getxmmregs=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_have_pt_getxmmregs" >&5
@@ -16156,16 +16120,15 @@ $as_echo_n "checking for -bbigtoc option... " >&6; }
 if ${gdb_cv_bigtoc+:} false; then :
   $as_echo_n "(cached) " >&6
 else
+  SAVE_LDFLAGS=$LDFLAGS
 
-    SAVE_LDFLAGS=$LDFLAGS
+     case $GCC in
+       yes) gdb_cv_bigtoc=-Wl,-bbigtoc ;;
+       *) gdb_cv_bigtoc=-bbigtoc ;;
+     esac
 
-    case $GCC in
-    yes) gdb_cv_bigtoc=-Wl,-bbigtoc ;;
-    *) gdb_cv_bigtoc=-bbigtoc ;;
-    esac
-
-    LDFLAGS=$LDFLAGS\ $gdb_cv_bigtoc
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+     LDFLAGS=$LDFLAGS\ $gdb_cv_bigtoc
+     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 int
@@ -16180,10 +16143,11 @@ if ac_fn_c_try_link "$LINENO"; then :
 
 else
   gdb_cv_bigtoc=
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-    LDFLAGS="${SAVE_LDFLAGS}"
+     LDFLAGS="${SAVE_LDFLAGS}"
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_bigtoc" >&5
@@ -16295,8 +16259,9 @@ int
 main ()
 {
 #ifndef PTHDB_VERSION_3
-                                    #error
-                                    #endif
+	       #error
+	       #endif
+
   ;
   return 0;
 }
@@ -16305,8 +16270,10 @@ if ac_fn_c_try_compile "$LINENO"; then :
   gdb_cv_have_aix_thread_debug=yes
 else
   gdb_cv_have_aix_thread_debug=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_have_aix_thread_debug" >&5
@@ -16338,7 +16305,7 @@ _ACEOF
 fi
 
 if test "x$ac_cv_header_thread_db_h" = "xyes"; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether <thread_db.h> has TD_NOTALLOC" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether <thread_db.h> has TD_NOTALLOC" >&5
 $as_echo_n "checking whether <thread_db.h> has TD_NOTALLOC... " >&6; }
 if ${gdb_cv_thread_db_h_has_td_notalloc+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -16350,6 +16317,7 @@ int
 main ()
 {
 int i = TD_NOTALLOC;
+
   ;
   return 0;
 }
@@ -16365,7 +16333,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_thread_db_h_has_td_notalloc" >&5
 $as_echo "$gdb_cv_thread_db_h_has_td_notalloc" >&6; }
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether <thread_db.h> has TD_VERSION" >&5
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether <thread_db.h> has TD_VERSION" >&5
 $as_echo_n "checking whether <thread_db.h> has TD_VERSION... " >&6; }
 if ${gdb_cv_thread_db_h_has_td_version+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -16377,6 +16346,7 @@ int
 main ()
 {
 int i = TD_VERSION;
+
   ;
   return 0;
 }
@@ -16392,7 +16362,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_thread_db_h_has_td_version" >&5
 $as_echo "$gdb_cv_thread_db_h_has_td_version" >&6; }
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether <thread_db.h> has TD_NOTLS" >&5
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether <thread_db.h> has TD_NOTLS" >&5
 $as_echo_n "checking whether <thread_db.h> has TD_NOTLS... " >&6; }
 if ${gdb_cv_thread_db_h_has_td_notls+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -16404,6 +16375,7 @@ int
 main ()
 {
 int i = TD_NOTLS;
+
   ;
   return 0;
 }
@@ -16730,13 +16702,14 @@ $as_echo_n "checking compiler warning flags... " >&6; }
 	      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 struct scoped_restore_base {};
-                 struct scoped_restore_tmpl : public scoped_restore_base {
-		   ~scoped_restore_tmpl() {}
-		 };
+		    struct scoped_restore_tmpl : public scoped_restore_base {
+		      ~scoped_restore_tmpl() {}
+		    };
 int
 main ()
 {
 const scoped_restore_base &b = scoped_restore_tmpl();
+
   ;
   return 0;
 }
@@ -16818,6 +16791,7 @@ if ac_fn_cxx_try_link "$LINENO"; then :
   enable_ubsan=yes
 else
   enable_ubsan=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -16907,13 +16881,13 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdlib.h>
-  #include "bfd.h"
-  #include "elf-bfd.h"
-
+	   #include "bfd.h"
+	   #include "elf-bfd.h"
 int
 main ()
 {
 return bfd_get_elf_phdr_upper_bound (NULL);
+
   ;
   return 0;
 }
@@ -16922,9 +16896,11 @@ if ac_fn_c_try_link "$LINENO"; then :
   gdb_cv_var_elf=yes
 else
   gdb_cv_var_elf=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_var_elf" >&5
 $as_echo "$gdb_cv_var_elf" >&6; }
@@ -17018,13 +16994,13 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdlib.h>
-  #include "bfd.h"
-  #include "mach-o.h"
-
+	   #include "bfd.h"
+	   #include "mach-o.h"
 int
 main ()
 {
 return bfd_mach_o_lookup_command (NULL, 0, NULL);
+
   ;
   return 0;
 }
@@ -17033,9 +17009,11 @@ if ac_fn_c_try_link "$LINENO"; then :
   gdb_cv_var_macho=yes
 else
   gdb_cv_var_macho=no
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_var_macho" >&5
 $as_echo "$gdb_cv_var_macho" >&6; }

@@ -31,32 +31,26 @@ struct thread_info;
 /* True if we are debugging run control.  */
 extern unsigned int debug_infrun;
 
-/* Print an "infrun" debug statement.  Should be used through
-   infrun_debug_printf.  */
-void ATTRIBUTE_PRINTF (2, 3) infrun_debug_printf_1
-  (const char *func_name, const char *fmt, ...);
+/* Print an "infrun" debug statement.  */
 
 #define infrun_debug_printf(fmt, ...) \
   do \
     { \
       if (debug_infrun) \
-	infrun_debug_printf_1 (__func__, fmt, ##__VA_ARGS__); \
+	debug_prefixed_printf ("infrun", __func__, fmt, ##__VA_ARGS__); \
     } \
   while (0)
 
 /* True if we are debugging displaced stepping.  */
 extern bool debug_displaced;
 
-/* Print a "displaced" debug statement.  Should be used through
-   displaced_debug_printf.  */
-void ATTRIBUTE_PRINTF (2, 3) displaced_debug_printf_1
-  (const char *func_name, const char *fmt, ...);
+/* Print a "displaced" debug statement.  */
 
 #define displaced_debug_printf(fmt, ...) \
   do \
     { \
       if (debug_displaced) \
-	displaced_debug_printf_1 (__func__, fmt, ##__VA_ARGS__); \
+	debug_prefixed_printf ("displaced", __func__, fmt, ##__VA_ARGS__); \
     } \
   while (0)
 
