@@ -1430,19 +1430,6 @@ const struct quick_symbol_functions psym_functions =
 
 
 
-static void
-sort_pst_symbols (struct objfile *objfile, struct partial_symtab *pst)
-{
-  /* Sort the global list; don't sort the static list.  */
-  std::sort (pst->global_psymbols.begin (),
-	     pst->global_psymbols.end (),
-	     [] (partial_symbol *s1, partial_symbol *s2)
-    {
-      return strcmp_iw_ordered (s1->ginfo.search_name (),
-				s2->ginfo.search_name ()) < 0;
-    });
-}
-
 /* Partially fill a partial symtab.  It will be completely filled at
    the end of the symbol list.  */
 
@@ -1458,12 +1445,19 @@ partial_symtab::partial_symtab (const char *filename,
 /* Perform "finishing up" operations of a partial symtab.  */
 
 void
-end_psymtab_common (struct objfile *objfile, struct partial_symtab *pst)
+partial_symtab::end ()
 {
-  pst->global_psymbols.shrink_to_fit ();
-  pst->static_psymbols.shrink_to_fit ();
+  global_psymbols.shrink_to_fit ();
+  static_psymbols.shrink_to_fit ();
 
-  sort_pst_symbols (objfile, pst);
+  /* Sort the global list; don't sort the static list.  */
+  std::sort (global_psymbols.begin (),
+	     global_psymbols.end (),
+	     [] (partial_symbol *s1, partial_symbol *s2)
+    {
+      return strcmp_iw_ordered (s1->ginfo.search_name (),
+				s2->ginfo.search_name ()) < 0;
+    });
 }
 
 /* See psymtab.h.  */
@@ -1523,17 +1517,6 @@ add_psymbol_to_bcache (const partial_symbol &psymbol, struct objfile *objfile,
 	  (&psymbol, sizeof (struct partial_symbol), added));
 }
 
-/* Helper function, adds partial symbol to the given partial symbol list.  */
-
-static void
-append_psymbol_to_list (std::vector<partial_symbol *> &list,
-			struct partial_symbol *psym,
-			struct objfile *objfile)
-{
-  list.push_back (psym);
-  OBJSTAT (objfile, n_psyms++);
-}
-
 /* See psympriv.h.  */
 
 void
@@ -1555,7 +1538,7 @@ partial_symtab::add_psymbol (const partial_symbol &psymbol,
     = (where == psymbol_placement::STATIC
        ? static_psymbols
        : global_psymbols);
-  append_psymbol_to_list (list, psym, objfile);
+  list.push_back (psym);
 }
 
 /* See psympriv.h.  */
@@ -1580,13 +1563,6 @@ partial_symtab::add_psymbol (gdb::string_view name, bool copy_name,
   psymbol.ginfo.compute_and_set_names (name, copy_name, objfile->per_bfd);
 
   add_psymbol (psymbol, where, objfile);
-}
-
-/* See psympriv.h.  */
-
-void
-init_psymbol_list (struct objfile *objfile, int total_symbols)
-{
 }
 
 /* See psympriv.h.  */

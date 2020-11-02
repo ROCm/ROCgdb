@@ -2000,7 +2000,7 @@ xcoff_end_psymtab (struct objfile *objfile, legacy_psymtab *pst,
     first_fun_line_offset;
   first_fun_line_offset = 0;
 
-  end_psymtab_common (objfile, pst);
+  pst->end ();
 
   pst->number_of_dependencies = number_dependencies;
   if (number_dependencies)
@@ -2921,12 +2921,6 @@ xcoff_initial_scan (struct objfile *objfile, symfile_add_flags symfile_flags)
   val = bfd_bread (info->symtbl, size, abfd);
   if (val != size)
     perror_with_name (_("reading symbol table"));
-
-  /* I'm not sure how how good num_symbols is; the rule of thumb in
-     init_psymbol_list was developed for a.out.  On the one hand,
-     num_symbols includes auxents.  On the other hand, it doesn't
-     include N_SLINE.  */
-  init_psymbol_list (objfile, num_symbols);
 
   scoped_free_pendings free_pending;
   minimal_symbol_reader reader (objfile);

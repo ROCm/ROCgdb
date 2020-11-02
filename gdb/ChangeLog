@@ -1,3 +1,67 @@
+2020-11-01  Tom Tromey  <tom@tromey.com>
+
+	* dbxread.c (dbx_end_psymtab): Update.
+	* dwarf2/read.c (process_psymtab_comp_unit_reader)
+	(build_type_psymtabs_reader): Update.
+	* xcoffread.c (xcoff_end_psymtab): Update.
+	* ctfread.c (scan_partial_symbols): Update.
+	* psymtab.c (sort_pst_symbols): Remove.
+	(partial_symtab::end): Rename from end_psymtab_common.  Inline
+	sort_pst_symbols.
+	* psympriv.h (struct partial_symtab) <end>: New method.
+	(end_psymtab_common): Don't declare.
+
+2020-11-01  Tom Tromey  <tom@tromey.com>
+
+	* symmisc.c (count_psyms): New function.
+	(print_objfile_statistics): Use it.
+	* psymtab.c (append_psymbol_to_list): Remove.
+	(partial_symtab::add_psymbol): Inline append_psymbol_to_list.
+	* objfiles.h (struct objstats) <n_psyms>: Remove.
+
+2020-11-01  Tom Tromey  <tom@tromey.com>
+
+	* dbxread.c (dbx_end_psymtab): Update.
+	* dwarf2/read.c (process_psymtab_comp_unit_reader): Update.
+	(build_type_psymtabs_reader): Update.
+	* xcoffread.c (xcoff_end_psymtab): Update.
+	* ctfread.c (scan_partial_symbols): Update.
+	* psympriv.h (end_psymtab_common): Update.
+	* psymtab.c (end_psymtab_common): Remove objfile parameter.
+	(sort_pst_symbols): Likewise.
+
+2020-11-01  Tom Tromey  <tom@tromey.com>
+
+	* dbxread.c (dbx_symfile_read): Update.
+	* dwarf2/read.c (dwarf2_build_psymtabs): Update.
+	* xcoffread.c (xcoff_initial_scan): Update.
+	* psympriv.h (init_psymbol_list): Don't declare.
+	* psymtab.c (init_psymbol_list): Remove.
+
+2020-11-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (gnat_encoded_fixed_point_type_info): Renames
+	gnat_encoded_fixed_type_info.  Update all callers.
+
+2020-11-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (cast_from_gnat_encoded_fixed_point_type): Split
+	line too long.
+
+2020-11-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.c (cast_from_gnat_encoded_fixed_point_type): Renames
+	cast_from_fixed.  Update all callers.
+	(cast_to_gnat_encoded_fixed_point_type): Renames cast_to_fixed.
+	Update all callers.
+	(gnat_encoded_fixed_point_scaling_factor): Renames ada_scaling_factor.
+	Update all callers.
+	* ada-lang.h (gnat_encoded_fixed_point_scaling_factor): Renames
+	ada_scaling_factor.
+	* ada-typeprint.c: Replace call to ada_scaling_factor by call
+	to print_gnat_encoded_fixed_point_type.
+	* ada-valprint.c: Likewise.
+
 2020-10-31  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* infrun.h (infrun_debug_printf): Add check of debug_infrun flag.

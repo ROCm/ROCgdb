@@ -248,6 +248,10 @@ struct partial_symtab
 		    struct objfile *objfile);
 
 
+  /* Indicate that this partial symtab is complete.  */
+
+  void end ();
+
   /* Chain of all existing partial symtabs.  */
 
   struct partial_symtab *next = nullptr;
@@ -435,14 +439,6 @@ struct legacy_psymtab : public standard_psymtab
 
   void *read_symtab_private = nullptr;
 };
-
-/* Initialize storage for partial symbols.  If partial symbol storage
-   has already been initialized, this does nothing.  TOTAL_SYMBOLS is
-   an estimate of how many symbols there will be.  */
-
-extern void init_psymbol_list (struct objfile *objfile, int total_symbols);
-
-extern void end_psymtab_common (struct objfile *, struct partial_symtab *);
 
 /* Used when recording partial symbol tables.  On destruction,
    discards any partial symbol tables that have been built.  However,
