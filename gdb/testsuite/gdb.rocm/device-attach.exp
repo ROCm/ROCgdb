@@ -51,7 +51,6 @@ proc_with_prefix process_attach_cmdline_tests {} {
     global GDB
     global INTERNAL_GDBFLAGS
     global GDBFLAGS
-    global timeout
     global decimal
 
     if ![isnative] then {
@@ -88,7 +87,6 @@ proc_with_prefix process_attach_tests {} {
     global srcfile
     global testfile
     global subdir
-    global timeout
     global decimal
 
     clean_restart $binfile
@@ -134,21 +132,18 @@ proc_with_prefix process_attach_tests {} {
 
     # Wait a bit for gdb to finish detaching
 
-    exec sleep 5
+    exec sleep 1
 
     # Purge the symbols from gdb's brain.  (We want to be certain the
     # next attach, which won't be preceded by a "file" command, is
     # really getting the executable file without our help.)
 
-    set old_timeout $timeout
-    set timeout 15 
     set test "attach, purging symbols after detach"
     gdb_test_multiple "file" "$test" {
         -re "No executable file now.*Discard symbol table.*y or n. $" {
             gdb_test "y" "No symbol file now." "$test"
         }
     }
-    set timeout $old_timeout
 
     # Verify that we can attach to the process just by giving the
     # process ID.

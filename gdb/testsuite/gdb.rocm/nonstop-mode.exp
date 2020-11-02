@@ -92,24 +92,24 @@ gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_breakpoint "VectorAdd" "allow-pending"
 set test_name "run to VectorAdd Breakpoint"
 send_gdb "run\n"
-gdb_expect 60 {
+gdb_expect {
   -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
 
 # In non-stop mode when we do run after puting breakpoint in kernel all threads gets created
 # so we need to wait until all thread info get display on gdb console.
-sleep 5
+sleep 1
 
 gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 set test_name "run to VectorAdd Breakpoint after inferior exit"
 send_gdb "run\n"
-gdb_expect 60 {
+gdb_expect {
   -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
-sleep 5
+sleep 1
 gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 
 
@@ -131,7 +131,7 @@ gdb_test_sequence "info threads" "info threads" {
  {\d+\s+AMDGPU\sThread\s\d+\:\d+:\d+:\d+}
 }
 
-sleep 5
+sleep 1
 
 
 # Show architecture info while debugging in device code.
@@ -184,12 +184,12 @@ gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test "enable 1"
 set test_name "run to VectorAdd after disable/enable Breakpoint No"
 send_gdb "run\n"
-gdb_expect 60 {
+gdb_expect {
   -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
 
-sleep 5
+sleep 1
 gdb_test "clear VectorAdd"
 gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
 gdb_test "start" {.+hit\sTemporary\sbreakpoint\s[\d].*}
@@ -198,12 +198,12 @@ gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_breakpoint "VectorAdd" "allow-pending"
 set test_name "Again setting Breakpoint and running to Breakpoint after inferior exit"
 send_gdb "run\n"
-gdb_expect 60 {
+gdb_expect {
   -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) run"}
 }
 
-sleep 5
+sleep 1
 
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 

@@ -52,7 +52,7 @@ with_test_prefix "all stop mode" {
 
     set test_name "run in device function in all stop mode"
     send_gdb "run\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
@@ -63,7 +63,7 @@ with_test_prefix "all stop mode" {
 
     set test_name "start in device function, in all stop mode"
     send_gdb "start\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
@@ -76,7 +76,7 @@ with_test_prefix "all stop mode" {
 
     set test_name "quit in device function, in all stop mode"
     send_gdb "quit\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "A debugging session is active.*Quit anyway.*y or n. $" {
             send_gdb "y\n"
             pass $test_name
@@ -96,7 +96,7 @@ with_test_prefix "scheduler-locking" {
     set test_name "run in device function after scheduler-locking on"
     gdb_test_no_output "set scheduler-locking on"
     send_gdb "run\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
@@ -109,7 +109,7 @@ with_test_prefix "scheduler-locking" {
 
     set test_name "start in device function after scheduler-locking on"
     send_gdb "start\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
@@ -124,7 +124,7 @@ with_test_prefix "scheduler-locking" {
 
     set test_name "quit in device function after scheduler-locking on"
     send_gdb "quit\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "A debugging session is active.*Quit anyway.*y or n. $" {
             send_gdb "y\n"
             pass $test_name
@@ -141,14 +141,14 @@ with_test_prefix "non-stop mode" {
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     set test_name "run to bit_extract_kernel Breakpoint"
     send_gdb "run\n"
-    gdb_expect 60 {
+    gdb_expect {
       -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
       timeout {fail "(timeout) $test_name"}
     }
 
     set test_name "run in device function, in non-stop mode"
     send_gdb "run\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
@@ -161,7 +161,7 @@ with_test_prefix "non-stop mode" {
 
     set test_name "start in device function, in non-stop mode"
     send_gdb "start\n"
-    gdb_expect 60 {
+    gdb_expect {
          -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
@@ -176,7 +176,7 @@ with_test_prefix "non-stop mode" {
 
     set test_name "quit in device function, in non-stop mode"
     send_gdb "quit\n"
-    gdb_expect 60 {
+    gdb_expect {
         -re "A debugging session is active.*Quit anyway.*y or n. $" {
             send_gdb "y\n"
             pass $test_name

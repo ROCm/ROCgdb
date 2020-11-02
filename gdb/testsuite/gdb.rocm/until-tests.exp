@@ -65,7 +65,6 @@ gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[
 gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
 gdb_test_no_output "set scheduler-locking off"
 gdb_test "clear bit_extract_kernel"
-set timeout 60
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 # Until tests without specifying location.
@@ -78,12 +77,10 @@ gdb_test "until" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
 gdb_test "info line" "Line [expr $breakpoint_loc+1].*"
 gdb_test_no_output "set scheduler-locking off"
 gdb_test "clear bit_extract_kernel"
-set timeout 60
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 
 # Until tests and other tests after setting conditional breakpoint on AMDGPU thread.
-set timeout 40
 clean_restart ${binfile}
 gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" "Breakpoint .* at .*${testfile}.*"
@@ -101,20 +98,19 @@ gdb_breakpoint "bit_extract_kernel" "allow-pending"
 
 set test_name "run to bit_extract_kernel Breakpoint"
 send_gdb "run\n"
-gdb_expect 60 {
+gdb_expect {
   -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
   timeout {fail "(timeout) $test_name"}
 }
 
 # In non-stop mode when we do run after puting breakpoint in kernel all threads gets created
 # so we need to wait until all thread info get display on gdb console.
-sleep 5
+sleep 1
 
 gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
 gdb_test "info line" "Line $breakpoint_loc.*"
 gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
 gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
-set timeout 60
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 

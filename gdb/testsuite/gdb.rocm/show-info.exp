@@ -125,7 +125,6 @@ gdb_test_sequence "info inferiors" "info inferiors" {
  {\*\s\d+\s+process\s+\d+}
 }
 
-set timeout 40
 gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"
 gdb_test "continue" {.+Inferior\s\d+.+\sexited\snormally.+}
 
