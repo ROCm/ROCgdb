@@ -64,7 +64,6 @@ gdb_test "info line" "Line [expr $breakpoint_loc+1].*"
 gdb_test "next + 2" "\[^\r\n\]*[expr $breakpoint_loc+1+2].*"
 gdb_test_no_output "set scheduler-locking off"
 gdb_test "clear bit_extract_kernel"
-set timeout 60
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 
@@ -79,13 +78,11 @@ gdb_test "next + 3" "\[^\r\n\]*[expr $breakpoint_loc+3].*"
 gdb_test "step" "\[^\r\n\]*__bitextract_u32.*"
 gdb_test_no_output "set scheduler-locking off"
 gdb_test "disable 1"
-set timeout 60
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test "enable 1"
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 gdb_test "delete 1"
-set timeout 60
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 # Set the breakpont through line no and turn on scheduler-locking.
@@ -114,7 +111,7 @@ gdb_test_sequence "info threads" "info threads" {
     {\d+\s+AMDGPU\sThread\s\d+\:\d+\:\d+\:\d+\s}
 }
 
-sleep 5
+sleep 1
 
 
 # Show architecture info while debugging in device code.
@@ -160,7 +157,6 @@ gdb_test_no_output "set scheduler-locking step"
 gdb_test "info line" "Line $breakpoint_loc.*"
 gdb_test "next " "\[^\r\n\]*[expr $breakpoint_loc].*"
 gdb_test "clear $srcfile:$breakpoint_loc"
-set timeout 60
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 gdb_exit

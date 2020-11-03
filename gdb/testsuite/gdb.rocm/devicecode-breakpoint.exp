@@ -72,8 +72,6 @@ clean_restart ${binfile}
 #tbreak bit_extract_kernel
 gdb_breakpoint "bit_extract_kernel" "allow-pending" "temporary"
 gdb_test "run" {.+hit\sTemporary\sbreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-#controlling the timeout of the test as continue on device thread taking around 20-30s
-set timeout 30
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 clean_restart ${binfile}
@@ -115,7 +113,6 @@ verbose $wave_id_re
 
 clean_restart ${binfile}
 
-set timeout 40
 #TEST5
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_thread==<threadno>
