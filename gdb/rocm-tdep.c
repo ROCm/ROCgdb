@@ -715,40 +715,49 @@ rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
 void
 rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
-
   if (debug_infrun)
     fprintf_unfiltered (
         gdb_stdlog,
         "\e[1;34minfrun: rocm_target_ops::resume ([%d,%ld,%ld])\e[0m\n",
         ptid.pid (), ptid.lwp (), ptid.tid ());
 
-  /* Check if the thread focus is on the GPU device.  */
-  if (ptid == minus_one_ptid || !ptid_is_gpu (ptid))
+  bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
+
+  /* A specific PTID means `step only this process id'.  */
+  gdb_assert (!many_threads || !step);
+
+  if (!ptid_is_gpu (ptid) || many_threads)
     {
       beneath ()->resume (ptid, step, signo);
-      if (ptid != minus_one_ptid)
+
+      /* The request is for a single thread, we are done.  */
+      if (!many_threads)
         return;
     }
 
-  /* A specific PTID means `step only this process id'.  */
-  bool resume_one = ptid != minus_one_ptid && !ptid.is_pid ();
-  gdb_assert (resume_one || !step);
+  for (thread_info *thread :
+       all_non_exited_threads (current_inferior ()->process_target (), ptid))
+    {
+      if (!ptid_is_gpu (thread->ptid))
+        continue;
 
-  if (!resume_one)
-    error (_ ("internal error - unimplemented "));
+      struct rocm_inferior_info *info = get_rocm_inferior_info (thread->inf);
 
-  amd_dbgapi_process_set_progress (info->process_id,
-                                   AMD_DBGAPI_PROGRESS_NO_FORWARD);
+      if (!info->commit_resume_all_start)
+        {
+          amd_dbgapi_process_set_progress (info->process_id,
+                                           AMD_DBGAPI_PROGRESS_NO_FORWARD);
+          info->commit_resume_all_start = true;
+        }
 
-  amd_dbgapi_status_t status = amd_dbgapi_wave_resume (
-      get_amd_dbgapi_wave_id (ptid), step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
-                                          : AMD_DBGAPI_RESUME_MODE_NORMAL);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    warning (_ ("Could not resume %s (rc=%d)"),
-             target_pid_to_str (ptid).c_str (), status);
-
-  info->commit_resume_all_start = true;
+      amd_dbgapi_status_t status
+          = amd_dbgapi_wave_resume (get_amd_dbgapi_wave_id (ptid),
+                                    step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
+                                         : AMD_DBGAPI_RESUME_MODE_NORMAL);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+        error (_ ("Could not resume %s (rc=%d)"),
+               pid_to_str (thread->ptid).c_str (), status);
+    }
 }
 
 void
@@ -777,26 +786,6 @@ rocm_target_ops::commit_resume ()
     target_async (1);
 }
 
-static void
-rocm_target_stop_one_wave (ptid_t ptid)
-{
-  amd_dbgapi_status_t status;
-
-  status = amd_dbgapi_wave_stop (get_amd_dbgapi_wave_id (ptid));
-
-  if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-    {
-      /* the wave must have exited, set the thread status to reflect that.  */
-      auto *tp = find_thread_ptid (current_inferior (), ptid);
-      gdb_assert (tp);
-
-      tp->state = THREAD_EXITED;
-    }
-  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    warning (_ ("Could not stop %s (rc=%d)"),
-             target_pid_to_str (ptid).c_str (), status);
-}
-
 void
 rocm_target_ops::stop (ptid_t ptid)
 {
@@ -806,17 +795,38 @@ rocm_target_ops::stop (ptid_t ptid)
         "\e[1;34minfrun: rocm_target_ops::stop ([%d,%ld,%ld])\e[0m\n",
         ptid.pid (), ptid.lwp (), ptid.tid ());
 
-  if (ptid == minus_one_ptid || !ptid_is_gpu (ptid))
+  bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
+
+  if (!ptid_is_gpu (ptid) || many_threads)
     {
       beneath ()->stop (ptid);
-      if (ptid != minus_one_ptid)
+
+      /* The request is for a single thread, we are done.  */
+      if (!many_threads)
         return;
     }
 
-  if (ptid == minus_one_ptid)
-    error (_ ("internal error - unimplemented "));
+  for (thread_info *thread :
+       all_non_exited_threads (current_inferior ()->process_target (), ptid))
+    {
+      if (!ptid_is_gpu (thread->ptid))
+        continue;
 
-  rocm_target_stop_one_wave (ptid);
+      amd_dbgapi_status_t status
+          = amd_dbgapi_wave_stop (get_amd_dbgapi_wave_id (thread->ptid));
+
+      if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
+        {
+          /* the wave must have exited, set the thread status to reflect that.
+           */
+          thread->state = THREAD_EXITED;
+        }
+      else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+        {
+          error (_ ("Could not stop %s (rc=%d)"),
+                 pid_to_str (thread->ptid).c_str (), status);
+        }
+    }
 }
 
 static void
