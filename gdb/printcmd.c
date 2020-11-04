@@ -2739,6 +2739,7 @@ No argument means cancel all automatic-display expressions.\n\
 \"delete display\" has the same effect as this command.\n\
 Do \"info display\" to see current list of code numbers."),
 	   &cmdlist);
+  add_info_alias ("disp", "display", 1);
 
   add_com ("display", class_vars, display_command, _("\
 Print value of expression EXP each time the program stops.\n\
@@ -2749,6 +2750,7 @@ as in the \"x\" command, and then EXP is used to get the address to examine\n\
 and examining is done as in the \"x\" command.\n\n\
 With no argument, display all currently requested auto-display expressions.\n\
 Use \"undisplay\" to cancel display requests previously made."));
+  add_com_alias ("disp", "display", class_vars, 1);
 
   add_cmd ("display", class_vars, enable_display_command, _("\
 Enable some expressions to be displayed when program stops.\n\
