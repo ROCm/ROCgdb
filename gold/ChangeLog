@@ -1,3 +1,17 @@
+2020-11-03  Alan Modra  <amodra@gmail.com>
+
+	* powerpc.cc (Target_powerpc::tocsave_loc): Return a pointer.
+	(Target_powerpc::Relocate::relocate): Avoid -Wdangling-gsl error.
+
+2020-11-03  Nick Gasson  <nick.gasson@arm.com>
+
+	PR 26827
+	* fileread.cc (File_read::open): Ensure file_counts_lock is
+	initialized.
+	* testsuite/Makefile.am (check_PROGRAMS): Add a test that passes
+	-Wl,--threads.
+	* testsuite/Makefile.in: Regenerate.
+
 2020-10-30  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* testsuite/gnu_property_test.sh: Updated.

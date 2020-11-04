@@ -3110,8 +3110,8 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    stack.clear ();
 
 	    /* FIXME: cagney/2003-03-26: This code should be using
-               get_frame_base_address(), and then implement a dwarf2
-               specific this_base method.  */
+	       get_frame_base_address(), and then implement a dwarf2
+	       specific this_base method.  */
 	    this->get_frame_base (&datastart, &datalen);
 	    eval (datastart, datalen);
 	    result_entry = fetch (0);

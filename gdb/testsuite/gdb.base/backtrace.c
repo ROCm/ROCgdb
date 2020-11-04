@@ -15,19 +15,21 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-int __attribute__((noinline,noclone))
+#include "../lib/attributes.h"
+
+int __attribute__((noinline)) ATTRIBUTE_NOCLONE
 baz ()
 {
   return 0;	/* Break here.  */
 }
 
-int __attribute__((noinline,noclone))
+int __attribute__((noinline)) ATTRIBUTE_NOCLONE
 bar ()
 {
   return baz ();
 }
 
-int __attribute__((noinline,noclone))
+int __attribute__((noinline)) ATTRIBUTE_NOCLONE
 foo ()
 {
   return bar ();

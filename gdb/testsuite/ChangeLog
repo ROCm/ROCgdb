@@ -1,3 +1,39 @@
+2020-11-03  Tom de Vries  <tdevries@suse.de>
+
+	* lib/dwarf.exp (Dwarf::_handle_DW_TAG): Improve attribute list
+	terminator comments.
+	(Dwarf::cu, Dwarf::tu): Remove superfluous abbreviation table
+	terminator.
+
+2020-11-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.base/step-over-no-symbols.exp (test_step_over): Replace
+	integer format test with regexp.
+
+2020-11-02  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/print-file-var.exp (test): Separate compiler and
+	linker options, and build using build_executable_from_specs
+	to accommodate this.
+
+2020-11-02  Gary Benson <gbenson@redhat.com>
+
+	* lib/gdb.exp (gdb_compile): Inhibit passing "-x c++"
+	for .c files compiled as C++ with Clang if any shared
+	libraries are specified.
+
+2020-11-02  Gary Benson <gbenson@redhat.com>
+
+	* lib/attributes.h: New header.
+	* gdb.base/backtrace.c: Include the above. Replace
+	__attribute__(noclone)) with ATTRIBUTE_NOCLONE.
+	* gdb.base/infcall-nested-structs.c: Likewise.
+	* gdb.base/vla-optimized-out.c: Likewise.
+
+2020-11-02  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/fission-multi-cu.S: Remove .debug_line.dwo section.
+
 2020-11-01  Joel Brobecker  <brobecker@adacore.com>
 
 	* gdb.ada/fixed_points/fixed_points.adb: Replace use of

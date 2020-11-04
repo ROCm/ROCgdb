@@ -1,3 +1,8 @@
+2020-11-03  Alan Modra  <amodra@gmail.com>
+
+	* elf.c (bfd_section_from_shdr): Free sections_being_created.
+	Use bfd_zmalloc.
+
 2020-11-02  Alan Modra  <amodra@gmail.com>
 
 	PR 15146
@@ -152,6 +157,10 @@
 	PR 26681
 	* elflink.c (bfd_elf_gc_sections): Do not arbitrarily keep note
 	sections which are linked to another section.
+
+2020-09-30  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
+
+	* cpu-arm.c: Add cortex-a78 and cortex-a78ae.
 
 2020-09-28  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
 
