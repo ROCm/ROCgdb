@@ -754,8 +754,6 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 void
 rocm_target_ops::commit_resume ()
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
-
   if (debug_infrun)
     fprintf_unfiltered (
         gdb_stdlog,
@@ -763,8 +761,13 @@ rocm_target_ops::commit_resume ()
 
   beneath ()->commit_resume ();
 
-  if (info->commit_resume_all_start)
+  for (inferior *inf :
+       all_non_exited_inferiors (current_inferior ()->process_target ()))
     {
+      struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+      if (!info->commit_resume_all_start)
+        continue;
+
       amd_dbgapi_process_set_progress (info->process_id,
                                        AMD_DBGAPI_PROGRESS_NORMAL);
       info->commit_resume_all_start = false;
