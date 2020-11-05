@@ -170,8 +170,6 @@ static long decode_packed_array_bitsize (struct type *);
 
 static struct value *decode_constrained_packed_array (struct value *);
 
-static int ada_is_packed_array_type  (struct type *);
-
 static int ada_is_unconstrained_packed_array_type (struct type *);
 
 static struct value *value_subscript_packed (struct value *, int,
@@ -1965,7 +1963,7 @@ ada_coerce_to_simple_array_type (struct type *type)
 /* Non-zero iff TYPE represents a standard GNAT packed-array type.  */
 
 static int
-ada_is_packed_array_type  (struct type *type)
+ada_is_gnat_encoded_packed_array_type  (struct type *type)
 {
   if (type == NULL)
     return 0;
@@ -1982,7 +1980,7 @@ ada_is_packed_array_type  (struct type *type)
 int
 ada_is_constrained_packed_array_type (struct type *type)
 {
-  return ada_is_packed_array_type (type)
+  return ada_is_gnat_encoded_packed_array_type (type)
     && !ada_is_array_descriptor_type (type);
 }
 
@@ -1992,8 +1990,37 @@ ada_is_constrained_packed_array_type (struct type *type)
 static int
 ada_is_unconstrained_packed_array_type (struct type *type)
 {
-  return ada_is_packed_array_type (type)
-    && ada_is_array_descriptor_type (type);
+  if (!ada_is_array_descriptor_type (type))
+    return 0;
+
+  if (ada_is_gnat_encoded_packed_array_type (type))
+    return 1;
+
+  /* If we saw GNAT encodings, then the above code is sufficient.
+     However, with minimal encodings, we will just have a thick
+     pointer instead.  */
+  if (is_thick_pntr (type))
+    {
+      type = desc_base_type (type);
+      /* The structure's first field is a pointer to an array, so this
+	 fetches the array type.  */
+      type = TYPE_TARGET_TYPE (type->field (0).type ());
+      /* Now we can see if the array elements are packed.  */
+      return TYPE_FIELD_BITSIZE (type, 0) > 0;
+    }
+
+  return 0;
+}
+
+/* Return true if TYPE is a (Gnat-encoded) constrained packed array
+   type, or if it is an ordinary (non-Gnat-encoded) packed array.  */
+
+static bool
+ada_is_any_packed_array_type (struct type *type)
+{
+  return (ada_is_constrained_packed_array_type (type)
+	  || (type->code () == TYPE_CODE_ARRAY
+	      && TYPE_FIELD_BITSIZE (type, 0) % 8 != 0));
 }
 
 /* Given that TYPE encodes a packed array type (constrained or unconstrained),
@@ -2020,7 +2047,15 @@ decode_packed_array_bitsize (struct type *type)
     return 0;
 
   tail = strstr (raw_name, "___XP");
-  gdb_assert (tail != NULL);
+  if (tail == nullptr)
+    {
+      gdb_assert (is_thick_pntr (type));
+      /* The structure's first field is a pointer to an array, so this
+	 fetches the array type.  */
+      type = TYPE_TARGET_TYPE (type->field (0).type ());
+      /* Now we can see if the array elements are packed.  */
+      return TYPE_FIELD_BITSIZE (type, 0);
+    }
 
   if (sscanf (tail + sizeof ("___XP") - 1, "%ld", &bits) != 1)
     {
@@ -2139,6 +2174,35 @@ decode_constrained_packed_array_type (struct type *type)
   return constrained_packed_array_type (shadow_type, &bits);
 }
 
+/* Helper function for decode_constrained_packed_array.  Set the field
+   bitsize on a series of packed arrays.  Returns the number of
+   elements in TYPE.  */
+
+static LONGEST
+recursively_update_array_bitsize (struct type *type)
+{
+  gdb_assert (type->code () == TYPE_CODE_ARRAY);
+
+  LONGEST low, high;
+  if (get_discrete_bounds (type->index_type (), &low, &high) < 0
+      || low > high)
+    return 0;
+  LONGEST our_len = high - low + 1;
+
+  struct type *elt_type = TYPE_TARGET_TYPE (type);
+  if (elt_type->code () == TYPE_CODE_ARRAY)
+    {
+      LONGEST elt_len = recursively_update_array_bitsize (elt_type);
+      LONGEST elt_bitsize = elt_len * TYPE_FIELD_BITSIZE (elt_type, 0);
+      TYPE_FIELD_BITSIZE (type, 0) = elt_bitsize;
+
+      TYPE_LENGTH (type) = ((our_len * elt_bitsize + HOST_CHAR_BIT - 1)
+			    / HOST_CHAR_BIT);
+    }
+
+  return our_len;
+}
+
 /* Given that ARR is a struct value *indicating a GNAT constrained packed
    array, returns a simple array that denotes that array.  Its type is a
    standard GDB array type except that the BITSIZEs of the array
@@ -2167,6 +2231,18 @@ decode_constrained_packed_array (struct value *arr)
       error (_("can't unpack array"));
       return NULL;
     }
+
+  /* Decoding the packed array type could not correctly set the field
+     bitsizes for any dimension except the innermost, because the
+     bounds may be variable and were not passed to that function.  So,
+     we further resolve the array bounds here and then update the
+     sizes.  */
+  const gdb_byte *valaddr = value_contents_for_printing (arr);
+  CORE_ADDR address = value_address (arr);
+  gdb::array_view<const gdb_byte> view
+    = gdb::make_array_view (valaddr, TYPE_LENGTH (type));
+  type = resolve_dynamic_type (type, view, address);
+  recursively_update_array_bitsize (type);
 
   if (type_byte_order (value_type (arr)) == BFD_ENDIAN_BIG
       && ada_is_modular_type (value_type (arr)))
@@ -2752,9 +2828,11 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
       base_low_pos = base_low;
     }
 
-  base = value_as_address (array_ptr)
-    + ((low_pos - base_low_pos)
-       * TYPE_LENGTH (TYPE_TARGET_TYPE (type0)));
+  ULONGEST stride = TYPE_FIELD_BITSIZE (slice_type, 0) / 8;
+  if (stride == 0)
+    stride = TYPE_LENGTH (TYPE_TARGET_TYPE (type0));
+
+  base = value_as_address (array_ptr) + (low_pos - base_low_pos) * stride;
   return value_at_lazy (slice_type, base);
 }
 
@@ -4319,6 +4397,10 @@ ada_value_struct_elt (struct value *arg, const char *name, int no_err)
 	 offsets to each field in unconstrained record types.  */
       t1 = ada_to_fixed_type (ada_get_base_type (t1), NULL,
 			      address, NULL, check_tag);
+
+      /* Resolve the dynamic type as well.  */
+      arg = value_from_contents_and_address (t1, nullptr, address);
+      t1 = value_type (arg);
 
       if (find_struct_field (name, t1, 0,
 			     &field_type, &byte_offset, &bit_offset,
@@ -8350,7 +8432,11 @@ to_fixed_array_type (struct type *type0, struct value *dval,
 
   constrained_packed_array_p = ada_is_constrained_packed_array_type (type0);
   if (constrained_packed_array_p)
-    type0 = decode_constrained_packed_array_type (type0);
+    {
+      type0 = decode_constrained_packed_array_type (type0);
+      if (type0 == nullptr)
+	error (_("could not decode constrained packed array type"));
+    }
 
   index_type_desc = ada_find_parallel_type (type0, xa_suffix);
 
@@ -10540,7 +10626,7 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
 	  TYPE_TARGET_TYPE (value_type (array)) =
 	    ada_aligned_type (TYPE_TARGET_TYPE (value_type (array)));
 
-	if (ada_is_constrained_packed_array_type (value_type (array)))
+	if (ada_is_any_packed_array_type (value_type (array)))
 	  error (_("cannot slice a packed array"));
 
 	/* If this is a reference to an array or an array lvalue,

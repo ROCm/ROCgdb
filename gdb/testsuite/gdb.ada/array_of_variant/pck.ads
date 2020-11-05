@@ -1,4 +1,4 @@
---  Copyright 2012-2020 Free Software Foundation, Inc.
+--  Copyright 2020 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -13,12 +13,11 @@
 --  You should have received a copy of the GNU General Public License
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-with Pck; use Pck;
+with System;
 
-procedure Foo is
-   SA : Simple_Array := (1, 2, 3, 4);
-   VA : Variant_Access := New_Variant (Size => 3);
-begin
-   Update_Small (SA (3));  -- STOP
-   Update_Small (VA.T (1));
-end Foo;
+package Pck is
+   Five : Integer := 5;
+
+   procedure Do_Nothing (A : System.Address);
+
+end Pck;

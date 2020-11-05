@@ -1,3 +1,71 @@
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* ada-typeprint.c (ada_print_type): Handle __XVL fields.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* ada-typeprint.c (ada_print_type): Handle __T types.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (add_partial_symbol, process_die):
+	Handle DW_TAG_array_type.
+	(is_type_tag_for_partial): Add "lang" parameter.
+	(load_partial_dies, new_symbol): Handle DW_TAG_array_type.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_value_slice_from_ptr): Use bit size.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (read_array_type): Only apply stride to innermost
+	array.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* gdbtypes.c (update_static_array_size): Handle bit stride.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_value_struct_elt): Resolve dynamic type.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_is_any_packed_array_type): New function.
+	(ada_evaluate_subexp) <case TERNOP_SLICE>: Use it.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.c (recognize_bound_expression)
+	(quirk_ada_thick_pointer): New functions.
+	(read_array_type): Call quirk_ada_thick_pointer.
+	(set_die_type): Add "skip_data_location" parameter.
+	(quirk_ada_thick_pointer): New function.
+	(process_structure_scope): Call quirk_ada_thick_pointer.
+	* ada-lang.c (ada_is_unconstrained_packed_array_type)
+	(decode_packed_array_bitsize): Handle thick pointers without
+	parallel types.
+	(ada_is_gnat_encoded_packed_array_type): Rename from
+	ada_is_packed_array_type.
+	(ada_is_constrained_packed_array_type): Update.
+	* ada-valprint.c (ada_val_print_gnat_array): Remove.
+	(ada_value_print_1): Use ada_get_decoded_value.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (recursively_update_array_bitsize): New function.
+	(decode_constrained_packed_array_type): Call it.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (to_fixed_array_type): Error if
+	decode_constrained_packed_array_type returns NULL.
+
+2020-11-04  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/leb.h (read_3_bytes): Use bfd_get_24.
+
 2020-11-02  Tom Tromey  <tromey@adacore.com>
 
 	* Makefile.in (ALL_64_TARGET_OBS): Add amd64-ravenscar-thread.o.
