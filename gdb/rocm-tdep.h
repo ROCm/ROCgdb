@@ -78,6 +78,11 @@ extern gdb::observers::observable<> amd_dbgapi_code_object_list_updated;
 static inline bool
 ptid_is_gpu (ptid_t ptid)
 {
+  /* FIXME: Currently using values that are known not to conflict with other
+     processes to indicate if it is a GPU thread.  ptid.pid 1 is the init
+     process and is the only process that could have a ptid.lwp of 1.  The init
+     process cannot have a GPU.  No other process can have a ptid.lwp of 1.
+     The GPU wave ID is stored in the ptid.tid.  */
   return ptid.pid () != 1 && ptid.lwp () == 1;
 }
 
@@ -91,6 +96,7 @@ get_amd_dbgapi_process_id (struct inferior *inferior = nullptr);
 static inline amd_dbgapi_wave_id_t
 get_amd_dbgapi_wave_id (ptid_t ptid)
 {
+  gdb_assert (ptid_is_gpu (ptid));
   return amd_dbgapi_wave_id_t{
     static_cast<decltype (amd_dbgapi_wave_id_t::handle)> (ptid.tid ())
   };
