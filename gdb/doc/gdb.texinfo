@@ -3761,7 +3761,7 @@ appears in the @samp{info threads} display.
 On some systems, such as @sc{gnu}/Linux, @value{GDBN} is able to
 determine the name of the thread as given by the OS.  On these
 systems, a name specified with @samp{thread name} will override the
-system-give name, and removing the user-specified name will cause
+system-specified name, and removing the user-specified name will cause
 @value{GDBN} to once again display the system-specified name.
 
 @kindex thread find
@@ -12198,11 +12198,6 @@ The per-inferior heterogeneous agent number of the current thread, or 0
 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
 Debugging}.
 
-@item $_gagent
-The global heterogeneous agent number of the current thread, or 0 if not
-associated with a heterogeneous dispatch.  @xref{Heterogeneous
-Debugging}.
-
 @item $_agent_systag
 The target system's heterogeneous agent identifier (@var{agent_systag}) string
 of the heterogeneous agent of the current thread.
@@ -12212,11 +12207,6 @@ The per-inferior heterogeneous queue number of the current thread, or 0
 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
 Debugging}.
 
-@item $_gqueue
-The global heterogeneous queue number of the current thread, or 0 if not
-associated with a heterogeneous dispatch.  @xref{Heterogeneous
-Debugging}.
-
 @item $_queue_systag
 The target system's heterogeneous queue identifier (@var{queue_systag}) string
 of the heterogeneous queue of the current thread.
@@ -12224,11 +12214,6 @@ of the heterogeneous queue of the current thread.
 @item $_dispatch
 The per-inferior heterogeneous dispatch number of the current thread, or
 0 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
-Debugging}.
-
-@item $_gdispatch
-The global heterogeneous dispatch number of the current thread, or 0 if
-not associated with a heterogeneous dispatch.  @xref{Heterogeneous
 Debugging}.
 
 @item $_dispatch_systag
@@ -22276,6 +22261,7 @@ heterogeneous entities of an inferior, but not unique between
 heterogeneous entities of different inferiors.
 
 @item
+@anchor{qualified heterogeneous entity numbers}
 You can refer to a given heterogeneous entity in an inferior using the
 qualified @var{inferior-num}.@var{heterogeneous-entity-num} syntax,
 also known as a @dfn{qualified heterogeneous entity ID}, with
@@ -22300,13 +22286,13 @@ list} as argument.  The list element has the same forms as for thread
 ID lists.  @xref{thread ID list}.
 
 @item
-@anchor{global heterogeneous entity numbers} In addition to a
-@emph{per-inferior} number, each heterogeneous entity is also assigned
-a unique @emph{global} number, also known as @dfn{global heterogeneous
-entity ID}, a single integer.  Unlike the heterogeneous entity number
-component of the heterogeneous entity ID, no two threads have the same
-global heterogeneous entity ID, even when you're debugging multiple
-inferiors.
+@anchor{global heterogeneous entity numbers}
+In addition to a @emph{per-inferior} number, some heterogeneous
+entities are also assigned a unique @emph{global} number, also known
+as @dfn{global heterogeneous entity ID}, a single integer.  Unlike the
+heterogeneous entity number component of the heterogeneous entity ID,
+no two entities have the same global heterogeneous entity ID, even
+when you're debugging multiple inferiors.
 
 @end itemize
 
@@ -22324,24 +22310,16 @@ expressions, command scripts, and so forth.
 @xref{Convenience Vars,,Convenience Variables}.
 
 @vindex $_agent@r{, convenience variable}
-@vindex $_gagent@r{, convenience variable}
 @vindex $_queue@r{, convenience variable}
-@vindex $_gqueue@r{, convenience variable}
 @vindex $_dispatch@r{, convenience variable}
-@vindex $_gdispatch@r{, convenience variable}
 @item $_agent
-@itemx $_gagent
 @itemx $_queue
-@itemx $_gqueue
 @itemx $_dispatch
-@itemx $_gdispatch
 There are debugger convenience variables that contain the number of
 each heterogeneous entity associated with the current thread if it was
 created by a heterogeneous dispatch, or 0 otherwise.  @code{$_agent},
 @code{$_queue}, and @code{$_dispatch} contain the corresponding
-per-inferior heterogeneous entity number.  While @code{$_gagent},
-@code{$_gqueue}, and @code{$_gdispatch}, contain the corresponding
-global heterogeneous entity number.
+per-inferior heterogeneous entity number.
 
 @vindex $_lane@r{, convenience variable}
 @vindex $_glane@r{, convenience variable}
@@ -22462,24 +22440,21 @@ The following commands are related to heterogeneous debugging:
 
 @table @code
 
-@item info agents @r{[}-gid@r{]} @r{[}@var{agent-id-list}@r{]}
+@item info agents @r{[}@var{agent-id-list}@r{]}
 @kindex info agents
-The @code{info agents} command lists the following information for each
-heterogeneous agent (in this order):
+The @code{info agents} command lists the following information for
+each heterogeneous agent (in this order):
 
 @enumerate
 @item
-The per-inferior heterogeneous agent number assigned by @value{GDBN}.
+The heterogeneous agent ID.  @xref{qualified heterogeneous entity
+numbers}.
 
 @item
-The global heterogeneous agent number assigned by @value{GDBN}, if the
-@w{@option{-gid}} option was specified.
+The target system's heterogeneous agent identifier.
 
 @item
-The target system’s heterogeneous agent identifier.
-
-@item
-The target system’s device name.
+The target system's device name.
 
 @item
 The number of compute unit cores.
@@ -22489,7 +22464,9 @@ The total number of threads.  The number of threads that a core can execute
 concurrently is dependent on the target architecture of the device.
 
 @item
-The @acronym{PCI} slot number in @acronym{BDF, Bus:Device.Function} notation.
+The target-specific string identifying the location of the agent.  For
+example, some target agents may use the @acronym{PCI} slot number in
+@acronym{BDF, Bus:Device.Function} notation.
 
 @end enumerate
 
@@ -22508,33 +22485,39 @@ For example,
 
 @smallexample
 (@value{GDBP}) info agents
-  Id   Target Id                  Device Name Cores Threads PCI Slot
+  Id   Target Id                  Device Name Cores Threads Location
 * 1    AMDGPU Agent (GPUID 45151) vega20      240   2400    0a:00.0
   2    AMDGPU Agent (GPUID 39113) vega20      240   2400    44:00.0
 @end smallexample
 
+If you're debugging multiple inferiors, @value{GDBN} displays
+heterogeneous agent IDs using the qualified
+@var{inferior-num}.@var{agent-num} format.  Otherwise, only
+@var{agent-num} is shown.
+
 @item info queues @r{[}@var{queue-id-list}@r{]}
 @kindex info queues
-The @code{info queues} command lists the following information for each
-heterogeneous queue (in this order):
+The @code{info queues} command lists the following information for
+each heterogeneous queue (in this order):
 
 @enumerate
 @item
-The per-inferior heterogeneous queue number assigned by @value{GDBN}.
+The heterogeneous queue ID.  @xref{qualified heterogeneous entity
+numbers}.
 
 @item
-The target system’s heterogeneous queue identifier.
+The target system's heterogeneous queue identifier.
 
 @item
 The type of the heterogeneous queue.  The meaning of the queue types is target
 architecture and operating system depentent.
 
 @item
-The target system’s heterogeneous packet identifier for the next packet that
+The target system's heterogeneous packet identifier for the next packet that
 will be read from the heterogeneous queue by the device.
 
 @item
-The target system’s heterogeneous packet identifier for the next packet that
+The target system's heterogeneous packet identifier for the next packet that
 will be written to the heterogeneous queue for submission to the device.
 
 @item
@@ -22563,6 +22546,11 @@ For example,
   3    AMDGPU Queue 1:3 (QID 0) HSA (Multi)  4      4      262144   0x00007ffff7f00000
 @end smallexample
 
+If you're debugging multiple inferiors, @value{GDBN} displays
+heterogeneous queue IDs using the qualified
+@var{inferior-num}.@var{queue-num} format.  Otherwise, only
+@var{queue-num} is shown.
+
 @item info dispatches @r{[}-full@r{]} @r{[}@var{dispatch-id-list}@r{]}
 @kindex info dispatches
 The @code{info dispatches} command lists the following information for each
@@ -22570,21 +22558,22 @@ heterogeneous dispatch (in this order):
 
 @enumerate
 @item
-The per-inferior heterogeneous dispatch number assigned by @value{GDBN}.
+The heterogeneous dispatch ID.  @xref{qualified heterogeneous entity
+numbers}.
 
 @item
-The target system’s identifier of the dispatch packet that initiated the
+The target system's identifier of the dispatch packet that initiated the
 dispatch.
 
 @item
-The x, y, and z grid dimensions in terms of work-items of the heterogeneous
-dispatch.  The number of dimensions displayed matches the dimensionality of the
-heterogeneous dispatch.
+The x, y, and z heterogeneous grid dimensions, in that order, in terms of
+work-items of the heterogeneous dispatch.  The number of dimensions displayed
+matches the dimensionality of the heterogeneous dispatch.
 
 @item
-The x, y, and z heterogeneous work-group dimensions in terms of work-items of
-the heterogeneous dispatch.  The number of dimensions displayed matches the
-dimensionality of the heterogeneous dispatch.
+The x, y, and z heterogeneous work-group dimensions, in that order, in terms of
+work-items of the heterogeneous dispatch.  The number of dimensions displayed
+matches the dimensionality of the heterogeneous dispatch.
 
 @item
 The fences associated with the heterogeneous dispatch packet.  The kinds of
@@ -22631,13 +22620,18 @@ For example,
 * 1    AMDGPU Dispatch 1:1:1 (PKID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
 @end smallexample
 
+If you're debugging multiple inferiors, @value{GDBN} displays
+heterogeneous dispatch IDs using the qualified
+@var{inferior-num}.@var{dispatch-num} format.  Otherwise, only
+@var{dispatch-num} is shown.
+
 @item queue find @var{regexp}
 @cindex search for a heterogeneous queue
 @itemx dispatch find @var{regexp}
 @cindex search for a heterogeneous dispatch
 These commands operate the same way as the @samp{thread find} command
 (@pxref{thread find, ,@samp{thread find}}) except that they use the target
-system’s heterogeneous agent, queue, and dispatch identifiers respectively.
+system's heterogeneous agent, queue, and dispatch identifiers respectively.
 
 @item info packets @r{[}@var{queue-id-list}@r{]}
 @kindex info packets
@@ -22660,22 +22654,22 @@ heterogeneous agent, with the oldest packet first.
 
 @enumerate
 @item
-the associated heterogeneous agent number assigned by @value{GDBN},
-displayed as a global ID
+The associated heterogeneous agent ID.  @xref{qualified heterogeneous
+entity numbers}.
 
 @item
-the associated heterogeneous queue number assigned by @value{GDBN},
-displayed as a global ID
+The associated heterogeneous queue ID.  @xref{qualified heterogeneous
+entity numbers}.
 
 @item
-the packet position in the heterogeneous queue, with the oldest one
-being 1
+The packet position in the heterogeneous queue, with the oldest one
+being 1.
 
 @item
-additional information about the heterogeneous packet that varies
+Additional information about the heterogeneous packet that varies
 depending on the heterogeneous system and may vary depending on the
 target architecture of the heterogeneous entity
-(@pxref{Architectures})
+(@pxref{Architectures}).
 
 @end enumerate
 
@@ -22767,11 +22761,12 @@ list}).
 
 @enumerate
 @item
-The per-inferior heterogeneous lane number assigned by @value{GDBN}.
+The heterogeneous lane ID assigned by @value{GDBN}.  @xref{qualified
+heterogeneous entity numbers}.
 
 @item
-The global heterogeneous lane number assigned by @value{GDBN}, if the
-@w{@option{-gid}} option was specified.
+The global heterogeneous lane ID, if the @w{@option{-gid}} option was
+specified.  @xref{global heterogeneous entity numbers}.
 
 @item
 The thread number assigned by @value{GDBN} for the thread that
@@ -27173,8 +27168,7 @@ implemented unless noted below.
 
 The command line interface @code{info agents}, @code{info queues}, @code{info
 dispatches}, @code{queue find}, and @code{dispatch find} commands are
-supported.  However, these have no Python bindings and have undocumented
-prototype machine interface command support that is subject to change.
+supported.  However, these have no Python bindings.
 
 The debugger convenience variable @code{$_wave_id} is available which
 returns a string that has the format:
@@ -30814,7 +30808,7 @@ Emacs Manual}).
 
 @cindex @sc{gdb/mi}, its purpose
 @sc{gdb/mi} is a line based machine oriented text interface to
-@value{GDBN} and is activated by specifying using the
+@value{GDBN} and is activated by specifying the
 @option{--interpreter} command line option (@pxref{Mode Options}).  It
 is specifically intended to support the development of systems which
 use the debugger as just one small component of a larger system.
@@ -30870,6 +30864,7 @@ may repeat one or more times.
 * GDB/MI Ada Tasking Commands::
 * GDB/MI Program Execution::
 * GDB/MI Stack Manipulation::
+* GDB/MI Heterogeneous Debugging Commands::
 * GDB/MI Variable Objects::
 * GDB/MI Data Manipulation::
 * GDB/MI Tracepoint Commands::
@@ -30892,7 +30887,7 @@ may repeat one or more times.
 @section @sc{gdb/mi} General Design
 @cindex GDB/MI General Design
 
-Interaction of a @sc{GDB/MI} frontend with @value{GDBN} involves three
+Interaction of a @sc{gdb/mi} frontend with @value{GDBN} involves three
 parts---commands sent to @value{GDBN}, responses to those commands
 and notifications.  Each command results in exactly one response,
 indicating either successful completion of the command, or an error.
@@ -31093,7 +31088,7 @@ The key observation is that regardless of the structure of the
 target, MI can have a global list of threads, because most commands that 
 accept the @samp{--thread} option do not need to know what process that
 thread belongs to.  Therefore, it is not necessary to introduce
-neither additional @samp{--process} option, nor an notion of the
+neither additional @samp{--process} option, nor a notion of the
 current process in the MI interface.  The only strictly new feature
 that is required is the ability to find how the threads are grouped
 into processes.
@@ -31109,14 +31104,14 @@ debugging at the moment.  By passing an identifier of a thread group
 to the @code{-list-thread-groups} command, it is possible to obtain
 the members of specific thread group.
 
-To allow the user to easily discover processes, and other objects, he
-wishes to debug, a concept of @dfn{available thread group} is
-introduced.  Available thread group is an thread group that
+To allow users to easily discover processes, and other objects, they
+wish to debug, a concept of @dfn{available thread group} is
+introduced.  Available thread group is a thread group that
 @value{GDBN} is not debugging, but that can be attached to, using the
 @code{-target-attach} command.  The list of available top-level thread
 groups can be obtained using @samp{-list-thread-groups --available}.
-In general, the content of a thread group may be only retrieved only
-after attaching to that thread group.
+In general, the content of a thread group may be retrieved only after
+attaching to that thread group.
 
 Thread groups are related to inferiors (@pxref{Inferiors Connections and
 Programs}).  Each inferior corresponds to a thread group of a special
@@ -31245,7 +31240,7 @@ corresponding output for that command will also be prefixed by that same
 @code{"done" | "running" | "connected" | "error" | "exit"}
 
 @item @var{async-class} @expansion{}
-@code{"stopped" | @var{others}} (where @var{others} will be added
+@code{"stopped" | "running" | @var{others}} (where @var{others} will be added
 depending on the needs---this is still in development).
 
 @item @var{result} @expansion{}
@@ -31311,7 +31306,7 @@ prefixed by @samp{+}.
 @item
 @cindex async output in @sc{gdb/mi}
 @var{exec-async-output} contains asynchronous state change on the target
-(stopped, started, disappeared).  All async output is prefixed by
+(stopped, running).  All async output is prefixed by
 @samp{*}.
 
 @item
@@ -31416,7 +31411,7 @@ The following table gives a summary of the released versions of the MI
 interface: the version number, the version of GDB in which it first appeared
 and the breaking changes compared to the previous version.
 
-@multitable @columnfractions .05 .05 .9
+@multitable @columnfractions .1 .1 .8
 @headitem MI version @tab GDB version @tab Breaking changes
 
 @item
@@ -31435,7 +31430,7 @@ None
 @itemize
 @item
 The @code{-environment-pwd}, @code{-environment-directory} and
-@code{-environment-path} commands now returns values using the MI output
+@code{-environment-path} commands now return values using the MI output
 syntax, rather than CLI output syntax.
 
 @item
@@ -31494,6 +31489,9 @@ follow development on @email{gdb@@sourceware.org} and
 * GDB/MI Breakpoint Information::
 * GDB/MI Frame Information::
 * GDB/MI Thread Information::
+* GDB/MI Heterogeneous Agent Information::
+* GDB/MI Heterogeneous Queue Information::
+* GDB/MI Heterogeneous Dispatch Information::
 * GDB/MI Ada Exception Information::
 @end menu
 
@@ -31785,7 +31783,7 @@ for existing method and format values.
 Reports that a parameter of the command @code{set @var{param}} is
 changed to @var{value}.  In the multi-word @code{set} command,
 the @var{param} is the whole parameter list to @code{set} command.
-For example, In command @code{set check type on}, @var{param}
+For example, in command @code{set check type on}, @var{param}
 is @code{check type} and @var{value} is @code{on}.
 
 @item =memory-changed,thread-group=@var{id},addr=@var{addr},len=@var{len}[,type="code"]
@@ -31978,7 +31976,7 @@ For example, here is what the output of @code{-break-insert}
 @node GDB/MI Frame Information
 @subsection @sc{gdb/mi} Frame Information
 
-Response from many MI commands includes an information about stack
+Response from many MI commands includes information about a stack
 frame.  This information is a tuple that may have the following
 fields:
 
@@ -32008,7 +32006,7 @@ The source line corresponding to the frames' code address.  This field
 may be absent.
 
 @item from
-The name of the binary file (either executable or shared library) the
+The name of the binary file (either executable or shared library) that
 corresponds to the frame's code address.  This field may be absent.
 
 @end table
@@ -32016,7 +32014,7 @@ corresponds to the frame's code address.  This field may be absent.
 @node GDB/MI Thread Information
 @subsection @sc{gdb/mi} Thread Information
 
-Whenever @value{GDBN} has to report an information about a thread, it
+Whenever @value{GDBN} has to report information about a thread, it
 uses a tuple with the following fields.  The fields are always present unless
 stated otherwise.
 
@@ -32051,6 +32049,183 @@ if the thread is stopped.  Its format is documented in
 @item core
 The value of this field is an integer number of the processor core the
 thread was last seen on.  This field is optional.
+@end table
+
+@node GDB/MI Heterogeneous Agent Information
+@subsection @sc{gdb/mi} Heterogeneous Agent Information
+
+Whenever @value{GDBN} has to report information about a heterogeneous
+agent (@pxref{Heterogeneous Debugging}), it uses a tuple with the
+following fields.  The fields are always present unless stated
+otherwise.
+
+@table @code
+@item id
+The qualified heterogeneous agent ID.  @xref{qualified heterogeneous
+entity numbers}.
+
+@item target-id
+The target-specific string identifying the heterogeneous agent.
+
+@item details
+Additional information about the heterogeneous agent provided by the
+target.  It is supposed to be human-readable and not interpreted by
+the frontend.  This field is optional.
+
+@item device-name
+The target system's heterogeneous agent identifier.  This field is
+optional.
+
+@item cores
+The number of compute unit cores.
+
+@item threads
+The total number of threads.  The number of threads that a core can
+execute concurrently is dependent on the target architecture of the
+device.
+
+@item location
+The target-specific string identifying the location of the agent.  For
+example, some target agents may use the @acronym{PCI} slot number in
+@acronym{BDF, Bus:Device.Function} notation.
+@end table
+
+@node GDB/MI Heterogeneous Queue Information
+@subsection @sc{gdb/mi} Heterogeneous Queue Information
+
+Whenever @value{GDBN} has to report information about a heterogeneous
+queue (@pxref{Heterogeneous Debugging}), it uses a tuple with the
+following fields.  The fields are always present unless stated
+otherwise.
+
+@table @code
+@item id
+The qualified heterogeneous queue ID.  @xref{qualified heterogeneous
+entity numbers}.
+
+@item agent-id
+The qualified heterogeneous agent ID with which the heterogeneous
+queue is associated.  @xref{qualified heterogeneous entity numbers}.
+
+@item target-id
+The target-specific string identifying the heterogeneous queue.
+
+@item details
+Additional information about the heterogeneous queue provided by the
+target.  It is supposed to be human-readable and not interpreted by
+the frontend.  This field is optional.
+
+@item type
+The type of the heterogeneous queue.  The meaning of the queue types
+is target architecture and operating system dependant.
+
+@item read
+The target system's heterogeneous packet identifier for the next
+packet that will be read from the heterogeneous queue by the device.
+
+@item write
+The target system's heterogeneous packet identifier for the next
+packet that will be written to the heterogeneous queue for submission
+to the device.
+
+@item size
+The size in bytes of the heterogeneous queue packet buffer.
+
+@item addr
+The global memory address of the heterogeneous queue packet buffer.
+@end table
+
+@node GDB/MI Heterogeneous Dispatch Information
+@subsection @sc{gdb/mi} Heterogeneous Dispatch Information
+
+Whenever @value{GDBN} has to report information about a heterogeneous
+dispatch (@pxref{Heterogeneous Debugging}), it uses a tuple with the
+following fields. The fields are always present unless stated
+otherwise.
+
+@table @code
+@item id
+The qualified heterogeneous dispatch ID.  @xref{qualified
+heterogeneous entity numbers}.
+
+@item queue-id
+The qualified heterogeneous queue ID with which the heterogeneous
+dispatch is associated.  @xref{qualified heterogeneous entity
+numbers}.
+
+@item target-id
+The target-specific string identifying the heterogeneous dispatch.
+
+@item details
+Additional information about the heterogeneous dispatch provided by
+the target.  It is supposed to be human-readable and not interpreted
+by the frontend.  This field is optional.
+
+@item grid
+A list of the x, y, and z heterogeneous grid dimensions, in that
+order, in terms of work-items of the heterogeneous dispatch.  The
+number of elements matches the dimensionality of the heterogeneous
+dispatch.
+
+@item workgroup
+A list of the x, y, and z heterogeneous work-group dimensions, in that
+order in terms of work-items of the heterogeneous dispatch.  The
+number of elements matches the dimensionality of the heterogeneous
+dispatch.
+
+@item fences
+A list of the fences associated with the heterogeneous dispatch
+packet.  The kinds of fences are target architecture dependent.  Each
+fence is a tuple with the following fields:
+
+@table @code
+@item name
+The name of the fence.
+
+@item value
+The value of the fence.  This field is optional.  If omitted then the
+fence is present if in the list.
+
+@item abbrev
+An abbreviation that can be used to display the fence and its value.
+This field is optional.
+@end table
+
+@item address-spaces
+A list of address spaces associated with the heterogeneous dispatch
+packet.  The address spaces are target architecture dependent.  Each
+address space is a tuple with the following fields:
+
+@table @code
+@item name
+The name of the address space.
+
+@item size
+The size in bytes of the address space.
+
+@item abbrev
+An abbreviation that can be used to display the address space.  This
+field is optional.
+@end table
+
+@item kernel-desc
+The global memory address of the kernel descriptor for the
+heterogeneous dispatch.  The descriptor is target architecture
+dependent.
+
+@item kernel-args
+The global memory address of the kernel arguments for the
+heterogeneous dispatch.
+
+@item completion
+The global memory address of the completion event for the
+heterogeneous dispatch.  Omitted if the heterogeneous dispatch has no
+completion event.  The event is target architecture and operating
+system dependent.
+
+@item kernel-function
+The global memory address of the kernel function entry point for the
+heterogeneous dispatch.
 @end table
 
 @node GDB/MI Ada Exception Information
@@ -34574,6 +34749,181 @@ The corresponding @value{GDBN} commands are @samp{frame}, @samp{up},
 (gdb)
 -stack-select-frame 2
 ^done
+(gdb)
+@end smallexample
+
+@c %%%%%%%%%%%%%%%%%%%%%%%%%%%% SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+@node GDB/MI Heterogeneous Debugging Commands
+@section @sc{gdb/mi} Heterogeneous Debugging Commands
+
+@cindex heterogeneous debugging commands for @sc{gdb/mi}
+@cindex @sc{gdb/mi}, heterogeneous debugging commands
+This section documents @sc{gdb/mi} commands for heterogeneous
+debugging (@pxref{Heterogeneous Debugging}).
+
+@subheading The @code{-agent-info} Command
+@findex -agent-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -agent-info [ @var{agent-id} ]
+@end smallexample
+
+Reports information about either a specific heterogeneous agent, if
+the @var{agent-id} parameter is present, or about all heterogeneous
+agents.  @var{agent-id} is the qualified heterogeneous agent ID.  When
+printing information about all heterogeneous agents, also reports the
+qualified heterogeneous agent ID of the current heterogeneous agent.
+@xref{qualified heterogeneous entity numbers}.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info agents}.
+
+@subsubheading Result
+
+The result contains the following attributes:
+
+@table @code
+@item agents
+A list of heterogeneous agents.  The format of the elements of the
+list is described in @ref{GDB/MI Heterogeneous Agent Information}.
+
+@item current-agent-id
+The qualified heterogeneous agent ID of the heterogeneous agent
+associated with the currently selected thread.  This field is omitted
+if there is no selected thread (for example, when the selected
+inferior is not running, and therefore has no threads), the selected
+thread is not associated with a heterogeneous agent, or if a
+@var{agent-id} argument was passed to the command.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-agent-info
+^done,agents=[
+@{id="1.1",target-id="AMDGPU Agent (GPUID 45151)",
+  device-name="vega20",cores="240",threads="2400",location="0a:00.0"@}​​​​​,
+@{id="1.2",target-id="AMDGPU Agent (GPUID 39113)",
+  device-name="vega20",cores="240",threads="2400",location="44:00.0"@}​​​​​],
+current-agent-id="1.1"
+(gdb)
+@end smallexample
+
+@subheading The @code{-queue-info} Command
+@findex -queue-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -queue-info [ @var{queue-id} ]
+@end smallexample
+
+Reports information about either a specific heterogeneous queue, if
+the @var{queue-id} parameter is present, or about all heterogeneous
+queues.  @var{queue-id} is the qualified heterogeneous queue ID.  When
+printing information about all heterogeneous queues, also reports the
+qualified heterogeneous queue ID of the current heterogeneous queue.
+@xref{qualified heterogeneous entity numbers}.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info queues}.
+
+@subsubheading Result
+
+The result contains the following attributes:
+
+@table @code
+@item queues
+A list of heterogeneous queues.  The format of the elements of the
+list is described in @ref{GDB/MI Heterogeneous Queue Information}.
+
+@item current-queue-id
+The qualified heterogeneous queue ID of the heterogeneous queue
+associated with the currently selected thread.  This field is omitted
+if there is no selected thread (for example, when the selected
+inferior is not running, and therefore has no threads), the selected
+thread is not associated with a heterogeneous queue, or if a
+@var{queue-id} argument was passed to the command.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-queue-info
+^done,queues=[
+@{id="1.1",agent-id="1.1",target-id="AMDGPU Queue 1:1 (QID 2)",type="HSA (Multi)",
+  read="0",write="2",size="65536",addr="0x00007ffff7ee0000"@}​​​​​,
+@{id="1.2",agent-id="1.1",target-id="AMDGPU Queue 1:2 (QID 3)",type="DMA",
+  size="1048576",addr="0x00007ffde4800000"@}​​​​​],
+@{id="1.3",agent-id="1.1",target-id="AMDGPU Queue 2:3 (QID 1)",type="HSA (Multi)",
+  read="2",write="2",size="262144",addr="0x00007ffff7e80000"@}​​​​​,
+@{id="1.4",agent-id="1.1",target-id="AMDGPU Queue 1:4 (QID 0)",type="HSA (Multi)",
+  read="4",write="4",size="262144",addr="0x00007ffff7f80000"@}​​​​​],
+current-queue-id="1.1"
+(gdb)
+@end smallexample
+
+@subheading The @code{-dispatch-info} Command
+@findex -agent-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -dispatch-info [ @var{dispatch-id} ]
+@end smallexample
+
+Reports information about either a specific heterogeneous dispatch, if
+the @var{dispatch-id} parameter is present, or about all heterogeneous
+dispatches.  @var{dispatch-id} is the qualified heterogeneous dispatch
+ID.  When printing information about all heterogeneous dispatches,
+also reports the qualified heterogeneous dispatch ID of the current
+heterogeneous dispatch.  @xref{qualified heterogeneous entity
+numbers}.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info dispatches}.
+
+@subsubheading Result
+
+The result contains the following attributes:
+
+@table @code
+@item dispatches
+A list of heterogeneous dispatches.  The format of the elements of the
+list is described in @ref{GDB/MI Heterogeneous Dispatch Information}.
+
+@item current-dispatch-id
+The qualified heterogeneous dispatch ID of the heterogeneous dispatch
+associated with the currently selected thread.  This field is omitted
+if there is no selected thread (for example, when the selected
+inferior is not running, and therefore has no threads), the selected
+thread is not associated with a heterogeneous dispatch, or if a
+@var{dispatch-id} argument was passed to the command.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-dispatch-info
+^done,dispatches=[
+@{id="1.1",queue_id="1.1",target-id="AMDGPU Dispatch 1:1:1 (PKID 0)",
+  grid="[1024,1,1]",workgroup="[256,1,1]",
+  fences=[@{name="Barrier", abbrev="B"@},@{name="Aquire", value="System", abbrev="As"@}],
+  address-spaces=[@{name="Shared", size="0"@},@{name="Private", size="0"@}],
+  kernel-desc="0x00007ffde7e00740",kernel-args="0x00007fffeff00000",
+  completion="0x0000000000000000",kernel-function="0x00007ffde7e01000"@}​​​​​],
+current-dispatch-id="1.1"
 (gdb)
 @end smallexample
 
