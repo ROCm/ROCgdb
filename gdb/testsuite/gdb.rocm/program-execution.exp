@@ -25,132 +25,64 @@ if [skip_hipcc_tests] {
     return 0
 }
 
-if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+if {[build_executable "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
     return -1
 }
 
+# Test "start" and "quit" while stopped at a breakpoint in device
+# code.  MODE is the mode being tested.  It can either be "all-stop",
+# "sched-lock" or "non-stop".
+
+proc test {mode} {
+    global gdb_prompt binfile
+
+    clean_restart ${binfile}
+
+    if {$mode == "non-stop"} {
+	gdb_test_no_output "set non-stop on"
+    }
+
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+    if {$mode == "sched-lock"} {
+	gdb_test_no_output "set scheduler-locking on"
+    }
+
+    gdb_test_multiple "run" "run in device function" {
+	-re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
+	    send_gdb "y\n"
+	    exp_continue
+	}
+	-re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
+	    pass $gdb_test_name
+	}
+    }
+
+    gdb_test_multiple "start" "start in device function" {
+	-re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
+	    send_gdb "y\n"
+	    exp_continue
+	}
+	-re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
+	    pass $gdb_test_name
+	}
+    }
+
+    gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+    gdb_test_multiple "quit" "quit in device function" {
+	-re "A debugging session is active.*Quit anyway.*y or n. $" {
+	    send_gdb "y\n"
+	    pass $gdb_test_name
+	}
+    }
+}
+
 with_rocm_gpu_lock {
-
-# Set symbolic breakpoint in device code and do "run", "start"
-# and "quit" in it.
-with_test_prefix "all stop mode" {
-    gdb_breakpoint "bit_extract_kernel" "allow-pending"
-    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-
-    gdb_test_multiple "run" "run in device function" {
-        -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-            send_gdb "y\n"
-            exp_continue
-        }
-        -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-	    pass $gdb_test_name
-	}
+    foreach_with_prefix mode {"all-stop" "sched-lock" "non-stop"} {
+	test $mode
     }
 
-    gdb_test_multiple "start" "start in device function" {
-        -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-            send_gdb "y\n"
-            exp_continue
-        }
-        -re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
-	    pass $gdb_test_name
-	}
-    }
-
-    gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-
-    gdb_test_multiple "quit" "quit in device function" {
-        -re "A debugging session is active.*Quit anyway.*y or n. $" {
-            send_gdb "y\n"
-            pass $gdb_test_name
-        }
-    }
-}
-
-clean_restart ${binfile}
-
-# Turn on scheduler-locking and check "run", "start" and
-# "quit" in it.
-with_test_prefix "scheduler-locking" {
-    gdb_breakpoint "bit_extract_kernel" "allow-pending"
-    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-
-    gdb_test_no_output "set scheduler-locking on"
-
-    gdb_test_multiple "run" "run in device function" {
-        -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-            send_gdb "y\n"
-            exp_continue
-        }
-        -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $gdb_test_name
-        }
-    }
-
-    gdb_test_multiple "start" "start in device function" {
-        -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-            send_gdb "y\n"
-            exp_continue
-        }
-        -re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $gdb_test_name
-        }
-    }
-
-    gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-
-    gdb_test_multiple "quit" "quit in device function" {
-        -re "A debugging session is active.*Quit anyway.*y or n. $" {
-            send_gdb "y\n"
-            pass $gdb_test_name
-        }
-    }
-}
-
-clean_restart ${binfile}
-
-# Check "run", "start" and "quit" in non-stop mode.
-
-with_test_prefix "non-stop mode" {
-    gdb_test_no_output "set non-stop on"
-
-    gdb_breakpoint "bit_extract_kernel" "allow-pending"
-
-    gdb_test_multiple "run" "run to bit_extract_kernel breakpoint" {
-	-re "hit Breakpoint \[1-9\].*$gdb_prompt.*" {
-	    pass $gdb_test_name
-	}
-    }
-
-    gdb_test_multiple "run" "run in device function" {
-        -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-            send_gdb "y\n"
-            exp_continue
-        }
-        -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $gdb_test_name
-        }
-    }
-
-    gdb_test_multiple "start" "start in device function" {
-         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-            send_gdb "y\n"
-            exp_continue
-        }
-        -re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $gdb_test_name
-        }
-    }
-
-    gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-
-    gdb_test_multiple "quit" "quit in device function" {
-        -re "A debugging session is active.*Quit anyway.*y or n. $" {
-            send_gdb "y\n"
-            pass $gdb_test_name
-        }
-    }
-}
-
-gdb_exit
+    gdb_exit
 }
