@@ -18,27 +18,14 @@
 
 load_lib rocm.exp
 
-set testfile "program-execution"
-set srcfile ${srcdir}/${subdir}/${testfile}.cpp
-set objfile [standard_output_file ${testfile}.o]
-set binfile [standard_output_file ${testfile}]
+standard_testfile .cpp
 
-# Check if skip hip tests
 if [skip_hipcc_tests] {
     verbose "Skipping hip test: ${testfile}."
     return 0
 }
 
-# Compile the hip program
 if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
-    return -1
-}
-
-gdb_start
-
-# Load the hip program
-if {[gdb_load ${binfile}] == -1} {
-    verbose "failed to load program ${testfile}."
     return -1
 }
 
@@ -50,38 +37,33 @@ with_test_prefix "all stop mode" {
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
-    set test_name "run in device function in all stop mode"
-    send_gdb "run\n"
-    gdb_expect {
+    gdb_test_multiple "run" "run in device function" {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
         }
-        -re "hit Breakpoint \[1-9\].*$gdb_prompt $" { pass $test_name }
-        timeout { fail "(timeout) $test_name" }
+        -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
+	    pass $gdb_test_name
+	}
     }
 
-    set test_name "start in device function, in all stop mode"
-    send_gdb "start\n"
-    gdb_expect {
+    gdb_test_multiple "start" "start in device function" {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
         }
-        -re "Temporary breakpoint \[1-9\].*$gdb_prompt $" { pass $test_name }
-        timeout { fail "(timeout) $test_name" }
+        -re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
+	    pass $gdb_test_name
+	}
     }
 
     gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
-    set test_name "quit in device function, in all stop mode"
-    send_gdb "quit\n"
-    gdb_expect {
+    gdb_test_multiple "quit" "quit in device function" {
         -re "A debugging session is active.*Quit anyway.*y or n. $" {
             send_gdb "y\n"
-            pass $test_name
+            pass $gdb_test_name
         }
-        timeout { fail "(timeout) $test_name" }
     }
 }
 
@@ -93,95 +75,80 @@ with_test_prefix "scheduler-locking" {
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
-    set test_name "run in device function after scheduler-locking on"
     gdb_test_no_output "set scheduler-locking on"
-    send_gdb "run\n"
-    gdb_expect {
+
+    gdb_test_multiple "run" "run in device function" {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
         }
         -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $test_name
+            pass $gdb_test_name
         }
-        timeout { fail "(timeout) $test_name" }
     }
 
-    set test_name "start in device function after scheduler-locking on"
-    send_gdb "start\n"
-    gdb_expect {
+    gdb_test_multiple "start" "start in device function" {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
         }
         -re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $test_name
+            pass $gdb_test_name
         }
-        timeout { fail "(timeout) $test_name" }
     }
 
     gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
-    set test_name "quit in device function after scheduler-locking on"
-    send_gdb "quit\n"
-    gdb_expect {
+    gdb_test_multiple "quit" "quit in device function" {
         -re "A debugging session is active.*Quit anyway.*y or n. $" {
             send_gdb "y\n"
-            pass $test_name
+            pass $gdb_test_name
         }
-        timeout { fail "(timeout) $test_name" }
     }
 }
 
 clean_restart ${binfile}
 
-# Turn on non-stop mode and check "run","start" and "quit" in  it.
+# Check "run", "start" and "quit" in non-stop mode.
+
 with_test_prefix "non-stop mode" {
     gdb_test_no_output "set non-stop on"
+
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
-    set test_name "run to bit_extract_kernel Breakpoint"
-    send_gdb "run\n"
-    gdb_expect {
-      -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
-      timeout {fail "(timeout) $test_name"}
+
+    gdb_test_multiple "run" "run to bit_extract_kernel breakpoint" {
+	-re "hit Breakpoint \[1-9\].*$gdb_prompt.*" {
+	    pass $gdb_test_name
+	}
     }
 
-    set test_name "run in device function, in non-stop mode"
-    send_gdb "run\n"
-    gdb_expect {
+    gdb_test_multiple "run" "run in device function" {
         -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
         }
         -re "hit Breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $test_name
+            pass $gdb_test_name
         }
-        timeout { fail "(timeout) $test_name" }
     }
 
-    set test_name "start in device function, in non-stop mode"
-    send_gdb "start\n"
-    gdb_expect {
+    gdb_test_multiple "start" "start in device function" {
          -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
             send_gdb "y\n"
             exp_continue
         }
         -re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
-            pass $test_name
+            pass $gdb_test_name
         }
-        timeout { fail "(timeout) $test_name" }
     }
 
     gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
-    set test_name "quit in device function, in non-stop mode"
-    send_gdb "quit\n"
-    gdb_expect {
+    gdb_test_multiple "quit" "quit in device function" {
         -re "A debugging session is active.*Quit anyway.*y or n. $" {
             send_gdb "y\n"
-            pass $test_name
+            pass $gdb_test_name
         }
-        timeout { fail "(timeout) $test_name" }
     }
 }
 
