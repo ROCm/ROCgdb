@@ -22,12 +22,8 @@
 #include <hip/hip_runtime.h>
 #include <hip/hip_runtime.h>
 
-// Defining number of elements in Array
+// Number of elements in Array.
 #define N 64
-#define NO_OF_BLOCKS 4
-#define NO_OF_THREADS 256
-
-
 
 #define HIPCHECK(cmd)                                                          \
 do {                                                                           \
@@ -95,9 +91,9 @@ int main(void)
   for (int i = 0; i < nGpu; i ++) {
   HIPCHECK(hipSetDevice(i));
 
-  // Calling VectorAdd kernels with NO_OF_BLOCKS and NO_OF_THREADS per block, passing
-  // device pointers as parameters
-  hipLaunchKernelGGL(VectorAdd, dim3(NO_OF_BLOCKS), dim3(NO_OF_THREADS), 0, stream[i], d_a[i], d_b[i], d_c[i]);
+  hipLaunchKernelGGL(VectorAdd,
+		     dim3(GRID_DIM), dim3(BLOCK_DIM),
+		     0, stream[i], d_a[i], d_b[i], d_c[i]);
   }
   
   for (int i = 0; i < nGpu; i ++) {

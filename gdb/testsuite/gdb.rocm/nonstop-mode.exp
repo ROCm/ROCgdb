@@ -20,129 +20,123 @@
 
 load_lib rocm.exp
 
-set testfile "nonstop-mode"
-set srcfile ${srcdir}/${subdir}/${testfile}.cpp
-set objfile [standard_output_file ${testfile}.o]
-set binfile [standard_output_file ${testfile}]
+standard_testfile .cpp
 
-set wave_id {(0,0,0)/0}
-set rocm_threadno {1:1:1:5}
-set threadid {16}
+set num_waves 16
 
-# Check if skip hip tests
 if [skip_hipcc_tests] {
     verbose "Skipping hip test: ${testfile}."
     return 0
 }
 
-# Compile the hip program
-if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+# Some GPUs have 32 lanes per wave, while others have 64.  Use 32
+# threads per block so that we can control number of waves using the
+# number of blocks on all GPUs.
+set options [list \
+		 debug \
+		 hip \
+		 additional_flags=-DGRID_DIM=$num_waves \
+		 additional_flags=-DBLOCK_DIM=32 \
+		]
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile $options]} {
     return -1
 }
 
-gdb_start
+# Run and wait until all threads/waves report a breakpoint hit.
 
-# Load the hip program
-if {[gdb_load ${binfile}] == -1} {
-    verbose "failed to load program ${testfile}."
-    return -1
+proc run_and_wait {test} {
+    global gdb_prompt
+    global num_waves
+
+    set hits 0
+
+    # Use background "run" so that we get the prompt immediately.
+    gdb_test_multiple "run&" $test {
+	-re "$gdb_prompt" {
+	    gdb_test_multiple "" $test {
+		-re "hit Breakpoint \[1-9\]" {
+		    incr hits
+		    if {$hits < $num_waves} {
+			exp_continue
+		    } else {
+			pass $test
+		    }
+		}
+	    }
+	}
+    }
 }
 
 with_rocm_gpu_lock {
 
-# Run to main and break
 if ![runto_main] {
-    fail "can't run to main and break in program ${testfile}."
+    fail "can't run to main"
     return -1
 }
 
+# Fetch the thread id of the first wave.
 
-# Code to fetch threadno and corresponding wave_id.
 # Set breakpoint in device code.
 gdb_breakpoint "VectorAdd" "allow-pending"
 gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
-send_gdb "info threads\n"
-gdb_expect -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\:\\d+:\\d+:\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
-  set threadid "$expect_out(1,string)"
-  set rocm_threadno "$expect_out(2,string)"
-  set wave_id  "$expect_out(3,string)"
+
+set threadid ""
+
+gdb_test_multiple "info threads" "extract thread id" {
+    -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+\\d+\:\\d+:\\d+:\\d+\\s+\\(\\d+,\\d+,\\d+\\)/\\d+.*$gdb_prompt $" {
+	set threadid "$expect_out(1,string)"
+	pass $gdb_test_name
+    }
 }
 
-verbose $rocm_threadno
-verbose $threadid
-verbose $wave_id
-regsub -all {[]*+.|()^$\[\\]} $wave_id {\\&} wave_id_re
-verbose $wave_id_re
+if {$threadid == ""} {
+    return
+}
+
+verbose -log "threadid=$threadid"
 
 clean_restart ${binfile}
 
 # Turn on non-stop mode.
 
-# In nonstop mode gdb prompt is not the last string to consider in regex
-# as it is lost between the other threads.
-# For example
-# Thread 5 "nonstop-mode" hit Breakpoint 1, VectorAdd () at ../../../git/gdb/testsuite/gdb.rocm/nonstop-mode.cpp:51
-# 51    int tid = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
-# (gdb)
-# Thread 6 "nonstop-mode" hit Breakpoint 1, VectorAdd () at ../../../git/gdb/testsuite/gdb.rocm/nonstop-mode.cpp:51
-# 51    int tid = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
-
 gdb_test_no_output "set non-stop on"
 gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
 gdb_breakpoint "VectorAdd" "allow-pending"
-set test_name "run to VectorAdd Breakpoint"
-send_gdb "run\n"
-gdb_expect {
-  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
-  timeout {fail "(timeout) run"}
-}
 
-# In non-stop mode when we do run after puting breakpoint in kernel all threads gets created
-# so we need to wait until all thread info get display on gdb console.
-sleep 1
+run_and_wait "run to VectorAdd Breakpoint"
 
 gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
-set test_name "run to VectorAdd Breakpoint after inferior exit"
-send_gdb "run\n"
-gdb_expect {
-  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
-  timeout {fail "(timeout) run"}
-}
-sleep 1
-gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 
+run_and_wait "run to VectorAdd Breakpoint after inferior exit"
+
+gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
 
 # Check "info agents".
 # vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"
 # vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
 gdb_test_sequence "info agents" "info agents" {
- {Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+PCI Slot}
- {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+    {Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+PCI Slot}
+    {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
 }
-
 
 # Check "info threads".
 # Sample output:
 #* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
 #  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
- {Id\s+Target\s+Id\s+Frame}
- {\d+\s+AMDGPU\sThread\s\d+\:\d+:\d+:\d+}
+    {Id\s+Target\s+Id\s+Frame}
+    {\d+\s+AMDGPU\sThread\s\d+\:\d+:\d+:\d+}
 }
-
-sleep 1
-
 
 # Show architecture info while debugging in device code.
 # Sample output "The target architecture is set automatically (currently amdgcn:gfx906)"
 gdb_test "show architecture" \
-  {The target architecture is set to "auto" \(currently "amdgcn:gfx\d+"\)\.}
+    {The target architecture is set to "auto" \(currently "amdgcn:gfx\d+"\)\.}
 
 gdb_test_sequence "show convenience" "show convenience" {
- {\$_thread = \d+}
- {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
-
+    {\$_thread = \d+}
+    {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
 }
 
 
@@ -164,9 +158,9 @@ gdb_test_sequence "show convenience" "show convenience" {
 # 1       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
 #         breakpoint already hit 1 time
 gdb_test_sequence "info break" "info break" {
- {Num\s+Type\s+Disp\sEnb Address\s+What}
- {\d+\s+breakpoint\s+keep\s+y}
- {breakpoint already hit\s\d+\stime}
+    {Num\s+Type\s+Disp\sEnb Address\s+What}
+    {\d+\s+breakpoint\s+keep\s+y}
+    {breakpoint already hit\s\d+\stime}
 }
 
 
@@ -174,41 +168,28 @@ gdb_test_sequence "info break" "info break" {
 #   Num  Description       Executable
 # * 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
 gdb_test_sequence "info inferiors" "info inferiors" {
- {Num\s+Description\s+Connection\s+Executable}
- {\*\s\d+\s+process\s+\d+}
+    {Num\s+Description\s+Connection\s+Executable}
+    {\*\s\d+\s+process\s+\d+}
 }
 
 gdb_test "disable 1"
 gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
 gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test "enable 1"
-set test_name "run to VectorAdd after disable/enable Breakpoint No"
-send_gdb "run\n"
-gdb_expect {
-  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
-  timeout {fail "(timeout) run"}
-}
+run_and_wait "run to VectorAdd after disable/enable Breakpoint No"
 
-sleep 1
 gdb_test "clear VectorAdd"
 gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
 gdb_test "start" {.+hit\sTemporary\sbreakpoint\s[\d].*}
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
 gdb_breakpoint "VectorAdd" "allow-pending"
-set test_name "Again setting Breakpoint and running to Breakpoint after inferior exit"
-send_gdb "run\n"
-gdb_expect {
-  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
-  timeout {fail "(timeout) run"}
-}
-
-sleep 1
+run_and_wait "Again setting Breakpoint and running to Breakpoint after inferior exit"
 
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 
-
 # Switch to all stop mode.
+
 gdb_test_no_output "set non-stop off"
 gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
