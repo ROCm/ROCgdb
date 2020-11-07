@@ -18,38 +18,34 @@
 
 load_lib rocm.exp
 
-set testfile "until-tests"
-set srcfile ${srcdir}/${subdir}/${testfile}.cpp
-set objfile [standard_output_file ${testfile}.o]
-set binfile [standard_output_file ${testfile}]
+standard_testfile .cpp
 
-set breakpoint_loc 35
-set threadid {16}
+set breakpoint_loc [gdb_get_line_number "location line"]
+set threadid 16
+set num_waves 16
 
-# Check if skip hip tests
 if [skip_hipcc_tests] {
     verbose "Skipping hip test: ${testfile}."
     return 0
 }
 
-# Compile the hip program
-if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
-    return -1
-}
-
-gdb_start
-
-# Load the hip program
-if {[gdb_load ${binfile}] == -1} {
-    verbose "failed to load program ${testfile}."
+# Some GPUs have 32 lanes per wave, while others have 64.  Use 32
+# threads per block so that we can control number of waves using the
+# number of blocks on all GPUs.
+set options [list \
+		 debug \
+		 hip \
+		 additional_flags=-DGRID_DIM=$num_waves \
+		 additional_flags=-DBLOCK_DIM=32 \
+		]
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile $options]} {
     return -1
 }
 
 with_rocm_gpu_lock {
 
-# Run to main and break
 if ![runto_main] {
-    fail "can't run to main and break in program ${testfile}."
+    fail "can't run to main"
     return -1
 }
 
@@ -90,22 +86,36 @@ gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[
 gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
+# Run and wait until all threads/waves report a breakpoint hit.
+
+proc run_and_wait {test} {
+    global gdb_prompt
+    global num_waves
+
+    set hits 0
+
+    # Use background "run" so that we get the prompt immediately.
+    gdb_test_multiple "run&" $test {
+	-re "$gdb_prompt" {
+	    gdb_test_multiple "" $test {
+		-re "hit Breakpoint \[1-9\]" {
+		    incr hits
+		    if {$hits < $num_waves} {
+			exp_continue
+		    } else {
+			pass $gdb_test_name
+		    }
+		}
+	    }
+	}
+    }
+}
 
 # Until and other tests in non-stop mode.
 clean_restart ${binfile}
 gdb_test_no_output "set non-stop on"
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
-
-set test_name "run to bit_extract_kernel Breakpoint"
-send_gdb "run\n"
-gdb_expect {
-  -re "hit Breakpoint \[1-9\].*$gdb_prompt.*" { pass $test_name }
-  timeout {fail "(timeout) $test_name"}
-}
-
-# In non-stop mode when we do run after puting breakpoint in kernel all threads gets created
-# so we need to wait until all thread info get display on gdb console.
-sleep 1
+run_and_wait "run to bit_extract_kernel Breakpoint"
 
 gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
 gdb_test "info line" "Line $breakpoint_loc.*"
