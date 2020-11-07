@@ -542,7 +542,7 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
           = offset & ~ROCM_ASPACE_MASK;
 
       /* FIXME: Default to the generic address space to allow the examine
-         command to work with flat addresses wihout special syntax.  */
+         command to work with flat addresses without special syntax.  */
       if (!dwarf_address_space)
         dwarf_address_space = /*DW_ASPACE_AMDGPU_generic*/ 1;
 
@@ -692,12 +692,12 @@ rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
   for (size_t i = 0; i < watchpoints.count; ++i)
     {
       amd_dbgapi_watchpoint_id_t watchpoint = watchpoints.watchpoint_ids[i];
-      auto it = std::find_if (
-          info->watchpoint_map.begin (), info->watchpoint_map.end (),
-          [watchpoint] (
-              const decltype (info->watchpoint_map)::value_type &value) {
-            return value.second.second.handle == watchpoint.handle;
-          });
+      auto it = std::find_if (info->watchpoint_map.begin (),
+                              info->watchpoint_map.end (),
+                              [watchpoint] (const decltype (
+                                  info->watchpoint_map)::value_type &value) {
+                                return value.second.second == watchpoint;
+                              });
       if (it != info->watchpoint_map.end ())
         {
           start = std::max (start, it->first);
@@ -996,8 +996,7 @@ rocm_process_event_queue (amd_dbgapi_event_kind_t until_event_kind)
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
         error (_ ("next_pending_event failed (rc=%d)"), status);
 
-      if (event_id.handle == AMD_DBGAPI_EVENT_NONE.handle
-          || event_kind == until_event_kind)
+      if (event_id == AMD_DBGAPI_EVENT_NONE || event_kind == until_event_kind)
         return event_id;
 
       rocm_process_one_event (event_id, event_kind);
@@ -1299,7 +1298,7 @@ rocm_target_ops::update_thread_list ()
       size_t count;
 
       process_id = get_amd_dbgapi_process_id (inf);
-      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+      if (process_id == AMD_DBGAPI_PROCESS_NONE)
         {
           /* The inferior may not be attached yet.  */
           continue;
@@ -1644,7 +1643,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
             = new_address_location (address, nullptr, 0);
         if (!create_breakpoint (
                 section->objfile->arch (), location.get (),
-                /*cond_string*/ NULL, /*thread*/ -1, /*extra_sring*/ NULL,
+                /*cond_string*/ NULL, /*thread*/ -1, /*extra_string*/ NULL,
                 /*parse_extra*/ 0, /*tempflag*/ 0, /*bptype*/ bp_breakpoint,
                 /*ignore_count*/ 0, /*pending_break*/ AUTO_BOOLEAN_FALSE,
                 /*ops*/ &rocm_breakpoint_ops, /*from_tty*/ 0,
@@ -1735,7 +1734,7 @@ rocm_target_inferior_appeared (struct inferior *inf)
      inferior's process stack.  */
   if (!any_thread_p ())
     {
-      /* Finalize and re-initalize the debugger API so that the handle ID
+      /* Finalize and re-initialize the debugger API so that the handle ID
          numbers will all start from the beginning again.  */
 
       amd_dbgapi_status_t status = amd_dbgapi_finalize ();
@@ -1848,7 +1847,7 @@ info_agents_command (const char *args, int from_tty)
       amd_dbgapi_agent_id_t *agent_list;
       size_t agent_count;
 
-      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+      if (process_id == AMD_DBGAPI_PROCESS_NONE)
         continue;
 
       if (amd_dbgapi_process_agent_list (process_id, &agent_count, &agent_list,
@@ -1947,8 +1946,7 @@ info_agents_command (const char *args, int from_tty)
           /* current  */
           if (!uiout->is_mi_like_p ())
             {
-              if (current_inferior () == inf
-                  && agent_id.handle == current_agent_id.handle)
+              if (current_inferior () == inf && agent_id == current_agent_id)
                 uiout->field_string ("current", "*");
               else
                 uiout->field_skip ("current");
@@ -2037,7 +2035,7 @@ info_queues_command (const char *args, int from_tty)
       amd_dbgapi_queue_id_t *queue_list;
       size_t queue_count;
 
-      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+      if (process_id == AMD_DBGAPI_PROCESS_NONE)
         continue;
 
       if (amd_dbgapi_process_queue_list (process_id, &queue_count, &queue_list,
@@ -2127,8 +2125,7 @@ info_queues_command (const char *args, int from_tty)
           if (!uiout->is_mi_like_p ())
             {
               /* current  */
-              if (current_inferior () == inf
-                  && queue_id.handle == current_queue_id.handle)
+              if (current_inferior () == inf && queue_id == current_queue_id)
                 uiout->field_string ("current", "*");
               else
                 uiout->field_skip ("current");
@@ -2232,7 +2229,7 @@ queue_find_command (const char *arg, int from_tty)
       amd_dbgapi_queue_id_t *queue_list;
       size_t queue_count;
 
-      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+      if (process_id == AMD_DBGAPI_PROCESS_NONE)
         continue;
 
       if (amd_dbgapi_process_queue_list (process_id, &queue_count, &queue_list,
@@ -2363,7 +2360,7 @@ info_dispatches_command (const char *args, int from_tty)
       amd_dbgapi_dispatch_id_t *dispatch_list;
       size_t dispatch_count;
 
-      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+      if (process_id == AMD_DBGAPI_PROCESS_NONE)
         continue;
 
       if (amd_dbgapi_process_dispatch_list (process_id, &dispatch_count,
@@ -2527,7 +2524,7 @@ info_dispatches_command (const char *args, int from_tty)
             {
               /* current  */
               if (current_inferior () == inf
-                  && dispatch_id.handle == current_dispatch_id.handle)
+                  && dispatch_id == current_dispatch_id)
                 uiout->field_string ("current", "*");
               else
                 uiout->field_skip ("current");
@@ -2720,7 +2717,7 @@ dispatch_find_command (const char *arg, int from_tty)
       amd_dbgapi_dispatch_id_t *dispatch_list;
       size_t dispatch_count;
 
-      if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
+      if (process_id == AMD_DBGAPI_PROCESS_NONE)
         continue;
 
       if (amd_dbgapi_process_dispatch_list (process_id, &dispatch_count,
