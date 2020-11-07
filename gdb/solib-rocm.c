@@ -84,7 +84,7 @@ get_solib_info (void)
 
 static void
 rocm_solib_relocate_section_addresses (struct so_list *so,
-                                       struct target_section *sec)
+				       struct target_section *sec)
 {
   if (!rocm_is_amdgcn_gdbarch (gdbarch_from_bfd (so->abfd)))
     {
@@ -180,7 +180,7 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
   protocol_end += protocol_delim.length ();
 
   std::transform (protocol.begin (), protocol.end (), protocol.begin (),
-                  [] (unsigned char c) { return std::tolower (c); });
+		  [] (unsigned char c) { return std::tolower (c); });
 
   std::string path;
   size_t path_end = uri.find_first_of ("#?", protocol_end);
@@ -194,10 +194,10 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
   decoded_path.reserve (path.length ());
   for (size_t i = 0; i < path.length (); ++i)
     if (path[i] == '%' && std::isxdigit (path[i + 1])
-        && std::isxdigit (path[i + 2]))
+	&& std::isxdigit (path[i + 2]))
       {
-        decoded_path += std::stoi (path.substr (i + 1, 2), 0, 16);
-        i += 2;
+	decoded_path += std::stoi (path.substr (i + 1, 2), 0, 16);
+	i += 2;
       }
     else
       decoded_path += path[i];
@@ -222,53 +222,53 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
   });
 
   gdb::unique_xmalloc_ptr<rocm_code_object_stream> stream (
-      XCNEW (rocm_code_object_stream));
+    XCNEW (rocm_code_object_stream));
   try
     {
       auto offset_it = params.find ("offset");
       if (offset_it != params.end ())
-        stream->offset = std::stoul (offset_it->second, nullptr, 0);
+	stream->offset = std::stoul (offset_it->second, nullptr, 0);
 
       auto size_it = params.find ("size");
       if (size_it != params.end ())
-        if (!(stream->size = std::stoul (size_it->second, nullptr, 0)))
-          {
-            bfd_set_error (bfd_error_bad_value);
-            return nullptr;
-          }
+	if (!(stream->size = std::stoul (size_it->second, nullptr, 0)))
+	  {
+	    bfd_set_error (bfd_error_bad_value);
+	    return nullptr;
+	  }
 
       if (protocol == "file")
-        {
-          int target_errno;
-          stream->fd = target_fileio_open (
-              static_cast<struct inferior *> (inferior), decoded_path.c_str (),
-              FILEIO_O_RDONLY, false, 0, &target_errno);
+	{
+	  int target_errno;
+	  stream->fd = target_fileio_open (
+	    static_cast<struct inferior *> (inferior), decoded_path.c_str (),
+	    FILEIO_O_RDONLY, false, 0, &target_errno);
 
-          if (stream->fd == -1)
-            {
-              /* FIXME: Should we set errno?  Move fileio_errno_to_host from
-                 gdb_bfd.c to fileio.cc  */
-              /* errno = fileio_errno_to_host (target_errno); */
-              bfd_set_error (bfd_error_system_call);
-              return nullptr;
-            }
+	  if (stream->fd == -1)
+	    {
+	      /* FIXME: Should we set errno?  Move fileio_errno_to_host from
+		 gdb_bfd.c to fileio.cc  */
+	      /* errno = fileio_errno_to_host (target_errno); */
+	      bfd_set_error (bfd_error_system_call);
+	      return nullptr;
+	    }
 
-          return stream.release ();
-        }
+	  return stream.release ();
+	}
       else if (protocol == "memory")
-        {
-          pid_t pid = std::stoul (path);
-          if (pid != static_cast<struct inferior *> (inferior)->pid)
-            {
-              warning (_ ("`%s': code object is from another inferior"),
-                       uri.c_str ());
-              bfd_set_error (bfd_error_bad_value);
-              return nullptr;
-            }
+	{
+	  pid_t pid = std::stoul (path);
+	  if (pid != static_cast<struct inferior *> (inferior)->pid)
+	    {
+	      warning (_ ("`%s': code object is from another inferior"),
+		       uri.c_str ());
+	      bfd_set_error (bfd_error_bad_value);
+	      return nullptr;
+	    }
 
-          stream->fd = -1;
-          return stream.release ();
-        }
+	  stream->fd = -1;
+	  return stream.release ();
+	}
     }
   catch (...)
     {
@@ -277,7 +277,7 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
     }
 
   warning (_ ("`%s': protocol not supported: %s"), uri.c_str (),
-           protocol.c_str ());
+	   protocol.c_str ());
   bfd_set_error (bfd_error_bad_value);
   return nullptr;
 }
@@ -299,7 +299,7 @@ rocm_bfd_iovec_close (bfd *nbfd, void *data)
 
 static file_ptr
 rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
-                      file_ptr offset)
+		      file_ptr offset)
 {
   auto *stream = static_cast<rocm_code_object_stream *> (data);
   int target_errno;
@@ -309,11 +309,11 @@ rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
   if (stream->fd == -1)
     {
       if (target_read_memory (stream->offset + offset, (gdb_byte *)buf, size)
-          != 0)
-        {
-          bfd_set_error (bfd_error_invalid_operation);
-          return -1;
-        }
+	  != 0)
+	{
+	  bfd_set_error (bfd_error_invalid_operation);
+	  return -1;
+	}
       return size;
     }
 
@@ -324,19 +324,19 @@ rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
       QUIT;
 
       file_ptr bytes_read = target_fileio_pread (
-          stream->fd, static_cast<gdb_byte *> (buf) + nbytes, size,
-          stream->offset + offset + nbytes, &target_errno);
+	stream->fd, static_cast<gdb_byte *> (buf) + nbytes, size,
+	stream->offset + offset + nbytes, &target_errno);
 
       if (bytes_read == 0)
-        break;
+	break;
 
       if (bytes_read < 0)
-        {
-          /* FIXME: Should we set errno?  */
-          /* errno = fileio_errno_to_host (target_errno); */
-          bfd_set_error (bfd_error_system_call);
-          return -1;
-        }
+	{
+	  /* FIXME: Should we set errno?  */
+	  /* errno = fileio_errno_to_host (target_errno); */
+	  bfd_set_error (bfd_error_system_call);
+	  return -1;
+	}
 
       nbytes += bytes_read;
       size -= bytes_read;
@@ -355,23 +355,23 @@ rocm_bfd_iovec_stat (bfd *abfd, void *data, struct stat *sb)
   if (!stream->size)
     {
       gdb_assert (stream->fd != -1
-                  && "the size parameter is only optional for file URIs");
+		  && "the size parameter is only optional for file URIs");
 
       struct stat stat;
       if (target_fileio_fstat (stream->fd, &stat, &target_errno) < 0)
-        {
-          /* FIXME: Should we set errno?  */
-          /* errno = fileio_errno_to_host (target_errno); */
-          bfd_set_error (bfd_error_system_call);
-          return -1;
-        }
+	{
+	  /* FIXME: Should we set errno?  */
+	  /* errno = fileio_errno_to_host (target_errno); */
+	  bfd_set_error (bfd_error_system_call);
+	  return -1;
+	}
 
       /* Check that the offset is valid.  */
       if (stream->offset >= stat.st_size)
-        {
-          bfd_set_error (bfd_error_bad_value);
-          return -1;
-        }
+	{
+	  bfd_set_error (bfd_error_bad_value);
+	  return -1;
+	}
 
       stream->size = stat.st_size - stream->offset;
     }
@@ -389,17 +389,17 @@ rocm_solib_bfd_open (const char *pathname)
     return svr4_so_ops.bfd_open (pathname);
 
   gdb_bfd_ref_ptr abfd (gdb_bfd_openr_iovec (
-      pathname, "elf64-amdgcn", rocm_bfd_iovec_open, current_inferior (),
-      rocm_bfd_iovec_pread, rocm_bfd_iovec_close, rocm_bfd_iovec_stat));
+    pathname, "elf64-amdgcn", rocm_bfd_iovec_open, current_inferior (),
+    rocm_bfd_iovec_pread, rocm_bfd_iovec_close, rocm_bfd_iovec_stat));
 
   if (abfd == nullptr)
     error (_ ("Could not open `%s' as an executable file: %s"), pathname,
-           bfd_errmsg (bfd_get_error ()));
+	   bfd_errmsg (bfd_get_error ()));
 
   /* Check bfd format.  */
   if (!bfd_check_format (abfd.get (), bfd_object))
     error (_ ("`%s': not in executable format: %s"),
-           bfd_get_filename (abfd.get ()), bfd_errmsg (bfd_get_error ()));
+	   bfd_get_filename (abfd.get ()), bfd_errmsg (bfd_get_error ()));
 
   unsigned char osabi = elf_elfheader (abfd)->e_ident[EI_OSABI];
   unsigned char osabiversion = elf_elfheader (abfd)->e_ident[EI_ABIVERSION];
@@ -408,11 +408,11 @@ rocm_solib_bfd_open (const char *pathname)
      support only for V3.  */
   if (osabi != ELFOSABI_AMDGPU_HSA)
     error (_ ("`%s': ELF file OS ABI invalid (%d)."),
-           bfd_get_filename (abfd.get ()), osabi);
+	   bfd_get_filename (abfd.get ()), osabi);
 
   if (osabi == ELFOSABI_AMDGPU_HSA && osabiversion < 1)
     error (_ ("`%s': ELF file ABI version (%d) is not supported."),
-           bfd_get_filename (abfd.get ()), osabiversion);
+	   bfd_get_filename (abfd.get ()), osabiversion);
 
   return abfd;
 }
@@ -441,8 +441,8 @@ rocm_update_solib_list ()
   amd_dbgapi_code_object_id_t *code_object_list;
   size_t count;
 
-  if ((status = amd_dbgapi_process_code_object_list (process_id, &count,
-                                             &code_object_list, nullptr))
+  if ((status = amd_dbgapi_process_code_object_list (
+	 process_id, &count, &code_object_list, nullptr))
       != AMD_DBGAPI_STATUS_SUCCESS)
     {
       warning (_ ("amd_dbgapi_code_object_list failed (%d)"), status);
@@ -458,24 +458,24 @@ rocm_update_solib_list ()
       char *uri_bytes;
 
       if (amd_dbgapi_code_object_get_info (
-              code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_LOAD_ADDRESS,
-              sizeof (li->l_addr), &li->l_addr)
-              != AMD_DBGAPI_STATUS_SUCCESS
-          || amd_dbgapi_code_object_get_info (
-                 code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_URI_NAME,
-                 sizeof (uri_bytes), &uri_bytes)
-                 != AMD_DBGAPI_STATUS_SUCCESS)
-        continue;
+	    code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_LOAD_ADDRESS,
+	    sizeof (li->l_addr), &li->l_addr)
+	    != AMD_DBGAPI_STATUS_SUCCESS
+	  || amd_dbgapi_code_object_get_info (
+	       code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_URI_NAME,
+	       sizeof (uri_bytes), &uri_bytes)
+	       != AMD_DBGAPI_STATUS_SUCCESS)
+	continue;
 
       strncpy (so->so_name, uri_bytes, sizeof (so->so_name));
       so->so_name[sizeof (so->so_name) - 1] = '\0';
       xfree (uri_bytes);
 
       /* Make so_original_name unique so that code objects with the same URI
-         but different load addresses are seen by gdb core as different shared
-         objects.  */
+	 but different load addresses are seen by gdb core as different shared
+	 objects.  */
       xsnprintf (so->so_original_name, sizeof (so->so_original_name),
-                 "code_object_%ld", code_object_list[i].handle);
+		 "code_object_%ld", code_object_list[i].handle);
 
       so->next = nullptr;
       *link = so;
@@ -506,10 +506,10 @@ rocm_solib_dbgapi_activated ()
       rocm_solib_ops = svr4_so_ops;
       rocm_solib_ops.current_sos = rocm_solib_current_sos;
       rocm_solib_ops.solib_create_inferior_hook
-          = rocm_solib_create_inferior_hook;
+	= rocm_solib_create_inferior_hook;
       rocm_solib_ops.bfd_open = rocm_solib_bfd_open;
       rocm_solib_ops.relocate_section_addresses
-          = rocm_solib_relocate_section_addresses;
+	= rocm_solib_relocate_section_addresses;
     }
 
   /* Engage the ROCm so_ops.  */
