@@ -15,16 +15,8 @@
 
 load_lib rocm.exp
 
-set testfile "device-attach"
-set srcfile ${srcdir}/${subdir}/${testfile}.cpp
-set objfile [standard_output_file ${testfile}.o]
-set binfile [standard_output_file ${testfile}]
-set escapedbinfile  [string_to_regexp $binfile]
-
-set breakpoint_loc 35
-set wave_id {(0,0,0)/2}
-set rocm_threadno {1.3}
-set threadid {7}
+standard_testfile .cpp
+set escapedbinfile [string_to_regexp $binfile]
 
 if {![can_spawn_for_attach]} {
     return 0
@@ -155,23 +147,15 @@ proc_with_prefix process_attach_tests {} {
         }
     }
 
-    set test "info threads"
-    set found_amdgpu_thread 0
-    send_gdb "info threads\n"
-    gdb_expect {
-        -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\:\\d+\:\\d+\:\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $"\
-        {
+    set threadid ""
+    gdb_test_multiple "info threads" "extract thread id" {
+        -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+.*$gdb_prompt $" {
             set threadid "$expect_out(1,string)"
-            set rocm_threadno "$expect_out(2,string)"
-            set wave_id  "$expect_out(3,string)"
-            set found_amdgpu_thread 1
             pass "$test"
         }
-        -re "$gdb_prompt $" { fail "No AMDGPU thread" }
-        timeout { fail "(timeout) for info threads" }
     }
 
-    if {$found_amdgpu_thread == 1} {
+    if {$threadid != ""} {
         gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*" 
 
         # Show architecture info while debugging in device code.
