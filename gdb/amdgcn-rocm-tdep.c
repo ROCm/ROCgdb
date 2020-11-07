@@ -45,8 +45,10 @@ amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
   amd_dbgapi_register_exists_t register_exists;
-  if (amd_dbgapi_wave_register_exists (wave_id, tdep->register_ids[regnum], &register_exists)
-      != AMD_DBGAPI_STATUS_SUCCESS || register_exists != AMD_DBGAPI_REGISTER_PRESENT)
+  if (amd_dbgapi_wave_register_exists (wave_id, tdep->register_ids[regnum],
+				       &register_exists)
+	!= AMD_DBGAPI_STATUS_SUCCESS
+      || register_exists != AMD_DBGAPI_REGISTER_PRESENT)
     return "";
 
   return tdep->register_names[regnum].c_str ();
@@ -59,12 +61,12 @@ amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   amd_dbgapi_register_id_t register_id;
 
   if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-                                   &architecture_id)
+				   &architecture_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return -1;
 
   if (amd_dbgapi_dwarf_register_to_register (architecture_id, reg,
-                                             &register_id)
+					     &register_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return -1;
 
@@ -73,8 +75,8 @@ amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
 
 static enum return_value_convention
 amdgcn_return_value (struct gdbarch *gdbarch, struct value *function,
-                     struct type *type, struct regcache *regcache,
-                     gdb_byte *readbuf, const gdb_byte *writebuf)
+		     struct type *type, struct regcache *regcache,
+		     gdb_byte *readbuf, const gdb_byte *writebuf)
 {
   return RETURN_VALUE_STRUCT_CONVENTION;
 }
@@ -91,15 +93,15 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 
       auto it = tdep->vector_type_map.find (type_name);
       if (it != tdep->vector_type_map.end ())
-        return it->second;
+	return it->second;
 
       struct type *vector_type = init_vector_type (
-          gdb_type_from_type_name (gdbarch, type_name.substr (0, pos)),
-          std::stoi (type_name.substr (pos + 1)));
+	gdb_type_from_type_name (gdbarch, type_name.substr (0, pos)),
+	std::stoi (type_name.substr (pos + 1)));
 
       vector_type->set_name (
-          tdep->vector_type_map.emplace (type_name, vector_type)
-              .first->first.c_str ());
+	tdep->vector_type_map.emplace (type_name, vector_type)
+	  .first->first.c_str ());
 
       return vector_type;
     }
@@ -129,8 +131,8 @@ amdgcn_register_type (struct gdbarch *gdbarch, int regnum)
   char *bytes;
 
   if (amd_dbgapi_register_get_info (tdep->register_ids[regnum],
-                                    AMD_DBGAPI_REGISTER_INFO_TYPE,
-                                    sizeof (bytes), &bytes)
+				    AMD_DBGAPI_REGISTER_INFO_TYPE,
+				    sizeof (bytes), &bytes)
       == AMD_DBGAPI_STATUS_SUCCESS)
     {
       std::string type_name (bytes);
@@ -144,7 +146,7 @@ amdgcn_register_type (struct gdbarch *gdbarch, int regnum)
 
 static int
 amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-                            struct reggroup *group)
+			    struct reggroup *group)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   const char *name = reggroup_name (group);
@@ -156,12 +158,12 @@ amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   amd_dbgapi_register_class_state_t state;
 
   if (amd_dbgapi_register_is_in_register_class (
-          it->second, tdep->register_ids[regnum], &state)
+	it->second, tdep->register_ids[regnum], &state)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return group == all_reggroup;
 
   return state == AMD_DBGAPI_REGISTER_CLASS_STATE_MEMBER
-         || group == all_reggroup;
+	 || group == all_reggroup;
 }
 
 static int
@@ -190,7 +192,7 @@ amdgcn_frame_cache (struct frame_info *this_frame, void **this_cache)
     return (struct amdgcn_frame_cache *)*this_cache;
 
   struct amdgcn_frame_cache *cache
-      = FRAME_OBSTACK_ZALLOC (struct amdgcn_frame_cache);
+    = FRAME_OBSTACK_ZALLOC (struct amdgcn_frame_cache);
   (*this_cache) = cache;
 
   cache->pc = get_frame_func (this_frame);
@@ -201,10 +203,10 @@ amdgcn_frame_cache (struct frame_info *this_frame, void **this_cache)
 
 static void
 amdgcn_frame_this_id (struct frame_info *this_frame, void **this_cache,
-                      struct frame_id *this_id)
+		      struct frame_id *this_id)
 {
   struct amdgcn_frame_cache *cache
-      = amdgcn_frame_cache (this_frame, this_cache);
+    = amdgcn_frame_cache (this_frame, this_cache);
 
   if (get_frame_type (this_frame) == INLINE_FRAME)
     (*this_id) = frame_id_build (cache->base, cache->pc);
@@ -214,8 +216,8 @@ amdgcn_frame_this_id (struct frame_info *this_frame, void **this_cache,
   if (frame_debug)
     {
       fprintf_unfiltered (
-          gdb_stdlog, "{ amdgcn_frame_this_id (this_frame=%d) type=%d -> ",
-          frame_relative_level (this_frame), get_frame_type (this_frame));
+	gdb_stdlog, "{ amdgcn_frame_this_id (this_frame=%d) type=%d -> ",
+	frame_relative_level (this_frame), get_frame_type (this_frame));
       fprint_frame_id (gdb_stdlog, *this_id);
       fprintf_unfiltered (gdb_stdlog, "}\n");
     }
@@ -231,7 +233,7 @@ amdgcn_dummy_id (struct gdbarch *gdbarch, struct frame_info *this_frame)
 
 static struct value *
 amdgcn_frame_prev_register (struct frame_info *this_frame, void **this_cache,
-                            int regnum)
+			    int regnum)
 {
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
@@ -258,16 +260,16 @@ amdgcn_rocm_displaced_step_location (struct gdbarch *gdbarch)
 {
   size_t size = gdbarch_tdep (gdbarch)->breakpoint_instruction_size;
   gdb::unique_xmalloc_ptr<gdb_byte> buffer (
-      static_cast<gdb_byte *> (xmalloc (size)));
+    static_cast<gdb_byte *> (xmalloc (size)));
 
   /* Read the bytes that were overwritten by the breakpoint instruction.  */
   if (target_read_memory (regcache_read_pc (get_current_regcache ()),
-                          buffer.get (), size))
+			  buffer.get (), size))
     return 0;
 
   amd_dbgapi_displaced_stepping_id_t stepping_id;
   if (amd_dbgapi_displaced_stepping_start (
-          get_amd_dbgapi_wave_id (inferior_ptid), buffer.get (), &stepping_id)
+	get_amd_dbgapi_wave_id (inferior_ptid), buffer.get (), &stepping_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return 0;
 
@@ -276,10 +278,10 @@ amdgcn_rocm_displaced_step_location (struct gdbarch *gdbarch)
 
 static displaced_step_closure_up
 amdgcn_rocm_displaced_step_copy_insn (struct gdbarch *gdbarch, CORE_ADDR from,
-                                      CORE_ADDR to, struct regcache *regcache)
+				      CORE_ADDR to, struct regcache *regcache)
 {
   std::unique_ptr<rocm_displaced_step_closure> closure (
-      new rocm_displaced_step_closure);
+    new rocm_displaced_step_closure);
 
   closure->wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
   closure->displaced_stepping_id = { to };
@@ -289,19 +291,19 @@ amdgcn_rocm_displaced_step_copy_insn (struct gdbarch *gdbarch, CORE_ADDR from,
 
 static void
 amdgcn_rocm_displaced_step_fixup (struct gdbarch *gdbarch,
-                                  struct displaced_step_closure *closure_,
-                                  CORE_ADDR from, CORE_ADDR to,
-                                  struct regcache *regcache)
+				  struct displaced_step_closure *closure_,
+				  CORE_ADDR from, CORE_ADDR to,
+				  struct regcache *regcache)
 {
   rocm_displaced_step_closure *closure
-      = reinterpret_cast<rocm_displaced_step_closure *> (closure_);
+    = reinterpret_cast<rocm_displaced_step_closure *> (closure_);
 
   amd_dbgapi_status_t status = amd_dbgapi_displaced_stepping_complete (
-      closure->wave_id, closure->displaced_stepping_id);
+    closure->wave_id, closure->displaced_stepping_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"),
-           status);
+	   status);
 
   /* We may have written some registers, so flush the register cache.  */
   registers_changed_ptid (regcache->target (), regcache->ptid ());
@@ -311,17 +313,17 @@ static int
 print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
 {
   gdb_disassembler *self
-      = static_cast<gdb_disassembler *> (di->application_data);
+    = static_cast<gdb_disassembler *> (di->application_data);
 
   /* Try to read at most instruction_size bytes.  */
 
   amd_dbgapi_size_t instruction_size = gdbarch_max_insn_length (self->arch ());
   gdb::unique_xmalloc_ptr<gdb_byte> buffer (
-      (gdb_byte *)xmalloc (instruction_size));
+    (gdb_byte *)xmalloc (instruction_size));
 
   instruction_size
-      = target_read (current_top_target (), TARGET_OBJECT_CODE_MEMORY, NULL,
-                     buffer.get (), memaddr, instruction_size);
+    = target_read (current_top_target (), TARGET_OBJECT_CODE_MEMORY, NULL,
+		   buffer.get (), memaddr, instruction_size);
   if (instruction_size == TARGET_XFER_E_IO || instruction_size == 0)
     {
       (*di->memory_error_func) (-1, memaddr, di);
@@ -330,15 +332,15 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
 
   amd_dbgapi_architecture_id_t architecture_id;
   if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (self->arch ())->mach,
-                                   &architecture_id)
+				   &architecture_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return -1;
 
   char *instruction_text = nullptr;
 
   auto symbolizer
-      = [] (amd_dbgapi_symbolizer_id_t id, amd_dbgapi_global_address_t address,
-            char **symbol_text) -> amd_dbgapi_status_t {
+    = [] (amd_dbgapi_symbolizer_id_t id, amd_dbgapi_global_address_t address,
+	  char **symbol_text) -> amd_dbgapi_status_t {
     string_file string;
     print_address (reinterpret_cast<struct gdbarch *> (id), address, &string);
     *symbol_text = xstrdup (string.c_str ());
@@ -346,19 +348,19 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
   };
 
   if (amd_dbgapi_disassemble_instruction (
-          architecture_id, static_cast<amd_dbgapi_global_address_t> (memaddr),
-          &instruction_size, buffer.get (), &instruction_text,
-          reinterpret_cast<amd_dbgapi_symbolizer_id_t> (self->arch ()),
-          symbolizer)
+	architecture_id, static_cast<amd_dbgapi_global_address_t> (memaddr),
+	&instruction_size, buffer.get (), &instruction_text,
+	reinterpret_cast<amd_dbgapi_symbolizer_id_t> (self->arch ()),
+	symbolizer)
       != AMD_DBGAPI_STATUS_SUCCESS)
     {
       size_t alignment;
       if (amd_dbgapi_architecture_get_info (
-              architecture_id,
-              AMD_DBGAPI_ARCHITECTURE_INFO_MINIMUM_INSTRUCTION_ALIGNMENT,
-              sizeof (alignment), &alignment)
-          != AMD_DBGAPI_STATUS_SUCCESS)
-        error (_ ("amd_dbgapi_architecture_get_info failed"));
+	    architecture_id,
+	    AMD_DBGAPI_ARCHITECTURE_INFO_MINIMUM_INSTRUCTION_ALIGNMENT,
+	    sizeof (alignment), &alignment)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_ ("amd_dbgapi_architecture_get_info failed"));
 
       (*di->fprintf_func) (di->stream, "<illegal instruction>");
       /* Skip to the next valid instruction address.  */
@@ -385,15 +387,15 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
   if (find_pc_partial_function (start_pc, NULL, &func_addr, NULL))
     {
       CORE_ADDR post_prologue_pc
-          = skip_prologue_using_sal (gdbarch, func_addr);
+	= skip_prologue_using_sal (gdbarch, func_addr);
       struct compunit_symtab *cust = find_pc_compunit_symtab (func_addr);
 
       /* Clang always emits a line note before the prologue and another
-         one after.  We trust clang to emit usable line notes.  */
+	 one after.  We trust clang to emit usable line notes.  */
       if (post_prologue_pc
-          && (cust != NULL && COMPUNIT_PRODUCER (cust) != NULL
-              && startswith (COMPUNIT_PRODUCER (cust), "clang ")))
-        return std::max (start_pc, post_prologue_pc);
+	  && (cust != NULL && COMPUNIT_PRODUCER (cust) != NULL
+	      && startswith (COMPUNIT_PRODUCER (cust), "clang ")))
+	return std::max (start_pc, post_prologue_pc);
     }
 
   /* Can't determine prologue from the symbol table, need to examine
@@ -422,7 +424,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Allocate space for the new architecture.  */
   std::unique_ptr<struct gdbarch_tdep> tdep (new struct gdbarch_tdep);
   std::unique_ptr<struct gdbarch, gdbarch_deleter> gdbarch_u (
-      gdbarch_alloc (&info, tdep.get ()));
+    gdbarch_alloc (&info, tdep.get ()));
 
   struct gdbarch *gdbarch = gdbarch_u.get ();
 
@@ -451,7 +453,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Registers and Memory.  */
   amd_dbgapi_architecture_id_t architecture_id;
   if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-                                   &architecture_id)
+				   &architecture_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
@@ -459,7 +461,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   amd_dbgapi_register_class_id_t *register_class_ids;
 
   if (amd_dbgapi_architecture_register_class_list (
-          architecture_id, &register_class_count, &register_class_ids)
+	architecture_id, &register_class_count, &register_class_ids)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
@@ -470,26 +472,26 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     {
       char *bytes;
       if (amd_dbgapi_architecture_register_class_get_info (
-              register_class_ids[i], AMD_DBGAPI_REGISTER_CLASS_INFO_NAME,
-              sizeof (bytes), &bytes)
-          != AMD_DBGAPI_STATUS_SUCCESS)
-        continue;
+	    register_class_ids[i], AMD_DBGAPI_REGISTER_CLASS_INFO_NAME,
+	    sizeof (bytes), &bytes)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	continue;
 
       gdb::unique_xmalloc_ptr<char> name (bytes);
 
       auto inserted = tdep->register_class_map.emplace (name.get (),
-                                                        register_class_ids[i]);
+							register_class_ids[i]);
 
       if (!inserted.second)
-        continue;
+	continue;
 
       /* Allocate the reggroup in the gdbarch.  */
       auto *group = reggroup_gdbarch_new (gdbarch, name.get (), USER_REGGROUP);
       if (!group)
-        {
-          tdep->register_class_map.erase (inserted.first);
-          continue;
-        }
+	{
+	  tdep->register_class_map.erase (inserted.first);
+	  continue;
+	}
 
       reggroup_add (gdbarch, group);
     }
@@ -500,12 +502,12 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   amd_dbgapi_register_id_t *register_ids;
 
   if (amd_dbgapi_architecture_register_list (architecture_id, &register_count,
-                                             &register_ids)
+					     &register_ids)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
   tdep->register_ids.insert (tdep->register_ids.end (), &register_ids[0],
-                             &register_ids[register_count]);
+			     &register_ids[register_count]);
 
   set_gdbarch_num_regs (gdbarch, register_count);
   set_gdbarch_num_pseudo_regs (gdbarch, 0);
@@ -515,14 +517,14 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   for (size_t i = 0; i < register_count; ++i)
     {
       if (!tdep->regnum_map.emplace (tdep->register_ids[i], i).second)
-        return nullptr;
+	return nullptr;
 
       char *bytes;
       if (amd_dbgapi_register_get_info (tdep->register_ids[i],
-                                        AMD_DBGAPI_REGISTER_INFO_NAME,
-                                        sizeof (bytes), &bytes)
-          != AMD_DBGAPI_STATUS_SUCCESS)
-        continue;
+					AMD_DBGAPI_REGISTER_INFO_NAME,
+					sizeof (bytes), &bytes)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	continue;
 
       tdep->register_names[i] = bytes;
       xfree (bytes);
@@ -530,8 +532,8 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   amd_dbgapi_register_id_t pc_register_id;
   if (amd_dbgapi_architecture_get_info (
-          architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_PC_REGISTER,
-          sizeof (pc_register_id), &pc_register_id)
+	architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_PC_REGISTER,
+	sizeof (pc_register_id), &pc_register_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
@@ -554,44 +556,43 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Displaced stepping.  */
   set_gdbarch_displaced_step_location (gdbarch,
-                                       amdgcn_rocm_displaced_step_location);
+				       amdgcn_rocm_displaced_step_location);
 
   set_gdbarch_displaced_step_copy_insn (gdbarch,
-                                        amdgcn_rocm_displaced_step_copy_insn);
+					amdgcn_rocm_displaced_step_copy_insn);
   set_gdbarch_displaced_step_fixup (gdbarch, amdgcn_rocm_displaced_step_fixup);
 
   /* Instructions.  */
   amd_dbgapi_size_t max_insn_length = 0;
   if (amd_dbgapi_architecture_get_info (
-          architecture_id,
-          AMD_DBGAPI_ARCHITECTURE_INFO_LARGEST_INSTRUCTION_SIZE,
-          sizeof (max_insn_length), &max_insn_length)
+	architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_LARGEST_INSTRUCTION_SIZE,
+	sizeof (max_insn_length), &max_insn_length)
       != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_architecture_get_info failed"));
 
   set_gdbarch_max_insn_length (gdbarch, max_insn_length);
 
   if (amd_dbgapi_architecture_get_info (
-          architecture_id,
-          AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION_SIZE,
-          sizeof (tdep->breakpoint_instruction_size),
-          &tdep->breakpoint_instruction_size)
+	architecture_id,
+	AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION_SIZE,
+	sizeof (tdep->breakpoint_instruction_size),
+	&tdep->breakpoint_instruction_size)
       != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_architecture_get_info failed"));
 
   gdb_byte *breakpoint_instruction_bytes;
   if (amd_dbgapi_architecture_get_info (
-          architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION,
-          sizeof (breakpoint_instruction_bytes), &breakpoint_instruction_bytes)
+	architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION,
+	sizeof (breakpoint_instruction_bytes), &breakpoint_instruction_bytes)
       != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_architecture_get_info failed"));
 
   tdep->breakpoint_instruction_bytes.reset (breakpoint_instruction_bytes);
 
   set_gdbarch_breakpoint_kind_from_pc (gdbarch,
-                                       amdgcn_breakpoint_kind_from_pc);
+				       amdgcn_breakpoint_kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
-                                       amdgcn_sw_breakpoint_from_kind);
+				       amdgcn_sw_breakpoint_from_kind);
 
   tdep.release ();
   gdbarch_u.release ();

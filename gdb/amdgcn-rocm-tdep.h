@@ -42,7 +42,7 @@ struct register_id_equal_to
 {
   bool
   operator() (const amd_dbgapi_register_id_t &lhs,
-              const amd_dbgapi_register_id_t &rhs) const
+	      const amd_dbgapi_register_id_t &rhs) const
   {
     return std::equal_to<decltype (lhs.handle)> () (lhs.handle, rhs.handle);
   }
@@ -61,11 +61,11 @@ struct gdbarch_tdep
   std::vector<std::string> register_names;
   /* A map of gdb regnums keyed by they equivalent register_id.  */
   std::unordered_map<amd_dbgapi_register_id_t, int, register_id_hash,
-                     register_id_equal_to>
-      regnum_map;
+		     register_id_equal_to>
+    regnum_map;
   /* A map of register_class_ids keyed by their name.  */
   std::unordered_map<std::string, amd_dbgapi_register_class_id_t>
-      register_class_map;
+    register_class_map;
   /* A cache of vector types.  */
   std::unordered_map<std::string, struct type *> vector_type_map;
 };
