@@ -18,41 +18,26 @@
 
 load_lib rocm.exp
 
-set testfile "show-info"
-set srcfile ${srcdir}/${subdir}/${testfile}.cpp
-set objfile [standard_output_file ${testfile}.o]
-set binfile [standard_output_file ${testfile}]
+standard_testfile .cpp
 
-
-# Check if skip hip tests
 if [skip_hipcc_tests] {
     verbose "Skipping hip test: ${testfile}."
     return 0
 }
 
-# Compile the hip program
 if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
-    return -1
-}
-
-gdb_start
-
-# Load the hip program
-if {[gdb_load ${binfile}] == -1} {
-    verbose "failed to load program ${testfile}."
     return -1
 }
 
 with_rocm_gpu_lock {
 
-# Run to main and break
 if ![runto_main] {
-    fail "can't run to main and break in program ${testfile}."
+    fail "can't run to main"
     return -1
 }
 
 
-#Set breakpoint in device code
+# Set breakpoint in device code.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
@@ -61,8 +46,8 @@ gdb_continue_to_breakpoint "bit_extract_kernel"
 # vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"
 # vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
 gdb_test_sequence "info agents" "info agents" {
- {\s+Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+PCI Slot}
- {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+    {\s+Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+PCI Slot}
+    {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
 }
 
 #Test2
@@ -71,8 +56,8 @@ gdb_test_sequence "info agents" "info agents" {
 #* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
 #  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
- {Id\s+Target\s+Id\s+Frame}
- {\d+\s+AMDGPU\sThread\s\d+\:\d+\:\d+\:\d+\s\(\d+,\d+,\d+\)/\d+}
+    {Id\s+Target\s+Id\s+Frame}
+    {\d+\s+AMDGPU\sThread\s\d+\:\d+\:\d+\:\d+\s\(\d+,\d+,\d+\)/\d+}
 }
 
 #Test3
@@ -83,8 +68,8 @@ gdb_test "show architecture" \
 
 #Test4
 gdb_test_sequence "show convenience" "show convenience" {
- {\$_thread = \d+}
- {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
+    {\$_thread = \d+}
+    {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
 
 }
 
@@ -111,9 +96,9 @@ gdb_test_sequence "show convenience" "show convenience" {
 #2       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
 #        breakpoint already hit 1 time
 gdb_test_sequence "info break" "info break" {
- {Num\s+Type\s+Disp\sEnb Address\s+What}
- {\d+\s+breakpoint\s+keep\s+y}
- {breakpoint already hit\s\d+\stime}
+    {Num\s+Type\s+Disp\sEnb Address\s+What}
+    {\d+\s+breakpoint\s+keep\s+y}
+    {breakpoint already hit\s\d+\stime}
 }
 
 #Test7
@@ -121,8 +106,8 @@ gdb_test_sequence "info break" "info break" {
 #  Num  Description       Executable
 #* 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
 gdb_test_sequence "info inferiors" "info inferiors" {
- {Num\s+Description\s+Connection\s+Executable}
- {\*\s\d+\s+process\s+\d+}
+    {Num\s+Description\s+Connection\s+Executable}
+    {\*\s\d+\s+process\s+\d+}
 }
 
 gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"
