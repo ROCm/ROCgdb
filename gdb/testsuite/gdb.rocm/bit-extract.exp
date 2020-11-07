@@ -18,43 +18,25 @@
 
 load_lib rocm.exp
 
-set testfile "bit-extract"
-set srcfile ${srcdir}/${subdir}/${testfile}.cpp
-set objfile [standard_output_file ${testfile}.o]
-set binfile [standard_output_file ${testfile}]
+standard_testfile .cpp
 
-# Set device info
-set ISA "vega10"
-
-# Check if skip hip tests
 if [skip_hipcc_tests] {
     verbose "Skipping hip test: ${testfile}."
     return 0
 }
 
-# Compile the hip program
 if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
-    return -1
-}
-
-gdb_exit
-gdb_start
-
-# Load the hip program
-if {[gdb_load ${binfile}] == -1} {
-    verbose "failed to load program ${testfile}."
     return -1
 }
 
 with_rocm_gpu_lock {
 
-# Run to main and break
 if ![runto_main] {
-    fail "can't run to main and break in program ${testfile}."
+    fail "can't run to main"
     return -1
 }
 
-# Set breakpoing in device code
+# Set breakpoing in device code.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
