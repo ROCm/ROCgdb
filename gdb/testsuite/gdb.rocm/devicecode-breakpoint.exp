@@ -18,32 +18,16 @@
 
 load_lib rocm.exp
 
-set testfile "devicecode-breakpoint"
-set srcfile ${srcdir}/${subdir}/${testfile}.cpp
-set objfile [standard_output_file ${testfile}.o]
-set binfile [standard_output_file ${testfile}]
+standard_testfile .cpp
 
-set breakpoint_loc 35
-set wave_id {(0,0,0)/2}
-set rocm_threadno {1.3}
-set threadid {7}
+set breakpoint_loc [gdb_get_line_number "location line"]
 
-# Check if skip hip tests
 if [skip_hipcc_tests] {
     verbose "Skipping hip test: ${testfile}."
     return 0
 }
 
-# Compile the hip program
 if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
-    return -1
-}
-
-gdb_start
-
-# Load the hip program
-if {[gdb_load ${binfile}] == -1} {
-    verbose "failed to load program ${testfile}."
     return -1
 }
 
@@ -94,22 +78,26 @@ gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
 clean_restart ${binfile}
 
-#Code to fetch threadno and corresponding wave_id
-#Set breakpoing in device code
+# Fetch thread Id and corresponding wave_id.
+# Set breakpoing in device code.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sbit_extract_kernel\s\(.*\)\sat.*}
-send_gdb "info threads\n"
-gdb_expect -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+(\\d+\:\\d+\:\\d+\:\\d+)\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
-  set threadid "$expect_out(1,string)"
-  set rocm_threadno "$expect_out(2,string)"
-  set wave_id  "$expect_out(3,string)"
+
+set wave_id ""
+set threadid ""
+
+gdb_test_multiple "info threads" "info threads" {
+    -re "\\s+(\\d+)\\s+AMDGPU Thread\\s+\\d+\:\\d+\:\\d+\:\\d+\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
+	set threadid "$expect_out(1,string)"
+	set wave_id "$expect_out(2,string)"
+    }
 }
 
-verbose $rocm_threadno
-verbose $threadid
-verbose $wave_id
-regsub -all {[]*+.|()^$\[\\]} $wave_id {\\&} wave_id_re
-verbose $wave_id_re
+set wave_id_re [string_to_regexp $wave_id]
+
+verbose -log "threadid=$threadid"
+verbose -log "wave_id=$wave_id"
+verbose -log "wave_id_re=$wave_id_re"
 
 clean_restart ${binfile}
 

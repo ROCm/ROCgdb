@@ -32,7 +32,7 @@
 
 __global__ void bit_extract_kernel(uint32_t* C_d, const uint32_t* A_d, size_t N) {
     size_t offset = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x);
-    size_t stride = hipBlockDim_x * hipGridDim_x;
+    size_t stride = hipBlockDim_x * hipGridDim_x;                      /* location line */
 
     for (size_t i = offset; i < N; i += stride) {
         C_d[i] = __bitextract_u32(A_d[i], 8, 4);
