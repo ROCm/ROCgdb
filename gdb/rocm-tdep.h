@@ -23,10 +23,49 @@
 
 #include "gdbsupport/common-defs.h"
 #include "gdbsupport/observable.h"
-
-#include <type_traits>
+#include "gdbsupport/traits.h"
 
 #include <amd-dbgapi.h>
+
+namespace detail
+{
+
+template <typename T>
+using is_amd_dbgapi_handle
+  = gdb::Or<std::is_same<T, amd_dbgapi_address_class_id_t>,
+	    std::is_same<T, amd_dbgapi_address_space_id_t>,
+	    std::is_same<T, amd_dbgapi_architecture_id_t>,
+	    std::is_same<T, amd_dbgapi_agent_id_t>,
+	    std::is_same<T, amd_dbgapi_breakpoint_id_t>,
+	    std::is_same<T, amd_dbgapi_code_object_id_t>,
+	    std::is_same<T, amd_dbgapi_dispatch_id_t>,
+	    std::is_same<T, amd_dbgapi_displaced_stepping_id_t>,
+	    std::is_same<T, amd_dbgapi_event_id_t>,
+	    std::is_same<T, amd_dbgapi_process_id_t>,
+	    std::is_same<T, amd_dbgapi_queue_id_t>,
+	    std::is_same<T, amd_dbgapi_register_class_id_t>,
+	    std::is_same<T, amd_dbgapi_register_id_t>,
+	    std::is_same<T, amd_dbgapi_shared_library_id_t>,
+	    std::is_same<T, amd_dbgapi_watchpoint_id_t>,
+	    std::is_same<T, amd_dbgapi_wave_id_t>>;
+
+} /* namespace detail */
+
+template <typename T,
+	  typename = gdb::Requires<detail::is_amd_dbgapi_handle<T>>>
+bool
+operator== (const T &lhs, const T &rhs)
+{
+  return lhs.handle == rhs.handle;
+}
+
+template <typename T,
+	  typename = gdb::Requires<detail::is_amd_dbgapi_handle<T>>>
+bool
+operator!= (const T &lhs, const T &rhs)
+{
+  return !(lhs == rhs);
+}
 
 /* ROCm Debug API event observers.  */
 
