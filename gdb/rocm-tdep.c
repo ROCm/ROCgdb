@@ -1783,32 +1783,27 @@ static const struct internalvar_funcs rocm_wave_id_funcs
 struct cmd_list_element *set_debug_amdgpu_list;
 struct cmd_list_element *show_debug_amdgpu_list;
 
-constexpr char amd_dbgapi_log_level_off[] = "off";
-constexpr char amd_dbgapi_log_level_error[] = "error";
-constexpr char amd_dbgapi_log_level_warning[] = "warning";
-constexpr char amd_dbgapi_log_level_info[] = "info";
-constexpr char amd_dbgapi_log_level_verbose[] = "verbose";
-
 constexpr const char *debug_amdgpu_log_level_enums[]
-  = { [AMD_DBGAPI_LOG_LEVEL_NONE] = amd_dbgapi_log_level_off,
-      [AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR] = amd_dbgapi_log_level_error,
-      [AMD_DBGAPI_LOG_LEVEL_WARNING] = amd_dbgapi_log_level_warning,
-      [AMD_DBGAPI_LOG_LEVEL_INFO] = amd_dbgapi_log_level_info,
-      [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = amd_dbgapi_log_level_verbose,
-      nullptr };
+  = { [AMD_DBGAPI_LOG_LEVEL_NONE] = "off",
+      [AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR] = "error",
+      [AMD_DBGAPI_LOG_LEVEL_WARNING] = "warning",
+      [AMD_DBGAPI_LOG_LEVEL_INFO] = "info",
+      [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = "verbose" };
 
-static const char *debug_amdgpu_log_level = amd_dbgapi_log_level_warning;
+static const char *debug_amdgpu_log_level
+  = debug_amdgpu_log_level_enums[AMD_DBGAPI_LOG_LEVEL_WARNING];
 
 static amd_dbgapi_log_level_t
 get_debug_amdgpu_log_level ()
 {
-  size_t pos;
-  for (pos = 0; debug_amdgpu_log_level_enums[pos]; ++pos)
-    if (debug_amdgpu_log_level == debug_amdgpu_log_level_enums[pos])
-      break;
+  static constexpr size_t num_log_levels
+    = sizeof (debug_amdgpu_log_level_enums) / sizeof (const char *);
 
-  gdb_assert (debug_amdgpu_log_level_enums[pos]);
-  return static_cast<amd_dbgapi_log_level_t> (pos);
+  for (size_t pos = 0; pos < num_log_levels; ++pos)
+    if (debug_amdgpu_log_level == debug_amdgpu_log_level_enums[pos])
+      return static_cast<amd_dbgapi_log_level_t> (pos);
+
+  error (_ ("Invalid log level: %s"), debug_amdgpu_log_level);
 }
 
 static void
