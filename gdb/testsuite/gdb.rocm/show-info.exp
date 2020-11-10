@@ -77,15 +77,35 @@ gdb_test_sequence "show convenience" "show convenience" {
 #info sharedlibrary
 #sample output
 #From                To                  Syms Read   Shared Object Library
-#0x00007ffbdfe05000  0x00007ffbdfe07a2c  Yes (*)     AMDGPU shared object [loaded from memory 0xab9900..0xac3470]
-#0x00007ffbdc201000  0x00007ffbdc201c94  Yes         AMDGPU shared object [loaded from memory 0x9b71d0..0x9bae28]
-#Disabled test until complete fix for CODE URI is not in
-#gdb_test_sequence "info sharedlibrary" "info sharedlibrary" {
-# {From\s+To\s+Syms\s+Read\s+Shared Object Library}
-# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s\(\*\)\s+AMDGPU shared object.}
-# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s+AMDGPU shared object.}
-#}
+#0x00007fd120664ac0  0x00007fd120682790  Yes (*)     /lib64/ld-linux-x86-64.so.2
+#...
+#0x00007fd0125d8ec0  0x00007fd015f21630  Yes (*)     /opt/rocm-3.5.0/hip/lib/../../lib/libamd_comgr.so
+#0x00007fd11d74e870  0x00007fd11d75a868  Yes (*)     /lib/x86_64-linux-gnu/libtinfo.so.5
+#0x00007fd11d008000  0x00007fd11d00adc0  Yes (*)     memory://95557/mem#offset=0x7fd0083e7f60&size=41416
+#0x00007fd11d001000  0x00007fd11d00173c  Yes         file:///home/rocm/examples/bit_extract#offset=6477&size=10832
+#(*): Shared library is missing debugging information.
 
+#code_object_uri ::== file_uri | memory_uri
+#file_uri        ::== "file://" file_path [ range_specifier ]
+#memory_uri      ::== "memory://" process_id range_specifier
+#range_specifier ::== [ "#" | "?" ] "offset=" number "&" "size=" number
+#file_path       ::== URI_ENCODED_OS_FILE_PATH
+#process_id      ::== DECIMAL_NUMBER
+#number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+
+set number $decimal|$hex|0\[0-7\]+
+set process_id $decimal
+set file_path "(\\/\[^/ ]*)+\\/?"
+set range_specifier (#|\\?)offset=(${number})&size=(${number})
+set memory_uri "memory:\\/\\/$process_id$range_specifier"
+set file_uri "file://$file_path\($range_specifier\)?"
+
+gdb_test_sequence "info sharedlibrary" "info sharedlibrary" [list \
+    "From\\s+To\\s+Syms\\s+Read\\s+Shared Object Library" \
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$file_path" \
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$memory_uri" \
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$file_uri"
+]
 
 #Test6
 #info break
