@@ -1784,11 +1784,11 @@ struct cmd_list_element *set_debug_amdgpu_list;
 struct cmd_list_element *show_debug_amdgpu_list;
 
 constexpr const char *debug_amdgpu_log_level_enums[]
-  = { [AMD_DBGAPI_LOG_LEVEL_NONE] = "off",
-      [AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR] = "error",
-      [AMD_DBGAPI_LOG_LEVEL_WARNING] = "warning",
-      [AMD_DBGAPI_LOG_LEVEL_INFO] = "info",
-      [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = "verbose" };
+  = { /* [AMD_DBGAPI_LOG_LEVEL_NONE] = */ "off",
+      /* [AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR] = */ "error",
+      /* [AMD_DBGAPI_LOG_LEVEL_WARNING] = */ "warning",
+      /* [AMD_DBGAPI_LOG_LEVEL_INFO] = */ "info",
+      /* [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = */ "verbose" };
 
 static const char *debug_amdgpu_log_level
   = debug_amdgpu_log_level_enums[AMD_DBGAPI_LOG_LEVEL_WARNING];
