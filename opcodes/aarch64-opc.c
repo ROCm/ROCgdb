@@ -3174,6 +3174,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_Rt2:
     case AARCH64_OPND_Rs:
     case AARCH64_OPND_Ra:
+    case AARCH64_OPND_Rt_LS64:
     case AARCH64_OPND_Rt_SYS:
     case AARCH64_OPND_PAIRREG:
     case AARCH64_OPND_SVE_Rm:
@@ -4678,6 +4679,8 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   SR_CORE ("brbinf29_el1",  CPENC (2,1,C8,C13,4), F_REG_READ),
   SR_CORE ("brbinf30_el1",  CPENC (2,1,C8,C14,4), F_REG_READ),
   SR_CORE ("brbinf31_el1",  CPENC (2,1,C8,C15,4), F_REG_READ),
+
+  SR_CORE ("accdata_el1",   CPENC (3,0,C13,C0,5), 0),
 
   { 0, CPENC (0,0,0,0,0), 0, 0 }
 };

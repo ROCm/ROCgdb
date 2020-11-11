@@ -2380,7 +2380,7 @@ clear_internalvar (struct internalvar *var)
   var->kind = INTERNALVAR_VOID;
 }
 
-char *
+const char *
 internalvar_name (const struct internalvar *var)
 {
   return var->name;

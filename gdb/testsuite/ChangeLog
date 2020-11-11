@@ -1,3 +1,24 @@
+2020-11-10  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/bias.exp: Update.
+	* gdb.ada/bias/bias.adb (X): Change value.
+
+2020-11-10  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/vla-optimized-out.exp (p sizeof (a)): Wrap supplied
+	regexp fragment in parentheses to prevent false matching.
+
+2020-11-10  Gary Benson <gbenson@redhat.com>
+
+	* gdb.base/vla-optimized-out.c (f1): Add __attribute__ ((weak)).
+
+2020-11-10  Gary Benson <gbenson@redhat.com>
+
+	* gdb.cp/step-and-next-inline.exp: Only require
+	-gstatement-frontiers when building with GCC.
+	Only setup KFAIL's for GCC issues when using
+	a GCC-built executable.
+
 2020-11-06  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.base/debug-expr.c: Add extra function to allow for an
