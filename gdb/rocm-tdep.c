@@ -2788,12 +2788,12 @@ _initialize_rocm_tdep (void)
 
   add_basic_prefix_cmd (
     "amdgpu", no_class,
-    _ ("Generic command for setting amdgpu debugging flags"),
+    _ ("Generic command for setting amdgpu debugging flags."),
     &set_debug_amdgpu_list, "set debug amdgpu ", 0, &setdebuglist);
 
   add_show_prefix_cmd (
     "amdgpu", no_class,
-    _ ("Generic command for showing amdgpu debugging flags"),
+    _ ("Generic command for showing amdgpu debugging flags."),
     &show_debug_amdgpu_list, "show debug amdgpu ", 0, &showdebuglist);
 
   add_setshow_enum_cmd (
