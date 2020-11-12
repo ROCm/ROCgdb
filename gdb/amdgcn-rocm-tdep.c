@@ -321,10 +321,18 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
   gdb::unique_xmalloc_ptr<gdb_byte> buffer (
     (gdb_byte *)xmalloc (instruction_size));
 
-  instruction_size
-    = target_read (current_top_target (), TARGET_OBJECT_CODE_MEMORY, NULL,
-		   buffer.get (), memaddr, instruction_size);
-  if (instruction_size == TARGET_XFER_E_IO || instruction_size == 0)
+  /* read_memory_func doesn't support partial reads, so if the read
+     fails, try one byte less, on and on until we manage to read
+     something.  A case where this would happen is if we're trying to
+     read the last instruction at the end of a file section and that
+     instruction is smaller than the largest instruction.  */
+  while (instruction_size > 0)
+    {
+      if (di->read_memory_func (memaddr, buffer.get (), instruction_size, di) == 0)
+	break;
+      --instruction_size;
+    }
+  if (instruction_size == 0)
     {
       (*di->memory_error_func) (-1, memaddr, di);
       return -1;
