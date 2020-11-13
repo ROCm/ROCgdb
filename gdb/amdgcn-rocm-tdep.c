@@ -334,7 +334,7 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
     }
   if (instruction_size == 0)
     {
-      (*di->memory_error_func) (-1, memaddr, di);
+      di->memory_error_func (-1, memaddr, di);
       return -1;
     }
 
@@ -370,13 +370,13 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
 	  != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("amd_dbgapi_architecture_get_info failed"));
 
-      (*di->fprintf_func) (di->stream, "<illegal instruction>");
+      di->fprintf_func (di->stream, "<illegal instruction>");
       /* Skip to the next valid instruction address.  */
       return align_up (memaddr + 1, alignment) - memaddr;
     }
 
   /* Print the instruction.  */
-  (*di->fprintf_func) (di->stream, "%s", instruction_text);
+  di->fprintf_func (di->stream, "%s", instruction_text);
 
   /* Free the memory allocated by the amd-dbgapi.  */
   xfree (instruction_text);
