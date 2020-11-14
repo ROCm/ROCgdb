@@ -44,6 +44,8 @@ if {[build_executable "failed to prepare ${testfile}" $testfile $srcfile $option
 # either be "all-stop" or "non-stop". In all-stop mode we only expect
 # one breakpoint hit.  In non-stop mode, we expect a hit for each
 # wave.  TEST is the test name.  If not specified, defaults to CMD.
+# Careful to not use an overeager ".+" or ".*" in BP_HIT_RE, as that
+# could consume the prompt by mistake.
 
 proc run_and_wait_break_hits {mode cmd bp_hit_re {test ""}} {
     global gdb_prompt
@@ -106,10 +108,11 @@ proc test {mode} {
 	gdb_test_no_output "set non-stop on"
     }
 
+    set bp_hit_re {hit Breakpoint [\d]+, bit_extract_kernel \([^\r\n]*\)\sat}
+
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
 
-    run_and_wait_break_hits $mode "run" \
-	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat}
+    run_and_wait_break_hits $mode "run" $bp_hit_re
 
     if {$mode == "sched-lock"} {
 	gdb_test_no_output "set scheduler-locking on"
@@ -118,8 +121,7 @@ proc test {mode} {
     gdb_test_multiple "run" "run in device function" {
 	-re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
 	    send_gdb "y\n"
-	    run_and_wait_break_hits $mode "" \
-		"hit Breakpoint \[1-9\]" $gdb_test_name
+	    run_and_wait_break_hits $mode "" $bp_hit_re $gdb_test_name
 	}
     }
 
@@ -133,8 +135,7 @@ proc test {mode} {
 	}
     }
 
-    run_and_wait_break_hits $mode "continue" \
-	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat}
+    run_and_wait_break_hits $mode "continue" $bp_hit_re
 
     gdb_test_multiple "quit" "quit in device function" {
 	-re "A debugging session is active.*Quit anyway.*y or n. $" {
