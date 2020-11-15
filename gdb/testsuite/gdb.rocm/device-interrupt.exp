@@ -1,0 +1,109 @@
+# Copyright (C) 2020 Free Software Foundation, Inc.
+# Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that interrupting device waves works, even if the host CPU is
+# stopped.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Run to device code, continue it, and then try to interrupt the
+# program.  If SCHEDLOCK is "on", then only the GPU wave will be
+# continued.  If INTERRUPT_HOW is "ctrl-c", we try interrupting with
+# "Ctrl-C".  If it is "interrupt", then we try interrupting with the
+# "interrupt" command.
+
+proc test {schedlock interrupt_how} {
+    global gdb_prompt
+    global binfile
+
+    clean_restart $binfile
+
+    if ![runto_main] {
+	fail "can't run to main"
+	return -1
+    }
+
+    gdb_breakpoint "kernel" temporary allow-pending
+    gdb_continue_to_breakpoint "kernel"
+    gdb_test_no_output "set scheduler-locking $schedlock"
+
+    # Until the issue is fixed, use a low timeout to avoid wasting
+    # much testing time.
+    set intr_timeout 1
+
+    proc maybe_kfail {schedlock} {
+	if {$schedlock == "on"} {
+	    setup_kfail "*-*-*" "SWDEV/260837"
+	}
+    }
+
+    if {$interrupt_how == "ctrl-c"} {
+	gdb_test_multiple "continue" "" {
+	    -re "^continue\r\nContinuing.\r\n" {
+		pass $gdb_test_name
+	    }
+	}
+
+	maybe_kfail $schedlock
+	send_gdb "\003"
+	gdb_test_multiple "" "interrupt" {
+	    -timeout $intr_timeout
+	    -re "Thread .* received signal SIGINT.*$gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+    } elseif {$interrupt_how == "interrupt"} {
+	gdb_test_multiple "continue &" "" {
+	    -re "^continue &\r\nContinuing.\r\n$gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+	gdb_test_multiple "interrupt" "" {
+	    -re "$gdb_prompt " {
+		maybe_kfail $schedlock
+		gdb_test_multiple "" "interrupt" {
+		    -timeout $intr_timeout
+		    -re "Thread .* received signal SIGINT," {
+			pass $gdb_test_name
+		    }
+		}
+	    }
+	}
+    } else {
+	error "unknown interrupt_how=$interrupt_how"
+    }
+}
+
+with_rocm_gpu_lock {
+    foreach_with_prefix schedlock {"on" "off"} {
+	foreach_with_prefix interrupt_how {"ctrl-c" "interrupt"} {
+	    test $schedlock $interrupt_how
+	}
+    }
+}
