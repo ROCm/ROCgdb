@@ -7111,7 +7111,7 @@ proc cd { dir } {
 # 'auto' keywords.
 proc gdb_supported_languages {} {
     return [list c objective-c c++ d go fortran modula-2 asm pascal \
-		opencl rust minimal ada hip]
+		opencl rust minimal ada]
 }
 
 # Check if debugging is enabled for gdb.
