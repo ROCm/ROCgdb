@@ -738,6 +738,14 @@ else
   fi
 fi
 
+# Verify that we have a usable GMP library.
+AC_LIB_HAVE_LINKFLAGS([gmp], [], [#include <gmp.h>],
+                      [mpz_t n;
+                       mpz_init (n);])
+if test "$HAVE_LIBGMP" != yes; then
+  AC_MSG_ERROR([GMP is missing or unusable])
+fi
+
 AC_ARG_WITH(mpfr,
   AS_HELP_STRING([--with-mpfr], [include MPFR support (auto/yes/no)]),
   [], [with_mpfr=auto])

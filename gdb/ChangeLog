@@ -1,3 +1,163 @@
+2020-11-16  Pedro Alves  <pedro@palves.net>
+
+	* frame.c (get_prev_frame): Move get_frame_id call from here ...
+	(get_prev_frame_always_1): ... to here.
+	* inline-frame.c (inline_frame_this_id): Mention
+	get_prev_frame_always_1 in comment.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* valarith.c (fixed_point_binop): Add BINOP_EQUAL and BINOP_LESS
+	handling.
+	(value_less): Add fixed-point handling.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* eval.c (binop_promote): Add fixed-point type handling.
+	* valarith.c (fixed_point_binop): New function.
+	(scalar_binop): Add fixed-point type handling.
+	(value_neg): Add fixed-point type handling.
+	* valops.c (value_cast_to_fixed_point): New function.
+	(value_cast): Add fixed-point type handling.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-typeprint.c (ada_print_type): Add handing of fixed-point
+	range types.
+	* c-typeprint.c (c_type_print_varspec_prefix)
+	(c_type_print_varspec_suffix, c_type_print_base_1): Add
+	TYPE_CODE_FIXED_POINT handling.
+	* p-typeprint.c (pascal_type_print_varspec_prefix)
+	(pascal_type_print_varspec_suffix): Likewise.
+	* typeprint.c (print_type_fixed_point): New function.
+	* typeprint.h (print_type_fixed_point): Add declaration.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* printcmd.c (print_scalar_formatted): Add fixed-point type
+	handling when options->format is set.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-valprint.c (ada_value_print_1): Add fixed-point type handling.
+	* dwarf2/read.c (get_dwarf2_rational_constant)
+	(get_dwarf2_unsigned_rational_constant, finish_fixed_point_type)
+	(has_zero_over_zero_small_attribute): New functions.
+	read_base_type, set_die_type): Add fixed-point type handling.
+	* gdb-gdb.py.in: Add fixed-point type handling.
+	* gdbtypes.c: #include "gmp-utils.h".
+	(create_range_type, set_type_code): Add fixed-point type handling.
+	(init_fixed_point_type): New function.
+	(is_integral_type, is_scalar_type): Add fixed-point type handling.
+	(print_fixed_point_type_info): New function.
+	(recursive_dump_type, copy_type_recursive): Add fixed-point type
+	handling.
+	(fixed_point_type_storage): New typedef.
+	(fixed_point_objfile_key): New static global.
+	(allocate_fixed_point_type_info, is_fixed_point_type): New functions.
+	(fixed_point_type_base_type, fixed_point_scaling_factor): New
+	functions.
+	* gdbtypes.h: #include "gmp-utils.h".
+	(enum type_code) <TYPE_SPECIFIC_FIXED_POINT>: New enum.
+	(union type_specific) <fixed_point_info>: New field.
+	(struct fixed_point_type_info): New struct.
+	(INIT_FIXED_POINT_SPECIFIC, TYPE_FIXED_POINT_INFO): New macros.
+	(init_fixed_point_type, is_fixed_point_type)
+	(fixed_point_type_base_type, fixed_point_scaling_factor)
+	(allocate_fixed_point_type_info): Add declarations.
+	* valprint.c (generic_val_print_fixed_point): New function.
+	(generic_value_print): Add fixed-point type handling.
+	* value.c (value_as_address, unpack_long): Add fixed-point type
+	handling.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* utils.h (uinteger_pow): Add declaration.
+	* utils.c (uinteger_pow): Moved here (without changes)...
+	* valarith.c (uinteger_pow): ... from here.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* gmp-utils.h,  gmp-utils.h: New file.
+	* unittests/gmp-utils-selftests.c: New file.
+	* Makefile.in (SUBDIR_UNITTESTS_SRCS): Add
+	unittests/gmp-utils-selftests.c.
+	(COMMON_SFILES) Add gmp-utils.c.
+	(HFILES_NO_SRCDIR): Add gmp-utils.h.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* configure.ac: Generate an error if a usable GMP library
+	could not be found.
+	* configure: Regenerate.
+
+2020-11-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* configure.ac: Add support for --with-libgmp-prefix.
+	* Makefile.in (LIBGMP): New variable.
+	(CLIBS): Include $(LIBGMP).
+	* configure, config.in: Regenerate
+
+2020-11-14  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR cli/26879
+	* f-exp.y (COMPLETE): New token.
+	(exp): Two new rules for tab-completion.
+	(saw_name_at_eof): New static global.
+	(last_was_structop): Likewise.
+	(yylex): Set new variables, and return COMPLETE token at the end
+	of the input stream in some cases.
+
+2020-11-14  Tom Tromey  <tom@tromey.com>
+
+	* infrun.c (fetch_inferior_event): Use "bool" for should_stop.
+
+2020-11-14  Tom Tromey  <tom@tromey.com>
+
+	* opencl-lang.c (opencl_component_ref): Make "comps" const.
+
+2020-11-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* arm-tdep.c (class arm_instruction_reader) <read>: Fix comment.
+
+2020-11-13  Tom Tromey  <tom@tromey.com>
+
+	* c-lang.c (convert_ucn, convert_octal, convert_hex)
+	(convert_escape, parse_one_string): Constify.
+
+2020-11-13  Keith Seitz  <keiths@redhat.com>
+
+	https://bugzilla.redhat.com/show_bug.cgi?id=1553086
+	* elfread.c (elf_symfile_segments): Omit "Loadable section ...
+	outside of ELF segments" warning for debugin
+
+2020-11-13  Keith Seitz  <keiths@redhat.com>
+
+	PR gdb/23034
+	* elfread.c (elf_symfile_segments): Output a BFD file name
+	for the "Loadable section ... outside of ELF segments" warning.
+
+2020-11-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26835
+	* arm-tdep.c (class arm_instruction_reader): New.
+	(target_arm_instruction_reader): New.
+	(arm_analyze_prologue): Add instruction reader parameter and use
+	it.  Use arm_expand_immediate.
+	(class target_arm_instruction_reader): Adjust.
+	(arm_skip_prologue): Adjust.
+	(arm_expand_immediate): New.
+	(arm_scan_prologue): Adjust.
+	(arm_analyze_prologue_test): New.
+	(class test_arm_instruction_reader): New.
+
+2020-11-13  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-lang.c (fortran_argument_convert): Add declaration.  Add
+	header comment, taken from f-lang.h.  Make static.
+	* f-lang.h (f77_get_dynamic_array_length): Delete declaration.
+	(fortran_argument_convert): Delete declaration.
+
 2020-11-12  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* ada-exp.y (find_primitive_type): Make parameter const.
