@@ -1,3 +1,42 @@
+2020-11-18  Keith Seitz  <keiths@redhat.com>
+
+	* linux-tdep.c (dump_note_entry_p): Return true instead of
+	checking `filename'.
+
+2020-11-18  Tom de Vries  <tdevries@suse.de>
+
+	* debuginfod-support.c (debuginfod_source_query)
+	(debuginfod_debuginfo_query): Also do early exit if
+	"(getenv (DEBUGINFOD_URLS_ENV_VAR))[0] == '\0'".
+
+2020-11-18  Tom de Vries  <tdevries@suse.de>
+
+	* gdbtypes.c (update_static_array_size): Fix -Werror=bool-compare
+	warning.
+
+2020-11-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (get_array_bounds): Return bool, adjust some
+	callers.  Move doc here.
+	* gdbtypes.c (get_array_bounds): Return bool
+
+2020-11-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* arc-linux-tdep.c (arc_linux_sw_breakpoint_from_kind): Add an
+	assert.
+	* arc-tdep.c (arc_breakpoint_kind_from_pc): Likewise.
+	* disasm-selftests.c (print_one_insn_test): Fall throough from ARC
+	case to the default.
+
+2020-11-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* printcmd.c: Include 'safe-ctype.c'.
+	(skip_over_slash_fmt): New function.
+	(print_command_completer): Call skip_over_slash_fmt.
+	(display_and_x_command_completer): New function.
+	(_initialize_printcmd): Add command completion for 'x' and
+	'display'.
+
 2020-11-16  Pedro Alves  <pedro@palves.net>
 
 	* frame.c (get_prev_frame): Move get_frame_id call from here ...
@@ -78,7 +117,7 @@
 
 2020-11-15  Joel Brobecker  <brobecker@adacore.com>
 
-	* gmp-utils.h,  gmp-utils.h: New file.
+	* gmp-utils.h,  gmp-utils.c: New file.
 	* unittests/gmp-utils-selftests.c: New file.
 	* Makefile.in (SUBDIR_UNITTESTS_SRCS): Add
 	unittests/gmp-utils-selftests.c.

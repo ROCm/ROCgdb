@@ -1,3 +1,35 @@
+2020-11-18  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.mi/mi-nonstop-exit.exp: Enable non-stop through GDBFLAGS.
+	* gdb.mi/mi-ns-stale-regcache.exp: Likewise.
+	* gdb.mi/mi-nsintrall.exp: Likewise.
+	* gdb.mi/mi-nsmoribund.exp: Likewise.
+	* gdb.mi/mi-nsthrexec.exp: Likewise.
+	* gdb.mi/mi-watch-nonstop.exp: Likewise.
+
+2020-11-18  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* lib/mi-support.exp (mi_run_cmd_full): Use unresovled instead
+	of perror.
+
+2020-11-18  Joseph Myers  <joseph@codesourcery.com>
+
+	* lib/mi-support.exp (mi_gdb_file_cmd): Check for case where
+	$arg.exe exists but $arg does not.
+
+2020-11-17  Gary Benson <gbenson@redhat.com>
+
+	* gdb.trace/trace-common.h (x86_trace_dummy): Add
+	__attribute__ ((used)).
+
+2020-11-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.gdb/unittest.exp: Spot 'Running...' lines.
+
+2020-11-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/completion.exp: Add new tests.
+
 2020-11-16  Tom Tromey  <tromey@adacore.com>
 
 	* gdb.dwarf2/data-loc.exp: Update expected output.  Remove C
