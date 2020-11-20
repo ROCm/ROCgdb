@@ -1909,7 +1909,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
       struct value *v, *result;
       struct program_space *frame_pspace;
 
-      fetch_subexp_value (b->exp.get (), &pc, &v, &result, &val_chain, 0);
+      fetch_subexp_value (b->exp.get (), &pc, &v, &result, &val_chain, false);
 
       /* Avoid setting b->val if it's already set.  The meaning of
 	 b->val is 'the last value' user saw, and we should update
@@ -4973,7 +4973,7 @@ watchpoint_check (bpstat bs)
 	return WP_VALUE_CHANGED;
 
       mark = value_mark ();
-      fetch_subexp_value (b->exp.get (), &pc, &new_val, NULL, NULL, 0);
+      fetch_subexp_value (b->exp.get (), &pc, &new_val, NULL, NULL, false);
 
       if (b->val_bitsize != 0)
 	new_val = extract_bitfield_from_watchpoint_value (b, new_val);
@@ -10682,7 +10682,7 @@ is_masked_watchpoint (const struct breakpoint *b)
 		hw_access: watch access (read or write) */
 static void
 watch_command_1 (const char *arg, int accessflag, int from_tty,
-		 int just_location, int internal)
+		 bool just_location, bool internal)
 {
   struct breakpoint *scope_breakpoint = NULL;
   const struct block *exp_valid_block = NULL, *cond_exp_valid_block = NULL;
@@ -10699,7 +10699,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   int pc = 0;
   /* Flag to indicate whether we are going to use masks for
      the hardware watchpoint.  */
-  int use_mask = 0;
+  bool use_mask = false;
   CORE_ADDR mask = 0;
 
   /* Make sure that we actually have parameters to parse.  */
@@ -10766,7 +10766,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 	      if (use_mask)
 		error(_("You can specify only one mask."));
 
-	      use_mask = just_location = 1;
+	      use_mask = just_location = true;
 
 	      mark = value_mark ();
 	      mask_value = parse_to_comma_and_eval (&value_start);
@@ -11083,9 +11083,48 @@ can_use_hardware_watchpoint (const std::vector<value_ref_ptr> &vals)
 }
 
 void
-watch_command_wrapper (const char *arg, int from_tty, int internal)
+watch_command_wrapper (const char *arg, int from_tty, bool internal)
 {
   watch_command_1 (arg, hw_write, from_tty, 0, internal);
+}
+
+/* Options for the watch, awatch, and rwatch commands.  */
+
+struct watch_options
+{
+  /* For -location.  */
+  bool location = false;
+};
+
+/* Definitions of options for the "watch", "awatch", and "rwatch" commands.
+
+   Historically GDB always accepted both '-location' and '-l' flags for
+   these commands (both flags being synonyms).  When converting to the
+   newer option scheme only '-location' is added here.  That's fine (for
+   backward compatibility) as any non-ambiguous prefix of a flag will be
+   accepted, so '-l', '-loc', are now all accepted.
+
+   What this means is that, if in the future, we add any new flag here
+   that starts with '-l' then this will break backward compatibility, so
+   please, don't do that!  */
+
+static const gdb::option::option_def watch_option_defs[] = {
+  gdb::option::flag_option_def<watch_options> {
+    "location",
+    [] (watch_options *opt) { return &opt->location; },
+    N_("\
+This evaluates EXPRESSION and watches the memory to which is refers.\n\
+-l can be used as a short form of -location."),
+  },
+};
+
+/* Returns the option group used by 'watch', 'awatch', and 'rwatch'
+   commands.  */
+
+static gdb::option::option_def_group
+make_watch_options_def_group (watch_options *opts)
+{
+  return {{watch_option_defs}, opts};
 }
 
 /* A helper function that looks for the "-location" argument and then
@@ -11094,14 +11133,29 @@ watch_command_wrapper (const char *arg, int from_tty, int internal)
 static void
 watch_maybe_just_location (const char *arg, int accessflag, int from_tty)
 {
-  int just_location = 0;
+  watch_options opts;
+  auto grp = make_watch_options_def_group (&opts);
+  gdb::option::process_options
+    (&arg, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, grp);
+  if (arg != nullptr && *arg == '\0')
+    arg = nullptr;
 
-  if (arg
-      && (check_for_argument (&arg, "-location", sizeof ("-location") - 1)
-	  || check_for_argument (&arg, "-l", sizeof ("-l") - 1)))
-    just_location = 1;
+  watch_command_1 (arg, accessflag, from_tty, opts.location, false);
+}
 
-  watch_command_1 (arg, accessflag, from_tty, just_location, 0);
+/* Command completion for 'watch', 'awatch', and 'rwatch' commands.   */
+static void
+watch_command_completer (struct cmd_list_element *ignore,
+			 completion_tracker &tracker,
+			 const char *text, const char * /*word*/)
+{
+  const auto group = make_watch_options_def_group (nullptr);
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group))
+    return;
+
+  const char *word = advance_to_expression_complete_word_point (tracker, text);
+  expression_completer (ignore, tracker, text, word);
 }
 
 static void
@@ -11111,7 +11165,7 @@ watch_command (const char *arg, int from_tty)
 }
 
 void
-rwatch_command_wrapper (const char *arg, int from_tty, int internal)
+rwatch_command_wrapper (const char *arg, int from_tty, bool internal)
 {
   watch_command_1 (arg, hw_read, from_tty, 0, internal);
 }
@@ -11123,7 +11177,7 @@ rwatch_command (const char *arg, int from_tty)
 }
 
 void
-awatch_command_wrapper (const char *arg, int from_tty, int internal)
+awatch_command_wrapper (const char *arg, int from_tty, bool internal)
 {
   watch_command_1 (arg, hw_access, from_tty, 0, internal);
 }
@@ -15920,32 +15974,46 @@ If REGEX is given, only stop for libraries matching the regular expression."),
 		     CATCH_PERMANENT,
 		     CATCH_TEMPORARY);
 
-  c = add_com ("watch", class_breakpoint, watch_command, _("\
-Set a watchpoint for an expression.\n\
-Usage: watch [-l|-location] EXPRESSION\n\
-A watchpoint stops execution of your program whenever the value of\n\
-an expression changes.\n\
-If -l or -location is given, this evaluates EXPRESSION and watches\n\
-the memory to which it refers."));
-  set_cmd_completer (c, expression_completer);
+  const auto opts = make_watch_options_def_group (nullptr);
 
-  c = add_com ("rwatch", class_breakpoint, rwatch_command, _("\
-Set a read watchpoint for an expression.\n\
-Usage: rwatch [-l|-location] EXPRESSION\n\
+  static const std::string watch_help = gdb::option::build_help (_("\
+Set a watchpoint for EXPRESSION.\n\
+Usage: watch [-location] EXPRESSION\n\
+\n\
+Options:\n\
+%OPTIONS%\n\
+\n\
 A watchpoint stops execution of your program whenever the value of\n\
-an expression is read.\n\
-If -l or -location is given, this evaluates EXPRESSION and watches\n\
-the memory to which it refers."));
-  set_cmd_completer (c, expression_completer);
+an expression changes."), opts);
+  c = add_com ("watch", class_breakpoint, watch_command,
+	       watch_help.c_str ());
+  set_cmd_completer_handle_brkchars (c, watch_command_completer);
 
-  c = add_com ("awatch", class_breakpoint, awatch_command, _("\
-Set a watchpoint for an expression.\n\
-Usage: awatch [-l|-location] EXPRESSION\n\
-A watchpoint stops execution of your program whenever the value of\n\
-an expression is either read or written.\n\
-If -l or -location is given, this evaluates EXPRESSION and watches\n\
-the memory to which it refers."));
-  set_cmd_completer (c, expression_completer);
+  static const std::string rwatch_help = gdb::option::build_help (_("\
+Set a read watchpoint for EXPRESSION.\n\
+Usage: rwatch [-location] EXPRESSION\n\
+\n\
+Options:\n\
+%OPTIONS%\n\
+\n\
+A read watchpoint stops execution of your program whenever the value of\n\
+an expression is read."), opts);
+  c = add_com ("rwatch", class_breakpoint, rwatch_command,
+	       rwatch_help.c_str ());
+  set_cmd_completer_handle_brkchars (c, watch_command_completer);
+
+  static const std::string awatch_help = gdb::option::build_help (_("\
+Set an access watchpoint for EXPRESSION.\n\
+Usage: awatch [-location] EXPRESSION\n\
+\n\
+Options:\n\
+%OPTIONS%\n\
+\n\
+An access watchpoint stops execution of your program whenever the value\n\
+of an expression is either read or written."), opts);
+  c = add_com ("awatch", class_breakpoint, awatch_command,
+	       awatch_help.c_str ());
+  set_cmd_completer_handle_brkchars (c, watch_command_completer);
 
   add_info ("watchpoints", info_watchpoints_command, _("\
 Status of specified watchpoints (all watchpoints if no argument)."));

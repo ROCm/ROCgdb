@@ -1,3 +1,90 @@
+2020-11-19  Andreas Arnez  <arnez@linux.ibm.com>
+
+	PR tdep/26916
+	* s390-tdep.c (s390_process_record): Fix recording of STOC, STOCG,
+	and STOCFH.
+
+2020-11-19  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* f-lang.c (fortran_value_subarray): Use plongest/pulongest.
+
+2020-11-19  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbarch.sh (read_core_file_mappings): Remove `other` parameter
+	in `loop_cb` parameter.
+	* gdbarch.c: Re-generate.
+	* gdbarch.h: Re-generate.
+	* arch-utils.c (default_read_core_file_mappings): Remove `other`
+	parameter.
+	* arch-utils.h (default_read_core_file_mappings): Likewise.
+	* corelow.c (core_target::build_file_mappings): Likewise.
+	* linux-tdep.c (linux_read_core_file_mappings): Likewise.
+	(linux_core_info_proc_mappings): Likewise.
+
+2020-11-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Add f-array-walker.h.
+	* NEWS: Mention new options.
+	* f-array-walker.h: New file.
+	* f-lang.c: Include 'gdbcmd.h' and 'f-array-walker.h'.
+	(repack_array_slices): New static global.
+	(show_repack_array_slices): New function.
+	(fortran_array_slicing_debug): New static global.
+	(show_fortran_array_slicing_debug): New function.
+	(value_f90_subarray): Delete.
+	(skip_undetermined_arglist): Delete.
+	(class fortran_array_repacker_base_impl): New class.
+	(class fortran_lazy_array_repacker_impl): New class.
+	(class fortran_array_repacker_impl): New class.
+	(fortran_value_subarray): Complete rewrite.
+	(set_fortran_list): New static global.
+	(show_fortran_list): Likewise.
+	(_initialize_f_language): Register new commands.
+	(fortran_adjust_dynamic_array_base_address_hack): New function.
+	* f-lang.h (fortran_adjust_dynamic_array_base_address_hack):
+	Declare.
+	* f-valprint.c: Include 'f-array-walker.h'.
+	(class fortran_array_printer_impl): New class.
+	(f77_print_array_1): Delete.
+	(f77_print_array): Delete.
+	(fortran_print_array): New.
+	(f_value_print_inner): Update to call fortran_print_array.
+	* gdbtypes.c: Include 'f-lang.h'.
+	(resolve_dynamic_type_internal): Call
+	fortran_adjust_dynamic_array_base_address_hack.
+
+2020-11-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* breakpoint.c (struct watch_options): New struct.
+	(watch_option_defs): New static global.
+	(make_watch_options_def_group): New function.
+	(watch_maybe_just_location): Convert option parsing.
+	(watch_command_completer): New function.
+	(_initialize_breakpoint): Build help text using options mechanism.
+
+2020-11-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* breakpoint.c (update_watchpoint): Pass 'false' not '0'.
+	(watch_command_1): Update parameter types.  Convert locals to
+	bool.
+	(watch_command_wrapper): Change parameter type.
+	(watch_maybe_just_location): Change locals to bool.
+	(rwatch_command_wrapper): Update parameter type.
+	(awatch_command_wrapper): Update parameter type.
+	* breakpoint.h (watch_command_wrapper): Change parameter type.
+	(rwatch_command_wrapper): Update parameter type.
+	(awatch_command_wrapper): Update parameter type.
+	* eval.c (fetch_subexp_value): Change parameter type.
+	* ppc-linux-nat.c (ppc_linux_nat_target::check_condition): Pass
+	'false' not '0'.
+	* value.h (fetch_subexp_value): Change parameter type in
+	declaration.
+
+2020-11-19  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* printcmd.c (skip_over_slash_fmt): Make use of skip_to_space and
+	skip_spaces.
+
 2020-11-18  Keith Seitz  <keiths@redhat.com>
 
 	* linux-tdep.c (dump_note_entry_p): Return true instead of

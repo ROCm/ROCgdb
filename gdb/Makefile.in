@@ -1282,6 +1282,7 @@ HFILES_NO_SRCDIR = \
 	expression.h \
 	extension.h \
 	extension-priv.h \
+	f-array-walker.h \
 	f-lang.h \
 	fbsd-nat.h \
 	fbsd-tdep.h \
