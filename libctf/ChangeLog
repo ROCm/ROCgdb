@@ -1,3 +1,242 @@
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-link.c (ctf_link_deduplicating): Clean up the ctf_link_outputs
+	hash on error.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-create.c (ctf_dtd_insert): Set ENOMEM on the dict if out of memory.
+	(ctf_dvd_insert): Likewise.
+	(ctf_add_function): Report ECTF_RDONLY if this dict is not writable.
+	* ctf-subr.c (ctf_err_warn): Only debug-dump passed-in warnings if
+	the passed-in error code is nonzero: the error on the dict for
+	warnings may relate to a previous error.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-open.c (ctf_getsymsect): New.
+	(ctf_getstrsect): Likewise.
+	* libctf.ver: Add them.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-impl.h (struct ctf_archive_internal) <ctfi_dicts>: New, dicts
+	the archive machinery has opened and cached.
+	<ctfi_symdicts>: New, cache of dicts containing symbols looked up.
+	<ctfi_syms>: New, cache of types of symbols looked up.
+	* ctf-archive.c (ctf_arc_close): Free them on close.
+	(enosym): New, flag entry for 'symbol not present'.
+	(ctf_arc_import_parent): New, automatically import the parent from
+	".ctf" if this is a child in an archive and ".ctf" is present.
+	(ctf_dict_open_sections): Use it.
+	(ctf_archive_iter_internal): Likewise.
+	(ctf_cached_dict_close): New, thunk around ctf_dict_close.
+	(ctf_dict_open_cached): New, open and cache a dict.
+	(ctf_arc_flush_caches): New, flush the caches.
+	(ctf_arc_lookup_symbol): New, look up a symbol in (all members of)
+	an archive, and cache the lookup.
+	(ctf_archive_iter): Note the new caching behaviour.
+	(ctf_archive_next): Use ctf_dict_open_cached.
+	* libctf.ver: Add ctf_arc_lookup_symbol and ctf_arc_flush_caches.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-dedup.c (ctf_dedup_rhash_type): Null out the names of nameless
+	type kinds, just in case the input has named them.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-dump.c (ctf_dump_header): Dump the new flags bits and the index
+	section lengths.
+	(ctf_dump_objts): Report indexed sections.  Also dump functions.  Use
+	ctf_symbol_next, not manual looping.
+	(ctf_dump_funcs): Delete.
+	(ctf_dump): Use ctf_dump_objts, not ctf_dump_funcs.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-impl.h (CTF_INDEX_PAD_THRESHOLD): New.
+	(_libctf_nonnull_): Likewise.
+	(ctf_in_flight_dynsym_t): New.
+	(ctf_dict_t) <ctf_funcidx_names>: Likewise.
+	<ctf_objtidx_names>: Likewise.
+	<ctf_nfuncidx>: Likewise.
+	<ctf_nobjtidx>: Likewise.
+	<ctf_funcidx_sxlate>: Likewise.
+	<ctf_objtidx_sxlate>: Likewise.
+	<ctf_objthash>: Likewise.
+	<ctf_funchash>: Likewise.
+	<ctf_dynsyms>: Likewise.
+	<ctf_dynsymidx>: Likewise.
+	<ctf_dynsymmax>: Likewise.
+	<ctf_in_flight_dynsym>: Likewise.
+	(struct ctf_next) <u.ctn_next>: Likewise.
+	(ctf_symtab_skippable): New prototype.
+	(ctf_add_funcobjt_sym): Likewise.
+	(ctf_dynhash_sort_by_name): Likewise.
+	(ctf_sym_to_elf64): Rename to...
+	(ctf_elf32_to_link_sym): ... this, and...
+	(ctf_elf64_to_link_sym): ... this.
+	* ctf-open.c (init_symtab): Check for lack of CTF_F_NEWFUNCINFO
+	flag, and presence of index sections.  Refactor out
+	ctf_symtab_skippable and ctf_elf*_to_link_sym, and use them.  Use
+	ctf_link_sym_t, not Elf64_Sym.  Skip initializing objt or func
+	sxlate sections if corresponding index section is present.  Adjust
+	for new func info section format.
+	(ctf_bufopen_internal): Add ctf_err_warn to corrupt-file error
+	handling.  Report incorrect-length index sections.  Always do an
+	init_symtab, even if there is no symtab section (there may be index
+	sections still).
+	(flip_objts): Adjust comment: func and objt sections are actually
+	identical in structure now, no need to caveat.
+	(ctf_dict_close):  Free newly-added data structures.
+	* ctf-create.c (ctf_create): Initialize them.
+	(ctf_symtab_skippable): New, refactored out of
+	init_symtab, with st_nameidx_set check added.
+	(ctf_add_funcobjt_sym): New, add a function or object symbol to the
+	ctf_objthash or ctf_funchash, by name.
+	(ctf_add_objt_sym): Call it.
+	(ctf_add_func_sym): Likewise.
+	(symtypetab_delete_nonstatic_vars): New, delete vars also present as
+	data objects.
+	(CTF_SYMTYPETAB_EMIT_FUNCTION): New flag to symtypetab emitters:
+	this is a function emission, not a data object emission.
+	(CTF_SYMTYPETAB_EMIT_PAD): New flag to symtypetab emitters: emit
+	pads for symbols with no type (only set for unindexed sections).
+	(CTF_SYMTYPETAB_FORCE_INDEXED): New flag to symtypetab emitters:
+	always emit indexed.
+	(symtypetab_density): New, figure out section sizes.
+	(emit_symtypetab): New, emit a symtypetab.
+	(emit_symtypetab_index): New, emit a symtypetab index.
+	(ctf_serialize): Call them, emitting suitably sorted symtypetab
+	sections and indexes.  Set suitable header flags.  Copy over new
+	fields.
+	* ctf-hash.c (ctf_dynhash_sort_by_name): New, used to impose an
+	order on symtypetab index sections.
+	* ctf-link.c (ctf_add_type_mapping): Delete erroneous comment
+	relating to code that was never committed.
+	(ctf_link_one_variable): Improve variable name.
+	(check_sym): New, symtypetab analogue of check_variable.
+	(ctf_link_deduplicating_one_symtypetab): New.
+	(ctf_link_deduplicating_syms): Likewise.
+	(ctf_link_deduplicating): Call them.
+	(ctf_link_deduplicating_per_cu): Note that we don't call them in
+	this case (yet).
+	(ctf_link_add_strtab): Set the error on the fp correctly.
+	(ctf_link_add_linker_symbol): New (no longer a do-nothing stub), add
+	a linker symbol to the in-flight list.
+	(ctf_link_shuffle_syms): New (no longer a do-nothing stub), turn the
+	in-flight list into a mapping we can use, now its names are
+	resolvable in the external strtab.
+	* ctf-string.c (ctf_str_rollback_atom): Don't roll back atoms with
+	external strtab offsets.
+	(ctf_str_rollback): Adjust comment.
+	(ctf_str_write_strtab): Migrate ctf_syn_ext_strtab population from
+	writeout time...
+	(ctf_str_add_external): ... to string addition time.
+	* ctf-lookup.c (ctf_lookup_var_key_t): Rename to...
+	(ctf_lookup_idx_key_t): ... this, now we use it for syms too.
+	<clik_names>: New member, a name table.
+	(ctf_lookup_var): Adjust accordingly.
+	(ctf_lookup_variable): Likewise.
+	(ctf_lookup_by_id): Shuffle further up in the file.
+	(ctf_symidx_sort_arg_cb): New, callback for...
+	(sort_symidx_by_name): ... this new function to sort a symidx
+	found to be unsorted (likely originating from the compiler).
+	(ctf_symidx_sort): New, sort a symidx.
+	(ctf_lookup_symbol_name): Support dynamic symbols with indexes
+	provided by the linker.  Use ctf_link_sym_t, not Elf64_Sym.
+	Check the parent if a child lookup fails.
+	(ctf_lookup_by_symbol): Likewise.  Work for function symbols too.
+	(ctf_symbol_next): New, iterate over symbols with types (without
+	sorting).
+	(ctf_lookup_idx_name): New, bsearch for symbol names in indexes.
+	(ctf_try_lookup_indexed): New, attempt an indexed lookup.
+	(ctf_func_info): Reimplement in terms of ctf_lookup_by_symbol.
+	(ctf_func_args): Likewise.
+	(ctf_get_dict): Move...
+	* ctf-types.c (ctf_get_dict): ... here.
+	* ctf-util.c (ctf_sym_to_elf64): Re-express as...
+	(ctf_elf64_to_link_sym): ... this.  Add new st_symidx field, and
+	st_nameidx_set (always 0, so st_nameidx can be ignored).  Look in
+	the ELF strtab for names.
+	(ctf_elf32_to_link_sym): Likewise, for Elf32_Sym.
+	(ctf_next_destroy): Destroy ctf_next_t.u.ctn_next if need be.
+	* libctf.ver: Add ctf_symbol_next, ctf_add_objt_sym and
+	ctf_add_func_sym.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-link.c (ctf_link_shuffle_syms): Adjust.
+	(ctf_link_add_linker_symbol): New, unimplemented stub.
+	* libctf.ver: Add it.
+	* ctf-create.c (ctf_serialize): Set CTF_F_DYNSTR on newly-serialized
+	dicts.
+	* ctf-open-bfd.c (ctf_bfdopen_ctfsect): Check for the flag: open the
+	symtab/strtab if not present, dynsym/dynstr otherwise.
+	* ctf-archive.c (ctf_arc_bufpreamble): New, get the preamble from
+	some arbitrary member of a CTF archive.
+	* ctf-impl.h (ctf_arc_bufpreamble): Declare it.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-archive.c (ctf_arc_open_by_offset): Rename to...
+	(ctf_dict_open_by_offset): ... this.  Adjust callers.
+	(ctf_arc_open_by_name_internal): Rename to...
+	(ctf_dict_open_internal): ... this.  Adjust callers.
+	(ctf_arc_open_by_name_sections): Rename to...
+	(ctf_dict_open_sections): ... this, keeping compatibility function.
+	(ctf_arc_open_by_name): Rename to...
+	(ctf_dict_open): ... this, keeping compatibility function.
+	* libctf.ver: New functions added.
+	* ctf-link.c (ctf_link_one_input_archive): Adjusted accordingly.
+	(ctf_link_deduplicating_open_inputs): Likewise.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-impl.h: Rename ctf_file_t to ctf_dict_t: all declarations
+	adjusted.
+	(ctf_fileops): Rename to...
+	(ctf_dictops): ... this.
+	(ctf_dedup_t) <cd_id_to_file_t>: Rename to...
+	<cd_id_to_dict_t>: ... this.
+	(ctf_file_t): Fix outdated comment.
+	<ctf_fileops>: Rename to...
+	<ctf_dictops>: ... this.
+	(struct ctf_archive_internal) <ctfi_file>: Rename to...
+	<ctfi_dict>: ... this.
+	* ctf-archive.c: Rename ctf_file_t to ctf_dict_t.
+	Rename ctf_archive.ctfa_nfiles to ctfa_ndicts.
+	Rename ctf_file_close to ctf_dict_close.  All users adjusted.
+	* ctf-create.c: Likewise.  Refer to CTF dicts, not CTF containers.
+	(ctf_bundle_t) <ctb_file>: Rename to...
+	<ctb_dict): ... this.
+	* ctf-decl.c: Rename ctf_file_t to ctf_dict_t.
+	* ctf-dedup.c: Likewise.  Rename ctf_file_close to
+	ctf_dict_close. Refer to CTF dicts, not CTF containers.
+	* ctf-dump.c: Likewise.
+	* ctf-error.c: Likewise.
+	* ctf-hash.c: Likewise.
+	* ctf-inlines.h: Likewise.
+	* ctf-labels.c: Likewise.
+	* ctf-link.c: Likewise.
+	* ctf-lookup.c: Likewise.
+	* ctf-open-bfd.c: Likewise.
+	* ctf-string.c: Likewise.
+	* ctf-subr.c: Likewise.
+	* ctf-types.c: Likewise.
+	* ctf-util.c: Likewise.
+	* ctf-open.c: Likewise.
+	(ctf_file_close): Rename to...
+	(ctf_dict_close): ...this.
+	(ctf_file_close): New trivial wrapper around ctf_dict_close, for
+	compatibility.
+	(ctf_parent_file): Rename to...
+	(ctf_parent_dict): ... this.
+	(ctf_parent_file): New trivial wrapper around ctf_parent_dict, for
+	compatibility.
+	* libctf.ver: Add ctf_dict_close and ctf_parent_dict.
+
 2020-10-21  Tom Tromey  <tromey@adacore.com>
 
 	* mkerrors.sed: Remove.

@@ -1,3 +1,113 @@
+2020-11-21  Nelson Chu  <nelson.chu@sifive.com>
+
+	* emultempl/riscvelf.em (riscv_elf_before_allocation): Change
+	link_info.relax_pass from 3 to 4.
+	* testsuite/ld-riscv-elf/pcgp-relax.d: New testcase.
+	* testsuite/ld-riscv-elf/pcgp-relax.s: Likewise.
+	* testsuite/ld-riscv-elf/ld-riscv-elf.exp: Updated.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/data-func-conflicted.d: Shrink the expected
+	size of the type section now that function types are being
+	deduplicated properly.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/array.d: Adjust for nonzero flags word and
+	public symbols in the data section rather than variables: use
+	sysv hash style to keep test results the same on non-GNU targets.
+	* testsuite/ld-ctf/diag-cttname-null.d: Likewise.
+	* testsuite/ld-ctf/diag-cuname.d: Likewise.
+	* testsuite/ld-ctf/diag-parlabel.d: Likewise.
+	* testsuite/ld-ctf/slice.d: Likewise.
+	* testsuite/ld-ctf/function.d: Likewise, but in the function section.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-1.d:  Adjust for nonzero
+	flags word.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-1.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.parent.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-noncyclic.d: Likewise.
+	* testsuite/ld-ctf/cycle-1.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.A.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.B.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.C.d: Likewise.
+	* testsuite/ld-ctf/diag-wrong-magic-number-mixed.d:  Likewise.
+	* testsuite/ld-ctf/super-sub-cycles.d:  Likewise.
+	* testsuite/ld-ctf/data-func-1.c: New test.
+	* testsuite/ld-ctf/data-func-2.c: Likewise.
+	* testsuite/ld-ctf/data-func-conflicted.d: Likewise.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldelfgen.c (struct ctf_strsym_iter_cb_arg): Rename to...
+	(struct ctf_strtab_iter_cb_arg): ... this, changing fields:
+	<syms>: Remove.
+	<symcount>: Remove.
+	<symstrtab>: Rename to...
+	<strtab>: ... this.
+	(ldelf_ctf_strtab_iter_cb): Adjust.
+	(ldelf_ctf_symbols_iter_cb): Remove.
+	(ldelf_new_dynsym_for_ctf): New, tell libctf about a single
+	symbol.
+	(ldelf_examine_strtab_for_ctf): Rename to...
+	(ldelf_acquire_strings_for_ctf): ... this, only doing the strtab
+	portion and not symbols.
+	* ldelfgen.h: Adjust declarations accordingly.
+	* ldemul.c (ldemul_examine_strtab_for_ctf): Rename to...
+	(ldemul_acquire_strings_for_ctf): ... this.
+	(ldemul_new_dynsym_for_ctf): New.
+	* ldemul.h: Adjust declarations accordingly.
+	* ldlang.c (ldlang_ctf_apply_strsym): Rename to...
+	(ldlang_ctf_acquire_strings): ... this.
+	(ldlang_ctf_new_dynsym): New.
+	(lang_write_ctf): Call ldemul_new_dynsym_for_ctf with NULL to do
+	the actual symbol shuffle.
+	* ldlang.h (struct elf_strtab_hash): Adjust accordingly.
+	* ldmain.c (bfd_link_callbacks): Wire up new/renamed callbacks.
+
+	* emultempl/aix.em: Adjust for emulation changes:
+	ldemul_examine_strtab_for_ctf renamed to
+	ldemul_acquire_strings_for_ctf, new ldemul_new_dynsym_for_ctf.
+	* emultempl/armcoff.em: Likewise.
+	* emultempl/beos.em: Likewise.
+	* emultempl/elf.em: Likewise.
+	* emultempl/elf-generic.em: Likewise.
+	* emultempl/linux.em: Likewise.
+	* emultempl/msp430.em: Likewise.
+	* emultempl/pe.em: Likewise.
+	* emultempl/pep.em: Likewise.
+	* emultempl/ticoff.em: Likewise.
+	* emultempl/vanilla.em: Likewise.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldlang.c (ctf_output): This is a ctf_dict_t now.
+	(lang_ctf_errs_warnings): Rename ctf_file_t to ctf_dict_t.
+	(ldlang_open_ctf): Adjust comment.
+	(lang_merge_ctf): Use ctf_dict_close, not ctf_file_close.
+	* ldelfgen.h (ldelf_examine_strtab_for_ctf): Rename ctf_file_t to
+	ctf_dict_t.  Change opaque declaration accordingly.
+	* ldelfgen.c (ldelf_examine_strtab_for_ctf): Adjust.
+	* ldemul.h (examine_strtab_for_ctf): Likewise.
+	(ldemul_examine_strtab_for_ctf): Likewise.
+	* ldeuml.c (ldemul_examine_strtab_for_ctf): Likewise.
+
+2020-11-20  Jozef Lawrynowicz  <jozef.l@mittosystems.com>
+
+	* testsuite/ld-elf/retain3.s: Move symbolic reference into writeable
+	.data section from read-only .text section.
+	* testsuite/ld-elf/retain5.d: Don't pass --print-gc-sections for test
+	that doesn't require it.
+	* testsuite/ld-elf/retain6a.d: Adjust test.
+	* testsuite/ld-elf/retain6main.s: Move symbolic reference into writeable
+	.data section from read-only .text section.
+
 2020-11-18  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/ld-powerpc/group1.d,

@@ -1,3 +1,56 @@
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* readelf.c (dump_section_as_ctf): Use .dynsym and .dynstr, not
+	.symtab and .strtab.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* objdump.c (dump_ctf): Report errors from ctf_archive_iter.
+	* readelf.c (dump_section_as_ctf): Likewise.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* objdump.c (dump_ctf): Use ctf_dict_open, not
+	ctf_arc_open_by_name.
+	* readelf.c (dump_section_as_ctf): Likewise.
+
+2020-11-20  Nick Alcock  <nick.alcock@oracle.com>
+
+	* objdump.c (dump_ctf_errs): Rename ctf_file_t to ctf_dict_t.
+	(dump_ctf_archive_member): Likewise.
+	(dump_ctf): Likewise. Use ctf_dict_close, not ctf_file_close.
+	* readelf.c (dump_ctf_errs): Rename ctf_file_t to ctf_dict_t.
+	(dump_ctf_archive_member): Likewise.
+	(dump_section_as_ctf): Likewise.  Use ctf_dict_close, not
+	ctf_file_close.
+
+2020-11-20  Nick Clifton  <nickc@redhat.com>
+
+	PR 22967
+	* nm.c (ifunc_type_chars): New variable.
+	(long_options): Add --ifunc-chars.
+	(print_symbol): Use ifunc_type_chars for ifunc symbols.
+	(main): Handle the new option.
+	* doc/binutils.texi: Document the new option.
+	* configure.ac: Add --enable-f-for-ifunc-symbols option which
+	changes the default symbol displayed by nm.
+	* NEWS: Mention the new feature.
+	* testsuite/binutils-all/nm.exp: Test the new feature.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2020-11-20  Linda Zhang  <lindasc@qq.com>
+
+	PR 20979
+	* dllwrap.c (main): Deprecate and warn the use of dllwrap.
+
+2020-11-20  Jozef Lawrynowicz  <jozef.l@mittosystems.com>
+
+	* testsuite/binutils-all/readelf-maskos-1a.d: Fix test for unrecognized
+	bit set in SHF_MASKOS range.
+	* testsuite/binutils-all/readelf-maskos-1b.d: Likewise.
+	* testsuite/binutils-all/readelf-maskos-unknown.s: New test.
+
 2020-11-18  Jozef Lawrynowicz  <jozef.l@mittosystems.com>
 
 	* NEWS: Announce SHF_GNU_RETAIN support.

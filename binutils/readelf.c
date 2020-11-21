@@ -14638,7 +14638,7 @@ dump_ctf_indent_lines (ctf_sect_names_t sect ATTRIBUTE_UNUSED,
 
 /* Dump CTF errors/warnings.  */
 static void
-dump_ctf_errs (ctf_file_t *fp)
+dump_ctf_errs (ctf_dict_t *fp)
 {
   ctf_next_t *it = NULL;
   char *errtext;
@@ -14659,9 +14659,9 @@ dump_ctf_errs (ctf_file_t *fp)
 /* Dump one CTF archive member.  */
 
 static int
-dump_ctf_archive_member (ctf_file_t *ctf, const char *name, void *arg)
+dump_ctf_archive_member (ctf_dict_t *ctf, const char *name, void *arg)
 {
-  ctf_file_t *parent = (ctf_file_t *) arg;
+  ctf_dict_t *parent = (ctf_dict_t *) arg;
   const char *things[] = {"Header", "Labels", "Data objects",
 			  "Function objects", "Variables", "Types", "Strings",
 			  ""};
@@ -14725,7 +14725,7 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
   ctf_sect_t *	       strsectp = NULL;
   ctf_archive_t *      ctfa = NULL;
   ctf_archive_t *      parenta = NULL, *lookparent;
-  ctf_file_t *         parent = NULL;
+  ctf_dict_t *         parent = NULL;
 
   int err;
   bfd_boolean ret = FALSE;
@@ -14735,10 +14735,10 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
   ctfsect.cts_data = data;
 
   if (!dump_ctf_symtab_name)
-    dump_ctf_symtab_name = strdup (".symtab");
+    dump_ctf_symtab_name = strdup (".dynsym");
 
   if (!dump_ctf_strtab_name)
-    dump_ctf_strtab_name = strdup (".strtab");
+    dump_ctf_strtab_name = strdup (".dynstr");
 
   if (dump_ctf_symtab_name && dump_ctf_symtab_name[0] != 0)
     {
@@ -14815,7 +14815,7 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
   /* Assume that the applicable parent archive member is the default one.
      (This is what all known implementations are expected to do, if they
      put CTFs and their parents in archives together.)  */
-  if ((parent = ctf_arc_open_by_name (lookparent, NULL, &err)) == NULL)
+  if ((parent = ctf_dict_open (lookparent, NULL, &err)) == NULL)
     {
       dump_ctf_errs (NULL);
       error (_("CTF open failure: %s\n"), ctf_errmsg (err));
@@ -14827,11 +14827,15 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
   printf (_("\nDump of CTF section '%s':\n"),
 	  printable_section_name (filedata, section));
 
-  if (ctf_archive_iter (ctfa, dump_ctf_archive_member, parent) != 0)
-    ret = FALSE;
+  if ((err = ctf_archive_iter (ctfa, dump_ctf_archive_member, parent)) != 0)
+    {
+      dump_ctf_errs (NULL);
+      error (_("CTF member open failure: %s\n"), ctf_errmsg (err));
+      ret = FALSE;
+    }
 
  fail:
-  ctf_file_close (parent);
+  ctf_dict_close (parent);
   ctf_close (ctfa);
   ctf_close (parenta);
   free (parentdata);
