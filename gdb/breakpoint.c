@@ -10090,7 +10090,7 @@ break_range_command (const char *arg, int from_tty)
     some constant expressions and in such case still falsely return
     zero.  */
 
-static int
+static bool
 watchpoint_exp_is_const (const struct expression *exp)
 {
   int i = exp->nelts;
@@ -10183,7 +10183,7 @@ watchpoint_exp_is_const (const struct expression *exp)
 	    if (SYMBOL_CLASS (s) != LOC_BLOCK
 		&& SYMBOL_CLASS (s) != LOC_CONST
 		&& SYMBOL_CLASS (s) != LOC_CONST_BYTES)
-	      return 0;
+	      return false;
 	    break;
 	  }
 
@@ -10191,11 +10191,11 @@ watchpoint_exp_is_const (const struct expression *exp)
 	   the optimistic approach here: If we don't know something,
 	   then it is not a constant.  */
 	default:
-	  return 0;
+	  return false;
 	}
     }
 
-  return 1;
+  return true;
 }
 
 /* Watchpoint destructor.  */
