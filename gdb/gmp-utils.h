@@ -29,9 +29,9 @@
 #include <gmp.h>
 #include "gdbsupport/traits.h"
 
-/* Same as gmp_asprintf, but returning a convenient wrapper type.  */
+/* Same as gmp_asprintf, but returning an std::string.  */
 
-gdb::unique_xmalloc_ptr<char> gmp_string_asprintf (const char *fmt, ...);
+std::string gmp_string_printf (const char *fmt, ...);
 
 /* A class to make it easier to use GMP's mpz_t values within GDB.  */
 
@@ -96,22 +96,23 @@ struct gdb_mpz
      The return type can signed or unsigned, with no size restriction.  */
   template<typename T> T as_integer () const;
 
-  /* Set VAL by importing the number stored in the byte buffer (BUF),
-     given its size (LEN) and BYTE_ORDER.
+  /* Set VAL by importing the number stored in the byte array (BUF),
+     using the given BYTE_ORDER.  The size of the data to read is
+     the byte array's size.
 
      UNSIGNED_P indicates whether the number has an unsigned type.  */
-  void read (const gdb_byte *buf, int len, enum bfd_endian byte_order,
+  void read (gdb::array_view<const gdb_byte> buf, enum bfd_endian byte_order,
 	     bool unsigned_p);
 
-  /* Write VAL into BUF as a LEN-bytes number with the given BYTE_ORDER.
+  /* Write VAL into BUF as a number whose byte size is the size of BUF,
+     using the given BYTE_ORDER.
 
      UNSIGNED_P indicates whether the number has an unsigned type.  */
-  void write (gdb_byte *buf, int len, enum bfd_endian byte_order,
+  void write (gdb::array_view<gdb_byte> buf, enum bfd_endian byte_order,
 	      bool unsigned_p) const;
 
   /* Return a string containing VAL.  */
-  gdb::unique_xmalloc_ptr<char> str () const
-  { return gmp_string_asprintf ("%Zd", val); }
+  std::string str () const { return gmp_string_printf ("%Zd", val); }
 
   /* The destructor.  */
   ~gdb_mpz () { mpz_clear (val); }
@@ -163,30 +164,31 @@ struct gdb_mpq
   }
 
   /* Return a string representing VAL as "<numerator> / <denominator>".  */
-  gdb::unique_xmalloc_ptr<char> str () const
-  { return gmp_string_asprintf ("%Qd", val); }
+  std::string str () const { return gmp_string_printf ("%Qd", val); }
 
   /* Return VAL rounded to the nearest integer.  */
   gdb_mpz get_rounded () const;
 
-  /* Set VAL from the contents of the given buffer (BUF), which
-     contains the unscaled value of a fixed point type object
-     with the given size (LEN) and byte order (BYTE_ORDER).
+  /* Set VAL from the contents of the given byte array (BUF), which
+     contains the unscaled value of a fixed point type object.
+     The byte size of the data is the size of BUF.
+
+     BYTE_ORDER provides the byte_order to use when reading the data.
 
      UNSIGNED_P indicates whether the number has an unsigned type.
      SCALING_FACTOR is the scaling factor to apply after having
      read the unscaled value from our buffer.  */
-  void read_fixed_point (const gdb_byte *buf, int len,
+  void read_fixed_point (gdb::array_view<const gdb_byte> buf,
 			 enum bfd_endian byte_order, bool unsigned_p,
 			 const gdb_mpq &scaling_factor);
 
-  /* Write VAL into BUF as a LEN-bytes fixed point value following
-     the given BYTE_ORDER.
+  /* Write VAL into BUF as fixed point value following the given BYTE_ORDER.
+     The size of BUF is used as the length to write the value into.
 
      UNSIGNED_P indicates whether the number has an unsigned type.
      SCALING_FACTOR is the scaling factor to apply before writing
      the unscaled value to our buffer.  */
-  void write_fixed_point (gdb_byte *buf, int len,
+  void write_fixed_point (gdb::array_view<gdb_byte> buf,
 			  enum bfd_endian byte_order, bool unsigned_p,
 			  const gdb_mpq &scaling_factor) const;
 
@@ -215,13 +217,13 @@ struct gdb_mpf
      UNSIGNED_P indicates whether the number has an unsigned type.
      SCALING_FACTOR is the scaling factor to apply after having
      read the unscaled value from our buffer.  */
-  void read_fixed_point (const gdb_byte *buf, int len,
+  void read_fixed_point (gdb::array_view<const gdb_byte> buf,
 			 enum bfd_endian byte_order, bool unsigned_p,
 			 const gdb_mpq &scaling_factor)
   {
     gdb_mpq tmp_q;
 
-    tmp_q.read_fixed_point (buf, len, byte_order, unsigned_p, scaling_factor);
+    tmp_q.read_fixed_point (buf, byte_order, unsigned_p, scaling_factor);
     mpf_set_q (val, tmp_q.val);
   }
 

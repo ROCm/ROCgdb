@@ -1,3 +1,94 @@
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* README: Fix the URL of the MPFR library.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* README: Document the --with-libgmp-prefix configure option.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Add entry documenting support for DWARF-based fixed
+	point types.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Document that building GDB now requires GMP.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* typeprint.c (print_type_scalar): Add handling of
+	TYPE_CODE_FIXED_POINT.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* valarith.c (fixed_point_binop): Replace the
+	INIT_VAL_WITH_FIXED_POINT_VAL macro by a lambda.  Update all
+	users accordingly.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbtypes.h (struct type) <fixed_point_scaling_factor>: New method,
+	replacing fixed_point_scaling_factor.  All callers updated
+	throughout this project.
+	(fixed_point_scaling_factor): Delete declaration.
+	* gdbtypes.c (type::fixed_point_scaling_factor): Replaces
+	fixed_point_scaling_factor.  Adjust implementation accordingly.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbtypes.h (struct type) <fixed_point_type_base_type> New method,
+	replacing the fixed_point_type_base_type function. All callers
+	updated throughout this project.
+	(fixed_point_type_base_type): Remove declaration.
+	* gdbtypes.c (type::fixed_point_type_base_type): Replaces
+	fixed_point_type_base_type.  Adjust implementation accordingly.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbtypes.h (struct type) <fixed_point_info, set_fixed_point_info>:
+	New methods.
+	(INIT_FIXED_POINT_SPECIFIC): Adjust.
+	(TYPE_FIXED_POINT_INFO): Delete macro.
+	(allocate_fixed_point_type_info): Change return type to void.
+	* gdbtypes.c (copy_type_recursive): Replace the use of
+	TYPE_FIXED_POINT_INFO by a call to the fixed_point_info method.
+	(fixed_point_scaling_factor): Likewise.
+	(allocate_fixed_point_type_info): Change return type to void.
+	Adjust implementation accordingly.
+	* dwarf2/read.c (finish_fixed_point_type): Replace the use of
+	TYPE_FIXED_POINT_INFO by a call to the fixed_point_info method.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* gmp-utils.h (gdb_mpz::read): Change buf and len parameters
+	into one single gdb::array_view parameter.
+	(gdb_mpz::write): Likewise.
+	(gdb_mpq::read_fixed_point, gdb_mpq::write_fixed_point): Likewise.
+	* gmp-utils.c (gdb_mpz::read): Change buf and len parameters
+	into one single gdb::array_view parameter.
+	Adjust implementation accordingly.
+	(gdb_mpz::write): Likewise.
+	(gdb_mpq::read_fixed_point, gdb_mpq::write_fixed_point): Likewise.
+	* unittests/gmp-utils-selftests.c: Adapt following changes above.
+	* valarith.c, valops.c, valprint.c, value.c: Likewise.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* gmp-utils.h (gmp_string_printf): Rename from gmp_string_asprintf.
+	Change return type to std::string. Update all callers.
+	* gmp-utils.c (gmp_string_printf): Likewise.
+
+2020-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* unittests/gmp-utils-selftests.c (write_fp_test): Use mpq_set_si
+	instead of mpq_set_ui to initialize our GMP rational.
+
+2020-11-23  Tom de Vries  <tdevries@suse.de>
+
+	* debuginfod-support.c (debuginfod_source_query)
+	(debuginfod_debuginfo_query): Only set DESTNAME if successful.
+
 2020-11-21  Tom Tromey  <tom@tromey.com>
 
 	* breakpoint.c (watchpoint_exp_is_const): Return bool.

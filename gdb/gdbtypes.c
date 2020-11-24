@@ -4927,7 +4927,7 @@ static void
 print_fixed_point_type_info (struct type *type, int spaces)
 {
   printfi_filtered (spaces + 2, "scaling factor: %s\n",
-		    fixed_point_scaling_factor (type).str ().get ());
+		    type->fixed_point_scaling_factor ().str ().c_str ());
 }
 
 static struct obstack dont_print_type_obstack;
@@ -5503,8 +5503,8 @@ copy_type_recursive (struct objfile *objfile,
       break;
     case TYPE_SPECIFIC_FIXED_POINT:
       INIT_FIXED_POINT_SPECIFIC (new_type);
-      TYPE_FIXED_POINT_INFO (new_type)->scaling_factor
-	= TYPE_FIXED_POINT_INFO (type)->scaling_factor;
+      new_type->fixed_point_info ().scaling_factor
+	= type->fixed_point_info ().scaling_factor;
       break;
     case TYPE_SPECIFIC_INT:
       TYPE_SPECIFIC_FIELD (new_type) = TYPE_SPECIFIC_INT;
@@ -5826,11 +5826,11 @@ static const struct objfile_key<fixed_point_type_storage>
 
 /* See gdbtypes.h.  */
 
-fixed_point_type_info *
+void
 allocate_fixed_point_type_info (struct type *type)
 {
   std::unique_ptr<fixed_point_type_info> up (new fixed_point_type_info);
-  fixed_point_type_info *result;
+  fixed_point_type_info *info;
 
   if (TYPE_OBJFILE_OWNED (type))
     {
@@ -5838,17 +5838,17 @@ allocate_fixed_point_type_info (struct type *type)
 	= fixed_point_objfile_key.get (TYPE_OBJFILE (type));
       if (storage == nullptr)
 	storage = fixed_point_objfile_key.emplace (TYPE_OBJFILE (type));
-      result = up.get ();
+      info = up.get ();
       storage->push_back (std::move (up));
     }
   else
     {
       /* We just leak the memory, because that's what we do generally
 	 for non-objfile-attached types.  */
-      result = up.release ();
+      info = up.release ();
     }
 
-  return result;
+  type->set_fixed_point_info (info);
 }
 
 /* See gdbtypes.h.  */
@@ -5866,8 +5866,10 @@ is_fixed_point_type (struct type *type)
 /* See gdbtypes.h.  */
 
 struct type *
-fixed_point_type_base_type (struct type *type)
+type::fixed_point_type_base_type ()
 {
+  struct type *type = this;
+
   while (check_typedef (type)->code () == TYPE_CODE_RANGE)
     type = TYPE_TARGET_TYPE (check_typedef (type));
   type = check_typedef (type);
@@ -5879,11 +5881,11 @@ fixed_point_type_base_type (struct type *type)
 /* See gdbtypes.h.  */
 
 const gdb_mpq &
-fixed_point_scaling_factor (struct type *type)
+type::fixed_point_scaling_factor ()
 {
-  type = fixed_point_type_base_type (type);
+  struct type *type = this->fixed_point_type_base_type ();
 
-  return TYPE_FIXED_POINT_INFO (type)->scaling_factor;
+  return type->fixed_point_info ().scaling_factor;
 }
 
 

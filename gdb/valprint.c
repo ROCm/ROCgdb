@@ -809,13 +809,13 @@ generic_val_print_fixed_point (struct value *val, struct ui_file *stream,
       const gdb_byte *valaddr = value_contents_for_printing (val);
       gdb_mpf f;
 
-      f.read_fixed_point (valaddr, TYPE_LENGTH (type),
+      f.read_fixed_point (gdb::make_array_view (valaddr, TYPE_LENGTH (type)),
 			  type_byte_order (type), type->is_unsigned (),
-			  fixed_point_scaling_factor (type));
+			  type->fixed_point_scaling_factor ());
 
       const char *fmt = TYPE_LENGTH (type) < 4 ? "%.11Fg" : "%.17Fg";
-      gdb::unique_xmalloc_ptr<char> str = gmp_string_asprintf (fmt, f.val);
-      fprintf_filtered (stream, "%s", str.get ());
+      std::string str = gmp_string_printf (fmt, f.val);
+      fprintf_filtered (stream, "%s", str.c_str ());
     }
 }
 
@@ -871,7 +871,7 @@ generic_value_print (struct value *val, struct ui_file *stream, int recurse,
   type = check_typedef (type);
 
   if (is_fixed_point_type (type))
-    type = fixed_point_type_base_type (type);
+    type = type->fixed_point_type_base_type ();
 
   switch (type->code ())
     {

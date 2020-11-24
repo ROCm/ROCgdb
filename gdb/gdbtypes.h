@@ -1194,6 +1194,41 @@ struct type
     this->main_type->m_flag_endianity_not_default = endianity_is_not_default;
   }
 
+  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, return a reference
+     to this type's fixed_point_info.  */
+
+  struct fixed_point_type_info &fixed_point_info () const
+  {
+    gdb_assert (this->code () == TYPE_CODE_FIXED_POINT);
+    gdb_assert (this->main_type->type_specific.fixed_point_info != nullptr);
+
+    return *this->main_type->type_specific.fixed_point_info;
+  }
+
+  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, set this type's
+     fixed_point_info to INFO.  */
+
+  void set_fixed_point_info (struct fixed_point_type_info *info) const
+  {
+    gdb_assert (this->code () == TYPE_CODE_FIXED_POINT);
+
+    this->main_type->type_specific.fixed_point_info = info;
+  }
+
+  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, return its base type.
+
+     In other words, this returns the type after having peeled all
+     intermediate type layers (such as TYPE_CODE_RANGE, for instance).
+     The TYPE_CODE of the type returned is guaranteed to be
+     a TYPE_CODE_FIXED_POINT.  */
+
+  struct type *fixed_point_type_base_type ();
+
+  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, return its scaling
+     factor.  */
+
+  const gdb_mpq &fixed_point_scaling_factor ();
+
   /* * Return the dynamic property of the requested KIND from this type's
      list of dynamic properties.  */
   dynamic_prop *dyn_prop (dynamic_prop_node_kind kind) const;
@@ -1747,7 +1782,7 @@ extern void allocate_gnat_aux_type (struct type *);
    handled.  */
 #define INIT_FIXED_POINT_SPECIFIC(type) \
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FIXED_POINT, \
-   TYPE_FIXED_POINT_INFO (type) = allocate_fixed_point_type_info (type))
+   allocate_fixed_point_type_info (type))
 
 #define TYPE_MAIN_TYPE(thistype) (thistype)->main_type
 #define TYPE_TARGET_TYPE(thistype) TYPE_MAIN_TYPE(thistype)->target_type
@@ -1844,9 +1879,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 #define BASETYPE_VIA_VIRTUAL(thistype, index) \
   (TYPE_CPLUS_SPECIFIC(thistype)->virtual_field_bits == NULL ? 0 \
     : B_TST(TYPE_CPLUS_SPECIFIC(thistype)->virtual_field_bits, (index)))
-
-#define TYPE_FIXED_POINT_INFO(thistype) \
-  (TYPE_MAIN_TYPE(thistype)->type_specific.fixed_point_info)
 
 #define FIELD_NAME(thisfld) ((thisfld).name)
 #define FIELD_LOC_KIND(thisfld) ((thisfld).loc_kind)
@@ -2569,21 +2601,9 @@ extern int type_not_associated (const struct type *type);
    a range type whose base type is a TYPE_CODE_FIXED_POINT.  */
 extern bool is_fixed_point_type (struct type *type);
 
-/* Assuming that TYPE is a fixed point type, return its base type.
-
-   In other words, this returns the type after having peeled all
-   intermediate type layers (such as TYPE_CODE_RANGE, for instance).
-   The TYPE_CODE of the type returned is guaranteed to be
-   a TYPE_CODE_FIXED_POINT.  */
-extern struct type *fixed_point_type_base_type (struct type *type);
-
-/* Given TYPE, which is a fixed point type, return its scaling factor.  */
-extern const gdb_mpq &fixed_point_scaling_factor (struct type *type);
-
 /* Allocate a fixed-point type info for TYPE.  This should only be
    called by INIT_FIXED_POINT_SPECIFIC.  */
-extern fixed_point_type_info *allocate_fixed_point_type_info
-  (struct type *type);
+extern void allocate_fixed_point_type_info (struct type *type);
 
 /* * When the type includes explicit byte ordering, return that.
    Otherwise, the byte ordering from gdbarch_byte_order for 
