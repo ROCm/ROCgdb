@@ -872,6 +872,7 @@ read_frame_register_value (struct value *value, struct frame_info *frame)
   struct gdbarch *gdbarch = get_frame_arch (frame);
   LONGEST offset = 0;
   LONGEST reg_offset = value_offset (value);
+  LONGEST bit_offset = value_bitpos (value);
   int regnum = VALUE_REGNUM (value);
   int len = type_length_units (check_typedef (value_type (value)));
 
@@ -895,7 +896,8 @@ read_frame_register_value (struct value *value, struct frame_info *frame)
       if (reg_len > len)
 	reg_len = len;
 
-      value_contents_copy (value, offset, regval, reg_offset, reg_len);
+      value_contents_copy (value, offset, regval, reg_offset,
+			   bit_offset, reg_len);
 
       offset += reg_len;
       len -= reg_len;
@@ -907,15 +909,13 @@ read_frame_register_value (struct value *value, struct frame_info *frame)
 /* Return a value of type TYPE, stored in register REGNUM, in frame FRAME.  */
 
 struct value *
-value_from_register (struct type *type, int regnum,
-                     struct frame_info *frame, LONGEST offset)
+value_from_register (struct type *type, int regnum, struct frame_info *frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct type *type1 = check_typedef (type);
   struct value *v;
 
-  /* FIXME: Not sure what to do here if there is an offset.  */
-  if (gdbarch_convert_register_p (gdbarch, regnum, type1) && !offset)
+  if (gdbarch_convert_register_p (gdbarch, regnum, type1))
     {
       int optim, unavail, ok;
 
@@ -947,8 +947,6 @@ value_from_register (struct type *type, int regnum,
       /* Construct the value.  */
       v = gdbarch_value_from_register (gdbarch, type,
 				       regnum, get_frame_id (frame));
-
-      set_value_offset (v, value_offset (v) + offset);
 
       /* Get the data.  */
       read_frame_register_value (v, frame);

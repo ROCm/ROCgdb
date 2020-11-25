@@ -25,111 +25,54 @@
 #include "leb128.h"
 #include "gdbtypes.h"
 
-class dwarf_entry;
-class dwarf_entry_factory;
 struct dwarf2_per_objfile;
 
-/* The expression evaluator works with a dwarf_expr_context, describing
-   its current state and its callbacks.  */
-struct dwarf_expr_context
-{
-  /* We should ever only pass in the PER_OBJFILE and the ADDR_SIZE
-     information should be retrievable from there.  The PER_OBJFILE
-     contains a pointer to the PER_BFD information anyway and the
-     address size information must be the same for the whole BFD.   */
+/* Evaluate the expression at ADDR (LEN bytes long) in a given PER_CU
+   FRAME context.  The PER_OBJFILE contains a pointer to the PER_BFD
+   information.  ADDR_SIZE defines a size of the DWARF generic type.
+   INIT_VALUES vector contains values that are expected to be pushed
+   on a DWARF expression stack before the evaluation.  AS_LVAL defines
+   if the returned struct value is expected to be a value or a location
+   description.  Where TYPE, SUBOBJ_TYPE and SUBOBJ_OFFSET describe
+   expected struct value representation of the evaluation result.  The
+   ADDR_INFO property can be specified to override the range of memory
+   addresses with the passed in buffer.  */
+struct value *dwarf2_eval_exp (const gdb_byte *addr, size_t len, bool as_lval,
+			       struct dwarf2_per_objfile *per_objfile,
+			       struct dwarf2_per_cu_data *per_cu,
+			       struct frame_info *frame, int addr_size,
+			       std::vector<struct value *> *init_values,
+			       const struct property_addr_info *addr_info,
+			       struct type *type = nullptr,
+			       struct type *subobj_type = nullptr,
+			       LONGEST subobj_offset = 0);
 
-  dwarf_expr_context (struct dwarf2_per_objfile *per_objfile,
-		      int addr_size);
-  virtual ~dwarf_expr_context ();
-
-  void push_address (CORE_ADDR addr, bool in_stack_memory);
-  struct value *eval_exp (const gdb_byte *addr, size_t len, bool as_lval,
-			  struct dwarf2_per_cu_data *per_cu,
-			  struct frame_info *frame,
-			  const struct property_addr_info *addr_info = nullptr,
-			  struct type *type = nullptr,
-			  struct type *subobj_type = nullptr,
-			  LONGEST subobj_offset = 0);
-
-private:
-  /* The stack of values.  */
-  std::vector<dwarf_entry *> stack;
-
-  /* Target architecture to use for address operations.  */
-  struct gdbarch *gdbarch;
-
-  /* Target address size in bytes.  */
-  int addr_size;
-
-  /* DW_FORM_ref_addr size in bytes.  If -1 DWARF is executed from a frame
-     context and operations depending on DW_FORM_ref_addr are not allowed.  */
-  int ref_addr_size;
-
-  /* The current depth of dwarf expression recursion, via DW_OP_call*,
-     DW_OP_fbreg, DW_OP_push_object_address, etc., and the maximum
-     depth we'll tolerate before raising an error.  */
-  int recursion_depth, max_recursion_depth;
-
-  /* We evaluate the expression in the context of this objfile.  */
-  dwarf2_per_objfile *per_objfile;
-
-  /* Frame information used for the evaluation.  */
-  struct frame_info *frame;
-
-  /* Compilation unit used for the evaluation.  */
-  struct dwarf2_per_cu_data *per_cu;
-
-  /* Property address info used for the evaluation.  */
-  const struct property_addr_info *addr_info;
-
-  /* Factory in charge of the dwarf entry's life cycle.  */
-  dwarf_entry_factory *entry_factory;
-
-  void eval (const gdb_byte *addr, size_t len);
-  struct type *address_type () const;
-  void push (dwarf_entry *value);
-  bool stack_empty_p () const;
-  dwarf_entry *add_piece (ULONGEST bit_size, ULONGEST bit_offset);
-  dwarf_entry *create_select_composite (ULONGEST piece_bit_size,
-					ULONGEST pieces_count);
-  dwarf_entry *create_extend_composite (ULONGEST piece_bit_size,
-					ULONGEST pieces_count);
-  void execute_stack_op (const gdb_byte *op_ptr, const gdb_byte *op_end);
-  void pop ();
-  dwarf_entry *fetch (int n);
-  CORE_ADDR fetch_address (int n);
-  bool fetch_in_stack_memory (int n);
-  struct value *fetch_result (struct type *type,
-			      struct type *subobj_type,
-			      LONGEST subobj_offset,
-			      bool as_lval);
-  void get_frame_base (const gdb_byte **start, size_t *length);
-  struct type *get_base_type (cu_offset die_cu_off, int size);
-  void dwarf_call (cu_offset die_cu_off);
-  void push_dwarf_reg_entry_value (enum call_site_parameter_kind kind,
-				   union call_site_parameter_u kind_u,
-				   int deref_size);
-  dwarf_entry* dwarf_entry_deref (dwarf_entry *entry, struct type *type,
-				  size_t size = 0);
-  dwarf_entry *gdb_value_to_dwarf_entry (struct value *value);
-  struct value *dwarf_entry_to_gdb_value (dwarf_entry *entry,
-					  struct type *type,
-					  struct type *subobj_type = nullptr,
-					  LONGEST subobj_offset = 0);
-};
-
+/* Check that the current operator is either at the end of an
+   expression, or that it is followed by a composition operator or by
+   DW_OP_GNU_uninit (which should terminate the expression).  */
 void dwarf_expr_require_composition (const gdb_byte *, const gdb_byte *,
 				     const char *);
 
+/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_reg* return the
+   DWARF register number.  Otherwise return -1.  */
 int dwarf_block_to_dwarf_reg (const gdb_byte *buf, const gdb_byte *buf_end);
 
+/* If <BUF..BUF_END] contains DW_FORM_block* with just DW_OP_breg*(0) and
+   DW_OP_deref* return the DWARF register number.  Otherwise return -1.
+   DEREF_SIZE_RETURN contains -1 for DW_OP_deref; otherwise it contains the
+   size from DW_OP_deref_size.  */
 int dwarf_block_to_dwarf_reg_deref (const gdb_byte *buf,
 				    const gdb_byte *buf_end,
 				    CORE_ADDR *deref_size_return);
 
+/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_fbreg(X) fill
+   in FB_OFFSET_RETURN with the X offset and return 1.  Otherwise return 0.  */
 int dwarf_block_to_fb_offset (const gdb_byte *buf, const gdb_byte *buf_end,
 			      CORE_ADDR *fb_offset_return);
 
+/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_bregSP(X) fill
+   in SP_OFFSET_RETURN with the X offset and return 1.  Otherwise return 0.
+   The matched SP register number depends on GDBARCH.  */
 int dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
 			      const gdb_byte *buf_end,
 			      CORE_ADDR *sp_offset_return);
@@ -169,14 +112,16 @@ gdb_skip_leb128 (const gdb_byte *buf, const gdb_byte *buf_end)
   return buf + bytes_read;
 }
 
+/* Helper to read a uleb128 value or throw an error.  */
 extern const gdb_byte *safe_read_uleb128 (const gdb_byte *buf,
 					  const gdb_byte *buf_end,
 					  uint64_t *r);
 
+/* Helper to read a sleb128 value or throw an error.  */
 extern const gdb_byte *safe_read_sleb128 (const gdb_byte *buf,
 					  const gdb_byte *buf_end,
 					  int64_t *r);
-
+/* Helper to skip a leb128 value or throw an error.  */
 extern const gdb_byte *safe_skip_leb128 (const gdb_byte *buf,
 					 const gdb_byte *buf_end);
 

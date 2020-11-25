@@ -41,7 +41,6 @@
 #include "dwarf2/leb.h"
 #include "compile/compile.h"
 #include "gdbsupport/selftest.h"
-#include "selftest-arch.h"
 #include <algorithm>
 #include <vector>
 #include <unordered_set>
@@ -90,8 +89,7 @@ enum debug_loc_kind
   DEBUG_LOC_INVALID_ENTRY = -2
 };
 
-/* Helper function which throws an error if a synthetic pointer is
-   invalid.  */
+/* See loc.h.  */
 
 void
 invalid_synthetic_pointer (void)
@@ -1065,6 +1063,8 @@ call_site_parameter_matches (struct call_site_parameter *parameter,
   return 0;
 }
 
+/* See loc.h.  */
+
 struct call_site_parameter *
 dwarf_expr_reg_to_entry_parameter (struct frame_info *frame,
 				   enum call_site_parameter_kind kind,
@@ -1369,7 +1369,7 @@ fetch_const_value_from_synthetic_pointer (sect_offset die, LONGEST byte_offset,
   return result;
 }
 
-/* Fetch the value pointed to by a synthetic pointer.  */
+/* See loc.h.  */
 
 struct value *
 indirect_synthetic_pointer (sect_offset die, LONGEST byte_offset,
@@ -1423,8 +1423,6 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
 			       LONGEST subobj_byte_offset,
 			       bool as_lval)
 {
-  struct value *retval;
-
   if (subobj_type == NULL)
     {
       subobj_type = type;
@@ -1436,14 +1434,15 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
   if (size == 0)
     return allocate_optimized_out_value (subobj_type);
 
-  dwarf_expr_context ctx (per_objfile, per_cu->addr_size ());
-
+  struct value *retval;
   scoped_value_mark free_values;
 
   try
     {
-      retval = ctx.eval_exp (data, size, as_lval, per_cu, frame, nullptr,
-			     type, subobj_type, subobj_byte_offset);
+      retval
+	= dwarf2_eval_exp (data, size, as_lval, per_objfile, per_cu,
+			   frame, per_cu->addr_size (), nullptr, nullptr,
+			   type, subobj_type, subobj_byte_offset);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1513,23 +1512,28 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 
   dwarf2_per_objfile *per_objfile = dlbaton->per_objfile;
   struct dwarf2_per_cu_data *per_cu = dlbaton->per_cu;
-  dwarf_expr_context ctx (per_objfile, per_cu->addr_size ());
 
   struct value *result;
   scoped_value_mark free_values;
+  std::vector<struct value *> init_values;
 
   if (push_initial_value)
     {
+      struct type *type
+	= builtin_type (per_objfile->objfile->arch ())->builtin_uint64;
+
       if (addr_stack != nullptr)
-    ctx.push_address (addr_stack->addr, false);
+	init_values.push_back (value_at_lazy (type, addr_stack->addr));
       else
-    ctx.push_address (0, false);
+	init_values.push_back (value_at_lazy (type, 0));
     }
 
   try
     {
-      result = ctx.eval_exp (dlbaton->data, dlbaton->size,
-			     true, per_cu, frame, addr_stack);
+      result
+	= dwarf2_eval_exp (dlbaton->data, dlbaton->size, true, per_objfile,
+			   per_cu, frame, per_cu->addr_size (), &init_values,
+			   addr_stack);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1721,7 +1725,7 @@ dwarf2_compile_property_to_c (string_file *stream,
 }
 
 /* Compute the correct symbol_needs_kind value for the location
-   expression at DATA (length SIZE).  */
+   expression in EXPR.  */
 
 static enum symbol_needs_kind
 dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
@@ -1818,6 +1822,10 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	case DW_OP_nop:
 	case DW_OP_GNU_uninit:
 	case DW_OP_push_object_address:
+	case DW_OP_LLVM_offset:
+	case DW_OP_LLVM_bit_offset:
+	case DW_OP_LLVM_undefined:
+	case DW_OP_LLVM_piece_end:
 	  break;
 
 	case DW_OP_form_tls_address:

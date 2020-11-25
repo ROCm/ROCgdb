@@ -708,9 +708,7 @@ extern void read_frame_register_value (struct value *value,
 				       struct frame_info *frame);
 
 extern struct value *value_from_register (struct type *type, int regnum,
-					  struct frame_info *frame,
-					  LONGEST offset = 0);
-
+					  struct frame_info *frame);
 
 extern CORE_ADDR address_from_register (int regnum,
 					struct frame_info *frame);
@@ -742,10 +740,10 @@ extern struct value *allocate_value (struct type *type);
 extern struct value *allocate_value_lazy (struct type *type);
 extern void value_contents_copy (struct value *dst, LONGEST dst_offset,
 				 struct value *src, LONGEST src_offset,
-				 LONGEST length);
+				 LONGEST src_bit_offset, LONGEST length);
 extern void value_contents_copy_raw (struct value *dst, LONGEST dst_offset,
 				     struct value *src, LONGEST src_offset,
-				     LONGEST length);
+				     LONGEST src_bit_offset, LONGEST length);
 
 extern struct value *allocate_repeat_value (struct type *type, int count);
 

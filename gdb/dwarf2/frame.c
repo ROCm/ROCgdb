@@ -241,14 +241,18 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
 		  int initial_in_stack_memory, dwarf2_per_objfile *per_objfile,
 		  struct type* type = nullptr, bool as_lval = true)
 {
-  struct value *result_val;
-
-  dwarf_expr_context ctx (per_objfile, addr_size);
   scoped_value_mark free_values;
+  struct type *init_type
+    = builtin_type (per_objfile->objfile->arch ())->builtin_uint64;
+  struct value *init_value = value_at_lazy (init_type, initial);
+  std::vector<struct value *> init_values;
 
-  ctx.push_address (initial, initial_in_stack_memory);
-  result_val = ctx.eval_exp (exp, len, as_lval, nullptr,
-			     this_frame, nullptr, type);
+  set_value_stack (init_value, initial_in_stack_memory);
+  init_values.push_back (init_value);
+
+  struct value *result_val
+    = dwarf2_eval_exp (exp, len, true, per_objfile, nullptr,
+		       this_frame, addr_size, &init_values, nullptr);
 
   /* We need to clean up all the values that are not needed any more.
      The problem with a value_ref_ptr class is that it disconnects the
