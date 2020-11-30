@@ -1119,12 +1119,15 @@ check_DATA += x86_64_mov_to_lea1.stdout x86_64_mov_to_lea2.stdout \
 	x86_64_mov_to_lea7.stdout x86_64_mov_to_lea8.stdout \
 	x86_64_mov_to_lea9.stdout x86_64_mov_to_lea10.stdout \
 	x86_64_mov_to_lea11.stdout x86_64_mov_to_lea12.stdout \
-	x86_64_mov_to_lea13.stdout x86_64_mov_to_lea14.stdout
+	x86_64_mov_to_lea13.stdout x86_64_mov_to_lea14.stdout \
+	x86_64_mov_to_lea15.stdout x86_64_mov_to_lea16.stdout
+
 MOSTLYCLEANFILES += x86_64_mov_to_lea1 x86_64_mov_to_lea2 \
 	x86_64_mov_to_lea3 x86_64_mov_to_lea4 x86_64_mov_to_lea5 \
 	x86_64_mov_to_lea6 x86_64_mov_to_lea7 x86_64_mov_to_lea8 \
 	x86_64_mov_to_lea9 x86_64_mov_to_lea10 x86_64_mov_to_lea11 \
-	x86_64_mov_to_lea12 x86_64_mov_to_lea13 x86_64_mov_to_lea14
+	x86_64_mov_to_lea12 x86_64_mov_to_lea13 x86_64_mov_to_lea14 \
+	x86_64_mov_to_lea15 x86_64_mov_to_lea16
 
 x86_64_mov_to_lea1.o: x86_64_mov_to_lea1.s
 	$(TEST_AS) --64 -o $@ $<
@@ -1142,6 +1145,10 @@ x86_64_mov_to_lea7.o: x86_64_mov_to_lea4.s
 	$(TEST_AS) --x32 -o $@ $<
 x86_64_mov_to_lea8.o: x86_64_mov_to_lea4.s
 	$(TEST_AS) --64 -o $@ $<
+x86_64_mov_to_lea9.o: x86_64_mov_to_lea5.s
+	$(TEST_AS) --x32 -mrelax-relocations=yes -o $@ $<
+x86_64_mov_to_lea10.o: x86_64_mov_to_lea5.s
+	$(TEST_AS) --64 -mrelax-relocations=yes -o $@ $<
 x86_64_mov_to_lea1: x86_64_mov_to_lea1.o ../ld-new
 	../ld-new -Bsymbolic -shared -melf_x86_64 -o $@ $<
 x86_64_mov_to_lea2: x86_64_mov_to_lea1.o ../ld-new
@@ -1170,6 +1177,10 @@ x86_64_mov_to_lea13: x86_64_mov_to_lea7.o ../ld-new
 	../ld-new -melf32_x86_64 -shared -o $@ $<
 x86_64_mov_to_lea14: x86_64_mov_to_lea8.o ../ld-new
 	../ld-new -melf_x86_64 -shared -o $@ $<
+x86_64_mov_to_lea15: x86_64_mov_to_lea9.o ../ld-new
+	../ld-new -melf32_x86_64 -shared -o $@ $<
+x86_64_mov_to_lea16: x86_64_mov_to_lea10.o ../ld-new
+	../ld-new -melf_x86_64 -shared -o $@ $<
 x86_64_mov_to_lea1.stdout: x86_64_mov_to_lea1
 	$(TEST_OBJDUMP) -dw $< > $@
 x86_64_mov_to_lea2.stdout: x86_64_mov_to_lea2
@@ -1197,6 +1208,10 @@ x86_64_mov_to_lea12.stdout: x86_64_mov_to_lea12
 x86_64_mov_to_lea13.stdout: x86_64_mov_to_lea13
 	$(TEST_OBJDUMP) -dw $< > $@
 x86_64_mov_to_lea14.stdout: x86_64_mov_to_lea14
+	$(TEST_OBJDUMP) -dw $< > $@
+x86_64_mov_to_lea15.stdout: x86_64_mov_to_lea15
+	$(TEST_OBJDUMP) -dw $< > $@
+x86_64_mov_to_lea16.stdout: x86_64_mov_to_lea16
 	$(TEST_OBJDUMP) -dw $< > $@
 
 check_SCRIPTS += x86_64_indirect_call_to_direct.sh
@@ -4384,5 +4399,27 @@ dwp_test_2a.dwp: ../dwp dwp_test_main.dwo dwp_test_1.dwo
 	../dwp -o $@ dwp_test_main.dwo dwp_test_1.dwo
 dwp_test_2b.dwp: ../dwp dwp_test_1b.dwo dwp_test_2.dwo
 	../dwp -o $@ dwp_test_1b.dwo dwp_test_2.dwo
+
+check_SCRIPTS += pr26936.sh
+check_DATA += pr26936a.stdout pr26936b.stdout
+MOSTLYCLEANFILES += pr26936a pr26936b
+pr26936a.stdout: pr26936a
+	$(TEST_READELF) -wL -wR -wr $< >$@ 2>/dev/null
+pr26936a: pr26936a.o pr26936b.o pr26936c.o ../ld-new
+	../ld-new -Ttext-segment 0x10000 -z max-page-size=0x1000 \
+		-e _start -o $@ pr26936a.o pr26936b.o pr26936c.o
+pr26936b.stdout: pr26936b
+	$(TEST_READELF) -wL -wR -wr $< >$@ 2>/dev/null
+pr26936b: pr26936d.o pr26936b.o pr26936c.o ../ld-new
+	../ld-new -Ttext-segment 0x10000 -z max-page-size=0x1000 \
+		-e _start -o $@ pr26936d.o pr26936b.o pr26936c.o
+pr26936a.o: pr26936a.s
+	$(TEST_AS) --gen-debug -o $@ $<
+pr26936b.o: pr26936b.s
+	$(TEST_AS) --gen-debug -o $@ $<
+pr26936c.o: pr26936c.s
+	$(TEST_AS) --gen-debug -o $@ $<
+pr26936d.o: pr26936d.s
+	$(TEST_AS) --gen-debug -o $@ $<
 
 endif DEFAULT_TARGET_X86_64

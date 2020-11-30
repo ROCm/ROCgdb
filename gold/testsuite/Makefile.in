@@ -314,6 +314,8 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea12.stdout \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea13.stdout \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea14.stdout \
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea15.stdout \
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea16.stdout \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_indirect_call_to_direct1.stdout \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_indirect_jump_to_direct1.stdout \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_gd_to_le.stdout \
@@ -336,6 +338,8 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea12 \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea13 \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea14 \
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea15 \
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_mov_to_lea16 \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_indirect_call_to_direct1 \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_indirect_jump_to_direct1 \
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	x86_64_gd_to_le \
@@ -1126,11 +1130,13 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @DEFAULT_TARGET_S390_TRUE@@NATIVE_OR_CROSS_LINKER_TRUE@	split_s390x_z1_ns split_s390x_z2_ns split_s390x_z3_ns \
 @DEFAULT_TARGET_S390_TRUE@@NATIVE_OR_CROSS_LINKER_TRUE@	split_s390x_z4_ns split_s390x_n1_ns split_s390x_n2_ns split_s390x_r
 
-@DEFAULT_TARGET_X86_64_TRUE@am__append_116 = *.dwo *.dwp
+@DEFAULT_TARGET_X86_64_TRUE@am__append_116 = *.dwo *.dwp pr26936a \
+@DEFAULT_TARGET_X86_64_TRUE@	pr26936b
 @DEFAULT_TARGET_X86_64_TRUE@am__append_117 = dwp_test_1.sh \
-@DEFAULT_TARGET_X86_64_TRUE@	dwp_test_2.sh
+@DEFAULT_TARGET_X86_64_TRUE@	dwp_test_2.sh pr26936.sh
 @DEFAULT_TARGET_X86_64_TRUE@am__append_118 = dwp_test_1.stdout \
-@DEFAULT_TARGET_X86_64_TRUE@	dwp_test_2.stdout
+@DEFAULT_TARGET_X86_64_TRUE@	dwp_test_2.stdout pr26936a.stdout \
+@DEFAULT_TARGET_X86_64_TRUE@	pr26936b.stdout
 subdir = testsuite
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/../config/ax_pthread.m4 \
@@ -6439,6 +6445,13 @@ dwp_test_2.sh.log: dwp_test_2.sh
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+pr26936.sh.log: pr26936.sh
+	@p='pr26936.sh'; \
+	b='pr26936.sh'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 object_unittest.log: object_unittest$(EXEEXT)
 	@p='object_unittest$(EXEEXT)'; \
 	b='object_unittest'; \
@@ -8347,6 +8360,10 @@ uninstall-am:
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_AS) --x32 -o $@ $<
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea8.o: x86_64_mov_to_lea4.s
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_AS) --64 -o $@ $<
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea9.o: x86_64_mov_to_lea5.s
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_AS) --x32 -mrelax-relocations=yes -o $@ $<
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea10.o: x86_64_mov_to_lea5.s
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_AS) --64 -mrelax-relocations=yes -o $@ $<
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea1: x86_64_mov_to_lea1.o ../ld-new
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	../ld-new -Bsymbolic -shared -melf_x86_64 -o $@ $<
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea2: x86_64_mov_to_lea1.o ../ld-new
@@ -8375,6 +8392,10 @@ uninstall-am:
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	../ld-new -melf32_x86_64 -shared -o $@ $<
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea14: x86_64_mov_to_lea8.o ../ld-new
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	../ld-new -melf_x86_64 -shared -o $@ $<
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea15: x86_64_mov_to_lea9.o ../ld-new
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	../ld-new -melf32_x86_64 -shared -o $@ $<
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea16: x86_64_mov_to_lea10.o ../ld-new
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	../ld-new -melf_x86_64 -shared -o $@ $<
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea1.stdout: x86_64_mov_to_lea1
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_OBJDUMP) -dw $< > $@
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea2.stdout: x86_64_mov_to_lea2
@@ -8402,6 +8423,10 @@ uninstall-am:
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea13.stdout: x86_64_mov_to_lea13
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_OBJDUMP) -dw $< > $@
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea14.stdout: x86_64_mov_to_lea14
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_OBJDUMP) -dw $< > $@
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea15.stdout: x86_64_mov_to_lea15
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_OBJDUMP) -dw $< > $@
+@DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_mov_to_lea16.stdout: x86_64_mov_to_lea16
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_OBJDUMP) -dw $< > $@
 
 @DEFAULT_TARGET_X86_64_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@x86_64_indirect_call_to_direct1.o: x86_64_indirect_call_to_direct1.s
@@ -10352,6 +10377,24 @@ uninstall-am:
 @DEFAULT_TARGET_X86_64_TRUE@	../dwp -o $@ dwp_test_main.dwo dwp_test_1.dwo
 @DEFAULT_TARGET_X86_64_TRUE@dwp_test_2b.dwp: ../dwp dwp_test_1b.dwo dwp_test_2.dwo
 @DEFAULT_TARGET_X86_64_TRUE@	../dwp -o $@ dwp_test_1b.dwo dwp_test_2.dwo
+@DEFAULT_TARGET_X86_64_TRUE@pr26936a.stdout: pr26936a
+@DEFAULT_TARGET_X86_64_TRUE@	$(TEST_READELF) -wL -wR -wr $< >$@ 2>/dev/null
+@DEFAULT_TARGET_X86_64_TRUE@pr26936a: pr26936a.o pr26936b.o pr26936c.o ../ld-new
+@DEFAULT_TARGET_X86_64_TRUE@	../ld-new -Ttext-segment 0x10000 -z max-page-size=0x1000 \
+@DEFAULT_TARGET_X86_64_TRUE@		-e _start -o $@ pr26936a.o pr26936b.o pr26936c.o
+@DEFAULT_TARGET_X86_64_TRUE@pr26936b.stdout: pr26936b
+@DEFAULT_TARGET_X86_64_TRUE@	$(TEST_READELF) -wL -wR -wr $< >$@ 2>/dev/null
+@DEFAULT_TARGET_X86_64_TRUE@pr26936b: pr26936d.o pr26936b.o pr26936c.o ../ld-new
+@DEFAULT_TARGET_X86_64_TRUE@	../ld-new -Ttext-segment 0x10000 -z max-page-size=0x1000 \
+@DEFAULT_TARGET_X86_64_TRUE@		-e _start -o $@ pr26936d.o pr26936b.o pr26936c.o
+@DEFAULT_TARGET_X86_64_TRUE@pr26936a.o: pr26936a.s
+@DEFAULT_TARGET_X86_64_TRUE@	$(TEST_AS) --gen-debug -o $@ $<
+@DEFAULT_TARGET_X86_64_TRUE@pr26936b.o: pr26936b.s
+@DEFAULT_TARGET_X86_64_TRUE@	$(TEST_AS) --gen-debug -o $@ $<
+@DEFAULT_TARGET_X86_64_TRUE@pr26936c.o: pr26936c.s
+@DEFAULT_TARGET_X86_64_TRUE@	$(TEST_AS) --gen-debug -o $@ $<
+@DEFAULT_TARGET_X86_64_TRUE@pr26936d.o: pr26936d.s
+@DEFAULT_TARGET_X86_64_TRUE@	$(TEST_AS) --gen-debug -o $@ $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
