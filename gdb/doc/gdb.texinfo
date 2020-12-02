@@ -83,15 +83,15 @@ to the purchase or use of AMD’s products are as set forth in a signed
 agreement between the parties or in AMD's Standard Terms and
 Conditions of Sale.
 
-AMD@registeredsymbol{}, the AMD Arrow logo, ROCm@registeredsymbol{}
-and combinations thereof are trademarks of Advanced Micro Devices,
-Inc.  Linux@registeredsymbol{} is the registered trademark of Linus
-Torvalds in the U.S. and other countries.  PCIe@registeredsymbol{} is
-a registered trademark of PCI-SIG Corporation.  Other product names
-used in this publication are for identification purposes only and may
-be trademarks of their respective companies.
+AMD@registeredsymbol{}, the AMD Arrow logo, AMD Instinct@registeredsymbol{},
+Radeon@registeredsymbol{}, ROCm@registeredsymbol{} and combinations thereof are
+trademarks of Advanced Micro Devices, Inc.  Linux@registeredsymbol{} is the
+registered trademark of Linus Torvalds in the U.S. and other countries.
+PCIe@registeredsymbol{} is a registered trademark of PCI-SIG Corporation. Other
+product names used in this publication are for identification purposes only and
+may be trademarks of their respective companies.
 
-Copyright @copyright{} 2019-2020 Advanced Micro Devices, Inc.  All
+Copyright @copyright{} 2019-2021 Advanced Micro Devices, Inc.  All
 rights reserved.
 @end copying
 
@@ -26608,28 +26608,28 @@ The following AMD GPU chips are supported:
 @itemize @bullet{}
 
 @item
-``Vega 10'' which is displayed as @samp{vega10} by @value{GDBN} and
+``AMD Vega 10'' which is displayed as @samp{vega10} by @value{GDBN} and
 denoted as @samp{gfx900} by the compiler.
 
 @item
-``Vega 7nm'' which is displayed as @samp{vega20} by @value{GDBN} and
+``AMD Vega 7nm'' which is displayed as @samp{vega20} by @value{GDBN} and
 denoted as @samp{gfx906} by the compiler.
+
+@item
+``AMD Instinct@registeredsymbol{} MI100'' which is displayed as @samp{arcturus}
+by @value{GDBN} and denoted as @samp{gfx908} by the compiler.
 
 @c TODO:
 @c @item
-@c ``Arcturus'' which is displayed as @samp{arcturus} by @value{GDBN} and
-@c denoted as @samp{gfx908} by the compiler.
-@c
-@c @item
-@c ``Navi 10'' which is displayed as @samp{navi10} by @value{GDBN} and
+@c ``TBA'' which is displayed as @samp{navi10} by @value{GDBN} and
 @c denoted as @samp{gfx1010} by the compiler.
 @c
 @c @item
-@c ``Navi 12'' which is displayed as @samp{navi12} by @value{GDBN} and
+@c ``TBA'' which is displayed as @samp{navi12} by @value{GDBN} and
 @c denoted as @samp{gfx1011} by the compiler.
 @c
 @c @item
-@c ``Navi 14'' which is displayed as @samp{navi14} by @value{GDBN} and
+@c ``TBA'' which is displayed as @samp{navi14} by @value{GDBN} and
 @c denoted as @samp{gfx1012} by the compiler.
 @c
 @c @item

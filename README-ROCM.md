@@ -162,4 +162,4 @@ Canonical Ltd.  Other product names used in this publication are for
 identification purposes only and may be trademarks of their respective
 companies.
 
-Copyright (c) 2019-2020 Advanced Micro Devices, Inc.  All rights reserved.
+Copyright (c) 2019-2021 Advanced Micro Devices, Inc.  All rights reserved.
