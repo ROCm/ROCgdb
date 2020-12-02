@@ -125,4 +125,3 @@ gdb_test_no_output "set var \$$regname = 2" "init reg to 2"
 gdb_test_no_output "set var exec_mask = 0" "init exec_mask to 0"
 
 gdb_test "print/d a" " = 2" "a == 2"
-

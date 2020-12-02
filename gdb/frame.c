@@ -1581,9 +1581,9 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
       if (curr_len > len)
 	curr_len = len;
 
-      /*  Compute value is a special new case for DWARF 6.
-	  The problem is that the computed callback mechanism only
-	  supports a struct value arguments, so we need to make one.  */
+      /*  Compute value is a special new case.  The problem is that
+	  the computed callback mechanism only supports a struct
+	  value arguments, so we need to make one.  */
       if (value != NULL && VALUE_LVAL (value) == lval_computed)
 	{
 	  struct value *from_value;
