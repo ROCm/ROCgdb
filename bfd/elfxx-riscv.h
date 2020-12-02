@@ -33,8 +33,6 @@ riscv_reloc_type_lookup (bfd *, bfd_reloc_code_real_type);
 extern reloc_howto_type *
 riscv_elf_rtype_to_howto (bfd *, unsigned int r_type);
 
-#define RISCV_DONT_CARE_VERSION -1
-
 /* The information of architecture attribute.  */
 struct riscv_subset_t
 {
@@ -46,7 +44,8 @@ struct riscv_subset_t
 
 typedef struct riscv_subset_t riscv_subset_t;
 
-typedef struct {
+typedef struct
+{
   riscv_subset_t *head;
   riscv_subset_t *tail;
 } riscv_subset_list_t;
@@ -59,23 +58,20 @@ riscv_add_subset (riscv_subset_list_t *,
 		  const char *,
 		  int, int);
 
-extern riscv_subset_t *
+extern bfd_boolean
 riscv_lookup_subset (const riscv_subset_list_t *,
-		     const char *);
+		     const char *,
+		     riscv_subset_t **);
 
-extern riscv_subset_t *
-riscv_lookup_subset_version (const riscv_subset_list_t *,
-			     const char *,
-			     int, int);
-
-typedef struct {
+typedef struct
+{
   riscv_subset_list_t *subset_list;
   void (*error_handler) (const char *,
 			 ...) ATTRIBUTE_PRINTF_1;
   unsigned *xlen;
   void (*get_default_version) (const char *,
-                              unsigned int *,
-                              unsigned int *);
+			       int *,
+			       int *);
 } riscv_parse_subset_t;
 
 extern bfd_boolean
@@ -95,18 +91,16 @@ extern size_t
 riscv_estimate_digit (unsigned);
 
 /* ISA extension name class. E.g. "zbb" corresponds to RV_ISA_CLASS_Z,
-   "xargs" corresponds to RV_ISA_CLASS_X, etc.  Order is important
-   here.  */
+   "xargs" corresponds to RV_ISA_CLASS_X, etc.  */
 
 typedef enum riscv_isa_ext_class
-  {
-   RV_ISA_CLASS_S,
-   RV_ISA_CLASS_Z,
-   RV_ISA_CLASS_X,
-   RV_ISA_CLASS_UNKNOWN
-  } riscv_isa_ext_class_t;
-
-/* Classify the argument 'ext' into one of riscv_isa_ext_class_t.  */
+{
+  RV_ISA_CLASS_S,
+  RV_ISA_CLASS_H,
+  RV_ISA_CLASS_Z,
+  RV_ISA_CLASS_X,
+  RV_ISA_CLASS_UNKNOWN
+} riscv_isa_ext_class_t;
 
 riscv_isa_ext_class_t
 riscv_get_prefix_class (const char *);

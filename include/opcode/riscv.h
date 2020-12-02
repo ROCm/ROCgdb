@@ -354,14 +354,16 @@ enum riscv_isa_spec_class
   ISA_SPEC_CLASS_20191213
 };
 
+#define RISCV_UNKNOWN_VERSION -1
+
 /* This structure holds version information for specific ISA.  */
 
 struct riscv_ext_version
 {
   const char *name;
   enum riscv_isa_spec_class isa_spec_class;
-  unsigned int major_version;
-  unsigned int minor_version;
+  int major_version;
+  int minor_version;
 };
 
 /* All RISC-V CSR belong to one of these classes.  */

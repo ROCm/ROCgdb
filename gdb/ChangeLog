@@ -1,14 +1,34 @@
+2020-12-01  Sergio Durigan Junior  <sergiodj@sergiodj.net>
+
+	* dwarf2/read.c (dwz_search_other_debugdirs): New function.
+	(dwarf2_get_dwz_file): Convert 'filename' to a
+	std::string.  Use dwz_search_other_debugdirs to search for DWZ
+	files in the debug-file-directories provided by the user as well.
+
+2020-12-01  Tom Tromey  <tom@tromey.com>
+
+	* parse.c (expr_builder::expr_builder): Initialize expout.
+	(expr_builder::release): Use expression::resize.
+	(expression::expression, expression::~expression)
+	(expression::resize): New methods.
+	(write_exp_elt): Use expression::resize.
+	(prefixify_expression): Update.
+	(increase_expout_size): Use expression::resize.
+	* expression.h (struct expression): Add constructor, destructor.
+	<resize>: New method.
+	(expression_up): Change type.
+
+2020-12-01  Rogerio A. Cardoso  <rcardoso@linux.ibm.com>
+	* ppc-linux-nat.c: (PPC_DEBUG_FEATURE_DATA_BP_ARCH_31): New define.
+	(region_ok_for_hw_watchpoint): Check if 2nd DAWR is avaliable before
+	set region.
+
 2020-11-30  Tom de Vries  <tdevries@suse.de>
 
 	PR symtab/26905
 	* dwarf2/loc.c (dwarf2_locexpr_baton_eval): Add and handle
 	is_reference parameter.
 	(dwarf2_evaluate_property): Update dwarf2_locexpr_baton_eval call.
-
-2020-11-30  Tom de Vries  <tdevries@suse.de>
-
-	* debuginfod-support.c (debuginfod_source_query)
-	(debuginfod_debuginfo_query): Only set DESTNAME if successful.
 
 2020-11-30  Tom Tromey  <tom@tromey.com>
 
@@ -50,6 +70,9 @@
 
 	* printcmd.c (skip_over_slash_fmt): Reorder code to ensure in_fmt
 	is always initialized.
+
+2020-11-26  Rogerio Alves <rcardoso@linux.ibm.com>
+	* MAINTAINERS (Write After Approval): Add myself.
 
 2020-11-26  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
 

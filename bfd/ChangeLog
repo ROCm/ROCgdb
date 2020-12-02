@@ -1,3 +1,118 @@
+2020-12-01  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_parse_prefixed_ext): Use riscv_compare_subsets
+	to check the Z* extensions' order.
+
+2020-12-01  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_parse_add_subset): Allow to add g with
+	RISCV_UNKNOWN_VERSION versions.
+	(riscv_parse_std_ext): Add g to the subset list, we only use it
+	to add the implicit extensions, but won't output it to arch string.
+	(riscv_parse_add_implicit_subsets): Add implicit zicsr and zifencei
+	for g extension.
+	(riscv_arch_str1): Do not output g to the arch string.
+	* elfxx-riscv.h (RISCV_UNKNOWN_VERSION): Moved to include/opcode/riscv.h.
+
+2020-12-01  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c (riscv_merge_std_ext): Updated since
+	riscv_lookup_subset is changed.
+	* elfxx-riscv.c (riscv_ext_order): New Array used to compare the
+	extensions' order quickly.
+	(riscv_init_ext_order): New function.  Init the riscv_ext_order
+	according to the riscv_supported_std_ext and parse_config[i].class
+	automatically.
+	(riscv_compare_subsets): New function.  Similar to the strcmp, but
+	compare the subsets with the specific order.
+	(riscv_lookup_subset): Return TRUE and set `current` to the subset
+	if it is found.  Otherwise, return FALSE and set `current` to the
+	place where we should insert the subset.
+	(riscv_add_implicit_subset): New function.  Search the list first,
+	and then find the right place to add the implicit_subset.
+	(riscv_parse_add_subset): Since We have to add all arch string
+	extensions first, and then start to add their implicit extensions.
+	We can add arch string extensions in order by the original
+	riscv_add_subset, and then add the implicit subsets by the
+	riscv_add_implicit_subset.  Besides, do not add the implicit
+	extensions if we failed to find their default versions.
+	(riscv_parse_std_ext): Updated.
+	(riscv_parse_add_implicit_subsets): New function.  Add all implicit
+	extensions according to the arch string extensions.
+	(riscv_parse_subset): Call riscv_init_ext_order and
+	riscv_parse_add_implicit_subsets, before and after parsing the
+	arch string.  Remove parts of the ISA conflict checking since
+	the implicit extensions are added.
+	* elfxx-riscv.h (riscv_lookup_subset): Updated.
+
+2020-12-01  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_lookup_subset): Moved to front.
+	(riscv_add_subset): Likewise.
+	(riscv_release_subset_list): Likewise.
+	(riscv_parse_add_subset): New function.  Find and check the
+	versions before adding them by riscv_add_subset.
+	(riscv_parsing_subset_version): Remove use_default_version
+	and change the version type from unsigned to int.  Set the
+	versions to RISCV_UNKNOWN_VERSION if we can not find them
+	in the arch string.
+	(riscv_parse_std_ext): Updated.
+	(riscv_parse_prefixed_ext): Updated.  Since we use as_bad
+	rather than as_fatal to report more errors, return NULL
+	string if the parsed end_of_version is NULL, too.
+	(riscv_parse_subset): Use a new boolean, no_conflict, to
+	report more errors when we have more than one ISA conflicts.
+	* elfxx-riscv.h (RISCV_DONT_CARE_VERSION): Changed to
+	RISCV_UNKNOWN_VERSION.
+	(riscv_lookup_subset_version): Removed.
+	(riscv_parse_subset_t): Updated.
+
+2020-12-01  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_parse_std_ext): Stop parsing standard
+	extensions when parsed h keyword.
+	(riscv_get_prefix_class): Support prefixed h class.
+	(riscv_std_h_ext_strtab): Likewise.
+	(riscv_ext_h_valid_p): Likewise.
+	(parse_config): Likewise.
+	(riscv_std_z_ext_strtab): Add zifencei.
+	* elfxx-riscv.h (riscv_isa_ext_class): Add RV_ISA_CLASS_H.
+
+2020-12-01  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_parse_subset): ISA string cannot contain
+	any uppercase letter.
+
+2020-12-01  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c: Re-indent codes, unify and improve the error
+	messages and comments.
+	(riscv_parse_prefixed_ext): Stop parsing the prefixed class
+	extensions if the class is RV_ISA_CLASS_UNKNOWN, I get internal
+	errors before adding this check for march-fail-porder* testcases.
+	(riscv_parse_subset): Move the rv32 with q checking in front.
+	* elfxx-riscv.h: Likewise.
+
+2020-12-01  Alan Modra  <amodra@gmail.com>
+
+	PR 26979
+	* elf-bfd.h (elf_backend_merge_symbol_attribute): Update prototype.
+	* elf32-m68hc1x.h (elf32_m68hc11_merge_symbol_attribute): Likewise.
+	* elfxx-mips.h (_bfd_mips_elf_merge_symbol_attribute): Likewise.
+	* elfxx-x86.h (_bfd_x86_elf_merge_symbol_attribute): Likewise.
+	* elf32-m68hc1x.c (elf32_m68hc11_merge_symbol_attribute): Replace
+	isym parameter with st_other.  Adjust code.
+	* elf64-alpha.c (elf64_alpha_merge_symbol_attribute): Likewise.
+	* elf64-ppc.c (ppc64_elf_merge_symbol_attribute): Likewise.
+	* elfnn-aarch64.c (elfNN_aarch64_merge_symbol_attribute): Likewise.
+	* elfxx-mips.c (_bfd_mips_elf_merge_symbol_attribute): Likewise.
+	* elfxx-x86.c (_bfd_x86_elf_merge_symbol_attribute): Likewise.
+	* elflink.c (elf_merge_st_other): Likewise.
+	(_bfd_elf_merge_symbol, elf_link_add_object_symbols): Adjust to suit.
+	(_bfd_elf_copy_link_hash_symbol_type): Likewise.
+	(_bfd_elf_add_default_symbol): Merge st_other from undecorated
+	symbol and @VER symbol to @@VER symbol.
+
 2020-11-28  Alan Modra  <amodra@gmail.com>
 
 	PR 26907

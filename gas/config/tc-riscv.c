@@ -218,10 +218,12 @@ static riscv_subset_list_t riscv_subsets;
 static bfd_boolean
 riscv_subset_supports (const char *feature)
 {
+  struct riscv_subset_t *subset;
+
   if (riscv_opts.rvc && (strcasecmp (feature, "c") == 0))
     return TRUE;
 
-  return riscv_lookup_subset (&riscv_subsets, feature) != NULL;
+  return riscv_lookup_subset (&riscv_subsets, feature, &subset);
 }
 
 static bfd_boolean
@@ -275,28 +277,25 @@ init_ext_version_hash (const struct riscv_ext_version *table)
 
 static void
 riscv_get_default_ext_version (const char *name,
-                              unsigned int *major_version,
-                              unsigned int *minor_version)
+			       int *major_version,
+			       int *minor_version)
 {
   struct riscv_ext_version *ext;
-
-  *major_version = 0;
-  *minor_version = 0;
 
   if (name == NULL || default_isa_spec == ISA_SPEC_CLASS_NONE)
     return;
 
   ext = (struct riscv_ext_version *) str_hash_find (ext_version_hash, name);
   while (ext
-        && ext->name
-        && strcmp (ext->name, name) == 0)
+	 && ext->name
+	 && strcmp (ext->name, name) == 0)
     {
       if (ext->isa_spec_class == default_isa_spec)
-       {
-         *major_version = ext->major_version;
-         *minor_version = ext->minor_version;
-         return;
-       }
+	{
+	  *major_version = ext->major_version;
+	  *minor_version = ext->minor_version;
+	  return;
+	}
       ext++;
     }
 }
@@ -308,7 +307,7 @@ riscv_set_arch (const char *s)
 {
   riscv_parse_subset_t rps;
   rps.subset_list = &riscv_subsets;
-  rps.error_handler = as_fatal;
+  rps.error_handler = as_bad;
   rps.xlen = &xlen;
   rps.get_default_version = riscv_get_default_ext_version;
 

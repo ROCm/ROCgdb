@@ -1,13 +1,30 @@
+2020-12-01  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.threads/non-ldr-exc-1.exp: Fix indentation.
+
+2020-12-01  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.threads/non-ldr-exc-1.exp: Use foreach_with_prefix.
+	(do_test): Don't use with_test_prefix.
+	* gdb.threads/non-ldr-exc-2.exp: Use foreach_with_prefix.
+	(do_test): Don't use with_test_prefix.
+	* gdb.threads/non-ldr-exc-3.exp: Use foreach_with_prefix.
+	(do_test): Don't use with_test_prefix.
+	* gdb.threads/non-ldr-exc-4.exp: Use foreach_with_prefix.
+	(do_test): Don't use with_test_prefix.
+
+2020-12-01  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.threads/non-ldr-exit.exp: Fix comment.
+
+2020-12-01  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.xml/maint-xml-dump-03.xml: New file.
+
 2020-11-30  Tom de Vries  <tdevries@suse.de>
 
 	PR symtab/26905
 	* gdb.dwarf2/count.exp: Remove kfails.
-
-2020-11-30  Tom de Vries  <tdevries@suse.de>
-
-	* gdb.ada/enum_idx_packed.exp: Limit setup_kfail to gnat 9 and 10.
-	* gdb.ada/mod_from_name.exp: Same.
-	* gdb.ada/pckd_arr_ren.exp: Same.
 
 2020-11-24  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 
