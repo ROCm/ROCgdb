@@ -1227,6 +1227,8 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
 
   jit_inferior_created_hook ();
 
+  gdb::observers::inferior_execd.notify (inf);
+
   breakpoint_re_set ();
 
   /* Reinsert all breakpoints.  (Those which were symbolic have
