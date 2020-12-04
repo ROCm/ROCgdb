@@ -1,3 +1,11 @@
+2020-12-04  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.threads/step-over-exec.exp: New.
+	* gdb.threads/step-over-exec.c: New.
+	* gdb.threads/step-over-exec-execd.c: New.
+	* lib/my-syscalls.S: New.
+	* lib/my-syscalls.h: New.
+
 2020-10-30  Simon Marchi  <simon.marchi@efficios.com>
 
 	* gdb.arch/amd64-disp-step-avx.exp: Update displaced step debug
