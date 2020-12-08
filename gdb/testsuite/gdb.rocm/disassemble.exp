@@ -1,0 +1,130 @@
+# Copyright (C) 2021 Free Software Foundation, Inc.
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the various rocgdb disassemble commands on the kernel code.
+# disassembly command shows assembly instructions.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+# By default, GDB shows mangled names in disassembly listings.
+# Force demangling to make it easier to match symbols in the tests below.
+gdb_test_no_output "set print asm-demangle on"
+
+# Set breakpoint in device code.
+gdb_breakpoint "kernel" "allow-pending"
+gdb_continue_to_breakpoint "kernel"
+
+# Check "disassemble /r kernel".
+#
+# Sample vega20 output:
+#
+#  Dump of assembler code for function kernel():
+#  0x00007efe8de01600 <+0>:     ff 00 a0 be 00 04 00 00 s_mov_b32 s32, 0x400
+#  0x00007efe8de01608 <+8>:     80 00 a1 be     s_mov_b32 s33, 0
+#  0x00007efe8de0160c <+12>:    04 07 66 80     s_add_u32 flat_scratch_lo, s4, s7
+#  .
+#  .
+#  End of assembler dump.
+gdb_test_sequence "disassemble /r kernel" "disassemble raw" [list \
+    "Dump of assembler code for function kernel.+:" \
+    "\\s+$hex\\s+<\\+0>:\\s+(\[0-9a-fA-F]+\\s)+.+" \
+    "End of assembler dump\."
+]
+
+# Check "disassemble /m kernel".
+#
+# Sample vega20 output:
+#
+#  Dump of assembler code for function kernel():
+#  0x00007efe8de01600 <+0>:     s_mov_b32 s32, 0x400
+#  0x00007efe8de01608 <+8>:     s_mov_b32 s33, 0
+#  0x00007efe8de0160c <+12>:    s_add_u32 flat_scratch_lo, s4, s7
+#  .
+#  .
+# End of assembler dump.
+gdb_test_sequence "disassemble /m kernel" "disassemble machine code" [list \
+    "Dump of assembler code for function kernel.+:\\s+$decimal\\s+" \
+    "\\s+$hex\\s+<\\+0>:\\s+.+" \
+    "End of assembler dump\."
+]
+
+# Check "x/3i kernel".
+#
+# Sample vega20 output:
+#
+#  0x7efe8de01600 <kernel()>:   s_mov_b32 s32, 0x400
+#  0x7efe8de01608 <kernel()+8>: s_mov_b32 s33, 0
+#  0x7efe8de0160c <kernel()+12>:        s_add_u32 flat_scratch_lo, s4, s7
+gdb_test_sequence "x/3i kernel" "disassemble 3 instructions" [list \
+    "\\s+$hex\\s+<kernel\\(\\)\\+?($decimal)?>:(\\s*)" \
+    "\\s+$hex\\s+<kernel\\(\\)\\+?($decimal)?>:(\\s*)" \
+    "\\s+$hex\\s+<kernel\\(\\)\\+?($decimal)?>:(\\s*)"
+]
+
+# Check "nexti".
+# Sample vega20 output:
+#
+#  0x00007fa50e601664      27          int tid = hipThreadIdx_x;
+gdb_test "nexti" "$hex\\s+$decimal.+"
+
+# Check set disassemble-next-line off followed by n.
+# Sample vega20 output:
+# There should not be any disassemble code printed identified by the absence of the character "=>"
+gdb_test_no_output "set disassemble-next-line off"
+gdb_test_multiple "n" "next after disassemble-next-line off" {
+    -re "=>.*$gdb_prompt $" {
+        fail $gdb_test_name
+    }
+    -re "$gdb_prompt $" {
+        pass $gdb_test_name
+    }
+}
+
+# Check "set disassemble-next-line on followed by n".
+# vega20 sample output
+# There should be disassemble code printed identified by the presense of the character "=>"
+gdb_test_no_output "set disassemble-next-line on"
+gdb_test_multiple "n" "next after disassemble-next-line on" {
+    -re "=>.*$gdb_prompt $" {
+        pass $gdb_test_name
+    }
+    -re "$gdb_prompt $" {
+        fail $gdb_test_name
+    }
+}
+
+gdb_exit
+}
