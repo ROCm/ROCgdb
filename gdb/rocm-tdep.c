@@ -1784,7 +1784,8 @@ constexpr const char *debug_amdgpu_log_level_enums[]
       /* [AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR] = */ "error",
       /* [AMD_DBGAPI_LOG_LEVEL_WARNING] = */ "warning",
       /* [AMD_DBGAPI_LOG_LEVEL_INFO] = */ "info",
-      /* [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = */ "verbose" };
+      /* [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = */ "verbose",
+      nullptr };
 
 static const char *debug_amdgpu_log_level
   = debug_amdgpu_log_level_enums[AMD_DBGAPI_LOG_LEVEL_WARNING];
@@ -1792,10 +1793,7 @@ static const char *debug_amdgpu_log_level
 static amd_dbgapi_log_level_t
 get_debug_amdgpu_log_level ()
 {
-  static constexpr size_t num_log_levels
-    = sizeof (debug_amdgpu_log_level_enums) / sizeof (const char *);
-
-  for (size_t pos = 0; pos < num_log_levels; ++pos)
+  for (size_t pos = 0; debug_amdgpu_log_level_enums[pos]; ++pos)
     if (debug_amdgpu_log_level == debug_amdgpu_log_level_enums[pos])
       return static_cast<amd_dbgapi_log_level_t> (pos);
 
