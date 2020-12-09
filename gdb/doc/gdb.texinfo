@@ -27226,12 +27226,15 @@ restrictions.
 @item
 The debugger convenience variables, convenience functions, and
 commands described in @ref{Heterogeneous Debugging} are not yet
-implemented.  The exceptions are the @code{info agents}, @code{info queues},
-@code{info dispatches}, @code{queue find}, and @code{dispatch find} commands,
-which do not have Python bindings.
+implemented unless noted below.
 
-However, the debugger convenience variable @code{$_wave_id} is
-available which returns a string that has the format:
+The command line interface @code{info agents}, @code{info queues}, @code{info
+dispatches}, @code{queue find}, and @code{dispatch find} commands are
+supported.  However, these have no Python bindings and have undocumented
+prototype machine interface command support that is subject to change.
+
+The debugger convenience variable @code{$_wave_id} is available which
+returns a string that has the format:
 
 @smallexample
 (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
