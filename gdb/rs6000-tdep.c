@@ -153,6 +153,31 @@ static const char *const powerpc_vector_strings[] =
 static enum powerpc_vector_abi powerpc_vector_abi_global = POWERPC_VEC_AUTO;
 static const char *powerpc_vector_abi_string = "auto";
 
+/* PowerPC-related per-inferior data.  */
+
+struct ppc_inferior_data
+{
+  /* This is an optional in case we add more fields to ppc_inferior_data, we
+     don't want it instantiated as soon as we get the ppc_inferior_data for an
+     inferior.  */
+  gdb::optional<displaced_step_buffers> disp_step_buf;
+};
+
+static inferior_key<ppc_inferior_data> ppc_inferior_data_key;
+
+/* Get the per-inferior PowerPC data for INF.  */
+
+static ppc_inferior_data *
+get_ppc_per_inferior (inferior *inf)
+{
+  ppc_inferior_data *per_inf = ppc_inferior_data_key.get (inf);
+
+  if (per_inf == nullptr)
+    per_inf = ppc_inferior_data_key.emplace (inf);
+
+  return per_inf;
+}
+
 /* To be used by skip_prologue.  */
 
 struct rs6000_framedata
@@ -851,18 +876,19 @@ typedef BP_MANIPULATION_ENDIAN (little_breakpoint, big_breakpoint)
 					 || (insn & STORE_CONDITIONAL_MASK) == STHCX_INSTRUCTION \
 					 || (insn & STORE_CONDITIONAL_MASK) == STQCX_INSTRUCTION)
 
-typedef buf_displaced_step_closure ppc_displaced_step_closure;
+typedef buf_displaced_step_copy_insn_closure
+  ppc_displaced_step_copy_insn_closure;
 
 /* We can't displaced step atomic sequences.  */
 
-static displaced_step_closure_up
+static displaced_step_copy_insn_closure_up
 ppc_displaced_step_copy_insn (struct gdbarch *gdbarch,
 			      CORE_ADDR from, CORE_ADDR to,
 			      struct regcache *regs)
 {
   size_t len = gdbarch_max_insn_length (gdbarch);
-  std::unique_ptr<ppc_displaced_step_closure> closure
-    (new ppc_displaced_step_closure (len));
+  std::unique_ptr<ppc_displaced_step_copy_insn_closure> closure
+    (new ppc_displaced_step_copy_insn_closure (len));
   gdb_byte *buf = closure->buf.data ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int insn;
@@ -887,20 +913,21 @@ ppc_displaced_step_copy_insn (struct gdbarch *gdbarch,
 			  displaced_step_dump_bytes (buf, len).c_str ());;
 
   /* This is a work around for a problem with g++ 4.8.  */
-  return displaced_step_closure_up (closure.release ());
+  return displaced_step_copy_insn_closure_up (closure.release ());
 }
 
 /* Fix up the state of registers and memory after having single-stepped
    a displaced instruction.  */
 static void
 ppc_displaced_step_fixup (struct gdbarch *gdbarch,
-			  struct displaced_step_closure *closure_,
+			  struct displaced_step_copy_insn_closure *closure_,
 			  CORE_ADDR from, CORE_ADDR to,
 			  struct regcache *regs)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   /* Our closure is a copy of the instruction.  */
-  ppc_displaced_step_closure *closure = (ppc_displaced_step_closure *) closure_;
+  ppc_displaced_step_copy_insn_closure *closure
+    = (ppc_displaced_step_copy_insn_closure *) closure_;
   ULONGEST insn  = extract_unsigned_integer (closure->buf.data (),
 					     PPC_INSN_SIZE, byte_order);
   ULONGEST opcode = 0;
@@ -975,6 +1002,53 @@ ppc_displaced_step_fixup (struct gdbarch *gdbarch,
   /* Handle any other instructions that do not fit in the categories above.  */
     regcache_cooked_write_unsigned (regs, gdbarch_pc_regnum (gdbarch),
 				    from + offset);
+}
+
+/* Implementation of gdbarch_displaced_step_prepare.  */
+
+static displaced_step_prepare_status
+ppc_displaced_step_prepare  (gdbarch *arch, thread_info *thread,
+			     CORE_ADDR &displaced_pc)
+{
+  ppc_inferior_data *per_inferior = get_ppc_per_inferior (thread->inf);
+
+  if (!per_inferior->disp_step_buf.has_value ())
+    {
+      /* Figure out where the displaced step buffer is.  */
+      CORE_ADDR disp_step_buf_addr
+	= displaced_step_at_entry_point (thread->inf->gdbarch);
+
+      per_inferior->disp_step_buf.emplace (disp_step_buf_addr);
+    }
+
+  return per_inferior->disp_step_buf->prepare (thread, displaced_pc);
+}
+
+/* Implementation of gdbarch_displaced_step_finish.  */
+
+static displaced_step_finish_status
+ppc_displaced_step_finish (gdbarch *arch, thread_info *thread,
+			   gdb_signal sig)
+{
+  ppc_inferior_data *per_inferior = get_ppc_per_inferior (thread->inf);
+
+  gdb_assert (per_inferior->disp_step_buf.has_value ());
+
+  return per_inferior->disp_step_buf->finish (arch, thread, sig);
+}
+
+/* Implementation of gdbarch_displaced_step_restore_all_in_ptid.  */
+
+static void
+ppc_displaced_step_restore_all_in_ptid (inferior *parent_inf, ptid_t ptid)
+{
+  ppc_inferior_data *per_inferior = ppc_inferior_data_key.get (parent_inf);
+
+  if (per_inferior == nullptr
+      || !per_inferior->disp_step_buf.has_value ())
+    return;
+
+  per_inferior->disp_step_buf->restore_in_ptid (ptid);
 }
 
 /* Always use hardware single-stepping to execute the
@@ -6988,8 +7062,10 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_displaced_step_hw_singlestep (gdbarch,
 					    ppc_displaced_step_hw_singlestep);
   set_gdbarch_displaced_step_fixup (gdbarch, ppc_displaced_step_fixup);
-  set_gdbarch_displaced_step_location (gdbarch,
-				       displaced_step_at_entry_point);
+  set_gdbarch_displaced_step_prepare (gdbarch, ppc_displaced_step_prepare);
+  set_gdbarch_displaced_step_finish (gdbarch, ppc_displaced_step_finish);
+  set_gdbarch_displaced_step_restore_all_in_ptid
+    (gdbarch, ppc_displaced_step_restore_all_in_ptid);
 
   set_gdbarch_max_insn_length (gdbarch, PPC_INSN_SIZE);
 

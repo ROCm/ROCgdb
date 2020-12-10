@@ -783,7 +783,7 @@ V;ULONGEST;max_insn_length;;;0;0
 # If the instruction cannot execute out of line, return NULL.  The
 # core falls back to stepping past the instruction in-line instead in
 # that case.
-M;displaced_step_closure_up;displaced_step_copy_insn;CORE_ADDR from, CORE_ADDR to, struct regcache *regs;from, to, regs
+M;displaced_step_copy_insn_closure_up;displaced_step_copy_insn;CORE_ADDR from, CORE_ADDR to, struct regcache *regs;from, to, regs
 
 # Return true if GDB should use hardware single-stepping to execute a displaced
 # step instruction.  If false, GDB will simply restart execution at the
@@ -811,16 +811,22 @@ m;bool;displaced_step_hw_singlestep;void;;;default_displaced_step_hw_singlestep;
 #
 # For a general explanation of displaced stepping and how GDB uses it,
 # see the comments in infrun.c.
-M;void;displaced_step_fixup;struct displaced_step_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs;closure, from, to, regs;;NULL
+M;void;displaced_step_fixup;struct displaced_step_copy_insn_closure *closure, CORE_ADDR from, CORE_ADDR to, struct regcache *regs;closure, from, to, regs;;NULL
 
-# Return the address of an appropriate place to put displaced
-# instructions while we step over them.  There need only be one such
-# place, since we're only stepping one thread over a breakpoint at a
-# time.
+# Prepare THREAD for it to displaced step the instruction at its current PC.
 #
-# For a general explanation of displaced stepping and how GDB uses it,
-# see the comments in infrun.c.
-m;CORE_ADDR;displaced_step_location;void;;;NULL;;(! gdbarch->displaced_step_location) != (! gdbarch->displaced_step_copy_insn)
+# Throw an exception if any unexpected error happens.
+M;displaced_step_prepare_status;displaced_step_prepare;thread_info *thread, CORE_ADDR &displaced_pc;thread, displaced_pc
+
+# Clean up after a displaced step of THREAD.
+m;displaced_step_finish_status;displaced_step_finish;thread_info *thread, gdb_signal sig;thread, sig;;NULL;;(! gdbarch->displaced_step_finish) != (! gdbarch->displaced_step_prepare)
+
+# Return the closure associated to the displaced step buffer that is at ADDR.
+F;const displaced_step_copy_insn_closure *;displaced_step_copy_insn_closure_by_addr;inferior *inf, CORE_ADDR addr;inf, addr
+
+# PARENT_INF has forked and CHILD_PTID is the ptid of the child.  Restore the
+# contents of all displaced step buffers in the child's address space.
+f;void;displaced_step_restore_all_in_ptid;inferior *parent_inf, ptid_t child_ptid;parent_inf, child_ptid
 
 # Relocate an instruction to execute at a different address.  OLDLOC
 # is the address in the inferior memory where the instruction to
@@ -1270,6 +1276,7 @@ cat <<EOF
 #include "gdb_obstack.h"
 #include "infrun.h"
 #include "osabi.h"
+#include "displaced-stepping.h"
 
 struct floatformat;
 struct ui_file;
@@ -1296,6 +1303,7 @@ struct mem_range;
 struct syscalls_info;
 struct thread_info;
 struct ui_out;
+struct inferior;
 
 #include "regcache.h"
 
