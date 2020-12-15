@@ -1083,6 +1083,11 @@ lists all sections from all object files, including shared libraries."),
 			&maintenanceprintlist, "maintenance print ", 0,
 			&maintenancelist);
 
+  add_basic_prefix_cmd ("flush", class_maintenance,
+			_("Maintenance command for flushing GDB internal caches."),
+			&maintenanceflushlist, "maintenance flush ", 0,
+			&maintenancelist);
+
   add_basic_prefix_cmd ("set", class_maintenance, _("\
 Set GDB internal variables used by the GDB maintainer.\n\
 Configure variables internal to GDB that aid in GDB's maintenance"),
@@ -1193,11 +1198,12 @@ If nonzero, will cause the execution space for each command to be\n\
 displayed, following the command's output."),
 	   &maintenancelist);
 
-  add_cmd ("type", class_maintenance, maintenance_print_type, _("\
+  cmd = add_cmd ("type", class_maintenance, maintenance_print_type, _("\
 Print a type chain for a given symbol.\n\
 For each node in a type chain, print the raw data for each member of\n\
 the type structure, and the interpretation of the data."),
 	   &maintenanceprintlist);
+  set_cmd_completer (cmd, expression_completer);
 
   add_cmd ("statistics", class_maintenance, maintenance_print_statistics,
 	   _("Print statistics about internal gdb state."),

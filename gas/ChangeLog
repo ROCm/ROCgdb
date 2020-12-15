@@ -1,3 +1,86 @@
+2020-12-15  Alan Modra  <amodra@gmail.com>
+
+	PR 27071
+	* config/obj-elf.c (elf_obj_symbol_clone_hook): New function.
+	(elf_format_ops): Set symbol_clone_hook.
+	* config/obj-elf.h (elf_obj_symbol_clone_hook): Declare.
+	(obj_symbol_clone_hook): Define.
+	* listing.c (buffer_line): Avoid integer overflow on paper_width
+	set to zero.
+
+2020-12-14  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/elf/section27.s: Reorder .text, .data and .bss
+	so that output section order does not depend on those sections
+	being already created.  Use ".section .text" rather than ".text".
+
+2020-12-13  Borislav Petkov  <bp@suse.de>
+
+	* testsuite/gas/i386/align-branch-9.s: Don't use labels that are
+	automatically local for ELF targets.
+	* testsuite/gas/i386/branch.s: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-9.s: Likewise.
+	* testsuite/gas/i386/x86-64-branch.s: Likewise.
+	* testsuite/gas/i386/align-branch-9.d: Adjust to match more targets.
+	* testsuite/gas/i386/branch.d: Likewise.
+	* testsuite/gas/i386/ilp32/x86-64-branch.d: Likewise.
+	* testsuite/gas/i386/x86-64-align-branch-9.d: Likewise.
+	* testsuite/gas/i386/x86-64-branch.d: Likewise.
+
+2020-12-11  Sergey Belyashov  <sergey.belyashov@gmail.com>
+	    Nick Clifton  <nickc@redhat.com>
+
+	PR 27047
+	* config/tc-z80.c (s_bss): New function.
+	(md_pseudo_table): Add bss entry.
+
+2020-12-10  Nelson Chu  <nelson.chu@sifive.com>
+
+	* config/tc-riscv.c (riscv_ext): New function.  Use md_assemblef
+	to expand the zext and sext pseudos, to give them a chance to be
+	expanded into c-ext instructions.
+	(macro): Handle M_ZEXTH, M_ZEXTW, M_SEXTB and M_SEXTH.
+	* testsuite/gas/riscv/ext.s: New testcase.
+	* testsuite/gas/riscv/ext-32.d: Likewise.
+	* testsuite/gas/riscv/ext-64.d: Likewise.
+
+2020-12-10  Nelson Chu  <nelson.chu@sifive.com>
+
+	* config/tc-riscv.c (riscv_multi_subset_supports): Handle INSN_CLASS_ZICSR
+	and INSN_CLASS_ZIFENCEI.
+	* testsuite/gas/riscv/march-imply-i.s: New testcase.
+	* testsuite/gas/riscv/march-imply-i2p0-01.d: New testcase.  The version
+	of i is less than 2.1, and zi* are supported in the chosen spec, so
+	enable the fence.i and csr instructions, also output the implicit zi* to
+	the arch string.
+	* testsuite/gas/riscv/march-imply-i2p0-02.d: Likewise, but the zi* are
+	not supported in the spec 2.2.  Enable the related instructions since
+	i's version is less than 2.1, but do not output them.
+	* testsuite/gas/riscv/march-imply-i2p1-01.d: New testcase.  The version
+	of i is 2.1, so don't add it's implicit zi*, and disable the related
+	instructions.
+	* testsuite/gas/riscv/march-imply-i2p1-01.l: Likewise.
+	* testsuite/gas/riscv/march-imply-i2p1-02.d: Likewise, and set the zi*
+	explicitly, so enable the related instructions.
+	* testsuite/gas/riscv/march-imply-i2p0.d: Removed.
+	* testsuite/gas/riscv/march-imply-i2p1.d: Removed.
+
+2020-12-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/obj-elf.c (SEC_ASSEMBLER_SHF_MASK): New.
+	(get_section_by_match): Also check if SEC_ASSEMBLER_SHF_MASK of
+	sh_flags matches.  Rename info to sh_info.
+	(obj_elf_change_section): Don't check previous SHF_GNU_RETAIN.
+	Rename info to sh_info.
+	(obj_elf_section): Rename info to sh_info.  Set sh_flags for
+	SHF_GNU_RETAIN.
+	* config/obj-elf.h (elf_section_match): Rename info to sh_info.
+	Add sh_flags.
+	* testsuite/gas/elf/elf.exp: Run section27.
+	* testsuite/gas/elf/section24b.d: Updated.
+	* testsuite/gas/elf/section27.d: New file.
+	* testsuite/gas/elf/section27.s: Likewise.
+
 2020-12-04  Andreas Krebbel  <krebbel@linux.ibm.com>
 
 	* testsuite/gas/s390/zarch-z10.s: Add tests for risbgz.

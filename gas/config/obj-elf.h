@@ -106,8 +106,9 @@ struct elf_section_match
 {
   const char *   group_name;
   const char *   linked_to_symbol_name;
-  unsigned int   info;
   unsigned int   section_id;
+  unsigned int   sh_info;		/* ELF section information.  */
+  bfd_vma        sh_flags;		/* ELF section flags.  */
   flagword       flags;
 };
 
@@ -220,6 +221,11 @@ void elf_obj_read_begin_hook (void);
 void elf_obj_symbol_new_hook (symbolS *);
 #ifndef obj_symbol_new_hook
 #define obj_symbol_new_hook	elf_obj_symbol_new_hook
+#endif
+
+void elf_obj_symbol_clone_hook (symbolS *, symbolS *);
+#ifndef obj_symbol_clone_hook
+#define obj_symbol_clone_hook	elf_obj_symbol_clone_hook
 #endif
 
 void elf_copy_symbol_attributes (symbolS *, symbolS *);

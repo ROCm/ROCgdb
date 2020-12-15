@@ -1,3 +1,51 @@
+2020-12-15  Vivek Das Mohapatra  <vivek@collabora.com>
+
+	* elflink.c (bfd_elf_size_dynamic_sections): Call
+	_bfd_elf_add_dynamic_entry to add a DT_GNU_FLAGS_1 section.
+
+2020-12-14  Alan Modra  <amodra@gmail.com>
+
+	* elf-bfd.h (struct elf_obj_tdata): Add being_created.
+	* elf.c (bfd_section_from_shdr): Delete static vars for loop
+	detection.  Use new tdata variable instead.
+	* elfcode.h (elf_object_p): Allocate being_created.
+
+2020-12-10  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_ext_dont_care_version): New function.  Return
+	TRUE if we don't care the versions of the extensions.  These extensions
+	are added to the subset list for special purposes, with the explicit
+	versions or the RISCV_UNKNOWN_VERSION versions.
+	(riscv_parse_add_subset): If we do care the versions of the extension,
+	and the versions are unknown, then report errors for the non-implicit
+	extensions, and return directly for the implicit one.
+	(riscv_arch_str1): Do not output i extension after e, and the extensions
+	which versions are unknown.
+
+2020-12-07  Siddhesh Poyarekar  <siddhesh@sourceware.org>
+
+	PR 26945
+	* opncls.c (bfd_fdopenw): New function.
+	* bfd-in2.h: Regenerate.
+
+2020-12-07  Alan Modra  <amodra@gmail.com>
+
+	* elf32-csky.c (csky_relocate_contents): Correct negate test.
+	* cpu-ns32k.c (_bfd_do_ns32k_reloc_contents): Likewise.
+	* elf32-nds32.c (nds32_relocate_contents): Likewise.
+
+2020-12-05  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_check_relocs) <R_VAX_GOT32>: Use
+	SYMBOL_REFERENCES_LOCAL rather than `h->forced_local' to check
+	whether the symbol referred is local or not.
+
+2020-12-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27016
+	* elf64-x86-64.c (elf_x86_64_convert_load_reloc): Convert load
+	to mov only for GOTPCRELX relocations.
+
 2020-12-04  Alan Modra  <amodra@gmail.com>
 
 	PR 26978

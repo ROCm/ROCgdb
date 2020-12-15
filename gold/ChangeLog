@@ -1,3 +1,57 @@
+2020-12-15  Vivek Das Mohapatra  <vivek@collabora.com>
+
+	Implement -z unique / -z nounique options.
+	* layout.cc (Layout::finish_dynamic_section): Set DF_GNU_1_UNIQUE.
+	* options.h (class General_options): Handle -z unique, -z nounique.
+
+2020-12-14  H.J. Lu  <hjl.tools@gmail.com>
+	    Cary Coutant  <ccoutant@gmail.com>
+
+	PR gold/27039
+	* layout.cc (Layout::layout): Strip SHF_GNU_RETAIN.
+	* object.cc (Sized_relobj_file::Sized_relobj_file): Initialize osabi_.
+	(Sized_relobj_file::do_layout): Keep SHF_GNU_RETAIN sections for
+	GNU/FreBSD ELFOSABIs.
+	* object.h (Osabi) New class.
+	(Sized_relobj_file): Add osabi() and osabi_.
+	* testsuite/Makefile.am (check_SCRIPTS): Add retain.sh.
+	(check_DATA): Add retain_1.out retain_2.out.
+	(MOSTLYCLEANFILES): Add retain_1 retain_2.
+	(retain_1.out): New target.
+	(retain_1): Likewise.
+	(retain_1.o): Likewise.
+	(retain_2.out): Likewise.
+	(retain_2): Likewise.
+	(retain_2.o): Likewise.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/retain.sh: New file.
+	* testsuite/retain_1.s: Likewise.
+	* testsuite/retain_2.s: Likewise.
+
+2020-12-13  Cary Coutant  <ccoutant@gmail.com>
+
+	PR gold/23539
+	PR gold/24123
+	* testsuite/Makefile.am (incremental_copy_test): Re-enable for GCC 9+.
+	(incremental_comdat_test_1): Likewise.
+	* testsuite/Makefile.in: Regenerate.
+
+2020-12-13  Cary Coutant  <ccoutant@gmail.com>
+
+	PR gold/23539
+	* object.cc (Sized_relobj_file::layout_gnu_property_section): Ignore
+	Gnu properties during incremental links.
+
+2020-12-13  Cary Coutant  <ccoutant@gmail.com>
+
+	PR gold/24123
+	* layout.cc (Layout::init_fixed_output_section): Mask out flags that
+	should be ignored when matching sections.
+
+2020-12-07  Alan Modra  <amodra@gmail.com>
+
+	* plugin.cc (Plugin_recorder::init): Replace strncpy with memcpy.
+
 2020-12-03  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/Makefile.am (pr26936a.o): Pass -mx86-used-note=yes.

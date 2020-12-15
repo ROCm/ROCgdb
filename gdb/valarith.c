@@ -150,25 +150,33 @@ value_subscript (struct value *array, LONGEST index)
       || tarray->code () == TYPE_CODE_STRING)
     {
       struct type *range_type = tarray->index_type ();
-      LONGEST lowerbound, upperbound;
+      gdb::optional<LONGEST> lowerbound = get_discrete_low_bound (range_type);
+      if (!lowerbound.has_value ())
+	lowerbound = 0;
 
-      get_discrete_bounds (range_type, &lowerbound, &upperbound);
       if (VALUE_LVAL (array) != lval_memory)
-	return value_subscripted_rvalue (array, index, lowerbound);
+	return value_subscripted_rvalue (array, index, *lowerbound);
 
       if (!c_style)
 	{
-	  if (index >= lowerbound && index <= upperbound)
-	    return value_subscripted_rvalue (array, index, lowerbound);
+	  gdb::optional<LONGEST> upperbound
+	    = get_discrete_high_bound (range_type);
+
+	  if (!upperbound.has_value ())
+	    upperbound = 0;
+
+	  if (index >= *lowerbound && index <= *upperbound)
+	    return value_subscripted_rvalue (array, index, *lowerbound);
+
 	  /* Emit warning unless we have an array of unknown size.
 	     An array of unknown size has lowerbound 0 and upperbound -1.  */
-	  if (upperbound > -1)
+	  if (*upperbound > -1)
 	    warning (_("array or string index out of range"));
 	  /* fall doing C stuff */
 	  c_style = true;
 	}
 
-      index -= lowerbound;
+      index -= *lowerbound;
       array = value_coerce_array (array);
     }
 
@@ -957,6 +965,8 @@ fixed_point_binop (struct value *arg1, struct value *arg2, enum exp_opcode op)
       break;
 
     case BINOP_DIV:
+      if (mpq_sgn (v2.val) == 0)
+	error (_("Division by zero"));
       mpq_div (res.val, v1.val, v2.val);
       val = fixed_point_to_value (res);
       break;
@@ -1949,7 +1959,7 @@ value_bit_index (struct type *type, const gdb_byte *valaddr, int index)
   unsigned rel_index;
   struct type *range = type->index_type ();
 
-  if (get_discrete_bounds (range, &low_bound, &high_bound) < 0)
+  if (!get_discrete_bounds (range, &low_bound, &high_bound))
     return -2;
   if (index < low_bound || index > high_bound)
     return -1;

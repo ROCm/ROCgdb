@@ -1,3 +1,72 @@
+2020-12-15  Vivek Das Mohapatra  <vivek@collabora.com>
+
+	* readelf.c (get_dynamic_type): Handle DT_GNU_FLAGS_1.
+	(process_dynamic_section): Likewise.
+
+2020-12-11  Cary Coutant  <ccoutant@gmail.com>
+
+	* readelf.c (get_machine_name): Update list of e_machine values.
+
+2020-12-11  Sebastian Huber  <sebastian.huber@embedded-brains.de>
+
+	* ar.c (write_archive): Cast iostream pointer to FILE *.
+	* arsup.c (ar_save): Likewise.
+	* objcopy.c (copy_file): Likewise.
+
+2020-12-07  Nick Clifton  <nickc@redhat.com>
+
+	* objcopy.c (is_mergeable_note_section): Remove reference to
+	SHF_GNU_BUILD_NOTE.
+
+2020-12-07  Siddhesh Poyarekar  <siddhesh@sourceware.org>
+
+	PR 26945
+	* ar.c
+	(write_archive) [!defined (_WIN32) || defined (__CYGWIN32__)]:
+	Initialize TARGET_STAT and OFD to pass to SMART_RENAME.
+	* arsup.c
+	(ar_save) [defined (_WIN32) || defined (__CYGWIN32__)]:
+	Likewise.
+	* bucomm.h (smart_rename): Add new arguments to declaration.
+	* objcopy.c
+	(strip_main)[defined (_WIN32) || defined (__CYGWIN32__)]:
+	Initialize COPYFD and pass to SMART_RENAME.
+	(copy_main) [defined (_WIN32) || defined (__CYGWIN32__)]:
+	Likewise.
+	* rename.c (try_preserve_permissions): New function.
+	(smart_rename): Use it and add new arguments.
+
+2020-12-07  Siddhesh Poyarekar  <siddhesh@sourceware.org>
+
+	PR 26945
+	* objcopy.c (copy_file): New argument IN_STAT.  Return stat of
+	ibfd through it.
+	(strip_main): Remove redundant stat calls.  adjust copy_file
+	calls.
+	(copy_main): Likewise.
+
+2020-12-07  Siddhesh Poyarekar  <siddhesh@sourceware.org>
+
+	PR 26945
+	* bucomm.c (make_tempname): Add argument to return file
+	descriptor.
+	* bucomm.h (make_tempname): Likewise.
+	* ar.c: Include libbfd.h.
+	(write_archive): Adjust for change in make_tempname.  Call
+	bfd_fdopenw instead of bfd_openw.
+	* objcopy.c: Include libbfd.h.
+	(copy_file): New argument OFD.  Use bfd_fdopenw instead of
+	bfd_openw.
+	(strip_main): Adjust for change in make_tempname and
+	copy_file.
+	(copy_main): Likewise.
+
+
+2020-12-07  Nick Clifton  <nickc@redhat.com>
+
+	* README-how-to-make-a-release (point releases): Add a note to
+	update the milestone list on sourceware's bugzilla.
+
 2020-12-04  Alan Modra  <amodra@gmail.com>
 
 	* dwarf.c (frame_display_row): Do without static variable "sloc".

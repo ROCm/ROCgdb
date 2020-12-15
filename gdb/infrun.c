@@ -154,7 +154,7 @@ static ptid_t previous_inferior_ptid;
 
 static bool detach_fork = true;
 
-unsigned int debug_infrun = 0;
+bool debug_infrun = false;
 static void
 show_debug_infrun (struct ui_file *file, int from_tty,
 		   struct cmd_list_element *c, const char *value)
@@ -8101,7 +8101,6 @@ maybe_remove_breakpoints (void)
 struct stop_context
 {
   stop_context ();
-  ~stop_context ();
 
   DISABLE_COPY_AND_ASSIGN (stop_context);
 
@@ -8116,7 +8115,7 @@ struct stop_context
 
   /* If stopp for a thread event, this is the thread that caused the
      stop.  */
-  struct thread_info *thread;
+  thread_info_ref thread;
 
   /* The inferior that caused the stop.  */
   int inf_num;
@@ -8135,20 +8134,8 @@ stop_context::stop_context ()
     {
       /* Take a strong reference so that the thread can't be deleted
 	 yet.  */
-      thread = inferior_thread ();
-      thread->incref ();
+      thread = thread_info_ref::new_reference (inferior_thread ());
     }
-  else
-    thread = NULL;
-}
-
-/* Release a stop context previously created with save_stop_context.
-   Releases the strong reference to the thread as well. */
-
-stop_context::~stop_context ()
-{
-  if (thread != NULL)
-    thread->decref ();
 }
 
 /* Return true if the current context no longer matches the saved stop
@@ -9231,13 +9218,12 @@ There is no `stop' command, but you can set a hook on `stop'.\n\
 This allows you to set a list of commands to be run each time execution\n\
 of the program stops."), &cmdlist);
 
-  add_setshow_zuinteger_cmd ("infrun", class_maintenance, &debug_infrun, _("\
-Set inferior debugging."), _("\
-Show inferior debugging."), _("\
-When non-zero, inferior specific debugging is enabled."),
-			     NULL,
-			     show_debug_infrun,
-			     &setdebuglist, &showdebuglist);
+  add_setshow_boolean_cmd
+    ("infrun", class_maintenance, &debug_infrun,
+     _("Set inferior debugging."),
+     _("Show inferior debugging."),
+     _("When non-zero, inferior specific debugging is enabled."),
+     NULL, show_debug_infrun, &setdebuglist, &showdebuglist);
 
   add_setshow_boolean_cmd ("non-stop", no_class,
 			   &non_stop_1, _("\

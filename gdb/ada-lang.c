@@ -984,8 +984,9 @@ ada_fold_name (gdb::string_view name)
     {
       int i;
 
-      for (i = 0; i <= len; i += 1)
+      for (i = 0; i < len; i += 1)
 	fold_buffer[i] = tolower (name[i]);
+      fold_buffer[i] = '\0';
     }
 
   return fold_buffer;
@@ -2112,7 +2113,7 @@ constrained_packed_array_type (struct type *type, long *elt_bits)
 
   if ((check_typedef (index_type)->code () == TYPE_CODE_RANGE
        && is_dynamic_type (check_typedef (index_type)))
-      || get_discrete_bounds (index_type, &low_bound, &high_bound) < 0)
+      || !get_discrete_bounds (index_type, &low_bound, &high_bound))
     low_bound = high_bound = 0;
   if (high_bound < low_bound)
     *elt_bits = TYPE_LENGTH (new_type) = 0;
@@ -2182,7 +2183,7 @@ recursively_update_array_bitsize (struct type *type)
   gdb_assert (type->code () == TYPE_CODE_ARRAY);
 
   LONGEST low, high;
-  if (get_discrete_bounds (type->index_type (), &low, &high) < 0
+  if (!get_discrete_bounds (type->index_type (), &low, &high)
       || low > high)
     return 0;
   LONGEST our_len = high - low + 1;
@@ -2299,7 +2300,7 @@ value_subscript_packed (struct value *arr, int arity, struct value **ind)
 	  LONGEST lowerbound, upperbound;
 	  LONGEST idx;
 
-	  if (get_discrete_bounds (range_type, &lowerbound, &upperbound) < 0)
+	  if (!get_discrete_bounds (range_type, &lowerbound, &upperbound))
 	    {
 	      lim_warning (_("don't know bounds of array"));
 	      lowerbound = upperbound = 0;
@@ -2815,11 +2816,13 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
 			       type0->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       TYPE_FIELD_BITSIZE (type0, 0));
   int base_low =  ada_discrete_type_low_bound (type0->index_type ());
-  LONGEST base_low_pos, low_pos;
+  gdb::optional<LONGEST> base_low_pos, low_pos;
   CORE_ADDR base;
 
-  if (!discrete_position (base_index_type, low, &low_pos)
-      || !discrete_position (base_index_type, base_low, &base_low_pos))
+  low_pos = discrete_position (base_index_type, low);
+  base_low_pos = discrete_position (base_index_type, base_low);
+
+  if (!low_pos.has_value () || !base_low_pos.has_value ())
     {
       warning (_("unable to get positions in slice, use bounds instead"));
       low_pos = low;
@@ -2830,7 +2833,7 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
   if (stride == 0)
     stride = TYPE_LENGTH (TYPE_TARGET_TYPE (type0));
 
-  base = value_as_address (array_ptr) + (low_pos - base_low_pos) * stride;
+  base = value_as_address (array_ptr) + (*low_pos - *base_low_pos) * stride;
   return value_at_lazy (slice_type, base);
 }
 
@@ -2846,10 +2849,13 @@ ada_value_slice (struct value *array, int low, int high)
 			      (NULL, TYPE_TARGET_TYPE (type), index_type,
 			       type->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       TYPE_FIELD_BITSIZE (type, 0));
-  LONGEST low_pos, high_pos;
+  gdb::optional<LONGEST> low_pos, high_pos;
 
-  if (!discrete_position (base_index_type, low, &low_pos)
-      || !discrete_position (base_index_type, high, &high_pos))
+
+  low_pos = discrete_position (base_index_type, low);
+  high_pos = discrete_position (base_index_type, high);
+
+  if (!low_pos.has_value () || !high_pos.has_value ())
     {
       warning (_("unable to get positions in slice, use bounds instead"));
       low_pos = low;
@@ -2857,7 +2863,7 @@ ada_value_slice (struct value *array, int low, int high)
     }
 
   return value_cast (slice_type,
-		     value_slice (array, low, high_pos - low_pos + 1));
+		     value_slice (array, low, *high_pos - *low_pos + 1));
 }
 
 /* If type is a record type in the form of a standard GNAT array
@@ -4000,28 +4006,27 @@ replace_operator_with_call (expression_up *expp, int pc, int nargs,
 			    int oplen, struct symbol *sym,
 			    const struct block *block)
 {
-  /* A new expression, with 6 more elements (3 for funcall, 4 for function
-     symbol, -oplen for operator being replaced).  */
-  struct expression *newexp = (struct expression *)
-    xzalloc (sizeof (struct expression)
-	     + EXP_ELEM_TO_BYTES ((*expp)->nelts + 7 - oplen));
+  /* We want to add 6 more elements (3 for funcall, 4 for function
+     symbol, -OPLEN for operator being replaced) to the
+     expression.  */
   struct expression *exp = expp->get ();
+  int save_nelts = exp->nelts;
+  int extra_elts = 7 - oplen;
+  exp->nelts += extra_elts;
 
-  newexp->nelts = exp->nelts + 7 - oplen;
-  newexp->language_defn = exp->language_defn;
-  newexp->gdbarch = exp->gdbarch;
-  memcpy (newexp->elts, exp->elts, EXP_ELEM_TO_BYTES (pc));
-  memcpy (newexp->elts + pc + 7, exp->elts + pc + oplen,
-	  EXP_ELEM_TO_BYTES (exp->nelts - pc - oplen));
+  if (extra_elts > 0)
+    exp->resize (exp->nelts);
+  memmove (exp->elts + pc + 7, exp->elts + pc + oplen,
+	   EXP_ELEM_TO_BYTES (save_nelts - pc - oplen));
+  if (extra_elts < 0)
+    exp->resize (exp->nelts);
 
-  newexp->elts[pc].opcode = newexp->elts[pc + 2].opcode = OP_FUNCALL;
-  newexp->elts[pc + 1].longconst = (LONGEST) nargs;
+  exp->elts[pc].opcode = exp->elts[pc + 2].opcode = OP_FUNCALL;
+  exp->elts[pc + 1].longconst = (LONGEST) nargs;
 
-  newexp->elts[pc + 3].opcode = newexp->elts[pc + 6].opcode = OP_VAR_VALUE;
-  newexp->elts[pc + 4].block = block;
-  newexp->elts[pc + 5].symbol = sym;
-
-  expp->reset (newexp);
+  exp->elts[pc + 3].opcode = exp->elts[pc + 6].opcode = OP_VAR_VALUE;
+  exp->elts[pc + 4].block = block;
+  exp->elts[pc + 5].symbol = sym;
 }
 
 /* Type-class predicates */
@@ -5804,7 +5809,7 @@ ada_lookup_encoded_symbol (const char *name, const struct block *block,
      ada_lookup_name_info would re-encode/fold it again, and that
      would e.g., incorrectly lowercase object renaming names like
      "R28b" -> "r28b".  */
-  std::string verbatim = std::string ("<") + name + '>';
+  std::string verbatim = add_angle_brackets (name);
 
   gdb_assert (info != NULL);
   *info = ada_lookup_symbol (verbatim.c_str (), block, domain);
@@ -6032,6 +6037,13 @@ advance_wild_match (const char **namep, const char *name0, char target0)
 	      name += 2;
 	      break;
 	    }
+	  else if (t1 == '_' && name[2] == 'B' && name[3] == '_')
+	    {
+	      /* Names like "pkg__B_N__name", where N is a number, are
+		 block-local.  We can handle these by simply skipping
+		 the "B_" here.  */
+	      name += 4;
+	    }
 	  else
 	    return 0;
 	}
@@ -6074,28 +6086,6 @@ wild_match (const char *name, const char *patn)
       if (!advance_wild_match (&name, name0, *patn))
 	return false;
     }
-}
-
-/* Returns true iff symbol name SYM_NAME matches SEARCH_NAME, ignoring
-   any trailing suffixes that encode debugging information or leading
-   _ada_ on SYM_NAME (see is_name_suffix commentary for the debugging
-   information that is ignored).  */
-
-static bool
-full_match (const char *sym_name, const char *search_name)
-{
-  size_t search_name_len = strlen (search_name);
-
-  if (strncmp (sym_name, search_name, search_name_len) == 0
-      && is_name_suffix (sym_name + search_name_len))
-    return true;
-
-  if (startswith (sym_name, "_ada_")
-      && strncmp (sym_name + 5, search_name, search_name_len) == 0
-      && is_name_suffix (sym_name + search_name_len + 5))
-    return true;
-
-  return false;
 }
 
 /* Add symbols from BLOCK matching LOOKUP_NAME in DOMAIN to vector
@@ -8927,15 +8917,15 @@ pos_atr (struct value *arg)
 {
   struct value *val = coerce_ref (arg);
   struct type *type = value_type (val);
-  LONGEST result;
 
   if (!discrete_type_p (type))
     error (_("'POS only defined on discrete types"));
 
-  if (!discrete_position (type, value_as_long (val), &result))
+  gdb::optional<LONGEST> result = discrete_position (type, value_as_long (val));
+  if (!result.has_value ())
     error (_("enumeration value is invalid: can't find 'POS"));
 
-  return result;
+  return *result;
 }
 
 static struct value *
@@ -11346,14 +11336,16 @@ scan_discrim_bound (const char *str, int k, struct value *dval, LONGEST * px,
   return 1;
 }
 
-/* Value of variable named NAME in the current environment.  If
-   no such variable found, then if ERR_MSG is null, returns 0, and
+/* Value of variable named NAME.  Only exact matches are considered.
+   If no such variable found, then if ERR_MSG is null, returns 0, and
    otherwise causes an error with message ERR_MSG.  */
 
 static struct value *
 get_var_value (const char *name, const char *err_msg)
 {
-  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
+  std::string quoted_name = add_angle_brackets (name);
+
+  lookup_name_info lookup_name (quoted_name, symbol_name_match_type::FULL);
 
   std::vector<struct block_symbol> syms;
   int nsyms = ada_lookup_symbol_list_worker (lookup_name,
@@ -12250,7 +12242,7 @@ should_stop_exception (const struct bp_location *bl)
 static void
 check_status_exception (bpstat bs)
 {
-  bs->stop = should_stop_exception (bs->bp_location_at);
+  bs->stop = should_stop_exception (bs->bp_location_at.get ());
 }
 
 /* Implement the PRINT_IT method in the breakpoint_ops structure
@@ -13599,7 +13591,41 @@ do_full_match (const char *symbol_search_name,
 	       const lookup_name_info &lookup_name,
 	       completion_match_result *comp_match_res)
 {
-  return full_match (symbol_search_name, ada_lookup_name (lookup_name));
+  if (startswith (symbol_search_name, "_ada_"))
+    symbol_search_name += 5;
+
+  const char *lname = lookup_name.ada ().lookup_name ().c_str ();
+  int uscore_count = 0;
+  while (*lname != '\0')
+    {
+      if (*symbol_search_name != *lname)
+	{
+	  if (*symbol_search_name == 'B' && uscore_count == 2
+	      && symbol_search_name[1] == '_')
+	    {
+	      symbol_search_name += 2;
+	      while (isdigit (*symbol_search_name))
+		++symbol_search_name;
+	      if (symbol_search_name[0] == '_'
+		  && symbol_search_name[1] == '_')
+		{
+		  symbol_search_name += 2;
+		  continue;
+		}
+	    }
+	  return false;
+	}
+
+      if (*symbol_search_name == '_')
+	++uscore_count;
+      else
+	uscore_count = 0;
+
+      ++symbol_search_name;
+      ++lname;
+    }
+
+  return is_name_suffix (symbol_search_name);
 }
 
 /* symbol_name_matcher_ftype for exact (verbatim) matches.  */

@@ -2238,6 +2238,7 @@ get_dynamic_type (Filedata * filedata, unsigned long type)
     case DT_GNU_LIBLIST: return "GNU_LIBLIST";
     case DT_GNU_LIBLISTSZ: return "GNU_LIBLISTSZ";
     case DT_GNU_HASH:	return "GNU_HASH";
+    case DT_GNU_FLAGS_1: return "GNU_FLAGS_1";
 
     default:
       if ((type >= DT_LOPROC) && (type <= DT_HIPROC))
@@ -2569,10 +2570,26 @@ get_machine_name (unsigned e_machine)
     case EM_FT32:               return "FTDI Chip FT32";
     case EM_MOXIE:              return "Moxie";
     case EM_AMDGPU: 	 	return "AMD GPU";
+      /* 230 (all reserved) */
+      /* 240 */
     case EM_RISCV: 	 	return "RISC-V";
     case EM_LANAI:		return "Lanai 32-bit processor";
+    case EM_CEVA:		return "CEVA Processor Architecture Family";
+    case EM_CEVA_X2:		return "CEVA X2 Processor Family";
     case EM_BPF:		return "Linux BPF";
+    case EM_GRAPHCORE_IPU:	return "Graphcore Intelligent Processing Unit";
+    case EM_IMG1:		return "Imagination Technologies";
+      /* 250 */
     case EM_NFP:		return "Netronome Flow Processor";
+    case EM_VE:			return "NEC Vector Engine";
+    case EM_CSKY:		return "C-SKY";
+    case EM_ARC_COMPACT3_64:	return "Synopsys ARCv2.3 64-bit";
+    case EM_MCS6502:		return "MOS Technology MCS 6502 processor";
+    case EM_ARC_COMPACT3:	return "Synopsys ARCv2.3 32-bit";
+    case EM_KVX:		return "Kalray VLIW core of the MPPA processor family";
+    case EM_65816:		return "WDC 65816/65C816";
+    case EM_LOONGARCH:		return "Loongson Loongarch";
+    case EM_KF32:		return "ChipON KungFu32";
 
       /* Large numbers...  */
     case EM_MT:                 return "Morpho Techologies MT processor";
@@ -2587,7 +2604,6 @@ get_machine_name (unsigned e_machine)
     case EM_ADAPTEVA_EPIPHANY:	return "Adapteva EPIPHANY";
     case EM_CYGNUS_FRV:		return "Fujitsu FR-V";
     case EM_S12Z:               return "Freescale S12Z";
-    case EM_CSKY:		return "C-SKY";
 
     default:
       snprintf (buff, sizeof (buff), _("<unknown>: 0x%x"), e_machine);
@@ -11104,6 +11120,28 @@ the .dynstr section doesn't match the DT_STRTAB and DT_STRSZ tags\n"));
 	    {
 	      print_vma (entry->d_un.d_val, PREFIX_HEX);
 	      putchar ('\n');
+	    }
+	  break;
+
+	case DT_GNU_FLAGS_1:
+	  if (do_dynamic)
+	    {
+	      printf (_("Flags:"));
+	      if (entry->d_un.d_val == 0)
+		printf (_(" None\n"));
+	      else
+		{
+		  unsigned long int val = entry->d_un.d_val;
+
+		  if (val & DF_GNU_1_UNIQUE)
+		    {
+		      printf (" UNIQUE");
+		      val ^= DF_GNU_1_UNIQUE;
+		    }
+		  if (val != 0)
+		    printf (" %lx", val);
+		  puts ("");
+		}
 	    }
 	  break;
 

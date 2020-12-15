@@ -464,6 +464,7 @@ Sized_relobj_file<size, big_endian>::Sized_relobj_file(
     const elfcpp::Ehdr<size, big_endian>& ehdr)
   : Sized_relobj<size, big_endian>(name, input_file, offset),
     elf_file_(this, ehdr),
+    osabi_(ehdr),
     symtab_shndx_(-1U),
     local_symbol_count_(0),
     output_local_symbol_count_(0),
@@ -1304,6 +1305,10 @@ Sized_relobj_file<size, big_endian>::layout_gnu_property_section(
     Layout* layout,
     unsigned int shndx)
 {
+  // We ignore Gnu property sections on incremental links.
+  if (parameters->incremental())
+    return;
+
   section_size_type contents_len;
   const unsigned char* pcontents = this->section_contents(shndx,
 							  &contents_len,
@@ -1702,7 +1707,8 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
 	  if (this->is_section_name_included(name)
 	      || layout->keep_input_section (this, name)
 	      || sh_type == elfcpp::SHT_INIT_ARRAY
-	      || sh_type == elfcpp::SHT_FINI_ARRAY)
+	      || sh_type == elfcpp::SHT_FINI_ARRAY
+	      || this->osabi().has_shf_retain(shdr.get_sh_flags()))
 	    {
 	      symtab->gc()->worklist().push_back(Section_id(this, i));
 	    }

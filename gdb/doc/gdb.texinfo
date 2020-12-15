@@ -13687,6 +13687,12 @@ Show maximum number of dcache entries.  @xref{Caching Target Data, info dcache}.
 @kindex show dcache line-size
 Show default size of dcache lines.
 
+@item maint flush dcache
+@cindex dcache, flushing
+@kindex maint flush dcache
+Flush the contents (if any) of the dcache.  This maintainer command is
+useful when debugging the dcache implementation.
+
 @end table
 
 @node Searching Memory
@@ -19707,12 +19713,16 @@ This is useful when debugging symbol cache issues.
 Print symbol cache usage statistics.
 This helps determine how well the cache is being utilized.
 
+@kindex maint flush symbol-cache
 @kindex maint flush-symbol-cache
 @cindex symbol cache, flushing
-@item maint flush-symbol-cache
-Flush the contents of the symbol cache, all entries are removed.
-This command is useful when debugging the symbol cache.
-It is also useful when collecting performance data.
+@item maint flush symbol-cache
+@itemx maint flush-symbol-cache
+Flush the contents of the symbol cache, all entries are removed.  This
+command is useful when debugging the symbol cache.  It is also useful
+when collecting performance data.  The command @code{maint
+flush-symbol-cache} is deprecated in favor of @code{maint flush
+symbol-cache}..
 
 @end table
 
@@ -40954,9 +40964,15 @@ The register groups info looks like this:
  restore    internal
 @end smallexample
 
+@kindex maint flush register-cache
 @kindex flushregs
-@item flushregs
-This command forces @value{GDBN} to flush its internal register cache.
+@cindex register cache, flushing
+@item maint flush register-cache
+@itemx flushregs
+Flush the contents of the register cache and as a consequence the
+frame cache.  This command is useful when debugging issues related to
+register fetching, or frame unwinding.  The command @code{flushregs}
+is deprecated in favor of @code{maint flush register-cache}.
 
 @kindex maint print address-spaces
 @item maint print address-spaces @r{[}@var{file}@r{]}

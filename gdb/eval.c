@@ -1386,7 +1386,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	  int element_size = TYPE_LENGTH (check_typedef (element_type));
 	  LONGEST low_bound, high_bound, index;
 
-	  if (get_discrete_bounds (range_type, &low_bound, &high_bound) < 0)
+	  if (!get_discrete_bounds (range_type, &low_bound, &high_bound))
 	    {
 	      low_bound = 0;
 	      high_bound = (TYPE_LENGTH (type) / element_size) - 1;
@@ -1426,7 +1426,7 @@ evaluate_subexp_standard (struct type *expect_type,
 		 || check_type->code () == TYPE_CODE_TYPEDEF)
 	    check_type = TYPE_TARGET_TYPE (check_type);
 
-	  if (get_discrete_bounds (element_type, &low_bound, &high_bound) < 0)
+	  if (!get_discrete_bounds (element_type, &low_bound, &high_bound))
 	    error (_("(power)set type with unknown size"));
 	  memset (valaddr, '\0', TYPE_LENGTH (type));
 	  for (tem = 0; tem < nargs; tem++)
@@ -3096,7 +3096,7 @@ evaluate_subexp_for_cast (expression *exp, int *pos,
 /* Parse a type expression in the string [P..P+LENGTH).  */
 
 struct type *
-parse_and_eval_type (char *p, int length)
+parse_and_eval_type (const char *p, int length)
 {
   char *tmp = (char *) alloca (length + 4);
 

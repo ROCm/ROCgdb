@@ -341,9 +341,21 @@
 #define EM_AMDGPU 	224 	/* AMD GPU architecture */
 #define EM_RISCV 	243 	/* RISC-V */
 #define EM_LANAI	244	/* Lanai 32-bit processor.  */
+#define EM_CEVA		245	/* CEVA Processor Architecture Family */
+#define EM_CEVA_X2	246	/* CEVA X2 Processor Family */
 #define EM_BPF		247	/* Linux BPF – in-kernel virtual machine.  */
+#define EM_GRAPHCORE_IPU 248	/* Graphcore Intelligent Processing Unit */
+#define EM_IMG1		249	/* Imagination Technologies */
 #define EM_NFP		250	/* Netronome Flow Processor.  */
+#define EM_VE		251	/* NEC Vector Engine */
 #define EM_CSKY		252	/* C-SKY processor family.  */
+#define EM_ARC_COMPACT3_64 253	/* Synopsys ARCv2.3 64-bit */
+#define EM_MCS6502	254	/* MOS Technology MCS 6502 processor */
+#define EM_ARC_COMPACT3	255	/* Synopsys ARCv2.3 32-bit */
+#define EM_KVX		256	/* Kalray VLIW core of the MPPA processor family */
+#define EM_65816	257	/* WDC 65816/65C816 */
+#define EM_LOONGARCH	258	/* Loongson Loongarch */
+#define EM_KF32		259	/* ChipON KungFu32 */
 
 /* If it is necessary to assign new unofficial EM_* values, please pick large
    random numbers (0x8523, 0xa7f2, etc.) to minimize the chances of collision
@@ -555,7 +567,6 @@
 
 /* #define SHF_MASKOS	0x0F000000    *//* OS-specific semantics */
 #define SHF_MASKOS	0x0FF00000	/* New value, Oct 4, 1999 Draft */
-#define SHF_GNU_BUILD_NOTE    (1 << 20)	/* Section contains GNU BUILD ATTRIBUTE notes.  */
 #define SHF_GNU_RETAIN	      (1 << 21)	/* Section should not be garbage collected by the linker.  */
 #define SHF_MASKPROC	0xF0000000	/* Processor-specific semantics */
 
@@ -1035,6 +1046,7 @@
    deliberate special case and we maintain it for backwards compatability.
  */
 #define DT_VALRNGLO	0x6ffffd00
+#define DT_GNU_FLAGS_1  0x6ffffdf4
 #define DT_GNU_PRELINKED 0x6ffffdf5
 #define DT_GNU_CONFLICTSZ 0x6ffffdf6
 #define DT_GNU_LIBLISTSZ 0x6ffffdf7
@@ -1097,6 +1109,9 @@
 /* Flag values used in the DT_POSFLAG_1 .dynamic entry.	 */
 #define DF_P1_LAZYLOAD	0x00000001
 #define DF_P1_GROUPPERM	0x00000002
+
+/* Flag value in the DT_GNU_FLAGS_1 /dynamic entry.  */
+#define DF_GNU_1_UNIQUE 0x00000001
 
 /* Flag value in in the DT_FLAGS_1 .dynamic entry.  */
 #define DF_1_NOW	0x00000001

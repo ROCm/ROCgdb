@@ -97,22 +97,14 @@ static unsigned int dwarf_read_debug = 0;
 /* Print a "dwarf-read" debug statement if dwarf_read_debug is >= 1.  */
 
 #define dwarf_read_debug_printf(fmt, ...) \
-  do \
-    { \
-      if (dwarf_read_debug >= 1) \
-	debug_prefixed_printf ("dwarf-read", __func__, fmt, ##__VA_ARGS__); \
-    } \
-  while (0)
+  debug_prefixed_printf_cond (dwarf_read_debug >= 1, "dwarf-read", fmt, \
+			      ##__VA_ARGS__)
 
 /* Print a "dwarf-read" debug statement if dwarf_read_debug is >= 2.  */
 
 #define dwarf_read_debug_printf_v(fmt, ...) \
-  do \
-    { \
-      if (dwarf_read_debug >= 2) \
-	debug_prefixed_printf ("dwarf-read", __func__, fmt, ##__VA_ARGS__); \
-    } \
-  while (0)
+  debug_prefixed_printf_cond (dwarf_read_debug >= 2, "dwarf-read", fmt, \
+			      ##__VA_ARGS__)
 
 /* When non-zero, dump DIEs after they are read in.  */
 static unsigned int dwarf_die_debug = 0;
@@ -15899,6 +15891,55 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
   smash_to_methodptr_type (type, new_type);
 }
 
+/* Helper for quirk_ada_thick_pointer.  If TYPE is an array type that
+   requires rewriting, then copy it and return the updated copy.
+   Otherwise return nullptr.  */
+
+static struct type *
+rewrite_array_type (struct type *type)
+{
+  if (type->code () != TYPE_CODE_ARRAY)
+    return nullptr;
+
+  struct type *index_type = type->index_type ();
+  range_bounds *current_bounds = index_type->bounds ();
+
+  /* Handle multi-dimensional arrays.  */
+  struct type *new_target = rewrite_array_type (TYPE_TARGET_TYPE (type));
+  if (new_target == nullptr)
+    {
+      /* Maybe we don't need to rewrite this array.  */
+      if (current_bounds->low.kind () == PROP_CONST
+	  && current_bounds->high.kind () == PROP_CONST)
+	return nullptr;
+    }
+
+  /* Either the target type was rewritten, or the bounds have to be
+     updated.  Either way we want to copy the type and update
+     everything.  */
+  struct type *copy = copy_type (type);
+  int nfields = copy->num_fields ();
+  field *new_fields
+    = ((struct field *) TYPE_ZALLOC (copy,
+				     nfields * sizeof (struct field)));
+  memcpy (new_fields, copy->fields (), nfields * sizeof (struct field));
+  copy->set_fields (new_fields);
+  if (new_target != nullptr)
+    TYPE_TARGET_TYPE (copy) = new_target;
+
+  struct type *index_copy = copy_type (index_type);
+  range_bounds *bounds
+    = (struct range_bounds *) TYPE_ZALLOC (index_copy,
+					   sizeof (range_bounds));
+  *bounds = *current_bounds;
+  bounds->low.set_const_val (1);
+  bounds->high.set_const_val (0);
+  index_copy->set_bounds (bounds);
+  copy->set_index_type (index_copy);
+
+  return copy;
+}
+
 /* While some versions of GCC will generate complicated DWARF for an
    array (see quirk_ada_thick_pointer), more recent versions were
    modified to emit an explicit thick pointer structure.  However, in
@@ -15925,20 +15966,16 @@ quirk_ada_thick_pointer_struct (struct die_info *die, struct dwarf2_cu *cu,
   /* Make sure we're looking at a pointer to an array.  */
   if (type->field (0).type ()->code () != TYPE_CODE_PTR)
     return;
-  struct type *ary_type = TYPE_TARGET_TYPE (type->field (0).type ());
 
-  while (ary_type->code () == TYPE_CODE_ARRAY)
-    {
-      /* The Ada code already knows how to handle these types, so all
-	 that we need to do is turn the bounds into static bounds.  */
-      struct type *index_type = ary_type->index_type ();
-
-      index_type->bounds ()->low.set_const_val (1);
-      index_type->bounds ()->high.set_const_val (0);
-
-      /* Handle multi-dimensional arrays.  */
-      ary_type = TYPE_TARGET_TYPE (ary_type);
-    }
+  /* The Ada code already knows how to handle these types, so all that
+     we need to do is turn the bounds into static bounds.  However, we
+     don't want to rewrite existing array or index types in-place,
+     because those may be referenced in other contexts where this
+     rewriting is undesirable.  */
+  struct type *new_ary_type
+    = rewrite_array_type (TYPE_TARGET_TYPE (type->field (0).type ()));
+  if (new_ary_type != nullptr)
+    type->field (0).set_type (lookup_pointer_type (new_ary_type));
 }
 
 /* If the DIE has a DW_AT_alignment attribute, return its value, doing
@@ -18195,7 +18232,7 @@ read_typedef (struct die_info *die, struct dwarf2_cu *cu)
 
 static void
 get_dwarf2_rational_constant (struct die_info *die, struct dwarf2_cu *cu,
-			      LONGEST *numerator, LONGEST *denominator)
+			      gdb_mpz *numerator, gdb_mpz *denominator)
 {
   struct attribute *num_attr, *denom_attr;
 
@@ -18212,8 +18249,25 @@ get_dwarf2_rational_constant (struct die_info *die, struct dwarf2_cu *cu,
   if (num_attr == nullptr || denom_attr == nullptr)
     return;
 
-  *numerator = num_attr->constant_value (1);
-  *denominator = denom_attr->constant_value (1);
+  if (num_attr->form_is_block ())
+    {
+      dwarf_block *blk = num_attr->as_block ();
+      mpz_import (numerator->val, blk->size,
+		  bfd_big_endian (cu->per_objfile->objfile->obfd) ? 1 : -1,
+		  1, 0, 0, blk->data);
+    }
+  else
+    *numerator = gdb_mpz (num_attr->constant_value (1));
+
+  if (denom_attr->form_is_block ())
+    {
+      dwarf_block *blk = denom_attr->as_block ();
+      mpz_import (denominator->val, blk->size,
+		  bfd_big_endian (cu->per_objfile->objfile->obfd) ? 1 : -1,
+		  1, 0, 0, blk->data);
+    }
+  else
+    *denominator = gdb_mpz (denom_attr->constant_value (1));
 }
 
 /* Same as get_dwarf2_rational_constant, but extracting an unsigned
@@ -18225,25 +18279,26 @@ get_dwarf2_rational_constant (struct die_info *die, struct dwarf2_cu *cu,
 static void
 get_dwarf2_unsigned_rational_constant (struct die_info *die,
 				       struct dwarf2_cu *cu,
-				       ULONGEST *numerator,
-				       ULONGEST *denominator)
+				       gdb_mpz *numerator,
+				       gdb_mpz *denominator)
 {
-  LONGEST num = 1, denom = 1;
+  gdb_mpz num (1);
+  gdb_mpz denom (1);
 
   get_dwarf2_rational_constant (die, cu, &num, &denom);
-  if (num < 0 && denom < 0)
+  if (mpz_sgn (num.val) == -1 && mpz_sgn (denom.val) == -1)
     {
-      num = -num;
-      denom = -denom;
+      mpz_neg (num.val, num.val);
+      mpz_neg (denom.val, denom.val);
     }
-  else if (num < 0)
+  else if (mpz_sgn (num.val) == -1)
     {
       complaint (_("unexpected negative value for DW_AT_GNU_numerator"
 		   " in DIE at %s"),
 		 sect_offset_str (die->sect_off));
       return;
     }
-  else if (denom < 0)
+  else if (mpz_sgn (denom.val) == -1)
     {
       complaint (_("unexpected negative value for DW_AT_GNU_denominator"
 		   " in DIE at %s"),
@@ -18251,8 +18306,8 @@ get_dwarf2_unsigned_rational_constant (struct die_info *die,
       return;
     }
 
-  *numerator = num;
-  *denominator = denom;
+  *numerator = std::move (num);
+  *denominator = std::move (denom);
 }
 
 /* Assuming DIE corresponds to a fixed point type, finish the creation
@@ -18264,14 +18319,6 @@ finish_fixed_point_type (struct type *type, struct die_info *die,
 			 struct dwarf2_cu *cu)
 {
   struct attribute *attr;
-  /* Numerator and denominator of our fixed-point type's scaling factor.
-     The default is a scaling factor of 1, which we use as a fallback
-     when we are not able to decode it (problem with the debugging info,
-     unsupported forms, bug in GDB, etc...).  Using that as the default
-     allows us to at least print the unscaled value, which might still
-     be useful to a user.  */
-  ULONGEST scale_num = 1;
-  ULONGEST scale_denom = 1;
 
   gdb_assert (type->code () == TYPE_CODE_FIXED_POINT
 	      && TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_FIXED_POINT);
@@ -18281,6 +18328,15 @@ finish_fixed_point_type (struct type *type, struct die_info *die,
     attr = dwarf2_attr (die, DW_AT_decimal_scale, cu);
   if (!attr)
     attr = dwarf2_attr (die, DW_AT_small, cu);
+
+  /* Numerator and denominator of our fixed-point type's scaling factor.
+     The default is a scaling factor of 1, which we use as a fallback
+     when we are not able to decode it (problem with the debugging info,
+     unsupported forms, bug in GDB, etc...).  Using that as the default
+     allows us to at least print the unscaled value, which might still
+     be useful to a user.  */
+  gdb_mpz scale_num (1);
+  gdb_mpz scale_denom (1);
 
   if (attr == nullptr)
     {
@@ -18293,16 +18349,16 @@ finish_fixed_point_type (struct type *type, struct die_info *die,
   else if (attr->name == DW_AT_binary_scale)
     {
       LONGEST scale_exp = attr->constant_value (0);
-      ULONGEST *num_or_denom = scale_exp > 0 ? &scale_num : &scale_denom;
+      gdb_mpz *num_or_denom = scale_exp > 0 ? &scale_num : &scale_denom;
 
-      *num_or_denom = 1 << std::abs (scale_exp);
+      mpz_mul_2exp (num_or_denom->val, num_or_denom->val, std::abs (scale_exp));
     }
   else if (attr->name == DW_AT_decimal_scale)
     {
       LONGEST scale_exp = attr->constant_value (0);
-      ULONGEST *num_or_denom = scale_exp > 0 ? &scale_num : &scale_denom;
+      gdb_mpz *num_or_denom = scale_exp > 0 ? &scale_num : &scale_denom;
 
-      *num_or_denom = uinteger_pow (10, std::abs (scale_exp));
+      mpz_ui_pow_ui (num_or_denom->val, 10, std::abs (scale_exp));
     }
   else if (attr->name == DW_AT_small)
     {
@@ -18327,13 +18383,8 @@ finish_fixed_point_type (struct type *type, struct die_info *die,
     }
 
   gdb_mpq &scaling_factor = type->fixed_point_info ().scaling_factor;
-
-  gdb_mpz tmp_z (scale_num);
-  mpz_set (mpq_numref (scaling_factor.val), tmp_z.val);
-
-  tmp_z = scale_denom;
-  mpz_set (mpq_denref (scaling_factor.val), tmp_z.val);
-
+  mpz_set (mpq_numref (scaling_factor.val), scale_num.val);
+  mpz_set (mpq_denref (scaling_factor.val), scale_denom.val);
   mpq_canonicalize (scaling_factor.val);
 }
 
@@ -18399,9 +18450,9 @@ has_zero_over_zero_small_attribute (struct die_info *die,
   if (scale_die->tag != DW_TAG_constant)
     return false;
 
-  LONGEST num = 1, denom = 1;
+  gdb_mpz num (1), denom (1);
   get_dwarf2_rational_constant (scale_die, cu, &num, &denom);
-  return (num == 0 && denom == 0);
+  return mpz_sgn (num.val) == 0 && mpz_sgn (denom.val) == 0;
 }
 
 /* Initialise and return a floating point type of size BITS suitable for

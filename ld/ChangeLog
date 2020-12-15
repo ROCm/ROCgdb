@@ -1,3 +1,69 @@
+2020-12-15  Vivek Das Mohapatra  <vivek@collabora.com>
+
+	* emultempl/elf.em (gld${EMULATION_NAME}_handle_option):
+	Parse -z unique / -z nounique options.
+	* ld.texi (Options): Document -z unique and -z nounique.
+	* lexsup.c (elf_shlib_list_options): Likewise.
+
+2020-12-14  Howard Chu  <hyc@symas.com>
+
+	* libdep_plugin.c: New file: Processes archives that contain a
+	special library dependencies element.
+	* Makefile.am: Add build rules for libdep_plugin.
+	* Makefile.in: Regenerate.
+	* NEWS: Mention the new plugin.
+	* ld.texi: Document the new plugin.
+
+2020-12-14  Alan Modra  <amodra@gmail.com>
+
+	PR 26836
+	* lexsup.c (parse_args): Free really_longopts, longopts and
+	shortopts.
+
+2020-12-14  Nick Clifton  <nickc@redhat.com>
+
+	PR 27050
+	* lexsup.c (parse_args): Ensure that the longind local variable is
+	set.
+
+2020-12-14  Alan Modra  <amodra@gmail.com>
+
+	PR 27064
+	* deffilep.y (SHARED_K): Rename from SHARED.  Update uses.
+
+2020-12-05  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* testsuite/ld-vax-elf/got-local-exe-off-hidden.dd: New test
+	dump.
+	* testsuite/ld-vax-elf/got-local-exe-off-visible.dd: New test
+	dump.
+	* testsuite/ld-vax-elf/got-local-lib-off-hidden.dd: New test
+	dump.
+	* testsuite/ld-vax-elf/got-local-lib-off-visible.ed: New test
+	dump.
+	* testsuite/ld-vax-elf/got-local-off-external.ed: New test dump.
+	* testsuite/ld-vax-elf/got-local-exe-off.xd: New test dump.
+	* testsuite/ld-vax-elf/got-local-lib-off.xd: New test dump.
+	* testsuite/ld-vax-elf/got-local.ld: New test linker script.
+	* testsuite/ld-vax-elf/got-local-aux-off.s: New test source.
+	* testsuite/ld-vax-elf/got-local-def-off.s: New test source.
+	* testsuite/ld-vax-elf/got-local-ref-off-external.s: New test
+	source.
+	* testsuite/ld-vax-elf/got-local-ref-off-hidden.s: New test
+	source.
+	* testsuite/ld-vax-elf/got-local-ref-off-visible.s: New test
+	source.
+	* testsuite/ld-vax-elf/vax-elf.exp: Run the new tests.
+
+2020-12-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27016
+	* testsuite/ld-x86-64/x86-64.exp: Run pr27016a and pr27016b.
+	* testsuite/ld-x86-64/pr27016a.d: New file.
+	* testsuite/ld-x86-64/pr27016a.s: Likewise.
+	* testsuite/ld-x86-64/pr27016b.d: Likewise.
+	* testsuite/ld-x86-64/pr27016b.s: Likewise.
+
 2020-12-04  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/ld-elf/pr26978a.d,

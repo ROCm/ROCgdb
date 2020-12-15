@@ -46,6 +46,7 @@
 
 #include "hashtab.h"
 #include "gdbsupport/array-view.h"
+#include "gdbsupport/gdb_optional.h"
 #include "gdbsupport/offset-type.h"
 #include "gdbsupport/enum-flags.h"
 #include "gdbsupport/underlying.h"
@@ -2465,7 +2466,21 @@ extern struct type *lookup_template_type (const char *, struct type *,
 
 extern int get_vptr_fieldno (struct type *, struct type **);
 
-extern int get_discrete_bounds (struct type *, LONGEST *, LONGEST *);
+/* Set *LOWP and *HIGHP to the lower and upper bounds of discrete type
+   TYPE.
+
+   Return true if the two bounds are available, false otherwise.  */
+
+extern bool get_discrete_bounds (struct type *type, LONGEST *lowp,
+				 LONGEST *highp);
+
+/* If TYPE's low bound is a known constant, return it, else return nullopt.  */
+
+extern gdb::optional<LONGEST> get_discrete_low_bound (struct type *type);
+
+/* If TYPE's high bound is a known constant, return it, else return nullopt.  */
+
+extern gdb::optional<LONGEST> get_discrete_high_bound (struct type *type);
 
 /* Assuming TYPE is a simple, non-empty array type, compute its upper
    and lower bound.  Save the low bound into LOW_BOUND if not NULL.
@@ -2477,7 +2492,8 @@ extern int get_discrete_bounds (struct type *, LONGEST *, LONGEST *);
 extern bool get_array_bounds (struct type *type, LONGEST *low_bound,
 			      LONGEST *high_bound);
 
-extern int discrete_position (struct type *type, LONGEST val, LONGEST *pos);
+extern gdb::optional<LONGEST> discrete_position (struct type *type,
+						 LONGEST val);
 
 extern int class_types_same_p (const struct type *, const struct type *);
 

@@ -173,8 +173,6 @@ static int hw_watchpoint_used_count_others (struct breakpoint *except,
 static void enable_breakpoint_disp (struct breakpoint *, enum bpdisp,
 				    int count);
 
-static void free_bp_location (struct bp_location *loc);
-static void incref_bp_location (struct bp_location *loc);
 static void decref_bp_location (struct bp_location **loc);
 
 static struct bp_location *allocate_bp_location (struct breakpoint *bpt);
@@ -2177,7 +2175,7 @@ should_be_inserted (struct bp_location *bl)
       && stepping_past_nonsteppable_watchpoint ())
     {
       infrun_debug_printf ("stepping past non-steppable watchpoint. "
-			   "skipping watchpoint at %s:%d\n",
+			   "skipping watchpoint at %s:%d",
 			   paddress (bl->gdbarch, bl->address), bl->length);
       return 0;
     }
@@ -4246,15 +4244,6 @@ is_catchpoint (struct breakpoint *b)
   return (b->type == bp_catchpoint);
 }
 
-/* Frees any storage that is part of a bpstat.  Does not walk the
-   'next' chain.  */
-
-bpstats::~bpstats ()
-{
-  if (bp_location_at != NULL)
-    decref_bp_location (&bp_location_at);
-}
-
 /* Clear a bpstat so that it says we are not at any breakpoint.
    Also free any storage that is part of a bpstat.  */
 
@@ -4287,7 +4276,6 @@ bpstats::bpstats (const bpstats &other)
 {
   if (other.old_val != NULL)
     old_val = release_value (value_copy (other.old_val.get ()));
-  incref_bp_location (bp_location_at);
 }
 
 /* Return a copy of a bpstat.  Like "bs1 = bs2" but all storage that
@@ -4772,21 +4760,19 @@ breakpoint_cond_eval (expression *exp)
 
 bpstats::bpstats (struct bp_location *bl, bpstat **bs_link_pointer)
   : next (NULL),
-    bp_location_at (bl),
+    bp_location_at (bp_location_ref_ptr::new_reference (bl)),
     breakpoint_at (bl->owner),
     commands (NULL),
     print (0),
     stop (0),
     print_it (print_it_normal)
 {
-  incref_bp_location (bl);
   **bs_link_pointer = this;
   *bs_link_pointer = &next;
 }
 
 bpstats::bpstats ()
   : next (NULL),
-    bp_location_at (NULL),
     breakpoint_at (NULL),
     commands (NULL),
     print (0),
@@ -5064,7 +5050,7 @@ bpstat_check_watchpoint (bpstat bs)
   struct watchpoint *b;
 
   /* BS is built for existing struct breakpoint.  */
-  bl = bs->bp_location_at;
+  bl = bs->bp_location_at.get ();
   gdb_assert (bl != NULL);
   b = (struct watchpoint *) bs->breakpoint_at;
   gdb_assert (b != NULL);
@@ -5240,7 +5226,7 @@ bpstat_check_breakpoint_conditions (bpstat bs, thread_info *thread)
   gdb_assert (bs->stop);
 
   /* BS is built for existing struct breakpoint.  */
-  bl = bs->bp_location_at;
+  bl = bs->bp_location_at.get ();
   gdb_assert (bl != NULL);
   b = bs->breakpoint_at;
   gdb_assert (b != NULL);
@@ -7105,7 +7091,7 @@ bp_location::bp_location (breakpoint *owner, bp_loc_type type)
       || this->loc_type == bp_loc_hardware_breakpoint)
     mark_breakpoint_location_modified (this);
 
-  this->refc = 1;
+  incref ();
 }
 
 bp_location::bp_location (breakpoint *owner)
@@ -7122,30 +7108,13 @@ allocate_bp_location (struct breakpoint *bpt)
   return bpt->ops->allocate_location (bpt);
 }
 
-static void
-free_bp_location (struct bp_location *loc)
-{
-  delete loc;
-}
-
-/* Increment reference count.  */
-
-static void
-incref_bp_location (struct bp_location *bl)
-{
-  ++bl->refc;
-}
-
 /* Decrement reference count.  If the reference count reaches 0,
    destroy the bp_location.  Sets *BLP to NULL.  */
 
 static void
 decref_bp_location (struct bp_location **blp)
 {
-  gdb_assert ((*blp)->refc > 0);
-
-  if (--(*blp)->refc == 0)
-    free_bp_location (*blp);
+  bp_location_ref_policy::decref (*blp);
   *blp = NULL;
 }
 
@@ -9269,7 +9238,7 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
 	}
       else if (toklen >= 1 && strncmp (tok, "-force-condition", toklen) == 0)
 	{
-	  tok = cond_start = end_tok + 1;
+	  tok = tok + toklen;
 	  force = true;
 	}
       else if (toklen >= 1 && strncmp (tok, "thread", toklen) == 0)
@@ -12686,7 +12655,7 @@ bkpt_print_it (bpstat bs)
 
   gdb_assert (bs->bp_location_at != NULL);
 
-  bl = bs->bp_location_at;
+  bl = bs->bp_location_at.get ();
   b = bs->breakpoint_at;
 
   bp_temp = b->disposition == disp_del;

@@ -1036,88 +1036,170 @@ has_static_range (const struct range_bounds *bounds)
 	  && bounds->stride.kind () == PROP_CONST);
 }
 
+/* See gdbtypes.h.  */
 
-/* Set *LOWP and *HIGHP to the lower and upper bounds of discrete type
-   TYPE.
-
-   Return 1 if type is a range type with two defined, constant bounds.
-   Else, return 0 if it is discrete (and bounds will fit in LONGEST).
-   Else, return -1.  */
-
-int
-get_discrete_bounds (struct type *type, LONGEST *lowp, LONGEST *highp)
+gdb::optional<LONGEST>
+get_discrete_low_bound (struct type *type)
 {
   type = check_typedef (type);
   switch (type->code ())
     {
     case TYPE_CODE_RANGE:
-      /* This function currently only works for ranges with two defined,
-	 constant bounds.  */
-      if (type->bounds ()->low.kind () != PROP_CONST
-	  || type->bounds ()->high.kind () != PROP_CONST)
-	return -1;
+      {
+	/* This function only works for ranges with a constant low bound.  */
+	if (type->bounds ()->low.kind () != PROP_CONST)
+	  return {};
 
-      *lowp = type->bounds ()->low.const_val ();
-      *highp = type->bounds ()->high.const_val ();
+	LONGEST low = type->bounds ()->low.const_val ();
 
-      if (TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_ENUM)
-	{
-	  if (!discrete_position (TYPE_TARGET_TYPE (type), *lowp, lowp)
-	      || ! discrete_position (TYPE_TARGET_TYPE (type), *highp, highp))
-	    return 0;
-	}
-      return 1;
+	if (TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_ENUM)
+	  {
+	    gdb::optional<LONGEST> low_pos
+	      = discrete_position (TYPE_TARGET_TYPE (type), low);
+
+	    if (low_pos.has_value ())
+	      low = *low_pos;
+	  }
+
+	return low;
+      }
+
     case TYPE_CODE_ENUM:
-      if (type->num_fields () > 0)
-	{
-	  /* The enums may not be sorted by value, so search all
-	     entries.  */
-	  int i;
+      {
+	if (type->num_fields () > 0)
+	  {
+	    /* The enums may not be sorted by value, so search all
+	       entries.  */
+	    LONGEST low = TYPE_FIELD_ENUMVAL (type, 0);
 
-	  *lowp = *highp = TYPE_FIELD_ENUMVAL (type, 0);
-	  for (i = 0; i < type->num_fields (); i++)
-	    {
-	      if (TYPE_FIELD_ENUMVAL (type, i) < *lowp)
-		*lowp = TYPE_FIELD_ENUMVAL (type, i);
-	      if (TYPE_FIELD_ENUMVAL (type, i) > *highp)
-		*highp = TYPE_FIELD_ENUMVAL (type, i);
-	    }
+	    for (int i = 0; i < type->num_fields (); i++)
+	      {
+		if (TYPE_FIELD_ENUMVAL (type, i) < low)
+		  low = TYPE_FIELD_ENUMVAL (type, i);
+	      }
 
-	  /* Set unsigned indicator if warranted.  */
-	  if (*lowp >= 0)
-	    type->set_is_unsigned (true);
-	}
-      else
-	{
-	  *lowp = 0;
-	  *highp = -1;
-	}
-      return 0;
+	    /* Set unsigned indicator if warranted.  */
+	    if (low >= 0)
+	      type->set_is_unsigned (true);
+
+	    return low;
+	  }
+	else
+	  return 0;
+      }
+
     case TYPE_CODE_BOOL:
-      *lowp = 0;
-      *highp = 1;
       return 0;
+
     case TYPE_CODE_INT:
       if (TYPE_LENGTH (type) > sizeof (LONGEST))	/* Too big */
-	return -1;
+	return {};
+
       if (!type->is_unsigned ())
-	{
-	  *lowp = -(1 << (TYPE_LENGTH (type) * TARGET_CHAR_BIT - 1));
-	  *highp = -*lowp - 1;
-	  return 0;
-	}
+	return -(1 << (TYPE_LENGTH (type) * TARGET_CHAR_BIT - 1));
+
       /* fall through */
     case TYPE_CODE_CHAR:
-      *lowp = 0;
-      /* This round-about calculation is to avoid shifting by
-	 TYPE_LENGTH (type) * TARGET_CHAR_BIT, which will not work
-	 if TYPE_LENGTH (type) == sizeof (LONGEST).  */
-      *highp = 1 << (TYPE_LENGTH (type) * TARGET_CHAR_BIT - 1);
-      *highp = (*highp - 1) | *highp;
       return 0;
+
     default:
-      return -1;
+      return {};
     }
+}
+
+/* See gdbtypes.h.  */
+
+gdb::optional<LONGEST>
+get_discrete_high_bound (struct type *type)
+{
+  type = check_typedef (type);
+  switch (type->code ())
+    {
+    case TYPE_CODE_RANGE:
+      {
+	/* This function only works for ranges with a constant high bound.  */
+	if (type->bounds ()->high.kind () != PROP_CONST)
+	  return {};
+
+	LONGEST high = type->bounds ()->high.const_val ();
+
+	if (TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_ENUM)
+	  {
+	    gdb::optional<LONGEST> high_pos
+	      = discrete_position (TYPE_TARGET_TYPE (type), high);
+
+	    if (high_pos.has_value ())
+	      high = *high_pos;
+	  }
+
+	return high;
+      }
+
+    case TYPE_CODE_ENUM:
+      {
+	if (type->num_fields () > 0)
+	  {
+	    /* The enums may not be sorted by value, so search all
+	       entries.  */
+	    LONGEST high = TYPE_FIELD_ENUMVAL (type, 0);
+
+	    for (int i = 0; i < type->num_fields (); i++)
+	      {
+		if (TYPE_FIELD_ENUMVAL (type, i) > high)
+		  high = TYPE_FIELD_ENUMVAL (type, i);
+	      }
+
+	    return high;
+	  }
+	else
+	  return -1;
+      }
+
+    case TYPE_CODE_BOOL:
+      return 1;
+
+    case TYPE_CODE_INT:
+      if (TYPE_LENGTH (type) > sizeof (LONGEST))	/* Too big */
+	return {};
+
+      if (!type->is_unsigned ())
+	{
+	  LONGEST low = -(1 << (TYPE_LENGTH (type) * TARGET_CHAR_BIT - 1));
+	  return -low - 1;
+	}
+
+      /* fall through */
+    case TYPE_CODE_CHAR:
+      {
+	/* This round-about calculation is to avoid shifting by
+	   TYPE_LENGTH (type) * TARGET_CHAR_BIT, which will not work
+	   if TYPE_LENGTH (type) == sizeof (LONGEST).  */
+	LONGEST high = 1 << (TYPE_LENGTH (type) * TARGET_CHAR_BIT - 1);
+	return (high - 1) | high;
+      }
+
+    default:
+      return {};
+    }
+}
+
+/* See gdbtypes.h.  */
+
+bool
+get_discrete_bounds (struct type *type, LONGEST *lowp, LONGEST *highp)
+{
+  gdb::optional<LONGEST> low = get_discrete_low_bound (type);
+  if (!low.has_value ())
+    return false;
+
+  gdb::optional<LONGEST> high = get_discrete_high_bound (type);
+  if (!high.has_value ())
+    return false;
+
+  *lowp = *low;
+  *highp = *high;
+
+  return true;
 }
 
 /* See gdbtypes.h  */
@@ -1128,13 +1210,11 @@ get_array_bounds (struct type *type, LONGEST *low_bound, LONGEST *high_bound)
   struct type *index = type->index_type ();
   LONGEST low = 0;
   LONGEST high = 0;
-  int res;
 
   if (index == NULL)
     return false;
 
-  res = get_discrete_bounds (index, &low, &high);
-  if (res == -1)
+  if (!get_discrete_bounds (index, &low, &high))
     return false;
 
   if (low_bound)
@@ -1160,8 +1240,8 @@ get_array_bounds (struct type *type, LONGEST *low_bound, LONGEST *high_bound)
    in which case the value of POS is unmodified.
 */
 
-int
-discrete_position (struct type *type, LONGEST val, LONGEST *pos)
+gdb::optional<LONGEST>
+discrete_position (struct type *type, LONGEST val)
 {
   if (type->code () == TYPE_CODE_RANGE)
     type = TYPE_TARGET_TYPE (type);
@@ -1173,19 +1253,14 @@ discrete_position (struct type *type, LONGEST val, LONGEST *pos)
       for (i = 0; i < type->num_fields (); i += 1)
 	{
 	  if (val == TYPE_FIELD_ENUMVAL (type, i))
-	    {
-	      *pos = i;
-	      return 1;
-	    }
+	    return i;
 	}
+
       /* Invalid enumeration value.  */
-      return 0;
+      return {};
     }
   else
-    {
-      *pos = val;
-      return 1;
-    }
+    return val;
 }
 
 /* If the array TYPE has static bounds calculate and update its
@@ -1216,8 +1291,9 @@ update_static_array_size (struct type *type)
       if (stride == 0)
 	stride = range_type->bit_stride ();
 
-      if (get_discrete_bounds (range_type, &low_bound, &high_bound) < 0)
+      if (!get_discrete_bounds (range_type, &low_bound, &high_bound))
 	low_bound = high_bound = 0;
+
       element_type = check_typedef (TYPE_TARGET_TYPE (type));
       /* Be careful when setting the array length.  Ada arrays can be
 	 empty arrays with the high_bound being smaller than the low_bound.
@@ -1413,8 +1489,9 @@ create_set_type (struct type *result_type, struct type *domain_type)
     {
       LONGEST low_bound, high_bound, bit_length;
 
-      if (get_discrete_bounds (domain_type, &low_bound, &high_bound) < 0)
+      if (!get_discrete_bounds (domain_type, &low_bound, &high_bound))
 	low_bound = high_bound = 0;
+
       bit_length = high_bound - low_bound + 1;
       TYPE_LENGTH (result_type)
 	= (bit_length + TARGET_CHAR_BIT - 1) / TARGET_CHAR_BIT;
@@ -2925,7 +3002,7 @@ check_typedef (struct type *type)
    occurs, silently return a void type.  */
 
 static struct type *
-safe_parse_type (struct gdbarch *gdbarch, char *p, int length)
+safe_parse_type (struct gdbarch *gdbarch, const char *p, int length)
 {
   struct ui_file *saved_gdb_stderr;
   struct type *type = NULL; /* Initialize to keep gcc happy.  */

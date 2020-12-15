@@ -718,7 +718,7 @@ parse_args (unsigned argc, char **argv)
   last_optind = -1;
   while (1)
     {
-      int longind;
+      int longind = 0;
       int optc;
       static unsigned int defsym_count;
 
@@ -1699,6 +1699,10 @@ parse_args (unsigned argc, char **argv)
 	}
     }
 
+  free (really_longopts);
+  free (longopts);
+  free (shortopts);
+
   /* Run a couple of checks on the map filename.  */
   if (config.map_filename)
     {
@@ -2017,6 +2021,10 @@ elf_shlib_list_options (FILE *file)
   -z initfirst                Mark DSO to be initialized first at runtime\n"));
   fprintf (file, _("\
   -z interpose                Mark object to interpose all DSOs but executable\n"));
+  fprintf (file, _("\
+  -z unique                   Mark DSO to be loaded at most once by default, and only in the main namespace\n"));
+  fprintf (file, _("\
+  -z nounique                 Don't mark DSO as a loadable at most once\n"));
   fprintf (file, _("\
   -z lazy                     Mark object lazy runtime binding (default)\n"));
   fprintf (file, _("\

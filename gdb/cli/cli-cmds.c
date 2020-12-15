@@ -152,6 +152,10 @@ struct cmd_list_element *maintenanceprintlist;
 
 struct cmd_list_element *maintenancechecklist;
 
+/* Chain containing all defined "maintenance flush" subcommands.  */
+
+struct cmd_list_element *maintenanceflushlist;
+
 struct cmd_list_element *setprintlist;
 
 struct cmd_list_element *showprintlist;

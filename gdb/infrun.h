@@ -29,17 +29,12 @@ struct process_stratum_target;
 struct thread_info;
 
 /* True if we are debugging run control.  */
-extern unsigned int debug_infrun;
+extern bool debug_infrun;
 
 /* Print an "infrun" debug statement.  */
 
 #define infrun_debug_printf(fmt, ...) \
-  do \
-    { \
-      if (debug_infrun) \
-	debug_prefixed_printf ("infrun", __func__, fmt, ##__VA_ARGS__); \
-    } \
-  while (0)
+  debug_prefixed_printf_cond (debug_infrun, "infrun",fmt, ##__VA_ARGS__)
 
 /* Nonzero if we want to give control to the user when we're notified
    of shared library events by the dynamic linker.  */

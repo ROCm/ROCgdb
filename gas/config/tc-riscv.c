@@ -237,13 +237,19 @@ riscv_multi_subset_supports (enum riscv_insn_class insn_class)
     case INSN_CLASS_M: return riscv_subset_supports ("m");
     case INSN_CLASS_F: return riscv_subset_supports ("f");
     case INSN_CLASS_D: return riscv_subset_supports ("d");
-    case INSN_CLASS_D_AND_C:
-      return riscv_subset_supports ("d") && riscv_subset_supports ("c");
+    case INSN_CLASS_Q: return riscv_subset_supports ("q");
 
     case INSN_CLASS_F_AND_C:
-      return riscv_subset_supports ("f") && riscv_subset_supports ("c");
+      return (riscv_subset_supports ("f")
+	      && riscv_subset_supports ("c"));
+    case INSN_CLASS_D_AND_C:
+      return (riscv_subset_supports ("d")
+	      && riscv_subset_supports ("c"));
 
-    case INSN_CLASS_Q: return riscv_subset_supports ("q");
+    case INSN_CLASS_ZICSR:
+      return riscv_subset_supports ("zicsr");
+    case INSN_CLASS_ZIFENCEI:
+      return riscv_subset_supports ("zifencei");
 
     default:
       as_fatal ("Unreachable");
@@ -1427,6 +1433,23 @@ load_const (int reg, expressionS *ep)
     }
 }
 
+/* Zero extend and sign extend byte/half-word/word.  */
+
+static void
+riscv_ext (int destreg, int srcreg, unsigned shift, bfd_boolean sign)
+{
+  if (sign)
+    {
+      md_assemblef ("slli x%d, x%d, 0x%x", destreg, srcreg, shift);
+      md_assemblef ("srai x%d, x%d, 0x%x", destreg, destreg, shift);
+    }
+  else
+    {
+      md_assemblef ("slli x%d, x%d, 0x%x", destreg, srcreg, shift);
+      md_assemblef ("srli x%d, x%d, 0x%x", destreg, destreg, shift);
+    }
+}
+
 /* Expand RISC-V assembly macros into one or more instructions.  */
 static void
 macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
@@ -1546,6 +1569,22 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
 
     case M_CALL:
       riscv_call (rd, rs1, imm_expr, *imm_reloc);
+      break;
+
+    case M_ZEXTH:
+      riscv_ext (rd, rs1, xlen - 16, FALSE);
+      break;
+
+    case M_ZEXTW:
+      riscv_ext (rd, rs1, xlen - 32, FALSE);
+      break;
+
+    case M_SEXTB:
+      riscv_ext (rd, rs1, xlen - 8, TRUE);
+      break;
+
+    case M_SEXTH:
+      riscv_ext (rd, rs1, xlen - 16, TRUE);
       break;
 
     default:

@@ -1,3 +1,178 @@
+2020-12-15  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.base/style.exp: Add deprecation tests.
+
+2020-12-14  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* lib/gdb.exp (gdb_test_multiple): Fix typo in doc.
+
+2020-12-14  Mark Wielaard  <mark@klomp.org>
+
+	* lib/dwarf.exp (Dwarf::_handle_attribute): Handle SPECIAL_expr
+	specially, set attr_form_comment to the actual FORM string used.
+
+2020-12-14  Mark Wielaard  <mark@klomp.org>
+
+	* lib/dwarf.exp (Dwarf::_read_constants): Don't set
+	_constants(SPECIAL_expr) here, but set it...
+	(Dwarf::cu): ...here based on _cu_version.
+
+2020-12-14  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_compile_shlib): Make sure it's not necessary to
+	pass -fPIC.
+	* gdb.ada/catch_ex_std.exp: Don't pass -fPIC to gdb_compile_shlib.
+	* gdb.base/break-probes.exp: Same.
+	* gdb.base/ctxobj.exp: Same.
+	* gdb.base/dso2dso.exp: Same.
+	* gdb.base/global-var-nested-by-dso.exp: Same.
+	* gdb.base/info-shared.exp: Same.
+	* gdb.base/jit-reader-simple.exp: Same.
+	* gdb.base/print-file-var.exp: Same.
+	* gdb.base/skip-solib.exp: Same.
+	* gdb.btrace/dlopen.exp: Same.
+
+2020-12-14  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26963
+	* lib/gdb.exp (run_on_host): Declare test unsupported if spawn fails.
+
+2020-12-14  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26962
+	* gdb.base/solib-corrupted.exp: Handle "'_r_debug' has unknown type;
+	cast it to its declared type".
+
+2020-12-14  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26951
+	* gdb.base/batch-preserve-term-settings.exp: Use "gdb-subshell$ " as
+	shell prompt.
+
+2020-12-14  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/nested.exp: Add new tests.
+	* gdb.ada/nested/hello.adb (Fourth, Fifth): New procedures.
+
+2020-12-14  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.dwarf2/ada-thick-pointer.exp: New file.
+
+2020-12-14  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.dwarf2/dw2-fixed-point.exp: Add test for division by zero.
+
+2020-12-13  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26953
+	* gdb.base/endianity.exp: Skip tests requiring scalar_storage_order
+	attribute support if compiler doesn't support it.
+
+2020-12-13  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_compile_shlib): Handle ada.
+	* gdb.ada/catch_ex_std.exp: Use gdb_compile_shlib to compile from
+	source to shared lib.  Add ada to options.
+
+2020-12-13  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/catch_ex_std.exp: Use gnatmake -bargs and -largs instead of
+	calling gnatbind and gnatlink.
+
+2020-12-13  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/dcache-flush.c: New file.
+	* gdb.base/dcache-flush.exp: New file.
+
+2020-12-13  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/c-linkage-name.exp: Update to use new 'maint flush ...'
+	commands.
+	* gdb.base/killed-outside.exp: Likewise.
+	* gdb.opt/inline-bt.exp: Likewise.
+	* gdb.perf/gmonster-null-lookup.py: Likewise.
+	* gdb.perf/gmonster-print-cerr.py: Likewise.
+	* gdb.perf/gmonster-ptype-string.py: Likewise.
+	* gdb.python/py-unwind.exp: Likewise.
+
+2020-12-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/commands.exp: Update expected results.
+
+2020-12-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR cli/15104
+	* gdb.base/commands.exp: Add additional tests.
+	* gdb.base/completion.exp: Add additional tests.
+
+2020-12-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/completion.exp: Add additional tests.
+
+2020-12-11  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26991
+	* gdb.arch/i386-mpx-call.exp: Don't expect to trigger bounds
+        violations by setting bounds registers if the bounds are passed in the
+        Bounds Table.
+
+2020-12-11  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26954
+	* gdb.base/float128.exp: Detect and handle no mpfr support.
+
+2020-12-10  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/24694
+	* gdb.multi/multi-arch-exec.c (thread_start, main): Add barrier
+	calls.
+
+2020-12-10  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/26947
+	* gdb.tui/new-layout.exp: Don't execute tests with unbalanced curly
+	braces for tcl 8.5 and earlier.
+
+2020-12-09  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR 26875, PR 26901
+	* gdb.base/flexible-array-member.c: New test.
+	* gdb.base/flexible-array-member.exp: New test.
+
+2020-12-08  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.arch/amd64-gs_base.exp: Undo commit 67748e0f66, reimplement
+	using is_amd64_regs_target.
+
+2020-12-08  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/mi_task_arg.exp: Accept <optimized out> as valid value of
+	self_id.
+
+2020-12-07  Pedro Alves  <pedro@palves.net>
+
+	* gdb.base/break-on-linker-gcd-function.exp: Remove unused
+	'additional_flags' variable.
+
+2020-12-07  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.linespec/explicit.exp: Extend with a test to check completing
+	'-' after seemingly complete options.
+
+2020-12-07  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.linespec/keywords.exp: Add tests to check positional
+	flexibility of "-force-condition".
+
+2020-12-07  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.base/bp-cmds-run-with-ex.c: New file.
+	* gdb.base/bp-cmds-run-with-ex.exp: New file.
+	* gdb.base/bp-cmds-run-with-ex.gdb: New file.
+	* gdb.gdb/python-interrupts.exp: Update the call to
+	'catch_command_errors' with the new argument.
+	* gdb.gdb/python-selftest.exp: Ditto.
+
 2020-12-04  Simon Marchi  <simon.marchi@efficios.com>
 
 	* gdb.arch/amd64-disp-step-avx.exp: Adjust pattern.
