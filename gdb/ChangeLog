@@ -1,3 +1,53 @@
+2020-12-15  Rae Kim  <rae.kim@gmail.com>
+
+	* cli/cli-script.c (do_document_command): Rename from
+	document_command. Handle multi-line input.
+	(multi_line_command_p): Handle document_control.
+	(build_command_line): Likewise.
+	(execute_control_command_1): Likewise.
+	(process_next_line): Likewise.
+	(document_command): Call do_document_command.
+	* cli/cli-script.h (enum command_control_type): Add
+	document_control.
+
+2020-12-15  Tom Tromey  <tom@tromey.com>
+
+	* stap-probe.c (stap_probe::evaluate_argument): Use
+	evaluate_expression.
+	* dtrace-probe.c (dtrace_probe::evaluate_argument): Use
+	evaluate_expression.
+	* value.h (evaluate_expression): Add expect_type parameter.
+	* objc-lang.c (print_object_command): Call evaluate_expression.
+	* eval.c (evaluate_expression): Add expect_type parameter.
+
+2020-12-15  Tom Tromey  <tom@tromey.com>
+
+	* varobj.c (varobj_create): Use first_opcode.
+	* value.c (init_if_undefined_command): Use first_opcode.
+	* typeprint.c (whatis_exp): Use first_opcode.
+	* tracepoint.c (validate_actionline): Use first_opcode.
+	(encode_actions_1): Use first_opcode.
+	* stack.c (return_command): Use first_opcode.
+	* expression.h (struct expression) <first_opcode>: New method.
+	* eval.c (parse_and_eval_type): Use first_opcode.
+	* dtrace-probe.c (dtrace_process_dof_probe): Use first_opcode.
+
+2020-12-15  Tom Tromey  <tom@tromey.com>
+
+	* f-lang.c (evaluate_subexp_f): Update.
+	* expression.h (evaluate_subexp_do_call): Update.
+	* eval.c (evaluate_subexp_do_call): Add callee parameter.  Replace
+	nargs, argvec with array_view.
+	(evaluate_funcall): Update.
+
+2020-12-15  Tom Tromey  <tom@tromey.com>
+
+	* ada-lang.c (num_component_specs): Remove.
+	(assign_aggregate): Update.
+	(aggregate_assign_positional, aggregate_assign_from_choices)
+	(aggregate_assign_others, add_component_interval): Change
+	arguments.
+
 2020-12-15  Tom Tromey  <tromey@adacore.com>
 
 	* cli/cli-decode.c (deprecated_cmd_warning): Use title style for
