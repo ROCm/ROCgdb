@@ -88,7 +88,7 @@ static int prefixify_subexp (struct expression *, struct expression *, int,
 
 static expression_up parse_exp_in_context (const char **, CORE_ADDR,
 					   const struct block *, int,
-					   int, int *,
+					   bool, int *,
 					   innermost_block_tracker *,
 					   expr_completion_state *);
 
@@ -1028,7 +1028,7 @@ expression_up
 parse_exp_1 (const char **stringptr, CORE_ADDR pc, const struct block *block,
 	     int comma, innermost_block_tracker *tracker)
 {
-  return parse_exp_in_context (stringptr, pc, block, comma, 0, NULL,
+  return parse_exp_in_context (stringptr, pc, block, comma, false, NULL,
 			       tracker, nullptr);
 }
 
@@ -1042,7 +1042,7 @@ parse_exp_1 (const char **stringptr, CORE_ADDR pc, const struct block *block,
 static expression_up
 parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
 		      const struct block *block,
-		      int comma, int void_context_p, int *out_subexp,
+		      int comma, bool void_context_p, int *out_subexp,
 		      innermost_block_tracker *tracker,
 		      expr_completion_state *cstate)
 {
@@ -1113,7 +1113,7 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
 
   parser_state ps (lang, get_current_arch (), expression_context_block,
 		   expression_context_pc, comma, *stringptr,
-		   cstate != nullptr, tracker);
+		   cstate != nullptr, tracker, void_context_p);
 
   scoped_restore_current_language lang_saver;
   set_language (lang->la_language);
@@ -1147,7 +1147,7 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
   if (out_subexp)
     *out_subexp = subexp;
 
-  lang->post_parser (&result, void_context_p, ps.parse_completion, tracker);
+  lang->post_parser (&result, &ps);
 
   if (expressiondebug)
     dump_prefix_expression (result.get (), gdb_stdlog);
@@ -1205,7 +1205,7 @@ parse_expression_for_completion (const char *string,
 
   try
     {
-      exp = parse_exp_in_context (&string, 0, 0, 0, 0, &subexp,
+      exp = parse_exp_in_context (&string, 0, 0, 0, false, &subexp,
 				  nullptr, &cstate);
     }
   catch (const gdb_exception_error &except)

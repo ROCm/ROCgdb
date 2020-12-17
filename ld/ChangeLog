@@ -1,3 +1,24 @@
+2020-12-16  Howard Chu <hyc@symas.com>
+	    H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27081
+	* libdep_plugin.c (onload): Skip if not all required plugin hooks
+	are available.
+	* testsuite/config/default.exp (dep_plug_opt): New.
+	* testsuite/ld-elf/elf.exp: Pass $dep_plug_opt to nm.
+	* testsuite/ld-elf/pr26391.fd: New file.
+
+2020-12-16  Alan Modra  <amodra@gmail.com>
+
+	* ld.h (ld_config_type): Delete maxpagesize and commonpagesize.
+	* emultempl/elf.em: Use link_info rather than config
+	for maxpagesize and commonpagesize.
+	* emultempl/ppc32elf.em: Likewise.
+	* ldexp.c (fold_binary, fold_name): Likewise.
+	* ldemul.c (after_parse_default): Likewise.
+	(set_output_arch_default): Don't call bfd_emul_set_maxpagesize
+	or bfd_emul_set_commonpagesize.
+
 2020-12-15  Vivek Das Mohapatra  <vivek@collabora.com>
 
 	* emultempl/elf.em (gld${EMULATION_NAME}_handle_option):

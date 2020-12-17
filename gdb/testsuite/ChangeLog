@@ -1,3 +1,26 @@
+2020-12-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.base/async-shell.exp: Enable non-stop through GDBFLAGS.
+	* gdb.base/continue-all-already-running.exp: Likewise.
+	* gdb.base/moribund-step.exp: Likewise.
+	* gdb.base/step-sw-breakpoint-adjust-pc.exp: Likewise.
+
+2020-12-16  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/batch-preserve-term-settings.exp:
+
+2020-12-16  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_compile_shlib_1): Factor out of ...
+	(gdb_compile_shlib): ... here.  Filter out PIE-related flags.
+
+2020-12-16  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.arch/aarch64-tagged-pointer.c (main): Add a few more
+	pointer-based memory accesses.
+	* gdb.arch/aarch64-tagged-pointer.exp: Exercise additional
+	hw watchpoint cases.
+
 2020-12-15  Rae Kim  <rae.kim@gmail.com>
 
 	* gdb.base/document.exp: New test.
