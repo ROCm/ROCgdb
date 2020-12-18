@@ -1,3 +1,70 @@
+2020-12-18  Alan Modra  <amodra@gmail.com>
+
+	* elf32-microblaze.c (dbg): Delete unused variable.
+	* elf32-nds32.c (relax_group_section_id_list): Make static.
+	* som.c (reloc_queue): Make static.
+	* xtensa-isa.c (xtisa_errno, xtisa_error_msg): Make static.
+
+2020-12-18  Alan Modra  <amodra@gmail.com>
+
+	* archive.c (_bfd_ar_spacepad, _bfd_ar_sizepad): Use auto buf.
+	* coff-mcore.c (coff_mcore_relocate_section): Likewise.
+	* elf32-ppc.c (ppc_elf_unhandled_reloc): Use asprintf in place
+	of fixed size and possibly too small buf for translated message.
+	* elf64-ppc.c (ppc64_elf_unhandled_reloc): Likewise.
+	* elf32-v850.c (v850_elf_check_relocs): Likewise.
+	* ecoff.c (ecoff_type_to_string): Pass in return string buff rather
+	than using static buffer2.  Delete dead code.  Remove unnecessary
+	parentheses.
+	(_bfd_ecoff_print_symbol): Pass auto buff to ecoff_type_to_string.
+	* elf32-rx.c (describe_flags): Pass in return string buf rather
+	than using static buf.
+	(rx_elf_merge_private_bfd_data): Pass buf to describe_flags.
+	(rx_elf_print_private_bfd_data): Likewise.
+	* mach-o.c (cpusubtype): Pass in return string buffer rather than
+	using static buffer.
+	(bfd_mach_o_bfd_print_private_bfd_data): Pass buff to cpusubtype.
+	* opncls.c (separate_debug_file_exists): Make buffer an auto var.
+	(bfd_fill_in_gnu_debuglink_section): Likewise.
+	* peXXigen.c (rsrc_resource_name): Pass in return string buffer
+	rather than using static buffer.
+	(rsrc_sort_entries): Pass buff to rsrc_resource_name.
+	* vms-alpha.c (_bfd_vms_write_emh): Pass tbuf to get_vms_time_string.
+	* vms-misc.c (get_vms_time_string): Pass in return string tbuf
+	rather than using static tbuf.
+	* vms.h (get_vms_time_string): Update prototype.
+
+2020-12-18  Alan Modra  <amodra@gmail.com>
+
+	* coff-z80.c (bfd_howto_type): Make typedef const.
+	* elf32-z80.c (bfd_howto_type): Likewise.
+	* elf32-m32c.c (EncodingTable): Likewise.
+	* elf32-csky.c (csky_arch_for_merge): Likewise.
+	(csky_archs): Use typedef.
+	* elf32-m68hc11.c (m68hc11_direct_relax_table): Make const.
+	(find_relaxable_insn, m68hc11_elf_relax_section): Adjust to suit.
+	* elf32-ppc.c (ppc_alt_plt): Make const.
+	* elf32-rl78.c (relax_addr16): Likewise.
+	* targets.c (_bfd_associated_vector): Likewise.
+	(bfd_target_vector, bfd_associated_vector): Likewise.
+	* libbfd-in.h (bfd_target_vector, bfd_associated_vector): Likewise.
+	* libbfd.h: Regenerate.
+
+2020-12-18  Alan Modra  <amodra@gmail.com>
+
+	* ecoff.c (bfd_debug_section): Init using BFD_FAKE_SECTION.
+	(ecoff_scom_section, ecoff_scom_symbol): Statically init using
+	BFD_FAKE_SECTION and GLOBAL_SYM_INIT.  Delete initialisation code.
+	* elf32-m32r.c (m32r_elf_scom_section, m32r_elf_scom_symbol),
+	* elf32-score.c (score_elf_scom_section, score_elf_scom_symbol),
+	* elf32-score7.c (score_elf_scom_section, score_elf_scom_symbol),
+	* elf32-tic6x.c (tic6x_elf_scom_section, tic6x_elf_scom_symbol),
+	* elf32-v850.c (v850_elf_scom_section, v850_elf_scom_symbol),
+	(v850_elf_tcom_section, v850_elf_tcom_symbol),
+	(v850_elf_zcom_section, v850_elf_zcom_symbol),
+	* elf64-mmix.c (mmix_elf_reg_section, mmix_elf_reg_section_symbol),
+	* elfxx-mips.c (mips_elf_scom_section, mips_elf_scom_symbol): Likewise.
+
 2020-12-16  Alan Modra  <amodra@gmail.com>
 
 	* elfxx-target.h (elfNN_bed): Constify.
