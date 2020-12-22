@@ -1,3 +1,49 @@
+2020-12-21  Peter Waller  <p@pwaller.net>
+
+	* gdb.base/style-interp-exec-mi.exp: New.
+	* gdb.base/style-interp-exec-mi.c: New.
+
+2020-12-21  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.base/list.exp: Replace send_gdb + gdb_expect with
+	  gdb_test.  Use proc_with_prefix.
+
+2020-12-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/exception.exp: Build with nopie.
+	* gdb.btrace/function_call_history.exp: Likewise.
+	* gdb.btrace/unknown_functions.exp: Likewise.
+
+2020-12-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/multi-inferior.exp: Skip if use_gdb_stub.
+
+2020-12-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.python/py-record-btrace.exp: Make test names unique.
+	* gdb.python/py-record-full.exp: Likewise.
+
+2020-12-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/data.exp: Make test names unique.
+	* gdb.btrace/delta.exp: Likewise.
+	* gdb.btrace/enable.exp: Likewise.
+	* gdb.btrace/function_call_history.exp: Likewise.
+	* gdb.btrace/nohist.exp: Likewise.
+	* gdb.btrace/non-stop.exp: Likewise.
+	* gdb.btrace/rn-dl-bind.exp: Likewise.
+	* gdb.btrace/step.exp: Likewise.
+	* gdb.btrace/stepi.exp: Likewise.
+	* gdb.btrace/tailcall.exp: Likewise.
+
+2020-12-21  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/enable.exp: Update error message.
+	* gdb.btrace/multi-inferior.exp: Likewise.
+	* gdb.btrace/reconnect.exp: Likewise.
+	* gdb.python/py-record-btrace.exp: Likewise.
+	* gdb.python/py-record-full.exp: Likewise.
+
 2020-12-20  Tom de Vries  <tdevries@suse.de>
 
 	* lib/gdb.exp (save_target_board_info): New proc.
