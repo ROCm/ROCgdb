@@ -2156,6 +2156,7 @@ ALLDEPFILES = \
 	amd64-sol2-tdep.c \
 	amd64-tdep.c \
 	amdgcn-rocm-tdep.c \
+	arc-linux-nat.c \
 	arc-tdep.c \
 	arm.c \
 	arm-bsd-tdep.c \
