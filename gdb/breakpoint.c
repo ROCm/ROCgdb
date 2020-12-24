@@ -8604,9 +8604,7 @@ static void
 mention (struct breakpoint *b)
 {
   b->ops->print_mention (b);
-  if (current_uiout->is_mi_like_p ())
-    return;
-  printf_filtered ("\n");
+  current_uiout->text ("\n");
 }
 
 
