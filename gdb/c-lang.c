@@ -153,8 +153,11 @@ c_emit_char (int c, struct type *type,
   generic_emit_char (c, type, stream, quoter, encoding);
 }
 
+/* See language.h.  */
+
 void
-c_printchar (int c, struct type *type, struct ui_file *stream)
+language_defn::printchar (int c, struct type *type,
+			  struct ui_file * stream) const
 {
   c_string_type str_type;
 
@@ -175,7 +178,7 @@ c_printchar (int c, struct type *type, struct ui_file *stream)
     }
 
   fputc_filtered ('\'', stream);
-  LA_EMIT_CHAR (c, type, stream, '\'');
+  emitchar (c, type, stream, '\'');
   fputc_filtered ('\'', stream);
 }
 
