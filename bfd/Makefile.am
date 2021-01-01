@@ -1,7 +1,7 @@
 ## Process this file with automake to generate Makefile.in
 #
-#   Copyright (C) 2012-2020 Free Software Foundation, Inc.
-#   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+#   Copyright (C) 2012-2021 Free Software Foundation, Inc.
+#   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

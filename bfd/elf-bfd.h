@@ -1,6 +1,6 @@
 /* BFD back-end data structures for ELF files.
-   Copyright (C) 1992-2020 Free Software Foundation, Inc.
-   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1992-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
