@@ -1,7 +1,7 @@
 /* Convert a DWARF location expression to C
 
-   Copyright (C) 2014-2020 Free Software Foundation, Inc.
-   Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2014-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 

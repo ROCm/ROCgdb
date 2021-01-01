@@ -1,7 +1,7 @@
 @c GDB MANUAL configuration file.  
 @c
-@c Copyright (C) 1993--2020 Free Software Foundation, Inc.
-@c Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
+@c Copyright (C) 1993--2021 Free Software Foundation, Inc.
+@c Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 @c
 @c NOTE: While the GDB manual is configurable (by changing these
 @c switches), its configuration is ***NOT*** automatically tied in to
