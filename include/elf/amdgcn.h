@@ -1,7 +1,7 @@
 /* AMDGCN ELF support for BFD.
 
-   Copyright (C) 2019-2020 Free Software Foundation, Inc.
-   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of BFD, the Binary File Descriptor library.
 
