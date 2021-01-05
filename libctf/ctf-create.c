@@ -1142,9 +1142,11 @@ ctf_serialize (ctf_dict_t *fp)
   nfp->ctf_funchash = fp->ctf_funchash;
   nfp->ctf_dynsyms = fp->ctf_dynsyms;
   nfp->ctf_ptrtab = fp->ctf_ptrtab;
+  nfp->ctf_pptrtab = fp->ctf_pptrtab;
   nfp->ctf_dynsymidx = fp->ctf_dynsymidx;
   nfp->ctf_dynsymmax = fp->ctf_dynsymmax;
   nfp->ctf_ptrtab_len = fp->ctf_ptrtab_len;
+  nfp->ctf_pptrtab_len = fp->ctf_pptrtab_len;
   nfp->ctf_link_inputs = fp->ctf_link_inputs;
   nfp->ctf_link_outputs = fp->ctf_link_outputs;
   nfp->ctf_errs_warnings = fp->ctf_errs_warnings;
@@ -1154,6 +1156,7 @@ ctf_serialize (ctf_dict_t *fp)
   nfp->ctf_objtidx_sxlate = fp->ctf_objtidx_sxlate;
   nfp->ctf_str_prov_offset = fp->ctf_str_prov_offset;
   nfp->ctf_syn_ext_strtab = fp->ctf_syn_ext_strtab;
+  nfp->ctf_pptrtab_typemax = fp->ctf_pptrtab_typemax;
   nfp->ctf_in_flight_dynsyms = fp->ctf_in_flight_dynsyms;
   nfp->ctf_link_in_cu_mapping = fp->ctf_link_in_cu_mapping;
   nfp->ctf_link_out_cu_mapping = fp->ctf_link_out_cu_mapping;
@@ -1186,6 +1189,7 @@ ctf_serialize (ctf_dict_t *fp)
   memset (&fp->ctf_errs_warnings, 0, sizeof (ctf_list_t));
   fp->ctf_add_processing = NULL;
   fp->ctf_ptrtab = NULL;
+  fp->ctf_pptrtab = NULL;
   fp->ctf_funcidx_names = NULL;
   fp->ctf_objtidx_names = NULL;
   fp->ctf_funcidx_sxlate = NULL;
@@ -1582,7 +1586,8 @@ ctf_add_reftype (ctf_dict_t *fp, uint32_t flag, ctf_id_t ref, uint32_t kind)
      type and (if an anonymous typedef node is being pointed at) the type that
      points at too.  Note that ctf_typemax is at this point one higher than we
      want to check against, because it's just been incremented for the addition
-     of this type.  */
+     of this type.  The pptrtab is lazily-updated as needed, so is not touched
+     here.  */
 
   uint32_t type_idx = LCTF_TYPE_TO_INDEX (fp, type);
   uint32_t ref_idx = LCTF_TYPE_TO_INDEX (fp, ref);
@@ -1689,6 +1694,14 @@ ctf_add_array (ctf_dict_t *fp, uint32_t flag, const ctf_arinfo_t *arp)
   tmp = fp;
   if (ctf_lookup_by_id (&tmp, arp->ctr_index) == NULL)
     return CTF_ERR;		/* errno is set for us.  */
+
+  if (ctf_type_kind (fp, arp->ctr_index) == CTF_K_FORWARD)
+    {
+      ctf_err_warn (fp, 1, ECTF_INCOMPLETE,
+		    _("ctf_add_array: index type %lx is incomplete"),
+		    arp->ctr_contents);
+      return (ctf_set_errno (fp, ECTF_INCOMPLETE));
+    }
 
   if ((type = ctf_add_generic (fp, flag, NULL, CTF_K_ARRAY, &dtd)) == CTF_ERR)
     return CTF_ERR;		/* errno is set for us.  */
@@ -2040,6 +2053,7 @@ ctf_add_member_offset (ctf_dict_t *fp, ctf_id_t souid, const char *name,
   ssize_t msize, malign, ssize;
   uint32_t kind, vlen, root;
   char *s = NULL;
+  int is_incomplete = 0;
 
   if (!(fp->ctf_flags & LCTF_RDWR))
     return (ctf_set_errno (fp, ECTF_RDONLY));
@@ -2075,14 +2089,19 @@ ctf_add_member_offset (ctf_dict_t *fp, ctf_id_t souid, const char *name,
     {
       /* The unimplemented type, and any type that resolves to it, has no size
 	 and no alignment: it can correspond to any number of compiler-inserted
-	 types.  */
+	 types.  We allow incomplete types through since they are routinely
+	 added to the ends of structures, and can even be added elsewhere in
+	 structures by the deduplicator.  They are assumed to be zero-size with
+	 no alignment: this is often wrong, but problems can be avoided in this
+	 case by explicitly specifying the size of the structure via the _sized
+	 functions.  The deduplicator always does this.  */
 
+      msize = 0;
+      malign = 0;
       if (ctf_errno (fp) == ECTF_NONREPRESENTABLE)
-	{
-	  msize = 0;
-	  malign = 0;
-	  ctf_set_errno (fp, 0);
-	}
+	ctf_set_errno (fp, 0);
+      else if (ctf_errno (fp) == ECTF_INCOMPLETE)
+	is_incomplete = 1;
       else
 	return -1;		/* errno is set for us.  */
     }
@@ -2123,10 +2142,32 @@ ctf_add_member_offset (ctf_dict_t *fp, ctf_id_t souid, const char *name,
 	      return -1;	/* errno is set for us.  */
 	    }
 
+	  if (is_incomplete)
+	    {
+	      ctf_err_warn (fp, 1, ECTF_INCOMPLETE,
+			    _("ctf_add_member_offset: cannot add member %s of "
+			      "incomplete type %lx to struct %lx without "
+			      "specifying explicit offset\n"),
+			    name ? name : _("(unnamed member)"), type, souid);
+	      return (ctf_set_errno (fp, ECTF_INCOMPLETE));
+	    }
+
 	  if (ctf_type_encoding (fp, ltype, &linfo) == 0)
 	    off += linfo.cte_bits;
 	  else if ((lsize = ctf_type_size (fp, ltype)) > 0)
 	    off += lsize * CHAR_BIT;
+	  else if (lsize == -1 && ctf_errno (fp) == ECTF_INCOMPLETE)
+	    {
+	      ctf_err_warn (fp, 1, ECTF_INCOMPLETE,
+			    _("ctf_add_member_offset: cannot add member %s of "
+			      "type %lx to struct %lx without specifying "
+			      "explicit offset after member %s of type %lx, "
+			      "which is an incomplete type\n"),
+			    name ? name : _("(unnamed member)"), type, souid,
+			    lmd->dmd_name ? lmd->dmd_name
+			    : _("(unnamed member)"), ltype);
+	      return -1;			/* errno is set for us.  */
+	    }
 
 	  /* Round up the offset of the end of the last member to
 	     the next byte boundary, convert 'off' to bytes, and

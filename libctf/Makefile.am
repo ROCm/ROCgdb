@@ -19,7 +19,7 @@
 
 ACLOCAL_AMFLAGS = -I .. -I ../config -I ../bfd
 
-AUTOMAKE_OPTIONS = foreign no-texinfo.tex
+AUTOMAKE_OPTIONS = dejagnu foreign no-texinfo.tex
 
 # This is where we get zlib from.  zlibdir is -L../zlib and zlibinc is
 # -I../zlib, unless we were configured with --with-system-zlib, in which
@@ -39,7 +39,7 @@ include_HEADERS =
 noinst_LTLIBRARIES = libctf.la libctf-nobfd.la
 endif
 
-libctf_nobfd_la_LIBADD = @SHARED_LIBADD@ $(ZLIB)
+libctf_nobfd_la_LIBADD = @CTF_LIBADD@ $(LIBINTL) $(ZLIB)
 libctf_nobfd_la_LDFLAGS = -version-info 0:0:0 @SHARED_LDFLAGS@ @VERSION_FLAGS@
 libctf_nobfd_la_CPPFLAGS = $(AM_CPPFLAGS) -DNOBFD=1
 libctf_nobfd_la_SOURCES = ctf-archive.c ctf-dump.c ctf-create.c ctf-decl.c ctf-error.c \
@@ -50,8 +50,40 @@ if NEED_CTF_QSORT_R
 libctf_nobfd_la_SOURCES += ctf-qsort_r.c
 endif
 
-libctf_la_LIBADD = @BFD_LIBADD@ $(libctf_nobfd_la_LIBADD)
+libctf_la_LIBADD = ../bfd/libbfd.la $(libctf_nobfd_la_LIBADD)
 libctf_la_CPPFLAGS = $(AM_CPPFLAGS) -DNOBFD=0
-libctf_la_DEPENDENCIES = @BFD_DEPENDENCIES@
 libctf_la_LDFLAGS = $(libctf_nobfd_la_LDFLAGS)
 libctf_la_SOURCES = $(libctf_nobfd_la_SOURCES) ctf-open-bfd.c
+
+# Setup the testing framework, if you have one
+EXPECT = expect
+RUNTEST = runtest
+RUNTESTFLAGS =
+
+CC_FOR_TARGET = ` \
+  if [ -f $$r/../gcc/xgcc ] ; then \
+    if [ -f $$r/../newlib/Makefile ] ; then \
+      echo $$r/../gcc/xgcc -B$$r/../gcc/ -idirafter $$r/../newlib/targ-include -idirafter $${srcroot}/../newlib/libc/include -nostdinc; \
+    else \
+      echo $$r/../gcc/xgcc -B$$r/../gcc/; \
+    fi; \
+  else \
+    if [ "@host@" = "@target@" ] ; then \
+      echo $(CC); \
+    else \
+      echo gcc | sed '$(transform)'; \
+    fi; \
+  fi`
+
+check-DEJAGNU: site.exp
+	srcroot=`cd $(srcdir) && pwd`; export srcroot; \
+	r=`pwd`; export r; \
+	LC_ALL=C; export LC_ALL; \
+	EXPECT=$(EXPECT); export EXPECT; \
+	runtest=$(RUNTEST); \
+	if $(SHELL) -c "$$runtest --version" > /dev/null 2>&1; then \
+	  $$runtest --tool $(DEJATOOL) --srcdir $${srcroot}/testsuite \
+		CC="$(CC_FOR_TARGET)" CFLAGS="$(CFLAGS) -I$(INCDIR) -I$(srcdir) -I$(builddir) -I$(builddir)/../bfd $(ZLIBINC)" \
+		CC_FOR_HOST="$(CC)" LIBS="$(LIBS)" $(RUNTESTFLAGS); \
+	else echo "WARNING: could not find \`runtest'" 1>&2; :;\
+	fi

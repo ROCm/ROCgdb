@@ -1,3 +1,53 @@
+2021-01-05  Alan Modra  <amodra@gmail.com>
+
+	* elflink.c (bfd_elf_link_record_dynamic_symbol): Handle no_export
+	for relocatable executable.
+
+2021-01-05  Alan Modra  <amodra@gmail.com>
+
+	* vms-alpha.c (_bfd_vms_slurp_egsd): Read flags after size check.
+
+2021-01-05  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c (allocate_dynrelocs): When we are generating pde,
+	make sure gp symbol is output as a dynamic symbol.
+
+2021-01-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26256
+	* elflink.c (compare_link_order): Place unordered sections before
+	ordered sections.
+	(elf_fixup_link_order): Add a link info argument.  Allow mixed
+	ordered and unordered input sections for non-relocatable link.
+	Sort the consecutive bfd_indirect_link_order sections with the
+	same pattern.  Change the offsets of the bfd_indirect_link_order
+	sections only.
+	(bfd_elf_final_link): Pass info to elf_fixup_link_order.
+	* section.c (bfd_section): Add pattern.
+	(BFD_FAKE_SECTION): Initialize pattern to NULL.
+	* bfd-in2.h: Regenerated.
+
+2021-01-04  Alexander Fedotov  <alfedotov@gmail.com>
+
+	* elf32-arm.c (elf32_arm_print_private_bfd_data): Prefix hex value
+	of private flags with 0x.
+	* elfnn-aarch64.c (elfNN_aarch64_print_private_bfd_data): Likewise.
+
+2021-01-04  Alan Modra  <amodra@gmail.com>
+
+	PR 26822
+	* elflink.c (elf_link_input_bfd): Use the file base name in
+	linker generated STT_FILE symbols.
+
+2021-01-04  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_compare_subsets): Removed static.
+	* elfxx-riscv.h: Add declaration.
+	* elfnn-riscv.c (riscv_merge_multi_letter_ext): Use
+	riscv_compare_subsets to check the orders.
+	(riscv_skip_prefix): Removed.
+	(riscv_prefix_cmp): Removed.
+
 2021-01-04  Alan Modra  <amodra@gmail.com>
 
 	PR 26741

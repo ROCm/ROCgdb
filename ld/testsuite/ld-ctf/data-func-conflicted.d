@@ -10,7 +10,7 @@
 Contents of CTF section \.ctf:
 
   Header:
-    Magic number: dff2
+    Magic number: 0xdff2
     Version: 4 \(CTF_VERSION_3\)
 #...
     Data object section:	.* \(0xc bytes\)
@@ -20,21 +20,21 @@ Contents of CTF section \.ctf:
     String section:	.*
 #...
   Data objects:
-    bar -> struct var_3
-    var_1 -> foo_t
-    var_666 -> foo_t \*
+    bar -> 0x[0-9a-f]*: \(kind 6\) struct var_3 \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\)
+    var_1 -> 0x[0-9a-f]*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_666 -> 0x[0-9a-f]*: \(kind 3\) foo_t \* \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
 
   Function objects:
-    func_[0-9]* -> void \*\(\*\) \(const char \*restrict, int \(\*\)\(\*\) \(const char \*\)\)
+    func_[0-9]* -> 0x[0-9a-f]*: \(kind 5\) void \*\(\*\) \(const char \*restrict, int \(\*\)\(\*\) \(const char \*\)\) \(aligned at 0x[0-9a-f]*\)
 #...
   Types:
 #...
-   .*: struct var_3 .*
+    .*: \(kind 6\) struct var_3 .*
 #...
 CTF archive member: .*/data-func-1\.c:
 
   Header:
-    Magic number: dff2
+    Magic number: 0xdff2
     Version: 4 \(CTF_VERSION_3\)
 #...
     Parent name: \.ctf
@@ -46,18 +46,19 @@ CTF archive member: .*/data-func-1\.c:
   Labels:
 
   Data objects:
-    var_[0-9]* -> foo_t
-    var_[0-9]* -> foo_t
-    var_[0-9]* -> foo_t
-    var_[0-9]* -> foo_t
-    var_[0-9]* -> foo_t
-    var_[0-9]* -> foo_t
-    var_[0-9]* -> foo_t
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
+    var_[0-9]* -> 0x80000001*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
 #...
   Function objects:
 
   Variables:
 
   Types:
-     80000001: foo_t .* -> .* int .*
+    0x80000001: \(kind 10\) foo_t .* -> .* int .*
 #...

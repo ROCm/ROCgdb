@@ -388,7 +388,7 @@ standard_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
       break;
 
     case OPTION_VERSION:
-      sim_io_printf (sd, "GNU simulator %s%s\n", PKGVERSION, version);
+      sim_print_version (sd, is_command);
       if (STATE_OPEN_KIND (sd) == SIM_OPEN_STANDALONE)
 	exit (0);
       break;
@@ -815,6 +815,41 @@ sim_print_help (SIM_DESC sd, int is_command)
       sim_io_printf (sd, "program args    Arguments to pass to simulated program.\n");
       sim_io_printf (sd, "                Note: Very few simulators support this.\n");
     }
+}
+
+/* Print version information.  */
+
+void
+sim_print_version (SIM_DESC sd, int is_command)
+{
+  sim_io_printf (sd, "GNU simulator %s%s\n", PKGVERSION, version);
+
+  sim_io_printf (sd, "Copyright (C) 2021 Free Software Foundation, Inc.\n");
+
+  /* Following the copyright is a brief statement that the program is
+     free software, that users are free to copy and change it on
+     certain conditions, that it is covered by the GNU GPL, and that
+     there is no warranty.  */
+
+  sim_io_printf (sd, "\
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>\
+\nThis is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.\n");
+
+  if (!is_command)
+    return;
+
+  sim_io_printf (sd, "This SIM was configured as:\n");
+  sim_config_print (sd);
+
+  if (REPORT_BUGS_TO[0])
+    {
+      sim_io_printf (sd, "For bug reporting instructions, please see:\n\
+    %s.\n",
+		     REPORT_BUGS_TO);
+    }
+  sim_io_printf (sd, "Find the SIM homepage & other documentation resources \
+online at:\n    <https://sourceware.org/gdb/wiki/Sim/>.\n");
 }
 
 /* Utility of sim_args_command to find the closest match for a command.

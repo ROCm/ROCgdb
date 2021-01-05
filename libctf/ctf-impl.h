@@ -406,6 +406,9 @@ struct ctf_dict
   uint32_t *ctf_txlate;		  /* Translation table for type IDs.  */
   uint32_t *ctf_ptrtab;		  /* Translation table for pointer-to lookups.  */
   size_t ctf_ptrtab_len;	  /* Num types storable in ptrtab currently.  */
+  uint32_t *ctf_pptrtab;	  /* Parent types pointed to by child dicts.  */
+  size_t ctf_pptrtab_len;	  /* Num types storable in pptrtab currently.  */
+  uint32_t ctf_pptrtab_typemax;	  /* Max child type when pptrtab last updated.  */
   uint32_t *ctf_funcidx_names;	  /* Name of each function symbol in symtypetab
 				     (if indexed).  */
   uint32_t *ctf_objtidx_names;	  /* Likewise, for object symbols.  */
@@ -532,13 +535,15 @@ struct ctf_next
   ssize_t ctn_size;
   ssize_t ctn_increment;
   uint32_t ctn_n;
+
+  /* Some iterators contain other iterators, in addition to their other
+     state.  */
+  ctf_next_t *ctn_next;
+
   /* We can save space on this side of things by noting that a dictionary is
      either dynamic or not, as a whole, and a given iterator can only iterate
      over one kind of thing at once: so we can overlap the DTD and non-DTD
-     members, and the structure, variable and enum members, etc.
-
-     Some of the _next iterators actually thunk down to another _next iterator
-     themselves, so one of the options in here is a _next iterator!  */
+     members, and the structure, variable and enum members, etc.  */
   union
   {
     const ctf_member_t *ctn_mp;
@@ -546,10 +551,10 @@ struct ctf_next
     const ctf_dmdef_t *ctn_dmd;
     const ctf_enum_t *ctn_en;
     const ctf_dvdef_t *ctn_dvd;
-    ctf_next_t *ctn_next;
     ctf_next_hkv_t *ctn_sorted_hkv;
     void **ctn_hash_slot;
   } u;
+
   /* This union is of various sorts of dict we can iterate over:
      currently dictionaries and archives, dynhashes, and dynsets.  */
   union

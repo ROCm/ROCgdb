@@ -1,3 +1,15 @@
+2021-01-04  Mike Frysinger  <vapier@gentoo.org>
+
+	* wrapper.c: Include stdlib.h.
+
+2021-01-04  Mike Frysinger  <vapier@gentoo.org>
+
+	* iwmmxt.c: Include stdlib.h.
+
+2021-01-04  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure: Regenerate.
+
 2020-12-15  Nick Clifton  <nickc@redhat.com>
 
 	* wrapper.c (sim_create_inferior): Accept some more ARM machine numbers.

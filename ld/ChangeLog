@@ -1,3 +1,161 @@
+2021-01-05  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/enum-forward.c: New test.
+	* testsuite/ld-ctf/enum-forward.c: New results.
+
+2021-01-05  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/array.d: Adjust for dumper changes.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-1.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-enums.d: Likewise.
+	* testsuite/ld-ctf/conflicting-typedefs.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-cyclic-conflicting.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-cyclic-nonconflicting.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-into-cycle.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-noncyclic.d: Likewise.
+	* testsuite/ld-ctf/cycle-1.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.A.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.B.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.C.d: Likewise.
+	* testsuite/ld-ctf/data-func-conflicted.d: Likewise.
+	* testsuite/ld-ctf/diag-cttname-null.d: Likewise.
+	* testsuite/ld-ctf/diag-cuname.d: Likewise.
+	* testsuite/ld-ctf/diag-parlabel.d: Likewise.
+	* testsuite/ld-ctf/diag-wrong-magic-number-mixed.d: Likewise.
+	* testsuite/ld-ctf/forward.d: Likewise.
+	* testsuite/ld-ctf/function.d: Likewise.
+	* testsuite/ld-ctf/slice.d: Likewise.
+	* testsuite/ld-ctf/super-sub-cycles.d: Likewise.
+	* testsuite/ld-ctf/enums.c: New test.
+	* testsuite/ld-ctf/enums.d: New test.
+
+2021-01-05  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/conflicting-cycle-1.parent.d: Adjust for dumper
+	changes.
+	* testsuite/ld-ctf/cross-tu-cyclic-conflicting.d: Likewise.
+	* testsuite/ld-ctf/forward.c: New test...
+	* testsuite/ld-ctf/forward.d: ... and results.
+
+2021-01-05  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/array.d: Adjust for dumper changes.
+	* testsuite/ld-ctf/data-func-conflicted.d: Likewise.
+	* testsuite/ld-ctf/diag-cttname-null.d: Likewise.
+	* testsuite/ld-ctf/diag-cuname.d: Likewise.
+	* testsuite/ld-ctf/diag-parlabel.d: Likewise.
+	* testsuite/ld-ctf/function.d: Likewise.
+	* testsuite/ld-ctf/slice.d: Likewise.
+
+2021-01-05  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/array.d: Adjust for dumper changes.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-1.B-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-1.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.A-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-2.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-1.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.C-2.d: Likewise.
+	* testsuite/ld-ctf/conflicting-cycle-3.parent.d: Likewise.
+	* testsuite/ld-ctf/conflicting-enums.d: Likewise.
+	* testsuite/ld-ctf/conflicting-typedefs.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-cyclic-conflicting.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-cyclic-nonconflicting.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-into-cycle.d: Likewise.
+	* testsuite/ld-ctf/cross-tu-noncyclic.d: Likewise.
+	* testsuite/ld-ctf/cycle-1.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.A.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.B.d: Likewise.
+	* testsuite/ld-ctf/cycle-2.C.d: Likewise.
+	* testsuite/ld-ctf/data-func-conflicted.d: Likewise.
+	* testsuite/ld-ctf/diag-cttname-null.d: Likewise.
+	* testsuite/ld-ctf/diag-cuname.d: Likewise.
+	* testsuite/ld-ctf/diag-parlabel.d: Likewise.
+	* testsuite/ld-ctf/diag-wrong-magic-number-mixed.d: Likewise.
+	* testsuite/ld-ctf/function.d: Likewise.
+	* testsuite/ld-ctf/slice.d: Likewise.
+	* testsuite/ld-ctf/super-sub-cycles.d: Likewise.
+
+2021-01-05  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-scripts/sysroot-prefix.exp: Exclude some targets.
+
+2021-01-05  Alan Modra  <amodra@gmail.com>
+
+	PR ld/26256
+	* testsuite/ld-elf/pr26256-1b.d: xfail s12z.
+	* testsuite/ld-scripts/crossref.exp (cross1): Don't xfail ia64.
+
+2021-01-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26256
+	* ldlang.c (gc_section_callback): Set pattern.
+	* testsuite/ld-elf/pr26256-1.s: New file.
+	* testsuite/ld-elf/pr26256-1.t: Likewise.
+	* testsuite/ld-elf/pr26256-1a.d: Likewise.
+	* testsuite/ld-elf/pr26256-1b.d: Likewise.
+	* testsuite/ld-elf/pr26256-2.s: Likewise.
+	* testsuite/ld-elf/pr26256-2.t: Likewise.
+	* testsuite/ld-elf/pr26256-2a.d: Likewise.
+	* testsuite/ld-elf/pr26256-2b-alt.d: Likewise.
+	* testsuite/ld-elf/pr26256-2b.d: Likewise.
+	* testsuite/ld-elf/pr26256-3.s: Likewise.
+	* testsuite/ld-elf/pr26256-3a.d: Likewise.
+	* testsuite/ld-elf/pr26256-3a.t: Likewise.
+	* testsuite/ld-elf/pr26256-3b.d: Likewise.
+	* testsuite/ld-elf/pr26256-3b.t: Likewise.
+
+2021-01-04  Alan Modra  <amodra@gmail.com>
+
+	PR 26822
+	* testsuite/ld-arm/non-contiguous-arm2.d: Adjust STT_FILE symbol match.
+	* testsuite/ld-arm/non-contiguous-arm3.d: Likewise.
+	* testsuite/ld-arm/non-contiguous-arm5.d: Likewise.
+	* testsuite/ld-arm/non-contiguous-arm6.d: Likewise.
+	* testsuite/ld-i386/tlsbin.rd: Likewise.
+	* testsuite/ld-i386/tlsbin2.rd: Likewise.
+	* testsuite/ld-i386/tlsbindesc.rd: Likewise.
+	* testsuite/ld-i386/tlsdesc.rd: Likewise.
+	* testsuite/ld-i386/tlsnopic.rd: Likewise.
+	* testsuite/ld-i386/tlspic.rd: Likewise.
+	* testsuite/ld-i386/tlspic2.rd: Likewise.
+	* testsuite/ld-mips-elf/global-local-symtab-sort-n64.d: Likewise.
+	* testsuite/ld-mips-elf/global-local-symtab-sort-n64t.d: Likewise.
+	* testsuite/ld-mips-elf/global-local-symtab-sort-o32.d: Likewise.
+	* testsuite/ld-mips-elf/global-local-symtab-sort-o32t.d: Likewise.
+	* testsuite/ld-plugin/pr17973.d: Likewise.
+	* testsuite/ld-tic6x/shlib-1.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-1b.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-1r.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-1rb.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-app-1.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-app-1b.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-app-1r.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-app-1rb.rd: Likewise.
+	* testsuite/ld-tic6x/shlib-noindex.rd: Likewise.
+	* testsuite/ld-tic6x/static-app-1.rd: Likewise.
+	* testsuite/ld-tic6x/static-app-1b.rd: Likewise.
+	* testsuite/ld-tic6x/static-app-1r.rd: Likewise.
+	* testsuite/ld-tic6x/static-app-1rb.rd: Likewise.
+	* testsuite/ld-x86-64/tlsbin.rd: Likewise.
+	* testsuite/ld-x86-64/tlsbin2.rd: Likewise.
+	* testsuite/ld-x86-64/tlsbindesc.rd: Likewise.
+	* testsuite/ld-x86-64/tlsdesc.rd: Likewise.
+	* testsuite/ld-x86-64/tlspic.rd: Likewise.
+	* testsuite/ld-x86-64/tlspic2.rd: Likewise.
+	* testsuite/ld-xtensa/tlsbin.rd: Likewise.
+	* testsuite/ld-xtensa/tlspic.rd: Likewise.
+
 2021-01-01  Nicolas Boulenguez  <nicolas@debian.org>
 
 	* configure.tgt: Correct comment grammar.

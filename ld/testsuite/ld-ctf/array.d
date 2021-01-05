@@ -10,7 +10,7 @@
 Contents of CTF section .ctf:
 
   Header:
-    Magic number: dff2
+    Magic number: 0xdff2
     Version: 4 \(CTF_VERSION_3\)
 #...
     Data object section:	.* \(0x8 bytes\)
@@ -20,8 +20,8 @@ Contents of CTF section .ctf:
   Labels:
 
   Data objects:
-    digits -> int \[10\]
-    digits_names -> char \*\[10\]
+    digits -> 0x[0-9a-f]*: \(kind 4\) int \[10\] .*
+    digits_names -> 0x[0-9a-f]*: \(kind 4\) char \*\[10\] .*
 
   Function objects:
 
@@ -29,7 +29,7 @@ Contents of CTF section .ctf:
 
   Types:
 #...
-     [0-9a-f]*: .*\[10\] .*
+    0x[0-9a-f]*: \(kind 4\) .*\[10\] \(size .*
 #...
-     [0-9a-f]*: .*\[10\] .*
+    0x[0-9a-f]*: \(kind 4\) .*\[10\] \(size .*
 #...
