@@ -1,3 +1,82 @@
+2021-01-07  Alan Modra  <amodra@gmail.com>
+
+	* po/BLD-POTFILES.in: Regenerate.
+
+2021-01-07  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-elf/shared.exp: xfail pr22471 for targets that
+	complain about relocs in read-only sections.  Tidy ASFLAGS append.
+
+2021-01-06  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-sparc/sparc.exp (sparc64tests): Set text-segment
+	base for some tests.
+	* testsuite/ld-sparc/gotop32.dd: Match solaris output.
+	* testsuite/ld-sparc/gotop32.sd: Likewise.
+	* testsuite/ld-sparc/gotop32.td: Likewise.
+	* testsuite/ld-sparc/gotop64.dd: Likewise.
+	* testsuite/ld-sparc/gotop64.sd: Likewise.
+	* testsuite/ld-sparc/gotop64.td: Likewise.
+	* testsuite/ld-sparc/tlsg32.sd: Likewise.
+	* testsuite/ld-sparc/tlsg64.sd: Likewise.
+	* testsuite/ld-sparc/tlspie32.dd: Likewise.
+	* testsuite/ld-sparc/tlspie64.dd: Likewise.
+	* testsuite/ld-sparc/tlssunbin32.dd: Likewise.
+	* testsuite/ld-sparc/tlssunbin32.sd: Likewise.
+	* testsuite/ld-sparc/tlssunbin32.td: Likewise.
+	* testsuite/ld-sparc/tlssunbin64.dd: Likewise.
+	* testsuite/ld-sparc/tlssunbin64.sd: Likewise.
+	* testsuite/ld-sparc/tlssunbin64.td: Likewise.
+	* testsuite/ld-sparc/tlssunnopic32.dd: Likewise.
+	* testsuite/ld-sparc/tlssunnopic32.sd: Likewise.
+	* testsuite/ld-sparc/tlssunnopic64.dd: Likewise.
+	* testsuite/ld-sparc/tlssunnopic64.sd: Likewise.
+	* testsuite/ld-sparc/tlssunpic32.dd: Likewise.
+	* testsuite/ld-sparc/tlssunpic32.sd: Likewise.
+	* testsuite/ld-sparc/tlssunpic32.td: Likewise.
+	* testsuite/ld-sparc/tlssunpic64.dd: Likewise.
+	* testsuite/ld-sparc/tlssunpic64.sd: Likewise.
+	* testsuite/ld-sparc/tlssunpic64.td: Likewise.
+	* testsuite/ld-sparc/wdispcall.dd: Likewise.
+
+2021-01-06  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-scripts/rgn-at10.d: xfail v850.
+	* testsuite/ld-scripts/rgn-at11.d: Likewise.
+
+2021-01-06  Marcus Comstedt  <marcus@mc.pp.se>
+
+	* testsuite/ld-riscv-elf/ld-riscv-elf.exp: Added
+	riscv_choose_[ilp32|lp64]_emul to choose the correct linker script.
+	* testsuite/ld-riscv-elf/attr-merge-arch-01.d: Call
+	riscv_choose_[ilp32|lp64]_emul instead of hardcoding elf[32|64]lriscv.
+	* testsuite/ld-riscv-elf/attr-merge-arch-02.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-arch-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-arch-failed-01.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-arch-failed-02.d: Likewise.
+	* testsuite/ld-riscv-elf/c-lui-2.d: Likewise.
+	* testsuite/ld-riscv-elf/c-lui.d: Likewise.
+	* testsuite/ld-riscv-elf/call-relax.d: Likewise.
+	* testsuite/ld-riscv-elf/pcrel-lo-addend-2.d: Likewise.
+	* testsuite/ld-riscv-elf/pcrel-lo-addend.d: Likewise.
+	* testsuite/ld-riscv-elf/weakref32.d: Accept bigriscv in addition
+	to littleriscv.
+	* testsuite/ld-riscv-elf/weakref64.d: Likewise.
+
+2021-01-06  Marcus Comstedt  <marcus@mc.pp.se>
+
+	* configure.tgt: Added riscvbe-*-*, riscv32be*-*-*, riscv64be*-*-*,
+	riscv32be*-*-linux*, and riscv64be*-*-linux*.
+	* Makefile.am: Added eelf32briscv.c, eelf32briscv_ilp32f.c and
+	eelf32briscv_ilp32.c.
+	* Makefile.in: Regenerate.
+	* emulparams/elf32briscv.sh: Added.
+	* emulparams/elf32briscv_ilp32.sh: Likewise.
+	* emulparams/elf32briscv_ilp32f.sh: Likewise.
+	* emulparams/elf64briscv.sh: Likewise.
+	* emulparams/elf64briscv_lp64.sh: Likewise.
+	* emulparams/elf64briscv_lp64f.sh: Likewise.
+
 2021-01-05  Nick Alcock  <nick.alcock@oracle.com>
 
 	* testsuite/ld-ctf/enum-forward.c: New test.
