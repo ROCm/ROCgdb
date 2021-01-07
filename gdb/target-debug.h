@@ -51,6 +51,8 @@
   target_debug_do_print (plongest (X))
 #define target_debug_print_CORE_ADDR(X)		\
   target_debug_do_print (core_addr_to_string (X))
+#define target_debug_print_CORE_ADDR_r(X)	\
+  target_debug_do_print (core_addr_to_string (X))
 #define target_debug_print_const_char_p(X)	\
   target_debug_do_print (((X) ? (X) : "(null)"))
 #define target_debug_print_char_p(X)		\
