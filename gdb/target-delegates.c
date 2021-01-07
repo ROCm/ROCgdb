@@ -174,7 +174,7 @@ struct dummy_target : public target_ops
   void prepare_to_generate_core () override;
   void done_generating_core () override;
   bool supports_displaced_step (thread_info *arg0) override;
-  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc) override;
+  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
 
@@ -348,7 +348,7 @@ struct debug_target : public target_ops
   void prepare_to_generate_core () override;
   void done_generating_core () override;
   bool supports_displaced_step (thread_info *arg0) override;
-  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc) override;
+  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
 
@@ -4446,25 +4446,27 @@ debug_target::supports_displaced_step (thread_info *arg0)
 }
 
 displaced_step_prepare_status
-target_ops::displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc)
+target_ops::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
 {
-  return this->beneath ()->displaced_step_prepare (arg0, displaced_pc);
+  return this->beneath ()->displaced_step_prepare (arg0, arg1);
 }
 
 displaced_step_prepare_status
-dummy_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc)
+dummy_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
 {
-  return default_displaced_step_prepare (this, arg0, displaced_pc);
+  return default_displaced_step_prepare (this, arg0, arg1);
 }
 
 displaced_step_prepare_status
-debug_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &displaced_pc)
+debug_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
 {
   displaced_step_prepare_status result;
   fprintf_unfiltered (gdb_stdlog, "-> %s->displaced_step_prepare (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->displaced_step_prepare (arg0, displaced_pc);
+  result = this->beneath ()->displaced_step_prepare (arg0, arg1);
   fprintf_unfiltered (gdb_stdlog, "<- %s->displaced_step_prepare (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_CORE_ADDR_r (arg1);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_displaced_step_prepare_status (result);
   fputs_unfiltered ("\n", gdb_stdlog);
