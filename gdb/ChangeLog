@@ -1,3 +1,38 @@
+2021-01-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* value.c (set_value_component_location): Adjust the VALUE_LVAL
+	for internalvar components that have a dynamic location.
+
+2021-01-08  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/26881
+	* breakpoint.c (create_exception_master_breakpoint_probe)
+	(create_exception_master_breakpoint_hook): Factor out
+	of ...
+	(create_exception_master_breakpoint): ... here.  Only try to install
+	the master exception breakpoint in objfile.debug using the
+	_Unwind_DebugHook method, if the install using probes in objfile
+	failed.
+
+2021-01-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-lang.c (fortran_value_subarray): Call value_from_component.
+
+2021-01-07  Mike Frysinger  <vapier@gentoo.org>
+
+	* remote-sim.c: Include memory-map.h.
+	(gdbsim_target): Define memory_map override.
+	(gdbsim_target::memory_map): Define.
+
+2021-01-07  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (do_full_match): Conditionally skip "_ada_" prefix.
+
+2021-01-07  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (add_component_interval): Start loop using vector's
+	updated size.
+
 2021-01-06  Tom Tromey  <tromey@adacore.com>
 
 	* ada-lang.c (ada_evaluate_subexp) <BINOP_ADD, BINOP_SUB>:

@@ -1,3 +1,36 @@
+2021-01-08  Nick Clifton  <nickc@redhat.com>
+
+	* po/sv.po: Updated Swedish translation.
+
+2021-01-08  Nick Clifton  <nickc@redhat.com>
+
+	PR 27129
+	* aarch64-dis.c (determine_disassembling_preference): Move call to
+	aarch64_match_operands_constraint outside of the assertion.
+	* aarch64-asm.c (aarch64_ins_limm_1): Remove call to assert.
+	Replace with a return of FALSE.
+
+	PR 27139
+	* aarch64-opc.c (aarch64_sys_regs): Treat id_aa64mmfr2_el1 as a
+	core system register.
+
+2021-01-07  Samuel Thibault  <samuel.thibault@gnu.org>
+
+	* configure: Regenerate.
+
+2021-01-07  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated French translation.
+
+2021-01-07  Fredrik Noring  <noring@nocrew.org>
+
+	* m68k-opc.c (chkl): Change minimum architecture requirement to
+	m68020.
+
+2021-01-07  Philipp Tomsich  <prt@gnu.org>
+
+	* riscv-opc.c (riscv_opcodes): Add pause hint instruction.
+
 2021-01-07  Claire Xenia Wolf  <claire@symbioticeda.com>
 	    Jim Wilson  <jimw@sifive.com>
 	    Andrew Waterman  <andrew@sifive.com>

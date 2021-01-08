@@ -9756,7 +9756,7 @@ add_component_interval (LONGEST low, LONGEST high,
   }
 	
   indices.resize (indices.size () + 2);
-  for (j = size - 1; j >= i + 2; j -= 1)
+  for (j = indices.size () - 1; j >= i + 2; j -= 1)
     indices[j] = indices[j - 2];
   indices[i] = low;
   indices[i + 1] = high;
@@ -13573,10 +13573,16 @@ do_full_match (const char *symbol_search_name,
 	       const lookup_name_info &lookup_name,
 	       completion_match_result *comp_match_res)
 {
-  if (startswith (symbol_search_name, "_ada_"))
+  const char *lname = lookup_name.ada ().lookup_name ().c_str ();
+
+  /* If both symbols start with "_ada_", just let the loop below
+     handle the comparison.  However, if only the symbol name starts
+     with "_ada_", skip the prefix and let the match proceed as
+     usual.  */
+  if (startswith (symbol_search_name, "_ada_")
+      && !startswith (lname, "_ada"))
     symbol_search_name += 5;
 
-  const char *lname = lookup_name.ada ().lookup_name ().c_str ();
   int uscore_count = 0;
   while (*lname != '\0')
     {
