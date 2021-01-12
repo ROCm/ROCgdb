@@ -1,3 +1,47 @@
+2021-01-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27173
+	* configure: Regenerated.
+
+2021-01-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated French translation.
+	* po/pt.po: Updated Portuguese translation.
+	* po/sr.po: Updated Serbian translation.
+	* po/uk.po: Updated Ukranian translation.
+
+2021-01-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure: Regenerated.
+
+2021-01-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27166
+	* elfxx-x86.c (_bfd_x86_elf_merge_gnu_properties): Handle
+	-z lam-u48 and -z lam-u57.
+
+2021-01-09  Nick Clifton  <nickc@redhat.com>
+
+	* version.m4: Change to 2.36.50.
+	* configure: Regenerate.
+	* po/bfd.pot: Regenerate.
+
+2021-01-09  Nick Clifton  <nickc@redhat.com>
+
+	* 2.36 release branch crated.
+
+2021-01-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elfxx-x86.c (_bfd_x86_elf_link_setup_gnu_properties): Also set
+	LAM_U57 when setting LAM_U48.
+
+2021-01-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26256
+	PR ld/27160
+	* elflink.c (elf_fixup_link_order): Verify that fixing up
+	SHF_LINK_ORDER doesn't increase the output section size.
+
 2021-01-09  Alan Modra  <amodra@gmail.com>
 
 	* configure: Regenerate.

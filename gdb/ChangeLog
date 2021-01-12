@@ -1,3 +1,32 @@
+2021-01-11  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* arch/aarch64-insn.h (aarch64_debug_printf): New.
+	* arch/aarch64-insn.c: Use aarch64_debug_printf.
+	* aarch64-tdep.c: Use aarch64_debug_printf.
+
+2021-01-11  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* solib-aix.c (solib_aix_debug_printf): New, use throughout
+	file.
+
+2021-01-11  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (jit_debug): Change type to bool.
+	(_initialize_jit): Adjust.
+
+2021-01-09  Tom Tromey  <tom@tromey.com>
+
+	PR compile/23672
+	* compile/compile.c (compile_to_object): Avoid crash when
+	osabi_triplet_regexp returns NULL.
+
+2021-01-09  Tom Tromey  <tom@tromey.com>
+
+	* tracepoint.h (class collection_list) <append_exp>: Take a
+	std::string.
+	* tracepoint.c (collection_list::append_exp): Take a std::string.
+	(encode_actions_1): Update.
+
 2021-01-08  Tom Tromey  <tromey@adacore.com>
 
 	* parse.c (parse_expression): Add void_context_p parameter.  Use

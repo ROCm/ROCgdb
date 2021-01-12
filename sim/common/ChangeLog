@@ -1,3 +1,48 @@
+2021-01-11  Mike Frysinger  <vapier@gentoo.org>
+
+	* acinclude.m4 (SIM_AC_OUTPUT): Require SIM_AC_OPTION_WARNINGS.
+
+2021-01-11  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-core.c (sim_memory_map): Change %#x to PRIxTW.
+
+2021-01-11  Mike Frysinger  <vapier@gentoo.org>
+
+	* acinclude.m4 (SIM_AC_COMMON): Delete checks for stdlib.h, string.h,
+	strings.h, time.h, and errno.h.
+	* callback.c, cgen-scache.c, dv-glue.c, dv-pal.c, dv-sockser.c,
+	hw-alloc.c, hw-base.c, hw-device.c, hw-events.c, hw-handles.c,
+	hw-ports.c, hw-properties.c, hw-tree.c, nrun.c, sim-arange.c,
+	sim-events.c, sim-fpu.c, sim-hw.c, sim-load.c, sim-memopt.c,
+	sim-options.c, sim-profile.c, sim-trace.c, sim-utils.c,
+	sim-watch.c, syscall.c: Delete HAVE_ERRNO_H, HAVE_STDLIB_H,
+	HAVE_STRING_H, HAVE_STRINGS_H, HAVE_LIMITS_H, HAVE_TIME_H,
+	and strings.h include.
+
+2021-01-09  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-basics.h [__CYGWIN32__] (vasprintf, asprintf): Delete.
+	* sim-core.c, sim-watch.c: Include libiberty.h.
+
+2021-01-09  Mike Frysinger  <vapier@gentoo.org>
+
+	* acinclude.m4: Replace duplicate text with pointer to README-HACKING.
+
+2021-01-09  Mike Frysinger  <vapier@gentoo.org>
+
+	* acinclude.m4 (SIM_AC_OPTION_WARNINGS): Document 1st argument.
+	Set WERROR_CFLAGS when first arg is not set or is "yes".
+
+2021-01-09  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-base.c (full_name_of_hw): Delete full_name.  Replace
+	hw_strdup call with hw_malloc.
+
+2021-01-09  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-par.c: Include stdlib.h.
+	* cgen-trace.c, hw-events.c, sim-abort.c: Likewise.
+
 2021-01-08  Mike Frysinger  <vapier@gentoo.org>
 
 	* Make-common.in (C_DIALECT): Define.

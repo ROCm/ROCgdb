@@ -1,3 +1,44 @@
+2021-01-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27173
+	* configure: Regenerated.
+
+2021-01-11  Matt Jenkins  <matt@majenko.co.uk>
+
+	PR ld/27167
+	* ldmain.c (get_emulation): Add mipsmips32r3, mips32r5, mips64r3
+	and mips64r5 to list of known mips targets.
+
+2021-01-11  Nick Clifton  <nickc@redhat.com>matt@majenko.co.uk
+
+	* po/pt_BR.po: Updated Brazilian Portuguese translation.
+`	* po/uk.po: Updated Ukranian translation.
+
+2021-01-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure: Regenerated.
+
+2021-01-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27166
+	* testsuite/ld-x86-64/lam-u48.rd: New file.
+	* testsuite/ld-x86-64/lam-u57.rd: Likewise.
+	* testsuite/ld-x86-64/x86-64.exp: Add PR ld/27166 tests.
+
+2021-01-09  Nick Clifton  <nickc@redhat.com>
+
+	* configure: Regenerate.
+	* po/ld.pot: Regenerate.
+
+2021-01-09  Nick Clifton  <nickc@redhat.com>
+
+	* 2.36 release branch crated.
+
+2021-01-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-x86-64/property-x86-lam-u48-4.d: Updated.
+	* ld-x86-64/property-x86-lam-u48-5.d: Likewise.
+
 2021-01-09  Alan Modra  <amodra@gmail.com>
 
 	* configure: Regenerate.

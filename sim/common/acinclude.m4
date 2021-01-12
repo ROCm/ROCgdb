@@ -5,18 +5,7 @@
 # SIM_AC_OUTPUT is a cover function to AC_OUTPUT to generate the Makefile.
 # It is intended to be invoked last.
 #
-# The simulator's configure.ac should look like:
-#
-# dnl Process this file with autoconf to produce a configure script.
-# AC_PREREQ(2.64)dnl
-# AC_INIT(Makefile.in)
-# sinclude(../common/aclocal.m4)
-#
-# SIM_AC_COMMON
-#
-# ... target specific stuff ...
-#
-# SIM_AC_OUTPUT
+# See README-HACKING for more details.
 
 # Include global overrides and fixes for Autoconf.
 m4_include(../../config/override.m4)
@@ -109,12 +98,11 @@ ALL_LINGUAS=
 ZW_GNU_GETTEXT_SISTER_DIR(../../intl)
 
 # Check for common headers.
-# FIXME: Seems to me this can cause problems for i386-windows hosts.
-# At one point there were hardcoded AC_DEFINE's if ${host} = i386-*-windows*.
-AC_CHECK_HEADERS(stdlib.h string.h strings.h unistd.h time.h)
+# NB: You can assume C11 headers exist.
+AC_CHECK_HEADERS(unistd.h)
 AC_CHECK_HEADERS(sys/time.h sys/times.h sys/resource.h sys/mman.h)
 AC_CHECK_HEADERS(fcntl.h fpu_control.h)
-AC_CHECK_HEADERS(dlfcn.h errno.h sys/stat.h)
+AC_CHECK_HEADERS(dlfcn.h sys/stat.h)
 AC_CHECK_FUNCS(getrusage time sigaction __setfpucw)
 AC_CHECK_FUNCS(mmap munmap lstat truncate ftruncate posix_fallocate)
 AC_CHECK_MEMBERS([[struct stat.st_dev], [struct stat.st_ino],
@@ -737,6 +725,7 @@ AC_MSG_RESULT($sim_smp)
 
 dnl --enable-build-warnings is for developers of the simulator.
 dnl it enables extra GCC specific warnings.
+dnl arg[1] Enable -Werror by default? ("yes" or "no")
 AC_DEFUN([SIM_AC_OPTION_WARNINGS],
 [
 AC_ARG_ENABLE(werror,
@@ -753,11 +742,11 @@ if test "${GCC}" = yes -a -z "${ERROR_ON_WARNING}" ; then
 fi
 
 WERROR_CFLAGS=""
-if test "${ERROR_ON_WARNING}" = yes ; then
-# NOTE: Disabled in the sim dir due to most sims generating warnings.
-#    WERROR_CFLAGS="-Werror"
-     true
-fi
+m4_if(m4_default([$1], [yes]), [yes], [dnl
+  if test "${ERROR_ON_WARNING}" = yes ; then
+    WERROR_CFLAGS="-Werror"
+  fi
+])dnl
 
 build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
 -Wpointer-sign \
@@ -832,7 +821,9 @@ dnl one afterwards.  The two pieces of the common fragment are inserted into
 dnl the target's fragment at the appropriate points.
 
 AC_DEFUN([SIM_AC_OUTPUT],
-[
+[dnl
+AC_REQUIRE([SIM_AC_OPTION_WARNINGS])dnl
+
 dnl Make @cgen_breaks@ non-null only if the sim uses CGEN.
 cgen_breaks=""
 if grep CGEN_MAINT $srcdir/Makefile.in >/dev/null; then
