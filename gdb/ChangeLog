@@ -1,3 +1,45 @@
+2021-01-12  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* infrun.c (normal_stop): Fix indentation.
+
+2021-01-12  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* top.h (readnow_symbol_files, readnever_symbol_files): Move
+	declarations to ...
+	* symfile.h: ... here.
+	* symfile.c: Update doc.
+
+2021-01-12  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target.h (baud_rate, serial_parity): Move declarations...
+	* serial.h: ... here.
+	* main.c: Include serial.h.
+	* serial.c (baud_rate, serial_parity): Update doc.
+
+2021-01-12  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* top.c (pre_init_ui_hook): Remove.
+
+2021-01-12  Srinath Parvathaneni  <srinath.parvathaneni@arm.com>
+
+	* aarch64-tdep.c (aarch64_vnh_type): Add "bf" field in h registers.
+	(aarch64_vnv_type): Add "bf" type in h field of v registers.
+	* features/aarch64-fpu.c (create_feature_aarch64_fpu): Regenerated.
+	* features/aarch64-fpu.xml: Add bfloat16 type.
+
+2021-01-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* expprint.c (dump_subexp_body_standard): Handle OP_BOOL.
+
+2021-01-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.y (dot_ops): Rename to...
+	(fortran_operators): ...this.  Add a header comment.  Add symbol
+	based operators.
+	(yylex): Update to use fortran_operators not dot_ops.  Remove
+	special handling for '**', this is now included in
+	fortran_operators.
+
 2021-01-11  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* arch/aarch64-insn.h (aarch64_debug_printf): New.
