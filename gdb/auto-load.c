@@ -93,9 +93,9 @@ show_auto_load_gdb_scripts (struct ui_file *file, int from_tty,
 		    value);
 }
 
-/* Return non-zero if auto-loading gdb scripts is enabled.  */
+/* See auto-load.h.  */
 
-int
+bool
 auto_load_gdb_scripts_enabled (const struct extension_language_defn *extlang)
 {
   return auto_load_gdb_scripts;
@@ -461,19 +461,13 @@ filename_is_in_auto_load_safe_path_vec (const char *filename,
   return 0;
 }
 
-/* Return 1 if FILENAME is located in one of the directories of
-   AUTO_LOAD_SAFE_PATH.  Otherwise call warning and return 0.  FILENAME does
-   not have to be an absolute path.
+/* See auto-load.h.  */
 
-   Existence of FILENAME is not checked.  Function will still give a warning
-   even if the caller would quietly skip non-existing file in unsafe
-   directory.  */
-
-int
+bool
 file_is_auto_load_safe (const char *filename, const char *debug_fmt, ...)
 {
   gdb::unique_xmalloc_ptr<char> filename_real;
-  static int advice_printed = 0;
+  static bool advice_printed = false;
 
   if (debug_auto_load)
     {
@@ -485,11 +479,11 @@ file_is_auto_load_safe (const char *filename, const char *debug_fmt, ...)
     }
 
   if (filename_is_in_auto_load_safe_path_vec (filename, &filename_real))
-    return 1;
+    return true;
 
   auto_load_safe_path_vec_update ();
   if (filename_is_in_auto_load_safe_path_vec (filename, &filename_real))
-    return 1;
+    return true;
 
   warning (_("File \"%ps\" auto-loading has been declined by your "
 	     "`auto-load safe-path' set to \"%s\"."),
@@ -531,10 +525,10 @@ For more information about this security protection see the\n\
 \tinfo \"(gdb)Auto-loading safe path\"\n"),
 		       filename_real.get (),
 		       home_config.c_str (), home_config.c_str ());
-      advice_printed = 1;
+      advice_printed = true;
     }
 
-  return 0;
+  return false;
 }
 
 /* For scripts specified in .debug_gdb_scripts, multiple objfiles may load
@@ -569,8 +563,8 @@ struct loaded_script
      inaccessible), or NULL for loaded_script_texts.  */
   const char *full_path;
 
-  /* Non-zero if this script has been loaded.  */
-  int loaded;
+  /* True if this script has been loaded.  */
+  bool loaded;
 
   const struct extension_language_defn *language;
 };
@@ -656,24 +650,24 @@ get_auto_load_pspace_data_for_loading (struct program_space *pspace)
 }
 
 /* Add script file NAME in LANGUAGE to hash table of PSPACE_INFO.
-   LOADED 1 if the script has been (is going to) be loaded, 0 otherwise
-   (such as if it has not been found).
+   LOADED is true if the script has been (is going to) be loaded, false
+   otherwise (such as if it has not been found).
    FULL_PATH is NULL if the script wasn't found.
+
    The result is true if the script was already in the hash table.  */
 
-static int
-maybe_add_script_file (struct auto_load_pspace_info *pspace_info, int loaded,
+static bool
+maybe_add_script_file (struct auto_load_pspace_info *pspace_info, bool loaded,
 		       const char *name, const char *full_path,
 		       const struct extension_language_defn *language)
 {
   struct htab *htab = pspace_info->loaded_script_files.get ();
   struct loaded_script **slot, entry;
-  int in_hash_table;
 
   entry.name = name;
   entry.language = language;
   slot = (struct loaded_script **) htab_find_slot (htab, &entry, INSERT);
-  in_hash_table = *slot != NULL;
+  bool in_hash_table = *slot != NULL;
 
   /* If this script is not in the hash table, add it.  */
 
@@ -705,23 +699,23 @@ maybe_add_script_file (struct auto_load_pspace_info *pspace_info, int loaded,
 }
 
 /* Add script contents NAME in LANGUAGE to hash table of PSPACE_INFO.
-   LOADED 1 if the script has been (is going to) be loaded, 0 otherwise
-   (such as if it has not been found).
+   LOADED is true if the script has been (is going to) be loaded, false
+   otherwise (such as if it has not been found).
+
    The result is true if the script was already in the hash table.  */
 
-static int
+static bool
 maybe_add_script_text (struct auto_load_pspace_info *pspace_info,
-		       int loaded, const char *name,
+		       bool loaded, const char *name,
 		       const struct extension_language_defn *language)
 {
   struct htab *htab = pspace_info->loaded_script_texts.get ();
   struct loaded_script **slot, entry;
-  int in_hash_table;
 
   entry.name = name;
   entry.language = language;
   slot = (struct loaded_script **) htab_find_slot (htab, &entry, INSERT);
-  in_hash_table = *slot != NULL;
+  bool in_hash_table = *slot != NULL;
 
   /* If this script is not in the hash table, add it.  */
 
@@ -814,10 +808,9 @@ auto_load_objfile_script_1 (struct objfile *objfile, const char *realname,
 
   if (input)
     {
-      int is_safe;
       struct auto_load_pspace_info *pspace_info;
 
-      is_safe
+      bool is_safe
 	= file_is_auto_load_safe (debugfile,
 				  _("auto-load: Loading %s script \"%s\""
 				    " by extension for objfile \"%s\".\n"),
@@ -898,7 +891,6 @@ source_script_file (struct auto_load_pspace_info *pspace_info,
 		    const char *section_name, unsigned int offset,
 		    const char *file)
 {
-  int in_hash_table;
   objfile_script_sourcer_func *sourcer;
 
   /* Skip this script if support is not compiled in.  */
@@ -948,11 +940,10 @@ source_script_file (struct auto_load_pspace_info *pspace_info,
 					    section_name, offset);
     }
 
-  in_hash_table = maybe_add_script_file (pspace_info, bool (opened), file,
-					 (opened
-					  ? opened->full_path.get ()
-					  : NULL),
-					 language);
+  bool in_hash_table
+    = maybe_add_script_file (pspace_info, bool (opened), file,
+			     (opened ? opened->full_path.get (): NULL),
+			     language);
 
   /* If this file is not currently loaded, load it.  */
   if (opened && !in_hash_table)
@@ -974,7 +965,6 @@ execute_script_contents (struct auto_load_pspace_info *pspace_info,
   objfile_script_executor_func *executor;
   const char *newline, *script_text;
   const char *name;
-  int is_safe, in_hash_table;
 
   /* The first line of the script is the name of the script.
      It must not contain any kind of space character.  */
@@ -1028,14 +1018,16 @@ of file %ps."),
       return;
     }
 
-  is_safe = file_is_auto_load_safe (objfile_name (objfile),
-				    _("auto-load: Loading %s script "
-				      "\"%s\" from section \"%s\" of "
-				      "objfile \"%s\".\n"),
-				    ext_lang_name (language), name,
-				    section_name, objfile_name (objfile));
+  bool is_safe
+    = file_is_auto_load_safe (objfile_name (objfile),
+			      _("auto-load: Loading %s script "
+				"\"%s\" from section \"%s\" of "
+				"objfile \"%s\".\n"),
+			      ext_lang_name (language), name,
+			      section_name, objfile_name (objfile));
 
-  in_hash_table = maybe_add_script_text (pspace_info, is_safe, name, language);
+  bool in_hash_table
+    = maybe_add_script_text (pspace_info, is_safe, name, language);
 
   /* If this file is not currently loaded, load it.  */
   if (is_safe && !in_hash_table)

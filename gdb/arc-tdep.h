@@ -112,7 +112,12 @@ enum arc_regnum
 
 #define arc_print(fmt, args...) fprintf_unfiltered (gdb_stdlog, fmt, ##args)
 
-extern int arc_debug;
+extern bool arc_debug;
+
+/* Print an "arc" debug statement.  */
+
+#define arc_debug_printf(fmt, ...) \
+  debug_prefixed_printf_cond (arc_debug, "arc", fmt, ##__VA_ARGS__)
 
 /* Target-dependent information.  */
 

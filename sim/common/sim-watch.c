@@ -173,7 +173,7 @@ schedule_watchpoint (SIM_DESC sd,
       point->event = sim_events_watch_sim (sd,
 					   watch->pc,
 					   watch->sizeof_pc,
-					   0/* host-endian */,
+					   HOST_BYTE_ORDER,
 					   point->is_within,
 					   point->arg0, point->arg1,
 					   /* PC in arg0..arg1 */
@@ -255,7 +255,7 @@ do_watchpoint_create (SIM_DESC sd,
 
   (*point)->arg0 = strtoul (arg, &arg, 0);
   if (arg[0] == ',')
-    (*point)->arg0 = strtoul (arg, NULL, 0);
+    (*point)->arg1 = strtoul (arg + 1, NULL, 0);
   else
     (*point)->arg1 = (*point)->arg0;
 
@@ -376,7 +376,16 @@ static const OPTION watchpoint_options[] =
 
 static const char *default_interrupt_names[] = { "int", 0, };
 
-
+/* This default handler is "good enough" for targets that just want to trap into
+   gdb when watchpoints are hit, and have only configured STATE_WATCHPOINTS pc &
+   sizeof_pc fields.  */
+static void
+default_interrupt_handler (SIM_DESC sd, void *data)
+{
+  sim_cpu *cpu = STATE_CPU (sd, 0);
+  address_word cia = CPU_PC_GET (cpu);
+  sim_engine_halt (sd, cpu, NULL, cia, sim_stopped, SIM_SIGTRAP);
+}
 
 SIM_RC
 sim_watchpoint_install (SIM_DESC sd)
@@ -389,6 +398,8 @@ sim_watchpoint_install (SIM_DESC sd)
   /* fill in some details */
   if (watch->interrupt_names == NULL)
     watch->interrupt_names = default_interrupt_names;
+  if (watch->interrupt_handler == NULL)
+    watch->interrupt_handler = default_interrupt_handler;
   watch->nr_interrupts = 0;
   while (watch->interrupt_names[watch->nr_interrupts] != NULL)
     watch->nr_interrupts++;

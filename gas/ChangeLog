@@ -1,3 +1,29 @@
+2021-01-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.am (bfin-lex-wrapper.@OBJEXT@): Delete $(NO_WERROR).
+	* Makefile.in: Regenerated.
+
+2021-01-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-lex.l (YY_NO_INPUT, YY_NO_UNPUT): Define.
+	(parse_int): Mark char_bag const.
+
+2021-01-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/27178
+	* config/tc-i386.c (lex_got::gotrel): Add need_GOT_symbol.
+	Don't generate GOT_symbol for PLT relocations.
+	* testsuite/gas/i386/i386.exp: Run PR gas/27178 tests.
+	* testsuite/gas/i386/no-got.d: New file.
+	* testsuite/gas/i386/no-got.s: Likewise.
+	* testsuite/gas/i386/x86-64-no-got.d: Likewise.
+	* testsuite/gas/i386/x86-64-no-got.s: Likewise.
+
+2021-01-13  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.in: Regenerate.
+	* Makefile.in: Regenerate.
+
 2021-01-12  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR binutils/26792

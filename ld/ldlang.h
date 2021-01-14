@@ -158,6 +158,9 @@ typedef struct lang_output_section_statement_struct
 
   lang_output_section_phdr_list *phdrs;
 
+  /* Used by ELF SHF_LINK_ORDER sorting.  */
+  void *data;
+
   unsigned int block_value;
   int constraint;
   flagword flags;
@@ -323,6 +326,7 @@ typedef struct
 {
   lang_statement_header_type header;
   asection *section;
+  void *pattern;
 } lang_input_section_type;
 
 struct map_symbol_def {
@@ -349,8 +353,7 @@ bfd_input_just_syms (const bfd *abfd)
 typedef struct lang_wild_statement_struct lang_wild_statement_type;
 
 typedef void (*callback_t) (lang_wild_statement_type *, struct wildcard_list *,
-			    asection *, struct flag_info *,
-			    lang_input_statement_type *, void *);
+			    asection *, lang_input_statement_type *, void *);
 
 typedef void (*walk_wild_section_handler_t) (lang_wild_statement_type *,
 					     lang_input_statement_type *,
@@ -365,6 +368,7 @@ typedef bfd_boolean (*lang_match_sec_type_func) (bfd *, const asection *,
 typedef struct lang_section_bst
 {
   asection *section;
+  void *pattern;
   struct lang_section_bst *left;
   struct lang_section_bst *right;
 } lang_section_bst_type;
@@ -507,6 +511,7 @@ extern lang_output_section_statement_type *abs_output_section;
 extern lang_statement_list_type lang_os_list;
 extern struct lang_input_statement_flags input_flags;
 extern bfd_boolean lang_has_input_file;
+extern lang_statement_list_type statement_list;
 extern lang_statement_list_type *stat_ptr;
 extern bfd_boolean delete_output_file_on_failure;
 
@@ -651,7 +656,7 @@ extern void lang_enter_group
 extern void lang_leave_group
   (void);
 extern void lang_add_section
-  (lang_statement_list_type *, asection *,
+  (lang_statement_list_type *, asection *, struct wildcard_list *,
    struct flag_info *, lang_output_section_statement_type *);
 extern void lang_new_phdr
   (const char *, etree_type *, bfd_boolean, bfd_boolean, etree_type *,

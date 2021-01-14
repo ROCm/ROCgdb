@@ -1,3 +1,27 @@
+2021-01-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/26688
+	* elf32-bfin.c (bfinfdpic_relocate_section): Skip non SEC_ALLOC
+	section for R_BFIN_FUNCDESC.
+
+2021-01-14  Nick Clifton  <nickc@redhat.com>
+
+	* elf.c (elfcore_grok_win32pstatus): Check for a note type of 0.
+
+2021-01-13  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.in: Regenerate.
+	* doc/Makefile.in: Regenerate.
+
+2021-01-13  Alan Modra  <amodra@gmail.com>
+
+	PR 27160
+	* section.c (struct bfd_section): Remove pattern field.
+	(BFD_FAKE_SECTION): Adjust to suit.
+	* bfd-in2.h: Regenerate.
+	* elflink.c (compare_link_order, elf_fixup_link_order): Delete.
+	(bfd_elf_final_link): Don't call elf_fixup_link_order.
+
 2021-01-12  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR binutils/26792

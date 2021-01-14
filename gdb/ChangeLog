@@ -1,3 +1,93 @@
+2021-01-14  Tom de Vries  <tdevries@suse.de>
+
+	PR breakpoints/27151
+	* objfiles.h (in_plt_section): Handle .plt.sec.
+
+2021-01-13  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR gdb/26819
+	* remote.c
+	(remote_target::select_thread_for_ambiguous_stop_reply): New
+	member function.
+	(remote_target::process_stop_reply): Call
+	select_thread_for_ambiguous_stop_reply.
+
+2021-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* record-btrace.c (class record_btrace_target): Remove.
+	(record_btrace_target::commit_resume): Remove.
+	* record-full.c (class record_full_target): Remove.
+	(record_full_target::commit_resume): Remove.
+
+2021-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* remote.c (enum class resume_state): New.
+	(struct resumed_pending_vcont_info): New.
+	(struct remote_thread_info) <resume_state, set_not_resumed,
+	set_resumed_pending_vcont, resumed_pending_vcont_info,
+	set_resumed, m_resume_state, m_resumed_pending_vcont_info>:
+	New.
+	<last_resume_step, last_resume_sig, vcont_resumed>: Remove.
+	(remote_target::remote_add_thread): Adjust.
+	(remote_target::process_initial_stop_replies): Adjust.
+	(remote_target::resume): Adjust.
+	(remote_target::commit_resume): Rely on state in
+	remote_thread_info and not on tp->executing.
+	(remote_target::process_stop_reply): Adjust.
+
+2021-01-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* arc-tdep.h (arc_debug_printf): New.
+	* arc-tdep.c: Use arc_debug_printf.
+	* arc-linux-nat.c (arc_linux_nat_debug_printf): Add and use.
+	* arc-linux-tdep.c (arc_linux_debug_printf): Add and use.
+	* arc-newlib-tdep.c (arc_newlib_debug_printf): Add and use.
+
+2021-01-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* arc-tdep.h (arc_debug): Change type to bool.
+	* arc-tdep.c (arc_debug): Change type to bool.
+	(arc_analyze_prologue): Adjust.
+	(_initialize_arc_tdep): Use add_setshow_boolean_cmd.
+	* arc-linux-nat.c (ps_get_thread_area): Adjust.
+
+2021-01-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* auto-load.c (auto_load_objfile_script_1): Use bool.
+	(execute_script_contents): Use bool.
+
+2021-01-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* auto-load.h (auto_load_gdb_scripts_enabled): Return bool, move
+	comment here.
+	* auto-load.c (auto_load_gdb_scripts_enabled): Return bool, move
+	comment to header.
+	* extension-priv.h (struct extension_language_script_ops)
+	<auto_load_enabled>: Return bool.
+	* extension.h (ext_lang_auto_load_enabled): Return bool, move
+	comment here.
+	* extension.c (ext_lang_auto_load_enabled): Return bool, move
+	comment to header.
+	* guile/guile-header.h (gdbscm_auto_load_enabled): Return bool,
+	move comment here.
+	* guile/scm-auto-load.c (gdbscm_auto_load_enabled): Return bool,
+	move comment to header.
+	* python/python-header.h (gdbpy_auto_load_enabled): Return bool,
+	move comment here.
+	* python/py-auto-load.c (gdbpy_auto_load_enabled): Return bool,
+	move comment to header.
+
+2021-01-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* auto-load.h (file_is_auto_load_safe): Change return type to
+	bool, move comment here.
+	* auto-load.c (file_is_auto_load_safe): Change return type and
+	advice_printed to bool.  Move comment to  header.
+
+2021-01-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* jit.c (jit_debug_printf): New, use throughout file.
+
 2021-01-12  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* infrun.c (normal_stop): Fix indentation.
