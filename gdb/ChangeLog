@@ -1,3 +1,10 @@
+2021-01-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* record-btrace.c (class record_btrace_target): Remove.
+	(record_btrace_target::commit_resume): Remove.
+	* record-full.c (class record_full_target): Remove.
+	(record_full_target::commit_resume): Remove.
+
 2020-12-04  Simon Marchi  <simon.marchi@efficios.com>
 
 	* amd64-linux-tdep.c (amd64_linux_init_abi): Pass 2 as the
