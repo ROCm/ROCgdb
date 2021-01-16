@@ -1,3 +1,48 @@
+2021-01-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf-linker-x86.h (elf_linker_x86_params): Add
+	report_relative_reloc.
+	* elf32-i386.c (elf_i386_relocate_section): Call
+	_bfd_x86_elf_link_report_relative_reloc to report relative
+	relocations for -z report-relative-reloc.
+	(elf_i386_finish_dynamic_symbol): Likewse.
+	* elf64-x86-64.c (elf_x86_64_relocate_section): Likewse.
+	(elf_x86_64_finish_dynamic_symbol): Likewse.
+	* elfxx-x86.c (_bfd_x86_elf_link_report_relative_reloc): New
+	function.
+	* elfxx-x86.h (_bfd_x86_elf_link_report_relative_reloc): New
+	prototype.
+
+2021-01-16  Alan Modra  <amodra@gmail.com>
+
+	* compress.c (decompress_contents): Tidy inflateEnd result test.
+
+2021-01-16  Alan Modra  <amodra@gmail.com>
+
+	PR 26002
+	* elflink.c (elf_link_output_extsym): Use version 1 in
+	.gnu.version for undefined unversioned symbols.
+
+2021-01-15  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c (riscv_relax_delete_bytes): Fixed the indent that
+	caused the by previous commit accidentally.
+
+2021-01-15  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c: Indent, labels and GNU coding standards tidy,
+	also aligned the code.
+
+2021-01-15  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c (riscv_merge_attributes): Fix typos of messages.
+
+2021-01-15  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfnn-riscv.c: Comments tidy and improvement.
+	* elfxx-riscv.c: Likewise.
+	* elfxx-riscv.h: Likewise.
+
 2021-01-14  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR ld/26688

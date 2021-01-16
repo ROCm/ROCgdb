@@ -1,3 +1,38 @@
+2021-01-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* NEWS: Mention -z report-relative-reloc.
+	* ld.texi: Document -z report-relative-reloc.
+	* emulparams/elf32_x86_64.sh: Source x86-report-relative.sh.
+	* emulparams/elf_i386.sh: Likewse.
+	* emulparams/elf_x86_64.sh: Likewse.
+	* emulparams/x86-report-relative.sh: New file.
+	* testsuite/ld-i386/report-reloc-1.d: Likewse.
+	* testsuite/ld-i386/report-reloc-1.l: Likewse.
+	* testsuite/ld-i386/report-reloc-1.s: Likewse.
+	* testsuite/ld-x86-64/report-reloc-1-x32.d: Likewse.
+	* testsuite/ld-x86-64/report-reloc-1.d: Likewse.
+	* testsuite/ld-x86-64/report-reloc-1.l: Likewse.
+	* testsuite/ld-x86-64/report-reloc-1.s: Likewse.
+	* testsuite/ld-i386/i386.exp: Run report-reloc-1.
+	* testsuite/ld-x86-64/x86-64.exp: Run report-reloc-1 and
+	report-reloc-1-x32.
+
+2021-01-16  Alan Modra  <amodra@gmail.com>
+
+	PR 26002
+	* testsuite/ld-elfvers/vers6.dsym: Expect "Base" for undefined
+	unversioned symbols.
+	* testsuite/ld-elfvers/vers16.dsym: Likewise.
+
+2021-01-15  Nelson Chu  <nelson.chu@sifive.com>
+
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-01.d: Updated.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-02.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-03.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-04.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-05.d: Likewise.
+	* testsuite/ld-riscv-elf/attr-merge-priv-spec-failed-06.d: Likewise.
+
 2021-01-14  Nick Clifton  <nickc@redhat.com>
 
 	* po/fr.po: Updated French translation.
