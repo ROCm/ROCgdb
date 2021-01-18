@@ -508,6 +508,22 @@ rocm_update_solib_list ()
 
   solib_add (NULL, 0, auto_solib_add);
 
+  /* FIXME: Updating the solibs may cause breakpoints to be inserted in device
+     code objects. Currently, KFD only flushes the L2$ and I$ during CWSRs, so
+     simply writting the breakpoint instruction to memory does not guarantee
+     visibility from the device side, stale data could still be in I$ or L2$.
+
+     As a workaround, we can force a CWSR, before resuming the host thread
+     loading the code object, by requesting a thread list update. The ROCr
+     runtime creates an internal queue to run the blit kernels so, after
+     loading a device code object, we should always have at least one queue on
+     each device.  Suspending that queue to update the wave list causes the
+     caches to be flushed.
+
+     Remove this line when KFD is fixed to flush the caches on ptrace and
+     proc/pid/mem writes.  */
+  target_update_thread_list ();
+
   /* Switch it back.  */
   target_terminal::inferior ();
 }
