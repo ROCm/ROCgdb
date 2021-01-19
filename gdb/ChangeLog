@@ -1,3 +1,63 @@
+2021-01-18  Mike Frysinger  <vapier@gentoo.org>
+
+	* copyright.py (NOT_FSF_LIST): Delete sim/testsuite/sim/bfin/s21.s.
+
+2021-01-18  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-fbsd-tdep.c (riscv_fbsd_supply_gregset): Delete.
+	(riscv_fbsd_gregset): Use riscv_supply_regset.
+	(riscv_fbsd_fpregset): Likewise.
+	* riscv-linux-tdep.c (riscv_linux_gregset): Likewise.
+	(riscv_linux_fregset): Likewise.
+	* riscv-tdep.c (riscv_supply_regset): Define new function.
+	* riscv-tdep.h (riscv_supply_regset): Declare new function.
+
+2021-01-18  Tom de Vries  <tdevries@suse.de>
+
+	PR tdep/27172
+	* nat/amd64-linux-siginfo.c (cpt_si_lower, cpt_si_upper, SEGV_BNDERR):
+	New macro.
+	(compat_siginfo_from_siginfo): Copy cpt_si_lower and cpt_si_upper
+	for SEGV_BNDERR.
+
+2021-01-18  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* remote.c (class remote_target) <remote_hostio_send_command,
+	remote_hostio_parse_result>: Constify parameter.
+	(remote_hostio_parse_result): Likewise.
+	(remote_target::remote_hostio_send_command): Adjust.
+	(remote_target::remote_hostio_pread_vFile): Adjust.
+	(remote_target::fileio_readlink): Adjust.
+	(remote_target::fileio_fstat): Adjust.
+
+2021-01-18  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* remote.c (remote_target::start_remote): Move wait_status to
+	narrower scope.
+
+2021-01-18  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* remote.c (class remote_target):
+	<add_current_inferior_and_thread>: Constify parameter.
+	(stop_reply_extract_thread): Likewise.
+	(remote_target::get_current_thread): Likewise.
+	(remote_target::add_current_inferior_and_thread): Likewise.
+
+2021-01-18  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* remote.c (class remote_target)
+	<remote_unpack_thread_info_response,
+	parse_threadlist_response>: Constify parameter and/or return
+	value and or local variable.
+	(stub_unpack_int): Likewise.
+	(unpack_nibble): Likewise.
+	(unpack_byte): Likewise.
+	(unpack_int): Likewise.
+	(unpack_string): Likewise.
+	(unpack_threadid): Likewise.
+	(remote_target::remote_unpack_thread_info_response): Likewise.
+	(remote_target::parse_threadlist_response): Likewise.
+
 2021-01-15  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* tui/tui.c (tui_is_window_visible): Compare to nullptr, not 0.

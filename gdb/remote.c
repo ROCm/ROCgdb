@@ -705,7 +705,7 @@ public: /* Remote specific methods.  */
 				 ULONGEST offset, int *remote_errno);
 
   int remote_hostio_send_command (int command_bytes, int which_packet,
-				  int *remote_errno, char **attachment,
+				  int *remote_errno, const char **attachment,
 				  int *attachment_len);
   int remote_hostio_set_filesystem (struct inferior *inf,
 				    int *remote_errno);
@@ -737,7 +737,7 @@ public: /* Remote specific methods.  */
   int remote_resume_with_vcont (ptid_t ptid, int step,
 				gdb_signal siggnal);
 
-  void add_current_inferior_and_thread (char *wait_status);
+  void add_current_inferior_and_thread (const char *wait_status);
 
   ptid_t wait_ns (ptid_t ptid, struct target_waitstatus *status,
 		  target_wait_flags options);
@@ -784,7 +784,7 @@ public: /* Remote specific methods.  */
 				 int try_open_exec);
 
   ptid_t remote_current_thread (ptid_t oldpid);
-  ptid_t get_current_thread (char *wait_status);
+  ptid_t get_current_thread (const char *wait_status);
 
   void set_thread (ptid_t ptid, int gen);
   void set_general_thread (ptid_t ptid);
@@ -793,12 +793,12 @@ public: /* Remote specific methods.  */
 
   char *write_ptid (char *buf, const char *endbuf, ptid_t ptid);
 
-  int remote_unpack_thread_info_response (char *pkt, threadref *expectedref,
+  int remote_unpack_thread_info_response (const char *pkt, threadref *expectedref,
 					  gdb_ext_thread_info *info);
   int remote_get_threadinfo (threadref *threadid, int fieldset,
 			     gdb_ext_thread_info *info);
 
-  int parse_threadlist_response (char *pkt, int result_limit,
+  int parse_threadlist_response (const char *pkt, int result_limit,
 				 threadref *original_echo,
 				 threadref *resultlist,
 				 int *doneflag);
@@ -1017,7 +1017,7 @@ static CORE_ADDR remote_address_masked (CORE_ADDR);
 
 static void print_packet (const char *);
 
-static int stub_unpack_int (char *buff, int fieldlength);
+static int stub_unpack_int (const char *buff, int fieldlength);
 
 struct packet_config;
 
@@ -2999,19 +2999,19 @@ struct gdb_ext_thread_info
 
 #define BUF_THREAD_ID_SIZE (OPAQUETHREADBYTES * 2)
 
-static char *unpack_nibble (char *buf, int *val);
+static const char *unpack_nibble (const char *buf, int *val);
 
-static char *unpack_byte (char *buf, int *value);
+static const char *unpack_byte (const char *buf, int *value);
 
 static char *pack_int (char *buf, int value);
 
-static char *unpack_int (char *buf, int *value);
+static const char *unpack_int (const char *buf, int *value);
 
-static char *unpack_string (char *src, char *dest, int length);
+static const char *unpack_string (const char *src, char *dest, int length);
 
 static char *pack_threadid (char *pkt, threadref *id);
 
-static char *unpack_threadid (char *inbuf, threadref *id);
+static const char *unpack_threadid (const char *inbuf, threadref *id);
 
 void int_to_threadref (threadref *id, int value);
 
@@ -3121,7 +3121,7 @@ stubhex (int ch)
 }
 
 static int
-stub_unpack_int (char *buff, int fieldlength)
+stub_unpack_int (const char *buff, int fieldlength)
 {
   int nibble;
   int retval = 0;
@@ -3137,15 +3137,15 @@ stub_unpack_int (char *buff, int fieldlength)
   return retval;
 }
 
-static char *
-unpack_nibble (char *buf, int *val)
+static const char *
+unpack_nibble (const char *buf, int *val)
 {
   *val = fromhex (*buf++);
   return buf;
 }
 
-static char *
-unpack_byte (char *buf, int *value)
+static const char *
+unpack_byte (const char *buf, int *value)
 {
   *value = stub_unpack_int (buf, 2);
   return buf + 2;
@@ -3161,8 +3161,8 @@ pack_int (char *buf, int value)
   return buf;
 }
 
-static char *
-unpack_int (char *buf, int *value)
+static const char *
+unpack_int (const char *buf, int *value)
 {
   *value = stub_unpack_int (buf, 8);
   return buf + 8;
@@ -3192,8 +3192,8 @@ pack_string (char *pkt, char *string)
 }
 #endif /* 0 (unused) */
 
-static char *
-unpack_string (char *src, char *dest, int length)
+static const char *
+unpack_string (const char *src, char *dest, int length)
 {
   while (length--)
     *dest++ = *src++;
@@ -3215,11 +3215,11 @@ pack_threadid (char *pkt, threadref *id)
 }
 
 
-static char *
-unpack_threadid (char *inbuf, threadref *id)
+static const char *
+unpack_threadid (const char *inbuf, threadref *id)
 {
   char *altref;
-  char *limit = inbuf + BUF_THREAD_ID_SIZE;
+  const char *limit = inbuf + BUF_THREAD_ID_SIZE;
   int x, y;
 
   altref = (char *) id;
@@ -3334,7 +3334,7 @@ pack_threadinfo_request (char *pkt, int mode, threadref *id)
 				   the process.  */
 
 int
-remote_target::remote_unpack_thread_info_response (char *pkt,
+remote_target::remote_unpack_thread_info_response (const char *pkt,
 						   threadref *expectedref,
 						   gdb_ext_thread_info *info)
 {
@@ -3342,7 +3342,7 @@ remote_target::remote_unpack_thread_info_response (char *pkt,
   int mask, length;
   int tag;
   threadref ref;
-  char *limit = pkt + rs->buf.size (); /* Plausible parsing limit.  */
+  const char *limit = pkt + rs->buf.size (); /* Plausible parsing limit.  */
   int retval = 1;
 
   /* info->threadid = 0; FIXME: implement zero_threadref.  */
@@ -3465,18 +3465,17 @@ pack_threadlist_request (char *pkt, int startflag, int threadcount,
 /* Encoding:   'q':8,'M':8,count:16,done:8,argthreadid:64,(threadid:64)* */
 
 int
-remote_target::parse_threadlist_response (char *pkt, int result_limit,
+remote_target::parse_threadlist_response (const char *pkt, int result_limit,
 					  threadref *original_echo,
 					  threadref *resultlist,
 					  int *doneflag)
 {
   struct remote_state *rs = get_remote_state ();
-  char *limit;
   int count, resultcount, done;
 
   resultcount = 0;
   /* Assume the 'q' and 'M chars have been stripped.  */
-  limit = pkt + (rs->buf.size () - BUF_THREAD_ID_SIZE);
+  const char *limit = pkt + (rs->buf.size () - BUF_THREAD_ID_SIZE);
   /* done parse past here */
   pkt = unpack_byte (pkt, &count);	/* count field */
   pkt = unpack_nibble (pkt, &done);
@@ -4352,7 +4351,7 @@ remote_target::send_interrupt_sequence ()
    and extract the PTID.  Returns NULL_PTID if not found.  */
 
 static ptid_t
-stop_reply_extract_thread (char *stop_reply)
+stop_reply_extract_thread (const char *stop_reply)
 {
   if (stop_reply[0] == 'T' && strlen (stop_reply) > 3)
     {
@@ -4392,7 +4391,7 @@ stop_reply_extract_thread (char *stop_reply)
    method avoids a roundtrip.  */
 
 ptid_t
-remote_target::get_current_thread (char *wait_status)
+remote_target::get_current_thread (const char *wait_status)
 {
   ptid_t ptid = null_ptid;
 
@@ -4419,7 +4418,7 @@ remote_target::get_current_thread (char *wait_status)
    in in WAIT_STATUS, which may be NULL.  */
 
 void
-remote_target::add_current_inferior_and_thread (char *wait_status)
+remote_target::add_current_inferior_and_thread (const char *wait_status)
 {
   struct remote_state *rs = get_remote_state ();
   bool fake_pid_p = false;
@@ -4637,7 +4636,6 @@ remote_target::start_remote (int from_tty, int extended_p)
 {
   struct remote_state *rs = get_remote_state ();
   struct packet_config *noack_config;
-  char *wait_status = NULL;
 
   /* Signal other parts that we're going through the initial setup,
      and so things may not be stable yet.  E.g., we don't try to
@@ -4777,6 +4775,8 @@ remote_target::start_remote (int from_tty, int extended_p)
 
   if (!target_is_non_stop_p ())
     {
+      char *wait_status = NULL;
+
       if (rs->buf[0] == 'W' || rs->buf[0] == 'X')
 	{
 	  if (!extended_p)
@@ -4903,10 +4903,6 @@ remote_target::start_remote (int from_tty, int extended_p)
 	  rs->starting_up = 0;
 	  return;
 	}
-
-      /* In non-stop mode, any cached wait status will be stored in
-	 the stop reply queue.  */
-      gdb_assert (wait_status == NULL);
 
       /* Report all signals during attach/startup.  */
       pass_signals ({});
@@ -11973,8 +11969,8 @@ remote_buffer_add_int (char **buffer, int *left, ULONGEST value)
    -1 is returned, the other variables may not be initialized.  */
 
 static int
-remote_hostio_parse_result (char *buffer, int *retcode,
-			    int *remote_errno, char **attachment)
+remote_hostio_parse_result (const char *buffer, int *retcode,
+			    int *remote_errno, const char **attachment)
 {
   char *p, *p2;
 
@@ -12030,12 +12026,12 @@ remote_hostio_parse_result (char *buffer, int *retcode,
 
 int
 remote_target::remote_hostio_send_command (int command_bytes, int which_packet,
-					   int *remote_errno, char **attachment,
+					   int *remote_errno, const char **attachment,
 					   int *attachment_len)
 {
   struct remote_state *rs = get_remote_state ();
   int ret, bytes_read;
-  char *attachment_tmp;
+  const char *attachment_tmp;
 
   if (packet_support (which_packet) == PACKET_DISABLE)
     {
@@ -12246,7 +12242,7 @@ remote_target::remote_hostio_pread_vFile (int fd, gdb_byte *read_buf, int len,
 {
   struct remote_state *rs = get_remote_state ();
   char *p = rs->buf.data ();
-  char *attachment;
+  const char *attachment;
   int left = get_remote_packet_size ();
   int ret, attachment_len;
   int read_len;
@@ -12410,7 +12406,7 @@ remote_target::fileio_readlink (struct inferior *inf, const char *filename,
 {
   struct remote_state *rs = get_remote_state ();
   char *p = rs->buf.data ();
-  char *attachment;
+  const char *attachment;
   int left = get_remote_packet_size ();
   int len, attachment_len;
   int read_len;
@@ -12449,7 +12445,7 @@ remote_target::fileio_fstat (int fd, struct stat *st, int *remote_errno)
   char *p = rs->buf.data ();
   int left = get_remote_packet_size ();
   int attachment_len, ret;
-  char *attachment;
+  const char *attachment;
   struct fio_stat fst;
   int read_len;
 
