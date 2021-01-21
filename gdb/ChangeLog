@@ -1,3 +1,200 @@
+2021-01-20  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb_bfd.c (debug_bfd_cache): Change type to bool.
+	(_initialize_gdb_bfd): Adjust.
+
+2021-01-20  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26828
+	* dwarf2/read.c (maybe_queue_comp_unit): Add assertion.
+
+2021-01-20  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* dwarf2/read.c (follow_die_offset): Add logging.
+	(dwarf2_per_objfile::age_comp_units): Add logging.
+
+2021-01-20  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* aarch64-linux-tdep.c (aarch64_linux_record_tdep): Make static.
+	* aarch64-tdep.c (tdesc_aarch64_list, aarch64_prologue_unwind,
+	aarch64_stub_unwind, aarch64_normal_base, ): Make static.
+	* arm-linux-tdep.c (arm_prologue_unwind): Make static.
+	* arm-tdep.c (struct frame_unwind): Make static.
+	* auto-load.c (auto_load_safe_path_vec): Make static.
+	* csky-tdep.c (csky_stub_unwind): Make static.
+	* gdbarch.c (gdbarch_data_registry): Make static.
+	* gnu-v2-abi.c (gnu_v2_abi_ops): Make static.
+	* i386-netbsd-tdep.c (i386nbsd_mc_reg_offset): Make static.
+	* i386-tdep.c (i386_frame_setup_skip_insns,
+	i386_tramp_chain_in_reg_insns, i386_tramp_chain_on_stack_insns):
+	Make static.
+	* infrun.c (observer_mode): Make static.
+	* linux-nat.c (sigchld_action): Make static.
+	* linux-thread-db.c (thread_db_list): Make static.
+	* maint-test-options.c (maintenance_test_options_list):
+	* mep-tdep.c (mep_csr_registers): Make static.
+	* mi/mi-cmds.c (struct mi_cmd_stats): Remove struct type name.
+	(stats): Make static.
+	* nat/linux-osdata.c (struct osdata_type): Make static.
+	* ppc-netbsd-tdep.c (ppcnbsd_reg_offsets): Make static.
+	* progspace.c (last_program_space_num): Make static.
+	* python/py-param.c (struct parm_constant): Remove struct type
+	name.
+	(parm_constants): Make static.
+	* python/py-record-btrace.c (btpy_list_methods): Make static.
+	* python/py-record.c (recpy_gap_type): Make static.
+	* record.c (record_goto_cmdlist): Make static.
+	* regcache.c (regcache_descr_handle): Make static.
+	* registry.h (DEFINE_REGISTRY): Make definition static.
+	* symmisc.c (std_in, std_out, std_err): Make static.
+	* top.c (previous_saved_command_line): Make static.
+	* tracepoint.c (trace_user, trace_notes, trace_stop_notes): Make
+	static.
+	* unittests/command-def-selftests.c (nr_duplicates,
+	nr_invalid_prefixcmd, lists): Make static.
+	* unittests/observable-selftests.c (test_notification): Make
+	static.
+	* unittests/optional/assignment/1.cc (counter): Make static.
+	* unittests/optional/assignment/2.cc (counter): Make static.
+	* unittests/optional/assignment/3.cc (counter): Make static.
+	* unittests/optional/assignment/4.cc (counter): Make static.
+	* unittests/optional/assignment/5.cc (counter): Make static.
+	* unittests/optional/assignment/6.cc (counter): Make static.
+
+2021-01-20  Joel Sherrill  <joel@rtems.org>
+
+	PR gdb/27219
+	* remote.c (struct remote_thread_info) <resume_state>: Rename
+	to...
+	<get_resume_state>: ... this.
+	(remote_target::resume): Adjust.
+	(remote_target::commit_resume): Adjust.
+	(remote_target::select_thread_for_ambiguous_stop_reply): Adjust.
+
+2021-01-20  Sergio Durigan Junior  <sergiodj@sergiodj.net>
+	    Tom Tromey <tom@tromey.com>
+
+	* stap-probe.c (stap_parse_single_operand): Handle '!'
+	operator.
+	(stap_parse_argument_conditionally): Likewise.
+	Skip spaces after processing open-parenthesis sub-expression.
+	(stap_parse_argument_1): Skip spaces after call to
+	stap_parse_argument_conditionally.
+	Handle case when right-side expression is a parenthesized
+	sub-expression.
+	Skip spaces after call to stap_parse_argument_1.
+
+2021-01-19  Lancelot SIX  <lsix@lancelotsix.com>
+
+	* top.h (switch_thru_all_uis): Use DISABLE_COPY_AND_ASSIGN.
+
+2021-01-19  Luis Machado  <luis.machado@linaro.org>
+
+	* trad-frame.h (trad_frame_saved_reg) <set_value_bytes>: Allocate
+	memory and save data.
+	(trad_frame_set_value, trad_frame_set_realreg, trad_frame_set_addr)
+	(trad_frame_set_unknown, trad_frame_set_value_bytes)
+	(trad_frame_value_p, trad_frame_addr_p, trad_frame_realreg_p)
+	(trad_frame_value_bytes_p): Remove.
+	(trad_frame_reset_saved_regs): Adjust documentation.
+	* trad-frame.c (trad_frame_alloc_saved_regs): Initialize via a
+	constructor and reset the state of the registers.
+	(trad_frame_value_p, trad_frame_addr_p, trad_frame_realreg_p)
+	(trad_frame_value_bytes_p, trad_frame_set_value)
+	(trad_frame_set_realreg, trad_frame_set_addr)
+	(trad_frame_set_unknown, trad_frame_set_value_bytes): Remove.
+	(trad_frame_set_reg_realreg): Update to call member function.
+	(trad_frame_set_reg_addr, trad_frame_set_reg_value_bytes): Likewise.
+	(trad_frame_get_prev_register): Likewise.
+
+	* aarch64-tdep.c (aarch64_analyze_prologue)
+	(aarch64_analyze_prologue_test, aarch64_make_prologue_cache_1)
+	(aarch64_prologue_prev_register): Update to use member functions.
+	* alpha-mdebug-tdep.c (alpha_mdebug_frame_unwind_cache): Likewise.
+	* alpha-tdep.c (alpha_heuristic_frame_unwind_cache): Likewise.
+	* arc-tdep.c (arc_print_frame_cache, arc_make_frame_cache): Likewise.
+	* arm-tdep.c (arm_make_prologue_cache, arm_exidx_fill_cache)
+	(arm_make_epilogue_frame_cache): Likewise.
+	* avr-tdep.c (avr_frame_unwind_cache)
+	(avr_frame_prev_register): Likewise.
+	* cris-tdep.c (cris_scan_prologue): Likewise.
+	* csky-tdep.c (csky_frame_unwind_cache): Likewise.
+	* frv-tdep.c (frv_analyze_prologue): Likewise.
+	* hppa-tdep.c (hppa_frame_cache, hppa_fallback_frame_cache): Likewise.
+	* lm32-tdep.c (lm32_frame_cache): Likewise.
+	* m32r-tdep.c (m32r_frame_unwind_cache): Likewise.
+	* m68hc11-tdep.c (m68hc11_frame_unwind_cache): Likewise.
+	* mips-tdep.c (set_reg_offset, mips_insn16_frame_cache)
+	(mips_micro_frame_cache, mips_insn32_frame_cache): Likewise.
+	(reset_saved_regs): Adjust to set realreg.
+	* riscv-tdep.c (riscv_scan_prologue, riscv_frame_cache): Adjust to
+	call member functions.
+	* rs6000-tdep.c (rs6000_frame_cache, rs6000_epilogue_frame_cache)
+	* s390-tdep.c (s390_prologue_frame_unwind_cache)
+	(s390_backchain_frame_unwind_cache): Likewise.
+	* score-tdep.c (score7_analyze_prologue)
+	(score3_analyze_prologue, score_make_prologue_cache): Likewise.
+	* sparc-netbsd-tdep.c (sparc32nbsd_sigcontext_saved_regs): Likewise.
+	* sparc-sol2-tdep.c (sparc32_sol2_sigtramp_frame_cache): Likewise.
+	* sparc64-netbsd-tdep.c (sparc64nbsd_sigcontext_saved_regs): Likewise.
+	* sparc64-sol2-tdep.c (sparc64_sol2_sigtramp_frame_cache): Likewise.
+	* tilegx-tdep.c (tilegx_analyze_prologue)
+	(tilegx_frame_cache): Likewise.
+	* v850-tdep.c (v850_frame_cache): Likewise.
+	* vax-tdep.c (vax_frame_cache): Likewise.
+
+2021-01-19  Luis Machado  <luis.machado@linaro.org>
+
+	* frame.h (get_frame_register_bytes): Pass a gdb::array_view instead
+	of buffer + length.
+	(put_frame_register_bytes): Likewise.
+	Adjust documentation.
+	(get_frame_memory): Pass a gdb::array_view instead of buffer + length.
+	(safe_frame_unwind_memory): Likewise.
+	* frame.c (get_frame_register_bytes, put_frame_register_bytes)
+	(get_frame_memory, safe_frame_unwind_memory): Adjust to use
+	gdb::array_view.
+	* amd64-fbsd-tdep.c (amd64fbsd_sigtramp_p): Likewise.
+	* amd64-linux-tdep.c (amd64_linux_sigtramp_start): Likewise.
+	* amd64-obsd-tdep.c (amd64obsd_sigtramp_p): Likewise.
+	* arc-linux-tdep.c (arc_linux_is_sigtramp): Likewise.
+	* cris-tdep.c (cris_sigtramp_start, cris_rt_sigtramp_start): Likewise.
+	* dwarf2/loc.c (rw_pieced_value): Likewise.
+	* hppa-tdep.c (hppa_frame_cache): Likewise.
+	* i386-fbsd-tdep.c (i386fbsd_sigtramp_p): Likewise.
+	* i386-gnu-tdep.c (i386_gnu_sigtramp_start): Likewise.
+	* i386-linux-tdep.c (i386_linux_sigtramp_start)
+	(i386_linux_rt_sigtramp_start): Likewise.
+	* i386-obsd-tdep.c (i386obsd_sigtramp_p): Likewise.
+	* i386-tdep.c (i386_register_to_value): Likewise.
+	* i387-tdep.c (i387_register_to_value): Likewise.
+	* ia64-tdep.c (ia64_register_to_value): Likewise.
+	* m32r-linux-tdep.c (m32r_linux_sigtramp_start)
+	(m32r_linux_rt_sigtramp_start): Likewise.
+	* m68k-linux-tdep.c (m68k_linux_pc_in_sigtramp): Likewise.
+	* m68k-tdep.c (m68k_register_to_value): Likewise.
+	* mips-tdep.c (mips_register_to_value)
+	(mips_value_to_register): Likewise.
+	* ppc-fbsd-tdep.c (ppcfbsd_sigtramp_frame_sniffer)
+	(ppcfbsd_sigtramp_frame_cache): Likewise.
+	* ppc-obsd-tdep.c (ppcobsd_sigtramp_frame_sniffer)
+	(ppcobsd_sigtramp_frame_cache): Likewise.
+	* rs6000-tdep.c (rs6000_in_function_epilogue_frame_p)
+	(rs6000_register_to_value): Likewise.
+	* tilegx-tdep.c (tilegx_analyze_prologue): Likewise.
+	* tramp-frame.c (tramp_frame_start): Likewise.
+	* valops.c (value_assign): Likewise.
+
+2021-01-19  Luis Machado  <luis.machado@linaro.org>
+
+	* aarch64-linux-tdep.c (aarch64_linux_restore_vreg): Pass in an
+	array_view.
+	* trad-frame.c (trad_frame_set_value_bytes): Use gdb::array_view
+	instead of buffer and size.
+	(trad_frame_set_reg_value_bytes): Likewise.
+	* trad-frame.h (trad_frame_set_reg_value_bytes): Likewise.
+	(trad_frame_set_value_bytes): Likewise.
+
 2021-01-18  Mike Frysinger  <vapier@gentoo.org>
 
 	* copyright.py (NOT_FSF_LIST): Delete sim/testsuite/sim/bfin/s21.s.

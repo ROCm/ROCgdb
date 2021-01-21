@@ -1,3 +1,34 @@
+2021-01-20  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* lib/tuiterm.exp: Rename _cur_x/_cur_y to _cur_col/_cur_row.
+
+2021-01-20  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* lib/tuiterm.exp: Add links in comments.
+
+2021-01-20  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.python/py-format-string.exp: Allow Deriv+$decimal as vtable
+	offset.
+
+2021-01-20  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (skip_rust_tests): Skip if multilib_flags contains -m32.
+
+2021-01-20  Sergio Durigan Junior  <sergiodj@sergiodj.net>
+
+	* gdb.arch/amd64-stap-expressions.S: New file.
+	* gdb.arch/amd64-stap-expressions.exp: New file.
+
+2021-01-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/step-over-syscall.exp: Detect and handle sysenter/int
+	sequence.
+
+2021-01-19  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.arch/i386-mpx.c (main): Drop argc/argv parameter.
+
 2021-01-18  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.fortran/array-slices.exp (run_test): Avoid including

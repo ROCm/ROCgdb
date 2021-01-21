@@ -1227,7 +1227,7 @@ value_assign (struct value *toval, struct value *fromval)
 
 	if (bitpos || bitsize)
 	  {
-	    int changed_len;
+	    size_t changed_len;
 	    bool big_endian = type_byte_order (type) == BFD_ENDIAN_BIG;
 
 	    if (bitsize)
@@ -1252,7 +1252,7 @@ value_assign (struct value *toval, struct value *fromval)
 	    int optim, unavail;
 
 	    if (!get_frame_register_bytes (frame, value_reg, offset,
-					   changed_len, buffer.data (),
+					   {buffer.data (), changed_len},
 					   &optim, &unavail))
 	      {
 		if (optim)
@@ -1267,7 +1267,7 @@ value_assign (struct value *toval, struct value *fromval)
 			  0, bitsize, big_endian);
 
 	    put_frame_register_bytes (frame, value_reg, offset,
-				      changed_len, buffer.data ());
+				      {buffer.data (), changed_len});
 	  }
 	else
 	  {
@@ -1283,9 +1283,9 @@ value_assign (struct value *toval, struct value *fromval)
 	      }
 	    else
 	      {
-		put_frame_register_bytes (frame, value_reg,
-					  offset, TYPE_LENGTH (type),
-					  value_contents (fromval));
+		put_frame_register_bytes (frame, value_reg, offset,
+					  {value_contents (fromval),
+					   TYPE_LENGTH (type)});
 	      }
 	  }
 
