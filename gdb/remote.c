@@ -1100,7 +1100,7 @@ struct remote_thread_info : public private_thread_info
   CORE_ADDR watch_data_address = 0;
 
   /* Get the thread's resume state.  */
-  enum resume_state resume_state () const
+  enum resume_state get_resume_state () const
   {
     return m_resume_state;
   }
@@ -6407,7 +6407,7 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
 
       /* We don't expect the core to ask to resume an already resumed (from
          its point of view) thread.  */
-      gdb_assert (remote_thr->resume_state () == resume_state::NOT_RESUMED);
+      gdb_assert (remote_thr->get_resume_state () == resume_state::NOT_RESUMED);
 
       remote_thr->set_resumed_pending_vcont (step, siggnal);
       return;
@@ -6659,7 +6659,7 @@ remote_target::commit_resume ()
 
       /* If a thread of a process is not meant to be resumed, then we
 	 can't wildcard that process.  */
-      if (priv->resume_state () == resume_state::NOT_RESUMED)
+      if (priv->get_resume_state () == resume_state::NOT_RESUMED)
 	{
 	  get_remote_inferior (tp->inf)->may_wildcard_vcont = false;
 
@@ -6691,7 +6691,7 @@ remote_target::commit_resume ()
       /* If the thread was previously vCont-resumed, no need to send a specific
 	 action for it.  If we didn't receive a resume request for it, don't
 	 send an action for it either.  */
-      if (remote_thr->resume_state () != resume_state::RESUMED_PENDING_VCONT)
+      if (remote_thr->get_resume_state () != resume_state::RESUMED_PENDING_VCONT)
 	continue;
 
       gdb_assert (!thread_is_in_step_over_chain (tp));
