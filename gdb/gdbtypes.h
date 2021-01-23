@@ -220,14 +220,6 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 
 #define TYPE_NOTTEXT(t)	(((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_NOTTEXT)
 
-/* * Type owner.  If TYPE_OBJFILE_OWNED is true, the type is owned by
-   the objfile retrieved as TYPE_OBJFILE.  Otherwise, the type is
-   owned by an architecture; TYPE_OBJFILE is NULL in this case.  */
-
-#define TYPE_OBJFILE_OWNED(t) (TYPE_MAIN_TYPE (t)->flag_objfile_owned)
-#define TYPE_OWNER(t) TYPE_MAIN_TYPE(t)->owner
-#define TYPE_OBJFILE(t) (TYPE_OBJFILE_OWNED(t)? TYPE_OWNER(t).objfile : NULL)
-
 /* * True if this type was declared using the "class" keyword.  This is
    only valid for C++ structure and enum types.  If false, a structure
    was declared as a "struct"; if true it was declared "class".  For
@@ -817,7 +809,7 @@ struct main_type
   unsigned int m_flag_stub_supported : 1;
   unsigned int m_flag_gnu_ifunc : 1;
   unsigned int m_flag_fixed_instance : 1;
-  unsigned int flag_objfile_owned : 1;
+  unsigned int m_flag_objfile_owned : 1;
   unsigned int m_flag_endianity_not_default : 1;
 
   /* * True if this type was declared with "class" rather than
@@ -860,7 +852,7 @@ struct main_type
      this is somewhat ugly, but without major overhaul of the internal
      type system, it can't be avoided for now.  */
 
-  union type_owner owner;
+  union type_owner m_owner;
 
   /* * For a pointer type, describes the type of object pointed to.
      - For an array type, describes the type of the elements.
@@ -1242,6 +1234,49 @@ struct type
 
   /* * Remove dynamic property of kind KIND from this type, if it exists.  */
   void remove_dyn_prop (dynamic_prop_node_kind kind);
+
+  /* Return true if this type is owned by an objfile.  Return false if it is
+     owned by an architecture.  */
+  bool is_objfile_owned () const
+  {
+    return this->main_type->m_flag_objfile_owned;
+  }
+
+  /* Set the owner of the type to be OBJFILE.  */
+  void set_owner (objfile *objfile)
+  {
+    this->main_type->m_owner.objfile = objfile;
+    this->main_type->m_flag_objfile_owned = true;
+  }
+
+  /* Set the owner of the type to be ARCH.  */
+  void set_owner (gdbarch *arch)
+  {
+    this->main_type->m_owner.gdbarch = arch;
+    this->main_type->m_flag_objfile_owned = false;
+  }
+
+  /* Return the objfile owner of this type.
+
+     Return nullptr if this type is not objfile-owned.  */
+  struct objfile *objfile () const
+  {
+    if (!this->is_objfile_owned ())
+      return nullptr;
+
+    return this->main_type->m_owner.objfile;
+  }
+
+  /* Return the gdbarch owner of this type.
+
+     Return nullptr if this type is not gdbarch-owned.  */
+  gdbarch *arch () const
+  {
+    if (this->is_objfile_owned ())
+      return nullptr;
+
+    return this->main_type->m_owner.gdbarch;
+  }
 
   /* * Return true if this is an integer type whose logical (bit) size
      differs from its storage size; false otherwise.  Always return
@@ -2200,9 +2235,9 @@ extern const struct floatformat *floatformats_bfloat16[BFD_ENDIAN_UNKNOWN];
    when it is no longer needed.  */
 
 #define TYPE_ALLOC(t,size)                                              \
-  (obstack_alloc ((TYPE_OBJFILE_OWNED (t)                               \
-		   ? &TYPE_OBJFILE (t)->objfile_obstack                 \
-		   : gdbarch_obstack (TYPE_OWNER (t).gdbarch)),         \
+  (obstack_alloc (((t)->is_objfile_owned ()                             \
+		   ? &((t)->objfile ()->objfile_obstack)                \
+		   : gdbarch_obstack ((t)->arch ())),                   \
 		  size))
 
 

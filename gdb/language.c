@@ -1036,8 +1036,8 @@ language_arch_info::type_and_symbol::alloc_type_symbol
 {
   struct symbol *symbol;
   struct gdbarch *gdbarch;
-  gdb_assert (!TYPE_OBJFILE_OWNED (type));
-  gdbarch = TYPE_OWNER (type).gdbarch;
+  gdb_assert (!type->is_objfile_owned ());
+  gdbarch = type->arch ();
   symbol = new (gdbarch_obstack (gdbarch)) struct symbol ();
   symbol->m_name = type->name ();
   symbol->set_language (lang, nullptr);

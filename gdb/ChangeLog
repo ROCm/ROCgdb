@@ -1,3 +1,135 @@
+2021-01-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR cli/25956
+	* NEWS: Mention new command.
+	* cli/cli-style.c: Add 'cli/cli-setshow.h' include.
+	(version_style): Define.
+	(cli_style_option::cli_style_option): Add intensity parameter, and
+	use as appropriate.
+	(_initialize_cli_style): Register version style set/show commands.
+	* cli/cli-style.h (cli_style_option): Add intensity parameter.
+	(version_style): Declare.
+	* top.c (print_gdb_version): Use version_stype, and styled_string
+	to print the GDB version string.
+
+2021-01-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* utils.c (emit_style_escape): Only emit an escape sequence if the
+	requested style is different than the current applied style.
+	(fputs_maybe_filtered): Adjust the juggling of the wrap_style, and
+	current applied_style.
+	(fputs_styled): Remove is_default check.
+	(fputs_styled_unfiltered): Likewise.
+	(vfprintf_styled_no_gdbfmt): Likewise.
+
+2021-01-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* remote.h (remote_debug_printf): New.
+	(remote_debug_printf_nofunc): New.
+	(REMOTE_SCOPED_DEBUG_ENTER_EXIT): New.
+	* remote.c: Use above macros throughout file.
+
+2021-01-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* remote.h (remote_debug): Change to bool.
+	* remote.c (remote_debug): Change to bool.
+	(_initialize_remote): Adjust.
+
+2021-01-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target.h (remote_debug): Move to...
+	* remote.h (remote_debug): ... here.
+	* top.c (remote_debug): Move to...
+	* remote.c (remote_debug): ... here.
+	* remote-sim.c: Include remote.h.
+
+2021-01-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-cmds.c (show_remote_debug): Remove.
+	(show_remote_timeout): Remove.
+	(_initialize_cli_cmds): Don't register commands.
+	* remote.c (show_remote_debug): Move here.
+	(show_remote_timeout): Move here.
+	(_initialize_remote): Register commands.
+
+2021-01-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (TYPE_OBJFILE): Remove, change all users to use the
+	type::objfile method instead.
+
+2021-01-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.h (TYPE_OBJFILE_OWNED): Remove, update all users to
+	use the type::is_objfile_owned method.
+
+2021-01-22  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_OBJFILE_OWNED): Adjust.
+	(TYPE_OWNER): Remove.
+	(TYPE_OBJFILE): Adjust.
+	(struct main_type) <flag_objfile_owned>: Rename to...
+	<m_flag_objfile_owned>: ... this.
+	<owner>: Rename to...
+	<m_owner>: ... this.
+	(struct type) <is_objfile_owned, set_owner, objfile, arch>: New
+	methods.
+	(TYPE_ALLOC): Adjust.
+	* gdbtypes.c (alloc_type): Adjust.
+	(alloc_type_arch): Adjust.
+	(alloc_type_copy): Adjust.
+	(get_type_arch): Adjust.
+	(smash_type): Adjust.
+	(lookup_array_range_type): Adjust.
+	(recursive_dump_type): Adjust.
+	(copy_type_recursive): Adjust.
+	* compile/compile-c-types.c (convert_func): Adjust.
+	(convert_type_basic): Adjust.
+	* compile/compile-cplus-types.c (compile_cplus_convert_func):
+	Adjust.
+	* language.c
+	(language_arch_info::type_and_symbol::alloc_type_symbol):
+	Adjust.
+
+2021-01-21  Luis Machado  <luis.machado@linaro.org>
+
+	* coffread.c (enter_linenos): Passing string to complaint.
+	* valops.c (value_assign): Make array view.
+
+2021-01-21  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* auto-load.h (debug_auto_load): Move here.
+	(auto_load_debug_printf): New.
+	* auto-load.c: Use auto_load_debug_printf.
+	(debug_auto_load): Move to header.
+	* linux-thread-db.c (try_thread_db_load): Use
+	auto_load_debug_printf.
+	* main.c (captured_main_1): Likewise.
+
+2021-01-21  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* f-valprint.c (f77_array_offset_tbl): Remove.
+
+2021-01-21  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb_bfd.c (bfd_cache_debug_printf): New, use throughout file.
+
+2021-01-21  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* ser-tcp.c (wait_for_connect): Use interruptible_select instead
+	of gdb_select.
+
+2021-01-21  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR python/19151
+	* python/py-breakpoint.c (bppy_get_location): Handle
+	bp_hardware_breakpoint.
+	(bppy_init): Likewise.
+	(gdbpy_breakpoint_created): Likewise.
+
+2021-01-21  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* arm-tdep.c (arm_debug_printf): Add and use throughout file.
+
 2021-01-20  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* gdb_bfd.c (debug_bfd_cache): Change type to bool.

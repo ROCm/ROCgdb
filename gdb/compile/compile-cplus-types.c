@@ -970,10 +970,10 @@ compile_cplus_convert_func (compile_cplus_instance *instance,
      GDB's parser used to do.  */
   if (target_type == nullptr)
     {
-      if (TYPE_OBJFILE_OWNED (type))
-	target_type = objfile_type (TYPE_OWNER (type).objfile)->builtin_int;
+      if (type->is_objfile_owned ())
+	target_type = objfile_type (type->objfile ())->builtin_int;
       else
-	target_type = builtin_type (TYPE_OWNER (type).gdbarch)->builtin_int;
+	target_type = builtin_type (type->arch ())->builtin_int;
       warning (_("function has unknown return type; assuming int"));
     }
 
