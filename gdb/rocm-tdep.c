@@ -105,8 +105,8 @@ struct rocm_inferior_info
     watchpoint_map;
 
   /* List of pending events the rocm target retrieved from the dbgapi.  */
-  std::list<std::pair<amd_dbgapi_wave_id_t, amd_dbgapi_wave_stop_reason_t>>
-    wave_stop_events;
+  std::list<std::pair<amd_dbgapi_event_id_t, amd_dbgapi_event_kind_t>>
+    wave_events;
 
   /* Map of rocm_notify_shared_library_info's for libraries that have been
      registered to receive notifications when loading/unloading.  */
@@ -243,8 +243,9 @@ target_id_string (amd_dbgapi_wave_id_t wave_id)
 	   wave_id, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
 	   sizeof (wave_in_group), &wave_in_group)
 	   != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_wave_get_info for wave_%ld failed "),
-	   wave_id.handle);
+    /* The wave could have exited, so return a simple string to indicate this
+       is a GPU thread.  */
+    return "AMDGPU Thread";
 
   return string_printf ("AMDGPU Thread %ld:%ld:%ld:%ld (%d,%d,%d)/%d",
 			agent_id.handle, queue_id.handle, dispatch_id.handle,
@@ -856,10 +857,10 @@ handle_target_event (int error, gdb_client_data client_data)
   /* In all-stop mode, unless the event queue is empty (spurious wake-up),
      we can keep the process in progress_no_forward mode.  The infrun loop
      will enable forward progress when a thread is resumed.  */
-  if (non_stop || info->wave_stop_events.empty ())
+  if (non_stop || info->wave_events.empty ())
     amd_dbgapi_process_set_progress (process_id, AMD_DBGAPI_PROGRESS_NORMAL);
 
-  if (!info->wave_stop_events.empty ())
+  if (!info->wave_events.empty ())
     inferior_event_handler (INF_REG_EVENT);
 }
 
@@ -909,35 +910,10 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 
   switch (event_kind)
     {
+    case AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED:
     case AMD_DBGAPI_EVENT_KIND_WAVE_STOP:
-      {
-	amd_dbgapi_wave_id_t wave_id;
-	if ((status
-	     = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_WAVE,
-					  sizeof (wave_id), &wave_id))
-	    != AMD_DBGAPI_STATUS_SUCCESS)
-	  error (_ ("event_get_info for event_%ld failed (rc=%d)"),
-		 event_id.handle, status);
-
-	amd_dbgapi_wave_stop_reason_t stop_reason;
-	status = amd_dbgapi_wave_get_info (wave_id,
-					   AMD_DBGAPI_WAVE_INFO_STOP_REASON,
-					   sizeof (stop_reason), &stop_reason);
-
-	if (status != AMD_DBGAPI_STATUS_SUCCESS
-	    && status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-	  error (_ ("wave_get_info for wave_%ld failed (rc=%d)"),
-		 wave_id.handle, status);
-
-	/* The wave may have exited, or the queue went into an error
-	   state.  In such cases, we will see another wave command
-	   terminated event, and handle the wave termination then.  */
-
-	if (status == AMD_DBGAPI_STATUS_SUCCESS)
-	  info->wave_stop_events.emplace_back (
-	    std::make_pair (wave_id, stop_reason));
-      }
-      break;
+      info->wave_events.emplace_back (event_id, event_kind);
+      return;
 
     case AMD_DBGAPI_EVENT_KIND_CODE_OBJECT_LIST_UPDATED:
       amd_dbgapi_code_object_list_updated.notify ();
@@ -1039,7 +1015,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   amd_dbgapi_process_id_t process_id = info->process_id;
 
   /* Drain all the events from the amd_dbgapi, and preserve the ordering.  */
-  if (info->wave_stop_events.empty ())
+  if (info->wave_events.empty ())
     {
       amd_dbgapi_process_set_progress (process_id,
 				       AMD_DBGAPI_PROGRESS_NO_FORWARD);
@@ -1053,23 +1029,50 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
       /* In all-stop mode, unless the event queue is empty (spurious wake-up),
 	 we can keep the process in progress_no_forward mode.  The infrun loop
 	 will enable forward progress when a thread is resumed.  */
-      if (non_stop || info->wave_stop_events.empty ())
+      if (non_stop || info->wave_events.empty ())
 	amd_dbgapi_process_set_progress (process_id,
 					 AMD_DBGAPI_PROGRESS_NORMAL);
     }
 
-  if (info->wave_stop_events.empty ())
+  if (info->wave_events.empty ())
     /* There are no GPU events, return the host's wait kind.  */
     return minus_one_ptid;
 
-  amd_dbgapi_wave_id_t event_wave_id;
-  amd_dbgapi_wave_stop_reason_t stop_reason;
+  amd_dbgapi_event_id_t event_id;
+  amd_dbgapi_event_kind_t event_kind;
+  std::tie (event_id, event_kind) = info->wave_events.front ();
+  info->wave_events.pop_front ();
 
-  std::tie (event_wave_id, stop_reason) = info->wave_stop_events.front ();
-  info->wave_stop_events.pop_front ();
+  gdb_assert ((event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED
+	       || event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_STOP)
+	      && "Unsupported event_kind");
+
+  amd_dbgapi_wave_id_t event_wave_id;
+  amd_dbgapi_status_t status
+    = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_WAVE,
+				 sizeof (event_wave_id), &event_wave_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("event_get_info for event_%ld failed (rc=%d)"), event_id.handle,
+	   status);
+
+  amd_dbgapi_event_processed (event_id);
 
   struct inferior *inf = current_inferior ();
   event_ptid = ptid_t (inf->pid, 1, event_wave_id.handle);
+
+  if (event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED)
+    {
+      ws->kind = TARGET_WAITKIND_THREAD_EXITED;
+      return event_ptid;
+    }
+
+  amd_dbgapi_wave_stop_reason_t stop_reason;
+  status = amd_dbgapi_wave_get_info (event_wave_id,
+				     AMD_DBGAPI_WAVE_INFO_STOP_REASON,
+				     sizeof (stop_reason), &stop_reason);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("wave_get_info for wave_%ld failed (rc=%d)"),
+	   event_wave_id.handle, status);
 
   if (!find_thread_ptid (inf->process_target (), event_ptid))
     {
@@ -1118,7 +1121,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 
   /* If there are more events in the list, mark the async file so that
      rocm_target_ops::wait gets called again.  */
-  if (target_is_async_p () && !info->wave_stop_events.empty ())
+  if (target_is_async_p () && !info->wave_events.empty ())
     async_file_mark ();
 
   return event_ptid;
@@ -1564,7 +1567,7 @@ rocm_target_inferior_created (struct target_ops *target, int from_tty)
   if (!target_is_pushed (&rocm_ops))
     push_target (&rocm_ops);
 
-  gdb_assert (info->wave_stop_events.empty ());
+  gdb_assert (info->wave_events.empty ());
 
   status = amd_dbgapi_process_attach (
     reinterpret_cast<amd_dbgapi_client_process_id_t> (inf), &info->process_id);
