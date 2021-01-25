@@ -2173,7 +2173,7 @@ do_target_resume (ptid_t resume_ptid, bool step, enum gdb_signal sig)
 
   target_resume (resume_ptid, step, sig);
 
-  target_commit_resume ();
+  maybe_commit_resume_process_target (tp->inf->process_target ());
 
   if (target_can_async_p ())
     target_async (1);
@@ -2761,28 +2761,17 @@ schedlock_applies (struct thread_info *tp)
 					    execution_direction)));
 }
 
-/* Calls target_commit_resume on all targets.  */
+/* Calls maybe_commit_resume_process_target on all process targets.  */
 
 static void
-commit_resume_all_targets ()
+maybe_commit_resume_all_process_targets ()
 {
   scoped_restore_current_thread restore_thread;
 
-  /* Map between process_target and a representative inferior.  This
-     is to avoid committing a resume in the same target more than
-     once.  Resumptions must be idempotent, so this is an
-     optimization.  */
-  std::unordered_map<process_stratum_target *, inferior *> conn_inf;
-
-  for (inferior *inf : all_non_exited_inferiors ())
-    if (inf->has_execution ())
-      conn_inf[inf->process_target ()] = inf;
-
-  for (const auto &ci : conn_inf)
+  for (process_stratum_target *target : all_non_exited_process_targets ())
     {
-      inferior *inf = ci.second;
-      switch_to_inferior_no_thread (inf);
-      target_commit_resume ();
+      switch_to_target_no_thread (target);
+      maybe_commit_resume_process_target (target);
     }
 }
 
@@ -3004,7 +2993,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   cur_thr->prev_pc = regcache_read_pc_protected (regcache);
 
   {
-    scoped_restore save_defer_tc = make_scoped_defer_target_commit_resume ();
+    scoped_restore save_defer_tc
+      = make_scoped_defer_process_target_commit_resume ();
 
     started = start_step_over ();
 
@@ -3071,7 +3061,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       }
   }
 
-  commit_resume_all_targets ();
+  maybe_commit_resume_all_process_targets ();
 
   finish_state.release ();
 
@@ -5703,10 +5693,10 @@ finish_step_over (struct execution_control_state *ecs)
 
       {
         scoped_restore save_defer_tc
-          = make_scoped_defer_target_commit_resume ();
+          = make_scoped_defer_process_target_commit_resume ();
         restart_threads (ecs->event_thread);
       }
-      target_commit_resume ();
+      maybe_commit_resume_all_process_targets ();
 
       /* If we have events pending, go through handle_inferior_event
 	 again, picking up a pending event at random.  This avoids

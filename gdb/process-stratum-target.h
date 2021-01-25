@@ -63,6 +63,20 @@ public:
   bool has_registers () override;
   bool has_execution (inferior *inf) override;
 
+  /* Commit a series of resumption requests previously prepared with
+     resume calls.
+
+     GDB always calls `commit_resume` on the process stratum target after
+     calling `resume` on a target stack.  A process stratum target may thus use
+     this method in coordination with its `resume` method to batch resumption
+     requests.  In that case, the target doesn't actually resume in its
+     `resume` implementation.  Instead, it takes note of resumption intent in
+     `resume`, and defers the actual resumption `commit_resume`.
+
+     E.g., the remote target uses this to coalesce multiple resumption requests
+     in a single vCont packet.  */
+  virtual void commit_resume () {}
+
   /* True if any thread is, or may be executing.  We need to track
      this separately because until we fully sync the thread list, we
      won't know whether the target is fully stopped, even if we see
@@ -91,5 +105,20 @@ extern std::set<process_stratum_target *> all_non_exited_process_targets ();
    switch to no thread selected.  */
 
 extern void switch_to_target_no_thread (process_stratum_target *target);
+
+/* Commit a series of resumption requests previously prepared with
+   target_resume calls.
+
+   This function is a no-op if commit resumes are deferred (see
+   `make_scoped_defer_process_target_commit_resume`).  */
+
+extern void maybe_commit_resume_process_target
+  (process_stratum_target *target);
+
+/* Setup to defer `commit_resume` calls, and re-set to the previous status on
+   destruction.  */
+
+extern scoped_restore_tmpl<bool>
+  make_scoped_defer_process_target_commit_resume ();
 
 #endif /* !defined (PROCESS_STRATUM_TARGET_H) */

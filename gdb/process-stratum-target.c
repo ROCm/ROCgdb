@@ -108,3 +108,26 @@ switch_to_target_no_thread (process_stratum_target *target)
       break;
     }
 }
+
+/* If true, `maybe_commit_resume_process_target` is a no-op.  */
+
+static bool defer_process_target_commit_resume;
+
+/* See process-stratum-target.h.  */
+
+void
+maybe_commit_resume_process_target (process_stratum_target *proc_target)
+{
+  if (defer_process_target_commit_resume)
+    return;
+
+  proc_target->commit_resume ();
+}
+
+/* See process-stratum-target.h.  */
+
+scoped_restore_tmpl<bool>
+make_scoped_defer_process_target_commit_resume ()
+{
+  return make_scoped_restore (&defer_process_target_commit_resume, true);
+}

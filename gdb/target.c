@@ -2067,28 +2067,6 @@ target_resume (ptid_t ptid, int step, enum gdb_signal signal)
   clear_inline_frame_state (curr_target, ptid);
 }
 
-/* If true, target_commit_resume is a nop.  */
-static int defer_target_commit_resume;
-
-/* See target.h.  */
-
-void
-target_commit_resume (void)
-{
-  if (defer_target_commit_resume)
-    return;
-
-  current_top_target ()->commit_resume ();
-}
-
-/* See target.h.  */
-
-scoped_restore_tmpl<int>
-make_scoped_defer_target_commit_resume ()
-{
-  return make_scoped_restore (&defer_target_commit_resume, 1);
-}
-
 void
 target_pass_signals (gdb::array_view<const unsigned char> pass_signals)
 {

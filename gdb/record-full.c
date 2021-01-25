@@ -1261,11 +1261,11 @@ record_full_wait_1 (struct target_ops *ops,
                            break;
   			}
 
-                      if (gdbarch_software_single_step_p (gdbarch))
-			{
-			  process_stratum_target *proc_target
-			    = current_inferior ()->process_target ();
+		      process_stratum_target *proc_target
+			= current_inferior ()->process_target ();
 
+		      if (gdbarch_software_single_step_p (gdbarch))
+			{
 			  /* Try to insert the software single step breakpoint.
 			     If insert success, set step to 0.  */
 			  set_executing (proc_target, inferior_ptid, false);
@@ -1282,7 +1282,7 @@ record_full_wait_1 (struct target_ops *ops,
 					    "issuing one more step in the "
 					    "target beneath\n");
 		      ops->beneath ()->resume (ptid, step, GDB_SIGNAL_0);
-		      ops->beneath ()->commit_resume ();
+		      proc_target->commit_resume ();
 		      continue;
 		    }
 		}
