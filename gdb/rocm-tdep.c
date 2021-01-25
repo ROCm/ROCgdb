@@ -1436,13 +1436,6 @@ rocm_target_ops::displaced_step_prepare (thread_info *thread,
 
   displaced_debug_printf ("selected buffer at %#lx", displaced_pc);
 
-  /* FIXME: Tell infrun not to try preparing another displaced step for this
-     inferior.  Currently, concurrent displaced steps causes a performance
-     degradation as each displaced step triggers 2 queue suspends and resumes.
-     An upcoming change to expose forward progress in core gdb will address
-     this issue.  */
-  thread->inf->displaced_step_state.unavailable = true;
-
   /* We may have written some registers, so flush the register cache.  */
   registers_changed_thread (thread);
 
@@ -1481,9 +1474,6 @@ rocm_target_ops::displaced_step_finish (thread_info *thread, gdb_signal sig)
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"),
 	   status);
-
-  /* FIXME: See comment in displaced_step_prepare.  */
-  thread->inf->displaced_step_state.unavailable = false;
 
   /* We may have written some registers, so flush the register cache.  */
   registers_changed_thread (thread);
