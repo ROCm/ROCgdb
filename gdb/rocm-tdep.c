@@ -22,6 +22,7 @@
 
 #include "amdgcn-rocm-tdep.h"
 #include "arch-utils.h"
+#include "async-event.h"
 #include "cli/cli-style.h"
 #include "demangle.h"
 #include "displaced-stepping.h"
@@ -91,9 +92,6 @@ struct rocm_inferior_info
   /* The amd_dbgapi_notifier_t for this inferior.  */
   amd_dbgapi_notifier_t notifier{ -1 };
 
-  /* True if commit_resume should all-start the GPU queues.  */
-  bool commit_resume_all_start;
-
   /* True if the inferior has exited.  */
   bool has_exited{ false };
 
@@ -152,9 +150,10 @@ struct rocm_target_ops final : public target_ops
 
   void async (int enable) override;
 
+  bool has_pending_events () override;
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
   void resume (ptid_t, int, enum gdb_signal) override;
-  void commit_resume () override;
+  void commit_resumed () override;
   void stop (ptid_t ptid) override;
 
   void fetch_registers (struct regcache *, int) override;
@@ -213,9 +212,14 @@ static struct breakpoint_ops rocm_breakpoint_ops;
 /* Per-inferior data key.  */
 static const struct inferior_key<rocm_inferior_info> rocm_inferior_data;
 
-/* The read/write ends of the pipe registered as waitable file in the
-   event loop.  */
-static int rocm_event_pipe[2] = { -1, -1 };
+/* The async event handler registered with the event loop, indicating that we
+   might have events to report to the core and that we'd like our wait method
+   to be called.
+
+   This is nullptr when async is disabled and non-nullptr when async is
+   enabled.  */
+static async_event_handler *rocm_async_event_handler = nullptr;
+
 
 /* Return the target id string for a given wave.  */
 static std::string
@@ -315,42 +319,18 @@ target_id_string (amd_dbgapi_agent_id_t agent_id)
   return string_printf ("AMDGPU Agent (GPUID %ld)", os_id);
 }
 
-/* Flush the event pipe.  */
 static void
-async_file_flush (void)
+async_event_handler_clear ()
 {
-  int ret;
-  char buf;
-
-  do
-    {
-      ret = read (rocm_event_pipe[0], &buf, 1);
-    }
-  while (ret >= 0 || (ret == -1 && errno == EINTR));
+  gdb_assert (rocm_async_event_handler != nullptr);
+  clear_async_event_handler (rocm_async_event_handler);
 }
 
-/* Put something (anything, doesn't matter what, or how much) in event
-   pipe, so that the select/poll in the event-loop realizes we have
-   something to process.  */
-
 static void
-async_file_mark (void)
+async_event_handler_mark ()
 {
-  int ret;
-
-  /* It doesn't really matter what the pipe contains, as long we end
-     up with something in it.  Might as well flush the previous
-     left-overs.  */
-  async_file_flush ();
-
-  do
-    {
-      ret = write (rocm_event_pipe[1], "+", 1);
-    }
-  while (ret == -1 && errno == EINTR);
-
-  /* Ignore EAGAIN.  If the pipe is full, the event loop will already
-     be awakened anyway.  */
+  gdb_assert (rocm_async_event_handler != nullptr);
+  mark_async_event_handler (rocm_async_event_handler);
 }
 
 /* Fetch the rocm_inferior_info data for the given inferior.  */
@@ -727,6 +707,8 @@ rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
 void
 rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 {
+  gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
+
   if (debug_infrun)
     fprintf_unfiltered (
       gdb_stdlog,
@@ -754,18 +736,15 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	continue;
 
       struct rocm_inferior_info *info = get_rocm_inferior_info (thread->inf);
-
-      if (!info->commit_resume_all_start)
-	{
-	  amd_dbgapi_process_set_progress (info->process_id,
-					   AMD_DBGAPI_PROGRESS_NO_FORWARD);
-	  info->commit_resume_all_start = true;
-	}
-
       amd_dbgapi_status_t status
-	= amd_dbgapi_wave_resume (get_amd_dbgapi_wave_id (ptid),
-				  step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
-				       : AMD_DBGAPI_RESUME_MODE_NORMAL);
+	= amd_dbgapi_process_set_progress (info->process_id,
+					   AMD_DBGAPI_PROGRESS_NO_FORWARD);
+      gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
+
+      status = amd_dbgapi_wave_resume (get_amd_dbgapi_wave_id (ptid),
+				       (step
+					? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
+					: AMD_DBGAPI_RESUME_MODE_NORMAL));
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("Could not resume %s (rc=%d)"),
 	       pid_to_str (thread->ptid).c_str (), status);
@@ -773,33 +752,33 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 }
 
 void
-rocm_target_ops::commit_resume ()
+rocm_target_ops::commit_resumed ()
 {
   if (debug_infrun)
     fprintf_unfiltered (
-      gdb_stdlog, "\e[1;34minfrun: rocm_target_ops::commit_resume ()\e[0m\n");
+      gdb_stdlog, "\e[1;34minfrun: rocm_target_ops::commit_resumed ()\e[0m\n");
 
-  beneath ()->commit_resume ();
+  beneath ()->commit_resumed ();
 
-  for (inferior *inf :
-       all_non_exited_inferiors (current_inferior ()->process_target ()))
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+  for (inferior *inf : all_non_exited_inferiors (proc_target))
     {
-      struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
-      if (!info->commit_resume_all_start)
+      rocm_inferior_info *info = get_rocm_inferior_info (inf);
+      if (!info->activated)
 	continue;
 
-      amd_dbgapi_process_set_progress (info->process_id,
-				       AMD_DBGAPI_PROGRESS_NORMAL);
-      info->commit_resume_all_start = false;
+      amd_dbgapi_status_t status
+	= amd_dbgapi_process_set_progress (info->process_id,
+					   AMD_DBGAPI_PROGRESS_NORMAL);
+      gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
     }
-
-  if (target_can_async_p ())
-    target_async (1);
 }
 
 void
 rocm_target_ops::stop (ptid_t ptid)
 {
+  gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
+
   if (debug_infrun)
     fprintf_unfiltered (
       gdb_stdlog,
@@ -860,63 +839,83 @@ rocm_target_ops::stop (ptid_t ptid)
 }
 
 static void
-handle_target_event (int error, gdb_client_data client_data)
+handle_target_event (gdb_client_data client_data)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
-  amd_dbgapi_process_id_t process_id = info->process_id;
+  inferior_event_handler (INF_REG_EVENT);
+}
 
-  amd_dbgapi_process_set_progress (process_id, AMD_DBGAPI_PROGRESS_NO_FORWARD);
+/* Called when a dbgapi notifier fd is readable.  CLIENT_DATA is the
+   rocm_inferior_info object corresponding to the notifier.  */
 
-  /* Flush the async file first.  */
-  if (target_is_async_p ())
-    async_file_flush ();
+static void
+dbgapi_notifier_handler (int error, gdb_client_data client_data)
+{
+  rocm_inferior_info *info = (rocm_inferior_info *) client_data;
+  int ret;
 
-  rocm_process_event_queue ();
+  /* Drain the notifier pipe.  */
+  do
+    {
+      char buf;
+      ret = read (info->notifier, &buf, 1);
+    }
+  while (ret >= 0 || (ret == -1 && errno == EINTR));
 
-  /* In all-stop mode, unless the event queue is empty (spurious wake-up),
-     we can keep the process in progress_no_forward mode.  The infrun loop
-     will enable forward progress when a thread is resumed.  */
-  if (non_stop || info->wave_events.empty ())
-    amd_dbgapi_process_set_progress (process_id, AMD_DBGAPI_PROGRESS_NORMAL);
-
-  if (!info->wave_events.empty ())
-    inferior_event_handler (INF_REG_EVENT);
+  /* Signal our async handler.  */
+  async_event_handler_mark ();
 }
 
 void
 rocm_target_ops::async (int enable)
 {
+  infrun_debug_printf ("rocm async enable=%d", enable);
+
   beneath ()->async (enable);
 
   if (enable)
     {
-      if (rocm_event_pipe[0] != -1)
-	return;
+      if (rocm_async_event_handler != nullptr)
+	{
+	  /* Already enabled.  */
+	  return;
+	}
 
-      if (gdb_pipe_cloexec (rocm_event_pipe) == -1)
-	internal_error (__FILE__, __LINE__, "creating event pipe failed.");
+      /* The library gives us one notifier file descriptor per inferior (even
+	 the ones that don't have the ROCm runtime activated).  Register them
+	 all with the event loop.  */
+      process_stratum_target *proc_target
+	= current_inferior ()->process_target ();
 
-      ::fcntl (rocm_event_pipe[0], F_SETFL, O_NONBLOCK);
-      ::fcntl (rocm_event_pipe[1], F_SETFL, O_NONBLOCK);
+      for (inferior *inf : all_non_exited_inferiors (proc_target))
+	{
+	  rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
-      add_file_handler (rocm_event_pipe[0], handle_target_event, nullptr,
-			"rocm-tdep");
+	  if (info->notifier != -1)
+	    add_file_handler (info->notifier, dbgapi_notifier_handler, info,
+			      "rocm dbgapi notifier");
+	}
 
-      /* There may be pending events to handle.  Tell the event loop
-	 to poll them.  */
-      async_file_mark ();
+      rocm_async_event_handler
+	= create_async_event_handler (handle_target_event, nullptr, "rocm");
+
+      /* There may be pending events to handle.  Tell the event loop to poll
+         them.  */
+      async_event_handler_mark ();
     }
   else
     {
-      if (rocm_event_pipe[0] == -1)
+      if (rocm_async_event_handler == nullptr)
 	return;
 
-      delete_file_handler (rocm_event_pipe[0]);
+      for (inferior *inf : all_inferiors ())
+	{
+	  rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
-      ::close (rocm_event_pipe[0]);
-      ::close (rocm_event_pipe[1]);
-      rocm_event_pipe[0] = -1;
-      rocm_event_pipe[1] = -1;
+	  if (info->notifier != -1)
+	    delete_file_handler (info->notifier);
+	}
+
+      delete_async_event_handler (&rocm_async_event_handler);
     }
 }
 
@@ -1012,15 +1011,27 @@ rocm_process_event_queue (amd_dbgapi_event_kind_t until_event_kind)
     }
 }
 
+bool
+rocm_target_ops::has_pending_events ()
+{
+  if (rocm_async_event_handler != nullptr
+      && async_event_handler_marked (rocm_async_event_handler))
+    return true;
+
+  return beneath ()->has_pending_events ();
+}
+
 ptid_t
 rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 		       target_wait_flags target_options)
 {
+  gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
   gdb_assert (ptid == minus_one_ptid || ptid.is_pid ());
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: rocm_target_ops::wait\e[0m\n");
+			"\e[1;34minfrun: rocm_target_ops::wait (%d, %ld, %ld)\e[0m\n",
+			ptid.pid(), ptid.lwp(), ptid.tid());
 
   ptid_t event_ptid = beneath ()->wait (ptid, ws, target_options);
   if (event_ptid != minus_one_ptid)
@@ -1033,28 +1044,22 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 
   amd_dbgapi_process_id_t process_id = info->process_id;
 
-  /* Drain all the events from the amd_dbgapi, and preserve the ordering.  */
+  /* Clear this now, we'll re-mark it if we have more events to report.  */
+  if (target_is_async_p ())
+    async_event_handler_clear ();
+
+  /* This call is cheap in any case do it unconditionally.  */
+  amd_dbgapi_process_set_progress (process_id,
+				   AMD_DBGAPI_PROGRESS_NO_FORWARD);
+
+  /* If we don't have events pending in our queue, drain all the events from the
+     amd_dbgapi, and preserve the ordering.  */
   if (info->wave_events.empty ())
-    {
-      amd_dbgapi_process_set_progress (process_id,
-				       AMD_DBGAPI_PROGRESS_NO_FORWARD);
+    rocm_process_event_queue ();
 
-      /* Flush the async file first.  */
-      if (target_is_async_p ())
-	async_file_flush ();
-
-      rocm_process_event_queue ();
-
-      /* In all-stop mode, unless the event queue is empty (spurious wake-up),
-	 we can keep the process in progress_no_forward mode.  The infrun loop
-	 will enable forward progress when a thread is resumed.  */
-      if (non_stop || info->wave_events.empty ())
-	amd_dbgapi_process_set_progress (process_id,
-					 AMD_DBGAPI_PROGRESS_NORMAL);
-    }
-
+  /* If there are still no events in our queue, that means nothing is
+     available.  */
   if (info->wave_events.empty ())
-    /* There are no GPU events, return the host's wait kind.  */
     return minus_one_ptid;
 
   amd_dbgapi_event_id_t event_id;
@@ -1125,10 +1130,12 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   else
     ws->value.sig = GDB_SIGNAL_0;
 
-  /* If there are more events in the list, mark the async file so that
-     rocm_target_ops::wait gets called again.  */
-  if (target_is_async_p () && !info->wave_events.empty ())
-    async_file_mark ();
+  /* There may be more events to process (either already in
+     `wave_events` or that we need to fetch from dbgapi.  Mark the
+     async event handler so that rocm_target_ops::wait gets called
+     again and again, until it eventually returns minus_one_ptid.  */
+  if (target_is_async_p ())
+    async_event_handler_mark ();
 
   return event_ptid;
 }
@@ -1554,9 +1561,11 @@ rocm_target_solib_unloaded (struct so_list *solib)
 static void
 rocm_target_inferior_created (inferior *inf)
 {
+  process_stratum_target *proc_target = inf->process_target ();
+
   /* If the inferior is not running on the native target (e.g. it is running
      on a remote target), we don't want to deal with it.  */
-  if (inf->process_target () != get_native_target ())
+  if (proc_target != get_native_target ())
     return;
 
   auto *info = get_rocm_inferior_info (inf);
@@ -1589,29 +1598,23 @@ rocm_target_inferior_created (inferior *inf)
       return;
     }
 
-  /* We add a file handler for events returned by the debugger api. We'll use
-     this handler to signal our async handler that events are available.  */
-  add_file_handler (
-    info->notifier,
-    [] (int error, gdb_client_data client_data) {
-      auto info_ = static_cast<struct rocm_inferior_info *> (client_data);
-      int ret;
+  /* The underlying target will already be async if we are running, but not if
+     we are attaching.  */
+  if (proc_target->is_async_p ())
+    {
+      /* Make sure our async event handler is created.  */
+      target_async (1);
 
-      /* Drain the notifier pipe.  */
-      do
-	{
-	  char buf;
-	  ret = read (info_->notifier, &buf, 1);
-	}
-      while (ret >= 0 || (ret == -1 && errno == EINTR));
+      /* If the rocm target was already async, it didn't register the new fd, so
+	 make sure it is registered.  This call is idempotent so it's ok if
+	 it's already registered.  */
+      add_file_handler (info->notifier, dbgapi_notifier_handler, info,
+			"rocm dbgapi notifier");
+    }
 
-      /* Signal our async handler.  */
-      async_file_mark ();
-    },
-    info, "rocm-tdep");
-
-  /* Attaching to the inferior may have generated runtime events, process
-     them now.  */
+  /* Process available events right now.  This will let us get an
+     AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS event and set
+     rocm_inferior_info::activated.  */
   rocm_process_event_queue ();
 }
 
@@ -1621,7 +1624,10 @@ rocm_target_inferior_exit (struct inferior *inf)
   auto *info = get_rocm_inferior_info (inf);
 
   if (info->notifier != -1)
-    delete_file_handler (info->notifier);
+    {
+      delete_file_handler (info->notifier);
+      info->notifier = -1;
+    }
 
   if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
     amd_dbgapi_process_detach (info->process_id);
