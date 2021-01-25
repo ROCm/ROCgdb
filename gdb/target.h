@@ -487,6 +487,13 @@ struct target_ops
 			 int TARGET_DEBUG_PRINTER (target_debug_print_step),
 			 enum gdb_signal)
       TARGET_DEFAULT_NORETURN (noprocess ());
+
+    /* Ensure that all resumed threads are committed to the target.
+
+       See the description of COMMIT_RESUMED_STATE for more details.  */
+    virtual void commit_resumed ()
+      TARGET_DEFAULT_IGNORE ();
+
     /* See target_wait's description.  Note that implementations of
        this method must not assume that inferior_ptid on entry is
        pointing at the thread or inferior that ends up reporting an
@@ -1456,6 +1463,16 @@ extern void target_disconnect (const char *, int);
    target_commit_resume method implementation.  See
    target_commit_resume below.  */
 extern void target_resume (ptid_t ptid, int step, enum gdb_signal signal);
+
+/* Ensure that all resumed threads are committed to the target.
+
+   See the description of COMMIT_RESUMED_STATE for more details.  */
+
+static inline void
+target_commit_resumed ()
+{
+  current_top_target ()->commit_resumed ();
+}
 
 /* For target_read_memory see target/target.h.  */
 

@@ -14,6 +14,7 @@ struct dummy_target : public target_ops
   void detach (inferior *arg0, int arg1) override;
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
+  void commit_resumed () override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, int arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -188,6 +189,7 @@ struct debug_target : public target_ops
   void detach (inferior *arg0, int arg1) override;
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
+  void commit_resumed () override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, int arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -443,6 +445,26 @@ debug_target::resume (ptid_t arg0, int arg1, enum gdb_signal arg2)
   target_debug_print_step (arg1);
   fputs_unfiltered (", ", gdb_stdlog);
   target_debug_print_enum_gdb_signal (arg2);
+  fputs_unfiltered (")\n", gdb_stdlog);
+}
+
+void
+target_ops::commit_resumed ()
+{
+  this->beneath ()->commit_resumed ();
+}
+
+void
+dummy_target::commit_resumed ()
+{
+}
+
+void
+debug_target::commit_resumed ()
+{
+  fprintf_unfiltered (gdb_stdlog, "-> %s->commit_resumed (...)\n", this->beneath ()->shortname ());
+  this->beneath ()->commit_resumed ();
+  fprintf_unfiltered (gdb_stdlog, "<- %s->commit_resumed (", this->beneath ()->shortname ());
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 

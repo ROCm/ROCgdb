@@ -63,11 +63,6 @@ public:
   bool has_registers () override;
   bool has_execution (inferior *inf) override;
 
-  /* Ensure that all resumed threads are committed to the target.
-
-     See the description of COMMIT_RESUMED_STATE for more details.  */
-  virtual void commit_resumed () {}
-
   /* True if any thread is, or may be executing.  We need to track
      this separately because until we fully sync the thread list, we
      won't know whether the target is fully stopped, even if we see
