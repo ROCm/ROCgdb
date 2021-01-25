@@ -268,4 +268,79 @@ extern void all_uis_on_sync_execution_starting (void);
    detach.  */
 extern void restart_after_all_stop_detach (process_stratum_target *proc_target);
 
+/* RAII object to temporarily disable the requirement for process stratum
+   targets to commit their resumed threads.
+
+   On construction, set process_stratum_target::commit_resumed_state to false
+   for all process stratum targets.
+
+   On destruction, set process_stratum_target::commit_resumed_state to true for
+   all process targets, except those that:
+
+     - have no resumed threads
+     - have a resumed thread with a pending status
+
+   The process_stratum_target::commit_resumed method is not called on the
+   targets, because its implementations could throw, and we don't want that in
+   the destructor.  Instead, the caller should call the
+   maybe_call_commit_resumed_all_process_targets function after to achieve that.
+
+   The creation of nested scoped_disable_commit_resumed objects is tracked, such
+   that only the outermost instance actually does something, for cases like this:
+
+     void
+     inner_func ()
+     {
+       scoped_disable_commit_resumed disable;
+       // do stuff
+     }
+
+     void
+     outer_func ()
+     {
+       scoped_disable_commit_resumed disable;
+
+       for (... each thread ...)
+	 inner_func ();
+     }
+
+   In this case, we don't want the `disable` in `inner_func` to require targets
+   to commit resumed threads in its destructor.  */
+
+struct scoped_disable_commit_resumed
+{
+  explicit scoped_disable_commit_resumed (const char *reason);
+  ~scoped_disable_commit_resumed ();
+
+  DISABLE_COPY_AND_ASSIGN (scoped_disable_commit_resumed);
+
+private:
+  const char *m_reason;
+  bool m_prev_enable_commit_resumed;
+};
+
+/* Call the commit_resumed method on all process targets whose
+   COMMIT_RESUME_STATE is set.  */
+
+extern void maybe_call_commit_resumed_all_process_targets ();
+
+/* RAII object to temporarily enable the requirement for process
+   stratum targets to commit their resumed threads.  This is the
+   inverse of scoped_disable_commit_resumed.  The constructor calls
+   the maybe_call_commit_resumed_all_process_targets function itself,
+   since it's OK to throw from a constructor.  */
+
+struct scoped_enable_commit_resumed
+{
+  explicit scoped_enable_commit_resumed (const char *reason);
+  ~scoped_enable_commit_resumed ();
+
+  DISABLE_COPY_AND_ASSIGN (scoped_enable_commit_resumed);
+
+private:
+  const char *m_reason;
+  bool m_prev_enable_commit_resumed;
+};
+
+
 #endif /* INFRUN_H */

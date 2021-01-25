@@ -99,6 +99,20 @@ all_non_exited_process_targets ()
 
 /* See process-stratum-target.h.  */
 
+std::set<process_stratum_target *>
+all_process_targets ()
+{
+  /* Inferiors may share targets.  To eliminate duplicates, use a set.  */
+  std::set<process_stratum_target *> targets;
+  for (inferior *inf : all_inferiors ())
+    if (inf->process_target () != nullptr)
+      targets.insert (inf->process_target ());
+
+  return targets;
+}
+
+/* See process-stratum-target.h.  */
+
 void
 switch_to_target_no_thread (process_stratum_target *target)
 {
@@ -107,27 +121,4 @@ switch_to_target_no_thread (process_stratum_target *target)
       switch_to_inferior_no_thread (inf);
       break;
     }
-}
-
-/* If true, `maybe_commit_resume_process_target` is a no-op.  */
-
-static bool defer_process_target_commit_resume;
-
-/* See process-stratum-target.h.  */
-
-void
-maybe_commit_resume_process_target (process_stratum_target *proc_target)
-{
-  if (defer_process_target_commit_resume)
-    return;
-
-  proc_target->commit_resume ();
-}
-
-/* See process-stratum-target.h.  */
-
-scoped_restore_tmpl<bool>
-make_scoped_defer_process_target_commit_resume ()
-{
-  return make_scoped_restore (&defer_process_target_commit_resume, true);
 }

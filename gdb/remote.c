@@ -420,7 +420,7 @@ public:
   void detach (inferior *, int) override;
   void disconnect (const char *, int) override;
 
-  void commit_resume () override;
+  void commit_resumed () override;
   void resume (ptid_t, int, enum gdb_signal) override;
   ptid_t wait (ptid_t, struct target_waitstatus *, int) override;
 
@@ -6389,6 +6389,8 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
 {
   struct remote_state *rs = get_remote_state ();
 
+  gdb_assert (!this->commit_resumed_state);
+
   /* When connected in non-stop mode, the core resumes threads
      individually.  Resuming remote threads directly in target_resume
      would thus result in sending one packet per thread.  Instead, to
@@ -6473,6 +6475,36 @@ get_remote_inferior (inferior *inf)
 
   return static_cast<remote_inferior *> (inf->priv.get ());
 }
+
+struct stop_reply : public notif_event
+{
+  ~stop_reply ();
+
+  /* The identifier of the thread about this event  */
+  ptid_t ptid;
+
+  /* The remote state this event is associated with.  When the remote
+     connection, represented by a remote_state object, is closed,
+     all the associated stop_reply events should be released.  */
+  struct remote_state *rs;
+
+  struct target_waitstatus ws;
+
+  /* The architecture associated with the expedited registers.  */
+  gdbarch *arch;
+
+  /* Expedited registers.  This makes remote debugging a bit more
+     efficient for those targets that provide critical registers as
+     part of their normal status mechanism (as another roundtrip to
+     fetch them is avoided).  */
+  std::vector<cached_reg_t> regcache;
+
+  enum target_stop_reason stop_reason;
+
+  CORE_ADDR watch_data_address;
+
+  int core;
+};
 
 /* Class used to track the construction of a vCont packet in the
    outgoing packet buffer.  This is used to send multiple vCont
@@ -6578,7 +6610,7 @@ vcont_builder::push_action (ptid_t ptid, bool step, gdb_signal siggnal)
 /* to_commit_resume implementation.  */
 
 void
-remote_target::commit_resume ()
+remote_target::commit_resumed ()
 {
   int any_process_wildcard;
   int may_global_wildcard_vcont;
@@ -6653,6 +6685,8 @@ remote_target::commit_resume ()
      disable process and global wildcard resumes appropriately.  */
   check_pending_events_prevent_wildcard_vcont (&may_global_wildcard_vcont);
 
+  bool any_pending_vcont_resume = false;
+
   for (thread_info *tp : all_non_exited_threads (this))
     {
       remote_thread_info *priv = get_remote_thread_info (tp);
@@ -6669,12 +6703,20 @@ remote_target::commit_resume ()
 	  continue;
 	}
 
+      if (priv->get_resume_state () == resume_state::RESUMED_PENDING_VCONT)
+	any_pending_vcont_resume = true;
+
       /* If a thread is the parent of an unfollowed fork, then we
 	 can't do a global wildcard, as that would resume the fork
 	 child.  */
       if (is_pending_fork_parent_thread (tp))
 	may_global_wildcard_vcont = 0;
     }
+
+  /* We didn't have any resumed thread pending a vCont resume, so nothing to
+     do.  */
+  if (!any_pending_vcont_resume)
+    return;
 
   /* Now let's build the vCont packet(s).  Actions must be appended
      from narrower to wider scopes (thread -> process -> global).  If
@@ -6695,6 +6737,13 @@ remote_target::commit_resume ()
 	continue;
 
       gdb_assert (!thread_is_in_step_over_chain (tp));
+
+      /* We should never be commit-resuming a thread that has a stop reply.
+         Otherwise, we would end up reporting a stop event for a thread while
+	 it is running on the remote target.  */
+      remote_state *rs = get_remote_state ();
+      for (const auto &stop_reply : rs->stop_reply_queue)
+	gdb_assert (stop_reply->ptid != tp->ptid);
 
       const resumed_pending_vcont_info &info
 	= remote_thr->resumed_pending_vcont_info ();
@@ -6748,8 +6797,6 @@ remote_target::commit_resume ()
   vcont_builder.flush ();
 }
 
-
-
 /* Non-stop version of target_stop.  Uses `vCont;t' to stop a remote
    thread, all threads of a remote process, or all threads of all
    processes.  */
@@ -6760,6 +6807,78 @@ remote_target::remote_stop_ns (ptid_t ptid)
   struct remote_state *rs = get_remote_state ();
   char *p = rs->buf.data ();
   char *endp = p + get_remote_packet_size ();
+
+  gdb_assert (!this->commit_resumed_state);
+
+  /* If any thread that needs to stop was resumed but pending a vCont
+     resume, generate a phony stop_reply.  However, first check
+     whether the thread wasn't resumed with a signal.  Generating a
+     phony stop in that case would result in losing the signal.  */
+  bool needs_commit = false;
+  for (thread_info *tp : all_non_exited_threads (this, ptid))
+    {
+      remote_thread_info *remote_thr = get_remote_thread_info (tp);
+
+      if (remote_thr->get_resume_state ()
+	  == resume_state::RESUMED_PENDING_VCONT)
+	{
+	  const resumed_pending_vcont_info &info
+	    = remote_thr->resumed_pending_vcont_info ();
+	  if (info.sig != GDB_SIGNAL_0)
+	    {
+	      /* This signal must be forwarded to the inferior.  We
+		 could commit-resume just this thread, but its simpler
+		 to just commit-resume everything.  */
+	      needs_commit = true;
+	      break;
+	    }
+	}
+    }
+
+  if (needs_commit)
+    commit_resumed ();
+  else
+    for (thread_info *tp : all_non_exited_threads (this, ptid))
+      {
+	remote_thread_info *remote_thr = get_remote_thread_info (tp);
+
+	if (remote_thr->get_resume_state ()
+	    == resume_state::RESUMED_PENDING_VCONT)
+	  {
+	    if (remote_debug)
+	      fprintf_unfiltered (gdb_stdlog,
+				  "Enqueueing phony stop reply for thread pending "
+				  "vCont-resume (%d, %ld, %ld)", tp->ptid.pid(),
+				  tp->ptid.lwp (), tp->ptid.tid ());
+
+	    /* Check that the thread wasn't resumed with a signal.
+	       Generating a phony stop would result in losing the
+	       signal.  */
+	    const resumed_pending_vcont_info &info
+	      = remote_thr->resumed_pending_vcont_info ();
+	    gdb_assert (info.sig == GDB_SIGNAL_0);
+
+	    stop_reply *sr = new stop_reply ();
+	    sr->ptid = tp->ptid;
+	    sr->rs = rs;
+	    sr->ws.kind = TARGET_WAITKIND_STOPPED;
+	    sr->ws.value.sig = GDB_SIGNAL_0;
+	    sr->arch = tp->inf->gdbarch;
+	    sr->stop_reason = TARGET_STOPPED_BY_NO_REASON;
+	    sr->watch_data_address = 0;
+	    sr->core = 0;
+	    this->push_stop_reply (sr);
+
+	    /* Pretend that this thread was actually resumed on the
+	       remote target, then stopped.  If we leave it in the
+	       RESUMED_PENDING_VCONT state and the commit_resumed
+	       method is called while the stop reply is still in the
+	       queue, we'll end up reporting a stop event to the core
+	       for that thread while it is running on the remote
+	       target... that would be bad.  */
+	    remote_thr->set_resumed ();
+	  }
+      }
 
   /* FIXME: This supports_vCont_probed check is a workaround until
      packet_support is per-connection.  */
@@ -6967,36 +7086,6 @@ remote_console_output (const char *msg)
     }
   gdb_stdtarg->flush ();
 }
-
-struct stop_reply : public notif_event
-{
-  ~stop_reply ();
-
-  /* The identifier of the thread about this event  */
-  ptid_t ptid;
-
-  /* The remote state this event is associated with.  When the remote
-     connection, represented by a remote_state object, is closed,
-     all the associated stop_reply events should be released.  */
-  struct remote_state *rs;
-
-  struct target_waitstatus ws;
-
-  /* The architecture associated with the expedited registers.  */
-  gdbarch *arch;
-
-  /* Expedited registers.  This makes remote debugging a bit more
-     efficient for those targets that provide critical registers as
-     part of their normal status mechanism (as another roundtrip to
-     fetch them is avoided).  */
-  std::vector<cached_reg_t> regcache;
-
-  enum target_stop_reason stop_reason;
-
-  CORE_ADDR watch_data_address;
-
-  int core;
-};
 
 /* Return the length of the stop reply queue.  */
 
@@ -7894,6 +7983,8 @@ remote_target::wait_ns (ptid_t ptid, struct target_waitstatus *status, int optio
   struct stop_reply *stop_reply;
   int ret;
   int is_notif = 0;
+
+  gdb_assert (!this->commit_resumed_state);
 
   /* If in non-stop mode, get out of getpkt even if a
      notification is received.	*/

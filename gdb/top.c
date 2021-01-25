@@ -523,6 +523,8 @@ wait_sync_command_done (void)
   scoped_restore save_ui = make_scoped_restore (&current_ui);
   struct ui *ui = current_ui;
 
+  scoped_enable_commit_resumed enable ("sync wait");
+
   while (gdb_do_one_event () >= 0)
     if (ui->prompt_state != PROMPT_BLOCKED)
       break;

@@ -266,51 +266,57 @@ exec_continue (char **argv, int argc)
 {
   prepare_execution_command (current_top_target (), mi_async_p ());
 
-  if (non_stop)
-    {
-      /* In non-stop mode, 'resume' always resumes a single thread.
-	 Therefore, to resume all threads of the current inferior, or
-	 all threads in all inferiors, we need to iterate over
-	 threads.
+  {
+    scoped_disable_commit_resumed disable_commit_resumed ("mi continue");
 
-	 See comment on infcmd.c:proceed_thread_callback for rationale.  */
-      if (current_context->all || current_context->thread_group != -1)
-	{
-	  scoped_restore_current_thread restore_thread;
-	  int pid = 0;
+    if (non_stop)
+      {
+	/* In non-stop mode, 'resume' always resumes a single thread.
+	   Therefore, to resume all threads of the current inferior, or
+	   all threads in all inferiors, we need to iterate over
+	   threads.
 
-	  if (!current_context->all)
-	    {
-	      struct inferior *inf
-		= find_inferior_id (current_context->thread_group);
+	   See comment on infcmd.c:proceed_thread_callback for rationale.  */
+	if (current_context->all || current_context->thread_group != -1)
+	  {
+	    scoped_restore_current_thread restore_thread;
+	    int pid = 0;
 
-	      pid = inf->pid;
-	    }
-	  iterate_over_threads (proceed_thread_callback, &pid);
-	}
-      else
-	{
-	  continue_1 (0);
-	}
-    }
-  else
-    {
-      scoped_restore save_multi = make_scoped_restore (&sched_multi);
+	    if (!current_context->all)
+	      {
+		struct inferior *inf
+		  = find_inferior_id (current_context->thread_group);
 
-      if (current_context->all)
-	{
-	  sched_multi = 1;
-	  continue_1 (0);
-	}
-      else
-	{
-	  /* In all-stop mode, -exec-continue traditionally resumed
-	     either all threads, or one thread, depending on the
-	     'scheduler-locking' variable.  Let's continue to do the
-	     same.  */
-	  continue_1 (1);
-	}
-    }
+		pid = inf->pid;
+	      }
+	    iterate_over_threads (proceed_thread_callback, &pid);
+	  }
+	else
+	  {
+	    continue_1 (0);
+	  }
+      }
+    else
+      {
+	scoped_restore save_multi = make_scoped_restore (&sched_multi);
+
+	if (current_context->all)
+	  {
+	    sched_multi = 1;
+	    continue_1 (0);
+	  }
+	else
+	  {
+	    /* In all-stop mode, -exec-continue traditionally resumed
+	       either all threads, or one thread, depending on the
+	       'scheduler-locking' variable.  Let's continue to do the
+	       same.  */
+	    continue_1 (1);
+	  }
+      }
+  }
+
+  maybe_call_commit_resumed_all_process_targets ();
 }
 
 static void

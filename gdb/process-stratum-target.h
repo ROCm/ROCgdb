@@ -63,19 +63,10 @@ public:
   bool has_registers () override;
   bool has_execution (inferior *inf) override;
 
-  /* Commit a series of resumption requests previously prepared with
-     resume calls.
+  /* Ensure that all resumed threads are committed to the target.
 
-     GDB always calls `commit_resume` on the process stratum target after
-     calling `resume` on a target stack.  A process stratum target may thus use
-     this method in coordination with its `resume` method to batch resumption
-     requests.  In that case, the target doesn't actually resume in its
-     `resume` implementation.  Instead, it takes note of resumption intent in
-     `resume`, and defers the actual resumption `commit_resume`.
-
-     E.g., the remote target uses this to coalesce multiple resumption requests
-     in a single vCont packet.  */
-  virtual void commit_resume () {}
+     See the description of COMMIT_RESUMED_STATE for more details.  */
+  virtual void commit_resumed () {}
 
   /* True if any thread is, or may be executing.  We need to track
      this separately because until we fully sync the thread list, we
@@ -86,6 +77,35 @@ public:
 
   /* The connection number.  Visible in "info connections".  */
   int connection_number = 0;
+
+  /* Whether resumed threads must be committed to the target.
+
+     When true, resumed threads must be committed to the execution target.
+
+     When false, the process stratum target may leave resumed threads stopped
+     when it's convenient or efficient to do so.  When the core requires resumed
+     threads to be committed again, this is set back to true and calls the
+     `commit_resumed` method to allow the target to do so.
+
+     To simplify the implementation of process stratum targets, the following
+     methods are guaranteed to be called with COMMIT_RESUMED_STATE set to
+     false:
+
+       - resume
+       - stop
+       - wait
+
+     Knowing this, the process stratum target doesn't need to implement
+     different behaviors depending on the COMMIT_RESUMED_STATE, and can
+     simply assert that it is false.
+
+     Process stratum targets can take advantage of this to batch resumption
+     requests, for example.  In that case, the target doesn't actually resume in
+     its `resume` implementation.  Instead, it takes note of the resumption
+     intent in `resume` and defers the actual resumption to `commit_resumed`.
+     For example, the remote target uses this to coalesce multiple resumption
+     requests in a single vCont packet.  */
+  bool commit_resumed_state = false;
 };
 
 /* Downcast TARGET to process_stratum_target.  */
@@ -101,24 +121,13 @@ as_process_stratum_target (target_ops *target)
 
 extern std::set<process_stratum_target *> all_non_exited_process_targets ();
 
+/* Return a collection of all existing process stratum targets.  */
+
+extern std::set<process_stratum_target *> all_process_targets ();
+
 /* Switch to the first inferior (and program space) of TARGET, and
    switch to no thread selected.  */
 
 extern void switch_to_target_no_thread (process_stratum_target *target);
-
-/* Commit a series of resumption requests previously prepared with
-   target_resume calls.
-
-   This function is a no-op if commit resumes are deferred (see
-   `make_scoped_defer_process_target_commit_resume`).  */
-
-extern void maybe_commit_resume_process_target
-  (process_stratum_target *target);
-
-/* Setup to defer `commit_resume` calls, and re-set to the previous status on
-   destruction.  */
-
-extern scoped_restore_tmpl<bool>
-  make_scoped_defer_process_target_commit_resume ();
 
 #endif /* !defined (PROCESS_STRATUM_TARGET_H) */

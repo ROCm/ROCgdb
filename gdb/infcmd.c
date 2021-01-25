@@ -419,125 +419,131 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
 
   dont_repeat ();
 
-  kill_if_already_running (from_tty);
+  {
+    scoped_disable_commit_resumed disable_commit_resumed ("running");
 
-  init_wait_for_inferior ();
-  clear_breakpoint_hit_counts ();
+    kill_if_already_running (from_tty);
 
-  /* Clean up any leftovers from other runs.  Some other things from
-     this function should probably be moved into target_pre_inferior.  */
-  target_pre_inferior (from_tty);
+    init_wait_for_inferior ();
+    clear_breakpoint_hit_counts ();
 
-  /* The comment here used to read, "The exec file is re-read every
-     time we do a generic_mourn_inferior, so we just have to worry
-     about the symbol file."  The `generic_mourn_inferior' function
-     gets called whenever the program exits.  However, suppose the
-     program exits, and *then* the executable file changes?  We need
-     to check again here.  Since reopen_exec_file doesn't do anything
-     if the timestamp hasn't changed, I don't see the harm.  */
-  reopen_exec_file ();
-  reread_symbols ();
+    /* Clean up any leftovers from other runs.  Some other things from
+       this function should probably be moved into target_pre_inferior.  */
+    target_pre_inferior (from_tty);
 
-  gdb::unique_xmalloc_ptr<char> stripped = strip_bg_char (args, &async_exec);
-  args = stripped.get ();
+    /* The comment here used to read, "The exec file is re-read every
+       time we do a generic_mourn_inferior, so we just have to worry
+       about the symbol file."  The `generic_mourn_inferior' function
+       gets called whenever the program exits.  However, suppose the
+       program exits, and *then* the executable file changes?  We need
+       to check again here.  Since reopen_exec_file doesn't do anything
+       if the timestamp hasn't changed, I don't see the harm.  */
+    reopen_exec_file ();
+    reread_symbols ();
 
-  /* Do validation and preparation before possibly changing anything
-     in the inferior.  */
+    gdb::unique_xmalloc_ptr<char> stripped = strip_bg_char (args, &async_exec);
+    args = stripped.get ();
 
-  run_target = find_run_target ();
+    /* Do validation and preparation before possibly changing anything
+       in the inferior.  */
 
-  prepare_execution_command (run_target, async_exec);
+    run_target = find_run_target ();
 
-  if (non_stop && !run_target->supports_non_stop ())
-    error (_("The target does not support running in non-stop mode."));
+    prepare_execution_command (run_target, async_exec);
 
-  /* Done.  Can now set breakpoints, change inferior args, etc.  */
+    if (non_stop && !run_target->supports_non_stop ())
+      error (_("The target does not support running in non-stop mode."));
 
-  /* Insert temporary breakpoint in main function if requested.  */
-  if (run_how == RUN_STOP_AT_MAIN)
-    {
-      std::string arg = string_printf ("-qualified %s", main_name ());
-      tbreak_command (arg.c_str (), 0);
-    }
+    /* Done.  Can now set breakpoints, change inferior args, etc.  */
 
-  exec_file = get_exec_file (0);
+    /* Insert temporary breakpoint in main function if requested.  */
+    if (run_how == RUN_STOP_AT_MAIN)
+      {
+	std::string arg = string_printf ("-qualified %s", main_name ());
+	tbreak_command (arg.c_str (), 0);
+      }
 
-  /* We keep symbols from add-symbol-file, on the grounds that the
-     user might want to add some symbols before running the program
-     (right?).  But sometimes (dynamic loading where the user manually
-     introduces the new symbols with add-symbol-file), the code which
-     the symbols describe does not persist between runs.  Currently
-     the user has to manually nuke all symbols between runs if they
-     want them to go away (PR 2207).  This is probably reasonable.  */
+    exec_file = get_exec_file (0);
 
-  /* If there were other args, beside '&', process them.  */
-  if (args != NULL)
-    set_inferior_args (args);
+    /* We keep symbols from add-symbol-file, on the grounds that the
+       user might want to add some symbols before running the program
+       (right?).  But sometimes (dynamic loading where the user manually
+       introduces the new symbols with add-symbol-file), the code which
+       the symbols describe does not persist between runs.  Currently
+       the user has to manually nuke all symbols between runs if they
+       want them to go away (PR 2207).  This is probably reasonable.  */
 
-  if (from_tty)
-    {
-      uiout->field_string (NULL, "Starting program");
-      uiout->text (": ");
-      if (exec_file)
-	uiout->field_string ("execfile", exec_file);
-      uiout->spaces (1);
-      /* We call get_inferior_args() because we might need to compute
-	 the value now.  */
-      uiout->field_string ("infargs", get_inferior_args ());
-      uiout->text ("\n");
-      uiout->flush ();
-    }
+    /* If there were other args, beside '&', process them.  */
+    if (args != NULL)
+      set_inferior_args (args);
 
-  /* We call get_inferior_args() because we might need to compute
-     the value now.  */
-  run_target->create_inferior (exec_file,
-			       std::string (get_inferior_args ()),
-			       current_inferior ()->environment.envp (),
-			       from_tty);
-  /* to_create_inferior should push the target, so after this point we
-     shouldn't refer to run_target again.  */
-  run_target = NULL;
+    if (from_tty)
+      {
+	uiout->field_string (NULL, "Starting program");
+	uiout->text (": ");
+	if (exec_file)
+	  uiout->field_string ("execfile", exec_file);
+	uiout->spaces (1);
+	/* We call get_inferior_args() because we might need to compute
+	   the value now.  */
+	uiout->field_string ("infargs", get_inferior_args ());
+	uiout->text ("\n");
+	uiout->flush ();
+      }
 
-  /* We're starting off a new process.  When we get out of here, in
-     non-stop mode, finish the state of all threads of that process,
-     but leave other threads alone, as they may be stopped in internal
-     events --- the frontend shouldn't see them as stopped.  In
-     all-stop, always finish the state of all threads, as we may be
-     resuming more than just the new process.  */
-  process_stratum_target *finish_target;
-  ptid_t finish_ptid;
-  if (non_stop)
-    {
-      finish_target = current_inferior ()->process_target ();
-      finish_ptid = ptid_t (current_inferior ()->pid);
-    }
-  else
-    {
-      finish_target = nullptr;
-      finish_ptid = minus_one_ptid;
-    }
-  scoped_finish_thread_state finish_state (finish_target, finish_ptid);
+    /* We call get_inferior_args() because we might need to compute
+       the value now.  */
+    run_target->create_inferior (exec_file,
+				 std::string (get_inferior_args ()),
+				 current_inferior ()->environment.envp (),
+				 from_tty);
+    /* to_create_inferior should push the target, so after this point we
+       shouldn't refer to run_target again.  */
+    run_target = NULL;
 
-  /* Pass zero for FROM_TTY, because at this point the "run" command
-     has done its thing; now we are setting up the running program.  */
-  post_create_inferior (current_top_target (), 0);
+    /* We're starting off a new process.  When we get out of here, in
+       non-stop mode, finish the state of all threads of that process,
+       but leave other threads alone, as they may be stopped in internal
+       events --- the frontend shouldn't see them as stopped.  In
+       all-stop, always finish the state of all threads, as we may be
+       resuming more than just the new process.  */
+    process_stratum_target *finish_target;
+    ptid_t finish_ptid;
+    if (non_stop)
+      {
+	finish_target = current_inferior ()->process_target ();
+	finish_ptid = ptid_t (current_inferior ()->pid);
+      }
+    else
+      {
+	finish_target = nullptr;
+	finish_ptid = minus_one_ptid;
+      }
+    scoped_finish_thread_state finish_state (finish_target, finish_ptid);
 
-  /* Queue a pending event so that the program stops immediately.  */
-  if (run_how == RUN_STOP_AT_FIRST_INSN)
-    {
-      thread_info *thr = inferior_thread ();
-      thr->suspend.waitstatus_pending_p = 1;
-      thr->suspend.waitstatus.kind = TARGET_WAITKIND_STOPPED;
-      thr->suspend.waitstatus.value.sig = GDB_SIGNAL_0;
-    }
+    /* Pass zero for FROM_TTY, because at this point the "run" command
+       has done its thing; now we are setting up the running program.  */
+    post_create_inferior (current_top_target (), 0);
 
-  /* Start the target running.  Do not use -1 continuation as it would skip
-     breakpoint right at the entry point.  */
-  proceed (regcache_read_pc (get_current_regcache ()), GDB_SIGNAL_0);
+    /* Queue a pending event so that the program stops immediately.  */
+    if (run_how == RUN_STOP_AT_FIRST_INSN)
+      {
+	thread_info *thr = inferior_thread ();
+	thr->suspend.waitstatus_pending_p = 1;
+	thr->suspend.waitstatus.kind = TARGET_WAITKIND_STOPPED;
+	thr->suspend.waitstatus.value.sig = GDB_SIGNAL_0;
+      }
 
-  /* Since there was no error, there's no need to finish the thread
-     states here.  */
-  finish_state.release ();
+    /* Start the target running.  Do not use -1 continuation as it would skip
+       breakpoint right at the entry point.  */
+    proceed (regcache_read_pc (get_current_regcache ()), GDB_SIGNAL_0);
+
+    /* Since there was no error, there's no need to finish the thread
+       states here.  */
+    finish_state.release ();
+  }
+
+  maybe_call_commit_resumed_all_process_targets ();
 }
 
 static void
@@ -2565,115 +2571,121 @@ attach_command (const char *args, int from_tty)
 
   dont_repeat ();		/* Not for the faint of heart */
 
-  if (gdbarch_has_global_solist (target_gdbarch ()))
-    /* Don't complain if all processes share the same symbol
-       space.  */
-    ;
-  else if (target_has_execution)
-    {
-      if (query (_("A program is being debugged already.  Kill it? ")))
-	target_kill ();
-      else
-	error (_("Not killed."));
-    }
+  {
+    scoped_disable_commit_resumed disable_commit_resumed ("attaching");
 
-  /* Clean up any leftovers from other runs.  Some other things from
-     this function should probably be moved into target_pre_inferior.  */
-  target_pre_inferior (from_tty);
+    if (gdbarch_has_global_solist (target_gdbarch ()))
+      /* Don't complain if all processes share the same symbol
+	 space.  */
+      ;
+    else if (target_has_execution)
+      {
+	if (query (_("A program is being debugged already.  Kill it? ")))
+	  target_kill ();
+	else
+	  error (_("Not killed."));
+      }
 
-  gdb::unique_xmalloc_ptr<char> stripped = strip_bg_char (args, &async_exec);
-  args = stripped.get ();
+    /* Clean up any leftovers from other runs.  Some other things from
+       this function should probably be moved into target_pre_inferior.  */
+    target_pre_inferior (from_tty);
 
-  attach_target = find_attach_target ();
+    gdb::unique_xmalloc_ptr<char> stripped = strip_bg_char (args, &async_exec);
+    args = stripped.get ();
 
-  prepare_execution_command (attach_target, async_exec);
+    attach_target = find_attach_target ();
 
-  if (non_stop && !attach_target->supports_non_stop ())
-    error (_("Cannot attach to this target in non-stop mode"));
+    prepare_execution_command (attach_target, async_exec);
 
-  attach_target->attach (args, from_tty);
-  /* to_attach should push the target, so after this point we
-     shouldn't refer to attach_target again.  */
-  attach_target = NULL;
+    if (non_stop && !attach_target->supports_non_stop ())
+      error (_("Cannot attach to this target in non-stop mode"));
 
-  /* Set up the "saved terminal modes" of the inferior
-     based on what modes we are starting it with.  */
-  target_terminal::init ();
+    attach_target->attach (args, from_tty);
+    /* to_attach should push the target, so after this point we
+       shouldn't refer to attach_target again.  */
+    attach_target = NULL;
 
-  /* Install inferior's terminal modes.  This may look like a no-op,
-     as we've just saved them above, however, this does more than
-     restore terminal settings:
+    /* Set up the "saved terminal modes" of the inferior
+       based on what modes we are starting it with.  */
+    target_terminal::init ();
 
-     - installs a SIGINT handler that forwards SIGINT to the inferior.
-       Otherwise a Ctrl-C pressed just while waiting for the initial
-       stop would end up as a spurious Quit.
+    /* Install inferior's terminal modes.  This may look like a no-op,
+       as we've just saved them above, however, this does more than
+       restore terminal settings:
 
-     - removes stdin from the event loop, which we need if attaching
-       in the foreground, otherwise on targets that report an initial
-       stop on attach (which are most) we'd process input/commands
-       while we're in the event loop waiting for that stop.  That is,
-       before the attach continuation runs and the command is really
-       finished.  */
-  target_terminal::inferior ();
+       - installs a SIGINT handler that forwards SIGINT to the inferior.
+	 Otherwise a Ctrl-C pressed just while waiting for the initial
+	 stop would end up as a spurious Quit.
 
-  /* Set up execution context to know that we should return from
-     wait_for_inferior as soon as the target reports a stop.  */
-  init_wait_for_inferior ();
-  clear_proceed_status (0);
+       - removes stdin from the event loop, which we need if attaching
+	 in the foreground, otherwise on targets that report an initial
+	 stop on attach (which are most) we'd process input/commands
+	 while we're in the event loop waiting for that stop.  That is,
+	 before the attach continuation runs and the command is really
+	 finished.  */
+    target_terminal::inferior ();
 
-  inferior->needs_setup = 1;
+    /* Set up execution context to know that we should return from
+       wait_for_inferior as soon as the target reports a stop.  */
+    init_wait_for_inferior ();
+    clear_proceed_status (0);
 
-  if (target_is_non_stop_p ())
-    {
-      /* If we find that the current thread isn't stopped, explicitly
-	 do so now, because we're going to install breakpoints and
-	 poke at memory.  */
+    inferior->needs_setup = 1;
 
-      if (async_exec)
-	/* The user requested an `attach&'; stop just one thread.  */
-	target_stop (inferior_ptid);
-      else
-	/* The user requested an `attach', so stop all threads of this
-	   inferior.  */
-	target_stop (ptid_t (inferior_ptid.pid ()));
-    }
+    if (target_is_non_stop_p ())
+      {
+	/* If we find that the current thread isn't stopped, explicitly
+	   do so now, because we're going to install breakpoints and
+	   poke at memory.  */
 
-  /* Check for exec file mismatch, and let the user solve it.  */
-  validate_exec_file (from_tty);
+	if (async_exec)
+	  /* The user requested an `attach&'; stop just one thread.  */
+	  target_stop (inferior_ptid);
+	else
+	  /* The user requested an `attach', so stop all threads of this
+	     inferior.  */
+	  target_stop (ptid_t (inferior_ptid.pid ()));
+      }
 
-  mode = async_exec ? ATTACH_POST_WAIT_RESUME : ATTACH_POST_WAIT_STOP;
+    /* Check for exec file mismatch, and let the user solve it.  */
+    validate_exec_file (from_tty);
 
-  /* Some system don't generate traps when attaching to inferior.
-     E.g. Mach 3 or GNU hurd.  */
-  if (!target_attach_no_wait ())
-    {
-      struct attach_command_continuation_args *a;
+    mode = async_exec ? ATTACH_POST_WAIT_RESUME : ATTACH_POST_WAIT_STOP;
 
-      /* Careful here.  See comments in inferior.h.  Basically some
-	 OSes don't ignore SIGSTOPs on continue requests anymore.  We
-	 need a way for handle_inferior_event to reset the stop_signal
-	 variable after an attach, and this is what
-	 STOP_QUIETLY_NO_SIGSTOP is for.  */
-      inferior->control.stop_soon = STOP_QUIETLY_NO_SIGSTOP;
+    /* Some system don't generate traps when attaching to inferior.
+       E.g. Mach 3 or GNU hurd.  */
+    if (!target_attach_no_wait ())
+      {
+	struct attach_command_continuation_args *a;
 
-      /* Wait for stop.  */
-      a = XNEW (struct attach_command_continuation_args);
-      a->args = xstrdup (args);
-      a->from_tty = from_tty;
-      a->mode = mode;
-      add_inferior_continuation (attach_command_continuation, a,
-				 attach_command_continuation_free_args);
+	/* Careful here.  See comments in inferior.h.  Basically some
+	   OSes don't ignore SIGSTOPs on continue requests anymore.  We
+	   need a way for handle_inferior_event to reset the stop_signal
+	   variable after an attach, and this is what
+	   STOP_QUIETLY_NO_SIGSTOP is for.  */
+	inferior->control.stop_soon = STOP_QUIETLY_NO_SIGSTOP;
 
-      /* Let infrun consider waiting for events out of this
-	 target.  */
-      inferior->process_target ()->threads_executing = true;
+	/* Wait for stop.  */
+	a = XNEW (struct attach_command_continuation_args);
+	a->args = xstrdup (args);
+	a->from_tty = from_tty;
+	a->mode = mode;
+	add_inferior_continuation (attach_command_continuation, a,
+				   attach_command_continuation_free_args);
 
-      if (!target_is_async_p ())
-	mark_infrun_async_event_handler ();
-      return;
-    }
-  else
-    attach_post_wait (args, from_tty, mode);
+	/* Let infrun consider waiting for events out of this
+	   target.  */
+	inferior->process_target ()->threads_executing = true;
+
+	if (!target_is_async_p ())
+	  mark_infrun_async_event_handler ();
+	return;
+      }
+    else
+      attach_post_wait (args, from_tty, mode);
+  }
+
+  maybe_call_commit_resumed_all_process_targets ();
 }
 
 /* We had just found out that the target was already attached to an
@@ -2747,39 +2759,49 @@ detach_command (const char *args, int from_tty)
   if (inferior_ptid == null_ptid)
     error (_("The program is not being run."));
 
-  query_if_trace_running (from_tty);
+  {
+    scoped_disable_commit_resumed disable_commit_resumed ("detaching");
 
-  disconnect_tracing ();
+    query_if_trace_running (from_tty);
 
-  /* Hold a strong reference to the target while (maybe)
-     detaching the parent.  Otherwise detaching could close the
-     target.  */
-  auto target_ref
-    = target_ops_ref::new_reference (current_inferior ()->process_target ());
+    disconnect_tracing ();
 
-  /* Save this before detaching, since detaching may unpush the
-     process_stratum target.  */
-  bool was_non_stop_p = target_is_non_stop_p ();
+    /* Hold a strong reference to the target while (maybe)
+       detaching the parent.  Otherwise detaching could close the
+       target.  */
+    auto target_ref
+      = target_ops_ref::new_reference (current_inferior ()->process_target ());
 
-  target_detach (current_inferior (), from_tty);
+    /* Save this before detaching, since detaching may unpush the
+       process_stratum target.  */
+    bool was_non_stop_p = target_is_non_stop_p ();
 
-  /* The current inferior process was just detached successfully.  Get
-     rid of breakpoints that no longer make sense.  Note we don't do
-     this within target_detach because that is also used when
-     following child forks, and in that case we will want to transfer
-     breakpoints to the child, not delete them.  */
-  breakpoint_init_inferior (inf_exited);
+    target_detach (current_inferior (), from_tty);
 
-  /* If the solist is global across inferiors, don't clear it when we
-     detach from a single inferior.  */
-  if (!gdbarch_has_global_solist (target_gdbarch ()))
-    no_shared_libraries (NULL, from_tty);
+    /* The current inferior process was just detached successfully.  Get
+       rid of breakpoints that no longer make sense.  Note we don't do
+       this within target_detach because that is also used when
+       following child forks, and in that case we will want to transfer
+       breakpoints to the child, not delete them.  */
+    breakpoint_init_inferior (inf_exited);
 
-  if (deprecated_detach_hook)
-    deprecated_detach_hook ();
+    /* If the solist is global across inferiors, don't clear it when we
+       detach from a single inferior.  */
+    if (!gdbarch_has_global_solist (target_gdbarch ()))
+      no_shared_libraries (NULL, from_tty);
 
-  if (!was_non_stop_p)
-    restart_after_all_stop_detach (as_process_stratum_target (target_ref.get ()));
+    if (deprecated_detach_hook)
+      deprecated_detach_hook ();
+
+    if (!was_non_stop_p)
+      {
+	process_stratum_target *proc_target
+	  = as_process_stratum_target (target_ref.get ());
+	restart_after_all_stop_detach (proc_target);
+      }
+  }
+
+  maybe_call_commit_resumed_all_process_targets ();
 }
 
 /* Disconnect from the current target without resuming it (leaving it
@@ -2828,23 +2850,29 @@ stop_current_target_threads_ns (ptid_t ptid)
 void
 interrupt_target_1 (bool all_threads)
 {
-  if (non_stop)
-    {
-      if (all_threads)
-	{
-	  scoped_restore_current_thread restore_thread;
+  {
+    scoped_disable_commit_resumed inhibit ("interrupting");
 
-	  for (inferior *inf : all_inferiors ())
-	    {
-	      switch_to_inferior_no_thread (inf);
-	      stop_current_target_threads_ns (minus_one_ptid);
-	    }
-	}
-      else
-	stop_current_target_threads_ns (inferior_ptid);
-    }
-  else
-    target_interrupt ();
+    if (non_stop)
+      {
+	if (all_threads)
+	  {
+	    scoped_restore_current_thread restore_thread;
+
+	    for (inferior *inf : all_inferiors ())
+	      {
+		switch_to_inferior_no_thread (inf);
+		stop_current_target_threads_ns (minus_one_ptid);
+	      }
+	  }
+	else
+	  stop_current_target_threads_ns (inferior_ptid);
+      }
+    else
+      target_interrupt ();
+  }
+
+  maybe_call_commit_resumed_all_process_targets ();
 }
 
 /* interrupt [-a]

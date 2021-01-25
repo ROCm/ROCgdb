@@ -2001,6 +2001,9 @@ ptid_t
 target_wait (ptid_t ptid, struct target_waitstatus *status, int options)
 {
   target_ops *target = current_top_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  gdb_assert (!proc_target->commit_resumed_state);
 
   if (!target->can_async_p ())
     gdb_assert ((options & TARGET_WNOHANG) == 0);
@@ -2054,6 +2057,7 @@ void
 target_resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
   process_stratum_target *curr_target = current_inferior ()->process_target ();
+  gdb_assert (!curr_target->commit_resumed_state);
 
   target_dcache_invalidate ();
 
@@ -3222,6 +3226,10 @@ target_update_thread_list (void)
 void
 target_stop (ptid_t ptid)
 {
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  gdb_assert (!proc_target->commit_resumed_state);
+
   if (!may_stop)
     {
       warning (_("May not interrupt or stop the target, ignoring attempt"));
