@@ -1,3 +1,32 @@
+2021-01-26  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (DEBUG_EXEC, DEBUG_EVENTS, DEBUG_MEM)
+	(DEBUG_EXCEPT): Use debug_prefixed_printf_cond.
+	(windows_init_thread_list, windows_nat::handle_load_dll)
+	(windows_nat::handle_unload_dll, windows_nat_target::resume)
+	(windows_nat_target::resume)
+	(windows_nat_target::get_windows_debug_event)
+	(windows_nat_target::interrupt, windows_xfer_memory)
+	(windows_nat_target::close): Update.
+	* nat/windows-nat.c (DEBUG_EVENTS): Use
+	debug_prefixed_printf_cond.
+	(matching_pending_stop, fetch_pending_stop)
+	(continue_last_debug_event): Update.
+
+2020-12-17  Mihails Strasuns  <mihails.strasuns@intel.com>
+
+	* linux-tdep.c (linux_make_mappings_corefile_notes): Start using
+	elfcore_write_file_note.
+
+2021-01-26  Shahab Vahedi  <shahab@synopsys.com>
+
+	* arc-tdep.c (arc_add_reggroups): New function.
+	(arc_gdbarch_init): Call arc_add_reggroups.
+
+2021-01-26  Anton Kolesov  <anton.kolesov@synopsys.com>
+
+	* arc-tdep.c (arc_skip_prologue): Log "pc" address.
+
 2021-01-25  Bernd Edlinger  <bernd.edlinger@hotmail.de>
 	    Simon Marchi  <simon.marchi@polymtl.ca>
 	    Tom de Vries  <tdevries@suse.de>
