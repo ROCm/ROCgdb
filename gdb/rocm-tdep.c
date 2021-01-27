@@ -1063,6 +1063,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   if (event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED)
     {
       ws->kind = TARGET_WAITKIND_THREAD_EXITED;
+      ws->value.integer = 0;
       return event_ptid;
     }
 
