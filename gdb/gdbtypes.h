@@ -1263,7 +1263,7 @@ struct type
   /* Return the objfile owner of this type.
 
      Return nullptr if this type is not objfile-owned.  */
-  struct objfile *objfile () const
+  struct objfile *objfile_owner () const
   {
     if (!this->is_objfile_owned ())
       return nullptr;
@@ -1274,13 +1274,20 @@ struct type
   /* Return the gdbarch owner of this type.
 
      Return nullptr if this type is not gdbarch-owned.  */
-  gdbarch *arch () const
+  gdbarch *arch_owner () const
   {
     if (this->is_objfile_owned ())
       return nullptr;
 
     return this->main_type->m_owner.gdbarch;
   }
+
+  /* Return the type's architecture.  For types owned by an
+     architecture, that architecture is returned.  For types owned by an
+     objfile, that objfile's architecture is returned.
+
+     The return value is always non-nullptr.  */
+  gdbarch *arch () const;
 
   /* * Return true if this is an integer type whose logical (bit) size
      differs from its storage size; false otherwise.  Always return
@@ -2240,8 +2247,8 @@ extern const struct floatformat *floatformats_bfloat16[BFD_ENDIAN_UNKNOWN];
 
 #define TYPE_ALLOC(t,size)                                              \
   (obstack_alloc (((t)->is_objfile_owned ()                             \
-		   ? &((t)->objfile ()->objfile_obstack)                \
-		   : gdbarch_obstack ((t)->arch ())),                   \
+		   ? &((t)->objfile_owner ()->objfile_obstack)          \
+		   : gdbarch_obstack ((t)->arch_owner ())),             \
 		  size))
 
 
@@ -2257,12 +2264,6 @@ extern const struct floatformat *floatformats_bfloat16[BFD_ENDIAN_UNKNOWN];
 extern struct type *alloc_type (struct objfile *);
 extern struct type *alloc_type_arch (struct gdbarch *);
 extern struct type *alloc_type_copy (const struct type *);
-
-/* * Return the type's architecture.  For types owned by an
-   architecture, that architecture is returned.  For types owned by an
-   objfile, that objfile's architecture is returned.  */
-
-extern struct gdbarch *get_type_arch (const struct type *);
 
 /* * This returns the target type (or NULL) of TYPE, also skipping
    past typedefs.  */
@@ -2661,9 +2662,9 @@ extern bool is_fixed_point_type (struct type *type);
 extern void allocate_fixed_point_type_info (struct type *type);
 
 /* * When the type includes explicit byte ordering, return that.
-   Otherwise, the byte ordering from gdbarch_byte_order for 
-   get_type_arch is returned.  */
-   
+   Otherwise, the byte ordering from gdbarch_byte_order for
+   the type's arch is returned.  */
+
 extern enum bfd_endian type_byte_order (const struct type *type);
 
 /* A flag to enable printing of debugging information of C++

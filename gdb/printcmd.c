@@ -305,7 +305,7 @@ print_formatted (struct value *val, int size,
 	  /* We often wrap here if there are long symbolic names.  */
 	  wrap_here ("    ");
 	  next_address = (value_address (val)
-			  + gdb_print_insn (get_type_arch (type),
+			  + gdb_print_insn (type->arch (),
 					    value_address (val), stream,
 					    &branch_delay_insns));
 	  return;
@@ -332,7 +332,7 @@ print_formatted (struct value *val, int size,
 static struct type *
 float_type_from_length (struct type *type)
 {
-  struct gdbarch *gdbarch = get_type_arch (type);
+  struct gdbarch *gdbarch = type->arch ();
   const struct builtin_type *builtin = builtin_type (gdbarch);
 
   if (TYPE_LENGTH (type) == TYPE_LENGTH (builtin->builtin_float))
@@ -354,7 +354,7 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 			const struct value_print_options *options,
 			int size, struct ui_file *stream)
 {
-  struct gdbarch *gdbarch = get_type_arch (type);
+  struct gdbarch *gdbarch = type->arch ();
   unsigned int len = TYPE_LENGTH (type);
   enum bfd_endian byte_order = type_byte_order (type);
 
@@ -2371,7 +2371,7 @@ printf_wide_c_string (struct ui_file *stream, const char *format,
 {
   const gdb_byte *str;
   size_t len;
-  struct gdbarch *gdbarch = get_type_arch (value_type (value));
+  struct gdbarch *gdbarch = value_type (value)->arch ();
   struct type *wctype = lookup_typename (current_language,
 					 "wchar_t", NULL, 0);
   int wcwidth = TYPE_LENGTH (wctype);
@@ -2439,7 +2439,7 @@ printf_floating (struct ui_file *stream, const char *format,
 {
   /* Parameter data.  */
   struct type *param_type = value_type (value);
-  struct gdbarch *gdbarch = get_type_arch (param_type);
+  struct gdbarch *gdbarch = param_type->arch ();
 
   /* Determine target type corresponding to the format string.  */
   struct type *fmt_type;
@@ -2645,8 +2645,7 @@ ui_printf (const char *arg, struct ui_file *stream)
 	    break;
 	  case wide_char_arg:
 	    {
-	      struct gdbarch *gdbarch
-		= get_type_arch (value_type (val_args[i]));
+	      struct gdbarch *gdbarch = value_type (val_args[i])->arch ();
 	      struct type *wctype = lookup_typename (current_language,
 						     "wchar_t", NULL, 0);
 	      struct type *valtype;

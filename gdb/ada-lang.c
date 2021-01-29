@@ -4526,13 +4526,12 @@ ada_convert_actual (struct value *actual, struct type *formal_type0)
 static CORE_ADDR
 value_pointer (struct value *value, struct type *type)
 {
-  struct gdbarch *gdbarch = get_type_arch (type);
   unsigned len = TYPE_LENGTH (type);
   gdb_byte *buf = (gdb_byte *) alloca (len);
   CORE_ADDR addr;
 
   addr = value_address (value);
-  gdbarch_address_to_pointer (gdbarch, type, buf, addr);
+  gdbarch_address_to_pointer (type->arch (), type, buf, addr);
   addr = extract_unsigned_integer (buf, len, type_byte_order (type));
   return addr;
 }
@@ -11235,7 +11234,7 @@ ada_is_system_address_type (struct type *type)
 static struct type *
 ada_scaling_type (struct type *type)
 {
-  return builtin_type (get_type_arch (type))->builtin_long_double;
+  return builtin_type (type->arch ())->builtin_long_double;
 }
 
 /* Assuming that TYPE is the representation of an Ada fixed-point
@@ -13270,8 +13269,8 @@ ada_operator_check (struct expression *exp, int pos,
 
   /* Invoke callbacks for TYPE and OBJFILE if they were set as non-NULL.  */
 
-  if (type != nullptr && type->objfile () != nullptr
-      && objfile_func (type->objfile (), data))
+  if (type != nullptr && type->objfile_owner () != nullptr
+      && objfile_func (type->objfile_owner (), data))
     return 1;
 
   return 0;

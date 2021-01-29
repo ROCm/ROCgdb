@@ -1451,7 +1451,7 @@ dwarf_entry_factory::entry_to_location (dwarf_entry *entry)
   gdb_assert (value != nullptr);
 
   struct type *type = value->get_type ();
-  struct gdbarch *gdbarch = get_type_arch (type);
+  struct gdbarch *gdbarch = type->arch ();
   LONGEST offset;
 
   if (gdbarch_integer_to_address_p (gdbarch))
@@ -2456,7 +2456,7 @@ dwarf_expr_context::dwarf_entry_to_gdb_value (dwarf_entry *entry,
 					      struct type *subobj_type,
 					      LONGEST subobj_offset)
 {
-  struct gdbarch *gdbarch = get_type_arch (type);
+  struct gdbarch *gdbarch = type->arch ();
   struct value *retval = nullptr;
 
   if (subobj_type == nullptr)

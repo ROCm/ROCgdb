@@ -516,7 +516,7 @@ rust_language::value_print_inner
 	       that.  */
 	    struct type *elttype = check_typedef (TYPE_TARGET_TYPE (type));
 	    CORE_ADDR addr = value_as_address (val);
-	    struct gdbarch *arch = get_type_arch (type);
+	    struct gdbarch *arch = type->arch ();
 
 	    if (opts.addressprint)
 	      {
@@ -1825,7 +1825,7 @@ rust_operator_check (struct expression *exp, int pos,
     case OP_AGGREGATE:
       {
 	struct type *type = exp->elts[pos + 1].type;
-	struct objfile *objfile = type->objfile ();
+	struct objfile *objfile = type->objfile_owner ();
 
 	if (objfile != NULL && (*objfile_func) (objfile, data))
 	  return 1;
@@ -1919,7 +1919,7 @@ rust_language::emitchar (int ch, struct type *chtype,
 {
   if (!rust_chartype_p (chtype))
     generic_emit_char (ch, chtype, stream, quoter,
-		       target_charset (get_type_arch (chtype)));
+		       target_charset (chtype->arch ()));
   else if (ch == '\\' || ch == quoter)
     fprintf_filtered (stream, "\\%c", ch);
   else if (ch == '\n')
