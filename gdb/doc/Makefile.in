@@ -269,7 +269,7 @@ uninstall-info:
 	  (cd $(DESTDIR)$(infodir) && rm -f $$file $$file-[0-9] $$file-[0-9][0-9]); \
 	done
 
-html__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
+html__strip_dir = `echo $$p | sed -e 's|^.*/||' -e '$(transform)'`;
 
 install-html: $(HTMLFILES)
 	@$(NORMAL_INSTALL)
@@ -288,7 +288,7 @@ install-html: $(HTMLFILES)
 	  fi; \
 	done
 
-pdf__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
+pdf__strip_dir = `echo $$p | sed -e 's|^.*/||' -e '$(transform)'`;
 
 install-pdf: $(PDFFILES)
 	@$(NORMAL_INSTALL)
