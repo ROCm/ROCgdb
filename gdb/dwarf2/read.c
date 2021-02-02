@@ -552,16 +552,41 @@ public:
      Note this value comes from the Fission stub CU/TU's DIE.  */
   gdb::optional<ULONGEST> addr_base;
 
-  /* The DW_AT_rnglists_base attribute if present.
-     Note this value comes from the Fission stub CU/TU's DIE.
-     Also note that the value is zero in the non-DWO case so this value can
-     be used without needing to know whether DWO files are in use or not.
-     N.B. This does not apply to DW_AT_ranges appearing in
-     DW_TAG_compile_unit dies.  This is a bit of a wart, consider if ever
-     DW_AT_ranges appeared in the DW_TAG_compile_unit of DWO DIEs: then
-     DW_AT_rnglists_base *would* have to be applied, and we'd have to care
-     whether the DW_AT_ranges attribute came from the skeleton or DWO.  */
-  ULONGEST ranges_base = 0;
+  /* The DW_AT_GNU_ranges_base attribute, if present.
+
+     This is only relevant in the context of pre-DWARF 5 split units.  In this
+     context, there is a .debug_ranges section in the linked executable,
+     containing all the ranges data for all the compilation units.  Each
+     skeleton/stub unit has (if needed) a DW_AT_GNU_ranges_base attribute that
+     indicates the base of its contribution to that section.  The DW_AT_ranges
+     attributes in the split-unit are of the form DW_FORM_sec_offset and point
+     into the .debug_ranges section of the linked file.  However, they are not
+     "true" DW_FORM_sec_offset, because they are relative to the base of their
+     compilation unit's contribution, rather than relative to the beginning of
+     the section.  The DW_AT_GNU_ranges_base value must be added to it to make
+     it relative to the beginning of the section.
+
+     Note that the value is zero when we are not in a pre-DWARF 5 split-unit
+     case, so this value can be added without needing to know whether we are in
+     this case or not.
+
+     N.B. If a DW_AT_ranges attribute is found on the DW_TAG_compile_unit in the
+     skeleton/stub, it must not have the base added, as it already points to the
+     right place.  And since the DW_TAG_compile_unit DIE in the split-unit can't
+     have a DW_AT_ranges attribute, we can use the
+
+       die->tag != DW_AT_compile_unit
+
+     to determine whether the base should be added or not.  */
+  ULONGEST gnu_ranges_base = 0;
+
+  /* The DW_AT_rnglists_base attribute, if present.
+
+     This is used when processing attributes of form DW_FORM_rnglistx in
+     non-split units.  Attributes of this form found in a split unit don't
+     use it, as split-unit files have their own non-shared .debug_rnglists.dwo
+     section.  */
+  ULONGEST rnglists_base = 0;
 
   /* The DW_AT_loclists_base attribute if present.  */
   ULONGEST loclist_base = 0;
@@ -6968,10 +6993,17 @@ read_cutu_die_from_dwo (dwarf2_cu *cu,
 
       cu->addr_base = stub_comp_unit_die->addr_base ();
 
-      /* There should be a DW_AT_rnglists_base (DW_AT_GNU_ranges_base) attribute
-	 here (if needed). We need the value before we can process
-	 DW_AT_ranges.  */
-      cu->ranges_base = stub_comp_unit_die->ranges_base ();
+      /* There should be a DW_AT_GNU_ranges_base attribute here (if needed).
+         We need the value before we can process DW_AT_ranges values from the
+         DWO.  */
+      cu->gnu_ranges_base = stub_comp_unit_die->gnu_ranges_base ();
+
+      /* For DWARF5: record the DW_AT_rnglists_base value from the skeleton.  If
+         there are attributes of form DW_FORM_rnglistx in the skeleton, they'll
+         need the rnglists base.  Attributes of form DW_FORM_rnglistx in the
+         split unit don't use it, as the DWO has its own .debug_rnglists.dwo
+         section.  */
+      cu->rnglists_base = stub_comp_unit_die->rnglists_base ();
     }
   else if (stub_comp_dir != NULL)
     {
@@ -14660,20 +14692,14 @@ dwarf2_get_pc_bounds (struct die_info *die, CORE_ADDR *lowpc,
       attr = dwarf2_attr (die, DW_AT_ranges, cu);
       if (attr != nullptr && attr->form_is_unsigned ())
 	{
-	  /* DW_AT_rnglists_base does not apply to DIEs from the DWO skeleton.
-	     We take advantage of the fact that DW_AT_ranges does not appear
-	     in DW_TAG_compile_unit of DWO files.
+	  /* Offset in the .debug_ranges or .debug_rnglist section (depending
+	     on DWARF version).  */
+	  ULONGEST ranges_offset = attr->as_unsigned ();
 
-	     Attributes of the form DW_FORM_rnglistx have already had their
-	     value changed by read_rnglist_index and already include
-	     DW_AT_rnglists_base, so don't need to add the ranges base,
-	     either.  */
-	  int need_ranges_base = (die->tag != DW_TAG_compile_unit
-				  && attr->form != DW_FORM_rnglistx);
-	  unsigned int ranges_offset = (attr->as_unsigned ()
-					+ (need_ranges_base
-					   ? cu->ranges_base
-					   : 0));
+	  /* See dwarf2_cu::gnu_ranges_base's doc for why we might want to add
+	     this value.  */
+	  if (die->tag != DW_TAG_compile_unit)
+	    ranges_offset += cu->gnu_ranges_base;
 
 	  /* Value of the DW_AT_ranges attribute is the offset in the
 	     .debug_ranges section.  */
@@ -14838,24 +14864,17 @@ dwarf2_record_block_ranges (struct die_info *die, struct block *block,
   attr = dwarf2_attr (die, DW_AT_ranges, cu);
   if (attr != nullptr && attr->form_is_unsigned ())
     {
-      /* DW_AT_rnglists_base does not apply to DIEs from the DWO skeleton.
-	 We take advantage of the fact that DW_AT_ranges does not appear
-	 in DW_TAG_compile_unit of DWO files.
+      /* Offset in the .debug_ranges or .debug_rnglist section (depending
+	 on DWARF version).  */
+      ULONGEST ranges_offset = attr->as_unsigned ();
 
-	 Attributes of the form DW_FORM_rnglistx have already had their
-	 value changed by read_rnglist_index and already include
-	 DW_AT_rnglists_base, so don't need to add the ranges base,
-	 either.  */
-      int need_ranges_base = (die->tag != DW_TAG_compile_unit
-			      && attr->form != DW_FORM_rnglistx);
-
-      /* The value of the DW_AT_ranges attribute is the offset of the
-	 address range list in the .debug_ranges section.  */
-      unsigned long offset = (attr->as_unsigned ()
-			      + (need_ranges_base ? cu->ranges_base : 0));
+      /* See dwarf2_cu::gnu_ranges_base's doc for why we might want to add
+	 this value.  */
+      if (die->tag != DW_TAG_compile_unit)
+	ranges_offset += cu->gnu_ranges_base;
 
       std::vector<blockrange> blockvec;
-      dwarf2_ranges_process (offset, cu, die->tag,
+      dwarf2_ranges_process (ranges_offset, cu, die->tag,
 	[&] (CORE_ADDR start, CORE_ADDR end)
 	{
 	  start += baseaddr;
@@ -19293,7 +19312,7 @@ read_full_die_1 (const struct die_reader_specs *reader,
 
   attr = die->attr (DW_AT_rnglists_base);
   if (attr != nullptr)
-    cu->ranges_base = attr->as_unsigned ();
+    cu->rnglists_base = attr->as_unsigned ();
 
   if (any_need_reprocess)
     {
@@ -19821,26 +19840,15 @@ partial_die_info::read (const struct die_reader_specs *reader,
 
 	case DW_AT_ranges:
 	  {
-	    /* DW_AT_rnglists_base does not apply to DIEs from the DWO
-	       skeleton.  We take advantage of the fact the DW_AT_ranges
-	       does not appear in DW_TAG_compile_unit of DWO files.
+	    /* Offset in the .debug_ranges or .debug_rnglist section (depending
+	       on DWARF version).  */
+	    ULONGEST ranges_offset = attr.as_unsigned ();
 
-	       Attributes of the form DW_FORM_rnglistx have already had
-	       their value changed by read_rnglist_index and already
-	       include DW_AT_rnglists_base, so don't need to add the ranges
-	       base, either.  */
-	    int need_ranges_base = (tag != DW_TAG_compile_unit
-				    && attr.form != DW_FORM_rnglistx);
-	    /* It would be nice to reuse dwarf2_get_pc_bounds here,
-	       but that requires a full DIE, so instead we just
-	       reimplement it.  */
-	    unsigned int ranges_offset = (attr.as_unsigned ()
-					  + (need_ranges_base
-					     ? cu->ranges_base
-					     : 0));
+	    /* See dwarf2_cu::gnu_ranges_base's doc for why we might want to add
+	       this value.  */
+	    if (tag != DW_TAG_compile_unit)
+	      ranges_offset += cu->gnu_ranges_base;
 
-	    /* Value of the DW_AT_ranges attribute is the offset in the
-	       .debug_ranges section.  */
 	    if (dwarf2_ranges_read (ranges_offset, &lowpc, &highpc, cu,
 				    nullptr, tag))
 	      has_pc_info = 1;
@@ -20165,22 +20173,30 @@ partial_die_info::fixup (struct dwarf2_cu *cu)
 }
 
 /* Read the .debug_loclists or .debug_rnglists header (they are the same format)
-   contents from the given SECTION in the HEADER.  */
+   contents from the given SECTION in the HEADER.
+
+   HEADER_OFFSET is the offset of the header in the section.  */
 static void
 read_loclists_rnglists_header (struct loclists_rnglists_header *header,
-			       struct dwarf2_section_info *section)
+			       struct dwarf2_section_info *section,
+			       sect_offset header_offset)
 {
   unsigned int bytes_read;
   bfd *abfd = section->get_bfd_owner ();
-  const gdb_byte *info_ptr = section->buffer;
+  const gdb_byte *info_ptr = section->buffer + to_underlying (header_offset);
+
   header->length = read_initial_length (abfd, info_ptr, &bytes_read);
   info_ptr += bytes_read;
+
   header->version = read_2_bytes (abfd, info_ptr);
   info_ptr += 2;
+
   header->addr_size = read_1_byte (abfd, info_ptr);
   info_ptr += 1;
+
   header->segment_collector_size = read_1_byte (abfd, info_ptr);
   info_ptr += 1;
+
   header->offset_entry_count = read_4_bytes (abfd, info_ptr);
 }
 
@@ -20208,42 +20224,66 @@ lookup_loclist_base (struct dwarf2_cu *cu)
 
 /* Given a DW_FORM_loclistx value LOCLIST_INDEX, fetch the offset from the
    array of offsets in the .debug_loclists section.  */
-static CORE_ADDR
+
+static sect_offset
 read_loclist_index (struct dwarf2_cu *cu, ULONGEST loclist_index)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct objfile *objfile = per_objfile->objfile;
   bfd *abfd = objfile->obfd;
+  ULONGEST loclist_header_size =
+    (cu->header.initial_length_size == 4 ? LOCLIST_HEADER_SIZE32
+     : LOCLIST_HEADER_SIZE64);
   ULONGEST loclist_base = lookup_loclist_base (cu);
+
+  /* Offset in .debug_loclists of the offset for LOCLIST_INDEX.  */
+  ULONGEST start_offset =
+    loclist_base + loclist_index * cu->header.offset_size;
+
+  /* Get loclists section.  */
   struct dwarf2_section_info *section = cu_debug_loc_section (cu);
 
+  /* Read the loclists section content.  */
   section->read (objfile);
   if (section->buffer == NULL)
-    complaint (_("DW_FORM_loclistx used without .debug_loclists "
-		"section [in module %s]"), objfile_name (objfile));
+    error (_("DW_FORM_loclistx used without .debug_loclists "
+	     "section [in module %s]"), objfile_name (objfile));
+
+  /* DW_AT_loclists_base points after the .debug_loclists contribution header,
+     so if loclist_base is smaller than the header size, we have a problem.  */
+  if (loclist_base < loclist_header_size)
+    error (_("DW_AT_loclists_base is smaller than header size [in module %s]"),
+	   objfile_name (objfile));
+
+  /* Read the header of the loclists contribution.  */
   struct loclists_rnglists_header header;
-  read_loclists_rnglists_header (&header, section);
+  read_loclists_rnglists_header (&header, section,
+				 (sect_offset) (loclist_base - loclist_header_size));
+
+  /* Verify the loclist index is valid.  */
   if (loclist_index >= header.offset_entry_count)
-    complaint (_("DW_FORM_loclistx pointing outside of "
-		".debug_loclists offset array [in module %s]"),
-		objfile_name (objfile));
-  if (loclist_base + loclist_index * cu->header.offset_size
-	>= section->size)
-    complaint (_("DW_FORM_loclistx pointing outside of "
-		".debug_loclists section [in module %s]"),
-		objfile_name (objfile));
-  const gdb_byte *info_ptr
-    = section->buffer + loclist_base + loclist_index * cu->header.offset_size;
+    error (_("DW_FORM_loclistx pointing outside of "
+	     ".debug_loclists offset array [in module %s]"),
+	   objfile_name (objfile));
+
+  /* Validate that reading won't go beyond the end of the section.  */
+  if (start_offset + cu->header.offset_size > section->size)
+    error (_("Reading DW_FORM_loclistx index beyond end of"
+	     ".debug_loclists section [in module %s]"),
+	   objfile_name (objfile));
+
+  const gdb_byte *info_ptr = section->buffer + start_offset;
 
   if (cu->header.offset_size == 4)
-    return bfd_get_32 (abfd, info_ptr) + loclist_base;
+    return (sect_offset) (bfd_get_32 (abfd, info_ptr) + loclist_base);
   else
-    return bfd_get_64 (abfd, info_ptr) + loclist_base;
+    return (sect_offset) (bfd_get_64 (abfd, info_ptr) + loclist_base);
 }
 
 /* Given a DW_FORM_rnglistx value RNGLIST_INDEX, fetch the offset from the
    array of offsets in the .debug_rnglists section.  */
-static CORE_ADDR
+
+static sect_offset
 read_rnglist_index (struct dwarf2_cu *cu, ULONGEST rnglist_index,
 		    dwarf_tag tag)
 {
@@ -20253,8 +20293,14 @@ read_rnglist_index (struct dwarf2_cu *cu, ULONGEST rnglist_index,
   ULONGEST rnglist_header_size =
     (cu->header.initial_length_size == 4 ? RNGLIST_HEADER_SIZE32
      : RNGLIST_HEADER_SIZE64);
+
+  /* When reading a DW_FORM_rnglistx from a DWO, we read from the DWO's
+     .debug_rnglists.dwo section.  The rnglists base given in the skeleton
+     doesn't apply.  */
   ULONGEST rnglist_base =
-      (cu->dwo_unit != nullptr) ? rnglist_header_size : cu->ranges_base;
+      (cu->dwo_unit != nullptr) ? rnglist_header_size : cu->rnglists_base;
+
+  /* Offset in .debug_rnglists of the offset for RNGLIST_INDEX.  */
   ULONGEST start_offset =
     rnglist_base + rnglist_index * cu->header.offset_size;
 
@@ -20268,22 +20314,25 @@ read_rnglist_index (struct dwarf2_cu *cu, ULONGEST rnglist_index,
 	     "[in module %s]"),
 	   objfile_name (objfile));
 
-  /* Verify the rnglist index is valid.  */
+  /* DW_AT_rnglists_base points after the .debug_rnglists contribution header,
+     so if rnglist_base is smaller than the header size, we have a problem.  */
+  if (rnglist_base < rnglist_header_size)
+    error (_("DW_AT_rnglists_base is smaller than header size [in module %s]"),
+	   objfile_name (objfile));
+
+  /* Read the header of the rnglists contribution.  */
   struct loclists_rnglists_header header;
-  read_loclists_rnglists_header (&header, section);
+  read_loclists_rnglists_header (&header, section,
+				 (sect_offset) (rnglist_base - rnglist_header_size));
+
+  /* Verify the rnglist index is valid.  */
   if (rnglist_index >= header.offset_entry_count)
     error (_("DW_FORM_rnglistx index pointing outside of "
 	     ".debug_rnglists offset array [in module %s]"),
 	   objfile_name (objfile));
 
-  /* Validate that the offset is within the section's range.  */
-  if (start_offset >= section->size)
-    error (_("DW_FORM_rnglistx pointing outside of "
-	     ".debug_rnglists section [in module %s]"),
-	   objfile_name (objfile));
-
   /* Validate that reading won't go beyond the end of the section.  */
-  if (start_offset + cu->header.offset_size > rnglist_base + section->size)
+  if (start_offset + cu->header.offset_size > section->size)
     error (_("Reading DW_FORM_rnglistx index beyond end of"
 	     ".debug_rnglists section [in module %s]"),
 	   objfile_name (objfile));
@@ -20291,9 +20340,9 @@ read_rnglist_index (struct dwarf2_cu *cu, ULONGEST rnglist_index,
   const gdb_byte *info_ptr = section->buffer + start_offset;
 
   if (cu->header.offset_size == 4)
-    return read_4_bytes (abfd, info_ptr) + rnglist_base;
+    return (sect_offset) (read_4_bytes (abfd, info_ptr) + rnglist_base);
   else
-    return read_8_bytes (abfd, info_ptr) + rnglist_base;
+    return (sect_offset) (read_8_bytes (abfd, info_ptr) + rnglist_base);
 }
 
 /* Process the attributes that had to be skipped in the first round. These
@@ -20313,10 +20362,20 @@ read_attribute_reprocess (const struct die_reader_specs *reader,
 					    attr->as_unsigned_reprocess ()));
 	break;
       case DW_FORM_loclistx:
-	attr->set_address (read_loclist_index (cu, attr->as_unsigned ()));
-	 break;
+	{
+	  sect_offset loclists_sect_off
+	    = read_loclist_index (cu, attr->as_unsigned_reprocess ());
+
+	  attr->set_unsigned (to_underlying (loclists_sect_off));
+	}
+	break;
       case DW_FORM_rnglistx:
-	attr->set_address (read_rnglist_index (cu, attr->as_unsigned (), tag));
+	{
+	  sect_offset rnglists_sect_off
+	    = read_rnglist_index (cu, attr->as_unsigned_reprocess (), tag);
+
+	  attr->set_unsigned (to_underlying (rnglists_sect_off));
+	}
 	break;
       case DW_FORM_strx:
       case DW_FORM_strx1:

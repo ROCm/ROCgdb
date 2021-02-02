@@ -176,12 +176,9 @@ filename:  NAME;
 
 
 defsym_expr:
-		{ ldlex_defsym(); }
-		NAME '=' exp
-		{
-		  ldlex_popstate();
-		  lang_add_assignment (exp_defsym ($2, $4));
-		}
+		{ ldlex_expression(); }
+		assignment
+		{ ldlex_popstate(); }
 	;
 
 /* SYNTAX WITHIN AN MRI SCRIPT FILE */
@@ -864,12 +861,13 @@ high_level_library_NAME_list:
 			{ ldemul_hll($3); }
 	|	filename
 			{ ldemul_hll($1); }
-
 	;
 
 low_level_library:
 	SYSLIB '(' low_level_library_NAME_list ')'
-	; low_level_library_NAME_list:
+	;
+
+low_level_library_NAME_list:
 		low_level_library_NAME_list opt_comma filename
 			{ ldemul_syslib($3); }
 	|
@@ -1070,11 +1068,15 @@ section:	NAME		{ ldlex_expression(); }
 		'}' { ldlex_popstate (); ldlex_expression (); }
 		memspec_opt memspec_at_opt phdr_opt fill_opt
 		{
+		  if (yychar == NAME)
+		    {
+		      yyclearin;
+		      ldlex_backup ();
+		    }
 		  ldlex_popstate ();
 		  lang_leave_output_section_statement ($18, $15, $17, $16);
 		}
 		opt_comma
-		{}
 	|	OVERLAY
 			{ ldlex_expression (); }
 		opt_exp_without_type opt_nocrossrefs opt_at opt_subalign
@@ -1088,6 +1090,11 @@ section:	NAME		{ ldlex_expression(); }
 			{ ldlex_popstate (); ldlex_expression (); }
 		memspec_opt memspec_at_opt phdr_opt fill_opt
 			{
+			  if (yychar == NAME)
+			    {
+			      yyclearin;
+			      ldlex_backup ();
+			    }
 			  ldlex_popstate ();
 			  lang_leave_overlay ($5, (int) $4,
 					      $16, $13, $15, $14);

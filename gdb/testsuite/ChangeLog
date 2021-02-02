@@ -1,3 +1,66 @@
+2021-02-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.base/scope.exp: Use proc_with_prefix.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* lib/dwarf.exp (rnglists): Add -no-offset-array option to
+	table proc.
+	* gdb.dwarf2/rnglists-sec-offset.exp: Add test for
+	.debug_rnglists table without offset array.
+	* gdb.dwarf2/loclists-sec-offset.exp: Add test for
+	.debug_loclists table without offset array.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.dwarf2/rnglists-sec-offset.exp: Add test for DW_AT_ranges
+	of DW_FORM_sec_offset form plus DW_AT_rnglists_base attribute.
+	* gdb.dwarf2/loclists-sec-offset.exp: Add test for
+	DW_AT_location of DW_FORM_sec_offset plus DW_AT_loclists_base
+	attribute
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/26813
+	* lib/dwarf.exp (_handle_DW_FORM): Handle DW_FORM_loclistx.
+	(loclists): New proc.
+	* gdb.dwarf2/loclists-multiple-cus.c: New.
+	* gdb.dwarf2/loclists-multiple-cus.exp: New.
+	* gdb.dwarf2/loclists-sec-offset.c: New.
+	* gdb.dwarf2/loclists-sec-offset.exp: New.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* lib/dwarf.exp (_location): Add parameters.
+	(_handle_DW_FORM): Adjust.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/26813
+	* lib/dwarf.exp (_handle_DW_FORM): Handle DW_FORM_rnglistx.
+	(cu): Generate header for DWARF 5.
+	(rnglists): New proc.
+	* gdb.dwarf2/rnglists-multiple-cus.exp: New.
+	* gdb.dwarf2/rnglists-sec-offset.exp: New.
+
+2021-02-02  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/24620
+	* gdb.dwarf2/fission-reread.exp: Add test-case.
+
+2021-02-01  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/fission-base.S: Pass -DDWO=$dwo.
+	* gdb.dwarf2/fission-loclists-pie.S: Same.
+	* gdb.dwarf2/fission-loclists.S: Same.
+	* gdb.dwarf2/fission-multi-cu.S: Same.
+	* gdb.dwarf2/fission-reread.S: Same.
+	* gdb.dwarf2/fission-base.exp: Use DWO.
+	* gdb.dwarf2/fission-loclists-pie.exp: Same.
+	* gdb.dwarf2/fission-loclists.exp: Same.
+	* gdb.dwarf2/fission-multi-cu.exp: Same.
+	* gdb.dwarf2/fission-reread.exp: Same.
+
 2021-01-29  Tom de Vries  <tdevries@suse.de>
 
 	PR breakpoints/26063
