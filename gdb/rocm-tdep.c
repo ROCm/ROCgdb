@@ -823,8 +823,11 @@ rocm_target_ops::stop (ptid_t ptid)
       if (!ptid_is_gpu (thread->ptid))
 	continue;
 
-      amd_dbgapi_status_t status
-	= amd_dbgapi_wave_stop (get_amd_dbgapi_wave_id (thread->ptid));
+      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
+      amd_dbgapi_wave_state_t state;
+
+      amd_dbgapi_status_t status = amd_dbgapi_wave_get_info (
+	wave_id, AMD_DBGAPI_WAVE_INFO_STATE, sizeof (state), &state);
 
       if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
 	{
@@ -833,6 +836,16 @@ rocm_target_ops::stop (ptid_t ptid)
 	  thread->state = THREAD_EXITED;
 	}
       else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
+	       status);
+
+      /* If the wave is already known to be stopped then do nothing.  */
+      if (state == AMD_DBGAPI_WAVE_STATE_STOP)
+	continue;
+
+      status = amd_dbgapi_wave_stop (wave_id);
+
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	{
 	  error (_ ("Could not stop %s (rc=%d)"),
 		 pid_to_str (thread->ptid).c_str (), status);
