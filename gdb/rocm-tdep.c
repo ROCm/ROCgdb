@@ -1060,18 +1060,18 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   struct inferior *inf = current_inferior ();
   event_ptid = ptid_t (inf->pid, 1, event_wave_id.handle);
 
-  if (event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED)
+  amd_dbgapi_wave_stop_reason_t stop_reason;
+  status = amd_dbgapi_wave_get_info (event_wave_id,
+				     AMD_DBGAPI_WAVE_INFO_STOP_REASON,
+				     sizeof (stop_reason), &stop_reason);
+  if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID
+      && event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED)
     {
       ws->kind = TARGET_WAITKIND_THREAD_EXITED;
       ws->value.integer = 0;
       return event_ptid;
     }
-
-  amd_dbgapi_wave_stop_reason_t stop_reason;
-  status = amd_dbgapi_wave_get_info (event_wave_id,
-				     AMD_DBGAPI_WAVE_INFO_STOP_REASON,
-				     sizeof (stop_reason), &stop_reason);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("wave_get_info for wave_%ld failed (rc=%d)"),
 	   event_wave_id.handle, status);
 
