@@ -5800,6 +5800,16 @@ remote_target::remote_detach_1 (inferior *inf, int from_tty)
 
   target_announce_detach (from_tty);
 
+  if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+    {
+      /* If we're in breakpoints-always-inserted mode, or the inferior
+	 is running, we have to remove breakpoints before detaching.
+	 We don't do this in common code instead because not all
+	 targets support removing breakpoints while the target is
+	 running.  The remote target / gdbserver does, though.  */
+      remove_breakpoints_inf (current_inferior ());
+    }
+
   /* Tell the remote target to detach.  */
   remote_detach_pid (pid);
 
@@ -6033,7 +6043,12 @@ extended_remote_target::attach (const char *args, int from_tty)
 	}
     }
   else
-    gdb_assert (wait_status == NULL);
+    {
+      gdb_assert (wait_status == NULL);
+
+      gdb_assert (target_can_async_p ());
+      target_async (1);
+    }
 }
 
 /* Implementation of the to_post_attach method.  */
@@ -7001,13 +7016,11 @@ remote_notif_stop_ack (remote_target *remote,
   /* acknowledge */
   putpkt (remote, self->ack_command);
 
-  if (stop_reply->ws.kind == TARGET_WAITKIND_IGNORE)
-    {
-      /* We got an unknown stop reply.  */
-      error (_("Unknown stop reply"));
-    }
-
-  remote->push_stop_reply (stop_reply);
+  /* Kind can be TARGET_WAITKIND_IGNORE if we have meanwhile discarded
+     the notification.  It was left in the queue because we need to
+     acknowledge it and pull the rest of the notifications out.  */
+  if (stop_reply->ws.kind != TARGET_WAITKIND_IGNORE)
+    remote->push_stop_reply (stop_reply);
 }
 
 static int
@@ -7176,8 +7189,14 @@ remote_target::discard_pending_stop_replies (struct inferior *inf)
   /* Discard the in-flight notification.  */
   if (reply != NULL && reply->ptid.pid () == inf->pid)
     {
-      delete reply;
-      rns->pending_event[notif_client_stop.id] = NULL;
+      /* Leave the notification pending, since the server expects that
+	 we acknowledge it with vStopped.  But clear its contents, so
+	 that later on when we acknowledge it, we also discard it.  */
+      reply->ws.kind = TARGET_WAITKIND_IGNORE;
+
+      if (remote_debug)
+	fprintf_unfiltered (gdb_stdlog,
+			    "discarded in-flight notification\n");
     }
 
   /* Discard the stop replies we have already pulled with
