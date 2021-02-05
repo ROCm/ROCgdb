@@ -1,3 +1,27 @@
+2021-02-05  Nelson Chu  <nelson.chu@sifive.com>
+
+	PR 27348
+	* opcode/riscv.h: Remove obsolete OP_*CUSTOM_IMM.
+
+2021-02-05  Nelson Chu  <nelson.chu@sifive.com>
+
+	PR 27348
+	* opcode/riscv-opc.h: Remove obsolete Xcustom support.
+
+2021-01-27  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (ECTF_NONAME): New.
+	(ECTF_NERR): Adjust.
+
+2021-01-26  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-api.h (CTF_LINK_NO_FILTER_REPORTED_SYMS): New.
+
+2021-02-04  Nelson Chu  <nelson.chu@sifive.com>
+
+	* opcode/riscv-opc.h: Removed macros for zb* extensions.
+	* opcode/riscv.h (riscv_insn_class): Removed INSN_CLASS_ZB*.
+
 2021-01-15  Nelson Chu  <nelson.chu@sifive.com>
 
 	* opcode/riscv.h: Indent and GNU coding standards tidy,

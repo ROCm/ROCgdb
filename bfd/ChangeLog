@@ -1,3 +1,20 @@
+2021-02-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19609
+	* elf64-x86-64.c (elf_x86_64_relocate_section): Provide more
+	info when failed to convert GOTPCREL relocation.
+
+2021-02-04  Nelson Chu  <nelson.chu@sifive.com>
+
+	* elfxx-riscv.c (riscv_parse_prefixed_ext): Removed zb*.
+
+2021-02-04  Alan Modra  <amodra@gmail.com>
+
+	PR 27311
+	* elflink.c (elf_link_add_object_symbols): Don't pull in as-needed
+	libraries for IR references on pass over libraries after LTO
+	recompilation.
+
 2021-02-03  Alan Modra  <amodra@gmail.com>
 
 	PR 27311

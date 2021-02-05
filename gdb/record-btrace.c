@@ -2531,6 +2531,9 @@ record_btrace_target::wait (ptid_t ptid, struct target_waitstatus *status,
   std::vector<thread_info *> moving;
   std::vector<thread_info *> no_history;
 
+  /* Clear this, if needed we'll re-mark it below.  */
+  clear_async_event_handler (record_btrace_async_inferior_event_handler);
+
   DEBUG ("wait %s (0x%x)", target_pid_to_str (ptid).c_str (),
 	 (unsigned) options);
 

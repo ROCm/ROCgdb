@@ -223,8 +223,6 @@ static const char * const riscv_pred_succ[16] =
 #define OP_MASK_RL		0x1
 #define OP_SH_RL		25
 
-#define OP_MASK_CUSTOM_IMM	0x7fU
-#define OP_SH_CUSTOM_IMM	25
 #define OP_MASK_CSR		0xfffU
 #define OP_SH_CSR		20
 
@@ -311,10 +309,6 @@ enum riscv_insn_class
   INSN_CLASS_ZICSR,
   INSN_CLASS_ZIFENCEI,
   INSN_CLASS_ZIHINTPAUSE,
-  INSN_CLASS_ZBA,
-  INSN_CLASS_ZBB,
-  INSN_CLASS_ZBC,
-  INSN_CLASS_ZBA_OR_ZBB,
 };
 
 /* This structure holds information for a particular instruction.  */

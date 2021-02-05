@@ -104,6 +104,15 @@ typedef struct ctf_link_sym
 /* Omit the content of the variables section.  */
 #define CTF_LINK_OMIT_VARIABLES_SECTION 0x8
 
+/* If *unset*, filter out entries corresponding to linker-reported symbols
+   from the variable section, and filter out all entries with no linker-reported
+   symbols from the data object and function info sections: if set, do no
+   filtering and leave all entries in place.  (This is a negative-sense flag
+   because it is rare to want symbols the linker has not reported as present to
+   stick around in the symtypetab sections nonetheless: relocatable links are
+   the only likely case.)  */
+#define CTF_LINK_NO_FILTER_REPORTED_SYMS 0x10
+
 /* Symbolic names for CTF sections.  */
 
 typedef enum ctf_sect_names
@@ -231,7 +240,8 @@ typedef struct ctf_snapshot_id
   _CTF_ITEM (ECTF_NEXT_WRONGFP, "Iteration entity changed in mid-iterate.") \
   _CTF_ITEM (ECTF_FLAGS, "CTF header contains flags unknown to libctf.") \
   _CTF_ITEM (ECTF_NEEDSBFD, "This feature needs a libctf with BFD support.") \
-  _CTF_ITEM (ECTF_INCOMPLETE, "Type is not a complete type.")
+  _CTF_ITEM (ECTF_INCOMPLETE, "Type is not a complete type.") \
+  _CTF_ITEM (ECTF_NONAME, "Type name must not be empty.")
 
 #define	ECTF_BASE	1000	/* Base value for libctf errnos.  */
 
@@ -244,7 +254,7 @@ _CTF_ERRORS
 #undef _CTF_FIRST
   };
 
-#define ECTF_NERR (ECTF_INCOMPLETE - ECTF_BASE + 1) /* Count of CTF errors.  */
+#define ECTF_NERR (ECTF_NONAME - ECTF_BASE + 1) /* Count of CTF errors.  */
 
 /* The CTF data model is inferred to be the caller's data model or the data
    model of the given object, unless ctf_setmodel is explicitly called.  */
