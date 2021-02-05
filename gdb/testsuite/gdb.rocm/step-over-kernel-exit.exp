@@ -1,0 +1,108 @@
+# Copyright (C) 2023 Free Software Foundation, Inc.
+# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test stopping at and single-stepping and displaced-stepping an
+# s_endpgm instruction.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hipcc_tests
+
+if { [build_executable "failed to prepare" \
+	  $testfile $srcfile {debug hip}] == -1 } {
+    return -1
+}
+
+# Test stepping over an s_endpgm instruction.
+#
+# STEP_OVER_MODE can be one of:
+#
+#   - none: don't put a breakpoint on the s_endpgm instruction.
+
+#   - inline: put a breakpoint on the s_endpgm instruction, and use
+#     in-line stepping to step over it (disable displaced-stepping).
+
+#   - displaced: same, but use displaced stepping.
+#
+# SCHEDLOCK can be "on" or "off".
+
+proc do_test { step_over_mode schedlock } {
+    with_rocm_gpu_lock {
+	clean_restart $::binfile
+
+	if { $step_over_mode == "none" } {
+	    # Nothing to do.
+	} elseif { $step_over_mode == "inline" } {
+	    gdb_test_no_output "set displaced-stepping off"
+	} elseif { $step_over_mode == "displaced" } {
+	    gdb_test_no_output "set displaced-stepping on"
+	} else {
+	    error "Invalid step_over_mode value: $step_over_mode"
+	}
+
+	if ![runto_main] {
+	    fail "can't run to main"
+	    return -1
+	}
+
+	# Put a breakpoint on the instruction before s_endpgm,
+	# continue to it.
+	gdb_breakpoint "before_s_endpgm_insn" allow-pending
+	gdb_continue_to_breakpoint "before_s_endpgm_insn"
+
+	gdb_test_no_output "set scheduler-locking $schedlock"
+
+	gdb_test "stepi" \
+	    "\"s_endpgm_insn: s_endpgm\".*" \
+	    "single-step instruction before s_endpgm"
+
+	gdb_test "x/i \$pc" \
+	    "$::hex <\[^\r\n\]*>:\[ \t\]+s_endpgm.*" \
+	    "stopped at s_endpgm"
+
+	# If testing a step-over is requested, place a breakpoint at
+	# the current instruction to force a step-over.
+	if { $step_over_mode != "none" } {
+	    gdb_test "break s_endpgm_insn" "Breakpoint $::decimal at $::hex.*"
+	}
+
+	set d $::decimal
+	set wave_target_id_re "AMDGPU Wave $d:$d:$d:1 \\(0,0,0\\)/0"
+
+	set selected_thread_before \
+	    [get_integer_valueof "\$_thread" 0 "get selected thread before"]
+
+	gdb_test "stepi" \
+	    "\r\n\[$wave_target_id_re exited\]\r\nCommand aborted, thread exited\\." \
+	    "single-step s_endpgm"
+
+	# Check that the selected thread didn't change, and that GDB
+	# manages to print the exited wave's target ID properly.
+	gdb_test "thread" \
+	    "\r\n\[Current thread is $selected_thread_before \\($wave_target_id_re\\) \\(exited\\)\]" \
+	    "exited wave target id"
+    }
+}
+
+foreach_with_prefix step_over_mode {none inline displaced} {
+    foreach_with_prefix schedlock {off on} {
+	do_test $step_over_mode $schedlock
+    }
+}
