@@ -5334,21 +5334,24 @@ create_cus_from_debug_names_list (dwarf2_per_bfd *per_bfd,
 {
   if (!map.augmentation_is_gdb)
     {
-    for (uint32_t i = 0; i < map.cu_count; ++i)
-      {
-	sect_offset sect_off
-	  = (sect_offset) (extract_unsigned_integer
-			   (map.cu_table_reordered + i * map.offset_size,
-			    map.offset_size,
-			    map.dwarf5_byte_order));
-	/* We don't know the length of the CU, because the CU list in a
-	   .debug_names index can be incomplete, so we can't use the start of
-	   the next CU as end of this CU.  We create the CUs here with length 0,
-	   and in cutu_reader::cutu_reader we'll fill in the actual length.  */
-	dwarf2_per_cu_data *per_cu
-	  = create_cu_from_index_list (per_bfd, &section, is_dwz, sect_off, 0);
-	per_bfd->all_comp_units.push_back (per_cu);
-      }
+      for (uint32_t i = 0; i < map.cu_count; ++i)
+	{
+	  sect_offset sect_off
+	    = (sect_offset) (extract_unsigned_integer
+			     (map.cu_table_reordered + i * map.offset_size,
+			      map.offset_size,
+			      map.dwarf5_byte_order));
+	  /* We don't know the length of the CU, because the CU list in a
+	     .debug_names index can be incomplete, so we can't use the start
+	     of the next CU as end of this CU.  We create the CUs here with
+	     length 0, and in cutu_reader::cutu_reader we'll fill in the
+	     actual length.  */
+	  dwarf2_per_cu_data *per_cu
+	    = create_cu_from_index_list (per_bfd, &section, is_dwz,
+					 sect_off, 0);
+	  per_bfd->all_comp_units.push_back (per_cu);
+	}
+      return;
     }
 
   sect_offset sect_off_prev;
@@ -7833,6 +7836,9 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
       break;
     case DW_TAG_partial_unit:
       this_cu->unit_type = DW_UT_partial;
+      break;
+    case DW_TAG_type_unit:
+      this_cu->unit_type = DW_UT_type;
       break;
     default:
       abort ();

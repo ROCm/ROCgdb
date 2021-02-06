@@ -1,3 +1,19 @@
+2021-02-06  Alan Modra  <amodra@gmail.com>
+
+	PR 27349
+	* rename.c (smart_rename): Test for existence and type of output
+	file with lstat.
+
+2021-02-05  Nick Clifton  <nickc@redhat.com>
+
+	* MAINTAINERS: Remove Richard Henderson as the ALPHA maintainer.
+
+2021-02-05  Eli Zaretskii  <eliz@gnu.org>
+
+	PR 27252
+	* elfedit.c (check_file):
+	* bucomm.c (get_file_size): Fix typos in comments.
+
 2021-02-05  Alan Modra  <amodra@gmail.com>
 
 	PR 27345
