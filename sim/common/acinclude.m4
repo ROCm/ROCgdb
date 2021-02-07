@@ -21,8 +21,7 @@ sinclude([../../config/depstand.m4])
 AC_DEFUN([SIM_AC_COMMON],
 [
 AC_REQUIRE([AC_PROG_CC])
-# autoconf.info says this should be called right after AC_INIT.
-AC_CONFIG_HEADER(ifelse([$1],,config.h,[$1]):config.in)
+AC_CONFIG_HEADERS([config.h:config.in])
 AC_CANONICAL_SYSTEM
 AC_USE_SYSTEM_EXTENSIONS
 AC_C_BIGENDIAN
@@ -40,7 +39,6 @@ fi
 AC_SUBST(CC_FOR_BUILD)
 
 AC_SUBST(CFLAGS)
-AC_SUBST(HDEFINES)
 AR=${AR-ar}
 AC_SUBST(AR)
 AC_PROG_RANLIB
@@ -134,8 +132,6 @@ AC_PLUGINS
 AM_CONDITIONAL(PLUGINS, test "$plugins" = yes)
 LT_INIT([dlopen])
 AC_SUBST(lt_cv_dlopen_libs)
-
-. ${srcdir}/../../bfd/configure.host
 
 dnl Standard (and optional) simulator options.
 dnl Eventually all simulators will support these.
