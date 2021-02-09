@@ -2146,6 +2146,7 @@ get_type_abbrev_from_form (unsigned long                 form,
   switch (form)
     {
     case DW_FORM_GNU_ref_alt:
+    case DW_FORM_ref_sig8:
       /* FIXME: We are unable to handle this form at the moment.  */
       return NULL;
 
@@ -3610,6 +3611,13 @@ process_debug_info (struct dwarf_section *           section,
 
       SAFE_BYTE_GET_AND_INC (compunit.cu_abbrev_offset, hdrptr, offset_size, end);
 
+      if (compunit.cu_unit_type == DW_UT_split_compile
+	  || compunit.cu_unit_type == DW_UT_skeleton)
+	{
+	  uint64_t dwo_id;
+	  SAFE_BYTE_GET_AND_INC (dwo_id, hdrptr, 8, end);
+	}
+
       if (this_set == NULL)
 	{
 	  abbrev_base = 0;
@@ -3712,6 +3720,13 @@ process_debug_info (struct dwarf_section *           section,
 
       if (compunit.cu_version < 5)
 	SAFE_BYTE_GET_AND_INC (compunit.cu_pointer_size, hdrptr, 1, end);
+
+      if (compunit.cu_unit_type == DW_UT_split_compile
+	  || compunit.cu_unit_type == DW_UT_skeleton)
+	{
+	  uint64_t dwo_id;
+	  SAFE_BYTE_GET_AND_INC (dwo_id, hdrptr, 8, end);
+	}
 
       /* PR 17512: file: 001-108546-0.001:0.1.  */
       if (compunit.cu_pointer_size < 2 || compunit.cu_pointer_size > 8)
@@ -3829,7 +3844,9 @@ process_debug_info (struct dwarf_section *           section,
 
       if (compunit.cu_unit_type != DW_UT_compile
 	  && compunit.cu_unit_type != DW_UT_partial
-	  && compunit.cu_unit_type != DW_UT_type)
+	  && compunit.cu_unit_type != DW_UT_type
+	  && compunit.cu_unit_type != DW_UT_split_compile
+	  && compunit.cu_unit_type != DW_UT_skeleton)
 	{
 	  warn (_("CU at offset %s contains corrupt or "
 		  "unsupported unit type: %d.\n"),

@@ -1,3 +1,58 @@
+2021-02-08  Shahab Vahedi  <shahab@synopsys.com>
+
+	PR tdep/27369
+	* arc-linux-tdep.c (handle_atomic_sequence): New.
+	(arc_linux_software_single_step): Call handle_atomic_sequence().
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-tui.c (gdbpy_tui_window) <is_valid>: New member
+	function.
+	(REQUIRE_WINDOW): Call is_valid member function.
+	(REQUIRE_WINDOW_FOR_SETTER): New define.
+	(gdbpy_tui_is_valid): Call is_valid member function.
+	(gdbpy_tui_set_title): Call REQUIRE_WINDOW_FOR_SETTER instead.
+	* tui/tui-data.h (struct tui_win_info) <is_visible>: Check
+	tui_active too.
+	* tui/tui-layout.c (tui_apply_current_layout): Add an assert.
+	* tui/tui.c (tui_enable): Move setting of tui_active earlier in
+	the function.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-tui.c (gdbpy_tui_set_title): Check that the new value
+	for the title is not nullptr.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* tui-layout.c (saved_tui_windows): Delete.
+	(tui_apply_current_layout): Don't make use of saved_tui_windows,
+	call new get_windows member function instead.
+	(tui_get_window_by_name): Check in tui_windows.
+	(tui_layout_window::apply): Don't add to tui_windows.
+	* tui-layout.h (tui_layout_base::get_windows): New member function.
+	(tui_layout_window::get_windows): Likewise.
+	(tui_layout_split::get_windows): Likewise.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* tui/tui-layout.c (tui_apply_current_layout): Restore the delete
+	of the window objects.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/python.c (gdbpy_print_stack): Reformat an error message.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* tui/tui-interp.c (tui_command_line_handler): New function.
+	(tui_interp::resume): Register tui_command_line_handler as the
+	input_handler.
+	* tui/tui-io.c (tui_inject_newline_into_command_window): New
+	function.
+	(tui_getc_1): Delete handling of '\n' and '\r'.
+	* tui-io.h (tui_inject_newline_into_command_window): Declare.
+
 2021-02-07  Hannes Domani  <ssbssa@yahoo.de>
 
 	* tui/tui-regs.c (tui_data_window::display_registers_from):

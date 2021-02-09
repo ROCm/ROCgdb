@@ -1,3 +1,66 @@
+2021-02-09  Nick Clifton  <nickc@redhat.com>
+
+	PR 27381
+	* read.c (s_incbin): Check that the file to be included is a
+	regular, non-directory file.
+	* testsuite/gas/all/pr27381.s: New test source file.
+	* testsuite/gas/all/pr27381.d: New test control file.
+	* testsuite/gas/all/pr27381.err: Expected error output for the new test.
+	* testsuite/gas/all/gas.exp: Run the new test.
+
+2021-02-09  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.am (TARG_ENV_HFILES): Remove config/te-symbian.h.
+	* config/tc-arm.c (elf32_arm_target_format): Remove TE_SYMBIAN
+	support.
+	* config/te-symbian.h: Delete.
+	* configure.tgt: Remove arm-*-symbianelf*.
+	* testsuite/gas/arm/arch4t-eabi.d: Don't mention symbianelf in
+	target selection.
+	* testsuite/gas/arm/arch4t.d: Likewise.
+	* testsuite/gas/arm/got_prel.d: Likewise.
+	* testsuite/gas/arm/mapdir.d: Likewise.
+	* testsuite/gas/arm/mapmisc.d: Likewise.
+	* testsuite/gas/arm/mapsecs.d: Likewise.
+	* testsuite/gas/arm/mapshort-eabi.d: Likewise.
+	* testsuite/gas/arm/thumb-eabi.d: Likewise.
+	* testsuite/gas/arm/thumb.d: Likewise.
+	* testsuite/gas/arm/thumbrel.d: Likewise.
+	* Makefile.in: Regenerate.
+	* po/POTFILES.in: Regenerate.
+
+2021-02-09  Nick Clifton  <nickc@redhat.com>
+
+	PR 27384
+	* listing.c (listing_psize): Check the result of the width
+	expression before assigning it to paper_width.
+	* testsuite/gas/all/pr27384.s: New test source file.
+	* testsuite/gas/all/pr27384.d: New test control file.
+	* testsuite/gas/all/pr27384.err: Expected errors from new test.
+	* testsuite/gas/all/gas.exp: Run the new test.
+
+2021-02-09  Nick Clifton  <nickc@redhat.com>
+
+	PR 27355
+	* testsuite/gas/elf/pr27355.s: New test source file.
+	* testsuite/gas/elf/pr27355.d: New test control file.
+	* testsuite/gas/elf/pr27355.err: Expected errors from new test.
+	* testsuite/gas/elf/elf.exp: Run the new test.
+
+2021-02-08  Mike Frysinger  <vapier@gentoo.org>
+
+	* config/tc-tic54x (tic54x_mmregs): Rename to ...
+	(tic54x_register_mmregs): ... this.  Change mmregs to tic54x_mmregs.
+	(md_pseudo_table): Change tic54x_mmregs to tic54x_register_mmregs.
+	(md_begin): Add tic54x_ prefix to regs, mmregs, condition_codes,
+	cc2_codes, cc3_codes, status_bits, and misc_symbols.
+
+2021-02-08  Nick Clifton  <nickc@redhat.com>
+
+	PR 27355
+	* dwarf2dbg.c (allocate_filename_to_slot): Allocate the dirs array
+	if it has not already been created.
+
 2021-02-04  Nelson Chu  <nelson.chu@sifive.com>
 
 	* config/tc-riscv.c (riscv_multi_subset_supports): Removed

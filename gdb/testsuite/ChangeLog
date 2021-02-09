@@ -1,3 +1,48 @@
+2021-02-08  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.base/gnu-ifunc.exp (build): Pass -Wl,z,lazy.
+
+2021-02-08  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.dwarf2/enqueued-cu-base-addr.exp: Fix inter-CU reference.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/tui-window-disabled.c: New file.
+	* gdb.python/tui-window-disabled.exp: New file.
+	* gdb.python/tui-window-disabled.py: New file.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/tui-window.exp: Add new tests.
+	* gdb.python/tui-window.py (TestWindow) <__init__>: Store
+	TestWindow object into global the_window.
+	<remote_title>: New method.
+	(delete_window_title): New function.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.tui/winheight.exp: Add more tests.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-framefilter.exp: Update expected results.
+	* gdb.python/python.exp: Update expected results.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.tui/scroll.exp: Tighten expected results.  Remove comment
+	about bug in GDB, update expected results, and add more tests.
+
+2021-02-08  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.tui/scroll.exp: New file.
+	* gdb.tui/tui-layout-asm-short-prog.exp: Update expected results.
+	* lib/tuiterm.exp (Term::_csi_M): Delete count lines, scroll
+	remaining lines up.
+	(Term::check_region_contents): New proc.
+	(Term::check_box_contents): Use check_region_contents.
+
 2021-02-06  Tom de Vries  <tdevries@suse.de>
 
 	PR testsuite/26922
