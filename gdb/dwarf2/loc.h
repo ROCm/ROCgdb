@@ -54,6 +54,11 @@ extern void func_get_frame_base_dwarf_block (struct symbol *framefunc,
 					     const gdb_byte **start,
 					     size_t *length);
 
+/* A helper function to find the definition of NAME and compute its
+   value.  Returns nullptr if the name is not found.  */
+
+value *compute_var_value (const char *name);
+
 /* Fetch call_site_parameter from caller matching KIND and KIND_U.
    FRAME is for callee.
 
@@ -61,11 +66,9 @@ extern void func_get_frame_base_dwarf_block (struct symbol *framefunc,
    otherwise.  */
 
 struct call_site_parameter *dwarf_expr_reg_to_entry_parameter
-    (struct frame_info *frame,
-     enum call_site_parameter_kind kind,
-     union call_site_parameter_u kind_u,
-     dwarf2_per_cu_data **per_cu_return,
-     dwarf2_per_objfile **per_objfile_return);
+  (frame_info *frame, call_site_parameter_kind kind,
+   call_site_parameter_u kind_u, dwarf2_per_cu_data **per_cu_return,
+   dwarf2_per_objfile **per_objfile_return);
 
 
 /* Evaluate a location description, starting at DATA and with length
@@ -100,11 +103,6 @@ struct property_addr_info
      the object described by this node.  */
   struct property_addr_info *next;
 };
-
-/* A helper function to find the definition of NAME and compute its
-   value.  Returns nullptr if the name is not found.  */
-
-value *compute_var_value (const char *name);
 
 /* Converts a dynamic property into a static one.  FRAME is the frame in which
    the property is evaluated; if NULL, the selected frame (if any) is used
@@ -288,15 +286,13 @@ extern int dwarf_reg_to_regnum_or_error (struct gdbarch *arch,
 /* Helper function which throws an error if a synthetic pointer is
    invalid.  */
 
-extern void invalid_synthetic_pointer (void);
+extern void invalid_synthetic_pointer ();
 
 /* Fetch the value pointed to by a synthetic pointer.  */
 
-extern struct value *indirect_synthetic_pointer
-    (sect_offset die, LONGEST byte_offset,
-     dwarf2_per_cu_data *per_cu,
-     dwarf2_per_objfile *per_objfile,
-     struct frame_info *frame,
-     struct type *type, bool resolve_abstract_p = false);
+extern value *indirect_synthetic_pointer
+  (sect_offset die, LONGEST byte_offset, dwarf2_per_cu_data *per_cu,
+   dwarf2_per_objfile *per_objfile, frame_info *frame,
+   struct type *type, bool resolve_abstract_p = false);
 
 #endif /* dwarf2loc.h */

@@ -997,7 +997,7 @@ address_from_register (int regnum, struct frame_info *frame)
       return unpack_long (type, buf);
     }
 
-  /* FIXME: Here we need a way for a arch to give back the
+  /* FIXME: Here we need a way for an arch to give back the
 	    matching pointer type depending on the address space.  */
   type = register_type (gdbarch, regnum);
 
