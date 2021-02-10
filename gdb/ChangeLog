@@ -1,3 +1,52 @@
+2021-02-09  Tom Tromey  <tom@tromey.com>
+
+	* stap-probe.c (stap_parse_argument_conditionally): Fix typo.
+
+2021-02-09  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/27341
+	* dwarf2/read.c (read_array_type): Return NULL when not being able to
+	construct an array type.  Add assert to ensure that element_type is
+	not being modified.
+
+2021-02-09  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gcore.c (struct gcore_collect_regset_section_cb_data): Delete.
+	(gcore_collect_regset_section_cb): Delete.
+	(gcore_collect_thread_registers): Delete.
+	(gcore_build_thread_register_notes): Delete.
+	(gcore_find_signalled_thread): Delete.
+	* gcore.h: Remove 'gdbsupport/gdb_signals.h' include and delete
+	'gdbarch' and 'thread_info' declarations.
+	(gcore_build_thread_register_notes): Delete declaration.
+	(gcore_find_signalled_thread): Likewise.
+	* fbsd-tdep.c: Remove 'gcore.h' include.
+	(struct fbsd_collect_regset_section_cb_data): New struct.
+	(fbsd_collect_regset_section_cb): New function.
+	(fbsd_collect_thread_registers): New function.
+	(struct fbsd_corefile_thread_data): New struct.
+	(fbsd_corefile_thread): New function.
+	(fbsd_make_corefile_notes): Call FreeBSD specific code.
+	* linux-tdep.c: Remove 'gcore.h' include.
+	(struct linux_collect_regset_section_cb_data): New struct.
+	(linux_collect_regset_section_cb): New function.
+	(linux_collect_thread_registers): New function.
+	(linux_corefile_thread): Call Linux specific code.
+	(find_signalled_thread): New function.
+	(linux_make_corefile_notes): Call find_signalled_thread.
+
+2021-02-09  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (coerce_unspec_val_to_type): Avoid making lazy
+	not_lval value.
+	* value.c (value_contents_copy_raw): Now static.
+	* value.h (value_contents_copy_raw): Don't declare.
+
+2021-02-09  Tom Tromey  <tromey@adacore.com>
+
+	* gdbtypes.c (resolve_dynamic_struct): Handle structure with no
+	fields.
+
 2021-02-08  Shahab Vahedi  <shahab@synopsys.com>
 
 	PR tdep/27369
