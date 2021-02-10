@@ -38,15 +38,19 @@ struct dwarf2_per_objfile;
    expected struct value representation of the evaluation result.  The
    ADDR_INFO property can be specified to override the range of memory
    addresses with the passed in buffer.  */
-struct value *dwarf2_eval_exp (const gdb_byte *addr, size_t len, bool as_lval,
-			       struct dwarf2_per_objfile *per_objfile,
-			       struct dwarf2_per_cu_data *per_cu,
-			       struct frame_info *frame, int addr_size,
-			       std::vector<struct value *> *init_values,
-			       const struct property_addr_info *addr_info,
-			       struct type *type = nullptr,
-			       struct type *subobj_type = nullptr,
-			       LONGEST subobj_offset = 0);
+value *dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
+			dwarf2_per_objfile *per_objfile,
+			dwarf2_per_cu_data *per_cu,
+			frame_info *frame, int addr_size,
+			std::vector<value *> *init_values,
+			const struct property_addr_info *addr_info,
+			struct type *type = nullptr,
+			struct type *subobj_type = nullptr,
+			LONGEST subobj_offset = 0);
+
+/* Return the address type used of the ARCH architecture and
+   ADDR_SIZE is expected size of the type.  */
+type *address_type (gdbarch *arch, int addr_size);
 
 /* Check that the current operator is either at the end of an
    expression, or that it is followed by a composition operator or by
@@ -118,10 +122,11 @@ extern const gdb_byte *safe_read_uleb128 (const gdb_byte *buf,
 					  const gdb_byte *buf_end,
 					  uint64_t *r);
 
-/* Helper to read a sleb128 value or throw an error.  */
+/* Helper to read a uleb128 value or throw an error.  */
 extern const gdb_byte *safe_read_sleb128 (const gdb_byte *buf,
 					  const gdb_byte *buf_end,
 					  int64_t *r);
+
 /* Helper to skip a leb128 value or throw an error.  */
 extern const gdb_byte *safe_skip_leb128 (const gdb_byte *buf,
 					 const gdb_byte *buf_end);

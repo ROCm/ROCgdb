@@ -1552,14 +1552,13 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
 	  value arguments, so we need to make one.  */
       if (value != NULL && VALUE_LVAL (value) == lval_computed)
 	{
-	  struct value *from_value;
-	  const struct lval_funcs *funcs = value_computed_funcs (value);
-	  struct type * reg_type = register_type (gdbarch, regnum);
+	  const lval_funcs *funcs = value_computed_funcs (value);
+	  type * reg_type = register_type (gdbarch, regnum);
 
 	  if (funcs->write == NULL)
 	    error (_("Attempt to assign to an unmodifiable value."));
 
-	  from_value = allocate_value (reg_type);
+	  struct value *from_value = allocate_value (reg_type);
 	  memcpy (value_contents_raw (from_value), myaddr,
 		  TYPE_LENGTH (reg_type));
 

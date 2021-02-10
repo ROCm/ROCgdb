@@ -79,9 +79,13 @@ Dwarf::assemble $asm_file {
 		{DW_AT_location {
 		    DW_OP_addr $exec_mask_var
 		    DW_OP_deref
-		    DW_OP_bra 4 # conditional jump to DW_OP_bregx
+
+		    # conditional jump to DW_OP_bregx
+		    DW_OP_bra 4
 		    DW_OP_lit0
-		    DW_OP_skip 3 # jump to DW_OP_stack_value
+
+		    # jump to DW_OP_stack_value
+		    DW_OP_skip 3
 		    DW_OP_bregx $dwarf_regnum 0
 		    DW_OP_stack_value
 		} SPECIAL_expr}

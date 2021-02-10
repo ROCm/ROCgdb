@@ -1231,12 +1231,12 @@ value_assign (struct value *toval, struct value *fromval)
 	   put_frame_register_bytes() below.  That function will (eventually)
 	   perform the necessary unwind operation by first obtaining the next
 	   frame.  */
-	struct frame_info *frame = frame_find_by_id (VALUE_FRAME_ID (toval));
+	frame_info *frame = frame_find_by_id (VALUE_FRAME_ID (toval));
 
 	if (!frame)
 	  error (_("Value being assigned to is no longer active."));
 
-	struct gdbarch *gdbarch = get_frame_arch (frame);
+	gdbarch *arch = get_frame_arch (frame);
 	int value_reg = VALUE_REGNUM (toval);
 	LONGEST bitpos = value_bitpos (toval);
 	LONGEST bitsize = value_bitsize (toval);
@@ -1244,11 +1244,13 @@ value_assign (struct value *toval, struct value *fromval)
 
 	if (bitpos || bitsize)
 	  {
-	    size_t changed_len;
+	    int changed_len;
 	    bool big_endian = type_byte_order (type) == BFD_ENDIAN_BIG;
 
 	    if (bitsize)
 	      {
+		offset += value_offset (value_parent (toval));
+
 		changed_len = (bitpos + bitsize + HOST_CHAR_BIT - 1)
 			      / HOST_CHAR_BIT;
 
@@ -1269,8 +1271,7 @@ value_assign (struct value *toval, struct value *fromval)
 	    int optim, unavail;
 
 	    if (!get_frame_register_bytes (frame, value_reg, offset,
-					   {buffer.data (), changed_len},
-					   &optim, &unavail))
+					   buffer, &optim, &unavail))
 	      {
 		if (optim)
 		  throw_error (OPTIMIZED_OUT_ERROR,
@@ -1283,28 +1284,25 @@ value_assign (struct value *toval, struct value *fromval)
 	    copy_bitwise (buffer.data (), bitpos, value_contents (fromval),
 			  0, bitsize, big_endian);
 
-	    put_frame_register_bytes (frame, value_reg, offset,
-				      {buffer.data (), changed_len});
+	    put_frame_register_bytes (frame, value_reg, offset, buffer);
 	  }
 	else
 	  {
-	    if (gdbarch_convert_register_p (gdbarch, VALUE_REGNUM (toval),
-					    type))
+	    if (gdbarch_convert_register_p (arch, VALUE_REGNUM (toval), type))
 	      {
 		/* If TOVAL is a special machine register requiring
 		   conversion of program values to a special raw
 		   format.  */
-		gdbarch_value_to_register (gdbarch, frame,
-					   VALUE_REGNUM (toval), type,
-					   value_contents (fromval));
+		gdbarch_value_to_register (arch, frame, VALUE_REGNUM (toval),
+					   type, value_contents (fromval));
 	      }
 	    else
 	      {
 		gdb::array_view<const gdb_byte> contents
 		  = gdb::make_array_view (value_contents (fromval),
 					  TYPE_LENGTH (type));
-		put_frame_register_bytes (frame, value_reg, offset,
-					  contents);
+		put_frame_register_bytes (frame, value_reg,
+					  offset, contents);
 	      }
 	  }
 
@@ -1406,19 +1404,18 @@ value_assign (struct value *toval, struct value *fromval)
 struct value *
 value_repeat (struct value *arg1, int count)
 {
-  struct value *val;
-
   if (VALUE_LVAL (arg1) != lval_memory)
     error (_("Only values in memory can be extended with '@'."));
   if (count < 1)
     error (_("Invalid number %d of repetitions."), count);
 
-  val = allocate_repeat_value (value_enclosing_type (arg1), count);
+  value *val
+    = allocate_repeat_value (value_enclosing_type (arg1), count);
 
   VALUE_LVAL (val) = lval_memory;
   set_value_address (val, value_address (arg1));
   set_value_bitpos (val, value_bitpos (arg1));
-  struct type *enclosing_type = value_enclosing_type (val);
+  type *enclosing_type = value_enclosing_type (val);
 
   read_value_memory (val, value_bitpos (val), value_stack (val),
 		     value_address (val), value_contents_all_raw (val),

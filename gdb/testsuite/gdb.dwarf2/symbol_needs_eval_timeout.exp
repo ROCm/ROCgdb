@@ -97,13 +97,17 @@ Dwarf::assemble $asm_file {
 			DW_OP_lit1
 			DW_OP_addr $exec_mask_var
 			DW_OP_deref
-			DW_OP_skip 4 # jump to DW_OP_fbreg
+
+			# jump to DW_OP_fbreg
+			DW_OP_skip 4
 			DW_OP_drop
 			DW_OP_fbreg 0
 			DW_OP_dup
 			DW_OP_lit0
 			DW_OP_eq
-			DW_OP_bra -9 # conditional jump to DW_OP_drop
+
+			# conditional jump to DW_OP_drop
+			DW_OP_bra -9
 			DW_OP_stack_value
 		    } SPECIAL_expr}
 		    {external 1 flag}

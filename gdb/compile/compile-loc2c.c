@@ -368,6 +368,7 @@ compute_stack_depth_worker (int start, int *need_tempvar,
 	  ++stack_depth;
 	  break;
 
+	case DW_OP_LLVM_extend:
 	case DW_OP_LLVM_select_bit_piece:
 	  stack_depth -= 2;
 	  break;
@@ -377,7 +378,6 @@ compute_stack_depth_worker (int start, int *need_tempvar,
 	  op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
 	  break;
 
-	case DW_OP_LLVM_extend:
 	case DW_OP_LLVM_piece_end:
 	case DW_OP_LLVM_offset_constu:
 	case DW_OP_nop:

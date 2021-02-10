@@ -198,10 +198,10 @@ dwarf2_frame_state::dwarf2_frame_state (CORE_ADDR pc_, struct dwarf2_cie *cie)
    read as an address in a given FRAME.  */
 
 static CORE_ADDR
-read_addr_from_reg (struct frame_info *frame, int reg)
+read_addr_from_reg (frame_info *frame, int reg)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
-  int regnum = dwarf_reg_to_regnum_or_error (gdbarch, reg);
+  gdbarch *arch = get_frame_arch (frame);
+  int regnum = dwarf_reg_to_regnum_or_error (arch, reg);
 
   return address_from_register (regnum, frame);
 }
@@ -244,16 +244,17 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
 		  struct type* type = nullptr, bool as_lval = true)
 {
   scoped_value_mark free_values;
-  struct type *init_type
-    = builtin_type (per_objfile->objfile->arch ())->builtin_uint64;
-  struct value *init_value = value_at_lazy (init_type, initial);
-  std::vector<struct value *> init_values;
+  struct type *init_type = address_type (per_objfile->objfile->arch (),
+					 addr_size);
+
+  value *init_value = value_at_lazy (init_type, initial);
+  std::vector<value *> init_values;
 
   set_value_stack (init_value, initial_in_stack_memory);
   init_values.push_back (init_value);
 
-  struct value *result_val
-    = dwarf2_eval_exp (exp, len, true, per_objfile, nullptr,
+  value *result_val
+    = dwarf2_evaluate (exp, len, true, per_objfile, nullptr,
 		       this_frame, addr_size, &init_values, nullptr);
 
   /* We need to clean up all the values that are not needed any more.
@@ -264,7 +265,7 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
   value_ref_ptr value_holder = value_ref_ptr::new_reference (result_val);
   free_values.free_to_mark ();
 
-  return value_copy(result_val);
+  return value_copy (result_val);
 }
 
 
