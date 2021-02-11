@@ -8613,7 +8613,7 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
   partial_symbol psymbol;
   memset (&psymbol, 0, sizeof (psymbol));
   psymbol.ginfo.set_language (cu->language, &objfile->objfile_obstack);
-  psymbol.ginfo.section = -1;
+  psymbol.ginfo.set_section_index (-1);
 
   /* The code below indicates that the psymbol should be installed by
      setting this.  */
@@ -8642,7 +8642,7 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
 
       psymbol.domain = VAR_DOMAIN;
       psymbol.aclass = LOC_BLOCK;
-      psymbol.ginfo.section = SECT_OFF_TEXT (objfile);
+      psymbol.ginfo.set_section_index (SECT_OFF_TEXT (objfile));
       psymbol.ginfo.value.address = addr;
 
       if (pdi->main_subprogram && actual_name != NULL)
@@ -8687,7 +8687,7 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
 	    {
 	      psymbol.domain = VAR_DOMAIN;
 	      psymbol.aclass = LOC_STATIC;
-	      psymbol.ginfo.section = SECT_OFF_TEXT (objfile);
+	      psymbol.ginfo.set_section_index (SECT_OFF_TEXT (objfile));
 	      psymbol.ginfo.value.address = addr;
 	      where = psymbol_placement::GLOBAL;
 	    }
@@ -8703,7 +8703,7 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
 
 	  psymbol.domain = VAR_DOMAIN;
 	  psymbol.aclass = LOC_STATIC;
-	  psymbol.ginfo.section = SECT_OFF_TEXT (objfile);
+	  psymbol.ginfo.set_section_index (SECT_OFF_TEXT (objfile));
 	  if (has_loc)
 	    psymbol.ginfo.value.address = addr;
 	  where = psymbol_placement::STATIC;
@@ -22101,7 +22101,7 @@ var_decode_location (struct attribute *attr, struct symbol *sym,
 	  SET_SYMBOL_VALUE_ADDRESS
 	    (sym,
 	     SYMBOL_VALUE_ADDRESS (sym)
-	     + objfile->section_offsets[SYMBOL_SECTION (sym)]);
+	     + objfile->section_offsets[sym->section_index ()]);
 	  return;
 	}
     }

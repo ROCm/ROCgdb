@@ -196,7 +196,7 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
   index = 0;
   for (minimal_symbol *msymbol : objfile->msymbols ())
     {
-      struct obj_section *section = MSYMBOL_OBJ_SECTION (objfile, msymbol);
+      struct obj_section *section = msymbol->obj_section (objfile);
 
       switch (MSYMBOL_TYPE (msymbol))
 	{
@@ -240,7 +240,7 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
       /* Use the relocated address as shown in the symbol here -- do
 	 not try to respect copy relocations.  */
       CORE_ADDR addr = (msymbol->value.address
-			+ objfile->section_offsets[msymbol->section]);
+			+ objfile->section_offsets[msymbol->section_index ()]);
       fputs_filtered (paddress (gdbarch, addr), outfile);
       fprintf_filtered (outfile, " %s", msymbol->linkage_name ());
       if (section)
@@ -543,7 +543,7 @@ print_symbol (struct gdbarch *gdbarch, struct symbol *symbol,
   struct obj_section *section;
 
   if (SYMBOL_OBJFILE_OWNED (symbol))
-    section = SYMBOL_OBJ_SECTION (symbol_objfile (symbol), symbol);
+    section = symbol->obj_section (symbol_objfile (symbol));
   else
     section = NULL;
 

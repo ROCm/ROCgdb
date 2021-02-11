@@ -7702,7 +7702,15 @@ display_debug_ranges (struct dwarf_section *section,
 
   num_range_list = 0;
   for (i = 0; i < num_debug_info_entries; i++)
-    num_range_list += debug_information [i].num_range_lists;
+    {
+      if (debug_information [i].dwarf_version < 5 && is_rnglists)
+	/* Skip .debug_rnglists reference.  */
+	continue;
+      if (debug_information [i].dwarf_version >= 5 && !is_rnglists)
+	/* Skip .debug_range reference.  */
+	continue;
+      num_range_list += debug_information [i].num_range_lists;
+    }
 
   if (num_range_list == 0)
     {
@@ -7720,6 +7728,13 @@ display_debug_ranges (struct dwarf_section *section,
     {
       debug_info *debug_info_p = &debug_information[i];
       unsigned int j;
+
+      if (debug_information [i].dwarf_version < 5 && is_rnglists)
+	/* Skip .debug_rnglists reference.  */
+	continue;
+      if (debug_information [i].dwarf_version >= 5 && !is_rnglists)
+	/* Skip .debug_range reference.  */
+	continue;
 
       for (j = 0; j < debug_info_p->num_range_lists; j++)
 	{
@@ -11129,8 +11144,11 @@ load_dwo_file (const char * main_filename, const char * name, const char * dir, 
   char * separate_filename;
   void * separate_handle;
 
-  /* FIXME: Skip adding / if dwo_dir ends in /.  */
-  separate_filename = concat (dir, "/", name, NULL);
+  if (IS_ABSOLUTE_PATH (name))
+    separate_filename = strdup (name);
+  else
+    /* FIXME: Skip adding / if dwo_dir ends in /.  */
+    separate_filename = concat (dir, "/", name, NULL);
   if (separate_filename == NULL)
     {
       warn (_("Out of memory allocating dwo filename\n"));

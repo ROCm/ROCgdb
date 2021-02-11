@@ -1012,6 +1012,16 @@ general_symbol_info::search_name () const
 
 /* See symtab.h.  */
 
+struct obj_section *
+general_symbol_info::obj_section (const struct objfile *objfile) const
+{
+  if (section_index () >= 0)
+    return &objfile->sections[section_index ()];
+  return nullptr;
+}
+
+/* See symtab.h.  */
+
 bool
 symbol_matches_search_name (const struct general_symbol_info *gsymbol,
 			    const lookup_name_info &name)
@@ -1645,7 +1655,7 @@ fixup_section (struct general_symbol_info *ginfo,
   msym = lookup_minimal_symbol_by_pc_name (addr, ginfo->linkage_name (),
 					   objfile);
   if (msym)
-    ginfo->section = MSYMBOL_SECTION (msym);
+    ginfo->set_section_index (msym->section_index ());
   else
     {
       /* Static, function-local variables do appear in the linker
@@ -1697,7 +1707,7 @@ fixup_section (struct general_symbol_info *ginfo,
 	  if (obj_section_addr (s) - offset <= addr
 	      && addr < obj_section_endaddr (s) - offset)
 	    {
-	      ginfo->section = idx;
+	      ginfo->set_section_index (idx);
 	      return;
 	    }
 	}
@@ -1706,9 +1716,9 @@ fixup_section (struct general_symbol_info *ginfo,
 	 section.  If there is no allocated section, then it hardly
 	 matters what we pick, so just pick zero.  */
       if (fallback == -1)
-	ginfo->section = 0;
+	ginfo->set_section_index (0);
       else
-	ginfo->section = fallback;
+	ginfo->set_section_index (fallback);
     }
 }
 
@@ -1730,7 +1740,7 @@ fixup_symbol_section (struct symbol *sym, struct objfile *objfile)
   if (objfile == NULL)
     objfile = symbol_objfile (sym);
 
-  if (SYMBOL_OBJ_SECTION (objfile, sym))
+  if (sym->obj_section (objfile) != nullptr)
     return sym;
 
   /* We should have an objfile by now.  */
@@ -2972,8 +2982,7 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 		  ALL_BLOCK_SYMBOLS (b, iter, sym)
 		    {
 		      fixup_symbol_section (sym, obj_file);
-		      if (matching_obj_sections (SYMBOL_OBJ_SECTION (obj_file,
-								     sym),
+		      if (matching_obj_sections (sym->obj_section (obj_file),
 						 section))
 			break;
 		    }
@@ -3732,7 +3741,7 @@ find_function_start_sal (symbol *sym, bool funfirstline)
   fixup_symbol_section (sym, NULL);
   symtab_and_line sal
     = find_function_start_sal_1 (BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym)),
-				 SYMBOL_OBJ_SECTION (symbol_objfile (sym), sym),
+				 sym->obj_section (symbol_objfile (sym)),
 				 funfirstline);
   sal.symbol = sym;
   return sal;
@@ -3823,7 +3832,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
 
       objfile = symbol_objfile (sym);
       pc = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym));
-      section = SYMBOL_OBJ_SECTION (objfile, sym);
+      section = sym->obj_section (objfile);
       name = sym->linkage_name ();
     }
   else
@@ -3836,7 +3845,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
 
       objfile = msymbol.objfile;
       pc = BMSYMBOL_VALUE_ADDRESS (msymbol);
-      section = MSYMBOL_OBJ_SECTION (objfile, msymbol.minsym);
+      section = msymbol.minsym->obj_section (objfile);
       name = msymbol.minsym->linkage_name ();
     }
 
@@ -6463,7 +6472,8 @@ get_msymbol_address (struct objfile *objf, const struct minimal_symbol *minsym)
 	    return BMSYMBOL_VALUE_ADDRESS (found);
 	}
     }
-  return minsym->value.address + objf->section_offsets[minsym->section];
+  return (minsym->value.address
+	  + objf->section_offsets[minsym->section_index ()]);
 }
 
 

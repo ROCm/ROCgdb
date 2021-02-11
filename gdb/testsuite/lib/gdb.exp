@@ -2134,12 +2134,6 @@ proc skip_cplus_tests {} {
 # Return a 1 for configurations for which don't have both C++ and the STL.
 
 proc skip_stl_tests {} {
-    # Symbian supports the C++ language, but the STL is missing
-    # (both headers and libraries).
-    if { [istarget "arm*-*-symbianelf*"] } {
-	return 1
-    }
-
     return [skip_cplus_tests]
 }
 
@@ -2237,7 +2231,6 @@ proc skip_shlib_tests {} {
     if {([istarget *-*-linux*]
 	 || [istarget *-*-*bsd*]
 	 || [istarget *-*-solaris2*]
-	 || [istarget arm*-*-symbianelf*]
 	 || [istarget *-*-mingw*]
 	 || [istarget *-*-cygwin*]
 	 || [istarget *-*-pe*])} {
@@ -4161,10 +4154,6 @@ proc gdb_compile {source dest type options} {
 	    # Do not need anything.
 	} elseif { [istarget *-*-freebsd*] || [istarget *-*-openbsd*] } {
 	    lappend new_options "ldflags=-Wl,-rpath,${outdir}"
-	} elseif { [istarget arm*-*-symbianelf*] } {
-	    if { $shlib_load } {
-		lappend new_options "libs=-ldl"
-	    }
 	} else {
 	    if { $shlib_load } {
 		lappend new_options "libs=-ldl"
@@ -5157,9 +5146,6 @@ proc gdb_load_no_complaints { arg } {
     # Verify that there were no complaints.
     set re "^Reading symbols from \[^\r\n\]*\r\n$gdb_prompt $"
     gdb_assert {[regexp $re $gdb_file_cmd_msg]} "No complaints"
-
-    # Restore saved setting of complaints.
-    gdb_test_no_output "set complaints $save" ""
 }
 
 # gdb_reload -- load a file into the target.  Called before "running",
@@ -6210,7 +6196,6 @@ gdb_caching_proc gdb_has_argv0 {
 	  || [istarget *-*-cygwin*] || [istarget *-*-mingw32*]
 	  || [istarget *-*-*djgpp*] || [istarget *-*-go32*]
 	  || [istarget *-wince-pe] || [istarget *-*-mingw32ce*]
-	  || [istarget *-*-symbianelf*]
 	  || [istarget *-*-osf*]
 	  || [istarget *-*-dicos*]
 	  || [istarget *-*-nto*]

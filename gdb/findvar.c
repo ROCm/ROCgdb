@@ -639,11 +639,9 @@ language_defn::read_var_value (struct symbol *var,
       v = allocate_value (type);
       if (overlay_debugging)
 	{
-	  addr
-	    = symbol_overlayed_address (SYMBOL_VALUE_ADDRESS (var),
-					SYMBOL_OBJ_SECTION (symbol_objfile (var),
-							    var));
-
+	  struct objfile *var_objfile = symbol_objfile (var);
+	  addr = symbol_overlayed_address (SYMBOL_VALUE_ADDRESS (var),
+					   var->obj_section (var_objfile));
 	  store_typed_address (value_contents_raw (v), type, addr);
 	}
       else
@@ -666,9 +664,9 @@ language_defn::read_var_value (struct symbol *var,
 
     case LOC_STATIC:
       if (overlay_debugging)
-	addr = symbol_overlayed_address (SYMBOL_VALUE_ADDRESS (var),
-					 SYMBOL_OBJ_SECTION (symbol_objfile (var),
-							     var));
+	addr
+	  = symbol_overlayed_address (SYMBOL_VALUE_ADDRESS (var),
+				      var->obj_section (symbol_objfile (var)));
       else
 	addr = SYMBOL_VALUE_ADDRESS (var);
       break;
@@ -710,7 +708,7 @@ language_defn::read_var_value (struct symbol *var,
       if (overlay_debugging)
 	addr = symbol_overlayed_address
 	  (BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (var)),
-	   SYMBOL_OBJ_SECTION (symbol_objfile (var), var));
+	   var->obj_section (symbol_objfile (var)));
       else
 	addr = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (var));
       break;
@@ -778,7 +776,7 @@ language_defn::read_var_value (struct symbol *var,
 	    error (_("Missing %s symbol \"%s\"."),
 		   flavour_name, var->linkage_name ());
 	  }
-	obj_section = MSYMBOL_OBJ_SECTION (lookup_data.result.objfile, msym);
+	obj_section = msym->obj_section (lookup_data.result.objfile);
 	/* Relocate address, unless there is no section or the variable is
 	   a TLS variable. */
 	if (obj_section == NULL
