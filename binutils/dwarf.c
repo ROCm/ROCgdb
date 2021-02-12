@@ -3721,11 +3721,13 @@ process_debug_info (struct dwarf_section *           section,
       if (compunit.cu_version < 5)
 	SAFE_BYTE_GET_AND_INC (compunit.cu_pointer_size, hdrptr, 1, end);
 
+      bfd_boolean do_dwo_id = FALSE;
+      uint64_t dwo_id;
       if (compunit.cu_unit_type == DW_UT_split_compile
 	  || compunit.cu_unit_type == DW_UT_skeleton)
 	{
-	  uint64_t dwo_id;
 	  SAFE_BYTE_GET_AND_INC (dwo_id, hdrptr, 8, end);
+	  do_dwo_id = TRUE;
 	}
 
       /* PR 17512: file: 001-108546-0.001:0.1.  */
@@ -3798,6 +3800,8 @@ process_debug_info (struct dwarf_section *           section,
 	      printf (_("   Type Offset:   0x%s\n"),
 		      dwarf_vmatoa ("x", type_offset));
 	    }
+	  if (do_dwo_id)
+	    printf (_("   DWO ID:        0x%s\n"), dwarf_vmatoa ("x", dwo_id));
 	  if (this_set != NULL)
 	    {
 	      dwarf_vma *offsets = this_set->section_offsets;
@@ -7404,18 +7408,22 @@ display_debug_str_offsets (struct dwarf_section *section,
       else
 	entry_length = 4;
 
+      unsigned char *entries_end;
       if (length == 0)
 	{
 	  /* This is probably an old style .debug_str_offset section which
 	     just contains offsets and no header (and the first offset is 0).  */
 	  length = section->size;
 	  curr   = section->start;
+	  entries_end = end;
 
 	  printf (_("    Length: %#lx\n"), (unsigned long) length);
 	  printf (_("       Index   Offset [String]\n"));
 	}
       else
 	{
+	  entries_end = curr + length;
+
 	  int version;
 	  SAFE_BYTE_GET_AND_INC (version, curr, 2, end);
 	  if (version != 5)
@@ -7431,10 +7439,14 @@ display_debug_str_offsets (struct dwarf_section *section,
 	  printf (_("       Index   Offset [String]\n"));
 	}
 
-      for (idx = 0; length >= entry_length && curr < end; idx++)
+      for (idx = 0; curr < entries_end; idx++)
 	{
 	  dwarf_vma offset;
 	  const unsigned char * string;
+
+	  if (curr + entry_length > entries_end)
+	    /* Not enough space to read one entry_length, give up.  */
+	    return 0;
 
 	  SAFE_BYTE_GET_AND_INC (offset, curr, entry_length, end);
 	  if (dwo)

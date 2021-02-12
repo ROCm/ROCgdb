@@ -1,3 +1,49 @@
+2021-02-11  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/27353
+	* dwarf2/attribute.c (attribute::form_requires_reprocessing):
+	Return true for DW_FORM_strx.
+
+2021-02-11  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/27383:
+	* parse.c (write_exp_symbol_reference): Write sym.block.
+
+2021-02-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Mention changes to 'maint info sections'.
+	* maint.c (match_substring): Return a bool, fix whitespace issue.
+	(struct single_bfd_flag_info): New struct.
+	(bfd_flag_info): New static global.
+	(match_bfd_flags): Return a bool, use bfd_flag_info.
+	(print_bfd_flags): Use bfd_flag_info.
+	(maint_print_section_info): Delete trailing whitespace.
+	(struct maint_info_sections_opts): New struct.
+	(maint_info_sections_option_defs): New static global.
+	(maint_info_sections_completer): New function.
+	(maintenance_info_sections): Use option parsing mechanism.
+	(_initialize_maint_cmds): Update command help text for 'maint info
+	sections' and register a command completer.
+
+2021-02-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* maint.c (print_bfd_section_info_maybe_relocated): Delete,
+	functionality merged into...
+	(maint_print_all_sections): ...this new function.
+	(maintenance_info_sections): Make use of maint_print_all_sections,
+	allow all objects to be printed even where there's no executable.
+
+2021-02-11  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* breakpoint.c (resolve_sal_pc): Make use of
+	bound_minimal_symbol::obj_section.
+	* maint.c (maintenance_translate_address): Likewise.
+	* minsyms.c (minimal_symbol_upper_bound): Likewise.
+	* minsyms.h (struct bound_minimal_symbol) <obj_section>: New
+	member function.
+	* printcmd.c (info_address_command): Make use of
+	bound_minimal_symbol::obj_section.
+
 2021-02-11  Alan Modra  <amodra@gmail.com>
 
 	* arm-symbian-tdep.c: Delete.
