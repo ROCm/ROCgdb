@@ -748,32 +748,33 @@ slurp_symtab (bfd *abfd)
       non_fatal (_("failed to read symbol table from: %s"), bfd_get_filename (abfd));
       bfd_fatal (_("error message was"));
     }
-  /* Add an extra entry (at the end) with a NULL pointer.  */
-  storage += sizeof (asymbol *);
 
-  off_t filesize = bfd_get_file_size (abfd);
-
-  /* qv PR 24707.  */
-  if (filesize > 0
-      && filesize < storage
-      /* The MMO file format supports its own special compression
-	 technique, so its sections can be larger than the file size.  */
-      && bfd_get_flavour (abfd) != bfd_target_mmo_flavour)	  
+  if (storage)
     {
-      bfd_nonfatal_message (bfd_get_filename (abfd), abfd, NULL,
-			    _("error: symbol table size (%#lx) is larger than filesize (%#lx)"),
-			    storage, (long) filesize);
-      exit_status = 1;
-      symcount = 0;
-      return NULL;
+      off_t filesize = bfd_get_file_size (abfd);
+
+      /* qv PR 24707.  */
+      if (filesize > 0
+	  && filesize < storage
+	  /* The MMO file format supports its own special compression
+	     technique, so its sections can be larger than the file size.  */
+	  && bfd_get_flavour (abfd) != bfd_target_mmo_flavour)
+	{
+	  bfd_nonfatal_message (bfd_get_filename (abfd), abfd, NULL,
+				_("error: symbol table size (%#lx) "
+				  "is larger than filesize (%#lx)"),
+				storage, (long) filesize);
+	  exit_status = 1;
+	  symcount = 0;
+	  return NULL;
+	}
+
+      sy = (asymbol **) xmalloc (storage);
     }
 
-  sy = (asymbol **) xmalloc (storage);
   symcount = bfd_canonicalize_symtab (abfd, sy);
   if (symcount < 0)
     bfd_fatal (bfd_get_filename (abfd));
-  /* assert (symcount < (storage / sizeof (asymbol *))) */
-  sy[symcount] = NULL;
   return sy;
 }
 
@@ -786,7 +787,6 @@ slurp_dynamic_symtab (bfd *abfd)
   long storage;
 
   storage = bfd_get_dynamic_symtab_upper_bound (abfd);
-  /* Add an extra entry (at the end) with a NULL pointer.  */
   if (storage < 0)
     {
       if (!(bfd_get_file_flags (abfd) & DYNAMIC))
@@ -800,14 +800,12 @@ slurp_dynamic_symtab (bfd *abfd)
       bfd_fatal (bfd_get_filename (abfd));
     }
 
-  storage += sizeof (asymbol *);
-  sy = (asymbol **) xmalloc (storage);
+  if (storage)
+    sy = (asymbol **) xmalloc (storage);
 
   dynsymcount = bfd_canonicalize_dynamic_symtab (abfd, sy);
   if (dynsymcount < 0)
     bfd_fatal (bfd_get_filename (abfd));
-  /* assert (symcount < (storage / sizeof (asymbol *))) */
-  sy[dynsymcount] = NULL;
   return sy;
 }
 
@@ -3554,6 +3552,7 @@ load_specific_debug_section (enum dwarf_section_display_enum debug,
   bfd_byte *contents;
   bfd_size_type amt;
   size_t alloced;
+  bfd_boolean ret;
 
   if (section->start != NULL)
     {
@@ -3567,7 +3566,6 @@ load_specific_debug_section (enum dwarf_section_display_enum debug,
   section->reloc_info = NULL;
   section->num_relocs = 0;
   section->address = bfd_section_vma (sec);
-  section->user_data = sec;
   section->size = bfd_section_size (sec);
   /* PR 24360: On 32-bit hosts sizeof (size_t) < sizeof (bfd_size_type). */
   alloced = amt = section->size + 1;
@@ -3580,56 +3578,49 @@ load_specific_debug_section (enum dwarf_section_display_enum debug,
 	      (unsigned long long) section->size);
       return FALSE;
     }
-  section->start = contents = malloc (alloced);
-  if (section->start == NULL
-      || !bfd_get_full_section_contents (abfd, sec, &contents))
-    {
-      free_debug_section (debug);
-      printf (_("\nCan't get contents for section '%s'.\n"),
-	      sanitize_string (section->name));
-      return FALSE;
-    }
+
+  section->start = contents = xmalloc (alloced);
   /* Ensure any string section has a terminating NUL.  */
   section->start[section->size] = 0;
 
   if ((abfd->flags & (EXEC_P | DYNAMIC)) == 0
       && debug_displays [debug].relocate)
     {
-      long         reloc_size;
-      bfd_boolean  ret;
-
-      bfd_cache_section_contents (sec, section->start);
-
       ret = bfd_simple_get_relocated_section_contents (abfd,
 						       sec,
 						       section->start,
 						       syms) != NULL;
-
-      if (! ret)
-        {
-          free_debug_section (debug);
-          printf (_("\nCan't get contents for section '%s'.\n"),
-	          sanitize_string (section->name));
-          return FALSE;
-        }
-
-      reloc_size = bfd_get_reloc_upper_bound (abfd, sec);
-      if (reloc_size > 0)
+      if (ret)
 	{
-	  unsigned long reloc_count;
-	  arelent **relocs;
+	  long reloc_size = bfd_get_reloc_upper_bound (abfd, sec);
 
-	  relocs = (arelent **) xmalloc (reloc_size);
-
-	  reloc_count = bfd_canonicalize_reloc (abfd, sec, relocs, NULL);
-	  if (reloc_count == 0)
-	    free (relocs);
-	  else
+	  if (reloc_size > 0)
 	    {
-	      section->reloc_info = relocs;
-	      section->num_relocs = reloc_count;
+	      unsigned long reloc_count;
+	      arelent **relocs;
+
+	      relocs = (arelent **) xmalloc (reloc_size);
+
+	      reloc_count = bfd_canonicalize_reloc (abfd, sec, relocs, NULL);
+	      if (reloc_count == 0)
+		free (relocs);
+	      else
+		{
+		  section->reloc_info = relocs;
+		  section->num_relocs = reloc_count;
+		}
 	    }
 	}
+    }
+  else
+    ret = bfd_get_full_section_contents (abfd, sec, &contents);
+
+  if (!ret)
+    {
+      free_debug_section (debug);
+      printf (_("\nCan't get contents for section '%s'.\n"),
+	      sanitize_string (section->name));
+      return FALSE;
     }
 
   return TRUE;
@@ -3687,26 +3678,6 @@ void
 free_debug_section (enum dwarf_section_display_enum debug)
 {
   struct dwarf_section *section = &debug_displays [debug].section;
-
-  if (section->start == NULL)
-    return;
-
-  /* PR 17512: file: 0f67f69d.  */
-  if (section->user_data != NULL)
-    {
-      asection * sec = (asection *) section->user_data;
-
-      /* If we are freeing contents that are also pointed to by the BFD
-	 library's section structure then make sure to update those pointers
-	 too.  Otherwise, the next time we try to load data for this section
-	 we can end up using a stale pointer.  */
-      if (section->start == sec->contents)
-	{
-	  sec->contents = NULL;
-	  sec->flags &= ~ SEC_IN_MEMORY;
-	  sec->compress_status = COMPRESS_SECTION_NONE;
-	}
-    }
 
   free ((char *) section->start);
   section->start = NULL;
@@ -4915,12 +4886,11 @@ dump_bfd (bfd *abfd, bfd_boolean is_mainfile)
 		    }
 		  else
 		    {
-		      syms = xrealloc (syms, (symcount + old_symcount + 1) * sizeof (asymbol *));
+		      syms = xrealloc (syms, ((symcount + old_symcount + 1)
+					      * sizeof (asymbol *)));
 		      memcpy (syms + old_symcount,
 			      extra_syms,
-			      symcount * sizeof (asymbol *));
-		      /* Preserve the NULL entry at the end of the symbol table.  */
-		      syms[symcount + old_symcount] = NULL;
+			      (symcount + 1) * sizeof (asymbol *));
 		    }
 		}
 
