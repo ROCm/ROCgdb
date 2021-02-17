@@ -1,3 +1,21 @@
+2021-02-17  Alan Modra  <amodra@gmail.com>
+
+	* wasm32-dis.c: Include limits.h.
+	(CHAR_BIT): Provide backup define.
+	(wasm_read_leb128): Use CHAR_BIT to size "result" in bits.
+	Correct signed overflow checking.
+
+2021-02-16  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl: Split CVTPI2PD template. Add SSE2AVX variant.
+	* i386-tbl.h: Re-generate.
+
+2021-02-16  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-gen.c (set_bitfield): Don't look for CpuFP, Mmword, nor
+	Oword.
+	* i386-opc.tbl (CpuFP, Mmword, Oword): Define.
+
 2021-02-15  Andreas Krebbel  <krebbel@linux.ibm.com>
 
 	* s390-mkopc.c (main): Accept arch14 as cpu string.

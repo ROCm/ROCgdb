@@ -4874,7 +4874,7 @@ md_assemble (char *line)
   for (j = 0; j < i.operands; j++)
     {
       i.types[j] = operand_type_and (i.types[j], i.tm.operand_types[j]);
-      switch (i.types[j].bitfield.class)
+      switch (i.tm.operand_types[j].bitfield.class)
 	{
 	default:
 	  break;
@@ -4885,13 +4885,13 @@ md_assemble (char *line)
 	  i.xstate |= xstate_mask;
 	  break;
 	case RegSIMD:
-	  if (i.types[j].bitfield.tmmword)
+	  if (i.tm.operand_types[j].bitfield.tmmword)
 	    i.xstate |= xstate_tmm;
-	  else if (i.types[j].bitfield.zmmword)
+	  else if (i.tm.operand_types[j].bitfield.zmmword)
 	    i.xstate |= xstate_zmm;
-	  else if (i.types[j].bitfield.ymmword)
+	  else if (i.tm.operand_types[j].bitfield.ymmword)
 	    i.xstate |= xstate_ymm;
-	  else if (i.types[j].bitfield.xmmword)
+	  else if (i.tm.operand_types[j].bitfield.xmmword)
 	    i.xstate |= xstate_xmm;
 	  break;
 	}
@@ -9208,10 +9208,12 @@ output_insn (void)
 	  || i.tm.cpu_flags.bitfield.cpu687
 	  || i.tm.cpu_flags.bitfield.cpufisttp)
 	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_X87;
+
       if ((i.xstate & xstate_mmx)
 	  || i.tm.base_opcode == 0xf77 /* emms */
 	  || i.tm.base_opcode == 0xf0e /* femms */)
 	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_MMX;
+
       if (i.index_reg)
 	{
 	  if (i.index_reg->reg_type.bitfield.zmmword)
@@ -9221,10 +9223,20 @@ output_insn (void)
 	  else if (i.index_reg->reg_type.bitfield.xmmword)
 	    i.xstate |= xstate_xmm;
 	}
+
+      /* vzeroall / vzeroupper */
+      if (i.tm.base_opcode == 0x77 && i.tm.cpu_flags.bitfield.cpuavx)
+	i.xstate |= xstate_ymm;
+
       if ((i.xstate & xstate_xmm)
+	  /* ldmxcsr / stmxcsr */
+	  || (i.tm.base_opcode == 0xfae && i.tm.cpu_flags.bitfield.cpusse)
+	  /* vldmxcsr / vstmxcsr */
+	  || (i.tm.base_opcode == 0xae && i.tm.cpu_flags.bitfield.cpuavx)
 	  || i.tm.cpu_flags.bitfield.cpuwidekl
 	  || i.tm.cpu_flags.bitfield.cpukl)
 	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XMM;
+
       if ((i.xstate & xstate_ymm) == xstate_ymm)
 	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_YMM;
       if ((i.xstate & xstate_zmm) == xstate_zmm)
