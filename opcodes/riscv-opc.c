@@ -73,7 +73,7 @@ const char * const riscv_fpr_names_abi[NFPR] =
 #define MASK_RD (OP_MASK_RD << OP_SH_RD)
 #define MASK_CRS2 (OP_MASK_CRS2 << OP_SH_CRS2)
 #define MASK_IMM ENCODE_ITYPE_IMM (-1U)
-#define MASK_RVC_IMM ENCODE_RVC_IMM (-1U)
+#define MASK_RVC_IMM ENCODE_CITYPE_IMM (-1U)
 #define MASK_UIMM ENCODE_UTYPE_IMM (-1U)
 #define MASK_RM (OP_MASK_RM << OP_SH_RM)
 #define MASK_PRED (OP_MASK_PRED << OP_SH_PRED)
@@ -135,8 +135,7 @@ static int
 match_c_addi16sp (const struct riscv_opcode *op, insn_t insn)
 {
   return (match_opcode (op, insn)
-	  && (((insn & MASK_RD) >> OP_SH_RD) == 2)
-	  && EXTRACT_RVC_ADDI16SP_IMM (insn) != 0);
+	  && (((insn & MASK_RD) >> OP_SH_RD) == 2));
 }
 
 static int
@@ -144,7 +143,7 @@ match_c_lui (const struct riscv_opcode *op, insn_t insn)
 {
   return (match_rd_nonzero (op, insn)
 	  && (((insn & MASK_RD) >> OP_SH_RD) != 2)
-	  && EXTRACT_RVC_LUI_IMM (insn) != 0);
+	  && EXTRACT_CITYPE_LUI_IMM (insn) != 0);
 }
 
 /* We don't allow lui zero,X to become a c.lui hint, so we need a separate
@@ -155,13 +154,13 @@ match_c_lui_with_hint (const struct riscv_opcode *op, insn_t insn)
 {
   return (match_opcode (op, insn)
 	  && (((insn & MASK_RD) >> OP_SH_RD) != 2)
-	  && EXTRACT_RVC_LUI_IMM (insn) != 0);
+	  && EXTRACT_CITYPE_LUI_IMM (insn) != 0);
 }
 
 static int
 match_c_addi4spn (const struct riscv_opcode *op, insn_t insn)
 {
-  return match_opcode (op, insn) && EXTRACT_RVC_ADDI4SPN_IMM (insn) != 0;
+  return match_opcode (op, insn) && EXTRACT_CIWTYPE_ADDI4SPN_IMM (insn) != 0;
 }
 
 /* This requires a non-zero shift.  A zero rd is a hint, so is allowed.  */
@@ -169,7 +168,7 @@ match_c_addi4spn (const struct riscv_opcode *op, insn_t insn)
 static int
 match_c_slli (const struct riscv_opcode *op, insn_t insn)
 {
-  return match_opcode (op, insn) && EXTRACT_RVC_IMM (insn) != 0;
+  return match_opcode (op, insn) && EXTRACT_CITYPE_IMM (insn) != 0;
 }
 
 /* This requires a non-zero rd, and a non-zero shift.  */
@@ -177,7 +176,7 @@ match_c_slli (const struct riscv_opcode *op, insn_t insn)
 static int
 match_slli_as_c_slli (const struct riscv_opcode *op, insn_t insn)
 {
-  return match_rd_nonzero (op, insn) && EXTRACT_RVC_IMM (insn) != 0;
+  return match_rd_nonzero (op, insn) && EXTRACT_CITYPE_IMM (insn) != 0;
 }
 
 /* This requires a zero shift.  A zero rd is a hint, so is allowed.  */
@@ -185,7 +184,7 @@ match_slli_as_c_slli (const struct riscv_opcode *op, insn_t insn)
 static int
 match_c_slli64 (const struct riscv_opcode *op, insn_t insn)
 {
-  return match_opcode (op, insn) && EXTRACT_RVC_IMM (insn) == 0;
+  return match_opcode (op, insn) && EXTRACT_CITYPE_IMM (insn) == 0;
 }
 
 /* This is used for both srli and srai.  This requires a non-zero shift.
@@ -194,7 +193,7 @@ match_c_slli64 (const struct riscv_opcode *op, insn_t insn)
 static int
 match_srxi_as_c_srxi (const struct riscv_opcode *op, insn_t insn)
 {
-  return match_opcode (op, insn) && EXTRACT_RVC_IMM (insn) != 0;
+  return match_opcode (op, insn) && EXTRACT_CITYPE_IMM (insn) != 0;
 }
 
 const struct riscv_opcode riscv_opcodes[] =
@@ -847,7 +846,6 @@ const struct riscv_opcode riscv_insn_types[] =
 {"sb",      0, INSN_CLASS_F,       "O4,F3,S,t,p",       0, 0, match_opcode, 0 },
 {"sb",      0, INSN_CLASS_F,       "O4,F3,s,T,p",       0, 0, match_opcode, 0 },
 {"sb",      0, INSN_CLASS_F,       "O4,F3,S,T,p",       0, 0, match_opcode, 0 },
-
 {"b",       0, INSN_CLASS_I,       "O4,F3,s,t,p",       0, 0, match_opcode, 0 },
 {"b",       0, INSN_CLASS_F,       "O4,F3,S,t,p",       0, 0, match_opcode, 0 },
 {"b",       0, INSN_CLASS_F,       "O4,F3,s,T,p",       0, 0, match_opcode, 0 },
@@ -858,7 +856,6 @@ const struct riscv_opcode riscv_insn_types[] =
 
 {"uj",      0, INSN_CLASS_I,       "O4,d,a",            0, 0, match_opcode, 0 },
 {"uj",      0, INSN_CLASS_F,       "O4,D,a",            0, 0, match_opcode, 0 },
-
 {"j",       0, INSN_CLASS_I,       "O4,d,a",            0, 0, match_opcode, 0 },
 {"j",       0, INSN_CLASS_F,       "O4,D,a",            0, 0, match_opcode, 0 },
 
@@ -873,6 +870,19 @@ const struct riscv_opcode riscv_insn_types[] =
 {"ciw",     0, INSN_CLASS_C,       "O2,CF3,Ct,C8",      0, 0, match_opcode, 0 },
 {"ciw",     0, INSN_CLASS_F_AND_C, "O2,CF3,CD,C8",      0, 0, match_opcode, 0 },
 
+{"css",     0, INSN_CLASS_C,       "O2,CF3,CV,C6",      0, 0, match_opcode, 0 },
+{"css",     0, INSN_CLASS_F_AND_C, "O2,CF3,CT,C6",      0, 0, match_opcode, 0 },
+
+{"cl",      0, INSN_CLASS_C,       "O2,CF3,Ct,C5(Cs)",  0, 0, match_opcode, 0 },
+{"cl",      0, INSN_CLASS_F_AND_C, "O2,CF3,CD,C5(Cs)",  0, 0, match_opcode, 0 },
+{"cl",      0, INSN_CLASS_F_AND_C, "O2,CF3,Ct,C5(CS)",  0, 0, match_opcode, 0 },
+{"cl",      0, INSN_CLASS_F_AND_C, "O2,CF3,CD,C5(CS)",  0, 0, match_opcode, 0 },
+
+{"cs",      0, INSN_CLASS_C,       "O2,CF3,Ct,C5(Cs)",  0, 0, match_opcode, 0 },
+{"cs",      0, INSN_CLASS_F_AND_C, "O2,CF3,CD,C5(Cs)",  0, 0, match_opcode, 0 },
+{"cs",      0, INSN_CLASS_F_AND_C, "O2,CF3,Ct,C5(CS)",  0, 0, match_opcode, 0 },
+{"cs",      0, INSN_CLASS_F_AND_C, "O2,CF3,CD,C5(CS)",  0, 0, match_opcode, 0 },
+
 {"ca",      0, INSN_CLASS_C,       "O2,CF6,CF2,Cs,Ct",  0, 0, match_opcode, 0 },
 {"ca",      0, INSN_CLASS_F_AND_C, "O2,CF6,CF2,CS,Ct",  0, 0, match_opcode, 0 },
 {"ca",      0, INSN_CLASS_F_AND_C, "O2,CF6,CF2,Cs,CD",  0, 0, match_opcode, 0 },
@@ -886,90 +896,3 @@ const struct riscv_opcode riscv_insn_types[] =
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}
 };
-
-/* All standard extensions defined in all supported ISA spec.  */
-const struct riscv_ext_version riscv_ext_version_table[] =
-{
-/* name, ISA spec, major version, minor version.  */
-{"e", ISA_SPEC_CLASS_20191213, 1, 9},
-{"e", ISA_SPEC_CLASS_20190608, 1, 9},
-{"e", ISA_SPEC_CLASS_2P2,      1, 9},
-
-{"i", ISA_SPEC_CLASS_20191213, 2, 1},
-{"i", ISA_SPEC_CLASS_20190608, 2, 1},
-{"i", ISA_SPEC_CLASS_2P2,      2, 0},
-
-{"m", ISA_SPEC_CLASS_20191213, 2, 0},
-{"m", ISA_SPEC_CLASS_20190608, 2, 0},
-{"m", ISA_SPEC_CLASS_2P2,      2, 0},
-
-{"a", ISA_SPEC_CLASS_20191213, 2, 1},
-{"a", ISA_SPEC_CLASS_20190608, 2, 0},
-{"a", ISA_SPEC_CLASS_2P2,      2, 0},
-
-{"f", ISA_SPEC_CLASS_20191213, 2, 2},
-{"f", ISA_SPEC_CLASS_20190608, 2, 2},
-{"f", ISA_SPEC_CLASS_2P2,      2, 0},
-
-{"d", ISA_SPEC_CLASS_20191213, 2, 2},
-{"d", ISA_SPEC_CLASS_20190608, 2, 2},
-{"d", ISA_SPEC_CLASS_2P2,      2, 0},
-
-{"q", ISA_SPEC_CLASS_20191213, 2, 2},
-{"q", ISA_SPEC_CLASS_20190608, 2, 2},
-{"q", ISA_SPEC_CLASS_2P2,      2, 0},
-
-{"c", ISA_SPEC_CLASS_20191213, 2, 0},
-{"c", ISA_SPEC_CLASS_20190608, 2, 0},
-{"c", ISA_SPEC_CLASS_2P2,      2, 0},
-
-{"zicsr", ISA_SPEC_CLASS_20191213, 2, 0},
-{"zicsr", ISA_SPEC_CLASS_20190608, 2, 0},
-
-{"zifencei", ISA_SPEC_CLASS_20191213, 2, 0},
-{"zifencei", ISA_SPEC_CLASS_20190608, 2, 0},
-
-{"zihintpause", ISA_SPEC_CLASS_DRAFT, 1, 0},
-
-/* Terminate the list.  */
-{NULL, 0, 0, 0}
-};
-
-struct isa_spec_t
-{
-  const char *name;
-  enum riscv_isa_spec_class class;
-};
-
-/* List for all supported ISA spec versions.  */
-static const struct isa_spec_t isa_specs[] =
-{
-  {"2.2",      ISA_SPEC_CLASS_2P2},
-  {"20190608", ISA_SPEC_CLASS_20190608},
-  {"20191213", ISA_SPEC_CLASS_20191213},
-
-  /* Terminate the list.  */
-  {NULL, 0}
-};
-
-/* Get the corresponding ISA spec class by giving a ISA spec string.  */
-
-int
-riscv_get_isa_spec_class (const char *s,
-                         enum riscv_isa_spec_class *class)
-{
-  const struct isa_spec_t *version;
-
-  if (s == NULL)
-    return 0;
-
-  for (version = &isa_specs[0]; version->name != NULL; ++version)
-    if (strcmp (version->name, s) == 0)
-      {
-       *class = version->class;
-       return 1;
-      }
-
-  /* Can not find the supported ISA spec.  */
-  return 0;
-}

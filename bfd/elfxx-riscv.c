@@ -25,9 +25,11 @@
 #include "libbfd.h"
 #include "elf-bfd.h"
 #include "elf/riscv.h"
+#include "opcode/riscv.h"
 #include "libiberty.h"
 #include "elfxx-riscv.h"
 #include "safe-ctype.h"
+#include "cpu-riscv.h"
 
 #define MINUS_ONE ((bfd_vma)0 - 1)
 
@@ -233,7 +235,7 @@ static reloc_howto_type howto_table[] =
 	 "R_RISCV_BRANCH",		/* name */
 	 FALSE,				/* partial_inplace */
 	 0,				/* src_mask */
-	 ENCODE_SBTYPE_IMM (-1U),	/* dst_mask */
+	 ENCODE_BTYPE_IMM (-1U),	/* dst_mask */
 	 TRUE),				/* pcrel_offset */
 
   /* 20-bit PC-relative jump offset.  */
@@ -248,7 +250,7 @@ static reloc_howto_type howto_table[] =
 	 "R_RISCV_JAL",			/* name */
 	 FALSE,				/* partial_inplace */
 	 0,				/* src_mask */
-	 ENCODE_UJTYPE_IMM (-1U),	/* dst_mask */
+	 ENCODE_JTYPE_IMM (-1U),	/* dst_mask */
 	 TRUE),				/* pcrel_offset */
 
   /* 32-bit PC-relative function call (AUIPC/JALR).  */
@@ -657,7 +659,7 @@ static reloc_howto_type howto_table[] =
 	 "R_RISCV_RVC_BRANCH",		/* name */
 	 FALSE,				/* partial_inplace */
 	 0,				/* src_mask */
-	 ENCODE_RVC_B_IMM (-1U),	/* dst_mask */
+	 ENCODE_CBTYPE_IMM (-1U),	/* dst_mask */
 	 TRUE),				/* pcrel_offset */
 
   /* 11-bit PC-relative jump offset.  */
@@ -672,7 +674,7 @@ static reloc_howto_type howto_table[] =
 	 "R_RISCV_RVC_JUMP",		/* name */
 	 FALSE,				/* partial_inplace */
 	 0,				/* src_mask */
-	 ENCODE_RVC_J_IMM (-1U),	/* dst_mask */
+	 ENCODE_CJTYPE_IMM (-1U),	/* dst_mask */
 	 TRUE),				/* pcrel_offset */
 
   /* High 6 bits of 18-bit absolute address.  */
@@ -687,7 +689,7 @@ static reloc_howto_type howto_table[] =
 	 "R_RISCV_RVC_LUI",		/* name */
 	 FALSE,				/* partial_inplace */
 	 0,				/* src_mask */
-	 ENCODE_RVC_IMM (-1U),		/* dst_mask */
+	 ENCODE_CITYPE_IMM (-1U),	/* dst_mask */
 	 FALSE),			/* pcrel_offset */
 
   /* GP-relative load.  */
@@ -1024,12 +1026,13 @@ riscv_elf_add_sub_reloc (bfd *abfd,
   return bfd_reloc_ok;
 }
 
+#define RISCV_UNKNOWN_VERSION -1
+
 /* Array is used to compare the orders of all extensions quickly.
 
    Zero value: Preserved keyword.
    Negative value: Prefixed keyword (s, h, x, z).
    Positive value: Standard extension.  */
-
 static int riscv_ext_order[26] = {0};
 
 /* Similar to the strcmp.  It returns an integer less than, equal to,
