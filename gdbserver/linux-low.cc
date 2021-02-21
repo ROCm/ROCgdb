@@ -4267,8 +4267,14 @@ linux_process_target::resume_one_lwp_throw (lwp_info *lwp, int step,
 	  (PTRACE_TYPE_ARG4) (uintptr_t) signal);
 
   current_thread = saved_thread;
-  if (errno)
-    perror_with_name ("resuming thread");
+  if (errno && errno != ESRCH)
+    {
+      if (debug_threads)
+	debug_printf ("Resuming lwp %ld failed with %d: %s\n",
+		      lwpid_of (thread),
+		      errno, strerror (errno));
+      perror_with_name ("resuming thread");
+    }
 
   /* Successfully resumed.  Clear state that no longer makes sense,
      and mark the LWP as running.  Must not do this before resuming
