@@ -3841,10 +3841,11 @@ target_always_non_stop_p (void)
 int
 target_is_non_stop_p (void)
 {
-  return (non_stop
-	  || target_non_stop_enabled == AUTO_BOOLEAN_TRUE
-	  || (target_non_stop_enabled == AUTO_BOOLEAN_AUTO
-	      && target_always_non_stop_p ()));
+  return ((non_stop
+	   || target_non_stop_enabled == AUTO_BOOLEAN_TRUE
+	   || (target_non_stop_enabled == AUTO_BOOLEAN_AUTO
+	       && target_always_non_stop_p ()))
+	  && target_can_async_p ());
 }
 
 /* See target.h.  */
