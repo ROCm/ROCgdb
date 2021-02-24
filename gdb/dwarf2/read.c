@@ -1685,15 +1685,18 @@ public:
   explicit dwarf2_queue_guard (dwarf2_per_objfile *per_objfile)
     : m_per_objfile (per_objfile)
   {
+    gdb_assert (!m_per_objfile->per_bfd->queue.has_value ());
+
+    m_per_objfile->per_bfd->queue.emplace ();
   }
 
   /* Free any entries remaining on the queue.  There should only be
      entries left if we hit an error while processing the dwarf.  */
   ~dwarf2_queue_guard ()
   {
-    /* Ensure that no memory is allocated by the queue.  */
-    std::queue<dwarf2_queue_item> empty;
-    std::swap (m_per_objfile->per_bfd->queue, empty);
+    gdb_assert (m_per_objfile->per_bfd->queue.has_value ());
+
+    m_per_objfile->per_bfd->queue.reset ();
   }
 
   DISABLE_COPY_AND_ASSIGN (dwarf2_queue_guard);
@@ -1862,6 +1865,8 @@ dwarf2_per_bfd::~dwarf2_per_bfd ()
 void
 dwarf2_per_objfile::remove_all_cus ()
 {
+  gdb_assert (!this->per_bfd->queue.has_value ());
+
   for (auto pair : m_dwarf2_cus)
     delete pair.second;
 
@@ -2543,30 +2548,32 @@ dw2_do_instantiate_symtab (dwarf2_per_cu_data *per_cu,
   if (per_cu->type_unit_group_p ())
     return;
 
-  /* The destructor of dwarf2_queue_guard frees any entries left on
-     the queue.  After this point we're guaranteed to leave this function
-     with the dwarf queue empty.  */
-  dwarf2_queue_guard q_guard (per_objfile);
+  {
+    /* The destructor of dwarf2_queue_guard frees any entries left on
+       the queue.  After this point we're guaranteed to leave this function
+       with the dwarf queue empty.  */
+    dwarf2_queue_guard q_guard (per_objfile);
 
-  if (!per_objfile->symtab_set_p (per_cu))
-    {
-      queue_comp_unit (per_cu, per_objfile, language_minimal);
-      dwarf2_cu *cu = load_cu (per_cu, per_objfile, skip_partial);
+    if (!per_objfile->symtab_set_p (per_cu))
+      {
+	queue_comp_unit (per_cu, per_objfile, language_minimal);
+	dwarf2_cu *cu = load_cu (per_cu, per_objfile, skip_partial);
 
-      /* If we just loaded a CU from a DWO, and we're working with an index
-	 that may badly handle TUs, load all the TUs in that DWO as well.
-	 http://sourceware.org/bugzilla/show_bug.cgi?id=15021  */
-      if (!per_cu->is_debug_types
-	  && cu != NULL
-	  && cu->dwo_unit != NULL
-	  && per_objfile->per_bfd->index_table != NULL
-	  && per_objfile->per_bfd->index_table->version <= 7
-	  /* DWP files aren't supported yet.  */
-	  && get_dwp_file (per_objfile) == NULL)
-	queue_and_load_all_dwo_tus (cu);
-    }
+	/* If we just loaded a CU from a DWO, and we're working with an index
+	   that may badly handle TUs, load all the TUs in that DWO as well.
+	   http://sourceware.org/bugzilla/show_bug.cgi?id=15021  */
+	if (!per_cu->is_debug_types
+	    && cu != NULL
+	    && cu->dwo_unit != NULL
+	    && per_objfile->per_bfd->index_table != NULL
+	    && per_objfile->per_bfd->index_table->version <= 7
+	    /* DWP files aren't supported yet.  */
+	    && get_dwp_file (per_objfile) == NULL)
+	  queue_and_load_all_dwo_tus (cu);
+      }
 
-  process_queue (per_objfile);
+    process_queue (per_objfile);
+  }
 
   /* Age the cache, releasing compilation units that have not
      been used recently.  */
@@ -9181,17 +9188,35 @@ queue_comp_unit (dwarf2_per_cu_data *per_cu,
 		 enum language pretend_language)
 {
   per_cu->queued = 1;
-  per_cu->per_bfd->queue.emplace (per_cu, per_objfile, pretend_language);
+
+  gdb_assert (per_objfile->per_bfd->queue.has_value ());
+  per_cu->per_bfd->queue->emplace (per_cu, per_objfile, pretend_language);
 }
 
-/* If PER_CU is not yet queued, add it to the queue.
+/* If PER_CU is not yet expanded of queued for expansion, add it to the queue.
+
    If DEPENDENT_CU is non-NULL, it has a reference to PER_CU so add a
    dependency.
-   The result is non-zero if PER_CU was queued, otherwise the result is zero
-   meaning either PER_CU is already queued or it is already loaded.
 
-   N.B. There is an invariant here that if a CU is queued then it is loaded.
-   The caller is required to load PER_CU if we return non-zero.  */
+   Return true if maybe_queue_comp_unit requires the caller to load the CU's
+   DIEs, false otherwise.
+
+   Explanation: there is an invariant that if a CU is queued for expansion
+   (present in `dwarf2_per_bfd::queue`), then its DIEs are loaded
+   (a dwarf2_cu object exists for this CU, and `dwarf2_per_objfile::get_cu`
+   returns non-nullptr).  If the CU gets enqueued by this function but its DIEs
+   are not yet loaded, the the caller must load the CU's DIEs to ensure the
+   invariant is respected.
+
+   The caller is therefore not required to load the CU's DIEs (we return false)
+   if:
+
+     - the CU is already expanded, and therefore does not get enqueued
+     - the CU gets enqueued for expansion, but its DIEs are already loaded
+
+   Note that the caller should not use this function's return value as an
+   indicator of whether the CU's DIEs are loaded right now, it should check
+   that by calling `dwarf2_per_objfile::get_cu` instead.  */
 
 static int
 maybe_queue_comp_unit (struct dwarf2_cu *dependent_cu,
@@ -9222,22 +9247,32 @@ maybe_queue_comp_unit (struct dwarf2_cu *dependent_cu,
       /* Verify the invariant that if a CU is queued for expansion, its DIEs are
 	 loaded.  */
       gdb_assert (per_objfile->get_cu (per_cu) != nullptr);
+
+      /* If the CU is queued for expansion, it should not already be
+	 expanded.  */
+      gdb_assert (!per_objfile->symtab_set_p (per_cu));
+
+      /* The DIEs are already loaded, the caller doesn't need to do it.  */
       return 0;
+    }
+
+  bool queued = false;
+  if (!per_objfile->symtab_set_p (per_cu))
+    {
+      /* Add it to the queue.  */
+      queue_comp_unit (per_cu, per_objfile,  pretend_language);
+      queued = true;
     }
 
   /* If the compilation unit is already loaded, just mark it as
      used.  */
   dwarf2_cu *cu = per_objfile->get_cu (per_cu);
   if (cu != nullptr)
-    {
-      cu->last_used = 0;
-      return 0;
-    }
+    cu->last_used = 0;
 
-  /* Add it to the queue.  */
-  queue_comp_unit (per_cu, per_objfile,  pretend_language);
-
-  return 1;
+  /* Ask the caller to load the CU's DIEs if the CU got enqueued for expansion
+     and the DIEs are not already loaded.  */
+  return queued && cu == nullptr;
 }
 
 /* Process the queue.  */
@@ -9250,9 +9285,9 @@ process_queue (dwarf2_per_objfile *per_objfile)
 
   /* The queue starts out with one item, but following a DIE reference
      may load a new CU, adding it to the end of the queue.  */
-  while (!per_objfile->per_bfd->queue.empty ())
+  while (!per_objfile->per_bfd->queue->empty ())
     {
-      dwarf2_queue_item &item = per_objfile->per_bfd->queue.front ();
+      dwarf2_queue_item &item = per_objfile->per_bfd->queue->front ();
       dwarf2_per_cu_data *per_cu = item.per_cu;
 
       if (!per_objfile->symtab_set_p (per_cu))
@@ -9298,7 +9333,7 @@ process_queue (dwarf2_per_objfile *per_objfile)
 	}
 
       per_cu->queued = 0;
-      per_objfile->per_bfd->queue.pop ();
+      per_objfile->per_bfd->queue->pop ();
     }
 
   dwarf_read_debug_printf ("Done expanding symtabs of %s.",
@@ -23705,12 +23740,18 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
 				 sect_offset_str (per_cu->sect_off),
 				 per_objfile->get_cu (per_cu) != nullptr);
 
-      /* If necessary, add it to the queue and load its DIEs.  */
-      if (maybe_queue_comp_unit (cu, per_cu, per_objfile, cu->language))
+      /* If necessary, add it to the queue and load its DIEs.
+
+	 Even if maybe_queue_comp_unit doesn't require us to load the CU's DIEs,
+	 it doesn't mean they are currently loaded.  Since we require them
+	 to be loaded, we must check for ourselves.  */
+      if (maybe_queue_comp_unit (cu, per_cu, per_objfile, cu->language)
+	  || per_objfile->get_cu (per_cu) == nullptr)
 	load_full_comp_unit (per_cu, per_objfile, per_objfile->get_cu (per_cu),
 			     false, cu->language);
 
       target_cu = per_objfile->get_cu (per_cu);
+      gdb_assert (target_cu != nullptr);
     }
   else if (cu->dies == NULL)
     {
@@ -24084,10 +24125,14 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
      we can get here for DW_AT_imported_declaration where we need
      the DIE not the type.  */
 
-  /* If necessary, add it to the queue and load its DIEs.  */
+  /* If necessary, add it to the queue and load its DIEs.
 
+     Even if maybe_queue_comp_unit doesn't require us to load the CU's DIEs,
+     it doesn't mean they are currently loaded.  Since we require them
+     to be loaded, we must check for ourselves.  */
   if (maybe_queue_comp_unit (*ref_cu, &sig_type->per_cu, per_objfile,
-			     language_minimal))
+			     language_minimal)
+      || per_objfile->get_cu (&sig_type->per_cu) == nullptr)
     read_signatured_type (sig_type, per_objfile);
 
   sig_cu = per_objfile->get_cu (&sig_type->per_cu);
@@ -25086,6 +25131,13 @@ void
 dwarf2_per_objfile::age_comp_units ()
 {
   dwarf_read_debug_printf_v ("running");
+
+  /* This is not expected to be called in the middle of CU expansion.  There is
+     an invariant that if a CU is in the CUs-to-expand queue, its DIEs are
+     loaded in memory.  Calling age_comp_units while the queue is in use could
+     make us free the DIEs for a CU that is in the queue and therefore break
+     that invariant.  */
+  gdb_assert (!this->per_bfd->queue.has_value ());
 
   /* Start by clearing all marks.  */
   for (auto pair : m_dwarf2_cus)

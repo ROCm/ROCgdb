@@ -24,36 +24,28 @@
 
 #ifdef HAVE_GOOD_UTIME_H
 #include <utime.h>
-#else /* ! HAVE_GOOD_UTIME_H */
-#ifdef HAVE_UTIMES
+#elif defined HAVE_UTIMES
 #include <sys/time.h>
-#endif /* HAVE_UTIMES */
-#endif /* ! HAVE_GOOD_UTIME_H */
-
-#if ! defined (_WIN32) || defined (__CYGWIN32__)
-static int simple_copy (const char *, const char *);
+#endif
 
 /* The number of bytes to copy at once.  */
 #define COPY_BUF 8192
 
-/* Copy file FROM to file TO, performing no translations.
+/* Copy file FROMFD to file TO, performing no translations.
    Return 0 if ok, -1 if error.  */
 
 static int
-simple_copy (const char *from, const char *to)
+simple_copy (int fromfd, const char *to, struct stat *target_stat)
 {
-  int fromfd, tofd, nread;
+  int tofd, nread;
   int saved;
   char buf[COPY_BUF];
 
-  fromfd = open (from, O_RDONLY | O_BINARY);
-  if (fromfd < 0)
+  if (fromfd < 0
+      || lseek (fromfd, 0, SEEK_SET) != 0)
     return -1;
-#ifdef O_CREAT
-  tofd = open (to, O_CREAT | O_WRONLY | O_TRUNC | O_BINARY, 0777);
-#else
-  tofd = creat (to, 0777);
-#endif
+
+  tofd = open (to, O_WRONLY | O_TRUNC | O_BINARY);
   if (tofd < 0)
     {
       saved = errno;
@@ -61,6 +53,7 @@ simple_copy (const char *from, const char *to)
       errno = saved;
       return -1;
     }
+
   while ((nread = read (fromfd, buf, sizeof buf)) > 0)
     {
       if (write (tofd, buf, nread) != nread)
@@ -72,7 +65,16 @@ simple_copy (const char *from, const char *to)
 	  return -1;
 	}
     }
+
   saved = errno;
+
+#if !defined (_WIN32) || defined (__CYGWIN32__)
+  /* Writing to a setuid/setgid file may clear S_ISUID and S_ISGID.
+     Try to restore them, ignoring failure.  */
+  if (target_stat != NULL)
+    fchmod (tofd, target_stat->st_mode);
+#endif
+
   close (fromfd);
   close (tofd);
   if (nread < 0)
@@ -82,7 +84,6 @@ simple_copy (const char *from, const char *to)
     }
   return 0;
 }
-#endif /* __CYGWIN32__ or not _WIN32 */
 
 /* Set the times of the file DESTINATION to be the same as those in
    STATBUF.  */
@@ -91,87 +92,52 @@ void
 set_times (const char *destination, const struct stat *statbuf)
 {
   int result;
-
-  {
 #ifdef HAVE_GOOD_UTIME_H
-    struct utimbuf tb;
+  struct utimbuf tb;
 
-    tb.actime = statbuf->st_atime;
-    tb.modtime = statbuf->st_mtime;
-    result = utime (destination, &tb);
-#else /* ! HAVE_GOOD_UTIME_H */
-#ifndef HAVE_UTIMES
-    long tb[2];
+  tb.actime = statbuf->st_atime;
+  tb.modtime = statbuf->st_mtime;
+  result = utime (destination, &tb);
+#elif defined HAVE_UTIMES
+  struct timeval tv[2];
 
-    tb[0] = statbuf->st_atime;
-    tb[1] = statbuf->st_mtime;
-    result = utime (destination, tb);
-#else /* HAVE_UTIMES */
-    struct timeval tv[2];
+  tv[0].tv_sec = statbuf->st_atime;
+  tv[0].tv_usec = 0;
+  tv[1].tv_sec = statbuf->st_mtime;
+  tv[1].tv_usec = 0;
+  result = utimes (destination, tv);
+#else
+  long tb[2];
 
-    tv[0].tv_sec = statbuf->st_atime;
-    tv[0].tv_usec = 0;
-    tv[1].tv_sec = statbuf->st_mtime;
-    tv[1].tv_usec = 0;
-    result = utimes (destination, tv);
-#endif /* HAVE_UTIMES */
-#endif /* ! HAVE_GOOD_UTIME_H */
-  }
+  tb[0] = statbuf->st_atime;
+  tb[1] = statbuf->st_mtime;
+  result = utime (destination, tb);
+#endif
 
   if (result != 0)
     non_fatal (_("%s: cannot set time: %s"), destination, strerror (errno));
 }
 
-/* Rename FROM to TO, copying if TO exists.  TARGET_STAT has the file status
-   that, if non-NULL, is used to fix up timestamps after rename.  Return 0 if
-   ok, -1 if error.  */
+/* Copy FROM to TO.  TARGET_STAT has the file status that, if non-NULL,
+   is used to fix up timestamps.  Return 0 if ok, -1 if error.
+   At one time this function renamed files, but file permissions are
+   tricky to update given the number of different schemes used by
+   various systems.  So now we just copy.  */
 
 int
-smart_rename (const char *from, const char *to,
-	      struct stat *target_stat ATTRIBUTE_UNUSED)
+smart_rename (const char *from, const char *to, int fromfd,
+	      struct stat *target_stat, bfd_boolean preserve_dates)
 {
-  int ret = 0;
-  struct stat to_stat;
-  bfd_boolean exists;
+  int ret;
 
-  exists = lstat (to, &to_stat) == 0;
-
-#if defined (_WIN32) && !defined (__CYGWIN32__)
-  /* Win32, unlike unix, will not erase `to' in `rename(from, to)' but
-     fail instead.  Also, chown is not present.  */
-
-  if (exists)
-    remove (to);
-
-  ret = rename (from, to);
+  ret = simple_copy (fromfd, to, target_stat);
   if (ret != 0)
-    {
-      /* We have to clean up here.  */
-      non_fatal (_("unable to rename '%s'; reason: %s"), to, strerror (errno));
-      unlink (from);
-    }
-#else
-  /* Avoid a full copy and use rename if TO does not exist.  */
-  if (!exists)
-    {
-      if ((ret = rename (from, to)) != 0)
-	{
-	  /* We have to clean up here.  */
-	  non_fatal (_("unable to rename '%s'; reason: %s"), to, strerror (errno));
-	  unlink (from);
-	}
-    }
-  else
-    {
-      ret = simple_copy (from, to);
-      if (ret != 0)
-	non_fatal (_("unable to copy file '%s'; reason: %s"), to, strerror (errno));
+    non_fatal (_("unable to copy file '%s'; reason: %s"),
+	       to, strerror (errno));
 
-      if (target_stat != NULL)
-	set_times (to, target_stat);
-      unlink (from);
-    }
-#endif /* _WIN32 && !__CYGWIN32__ */
+  if (preserve_dates)
+    set_times (to, target_stat);
+  unlink (from);
 
   return ret;
 }
