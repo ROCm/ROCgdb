@@ -1,3 +1,45 @@
+2021-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/associated.exp: Add missing '-wrap' argument.
+
+2021-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR fortran/26155
+	* gdb.fortran/call-no-debug-func.f90: New file.
+	* gdb.fortran/call-no-debug-prog.f90: New file.
+	* gdb.fortran/call-no-debug.exp: New file.
+
+2021-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/associated.exp: New file.
+	* gdb.fortran/associated.f90: New file.
+
+2021-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/dot-ops.exp (dot_operations): Test ".xor.".
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/sect-cmd.exp: Update expected results.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/sect-cmd.exp: Rewrite using modern testsuite
+	techniques.  Enable the test for all targets.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/maint-info-sections.exp: Add new tests.
+	(check_maint_info_target_sections_output): New proc.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.arch/riscv-default-tdesc.exp: New file.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.fortran/pointer-to-pointer.exp: Additional tests.
+
 2021-02-18  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.arch/i386-biarch-core.exp: Add target check.

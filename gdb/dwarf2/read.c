@@ -12988,7 +12988,7 @@ open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
     {
       create_debug_type_hash_table (per_objfile, dwo_file.get (),
 				    &dwo_file->sections.info, dwo_file->tus,
-				    rcuh_kind::TYPE);
+				    rcuh_kind::COMPILE);
     }
 
   dwarf_read_debug_printf ("DWO file found: %s", dwo_name);
@@ -22226,10 +22226,10 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
       attr = dwarf2_attr (die,
 			  inlined_func ? DW_AT_call_file : DW_AT_decl_file,
 			  cu);
-      if (attr != nullptr && attr->form_is_unsigned ())
+      if (attr != nullptr && attr->is_nonnegative ())
 	{
 	  file_name_index file_index
-	    = (file_name_index) attr->as_unsigned ();
+	    = (file_name_index) attr->as_nonnegative ();
 	  struct file_entry *fe;
 
 	  if (cu->line_header != NULL)

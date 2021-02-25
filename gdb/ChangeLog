@@ -1,3 +1,153 @@
+2021-02-25  Jan Vrany  <jan.vrany@labware.com>
+
+	* gdb/mi/mi-interp.c (mi_traceframe_changed): Remove trailing \n from output.
+	(mi_tsv_created): Likewise.
+	(mi_tsv_deleted): Likewise.
+
+2021-02-25  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/27354
+	* dwarf2/read.c (open_and_init_dwo_file): Use rcuh_kind::COMPILE as
+	section_kind for &dwo_file->sections.info.
+
+2021-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR fortran/26155
+	* f-lang.c (fortran_argument_convert): Delete declaration.
+	(fortran_prepare_argument): New function.
+	(evaluate_subexp_f): Move logic to new function
+	fortran_prepare_argument.
+
+2021-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.y (f77_keywords): Add 'associated'.
+	* f-lang.c (fortran_associated): New function.
+	(evaluate_subexp_f): Handle FORTRAN_ASSOCIATED.
+	(operator_length_f): Likewise.
+	(print_unop_or_binop_subexp_f): New function.
+	(print_subexp_f): Make use of print_unop_or_binop_subexp_f for
+	FORTRAN_ASSOCIATED, FORTRAN_LBOUND, and FORTRAN_UBOUND.
+	(dump_subexp_body_f): Handle FORTRAN_ASSOCIATED.
+	(operator_check_f): Likewise.
+	* std-operator.def: Add FORTRAN_ASSOCIATED.
+
+2021-02-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.y (fortran_operators): Add ".xor.".
+
+2021-02-24  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/27336
+	* dwarf2/attribute.c (attribute::form_is_signed): New function
+	factored out of ...
+	* dwarf2/attribute.h (attribute::as_signed): ... here.
+	(attribute::is_nonnegative, attribute::as_nonnegative): New function.
+	(attribute::form_is_signed): Declare.
+	* dwarf2/read.c (new_symbol): Use is_nonnegative and as_nonnegative
+	for DW_AT_decl_file.
+
+2021-02-24  Kevin Buettner  <kevinb@redhat.com>
+
+	* nat/aarch64-linux-hw-point.c: Add comment regarding include
+	order for <sys/ptrace.h> and <asm/ptrace.h>.
+
+2021-02-24  Kevin Buettner  <kevinb@redhat.com>
+
+	* nat/aarch64-linux-hw-point.c: Include <asm/ptrace.h> after
+	<sys/ptrace.h>.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* exec.c (set_section_command): Move variable declarations into
+	the function body, and use std::string instead of a fixed size
+	buffer.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* exec.c (exec_target::get_section_table): Delete member function.
+	(section_table_read_available_memory): Use current_top_target, not
+	just the exec_ops target.
+	* target-delegates.c: Regenerate.
+	* target.c (default_get_section_table): New function.
+	* target.h (target_ops::get_section_table): Change default
+	behaviour to call default_get_section_table.
+	(default_get_section_table): Declare.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* exec.c (exec_target::close): Call new clear_target_sections
+	function.
+	(program_space::add_target_sections): Update name of member
+	variable.
+	(program_space::add_target_sections): Update name of member
+	variable.
+	(program_space::remove_target_sections): Likewise.
+	(exec_one_fork): Use new target_sections member function.
+	(exec_target::get_section_table): Likewise.
+	(exec_target::files_info): Likewise.
+	(set_section_command): Likewise.
+	(exec_set_section_address): Likewise.
+	(exec_target::has_memory): Use new target_sections member
+	function.
+	* progspace.h (program_space::clear_target_sections): New member
+	function.
+	(program_space::target_sections): Rename member variable to
+	m_target_sections, replace with a new member function.
+	(program_space::m_target_sections): New member variable.
+	* solib-dsbt.c (scan_dyntag): Use new member function.
+	* solib-svr4.c (scan_dyntag): Likewise.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb/bfd-target.c (class target_bfd) <get_section_table>: Make
+	return type const.
+	* gdb/exec.c (struct exec_target) <get_section_table>: Likewise.
+	(section_table_read_available_memory): Make local const.
+	(exec_target::xfer_partial): Make local const.
+	(print_section_info): Make parameter const.
+	* gdb/exec.h (print_section_info): Likewise.
+	* gdb/ppc64-tdep.c (ppc64_convert_from_func_ptr_addr): Make local
+	const.
+	* gdb/record-btrace.c (record_btrace_target::xfer_partial):
+	Likewise.
+	* gdb/remote.c (remote_target::remote_xfer_live_readonly_partial):
+	Likewise.
+	* gdb/s390-tdep.c (s390_load): Likewise.
+	* gdb/solib-dsbt.c (scan_dyntag): Likewise.
+	* gdb/solib-svr4.c (scan_dyntag): Likewise.
+	* gdb/target-debug.h (target_debug_print_target_section_table_p):
+	Rename to...
+	(target_debug_print_const_target_section_table_p): ...this.
+	* gdb/target-delegates.c: Regenerate.
+	* gdb/target.c (target_get_section_table): Make return type const.
+	(target_section_by_addr): Likewise.  Also make some locals const.
+	(memory_xfer_partial_1): Make some locals const.
+	* gdb/target.h (struct target_ops) <get_section_table>: Make
+	return type const.
+	(target_section_by_addr): Likewise.
+	(target_get_section_table): Likewise.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Mention new 'maint info target-sections' command.
+	* maint.c (maintenance_info_target_sections): New function.
+	(_initialize_maint_cmds): Register new command.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (riscv_features_from_gdbarch_info): Rename to...
+	(riscv_features_from_bfd): ...this.  Change parameter type to
+	'bfd*', and update as required.
+	(riscv_find_default_target_description): Update call to
+	riscv_features_from_bfd.  Select a default xlen based on
+	info.bfd_arch_info.
+	(riscv_gdbarch_init): Update call to riscv_features_from_bfd.
+
+2021-02-24  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* eval.c (evaluate_subexp_standard): Call value_ind for points to
+	dynamic types in UNOP_IND.
+
 2021-02-23  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	PR gdb/26828

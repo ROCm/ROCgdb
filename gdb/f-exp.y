@@ -982,6 +982,7 @@ static const struct token fortran_operators[] =
   { ".eq.", EQUAL, BINOP_END, false },
   { ".eqv.", EQUAL, BINOP_END, false },
   { ".neqv.", NOTEQUAL, BINOP_END, false },
+  { ".xor.", NOTEQUAL, BINOP_END, false },
   { "==", EQUAL, BINOP_END, false },
   { ".ne.", NOTEQUAL, BINOP_END, false },
   { "/=", NOTEQUAL, BINOP_END, false },
@@ -1047,6 +1048,7 @@ static const struct token f77_keywords[] =
   { "lbound", UNOP_OR_BINOP_INTRINSIC, FORTRAN_LBOUND, false },
   { "ubound", UNOP_OR_BINOP_INTRINSIC, FORTRAN_UBOUND, false },
   { "allocated", UNOP_INTRINSIC, UNOP_FORTRAN_ALLOCATED, false },
+  { "associated", UNOP_OR_BINOP_INTRINSIC, FORTRAN_ASSOCIATED, false },
 };
 
 /* Implementation of a dynamically expandable buffer for processing input
