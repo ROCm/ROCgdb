@@ -3305,6 +3305,7 @@ get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 	    case EF_AMDGPU_MACH_AMDGCN_GFX904 : strcat (buf, ", gfx904"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX906 : strcat (buf, ", gfx906"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX908 : strcat (buf, ", gfx908"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX90A : strcat (buf, ", gfx90a"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX1010 : strcat (buf, ", gfx1010"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX1011 : strcat (buf, ", gfx1011"); break;
 	    case EF_AMDGPU_MACH_AMDGCN_GFX1012 : strcat (buf, ", gfx1012"); break;

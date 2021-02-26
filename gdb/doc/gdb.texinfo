@@ -26619,6 +26619,10 @@ denoted as @samp{gfx906} by the compiler.
 ``AMD Instinct@registeredsymbol{} MI100'' which is displayed as @samp{arcturus}
 by @value{GDBN} and denoted as @samp{gfx908} by the compiler.
 
+@item
+``Aldebaran'' which is displayed as @samp{aldebaran} by @value{GDBN} and
+denoted as @samp{gfx90a} by the compiler.
+
 @c TODO:
 @c @item
 @c ``TBA'' which is displayed as @samp{navi10} by @value{GDBN} and
