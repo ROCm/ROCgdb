@@ -22,6 +22,7 @@ dnl See README-HACKING for more details.
 AC_DEFUN([SIM_AC_COMMON],
 [
 AC_REQUIRE([AC_PROG_CC])
+AC_REQUIRE([AC_PROG_CPP])
 AC_CONFIG_HEADERS([config.h:config.in])
 AC_CANONICAL_SYSTEM
 AC_USE_SYSTEM_EXTENSIONS
@@ -29,19 +30,19 @@ AC_C_BIGENDIAN
 AC_ARG_PROGRAM
 AC_PROG_INSTALL
 
-# Put a plausible default for CC_FOR_BUILD in Makefile.
-if test -z "$CC_FOR_BUILD"; then
-  if test "x$cross_compiling" = "xno"; then
-    CC_FOR_BUILD='$(CC)'
-  else
-    CC_FOR_BUILD=gcc
-  fi
+dnl Setup toolchain settings for build-time tools..
+if test "x$cross_compiling" = "xno"; then
+  : "${CC_FOR_BUILD:=\$(CC)}"
+  : "${CFLAGS_FOR_BUILD:=\$(CFLAGS)}"
+else
+  : "${CC_FOR_BUILD:=gcc}"
+  : "${CFLAGS_FOR_BUILD:=-g -O}"
 fi
 AC_SUBST(CC_FOR_BUILD)
+AC_SUBST(CFLAGS_FOR_BUILD)
 
 AC_SUBST(CFLAGS)
-AR=${AR-ar}
-AC_SUBST(AR)
+AC_CHECK_TOOL(AR, ar)
 AC_PROG_RANLIB
 
 # Require C11 or newer.  Autoconf-2.70 provides ac_cv_prog_cc_c11 when using
