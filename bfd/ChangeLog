@@ -1,3 +1,34 @@
+2021-03-02  Nick Clifton  <nickc@redhat.com>
+
+	PR 27484
+	* dwarf2.c (scan_unit_for_symbols): Scan twice, once to accumulate
+	function and variable tags and a second time to resolve their
+	attributes.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* elf-strtab.c (_bfd_elf_strtab_str): Skip strings with zero refcount.
+
+2021-03-02  Alan Modra  <amodra@gmail.com>
+
+	PR 27451
+	* elf64-ppc.c (ppc64_elf_gc_mark_dynamic_ref): Ignore synthesized
+	linker defined start/stop symbols when start_stop_gc.
+
+2021-03-02  Alan Modra  <amodra@gmail.com>
+
+	* elf64-ppc.c (ppc64_elf_relocate_section): Don't optimise got
+	indirect to pc-relative or toc-relative for undefined symbols.
+
+2021-03-01  Alan Modra  <amodra@gmail.com>
+	    Fangrui Song <maskray@google.com>
+
+	* elflink.c (_bfd_elf_gc_mark_rsec): Ignore synthesized linker
+	defined start/stop symbols when start_stop_gc.
+	(bfd_elf_gc_mark_dynamic_ref_symbol): Likewise.
+	(bfd_elf_define_start_stop): Don't modify ldscript_def syms.
+	* linker.c (bfd_generic_define_start_stop): Likewise.
+
 2021-02-25  Alan Modra  <amodra@gmail.com>
 
 	PR 27441

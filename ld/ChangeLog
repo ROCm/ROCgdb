@@ -1,3 +1,58 @@
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ldelfgen.c (ldelf_ctf_strtab_iter_cb): Skip zero-refcount strings.
+
+2021-03-02  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-powerpc/startstop.d,
+	* testsuite/ld-powerpc/startstop.r,
+	* testsuite/ld-powerpc/startstop.s: New test.
+	* testsuite/ld-powerpc/powerpc.exp: Run it.
+
+2021-03-02  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-powerpc/weak1.d,
+	* testsuite/ld-powerpc/weak1.r,
+	* testsuite/ld-powerpc/weak1.s,
+	* testsuite/ld-powerpc/weak1so.d,
+	* testsuite/ld-powerpc/weak1so.r: New tests.
+	* testsuite/ld-powerpc/powerpc.exp: Run them.
+
+2021-03-01  Hannes Domani  <ssbssa@sourceware.org>
+	    Nick Clifton  <nickc@redhat.com>
+
+	PR 27268
+	* scripttempl/pe.sc: Add DWARF-5 section names.
+	* scripttempl/pep.sc: Likewise.
+
+2021-03-01  Alan Modra  <amodra@gmail.com>
+	    Fangrui Song <maskray@google.com>
+
+	* emultempl/elf.em: Handle -z start-stop-gc and -z nostart-stop-gc.
+	* lexsup.c (elf_static_list_options): Display help for them.  Move
+	help for -z stack-size to here from elf_shlib_list_options. Add
+	help for -z start-stop-visibility and -z undefs.
+	* ld.texi: Document -z start-stop-gc and -z nostart-stop-gc.
+	* NEWS: Mention -z start-stop-gc.
+	* testsuite/ld-gc/start2.s,
+	* testsuite/ld-gc/start2.d: New test.
+	* testsuite/ld-gc/gc.exp: Run it.
+
+2021-03-01  Alan Modra  <amodra@gmail.com>
+
+	* ldlang.c (undef_start_stop): For ELF make undefined start/stop
+	symbols undefweak if that was how they were referenced.  Undo
+	dynamic state too.
+
+2021-03-01  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/ld-elf/pr25708.d: Add --with-symbol-versions to nm.
+	* testsuite/ld-elf/pr27128a.d: Likewise.
+	* testsuite/ld-elf/pr27128b.d: Likewise.
+	* testsuite/ld-elf/pr27128c.d: Likewise.
+	* testsuite/ld-elf/pr27128d.d: Likewise.
+	* testsuite/ld-elf/pr27128e.d: Likewise.
+
 2021-02-26  Alan Modra  <amodra@gmail.com>
 
 	PR 27441

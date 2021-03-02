@@ -1,3 +1,109 @@
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-create.c (symtypetab_density): Report the symbol name as
+	well as index in the name != object error; note the likely
+	consequences.
+	* ctf-link.c (ctf_link_shuffle_syms): Report the symbol index
+	as well as name.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-link.c (ctf_link_shuffle_syms): Free ctf_dynsyms properly.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-dump.c (ctf_dump_format_type): Fix signed/unsigned confusion.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-dedup.c (ctf_dedup): Pass on errors from ctf_dedup_hash_type.
+	Call ctf_dedup_fini properly on other errors.
+	(ctf_dedup_emit_type): Set the errno on dynhash insertion failure.
+	* ctf-link.c (ctf_link_deduplicating_per_cu): Close outputs beyond
+	output 0 when asserting because >1 output is found.
+	(ctf_link_deduplicating): Likewise, when asserting because the
+	shared output is not the same as the passed-in fp.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-impl.h (ctf_dict_t) <ctf_link_type_mapping>: No longer used
+	by the nondeduplicating linker.
+	(ctf_add_type_mapping): Removed, now static.
+	(ctf_type_mapping): Likewise.
+	(ctf_dedup_type_mapping): New.
+	(ctf_dedup_t) <cd_input_nums>: New.
+	* ctf-dedup.c (ctf_dedup_init): Populate it.
+	(ctf_dedup_fini): Free it again.  Emphasise that this has to be
+	the last thing called.
+	(ctf_dedup): Populate it.
+	(ctf_dedup_populate_type_mapping): Removed.
+	(ctf_dedup_populate_type_mappings): Likewise.
+	(ctf_dedup_emit): No longer call it.  No longer call
+	ctf_dedup_fini either.
+	(ctf_dedup_type_mapping): New.
+	* ctf-link.c (ctf_unnamed_cuname): New.
+	(ctf_create_per_cu): Arguments must be non-null now.
+	(ctf_in_member_cb_arg): Removed.
+	(ctf_link): No longer populate it.  No longer discard the
+	mapping table.
+	(ctf_link_deduplicating_one_symtypetab): Use
+	ctf_dedup_type_mapping, not ctf_type_mapping.  Use
+	ctf_unnamed_cuname.
+	(ctf_link_one_variable): Likewise.  Pass in args individually: no
+	longer a ctf_variable_iter callback.
+	(empty_link_type_mapping): Removed.
+	(ctf_link_deduplicating_variables): Use ctf_variable_next, not
+	ctf_variable_iter.  No longer pack arguments to
+	ctf_link_one_variable into a struct.
+	(ctf_link_deduplicating_per_cu): Call ctf_dedup_fini once
+	all link phases are done.
+	(ctf_link_deduplicating): Likewise.
+	(ctf_link_intern_extern_string): Improve comment.
+	(ctf_add_type_mapping): Migrate...
+	(ctf_type_mapping): ... these functions...
+	* ctf-create.c (ctf_add_type_mapping): ... here...
+	(ctf_type_mapping): ... and make static, for the sole use of
+	ctf_add_type.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-link.c (ctf_link_one_variable): Remove reference to
+	"unconflicted link mode".
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-link.c (ctf_create_per_cu): Drop FILENAME now that it is
+	always identical to CUNAME.
+	(ctf_link_deduplicating_one_symtypetab): Adjust.
+	(ctf_link_one_type): Remove.
+	(ctf_link_one_input_archive_member): Likewise.
+	(ctf_link_close_one_input_archive): Likewise.
+	(ctf_link_one_input_archive): Likewise.
+	(ctf_link): No longer call it.  Drop CTF_LINK_NONDEDUP path.
+	Improve header comment a bit (dicts, not files).  Adjust
+	ctf_create_per_cu call.
+	(ctf_link_deduplicating_variables): Simplify.
+	(ctf_link_in_member_cb_arg_t) <cu_name>: Remove.
+	<in_input_cu_file>: Likewise.
+	<in_fp_parent>: Likewise.
+	<done_parent>: Likewise.
+	(ctf_link_one_variable): Turn uses of in_file_name to in_cuname.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-types.c (ctf_member_iter): Move 'rc' to an inner scope.
+	(ctf_enum_iter): Reimplement in terms of ctf_enum_next.
+	(ctf_type_iter): Reimplement in terms of ctf_type_next.
+	(ctf_type_iter_all): Likewise.
+	(ctf_variable_iter): Reimplement in terms of ctf_variable_next.
+	* ctf-archive.c (ctf_archive_iter_internal): Remove.
+	(ctf_archive_iter): Reimplement in terms of ctf_archive_next.
+
+2021-03-02  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-archive.c (ctf_archive_next): Set the name of parents in
+	single-member archives.
+
 2021-02-26  Alan Modra  <amodra@gmail.com>
 
 	* Makefile.in: Regenerate.
@@ -9,7 +115,7 @@
 	* configure: Regenerate.
 	* Makefile.in: Regenerate.
 
-2021-02-17  Nick Alcock  <nick.alcock@oracle.com>
+2021-02-20  Nick Alcock  <nick.alcock@oracle.com>
 
 	* ctf-impl.h (ctf_dict_t) <ctf_symhash>: New.
 	<ctf_symhash_latest>: Likewise.
