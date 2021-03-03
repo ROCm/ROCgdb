@@ -1,3 +1,45 @@
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/rn-dl-bind.exp: Add ldflags=-Wl,-z,lazy.
+
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/non-stop.exp: Adjust expected source lines.
+
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/stepi.exp: Add {} options to prepare_for_testing.
+
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/exception.cc (main): Update test source.
+	* gdb.btrace/exception.exp: Update patterns.
+	* gdb.btrace/function_call_history.exp: Likewise.
+
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/unknown_functions.exp: Move -Wl,-x to ldflags.
+
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/rn-dl-bind.exp: Replace reverse-step with
+	reverse-continue to breakpoint.
+
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/delta.exp: Remove instruction-history and
+	function-call-history checks.
+
+2021-03-03  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* README (Note): Add nopie_ldflag.
+	* lib/gdb.exp (gdb_compile): Extend nopie handling.
+
+2021-03-02  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.ada/fixed_points.exp: Remove most special cases for minimal
+	encodings.
+
 2021-02-27  Lancelot Six  <lsix@lancelotix.com>
 
 	PR gdb/27393

@@ -1,3 +1,77 @@
+2021-03-02  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (cast_from_gnat_encoded_fixed_point_type)
+	(cast_to_gnat_encoded_fixed_point_type): Remove.
+	(ada_value_cast, ada_evaluate_subexp): Update.
+	(gnat_encoded_fixed_point_type_info)
+	(ada_is_gnat_encoded_fixed_point_type)
+	(gnat_encoded_fixed_point_delta)
+	(gnat_encoded_fixed_point_scaling_factor): Remove.
+	* ada-lang.h (ada_is_gnat_encoded_fixed_point_type)
+	(gnat_encoded_fixed_point_delta)
+	(gnat_encoded_fixed_point_scaling_factor): Don't declare.
+	* ada-typeprint.c (print_gnat_encoded_fixed_point_type): Remove.
+	(ada_print_type): Update.
+	* ada-valprint.c (ada_value_print_num): Update.
+	* dwarf2/read.c (ada_get_gnat_encoded_number)
+	(ada_get_gnat_encoded_ratio): New functions.
+	(finish_fixed_point_type): Use them.  Add parameters.
+	(GNAT_FIXED_POINT_SUFFIX): New define.
+	(gnat_encoded_fixed_point_type_info): New function.
+	(read_base_type): Handle gnat encodings.
+
+2021-03-02  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_fold_name, ada_variant_discrim_name)
+	(ada_enum_name, scan_discrim_bound, to_fixed_range_type): Use
+	std::string.
+	(GROW_VECT): Remove.
+	(grow_vect): Remove.
+
+2021-03-02  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.h (ada_lookup_symbol_list): Return a vector.
+	* ada-lang.c (resolve_subexp): Update.
+	(ada_resolve_function): Accept a vector.
+	(is_nonfunction, add_defn_to_vec)
+	(add_symbols_from_enclosing_procs): Likewise.
+	(num_defns_collected, defns_collected): Remove.
+	(remove_extra_symbols): Return a vector.
+	(remove_irrelevant_renamings): Return void.
+	(ada_add_local_symbols): Accept a vector.
+	(struct match_data) <obstackp>: Remove.
+	<resultp>: New member.
+	(aux_add_nonlocal_symbols): Update.
+	(ada_add_block_renamings, add_nonlocal_symbols)
+	(ada_add_all_symbols): Accept a vector.
+	(ada_lookup_symbol_list_worker, ada_lookup_symbol_list): Return a
+	vector.
+	(ada_lookup_symbol): Update.
+	(ada_add_block_symbols): Accept a vector.
+	(get_var_value, iterate_over_symbols): Update.
+	* ada-exp.y (block_lookup, write_var_or_type, write_name_assoc):
+	Update.
+
+2021-03-02  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (resolve_subexp): Use any_of and erase-remove idiom.
+
+2021-03-02  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (struct ada_symbol_cache) <cache_space>: Now an
+	auto_obstack.
+	<root>: Initialize.
+	(ada_pspace_data): Remove destructor.
+	<sym_cache>: Now a unique_ptr.
+	(ada_init_symbol_cache, ada_free_symbol_cache): Remove.
+	(ada_get_symbol_cache): Use 'new'.
+	(ada_clear_symbol_cache): Rewrite.
+
+2021-03-02  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (add_nonlocal_symbols): Handle case where objfile->sf
+	is null.
+
 2021-02-27  Lancelot Six  <lsix@lancelotsix.com>
 
 	PR gdb/27393

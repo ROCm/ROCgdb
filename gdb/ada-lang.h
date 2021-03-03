@@ -218,9 +218,8 @@ extern const char *ada_decode_symbol (const struct general_symbol_info *);
 
 extern std::string ada_decode (const char*);
 
-extern int ada_lookup_symbol_list (const char *, const struct block *,
-				   domain_enum,
-				   std::vector<struct block_symbol> *);
+extern std::vector<struct block_symbol> ada_lookup_symbol_list
+     (const char *, const struct block *, domain_enum);
 
 extern struct block_symbol ada_lookup_symbol (const char *,
 					      const struct block *,
@@ -281,13 +280,7 @@ extern struct type *ada_aligned_type (struct type *);
 extern const gdb_byte *ada_aligned_value_addr (struct type *,
 					       const gdb_byte *);
 
-extern int ada_is_gnat_encoded_fixed_point_type (struct type *);
-
 extern int ada_is_system_address_type (struct type *);
-
-extern struct value *gnat_encoded_fixed_point_delta (struct type *);
-
-extern struct value *gnat_encoded_fixed_point_scaling_factor (struct type *);
 
 extern int ada_which_variant_applies (struct type *, struct value *);
 
