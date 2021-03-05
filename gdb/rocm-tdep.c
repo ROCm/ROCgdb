@@ -1100,20 +1100,6 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
       set_executing (inf->process_target (), event_ptid, 1);
     }
 
-  /* Since we are manipulating the register cache for the event thread,
-     make sure it is the current thread.  */
-  switch_to_thread (inf->process_target (), event_ptid);
-
-  /* By caching the PC now, we avoid having to suspend/resume the queue
-     later when we need to access it.  */
-  amd_dbgapi_global_address_t stop_pc;
-  if (amd_dbgapi_wave_get_info (event_wave_id, AMD_DBGAPI_WAVE_INFO_PC,
-				sizeof (stop_pc), &stop_pc)
-      == AMD_DBGAPI_STATUS_SUCCESS)
-    {
-      struct regcache *regcache = get_thread_regcache_for_ptid (event_ptid);
-      regcache->raw_supply (gdbarch_pc_regnum (regcache->arch ()), &stop_pc);
-    }
   ws->kind = TARGET_WAITKIND_STOPPED;
 
   if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
