@@ -18540,6 +18540,8 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("NT_PRPSINFO (prpsinfo structure)");
       case NT_TASKSTRUCT:
 	return _("NT_TASKSTRUCT (task structure)");
+      case NT_GDB_TDESC:
+        return _("NT_GDB_TDESC (GDB XML target description)");
       case NT_PRXFPREG:
 	return _("NT_PRXFPREG (user_xfpregs structure)");
       case NT_PPC_VMX:
@@ -18616,6 +18618,8 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("NT_ARM_HW_WATCH (AArch hardware watchpoint registers)");
       case NT_ARC_V2:
 	return _("NT_ARC_V2 (ARC HS accumulator/extra registers)");
+      case NT_RISCV_CSR:
+	return _("NT_RISCV_CSR (RISC-V control and status registers)");
       case NT_PSTATUS:
 	return _("NT_PSTATUS (pstatus structure)");
       case NT_FPREGS:

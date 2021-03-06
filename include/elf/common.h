@@ -676,8 +676,14 @@
 					/*   note name must be "LINUX".  */
 #define NT_ARC_V2	0x600		/* ARC HS accumulator/extra registers.  */
 					/*   note name must be "LINUX".  */
+#define NT_RISCV_CSR    0x900		/* RISC-V Control and Status Registers */
+					/*   note name must be "CORE".  */
 #define NT_SIGINFO	0x53494749	/* Fields of siginfo_t.  */
 #define NT_FILE		0x46494c45	/* Description of mapped files.  */
+
+/* The range 0xff000000 to 0xffffffff is set aside for notes that don't
+   originate from any particular operating system.  */
+#define NT_GDB_TDESC	0xff000000	/* Contains copy of GDB's target description XML.  */
 
 /* Note segments for core files on dir-style procfs systems.  */
 

@@ -1,3 +1,61 @@
+2021-03-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27425
+	PR ld/27432
+	* bfd.c (_bfd_get_link_info): New function.
+	* elf-bfd.h (output_elf_obj_tdata): Add link_info.
+	(elf_link_info): New.
+	* libbfd-in.h (_bfd_get_link_info): New prototype.
+	* coff-x86_64.c (coff_amd64_reloc): Also subtract __ImageBase for
+	R_AMD64_IMAGEBASE when generating x86-64 ELF executable.
+	* pe-x86_64.c: Include "coff/internal.h" and "libcoff.h".
+	(pex64_link_add_symbols): New function.
+	(coff_bfd_link_add_symbols): New macro.
+	* libbfd.h: Regenerated.
+
+2021-03-05  Craig Blackmore  <craig.blackmore@embecosm.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* elf-bfd.h (elfcore_write_riscv_csr): Declare.
+	* elf.c (elfcore_grok_riscv_csr): New function.
+	(elfcore_grok_note): Handle NT_RISCV_CSR.
+	(elfcore_write_riscv_csr): New function.
+	(elfcore_write_register_note): Handle '.reg-riscv-csr'.
+
+2021-03-05  Craig Blackmore  <craig.blackmore@embecosm.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* elfnn-riscv.c (PRPSINFO_PR_FNAME_LENGTH): Define.
+	(PRPSINFO_PR_PSARGS_LENGTH): Define.
+	(riscv_write_core_note): New function.
+	(riscv_elf_grok_psinfo): Make use of two new length defines.
+	(elf_backend_write_core_note): Define.
+
+2021-03-05  Craig Blackmore  <craig.blackmore@embecosm.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* elf-bfd.h (elfcore_write_gdb_tdesc): Declare new function.
+	* elf.c (elfcore_grok_gdb_tdesc): New function.
+	(elfcore_grok_note): Handle NT_GDB_TDESC.
+	(elfcore_write_gdb_tdesc): New function.
+	(elfcore_write_register_note): Handle NT_GDB_TDESC.
+
+2021-03-05  Nick Clifton  <nickc@redhat.com>
+
+	PR 27521
+	* dwarf2.c (is_str_attr): Add DW_FORM_strx* forms.
+	(read_indexed_string): Placeholder function.
+	(read_attribute_value): Handle DW_FORM_strx* and DW_FORM_addrx*
+	forms.
+
+2021-03-05  Alan Modra  <amodra@gmail.com>
+
+	* reloc.c (bfd_perform_relocation): Revert 2021-01-12 and
+	2020-09-16 changes.
+	* coff-x86_64.c (coff_amd64_reloc): Do more or less the same
+	adjustments here instead.  Separate pc-relative adjustments
+	from symbol related adjustments.  Tidy comments and formatting.
+
 2021-03-04  Jan Beulich  <jbeulich@suse.com>
 
 	* coffcode.h (sec_to_styp_flags): Don't set IMAGE_SCN_LNK_* in

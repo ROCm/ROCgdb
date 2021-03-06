@@ -691,7 +691,7 @@ fetch_indirect_string (dwarf_vma offset)
 
   if (offset >= section->size)
     {
-      warn (_("DW_FORM_strp offset too big: %s\n"),
+      warn (_("DW_FORM_strp offset too big: 0x%s\n"),
 	    dwarf_vmatoa ("x", offset));
       return (const unsigned char *) _("<offset is too big>");
     }
@@ -719,7 +719,7 @@ fetch_indirect_line_string (dwarf_vma offset)
 
   if (offset >= section->size)
     {
-      warn (_("DW_FORM_line_strp offset too big: %s\n"),
+      warn (_("DW_FORM_line_strp offset too big: 0x%s\n"),
 	    dwarf_vmatoa ("x", offset));
       return (const unsigned char *) _("<offset is too big>");
     }
@@ -804,7 +804,7 @@ fetch_indexed_string (dwarf_vma idx, struct cu_tu_set *this_set,
 
   if (index_offset >= length)
     {
-      warn (_("DW_FORM_GNU_str_index offset too big: %s vs %s\n"),
+      warn (_("DW_FORM_GNU_str_index offset too big: 0x%s vs 0x%s\n"),
 	    dwarf_vmatoa ("x", index_offset),
 	    dwarf_vmatoa ("x", length));
       return _("<index offset is too big>");
@@ -814,7 +814,7 @@ fetch_indexed_string (dwarf_vma idx, struct cu_tu_set *this_set,
   str_offset -= str_section->address;
   if (str_offset >= str_section->size)
     {
-      warn (_("DW_FORM_GNU_str_index indirect offset too big: %s\n"),
+      warn (_("DW_FORM_GNU_str_index indirect offset too big: 0x%s\n"),
 	    dwarf_vmatoa ("x", str_offset));
       return _("<indirect index offset is too big>");
     }
@@ -840,7 +840,7 @@ fetch_indexed_value (dwarf_vma offset, dwarf_vma bytes)
 
   if (offset + bytes > section->size)
     {
-      warn (_("Offset into section %s too big: %s\n"),
+      warn (_("Offset into section %s too big: 0x%s\n"),
 	    section->name, dwarf_vmatoa ("x", offset));
       return "<offset too big>";
     }
@@ -6074,17 +6074,22 @@ display_debug_macro (struct dwarf_section *section,
   unsigned char *end = start + section->size;
   unsigned char *curr = start;
   unsigned char *extended_op_buf[256];
+  bfd_boolean is_dwo = FALSE;
+  const char *suffix = strrchr (section->name, '.');
+
+  if (suffix && strcmp (suffix, ".dwo") == 0)
+    is_dwo = TRUE;
 
   load_debug_section_with_follow (str, file);
   load_debug_section_with_follow (line, file);
   load_debug_section_with_follow (str_index, file);
-
+  
   introduce (section, FALSE);
 
   while (curr < end)
     {
       unsigned int lineno, version, flags;
-      unsigned int offset_size = 4;
+      unsigned int offset_size;
       const unsigned char *string;
       dwarf_vma line_offset = 0, sec_offset = curr - start, offset;
       unsigned char **extended_ops = NULL;
@@ -6098,8 +6103,7 @@ display_debug_macro (struct dwarf_section *section,
 	}
 
       SAFE_BYTE_GET_AND_INC (flags, curr, 1, end);
-      if (flags & 1)
-	offset_size = 8;
+      offset_size = (flags & 1) ? 8 : 4;
       printf (_("  Offset:                      0x%lx\n"),
 	      (unsigned long) sec_offset);
       printf (_("  Version:                     %d\n"), version);
@@ -6231,7 +6235,10 @@ display_debug_macro (struct dwarf_section *section,
 
 	    case DW_MACRO_define_strp:
 	      READ_ULEB (lineno, curr, end);
-	      SAFE_BYTE_GET_AND_INC (offset, curr, offset_size, end);
+	      if (version == 4 && is_dwo)
+		READ_ULEB (offset, curr, end);
+	      else
+		SAFE_BYTE_GET_AND_INC (offset, curr, offset_size, end);
 	      string = fetch_indirect_string (offset);
 	      printf (_(" DW_MACRO_define_strp - lineno : %d macro : %s\n"),
 		      lineno, string);
@@ -6239,7 +6246,10 @@ display_debug_macro (struct dwarf_section *section,
 
 	    case DW_MACRO_undef_strp:
 	      READ_ULEB (lineno, curr, end);
-	      SAFE_BYTE_GET_AND_INC (offset, curr, offset_size, end);
+	      if (version == 4 && is_dwo)
+		READ_ULEB (offset, curr, end);
+	      else
+		SAFE_BYTE_GET_AND_INC (offset, curr, offset_size, end);
 	      string = fetch_indirect_string (offset);
 	      printf (_(" DW_MACRO_undef_strp - lineno : %d macro : %s\n"),
 		      lineno, string);

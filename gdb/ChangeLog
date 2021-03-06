@@ -1,3 +1,91 @@
+2021-03-06  Weimin Pan  <weimin.pan@oracle.com>
+
+	* ctfread.c (ctf_psymtab_add_enums): New function.
+	(ctf_psymtab_type_cb): call ctf_psymtab_add_enums.
+
+2021-03-06  Weimin Pan  <weimin.pan@oracle.com>
+
+	* ctfread.c (read_func_kind_type): Set up function arguments.
+
+2021-03-05  Craig Blackmore  <craig.blackmore@embecosm.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-none-tdep.c: Add 'user-regs.h' and 'target-description.h'
+	includes.
+	(riscv_csrset): New static global.
+	(riscv_update_csrmap): New function.
+	(riscv_iterate_over_regset_sections): Process CSRs.
+
+2021-03-05  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* riscv-tdep.c (riscv_feature_name_csr): Define.
+	(riscv_feature_name_cpu): Define.
+	(riscv_feature_name_fpu): Define.
+	(riscv_feature_name_virtual): Define.
+	(riscv_xreg_feature): Use riscv_feature_name_cpu.
+	(riscv_freg_feature): Use riscv_feature_name_fpu.
+	(riscv_virtual_feature): Use riscv_feature_name_virtual.
+	(riscv_csr_feature): Use riscv_feature_name_csr.
+	* riscv-tdep.h (riscv_feature_name_csr): Declare.
+
+2021-03-05  Andrew Burgess  <andrew.burgess@embecosm.com>
+	    Craig Blackmore  <craig.blackmore@embecosm.com>
+
+	* Makefile.in (ALL_TARGET_OBS): Add riscv-none-tdep.o.
+	(ALLDEPFILES): Add riscv-none-tdep.c.
+	* configure: Regenerate.
+	* configure.ac (CONFIG_OBS): Add elf-none-tdep.o when BFD has ELF
+	support.
+	* configure.tgt (riscv*-*-*): Include riscv-none-tdep.c.
+	* elf-none-tdep.c: New file.
+	* elf-none-tdep.h: New file.
+	* riscv-none-tdep.c: New file.
+
+2021-03-05  Craig Blackmore  <craig.blackmore@embecosm.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* corelow.c: Add 'xml-tdesc.h' include.
+	(core_target::read_description): Load the target description from
+	the core file when possible.
+	* fbsd-tdep.c (fbsd_make_corefile_notes): Add target description
+	note.
+	* gcore-elf.c: Add 'gdbsupport/tdesc.h' include.
+	(gcore_elf_make_tdesc_note): New function.
+	* gcore-elf.h (gcore_elf_make_tdesc_note): Declare.
+	* linux-tdep.c (linux_make_corefile_notes): Add target description
+	note.
+
+2021-03-05  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* Makefile.in (SFILES): Add gcore-elf.c.
+	(HFILES_NO_SRCDIR): Add gcore-elf.h
+	* configure: Regenerate.
+	* configure.ac: Add gcore-elf.o to CONFIG_OBS if we have ELF
+	support.
+	* fbsd-tdep.c: Add 'gcore-elf.h' include.
+	(struct fbsd_collect_regset_section_cb_data): Delete.
+	(fbsd_collect_regset_section_cb): Delete.
+	(fbsd_collect_thread_registers): Delete.
+	(struct fbsd_corefile_thread_data): Delete.
+	(fbsd_corefile_thread): Delete.
+	(fbsd_make_corefile_notes): Call
+	gcore_elf_build_thread_register_notes instead of the now deleted
+	FreeBSD code.
+	* gcore-elf.c: New file, the content was moved here from
+	linux-tdep.c, functions were renamed and given minor cleanup.
+	* gcore-elf.h: New file.
+	* gcore.c (gcore_find_signalled_thread): Moved here from
+	linux-tdep.c and given a new name.  Minor cleanups.
+	* gcore.h (gcore_find_signalled_thread): Declare.
+	* linux-tdep.c: Add 'gcore.h' and 'gcore-elf.h' includes.
+	(struct linux_collect_regset_section_cb_data): Delete.
+	(linux_collect_regset_section_cb): Delete.
+	(linux_collect_thread_registers): Delete.
+	(linux_corefile_thread): Call
+	gcore_elf_build_thread_register_notes.
+	(find_signalled_thread): Delete.
+	(linux_make_corefile_notes): Call gcore_find_signalled_thread.
+
 2021-03-04  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	PR gdb/27147

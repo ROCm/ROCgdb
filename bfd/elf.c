@@ -9912,6 +9912,24 @@ elfcore_grok_arc_v2 (bfd *abfd, Elf_Internal_Note *note)
   return elfcore_make_note_pseudosection (abfd, ".reg-arc-v2", note);
 }
 
+/* Convert NOTE into a bfd_section called ".reg-riscv-csr".  Return TRUE if
+   successful otherwise, return FALSE.  */
+
+static bfd_boolean
+elfcore_grok_riscv_csr (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-riscv-csr", note);
+}
+
+/* Convert NOTE into a bfd_section called ".gdb-tdesc".  Return TRUE if
+   successful otherwise, return FALSE.  */
+
+static bfd_boolean
+elfcore_grok_gdb_tdesc (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".gdb-tdesc", note);
+}
+
 #if defined (HAVE_PRPSINFO_T)
 typedef prpsinfo_t   elfcore_psinfo_t;
 #if defined (HAVE_PRPSINFO32_T)		/* Sparc64 cross Sparc32 */
@@ -10567,6 +10585,20 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
       if (note->namesz == 6
 	  && strcmp (note->namedata, "LINUX") == 0)
 	return elfcore_grok_aarch_pauth (abfd, note);
+      else
+	return TRUE;
+
+    case NT_GDB_TDESC:
+      if (note->namesz == 4
+          && strcmp (note->namedata, "GDB") == 0)
+        return elfcore_grok_gdb_tdesc (abfd, note);
+      else
+        return TRUE;
+
+    case NT_RISCV_CSR:
+      if (note->namesz == 4
+          && strcmp (note->namedata, "GDB") == 0)
+        return elfcore_grok_riscv_csr (abfd, note);
       else
 	return TRUE;
 
@@ -11951,6 +11983,40 @@ elfcore_write_arc_v2 (bfd *abfd,
 			     note_name, NT_ARC_V2, arc_v2, size);
 }
 
+/* Write the buffer of csr values in CSRS (length SIZE) into the note
+   buffer BUF and update *BUFSIZ.  ABFD is the bfd the note is being
+   written into.  Return a pointer to the new start of the note buffer, to
+   replace BUF which may no longer be valid.  */
+
+char *
+elfcore_write_riscv_csr (bfd *abfd,
+                         char *buf,
+                         int *bufsiz,
+                         const void *csrs,
+                         int size)
+{
+  const char *note_name = "GDB";
+  return elfcore_write_note (abfd, buf, bufsiz,
+			     note_name, NT_RISCV_CSR, csrs, size);
+}
+
+/* Write the target description (a string) pointed to by TDESC, length
+   SIZE, into the note buffer BUF, and update *BUFSIZ.  ABFD is the bfd the
+   note is being written into.  Return a pointer to the new start of the
+   note buffer, to replace BUF which may no longer be valid.  */
+
+char *
+elfcore_write_gdb_tdesc (bfd *abfd,
+			 char *buf,
+			 int *bufsiz,
+			 const void *tdesc,
+			 int size)
+{
+  const char *note_name = "GDB";
+  return elfcore_write_note (abfd, buf, bufsiz,
+                             note_name, NT_GDB_TDESC, tdesc, size);
+}
+
 char *
 elfcore_write_register_note (bfd *abfd,
 			     char *buf,
@@ -12035,6 +12101,10 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_aarch_pauth (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-arc-v2") == 0)
     return elfcore_write_arc_v2 (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".gdb-tdesc") == 0)
+    return elfcore_write_gdb_tdesc (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-riscv-csr") == 0)
+    return elfcore_write_riscv_csr (abfd, buf, bufsiz, data, size);
   return NULL;
 }
 
