@@ -1,3 +1,62 @@
+2021-03-06  Chernov Sergey  <klen_s@mail.ru>
+
+	PR gdb/27528:
+	* ada-lang.c (ada_fold_name): Use gdb::to_string.
+
+2021-03-06  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/sect-names.h (dwarf2_elf_names): Declare.
+	* dwarf2/read.h (dwarf2_get_dwz_file): Move to dwz.h.
+	* dwarf2/read.c (dwarf2_elf_names): No longer static.
+	(locate_dwz_sections, dwz_search_other_debugdirs)
+	(dwarf2_get_dwz_file): Move to dwz.c.
+	* dwarf2/dwz.h (dwarf2_get_dwz_file): Move declaration from
+	read.h.
+	* dwarf2/dwz.c (locate_dwz_sections, dwz_search_other_debugdirs)
+	(dwarf2_get_dwz_file): Move from read.c.
+
+2021-03-06  Tom Tromey  <tom@tromey.com>
+
+	* debuginfod-support.h: Include scoped_fd.h.
+
+2021-03-06  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (dwarf2_get_dwz_file): Add 'require' parameter.
+	* dwarf2/read.c (dwarf2_get_dwz_file): Add 'require' parameter.
+	(get_abbrev_section_for_cu, read_attribute_value)
+	(get_debug_line_section): Update.
+	* dwarf2/macro.c (dwarf_decode_macro_bytes): Update.
+
+2021-03-06  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/sect-names.h (struct dwarf2_section_names) <matches>: New
+	method.
+	* dwarf2/read.c (section_is_p): Remove.
+	(dwarf2_per_bfd::locate_sections)
+	(dwarf2_per_bfd::locate_sections, locate_dwz_sections)
+	(locate_v1_virtual_dwo_sections, dwarf2_locate_dwo_sections)
+	(dwarf2_locate_common_dwp_sections)
+	(dwarf2_locate_v2_dwp_sections, dwarf2_locate_v5_dwp_sections):
+	Update.
+
+2021-03-06  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c: Include sect-names.h.
+	* symfile.h (struct dwarf2_section_names, struct
+	dwarf2_debug_sections): Move to dwarf2/sect-names.h.
+	* dwarf2/sect-names.h: New file, from symfile.h.
+	* dwarf2/read.c: Include sect-names.h.
+
+2021-03-06  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_attribute): Make 'abbrev' const.
+	* dwarf2/abbrev.c (abbrev_table::alloc_abbrev): Remove.
+	(abbrev_table::read): Update.
+	* dwarf2/abbrev.h (struct attr_abbrev): Move earlier.
+	(struct abbrev_info): Reformat.
+	<attrs>: Now an array.
+	(struct abbrev_table) <alloc_abbrev>: Remove.
+
 2021-03-06  Weimin Pan  <weimin.pan@oracle.com>
 
 	* ctfread.c (ctf_psymtab_add_enums): New function.

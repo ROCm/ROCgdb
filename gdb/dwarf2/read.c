@@ -41,6 +41,7 @@
 #include "dwarf2/dwz.h"
 #include "dwarf2/macro.h"
 #include "dwarf2/die.h"
+#include "dwarf2/sect-names.h"
 #include "dwarf2/stringify.h"
 #include "bfd.h"
 #include "elf-bfd.h"
@@ -87,7 +88,6 @@
 #include "rust-lang.h"
 #include "gdbsupport/pathstuff.h"
 #include "count-one-bits.h"
-#include "debuginfod-support.h"
 
 /* When == 1, print basic high level tracing messages.
    When > 1, be more verbose.
@@ -324,7 +324,7 @@ get_dwarf2_per_objfile (struct objfile *objfile)
 /* Note that if the debugging section has been compressed, it might
    have a name like .zdebug_info.  */
 
-static const struct dwarf2_debug_sections dwarf2_elf_names =
+const struct dwarf2_debug_sections dwarf2_elf_names =
 {
   { ".debug_info", ".zdebug_info" },
   { ".debug_abbrev", ".zdebug_abbrev" },
@@ -1341,7 +1341,8 @@ static const struct cu_partial_die_info find_partial_die (sect_offset, int,
 							  struct dwarf2_cu *);
 
 static const gdb_byte *read_attribute (const struct die_reader_specs *,
-				       struct attribute *, struct attr_abbrev *,
+				       struct attribute *,
+				       const struct attr_abbrev *,
 				       const gdb_byte *);
 
 static void read_attribute_reprocess (const struct die_reader_specs *reader,
@@ -1982,22 +1983,6 @@ dwarf2_has_info (struct objfile *objfile,
 	  && per_objfile->per_bfd->abbrev.s.section != NULL);
 }
 
-/* When loading sections, we look either for uncompressed section or for
-   compressed section names.  */
-
-static int
-section_is_p (const char *section_name,
-	      const struct dwarf2_section_names *names)
-{
-  if (names->normal != NULL
-      && strcmp (section_name, names->normal) == 0)
-    return 1;
-  if (names->compressed != NULL
-      && strcmp (section_name, names->compressed) == 0)
-    return 1;
-  return 0;
-}
-
 /* See declaration.  */
 
 void
@@ -2018,82 +2003,82 @@ dwarf2_per_bfd::locate_sections (bfd *abfd, asection *sectp,
 	       bfd_section_name (sectp), phex_nz (size, sizeof (size)),
 	       bfd_get_filename (abfd));
     }
-  else if (section_is_p (sectp->name, &names.info))
+  else if (names.info.matches (sectp->name))
     {
       this->info.s.section = sectp;
       this->info.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.abbrev))
+  else if (names.abbrev.matches (sectp->name))
     {
       this->abbrev.s.section = sectp;
       this->abbrev.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.line))
+  else if (names.line.matches (sectp->name))
     {
       this->line.s.section = sectp;
       this->line.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.loc))
+  else if (names.loc.matches (sectp->name))
     {
       this->loc.s.section = sectp;
       this->loc.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.loclists))
+  else if (names.loclists.matches (sectp->name))
     {
       this->loclists.s.section = sectp;
       this->loclists.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.macinfo))
+  else if (names.macinfo.matches (sectp->name))
     {
       this->macinfo.s.section = sectp;
       this->macinfo.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.macro))
+  else if (names.macro.matches (sectp->name))
     {
       this->macro.s.section = sectp;
       this->macro.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.str))
+  else if (names.str.matches (sectp->name))
     {
       this->str.s.section = sectp;
       this->str.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.str_offsets))
+  else if (names.str_offsets.matches (sectp->name))
     {
       this->str_offsets.s.section = sectp;
       this->str_offsets.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.line_str))
+  else if (names.line_str.matches (sectp->name))
     {
       this->line_str.s.section = sectp;
       this->line_str.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.addr))
+  else if (names.addr.matches (sectp->name))
     {
       this->addr.s.section = sectp;
       this->addr.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.frame))
+  else if (names.frame.matches (sectp->name))
     {
       this->frame.s.section = sectp;
       this->frame.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.eh_frame))
+  else if (names.eh_frame.matches (sectp->name))
     {
       this->eh_frame.s.section = sectp;
       this->eh_frame.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.ranges))
+  else if (names.ranges.matches (sectp->name))
     {
       this->ranges.s.section = sectp;
       this->ranges.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.rnglists))
+  else if (names.rnglists.matches (sectp->name))
     {
       this->rnglists.s.section = sectp;
       this->rnglists.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.types))
+  else if (names.types.matches (sectp->name))
     {
       struct dwarf2_section_info type_section;
 
@@ -2103,17 +2088,17 @@ dwarf2_per_bfd::locate_sections (bfd *abfd, asection *sectp,
 
       this->types.push_back (type_section);
     }
-  else if (section_is_p (sectp->name, &names.gdb_index))
+  else if (names.gdb_index.matches (sectp->name))
     {
       this->gdb_index.s.section = sectp;
       this->gdb_index.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.debug_names))
+  else if (names.debug_names.matches (sectp->name))
     {
       this->debug_names.s.section = sectp;
       this->debug_names.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names.debug_aranges))
+  else if (names.debug_aranges.matches (sectp->name))
     {
       this->debug_aranges.s.section = sectp;
       this->debug_aranges.size = bfd_section_size (sectp);
@@ -2164,233 +2149,6 @@ dwarf2_get_section_info (struct objfile *objfile,
   *sizep = info->size;
 }
 
-/* A helper function to find the sections for a .dwz file.  */
-
-static void
-locate_dwz_sections (bfd *abfd, asection *sectp, dwz_file *dwz_file)
-{
-  /* Note that we only support the standard ELF names, because .dwz
-     is ELF-only (at the time of writing).  */
-  if (section_is_p (sectp->name, &dwarf2_elf_names.abbrev))
-    {
-      dwz_file->abbrev.s.section = sectp;
-      dwz_file->abbrev.size = bfd_section_size (sectp);
-    }
-  else if (section_is_p (sectp->name, &dwarf2_elf_names.info))
-    {
-      dwz_file->info.s.section = sectp;
-      dwz_file->info.size = bfd_section_size (sectp);
-    }
-  else if (section_is_p (sectp->name, &dwarf2_elf_names.str))
-    {
-      dwz_file->str.s.section = sectp;
-      dwz_file->str.size = bfd_section_size (sectp);
-    }
-  else if (section_is_p (sectp->name, &dwarf2_elf_names.line))
-    {
-      dwz_file->line.s.section = sectp;
-      dwz_file->line.size = bfd_section_size (sectp);
-    }
-  else if (section_is_p (sectp->name, &dwarf2_elf_names.macro))
-    {
-      dwz_file->macro.s.section = sectp;
-      dwz_file->macro.size = bfd_section_size (sectp);
-    }
-  else if (section_is_p (sectp->name, &dwarf2_elf_names.gdb_index))
-    {
-      dwz_file->gdb_index.s.section = sectp;
-      dwz_file->gdb_index.size = bfd_section_size (sectp);
-    }
-  else if (section_is_p (sectp->name, &dwarf2_elf_names.debug_names))
-    {
-      dwz_file->debug_names.s.section = sectp;
-      dwz_file->debug_names.size = bfd_section_size (sectp);
-    }
-}
-
-/* Attempt to find a .dwz file (whose full path is represented by
-   FILENAME) in all of the specified debug file directories provided.
-
-   Return the equivalent gdb_bfd_ref_ptr of the .dwz file found, or
-   nullptr if it could not find anything.  */
-
-static gdb_bfd_ref_ptr
-dwz_search_other_debugdirs (std::string &filename, bfd_byte *buildid,
-			    size_t buildid_len)
-{
-  /* Let's assume that the path represented by FILENAME has the
-     "/.dwz/" subpath in it.  This is what (most) GNU/Linux
-     distributions do, anyway.  */
-  size_t dwz_pos = filename.find ("/.dwz/");
-
-  if (dwz_pos == std::string::npos)
-    return nullptr;
-
-  /* This is an obvious assertion, but it's here more to educate
-     future readers of this code that FILENAME at DWZ_POS *must*
-     contain a directory separator.  */
-  gdb_assert (IS_DIR_SEPARATOR (filename[dwz_pos]));
-
-  gdb_bfd_ref_ptr dwz_bfd;
-  std::vector<gdb::unique_xmalloc_ptr<char>> debugdir_vec
-    = dirnames_to_char_ptr_vec (debug_file_directory);
-
-  for (const gdb::unique_xmalloc_ptr<char> &debugdir : debugdir_vec)
-    {
-      /* The idea is to iterate over the
-	 debug file directories provided by the user and
-	 replace the hard-coded path in the "filename" by each
-	 debug-file-directory.
-
-	 For example, suppose that filename is:
-
-	   /usr/lib/debug/.dwz/foo.dwz
-
-	 And suppose that we have "$HOME/bar" as the
-	 debug-file-directory.  We would then adjust filename
-	 to look like:
-
-	   $HOME/bar/.dwz/foo.dwz
-
-	 which would hopefully allow us to find the alt debug
-	 file.  */
-      std::string ddir = debugdir.get ();
-
-      if (ddir.empty ())
-	continue;
-
-      /* Make sure the current debug-file-directory ends with a
-	 directory separator.  This is needed because, if FILENAME
-	 contains something like "/usr/lib/abcde/.dwz/foo.dwz" and
-	 DDIR is "/usr/lib/abc", then could wrongfully skip it
-	 below.  */
-      if (!IS_DIR_SEPARATOR (ddir.back ()))
-	ddir += SLASH_STRING;
-
-      /* Check whether the beginning of FILENAME is DDIR.  If it is,
-	 then we are dealing with a file which we already attempted to
-	 open before, so we just skip it and continue processing the
-	 remaining debug file directories.  */
-      if (filename.size () > ddir.size ()
-	  && filename.compare (0, ddir.size (), ddir) == 0)
-	continue;
-
-      /* Replace FILENAME's default debug-file-directory with
-	 DDIR.  */
-      std::string new_filename = ddir + &filename[dwz_pos + 1];
-
-      dwz_bfd = gdb_bfd_open (new_filename.c_str (), gnutarget);
-
-      if (dwz_bfd == nullptr)
-	continue;
-
-      if (!build_id_verify (dwz_bfd.get (), buildid_len, buildid))
-	{
-	  dwz_bfd.reset (nullptr);
-	  continue;
-	}
-
-      /* Found it.  */
-      break;
-    }
-
-  return dwz_bfd;
-}
-
-/* See dwarf2read.h.  */
-
-struct dwz_file *
-dwarf2_get_dwz_file (dwarf2_per_bfd *per_bfd)
-{
-  bfd_size_type buildid_len_arg;
-  size_t buildid_len;
-  bfd_byte *buildid;
-
-  if (per_bfd->dwz_file != NULL)
-    return per_bfd->dwz_file.get ();
-
-  bfd_set_error (bfd_error_no_error);
-  gdb::unique_xmalloc_ptr<char> data
-    (bfd_get_alt_debug_link_info (per_bfd->obfd,
-				  &buildid_len_arg, &buildid));
-  if (data == NULL)
-    {
-      if (bfd_get_error () == bfd_error_no_error)
-	return NULL;
-      error (_("could not read '.gnu_debugaltlink' section: %s"),
-	     bfd_errmsg (bfd_get_error ()));
-    }
-
-  gdb::unique_xmalloc_ptr<bfd_byte> buildid_holder (buildid);
-
-  buildid_len = (size_t) buildid_len_arg;
-
-  std::string filename = data.get ();
-
-  if (!IS_ABSOLUTE_PATH (filename.c_str ()))
-    {
-      gdb::unique_xmalloc_ptr<char> abs
-	= gdb_realpath (bfd_get_filename (per_bfd->obfd));
-
-      filename = ldirname (abs.get ()) + SLASH_STRING + filename;
-    }
-
-  /* First try the file name given in the section.  If that doesn't
-     work, try to use the build-id instead.  */
-  gdb_bfd_ref_ptr dwz_bfd (gdb_bfd_open (filename.c_str (), gnutarget));
-  if (dwz_bfd != NULL)
-    {
-      if (!build_id_verify (dwz_bfd.get (), buildid_len, buildid))
-	dwz_bfd.reset (nullptr);
-    }
-
-  if (dwz_bfd == NULL)
-    dwz_bfd = build_id_to_debug_bfd (buildid_len, buildid);
-
-  if (dwz_bfd == nullptr)
-    {
-      /* If the user has provided us with different
-	 debug file directories, we can try them in order.  */
-      dwz_bfd = dwz_search_other_debugdirs (filename, buildid, buildid_len);
-    }
-
-  if (dwz_bfd == nullptr)
-    {
-      gdb::unique_xmalloc_ptr<char> alt_filename;
-      const char *origname = bfd_get_filename (per_bfd->obfd);
-
-      scoped_fd fd (debuginfod_debuginfo_query (buildid,
-						buildid_len,
-						origname,
-						&alt_filename));
-
-      if (fd.get () >= 0)
-	{
-	  /* File successfully retrieved from server.  */
-	  dwz_bfd = gdb_bfd_open (alt_filename.get (), gnutarget);
-
-	  if (dwz_bfd == nullptr)
-	    warning (_("File \"%s\" from debuginfod cannot be opened as bfd"),
-		     alt_filename.get ());
-	  else if (!build_id_verify (dwz_bfd.get (), buildid_len, buildid))
-	    dwz_bfd.reset (nullptr);
-	}
-    }
-
-  if (dwz_bfd == NULL)
-    error (_("could not find '.gnu_debugaltlink' file for %s"),
-	   bfd_get_filename (per_bfd->obfd));
-
-  std::unique_ptr<struct dwz_file> result
-    (new struct dwz_file (std::move (dwz_bfd)));
-
-  for (asection *sec : gdb_bfd_sections (result->dwz_bfd))
-    locate_dwz_sections (result->dwz_bfd.get (), sec, result.get ());
-
-  gdb_bfd_record_inclusion (per_bfd->obfd, result->dwz_bfd.get ());
-  per_bfd->dwz_file = std::move (result);
-  return per_bfd->dwz_file.get ();
-}
 
 /* DWARF quick_symbols_functions support.  */
 
@@ -6323,7 +6081,7 @@ get_abbrev_section_for_cu (struct dwarf2_per_cu_data *this_cu)
   dwarf2_per_bfd *per_bfd = this_cu->per_bfd;
 
   if (this_cu->is_dwz)
-    abbrev = &dwarf2_get_dwz_file (per_bfd)->abbrev;
+    abbrev = &dwarf2_get_dwz_file (per_bfd, true)->abbrev;
   else
     abbrev = &per_bfd->abbrev;
 
@@ -12104,7 +11862,7 @@ locate_v1_virtual_dwo_sections (asection *sectp,
 {
   const struct dwop_section_names *names = &dwop_section_names;
 
-  if (section_is_p (sectp->name, &names->abbrev_dwo))
+  if (names->abbrev_dwo.matches (sectp->name))
     {
       /* There can be only one.  */
       if (sections->abbrev.s.section != NULL)
@@ -12112,8 +11870,8 @@ locate_v1_virtual_dwo_sections (asection *sectp,
       sections->abbrev.s.section = sectp;
       sections->abbrev.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->info_dwo)
-	   || section_is_p (sectp->name, &names->types_dwo))
+  else if (names->info_dwo.matches (sectp->name)
+	   || names->types_dwo.matches (sectp->name))
     {
       /* There can be only one.  */
       if (sections->info_or_types.s.section != NULL)
@@ -12121,7 +11879,7 @@ locate_v1_virtual_dwo_sections (asection *sectp,
       sections->info_or_types.s.section = sectp;
       sections->info_or_types.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->line_dwo))
+  else if (names->line_dwo.matches (sectp->name))
     {
       /* There can be only one.  */
       if (sections->line.s.section != NULL)
@@ -12129,7 +11887,7 @@ locate_v1_virtual_dwo_sections (asection *sectp,
       sections->line.s.section = sectp;
       sections->line.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->loc_dwo))
+  else if (names->loc_dwo.matches (sectp->name))
     {
       /* There can be only one.  */
       if (sections->loc.s.section != NULL)
@@ -12137,7 +11895,7 @@ locate_v1_virtual_dwo_sections (asection *sectp,
       sections->loc.s.section = sectp;
       sections->loc.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->macinfo_dwo))
+  else if (names->macinfo_dwo.matches (sectp->name))
     {
       /* There can be only one.  */
       if (sections->macinfo.s.section != NULL)
@@ -12145,7 +11903,7 @@ locate_v1_virtual_dwo_sections (asection *sectp,
       sections->macinfo.s.section = sectp;
       sections->macinfo.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->macro_dwo))
+  else if (names->macro_dwo.matches (sectp->name))
     {
       /* There can be only one.  */
       if (sections->macro.s.section != NULL)
@@ -12153,7 +11911,7 @@ locate_v1_virtual_dwo_sections (asection *sectp,
       sections->macro.s.section = sectp;
       sections->macro.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->str_offsets_dwo))
+  else if (names->str_offsets_dwo.matches (sectp->name))
     {
       /* There can be only one.  */
       if (sections->str_offsets.s.section != NULL)
@@ -12888,57 +12646,57 @@ dwarf2_locate_dwo_sections (bfd *abfd, asection *sectp,
 {
   const struct dwop_section_names *names = &dwop_section_names;
 
-  if (section_is_p (sectp->name, &names->abbrev_dwo))
+  if (names->abbrev_dwo.matches (sectp->name))
     {
       dwo_sections->abbrev.s.section = sectp;
       dwo_sections->abbrev.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->info_dwo))
+  else if (names->info_dwo.matches (sectp->name))
     {
       dwo_sections->info.s.section = sectp;
       dwo_sections->info.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->line_dwo))
+  else if (names->line_dwo.matches (sectp->name))
     {
       dwo_sections->line.s.section = sectp;
       dwo_sections->line.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->loc_dwo))
+  else if (names->loc_dwo.matches (sectp->name))
     {
       dwo_sections->loc.s.section = sectp;
       dwo_sections->loc.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->loclists_dwo))
+  else if (names->loclists_dwo.matches (sectp->name))
     {
       dwo_sections->loclists.s.section = sectp;
       dwo_sections->loclists.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->macinfo_dwo))
+  else if (names->macinfo_dwo.matches (sectp->name))
     {
       dwo_sections->macinfo.s.section = sectp;
       dwo_sections->macinfo.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->macro_dwo))
+  else if (names->macro_dwo.matches (sectp->name))
     {
       dwo_sections->macro.s.section = sectp;
       dwo_sections->macro.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->rnglists_dwo))
+  else if (names->rnglists_dwo.matches (sectp->name))
     {
       dwo_sections->rnglists.s.section = sectp;
       dwo_sections->rnglists.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->str_dwo))
+  else if (names->str_dwo.matches (sectp->name))
     {
       dwo_sections->str.s.section = sectp;
       dwo_sections->str.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->str_offsets_dwo))
+  else if (names->str_offsets_dwo.matches (sectp->name))
     {
       dwo_sections->str_offsets.s.section = sectp;
       dwo_sections->str_offsets.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->types_dwo))
+  else if (names->types_dwo.matches (sectp->name))
     {
       struct dwarf2_section_info type_section;
 
@@ -13013,17 +12771,17 @@ dwarf2_locate_common_dwp_sections (bfd *abfd, asection *sectp,
   dwp_file->elf_sections[elf_section_nr] = sectp;
 
   /* Look for specific sections that we need.  */
-  if (section_is_p (sectp->name, &names->str_dwo))
+  if (names->str_dwo.matches (sectp->name))
     {
       dwp_file->sections.str.s.section = sectp;
       dwp_file->sections.str.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->cu_index))
+  else if (names->cu_index.matches (sectp->name))
     {
       dwp_file->sections.cu_index.s.section = sectp;
       dwp_file->sections.cu_index.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->tu_index))
+  else if (names->tu_index.matches (sectp->name))
     {
       dwp_file->sections.tu_index.s.section = sectp;
       dwp_file->sections.tu_index.size = bfd_section_size (sectp);
@@ -13048,42 +12806,42 @@ dwarf2_locate_v2_dwp_sections (bfd *abfd, asection *sectp, void *dwp_file_ptr)
   dwp_file->elf_sections[elf_section_nr] = sectp;
 
   /* Look for specific sections that we need.  */
-  if (section_is_p (sectp->name, &names->abbrev_dwo))
+  if (names->abbrev_dwo.matches (sectp->name))
     {
       dwp_file->sections.abbrev.s.section = sectp;
       dwp_file->sections.abbrev.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->info_dwo))
+  else if (names->info_dwo.matches (sectp->name))
     {
       dwp_file->sections.info.s.section = sectp;
       dwp_file->sections.info.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->line_dwo))
+  else if (names->line_dwo.matches (sectp->name))
     {
       dwp_file->sections.line.s.section = sectp;
       dwp_file->sections.line.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->loc_dwo))
+  else if (names->loc_dwo.matches (sectp->name))
     {
       dwp_file->sections.loc.s.section = sectp;
       dwp_file->sections.loc.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->macinfo_dwo))
+  else if (names->macinfo_dwo.matches (sectp->name))
     {
       dwp_file->sections.macinfo.s.section = sectp;
       dwp_file->sections.macinfo.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->macro_dwo))
+  else if (names->macro_dwo.matches (sectp->name))
     {
       dwp_file->sections.macro.s.section = sectp;
       dwp_file->sections.macro.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->str_offsets_dwo))
+  else if (names->str_offsets_dwo.matches (sectp->name))
     {
       dwp_file->sections.str_offsets.s.section = sectp;
       dwp_file->sections.str_offsets.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->types_dwo))
+  else if (names->types_dwo.matches (sectp->name))
     {
       dwp_file->sections.types.s.section = sectp;
       dwp_file->sections.types.size = bfd_section_size (sectp);
@@ -13108,37 +12866,37 @@ dwarf2_locate_v5_dwp_sections (bfd *abfd, asection *sectp, void *dwp_file_ptr)
   dwp_file->elf_sections[elf_section_nr] = sectp;
 
   /* Look for specific sections that we need.  */
-  if (section_is_p (sectp->name, &names->abbrev_dwo))
+  if (names->abbrev_dwo.matches (sectp->name))
     {
       dwp_file->sections.abbrev.s.section = sectp;
       dwp_file->sections.abbrev.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->info_dwo))
+  else if (names->info_dwo.matches (sectp->name))
     {
       dwp_file->sections.info.s.section = sectp;
       dwp_file->sections.info.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->line_dwo))
+  else if (names->line_dwo.matches (sectp->name))
    {
      dwp_file->sections.line.s.section = sectp;
      dwp_file->sections.line.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->loclists_dwo))
+  else if (names->loclists_dwo.matches (sectp->name))
     {
       dwp_file->sections.loclists.s.section = sectp;
       dwp_file->sections.loclists.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->macro_dwo))
+  else if (names->macro_dwo.matches (sectp->name))
     {
       dwp_file->sections.macro.s.section = sectp;
       dwp_file->sections.macro.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->rnglists_dwo))
+  else if (names->rnglists_dwo.matches (sectp->name))
     {
       dwp_file->sections.rnglists.s.section = sectp;
       dwp_file->sections.rnglists.size = bfd_section_size (sectp);
     }
-  else if (section_is_p (sectp->name, &names->str_offsets_dwo))
+  else if (names->str_offsets_dwo.matches (sectp->name))
     {
       dwp_file->sections.str_offsets.s.section = sectp;
       dwp_file->sections.str_offsets.size = bfd_section_size (sectp);
@@ -20669,7 +20427,7 @@ read_attribute_value (const struct die_reader_specs *reader,
       /* FALLTHROUGH */
     case DW_FORM_GNU_strp_alt:
       {
-	dwz_file *dwz = dwarf2_get_dwz_file (per_objfile->per_bfd);
+	dwz_file *dwz = dwarf2_get_dwz_file (per_objfile->per_bfd, true);
 	LONGEST str_offset = cu_header->read_offset (abfd, info_ptr,
 						     &bytes_read);
 
@@ -20837,7 +20595,7 @@ read_attribute_value (const struct die_reader_specs *reader,
 
 static const gdb_byte *
 read_attribute (const struct die_reader_specs *reader,
-		struct attribute *attr, struct attr_abbrev *abbrev,
+		struct attribute *attr, const struct attr_abbrev *abbrev,
 		const gdb_byte *info_ptr)
 {
   attr->name = abbrev->name;
@@ -21267,7 +21025,7 @@ get_debug_line_section (struct dwarf2_cu *cu)
     section = &cu->dwo_unit->dwo_file->sections.line;
   else if (cu->per_cu->is_dwz)
     {
-      dwz_file *dwz = dwarf2_get_dwz_file (per_objfile->per_bfd);
+      dwz_file *dwz = dwarf2_get_dwz_file (per_objfile->per_bfd, true);
 
       section = &dwz->line;
     }

@@ -633,12 +633,6 @@ struct signatured_type
   struct dwo_unit *dwo_unit;
 };
 
-/* Open the separate '.dwz' debug file, if needed.  Return NULL if
-   there is no .gnu_debugaltlink section in the file.  Error if there
-   is such a section but the file cannot be found.  */
-
-extern dwz_file *dwarf2_get_dwz_file (dwarf2_per_bfd *per_bfd);
-
 /* Return the type of the DIE at DIE_OFFSET in the CU named by
    PER_CU.  */
 
