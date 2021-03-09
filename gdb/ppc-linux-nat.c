@@ -54,6 +54,7 @@
 #include "arch/ppc-linux-tdesc.h"
 #include "nat/ppc-linux.h"
 #include "linux-tdep.h"
+#include "expop.h"
 
 /* Similarly for the hardware watchpoint support.  These requests are used
    when the PowerPC HWDEBUG ptrace interface is not available.  */
@@ -2487,20 +2488,24 @@ ppc_linux_nat_target::check_condition (CORE_ADDR watch_addr,
 				       struct expression *cond,
 				       CORE_ADDR *data_value, int *len)
 {
-  int pc = 1, num_accesses_left, num_accesses_right;
+  int num_accesses_left, num_accesses_right;
   struct value *left_val, *right_val;
   std::vector<value_ref_ptr> left_chain, right_chain;
 
-  if (cond->elts[0].opcode != BINOP_EQUAL)
+  expr::equal_operation *eqop
+    = dynamic_cast<expr::equal_operation *> (cond->op.get ());
+  if (eqop == nullptr)
     return 0;
+  expr::operation *lhs = eqop->get_lhs ();
+  expr::operation *rhs = eqop->get_rhs ();
 
-  fetch_subexp_value (cond, &pc, &left_val, NULL, &left_chain, false);
+  fetch_subexp_value (cond, lhs, &left_val, NULL, &left_chain, false);
   num_accesses_left = num_memory_accesses (left_chain);
 
   if (left_val == NULL || num_accesses_left < 0)
     return 0;
 
-  fetch_subexp_value (cond, &pc, &right_val, NULL, &right_chain, false);
+  fetch_subexp_value (cond, rhs, &right_val, NULL, &right_chain, false);
   num_accesses_right = num_memory_accesses (right_chain);
 
   if (right_val == NULL || num_accesses_right < 0)

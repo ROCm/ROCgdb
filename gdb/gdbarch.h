@@ -1346,8 +1346,8 @@ extern void set_gdbarch_stap_is_single_operand (struct gdbarch *gdbarch, gdbarch
 
 extern bool gdbarch_stap_parse_special_token_p (struct gdbarch *gdbarch);
 
-typedef int (gdbarch_stap_parse_special_token_ftype) (struct gdbarch *gdbarch, struct stap_parse_info *p);
-extern int gdbarch_stap_parse_special_token (struct gdbarch *gdbarch, struct stap_parse_info *p);
+typedef expr::operation_up (gdbarch_stap_parse_special_token_ftype) (struct gdbarch *gdbarch, struct stap_parse_info *p);
+extern expr::operation_up gdbarch_stap_parse_special_token (struct gdbarch *gdbarch, struct stap_parse_info *p);
 extern void set_gdbarch_stap_parse_special_token (struct gdbarch *gdbarch, gdbarch_stap_parse_special_token_ftype *stap_parse_special_token);
 
 /* Perform arch-dependent adjustments to a register name.
@@ -1386,8 +1386,8 @@ extern void set_gdbarch_stap_adjust_register (struct gdbarch *gdbarch, gdbarch_s
 
 extern bool gdbarch_dtrace_parse_probe_argument_p (struct gdbarch *gdbarch);
 
-typedef void (gdbarch_dtrace_parse_probe_argument_ftype) (struct gdbarch *gdbarch, struct expr_builder *builder, int narg);
-extern void gdbarch_dtrace_parse_probe_argument (struct gdbarch *gdbarch, struct expr_builder *builder, int narg);
+typedef expr::operation_up (gdbarch_dtrace_parse_probe_argument_ftype) (struct gdbarch *gdbarch, int narg);
+extern expr::operation_up gdbarch_dtrace_parse_probe_argument (struct gdbarch *gdbarch, int narg);
 extern void set_gdbarch_dtrace_parse_probe_argument (struct gdbarch *gdbarch, gdbarch_dtrace_parse_probe_argument_ftype *dtrace_parse_probe_argument);
 
 /* True if the given ADDR does not contain the instruction sequence
