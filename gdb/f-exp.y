@@ -260,6 +260,13 @@ exp	:	UNOP_OR_BINOP_INTRINSIC '('
 			      else
 				pstate->wrap2<fortran_associated_2arg> ();
 			    }
+			  else if ($1 == FORTRAN_ARRAY_SIZE)
+			    {
+			      if (n == 1)
+				pstate->wrap<fortran_array_size_1arg> ();
+			      else
+				pstate->wrap2<fortran_array_size_2arg> ();
+			    }
 			  else
 			    {
 			      std::vector<operation_up> args
@@ -319,6 +326,15 @@ exp	:	UNOP_INTRINSIC '(' exp ')'
 			      break;
 			    case UNOP_FORTRAN_ALLOCATED:
 			      pstate->wrap<fortran_allocated_operation> ();
+			      break;
+			    case UNOP_FORTRAN_RANK:
+			      pstate->wrap<fortran_rank_operation> ();
+			      break;
+			    case UNOP_FORTRAN_SHAPE:
+			      pstate->wrap<fortran_array_shape_operation> ();
+			      break;
+			    case UNOP_FORTRAN_LOC:
+			      pstate->wrap<fortran_loc_operation> ();
 			      break;
 			    default:
 			      gdb_assert_not_reached ("unhandled intrinsic");
@@ -1139,6 +1155,10 @@ static const struct token f77_keywords[] =
   { "ubound", UNOP_OR_BINOP_INTRINSIC, FORTRAN_UBOUND, false },
   { "allocated", UNOP_INTRINSIC, UNOP_FORTRAN_ALLOCATED, false },
   { "associated", UNOP_OR_BINOP_INTRINSIC, FORTRAN_ASSOCIATED, false },
+  { "rank", UNOP_INTRINSIC, UNOP_FORTRAN_RANK, false },
+  { "size", UNOP_OR_BINOP_INTRINSIC, FORTRAN_ARRAY_SIZE, false },
+  { "shape", UNOP_INTRINSIC, UNOP_FORTRAN_SHAPE, false },
+  { "loc", UNOP_INTRINSIC, UNOP_FORTRAN_LOC, false },
 };
 
 /* Implementation of a dynamically expandable buffer for processing input

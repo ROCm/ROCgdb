@@ -1,3 +1,58 @@
+2021-03-09  Tom Tromey  <tromey@adacore.com>
+
+	* eval.c (operation::evaluate_funcall): Use function formal
+	parameter types when evaluating.
+
+2021-03-09  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb-gdb.py.in (StructMainTypePrettyPrinter) <owner_to_string>:
+	Updated fields names flag_objfile_owned to m_flag_objfile_owned,
+	and owner to m_owner.
+
+2021-03-09  Felix Willgerodt  <felix.willgerodt@intel.com>
+
+        * f-exp.h (eval_op_f_loc): Declare.
+        (expr::fortran_loc_operation): New typedef.
+        * f-exp.y (exp): Handle UNOP_FORTRAN_LOC after parsing an
+        UNOP_INTRINSIC.
+        (f77_keywords): Add LOC keyword.
+        * f-lang.c (eval_op_f_loc): New function.
+        * std-operator.def (UNOP_FORTRAN_LOC): New operator.
+
+2021-03-09  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.h (eval_op_f_array_shape): Declare.
+	(fortran_array_shape_operation): New type.
+	* f-exp.y (exp): Handle UNOP_FORTRAN_SHAPE after parsing
+	UNOP_INTRINSIC.
+	(f77_keywords): Add "shape" keyword.
+	* f-lang.c (fortran_array_shape): New function.
+	(eval_op_f_array_shape): New function.
+	* std-operator.def (UNOP_FORTRAN_SHAPE): New operator.
+
+2021-03-09  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.y (eval_op_f_array_size): Declare 1 and 2 argument forms
+	of this function.
+	(expr::fortran_array_size_1arg): New type.
+	(expr::fortran_array_size_2arg): Likewise.
+	* f-exp.y (exp): Handle FORTRAN_ARRAY_SIZE after parsing
+	UNOP_OR_BINOP_INTRINSIC.
+	(f77_keywords): Add "size" keyword.
+	* f-lang.c (fortran_array_size): New function.
+	(eval_op_f_array_size): New function, has a 1 arg and 2 arg form.
+	* std-operator.def (FORTRAN_ARRAY_SIZE): New operator.
+
+2021-03-09  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.h (eval_op_f_rank): Declare.
+	(expr::fortran_rank_operation): New typedef.
+	* f-exp.y (exp): Handle UNOP_FORTRAN_RANK after parsing an
+	UNOP_INTRINSIC.
+	(f77_keywords): Add "rank" keyword.
+	* f-lang.c (eval_op_f_rank): New function.
+	* std-operator.def (UNOP_FORTRAN_RANK): New operator.
+
 2021-03-08  Tom Tromey  <tom@tromey.com>
 
 	* printcmd.c (set_command): Remove null check.

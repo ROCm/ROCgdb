@@ -73,6 +73,56 @@ extern struct value * eval_op_f_allocated (struct type *expect_type,
 					   enum noside noside,
 					   enum exp_opcode op,
 					   struct value *arg1);
+extern struct value * eval_op_f_loc (struct type *expect_type,
+				     struct expression *exp,
+				     enum noside noside,
+				     enum exp_opcode op,
+				     struct value *arg1);
+
+/* Implement the evaluation of UNOP_FORTRAN_RANK.  EXPECTED_TYPE, EXP, and
+   NOSIDE are as for expression::evaluate (see expression.h).  OP will
+   always be UNOP_FORTRAN_RANK, and ARG1 is the argument being passed to
+   the expression.   */
+
+extern struct value *eval_op_f_rank (struct type *expect_type,
+				     struct expression *exp,
+				     enum noside noside,
+				     enum exp_opcode op,
+				     struct value *arg1);
+
+/* Implement expression evaluation for Fortran's SIZE keyword. For
+   EXPECT_TYPE, EXP, and NOSIDE see expression::evaluate (in
+   expression.h).  OP will always for FORTRAN_ARRAY_SIZE.  ARG1 is the
+   value passed to SIZE if it is only passed a single argument.  For the
+   two argument form see the overload of this function below.  */
+
+extern struct value *eval_op_f_array_size (struct type *expect_type,
+					   struct expression *exp,
+					   enum noside noside,
+					   enum exp_opcode opcode,
+					   struct value *arg1);
+
+/* An overload of EVAL_OP_F_ARRAY_SIZE above, this version takes two
+   arguments, representing the two values passed to Fortran's SIZE
+   keyword.  */
+
+extern struct value *eval_op_f_array_size (struct type *expect_type,
+					   struct expression *exp,
+					   enum noside noside,
+					   enum exp_opcode opcode,
+					   struct value *arg1,
+					   struct value *arg2);
+
+/* Implement the evaluation of Fortran's SHAPE keyword.  EXPECTED_TYPE,
+   EXP, and NOSIDE are as for expression::evaluate (see expression.h).  OP
+   will always be UNOP_FORTRAN_SHAPE, and ARG1 is the argument being passed
+   to the expression.  */
+
+extern struct value *eval_op_f_array_shape (struct type *expect_type,
+					    struct expression *exp,
+					    enum noside noside,
+					    enum exp_opcode op,
+					    struct value *arg1);
 
 namespace expr
 {
@@ -86,6 +136,8 @@ using fortran_kind_operation = unop_operation<UNOP_FORTRAN_KIND,
 					      eval_op_f_kind>;
 using fortran_allocated_operation = unop_operation<UNOP_FORTRAN_ALLOCATED,
 						   eval_op_f_allocated>;
+using fortran_loc_operation = unop_operation<UNOP_FORTRAN_LOC,
+						   eval_op_f_loc>;
 
 using fortran_mod_operation = binop_operation<BINOP_MOD, eval_op_f_mod>;
 using fortran_modulo_operation = binop_operation<BINOP_FORTRAN_MODULO,
@@ -94,6 +146,14 @@ using fortran_associated_1arg = unop_operation<FORTRAN_ASSOCIATED,
 					       eval_op_f_associated>;
 using fortran_associated_2arg = binop_operation<FORTRAN_ASSOCIATED,
 						eval_op_f_associated>;
+using fortran_rank_operation = unop_operation<UNOP_FORTRAN_RANK,
+					      eval_op_f_rank>;
+using fortran_array_size_1arg = unop_operation<FORTRAN_ARRAY_SIZE,
+					       eval_op_f_array_size>;
+using fortran_array_size_2arg = binop_operation<FORTRAN_ARRAY_SIZE,
+						eval_op_f_array_size>;
+using fortran_array_shape_operation = unop_operation<UNOP_FORTRAN_SHAPE,
+						     eval_op_f_array_shape>;
 
 /* The Fortran "complex" operation.  */
 class fortran_cmplx_operation
