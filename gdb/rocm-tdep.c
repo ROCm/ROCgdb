@@ -831,9 +831,10 @@ rocm_target_ops::stop (ptid_t ptid)
 
       if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
 	{
-	  /* the wave must have exited, set the thread status to reflect that.
-	   */
-	  thread->state = THREAD_EXITED;
+	  /* The wave could have terminated since the last time the wave list
+	     was refreshed.  The next wave list will not include this wave, so
+	     there's nothing else needed here.  */
+	  continue;
 	}
       else if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
@@ -845,7 +846,12 @@ rocm_target_ops::stop (ptid_t ptid)
 
       status = amd_dbgapi_wave_stop (wave_id);
 
-      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+      if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
+	{
+	  /* The wave could have terminated, see comment above.  */
+	  continue;
+	}
+      else if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	{
 	  error (_ ("Could not stop %s (rc=%d)"),
 		 pid_to_str (thread->ptid).c_str (), status);
