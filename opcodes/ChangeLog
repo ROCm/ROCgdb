@@ -1,3 +1,23 @@
+2021-03-12  Alan Modra  <amodra@gmail.com>
+
+	* i386-dis.c (print_insn <PREFIX_IGNORED>): Correct typo.
+
+2021-03-11  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (OP_XMM): Re-order checks.
+
+2021-03-11  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (putop): Drop need_vex check when also checking
+	vex.evex.
+	(intel_operand_size, OP_E_memory): Drop vex.evex check when also
+	checking vex.b.
+
+2021-03-11  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (OP_E_memory): Drop xmmq_mode from broadcast
+	checks. Move case label past broadcast check.
+
 2021-03-10  Jan Beulich  <jbeulich@suse.com>
 
 	* opcodes/i386-dis.c (MVexVSIBDQWpX, MVexVSIBQDWpX,

@@ -9783,7 +9783,7 @@ print_insn (bfd_vma pc, disassemble_info *info)
 	 origins in all_prefixes.  */
       used_prefixes &= ~PREFIX_OPCODE;
       if (last_data_prefix >= 0)
-	all_prefixes[last_repz_prefix] = 0x66;
+	all_prefixes[last_data_prefix] = 0x66;
       if (last_repz_prefix >= 0)
 	all_prefixes[last_repz_prefix] = 0xf3;
       if (last_repnz_prefix >= 0)
@@ -10749,7 +10749,7 @@ putop (const char *in_template, int sizeflag)
 	    }
 	  else if (l == 1 && last[0] == 'X')
 	    {
-	      if (!need_vex || !vex.evex)
+	      if (!vex.evex)
 		abort ();
 	      if (intel_syntax
 		  || ((modrm.mod == 3 || vex.b) && !(sizeflag & SUFFIX_ALWAYS)))
@@ -10951,8 +10951,7 @@ print_displacement (char *buf, bfd_vma disp)
 static void
 intel_operand_size (int bytemode, int sizeflag)
 {
-  if (vex.evex
-      && vex.b
+  if (vex.b
       && (bytemode == x_mode
 	  || bytemode == evex_half_bcst_xmmq_mode))
     {
@@ -11418,7 +11417,6 @@ OP_E_memory (int bytemode, int sizeflag)
       /* In EVEX, if operand doesn't allow broadcast, vex.b should be 0.  */
       if (vex.b
 	  && bytemode != x_mode
-	  && bytemode != xmmq_mode
 	  && bytemode != evex_half_bcst_xmmq_mode)
 	{
 	  BadOp ();
@@ -11455,7 +11453,6 @@ OP_E_memory (int bytemode, int sizeflag)
 	  break;
 	case x_mode:
 	case evex_half_bcst_xmmq_mode:
-	case xmmq_mode:
 	  if (vex.b)
 	    {
 	      shift = vex.w ? 3 : 2;
@@ -11464,6 +11461,7 @@ OP_E_memory (int bytemode, int sizeflag)
 	  /* Fall through.  */
 	case xmmqd_mode:
 	case xmmdw_mode:
+	case xmmq_mode:
 	case ymmq_mode:
 	case evex_x_nobcst_mode:
 	case x_swap_mode:
@@ -11846,13 +11844,11 @@ OP_E_memory (int bytemode, int sizeflag)
 	  oappend (scratchbuf);
 	}
     }
-  if (vex.evex && vex.b
+  if (vex.b
       && (bytemode == x_mode
-	  || bytemode == xmmq_mode
 	  || bytemode == evex_half_bcst_xmmq_mode))
     {
       if (vex.w
-	  || bytemode == xmmq_mode
 	  || bytemode == evex_half_bcst_xmmq_mode)
 	{
 	  switch (vex.length)
@@ -12602,13 +12598,37 @@ OP_XMM (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	reg += 16;
     }
 
-  if (need_vex
-      && bytemode != xmm_mode
-      && bytemode != xmmq_mode
-      && bytemode != evex_half_bcst_xmmq_mode
-      && bytemode != ymm_mode
-      && bytemode != tmm_mode
-      && bytemode != scalar_mode)
+  if (bytemode == xmmq_mode
+      || bytemode == evex_half_bcst_xmmq_mode)
+    {
+      switch (vex.length)
+	{
+	case 128:
+	case 256:
+	  names = names_xmm;
+	  break;
+	case 512:
+	  names = names_ymm;
+	  break;
+	default:
+	  abort ();
+	}
+    }
+  else if (bytemode == ymm_mode)
+    names = names_ymm;
+  else if (bytemode == tmm_mode)
+    {
+      modrm.reg = reg;
+      if (reg >= 8)
+	{
+	  oappend ("(bad)");
+	  return;
+	}
+      names = names_tmm;
+    }
+  else if (need_vex
+	   && bytemode != xmm_mode
+	   && bytemode != scalar_mode)
     {
       switch (vex.length)
 	{
@@ -12633,34 +12653,6 @@ OP_XMM (int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	  abort ();
 	}
     }
-  else if (bytemode == xmmq_mode
-	   || bytemode == evex_half_bcst_xmmq_mode)
-    {
-      switch (vex.length)
-	{
-	case 128:
-	case 256:
-	  names = names_xmm;
-	  break;
-	case 512:
-	  names = names_ymm;
-	  break;
-	default:
-	  abort ();
-	}
-    }
-  else if (bytemode == tmm_mode)
-    {
-      modrm.reg = reg;
-      if (reg >= 8)
-	{
-	  oappend ("(bad)");
-	  return;
-	}
-      names = names_tmm;
-    }
-  else if (bytemode == ymm_mode)
-    names = names_ymm;
   else
     names = names_xmm;
   oappend (names[reg]);
