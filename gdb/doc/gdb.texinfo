@@ -27234,11 +27234,54 @@ that specify disjoint AMD GPU devices.  This is because the
 @emph{cgroups} and so will attempt to enable debugging for all AMD GPU
 devices for all inferiors it is debugging.
 
-The @code{HIP_VISIBLE_DEVICES} environment variable can also be used
-to limit the visible GPUs used by the HIP runtime.  For example,
+It is suggested to use @emph{Docker} rather than @emph{cgroups}
+directly to limit the AMD GPU devices visible inside a container:
+
+@enumerate
+
+@item
+@samp{/dev/kfd} must be mapped into the container.
+
+@item
+The @samp{/dev/dri/renderD@var{<render-minor-number>}} and
+@samp{/dev/drm/card@var{<node-number>}} files corresponding to each AMD
+GPU device that is to be visible must be mapped into the container.
+Note that non-AMD GPU cards may also be present.
+
+The @var{render-minor-number} for a device can be obtained by looking
+at the @samp{drm_render_minor} field value from:
 
 @smallexample
-export HIP_VISIBLE_DEVICES=0
+cat /sys/class/kfd/kfd/topology/nodes/@var{<node-number>}/properties
+@end smallexample
+
+@item
+Make sure the container user is a member of the @var{render} group for
+Ubuntu 20.04 onward and the @var{video} group for all other
+distributions.
+
+@item
+Specify the @samp{--cap-add=SYS_PTRACE} and
+@samp{--security-opt seccomp=unconfined} options.
+
+@item
+Install the @acronym{AMD ROCm} packages in the container.  See
+@uref{https://github.com/RadeonOpenCompute/ROCm-docker}.
+
+@end enumerate
+
+All processes running in the container will see the same subset of
+devices.  By having two containers with non-overlapping sets of AMD
+GPUs, it is possible to use @value{GDBN} in both containers at the
+same time since each AMD GPU will only have one @value{GDBN} process
+accessing it.
+
+For example:
+
+@smallexample
+docker run -it --rm --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+    --device=/dev/kfd --device=/dev/drm/card0 --device=/dev/dri/renderD128 \
+    --group-add render ubuntu:20.04 /bin/bash
 @end smallexample
 
 @item
