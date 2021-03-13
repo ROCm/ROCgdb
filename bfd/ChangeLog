@@ -1,3 +1,82 @@
+2021-03-12  Clément Chigot  <clement.chigot@atos.net>
+
+	* reloc.c (BFD_RELOC_PPC_TLS_LE, BFD_RELOC_PPC_TLS_IE,
+	BFD_RELOC_PPC_TLS_M, BFD_RELOC_PPC_TLS_ML, BFD_RELOC_PPC64_TLS_GD,
+	BFD_RELOC_PPC64_TLS_LD, BFD_RELOC_PPC64_TLS_LE,
+	BFD_RELOC_PPC64_TLS_IE, BFD_RELOC_PPC64_TLS_M,
+	BFD_RELOC_PPC64_TLS_ML): New relocations.
+	* bfd-in2.h: Regenerate.
+	* libbfd.h: Regenerate.
+	* coff-rs6000.c (xcoff_calculate_relocation): Call
+	xcoff_reloc_type_tls for TLS relocations.
+	(xcoff_howto_table): Implement TLS relocations.
+	(_bfd_xcoff_reloc_type_lookup): Add cases TLS relocations.
+	(xcoff_reloc_type_tls): New function.
+	* coff64-rs6000.c (xcoff_calculate_relocation): Likewise.
+	(xcoff_howto_table): Likewise.
+	(_bfd_xcoff_reloc_type_lookup): Likewise.
+	* coffcode.h (sec_to_styp_flags): Handle TLS sections.
+	(styp_to_sec_flags): Likewise.
+	(coff_compute_section_file_positions): Avoid file offset
+	optimisation for .data when the previous section is .tdata.
+	(coff_write_object_contents): Handle TLS sections.
+	* coffswap.h (coff_swap_aouthdr_out): Add support for
+	new fields in aouthdr.
+	* libxcoff.h (xcoff_reloc_type_tls): Add prototype.
+	* xcofflink.c (xcoff_link_add_symbols): Handle XMC_UL.
+	(xcoff_need_ldrel_p): Add cases for TLS relocations.
+	(xcoff_create_ldrel): Add l_symndx for TLS sections.
+
+2021-03-12  Clément Chigot  <clement.chigot@atos.net>
+
+	* reloc.c (BFD_RELOC_PPC_TOC16_HI, BFD_RELOC_PPC_TOC16_LO):
+	New relocations.
+	* bfd-in2.h: Regenerate.
+	* libbfd.h: Regenerate.
+	* coff-rs6000.c (xcoff_calculate_relocation): Call
+	xcoff_reloc_type_toc for R_TOCU and R_TOCL.
+	(xcoff_howto_table): Remove src_mask for TOC relocations.
+	Add R_TOCU and R_TOCL howtos.
+	(_bfd_xcoff_reloc_type_lookup): Add cases for
+	BFD_RELOC_PPC_TOC16_HI and BFD_RELOC_PPC_TOC16_LO.
+	(xcoff_reloc_type_toc): Compute the whole offset.
+	Implement R_TOCU and R_TOCL.
+	* coff64-rs6000.c (xcoff64_calculate_relocation):
+	Likewise.
+	(xcoff64_howto_table): Likewise.
+	(xcoff64_reloc_type_lookup): Likewise.
+
+2021-03-12  Clément Chigot  <clement.chigot@atos.net>
+
+	* coff-rs6000.c (xcoff_calculate_relocation): Correct and
+	add new relocations.
+	(xcoff_howto_table): Likewise.
+	(xcoff_rtype2howto): Increase r_type maximum value.
+	(xcoff_ppc_relocate_section): Reuse predefined HOWTOs instead
+	of create a new one from scratch.  Enable only some relocations
+	to have a changing r_size.
+	* coff64-rs6000.c (xcoff64_calculate_relocation): Likewise.
+	(xcoff64_howto_table): Likewise.
+	(xcoff64_rtype2howto): Likewise.
+	(xcoff64_ppc_relocate_section): Likewise.
+	* libxcoff.h (XCOFF_MAX_CALCULATE_RELOCATION): Fix value.
+
+2021-03-12  Clément Chigot  <clement.chigot@atos.net>
+
+	* coff64-rs6000.c (xcoff64_ppc_relocate_section): Move.
+
+2021-03-12  Clément Chigot  <clement.chigot@atos.net>
+
+	* coff64-rs6000.c (xcoff64_write_object_contents): Remove.
+	* coffcode.h (coff_write_object_contents): Add bfd_mach_ppc_620
+	support for o_cputype field.  Avoid creating an empty a.out header
+	for XCOFF64.
+
+2021-03-12  Clément Chigot  <clement.chigot@atos.net>
+
+	* coff64-rs6000.c (xcoff64_create_csect_from_smclas): Add
+	missing smclass.
+
 2021-03-11  Nelson Chu  <nelson.chu@sifive.com>
 
 	* elfnn-riscv.c (riscv_elf_link_hash_table): New boolean

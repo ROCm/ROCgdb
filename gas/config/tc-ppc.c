@@ -992,21 +992,41 @@ static bfd_boolean msolaris = SOLARIS_P;
 
 /* The RS/6000 assembler uses the .csect pseudo-op to generate code
    using a bunch of different sections.  These assembler sections,
-   however, are all encompassed within the .text or .data sections of
-   the final output file.  We handle this by using different
-   subsegments within these main segments.  */
+   however, are all encompassed within the .text, .data or .bss sections
+   of the final output file.  We handle this by using different
+   subsegments within these main segments.
+   .tdata and .tbss sections only have one type of csects for now,
+   but it's better to follow the same construction like the others.  */
 
-/* Next subsegment to allocate within the .text segment.  */
-static subsegT ppc_text_subsegment = 2;
+struct ppc_xcoff_section ppc_xcoff_text_section;
+struct ppc_xcoff_section ppc_xcoff_data_section;
+struct ppc_xcoff_section ppc_xcoff_bss_section;
+struct ppc_xcoff_section ppc_xcoff_tdata_section;
+struct ppc_xcoff_section ppc_xcoff_tbss_section;
 
-/* Linked list of csects in the text section.  */
-static symbolS *ppc_text_csects;
+/* Return true if the ppc_xcoff_section structure is already
+   initialized.  */
+static bfd_boolean
+ppc_xcoff_section_is_initialized (struct ppc_xcoff_section *section)
+{
+  return section->segment != NULL;
+}
 
-/* Next subsegment to allocate within the .data segment.  */
-static subsegT ppc_data_subsegment = 2;
-
-/* Linked list of csects in the data section.  */
-static symbolS *ppc_data_csects;
+/* Initialize a ppc_xcoff_section.
+   Dummy symbols are used to ensure the position of .text over .data
+   and .tdata.  These symbols won't be output.  */
+static void
+ppc_init_xcoff_section (struct ppc_xcoff_section *s, segT seg,
+			bfd_boolean need_dummy)
+{
+  s->segment = seg;
+  s->next_subsegment = 2;
+  if (need_dummy)
+    {
+      s->csects = symbol_make ("dummy\001");
+      symbol_get_tc (s->csects)->within = s->csects;
+    }
+}
 
 /* The current csect.  */
 static symbolS *ppc_current_csect;
@@ -1858,13 +1878,12 @@ md_begin (void)
 #ifdef OBJ_XCOFF
   ppc_coff_debug_section = coff_section_from_bfd_index (stdoutput, N_DEBUG);
 
-  /* Create dummy symbols to serve as initial csects.  This forces the
-     text csects to precede the data csects.  These symbols will not
-     be output.  */
-  ppc_text_csects = symbol_make ("dummy\001");
-  symbol_get_tc (ppc_text_csects)->within = ppc_text_csects;
-  ppc_data_csects = symbol_make ("dummy\001");
-  symbol_get_tc (ppc_data_csects)->within = ppc_data_csects;
+  /* Create XCOFF sections with .text in first, as it's creating dummy symbols
+     to serve as initial csects.  This forces the text csects to precede the
+     data csects.  These symbols will not be output.  */
+  ppc_init_xcoff_section (&ppc_xcoff_text_section, text_section, TRUE);
+  ppc_init_xcoff_section (&ppc_xcoff_data_section, data_section, TRUE);
+  ppc_init_xcoff_section (&ppc_xcoff_bss_section, bss_section, FALSE);
 #endif
 }
 
@@ -2646,6 +2665,115 @@ ppc_elf_adjust_symtab (void)
     }
 }
 #endif /* OBJ_ELF */
+
+#ifdef OBJ_XCOFF
+/* Parse XCOFF relocations.  */
+static bfd_reloc_code_real_type
+ppc_xcoff_suffix (char **str_p)
+{
+  struct map_bfd {
+    const char *string;
+    unsigned int length : 8;
+    unsigned int valid32 : 1;
+    unsigned int valid64 : 1;
+    unsigned int reloc;
+  };
+
+  char ident[20];
+  char *str = *str_p;
+  char *str2;
+  int ch;
+  int len;
+  const struct map_bfd *ptr;
+
+#define MAP(str, reloc)   { str, sizeof (str) - 1, 1, 1, reloc }
+#define MAP32(str, reloc) { str, sizeof (str) - 1, 1, 0, reloc }
+#define MAP64(str, reloc) { str, sizeof (str) - 1, 0, 1, reloc }
+
+  static const struct map_bfd mapping[] = {
+    MAP ("l",			BFD_RELOC_PPC_TOC16_LO),
+    MAP ("u",			BFD_RELOC_PPC_TOC16_HI),
+    MAP32 ("ie",		BFD_RELOC_PPC_TLSIE),
+    MAP32 ("ld",		BFD_RELOC_PPC_TLSLD),
+    MAP32 ("le",		BFD_RELOC_PPC_TLSLE),
+    MAP32 ("m", 		BFD_RELOC_PPC_TLSM),
+    MAP32 ("ml",		BFD_RELOC_PPC_TLSML),
+    MAP64 ("ie",		BFD_RELOC_PPC64_TLSIE),
+    MAP64 ("ld",		BFD_RELOC_PPC64_TLSLD),
+    MAP64 ("le",		BFD_RELOC_PPC64_TLSLE),
+    MAP64 ("m", 		BFD_RELOC_PPC64_TLSM),
+    MAP64 ("ml",		BFD_RELOC_PPC64_TLSML),
+  };
+
+  if (*str++ != '@')
+    return BFD_RELOC_NONE;
+
+  for (ch = *str, str2 = ident;
+       (str2 < ident + sizeof (ident) - 1
+	&& (ISALNUM (ch) || ch == '@'));
+       ch = *++str)
+    {
+      *str2++ = TOLOWER (ch);
+    }
+
+  *str2 = '\0';
+  len = str2 - ident;
+
+  ch = ident[0];
+  for (ptr = &mapping[0]; ptr->length > 0; ptr++)
+    if (ch == ptr->string[0]
+	&& len == ptr->length
+	&& memcmp (ident, ptr->string, ptr->length) == 0
+	&& (ppc_obj64 ? ptr->valid64 : ptr->valid32))
+      {
+	*str_p = str;
+	return (bfd_reloc_code_real_type) ptr->reloc;
+      }
+
+  return BFD_RELOC_NONE;
+}
+
+/* Restore XCOFF addis instruction to ELF format.
+   AIX often generates addis instructions using "addis RT,D(RA)"
+   format instead of the ELF "addis RT,RA,SI" one.
+   On entry RT_E is at the comma after RT, D_E is at the open
+   parenthesis after D, and RA_E is at the close parenthesis after RA.  */
+static void
+ppc_xcoff_fixup_addis (char *rt_e, char *d_e, char *ra_e)
+{
+  size_t ra_size = ra_e - d_e - 1;
+  char *save_ra = xmalloc (ra_size);
+
+  /* Copy RA.  */
+  memcpy (save_ra, d_e + 1, ra_size);
+  /* Shuffle D to make room for RA, copying the comma too.  */
+  memmove (rt_e + ra_size + 1, rt_e, d_e - rt_e);
+  /* Erase the trailing ')', keeping any rubbish for potential errors.  */
+  memmove (ra_e, ra_e + 1, strlen (ra_e));
+  /* Write RA back.  */
+  memcpy (rt_e + 1, save_ra, ra_size);
+  free (save_ra);
+}
+
+/* Support @ie, etc. on constants emitted via .short, .int etc.  */
+
+bfd_reloc_code_real_type
+ppc_xcoff_parse_cons (expressionS *exp, unsigned int nbytes)
+{
+  expression (exp);
+  if (nbytes >= 2 && *input_line_pointer == '@')
+    return ppc_xcoff_suffix (&input_line_pointer);
+
+  /* There isn't any @ symbol for default TLS relocations (R_TLS).  */
+  if (exp->X_add_symbol != NULL
+      && (symbol_get_tc (exp->X_add_symbol)->symbol_class == XMC_TL
+	  || symbol_get_tc (exp->X_add_symbol)->symbol_class == XMC_UL))
+      return (ppc_obj64 ? BFD_RELOC_PPC64_TLSGD: BFD_RELOC_PPC_TLSGD);
+
+  return BFD_RELOC_NONE;
+}
+
+#endif /* OBJ_XCOFF */
 
 #if defined (OBJ_XCOFF) || defined (OBJ_ELF)
 /* See whether a symbol is in the TOC section.  */
@@ -2655,6 +2783,7 @@ ppc_is_toc_sym (symbolS *sym)
 {
 #ifdef OBJ_XCOFF
   return (symbol_get_tc (sym)->symbol_class == XMC_TC
+	  || symbol_get_tc (sym)->symbol_class == XMC_TE
 	  || symbol_get_tc (sym)->symbol_class == XMC_TC0);
 #endif
 #ifdef OBJ_ELF
@@ -2920,6 +3049,8 @@ fixup_size (bfd_reloc_code_real_type reloc, bfd_boolean *pc_relative)
     case BFD_RELOC_PPC_GOT_TPREL16_HI:
     case BFD_RELOC_PPC_GOT_TPREL16_LO:
     case BFD_RELOC_PPC_TOC16:
+    case BFD_RELOC_PPC_TOC16_HI:
+    case BFD_RELOC_PPC_TOC16_LO:
     case BFD_RELOC_PPC_TPREL16:
     case BFD_RELOC_PPC_TPREL16_HA:
     case BFD_RELOC_PPC_TPREL16_HI:
@@ -2968,6 +3099,10 @@ fixup_size (bfd_reloc_code_real_type reloc, bfd_boolean *pc_relative)
     case BFD_RELOC_PPC_TLS:
     case BFD_RELOC_PPC_TLSGD:
     case BFD_RELOC_PPC_TLSLD:
+    case BFD_RELOC_PPC_TLSLE:
+    case BFD_RELOC_PPC_TLSIE:
+    case BFD_RELOC_PPC_TLSM:
+    case BFD_RELOC_PPC_TLSML:
     case BFD_RELOC_PPC_VLE_HA16A:
     case BFD_RELOC_PPC_VLE_HA16D:
     case BFD_RELOC_PPC_VLE_HI16A:
@@ -3027,6 +3162,12 @@ fixup_size (bfd_reloc_code_real_type reloc, bfd_boolean *pc_relative)
     case BFD_RELOC_PPC64_TPREL34:
     case BFD_RELOC_PPC64_DTPREL34:
     case BFD_RELOC_PPC64_TOC:
+    case BFD_RELOC_PPC64_TLSGD:
+    case BFD_RELOC_PPC64_TLSLD:
+    case BFD_RELOC_PPC64_TLSLE:
+    case BFD_RELOC_PPC64_TLSIE:
+    case BFD_RELOC_PPC64_TLSM:
+    case BFD_RELOC_PPC64_TLSML:
       size = 8;
       break;
 
@@ -3161,6 +3302,28 @@ md_assemble (char *str)
   str = s;
   while (ISSPACE (*str))
     ++str;
+
+#ifdef OBJ_XCOFF
+  /* AIX often generates addis instructions using "addis RT, D(RA)"
+     format instead of the classic "addis RT, RA, SI" one.
+     Restore it to the default format as it's the one encoded
+     in ppc opcodes.  */
+    if (!strcmp (opcode->name, "addis"))
+      {
+	char *rt_e = strchr (str, ',');
+	if (rt_e != NULL
+	    && strchr (rt_e + 1, ',') == NULL)
+	  {
+	    char *d_e = strchr (rt_e + 1, '(');
+	    if (d_e != NULL && d_e != rt_e + 1)
+	      {
+		char *ra_e = strrchr (d_e + 1, ')');
+		if (ra_e != NULL && ra_e != d_e + 1)
+		  ppc_xcoff_fixup_addis (rt_e, d_e, ra_e);
+	      }
+	  }
+      }
+#endif
 
   /* PowerPC operands are just expressions.  The only real issue is
      that a few operand types are optional.  If an instruction has
@@ -3558,6 +3721,9 @@ md_assemble (char *str)
 		}
 	    }
 #endif /* OBJ_ELF */
+#ifdef OBJ_XCOFF
+	  reloc = ppc_xcoff_suffix (&str);
+#endif /* OBJ_XCOFF */
 
 	  if (reloc != BFD_RELOC_NONE)
 	    ;
@@ -4096,7 +4262,9 @@ static bfd_boolean ppc_stab_symbol;
 /* The .comm and .lcomm pseudo-ops for XCOFF.  XCOFF puts common
    symbols in the .bss segment as though they were local common
    symbols, and uses a different smclas.  The native Aix 4.3.3 assembler
-   aligns .comm and .lcomm to 4 bytes.  */
+   aligns .comm and .lcomm to 4 bytes.
+   Symbols having a XMC_UL storage class are uninialized thread-local
+   data.  */
 
 static void
 ppc_comm (int lcomm)
@@ -4111,6 +4279,7 @@ ppc_comm (int lcomm)
   symbolS *lcomm_sym = NULL;
   symbolS *sym;
   char *pfrag;
+  struct ppc_xcoff_section *section;
 
   endc = get_symbol_name (&name);
   end_name = input_line_pointer;
@@ -4203,7 +4372,23 @@ ppc_comm (int lcomm)
       return;
     }
 
-  record_alignment (bss_section, align);
+  if (symbol_get_tc (sym)->symbol_class == XMC_UL
+      || (lcomm && symbol_get_tc (lcomm_sym)->symbol_class == XMC_UL))
+    {
+      section = &ppc_xcoff_tbss_section;
+      if (!ppc_xcoff_section_is_initialized (section))
+	{
+	  ppc_init_xcoff_section (section,
+				  subseg_new (".tbss", 0), FALSE);
+	  bfd_set_section_flags (section->segment,
+				 SEC_ALLOC | SEC_THREAD_LOCAL);
+	  seg_info (section->segment)->bss = 1;
+	}
+    }
+  else
+    section = &ppc_xcoff_bss_section;
+
+  record_alignment (section->segment, align);
 
   if (! lcomm
       || ! S_IS_DEFINED (lcomm_sym))
@@ -4224,14 +4409,14 @@ ppc_comm (int lcomm)
 	  def_size = 0;
 	}
 
-      subseg_set (bss_section, 1);
+      subseg_set (section->segment, 1);
       frag_align (align, 0, 0);
 
       symbol_set_frag (def_sym, frag_now);
       pfrag = frag_var (rs_org, 1, 1, (relax_substateT) 0, def_sym,
 			def_size, (char *) NULL);
       *pfrag = 0;
-      S_SET_SEGMENT (def_sym, bss_section);
+      S_SET_SEGMENT (def_sym, section->segment);
       symbol_get_tc (def_sym)->align = align;
     }
   else if (lcomm)
@@ -4247,7 +4432,7 @@ ppc_comm (int lcomm)
   if (lcomm)
     {
       /* Make sym an offset from lcomm_sym.  */
-      S_SET_SEGMENT (sym, bss_section);
+      S_SET_SEGMENT (sym, section->segment);
       symbol_set_frag (sym, symbol_get_frag (lcomm_sym));
       S_SET_VALUE (sym, symbol_get_frag (lcomm_sym)->fr_offset);
       symbol_get_frag (lcomm_sym)->fr_offset += size;
@@ -4305,7 +4490,7 @@ ppc_change_csect (symbolS *sym, offsetT align)
     subseg_set (S_GET_SEGMENT (sym), symbol_get_tc (sym)->subseg);
   else
     {
-      symbolS **list_ptr;
+      struct ppc_xcoff_section *section;
       int after_toc;
       int hold_chunksize;
       symbolS *list;
@@ -4327,31 +4512,56 @@ ppc_change_csect (symbolS *sym, offsetT align)
 	case XMC_SV:
 	case XMC_TI:
 	case XMC_TB:
-	  S_SET_SEGMENT (sym, text_section);
-	  symbol_get_tc (sym)->subseg = ppc_text_subsegment;
-	  ++ppc_text_subsegment;
-	  list_ptr = &ppc_text_csects;
+	  section = &ppc_xcoff_text_section;
 	  is_code = 1;
 	  break;
 	case XMC_RW:
 	case XMC_TC0:
 	case XMC_TC:
+	case XMC_TE:
 	case XMC_DS:
 	case XMC_UA:
-	case XMC_BS:
 	case XMC_UC:
+	  section = &ppc_xcoff_data_section;
 	  if (ppc_toc_csect != NULL
 	      && (symbol_get_tc (ppc_toc_csect)->subseg + 1
-		  == ppc_data_subsegment))
+		  == section->next_subsegment))
 	    after_toc = 1;
-	  S_SET_SEGMENT (sym, data_section);
-	  symbol_get_tc (sym)->subseg = ppc_data_subsegment;
-	  ++ppc_data_subsegment;
-	  list_ptr = &ppc_data_csects;
+	  break;
+	case XMC_BS:
+	  section = &ppc_xcoff_bss_section;
+	  break;
+	case XMC_TL:
+	  section = &ppc_xcoff_tdata_section;
+	  /* Create .tdata section if not yet done.  */
+	  if (!ppc_xcoff_section_is_initialized (section))
+	    {
+	      ppc_init_xcoff_section (section, subseg_new (".tdata", 0),
+					TRUE);
+	      bfd_set_section_flags (section->segment, SEC_ALLOC
+				     | SEC_LOAD | SEC_RELOC | SEC_DATA
+				     | SEC_THREAD_LOCAL);
+	    }
+	  break;
+	case XMC_UL:
+	  section = &ppc_xcoff_tbss_section;
+	  /* Create .tbss section if not yet done.  */
+	  if (!ppc_xcoff_section_is_initialized (section))
+	    {
+	      ppc_init_xcoff_section (section, subseg_new (".tbss", 0),
+				      FALSE);
+	      bfd_set_section_flags (section->segment, SEC_ALLOC |
+				     SEC_THREAD_LOCAL);
+	      seg_info (section->segment)->bss = 1;
+	    }
 	  break;
 	default:
 	  abort ();
 	}
+
+      S_SET_SEGMENT (sym, section->segment);
+      symbol_get_tc (sym)->subseg = section->next_subsegment;
+      ++section->next_subsegment;
 
       /* We set the obstack chunk size to a small value before
 	 changing subsegments, so that we don't use a lot of memory
@@ -4380,7 +4590,7 @@ ppc_change_csect (symbolS *sym, offsetT align)
       symbol_get_tc (sym)->output = 1;
       symbol_get_tc (sym)->within = sym;
 
-      for (list = *list_ptr;
+      for (list = section->csects;
 	   symbol_get_tc (list)->next != (symbolS *) NULL;
 	   list = symbol_get_tc (list)->next)
 	;
@@ -5219,8 +5429,8 @@ ppc_toc (int ignore ATTRIBUTE_UNUSED)
       symbolS *sym;
       symbolS *list;
 
-      subseg = ppc_data_subsegment;
-      ++ppc_data_subsegment;
+      subseg = ppc_xcoff_data_section.next_subsegment;
+      ++ppc_xcoff_data_section.next_subsegment;
 
       subseg_new (segment_name (data_section), subseg);
       ppc_toc_frag = frag_now;
@@ -5235,7 +5445,7 @@ ppc_toc (int ignore ATTRIBUTE_UNUSED)
 
       ppc_toc_csect = sym;
 
-      for (list = ppc_data_csects;
+      for (list = ppc_xcoff_data_section.csects;
 	   symbol_get_tc (list)->next != (symbolS *) NULL;
 	   list = symbol_get_tc (list)->next)
 	;
@@ -5383,7 +5593,21 @@ ppc_tc (int ignore ATTRIBUTE_UNUSED)
     S_SET_SEGMENT (sym, now_seg);
     symbol_set_frag (sym, frag_now);
     S_SET_VALUE (sym, (valueT) frag_now_fix ());
-    symbol_get_tc (sym)->symbol_class = XMC_TC;
+
+    /* AIX assembler seems to allow any storage class to be set in .tc.
+       But for now, only XMC_TC and XMC_TE are supported by us.  */
+    switch (symbol_get_tc (sym)->symbol_class)
+      {
+      case XMC_TC:
+      case XMC_TE:
+	break;
+
+      default:
+	as_bad (_(".tc with storage class %d not yet supported"),
+		symbol_get_tc (sym)->symbol_class);
+	ignore_rest_of_line ();
+	return;
+      }
     symbol_get_tc (sym)->output = 1;
 
     ppc_frob_label (sym);
@@ -5585,12 +5809,18 @@ ppc_symbol_new_hook (symbolS *sym)
 	tc->symbol_class = XMC_TB;
       else if (strcmp (s, "TC0]") == 0 || strcmp (s, "T0]") == 0)
 	tc->symbol_class = XMC_TC0;
+      else if (strcmp (s, "TE]") == 0)
+	tc->symbol_class = XMC_TE;
+      else if (strcmp (s, "TL]") == 0)
+	tc->symbol_class = XMC_TL;
       break;
     case 'U':
       if (strcmp (s, "UA]") == 0)
 	tc->symbol_class = XMC_UA;
       else if (strcmp (s, "UC]") == 0)
 	tc->symbol_class = XMC_UC;
+      else if (strcmp (s, "UL]") == 0)
+	tc->symbol_class = XMC_UL;
       break;
     case 'X':
       if (strcmp (s, "XO]") == 0)
@@ -5732,12 +5962,15 @@ ppc_frob_symbol (symbolS *sym)
 	    }
 	  a->x_csect.x_smtyp = (symbol_get_tc (sym)->align << 3) | XTY_SD;
 	}
-      else if (S_GET_SEGMENT (sym) == bss_section)
+      else if (S_GET_SEGMENT (sym) == bss_section
+	       || S_GET_SEGMENT (sym) == ppc_xcoff_tbss_section.segment)
 	{
 	  /* This is a common symbol.  */
 	  a->x_csect.x_scnlen.l = symbol_get_frag (sym)->fr_offset;
 	  a->x_csect.x_smtyp = (symbol_get_tc (sym)->align << 3) | XTY_CM;
-	  if (S_IS_EXTERNAL (sym))
+	  if (S_GET_SEGMENT (sym) == ppc_xcoff_tbss_section.segment)
+	    symbol_get_tc (sym)->symbol_class = XMC_UL;
+	  else if (S_IS_EXTERNAL (sym))
 	    symbol_get_tc (sym)->symbol_class = XMC_RW;
 	  else
 	    symbol_get_tc (sym)->symbol_class = XMC_BS;
@@ -5757,7 +5990,7 @@ ppc_frob_symbol (symbolS *sym)
 	  a->x_csect.x_scnlen.l = 0;
 	  a->x_csect.x_smtyp = XTY_ER;
 	}
-      else if (symbol_get_tc (sym)->symbol_class == XMC_TC)
+      else if (ppc_is_toc_sym (sym))
 	{
 	  symbolS *next;
 
@@ -5767,7 +6000,7 @@ ppc_frob_symbol (symbolS *sym)
 	  while (symbol_get_tc (next)->symbol_class == XMC_TC0)
 	    next = symbol_next (next);
 	  if (next == (symbolS *) NULL
-	      || symbol_get_tc (next)->symbol_class != XMC_TC)
+	      || (!ppc_is_toc_sym (next)))
 	    {
 	      if (ppc_after_toc_frag == (fragS *) NULL)
 		a->x_csect.x_scnlen.l = (bfd_section_size (data_section)
@@ -5791,9 +6024,11 @@ ppc_frob_symbol (symbolS *sym)
 	  /* This is a normal symbol definition.  x_scnlen is the
 	     symbol index of the containing csect.  */
 	  if (S_GET_SEGMENT (sym) == text_section)
-	    csect = ppc_text_csects;
+	    csect = ppc_xcoff_text_section.csects;
 	  else if (S_GET_SEGMENT (sym) == data_section)
-	    csect = ppc_data_csects;
+	    csect = ppc_xcoff_data_section.csects;
+	  else if (S_GET_SEGMENT (sym) == ppc_xcoff_tdata_section.segment)
+	    csect = ppc_xcoff_tdata_section.csects;
 	  else
 	    abort ();
 
@@ -6053,7 +6288,8 @@ ppc_fix_adjustable (fixS *fix)
 
 	  if (sy_tc->symbol_class == XMC_TC0)
 	    continue;
-	  if (sy_tc->symbol_class != XMC_TC)
+	  if (sy_tc->symbol_class != XMC_TC
+	      && sy_tc->symbol_class != XMC_TE)
 	    break;
 	  if (val == resolve_symbol_value (sy))
 	    {
@@ -6072,7 +6308,9 @@ ppc_fix_adjustable (fixS *fix)
   if (tc->subseg == 0
       && tc->symbol_class != XMC_TC0
       && tc->symbol_class != XMC_TC
+      && tc->symbol_class != XMC_TE
       && symseg != bss_section
+      && symseg != ppc_xcoff_tbss_section.segment
       /* Don't adjust if this is a reloc in the toc section.  */
       && (symseg != data_section
 	  || ppc_toc_csect == NULL
@@ -6516,8 +6754,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  && (operand->insert == NULL || ppc_obj64)
 	  && fixP->fx_addsy != NULL
 	  && symbol_get_tc (fixP->fx_addsy)->subseg != 0
-	  && symbol_get_tc (fixP->fx_addsy)->symbol_class != XMC_TC
-	  && symbol_get_tc (fixP->fx_addsy)->symbol_class != XMC_TC0
+	  && !ppc_is_toc_sym (fixP->fx_addsy)
 	  && S_GET_SEGMENT (fixP->fx_addsy) != bss_section)
 	{
 	  value = fixP->fx_offset;
@@ -6531,7 +6768,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
        if (fixP->fx_r_type == BFD_RELOC_16
            && fixP->fx_addsy != NULL
            && ppc_is_toc_sym (fixP->fx_addsy))
-         fixP->fx_r_type = BFD_RELOC_PPC_TOC16;
+	 fixP->fx_r_type = BFD_RELOC_PPC_TOC16;
 #endif
     }
 
@@ -6984,6 +7221,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	case BFD_RELOC_PPC_EMB_RELSDA:
 	case BFD_RELOC_PPC64_TOC:
 	case BFD_RELOC_PPC_TOC16:
+	case BFD_RELOC_PPC_TOC16_LO:
+	case BFD_RELOC_PPC_TOC16_HI:
 	case BFD_RELOC_PPC64_TOC16_LO:
 	case BFD_RELOC_PPC64_TOC16_HI:
 	case BFD_RELOC_PPC64_TOC16_HA:
@@ -7005,6 +7244,37 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 #endif
 
 #ifdef OBJ_XCOFF
+	case BFD_RELOC_PPC_TLSGD:
+	case BFD_RELOC_PPC_TLSLD:
+	case BFD_RELOC_PPC_TLSLE:
+	case BFD_RELOC_PPC_TLSIE:
+	case BFD_RELOC_PPC_TLSM:
+	case BFD_RELOC_PPC64_TLSGD:
+	case BFD_RELOC_PPC64_TLSLD:
+	case BFD_RELOC_PPC64_TLSLE:
+	case BFD_RELOC_PPC64_TLSIE:
+	case BFD_RELOC_PPC64_TLSM:
+	  gas_assert (fixP->fx_addsy != NULL);
+	  S_SET_THREAD_LOCAL (fixP->fx_addsy);
+	  fieldval = 0;
+	  break;
+
+	  /* TLSML relocations are targeting a XMC_TC symbol named
+	     "_$TLSML". We can't check earlier because the relocation
+	     can target any symbol name which will be latter .rename
+	     to "_$TLSML".  */
+	case BFD_RELOC_PPC_TLSML:
+	case BFD_RELOC_PPC64_TLSML:
+	  gas_assert (fixP->fx_addsy != NULL);
+	  if (strcmp (symbol_get_tc (fixP->fx_addsy)->real_name, "_$TLSML") != 0)
+	    {
+	      as_bad_where (fixP->fx_file, fixP->fx_line,
+			    _("R_TLSML relocation doesn't target a "
+			      "symbol named \"_$TLSML\". %s"), S_GET_NAME(fixP->fx_addsy));
+	    }
+	  fieldval = 0;
+	  break;
+
 	case BFD_RELOC_NONE:
 #endif
 	case BFD_RELOC_CTOR:
@@ -7061,7 +7331,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	symbol_get_bfdsym (fixP->fx_addsy)->flags |= BSF_KEEP;
     }
 #else
-  if (fixP->fx_r_type != BFD_RELOC_PPC_TOC16)
+  if (fixP->fx_r_type != BFD_RELOC_PPC_TOC16
+      && fixP->fx_r_type != BFD_RELOC_PPC_TOC16_HI
+      && fixP->fx_r_type != BFD_RELOC_PPC_TOC16_LO)
     fixP->fx_addnumber = 0;
   else
     {
@@ -7069,6 +7341,12 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	 of the symbol.  */
       fixP->fx_addnumber = (- bfd_section_vma (S_GET_SEGMENT (fixP->fx_addsy))
 			    - S_GET_VALUE (ppc_toc_csect));
+
+      /* The high bits must be adjusted for the low bits being signed.  */
+      if (fixP->fx_r_type == BFD_RELOC_PPC_TOC16_HI) {
+	fixP->fx_addnumber += 0x8000;
+      }
+
       /* Set *valP to avoid errors.  */
       *valP = value;
     }

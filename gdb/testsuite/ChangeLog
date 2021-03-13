@@ -1,3 +1,74 @@
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-bad-printers.exp: Extend test names to make them
+	unique.
+	* gdb.python/py-events.exp: Likewise.
+	* gdb.python/py-finish-breakpoint2.exp: Likewise.
+	* gdb.python/py-frame-inline.exp: Likewise.
+	* gdb.python/py-frame.exp: Likewise.
+	* gdb.python/py-infthread.exp: Likewise.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-value-cc.exp: Remove a duplicate test.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/lib-types.exp: Update the test to check the correct
+	python variable.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-explore-cc.exp: Extend test names to make them
+	unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-lookup-type.exp: Remove duplicate test.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-symtab.exp: Extend test names to make them
+	unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-prompt.exp: Add with_test_prefix to make test
+	names unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-block.exp: Give tests unique names.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-pp-maint.exp: Extend test names to make them
+	unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-explore.exp: Add with_test_prefix to make test
+	names unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-finish-breakpoint.exp: Make test names unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-strfns.exp: Use with_test_prefix to make test
+	names unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-format-string.exp: Use proc_with_prefix to make
+	test names unique.
+
+2021-03-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-mi.exp: Use with_test_prefix to make test names
+	unique.
+
 2021-03-09  Tom Tromey  <tromey@adacore.com>
 
 	* gdb.base/cast-call.exp: New file.
