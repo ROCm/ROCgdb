@@ -132,7 +132,7 @@ gdb_test_sequence "info threads" "info threads" {
 # Show architecture info while debugging in device code.
 # Sample output "The target architecture is set automatically (currently amdgcn:gfx906)"
 gdb_test "show architecture" \
-    {The target architecture is set to "auto" \(currently "amdgcn:gfx\d+"\)\.}
+    {The target architecture is set to "auto" \(currently "amdgcn:gfx\w+"\)\.}
 
 gdb_test_sequence "show convenience" "show convenience" {
     {\$_thread = \d+}
