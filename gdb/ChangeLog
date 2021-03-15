@@ -1,3 +1,18 @@
+2021-03-14  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_attribute_value): Use cu_header
+	consistently.
+
+2021-03-14  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (struct die_reader_specs) <abfd>: Fix formatting.
+	(peek_die_abbrev): Use reader.abfd.
+
+2021-03-14  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_per_cu_data::get_header): Set
+	m_header_read_in.
+
 2021-03-13  Tom Tromey  <tom@tromey.com>
 
 	* dwarf2/read.c (struct partial_die_info): Update.
