@@ -1,4 +1,4 @@
---  Copyright 2018-2021 Free Software Foundation, Inc.
+--  Copyright 2021 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -13,25 +13,16 @@
 --  You should have received a copy of the GNU General Public License
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-with Pck; use Pck;
-with System;
-with Unchecked_Conversion;
+package body target_wrapper is
 
-procedure VsizeLim is
-   Small : String := Ident ("1234567890");
-   Larger : String := Ident ("1234567890|1234567890|1234567890");
+   procedure Do_Nothing (A : System.Address) is
+   begin
+      null;
+   end Do_Nothing;
 
-   type String_Ptr is access all String;
-   type Big_String_Ptr is access all String (Positive);
+   procedure Put (A : in out IArray) is
+   begin
+      Do_Nothing (A'Address); -- STOP2
+   end Put;
 
-   function To_Ptr is
-     new Unchecked_Conversion (System.Address, Big_String_Ptr);
-
-   Name_Str : String_Ptr := new String'(Larger);
-   Name : Big_String_Ptr := To_Ptr (Name_Str.all'Address);
-
-begin
-   Do_Nothing (Small'Address); -- STOP
-   Do_Nothing (Larger'Address);
-   Do_Nothing (Name'Address);
-end VsizeLim;
+end target_wrapper;

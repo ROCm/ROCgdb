@@ -1,3 +1,72 @@
+2021-03-16  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-framefilter.c (py_print_frame): Use PyInt_Check as
+	well as PyLong_Check for Python 2.
+
+2021-03-15  Tom Tromey  <tromey@adacore.com>
+
+	PR build/27579:
+	* rust-exp.y (maker_map): Use gdb::hash_enum.
+	* stap-probe.c (stap_maker_map): Use gdb::hash_enum.
+
+2021-03-15  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* dwarf2/read.c (create_debug_type_hash_table): Remove colon at
+	end of debug print.
+
+2021-03-15  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* dwarf2/read.c (dw2_get_file_names_reader): Remove info_ptr
+	parameter, adjust caller.
+
+2021-03-15  Tom Tromey  <tromey@adacore.com>
+
+	* ada-exp.y (simple_exp): Always push a result for unary '+'.
+
+2021-03-15  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_unop_ind_operation::evaluate): Call
+	ada_ensure_varsize_limit.
+
+2021-03-15  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (numeric_type_p, integer_type_p): Return true for
+	fixed-point.
+	* ada-exp.y (maybe_overload): New function.
+	(ada_wrap_overload): New function.
+	(ada_un_wrap2, ada_wrap2, ada_wrap_op): Use maybe_overload.
+	(exp1, simple_exp, relation, and_exp, and_then_exp, or_exp)
+	(or_else_exp, xor_exp, primary): Update.
+
+2021-03-15  Tom Tromey  <tromey@adacore.com>
+
+	PR ada/27545:
+	* ada-lang.c (ada_var_value_operation::evaluate): Use recursive
+	call for tagged type.
+
+2021-03-15  Tom Tromey  <tromey@adacore.com>
+
+	* ada-exp.y (exp1): Handle resolution of the right hand side of an
+	assignment.
+
+2021-03-15  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_aggregate_operation::assign_aggregate): Return
+	container.
+	(ada_assign_operation::evaluate): Update.
+	* ada-exp.h (class ada_aggregate_operation) <assign_aggregate>:
+	Change return type.
+
+2021-03-15  Felix Willgerodt  <felix.willgerodt@intel.com>
+
+	* i386-tdep.c (i386_floatformat_for_type): Add COMPLEX*32 and REAL*16.
+
+2021-03-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/python.c (gdbpy_source_objfile_script): Use
+	make_scoped_restore to restore gdbpy_current_objfile.
+	(gdbpy_execute_objfile_script): Likewise.
+
 2021-03-14  Tom Tromey  <tom@tromey.com>
 
 	* dwarf2/read.c (read_attribute_value): Use cu_header

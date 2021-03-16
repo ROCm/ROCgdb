@@ -1,4 +1,4 @@
---  Copyright 2018-2021 Free Software Foundation, Inc.
+--  Copyright 2021 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -13,25 +13,12 @@
 --  You should have received a copy of the GNU General Public License
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-with Pck; use Pck;
-with System;
-with Unchecked_Conversion;
+package Enums_Overload is
 
-procedure VsizeLim is
-   Small : String := Ident ("1234567890");
-   Larger : String := Ident ("1234567890|1234567890|1234567890");
+   type Color is (Red, Orange, Yellow, Green, Blue, Violet, Indigo);
 
-   type String_Ptr is access all String;
-   type Big_String_Ptr is access all String (Positive);
+   type Traffic_Signal is (Green, Yellow, Red);
 
-   function To_Ptr is
-     new Unchecked_Conversion (System.Address, Big_String_Ptr);
+   procedure Test_Enums_Overload;
 
-   Name_Str : String_Ptr := new String'(Larger);
-   Name : Big_String_Ptr := To_Ptr (Name_Str.all'Address);
-
-begin
-   Do_Nothing (Small'Address); -- STOP
-   Do_Nothing (Larger'Address);
-   Do_Nothing (Name'Address);
-end VsizeLim;
+end Enums_Overload;

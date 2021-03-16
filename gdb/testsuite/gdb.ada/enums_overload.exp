@@ -1,4 +1,4 @@
-# Copyright 2016-2021 Free Software Foundation, Inc.
+# Copyright 2021 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@ load_lib "ada.exp"
 
 if { [skip_ada_tests] } { return -1 }
 
-standard_ada_testfile main_p324_051
+standard_ada_testfile enums_overload_main
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
   return -1
@@ -25,18 +25,13 @@ if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } 
 
 clean_restart ${testfile}
 
-set bp_location [gdb_get_line_number "STOP" ${testdir}/main_p324_051.adb]
-runto "main_p324_051.adb:$bp_location"
+set bp_location [gdb_get_line_number "STOP" ${testdir}/enums_overload.adb]
+runto "enums_overload.adb:$bp_location"
 
-gdb_test "print assign_arr_input.u2 :=(0.25,0.5,0.75)" \
-         " = \\(0\\.25, 0\\.5, 0\\.75\\)"
-
-gdb_test "print assign_arr_input.u2 :=(0.25, others => 0.125)" \
-         " = \\(0\\.25, 0\\.125, 0\\.125\\)"
-
-set line [gdb_get_line_number "STOP2" ${testdir}/target_wrapper.adb]
-gdb_breakpoint target_wrapper.adb:$line
-gdb_continue_to_breakpoint STOP2
-
-gdb_test "print a" " = \\(8, 10, 12\\)"
-gdb_test "print a := (2, 4, 6)" " = \\(2, 4, 6\\)" "assign to a"
+gdb_test "ptype x" "type = range red \\.\\. yellow"
+gdb_test "print x := red" " = red"
+gdb_test "print x" " = red"
+gdb_test "print enums_overload.reddish'(red)" " = red" \
+    "function call disambiguates enum"
+gdb_test "print y := red" " = red"
+gdb_test "print y" " = red"
