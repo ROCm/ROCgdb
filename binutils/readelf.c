@@ -15483,7 +15483,7 @@ display_debug_section (int shndx, Elf_Internal_Shdr * section, Filedata * fileda
 
 	      section_subset = NULL;
 
-	      if (secondary || (id != info && id != abbrev))
+	      if (secondary || (id != info && id != abbrev && id != debug_addr))
 		free_debug_section (id);
 	    }
 	  break;
@@ -15550,6 +15550,9 @@ process_section_contents (Filedata * filedata)
     {
       dump_type dump = filedata->dump.dump_sects[i];
 
+      if (filedata->is_separate && ! process_links)
+	dump &= DEBUG_DUMP;
+      
 #ifdef SUPPORT_DISASSEMBLY
       if (dump & DISASS_DUMP)
 	{
@@ -21347,10 +21350,10 @@ process_object (Filedata * filedata)
 	    res = FALSE;
 	  else if (! process_section_headers (d->handle))
 	    res = FALSE;
+	  else if (! process_section_contents (d->handle))
+	    res = FALSE;
 	  else if (process_links)
 	    {
-	      if (! process_section_contents (d->handle))
-		res = FALSE;
 	      if (! process_section_groups (d->handle))
 		res = FALSE;
 	      if (! process_program_headers (d->handle))
