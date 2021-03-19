@@ -592,9 +592,9 @@ ctf_lookup_symbol_idx (ctf_dict_t *fp, const char *symname)
 				       cache->ctf_symhash_latest) < 0)
 		goto oom;
 	    if (strcmp (sym.st_name, symname) == 0)
-              return cache->ctf_symhash_latest++;
-          }
-          break;
+	      return cache->ctf_symhash_latest++;
+	  }
+	  break;
 	case sizeof (Elf32_Sym):
 	  {
 	    Elf32_Sym *symp = (Elf32_Sym *) sp->cts_data;
@@ -607,8 +607,8 @@ ctf_lookup_symbol_idx (ctf_dict_t *fp, const char *symname)
 				       cache->ctf_symhash_latest) < 0)
 		goto oom;
 	    if (strcmp (sym.st_name, symname) == 0)
-              return cache->ctf_symhash_latest++;
-          }
+	      return cache->ctf_symhash_latest++;
+	  }
 	  break;
 	default:
 	  ctf_set_errno (fp, ECTF_SYMTAB);
@@ -723,7 +723,8 @@ ctf_symbol_next (ctf_dict_t *fp, ctf_next_t **it, const char **name,
 
 	  *name = ctf_strptr (fp, idx[i->ctn_n]);
 	  sym = tab[i->ctn_n++];
-	} while (sym == -1u || sym == 0);
+	}
+      while (sym == -1u || sym == 0);
     }
   else
     {
@@ -902,7 +903,7 @@ ctf_lookup_by_sym_or_name (ctf_dict_t *fp, unsigned long symidx,
 	  if (symidx > fp->ctf_dynsymmax)
 	    goto try_parent;
 
-          sym = fp->ctf_dynsymidx[symidx];
+	  sym = fp->ctf_dynsymidx[symidx];
 	  err = ECTF_NOTYPEDAT;
 	  if (!sym || (sym->st_shndx != STT_OBJECT && sym->st_shndx != STT_FUNC))
 	    goto try_parent;

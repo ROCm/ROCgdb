@@ -1,3 +1,25 @@
+2021-03-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27590
+	* testsuite/ld-elf/pr27590.s: New file.
+	* testsuite/ld-elf/pr27590a.d: Likewise.
+	* testsuite/ld-elf/pr27590b.d: Likewise.
+	* testsuite/ld-i386/i386.exp: Also run ld/27193 test with
+	--reduce-memory-overheads.
+
+2021-03-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27587
+	* testsuite/ld-x86-64/pr27587.err: New file.
+	* testsuite/ld-x86-64/pr27587a.obj.bz2: Likewise.
+	* testsuite/ld-x86-64/pr27587b.obj.bz2: Likewise.
+	* testsuite/ld-x86-64/x86-64.exp: Run PR ld/27587 test.
+
+2021-03-18  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/slice.c: Check slices of enums too.
+	* testsuite/ld-ctf/slice.d: Results adjusted.
+
 2021-03-16  Nick Clifton  <nickc@redhat.com>
 
 	* pe-dll.c (pe_find_cdecl_alias_match): Use memmove to overwrite
