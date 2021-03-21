@@ -1,3 +1,449 @@
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_initial_scan): Create partial symtabs.
+	* symfile.c (syms_from_objfile_1, reread_symbols): Update.
+	* psymtab.h (make_psymbol_functions): Don't declare.
+	* psymtab.c (make_psymbol_functions): Remove.
+	(maintenance_print_psymbols): Update.
+	* psympriv.h (struct psymbol_functions): Add no-argument
+	constructor.
+	* objfiles.h (struct objfile) <reset_psymtabs>: Remove.
+	<partial_symtabs>: Remove.
+	* mdebugread.c (mdebug_build_psymtabs): Create partial symtabs.
+	* elfread.c (read_partial_symbols): Update.
+	(elf_symfile_read): Remove check for existing partial symbols.
+	Don't clear "qf".
+	* dwarf2/read.c (dwarf2_has_info): Remove check for existing
+	partial symbols.
+	(dwarf2_build_psymtabs): Add psymbol_functions parameter.  Create
+	partial symtabs.
+	* dwarf2/public.h (dwarf2_build_psymtabs): Add psymbol_functions
+	parameter.
+	* dbxread.c (dbx_symfile_read): Create partial symtabs.
+	* ctfread.c (elfctf_build_psymtabs): Create partial symtabs.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_build_psymtabs): Update.
+	* symfile.c (syms_from_objfile_1, reread_symbols): Update.
+	* symfile-debug.c (objfile::has_partial_symbols)
+	(objfile::find_last_source_symtab)
+	(objfile::forget_cached_source_info)
+	(objfile::map_symtabs_matching_filename, objfile::lookup_symbol)
+	(objfile::print_stats, objfile::dump)
+	(objfile::expand_symtabs_for_function)
+	(objfile::expand_all_symtabs)
+	(objfile::expand_symtabs_with_fullname)
+	(objfile::map_matching_symbols)
+	(objfile::expand_symtabs_matching)
+	(objfile::find_pc_sect_compunit_symtab)
+	(objfile::map_symbol_filenames)
+	(objfile::find_compunit_symtab_by_address)
+	(objfile::lookup_global_symbol_language)
+	(objfile::require_partial_symbols): Update.
+	* psymtab.c (maintenance_print_psymbols)
+	(maintenance_info_psymtabs, maintenance_check_psymtabs): Update.
+	* objfiles.h (struct objfile) <qf>: Now a forward_list.
+	* objfiles.c (objfile_relocate1): Update.
+	* elfread.c (elf_symfile_read): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* objfiles.h (struct objfile) <psymtabs>: Remove method.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (psymbol_functions::count_psyms): Rename.
+	(psymbol_functions::print_stats): Update.
+	* psympriv.h (struct psymbol_functions) <count_psyms>: Declare
+	method.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (psymbol_functions::require_partial_symbols): Rename.
+	(psymbol_functions::find_pc_sect_psymtab): Rename.
+	(psymbol_functions::find_pc_sect_compunit_symtab)
+	(maintenance_print_psymbols, maintenance_check_psymtabs): Update.
+	* psympriv.h (struct psymbol_functions) <require_partial_symbols>:
+	Declare new method.
+	<get_partial_symtabs, find_pc_sect_psymtab>: Likewise.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_start_psymtab): Add partial_symtabs parameter.
+	(xcoff_end_psymtab, scan_xcoff_symtab): Update.
+	* psymtab.c (partial_symtab::partial_symtab): Add partial_symtabs
+	parameter.
+	(add_psymbol_to_bcache): Remove.
+	(partial_symtab::add_psymbol): Add partial_symtabs parameter.
+	(partial_symtab::add_psymbol, partial_symtab::partial_symtab):
+	Likewise.
+	* psympriv.h (partial_symtab): Add partial_symtabs parameter.
+	<add_psymbol>: Likewise.
+	(standard_psymtab, legacy_psymtab): Likewise.
+	* mdebugread.c (parse_partial_symbols): Update.
+	(handle_psymbol_enumerators): Add partial_symtabs parameter.
+	(handle_psymbol_enumerators): Update.
+	(new_psymtab): Add partial_symtabs parameter.
+	* dwarf2/read.h (dwarf2_psymtab): Add partial_symtabs parameter.
+	* dwarf2/read.c (dwarf2_include_psymtab): Add partial_symtabs
+	parameter.
+	(dwarf2_create_include_psymtab): Add partial_symtabs parameter.
+	(create_partial_symtab, add_partial_symbol, dwarf_decode_lines):
+	Update.
+	* dbxread.c (read_dbx_symtab): Update.
+	(start_psymtab): Add partial_symtabs parameter.
+	(dbx_end_psymtab): Update.
+	* ctfread.c (struct ctf_context) <partial_symtabs>: New member.
+	(ctf_psymtab): Add partial_symtabs parameter.
+	(create_partial_symtab, ctf_psymtab_type_cb, ctf_psymtab_var_cb):
+	Update.
+	(scan_partial_symbols): Add partial_symtabs parameter.
+	(scan_partial_symbols, elfctf_build_psymtabs)
+	(ctf_psymtab_add_enums): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (read_symbols): Use objfile method.
+	* symfile-debug.c (objfile::require_partial_symbols): New method.
+	* psymtab.h (require_partial_symbols): Don't declare.
+	* psymtab.c (require_partial_symbols): Use objfile method.  Now
+	static.
+	(psymbol_functions::map_symtabs_matching_filename, OBJFILE)
+	(psymbol_functions::lookup_symbol)
+	(psymbol_functions::lookup_global_symbol_language)
+	(psymbol_functions::find_last_source_symtab)
+	(psymbol_functions::forget_cached_source_info)
+	(psymbol_functions::print_stats)
+	(psymbol_functions::expand_symtabs_for_function)
+	(psymbol_functions::expand_all_symtabs)
+	(psymbol_functions::expand_symtabs_with_fullname)
+	(psymbol_functions::map_symbol_filenames)
+	(psymbol_functions::map_matching_symbols)
+	(psymbol_functions::expand_symtabs_matching)
+	(psymbol_functions::find_compunit_symtab_by_address)
+	(maintenance_print_psymbols, maintenance_info_psymtabs)
+	(maintenance_check_psymtabs): Update.
+	* objfiles.h (struct objfile) <require_partial_symbols>: Declare
+	new method.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_sym_fns): Update.
+	* symfile.h (struct sym_fns) <sym_read_psymbols>: Remove.
+	* symfile-debug.c (objfile::has_partial_symbols): Use
+	can_lazily_read_symbols.
+	(debug_sym_read_psymbols): Remove.
+	(debug_sym_fns, install_symfile_debug_logging): Update.
+	* quick-symbol.h (struct quick_symbol_functions)
+	<can_lazily_read_symbols, read_partial_symbols>: New methods.
+	* psymtab.c (require_partial_symbols): Use new 'qf' methods.
+	* mipsread.c (ecoff_sym_fns): Update.
+	* machoread.c (macho_sym_fns): Update.
+	* elfread.c (struct lazy_dwarf_reader): New.
+	(elf_symfile_read): Update.
+	(read_psyms): Now a method of lazy_dwarf_reader.
+	(elf_sym_fns): Update.
+	(elf_sym_fns_lazy_psyms): Remove.
+	* dbxread.c (aout_sym_fns): Update.
+	* coffread.c (coff_sym_fns): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (syms_from_objfile_1): Call reset_psymtabs.
+	(reread_symbols): Move reset_psymtabs call later.
+	* objfiles.c (objfile::objfile): Don't initialize
+	partial_symtabs.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_build_psymtabs): Call
+	set_partial_symtabs.
+	* symfile.c (syms_from_objfile_1, reread_symbols): Update.
+	* psymtab.h (make_psymbol_functions): Add partial_symtabs
+	parameter.
+	* psymtab.c (find_pc_sect_psymtab): Add partial_symtabs
+	parameter.
+	(psymbol_functions::find_pc_sect_compunit_symtab)
+	(psymbol_functions::print_stats, psymbol_functions::dump)
+	(psymbol_functions::has_symbols): Update.
+	(make_psymbol_functions, dump_psymtab_addrmap): Add
+	partial_symtabs parameter.
+	(maintenance_print_psymbols): Update.
+	(psymbol_functions::expand_symtabs_matching): Update.
+	* psympriv.h (struct psymbol_functions): Add constructor.
+	<m_partial_symtabs>: New member.
+	<set_partial_symtabs>: New method.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_create_include_psymtab): Add per_bfd
+	parameter.
+	(process_psymtab_comp_unit_reader)
+	(build_type_psymtab_dependencies, dwarf2_build_psymtabs_hard)
+	(add_partial_subprogram, dwarf2_ranges_read, dwarf_decode_lines):
+	Reference psymtabs via per_bfd.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/index-write.c (struct addrmap_index_data) <objfile>:
+	Remove.
+	(add_address_entry): Remove objfile parameter.
+	(add_address_entry_worker): Update.
+	(write_address_map): Replace objfile parameter with per_bfd.
+	(write_gdbindex, write_psymtabs_to_index): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_base_index_functions::print_stats): Add
+	print_bcache parameter.
+	* symfile-debug.c (objfile::print_stats): Add print_bcache
+	parameter.
+	* quick-symbol.h (struct quick_symbol_functions)
+	<print_stats>: Add print_bcache parameter.
+	* symmisc.c (print_symbol_bcache_statistics, count_psyms): Move
+	code to psymtab.c.
+	(print_objfile_statistics): Move psymtab code to psymtab.c.
+	* psymtab.c (count_psyms): Move from symmisc.c.
+	(psymbol_functions::print_stats): Print partial symbol and bcache
+	statistics.  Add print_bcache parameter.
+	* objfiles.h (print_symbol_bcache_statistics): Don't declare.
+	(struct objfile) <print_stats>: Add print_bcache parameter.
+	* maint.c (maintenance_print_statistics): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct dwarf2_per_bfd) <psymtabs_addrmap>: New
+	member.
+	* dwarf2/read.c (create_addrmap_from_index)
+	(create_addrmap_from_aranges): Set per_bfd addrmap.
+	(dwarf2_read_gdb_index): Don't set partial_symtabs.
+	(dwarf2_base_index_functions::find_pc_sect_compunit_symtab): Use
+	per_bfd addrmap.
+	(dwarf2_read_debug_names): Don't set partial_symtabs.
+	(dwarf2_initialize_objfile): Likewise.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_build_psymtabs): Set partial_symtabs
+	earlier.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* psympriv.h (psymtab_discarder): Take psymtab_storage parameter.
+	(~psymtab_discarder, keep): Update.
+	<m_objfile>: Remove.
+	<m_partial_symtabs>: New member.
+	* dwarf2/read.c (dwarf2_build_psymtabs): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* xcoffread.c (xcoff_end_psymtab): Add partial_symtabs parameter.
+	(xcoff_end_psymtab): Update.
+	(scan_xcoff_symtab): Add partial_symtabs parameter.
+	(xcoff_initial_scan): Update.
+	* stabsread.h (dbx_end_psymtab): Add partial_symtabs parameter.
+	* mdebugread.c (mdebug_build_psymtabs): Update.
+	(parse_partial_symbols): Add partial_symtabs parameter.
+	* dbxread.c (dbx_symfile_read): Update.
+	(read_dbx_symtab): Add partial_symtabs parameter.
+	(read_dbx_symtab): Update.
+	(dbx_end_psymtab): Add partial_symtabs parameter.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* quick-symbol.h (struct quick_symbol_functions)
+	<relocated>: New method.
+	* psymtab.h (struct psymbol_functions) <relocated>: New
+	method.
+	<fill_psymbol_map>: Declare method.
+	<m_psymbol_map>: New member.
+	* psymtab.c (psymbol_functions::fill_psymbol_map): Rename.
+	(psymbol_functions::find_compunit_symtab_by_address): Update.
+	* objfiles.h (reset_psymtabs): Don't clear psymbol_map.
+	(struct objfile) <psymbol_map>: Remove.
+	* objfiles.c (objfile_relocate1): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* psympriv.h (struct psymbol_functions): New.
+	* symfile.c (syms_from_objfile_1, reread_symbols): Update.
+	* symfile-debug.c (objfile::find_compunit_symtab_by_address)
+	(objfile::lookup_global_symbol_language): Update.
+	* quick-symbol.h (struct quick_symbol_functions): Convert function
+	pointers to methods.  Add virtual destructor.
+	(quick_symbol_functions_up): New typedef.
+	* psymtab.h (psym_functions, dwarf2_gdb_index_functions)
+	(dwarf2_debug_names_functions): Don't declare.
+	(make_psymbol_functions): Declare.
+	* psymtab.c (psymbol_functions::map_symtabs_matching_filename)
+	(psymbol_functions::find_pc_sect_compunit_symtab)
+	(psymbol_functions::lookup_symbol)
+	(psymbol_functions::lookup_global_symbol_language)
+	(psymbol_functions::find_last_source_symtab)
+	(psymbol_functions::forget_cached_source_info)
+	(psymbol_functions::print_stats, psymbol_functions::dump)
+	(psymbol_functions::expand_symtabs_for_function)
+	(psymbol_functions::expand_all_symtabs)
+	(psymbol_functions::expand_symtabs_with_fullname)
+	(psymbol_functions::map_symbol_filenames)
+	(psymbol_functions::map_matching_symbols)
+	(psymbol_functions::expand_symtabs_matching)
+	(psymbol_functions::has_symbols)
+	(psymbol_functions::find_compunit_symtab_by_address): Rename.
+	(psym_functions): Remove.
+	(make_psymbol_functions): New function.
+	* objfiles.h (struct objfile) <qf>: Change type.
+	* elfread.c (elf_symfile_read): Update.
+	* dwarf2/read.c (struct dwarf2_base_index_functions)
+	(struct dwarf2_gdb_index, struct dwarf2_debug_names_index): New.
+	(make_dwarf_gdb_index, make_dwarf_debug_names): New functions.
+	(dwarf2_base_index_functions::find_last_source_symtab)
+	(dwarf2_base_index_functions::forget_cached_source_info)
+	(dwarf2_base_index_functions::map_symtabs_matching_filename)
+	(dwarf2_gdb_index::lookup_symbol)
+	(dwarf2_base_index_functions::print_stats)
+	(dwarf2_gdb_index::dump)
+	(dwarf2_gdb_index::expand_symtabs_for_function)
+	(dwarf2_base_index_functions::expand_all_symtabs)
+	(dwarf2_base_index_functions::expand_symtabs_with_fullname):
+	Rename.
+	(dwarf2_gdb_index::map_matching_symbols): New method.
+	(dwarf2_gdb_index::expand_symtabs_matching): New method.
+	(dwarf2_base_index_functions::find_pc_sect_compunit_symtab)
+	(dwarf2_base_index_functions::map_symbol_filenames)
+	(dwarf2_base_index_functions::has_symbols): Rename.
+	(dwarf2_gdb_index_functions): Remove.
+	(dwarf2_debug_names_index::lookup_symbol)
+	(dwarf2_debug_names_index::dump)
+	(dwarf2_debug_names_index::expand_symtabs_for_function)
+	(dwarf2_debug_names_index::map_matching_symbols)
+	(dwarf2_debug_names_index::expand_symtabs_matching): Rename.
+	(dwarf2_debug_names_functions): Remove.
+	* dwarf2/public.h (make_dwarf_gdb_index, make_dwarf_debug_names):
+	Declare.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (require_partial_symbols): Check that 'sf' is not
+	null.
+	* xcoffread.c (xcoff_sym_fns): Update.
+	* symfile.h (struct sym_fns) <qf>: Remove.
+	* symfile.c (syms_from_objfile_1, reread_symbols): Update.
+	* symfile-debug.c (objfile::has_partial_symbols)
+	(objfile::find_last_source_symtab)
+	(objfile::forget_cached_source_info)
+	(objfile::map_symtabs_matching_filename, objfile::lookup_symbol)
+	(objfile::print_stats, objfile::dump)
+	(objfile::expand_symtabs_for_function)
+	(objfile::expand_all_symtabs)
+	(objfile::expand_symtabs_with_fullname)
+	(objfile::map_matching_symbols)
+	(objfile::expand_symtabs_matching)
+	(objfile::find_pc_sect_compunit_symtab)
+	(objfile::map_symbol_filenames)
+	(objfile::find_compunit_symtab_by_address)
+	(objfile::lookup_global_symbol_language, debug_sym_fns)
+	(install_symfile_debug_logging): Update.
+	* objfiles.h (struct objfile) <qf>: New member.
+	* mipsread.c (ecoff_sym_fns): Update.
+	* machoread.c (macho_sym_fns): Update.
+	* elfread.c (elf_sym_fns_gdb_index, elf_sym_fns_debug_names):
+	Don't declare.
+	(elf_symfile_read, elf_sym_fns, elf_sym_fns_lazy_psyms): Update.
+	* dbxread.c (aout_sym_fns): Update.
+	* coffread.c (coff_sym_fns): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* symfile.h (symbol_compare_ftype, symbol_filename_ftype)
+	(expand_symtabs_file_matcher_ftype)
+	(expand_symtabs_symbol_matcher_ftype)
+	(expand_symtabs_exp_notify_ftype, struct quick_symbol_functions):
+	Move to quick-symbol.h.
+	* quick-symbol.h: New file.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (iterate_over_symtabs, expand_symtab_containing_pc)
+	(lookup_symbol_via_quick_fns, find_quick_global_symbol_language)
+	(basic_lookup_transparent_type_quick)
+	(find_pc_sect_compunit_symtab, find_symbol_at_address)
+	(find_line_symtab, global_symbol_searcher::expand_symtabs):
+	Update.
+	* symmisc.c (print_objfile_statistics, dump_objfile)
+	(maintenance_expand_symtabs): Update.
+	* symfile.c (symbol_file_add_with_addrs)
+	(expand_symtabs_matching, map_symbol_filenames): Update.
+	* symfile-debug.c (objfile::has_partial_symbols)
+	(objfile::find_last_source_symtab)
+	(objfile::forget_cached_source_info)
+	(objfile::map_symtabs_matching_filename, objfile::lookup_symbol)
+	(objfile::print_stats, objfile::dump)
+	(objfile::expand_symtabs_for_function)
+	(objfile::expand_all_symtabs)
+	(objfile::expand_symtabs_with_fullname)
+	(objfile::map_matching_symbols)
+	(objfile::expand_symtabs_matching)
+	(objfile::find_pc_sect_compunit_symtab)
+	(objfile::map_symbol_filenames)
+	(objfile::find_compunit_symtab_by_address)
+	(objfile::lookup_global_symbol_language): New methods.
+	(debug_sym_quick_functions): Remove.
+	(debug_sym_fns, install_symfile_debug_logging): Update.
+	* source.c (forget_cached_source_info_for_objfile)
+	(select_source_symtab): Update.
+	* objfiles.h (struct objfile): Add methods corresponding to
+	quick_symbol_functions.
+	* objfiles.c (objfile::has_partial_symbols): Move to
+	symfile-debug.c.
+	* linespec.c (iterate_over_all_matching_symtabs): Update.
+	* cp-support.c (add_symbol_overload_list_qualified): Update.
+	* ada-lang.c (add_nonlocal_symbols): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* objfiles.h (struct objfile) <has_partial_symbols>: Return bool.
+	* symfile.h (struct quick_symbol_functions) <has_symbols>: Return
+	bool.
+	* symfile-debug.c (debug_qf_has_symbols): Return bool.
+	* psymtab.c (psym_has_symbols): Return bool.
+	* objfiles.c (objfile::has_partial_symbols): Return bool.
+	* dwarf2/read.c (dw2_has_symbols): Return bool.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* symfile.c (read_symbols): Update.
+	* objfiles.h (struct objfile) <has_partial_symbols>: New method.
+	(objfile_has_partial_symbols): Don't declare.
+	* objfiles.c (objfile::has_partial_symbols): Rename from
+	objfile_has_partial_symbols.
+	(objfile_has_symbols, have_partial_symbols): Update.
+	* elfread.c (elf_symfile_read): Update.
+	* dwarf2/read.c (dwarf2_has_info): Update.
+	* coffread.c (coff_symfile_read): Update.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* coffread.c: Include dwarf2/public.h.
+	* dwarf2/frame.c: Include dwarf2/public.h.
+	* dwarf2/index-write.h: Include dwarf2/public.h, not symfile.h.
+	* dwarf2/public.h: New file.
+	* dwarf2/read.c: Include dwarf2/public.h.
+	* elfread.c: Include dwarf2/public.h.
+	* machoread.c: Include dwarf2/public.h.
+	* symfile.h (dwarf2_has_info, enum dw_index_kind)
+	(dwarf2_initialize_objfile, dwarf2_build_psymtabs)
+	(dwarf2_build_frame_info): Move to dwarf2/public.h.
+	* xcoffread.c: Include dwarf2/public.h.
+
+2021-03-20  Tom Tromey  <tom@tromey.com>
+
+	* symfile.h (enum dwarf2_section_enum)
+	(dwarf2_get_section_info): Move to dwarf2/read.h.
+	* dwarf2/read.h (enum dwarf2_section_enum)
+	(dwarf2_get_section_info): Move from symfile.h.
+
 2021-03-19  Pedro Alves  <pedro@palves.net>
 
 	* thread.c (any_thread_of_inferior): Check if there's a selected

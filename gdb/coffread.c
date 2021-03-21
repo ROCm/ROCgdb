@@ -36,6 +36,7 @@
 #include "target.h"
 #include "block.h"
 #include "dictionary.h"
+#include "dwarf2/public.h"
 
 #include "coff-pe-read.h"
 
@@ -707,7 +708,7 @@ coff_symfile_read (struct objfile *objfile, symfile_add_flags symfile_flags)
   dwarf2_build_frame_info (objfile);
 
   /* Try to add separate debug file if no symbols table found.   */
-  if (!objfile_has_partial_symbols (objfile))
+  if (!objfile->has_partial_symbols ())
     {
       std::string debugfile = find_separate_debug_file_by_buildid (objfile);
 
@@ -2167,7 +2168,6 @@ static const struct sym_fns coff_sym_fns =
 				   for sym_read() */
   coff_symfile_read,		/* sym_read: read a symbol file into
 				   symtab */
-  NULL,				/* sym_read_psymbols */
   coff_symfile_finish,		/* sym_finish: finished with file,
 				   cleanup */
   default_symfile_offsets,	/* sym_offsets: xlate external to
@@ -2179,7 +2179,6 @@ static const struct sym_fns coff_sym_fns =
   default_symfile_relocate,	/* sym_relocate: Relocate a debug
 				   section.  */
   NULL,				/* sym_probe_fns */
-  &psym_functions
 };
 
 void _initialize_coffread ();

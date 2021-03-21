@@ -5204,11 +5204,8 @@ add_nonlocal_symbols (std::vector<struct block_symbol> &result,
     {
       data.objfile = objfile;
 
-      if (objfile->sf != nullptr)
-	objfile->sf->qf->map_matching_symbols (objfile, lookup_name,
-					       domain, global, callback,
-					       (is_wild_match
-						? NULL : compare_names));
+      objfile->map_matching_symbols (lookup_name, domain, global, callback,
+				     is_wild_match ? NULL : compare_names);
 
       for (compunit_symtab *cu : objfile->compunits ())
 	{
@@ -5230,10 +5227,8 @@ add_nonlocal_symbols (std::vector<struct block_symbol> &result,
       for (objfile *objfile : current_program_space->objfiles ())
 	{
 	  data.objfile = objfile;
-	  if (objfile->sf != nullptr)
-	    objfile->sf->qf->map_matching_symbols (objfile, name1,
-						   domain, global, callback,
-						   compare_names);
+	  objfile->map_matching_symbols (name1, domain, global, callback,
+					 compare_names);
 	}
     }      	
 }

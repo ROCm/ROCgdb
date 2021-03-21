@@ -69,8 +69,6 @@
 #include <chrono>
 #include <algorithm>
 
-#include "psymtab.h"
-
 int (*deprecated_ui_load_progress_hook) (const char *section,
 					 unsigned long num);
 void (*deprecated_show_load_progress) (const char *section,
@@ -775,7 +773,7 @@ read_symbols (struct objfile *objfile, symfile_add_flags add_flags)
 
   /* find_separate_debug_file_in_section should be called only if there is
      single binary with no existing separate debug info file.  */
-  if (!objfile_has_partial_symbols (objfile)
+  if (!objfile->has_partial_symbols ()
       && objfile->separate_debug_objfile == NULL
       && objfile->separate_debug_objfile_backlink == NULL)
     {
@@ -793,7 +791,7 @@ read_symbols (struct objfile *objfile, symfile_add_flags add_flags)
 	}
     }
   if ((add_flags & SYMFILE_NO_READ) == 0)
-    require_partial_symbols (objfile, false);
+    objfile->require_partial_symbols (false);
 }
 
 /* Initialize entry point information for this objfile.  */
@@ -904,6 +902,7 @@ syms_from_objfile_1 (struct objfile *objfile,
   const int mainline = add_flags & SYMFILE_MAINLINE;
 
   objfile_set_sym_fns (objfile, find_sym_fns (objfile->obfd));
+  objfile->qf.clear ();
 
   if (objfile->sf == NULL)
     {
@@ -1100,8 +1099,7 @@ symbol_file_add_with_addrs (bfd *abfd, const char *name,
 	printf_filtered (_("Expanding full symbols from %ps...\n"),
 			 styled_string (file_name_style.style (), name));
 
-      if (objfile->sf)
-	objfile->sf->qf->expand_all_symtabs (objfile);
+      objfile->expand_all_symtabs ();
     }
 
   /* Note that we only print a message if we have no symbols and have
@@ -2522,8 +2520,6 @@ reread_symbols (void)
 	    error (_("Can't read symbols from %s: %s."), objfile_name (objfile),
 		   bfd_errmsg (bfd_get_error ()));
 
-	  objfile->reset_psymtabs ();
-
 	  /* NB: after this call to obstack_free, objfiles_changed
 	     will need to be called (see discussion below).  */
 	  obstack_free (&objfile->objfile_obstack, 0);
@@ -2555,6 +2551,7 @@ reread_symbols (void)
 	     based on whether .gdb_index is present, and we need it to
 	     start over.  PR symtab/15885  */
 	  objfile_set_sym_fns (objfile, find_sym_fns (objfile->obfd));
+	  objfile->qf.clear ();
 
 	  build_objfile_section_table (objfile);
 
@@ -3731,13 +3728,10 @@ expand_symtabs_matching
    enum search_domain kind)
 {
   for (objfile *objfile : current_program_space->objfiles ())
-    {
-      if (objfile->sf)
-	objfile->sf->qf->expand_symtabs_matching (objfile, file_matcher,
-						  &lookup_name,
-						  symbol_matcher,
-						  expansion_notify, kind);
-    }
+    objfile->expand_symtabs_matching (file_matcher,
+				      &lookup_name,
+				      symbol_matcher,
+				      expansion_notify, kind);
 }
 
 /* Wrapper around the quick_symbol_functions map_symbol_filenames "method".
@@ -3749,11 +3743,7 @@ map_symbol_filenames (symbol_filename_ftype *fun, void *data,
 		      int need_fullname)
 {
   for (objfile *objfile : current_program_space->objfiles ())
-    {
-      if (objfile->sf)
-	objfile->sf->qf->map_symbol_filenames (objfile, fun, data,
-					       need_fullname);
-    }
+    objfile->map_symbol_filenames (fun, data, need_fullname);
 }
 
 #if GDB_SELF_TEST

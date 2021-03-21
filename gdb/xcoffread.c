@@ -48,6 +48,7 @@
 #include "complaints.h"
 #include "psympriv.h"
 #include "dwarf2/sect-names.h"
+#include "dwarf2/public.h"
 
 #include "gdb-stabs.h"
 
@@ -202,6 +203,7 @@ eb_complaint (int arg1)
 static void xcoff_initial_scan (struct objfile *, symfile_add_flags);
 
 static void scan_xcoff_symtab (minimal_symbol_reader &,
+			       psymtab_storage *partial_symtabs,
 			       struct objfile *);
 
 static const char *xcoff_next_symbol_text (struct objfile *);
@@ -1958,11 +1960,13 @@ static unsigned int first_fun_line_offset;
    (normal).  */
 
 static legacy_psymtab *
-xcoff_start_psymtab (struct objfile *objfile,
+xcoff_start_psymtab (psymtab_storage *partial_symtabs,
+		     struct objfile *objfile,
 		     const char *filename, int first_symnum)
 {
   /* We fill in textlow later.  */
-  legacy_psymtab *result = new legacy_psymtab (filename, objfile, 0);
+  legacy_psymtab *result = new legacy_psymtab (filename, partial_symtabs,
+					       objfile, 0);
 
   result->read_symtab_private =
     XOBNEW (&objfile->objfile_obstack, struct symloc);
@@ -1985,7 +1989,8 @@ xcoff_start_psymtab (struct objfile *objfile,
    are the information for includes and dependencies.  */
 
 static legacy_psymtab *
-xcoff_end_psymtab (struct objfile *objfile, legacy_psymtab *pst,
+xcoff_end_psymtab (struct objfile *objfile, psymtab_storage *partial_symtabs,
+		   legacy_psymtab *pst,
 		   const char **include_list, int num_includes,
 		   int capping_symbol_number,
 		   legacy_psymtab **dependency_list,
@@ -2007,7 +2012,7 @@ xcoff_end_psymtab (struct objfile *objfile, legacy_psymtab *pst,
   if (number_dependencies)
     {
       pst->dependencies
-	= objfile->partial_symtabs->allocate_dependencies (number_dependencies);
+	= partial_symtabs->allocate_dependencies (number_dependencies);
       memcpy (pst->dependencies, dependency_list,
 	      number_dependencies * sizeof (legacy_psymtab *));
     }
@@ -2017,7 +2022,7 @@ xcoff_end_psymtab (struct objfile *objfile, legacy_psymtab *pst,
   for (i = 0; i < num_includes; i++)
     {
       legacy_psymtab *subpst =
-	new legacy_psymtab (include_list[i], objfile);
+	new legacy_psymtab (include_list[i], partial_symtabs, objfile);
 
       subpst->read_symtab_private = XOBNEW (&objfile->objfile_obstack, symloc);
       ((struct symloc *) subpst->read_symtab_private)->first_symnum = 0;
@@ -2026,7 +2031,7 @@ xcoff_end_psymtab (struct objfile *objfile, legacy_psymtab *pst,
       /* We could save slight bits of space by only making one of these,
 	 shared by the entire set of include files.  FIXME-someday.  */
       subpst->dependencies =
-	objfile->partial_symtabs->allocate_dependencies (1);
+	partial_symtabs->allocate_dependencies (1);
       subpst->dependencies[0] = pst;
       subpst->number_of_dependencies = 1;
 
@@ -2042,7 +2047,7 @@ xcoff_end_psymtab (struct objfile *objfile, legacy_psymtab *pst,
       /* Empty psymtabs happen as a result of header files which don't have
 	 any symbols in them.  There can be a lot of them.  */
 
-      objfile->partial_symtabs->discard_psymtab (pst);
+      partial_symtabs->discard_psymtab (pst);
 
       /* Indicate that psymtab was thrown away.  */
       pst = NULL;
@@ -2111,6 +2116,7 @@ function_outside_compilation_unit_complaint (const char *arg1)
 
 static void
 scan_xcoff_symtab (minimal_symbol_reader &reader,
+		   psymtab_storage *partial_symtabs,
 		   struct objfile *objfile)
 {
   CORE_ADDR toc_offset = 0;	/* toc offset value in data section.  */
@@ -2232,7 +2238,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 			       each program csect, because their text
 			       sections need not be adjacent.  */
 			    xcoff_end_psymtab
-			      (objfile, pst, psymtab_include_list,
+			      (objfile, partial_symtabs, pst, psymtab_include_list,
 			       includes_used, symnum_before, dependency_list,
 			       dependencies_used, textlow_not_set);
 			    includes_used = 0;
@@ -2240,7 +2246,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 			    /* Give all psymtabs for this source file the same
 			       name.  */
 			    pst = xcoff_start_psymtab
-			      (objfile,
+			      (partial_symtabs, objfile,
 			       filestring,
 			       symnum_before);
 			  }
@@ -2401,7 +2407,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 
 	    if (pst)
 	      {
-		xcoff_end_psymtab (objfile, pst, psymtab_include_list,
+		xcoff_end_psymtab (objfile, partial_symtabs,
+				   pst, psymtab_include_list,
 				   includes_used, symnum_before,
 				   dependency_list, dependencies_used,
 				   textlow_not_set);
@@ -2422,7 +2429,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 	    else
 	      filestring = namestring;
 
-	    pst = xcoff_start_psymtab (objfile,
+	    pst = xcoff_start_psymtab (partial_symtabs, objfile,
 				       filestring,
 				       symnum_before);
 	    last_csect_name = NULL;
@@ -2581,7 +2588,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  SECT_OFF_DATA (objfile),
 				  psymbol_placement::STATIC,
 				  symbol.n_value,
-				  psymtab_language, objfile);
+				  psymtab_language,
+				  partial_symtabs, objfile);
 		continue;
 
 	      case 'G':
@@ -2593,7 +2601,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  SECT_OFF_DATA (objfile),
 				  psymbol_placement::GLOBAL,
 				  symbol.n_value,
-				  psymtab_language, objfile);
+				  psymtab_language,
+				  partial_symtabs, objfile);
 		continue;
 
 	      case 'T':
@@ -2611,7 +2620,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 							p - namestring),
 				      true, STRUCT_DOMAIN, LOC_TYPEDEF, -1,
 				      psymbol_placement::STATIC,
-				      0, psymtab_language, objfile);
+				      0, psymtab_language,
+				      partial_symtabs, objfile);
 		    if (p[2] == 't')
 		      {
 			/* Also a typedef with the same name.  */
@@ -2619,7 +2629,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 							    p - namestring),
 					  true, VAR_DOMAIN, LOC_TYPEDEF, -1,
 					  psymbol_placement::STATIC,
-					  0, psymtab_language, objfile);
+					  0, psymtab_language,
+					  partial_symtabs, objfile);
 			p += 1;
 		      }
 		  }
@@ -2632,7 +2643,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 							p - namestring),
 				      true, VAR_DOMAIN, LOC_TYPEDEF, -1,
 				      psymbol_placement::STATIC,
-				      0, psymtab_language, objfile);
+				      0, psymtab_language,
+				      partial_symtabs, objfile);
 		  }
 	      check_enum:
 		/* If this is an enumerated type, we need to
@@ -2694,7 +2706,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 			pst->add_psymbol (gdb::string_view (p, q - p), true,
 					  VAR_DOMAIN, LOC_CONST, -1,
 					  psymbol_placement::STATIC,
-					  0, psymtab_language, objfile);
+					  0, psymtab_language,
+					  partial_symtabs, objfile);
 			/* Point past the name.  */
 			p = q;
 			/* Skip over the value.  */
@@ -2713,7 +2726,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 						    p - namestring),
 				  true, VAR_DOMAIN, LOC_CONST, -1,
 				  psymbol_placement::STATIC,
-				  0, psymtab_language, objfile);
+				  0, psymtab_language,
+				  partial_symtabs, objfile);
 		continue;
 
 	      case 'f':
@@ -2733,7 +2747,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  SECT_OFF_TEXT (objfile),
 				  psymbol_placement::STATIC,
 				  symbol.n_value,
-				  psymtab_language, objfile);
+				  psymtab_language,
+				  partial_symtabs, objfile);
 		continue;
 
 		/* Global functions were ignored here, but now they
@@ -2764,7 +2779,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  SECT_OFF_TEXT (objfile),
 				  psymbol_placement::GLOBAL,
 				  symbol.n_value,
-				  psymtab_language, objfile);
+				  psymtab_language,
+				  partial_symtabs, objfile);
 		continue;
 
 		/* Two things show up here (hopefully); static symbols of
@@ -2818,7 +2834,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 
   if (pst)
     {
-      xcoff_end_psymtab (objfile, pst, psymtab_include_list, includes_used,
+      xcoff_end_psymtab (objfile, partial_symtabs,
+			 pst, psymtab_include_list, includes_used,
 			 ssymnum, dependency_list,
 			 dependencies_used, textlow_not_set);
     }
@@ -2929,7 +2946,10 @@ xcoff_initial_scan (struct objfile *objfile, symfile_add_flags symfile_flags)
   /* Now that the symbol table data of the executable file are all in core,
      process them and define symbols accordingly.  */
 
-  scan_xcoff_symtab (reader, objfile);
+  psymbol_functions *psf = new psymbol_functions ();
+  psymtab_storage *partial_symtabs = psf->get_partial_symtabs ().get ();
+  objfile->qf.emplace_front (psf);
+  scan_xcoff_symtab (reader, partial_symtabs, objfile);
 
   /* Install any minimal symbols that have been collected as the current
      minimal symbols for this objfile.  */
@@ -2998,14 +3018,12 @@ static const struct sym_fns xcoff_sym_fns =
   xcoff_new_init,		/* init anything gbl to entire symtab */
   xcoff_symfile_init,		/* read initial info, setup for sym_read() */
   xcoff_initial_scan,		/* read a symbol file into symtab */
-  NULL,				/* sym_read_psymbols */
   xcoff_symfile_finish,		/* finished with file, cleanup */
   xcoff_symfile_offsets,	/* xlate offsets ext->int form */
   default_symfile_segments,	/* Get segment information from a file.  */
   aix_process_linenos,
   default_symfile_relocate,	/* Relocate a debug section.  */
   NULL,				/* sym_probe_fns */
-  &psym_functions
 };
 
 /* Same as xcoff_get_n_import_files, but for core files.  */

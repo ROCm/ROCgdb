@@ -257,6 +257,9 @@ public:
      partial symbols have been read the first time.  */
   std::shared_ptr<psymtab_storage> partial_symtabs;
 
+  /* The address map that is used by the DWARF index code.  */
+  struct addrmap *index_addrmap = nullptr;
+
 private:
 
   /* The total number of per_cu and signatured_type objects that have
@@ -403,9 +406,11 @@ dwarf2_per_objfile *get_dwarf2_per_objfile (struct objfile *objfile);
 /* A partial symtab specialized for DWARF.  */
 struct dwarf2_psymtab : public partial_symtab
 {
-  dwarf2_psymtab (const char *filename, struct objfile *objfile,
+  dwarf2_psymtab (const char *filename,
+		  psymtab_storage *partial_symtabs,
+		  struct objfile *objfile,
 		  dwarf2_per_cu_data *per_cu)
-    : partial_symtab (filename, objfile, 0),
+    : partial_symtab (filename, partial_symtabs, objfile, 0),
       per_cu_data (per_cu)
   {
   }
@@ -687,5 +692,16 @@ struct type *dwarf2_fetch_die_type_sect_off
 
 /* When non-zero, dump line number entries as they are read in.  */
 extern unsigned int dwarf_line_debug;
+
+/* Dwarf2 sections that can be accessed by dwarf2_get_section_info.  */
+enum dwarf2_section_enum {
+  DWARF2_DEBUG_FRAME,
+  DWARF2_EH_FRAME
+};
+
+extern void dwarf2_get_section_info (struct objfile *,
+                                     enum dwarf2_section_enum,
+				     asection **, const gdb_byte **,
+				     bfd_size_type *);
 
 #endif /* DWARF2READ_H */

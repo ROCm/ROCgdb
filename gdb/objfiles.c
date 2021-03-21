@@ -323,7 +323,6 @@ build_objfile_section_table (struct objfile *objfile)
 objfile::objfile (bfd *abfd, const char *name, objfile_flags flags_)
   : flags (flags_),
     pspace (current_program_space),
-    partial_symtabs (new psymtab_storage ()),
     obfd (abfd)
 {
   const char *expanded_name;
@@ -703,9 +702,9 @@ objfile_relocate1 (struct objfile *objfile,
       }
   }
 
-  /* This stores relocated addresses and so must be cleared.  This
-     will cause it to be recreated on demand.  */
-  objfile->psymbol_map.clear ();
+  /* Notify the quick symbol object.  */
+  for (const auto &iter : objfile->qf)
+    iter->relocated ();
 
   /* Relocate isolated symbols.  */
   {
@@ -810,25 +809,6 @@ objfile_rebase (struct objfile *objfile, CORE_ADDR slide)
     breakpoint_re_set ();
 }
 
-/* Return non-zero if OBJFILE has partial symbols.  */
-
-int
-objfile_has_partial_symbols (struct objfile *objfile)
-{
-  if (!objfile->sf)
-    return 0;
-
-  /* If we have not read psymbols, but we have a function capable of reading
-     them, then that is an indication that they are in fact available.  Without
-     this function the symbols may have been already read in but they also may
-     not be present in this objfile.  */
-  if ((objfile->flags & OBJF_PSYMTABS_READ) == 0
-      && objfile->sf->sym_read_psymbols != NULL)
-    return 1;
-
-  return objfile->sf->qf->has_symbols (objfile);
-}
-
 /* Return non-zero if OBJFILE has full symbols.  */
 
 int
@@ -844,7 +824,7 @@ int
 objfile_has_symbols (struct objfile *objfile)
 {
   for (::objfile *o : objfile->separate_debug_objfiles ())
-    if (objfile_has_partial_symbols (o) || objfile_has_full_symbols (o))
+    if (o->has_partial_symbols () || objfile_has_full_symbols (o))
       return 1;
   return 0;
 }
@@ -859,7 +839,7 @@ have_partial_symbols (void)
 {
   for (objfile *ofp : current_program_space->objfiles ())
     {
-      if (objfile_has_partial_symbols (ofp))
+      if (ofp->has_partial_symbols ())
 	return 1;
     }
   return 0;

@@ -37,6 +37,8 @@
 #include "gdbarch.h"
 #include "gdbsupport/refcounted-object.h"
 #include "jit.h"
+#include "quick-symbol.h"
+#include <forward_list>
 
 struct htab;
 struct objfile_data;
@@ -210,7 +212,6 @@ struct objstats
 #define OBJSTAT(objfile, expr) (objfile -> stats.expr)
 #define OBJSTATS struct objstats stats
 extern void print_objfile_statistics (void);
-extern void print_symbol_bcache_statistics (void);
 
 /* Number of entries in the minimal symbol hash table.  */
 #define MINIMAL_SYMBOL_HASH_SIZE 2039
@@ -415,8 +416,8 @@ private:
 
    GDB typically reads symbols twice -- first an initial scan which just
    reads "partial symbols"; these are partial information for the
-   static/global symbols in a symbol file.  When later looking up symbols,
-   objfile->sf->qf->lookup_symbol is used to check if we only have a partial
+   static/global symbols in a symbol file.  When later looking up
+   symbols, lookup_symbol is used to check if we only have a partial
    symbol and if so, read and expand the full compunit.  */
 
 struct objfile
@@ -445,22 +446,6 @@ public:
   void unlink ();
 
   DISABLE_COPY_AND_ASSIGN (objfile);
-
-  /* A range adapter that makes it possible to iterate over all
-     psymtabs in one objfile.  */
-
-  psymtab_storage::partial_symtab_range psymtabs ()
-  {
-    return partial_symtabs->range ();
-  }
-
-  /* Reset the storage for the partial symbol tables.  */
-
-  void reset_psymtabs ()
-  {
-    psymbol_map.clear ();
-    partial_symtabs.reset (new psymtab_storage ());
-  }
 
   typedef next_adapter<struct compunit_symtab> compunits_range;
 
@@ -548,6 +533,77 @@ public:
     return per_bfd->gdbarch;
   }
 
+  /* Return true if OBJFILE has partial symbols.  */
+
+  bool has_partial_symbols ();
+
+  /* See quick_symbol_functions.  */
+  struct symtab *find_last_source_symtab ();
+
+  /* See quick_symbol_functions.  */
+  void forget_cached_source_info ();
+
+  /* See quick_symbol_functions.  */
+  bool map_symtabs_matching_filename
+    (const char *name, const char *real_path,
+     gdb::function_view<bool (symtab *)> callback);
+
+  /* See quick_symbol_functions.  */
+  struct compunit_symtab *lookup_symbol (block_enum kind, const char *name,
+					 domain_enum domain);
+
+  /* See quick_symbol_functions.  */
+  void print_stats (bool print_bcache);
+
+  /* See quick_symbol_functions.  */
+  void dump ();
+
+  /* See quick_symbol_functions.  */
+  void expand_symtabs_for_function (const char *func_name);
+
+  /* See quick_symbol_functions.  */
+  void expand_all_symtabs ();
+
+  /* See quick_symbol_functions.  */
+  void expand_symtabs_with_fullname (const char *fullname);
+
+  /* See quick_symbol_functions.  */
+  void map_matching_symbols
+    (const lookup_name_info &name, domain_enum domain,
+     int global,
+     gdb::function_view<symbol_found_callback_ftype> callback,
+     symbol_compare_ftype *ordered_compare);
+
+  /* See quick_symbol_functions.  */
+  void expand_symtabs_matching
+    (gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+     const lookup_name_info *lookup_name,
+     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
+     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     enum search_domain kind);
+
+  /* See quick_symbol_functions.  */
+  struct compunit_symtab *find_pc_sect_compunit_symtab
+    (struct bound_minimal_symbol msymbol,
+     CORE_ADDR pc,
+     struct obj_section *section,
+     int warn_if_readin);
+
+  /* See quick_symbol_functions.  */
+  void map_symbol_filenames (symbol_filename_ftype *fun, void *data,
+			     int need_fullname);
+
+  /* See quick_symbol_functions.  */
+  struct compunit_symtab *find_compunit_symtab_by_address (CORE_ADDR address);
+
+  /* See quick_symbol_functions.  */
+  enum language lookup_global_symbol_language (const char *name,
+					       domain_enum domain,
+					       bool *symbol_found_p);
+
+  /* See quick_symbol_functions.  */
+  void require_partial_symbols (bool verbose);
+
 
   /* The object file's original name as specified by the user,
      made absolute, and tilde-expanded.  However, it is not canonicalized
@@ -572,10 +628,6 @@ public:
 
   struct compunit_symtab *compunit_symtabs = nullptr;
 
-  /* The partial symbol tables.  */
-
-  std::shared_ptr<psymtab_storage> partial_symtabs;
-
   /* The object file's BFD.  Can be null if the objfile contains only
      minimal symbols, e.g. the run time common symbols for SunOS4.  */
 
@@ -596,11 +648,6 @@ public:
 
   struct obstack objfile_obstack {};
 
-  /* Map symbol addresses to the partial symtab that defines the
-     object at that address.  */
-
-  std::vector<std::pair<CORE_ADDR, partial_symtab *>> psymbol_map;
-
   /* Structure which keeps track of functions that manipulate objfile's
      of the same type as this objfile.  I.e. the function to read partial
      symbols for example.  Note that this structure is in statically
@@ -608,6 +655,10 @@ public:
      object module reader of this type.  */
 
   const struct sym_fns *sf = nullptr;
+
+  /* The "quick" (aka partial) symbol functions for this symbol
+     reader.  */
+  std::forward_list<quick_symbol_functions_up> qf;
 
   /* Per objfile data-pointers required by other GDB modules.  */
 
@@ -737,8 +788,6 @@ extern void free_objfile_separate_debug (struct objfile *);
 
 extern void objfile_relocate (struct objfile *, const section_offsets &);
 extern void objfile_rebase (struct objfile *, CORE_ADDR);
-
-extern int objfile_has_partial_symbols (struct objfile *objfile);
 
 extern int objfile_has_full_symbols (struct objfile *objfile);
 
