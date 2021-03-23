@@ -1,3 +1,28 @@
+2021-03-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* dwarf2/read.c (process_psymtab_comp_unit): Replace abort with an
+	error.
+	(process_full_comp_unit): Validate the top-level tag before
+	processing the first DIE.
+	(read_func_scope): Ensure we have a valid builder.
+
+2021-03-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* objc-lang.c (objc_demangle): Renamed to
+	objc_language::demangle_symbol, and moved later in the file.
+	(objc_language::sniff_from_mangled_name): Call demangle_symbol
+	member function.
+	(objc_language::demangle_symbol): Defined outside of class
+	declaration.  The definition is the old objc_demangle with NULL
+	changed to nullptr, and if conditions relating to nullptr pointers
+	or null character checks made explicit.
+	* objc-lang.h (objc_demangle): Delete declaration.
+
+2021-03-22  Martin Liska  <mliska@suse.cz>
+
+	* arm-tdep.c (show_disassembly_style_sfunc): Replace usage of CONST_STRNEQ with startswith.
+	(_initialize_arm_tdep): Likewise.
+
 2021-03-20  Tom Tromey  <tom@tromey.com>
 
 	* xcoffread.c (xcoff_initial_scan): Create partial symtabs.
