@@ -1,3 +1,34 @@
+2021-03-25  Nick Alcock  <nick.alcock@oracle.com>
+
+	* configure.ac: Check for dlsym, not dlopen.
+	* configure: Regenerate.
+
+2021-03-25  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/libctf-writable/symtypetab-nonlinker-writeout.c: Don't
+	leak buf.
+
+2021-03-25  Nick Alcock  <nick.alcock@oracle.com>
+
+	PR libctf/27628
+	* ctf-lookup.c (isqualifier): Don't dereference out-of-bounds
+	qhash values.
+
+2021-03-25  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-open-bfd.c (ctf_bfdopen_ctfsect): Initialize debugging.
+
+2021-03-25  Nick Alcock  <nick.alcock@oracle.com>
+
+	PR libctf/27628
+	* ctf-serialize.c (ctf_emit_type_sect): Allow for a NULL vlen in
+	CTF_K_FUNCTION types.
+
+2021-03-25  Nick Alcock  <nick.alcock@oracle.com>
+
+	* ctf-dump.c (ctf_dump_format_type): Don't emit size or alignment
+	on error.
+
 2021-03-21  Alan Modra  <amodra@gmail.com>
 
 	* ctf-impl.h: Include string.h.

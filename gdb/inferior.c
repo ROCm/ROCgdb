@@ -507,7 +507,7 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
 
       uiout->field_signed ("number", inf->num);
 
-      /* Because target_pid_to_str uses current_top_target,
+      /* Because target_pid_to_str uses the current inferior,
 	 switch the inferior.  */
       switch_to_inferior_no_thread (inf);
 
@@ -771,7 +771,7 @@ switch_to_inferior_and_push_target (inferior *new_inf,
   /* Reuse the target for new inferior.  */
   if (!no_connection && proc_target != NULL)
     {
-      push_target (proc_target);
+      new_inf->push_target (proc_target);
       if (proc_target->connection_string () != NULL)
 	printf_filtered (_("Added inferior %d on connection %d (%s %s)\n"),
 			 new_inf->num,

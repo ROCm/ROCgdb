@@ -1769,9 +1769,9 @@ procfs_target::attach (const char *args, int from_tty)
 
   /* Push the target if needed, ensure it gets un-pushed it if attach fails.  */
   target_unpush_up unpusher;
-  if (!target_is_pushed (this))
+  if (!inf->target_is_pushed (this))
     {
-      push_target (this);
+      current_inferior ()->push_target (this);
       unpusher.reset (this);
     }
 
@@ -2862,8 +2862,8 @@ procfs_target::create_inferior (const char *exec_file,
       shell_file = tryname;
     }
 
-  if (!target_is_pushed (this))
-    push_target (this);
+  if (!inf->target_is_pushed (this))
+    current_inferior ()->push_target (this);
 
   pid = fork_inferior (exec_file, allargs, env, procfs_set_exec_trap,
 		       NULL, procfs_pre_trace, shell_file, NULL);
@@ -3643,7 +3643,8 @@ procfs_target::make_corefile_notes (bfd *obfd, int *note_size)
 			     &thread_args);
 
   gdb::optional<gdb::byte_vector> auxv =
-    target_read_alloc (current_top_target (), TARGET_OBJECT_AUXV, NULL);
+    target_read_alloc (current_inferior ()->top_target (),
+		       TARGET_OBJECT_AUXV, NULL);
   if (auxv && !auxv->empty ())
     note_data.reset (elfcore_write_note (obfd, note_data.release (), note_size,
 					 "CORE", NT_AUXV, auxv->data (),

@@ -700,6 +700,7 @@ ALL_64_TARGET_OBS = \
 	amd64-windows-tdep.o \
 	arch/aarch64.o \
 	arch/aarch64-insn.o \
+	arch/aarch64-mte-linux.o \
 	arch/amd64.o \
 	ia64-linux-tdep.o \
 	ia64-tdep.o \
@@ -1477,6 +1478,7 @@ HFILES_NO_SRCDIR = \
 	arch/aarch32.h \
 	arch/aarch64.h \
 	arch/aarch64-insn.h \
+	arch/aarch64-mte-linux.h \
 	arch/arc.h \
 	arch/arm.h \
 	arch/i386.h \
@@ -1512,6 +1514,7 @@ HFILES_NO_SRCDIR = \
 	mi/mi-parse.h \
 	nat/aarch64-linux.h \
 	nat/aarch64-linux-hw-point.h \
+	nat/aarch64-mte-linux-ptrace.h \
 	nat/aarch64-sve-linux-ptrace.h \
 	nat/amd64-linux-siginfo.h \
 	nat/gdb_ptrace.h \

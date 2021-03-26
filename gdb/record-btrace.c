@@ -337,7 +337,7 @@ record_btrace_push_target (void)
 
   record_btrace_auto_enable ();
 
-  push_target (&record_btrace_ops);
+  current_inferior ()->push_target (&record_btrace_ops);
 
   record_btrace_async_inferior_event_handler
     = create_async_event_handler (record_btrace_handle_async_inferior_event,
@@ -428,7 +428,7 @@ record_btrace_target::disconnect (const char *args,
   struct target_ops *beneath = this->beneath ();
 
   /* Do not stop recording, just clean up GDB side.  */
-  unpush_target (this);
+  current_inferior ()->unpush_target (this);
 
   /* Forward disconnect.  */
   beneath->disconnect (args, from_tty);

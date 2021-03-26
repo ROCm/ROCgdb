@@ -1,3 +1,72 @@
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* Makefile.in (SFILES): Add /../gdb/nat/aarch64-mte-linux-ptrace.c.
+	* configure.srv (aarch64*-*-linux*): Add arch/aarch64-mte-linux.o and
+	nat/aarch64-mte-linux-ptrace.o.
+	* linux-aarch64-low.cc: Include nat/aarch64-mte-linux-ptrace.h.
+	(class aarch64_target) <supports_memory_tagging>
+	<fetch_memtags, store_memtags>: New method overrides.
+	(aarch64_target::supports_memory_tagging)
+	(aarch64_target::fetch_memtags)
+	(aarch64_target::store_memtags): New methods.
+
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* linux-aarch64-low.cc (aarch64_fill_mteregset): New function.
+	(aarch64_store_mteregset): New function.
+	(aarch64_regsets): Add MTE register set entry.
+	(aarch64_sve_regsets): Add MTE register set entry.
+
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* linux-aarch64-ipa.cc (get_ipa_tdesc): Update call to
+	aarch64_linux_read_description.
+	(initialize_low_tracepoint): Likewise.
+	* linux-aarch64-low.cc (aarch64_target::low_arch_setup): Take MTE flag
+	into account.
+	* linux-aarch64-tdesc.cc (tdesc_aarch64_list): Add one more dimension
+	for MTE.
+	(aarch64_linux_read_description): Add mte_p parameter and update to
+	use it.
+	* linux-aarch64-tdesc.h (aarch64_linux_read_description): Add mte_p
+	parameter.
+
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* linux-aarch64-low.cc: Include arch/aarch64-mte-linux.h.
+
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* server.cc (test_memory_tagging_functions): New function.
+	(captured_main): Register test_memory_tagging_functions.
+
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* remote-utils.cc (decode_m_packet_params): Renamed from ...
+	(decode_m_packet): ... this, which now calls decode_m_packet_params.
+	Make char * param/return const char *.
+	(decode_M_packet): Use decode_m_packet_params and make char * param
+	const char *.
+	* remote-utils.h (decode_m_packet_params): New prototype.
+	(decode_m_packet): Constify char pointers.
+	(decode_M_packet): Likewise.
+	* server.cc (create_fetch_memtags_reply)
+	(parse_store_memtags_request): New
+	functions.
+	(handle_general_set): Handle the QMemTags packet.
+	(parse_fetch_memtags_request): New function.
+	(handle_query): Handle the qMemTags packet and advertise memory
+	tagging support.
+	(captured_main): Initialize memory tagging flag.
+	* server.h (struct client_state): Initialize memory tagging flag.
+	* target.cc (process_stratum_target::supports_memory_tagging)
+	(process_stratum_target::fetch_memtags)
+	(process_stratum_target::store_memtags): New methods.
+	* target.h: Include gdbsupport/byte-vector.h.
+	(class process_stratum_target) <supports_memory_tagging>
+	<fetch_memtags, store_memtags>: New class virtual methods.
+	(target_supports_memory_tagging): Define.
+
 2021-03-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 
 	* inferiors.h (struct process_info) <all_dlls, dlls_changed>: New

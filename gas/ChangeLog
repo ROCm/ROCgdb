@@ -1,3 +1,141 @@
+2021-03-25  Abid Qadeer  <abidh@codesourcery.com>
+
+	* testsuite/gas/nios2/brn.d: New.
+	* testsuite/gas/nios2/brn.d: New.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (match_template): Use t instead of i.tm.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	* testsuite/gas/i386/avx512f-nondef.s: Add vgather cases.
+	* testsuite/gas/i386/x86-64-vgather-check.s: Add cases with
+	colliding registers in the upper half of the space.
+	* testsuite/gas/i386/avx512f-nondef.d,
+	testsuite/gas/i386/vgather-check.d,
+	testsuite/gas/i386/x86-64-vgather-check.d,
+	testsuite/gas/i386/x86-64-vgather-check-error.l,
+	testsuite/gas/i386/x86-64-vgather-check-warn.e: Adjust
+	expecations.
+	* testsuite/gas/i386/vgather-check-none.d,
+	testsuite/gas/i386/vgather-check-warn.d,
+	testsuite/gas/i386/x86-64-vgather-check-none.d,
+	testsuite/gas/i386/x86-64-vgather-check-warn.d: Refer to "base"
+	tests for expected dump output.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	* testsuite/gas/i386/avx512f-nondef.s: Add case for EVEX.z
+	without mask register.
+	* testsuite/gas/i386/avx512f-nondef.d: Adjust expectations.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (md_assemble): Widen set of insns to avoid
+	swapping operands for.
+	* testsuite/gas/i386/invlpgb.s: Fix, re-arrange, and add Intel
+	syntax tests.
+	* testsuite/gas/i386/snp.s: Re-arrange and add multi-operand as
+	well as Intel syntax tests.
+	* testsuite/gas/i386/invlpgb.d, testsuite/gas/i386/snp.d: Adjust
+	expectations.
+	* testsuite/gas/i386/invlpgb64.d, testsuite/gas/i386/snp64.d: 
+	Likewise. Drop passing --def-sym to as.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	PR/gas 27419
+	* config/tc-i386.c (process_suffix): Restrict (%rip) -> (%eip)
+	conversion to x32 mode.
+	* testsuite/gas/i386/ilp32/enqcmd.s,
+	testsuite/gas/i386/ilp32/enqcmd.d,
+	testsuite/gas/i386/ilp32/movdir.s,
+	testsuite/gas/i386/ilp32/movdir.d: New.
+	* testsuite/gas/i386/x86-64-enqcmd.s,
+	testsuite/gas/i386/x86-64-movdir.s: Drop mismatched operand
+	cases.
+	* testsuite/gas/i386/x86-64-enqcmd-inval.s: Add (%rip) and
+	(%eip) cases.
+	* testsuite/gas/i386/x86-64-movdir64b-reg.s Add (%eip) case.
+	* testsuite/gas/i386/x86-64-enqcmd.d,
+	testsuite/gas/i386/x86-64-enqcmd-intel.d,
+	testsuite/gas/i386/x86-64-enqcmd-inval.l,
+	testsuite/gas/i386/x86-64-movdir.d,
+	testsuite/gas/i386/x86-64-movdir-intel.d,
+	testsuite/gas/i386/x86-64-movdir64b-reg.l: Adjust expectations.
+
+2021-03-25  Alan Modra  <amodra@gmail.com>
+
+	PR 27647
+	* testsuite/gas/ppc/a2.d: Update expected output.
+	* testsuite/gas/ppc/power8.d: Likewise.
+
+2021-03-24  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (struct _i386_insn): New field
+	opcode_length.
+	(md_begin): Drop assertion.
+	(install_template): New.
+	(build_vex_prefix): Call install_template.
+	(match_template): Likewise.
+	(process_operands): Use new opcode_length field.
+	(output_jump): Likewise.
+	(output_insn): Likewise. Adjust psedo prefix check.
+
+2021-03-24  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (md_begin): Add assertion.
+	(build_vex_prefix): Drop implied prefix calculation.
+	(build_evex_prefix): Likewise.
+	(optimize_encoding): Adjust opcode checks.
+	(load_insn_p): Also check opcodeprefix.
+	(match_template): Also check opcodespace.
+	(process_suffix): Likewise.
+	(process_operands): Likewise.
+	(output_insn): Likewise. Also check isprefix when discaring
+	standalone LOCK.
+	* config/tc-i386-intel.c (i386_intel_operand): Also check
+	opcodespace.
+
+2021-03-24  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (parse_insn): Recognize pseudo prefixes by
+	base_opcode and extension_opcode.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (pte): Re-order opc_pfx[] entries.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (output_i386_opcode): Invoke
+	process_i386_cpu_flag() slightly later.
+	(process_i386_opcodes): Likewise.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (pte): Print prefix and encoding space.
+	(build_vex_prefix): Check opcodespace instead of opcodeprefix.
+	(build_evex_prefix): Likewise.
+	(load_insn_p): Likewise.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (load_insn_p): Use PREFIX_NONE. Fold two
+	if()-s.
+	(match_template, output_insn): Use PREFIX_NONE.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (i386_index_check): New local variable t.
+	Correct MPX insn check.
+	* config/tc-i386-intel.c (i386_intel_simplify_register): Correct
+	MPX insn check.
+	* testsuite/gas/i386/x86-64-mpx.s: Add RIP-relative cases. Test
+	index scaling by other than 1.
+	* testsuite/gas/i386/x86-64-mpx.d: Adjust expectations.
+
 2021-03-22  Martin Liska  <mliska@suse.cz>
 
 	* config/tc-i386.c (md_parse_option): Replace usage of CONST_STRNEQ with startswith.

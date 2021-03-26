@@ -79,6 +79,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include "async-event.h"
+#include "gdbsupport/selftest.h"
 
 /* The remote target.  */
 
@@ -689,6 +690,14 @@ public:
   int insert_exec_catchpoint (int) override;
   int remove_exec_catchpoint (int) override;
   enum exec_direction_kind execution_direction () override;
+
+  bool supports_memory_tagging () override;
+
+  bool fetch_memtags (CORE_ADDR address, size_t len,
+		      gdb::byte_vector &tags, int type) override;
+
+  bool store_memtags (CORE_ADDR address, size_t len,
+		      const gdb::byte_vector &tags, int type) override;
 
 public: /* Remote specific methods.  */
 
@@ -2167,6 +2176,10 @@ enum {
   /* Support TARGET_WAITKIND_NO_RESUMED.  */
   PACKET_no_resumed,
 
+  /* Support for memory tagging, allocation tag fetch/store
+     packets and the tag violation stop replies.  */
+  PACKET_memory_tagging_feature,
+
   PACKET_MAX
 };
 
@@ -2306,6 +2319,14 @@ static int
 remote_exec_event_p (struct remote_state *rs)
 {
   return packet_support (PACKET_exec_event_feature) == PACKET_ENABLE;
+}
+
+/* Returns true if memory tagging is supported, false otherwise.  */
+
+static bool
+remote_memory_tagging_p ()
+{
+  return packet_support (PACKET_memory_tagging_feature) == PACKET_ENABLE;
 }
 
 /* Insert fork catchpoint target routine.  If fork events are enabled
@@ -2474,7 +2495,7 @@ remote_target::remote_add_inferior (bool fake_pid_p, int pid, int attached,
 	  inf = add_inferior_with_spaces ();
 	}
       switch_to_inferior_no_thread (inf);
-      push_target (this);
+      inf->push_target (this);
       inferior_appeared (inf, pid);
     }
 
@@ -5058,9 +5079,8 @@ remote_target::remote_check_symbols ()
 
 	  /* If this is a function address, return the start of code
 	     instead of any data function descriptor.  */
-	  sym_addr = gdbarch_convert_from_func_ptr_addr (target_gdbarch (),
-							 sym_addr,
-							 current_top_target ());
+	  sym_addr = gdbarch_convert_from_func_ptr_addr
+	    (target_gdbarch (), sym_addr, current_inferior ()->top_target ());
 
 	  xsnprintf (msg.data (), get_remote_packet_size (), "qSymbol:%s:%s",
 		     phex_nz (sym_addr, addr_size), &reply[8]);
@@ -5307,6 +5327,8 @@ static const struct protocol_feature remote_protocol_features[] = {
   { "vContSupported", PACKET_DISABLE, remote_supported_packet, PACKET_vContSupported },
   { "QThreadEvents", PACKET_DISABLE, remote_supported_packet, PACKET_QThreadEvents },
   { "no-resumed", PACKET_DISABLE, remote_supported_packet, PACKET_no_resumed },
+  { "memory-tagging", PACKET_DISABLE, remote_supported_packet,
+    PACKET_memory_tagging_feature },
 };
 
 static char *remote_support_xml;
@@ -5400,6 +5422,10 @@ remote_target::remote_query_supported ()
 
       if (packet_set_cmd_state (PACKET_no_resumed) != AUTO_BOOLEAN_FALSE)
 	remote_query_supported_append (&q, "no-resumed+");
+
+      if (packet_set_cmd_state (PACKET_memory_tagging_feature)
+	  != AUTO_BOOLEAN_FALSE)
+	remote_query_supported_append (&q, "memory-tagging+");
 
       /* Keep this one last to work around a gdbserver <= 7.10 bug in
 	 the qSupported:xmlRegisters=i386 handling.  */
@@ -5673,7 +5699,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
     }
 
   /* Switch to using the remote target now.  */
-  push_target (std::move (target_holder));
+  current_inferior ()->push_target (std::move (target_holder));
 
   /* Register extra event sources in the event loop.  */
   rs->remote_async_inferior_event_token
@@ -7164,14 +7190,16 @@ remote_target::check_pending_events_prevent_wildcard_vcont
 	  || event->ws.kind == TARGET_WAITKIND_VFORKED)
 	*may_global_wildcard = 0;
 
-      struct inferior *inf = find_inferior_ptid (this, event->ptid);
-
       /* This may be the first time we heard about this process.
 	 Regardless, we must not do a global wildcard resume, otherwise
 	 we'd resume this process too.  */
       *may_global_wildcard = 0;
-      if (inf != NULL)
-	get_remote_inferior (inf)->may_wildcard_vcont = false;
+      if (event->ptid != null_ptid)
+	{
+	  inferior *inf = find_inferior_ptid (this, event->ptid);
+	  if (inf != NULL)
+	    get_remote_inferior (inf)->may_wildcard_vcont = false;
+	}
     }
 }
 
@@ -11436,7 +11464,8 @@ remote_target::memory_map ()
 {
   std::vector<mem_region> result;
   gdb::optional<gdb::char_vector> text
-    = target_read_stralloc (current_top_target (), TARGET_OBJECT_MEMORY_MAP, NULL);
+    = target_read_stralloc (current_inferior ()->top_target (),
+			    TARGET_OBJECT_MEMORY_MAP, NULL);
 
   if (text)
     result = parse_memory_map (text->data ());
@@ -13667,7 +13696,8 @@ traceframe_info_up
 remote_target::traceframe_info ()
 {
   gdb::optional<gdb::char_vector> text
-    = target_read_stralloc (current_top_target (), TARGET_OBJECT_TRACEFRAME_INFO,
+    = target_read_stralloc (current_inferior ()->top_target (),
+			    TARGET_OBJECT_TRACEFRAME_INFO,
 			    NULL);
   if (text)
     return parse_traceframe_info (text->data ());
@@ -13896,7 +13926,8 @@ static void
 btrace_read_config (struct btrace_config *conf)
 {
   gdb::optional<gdb::char_vector> xml
-    = target_read_stralloc (current_top_target (), TARGET_OBJECT_BTRACE_CONF, "");
+    = target_read_stralloc (current_inferior ()->top_target (),
+			    TARGET_OBJECT_BTRACE_CONF, "");
   if (xml)
     parse_xml_btrace_conf (conf, xml->data ());
 }
@@ -14097,7 +14128,8 @@ remote_target::read_btrace (struct btrace_data *btrace,
     }
 
   gdb::optional<gdb::char_vector> xml
-    = target_read_stralloc (current_top_target (), TARGET_OBJECT_BTRACE, annex);
+    = target_read_stralloc (current_inferior ()->top_target (),
+			    TARGET_OBJECT_BTRACE, annex);
   if (!xml)
     return BTRACE_ERR_UNKNOWN;
 
@@ -14153,7 +14185,7 @@ remote_target::pid_to_exec_file (int pid)
       xsnprintf (annex, annex_size, "%x", pid);
     }
 
-  filename = target_read_stralloc (current_top_target (),
+  filename = target_read_stralloc (current_inferior ()->top_target (),
 				   TARGET_OBJECT_EXEC_FILE, annex);
 
   return filename ? filename->data () : nullptr;
@@ -14488,6 +14520,197 @@ show_remote_timeout (struct ui_file *file, int from_tty,
 		    _("Timeout limit to wait for target to respond is %s.\n"),
 		    value);
 }
+
+/* Implement the "supports_memory_tagging" target_ops method.  */
+
+bool
+remote_target::supports_memory_tagging ()
+{
+  return remote_memory_tagging_p ();
+}
+
+/* Create the qMemTags packet given ADDRESS, LEN and TYPE.  */
+
+static void
+create_fetch_memtags_request (gdb::char_vector &packet, CORE_ADDR address,
+			      size_t len, int type)
+{
+  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+
+  std::string request = string_printf ("qMemTags:%s,%s:%s",
+				       phex_nz (address, addr_size),
+				       phex_nz (len, sizeof (len)),
+				       phex_nz (type, sizeof (type)));
+
+  strcpy (packet.data (), request.c_str ());
+}
+
+/* Parse the qMemTags packet reply into TAGS.
+
+   Return true if successful, false otherwise.  */
+
+static bool
+parse_fetch_memtags_reply (const gdb::char_vector &reply,
+			   gdb::byte_vector &tags)
+{
+  if (reply.empty () || reply[0] == 'E' || reply[0] != 'm')
+    return false;
+
+  /* Copy the tag data.  */
+  tags = hex2bin (reply.data () + 1);
+
+  return true;
+}
+
+/* Create the QMemTags packet given ADDRESS, LEN, TYPE and TAGS.  */
+
+static void
+create_store_memtags_request (gdb::char_vector &packet, CORE_ADDR address,
+			      size_t len, int type,
+			      const gdb::byte_vector &tags)
+{
+  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+
+  /* Put together the main packet, address and length.  */
+  std::string request = string_printf ("QMemTags:%s,%s:%s:",
+				       phex_nz (address, addr_size),
+				       phex_nz (len, sizeof (len)),
+				       phex_nz (type, sizeof (type)));
+  request += bin2hex (tags.data (), tags.size ());
+
+  /* Check if we have exceeded the maximum packet size.  */
+  if (packet.size () < request.length ())
+    error (_("Contents too big for packet QMemTags."));
+
+  strcpy (packet.data (), request.c_str ());
+}
+
+/* Implement the "fetch_memtags" target_ops method.  */
+
+bool
+remote_target::fetch_memtags (CORE_ADDR address, size_t len,
+			      gdb::byte_vector &tags, int type)
+{
+  /* Make sure the qMemTags packet is supported.  */
+  if (!remote_memory_tagging_p ())
+    gdb_assert_not_reached ("remote fetch_memtags called with packet disabled");
+
+  struct remote_state *rs = get_remote_state ();
+
+  create_fetch_memtags_request (rs->buf, address, len, type);
+
+  putpkt (rs->buf);
+  getpkt (&rs->buf, 0);
+
+  return parse_fetch_memtags_reply (rs->buf, tags);
+}
+
+/* Implement the "store_memtags" target_ops method.  */
+
+bool
+remote_target::store_memtags (CORE_ADDR address, size_t len,
+			      const gdb::byte_vector &tags, int type)
+{
+  /* Make sure the QMemTags packet is supported.  */
+  if (!remote_memory_tagging_p ())
+    gdb_assert_not_reached ("remote store_memtags called with packet disabled");
+
+  struct remote_state *rs = get_remote_state ();
+
+  create_store_memtags_request (rs->buf, address, len, type, tags);
+
+  putpkt (rs->buf);
+  getpkt (&rs->buf, 0);
+
+  /* Verify if the request was successful.  */
+  return packet_check_result (rs->buf.data ()) == PACKET_OK;
+}
+
+#if GDB_SELF_TEST
+
+namespace selftests {
+
+static void
+test_memory_tagging_functions ()
+{
+  remote_target remote;
+
+  struct packet_config *config
+    = &remote_protocol_packets[PACKET_memory_tagging_feature];
+
+  scoped_restore restore_memtag_support_
+    = make_scoped_restore (&config->support);
+
+  /* Test memory tagging packet support.  */
+  config->support = PACKET_SUPPORT_UNKNOWN;
+  SELF_CHECK (remote.supports_memory_tagging () == false);
+  config->support = PACKET_DISABLE;
+  SELF_CHECK (remote.supports_memory_tagging () == false);
+  config->support = PACKET_ENABLE;
+  SELF_CHECK (remote.supports_memory_tagging () == true);
+
+  /* Setup testing.  */
+  gdb::char_vector packet;
+  gdb::byte_vector tags, bv;
+  std::string expected, reply;
+  packet.resize (32000);
+
+  /* Test creating a qMemTags request.  */
+
+  expected = "qMemTags:0,0:0";
+  create_fetch_memtags_request (packet, 0x0, 0x0, 0);
+  SELF_CHECK (strcmp (packet.data (), expected.c_str ()) == 0);
+
+  expected = "qMemTags:deadbeef,10:1";
+  create_fetch_memtags_request (packet, 0xdeadbeef, 16, 1);
+  SELF_CHECK (strcmp (packet.data (), expected.c_str ()) == 0);
+
+  /* Test parsing a qMemTags reply.  */
+
+  /* Error reply, tags vector unmodified.  */
+  reply = "E00";
+  strcpy (packet.data (), reply.c_str ());
+  tags.resize (0);
+  SELF_CHECK (parse_fetch_memtags_reply (packet, tags) == false);
+  SELF_CHECK (tags.size () == 0);
+
+  /* Valid reply, tags vector updated.  */
+  tags.resize (0);
+  bv.resize (0);
+
+  for (int i = 0; i < 5; i++)
+    bv.push_back (i);
+
+  reply = "m" + bin2hex (bv.data (), bv.size ());
+  strcpy (packet.data (), reply.c_str ());
+
+  SELF_CHECK (parse_fetch_memtags_reply (packet, tags) == true);
+  SELF_CHECK (tags.size () == 5);
+
+  for (int i = 0; i < 5; i++)
+    SELF_CHECK (tags[i] == i);
+
+  /* Test creating a QMemTags request.  */
+
+  /* Empty tag data.  */
+  tags.resize (0);
+  expected = "QMemTags:0,0:0:";
+  create_store_memtags_request (packet, 0x0, 0x0, 0, tags);
+  SELF_CHECK (memcmp (packet.data (), expected.c_str (),
+		      expected.length ()) == 0);
+
+  /* Non-empty tag data.  */
+  tags.resize (0);
+  for (int i = 0; i < 5; i++)
+    tags.push_back (i);
+  expected = "QMemTags:deadbeef,ff:1:0001020304";
+  create_store_memtags_request (packet, 0xdeadbeef, 255, 1, tags);
+  SELF_CHECK (memcmp (packet.data (), expected.c_str (),
+		      expected.length ()) == 0);
+}
+
+} // namespace selftests
+#endif /* GDB_SELF_TEST */
 
 void _initialize_remote ();
 void
@@ -14888,6 +15111,9 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
   add_packet_config_cmd (&remote_protocol_packets[PACKET_no_resumed],
 			 "N stop reply", "no-resumed-stop-reply", 0);
 
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_memory_tagging_feature],
+			 "memory-tagging-feature", "memory-tagging-feature", 0);
+
   /* Assert that we've registered "set remote foo-packet" commands
      for all packet configs.  */
   {
@@ -15019,4 +15245,9 @@ from the target."),
 
   /* Eventually initialize fileio.  See fileio.c */
   initialize_remote_fileio (&remote_set_cmdlist, &remote_show_cmdlist);
+
+#if GDB_SELF_TEST
+  selftests::register_test ("remote_memory_tagging",
+			    selftests::test_memory_tagging_functions);
+#endif
 }

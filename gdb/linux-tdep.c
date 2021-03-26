@@ -88,7 +88,32 @@ struct smaps_vmflags
     /* Is this a MAP_SHARED mapping (VM_SHARED, "sh").  */
 
     unsigned int shared_mapping : 1;
+
+    /* Memory map has memory tagging enabled.  */
+
+    unsigned int memory_tagging : 1;
   };
+
+/* Data structure that holds the information contained in the
+   /proc/<pid>/smaps file.  */
+
+struct smaps_data
+{
+  ULONGEST start_address;
+  ULONGEST end_address;
+  std::string filename;
+  struct smaps_vmflags vmflags;
+  bool read;
+  bool write;
+  bool exec;
+  bool priv;
+  bool has_anonymous;
+  bool mapping_anon_p;
+  bool mapping_file_p;
+
+  ULONGEST inode;
+  ULONGEST offset;
+};
 
 /* Whether to take the /proc/PID/coredump_filter into account when
    generating a corefile.  */
@@ -385,9 +410,10 @@ int
 linux_is_uclinux (void)
 {
   CORE_ADDR dummy;
+  target_ops *target = current_inferior ()->top_target ();
 
-  return (target_auxv_search (current_top_target (), AT_NULL, &dummy) > 0
-	  && target_auxv_search (current_top_target (), AT_PAGESZ, &dummy) == 0);
+  return (target_auxv_search (target, AT_NULL, &dummy) > 0
+	  && target_auxv_search (target, AT_PAGESZ, &dummy) == 0);
 }
 
 static int
@@ -476,6 +502,8 @@ decode_vmflags (char *p, struct smaps_vmflags *v)
 	v->exclude_coredump = 1;
       else if (strcmp (s, "sh") == 0)
 	v->shared_mapping = 1;
+      else if (strcmp (s, "mt") == 0)
+	v->memory_tagging = 1;
     }
 }
 
@@ -1271,6 +1299,180 @@ typedef int linux_dump_mapping_p_ftype (filter_flags filterflags,
 					ULONGEST addr,
 					ULONGEST offset);
 
+/* Helper function to parse the contents of /proc/<pid>/smaps into a data
+   structure, for easy access.
+
+   DATA is the contents of the smaps file.  The parsed contents are stored
+   into the SMAPS vector.  */
+
+static std::vector<struct smaps_data>
+parse_smaps_data (const char *data,
+		  const std::string maps_filename)
+{
+  char *line, *t;
+
+  gdb_assert (data != nullptr);
+
+  line = strtok_r ((char *) data, "\n", &t);
+
+  std::vector<struct smaps_data> smaps;
+
+  while (line != NULL)
+    {
+      ULONGEST addr, endaddr, offset, inode;
+      const char *permissions, *device, *filename;
+      struct smaps_vmflags v;
+      size_t permissions_len, device_len;
+      int read, write, exec, priv;
+      int has_anonymous = 0;
+      int mapping_anon_p;
+      int mapping_file_p;
+
+      memset (&v, 0, sizeof (v));
+      read_mapping (line, &addr, &endaddr, &permissions, &permissions_len,
+		    &offset, &device, &device_len, &inode, &filename);
+      mapping_anon_p = mapping_is_anonymous_p (filename);
+      /* If the mapping is not anonymous, then we can consider it
+	 to be file-backed.  These two states (anonymous or
+	 file-backed) seem to be exclusive, but they can actually
+	 coexist.  For example, if a file-backed mapping has
+	 "Anonymous:" pages (see more below), then the Linux
+	 kernel will dump this mapping when the user specified
+	 that she only wants anonymous mappings in the corefile
+	 (*even* when she explicitly disabled the dumping of
+	 file-backed mappings).  */
+      mapping_file_p = !mapping_anon_p;
+
+      /* Decode permissions.  */
+      read = (memchr (permissions, 'r', permissions_len) != 0);
+      write = (memchr (permissions, 'w', permissions_len) != 0);
+      exec = (memchr (permissions, 'x', permissions_len) != 0);
+      /* 'private' here actually means VM_MAYSHARE, and not
+	 VM_SHARED.  In order to know if a mapping is really
+	 private or not, we must check the flag "sh" in the
+	 VmFlags field.  This is done by decode_vmflags.  However,
+	 if we are using a Linux kernel released before the commit
+	 834f82e2aa9a8ede94b17b656329f850c1471514 (3.10), we will
+	 not have the VmFlags there.  In this case, there is
+	 really no way to know if we are dealing with VM_SHARED,
+	 so we just assume that VM_MAYSHARE is enough.  */
+      priv = memchr (permissions, 'p', permissions_len) != 0;
+
+      /* Try to detect if region should be dumped by parsing smaps
+	 counters.  */
+      for (line = strtok_r (NULL, "\n", &t);
+	   line != NULL && line[0] >= 'A' && line[0] <= 'Z';
+	   line = strtok_r (NULL, "\n", &t))
+	{
+	  char keyword[64 + 1];
+
+	  if (sscanf (line, "%64s", keyword) != 1)
+	    {
+	      warning (_("Error parsing {s,}maps file '%s'"),
+		       maps_filename.c_str ());
+	      break;
+	    }
+
+	  if (strcmp (keyword, "Anonymous:") == 0)
+	    {
+	      /* Older Linux kernels did not support the
+		 "Anonymous:" counter.  Check it here.  */
+	      has_anonymous = 1;
+	    }
+	  else if (strcmp (keyword, "VmFlags:") == 0)
+	    decode_vmflags (line, &v);
+
+	  if (strcmp (keyword, "AnonHugePages:") == 0
+	      || strcmp (keyword, "Anonymous:") == 0)
+	    {
+	      unsigned long number;
+
+	      if (sscanf (line, "%*s%lu", &number) != 1)
+		{
+		  warning (_("Error parsing {s,}maps file '%s' number"),
+			   maps_filename.c_str ());
+		  break;
+		}
+	      if (number > 0)
+		{
+		  /* Even if we are dealing with a file-backed
+		     mapping, if it contains anonymous pages we
+		     consider it to be *also* an anonymous
+		     mapping, because this is what the Linux
+		     kernel does:
+
+		     // Dump segments that have been written to.
+		     if (vma->anon_vma && FILTER(ANON_PRIVATE))
+		       goto whole;
+
+		    Note that if the mapping is already marked as
+		    file-backed (i.e., mapping_file_p is
+		    non-zero), then this is a special case, and
+		    this mapping will be dumped either when the
+		    user wants to dump file-backed *or* anonymous
+		    mappings.  */
+		  mapping_anon_p = 1;
+		}
+	    }
+	}
+      /* Save the smaps entry to the vector.  */
+	struct smaps_data map;
+
+	map.start_address = addr;
+	map.end_address = endaddr;
+	map.filename = filename;
+	map.vmflags = v;
+	map.read = read? true : false;
+	map.write = write? true : false;
+	map.exec = exec? true : false;
+	map.priv = priv? true : false;
+	map.has_anonymous = has_anonymous;
+	map.mapping_anon_p = mapping_anon_p? true : false;
+	map.mapping_file_p = mapping_file_p? true : false;
+	map.offset = offset;
+	map.inode = inode;
+
+	smaps.emplace_back (map);
+    }
+
+  return smaps;
+}
+
+/* See linux-tdep.h.  */
+
+bool
+linux_address_in_memtag_page (CORE_ADDR address)
+{
+  if (current_inferior ()->fake_pid_p)
+    return false;
+
+  pid_t pid = current_inferior ()->pid;
+
+  std::string smaps_file = string_printf ("/proc/%d/smaps", pid);
+
+  gdb::unique_xmalloc_ptr<char> data
+    = target_fileio_read_stralloc (NULL, smaps_file.c_str ());
+
+  if (data == nullptr)
+    return false;
+
+  /* Parse the contents of smaps into a vector.  */
+  std::vector<struct smaps_data> smaps
+    = parse_smaps_data (data.get (), smaps_file);
+
+  for (const smaps_data &map : smaps)
+    {
+      /* Is the address within [start_address, end_address) in a page
+	 mapped with memory tagging?  */
+      if (address >= map.start_address
+	  && address < map.end_address
+	  && map.vmflags.memory_tagging)
+	return true;
+    }
+
+  return false;
+}
+
 /* List memory regions in the inferior for a corefile.  */
 
 static int
@@ -1279,8 +1481,6 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 				linux_find_memory_region_ftype *func,
 				void *obfd)
 {
-  char mapsfilename[100];
-  char coredumpfilter_name[100];
   pid_t pid;
   /* Default dump behavior of coredump_filter (0x33), according to
      Documentation/filesystems/proc.txt from the Linux kernel
@@ -1298,10 +1498,12 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 
   if (use_coredump_filter)
     {
-      xsnprintf (coredumpfilter_name, sizeof (coredumpfilter_name),
-		 "/proc/%d/coredump_filter", pid);
+      std::string core_dump_filter_name
+	= string_printf ("/proc/%d/coredump_filter", pid);
+
       gdb::unique_xmalloc_ptr<char> coredumpfilterdata
-	= target_fileio_read_stralloc (NULL, coredumpfilter_name);
+	= target_fileio_read_stralloc (NULL, core_dump_filter_name.c_str ());
+
       if (coredumpfilterdata != NULL)
 	{
 	  unsigned int flags;
@@ -1311,144 +1513,59 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 	}
     }
 
-  xsnprintf (mapsfilename, sizeof mapsfilename, "/proc/%d/smaps", pid);
+  std::string maps_filename = string_printf ("/proc/%d/smaps", pid);
+
   gdb::unique_xmalloc_ptr<char> data
-    = target_fileio_read_stralloc (NULL, mapsfilename);
+    = target_fileio_read_stralloc (NULL, maps_filename.c_str ());
+
   if (data == NULL)
     {
       /* Older Linux kernels did not support /proc/PID/smaps.  */
-      xsnprintf (mapsfilename, sizeof mapsfilename, "/proc/%d/maps", pid);
-      data = target_fileio_read_stralloc (NULL, mapsfilename);
+      maps_filename = string_printf ("/proc/%d/maps", pid);
+      data = target_fileio_read_stralloc (NULL, maps_filename.c_str ());
+
+      if (data == nullptr)
+	return 1;
     }
 
-  if (data != NULL)
+  /* Parse the contents of smaps into a vector.  */
+  std::vector<struct smaps_data> smaps
+    = parse_smaps_data (data.get (), maps_filename.c_str ());
+
+  for (const struct smaps_data &map : smaps)
     {
-      char *line, *t;
+      int should_dump_p = 0;
 
-      line = strtok_r (data.get (), "\n", &t);
-      while (line != NULL)
+      if (map.has_anonymous)
 	{
-	  ULONGEST addr, endaddr, offset, inode;
-	  const char *permissions, *device, *filename;
-	  struct smaps_vmflags v;
-	  size_t permissions_len, device_len;
-	  int read, write, exec, priv;
-	  int has_anonymous = 0;
-	  int should_dump_p = 0;
-	  int mapping_anon_p;
-	  int mapping_file_p;
-
-	  memset (&v, 0, sizeof (v));
-	  read_mapping (line, &addr, &endaddr, &permissions, &permissions_len,
-			&offset, &device, &device_len, &inode, &filename);
-	  mapping_anon_p = mapping_is_anonymous_p (filename);
-	  /* If the mapping is not anonymous, then we can consider it
-	     to be file-backed.  These two states (anonymous or
-	     file-backed) seem to be exclusive, but they can actually
-	     coexist.  For example, if a file-backed mapping has
-	     "Anonymous:" pages (see more below), then the Linux
-	     kernel will dump this mapping when the user specified
-	     that she only wants anonymous mappings in the corefile
-	     (*even* when she explicitly disabled the dumping of
-	     file-backed mappings).  */
-	  mapping_file_p = !mapping_anon_p;
-
-	  /* Decode permissions.  */
-	  read = (memchr (permissions, 'r', permissions_len) != 0);
-	  write = (memchr (permissions, 'w', permissions_len) != 0);
-	  exec = (memchr (permissions, 'x', permissions_len) != 0);
-	  /* 'private' here actually means VM_MAYSHARE, and not
-	     VM_SHARED.  In order to know if a mapping is really
-	     private or not, we must check the flag "sh" in the
-	     VmFlags field.  This is done by decode_vmflags.  However,
-	     if we are using a Linux kernel released before the commit
-	     834f82e2aa9a8ede94b17b656329f850c1471514 (3.10), we will
-	     not have the VmFlags there.  In this case, there is
-	     really no way to know if we are dealing with VM_SHARED,
-	     so we just assume that VM_MAYSHARE is enough.  */
-	  priv = memchr (permissions, 'p', permissions_len) != 0;
-
-	  /* Try to detect if region should be dumped by parsing smaps
-	     counters.  */
-	  for (line = strtok_r (NULL, "\n", &t);
-	       line != NULL && line[0] >= 'A' && line[0] <= 'Z';
-	       line = strtok_r (NULL, "\n", &t))
-	    {
-	      char keyword[64 + 1];
-
-	      if (sscanf (line, "%64s", keyword) != 1)
-		{
-		  warning (_("Error parsing {s,}maps file '%s'"), mapsfilename);
-		  break;
-		}
-
-	      if (strcmp (keyword, "Anonymous:") == 0)
-		{
-		  /* Older Linux kernels did not support the
-		     "Anonymous:" counter.  Check it here.  */
-		  has_anonymous = 1;
-		}
-	      else if (strcmp (keyword, "VmFlags:") == 0)
-		decode_vmflags (line, &v);
-
-	      if (strcmp (keyword, "AnonHugePages:") == 0
-		  || strcmp (keyword, "Anonymous:") == 0)
-		{
-		  unsigned long number;
-
-		  if (sscanf (line, "%*s%lu", &number) != 1)
-		    {
-		      warning (_("Error parsing {s,}maps file '%s' number"),
-			       mapsfilename);
-		      break;
-		    }
-		  if (number > 0)
-		    {
-		      /* Even if we are dealing with a file-backed
-			 mapping, if it contains anonymous pages we
-			 consider it to be *also* an anonymous
-			 mapping, because this is what the Linux
-			 kernel does:
-
-			 // Dump segments that have been written to.
-			 if (vma->anon_vma && FILTER(ANON_PRIVATE))
-			 	goto whole;
-
-			 Note that if the mapping is already marked as
-			 file-backed (i.e., mapping_file_p is
-			 non-zero), then this is a special case, and
-			 this mapping will be dumped either when the
-			 user wants to dump file-backed *or* anonymous
-			 mappings.  */
-		      mapping_anon_p = 1;
-		    }
-		}
-	    }
-
-	  if (has_anonymous)
-	    should_dump_p = should_dump_mapping_p (filterflags, &v, priv,
-						   mapping_anon_p,
-						   mapping_file_p,
-						   filename, addr, offset);
-	  else
-	    {
-	      /* Older Linux kernels did not support the "Anonymous:" counter.
-		 If it is missing, we can't be sure - dump all the pages.  */
-	      should_dump_p = 1;
-	    }
-
-	  /* Invoke the callback function to create the corefile segment.  */
-	  if (should_dump_p)
-	    func (addr, endaddr - addr, offset, inode,
-		  read, write, exec, 1, /* MODIFIED is true because we
-					   want to dump the mapping.  */
-		  filename, obfd);
+	  should_dump_p
+	    = should_dump_mapping_p (filterflags, &map.vmflags,
+				     map.priv,
+				     map.mapping_anon_p,
+				     map.mapping_file_p,
+				     map.filename.c_str (),
+				     map.start_address,
+				     map.offset);
+	}
+      else
+	{
+	  /* Older Linux kernels did not support the "Anonymous:" counter.
+	     If it is missing, we can't be sure - dump all the pages.  */
+	  should_dump_p = 1;
 	}
 
-      return 0;
+      /* Invoke the callback function to create the corefile segment.  */
+      if (should_dump_p)
+	{
+	  func (map.start_address, map.end_address - map.start_address,
+		map.offset, map.inode, map.read, map.write, map.exec,
+		1, /* MODIFIED is true because we want to dump
+		      the mapping.  */
+		map.filename.c_str (), obfd);
+	}
     }
 
-  return 1;
+  return 0;
 }
 
 /* A structure for passing information through
@@ -1619,7 +1736,8 @@ linux_get_siginfo_data (thread_info *thread, struct gdbarch *gdbarch)
 
   gdb::byte_vector buf (TYPE_LENGTH (siginfo_type));
 
-  bytes_read = target_read (current_top_target (), TARGET_OBJECT_SIGNAL_INFO, NULL,
+  bytes_read = target_read (current_inferior ()->top_target (),
+			    TARGET_OBJECT_SIGNAL_INFO, NULL,
 			    buf.data (), 0, TYPE_LENGTH (siginfo_type));
   if (bytes_read != TYPE_LENGTH (siginfo_type))
     buf.clear ();
@@ -1921,7 +2039,8 @@ linux_make_corefile_notes (struct gdbarch *gdbarch, bfd *obfd, int *note_size)
 
   /* Auxillary vector.  */
   gdb::optional<gdb::byte_vector> auxv =
-    target_read_alloc (current_top_target (), TARGET_OBJECT_AUXV, NULL);
+    target_read_alloc (current_inferior ()->top_target (),
+		       TARGET_OBJECT_AUXV, NULL);
   if (auxv && !auxv->empty ())
     {
       note_data.reset (elfcore_write_note (obfd, note_data.release (),
@@ -2201,7 +2320,8 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
   char filename[100];
   long pid;
 
-  if (target_auxv_search (current_top_target (), AT_SYSINFO_EHDR, &range->start) <= 0)
+  if (target_auxv_search (current_inferior ()->top_target (),
+			  AT_SYSINFO_EHDR, &range->start) <= 0)
     return 0;
 
   /* It doesn't make sense to access the host's /proc when debugging a
@@ -2391,14 +2511,15 @@ linux_displaced_step_location (struct gdbarch *gdbarch)
      local-store address and is thus not usable as displaced stepping
      location.  The auxiliary vector gets us the PowerPC-side entry
      point address instead.  */
-  if (target_auxv_search (current_top_target (), AT_ENTRY, &addr) <= 0)
+  if (target_auxv_search (current_inferior ()->top_target (),
+			  AT_ENTRY, &addr) <= 0)
     throw_error (NOT_SUPPORTED_ERROR,
 		 _("Cannot find AT_ENTRY auxiliary vector entry."));
 
   /* Make certain that the address points at real code, and not a
      function descriptor.  */
-  addr = gdbarch_convert_from_func_ptr_addr (gdbarch, addr,
-					     current_top_target ());
+  addr = gdbarch_convert_from_func_ptr_addr
+    (gdbarch, addr, current_inferior ()->top_target ());
 
   /* Inferior calls also use the entry point as a breakpoint location.
      We don't want displaced stepping to interfere with those

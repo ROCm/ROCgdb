@@ -42,6 +42,7 @@
 #include "count-one-bits.h"
 #include "c-lang.h"
 #include "cp-abi.h"
+#include "inferior.h"
 
 /* Maximum number of wchars returned from wchar_iterate.  */
 #define MAX_WCHARS 4
@@ -110,6 +111,7 @@ struct value_print_options user_print_options =
   10,				/* repeat_count_threshold */
   0,				/* output_format */
   0,				/* format */
+  1,				/* memory_tag_violations */
   0,				/* stop_print_at_null */
   0,				/* print_array_indexes */
   0,				/* deref_ref */
@@ -200,6 +202,17 @@ show_repeat_count_threshold (struct ui_file *file, int from_tty,
 			     struct cmd_list_element *c, const char *value)
 {
   fprintf_filtered (file, _("Threshold for repeated print elements is %s.\n"),
+		    value);
+}
+
+/* If nonzero, prints memory tag violations for pointers.  */
+
+static void
+show_memory_tag_violations (struct ui_file *file, int from_tty,
+			    struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file,
+		    _("Printing of memory tag violations is %s.\n"),
 		    value);
 }
 
@@ -1836,9 +1849,8 @@ print_function_pointer_address (const struct value_print_options *options,
 				CORE_ADDR address,
 				struct ui_file *stream)
 {
-  CORE_ADDR func_addr
-    = gdbarch_convert_from_func_ptr_addr (gdbarch, address,
-					  current_top_target ());
+  CORE_ADDR func_addr = gdbarch_convert_from_func_ptr_addr
+    (gdbarch, address, current_inferior ()->top_target ());
 
   /* If the function pointer is represented by a description, print
      the address of the description.  */
@@ -3021,6 +3033,17 @@ static const gdb::option::option_def value_print_option_defs[] = {
     N_("When structures, unions, or arrays are nested beyond this depth then they\n\
 will be replaced with either '{...}' or '(...)' depending on the language.\n\
 Use \"unlimited\" to print the complete structure.")
+  },
+
+  boolean_option_def {
+    "memory-tag-violations",
+    [] (value_print_options *opt) { return &opt->memory_tag_violations; },
+    show_memory_tag_violations, /* show_cmd_cb */
+    N_("Set printing of memory tag violations for pointers."),
+    N_("Show printing of memory tag violations for pointers."),
+    N_("Issue a warning when the printed value is a pointer\n\
+whose logical tag doesn't match the allocation tag of the memory\n\
+location it points to."),
   },
 
   boolean_option_def {

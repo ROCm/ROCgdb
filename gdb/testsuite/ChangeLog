@@ -1,3 +1,27 @@
+2021-03-25  Pedro Alves  <pedro@palves.net>
+
+	* gdb.server/stop-reply-no-thread-multi.exp (run_test): Add
+	"target_non_stop" parameter and use it.
+	(top level): Add "maint set target-non-stop on/off" testing axis.
+
+2021-03-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* lib/ada.exp (gnat_runtime_has_debug_info): Use -wrap with
+	gdb_test_multiple.
+
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.arch/aarch64-mte.c: New file.
+	* gdb.arch/aarch64-mte.exp: New test.
+	* gdb.base/memtag.c: New file.
+	* gdb.base/memtag.exp: New test.
+	* lib/gdb.exp (supports_memtag): New function.
+
+2021-03-24  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.base/options.exp: Adjust for new print options.
+	* gdb.base/with.exp: Likewise.
+
 2021-03-22  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.dwarf2/dw2-missing-cu-tag.c: New file.

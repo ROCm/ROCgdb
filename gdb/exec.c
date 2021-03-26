@@ -616,7 +616,7 @@ program_space::add_target_sections (void *owner,
 	    continue;
 
 	  switch_to_inferior_no_thread (inf);
-	  push_target (&exec_ops);
+	  inf->push_target (&exec_ops);
 	}
     }
 }
@@ -671,7 +671,7 @@ program_space::remove_target_sections (void *owner)
 	    continue;
 
 	  switch_to_inferior_no_thread (inf);
-	  unpush_target (&exec_ops);
+	  inf->unpush_target (&exec_ops);
 	}
     }
 }
@@ -682,7 +682,7 @@ void
 exec_on_vfork ()
 {
   if (!current_program_space->target_sections ().empty ())
-    push_target (&exec_ops);
+    current_inferior ()->push_target (&exec_ops);
 }
 
 
@@ -775,7 +775,7 @@ section_table_read_available_memory (gdb_byte *readbuf, ULONGEST offset,
 				     ULONGEST len, ULONGEST *xfered_len)
 {
   const target_section_table *table
-    = target_get_section_table (current_top_target ());
+    = target_get_section_table (current_inferior ()->top_target ());
   std::vector<mem_range> available_memory
     = section_table_available_memory (offset, len, *table);
 

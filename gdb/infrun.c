@@ -478,7 +478,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  set_current_inferior (child_inf);
 	  switch_to_no_thread ();
 	  child_inf->symfile_flags = SYMFILE_NO_READ;
-	  push_target (parent_inf->process_target ());
+	  child_inf->push_target (parent_inf->process_target ());
 	  thread_info *child_thr
 	    = add_thread_silent (child_inf->process_target (), child_ptid);
 
@@ -628,7 +628,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	   informing the solib layer about this new process.  */
 
 	set_current_inferior (child_inf);
-	push_target (target);
+	child_inf->push_target (target);
       }
 
       thread_info *child_thr = add_thread_silent (target, child_ptid);
@@ -1184,7 +1184,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
 
       inferior *org_inferior = current_inferior ();
       switch_to_inferior_no_thread (inf);
-      push_target (org_inferior->process_target ());
+      inf->push_target (org_inferior->process_target ());
       thread_info *thr = add_thread (inf->process_target (), ptid);
       switch_to_thread (thr);
     }
@@ -1775,7 +1775,7 @@ displaced_step_finish (thread_info *event_thread, enum gdb_signal signal)
   /* Fixup may need to read memory/registers.  Switch to the thread
      that we're fixing up.  Also, target_stopped_by_watchpoint checks
      the current thread, and displaced_step_restore performs ptid-dependent
-     memory accesses using current_inferior() and current_top_target().  */
+     memory accesses using current_inferior().  */
   switch_to_thread (event_thread);
 
   displaced_step_reset_cleanup cleanup (displaced);
@@ -2029,7 +2029,8 @@ set_schedlock_func (const char *args, int from_tty, struct cmd_list_element *c)
   if (!target_can_lock_scheduler ())
     {
       scheduler_mode = schedlock_off;
-      error (_("Target '%s' cannot support this command."), target_shortname);
+      error (_("Target '%s' cannot support this command."),
+	     target_shortname ());
     }
 }
 
@@ -5816,7 +5817,8 @@ handle_signal_stop (struct execution_control_state *ecs)
 
 	  infrun_debug_printf ("stopped by watchpoint");
 
-	  if (target_stopped_data_address (current_top_target (), &addr))
+	  if (target_stopped_data_address (current_inferior ()->top_target (),
+					   &addr))
 	    infrun_debug_printf ("stopped data address=%s",
 				 paddress (reg_gdbarch, addr));
 	  else
@@ -8838,7 +8840,8 @@ siginfo_value_read (struct value *v)
   validate_registers_access ();
 
   transferred =
-    target_read (current_top_target (), TARGET_OBJECT_SIGNAL_INFO,
+    target_read (current_inferior ()->top_target (),
+		 TARGET_OBJECT_SIGNAL_INFO,
 		 NULL,
 		 value_contents_all_raw (v),
 		 value_offset (v),
@@ -8860,7 +8863,7 @@ siginfo_value_write (struct value *v, struct value *fromval)
      vice versa.  */
   validate_registers_access ();
 
-  transferred = target_write (current_top_target (),
+  transferred = target_write (current_inferior ()->top_target (),
 			      TARGET_OBJECT_SIGNAL_INFO,
 			      NULL,
 			      value_contents_all_raw (fromval),
@@ -8924,7 +8927,8 @@ public:
 
 	siginfo_data.reset ((gdb_byte *) xmalloc (len));
 
-	if (target_read (current_top_target (), TARGET_OBJECT_SIGNAL_INFO, NULL,
+	if (target_read (current_inferior ()->top_target (),
+			 TARGET_OBJECT_SIGNAL_INFO, NULL,
 			 siginfo_data.get (), 0, len) != len)
 	  {
 	    /* Errors ignored.  */
@@ -8959,7 +8963,8 @@ public:
 	struct type *type = gdbarch_get_siginfo_type (gdbarch);
 
 	/* Errors ignored.  */
-	target_write (current_top_target (), TARGET_OBJECT_SIGNAL_INFO, NULL,
+	target_write (current_inferior ()->top_target (),
+		      TARGET_OBJECT_SIGNAL_INFO, NULL,
 		      m_siginfo_data.get (), 0, TYPE_LENGTH (type));
       }
 

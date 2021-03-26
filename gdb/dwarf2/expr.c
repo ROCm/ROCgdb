@@ -212,7 +212,7 @@ xfer_from_memory (CORE_ADDR address, gdb_byte *readbuf,
       ULONGEST xfered_partial;
 
       enum target_xfer_status status
-	= target_xfer_partial (current_top_target (), object, NULL,
+	= target_xfer_partial (current_inferior ()->top_target (), object, NULL,
 			       (readbuf != nullptr
 				? readbuf + xfered_total
 				: nullptr),

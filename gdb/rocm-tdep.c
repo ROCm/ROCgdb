@@ -1174,7 +1174,7 @@ rocm_target_ops::mourn_inferior ()
   amd_dbgapi_process_detach (info->process_id);
   info->process_id = AMD_DBGAPI_PROCESS_NONE;
 
-  unpush_target (&rocm_ops);
+  current_inferior ()->unpush_target (&rocm_ops);
   beneath ()->mourn_inferior ();
 }
 
@@ -1192,7 +1192,7 @@ rocm_target_ops::detach (inferior *inf, int from_tty)
   amd_dbgapi_process_detach (info->process_id);
   info->process_id = AMD_DBGAPI_PROCESS_NONE;
 
-  unpush_target (&rocm_ops);
+  inf->unpush_target (&rocm_ops);
   beneath ()->detach (inf, from_tty);
 }
 
@@ -1568,8 +1568,8 @@ rocm_target_inferior_created (inferior *inf)
       return;
     }
 
-  if (!target_is_pushed (&rocm_ops))
-    push_target (&rocm_ops);
+  if (!inf->target_is_pushed (&rocm_ops))
+    inf->push_target (&rocm_ops);
 
   gdb_assert (info->wave_events.empty ());
 

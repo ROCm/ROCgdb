@@ -1,3 +1,101 @@
+2021-03-25  Abid Qadeer  <abidh@codesourcery.com>
+
+	* nios2-dis.c (nios2_print_insn_arg): Fix sign extension of
+	immediate in br.n instruction.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (XMGatherD, VexGatherD): New.
+	(vex_table): Use VexGatherD for vpgatherd* and vgatherdp*.
+	(print_insn): Check masking for S/G insns.
+	(OP_E_memory): New local variable check_gather. Extend mandatory
+	SIB check. Check register conflicts for (EVEX-encoded) gathers.
+	Extend check for disallowed 16-bit addressing.
+	(OP_VEX): New local variables modrm_reg and sib_index. Convert
+	if()s to switch(). Check register conflicts for (VEX-encoded)
+	gathers. Drop no longer reachable cases.
+	* i386-dis-evex.h (evex_table): Use XMGatherD for vpgatherd* and
+	vgatherdp*.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-dis.c (print_insn): Mark as bad EVEX encodings specifying
+	zeroing-masking without masking.
+
+2021-03-25  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.tbl (invlpgb): Fix multi-operand form.
+	(pvalidate, rmpupdate, rmpadjust): Add multi-operand forms. Mark
+	single-operand forms as deprecated.
+	* i386-tbl.h: Re-generate.
+
+2021-03-25  Alan Modra  <amodra@gmail.com>
+
+	PR 27647
+	* ppc-opc.c (XLOCB_MASK): Delete.
+	(XLBOBB_MASK, XLBOBIBB_MASK, XLBOCBBB_MASK): Define using
+	XLBH_MASK.
+	(powerpc_opcodes): Accept a BH field on all extended forms of
+	bclr, bclrl, bcctr, bcctrl, bctar, bctarl.
+
+2021-03-24  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-gen.c (output_i386_opcode): Drop processing of
+	opcode_length. Calculate length from base_opcode. Adjust prefix
+	encoding determination.
+	(process_i386_opcodes): Drop output of fake opcode_length.
+	* i386-opc.h (struct insn_template): Drop opcode_length field.
+	* i386-opc.tbl: Drop opcode length field from all templates.
+	* i386-tbl.h: Re-generate.
+
+2021-03-24  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-gen.c (process_i386_opcode_modifier): Return void. New
+	parameter "prefix". Drop local variable "regular_encoding".
+	Record prefix setting / check for consistency.
+	(output_i386_opcode): Parse opcode_length and base_opcode
+	earlier. Derive prefix encoding. Drop no longer applicable
+	consistency checking. Adjust process_i386_opcode_modifier()
+	invocation.
+	(process_i386_opcodes): Adjust process_i386_opcode_modifier()
+	invocation.
+	* i386-tbl.h: Re-generate.
+
+2021-03-24  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-gen.c (process_i386_opcode_modifier): Drop IsPrefix
+	check.
+	* i386-opc.h (Prefix_*): Move #define-s.
+	* i386-opc.tbl: Move pseudo prefix enumerator values to
+	extension opcode field. Introduce pseudopfx template.
+	* i386-tbl.h: Re-generate.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.h (PREFIX_0XF2, PREFIX_0XF3): Excahnge values. Extend
+	comment.
+	* i386-tbl.h: Re-generate.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-opc.h (struct insn_template): Move cpu_flags field past
+	opcode_modifier one.
+	* i386-tbl.h: Re-generate.
+
+2021-03-23  Jan Beulich  <jbeulich@suse.com>
+
+	* i386-gen.c (opcode_modifiers): New OpcodeSpace element.
+	* i386-opc.h (OpcodeSpace): New enumerator.
+	(VEX0F, VEX0F38, VEX0F3A, XOP08, XOP09, XOP0A): Rename to ...
+	(SPACE_BASE, SPACE_0F, SPACE_0F38, SPACE_0F3A, SPACE_XOP08,
+	SPACE_XOP09, SPACE_XOP0A): ... respectively.
+	(struct i386_opcode_modifier): New field opcodespace. Shrink
+	opcodeprefix field.
+	i386-opc.tbl (Space0F, Space0F38, Space0F3A, SpaceXOP08,
+	SpaceXOP09, SpaceXOP0A): Define. Use them to replace
+	OpcodePrefix uses.
+	* i386-tbl.h: Re-generate.
+
 2021-03-22  Martin Liska  <mliska@suse.cz>
 
 	* aarch64-dis.c (parse_aarch64_dis_option): Replace usage of CONST_STRNEQ with startswith.

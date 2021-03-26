@@ -314,9 +314,13 @@ i386_intel_simplify_register (expressionS *e)
     intel_state.base = i386_regtab + reg_num;
   else if (!intel_state.index)
     {
+      const insn_template *t = current_templates->start;
+
       if (intel_state.in_scale
-	  || current_templates->start->base_opcode == 0xf30f1b /* bndmk */
-	  || (current_templates->start->base_opcode & ~1) == 0x0f1a /* bnd{ld,st}x */
+	  || (t->opcode_modifier.opcodeprefix == PREFIX_0XF3
+	      && t->base_opcode == 0x0f1b /* bndmk */)
+	  || (t->opcode_modifier.opcodeprefix == PREFIX_NONE
+	      && (t->base_opcode & ~1) == 0x0f1a /* bnd{ld,st}x */)
 	  || i386_regtab[reg_num].reg_type.bitfield.baseindex)
 	intel_state.index = i386_regtab + reg_num;
       else
@@ -638,7 +642,8 @@ i386_intel_operand (char *operand_string, int got_a_float)
     return 0;
 
   if (intel_state.op_modifier != O_absent
-      && current_templates->start->base_opcode != 0x8d /* lea */)
+      && (current_templates->start->opcode_modifier.opcodespace != SPACE_BASE
+          || current_templates->start->base_opcode != 0x8d /* lea */))
     {
       i.types[this_operand].bitfield.unspecified = 0;
 
@@ -662,7 +667,8 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	  if ((current_templates->start->name[0] == 'l'
 	       && current_templates->start->name[2] == 's'
 	       && current_templates->start->name[3] == 0)
-	      || current_templates->start->base_opcode == 0x62 /* bound */)
+	      || (current_templates->start->opcode_modifier.opcodespace == SPACE_BASE
+		  && current_templates->start->base_opcode == 0x62 /* bound */))
 	    suffix = WORD_MNEM_SUFFIX;
 	  else if (flag_code != CODE_32BIT
 		   && (current_templates->start->opcode_modifier.jump == JUMP
@@ -692,7 +698,8 @@ i386_intel_operand (char *operand_string, int got_a_float)
 
 	case O_qword_ptr: /* O_mmword_ptr */
 	  i.types[this_operand].bitfield.qword = 1;
-	  if (current_templates->start->base_opcode == 0x62 /* bound */
+	  if ((current_templates->start->opcode_modifier.opcodespace == SPACE_BASE
+	       && current_templates->start->base_opcode == 0x62 /* bound */)
 	      || got_a_float == 1)	/* "f..." */
 	    suffix = LONG_MNEM_SUFFIX;
 	  else

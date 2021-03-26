@@ -46,6 +46,7 @@
 #include "gdbsupport/array-view.h"
 #include "cli/cli-style.h"
 #include "expop.h"
+#include "inferior.h"
 
 /* Definition of a user function.  */
 struct internal_function
@@ -3174,7 +3175,8 @@ value_fn_field (struct value **arg1p, struct fn_field *f,
 
       set_value_address (v,
 	gdbarch_convert_from_func_ptr_addr
-	   (gdbarch, BMSYMBOL_VALUE_ADDRESS (msym), current_top_target ()));
+	   (gdbarch, BMSYMBOL_VALUE_ADDRESS (msym),
+	    current_inferior ()->top_target ()));
     }
 
   if (arg1p)

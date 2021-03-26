@@ -10008,6 +10008,10 @@ If you omit @var{expr}, @value{GDBN} displays the last value again (from the
 conveniently inspect the same value in an alternative format.
 @end table
 
+If the architecture supports memory tagging, the @code{print} command will
+display pointer/memory tag mismatches if what is being printed is a pointer
+or reference type. @xref{Memory Tagging}.
+
 A more low-level way of examining data is with the @code{x} command.
 It examines data in memory at a specified address and prints it in a
 specified format.  @xref{Memory, ,Examining Memory}.
@@ -10775,7 +10779,8 @@ number is specified, memory is examined backward from @var{addr}.
 @item @var{f}, the display format
 The display format is one of the formats used by @code{print}
 (@samp{x}, @samp{d}, @samp{u}, @samp{o}, @samp{t}, @samp{a}, @samp{c},
-@samp{f}, @samp{s}), and in addition @samp{i} (for machine instructions).
+@samp{f}, @samp{s}), @samp{i} (for machine instructions) and
+@samp{m} (for displaying memory tags).
 The default is @samp{x} (hexadecimal) initially.  The default changes
 each time you use either @code{x} or @code{print}.
 
@@ -10870,6 +10875,22 @@ counter is shown with a @code{=>} marker. For example:
    0x804838c <main+24>: call   0x80482d4 <puts@@plt>
 @end smallexample
 
+If the architecture supports memory tagging, the tags can be displayed by
+using @samp{m}.  @xref{Memory Tagging}.
+
+The information will be displayed once per granule size
+(the amount of bytes a particular memory tag covers).  For example, AArch64
+has a granule size of 16 bytes, so it will display a tag every 16 bytes.
+
+Due to the way @value{GDBN} prints information with the @code{x} command (not
+aligned to a particular boundary), the tag information will refer to the
+initial address displayed on a particular line.  If a memory tag boundary
+is crossed in the middle of a line displayed by the @code{x} command, it
+will be displayed on the next line.
+
+The @samp{m} format doesn't affect any other specified formats that were
+passed to the @code{x} command.
+
 @cindex @code{$_}, @code{$__}, and value history
 The addresses and contents printed by the @code{x} command are not saved
 in the value history because there is often too much of them and they
@@ -10919,6 +10940,67 @@ arguments, compares all loadable sections.  With an argument of
 Note: for remote targets, this command can be accelerated if the
 target supports computing the CRC checksum of a block of memory
 (@pxref{qCRC packet}).
+@end table
+
+@node Memory Tagging
+@subsection Memory Tagging
+
+Memory tagging is a memory protection technology that uses a pair of tags to
+validate memory accesses through pointers.  The tags are integer values
+usually comprised of a few bits, depending on the architecture.
+
+There are two types of tags that are used in this setup: logical and
+allocation.  A logical tag is stored in the pointers themselves, usually at the
+higher bits of the pointers.  An allocation tag is the tag associated
+with particular ranges of memory in the physical address space, against which
+the logical tags from pointers are compared.
+
+The pointer tag (logical tag) must match the memory tag (allocation tag)
+for the memory access to be valid.  If the logical tag does not match the
+allocation tag, that will raise a memory violation.
+
+Allocation tags cover multiple contiguous bytes of physical memory.  This
+range of bytes is called a memory tag granule and is architecture-specific.
+For example,  AArch64 has a tag granule of 16 bytes, meaning each allocation
+tag spans 16 bytes of memory.
+
+If the underlying architecture supports memory tagging, like AArch64 MTE
+or SPARC ADI do,  @value{GDBN} can make use of it to validate pointers
+against memory allocation tags.
+
+The @code{print} (@pxref{Data}) and @code{x} (@pxref{Memory}) commands will
+display tag information when appropriate, and a command prefix of
+@code{memory-tag} gives access to the various memory tagging commands.
+
+The @code{memory-tag} commands are the following:
+
+@table @code
+@kindex memory-tag print-logical-tag
+@item memory-tag print-logical-tag @var{pointer_expression}
+Print the logical tag stored in @var{pointer_expression}.
+@kindex memory-tag with-logical-tag
+@item memory-tag with-logical-tag @var{pointer_expression} @var{tag_bytes}
+Print the pointer given by @var{pointer_expression}, augmented with a logical
+tag of @var{tag_bytes}.
+@kindex memory-tag print-allocation-tag
+@item memory-tag print-allocation-tag @var{address_expression}
+Print the allocation tag associated with the memory address given by
+@var{address_expression}.
+@kindex memory-tag setatag
+@item memory-tag setatag @var{starting_address} @var{length} @var{tag_bytes}
+Set the allocation tag(s) for memory range @r{[}@var{starting_address},
+@var{starting_address} + @var{length}@r{)} to @var{tag_bytes}.
+@kindex memory-tag check
+@item memory-tag check @var{pointer_expression}
+Check if the logical tag in the pointer given by @var{pointer_expression}
+matches the allocation tag for the memory referenced by the pointer.
+
+This essentially emulates the hardware validation that is done when tagged
+memory is accessed through a pointer, but does not cause a memory fault as
+it would during hardware validation.
+
+It can be used to inspect potential memory tagging violations in the running
+process, before any faults get triggered.
 @end table
 
 @node Auto Display
@@ -11523,6 +11605,20 @@ language, for most languages @code{@{...@}} is used, but Fortran uses
 @item show print max-depth
 Display the current threshold after which nested structures are
 replaces with ellipsis.
+
+@anchor{set print memory-tag-violations}
+@cindex printing memory tag violation information
+@item set print memory-tag-violations
+@itemx set print memory-tag-violations on
+Cause @value{GDBN} to display additional information about memory tag violations
+when printing pointers and addresses.
+
+@item set print memory-tag-violations off
+Stop printing memory tag violation information.
+
+@item show print memory-tag-violations
+Show whether memory tag violation information is displayed when printing
+pointers and addresses.
 
 @anchor{set print null-stop}
 @item set print null-stop
@@ -26303,6 +26399,42 @@ register @code{$lr} is pointing to an PAC function its value will be masked.
 When GDB prints a backtrace, any addresses that required unmasking will be
 postfixed with the marker [PAC].  When using the MI, this is printed as part
 of the @code{addr_flags} field.
+
+@subsubsection AArch64 Memory Tagging Extension.
+@cindex AArch64 Memory Tagging Extension.
+
+When @value{GDBN} is debugging the AArch64 architecture, the program is
+using the v8.5-A feature Memory Tagging Extension (MTE) and there is support
+in the kernel for MTE, @value{GDBN} will make memory tagging functionality
+available for inspection and editing of logical and allocation tags.
+@xref{Memory Tagging}.
+
+To aid debugging, @value{GDBN} will output additional information when SIGSEGV
+signals are generated as a result of memory tag failures.
+
+If the tag violation is synchronous, the following will be shown:
+
+@smallexample
+Program received signal SIGSEGV, Segmentation fault
+Memory tag violation while accessing address 0x0500fffff7ff8000
+Allocation tag 0x1
+Logical tag 0x5.
+@end smallexample
+
+If the tag violation is asynchronous, the fault address is not available.
+In this case @value{GDBN} will show the following:
+
+@smallexample
+Program received signal SIGSEGV, Segmentation fault
+Memory tag violation
+Fault address unavailable.
+@end smallexample
+
+A special register, @code{tag_ctl}, is made available through the
+@code{org.gnu.gdb.aarch64.mte} feature.  This register exposes some
+options that can be controlled at runtime and emulates the @code{prctl}
+option @code{PR_SET_TAGGED_ADDR_CTRL}.  For further information, see the
+documentation in the Linux kernel.
 
 @node i386
 @subsection x86 Architecture-specific Issues
@@ -43144,6 +43276,87 @@ is a sequence of thread IDs, @var{threadid} (eight hex
 digits), from the target.  See @code{remote.c:parse_threadlist_response()}.
 @end table
 
+@item qMemTags:@var{start address},@var{length}:@var{type}
+@anchor{qMemTags}
+@cindex fetch memory tags
+@cindex @samp{qMemTags} packet
+Fetch memory tags of type @var{type} from the address range
+@w{@r{[}@var{start address}, @var{start address} + @var{length}@r{)}}.  The
+target is responsible for calculating how many tags will be returned, as this
+is architecture-specific.
+
+@var{start address} is the starting address of the memory range.
+
+@var{length} is the length, in bytes, of the memory range.
+
+@var{type} is the type of tag the request wants to fetch.  The type is a signed
+integer.
+
+Reply:
+@table @samp
+@item @var{mxx}@dots{}
+Hex encoded sequence of uninterpreted bytes, @var{xx}@dots{}, representing the
+tags found in the requested memory range.
+
+@item E @var{nn}
+An error occured.  This means that fetching of memory tags failed for some
+reason.
+
+@item @w{}
+An empty reply indicates that @samp{qMemTags} is not supported by the stub,
+although this should not happen given @value{GDBN} will only send this packet
+if the stub has advertised support for memory tagging via @samp{qSupported}.
+@end table
+
+@item QMemTags:@var{start address},@var{length}:@var{type}:@var{tag bytes}
+@anchor{QMemTags}
+@cindex store memory tags
+@cindex @samp{QMemTags} packet
+Store memory tags of type @var{type} to the address range
+@w{@r{[}@var{start address}, @var{start address} + @var{length}@r{)}}.  The
+target is responsible for interpreting the type, the tag bytes and modifying
+the memory tag granules accordingly, given this is architecture-specific.
+
+The interpretation of how many tags (@var{nt}) should be written to how many
+memory tag granules (@var{ng}) is also architecture-specific.  The behavior is
+implementation-specific, but the following is suggested.
+
+If the number of memory tags, @var{nt}, is greater than or equal to the
+number of memory tag granules, @var{ng}, only @var{ng} tags will be
+stored.
+
+If @var{nt} is less than @var{ng}, the behavior is that of a fill operation,
+and the tag bytes will be used as a pattern that will get repeated until
+@var{ng} tags are stored.
+
+@var{start address} is the starting address of the memory range.  The address
+does not have any restriction on alignment or size.
+
+@var{length} is the length, in bytes, of the memory range.
+
+@var{type} is the type of tag the request wants to fetch.  The type is a signed
+integer.
+
+@var{tag bytes} is a sequence of hex encoded uninterpreted bytes which will be
+interpreted by the target.  Each pair of hex digits is interpreted as a
+single byte.
+
+Reply:
+@table @samp
+@item OK
+The request was successful and the memory tag granules were modified
+accordingly.
+
+@item E @var{nn}
+An error occured.  This means that modifying the memory tag granules failed
+for some reason.
+
+@item @w{}
+An empty reply indicates that @samp{QMemTags} is not supported by the stub,
+although this should not happen given @value{GDBN} will only send this packet
+if the stub has advertised support for memory tagging via @samp{qSupported}.
+@end table
+
 @item qOffsets
 @cindex section offsets, remote request
 @cindex @samp{qOffsets} packet
@@ -43811,6 +44024,11 @@ These are the currently defined stub features and their properties:
 @tab @samp{-}
 @tab No
 
+@item @samp{memory-tagging}
+@tab No
+@tab @samp{-}
+@tab No
+
 @end multitable
 
 These are the currently defined stub features, in more detail:
@@ -44024,6 +44242,16 @@ The remote stub understands the @samp{QThreadEvents} packet.
 
 @item no-resumed
 The remote stub reports the @samp{N} stop reply.
+
+
+@item memory-tagging
+The remote stub supports and implements the required memory tagging
+functionality and understands the @samp{qMemTags} (@pxref{qMemTags}) and
+@samp{QMemTags} (@pxref{QMemTags}) packets.
+
+For AArch64 GNU/Linux systems, this feature also requires access to the
+@file{/proc/@var{pid}/smaps} file so memory mapping page flags can be inspected.
+This is done via the @samp{vFile} requests.
 
 @end table
 
@@ -44506,6 +44734,7 @@ details of XML target descriptions for each architecture.
 
 @menu
 * ARM Breakpoint Kinds::
+* ARM Memory Tag Types::
 @end menu
 
 @node ARM Breakpoint Kinds
@@ -44524,6 +44753,23 @@ These breakpoint kinds are defined for the @samp{Z0} and @samp{Z1} packets.
 
 @item 4
 32-bit @acronym{ARM} mode breakpoint.
+
+@end table
+
+@node ARM Memory Tag Types
+@subsubsection @acronym{ARM} Memory Tag Types
+@cindex memory tag types, @acronym{ARM}
+
+These memory tag types are defined for the @samp{qMemTag} and @samp{QMemTag}
+packets.
+
+@table @r
+
+@item 0
+MTE logical tag
+
+@item 1
+MTE allocation tag
 
 @end table
 
