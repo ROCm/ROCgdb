@@ -5769,7 +5769,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 		 relocate the text and data segments independently,
 		 so the symbol does not matter.  */
 	      symbol = 0;
-	      relocate = globals->no_apply_dynamic_relocs ? FALSE : TRUE;
+	      relocate = !globals->no_apply_dynamic_relocs;
 	      outrel.r_info = ELFNN_R_INFO (symbol, AARCH64_R (RELATIVE));
 	      outrel.r_addend += value;
 	    }
@@ -6697,7 +6697,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
 
 /* Relocate an AArch64 ELF section.  */
 
-static bfd_boolean
+static int
 elfNN_aarch64_relocate_section (bfd *output_bfd,
 				struct bfd_link_info *info,
 				bfd *input_bfd,
@@ -8828,7 +8828,7 @@ elfNN_aarch64_allocate_ifunc_dynrelocs (struct elf_link_hash_entry *h,
 /* Allocate space in .plt, .got and associated reloc sections for
    local ifunc dynamic relocs.  */
 
-static bfd_boolean
+static int
 elfNN_aarch64_allocate_local_ifunc_dynrelocs (void **slot, void *inf)
 {
   struct elf_link_hash_entry *h
@@ -9475,7 +9475,7 @@ elfNN_aarch64_finish_dynamic_symbol (bfd *output_bfd,
 /* Finish up local dynamic symbol handling.  We set the contents of
    various dynamic sections here.  */
 
-static bfd_boolean
+static int
 elfNN_aarch64_finish_local_dynamic_symbol (void **slot, void *inf)
 {
   struct elf_link_hash_entry *h

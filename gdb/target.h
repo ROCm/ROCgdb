@@ -487,8 +487,15 @@ struct target_ops
 			 int TARGET_DEBUG_PRINTER (target_debug_print_step),
 			 enum gdb_signal)
       TARGET_DEFAULT_NORETURN (noprocess ());
-    virtual void commit_resume ()
+
+    /* Ensure that all resumed threads are committed to the target.
+
+       See the description of
+       process_stratum_target::commit_resumed_state for more
+       details.  */
+    virtual void commit_resumed ()
       TARGET_DEFAULT_IGNORE ();
+
     /* See target_wait's description.  Note that implementations of
        this method must not assume that inferior_ptid on entry is
        pointing at the thread or inferior that ends up reporting an
@@ -714,6 +721,15 @@ struct target_ops
       TARGET_DEFAULT_NORETURN (tcomplain ());
     virtual int async_wait_fd ()
       TARGET_DEFAULT_NORETURN (noprocess ());
+    /* Return true if the target has pending events to report to the
+       core.  If true, then GDB avoids resuming the target until all
+       pending events are consumed, so that multiple resumptions can
+       be coalesced as an optimization.  Most targets can't tell
+       whether they have pending events without calling target_wait,
+       so we default to returning false.  The only downside is that a
+       potential optimization is missed.  */
+    virtual bool has_pending_events ()
+      TARGET_DEFAULT_RETURN (false);
     virtual void thread_events (int)
       TARGET_DEFAULT_IGNORE ();
     /* This method must be implemented in some situations.  See the
@@ -1475,23 +1491,11 @@ extern void target_disconnect (const char *, int);
    target_commit_resume below.  */
 extern void target_resume (ptid_t ptid, int step, enum gdb_signal signal);
 
-/* Commit a series of resumption requests previously prepared with
-   target_resume calls.
+/* Ensure that all resumed threads are committed to the target.
 
-   GDB always calls target_commit_resume after calling target_resume
-   one or more times.  A target may thus use this method in
-   coordination with the target_resume method to batch target-side
-   resumption requests.  In that case, the target doesn't actually
-   resume in its target_resume implementation.  Instead, it prepares
-   the resumption in target_resume, and defers the actual resumption
-   to target_commit_resume.  E.g., the remote target uses this to
-   coalesce multiple resumption requests in a single vCont packet.  */
-extern void target_commit_resume ();
-
-/* Setup to defer target_commit_resume calls, and reactivate
-   target_commit_resume on destruction, if it was previously
-   active.  */
-extern scoped_restore_tmpl<int> make_scoped_defer_target_commit_resume ();
+   See the description of process_stratum_target::commit_resumed_state
+   for more details.  */
+extern void target_commit_resumed ();
 
 /* For target_read_memory see target/target.h.  */
 
@@ -1501,6 +1505,11 @@ extern ptid_t default_target_wait (struct target_ops *ops,
 				   ptid_t ptid,
 				   struct target_waitstatus *status,
 				   target_wait_flags options);
+
+/* Return true if the target has pending events to report to the core.
+   See target_ops::has_pending_events().  */
+
+extern bool target_has_pending_events ();
 
 /* Fetch at least register REGNO, or all regs if regno == -1.  No result.  */
 

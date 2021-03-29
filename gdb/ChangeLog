@@ -1,3 +1,156 @@
+2021-03-28  Tom Tromey  <tom@tromey.com>
+
+	* elfread.c (can_lazily_read_symbols): Move to dwarf2/read.c.
+	(elf_symfile_read): Simplify.
+	* dwarf2/read.c (struct lazy_dwarf_reader): Move from elfread.c.
+	(make_lazy_dwarf_reader): New function.
+	(make_dwarf_gdb_index, make_dwarf_debug_names): Now static.
+	(dwarf2_initialize_objfile): Return void.  Remove index_kind
+	parameter.  Push on 'qf' list.
+	* dwarf2/public.h (dwarf2_initialize_objfile): Change return
+	type.  Remove 'index_kind' parameter.
+	(make_dwarf_gdb_index, make_dwarf_debug_names): Don't declare.
+
+2021-03-27  Tom Tromey  <tom@tromey.com>
+
+	* elfread.c (elf_sym_fns_lazy_psyms): Don't declare.
+
+2021-03-27  Tom Tromey  <tom@tromey.com>
+
+	* elfread.c (elf_symfile_read): Don't clear 'qf'.
+
+2021-03-26  Lancelot Six  <lsix@lancelotsix.com>
+
+	* contrib/gdb-add-index.sh: Avoid variable shadowing and get
+	rid of 'local'.
+
+2021-03-26  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (struct output_source_filename_data): Add 'output'
+	method and operator().
+	(output_source_filename_data::output): Rename from
+	output_source_filename.
+	(output_partial_symbol_filename): Remove.
+	(info_sources_command): Update.
+	(struct add_partial_filename_data): Add operator().
+	(add_partial_filename_data::operator()): Rename from
+	maybe_add_partial_symtab_filename.
+	(make_source_files_completion_list): Update.
+	* symfile.c (quick_symbol_functions): Update.
+	* symfile-debug.c (objfile::map_symbol_filenames): Update.
+	* quick-symbol.h (symbol_filename_ftype): Change type of 'fun' and
+	'need_fullname'.  Remove 'data' parameter.
+	(struct quick_symbol_functions) <map_symbol_filenames>: Likewise.
+	* psymtab.c (psymbol_functions::map_symbol_filenames): Update.
+	* psympriv.h (struct psymbol_functions) <map_symbol_filenames>:
+	Change type of 'fun' and 'need_fullname'.  Remove 'data'
+	parameter.
+	* objfiles.h (struct objfile) <map_symbol_filenames>: Change type
+	of 'fun' and 'need_fullname'.  Remove 'data' parameter.
+	* mi/mi-cmd-file.c (print_partial_file_name): Remove 'ignore'
+	parameter.
+	(mi_cmd_file_list_exec_source_files): Update.
+	* dwarf2/read.c
+	(dwarf2_base_index_functions::map_symbol_filenames): Update.
+
+2021-03-26  Tom Tromey  <tom@tromey.com>
+
+	* ada-lang.c (struct match_data): Add operator().
+	(match_data::operator()): Rename from aux_add_nonlocal_symbols.
+	(callback): Remove 'callback'.
+
+2021-03-26  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (psymbol_functions::expand_symtabs_matching): Only
+	call make_ignore_params once.
+
+2021-03-26  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (psymbol_functions::expand_symtabs_matching): Remove
+	"user" check.
+
+2021-03-26  Simon Marchi  <simon.marchi@efficios.com>
+	    Pedro Alves  <pedro@palves.net>
+
+	* async-event.c: Include "infrun.h".
+	(async_event_handler_marked): New.
+	* async-event.h (async_event_handler_marked): Declare.
+	* infrun.c (maybe_set_commit_resumed_all_targets): Switch to
+	inferior before calling target method.  Don't commit-resumed if
+	target_has_pending_events is true.
+	* remote.c (remote_target::has_pending_events): New.
+	* target-delegates.c: Regenerate.
+	* target.c (target_has_pending_events): New.
+	* target.h (target_ops::has_pending_events): New target method.
+	(target_has_pending_events): New.
+
+2021-03-26  Simon Marchi  <simon.marchi@efficios.com>
+	    Pedro Alves  <pedro@palves.net>
+
+	* infcmd.c (run_command_1, attach_command, detach_command)
+	(interrupt_target_1): Use scoped_disable_commit_resumed.
+	* infrun.c (do_target_resume): Remove
+	target_commit_resume call.
+	(commit_resume_all_targets): Remove.
+	(maybe_set_commit_resumed_all_targets): New.
+	(maybe_call_commit_resumed_all_targets): New.
+	(enable_commit_resumed): New.
+	(scoped_disable_commit_resumed::scoped_disable_commit_resumed)
+	(scoped_disable_commit_resumed::~scoped_disable_commit_resumed)
+	(scoped_disable_commit_resumed::reset)
+	(scoped_disable_commit_resumed::reset_and_commit)
+	(scoped_enable_commit_resumed::scoped_enable_commit_resumed)
+	(scoped_enable_commit_resumed::~scoped_enable_commit_resumed):
+	New.
+	(proceed): Use scoped_disable_commit_resumed and
+	maybe_call_commit_resumed_all_targets.
+	(fetch_inferior_event): Use scoped_disable_commit_resumed.
+	* infrun.h (struct scoped_disable_commit_resumed): New.
+	(maybe_call_commit_resumed_all_process_targets): New.
+	(struct scoped_enable_commit_resumed): New.
+	* mi/mi-main.c (exec_continue): Use scoped_disable_commit_resumed.
+	* process-stratum-target.h (class process_stratum_target):
+	<commit_resumed_state>: New.
+	* record-full.c (record_full_wait_1): Change commit_resumed_state
+	around calling commit_resumed.
+	* remote.c (class remote_target) <commit_resume>: Rename to...
+	<commit_resumed>: ... this.
+	(struct stop_reply): Move up.
+	(remote_target::commit_resume): Rename to...
+	(remote_target::commit_resumed): ... this.  Check if there is any
+	thread pending vCont resume.
+	(remote_target::remote_stop_ns): Generate stop replies for resumed
+	but pending vCont threads.
+	(remote_target::wait_ns): Add gdb_assert.
+	* target-delegates.c: Regenerate.
+	* target.c (target_wait, target_resume): Assert that the current
+	process_stratum target isn't in commit-resumed state.
+	(defer_target_commit_resume): Remove.
+	(target_commit_resume): Remove.
+	(target_commit_resumed): New.
+	(make_scoped_defer_target_commit_resume): Remove.
+	(target_stop): Assert that the current process_stratum target
+	isn't in commit-resumed state.
+	* target.h (struct target_ops) <commit_resume>: Rename to ...
+	 <commit_resumed>: ... this.
+	(target_commit_resume): Remove.
+	(target_commit_resumed): New.
+	(make_scoped_defer_target_commit_resume): Remove.
+	* top.c (wait_sync_command_done): Use
+	scoped_enable_commit_resumed.
+
+2021-03-26  Pedro Alves  <pedro@palves.net>
+
+	* target.c (target_always_non_stop_p): Also check whether the
+	target can async.
+
+2021-03-26  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_read_debug_names)
+	(dwarf2_build_psymtabs_hard, create_addrmap_from_aranges)
+	(dw2_debug_names_iterator::next, create_type_unit_group):
+	Simplify.
+
 2021-03-25  Pedro Alves  <pedro@palves.net>
 
 	* gdb.server/bkpt-other-inferior.exp: Only enable remote output

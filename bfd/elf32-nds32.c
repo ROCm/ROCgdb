@@ -4677,7 +4677,7 @@ nds32_elf_final_link_relocate (reloc_howto_type *howto, bfd *input_bfd,
 				  contents + address);
 }
 
-static bfd_boolean
+static int
 nds32_elf_output_symbol_hook (struct bfd_link_info *info,
 			      const char *name,
 			      Elf_Internal_Sym *elfsym ATTRIBUTE_UNUSED,
@@ -4935,7 +4935,7 @@ fls (register unsigned int x)
 #define nds32_elf_local_tlsdesc_gotent(bfd) \
   (elf_nds32_tdata (bfd)->local_tlsdesc_gotent)
 
-static bfd_boolean
+static int
 nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 			    struct bfd_link_info * info,
 			    bfd *		   input_bfd,
@@ -9038,7 +9038,7 @@ insert_nds32_elf_blank (nds32_elf_blank_t **blank_p, bfd_vma addr, bfd_vma len)
   if (!*blank_p)
     {
       *blank_p = create_nds32_elf_blank (addr, len);
-      return *blank_p ? TRUE : FALSE;
+      return *blank_p != NULL;
     }
 
   blank_t = search_nds32_elf_blank (*blank_p, addr);
@@ -12461,10 +12461,10 @@ static bfd_boolean
 nds32_elf_output_arch_syms (bfd *output_bfd ATTRIBUTE_UNUSED,
 			    struct bfd_link_info *info,
 			    void *finfo ATTRIBUTE_UNUSED,
-			    bfd_boolean (*func) (void *, const char *,
-						 Elf_Internal_Sym *,
-						 asection *,
-						 struct elf_link_hash_entry *)
+			    int (*func) (void *, const char *,
+					 Elf_Internal_Sym *,
+					 asection *,
+					 struct elf_link_hash_entry *)
 			    ATTRIBUTE_UNUSED)
 {
   FILE *sym_ld_script = NULL;

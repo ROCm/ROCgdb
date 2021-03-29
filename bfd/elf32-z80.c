@@ -383,7 +383,7 @@ z80_elf_final_link_relocate (unsigned long r_type,
   return r ? bfd_reloc_ok : bfd_reloc_notsupported;
 }
 
-static bfd_boolean
+static int
 z80_elf_relocate_section (bfd *output_bfd,
 			  struct bfd_link_info *info,
 			  bfd *input_bfd,
@@ -550,7 +550,7 @@ z80_elf_object_p (bfd *abfd)
   return bfd_default_set_arch_mach (abfd, bfd_arch_z80, mach);
 }
 
-static int
+static bfd_boolean
 z80_is_local_label_name (bfd *	abfd ATTRIBUTE_UNUSED,
 			 const char * name)
 {

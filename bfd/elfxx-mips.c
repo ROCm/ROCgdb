@@ -4362,7 +4362,7 @@ mips_elf_record_got_page_entry (struct mips_elf_traverse_got_arg *arg,
    whether the page reference described by *REFP needs a GOT page entry,
    and record that entry in DATA->g if so.  Set DATA->g to null on failure.  */
 
-static bfd_boolean
+static int
 mips_elf_resolve_got_page_ref (void **refp, void *data)
 {
   struct mips_got_page_ref *ref;
@@ -4530,7 +4530,7 @@ mips_use_local_got_p (struct bfd_link_info *info,
    Count the number of global symbols that are in the primary GOT only
    because they have relocations against them (reloc_only_gotno).  */
 
-static int
+static bfd_boolean
 mips_elf_count_got_symbols (struct mips_elf_link_hash_entry *h, void *data)
 {
   struct bfd_link_info *info;
@@ -10319,7 +10319,7 @@ mips_reloc_against_discarded_section (bfd *output_bfd,
 
 /* Relocate a MIPS ELF section.  */
 
-bfd_boolean
+int
 _bfd_mips_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 				bfd *input_bfd, asection *input_section,
 				bfd_byte *contents, Elf_Internal_Rela *relocs,
@@ -16395,7 +16395,7 @@ _bfd_mips_elf_merge_symbol_attribute (struct elf_link_hash_entry *h,
 bfd_boolean
 _bfd_mips_elf_ignore_undef_symbol (struct elf_link_hash_entry *h)
 {
-  return ELF_MIPS_IS_OPTIONAL (h->other) ? TRUE : FALSE;
+  return ELF_MIPS_IS_OPTIONAL (h->other) != 0;
 }
 
 bfd_boolean

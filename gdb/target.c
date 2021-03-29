@@ -2597,6 +2597,9 @@ target_wait (ptid_t ptid, struct target_waitstatus *status,
 	     target_wait_flags options)
 {
   target_ops *target = current_inferior ()->top_target ();
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  gdb_assert (!proc_target->commit_resumed_state);
 
   if (!target->can_async_p ())
     gdb_assert ((options & TARGET_WNOHANG) == 0);
@@ -2653,6 +2656,7 @@ void
 target_resume (ptid_t ptid, int step, enum gdb_signal signal)
 {
   process_stratum_target *curr_target = current_inferior ()->process_target ();
+  gdb_assert (!curr_target->commit_resumed_state);
 
   target_dcache_invalidate ();
 
@@ -2666,26 +2670,21 @@ target_resume (ptid_t ptid, int step, enum gdb_signal signal)
   clear_inline_frame_state (curr_target, ptid);
 }
 
-/* If true, target_commit_resume is a nop.  */
-static int defer_target_commit_resume;
-
 /* See target.h.  */
 
 void
-target_commit_resume (void)
+target_commit_resumed ()
 {
-  if (defer_target_commit_resume)
-    return;
-
-  current_inferior ()->top_target ()->commit_resume ();
+  gdb_assert (current_inferior ()->process_target ()->commit_resumed_state);
+  current_inferior ()->top_target ()->commit_resumed ();
 }
 
 /* See target.h.  */
 
-scoped_restore_tmpl<int>
-make_scoped_defer_target_commit_resume ()
+bool
+target_has_pending_events ()
 {
-  return make_scoped_restore (&defer_target_commit_resume, 1);
+  return current_inferior ()->top_target ()->has_pending_events ();
 }
 
 void
@@ -3761,6 +3760,10 @@ target_update_thread_list (void)
 void
 target_stop (ptid_t ptid)
 {
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  gdb_assert (!proc_target->commit_resumed_state);
+
   if (!may_stop)
     {
       warning (_("May not interrupt or stop the target, ignoring attempt"));
@@ -4370,10 +4373,11 @@ target_always_non_stop_p (void)
 bool
 target_is_non_stop_p ()
 {
-  return (non_stop
-	  || target_non_stop_enabled == AUTO_BOOLEAN_TRUE
-	  || (target_non_stop_enabled == AUTO_BOOLEAN_AUTO
-	      && target_always_non_stop_p ()));
+  return ((non_stop
+	   || target_non_stop_enabled == AUTO_BOOLEAN_TRUE
+	   || (target_non_stop_enabled == AUTO_BOOLEAN_AUTO
+	       && target_always_non_stop_p ()))
+	  && target_can_async_p ());
 }
 
 /* See target.h.  */

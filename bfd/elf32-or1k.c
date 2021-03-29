@@ -1242,7 +1242,7 @@ or1k_final_link_relocate (reloc_howto_type *howto, bfd *input_bfd,
    section, which means that the addend must be adjusted
    accordingly.  */
 
-static bfd_boolean
+static int
 or1k_elf_relocate_section (bfd *output_bfd,
 			   struct bfd_link_info *info,
 			   bfd *input_bfd,
@@ -2698,7 +2698,7 @@ or1k_set_got_and_rela_sizes (const unsigned char tls_type,
       is_tls_entry = TRUE;
     }
 
-  if (is_tls_entry == FALSE)
+  if (!is_tls_entry)
     *got_size += 4;
 
   if (dynamic)
@@ -2709,7 +2709,7 @@ or1k_set_got_and_rela_sizes (const unsigned char tls_type,
       if ((tls_type & TLS_IE) != 0)
 	*rela_size += sizeof (Elf32_External_Rela);
 
-      if (is_tls_entry == FALSE)
+      if (!is_tls_entry)
 	*rela_size += sizeof (Elf32_External_Rela);
     }
 }

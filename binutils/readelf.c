@@ -4788,7 +4788,7 @@ request_dump (struct dump_data *dumpdata, dump_type type)
   int section;
   char * cp;
 
-  do_dump++;
+  do_dump = TRUE;
   section = strtoul (optarg, & cp, 0);
 
   if (! *cp && section >= 0)
@@ -14495,7 +14495,7 @@ dump_section_as_strings (Elf_Internal_Shdr * section, Filedata * filedata)
   real_start = start = (unsigned char *) get_section_contents (section, filedata);
   if (start == NULL)
     /* PR 21820: Do not fail if the section was empty.  */
-    return (section->sh_size == 0 || section->sh_type == SHT_NOBITS) ? TRUE : FALSE;
+    return section->sh_size == 0 || section->sh_type == SHT_NOBITS;
 
   num_bytes = section->sh_size;
 
@@ -14711,7 +14711,7 @@ dump_section_as_bytes (Elf_Internal_Shdr *  section,
   real_start = start = (unsigned char *) get_section_contents (section, filedata);
   if (start == NULL)
     /* PR 21820: Do not fail if the section was empty.  */
-    return (section->sh_size == 0 || section->sh_type == SHT_NOBITS) ? TRUE : FALSE;
+    return section->sh_size == 0 || section->sh_type == SHT_NOBITS;
 
   section_size = section->sh_size;
 

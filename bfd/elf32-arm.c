@@ -8796,9 +8796,9 @@ stm32l4xx_need_create_replacing_stub (const insn32 insn,
 
   /* DEFAULT mode accounts for the real bug condition situation,
      ALL mode inserts stubs for each LDM/VLDM instruction (testing).  */
-  return
-    (stm32l4xx_fix == BFD_ARM_STM32L4XX_FIX_DEFAULT) ? nb_words > 8 :
-    (stm32l4xx_fix == BFD_ARM_STM32L4XX_FIX_ALL) ? TRUE : FALSE;
+  return (stm32l4xx_fix == BFD_ARM_STM32L4XX_FIX_DEFAULT
+	  ? nb_words > 8
+	  : stm32l4xx_fix == BFD_ARM_STM32L4XX_FIX_ALL);
 }
 
 /* Look for potentially-troublesome code sequences which might trigger
@@ -13024,7 +13024,7 @@ arm_add_to_rel (bfd *		   abfd,
 
 /* Relocate an ARM ELF section.  */
 
-static bfd_boolean
+static int
 elf32_arm_relocate_section (bfd *		   output_bfd,
 			    struct bfd_link_info * info,
 			    bfd *		   input_bfd,

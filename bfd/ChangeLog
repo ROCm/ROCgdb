@@ -1,3 +1,147 @@
+2021-03-29  Alan Modra  <amodra@gmail.com>
+
+	* aoutx.h (aout_link_write_symbols): Don't cast boolean expression
+	to bfd_boolean.
+	* elf32-or1k.c (or1k_set_got_and_rela_sizes): Dont compare booleans
+	against FALSE.
+	* elf32-arc.c (name_for_global_symbol): Don't compare boolean to TRUE.
+	(is_reloc_PC_relative): Don't use "boolean_condition ? TRUE : FALSE".
+	(is_reloc_SDA_relative, is_reloc_for_GOT): Likewise.
+	(is_reloc_for_PLT, is_reloc_for_TLS): Likewise.
+	* elf32-arm.c (stm32l4xx_need_create_replacing_stub): Likewise.
+	* elf32-nds32.c (insert_nds32_elf_blank): Likewise.
+	* elf32-rx.c (rx_set_section_contents): Likewise.
+	* elfnn-aarch64.c (elfNN_aarch64_final_link_relocate): Likewise.
+	* elfxx-mips.c (_bfd_mips_elf_ignore_undef_symbol): Likewise.
+	* mach-o.c (bfd_mach_o_read_command): Likewise.
+	* targets.c (bfd_get_target_info): Likewise.
+
+2021-03-29  Alan Modra  <amodra@gmail.com>
+
+	* coff-z80.c (z80_is_local_label_name): Return bfd_boolean.
+	* elf32-z80.c (z80_is_local_label_name): Likewise.
+	* elf32-spu.c (spu_elf_modify_headers): Likewise.
+	* elf32-nds32.h (struct elf_nds32_link_hash_table <hyper_relax>):
+	Change type to int.
+	* vms-lib.c (_bfd_vms_lib_write_archive_contents): Correct test
+	for error return from vms_write_data_block.
+
+2021-03-29  Alan Modra  <amodra@gmail.com>
+
+	* elf32-i386.c (elf_i386_finish_local_dynamic_symbol): Return int.
+	* elf64-ia64-vms.c (elf64_ia64_local_dyn_info_free): Likewise.
+	(elf64_ia64_local_dyn_sym_thunk): Likewise.
+	* elf64-x86-64.c (elf_x86_64_finish_local_dynamic_symbol): Likewise.
+	* elfnn-aarch64.c (elfNN_aarch64_allocate_local_ifunc_dynrelocs),
+	(elfNN_aarch64_finish_local_dynamic_symbol): Likewise.
+	* elfnn-ia64.c (elfNN_ia64_local_dyn_info_free): Likewise.
+	(elfNN_ia64_local_dyn_sym_thunk): Likewise.
+	* elfnn-riscv.c (allocate_local_ifunc_dynrelocs): Likewise.
+	(riscv_pcrel_reloc_eq): Likewise.
+	(riscv_elf_finish_local_dynamic_symbol): Likewise.
+	* elfxx-sparc.c (allocate_local_dynrelocs): Likewise.
+	(finish_local_dynamic_symbol): Likewise.
+	* elfxx-x86.c (elf_x86_allocate_local_dynreloc): Likewise.
+	* elfxx-mips.c (mips_elf_resolve_got_page_ref): Likewise.
+	(mips_elf_count_got_symbols): Change return type to bfd_boolean.
+
+2021-03-29  Alan Modra  <amodra@gmail.com>
+
+	* elflink.c (elf_link_output_symstrtab): Make flinfo parameter
+	a void pointer.
+	(bfd_elf_final_link): Delete out_sym_func typedef and don't cast
+	elf_link_output_symstrtab when calling output_arch_syms and
+	output_arch_local_syms.
+	* elf-bfd.h (struct elf_backend_data <elf_backend_output_arch_syms,
+	elf_backend_output_arch_local_syms>): Change return type of func
+	arg to match elf_link_output_symstrtab.
+	* elf-vxworks.h (elf_vxworks_link_output_symbol_hook): Correct
+	return type.
+	* elf32-nds32.c (nds32_elf_output_symbol_hook): Correct return type.
+	(nds32_elf_output_arch_syms): Correct func return type.
+
+2021-03-29  Alan Modra  <amodra@gmail.com>
+
+	* elf-m10200.c (mn10200_elf_relocate_section): Return int.
+	* elf-m10300.c (mn10300_elf_relocate_section): Likewise.
+	* elf32-arc.c (elf_arc_relocate_section): Likewise.
+	* elf32-arm.c (elf32_arm_relocate_section): Likewise.
+	* elf32-avr.c (elf32_avr_relocate_section): Likewise.
+	* elf32-bfin.c (bfin_relocate_section): Likewise.
+	(bfinfdpic_relocate_section): Likewise.
+	* elf32-cr16.c (elf32_cr16_relocate_section): Likewise.
+	* elf32-cris.c (cris_elf_relocate_section): Likewise.
+	* elf32-crx.c (elf32_crx_relocate_section): Likewise.
+	* elf32-csky.c (csky_elf_relocate_section): Likewise.
+	* elf32-d10v.c (elf32_d10v_relocate_section): Likewise.
+	* elf32-epiphany.c (epiphany_elf_relocate_section): Likewise.
+	* elf32-fr30.c (fr30_elf_relocate_section): Likewise.
+	* elf32-frv.c (elf32_frv_relocate_section): Likewise.
+	* elf32-ft32.c (ft32_elf_relocate_section): Likewise.
+	* elf32-h8300.c (elf32_h8_relocate_section): Likewise.
+	* elf32-hppa.c (elf32_hppa_relocate_section): Likewise.
+	* elf32-i386.c (elf_i386_relocate_section): Likewise.
+	* elf32-ip2k.c (ip2k_elf_relocate_section): Likewise.
+	* elf32-iq2000.c (iq2000_elf_relocate_section): Likewise.
+	* elf32-lm32.c (lm32_elf_relocate_section): Likewise.
+	* elf32-m32c.c (m32c_elf_relocate_section): Likewise.
+	* elf32-m32r.c (m32r_elf_relocate_section): Likewise.
+	* elf32-m68hc1x.c (elf32_m68hc11_relocate_section): Likewise.
+	* elf32-m68hc1x.h (elf32_m68hc11_relocate_section): Likewise.
+	* elf32-m68k.c (elf_m68k_relocate_section): Likewise.
+	* elf32-mcore.c (mcore_elf_relocate_section): Likewise.
+	* elf32-mep.c (mep_elf_relocate_section): Likewise.
+	* elf32-metag.c (elf_metag_relocate_section): Likewise.
+	* elf32-microblaze.c (microblaze_elf_relocate_section): Likewise.
+	* elf32-moxie.c (moxie_elf_relocate_section): Likewise.
+	* elf32-msp430.c (elf32_msp430_relocate_section): Likewise.
+	* elf32-mt.c (mt_elf_relocate_section): Likewise.
+	* elf32-nds32.c (nds32_elf_relocate_section): Likewise.
+	* elf32-nios2.c (nios2_elf32_relocate_section): Likewise.
+	* elf32-or1k.c (or1k_elf_relocate_section): Likewise.
+	* elf32-ppc.c (ppc_elf_relocate_section): Likewise.
+	* elf32-pru.c (pru_elf32_relocate_section): Likewise.
+	* elf32-rl78.c (rl78_elf_relocate_section): Likewise.
+	* elf32-rx.c (rx_elf_relocate_section): Likewise.
+	* elf32-s390.c (elf_s390_relocate_section): Likewise.
+	* elf32-score.c (s3_bfd_score_elf_relocate_section): Likewise.
+	(_bfd_score_elf_relocate_section): Likewise.
+	* elf32-score.h (s7_bfd_score_elf_relocate_section): Likewise.
+	* elf32-score7.c (s7_bfd_score_elf_relocate_section): Likewise.
+	* elf32-sh.c (sh_elf_relocate_section): Likewise.
+	* elf32-tic6x.c (elf32_tic6x_relocate_section): Likewise.
+	* elf32-tilepro.c (tilepro_elf_relocate_section): Likewise.
+	* elf32-v850.c (v850_elf_relocate_section): Likewise.
+	* elf32-vax.c (elf_vax_relocate_section): Likewise.
+	* elf32-visium.c (visium_elf_relocate_section): Likewise.
+	* elf32-xc16x.c (elf32_xc16x_relocate_section): Likewise.
+	* elf32-xstormy16.c (xstormy16_elf_relocate_section): Likewise.
+	* elf32-xtensa.c (elf_xtensa_relocate_section): Likewise.
+	* elf32-z80.c (z80_elf_relocate_section): Likewise.
+	* elf64-alpha.c (elf64_alpha_relocate_section_r): Likewise.
+	(elf64_alpha_relocate_section): Likewise.
+	* elf64-bpf.c (bpf_elf_relocate_section): Likewise.
+	* elf64-hppa.c (elf64_hppa_relocate_section): Likewise.
+	* elf64-ia64-vms.c (elf64_ia64_relocate_section): Likewise.
+	* elf64-mmix.c (mmix_elf_relocate_section): Likewise.
+	* elf64-ppc.c (ppc64_elf_relocate_section): Likewise.
+	* elf64-s390.c (elf_s390_relocate_section): Likewise.
+	* elf64-x86-64.c (elf_x86_64_relocate_section): Likewise.
+	* elfnn-aarch64.c (elfNN_aarch64_relocate_section): Likewise.
+	* elfnn-ia64.c (elfNN_ia64_relocate_section): Likewise.
+	* elfnn-riscv.c (riscv_elf_relocate_section): Likewise.
+	* elfxx-mips.c (_bfd_mips_elf_relocate_section): Likewise.
+	* elfxx-mips.h (_bfd_mips_elf_relocate_section): Likewise.
+	* elfxx-sparc.c (_bfd_sparc_elf_relocate_section): Likewise.
+	* elfxx-sparc.h (_bfd_sparc_elf_relocate_section): Likewise.
+	* elfxx-tilegx.c (tilegx_elf_relocate_section): Likewise.
+	* elfxx-tilegx.h (tilegx_elf_relocate_section): Likewise.
+
+2021-03-26  Keith Seitz  <keiths@redhat.com>
+
+	* elfcore.h (_bfd_elf_core_find_build_id): Seek file
+	offset of program headers after calling elf_read_notes.
+
 2021-03-23  Jan Beulich  <jbeulich@suse.com>
 
 	* dwarf2.c (read_indexed_string): Rename index to idx.

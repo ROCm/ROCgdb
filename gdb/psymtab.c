@@ -1092,10 +1092,10 @@ psymbol_functions::expand_symtabs_with_fullname (struct objfile *objfile,
    the definition of quick_symbol_functions in symfile.h.  */
 
 void
-psymbol_functions::map_symbol_filenames (struct objfile *objfile,
-					 symbol_filename_ftype *fun,
-					 void *data,
-					 int need_fullname)
+psymbol_functions::map_symbol_filenames
+     (struct objfile *objfile,
+      gdb::function_view<symbol_filename_ftype> fun,
+      bool need_fullname)
 {
   for (partial_symtab *ps : require_partial_symbols (objfile))
     {
@@ -1118,7 +1118,7 @@ psymbol_functions::map_symbol_filenames (struct objfile *objfile,
 	fullname = psymtab_to_fullname (ps);
       else
 	fullname = NULL;
-      (*fun) (ps->filename, fullname, data);
+      fun (ps->filename, fullname);
     }
 }
 
@@ -1306,16 +1306,15 @@ psymbol_functions::expand_symtabs_matching
   for (partial_symtab *ps : require_partial_symbols (objfile))
     ps->searched_flag = PST_NOT_SEARCHED;
 
+  gdb::optional<lookup_name_info> psym_lookup_name;
+  if (lookup_name != nullptr)
+    psym_lookup_name = lookup_name->make_ignore_params ();
+
   for (partial_symtab *ps : m_partial_symtabs->range ())
     {
       QUIT;
 
       if (ps->readin_p (objfile))
-	continue;
-
-      /* We skip shared psymtabs because file-matching doesn't apply
-	 to them; but we search them later in the loop.  */
-      if (ps->user != NULL)
 	continue;
 
       if (file_matcher)
@@ -1340,7 +1339,7 @@ psymbol_functions::expand_symtabs_matching
 
       if ((symbol_matcher == NULL && lookup_name == NULL)
 	  || recursively_search_psymtabs (ps, objfile, domain,
-					  lookup_name->make_ignore_params (),
+					  *psym_lookup_name,
 					  symbol_matcher))
 	{
 	  struct compunit_symtab *symtab =

@@ -14,7 +14,7 @@ struct dummy_target : public target_ops
   void detach (inferior *arg0, int arg1) override;
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
-  void commit_resume () override;
+  void commit_resumed () override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -84,6 +84,7 @@ struct dummy_target : public target_ops
   bool is_async_p () override;
   void async (int arg0) override;
   int async_wait_fd () override;
+  bool has_pending_events () override;
   void thread_events (int arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
@@ -191,7 +192,7 @@ struct debug_target : public target_ops
   void detach (inferior *arg0, int arg1) override;
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
-  void commit_resume () override;
+  void commit_resumed () override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -261,6 +262,7 @@ struct debug_target : public target_ops
   bool is_async_p () override;
   void async (int arg0) override;
   int async_wait_fd () override;
+  bool has_pending_events () override;
   void thread_events (int arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
@@ -453,22 +455,22 @@ debug_target::resume (ptid_t arg0, int arg1, enum gdb_signal arg2)
 }
 
 void
-target_ops::commit_resume ()
+target_ops::commit_resumed ()
 {
-  this->beneath ()->commit_resume ();
+  this->beneath ()->commit_resumed ();
 }
 
 void
-dummy_target::commit_resume ()
+dummy_target::commit_resumed ()
 {
 }
 
 void
-debug_target::commit_resume ()
+debug_target::commit_resumed ()
 {
-  fprintf_unfiltered (gdb_stdlog, "-> %s->commit_resume (...)\n", this->beneath ()->shortname ());
-  this->beneath ()->commit_resume ();
-  fprintf_unfiltered (gdb_stdlog, "<- %s->commit_resume (", this->beneath ()->shortname ());
+  fprintf_unfiltered (gdb_stdlog, "-> %s->commit_resumed (...)\n", this->beneath ()->shortname ());
+  this->beneath ()->commit_resumed ();
+  fprintf_unfiltered (gdb_stdlog, "<- %s->commit_resumed (", this->beneath ()->shortname ());
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
@@ -2201,6 +2203,31 @@ debug_target::async_wait_fd ()
   fprintf_unfiltered (gdb_stdlog, "<- %s->async_wait_fd (", this->beneath ()->shortname ());
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_int (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+bool
+target_ops::has_pending_events ()
+{
+  return this->beneath ()->has_pending_events ();
+}
+
+bool
+dummy_target::has_pending_events ()
+{
+  return false;
+}
+
+bool
+debug_target::has_pending_events ()
+{
+  bool result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->has_pending_events (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->has_pending_events ();
+  fprintf_unfiltered (gdb_stdlog, "<- %s->has_pending_events (", this->beneath ()->shortname ());
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_bool (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }

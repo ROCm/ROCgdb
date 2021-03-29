@@ -1,3 +1,59 @@
+2021-03-26  Will Schmidt  <will_schmidt@vnet.ibm.com>
+
+	* gdb.arch/powerpc-disassembler-options.exp: Extend some test
+	names for uniqueness.
+	* gdb.arch/powerpc-fpscr-gcore.exp: Add more test names for
+	uniqueness.
+
+2021-03-26  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-prettyprint.c (struct container): Add 'is_array_p'
+	member.
+	(make_container): Initialise is_array_p.
+	* gdb.python/py-prettyprint.exp: Add new tests.
+	* gdb.python/py-prettyprint.py (ContainerPrinter.display_hint):
+	Check is_array_p and possibly return 'array'.
+
+2021-03-26  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.cp/breakpoint.exp: Extend test names to make them unique.
+	* gdb.cp/casts.exp: Give tests unique names.
+	* gdb.cp/filename.exp: Likewise.
+	* gdb.cp/gdb2495.exp: Likewise.
+	* gdb.cp/mb-ctor.exp: Extend test names to make them unique.
+	* gdb.cp/misc.exp: Rename test to make it unique.
+	* gdb.cp/nsnested.exp: Give tests unique names.
+	* gdb.cp/ovldbreak.exp: Likewise.
+	* gdb.cp/pr17494.exp: Rename test to reflect what is actually
+	being tested.  This also removes the duplicate test name.
+	* gdb.cp/ref-types.exp: Likewise.
+	* gdb.cp/temargs.exp: Likewise.
+
+2021-03-26  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.cp/cplusfuncs.exp (test_paddr_operator_functions): Escape
+	square brackets in test.
+
+2021-03-26  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.cp/maint.exp (test_first_component): Run more tests with a
+	variable number of spaces, this removes the duplicate testing of
+	'operator ->' which existed before.
+
+2021-03-26  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.cp/gdb2384.cc (main): Change comments used for breakpoints.
+	* gdb.cp/gdb2384.exp: Change and extend test names to avoid
+	duplicates, and also to avoid having a string inside parentheses
+	at the end of test names.
+
+2021-03-26  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.cp/nsusing.exp: Rewrite test, remove a duplicate test block.
+	Avoid repeated uses of 'runto', and instread just progress once
+	through the test stopping at different breakpoints.  Give comments
+	a capital letter and full stop.  Give duplicate tests unique names.
+
 2021-03-25  Pedro Alves  <pedro@palves.net>
 
 	* gdb.server/stop-reply-no-thread-multi.exp (run_test): Add

@@ -1352,7 +1352,7 @@ allocate_ifunc_dynrelocs (struct elf_link_hash_entry *h,
 /* Allocate space in .plt, .got and associated reloc sections for
    local ifunc dynamic relocs.  */
 
-static bfd_boolean
+static int
 allocate_local_ifunc_dynrelocs (void **slot, void *inf)
 {
   struct elf_link_hash_entry *h
@@ -1766,7 +1766,7 @@ riscv_pcrel_reloc_hash (const void *entry)
   return (hashval_t)(e->address >> 2);
 }
 
-static bfd_boolean
+static int
 riscv_pcrel_reloc_eq (const void *entry1, const void *entry2)
 {
   const riscv_pcrel_hi_reloc *e1 = entry1, *e2 = entry2;
@@ -1932,7 +1932,7 @@ riscv_resolve_pcrel_lo_relocs (riscv_pcrel_relocs *p)
    section, which means that the addend must be adjusted
    accordingly.  */
 
-static bfd_boolean
+static int
 riscv_elf_relocate_section (bfd *output_bfd,
 			    struct bfd_link_info *info,
 			    bfd *input_bfd,
@@ -3110,7 +3110,7 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 /* Finish up local dynamic symbol handling.  We set the contents of
    various dynamic sections here.  */
 
-static bfd_boolean
+static int
 riscv_elf_finish_local_dynamic_symbol (void **slot, void *inf)
 {
   struct elf_link_hash_entry *h = (struct elf_link_hash_entry *) *slot;
