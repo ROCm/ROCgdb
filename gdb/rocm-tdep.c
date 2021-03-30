@@ -1517,10 +1517,6 @@ rocm_target_solib_loaded (struct so_list *solib)
 	  amd_dbgapi_report_shared_library (
 	    amd_dbgapi_shared_library_id_t{ value.first },
 	    AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED);
-
-	  /* The rocm target may not be engaged yet, we need to process the
-	    events now in case there is a runtime event pending.  */
-	  rocm_process_event_queue ();
 	}
     }
 }
@@ -1612,11 +1608,6 @@ rocm_target_inferior_created (inferior *inf)
       add_file_handler (info->notifier, dbgapi_notifier_handler, info,
 			"rocm dbgapi notifier");
     }
-
-  /* Process available events right now.  This will let us get an
-     AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS event and set
-     rocm_inferior_info::activated.  */
-  rocm_process_event_queue ();
 }
 
 static void
