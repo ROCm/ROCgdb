@@ -96,9 +96,11 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
       if (it != tdep->vector_type_map.end ())
 	return it->second;
 
-      struct type *vector_type = init_vector_type (
-	gdb_type_from_type_name (gdbarch, type_name.substr (0, pos)),
-	std::stoi (type_name.substr (pos + 1)));
+      struct type *vector_type
+	= init_vector_type (gdb_type_from_type_name (gdbarch,
+						     type_name.substr (0,
+								       pos)),
+			    std::stoi (type_name.substr (pos + 1)));
 
       vector_type->set_name (
 	tdep->vector_type_map.emplace (type_name, vector_type)
@@ -158,8 +160,9 @@ amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
   amd_dbgapi_register_class_state_t state;
 
-  if (amd_dbgapi_register_is_in_register_class (
-	it->second, tdep->register_ids[regnum], &state)
+  if (amd_dbgapi_register_is_in_register_class (it->second,
+						tdep->register_ids[regnum],
+						&state)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return group == all_reggroup;
 
@@ -190,7 +193,7 @@ static struct amdgcn_frame_cache *
 amdgcn_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
   if (*this_cache)
-    return (struct amdgcn_frame_cache *)*this_cache;
+    return (struct amdgcn_frame_cache *) *this_cache;
 
   struct amdgcn_frame_cache *cache
     = FRAME_OBSTACK_ZALLOC (struct amdgcn_frame_cache);
@@ -216,9 +219,10 @@ amdgcn_frame_this_id (struct frame_info *this_frame, void **this_cache,
 
   if (frame_debug)
     {
-      fprintf_unfiltered (
-	gdb_stdlog, "{ amdgcn_frame_this_id (this_frame=%d) type=%d -> ",
-	frame_relative_level (this_frame), get_frame_type (this_frame));
+      fprintf_unfiltered (gdb_stdlog,
+			  "{ amdgcn_frame_this_id (this_frame=%d) type=%d -> ",
+			  frame_relative_level (this_frame),
+			  get_frame_type (this_frame));
       fprint_frame_id (gdb_stdlog, *this_id);
       fprintf_unfiltered (gdb_stdlog, "}\n");
     }
@@ -260,7 +264,7 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
 
   amd_dbgapi_size_t instruction_size = gdbarch_max_insn_length (self->arch ());
   gdb::unique_xmalloc_ptr<gdb_byte> buffer (
-    (gdb_byte *)xmalloc (instruction_size));
+    (gdb_byte *) xmalloc (instruction_size));
 
   /* read_memory_func doesn't support partial reads, so if the read
      fails, try one byte less, on and on until we manage to read
@@ -269,7 +273,8 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
      instruction is smaller than the largest instruction.  */
   while (instruction_size > 0)
     {
-      if (di->read_memory_func (memaddr, buffer.get (), instruction_size, di) == 0)
+      if (di->read_memory_func (memaddr, buffer.get (), instruction_size, di)
+	  == 0)
 	break;
       --instruction_size;
     }
@@ -296,11 +301,16 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
     return AMD_DBGAPI_STATUS_SUCCESS;
   };
 
-  if (amd_dbgapi_disassemble_instruction (
-	architecture_id, static_cast<amd_dbgapi_global_address_t> (memaddr),
-	&instruction_size, buffer.get (), &instruction_text,
-	reinterpret_cast<amd_dbgapi_symbolizer_id_t> (self->arch ()),
-	symbolizer)
+  if (amd_dbgapi_disassemble_instruction (architecture_id,
+					  static_cast<
+					    amd_dbgapi_global_address_t> (
+					    memaddr),
+					  &instruction_size, buffer.get (),
+					  &instruction_text,
+					  reinterpret_cast<
+					    amd_dbgapi_symbolizer_id_t> (
+					    self->arch ()),
+					  symbolizer)
       != AMD_DBGAPI_STATUS_SUCCESS)
     {
       size_t alignment;
@@ -409,8 +419,9 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   size_t register_class_count;
   amd_dbgapi_register_class_id_t *register_class_ids;
 
-  if (amd_dbgapi_architecture_register_class_list (
-	architecture_id, &register_class_count, &register_class_ids)
+  if (amd_dbgapi_architecture_register_class_list (architecture_id,
+						   &register_class_count,
+						   &register_class_ids)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
@@ -480,10 +491,11 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     }
 
   amd_dbgapi_register_id_t pc_register_id;
-  if (amd_dbgapi_architecture_get_info (
-	architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_PC_REGISTER,
-	sizeof (pc_register_id), &pc_register_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  if (
+    amd_dbgapi_architecture_get_info (architecture_id,
+				      AMD_DBGAPI_ARCHITECTURE_INFO_PC_REGISTER,
+				      sizeof (pc_register_id), &pc_register_id)
+    != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
   set_gdbarch_pc_regnum (gdbarch, tdep->regnum_map[pc_register_id]);

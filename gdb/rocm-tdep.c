@@ -220,7 +220,6 @@ static const struct inferior_key<rocm_inferior_info> rocm_inferior_data;
    enabled.  */
 static async_event_handler *rocm_async_event_handler = nullptr;
 
-
 /* Return the target id string for a given wave.  */
 static std::string
 target_id_string (amd_dbgapi_wave_id_t wave_id)
@@ -372,11 +371,12 @@ rocm_breakpoint_check_status (struct bpstats *bs)
   bs->print_it = print_it_noop;
 
   /* Find the address the breakpoint is set at.  */
-  auto it = std::find_if (
-    info->breakpoint_map.begin (), info->breakpoint_map.end (),
-    [=] (const decltype (info->breakpoint_map)::value_type &value) {
-      return value.second == bs->breakpoint_at;
-    });
+  auto it
+    = std::find_if (info->breakpoint_map.begin (), info->breakpoint_map.end (),
+		    [=] (const decltype (
+		      info->breakpoint_map)::value_type &value) {
+		      return value.second == bs->breakpoint_at;
+		    });
 
   if (it == info->breakpoint_map.end ())
     error (_ ("Could not find breakpoint_id for breakpoint at %#lx"),
@@ -385,10 +385,11 @@ rocm_breakpoint_check_status (struct bpstats *bs)
   amd_dbgapi_breakpoint_id_t breakpoint_id{ it->first };
   amd_dbgapi_breakpoint_action_t action;
 
-  status = amd_dbgapi_report_breakpoint_hit (
-    breakpoint_id,
-    reinterpret_cast<amd_dbgapi_client_thread_id_t> (inferior_thread ()),
-    &action);
+  status = amd_dbgapi_report_breakpoint_hit (breakpoint_id,
+					     reinterpret_cast<
+					       amd_dbgapi_client_thread_id_t> (
+					       inferior_thread ()),
+					     &action);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_report_breakpoint_hit failed: breakpoint_%ld "
@@ -409,9 +410,10 @@ rocm_breakpoint_check_status (struct bpstats *bs)
   gdb_assert (resume_event_id != AMD_DBGAPI_EVENT_NONE);
 
   amd_dbgapi_breakpoint_id_t resume_breakpoint_id;
-  status = amd_dbgapi_event_get_info (
-    resume_event_id, AMD_DBGAPI_EVENT_INFO_BREAKPOINT,
-    sizeof (resume_breakpoint_id), &resume_breakpoint_id);
+  status = amd_dbgapi_event_get_info (resume_event_id,
+				      AMD_DBGAPI_EVENT_INFO_BREAKPOINT,
+				      sizeof (resume_breakpoint_id),
+				      &resume_breakpoint_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_event_get_info failed (rc=%d)"), status);
@@ -453,7 +455,7 @@ rocm_target_ops::thread_name (thread_info *tp)
 
   char comm_path[128];
   xsnprintf (comm_path, sizeof (comm_path), "/proc/%ld/comm",
-	     (long)tp->ptid.pid ());
+	     (long) tp->ptid.pid ());
 
   gdb_file_up comm_file = gdb_fopen_cloexec (comm_path, "r");
   if (!comm_file)
@@ -710,10 +712,10 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
   if (debug_infrun)
-    fprintf_unfiltered (
-      gdb_stdlog,
-      "\e[1;34minfrun: rocm_target_ops::resume ([%d,%ld,%ld])\e[0m\n",
-      ptid.pid (), ptid.lwp (), ptid.tid ());
+    fprintf_unfiltered (gdb_stdlog,
+			"\e[1;34minfrun: rocm_target_ops::resume "
+			"([%d,%ld,%ld])\e[0m\n",
+			ptid.pid (), ptid.lwp (), ptid.tid ());
 
   bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
 
@@ -741,9 +743,9 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 					   AMD_DBGAPI_PROGRESS_NO_FORWARD);
       gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
 
-      status = amd_dbgapi_wave_resume (get_amd_dbgapi_wave_id (ptid),
-				       (step
-					? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
+      status
+	= amd_dbgapi_wave_resume (get_amd_dbgapi_wave_id (ptid),
+				  (step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
 					: AMD_DBGAPI_RESUME_MODE_NORMAL));
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("Could not resume %s (rc=%d)"),
@@ -755,8 +757,9 @@ void
 rocm_target_ops::commit_resumed ()
 {
   if (debug_infrun)
-    fprintf_unfiltered (
-      gdb_stdlog, "\e[1;34minfrun: rocm_target_ops::commit_resumed ()\e[0m\n");
+    fprintf_unfiltered (gdb_stdlog,
+			"\e[1;34minfrun: rocm_target_ops::commit_resumed "
+			"()\e[0m\n");
 
   beneath ()->commit_resumed ();
 
@@ -780,10 +783,10 @@ rocm_target_ops::stop (ptid_t ptid)
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
   if (debug_infrun)
-    fprintf_unfiltered (
-      gdb_stdlog,
-      "\e[1;34minfrun: rocm_target_ops::stop ([%d,%ld,%ld])\e[0m\n",
-      ptid.pid (), ptid.lwp (), ptid.tid ());
+    fprintf_unfiltered (gdb_stdlog,
+			"\e[1;34minfrun: rocm_target_ops::stop "
+			"([%d,%ld,%ld])\e[0m\n",
+			ptid.pid (), ptid.lwp (), ptid.tid ());
 
   bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
 
@@ -805,8 +808,9 @@ rocm_target_ops::stop (ptid_t ptid)
       amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
       amd_dbgapi_wave_state_t state;
 
-      amd_dbgapi_status_t status = amd_dbgapi_wave_get_info (
-	wave_id, AMD_DBGAPI_WAVE_INFO_STATE, sizeof (state), &state);
+      amd_dbgapi_status_t status
+	= amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STATE,
+				    sizeof (state), &state);
 
       if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
 	{
@@ -899,7 +903,7 @@ rocm_target_ops::async (int enable)
 	= create_async_event_handler (handle_target_event, nullptr, "rocm");
 
       /* There may be pending events to handle.  Tell the event loop to poll
-         them.  */
+	 them.  */
       async_event_handler_mark ();
     }
   else
@@ -947,9 +951,11 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
       {
 	amd_dbgapi_runtime_state_t runtime_state;
 
-	if ((status = amd_dbgapi_event_get_info (
-	       event_id, AMD_DBGAPI_EVENT_INFO_RUNTIME_STATE,
-	       sizeof (runtime_state), &runtime_state))
+	if ((status
+	     = amd_dbgapi_event_get_info (event_id,
+					  AMD_DBGAPI_EVENT_INFO_RUNTIME_STATE,
+					  sizeof (runtime_state),
+					  &runtime_state))
 	    != AMD_DBGAPI_STATUS_SUCCESS)
 	  error (_ ("event_get_info for event_%ld failed (rc=%d)"),
 		 event_id.handle, status);
@@ -998,8 +1004,9 @@ rocm_process_event_queue (amd_dbgapi_event_kind_t until_event_kind)
       amd_dbgapi_event_id_t event_id;
       amd_dbgapi_event_kind_t event_kind;
 
-      amd_dbgapi_status_t status = amd_dbgapi_process_next_pending_event (
-	info->process_id, &event_id, &event_kind);
+      amd_dbgapi_status_t status
+	= amd_dbgapi_process_next_pending_event (info->process_id, &event_id,
+						 &event_kind);
 
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("next_pending_event failed (rc=%d)"), status);
@@ -1030,8 +1037,9 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: rocm_target_ops::wait (%d, %ld, %ld)\e[0m\n",
-			ptid.pid(), ptid.lwp(), ptid.tid());
+			"\e[1;34minfrun: rocm_target_ops::wait (%d, %ld, "
+			"%ld)\e[0m\n",
+			ptid.pid (), ptid.lwp (), ptid.tid ());
 
   ptid_t event_ptid = beneath ()->wait (ptid, ws, target_options);
   if (event_ptid != minus_one_ptid)
@@ -1049,11 +1057,10 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
     async_event_handler_clear ();
 
   /* This call is cheap in any case do it unconditionally.  */
-  amd_dbgapi_process_set_progress (process_id,
-				   AMD_DBGAPI_PROGRESS_NO_FORWARD);
+  amd_dbgapi_process_set_progress (process_id, AMD_DBGAPI_PROGRESS_NO_FORWARD);
 
-  /* If we don't have events pending in our queue, drain all the events from the
-     amd_dbgapi, and preserve the ordering.  */
+  /* If we don't have events pending in our queue, drain all the events from
+     the amd_dbgapi, and preserve the ordering.  */
   if (info->wave_events.empty ())
     rocm_process_event_queue ();
 
@@ -1221,9 +1228,10 @@ rocm_target_ops::fetch_registers (struct regcache *regcache, int regno)
 
   gdb_byte raw[AMDGCN_MAX_REGISTER_SIZE];
 
-  amd_dbgapi_status_t status = amd_dbgapi_read_register (
-    wave_id, tdep->register_ids[regno], 0,
-    TYPE_LENGTH (register_type (gdbarch, regno)), raw);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_read_register (wave_id, tdep->register_ids[regno], 0,
+				TYPE_LENGTH (register_type (gdbarch, regno)),
+				raw);
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     {
@@ -1253,9 +1261,10 @@ rocm_target_ops::store_registers (struct regcache *regcache, int regno)
 
   regcache->raw_collect (regno, &raw);
 
-  amd_dbgapi_status_t status = amd_dbgapi_write_register (
-    wave_id, tdep->register_ids[regno], 0,
-    TYPE_LENGTH (register_type (gdbarch, regno)), raw);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_write_register (wave_id, tdep->register_ids[regno], 0,
+				 TYPE_LENGTH (register_type (gdbarch, regno)),
+				 raw);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     {
@@ -1409,8 +1418,9 @@ rocm_target_ops::displaced_step_prepare (thread_info *thread,
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
   amd_dbgapi_displaced_stepping_id_t stepping_id;
 
-  amd_dbgapi_status_t status = amd_dbgapi_displaced_stepping_start (
-    wave_id, overwritten_bytes.get (), &stepping_id);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_displaced_stepping_start (wave_id, overwritten_bytes.get (),
+					   &stepping_id);
 
   if (status == AMD_DBGAPI_STATUS_ERROR_DISPLACED_STEPPING_BUFFER_UNAVAILABLE)
     return DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE;
@@ -1572,8 +1582,9 @@ rocm_target_inferior_created (inferior *inf)
 
   gdb_assert (info->wave_events.empty ());
 
-  status = amd_dbgapi_process_attach (
-    reinterpret_cast<amd_dbgapi_client_process_id_t> (inf), &info->process_id);
+  status = amd_dbgapi_process_attach (reinterpret_cast<
+					amd_dbgapi_client_process_id_t> (inf),
+				      &info->process_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("Could not attach to process %d"), inf->pid);
@@ -1595,8 +1606,8 @@ rocm_target_inferior_created (inferior *inf)
       /* Make sure our async event handler is created.  */
       target_async (1);
 
-      /* If the rocm target was already async, it didn't register the new fd, so
-	 make sure it is registered.  This call is idempotent so it's ok if
+      /* If the rocm target was already async, it didn't register the new fd,
+	 so make sure it is registered.  This call is idempotent so it's ok if
 	 it's already registered.  */
       add_file_handler (info->notifier, dbgapi_notifier_handler, info,
 			"rocm dbgapi notifier");
@@ -1774,13 +1785,15 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 	return AMD_DBGAPI_STATUS_ERROR;
 
       event_location_up location = new_address_location (address, nullptr, 0);
-      if (!create_breakpoint (
-	    section->objfile->arch (), location.get (),
-	    /*cond_string*/ NULL, /*thread*/ -1, /*extra_string*/ NULL,
-	    /*parse_extra*/ 0, /*tempflag*/ 0, /*bptype*/ bp_breakpoint,
-	    /*ignore_count*/ 0, /*pending_break*/ AUTO_BOOLEAN_FALSE,
-	    /*ops*/ &rocm_breakpoint_ops, /*from_tty*/ 0,
-	    /*enabled*/ 1, /*internal*/ 1, /*flags*/ 0))
+      if (!create_breakpoint (section->objfile->arch (), location.get (),
+			      /*cond_string*/ NULL, /*thread*/ -1,
+			      /*extra_string*/ NULL,
+			      /*parse_extra*/ 0, /*tempflag*/ 0,
+			      /*bptype*/ bp_breakpoint,
+			      /*ignore_count*/ 0,
+			      /*pending_break*/ AUTO_BOOLEAN_FALSE,
+			      /*ops*/ &rocm_breakpoint_ops, /*from_tty*/ 0,
+			      /*enabled*/ 1, /*internal*/ 1, /*flags*/ 0))
 	return AMD_DBGAPI_STATUS_ERROR;
 
       /* Find our breakpoint in the breakpoint list.  */
@@ -2000,13 +2013,16 @@ info_agents_command (const char *args, int from_tty)
 	  for (auto &&agent_id : agents)
 	    {
 	      /* target id  */
-	      max_target_id_width = std::max (
-		max_target_id_width, target_id_string (agent_id).size ());
+	      max_target_id_width
+		= std::max (max_target_id_width,
+			    target_id_string (agent_id).size ());
 	      /* name  */
 	      char *agent_name;
-	      if ((status = amd_dbgapi_agent_get_info (
-		     agent_id, AMD_DBGAPI_AGENT_INFO_NAME, sizeof (agent_name),
-		     &agent_name))
+	      if ((status
+		   = amd_dbgapi_agent_get_info (agent_id,
+						AMD_DBGAPI_AGENT_INFO_NAME,
+						sizeof (agent_name),
+						&agent_name))
 		  != AMD_DBGAPI_STATUS_SUCCESS)
 		error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
 
@@ -2026,9 +2042,10 @@ info_agents_command (const char *args, int from_tty)
 	  return;
 	}
 
-      if (amd_dbgapi_wave_get_info (
-	    get_amd_dbgapi_wave_id (inferior_ptid), AMD_DBGAPI_WAVE_INFO_AGENT,
-	    sizeof (current_agent_id), &current_agent_id)
+      if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+				    AMD_DBGAPI_WAVE_INFO_AGENT,
+				    sizeof (current_agent_id),
+				    &current_agent_id)
 	  != AMD_DBGAPI_STATUS_SUCCESS)
 	current_agent_id = AMD_DBGAPI_AGENT_NONE;
 
@@ -2073,20 +2090,23 @@ info_agents_command (const char *args, int from_tty)
 	    }
 
 	  /* id-in-th  */
-	  uiout->field_string (
-	    "id", (show_inferior_qualified_tids () || uiout->is_mi_like_p ()
-		     ? string_printf ("%d.%ld", inf->num, agent_id.handle)
-		     : string_printf ("%ld", agent_id.handle))
-		    .c_str ());
+	  uiout->field_string ("id",
+			       (show_inferior_qualified_tids ()
+				    || uiout->is_mi_like_p ()
+				  ? string_printf ("%d.%ld", inf->num,
+						   agent_id.handle)
+				  : string_printf ("%ld", agent_id.handle))
+				 .c_str ());
 
 	  /* target_id  */
 	  uiout->field_string ("target-id", target_id_string (agent_id));
 
 	  /* name  */
 	  char *agent_name;
-	  if ((status = amd_dbgapi_agent_get_info (
-		 agent_id, AMD_DBGAPI_AGENT_INFO_NAME, sizeof (agent_name),
-		 &agent_name))
+	  if ((status
+	       = amd_dbgapi_agent_get_info (agent_id,
+					    AMD_DBGAPI_AGENT_INFO_NAME,
+					    sizeof (agent_name), &agent_name))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
 
@@ -2115,16 +2135,19 @@ info_agents_command (const char *args, int from_tty)
 
 	  /* location  */
 	  uint16_t location_id;
-	  if ((status = amd_dbgapi_agent_get_info (
-		 agent_id, AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
-		 sizeof (location_id), &location_id))
+	  if ((status
+	       = amd_dbgapi_agent_get_info (agent_id,
+					    AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
+					    sizeof (location_id),
+					    &location_id))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
 
-	  uiout->field_string (
-	    "location_id",
-	    string_printf ("%02x:%02x.%d", (location_id >> 8) & 0xFF,
-			   (location_id >> 3) & 0x1F, location_id & 0x7));
+	  uiout->field_string ("location_id",
+			       string_printf ("%02x:%02x.%d",
+					      (location_id >> 8) & 0xFF,
+					      (location_id >> 3) & 0x1F,
+					      location_id & 0x7));
 
 	  uiout->text ("\n");
 	}
@@ -2186,8 +2209,9 @@ info_queues_command (const char *args, int from_tty)
 	  for (auto &&queue_id : queues)
 	    {
 	      /* target id  */
-	      max_target_id_width = std::max (
-		max_target_id_width, target_id_string (queue_id).size ());
+	      max_target_id_width
+		= std::max (max_target_id_width,
+			    target_id_string (queue_id).size ());
 
 	      ++n_queues;
 	    }
@@ -2202,9 +2226,10 @@ info_queues_command (const char *args, int from_tty)
 	  return;
 	}
 
-      if (amd_dbgapi_wave_get_info (
-	    get_amd_dbgapi_wave_id (inferior_ptid), AMD_DBGAPI_WAVE_INFO_QUEUE,
-	    sizeof (current_queue_id), &current_queue_id)
+      if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+				    AMD_DBGAPI_WAVE_INFO_QUEUE,
+				    sizeof (current_queue_id),
+				    &current_queue_id)
 	  != AMD_DBGAPI_STATUS_SUCCESS)
 	current_queue_id = AMD_DBGAPI_QUEUE_NONE;
 
@@ -2250,19 +2275,22 @@ info_queues_command (const char *args, int from_tty)
 	    }
 
 	  /* id  */
-	  uiout->field_string (
-	    "id", (show_inferior_qualified_tids () || uiout->is_mi_like_p ()
-		     ? string_printf ("%d.%ld", inf->num, queue_id.handle)
-		     : string_printf ("%ld", queue_id.handle))
-		    .c_str ());
+	  uiout->field_string ("id",
+			       (show_inferior_qualified_tids ()
+				    || uiout->is_mi_like_p ()
+				  ? string_printf ("%d.%ld", inf->num,
+						   queue_id.handle)
+				  : string_printf ("%ld", queue_id.handle))
+				 .c_str ());
 
 	  /* target-id  */
 	  uiout->field_string ("target-id", target_id_string (queue_id));
 
 	  /* type  */
 	  amd_dbgapi_os_queue_type_t type;
-	  if ((status = amd_dbgapi_queue_get_info (
-		 queue_id, AMD_DBGAPI_QUEUE_INFO_TYPE, sizeof (type), &type))
+	  if ((status = amd_dbgapi_queue_get_info (queue_id,
+						   AMD_DBGAPI_QUEUE_INFO_TYPE,
+						   sizeof (type), &type))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
 
@@ -2307,8 +2335,9 @@ info_queues_command (const char *args, int from_tty)
 
 	  /* size  */
 	  amd_dbgapi_size_t size;
-	  if ((status = amd_dbgapi_queue_get_info (
-		 queue_id, AMD_DBGAPI_QUEUE_INFO_SIZE, sizeof (size), &size))
+	  if ((status = amd_dbgapi_queue_get_info (queue_id,
+						   AMD_DBGAPI_QUEUE_INFO_SIZE,
+						   sizeof (size), &size))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
 
@@ -2316,9 +2345,10 @@ info_queues_command (const char *args, int from_tty)
 
 	  /* addr */
 	  amd_dbgapi_global_address_t addr;
-	  if ((status = amd_dbgapi_queue_get_info (
-		 queue_id, AMD_DBGAPI_QUEUE_INFO_ADDRESS, sizeof (addr),
-		 &addr))
+	  if ((status
+	       = amd_dbgapi_queue_get_info (queue_id,
+					    AMD_DBGAPI_QUEUE_INFO_ADDRESS,
+					    sizeof (addr), &addr))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
 
@@ -2439,8 +2469,9 @@ info_dispatches_command_completer (struct cmd_list_element *ignore,
 {
   const auto grp = make_info_dispatches_options_def_group (nullptr);
 
-  if (gdb::option::complete_options (
-	tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp))
+  if (gdb::option::
+	complete_options (tracker, &text,
+			  gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp))
     return;
 
   /* Convenience to let the user know what the option can accept.  */
@@ -2463,8 +2494,9 @@ info_dispatches_command (const char *args, int from_tty)
 
   info_dispatches_opts opts;
   auto grp = make_info_dispatches_options_def_group (&opts);
-  gdb::option::process_options (
-    &args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
+  gdb::option::process_options (&args,
+				gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR,
+				grp);
 
   gdb::optional<ui_out_emit_list> list_emitter;
   gdb::optional<ui_out_emit_table> table_emitter;
@@ -2513,8 +2545,9 @@ info_dispatches_command (const char *args, int from_tty)
 	  for (auto &&dispatch_id : dispatches)
 	    {
 	      /* target id  */
-	      max_target_id_width = std::max (
-		max_target_id_width, target_id_string (dispatch_id).size ());
+	      max_target_id_width
+		= std::max (max_target_id_width,
+			    target_id_string (dispatch_id).size ());
 
 	      /* grid  */
 	      uint32_t dims;
@@ -2533,8 +2566,9 @@ info_dispatches_command (const char *args, int from_tty)
 		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
 		       status);
 
-	      max_grid_width = std::max (
-		max_grid_width, ndim_string (dims, grid_sizes).size ());
+	      max_grid_width
+		= std::max (max_grid_width,
+			    ndim_string (dims, grid_sizes).size ());
 
 	      /* workgroup  */
 	      uint16_t work_group_sizes[3];
@@ -2627,11 +2661,11 @@ info_dispatches_command (const char *args, int from_tty)
       inferior *inf = value.first;
       auto &dispatches = value.second;
 
-      std::sort (
-	dispatches.begin (), dispatches.end (),
-	[] (amd_dbgapi_dispatch_id_t lhs, amd_dbgapi_dispatch_id_t rhs) {
-	  return lhs.handle < rhs.handle;
-	});
+      std::sort (dispatches.begin (), dispatches.end (),
+		 [] (amd_dbgapi_dispatch_id_t lhs,
+		     amd_dbgapi_dispatch_id_t rhs) {
+		   return lhs.handle < rhs.handle;
+		 });
 
       for (auto &&dispatch_id : dispatches)
 	{
@@ -2648,11 +2682,13 @@ info_dispatches_command (const char *args, int from_tty)
 	    }
 
 	  /* id  */
-	  uiout->field_string (
-	    "id", (show_inferior_qualified_tids () || uiout->is_mi_like_p ()
-		     ? string_printf ("%d.%ld", inf->num, dispatch_id.handle)
-		     : string_printf ("%ld", dispatch_id.handle))
-		    .c_str ());
+	  uiout->field_string ("id",
+			       (show_inferior_qualified_tids ()
+				    || uiout->is_mi_like_p ()
+				  ? string_printf ("%d.%ld", inf->num,
+						   dispatch_id.handle)
+				  : string_printf ("%ld", dispatch_id.handle))
+				 .c_str ());
 
 	  /* target-id  */
 	  uiout->field_string ("target-id", target_id_string (dispatch_id));
@@ -2687,10 +2723,12 @@ info_dispatches_command (const char *args, int from_tty)
 
 	  /* fence  */
 	  amd_dbgapi_dispatch_barrier_t barrier;
-	  if ((status = amd_dbgapi_dispatch_get_info (
-		 dispatch_id, AMD_DBGAPI_DISPATCH_INFO_BARRIER,
-		 sizeof (barrier), &barrier))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
+	  if (
+	    (status
+	     = amd_dbgapi_dispatch_get_info (dispatch_id,
+					     AMD_DBGAPI_DISPATCH_INFO_BARRIER,
+					     sizeof (barrier), &barrier))
+	    != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
 
 	  amd_dbgapi_dispatch_fence_scope_t acquire, release;
@@ -2840,8 +2878,8 @@ dispatch_find_command (const char *arg, int from_tty)
 	  != AMD_DBGAPI_STATUS_SUCCESS)
 	continue;
 
-      std::vector<amd_dbgapi_dispatch_id_t> dispatches (
-	&dispatch_list[0], &dispatch_list[dispatch_count]);
+      std::vector<amd_dbgapi_dispatch_id_t>
+	dispatches (&dispatch_list[0], &dispatch_list[dispatch_count]);
 
       xfree (dispatch_list);
 
@@ -2890,9 +2928,10 @@ _initialize_rocm_tdep (void)
   uint32_t major, minor, patch;
   amd_dbgapi_get_version (&major, &minor, &patch);
   if (major != AMD_DBGAPI_VERSION_MAJOR || minor < AMD_DBGAPI_VERSION_MINOR)
-    error (
-      _ ("amd-dbgapi library version mismatch, got %d.%d.%d, need %d.%d+"),
-      major, minor, patch, AMD_DBGAPI_VERSION_MAJOR, AMD_DBGAPI_VERSION_MINOR);
+    error (_ (
+	     "amd-dbgapi library version mismatch, got %d.%d.%d, need %d.%d+"),
+	   major, minor, patch, AMD_DBGAPI_VERSION_MAJOR,
+	   AMD_DBGAPI_VERSION_MINOR);
 
   /* Initialize the ROCm Debug API.  */
   amd_dbgapi_status_t status = amd_dbgapi_initialize (&dbgapi_callbacks);
@@ -2911,27 +2950,32 @@ _initialize_rocm_tdep (void)
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
-  add_basic_prefix_cmd (
-    "amdgpu", no_class,
-    _ ("Generic command for setting amdgpu debugging flags."),
-    &set_debug_amdgpu_list, "set debug amdgpu ", 0, &setdebuglist);
+  add_basic_prefix_cmd ("amdgpu", no_class,
+			_ ("Generic command for setting amdgpu debugging "
+			   "flags."),
+			&set_debug_amdgpu_list, "set debug amdgpu ", 0,
+			&setdebuglist);
 
-  add_show_prefix_cmd (
-    "amdgpu", no_class,
-    _ ("Generic command for showing amdgpu debugging flags."),
-    &show_debug_amdgpu_list, "show debug amdgpu ", 0, &showdebuglist);
+  add_show_prefix_cmd ("amdgpu", no_class,
+		       _ ("Generic command for showing amdgpu debugging "
+			  "flags."),
+		       &show_debug_amdgpu_list, "show debug amdgpu ", 0,
+		       &showdebuglist);
 
-  add_setshow_enum_cmd (
-    "log-level", class_maintenance, debug_amdgpu_log_level_enums,
-    &debug_amdgpu_log_level, _ ("Set the amdgpu log level."),
-    _ ("Show the amdgpu log level."),
-    _ ("off     == no logging is enabled\n"
-       "error   == fatal errors are reported\n"
-       "warning == fatal errors and warnings are reported\n"
-       "info    == fatal errors, warnings, and info messages are reported\n"
-       "verbose == all messages are reported"),
-    set_debug_amdgpu_log_level, show_debug_amdgpu_log_level,
-    &set_debug_amdgpu_list, &show_debug_amdgpu_list);
+  add_setshow_enum_cmd ("log-level", class_maintenance,
+			debug_amdgpu_log_level_enums, &debug_amdgpu_log_level,
+			_ ("Set the amdgpu log level."),
+			_ ("Show the amdgpu log level."),
+			_ (
+			  "off     == no logging is enabled\n"
+			  "error   == fatal errors are reported\n"
+			  "warning == fatal errors and warnings are reported\n"
+			  "info    == fatal errors, warnings, and info "
+			  "messages are reported\n"
+			  "verbose == all messages are reported"),
+			set_debug_amdgpu_log_level,
+			show_debug_amdgpu_log_level, &set_debug_amdgpu_list,
+			&show_debug_amdgpu_list);
 
   add_cmd ("agents", class_info, info_agents_command,
 	   _ ("(Display currently active heterogeneous agents.\n\
@@ -2959,10 +3003,10 @@ If ID is given, it is a space-separated list of IDs of queues to display.\n\
 Otherwise, all queues are displayed."),
 	   &infolist);
 
-  add_basic_prefix_cmd (
-    "dispatch", class_run,
-    _ ("Commands that operate on heterogeneous dispatches."), &dispatch_list,
-    "dispatch ", 0, &cmdlist);
+  add_basic_prefix_cmd ("dispatch", class_run,
+			_ ("Commands that operate on heterogeneous "
+			   "dispatches."),
+			&dispatch_list, "dispatch ", 0, &cmdlist);
 
   add_cmd ("find", class_run, dispatch_find_command, _ ("\
 Find heterogeneous dispatches that match a regular expression.\n\
