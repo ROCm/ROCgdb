@@ -26847,8 +26847,9 @@ denoted as @samp{gfx900} by the compiler.
 denoted as @samp{gfx906} by the compiler.
 
 @item
-``AMD Instinct@registeredsymbol{} MI100'' which is displayed as @samp{arcturus}
-by @value{GDBN} and denoted as @samp{gfx908} by the compiler.
+``AMD Instinct@registeredsymbol{} MI100 Accelerator'' which is displayed
+as @samp{arcturus} by @value{GDBN} and denoted as @samp{gfx908} by the
+compiler.
 
 @item
 ``Aldebaran'' which is displayed as @samp{aldebaran} by @value{GDBN} and
