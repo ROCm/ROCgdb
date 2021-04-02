@@ -99,6 +99,14 @@ struct rocm_inferior_info
   /* True if the ROCm runtime is loaded.  */
   bool runtime_loaded{ false };
 
+  struct
+  {
+    /* Whether precise memory reporting is requested.  */
+    bool requested{ false };
+    /* Precise memory was requested and successfully enabled by the dbgapi.  */
+    bool enabled{ false };
+  } precise_memory;
+
   std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
 		     struct breakpoint *>
     breakpoint_map;
@@ -1286,6 +1294,33 @@ rocm_target_ops::stopped_by_hw_breakpoint ()
 	 && beneath ()->stopped_by_hw_breakpoint ();
 }
 
+/* Set the process's memory access reporting precision.
+
+   The precision can be ::AMD_DBGAPI_MEMORY_PRECISION_PRECISE (waves wait for
+   memory instructions to complete before executing further instructions), or
+   ::AMD_DBGAPI_MEMORY_PRECISION_NONE (memory instructions execute normally).
+
+   Returns true if the precision is supported by the architecture of all agents
+   in the process, or false if at least one agent does not support the
+   requested precision.
+
+   An error is thrown if setting the precision results in a status other than
+   ::AMD_DBGAPI_STATUS_SUCCESS or ::AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED.  */
+static bool
+rocm_set_process_memory_precision (amd_dbgapi_process_id_t process_id,
+				   amd_dbgapi_memory_precision_t precision)
+{
+  amd_dbgapi_status_t status
+    = amd_dbgapi_set_memory_precision (process_id, precision);
+
+  if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
+    return false;
+  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("amd_dbgapi_set_memory_precision failed (rc=%d)"), status);
+
+  return true;
+}
+
 static void
 rocm_enable (inferior *inf)
 {
@@ -1312,6 +1347,15 @@ rocm_enable (inferior *inf)
       info->process_id = AMD_DBGAPI_PROCESS_NONE;
       error (_ ("Could not retrieve process %d's notifier"), inf->pid);
     }
+
+  amd_dbgapi_memory_precision_t memory_precision
+    = info->precise_memory.requested ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
+				     : AMD_DBGAPI_MEMORY_PRECISION_NONE;
+  if (rocm_set_process_memory_precision (info->process_id, memory_precision))
+    info->precise_memory.enabled = info->precise_memory.requested;
+  else
+    warning (
+      _ ("AMDGPU precise memory access reporting could not be enabled."));
 
   gdb_assert (!inf->target_is_pushed (&rocm_ops));
   inf->push_target (&rocm_ops);
@@ -1359,7 +1403,10 @@ rocm_disable (inferior *inf)
   for (auto &&value : info->breakpoint_map)
     delete_breakpoint (value.second);
 
-  rocm_inferior_data.clear (inf);
+  /* Reset the rocm_inferior_info, except for precise_memory_mode.  */
+  bool precise_memory_requested = info->precise_memory.requested;
+  *info = rocm_inferior_info (inf);
+  info->precise_memory.requested = precise_memory_requested;
 }
 
 void
@@ -2028,7 +2075,49 @@ rocm_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 static const struct internalvar_funcs rocm_wave_id_funcs
   = { rocm_wave_id_make_value, NULL, NULL };
 
-/* List of set/show debug amd_dbgapi commands.  */
+static bool precise_memory_mode = false;
+
+static void
+show_precise_memory_mode (struct ui_file *file, int from_tty,
+			  struct cmd_list_element *c, const char *value)
+{
+  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+
+  fprintf_filtered (file,
+		    _ ("AMDGPU precise memory access reporting is %s "
+		       "(currently %s).\n"),
+		    info->precise_memory.requested ? "on" : "off",
+		    info->precise_memory.enabled ? "enabled" : "disabled");
+}
+
+static void
+set_precise_memory_mode (const char *args, int from_tty,
+			 struct cmd_list_element *c)
+{
+  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+
+  info->precise_memory.requested = precise_memory_mode;
+
+  if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
+    {
+      amd_dbgapi_memory_precision_t memory_precision
+	= info->precise_memory.requested ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
+					 : AMD_DBGAPI_MEMORY_PRECISION_NONE;
+
+      if (rocm_set_process_memory_precision (info->process_id,
+					     memory_precision))
+	info->precise_memory.enabled = info->precise_memory.requested;
+      else
+	warning (
+	  _ ("AMDGPU precise memory access reporting could not be enabled."));
+    }
+}
+
+/* List of set/show amdgpu commands.  */
+struct cmd_list_element *set_amdgpu_list;
+struct cmd_list_element *show_amdgpu_list;
+
+/* List of set/show debug amdgpu commands.  */
 struct cmd_list_element *set_debug_amdgpu_list;
 struct cmd_list_element *show_debug_amdgpu_list;
 
@@ -3070,6 +3159,22 @@ _initialize_rocm_tdep (void)
   gdb::observers::inferior_execd.attach (rocm_target_inferior_execd);
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
+
+  add_basic_prefix_cmd ("amdgpu", no_class,
+			_ ("Generic command for setting amdgpu flags."),
+			&set_amdgpu_list, "set amdgpu ", 0, &setlist);
+
+  add_show_prefix_cmd ("amdgpu", no_class,
+		       _ ("Generic command for showing amdgpu flags."),
+		       &show_amdgpu_list, "show amdgpu ", 0, &showlist);
+
+  add_setshow_boolean_cmd ("precise-memory", no_class, &precise_memory_mode,
+			   _ ("Set precise-memory mode."),
+			   _ ("Show precise-memory mode."), _ ("\
+If on, precise memory reporting is enabled if/when the inferior is running.\n\
+If off (default), precise memory reporting is disabled."),
+			   set_precise_memory_mode, show_precise_memory_mode,
+			   &set_amdgpu_list, &show_amdgpu_list);
 
   add_basic_prefix_cmd ("amdgpu", no_class,
 			_ ("Generic command for setting amdgpu debugging "
