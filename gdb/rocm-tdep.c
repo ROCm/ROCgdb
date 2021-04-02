@@ -1254,10 +1254,58 @@ rocm_target_ops::stopped_by_hw_breakpoint ()
 	 && beneath ()->stopped_by_hw_breakpoint ();
 }
 
-void
-rocm_target_ops::mourn_inferior ()
+static void
+rocm_enable (inferior *inf)
 {
-  auto *info = get_rocm_inferior_info ();
+  if (!target_can_async_p ())
+    {
+      warning (_ ("ROCgdb requires target-async, GPU debugging is disabled"));
+      return;
+    }
+
+  auto *info = get_rocm_inferior_info (inf);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_process_attach (reinterpret_cast<
+				   amd_dbgapi_client_process_id_t> (inf),
+				 &info->process_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("Could not attach to process %d (rc=%d)"), inf->pid, status);
+
+  if (amd_dbgapi_process_get_info (info->process_id,
+				   AMD_DBGAPI_PROCESS_INFO_NOTIFIER,
+				   sizeof (info->notifier), &info->notifier)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      amd_dbgapi_process_detach (info->process_id);
+      info->process_id = AMD_DBGAPI_PROCESS_NONE;
+      error (_ ("Could not retrieve process %d's notifier"), inf->pid);
+    }
+
+  gdb_assert (!inf->target_is_pushed (&rocm_ops));
+  inf->push_target (&rocm_ops);
+
+  /* The underlying target will already be async if we are running, but not if
+     we are attaching.  */
+  if (inf->process_target ()->is_async_p ())
+    {
+      /* Make sure our async event handler is created.  */
+      target_async (1);
+
+      /* If the rocm target was already async, it didn't register the new fd,
+	 so make sure it is registered.  This call is idempotent so it's ok if
+	 it's already registered.  */
+      add_file_handler (info->notifier, dbgapi_notifier_handler, info,
+			"rocm dbgapi notifier");
+    }
+}
+
+static void
+rocm_disable (inferior *inf)
+{
+  auto *info = get_rocm_inferior_info (inf);
+
+  if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
+    return;
 
   if (info->runtime_loaded)
     {
@@ -1265,31 +1313,34 @@ rocm_target_ops::mourn_inferior ()
       info->runtime_loaded = false;
     }
 
-  if (info->notifier != -1)
-    delete_file_handler (info->notifier);
+  amd_dbgapi_status_t status = amd_dbgapi_process_detach (info->process_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    warning (_ ("Could not detach from process %d (rc=%d)"), inf->pid, status);
 
-  amd_dbgapi_process_detach (info->process_id);
-  info->process_id = AMD_DBGAPI_PROCESS_NONE;
+  gdb_assert (info->notifier != -1);
+  delete_file_handler (info->notifier);
 
-  current_inferior ()->unpush_target (&rocm_ops);
+  gdb_assert (inf->target_is_pushed (&rocm_ops));
+  inf->unpush_target (&rocm_ops);
+
+  /* Delete the breakpoints that are still active.  */
+  for (auto &&value : info->breakpoint_map)
+    delete_breakpoint (value.second);
+
+  rocm_inferior_data.clear (inf);
+}
+
+void
+rocm_target_ops::mourn_inferior ()
+{
+  rocm_disable (current_inferior ());
   beneath ()->mourn_inferior ();
 }
 
 void
 rocm_target_ops::detach (inferior *inf, int from_tty)
 {
-  auto *info = get_rocm_inferior_info (inf);
-
-  if (info->runtime_loaded)
-    {
-      amd_dbgapi_runtime_unloaded.notify ();
-      info->runtime_loaded = false;
-    }
-
-  amd_dbgapi_process_detach (info->process_id);
-  info->process_id = AMD_DBGAPI_PROCESS_NONE;
-
-  inf->unpush_target (&rocm_ops);
+  rocm_disable (inf);
   beneath ()->detach (inf, from_tty);
 }
 
@@ -1640,78 +1691,12 @@ rocm_target_solib_unloaded (struct so_list *solib)
 static void
 rocm_target_inferior_created (inferior *inf)
 {
-  process_stratum_target *proc_target = inf->process_target ();
-
   /* If the inferior is not running on the native target (e.g. it is running
      on a remote target), we don't want to deal with it.  */
-  if (proc_target != get_native_target ())
+  if (inf->process_target () != get_native_target ())
     return;
 
-  auto *info = get_rocm_inferior_info (inf);
-  amd_dbgapi_status_t status;
-
-  if (!target_can_async_p ())
-    {
-      warning (_ ("ROCgdb requires target-async, GPU debugging is disabled"));
-      return;
-    }
-
-  if (!inf->target_is_pushed (&rocm_ops))
-    inf->push_target (&rocm_ops);
-
-  gdb_assert (info->wave_events.empty ());
-
-  status = amd_dbgapi_process_attach (reinterpret_cast<
-					amd_dbgapi_client_process_id_t> (inf),
-				      &info->process_id);
-
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("Could not attach to process %d"), inf->pid);
-
-  if (amd_dbgapi_process_get_info (info->process_id,
-				   AMD_DBGAPI_PROCESS_INFO_NOTIFIER,
-				   sizeof (info->notifier), &info->notifier)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    {
-      warning (_ ("Could not retrieve process %d's notifier"), inf->pid);
-      amd_dbgapi_process_detach (info->process_id);
-      return;
-    }
-
-  /* The underlying target will already be async if we are running, but not if
-     we are attaching.  */
-  if (proc_target->is_async_p ())
-    {
-      /* Make sure our async event handler is created.  */
-      target_async (1);
-
-      /* If the rocm target was already async, it didn't register the new fd,
-	 so make sure it is registered.  This call is idempotent so it's ok if
-	 it's already registered.  */
-      add_file_handler (info->notifier, dbgapi_notifier_handler, info,
-			"rocm dbgapi notifier");
-    }
-}
-
-static void
-rocm_target_inferior_exit (struct inferior *inf)
-{
-  auto *info = get_rocm_inferior_info (inf);
-
-  if (info->notifier != -1)
-    {
-      delete_file_handler (info->notifier);
-      info->notifier = -1;
-    }
-
-  if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
-    amd_dbgapi_process_detach (info->process_id);
-
-  /* Delete the breakpoints that are still active.  */
-  for (auto &&value : info->breakpoint_map)
-    delete_breakpoint (value.second);
-
-  rocm_inferior_data.clear (inf);
+  rocm_enable (inf);
 }
 
 static cli_style_option warning_style ("rocm_warning", ui_file_style::RED);
@@ -3034,7 +3019,6 @@ _initialize_rocm_tdep (void)
   gdb::observers::solib_loaded.attach (rocm_target_solib_loaded);
   gdb::observers::solib_unloaded.attach (rocm_target_solib_unloaded);
   gdb::observers::inferior_created.attach (rocm_target_inferior_created);
-  gdb::observers::inferior_exit.attach (rocm_target_inferior_exit);
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
