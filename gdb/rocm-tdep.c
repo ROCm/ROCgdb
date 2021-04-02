@@ -67,8 +67,8 @@
 
 #define DEFINE_OBSERVABLE(name) decltype (name) name (#name)
 
-DEFINE_OBSERVABLE (amd_dbgapi_activated);
-DEFINE_OBSERVABLE (amd_dbgapi_deactivated);
+DEFINE_OBSERVABLE (amd_dbgapi_runtime_loaded);
+DEFINE_OBSERVABLE (amd_dbgapi_runtime_unloaded);
 DEFINE_OBSERVABLE (amd_dbgapi_code_object_list_updated);
 
 #undef DEFINE_OBSERVABLE
@@ -83,17 +83,14 @@ struct rocm_notify_shared_library_info
 
 struct rocm_inferior_info
 {
-  /* True if the target is activated.  */
-  bool activated{ false };
-
   /* The amd_dbgapi_process_id for this inferior.  */
   amd_dbgapi_process_id_t process_id{ AMD_DBGAPI_PROCESS_NONE };
 
   /* The amd_dbgapi_notifier_t for this inferior.  */
   amd_dbgapi_notifier_t notifier{ -1 };
 
-  /* True if the inferior has exited.  */
-  bool has_exited{ false };
+  /* True if the ROCm runtime is loaded.  */
+  bool runtime_loaded{ false };
 
   std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
 		     struct breakpoint *>
@@ -578,12 +575,12 @@ rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
-  if (info->activated && type != hw_write)
+  if (info->runtime_loaded && type != hw_write)
     /* We only allow write watchpoints when GPU debugging is active.  */
     return 1;
 
   int ret = beneath ()->insert_watchpoint (addr, len, type, cond);
-  if (ret || !info->activated)
+  if (ret || !info->runtime_loaded)
     return ret;
 
   amd_dbgapi_watchpoint_id_t watch_id;
@@ -626,7 +623,7 @@ rocm_target_ops::remove_watchpoint (CORE_ADDR addr, int len,
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
   int ret = beneath ()->remove_watchpoint (addr, len, type, cond);
-  if (!info->activated)
+  if (!info->runtime_loaded)
     return ret;
 
   /* Find the watch_id for the addr..addr+len range.  */
@@ -768,7 +765,7 @@ rocm_target_ops::commit_resumed ()
   for (inferior *inf : all_non_exited_inferiors (proc_target))
     {
       rocm_inferior_info *info = get_rocm_inferior_info (inf);
-      if (!info->activated)
+      if (!info->runtime_loaded)
 	continue;
 
       amd_dbgapi_status_t status
@@ -886,7 +883,7 @@ rocm_target_ops::async (int enable)
 	}
 
       /* The library gives us one notifier file descriptor per inferior (even
-	 the ones that don't have the ROCm runtime activated).  Register them
+	 the ones that don't have yet loaded the ROCm runtime).  Register them
 	 all with the event loop.  */
       process_stratum_target *proc_target
 	= current_inferior ()->process_target ();
@@ -983,15 +980,15 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 	switch (runtime_state)
 	  {
 	  case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS:
-	    info->activated = true;
-	    amd_dbgapi_activated.notify ();
+	    info->runtime_loaded = true;
+	    amd_dbgapi_runtime_loaded.notify ();
 	    break;
 
 	  case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
-	    if (info->activated)
+	    if (info->runtime_loaded)
 	      {
-		amd_dbgapi_deactivated.notify ();
-		info->activated = false;
+		amd_dbgapi_runtime_unloaded.notify ();
+		info->runtime_loaded = false;
 	      }
 	    break;
 
@@ -1261,12 +1258,11 @@ void
 rocm_target_ops::mourn_inferior ()
 {
   auto *info = get_rocm_inferior_info ();
-  info->has_exited = true;
 
-  if (info->activated)
+  if (info->runtime_loaded)
     {
-      amd_dbgapi_deactivated.notify ();
-      info->activated = false;
+      amd_dbgapi_runtime_unloaded.notify ();
+      info->runtime_loaded = false;
     }
 
   if (info->notifier != -1)
@@ -1284,10 +1280,10 @@ rocm_target_ops::detach (inferior *inf, int from_tty)
 {
   auto *info = get_rocm_inferior_info (inf);
 
-  if (info->activated)
+  if (info->runtime_loaded)
     {
-      amd_dbgapi_deactivated.notify ();
-      info->activated = false;
+      amd_dbgapi_runtime_unloaded.notify ();
+      info->runtime_loaded = false;
     }
 
   amd_dbgapi_process_detach (info->process_id);
@@ -1735,9 +1731,8 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   .get_os_pid = [] (amd_dbgapi_client_process_id_t client_process_id,
 		    pid_t *pid) -> amd_dbgapi_status_t {
     inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
-    if (info->has_exited)
+    if (inf->pid == 0)
       return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
 
     *pid = inf->pid;

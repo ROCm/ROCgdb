@@ -69,8 +69,8 @@ operator!= (const T &lhs, const T &rhs)
 
 /* ROCm Debug API event observers.  */
 
-extern gdb::observers::observable<> amd_dbgapi_activated;
-extern gdb::observers::observable<> amd_dbgapi_deactivated;
+extern gdb::observers::observable<> amd_dbgapi_runtime_loaded;
+extern gdb::observers::observable<> amd_dbgapi_runtime_unloaded;
 extern gdb::observers::observable<> amd_dbgapi_code_object_list_updated;
 
 /* Return true if the given ptid is a GPU thread (wave) ptid.  */
