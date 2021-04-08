@@ -222,7 +222,7 @@ static async_event_handler *rocm_async_event_handler = nullptr;
 
 /* Return the target id string for a given wave.  */
 static std::string
-target_id_string (amd_dbgapi_wave_id_t wave_id)
+rocm_target_id_string (amd_dbgapi_wave_id_t wave_id)
 {
   amd_dbgapi_dispatch_id_t dispatch_id;
   amd_dbgapi_queue_id_t queue_id;
@@ -258,7 +258,7 @@ target_id_string (amd_dbgapi_wave_id_t wave_id)
 
 /* Return the target id string for a given dispatch.  */
 static std::string
-target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
+rocm_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 {
   amd_dbgapi_queue_id_t queue_id;
   amd_dbgapi_agent_id_t agent_id;
@@ -286,7 +286,7 @@ target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 
 /* Return the target id string for a given queue.  */
 static std::string
-target_id_string (amd_dbgapi_queue_id_t queue_id)
+rocm_target_id_string (amd_dbgapi_queue_id_t queue_id)
 {
   amd_dbgapi_agent_id_t agent_id;
   amd_dbgapi_os_queue_id_t os_id;
@@ -306,7 +306,7 @@ target_id_string (amd_dbgapi_queue_id_t queue_id)
 
 /* Return the target id string for a given agent.  */
 static std::string
-target_id_string (amd_dbgapi_agent_id_t agent_id)
+rocm_target_id_string (amd_dbgapi_agent_id_t agent_id)
 {
   amd_dbgapi_os_agent_id_t os_id;
   if (amd_dbgapi_agent_get_info (agent_id, AMD_DBGAPI_AGENT_INFO_OS_ID,
@@ -494,7 +494,7 @@ rocm_target_ops::pid_to_str (ptid_t ptid)
       return beneath ()->pid_to_str (ptid);
     }
 
-  return target_id_string (get_amd_dbgapi_wave_id (ptid));
+  return rocm_target_id_string (get_amd_dbgapi_wave_id (ptid));
 }
 
 const char *
@@ -2095,7 +2095,7 @@ info_agents_command (const char *args, int from_tty)
 	      /* target id  */
 	      max_target_id_width
 		= std::max (max_target_id_width,
-			    target_id_string (agent_id).size ());
+			    rocm_target_id_string (agent_id).size ());
 	      /* name  */
 	      char *agent_name;
 	      if ((status
@@ -2179,7 +2179,7 @@ info_agents_command (const char *args, int from_tty)
 				 .c_str ());
 
 	  /* target_id  */
-	  uiout->field_string ("target-id", target_id_string (agent_id));
+	  uiout->field_string ("target-id", rocm_target_id_string (agent_id));
 
 	  /* name  */
 	  char *agent_name;
@@ -2291,7 +2291,7 @@ info_queues_command (const char *args, int from_tty)
 	      /* target id  */
 	      max_target_id_width
 		= std::max (max_target_id_width,
-			    target_id_string (queue_id).size ());
+			    rocm_target_id_string (queue_id).size ());
 
 	      ++n_queues;
 	    }
@@ -2364,7 +2364,7 @@ info_queues_command (const char *args, int from_tty)
 				 .c_str ());
 
 	  /* target-id  */
-	  uiout->field_string ("target-id", target_id_string (queue_id));
+	  uiout->field_string ("target-id", rocm_target_id_string (queue_id));
 
 	  /* type  */
 	  amd_dbgapi_os_queue_type_t type;
@@ -2472,7 +2472,7 @@ queue_find_command (const char *arg, int from_tty)
 
       for (auto &&queue_id : queues)
 	{
-	  std::string target_id = target_id_string (queue_id);
+	  std::string target_id = rocm_target_id_string (queue_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
 	      printf_filtered (_ ("Queue %ld has Target Id '%s'\n"),
@@ -2584,6 +2584,10 @@ info_dispatches_command (const char *args, int from_tty)
   std::vector<std::pair<inferior *, std::vector<amd_dbgapi_dispatch_id_t>>>
     all_filtered_dispatches;
 
+  /* We'll be switching inferiors temporarily below.  */
+  inferior *curr_inferior = current_inferior ();
+  scoped_restore_current_thread restore_thread;
+
   for (inferior *inf : all_inferiors ())
     {
       amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
@@ -2602,7 +2606,7 @@ info_dispatches_command (const char *args, int from_tty)
       std::copy_if (&dispatch_list[0], &dispatch_list[dispatch_count],
 		    std::back_inserter (filtered_dispatches),
 		    [=] (auto dispatch_id) {
-		      return tid_is_in_list (args, current_inferior ()->num,
+		      return tid_is_in_list (args, curr_inferior->num,
 					     inf->num, dispatch_id.handle);
 		    });
 
@@ -2627,7 +2631,7 @@ info_dispatches_command (const char *args, int from_tty)
 	      /* target id  */
 	      max_target_id_width
 		= std::max (max_target_id_width,
-			    target_id_string (dispatch_id).size ());
+			    rocm_target_id_string (dispatch_id).size ());
 
 	      /* grid  */
 	      uint32_t dims;
@@ -2747,6 +2751,10 @@ info_dispatches_command (const char *args, int from_tty)
 		   return lhs.handle < rhs.handle;
 		 });
 
+      /* Switch the inferior since we are doing a symbol lookup in this
+	 inferior's program space.  */
+      switch_to_inferior_no_thread (inf);
+
       for (auto &&dispatch_id : dispatches)
 	{
 	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
@@ -2754,8 +2762,7 @@ info_dispatches_command (const char *args, int from_tty)
 	  if (!uiout->is_mi_like_p ())
 	    {
 	      /* current  */
-	      if (current_inferior () == inf
-		  && dispatch_id == current_dispatch_id)
+	      if (curr_inferior == inf && dispatch_id == current_dispatch_id)
 		uiout->field_string ("current", "*");
 	      else
 		uiout->field_skip ("current");
@@ -2771,7 +2778,8 @@ info_dispatches_command (const char *args, int from_tty)
 				 .c_str ());
 
 	  /* target-id  */
-	  uiout->field_string ("target-id", target_id_string (dispatch_id));
+	  uiout->field_string ("target-id",
+			       rocm_target_id_string (dispatch_id));
 
 	  /* grid  */
 	  uint32_t dims;
@@ -2943,6 +2951,9 @@ dispatch_find_command (const char *arg, int from_tty)
   if (tmp)
     error (_ ("Invalid regexp (%s): %s"), tmp, arg);
 
+  /* We'll be switching inferiors temporarily below.  */
+  scoped_restore_current_thread restore_thread;
+
   size_t matches = 0;
   for (inferior *inf : all_inferiors ())
     {
@@ -2963,9 +2974,13 @@ dispatch_find_command (const char *arg, int from_tty)
 
       xfree (dispatch_list);
 
+      /* Switch the inferior since we are doing a symbol lookup in this
+	 inferior's program space.  */
+      switch_to_inferior_no_thread (inf);
+
       for (auto &&dispatch_id : dispatches)
 	{
-	  std::string target_id = target_id_string (dispatch_id);
+	  std::string target_id = rocm_target_id_string (dispatch_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
 	      printf_filtered (_ ("Dispatch %ld has Target Id '%s'\n"),
