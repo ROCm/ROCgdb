@@ -1699,6 +1699,21 @@ rocm_target_inferior_created (inferior *inf)
   rocm_enable (inf);
 }
 
+static void
+rocm_target_inferior_execd (inferior *inf)
+{
+  /* If the inferior is not running on the native target (e.g. it is running
+     on a remote target), we don't want to deal with it.  */
+  if (inf->process_target () != get_native_target ())
+    return;
+
+  /* The inferior has EXEC'd and the process image has changed.  The dbgapi is
+     attached to the old process image, so we need to detach and re-attach to
+     the new process image.  */
+  rocm_disable (inf);
+  rocm_enable (inf);
+}
+
 static cli_style_option warning_style ("rocm_warning", ui_file_style::RED);
 static cli_style_option info_style ("rocm_info", ui_file_style::GREEN);
 static cli_style_option verbose_style ("rocm_verbose", ui_file_style::BLUE);
@@ -3018,7 +3033,9 @@ _initialize_rocm_tdep (void)
   gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup);
   gdb::observers::solib_loaded.attach (rocm_target_solib_loaded);
   gdb::observers::solib_unloaded.attach (rocm_target_solib_unloaded);
+
   gdb::observers::inferior_created.attach (rocm_target_inferior_created);
+  gdb::observers::inferior_execd.attach (rocm_target_inferior_execd);
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
