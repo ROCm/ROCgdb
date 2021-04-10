@@ -92,7 +92,7 @@ rocm_solib_relocate_section_addresses (struct so_list *so,
       return;
     }
 
-  lm_info_svr4 *li = (lm_info_svr4 *)so->lm_info;
+  lm_info_svr4 *li = (lm_info_svr4 *) so->lm_info;
   sec->addr = sec->addr + li->l_addr;
   sec->endaddr = sec->endaddr + li->l_addr;
 }
@@ -112,7 +112,7 @@ rocm_solib_copy_list (const struct so_list *src)
       newobj = XNEW (struct so_list);
       memcpy (newobj, src, sizeof (struct so_list));
 
-      lm_info_svr4 *src_li = (lm_info_svr4 *)src->lm_info;
+      lm_info_svr4 *src_li = (lm_info_svr4 *) src->lm_info;
       newobj->lm_info = new lm_info_svr4 (*src_li);
 
       newobj->next = NULL;
@@ -215,11 +215,14 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 
   /* Create a tag-value map from the tokenized query/fragment.  */
   std::unordered_map<std::string, std::string> params;
-  std::for_each (tokens.begin (), tokens.end (), [&] (std::string &token) {
-    size_t delim = token.find ('=');
-    if (delim != std::string::npos)
-      params.emplace (token.substr (0, delim), token.substr (delim + 1));
-  });
+  std::for_each (tokens.begin (), tokens.end (),
+		 [&] (std::string &token)
+		 {
+		   size_t delim = token.find ('=');
+		   if (delim != std::string::npos)
+		     params.emplace (token.substr (0, delim),
+				     token.substr (delim + 1));
+		 });
 
   gdb::unique_xmalloc_ptr<rocm_code_object_stream> stream (
     XCNEW (rocm_code_object_stream));
@@ -240,9 +243,10 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
       if (protocol == "file")
 	{
 	  int target_errno;
-	  stream->fd = target_fileio_open (
-	    static_cast<struct inferior *> (inferior), decoded_path.c_str (),
-	    FILEIO_O_RDONLY, false, 0, &target_errno);
+	  stream->fd
+	    = target_fileio_open (static_cast<struct inferior *> (inferior),
+				  decoded_path.c_str (), FILEIO_O_RDONLY,
+				  false, 0, &target_errno);
 
 	  if (stream->fd == -1)
 	    {
@@ -308,7 +312,7 @@ rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
      memory.  */
   if (stream->fd == -1)
     {
-      if (target_read_memory (stream->offset + offset, (gdb_byte *)buf, size)
+      if (target_read_memory (stream->offset + offset, (gdb_byte *) buf, size)
 	  != 0)
 	{
 	  bfd_set_error (bfd_error_invalid_operation);
@@ -323,9 +327,11 @@ rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
     {
       QUIT;
 
-      file_ptr bytes_read = target_fileio_pread (
-	stream->fd, static_cast<gdb_byte *> (buf) + nbytes, size,
-	stream->offset + offset + nbytes, &target_errno);
+      file_ptr bytes_read
+	= target_fileio_pread (stream->fd,
+			       static_cast<gdb_byte *> (buf) + nbytes, size,
+			       stream->offset + offset + nbytes,
+			       &target_errno);
 
       if (bytes_read == 0)
 	break;
@@ -388,9 +394,10 @@ rocm_solib_bfd_open (const char *pathname)
   if (!strstr (pathname, "://"))
     return svr4_so_ops.bfd_open (pathname);
 
-  gdb_bfd_ref_ptr abfd (gdb_bfd_openr_iovec (
-    pathname, "elf64-amdgcn", rocm_bfd_iovec_open, current_inferior (),
-    rocm_bfd_iovec_pread, rocm_bfd_iovec_close, rocm_bfd_iovec_stat));
+  gdb_bfd_ref_ptr abfd (
+    gdb_bfd_openr_iovec (pathname, "elf64-amdgcn", rocm_bfd_iovec_open,
+			 current_inferior (), rocm_bfd_iovec_pread,
+			 rocm_bfd_iovec_close, rocm_bfd_iovec_stat));
 
   if (abfd == nullptr)
     error (_ ("Could not open `%s' as an executable file: %s"), pathname,
@@ -441,8 +448,9 @@ rocm_update_solib_list ()
   amd_dbgapi_code_object_id_t *code_object_list;
   size_t count;
 
-  if ((status = amd_dbgapi_process_code_object_list (
-	 process_id, &count, &code_object_list, nullptr))
+  if ((status
+       = amd_dbgapi_process_code_object_list (process_id, &count,
+					      &code_object_list, nullptr))
       != AMD_DBGAPI_STATUS_SUCCESS)
     {
       warning (_ ("amd_dbgapi_code_object_list failed (%d)"), status);

@@ -294,7 +294,8 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
 
   auto symbolizer
     = [] (amd_dbgapi_symbolizer_id_t id, amd_dbgapi_global_address_t address,
-	  char **symbol_text) -> amd_dbgapi_status_t {
+	  char **symbol_text) -> amd_dbgapi_status_t
+  {
     string_file string;
     print_address (reinterpret_cast<struct gdbarch *> (id), address, &string);
     *symbol_text = xstrdup (string.c_str ());
