@@ -83,9 +83,7 @@ struct rocm_notify_shared_library_info
 
 struct rocm_inferior_info
 {
-  explicit rocm_inferior_info (inferior *inf)
-    : inf (inf)
-  {}
+  explicit rocm_inferior_info (inferior *inf) : inf (inf) {}
 
   /* Backlink to inferior.  */
   inferior *inf;
@@ -393,10 +391,9 @@ rocm_breakpoint_check_status (struct bpstats *bs)
   /* Find the address the breakpoint is set at.  */
   auto it
     = std::find_if (info->breakpoint_map.begin (), info->breakpoint_map.end (),
-		    [=] (const decltype (
-		      info->breakpoint_map)::value_type &value) {
-		      return value.second == bs->breakpoint_at;
-		    });
+		    [=] (
+		      const decltype (info->breakpoint_map)::value_type &value)
+		    { return value.second == bs->breakpoint_at; });
 
   if (it == info->breakpoint_map.end ())
     error (_ ("Could not find breakpoint_id for breakpoint at %#lx"),
@@ -625,13 +622,16 @@ insert_initial_watchpoints (rocm_inferior_info *info)
 {
   gdb_assert (info->runtime_loaded);
 
-  iterate_over_bp_locations ([info] (bp_location *loc)
+  iterate_over_bp_locations (
+    [info] (bp_location *loc)
     {
       if (loc->loc_type == bp_loc_hardware_watchpoint
 	  && loc->pspace == info->inf->pspace)
 	{
-	  if (rocm_insert_one_watchpoint (info, loc->address, loc->length) != 0)
-	    warning (_("Failed to insert existing watchpoint after loading runtime."));
+	  if (rocm_insert_one_watchpoint (info, loc->address, loc->length)
+	      != 0)
+	    warning (_ (
+	      "Failed to insert existing watchpoint after loading runtime."));
 	}
     });
 }
@@ -731,12 +731,13 @@ rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
   for (size_t i = 0; i < watchpoints.count; ++i)
     {
       amd_dbgapi_watchpoint_id_t watchpoint = watchpoints.watchpoint_ids[i];
-      auto it = std::find_if (info->watchpoint_map.begin (),
-			      info->watchpoint_map.end (),
-			      [watchpoint] (const decltype (
-				info->watchpoint_map)::value_type &value) {
-				return value.second.second == watchpoint;
-			      });
+      auto it
+	= std::find_if (info->watchpoint_map.begin (),
+			info->watchpoint_map.end (),
+			[watchpoint] (
+			  const decltype (info->watchpoint_map)::value_type
+			    &value)
+			{ return value.second.second == watchpoint; });
       if (it != info->watchpoint_map.end ())
 	{
 	  start = std::max (start, it->first);
@@ -845,7 +846,8 @@ rocm_target_ops::stop (ptid_t ptid)
 	return;
     }
 
-  auto stop_one_thread = [this] (thread_info *thread) {
+  auto stop_one_thread = [this] (thread_info *thread)
+  {
     gdb_assert (thread != nullptr);
 
     amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
@@ -902,7 +904,7 @@ rocm_target_ops::stop (ptid_t ptid)
 
   for (auto *inf : all_inferiors (proc_target))
     /* Use the threads_safe iterator since stop_one_thread may delete the
-       thread if is has exited.  */
+       thread if it has exited.  */
     for (auto *thread : inf->threads_safe ())
       if (thread->state != THREAD_EXITED && thread->ptid.matches (ptid)
 	  && ptid_is_gpu (thread->ptid))
@@ -952,7 +954,7 @@ rocm_target_ops::async (int enable)
 	}
 
       /* The library gives us one notifier file descriptor per inferior (even
-	 the ones that don't have yet loaded the ROCm runtime).  Register them
+	 the ones that have not yet loaded the ROCm runtime).  Register them
 	 all with the event loop.  */
       process_stratum_target *proc_target
 	= current_inferior ()->process_target ();
@@ -1233,10 +1235,12 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
      that we need to fetch from dbgapi.  Mark the async event handler so that
      rocm_target_ops::wait gets called again and again, until it eventually
      returns minus_one_ptid.  */
-  auto more_events = make_scope_exit ([] () {
-    if (target_is_async_p ())
-      async_event_handler_mark ();
-  });
+  auto more_events = make_scope_exit (
+    [] ()
+    {
+      if (target_is_async_p ())
+	async_event_handler_mark ();
+    });
 
   auto *proc_target = current_inferior ()->process_target ();
   amd_dbgapi_process_id_t process_id;
@@ -1846,7 +1850,8 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 
   /* get_os_pid.  */
   .get_os_pid = [] (amd_dbgapi_client_process_id_t client_process_id,
-		    pid_t *pid) -> amd_dbgapi_status_t {
+		    pid_t *pid) -> amd_dbgapi_status_t
+  {
     inferior *inf = reinterpret_cast<inferior *> (client_process_id);
 
     if (inf->pid == 0)
@@ -1861,7 +1866,8 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   = [] (amd_dbgapi_client_process_id_t client_process_id,
 	const char *library_name, amd_dbgapi_shared_library_id_t library_id,
 	amd_dbgapi_shared_library_state_t *library_state)
-    -> amd_dbgapi_status_t {
+    -> amd_dbgapi_status_t
+  {
     inferior *inf = reinterpret_cast<inferior *> (client_process_id);
     struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
@@ -1906,7 +1912,8 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   /* disable_notify_shared_library callback.  */
   .disable_notify_shared_library
   = [] (amd_dbgapi_client_process_id_t client_process_id,
-	amd_dbgapi_shared_library_id_t library_id) -> amd_dbgapi_status_t {
+	amd_dbgapi_shared_library_id_t library_id) -> amd_dbgapi_status_t
+  {
     inferior *inf = reinterpret_cast<inferior *> (client_process_id);
     struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
@@ -1922,111 +1929,115 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   .get_symbol_address =
     [] (amd_dbgapi_client_process_id_t client_process_id,
 	amd_dbgapi_shared_library_id_t library_id, const char *symbol_name,
-	amd_dbgapi_global_address_t *address) {
-      inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-      struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+	amd_dbgapi_global_address_t *address)
+  {
+    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
+    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
-      auto it = info->notify_solib_map.find (library_id.handle);
-      if (it == info->notify_solib_map.end ())
-	return AMD_DBGAPI_STATUS_ERROR_INVALID_SHARED_LIBRARY_ID;
+    auto it = info->notify_solib_map.find (library_id.handle);
+    if (it == info->notify_solib_map.end ())
+      return AMD_DBGAPI_STATUS_ERROR_INVALID_SHARED_LIBRARY_ID;
 
-      struct so_list *solib = it->second.solib;
-      if (!solib)
-	return AMD_DBGAPI_STATUS_ERROR_LIBRARY_NOT_LOADED;
+    struct so_list *solib = it->second.solib;
+    if (!solib)
+      return AMD_DBGAPI_STATUS_ERROR_LIBRARY_NOT_LOADED;
 
-      solib_read_symbols (solib, 0);
-      if (!solib->objfile)
-	return AMD_DBGAPI_STATUS_ERROR_SYMBOL_NOT_FOUND;
+    solib_read_symbols (solib, 0);
+    if (!solib->objfile)
+      return AMD_DBGAPI_STATUS_ERROR_SYMBOL_NOT_FOUND;
 
-      struct bound_minimal_symbol msymbol
-	= lookup_minimal_symbol (symbol_name, NULL, solib->objfile);
+    struct bound_minimal_symbol msymbol
+      = lookup_minimal_symbol (symbol_name, NULL, solib->objfile);
 
-      if (!msymbol.minsym || BMSYMBOL_VALUE_ADDRESS (msymbol) == 0)
-	return AMD_DBGAPI_STATUS_ERROR_SYMBOL_NOT_FOUND;
+    if (!msymbol.minsym || BMSYMBOL_VALUE_ADDRESS (msymbol) == 0)
+      return AMD_DBGAPI_STATUS_ERROR_SYMBOL_NOT_FOUND;
 
-      *address = BMSYMBOL_VALUE_ADDRESS (msymbol);
-      return AMD_DBGAPI_STATUS_SUCCESS;
-    },
+    *address = BMSYMBOL_VALUE_ADDRESS (msymbol);
+    return AMD_DBGAPI_STATUS_SUCCESS;
+  },
 
   /* set_breakpoint callback.  */
   .insert_breakpoint =
     [] (amd_dbgapi_client_process_id_t client_process_id,
 	amd_dbgapi_shared_library_id_t shared_library_id,
 	amd_dbgapi_global_address_t address,
-	amd_dbgapi_breakpoint_id_t breakpoint_id) {
-      inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-      struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+	amd_dbgapi_breakpoint_id_t breakpoint_id)
+  {
+    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
+    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
-      /* Initialize the breakpoint ops lazily since we depend on
-	 bkpt_breakpoint_ops and we can't control the order in which
-	 initializers are called.  */
-      if (rocm_breakpoint_ops.check_status == NULL)
-	{
-	  rocm_breakpoint_ops = bkpt_breakpoint_ops;
-	  rocm_breakpoint_ops.check_status = rocm_breakpoint_check_status;
-	  rocm_breakpoint_ops.re_set = rocm_breakpoint_re_set;
-	}
+    /* Initialize the breakpoint ops lazily since we depend on
+       bkpt_breakpoint_ops and we can't control the order in which
+       initializers are called.  */
+    if (rocm_breakpoint_ops.check_status == NULL)
+      {
+	rocm_breakpoint_ops = bkpt_breakpoint_ops;
+	rocm_breakpoint_ops.check_status = rocm_breakpoint_check_status;
+	rocm_breakpoint_ops.re_set = rocm_breakpoint_re_set;
+      }
 
-      auto it = info->breakpoint_map.find (breakpoint_id.handle);
-      if (it != info->breakpoint_map.end ())
-	return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
+    auto it = info->breakpoint_map.find (breakpoint_id.handle);
+    if (it != info->breakpoint_map.end ())
+      return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
 
-      /* Create a new breakpoint.  */
-      struct obj_section *section = find_pc_section (address);
-      if (!section || !section->objfile)
-	return AMD_DBGAPI_STATUS_ERROR;
+    /* Create a new breakpoint.  */
+    struct obj_section *section = find_pc_section (address);
+    if (!section || !section->objfile)
+      return AMD_DBGAPI_STATUS_ERROR;
 
-      event_location_up location = new_address_location (address, nullptr, 0);
-      if (!create_breakpoint (section->objfile->arch (), location.get (),
-			      /*cond_string*/ NULL, /*thread*/ -1,
-			      /*extra_string*/ NULL, false /*force_condition*/,
-			      /*parse_extra*/ 0, /*tempflag*/ 0,
-			      /*bptype*/ bp_breakpoint,
-			      /*ignore_count*/ 0,
-			      /*pending_break*/ AUTO_BOOLEAN_FALSE,
-			      /*ops*/ &rocm_breakpoint_ops, /*from_tty*/ 0,
-			      /*enabled*/ 1, /*internal*/ 1, /*flags*/ 0))
-	return AMD_DBGAPI_STATUS_ERROR;
+    event_location_up location = new_address_location (address, nullptr, 0);
+    if (!create_breakpoint (section->objfile->arch (), location.get (),
+			    /*cond_string*/ NULL, /*thread*/ -1,
+			    /*extra_string*/ NULL, false /*force_condition*/,
+			    /*parse_extra*/ 0, /*tempflag*/ 0,
+			    /*bptype*/ bp_breakpoint,
+			    /*ignore_count*/ 0,
+			    /*pending_break*/ AUTO_BOOLEAN_FALSE,
+			    /*ops*/ &rocm_breakpoint_ops, /*from_tty*/ 0,
+			    /*enabled*/ 1, /*internal*/ 1, /*flags*/ 0))
+      return AMD_DBGAPI_STATUS_ERROR;
 
-      /* Find our breakpoint in the breakpoint list.  */
-      auto bp_loc = std::make_pair (inf->aspace, address);
-      auto bp = breakpoint_find_if (
-	[] (struct breakpoint *b, void *data) {
-	  auto *arg = static_cast<decltype (&bp_loc)> (data);
-	  if (b->ops == &rocm_breakpoint_ops && b->loc
-	      && b->loc->pspace->aspace == arg->first
-	      && b->loc->address == arg->second)
-	    return 1;
-	  return 0;
-	},
-	reinterpret_cast<void *> (&bp_loc));
+    /* Find our breakpoint in the breakpoint list.  */
+    auto bp_loc = std::make_pair (inf->aspace, address);
+    auto bp = breakpoint_find_if (
+      [] (struct breakpoint *b, void *data)
+      {
+	auto *arg = static_cast<decltype (&bp_loc)> (data);
+	if (b->ops == &rocm_breakpoint_ops && b->loc
+	    && b->loc->pspace->aspace == arg->first
+	    && b->loc->address == arg->second)
+	  return 1;
+	return 0;
+      },
+      reinterpret_cast<void *> (&bp_loc));
 
-      if (!bp)
-	error (_ ("Could not find breakpoint"));
+    if (!bp)
+      error (_ ("Could not find breakpoint"));
 
-      info->breakpoint_map.emplace (breakpoint_id.handle, bp);
-      return AMD_DBGAPI_STATUS_SUCCESS;
-    },
+    info->breakpoint_map.emplace (breakpoint_id.handle, bp);
+    return AMD_DBGAPI_STATUS_SUCCESS;
+  },
 
   /* remove_breakpoint callback.  */
   .remove_breakpoint =
     [] (amd_dbgapi_client_process_id_t client_process_id,
-	amd_dbgapi_breakpoint_id_t breakpoint_id) {
-      inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-      struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+	amd_dbgapi_breakpoint_id_t breakpoint_id)
+  {
+    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
+    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
-      auto it = info->breakpoint_map.find (breakpoint_id.handle);
-      if (it == info->breakpoint_map.end ())
-	return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
+    auto it = info->breakpoint_map.find (breakpoint_id.handle);
+    if (it == info->breakpoint_map.end ())
+      return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
 
-      delete_breakpoint (it->second);
-      info->breakpoint_map.erase (it);
+    delete_breakpoint (it->second);
+    info->breakpoint_map.erase (it);
 
-      return AMD_DBGAPI_STATUS_SUCCESS;
-    },
+    return AMD_DBGAPI_STATUS_SUCCESS;
+  },
 
-  .log_message
-  = [] (amd_dbgapi_log_level_t level, const char *message) -> void {
+  .log_message = [] (amd_dbgapi_log_level_t level, const char *message) -> void
+  {
     gdb::optional<target_terminal::scoped_restore_terminal_state> tstate;
 
     if (level > get_debug_amdgpu_log_level ())
@@ -2224,7 +2235,9 @@ info_agents_command (const char *args, int from_tty)
 
       std::vector<amd_dbgapi_agent_id_t> filtered_agents;
       std::copy_if (&agent_list[0], &agent_list[agent_count],
-		    std::back_inserter (filtered_agents), [=] (auto agent_id) {
+		    std::back_inserter (filtered_agents),
+		    [=] (auto agent_id)
+		    {
 		      return tid_is_in_list (args, current_inferior ()->num,
 					     inf->num, agent_id.handle);
 		    });
@@ -2292,13 +2305,13 @@ info_agents_command (const char *args, int from_tty)
     }
 
   amd_dbgapi_agent_id_t current_agent_id;
-  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0') ||
-      !ptid_is_gpu (inferior_ptid) ||
-      amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-  				AMD_DBGAPI_WAVE_INFO_AGENT,
-  				sizeof (current_agent_id),
-  				&current_agent_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
+      || !ptid_is_gpu (inferior_ptid)
+      || amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+				   AMD_DBGAPI_WAVE_INFO_AGENT,
+				   sizeof (current_agent_id),
+				   &current_agent_id)
+	   != AMD_DBGAPI_STATUS_SUCCESS)
     current_agent_id = AMD_DBGAPI_AGENT_NONE;
 
   /* Rows:  */
@@ -2308,9 +2321,8 @@ info_agents_command (const char *args, int from_tty)
       auto &agents = value.second;
 
       std::sort (agents.begin (), agents.end (),
-		 [] (amd_dbgapi_agent_id_t lhs, amd_dbgapi_agent_id_t rhs) {
-		   return lhs.handle < rhs.handle;
-		 });
+		 [] (amd_dbgapi_agent_id_t lhs, amd_dbgapi_agent_id_t rhs)
+		 { return lhs.handle < rhs.handle; });
 
       for (auto &&agent_id : agents)
 	{
@@ -2374,8 +2386,7 @@ info_agents_command (const char *args, int from_tty)
 	  if ((status
 	       = amd_dbgapi_agent_get_info (agent_id,
 					    AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
-					    sizeof (location),
-					    &location))
+					    sizeof (location), &location))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
 
@@ -2426,7 +2437,9 @@ info_queues_command (const char *args, int from_tty)
 
       std::vector<amd_dbgapi_queue_id_t> filtered_queues;
       std::copy_if (&queue_list[0], &queue_list[queue_count],
-		    std::back_inserter (filtered_queues), [=] (auto queue_id) {
+		    std::back_inserter (filtered_queues),
+		    [=] (auto queue_id)
+		    {
 		      return tid_is_in_list (args, current_inferior ()->num,
 					     inf->num, queue_id.handle);
 		    });
@@ -2483,13 +2496,13 @@ info_queues_command (const char *args, int from_tty)
     }
 
   amd_dbgapi_queue_id_t current_queue_id;
-  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0') ||
-      !ptid_is_gpu (inferior_ptid) ||
-      amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				AMD_DBGAPI_WAVE_INFO_QUEUE,
-				sizeof (current_queue_id),
-				&current_queue_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
+      || !ptid_is_gpu (inferior_ptid)
+      || amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+				   AMD_DBGAPI_WAVE_INFO_QUEUE,
+				   sizeof (current_queue_id),
+				   &current_queue_id)
+	   != AMD_DBGAPI_STATUS_SUCCESS)
     current_queue_id = AMD_DBGAPI_QUEUE_NONE;
 
   /* Rows:  */
@@ -2499,9 +2512,8 @@ info_queues_command (const char *args, int from_tty)
       auto &queues = value.second;
 
       std::sort (queues.begin (), queues.end (),
-		 [] (amd_dbgapi_queue_id_t lhs, amd_dbgapi_queue_id_t rhs) {
-		   return lhs.handle < rhs.handle;
-		 });
+		 [] (amd_dbgapi_queue_id_t lhs, amd_dbgapi_queue_id_t rhs)
+		 { return lhs.handle < rhs.handle; });
 
       for (auto &&queue_id : queues)
 	{
@@ -2536,26 +2548,29 @@ info_queues_command (const char *args, int from_tty)
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
 
-	  uiout->field_string ("type", [type] () {
-	    switch (type)
-	      {
-	      case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_MULTIPLE_PRODUCER:
-		return "HSA (Multi)";
-	      case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_SINGLE_PRODUCER:
-		return "HSA (Single)";
-	      case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_COOPERATIVE:
-		return "HSA (Coop)";
-	      case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_PM4:
-		return "PM4";
-	      case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA:
-		return "DMA";
-	      case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA_XGMI:
-		return "XGMI";
-	      case AMD_DBGAPI_OS_QUEUE_TYPE_UNKNOWN:
-	      default:
-		return "Unknown";
-	      }
-	  }());
+	  uiout->field_string (
+	    "type",
+	    [type] ()
+	    {
+	      switch (type)
+		{
+		case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_MULTIPLE_PRODUCER:
+		  return "HSA (Multi)";
+		case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_SINGLE_PRODUCER:
+		  return "HSA (Single)";
+		case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_COOPERATIVE:
+		  return "HSA (Coop)";
+		case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_PM4:
+		  return "PM4";
+		case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA:
+		  return "DMA";
+		case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA_XGMI:
+		  return "XGMI";
+		case AMD_DBGAPI_OS_QUEUE_TYPE_UNKNOWN:
+		default:
+		  return "Unknown";
+		}
+	    }());
 
 	  /* read, write  */
 	  amd_dbgapi_os_queue_packet_id_t read, write;
@@ -2770,7 +2785,8 @@ info_dispatches_command (const char *args, int from_tty)
       std::vector<amd_dbgapi_dispatch_id_t> filtered_dispatches;
       std::copy_if (&dispatch_list[0], &dispatch_list[dispatch_count],
 		    std::back_inserter (filtered_dispatches),
-		    [=] (auto dispatch_id) {
+		    [=] (auto dispatch_id)
+		    {
 		      return tid_is_in_list (args, curr_inferior->num,
 					     inf->num, dispatch_id.handle);
 		    });
@@ -2898,14 +2914,14 @@ info_dispatches_command (const char *args, int from_tty)
     }
 
   amd_dbgapi_dispatch_id_t current_dispatch_id;
-  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0') ||
-      !ptid_is_gpu (inferior_ptid) ||
-      amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				AMD_DBGAPI_WAVE_INFO_DISPATCH,
-				sizeof (current_dispatch_id),
-				&current_dispatch_id)
-       != AMD_DBGAPI_STATUS_SUCCESS)
-	 current_dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
+  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
+      || !ptid_is_gpu (inferior_ptid)
+      || amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+				   AMD_DBGAPI_WAVE_INFO_DISPATCH,
+				   sizeof (current_dispatch_id),
+				   &current_dispatch_id)
+	   != AMD_DBGAPI_STATUS_SUCCESS)
+    current_dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
 
   /* Rows:  */
   for (auto &&value : all_filtered_dispatches)
@@ -2915,9 +2931,8 @@ info_dispatches_command (const char *args, int from_tty)
 
       std::sort (dispatches.begin (), dispatches.end (),
 		 [] (amd_dbgapi_dispatch_id_t lhs,
-		     amd_dbgapi_dispatch_id_t rhs) {
-		   return lhs.handle < rhs.handle;
-		 });
+		     amd_dbgapi_dispatch_id_t rhs)
+		 { return lhs.handle < rhs.handle; });
 
       /* Switch the inferior since we are doing a symbol lookup in this
 	 inferior's program space.  */
@@ -3105,7 +3120,8 @@ info_dispatches_command (const char *args, int from_tty)
 	}
     }
 
-  if (uiout->is_mi_like_p () && current_dispatch_id != AMD_DBGAPI_DISPATCH_NONE)
+  if (uiout->is_mi_like_p ()
+      && current_dispatch_id != AMD_DBGAPI_DISPATCH_NONE)
     uiout->field_signed ("current-dispatch-id", current_dispatch_id.handle);
 
   gdb_flush (gdb_stdout);
