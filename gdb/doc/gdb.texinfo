@@ -27651,11 +27651,6 @@ thread sanitizers.
 @value{GDBN} support for AMD GPU is not currently available under
 virtualization.
 
-@item
-Performing an instruction single step when an AMD GPU wavefront is
-positioned on an @code{S_ENDPGM} instruction may cause the AMD GPU
-hardware to hang.
-
 @end enumerate
 
 @node Controlling GDB
