@@ -26889,13 +26889,13 @@ HIP Programming Language} is supported.
 
 When compiling, the @w{@option{-ggdb}} option should be used to
 produce debugging information suitable for use by @value{GDBN}.  The
-@w{@option{--amdgpu-target}} option is used to specify the AMD GPUs
+@w{@option{--offload-arch}} option is used to specify the AMD GPUs
 that the executable is required to support.  For example, to compile a
 HIP program that can utilize ``Vega 10'' and ``Vega 7nm'' AMD GPU
 devices, with no optimization:
 
 @smallexample
-hipcc -O0 -ggdb --amdgpu-target=gfx900 --amdgpu-target=gfx906 \
+hipcc -O0 -ggdb ---offload-arch=gfx900 --offload-arch=gfx906 \
         bit_extract.cpp -o bit_extract
 @end smallexample
 
