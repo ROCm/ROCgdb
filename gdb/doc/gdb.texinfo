@@ -26995,10 +26995,10 @@ HIP Programming Language} is supported.
 
 When compiling, the @w{@option{-ggdb}} option should be used to
 produce debugging information suitable for use by @value{GDBN}.  The
-@w{@option{--offload-arch}} option is used to specify the AMD GPUs
-that the executable is required to support.  For example, to compile a
-HIP program that can utilize ``Vega 10'' and ``Vega 7nm'' AMD GPU
-devices, with no optimization:
+@w{@option{--offload-arch}} option is used to specify the AMD GPU
+chips that the executable is required to support.  For example, to
+compile a HIP program that can utilize ``Vega 10'' and ``Vega 7nm''
+AMD GPU devices, with no optimization:
 
 @smallexample
 hipcc -O0 -ggdb ---offload-arch=gfx900 --offload-arch=gfx906 \
@@ -27354,31 +27354,126 @@ the generic address space that can access the @var{global},
 
 @end table
 
-The @code{set debug amdgpu log-level @var{level}} command can be
-used to enable diagnostic messages for the AMD GPU target, where
-@var{level} can be:
+A wavefront can report memory violation and address watch access
+events.  However, the program location at which they are reported may
+be after the machine instruction that caused them.  This can result in
+the reported source statement being incorrect.  The following commands
+can be used to control this behavior:
+
+@table @code
+
+@kindex set amdgpu precise-memory
+@cindex AMD GPU precise memory event reporting
+@item set amdgpu precise-memory @var{mode}
+@code{set amdgpu precise-memory} controls how the AMD GPU detects
+memory violations and address watch events.  Where @var{mode} can be:
 
 @table @code
 
 @item off
-no logging is enabled
+The program location may not be immediately after the instruction that
+caused the memory violation or address watch event.  This is the
+default.
 
-@item error
-fatal errors are reported
-
-@item warning
-fatal errors and warnings are reported
-
-@item info
-fatal errors, warnings, and info messages are reported
-
-@item verbose
-all messages are reported
+@item on
+Requests that the program location will be immediately after the
+instruction that caused a memory violation or address watch event.
+Enabling this mode may make the AMD GPU execution significantly slower
+as it has to wait for each memory operation to complete before
+executing the next instruction.
 
 @end table
 
-The @code{show debug amdgpu log-level} command displays the
-current AMD GPU target log level.
+For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory off
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is off
+(@value{GDBP})
+@end smallexample
+
+If a memory violation or address watch access event is reported for an
+AMD GPU thread that supports controlling precise memory detection when
+the mode is @samp{off}, then the message includes an indication that
+the position may not be accurate.  For example:
+
+@smallexample
+(@value{GDBP}) run
+Thread 6 "bit_extract" received signal SIGSEGV, Segmentation fault.
+0x00007ffee6a0a028 in bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:38
+38     size_t offset = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x);
+('set amdgpu precise-memory on' is not enabled so reported location may not be accurate)
+(@value{GDBP})
+@end smallexample
+
+The precise memory mode cannot be enabled until the inferior is started
+or attached.  If at that time all AMD GPU chips accessible to the
+inferior support the @samp{on} mode, then it is enabled.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP}) run
+...
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently enabled)
+(@value{GDBP})
+@end smallexample
+
+Alternatively, if at that time any of the AMD GPU chips accessible to
+the inferior do not support the @samp{on} mode, then a warning is
+reported and the mode is not enabled.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP}) run
+AMDGPU precise memory access reporting could not be enabled
+(@value{GDBP})
+@end smallexample
+
+If the inferior is already executing when setting the @samp{on} mode,
+then a warning will be reported immediately.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+AMDGPU precise memory access reporting could not be enabled
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP})
+@end smallexample
+
+Otherwise, setting the @samp{on} mode will enable it immediately.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently enabled)
+(@value{GDBP})
+@end smallexample
+
+@kindex show amdgpu precise-memory
+@cindex AMD GPU precise memory event reporting
+@item show amdgpu precise-memory
+@code{show amdgpu precise-memory} displays the currently requested AMD
+GPU precise memory setting.  If @samp{on} has been requested, the
+message also indicates if it is currently enabled.  For example:
+
+@smallexample
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP})
+@end smallexample
+
+@end table
+
+The @code{set debug amdgpu log-level @var{level}} command can be used
+to enable diagnostic messages for the AMD GPU target.  The @code{show
+debug amdgpu log-level} command displays the current AMD GPU target
+log level.  @xref{set debug amdgpu}.
 
 For example, the following will enable information messages and send
 the log to a new file:
@@ -27427,6 +27522,7 @@ returns a string that has the format:
 (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
 @end smallexample
 
+@noindent
 Where:
 
 @table @var
@@ -27455,6 +27551,12 @@ address set to 0x00020000.  A generic private address only accesses
 lane 0 of the currently focused wavefront.  A group address accesses
 the @code{group} segment memory shared by all wavefronts that are
 members of the same work-group as the currently focused wavefront.
+
+@item
+If a memory violation or address watch access event is reported for an
+AMD GPU thread that supports controlling precise memory detection when
+the mode is @samp{off}, then the message does not currently include an
+indication that the position may not be accurate.
 
 @item
 The @acronym{AMD ROCm} compiler currently does not support generating
@@ -27653,14 +27755,12 @@ export HIP_ENABLE_DEFERRED_LOADING=0
 application performs a @code{fork}, then the program may crash.
 
 @item
-Memory violations are reported to the wavefronts that cause them.
-However, the program location at which they are reported may be after
-the source statement that caused them.  The @acronym{AMD ROCm} runtime
-can currently cause the inferior to terminate before the memory
-violation is reported.  This can be avoided by setting a breakpoint in
-@code{abort} and using the non-stop mode (@pxref{Non-Stop Mode}).
-This will prevent the @acronym{AMD ROCm} runtime from terminating the
-inferior, while allowing @value{GDBN} to report the memory violation.
+The @acronym{AMD ROCm} runtime can currently cause the inferior to
+terminate before a memory violation caused by an AMD GPU wavefront is
+reported.  This can be avoided by setting a breakpoint in @code{abort}
+and using the non-stop mode (@pxref{Non-Stop Mode}).  This will
+prevent the @acronym{AMD ROCm} runtime from terminating the inferior,
+while allowing @value{GDBN} to report the memory violation.
 
 @item
 @value{GDBN} may report errors if execution is continued after the
@@ -28899,6 +28999,37 @@ Display debugging messages about inner workings of the AIX thread
 module.
 @item show debug aix-thread
 Show the current state of AIX thread debugging info display.
+
+@cindex AMD GPU debugging info
+@anchor{set debug amdgpu}
+@item set debug amdgpu
+@itemx show debug amdgpu
+
+The @code{set debug amdgpu log-level @var{level}} command can be used
+to enable diagnostic messages for the AMD GPU target, where
+@var{level} can be:
+
+@table @code
+
+@item off
+no logging is enabled
+
+@item error
+fatal errors are reported
+
+@item warning
+fatal errors and warnings are reported
+
+@item info
+fatal errors, warnings, and info messages are reported
+
+@item verbose
+all messages are reported
+
+@end table
+
+The @code{show debug amdgpu log-level} command displays the current
+AMD GPU target log level.
 
 @item set debug check-physname
 @cindex physname
