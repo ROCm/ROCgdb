@@ -26605,47 +26605,45 @@ installed.
 
 The following AMD GPU chips are supported:
 
-@itemize @bullet{}
+@table @emph
 
-@item
-``AMD Vega 10'' which is displayed as @samp{vega10} by @value{GDBN} and
-denoted as @samp{gfx900} by the compiler.
+@item AMD Vega 10
+Displayed as @samp{vega10} by @value{GDBN} and denoted as
+@samp{gfx900} by the compiler.
 
-@item
-``AMD Vega 7nm'' which is displayed as @samp{vega20} by @value{GDBN} and
-denoted as @samp{gfx906} by the compiler.
+@item AMD Vega 7nm
+Displayed as @samp{vega20} by @value{GDBN} and denoted as
+@samp{gfx906} by the compiler.
 
-@item
-``AMD Instinct@registeredsymbol{} MI100 Accelerator'' which is displayed
-as @samp{arcturus} by @value{GDBN} and denoted as @samp{gfx908} by the
-compiler.
+@item AMD Instinct@registeredsymbol{} MI100 Accelerator
+Displayed as @samp{arcturus} by @value{GDBN} and denoted as
+@samp{gfx908} by the compiler.
 
-@item
-``Aldebaran'' which is displayed as @samp{aldebaran} by @value{GDBN} and
-denoted as @samp{gfx90a} by the compiler.
+@item Aldebaran
+Displayed as @samp{aldebaran} by @value{GDBN} and denoted as
+@samp{gfx90a} by the compiler.
 
-@c TODO:
-@c @item
-@c ``TBA'' which is displayed as @samp{navi10} by @value{GDBN} and
-@c denoted as @samp{gfx1010} by the compiler.
-@c
-@c @item
-@c ``TBA'' which is displayed as @samp{navi12} by @value{GDBN} and
-@c denoted as @samp{gfx1011} by the compiler.
-@c
-@c @item
-@c ``TBA'' which is displayed as @samp{navi14} by @value{GDBN} and
-@c denoted as @samp{gfx1012} by the compiler.
-@c
-@c @item
-@c ``Navi 21'' which is displayed as @samp{sienna_cichlid} by @value{GDBN} and
-@c denoted as @samp{gfx1030} by the compiler.
-@c
-@c @item
-@c ``Navi 22'' which is displayed as @samp{navy_flounder} by @value{GDBN} and
-@c denoted as @samp{gfx1031} by the compiler.
+@item Navi10
+Displayed as @samp{navi10} by @value{GDBN} and denoted as
+@samp{gfx1010} by the compiler.
 
-@end itemize
+@item Navi12
+Displayed as @samp{navi12} by @value{GDBN} and denoted as
+@samp{gfx1011} by the compiler.
+
+@item Navi14
+Displayed as @samp{navi14} by @value{GDBN} and denoted as
+@samp{gfx1012} by the compiler.
+
+@item Sienna Cichlid
+Displayed as @samp{sienna_cichlid} by @value{GDBN} and denoted as
+@samp{gfx1030} by the compiler.
+
+@item Navy Flounder
+Displayed as @samp{navy_flounder} by @value{GDBN} and denoted as
+@samp{gfx1031} by the compiler.
+
+@end table
 
 @value{GDBN} supports the following source languages:
 
