@@ -16,13 +16,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 AUTOMAKE_OPTIONS = dejagnu foreign no-dist subdir-objects
-ACLOCAL_AMFLAGS = -I.. -I../config
+ACLOCAL_AMFLAGS = -Im4 -I.. -I../config
 
 srcroot = $(srcdir)/..
 
 SUBDIRS = @subdirs@
 
+SIM_PRIMARY_TARGET = @SIM_PRIMARY_TARGET@
+AM_MAKEFLAGS = SIM_PRIMARY_TARGET=$(SIM_PRIMARY_TARGET)
+
+# We don't set some of these vars here, but we need to define them so they may
+# be used consistently in local.mk files we include below.
+check_PROGRAMS =
+noinst_LIBRARIES =
+EXTRA_PROGRAMS =
+
+CLEANFILES =
+DISTCLEANFILES =
 MOSTLYCLEANFILES = core
+
+COMPILE_FOR_BUILD = $(CC_FOR_BUILD) $(AM_CPPFLAGS) $(CFLAGS_FOR_BUILD)
+LINK_FOR_BUILD = $(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) -o $@
 
 # Generate nltvals.def for newlib/libgloss using devo and build tree.
 # This file is shipped with distributions so we build in the source dir.
@@ -35,4 +49,7 @@ nltvals:
 	$(abs_srcdir)/common/gennltvals.py --cpp "$(CPP)" --output nltvals.def --srcroot $(srcroot)
 	$(SHELL) $(srcroot)/move-if-change nltvals.def $(abs_srcdir)/common/nltvals.def
 
+if SIM_ENABLE_IGEN
+include igen/local.mk
+endif
 include testsuite/local.mk

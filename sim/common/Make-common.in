@@ -72,6 +72,7 @@ INSTALL_DATA = @INSTALL_DATA@
 CC = @CC@
 C_DIALECT = @C_DIALECT@
 CC_FOR_BUILD = @CC_FOR_BUILD@
+CFLAGS_FOR_BUILD = @CFLAGS_FOR_BUILD@
 CFLAGS = @CFLAGS@
 CPPFLAGS = @CPPFLAGS@
 CXXFLAGS = @CXXFLAGS@
@@ -230,7 +231,7 @@ CSEARCH = -I. -I$(srcdir) -I../common -I$(srccom) \
   -I../../opcodes -I$(srcroot)/opcodes \
   @INCINTL@
 ALL_CFLAGS = $(CONFIG_CFLAGS) $(CSEARCH) $(CFLAGS)
-BUILD_CFLAGS = -g -O $(CSEARCH)
+BUILD_CFLAGS = $(CFLAGS_FOR_BUILD) $(CSEARCH)
 
 COMMON_DEP_CFLAGS = $(CONFIG_CFLAGS) $(CSEARCH)
 
@@ -466,9 +467,14 @@ CGEN_MAIN_CPU_DEPS = \
 install: install-common $(SIM_EXTRA_INSTALL)
 
 install-common: installdirs
+	a=`basename "$$(pwd)"`; \
 	n=`echo run | sed '$(program_transform_name)'`; \
+	[ "$(SIM_PRIMARY_TARGET)" = "$$a" ] || n="$$n-$$a"; \
 	$(INSTALL_PROGRAM) run$(EXEEXT) $(DESTDIR)$(bindir)/$$n$(EXEEXT)
-	n=`echo libsim.a | sed s/libsim.a/lib$(target_alias)-sim.a/`; \
+	n="$(target_alias)-sim"; \
+	a=`basename "$$(pwd)"`; \
+	[ "$(SIM_PRIMARY_TARGET)" = "$$a" ] || n="$$n-$$a"; \
+	n="lib$$n.a"; \
 	$(INSTALL_DATA) libsim.a $(DESTDIR)$(libdir)/$$n ; \
 	( cd $(DESTDIR)$(libdir) ; $(RANLIB) $$n )
 

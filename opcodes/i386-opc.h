@@ -19,10 +19,7 @@
    02110-1301, USA.  */
 
 #include "opcode/i386.h"
-#ifdef HAVE_LIMITS_H
 #include <limits.h>
-#endif
-
 #ifndef CHAR_BIT
 #define CHAR_BIT 8
 #endif
@@ -990,24 +987,6 @@ typedef struct
 }
 reg_entry;
 
-/* Entries in i386_regtab.  */
-#define REGNAM_AL 1
-#define REGNAM_AX 25
-#define REGNAM_EAX 41
-
 extern const reg_entry i386_regtab[];
 extern const unsigned int i386_regtab_size;
-
-typedef struct
-{
-  char *seg_name;
-  unsigned int seg_prefix;
-}
-seg_entry;
-
-extern const seg_entry cs;
-extern const seg_entry ds;
-extern const seg_entry ss;
-extern const seg_entry es;
-extern const seg_entry fs;
-extern const seg_entry gs;
+extern const unsigned char i386_seg_prefixes[6];

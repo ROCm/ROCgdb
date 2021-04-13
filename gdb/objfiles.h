@@ -264,11 +264,35 @@ private:
 
 struct objfile_per_bfd_storage
 {
-  objfile_per_bfd_storage ()
-    : minsyms_read (false)
+  objfile_per_bfd_storage (bfd *bfd)
+    : minsyms_read (false), m_bfd (bfd)
   {}
 
   ~objfile_per_bfd_storage ();
+
+  /* Intern STRING in this object's string cache and return the unique copy.
+     The copy has the same lifetime as this object.
+
+     STRING must be null-terminated.  */
+
+  const char *intern (const char *str)
+  {
+    return (const char *) string_cache.insert (str, strlen (str) + 1);
+  }
+
+  /* Same as the above, but for an std::string.  */
+
+  const char *intern (const std::string &str)
+  {
+    return (const char *) string_cache.insert (str.c_str (), str.size () + 1);
+  }
+
+  /* Get the BFD this object is associated to.  */
+
+  bfd *get_bfd () const
+  {
+    return m_bfd;
+  }
 
   /* The storage has an obstack of its own.  */
 
@@ -347,6 +371,11 @@ struct objfile_per_bfd_storage
   /* All the different languages of symbols found in the demangled
      hash table.  */
   std::bitset<nr_languages> demangled_hash_languages;
+
+private:
+  /* The BFD this object is associated to.  */
+
+  bfd *m_bfd;
 };
 
 /* An iterator that first returns a parent objfile, and then each
@@ -516,15 +545,14 @@ public:
      lifetime as the per-BFD object.  */
   const char *intern (const char *str)
   {
-    return (const char *) per_bfd->string_cache.insert (str, strlen (str) + 1);
+    return per_bfd->intern (str);
   }
 
   /* Intern STRING and return the unique copy.  The copy has the same
      lifetime as the per-BFD object.  */
   const char *intern (const std::string &str)
   {
-    return (const char *) per_bfd->string_cache.insert (str.c_str (),
-							str.size () + 1);
+    return per_bfd->intern (str);
   }
 
   /* Retrieve the gdbarch associated with this objfile.  */

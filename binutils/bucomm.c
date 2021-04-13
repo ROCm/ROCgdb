@@ -25,16 +25,9 @@
 #include "bfd.h"
 #include "libiberty.h"
 #include "filenames.h"
-
-#include <time.h>		/* ctime, maybe time_t */
+#include <time.h>
 #include <assert.h>
 #include "bucomm.h"
-
-#ifndef HAVE_TIME_T_IN_TIME_H
-#ifndef HAVE_TIME_T_IN_TYPES_H
-typedef long time_t;
-#endif
-#endif
 
 /* Error reporting.  */
 
@@ -435,7 +428,7 @@ display_info (void)
    Mode       User\tGroup\tSize\tDate               Name */
 
 void
-print_arelt_descr (FILE *file, bfd *abfd, bfd_boolean verbose, bfd_boolean offsets)
+print_arelt_descr (FILE *file, bfd *abfd, bool verbose, bool offsets)
 {
   struct stat buf;
 
@@ -677,18 +670,18 @@ bfd_get_archive_filename (const bfd *abfd)
    is valid for writing.  For security reasons absolute paths
    and paths containing /../ are not allowed.  See PR 17533.  */
 
-bfd_boolean
+bool
 is_valid_archive_path (char const * pathname)
 {
   const char * n = pathname;
 
   if (IS_ABSOLUTE_PATH (n))
-    return FALSE;
+    return false;
 
   while (*n)
     {
       if (*n == '.' && *++n == '.' && ( ! *++n || IS_DIR_SEPARATOR (*n)))
-	return FALSE;
+	return false;
 
       while (*n && ! IS_DIR_SEPARATOR (*n))
 	n++;
@@ -696,5 +689,5 @@ is_valid_archive_path (char const * pathname)
 	n++;
     }
 
-  return TRUE;
+  return true;
 }

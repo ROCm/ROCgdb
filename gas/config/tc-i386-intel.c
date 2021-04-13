@@ -335,7 +335,7 @@ i386_intel_simplify_register (expressionS *e)
   else
     {
       /* esp is invalid as index */
-      intel_state.index = i386_regtab + REGNAM_EAX + ESP_REG_NUM;
+      intel_state.index = reg_eax + ESP_REG_NUM;
     }
   return 2;
 }
@@ -500,7 +500,7 @@ static int i386_intel_simplify (expressionS *e)
 		break;
 	      default:
 		/* esp is invalid as index */
-		intel_state.index = i386_regtab + REGNAM_EAX + ESP_REG_NUM;
+		intel_state.index = reg_eax + ESP_REG_NUM;
 		break;
 	      }
 
@@ -767,19 +767,19 @@ i386_intel_operand (char *operand_string, int got_a_float)
       || current_templates->start->opcode_modifier.jump == JUMP_DWORD
       || current_templates->start->opcode_modifier.jump == JUMP_INTERSEGMENT)
     {
-      bfd_boolean jumpabsolute = FALSE;
+      bool jumpabsolute = false;
 
       if (i.op[this_operand].regs
 	  || intel_state.base
 	  || intel_state.index
 	  || intel_state.is_mem > 1)
-	jumpabsolute = TRUE;
+	jumpabsolute = true;
       else
 	switch (intel_state.op_modifier)
 	  {
 	  case O_near_ptr:
 	    if (intel_state.seg)
-	      jumpabsolute = TRUE;
+	      jumpabsolute = true;
 	    else
 	      intel_state.is_mem = 1;
 	    break;
@@ -791,14 +791,14 @@ i386_intel_operand (char *operand_string, int got_a_float)
 		if (intel_state.op_modifier == O_absent)
 		  {
 		    if (intel_state.is_indirect == 1)
-		      jumpabsolute = TRUE;
+		      jumpabsolute = true;
 		    break;
 		  }
 		as_bad (_("cannot infer the segment part of the operand"));
 		return 0;
 	      }
 	    else if (S_GET_SEGMENT (intel_state.seg) == reg_section)
-	      jumpabsolute = TRUE;
+	      jumpabsolute = true;
 	    else
 	      {
 		i386_operand_type types;
@@ -832,12 +832,12 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	      }
 	    break;
 	  default:
-	    jumpabsolute = TRUE;
+	    jumpabsolute = true;
 	    break;
 	  }
       if (jumpabsolute)
 	{
-	  i.jumpabsolute = TRUE;
+	  i.jumpabsolute = true;
 	  intel_state.is_mem |= 1;
 	}
     }
@@ -1028,16 +1028,10 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	      as_warn (_("redundant segment overrides"));
 	      break;
 	    }
-	  switch (i386_regtab[expP->X_add_number].reg_num)
-	    {
-	    case 0: i.seg[i.mem_operands] = &es; break;
-	    case 1: i.seg[i.mem_operands] = &cs; break;
-	    case 2: i.seg[i.mem_operands] = &ss; break;
-	    case 3: i.seg[i.mem_operands] = &ds; break;
-	    case 4: i.seg[i.mem_operands] = &fs; break;
-	    case 5: i.seg[i.mem_operands] = &gs; break;
-	    case RegFlat: i.seg[i.mem_operands] = NULL; break;
-	    }
+	  if (i386_regtab[expP->X_add_number].reg_num == RegFlat)
+	    i.seg[i.mem_operands] = NULL;
+	  else
+	    i.seg[i.mem_operands] = &i386_regtab[expP->X_add_number];
 	}
 
       if (!i386_index_check (operand_string))

@@ -220,20 +220,6 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 
 #define TYPE_NOTTEXT(t)	(((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_NOTTEXT)
 
-/* * True if this type was declared using the "class" keyword.  This is
-   only valid for C++ structure and enum types.  If false, a structure
-   was declared as a "struct"; if true it was declared "class".  For
-   enum types, this is true when "enum class" or "enum struct" was
-   used to declare the type..  */
-
-#define TYPE_DECLARED_CLASS(t) (TYPE_MAIN_TYPE (t)->flag_declared_class)
-
-/* * True if this type is a "flag" enum.  A flag enum is one where all
-   the values are pairwise disjoint when "and"ed together.  This
-   affects how enum values are printed.  */
-
-#define TYPE_FLAG_ENUM(t) (TYPE_MAIN_TYPE (t)->flag_flag_enum)
-
 /* * Constant type.  If this is set, the corresponding type has a
    const modifier.  */
 
@@ -815,12 +801,12 @@ struct main_type
   /* * True if this type was declared with "class" rather than
      "struct".  */
 
-  unsigned int flag_declared_class : 1;
+  unsigned int m_flag_declared_class : 1;
 
   /* * True if this is an enum type with disjoint values.  This
      affects how the enum is printed.  */
 
-  unsigned int flag_flag_enum : 1;
+  unsigned int m_flag_flag_enum : 1;
 
   /* * A discriminant telling us which field of the type_specific
      union is being used for this type, if any.  */
@@ -1185,6 +1171,37 @@ struct type
   void set_endianity_is_not_default (bool endianity_is_not_default)
   {
     this->main_type->m_flag_endianity_not_default = endianity_is_not_default;
+  }
+
+
+  /* True if this type was declared using the "class" keyword.  This is
+     only valid for C++ structure and enum types.  If false, a structure
+     was declared as a "struct"; if true it was declared "class".  For
+     enum types, this is true when "enum class" or "enum struct" was
+     used to declare the type.  */
+
+  bool is_declared_class () const
+  {
+    return this->main_type->m_flag_declared_class;
+  }
+
+  void set_is_declared_class (bool is_declared_class) const
+  {
+    this->main_type->m_flag_declared_class = is_declared_class;
+  }
+
+  /* True if this type is a "flag" enum.  A flag enum is one where all
+     the values are pairwise disjoint when "and"ed together.  This
+     affects how enum values are printed.  */
+
+  bool is_flag_enum () const
+  {
+    return this->main_type->m_flag_flag_enum;
+  }
+
+  void set_is_flag_enum (bool is_flag_enum)
+  {
+    this->main_type->m_flag_flag_enum = is_flag_enum;
   }
 
   /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, return a reference

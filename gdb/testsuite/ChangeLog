@@ -1,3 +1,41 @@
+2021-04-06  Tom de Vries  <tdevries@suse.de>
+
+	PR breakpoints/25884
+	* gdb.opt/inline-cmds.exp: Remove kfail.
+
+2021-04-06  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/27691
+	* gdb.threads/gcore-thread.exp: Don't call gdb_core_cmd with core
+	file "".
+
+2021-04-01  Egeyar Bagcioglu  <egeyar@gmail.com>
+
+	* lib/pdtrace.in: Fix obvious typo.
+
+2021-03-31  Tom Tromey  <tromey@adacore.com>
+
+	* lib/dwarf.exp (Dwarf::_get_args): New proc.
+	(Dwarf::_location): Use it.
+
+2021-03-31  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/27667
+	* lib/gdb.exp (default_gdb_init): Unset DEBUGINFOD_URLS.
+
+2021-03-30  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27541
+	* gdb.base/index-cache-load-twice.exp: Remove.
+	* gdb.base/index-cache-load-twice.c: Remove.
+	* gdb.dwarf2/per-bfd-sharing.exp: New.
+	* gdb.dwarf2/per-bfd-sharing.c: New.
+
+2021-03-30  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/27604
+	* gdb.dwarf2/dw2-cu-size.S: Add missing .debug_abbrev terminator.
+
 2021-03-29  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 
 	* gdb.mi/user-selected-context-sync.exp: Spin on a variable in

@@ -105,13 +105,13 @@ bfd_amdgcn_get_mach_from_notes (bfd *abfd)
   return mach;
 }
 
-static bfd_boolean
+static bool
 elf64_amdgcn_object_p (bfd *abfd)
 {
   unsigned int mach;
 
   if (elf_elfheader (abfd)->e_ident[EI_OSABI] != ELFOSABI_AMDGPU_HSA)
-    return FALSE;
+    return false;
 
   if (elf_elfheader (abfd)->e_ident[EI_ABIVERSION] < 1)
     mach = bfd_amdgcn_get_mach_from_notes (abfd);
@@ -119,7 +119,7 @@ elf64_amdgcn_object_p (bfd *abfd)
     mach = elf_elfheader (abfd)->e_flags & EF_AMDGPU_MACH;
 
   bfd_default_set_arch_mach (abfd, bfd_arch_amdgcn, mach);
-  return TRUE;
+  return true;
 }
 
 

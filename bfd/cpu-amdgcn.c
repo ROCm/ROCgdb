@@ -44,15 +44,15 @@
 
 static const bfd_arch_info_type arch_info_struct[] =
 {
-  N (bfd_mach_amdgcn_gfx906, "amdgcn:gfx906", FALSE, NN(1)),
-  N (bfd_mach_amdgcn_gfx908, "amdgcn:gfx908", FALSE, NN(2)),
-  N (bfd_mach_amdgcn_gfx90a, "amdgcn:gfx90a", FALSE, NN(3)),
-  N (bfd_mach_amdgcn_gfx1010, "amdgcn:gfx1010", FALSE, NN(4)),
-  N (bfd_mach_amdgcn_gfx1011, "amdgcn:gfx1011", FALSE, NN(5)),
-  N (bfd_mach_amdgcn_gfx1012, "amdgcn:gfx1012", FALSE, NN(6)),
-  N (bfd_mach_amdgcn_gfx1030, "amdgcn:gfx1030", FALSE, NN(7)),
-  N (bfd_mach_amdgcn_gfx1031, "amdgcn:gfx1031", FALSE, 0),
+  N (bfd_mach_amdgcn_gfx906, "amdgcn:gfx906", false, NN(1)),
+  N (bfd_mach_amdgcn_gfx908, "amdgcn:gfx908", false, NN(2)),
+  N (bfd_mach_amdgcn_gfx90a, "amdgcn:gfx90a", false, NN(3)),
+  N (bfd_mach_amdgcn_gfx1010, "amdgcn:gfx1010", false, NN(4)),
+  N (bfd_mach_amdgcn_gfx1011, "amdgcn:gfx1011", false, NN(5)),
+  N (bfd_mach_amdgcn_gfx1012, "amdgcn:gfx1012", false, NN(6)),
+  N (bfd_mach_amdgcn_gfx1030, "amdgcn:gfx1030", false, NN(7)),
+  N (bfd_mach_amdgcn_gfx1031, "amdgcn:gfx1031", false, 0),
 };
 
 const bfd_arch_info_type bfd_amdgcn_arch =
-  N (bfd_mach_amdgcn_gfx900, "amdgcn:gfx900", TRUE, NN(0));
+  N (bfd_mach_amdgcn_gfx900, "amdgcn:gfx900", true, NN(0));

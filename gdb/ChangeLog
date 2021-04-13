@@ -1,3 +1,109 @@
+2021-04-06  Tom de Vries  <tdevries@suse.de>
+
+	PR breakpoints/25884
+	* infcmd.c (prepare_one_step): Using inline frame info to narrow
+	stepping range.
+
+2021-04-06  Tom de Vries  <tdevries@suse.de>
+
+	PR tui/27680
+	* tui/tui-disasm.c (len_without_escapes): Pass ptr pointing at escape
+	to style.parse.
+
+2021-04-04  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* avr-tdep.c (avr_frame_unwind_cache): Use
+	trad_frame_saved_reg::is_addr.
+
+2021-04-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* objfiles.c (get_objfile_bfd_data): Remove objfile parameter,
+	adjust callers.
+
+2021-04-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* psympriv.h (struct partial_symtab) <partial_symtab>: Change
+	objfile parameter for objfile_per_bfd_storage, adjust callers.
+	(struct standard_psymtab) <standard_psymtab>: Likewise.
+	(struct legacy_psymtab) <legacy_psymtab>: Likewise.
+	* psymtab.c (partial_symtab::partial_symtab): Likewise.
+	* ctfread.c (struct ctf_psymtab): Likewise.
+	* dwarf2/read.h (struct dwarf2_psymtab): Likewise.
+	* dwarf2/read.c (struct dwarf2_include_psymtab): Likewise.
+	(dwarf2_create_include_psymtab): Likewise.
+	* objfiles.h (struct objfile_per_bfd_storage)
+	<objfile_per_bfd_storage>: Add bfd parameter, adjust callers.
+	<get_bfd>: New method.
+	<m_bfd>: New field.
+	* objfiles.c (get_objfile_bfd_data): Adjust.
+
+2021-04-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* psymtab.c (partial_symtab::partial_symtab): Change
+	last_objfile_name to be an std::string.
+	* symfile.c (allocate_symtab): Likewise.
+
+2021-04-02  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* objfiles.h (struct objfile_per_bfd_storage) <intern>: New
+	methods.
+	(struct objfile) <intern>: Use
+	objfile::objfile_per_bfd_storage::intern.
+
+2021-04-01  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_FLAG_ENUM): Remove, replace all uses
+	with type::is_flag_enum.
+
+2021-04-01  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_flag_enum,
+	set_is_flag_enum>: New methods.
+	(TYPE_FLAG_ENUM): Use type::is_flag_enum, change all
+	write call sites to use type::set_is_flag_enum.
+
+2021-04-01  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (TYPE_DECLARED_CLASS): Remove, replace all uses
+	with type::is_declared_class.
+
+2021-04-01  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (struct type) <is_declared_class,
+	set_is_declared_class>: New methods.
+	(TYPE_DECLARED_CLASS): Use type::is_declared_class, change all
+	write call sites to use type::set_is_declared_class.
+
+2021-02-28  Boris Staletic  <boris.staletic@gmail.com>
+
+	* gdb/python/lib/gdb/__init__.py: Use importlib on python 3.4+
+	to avoid deprecation warnings.
+
+2021-04-01  Martin Liska  <mliska@suse.cz>
+
+	* cp-name-parser.y: Use startswith instead of strncmp.
+	* m2-exp.y: Likewise.
+	* macroexp.c (substitute_args): Likewise.
+	* mi/mi-main.c (command_notifies_uscc_observer): Likewise.
+	* rust-exp.y: Likewise.
+
+2021-03-31  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_gdb_index::map_matching_symbols): Merge
+	with dw2_map_matching_symbols.
+	(dwarf2_gdb_index::expand_symtabs_matching): Merge with
+	dw2_expand_symtabs_matching.
+
+2021-03-31  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/stringify.h: Fix typo.
+
+2021-03-30  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27541
+	* dwarf2/read.c (dwarf2_has_info): Don't share dwarf2_per_bfd
+	with objfiles using READNOW.
+
 2021-03-29  Tom Tromey  <tromey@adacore.com>
 
 	* top.c (check_frame_language_change): Update.

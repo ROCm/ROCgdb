@@ -1952,9 +1952,14 @@ dwarf2_has_info (struct objfile *objfile,
     {
       dwarf2_per_bfd *per_bfd;
 
-      /* We can share a "dwarf2_per_bfd" with other objfiles if the BFD
-	 doesn't require relocations.  */
-      if (!gdb_bfd_requires_relocations (objfile->obfd))
+      /* We can share a "dwarf2_per_bfd" with other objfiles if the
+	 BFD doesn't require relocations.
+
+	 We don't share with objfiles for which -readnow was requested,
+	 because it would complicate things when loading the same BFD with
+	 -readnow and then without -readnow.  */
+      if (!gdb_bfd_requires_relocations (objfile->obfd)
+	  && (objfile->flags & OBJF_READNOW) == 0)
 	{
 	  /* See if one has been created for this BFD yet.  */
 	  per_bfd = dwarf2_per_bfd_bfd_data_key.get (objfile->obfd);
@@ -3833,8 +3838,8 @@ dw2_expand_symtabs_matching_one
    gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify);
 
-static void
-dw2_map_matching_symbols
+void
+dwarf2_gdb_index::map_matching_symbols
   (struct objfile *objfile,
    const lookup_name_info &name, domain_enum domain,
    int global,
@@ -3889,18 +3894,6 @@ dw2_map_matching_symbols
 					    domain, callback))
 	return;
     }
-}
-
-void
-dwarf2_gdb_index::map_matching_symbols
-  (struct objfile *objfile,
-   const lookup_name_info &name, domain_enum domain,
-   int global,
-   gdb::function_view<symbol_found_callback_ftype> callback,
-   symbol_compare_ftype *ordered_compare)
-{
-  dw2_map_matching_symbols (objfile, name, domain, global, callback,
-			    ordered_compare);
 }
 
 /* Starting from a search name, return the string that finds the upper
@@ -4854,14 +4847,14 @@ dw_expand_symtabs_matching_file_matcher
     }
 }
 
-static void
-dw2_expand_symtabs_matching
-  (struct objfile *objfile,
-   gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
-   const lookup_name_info *lookup_name,
-   gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-   gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
-   enum search_domain kind)
+void
+dwarf2_gdb_index::expand_symtabs_matching
+    (struct objfile *objfile,
+     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+     const lookup_name_info *lookup_name,
+     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
+     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     enum search_domain kind)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
@@ -4893,19 +4886,6 @@ dw2_expand_symtabs_matching
 			     kind);
       return true;
     }, per_objfile);
-}
-
-void
-dwarf2_gdb_index::expand_symtabs_matching
-    (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
-     const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
-     enum search_domain kind)
-{
-  dw2_expand_symtabs_matching (objfile, file_matcher, lookup_name,
-			       symbol_matcher, expansion_notify, kind);
 }
 
 /* A helper for dw2_find_pc_sect_compunit_symtab which finds the most specific
@@ -6269,8 +6249,8 @@ struct dwarf2_include_psymtab : public partial_symtab
 {
   dwarf2_include_psymtab (const char *filename,
 			  psymtab_storage *partial_symtabs,
-			  struct objfile *objfile)
-    : partial_symtab (filename, partial_symtabs, objfile)
+			  objfile_per_bfd_storage *objfile_per_bfd)
+    : partial_symtab (filename, partial_symtabs, objfile_per_bfd)
   {
   }
 
@@ -6326,10 +6306,10 @@ dwarf2_create_include_psymtab (dwarf2_per_bfd *per_bfd,
 			       const char *name,
 			       dwarf2_psymtab *pst,
 			       psymtab_storage *partial_symtabs,
-			       struct objfile *objfile)
+			       objfile_per_bfd_storage *objfile_per_bfd)
 {
   dwarf2_include_psymtab *subpst
-    = new dwarf2_include_psymtab (name, partial_symtabs, objfile);
+    = new dwarf2_include_psymtab (name, partial_symtabs, objfile_per_bfd);
 
   if (!IS_ABSOLUTE_PATH (subpst->filename))
     subpst->dirname = pst->dirname;
@@ -7581,11 +7561,9 @@ create_partial_symtab (dwarf2_per_cu_data *per_cu,
 		       dwarf2_per_objfile *per_objfile,
 		       const char *name)
 {
-  struct objfile *objfile = per_objfile->objfile;
-  dwarf2_psymtab *pst;
-
-  pst = new dwarf2_psymtab (name, per_objfile->per_bfd->partial_symtabs.get (),
-			    objfile, per_cu);
+  dwarf2_psymtab *pst
+    = new dwarf2_psymtab (name, per_objfile->per_bfd->partial_symtabs.get (),
+			  per_objfile->objfile->per_bfd, per_cu);
 
   pst->psymtabs_addrmap_supported = true;
 
@@ -16168,7 +16146,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
     }
 
   if (cu->language == language_cplus && die->tag == DW_TAG_class_type)
-    TYPE_DECLARED_CLASS (type) = 1;
+    type->set_is_declared_class (true);
 
   /* Store the calling convention in the type if it's available in
      the die.  Otherwise the calling convention remains set to
@@ -16698,7 +16676,7 @@ update_enumeration_type_from_children (struct die_info *die,
     type->set_is_unsigned (true);
 
   if (flag_enum)
-    TYPE_FLAG_ENUM (type) = 1;
+    type->set_is_flag_enum (true);
 }
 
 /* Given a DW_AT_enumeration_type die, set its type.  We do not
@@ -16782,7 +16760,7 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
 	set_type_align (type, TYPE_RAW_ALIGN (underlying_type));
     }
 
-  TYPE_DECLARED_CLASS (type) = dwarf2_flag_true_p (die, DW_AT_enum_class, cu);
+  type->set_is_declared_class (dwarf2_flag_true_p (die, DW_AT_enum_class, cu));
 
   set_die_type (die, type, cu);
 
@@ -22031,7 +22009,7 @@ dwarf_decode_lines (struct line_header *lh, const char *comp_dir,
 	      dwarf2_create_include_psymtab
 		(cu->per_objfile->per_bfd, include_name, pst,
 		 cu->per_objfile->per_bfd->partial_symtabs.get (),
-		 objfile);
+		 objfile->per_bfd);
 	  }
     }
   else
@@ -23328,7 +23306,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
 	return determine_prefix (parent, cu);
       case DW_TAG_enumeration_type:
 	parent_type = read_type_die (parent, cu);
-	if (TYPE_DECLARED_CLASS (parent_type))
+	if (parent_type->is_declared_class ())
 	  {
 	    if (parent_type->name () != NULL)
 	      return parent_type->name ();

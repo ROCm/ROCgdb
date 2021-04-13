@@ -609,7 +609,7 @@ stag_add_field (struct stag *parent,
       sf->next = sfield;
     }
   /* Only create a symbol for this field if the parent has no name.  */
-  if (!strncmp (".fake", parent->name, 5))
+  if (startswith (parent->name, ".fake"))
     {
       symbolS *sym = symbol_new (name, absolute_section, &zero_address_frag,
 				 offset);
@@ -705,7 +705,7 @@ tic54x_endstruct (int is_union)
 {
   int size;
   const char *path =
-    !strncmp (current_stag->name, ".fake", 5) ? "" : current_stag->name;
+    startswith (current_stag->name, ".fake") ? "" : current_stag->name;
 
   if (!current_stag || current_stag->is_union != is_union)
     {
@@ -2357,7 +2357,7 @@ tic54x_mlib (int ignore ATTRIBUTE_UNUSED)
       fclose (ftmp);
       free (buf);
       input_scrub_insert_file (fname);
-      unlink (fname);
+      remove (fname);
     }
 }
 
@@ -3986,7 +3986,7 @@ emit_insn (tic54x_insn *insn)
       if (insn->opcode[i].unresolved)
 	fix_new_exp (frag_now, p - frag_now->fr_literal,
 		     insn->opcode[i].r_nchars, &insn->opcode[i].addr_expr,
-		     FALSE, insn->opcode[i].r_type);
+		     false, insn->opcode[i].r_type);
     }
 }
 
@@ -5037,7 +5037,7 @@ md_atof (int type, char *literalP, int *sizeP)
 {
   /* Target data is little-endian, but floats are stored
      big-"word"ian.  ugh.  */
-  return ieee_md_atof (type, literalP, sizeP, TRUE);
+  return ieee_md_atof (type, literalP, sizeP, true);
 }
 
 arelent *

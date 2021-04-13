@@ -48,7 +48,7 @@
 
 int verbose = 0;
 
-bfd_boolean target_is_bigendian = 0;
+bool target_is_bigendian = 0;
 const char *def_target_arch;
 
 static void set_endianness (bfd *, const char *);
@@ -713,12 +713,12 @@ quot (const char *string)
 #if defined (_WIN32) && !defined (__CYGWIN__)
   /* For Windows shells, quote "like this".   */
   {
-    bfd_boolean quoted = FALSE;
+    bool quoted = false;
 
     dest = buf;
     if (strchr (string, ' '))
       {
-	quoted = TRUE;
+	quoted = true;
 	*dest++ = '"';
       }
 
@@ -823,12 +823,10 @@ main (int argc, char **argv)
   rc_res_directory *resources;
   int use_temp_file;
 
-#if defined (HAVE_SETLOCALE) && defined (HAVE_LC_MESSAGES)
+#ifdef HAVE_LC_MESSAGES
   setlocale (LC_MESSAGES, "");
 #endif
-#if defined (HAVE_SETLOCALE)
   setlocale (LC_CTYPE, "");
-#endif
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
 
