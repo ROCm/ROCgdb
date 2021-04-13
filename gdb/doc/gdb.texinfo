@@ -27630,9 +27630,6 @@ export HSA_LOADER_ENABLE_MMAP_URI=1
 AMD GPU does not currently support calling inferior functions.
 
 @item
-@value{GDBN} does not support following a forked process.
-
-@item
 The @code{gdbserver} is not supported.
 
 @item
