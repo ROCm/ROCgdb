@@ -1,3 +1,91 @@
+2021-04-08  Dominique Quatravaux  <dominique.quatravaux@epfl.ch>
+
+	* darwin-nat.c (darwin_nat_target::resume): Remove status
+	variable.
+
+2021-04-08  Felix Willgerodt  <felix.willgerodt@intel.com>
+
+	* i386-tdep.c (i386_skip_prologue): Use symbol table to find the
+	prologue end for Intel compilers.
+	* amd64-tdep.c (amd64_skip_prologue): Likewise.
+	* producer.c (producer_is_icc_ge_19): New function.
+	* producer.h (producer_is_icc_ge_19): New declaration.
+
+2021-04-08  Felix Willgerodt  <felix.willgerodt@intel.com>
+
+	* producer.c: (producer_is_icc): Update for new version scheme.
+	(producer_parsing_tests): Update names and expected results.
+	* producer.h: (producer_is_icc): Update comment accordingly.
+
+2021-04-07  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target.h (struct target_ops) <follow_fork>: Return void.
+	(target_follow_fork): Likewise.
+	* target.c (default_follow_fork): Likewise.
+	(target_follow_fork): Likewise.
+	* infrun.c (follow_fork_inferior): Adjust.
+	* fbsd-nat.h (class fbsd_nat_target) <follow_fork>: Return void.
+	* fbsd-nat.c (fbsd_nat_target:::follow_fork): Likewise.
+	* linux-nat.h (class linux_nat_target) <follow_fork>: Likewise.
+	* linux-nat.c (linux_nat_target::follow_fork): Return void.
+	* obsd-nat.h (class obsd_nat_target) <follow_fork>: Return void.
+	* obsd-nat.c (obsd_nat_target::follow_fork): Likewise.
+	* remote.c (class remote_target) <follow_fork>: Likewise.
+	(remote_target::follow_fork): Likewise.
+	* target-delegates.c: Re-generate.
+
+2021-04-07  Weimin Pan  <weimin.pan@oracle.com>
+
+	* ctfread.c (fetch_tid_type): New function, use throughout file.
+	(read_forward_type): New function.
+	(read_type_record): Call read_forward_type.
+
+2021-04-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* f-exp.h (class fortran_structop_operation): New class.
+	* f-exp.y (exp): Create fortran_structop_operation instead of the
+	generic structop_operation.
+	* f-lang.c (fortran_undetermined::evaluate): Re-evaluate
+	expression as EVAL_NORMAL if the result type was dynamic so we can
+	extract the actual array bounds.
+	(fortran_structop_operation::evaluate): New function.
+
+2021-04-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* eval.c (evaluate_subexp_standard): Remove
+	EVAL_AVOID_SIDE_EFFECTS handling from STRUCTOP_STRUCT and
+	STRUCTOP_PTR.
+
+2021-04-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* valops.c (value_cast): Call value_deeply_equal before performing
+	any cast.
+
+2021-04-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdbtypes.c (types_equal): Move pointer equality check earlier in
+	the function.
+
+2021-04-07  Caroline Tice  <cmtice@google.com>
+
+	* dwarf2/read.c (try_open_dwop_file): Add path for the binary to
+	the search paths used resolve relative location of .dwo file.
+
+2021-04-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* dwarf2/section.c (dwarf2_section_info::get_bfd_owner): Add an
+	assert.
+	(dwarf2_section_info::get_file_name): Add an assert.
+	(dwarf2_section_info::read_string): Display a minimal, sane error
+	when the dwarf2_section_info is not associated with a bfd section.
+
+2021-04-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* top.c (staged_gdb_datadir): Update comment.
+	(set_gdb_datadir): Copy the value of gdb_datadir back into
+	staged_datadir.
+	(init_main): Initialise staged_gdb_datadir.
+
 2021-04-06  Tom de Vries  <tdevries@suse.de>
 
 	PR breakpoints/25884

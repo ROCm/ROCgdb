@@ -1,3 +1,11 @@
+2021-04-08  Tom Tromey  <tom@tromey.com>
+
+	* compile.c (init_pointers): Fix sequence point warning.
+
+2021-04-08  Tom Tromey  <tom@tromey.com>
+
+	* compile.c (cmdline_location): Use new-style declaration.
+
 2021-04-02  Mike Frysinger  <vapier@gentoo.org>
 
 	* aclocal.m4, configure: Regenerate.
