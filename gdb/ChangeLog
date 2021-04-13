@@ -1,3 +1,29 @@
+2021-04-12  Will Schmidt  <will_schmidt@vnet.ibm.com>
+
+	* rs6000-tdep.c:  Add support for single-stepping of
+	prefixed instructions.
+
+2021-04-12  Will Schmidt  <will_schmidt@vnet.ibm.com>
+
+	PR gdb/27525
+	* gdb/rs6000-tdep.c (ppc_displaced_step_fixup): Update to
+	handle the addpcis/lnia instruction.
+
+2021-04-05  Will Schmidt  <will_schmidt@vnet.ibm.com>
+
+	* MAINTAINERS (Write After Approval): Add myself.
+
+2021-4-12  Carl Love  <cel@us.ibm.com>
+
+	* rs6000-tdep.c (rs6000_builtin_type_vec128): Add t_float128 variable.
+	(rs6000_builtin_type_vec128): Add append_composite_type_field for
+	float128.
+
+2021-04-12  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* nat/windows-nat.c: Remove all code guarded by _WIN32_WCE.
+	* nat/windows-nat.h: Likewise.
+
 2021-04-10  Eli Zaretskii  <eliz@gnu.org>
 
 	* windows-nat.c (windows_nat::handle_load_dll): Call

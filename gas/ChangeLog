@@ -1,9 +1,62 @@
+2021-04-13  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/gas/m68hc11/m68hc11.exp (gas_m68hc11_message): Don't
+	write to $srcdir.  Use gas_host_run and read output file rather
+	than gas_start/gas_finish.
+
+2021-04-12  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-ppc.c (insn_validate): Use uint64_t for operand values.
+	(md_assemble): Likewise.  Handle bignum operands.
+	(ppc_elf_suffix): Handle O_big.  Remove unnecessary input_line_pointer
+	check.
+	* expr.c: Delete unnecessary forward declarations.
+	(generic_bignum_to_int32): Return uint32_t.
+	(generic_bignum_to_int64): Return uint64_t.  Compile always.
+	(operand): Twiddle X_extrabit for unary '~'.  Set X_unsigned and
+	clear X_extrabit for unary '!'.
+	* expr.h (generic_bignum_to_int32): Declare.
+	(generic_bignum_to_int64): Declare.
+	* testsuite/gas/ppc/prefix-pcrel.s,
+	* testsuite/gas/ppc/prefix-pcrel.d: Add more instructions.
+
 2021-04-09  Tejas Belagod  <tejas.belagod@arm.com>
 
-	* config/tc-aarch64.c (warn_unpredictable_ldst): Clean-up diagnostic messages
-	for LD/ST Exclusive instructions.
+2021-04-12  Nelson Chu  <nelson.chu@sifive.com>
+
+	* testsuite/gas/riscv/march-fail-order-x-std.d: Renamed from
+	march-fail-porder-x-std.d.
+	* testsuite/gas/riscv/march-fail-order-z-std.d: Renamed from
+	march-fail-porder-z-std.d.
+	* testsuite/gas/riscv/march-fail-order-x-z.d: Renamed from
+	march-fail-porder-x-z.d.
+	* testsuite/gas/riscv/march-fail-order-zx-std.l: Added to replace
+	march-fail-porder.l.
+	* testsuite/gas/riscv/march-fail-order-x-z.l: Likewise.
+	* testsuite/gas/riscv/march-fail-order-x.l: Updated.
+	* testsuite/gas/riscv/march-fail-order-z.l: Likewise.
+	* testsuite/gas/riscv/march-fail-single-prefix-h.d: Renamed from
+	march-fail-single-char-h.d.
+	* testsuite/gas/riscv/march-fail-single-prefix-s.d: Renamed from
+	march-fail-single-char-s.d.
+	* testsuite/gas/riscv/march-fail-single-prefix-x.d: Renamed from
+	march-fail-single-char-x.d.
+	* testsuite/gas/riscv/march-fail-single-prefix-z.d: Renamed from
+	march-fail-single-char-z.d.
+	* testsuite/gas/riscv/march-fail-single-prefix-zmx.d: Added.
+	* testsuite/gas/riscv/march-fail-single-prefix.l: Added to replace
+	march-fail-single-prefix.l.
+	* testsuite/gas/riscv/march-fail-unknown-zxm.d: Added.
+	* testsuite/gas/riscv/march-fail-unknown-std.l: Updated.
+	* testsuite/gas/riscv/march-fail-unknown.l: Likewise.
+
+2021-04-09  Tejas Belagod  <tejas.belagod@arm.com>
+
+	* config/tc-aarch64.c (warn_unpredictable_ldst): Clean-up
+	diagnostic messages for LD/ST Exclusive instructions.
 	* testsuite/gas/aarch64/diagnostic.s: Add a diagnostic test for STLXP.
-	* testsuite/gas/aarch64/diagnostic.l: Fix-up test after message clean-up.
+	* testsuite/gas/aarch64/diagnostic.l: Fix-up test after message
+	clean-up.
 
 2021-04-09  Alan Modra  <amodra@gmail.com>
 
@@ -494,7 +547,7 @@
 	well as Intel syntax tests.
 	* testsuite/gas/i386/invlpgb.d, testsuite/gas/i386/snp.d: Adjust
 	expectations.
-	* testsuite/gas/i386/invlpgb64.d, testsuite/gas/i386/snp64.d: 
+	* testsuite/gas/i386/invlpgb64.d, testsuite/gas/i386/snp64.d:
 	Likewise. Drop passing --def-sym to as.
 
 2021-03-25  Jan Beulich  <jbeulich@suse.com>
@@ -857,7 +910,7 @@
 2021-02-12  Nick Clifton  <nickc@redhat.com>
 
 	* testsuite/gas/mach-o/sections-1.d: Stop automatic debug link
-        following.
+	following.
 	* testsuite/gas/xgate/insns-dwarf2.d: Likewise.
 
 2021-02-12  Alan Modra  <amodra@gmail.com>

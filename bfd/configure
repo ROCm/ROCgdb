@@ -827,6 +827,7 @@ with_gnu_ld
 enable_libtool_lock
 enable_plugins
 enable_largefile
+enable_checking
 enable_64_bit_bfd
 enable_targets
 enable_64_bit_archive
@@ -1485,6 +1486,7 @@ Optional Features:
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --enable-plugins        Enable support for plugins
   --disable-largefile     omit support for large files
+  --enable-checking       enable run-time checks
   --enable-64-bit-bfd     64-bit support (on hosts with narrower word sizes)
   --enable-targets        alternative target configurations
   --enable-64-bit-archive force 64-bit archives
@@ -11043,7 +11045,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11045 "configure"
+#line 11047 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11149,7 +11151,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11151 "configure"
+#line 11153 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11788,6 +11790,22 @@ else
   PLUGINS_FALSE=
 fi
 
+
+ac_checking=
+. ${srcdir}/development.sh
+test "$development" = true && ac_checking=yes
+# Check whether --enable-checking was given.
+if test "${enable_checking+set}" = set; then :
+  enableval=$enable_checking; case "${enableval}" in
+  no|none)  ac_checking= ;;
+  *)	    ac_checking=yes ;;
+esac
+fi
+if test x$ac_checking != x ; then
+
+$as_echo "#define ENABLE_CHECKING 1" >>confdefs.h
+
+fi
 
 # Check whether --enable-64-bit-bfd was given.
 if test "${enable_64_bit_bfd+set}" = set; then :

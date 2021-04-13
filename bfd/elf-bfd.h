@@ -28,6 +28,10 @@
 #include "elf/internal.h"
 #include "bfdlink.h"
 
+#ifndef ENABLE_CHECKING
+#define ENABLE_CHECKING 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -709,30 +713,53 @@ struct elf_link_hash_table
   asection *dynsym;
 };
 
+/* Returns TRUE if the hash table is a struct elf_link_hash_table.  */
+
+static inline bool
+is_elf_hash_table (const struct bfd_link_hash_table *htab)
+{
+  return htab->type == bfd_link_elf_hash_table;
+}
+
 /* Look up an entry in an ELF linker hash table.  */
 
-#define elf_link_hash_lookup(table, string, create, copy, follow)	\
-  ((struct elf_link_hash_entry *)					\
-   bfd_link_hash_lookup (&(table)->root, (string), (create),		\
-			 (copy), (follow)))
+static inline struct elf_link_hash_entry *
+elf_link_hash_lookup (struct elf_link_hash_table *table, const char *string,
+		      bool create, bool copy, bool follow)
+{
+  if (ENABLE_CHECKING && !is_elf_hash_table (&table->root))
+    abort ();
+  return (struct elf_link_hash_entry *)
+    bfd_link_hash_lookup (&table->root, string, create, copy, follow);
+}
 
 /* Traverse an ELF linker hash table.  */
 
-#define elf_link_hash_traverse(table, func, info)			\
-  (bfd_link_hash_traverse						\
-   (&(table)->root,							\
-    (bool (*) (struct bfd_link_hash_entry *, void *)) (func),		\
-    (info)))
+static inline void
+elf_link_hash_traverse (struct elf_link_hash_table *table,
+			bool (*f) (struct elf_link_hash_entry *, void *),
+			void *info)
+{
+  if (ENABLE_CHECKING && !is_elf_hash_table (&table->root))
+    abort ();
+  bfd_link_hash_traverse (&table->root,
+			  (bool (*) (struct bfd_link_hash_entry *, void *)) f,
+			  info);
+}
 
 /* Get the ELF linker hash table from a link_info structure.  */
 
-#define elf_hash_table(p) ((struct elf_link_hash_table *) ((p)->hash))
+static inline struct elf_link_hash_table *
+elf_hash_table (const struct bfd_link_info *info)
+{
+  return (struct elf_link_hash_table *) info->hash;
+}
 
-#define elf_hash_table_id(table)	((table) -> hash_table_id)
-
-/* Returns TRUE if the hash table is a struct elf_link_hash_table.  */
-#define is_elf_hash_table(htab)						\
-  (((struct bfd_link_hash_table *) (htab))->type == bfd_link_elf_hash_table)
+static inline enum elf_target_id
+elf_hash_table_id (const struct elf_link_hash_table *table)
+{
+  return table->hash_table_id;
+}
 
 /* Constant information held for an ELF backend.  */
 
@@ -977,7 +1004,7 @@ struct elf_backend_data
 
   /* A function to return the linker hash table entry of a symbol that
      might be satisfied by an archive symbol.  */
-  struct elf_link_hash_entry * (*elf_backend_archive_symbol_lookup)
+  struct bfd_link_hash_entry * (*elf_backend_archive_symbol_lookup)
     (bfd *, struct bfd_link_info *, const char *);
 
   /* Return true if local section symbols should have a non-null st_name.
@@ -2583,7 +2610,7 @@ extern bool _bfd_elf_relocs_compatible
 extern bool _bfd_elf_notice_as_needed
   (bfd *, struct bfd_link_info *, enum notice_asneeded_action);
 
-extern struct elf_link_hash_entry *_bfd_elf_archive_symbol_lookup
+extern struct bfd_link_hash_entry *_bfd_elf_archive_symbol_lookup
   (bfd *, struct bfd_link_info *, const char *);
 extern bool bfd_elf_link_add_symbols
   (bfd *, struct bfd_link_info *);

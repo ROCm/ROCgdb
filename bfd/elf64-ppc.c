@@ -4196,20 +4196,21 @@ ppc64_elf_merge_symbol (struct elf_link_hash_entry *h,
    NAME is a symbol defined in an archive.  Return a symbol in the hash
    table that might be satisfied by the archive symbols.  */
 
-static struct elf_link_hash_entry *
+static struct bfd_link_hash_entry *
 ppc64_elf_archive_symbol_lookup (bfd *abfd,
 				 struct bfd_link_info *info,
 				 const char *name)
 {
-  struct elf_link_hash_entry *h;
+  struct bfd_link_hash_entry *h;
   char *dot_name;
   size_t len;
 
   h = _bfd_elf_archive_symbol_lookup (abfd, info, name);
   if (h != NULL
+      && ppc_hash_table (info) != NULL
       /* Don't return this sym if it is a fake function descriptor
 	 created by add_symbol_adjust.  */
-      && !ppc_elf_hash_entry (h)->fake)
+      && !((struct ppc_link_hash_entry *) h)->fake)
     return h;
 
   if (name[0] == '.')
@@ -4218,7 +4219,7 @@ ppc64_elf_archive_symbol_lookup (bfd *abfd,
   len = strlen (name);
   dot_name = bfd_alloc (abfd, len + 2);
   if (dot_name == NULL)
-    return (struct elf_link_hash_entry *) -1;
+    return (struct bfd_link_hash_entry *) -1;
   dot_name[0] = '.';
   memcpy (dot_name + 1, name, len + 1);
   h = _bfd_elf_archive_symbol_lookup (abfd, info, dot_name);
@@ -13954,19 +13955,20 @@ ppc64_elf_set_toc (struct bfd_link_info *info, bfd *obfd)
       struct elf_link_hash_entry *h;
       struct elf_link_hash_table *htab = elf_hash_table (info);
 
-      if (is_elf_hash_table (htab)
+      if (is_elf_hash_table (&htab->root)
 	  && htab->hgot != NULL)
 	h = htab->hgot;
       else
 	{
-	  h = elf_link_hash_lookup (htab, ".TOC.", false, false, true);
-	  if (is_elf_hash_table (htab))
+	  h = (struct elf_link_hash_entry *)
+	    bfd_link_hash_lookup (&htab->root, ".TOC.", false, false, true);
+	  if (is_elf_hash_table (&htab->root))
 	    htab->hgot = h;
 	}
       if (h != NULL
 	  && h->root.type == bfd_link_hash_defined
 	  && !h->root.linker_def
-	  && (!is_elf_hash_table (htab)
+	  && (!is_elf_hash_table (&htab->root)
 	      || h->def_regular))
 	{
 	  TOCstart = defined_sym_val (h) - TOC_BASE_OFF;
