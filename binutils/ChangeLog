@@ -1,3 +1,76 @@
+2021-04-16  Alan Modra  <amodra@gmail.com>
+
+	PR 27725
+	* rename.c (get_stat_atime, get_stat_mtime): Make static.
+	(get_stat_atime_ns, get_stat_mtime_ns): Likewise.
+
+2021-04-15  Pekka Seppänen  <pexu@sourceware.mail.kapsi.fi>
+
+	PR 27725
+	* rename.c (get_stat_atime_ns): Add ATTRIBUTE_UNUSED.
+	(get_stat_mtime_ns): Likewise.
+
+2021-04-15  Alan Modra  <amodra@gmail.com>
+
+	PR 27725
+	* configure.ac: Check for sys/time.h and utimensat.  Use standard
+	checks for mkstemp and mkdtemp.  Whitespace.  Check for nanosecond
+	members of struct stat.
+	* rename.c: Prefer sys/time.h for utimes over utime.h for utime.
+	(STAT_TIMESPEC, STAT_TIMESPEC_NS): Define
+	(get_stat_atime_ns, get_stat_mtime_ns): New inline functions.
+	(get_stat_atime, get_stat_mtime): Likewise.
+	(set_times): Choose first available of utimensat, utimes, utime.
+	Use above inline functions to set timespec and timeval values.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* testsuite/binutils-all/objcopy.exp (objcopy_test): Add test of
+	file timestamp when --preserve-dates is used.
+
+2021-04-15  Alan Modra  <amodra@gmail.com>
+
+	PR 27456
+	* rename.c (smart_rename): When TO and FROM are equal, just set
+	file timestamp.
+	* objcopy.c (strip_main, copy_main): Always call smart_rename.
+
+2021-04-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/27708
+	* testsuite/binutils-all/x86-64/pr27708.dump: New file.
+	* testsuite/binutils-all/x86-64/pr27708.exe.bz2: Likewise.
+	* testsuite/binutils-all/x86-64/x86-64.exp: Run binutils/27708
+	test.
+
+2021-04-14  Mark Harmstone  <mark@harmstone.com>
+
+	PR 27686
+	* resbin.c (bin_to_res_version): Ignore any trailing bytes at the
+	end of the structure.
+
+2021-04-14  Frederic Cambus  <fred@statdns.com>
+
+	* readelf.c (get_netbsd_elfcore_note_type): Remove unneeded #ifdef
+	checks for NT_NETBSDCORE_AUXV and NT_NETBSDCORE_LWPSTATUS.
+
+2021-04-14  Alan Modra  <amodra@gmail.com>
+
+	PR 27716
+	* objdump.c (show_line): Don't limit paths to PATH_MAX.
+	* readelf.c (struct filedata): Change program_interpreter from
+	a char array to a char pointer.
+	(process_program_headers): Sanity check PT_INTERP p_filesz.
+	Malloc program_interpreter using p_filesz and read directly from
+	file.
+	(process_dynamic_section): Check program_interpreter is non-NULL.
+	(free_filedata): New function, split out from..
+	(process_object): ..here.
+	(close_debug_file): Call free_filedata.
+	* sysdep.h: Don't include sys/param.h.
+	(PATH_MAX): Don't define.
+	* configure.ac: Don't check for sys/param.h.
+	* configure: Regenerate.
+
 2021-04-13  Frederic Cambus  <fred@statdns.com>
 
 	* readelf.c (process_netbsd_elf_note): Remove now unneeded #ifdef

@@ -1,3 +1,89 @@
+2021-04-15  John Baldwin  <jhb@FreeBSD.org>
+
+	* fbsd-nat.c (fbsd_lwp_debug_printf, fbsd_nat_debug_printf): New,
+	use throughout file.
+
+2021-04-15  Tom Tromey  <tromey@adacore.com>
+
+	* ada-valprint.c (ada_value_print_array): Handle optimized-out
+	arrays.
+
+2021-04-15  Tom Tromey  <tromey@adacore.com>
+
+	* printcmd.c (print_variable_and_value): Use
+	common_val_print_checked.
+
+2021-04-15  Tom Tromey  <tromey@adacore.com>
+
+	* rust-exp.y (rust_parser::convert_ast_to_expression): Update.
+	* parse.c (parser_state::push_symbol, parser_state::push_dollar):
+	Update.
+	* p-exp.y (variable): Update.
+	* m2-exp.y (variable): Update.
+	* go-exp.y (variable): Update.
+	* expprint.c (dump_for_expression): New overload.
+	* expop.h (check_objfile): New overload.
+	(check_constant): New overload.
+	(class var_value_operation): Use block_symbol.
+	<get_symbol>: Rewrite.
+	* eval.c (var_value_operation::evaluate)
+	(var_value_operation::evaluate_funcall)
+	(var_value_operation::evaluate_for_address)
+	(var_value_operation::evaluate_for_address)
+	(var_value_operation::evaluate_with_coercion)
+	(var_value_operation::evaluate_for_sizeof)
+	(var_value_operation::evaluate_for_cast): Update.
+	* d-exp.y (PrimaryExpression): Update.
+	* c-exp.y (variable): Update.
+	* ax-gdb.c (var_value_operation::do_generate_ax): Update.
+	* ada-lang.c (ada_var_value_operation::evaluate_for_cast)
+	(ada_var_value_operation::evaluate)
+	(ada_var_value_operation::resolve)
+	(ada_funcall_operation::resolve): Update.
+	* ada-exp.y (write_var_from_sym, write_object_renaming)
+	(write_ambiguous_var, write_var_or_type, write_name_assoc)
+	(maybe_overload): Update.
+	* ada-exp.h (class ada_var_value_operation) <get_block>: Rewrite.
+
+2021-04-15  Tom Tromey  <tom@tromey.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Add entry.
+	* main.c (captured_main_1): Call check_quiet_mode.
+	* top.c (startup_quiet): New global.
+	(check_quiet_mode): New function.
+	(show_startup_quiet): New function.
+	(init_main): Register new command.
+	* top.h (check_quiet_mode): Declare.
+
+2021-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR cli/25956
+	* NEWS: Mention new early init files and command line options.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+	* configure.ac: Define GDBEARLYINIT.
+	* main.c (get_earlyinit_files): New function.
+	(enum cmdarg_kind): Add CMDARG_EARLYINIT_FILE and
+	CMDARG_EARLYINIT_COMMAND.
+	(captured_main_1): Add support for new command line flags, and for
+	processing startup files.
+	(print_gdb_help): Include startup files in the output.
+
+2021-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* main.c (relocate_gdbinit_path_maybe_in_datadir): Rename to...
+	(relocate_file_path_maybe_in_datadir): ...this.
+	(class gdb_initfile_finder): New class.
+	(get_init_files): Now uses gdb_initfile_finder.
+	(print_gdb_help): Print 'None found' when there are no init files.
+
+2021-04-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* dwarf2/read.c (inherit_abstract_dies): Keep a reference to the
+	corresponding child of the abstract DIE when iterating the
+	children of the concrete DIE.
+
 2021-04-13  Tom de Vries  <tdevries@suse.de>
 
 	* ui-style.c (read_semi_number, extended_color): Change idx parameter
@@ -5012,7 +5098,7 @@
 
 	* top.c (print_gdb_version): Update copyright year.
 
-2021-01-01  Joel Brobecker  <brobecker@adacore.com>
+2021-01-01, 21  Joel Brobecker  <brobecker@adacore.com>
 
 	* config/djgpp/fnchange.lst: Add entry for gdb/ChangeLog-2020.
 

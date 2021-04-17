@@ -1213,7 +1213,8 @@ namespace eval Dwarf {
 		}
 
 		DW_OP_fbreg {
-		    _op .sleb128 [lindex $line 1]
+		    _get_args $line $opcode offset
+		    _op .sleb128 $argvec(offset)
 		}
 
 		DW_OP_LLVM_offset_constu {

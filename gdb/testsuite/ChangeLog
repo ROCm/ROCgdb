@@ -1,3 +1,45 @@
+2021-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-parameter.exp: Give a test a proper name to avoid
+	including a path in the test name.
+
+2021-04-15  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.threads/fork-plus-threads.exp: Use foreach_with_prefix.
+
+2021-04-15  Tom Tromey  <tromey@adacore.com>
+
+	* gdb.dwarf2/arr-stride.exp: Add test.
+
+2021-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/startup-file.exp: Add more tests.
+
+2021-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR cli/25956
+	* gdb.base/early-init-file.c: New file.
+	* gdb.base/early-init-file.exp: New file.
+	* lib/gdb-utils.exp (style): Handle style 'none'.
+
+2021-04-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.dwarf2/dw2-inline-with-lexical-scope.exp: Use
+	@DW_INL_declared_inlined for the inline attribute.
+
+2021-04-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.opt/inline-locals.c (scoped): New function.
+	(main): Call 'scoped'.
+	* gdb.opt/inline-locals.exp: Update with "info locals" tests
+	for scoped variables.
+	* gdb.dwarf2/dw2-inline-with-lexical-scope.c: New file.
+	* gdb.dwarf2/dw2-inline-with-lexical-scope.exp: New file.
+
+2021-04-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* lib/dwarf.exp (_location): Recognize DW_OP_fbreg as an op.
+
 2021-04-12  Will Schmidt  <will_schmidt@vnet.ibm.com>
 
 	* gdb.arch/powerpc-vsx-regs.exp: Initialize vs* doublewords.

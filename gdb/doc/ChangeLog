@@ -1,3 +1,24 @@
+2021-04-15  Tom Tromey  <tom@tromey.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.texinfo (Mode Options): Mention "set startup-quietly".
+
+2021-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR cli/25956
+	* gdb.texinfo (File Options): Mention new command line options.
+	(Startup): Discuss when early init files are processed.
+	(Initialization Files): Add description of early init files.
+	(Output Styling): Update description of 'version' style.
+	(gdb man): Mention early init files.
+
+2021-04-14  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.texinfo (GDB/MI Miscellaneous Commands): Add missing
+	parentheses to GDB prompt in example, and replace '(gdb)' with
+	'(@value{GDBP})' in one example where the latter was already in
+	use.
+
 2021-03-29  Luis Machado  <luis.machado@linaro.org>
 
 	* gdb.textinfo (Memory Tagging): Make it a @section.

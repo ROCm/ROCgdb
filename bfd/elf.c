@@ -6300,6 +6300,11 @@ assign_file_positions_for_non_load_sections (bfd *abfd,
 		    {
 		      p->p_filesz = (sect->filepos - m->sections[0]->filepos
 				     + hdr->sh_size);
+		      /* NB: p_memsz of the loadable PT_NOTE segment
+			 should be the same as p_filesz.  */
+		      if (p->p_type == PT_NOTE
+			  && (hdr->sh_flags & SHF_ALLOC) != 0)
+			p->p_memsz = p->p_filesz;
 		      break;
 		    }
 		}
@@ -10945,17 +10950,13 @@ elfcore_grok_netbsd_note (bfd *abfd, Elf_Internal_Note *note)
 	 since the kernel writes this note out first when it
 	 creates a core file.  */
       return elfcore_grok_netbsd_procinfo (abfd, note);
-#ifdef NT_NETBSDCORE_AUXV
     case NT_NETBSDCORE_AUXV:
       /* NetBSD-specific Elf Auxiliary Vector data. */
       return elfcore_make_auxv_note_section (abfd, note, 4);
-#endif
-#ifdef NT_NETBSDCORE_LWPSTATUS
     case NT_NETBSDCORE_LWPSTATUS:
       return elfcore_make_note_pseudosection (abfd,
 					      ".note.netbsdcore.lwpstatus",
 					      note);
-#endif
     default:
       break;
     }
