@@ -1,3 +1,15 @@
+2021-04-16  Tom Tromey  <tom@tromey.com>
+
+	* rust-parse.c: New file.
+	* rust-exp.y: Remove.
+	* Makefile.in (COMMON_SFILES): Add rust-parse.c.
+	(SFILES): Remove rust-exp.y.
+	(YYFILES, local-maintainer-clean): Remove rust-exp.c.
+
+2021-04-16  Luis Machado  <luis.machado@linaro.org>
+
+	* arch-utils.c (default_floatformat_for_type): Handle bfloat16.
+
 2021-04-15  John Baldwin  <jhb@FreeBSD.org>
 
 	* fbsd-nat.c (fbsd_lwp_debug_printf, fbsd_nat_debug_printf): New,

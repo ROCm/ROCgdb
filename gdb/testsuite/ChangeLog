@@ -1,3 +1,20 @@
+2021-04-16  Tom Tromey  <tom@tromey.com>
+
+	* gdb.rust/simple.exp: Change error text.
+	* gdb.rust/expr.exp: Change error text.
+
+2021-04-16  Tom Tromey  <tom@tromey.com>
+
+	* gdb.rust/simple.exp: Add parens to 'as' test.
+
+2021-04-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* boards/simavr.exp: Set debug_flags.
+
+2021-04-16  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.dwarf2/dw2-bfloat16.exp: New file.
+
 2021-04-15  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.python/py-parameter.exp: Give a test a proper name to avoid
