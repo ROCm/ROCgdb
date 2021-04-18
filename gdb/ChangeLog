@@ -1,3 +1,224 @@
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	PR gdb/23743:
+	* dwarf2/read.c (class offset_view): New.
+	(struct symbol_table_slot): Remove.
+	(struct mapped_index) <symbol_table, constant_pool>: Change type.
+	<symbol_name_index, symbol_vec_index>: New methods.
+	<symbol_name_slot_invalid, symbol_name_at, symbol_name_count>:
+	Rewrite.
+	(read_gdb_index_from_buffer): Update.
+	(struct dw2_symtab_iterator) <vec>: Change type.
+	(dw2_symtab_iter_init_common, dw2_symtab_iter_init)
+	(dw2_symtab_iter_next, dw2_expand_marked_cus): Update.
+	* dwarf2/index-write.c (class data_buf) <append_data>: Remove.
+	<append_array, append_offset>: New methods.
+	(write_hash_table, add_address_entry, write_gdbindex_1)
+	(write_debug_names): Update.
+	* dwarf2/index-common.h (byte_swap, MAYBE_SWAP): Remove.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/index-write.c (write_psymtabs_to_index): Check
+	partial_symtabs.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* psymtab.c (psymbol_functions::expand_matching_symbols): Rename
+	from map_matching_symbols.  Change parameters.
+	* psympriv.h (struct psymbol_functions) <expand_matching_symbols>:
+	Rename from map_matching_symbols.  Change parameters.
+	* dwarf2/read.c (struct dwarf2_gdb_index)
+	<expand_matching_symbols>: Rename from map_matching_symbols.
+	Change parameters.
+	(struct dwarf2_debug_names_index) <expand_matching_symbols>:
+	Rename from map_matching_symbols.  Change parameters.
+	(dwarf2_gdb_index::expand_matching_symbols): Rename from
+	dw2_map_matching_symbols.  Change parameters.
+	(dwarf2_gdb_index::expand_matching_symbols): Remove old
+	implementation.
+	(dwarf2_debug_names_index::expand_matching_symbols): Rename from
+	map_matching_symbols.  Change parameters.
+	* objfiles.h (struct objfile) <expand_matching_symbols>: Rename
+	from map_matching_symbols.  Change parameters.
+	* symfile-debug.c (objfile::expand_matching_symbols): Rename from
+	map_matching_symbols.  Change parameters.
+	* ada-lang.c (map_matching_symbols): New function.
+	(add_nonlocal_symbols): Update.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* quick-symbol.h (struct quick_symbol_functions)
+	<expand_symtabs_with_fullname>: Remove.
+	* psymtab.c (psymbol_functions::expand_symtabs_with_fullname):
+	Remove.
+	* psympriv.h (struct psymbol_functions)
+	<expand_symtabs_with_fullname>: Remove.
+	* dwarf2/read.c (struct dwarf2_base_index_functions)
+	<expand_symtabs_with_fullname>: Remove.
+	(dwarf2_base_index_functions::expand_symtabs_with_fullname):
+	Remove.
+	* objfiles.h (struct objfile) <expand_symtabs_with_fullname>:
+	Update comment.
+	* symfile-debug.c (objfile::expand_symtabs_with_fullname):
+	Rewrite.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* symfile-debug.c (objfile::expand_symtabs_for_function):
+	Rewrite.
+	* quick-symbol.h (struct quick_symbol_functions)
+	<expand_symtabs_for_function>: Remove.
+	* psymtab.c (psymbol_functions::expand_symtabs_for_function):
+	Remove.
+	* psympriv.h (struct psymbol_functions)
+	<expand_symtabs_for_function>: Remove.
+	* objfiles.h (struct objfile) <expand_symtabs_for_function>:
+	Update comment.
+	* dwarf2/read.c (struct dwarf2_gdb_index)
+	<expand_symtabs_for_function>: Remove.
+	(struct dwarf2_debug_names_index) <expand_symtabs_for_function>:
+	Remove.
+	(find_slot_in_mapped_hash): Remove.
+	(dw2_symtab_iter_init_common): Merge with dw2_symtab_iter_init.
+	(dw2_symtab_iter_init): Remove one overload.
+	(dwarf2_gdb_index::expand_symtabs_for_function)
+	(dwarf2_debug_names_index::expand_symtabs_for_function): Remove.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* symfile-debug.c (objfile::map_symtabs_matching_filename):
+	Rewrite.
+	* quick-symbol.h (struct quick_symbol_functions)
+	<map_symtabs_matching_filename>: Remove.
+	* psymtab.c (partial_map_expand_apply)
+	(psymbol_functions::map_symtabs_matching_filename): Remove.
+	* psympriv.h (struct psymbol_functions)
+	<map_symtabs_matching_filename>: Remove.
+	* objfiles.h (struct objfile) <map_symtabs_matching_filename>:
+	Update comment.
+	* dwarf2/read.c (struct dwarf2_base_index_functions)
+	<map_symtabs_matching_filename>: Remove.
+	(dw2_map_expand_apply)
+	(dwarf2_base_index_functions::map_symtabs_matching_filename):
+	Remove.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* symfile-debug.c (objfile::lookup_symbol): Rewrite.
+	* quick-symbol.h (struct quick_symbol_functions) <lookup_symbol>:
+	Remove.
+	* psymtab.c (psymbol_functions::lookup_symbol): Remove.
+	* psympriv.h (struct psymbol_functions) <lookup_symbol>: Remove.
+	* objfiles.h (struct objfile) <lookup_symbol>: Add comment.
+	* dwarf2/read.c (struct dwarf2_gdb_index) <lookup_symbol>:
+	Remove.
+	(struct dwarf2_debug_names_index) <lookup_symbol>: Remove.
+	(dwarf2_gdb_index::lookup_symbol)
+	(dwarf2_debug_names_index::lookup_symbol): Remove.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (global_symbol_searcher::expand_symtabs): Update.
+	* symmisc.c (maintenance_expand_symtabs): Update.
+	* symfile.c (expand_symtabs_matching): Update.
+	* symfile-debug.c (objfile::expand_symtabs_matching): Add 'domain'
+	parameter.
+	* quick-symbol.h (struct quick_symbol_functions)
+	<expand_symtabs_matching>: Add 'domain' parameter.
+	* psymtab.c (recursively_search_psymtabs)
+	(psymbol_functions::expand_symtabs_matching): Add 'domain'
+	parameter.
+	* psympriv.h (struct psymbol_functions) <expand_symtabs_matching>:
+	Add 'domain' parameter.
+	* objfiles.h (struct objfile) <expand_symtabs_matching>: Add
+	'domain' parameter.
+	* linespec.c (iterate_over_all_matching_symtabs): Update.
+	* dwarf2/read.c (struct dwarf2_gdb_index)
+	<expand_symtabs_matching>: Add 'domain' parameter.
+	(struct dwarf2_debug_names_index) <expand_symtabs_matching>: Add
+	'domain' parameter.
+	(dw2_expand_symtabs_matching)
+	(dwarf2_gdb_index::expand_symtabs_matching)
+	(dw2_debug_names_iterator)
+	(dwarf2_debug_names_index::expand_symtabs_matching): Add 'domain'
+	parameter.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (global_symbol_searcher::expand_symtabs)
+	(default_collect_symbol_completion_matches_break_on): Update.
+	* symmisc.c (maintenance_expand_symtabs): Update.
+	* symfile.h (expand_symtabs_matching): Add search_flags
+	parameter.
+	* symfile.c (expand_symtabs_matching): Add search_flags
+	parameter.
+	* symfile-debug.c (objfile::expand_symtabs_matching): Add
+	search_flags parameter.
+	* quick-symbol.h (struct quick_symbol_functions)
+	<expand_symtabs_matching>: Add search_flags parameter.
+	* python/py-symbol.c (gdbpy_lookup_static_symbols): Update.
+	* psymtab.c (recursively_search_psymtabs)
+	(psymbol_functions::expand_symtabs_matching): Add search_flags
+	parameter.
+	* psympriv.h (struct psymbol_functions) <expand_symtabs_matching>:
+	Add search_flags parameter.
+	* objfiles.h (struct objfile) <expand_symtabs_matching>: Add
+	search_flags parameter.
+	* linespec.c (iterate_over_all_matching_symtabs): Update.
+	* dwarf2/read.c (struct dwarf2_gdb_index)
+	<expand_symtabs_matching>: Add search_flags parameter.
+	(struct dwarf2_debug_names_index) <expand_symtabs_matching>: Add
+	search_flags parameter.
+	(dw2_map_matching_symbols): Update.
+	(dw2_expand_marked_cus, dw2_expand_symtabs_matching)
+	(dwarf2_gdb_index::expand_symtabs_matching): Add search_flags
+	parameter.
+	(dw2_debug_names_iterator): Change block_index to search flags.
+	<m_block_index>: Likewise.
+	(dw2_debug_names_iterator::next)
+	(dwarf2_debug_names_index::lookup_symbol)
+	(dwarf2_debug_names_index::expand_symtabs_for_function)
+	(dwarf2_debug_names_index::map_matching_symbols)
+	(dwarf2_debug_names_index::map_matching_symbols): Update.
+	(dwarf2_debug_names_index::expand_symtabs_matching): Add
+	search_flags parameter.
+	* ada-lang.c (ada_add_global_exceptions)
+	(collect_symbol_completion_matches): Update.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* symtab.c (default_collect_symbol_completion_matches_break_on):
+	Update.
+	* symfile.h (expand_symtabs_matching): Return bool.
+	* symfile.c (expand_symtabs_matching): Return bool.
+	* symfile-debug.c (objfile::expand_symtabs_matching): Return
+	bool.
+	* quick-symbol.h (expand_symtabs_exp_notify_ftype): Return bool.
+	(struct quick_symbol_functions) <expand_symtabs_matching>: Return
+	bool.
+	* psymtab.c (psymbol_functions::expand_symtabs_matching): Return
+	bool.
+	* psympriv.h (struct psymbol_functions)
+	<expand_symtabs_matching>: Return bool.
+	* objfiles.h (struct objfile) <expand_symtabs_matching>: Return
+	bool.
+	* dwarf2/read.c (struct dwarf2_gdb_index)
+	<expand_symtabs_matching>: Return bool.
+	(struct dwarf2_debug_names_index) <expand_symtabs_matching>:
+	Return bool.
+	(dw2_expand_symtabs_matching_symbol): Return bool.
+	(dw2_expand_symtabs_matching_one, dw2_expand_marked_cus)
+	(dw2_expand_symtabs_matching)
+	(dwarf2_gdb_index::expand_symtabs_matching)
+	(dwarf2_debug_names_index::expand_symtabs_matching)
+	(dwarf2_debug_names_index::expand_symtabs_matching): Return bool.
+
+2021-04-17  Tom Tromey  <tom@tromey.com>
+
+	* quick-symbol.h (enum block_search_flag_values): New.
+	(block_search_flags): New enum flags type.
+
 2021-04-16  Tom Tromey  <tom@tromey.com>
 
 	* rust-parse.c: New file.

@@ -571,12 +571,32 @@ public:
   /* See quick_symbol_functions.  */
   void forget_cached_source_info ();
 
-  /* See quick_symbol_functions.  */
+  /* Expand and iterate over each "partial" symbol table in OBJFILE
+     where the source file is named NAME.
+
+     If NAME is not absolute, a match after a '/' in the symbol table's
+     file name will also work, REAL_PATH is NULL then.  If NAME is
+     absolute then REAL_PATH is non-NULL absolute file name as resolved
+     via gdb_realpath from NAME.
+
+     If a match is found, the "partial" symbol table is expanded.
+     Then, this calls iterate_over_some_symtabs (or equivalent) over
+     all newly-created symbol tables, passing CALLBACK to it.
+     The result of this call is returned.  */
   bool map_symtabs_matching_filename
     (const char *name, const char *real_path,
      gdb::function_view<bool (symtab *)> callback);
 
-  /* See quick_symbol_functions.  */
+  /* Check to see if the symbol is defined in a "partial" symbol table
+     of this objfile.  BLOCK_INDEX should be either GLOBAL_BLOCK or
+     STATIC_BLOCK, depending on whether we want to search global
+     symbols or static symbols.  NAME is the name of the symbol to
+     look for.  DOMAIN indicates what sort of symbol to search for.
+
+     Returns the newly-expanded compunit in which the symbol is
+     defined, or NULL if no such symbol table exists.  If OBJFILE
+     contains !TYPE_OPAQUE symbol prefer its compunit.  If it contains
+     only TYPE_OPAQUE symbol(s), return at least that compunit.  */
   struct compunit_symtab *lookup_symbol (block_enum kind, const char *name,
 					 domain_enum domain);
 
@@ -586,28 +606,34 @@ public:
   /* See quick_symbol_functions.  */
   void dump ();
 
-  /* See quick_symbol_functions.  */
+  /* Find all the symbols in OBJFILE named FUNC_NAME, and ensure that
+     the corresponding symbol tables are loaded.  */
   void expand_symtabs_for_function (const char *func_name);
 
   /* See quick_symbol_functions.  */
   void expand_all_symtabs ();
 
-  /* See quick_symbol_functions.  */
+  /* Read all symbol tables associated with OBJFILE which have
+     symtab_to_fullname equal to FULLNAME.
+     This is for the purposes of examining code only, e.g., expand_line_sal.
+     The routine may ignore debug info that is known to not be useful with
+     code, e.g., DW_TAG_type_unit for dwarf debug info.  */
   void expand_symtabs_with_fullname (const char *fullname);
 
   /* See quick_symbol_functions.  */
-  void map_matching_symbols
+  void expand_matching_symbols
     (const lookup_name_info &name, domain_enum domain,
      int global,
-     gdb::function_view<symbol_found_callback_ftype> callback,
      symbol_compare_ftype *ordered_compare);
 
   /* See quick_symbol_functions.  */
-  void expand_symtabs_matching
+  bool expand_symtabs_matching
     (gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
      const lookup_name_info *lookup_name,
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     block_search_flags search_flags,
+     domain_enum domain,
      enum search_domain kind);
 
   /* See quick_symbol_functions.  */

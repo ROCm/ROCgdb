@@ -20,6 +20,16 @@
 #ifndef GDB_QUICK_SYMBOL_H
 #define GDB_QUICK_SYMBOL_H
 
+/* Like block_enum, but used as flags to pass to lookup functions.  */
+
+enum block_search_flag_values
+{
+  SEARCH_GLOBAL_BLOCK = 1,
+  SEARCH_STATIC_BLOCK = 2
+};
+
+DEF_ENUM_FLAGS_TYPE (enum block_search_flag_values, block_search_flags);
+
 /* Comparison function for symbol look ups.  */
 
 typedef int (symbol_compare_ftype) (const char *string1,
@@ -42,9 +52,11 @@ typedef bool (expand_symtabs_file_matcher_ftype) (const char *filename,
 typedef bool (expand_symtabs_symbol_matcher_ftype) (const char *name);
 
 /* Callback for quick_symbol_functions->expand_symtabs_matching
-   to be called after a symtab has been expanded.  */
+   to be called after a symtab has been expanded.  If this returns
+   true, more symtabs are checked; if it returns false, iteration
+   stops.  */
 
-typedef void (expand_symtabs_exp_notify_ftype) (compunit_symtab *symtab);
+typedef bool (expand_symtabs_exp_notify_ftype) (compunit_symtab *symtab);
 
 /* The "quick" symbol functions exist so that symbol readers can
    avoiding an initial read of all the symbols.  For example, symbol
@@ -81,37 +93,6 @@ struct quick_symbol_functions
   /* Forget all cached full file names for OBJFILE.  */
   virtual void forget_cached_source_info (struct objfile *objfile) = 0;
 
-  /* Expand and iterate over each "partial" symbol table in OBJFILE
-     where the source file is named NAME.
-
-     If NAME is not absolute, a match after a '/' in the symbol table's
-     file name will also work, REAL_PATH is NULL then.  If NAME is
-     absolute then REAL_PATH is non-NULL absolute file name as resolved
-     via gdb_realpath from NAME.
-
-     If a match is found, the "partial" symbol table is expanded.
-     Then, this calls iterate_over_some_symtabs (or equivalent) over
-     all newly-created symbol tables, passing CALLBACK to it.
-     The result of this call is returned.  */
-  virtual bool map_symtabs_matching_filename
-    (struct objfile *objfile, const char *name, const char *real_path,
-     gdb::function_view<bool (symtab *)> callback) = 0;
-
-  /* Check to see if the symbol is defined in a "partial" symbol table
-     of OBJFILE.  BLOCK_INDEX should be either GLOBAL_BLOCK or STATIC_BLOCK,
-     depending on whether we want to search global symbols or static
-     symbols.  NAME is the name of the symbol to look for.  DOMAIN
-     indicates what sort of symbol to search for.
-
-     Returns the newly-expanded compunit in which the symbol is
-     defined, or NULL if no such symbol table exists.  If OBJFILE
-     contains !TYPE_OPAQUE symbol prefer its compunit.  If it contains
-     only TYPE_OPAQUE symbol(s), return at least that compunit.  */
-  virtual struct compunit_symtab *lookup_symbol (struct objfile *objfile,
-						 block_enum block_index,
-						 const char *name,
-						 domain_enum domain) = 0;
-
   /* Check to see if the global symbol is defined in a "partial" symbol table
      of OBJFILE. NAME is the name of the symbol to look for.  DOMAIN
      indicates what sort of symbol to search for.
@@ -135,28 +116,14 @@ struct quick_symbol_functions
      gdb_stdout.  This is used for "maint print objfiles".  */
   virtual void dump (struct objfile *objfile) = 0;
 
-  /* Find all the symbols in OBJFILE named FUNC_NAME, and ensure that
-     the corresponding symbol tables are loaded.  */
-  virtual void expand_symtabs_for_function (struct objfile *objfile,
-					    const char *func_name) = 0;
-
   /* Read all symbol tables associated with OBJFILE.  */
   virtual void expand_all_symtabs (struct objfile *objfile) = 0;
 
-  /* Read all symbol tables associated with OBJFILE which have
-     symtab_to_fullname equal to FULLNAME.
-     This is for the purposes of examining code only, e.g., expand_line_sal.
-     The routine may ignore debug info that is known to not be useful with
-     code, e.g., DW_TAG_type_unit for dwarf debug info.  */
-  virtual void expand_symtabs_with_fullname (struct objfile *objfile,
-					     const char *fullname) = 0;
-
   /* Find global or static symbols in all tables that are in DOMAIN
-     and for which MATCH (symbol name, NAME) == 0, passing each to 
-     CALLBACK, reading in partial symbol tables as needed.  Look
-     through global symbols if GLOBAL and otherwise static symbols.
-     Passes NAME and NAMESPACE to CALLBACK with each symbol
-     found.  After each block is processed, passes NULL to CALLBACK.
+     and for which MATCH (symbol name, NAME) == 0, reading in partial
+     symbol tables as needed.  Look through global symbols if GLOBAL
+     and otherwise static symbols.
+
      MATCH must be weaker than strcmp_iw_ordered in the sense that
      strcmp_iw_ordered(x,y) == 0 --> MATCH(x,y) == 0.  ORDERED_COMPARE,
      if non-null, must be an ordering relation compatible with
@@ -165,15 +132,13 @@ struct quick_symbol_functions
      and 
 	    strcmp_iw_ordered(x,y) <= 0 --> ORDERED_COMPARE(x,y) <= 0
      (allowing strcmp_iw_ordered(x,y) < 0 while ORDERED_COMPARE(x, y) == 0).
-     CALLBACK returns true to indicate that the scan should continue, or
-     false to indicate that the scan should be terminated.  */
+  */
 
-  virtual void map_matching_symbols
+  virtual void expand_matching_symbols
     (struct objfile *,
      const lookup_name_info &lookup_name,
      domain_enum domain,
      int global,
-     gdb::function_view<symbol_found_callback_ftype> callback,
      symbol_compare_ftype *ordered_compare) = 0;
 
   /* Expand all symbol tables in OBJFILE matching some criteria.
@@ -190,19 +155,26 @@ struct quick_symbol_functions
 
      Otherwise, individual symbols are considered.
 
-     If KIND does not match, the symbol is skipped.
+     If DOMAIN or KIND do not match, the symbol is skipped.
+     If DOMAIN is UNDEF_DOMAIN, that is treated as a wildcard.
 
      If the symbol name does not match LOOKUP_NAME, the symbol is skipped.
 
      If SYMBOL_MATCHER returns false, then the symbol is skipped.
 
-     Otherwise, the symbol's symbol table is expanded.  */
-  virtual void expand_symtabs_matching
+     Otherwise, the symbol's symbol table is expanded and the
+     notification function is called.  If the notification function
+     returns false, execution stops and this method returns false.
+     Otherwise, more files are considered.  This method will return
+     true if all calls to the notification function return true.  */
+  virtual bool expand_symtabs_matching
     (struct objfile *objfile,
      gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
      const lookup_name_info *lookup_name,
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     block_search_flags search_flags,
+     domain_enum domain,
      enum search_domain kind) = 0;
 
   /* Return the comp unit from OBJFILE that contains PC and

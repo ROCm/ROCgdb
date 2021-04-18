@@ -224,17 +224,50 @@ protected:
   ~mapped_index_base() = default;
 };
 
+/* This is a view into the index that converts from bytes to an
+   offset_type, and allows indexing.  Unaligned bytes are specifically
+   allowed here, and handled via unpacking.  */
+
+class offset_view
+{
+public:
+  offset_view () = default;
+
+  explicit offset_view (gdb::array_view<const gdb_byte> bytes)
+    : m_bytes (bytes)
+  {
+  }
+
+  /* Extract the INDEXth offset_type from the array.  */
+  offset_type operator[] (size_t index) const
+  {
+    const gdb_byte *bytes = &m_bytes[index * sizeof (offset_type)];
+    return (offset_type) extract_unsigned_integer (bytes,
+						   sizeof (offset_type),
+						   BFD_ENDIAN_LITTLE);
+  }
+
+  /* Return the number of offset_types in this array.  */
+  size_t size () const
+  {
+    return m_bytes.size () / sizeof (offset_type);
+  }
+
+  /* Return true if this view is empty.  */
+  bool empty () const
+  {
+    return m_bytes.empty ();
+  }
+
+private:
+  /* The underlying bytes.  */
+  gdb::array_view<const gdb_byte> m_bytes;
+};
+
 /* A description of the mapped index.  The file format is described in
    a comment by the code that writes the index.  */
 struct mapped_index final : public mapped_index_base
 {
-  /* A slot/bucket in the symbol table hash.  */
-  struct symbol_table_slot
-  {
-    const offset_type name;
-    const offset_type vec;
-  };
-
   /* Index data format version.  */
   int version = 0;
 
@@ -242,25 +275,42 @@ struct mapped_index final : public mapped_index_base
   gdb::array_view<const gdb_byte> address_table;
 
   /* The symbol table, implemented as a hash table.  */
-  gdb::array_view<symbol_table_slot> symbol_table;
+  offset_view symbol_table;
 
   /* A pointer to the constant pool.  */
-  const char *constant_pool = nullptr;
+  gdb::array_view<const gdb_byte> constant_pool;
+
+  /* Return the index into the constant pool of the name of the IDXth
+     symbol in the symbol table.  */
+  offset_type symbol_name_index (offset_type idx) const
+  {
+    return symbol_table[2 * idx];
+  }
+
+  /* Return the index into the constant pool of the CU vector of the
+     IDXth symbol in the symbol table.  */
+  offset_type symbol_vec_index (offset_type idx) const
+  {
+    return symbol_table[2 * idx + 1];
+  }
 
   bool symbol_name_slot_invalid (offset_type idx) const override
   {
-    const auto &bucket = this->symbol_table[idx];
-    return bucket.name == 0 && bucket.vec == 0;
+    return (symbol_name_index (idx) == 0
+	    && symbol_vec_index (idx) == 0);
   }
 
   /* Convenience method to get at the name of the symbol at IDX in the
      symbol table.  */
   const char *symbol_name_at
     (offset_type idx, dwarf2_per_objfile *per_objfile) const override
-  { return this->constant_pool + MAYBE_SWAP (this->symbol_table[idx].name); }
+  {
+    return (const char *) (this->constant_pool.data ()
+			   + symbol_name_index (idx));
+  }
 
   size_t symbol_name_count () const override
-  { return this->symbol_table.size (); }
+  { return this->symbol_table.size () / 2; }
 };
 
 /* A description of the mapped .debug_names.
@@ -2229,10 +2279,6 @@ struct dwarf2_base_index_functions : public quick_symbol_functions
 
   void forget_cached_source_info (struct objfile *objfile) override;
 
-  bool map_symtabs_matching_filename
-    (struct objfile *objfile, const char *name, const char *real_path,
-     gdb::function_view<bool (symtab *)> callback) override;
-
   enum language lookup_global_symbol_language (struct objfile *objfile,
 					       const char *name,
 					       domain_enum domain,
@@ -2245,9 +2291,6 @@ struct dwarf2_base_index_functions : public quick_symbol_functions
   void print_stats (struct objfile *objfile, bool print_bcache) override;
 
   void expand_all_symtabs (struct objfile *objfile) override;
-
-  void expand_symtabs_with_fullname (struct objfile *objfile,
-				     const char *fullname) override;
 
   struct compunit_symtab *find_pc_sect_compunit_symtab
     (struct objfile *objfile, struct bound_minimal_symbol msymbol,
@@ -2266,59 +2309,45 @@ struct dwarf2_base_index_functions : public quick_symbol_functions
 
 struct dwarf2_gdb_index : public dwarf2_base_index_functions
 {
-  struct compunit_symtab *lookup_symbol (struct objfile *objfile,
-					 block_enum block_index,
-					 const char *name,
-					 domain_enum domain) override;
-
   void dump (struct objfile *objfile) override;
 
-  void expand_symtabs_for_function (struct objfile *objfile,
-				    const char *func_name) override;
-
-  void map_matching_symbols
+  void expand_matching_symbols
     (struct objfile *,
      const lookup_name_info &lookup_name,
      domain_enum domain,
      int global,
-     gdb::function_view<symbol_found_callback_ftype> callback,
      symbol_compare_ftype *ordered_compare) override;
 
-  void expand_symtabs_matching
+  bool expand_symtabs_matching
     (struct objfile *objfile,
      gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
      const lookup_name_info *lookup_name,
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     block_search_flags search_flags,
+     domain_enum domain,
      enum search_domain kind) override;
 };
 
 struct dwarf2_debug_names_index : public dwarf2_base_index_functions
 {
-  struct compunit_symtab *lookup_symbol (struct objfile *objfile,
-					 block_enum block_index,
-					 const char *name,
-					 domain_enum domain) override;
-
   void dump (struct objfile *objfile) override;
 
-  void expand_symtabs_for_function (struct objfile *objfile,
-				    const char *func_name) override;
-
-  void map_matching_symbols
+  void expand_matching_symbols
     (struct objfile *,
      const lookup_name_info &lookup_name,
      domain_enum domain,
      int global,
-     gdb::function_view<symbol_found_callback_ftype> callback,
      symbol_compare_ftype *ordered_compare) override;
 
-  void expand_symtabs_matching
+  bool expand_symtabs_matching
     (struct objfile *objfile,
      gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
      const lookup_name_info *lookup_name,
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     block_search_flags search_flags,
+     domain_enum domain,
      enum search_domain kind) override;
 };
 
@@ -2950,68 +2979,6 @@ create_addrmap_from_aranges (dwarf2_per_objfile *per_objfile,
 						 &per_bfd->obstack);
 }
 
-/* Find a slot in the mapped index INDEX for the object named NAME.
-   If NAME is found, set *VEC_OUT to point to the CU vector in the
-   constant pool and return true.  If NAME cannot be found, return
-   false.  */
-
-static bool
-find_slot_in_mapped_hash (struct mapped_index *index, const char *name,
-			  offset_type **vec_out)
-{
-  offset_type hash;
-  offset_type slot, step;
-  int (*cmp) (const char *, const char *);
-
-  gdb::unique_xmalloc_ptr<char> without_params;
-  if (current_language->la_language == language_cplus
-      || current_language->la_language == language_fortran
-      || current_language->la_language == language_d)
-    {
-      /* NAME is already canonical.  Drop any qualifiers as .gdb_index does
-	 not contain any.  */
-
-      if (strchr (name, '(') != NULL)
-	{
-	  without_params = cp_remove_params (name);
-
-	  if (without_params != NULL)
-	    name = without_params.get ();
-	}
-    }
-
-  /* Index version 4 did not support case insensitive searches.  But the
-     indices for case insensitive languages are built in lowercase, therefore
-     simulate our NAME being searched is also lowercased.  */
-  hash = mapped_index_string_hash ((index->version == 4
-				    && case_sensitivity == case_sensitive_off
-				    ? 5 : index->version),
-				   name);
-
-  slot = hash & (index->symbol_table.size () - 1);
-  step = ((hash * 17) & (index->symbol_table.size () - 1)) | 1;
-  cmp = (case_sensitivity == case_sensitive_on ? strcmp : strcasecmp);
-
-  for (;;)
-    {
-      const char *str;
-
-      const auto &bucket = index->symbol_table[slot];
-      if (bucket.name == 0 && bucket.vec == 0)
-	return false;
-
-      str = index->constant_pool + MAYBE_SWAP (bucket.name);
-      if (!cmp (name, str))
-	{
-	  *vec_out = (offset_type *) (index->constant_pool
-				      + MAYBE_SWAP (bucket.vec));
-	  return true;
-	}
-
-      slot = (slot + step) & (index->symbol_table.size () - 1);
-    }
-}
-
 /* A helper function that reads the .gdb_index from BUFFER and fills
    in MAP.  FILENAME is the name of the file containing the data;
    it is used for error reporting.  DEPRECATED_OK is true if it is
@@ -3034,9 +3001,10 @@ read_gdb_index_from_buffer (const char *filename,
 			    offset_type *types_list_elements)
 {
   const gdb_byte *addr = &buffer[0];
+  offset_view metadata (buffer);
 
   /* Version check.  */
-  offset_type version = MAYBE_SWAP (*(offset_type *) addr);
+  offset_type version = metadata[0];
   /* Versions earlier than 3 emitted every copy of a psymbol.  This
      causes the index to behave very poorly for certain requests.  Version 3
      contained incomplete addrmap.  So, it seems better to just ignore such
@@ -3089,35 +3057,29 @@ to use the section anyway."),
 
   map->version = version;
 
-  offset_type *metadata = (offset_type *) (addr + sizeof (offset_type));
-
-  int i = 0;
-  *cu_list = addr + MAYBE_SWAP (metadata[i]);
-  *cu_list_elements = ((MAYBE_SWAP (metadata[i + 1]) - MAYBE_SWAP (metadata[i]))
-		       / 8);
+  int i = 1;
+  *cu_list = addr + metadata[i];
+  *cu_list_elements = (metadata[i + 1] - metadata[i]) / 8;
   ++i;
 
-  *types_list = addr + MAYBE_SWAP (metadata[i]);
-  *types_list_elements = ((MAYBE_SWAP (metadata[i + 1])
-			   - MAYBE_SWAP (metadata[i]))
-			  / 8);
+  *types_list = addr + metadata[i];
+  *types_list_elements = (metadata[i + 1] - metadata[i]) / 8;
   ++i;
 
-  const gdb_byte *address_table = addr + MAYBE_SWAP (metadata[i]);
-  const gdb_byte *address_table_end = addr + MAYBE_SWAP (metadata[i + 1]);
+  const gdb_byte *address_table = addr + metadata[i];
+  const gdb_byte *address_table_end = addr + metadata[i + 1];
   map->address_table
     = gdb::array_view<const gdb_byte> (address_table, address_table_end);
   ++i;
 
-  const gdb_byte *symbol_table = addr + MAYBE_SWAP (metadata[i]);
-  const gdb_byte *symbol_table_end = addr + MAYBE_SWAP (metadata[i + 1]);
+  const gdb_byte *symbol_table = addr + metadata[i];
+  const gdb_byte *symbol_table_end = addr + metadata[i + 1];
   map->symbol_table
-    = gdb::array_view<mapped_index::symbol_table_slot>
-       ((mapped_index::symbol_table_slot *) symbol_table,
-	(mapped_index::symbol_table_slot *) symbol_table_end);
+    = offset_view (gdb::array_view<const gdb_byte> (symbol_table,
+						    symbol_table_end));
 
   ++i;
-  map->constant_pool = (char *) (addr + MAYBE_SWAP (metadata[i]));
+  map->constant_pool = buffer.slice (metadata[i]);
 
   return 1;
 }
@@ -3388,100 +3350,6 @@ dwarf2_base_index_functions::forget_cached_source_info
 			  dw2_free_cached_file_names, NULL);
 }
 
-/* Helper function for dw2_map_symtabs_matching_filename that expands
-   the symtabs and calls the iterator.  */
-
-static int
-dw2_map_expand_apply (struct objfile *objfile,
-		      struct dwarf2_per_cu_data *per_cu,
-		      const char *name, const char *real_path,
-		      gdb::function_view<bool (symtab *)> callback)
-{
-  struct compunit_symtab *last_made = objfile->compunit_symtabs;
-
-  /* Don't visit already-expanded CUs.  */
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-  if (per_objfile->symtab_set_p (per_cu))
-    return 0;
-
-  /* This may expand more than one symtab, and we want to iterate over
-     all of them.  */
-  dw2_instantiate_symtab (per_cu, per_objfile, false);
-
-  return iterate_over_some_symtabs (name, real_path, objfile->compunit_symtabs,
-				    last_made, callback);
-}
-
-/* Implementation of the map_symtabs_matching_filename method.  */
-
-bool
-dwarf2_base_index_functions::map_symtabs_matching_filename
-  (struct objfile *objfile, const char *name, const char *real_path,
-   gdb::function_view<bool (symtab *)> callback)
-{
-  const char *name_basename = lbasename (name);
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-
-  /* The rule is CUs specify all the files, including those used by
-     any TU, so there's no need to scan TUs here.  */
-
-  for (dwarf2_per_cu_data *per_cu : per_objfile->per_bfd->all_comp_units)
-    {
-      /* We only need to look at symtabs not already expanded.  */
-      if (per_objfile->symtab_set_p (per_cu))
-	continue;
-
-      quick_file_names *file_data = dw2_get_file_names (per_cu, per_objfile);
-      if (file_data == NULL)
-	continue;
-
-      for (int j = 0; j < file_data->num_file_names; ++j)
-	{
-	  const char *this_name = file_data->file_names[j];
-	  const char *this_real_name;
-
-	  if (compare_filenames_for_search (this_name, name))
-	    {
-	      if (dw2_map_expand_apply (objfile, per_cu, name, real_path,
-					callback))
-		return true;
-	      continue;
-	    }
-
-	  /* Before we invoke realpath, which can get expensive when many
-	     files are involved, do a quick comparison of the basenames.  */
-	  if (! basenames_may_differ
-	      && FILENAME_CMP (lbasename (this_name), name_basename) != 0)
-	    continue;
-
-	  this_real_name = dw2_get_real_path (per_objfile, file_data, j);
-	  if (compare_filenames_for_search (this_real_name, name))
-	    {
-	      if (dw2_map_expand_apply (objfile, per_cu, name, real_path,
-					callback))
-		return true;
-	      continue;
-	    }
-
-	  if (real_path != NULL)
-	    {
-	      gdb_assert (IS_ABSOLUTE_PATH (real_path));
-	      gdb_assert (IS_ABSOLUTE_PATH (name));
-	      if (this_real_name != NULL
-		  && FILENAME_CMP (real_path, this_real_name) == 0)
-		{
-		  if (dw2_map_expand_apply (objfile, per_cu, name, real_path,
-					    callback))
-		    return true;
-		  continue;
-		}
-	    }
-	}
-    }
-
-  return false;
-}
-
 /* Struct used to manage iterating over all CUs looking for a symbol.  */
 
 struct dw2_symtab_iterator
@@ -3495,7 +3363,7 @@ struct dw2_symtab_iterator
   domain_enum domain;
   /* The list of CUs from the index entry of the symbol,
      or NULL if not found.  */
-  offset_type *vec;
+  offset_view vec;
   /* The next element in VEC to look at.  */
   int next;
   /* The number of elements in VEC, or zero if there is no match.  */
@@ -3507,43 +3375,6 @@ struct dw2_symtab_iterator
   int global_seen;
 };
 
-/* Initialize the index symtab iterator ITER, common part.  */
-
-static void
-dw2_symtab_iter_init_common (struct dw2_symtab_iterator *iter,
-			     dwarf2_per_objfile *per_objfile,
-			     gdb::optional<block_enum> block_index,
-			     domain_enum domain)
-{
-  iter->per_objfile = per_objfile;
-  iter->block_index = block_index;
-  iter->domain = domain;
-  iter->next = 0;
-  iter->global_seen = 0;
-  iter->vec = NULL;
-  iter->length = 0;
-}
-
-/* Initialize the index symtab iterator ITER, const char *NAME variant.  */
-
-static void
-dw2_symtab_iter_init (struct dw2_symtab_iterator *iter,
-		      dwarf2_per_objfile *per_objfile,
-		      gdb::optional<block_enum> block_index,
-		      domain_enum domain,
-		      const char *name)
-{
-  dw2_symtab_iter_init_common (iter, per_objfile, block_index, domain);
-
-  mapped_index *index = per_objfile->per_bfd->index_table.get ();
-  /* index is NULL if OBJF_READNOW.  */
-  if (index == NULL)
-    return;
-
-  if (find_slot_in_mapped_hash (index, name, &iter->vec))
-    iter->length = MAYBE_SWAP (*iter->vec);
-}
-
 /* Initialize the index symtab iterator ITER, offset_type NAMEI variant.  */
 
 static void
@@ -3552,7 +3383,13 @@ dw2_symtab_iter_init (struct dw2_symtab_iterator *iter,
 		      gdb::optional<block_enum> block_index,
 		      domain_enum domain, offset_type namei)
 {
-  dw2_symtab_iter_init_common (iter, per_objfile, block_index, domain);
+  iter->per_objfile = per_objfile;
+  iter->block_index = block_index;
+  iter->domain = domain;
+  iter->next = 0;
+  iter->global_seen = 0;
+  iter->vec = {};
+  iter->length = 0;
 
   mapped_index *index = per_objfile->per_bfd->index_table.get ();
   /* index is NULL if OBJF_READNOW.  */
@@ -3560,11 +3397,10 @@ dw2_symtab_iter_init (struct dw2_symtab_iterator *iter,
     return;
 
   gdb_assert (!index->symbol_name_slot_invalid (namei));
-  const auto &bucket = index->symbol_table[namei];
+  offset_type vec_idx = index->symbol_vec_index (namei);
 
-  iter->vec = (offset_type *) (index->constant_pool
-			       + MAYBE_SWAP (bucket.vec));
-  iter->length = MAYBE_SWAP (*iter->vec);
+  iter->vec = offset_view (index->constant_pool.slice (vec_idx));
+  iter->length = iter->vec[0];
 }
 
 /* Return the next matching CU or NULL if there are no more.  */
@@ -3576,8 +3412,7 @@ dw2_symtab_iter_next (struct dw2_symtab_iterator *iter)
 
   for ( ; iter->next < iter->length; ++iter->next)
     {
-      offset_type cu_index_and_attrs =
-	MAYBE_SWAP (iter->vec[iter->next + 1]);
+      offset_type cu_index_and_attrs = iter->vec[iter->next + 1];
       offset_type cu_index = GDB_INDEX_CU_VALUE (cu_index_and_attrs);
       gdb_index_symbol_kind symbol_kind =
 	GDB_INDEX_SYMBOL_KIND_VALUE (cu_index_and_attrs);
@@ -3664,50 +3499,6 @@ dw2_symtab_iter_next (struct dw2_symtab_iterator *iter)
   return NULL;
 }
 
-struct compunit_symtab *
-dwarf2_gdb_index::lookup_symbol (struct objfile *objfile,
-				 block_enum block_index,
-				 const char *name, domain_enum domain)
-{
-  struct compunit_symtab *stab_best = NULL;
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-
-  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
-
-  struct dw2_symtab_iterator iter;
-  struct dwarf2_per_cu_data *per_cu;
-
-  dw2_symtab_iter_init (&iter, per_objfile, block_index, domain, name);
-
-  while ((per_cu = dw2_symtab_iter_next (&iter)) != NULL)
-    {
-      struct symbol *sym, *with_opaque = NULL;
-      struct compunit_symtab *stab
-	= dw2_instantiate_symtab (per_cu, per_objfile, false);
-      const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (stab);
-      const struct block *block = BLOCKVECTOR_BLOCK (bv, block_index);
-
-      sym = block_find_symbol (block, name, domain,
-			       block_find_non_opaque_type_preferred,
-			       &with_opaque);
-
-      /* Some caution must be observed with overloaded functions
-	 and methods, since the index will not contain any overload
-	 information (but NAME might contain it).  */
-
-      if (sym != NULL
-	  && SYMBOL_MATCHES_SEARCH_NAME (sym, lookup_name))
-	return stab;
-      if (with_opaque != NULL
-	  && SYMBOL_MATCHES_SEARCH_NAME (with_opaque, lookup_name))
-	stab_best = stab;
-
-      /* Keep looking through other CUs.  */
-    }
-
-  return stab_best;
-}
-
 void
 dwarf2_base_index_functions::print_stats (struct objfile *objfile,
 					  bool print_bcache)
@@ -3754,22 +3545,6 @@ dwarf2_gdb_index::dump (struct objfile *objfile)
 }
 
 void
-dwarf2_gdb_index::expand_symtabs_for_function (struct objfile *objfile,
-					       const char *func_name)
-{
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-
-  struct dw2_symtab_iterator iter;
-  struct dwarf2_per_cu_data *per_cu;
-
-  dw2_symtab_iter_init (&iter, per_objfile, {}, VAR_DOMAIN, func_name);
-
-  while ((per_cu = dw2_symtab_iter_next (&iter)) != NULL)
-    dw2_instantiate_symtab (per_cu, per_objfile, false);
-
-}
-
-void
 dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
@@ -3789,41 +3564,7 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
     }
 }
 
-void
-dwarf2_base_index_functions::expand_symtabs_with_fullname
-     (struct objfile *objfile, const char *fullname)
-{
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-
-  /* We don't need to consider type units here.
-     This is only called for examining code, e.g. expand_line_sal.
-     There can be an order of magnitude (or more) more type units
-     than comp units, and we avoid them if we can.  */
-
-  for (dwarf2_per_cu_data *per_cu : per_objfile->per_bfd->all_comp_units)
-    {
-      /* We only need to look at symtabs not already expanded.  */
-      if (per_objfile->symtab_set_p (per_cu))
-	continue;
-
-      quick_file_names *file_data = dw2_get_file_names (per_cu, per_objfile);
-      if (file_data == NULL)
-	continue;
-
-      for (int j = 0; j < file_data->num_file_names; ++j)
-	{
-	  const char *this_fullname = file_data->file_names[j];
-
-	  if (filename_cmp (this_fullname, fullname) == 0)
-	    {
-	      dw2_instantiate_symtab (per_cu, per_objfile, false);
-	      break;
-	    }
-	}
-    }
-}
-
-static void
+static bool
 dw2_expand_symtabs_matching_symbol
   (mapped_index_base &index,
    const lookup_name_info &lookup_name_in,
@@ -3831,7 +3572,7 @@ dw2_expand_symtabs_matching_symbol
    gdb::function_view<bool (offset_type)> match_callback,
    dwarf2_per_objfile *per_objfile);
 
-static void
+static bool
 dw2_expand_symtabs_matching_one
   (dwarf2_per_cu_data *per_cu,
    dwarf2_per_objfile *per_objfile,
@@ -3839,11 +3580,10 @@ dw2_expand_symtabs_matching_one
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify);
 
 void
-dwarf2_gdb_index::map_matching_symbols
+dwarf2_gdb_index::expand_matching_symbols
   (struct objfile *objfile,
    const lookup_name_info &name, domain_enum domain,
    int global,
-   gdb::function_view<symbol_found_callback_ftype> callback,
    symbol_compare_ftype *ordered_compare)
 {
   /* Used for Ada.  */
@@ -3881,18 +3621,6 @@ dwarf2_gdb_index::map_matching_symbols
     {
       /* We have -readnow: no .gdb_index, but no partial symtabs either.  So,
 	 proceed assuming all symtabs have been read in.  */
-    }
-
-  for (compunit_symtab *cust : objfile->compunits ())
-    {
-      const struct block *block;
-
-      if (cust == NULL)
-	continue;
-      block = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust), block_kind);
-      if (!iterate_over_symbols_terminated (block, name,
-					    domain, callback))
-	return;
     }
 }
 
@@ -4126,7 +3854,7 @@ mapped_index_base::build_name_components (dwarf2_per_objfile *per_objfile)
    symbol name that matches, calls MATCH_CALLBACK, passing it the
    symbol's index in the mapped_index_base symbol table.  */
 
-static void
+static bool
 dw2_expand_symtabs_matching_symbol
   (mapped_index_base &index,
    const lookup_name_info &lookup_name_in,
@@ -4211,12 +3939,16 @@ dw2_expand_symtabs_matching_symbol
 
   /* Finally call the callback, once per match.  */
   ULONGEST prev = -1;
+  bool result = true;
   for (offset_type idx : matches)
     {
       if (prev != idx)
 	{
 	  if (!match_callback (idx))
-	    break;
+	    {
+	      result = false;
+	      break;
+	    }
 	  prev = idx;
 	}
     }
@@ -4224,6 +3956,8 @@ dw2_expand_symtabs_matching_symbol
   /* Above we use a type wider than idx's for 'prev', since 0 and
      (offset_type)-1 are both possible values.  */
   static_assert (sizeof (prev) > sizeof (offset_type), "");
+
+  return result;
 }
 
 #if GDB_SELF_TEST
@@ -4664,7 +4398,7 @@ run_test ()
    dw_expand_symtabs_matching_file_matcher), expand the CU and call
    EXPANSION_NOTIFY on it.  */
 
-static void
+static bool
 dw2_expand_symtabs_matching_one
   (dwarf2_per_cu_data *per_cu,
    dwarf2_per_objfile *per_objfile,
@@ -4680,31 +4414,32 @@ dw2_expand_symtabs_matching_one
       gdb_assert (symtab != nullptr);
 
       if (expansion_notify != NULL && symtab_was_null)
-	expansion_notify (symtab);
+	return expansion_notify (symtab);
     }
+  return true;
 }
 
 /* Helper for dw2_expand_matching symtabs.  Called on each symbol
    matched, to expand corresponding CUs that were marked.  IDX is the
    index of the symbol name that matched.  */
 
-static void
+static bool
 dw2_expand_marked_cus
   (dwarf2_per_objfile *per_objfile, offset_type idx,
    gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+   block_search_flags search_flags,
    search_domain kind)
 {
-  offset_type *vec, vec_len, vec_idx;
+  offset_type vec_len, vec_idx;
   bool global_seen = false;
   mapped_index &index = *per_objfile->per_bfd->index_table;
 
-  vec = (offset_type *) (index.constant_pool
-			 + MAYBE_SWAP (index.symbol_table[idx].vec));
-  vec_len = MAYBE_SWAP (vec[0]);
+  offset_view vec (index.constant_pool.slice (index.symbol_vec_index (idx)));
+  vec_len = vec[0];
   for (vec_idx = 0; vec_idx < vec_len; ++vec_idx)
     {
-      offset_type cu_index_and_attrs = MAYBE_SWAP (vec[vec_idx + 1]);
+      offset_type cu_index_and_attrs = vec[vec_idx + 1];
       /* This value is only valid for index versions >= 7.  */
       int is_static = GDB_INDEX_SYMBOL_STATIC_VALUE (cu_index_and_attrs);
       gdb_index_symbol_kind symbol_kind =
@@ -4732,6 +4467,17 @@ dw2_expand_marked_cus
       /* Only check the symbol's kind if it has one.  */
       if (attrs_valid)
 	{
+	  if (is_static)
+	    {
+	      if ((search_flags & SEARCH_STATIC_BLOCK) == 0)
+		continue;
+	    }
+	  else
+	    {
+	      if ((search_flags & SEARCH_GLOBAL_BLOCK) == 0)
+		continue;
+	    }
+
 	  switch (kind)
 	    {
 	    case VARIABLES_DOMAIN:
@@ -4765,9 +4511,12 @@ dw2_expand_marked_cus
 	}
 
       dwarf2_per_cu_data *per_cu = per_objfile->per_bfd->get_cutu (cu_index);
-      dw2_expand_symtabs_matching_one (per_cu, per_objfile, file_matcher,
-				       expansion_notify);
+      if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile, file_matcher,
+					    expansion_notify))
+	return false;
     }
+
+  return true;
 }
 
 /* If FILE_MATCHER is non-NULL, set all the
@@ -4847,20 +4596,22 @@ dw_expand_symtabs_matching_file_matcher
     }
 }
 
-void
+bool
 dwarf2_gdb_index::expand_symtabs_matching
     (struct objfile *objfile,
      gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
      const lookup_name_info *lookup_name,
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     block_search_flags search_flags,
+     domain_enum domain,
      enum search_domain kind)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
   /* index_table is NULL if OBJF_READNOW.  */
   if (!per_objfile->per_bfd->index_table)
-    return;
+    return true;
 
   dw_expand_symtabs_matching_file_matcher (per_objfile, file_matcher);
 
@@ -4870,22 +4621,28 @@ dwarf2_gdb_index::expand_symtabs_matching
 	{
 	  QUIT;
 
-	  dw2_expand_symtabs_matching_one (per_cu, per_objfile,
-					   file_matcher, expansion_notify);
+	  if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile,
+						file_matcher,
+						expansion_notify))
+	    return false;
 	}
-      return;
+      return true;
     }
 
   mapped_index &index = *per_objfile->per_bfd->index_table;
 
-  dw2_expand_symtabs_matching_symbol (index, *lookup_name,
-				      symbol_matcher,
-				      [&] (offset_type idx)
+  bool result
+    = dw2_expand_symtabs_matching_symbol (index, *lookup_name,
+					  symbol_matcher,
+					  [&] (offset_type idx)
     {
-      dw2_expand_marked_cus (per_objfile, idx, file_matcher, expansion_notify,
-			     kind);
+      if (!dw2_expand_marked_cus (per_objfile, idx, file_matcher,
+				  expansion_notify, search_flags, kind))
+	return false;
       return true;
     }, per_objfile);
+
+  return result;
 }
 
 /* A helper for dw2_find_pc_sect_compunit_symtab which finds the most specific
@@ -5358,7 +5115,7 @@ class dw2_debug_names_iterator
 {
 public:
   dw2_debug_names_iterator (const mapped_debug_names &map,
-			    gdb::optional<block_enum> block_index,
+			    block_search_flags block_index,
 			    domain_enum domain,
 			    const char *name, dwarf2_per_objfile *per_objfile)
     : m_map (map), m_block_index (block_index), m_domain (domain),
@@ -5367,15 +5124,18 @@ public:
   {}
 
   dw2_debug_names_iterator (const mapped_debug_names &map,
-			    search_domain search, uint32_t namei, dwarf2_per_objfile *per_objfile)
+			    search_domain search, uint32_t namei,
+			    dwarf2_per_objfile *per_objfile,
+			    domain_enum domain = UNDEF_DOMAIN)
     : m_map (map),
+      m_domain (domain),
       m_search (search),
       m_addr (find_vec_in_debug_names (map, namei, per_objfile)),
       m_per_objfile (per_objfile)
   {}
 
   dw2_debug_names_iterator (const mapped_debug_names &map,
-			    block_enum block_index, domain_enum domain,
+			    block_search_flags block_index, domain_enum domain,
 			    uint32_t namei, dwarf2_per_objfile *per_objfile)
     : m_map (map), m_block_index (block_index), m_domain (domain),
       m_addr (find_vec_in_debug_names (map, namei, per_objfile)),
@@ -5396,9 +5156,9 @@ private:
   /* The internalized form of .debug_names.  */
   const mapped_debug_names &m_map;
 
-  /* If set, only look for symbols that match that block.  Valid values are
-     GLOBAL_BLOCK and STATIC_BLOCK.  */
-  const gdb::optional<block_enum> m_block_index;
+  /* Restrict the search to these blocks.  */
+  block_search_flags m_block_index = (SEARCH_GLOBAL_BLOCK
+				      | SEARCH_STATIC_BLOCK);
 
   /* The kind of symbol we're looking for.  */
   const domain_enum m_domain = UNDEF_DOMAIN;
@@ -5647,13 +5407,18 @@ dw2_debug_names_iterator::next ()
     goto again;
 
   /* Check static vs global.  */
-  if (symbol_linkage_ != symbol_linkage::unknown && m_block_index.has_value ())
+  if (symbol_linkage_ != symbol_linkage::unknown)
     {
-	const bool want_static = *m_block_index == STATIC_BLOCK;
-	const bool symbol_is_static =
-	  symbol_linkage_ == symbol_linkage::static_;
-	if (want_static != symbol_is_static)
-	  goto again;
+      if (symbol_linkage_ == symbol_linkage::static_)
+	{
+	  if ((m_block_index & SEARCH_STATIC_BLOCK) == 0)
+	    goto again;
+	}
+      else
+	{
+	  if ((m_block_index & SEARCH_GLOBAL_BLOCK) == 0)
+	    goto again;
+	}
     }
 
   /* Match dw2_symtab_iter_next, symbol_kind
@@ -5753,54 +5518,6 @@ dw2_debug_names_iterator::next ()
   return per_cu;
 }
 
-struct compunit_symtab *
-dwarf2_debug_names_index::lookup_symbol
-     (struct objfile *objfile, block_enum block_index,
-      const char *name, domain_enum domain)
-{
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-
-  const auto &mapp = per_objfile->per_bfd->debug_names_table;
-  if (!mapp)
-    {
-      /* index is NULL if OBJF_READNOW.  */
-      return NULL;
-    }
-  const auto &map = *mapp;
-
-  dw2_debug_names_iterator iter (map, block_index, domain, name, per_objfile);
-
-  struct compunit_symtab *stab_best = NULL;
-  struct dwarf2_per_cu_data *per_cu;
-  while ((per_cu = iter.next ()) != NULL)
-    {
-      struct symbol *sym, *with_opaque = NULL;
-      compunit_symtab *stab
-	= dw2_instantiate_symtab (per_cu, per_objfile, false);
-      const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (stab);
-      const struct block *block = BLOCKVECTOR_BLOCK (bv, block_index);
-
-      sym = block_find_symbol (block, name, domain,
-			       block_find_non_opaque_type_preferred,
-			       &with_opaque);
-
-      /* Some caution must be observed with overloaded functions and
-	 methods, since the index will not contain any overload
-	 information (but NAME might contain it).  */
-
-      if (sym != NULL
-	  && strcmp_iw (sym->search_name (), name) == 0)
-	return stab;
-      if (with_opaque != NULL
-	  && strcmp_iw (with_opaque->search_name (), name) == 0)
-	stab_best = stab;
-
-      /* Keep looking through other CUs.  */
-    }
-
-  return stab_best;
-}
-
 /* This dumps minimal information about .debug_names.  It is called
    via "mt print objfiles".  The gdb.dwarf2/gdb-index.exp testcase
    uses this to verify that .debug_names has been loaded.  */
@@ -5820,31 +5537,10 @@ dwarf2_debug_names_index::dump (struct objfile *objfile)
 }
 
 void
-dwarf2_debug_names_index::expand_symtabs_for_function
-     (struct objfile *objfile, const char *func_name)
-{
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-
-  /* per_objfile->per_bfd->debug_names_table is NULL if OBJF_READNOW.  */
-  if (per_objfile->per_bfd->debug_names_table)
-    {
-      const mapped_debug_names &map = *per_objfile->per_bfd->debug_names_table;
-
-      dw2_debug_names_iterator iter (map, {}, VAR_DOMAIN, func_name,
-				     per_objfile);
-
-      struct dwarf2_per_cu_data *per_cu;
-      while ((per_cu = iter.next ()) != NULL)
-	dw2_instantiate_symtab (per_cu, per_objfile, false);
-    }
-}
-
-void
-dwarf2_debug_names_index::map_matching_symbols
+dwarf2_debug_names_index::expand_matching_symbols
   (struct objfile *objfile,
    const lookup_name_info &name, domain_enum domain,
    int global,
-   gdb::function_view<symbol_found_callback_ftype> callback,
    symbol_compare_ftype *ordered_compare)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
@@ -5854,7 +5550,8 @@ dwarf2_debug_names_index::map_matching_symbols
     return;
 
   mapped_debug_names &map = *per_objfile->per_bfd->debug_names_table;
-  const block_enum block_kind = global ? GLOBAL_BLOCK : STATIC_BLOCK;
+  const block_search_flags block_flags
+    = global ? SEARCH_GLOBAL_BLOCK : SEARCH_STATIC_BLOCK;
 
   const char *match_name = name.ada ().lookup_name ().c_str ();
   auto matcher = [&] (const char *symname)
@@ -5869,7 +5566,7 @@ dwarf2_debug_names_index::map_matching_symbols
     {
       /* The name was matched, now expand corresponding CUs that were
 	 marked.  */
-      dw2_debug_names_iterator iter (map, block_kind, domain, namei,
+      dw2_debug_names_iterator iter (map, block_flags, domain, namei,
 				     per_objfile);
 
       struct dwarf2_per_cu_data *per_cu;
@@ -5878,39 +5575,24 @@ dwarf2_debug_names_index::map_matching_symbols
 					 nullptr);
       return true;
     }, per_objfile);
-
-  /* It's a shame we couldn't do this inside the
-     dw2_expand_symtabs_matching_symbol callback, but that skips CUs
-     that have already been expanded.  Instead, this loop matches what
-     the psymtab code does.  */
-  for (dwarf2_per_cu_data *per_cu : per_objfile->per_bfd->all_comp_units)
-    {
-      compunit_symtab *symtab = per_objfile->get_symtab (per_cu);
-      if (symtab != nullptr)
-	{
-	  const struct block *block
-	    = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (symtab), block_kind);
-	  if (!iterate_over_symbols_terminated (block, name,
-						domain, callback))
-	    break;
-	}
-    }
 }
 
-void
+bool
 dwarf2_debug_names_index::expand_symtabs_matching
   (struct objfile *objfile,
    gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
    const lookup_name_info *lookup_name,
    gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+   block_search_flags search_flags,
+   domain_enum domain,
    enum search_domain kind)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
   /* debug_names_table is NULL if OBJF_READNOW.  */
   if (!per_objfile->per_bfd->debug_names_table)
-    return;
+    return true;
 
   dw_expand_symtabs_matching_file_matcher (per_objfile, file_matcher);
 
@@ -5920,28 +5602,35 @@ dwarf2_debug_names_index::expand_symtabs_matching
 	{
 	  QUIT;
 
-	  dw2_expand_symtabs_matching_one (per_cu, per_objfile, file_matcher,
-					   expansion_notify);
+	  if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile,
+						file_matcher,
+						expansion_notify))
+	    return false;
 	}
-      return;
+      return true;
     }
 
   mapped_debug_names &map = *per_objfile->per_bfd->debug_names_table;
 
-  dw2_expand_symtabs_matching_symbol (map, *lookup_name,
-				      symbol_matcher,
-				      [&] (offset_type namei)
+  bool result
+    = dw2_expand_symtabs_matching_symbol (map, *lookup_name,
+					  symbol_matcher,
+					  [&] (offset_type namei)
     {
       /* The name was matched, now expand corresponding CUs that were
 	 marked.  */
-      dw2_debug_names_iterator iter (map, kind, namei, per_objfile);
+      dw2_debug_names_iterator iter (map, kind, namei, per_objfile, domain);
 
       struct dwarf2_per_cu_data *per_cu;
       while ((per_cu = iter.next ()) != NULL)
-	dw2_expand_symtabs_matching_one (per_cu, per_objfile, file_matcher,
-					 expansion_notify);
+	if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile,
+					      file_matcher,
+					      expansion_notify))
+	  return false;
       return true;
     }, per_objfile);
+
+  return result;
 }
 
 /* Get the content of the .gdb_index section of OBJ.  SECTION_OWNER should point

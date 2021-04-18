@@ -4547,6 +4547,8 @@ global_symbol_searcher::expand_symtabs
 	       || preg->exec (symname, 0, NULL, 0) == 0);
      },
      NULL,
+     SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
+     UNDEF_DOMAIN,
      kind);
 
   /* Here, we search through the minimal symbol tables for functions and
@@ -5730,7 +5732,9 @@ default_collect_symbol_completion_matches_break_on
 			       add_symtab_completions (symtab,
 						       tracker, mode, lookup_name,
 						       sym_text, word, code);
+			       return true;
 			     },
+			   SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
 			   ALL_DOMAIN);
 
   /* Search upwards from currently selected frame (so that we can

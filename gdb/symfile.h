@@ -321,11 +321,12 @@ symfile_segment_data_up get_symfile_segment_data (bfd *abfd);
 
 extern scoped_restore_tmpl<int> increment_reading_symtab (void);
 
-void expand_symtabs_matching
+bool expand_symtabs_matching
   (gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
    const lookup_name_info &lookup_name,
    gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+   block_search_flags search_flags,
    enum search_domain kind);
 
 void map_symbol_filenames (gdb::function_view<symbol_filename_ftype> fun,
