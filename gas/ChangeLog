@@ -1,3 +1,30 @@
+2021-04-19  Nick Clifton  <nickc@redhat.com>
+
+	* testsuite/gas/all/gas.exp: Add rs6000*-*-aix* to the list of
+	targets which should skip the undefined symbols test.
+
+2021-04-19  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
+
+	* NEWS: Update news.
+	* testsuite/gas/aarch64/rme.d: Update test.
+	* testsuite/gas/aarch64/rme.s: Update test.
+
+2021-04-19  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
+
+	* testsuite/gas/aarch64/rme.d: Update test.
+	* testsuite/gas/aarch64/rme.s: Update test.
+
+2021-04-19  Jan Beulich  <jbeulich@suse.com>
+
+	* as.h (sprint_value): Delete.
+	* messages.c (sprint_value): Likewise.
+	* config/tc-i386.c (offset_in_range): Use bfd_sprintf_vma in
+	place of sprint_value.
+	* config/tc-s390.c (s390_insert_operand): Likewise.
+	* doc/internals.texi (sprint_value): Delete section.
+	* write.c (fixup_segment): Likewise.
+	(relax_segment): Likewise.
+
 2021-04-16  Przemyslaw Wirkus  <przemyslaw.wirkus@arm.com>
 
 	* testsuite/gas/aarch64/rme-invalid.d: New test.

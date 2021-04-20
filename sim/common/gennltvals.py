@@ -51,6 +51,7 @@ TARGET_DIRS = {
     'i960': 'libgloss/i960',
     'mcore': 'libgloss/mcore',
     'riscv': 'libgloss/riscv/machine',
+    'sh': 'newlib/libc/sys/sh/sys',
     'v850': 'libgloss/v850/sys',
 }
 TARGETS = {
@@ -60,14 +61,19 @@ TARGETS = {
     'fr30',
     'frv',
     'i960',
+    'iq2000',
     'lm32',
+    'm32c',
     'm32r',
     'mcore',
     'mn10200',
     'mn10300',
+    'moxie',
     'msp430',
     'pru',
     'riscv',
+    'rx',
+    'sh',
     'sparc',
     'v850',
 }
