@@ -105,7 +105,7 @@ proc_with_prefix test_detach_on_fork_off_follow_fork_mode_parent { } {
 	}
 
 	# We are stopped in the parent.
-	gdb_test "inferior" "Current inferior is 1.*" "current inferior is parent"
+	gdb_test "info inferior" "\\* 1 .*" "current inferior is parent"
 
 	# Switch to the child, verify there is a JIT-ed objfile.
 	gdb_test "inferior 2" "Switching to inferior 2.*"
@@ -132,7 +132,7 @@ proc_with_prefix test_detach_on_fork_off_follow_fork_mode_child { } {
 	# We are stopped in the child.  This is the exact same thing as
 	# test_detach_on_fork_off_follow_fork_mode_parent, except that we are
 	# stopped in the child.
-	gdb_test "inferior" "Current inferior is 2.*" "current inferior is child"
+	gdb_test "info inferior" "\\* 2 .*" "current inferior is child"
 
 	# Switch to the parent, verify there is a JIT-ed objfile.
 	gdb_test "inferior 1" "Switching to inferior 1.*"
@@ -157,7 +157,7 @@ proc_with_prefix test_detach_on_fork_on_follow_fork_mode_parent { } {
 	}
 
 	# We are stopped in the parent, child is detached.
-	gdb_test "inferior" "Current inferior is 1.*" "current inferior is parent"
+	gdb_test "info inferior" "\\* 1 .*" "current inferior is parent"
 	gdb_test "inferior 2" "Inferior ID 2 not known." "no inferior 2"
 
 	# Continue past JIT unload, verify there are no more JIT-ed objfiles.
@@ -171,7 +171,7 @@ proc_with_prefix test_detach_on_fork_on_follow_fork_mode_child { } {
 	}
 
 	# We are stopped in the child, parent is detached.
-	gdb_test "inferior" "Current inferior is 2.*" "current inferior is child"
+	gdb_test "info inferior" "\\* 2 .*" "current inferior is child"
 	gdb_test "inferior 1" "Switching to inferior 1 \\\[<null>\\\].*"
 	gdb_test "inferior 2" "Switching to inferior 2.*"
 
