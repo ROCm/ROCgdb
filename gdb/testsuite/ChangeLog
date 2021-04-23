@@ -1,3 +1,49 @@
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* gdb.base/ptype-offsets.cc (struct empty_member): New.
+	(main): Use empty_member.
+	* gdb.base/ptype-offsets.exp: Add new test.
+
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.python/flexible-array-member.exp: Add check for Python
+	support.
+
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27757
+	* gdb.python/flexible-array-member.c: New test.
+	* gdb.python/flexible-array-member.exp: New test.
+	* gdb.guile/scm-type.exp (test_range): Add test for flexible
+	array member.
+	* gdb.guile/scm-type.c (struct flex_member): New.
+	(main): Use it.
+
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* gdb.rust/modules.exp: Add checks for syntax errors.
+	* gdb.rust/expr.exp: Add checks for syntax errors.
+	* gdb.rust/simple.exp: Add checks for syntax errors.
+
+2021-04-21  Carl Love  <cel@us.ibm.com>
+
+	* gdb.base/valgrind-bt.exp: Add gdb_test "break main".
+	Update expected string for gdb_test "bt".
+
+	* lib/valgrind.exp: Add set remotetimeout 3.
+	Increase vgdb wait from 1 to 2.
+	Add max-invoke-ms option to vgdb command line.
+
+2021-04-21  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.mi/mi-break.exp: Extend with checks for invalid breakpoint
+	conditions.
+
+2021-04-21  Simon Marchi  <simon.marchi@polymtl.ca>
+	    Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.mi/mi-break.exp: Fix the duplicate test names.
+
 2021-04-20  Felix Willgerodt  <felix.willgerodt@intel.com>
 
 	* gdb.base/address_space_qualifier.exp: New file.

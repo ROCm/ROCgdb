@@ -1892,7 +1892,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
       event_location_up location = new_address_location (address, nullptr, 0);
       if (!create_breakpoint (section->objfile->arch (), location.get (),
 			      /*cond_string*/ NULL, /*thread*/ -1,
-			      /*extra_string*/ NULL,
+			      /*extra_string*/ NULL, false /*force_condition*/,
 			      /*parse_extra*/ 0, /*tempflag*/ 0,
 			      /*bptype*/ bp_breakpoint,
 			      /*ignore_count*/ 0,

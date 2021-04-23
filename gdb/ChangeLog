@@ -1,3 +1,164 @@
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* breakpoint.c (iterate_over_bp_locations): Change callback to
+	function view, remove data parameter.
+	* breakpoint.h (iterate_over_bp_locations): Likewise.
+	* record-full.c (record_full_sync_record_breakpoints): Remove
+	data parameter.
+
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* c-typeprint.c (c_type_print_base_struct_union): Use
+	print_spaces_filtered_with_print_options.
+
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27757
+	* python/py-type.c (typy_range): Check that bounds are constant
+	before accessing them as such.
+	* guile/scm-type.c (gdbscm_type_range): Likewise.
+
+2021-04-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* Makefile.in (COMMON_SFILES): Remove continuations.c.
+	* inferior.c (inferior::add_continuation): New method, adapted
+	from 'add_inferior_continuation'.
+	(inferior::do_all_continuations): New method, adapted from
+	'do_all_inferior_continuations'.
+	(inferior::~inferior): Clear the list of continuations directly.
+	* inferior.h (class inferior) <continuations>: Rename into...
+	<m_continuations>: ...this and make private.
+	* continuations.c: Remove.
+	* continuations.h: Remove.
+	* event-top.c: Don't include "continuations.h".
+
+	Update the users below.
+	* inf-loop.c (inferior_event_handler)
+	* infcmd.c (attach_command)
+	(notice_new_inferior): Update.
+
+2021-04-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* inferior.h (class inferior) <continuations>: Change the type
+	to be an std::list of std::function's.
+	Update the references and uses below.
+	* continuations.c (struct continuation): Delete.
+	(make_continuation): Delete.
+	(do_my_continuations_1): Delete.
+	(do_my_continuations): Delete.
+	(discard_my_continuations_1): Delete.
+	(discard_my_continuations): Delete.
+	(add_inferior_continuation): Update.
+	(do_all_inferior_continuations): Update.
+	(discard_all_inferior_continuations): Update.
+	* continuations.h (add_inferior_continuation): Update to take
+	an std::function as the parameter.
+	* infcmd.c (struct attach_command_continuation_args): Delete.
+	(attach_command_continuation): Delete.
+	(attach_command_continuation_free_args): Delete.
+	(attach_command): Update.
+	(notice_new_inferior): Update.
+
+2021-04-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* continuations.h: Update the general comment.
+	* inferior.h (class inferior) <continuations>: Update the comment.
+	* interps.c: Do not include "continuations.h".
+
+2021-04-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* continuations.h (do_all_inferior_continuations): Remove the 'err'
+	parameter.  Update the references below.
+	* continuations.c (do_my_continuations_1)
+	(do_my_continuations)
+	(do_all_inferior_continuations): Update.
+	* inf-loop.c (inferior_event_handler): Update.
+	* infcmd.c (attach_command_continuation): Update.
+
+2021-04-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infcmd.c (attach_post_wait): Update the function comment.
+
+2021-04-22  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* infcmd.c (attach_post_wait): Remove the unused parameter 'args'.
+	Update the references below.
+	(struct attach_command_continuation_args)
+	(attach_command_continuation)
+	(attach_command_continuation_free_args)
+	(attach_command)
+	(notice_new_inferior): Update to remove the reference to 'args'.
+
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+	    Tom de Vries  <tdevries@suse.de>
+
+	PR remote/27710
+	* remote.c (remote_target_is_non_stop_p): New function.
+	* remote.h (remote_target_is_non_stop_p): Declare.
+	* remote-notif.c (remote_async_get_pending_events_handler): Fix assert
+	to check non-stopness using notif_state->remote rather current target.
+
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* rust-parse.c (rust_parser::parse_sizeof): Remove KW_MUT code.
+	(struct typed_val_int) <val>: Now ULONGEST.
+	(rust_parser::parse_array_type): Remove negative check.
+	(rust_lex_int_test): Change 'value' to ULONGEST.
+
+2021-04-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* arch-utils.c (default_addressable_memory_unit_size): Return a
+	value based on bfd's bits per byte.
+
+2021-04-21  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct dwarf2_per_cu_data) <dwarf_version>: Now
+	unsigned char.
+	(struct dwarf2_per_cu_data): Rearrange.
+	* dwarf2/comp-unit.h (struct comp_unit_head) <version>: Now
+	unsigned char.
+	(struct comp_unit_head): Rearrange.
+	* dwarf2/comp-unit.c (read_comp_unit_head): Update.
+
+2021-04-21  Tom de Vries  <tdevries@suse.de>
+
+	PR build/27681
+	* configure.ac: Remove --without-included-regex/--with-included-regex.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+	* gdb_regex.h: Assume USE_INCLUDED_REGEX is defined.
+
+2021-04-21  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* breakpoint.h (create_breakpoint): Add a new parameter,
+	'force_condition'.
+	* breakpoint.c (create_breakpoint): Use the 'force_condition'
+	argument when 'parse_extra' is false to check if the condition
+	is invalid at all of the breakpoint locations.
+	Update the users below.
+	(break_command_1)
+	(dprintf_command)
+	(trace_command)
+	(ftrace_command)
+	(strace_command)
+	(create_tracepoint_from_upload): Update.
+	* guile/scm-breakpoint.c (gdbscm_register_breakpoint_x): Update.
+	* mi/mi-cmd-break.c (mi_cmd_break_insert_1): Update.
+	* python/py-breakpoint.c (bppy_init): Update.
+	* python/py-finishbreakpoint.c (bpfinishpy_init): Update.
+
+2021-04-21  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* breakpoint.c (print_one_breakpoint_location): Display "N" for
+	disabled-by-condition locations on MI-like output.
+	(breakpoint_1): Do not display the disabled-by-condition footnote
+	if the output is MI-like.
+
+2021-04-21  Frederic Cambus  <fred@statdns.com>
+
+	* syscalls/update-netbsd.sh: Fix script name display in usage, and
+	update year range in generated copyright notices.
+
 2021-04-20  Felix Willgerodt  <felix.willgerodt@intel.com>
 
 	* c-exp.y (qualifier_seq_noopt): Replace qualifier_seq with

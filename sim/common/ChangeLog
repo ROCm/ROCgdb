@@ -1,3 +1,35 @@
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* sim-utils.c: Update includes.
+
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* Make-common.in: Require GNU make.
+
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* Make-common.in (stamp-hw): New target.
+	(hw-config.h): Depend on stamp-hw.
+	(mostlyclean): Remove stamp-hw and hw-config.h.
+
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* Make-common.in (mostlyclean): Now an alias for clean, not
+	distclean.
+
+2021-04-22  Tom Tromey  <tom@tromey.com>
+
+	* sim-events.c (sim_events_schedule): Use
+	sim_events_schedule_tracef.
+
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* callback.c (os_printf_filtered, os_vprintf_filtered,
+	os_evprintf_filtered, os_error): Use ATTRIBUTE_PRINTF.
+	* sim-engine.h (sim_engine_abort, sim_engine_vabort): Likewise.
+	* sim-events.h (sim_events_schedule_tracef,
+	sim_events_schedule_vtracef): Use ATTRIBUTE_NULL_PRINTF.
+
 2021-04-18  Mike Frysinger  <vapier@gentoo.org>
 
 	* gennltvals.py (TARGETS): Add moxie.

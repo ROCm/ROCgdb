@@ -35,16 +35,6 @@ AC_SUBST(PACKAGE)
 ZW_CREATE_DEPDIR
 ZW_PROG_COMPILER_DEPENDENCIES([CC])
 
-# Check for the 'make' the user wants to use.
-AC_CHECK_PROGS(MAKE, make)
-MAKE_IS_GNU=
-case "`$MAKE --version 2>&1 | sed 1q`" in
-  *GNU*)
-    MAKE_IS_GNU=yes
-    ;;
-esac
-AM_CONDITIONAL(GMAKE, test "$MAKE_IS_GNU" = yes)
-
 dnl We don't use gettext, but bfd does.  So we do the appropriate checks
 dnl to see if there are intl libraries we should link against.
 ALL_LINGUAS=
@@ -59,8 +49,6 @@ AC_CHECK_HEADERS_ONCE(m4_flatten([
   unistd.h
   sys/mman.h
   sys/resource.h
-  sys/time.h
-  sys/times.h
   sys/stat.h
 ]))
 AC_CHECK_FUNCS_ONCE(m4_flatten([

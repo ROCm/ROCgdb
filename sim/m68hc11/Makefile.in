@@ -36,9 +36,6 @@ SIM_EXTRA_CFLAGS = -DWITH_TARGET_WORD_BITSIZE=32 \
 		   -DWITH_TARGET_WORD_MSB=31
 SIM_EXTRA_CLEAN = clean-extra
 
-INCLUDE = $(srcdir)/../../include/gdb/callback.h \
-	  interrupts.h sim-main.h
-
 
 ## COMMON_POST_CONFIG_FRAG
 
@@ -53,8 +50,6 @@ gencode.o: gencode.c
 
 gencode: gencode.o
 	$(LINK_FOR_BUILD) $^
-
-interp.o: interp.c $(INCLUDE)
 
 clean-extra:
 	rm -f gencode m68hc11int.c

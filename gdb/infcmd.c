@@ -47,7 +47,6 @@
 #include "inline-frame.h"
 #include "tracepoint.h"
 #include "inf-loop.h"
-#include "continuations.h"
 #include "linespec.h"
 #include "thread-fsm.h"
 #include "top.h"
@@ -2467,11 +2466,11 @@ enum attach_post_wait_mode
 };
 
 /* Called after we've attached to a process and we've seen it stop for
-   the first time.  If ASYNC_EXEC is true, re-resume threads that
-   should be running.  Else if ATTACH, */
+   the first time.  Resume, stop, or don't touch the threads according
+   to MODE.  */
 
 static void
-attach_post_wait (const char *args, int from_tty, enum attach_post_wait_mode mode)
+attach_post_wait (int from_tty, enum attach_post_wait_mode mode)
 {
   struct inferior *inferior;
 
@@ -2486,7 +2485,7 @@ attach_post_wait (const char *args, int from_tty, enum attach_post_wait_mode mod
       /* The user requested an `attach&', so be sure to leave threads
 	 that didn't get a signal running.  */
 
-      /* Immediatelly resume all suspended threads of this inferior,
+      /* Immediately resume all suspended threads of this inferior,
 	 and this inferior only.  This should have no effect on
 	 already running threads.  If a thread has been stopped with a
 	 signal, leave it be.  */
@@ -2538,35 +2537,6 @@ attach_post_wait (const char *args, int from_tty, enum attach_post_wait_mode mod
       if (deprecated_attach_hook)
 	deprecated_attach_hook ();
     }
-}
-
-struct attach_command_continuation_args
-{
-  char *args;
-  int from_tty;
-  enum attach_post_wait_mode mode;
-};
-
-static void
-attach_command_continuation (void *args, int err)
-{
-  struct attach_command_continuation_args *a
-    = (struct attach_command_continuation_args *) args;
-
-  if (err)
-    return;
-
-  attach_post_wait (a->args, a->from_tty, a->mode);
-}
-
-static void
-attach_command_continuation_free_args (void *args)
-{
-  struct attach_command_continuation_args *a
-    = (struct attach_command_continuation_args *) args;
-
-  xfree (a->args);
-  xfree (a);
 }
 
 /* "attach" command entry point.  Takes a program started up outside
@@ -2666,8 +2636,6 @@ attach_command (const char *args, int from_tty)
      E.g. Mach 3 or GNU hurd.  */
   if (!target_attach_no_wait ())
     {
-      struct attach_command_continuation_args *a;
-
       /* Careful here.  See comments in inferior.h.  Basically some
 	 OSes don't ignore SIGSTOPs on continue requests anymore.  We
 	 need a way for handle_inferior_event to reset the stop_signal
@@ -2676,12 +2644,10 @@ attach_command (const char *args, int from_tty)
       inferior->control.stop_soon = STOP_QUIETLY_NO_SIGSTOP;
 
       /* Wait for stop.  */
-      a = XNEW (struct attach_command_continuation_args);
-      a->args = xstrdup (args);
-      a->from_tty = from_tty;
-      a->mode = mode;
-      add_inferior_continuation (attach_command_continuation, a,
-				 attach_command_continuation_free_args);
+      inferior->add_continuation ([=] ()
+	{
+	  attach_post_wait (from_tty, mode);
+	});
 
       /* Let infrun consider waiting for events out of this
 	 target.  */
@@ -2692,7 +2658,7 @@ attach_command (const char *args, int from_tty)
       return;
     }
   else
-    attach_post_wait (args, from_tty, mode);
+    attach_post_wait (from_tty, mode);
 
   disable_commit_resumed.reset_and_commit ();
 }
@@ -2725,7 +2691,6 @@ notice_new_inferior (thread_info *thr, int leave_running, int from_tty)
 
   if (thr->executing)
     {
-      struct attach_command_continuation_args *a;
       struct inferior *inferior = current_inferior ();
 
       /* We're going to install breakpoints, and poke at memory,
@@ -2736,17 +2701,15 @@ notice_new_inferior (thread_info *thr, int leave_running, int from_tty)
       inferior->control.stop_soon = STOP_QUIETLY_REMOTE;
 
       /* Wait for stop before proceeding.  */
-      a = XNEW (struct attach_command_continuation_args);
-      a->args = xstrdup ("");
-      a->from_tty = from_tty;
-      a->mode = mode;
-      add_inferior_continuation (attach_command_continuation, a,
-				 attach_command_continuation_free_args);
+      inferior->add_continuation ([=] ()
+	{
+	  attach_post_wait (from_tty, mode);
+	});
 
       return;
     }
 
-  attach_post_wait ("" /* args */, from_tty, mode);
+  attach_post_wait (from_tty, mode);
 }
 
 /*
