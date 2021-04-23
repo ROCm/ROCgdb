@@ -83,6 +83,13 @@ struct rocm_notify_shared_library_info
 
 struct rocm_inferior_info
 {
+  explicit rocm_inferior_info (inferior *inf)
+    : inf (inf)
+  {}
+
+  /* Backlink to inferior.  */
+  inferior *inf;
+
   /* The amd_dbgapi_process_id for this inferior.  */
   amd_dbgapi_process_id_t process_id{ AMD_DBGAPI_PROCESS_NONE };
 
@@ -340,7 +347,7 @@ get_rocm_inferior_info (struct inferior *inferior)
   struct rocm_inferior_info *info = rocm_inferior_data.get (inferior);
 
   if (!info)
-    info = rocm_inferior_data.emplace (inferior);
+    info = rocm_inferior_data.emplace (inferior, inferior);
 
   return info;
 }
@@ -568,6 +575,51 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
 				     requested_len, xfered_len);
 }
 
+static int
+rocm_insert_one_watchpoint (rocm_inferior_info *info, CORE_ADDR addr, int len)
+{
+  amd_dbgapi_watchpoint_id_t watch_id;
+  amd_dbgapi_global_address_t adjusted_address;
+  amd_dbgapi_size_t adjusted_size;
+
+  if (amd_dbgapi_set_watchpoint (info->process_id, addr, len,
+				 AMD_DBGAPI_WATCHPOINT_KIND_STORE_AND_RMW,
+				 &watch_id, &adjusted_address, &adjusted_size)
+	!= AMD_DBGAPI_STATUS_SUCCESS
+      /* FIXME: A reduced range watchpoint may have been inserted, which would
+	require additional watchpoints to be inserted to cover the requested
+	range.  */
+      || adjusted_address > addr
+      || (adjusted_address + adjusted_size) < (addr + len))
+    return 1;
+
+  if (!info->watchpoint_map
+	 .emplace (addr, std::make_pair (addr + len, watch_id))
+	 .second)
+    {
+      amd_dbgapi_remove_watchpoint (info->process_id, watch_id);
+      return 1;
+    }
+
+  return 0;
+}
+
+static void
+insert_initial_watchpoints (rocm_inferior_info *info)
+{
+  gdb_assert (info->runtime_loaded);
+
+  iterate_over_bp_locations ([info] (bp_location *loc)
+    {
+      if (loc->loc_type == bp_loc_hardware_watchpoint
+	  && loc->pspace == info->inf->pspace)
+	{
+	  if (rocm_insert_one_watchpoint (info, loc->address, loc->length) != 0)
+	    warning (_("Failed to insert existing watchpoint after loading runtime."));
+	}
+    });
+}
+
 int
 rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
 				    enum target_hw_bp_type type,
@@ -583,36 +635,15 @@ rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
   if (ret || !info->runtime_loaded)
     return ret;
 
-  amd_dbgapi_watchpoint_id_t watch_id;
-  amd_dbgapi_global_address_t adjusted_address;
-  amd_dbgapi_size_t adjusted_size;
-
-  if (amd_dbgapi_set_watchpoint (info->process_id, addr, len,
-				 AMD_DBGAPI_WATCHPOINT_KIND_STORE_AND_RMW,
-				 &watch_id, &adjusted_address, &adjusted_size)
-	!= AMD_DBGAPI_STATUS_SUCCESS
-      /* FIXME: A reduced range watchpoint may have been inserted, which would
-	require additional watchpoints to be inserted to cover the requested
-	range.  */
-      || adjusted_address > addr
-      || (adjusted_address + adjusted_size) < (addr + len))
+  ret = rocm_insert_one_watchpoint (info, addr, len);
+  if (ret != 0)
     {
       /* We failed to insert the GPU watchpoint, so remove the CPU watchpoint
 	 before returning an error.  */
       beneath ()->remove_watchpoint (addr, len, type, cond);
-      return 1;
     }
 
-  if (!info->watchpoint_map
-	 .emplace (addr, std::make_pair (addr + len, watch_id))
-	 .second)
-    {
-      amd_dbgapi_remove_watchpoint (info->process_id, watch_id);
-      beneath ()->remove_watchpoint (addr, len, type, cond);
-      return 1;
-    }
-
-  return 0;
+  return ret;
 }
 
 int
@@ -981,6 +1012,7 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 	  {
 	  case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS:
 	    info->runtime_loaded = true;
+	    insert_initial_watchpoints (info);
 	    amd_dbgapi_runtime_loaded.notify ();
 	    break;
 

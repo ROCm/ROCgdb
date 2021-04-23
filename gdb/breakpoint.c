@@ -2953,7 +2953,7 @@ iterate_over_bp_locations (walk_bp_location_callback callback)
 
   ALL_BP_LOCATIONS (loc, loc_tmp)
     {
-      callback (loc, NULL);
+      callback (loc);
     }
 }
 

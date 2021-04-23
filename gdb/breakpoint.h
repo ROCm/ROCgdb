@@ -1304,7 +1304,7 @@ extern void breakpoint_init_inferior (enum inf_context);
 
 extern void breakpoint_auto_delete (bpstat);
 
-typedef void (*walk_bp_location_callback) (struct bp_location *, void *);
+using walk_bp_location_callback = gdb::function_view<void(bp_location *)>;
 
 extern void iterate_over_bp_locations (walk_bp_location_callback);
 
