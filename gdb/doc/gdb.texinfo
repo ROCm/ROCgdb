@@ -27623,12 +27623,6 @@ docker run -it --rm --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
 @end smallexample
 
 @item
-The @code{until} command does not work when multiple AMD GPUs are
-present as @value{GDBN} has limitations when there are multiple code
-objects that have the same breakpoint set.  The work around is to use
-@samp{tbreak @var{line}; continue}.
-
-@item
 The HIP runtime currently performs deferred code object loading by
 default.  AMD GPU code objects are not loaded until the first kernel
 is launched.  Before then, all breakpoints have to be set as pending
