@@ -1,3 +1,44 @@
+2021-04-24  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* observable.h (observer_debug_printf,
+	OBSERVER_SCOPED_DEBUG_START_END): New.
+	(class observable) <notify, attach>: Use them.
+
+2021-04-24  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* common-debug.h (struct scoped_debug_start_end)
+	<scoped_debug_start_end>: Change start_msg/end_msg for
+	start_prefix/end_prefix.  Add format string parameter and make
+	variadic.
+	<~scoped_debug_start_end>: Adjust.
+	<m_end_msg>: Rename to...
+	<m_end_prefix>: ... this.
+	<m_with_format>: New.
+	<m_msg>: New.
+	(scoped_debug_start_end): Make variadic.
+	(scoped_debug_enter_exit): Adjust.
+
+2021-04-24  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* observable.h (class observable) <struct observer> <observer>:
+	Add name parameter.
+	<name>: New field.
+	<attach>: Add name parameter, update all callers.
+
+2021-04-24  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* observable.h (class observable) <struct observer>: New.
+	<detach, notify>: Update.
+	<m_observers>: Change type to vector of observers.
+
+2021-04-23  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* observable.h (observer_debug): Change to bool.
+
+2021-04-23  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* common-debug.h: Include preprocessor.h.
+
 2021-03-24  Luis Machado  <luis.machado@linaro.org>
 
 	* rsp-low.cc (fromhex, hex2bin): Move to ...

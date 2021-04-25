@@ -24,13 +24,23 @@
 #include <functional>
 #include <vector>
 
+/* Print an "observer" debug statement.  */
+
+#define observer_debug_printf(fmt, ...) \
+  debug_prefixed_printf_cond (observer_debug, "observer", fmt, ##__VA_ARGS__)
+
+/* Print "observer" start/end debug statements.  */
+
+#define OBSERVER_SCOPED_DEBUG_START_END(fmt, ...) \
+  scoped_debug_start_end (observer_debug, "observer", fmt, ##__VA_ARGS__)
+
 namespace gdb
 {
 
 namespace observers
 {
 
-extern unsigned int observer_debug;
+extern bool observer_debug;
 
 /* An observer is an entity which is interested in being notified
    when GDB reaches certain states, or certain events occur in GDB.
@@ -56,9 +66,21 @@ template<typename... T>
 class observable
 {
 public:
-
   typedef std::function<void (T...)> func_type;
 
+private:
+  struct observer
+  {
+    observer (const struct token *token, func_type func, const char *name)
+      : token (token), func (func), name (name)
+    {}
+
+    const struct token *token;
+    func_type func;
+    const char *name;
+  };
+
+public:
   explicit observable (const char *name)
     : m_name (name)
   {
@@ -67,17 +89,29 @@ public:
   DISABLE_COPY_AND_ASSIGN (observable);
 
   /* Attach F as an observer to this observable.  F cannot be
-     detached.  */
-  void attach (const func_type &f)
+     detached.
+
+     NAME is the name of the observer, used for debug output purposes.  Its
+     lifetime must be at least as long as the observer is attached.  */
+  void attach (const func_type &f, const char *name)
   {
-    m_observers.emplace_back (nullptr, f);
+    observer_debug_printf ("Attaching observable %s to observer %s",
+			   name, m_name);
+
+    m_observers.emplace_back (nullptr, f, name);
   }
 
   /* Attach F as an observer to this observable.  T is a reference to
-     a token that can be used to later remove F.  */
-  void attach (const func_type &f, const token &t)
+     a token that can be used to later remove F.
+
+     NAME is the name of the observer, used for debug output purposes.  Its
+     lifetime must be at least as long as the observer is attached.  */
+  void attach (const func_type &f, const token &t, const char *name)
   {
-    m_observers.emplace_back (&t, f);
+    observer_debug_printf ("Attaching observable %s to observer %s",
+			   name, m_name);
+
+    m_observers.emplace_back (&t, f, name);
   }
 
   /* Remove observers associated with T from this observable.  T is
@@ -87,11 +121,13 @@ public:
   {
     auto iter = std::remove_if (m_observers.begin (),
 				m_observers.end (),
-				[&] (const std::pair<const token *,
-				     func_type> &e)
+				[&] (const observer &o)
 				{
-				  return e.first == &t;
+				  return o.token == &t;
 				});
+
+    observer_debug_printf ("Detaching observable %s from observer %s",
+			   iter->name, m_name);
 
     m_observers.erase (iter, m_observers.end ());
   }
@@ -99,16 +135,19 @@ public:
   /* Notify all observers that are attached to this observable.  */
   void notify (T... args) const
   {
-    if (observer_debug)
-      fprintf_unfiltered (gdb_stdlog, "observable %s notify() called\n",
-			  m_name);
+    OBSERVER_SCOPED_DEBUG_START_END ("observable %s notify() called", m_name);
+
     for (auto &&e : m_observers)
-      e.second (args...);
+      {
+	OBSERVER_SCOPED_DEBUG_START_END ("calling observer %s of observable %s",
+					 e.name, m_name);
+	e.func (args...);
+      }
   }
 
 private:
 
-  std::vector<std::pair<const token *, func_type>> m_observers;
+  std::vector<observer> m_observers;
   const char *m_name;
 };
 

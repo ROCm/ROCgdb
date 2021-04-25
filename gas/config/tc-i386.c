@@ -3297,8 +3297,8 @@ static void
 pe (expressionS *e)
 {
   fprintf (stdout, "    operation     %d\n", e->X_op);
-  fprintf (stdout, "    add_number    %ld (%lx)\n",
-	   (long) e->X_add_number, (long) e->X_add_number);
+  fprintf (stdout, "    add_number    %" BFD_VMA_FMT "d (%" BFD_VMA_FMT "x)\n",
+	   e->X_add_number, e->X_add_number);
   if (e->X_add_symbol)
     {
       fprintf (stdout, "    add_symbol    ");
@@ -3553,6 +3553,16 @@ tc_i386_fix_adjustable (fixS *fixP ATTRIBUTE_UNUSED)
     return 0;
 #endif
   return 1;
+}
+
+static INLINE bool
+want_disp32 (const insn_template *t)
+{
+  return flag_code != CODE_64BIT
+	 || i.prefix[ADDR_PREFIX]
+	 || (t->base_opcode == 0x8d
+	     && t->opcode_modifier.opcodespace == SPACE_BASE
+	     && !i.types[1].bitfield.qword);
 }
 
 static int
@@ -4740,6 +4750,34 @@ md_assemble (char *line)
   if (i.imm_operands)
     optimize_imm ();
 
+  if (i.disp_operands && !want_disp32 (current_templates->start))
+    {
+      for (j = 0; j < i.operands; ++j)
+	{
+	  const expressionS *exp = i.op[j].disps;
+
+	  if (!operand_type_check (i.types[j], disp))
+	    continue;
+
+	  if (exp->X_op != O_constant)
+	    continue;
+
+	  /* Since displacement is signed extended to 64bit, don't allow
+	     disp32 and turn off disp32s if they are out of range.  */
+	  i.types[j].bitfield.disp32 = 0;
+	  if (fits_in_signed_long (exp->X_add_number))
+	    continue;
+
+	  i.types[j].bitfield.disp32s = 0;
+	  if (i.types[j].bitfield.baseindex)
+	    {
+	      as_bad (_("0x%" BFD_VMA_FMT "x out of range of signed 32bit displacement"),
+		      exp->X_add_number);
+	      return;
+	    }
+	}
+    }
+
   /* Don't optimize displacement for movabs since it only takes 64bit
      displacement.  */
   if (i.disp_operands
@@ -5707,19 +5745,6 @@ optimize_disp (void)
 		op_disp = (((op_disp & 0xffff) ^ 0x8000) - 0x8000);
 		i.types[op].bitfield.disp64 = 0;
 	      }
-#ifdef BFD64
-	    /* Optimize 64-bit displacement to 32-bit for 64-bit BFD.  */
-	    if (i.types[op].bitfield.disp32
-		&& (op_disp & ~(((offsetT) 2 << 31) - 1)) == 0)
-	      {
-		/* If this operand is at most 32 bits, convert
-		   to a signed 32 bit number and don't use 64bit
-		   displacement.  */
-		op_disp &= (((offsetT) 2 << 31) - 1);
-		op_disp = (op_disp ^ ((offsetT) 1 << 31)) - ((addressT) 1 << 31);
-		i.types[op].bitfield.disp64 = 0;
-	      }
-#endif
 	    if (!op_disp && i.types[op].bitfield.baseindex)
 	      {
 		i.types[op].bitfield.disp8 = 0;
@@ -5730,17 +5755,32 @@ optimize_disp (void)
 		i.op[op].disps = 0;
 		i.disp_operands--;
 	      }
+#ifdef BFD64
 	    else if (flag_code == CODE_64BIT)
 	      {
+		if (want_disp32 (current_templates->start)
+		    && fits_in_unsigned_long (op_disp))
+		  i.types[op].bitfield.disp32 = 1;
+
+		/* Optimize 64-bit displacement to 32-bit for 64-bit BFD.  */
+		if (i.types[op].bitfield.disp32
+		    && (op_disp & ~(((offsetT) 2 << 31) - 1)) == 0)
+		  {
+		    /* If this operand is at most 32 bits, convert
+		       to a signed 32 bit number and don't use 64bit
+		       displacement.  */
+		    op_disp &= (((offsetT) 2 << 31) - 1);
+		    op_disp = (op_disp ^ ((offsetT) 1 << 31)) - ((addressT) 1 << 31);
+		    i.types[op].bitfield.disp64 = 0;
+		  }
+
 		if (fits_in_signed_long (op_disp))
 		  {
 		    i.types[op].bitfield.disp64 = 0;
 		    i.types[op].bitfield.disp32s = 1;
 		  }
-		if (i.prefix[ADDR_PREFIX]
-		    && fits_in_unsigned_long (op_disp))
-		  i.types[op].bitfield.disp32 = 1;
 	      }
+#endif
 	    if ((i.types[op].bitfield.disp32
 		 || i.types[op].bitfield.disp32s
 		 || i.types[op].bitfield.disp16)
@@ -8078,7 +8118,7 @@ build_modrm_byte (void)
 		  i.types[op].bitfield.disp8 = 0;
 		  i.types[op].bitfield.disp16 = 0;
 		  i.types[op].bitfield.disp64 = 0;
-		  if (flag_code != CODE_64BIT || i.prefix[ADDR_PREFIX])
+		  if (want_disp32 (&i.tm))
 		    {
 		      /* Must be 32 bit */
 		      i.types[op].bitfield.disp32 = 1;
@@ -8129,7 +8169,7 @@ build_modrm_byte (void)
 		      i.rm.regmem = ESCAPE_TO_TWO_BYTE_ADDRESSING;
 		      i.sib.base = NO_BASE_REGISTER;
 		      i.sib.index = NO_INDEX_REGISTER;
-		      newdisp = (!i.prefix[ADDR_PREFIX] ? disp32s : disp32);
+		      newdisp = (want_disp32(&i.tm) ? disp32 : disp32s);
 		    }
 		  else if ((flag_code == CODE_16BIT)
 			   ^ (i.prefix[ADDR_PREFIX] != 0))
@@ -8158,7 +8198,7 @@ build_modrm_byte (void)
 		  i.types[op].bitfield.disp8 = 0;
 		  i.types[op].bitfield.disp16 = 0;
 		  i.types[op].bitfield.disp64 = 0;
-		  if (flag_code != CODE_64BIT || i.prefix[ADDR_PREFIX])
+		  if (want_disp32 (&i.tm))
 		    {
 		      /* Must be 32 bit */
 		      i.types[op].bitfield.disp32 = 1;
@@ -8233,12 +8273,11 @@ build_modrm_byte (void)
 	    }
 	  else /* i.base_reg and 32/64 bit mode  */
 	    {
-	      if (flag_code == CODE_64BIT
-		  && operand_type_check (i.types[op], disp))
+	      if (operand_type_check (i.types[op], disp))
 		{
 		  i.types[op].bitfield.disp16 = 0;
 		  i.types[op].bitfield.disp64 = 0;
-		  if (i.prefix[ADDR_PREFIX] == 0)
+		  if (!want_disp32 (&i.tm))
 		    {
 		      i.types[op].bitfield.disp32 = 0;
 		      i.types[op].bitfield.disp32s = 1;
@@ -10908,25 +10947,6 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
       as_bad (_("missing or invalid displacement expression `%s'"),
 	      disp_start);
       ret = 0;
-    }
-
-  else if (flag_code == CODE_64BIT
-	   && !i.prefix[ADDR_PREFIX]
-	   && exp->X_op == O_constant)
-    {
-      /* Since displacement is signed extended to 64bit, don't allow
-	 disp32 and turn off disp32s if they are out of range.  */
-      i.types[this_operand].bitfield.disp32 = 0;
-      if (!fits_in_signed_long (exp->X_add_number))
-	{
-	  i.types[this_operand].bitfield.disp32s = 0;
-	  if (i.types[this_operand].bitfield.baseindex)
-	    {
-	      as_bad (_("0x%lx out range of signed 32bit displacement"),
-		      (long) exp->X_add_number);
-	      ret = 0;
-	    }
-	}
     }
 
 #if (defined (OBJ_AOUT) || defined (OBJ_MAYBE_AOUT))

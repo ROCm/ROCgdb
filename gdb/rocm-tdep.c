@@ -3151,12 +3151,16 @@ _initialize_rocm_tdep (void)
   amd_dbgapi_set_log_level (get_debug_amdgpu_log_level ());
 
   /* Install observers.  */
-  gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup);
-  gdb::observers::solib_loaded.attach (rocm_target_solib_loaded);
-  gdb::observers::solib_unloaded.attach (rocm_target_solib_unloaded);
+  gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup,
+					     "rocm-tdep");
+  gdb::observers::solib_loaded.attach (rocm_target_solib_loaded, "rocm-tdep");
+  gdb::observers::solib_unloaded.attach (rocm_target_solib_unloaded,
+					 "rocm-tdep");
 
-  gdb::observers::inferior_created.attach (rocm_target_inferior_created);
-  gdb::observers::inferior_execd.attach (rocm_target_inferior_execd);
+  gdb::observers::inferior_created.attach (rocm_target_inferior_created,
+					   "rocm-tdep");
+  gdb::observers::inferior_execd.attach (rocm_target_inferior_execd,
+					 "rocm-tdep");
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 

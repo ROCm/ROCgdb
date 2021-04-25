@@ -527,9 +527,11 @@ void
 _initialize_rocm_solib (void)
 {
   /* Install our observers.  */
-  amd_dbgapi_code_object_list_updated.attach (rocm_update_solib_list);
+  amd_dbgapi_code_object_list_updated.attach (rocm_update_solib_list,
+					      "solib-rocm");
 
   /* FIXME: remove this when we can clear the solist in
      rocm_solib_create_inferior_hook.  */
-  gdb::observers::inferior_created.attach (rocm_solib_target_inferior_created);
+  gdb::observers::inferior_created.attach (rocm_solib_target_inferior_created,
+					   "solib-rocm");
 }
