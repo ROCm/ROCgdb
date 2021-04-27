@@ -26954,7 +26954,7 @@ Displayed as @samp{vega10} by @value{GDBN} and denoted as
 Displayed as @samp{vega20} by @value{GDBN} and denoted as
 @samp{gfx906} by the compiler.
 
-@item AMD Instinct@registeredsymbol{} MI100 Accelerator
+@item AMD Instinct@registeredsymbol{} MI100 accelerator
 Displayed as @samp{arcturus} by @value{GDBN} and denoted as
 @samp{gfx908} by the compiler.
 
