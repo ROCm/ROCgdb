@@ -1,3 +1,50 @@
+2021-04-27  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.base/maint.exp: Drop a pattern that is not needed.
+	* lib/gdb.exp (readnow): Match line-by-line.
+
+2021-04-27  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.xml/tdesc-reload.exp: Pass -lbl.
+
+2021-04-27  Michael Weghorn  <m.weghorn@posteo.de>
+	    Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.python/libpy-autoloaded-pretty-printers-in-newobjfile-event.so-gdb.py: New test.
+	* gdb.python/py-autoloaded-pretty-printers-in-newobjfile-event-lib.cc: New test.
+	* gdb.python/py-autoloaded-pretty-printers-in-newobjfile-event-lib.h: New test.
+	* gdb.python/py-autoloaded-pretty-printers-in-newobjfile-event-main.cc: New test.
+	* gdb.python/py-autoloaded-pretty-printers-in-newobjfile-event.exp: New test.
+	* gdb.python/py-autoloaded-pretty-printers-in-newobjfile-event.py: New test.
+
+2021-04-26  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/27743:
+	* gdb.dwarf2/imported-unit-bp.exp: New file.
+	* gdb.dwarf2/imported-unit-bp-main.c: New file.
+	* gdb.dwarf2/imported-unit-bp-alt.c: New file.
+
+2021-04-26  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27773
+	* gdb.base/dump.exp: Test dump to non-existent dir.
+
+2021-04-26  Luis Machado  <luis.machado@linaro.org>
+
+	* gdb.arch/aarch64-dbreg-contents.c (set_watchpoint): Fix arch level
+	comparison.
+
+2021-04-25  Lancelot Six  <lsix@lancelotsix.com>
+
+	PR gdb/22640
+	* gdb.base/ptype-offsets.exp: Add tests to verify the behavior
+	of 'ptype/ox' and 'ptype/od'. Check that 'set print type hex'
+	changes the default behavior of 'ptype/o'.  Update to take into
+	account new horizontal layout.
+	* gdb.rust/simple.exp: Update ptype test to check new horizontal
+	layout.
+	* gdb.rust/union.exp: Same.
+
 2021-04-23  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.base/info_sources.exp: Add new tests.

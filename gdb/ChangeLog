@@ -1,3 +1,83 @@
+2021-04-27  Luis Machado  <luis.machado@linaro.org>
+
+	* psymtab.c (psymbol_functions::dump): Output newline.
+	Remove wrap.
+	* symmisc.c (dump_objfile): Likewise.
+
+2021-04-27  Michael Weghorn  <m.weghorn@posteo.de>
+	    Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb/auto-load.c (_initialize_auto_load): 'Specify token
+	when attaching the 'auto_load_new_objfile' observer, so
+	other observers can specify it as a dependency.
+	* gdb/auto-load.h (struct token): Declare
+	'auto_load_new_objfile_observer_token' as token to be used
+	for the 'auto_load_new_objfile' observer.
+	* gdb/python/py-inferior.c (gdbpy_initialize_inferior): Make
+	'python_new_objfile' observer depend on 'auto_load_new_objfile'
+	observer, so it gets notified after the latter.
+
+2021-04-27  Michael Weghorn  <m.weghorn@posteo.de>
+	    Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* unittests/observable-selftests.c (dependency_test_counters):
+	New.
+	(observer_token0, observer_token1, observer_token2,
+	observer_token3, observer_token4, observer_token5): New.
+	(struct dependency_observer_data): New struct.
+	(observer_dependency_test_callback): New function.
+	(test_observers): New.
+	(run_dependency_test): New function.
+	(test_dependency): New.
+	(_initialize_observer_selftest): Register dependency test.
+
+2021-04-26  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27773
+	* cli/cli-dump.c (dump_binary_file): Check result of
+	gdb_fopen_cloexec.
+
+2021-04-25  Sergei Trofimovich  <siarheit@google.com>
+
+	* sparc-linux-nat.c (sparc_linux_nat_target): fix sparc build
+	by passing `process_stratum_target*` parameter.
+
+2021-04-25  Lancelot Six  <lsix@lancelotsix.com>
+
+	PR gdb/22640
+	* typeprint.h (struct type_print_options): Add print_in_hex
+	flag.
+	(struct print_offset_data): Add print_in_hex flag, add a
+	constructor accepting a type_print_options* argument.
+	* typeprint.c (type_print_raw_options, default_ptype_flags): Set
+	default value for print_in_hex.
+	(print_offset_data::indentation): Allow more horizontal space.
+	(print_offset_data::print_offset_data): Add ctor.
+	(print_offset_data::maybe_print_hole, print_offset_data::update):
+	Handle the print_in_hex flag.
+	(whatis_exp): Handle 'x' and 'd' flags.
+	(print_offsets_and_sizes_in_hex): Declare.
+	(set_print_offsets_and_sizes_in_hex): Create.
+	(show_print_offsets_and_sizes_in_hex): Create.
+	(_initialize_typeprint): Update help message for the ptype
+	command, register the 'set print type hex' and 'show print type
+	hex' commands.
+	* c-typeprint.c (c_print_type, c_type_print_base_struct_union)
+	(c_type_print_base): Construct the print_offset_data
+	object using the type_print_optons parameter.
+	* rust-lang.c (rust_language::print_type): Construct the
+	print_offset_data object using the type_print_optons parameter.
+	* NEWS: Mention the new flags of the ptype command.
+
+2021-04-25  Lancelot Six  <lsix@lancelotsix.com>
+
+	* typeprint.h (struct type_print_options): Move before
+	print_offset_data.
+
+2021-04-25  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 10.2 released.
+
 2021-04-23  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* observable.c (observer_debug): Change to bool.

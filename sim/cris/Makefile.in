@@ -36,12 +36,9 @@ SIM_OBJS = \
 # FIXME: $(srccom)/cgen-ops.h should be in CGEN_INCLUDE_DEPS.
 SIM_EXTRA_DEPS = \
 	$(CGEN_INCLUDE_DEPS) $(srccom)/cgen-ops.h \
-	arch.h cpuall.h cris-sim.h cris-desc.h engv10.h
+	arch.h cpuall.h cris-sim.h cris-desc.h engv10.h engv32.h
 
 SIM_EXTRA_CLEAN = cris-clean
-
-# This selects the cris newlib/libgloss syscall definitions.
-NL_TARGET = -DNL_TARGET_cris
 
 ## COMMON_POST_CONFIG_FRAG
 
