@@ -144,6 +144,8 @@ static amd_dbgapi_log_level_t get_debug_amdgpu_log_level ();
 
 struct rocm_target_ops final : public target_ops
 {
+  bool report_thread_events = false;
+
   const target_info &
   info () const override
   {
@@ -173,6 +175,13 @@ struct rocm_target_ops final : public target_ops
   void update_thread_list () override;
 
   struct gdbarch *thread_architecture (ptid_t) override;
+
+  void
+  thread_events (int enable) override
+  {
+    report_thread_events = enable;
+    beneath ()->thread_events (enable);
+  }
 
   std::string pid_to_str (ptid_t ptid) override;
 
@@ -779,13 +788,14 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 					   AMD_DBGAPI_PROGRESS_NO_FORWARD);
       gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
 
+      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
       status
-	= amd_dbgapi_wave_resume (get_amd_dbgapi_wave_id (ptid),
+	= amd_dbgapi_wave_resume (wave_id,
 				  (step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
 					: AMD_DBGAPI_RESUME_MODE_NORMAL));
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_ ("Could not resume %s (rc=%d)"),
-	       pid_to_str (thread->ptid).c_str (), status);
+	error (_ ("wave_resume for wave_%ld failed (rc=%d)"), wave_id.handle,
+	       status);
     }
 }
 
@@ -835,47 +845,68 @@ rocm_target_ops::stop (ptid_t ptid)
 	return;
     }
 
-  for (thread_info *thread :
-       all_non_exited_threads (current_inferior ()->process_target (), ptid))
+  auto stop_one_thread = [this] (thread_info *thread) {
+    gdb_assert (thread != nullptr);
+
+    amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
+    amd_dbgapi_wave_state_t state;
+
+    amd_dbgapi_status_t status
+      = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STATE,
+				  sizeof (state), &state);
+    if (status == AMD_DBGAPI_STATUS_SUCCESS)
+      {
+	/* If the wave is already known to be stopped then do nothing.  */
+	if (state == AMD_DBGAPI_WAVE_STATE_STOP)
+	  return;
+
+	status = amd_dbgapi_wave_stop (wave_id);
+	if (status == AMD_DBGAPI_STATUS_SUCCESS)
+	  return;
+
+	if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
+	  error (_ ("wave_stop for wave_%ld failed (rc=%d)"), wave_id.handle,
+		 status);
+      }
+    else if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
+      error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
+	     status);
+
+    /* The status is AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID.  The wave
+       could have terminated since the last time the wave list was
+       refreshed.  */
+
+    if (report_thread_events)
+      {
+	get_rocm_inferior_info (thread->inf)
+	  ->wave_events.emplace_back (thread->ptid,
+				      target_waitstatus{
+					TARGET_WAITKIND_THREAD_EXITED, 0 });
+
+	if (target_is_async_p ())
+	  async_event_handler_mark ();
+      }
+
+    delete_thread_silent (thread);
+  };
+
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  if (!many_threads)
     {
-      if (!ptid_is_gpu (thread->ptid))
-	continue;
-
-      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
-      amd_dbgapi_wave_state_t state;
-
-      amd_dbgapi_status_t status
-	= amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STATE,
-				    sizeof (state), &state);
-
-      if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-	{
-	  /* The wave could have terminated since the last time the wave list
-	     was refreshed.  The next wave list will not include this wave, so
-	     there's nothing else needed here.  */
-	  continue;
-	}
-      else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
-	       status);
-
-      /* If the wave is already known to be stopped then do nothing.  */
-      if (state == AMD_DBGAPI_WAVE_STATE_STOP)
-	continue;
-
-      status = amd_dbgapi_wave_stop (wave_id);
-
-      if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-	{
-	  /* The wave could have terminated, see comment above.  */
-	  continue;
-	}
-      else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	{
-	  error (_ ("Could not stop %s (rc=%d)"),
-		 pid_to_str (thread->ptid).c_str (), status);
-	}
+      /* No need to iterate all non-exited threads if the request is to stop a
+	 specific thread.  */
+      stop_one_thread (find_thread_ptid (proc_target, ptid));
+      return;
     }
+
+  for (auto *inf : all_inferiors (proc_target))
+    /* Use the threads_safe iterator since stop_one_thread may delete the
+       thread if is has exited.  */
+    for (auto *thread : inf->threads_safe ())
+      if (thread->state != THREAD_EXITED && thread->ptid.matches (ptid)
+	  && ptid_is_gpu (thread->ptid))
+	stop_one_thread (thread);
 }
 
 static void
