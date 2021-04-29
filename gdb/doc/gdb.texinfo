@@ -27147,13 +27147,16 @@ If you want to print the log to both the console and a file, ommit the
 
 @c TODO: Add when support available:
 @c
-@c The @var{AMD_???} environment variable can be set to disable the kernel
-@c driver from ensuring that all AMD GPU wavefronts created will fully
-@c support the @value{GDBN} if it attached.  If AMD GPU wavefronts are
-@c created when support is disabled, @value{GDBN} will be unable to
-@c report the heterogeneous dispatch associated with the wavefront, or the
-@c wavefront's heterogeneous work-group position.  The default is enabled.
-@c Disabling may very marginally improve wavefront launch latency.
+@c By default, the kernel driver causes all @acronym{AMD GPU} wavefronts
+@c created when @value{GDBN} is not attached to be unable to report the
+@c heterogeneous dispatch associated with the wavefront, or the wavefront's
+@c heterogeneous work-group position.  This does not affect wavefronts created
+@c while @value{GDBN} is attached which are always capable of reporting this
+@c information.  If the @env{HSA_ENABLE_FULL_GDB_SUPPORT} environment variable
+@c is set to @samp{1} when the @acronym{AMD ROCm} runtime is initialized, then
+@c this information will be available even for wavefronts created when
+@c @value{GDBN} was not attached, but may very marginally reduce wavefront
+@c launch latency for very short lived wavefronts.
 
 @value{GDBN} @acronym{AMD GPU} support is currently a prototype and
 has the following restrictions.  Future releases aim to address these
