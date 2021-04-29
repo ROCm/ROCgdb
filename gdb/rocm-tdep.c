@@ -115,8 +115,7 @@ struct rocm_inferior_info
     watchpoint_map;
 
   /* List of pending events the rocm target retrieved from the dbgapi.  */
-  std::list<std::pair<amd_dbgapi_event_id_t, amd_dbgapi_event_kind_t>>
-    wave_events;
+  std::list<std::pair<ptid_t, target_waitstatus>> wave_events;
 
   /* Map of rocm_notify_shared_library_info's for libraries that have been
      registered to receive notifications when loading/unloading.  */
@@ -990,8 +989,62 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
     {
     case AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED:
     case AMD_DBGAPI_EVENT_KIND_WAVE_STOP:
-      info->wave_events.emplace_back (event_id, event_kind);
-      return;
+      {
+	amd_dbgapi_wave_id_t wave_id;
+	status
+	  = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_WAVE,
+				       sizeof (wave_id), &wave_id);
+	if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	  error (_ ("event_get_info for event_%ld failed (rc=%d)"),
+		 event_id.handle, status);
+
+	ptid_t event_ptid (pid, 1, wave_id.handle);
+	target_waitstatus ws;
+
+	amd_dbgapi_wave_stop_reason_t stop_reason;
+	status = amd_dbgapi_wave_get_info (wave_id,
+					   AMD_DBGAPI_WAVE_INFO_STOP_REASON,
+					   sizeof (stop_reason), &stop_reason);
+	if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID
+	    && event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED)
+	  {
+	    ws.kind = TARGET_WAITKIND_THREAD_EXITED;
+	    ws.value.integer = 0;
+	  }
+	else if (status == AMD_DBGAPI_STATUS_SUCCESS)
+	  {
+	    ws.kind = TARGET_WAITKIND_STOPPED;
+
+	    if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
+	      ws.value.sig = GDB_SIGNAL_SEGV;
+	    else if (stop_reason
+		     & (AMD_DBGAPI_WAVE_STOP_REASON_FP_INPUT_DENORMAL
+			| AMD_DBGAPI_WAVE_STOP_REASON_FP_DIVIDE_BY_0
+			| AMD_DBGAPI_WAVE_STOP_REASON_FP_OVERFLOW
+			| AMD_DBGAPI_WAVE_STOP_REASON_FP_UNDERFLOW
+			| AMD_DBGAPI_WAVE_STOP_REASON_FP_INEXACT
+			| AMD_DBGAPI_WAVE_STOP_REASON_FP_INVALID_OPERATION
+			| AMD_DBGAPI_WAVE_STOP_REASON_INT_DIVIDE_BY_0))
+	      ws.value.sig = GDB_SIGNAL_FPE;
+	    else if (stop_reason
+		     & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
+			| AMD_DBGAPI_WAVE_STOP_REASON_WATCHPOINT
+			| AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP
+			| AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP
+			| AMD_DBGAPI_WAVE_STOP_REASON_TRAP))
+	      ws.value.sig = GDB_SIGNAL_TRAP;
+	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP)
+	      ws.value.sig = GDB_SIGNAL_ABRT;
+	    else
+	      ws.value.sig = GDB_SIGNAL_0;
+	  }
+	else
+	  error (_ ("wave_get_info for wave_%ld failed (rc=%d)"),
+		 wave_id.handle, status);
+
+	info->wave_events.emplace_back (event_ptid, ws);
+	break;
+      }
 
     case AMD_DBGAPI_EVENT_KIND_CODE_OBJECT_LIST_UPDATED:
       amd_dbgapi_code_object_list_updated.notify ();
@@ -1090,7 +1143,7 @@ rocm_target_ops::has_pending_events ()
   return beneath ()->has_pending_events ();
 }
 
-static std::pair<amd_dbgapi_event_id_t, amd_dbgapi_event_kind_t>
+static std::pair<ptid_t, target_waitstatus>
 rocm_consume_one_event (ptid_t ptid)
 {
   auto *target = current_inferior ()->process_target ();
@@ -1113,7 +1166,7 @@ rocm_consume_one_event (ptid_t ptid)
     }
 
   if (info->wave_events.empty ())
-    return {};
+    return { minus_one_ptid, target_waitstatus{ TARGET_WAITKIND_IGNORE, 0 } };
 
   auto event = info->wave_events.front ();
   info->wave_events.pop_front ();
@@ -1127,7 +1180,6 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 {
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
   gdb_assert (ptid == minus_one_ptid || ptid.is_pid ());
-  amd_dbgapi_status_t status;
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
@@ -1138,6 +1190,9 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   ptid_t event_ptid = beneath ()->wait (ptid, ws, target_options);
   if (event_ptid != minus_one_ptid)
     return event_ptid;
+
+  gdb_assert (ws->kind == TARGET_WAITKIND_NO_RESUMED
+	      || ws->kind == TARGET_WAITKIND_IGNORE);
 
   /* Flush the async handler first.  */
   if (target_is_async_p ())
@@ -1152,16 +1207,18 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
       async_event_handler_mark ();
   });
 
-  auto *target = current_inferior ()->process_target ();
+  auto *proc_target = current_inferior ()->process_target ();
   amd_dbgapi_process_id_t process_id;
 
   if (ptid != minus_one_ptid)
     {
       gdb_assert (ptid.is_pid ());
-      inferior *inf = find_inferior_pid (target, ptid.pid ());
+      inferior *inf = find_inferior_pid (proc_target, ptid.pid ());
 
       gdb_assert (inf != nullptr);
       process_id = get_rocm_inferior_info (inf)->process_id;
+
+      gdb_assert (process_id != AMD_DBGAPI_PROCESS_NONE);
     }
   else
     process_id = AMD_DBGAPI_PROCESS_NONE;
@@ -1170,17 +1227,15 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
      minus_on_ptid, or all attached processes if ptid is minus_one_ptid.  */
   amd_dbgapi_process_set_progress (process_id, AMD_DBGAPI_PROGRESS_NO_FORWARD);
 
-  amd_dbgapi_event_id_t event_id;
-  amd_dbgapi_event_kind_t event_kind;
-  std::tie (event_id, event_kind) = rocm_consume_one_event (ptid);
-
-  if (event_id == AMD_DBGAPI_EVENT_NONE)
+  target_waitstatus gpu_waitstatus;
+  std::tie (event_ptid, gpu_waitstatus) = rocm_consume_one_event (ptid);
+  if (event_ptid == minus_one_ptid)
     {
       /* Drain the events from the amd_dbgapi and preserve the ordering.  */
       rocm_process_event_queue ();
 
-      std::tie (event_id, event_kind) = rocm_consume_one_event (ptid);
-      if (event_id == AMD_DBGAPI_EVENT_NONE)
+      std::tie (event_ptid, gpu_waitstatus) = rocm_consume_one_event (ptid);
+      if (event_ptid == minus_one_ptid)
 	{
 	  /* If we requested a specific ptid, and nothing came out, assume
 	     another ptid may have more events, otherwise, keep the
@@ -1188,86 +1243,40 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 	  if (ptid == minus_one_ptid)
 	    more_events.release ();
 
-	  /* There are no GPU events, return the host's wait kind.  */
+	  if (ws->kind == TARGET_WAITKIND_NO_RESUMED)
+	    {
+	      /* We can't easily check that all GPU waves are stopped, and no
+		 new waves can be created (the GPU has fixed function hardware
+		 to create new threads), so even if the target beneath returns
+		 waitkind_no_resumed, we have to report waitkind_ignore if GPU
+		 debugging is enabled for at least one resumed inferior handled
+		 by the ROCm target.  */
+
+	      for (inferior *inf : all_inferiors ())
+		if (inf->target_at (arch_stratum) == &rocm_ops
+		    && get_rocm_inferior_info (inf)->runtime_loaded)
+		  {
+		    ws->kind = TARGET_WAITKIND_IGNORE;
+		    break;
+		  }
+	    }
+
+	  /* There are no events to report, return the target beneath's
+	     waitstatus (either IGNORE or NO_RESUMED).  */
 	  return minus_one_ptid;
 	}
     }
 
-  gdb_assert ((event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED
-	       || event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_STOP)
-	      && "Unsupported event_kind");
-
-  status = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_PROCESS,
-				      sizeof (process_id), &process_id);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("event_get_info for event_%ld failed (rc=%d)"), event_id.handle,
-	   status);
-
-  amd_dbgapi_wave_id_t wave_id;
-  status = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_WAVE,
-				      sizeof (wave_id), &wave_id);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("event_get_info for event_%ld failed (rc=%d)"), event_id.handle,
-	   status);
-
-  amd_dbgapi_event_processed (event_id);
-
-  amd_dbgapi_os_process_id_t pid;
-  status
-    = amd_dbgapi_process_get_info (process_id, AMD_DBGAPI_PROCESS_INFO_OS_ID,
-				   sizeof (pid), &pid);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("process_get_info for process_%ld failed (rc=%d)"),
-	   process_id.handle, status);
-
-  event_ptid = ptid_t (pid, 1, wave_id.handle);
-
-  amd_dbgapi_wave_stop_reason_t stop_reason;
-  status = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STOP_REASON,
-				     sizeof (stop_reason), &stop_reason);
-  if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID
-      && event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED)
+  if (!find_thread_ptid (proc_target, event_ptid))
     {
-      ws->kind = TARGET_WAITKIND_THREAD_EXITED;
-      ws->value.integer = 0;
-      return event_ptid;
-    }
-  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
-	   status);
-
-  if (!find_thread_ptid (target, event_ptid))
-    {
-      add_thread_silent (target, event_ptid);
-      set_running (target, event_ptid, 1);
-      set_executing (target, event_ptid, 1);
+      /* Silently create new GPU threads to avoid spamming the terminal with
+	 thousands of "[New Thread ...]" messages.  */
+      add_thread_silent (proc_target, event_ptid);
+      set_running (proc_target, event_ptid, 1);
+      set_executing (proc_target, event_ptid, 1);
     }
 
-  ws->kind = TARGET_WAITKIND_STOPPED;
-
-  if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
-    ws->value.sig = GDB_SIGNAL_SEGV;
-  else if (stop_reason
-	   & (AMD_DBGAPI_WAVE_STOP_REASON_FP_INPUT_DENORMAL
-	      | AMD_DBGAPI_WAVE_STOP_REASON_FP_DIVIDE_BY_0
-	      | AMD_DBGAPI_WAVE_STOP_REASON_FP_OVERFLOW
-	      | AMD_DBGAPI_WAVE_STOP_REASON_FP_UNDERFLOW
-	      | AMD_DBGAPI_WAVE_STOP_REASON_FP_INEXACT
-	      | AMD_DBGAPI_WAVE_STOP_REASON_FP_INVALID_OPERATION
-	      | AMD_DBGAPI_WAVE_STOP_REASON_INT_DIVIDE_BY_0))
-    ws->value.sig = GDB_SIGNAL_FPE;
-  else if (stop_reason
-	   & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
-	      | AMD_DBGAPI_WAVE_STOP_REASON_WATCHPOINT
-	      | AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP
-	      | AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP
-	      | AMD_DBGAPI_WAVE_STOP_REASON_TRAP))
-    ws->value.sig = GDB_SIGNAL_TRAP;
-  else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP)
-    ws->value.sig = GDB_SIGNAL_ABRT;
-  else
-    ws->value.sig = GDB_SIGNAL_0;
-
+  *ws = gpu_waitstatus;
   return event_ptid;
 }
 
