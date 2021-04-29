@@ -27468,6 +27468,13 @@ re-run, watchpoints are only re-activated on the CPU, not on the AMD
 GPU.
 
 @item
+Watchpoints are not reported for memory that is written by memory
+transfers performed by @acronym{DMA, Direct Memory Access} hardware.
+The @env{HSA_ENABLE_SDMA} environment variable can be set to @samp{0}
+to disable the @acronym{AMD ROCm} runtime from using @acronym{DMA} for
+transfers between the CPU and @acronym{AMD GPU}.
+
+@item
 When single stepping there can be times when @value{GDBN} appears to
 wait indefinitely for the single step to complete.  If this happens,
 @samp{Ctrl-C} can be used to cancel the single step command so it can
@@ -27478,7 +27485,7 @@ The HIP runtime currently loads code objects from memory, including
 when loading modules from a file, which results in code object URIs
 being reported as @samp{memory://}.
 
-The @code{HSA_LOADER_ENABLE_MMAP_URI} environment variable can be used
+The @env{HSA_LOADER_ENABLE_MMAP_URI} environment variable can be used
 to request that the @acronym{AMD ROCm} runtime attempt to determine
 the file containing the code object memory so that @samp{file://} URIs
 can be reported.
