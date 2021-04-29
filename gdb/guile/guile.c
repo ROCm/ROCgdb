@@ -75,12 +75,12 @@ const char *gdbscm_print_excp = gdbscm_print_excp_message;
 
 #ifdef HAVE_GUILE
 
-static void gdbscm_finish_initialization
-  (const struct extension_language_defn *);
+static void gdbscm_initialize (const struct extension_language_defn *);
 static int gdbscm_initialized (const struct extension_language_defn *);
 static void gdbscm_eval_from_control_command
   (const struct extension_language_defn *, struct command_line *);
 static script_sourcer_func gdbscm_source_script;
+static void gdbscm_set_backtrace (int enable);
 
 int gdb_scheme_initialized;
 
@@ -112,7 +112,7 @@ static const struct extension_language_script_ops guile_extension_script_ops =
 
 static const struct extension_language_ops guile_extension_ops =
 {
-  gdbscm_finish_initialization,
+  gdbscm_initialize,
   gdbscm_initialized,
 
   gdbscm_eval_from_control_command,
@@ -637,13 +637,46 @@ call_initialize_gdb_module (void *data)
   return NULL;
 }
 
-/* A callback to finish Guile initialization after gdb has finished all its
-   initialization.
-   This is the extension_language_ops.finish_initialization "method".  */
+/* A callback to initialize Guile after gdb has finished all its
+   initialization.  This is the extension_language_ops.initialize "method".  */
 
 static void
-gdbscm_finish_initialization (const struct extension_language_defn *extlang)
+gdbscm_initialize (const struct extension_language_defn *extlang)
 {
+#if HAVE_GUILE
+  /* The Python support puts the C side in module "_gdb", leaving the
+     Python side to define module "gdb" which imports "_gdb".  There is
+     evidently no similar convention in Guile so we skip this.  */
+
+#if HAVE_GUILE_MANUAL_FINALIZATION
+  /* Our SMOB free functions are not thread-safe, as GDB itself is not
+     intended to be thread-safe.  Disable automatic finalization so that
+     finalizers aren't run in other threads.  */
+  scm_set_automatic_finalization_enabled (0);
+#endif
+
+  /* Before we initialize Guile, block signals needed by gdb (especially
+     SIGCHLD).  This is done so that all threads created during Guile
+     initialization have SIGCHLD blocked.  PR 17247.  Really libgc and
+     Guile should do this, but we need to work with libgc 7.4.x.  */
+  {
+    gdb::block_signals blocker;
+
+    /* scm_with_guile is the most portable way to initialize Guile.  Plus
+       we need to initialize the Guile support while in Guile mode (e.g.,
+       called from within a call to scm_with_guile).  */
+    scm_with_guile (call_initialize_gdb_module, NULL);
+  }
+
+  /* Set Guile's backtrace to match the "set guile print-stack" default.
+     [N.B. The two settings are still separate.]  But only do this after
+     we've initialized Guile, it's nice to see a backtrace if there's an
+     error during initialization.  OTOH, if the error is that gdb/init.scm
+     wasn't found because gdb is being run from the build tree, the
+     backtrace is more noise than signal.  Sigh.  */
+  gdbscm_set_backtrace (0);
+#endif
+
   /* Restore the environment to the user interaction one.  */
   scm_set_current_module (scm_interaction_environment ());
 }
@@ -770,43 +803,4 @@ void
 _initialize_guile ()
 {
   install_gdb_commands ();
-
-#if HAVE_GUILE
-  {
-    /* The Python support puts the C side in module "_gdb", leaving the Python
-       side to define module "gdb" which imports "_gdb".  There is evidently no
-       similar convention in Guile so we skip this.  */
-
-#if HAVE_GUILE_MANUAL_FINALIZATION
-    /* Our SMOB free functions are not thread-safe, as GDB itself is not
-       intended to be thread-safe.  Disable automatic finalization so that
-       finalizers aren't run in other threads.  */
-    scm_set_automatic_finalization_enabled (0);
-#endif
-
-    /* Before we initialize Guile, block signals needed by gdb
-       (especially SIGCHLD).
-       This is done so that all threads created during Guile initialization
-       have SIGCHLD blocked.  PR 17247.
-       Really libgc and Guile should do this, but we need to work with
-       libgc 7.4.x.  */
-    {
-      gdb::block_signals blocker;
-
-      /* scm_with_guile is the most portable way to initialize Guile.
-	 Plus we need to initialize the Guile support while in Guile mode
-	 (e.g., called from within a call to scm_with_guile).  */
-      scm_with_guile (call_initialize_gdb_module, NULL);
-    }
-
-    /* Set Guile's backtrace to match the "set guile print-stack" default.
-       [N.B. The two settings are still separate.]
-       But only do this after we've initialized Guile, it's nice to see a
-       backtrace if there's an error during initialization.
-       OTOH, if the error is that gdb/init.scm wasn't found because gdb is
-       being run from the build tree, the backtrace is more noise than signal.
-       Sigh.  */
-    gdbscm_set_backtrace (0);
-  }
-#endif
 }

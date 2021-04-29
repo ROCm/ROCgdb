@@ -1,3 +1,123 @@
+2021-04-28  Tom Tromey  <tromey@adacore.com>
+
+	* ada-exp.y (primary): Use new type for null pointer.
+	* ada-lang.c (ada_type_match): Remove "may_deref"
+	parameter.  Handle null pointer.
+	(ada_args_match): Update.
+	* ada-valprint.c (ada_value_print_ptr, ada_value_print):
+	Handle null pointer.
+
+2021-04-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Mention new commands.
+	* python/python.c (python_ignore_environment): New static global.
+	(show_python_ignore_environment): New function.
+	(set_python_ignore_environment): New function.
+	(python_dont_write_bytecode): New static global.
+	(show_python_dont_write_bytecode): New function.
+	(set_python_dont_write_bytecode): New function.
+	(_initialize_python): Register new commands.
+
+2021-04-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* extension-priv.h (struct extension_language_ops): Rename
+	'finish_initialization' to 'initialize'.
+	* extension.c (finish_ext_lang_initialization): Renamed to...
+	(ext_lang_initialization): ...this, update comment, and updated
+	the calls to reflect the change in struct extension_language_ops.
+	* extension.h (finish_ext_lang_initialization): Renamed to...
+	(ext_lang_initialization): ...this.
+	* guile/guile.c (gdbscm_finish_initialization): Renamed to...
+	(gdbscm_initialize): ...this, update comment at definition.
+	(guile_extension_ops): Update.
+	* main.c (captured_main_1): Update call to
+	finish_ext_lang_initialization.
+	* python/python.c (gdbpy_finish_initialization): Rename to...
+	(gdbpy_initialize): ...this, update comment at definition, and
+	update call to do_finish_initialization.
+	(python_extension_ops): Update.
+	(do_finish_initialization): Rename to...
+	(do_initialize): ...this, and update comment.
+
+2021-04-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* main.c (captured_main_1): Add a call to
+	finish_ext_lang_initialization.
+	* top.c (gdb_init): Remove call to finish_ext_lang_initialization.
+
+2021-04-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* guile/guile.c (gdbscm_set_backtrace): Add declaration.
+	(gdbscm_finish_initialization): Add code moved from
+	_initialize_guile.
+	(_initialize_guile): Move code to gdbscm_finish_initialization.
+	* guile/scm-arch.c (gdbscm_initialize_arches): Move some code into
+	_initialize_scm_arch.
+	(_initialize_scm_arch): New function.
+	* guile/scm-block.c (gdbscm_initialize_blocks): Move some code
+	into _initialize_scm_block.
+	(_initialize_scm_block): New function.
+	* guile/scm-frame.c (gdbscm_initialize_frames): Move some code
+	into _initialize_scm_frame.
+	(_initialize_scm_frame): New function.
+	* guile/scm-objfile.c (gdbscm_initialize_objfiles): Move some code
+	into _initialize_scm_objfile.
+	(_initialize_scm_objfile): New function.
+	* guile/scm-progspace.c (gdbscm_initialize_pspaces): Move some
+	code into _initialize_scm_progspace.
+	(_initialize_scm_progspace): New function.
+	* guile/scm-symbol.c (gdbscm_initialize_symbols): Move some code
+	into _initialize_scm_symbol.
+	(_initialize_scm_symbol): New function.
+	* guile/scm-symtab.c (gdbscm_initialize_symtabs): Move some code
+	into _initialize_scm_symtab.
+	(_initialize_scm_symtab): New function.
+	* guile/scm-type.c (gdbscm_initialize_types): Move some code into
+	_initialize_scm_type.
+	(_initialize_scm_type): New function.
+
+2021-04-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* python/py-arch.c (_initialize_py_arch): New function.
+	(gdbpy_initialize_arch): Move code to _initialize_py_arch.
+	* python/py-block.c (_initialize_py_block): New function.
+	(gdbpy_initialize_blocks): Move code to _initialize_py_block.
+	* python/py-inferior.c (_initialize_py_inferior): New function.
+	(gdbpy_initialize_inferior): Move code to _initialize_py_inferior.
+	* python/py-objfile.c (_initialize_py_objfile): New function.
+	(gdbpy_initialize_objfile): Move code to _initialize_py_objfile.
+	* python/py-progspace.c (_initialize_py_progspace): New function.
+	(gdbpy_initialize_pspace): Move code to _initialize_py_progspace.
+	* python/py-registers.c (_initialize_py_registers): New function.
+	(gdbpy_initialize_registers): Move code to
+	_initialize_py_registers.
+	* python/py-symbol.c (_initialize_py_symbol): New function.
+	(gdbpy_initialize_symbols): Move code to _initialize_py_symbol.
+	* python/py-symtab.c (_initialize_py_symtab): New function.
+	(gdbpy_initialize_symtabs): Move code to _initialize_py_symtab.
+	* python/py-type.c (_initialize_py_type): New function.
+	(gdbpy_initialize_types): Move code to _initialize_py_type.
+	* python/py-unwind.c (_initialize_py_unwind): New function.
+	(gdbpy_initialize_unwind): Move code to _initialize_py_unwind.
+	* python/python.c (_initialize_python): Move call to
+	do_start_initialization to gdbpy_finish_initialization.
+	(gdbpy_finish_initialization): Add call to
+	do_start_initialization.
+
+2021-04-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* extension.c (struct scoped_default_signal): New struct.
+	(scoped_default_sigint): New typedef.
+	(finish_ext_lang_initialization): Make use of
+	scoped_default_sigint.
+
+2021-04-28  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* main.c (captured_main_1): Don't pass argument to gdb_init.
+	* top.c (gdb_init): Remove unused argument, and add header
+	comment.
+	* top.h (gdb_init): Remove argument.
+
 2021-04-27  Luis Machado  <luis.machado@linaro.org>
 
 	* psymtab.c (psymbol_functions::dump): Output newline.
