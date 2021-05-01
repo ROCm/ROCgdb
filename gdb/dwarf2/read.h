@@ -42,6 +42,7 @@ struct tu_stats
   int nr_symtab_sharers;
   int nr_stmt_less_type_units;
   int nr_all_type_units_reallocs;
+  int nr_tus;
 };
 
 struct dwarf2_cu;
@@ -93,39 +94,21 @@ struct dwarf2_per_bfd
 
   DISABLE_COPY_AND_ASSIGN (dwarf2_per_bfd);
 
-  /* Return the CU/TU given its index.
-
-     This is intended for loops like:
-
-     for (i = 0; i < (dwarf2_per_bfd->n_comp_units
-		      + dwarf2_per_bfd->n_type_units); ++i)
-       {
-	 dwarf2_per_cu_data *per_cu = dwarf2_per_bfd->get_cutu (i);
-
-	 ...;
-       }
-  */
-  dwarf2_per_cu_data *get_cutu (int index);
-
-  /* Return the CU given its index.
-     This differs from get_cutu in that it's for when you know INDEX refers to a
-     CU.  */
-  dwarf2_per_cu_data *get_cu (int index);
-
-  /* Return the TU given its index.
-     This differs from get_cutu in that it's for when you know INDEX refers to a
-     TU.  */
-  signatured_type *get_tu (int index);
+  /* Return the CU given its index.  */
+  dwarf2_per_cu_data *get_cu (int index) const
+  {
+    return this->all_comp_units[index].get ();
+  }
 
   /* A convenience function to allocate a dwarf2_per_cu_data.  The
      returned object has its "index" field set properly.  The object
      is allocated on the dwarf2_per_bfd obstack.  */
-  dwarf2_per_cu_data *allocate_per_cu ();
+  std::unique_ptr<dwarf2_per_cu_data> allocate_per_cu ();
 
   /* A convenience function to allocate a signatured_type.  The
      returned object has its "index" field set properly.  The object
      is allocated on the dwarf2_per_bfd obstack.  */
-  signatured_type *allocate_signatured_type ();
+  std::unique_ptr<signatured_type> allocate_signatured_type ();
 
   /* Return the number of partial symtabs allocated with allocate_per_cu
      and allocate_signatured_type so far.  */
@@ -171,10 +154,7 @@ public:
 
   /* Table of all the compilation units.  This is used to locate
      the target compilation unit of a particular reference.  */
-  std::vector<dwarf2_per_cu_data *> all_comp_units;
-
-  /* The .debug_types-related CUs (TUs).  */
-  std::vector<signatured_type *> all_type_units;
+  std::vector<std::unique_ptr<dwarf2_per_cu_data>> all_comp_units;
 
   /* Table of struct type_unit_group objects.
      The hash key is the DW_AT_stmt_list value.  */
@@ -425,16 +405,29 @@ struct dwarf2_psymtab : public partial_symtab
 
 struct dwarf2_per_cu_data
 {
+  dwarf2_per_cu_data ()
+    : queued (false),
+      load_all_dies (false),
+      is_debug_types (false),
+      is_dwz (false),
+      reading_dwo_directly (false),
+      tu_read (false),
+      m_header_read_in (false),
+      unit_type {},
+      lang (language_unknown)
+  {
+  }
+
   /* The start offset and length of this compilation unit.
      NOTE: Unlike comp_unit_head.length, this length includes
      initial_length_size.
      If the DIE refers to a DWO file, this is always of the original die,
      not the DWO file.  */
-  sect_offset sect_off;
-  unsigned int length;
+  sect_offset sect_off {};
+  unsigned int length = 0;
 
   /* DWARF standard version this data has been read from (such as 4 or 5).  */
-  unsigned char dwarf_version;
+  unsigned char dwarf_version = 0;
 
   /* Flag indicating this compilation unit will be read in before
      any of the current compilation units are processed.  */
@@ -483,15 +476,15 @@ struct dwarf2_per_cu_data
   ENUM_BITFIELD (language) lang : LANGUAGE_BITS;
 
   /* Our index in the unshared "symtabs" vector.  */
-  unsigned index;
+  unsigned index = 0;
 
   /* The section this CU/TU lives in.
      If the DIE refers to a DWO file, this is always the original die,
      not the DWO file.  */
-  struct dwarf2_section_info *section;
+  struct dwarf2_section_info *section = nullptr;
 
   /* Backlink to the owner of this.  */
-  dwarf2_per_bfd *per_bfd;
+  dwarf2_per_bfd *per_bfd = nullptr;
 
   /* DWARF header of this CU.  Note that dwarf2_cu reads its own version of the
      header, which may differ from this one, since it may pass rcuh_kind::TYPE
@@ -500,7 +493,7 @@ struct dwarf2_per_cu_data
 
      Don't access this field directly, use the get_header method instead.  It
      should be private, but we can't make it private at the moment.  */
-  mutable comp_unit_head m_header;
+  mutable comp_unit_head m_header {};
 
   /* When dwarf2_per_bfd::using_index is true, the 'quick' field
      is active.  Otherwise, the 'psymtab' field is active.  */
@@ -512,7 +505,7 @@ struct dwarf2_per_cu_data
 
     /* Data needed by the "quick" functions.  */
     struct dwarf2_per_cu_quick_data *quick;
-  } v;
+  } v {};
 
   /* The CUs we import using DW_TAG_imported_unit.  This is filled in
      while reading psymtabs, used to compute the psymtab dependencies,
@@ -538,7 +531,7 @@ struct dwarf2_per_cu_data
      could be refactored to make this private.  Until then please try to
      avoid direct access to this member, and instead use the helper
      functions above.  */
-  std::vector <dwarf2_per_cu_data *> *imported_symtabs;
+  std::vector <dwarf2_per_cu_data *> *imported_symtabs = nullptr;
 
   /* Return true of IMPORTED_SYMTABS is empty or not yet allocated.  */
   bool imported_symtabs_empty () const
@@ -602,36 +595,30 @@ struct dwarf2_per_cu_data
 
 /* Entry in the signatured_types hash table.  */
 
-struct signatured_type
+struct signatured_type : public dwarf2_per_cu_data
 {
-  /* The "per_cu" object of this type.
-     This struct is used iff per_cu.is_debug_types.
-     N.B.: This is the first member so that it's easy to convert pointers
-     between them.  */
-  struct dwarf2_per_cu_data per_cu;
-
   /* The type's signature.  */
-  ULONGEST signature;
+  ULONGEST signature = 0;
 
   /* Offset in the TU of the type's DIE, as read from the TU header.
      If this TU is a DWO stub and the definition lives in a DWO file
      (specified by DW_AT_GNU_dwo_name), this value is unusable.  */
-  cu_offset type_offset_in_tu;
+  cu_offset type_offset_in_tu {};
 
   /* Offset in the section of the type's DIE.
      If the definition lives in a DWO file, this is the offset in the
      .debug_types.dwo section.
      The value is zero until the actual value is known.
      Zero is otherwise not a valid section offset.  */
-  sect_offset type_offset_in_section;
+  sect_offset type_offset_in_section {};
 
   /* Type units are grouped by their DW_AT_stmt_list entry so that they
      can share them.  This points to the containing symtab.  */
-  struct type_unit_group *type_unit_group;
+  struct type_unit_group *type_unit_group = nullptr;
 
   /* Containing DWO unit.
      This field is valid iff per_cu.reading_dwo_directly.  */
-  struct dwo_unit *dwo_unit;
+  struct dwo_unit *dwo_unit = nullptr;
 };
 
 /* Return the type of the DIE at DIE_OFFSET in the CU named by

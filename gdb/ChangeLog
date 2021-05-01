@@ -1,3 +1,164 @@
+2021-04-30  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_initialize_objfile): Update.
+	(add_signatured_type_cu_to_table): Remove.
+	(create_debug_type_hash_table): Assume dwo_file is non-null.
+	(create_debug_types_hash_table): Update comment.
+	(create_all_type_units): Remove.
+	(sort_tu_by_abbrev_offset): Update comment.
+	(build_type_psymtabs): Rename from build_type_psymtabs_1.
+	(build_type_psymtabs): Remove.
+	(process_skeletonless_type_unit, dwarf2_build_psymtabs_hard):
+	Update.
+	(read_comp_units_from_section): Add types_htab, section_kind
+	parameters.
+	(create_all_comp_units): Read type units.
+
+2021-04-30  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct tu_stats) <nr_tus>: New member.
+	(struct dwarf2_per_bfd) <get_cutu, get_tu>: Remove
+	<get_cu>: Now inline.
+	<all_type_units>: Remove.
+	* dwarf2/read.c (dwarf2_per_bfd::~dwarf2_per_bfd): Update.
+	(dwarf2_per_bfd::get_cutu, dwarf2_per_bfd::get_cu)
+	(dwarf2_per_bfd::get_tu): Remove.
+	(dwarf2_per_bfd::allocate_signatured_type): Update nr_tus.
+	(create_signatured_type_table_from_index)
+	(create_signatured_type_table_from_debug_names)
+	(dw2_symtab_iter_next, dwarf2_base_index_functions::print_stats)
+	(dwarf2_base_index_functions::expand_all_symtabs)
+	(dw2_expand_marked_cus, dw_expand_symtabs_matching_file_matcher)
+	(dwarf2_base_index_functions::map_symbol_filenames)
+	(dw2_debug_names_iterator::next, dwarf2_initialize_objfile)
+	(add_signatured_type_cu_to_table, create_all_type_units)
+	(add_type_unit, build_type_psymtabs_1, print_tu_stats)
+	(create_all_comp_units): Update.
+	* dwarf2/index-write.c (check_dwarf64_offsets, write_gdbindex)
+	(write_debug_names): Update.
+
+2021-04-30  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h (struct dwarf2_per_bfd) <allocate_per_cu,
+	allocate_signatured_type>: Change return type.
+	<all_comp_units, all_type_units>: Hold unique pointers.
+	(struct dwarf2_per_cu_data): Add constructor and initializers.
+	(struct signatured_type): Derive from dwarf2_per_cu_data.
+	* dwarf2/read.c (type_unit_group): Derive from
+	dwarf2_per_cu_data.
+	(dwarf2_per_bfd::get_cutu, dwarf2_per_bfd::get_cu)
+	(dwarf2_per_bfd::get_tu)
+	(dwarf2_per_bfd::allocate_signatured_type)
+	(dwarf2_per_bfd::allocate_signatured_type)
+	(create_cu_from_index_list, create_cus_from_index_list)
+	(create_signatured_type_table_from_index)
+	(create_signatured_type_table_from_debug_names)
+	(create_addrmap_from_aranges)
+	(dwarf2_base_index_functions::find_last_source_symtab)
+	(dw_expand_symtabs_matching_file_matcher)
+	(dwarf2_gdb_index::expand_symtabs_matching)
+	(dwarf2_base_index_functions::map_symbol_filenames)
+	(create_cus_from_debug_names_list)
+	(dw2_debug_names_iterator::next)
+	(dwarf2_debug_names_index::expand_symtabs_matching)
+	(create_debug_type_hash_table, add_type_unit)
+	(fill_in_sig_entry_from_dwo_entry, lookup_dwo_signatured_type):
+	Update.
+	(allocate_type_unit_groups_table): Use delete.
+	(create_type_unit_group): Change return type.  Use new.
+	(get_type_unit_group, build_type_psymtabs_1)
+	(build_type_psymtab_dependencies)
+	(process_skeletonless_type_unit, set_partial_user)
+	(dwarf2_build_psymtabs_hard, read_comp_units_from_section)
+	(create_cus_hash_table, queue_and_load_dwo_tu, follow_die_sig_1)
+	(read_signatured_type): Update.
+	(dwarf2_find_containing_comp_unit): Change type of
+	'all_comp_units'.
+	(run_test): Update.
+	(dwarf2_per_bfd::allocate_per_cu)
+	(dwarf2_per_bfd::allocate_signatured_type): Change return type.
+	Use new.
+	(add_signatured_type_cu_to_table): Update.
+	* dwarf2/index-write.c (write_one_signatured_type)
+	(check_dwarf64_offsets, psyms_seen_size, write_gdbindex)
+	(write_debug_names): Update.
+
+2021-04-30  Tom Tromey  <tromey@adacore.com>
+
+	* nat/windows-nat.h (get_image_name): Don't declare.
+	* nat/windows-nat.c (get_image_name): Now static.
+
+2021-04-30  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (windows_nat::handle_load_dll): Update.
+	(windows_nat_target::get_windows_debug_event): Call
+	dll_loaded_event.
+	(windows_add_all_dlls, windows_add_dll): Move to
+	nat/windows-nat.c.
+	* nat/windows-nat.h (handle_load_dll): Change parameters.
+	(dll_loaded_event, windows_add_all_dlls): Declare.
+	* nat/windows-nat.c (windows_add_dll, windows_add_all_dlls): Move
+	from windows-nat.c.
+	(dll_loaded_event): New function.
+
+2021-04-30  Tom Tromey  <tromey@adacore.com>
+
+	* nat/windows-nat.h (GenerateConsoleCtrlEvent): New define.
+	(GenerateConsoleCtrlEvent_ftype, GenerateConsoleCtrlEvent):
+	Declare.
+	* nat/windows-nat.c (GenerateConsoleCtrlEvent): Define.
+	(initialize_loadable): Initialize GenerateConsoleCtrlEvent.
+
+2021-04-30  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c: Move code to nat/windows-nat.[ch].
+	(_initialize_windows_nat): Call initialize_loadable.
+	* nat/windows-nat.h (AdjustTokenPrivileges)
+	(DebugActiveProcessStop, DebugBreakProcess)
+	(DebugSetProcessKillOnExit, EnumProcessModules)
+	(EnumProcessModulesEx, GetModuleInformation)
+	(GetModuleFileNameExA, GetModuleFileNameExW)
+	(LookupPrivilegeValueA, OpenProcessToken, GetConsoleFontSize)
+	(GetCurrentConsoleFont, Wow64SuspendThread)
+	(Wow64GetThreadContext, Wow64SetThreadContext)
+	(Wow64GetThreadSelectorEntry): Move from windows-nat.c.
+	(AdjustTokenPrivileges_ftype)
+	(DebugActiveProcessStop_ftype, DebugBreakProcess_ftype)
+	(DebugSetProcessKillOnExit_ftype, EnumProcessModules_ftype)
+	(EnumProcessModulesEx_ftype, GetModuleInformation_ftype)
+	(GetModuleFileNameExA_ftype, GetModuleFileNameExW_ftype)
+	(LookupPrivilegeValueA_ftype, OpenProcessToken_ftype)
+	(GetConsoleFontSize_ftype)
+	(GetCurrentConsoleFont_ftype, Wow64SuspendThread_ftype)
+	(Wow64GetThreadContext_ftype, Wow64SetThreadContext_ftype)
+	(Wow64GetThreadSelectorEntry_ftype): Likewise.
+	(initialize_loadable): Declare.
+	* nat/windows-nat.c (AdjustTokenPrivileges)
+	(DebugActiveProcessStop, DebugBreakProcess)
+	(DebugSetProcessKillOnExit, EnumProcessModules)
+	(EnumProcessModulesEx, GetModuleInformation, GetModuleFileNameExA)
+	(GetModuleFileNameExW, LookupPrivilegeValueA, OpenProcessToken)
+	(GetCurrentConsoleFont, GetConsoleFontSize, Wow64SuspendThread)
+	(Wow64GetThreadContext, Wow64SetThreadContext)
+	(Wow64GetThreadSelectorEntry): Define.
+	(bad, bad_GetCurrentConsoleFont, bad_GetConsoleFontSize): Move
+	from windows-nat.c.
+	(initialize_loadable): Likewise, and rename.
+
+2021-04-30  Tom Tromey  <tromey@adacore.com>
+
+	* windows-nat.c (bad_GetModuleFileNameEx): Remove define.
+	(bad_DebugActiveProcessStop, bad_DebugBreakProcess)
+	(bad_DebugSetProcessKillOnExit, bad_EnumProcessModules)
+	(bad_GetModuleFileNameExW, bad_GetModuleFileNameExA)
+	(bad_GetModuleInformation, bad_OpenProcessToken): Remove.
+	(bad): New template functions.
+	(_initialize_loadable): Update.
+
+2021-04-30  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_index_type): Use ada_check_typedef.
+
 2021-04-29  Simon Marchi  <simon.marchi@efficios.com>
 
 	* auto-load.h: Split namespace declaration.
