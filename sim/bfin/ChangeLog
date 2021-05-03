@@ -1,3 +1,19 @@
+2021-05-02  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-sim.c: Include ansidecl.h.
+	(illegal_instruction): Change __attribute__((noreturn)) to
+	ATTRIBUTE_NORETURN.
+	(illegal_instruction_combination, illegal_instruction_or_combination,
+	unhandled_instruction): Likewise.
+
+2021-05-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-bfin_mmu.c (bfin_mmu_options): Mark static.
+	(sim_install_bfin_mmu): New function & prototype.
+	* interp.c (e_sim_add_option_table): Delete.
+	* machs.c (bfin_mach_options): Mark static.
+	(sim_install_bfin_mach): New function & prototype.
+
 2021-05-01  Mike Frysinger  <vapier@gentoo.org>
 
 	* config.in, configure: Regenerate.

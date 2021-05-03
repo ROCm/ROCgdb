@@ -236,6 +236,7 @@ standard_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
 	    case USER_ENVIRONMENT: type = "user"; break;
 	    case VIRTUAL_ENVIRONMENT: type = "virtual"; break;
 	    case OPERATING_ENVIRONMENT: type = "operating"; break;
+	    default: abort ();
 	    }
 	  sim_io_eprintf (sd, "Simulator compiled for the %s environment only.\n",
 			  type);
@@ -284,6 +285,7 @@ standard_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
 	case FORCED_ALIGNMENT:
 	  sim_io_eprintf (sd, "Simulator compiled for forced alignment only.\n");
 	  break;
+	default: abort ();
 	}
       return SIM_RC_FAIL;
 
@@ -437,6 +439,7 @@ dup_arg_p (const char *arg)
 	arg_table = htab_create_alloc (10, htab_hash_string,
 				       compare_strings, NULL,
 				       xcalloc, free);
+      htab_empty (arg_table);
       return 0;
     }
 
