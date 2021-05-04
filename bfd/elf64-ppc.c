@@ -9808,7 +9808,11 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 	 relocs against symbols which are not dynamic.  */
       else if (h->type != STT_GNU_IFUNC)
 	{
-	  if (h->dynamic_adjusted
+	  if ((h->dynamic_adjusted
+	       || (h->ref_regular
+		   && h->root.type == bfd_link_hash_undefweak
+		   && (info->dynamic_undefined_weak > 0
+		       || !_bfd_elf_readonly_dynrelocs (h))))
 	      && !h->def_regular
 	      && !ELF_COMMON_DEF_P (h))
 	    {
@@ -9855,6 +9859,9 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
       for (pent = h->plt.plist; pent != NULL; pent = pent->next)
 	if (pent->plt.refcount > 0)
 	  {
+	    if (!ensure_undef_dynamic (info, h))
+	      return false;
+
 	    if (use_local_plt (info, h))
 	      {
 		if (h->type == STT_GNU_IFUNC)

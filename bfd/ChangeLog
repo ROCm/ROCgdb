@@ -1,3 +1,50 @@
+2021-05-04  Nick Clifton  <nickc@redhat.com>
+
+	* libbfd.c (bfd_malloc): Provide some documenation.  Treat a size
+	of 0 as 1.
+	(bfd_realloc): Likewise.
+	(bfd_zmalloc): Likewise.
+	(bfd_realloc_or_free): Provide some documentation.  Treat a size
+	of 0 as a request to free.
+	* libbfd-in.h (bfd_realloc): Remove prototype.
+	(bfd_realloc_or_free): Remove prototype.
+	(bfd_zmalloc): Remove prototype.
+	* libbfd.h: Regenerate.
+
+2021-05-03  Jan Beulich  <jbeulich@suse.com>
+
+	* elf32-i386.c (elf_howto_table): Switch all 32-bit relocs to
+	complain_overflow_dont.
+	* elf64-x86-64.c (x86_64_elf_howto_table): Switch all 64-bit
+	relocs to complain_overflow_dont.
+
+2021-05-03  Alan Modra  <amodra@gmail.com>
+
+	* elf32-ppc.c (allocate_dynrelocs): Keep dyn_relocs for undefweak
+	symbols when -z dynamic-undefined-weak or when there are no
+	dynamic relocs in read-only sections and -z nodynamic-undefined-weak
+	is not given.
+	* elf64-ppc.c (allocate_dynrelocs): Likewise.
+
+2021-05-03  Alan Modra  <amodra@gmail.com>
+
+	* elf32-ppc.c (allocate_dynrelocs): Call ensure_undef_dynamic for
+	weak undefined symols that only appear on PLT relocs.
+	* elf64-ppc.c (allocate_dynrelocs): Likewise.
+
+2021-05-03  Alan Modra  <amodra@gmail.com>
+
+	PR 27755
+	* elf32-ppc.c (ppc_elf_inline_plt): Do increment rel in loop.
+
+2021-05-03  Alan Modra  <amodra@gmail.com>
+
+	* elf32-csky.c (is_mapping_symbol_name): New function.
+	(csky_elf_is_target_special_symbol): Likewise.
+	(csky_elf_maybe_function_sym): Likewise.
+	(bfd_elf32_bfd_is_target_special_symbol): Define.
+	(elf_backend_maybe_function_sym): Define.
+
 2021-04-30  Nick Clifton  <nickc@redhat.com>
 
 	PR 27801
