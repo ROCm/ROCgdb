@@ -46,7 +46,9 @@
 #  errno \
 #  fnmatch-gnu \
 #  frexpl \
+#  gendocs \
 #  getcwd \
+#  getline \
 #  gettimeofday \
 #  gitlog-to-changelog \
 #  glob \
@@ -88,7 +90,9 @@ gl_MODULES([
   errno
   fnmatch-gnu
   frexpl
+  gendocs
   getcwd
+  getline
   gettimeofday
   gitlog-to-changelog
   glob

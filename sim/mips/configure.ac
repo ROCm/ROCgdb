@@ -426,28 +426,10 @@ AC_SUBST(sim_multi_obj)
 #
 # Add simulated hardware devices
 #
-hw_extra_devices=""
-case "${target}" in
-  mips*tx39*)
-	hw_extra_devices="tx3904cpu tx3904irc tx3904tmr tx3904sio" 
-	;;
-  *)
-	;;
-esac
-SIM_AC_OPTION_HARDWARE($hw_extra_devices)
-
-
-# Choose simulator engine
-case "${target}" in
-  *)    mips_igen_engine="engine.o"
-	;;
-esac
-AC_SUBST(mips_igen_engine)
+SIM_AC_OPTION_HARDWARE(tx3904cpu tx3904irc tx3904tmr tx3904sio)
 
 
 AC_PATH_X
-mips_extra_libs=""
-AC_SUBST(mips_extra_libs)
 
 AC_CHECK_LIB(m, fabs)
 AC_CHECK_FUNCS(aint anint sqrt)

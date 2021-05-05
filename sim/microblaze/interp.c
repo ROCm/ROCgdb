@@ -28,6 +28,7 @@
 
 #include "sim-main.h"
 #include "sim-options.h"
+#include "sim-syscall.h"
 
 #include "microblaze-dis.h"
 
@@ -167,6 +168,7 @@ sim_engine_run (SIM_DESC sd,
 	{
 	  insts += 1;
 	  bonus_cycles++;
+	  TRACE_INSN (cpu, "HALT (%i)", RETREG);
 	  sim_engine_halt (sd, NULL, NULL, NULL_CIA, sim_exited, RETREG);
 	}
       else
@@ -175,6 +177,7 @@ sim_engine_run (SIM_DESC sd,
 	    {
 #define INSTRUCTION(NAME, OPCODE, TYPE, ACTION)		\
 	    case NAME:					\
+	      TRACE_INSN (cpu, #NAME);			\
 	      ACTION;					\
 	      break;
 #include "microblaze.isa"
@@ -284,8 +287,18 @@ sim_engine_run (SIM_DESC sd,
 		    IMM_ENABLE = 0;
 	        }
 	      else
-		/* no delay slot: increment cycle count */
-		bonus_cycles++;
+		{
+		  if (op == brki && IMM == 8)
+		    {
+		      RETREG = sim_syscall (cpu, CPU.regs[12], CPU.regs[5],
+					    CPU.regs[6], CPU.regs[7],
+					    CPU.regs[8]);
+		      PC = RD + INST_SIZE;
+		    }
+
+		  /* no delay slot: increment cycle count */
+		  bonus_cycles++;
+		}
 	    }
 	}
 
