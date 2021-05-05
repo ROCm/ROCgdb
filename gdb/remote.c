@@ -1,6 +1,6 @@
 /* Remote target communications for serial-line targets in custom GDB protocol
 
-   Copyright (C) 1988-2020 Free Software Foundation, Inc.
+   Copyright (C) 1988-2021 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -14390,7 +14390,24 @@ remote_async_serial_handler (struct serial *scb, void *context)
 static void
 remote_async_inferior_event_handler (gdb_client_data data)
 {
+  remote_target *remote = (remote_target *) data;
+  /* Hold a strong reference to the remote target while handling an
+     event, since that could result in closing the connection.  */
+  auto remote_ref = target_ops_ref::new_reference (remote);
+
   inferior_event_handler (INF_REG_EVENT);
+
+  remote_state *rs = remote->get_remote_state ();
+
+  /* inferior_event_handler may have consumed an event pending on the
+     infrun side without calling target_wait on the REMOTE target, or
+     may have pulled an event out of a different target.  Keep trying
+     for this remote target as long it still has either pending events
+     or unacknowledged notifications.  */
+
+  if (rs->notif_state->pending_event[notif_client_stop.id] != NULL
+      || !rs->stop_reply_queue.empty ())
+    mark_async_event_handler (rs->remote_async_inferior_event_token);
 }
 
 int

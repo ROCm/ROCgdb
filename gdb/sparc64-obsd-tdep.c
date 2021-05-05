@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/sparc64.
 
-   Copyright (C) 2004-2020 Free Software Foundation, Inc.
+   Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -27,6 +27,7 @@
 #include "symtab.h"
 #include "objfiles.h"
 #include "trad-frame.h"
+#include "inferior.h"
 
 #include "obsd-tdep.h"
 #include "sparc64-tdep.h"
@@ -328,6 +329,9 @@ sparc64obsd_supply_uthread (struct regcache *regcache,
   CORE_ADDR fp, fp_addr = addr + SPARC64OBSD_UTHREAD_FP_OFFSET;
   gdb_byte buf[8];
 
+  /* This function calls functions that depend on the global current thread.  */
+  gdb_assert (regcache->ptid () == inferior_ptid);
+
   gdb_assert (regnum >= -1);
 
   fp = read_memory_unsigned_integer (fp_addr, 8, byte_order);
@@ -372,6 +376,9 @@ sparc64obsd_collect_uthread(const struct regcache *regcache,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR sp;
   gdb_byte buf[8];
+
+  /* This function calls functions that depend on the global current thread.  */
+  gdb_assert (regcache->ptid () == inferior_ptid);
 
   gdb_assert (regnum >= -1);
 

@@ -1,7 +1,7 @@
 /* Interface between GDB and target environments, including files and processes
 
-   Copyright (C) 1990-2020 Free Software Foundation, Inc.
-   Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1990-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.  Written by John Gilmore.
 
@@ -2435,6 +2435,20 @@ extern void push_target (struct target_ops *);
 extern void push_target (target_ops_up &&);
 
 extern int unpush_target (struct target_ops *);
+
+/* A unique_ptr helper to unpush a target.  */
+
+struct target_unpusher
+{
+  void operator() (struct target_ops *ops) const
+  {
+    unpush_target (ops);
+  }
+};
+
+/* A unique_ptr that unpushes a target on destruction.  */
+
+typedef std::unique_ptr<struct target_ops, target_unpusher> target_unpush_up;
 
 extern void target_pre_inferior (int);
 

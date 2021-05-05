@@ -1,7 +1,7 @@
 /* Perform non-arithmetic operations on values, for GDB.
 
-   Copyright (C) 1986-2020 Free Software Foundation, Inc.
-   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -395,7 +395,7 @@ value_cast (struct type *type, struct value *arg2)
 	  int val_length = TYPE_LENGTH (type2);
 	  LONGEST low_bound, high_bound, new_length;
 
-	  if (get_discrete_bounds (range_type, &low_bound, &high_bound) < 0)
+	  if (!get_discrete_bounds (range_type, &low_bound, &high_bound))
 	    low_bound = 0, high_bound = 0;
 	  new_length = val_length / element_length;
 	  if (val_length % element_length != 0)
@@ -3812,7 +3812,7 @@ value_slice (struct value *array, int lowbound, int length)
     error (_("array not associated"));
 
   range_type = array_type->index_type ();
-  if (get_discrete_bounds (range_type, &lowerbound, &upperbound) < 0)
+  if (!get_discrete_bounds (range_type, &lowerbound, &upperbound))
     error (_("slice from bad array or bitstring"));
 
   if (lowbound < lowerbound || length < 0

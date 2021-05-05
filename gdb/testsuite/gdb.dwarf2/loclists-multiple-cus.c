@@ -1,6 +1,6 @@
-/* This testcase is part of GDB, the GNU debugger.
+/* Copyright (C) 2021 Free Software Foundation, Inc.
 
-   Copyright 2020 Free Software Foundation, Inc.
+   This file is part of GDB.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,8 +15,23 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+static int
+func1 (void)
+{
+  asm ("func1_label: .global func1_label\n");
+  return 1;
+}
+
+static int
+func2 (void)
+{
+  asm ("func2_label: .global func2_label\n");
+  return 2;
+}
+
 int
 main (void)
 {
-  return 0;
+  func1 ();
+  func2 ();
 }

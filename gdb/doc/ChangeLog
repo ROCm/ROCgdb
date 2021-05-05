@@ -1,3 +1,17 @@
+2021-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.texinfo, refcard.tex: Update copyright year range.
+
+2020-12-26  Jeanne Rasata <jeanne@fsf.org>  (tiny change)
+
+	* gdb.texinfo: Fix capitalization in many sections following CMS
+	style-guide rules, remove period at end of a few headings.
+
+2020-11-29  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR python/26974
+	* python.texi: Fix docu for static members argument.
+
 2020-08-25  Shahab Vahedi  <shahab@synopsys.com>
 
 	* gdb.texinfo (Synopsys ARC): Document LP_START, LP_END and BTA.

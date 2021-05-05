@@ -1,4 +1,4 @@
-/* Copyright (C) 2017-2020 Free Software Foundation, Inc.
+/* Copyright (C) 2017-2021 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -113,8 +113,9 @@ arc_lookup_target_description (const struct arc_arch_features &features)
 
   target_desc *tdesc = arc_create_target_description (features);
 
-  /* Add the newly created target description to the repertoire.  */
-  arc_tdesc_cache.emplace (features, tdesc);
+  /* Add the newly created target description to the repertoire.
+     PR build/27385: Use "target_desc_up ()" ctor explicitly.  */
+  arc_tdesc_cache.emplace (features, target_desc_up (tdesc));
 
   return tdesc;
 }

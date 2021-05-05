@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2020 Free Software Foundation, Inc.
+/* Copyright (C) 2009-2021 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -23,8 +23,8 @@
 #include "aarch64-linux-hw-point.h"
 
 #include <sys/uio.h>
-#include <asm/ptrace.h>
 #include <sys/ptrace.h>
+#include <asm/ptrace.h>
 #include <elf.h>
 
 /* Number of hardware breakpoints/watchpoints the target supports.

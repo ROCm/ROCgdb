@@ -1,6 +1,6 @@
 /* Target-dependent code for SPARC.
 
-   Copyright (C) 2003-2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2021 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1944,6 +1944,9 @@ sparc_supply_rwindow (struct regcache *regcache, CORE_ADDR sp, int regnum)
   gdb_byte buf[8];
   int i;
 
+  /* This function calls functions that depend on the global current thread.  */
+  gdb_assert (regcache->ptid () == inferior_ptid);
+
   if (sp & 1)
     {
       /* Registers are 64-bit.  */
@@ -2017,6 +2020,9 @@ sparc_collect_rwindow (const struct regcache *regcache,
   int offset = 0;
   gdb_byte buf[8];
   int i;
+
+  /* This function calls functions that depend on the global current thread.  */
+  gdb_assert (regcache->ptid () == inferior_ptid);
 
   if (sp & 1)
     {

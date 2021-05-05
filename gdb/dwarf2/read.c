@@ -1,7 +1,7 @@
 /* DWARF 2 debugging format support for GDB.
 
-   Copyright (C) 1994-2020 Free Software Foundation, Inc.
-   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1994-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
    Inc.  with support from Florida State University (under contract
@@ -1645,15 +1645,18 @@ public:
   explicit dwarf2_queue_guard (dwarf2_per_objfile *per_objfile)
     : m_per_objfile (per_objfile)
   {
+    gdb_assert (!m_per_objfile->per_bfd->queue.has_value ());
+
+    m_per_objfile->per_bfd->queue.emplace ();
   }
 
   /* Free any entries remaining on the queue.  There should only be
      entries left if we hit an error while processing the dwarf.  */
   ~dwarf2_queue_guard ()
   {
-    /* Ensure that no memory is allocated by the queue.  */
-    std::queue<dwarf2_queue_item> empty;
-    std::swap (m_per_objfile->per_bfd->queue, empty);
+    gdb_assert (m_per_objfile->per_bfd->queue.has_value ());
+
+    m_per_objfile->per_bfd->queue.reset ();
   }
 
   DISABLE_COPY_AND_ASSIGN (dwarf2_queue_guard);
@@ -1822,6 +1825,8 @@ dwarf2_per_bfd::~dwarf2_per_bfd ()
 void
 dwarf2_per_objfile::remove_all_cus ()
 {
+  gdb_assert (!this->per_bfd->queue.has_value ());
+
   for (auto pair : m_dwarf2_cus)
     delete pair.second;
 
@@ -1907,9 +1912,14 @@ dwarf2_has_info (struct objfile *objfile,
 
       /* We can share a "dwarf2_per_bfd" with other objfiles if the BFD
          doesn't require relocations and if there aren't partial symbols
-	 from some other reader.  */
+	 from some other reader.
+
+	 We don't share with objfiles for which -readnow was requested,
+	 because it would complicate things when loading the same BFD with
+	 -readnow and then without -readnow.  */
       if (!objfile_has_partial_symbols (objfile)
-	  && !gdb_bfd_requires_relocations (objfile->obfd))
+	  && !gdb_bfd_requires_relocations (objfile->obfd)
+	  && (objfile->flags & OBJF_READNOW) == 0)
 	{
 	  /* See if one has been created for this BFD yet.  */
 	  per_bfd = dwarf2_per_bfd_bfd_data_key.get (objfile->obfd);
@@ -2412,30 +2422,32 @@ dw2_do_instantiate_symtab (dwarf2_per_cu_data *per_cu,
   if (per_cu->type_unit_group_p ())
     return;
 
-  /* The destructor of dwarf2_queue_guard frees any entries left on
-     the queue.  After this point we're guaranteed to leave this function
-     with the dwarf queue empty.  */
-  dwarf2_queue_guard q_guard (dwarf2_per_objfile);
+  {
+    /* The destructor of dwarf2_queue_guard frees any entries left on
+       the queue.  After this point we're guaranteed to leave this function
+       with the dwarf queue empty.  */
+    dwarf2_queue_guard q_guard (per_objfile);
 
-  if (!per_objfile->symtab_set_p (per_cu))
-    {
-      queue_comp_unit (per_cu, per_objfile, language_minimal);
-      dwarf2_cu *cu = load_cu (per_cu, per_objfile, skip_partial);
+    if (!per_objfile->symtab_set_p (per_cu))
+      {
+	queue_comp_unit (per_cu, per_objfile, language_minimal);
+	dwarf2_cu *cu = load_cu (per_cu, per_objfile, skip_partial);
 
-      /* If we just loaded a CU from a DWO, and we're working with an index
-	 that may badly handle TUs, load all the TUs in that DWO as well.
-	 http://sourceware.org/bugzilla/show_bug.cgi?id=15021  */
-      if (!per_cu->is_debug_types
-	  && cu != NULL
-	  && cu->dwo_unit != NULL
-	  && per_objfile->per_bfd->index_table != NULL
-	  && per_objfile->per_bfd->index_table->version <= 7
-	  /* DWP files aren't supported yet.  */
-	  && get_dwp_file (per_objfile) == NULL)
-	queue_and_load_all_dwo_tus (cu);
-    }
+	/* If we just loaded a CU from a DWO, and we're working with an index
+	   that may badly handle TUs, load all the TUs in that DWO as well.
+	   http://sourceware.org/bugzilla/show_bug.cgi?id=15021  */
+	if (!per_cu->is_debug_types
+	    && cu != NULL
+	    && cu->dwo_unit != NULL
+	    && per_objfile->per_bfd->index_table != NULL
+	    && per_objfile->per_bfd->index_table->version <= 7
+	    /* DWP files aren't supported yet.  */
+	    && get_dwp_file (per_objfile) == NULL)
+	  queue_and_load_all_dwo_tus (cu);
+      }
 
-  process_queue (per_objfile);
+    process_queue (per_objfile);
+  }
 
   /* Age the cache, releasing compilation units that have not
      been used recently.  */
@@ -7702,6 +7714,9 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
     case DW_TAG_partial_unit:
       this_cu->unit_type = DW_UT_partial;
       break;
+    case DW_TAG_type_unit:
+      this_cu->unit_type = DW_UT_type;
+      break;
     default:
       abort ();
     }
@@ -9051,17 +9066,35 @@ queue_comp_unit (dwarf2_per_cu_data *per_cu,
 		 enum language pretend_language)
 {
   per_cu->queued = 1;
-  per_cu->per_bfd->queue.emplace (per_cu, per_objfile, pretend_language);
+
+  gdb_assert (per_objfile->per_bfd->queue.has_value ());
+  per_cu->per_bfd->queue->emplace (per_cu, per_objfile, pretend_language);
 }
 
-/* If PER_CU is not yet queued, add it to the queue.
+/* If PER_CU is not yet expanded of queued for expansion, add it to the queue.
+
    If DEPENDENT_CU is non-NULL, it has a reference to PER_CU so add a
    dependency.
-   The result is non-zero if PER_CU was queued, otherwise the result is zero
-   meaning either PER_CU is already queued or it is already loaded.
 
-   N.B. There is an invariant here that if a CU is queued then it is loaded.
-   The caller is required to load PER_CU if we return non-zero.  */
+   Return true if maybe_queue_comp_unit requires the caller to load the CU's
+   DIEs, false otherwise.
+
+   Explanation: there is an invariant that if a CU is queued for expansion
+   (present in `dwarf2_per_bfd::queue`), then its DIEs are loaded
+   (a dwarf2_cu object exists for this CU, and `dwarf2_per_objfile::get_cu`
+   returns non-nullptr).  If the CU gets enqueued by this function but its DIEs
+   are not yet loaded, the the caller must load the CU's DIEs to ensure the
+   invariant is respected.
+
+   The caller is therefore not required to load the CU's DIEs (we return false)
+   if:
+
+     - the CU is already expanded, and therefore does not get enqueued
+     - the CU gets enqueued for expansion, but its DIEs are already loaded
+
+   Note that the caller should not use this function's return value as an
+   indicator of whether the CU's DIEs are loaded right now, it should check
+   that by calling `dwarf2_per_objfile::get_cu` instead.  */
 
 static int
 maybe_queue_comp_unit (struct dwarf2_cu *dependent_cu,
@@ -9088,21 +9121,36 @@ maybe_queue_comp_unit (struct dwarf2_cu *dependent_cu,
 
   /* If it's already on the queue, we have nothing to do.  */
   if (per_cu->queued)
-    return 0;
+    {
+      /* Verify the invariant that if a CU is queued for expansion, its DIEs are
+	 loaded.  */
+      gdb_assert (per_objfile->get_cu (per_cu) != nullptr);
+
+      /* If the CU is queued for expansion, it should not already be
+	 expanded.  */
+      gdb_assert (!per_objfile->symtab_set_p (per_cu));
+
+      /* The DIEs are already loaded, the caller doesn't need to do it.  */
+      return 0;
+    }
+
+  bool queued = false;
+  if (!per_objfile->symtab_set_p (per_cu))
+    {
+      /* Add it to the queue.  */
+      queue_comp_unit (per_cu, per_objfile,  pretend_language);
+      queued = true;
+    }
 
   /* If the compilation unit is already loaded, just mark it as
      used.  */
   dwarf2_cu *cu = per_objfile->get_cu (per_cu);
   if (cu != nullptr)
-    {
-      cu->last_used = 0;
-      return 0;
-    }
+    cu->last_used = 0;
 
-  /* Add it to the queue.  */
-  queue_comp_unit (per_cu, per_objfile,  pretend_language);
-
-  return 1;
+  /* Ask the caller to load the CU's DIEs if the CU got enqueued for expansion
+     and the DIEs are not already loaded.  */
+  return queued && cu == nullptr;
 }
 
 /* Process the queue.  */
@@ -9119,9 +9167,9 @@ process_queue (dwarf2_per_objfile *per_objfile)
 
   /* The queue starts out with one item, but following a DIE reference
      may load a new CU, adding it to the end of the queue.  */
-  while (!per_objfile->per_bfd->queue.empty ())
+  while (!per_objfile->per_bfd->queue->empty ())
     {
-      dwarf2_queue_item &item = per_objfile->per_bfd->queue.front ();
+      dwarf2_queue_item &item = per_objfile->per_bfd->queue->front ();
       dwarf2_per_cu_data *per_cu = item.per_cu;
 
       if (!per_objfile->symtab_set_p (per_cu))
@@ -9167,7 +9215,7 @@ process_queue (dwarf2_per_objfile *per_objfile)
 	}
 
       per_cu->queued = 0;
-      per_objfile->per_bfd->queue.pop ();
+      per_objfile->per_bfd->queue->pop ();
     }
 
   if (dwarf_read_debug)
@@ -16812,6 +16860,14 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       child_die = child_die->sibling;
     }
 
+  if (range_types.empty ())
+    {
+      complaint (_("unable to find array range - DIE at %s [in module %s]"),
+		 sect_offset_str (die->sect_off),
+		 objfile_name (cu->per_objfile->objfile));
+      return NULL;
+    }
+
   /* Dwarf2 dimensions are output from left to right, create the
      necessary array types in backwards order.  */
 
@@ -16832,6 +16888,8 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 	type = create_array_type_with_stride (NULL, type, range_types[ndim],
 					      byte_stride_prop, bit_stride);
     }
+
+  gdb_assert (type != element_type);
 
   /* Understand Dwarf2 support for vector types (like they occur on
      the PowerPC w/ AltiVec).  Gcc just adds another attribute to the
@@ -19481,22 +19539,30 @@ partial_die_info::fixup (struct dwarf2_cu *cu)
 }
 
 /* Read the .debug_loclists or .debug_rnglists header (they are the same format)
-   contents from the given SECTION in the HEADER.  */
+   contents from the given SECTION in the HEADER.
+
+   HEADER_OFFSET is the offset of the header in the section.  */
 static void
 read_loclists_rnglists_header (struct loclists_rnglists_header *header,
-			       struct dwarf2_section_info *section)
+			       struct dwarf2_section_info *section,
+			       sect_offset header_offset)
 {
   unsigned int bytes_read;
   bfd *abfd = section->get_bfd_owner ();
-  const gdb_byte *info_ptr = section->buffer;
+  const gdb_byte *info_ptr = section->buffer + to_underlying (header_offset);
+
   header->length = read_initial_length (abfd, info_ptr, &bytes_read);
   info_ptr += bytes_read;
+
   header->version = read_2_bytes (abfd, info_ptr);
   info_ptr += 2;
+
   header->addr_size = read_1_byte (abfd, info_ptr);
   info_ptr += 1;
+
   header->segment_collector_size = read_1_byte (abfd, info_ptr);
   info_ptr += 1;
+
   header->offset_entry_count = read_4_bytes (abfd, info_ptr);
 }
 
@@ -19530,26 +19596,53 @@ read_loclist_index (struct dwarf2_cu *cu, ULONGEST loclist_index)
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct objfile *objfile = per_objfile->objfile;
   bfd *abfd = objfile->obfd;
+  ULONGEST loclist_header_size =
+    (cu->header.initial_length_size == 4 ? LOCLIST_HEADER_SIZE32
+     : LOCLIST_HEADER_SIZE64);
   ULONGEST loclist_base = lookup_loclist_base (cu);
+
+  /* Offset in .debug_loclists of the offset for LOCLIST_INDEX.  */
+  ULONGEST start_offset =
+    loclist_base + loclist_index * cu->header.offset_size;
+
+  /* Get loclists section.  */
   struct dwarf2_section_info *section = cu_debug_loc_section (cu);
 
+  /* Read the loclists section content.  */
   section->read (objfile);
   if (section->buffer == NULL)
-    complaint (_("DW_FORM_loclistx used without .debug_loclists "
-	        "section [in module %s]"), objfile_name (objfile));
+    error (_("DW_FORM_loclistx used without .debug_loclists "
+	     "section [in module %s]"), objfile_name (objfile));
+
+  /* DW_AT_loclists_base points after the .debug_loclists contribution header,
+     so if loclist_base is smaller than the header size, we have a problem.  */
+  if (loclist_base < loclist_header_size)
+    error (_("DW_AT_loclists_base is smaller than header size [in module %s]"),
+	   objfile_name (objfile));
+
+  /* Read the header of the loclists contribution.  */
   struct loclists_rnglists_header header;
-  read_loclists_rnglists_header (&header, section);
+  read_loclists_rnglists_header (&header, section,
+				 (sect_offset) (loclist_base - loclist_header_size));
+
+  /* Verify the loclist index is valid.  */
   if (loclist_index >= header.offset_entry_count)
-    complaint (_("DW_FORM_loclistx pointing outside of "
-	        ".debug_loclists offset array [in module %s]"),
-	        objfile_name (objfile));
-  if (loclist_base + loclist_index * cu->header.offset_size
-	>= section->size)
-    complaint (_("DW_FORM_loclistx pointing outside of "
-	        ".debug_loclists section [in module %s]"),
-	        objfile_name (objfile));
-  const gdb_byte *info_ptr
-    = section->buffer + loclist_base + loclist_index * cu->header.offset_size;
+    error (_("DW_FORM_loclistx pointing outside of "
+	     ".debug_loclists offset array [in module %s]"),
+	   objfile_name (objfile));
+
+  if (start_offset >= section->size)
+    error (_("DW_FORM_loclistx pointing outside of "
+	     ".debug_loclists section [in module %s]"),
+	   objfile_name (objfile));
+
+  /* Validate that reading won't go beyond the end of the section.  */
+  if (start_offset + cu->header.offset_size > section->size)
+    error (_("Reading DW_FORM_loclistx index beyond end of"
+	     ".debug_loclists section [in module %s]"),
+	   objfile_name (objfile));
+
+  const gdb_byte *info_ptr = section->buffer + start_offset;
 
   if (cu->header.offset_size == 4)
     return bfd_get_32 (abfd, info_ptr) + loclist_base;
@@ -19571,6 +19664,8 @@ read_rnglist_index (struct dwarf2_cu *cu, ULONGEST rnglist_index,
      : RNGLIST_HEADER_SIZE64);
   ULONGEST rnglist_base =
       (cu->dwo_unit != nullptr) ? rnglist_header_size : cu->ranges_base;
+
+  /* Offset in .debug_rnglists of the offset for RNGLIST_INDEX.  */
   ULONGEST start_offset =
     rnglist_base + rnglist_index * cu->header.offset_size;
 
@@ -19584,9 +19679,18 @@ read_rnglist_index (struct dwarf2_cu *cu, ULONGEST rnglist_index,
 	     "[in module %s]"),
 	   objfile_name (objfile));
 
-  /* Verify the rnglist index is valid.  */
+  /* DW_AT_rnglists_base points after the .debug_rnglists contribution header,
+     so if rnglist_base is smaller than the header size, we have a problem.  */
+  if (rnglist_base < rnglist_header_size)
+    error (_("DW_AT_rnglists_base is smaller than header size [in module %s]"),
+	   objfile_name (objfile));
+
+  /* Read the header of the rnglists contribution.  */
   struct loclists_rnglists_header header;
-  read_loclists_rnglists_header (&header, section);
+  read_loclists_rnglists_header (&header, section,
+				 (sect_offset) (rnglist_base - rnglist_header_size));
+
+  /* Verify the rnglist index is valid.  */
   if (rnglist_index >= header.offset_entry_count)
     error (_("DW_FORM_rnglistx index pointing outside of "
 	     ".debug_rnglists offset array [in module %s]"),
@@ -19599,7 +19703,7 @@ read_rnglist_index (struct dwarf2_cu *cu, ULONGEST rnglist_index,
 	   objfile_name (objfile));
 
   /* Validate that reading won't go beyond the end of the section.  */
-  if (start_offset + cu->header.offset_size > rnglist_base + section->size)
+  if (start_offset + cu->header.offset_size > section->size)
     error (_("Reading DW_FORM_rnglistx index beyond end of"
 	     ".debug_rnglists section [in module %s]"),
 	   objfile_name (objfile));
@@ -22929,12 +23033,24 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
       per_cu = dwarf2_find_containing_comp_unit (sect_off, offset_in_dwz,
 						 per_objfile);
 
-      /* If necessary, add it to the queue and load its DIEs.  */
-      if (maybe_queue_comp_unit (cu, per_cu, per_objfile, cu->language))
+      if (dwarf_read_debug > 1)
+	fprintf_unfiltered (gdb_stdlog,
+			    "target CU offset: %s, target CU DIEs loaded: %d\n",
+			    sect_offset_str (per_cu->sect_off),
+			    per_objfile->get_cu (per_cu) != nullptr);
+
+      /* If necessary, add it to the queue and load its DIEs.
+
+	 Even if maybe_queue_comp_unit doesn't require us to load the CU's DIEs,
+	 it doesn't mean they are currently loaded.  Since we require them
+	 to be loaded, we must check for ourselves.  */
+      if (maybe_queue_comp_unit (cu, per_cu, per_objfile, cu->language)
+	  || per_objfile->get_cu (per_cu) == nullptr)
 	load_full_comp_unit (per_cu, per_objfile, per_objfile->get_cu (per_cu),
 			     false, cu->language);
 
       target_cu = per_objfile->get_cu (per_cu);
+      gdb_assert (target_cu != nullptr);
     }
   else if (cu->dies == NULL)
     {
@@ -23301,10 +23417,14 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
      we can get here for DW_AT_imported_declaration where we need
      the DIE not the type.  */
 
-  /* If necessary, add it to the queue and load its DIEs.  */
+  /* If necessary, add it to the queue and load its DIEs.
 
+     Even if maybe_queue_comp_unit doesn't require us to load the CU's DIEs,
+     it doesn't mean they are currently loaded.  Since we require them
+     to be loaded, we must check for ourselves.  */
   if (maybe_queue_comp_unit (*ref_cu, &sig_type->per_cu, per_objfile,
-			     language_minimal))
+			     language_minimal)
+      || per_objfile->get_cu (&sig_type->per_cu) == nullptr)
     read_signatured_type (sig_type, per_objfile);
 
   sig_cu = per_objfile->get_cu (&sig_type->per_cu);
@@ -24282,6 +24402,16 @@ dwarf2_per_objfile::set_cu (dwarf2_per_cu_data *per_cu, dwarf2_cu *cu)
 void
 dwarf2_per_objfile::age_comp_units ()
 {
+  if (dwarf_read_debug > 1)
+    fprintf_unfiltered (gdb_stdlog, "age_comp_units: running\n");
+
+  /* This is not expected to be called in the middle of CU expansion.  There is
+     an invariant that if a CU is in the CUs-to-expand queue, its DIEs are
+     loaded in memory.  Calling age_comp_units while the queue is in use could
+     make us free the DIEs for a CU that is in the queue and therefore break
+     that invariant.  */
+  gdb_assert (!this->per_bfd->queue.has_value ());
+
   /* Start by clearing all marks.  */
   for (auto pair : m_dwarf2_cus)
     pair.second->mark = false;

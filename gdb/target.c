@@ -1,6 +1,6 @@
 /* Select target systems and architectures at runtime for GDB.
 
-   Copyright (C) 1990-2020 Free Software Foundation, Inc.
+   Copyright (C) 1990-2021 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.
 
@@ -2119,7 +2119,7 @@ default_mourn_inferior (struct target_ops *self)
 void
 target_mourn_inferior (ptid_t ptid)
 {
-  gdb_assert (ptid == inferior_ptid);
+  gdb_assert (ptid.pid () == inferior_ptid.pid ());
   current_top_target ()->mourn_inferior ();
 
   /* We no longer need to keep handles on any of the object files.

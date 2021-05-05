@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# Copyright (C) 2011-2020 Free Software Foundation, Inc.
+# Copyright (C) 2011-2021 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -46,7 +46,9 @@ def get_update_list():
     the files are relative to that root directory.
     """
     result = []
-    for gdb_dir in ('gdb', 'gnulib', 'sim', 'include/gdb'):
+    for gdb_dir in (
+        'gdb', 'gdbserver', 'gdbsupport', 'gnulib', 'sim', 'include/gdb',
+    ):
         for root, dirs, files in os.walk(gdb_dir, topdown=True):
             for dirname in dirs:
                 reldirname = "%s/%s" % (root, dirname)

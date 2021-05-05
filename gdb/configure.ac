@@ -1,6 +1,6 @@
 dnl Autoconf configure script for GDB, the GNU debugger.
-dnl Copyright (C) 1995-2020 Free Software Foundation, Inc.
-dnl Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+dnl Copyright (C) 1995-2021 Free Software Foundation, Inc.
+dnl Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -1654,7 +1654,7 @@ if test "${gdb_native}" = yes; then
          [#include "Python.h"],
          [int err;
           Py_Initialize ();
-          err = PyRun_SimpleString ("import itertools\n");
+          err = PyRun_SimpleString ("import ctypes\n");
           Py_Finalize ();
           return err == 0 ? 0 : 1;])],
        [dynamic_list=true], [], [true])

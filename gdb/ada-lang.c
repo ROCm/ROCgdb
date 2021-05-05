@@ -1,7 +1,7 @@
 /* Ada language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2020 Free Software Foundation, Inc.
-   Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1992-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -2098,7 +2098,7 @@ constrained_packed_array_type (struct type *type, long *elt_bits)
 
   if ((check_typedef (index_type)->code () == TYPE_CODE_RANGE
        && is_dynamic_type (check_typedef (index_type)))
-      || get_discrete_bounds (index_type, &low_bound, &high_bound) < 0)
+      || !get_discrete_bounds (index_type, &low_bound, &high_bound))
     low_bound = high_bound = 0;
   if (high_bound < low_bound)
     *elt_bits = TYPE_LENGTH (new_type) = 0;
@@ -2244,7 +2244,7 @@ value_subscript_packed (struct value *arr, int arity, struct value **ind)
           LONGEST lowerbound, upperbound;
           LONGEST idx;
 
-          if (get_discrete_bounds (range_type, &lowerbound, &upperbound) < 0)
+          if (!get_discrete_bounds (range_type, &lowerbound, &upperbound))
             {
               lim_warning (_("don't know bounds of array"));
               lowerbound = upperbound = 0;
@@ -2760,11 +2760,13 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
 			       type0->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       TYPE_FIELD_BITSIZE (type0, 0));
   int base_low =  ada_discrete_type_low_bound (type0->index_type ());
-  LONGEST base_low_pos, low_pos;
+  gdb::optional<LONGEST> base_low_pos, low_pos;
   CORE_ADDR base;
 
-  if (!discrete_position (base_index_type, low, &low_pos)
-      || !discrete_position (base_index_type, base_low, &base_low_pos))
+  low_pos = discrete_position (base_index_type, low);
+  base_low_pos = discrete_position (base_index_type, base_low);
+
+  if (!low_pos.has_value () || !base_low_pos.has_value ())
     {
       warning (_("unable to get positions in slice, use bounds instead"));
       low_pos = low;
@@ -2772,7 +2774,7 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
     }
 
   base = value_as_address (array_ptr)
-    + ((low_pos - base_low_pos)
+    + ((*low_pos - *base_low_pos)
        * TYPE_LENGTH (TYPE_TARGET_TYPE (type0)));
   return value_at_lazy (slice_type, base);
 }
@@ -2789,10 +2791,13 @@ ada_value_slice (struct value *array, int low, int high)
 			      (NULL, TYPE_TARGET_TYPE (type), index_type,
 			       type->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       TYPE_FIELD_BITSIZE (type, 0));
-  LONGEST low_pos, high_pos;
+  gdb::optional<LONGEST> low_pos, high_pos;
 
-  if (!discrete_position (base_index_type, low, &low_pos)
-      || !discrete_position (base_index_type, high, &high_pos))
+
+  low_pos = discrete_position (base_index_type, low);
+  high_pos = discrete_position (base_index_type, high);
+
+  if (!low_pos.has_value () || !high_pos.has_value ())
     {
       warning (_("unable to get positions in slice, use bounds instead"));
       low_pos = low;
@@ -2800,7 +2805,7 @@ ada_value_slice (struct value *array, int low, int high)
     }
 
   return value_cast (slice_type,
-		     value_slice (array, low, high_pos - low_pos + 1));
+		     value_slice (array, low, *high_pos - *low_pos + 1));
 }
 
 /* If type is a record type in the form of a standard GNAT array
@@ -8862,15 +8867,15 @@ pos_atr (struct value *arg)
 {
   struct value *val = coerce_ref (arg);
   struct type *type = value_type (val);
-  LONGEST result;
 
   if (!discrete_type_p (type))
     error (_("'POS only defined on discrete types"));
 
-  if (!discrete_position (type, value_as_long (val), &result))
+  gdb::optional<LONGEST> result = discrete_position (type, value_as_long (val));
+  if (!result.has_value ())
     error (_("enumeration value is invalid: can't find 'POS"));
 
-  return result;
+  return *result;
 }
 
 static struct value *

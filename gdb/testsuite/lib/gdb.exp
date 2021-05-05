@@ -1,6 +1,6 @@
-# Copyright 1992-2020 Free Software Foundation, Inc.
-# Copyright (C) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
-#
+# Copyright 1992-2021 Free Software Foundation, Inc.
+# Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -4983,6 +4983,62 @@ proc gdb_load { arg } {
 	return [gdb_file_cmd $arg]
     }
     return 0
+}
+
+#
+# with_complaints -- Execute BODY and set complaints temporary to N for the
+# duration.
+#
+proc with_complaints { n body } {
+    global decimal
+
+    # Save current setting of complaints.
+    set save ""
+    set show_complaints_re \
+	"Max number of complaints about incorrect symbols is ($decimal)\\."
+    gdb_test_multiple "show complaints" "" {
+	-re -wrap $show_complaints_re {
+	    set save $expect_out(1,string)
+	}
+    }
+
+    if { $save == "" } {
+	perror "Did not manage to set complaints"
+    } else {
+	# Set complaints.
+	gdb_test_no_output "set complaints $n" ""
+    }
+
+    set code [catch {uplevel 1 $body} result]
+
+    # Restore saved setting of complaints.
+    if { $save != "" } {
+	gdb_test_no_output "set complaints $save" ""
+    }
+
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+#
+# gdb_load_no_complaints -- As gdb_load, but in addition verifies that
+# loading caused no symbol reading complaints.
+#
+proc gdb_load_no_complaints { arg } {
+    global gdb_prompt gdb_file_cmd_msg decimal
+
+    # Temporarily set complaint to a small non-zero number.
+    with_complaints 5 {
+	gdb_load $arg
+    }
+
+    # Verify that there were no complaints.
+    set re "^Reading symbols from \[^\r\n\]*\r\n$gdb_prompt $"
+    gdb_assert {[regexp $re $gdb_file_cmd_msg]} "No complaints"
 }
 
 # gdb_reload -- load a file into the target.  Called before "running",

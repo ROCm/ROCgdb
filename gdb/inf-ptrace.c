@@ -1,6 +1,6 @@
 /* Low-level child interface to ptrace.
 
-   Copyright (C) 1988-2020 Free Software Foundation, Inc.
+   Copyright (C) 1988-2021 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -48,22 +48,6 @@ gdb_ptrace (PTRACE_TYPE_ARG1 request, ptid_t ptid, PTRACE_TYPE_ARG3 addr,
   return ptrace (request, pid, addr, data);
 #endif
 }
-
-/* A unique_ptr helper to unpush a target.  */
-
-struct target_unpusher
-{
-  void operator() (struct target_ops *ops) const
-  {
-    unpush_target (ops);
-  }
-};
-
-/* A unique_ptr that unpushes a target on destruction.  */
-
-typedef std::unique_ptr<struct target_ops, target_unpusher> target_unpush_up;
-
-
 
 inf_ptrace_target::~inf_ptrace_target ()
 {}

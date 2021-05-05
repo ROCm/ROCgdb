@@ -1,6 +1,6 @@
 /* Support for printing Ada values for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2020 Free Software Foundation, Inc.
+   Copyright (C) 1986-2021 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -136,7 +136,7 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
   {
     LONGEST high;
 
-    if (get_discrete_bounds (index_type, &low, &high) < 0)
+    if (!get_discrete_bounds (index_type, &low, &high))
       len = 1;
     else if (low > high)
       {

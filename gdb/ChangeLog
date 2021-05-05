@@ -511,6 +511,268 @@
 	* procfs.c (procfs_target::insert_watchpoint): Update.
 	* target.h (target_have_steppable_watchpoint): Now a function.
 
+2021-04-25  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 10.2.
+
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27757
+	* python/py-type.c (typy_range): Check that bounds are constant
+	before accessing them as such.
+	* guile/scm-type.c (gdbscm_type_range): Likewise.
+
+2021-04-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27757
+	* python/py-type.c (typy_range): Check that bounds are constant
+	before accessing them as such.
+	* guile/scm-type.c (gdbscm_type_range): Likewise.
+
+2021-03-30  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27541
+	* dwarf2/read.c (dwarf2_has_info): Don't share dwarf2_per_bfd
+	with objfiles using READNOW.
+
+2021-03-12  Christian Biesinger  <cbiesinger@google.com>
+
+	PR threads/27239
+	* cp-support.c: Use scoped_segv_handler_restore.
+	* event-top.c (thread_local_segv_handler): Made static.
+	(scoped_segv_handler_restore::scoped_segv_handler_restore):
+	New function.
+	(scoped_segv_handler_restore::~scoped_segv_handler_restore): New
+	function.
+	* event-top.h (class scoped_segv_handler_restore): New class.
+	(thread_local_segv_handler): Removed.
+
+2021-03-07  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/27341
+	* dwarf2/read.c (read_array_type): Return NULL when not being able to
+	construct an array type.  Add assert to ensure that element_type is
+	not being modified.
+
+2021-03-06  Kevin Buettner  <kevinb@redhat.com>
+
+	PR build/27536
+	* nat/aarch64-linux-hw-point.c: Include <asm/ptrace.h> after
+	<sys/ptrace.h>.
+
+2021-03-06  Kevin Buettner  <kevinb@redhat.com>
+
+	PR build/27535
+	* nat/amd64-linux-siginfo.c: Include "gdbsupport/common-defs.h"
+	(which in turn includes <gnulib/config.h>) before include
+	of <signal.h>.
+
+2021-03-06  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/27333
+	* dwarf2/read.c (process_psymtab_comp_unit): Handle DW_TAG_type_unit.
+
+2021-03-04  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27147
+	* sparc-nat.h (sparc_fetch_inferior_registers): Add
+	process_stratum_target parameter,
+	sparc_store_inferior_registers): update callers.
+	* sparc-nat.c (sparc_fetch_inferior_registers,
+	sparc_store_inferior_registers): Add process_stratum_target
+	parameter.  Switch current thread before calling
+	sparc_supply_gregset / sparc_collect_rwindow.
+	(sparc_store_inferior_registers): Likewise.
+	* sparc-obsd-tdep.c (sparc32obsd_supply_uthread): Add assertion.
+	(sparc32obsd_collect_uthread): Likewise.
+	* sparc-tdep.c (sparc_supply_rwindow, sparc_collect_rwindow):
+	Add assertion.
+	* sparc64-obsd-tdep.c (sparc64obsd_collect_uthread,
+	sparc64obsd_supply_uthread): Add assertion.
+
+2021-02-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26861
+	* target.c (target_mourn_inferior): Only compare pids in
+	target_mourn_inferior.
+
+2021-02-23  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26828
+	* dwarf2/read.c (dwarf2_queue_guard) <dwarf2_queue_guard>:
+	Instantiate queue.
+	(~dwarf2_queue_guard): Clear queue.
+	(queue_comp_unit): Assert that queue is
+	instantiated.
+	(process_queue): Adjust.
+	* dwarf2/read.h (struct dwarf2_per_bfd) <queue>: Make optional.
+
+2021-02-23  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/26828
+	* dwarf2/read.c (maybe_queue_comp_unit): Check if CU is expanded
+	to decide whether or not to enqueue it for expansion.
+	(follow_die_offset, follow_die_sig_1): Ensure we load the DIEs
+	after calling maybe_queue_comp_unit.
+
+2021-02-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	PR gdb/27435
+	* inf-ptrace.c (struct target_unpusher): Move to target.h.
+	(target_unpush_up): Likewise.
+	* procfs.c (procfs_target::attach): Push target early.  Use
+	target_unpush_up to unpush target in case of error.
+	* target.h (struct target_unpusher): Move here.
+	(target_unpush_up): Likewise.
+
+2021-02-09  Shahab Vahedi  <shahab@synopsys.com>
+
+	PR build/27385
+	* arch/arc.c (arc_lookup_target_description): Use
+	target_desc_up() ctor explicitly.
+
+2021-02-08  Shahab Vahedi  <shahab@synopsys.com>
+
+	PR tdep/27369
+	* arc-linux-tdep.c (handle_atomic_sequence): New.
+	(arc_linux_software_single_step): Call handle_atomic_sequence().
+
+2021-02-05  Tom de Vries  <tdevries@suse.de>
+
+	PR breakpoints/27330
+	* breakpoint.c (create_exception_master_breakpoint): Handle case that
+	glibc object file has debug info.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR gdb/26813
+	* dwarf2/read.c (read_loclists_rnglists_header): Add
+	header_offset parameter and use it.
+	(read_loclist_index): Read header of the current contribution,
+	not the one at the beginning of the section.
+	(read_rnglist_index): Likewise.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* dwarf2/read.c (read_loclist_index): Add bound check for the end
+	of the offset.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* dwarf2/read.c (read_rnglist_index): Fix bound check.
+
+2021-02-02  Simon Marchi  <simon.marchi@efficios.com>
+
+	* dwarf2/read.c (read_loclist_index): Change complaints into
+	errors.
+
+2021-01-08  Tom de Vries  <tdevries@suse.de>
+
+	PR gdb/26881
+	* breakpoint.c (create_exception_master_breakpoint_probe)
+	(create_exception_master_breakpoint_hook): Factor out
+	of ...
+	(create_exception_master_breakpoint): ... here.  Only try to install
+	the master exception breakpoint in objfile.debug using the
+	_Unwind_DebugHook method, if the install using probes in objfile
+	failed.
+
+2021-01-07  Pedro Alves  <pedro@palves.net>
+	    Simon Marchi  <simon.marchi@polymtl.ca>
+	    Tom de Vries  <tdevries@suse.de>
+
+	PR remote/26614
+	* remote.c (remote_async_inferior_event_handler):  Hold a strong
+	reference to the remote target while handling an event.
+
+2021-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbarch.sh: Update copyright year range.
+
+2021-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	Update copyright year range in copyright header of all GDB files.
+
+2021-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* copyright.py (get_update_list): Add "gdbserver" and "gdbsupport"
+	to the list of directories to update.
+
+2021-01-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* top.c (print_gdb_version): Update copyright year.
+
+2020-12-09  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdbtypes.c (get_discrete_low_bound, get_discrete_high_bound):
+	Return {} instead of false.
+	(get_discrete_bounds): Compute high bound only if low bound is
+	valid.
+
+2020-12-09  Simon Marchi  <simon.marchi@efficios.com>
+
+	PR 26875, PR 26901
+	* gdbtypes.c (get_discrete_low_bound): Make non-static.
+	(get_discrete_high_bound): Make non-static.
+	* gdbtypes.h (get_discrete_low_bound): New declaration.
+	(get_discrete_high_bound): New declaration.
+	* valarith.c (value_subscript): Only fetch high bound if
+	necessary.
+
+2020-12-09  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.c (get_discrete_bounds): Implement with
+	get_discrete_low_bound and get_discrete_high_bound.
+	(get_discrete_low_bound): New.
+	(get_discrete_high_bound): New.
+
+2020-12-09  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdbtypes.h (get_discrete_bounds): Return bool, adjust all
+	callers.
+	* gdbtypes.c (get_discrete_bounds): Return bool.
+
+2020-12-09  Simon Marchi  <simon.marchi@efficios.com>
+
+	* ada-lang.c (ada_value_slice_from_ptr): Adjust.
+	(ada_value_slice): Adjust.
+	(pos_atr): Adjust.
+	* gdbtypes.c (get_discrete_bounds): Adjust.
+	(discrete_position): Return optional.
+	* gdbtypes.h (discrete_position): Return optional.
+
+2020-12-06  Giancarlo Frix  <gfrix@rocketsoftware.com>  (tiny change)
+
+	PR breakpoints/27009
+	* s390-tdep.h (op_bc): Correct BC opcode value.
+
+2020-12-04  Shahab Vahedi  <shahab@synopsys.com>
+
+	PR tdep/27015
+	* arc-linux-tdep.c (collect_register): Populate "eret" by
+	"pc" value from the regcache when asked for "pc" value.
+
+2020-11-29  Hannes Domani  <ssbssa@yahoo.de>
+
+	PR tui/26973
+	* tui/tui-layout.c (tui_apply_current_layout): Don't delete the
+	static locator win info.
+
+2020-11-06  Romain Geissler  <romain.geissler@amadeus.com>
+
+	PR python/26832
+	* configure: Regenerate.
+	* configure.ac: Check for python modules ctypes instead of
+	itertools.
+
+2020-10-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 10.1.90.DATE-git.
+
+2020-10-24  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 10.1 released.
+
 2020-10-24  Joel Brobecker  <brobecker@adacore.com>
 
 	* version.in: Set GDB version number to 10.1.
