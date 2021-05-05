@@ -1630,7 +1630,7 @@ rocm_target_ops::update_thread_list ()
 	  amd_dbgapi_wave_state_t state;
 
 	  if (amd_dbgapi_wave_get_info (
-		  process_id, get_amd_dbgapi_wave_id (wave_ptid),
+		  process_id, tid,
 		  AMD_DBGAPI_WAVE_INFO_STATE, sizeof (state), &state)
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    continue;*/
@@ -2200,7 +2200,6 @@ static void
 info_agents_command (const char *args, int from_tty)
 {
   struct ui_out *uiout = current_uiout;
-  amd_dbgapi_agent_id_t current_agent_id;
   amd_dbgapi_status_t status;
 
   gdb::optional<ui_out_emit_list> list_emitter;
@@ -2269,19 +2268,12 @@ info_agents_command (const char *args, int from_tty)
 
       if (!n_agents)
 	{
-	  if (!args || *args == '\0')
+	  if (args == nullptr || *args == '\0')
 	    uiout->message (_ ("No agents are currently active.\n"));
 	  else
 	    uiout->message (_ ("No active agents match '%s'.\n"), args);
 	  return;
 	}
-
-      if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				    AMD_DBGAPI_WAVE_INFO_AGENT,
-				    sizeof (current_agent_id),
-				    &current_agent_id)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	current_agent_id = AMD_DBGAPI_AGENT_NONE;
 
       /* Header:  */
       table_emitter.emplace (uiout, 7, n_agents, "InfoRocmAgentsTable");
@@ -2295,9 +2287,19 @@ info_agents_command (const char *args, int from_tty)
 			   "Device Name");
       uiout->table_header (5, ui_left, "cores", "Cores");
       uiout->table_header (7, ui_left, "threads", "Threads");
-      uiout->table_header (8, ui_left, "location_id", "PCI Slot");
+      uiout->table_header (8, ui_left, "location", "Location");
       uiout->table_body ();
     }
+
+  amd_dbgapi_agent_id_t current_agent_id;
+  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0') ||
+      !ptid_is_gpu (inferior_ptid) ||
+      amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+  				AMD_DBGAPI_WAVE_INFO_AGENT,
+  				sizeof (current_agent_id),
+  				&current_agent_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    current_agent_id = AMD_DBGAPI_AGENT_NONE;
 
   /* Rows:  */
   for (auto &&value : all_filtered_agents)
@@ -2317,7 +2319,7 @@ info_agents_command (const char *args, int from_tty)
 	  /* current  */
 	  if (!uiout->is_mi_like_p ())
 	    {
-	      if (current_inferior () == inf && agent_id == current_agent_id)
+	      if (agent_id == current_agent_id)
 		uiout->field_string ("current", "*");
 	      else
 		uiout->field_skip ("current");
@@ -2368,24 +2370,28 @@ info_agents_command (const char *args, int from_tty)
 	  uiout->field_signed ("threads", cores * threads);
 
 	  /* location  */
-	  uint16_t location_id;
+	  uint16_t location;
 	  if ((status
 	       = amd_dbgapi_agent_get_info (agent_id,
 					    AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
-					    sizeof (location_id),
-					    &location_id))
+					    sizeof (location),
+					    &location))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
 	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
 
-	  uiout->field_string ("location_id",
+	  uiout->field_string ("location",
 			       string_printf ("%02x:%02x.%d",
-					      (location_id >> 8) & 0xFF,
-					      (location_id >> 3) & 0x1F,
-					      location_id & 0x7));
+					      (location >> 8) & 0xFF,
+					      (location >> 3) & 0x1F,
+					      location & 0x7));
 
 	  uiout->text ("\n");
 	}
     }
+
+  if (uiout->is_mi_like_p () && current_agent_id != AMD_DBGAPI_AGENT_NONE)
+    uiout->field_signed ("current-agent-id", current_agent_id.handle);
+
   gdb_flush (gdb_stdout);
 }
 
@@ -2396,7 +2402,6 @@ info_queues_command (const char *args, int from_tty)
 {
   struct gdbarch *gdbarch = target_gdbarch ();
   struct ui_out *uiout = current_uiout;
-  amd_dbgapi_queue_id_t current_queue_id;
   amd_dbgapi_status_t status;
 
   gdb::optional<ui_out_emit_list> list_emitter;
@@ -2453,19 +2458,12 @@ info_queues_command (const char *args, int from_tty)
 
       if (!n_queues)
 	{
-	  if (!args || *args == '\0')
+	  if (args == nullptr || *args == '\0')
 	    uiout->message (_ ("No queues are currently active.\n"));
 	  else
 	    uiout->message (_ ("No active queues match '%s'.\n"), args);
 	  return;
 	}
-
-      if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				    AMD_DBGAPI_WAVE_INFO_QUEUE,
-				    sizeof (current_queue_id),
-				    &current_queue_id)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	current_queue_id = AMD_DBGAPI_QUEUE_NONE;
 
       /* Header:  */
       table_emitter.emplace (uiout, 8, n_queues, "InfoRocmQueuesTable");
@@ -2483,6 +2481,16 @@ info_queues_command (const char *args, int from_tty)
 			   "addr", "Address");
       uiout->table_body ();
     }
+
+  amd_dbgapi_queue_id_t current_queue_id;
+  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0') ||
+      !ptid_is_gpu (inferior_ptid) ||
+      amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+				AMD_DBGAPI_WAVE_INFO_QUEUE,
+				sizeof (current_queue_id),
+				&current_queue_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    current_queue_id = AMD_DBGAPI_QUEUE_NONE;
 
   /* Rows:  */
   for (auto &&value : all_filtered_queues)
@@ -2502,7 +2510,7 @@ info_queues_command (const char *args, int from_tty)
 	  if (!uiout->is_mi_like_p ())
 	    {
 	      /* current  */
-	      if (current_inferior () == inf && queue_id == current_queue_id)
+	      if (queue_id == current_queue_id)
 		uiout->field_string ("current", "*");
 	      else
 		uiout->field_skip ("current");
@@ -2591,6 +2599,10 @@ info_queues_command (const char *args, int from_tty)
 	  uiout->text ("\n");
 	}
     }
+
+  if (uiout->is_mi_like_p () && current_queue_id != AMD_DBGAPI_QUEUE_NONE)
+    uiout->field_signed ("current-queue-id", current_queue_id.handle);
+
   gdb_flush (gdb_stdout);
 }
 
@@ -2723,7 +2735,6 @@ info_dispatches_command (const char *args, int from_tty)
 {
   struct gdbarch *gdbarch = target_gdbarch ();
   struct ui_out *uiout = current_uiout;
-  amd_dbgapi_dispatch_id_t current_dispatch_id;
   amd_dbgapi_status_t status;
 
   info_dispatches_opts opts;
@@ -2849,19 +2860,12 @@ info_dispatches_command (const char *args, int from_tty)
 
       if (!n_dispatches)
 	{
-	  if (!args || *args == '\0')
+	  if (args == nullptr || *args == '\0')
 	    uiout->message (_ ("No dispatches are currently active.\n"));
 	  else
 	    uiout->message (_ ("No active dispatches match '%s'.\n"), args);
 	  return;
 	}
-
-      if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				    AMD_DBGAPI_WAVE_INFO_DISPATCH,
-				    sizeof (current_dispatch_id),
-				    &current_dispatch_id)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	current_dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
 
       /* Header:  */
       table_emitter.emplace (uiout, opts.full ? 11 : 7, n_dispatches,
@@ -2893,6 +2897,16 @@ info_dispatches_command (const char *args, int from_tty)
       uiout->table_body ();
     }
 
+  amd_dbgapi_dispatch_id_t current_dispatch_id;
+  if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0') ||
+      !ptid_is_gpu (inferior_ptid) ||
+      amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
+				AMD_DBGAPI_WAVE_INFO_DISPATCH,
+				sizeof (current_dispatch_id),
+				&current_dispatch_id)
+       != AMD_DBGAPI_STATUS_SUCCESS)
+	 current_dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
+
   /* Rows:  */
   for (auto &&value : all_filtered_dispatches)
     {
@@ -2916,7 +2930,7 @@ info_dispatches_command (const char *args, int from_tty)
 	  if (!uiout->is_mi_like_p ())
 	    {
 	      /* current  */
-	      if (curr_inferior == inf && dispatch_id == current_dispatch_id)
+	      if (dispatch_id == current_dispatch_id)
 		uiout->field_string ("current", "*");
 	      else
 		uiout->field_skip ("current");
@@ -3090,6 +3104,10 @@ info_dispatches_command (const char *args, int from_tty)
 	  uiout->text ("\n");
 	}
     }
+
+  if (uiout->is_mi_like_p () && current_dispatch_id != AMD_DBGAPI_DISPATCH_NONE)
+    uiout->field_signed ("current-dispatch-id", current_dispatch_id.handle);
+
   gdb_flush (gdb_stdout);
 }
 
