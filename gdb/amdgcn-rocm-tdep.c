@@ -548,6 +548,16 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       amdgcn_sw_breakpoint_from_kind);
 
+  amd_dbgapi_size_t pc_adjust;
+  if (amd_dbgapi_architecture_get_info (
+	architecture_id,
+	AMD_DBGAPI_ARCHITECTURE_INFO_BREAKPOINT_INSTRUCTION_PC_ADJUST,
+	sizeof (pc_adjust), &pc_adjust)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_ ("amd_dbgapi_architecture_get_info failed"));
+
+  set_gdbarch_decr_pc_after_break (gdbarch, pc_adjust);
+
   tdep.release ();
   gdbarch_u.release ();
 
