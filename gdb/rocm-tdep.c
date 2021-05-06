@@ -1013,8 +1013,8 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
     error (_ ("process_get_info for process_%ld failed (rc=%d)"),
 	   process_id.handle, status);
 
-  inferior *inf
-    = find_inferior_pid (current_inferior ()->process_target (), pid);
+  auto *proc_target = current_inferior ()->process_target ();
+  inferior *inf = find_inferior_pid (proc_target, pid);
   gdb_assert (inf != nullptr && "Could not find inferior");
   struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
 
@@ -1070,6 +1070,32 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 	      ws.value.sig = GDB_SIGNAL_ABRT;
 	    else
 	      ws.value.sig = GDB_SIGNAL_0;
+
+	    thread_info *thread = find_thread_ptid (proc_target, event_ptid);
+	    if (thread == nullptr)
+	      {
+		/* Silently create new GPU threads to avoid spamming the
+		   terminal with thousands of "[New Thread ...]" messages.  */
+		thread = add_thread_silent (proc_target, event_ptid);
+		set_running (proc_target, event_ptid, 1);
+		set_executing (proc_target, event_ptid, 1);
+	      }
+
+	    /* If the wave is stopped because of a software breakpoint, the
+	       program counter needs to be adjusted so that it points to the
+	       breakpoint instruction.  */
+	    if ((stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0)
+	      {
+		regcache *regcache = get_thread_regcache (thread);
+		gdbarch *gdbarch = regcache->arch ();
+
+		CORE_ADDR pc = regcache_read_pc (regcache);
+		CORE_ADDR adjusted_pc
+		  = pc - gdbarch_decr_pc_after_break (gdbarch);
+
+		if (adjusted_pc != pc)
+		  regcache_write_pc (regcache, adjusted_pc);
+	      }
 	  }
 	else
 	  error (_ ("wave_get_info for wave_%ld failed (rc=%d)"),
@@ -1300,15 +1326,6 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 	     waitstatus (either IGNORE or NO_RESUMED).  */
 	  return minus_one_ptid;
 	}
-    }
-
-  if (!find_thread_ptid (proc_target, event_ptid))
-    {
-      /* Silently create new GPU threads to avoid spamming the terminal with
-	 thousands of "[New Thread ...]" messages.  */
-      add_thread_silent (proc_target, event_ptid);
-      set_running (proc_target, event_ptid, 1);
-      set_executing (proc_target, event_ptid, 1);
     }
 
   *ws = gpu_waitstatus;
