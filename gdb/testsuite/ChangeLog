@@ -1,3 +1,51 @@
+2021-05-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.guile/scm-breakpoint.exp (test_watchpoints): Print the
+	watchpoint object before and after registering it with GDB.
+
+2021-05-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.guile/scm-breakpoint.exp (test_bkpt_basic): Convert to
+	'proc_with_prefix', remove use of 'with_test_prefix', and
+	reindent.
+	(test_bkpt_deletion): Likewise.
+	(test_bkpt_cond_and_cmds): Likewise.
+	(test_bkpt_invisible): Likewise.
+	(test_watchpoints): Likewise.
+	(test_bkpt_internal): Likewise.
+	(test_bkpt_eval_funcs): Likewise.
+	(test_bkpt_registration): Likewise.
+	(test_bkpt_address): Convert to 'proc_with_prefix'.
+	(test_bkpt_probe): Likewise.
+
+2021-05-06  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.guile/scm-breakpoint.exp (test_bkpt_basic): Extend test
+	names to avoid duplicates.
+	(test_bkpt_cond_and_cmds): Likewise.
+	(test_bkpt_eval_funcs): Likewise.
+
+2021-05-06  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.mi/mi-break.exp (test_forced_conditions): Add a test
+	for the -break-condition command's "--force" flag.
+
+2021-05-06  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.mi/mi-break.exp (test_forced_conditions): New proc that
+	is called by the test.
+
+2021-05-05  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.threads/detach-step-over.exp: Do exp_continue when encountering
+	"Reading symbols" or "Expanding full symbols" lines.  Using timeout
+	factor of 2 for attach.
+
+2021-05-05  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.threads/fork-plus-threads.exp: Handle "New LWP <n>" and
+	"LWP <n> exited" messages.
+
 2021-05-04  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* gdb.python/py-type.exp (test_fields): Test calling fields on

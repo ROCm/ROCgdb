@@ -1,3 +1,40 @@
+2021-05-06  Stafford Horne  <shorne@gmail.com>
+
+	PR 27746
+	testsuite/ld-or1k/or1k.exp (or1kplttests): Add tests for linking
+	along with gotha() relocations.
+	testsuite/ld-or1k/gotha1.dd: New file.
+	testsuite/ld-or1k/gotha1.s: New file.
+	testsuite/ld-or1k/gotha2.dd: New file.
+	testsuite/ld-or1k/gotha2.s: New file
+	testsuite/ld-or1k/pltlib.s (x): Define size to avoid link
+	failure.
+
+2021-05-06  Nick Alcock  <nick.alcock@oracle.com>
+
+	* testsuite/ld-ctf/ctf.exp: Use -gctf, not -gt.
+	* testsuite/lib/ld-lib.exp: Likewise.
+	* testsuite/ld-ctf/nonrepresentable-1.c: New test for nonrepresentable types.
+	* testsuite/ld-ctf/nonrepresentable-2.c: Likewise.
+	* testsuite/ld-ctf/nonrepresentable.d: Likewise.
+	* testsuite/ld-ctf/array.d: Larger type section.
+	* testsuite/ld-ctf/data-func-conflicted.d: Likewise.
+	* testsuite/ld-ctf/enums.d: Likewise.
+	* testsuite/ld-ctf/conflicting-enums.d: Don't compare types.
+	* testsuite/ld-ctf/cross-tu-cyclic-conflicting.d: Changed type order.
+	* testsuite/ld-ctf/cross-tu-noncyclic.d: Likewise.
+	* testsuite/ld-ctf/slice.d: Adjust for improved slice emission.
+
+2021-05-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27825
+	* testsuite/ld-elf/pr27825-1.d: New file.
+	* testsuite/ld-elf/pr27825-1a.s: Likewise.
+	* testsuite/ld-elf/pr27825-1b.s: Likewise.
+	* testsuite/ld-elf/pr27825-2.d: Likewise.
+	* testsuite/ld-elf/pr27825-2a.s: Likewise.
+	* testsuite/ld-elf/pr27825-2b.s: Likewise.
+
 2021-05-05  Alan Modra  <amodra@gmail.com>
 
 	* testsuite/ld-powerpc/empty.s: New file.

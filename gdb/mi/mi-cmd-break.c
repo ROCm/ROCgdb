@@ -184,12 +184,14 @@ mi_cmd_break_insert_1 (int dprintf, const char *command, char **argv, int argc)
   int is_explicit = 0;
   struct explicit_location explicit_loc;
   std::string extra_string;
+  bool force_condition = false;
 
   enum opt
     {
       HARDWARE_OPT, TEMP_OPT, CONDITION_OPT,
       IGNORE_COUNT_OPT, THREAD_OPT, PENDING_OPT, DISABLE_OPT,
       TRACEPOINT_OPT,
+      FORCE_CONDITION_OPT,
       QUALIFIED_OPT,
       EXPLICIT_SOURCE_OPT, EXPLICIT_FUNC_OPT,
       EXPLICIT_LABEL_OPT, EXPLICIT_LINE_OPT
@@ -204,6 +206,7 @@ mi_cmd_break_insert_1 (int dprintf, const char *command, char **argv, int argc)
     {"f", PENDING_OPT, 0},
     {"d", DISABLE_OPT, 0},
     {"a", TRACEPOINT_OPT, 0},
+    {"-force-condition", FORCE_CONDITION_OPT, 0},
     {"-qualified", QUALIFIED_OPT, 0},
     {"-source" , EXPLICIT_SOURCE_OPT, 1},
     {"-function", EXPLICIT_FUNC_OPT, 1},
@@ -269,6 +272,9 @@ mi_cmd_break_insert_1 (int dprintf, const char *command, char **argv, int argc)
 	case EXPLICIT_LINE_OPT:
 	  is_explicit = 1;
 	  explicit_loc.line_offset = linespec_parse_line_offset (oarg);
+	  break;
+	case FORCE_CONDITION_OPT:
+	  force_condition = true;
 	  break;
 	}
     }
@@ -354,7 +360,7 @@ mi_cmd_break_insert_1 (int dprintf, const char *command, char **argv, int argc)
 
   create_breakpoint (get_current_arch (), location.get (), condition, thread,
 		     extra_string.c_str (),
-		     false,
+		     force_condition,
 		     0 /* condition and thread are valid.  */,
 		     temp_p, type_wanted,
 		     ignore_count,
@@ -378,6 +384,63 @@ void
 mi_cmd_dprintf_insert (const char *command, char **argv, int argc)
 {
   mi_cmd_break_insert_1 (1, command, argv, argc);
+}
+
+/* Implements the -break-condition command.
+   See the MI manual for the list of options.  */
+
+void
+mi_cmd_break_condition (const char *command, char **argv, int argc)
+{
+  enum option
+    {
+      FORCE_CONDITION_OPT,
+    };
+
+  static const struct mi_opt opts[] =
+  {
+    {"-force", FORCE_CONDITION_OPT, 0},
+    { 0, 0, 0 }
+  };
+
+  /* Parse arguments.  */
+  int oind = 0;
+  char *oarg;
+  bool force_condition = false;
+
+  while (true)
+    {
+      int opt = mi_getopt ("-break-condition", argc, argv,
+			   opts, &oind, &oarg);
+      if (opt < 0)
+	break;
+
+      switch (opt)
+	{
+	case FORCE_CONDITION_OPT:
+	  force_condition = true;
+	  break;
+	}
+    }
+
+  /* There must be at least two more args: a bpnum and a condition
+     expression.  */
+  if (oind + 1 >= argc)
+    error (_("-break-condition: Missing the <number> and/or <expr> "
+	     "argument"));
+
+  int bpnum = atoi (argv[oind]);
+
+  /* The rest form the condition expr.  */
+  std::string expr (argv[oind + 1]);
+  for (int i = oind + 2; i < argc; ++i)
+    {
+      expr += " ";
+      expr += argv[i];
+    }
+
+  set_breakpoint_condition (bpnum, expr.c_str (), 0 /* from_tty */,
+			    force_condition);
 }
 
 enum wp_type
