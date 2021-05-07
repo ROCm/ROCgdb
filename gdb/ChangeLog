@@ -1,3 +1,34 @@
+2021-05-07  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* Re-format all Python files using black.
+
+2021-05-07  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/26327
+	* dwarf2/read.c (struct dwarf2_cu): Remove ancestor.
+	(dwarf2_cu::get_builder): Remove ancestor-related code.
+	(new_symbol): Remove code supporting pre-4.1 gcc that show arguments
+	of inlined functions as locals.
+	(follow_die_offset, follow_die_sig_1): Remove setting of ancestor.
+
+2021-05-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* guile/guile-internal.h (gdbscm_safe_source_script): Change
+	function return type.
+	* guile/guile.c (gdbscm_source_script): Update to handle change in
+	gdbscm_safe_source_script.
+	* guile/scm-objfile.c (gdbscm_source_objfile_script): Likewise.
+	* guile/scm-safe-call.c (gdbscm_safe_source_script): Change return
+	type.
+
+2021-05-06  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* inferior.h (class inferior) <args>: Change type to
+	unique_xmalloc_ptr.
+	* inferior.c (inferior::~inferior): Don't free args.
+	* infcmd.c (get_inferior_args): Adjust.
+	(set_inferior_args): Adjust.
+
 2021-05-06  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* guile/scm-breakpoint.c (bpscm_print_breakpoint_smob): Only print
