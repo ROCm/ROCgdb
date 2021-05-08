@@ -1,3 +1,86 @@
+2021-05-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* cli/cli-cmds.c: Add 'gdbsupport/gdb_tilde_expand.h'
+	include.
+	(source_script_with_search): Perform tilde expansion.
+
+2021-05-07  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target-descriptions.c (struct target_desc_info) <filename>:
+	Make std::string.
+	(copy_inferior_target_desc_info): Adjust.
+	(target_desc_info_free): Adjust.
+	(target_find_description): Adjust.
+	(set_tdesc_filename_cmd): Adjust.
+	(show_tdesc_filename_cmd): Adjust.
+	(unset_tdesc_filename_cmd): Adjust.
+	(maint_print_c_tdesc_cmd): Adjust.
+
+2021-05-07  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target-descriptions.c (struct target_desc_info): Initialize
+	fields.
+	(get_tdesc_info): Use new.
+	(target_desc_info_free): Use delete.
+
+2021-05-07  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target-descriptions.c (struct target_desc_info) <fetched>:
+	bool.
+	(target_find_description): Adjust.
+	(target_clear_description): Adjust.
+
+2021-05-07  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* target-descriptions.c (struct target_desc_info) <tdesc>:
+	Adjust doc.
+	(target_desc_fetched): Remove.
+	(current_target_desc): Remove.
+	(target_description_filename): Remove.
+	(target_find_description): Adjust.
+	(target_clear_description): Adjust.
+	(target_current_description): Adjust.
+	(set_tdesc_filename_cmd): Adjust.
+	(show_tdesc_filename_cmd): Adjust.
+	(unset_tdesc_filename_cmd): Adjust.
+	(maint_print_c_tdesc_cmd): Adjust.
+	(maint_print_xml_tdesc_cmd): Adjust.
+
+2021-05-07  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* infcmd.c (notice_new_inferior): Change parameter type.
+	* inferior.h (notice_new_inferior): Change parameter type.
+	* remote.c (remote_notice_new_inferior): Change parameter type to
+	bool.  Also update type of local variable to bool.
+	(remote_target::update_thread_list): Change type of local variable
+	to bool.
+	(remote_target::process_stop_reply): Pass bool instead of int to
+	remote_notice_new_inferior.
+
+2021-05-07  Simon Marchi  <simon.marchi@efficios.com>
+
+	* target.c (target_stack::unpush): Call target_ops::find_beneath
+	to get the target beneath `t`.
+
+2021-05-07  Simon Marchi  <simon.marchi@efficios.com>
+
+	* target.c (target_close): Check in all inferiors that the
+	target is not pushed.
+
+2021-05-07  Aaron Merey  <amerey@redhat.com>
+
+	* debuginfod-support.c (debuginfod_init): Remove.
+	(get_debuginfod_client): New function.
+
+2021-05-07  Tom Tromey  <tom@tromey.com>
+
+	* breakpoint.c (ambiguous_names_p): Use htab_eq_string.
+	* utils.c (streq_hash): Remove.
+	* utils.h (streq_hash): Don't declare.
+	* completer.c (completion_tracker::discard_completions): Update
+	comment.
+	* ada-lang.c (_initialize_ada_language): Use htab_eq_string.
+
 2021-05-07  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* Re-format all Python files using black.
