@@ -481,6 +481,7 @@ modules.c: Makefile $(SIM_OBJS:.o=.c)
 	) >$@.tmp
 	$(SHELL) $(srcroot)/move-if-change $@.tmp $@
 	@rm -f $@.l-tmp $@.tmp
+	touch $@
 
 # CGEN support.
 
@@ -512,9 +513,17 @@ installdirs:
 
 check:
 
+html:
+clean-html:
+install-html:
+
 info:
 clean-info:
 install-info:
+
+pdf:
+clean-pdf:
+install-pdf:
 
 .NOEXPORT:
 MAKEOVERRIDES=

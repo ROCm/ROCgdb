@@ -1046,7 +1046,7 @@ linux_nat_post_attach_wait (ptid_t ptid, int *signalled)
     {
       /* The pid we tried to attach has apparently just exited.  */
       linux_nat_debug_printf ("Failed to stop %d: %s", pid,
-			      status_to_str (status));
+			      status_to_str (status).c_str ());
       return status;
     }
 
@@ -1054,7 +1054,7 @@ linux_nat_post_attach_wait (ptid_t ptid, int *signalled)
     {
       *signalled = 1;
       linux_nat_debug_printf ("Received %s after attaching",
-			      status_to_str (status));
+			      status_to_str (status).c_str ());
     }
 
   return status;
@@ -1224,7 +1224,8 @@ linux_nat_target::attach (const char *args, int from_tty)
   /* Save the wait status to report later.  */
   lp->resumed = 1;
   linux_nat_debug_printf ("waitpid %ld, saving status %s",
-			  (long) lp->ptid.pid (), status_to_str (status));
+			  (long) lp->ptid.pid (),
+			  status_to_str (status).c_str ());
 
   lp->status = status;
 
@@ -1990,7 +1991,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status)
 	      /* Save the wait status to report later.  */
 	      linux_nat_debug_printf
 		("waitpid of new LWP %ld, saving status %s",
-		 (long) new_lp->ptid.lwp (), status_to_str (status));
+		 (long) new_lp->ptid.lwp (), status_to_str (status).c_str ());
 	      new_lp->status = status;
 	    }
 	  else if (report_thread_events)
@@ -2138,7 +2139,7 @@ wait_lwp (struct lwp_info *lp)
 
       linux_nat_debug_printf ("waitpid %s received %s",
 			      target_pid_to_str (lp->ptid).c_str (),
-			      status_to_str (status));
+			      status_to_str (status).c_str ());
 
       /* Check if the thread has exited.  */
       if (WIFEXITED (status) || WIFSIGNALED (status))
@@ -2425,7 +2426,7 @@ stop_wait_callback (struct lwp_info *lp)
 	  /* The thread was stopped with a signal other than SIGSTOP.  */
 
 	  linux_nat_debug_printf ("Pending event %s in %s",
-				  status_to_str ((int) status),
+				  status_to_str ((int) status).c_str (),
 				  target_pid_to_str (lp->ptid).c_str ());
 
 	  /* Save the sigtrap event.  */
@@ -2844,7 +2845,7 @@ linux_nat_filter_event (int lwpid, int status)
   if (WIFSTOPPED (status) && !lp)
     {
       linux_nat_debug_printf ("saving LWP %ld status %s in stopped_pids list",
-			      (long) lwpid, status_to_str (status));
+			      (long) lwpid, status_to_str (status).c_str ());
       add_to_pid_list (&stopped_pids, lwpid, status);
       return;
     }
@@ -3137,7 +3138,7 @@ linux_nat_wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
   if (lp != NULL)
     {
       linux_nat_debug_printf ("Using pending wait status %s for %s.",
-			      status_to_str (lp->status),
+			      status_to_str (lp->status).c_str (),
 			      target_pid_to_str (lp->ptid).c_str ());
     }
 
@@ -3172,7 +3173,8 @@ linux_nat_wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
       if (lwpid > 0)
 	{
 	  linux_nat_debug_printf ("waitpid %ld received %s",
-				  (long) lwpid, status_to_str (status));
+				  (long) lwpid,
+				  status_to_str (status).c_str ());
 
 	  linux_nat_filter_event (lwpid, status);
 	  /* Retry until nothing comes out of waitpid.  A single
@@ -4007,11 +4009,7 @@ linux_nat_target::supports_multi_process ()
 bool
 linux_nat_target::supports_disable_randomization ()
 {
-#ifdef HAVE_PERSONALITY
   return true;
-#else
-  return false;
-#endif
 }
 
 /* SIGCHLD handler that serves two purposes: In non-stop/async mode,
