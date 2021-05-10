@@ -220,11 +220,11 @@ amdgcn_frame_this_id (struct frame_info *this_frame, void **this_cache,
   if (frame_debug)
     {
       fprintf_unfiltered (gdb_stdlog,
-			  "{ amdgcn_frame_this_id (this_frame=%d) type=%d -> ",
+			  "{ amdgcn_frame_this_id (this_frame=%d) type=%d"
+			  " -> %s }\n",
 			  frame_relative_level (this_frame),
-			  get_frame_type (this_frame));
-      fprint_frame_id (gdb_stdlog, *this_id);
-      fprintf_unfiltered (gdb_stdlog, "}\n");
+			  get_frame_type (this_frame),
+			  this_id->to_string ().c_str ());
     }
 
   return;
