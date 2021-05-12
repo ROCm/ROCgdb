@@ -27504,8 +27504,8 @@ the log to a new file:
 (@value{GDBP}) set logging on
 @end smallexample
 
-If you want to print the log to both the console and a file, ommit the
-@code{set the logging debugredirect} command.  @xref{Logging Output}.
+If you want to print the log to both the console and a file, omit the
+@code{set logging debugredirect on} command.  @xref{Logging Output}.
 
 @c TODO: Add when support available:
 @c
