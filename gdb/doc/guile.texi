@@ -801,6 +801,21 @@ The @code{<gdb:value>} object @code{scm-val} is identical to that
 corresponding to @code{val}.
 @end deffn
 
+@deffn {Scheme Procedure} value-reference-value value
+Return a new @code{<gdb:value>} object which is a reference to the value
+encapsulated by @code{<gdb:value>} object @var{value}.
+@end deffn
+
+@deffn {Scheme Procedure} value-rvalue-reference-value value
+Return a new @code{<gdb:value>} object which is an rvalue reference to
+the value encapsulated by @code{<gdb:value>} object @var{value}.
+@end deffn
+
+@deffn {Scheme Procedure} value-const-value value
+Return a new @code{<gdb:value>} object which is a @samp{const} version
+of @code{<gdb:value>} object @var{value}.
+@end deffn
+
 @deffn {Scheme Procedure} value-field value field-name
 Return field @var{field-name} from @code{<gdb:value>} object @var{value}.
 @end deffn
@@ -1267,6 +1282,9 @@ A pointer-to-member.
 
 @item TYPE_CODE_REF
 A reference type.
+
+@item TYPE_CODE_RVALUE_REF
+A C@t{++}11 rvalue reference type.
 
 @item TYPE_CODE_CHAR
 A character type.

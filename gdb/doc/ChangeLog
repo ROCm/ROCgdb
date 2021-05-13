@@ -1,3 +1,19 @@
+2021-05-12  George Barrett  <bob@bob131.so>
+
+	* guile.texi (Values From Inferior In Guile): Add documentation
+	for value-const-value.
+
+2021-05-12  George Barrett  <bob@bob131.so>
+
+	* guile.texi (Values From Inferior In Guile): Add documentation
+	for value-reference-value.  Add documentation for
+	value-rvalue-reference-value.
+
+2021-05-12  George Barrett  <bob@bob131.so>
+
+	* guile.texi (Types In Guile): Add documentation for
+	TYPE_CODE_RVALUE_REF.
+
 2021-05-10  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* guile.texinfo (Breakpoints In Guile): Reword sentence.
@@ -12,11 +28,6 @@
 
 	* python.texinfo (Python Commands): Document 'set debug
 	py-breakpoint' and 'show debug py-breakpoint'.
-
-2021-05-07  Tom de Vries  <tdevries@suse.de>
-
-	PR symtab/26327
-	* gdb.texinfo (Inline Functions): Update.
 
 2021-05-06  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 

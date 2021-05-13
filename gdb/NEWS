@@ -200,6 +200,17 @@ QMemTags
   Request the remote to store the specified allocation tags to the requested
   memory range.
 
+* Guile API
+
+  ** Improved support for rvalue reference values:
+     TYPE_CODE_RVALUE_REF is now exported as part of the API and the
+     value-referenced-value procedure now handles rvalue reference
+     values.
+
+  ** New procedures for obtaining value variants:
+     value-reference-value, value-rvalue-reference-value and
+     value-const-value.
+
 *** Changes in GDB 10
 
 * There are new feature names for ARC targets: "org.gnu.gdb.arc.core"

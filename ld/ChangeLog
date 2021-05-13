@@ -1,3 +1,30 @@
+2021-05-13  Fangrui Song  <maskray@google.com>
+
+	PR 27834
+	* ldlex.h (enum option_values): Add OPTION_NO_SYMBOLIC.
+	* lexsup.c (ld_options): Add -Bno-symbolic.
+	(parse_args): Handle -Bno-symbolic.
+	* ld.texi: Document -Bno-symbolic.
+	* NEWS: Mention -Bno-symbolic.
+	* testsuite/ld-elf/shared.exp: Add a test.
+
+2021-05-12  Richard Earnshaw  <rearnsha@arm.com>
+
+	* testsuite/ld-arm/arm-elf.exp (farcall test for v8-m.mainline):
+	Correct expected output.
+
+2021-05-11  Roland McGrath  <mcgrathr@google.com>
+
+	* testsuite/ld-x86-64/rela.d: Fix regexp not to presume a specific
+	address layout, so it works for e.g. --target=x86-64-elf.
+
+2021-05-11  Nick Clifton  <nickc@redhat.com>
+
+	PR 27113
+	* Makefile.am (install-data-local): Also delete libdep.dll.a if it
+	is present.
+	* Makefile.in: Regenerate.
+
 2021-05-10  Dimitar Dimitrov  <dimitar@dinux.eu>
 
 	* testsuite/ld-elf/group8a.d: Remove pru from XFAIL list.

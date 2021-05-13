@@ -1,3 +1,54 @@
+2021-05-12  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* python/python-internal.h (gdbpy_parse_command_name): Return
+	gdb::unique_xmalloc_ptr.
+	* python/py-cmd.c (gdbpy_parse_command_name): Likewise.
+	(cmdpy_init): Adjust.
+	* python/py-param.c (parmpy_init): Adjust.
+	(add_setshow_generic): Take gdb::unique_xmalloc_ptr, release it
+	when done.
+
+2021-05-12  George Barrett  <bob@bob131.so>
+
+	* NEWS (Guile API): Note the addition of the new procedure.
+	* guile/scm-value.c (gdbscm_value_const_value): Add
+	implementation of value-const-value procedure.
+	(value_functions): Add value-const-value procedure.
+
+2021-05-12  George Barrett  <bob@bob131.so>
+
+	* NEWS (Guile API): Note the addition of new procedures.
+	* guile/scm-value.c (gdbscm_reference_value): Add helper function
+	for reference value creation.
+	(gdbscm_value_reference_value): Add implementation of
+	value-reference-value procedure.
+	(gdbscm_value_rvalue_reference_value): Add implementation of
+	value-rvalue-reference-value procedure.
+	(value_functions): Add value-reference-value procedure.  Add
+	value-rvalue-reference-value procedure.
+
+2021-05-12  George Barrett  <bob@bob131.so>
+
+	* guile/scm-type.c (type_integer_constants): Add binding for
+	TYPE_CODE_RVALUE_REF.
+	* guile/scm-value.c (gdbscm_value_referenced_value): Handle
+	dereferencing of rvalue references.
+	* NEWS (Guile API): Note improvements in rvalue reference support.
+
+2021-05-12  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* btrace.c (handle_pt_insn_events): Ignore status update enable
+	events.
+
+2021-05-11  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* arm-tdep.c (arm_record_data_proc_misc_ld_str): Fix
+	indentation.
+
+2021-05-11  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (struct cmd_list_element): Fix indentation.
+
 2021-05-10  Lancelot Six  <lsix@lancelotsix.com>
 
 	PR gdb/27614
@@ -167,15 +218,6 @@
 2021-05-07  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* Re-format all Python files using black.
-
-2021-05-07  Tom de Vries  <tdevries@suse.de>
-
-	PR symtab/26327
-	* dwarf2/read.c (struct dwarf2_cu): Remove ancestor.
-	(dwarf2_cu::get_builder): Remove ancestor-related code.
-	(new_symbol): Remove code supporting pre-4.1 gcc that show arguments
-	of inlined functions as locals.
-	(follow_die_offset, follow_die_sig_1): Remove setting of ancestor.
 
 2021-05-07  Andrew Burgess  <andrew.burgess@embecosm.com>
 

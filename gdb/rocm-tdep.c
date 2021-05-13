@@ -3257,11 +3257,11 @@ _initialize_rocm_tdep (void)
 
   add_basic_prefix_cmd ("amdgpu", no_class,
 			_ ("Generic command for setting amdgpu flags."),
-			&set_amdgpu_list, "set amdgpu ", 0, &setlist);
+			&set_amdgpu_list, 0, &setlist);
 
   add_show_prefix_cmd ("amdgpu", no_class,
 		       _ ("Generic command for showing amdgpu flags."),
-		       &show_amdgpu_list, "show amdgpu ", 0, &showlist);
+		       &show_amdgpu_list, 0, &showlist);
 
   add_setshow_boolean_cmd ("precise-memory", no_class, &precise_memory_mode,
 			   _ ("Set precise-memory mode."),
@@ -3274,14 +3274,12 @@ If off (default), precise memory reporting is disabled."),
   add_basic_prefix_cmd ("amdgpu", no_class,
 			_ ("Generic command for setting amdgpu debugging "
 			   "flags."),
-			&set_debug_amdgpu_list, "set debug amdgpu ", 0,
-			&setdebuglist);
+			&set_debug_amdgpu_list, 0, &setdebuglist);
 
   add_show_prefix_cmd ("amdgpu", no_class,
 		       _ ("Generic command for showing amdgpu debugging "
 			  "flags."),
-		       &show_debug_amdgpu_list, "show debug amdgpu ", 0,
-		       &showdebuglist);
+		       &show_debug_amdgpu_list, 0, &showdebuglist);
 
   add_setshow_enum_cmd ("log-level", class_maintenance,
 			debug_amdgpu_log_level_enums, &debug_amdgpu_log_level,
@@ -3308,7 +3306,7 @@ Otherwise, all agents are displayed."),
 
   add_basic_prefix_cmd ("queue", class_run,
 			_ ("Commands that operate on heterogeneous queues."),
-			&queue_list, "queue ", 0, &cmdlist);
+			&queue_list, 0, &cmdlist);
 
   add_cmd ("find", class_run, queue_find_command, _ ("\
 Find heterogeneous queues that match a regular expression.\n\
@@ -3327,7 +3325,7 @@ Otherwise, all queues are displayed."),
   add_basic_prefix_cmd ("dispatch", class_run,
 			_ ("Commands that operate on heterogeneous "
 			   "dispatches."),
-			&dispatch_list, "dispatch ", 0, &cmdlist);
+			&dispatch_list, 0, &cmdlist);
 
   add_cmd ("find", class_run, dispatch_find_command, _ ("\
 Find heterogeneous dispatches that match a regular expression.\n\

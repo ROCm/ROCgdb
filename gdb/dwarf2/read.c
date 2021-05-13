@@ -685,12 +685,20 @@ public:
 
   struct partial_die_info *find_partial_die (sect_offset sect_off);
 
+  /* If this CU was inherited by another CU (via specification,
+     abstract_origin, etc), this is the ancestor CU.  */
+  dwarf2_cu *ancestor;
+
   /* Get the buildsym_compunit for this CU.  */
   buildsym_compunit *get_builder ()
   {
     /* If this CU has a builder associated with it, use that.  */
     if (m_builder != nullptr)
       return m_builder.get ();
+
+    /* Otherwise, search ancestors for a valid builder.  */
+    if (ancestor != nullptr)
+      return ancestor->get_builder ();
 
     return nullptr;
   }
@@ -22038,7 +22046,15 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	  break;
 	case DW_TAG_formal_parameter:
 	  {
-	    SYMBOL_IS_ARGUMENT (sym) = 1;
+	    /* If we are inside a function, mark this as an argument.  If
+	       not, we might be looking at an argument to an inlined function
+	       when we do not have enough information to show inlined frames;
+	       pretend it's a local variable in that case so that the user can
+	       still see it.  */
+	    struct context_stack *curr
+	      = cu->get_builder ()->get_current_context_stack ();
+	    if (curr != nullptr && curr->name != nullptr)
+	      SYMBOL_IS_ARGUMENT (sym) = 1;
 	    attr = dwarf2_attr (die, DW_AT_location, cu);
 	    if (attr != nullptr)
 	      {
@@ -23374,6 +23390,9 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
   *ref_cu = target_cu;
   temp_die.sect_off = sect_off;
 
+  if (target_cu != cu)
+    target_cu->ancestor = cu;
+
   return (struct die_info *) htab_find_with_hash (target_cu->die_hash,
 						  &temp_die,
 						  to_underlying (sect_off));
@@ -23723,7 +23742,7 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
 		  struct dwarf2_cu **ref_cu)
 {
   struct die_info temp_die;
-  struct dwarf2_cu *sig_cu;
+  struct dwarf2_cu *sig_cu, *cu = *ref_cu;
   struct die_info *die;
   dwarf2_per_objfile *per_objfile = (*ref_cu)->per_objfile;
 
@@ -23759,6 +23778,8 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
 	}
 
       *ref_cu = sig_cu;
+      if (sig_cu != cu)
+	sig_cu->ancestor = cu;
 
       return die;
     }
@@ -25080,13 +25101,13 @@ _initialize_dwarf2_read ()
   add_basic_prefix_cmd ("dwarf", class_maintenance, _("\
 Set DWARF specific variables.\n\
 Configure DWARF variables such as the cache size."),
-			&set_dwarf_cmdlist, "maintenance set dwarf ",
+			&set_dwarf_cmdlist,
 			0/*allow-unknown*/, &maintenance_set_cmdlist);
 
   add_show_prefix_cmd ("dwarf", class_maintenance, _("\
 Show DWARF specific variables.\n\
 Show DWARF variables such as the cache size."),
-		       &show_dwarf_cmdlist, "maintenance show dwarf ",
+		       &show_dwarf_cmdlist,
 		       0/*allow-unknown*/, &maintenance_show_cmdlist);
 
   add_setshow_zinteger_cmd ("max-cache-age", class_obscure,

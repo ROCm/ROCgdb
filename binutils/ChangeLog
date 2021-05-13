@@ -1,3 +1,84 @@
+2021-05-12  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (process_extended_line_op): Don't bump data pointer past
+	end when strnlen doesn't find string terminator.
+	(decode_location_expression): Remove dead code.
+	(skip_attr_bytes): Remove const from end param.  Ensure data
+	pointer doesn't pass end.
+	(get_type_signedness): Remove const from end param.
+	(read_and_display_attr_value): Ensure data pointer doesn't pass end.
+	(display_debug_lines_raw, display_debug_lines_decoded): Likewise.
+	(display_debug_pubnames_worker): Likewise.
+	(display_debug_pubnames_worker): Use SAFE_BYTE_GET_AND INC rather
+	than blindly incrementing data pointer.
+	(display_debug_addr, display_debug_str_offsets): Likewise.  Don't
+	compare pointers, compare lengths.
+
+2021-05-12  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (SAFE_BYTE_GET_INTERNAL): Define.
+	(SAFE_BYTE_GET, SAFE_BYTE_GET_AND_INC): Define using the above.
+	(SAFE_SIGNED_BYTE_GET, SAFE_SIGNED_BYTE_GET_AND_INC): Likewise.
+	(display_discr_list): Use SAFE_BYTE_GET_AND_INC rather than
+	SAFE_BYTE_GET followed by increment.
+	(process_debug_info): Likewise, and test bytes remaining before
+	incrementing section_begin rather than using pointer comparison.
+	(display_debug_names): Pass lvalue as SAFE_BYTE_GET PTR.
+	(process_cu_tu_index): Likewise for SAFE_BYTE_GET_AND_INC.
+
+2021-05-12  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (dwarf_vmatoa64, SAFE_BYTE_GET64, add64): Delete.
+	(skip_attr_bytes): Replace use of SAFE_BYTE_GET64 with
+	SAFE_BYTE_GET_AND_INC.
+	(read_and_display_attr_value): Likewise.  Print using dwarf_vmatoa.
+	(process_debug_info, process_cu_tu_index): Likewise.
+	* elfcomm.c (byte_put, byte_put_little_endian, byte_put_big_endian),
+	(byte_get, byte_get_little_endian, byte_get_big_endian),
+	(byte_get_signed): Make size param unsigned.  Remove code dealing
+	with 4-byte elf_vma.
+	(byte_get_64): Delete.
+	* elfcomm.h  (byte_put, byte_put_little_endian, byte_put_big_endian),
+	(byte_get, byte_get_little_endian, byte_get_big_endian),
+	(byte_get_signed): Update prototypes.
+	(byte_get_64): Delete.
+
+2021-05-12  Alan Modra  <amodra@gmail.com>
+
+	PR 27836
+	* dwarf.c (display_debug_frames): Don't compare pointers derived
+	from user input.  Test offset against bounds instead.
+
+2021-05-12  Alan Modra  <amodra@gmail.com>
+
+	PR 27853
+	* dwarf.c (display_formatted_table): Test for data >= end rather
+	than data == end.
+	(process_extended_line_op): Likewise.
+	(display_debug_lines_raw): Likewise.
+	(display_debug_lines_decoded): Likewise.
+
+2021-05-12  Alan Modra  <amodra@gmail.com>
+
+	PR 27849
+	* dwarf.c (fetch_indexed_string): Correct length sanity checks.
+	Sanity check section size for version and padding too.  Correct
+	index sanity check.  Handle multiple tables in .debug_str_offsets.
+
+2021-05-11  Hans-Peter Nilsson  <hp@axis.com>
+
+	* dwarf.c (process_abbrev_set): Properly parenthesize before
+	casting to unsigned long.
+
+2021-05-11  Alan Modra  <amodra@gmail.com>
+
+	PR 27845
+	* dwarf.c (process_abbrev_set): Replace start and end parameters
+	with section, abbrev_base, abbrev_size, abbrev_offset.  Update
+	all callers.  Sanity check parameters correctly and emit warnings
+	here rather than..
+	(process_debug_info): ..here.
+
 2021-05-10  Thomas Wolff  <towo@towo.net>
 
 	PR 4356
