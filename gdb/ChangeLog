@@ -1,3 +1,41 @@
+2021-05-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* inf-child.h (inf_child_target) <follow_exec>: New.
+	* inf-child.c (inf_child_target::follow_exec): New.
+
+2021-05-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* target.h (struct target_ops) <follow_exec>: Add ptid_t
+	parameter.
+	(target_follow_exec): Likewise.
+	* target.c (target_follow_exec): Add ptid_t parameter.
+	* infrun.c (follow_exec): Adjust call to target_follow_exec,
+	don't push target nor create thread.
+	* linux-thread-db.c (class thread_db_target) <follow_exec>: New.
+	(thread_db_target::wait): Just return on TARGET_WAITKIND_EXECD.
+	(thread_db_target::follow_exec): New.
+	* remote.c (class remote_target) <follow_exec>: Add ptid_t parameter.
+	(remote_target::follow_exec): Call
+	process_stratum_target::follow_exec.
+	* target-delegates.c: Re-generate.
+
+2021-05-13  Simon Marchi  <simon.marchi@efficios.com>
+
+	* infrun.c (follow_exec): Call target_follow_fork when
+	follow-exec-mode is same.
+	* target.h (target_follow_fork): Improve doc.
+
+2021-05-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (struct cmd_list_element) <pre_show_hook>:
+	Remove.
+	* cli/cli-setshow.c (do_show_command): Adjust.
+
+2021-05-13  Luis Machado  <luis.machado@linaro.org>
+
+	* arch/aarch64-mte-linux.c (aarch64_mte_get_tag_granules): Don't
+	include the last address in the range.
+
 2021-05-12  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* python/python-internal.h (gdbpy_parse_command_name): Return

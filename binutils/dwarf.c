@@ -7516,7 +7516,14 @@ display_debug_str_offsets (struct dwarf_section *section,
 	}
       else
 	{
-	  entries_end = curr + length;
+	  if (length <= (dwarf_vma) (end - curr))
+	    entries_end = curr + length;
+	  else
+	    {
+	      warn (_("Section %s is too small %#lx\n"),
+		    section->name, (unsigned long) section->size);
+	      entries_end = end;
+	    }
 
 	  int version;
 	  SAFE_BYTE_GET_AND_INC (version, curr, 2, end);
@@ -7542,7 +7549,7 @@ display_debug_str_offsets (struct dwarf_section *section,
 	    /* Not enough space to read one entry_length, give up.  */
 	    return 0;
 
-	  SAFE_BYTE_GET_AND_INC (offset, curr, entry_length, end);
+	  SAFE_BYTE_GET_AND_INC (offset, curr, entry_length, entries_end);
 	  if (dwo)
 	    string = (const unsigned char *)
 	      fetch_indexed_string (idx, NULL, entry_length, dwo);
@@ -8741,6 +8748,8 @@ display_debug_frames (struct dwarf_section *section,
 		if (cie->chunk_start == look_for)
 		  break;
 	    }
+	  else if (cie_off >= section->size)
+	    cie = NULL;
 	  else
 	    {
 	      for (cie = forward_refs; cie ; cie = cie->next)
