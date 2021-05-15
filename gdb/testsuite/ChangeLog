@@ -1,3 +1,28 @@
+2021-05-14  Tom Tromey  <tom@tromey.com>
+
+	* gdb.rust/pp.exp: New file.
+	* gdb.rust/pp.py: New file.
+	* gdb.rust/pp.rs: New file.
+
+2021-05-14  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* gdb.base/index-cache.exp: Cleanup $cache_dir/*.gdb-index and
+	remove the directory.
+	* gdb.dwarf2/per-bfd-sharing.exp: Likewise.
+
+2021-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* gdb.python/py-inferior.exp: Add test cases for 'connection_num'.
+
+2021-05-14  Kent Cheung  <kent.cheung@arm.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.python/py-format-string.c: Added a variable to test.
+	* gdb.python/py-format-string.exp: Check string representation is
+	printed at appropriate max_depth settings.
+	* gdb.python/py-nested-maps.exp: Likewise.
+	* gdb.guile/scm-pretty-print.exp: Add additional tests.
+
 2021-05-13  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* gdb.guile/scm-pretty-print.exp (run_lang_tests): Give some tests

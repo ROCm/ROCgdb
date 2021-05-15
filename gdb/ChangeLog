@@ -1,3 +1,44 @@
+2021-05-14  Tom Tromey  <tom@tromey.com>
+
+	* rust-lang.c (rust_language::val_print_struct)
+	(rust_language::print_enum): Use common_val_print, not
+	value_print_inner.
+
+2021-05-14  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	* python/py-inferior.c (infpy_get_connection_num): New function.
+	(inferior_object_getset): Add a new element for 'connection_num'.
+	* NEWS: Mention the 'connection_num' attribute of Inferior objects.
+
+2021-05-14  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* remote.c (check_pending_events_prevent_wildcard_vcont): Change
+	argument type, update and re-wrap, header comment.
+	(remote_target::commit_resumed): Convert any_process_wildcard and
+	may_global_wildcard_vcont from int to bool.
+
+2021-05-14  Kent Cheung  <kent.cheung@arm.com>
+
+	* cp-valprint.c (cp_print_value): Replaced duplicate code.
+	* guile/scm-pretty-print.c (ppscm_print_children): Check max_depth
+	just before printing child values.
+	(gdbscm_apply_val_pretty_printer): Don't check max_depth before
+	printing string representation.
+	* python/py-prettyprint.c (print_children): Check max_depth just
+	before printing child values.
+	(gdbpy_apply_val_pretty_printer): Don't check max_depth before
+	printing string representation.
+
+2021-05-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* remote-sim.c: Change gdb/callback.h & gdb/remote-sim.h includes to
+	sim/callback.h & sim/sim.h.
+
+2021-05-13  Mike Frysinger  <vapier@gentoo.org>
+
+	* lm32-tdep.c: Delete gdb/callback.h, gdb/remote-sim.h, and
+	sim-regno.h include.
+
 2021-05-13  Simon Marchi  <simon.marchi@efficios.com>
 
 	* inf-child.h (inf_child_target) <follow_exec>: New.

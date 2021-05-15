@@ -1,3 +1,37 @@
+2021-05-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* callback.c (os_lseek): Change return and 3rd arg to int64_t.
+	(os_ftruncate): Change 3rd arg to int64_t.
+	(os_truncate): Change 3rd arg to int64_t.
+	* sim-io.c (sim_io_lseek): Change return and 3rd arg to int64_t.
+	* sim-io.h (sim_io_lseek): Likewise.
+
+2021-05-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* callback.c (os_time): Change return to int64_t.  Delete 2nd arg.
+	(os_fstat): Delete 2nd arg to time callback.
+	* sim-io.c (sim_io_time): Change return to int64_t.  Delete 2nd arg
+	to time callback.
+	* sim-io.h (sim_io_time): Change return to int64_t.
+	* syscall.c (cb_syscall): Delete 2nd arg to time callback.
+
+2021-05-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* callback.c (cb_host_to_target_stat): Change PTR to void*.
+	* sim-syscall.c (sim_syscall_multi): Delete (PTR) casts.
+
+2021-05-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* Make-common.in (callback_h, remote_sim_h): Update path.
+	* callback.c: Update include path.
+	* gentmap.c (gen_targ_map_c): Likewise.
+	* sim-basics.h: Likewise.
+	* sim-close.c: Likewise.
+	* sim-core.c: Likewise.
+	* sim-load.c: Likewise.
+	* sim-module.h: Likewise.
+	* syscall.c: Likewise.
+
 2021-05-08  Mike Frysinger  <vapier@gentoo.org>
 
 	* Make-common.in (modules.c): Touch $@ at the end.

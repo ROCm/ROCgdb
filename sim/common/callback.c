@@ -35,7 +35,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "gdb/callback.h"
+#include "sim/callback.h"
 #include "targ-vals.h"
 /* For xmalloc.  */
 #include "libiberty.h"
@@ -205,10 +205,10 @@ os_isatty (host_callback *p, int fd)
   return result;
 }
 
-static int
-os_lseek (host_callback *p, int fd, long off, int way)
+static int64_t
+os_lseek (host_callback *p, int fd, int64_t off, int way)
 {
-  int result;
+  int64_t result;
 
   result = fdbad (p, fd);
   if (result)
@@ -420,12 +420,12 @@ os_system (host_callback *p, const char *s)
   return result;
 }
 
-static long
-os_time (host_callback *p, long *t)
+static int64_t
+os_time (host_callback *p)
 {
-  long result;
+  int64_t result;
 
-  result = time (t);
+  result = time (NULL);
   p->last_errno = errno;
   return result;
 }
@@ -466,7 +466,7 @@ os_fstat (host_callback *p, int fd, struct stat *buf)
   if (p->ispipe[fd])
     {
 #if defined (HAVE_STRUCT_STAT_ST_ATIME) || defined (HAVE_STRUCT_STAT_ST_CTIME) || defined (HAVE_STRUCT_STAT_ST_MTIME)
-      time_t t = (*p->time) (p, NULL);
+      time_t t = (*p->time) (p);
 #endif
 
       /* We have to fake the struct stat contents, since the pipe is
@@ -519,7 +519,7 @@ os_lstat (host_callback *p, const char *file, struct stat *buf)
 }
 
 static int
-os_ftruncate (host_callback *p, int fd, long len)
+os_ftruncate (host_callback *p, int fd, int64_t len)
 {
   int result;
 
@@ -542,7 +542,7 @@ os_ftruncate (host_callback *p, int fd, long len)
 }
 
 static int
-os_truncate (host_callback *p, const char *file, long len)
+os_truncate (host_callback *p, const char *file, int64_t len)
 {
 #ifdef HAVE_TRUNCATE
   int result;
@@ -946,7 +946,7 @@ cb_store_target_endian (host_callback *cb, char *p, int size, long val)
    or zero if an error occurred during the translation.  */
 
 int
-cb_host_to_target_stat (host_callback *cb, const struct stat *hs, PTR ts)
+cb_host_to_target_stat (host_callback *cb, const struct stat *hs, void *ts)
 {
   const char *m = cb->stat_map;
   char *p;

@@ -42,15 +42,12 @@
    is ENVIRONMENT_OPERATING.
 */
 
-#ifndef CALLBACK_H
-#define CALLBACK_H
+#ifndef SIM_CALLBACK_H
+#define SIM_CALLBACK_H
 
-/* ??? The reason why we check for va_start here should be documented.  */
-
-#ifndef va_start
 #include <ansidecl.h>
 #include <stdarg.h>
-#endif
+#include <stdint.h>
 /* Needed for enum bfd_endian.  */
 #include "bfd.h"
 
@@ -76,13 +73,13 @@ struct host_callback_struct
   int (*close) (host_callback *,int);
   int (*get_errno) (host_callback *);
   int (*isatty) (host_callback *, int);
-  int (*lseek) (host_callback *, int, long , int);
+  int64_t (*lseek) (host_callback *, int, int64_t, int);
   int (*open) (host_callback *, const char*, int mode);
   int (*read) (host_callback *,int,  char *, int);
   int (*read_stdin) ( host_callback *, char *, int);
   int (*rename) (host_callback *, const char *, const char *);
   int (*system) (host_callback *, const char *);
-  long (*time) (host_callback *, long *);
+  int64_t (*time) (host_callback *);
   int (*unlink) (host_callback *, const char *);
   int (*write) (host_callback *,int, const char *, int);
   int (*write_stdout) (host_callback *, const char *, int);
@@ -92,8 +89,8 @@ struct host_callback_struct
   int (*to_stat) (host_callback *, const char *, struct stat *);
   int (*to_fstat) (host_callback *, int, struct stat *);
   int (*to_lstat) (host_callback *, const char *, struct stat *);
-  int (*ftruncate) (host_callback *, int, long);
-  int (*truncate) (host_callback *, const char *, long);
+  int (*ftruncate) (host_callback *, int, int64_t);
+  int (*truncate) (host_callback *, const char *, int64_t);
   int (*pipe) (host_callback *, int *);
 
   /* Called by the framework when a read call has emptied a pipe buffer.  */
@@ -125,11 +122,7 @@ struct host_callback_struct
   /* Print an error message and "exit".
      In the case of gdb "exiting" means doing a longjmp back to the main
      command loop.  */
-  void (*error) (host_callback *, const char *, ...)
-#ifdef __GNUC__
-    __attribute__ ((__noreturn__))
-#endif
-    ;
+  void (*error) (host_callback *, const char *, ...) ATTRIBUTE_NORETURN;
 
   int last_errno;		/* host format */
 
@@ -257,8 +250,8 @@ typedef struct cb_syscall {
   int errcode;
 
   /* Working space to be used by memory read/write callbacks.  */
-  PTR p1;
-  PTR p2;
+  void *p1;
+  void *p2;
   long x1,x2;
 
   /* Callbacks for reading/writing memory (e.g. for read/write syscalls).
@@ -328,7 +321,7 @@ const char *cb_target_str_signal (host_callback *, int);
 /* Translate host stat struct to target.
    If stat struct ptr is NULL, just compute target stat struct size.
    Result is size of target stat struct or 0 if error.  */
-int cb_host_to_target_stat (host_callback *, const struct stat *, PTR);
+int cb_host_to_target_stat (host_callback *, const struct stat *, void *);
 
 /* Translate a value to target endian.  */
 void cb_store_target_endian (host_callback *, char *, int, long);
