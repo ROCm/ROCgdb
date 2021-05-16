@@ -1,3 +1,105 @@
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (process_cu_tu_index): Avoid pointer UB.  Use _mul_overflow.
+	Delete dead code.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_gdb_index): Avoid pointer UB and overflow in
+	length calculations.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_names): Complain when header length is
+	too small.  Avoid pointer UB.  Sanity check augmentation string,
+	CU table, TU table and foreign TU table sizes.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_frames): Delete initial_length_size.
+	Avoid pointer UB.  Constrain data reads to length given in header.
+	Sanity check cie header length.  Only skip up to next FDE on
+	finding augmentation data too long.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (read_cie): Add more sanity checks to ensure data
+	pointer is not bumped past end.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_ranges): Delete initial_length_size.
+	Correct fallback size calculated on finding a reloc.  Constrain
+	data reads to length given in header.  Avoid pointer UB.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_rnglists_list): Avoid pointer UB.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_str_offsets): Constrain reads to length
+	given in header.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_aranges): Delete initial_length_size.
+	Use end_ranges to constrain data reads to header length.  Avoid
+	pointer UB.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_loc_list): Avoid pointer UB.  Correct check
+	before reading uleb length.  Warn on excess length.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_macro): Print strings that might not
+	be zero terminated with %*s.  Don't bump curr if unterminated.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (get_line_filename_and_dirname): Delete initial_length_size.
+	Simplify length sanity check, and check for too small lengths.
+	Constrain data reads to header length.  Avoid pointer UB.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_macinfo): Print strings that might not
+	be zero terminated with %*s.  Don't bump curr if unterminated.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_pubnames_worker): Delete initial_length_size.
+	Simplify length check.  Constrain reads to length given by header.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_lines_decoded): Don't use strnlen when
+	we have already checked for NUL termination.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (read_debug_line_header): Delete initial_length_size.
+	Avoid pointer UB.  Keep within length specified by header.
+	Delete dead code.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (process_debug_info): Always do the first CU length
+	scan for sanity checks.  Remove initial_length_size var and
+	instead calculate end_cu.  Use end_cu to limit data reads.
+	Delete now dead code checking length.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (SAFE_BYTE_GET_INTERNAL): Assert only when ENABLE_CHECKING.
+
+2021-05-15  Alan Modra  <amodra@gmail.com>
+
+	* bucomm.h (_mul_overflow): Define.
+	* dwarf.c (get_encoded_value): Avoid pointer UB.
+
 2021-05-13  Alan Modra  <amodra@gmail.com>
 
 	PR 27861
