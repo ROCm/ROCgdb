@@ -1,3 +1,18 @@
+2021-05-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-main.h (SIM_HAVE_COMMON_SIM_STATE): Delete.
+
+2021-05-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-main.h (SIM_HAVE_COMMON_SIM_STATE): Define.
+	(struct sim_state): Delete.
+
+2021-05-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-mn103cpu.c, dv-mn103int.c, dv-mn103iop.c, dv-mn103ser.c,
+	dv-mn103tim.c, op_utils.c: Include defs.h.
+	* interp.c: Replace config.h include with defs.h.
+
 2021-05-16  Mike Frysinger  <vapier@gentoo.org>
 
 	* config.in, configure: Regenerate.

@@ -208,7 +208,7 @@ extern struct cmd_list_element *add_show_prefix_cmd
 extern struct cmd_list_element *add_prefix_cmd_suppress_notification
 			(const char *name, enum command_class theclass,
 			 cmd_const_cfunc_ftype *fun,
-			 const char *doc, struct cmd_list_element **prefixlist,
+			 const char *doc, struct cmd_list_element **subcommands,
 			 int allow_unknown,
 			 struct cmd_list_element **list,
 			 int *suppress_notification);
@@ -594,9 +594,6 @@ extern void save_command_line (const char *cmd);
    as a class of commands.  */
 
 extern void not_just_help_class_command (const char *, int);
-
-/* Check function pointer.  */
-extern int cmd_func_p (struct cmd_list_element *cmd);
 
 /* Call the command function.  */
 extern void cmd_func (struct cmd_list_element *cmd,

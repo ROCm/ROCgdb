@@ -1,3 +1,21 @@
+2021-05-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-main.h (SIM_HAVE_COMMON_SIM_STATE): Delete.
+
+2021-05-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-main.h (SIM_HAVE_COMMON_SIM_STATE): Define.
+	(struct sim_state): Delete.
+
+2021-05-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* cr16_sim.h: Delete config.h include.
+	* gencode.c: Replace config.h include with defs.h.
+	(write_template): Output defs.h include.
+	(write_opcodes): Likewise.
+	* interp.c: Replace config.h include with defs.h.
+	* simops.c: Include defs.h.
+
 2021-05-16  Mike Frysinger  <vapier@gentoo.org>
 
 	* config.in, configure: Regenerate.

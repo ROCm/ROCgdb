@@ -1,3 +1,79 @@
+2021-05-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-base.h (SIM_HAVE_COMMON_SIM_STATE): Delete.
+	(struct sim_state_base): Merge into ...
+	(struct sim_state): ... this.
+	(STATE_MY_NAME): Delete base.
+	(STATE_OPEN_KIND): Likewise.
+	(STATE_CALLBACK): Likewise.
+	(STATE_ENVIRONMENT): Likewise.
+	(STATE_CONFIG): Likewise.
+	(STATE_MODULES): Likewise.
+	(STATE_OPTIONS): Likewise.
+	(STATE_VERBOSE_P): Likewise.
+	(STATE_TRACE_DATA): Likewise.
+	(STATE_ARCHITECTURE): Likewise.
+	(STATE_TARGET): Likewise.
+	(STATE_PROG_ARGV): Likewise.
+	(STATE_PROG_BFD): Likewise.
+	(STATE_PROG_SYMS): Likewise.
+	(STATE_PROG_SYMS_COUNT): Likewise.
+	(STATE_TEXT_SECTION): Likewise.
+	(STATE_TEXT_START): Likewise.
+	(STATE_TEXT_END): Likewise.
+	(STATE_START_ADDR): Likewise.
+	(STATE_SCACHE_SIZE): Likewise.
+	(STATE_CORE): Likewise.
+	(STATE_MEMOPT): Likewise.
+	(STATE_EVENTS): Likewise.
+	(STATE_ENGINE): Likewise.
+	(STATE_WATCHPOINTS): Likewise.
+	(STATE_HW): Likewise.
+	(STATE_LOAD_AT_LMA_P): Likewise.
+	(SIM_MAGIC_NUMBER): Likewise.
+	(STATE_MAGIC): Likewise.
+	* sim-utils.c (sim_state_alloc_extra): Delete check for
+	SIM_HAVE_COMMON_SIM_STATE.
+
+2021-05-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-defs.h (STATE_RUN_FAST_P): Call STATE_CGEN_STATE.
+	* sim-base.h [CGEN_ARCH]: Include cgen-sim.h and define
+	SIM_HAVE_COMMON_SIM_STATE.
+	(struct sim_state): Add cgen_state.
+	(STATE_CGEN_STATE): Define.
+
+2021-05-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-base.h (struct sim_state): Update comment.
+	(struct sim_state): Define.
+	(STATE_ARCH_DATA): Likewise.
+	(sim_state_alloc): New define.
+	(sim_state_alloc_extra): Renamed & add 3rd arg.
+	* sim-utils.c (sim_state_alloc): Likewise.
+	(sim_state_alloc_extra): Set arch data.
+
+2021-05-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* callback.c: Replace config.h include with defs.h.
+	* cgen-accfp.c, cgen-fpu.c, cgen-par.c, cgen-run.c, cgen-scache.c,
+	dv-core.c, dv-glue.c, genmloop.sh, hw-alloc.c, hw-base.c, hw-device.c,
+	hw-events.c, hw-handles.c, hw-instances.c, hw-ports.c,
+	hw-properties.c, hw-tree.c, sim-abort.c, sim-arange.c, sim-bits.c,
+	sim-close.c, sim-command.c, sim-config.c, sim-core.c, sim-cpu.c,
+	sim-endian.c, sim-engine.c, sim-events.c, sim-fpu.c, sim-hload.c,
+	sim-hrw.c, sim-hw.c, sim-info.c, sim-inline.c, sim-model.c,
+	sim-profile.c, sim-reason.c, sim-reg.c, sim-resume.c, sim-run.c,
+	sim-signal.c, sim-stop.c, sim-trace.c, sim-utils.c: Include defs.h.
+	* cgen-trace.c, cgen-utils.c, dv-cfi.c, dv-pal.c, dv-sockser.c,
+	nrun.c, sim-basics.h, sim-load.c, sim-memopt.c, sim-module.c,
+	sim-options.c, sim-syscall.c, sim-watch.c, syscall.c: Replace
+	config.h include with defs.h.
+	* gentmap.c (gen_targ_map_c): Replace config.h with defs.h.
+	* sim-io.c: Include defs.h.
+	(open): Undefine.
+	* defs.h: New file.
+
 2021-05-15  Mike Frysinger  <vapier@gentoo.org>
 
 	* nrun.c: Include environ.h.

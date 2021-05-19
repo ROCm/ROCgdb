@@ -76,20 +76,22 @@ struct cmd_list_element
      space.  It is used before the word "command" in describing the
      commands reached through this prefix.
 
-     For non-prefix commands, an empty string is returned.  */
-  std::string prefixname ()
-  {
-    if (prefixlist == nullptr)
-      /* Not a prefix command.  */
-      return "";
+     For non-prefix commands, return an empty string.  */
+  std::string prefixname () const;
 
-    std::string prefixname;
-    if (prefix != nullptr)
-      prefixname = prefix->prefixname ();
-    prefixname += name;
-    prefixname += " ";
-    return prefixname;
-  }
+  /* Return true if this command is an alias of another command.  */
+  bool is_alias () const
+  { return this->alias_target != nullptr; }
+
+  /* Return true if this command is a prefix command.  */
+  bool is_prefix () const
+  { return this->subcommands != nullptr; }
+
+  /* Return true if this command is a "command class help" command.  For
+     instance, a "stack" dummy command is registered so that one can do
+     "help stack" and show help for all commands of the "stack" class.  */
+  bool is_command_class_help () const
+  { return this->func == nullptr; }
 
   /* Points to next command in this list.  */
   struct cmd_list_element *next = nullptr;
@@ -199,7 +201,7 @@ struct cmd_list_element
 
   /* Nonzero identifies a prefix command.  For them, the address
      of the variable containing the list of subcommands.  */
-  struct cmd_list_element **prefixlist = nullptr;
+  struct cmd_list_element **subcommands = nullptr;
 
   /* The prefix command of this command.  */
   struct cmd_list_element *prefix = nullptr;
@@ -241,7 +243,7 @@ struct cmd_list_element
 
   /* Pointer to command that is aliased by this one, so the
      aliased command can be located in case it has been hooked.  */
-  struct cmd_list_element *cmd_pointer = nullptr;
+  struct cmd_list_element *alias_target = nullptr;
 
   /* Start of a linked list of all aliases of this command.  */
   struct cmd_list_element *aliases = nullptr;

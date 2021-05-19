@@ -1,3 +1,125 @@
+2021-05-17  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.h: Update include.
+	* dwarf2/read.c: Update include.
+	* dwarf2/line-header.c: Update include.
+	* dwarf2/cu.h: Update include.
+	* dwarf2/comp-unit-head.h: Rename from comp-unit.h.
+	* dwarf2/comp-unit-head.c: Rename from comp-unit.c.
+	* Makefile.in (COMMON_SFILES): Update.
+
+2021-05-17  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (maybe_queue_comp_unit)
+	(dwarf2_per_objfile::age_comp_units): Update.
+	(dwarf2_add_dependence, dwarf2_mark_helper, dwarf2_mark): Move to
+	dwarf2_cu methods.
+	* dwarf2/cu.h (struct dwarf2_cu) <mark, clear_mark, is_marked,
+	add_dependence>: New methods.
+	<m_dependencies>: Add "m_" prefix.  Now private.
+	<m_mark>: Add "m_" prefix.
+	* dwarf2/cu.c (dwarf2_cu::dwarf2_cu): Update.
+	(dwarf2_mark_helper): New function.
+	(dwarf2_cu::mark, dwarf2_cu::add_dependence): New methods.
+
+2021-05-17  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (dwarf2_cu::addr_sized_int_type)
+	(dwarf2_cu::start_symtab, dwarf2_cu::addr_type)
+	(dwarf2_cu::dwarf2_cu): Move to cu.c.
+	* dwarf2/cu.c: New file.
+	* Makefile.in (COMMON_SFILES): Add dwarf2/cu.c.
+
+2021-05-17  Tom Tromey  <tom@tromey.com>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Add dwarf2/cu.h.
+	* dwarf2/read.c (struct delayed_method_info, struct dwarf2_cu):
+	Move to cu.h.
+	* dwarf2/cu.h: New file.
+
+2021-05-17  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* .dir-locals.el: Set sentence-end-double-space for all modes, and
+	set brace-list-open to 0 for C and C++ modes.
+
+2021-05-17  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/loc.c (dwarf2_evaluate_loc_desc::get_frame_base): Throw
+	if frame is null.
+
+2021-05-17  Tom Tromey  <tromey@adacore.com>
+
+	* nat/linux-osdata.c (user_from_uid, time_from_time_t)
+	(group_from_gid): Subtract one from strncpy length.
+
+2021-05-17  Tom Tromey  <tromey@adacore.com>
+
+	* source.c (add_path): Check 'p' before using 'p[-1]'.
+
+2021-05-17  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf2/read.h (struct dwarf2_per_cu_data_deleter: New.
+	(dwarf2_per_cu_data_up): New typedef.
+	(struct dwarf2_per_bfd) <allocate_per_cu>: Change return type.
+	<all_comp_units>: Use dwarf2_per_cu_data_up.
+	* dwarf2/read.c (dwarf2_per_cu_data::operator()): New function.
+	(dwarf2_per_bfd::allocate_per_cu): Return dwarf2_per_cu_data_up.
+	(create_cu_from_index_list): Likewise.
+	(create_signatured_type_table_from_index)
+	(create_cus_from_debug_names_list, add_type_unit)
+	(read_comp_units_from_section): Update.
+	(dwarf2_find_containing_comp_unit): Change type of all_comp_units.
+	(run_test): Update.
+
+2021-05-17  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (tu_abbrev_offset::operator<): New method.
+	(sort_tu_by_abbrev_offset): Remove.
+	(build_type_psymtabs): Update.
+
+2021-05-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* py-project.toml: New.
+	* gdb-gdb.py.in: Re-format.
+
+2021-05-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (cmd_list_element) <is_command_class_help>:
+	New, use it.
+	* command.h (cmd_func_p): Remove.
+	* cli/cli-decode.c (cmd_func_p): Remove.
+
+2021-05-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (cmd_list_element) <is_alias>: New, use it.
+
+2021-05-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (cmd_list_element) <cmd_pointer>: Rename
+	to...
+	<alias_target>: ... this.
+	(add_alias_cmd): Rename old to target.
+	(add_info_alias): Rename old_name to target_name.
+	(add_com_alias): Likewise.
+
+2021-05-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* Rename "prefixlist" parameters to "subcommands" throughout.
+	* cli/cli-decode.h (cmd_list_element) <prefixlist>: Rename to...
+	<subcommands>: ... this.
+	* cli/cli-decode.c (lookup_cmd_for_prefixlist): Rename to...
+	(lookup_cmd_with_subcommands): ... this.
+
+2021-05-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.c (add_alias_cmd): Don't handle old == 0.
+
+2021-05-17  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (prefixname): Make const, move implementation
+	to cli/cli-decode.c.
+	* cli/cli-decode.c (cmd_list_element::prefixname): New.
+
 2021-05-16  Weimin Pan  <weimin.pan@oracle.com>
 
 	* ctfread.c (new_symbol): Set function address.

@@ -17,6 +17,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+/* This must come before any other includes.  */
+#include "defs.h"
+
 #include "sim-main.h"
 #include "sim-assert.h"
 
@@ -45,14 +48,17 @@ zalloc (unsigned long size)
 /* Allocate a sim_state struct.  */
 
 SIM_DESC
-sim_state_alloc (SIM_OPEN_KIND kind,
-		 host_callback *callback)
+sim_state_alloc_extra (SIM_OPEN_KIND kind, host_callback *callback,
+		       size_t extra_bytes)
 {
   SIM_DESC sd = ZALLOC (struct sim_state);
 
   STATE_MAGIC (sd) = SIM_MAGIC_NUMBER;
   STATE_CALLBACK (sd) = callback;
   STATE_OPEN_KIND (sd) = kind;
+
+  if (extra_bytes)
+    STATE_ARCH_DATA (sd) = zalloc (extra_bytes);
 
 #if 0
   {

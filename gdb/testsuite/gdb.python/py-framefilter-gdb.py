@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2021 Free Software Foundation, Inc.
+# Copyright (C) 2013-2021 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,29 +20,29 @@ import itertools
 from gdb.FrameDecorator import FrameDecorator
 
 
-class FrameObjFile ():
-
-    def __init__ (self):
+class FrameObjFile:
+    def __init__(self):
         self.name = "Filter1"
         self.priority = 1
         self.enabled = False
-        gdb.current_progspace().frame_filters ["Progspace" + self.name] = self
-        gdb.current_objfile().frame_filters ["ObjectFile" + self.name] = self
+        gdb.current_progspace().frame_filters["Progspace" + self.name] = self
+        gdb.current_objfile().frame_filters["ObjectFile" + self.name] = self
 
-    def filter (self, frame_iter):
+    def filter(self, frame_iter):
         return frame_iter
 
-class FrameObjFile2 ():
 
-    def __init__ (self):
+class FrameObjFile2:
+    def __init__(self):
         self.name = "Filter2"
         self.priority = 100
         self.enabled = True
-        gdb.current_progspace().frame_filters ["Progspace" + self.name] = self
-        gdb.current_objfile().frame_filters ["ObjectFile" + self.name] = self
+        gdb.current_progspace().frame_filters["Progspace" + self.name] = self
+        gdb.current_objfile().frame_filters["ObjectFile" + self.name] = self
 
-    def filter (self, frame_iter):
+    def filter(self, frame_iter):
         return frame_iter
+
 
 FrameObjFile()
 FrameObjFile2()

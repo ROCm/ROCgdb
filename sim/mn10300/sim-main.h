@@ -65,17 +65,6 @@ struct _sim_cpu {
   sim_cpu_base base;
 };
 
-
-struct sim_state {
-
-  /* the processors proper */
-  sim_cpu *cpu[MAX_NR_PROCESSORS];
-
-  /* The base class.  */
-  sim_state_base base;
-
-};
-
 /* For compatibility, until all functions converted to passing
    SIM_DESC as an argument */
 extern SIM_DESC simulator;

@@ -1026,7 +1026,8 @@ COMMON_SFILES = \
 	dummy-frame.c \
 	dwarf2/abbrev.c \
 	dwarf2/attribute.c \
-	dwarf2/comp-unit.c \
+	dwarf2/comp-unit-head.c \
+	dwarf2/cu.c \
 	dwarf2/dwz.c \
 	dwarf2/expr.c \
 	dwarf2/frame-tailcall.c \
@@ -1275,6 +1276,7 @@ HFILES_NO_SRCDIR = \
 	dictionary.h \
 	disasm.h \
 	dummy-frame.h \
+	dwarf2/cu.h \
 	dwarf2/frame-tailcall.h \
 	dwarf2/frame.h \
 	dwarf2/expr.h \

@@ -33,14 +33,6 @@ struct _sim_cpu
   sim_cpu_base base;
 };
 
-struct sim_state
-{
-  sim_cpu *cpu[MAX_NR_PROCESSORS];
-
-  /* Simulator specific members.  */
-  sim_state_base base;
-};
-
 #define MSP430_CPU(sd)       (STATE_CPU ((sd), 0))
 #define MSP430_CPU_STATE(sd) (MSP430_CPU ((sd)->state))
 

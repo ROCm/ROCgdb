@@ -18,7 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "config.h"
+/* This must come before any other includes.  */
+#include "defs.h"
 
 #include "sim-main.h"
 #include "sim-options.h"
@@ -58,7 +59,8 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback,
 {
   char c;
   int i;
-  SIM_DESC sd = sim_state_alloc (kind, callback);
+  SIM_DESC sd = sim_state_alloc_extra (kind, callback,
+				       sizeof (struct riscv_sim_state));
 
   /* The cpu data is kept in a separately allocated chunk of memory.  */
   if (sim_cpu_alloc_all (sd, 1) != SIM_RC_OK)

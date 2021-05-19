@@ -34,7 +34,8 @@
 #include "dwarf2/read.h"
 #include "dwarf2/abbrev.h"
 #include "dwarf2/attribute.h"
-#include "dwarf2/comp-unit.h"
+#include "dwarf2/comp-unit-head.h"
+#include "dwarf2/cu.h"
 #include "dwarf2/index-cache.h"
 #include "dwarf2/index-common.h"
 #include "dwarf2/leb.h"
@@ -51,7 +52,6 @@
 #include "gdbtypes.h"
 #include "objfiles.h"
 #include "dwarf2.h"
-#include "buildsym.h"
 #include "demangle.h"
 #include "gdb-demangle.h"
 #include "filenames.h"	/* for DOSish file names */
@@ -460,249 +460,6 @@ struct loclists_rnglists_header
 
   /* A 4-byte count of the number of offsets that follow the header.  */
   unsigned int offset_entry_count;
-};
-
-/* Type used for delaying computation of method physnames.
-   See comments for compute_delayed_physnames.  */
-struct delayed_method_info
-{
-  /* The type to which the method is attached, i.e., its parent class.  */
-  struct type *type;
-
-  /* The index of the method in the type's function fieldlists.  */
-  int fnfield_index;
-
-  /* The index of the method in the fieldlist.  */
-  int index;
-
-  /* The name of the DIE.  */
-  const char *name;
-
-  /*  The DIE associated with this method.  */
-  struct die_info *die;
-};
-
-/* Internal state when decoding a particular compilation unit.  */
-struct dwarf2_cu
-{
-  explicit dwarf2_cu (dwarf2_per_cu_data *per_cu,
-		      dwarf2_per_objfile *per_objfile);
-
-  DISABLE_COPY_AND_ASSIGN (dwarf2_cu);
-
-  /* TU version of handle_DW_AT_stmt_list for read_type_unit_scope.
-     Create the set of symtabs used by this TU, or if this TU is sharing
-     symtabs with another TU and the symtabs have already been created
-     then restore those symtabs in the line header.
-     We don't need the pc/line-number mapping for type units.  */
-  void setup_type_unit_groups (struct die_info *die);
-
-  /* Start a symtab for DWARF.  NAME, COMP_DIR, LOW_PC are passed to the
-     buildsym_compunit constructor.  */
-  struct compunit_symtab *start_symtab (const char *name,
-					const char *comp_dir,
-					CORE_ADDR low_pc);
-
-  /* Reset the builder.  */
-  void reset_builder () { m_builder.reset (); }
-
-  /* Return a type that is a generic pointer type, the size of which
-     matches the address size given in the compilation unit header for
-     this CU.  */
-  struct type *addr_type () const;
-
-  /* Find an integer type the same size as the address size given in
-     the compilation unit header for this CU.  UNSIGNED_P controls if
-     the integer is unsigned or not.  */
-  struct type *addr_sized_int_type (bool unsigned_p) const;
-
-  /* The header of the compilation unit.  */
-  struct comp_unit_head header {};
-
-  /* Base address of this compilation unit.  */
-  gdb::optional<CORE_ADDR> base_address;
-
-  /* The language we are debugging.  */
-  enum language language = language_unknown;
-  const struct language_defn *language_defn = nullptr;
-
-  const char *producer = nullptr;
-
-private:
-  /* The symtab builder for this CU.  This is only non-NULL when full
-     symbols are being read.  */
-  std::unique_ptr<buildsym_compunit> m_builder;
-
-public:
-  /* The generic symbol table building routines have separate lists for
-     file scope symbols and all all other scopes (local scopes).  So
-     we need to select the right one to pass to add_symbol_to_list().
-     We do it by keeping a pointer to the correct list in list_in_scope.
-
-     FIXME: The original dwarf code just treated the file scope as the
-     first local scope, and all other local scopes as nested local
-     scopes, and worked fine.  Check to see if we really need to
-     distinguish these in buildsym.c.  */
-  struct pending **list_in_scope = nullptr;
-
-  /* Hash table holding all the loaded partial DIEs
-     with partial_die->offset.SECT_OFF as hash.  */
-  htab_t partial_dies = nullptr;
-
-  /* Storage for things with the same lifetime as this read-in compilation
-     unit, including partial DIEs.  */
-  auto_obstack comp_unit_obstack;
-
-  /* Backlink to our per_cu entry.  */
-  struct dwarf2_per_cu_data *per_cu;
-
-  /* The dwarf2_per_objfile that owns this.  */
-  dwarf2_per_objfile *per_objfile;
-
-  /* How many compilation units ago was this CU last referenced?  */
-  int last_used = 0;
-
-  /* A hash table of DIE cu_offset for following references with
-     die_info->offset.sect_off as hash.  */
-  htab_t die_hash = nullptr;
-
-  /* Full DIEs if read in.  */
-  struct die_info *dies = nullptr;
-
-  /* A set of pointers to dwarf2_per_cu_data objects for compilation
-     units referenced by this one.  Only set during full symbol processing;
-     partial symbol tables do not have dependencies.  */
-  htab_t dependencies = nullptr;
-
-  /* Header data from the line table, during full symbol processing.  */
-  struct line_header *line_header = nullptr;
-  /* Non-NULL if LINE_HEADER is owned by this DWARF_CU.  Otherwise,
-     it's owned by dwarf2_per_bfd::line_header_hash.  If non-NULL,
-     this is the DW_TAG_compile_unit die for this CU.  We'll hold on
-     to the line header as long as this DIE is being processed.  See
-     process_die_scope.  */
-  die_info *line_header_die_owner = nullptr;
-
-  /* A list of methods which need to have physnames computed
-     after all type information has been read.  */
-  std::vector<delayed_method_info> method_list;
-
-  /* To be copied to symtab->call_site_htab.  */
-  htab_t call_site_htab = nullptr;
-
-  /* Non-NULL if this CU came from a DWO file.
-     There is an invariant here that is important to remember:
-     Except for attributes copied from the top level DIE in the "main"
-     (or "stub") file in preparation for reading the DWO file
-     (e.g., DW_AT_addr_base), we KISS: there is only *one* CU.
-     Either there isn't a DWO file (in which case this is NULL and the point
-     is moot), or there is and either we're not going to read it (in which
-     case this is NULL) or there is and we are reading it (in which case this
-     is non-NULL).  */
-  struct dwo_unit *dwo_unit = nullptr;
-
-  /* The DW_AT_addr_base (DW_AT_GNU_addr_base) attribute if present.
-     Note this value comes from the Fission stub CU/TU's DIE.  */
-  gdb::optional<ULONGEST> addr_base;
-
-  /* The DW_AT_GNU_ranges_base attribute, if present.
-
-     This is only relevant in the context of pre-DWARF 5 split units.  In this
-     context, there is a .debug_ranges section in the linked executable,
-     containing all the ranges data for all the compilation units.  Each
-     skeleton/stub unit has (if needed) a DW_AT_GNU_ranges_base attribute that
-     indicates the base of its contribution to that section.  The DW_AT_ranges
-     attributes in the split-unit are of the form DW_FORM_sec_offset and point
-     into the .debug_ranges section of the linked file.  However, they are not
-     "true" DW_FORM_sec_offset, because they are relative to the base of their
-     compilation unit's contribution, rather than relative to the beginning of
-     the section.  The DW_AT_GNU_ranges_base value must be added to it to make
-     it relative to the beginning of the section.
-
-     Note that the value is zero when we are not in a pre-DWARF 5 split-unit
-     case, so this value can be added without needing to know whether we are in
-     this case or not.
-
-     N.B. If a DW_AT_ranges attribute is found on the DW_TAG_compile_unit in the
-     skeleton/stub, it must not have the base added, as it already points to the
-     right place.  And since the DW_TAG_compile_unit DIE in the split-unit can't
-     have a DW_AT_ranges attribute, we can use the
-
-       die->tag != DW_AT_compile_unit
-
-     to determine whether the base should be added or not.  */
-  ULONGEST gnu_ranges_base = 0;
-
-  /* The DW_AT_rnglists_base attribute, if present.
-
-     This is used when processing attributes of form DW_FORM_rnglistx in
-     non-split units.  Attributes of this form found in a split unit don't
-     use it, as split-unit files have their own non-shared .debug_rnglists.dwo
-     section.  */
-  ULONGEST rnglists_base = 0;
-
-  /* The DW_AT_loclists_base attribute if present.  */
-  ULONGEST loclist_base = 0;
-
-  /* When reading debug info generated by older versions of rustc, we
-     have to rewrite some union types to be struct types with a
-     variant part.  This rewriting must be done after the CU is fully
-     read in, because otherwise at the point of rewriting some struct
-     type might not have been fully processed.  So, we keep a list of
-     all such types here and process them after expansion.  */
-  std::vector<struct type *> rust_unions;
-
-  /* The DW_AT_str_offsets_base attribute if present.  For DWARF 4 version DWO
-     files, the value is implicitly zero.  For DWARF 5 version DWO files, the
-     value is often implicit and is the size of the header of
-     .debug_str_offsets section (8 or 4, depending on the address size).  */
-  gdb::optional<ULONGEST> str_offsets_base;
-
-  /* Mark used when releasing cached dies.  */
-  bool mark : 1;
-
-  /* This CU references .debug_loc.  See the symtab->locations_valid field.
-     This test is imperfect as there may exist optimized debug code not using
-     any location list and still facing inlining issues if handled as
-     unoptimized code.  For a future better test see GCC PR other/32998.  */
-  bool has_loclist : 1;
-
-  /* These cache the results for producer_is_* fields.  CHECKED_PRODUCER is true
-     if all the producer_is_* fields are valid.  This information is cached
-     because profiling CU expansion showed excessive time spent in
-     producer_is_gxx_lt_4_6.  */
-  bool checked_producer : 1;
-  bool producer_is_gxx_lt_4_6 : 1;
-  bool producer_is_gcc_lt_4_3 : 1;
-  bool producer_is_icc : 1;
-  bool producer_is_icc_lt_14 : 1;
-  bool producer_is_codewarrior : 1;
-
-  /* When true, the file that we're processing is known to have
-     debugging info for C++ namespaces.  GCC 3.3.x did not produce
-     this information, but later versions do.  */
-
-  bool processing_has_namespace_info : 1;
-
-  struct partial_die_info *find_partial_die (sect_offset sect_off);
-
-  /* If this CU was inherited by another CU (via specification,
-     abstract_origin, etc), this is the ancestor CU.  */
-  dwarf2_cu *ancestor;
-
-  /* Get the buildsym_compunit for this CU.  */
-  buildsym_compunit *get_builder ()
-  {
-    /* If this CU has a builder associated with it, use that.  */
-    if (m_builder != nullptr)
-      return m_builder.get ();
-
-    /* Otherwise, search ancestors for a valid builder.  */
-    if (ancestor != nullptr)
-      return ancestor->get_builder ();
-
-    return nullptr;
-  }
 };
 
 /* A struct that can be used as a hash key for tables based on DW_AT_stmt_list.
@@ -1703,11 +1460,6 @@ static void process_full_comp_unit (dwarf2_cu *cu,
 static void process_full_type_unit (dwarf2_cu *cu,
 				    enum language pretend_language);
 
-static void dwarf2_add_dependence (struct dwarf2_cu *,
-				   struct dwarf2_per_cu_data *);
-
-static void dwarf2_mark (struct dwarf2_cu *);
-
 static struct type *get_die_type_at_offset (sect_offset,
 					    dwarf2_per_cu_data *per_cu,
 					    dwarf2_per_objfile *per_objfile);
@@ -1760,6 +1512,17 @@ dwarf2_queue_item::~dwarf2_queue_item ()
       per_objfile->remove_cu (per_cu);
       per_cu->queued = 0;
     }
+}
+
+/* See dwarf2/read.h.  */
+
+void
+dwarf2_per_cu_data_deleter::operator() (dwarf2_per_cu_data *data)
+{
+  if (data->is_debug_types)
+    delete static_cast<signatured_type *> (data);
+  else
+    delete data;
 }
 
 /* The return type of find_file_and_directory.  Note, the enclosed
@@ -2524,10 +2287,10 @@ dw2_instantiate_symtab (dwarf2_per_cu_data *per_cu,
 
 /* See read.h.  */
 
-std::unique_ptr<dwarf2_per_cu_data>
+dwarf2_per_cu_data_up
 dwarf2_per_bfd::allocate_per_cu ()
 {
-  std::unique_ptr<dwarf2_per_cu_data> result (new dwarf2_per_cu_data);
+  dwarf2_per_cu_data_up result (new dwarf2_per_cu_data);
   result->per_bfd = this;
   result->index = m_num_psymtabs++;
   return result;
@@ -2548,13 +2311,13 @@ dwarf2_per_bfd::allocate_signatured_type ()
 /* Return a new dwarf2_per_cu_data allocated on the per-bfd
    obstack, and constructed with the specified field values.  */
 
-static std::unique_ptr<dwarf2_per_cu_data>
+static dwarf2_per_cu_data_up
 create_cu_from_index_list (dwarf2_per_bfd *per_bfd,
 			   struct dwarf2_section_info *section,
 			   int is_dwz,
 			   sect_offset sect_off, ULONGEST length)
 {
-  std::unique_ptr<dwarf2_per_cu_data> the_cu = per_bfd->allocate_per_cu ();
+  dwarf2_per_cu_data_up the_cu = per_bfd->allocate_per_cu ();
   the_cu->sect_off = sect_off;
   the_cu->length = length;
   the_cu->section = section;
@@ -2582,7 +2345,7 @@ create_cus_from_index_list (dwarf2_per_bfd *per_bfd,
       ULONGEST length = extract_unsigned_integer (cu_list + 8, 8, BFD_ENDIAN_LITTLE);
       cu_list += 2 * 8;
 
-      std::unique_ptr<dwarf2_per_cu_data> per_cu
+      dwarf2_per_cu_data_up per_cu
 	= create_cu_from_index_list (per_bfd, section, is_dwz, sect_off,
 				     length);
       per_bfd->all_comp_units.push_back (std::move (per_cu));
@@ -2649,7 +2412,7 @@ create_signatured_type_table_from_index
       slot = htab_find_slot (sig_types_hash.get (), sig_type.get (), INSERT);
       *slot = sig_type.get ();
 
-      per_bfd->all_comp_units.push_back (std::move (sig_type));
+      per_bfd->all_comp_units.emplace_back (sig_type.release ());
     }
 
   per_bfd->signatured_types = std::move (sig_types_hash);
@@ -2701,7 +2464,7 @@ create_signatured_type_table_from_debug_names
       slot = htab_find_slot (sig_types_hash.get (), sig_type.get (), INSERT);
       *slot = sig_type.get ();
 
-      per_objfile->per_bfd->all_comp_units.push_back (std::move (sig_type));
+      per_objfile->per_bfd->all_comp_units.emplace_back (sig_type.release ());
     }
 
   per_objfile->per_bfd->signatured_types = std::move (sig_types_hash);
@@ -4932,7 +4695,7 @@ create_cus_from_debug_names_list (dwarf2_per_bfd *per_bfd,
 	     of the next CU as end of this CU.  We create the CUs here with
 	     length 0, and in cutu_reader::cutu_reader we'll fill in the
 	     actual length.  */
-	  std::unique_ptr<dwarf2_per_cu_data> per_cu
+	  dwarf2_per_cu_data_up per_cu
 	    = create_cu_from_index_list (per_bfd, &section, is_dwz,
 					 sect_off, 0);
 	  per_bfd->all_comp_units.push_back (std::move (per_cu));
@@ -4957,7 +4720,7 @@ create_cus_from_debug_names_list (dwarf2_per_bfd *per_bfd,
       if (i >= 1)
 	{
 	  const ULONGEST length = sect_off_next - sect_off_prev;
-	  std::unique_ptr<dwarf2_per_cu_data> per_cu
+	  dwarf2_per_cu_data_up per_cu
 	    = create_cu_from_index_list (per_bfd, &section, is_dwz,
 					 sect_off_prev, length);
 	  per_bfd->all_comp_units.push_back (std::move (per_cu));
@@ -6134,7 +5897,8 @@ add_type_unit (dwarf2_per_objfile *per_objfile, ULONGEST sig, void **slot)
 
   per_objfile->resize_symtabs ();
 
-  per_objfile->per_bfd->all_comp_units.push_back (std::move (sig_type_holder));
+  per_objfile->per_bfd->all_comp_units.emplace_back
+    (sig_type_holder.release ());
   sig_type->signature = sig;
   sig_type->is_debug_types = 1;
   if (per_objfile->per_bfd->using_index)
@@ -7353,18 +7117,15 @@ struct tu_abbrev_offset
   : sig_type (sig_type_), abbrev_offset (abbrev_offset_)
   {}
 
+  /* This is used when sorting.  */
+  bool operator< (const tu_abbrev_offset &other)
+  {
+    return abbrev_offset < other.abbrev_offset;
+  }
+
   signatured_type *sig_type;
   sect_offset abbrev_offset;
 };
-
-/* Helper routine for build_type_psymtabs, passed to std::sort.  */
-
-static bool
-sort_tu_by_abbrev_offset (const struct tu_abbrev_offset &a,
-			  const struct tu_abbrev_offset &b)
-{
-  return a.abbrev_offset < b.abbrev_offset;
-}
 
 /* Efficiently read all the type units.
 
@@ -7433,8 +7194,7 @@ build_type_psymtabs (dwarf2_per_objfile *per_objfile)
 	}
     }
 
-  std::sort (sorted_by_abbrev.begin (), sorted_by_abbrev.end (),
-	     sort_tu_by_abbrev_offset);
+  std::sort (sorted_by_abbrev.begin (), sorted_by_abbrev.end ());
 
   abbrev_offset = (sect_offset) ~(unsigned) 0;
 
@@ -7713,7 +7473,7 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
 
   while (info_ptr < section->buffer + section->size)
     {
-      std::unique_ptr<dwarf2_per_cu_data> this_cu;
+      dwarf2_per_cu_data_up this_cu;
 
       sect_offset sect_off = (sect_offset) (info_ptr - section->buffer);
 
@@ -7734,7 +7494,7 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
 	  signatured_type *sig_ptr = sig_type.get ();
 	  sig_type->signature = cu_header.signature;
 	  sig_type->type_offset_in_tu = cu_header.type_cu_offset_in_tu;
-	  this_cu = std::move (sig_type);
+	  this_cu.reset (sig_type.release ());
 
 	  void **slot = htab_find_slot (types_htab.get (), sig_ptr, INSERT);
 	  gdb_assert (slot != nullptr);
@@ -8690,7 +8450,7 @@ maybe_queue_comp_unit (struct dwarf2_cu *dependent_cu,
   /* Mark the dependence relation so that we don't flush PER_CU
      too early.  */
   if (dependent_cu != NULL)
-    dwarf2_add_dependence (dependent_cu, per_cu);
+    dependent_cu->add_dependence (per_cu);
 
   /* If it's already on the queue, we have nothing to do.  */
   if (per_cu->queued)
@@ -18584,15 +18344,6 @@ dwarf2_per_objfile::int_type (int size_in_bytes, bool unsigned_p) const
   gdb_assert_not_reached ("unable to find suitable integer type");
 }
 
-/* See read.h.  */
-
-struct type *
-dwarf2_cu::addr_sized_int_type (bool unsigned_p) const
-{
-  int addr_size = this->per_cu->addr_size ();
-  return this->per_objfile->int_type (addr_size, unsigned_p);
-}
-
 /* Read the DW_AT_type attribute for a sub-range.  If this attribute is not
    present (which is valid) then compute the default type based on the
    compilation units address size.  */
@@ -21697,29 +21448,6 @@ dwarf2_start_subfile (struct dwarf2_cu *cu, const char *filename,
   cu->get_builder ()->start_subfile (filename);
 }
 
-/* Start a symtab for DWARF.  NAME, COMP_DIR, LOW_PC are passed to the
-   buildsym_compunit constructor.  */
-
-struct compunit_symtab *
-dwarf2_cu::start_symtab (const char *name, const char *comp_dir,
-			 CORE_ADDR low_pc)
-{
-  gdb_assert (m_builder == nullptr);
-
-  m_builder.reset (new struct buildsym_compunit
-		   (this->per_objfile->objfile,
-		    name, comp_dir, language, low_pc));
-
-  list_in_scope = get_builder ()->get_file_symbols ();
-
-  get_builder ()->record_debugformat (xstrprintf ("DWARF %d", this->header.version));
-  get_builder ()->record_producer (producer);
-
-  processing_has_namespace_info = false;
-
-  return get_builder ()->get_compunit_symtab ();
-}
-
 static void
 var_decode_location (struct attribute *attr, struct symbol *sym,
 		     struct dwarf2_cu *cu)
@@ -24574,23 +24302,6 @@ dwarf2_per_cu_data::ref_addr_size () const
     return header->offset_size;
 }
 
-/* See read.h.  */
-
-struct type *
-dwarf2_cu::addr_type () const
-{
-  struct objfile *objfile = this->per_objfile->objfile;
-  struct type *void_type = objfile_type (objfile)->builtin_void;
-  struct type *addr_type = lookup_pointer_type (void_type);
-  int addr_size = this->per_cu->addr_size ();
-
-  if (TYPE_LENGTH (addr_type) == addr_size)
-    return addr_type;
-
-  addr_type = addr_sized_int_type (addr_type->is_unsigned ());
-  return addr_type;
-}
-
 /* A helper function for dwarf2_find_containing_comp_unit that returns
    the index of the result, and that searches a vector.  It will
    return a result even if the offset in question does not actually
@@ -24601,7 +24312,7 @@ static int
 dwarf2_find_containing_comp_unit
   (sect_offset sect_off,
    unsigned int offset_in_dwz,
-   const std::vector<std::unique_ptr<dwarf2_per_cu_data>> &all_comp_units)
+   const std::vector<dwarf2_per_cu_data_up> &all_comp_units)
 {
   int low, high;
 
@@ -24667,13 +24378,13 @@ namespace find_containing_comp_unit {
 static void
 run_test ()
 {
-  std::unique_ptr<dwarf2_per_cu_data> one (new dwarf2_per_cu_data);
+  dwarf2_per_cu_data_up one (new dwarf2_per_cu_data);
   dwarf2_per_cu_data *one_ptr = one.get ();
-  std::unique_ptr<dwarf2_per_cu_data> two (new dwarf2_per_cu_data);
+  dwarf2_per_cu_data_up two (new dwarf2_per_cu_data);
   dwarf2_per_cu_data *two_ptr = two.get ();
-  std::unique_ptr<dwarf2_per_cu_data> three (new dwarf2_per_cu_data);
+  dwarf2_per_cu_data_up three (new dwarf2_per_cu_data);
   dwarf2_per_cu_data *three_ptr = three.get ();
-  std::unique_ptr<dwarf2_per_cu_data> four (new dwarf2_per_cu_data);
+  dwarf2_per_cu_data_up four (new dwarf2_per_cu_data);
   dwarf2_per_cu_data *four_ptr = four.get ();
 
   one->length = 5;
@@ -24686,7 +24397,7 @@ run_test ()
   four->length = 7;
   four->is_dwz = 1;
 
-  std::vector<std::unique_ptr<dwarf2_per_cu_data>> units;
+  std::vector<dwarf2_per_cu_data_up> units;
   units.push_back (std::move (one));
   units.push_back (std::move (two));
   units.push_back (std::move (three));
@@ -24713,24 +24424,6 @@ run_test ()
 }
 
 #endif /* GDB_SELF_TEST */
-
-/* Initialize dwarf2_cu to read PER_CU, in the context of PER_OBJFILE.  */
-
-dwarf2_cu::dwarf2_cu (dwarf2_per_cu_data *per_cu,
-		      dwarf2_per_objfile *per_objfile)
-  : per_cu (per_cu),
-    per_objfile (per_objfile),
-    mark (false),
-    has_loclist (false),
-    checked_producer (false),
-    producer_is_gxx_lt_4_6 (false),
-    producer_is_gcc_lt_4_3 (false),
-    producer_is_icc (false),
-    producer_is_icc_lt_14 (false),
-    producer_is_codewarrior (false),
-    processing_has_namespace_info (false)
-{
-}
 
 /* Initialize basic fields of dwarf_cu CU according to DIE COMP_UNIT_DIE.  */
 
@@ -24791,7 +24484,7 @@ dwarf2_per_objfile::age_comp_units ()
 
   /* Start by clearing all marks.  */
   for (auto pair : m_dwarf2_cus)
-    pair.second->mark = false;
+    pair.second->clear_mark ();
 
   /* Traverse all CUs, mark them and their dependencies if used recently
      enough.  */
@@ -24801,7 +24494,7 @@ dwarf2_per_objfile::age_comp_units ()
 
       cu->last_used++;
       if (cu->last_used <= dwarf_max_cache_age)
-	dwarf2_mark (cu);
+	cu->mark ();
     }
 
   /* Delete all CUs still not marked.  */
@@ -24809,7 +24502,7 @@ dwarf2_per_objfile::age_comp_units ()
     {
       dwarf2_cu *cu = it->second;
 
-      if (!cu->mark)
+      if (!cu->is_marked ())
 	{
 	  dwarf_read_debug_printf_v ("deleting old CU %s",
 				     sect_offset_str (cu->per_cu->sect_off));
@@ -25008,71 +24701,6 @@ static struct type *
 get_die_type (struct die_info *die, struct dwarf2_cu *cu)
 {
   return get_die_type_at_offset (die->sect_off, cu->per_cu, cu->per_objfile);
-}
-
-/* Add a dependence relationship from CU to REF_PER_CU.  */
-
-static void
-dwarf2_add_dependence (struct dwarf2_cu *cu,
-		       struct dwarf2_per_cu_data *ref_per_cu)
-{
-  void **slot;
-
-  if (cu->dependencies == NULL)
-    cu->dependencies
-      = htab_create_alloc_ex (5, htab_hash_pointer, htab_eq_pointer,
-			      NULL, &cu->comp_unit_obstack,
-			      hashtab_obstack_allocate,
-			      dummy_obstack_deallocate);
-
-  slot = htab_find_slot (cu->dependencies, ref_per_cu, INSERT);
-  if (*slot == NULL)
-    *slot = ref_per_cu;
-}
-
-/* Subroutine of dwarf2_mark to pass to htab_traverse.
-   Set the mark field in every compilation unit in the
-   cache that we must keep because we are keeping CU.
-
-   DATA is the dwarf2_per_objfile object in which to look up CUs.  */
-
-static int
-dwarf2_mark_helper (void **slot, void *data)
-{
-  dwarf2_per_cu_data *per_cu = (dwarf2_per_cu_data *) *slot;
-  dwarf2_per_objfile *per_objfile = (dwarf2_per_objfile *) data;
-  dwarf2_cu *cu = per_objfile->get_cu (per_cu);
-
-  /* cu->dependencies references may not yet have been ever read if QUIT aborts
-     reading of the chain.  As such dependencies remain valid it is not much
-     useful to track and undo them during QUIT cleanups.  */
-  if (cu == nullptr)
-    return 1;
-
-  if (cu->mark)
-    return 1;
-
-  cu->mark = true;
-
-  if (cu->dependencies != nullptr)
-    htab_traverse (cu->dependencies, dwarf2_mark_helper, per_objfile);
-
-  return 1;
-}
-
-/* Set the mark field in CU and in every other compilation unit in the
-   cache that we must keep because we are keeping CU.  */
-
-static void
-dwarf2_mark (struct dwarf2_cu *cu)
-{
-  if (cu->mark)
-    return;
-
-  cu->mark = true;
-
-  if (cu->dependencies != nullptr)
-    htab_traverse (cu->dependencies, dwarf2_mark_helper, cu->per_objfile);
 }
 
 /* Trivial hash function for partial_die_info: the hash value of a DIE
