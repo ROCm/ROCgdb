@@ -11866,7 +11866,7 @@ print_mention_exception (struct breakpoint *b)
 	  {
 	    std::string info = string_printf (_("`%s' Ada exception"),
 					      c->excep_string.c_str ());
-	    uiout->text (info.c_str ());
+	    uiout->text (info);
 	  }
 	else
 	  uiout->text (_("all Ada exceptions"));
@@ -11882,7 +11882,7 @@ print_mention_exception (struct breakpoint *b)
 	    std::string info
 	      = string_printf (_("`%s' Ada exception handlers"),
 			       c->excep_string.c_str ());
-	    uiout->text (info.c_str ());
+	    uiout->text (info);
 	  }
 	else
 	  uiout->text (_("all Ada exceptions handlers"));

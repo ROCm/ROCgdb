@@ -1184,8 +1184,7 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	    }
 	  else
 	    {
-	      uiout->field_string ("target-id",
-				   thread_target_id_str (tp).c_str ());
+	      uiout->field_string ("target-id", thread_target_id_str (tp));
 	    }
 
 	  if (tp->state == THREAD_RUNNING)
@@ -1977,7 +1976,7 @@ print_selected_thread_frame (struct ui_out *uiout,
 	  uiout->text ("[Switching to thread ");
 	  uiout->field_string ("new-thread-id", print_thread_id (tp));
 	  uiout->text (" (");
-	  uiout->text (target_pid_to_str (inferior_ptid).c_str ());
+	  uiout->text (target_pid_to_str (inferior_ptid));
 	  uiout->text (")]");
 	}
     }
