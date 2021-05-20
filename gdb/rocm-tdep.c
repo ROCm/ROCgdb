@@ -219,6 +219,9 @@ struct rocm_target_ops final : public target_ops
 
   displaced_step_finish_status displaced_step_finish (thread_info *thread,
 						      gdb_signal sig) override;
+
+  void follow_exec (inferior *follow_inf, ptid_t ptid,
+		    const char *execd_pathname) override;
 };
 
 /* ROCm's target vector.  */
@@ -1839,19 +1842,19 @@ rocm_target_inferior_created (inferior *inf)
   rocm_enable (inf);
 }
 
-static void
-rocm_target_inferior_execd (inferior *inf)
+void
+rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
+			      const char *execd_pathname)
 {
-  /* If the inferior is not running on the native target (e.g. it is running
-     on a remote target), we don't want to deal with it.  */
-  if (inf->process_target () != get_native_target ())
-    return;
-
   /* The inferior has EXEC'd and the process image has changed.  The dbgapi is
      attached to the old process image, so we need to detach and re-attach to
      the new process image.  */
-  rocm_disable (inf);
-  rocm_enable (inf);
+  rocm_disable (current_inferior ());
+
+  beneath ()->follow_exec (follow_inf, ptid, execd_pathname);
+
+  gdb_assert (current_inferior () == follow_inf);
+  rocm_enable (follow_inf);
 }
 
 static cli_style_option warning_style ("rocm_warning", ui_file_style::RED);
@@ -3250,8 +3253,6 @@ _initialize_rocm_tdep (void)
 
   gdb::observers::inferior_created.attach (rocm_target_inferior_created,
 					   "rocm-tdep");
-  gdb::observers::inferior_execd.attach (rocm_target_inferior_execd,
-					 "rocm-tdep");
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
