@@ -1,6 +1,46 @@
+2021-05-21  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/25047
+	* contrib/cc-with-tweaks.sh: Handle -l.
+
+2021-05-21  Tom de Vries  <tdevries@suse.de>
+
+	PR breakpoint/27889
+	* jit.c (jit_breakpoint_re_set_internal): Skip separate debug
+	objects.  Call get_jiter_objfile_data with the_objfile.
+
+2021-05-20  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linespec.c (linespec_p): Remove.  Replace all uses with
+	"linespec *".
+
+2021-05-20  Alexandra Hájková  <ahajkova@redhat.com>
+	    Pedro Alves  <pedro@palves.net>
+
+	* cli/cli-script.h (command_line_up): New unique_ptr typedef.
+	* cli/cli-script.c (multi_line_command_p): Use unique_ptr
+	command_line_up instead of struct command_line.
+	(build_command_line): Likewise.
+	(get_command_line): Update the cmd function call parameter.
+	(process_next_line):  Use unique_ptr command_line_up instead
+	of struct command_line.
+	(recurse_read_control_structure): Change the the type of
+	next to command_line_up.
+	(read_command_lines_1): Change type of `next' to be
+	command_line_up and update all references of `next'
+	accordingly.
+
+2021-05-20  Alexandra Hájková  <ahajkova@redhat.com>
+
+	* MAINTAINERS (Write After Approval): Add myself.
+
 2021-05-19  John Baldwin  <jhb@FreeBSD.org>
 
 	* dwarf2/read.c (tu_abbrev_offset::operator<): Mark const.
+
+2021-05-18  Alexandra Hájková  <ahajkova@redhat.com>
+
+	* inflow.c (new_tty): Do not leak tty.
 
 2021-05-17  Tom Tromey  <tom@tromey.com>
 
@@ -250,11 +290,6 @@
 
 	* btrace.c (handle_pt_insn_events): Ignore status update enable
 	events.
-
-2021-05-11 Alexandra Hájková <ahajkova@redhat.com>
-
-	* inflow.c (new_tty): Do not leak tty.
-
 
 2021-05-11  Simon Marchi  <simon.marchi@polymtl.ca>
 
