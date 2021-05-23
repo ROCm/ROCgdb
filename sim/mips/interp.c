@@ -438,6 +438,9 @@ sim_open (SIM_OPEN_KIND kind, host_callback *cb,
 	  /* memory alias K1BASE@1,K1SIZE%MEMSIZE,K0BASE */
 	  sim_do_commandf (sd, "memory alias 0x%lx@1,0x%lx%%0x%lx,0x%0x",
 			   K1BASE, K1SIZE, (long)mem_size, K0BASE);
+	  if (WITH_TARGET_WORD_BITSIZE == 64)
+	    sim_do_commandf (sd, "memory alias 0x%x,0x%" PRIxTW ",0x%" PRIxTA,
+			     (K0BASE), mem_size, EXTENDED(K0BASE));
 	}
 
       device_init(sd);
@@ -696,11 +699,16 @@ sim_open (SIM_OPEN_KIND kind, host_callback *cb,
   if (idt_monitor_base != 0)
     {
       unsigned loop;
-      unsigned idt_monitor_size = 1 << 11;
+      address_word idt_monitor_size = 1 << 11;
 
       /* the default monitor region */
-      sim_do_commandf (sd, "memory region 0x%x,0x%x",
-		       idt_monitor_base, idt_monitor_size);
+      if (WITH_TARGET_WORD_BITSIZE == 64)
+	sim_do_commandf (sd, "memory alias 0x%x,0x%" PRIxTW ",0x%" PRIxTA,
+			 idt_monitor_base, idt_monitor_size,
+			 EXTENDED (idt_monitor_base));
+      else
+	sim_do_commandf (sd, "memory region 0x%x,0x%x",
+			 idt_monitor_base, idt_monitor_size);
 
       /* Entry into the IDT monitor is via fixed address vectors, and
 	 not using machine instructions. To avoid clashing with use of
@@ -1014,12 +1022,11 @@ sim_create_inferior (SIM_DESC sd, struct bfd *abfd,
 	  sim_cpu *cpu = STATE_CPU (sd, cpu_nr);
 	  sim_cia pc = bfd_get_start_address (abfd);
 
-	  /* We need to undo brain-dead bfd behavior where it sign-extends
-	     addresses that are supposed to be unsigned.  See the mips bfd
-	     sign_extend_vma setting.  We have to check the ELF data itself
-	     in order to handle o32 & n32 ABIs.  */
-	  if (abfd->tdata.elf_obj_data->elf_header->e_ident[EI_CLASS] ==
-	      ELFCLASS32)
+	  /* The 64-bit BFD sign-extends MIPS addresses to model
+	     32-bit compatibility segments with 64-bit addressing.
+	     These addresses work as is on 64-bit targets but
+	     can be truncated for 32-bit targets.  */
+	  if (WITH_TARGET_WORD_BITSIZE == 32)
 	    pc = (unsigned32) pc;
 
 	  CPU_PC_SET (cpu, pc);
