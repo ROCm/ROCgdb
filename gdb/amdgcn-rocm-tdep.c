@@ -56,22 +56,14 @@ amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
 }
 
 static int
-amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
+amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int dwarf_reg)
 {
-  amd_dbgapi_architecture_id_t architecture_id;
-  amd_dbgapi_register_id_t register_id;
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-				   &architecture_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    return -1;
+  if (dwarf_reg < tdep->dwarf_regnum_to_gdb_regnum.size ())
+    return tdep->dwarf_regnum_to_gdb_regnum[dwarf_reg];
 
-  if (amd_dbgapi_dwarf_register_to_register (architecture_id, reg,
-					     &register_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    return -1;
-
-  return gdbarch_tdep (gdbarch)->regnum_map[register_id];
+  return -1;
 }
 
 static enum return_value_convention
@@ -467,12 +459,14 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
+  gdb::unique_xmalloc_ptr<amd_dbgapi_register_id_t> register_ids_holder
+    (register_ids);
+
   tdep->register_ids.insert (tdep->register_ids.end (), &register_ids[0],
 			     &register_ids[register_count]);
 
   set_gdbarch_num_regs (gdbarch, register_count);
   set_gdbarch_num_pseudo_regs (gdbarch, 0);
-  xfree (register_ids);
 
   tdep->register_names.resize (register_count);
   for (size_t i = 0; i < register_count; ++i)
@@ -480,15 +474,29 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       if (!tdep->regnum_map.emplace (tdep->register_ids[i], i).second)
 	return nullptr;
 
+      /* Get register name.  */
       char *bytes;
       if (amd_dbgapi_register_get_info (tdep->register_ids[i],
 					AMD_DBGAPI_REGISTER_INFO_NAME,
 					sizeof (bytes), &bytes)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	continue;
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  tdep->register_names[i] = bytes;
+	  xfree (bytes);
+	}
 
-      tdep->register_names[i] = bytes;
-      xfree (bytes);
+      /* Get register DWARF number.  */
+      uint64_t dwarf_num;
+      if (amd_dbgapi_register_get_info (tdep->register_ids[i],
+					AMD_DBGAPI_REGISTER_INFO_DWARF,
+					sizeof (dwarf_num), &dwarf_num)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  if (dwarf_num >= tdep->dwarf_regnum_to_gdb_regnum.size ())
+	    tdep->dwarf_regnum_to_gdb_regnum.resize (dwarf_num + 1, -1);
+
+	  tdep->dwarf_regnum_to_gdb_regnum[dwarf_num] = i;
+	}
     }
 
   amd_dbgapi_register_id_t pc_register_id;
