@@ -4694,11 +4694,10 @@ usage (FILE * stream)
   -R --relocated-dump=<number|name>\n\
                          Dump the contents of section <number|name> as relocated bytes\n\
   -z --decompress        Decompress section before dumping it\n\
-  -w[lLiaprmfFsoORtUuTgAc] or\n\
-  --debug-dump[=rawline,=decodedline,=info,=abbrev,=pubnames,=aranges,=macro,=frames,\n\
-               =frames-interp,=str,=str-offsets,=loc,=Ranges,=pubtypes,\n\
-               =gdb_index,=trace_info,=trace_abbrev,=trace_aranges,\n\
-               =addr,=cu_index]\n\
+  -w[lLiaprmfFsOoRtgUuTAc] or\n\
+  --debug-dump=[rawline,decodedline,info,abbrev,pubnames,aranges,macro,frames,\n\
+                frames-interp,str,str-offsets,loc,Ranges,pubtypes,gdb_index,\n\
+                trace_info,trace_abbrev,trace_aranges,addr,cu_index]\n\
                          Display the contents of DWARF debug sections\n\
   -wk,--debug-dump=links Display the contents of sections that link to separate debuginfo files\n\
   -P,--process-links     Display the contents of non-debug sections in separate debuginfo files.  (Implies -wK)\n"));
@@ -19256,6 +19255,9 @@ decode_x86_feature_2 (unsigned int bitmask)
 	  break;
 	case GNU_PROPERTY_X86_FEATURE_2_XSAVEC:
 	  printf ("XSAVEC");
+	  break;
+	case GNU_PROPERTY_X86_FEATURE_2_CODE16:
+	  printf ("CODE16");
 	  break;
 	default:
 	  printf (_("<unknown: %x>"), bit);

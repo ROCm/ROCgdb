@@ -109,8 +109,8 @@ static unsigned int dwarf_read_debug = 0;
   debug_prefixed_printf_cond (dwarf_read_debug >= 2, "dwarf-read", fmt, \
 			      ##__VA_ARGS__)
 
-/* When non-zero, dump DIEs after they are read in.  */
-static unsigned int dwarf_die_debug = 0;
+/* When true, dump DIEs after they are read in.  */
+static bool dwarf_die_debug = false;
 
 /* When non-zero, dump line number entries as they are read in.  */
 unsigned int dwarf_line_debug = 0;
@@ -1573,8 +1573,6 @@ typedef std::unique_ptr<struct dwo_file> dwo_file_up;
 static void process_cu_includes (dwarf2_per_objfile *per_objfile);
 
 static void check_producer (struct dwarf2_cu *cu);
-
-static void free_line_header_voidp (void *arg);
 
 /* Various complaints about symbol reading that don't abort the process.  */
 
@@ -6741,12 +6739,7 @@ allocate_type_unit_groups_table ()
   return htab_up (htab_create_alloc (3,
 				     hash_type_unit_group,
 				     eq_type_unit_group,
-				     [] (void *arg)
-				     {
-				       type_unit_group *grp
-					 = (type_unit_group *) arg;
-				       delete grp;
-				     },
+				     htab_delete_entry<type_unit_group>,
 				     xcalloc, xfree));
 }
 
@@ -10439,7 +10432,7 @@ handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
       per_objfile->line_header_hash
 	.reset (htab_create_alloc (127, line_header_hash_voidp,
 				   line_header_eq_voidp,
-				   free_line_header_voidp,
+				   htab_delete_entry<line_header>,
 				   xcalloc, xfree));
     }
 
@@ -10770,17 +10763,10 @@ eq_dwo_file (const void *item_lhs, const void *item_rhs)
 static htab_up
 allocate_dwo_file_hash_table ()
 {
-  auto delete_dwo_file = [] (void *item)
-    {
-      struct dwo_file *dwo_file = (struct dwo_file *) item;
-
-      delete dwo_file;
-    };
-
   return htab_up (htab_create_alloc (41,
 				     hash_dwo_file,
 				     eq_dwo_file,
-				     delete_dwo_file,
+				     htab_delete_entry<dwo_file>,
 				     xcalloc, xfree));
 }
 
@@ -20529,16 +20515,6 @@ die_specification (struct die_info *die, struct dwarf2_cu **spec_cu)
     return follow_die_ref (die, spec_attr, spec_cu);
 }
 
-/* Stub for free_line_header to match void * callback types.  */
-
-static void
-free_line_header_voidp (void *arg)
-{
-  struct line_header *lh = (struct line_header *) arg;
-
-  delete lh;
-}
-
 /* A convenience function to find the proper .debug_line section for a CU.  */
 
 static struct dwarf2_section_info *
@@ -24779,14 +24755,14 @@ information.  A value greater than 1 provides more verbose information."),
 			    NULL,
 			    &setdebuglist, &showdebuglist);
 
-  add_setshow_zuinteger_cmd ("dwarf-die", no_class, &dwarf_die_debug, _("\
+  add_setshow_boolean_cmd ("dwarf-die", no_class, &dwarf_die_debug, _("\
 Set debugging of the DWARF DIE reader."), _("\
 Show debugging of the DWARF DIE reader."), _("\
-When enabled (non-zero), DIEs are dumped after they are read in.\n\
+When enabled, DIEs are dumped after they are read in.\n\
 The value is the maximum depth to print."),
-			     NULL,
-			     NULL,
-			     &setdebuglist, &showdebuglist);
+			   NULL,
+			   NULL,
+			   &setdebuglist, &showdebuglist);
 
   add_setshow_zuinteger_cmd ("dwarf-line", no_class, &dwarf_line_debug, _("\
 Set debugging of the dwarf line reader."), _("\
