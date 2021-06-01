@@ -509,7 +509,7 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 	opts.format = 0;
 	if (type->is_unsigned ())
 	  type = builtin_type (gdbarch)->builtin_true_unsigned_char;
- 	else
+	else
 	  type = builtin_type (gdbarch)->builtin_true_char;
 
 	value_print (value_from_longest (type, *val_long), stream, &opts);
@@ -3215,7 +3215,7 @@ Default count is 1.  Default address is following last thing printed\n\
 with this command or \"print\"."));
   set_cmd_completer_handle_brkchars (c, display_and_x_command_completer);
 
-  add_info ("display", info_display_command, _("\
+  c = add_info ("display", info_display_command, _("\
 Expressions to display when program stops, with code numbers.\n\
 Usage: info display"));
 
@@ -3227,7 +3227,7 @@ No argument means cancel all automatic-display expressions.\n\
 \"delete display\" has the same effect as this command.\n\
 Do \"info display\" to see current list of code numbers."),
 	   &cmdlist);
-  add_info_alias ("disp", "display", 1);
+  add_info_alias ("disp", c, 1);
 
   c = add_com ("display", class_vars, display_command, _("\
 Print value of expression EXP each time the program stops.\n\
@@ -3239,7 +3239,7 @@ and examining is done as in the \"x\" command.\n\n\
 With no argument, display all currently requested auto-display expressions.\n\
 Use \"undisplay\" to cancel display requests previously made."));
   set_cmd_completer_handle_brkchars (c, display_and_x_command_completer);
-  add_com_alias ("disp", "display", class_vars, 1);
+  add_com_alias ("disp", c, class_vars, 1);
 
   add_cmd ("display", class_vars, enable_display_command, _("\
 Enable some expressions to be displayed when program stops.\n\
@@ -3307,7 +3307,8 @@ current working language.  The result is printed and saved in the value\n\
 history, if it is not void."));
   set_cmd_completer_handle_brkchars (c, print_command_completer);
 
-  add_cmd ("variable", class_vars, set_command, _("\
+  cmd_list_element *set_variable_cmd
+    = add_cmd ("variable", class_vars, set_command, _("\
 Evaluate expression EXP and assign result to variable VAR.\n\
 Usage: set variable VAR = EXP\n\
 This uses assignment syntax appropriate for the current language\n\
@@ -3316,8 +3317,8 @@ VAR may be a debugger \"convenience\" variable (names starting\n\
 with $), a register (a few standard names starting with $), or an actual\n\
 variable in the program being debugged.  EXP is any valid expression.\n\
 This may usually be abbreviated to simply \"set\"."),
-	   &setlist);
-  add_alias_cmd ("var", "variable", class_vars, 0, &setlist);
+	       &setlist);
+  add_alias_cmd ("var", set_variable_cmd, class_vars, 0, &setlist);
 
   const auto print_opts = make_value_print_options_def_group (nullptr);
 
@@ -3354,10 +3355,11 @@ EXP may be preceded with /FMT, where FMT is a format letter\n\
 but no count or size letter (see \"x\" command)."),
 					      print_opts);
 
-  c = add_com ("print", class_vars, print_command, print_help.c_str ());
-  set_cmd_completer_handle_brkchars (c, print_command_completer);
-  add_com_alias ("p", "print", class_vars, 1);
-  add_com_alias ("inspect", "print", class_vars, 1);
+  cmd_list_element *print_cmd
+    = add_com ("print", class_vars, print_command, print_help.c_str ());
+  set_cmd_completer_handle_brkchars (print_cmd, print_command_completer);
+  add_com_alias ("p", print_cmd, class_vars, 1);
+  add_com_alias ("inspect", print_cmd, class_vars, 1);
 
   add_setshow_uinteger_cmd ("max-symbolic-offset", no_class,
 			    &max_symbolic_offset, _("\

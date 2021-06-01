@@ -7244,7 +7244,7 @@ process_event_stop_test (struct execution_control_state *ecs)
   bool refresh_step_info = true;
   if ((ecs->event_thread->suspend.stop_pc == stop_pc_sal.pc)
       && (ecs->event_thread->current_line != stop_pc_sal.line
- 	  || ecs->event_thread->current_symtab != stop_pc_sal.symtab))
+	  || ecs->event_thread->current_symtab != stop_pc_sal.symtab))
     {
       /* We are at a different line.  */
 
@@ -9497,10 +9497,11 @@ _initialize_infrun ()
     = create_async_event_handler (infrun_async_inferior_event_handler, NULL,
 				  "infrun");
 
-  add_info ("signals", info_signals_command, _("\
+  cmd_list_element *info_signals_cmd
+    = add_info ("signals", info_signals_command, _("\
 What debugger does when program gets various signals.\n\
 Specify a signal as argument to print info on that signal only."));
-  add_info_alias ("handle", "signals", 0);
+  add_info_alias ("handle", info_signals_cmd, 0);
 
   c = add_com ("handle", class_run, handle_command, _("\
 Specify how to handle signals.\n\

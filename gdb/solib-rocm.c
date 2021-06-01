@@ -532,7 +532,7 @@ rocm_solib_target_inferior_created (inferior *inf)
 extern initialize_file_ftype _initialize_rocm_solib;
 
 void
-_initialize_rocm_solib (void)
+_initialize_rocm_solib ()
 {
   /* Install our observers.  */
   amd_dbgapi_code_object_list_updated.attach (rocm_update_solib_list,

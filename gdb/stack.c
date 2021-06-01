@@ -1005,11 +1005,11 @@ print_pc (struct ui_out *uiout, struct gdbarch *gdbarch, frame_info *frame,
 
   std::string flags = gdbarch_get_pc_address_flags (gdbarch, frame, pc);
   if (!flags.empty ())
-  {
-    uiout->text (" [");
-    uiout->field_string ("addr_flags", flags);
-    uiout->text ("]");
-  }
+    {
+      uiout->text (" [");
+      uiout->field_string ("addr_flags", flags);
+      uiout->text ("]");
+    }
 }
 
 /* See stack.h.  */
@@ -1927,7 +1927,7 @@ public:
     struct frame_info *fid;
 
     if (args == NULL)
-    error (_("Missing address argument to view a frame"));
+      error (_("Missing address argument to view a frame"));
 
     gdb_argv argv (args);
 
@@ -2769,7 +2769,7 @@ return_command (const char *retval_exp, int from_tty)
       if (thisfun != NULL)
 	return_type = TYPE_TARGET_TYPE (SYMBOL_TYPE (thisfun));
       if (return_type == NULL)
-      	{
+	{
 	  if (retval_expr->first_opcode () != UNOP_CAST
 	      && retval_expr->first_opcode () != UNOP_CAST_TYPE)
 	    error (_("Return value type not available for selected "
@@ -3329,22 +3329,24 @@ An argument says how many frames up to go."));
 Same as the `up' command, but does not print anything.\n\
 This is useful in command scripts."));
 
-  add_com ("down", class_stack, down_command, _("\
+  cmd_list_element *down_cmd
+    = add_com ("down", class_stack, down_command, _("\
 Select and print stack frame called by this one.\n\
 An argument says how many frames down to go."));
-  add_com_alias ("do", "down", class_stack, 1);
-  add_com_alias ("dow", "down", class_stack, 1);
+  add_com_alias ("do", down_cmd, class_stack, 1);
+  add_com_alias ("dow", down_cmd, class_stack, 1);
   add_com ("down-silently", class_support, down_silently_command, _("\
 Same as the `down' command, but does not print anything.\n\
 This is useful in command scripts."));
 
-  add_prefix_cmd ("frame", class_stack,
-		  &frame_cmd.base_command, _("\
+  cmd_list_element *frame_cmd_el
+    = add_prefix_cmd ("frame", class_stack,
+		      &frame_cmd.base_command, _("\
 Select and print a stack frame.\n\
 With no argument, print the selected stack frame.  (See also \"info frame\").\n\
 A single numerical argument specifies the frame to select."),
-		  &frame_cmd_list, 1, &cmdlist);
-  add_com_alias ("f", "frame", class_stack, 1);
+		      &frame_cmd_list, 1, &cmdlist);
+  add_com_alias ("f", frame_cmd_el, class_stack, 1);
 
 #define FRAME_APPLY_OPTION_HELP "\
 Prints the frame location information followed by COMMAND output.\n\
@@ -3498,25 +3500,27 @@ For backward compatibility, the following qualifiers are supported:\n\
 With a negative COUNT, print outermost -COUNT frames."),
 			       backtrace_opts);
 
-  cmd_list_element *c = add_com ("backtrace", class_stack,
-				 backtrace_command,
-				 backtrace_help.c_str ());
-  set_cmd_completer_handle_brkchars (c, backtrace_command_completer);
+  cmd_list_element *backtrace_cmd
+    = add_com ("backtrace", class_stack, backtrace_command,
+	       backtrace_help.c_str ());
+  set_cmd_completer_handle_brkchars (backtrace_cmd, backtrace_command_completer);
 
-  add_com_alias ("bt", "backtrace", class_stack, 0);
+  add_com_alias ("bt", backtrace_cmd, class_stack, 0);
 
-  add_com_alias ("where", "backtrace", class_stack, 0);
-  add_info ("stack", backtrace_command,
-	    _("Backtrace of the stack, or innermost COUNT frames."));
-  add_info_alias ("s", "stack", 1);
+  add_com_alias ("where", backtrace_cmd, class_stack, 0);
+  cmd_list_element *info_stack_cmd
+    = add_info ("stack", backtrace_command,
+		_("Backtrace of the stack, or innermost COUNT frames."));
+  add_info_alias ("s", info_stack_cmd, 1);
 
-  add_prefix_cmd ("frame", class_info, &info_frame_cmd.base_command,
-		  _("All about the selected stack frame.\n\
+  cmd_list_element *info_frame_cmd_el
+    = add_prefix_cmd ("frame", class_info, &info_frame_cmd.base_command,
+		      _("All about the selected stack frame.\n\
 With no arguments, displays information about the currently selected stack\n\
 frame.  Alternatively a frame specification may be provided (See \"frame\")\n\
 the information is then printed about the specified frame."),
-		  &info_frame_cmd_list, 1, &infolist);
-  add_info_alias ("f", "frame", 1);
+		      &info_frame_cmd_list, 1, &infolist);
+  add_info_alias ("f", info_frame_cmd_el, 1);
 
   add_cmd ("address", class_stack, &info_frame_cmd.address,
 	   _("\
@@ -3572,17 +3576,18 @@ Usage: func NAME"));
 
   /* Install "set print raw frame-arguments", a deprecated spelling of
      "set print raw-frame-arguments".  */
-  cmd = add_setshow_boolean_cmd
-    ("frame-arguments", no_class,
-     &user_frame_print_options.print_raw_frame_arguments,
-     _("\
+  set_show_commands set_show_frame_args
+    = add_setshow_boolean_cmd
+      ("frame-arguments", no_class,
+       &user_frame_print_options.print_raw_frame_arguments,
+       _("\
 Set whether to print frame arguments in raw form."), _("\
 Show whether to print frame arguments in raw form."), _("\
 If set, frame arguments are printed in raw form, bypassing any\n\
 pretty-printers for that value."),
-     NULL, NULL,
-     &setprintrawlist, &showprintrawlist);
-  deprecate_cmd (cmd, "set print raw-frame-arguments");
+       NULL, NULL,
+       &setprintrawlist, &showprintrawlist);
+  deprecate_cmd (set_show_frame_args.set, "set print raw-frame-arguments");
 
   add_setshow_auto_boolean_cmd ("disassemble-next-line", class_stack,
 				&disassemble_next_line, _("\

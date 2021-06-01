@@ -1,3 +1,88 @@
+2021-05-29  Alan Modra  <amodra@gmail.com>
+
+	* ppc-dis.c (lookup_powerpc): Test deprecated field when -Many.
+	Don't special case PPC_OPCODE_RAW.
+	(lookup_prefix): Likewise.
+	(lookup_vle, lookup_spe2): Similarly.  Add dialect parameter and..
+	(print_insn_powerpc): ..update caller.
+	* ppc-opc.c (EXT): Define.
+	(powerpc_opcodes): Mark extended mnemonics with EXT.
+	(prefix_opcodes, vle_opcodes): Likewise.
+	(XISEL, XISEL_MASK): Add cr field and simplify.
+	(powerpc_opcodes): Use XISEL with extended isel mnemonics and sort
+	all isel variants to where the base mnemonic belongs.  Sort dstt,
+	dststt and dssall.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-opc.c (mips_builtin_opcodes): Reorder legacy COP0, COP2,
+	COP3 opcode instructions.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-opc.c (mips_builtin_opcodes): Update exclusion list for
+	"ldc2", "ldc3", "lwc0", "lwc2", "lwc3", "sdc2", "sdc3", "swc0",
+	"swc2", "swc3", "cfc0", "ctc0", "bc2f", "bc2fl", "bc2t",
+	"bc2tl", "cfc2", "ctc2", "dmfc2", "dmtc2", "mfc2", "mtc2",
+	"bc3f", "bc3fl", "bc3t", "bc3tl", "cfc3", "ctc3", "mfc3",
+	"mtc3", "bc0f", "bc0fl", "bc0t", "bc0tl", "rfe", "c2", "c3",
+	"cop2", and "cop3" entries.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-opc.c (mips_builtin_opcodes): Remove "dmfc3" and "dmtc3"
+	entries and associated comments.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-opc.c (mips_builtin_opcodes): Move the "rfe" entry ahead
+	of "c0".
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-dis.c (mips_cp1_names_mips): New variable.
+	(mips_arch_choices): Use it rather than `mips_cp1_names_numeric'
+	for "r3000", "r4000", "r4010", "vr4100", "vr4111", "vr4120",
+	"r4300", "r4400", "r4600", "r4650", "r5000", "vr5400", "vr5500",
+	"r5900", "r6000", "rm7000", "rm9000", "r8000", "r10000",
+	"r12000", "r14000", "r16000", "mips5", "loongson2e", and
+	"loongson2f".
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-dis.c (print_reg) <OP_REG_COPRO>: Move control register
+	handling code over to...
+	<OP_REG_CONTROL>: ... this new case.
+	* mips-opc.c (decode_mips_operand) <'g', 'y'>: New cases.
+	(mips_builtin_opcodes): Update "cfc1", "ctc1", "cttc1", "cttc2",
+	"cfc0", "ctc0", "cfc2", "ctc2", "cfc3", and "ctc3" entries
+	replacing the `G' operand code with `g'.  Update "cftc1" and
+	"cftc2" entries replacing the `E' operand code with `y'.
+	* micromips-opc.c (decode_micromips_operand) <'g'>: New case.
+	(micromips_opcodes): Update "cfc1", "cfc2", "ctc1", and "ctc2"
+	entries replacing the `G' operand code with `g'.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-dis.c (mips_cp0_names_r3900): New variable.
+	(mips_arch_choices): Use it rather than `mips_cp0_names_numeric'
+	for "r3900".
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* mips-opc.c (mips_builtin_opcodes): Switch "cttc2", "mttc2",
+	and "mtthc2" to using the `G' rather than `g' operand code for
+	the coprocessor control register referred.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* micromips-opc.c (micromips_opcodes): Swap the two "dmtc1"
+	entries with each other.
+
+2021-05-27  Peter Bergner  <bergner@linux.ibm.com>
+
+	* ppc-opc.c (powerpc_opcodes) <xxmr, xxlnot>: New extended mnemonics.
+
 2021-05-25  Alan Modra  <amodra@gmail.com>
 
 	* cris-desc.c: Regenerate.

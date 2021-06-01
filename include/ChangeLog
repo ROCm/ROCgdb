@@ -1,3 +1,31 @@
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* opcode/mips.h (cpu_is_member): Remove code for MIPSr6 ISA
+	exclusion.
+	(opcode_is_member): Handle ISA level exclusion.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* opcode/mips.h (isa_is_member): New inline function, factored
+	out from...
+	(opcode_is_member): ... here.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* opcode/mips.h: Document `g' and `y' operand codes.
+	(mips_reg_operand_type): Add OP_REG_CONTROL enumeration
+	constant.
+
+2021-05-29  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* opcode/mips.h: Complement change made to opcodes and remove
+	references to the `g' regular MIPS ISA operand code.
+
+2021-05-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/27905
+	* elf/common.h (GNU_PROPERTY_X86_FEATURE_2_CODE16): Removed.
+
 2021-05-26  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR ld/27905

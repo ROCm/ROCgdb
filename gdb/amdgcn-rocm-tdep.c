@@ -576,7 +576,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 extern initialize_file_ftype _initialize_amdgcn_rocm_tdep;
 
 void
-_initialize_amdgcn_rocm_tdep (void)
+_initialize_amdgcn_rocm_tdep ()
 {
   gdbarch_register (bfd_arch_amdgcn, amdgcn_gdbarch_init, NULL);
 }

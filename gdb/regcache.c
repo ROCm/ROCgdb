@@ -2094,22 +2094,23 @@ _initialize_regcache ()
   gdb::observers::thread_ptid_changed.attach (regcache_thread_ptid_changed,
 					      "regcache");
 
-  add_cmd ("register-cache", class_maintenance, reg_flush_command,
-	   _("Force gdb to flush its register and frame cache."),
-	   &maintenanceflushlist);
-  c = add_com_alias ("flushregs", "maintenance flush register-cache",
+  cmd_list_element *maintenance_flush_register_cache_cmd
+    = add_cmd ("register-cache", class_maintenance, reg_flush_command,
+	       _("Force gdb to flush its register and frame cache."),
+	       &maintenanceflushlist);
+  c = add_com_alias ("flushregs", maintenance_flush_register_cache_cmd,
 		     class_maintenance, 0);
   deprecate_cmd (c, "maintenance flush register-cache");
 
 #if GDB_SELF_TEST
   selftests::register_test ("get_thread_arch_aspace_regcache",
-  			    selftests::get_thread_arch_aspace_regcache_test);
+			    selftests::get_thread_arch_aspace_regcache_test);
   selftests::register_test ("registers_changed_ptid_all",
 			    selftests::registers_changed_ptid_all_test);
   selftests::register_test ("registers_changed_ptid_target",
-  			    selftests::registers_changed_ptid_target_test);
+			    selftests::registers_changed_ptid_target_test);
   selftests::register_test ("registers_changed_ptid_target_pid",
-  			    selftests::registers_changed_ptid_target_pid_test);
+			    selftests::registers_changed_ptid_target_pid_test);
   selftests::register_test ("registers_changed_ptid_target_ptid",
 			    selftests::registers_changed_ptid_target_ptid_test);
 

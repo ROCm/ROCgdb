@@ -109,8 +109,8 @@ static unsigned int dwarf_read_debug = 0;
   debug_prefixed_printf_cond (dwarf_read_debug >= 2, "dwarf-read", fmt, \
 			      ##__VA_ARGS__)
 
-/* When true, dump DIEs after they are read in.  */
-static bool dwarf_die_debug = false;
+/* When non-zero, dump DIEs after they are read in.  */
+static unsigned int dwarf_die_debug = 0;
 
 /* When non-zero, dump line number entries as they are read in.  */
 unsigned int dwarf_line_debug = 0;
@@ -2290,7 +2290,7 @@ dwarf2_per_bfd::allocate_per_cu ()
 {
   dwarf2_per_cu_data_up result (new dwarf2_per_cu_data);
   result->per_bfd = this;
-  result->index = m_num_psymtabs++;
+  result->index = all_comp_units.size ();
   return result;
 }
 
@@ -2301,7 +2301,8 @@ dwarf2_per_bfd::allocate_signatured_type ()
 {
   std::unique_ptr<signatured_type> result (new signatured_type);
   result->per_bfd = this;
-  result->index = m_num_psymtabs++;
+  result->index = all_comp_units.size ();
+  result->is_debug_types = true;
   tu_stats.nr_tus++;
   return result;
 }
@@ -2400,7 +2401,6 @@ create_signatured_type_table_from_index
       sig_type = per_bfd->allocate_signatured_type ();
       sig_type->signature = signature;
       sig_type->type_offset_in_tu = type_offset_in_tu;
-      sig_type->is_debug_types = 1;
       sig_type->section = section;
       sig_type->sect_off = sect_off;
       sig_type->v.quick
@@ -2452,7 +2452,6 @@ create_signatured_type_table_from_debug_names
       sig_type = per_objfile->per_bfd->allocate_signatured_type ();
       sig_type->signature = cu_header.signature;
       sig_type->type_offset_in_tu = cu_header.type_cu_offset_in_tu;
-      sig_type->is_debug_types = 1;
       sig_type->section = section;
       sig_type->sect_off = sect_off;
       sig_type->v.quick
@@ -5898,7 +5897,6 @@ add_type_unit (dwarf2_per_objfile *per_objfile, ULONGEST sig, void **slot)
   per_objfile->per_bfd->all_comp_units.emplace_back
     (sig_type_holder.release ());
   sig_type->signature = sig;
-  sig_type->is_debug_types = 1;
   if (per_objfile->per_bfd->using_index)
     {
       sig_type->v.quick =
@@ -7022,6 +7020,9 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
 
   cutu_reader reader (this_cu, per_objfile, nullptr, nullptr, false);
 
+  if (reader.comp_unit_die == nullptr)
+    return;
+
   switch (reader.comp_unit_die->tag)
     {
     case DW_TAG_compile_unit:
@@ -7499,7 +7500,6 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
 		       hex_string (sig_ptr->signature));
 	  *slot = sig_ptr;
 	}
-      this_cu->is_debug_types = (cu_header.unit_type == DW_UT_type);
       this_cu->sect_off = sect_off;
       this_cu->length = cu_header.length + cu_header.initial_length_size;
       this_cu->is_dwz = is_dwz;
@@ -18825,7 +18825,7 @@ load_partial_dies (const struct die_reader_specs *reader,
   last_die = NULL;
 
   gdb_assert (cu->per_cu != NULL);
-  if (cu->per_cu->load_all_dies)
+  if (cu->load_all_dies)
     load_all = 1;
 
   cu->partial_dies
@@ -19401,9 +19401,9 @@ find_partial_die (sect_offset sect_off, int offset_in_dwz, struct dwarf2_cu *cu)
   /* If we didn't find it, and not all dies have been loaded,
      load them all and try again.  */
 
-  if (pd == NULL && cu->per_cu->load_all_dies == 0)
+  if (pd == NULL && cu->load_all_dies == 0)
     {
-      cu->per_cu->load_all_dies = 1;
+      cu->load_all_dies = 1;
 
       /* This is nasty.  When we reread the DIEs, somewhere up the call chain
 	 THIS_CU->cu may already be in use.  So we can't just free it and
@@ -19417,7 +19417,7 @@ find_partial_die (sect_offset sect_off, int offset_in_dwz, struct dwarf2_cu *cu)
     }
 
   if (pd == NULL)
-    error (_("Dwarf Error: Cannot not find DIE at %s [from module %s]\n"),
+    error (_("Dwarf Error: Cannot find DIE at %s [from module %s]\n"),
 		    sect_offset_str (sect_off), bfd_get_filename (objfile->obfd));
   return { cu, pd };
 }
@@ -24755,14 +24755,14 @@ information.  A value greater than 1 provides more verbose information."),
 			    NULL,
 			    &setdebuglist, &showdebuglist);
 
-  add_setshow_boolean_cmd ("dwarf-die", no_class, &dwarf_die_debug, _("\
+  add_setshow_zuinteger_cmd ("dwarf-die", no_class, &dwarf_die_debug, _("\
 Set debugging of the DWARF DIE reader."), _("\
 Show debugging of the DWARF DIE reader."), _("\
-When enabled, DIEs are dumped after they are read in.\n\
+When enabled (non-zero), DIEs are dumped after they are read in.\n\
 The value is the maximum depth to print."),
-			   NULL,
-			   NULL,
-			   &setdebuglist, &showdebuglist);
+			     NULL,
+			     NULL,
+			     &setdebuglist, &showdebuglist);
 
   add_setshow_zuinteger_cmd ("dwarf-line", no_class, &dwarf_line_debug, _("\
 Set debugging of the dwarf line reader."), _("\

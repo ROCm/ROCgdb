@@ -625,8 +625,7 @@ insert_initial_watchpoints (rocm_inferior_info *info)
 {
   gdb_assert (info->runtime_loaded);
 
-  iterate_over_bp_locations (
-    [info] (bp_location *loc)
+  for (bp_location *loc : all_bp_locations ())
     {
       if (loc->loc_type == bp_loc_hardware_watchpoint
 	  && loc->pspace == info->inf->pspace)
@@ -636,7 +635,7 @@ insert_initial_watchpoints (rocm_inferior_info *info)
 	    warning (_ (
 	      "Failed to insert existing watchpoint after loading runtime."));
 	}
-    });
+    };
 }
 
 int
@@ -3224,7 +3223,7 @@ dispatch_find_command (const char *arg, int from_tty)
 extern initialize_file_ftype _initialize_rocm_tdep;
 
 void
-_initialize_rocm_tdep (void)
+_initialize_rocm_tdep ()
 {
   /* Make sure the loaded debugger library version is greater than or equal to
      the one used to build ROCgdb.  */

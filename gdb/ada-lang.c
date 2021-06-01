@@ -2170,9 +2170,9 @@ decode_constrained_packed_array (struct value *arr)
       && ada_is_modular_type (value_type (arr)))
     {
        /* This is a (right-justified) modular type representing a packed
- 	 array with no wrapper.  In order to interpret the value through
- 	 the (left-justified) packed array type we just built, we must
- 	 first left-justify it.  */
+	  array with no wrapper.  In order to interpret the value through
+	  the (left-justified) packed array type we just built, we must
+	  first left-justify it.  */
       int bit_size, bit_pos;
       ULONGEST mod;
 
@@ -11553,8 +11553,6 @@ static void
 create_excep_cond_exprs (struct ada_catchpoint *c,
 			 enum ada_exception_catchpoint_kind ex)
 {
-  struct bp_location *bl;
-
   /* Nothing to do if there's no specific exception to catch.  */
   if (c->excep_string.empty ())
     return;
@@ -11570,7 +11568,7 @@ create_excep_cond_exprs (struct ada_catchpoint *c,
 
   /* Iterate over all the catchpoint's locations, and parse an
      expression for each.  */
-  for (bl = c->loc; bl != NULL; bl = bl->next)
+  for (bp_location *bl : c->locations ())
     {
       struct ada_catchpoint_location *ada_loc
 	= (struct ada_catchpoint_location *) bl;

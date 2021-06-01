@@ -1276,8 +1276,8 @@ i386_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
 
      "andl $-XXX, %esp" can be either 3 bytes or 6 bytes:
      
-     	0x83 0xe4 0xf0			andl $-16, %esp
-     	0x81 0xe4 0x00 0xff 0xff 0xff	andl $-256, %esp
+	0x83 0xe4 0xf0			andl $-16, %esp
+	0x81 0xe4 0x00 0xff 0xff 0xff	andl $-256, %esp
    */
 
   gdb_byte buf[14];
@@ -1941,20 +1941,20 @@ i386_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
       gdb_byte buf[4];
 
       if (target_read_code (pc + 1, buf, sizeof buf) == 0)
- 	{
+	{
 	  /* Make sure address is computed correctly as a 32bit
 	     integer even if CORE_ADDR is 64 bit wide.  */
- 	  struct bound_minimal_symbol s;
- 	  CORE_ADDR call_dest;
+	  struct bound_minimal_symbol s;
+	  CORE_ADDR call_dest;
 
 	  call_dest = pc + 5 + extract_signed_integer (buf, 4, byte_order);
 	  call_dest = call_dest & 0xffffffffU;
- 	  s = lookup_minimal_symbol_by_pc (call_dest);
- 	  if (s.minsym != NULL
- 	      && s.minsym->linkage_name () != NULL
- 	      && strcmp (s.minsym->linkage_name (), "__main") == 0)
- 	    pc += 5;
- 	}
+	  s = lookup_minimal_symbol_by_pc (call_dest);
+	  if (s.minsym != NULL
+	      && s.minsym->linkage_name () != NULL
+	      && strcmp (s.minsym->linkage_name (), "__main") == 0)
+	    pc += 5;
+	}
     }
 
   return pc;
@@ -4967,10 +4967,8 @@ static int i386_record_floats (struct gdbarch *gdbarch,
   else if (I386_SAVE_FPU_ENV_REG_STACK == iregnum)
     {
       for (i = I387_ST0_REGNUM (tdep); i <= I387_FOP_REGNUM (tdep); i++)
-      {
 	if (record_full_arch_list_add_reg (ir->regcache, i))
 	  return -1;
-      }
     }
   else if ((iregnum >= I387_ST0_REGNUM (tdep)) &&
 	   (iregnum <= I387_FOP_REGNUM (tdep)))
