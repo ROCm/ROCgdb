@@ -730,6 +730,7 @@ ALL_TARGET_OBS = \
 	arm-fbsd-tdep.o \
 	arm-linux-tdep.o \
 	arm-netbsd-tdep.o \
+	arm-none-tdep.o \
 	arm-obsd-tdep.o \
 	arm-pikeos-tdep.o \
 	arm-tdep.o \
@@ -1594,7 +1595,7 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	$(SUBDIR_TARGET_OBS) \
 	$(SUBDIR_GCC_COMPILE_OBS)
 
-SUBDIRS = doc @subdirs@ data-directory
+SUBDIRS = doc @subdirs@ data-directory testsuite
 CLEANDIRS = $(SUBDIRS)
 
 # List of subdirectories in the build tree that must exist.
@@ -1636,7 +1637,7 @@ generated_files = \
 PYTHON_CFLAGS = @PYTHON_CFLAGS@
 
 all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.py gdb-gdb.gdb
-	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=`echo $(SUBDIRS) | sed 's/testsuite//'`" subdir_do
+	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
 
 # Rule for compiling .c files in the top-level gdb directory.
 # The order-only dependencies ensure that we create the build subdirectories.
@@ -1889,11 +1890,6 @@ ifneq ($(CODESIGN_CERT),)
 	$(ECHO_SIGN) $(CODESIGN) -s $(CODESIGN_CERT) gdb$(EXEEXT)
 endif
 
-# Convenience rule to handle recursion.
-.PHONY: all-data-directory
-all-data-directory: data-directory/Makefile
-	@$(MAKE) $(FLAGS_TO_PASS) DO=all DODIRS=data-directory subdir_do
-
 # This is useful when debugging GDB, because some Unix's don't let you run GDB
 # on itself without copying the executable.  So "make gdb1" will make
 # gdb and put a copy in gdb1, and you can run it with "gdb gdb1".
@@ -1991,9 +1987,6 @@ subdir_do: force
 	done
 
 Makefile: Makefile.in config.status
-	$(SHELL) config.status $@
-
-data-directory/Makefile: data-directory/Makefile.in config.status
 	$(SHELL) config.status $@
 
 .PHONY: run
@@ -2168,6 +2161,7 @@ ALLDEPFILES = \
 	arm-linux-tdep.c \
 	arm-netbsd-nat.c \
 	arm-netbsd-tdep.c \
+	arm-none-tdep.c \
 	arm-obsd-tdep.c \
 	arm-tdep.c \
 	avr-tdep.c \

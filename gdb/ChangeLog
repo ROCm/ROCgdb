@@ -1,3 +1,55 @@
+2021-06-01  John Baldwin  <jhb@FreeBSD.org>
+
+	* infrun.c (handle_inferior_event): Only call
+	gdbarch_displaced_step_restore_all_in_ptid if
+	gdbarch_supports_displaced_stepping is true.
+
+2021-06-01  Tom Tromey  <tromey@adacore.com>
+
+	* Makefile.in (all-data-directory): Remove.
+	(data-directory/Makefile): Remove.
+
+2021-06-01  Tom Tromey  <tromey@adacore.com>
+
+	* configure: Rebuild.
+	* configure.ac: Use AS_HELP_STRING for enable-shared.  Fix typo.
+
+2021-06-01  Tom Tromey  <tromey@adacore.com>
+
+	* silent-rules.mk (ECHO_CC): New variable.
+
+2021-06-01  Tom Tromey  <tromey@adacore.com>
+
+	* Makefile.in (SUBDIRS): Add testsuite.
+	(all): Don't exclude testsuite.
+
+2021-06-01  Tom Tromey  <tromey@adacore.com>
+
+	* configure.ac: Copy some code from testsuite/configure.ac.
+	(enable_libctf): Subst this, not ENABLE_LIBCTF.
+	* configure: Rebuild.
+
+2021-06-01  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/26096
+	* minsyms.c (msymbol_is_cold_clone): New function.
+	(msymbol_is_function): Use msymbol_is_cold_clone.
+
+2021-06-01  Fredrik Hederstierna  <fredrik@hederstierna.com>
+	    Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR gdb/14383
+	* Makefile.in (ALL_TARGET_OBS): Add arm-none-tdep.o.
+	(ALLDEPFILES): Add arm-none-tdep.c
+	* arm-none-tdep.c: New file.
+	* configure.tgt (arm*-*-*): Add arm-none-tdep.o to cpu_obs.
+
+2021-06-01  Andrew Burgess  <andrew.burgess@embecosm.com>
+	    Richard Bunt  <richard.bunt@arm.com>
+
+	* breakpoint.c (check_longjmp_breakpoint_for_call_dummy): Add
+	check for why the backtrace stopped.
+
 2021-05-31  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* dwarf2/read.h (struct structured_type) <signatured_type>: New.
