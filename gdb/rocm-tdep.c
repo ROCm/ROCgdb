@@ -73,12 +73,6 @@ DEFINE_OBSERVABLE (amd_dbgapi_code_object_list_updated);
 
 #undef DEFINE_OBSERVABLE
 
-struct rocm_notify_shared_library_info
-{
-  std::string compare; /* Compare loaded library names with this string.  */
-  struct so_list *solib;
-};
-
 /* ROCm-specific inferior data.  */
 
 struct rocm_inferior_info
@@ -114,12 +108,6 @@ struct rocm_inferior_info
 
   /* List of pending events the rocm target retrieved from the dbgapi.  */
   std::list<std::pair<ptid_t, target_waitstatus>> wave_events;
-
-  /* Map of rocm_notify_shared_library_info's for libraries that have been
-     registered to receive notifications when loading/unloading.  */
-  std::unordered_map<decltype (amd_dbgapi_shared_library_id_t::handle),
-		     struct rocm_notify_shared_library_info>
-    notify_solib_map;
 
   std::unordered_map<thread_info *,
 		     decltype (amd_dbgapi_displaced_stepping_id_t::handle)>
@@ -783,21 +771,21 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
   switch (signo)
     {
     case GDB_SIGNAL_BUS:
-      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_APERTURE_VIOLATION;
+      exception = AMD_DBGAPI_EXCEPTION_WAVE_APERTURE_VIOLATION;
       break;
     case GDB_SIGNAL_SEGV:
-      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_MEMORY_VIOLATION;
+      exception = AMD_DBGAPI_EXCEPTION_WAVE_MEMORY_VIOLATION;
       break;
     case GDB_SIGNAL_ILL:
-      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_ILLEGAL_INSTRUCTION;
+      exception = AMD_DBGAPI_EXCEPTION_WAVE_ILLEGAL_INSTRUCTION;
       break;
     case GDB_SIGNAL_FPE:
     case GDB_SIGNAL_ABRT:
     case GDB_SIGNAL_TRAP:
-      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_EXCEPTION;
+      exception = AMD_DBGAPI_EXCEPTION_WAVE_EXCEPTION;
       break;
     case GDB_SIGNAL_0:
-      exception = AMD_DBGAPI_EXCEPTIONS_NONE;
+      exception = AMD_DBGAPI_EXCEPTION_NONE;
       break;
     default:
       error (_ ("Resuming with signal %s is not supported by this agent."),
@@ -1062,7 +1050,7 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 	ptid_t event_ptid (pid, 1, wave_id.handle);
 	target_waitstatus ws;
 
-	amd_dbgapi_wave_stop_reason_t stop_reason;
+	amd_dbgapi_wave_stop_reasons_t stop_reason;
 	status = amd_dbgapi_wave_get_info (wave_id,
 					   AMD_DBGAPI_WAVE_INFO_STOP_REASON,
 					   sizeof (stop_reason), &stop_reason);
@@ -1078,9 +1066,11 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 
 	    if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_APERTURE_VIOLATION)
 	      ws.value.sig = GDB_SIGNAL_BUS;
-	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
+	    else if (stop_reason
+		     & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
 	      ws.value.sig = GDB_SIGNAL_SEGV;
-	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ILLEGAL_INSTRUCTION)
+	    else if (stop_reason
+		     & AMD_DBGAPI_WAVE_STOP_REASON_ILLEGAL_INSTRUCTION)
 	      ws.value.sig = GDB_SIGNAL_ILL;
 	    else if (stop_reason
 		     & (AMD_DBGAPI_WAVE_STOP_REASON_FP_INPUT_DENORMAL
@@ -1372,7 +1362,7 @@ rocm_target_ops::stopped_by_sw_breakpoint ()
 
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
 
-  amd_dbgapi_wave_stop_reason_t stop_reason;
+  amd_dbgapi_wave_stop_reasons_t stop_reason;
   return (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STOP_REASON,
 				    sizeof (stop_reason), &stop_reason)
 	  == AMD_DBGAPI_STATUS_SUCCESS)
@@ -1774,7 +1764,7 @@ rocm_target_ops::displaced_step_finish (thread_info *thread, gdb_signal sig)
 
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
 
-  amd_dbgapi_wave_stop_reason_t stop_reason;
+  amd_dbgapi_wave_stop_reasons_t stop_reason;
   amd_dbgapi_status_t status
     = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STOP_REASON,
 				sizeof (stop_reason), &stop_reason);
@@ -1795,67 +1785,6 @@ rocm_target_ops::displaced_step_finish (thread_info *thread, gdb_signal sig)
   return (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP) != 0
 	   ? DISPLACED_STEP_FINISH_STATUS_OK
 	   : DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED;
-}
-
-static void
-rocm_target_solib_loaded (struct so_list *solib)
-{
-  /* If the inferior is not running on the native target (e.g. it is running
-     on a remote target), we don't want to deal with it.  */
-  if (current_inferior ()->process_target () != get_native_target ())
-    return;
-
-  std::string so_name (solib->so_name);
-
-  auto pos = so_name.find_last_of ('/');
-  std::string library_name
-    = so_name.substr (pos == std::string::npos ? 0 : (pos + 1));
-
-  /* Notify the amd_dbgapi that a shared library has been loaded.  */
-  for (auto &&value : get_rocm_inferior_info ()->notify_solib_map)
-    {
-      if (!value.second.solib && library_name == value.second.compare)
-	{
-	  value.second.solib = solib;
-
-	  amd_dbgapi_report_shared_library (
-	    amd_dbgapi_shared_library_id_t{ value.first },
-	    AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED);
-	}
-    }
-}
-
-static void
-rocm_target_solib_unloaded (struct so_list *solib)
-{
-  /* Notify the amd_dbgapi that a shared library will unload.  */
-  for (auto &&value : get_rocm_inferior_info ()->notify_solib_map)
-    /* TODO: If we want to support file name wildcards, change this code.  */
-    if (solib == value.second.solib)
-      {
-	struct rocm_inferior_info *info = get_rocm_inferior_info ();
-
-	amd_dbgapi_report_shared_library (
-	  amd_dbgapi_shared_library_id_t{ value.first },
-	  AMD_DBGAPI_SHARED_LIBRARY_STATE_UNLOADED);
-
-	/* Delete breakpoints that were left inserted in this shared library.
-	 */
-	for (auto it = info->breakpoint_map.begin ();
-	     it != info->breakpoint_map.end ();)
-	  if (solib_contains_address_p (solib, it->second->loc->address))
-	    {
-	      warning (_ ("breakpoint_%ld is still inserted after "
-			  "shared_library_%ld was unloaded"),
-		       it->first, value.first);
-	      delete_breakpoint (it->second);
-	      it = info->breakpoint_map.erase (it);
-	    }
-	  else
-	    ++it;
-
-	value.second.solib = nullptr;
-      }
 }
 
 static void
@@ -1908,105 +1837,9 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
     return AMD_DBGAPI_STATUS_SUCCESS;
   },
 
-  /* enable_notify_shared_library callback.  */
-  .enable_notify_shared_library
-  = [] (amd_dbgapi_client_process_id_t client_process_id,
-	const char *library_name, amd_dbgapi_shared_library_id_t library_id,
-	amd_dbgapi_shared_library_state_t *library_state)
-    -> amd_dbgapi_status_t
-  {
-    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
-
-    if (!library_name || !library_state)
-      return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
-
-    /* Check that the library_name is valid.  If must not be empty, and
-       should not have wildcard characters.  */
-    if (*library_name == '\0'
-	|| std::string (library_name).find_first_of ("*?[]")
-	     != std::string::npos)
-      return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
-
-    /* Check whether the library is already loaded.  */
-    struct so_list *solib;
-    for (solib = inf->pspace->so_list; solib; solib = solib->next)
-      {
-	std::string so_name (solib->so_name);
-
-	auto pos = so_name.find_last_of ('/');
-	if (so_name.substr (pos == std::string::npos ? 0 : (pos + 1))
-	    == library_name)
-	  break;
-      }
-
-    /* Add a new entry in the notify_solib_map.  */
-    if (!info->notify_solib_map
-	   .emplace (std::piecewise_construct,
-		     std::forward_as_tuple (library_id.handle),
-		     std::forward_as_tuple (
-		       rocm_notify_shared_library_info{ library_name, solib }))
-	   .second)
-      return AMD_DBGAPI_STATUS_ERROR;
-
-    *library_state = solib != nullptr
-		       ? AMD_DBGAPI_SHARED_LIBRARY_STATE_LOADED
-		       : AMD_DBGAPI_SHARED_LIBRARY_STATE_UNLOADED;
-
-    return AMD_DBGAPI_STATUS_SUCCESS;
-  },
-
-  /* disable_notify_shared_library callback.  */
-  .disable_notify_shared_library
-  = [] (amd_dbgapi_client_process_id_t client_process_id,
-	amd_dbgapi_shared_library_id_t library_id) -> amd_dbgapi_status_t
-  {
-    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
-
-    auto it = info->notify_solib_map.find (library_id.handle);
-    if (it == info->notify_solib_map.end ())
-      return AMD_DBGAPI_STATUS_ERROR_INVALID_SHARED_LIBRARY_ID;
-
-    info->notify_solib_map.erase (it);
-    return AMD_DBGAPI_STATUS_SUCCESS;
-  },
-
-  /* get_symbol_address callback.  */
-  .get_symbol_address =
-    [] (amd_dbgapi_client_process_id_t client_process_id,
-	amd_dbgapi_shared_library_id_t library_id, const char *symbol_name,
-	amd_dbgapi_global_address_t *address)
-  {
-    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
-
-    auto it = info->notify_solib_map.find (library_id.handle);
-    if (it == info->notify_solib_map.end ())
-      return AMD_DBGAPI_STATUS_ERROR_INVALID_SHARED_LIBRARY_ID;
-
-    struct so_list *solib = it->second.solib;
-    if (!solib)
-      return AMD_DBGAPI_STATUS_ERROR_LIBRARY_NOT_LOADED;
-
-    solib_read_symbols (solib, 0);
-    if (!solib->objfile)
-      return AMD_DBGAPI_STATUS_ERROR_SYMBOL_NOT_FOUND;
-
-    struct bound_minimal_symbol msymbol
-      = lookup_minimal_symbol (symbol_name, NULL, solib->objfile);
-
-    if (!msymbol.minsym || BMSYMBOL_VALUE_ADDRESS (msymbol) == 0)
-      return AMD_DBGAPI_STATUS_ERROR_SYMBOL_NOT_FOUND;
-
-    *address = BMSYMBOL_VALUE_ADDRESS (msymbol);
-    return AMD_DBGAPI_STATUS_SUCCESS;
-  },
-
   /* set_breakpoint callback.  */
   .insert_breakpoint =
     [] (amd_dbgapi_client_process_id_t client_process_id,
-	amd_dbgapi_shared_library_id_t shared_library_id,
 	amd_dbgapi_global_address_t address,
 	amd_dbgapi_breakpoint_id_t breakpoint_id)
   {
@@ -3274,10 +3107,6 @@ _initialize_rocm_tdep ()
   /* Install observers.  */
   gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup,
 					     "rocm-tdep");
-  gdb::observers::solib_loaded.attach (rocm_target_solib_loaded, "rocm-tdep");
-  gdb::observers::solib_unloaded.attach (rocm_target_solib_unloaded,
-					 "rocm-tdep");
-
   gdb::observers::inferior_created.attach (rocm_target_inferior_created,
 					   "rocm-tdep");
 
