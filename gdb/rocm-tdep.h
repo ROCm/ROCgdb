@@ -45,7 +45,6 @@ using is_amd_dbgapi_handle
 	    std::is_same<T, amd_dbgapi_queue_id_t>,
 	    std::is_same<T, amd_dbgapi_register_class_id_t>,
 	    std::is_same<T, amd_dbgapi_register_id_t>,
-	    std::is_same<T, amd_dbgapi_shared_library_id_t>,
 	    std::is_same<T, amd_dbgapi_watchpoint_id_t>,
 	    std::is_same<T, amd_dbgapi_wave_id_t>>;
 
