@@ -1,3 +1,29 @@
+2021-06-05  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* compile/compile.c (scoped_ignore_sigpipe): New helper class.
+	(compile_to_object): Ignore SIGPIPE before calling the plugin.
+
+2021-06-05  Tom Tromey  <tom@tromey.com>
+
+	* data-directory/Makefile.in (Makefile): Use correct directory
+	name.
+
+2021-06-05  Tom Tromey  <tom@tromey.com>
+
+	* data-directory/Makefile.in (Makefile): Rewrite.
+
+2021-06-05  Tom Tromey  <tromey@adacore.com>
+
+	* configure: Rebuild.
+	* configure.ac: Add ACX_NONCANONICAL_TARGET.
+
+2021-06-05  Shahab Vahedi  <shahab@synopsys.com>
+
+	* NEWS: Document 'set disassembler-options' support for the ARC
+	target.
+	* arc-tdep.c (arc_gdbarch_init): Set
+	'gdbarch_valid_disassembler_options'.
+
 2021-06-04  Tom Tromey  <tromey@adacore.com>
 
 	* dwarf2/read.h (dwarf2_fetch_die_type_sect_off): Add 'var_name'

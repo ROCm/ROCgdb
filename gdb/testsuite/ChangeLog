@@ -1,3 +1,33 @@
+2021-06-07  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/info-types.exp.tcl: Remove "File .*" matching from regexp
+	matching state machine.
+
+2021-06-07  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/new-ui-pending-input.exp
+	(test_command_line_new_ui_pending_input): Fix regexp for "initial
+	prompt on extra console".
+
+2021-06-07  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/info-types.exp.tcl (run_test): Move "random line" regexp
+	up.
+
+2021-06-06  Simon Marchi  <simon.marchi@efficios.com>
+
+	* gdb.server/stop-reply-no-thread-multi.exp: Clear sysroot when
+	host and target are local.
+
+2021-06-05  Hannes Domani  <ssbssa@yahoo.de>
+
+	* gdb.python/py-symbol.exp: Fix tests for Python 3.
+
+2021-06-05  Shahab Vahedi  <shahab@synopsys.com>
+
+	* gdb.arch/arc-disassembler-options.exp: New test.
+	* gdb.arch/arc-disassembler-options.s: New test source.
+
 2021-06-04  Tom Tromey  <tromey@adacore.com>
 
 	* gdb.ada/array_of_symbolic_length.exp: New file.
