@@ -101,6 +101,11 @@ struct property_addr_info
   struct property_addr_info *next;
 };
 
+/* A helper function to find the definition of NAME and compute its
+   value.  Returns nullptr if the name is not found.  */
+
+value *compute_var_value (const char *name);
+
 /* Converts a dynamic property into a static one.  FRAME is the frame in which
    the property is evaluated; if NULL, the selected frame (if any) is used
    instead.

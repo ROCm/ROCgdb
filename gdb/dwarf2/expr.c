@@ -1881,8 +1881,10 @@ sect_variable_value (sect_offset sect_off,
 		     dwarf2_per_cu_data *per_cu,
 		     dwarf2_per_objfile *per_objfile)
 {
+  const char *var_name = nullptr;
   struct type *die_type
-    = dwarf2_fetch_die_type_sect_off (sect_off, per_cu, per_objfile);
+    = dwarf2_fetch_die_type_sect_off (sect_off, per_cu, per_objfile,
+				      &var_name);
 
   if (die_type == NULL)
     error (_("Bad DW_OP_GNU_variable_value DIE."));
@@ -1890,8 +1892,17 @@ sect_variable_value (sect_offset sect_off,
   /* Note: Things still work when the following test is removed.  This
      test and error is here to conform to the proposed specification.  */
   if (die_type->code () != TYPE_CODE_INT
-      && die_type->code () != TYPE_CODE_PTR)
+      && die_type->code () != TYPE_CODE_PTR
+      && die_type->code () != TYPE_CODE_ENUM
+      && die_type->code () != TYPE_CODE_RANGE)
     error (_("Type of DW_OP_GNU_variable_value DIE must be an integer or pointer."));
+
+  if (var_name != nullptr)
+    {
+      value *result = compute_var_value (var_name);
+      if (result != nullptr)
+       return result;
+    }
 
   struct type *type = lookup_pointer_type (die_type);
   struct frame_info *frame = get_selected_frame (_("No frame selected."));

@@ -1569,6 +1569,18 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
   return 1;
 }
 
+/* See loc.h.  */
+
+value *
+compute_var_value (const char *name)
+{
+  struct block_symbol sym = lookup_symbol (name, nullptr, VAR_DOMAIN,
+					   nullptr);
+  if (sym.symbol != nullptr)
+    return value_of_variable (sym.symbol, sym.block);
+  return nullptr;
+}
+
 /* See dwarf2loc.h.  */
 
 bool
@@ -1687,6 +1699,17 @@ dwarf2_evaluate_property (const struct dynamic_prop *prop,
 	*value = value_as_address (val);
 	return true;
       }
+
+    case PROP_VARIABLE_NAME:
+      {
+	struct value *val = compute_var_value (prop->variable_name ());
+	if (val != nullptr)
+	  {
+	    *value = value_as_long (val);
+	    return true;
+	  }
+      }
+      break;
     }
 
   return false;

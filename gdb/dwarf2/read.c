@@ -18180,6 +18180,25 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
   return set_die_type (die, type, cu);
 }
 
+/* A helper function that returns the name of DIE, if it refers to a
+   variable declaration.  */
+
+static const char *
+var_decl_name (struct die_info *die, struct dwarf2_cu *cu)
+{
+  if (die->tag != DW_TAG_variable)
+    return nullptr;
+
+  attribute *attr = dwarf2_attr (die, DW_AT_declaration, cu);
+  if (attr == nullptr || !attr->as_boolean ())
+    return nullptr;
+
+  attr = dwarf2_attr (die, DW_AT_name, cu);
+  if (attr == nullptr)
+    return nullptr;
+  return attr->as_string ();
+}
+
 /* Parse dwarf attribute if it's a block, reference or constant and put the
    resulting value of the attribute into struct bound_prop.
    Returns 1 if ATTR could be resolved into PROP, 0 otherwise.  */
@@ -18234,7 +18253,15 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 	target_attr = dwarf2_attr (target_die, DW_AT_data_member_location,
 				   target_cu);
       if (target_attr == NULL)
-	return 0;
+	{
+	  const char *name = var_decl_name (target_die, target_cu);
+	  if (name != nullptr)
+	    {
+	      prop->set_variable_name (name);
+	      return 1;
+	    }
+	  return 0;
+	}
 
       switch (target_attr->name)
 	{
@@ -23419,7 +23446,8 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
 struct type *
 dwarf2_fetch_die_type_sect_off (sect_offset sect_off,
 				dwarf2_per_cu_data *per_cu,
-				dwarf2_per_objfile *per_objfile)
+				dwarf2_per_objfile *per_objfile,
+				const char **var_name)
 {
   struct die_info *die;
 
@@ -23434,6 +23462,8 @@ dwarf2_fetch_die_type_sect_off (sect_offset sect_off,
   if (!die)
     return NULL;
 
+  if (var_name != nullptr)
+    *var_name = var_decl_name (die, cu);
   return die_type (die, cu);
 }
 
