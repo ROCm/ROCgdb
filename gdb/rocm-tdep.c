@@ -779,6 +779,31 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	return;
     }
 
+  amd_dbgapi_exceptions_t exception;
+  switch (signo)
+    {
+    case GDB_SIGNAL_BUS:
+      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_APERTURE_VIOLATION;
+      break;
+    case GDB_SIGNAL_SEGV:
+      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_MEMORY_VIOLATION;
+      break;
+    case GDB_SIGNAL_ILL:
+      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_ILLEGAL_INSTRUCTION;
+      break;
+    case GDB_SIGNAL_FPE:
+    case GDB_SIGNAL_ABRT:
+    case GDB_SIGNAL_TRAP:
+      exception = AMD_DBGAPI_EXCEPTIONS_WAVE_EXCEPTION;
+      break;
+    case GDB_SIGNAL_0:
+      exception = AMD_DBGAPI_EXCEPTIONS_NONE;
+      break;
+    default:
+      error (_ ("Resuming with signal %s is not supported by this agent."),
+	     gdb_signal_to_name (signo));
+    }
+
   for (thread_info *thread :
        all_non_exited_threads (current_inferior ()->process_target (), ptid))
     {
@@ -795,7 +820,8 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
       status
 	= amd_dbgapi_wave_resume (wave_id,
 				  (step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
-					: AMD_DBGAPI_RESUME_MODE_NORMAL));
+					: AMD_DBGAPI_RESUME_MODE_NORMAL),
+				  exception);
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("wave_resume for wave_%ld failed (rc=%d)"), wave_id.handle,
 	       status);
@@ -1050,8 +1076,12 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 	  {
 	    ws.kind = TARGET_WAITKIND_STOPPED;
 
-	    if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
+	    if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_APERTURE_VIOLATION)
+	      ws.value.sig = GDB_SIGNAL_BUS;
+	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
 	      ws.value.sig = GDB_SIGNAL_SEGV;
+	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ILLEGAL_INSTRUCTION)
+	      ws.value.sig = GDB_SIGNAL_ILL;
 	    else if (stop_reason
 		     & (AMD_DBGAPI_WAVE_STOP_REASON_FP_INPUT_DENORMAL
 			| AMD_DBGAPI_WAVE_STOP_REASON_FP_DIVIDE_BY_0
