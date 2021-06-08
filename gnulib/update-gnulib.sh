@@ -32,6 +32,7 @@
 IMPORTED_GNULIB_MODULES="\
     alloca \
     canonicalize-lgpl \
+    chown \
     count-one-bits \
     dirent \
     dirfd \
@@ -54,10 +55,12 @@ IMPORTED_GNULIB_MODULES="\
     mkdir \
     mkdtemp \
     mkostemp \
+    netdb \
     pathmax \
     rawmemchr \
     readlink \
     rename \
+    select \
     setenv \
     signal-h \
     strchrnul \

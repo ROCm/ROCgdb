@@ -16,57 +16,6 @@
 # Check that 'info types' produces the expected output for an inferior
 # containing a number of different types.
 
-# Match LINE against regexp OUTPUT_LINES[IDX].
-proc match_line { line output_lines idx_name } {
-    upvar $idx_name idx
-
-    while { 1 } {
-	if { $idx == [llength $output_lines] } {
-	    # Ran out of regexps, bail out.
-	    return -1
-	}
-
-	set re [lindex $output_lines $idx]
-	if { $re == "--optional" } {
-	    # Optional, get actual regexp.
-	    set opt 1
-	    incr idx
-	    set re [lindex $output_lines $idx]
-	} else {
-	    # Not optional.
-	    set opt 0
-	}
-
-	if { [regexp $re $line] } {
-	    # Match.
-	    incr idx
-	    if { $idx == [llength $output_lines] } {
-		# Last match, we're done.
-		return 1
-	    }
-	    # Match found, keep looking for next match.
-	    return 0
-	} else {
-	    # No match.
-	    if { $idx == 0 } {
-		# First match not found, just keep looking for first match.
-		return 0
-	    } elseif { $opt } {
-		# Try next regexp on same line.
-		incr idx
-		continue
-	    } else {
-		# Mismatch, bail out.
-		return -1
-	    }
-	}
-	break
-    }
-
-    # Keep going.
-    return 0
-}
-
 # Run 'info types' test, compiling the test file for language LANG,
 # which should be either 'c' or 'c++'.
 proc run_test { lang } {
@@ -94,6 +43,8 @@ proc run_test { lang } {
     if { $lang == "c++" } {
 	set output_lines \
 	    [list \
+		 "All defined types:" \
+		 "--any" \
 		 $file_re \
 		 "98:\[\t \]+CL;" \
 		 "42:\[\t \]+anon_struct_t;" \
@@ -129,6 +80,8 @@ proc run_test { lang } {
     } else {
 	set output_lines \
 	    [list \
+		 "All defined types:" \
+		 "--any" \
 		 $file_re \
 		 "52:\[\t \]+typedef enum {\\.\\.\\.} anon_enum_t;" \
 		 "45:\[\t \]+typedef struct {\\.\\.\\.} anon_struct_t;" \
@@ -157,33 +110,7 @@ proc run_test { lang } {
 		 ""]
     }
 
-    set state 0
-    set idx 0
-    gdb_test_multiple "info types" "" {
-	-re "\r\nAll defined types:" {
-	    if { $state == 0 } { set state 1 } else { set state -1 }
-	    exp_continue
-	}
-	-re "^\r\n(\[^\r\n\]*)(?=\r\n)" {
-	    if { $state == 1 } {
-		set line $expect_out(1,string)
-		set res [match_line $line $output_lines idx]
-		if { $res == 1 } {
-		    set state 2
-		} elseif { $res == -1 } {
-		    set state -2
-		}
-	    }
-	    exp_continue
-	}
-	-re -wrap "" {
-	    if { $state == 2} {
-		pass $gdb_test_name
-	    } else {
-		fail "$gdb_test_name (state == $state)"
-	    }
-	}
-    }
+    gdb_test_lines "info types" "" $output_lines
 }
 
 run_test $lang

@@ -5793,7 +5793,7 @@ optimize_imm (void)
 	       This allows a 16-bit operand such as $0xffe0 to
 	       be recognised as within Imm8S range.  */
 	    if ((i.types[op].bitfield.imm16)
-		&& (i.op[op].imms->X_add_number & ~(offsetT) 0xffff) == 0)
+		&& fits_in_unsigned_word (i.op[op].imms->X_add_number))
 	      {
 		i.op[op].imms->X_add_number = ((i.op[op].imms->X_add_number
 						^ 0x8000) - 0x8000);
@@ -5801,8 +5801,7 @@ optimize_imm (void)
 #ifdef BFD64
 	    /* Store 32-bit immediate in 64-bit for 64-bit BFD.  */
 	    if ((i.types[op].bitfield.imm32)
-		&& ((i.op[op].imms->X_add_number & ~(((offsetT) 2 << 31) - 1))
-		    == 0))
+		&& fits_in_unsigned_long (i.op[op].imms->X_add_number))
 	      {
 		i.op[op].imms->X_add_number = ((i.op[op].imms->X_add_number
 						^ ((offsetT) 1 << 31))
@@ -5880,15 +5879,6 @@ optimize_disp (void)
 	  {
 	    offsetT op_disp = i.op[op].disps->X_add_number;
 
-	    if (i.types[op].bitfield.disp16
-		&& (op_disp & ~(offsetT) 0xffff) == 0)
-	      {
-		/* If this operand is at most 16 bits, convert
-		   to a signed 16 bit number and don't use 64bit
-		   displacement.  */
-		op_disp = (((op_disp & 0xffff) ^ 0x8000) - 0x8000);
-		i.types[op].bitfield.disp64 = 0;
-	      }
 	    if (!op_disp && i.types[op].bitfield.baseindex)
 	      {
 		i.types[op].bitfield.disp8 = 0;
@@ -5898,24 +5888,33 @@ optimize_disp (void)
 		i.types[op].bitfield.disp64 = 0;
 		i.op[op].disps = 0;
 		i.disp_operands--;
+		continue;
 	      }
-#ifdef BFD64
-	    else if (flag_code == CODE_64BIT)
-	      {
-		if (want_disp32 (current_templates->start)
-		    && fits_in_unsigned_long (op_disp))
-		  i.types[op].bitfield.disp32 = 1;
 
+	    if (i.types[op].bitfield.disp16
+		&& fits_in_unsigned_word (op_disp))
+	      {
+		/* If this operand is at most 16 bits, convert
+		   to a signed 16 bit number and don't use 64bit
+		   displacement.  */
+		op_disp = ((op_disp ^ 0x8000) - 0x8000);
+		i.types[op].bitfield.disp64 = 0;
+	      }
+
+#ifdef BFD64
+	    if (flag_code == CODE_64BIT)
+	      {
 		/* Optimize 64-bit displacement to 32-bit for 64-bit BFD.  */
-		if (i.types[op].bitfield.disp32
-		    && (op_disp & ~(((offsetT) 2 << 31) - 1)) == 0)
+		if ((i.types[op].bitfield.disp32
+		     || want_disp32 (current_templates->start))
+		    && fits_in_unsigned_long (op_disp))
 		  {
 		    /* If this operand is at most 32 bits, convert
 		       to a signed 32 bit number and don't use 64bit
 		       displacement.  */
-		    op_disp &= (((offsetT) 2 << 31) - 1);
 		    op_disp = (op_disp ^ ((offsetT) 1 << 31)) - ((addressT) 1 << 31);
 		    i.types[op].bitfield.disp64 = 0;
+		    i.types[op].bitfield.disp32 = 1;
 		  }
 
 		if (fits_in_signed_long (op_disp))
@@ -5930,6 +5929,8 @@ optimize_disp (void)
 		 || i.types[op].bitfield.disp16)
 		&& fits_in_disp8 (op_disp))
 	      i.types[op].bitfield.disp8 = 1;
+
+	    i.op[op].disps->X_add_number = op_disp;
 	  }
 	else if (i.reloc[op] == BFD_RELOC_386_TLS_DESC_CALL
 		 || i.reloc[op] == BFD_RELOC_X86_64_TLSDESC_CALL)
