@@ -1,3 +1,46 @@
+2021-06-10  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/user-selected-context-sync.c (child_sub_function, main):
+	Rewrite while (1) using dummy loop body.
+
+2021-06-10  Bhuvanendra Kumar N  <Bhuvanendra.KumarN@amd.com>
+
+	* gdb.base/foll-exec.c: convert the multi-line function call into
+	single line.
+
+2021-06-10  Tom de Vries  <tdevries@suse.de>
+
+	* lib/cp-support.exp (cp_test_ptype_class): Break up regexp.
+	* gdb.cp/nested-types.exp: Remove usage of read1 timeout factor.
+
+2021-06-10  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.cp/cplusfuncs.exp (info_func_regexp): Use gdb_test_lines.
+
+2021-06-09  Tom Tromey  <tromey@adacore.com>
+
+	* README (Example): Update read1 example.
+
+2021-06-09  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* lib/tuiterm.exp (Term) <_check_box>: Improve logging.
+
+2021-06-08  Lancelot Six  <lsix@lancelotsix.com>
+
+	* gdb.base/premature-dummy-frame-removal.py (TestUnwinder): Use
+	'is None' instead of '== None' and 'is not None' instead of
+	'!= None'.
+	* gdb.python/py-frame-args.py (lookup_function): Same.
+	* gdb.python/py-framefilter-invalidarg.py (Reverse_Function): Same.
+	* gdb.python/py-framefilter.py (Reverse_Function): Same.
+	* gdb.python/py-nested-maps.py (lookup_function): Same.
+	* gdb.python/py-objfile-script-gdb.py (lookup_function): Same.
+	* gdb.python/py-prettyprint.py (lookup_function): Same.
+	* gdb.python/py-section-script.py (lookup_function): Same.
+	* gdb.python/py-unwind-inline.py (dummy_unwinder): Same.
+	* gdb.python/python.exp: Same.
+	* gdb.rust/pp.py (lookup_function): Same.
+
 2021-06-08  Tom de Vries  <tdevries@suse.de>
 
 	* lib/gdb.exp (multi_line): Require more than one argument.
