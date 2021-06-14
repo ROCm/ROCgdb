@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#include "portability.h"
 #include "sim/callback.h"
 #include "gdb/signals.h"
 #include "sim-main.h"
@@ -73,25 +74,6 @@
 
 #include "dv-bfin_cec.h"
 #include "dv-bfin_mmu.h"
-
-#ifndef HAVE_GETUID
-# define getuid() 0
-#endif
-#ifndef HAVE_GETGID
-# define getgid() 0
-#endif
-#ifndef HAVE_GETEUID
-# define geteuid() 0
-#endif
-#ifndef HAVE_GETEGID
-# define getegid() 0
-#endif
-#ifndef HAVE_SETUID
-# define setuid(uid) -1
-#endif
-#ifndef HAVE_SETGID
-# define setgid(gid) -1
-#endif
 
 static const char cb_linux_stat_map_32[] =
 /* Linux kernel 32bit layout:  */
@@ -719,6 +701,9 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback,
   int i;
   SIM_DESC sd = sim_state_alloc_extra (kind, callback,
 				       sizeof (struct bfin_board_data));
+
+  /* Set default options before parsing user options.  */
+  current_alignment = STRICT_ALIGNMENT;
 
   /* The cpu data is kept in a separately allocated chunk of memory.  */
   if (sim_cpu_alloc_all (sd, 1) != SIM_RC_OK)

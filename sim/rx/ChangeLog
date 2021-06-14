@@ -1,3 +1,26 @@
+2021-06-13  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.in (SIM_EXTRA_CFLAGS): Set to @sim_cycle_accurate_flags@.
+	* configure.ac: Move CYCLE_ACCURATE define from AC_DEFINE to
+	AC_SUBST.
+	* config.in, configure: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* README.txt: Change cycle-stats to sim-profile.
+	* configure.ac: Delete cycle-stats.
+	* mem.c: Change CYCLE_STATS to WITH_PROFILE
+	* rx.c: Likewise.
+	* config.in, configure: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4, config.in, configure: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* config.in, configure: Regenerate.
+
 2021-05-16  Mike Frysinger  <vapier@gentoo.org>
 
 	* err.c: Include defs.h.

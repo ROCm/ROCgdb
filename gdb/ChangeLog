@@ -1,16 +1,25 @@
-2021-06-10  Simon Marchi  <simon.marchi@polymtl.ca>
+2021-06-12  John Baldwin  <jhb@FreeBSD.org>
 
-	* lib/gdb.exp (default_gdb_exit): Unset gdb_tty_name.
-	(spawn_capture_tty_name): New, override builtin spawn.
-	(default_gdb_spawn): Capture GDB's TTY name.
-	* lib/tuiterm.exp (tuiterm_spawn): Remove.
-	(tuiterm_env_init, tuiterm_env_finish): Remove spawn override.
-	(Term) <resize>: Use new variable name.
-	(tuiterm_env_init, tuiterm_env_finish): Remove.
-	(tuiterm_env): Don't call tuiterm_env_init and register
-	tuiterm_env_finish in gdb_finish_hooks.
-	(gdb_finish_hooks): Remove.
-	(gdb_finish): Don't call finish hooks.
+	* remote.c (remote_new_objfile): Fix indentation.
+
+2021-06-11  Kevin Buettner  <kevinb@redhat.com>
+
+	* solib.c (libpthread_name_p): Match "libc" in addition
+	to "libpthread".
+	* linux-thread-db.c (libpthread_objfile_p): New function.
+	(libpthread_name_p): Adjust preexisting callers to use
+	libpthread_objfile_p().
+
+2021-06-11  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* dwarf2/loc.h (struct call_site_stuff): Remove.
+
+2021-06-11  Tom Tromey  <tom@tromey.com>
+
+	PR rust/23427
+	* rust-parse.c (rust_parser::lex_identifier): Handle raw
+	identifiers.
+	(rust_lex_tests): Add raw identifier tests.
 
 2021-06-08  Lancelot Six  <lsix@lancelotsix.com>
 

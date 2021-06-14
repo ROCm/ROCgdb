@@ -1,3 +1,34 @@
+2021-06-12  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (process_file_header): Don't clear section_headers.
+
+2021-06-12  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (get_section_headers): Don't test e_shoff here, leave
+	that to get_32bit_section_headers or get_64bit_section_headers.
+	(process_object): Throw away section header read to print file
+	header extension.
+
+2021-06-11  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (struct filedata): Move archive_file_offset and
+	archive_file_size earlier.
+	(free_filedata): Clear using memset.
+
+2021-06-11  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (GET_ELF_SYMBOLS): Delete.  Replace with..
+	(get_elf_symbols): ..this new function throughout.
+	(get_32bit_section_headers): Don't free section_headers.
+	(get_64bit_section_headers): Likewise.
+	(get_section_headers): New function, use throughout in place of
+	32bit and 64bit variants.
+	(get_dynamic_section): Similarly.
+	(process_section_headers): Don't free filedata memory here.
+	(get_file_header): Don't get section headers here..
+	(process_object): ..Read them here instead.  Don't exit without
+	freeing filedata memory.
+
 2021-06-09  Nick Clifton  <nickc@redhat.com>
 
 	* MAINTAINERS: Remove Daniel Jacobwitz from the maintainers list.

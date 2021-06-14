@@ -82,7 +82,6 @@ CPPFLAGS = @CPPFLAGS@
 CXXFLAGS = @CXXFLAGS@
 LDFLAGS = @LDFLAGS@
 
-SIM_ALIGNMENT = @sim_alignment@
 SIM_BITSIZE = @sim_bitsize@
 SIM_DEFAULT_MODEL = @sim_default_model@
 SIM_ENDIAN = @sim_endian@
@@ -180,7 +179,6 @@ SIM_NEW_COMMON_OBJS = \
 	sim-hrw.o \
 	sim-io.o \
 	sim-info.o \
-	sim-load.o \
 	sim-memopt.o \
 	sim-model.o \
 	sim-module.o \
@@ -222,7 +220,6 @@ CGEN_INCLUDE_DEPS = \
 CONFIG_CFLAGS = \
 	@DEFS@ \
 	$(SIM_DEFAULT_MODEL) \
-	$(SIM_ALIGNMENT) \
 	$(SIM_BITSIZE) \
 	$(SIM_ENDIAN) \
 	$(SIM_FLOAT) \
@@ -256,7 +253,11 @@ LIBDEPS = $(BFD_LIB) $(OPCODES_LIB) $(LIBINTL_DEP) $(LIBIBERTY_LIB)
 EXTRA_LIBS = $(BFD_LIB) $(OPCODES_LIB) $(LIBINTL) $(LIBIBERTY_LIB) \
 	$(CONFIG_LIBS) $(SIM_EXTRA_LIBS) $(LIBDL) $(LIBGNU) $(LIBGNU_EXTRA_LIBS)
 
-COMMON_OBJS = ../common/version.o
+COMMON_OBJS_NAMES = \
+	portability.o \
+	sim-load.o \
+	version.o
+COMMON_OBJS = $(COMMON_OBJS_NAMES:%=../common/common_libcommon_a-%)
 
 LIB_OBJS = callback.o modules.o syscall.o targ-map.o $(COMMON_OBJS) $(SIM_OBJS)
 

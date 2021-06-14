@@ -5,7 +5,6 @@ AC_CONFIG_MACRO_DIRS([../m4 ../.. ../../config])
 SIM_AC_COMMON
 
 SIM_AC_OPTION_ENDIAN(LITTLE)
-SIM_AC_OPTION_ALIGNMENT(STRICT_ALIGNMENT,STRICT_ALIGNMENT)
 SIM_AC_OPTION_DEFAULT_MODEL(bf537)
 SIM_AC_OPTION_WARNINGS
 SIM_AC_OPTION_HARDWARE(\
@@ -41,16 +40,6 @@ SIM_AC_OPTION_HARDWARE(\
 	bfin_wp \
 	eth_phy \
 )
-
-AC_CHECK_FUNCS_ONCE([getuid getgid geteuid getegid setuid setgid kill pread])
-AC_CHECK_HEADERS_ONCE(m4_flatten([
-	linux/if_tun.h
-	linux/mii.h
-	linux/types.h
-	net/if.h
-	sys/ioctl.h
-	sys/mman.h
-]))
 
 PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(SDL, sdl, [

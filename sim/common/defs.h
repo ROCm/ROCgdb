@@ -34,8 +34,24 @@
 #undef PACKAGE_URL
 #undef PACKAGE_VERSION
 
-/* Include sim's various configure tests.  */
+/* Include arch-specific sim's various configure tests.  */
 #include "config.h"
+
+#ifndef SIM_COMMON_BUILD
+
+/* Reset macros that our config.h will provide.  */
+#undef PACKAGE
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_URL
+#undef PACKAGE_VERSION
+
+/* Include common sim's various configure tests.  */
+#include "../config.h"
+
+#endif
 
 #endif
 

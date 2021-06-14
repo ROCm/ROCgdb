@@ -1,3 +1,71 @@
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.in: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* m4/sim_ac_platform.m4: Delete sys/select.h.
+	* config.h.in, configure: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Call SIM_AC_OPTION_ALIGNMENT.
+	* m4/sim_ac_option_alignment.m4: Delete wire and default alignment.
+	* aclocal.m4, config.h.in, configure, Makefile.in: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Define PKGVERSION & REPORT_BUGS_TO.
+	* m4/sim_ac_common.m4: Delete calls to ACX_PKGVERSION & ACX_BUGURL.
+	* aclocal.m4, config.h.in, configure, Makefile.in: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Call SIM_AC_OPTION_DEBUG, SIM_AC_OPTION_STDIO,
+	SIM_AC_OPTION_TRACE, and SIM_AC_OPTION_PROFILE.
+	* m4/sim_ac_common.m4: Delete calls to SIM_AC_OPTION_DEBUG,
+	SIM_AC_OPTION_STDIO, SIM_AC_OPTION_TRACE, and SIM_AC_OPTION_PROFILE.
+	* aclocal.m4, config.h.in, configure, Makefile.in: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* m4/sim_ac_common.m4: Replace --enable-sim-debug, --enable-sim-stdio,
+	--enable-sim-trace, and --enable-sim-profile with calls to
+	SIM_AC_OPTION_DEBUG, SIM_AC_OPTION_STDIO, SIM_AC_OPTION_TRACE, and
+	SIM_AC_OPTION_PROFILE.
+	* m4/sim_ac_option_debug.m4: New file.
+	* m4/sim_ac_option_profile.m4: New file.
+	* m4/sim_ac_option_stdio.m4: New file.
+	* m4/sim_ac_option_trace.m4: New file.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* m4/sim_ac_platform.m4: Check more headers, funcs, structs, and
+	types.
+	* config.h.in, configure: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Call SIM_AC_OPTION_ENVIRONMENT.
+	* m4/sim_ac_common.m4: Delete call to SIM_AC_OPTION_ENVIRONMENT.
+	* aclocal.m4, config.h.in, configure, Makefile.in: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Call SIM_AC_OPTION_ASSERT.
+	* m4/sim_ac_common.m4: Delete call to SIM_AC_OPTION_ASSERT.
+	* aclocal.m4, config.h.in, configure, Makefile.in: Regenerate.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Call AC_CONFIG_HEADERS and SIM_AC_PLATFORM.
+	* m4/sim_ac_common.m4: Delete calls to AC_CHECK_HEADERS_ONCE,
+	AC_CHECK_FUNCS_ONCE, AC_CHECK_MEMBERS, AC_CHECK_TYPES, and
+	AC_TYPE_SIGNAL.
+	* aclocal.m4, configure, Makefile.in: Regenerate.
+	* config.h.in: New file.
+	* m4/sim_ac_platform.m4: New file.
+
 2021-06-05  Mike Frysinger  <vapier@gentoo.org>
 
 	* Makefile.am: Include common/local.mk.

@@ -265,12 +265,13 @@ typedef struct filedata
   FILE *               handle;
   bfd_size_type        file_size;
   Elf_Internal_Ehdr    file_header;
+  unsigned long        archive_file_offset;
+  unsigned long        archive_file_size;
+  /* Everything below this point is cleared out by free_filedata.  */
   Elf_Internal_Shdr *  section_headers;
   Elf_Internal_Phdr *  program_headers;
   char *               string_table;
   unsigned long        string_table_length;
-  unsigned long        archive_file_offset;
-  unsigned long        archive_file_size;
   unsigned long        dynamic_addr;
   bfd_size_type        dynamic_size;
   size_t               dynamic_nent;
@@ -358,10 +359,6 @@ static const char * get_symbol_version_string
    : filedata->string_table + (X)->sh_name)
 
 #define DT_VERSIONTAGIDX(tag)	(DT_VERNEEDNUM - (tag))	/* Reverse order!  */
-
-#define GET_ELF_SYMBOLS(file, section, sym_count)			\
-  (is_32bit_elf ? get_32bit_elf_symbols (file, section, sym_count)	\
-   : get_64bit_elf_symbols (file, section, sym_count))
 
 #define VALID_SYMBOL_NAME(strtab, strtab_size, offset) \
    (strtab != NULL && offset < strtab_size)
@@ -5281,8 +5278,6 @@ process_file_header (Filedata * filedata)
 	header->e_shstrndx = filedata->section_headers[0].sh_link;
       if (header->e_shstrndx >= header->e_shnum)
 	header->e_shstrndx = SHN_UNDEF;
-      free (filedata->section_headers);
-      filedata->section_headers = NULL;
     }
 
   return true;
@@ -5797,7 +5792,6 @@ get_32bit_section_headers (Filedata * filedata, bool probe)
   if (shdrs == NULL)
     return false;
 
-  free (filedata->section_headers);
   filedata->section_headers = (Elf_Internal_Shdr *)
     cmalloc (num, sizeof (Elf_Internal_Shdr));
   if (filedata->section_headers == NULL)
@@ -5864,7 +5858,6 @@ get_64bit_section_headers (Filedata * filedata, bool probe)
   if (shdrs == NULL)
     return false;
 
-  free (filedata->section_headers);
   filedata->section_headers = (Elf_Internal_Shdr *)
     cmalloc (num, sizeof (Elf_Internal_Shdr));
   if (filedata->section_headers == NULL)
@@ -5897,6 +5890,18 @@ get_64bit_section_headers (Filedata * filedata, bool probe)
 
   free (shdrs);
   return true;
+}
+
+static bool
+get_section_headers (Filedata *filedata, bool probe)
+{
+  if (filedata->section_headers != NULL)
+    return true;
+
+  if (is_32bit_elf)
+    return get_32bit_section_headers (filedata, probe);
+  else
+    return get_64bit_section_headers (filedata, probe);
 }
 
 static Elf_Internal_Sym *
@@ -6133,6 +6138,17 @@ get_64bit_elf_symbols (Filedata *           filedata,
     * num_syms_return = isyms == NULL ? 0 : number;
 
   return isyms;
+}
+
+static Elf_Internal_Sym *
+get_elf_symbols (Filedata *filedata,
+		 Elf_Internal_Shdr *section,
+		 unsigned long *num_syms_return)
+{
+  if (is_32bit_elf)
+    return get_32bit_elf_symbols (filedata, section, num_syms_return);
+  else
+    return get_64bit_elf_symbols (filedata, section, num_syms_return);
 }
 
 static const char *
@@ -6492,23 +6508,6 @@ process_section_headers (Filedata * filedata)
   Elf_Internal_Shdr * section;
   unsigned int i;
 
-  free (filedata->section_headers);
-  filedata->section_headers = NULL;
-  free (filedata->dynamic_symbols);
-  filedata->dynamic_symbols = NULL;
-  filedata->num_dynamic_syms = 0;
-  free (filedata->dynamic_strings);
-  filedata->dynamic_strings = NULL;
-  filedata->dynamic_strings_length = 0;
-  free (filedata->dynamic_syminfo);
-  filedata->dynamic_syminfo = NULL;
-  while (filedata->symtab_shndx_list != NULL)
-    {
-      elf_section_list *next = filedata->symtab_shndx_list->next;
-      free (filedata->symtab_shndx_list);
-      filedata->symtab_shndx_list = next;
-    }
-
   if (filedata->file_header.e_shnum == 0)
     {
       /* PR binutils/12467.  */
@@ -6538,16 +6537,8 @@ process_section_headers (Filedata * filedata)
 		(unsigned long) filedata->file_header.e_shoff);
     }
 
-  if (is_32bit_elf)
-    {
-      if (! get_32bit_section_headers (filedata, false))
-	return false;
-    }
-  else
-    {
-      if (! get_64bit_section_headers (filedata, false))
-	return false;
-    }
+  if (!get_section_headers (filedata, false))
+    return false;
 
   /* Read in the string table, so that we have names to display.  */
   if (filedata->file_header.e_shstrndx != SHN_UNDEF
@@ -6656,7 +6647,7 @@ process_section_headers (Filedata * filedata)
 
 	  CHECK_ENTSIZE (section, i, Sym);
 	  filedata->dynamic_symbols
-	    = GET_ELF_SYMBOLS (filedata, section, &filedata->num_dynamic_syms);
+	    = get_elf_symbols (filedata, section, &filedata->num_dynamic_syms);
 	  filedata->dynamic_symtab_section = section;
 	  break;
 
@@ -7211,7 +7202,7 @@ get_symtab (Filedata *filedata, Elf_Internal_Shdr *symsec,
 {
   *strtab = NULL;
   *strtablen = 0;
-  *symtab = GET_ELF_SYMBOLS (filedata, symsec, nsyms);
+  *symtab = get_elf_symbols (filedata, symsec, nsyms);
 
   if (*symtab == NULL)
     return false;
@@ -7382,7 +7373,7 @@ process_section_groups (Filedata * filedata)
 	    {
 	      symtab_sec = sec;
 	      free (symtab);
-	      symtab = GET_ELF_SYMBOLS (filedata, symtab_sec, & num_syms);
+	      symtab = get_elf_symbols (filedata, symtab_sec, & num_syms);
 	    }
 
 	  if (symtab == NULL)
@@ -10319,6 +10310,18 @@ get_64bit_dynamic_section (Filedata * filedata)
   return true;
 }
 
+static bool
+get_dynamic_section (Filedata *filedata)
+{
+  if (filedata->dynamic_section)
+    return true;
+
+  if (is_32bit_elf)
+    return get_32bit_dynamic_section (filedata);
+  else
+    return get_64bit_dynamic_section (filedata);
+}
+
 static void
 print_dynamic_flags (bfd_vma flags)
 {
@@ -10662,16 +10665,8 @@ process_dynamic_section (Filedata * filedata)
       return true;
     }
 
-  if (is_32bit_elf)
-    {
-      if (! get_32bit_dynamic_section (filedata))
-	return false;
-    }
-  else
-    {
-      if (! get_64bit_dynamic_section (filedata))
-	return false;
-    }
+  if (!get_dynamic_section (filedata))
+    return false;
 
   /* Find the appropriate symbol table.  */
   if (filedata->dynamic_symbols == NULL || do_histogram)
@@ -10755,7 +10750,7 @@ the .dynsym section doesn't match the DT_SYMTAB and DT_SYMENT tags\n"));
 
 		  section.sh_name = filedata->string_table_length;
 		  filedata->dynamic_symbols
-		    = GET_ELF_SYMBOLS (filedata, &section,
+		    = get_elf_symbols (filedata, &section,
 				       &filedata->num_dynamic_syms);
 		  if (filedata->dynamic_symbols == NULL
 		      || filedata->num_dynamic_syms != num_of_syms)
@@ -11785,7 +11780,7 @@ process_version_sections (Filedata * filedata)
 
 	    found = true;
 
-	    symbols = GET_ELF_SYMBOLS (filedata, link_section, & num_syms);
+	    symbols = get_elf_symbols (filedata, link_section, & num_syms);
 	    if (symbols == NULL)
 	      break;
 
@@ -12987,7 +12982,7 @@ process_symbol_table (Filedata * filedata)
 	  else
 	    printf (_("   Num:    Value          Size Type    Bind   Vis      Ndx Name\n"));
 
-	  symtab = GET_ELF_SYMBOLS (filedata, section, & num_syms);
+	  symtab = get_elf_symbols (filedata, section, & num_syms);
 	  if (symtab == NULL)
 	    continue;
 
@@ -14353,7 +14348,7 @@ apply_relocations (Filedata *                 filedata,
       if (filedata->file_header.e_machine == EM_SH)
 	is_rela = false;
 
-      symtab = GET_ELF_SYMBOLS (filedata, symsec, & num_syms);
+      symtab = get_elf_symbols (filedata, symsec, & num_syms);
 
       for (rp = relocs; rp < relocs + num_relocs; ++rp)
 	{
@@ -21310,16 +21305,6 @@ get_file_header (Filedata * filedata)
       filedata->file_header.e_shstrndx  = BYTE_GET (ehdr64.e_shstrndx);
     }
 
-  if (filedata->file_header.e_shoff)
-    {
-      /* There may be some extensions in the first section header.  Don't
-	 bomb if we can't read it.  */
-      if (is_32bit_elf)
-	get_32bit_section_headers (filedata, true);
-      else
-	get_64bit_section_headers (filedata, true);
-    }
-
   return true;
 }
 
@@ -21327,35 +21312,14 @@ static void
 free_filedata (Filedata *filedata)
 {
   free (filedata->program_interpreter);
-  filedata->program_interpreter = NULL;
-
   free (filedata->program_headers);
-  filedata->program_headers = NULL;
-
   free (filedata->section_headers);
-  filedata->section_headers = NULL;
-
   free (filedata->string_table);
-  filedata->string_table = NULL;
-  filedata->string_table_length = 0;
-
   free (filedata->dump.dump_sects);
-  filedata->dump.dump_sects = NULL;
-  filedata->dump.num_dump_sects = 0;
-
   free (filedata->dynamic_strings);
-  filedata->dynamic_strings = NULL;
-  filedata->dynamic_strings_length = 0;
-
   free (filedata->dynamic_symbols);
-  filedata->dynamic_symbols = NULL;
-  filedata->num_dynamic_syms = 0;
-
   free (filedata->dynamic_syminfo);
-  filedata->dynamic_syminfo = NULL;
-
   free (filedata->dynamic_section);
-  filedata->dynamic_section = NULL;
 
   while (filedata->symtab_shndx_list != NULL)
     {
@@ -21365,7 +21329,6 @@ free_filedata (Filedata *filedata)
     }
 
   free (filedata->section_headers_groups);
-  filedata->section_headers_groups = NULL;
 
   if (filedata->section_groups)
     {
@@ -21383,8 +21346,9 @@ free_filedata (Filedata *filedata)
 	}
 
       free (filedata->section_groups);
-      filedata->section_groups = NULL;
     }
+  memset (&filedata->section_headers, 0,
+	  sizeof (Filedata) - offsetof (Filedata, section_headers));
 }
 
 static void
@@ -21430,19 +21394,8 @@ open_file (const char * pathname, bool is_separate)
   if (! get_file_header (filedata))
     goto fail;
 
-  if (filedata->file_header.e_shoff)
-    {
-      bool res;
-
-      /* Read the section headers again, this time for real.  */
-      if (is_32bit_elf)
-	res = get_32bit_section_headers (filedata, false);
-      else
-	res = get_64bit_section_headers (filedata, false);
-
-      if (!res)
-	goto fail;
-    }
+  if (!get_section_headers (filedata, false))
+    goto fail;
 
   return filedata;
 
@@ -21518,8 +21471,20 @@ process_object (Filedata * filedata)
 
   initialise_dump_sects (filedata);
 
+  /* There may be some extensions in the first section header.  Don't
+     bomb if we can't read it.  */
+  get_section_headers (filedata, true);
+
   if (! process_file_header (filedata))
-    return false;
+    {
+      res = false;
+      goto out;
+    }
+
+  /* Throw away the single section header read above, so that we
+     re-read the entire set.  */
+  free (filedata->section_headers);
+  filedata->section_headers = NULL;
 
   if (! process_section_headers (filedata))
     {
@@ -21615,6 +21580,7 @@ process_object (Filedata * filedata)
   if (! process_arch_specific (filedata))
     res = false;
 
+ out:
   free_filedata (filedata);
 
   free_debug_memory ();

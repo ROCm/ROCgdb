@@ -5,7 +5,6 @@ AC_CONFIG_MACRO_DIRS([../m4 ../.. ../../config])
 SIM_AC_COMMON
 
 dnl Options available in this module
-SIM_AC_OPTION_ALIGNMENT(NONSTRICT_ALIGNMENT)
 SIM_AC_OPTION_WARNINGS(no)
 SIM_AC_OPTION_RESERVED_BITS(1)
 
@@ -432,6 +431,5 @@ SIM_AC_OPTION_HARDWARE(tx3904cpu tx3904irc tx3904tmr tx3904sio)
 AC_PATH_X
 
 AC_CHECK_LIB(m, fabs)
-AC_CHECK_FUNCS(aint anint sqrt)
 
 SIM_AC_OUTPUT

@@ -19,19 +19,6 @@ ALL_LINGUAS=
 ZW_GNU_GETTEXT_SISTER_DIR(../../intl)
 
 
-AC_ARG_ENABLE(sim-alignment,
-[  --enable-sim-alignment=align		Specify strict or nonstrict alignment.],
-[case "${enableval}" in
-  yes | strict | STRICT)	sim_alignment="-DWITH_ALIGNMENT=STRICT_ALIGNMENT";;
-  no | nonstrict | NONSTRICT)	sim_alignment="-DWITH_ALIGNMENT=NONSTRICT_ALIGNMENT";;
-  0 | default | DEFAULT)	sim_alignment="-DWITH_ALIGNMENT=0";;
-  *)				AC_MSG_ERROR("Unknown value $enableval passed to --enable-sim-alignment"); sim_alignment="";;
-esac
-if test x"$silent" != x"yes" && test x"$sim_alignment" != x""; then
-  echo "Setting alignment flags = $sim_alignment" 6>&1
-fi],[sim_alignment=""])dnl
-
-
 AC_MSG_CHECKING([whether to enable sim asserts])
 sim_assert="1"
 AC_ARG_ENABLE(sim-assert,
@@ -135,21 +122,6 @@ esac
 if test x"$silent" != x"yes" && test x"$sim_endian" != x""; then
   echo "Setting endian flags = $sim_endian" 6>&1
 fi],[sim_endian=""])dnl
-
-
-AC_MSG_CHECKING([default sim environment setting])
-sim_env="0"
-AC_ARG_ENABLE(sim-env,
-[  --enable-sim-env=env			Specify target environment (operating, virtual, user).],
-[case "${enableval}" in
-  operating | os | oea)	sim_env="OPERATING_ENVIRONMENT";;
-  virtual | vea)	sim_env="VIRTUAL_ENVIRONMENT";;
-  user | uea)		sim_env="USER_ENVIRONMENT";;
-  no)			sim_env="0";;
-  *)			AC_MSG_ERROR([Unknown value $enableval passed to --enable-sim-env]);;
-esac])dnl
-AC_DEFINE_UNQUOTED([WITH_ENVIRONMENT], [$sim_env], [Sim default environment])
-AC_MSG_RESULT($sim_env)
 
 
 AC_ARG_ENABLE(sim-filter,
@@ -457,7 +429,7 @@ AC_ARG_ENABLE(sim-monitor,
   no)		sim_monitor="-DWITH_MON=0";;
   instruction)	sim_monitor="-DWITH_MON=MONITOR_INSTRUCTION_ISSUE";;
   memory)	sim_monitor="-DWITH_MON=MONITOR_LOAD_STORE_UNIT";;
-  *)		AC_MSG_ERROR("Unknown value $enableval passed to --enable-sim-mon"); sim_env="";;
+  *)		AC_MSG_ERROR("Unknown value $enableval passed to --enable-sim-mon");;
 esac
 if test x"$silent" != x"yes" && test x"$sim_monitor" != x""; then
   echo "Setting monitor flags = $sim_monitor" 6>&1
@@ -534,19 +506,6 @@ if test x"$silent" != x"yes"; then
 fi])dnl
 
 
-AC_MSG_CHECKING([for sim stdio debug behavior])
-sim_stdio=0
-AC_ARG_ENABLE(sim-stdio,
-[  --enable-sim-stdio			Specify whether to use stdio for console input/output.],
-[case "${enableval}" in
-  yes)	sim_stdio="DO_USE_STDIO";;
-  no)	sim_stdio="DONT_USE_STDIO";;
-  *)	AC_MSG_ERROR([Unknown value $enableval passed to --enable-sim-stdio]);;
-esac])dnl
-AC_DEFINE_UNQUOTED([WITH_STDIO], [$sim_stdio], [How to route I/O])
-AC_MSG_RESULT($sim_stdio)
-
-
 AC_ARG_ENABLE(sim-switch,
 [  --enable-sim-switch			Use a switch instead of a table for instruction call.],
 [case "${enableval}" in
@@ -572,19 +531,6 @@ esac
 if test x"$silent" != x"yes" && test x"$sim_timebase" != x""; then
   echo "Setting timebase flags = $sim_timebase" 6>&1
 fi],[sim_timebase=""])dnl
-
-
-AC_MSG_CHECKING([for sim trace settings])
-sim_trace="1"
-AC_ARG_ENABLE(sim-trace,
-[  --enable-sim-trace			Specify whether tracing is supported.],
-[case "${enableval}" in
-  yes)	sim_trace="1";;
-  no)	sim_trace="0";;
-  *)	AC_MSG_ERROR([--enable-sim-trace does not take a value]);;
-esac])dnl
-AC_DEFINE_UNQUOTED([WITH_TRACE], [$sim_trace], [Sim trace settings])
-AC_MSG_RESULT($sim_trace)
 
 
 AC_ARG_ENABLE(werror,
@@ -633,11 +579,6 @@ if test x"$silent" != x"yes" && test x"$sim_xor_endian" != x""; then
 fi],[sim_xor_endian=""])dnl
 
 
-ACX_PKGVERSION([GDB])
-ACX_BUGURL([https://www.gnu.org/software/gdb/bugs/])
-AC_DEFINE_UNQUOTED([PKGVERSION], ["$PKGVERSION"], [Additional package description])
-AC_DEFINE_UNQUOTED([REPORT_BUGS_TO], ["$REPORT_BUGS_TO"], [Bug reporting address])
-
 AC_CANONICAL_SYSTEM
 AC_ARG_PROGRAM
 
@@ -660,23 +601,6 @@ esac
 
 AC_CONFIG_HEADER(config.h:config.in)
 
-AC_STRUCT_ST_BLKSIZE
-AC_STRUCT_ST_BLOCKS
-AC_STRUCT_ST_RDEV
-AC_STRUCT_TIMEZONE
-
-AC_TYPE_GETGROUPS
-AC_TYPE_MODE_T
-AC_TYPE_OFF_T
-AC_TYPE_PID_T
-AC_TYPE_SIGNAL
-AC_TYPE_SIZE_T
-AC_TYPE_UID_T
-
-AC_CHECK_FUNCS(access cfgetispeed cfgetospeed cfsetispeed cfsetospeed chdir chmod chown dup dup2 fchmod fchown fcntl fstat fstatfs getdirentries getegid geteuid getgid getpid getppid getrusage gettimeofday getuid ioctl kill link lseek lstat mkdir pipe readlink rmdir setreuid setregid stat sigprocmask stat symlink tcgetattr tcsetattr tcsendbreak tcdrain tcflush tcflow tcgetpgrp tcsetpgrp time umask unlink)
-
-AC_CHECK_HEADERS(fcntl.h sys/ioctl.h sys/mount.h sys/param.h sys/resource.h sys/stat.h sys/termio.h sys/termios.h sys/time.h sys/times.h sys/types.h unistd.h sys/vfs.h sys/statfs.h)
-AC_HEADER_DIRENT
 
 dnl Figure out what type of termio/termios support there is
 sim_termio=""
@@ -881,7 +805,6 @@ AC_SUBST(sim_igen_smp)
 AC_SUBST(sim_bitsize)
 AC_SUBST(sim_hostbitsize)
 AC_SUBST(sim_timebase)
-AC_SUBST(sim_alignment)
 AC_SUBST(sim_float)
 AC_SUBST(sim_reserved)
 AC_SUBST(sim_monitor)

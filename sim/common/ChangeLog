@@ -1,3 +1,34 @@
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* Make-common.in (COMMON_OBJS_NAMES): Add portability.o.
+	* local.mk (%C%_libcommon_a_SOURCES): Add %D%/portability.c.
+	* portability.c, portability.h: New files.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* Make-common.in (SIM_NEW_COMMON_OBJS): Move sim-load.o to ...
+	(COMMON_OBJS_NAMES): ... here.  Rename var from COMMON_OBJS.
+	(COMMON_OBJS): Redefine.
+	* defs.h [SIM_COMMON_BUILD]: Do not include ../config.h.
+	* local.mk (%C%_libcommon_a_CPPFLAGS): New variable.
+	(%C%_libcommon_a_SOURCES): Add %D%/sim-load.c.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-sockser.c: Include sys/select.h.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* Make-common.in: Delete SIM_ALIGNMENT.
+	* sim-config.c (sim_config): Change WITH_DEFAULT_ALIGNMENT to
+	NONSTRICT_ALIGNMENT.
+	(sim_config_print): Delete WITH_DEFAULT_ALIGNMENT logic.
+	* sim-config.h (WITH_DEFAULT_ALIGNMENT): Delete.
+
+2021-06-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* defs.h: Include ../config.h.  Undefine PACKAGE* defines.
+
 2021-06-09  Mike Frysinger  <vapier@gentoo.org>
 
 	* sim-basics.h (NULL): Delete.
