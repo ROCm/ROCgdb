@@ -1,3 +1,23 @@
+2021-06-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.in (GNULIB_BUILDDIR): Rename to ...
+	(GNULIB_PARENT_DIR): ... this.  Remove "gnulib" from value.
+
+2021-06-14  John Baldwin  <jhb@FreeBSD.org>
+
+	* configure.ac: Check for <sys/procctl.h>.
+	* config.in, configure: Regenerate.
+	* fbsd-nat.c: Include <sys/procctl.h> if present.
+	[PROC_ASLR_CTL] (maybe_disable_address_space_randomization): New.
+	(fbsd_nat_target::create_inferior)
+	(fbsd_nat_target::supports_disable_randomization): New.
+	* fbsd-nat.h (fbsd_nat_target::create_inferior)
+	(fbsd_nat_target::supports_disable_randomization): New.
+
+2021-06-14  Bernd Edlinger  <bernd.edlinger@hotmail.de>
+
+	* compile/compile.c: Include missing header signal.h.
+
 2021-06-12  John Baldwin  <jhb@FreeBSD.org>
 
 	* remote.c (remote_new_objfile): Fix indentation.

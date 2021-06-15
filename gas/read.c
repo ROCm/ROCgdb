@@ -364,9 +364,7 @@ static const pseudo_typeS potable[] = {
   {"common.s", s_mri_common, 1},
   {"data", s_data, 0},
   {"dc", cons, 2},
-#ifdef TC_ADDRESS_BYTES
   {"dc.a", cons, 0},
-#endif
   {"dc.b", cons, 1},
   {"dc.d", float_cons, 'd'},
   {"dc.l", cons, 4},
@@ -4095,10 +4093,8 @@ cons_worker (int nbytes,	/* 1=.byte, 2=.word, 4=.long.  */
       return;
     }
 
-#ifdef TC_ADDRESS_BYTES
   if (nbytes == 0)
     nbytes = TC_ADDRESS_BYTES ();
-#endif
 
 #ifdef md_cons_align
   md_cons_align (nbytes);
@@ -4543,18 +4539,8 @@ emit_expr_with_reloc (expressionS *exp,
 	      || (get & hibit) == 0))
 	{
 	  /* Leading bits contain both 0s & 1s.  */
-#if defined (BFD64) && BFD_HOST_64BIT_LONG_LONG
-#ifndef __MSVCRT__
-	  as_warn (_("value 0x%llx truncated to 0x%llx"),
-		   (unsigned long long) get, (unsigned long long) use);
-#else
-	  as_warn (_("value 0x%I64x truncated to 0x%I64x"),
-		   (unsigned long long) get, (unsigned long long) use);
-#endif
-#else
-	  as_warn (_("value 0x%lx truncated to 0x%lx"),
-		   (unsigned long) get, (unsigned long) use);
-#endif
+	  as_warn (_("value 0x%" BFD_VMA_FMT "x truncated to 0x%" BFD_VMA_FMT "x"),
+		   get, use);
 	}
       /* Put bytes in right order.  */
       md_number_to_chars (p, use, (int) nbytes);
