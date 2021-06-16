@@ -780,9 +780,13 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
       exception = AMD_DBGAPI_EXCEPTION_WAVE_ILLEGAL_INSTRUCTION;
       break;
     case GDB_SIGNAL_FPE:
+      exception = AMD_DBGAPI_EXCEPTION_WAVE_MATH_ERROR;
+      break;
     case GDB_SIGNAL_ABRT:
+      exception = AMD_DBGAPI_EXCEPTION_WAVE_ABORT;
+      break;
     case GDB_SIGNAL_TRAP:
-      exception = AMD_DBGAPI_EXCEPTION_WAVE_EXCEPTION;
+      exception = AMD_DBGAPI_EXCEPTION_WAVE_TRAP;
       break;
     case GDB_SIGNAL_0:
       exception = AMD_DBGAPI_EXCEPTION_NONE;
