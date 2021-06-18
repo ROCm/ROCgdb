@@ -1950,6 +1950,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
       case AMD_DBGAPI_LOG_LEVEL_INFO:
 	fputs_styled ("amd-dbgapi: ", info_style.style (), out_file);
 	break;
+      case AMD_DBGAPI_LOG_LEVEL_TRACE:
       case AMD_DBGAPI_LOG_LEVEL_VERBOSE:
 	fputs_styled ("amd-dbgapi: ", verbose_style.style (), out_file);
 	break;
@@ -2061,6 +2062,7 @@ constexpr const char *debug_amdgpu_log_level_enums[]
       /* [AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR] = */ "error",
       /* [AMD_DBGAPI_LOG_LEVEL_WARNING] = */ "warning",
       /* [AMD_DBGAPI_LOG_LEVEL_INFO] = */ "info",
+      /* [AMD_DBGAPI_LOG_LEVEL_TRACE] = */ "trace",
       /* [AMD_DBGAPI_LOG_LEVEL_VERBOSE] = */ "verbose",
       nullptr };
 
@@ -3152,6 +3154,8 @@ If off (default), precise memory reporting is disabled."),
 			  "warning == fatal errors and warnings are reported\n"
 			  "info    == fatal errors, warnings, and info "
 			  "messages are reported\n"
+			  "trace   == fatal errors, warnings, info, and "
+			  "API tracing messages are reported\n"
 			  "verbose == all messages are reported"),
 			set_debug_amdgpu_log_level,
 			show_debug_amdgpu_log_level, &set_debug_amdgpu_list,
