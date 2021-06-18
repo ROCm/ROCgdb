@@ -1883,7 +1883,7 @@ md_begin (void)
      data csects.  These symbols will not be output.  */
   ppc_init_xcoff_section (&ppc_xcoff_text_section, text_section, true);
   ppc_init_xcoff_section (&ppc_xcoff_data_section, data_section, true);
-  ppc_init_xcoff_section (&ppc_xcoff_bss_section, bss_section, false);
+  ppc_init_xcoff_section (&ppc_xcoff_bss_section, bss_section, true);
 #endif
 }
 
@@ -5986,7 +5986,10 @@ ppc_frob_symbol (symbolS *sym)
 	      a->x_csect.x_scnlen.l = (S_GET_VALUE (symbol_get_tc (sym)->next)
 				       - S_GET_VALUE (sym));
 	    }
-	  a->x_csect.x_smtyp = (symbol_get_tc (sym)->align << 3) | XTY_SD;
+	  if (symbol_get_tc (sym)->symbol_class == XMC_BS)
+	    a->x_csect.x_smtyp = (symbol_get_tc (sym)->align << 3) | XTY_CM;
+	  else
+	    a->x_csect.x_smtyp = (symbol_get_tc (sym)->align << 3) | XTY_SD;
 	}
       else if (S_GET_SEGMENT (sym) == bss_section
 	       || S_GET_SEGMENT (sym) == ppc_xcoff_tbss_section.segment)
@@ -6415,7 +6418,8 @@ ppc_fix_adjustable (fixS *fix)
   /* Adjust a reloc against a .lcomm symbol to be against the base
      .lcomm.  */
   if (symseg == bss_section
-      && ! S_IS_EXTERNAL (fix->fx_addsy))
+      && ! S_IS_EXTERNAL (fix->fx_addsy)
+      && symbol_get_tc (fix->fx_addsy)->subseg == 0)
     {
       symbolS *sy = symbol_get_frag (fix->fx_addsy)->fr_symbol;
 
@@ -7411,11 +7415,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	symbol_get_bfdsym (fixP->fx_addsy)->flags |= BSF_KEEP;
     }
 #else
-  if (fixP->fx_r_type != BFD_RELOC_PPC_TOC16
-      && fixP->fx_r_type != BFD_RELOC_PPC_TOC16_HI
-      && fixP->fx_r_type != BFD_RELOC_PPC_TOC16_LO)
-    fixP->fx_addnumber = 0;
-  else
+  if (fixP->fx_r_type == BFD_RELOC_PPC_TOC16
+      || fixP->fx_r_type == BFD_RELOC_PPC_TOC16_HI
+      || fixP->fx_r_type == BFD_RELOC_PPC_TOC16_LO)
     {
       /* We want to use the offset within the toc, not the actual VMA
 	 of the symbol.  */
@@ -7430,6 +7432,15 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
       /* Set *valP to avoid errors.  */
       *valP = value;
     }
+  else if (fixP->fx_r_type == BFD_RELOC_PPC_TLSM
+	   || fixP->fx_r_type == BFD_RELOC_PPC64_TLSM)
+    /* AIX ld expects the section contents for these relocations
+       to be zero.  Arrange for that to occur when
+       bfd_install_relocation is called.  */
+    fixP->fx_addnumber = (- bfd_section_vma (S_GET_SEGMENT (fixP->fx_addsy))
+			  - S_GET_VALUE (fixP->fx_addsy));
+  else
+    fixP->fx_addnumber = 0;
 #endif
 }
 

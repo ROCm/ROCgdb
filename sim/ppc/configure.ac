@@ -19,19 +19,6 @@ ALL_LINGUAS=
 ZW_GNU_GETTEXT_SISTER_DIR(../../intl)
 
 
-AC_MSG_CHECKING([whether to enable sim asserts])
-sim_assert="1"
-AC_ARG_ENABLE(sim-assert,
-[  --enable-sim-assert			Specify whether to perform random assertions.],
-[case "${enableval}" in
-  yes)	sim_assert="1";;
-  no)	sim_assert="0";;
-  *)	AC_MSG_ERROR([--enable-sim-assert does not take a value]);;
-esac])dnl
-AC_DEFINE_UNQUOTED([WITH_ASSERT], [$sim_assert], [Sim assert settings])
-AC_MSG_RESULT($sim_assert)
-
-
 AC_ARG_ENABLE(sim-bitsize,
 [  --enable-sim-bitsize=n		Specify target bitsize (32 or 64).],
 [case "${enableval}" in
@@ -104,24 +91,6 @@ fi],[sim_dup="-E"
 if test x"$silent" != x"yes"; then
   echo "Setting duplicate flags = $sim_dup" 6>&1
 fi])dnl
-
-
-AC_ARG_ENABLE(sim-endian,
-[  --enable-sim-endian=endian		Specify target byte endian orientation.],
-[case "${enableval}" in
-  yes)	case "$target" in
-	  *powerpc-*) sim_endian="-DWITH_TARGET_BYTE_ORDER=BIG_ENDIAN";;
-	  *powerpcle-*) sim_endian="-DWITH_TARGET_BYTE_ORDER=LITTLE_ENDIAN";;
-	  *) echo "Unknown target $target" 1>&6; sim_endian="-DWITH_TARGET_BYTE_ORDER=0";;
-	esac;;
-  no)	 sim_endian="-DWITH_TARGET_BYTE_ORDER=0";;
-  b*|B*) sim_endian="-DWITH_TARGET_BYTE_ORDER=BIG_ENDIAN";;
-  l*|L*) sim_endian="-DWITH_TARGET_BYTE_ORDER=LITTLE_ENDIAN";;
-  *)	 AC_MSG_ERROR("Unknown value $enableval for --enable-sim-endian"); sim_endian="";;
-esac
-if test x"$silent" != x"yes" && test x"$sim_endian" != x""; then
-  echo "Setting endian flags = $sim_endian" 6>&1
-fi],[sim_endian=""])dnl
 
 
 AC_ARG_ENABLE(sim-filter,
@@ -285,29 +254,6 @@ esac
 if test x"$silent" != x"yes" && test x"$sim_hostbitsize" != x""; then
   echo "Setting hostbitsize flags = $sim_hostbitsize" 6>&1
 fi],[sim_hostbitsize=""])dnl
-
-
-AC_ARG_ENABLE(sim-hostendian,
-[  --enable-sim-hostendian=end		Specify host byte endian orientation.],
-[case "${enableval}" in
-  no)	 sim_hostendian="-DWITH_HOST_BYTE_ORDER=0";;
-  b*|B*) sim_hostendian="-DWITH_HOST_BYTE_ORDER=BIG_ENDIAN";;
-  l*|L*) sim_hostendian="-DWITH_HOST_BYTE_ORDER=LITTLE_ENDIAN";;
-  *)	 AC_MSG_ERROR("Unknown value $enableval for --enable-sim-hostendian"); sim_hostendian="";;
-esac
-if test x"$silent" != x"yes" && test x"$sim_hostendian" != x""; then
-  echo "Setting hostendian flags = $sim_hostendian" 6>&1
-fi],[
-if test "x$cross_compiling" = "xno"; then
-  AC_C_BIGENDIAN
-  if test $ac_cv_c_bigendian = yes; then
-    sim_hostendian="-DWITH_HOST_BYTE_ORDER=BIG_ENDIAN"
-  else
-    sim_hostendian="-DWITH_HOST_BYTE_ORDER=LITTLE_ENDIAN"
-  fi
-else
-  sim_hostendian="-DWITH_HOST_BYTE_ORDER=0"
-fi])dnl
 
 
 AC_ARG_ENABLE(sim-icache,
@@ -773,9 +719,6 @@ else
   rm -rf $tempdir
 fi
 
-dnl Check for exe extension
-AC_EXEEXT
-
 AC_SUBST(CC_FOR_BUILD)
 AC_SUBST(CFLAGS_FOR_BUILD)
 AC_SUBST(CFLAGS)
@@ -797,9 +740,7 @@ AC_SUBST(sim_hw_obj)
 AC_SUBST(sim_pk_src)
 AC_SUBST(sim_pk_obj)
 AC_SUBST(sim_inline)
-AC_SUBST(sim_endian)
 AC_SUBST(sim_xor_endian)
-AC_SUBST(sim_hostendian)
 AC_SUBST(sim_smp)
 AC_SUBST(sim_igen_smp)
 AC_SUBST(sim_bitsize)

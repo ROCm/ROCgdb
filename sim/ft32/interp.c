@@ -33,6 +33,7 @@
 
 #include "sim-main.h"
 #include "sim-options.h"
+#include "sim-signal.h"
 
 #include "opcode/ft32.h"
 
@@ -810,6 +811,7 @@ sim_open (SIM_OPEN_KIND kind,
 
   /* Set default options before parsing user options.  */
   current_alignment = STRICT_ALIGNMENT;
+  current_target_byte_order = BFD_ENDIAN_LITTLE;
 
   /* The cpu data is kept in a separately allocated chunk of memory.  */
   if (sim_cpu_alloc_all (sd, 1) != SIM_RC_OK)

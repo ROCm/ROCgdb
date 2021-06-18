@@ -280,7 +280,7 @@ INLINE_DEVICE\
 (void) device_add_boolean_property
 (device *me,
  const char *property,
- int bool);
+ int boolean);
 
 INLINE_DEVICE\
 (int) device_find_boolean_property
@@ -729,7 +729,7 @@ EXTERN_DEVICE\
 (void) device_error
 (device *me,
  const char *fmt,
- ...) __attribute__ ((format (printf, 2, 3)));
+ ...) ATTRIBUTE_PRINTF_2;
 
 INLINE_DEVICE\
 (int) device_trace

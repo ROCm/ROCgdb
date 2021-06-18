@@ -41,7 +41,7 @@ proc gas_bfd64_check { } {
     global AS
 
     set status [gas_host_run "$AS --help" ""]
-    return [regexp "32bit/64bit/x32" [lindex $status 1]];
+    return [regexp "32bit/64bit" [lindex $status 1]];
 }
 
 if [gas_32_check] then {
@@ -87,6 +87,10 @@ if [gas_32_check] then {
     run_dump_test "disp"
     run_dump_test "disp-intel"
     run_dump_test "disp32"
+    run_list_test "disp-imm-16"
+    if { [gas_bfd64_check] } {
+	run_dump_test "disp-imm-32"
+    }
     run_dump_test "vmx"
     run_dump_test "vmfunc"
     run_dump_test "smx"
@@ -861,6 +865,7 @@ if [gas_64_check] then {
     run_dump_test "x86-64-sib-intel"
     run_dump_test "x86-64-disp"
     run_dump_test "x86-64-disp-intel"
+    run_list_test "disp-imm-64"
     run_dump_test "intel-movs64"
     run_dump_test "intel-cmps64"
     run_dump_test "x86-64-disp32"

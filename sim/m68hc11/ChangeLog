@@ -1,3 +1,32 @@
+2021-06-18  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-m68hc11eepr.c: Include sim-signal.h.
+	* interrupts.c, m68hc11_sim.c: Likewise.
+	* sim-main.h: Delete sim-signal.h include.
+
+2021-06-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Delete SIM_AC_OPTION_ENDIAN call.
+	* interp.c (sim_open): Set current_target_byte_order.
+	* aclocal.m4, configure: Regenerate.
+
+2021-06-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-main.h: Delete sim/callback.h include.
+
+2021-06-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure: Regenerate.
+
+2021-06-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure: Regenerate.
+	* config.in: Removed.
+
+2021-06-15  Mike Frysinger  <vapier@gentoo.org>
+
+	* config.in, configure: Regenerate.
+
 2021-06-12  Mike Frysinger  <vapier@gentoo.org>
 
 	* configure.ac: Delete call to SIM_AC_OPTION_ALIGNMENT.

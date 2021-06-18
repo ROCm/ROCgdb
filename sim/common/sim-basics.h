@@ -112,7 +112,6 @@ typedef enum {
 /* Basic definitions - ordered so that nothing calls what comes after it.  */
 
 #include "ansidecl.h"
-#include "sim/callback.h"
 #include "sim/sim.h"
 
 #include "sim-config.h"
@@ -122,11 +121,8 @@ typedef enum {
 #include "sim-types.h"
 #include "sim-bits.h"
 #include "sim-endian.h"
-#include "sim-signal.h"
 
 #include "sim-utils.h"
-
-#include "libiberty.h"
 
 /* Note: Only the simpler interfaces are defined here.  More heavy
    weight objects, such as core and events, are defined in the more

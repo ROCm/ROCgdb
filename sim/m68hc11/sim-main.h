@@ -21,16 +21,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #define _SIM_MAIN_H
 
 #include "sim-basics.h"
-#include "sim-signal.h"
 #include "sim-base.h"
 
 #include "bfd.h"
 
 #include "opcode/m68hc11.h"
 
-#include "sim/callback.h"
 #include "sim/sim.h"
 #include "opcode/m68hc11.h"
+#include "sim-signal.h"
 #include "sim-types.h"
 
 typedef unsigned8 uint8;

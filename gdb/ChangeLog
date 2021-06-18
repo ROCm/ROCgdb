@@ -1,3 +1,73 @@
+2021-06-17  Pedro Alves  <pedro@palves.net>
+
+	* scoped_ignore_signal.h (scoped_ignore_signal): Add
+	ConsumePending template parameter.
+	(scoped_ignore_signal::~scoped_ignore_signal): Skip calling
+	sigtimedwait if ConsumePending is false.
+	(scoped_ignore_sigpipe): Initialize with ConsumePending=true.
+	* scoped_ignore_sigttou.h (scoped_ignore_sigttou)
+	<m_ignore_signal>: Initialize with ConsumePending=false.
+
+2021-06-17  Pedro Alves  <pedro@palves.net>
+
+	* Makefile.in (SELFTESTS_SRCS): Add
+	unittests/scoped_ignore_signal-selftests.c.
+	* unittests/scoped_ignore_signal-selftests.c: New.
+
+2021-06-17  Pedro Alves  <pedro@palves.net>
+
+	* gdbsupport/scoped_ignore_signal.h: New.
+	* compile/compile.c: Include gdbsupport/scoped_ignore_signal.h
+	instead of <signal.h>.  Don't include <unistd.h>.
+	(scoped_ignore_sigpipe): Remove.
+	* gdbsupport/scoped_ignore_sigttou.h: Include gdbsupport/scoped_ignore_signal.h
+	instead of <signal.h>.  Don't include <unistd.h>.
+	(lazy_init): New.
+	(scoped_ignore_sigttou): Reimplement using scoped_ignore_signal
+	and lazy_init.
+
+2021-06-17  Pedro Alves  <pedro@palves.net>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Remove inflow.h.
+	* inf-ptrace.c, inflow.c, procfs.c: Don't include "inflow.h".
+	* inflow.h: Delete, moved to gdbsupport/ under a different name.
+	* ser-unix.c: Don't include "inflow.h".  Include
+	"gdbsupport/scoped_ignore_sigttou.h".
+
+2021-06-17  Pedro Alves  <pedro@palves.net>
+
+	* tui/tui-io.c (tui_dispatch_mouse_event): New, factored out from
+	...
+	(tui_dispatch_ctrl_char): ... this.  Move CTRL-L handling to
+	tui_getc_1.
+	(cur_seq, start_sequence): New.
+	(tui_getc_1): Pass key escape sequences for curses control keys to
+	readline.  Handle mouse and ctrl-l here.
+	(tui_resize_all): Disable/reenable the keypad if the command
+	window has the focus too.
+	* tui/tui-win.c (tui_set_focus_command): Don't change keypad
+	setting.
+	* tui/tui.c (tui_rl_other_window): Don't change keypad setting.
+
+2021-06-16  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* silent-rules.mk (ECHO_CCLD, ECHO_AR, ECHO_RANLIB): New.
+
+2021-06-16  Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/26327
+	* dwarf2/cu.h (dwarf2_cu::ancestor): Remove.
+	(dwarf2_cu::get_builder): Declare and move ...
+	* dwarf2/cu.c (dwarf2_cu::get_builder): ... here.  Use sym_cu instead
+	of ancestor.  Assert return value is non-null.
+	* dwarf2/read.c (read_file_scope): Set per_objfile->sym_cu.
+	(follow_die_offset, follow_die_sig_1): Remove setting of ancestor.
+	(dwarf2_per_objfile): Add sym_cu field.
+
+2021-06-15  Alan Modra  <amodra@gmail.com>
+
+	* testsuite/lib/gdb.exp (exec_is_pie): Match new PIE readelf output.
+
 2021-06-14  Mike Frysinger  <vapier@gentoo.org>
 
 	* Makefile.in (GNULIB_BUILDDIR): Rename to ...

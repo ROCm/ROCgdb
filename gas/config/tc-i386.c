@@ -2089,9 +2089,6 @@ operand_type_xor (i386_operand_type x, i386_operand_type y)
   return x;
 }
 
-static const i386_operand_type disp16 = OPERAND_TYPE_DISP16;
-static const i386_operand_type disp32 = OPERAND_TYPE_DISP32;
-static const i386_operand_type disp32s = OPERAND_TYPE_DISP32S;
 static const i386_operand_type disp16_32 = OPERAND_TYPE_DISP16_32;
 static const i386_operand_type anydisp = OPERAND_TYPE_ANYDISP;
 static const i386_operand_type anyimm = OPERAND_TYPE_ANYIMM;
@@ -2556,21 +2553,17 @@ offset_in_range (offsetT val, int size)
     {
     case 1: mask = ((addressT) 1 <<  8) - 1; break;
     case 2: mask = ((addressT) 1 << 16) - 1; break;
-    case 4: mask = ((addressT) 2 << 31) - 1; break;
 #ifdef BFD64
-    case 8: mask = ((addressT) 2 << 63) - 1; break;
+    case 4: mask = ((addressT) 1 << 32) - 1; break;
 #endif
+    case sizeof (val): return val;
     default: abort ();
     }
 
-  if ((val & ~mask) != 0 && (val & ~mask) != ~mask)
-    {
-      char buf1[40], buf2[40];
+  if ((val & ~mask) != 0 && (-val & ~mask) != 0)
+    as_warn (_("%"BFD_VMA_FMT"x shortened to %"BFD_VMA_FMT"x"),
+             val, val & mask);
 
-      bfd_sprintf_vma (stdoutput, buf1, val);
-      bfd_sprintf_vma (stdoutput, buf2, val & mask);
-      as_warn (_("%s shortened to %s"), buf1, buf2);
-    }
   return val & mask;
 }
 
@@ -5888,12 +5881,8 @@ optimize_disp (void)
 
 	    if (!op_disp && i.types[op].bitfield.baseindex)
 	      {
-		i.types[op].bitfield.disp8 = 0;
-		i.types[op].bitfield.disp16 = 0;
-		i.types[op].bitfield.disp32 = 0;
-		i.types[op].bitfield.disp32s = 0;
-		i.types[op].bitfield.disp64 = 0;
-		i.op[op].disps = 0;
+		i.types[op] = operand_type_and_not (i.types[op], anydisp);
+		i.op[op].disps = NULL;
 		i.disp_operands--;
 		continue;
 	      }
@@ -5909,26 +5898,24 @@ optimize_disp (void)
 	      }
 
 #ifdef BFD64
-	    if (flag_code == CODE_64BIT)
+	    /* Optimize 64-bit displacement to 32-bit for 64-bit BFD.  */
+	    if ((i.types[op].bitfield.disp32
+		 || (flag_code == CODE_64BIT
+		     && want_disp32 (current_templates->start)))
+		&& fits_in_unsigned_long (op_disp))
 	      {
-		/* Optimize 64-bit displacement to 32-bit for 64-bit BFD.  */
-		if ((i.types[op].bitfield.disp32
-		     || want_disp32 (current_templates->start))
-		    && fits_in_unsigned_long (op_disp))
-		  {
-		    /* If this operand is at most 32 bits, convert
-		       to a signed 32 bit number and don't use 64bit
-		       displacement.  */
-		    op_disp = (op_disp ^ ((offsetT) 1 << 31)) - ((addressT) 1 << 31);
-		    i.types[op].bitfield.disp64 = 0;
-		    i.types[op].bitfield.disp32 = 1;
-		  }
+		/* If this operand is at most 32 bits, convert
+		   to a signed 32 bit number and don't use 64bit
+		   displacement.  */
+		op_disp = (op_disp ^ ((offsetT) 1 << 31)) - ((addressT) 1 << 31);
+		i.types[op].bitfield.disp64 = 0;
+		i.types[op].bitfield.disp32 = 1;
+	      }
 
-		if (fits_in_signed_long (op_disp))
-		  {
-		    i.types[op].bitfield.disp64 = 0;
-		    i.types[op].bitfield.disp32s = 1;
-		  }
+	    if (flag_code == CODE_64BIT && fits_in_signed_long (op_disp))
+	      {
+		i.types[op].bitfield.disp64 = 0;
+		i.types[op].bitfield.disp32s = 1;
 	      }
 #endif
 	    if ((i.types[op].bitfield.disp32
@@ -5944,11 +5931,7 @@ optimize_disp (void)
 	  {
 	    fix_new_exp (frag_now, frag_more (0) - frag_now->fr_literal, 0,
 			 i.op[op].disps, 0, i.reloc[op]);
-	    i.types[op].bitfield.disp8 = 0;
-	    i.types[op].bitfield.disp16 = 0;
-	    i.types[op].bitfield.disp32 = 0;
-	    i.types[op].bitfield.disp32s = 0;
-	    i.types[op].bitfield.disp64 = 0;
+	    i.types[op] = operand_type_and_not (i.types[op], anydisp);
 	  }
  	else
 	  /* We only support 64bit displacement on constants.  */
@@ -8267,20 +8250,11 @@ build_modrm_byte (void)
 		{
 		  i.sib.base = NO_BASE_REGISTER;
 		  i.sib.scale = i.log2_scale_factor;
-		  i.types[op].bitfield.disp8 = 0;
-		  i.types[op].bitfield.disp16 = 0;
-		  i.types[op].bitfield.disp64 = 0;
+		  i.types[op] = operand_type_and_not (i.types[op], anydisp);
 		  if (want_disp32 (&i.tm))
-		    {
-		      /* Must be 32 bit */
-		      i.types[op].bitfield.disp32 = 1;
-		      i.types[op].bitfield.disp32s = 0;
-		    }
+		    i.types[op].bitfield.disp32 = 1;
 		  else
-		    {
-		      i.types[op].bitfield.disp32 = 0;
-		      i.types[op].bitfield.disp32s = 1;
-		    }
+		    i.types[op].bitfield.disp32s = 1;
 		}
 
 	      /* Since the mandatory SIB always has index register, so
@@ -8306,12 +8280,11 @@ build_modrm_byte (void)
 		fake_zero_displacement = 1;
 	      if (i.index_reg == 0)
 		{
-		  i386_operand_type newdisp;
-
 		  /* Both check for VSIB and mandatory non-vector SIB. */
 		  gas_assert (!i.tm.opcode_modifier.sib
 			      || i.tm.opcode_modifier.sib == SIBMEM);
 		  /* Operand is just <disp>  */
+		  i.types[op] = operand_type_and_not (i.types[op], anydisp);
 		  if (flag_code == CODE_64BIT)
 		    {
 		      /* 64bit mode overwrites the 32bit absolute
@@ -8321,21 +8294,22 @@ build_modrm_byte (void)
 		      i.rm.regmem = ESCAPE_TO_TWO_BYTE_ADDRESSING;
 		      i.sib.base = NO_BASE_REGISTER;
 		      i.sib.index = NO_INDEX_REGISTER;
-		      newdisp = (want_disp32(&i.tm) ? disp32 : disp32s);
+		      if (want_disp32 (&i.tm))
+			i.types[op].bitfield.disp32 = 1;
+		      else
+			i.types[op].bitfield.disp32s = 1;
 		    }
 		  else if ((flag_code == CODE_16BIT)
 			   ^ (i.prefix[ADDR_PREFIX] != 0))
 		    {
 		      i.rm.regmem = NO_BASE_REGISTER_16;
-		      newdisp = disp16;
+		      i.types[op].bitfield.disp16 = 1;
 		    }
 		  else
 		    {
 		      i.rm.regmem = NO_BASE_REGISTER;
-		      newdisp = disp32;
+		      i.types[op].bitfield.disp32 = 1;
 		    }
-		  i.types[op] = operand_type_and_not (i.types[op], anydisp);
-		  i.types[op] = operand_type_or (i.types[op], newdisp);
 		}
 	      else if (!i.tm.opcode_modifier.sib)
 		{
@@ -8347,20 +8321,11 @@ build_modrm_byte (void)
 		  i.sib.base = NO_BASE_REGISTER;
 		  i.sib.scale = i.log2_scale_factor;
 		  i.rm.regmem = ESCAPE_TO_TWO_BYTE_ADDRESSING;
-		  i.types[op].bitfield.disp8 = 0;
-		  i.types[op].bitfield.disp16 = 0;
-		  i.types[op].bitfield.disp64 = 0;
+		  i.types[op] = operand_type_and_not (i.types[op], anydisp);
 		  if (want_disp32 (&i.tm))
-		    {
-		      /* Must be 32 bit */
-		      i.types[op].bitfield.disp32 = 1;
-		      i.types[op].bitfield.disp32s = 0;
-		    }
+		    i.types[op].bitfield.disp32 = 1;
 		  else
-		    {
-		      i.types[op].bitfield.disp32 = 0;
-		      i.types[op].bitfield.disp32s = 1;
-		    }
+		    i.types[op].bitfield.disp32s = 1;
 		  if ((i.index_reg->reg_flags & RegRex) != 0)
 		    i.rex |= REX_X;
 		}
@@ -11023,9 +10988,18 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
       ret = 0;
     }
 
+  else if (exp->X_op == O_constant)
+    {
+      /* Sizing gets taken care of by optimize_disp().
+
+	 If not 64bit, sign/zero extend val, to account for wraparound
+	 when !BFD64.  */
+      if (flag_code != CODE_64BIT)
+	exp->X_add_number = extend_to_32bit_address (exp->X_add_number);
+    }
+
 #if (defined (OBJ_AOUT) || defined (OBJ_MAYBE_AOUT))
-  else if (exp->X_op != O_constant
-	   && OUTPUT_FLAVOR == bfd_target_aout_flavour
+  else if (OUTPUT_FLAVOR == bfd_target_aout_flavour
 	   && exp_seg != absolute_section
 	   && exp_seg != text_section
 	   && exp_seg != data_section
@@ -11038,18 +11012,11 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
     }
 #endif
 
-  if (current_templates->start->opcode_modifier.jump == JUMP_BYTE
-      /* Constants get taken care of by optimize_disp().  */
-      && exp->X_op != O_constant)
+  else if (current_templates->start->opcode_modifier.jump == JUMP_BYTE)
     i.types[this_operand].bitfield.disp8 = 1;
 
   /* Check if this is a displacement only operand.  */
-  bigdisp = i.types[this_operand];
-  bigdisp.bitfield.disp8 = 0;
-  bigdisp.bitfield.disp16 = 0;
-  bigdisp.bitfield.disp32 = 0;
-  bigdisp.bitfield.disp32s = 0;
-  bigdisp.bitfield.disp64 = 0;
+  bigdisp = operand_type_and_not (i.types[this_operand], anydisp);
   if (operand_type_all_zero (&bigdisp))
     i.types[this_operand] = operand_type_and (i.types[this_operand],
 					      types);
@@ -11566,15 +11533,19 @@ i386_att_operand (char *operand_string)
       if (*base_string == ')')
 	{
 	  char *temp_string;
+	  unsigned int parens_not_balanced = 1;
 
 	  /* We've already checked that the number of left & right ()'s are
 	     equal, so this loop will not be infinite.  */
 	  do
 	    {
 	      base_string--;
+	      if (*base_string == ')')
+		parens_not_balanced++;
+	      if (*base_string == '(')
+		parens_not_balanced--;
 	    }
-	  while (*base_string != '(' && *base_string != ')'
-		 && *base_string != '"');
+	  while (parens_not_balanced && *base_string != '"');
 
 	  temp_string = base_string;
 
@@ -13748,10 +13719,14 @@ md_show_usage (FILE *stream)
   fprintf (stream, _("\
   -s                      ignored\n"));
 #endif
-#if defined BFD64 && (defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF) \
-		      || defined (TE_PE) || defined (TE_PEP))
+#ifdef BFD64
+# if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
   fprintf (stream, _("\
-  --32/--64/--x32         generate 32bit/64bit/x32 code\n"));
+  --32/--64/--x32         generate 32bit/64bit/x32 object\n"));
+# elif defined (TE_PE) || defined (TE_PEP) || defined (OBJ_MACH_O)
+  fprintf (stream, _("\
+  --32/--64               generate 32bit/64bit object\n"));
+# endif
 #endif
 #ifdef SVR4_COMMENT_CHARS
   fprintf (stream, _("\

@@ -25,12 +25,11 @@
 
 STATIC_INLINE_OPTIONS\
 (const char *)
-options_byte_order (int order)
+options_byte_order (enum bfd_endian order)
 {
   switch (order) {
-  case 0:		return "0";
-  case BIG_ENDIAN:	return "BIG_ENDIAN";
-  case LITTLE_ENDIAN:	return "LITTLE_ENDIAN";
+  case BFD_ENDIAN_BIG:		return "BIG_ENDIAN";
+  case BFD_ENDIAN_LITTLE:	return "LITTLE_ENDIAN";
   }
 
   return "UNKNOWN";
@@ -117,7 +116,7 @@ print_options (void)
   printf_filtered ("Compiled on %s %s\n", __DATE__, __TIME__);
 #endif
 
-  printf_filtered ("WITH_HOST_BYTE_ORDER     = %s\n", options_byte_order (WITH_HOST_BYTE_ORDER));
+  printf_filtered ("HOST_BYTE_ORDER          = %s\n", options_byte_order (HOST_BYTE_ORDER));
   printf_filtered ("WITH_TARGET_BYTE_ORDER   = %s\n", options_byte_order (WITH_TARGET_BYTE_ORDER));
   printf_filtered ("WITH_XOR_ENDIAN          = %d\n", WITH_XOR_ENDIAN);
   printf_filtered ("WITH_SMP                 = %d\n", WITH_SMP);

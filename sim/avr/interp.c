@@ -29,6 +29,7 @@
 #include "sim-main.h"
 #include "sim-base.h"
 #include "sim-options.h"
+#include "sim-signal.h"
 
 /* As AVR is a 8/16 bits processor, define handy types.  */
 typedef unsigned short int word;
@@ -1686,6 +1687,7 @@ sim_open (SIM_OPEN_KIND kind, host_callback *cb,
 
   /* Set default options before parsing user options.  */
   current_alignment = STRICT_ALIGNMENT;
+  current_target_byte_order = BFD_ENDIAN_LITTLE;
 
   /* The cpu data is kept in a separately allocated chunk of memory.  */
   if (sim_cpu_alloc_all (sd, 1) != SIM_RC_OK)

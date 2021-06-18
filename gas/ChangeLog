@@ -1,3 +1,94 @@
+2021-06-17  Nick Clifton  <nickc@redhat.com>
+
+	PR 27904
+	* config/tc-aarch64.c (ldst_lo12_determine_real_reloc_type):
+	Generate a syntax error message if the reloc qualifier does not
+	match the instruction's size.
+
+2021-06-17  Clément Chigot  <clement.chigot@atos.net>
+
+	* config/tc-ppc.c (md_begin): Create bss section with dummy
+	symbol.
+	(ppc_frob_symbol): Output XTY_CM for bss csects.
+	(ppc_fix_adjustable): Adjust condition to avoid bss csects.
+
+2021-06-17  Clément Chigot  <clement.chigot@atos.net>
+
+	* config/tc-ppc.c (md_apply_fix): Adjust addend to nullify
+	section contents for BFD_RELOC_PPC_TLSM or
+	BFD_RELOC_PPC64_TLSM.
+	* testsuite/gas/ppc/xcoff-tlsm-32.d: New test.
+	* testsuite/gas/ppc/xcoff-tlsm-64.d: New test.
+	* testsuite/gas/ppc/xcoff-tlsm.s: New test.
+	* testsuite/gas/ppc/aix.exp: Run new tests.
+
+2021-06-16  Jan Beulich  <jbeulich@suse.com>
+
+	* read.c (parse_one_float): New.
+	(s_float_space, float_cons): Use it.
+	* testsuite/gas/all/float.s: Add .dc.*, .dcb.*, and .ds.* cases.
+
+2021-06-16  Jan Beulich  <jbeulich@suse.com>
+
+	* read.c (emit_expr_with_reloc): Adjust overflow check. Drop
+	hibit local variable.
+	* write.c (fixup_segment): Differentiate signed and non-signed
+	relocs in overflow check.
+	* testsuite/gas/all/overflow.s,
+	testsuite/gas/all/overflow.l: New.
+	* testsuite/gas/all/gas.exp: Run new test.
+
+2021-06-15  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (md_show_usage): Split ELF and PE/COFF parts
+	of object format controlling option. Add Mach-O to the latter.
+	* testsuite/gas/i386/i386.exp (gas_bfd64_check): Adjust
+	accordingly.
+
+2021-06-15  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (disp16, disp32, disp32s): Delete.
+	(optimize_disp, i386_finalize_displacement): Use
+	operand_type_and_not.
+	(build_modrm_byte): Likewise. Eliminate local variable newdisp.
+
+2021-06-15  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (offset_in_range): Bail early when mask would
+	cover all bits anyway.
+
+2021-06-15  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (optimize_disp): Generalize disp32 part of
+	the BFD64-only logic to also apply to non-64-bit code.
+	(i386_finalize_displacement): Use extend_to_32bit_address for
+	non-64-bit code. Drop now redundant O_constant checks.
+	* testsuite/gas/i386/disp-imm-32.s,
+	testsuite/gas/i386/disp-imm-32.d: New.
+	* testsuite/gas/i386/i386.exp: Run new test.
+
+2021-06-15  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (offset_in_range): Replace uses of
+	bfd_sprintf_vma.
+
+2021-06-15  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (offset_in_range): Adjust conditional.
+	* testsuite/gas/i386/disp-imm-16.s,
+	testsuite/gas/i386/disp-imm-16.l,
+	testsuite/gas/i386/disp-imm-64.s,
+	testsuite/gas/i386/disp-imm-64.l: New.
+	* testsuite/gas/i386/i386.exp: Run new tests.
+
+2021-06-15  Jan Beulich  <jbeulich@suse.com>
+
+	* config/tc-i386.c (i386_att_operand): Re-introduce (now
+	properly named) parens_not_balanced.
+	* testsuite/gas/i386/sib.s: Add more cases.
+	* testsuite/gas/i386/sib.d, testsuite/gas/i386/sib-intel.d:
+	Adjust expectations.
+
 2021-06-14  Jan Beulich  <jbeulich@suse.com>
 
 	* read.c (emit_expr_with_reloc): Fold three as_warn().
