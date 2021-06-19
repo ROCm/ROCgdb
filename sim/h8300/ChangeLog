@@ -1,3 +1,20 @@
+2021-06-19  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2021-06-19  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure: Regenerate.
+
+2021-06-18  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4, configure: Regenerate.
+
+2021-06-18  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure: Regenerate.
+
 2021-06-18  Mike Frysinger  <vapier@gentoo.org>
 
 	* compile.c: Include sim-signal.h.

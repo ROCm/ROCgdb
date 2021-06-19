@@ -5,7 +5,6 @@ AC_CONFIG_MACRO_DIRS([../m4 ../.. ../../config])
 SIM_AC_COMMON
 
 dnl Options available in this module
-SIM_AC_OPTION_WARNINGS(no)
 SIM_AC_OPTION_RESERVED_BITS(1)
 
 # DEPRECATED
@@ -407,10 +406,5 @@ AC_SUBST(sim_multi_obj)
 # Add simulated hardware devices
 #
 SIM_AC_OPTION_HARDWARE(tx3904cpu tx3904irc tx3904tmr tx3904sio)
-
-
-AC_PATH_X
-
-AC_CHECK_LIB(m, fabs)
 
 SIM_AC_OUTPUT
