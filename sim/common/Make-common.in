@@ -52,9 +52,6 @@ include ../arch-subdir.mk
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 
-host_alias = @host_alias@
-target_alias = @target_alias@
-program_transform_name = @program_transform_name@
 bindir = @bindir@
 
 libdir = @libdir@
@@ -70,21 +67,7 @@ includedir = @includedir@
 # This can be referenced by the gettext configuration code.
 top_builddir = ..
 
-EXEEXT = @EXEEXT@
 SHELL = @SHELL@
-
-INSTALL = @INSTALL@
-INSTALL_PROGRAM = @INSTALL_PROGRAM@
-INSTALL_DATA = @INSTALL_DATA@
-
-CC = @CC@
-C_DIALECT = @C_DIALECT@
-CC_FOR_BUILD = @CC_FOR_BUILD@
-CFLAGS_FOR_BUILD = @CFLAGS_FOR_BUILD@
-CFLAGS = @CFLAGS@
-CPPFLAGS = @CPPFLAGS@
-CXXFLAGS = @CXXFLAGS@
-LDFLAGS = @LDFLAGS@
 
 SIM_BITSIZE = @sim_bitsize@
 SIM_DEFAULT_MODEL = @sim_default_model@
@@ -98,14 +81,7 @@ SIM_SCACHE = @sim_scache@
 SIM_WARN_CFLAGS = $(WARN_CFLAGS)
 SIM_WERROR_CFLAGS = $(WERROR_CFLAGS)
 
-AR = @AR@
-AR_FLAGS = rc
-RANLIB = @RANLIB@
-MAKEINFO = makeinfo
-
 # Dependency tracking information.
-DEPMODE = @CCDEPMODE@
-DEPDIR = @DEPDIR@
 depcomp = $(SHELL) $(srcroot)/depcomp
 
 # Note that these are overridden by GNU make-specific code below if
@@ -235,7 +211,7 @@ CSEARCH = -I. -I$(srcdir) -I../common -I$(srccom) \
   -I../../bfd -I$(srcroot)/bfd \
   -I../../opcodes -I$(srcroot)/opcodes \
   -I../.. \
-  @INCINTL@
+  $(INTL_CFLAGS)
 ALL_CFLAGS = $(CONFIG_CFLAGS) $(CSEARCH) $(INCGNU) $(SIM_EXTRA_CFLAGS) $(CFLAGS)
 BUILD_CFLAGS = $(CFLAGS_FOR_BUILD) $(CSEARCH)
 
@@ -245,8 +221,6 @@ ZLIB = $(zlibdir) -lz
 LIBIBERTY_LIB = ../../libiberty/libiberty.a
 BFD_LIB = ../../bfd/libbfd.a
 OPCODES_LIB = ../../opcodes/libopcodes.a
-LIBINTL = @LIBINTL@
-LIBINTL_DEP = @LIBINTL_DEP@
 CONFIG_LIBS = $(COMMON_LIBS) @LIBS@ $(ZLIB)
 LIBDEPS = $(BFD_LIB) $(OPCODES_LIB) $(LIBINTL_DEP) $(LIBIBERTY_LIB)
 EXTRA_LIBS = $(BFD_LIB) $(OPCODES_LIB) $(LIBINTL) $(LIBIBERTY_LIB) \
