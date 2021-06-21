@@ -39,6 +39,7 @@ LDFLAGS = @LDFLAGS@
 AR = @AR@
 AR_FLAGS = rc
 RANLIB = @RANLIB@
+DTC = @DTC@
 
 DEPMODE = @CCDEPMODE@
 DEPDIR = @DEPDIR@
@@ -52,3 +53,18 @@ INTL_CFLAGS = @INCINTL@
 COMMON_LIBS = @LIBS@
 WARN_CFLAGS = @WARN_CFLAGS@
 WERROR_CFLAGS = @WERROR_CFLAGS@
+
+# Maintainer support, enable with --enable-maintainer-mode.
+# Once all subdirs are moved to automake, we can drop this custom logic and
+# switch back to using @MAINTAINER_MODE_TRUE@ directly.
+MAINT = ; @true
+# The following line is commented depending upon --enable-maintainer-mode.
+@MAINTAINER_MODE_TRUE@MAINT =
+
+# cgen support, enable with --enable-cgen-maint
+CGEN_MAINT = ; @true
+# The following line is commented in or out depending upon --enable-cgen-maint.
+@CGEN_MAINT@CGEN_MAINT =
+CGENDIR = @cgendir@
+
+SIM_INLINE = @SIM_INLINE@

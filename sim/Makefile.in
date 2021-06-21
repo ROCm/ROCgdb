@@ -205,9 +205,11 @@ am__aclocal_m4_deps = $(top_srcdir)/../config/acx.m4 \
 	$(top_srcdir)/../ltversion.m4 $(top_srcdir)/../lt~obsolete.m4 \
 	$(top_srcdir)/m4/sim_ac_option_alignment.m4 \
 	$(top_srcdir)/m4/sim_ac_option_assert.m4 \
+	$(top_srcdir)/m4/sim_ac_option_cgen_maint.m4 \
 	$(top_srcdir)/m4/sim_ac_option_debug.m4 \
 	$(top_srcdir)/m4/sim_ac_option_endian.m4 \
 	$(top_srcdir)/m4/sim_ac_option_environment.m4 \
+	$(top_srcdir)/m4/sim_ac_option_inline.m4 \
 	$(top_srcdir)/m4/sim_ac_option_profile.m4 \
 	$(top_srcdir)/m4/sim_ac_option_stdio.m4 \
 	$(top_srcdir)/m4/sim_ac_option_trace.m4 \
@@ -637,6 +639,7 @@ CCDEPMODE = @CCDEPMODE@
 CC_FOR_BUILD = @CC_FOR_BUILD@
 CFLAGS = @CFLAGS@
 CFLAGS_FOR_BUILD = @CFLAGS_FOR_BUILD@
+CGEN_MAINT = @CGEN_MAINT@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -645,6 +648,7 @@ DATADIRNAME = @DATADIRNAME@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
+DTC = @DTC@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -699,6 +703,7 @@ REPORT_BUGS_TO = @REPORT_BUGS_TO@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIM_INLINE = @SIM_INLINE@
 SIM_PRIMARY_TARGET = @SIM_PRIMARY_TARGET@
 STRIP = @STRIP@
 USE_NLS = @USE_NLS@
@@ -724,6 +729,8 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
+cgen = @cgen@
+cgendir = @cgendir@
 datadir = @datadir@
 datarootdir = @datarootdir@
 docdir = @docdir@
@@ -782,7 +789,7 @@ DISTCLEANFILES =
 MOSTLYCLEANFILES = core $(am__append_4) site-srcdir.exp testrun.log \
 	testrun.sum
 AM_CFLAGS = $(WERROR_CFLAGS) $(WARN_CFLAGS)
-AM_CPPFLAGS = -I$(srcroot)/include -I$(srcdir)/common
+AM_CPPFLAGS = -I$(srcroot)/include $(SIM_INLINE) -I$(srcdir)/common
 COMPILE_FOR_BUILD = $(CC_FOR_BUILD) $(AM_CPPFLAGS) $(CFLAGS_FOR_BUILD)
 LINK_FOR_BUILD = $(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) -o $@
 

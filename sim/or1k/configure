@@ -587,12 +587,6 @@ LIBOBJS
 sim_reserved_bits
 sim_float
 cgen_breaks
-cgen
-cgendir
-CGEN_MAINT
-MAINT
-MAINTAINER_MODE_FALSE
-MAINTAINER_MODE_TRUE
 target_alias
 host_alias
 build_alias
@@ -632,7 +626,6 @@ PACKAGE_NAME
 PATH_SEPARATOR
 SHELL
 sim_scache
-sim_inline
 sim_hw
 sim_hw_objs
 sim_hw_cflags
@@ -641,12 +634,9 @@ sim_bitsize'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-enable_maintainer_mode
-enable_sim_inline
 enable_sim_bitsize
 enable_sim_scache
 enable_sim_default_model
-enable_cgen_maint
 enable_sim_hardware
 '
       ac_precious_vars='build_alias
@@ -1259,17 +1249,11 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-maintainer-mode
-                          enable make rules and dependencies not useful (and
-                          sometimes confusing) to the casual installer
-  --enable-sim-inline=inlines
-                          Specify which functions should be inlined
   --enable-sim-bitsize=N  Specify target bitsize (32 or 64)
   --enable-sim-scache=size
                           Specify simulator execution cache size
   --enable-sim-default-model=model
                           Specify default model to simulate
-  --enable-cgen-maint=DIR build cgen generated files
   --enable-sim-hardware=LIST
                           Specify the hardware to be included in the build.
 
@@ -1703,65 +1687,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-
-
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to enable maintainer-specific portions of Makefiles" >&5
-$as_echo_n "checking whether to enable maintainer-specific portions of Makefiles... " >&6; }
-    # Check whether --enable-maintainer-mode was given.
-if test "${enable_maintainer_mode+set}" = set; then :
-  enableval=$enable_maintainer_mode; USE_MAINTAINER_MODE=$enableval
-else
-  USE_MAINTAINER_MODE=no
-fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $USE_MAINTAINER_MODE" >&5
-$as_echo "$USE_MAINTAINER_MODE" >&6; }
-   if test $USE_MAINTAINER_MODE = yes; then
-  MAINTAINER_MODE_TRUE=
-  MAINTAINER_MODE_FALSE='#'
-else
-  MAINTAINER_MODE_TRUE='#'
-  MAINTAINER_MODE_FALSE=
-fi
-
-  MAINT=$MAINTAINER_MODE_TRUE
-
-
-
-
-sim_inline="-DDEFAULT_INLINE=0"
-# Check whether --enable-sim-inline was given.
-if test "${enable_sim_inline+set}" = set; then :
-  enableval=$enable_sim_inline; sim_inline=""
-case "$enableval" in
-  no)		sim_inline="-DDEFAULT_INLINE=0";;
-  0)		sim_inline="-DDEFAULT_INLINE=0";;
-  yes | 2)	sim_inline="-DDEFAULT_INLINE=ALL_C_INLINE";;
-  1)		sim_inline="-DDEFAULT_INLINE=INLINE_LOCALS";;
-  *) for x in `echo "$enableval" | sed -e "s/,/ /g"`; do
-       new_flag=""
-       case "$x" in
-	 *_INLINE=*)	new_flag="-D$x";;
-	 *=*)		new_flag=`echo "$x" | sed -e "s/=/_INLINE=/" -e "s/^/-D/"`;;
-	 *_INLINE)	new_flag="-D$x=ALL_C_INLINE";;
-	 *)		new_flag="-D$x""_INLINE=ALL_C_INLINE";;
-       esac
-       if test x"$sim_inline" = x""; then
-	 sim_inline="$new_flag"
-       else
-	 sim_inline="$sim_inline $new_flag"
-       fi
-     done;;
-esac
-if test x"$silent" != x"yes" && test x"$sim_inline" != x""; then
-  echo "Setting inline flags = $sim_inline" 6>&1
-fi
-fi
-
-
-
 wire_word_bitsize="32"
 wire_word_msb="31"
 wire_address_bitsize="32"
@@ -1854,39 +1779,6 @@ fi
 else
   sim_default_model="-DWITH_DEFAULT_MODEL='\"${default_sim_default_model}\"'"
 fi
-
-
-
-cgen_maint=no
-cgen=guile
-cgendir='$(srcdir)/../../cgen'
-# Check whether --enable-cgen-maint was given.
-if test "${enable_cgen_maint+set}" = set; then :
-  enableval=$enable_cgen_maint; case "${enableval}" in
-  yes)	cgen_maint=yes ;;
-  no)	cgen_maint=no ;;
-  *)
-	# Argument is a directory where cgen can be found.  In some
-	# future world cgen could be installable, but right now this
-	# is not the case.  Instead we assume the directory is a path
-	# to the cgen source tree.
-	cgen_maint=yes
-        if test -r ${enableval}/iformat.scm; then
-          # This looks like a cgen source tree.
-	  cgendir=${enableval}
-        else
-	  as_fn_error $? "${enableval} doesn't look like a cgen source tree" "$LINENO" 5
-        fi
-	;;
-esac
-fi
-if test x${cgen_maint} != xno ; then
-  CGEN_MAINT=''
-else
-  CGEN_MAINT='#'
-fi
-
-
 
 
 
@@ -2111,10 +2003,6 @@ LIBOBJS=$ac_libobjs
 LTLIBOBJS=$ac_ltlibobjs
 
 
-if test -z "${MAINTAINER_MODE_TRUE}" && test -z "${MAINTAINER_MODE_FALSE}"; then
-  as_fn_error $? "conditional \"MAINTAINER_MODE\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 
 : "${CONFIG_STATUS=./config.status}"
 ac_write_fail=0
