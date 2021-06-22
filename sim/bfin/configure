@@ -639,15 +639,11 @@ PACKAGE_TARNAME
 PACKAGE_NAME
 PATH_SEPARATOR
 SHELL
-sim_hw
-sim_hw_objs
-sim_hw_cflags
 sim_default_model'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_sim_default_model
-enable_sim_hardware
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1271,8 +1267,6 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-sim-default-model=model
                           Specify default model to simulate
-  --enable-sim-hardware=LIST
-                          Specify the hardware to be included in the build.
 
 Some influential environment variables:
   PKG_CONFIG  path to pkg-config utility
@@ -1822,88 +1816,6 @@ else
   sim_default_model="-DWITH_DEFAULT_MODEL='\"${default_sim_default_model}\"'"
 fi
 
-
-
-hardware="cfi core pal glue \
-	bfin_cec \
-	bfin_ctimer \
-	bfin_dma \
-	bfin_dmac \
-	bfin_ebiu_amc \
-	bfin_ebiu_ddrc \
-	bfin_ebiu_sdc \
-	bfin_emac \
-	bfin_eppi \
-	bfin_evt \
-	bfin_gpio \
-	bfin_gpio2 \
-	bfin_gptimer \
-	bfin_jtag \
-	bfin_mmu \
-	bfin_nfc \
-	bfin_otp \
-	bfin_pfmon \
-	bfin_pint \
-	bfin_pll \
-	bfin_ppi \
-	bfin_rtc \
-	bfin_sic \
-	bfin_spi \
-	bfin_trace \
-	bfin_twi \
-	bfin_uart \
-	bfin_uart2 \
-	bfin_wdog \
-	bfin_wp \
-	eth_phy \
-"
-sim_hw_cflags="-DWITH_HW=1"
-sim_hw="$hardware"
-sim_hw_objs="\$(SIM_COMMON_HW_OBJS) `echo $sim_hw | sed -e 's/\([^ ][^ ]*\)/dv-\1.o/g'`"
-
-# Check whether --enable-sim-hardware was given.
-if test "${enable_sim_hardware+set}" = set; then :
-  enableval=$enable_sim_hardware;
-else
-  enable_sim_hardware="yes"
-fi
-
-case ${enable_sim_hardware} in
-  yes|no) ;;
-  ,*) hardware="${hardware} `echo ${enableval} | sed -e 's/,/ /'`";;
-  *,) hardware="`echo ${enableval} | sed -e 's/,/ /'` ${hardware}";;
-  *)  hardware="`echo ${enableval} | sed -e 's/,/ /'`"'';;
-esac
-
-if test "$enable_sim_hardware" = no; then
-  sim_hw_objs=
-  sim_hw_cflags="-DWITH_HW=0"
-  sim_hw=
-else
-  sim_hw_cflags="-DWITH_HW=1"
-  # remove duplicates
-  sim_hw=""
-  sim_hw_objs="\$(SIM_COMMON_HW_OBJS)"
-  for i in $hardware ; do
-    case " $sim_hw " in
-      *" $i "*) ;;
-      *) sim_hw="$sim_hw $i" ; sim_hw_objs="$sim_hw_objs dv-$i.o";;
-    esac
-  done
-  # mingw does not support sockser
-  case ${host} in
-    *mingw*) ;;
-    *) # TODO: We don't add dv-sockser to sim_hw as it is not a "real" device
-       # that you instatiate.  Instead, other code will call into it directly.
-       # At some point, we should convert it over.
-       sim_hw_objs="$sim_hw_objs dv-sockser.o"
-       sim_hw_cflags="$sim_hw_cflags -DHAVE_DV_SOCKSER"
-       ;;
-  esac
-  if test x"$silent" != x"yes"; then
-    echo "Setting hardware to $sim_hw_cflags, $sim_hw, $sim_hw_objs"
-  fi
-fi
 
 
 
@@ -2960,7 +2872,6 @@ fi
 
 
 
-
 cgen_breaks=""
 if grep CGEN_MAINT $srcdir/Makefile.in >/dev/null; then
 cgen_breaks="break cgen_rtx_error";
@@ -2975,9 +2886,6 @@ ac_config_files="$ac_config_files .gdbinit:../common/gdbinit.in"
 ac_config_commands="$ac_config_commands Makefile"
 
 ac_config_commands="$ac_config_commands stamp-h"
-
-
-
 
 
 

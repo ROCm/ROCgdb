@@ -78,6 +78,11 @@
   and "-eiex" that allow options (that would normally appear in a
   gdbearlyinit file) to be passed on the command line.
 
+* For RISC-V targets, the target feature "org.gnu.gdb.riscv.vector" is
+  now understood by GDB, and can be used to describe the vector
+  registers of a target.  The precise requirements of this register
+  feature are documented in the GDB manual.
+
 * New commands
 
 set debug event-loop
@@ -219,6 +224,12 @@ QMemTags
   ** Inferior objects now contain a read-only 'connection_num' attribute that
      gives the connection number as seen in 'info connections' and
      'info inferiors'.
+
+  ** New method gdb.Frame.level() which returns the stack level of the
+     frame object.
+
+  ** New method gdb.PendingFrame.level() which returns the stack level
+     of the frame object.
 
 *** Changes in GDB 10
 

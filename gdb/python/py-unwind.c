@@ -27,6 +27,7 @@
 #include "python-internal.h"
 #include "regcache.h"
 #include "valprint.h"
+#include "user-regs.h"
 
 /* Debugging of Python unwinders.  */
 
@@ -265,6 +266,26 @@ unwind_infopy_add_saved_register (PyObject *self, PyObject *args)
       PyErr_SetString (PyExc_ValueError, "Bad register");
       return NULL;
     }
+
+  /* If REGNUM identifies a user register then *maybe* we can convert this
+     to a real (i.e. non-user) register.  The maybe qualifier is because we
+     don't know what user registers each target might add, however, the
+     following logic should work for the usual style of user registers,
+     where the read function just forwards the register read on to some
+     other register with no adjusting the value.  */
+  if (regnum >= gdbarch_num_cooked_regs (pending_frame->gdbarch))
+    {
+      struct value *user_reg_value
+	= value_of_user_reg (regnum, pending_frame->frame_info);
+      if (VALUE_LVAL (user_reg_value) == lval_register)
+	regnum = VALUE_REGNUM (user_reg_value);
+      if (regnum >= gdbarch_num_cooked_regs (pending_frame->gdbarch))
+	{
+	  PyErr_SetString (PyExc_ValueError, "Bad register");
+	  return NULL;
+	}
+    }
+
   {
     struct value *value;
     size_t data_size;
@@ -440,6 +461,23 @@ pending_framepy_architecture (PyObject *self, PyObject *args)
       return NULL;
     }
   return gdbarch_to_arch_object (pending_frame->gdbarch);
+}
+
+/* Implementation of PendingFrame.level (self) -> Integer.  */
+
+static PyObject *
+pending_framepy_level (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  if (pending_frame->frame_info == NULL)
+    {
+      PyErr_SetString (PyExc_ValueError,
+		       "Attempting to read stack level from stale PendingFrame");
+      return NULL;
+    }
+  int level = frame_relative_level (pending_frame->frame_info);
+  return gdb_py_object_from_longest (level).release ();
 }
 
 /* frame_unwind.this_id method.  */
@@ -683,6 +721,8 @@ static PyMethodDef pending_frame_object_methods[] =
     pending_framepy_architecture, METH_NOARGS,
     "architecture () -> gdb.Architecture\n"
     "The architecture for this PendingFrame." },
+  { "level", pending_framepy_level, METH_NOARGS,
+    "The stack level of this frame." },
   {NULL}  /* Sentinel */
 };
 
