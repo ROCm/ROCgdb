@@ -1,3 +1,31 @@
+2021-06-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* python/lib/gdb/__init__.py: Format.
+
+2021-06-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* infrun.c (do_target_wait): Remove wait_ptid parameter.
+	(fetch_inferior_event): Adjust.
+
+2021-06-22  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* python/lib/gdb/__init__.py (_execute_unwinders): Return tuple
+	with name of chosen unwinder.
+	* python/py-unwind.c (pyuw_sniffer): Print name of chosen
+	unwinder in debug message.
+
+2021-06-22  Andreas Schwab  <schwab@suse.de>
+
+	PR symtab/27999
+	* dwarf2/loc.c (decode_debug_loclists_addresses): Support
+	DW_LLE_start_end.
+
+2021-06-22  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* breakpoint.c (insert_bp_location): If we catch a
+	TARGET_CLOSE_ERROR just rethrow it, the breakpoints might have
+	been deleted.
+
 2021-06-21  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* NEWS: Mention new target feature name.

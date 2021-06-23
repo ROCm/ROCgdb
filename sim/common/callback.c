@@ -32,6 +32,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -56,6 +57,7 @@ void sim_cb_eprintf (host_callback *, const char *, ...);
 
 extern CB_TARGET_DEFS_MAP cb_init_syscall_map[];
 extern CB_TARGET_DEFS_MAP cb_init_errno_map[];
+extern CB_TARGET_DEFS_MAP cb_init_signal_map[];
 extern CB_TARGET_DEFS_MAP cb_init_open_map[];
 
 /* Make sure the FD provided is ok.  If not, return non-zero
@@ -557,6 +559,17 @@ os_truncate (host_callback *p, const char *file, int64_t len)
 }
 
 static int
+os_getpid (host_callback *p)
+{
+  int result;
+
+  result = getpid ();
+  /* POSIX says getpid always succeeds.  */
+  p->last_errno = 0;
+  return result;
+}
+
+static int
 os_pipe (host_callback *p, int *filedes)
 {
   int i;
@@ -665,6 +678,7 @@ os_init (host_callback *p)
 
   p->syscall_map = cb_init_syscall_map;
   p->errno_map = cb_init_errno_map;
+  p->signal_map = cb_init_signal_map;
   p->open_map = cb_init_open_map;
 
   return 1;
@@ -736,6 +750,8 @@ host_callback default_callback =
 
   os_ftruncate,
   os_truncate,
+
+  os_getpid,
 
   os_pipe,
   os_pipe_empty,
@@ -909,6 +925,19 @@ cb_target_to_host_open (host_callback *cb, int target_val)
     }
 
   return host_val;
+}
+
+/* Translate the target's version of a signal number to the host's.
+   This isn't actually the host's version, rather a canonical form.
+   ??? Perhaps this should be renamed to ..._canon_signal.  */
+
+int
+cb_target_to_host_signal (host_callback *cb, int target_val)
+{
+  const CB_TARGET_DEFS_MAP *m =
+    cb_target_map_entry (cb->signal_map, target_val);
+
+  return m ? m->host_val : -1;
 }
 
 /* Utility for e.g. cb_host_to_target_stat to store values in the target's
