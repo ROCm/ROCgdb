@@ -247,14 +247,14 @@ static const struct frame_unwind amdgcn_frame_unwind = {
 };
 
 static int
-print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
+print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *info)
 {
-  gdb_disassembler *self
-    = static_cast<gdb_disassembler *> (di->application_data);
+  gdb_disassembler *di
+    = static_cast<gdb_disassembler *> (info->application_data);
 
   /* Try to read at most instruction_size bytes.  */
 
-  amd_dbgapi_size_t instruction_size = gdbarch_max_insn_length (self->arch ());
+  amd_dbgapi_size_t instruction_size = gdbarch_max_insn_length (di->arch ());
   gdb::unique_xmalloc_ptr<gdb_byte> buffer (
     (gdb_byte *) xmalloc (instruction_size));
 
@@ -265,44 +265,43 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
      instruction is smaller than the largest instruction.  */
   while (instruction_size > 0)
     {
-      if (di->read_memory_func (memaddr, buffer.get (), instruction_size, di)
+      if (info->read_memory_func (memaddr, buffer.get (), instruction_size,
+				  info)
 	  == 0)
 	break;
       --instruction_size;
     }
   if (instruction_size == 0)
     {
-      di->memory_error_func (-1, memaddr, di);
+      info->memory_error_func (-1, memaddr, info);
       return -1;
     }
 
   amd_dbgapi_architecture_id_t architecture_id;
-  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (self->arch ())->mach,
+  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (di->arch ())->mach,
 				   &architecture_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return -1;
 
-  char *instruction_text = nullptr;
-
-  auto symbolizer
-    = [] (amd_dbgapi_symbolizer_id_t id, amd_dbgapi_global_address_t address,
-	  char **symbol_text) -> amd_dbgapi_status_t
+  auto symbolizer = [] (amd_dbgapi_symbolizer_id_t symbolizer_id,
+			amd_dbgapi_global_address_t address,
+			char **symbol_text) -> amd_dbgapi_status_t
   {
-    string_file string;
-    print_address (reinterpret_cast<struct gdbarch *> (id), address, &string);
+    gdb_disassembler *disasm
+      = reinterpret_cast<gdb_disassembler *> (symbolizer_id);
+
+    string_file string (disasm->stream ()->can_emit_style_escape ());
+    print_address (disasm->arch (), address, &string);
     *symbol_text = xstrdup (string.c_str ());
+
     return AMD_DBGAPI_STATUS_SUCCESS;
   };
+  auto symbolizer_id = reinterpret_cast<amd_dbgapi_symbolizer_id_t> (di);
 
-  if (amd_dbgapi_disassemble_instruction (architecture_id,
-					  static_cast<
-					    amd_dbgapi_global_address_t> (
-					    memaddr),
+  char *instruction_text = nullptr;
+  if (amd_dbgapi_disassemble_instruction (architecture_id, memaddr,
 					  &instruction_size, buffer.get (),
-					  &instruction_text,
-					  reinterpret_cast<
-					    amd_dbgapi_symbolizer_id_t> (
-					    self->arch ()),
+					  &instruction_text, symbolizer_id,
 					  symbolizer)
       != AMD_DBGAPI_STATUS_SUCCESS)
     {
@@ -314,13 +313,13 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *di)
 	  != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("amd_dbgapi_architecture_get_info failed"));
 
-      di->fprintf_func (di->stream, "<illegal instruction>");
+      info->fprintf_func (info->stream, "<illegal instruction>");
       /* Skip to the next valid instruction address.  */
       return align_up (memaddr + 1, alignment) - memaddr;
     }
 
   /* Print the instruction.  */
-  di->fprintf_func (di->stream, "%s", instruction_text);
+  info->fprintf_func (info->stream, "%s", instruction_text);
 
   /* Free the memory allocated by the amd-dbgapi.  */
   xfree (instruction_text);
