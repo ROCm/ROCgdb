@@ -135,18 +135,6 @@ cmd_cfunc_eq (struct cmd_list_element *cmd, cmd_const_cfunc_ftype *cfunc)
 }
 
 void
-set_cmd_context (struct cmd_list_element *cmd, void *context)
-{
-  cmd->context = context;
-}
-
-void *
-get_cmd_context (struct cmd_list_element *cmd)
-{
-  return cmd->context;
-}
-
-void
 set_cmd_completer (struct cmd_list_element *cmd, completer_ftype *completer)
 {
   cmd->completer = completer; /* Ok.  */
@@ -583,8 +571,7 @@ add_setshow_enum_cmd (const char *name,
 		      cmd_const_sfunc_ftype *set_func,
 		      show_value_ftype *show_func,
 		      struct cmd_list_element **set_list,
-		      struct cmd_list_element **show_list,
-		      void *context)
+		      struct cmd_list_element **show_list)
 {
   set_show_commands commands
     =  add_setshow_cmd_full (name, theclass, var_enum, var,
@@ -592,10 +579,6 @@ add_setshow_enum_cmd (const char *name,
 			     set_func, show_func,
 			     set_list, show_list);
   commands.set->enums = enumlist;
-
-  set_cmd_context (commands.set, context);
-  set_cmd_context (commands.show, context);
-
   return commands;
 }
 
@@ -920,7 +903,8 @@ delete_cmd (const char *name, struct cmd_list_element **list,
       if (strcmp (iter->name, name) == 0)
 	{
 	  if (iter->destroyer)
-	    iter->destroyer (iter, iter->context);
+	    iter->destroyer (iter, iter->context ());
+
 	  if (iter->hookee_pre)
 	    iter->hookee_pre->hook_pre = 0;
 	  *prehook = iter->hook_pre;

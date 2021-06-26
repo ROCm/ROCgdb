@@ -253,12 +253,6 @@ extern void set_cmd_completer_handle_brkchars (struct cmd_list_element *,
 extern int cmd_cfunc_eq (struct cmd_list_element *cmd,
 			 cmd_const_cfunc_ftype *cfun);
 
-/* Each command object has a local context attached to it.  */
-extern void set_cmd_context (struct cmd_list_element *cmd,
-			     void *context);
-extern void *get_cmd_context (struct cmd_list_element *cmd);
-
-
 /* Execute CMD's pre/post hook.  Throw an error if the command fails.
    If already executing this pre/post hook, or there is no pre/post
    hook, the call is silently ignored.  */
@@ -409,7 +403,7 @@ extern set_show_commands add_setshow_enum_cmd
    const char **var, const char *set_doc, const char *show_doc,
    const char *help_doc, cmd_const_sfunc_ftype *set_func,
    show_value_ftype *show_func, cmd_list_element **set_list,
-   cmd_list_element **show_list, void *context = nullptr);
+   cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_auto_boolean_cmd
   (const char *name, command_class theclass, auto_boolean *var,

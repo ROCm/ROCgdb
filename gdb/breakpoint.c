@@ -68,6 +68,7 @@
 #include "thread-fsm.h"
 #include "tid-parse.h"
 #include "cli/cli-style.h"
+#include "cli/cli-decode.h"
 
 /* readline include files */
 #include "readline/tilde.h"
@@ -8200,7 +8201,7 @@ catch_load_or_unload (const char *arg, int from_tty, int is_load,
 		      struct cmd_list_element *command)
 {
   const int enabled = 1;
-  bool temp = get_cmd_context (command) == CATCH_TEMPORARY;
+  bool temp = command->context () == CATCH_TEMPORARY;
 
   add_solib_catchpoint (arg, is_load, temp, enabled);
 }
@@ -11284,7 +11285,7 @@ catch_fork_command_1 (const char *arg, int from_tty,
   const char *cond_string = NULL;
   catch_fork_kind fork_kind;
 
-  fork_kind = (catch_fork_kind) (uintptr_t) get_cmd_context (command);
+  fork_kind = (catch_fork_kind) (uintptr_t) command->context ();
   bool temp = (fork_kind == catch_fork_temporary
 	       || fork_kind == catch_vfork_temporary);
 
@@ -11328,7 +11329,7 @@ catch_exec_command_1 (const char *arg, int from_tty,
 {
   struct gdbarch *gdbarch = get_current_arch ();
   const char *cond_string = NULL;
-  bool temp = get_cmd_context (command) == CATCH_TEMPORARY;
+  bool temp = command->context () == CATCH_TEMPORARY;
 
   if (!arg)
     arg = "";
@@ -15218,13 +15219,13 @@ add_catch_command (const char *name, const char *docstring,
   command = add_cmd (name, class_breakpoint, docstring,
 		     &catch_cmdlist);
   set_cmd_sfunc (command, sfunc);
-  set_cmd_context (command, user_data_catch);
+  command->set_context (user_data_catch);
   set_cmd_completer (command, completer);
 
   command = add_cmd (name, class_breakpoint, docstring,
 		     &tcatch_cmdlist);
   set_cmd_sfunc (command, sfunc);
-  set_cmd_context (command, user_data_tcatch);
+  command->set_context (user_data_tcatch);
   set_cmd_completer (command, completer);
 }
 

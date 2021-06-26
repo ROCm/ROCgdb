@@ -50,6 +50,7 @@
 #include "typeprint.h"
 #include "namespace.h"
 #include "cli/cli-style.h"
+#include "cli/cli-decode.h"
 
 #include "value.h"
 #include "mi/mi-common.h"
@@ -977,12 +978,10 @@ ada_remove_po_subprogram_suffix (const char *encoded, int *len)
     *len = *len - 1;
 }
 
-/* If ENCODED follows the GNAT entity encoding conventions, then return
-   the decoded form of ENCODED.  Otherwise, return "<%s>" where "%s" is
-   replaced by ENCODED.  */
+/* See ada-lang.h.  */
 
 std::string
-ada_decode (const char *encoded)
+ada_decode (const char *encoded, bool wrap)
 {
   int i, j;
   int len0;
@@ -1217,12 +1216,14 @@ ada_decode (const char *encoded)
   return decoded;
 
 Suppress:
+  if (!wrap)
+    return {};
+
   if (encoded[0] == '<')
     decoded = encoded;
   else
     decoded = '<' + std::string(encoded) + '>';
   return decoded;
-
 }
 
 /* Table for keeping permanent unique copies of decoded names.  Once
@@ -1485,7 +1486,7 @@ desc_bounds (struct value *arr)
 
   else if (is_thick_pntr (type))
     {
-      struct value *p_bounds = value_struct_elt (&arr, NULL, "P_BOUNDS", NULL,
+      struct value *p_bounds = value_struct_elt (&arr, {}, "P_BOUNDS", NULL,
 					       _("Bad GNAT array descriptor"));
       struct type *p_bounds_type = value_type (p_bounds);
 
@@ -1567,7 +1568,7 @@ desc_data (struct value *arr)
   if (is_thin_pntr (type))
     return thin_data_pntr (arr);
   else if (is_thick_pntr (type))
-    return value_struct_elt (&arr, NULL, "P_ARRAY", NULL,
+    return value_struct_elt (&arr, {}, "P_ARRAY", NULL,
 			     _("Bad GNAT array descriptor"));
   else
     return NULL;
@@ -1607,7 +1608,7 @@ desc_one_bound (struct value *bounds, int i, int which)
   char bound_name[20];
   xsnprintf (bound_name, sizeof (bound_name), "%cB%d",
 	     which ? 'U' : 'L', i - 1);
-  return value_struct_elt (&bounds, NULL, bound_name, NULL,
+  return value_struct_elt (&bounds, {}, bound_name, NULL,
 			   _("Bad GNAT array descriptor bounds"));
 }
 
@@ -12230,7 +12231,7 @@ catch_ada_exception_command (const char *arg_entry, int from_tty,
   std::string excep_string;
   std::string cond_string;
 
-  tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+  tempflag = command->context () == CATCH_TEMPORARY;
 
   if (!arg)
     arg = "";
@@ -12255,7 +12256,7 @@ catch_ada_handlers_command (const char *arg_entry, int from_tty,
   std::string excep_string;
   std::string cond_string;
 
-  tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+  tempflag = command->context () == CATCH_TEMPORARY;
 
   if (!arg)
     arg = "";
@@ -12323,7 +12324,7 @@ catch_assert_command (const char *arg_entry, int from_tty,
   int tempflag;
   std::string cond_string;
 
-  tempflag = get_cmd_context (command) == CATCH_TEMPORARY;
+  tempflag = command->context () == CATCH_TEMPORARY;
 
   if (!arg)
     arg = "";

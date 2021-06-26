@@ -49,6 +49,31 @@
     all locations of the selected breakpoint.  This is equivalent to
     the '-force' flag of the CLI's "cond" command.
 
+ ** '-file-list-exec-source-files [--group-by-objfile]
+ 	                          [--basename | --dirname]
+                                  [--] [REGEXP]'
+
+    The existing -file-list-exec-source-files command now takes an
+    optional REGEXP which is used to filter the source files that are
+    included in the results.
+
+    By default REGEXP is matched against the full filename of the
+    source file. When one of --basename or --dirname is given then
+    REGEXP is only matched against the specified part of the full
+    source filename.
+
+    When the optional --group-by-objfile flag is used the output
+    format is changed, the results are now a list of object files
+    (executable and libraries) with the source files that are
+    associated with each object file.
+
+    The results from -file-list-exec-source-files now include a
+    'debug-fully-read' field which takes the value 'true' or 'false'.
+    A 'true' value indicates the source file is from a compilation
+    unit that has had its debug information fully read in by GDB, a
+    value of 'false' indicates GDB has only performed a partial scan
+    of the debug information so far.
+
 * GDB now supports core file debugging for x86_64 Cygwin programs.
 
 * GDB will now look for the .gdbinit file in a config directory before
@@ -196,6 +221,12 @@ ptype[/FLAGS] TYPE | EXPRESSION
   offsets of struct members.  Default behavior is given by 'show print
   type hex'.
 
+info sources
+  The info sources command output has been restructured.  The results
+  are now based around a list of objfiles (executable and libraries),
+  and for each objfile the source files that are part of that objfile
+  are listed.
+
 * Removed targets and native configurations
 
 ARM Symbian			arm*-*-symbianelf*
@@ -230,6 +261,10 @@ QMemTags
 
   ** New method gdb.PendingFrame.level() which returns the stack level
      of the frame object.
+
+  ** When hitting a catchpoint, the Python API will now emit a
+     gdb.BreakpointEvent rather than a gdb.StopEvent.  The
+     gdb.Breakpoint attached to the event will have type BP_CATCHPOINT.
 
 *** Changes in GDB 10
 

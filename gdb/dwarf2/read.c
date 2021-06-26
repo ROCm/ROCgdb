@@ -1175,8 +1175,6 @@ static const char *read_dwo_str_index (const struct die_reader_specs *reader,
 static const char *read_stub_str_index (struct dwarf2_cu *cu,
 					ULONGEST str_index);
 
-static void set_cu_language (unsigned int, struct dwarf2_cu *);
-
 static struct attribute *dwarf2_attr (struct die_info *, unsigned int,
 				      struct dwarf2_cu *);
 
@@ -2028,6 +2026,8 @@ struct dwarf2_base_index_functions : public quick_symbol_functions
 {
   bool has_symbols (struct objfile *objfile) override;
 
+  bool has_unexpanded_symtabs (struct objfile *objfile) override;
+
   struct symtab *find_last_source_symtab (struct objfile *objfile) override;
 
   void forget_cached_source_info (struct objfile *objfile) override;
@@ -2641,18 +2641,12 @@ create_addrmap_from_aranges (dwarf2_per_objfile *per_objfile,
 
       /* Must pad to an alignment boundary that is twice the address
 	 size.  It is undocumented by the DWARF standard but GCC does
-	 use it.  */
-      for (size_t padding = ((-(addr - section->buffer))
-			     & (2 * address_size - 1));
-	   padding > 0; padding--)
-	if (*addr++ != 0)
-	  {
-	    warning (_("Section .debug_aranges in %s entry at offset %s "
-		       "padding is not zero, ignoring .debug_aranges."),
-		     objfile_name (objfile),
-		     plongest (entry_addr - section->buffer));
-	    return;
-	  }
+	 use it.  However, not every compiler does this.  We can see
+	 whether it has happened by looking at the total length of the
+	 contents of the aranges for this CU -- it if isn't a multiple
+	 of twice the address size, then we skip any leftover
+	 bytes.  */
+      addr += (entry_end - addr) % (2 * address_size);
 
       for (;;)
 	{
@@ -4478,6 +4472,26 @@ bool
 dwarf2_base_index_functions::has_symbols (struct objfile *objfile)
 {
   return true;
+}
+
+/* See quick_symbol_functions::has_unexpanded_symtabs in quick-symbol.h.  */
+
+bool
+dwarf2_base_index_functions::has_unexpanded_symtabs (struct objfile *objfile)
+{
+  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
+
+  for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
+    {
+      /* Is this already expanded?  */
+      if (per_objfile->symtab_set_p (per_cu.get ()))
+	continue;
+
+      /* It has not yet been expanded.  */
+      return true;
+    }
+
+  return false;
 }
 
 /* DWARF-5 debug_names reader.  */
@@ -7048,8 +7062,6 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
 				      reader.comp_unit_die,
 				      pretend_language);
 
-  this_cu->lang = reader.cu->language;
-
   /* Age out any secondary CUs.  */
   per_objfile->age_comp_units ();
 }
@@ -7565,7 +7577,7 @@ scan_partial_symbols (struct partial_die_info *first_die, CORE_ADDR *lowpc,
 	    case DW_TAG_subprogram:
 	    case DW_TAG_inlined_subroutine:
 	      add_partial_subprogram (pdi, lowpc, highpc, set_addrmap, cu);
-	      if (cu->language == language_cplus)
+	      if (cu->per_cu->lang == language_cplus)
 		scan_partial_symbols (pdi->die_child, lowpc, highpc,
 				      set_addrmap, cu);
 	      break;
@@ -7586,8 +7598,9 @@ scan_partial_symbols (struct partial_die_info *first_die, CORE_ADDR *lowpc,
 		{
 		  add_partial_symbol (pdi, cu);
 		}
-	      if ((cu->language == language_rust
-		   || cu->language == language_cplus) && pdi->has_children)
+	      if ((cu->per_cu->lang == language_rust
+		   || cu->per_cu->lang == language_cplus)
+		  && pdi->has_children)
 		scan_partial_symbols (pdi->die_child, lowpc, highpc,
 				      set_addrmap, cu);
 	      break;
@@ -7626,7 +7639,7 @@ scan_partial_symbols (struct partial_die_info *first_die, CORE_ADDR *lowpc,
 		/* Go read the partial unit, if needed.  */
 		if (per_cu->v.psymtab == NULL)
 		  process_psymtab_comp_unit (per_cu, cu->per_objfile, true,
-					     cu->language);
+					     cu->per_cu->lang);
 
 		cu->per_cu->imported_symtabs_push (per_cu);
 	      }
@@ -7701,7 +7714,7 @@ partial_die_parent_scope (struct partial_die_info *pdi,
   /* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they generated bogus
      DW_TAG_namespace DIEs with a name of "::" for the global namespace.
      Work around this problem here.  */
-  if (cu->language == language_cplus
+  if (cu->per_cu->lang == language_cplus
       && parent->tag == DW_TAG_namespace
       && strcmp (parent->name (cu), "::") == 0
       && grandparent_scope == NULL)
@@ -7722,7 +7735,7 @@ partial_die_parent_scope (struct partial_die_info *pdi,
       || parent->tag == DW_TAG_interface_type
       || parent->tag == DW_TAG_union_type
       || parent->tag == DW_TAG_enumeration_type
-      || (cu->language == language_fortran
+      || (cu->per_cu->lang == language_fortran
 	  && parent->tag == DW_TAG_subprogram
 	  && pdi->tag == DW_TAG_subprogram))
     {
@@ -7812,7 +7825,8 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
 
   partial_symbol psymbol;
   memset (&psymbol, 0, sizeof (psymbol));
-  psymbol.ginfo.set_language (cu->language, &objfile->objfile_obstack);
+  psymbol.ginfo.set_language (cu->per_cu->lang,
+			      &objfile->objfile_obstack);
   psymbol.ginfo.set_section_index (-1);
 
   /* The code below indicates that the psymbol should be installed by
@@ -7826,8 +7840,8 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
       addr = (gdbarch_adjust_dwarf2_addr (gdbarch, pdi->lowpc + baseaddr)
 	      - baseaddr);
       if (pdi->is_external
-	  || cu->language == language_ada
-	  || (cu->language == language_fortran
+	  || cu->per_cu->lang == language_ada
+	  || (cu->per_cu->lang == language_fortran
 	      && pdi->die_parent != NULL
 	      && pdi->die_parent->tag == DW_TAG_subprogram))
 	{
@@ -7846,7 +7860,7 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
       psymbol.ginfo.value.address = addr;
 
       if (pdi->main_subprogram && actual_name != NULL)
-	set_objfile_main_name (objfile, actual_name, cu->language);
+	set_objfile_main_name (objfile, actual_name, cu->per_cu->lang);
       break;
     case DW_TAG_constant:
       psymbol.domain = VAR_DOMAIN;
@@ -7951,14 +7965,14 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
 	 static vs. global.  */
       psymbol.domain = STRUCT_DOMAIN;
       psymbol.aclass = LOC_TYPEDEF;
-      where = (cu->language == language_cplus
+      where = (cu->per_cu->lang == language_cplus
 	       ? psymbol_placement::GLOBAL
 	       : psymbol_placement::STATIC);
       break;
     case DW_TAG_enumerator:
       psymbol.domain = VAR_DOMAIN;
       psymbol.aclass = LOC_CONST;
-      where = (cu->language == language_cplus
+      where = (cu->per_cu->lang == language_cplus
 	       ? psymbol_placement::GLOBAL
 	       : psymbol_placement::STATIC);
       break;
@@ -7970,7 +7984,8 @@ add_partial_symbol (struct partial_die_info *pdi, struct dwarf2_cu *cu)
     {
       if (built_actual_name != nullptr)
 	actual_name = objfile->intern (actual_name);
-      if (pdi->linkage_name == nullptr || cu->language == language_ada)
+      if (pdi->linkage_name == nullptr
+	  || cu->per_cu->lang == language_ada)
 	psymbol.ginfo.set_linkage_name (actual_name);
       else
 	{
@@ -8082,7 +8097,8 @@ add_partial_subprogram (struct partial_die_info *pdi,
   if (! pdi->has_children)
     return;
 
-  if (cu->language == language_ada || cu->language == language_fortran)
+  if (cu->per_cu->lang == language_ada
+      || cu->per_cu->lang == language_fortran)
     {
       pdi = pdi->die_child;
       while (pdi != NULL)
@@ -8690,7 +8706,7 @@ compute_delayed_physnames (struct dwarf2_cu *cu)
   /* Only C++ delays computing physnames.  */
   if (cu->method_list.empty ())
     return;
-  gdb_assert (cu->language == language_cplus);
+  gdb_assert (cu->per_cu->lang == language_cplus);
 
   for (const delayed_method_info &mi : cu->method_list)
     {
@@ -9119,7 +9135,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 static void
 rust_union_quirks (struct dwarf2_cu *cu)
 {
-  gdb_assert (cu->language == language_rust);
+  gdb_assert (cu->per_cu->lang == language_rust);
   for (type *type_ : cu->rust_unions)
     quirk_rust_enum (type_, cu->per_objfile->objfile);
   /* We don't need this any more.  */
@@ -9292,9 +9308,6 @@ process_full_comp_unit (dwarf2_cu *cu, enum language pretend_language)
   /* Clear the list here in case something was left over.  */
   cu->method_list.clear ();
 
-  cu->language = pretend_language;
-  cu->language_defn = language_def (cu->language);
-
   dwarf2_find_base_address (cu->dies, cu);
 
   /* Before we start reading the top-level DIE, ensure it has a valid tag
@@ -9316,7 +9329,7 @@ process_full_comp_unit (dwarf2_cu *cu, enum language pretend_language)
   process_die (cu->dies, cu);
 
   /* For now fudge the Go package.  */
-  if (cu->language == language_go)
+  if (cu->per_cu->lang == language_go)
     fixup_go_packaging (cu);
 
   /* Now that we have processed all the DIEs in the CU, all the types
@@ -9324,7 +9337,7 @@ process_full_comp_unit (dwarf2_cu *cu, enum language pretend_language)
      physnames.  */
   compute_delayed_physnames (cu);
 
-  if (cu->language == language_rust)
+  if (cu->per_cu->lang == language_rust)
     rust_union_quirks (cu);
 
   /* Some compilers don't define a DW_AT_high_pc attribute for the
@@ -9353,9 +9366,9 @@ process_full_comp_unit (dwarf2_cu *cu, enum language pretend_language)
       /* Set symtab language to language from DW_AT_language.  If the
 	 compilation is from a C file generated by language preprocessors, do
 	 not set the language if it was already deduced by start_subfile.  */
-      if (!(cu->language == language_c
+      if (!(cu->per_cu->lang == language_c
 	    && COMPUNIT_FILETABS (cust)->language != language_unknown))
-	COMPUNIT_FILETABS (cust)->language = cu->language;
+	COMPUNIT_FILETABS (cust)->language = cu->per_cu->lang;
 
       /* GCC-4.0 has started to support -fvar-tracking.  GCC-3.x still can
 	 produce DW_AT_location with location lists but it can be possibly
@@ -9405,14 +9418,11 @@ process_full_type_unit (dwarf2_cu *cu,
   /* Clear the list here in case something was left over.  */
   cu->method_list.clear ();
 
-  cu->language = pretend_language;
-  cu->language_defn = language_def (cu->language);
-
   /* The symbol tables are set up in read_type_unit_scope.  */
   process_die (cu->dies, cu);
 
   /* For now fudge the Go package.  */
-  if (cu->language == language_go)
+  if (cu->per_cu->lang == language_go)
     fixup_go_packaging (cu);
 
   /* Now that we have processed all the DIEs in the CU, all the types
@@ -9420,7 +9430,7 @@ process_full_type_unit (dwarf2_cu *cu,
      physnames.  */
   compute_delayed_physnames (cu);
 
-  if (cu->language == language_rust)
+  if (cu->per_cu->lang == language_rust)
     rust_union_quirks (cu);
 
   /* TUs share symbol tables.
@@ -9441,9 +9451,9 @@ process_full_type_unit (dwarf2_cu *cu,
 	     compilation is from a C file generated by language preprocessors,
 	     do not set the language if it was already deduced by
 	     start_subfile.  */
-	  if (!(cu->language == language_c
+	  if (!(cu->per_cu->lang == language_c
 		&& COMPUNIT_FILETABS (cust)->language != language_c))
-	    COMPUNIT_FILETABS (cust)->language = cu->language;
+	    COMPUNIT_FILETABS (cust)->language = cu->per_cu->lang;
 	}
     }
   else
@@ -9491,9 +9501,10 @@ process_imported_unit_die (struct die_info *die, struct dwarf2_cu *cu)
 	return;
 
       /* If necessary, add it to the queue and load its DIEs.  */
-      if (maybe_queue_comp_unit (cu, per_cu, per_objfile, cu->language))
+      if (maybe_queue_comp_unit (cu, per_cu, per_objfile,
+				 cu->per_cu->lang))
 	load_full_comp_unit (per_cu, per_objfile, per_objfile->get_cu (per_cu),
-			     false, cu->language);
+			     false, cu->per_cu->lang);
 
       cu->per_cu->imported_symtabs_push (per_cu);
     }
@@ -9551,7 +9562,7 @@ process_die (struct die_info *die, struct dwarf2_cu *cu)
       break;
     case DW_TAG_subprogram:
       /* Nested subprograms in Fortran get a prefix.  */
-      if (cu->language == language_fortran
+      if (cu->per_cu->lang == language_fortran
 	  && die->parent != NULL
 	  && die->parent->tag == DW_TAG_subprogram)
 	cu->processing_has_namespace_info = true;
@@ -9594,7 +9605,7 @@ process_die (struct die_info *die, struct dwarf2_cu *cu)
       /* We only need to handle this case for Ada -- in other
 	 languages, it's normal for the compiler to emit a typedef
 	 instead.  */
-      if (cu->language != language_ada)
+      if (cu->per_cu->lang != language_ada)
 	break;
       /* FALLTHROUGH */
     case DW_TAG_base_type:
@@ -9626,7 +9637,7 @@ process_die (struct die_info *die, struct dwarf2_cu *cu)
     case DW_TAG_imported_module:
       cu->processing_has_namespace_info = true;
       if (die->child != NULL && (die->tag == DW_TAG_imported_declaration
-				 || cu->language != language_fortran))
+				 || cu->per_cu->lang != language_fortran))
 	complaint (_("Tag '%s' has unexpected children"),
 		   dwarf_tag_name (die->tag));
       read_import_statement (die, cu);
@@ -9738,7 +9749,7 @@ dw2_linkage_name (struct die_info *die, struct dwarf2_cu *cu)
 
   /* rustc emits invalid values for DW_AT_linkage_name.  Ignore these.
      See https://github.com/rust-lang/rust/issues/32925.  */
-  if (cu->language == language_rust && linkage_name != NULL
+  if (cu->per_cu->lang == language_rust && linkage_name != NULL
       && strchr (linkage_name, '{') != NULL)
     linkage_name = NULL;
 
@@ -9776,6 +9787,8 @@ dwarf2_compute_name (const char *name,
   if (name == NULL)
     name = dwarf2_name (die, cu);
 
+  enum language lang = cu->per_cu->lang;
+
   /* For Fortran GDB prefers DW_AT_*linkage_name for the physname if present
      but otherwise compute it by typename_concat inside GDB.
      FIXME: Actually this is not really true, or at least not always true.
@@ -9783,8 +9796,8 @@ dwarf2_compute_name (const char *name,
      Fortran names because there is no mangling standard.  So new_symbol
      will set the demangled name to the result of dwarf2_full_name, and it is
      the demangled name that GDB uses if it exists.  */
-  if (cu->language == language_ada
-      || (cu->language == language_fortran && physname))
+  if (lang == language_ada
+      || (lang == language_fortran && physname))
     {
       /* For Ada unit, we prefer the linkage name over the name, as
 	 the former contains the exported name, which the user expects
@@ -9799,9 +9812,9 @@ dwarf2_compute_name (const char *name,
 
   /* These are the only languages we know how to qualify names in.  */
   if (name != NULL
-      && (cu->language == language_cplus
-	  || cu->language == language_fortran || cu->language == language_d
-	  || cu->language == language_rust))
+      && (lang == language_cplus
+	  || lang == language_fortran || lang == language_d
+	  || lang == language_rust))
     {
       if (die_needs_namespace (die, cu))
 	{
@@ -9842,12 +9855,11 @@ dwarf2_compute_name (const char *name,
 	     templates; two instantiated function templates are allowed to
 	     differ only by their return types, which we do not add here.  */
 
-	  if (cu->language == language_cplus && strchr (name, '<') == NULL)
+	  if (lang == language_cplus && strchr (name, '<') == NULL)
 	    {
 	      struct attribute *attr;
 	      struct die_info *child;
 	      int first = 1;
-	      const language_defn *cplus_lang = language_def (cu->language);
 
 	      die->building_fullname = 1;
 
@@ -9882,8 +9894,8 @@ dwarf2_compute_name (const char *name,
 
 		  if (child->tag == DW_TAG_template_type_param)
 		    {
-		      cplus_lang->print_type (type, "", &buf, -1, 0,
-					      &type_print_raw_options);
+		      cu->language_defn->print_type (type, "", &buf, -1, 0,
+						     &type_print_raw_options);
 		      continue;
 		    }
 
@@ -9903,7 +9915,7 @@ dwarf2_compute_name (const char *name,
 		  if (type->has_no_signedness ())
 		    /* GDB prints characters as NUMBER 'CHAR'.  If that's
 		       changed, this can use value_print instead.  */
-		    cplus_lang->printchar (value, type, &buf);
+		    cu->language_defn->printchar (value, type, &buf);
 		  else
 		    {
 		      struct value_print_options opts;
@@ -9949,14 +9961,14 @@ dwarf2_compute_name (const char *name,
 	     information, if PHYSNAME.  */
 
 	  if (physname && die->tag == DW_TAG_subprogram
-	      && cu->language == language_cplus)
+	      && lang == language_cplus)
 	    {
 	      struct type *type = read_type_die (die, cu);
 
-	      c_type_print_args (type, &buf, 1, cu->language,
+	      c_type_print_args (type, &buf, 1, lang,
 				 &type_print_raw_options);
 
-	      if (cu->language == language_cplus)
+	      if (lang == language_cplus)
 		{
 		  /* Assume that an artificial first parameter is
 		     "this", but do not crash if it is not.  RealView
@@ -9973,7 +9985,7 @@ dwarf2_compute_name (const char *name,
 
 	  const std::string &intermediate_name = buf.string ();
 
-	  if (cu->language == language_cplus)
+	  if (lang == language_cplus)
 	    canonical_name
 	      = dwarf2_canonicalize_name (intermediate_name.c_str (), cu,
 					  objfile);
@@ -10024,7 +10036,7 @@ dwarf2_physname (const char *name, struct die_info *die, struct dwarf2_cu *cu)
   if (!die_needs_namespace (die, cu))
     return dwarf2_compute_name (name, die, cu, 1);
 
-  if (cu->language != language_rust)
+  if (cu->per_cu->lang != language_rust)
     mangled = dw2_linkage_name (die, cu);
 
   /* DW_AT_linkage_name is missing in some cases - depend on what GDB
@@ -10032,8 +10044,7 @@ dwarf2_physname (const char *name, struct die_info *die, struct dwarf2_cu *cu)
   gdb::unique_xmalloc_ptr<char> demangled;
   if (mangled != NULL)
     {
-
-      if (language_def (cu->language)->store_sym_names_in_linkage_form_p ())
+      if (cu->language_defn->store_sym_names_in_linkage_form_p ())
 	{
 	  /* Do nothing (do not demangle the symbol name).  */
 	}
@@ -10167,7 +10178,7 @@ read_namespace_alias (struct die_info *die, struct dwarf2_cu *cu)
 static struct using_direct **
 using_directives (struct dwarf2_cu *cu)
 {
-  if (cu->language == language_ada
+  if (cu->per_cu->lang == language_ada
       && cu->get_builder ()->outermost_context_p ())
     return cu->get_builder ()->get_global_using_directives ();
   else
@@ -10258,12 +10269,15 @@ read_import_statement (struct die_info *die, struct dwarf2_cu *cu)
   else if (strlen (imported_name_prefix) > 0)
     canonical_name = obconcat (&objfile->objfile_obstack,
 			       imported_name_prefix,
-			       (cu->language == language_d ? "." : "::"),
+			       (cu->per_cu->lang == language_d
+				? "."
+				: "::"),
 			       imported_name, (char *) NULL);
   else
     canonical_name = imported_name;
 
-  if (die->tag == DW_TAG_imported_module && cu->language == language_fortran)
+  if (die->tag == DW_TAG_imported_module
+      && cu->per_cu->lang == language_fortran)
     for (child_die = die->child; child_die && child_die->tag;
 	 child_die = child_die->sibling)
       {
@@ -10504,7 +10518,7 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
   struct die_info *child_die;
   CORE_ADDR baseaddr;
 
-  prepare_one_comp_unit (cu, die, cu->language);
+  prepare_one_comp_unit (cu, die, cu->per_cu->lang);
   baseaddr = objfile->text_section_offset ();
 
   get_scope_pc_bounds (die, &lowpc, &highpc, cu);
@@ -10516,16 +10530,6 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
   lowpc = gdbarch_adjust_dwarf2_addr (gdbarch, lowpc + baseaddr);
 
   file_and_directory fnd = find_file_and_directory (die, cu);
-
-  /* The XLCL doesn't generate DW_LANG_OpenCL because this attribute is not
-     standardised yet.  As a workaround for the language detection we fall
-     back to the DW_AT_producer string.  */
-  if (cu->producer && strstr (cu->producer, "IBM XL C for OpenCL") != NULL)
-    cu->language = language_opencl;
-
-  /* Similar hack for Go.  */
-  if (cu->producer && strstr (cu->producer, "GNU Go ") != NULL)
-    set_cu_language (DW_LANG_Go, cu);
 
   cu->start_symtab (fnd.name, fnd.comp_dir, lowpc);
 
@@ -12721,7 +12725,7 @@ queue_and_load_dwo_tu (void **slot, void *info)
 	 a real dependency of PER_CU on SIG_TYPE.  That is detected later
 	 while processing PER_CU.  */
       if (maybe_queue_comp_unit (NULL, sig_type, cu->per_objfile,
-				 cu->language))
+				 cu->per_cu->lang))
 	load_full_type_unit (sig_type, cu->per_objfile);
       cu->per_cu->imported_symtabs_push (sig_type);
     }
@@ -13009,7 +13013,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 
   if (dwarf2_flag_true_p (die, DW_AT_main_subprogram, cu))
     set_objfile_main_name (objfile, newobj->name->linkage_name (),
-			   cu->language);
+			   cu->per_cu->lang);
 
   /* If there is a location expression for DW_AT_frame_base, record
      it.  */
@@ -13054,7 +13058,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   /* If we have a DW_AT_specification, we might need to import using
      directives from the context of the specification DIE.  See the
      comment in determine_prefix.  */
-  if (cu->language == language_cplus
+  if (cu->per_cu->lang == language_cplus
       && dwarf2_attr (die, DW_AT_specification, cu))
     {
       struct dwarf2_cu *spec_cu = cu;
@@ -13082,10 +13086,10 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 				     cstk.static_link, lowpc, highpc);
 
   /* For C++, set the block's scope.  */
-  if ((cu->language == language_cplus
-       || cu->language == language_fortran
-       || cu->language == language_d
-       || cu->language == language_rust)
+  if ((cu->per_cu->lang == language_cplus
+       || cu->per_cu->lang == language_fortran
+       || cu->per_cu->lang == language_d
+       || cu->per_cu->lang == language_rust)
       && cu->processing_has_namespace_info)
     block_set_scope (block, determine_prefix (die, cu),
 		     &objfile->objfile_obstack);
@@ -13561,7 +13565,7 @@ read_variable (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct rust_vtable_symbol *storage = NULL;
 
-  if (cu->language == language_rust)
+  if (cu->per_cu->lang == language_rust)
     {
       struct type *containing_type = rust_containing_type (die, cu);
 
@@ -14067,7 +14071,7 @@ dwarf2_get_subprogram_pc_bounds (struct die_info *die,
 
   /* If the language does not allow nested subprograms (either inside
      subprograms or lexical blocks), we're done.  */
-  if (cu->language != language_ada)
+  if (cu->per_cu->lang != language_ada)
     return;
 
   /* Check all the children of the given DIE.  If it contains nested
@@ -14834,7 +14838,7 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
   type->set_fields
     ((struct field *) TYPE_ZALLOC (type, sizeof (struct field) * nfields));
 
-  if (fip->non_public_fields && cu->language != language_ada)
+  if (fip->non_public_fields && cu->per_cu->lang != language_ada)
     {
       ALLOCATE_CPLUS_STRUCT_TYPE (type);
 
@@ -14853,7 +14857,7 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
 
   /* If the type has baseclasses, allocate and clear a bit vector for
      TYPE_FIELD_VIRTUAL_BITS.  */
-  if (!fip->baseclasses.empty () && cu->language != language_ada)
+  if (!fip->baseclasses.empty () && cu->per_cu->lang != language_ada)
     {
       int num_bytes = B_BYTES (fip->baseclasses.size ());
       unsigned char *pointer;
@@ -14879,12 +14883,12 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
       switch (field.accessibility)
 	{
 	case DW_ACCESS_private:
-	  if (cu->language != language_ada)
+	  if (cu->per_cu->lang != language_ada)
 	    SET_TYPE_FIELD_PRIVATE (type, i);
 	  break;
 
 	case DW_ACCESS_protected:
-	  if (cu->language != language_ada)
+	  if (cu->per_cu->lang != language_ada)
 	    SET_TYPE_FIELD_PROTECTED (type, i);
 	  break;
 
@@ -14905,7 +14909,7 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
 	    {
 	    case DW_VIRTUALITY_virtual:
 	    case DW_VIRTUALITY_pure_virtual:
-	      if (cu->language == language_ada)
+	      if (cu->per_cu->lang == language_ada)
 		error (_("unexpected virtuality in component of Ada type"));
 	      SET_TYPE_FIELD_VIRTUAL (type, i);
 	      break;
@@ -14956,7 +14960,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
   const char *fieldname;
   struct type *this_type;
 
-  if (cu->language == language_ada)
+  if (cu->per_cu->lang == language_ada)
     error (_("unexpected member function in Ada type"));
 
   /* Get name of member function.  */
@@ -14989,7 +14993,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
   fnp = &flp->fnfields.back ();
 
   /* Delay processing of the physname until later.  */
-  if (cu->language == language_cplus)
+  if (cu->per_cu->lang == language_cplus)
     add_to_method_list (type, i, flp->fnfields.size () - 1, fieldname,
 			die, cu);
   else
@@ -15144,7 +15148,7 @@ static void
 dwarf2_attach_fn_fields_to_type (struct field_info *fip, struct type *type,
 				 struct dwarf2_cu *cu)
 {
-  if (cu->language == language_ada)
+  if (cu->per_cu->lang == language_ada)
     error (_("unexpected member functions in Ada type"));
 
   ALLOCATE_CPLUS_STRUCT_TYPE (type);
@@ -15287,7 +15291,7 @@ static void
 quirk_ada_thick_pointer_struct (struct die_info *die, struct dwarf2_cu *cu,
 				struct type *type)
 {
-  gdb_assert (cu->language == language_ada);
+  gdb_assert (cu->per_cu->lang == language_ada);
 
   /* Check for a structure with two children.  */
   if (type->code () != TYPE_CODE_STRUCT || type->num_fields () != 2)
@@ -15466,9 +15470,9 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   name = dwarf2_name (die, cu);
   if (name != NULL)
     {
-      if (cu->language == language_cplus
-	  || cu->language == language_d
-	  || cu->language == language_rust)
+      if (cu->per_cu->lang == language_cplus
+	  || cu->per_cu->lang == language_d
+	  || cu->per_cu->lang == language_rust)
 	{
 	  const char *full_name = dwarf2_full_name (name, die, cu);
 
@@ -15500,7 +15504,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
       type->set_code (TYPE_CODE_STRUCT);
     }
 
-  if (cu->language == language_cplus && die->tag == DW_TAG_class_type)
+  if (cu->per_cu->lang == language_cplus && die->tag == DW_TAG_class_type)
     type->set_is_declared_class (true);
 
   /* Store the calling convention in the type if it's available in
@@ -15711,7 +15715,7 @@ handle_struct_member_die (struct die_info *child_die, struct type *type,
       /* Rust doesn't have member functions in the C++ sense.
 	 However, it does emit ordinary functions as children
 	 of a struct DIE.  */
-      if (cu->language == language_rust)
+      if (cu->per_cu->lang == language_rust)
 	read_func_scope (child_die, cu);
       else
 	{
@@ -15872,7 +15876,8 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 
       /* Copy fi.nested_types_list linked list elements content into the
 	 allocated array TYPE_NESTED_TYPES_ARRAY (type).  */
-      if (!fi.nested_types_list.empty () && cu->language != language_ada)
+      if (!fi.nested_types_list.empty ()
+	  && cu->per_cu->lang != language_ada)
 	{
 	  int count = fi.nested_types_list.size ();
 
@@ -15888,9 +15893,9 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
     }
 
   quirk_gcc_member_function_pointer (type, objfile);
-  if (cu->language == language_rust && die->tag == DW_TAG_union_type)
+  if (cu->per_cu->lang == language_rust && die->tag == DW_TAG_union_type)
     cu->rust_unions.push_back (type);
-  else if (cu->language == language_ada)
+  else if (cu->per_cu->lang == language_ada)
     quirk_ada_thick_pointer_struct (die, cu, type);
 
   /* NOTE: carlton/2004-03-16: GCC 3.4 (or at least one of its
@@ -16593,7 +16598,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
   maybe_set_alignment (cu, die, type);
 
   struct type *replacement_type = nullptr;
-  if (cu->language == language_ada)
+  if (cu->per_cu->lang == language_ada)
     {
       replacement_type = quirk_ada_thick_pointer (die, cu, type);
       if (replacement_type != nullptr)
@@ -16630,7 +16635,7 @@ read_array_order (struct die_info *die, struct dwarf2_cu *cu)
      FIXME: dsl/2004-8-20: If G77 is ever fixed, this will also need
      version checking.  */
 
-  if (cu->language == language_fortran
+  if (cu->per_cu->lang == language_fortran
       && cu->producer && strstr (cu->producer, "GNU F77"))
     {
       return DW_ORD_row_major;
@@ -17369,9 +17374,9 @@ prototyped_function_p (struct die_info *die, struct dwarf2_cu *cu)
      languages that allow unprototyped functions (Eg: Objective C).
      For all other languages, assume that functions are always
      prototyped.  */
-  if (cu->language != language_c
-      && cu->language != language_objc
-      && cu->language != language_opencl)
+  if (cu->per_cu->lang != language_c
+      && cu->per_cu->lang != language_objc
+      && cu->per_cu->lang != language_opencl)
     return 1;
 
   /* RealView does not emit DW_AT_prototyped.  We can not distinguish
@@ -17496,7 +17501,8 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 	      /* RealView does not mark THIS as const, which the testsuite
 		 expects.  GCC marks THIS as const in method definitions,
 		 but not in the class specifications (GCC PR 43053).  */
-	      if (cu->language == language_cplus && !TYPE_CONST (arg_type)
+	      if (cu->per_cu->lang == language_cplus
+		  && !TYPE_CONST (arg_type)
 		  && TYPE_FIELD_ARTIFICIAL (ftype, iparams))
 		{
 		  int is_this = 0;
@@ -17931,7 +17937,7 @@ dwarf2_init_complex_target_type (struct dwarf2_cu *cu,
   /* Try to find a suitable floating point builtin type of size BITS.
      We're going to use the name of this type as the name for the complex
      target type that we are about to create.  */
-  switch (cu->language)
+  switch (cu->per_cu->lang)
     {
     case language_fortran:
       switch (bits)
@@ -18021,7 +18027,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
     }
 
   if ((encoding == DW_ATE_signed_fixed || encoding == DW_ATE_unsigned_fixed)
-      && cu->language == language_ada
+      && cu->per_cu->lang == language_ada
       && has_zero_over_zero_small_attribute (die, cu))
     {
       /* brobecker/2018-02-24: This is a fixed point type for which
@@ -18043,7 +18049,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
      than an "else if".  */
   const char *gnat_encoding_suffix = nullptr;
   if ((encoding == DW_ATE_signed || encoding == DW_ATE_unsigned)
-      && cu->language == language_ada
+      && cu->per_cu->lang == language_ada
       && name != nullptr)
     {
       gnat_encoding_suffix = gnat_encoded_fixed_point_type_info (name);
@@ -18100,7 +18106,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	type = dwarf2_init_integer_type (cu, objfile, bits, 0, name);
 	break;
       case DW_ATE_unsigned:
-	if (cu->language == language_fortran
+	if (cu->per_cu->lang == language_fortran
 	    && name
 	    && startswith (name, "character("))
 	  type = init_character_type (objfile, bits, 1, name);
@@ -18108,18 +18114,20 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	  type = dwarf2_init_integer_type (cu, objfile, bits, 1, name);
 	break;
       case DW_ATE_signed_char:
-	if (cu->language == language_ada || cu->language == language_m2
-	    || cu->language == language_pascal
-	    || cu->language == language_fortran)
+	if (cu->per_cu->lang == language_ada
+	    || cu->per_cu->lang == language_m2
+	    || cu->per_cu->lang == language_pascal
+	    || cu->per_cu->lang == language_fortran)
 	  type = init_character_type (objfile, bits, 0, name);
 	else
 	  type = dwarf2_init_integer_type (cu, objfile, bits, 0, name);
 	break;
       case DW_ATE_unsigned_char:
-	if (cu->language == language_ada || cu->language == language_m2
-	    || cu->language == language_pascal
-	    || cu->language == language_fortran
-	    || cu->language == language_rust)
+	if (cu->per_cu->lang == language_ada
+	    || cu->per_cu->lang == language_m2
+	    || cu->per_cu->lang == language_pascal
+	    || cu->per_cu->lang == language_fortran
+	    || cu->per_cu->lang == language_rust)
 	  type = init_character_type (objfile, bits, 1, name);
 	else
 	  type = dwarf2_init_integer_type (cu, objfile, bits, 1, name);
@@ -18414,7 +18422,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   /* Set LOW_DEFAULT_IS_VALID if current language and DWARF version allow
      omitting DW_AT_lower_bound.  */
-  switch (cu->language)
+  switch (cu->per_cu->lang)
     {
     case language_c:
     case language_cplus:
@@ -18550,7 +18558,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
     range_type->bounds ()->flag_upper_bound_is_count = 1;
 
   /* Ada expects an empty array on no boundary attributes.  */
-  if (attr == NULL && cu->language != language_ada)
+  if (attr == NULL && cu->per_cu->lang != language_ada)
     range_type->bounds ()->high.set_undefined ();
 
   name = dwarf2_name (die, cu);
@@ -18583,7 +18591,7 @@ read_unspecified_type (struct die_info *die, struct dwarf2_cu *cu)
      of the type is deferred to a different unit.  When encountering
      such a type, we treat it as a stub, and try to resolve it later on,
      when needed.  */
-  if (cu->language == language_ada)
+  if (cu->per_cu->lang == language_ada)
     type->set_is_stub (true);
 
   return set_die_type (die, type, cu);
@@ -18883,7 +18891,7 @@ load_partial_dies (const struct die_reader_specs *reader,
       /* Check for template arguments.  We never save these; if
 	 they're seen, we just mark the parent, and go on our way.  */
       if (parent_die != NULL
-	  && cu->language == language_cplus
+	  && cu->per_cu->lang == language_cplus
 	  && (abbrev->tag == DW_TAG_template_type_param
 	      || abbrev->tag == DW_TAG_template_value_param))
 	{
@@ -18900,7 +18908,7 @@ load_partial_dies (const struct die_reader_specs *reader,
       /* We only recurse into c++ subprograms looking for template arguments.
 	 Skip their other children.  */
       if (!load_all
-	  && cu->language == language_cplus
+	  && cu->per_cu->lang == language_cplus
 	  && parent_die != NULL
 	  && parent_die->tag == DW_TAG_subprogram
 	  && abbrev->tag != DW_TAG_inlined_subroutine)
@@ -18914,7 +18922,7 @@ load_partial_dies (const struct die_reader_specs *reader,
 	 later variables referencing them via DW_AT_specification (for
 	 static members).  */
       if (!load_all
-	  && !is_type_tag_for_partial (abbrev->tag, cu->language)
+	  && !is_type_tag_for_partial (abbrev->tag, cu->per_cu->lang)
 	  && abbrev->tag != DW_TAG_constant
 	  && abbrev->tag != DW_TAG_enumerator
 	  && abbrev->tag != DW_TAG_subprogram
@@ -19071,17 +19079,17 @@ load_partial_dies (const struct die_reader_specs *reader,
 	      || last_die->tag == DW_TAG_namespace
 	      || last_die->tag == DW_TAG_module
 	      || last_die->tag == DW_TAG_enumeration_type
-	      || (cu->language == language_cplus
+	      || (cu->per_cu->lang == language_cplus
 		  && last_die->tag == DW_TAG_subprogram
 		  && (last_die->raw_name == NULL
 		      || strchr (last_die->raw_name, '<') == NULL))
-	      || (cu->language != language_c
+	      || (cu->per_cu->lang != language_c
 		  && (last_die->tag == DW_TAG_class_type
 		      || last_die->tag == DW_TAG_interface_type
 		      || last_die->tag == DW_TAG_structure_type
 		      || last_die->tag == DW_TAG_union_type))
-	      || ((cu->language == language_ada
-		   || cu->language == language_fortran)
+	      || ((cu->per_cu->lang == language_ada
+		   || cu->per_cu->lang == language_fortran)
 		  && (last_die->tag == DW_TAG_subprogram
 		      || last_die->tag == DW_TAG_lexical_block))))
 	{
@@ -19265,7 +19273,7 @@ partial_die_info::read (const struct die_reader_specs *reader,
 	     information, we support this practice for backward
 	     compatibility.  */
 	  if (attr.constant_value (0) == DW_CC_program
-	      && cu->language == language_fortran)
+	      && cu->per_cu->lang == language_fortran)
 	    main_subprogram = 1;
 	  break;
 	case DW_AT_inline:
@@ -19317,7 +19325,7 @@ partial_die_info::read (const struct die_reader_specs *reader,
      of the order in which the name and linkage name were emitted.
      Really, though, this is just a workaround for the fact that gdb
      doesn't store both the name and the linkage name.  */
-  if (cu->language == language_ada && linkage_name != nullptr)
+  if (cu->per_cu->lang == language_ada && linkage_name != nullptr)
     raw_name = linkage_name;
 
   if (high_pc_relative)
@@ -19583,7 +19591,7 @@ partial_die_info::fixup (struct dwarf2_cu *cu)
   /* If there is no parent die to provide a namespace, and there are
      children, see if we can determine the namespace from their linkage
      name.  */
-  if (cu->language == language_cplus
+  if (cu->per_cu->lang == language_cplus
       && !cu->per_objfile->per_bfd->types.empty ()
       && die_parent == NULL
       && has_children
@@ -20371,9 +20379,11 @@ leb128_size (const gdb_byte *buf)
     }
 }
 
-static void
-set_cu_language (unsigned int lang, struct dwarf2_cu *cu)
+static enum language
+dwarf_lang_to_enum_language (unsigned int lang)
 {
+  enum language language;
+
   switch (lang)
     {
     case DW_LANG_C89:
@@ -20381,54 +20391,58 @@ set_cu_language (unsigned int lang, struct dwarf2_cu *cu)
     case DW_LANG_C11:
     case DW_LANG_C:
     case DW_LANG_UPC:
-      cu->language = language_c;
+      language = language_c;
       break;
     case DW_LANG_Java:
     case DW_LANG_C_plus_plus:
     case DW_LANG_C_plus_plus_11:
     case DW_LANG_C_plus_plus_14:
-      cu->language = language_cplus;
+      language = language_cplus;
       break;
     case DW_LANG_D:
-      cu->language = language_d;
+      language = language_d;
       break;
     case DW_LANG_Fortran77:
     case DW_LANG_Fortran90:
     case DW_LANG_Fortran95:
     case DW_LANG_Fortran03:
     case DW_LANG_Fortran08:
-      cu->language = language_fortran;
+      language = language_fortran;
       break;
     case DW_LANG_Go:
-      cu->language = language_go;
+      language = language_go;
       break;
     case DW_LANG_Mips_Assembler:
-      cu->language = language_asm;
+      language = language_asm;
       break;
     case DW_LANG_Ada83:
     case DW_LANG_Ada95:
-      cu->language = language_ada;
+      language = language_ada;
       break;
     case DW_LANG_Modula2:
-      cu->language = language_m2;
+      language = language_m2;
       break;
     case DW_LANG_Pascal83:
-      cu->language = language_pascal;
+      language = language_pascal;
       break;
     case DW_LANG_ObjC:
-      cu->language = language_objc;
+      language = language_objc;
       break;
     case DW_LANG_Rust:
     case DW_LANG_Rust_old:
-      cu->language = language_rust;
+      language = language_rust;
+      break;
+    case DW_LANG_OpenCL:
+      language = language_opencl;
       break;
     case DW_LANG_Cobol74:
     case DW_LANG_Cobol85:
     default:
-      cu->language = language_minimal;
+      language = language_minimal;
       break;
     }
-  cu->language_defn = language_def (cu->language);
+
+  return language;
 }
 
 /* Return the named attribute or NULL if not there.  */
@@ -21563,16 +21577,16 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
       OBJSTAT (objfile, n_syms++);
 
       /* Cache this symbol's name and the name's demangled form (if any).  */
-      sym->set_language (cu->language, &objfile->objfile_obstack);
+      sym->set_language (cu->per_cu->lang, &objfile->objfile_obstack);
       /* Fortran does not have mangling standard and the mangling does differ
 	 between gfortran, iFort etc.  */
       const char *physname
-	= (cu->language == language_fortran
+	= (cu->per_cu->lang == language_fortran
 	   ? dwarf2_full_name (name, die, cu)
 	   : dwarf2_physname (name, die, cu));
       const char *linkagename = dw2_linkage_name (die, cu);
 
-      if (linkagename == nullptr || cu->language == language_ada)
+      if (linkagename == nullptr || cu->per_cu->lang == language_ada)
 	sym->set_linkage_name (physname);
       else
 	{
@@ -21639,8 +21653,8 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	  SYMBOL_ACLASS_INDEX (sym) = LOC_BLOCK;
 	  attr2 = dwarf2_attr (die, DW_AT_external, cu);
 	  if ((attr2 != nullptr && attr2->as_boolean ())
-	      || cu->language == language_ada
-	      || cu->language == language_fortran)
+	      || cu->per_cu->lang == language_ada
+	      || cu->per_cu->lang == language_fortran)
 	    {
 	      /* Subprograms marked external are stored as a global symbol.
 		 Ada and Fortran subprograms, whether marked external or
@@ -21705,7 +21719,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 
 	      /* Fortran explicitly imports any global symbols to the local
 		 scope by DW_TAG_common_block.  */
-	      if (cu->language == language_fortran && die->parent
+	      if (cu->per_cu->lang == language_fortran && die->parent
 		  && die->parent->tag == DW_TAG_common_block)
 		attr2 = NULL;
 
@@ -21759,7 +21773,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 
 	      /* Fortran explicitly imports any global symbols to the local
 		 scope by DW_TAG_common_block.  */
-	      if (cu->language == language_fortran && die->parent
+	      if (cu->per_cu->lang == language_fortran && die->parent
 		  && die->parent->tag == DW_TAG_common_block)
 		{
 		  /* SYMBOL_CLASS doesn't matter here because
@@ -21845,16 +21859,16 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		buildsym_compunit *builder = cu->get_builder ();
 		list_to_add
 		  = (cu->list_in_scope == builder->get_file_symbols ()
-		     && cu->language == language_cplus
+		     && cu->per_cu->lang == language_cplus
 		     ? builder->get_global_symbols ()
 		     : cu->list_in_scope);
 
 		/* The semantics of C++ state that "struct foo {
 		   ... }" also defines a typedef for "foo".  */
-		if (cu->language == language_cplus
-		    || cu->language == language_ada
-		    || cu->language == language_d
-		    || cu->language == language_rust)
+		if (cu->per_cu->lang == language_cplus
+		    || cu->per_cu->lang == language_ada
+		    || cu->per_cu->lang == language_d
+		    || cu->per_cu->lang == language_rust)
 		  {
 		    /* The symbol's name is already allocated along
 		       with this objfile, so we don't need to
@@ -21889,7 +21903,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 
 	    list_to_add
 	      = (cu->list_in_scope == cu->get_builder ()->get_file_symbols ()
-		 && cu->language == language_cplus
+		 && cu->per_cu->lang == language_cplus
 		 ? cu->get_builder ()->get_global_symbols ()
 		 : cu->list_in_scope);
 	  }
@@ -21932,7 +21946,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
       /* For the benefit of old versions of GCC, check for anonymous
 	 namespaces based on the demangled name.  */
       if (!cu->processing_has_namespace_info
-	  && cu->language == language_cplus)
+	  && cu->per_cu->lang == language_cplus)
 	cp_scan_for_anonymous_namespaces (cu->get_builder (), sym, objfile);
     }
   return (sym);
@@ -22144,7 +22158,7 @@ need_gnat_info (struct dwarf2_cu *cu)
 {
   /* Assume that the Ada compiler was GNAT, which always produces
      the auxiliary information.  */
-  return (cu->language == language_ada);
+  return (cu->per_cu->lang == language_ada);
 }
 
 /* Return the auxiliary type of the die in question using its
@@ -22519,9 +22533,10 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
   struct type *parent_type;
   const char *retval;
 
-  if (cu->language != language_cplus
-      && cu->language != language_fortran && cu->language != language_d
-      && cu->language != language_rust)
+  if (cu->per_cu->lang != language_cplus
+      && cu->per_cu->lang != language_fortran
+      && cu->per_cu->lang != language_d
+      && cu->per_cu->lang != language_rust)
     return "";
 
   retval = anonymous_struct_prefix (die, cu);
@@ -22609,7 +22624,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
 	/* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they generated bogus
 	   DW_TAG_namespace DIEs with a name of "::" for the global namespace.
 	   Work around this problem here.  */
-	if (cu->language == language_cplus
+	if (cu->per_cu->lang == language_cplus
 	    && strcmp (parent_type->name (), "::") == 0)
 	  return "";
 	/* We give a name to even anonymous namespaces.  */
@@ -22630,7 +22645,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
       case DW_TAG_compile_unit:
       case DW_TAG_partial_unit:
 	/* gcc-4.5 -gdwarf-4 can drop the enclosing namespace.  Cope.  */
-	if (cu->language == language_cplus
+	if (cu->per_cu->lang == language_cplus
 	    && !per_objfile->per_bfd->types.empty ()
 	    && die->child != NULL
 	    && (die->tag == DW_TAG_class_type
@@ -22645,7 +22660,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
       case DW_TAG_subprogram:
 	/* Nested subroutines in Fortran get a prefix with the name
 	   of the parent's subroutine.  */
-	if (cu->language == language_fortran)
+	if (cu->per_cu->lang == language_fortran)
 	  {
 	    if ((die->tag ==  DW_TAG_subprogram)
 		&& (dwarf2_name (parent, cu) != NULL))
@@ -22684,7 +22699,7 @@ typename_concat (struct obstack *obs, const char *prefix, const char *suffix,
   if (suffix == NULL || suffix[0] == '\0'
       || prefix == NULL || prefix[0] == '\0')
     sep = "";
-  else if (cu->language == language_d)
+  else if (cu->per_cu->lang == language_d)
     {
       /* For D, the 'main' function could be defined in any module, but it
 	 should never be prefixed.  */
@@ -22696,7 +22711,7 @@ typename_concat (struct obstack *obs, const char *prefix, const char *suffix,
       else
 	sep = ".";
     }
-  else if (cu->language == language_fortran && physname)
+  else if (cu->per_cu->lang == language_fortran && physname)
     {
       /* This is gfortran specific mangling.  Normally DW_AT_linkage_name or
 	 DW_AT_MIPS_linkage_name is preferred and used instead.  */
@@ -22737,7 +22752,7 @@ static const char *
 dwarf2_canonicalize_name (const char *name, struct dwarf2_cu *cu,
 			  struct objfile *objfile)
 {
-  if (name && cu->language == language_cplus)
+  if (name && cu->per_cu->lang == language_cplus)
     {
       gdb::unique_xmalloc_ptr<char> canon_name
 	= cp_canonicalize_string (name);
@@ -23120,10 +23135,10 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
 	 Even if maybe_queue_comp_unit doesn't require us to load the CU's DIEs,
 	 it doesn't mean they are currently loaded.  Since we require them
 	 to be loaded, we must check for ourselves.  */
-      if (maybe_queue_comp_unit (cu, per_cu, per_objfile, cu->language)
+      if (maybe_queue_comp_unit (cu, per_cu, per_objfile, cu->per_cu->lang)
 	  || per_objfile->get_cu (per_cu) == nullptr)
 	load_full_comp_unit (per_cu, per_objfile, per_objfile->get_cu (per_cu),
-			     false, cu->language);
+			     false, cu->per_cu->lang);
 
       target_cu = per_objfile->get_cu (per_cu);
       gdb_assert (target_cu != nullptr);
@@ -24432,17 +24447,30 @@ prepare_one_comp_unit (struct dwarf2_cu *cu, struct die_info *comp_unit_die,
 {
   struct attribute *attr;
 
+  cu->producer = dwarf2_string_attr (comp_unit_die, DW_AT_producer, cu);
+
   /* Set the language we're debugging.  */
   attr = dwarf2_attr (comp_unit_die, DW_AT_language, cu);
-  if (attr != nullptr)
-    set_cu_language (attr->constant_value (0), cu);
-  else
+  if (cu->producer != nullptr
+      && strstr (cu->producer, "IBM XL C for OpenCL") != NULL)
     {
-      cu->language = pretend_language;
-      cu->language_defn = language_def (cu->language);
+      /* The XLCL doesn't generate DW_LANG_OpenCL because this
+	 attribute is not standardised yet.  As a workaround for the
+	 language detection we fall back to the DW_AT_producer
+	 string.  */
+      cu->per_cu->lang = language_opencl;
     }
-
-  cu->producer = dwarf2_string_attr (comp_unit_die, DW_AT_producer, cu);
+  else if (cu->producer != nullptr
+	   && strstr (cu->producer, "GNU Go ") != NULL)
+    {
+      /* Similar hack for Go.  */
+      cu->per_cu->lang = language_go;
+    }
+  else if (attr != nullptr)
+    cu->per_cu->lang = dwarf_lang_to_enum_language (attr->constant_value (0));
+  else
+    cu->per_cu->lang = pretend_language;
+  cu->language_defn = language_def (cu->per_cu->lang);
 }
 
 /* See read.h.  */

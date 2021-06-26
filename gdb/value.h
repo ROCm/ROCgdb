@@ -829,7 +829,7 @@ extern struct value *value_neg (struct value *arg1);
 extern struct value *value_complement (struct value *arg1);
 
 extern struct value *value_struct_elt (struct value **argp,
-				       struct value **args,
+				       gdb::optional<gdb::array_view <value *>> args,
 				       const char *name, int *static_memfuncp,
 				       const char *err);
 

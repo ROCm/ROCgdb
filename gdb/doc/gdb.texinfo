@@ -19523,20 +19523,36 @@ preprocessor macros.
 
 
 @kindex info sources
-@item info sources
-Print the names of all source files in your program for which there is
-debugging information, organized into two lists: files whose symbols
-have already been read, and files whose symbols will be read when needed.
+@item info sources @r{[}-dirname | -basename@r{]} @r{[}--@r{]} @r{[}@var{regexp}@r{]}
 
-@item info sources [-dirname | -basename] [--] [@var{regexp}]
-Like @samp{info sources}, but only print the names of the files
-matching the provided @var{regexp}.
-By default, the @var{regexp} is used to match anywhere in the filename.
-If @code{-dirname}, only files having a dirname matching @var{regexp} are shown.
-If  @code{-basename}, only files having a basename matching @var{regexp}
-are shown.
-The matching is case-sensitive, except on operating systems that
-have case-insensitive filesystem (e.g., MS-Windows).
+
+With no options @samp{info sources} prints the names of all source
+files in your program for which there is debugging information.  The
+source files are presented based on a list of object files
+(executables and libraries) currently loaded into @value{GDBN}.  For
+each object file all of the associated source files are listed.
+
+Each source file will only be printed once for each object file, but a
+single source file can be repeated in the output if it is part of
+multiple object files.
+
+If the optional @var{regexp} is provided, then only source files that
+match the regular expression will be printed.  The matching is
+case-sensitive, except on operating systems that have case-insensitive
+filesystem (e.g., MS-Windows). @samp{--} can be used before
+@var{regexp} to prevent @value{GDBN} interpreting @var{regexp} as a
+command option (e.g. if @var{regexp} starts with @samp{-}).
+
+By default, the @var{regexp} is used to match anywhere in the
+filename.  If @code{-dirname}, only files having a dirname matching
+@var{regexp} are shown.  If @code{-basename}, only files having a
+basename matching @var{regexp} are shown.
+
+It is possible that an object file may be printed in the list with no
+associated source files.  This can happen when either no source files
+match @var{regexp}, or, the object file was compiled without debug
+information and so @value{GDBN} is unable to find any source file
+names.
 
 @kindex info functions
 @item info functions [-q] [-n]
@@ -38244,18 +38260,75 @@ The @value{GDBN} equivalent is @samp{info source}
 
 
 @subheading The @code{-file-list-exec-source-files} Command
+@kindex info sources
 @findex -file-list-exec-source-files
 
 @subsubheading Synopsis
 
 @smallexample
- -file-list-exec-source-files
+ -file-list-exec-source-files @r{[} @var{--group-by-objfile} @r{]}
+                              @r{[} @var{--dirname} @r{|} @var{--basename} @r{]}
+                              @r{[} -- @r{]}
+                              @r{[} @var{regexp} @r{]}
 @end smallexample
 
-List the source files for the current executable.
+This command returns information about the source files @value{GDBN}
+knows about, it will output both the filename and fullname (absolute
+file name) of a source file, though the fullname can be elided if this
+information is not known to @value{GDBN}.
 
-It will always output both the filename and fullname (absolute file
-name) of a source file.
+With no arguments this command returns a list of source files.  Each
+source file is represented by a tuple with the fields; @var{file},
+@var{fullname}, and @var{debug-fully-read}.  The @var{file} is the
+display name for the file, while @var{fullname} is the absolute name
+of the file.  The @var{fullname} field can be elided if the absolute
+name of the source file can't be computed.  The field
+@var{debug-fully-read} will be a string, either @code{true} or
+@code{false}.  When @code{true}, this indicates the full debug
+information for the compilation unit describing this file has been
+read in.  When @code{false}, the full debug information has not yet
+been read in.  While reading in the full debug information it is
+possible that @value{GDBN} could become aware of additional source
+files.
+
+The optional @var{regexp} can be used to filter the list of source
+files returned.  The @var{regexp} will be matched against the full
+source file name.  The matching is case-sensitive, except on operating
+systems that have case-insensitive filesystem (e.g.,
+MS-Windows).  @samp{--} can be used before @var{regexp} to prevent
+@value{GDBN} interpreting @var{regexp} as a command option (e.g.@: if
+@var{regexp} starts with @samp{-}).
+
+If @code{--dirname} is provided, then @var{regexp} is matched only
+against the directory name of each source file.  If @code{--basename}
+is provided, then @var{regexp} is matched against the basename of each
+source file.  Only one of @code{--dirname} or @code{--basename} may be
+given, and if either is given then @var{regexp} is required.
+
+If @code{--group-by-objfile} is used then the format of the results is
+changed.  The results will now be a list of tuples, with each tuple
+representing an object file (executable or shared library) loaded into
+@value{GDBN}.  The fields of these tuples are; @var{filename},
+@var{debug-info}, and @var{sources}.  The @var{filename} is the
+absolute name of the object file, @var{debug-info} is a string with
+one of the following values:
+
+@table @code
+@item none
+This object file has no debug information.
+@item partially-read
+This object file has debug information, but it is not fully read in
+yet.  When it is read in later, GDB might become aware of additional
+source files.
+@item fully-read
+This object file has debug information, and this information is fully
+read into GDB.  The list of source files is complete.
+@end table
+
+The @var{sources} is a list or tuples, with each tuple describing a
+single source file with the same fields as described previously.  The
+@var{sources} list can be empty for object files that have no debug
+information.
 
 @subsubheading @value{GDBN} Command
 
@@ -38264,13 +38337,66 @@ The @value{GDBN} equivalent is @samp{info sources}.
 
 @subsubheading Example
 @smallexample
-(gdb)
+(@value{GDBP})
 -file-list-exec-source-files
-^done,files=[
-@{file=foo.c,fullname=/home/foo.c@},
-@{file=/home/bar.c,fullname=/home/bar.c@},
-@{file=gdb_could_not_find_fullpath.c@}]
-(gdb)
+^done,files=[@{file="foo.c",fullname="/home/foo.c",debug-fully-read="true"@},
+             @{file="/home/bar.c",fullname="/home/bar.c",debug-fully-read="true"@},
+             @{file="gdb_could_not_find_fullpath.c",debug-fully-read="true"@}]
+(@value{GDBP})
+-file-list-exec-source-files
+^done,files=[@{file="test.c",
+              fullname="/tmp/info-sources/test.c",
+              debug-fully-read="true"@},
+             @{file="/usr/include/stdc-predef.h",
+              fullname="/usr/include/stdc-predef.h",
+              debug-fully-read="true"@},
+             @{file="header.h",
+              fullname="/tmp/info-sources/header.h",
+              debug-fully-read="true"@},
+             @{file="helper.c",
+              fullname="/tmp/info-sources/helper.c",
+              debug-fully-read="true"@}]
+(@value{GDBP})
+-file-list-exec-source-files -- \\.c
+^done,files=[@{file="test.c",
+              fullname="/tmp/info-sources/test.c",
+              debug-fully-read="true"@},
+             @{file="helper.c",
+              fullname="/tmp/info-sources/helper.c",
+              debug-fully-read="true"@}]
+(@value{GDBP})
+-file-list-exec-source-files --group-by-objfile
+^done,files=[@{filename="/tmp/info-sources/test.x",
+              debug-info="fully-read",
+              sources=[@{file="test.c",
+                        fullname="/tmp/info-sources/test.c",
+                        debug-fully-read="true"@},
+                       @{file="/usr/include/stdc-predef.h",
+                        fullname="/usr/include/stdc-predef.h",
+                        debug-fully-read="true"@},
+                       @{file="header.h",
+                        fullname="/tmp/info-sources/header.h",
+                        debug-fully-read="true"@}]@},
+             @{filename="/lib64/ld-linux-x86-64.so.2",
+              debug-info="none",
+              sources=[]@},
+             @{filename="system-supplied DSO at 0x7ffff7fcf000",
+              debug-info="none",
+              sources=[]@},
+             @{filename="/tmp/info-sources/libhelper.so",
+              debug-info="fully-read",
+              sources=[@{file="helper.c",
+                        fullname="/tmp/info-sources/helper.c",
+                        debug-fully-read="true"@},
+                       @{file="/usr/include/stdc-predef.h",
+                        fullname="/usr/include/stdc-predef.h",
+                        debug-fully-read="true"@},
+                       @{file="header.h",
+                        fullname="/tmp/info-sources/header.h",
+                        debug-fully-read="true"@}]@},
+             @{filename="/lib64/libc.so.6",
+              debug-info="none",
+              sources=[]@}]
 @end smallexample
 
 @subheading The @code{-file-list-shared-libraries} Command

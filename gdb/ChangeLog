@@ -1,3 +1,296 @@
+2021-06-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* guile/scm-param.c (struct param_smob) <set_command,
+	show_command>: Remove.
+	<commands>: New.
+	(pascm_is_valid): Adjust.
+	(add_setshow_generic): Use return values of add_setshow
+	functions, return a set_show_commands.
+	(gdbscm_register_parameter_x): Adjust.
+
+2021-06-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* command.h (add_setshow_enum_cmd): Remove context parameter.
+	* cli/cli-decode.c (add_setshow_enum_cmd): Likewise, and don't
+	set context.
+	* cli/cli-style.c (cli_style_option::add_setshow_commands): Set
+	context here.
+
+2021-06-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (struct cmd_list_element) <set_context>: Add
+	assert.
+
+2021-06-25  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* cli/cli-decode.h (struct cmd_list_element) <set_context,
+	context>: New.
+	<context>: Rename to...
+	<m_context>: ... this.
+	* cli/cli-decode.c (set_cmd_context, get_cmd_context): Remove.
+	* command.h (set_cmd_context, get_cmd_context): Remove, use
+	cmd_list_element::set_context and cmd_list_element::context
+	everywhere instead.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Mention changes to 'info sources'.
+	* symtab.c (info_sources_filter::print): Delete.
+	(struct output_source_filename_data) <print_header>: Delete
+	declaration.  <printed_filename_p>: New member function.
+	(output_source_filename_data::print_header): Delete.
+	(info_sources_worker): Update group-by-objfile style output to
+	make it CLI suitable, simplify non-group-by-objfile now this is
+	only used from the MI.
+	(info_sources_command): Make group-by-objfile be the default for
+	CLI info sources command.
+	* symtab.h (struct info_sources_filter) <print>: Delete.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Mention additions to -file-list-exec-source-files.
+	* mi/mi-cmd-file.c (mi_cmd_file_list_exec_source_files): Add
+	--group-by-objfile option.
+	* symtab.c (isrc_flag_option_def): Rename to...
+	(isrc_match_flag_option_def): ...this.
+	(info_sources_option_defs): Rename to...
+	(info_sources_match_option_defs): ...this, and update to rename of
+	isrc_flag_option_def.
+	(struct filename_grouping_opts): New struct.
+	(isrc_grouping_flag_option_def): New type.
+	(info_sources_grouping_option_defs): New static global.
+	(make_info_sources_options_def_group): Update to return two option
+	groups.
+	(info_sources_command_completer): Update for changes to
+	make_info_sources_options_def_group.
+	(info_sources_worker): Add extra parameter, use this to display
+	alternative output format.
+	(info_sources_command): Pass extra parameter to
+	info_sources_worker.
+	(_initialize_symtab): Update for changes to
+	make_info_sources_options_def_group.
+	* symtab.h (info_sources_worker): Add extra parameter.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Mention additions to -file-list-exec-source-files.
+	* mi/mi-cmd-file.c (print_partial_file_name): Delete.
+	(mi_cmd_file_list_exec_source_files): Rewrite to handle command
+	options, and make use of info_sources_worker.
+	* symtab.c (struct info_sources_filter): Moved to symtab.h.
+	(info_sources_filter::print): Take uiout argument, produce output
+	through uiout.
+	(struct output_source_filename_data)
+	<output_source_filename_data>: Take uiout argument, store into
+	m_uiout.  <output>: Rewrite comment, add additional arguments to
+	declaration.  <operator()>: Send more arguments to
+	output. <m_uiout>: New member variable.
+	(output_source_filename_data::output): Take extra arguments,
+	produce output through m_uiout, and structure for MI.
+	(output_source_filename_data::print_header): Produce output
+	through m_uiout.
+	(info_sources_worker): New function, the implementation is taken
+	from info_sources_command, but modified so produce output through
+	a ui_out.
+	(info_sources_command): The second half of this function has gone
+	to become info_sources_worker.
+	* symtab.h (struct info_sources_filter): Moved from symtab.c, add
+	extra parameter to print member function.
+	(info_sources_worker): Declare.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* symtab.c (struct info_sources_filter): New.
+	(info_sources_filter::info_sources_filter): New function.
+	(info_sources_filter::matches): New function.
+	(info_sources_filter::print): New function.
+	(struct filename_partial_match_opts): Moved to later in the file
+	and update the comment.
+	(struct output_source_filename_data)
+	<output_source_filename_data>: New constructor.  <regexp>: Delete,
+	this is now in info_sources_filter.  <c_regexp>: Delete, this is
+	now in info_sources_filter.  <reset_output>: New member function.
+	<filename_seen_cache>: Rename to m_filename_seen_cache, change
+	from being a pointer, to being an actual object.  <first>: Rename
+	to m_first.  <print_header>: New member function. <partial_match>:
+	Delete.
+	(output_source_filename_data::output): Update now
+	m_filename_seen_cache is no longer a pointer, and for other member
+	variable name changes. Add a header comment.
+	(print_info_sources_header): Renamed to...
+	(output_source_filename_data::print_header): ...this.  Update now
+	it's a member function and to take account of member variable
+	renaming.
+	(info_sources_command): Add a header comment, delete stack local
+	filename_seen_cache, initialization of output_source_filename_data
+	is now done by the constructor.  Call print_header member function
+	instead of print_info_sources_header, call reset_output member
+	function instead of manually performing the reset.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* dwarf2/read.c (struct dwarf2_base_index_functions)
+	<has_unexpanded_symtabs>: Declare.
+	(dwarf2_base_index_functions::has_unexpanded_symtabs): Define new
+	function.
+	* objfiles.h (struct objfile) <has_unexpanded_symtabs>: Declare.
+	* psympriv.h (struct psymbol_functions) <has_unexpanded_symtabs>:
+	Declare.
+	* psymtab.c (psymbol_functions::has_unexpanded_symtabs): Define
+	new function.
+	* quick-symbol.h (struct quick_symbol_functions)
+	<has_unexpanded_symtabs>: Declare.
+	* symfile-debug.c (objfile::has_unexpanded_symtabs): Define new
+	function.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* infcall.c (call_function_by_hand_dummy): Add missing 'else' when
+	setting prototyped flag.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* ada-lang.c (desc_bounds): Use '{}' instead of NULL to indicate
+	an empty gdb::optional when calling value_struct_elt.
+	(desc_data): Likewise.
+	(desc_one_bound): Likewise.
+	* eval.c (structop_base_operation::evaluate_funcall): Pass
+	gdb::array_view, not a gdb::array_view* to value_struct_elt.
+	(eval_op_structop_struct): Use '{}' instead of NULL to indicate
+	an empty gdb::optional when calling value_struct_elt.
+	(eval_op_structop_ptr): Likewise.
+	* f-lang.c (fortran_structop_operation::evaluate): Likewise.
+	* guile/scm-value.c (gdbscm_value_field): Likewise.
+	* m2-lang.c (eval_op_m2_high): Likewise.
+	(eval_op_m2_subscript): Likewise.
+	* opencl-lang.c (opencl_structop_operation::evaluate): Likewise.
+	* python/py-value.c (valpy_getitem): Likewise.
+	* rust-lang.c (rust_val_print_str): Likewise.
+	(rust_range): Likewise.
+	(rust_subscript): Likewise.
+	(eval_op_rust_structop): Likewise.
+	(rust_aggregate_operation::evaluate): Likewise.
+	* valarith.c (value_user_defined_op): Likewise.
+	* valops.c (search_struct_method): Change parameter type, update
+	function body accordingly, and update header comment.
+	(value_struct_elt): Change parameter type, update function body
+	accordingly.
+	* value.h (value_struct_elt): Update declaration.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR gdb/27994
+	* eval.c (structop_base_operation::evaluate_funcall): Pass
+	array_view instead of array to value_struct_elt.
+	* valarith.c (value_user_defined_op): Likewise.
+	* valops.c (typecmp): Change parameter type from array pointer to
+	array_view.  Update header comment, and update body accordingly.
+	(search_struct_method): Likewise.
+	(value_struct_elt): Likewise.
+	* value.h (value_struct_elt): Update declaration.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR gdb/27994
+	* eval.c (structop_base_operation::evaluate_funcall): Add a
+	nullptr to the end of the args array, which should not be included
+	in the argument array_view.  Pass all the arguments through to
+	value_struct_elt.
+	* valops.c (search_struct_method): Update header comment.
+	(value_struct_elt): Likewise.
+
+2021-06-25  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (create_addrmap_from_aranges): Change padding
+	logic.
+
+2021-06-25  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (process_psymtab_comp_unit): Don't set 'lang'.
+	(scan_partial_symbols, partial_die_parent_scope)
+	(add_partial_symbol, add_partial_subprogram)
+	(compute_delayed_physnames, rust_union_quirks)
+	(process_full_comp_unit, process_full_type_unit)
+	(process_imported_unit_die, process_die, dw2_linkage_name)
+	(dwarf2_compute_name, dwarf2_physname, read_import_statement)
+	(read_file_scope, queue_and_load_dwo_tu, read_func_scope)
+	(read_variable, dwarf2_get_subprogram_pc_bounds)
+	(dwarf2_attach_fields_to_type, dwarf2_add_member_fn)
+	(dwarf2_attach_fn_fields_to_type)
+	(quirk_ada_thick_pointer_struct, read_structure_type)
+	(handle_struct_member_die, process_structure_scope)
+	(read_array_type, read_array_order, prototyped_function_p)
+	(read_subroutine_type, dwarf2_init_complex_target_type)
+	(read_base_type, read_subrange_type, read_unspecified_type)
+	(load_partial_dies, partial_die_info::fixup, set_cu_language)
+	(new_symbol, need_gnat_info, determine_prefix, typename_concat)
+	(dwarf2_canonicalize_name, follow_die_offset)
+	(prepare_one_comp_unit): Update.
+	* dwarf2/cu.c (dwarf2_cu::start_symtab): Update.
+
+2021-06-25  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/read.c (read_file_scope): Don't call set_cu_language.
+	(dwarf_lang_to_enum_language): Rename from set_cu_language.  Don't
+	set language_defn.  Handle DW_LANG_OpenCL.
+	(prepare_one_comp_unit): Check producer and set language_defn.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* NEWS: Mention Python BP_CATCHPOINT feature.
+	* python/py-breakpoint.c (pybp_codes): Add bp_catchpoint support.
+	(bppy_init): Likewise.
+	(gdbpy_breakpoint_created): Likewise.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* guile/scm-breakpoint.c (bpscm_type_to_string): Handle
+	bp_catchpoint.
+	(bpscm_want_scm_wrapper_p): Likewise.
+	(gdbscm_make_breakpoint): Likewise.
+	(breakpoint_integer_constants): Likewise.
+
+2021-06-25  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* guile/scm-breakpoint.c (gdbscm_make_breakpoint): Split the error
+	for invalid breakpoint numbers, and unsupported breakpoint
+	numbers.
+
+2021-06-25  Tom Tromey  <tom@tromey.com>
+
+	* dwarf2/index-write.c (struct addrmap_index_data): Add
+	initializers.
+	<operator()>: Declare.
+	(addrmap_index_data::operator()): Rename from
+	add_address_entry_worker.  Remove 'datap' parameter.
+	(write_address_map): Update.
+	* psymtab.c (struct dump_psymtab_addrmap_data): Remove
+	(dump_psymtab_addrmap_1): Remove 'data' parameter, add other
+	parameters.
+	(dump_psymtab_addrmap): Update.
+	* addrmap.c (struct addrmap_funcs) <foreach>: Remove 'data'
+	parameter.
+	(addrmap_foreach, addrmap_fixed_foreach): Likewise.
+	(struct mutable_foreach_data): Remove.
+	(addrmap_mutable_foreach_worker): Update.
+	(addrmap_mutable_foreach): Remove 'data' parameter.
+	* addrmap.h (addrmap_foreach_fn): Use gdb::function_view.
+	(addrmap_foreach): Remove 'data' parameter.
+
+2021-06-25  Tom Tromey  <tromey@adacore.com>
+
+	* python/py-type.c (typy_get_name): Decode an Ada type name.
+
+2021-06-25  Tom Tromey  <tromey@adacore.com>
+
+	* ada-lang.c (ada_decode): Add wrap parameter.
+	* ada-lang.h (ada_decode): Add wrap parameter.
+
+2021-06-25  Luis Machado  <luis.machado@linaro.org>
+
+	* corelow.c (core_target::core_target) Update to read target
+	description.
+
 2021-06-22  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* python/lib/gdb/__init__.py: Format.

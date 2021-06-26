@@ -138,6 +138,7 @@ bpscm_type_to_string (enum bptype type)
     case bp_hardware_watchpoint: return "BP_HARDWARE_WATCHPOINT";
     case bp_read_watchpoint: return "BP_READ_WATCHPOINT";
     case bp_access_watchpoint: return "BP_ACCESS_WATCHPOINT";
+    case bp_catchpoint: return "BP_CATCHPOINT";
     default: return "internal/other";
     }
 }
@@ -233,7 +234,8 @@ bpscm_want_scm_wrapper_p (struct breakpoint *bp, int from_scheme)
       && bp->type != bp_watchpoint
       && bp->type != bp_hardware_watchpoint
       && bp->type != bp_read_watchpoint
-      && bp->type != bp_access_watchpoint)
+      && bp->type != bp_access_watchpoint
+      && bp->type != bp_catchpoint)
     return 0;
 
   return 1;
@@ -387,8 +389,20 @@ gdbscm_make_breakpoint (SCM location_scm, SCM rest)
 				     _("invalid watchpoint class"));
 	}
       break;
+    case bp_none:
+    case bp_hardware_watchpoint:
+    case bp_read_watchpoint:
+    case bp_access_watchpoint:
+    case bp_catchpoint:
+      {
+	const char *type_name = bpscm_type_to_string (type);
+	gdbscm_misc_error (FUNC_NAME, type_arg_pos,
+			   gdbscm_scm_from_c_string (type_name),
+			   _("unsupported breakpoint type"));
+      }
+      break;
     default:
-      gdbscm_out_of_range_error (FUNC_NAME, access_type_arg_pos,
+      gdbscm_out_of_range_error (FUNC_NAME, type_arg_pos,
 				 scm_from_int (type),
 				 _("invalid breakpoint type"));
     }
@@ -1141,6 +1155,7 @@ static const scheme_integer_constant breakpoint_integer_constants[] =
   { "BP_HARDWARE_WATCHPOINT", bp_hardware_watchpoint },
   { "BP_READ_WATCHPOINT", bp_read_watchpoint },
   { "BP_ACCESS_WATCHPOINT", bp_access_watchpoint },
+  { "BP_CATCHPOINT", bp_catchpoint },
 
   { "WP_READ", hw_read },
   { "WP_WRITE", hw_write },
