@@ -32,6 +32,8 @@
 #include "cgen-ops.h"
 #include "cpu.h"
 
+#include "bpf-helpers.h"
+
 /* bpf_trace_printk is a printk-like facility for debugging.
 
    In the kernel, it appends a line to the Linux's tracing debugging
@@ -72,6 +74,7 @@ bpf_trace_printk (SIM_CPU *current_cpu)
      supported, which are read from %r3, %r4 and %r5 respectively.  */
   for (i = 0, tags_processed = 0; i < size;)
     {
+      UDI value;
       QI c = GETMEMUQI (current_cpu, CPU_PC_GET (current_cpu),
                         fmt_address + i);
 
@@ -88,22 +91,22 @@ bpf_trace_printk (SIM_CPU *current_cpu)
           if (i++ >= size)
             return -1; /* XXX look for kernel error code.  */
 
-          UDI value = GET_H_GPR (3 + tags_processed);
+          value = GET_H_GPR (3 + tags_processed);
 
           switch ((GETMEMUQI (current_cpu, CPU_PC_GET (current_cpu),
                              fmt_address + i)))
             {
             case 'd':
-              trace_printf (sd, current_cpu, "%d", value);
+              trace_printf (sd, current_cpu, "%d", (int) value);
               break;
             case 'i':
-              trace_printf (sd, current_cpu, "%i", value);
+              trace_printf (sd, current_cpu, "%i", (int) value);
               break;
             case 'u':
-              trace_printf (sd, current_cpu, "%u", value);
+              trace_printf (sd, current_cpu, "%u", (unsigned int) value);
               break;
             case 'x':
-              trace_printf (sd, current_cpu, "%x", value);
+              trace_printf (sd, current_cpu, "%x", (unsigned int) value);
               break;
             case 'l':
               {
@@ -113,16 +116,16 @@ bpf_trace_printk (SIM_CPU *current_cpu)
                              fmt_address + i))
                   {
                   case 'd':
-                    trace_printf (sd, current_cpu, "%ld", value);
+                    trace_printf (sd, current_cpu, "%ld", (long) value);
                     break;
                   case 'i':
-                    trace_printf (sd, current_cpu, "%li", value);
+                    trace_printf (sd, current_cpu, "%li", (long) value);
                     break;
                   case 'u':
-                    trace_printf (sd, current_cpu, "%lu", value);
+                    trace_printf (sd, current_cpu, "%lu", (unsigned long) value);
                     break;
                   case 'x':
-                    trace_printf (sd, current_cpu, "%lx", value);
+                    trace_printf (sd, current_cpu, "%lx", (unsigned long) value);
                     break;
                   case 'l':
                     {
@@ -131,16 +134,16 @@ bpf_trace_printk (SIM_CPU *current_cpu)
                       switch (GETMEMUQI (current_cpu, CPU_PC_GET (current_cpu),
                                 fmt_address + i)) {
                         case 'd':
-                          trace_printf (sd, current_cpu, "%lld", value);
+                          trace_printf (sd, current_cpu, "%lld", (long long) value);
                           break;
                         case 'i':
-                          trace_printf (sd, current_cpu, "%lli", value);
+                          trace_printf (sd, current_cpu, "%lli", (long long) value);
                           break;
                         case 'u':
-                          trace_printf (sd, current_cpu, "%llu", value);
+                          trace_printf (sd, current_cpu, "%llu", (unsigned long long) value);
                           break;
                         case 'x':
-                          trace_printf (sd, current_cpu, "%llx", value);
+                          trace_printf (sd, current_cpu, "%llx", (unsigned long long) value);
                           break;
                         default:
                           assert (0);

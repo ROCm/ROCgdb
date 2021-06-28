@@ -1,3 +1,53 @@
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-trace.c: Include diagnostics.h.
+	(cgen_trace_extract): Call DIAGNOSTIC_PUSH,
+	DIAGNOSTIC_IGNORE_FORMAT_NONLITERAL, and DIAGNOSTIC_POP.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-run.c (engine_run_n): Assert cpu arguments are valid.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-trace.h (cgen_trace_printf): Add ATTRIBUTE_PRINTF_2.
+	(sim_disasm_sprintf): Likewise.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-trace.c (cgen_trace_extract): Make name & fmt const.
+	(cgen_trace_result): Make name const.
+	(cgen_trace_printf): Make fmt const.
+	* cgen-trace.h (cgen_trace_extract): Make 3rd arg const.
+	(cgen_trace_result): Make 2nd arg const.
+	(cgen_trace_printf): Likewise.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-mem.h (DECLARE_GETMEM_EXTERN): New macro.
+	(DECLARE_GETMEM): Use DECLARE_GETMEM_EXTERN.
+	(DECLARE_SETMEM_EXTERN): New macro.
+	(DECLARE_SETMEM): Use DECLARE_SETMEM_EXTERN.
+	(DECLARE_GETIMEM_EXTERN): New macro.
+	(DECLARE_GETIMEM): Use DECLARE_GETIMEM_EXTERN.
+	(DECLARE_GETT_EXTERN): New macro.
+	(DECLARE_GETT): Use DECLARE_GETT_EXTERN.
+	(DECLARE_SETT_EXTERN): New macro.
+	(DECLARE_SETT): Use DECLARE_SETT_EXTERN.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-ops.h: Move prototype blocks before function definitions.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* cgen-ops.h (SUBWORDSIQI): Add int 2nd argument.
+	(SUBWORDSIHI, SUBWORDSIUQI, SUBWORDDIUQI): Likewise.
+	(ADDCFSI): Change return type to BI.
+	(ADDOFSI, SUBCFSI, SUBOFSI, ADDCFHI, ADDOFHI, SUBCFHI, SUBOFHI,
+	ADDCFQI, ADDOFQI, SUBCFQI, SUBOFQI): Likewise.
+	(MUL1OFSI): Change SI arguments to USI.
+
 2021-06-23  Mike Frysinger  <vapier@gentoo.org>
 
 	* sim-syscall.c (sim_syscall_multi): Handle CB_SYS_kill.
