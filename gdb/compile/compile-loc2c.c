@@ -366,6 +366,7 @@ compute_stack_depth_worker (int start, int *need_tempvar,
 
 	case DW_OP_LLVM_call_frame_entry_reg:
 	case DW_OP_LLVM_undefined:
+	case DW_OP_LLVM_push_lane:
 	  ++stack_depth;
 	  break;
 

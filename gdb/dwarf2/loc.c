@@ -2055,6 +2055,7 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	case DW_OP_GNU_regval_type:
 	case DW_OP_LLVM_call_frame_entry_reg:
 	case DW_OP_LLVM_aspace_bregx:
+	case DW_OP_LLVM_push_lane:
 	  symbol_needs = SYMBOL_NEEDS_FRAME;
 	  break;
 

@@ -33,6 +33,7 @@
 #include "frame.h"
 #include "gdbsupport/underlying.h"
 #include "gdbarch.h"
+#include "gdbthread.h"
 #include "inferior.h"
 #include "objfiles.h"
 #include "observable.h"
@@ -4290,6 +4291,19 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    memory->set_address_space (address_space);
 
 	    result_entry = memory;
+	  }
+	  break;
+	case DW_OP_LLVM_push_lane:
+	  {
+	    if (inferior_ptid == null_ptid)
+	      error (_("no thread selected"));
+
+	    thread_info *tp = inferior_thread ();
+	    if (!tp->has_simd_lanes ())
+	      error (_("thread has no lanes"));
+
+	    ULONGEST lane = tp->current_simd_lane ();
+	    result_entry = std::make_shared<dwarf_value> (lane, address_type);
 	  }
 	  break;
 
