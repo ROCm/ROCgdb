@@ -3711,11 +3711,9 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
       case DW_OP_LLVM_USER_push_lane:
 	{
 	  ensure_have_simd_lane ("DW_OP_LLVM_push_lane");
-#if 0
 	  ULONGEST lane = inferior_thread ()->current_simd_lane ();
 	  result_entry = std::make_shared<dwarf_value> (lane, address_type);
 	  m_scope |= LOCATION_SCOPE_LANE;
-#endif
 	}
 	break;
 
