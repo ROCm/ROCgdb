@@ -707,6 +707,7 @@ DW_OP (DW_OP_PGI_omp_thread_num, 0xf8)
 DW_OP (DW_OP_AARCH64_operation, 0xea)
 /* LLVM extensions for heterogeneous targets */
 DW_OP_DUP (DW_OP_LLVM_form_aspace_address, 0xe1)
+DW_OP_DUP (DW_OP_LLVM_push_lane, 0xe2)
 DW_OP_DUP (DW_OP_LLVM_offset, 0xe3)
 DW_OP_DUP (DW_OP_LLVM_offset_constu, 0xe4)
 DW_OP_DUP (DW_OP_LLVM_bit_offset, 0xe5)

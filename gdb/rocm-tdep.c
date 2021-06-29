@@ -789,15 +789,18 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
 
       size_t len = requested_len;
       amd_dbgapi_status_t status;
+      int current_lane = inferior_thread ()->current_simd_lane ();
 
       if (readbuf)
 	status
-	  = amd_dbgapi_read_memory (process_id, wave_id, 0, address_space_id,
-				    segment_address, &len, readbuf);
+	  = amd_dbgapi_read_memory (process_id, wave_id, current_lane,
+				    address_space_id, segment_address,
+				    &len, readbuf);
       else
 	status
-	  = amd_dbgapi_write_memory (process_id, wave_id, 0, address_space_id,
-				     segment_address, &len, writebuf);
+	  = amd_dbgapi_write_memory (process_id, wave_id, current_lane,
+				     address_space_id, segment_address,
+				     &len, writebuf);
 
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	return TARGET_XFER_EOF;
