@@ -89,7 +89,9 @@ struct rocm_inferior_info
   amd_dbgapi_notifier_t notifier{ -1 };
 
   /* True if the ROCm runtime is loaded.  */
-  bool runtime_loaded{ false };
+  amd_dbgapi_runtime_state_t runtime_state{
+    AMD_DBGAPI_RUNTIME_STATE_UNLOADED
+  };
 
   struct
   {
@@ -611,7 +613,7 @@ rocm_insert_one_watchpoint (rocm_inferior_info *info, CORE_ADDR addr, int len)
 static void
 insert_initial_watchpoints (rocm_inferior_info *info)
 {
-  gdb_assert (info->runtime_loaded);
+  gdb_assert (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS);
 
   for (bp_location *loc : all_bp_locations ())
     {
@@ -633,12 +635,13 @@ rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
-  if (info->runtime_loaded && type != hw_write)
+  if (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS
+      && type != hw_write)
     /* We only allow write watchpoints when GPU debugging is active.  */
     return 1;
 
   int ret = beneath ()->insert_watchpoint (addr, len, type, cond);
-  if (ret || !info->runtime_loaded)
+  if (ret || info->runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
     return ret;
 
   ret = rocm_insert_one_watchpoint (info, addr, len);
@@ -660,7 +663,7 @@ rocm_target_ops::remove_watchpoint (CORE_ADDR addr, int len,
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
   int ret = beneath ()->remove_watchpoint (addr, len, type, cond);
-  if (!info->runtime_loaded)
+  if (info->runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
     return ret;
 
   /* Find the watch_id for the addr..addr+len range.  */
@@ -834,7 +837,7 @@ rocm_target_ops::commit_resumed ()
   for (inferior *inf : all_non_exited_inferiors (proc_target))
     {
       rocm_inferior_info *info = get_rocm_inferior_info (inf);
-      if (!info->runtime_loaded)
+      if (info->runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
 	continue;
 
       amd_dbgapi_status_t status
@@ -1157,22 +1160,26 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 	switch (runtime_state)
 	  {
 	  case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS:
-	    info->runtime_loaded = true;
+	    gdb_assert (info->runtime_state
+			== AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
+	    info->runtime_state = runtime_state;
 	    insert_initial_watchpoints (info);
 	    amd_dbgapi_runtime_loaded.notify ();
 	    break;
 
 	  case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
-	    if (info->runtime_loaded)
-	      {
-		amd_dbgapi_runtime_unloaded.notify ();
-		info->runtime_loaded = false;
-	      }
+	    gdb_assert (info->runtime_state
+			!= AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
+	    amd_dbgapi_runtime_unloaded.notify ();
+	    info->runtime_state = runtime_state;
 	    break;
 
 	  case AMD_DBGAPI_RUNTIME_STATE_LOADED_ERROR_RESTRICTION:
-	    error (_ ("ROCgdb: unable to enable GPU debugging "
-		      "due to a restriction error"));
+	    gdb_assert (info->runtime_state
+			== AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
+	    warning (_ ("ROCgdb: unable to enable GPU debugging "
+			"due to a restriction error"));
+	    info->runtime_state = runtime_state;
 	    break;
 	  }
       }
@@ -1341,7 +1348,8 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 
 	      for (inferior *inf : all_inferiors ())
 		if (inf->target_at (arch_stratum) == &rocm_ops
-		    && get_rocm_inferior_info (inf)->runtime_loaded)
+		    && get_rocm_inferior_info (inf)->runtime_state
+			 == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
 		  {
 		    ws->kind = TARGET_WAITKIND_IGNORE;
 		    break;
@@ -1422,7 +1430,13 @@ rocm_enable (inferior *inf)
     = amd_dbgapi_process_attach (reinterpret_cast<
 				   amd_dbgapi_client_process_id_t> (inf),
 				 &info->process_id);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+  if (status == AMD_DBGAPI_STATUS_ERROR_RESTRICTION)
+    {
+      warning (_ (
+	"ROCgdb: unable to enable GPU debugging due to a restriction error"));
+      return;
+    }
+  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("Could not attach to process %d (rc=%d)"), inf->pid, status);
 
   if (amd_dbgapi_process_get_info (info->process_id,
@@ -1470,11 +1484,9 @@ rocm_disable (inferior *inf)
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
 
-  if (info->runtime_loaded)
-    {
-      amd_dbgapi_runtime_unloaded.notify ();
-      info->runtime_loaded = false;
-    }
+  if (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
+    amd_dbgapi_runtime_unloaded.notify ();
+  info->runtime_state = AMD_DBGAPI_RUNTIME_STATE_UNLOADED;
 
   amd_dbgapi_status_t status = amd_dbgapi_process_detach (info->process_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
