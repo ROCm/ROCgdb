@@ -1233,6 +1233,11 @@ namespace eval Dwarf {
 		    _op .2byte $argvec(label)
 		}
 
+		DW_OP_call4 {
+		   _get_args $line $opcode label
+		   _op .4byte $argvec(label)
+		}
+
 		DW_OP_implicit_value {
 		    set l1 [new_label "value_start"]
 		    set l2 [new_label "value_end"]
