@@ -201,3 +201,98 @@ proc with_rocm_gpu_lock { body } {
 	return -code $code $result
     }
 }
+
+# Build an OpenCL kernel library from SOURCES.
+# Ignore target boards multilib_flags.
+
+proc gdb_compile_ocl_kernel {sources dest options} {
+    set outdir [file dirname $dest]
+    set objects ""
+    foreach source $sources {
+	if {[file extension $source] == ".o"} {
+	    # Already a .o file.
+	    lappend objects $source
+	    continue
+	}
+
+	set sourcebase [file tail $source]
+	set object ${outdir}/${sourcebase}.o
+
+	if {[gdb_compile_ocl $source $object object \
+	     $options] != ""} {
+	    return -1
+	}
+
+	lappend objects $object
+    }
+
+    if {[gdb_compile_ocl "${objects}" "${dest}" executable $options] != ""} {
+	return -1
+    }
+
+    return ""
+}
+
+# Compile OpenCL kernel source files specified by SOURCE into a binary
+# of type TYPE at path DEST.  gdb_compile is implemented using
+# DejaGnu's target_compile, so the type parameter and most options are
+# passed directly to it.
+#
+# The type can be one of the following:
+#
+#   - object: Compile into an object file.
+#   - executable: Compile and link into an executable.
+#   - preprocess: Preprocess the source files.
+#   - assembly: Generate assembly listing.
+#
+# And here are some of the not too obscure options understood by DejaGnu that
+# influence the compilation:
+#
+#   - additional_flags=flag: Add FLAG to the compiler flags.
+#   - libs=library: Add LIBRARY to the libraries passed to the linker.  The
+#     argument can be a file, in which case it's added to the sources, or a
+#     linker flag.
+#   - ldflags=flag: Add FLAG to the linker flags.
+#   - incdir=path: Add PATH to the searched include directories.
+#   - libdir=path: Add PATH to the linker searched directories.
+#   - debug: Build with debug information.
+#   - optimize: Build with optimization.
+
+proc gdb_compile_ocl {source dest type options} {
+    global rocm_path
+    global CC_FOR_TARGET
+    global CXX_FOR_TARGET
+    global board
+
+    set outdir [file dirname $dest]
+
+    verbose "options are $options"
+    verbose "source is $source $dest $type $options"
+
+    # Override the host compiler with a rocm one.
+    save_vars {CC_FOR_TARGET CXX_FOR_TARGET} {
+	set CC_FOR_TARGET ${rocm_path}/llvm/bin/clang
+	set CXX_FOR_TARGET ${rocm_path}/llvm/bin/clang
+
+	# target_compile always adds -lm which is not supported for
+	# kernel compilation.
+        set board [target_info name]
+	if [board_info $board exists mathlib] {
+	    set mathlib [board_info $board mathlib]
+	    set_board_info mathlib ""
+	    set result [target_compile $source $dest $type $options]
+	    set_board_info mathlib $mathlib
+	} else {
+	    set_board_info mathlib ""
+	    set result [target_compile $source $dest $type $options]
+	    unset_board_info mathlib
+	}
+    }
+
+    # Prune uninteresting compiler (and linker) output.
+    regsub "Creating library file: \[^\r\n\]*\[\r\n\]+" $result "" result
+    regsub "\[\r\n\]*$" "$result" "" result
+    regsub "^\[\r\n\]*" "$result" "" result
+
+    return $result
+}
