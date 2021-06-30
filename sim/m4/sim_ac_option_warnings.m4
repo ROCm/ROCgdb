@@ -35,12 +35,19 @@ if test "${ERROR_ON_WARNING}" = yes ; then
   WERROR_CFLAGS="-Werror"
 fi
 
-build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
--Wpointer-sign \
--Wno-unused -Wunused-value -Wunused-function \
--Wno-switch -Wno-char-subscripts -Wmissing-prototypes
--Wdeclaration-after-statement -Wempty-body -Wmissing-parameter-type \
--Wold-style-declaration -Wold-style-definition"
+dnl The options we'll try to enable.
+dnl NB: Kept somewhat in sync with gdbsupport/warnings.m4.
+build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith
+-Wno-unused -Wunused-value -Wunused-function
+-Wno-switch -Wno-char-subscripts
+-Wempty-body -Wunused-but-set-parameter
+-Wno-error=maybe-uninitialized
+-Wmissing-declarations
+-Wmissing-prototypes
+-Wdeclaration-after-statement -Wmissing-parameter-type
+-Wpointer-sign
+-Wold-style-declaration -Wold-style-definition
+"
 
 # Enable -Wno-format by default when using gcc on mingw since many
 # GCC versions complain about %I64.

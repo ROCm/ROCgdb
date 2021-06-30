@@ -1,3 +1,32 @@
+2021-06-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* frame.h (FRAME_SCOPED_DEBUG_ENTER_EXIT): New.
+	* frame.c (compute_frame_id, get_prev_frame_always_1,
+	get_prev_frame): Use FRAME_SCOPED_DEBUG_ENTER_EXIT.
+	* frame-unwind.c (frame_unwind_find_by_frame): Likewise.
+	(frame_unwind_register_value): Likewise.
+
+2021-06-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* frame-unwind.h (struct frame_unwind) <name>: New.  Update
+	instances everywhere to include this field.
+	* frame-unwind.c (frame_unwind_try_unwinder,
+	frame_unwind_find_by_frame): Add debug messages.
+
+2021-06-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* frame.h (frame_debug_printf): New.
+	* frame.c: Use frame_debug_printf throughout when printing frame
+	debug messages.
+	* amd64-windows-tdep.c: Likewise.
+	* value.c: Likewise.
+
+2021-06-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* frame.h (frame_debug): Change type to bool.
+	* frame.c (frame_debug): Change type to bool.
+	(_initialize_frame): Adjust.
+
 2021-06-29  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
 
 	* gdbthread.h (find_thread_ptid): Remove the duplicate declaration.
