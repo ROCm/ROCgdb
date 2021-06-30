@@ -515,6 +515,125 @@ amdgcn_segment_address_from_core_address (CORE_ADDR addr)
   return addr & ~AMDGCN_ADDRESS_SPACE_MASK;
 }
 
+/* Address class to address space mapping.
+
+   TODO: This is just a quick fix to make the address class hand
+	 written test work.
+
+	 Unfortunately, there are only two bits currently in the type
+	 instance flags used for address classes, and this is not
+	 enough to describe the OpenCL address classes.
+
+	 Another problem for even a basic compiler address class
+	 support is the fact that both private_lane and private_wave
+	 address spaces can be mapped to the same private address
+	 class.
+
+	 We will have to ignore that problem for now and assume that a
+	 private address class is always mapped to a private_lane
+	 address space.
+
+	 This implementation will not be backward compatible when the
+	 compiler starts generating the address class type information.  */
+
+constexpr unsigned int DWARF_GLOBAL_ADDR_CLASS = 0;
+constexpr unsigned int DWARF_GENERIC_ADDR_CLASS = 1;
+constexpr unsigned int DWARF_LOCAL_ADDR_CLASS = 3;
+constexpr unsigned int DWARF_PRIVATE_LANE_ADDR_CLASS = 5;
+
+/* Map DWARF2_ADDR_CLASS address class to type instance flags.  */
+static type_instance_flags
+amdgcn_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+{
+  if (dwarf2_addr_class == DWARF_GENERIC_ADDR_CLASS)
+    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1
+	   | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2;
+  else if (dwarf2_addr_class == DWARF_LOCAL_ADDR_CLASS)
+    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
+  else if (dwarf2_addr_class == DWARF_PRIVATE_LANE_ADDR_CLASS)
+    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2;
+
+  return 0;
+}
+
+/* Map TYPE_FLAGS type instance flags to address class.  */
+static unsigned int
+amdgcn_type_flags_to_addr_class (type_instance_flags type_flags)
+{
+  if ((type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
+      && (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2))
+    return DWARF_GENERIC_ADDR_CLASS;
+  else if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
+    return DWARF_LOCAL_ADDR_CLASS;
+  else if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
+    return DWARF_PRIVATE_LANE_ADDR_CLASS;
+
+  /* With current limitations, we can only assume
+     that the address class is global.  */
+  return DWARF_GLOBAL_ADDR_CLASS;
+}
+
+/* Map TYPE_FLAGS type instance flags to address class name.
+
+   TODO: The idea of a target resolving a language address class name
+	 just seems wrong.
+
+	 At the moment, we assume that the language is OpenCL and
+	 provide matching address class names.  */
+static const char*
+amdgcn_address_class_type_flags_to_name (struct gdbarch *gdbarch,
+					 type_instance_flags type_flags)
+{
+  unsigned int addr_class = amdgcn_type_flags_to_addr_class (type_flags);
+
+  if (addr_class == DWARF_GENERIC_ADDR_CLASS)
+    return "generic";
+  if (addr_class == DWARF_LOCAL_ADDR_CLASS)
+    return "local";
+  else if (addr_class == DWARF_PRIVATE_LANE_ADDR_CLASS)
+    return "private";
+  else
+    return "";
+}
+
+/* Form a core address from a TYPE pointer type information and BUF
+   pointer value buffer.
+
+   TODO: The address class information belongs to a type, which means
+	 that an address class is a language based concept, so either
+	 the language should define the address class numbers and
+	 names or some kind of a language enumeration needs to be
+	 passed in.
+
+	 At the moment, we assume that the language is OpenCL and we
+	 apply 1-1 mapping between its address classes and rocm address
+	 spaces.  */
+static CORE_ADDR
+amdgcn_pointer_to_address (struct gdbarch *gdbarch,
+			   struct type *type, const gdb_byte *buf)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR address
+    = extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
+  unsigned int address_class
+    = amdgcn_type_flags_to_addr_class (type->instance_flags ());
+
+  /* Address might be in a converted format already, so even if the
+     class is global, the address might have the address space part
+     in it.  This happens in cases like 'p &local_array'."  */
+  if (address_class == DWARF_GLOBAL_ADDR_CLASS)
+    return address;
+
+  /* In the current implementation, we shouldn't have a case where we
+     have both type address class information as well as address
+     space information in a core address.  */
+  gdb_assert (!amdgcn_address_space_id_from_core_address (address));
+
+  address = amdgcn_segment_address_from_core_address (address);
+
+  return amdgcn_segment_address_to_core_address (address_class, address);
+}
+
 static CORE_ADDR
 amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 {
@@ -605,6 +724,12 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   dwarf2_append_unwinders (gdbarch);
   frame_unwind_append_unwinder (gdbarch, &amdgcn_frame_unwind);
   set_gdbarch_dummy_id (gdbarch, amdgcn_dummy_id);
+
+  set_gdbarch_pointer_to_address (gdbarch, amdgcn_pointer_to_address);
+  set_gdbarch_address_class_type_flags
+    (gdbarch, amdgcn_address_class_type_flags);
+  set_gdbarch_address_class_type_flags_to_name
+    (gdbarch, amdgcn_address_class_type_flags_to_name);
 
   /* Registers and Memory.  */
   amd_dbgapi_architecture_id_t architecture_id;
