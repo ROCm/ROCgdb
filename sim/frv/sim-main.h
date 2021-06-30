@@ -17,6 +17,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifndef FRV_SIM_MAIN_H
+#define FRV_SIM_MAIN_H
+
 /* Main header for the frv.  */
 
 /* This is a global setting.  Different cpu families can't mix-n-match -scache
@@ -34,7 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #define SIM_ENGINE_HALT_HOOK(SD, LAST_CPU, CIA) \
   frv_sim_engine_halt_hook ((SD), (LAST_CPU), (CIA))
 
-#define SIM_ENGINE_RESTART_HOOK(SD, LAST_CPU, CIA) 0
+#define SIM_ENGINE_RESTART_HOOK(SD, LAST_CPU, CIA)
 
 #include "sim-base.h"
 #include "cgen-sim.h"
@@ -114,3 +117,8 @@ frv_core_signal ((SD), (CPU), (CIA), (MAP), (NR_BYTES), (ADDR), \
 
 /* Default memory size.  */
 #define FRV_DEFAULT_MEM_SIZE 0x800000 /* 8M */
+
+void frvbf_model_branch (SIM_CPU *, PCADDR, int hint);
+void frvbf_perform_writeback (SIM_CPU *);
+
+#endif

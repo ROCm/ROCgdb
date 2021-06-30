@@ -30,7 +30,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "elf-bfd.h"
 
 static void free_state (SIM_DESC);
-static void print_frv_misc_cpu (SIM_CPU *cpu, int verbose);
 
 /* Cover function of sim_state_free to free the cpu buffers as well.  */
 
@@ -86,7 +85,7 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback, bfd *abfd,
   /* Allocate core managed memory if none specified by user.
      Use address 4 here in case the user wanted address 0 unmapped.  */
   if (sim_core_read_buffer (sd, NULL, read_map, &c, 4, 1) == 0)
-    sim_do_commandf (sd, "memory region 0,0x%lx", FRV_DEFAULT_MEM_SIZE);
+    sim_do_commandf (sd, "memory region 0,0x%x", FRV_DEFAULT_MEM_SIZE);
 
   /* check for/establish the reference program image */
   if (sim_analyze_program (sd,
@@ -104,7 +103,7 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback, bfd *abfd,
     bfd *prog_bfd = STATE_PROG_BFD (sd);
     if (prog_bfd != NULL)
       {
-	struct elf_backend_data *backend_data;
+	const struct elf_backend_data *backend_data;
 
 	if (bfd_get_arch (prog_bfd) != bfd_arch_frv)
 	  {

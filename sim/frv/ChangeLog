@@ -1,3 +1,52 @@
+2021-06-28  Mike Frysinger  <vapier@gentoo.org>
+
+	* cpu.c (frvbf_record_trace_results): Delete function.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-if.c (sim_open): Mark backend_data const.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-main.h (SIM_ENGINE_RESTART_HOOK): Delete 0.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* interrupts.c: Include cgen-mem.h.
+	* profile-fr400.c (acc_use_is_media_p4): Disable function.
+	* reset.c: Include cgen-mem.h.
+	* sim-if.c (print_frv_misc_cpu): Delete.
+	* sim-main.h (FRV_SIM_MAIN_H): Add ifdef guard.
+	(frvbf_model_branch): New prototype.
+	(frvbf_perform_writeback): Likewise.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* profile.c (wait_for_flush): Change %p to %x.
+	* sim-if.c (sim_open): Change %lx to %x.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* traps.c (frv_break): Delete pc and pass down NULL_CIA.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* profile.c (frvbf_model_insn_after): Change return to void.
+	(enforce_full_fr_latency, post_wait_for_FR, post_wait_for_FRdouble,
+	post_wait_for_ACC, post_wait_for_CCR, post_wait_for_SPR,
+	post_wait_for_fdiv, post_wait_for_fsqrt,
+	post_wait_for_float): Likewise.
+	* profile.h (post_wait_for_FR, post_wait_for_FRdouble,
+	post_wait_for_ACC, post_wait_for_CCR, post_wait_for_SPR,
+	post_wait_for_fdiv, post_wait_for_fsqrt, post_wait_for_float,
+	post_wait_for_media): Likewise.
+
+2021-06-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* frv.c (frvbf_shift_left_arith_saturate): Add braces to if statement.
+	* profile-fr500.c (adjust_float_register_busy): Likewise.
+	* profile-fr550.c (adjust_float_register_busy): Likewise.
+
 2021-06-22  Mike Frysinger  <vapier@gentoo.org>
 
 	* configure: Regenerate.

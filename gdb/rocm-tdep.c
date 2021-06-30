@@ -1595,8 +1595,6 @@ rocm_target_ops::thread_architecture (ptid_t ptid)
 	   architecture_id.handle);
 
   struct gdbarch_info info;
-  gdbarch_info_init (&info);
-
   info.bfd_arch_info = bfd_lookup_arch (bfd_arch_amdgcn, elf_amdgpu_machine);
   info.byte_order = BFD_ENDIAN_LITTLE;
   info.osabi = GDB_OSABI_AMDGPU_HSA;

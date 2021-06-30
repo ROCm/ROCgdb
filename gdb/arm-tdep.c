@@ -395,8 +395,7 @@ arm_find_mapping_symbol (CORE_ADDR memaddr, CORE_ADDR *start)
 	      data->section_maps_sorted[section_idx] = true;
 	    }
 
-	  struct arm_mapping_symbol map_key
-	    = { memaddr - obj_section_addr (sec), 0 };
+	  arm_mapping_symbol map_key = { memaddr - sec->addr (), 0 };
 	  arm_mapping_symbol_vec::const_iterator it
 	    = std::lower_bound (map.begin (), map.end (), map_key);
 
@@ -409,7 +408,7 @@ arm_find_mapping_symbol (CORE_ADDR memaddr, CORE_ADDR *start)
 	      if (it->value == map_key.value)
 		{
 		  if (start)
-		    *start = it->value + obj_section_addr (sec);
+		    *start = it->value + sec->addr ();
 		  return it->type;
 		}
 	    }
@@ -420,7 +419,7 @@ arm_find_mapping_symbol (CORE_ADDR memaddr, CORE_ADDR *start)
 		= it - 1;
 
 	      if (start)
-		*start = prev_it->value + obj_section_addr (sec);
+		*start = prev_it->value + sec->addr ();
 	      return prev_it->type;
 	    }
 	}
@@ -2218,7 +2217,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
 			  NULL
 			};
 
-		      CORE_ADDR pc = pers + obj_section_offset (pers_sec);
+		      CORE_ADDR pc = pers + pers_sec->offset ();
 		      int k;
 
 		      for (k = 0; personality[k]; k++)
@@ -2303,7 +2302,7 @@ arm_find_exidx_entry (CORE_ADDR memaddr, CORE_ADDR *start)
   if (sec != NULL)
     {
       struct arm_exidx_data *data;
-      struct arm_exidx_entry map_key = { memaddr - obj_section_addr (sec), 0 };
+      struct arm_exidx_entry map_key = { memaddr - sec->addr (), 0 };
 
       data = arm_exidx_data_key.get (sec->objfile->obfd);
       if (data != NULL)
@@ -2323,7 +2322,7 @@ arm_find_exidx_entry (CORE_ADDR memaddr, CORE_ADDR *start)
 		  if (idx->addr == map_key.addr)
 		    {
 		      if (start)
-			*start = idx->addr + obj_section_addr (sec);
+			*start = idx->addr + sec->addr ();
 		      return idx->entry;
 		    }
 		}
@@ -2332,7 +2331,7 @@ arm_find_exidx_entry (CORE_ADDR memaddr, CORE_ADDR *start)
 		{
 		  idx = idx - 1;
 		  if (start)
-		    *start = idx->addr + obj_section_addr (sec);
+		    *start = idx->addr + sec->addr ();
 		  return idx->entry;
 		}
 	    }
@@ -8403,15 +8402,12 @@ arm_skip_stub (struct frame_info *frame, CORE_ADDR pc)
 static void
 arm_update_current_architecture (void)
 {
-  struct gdbarch_info info;
-
   /* If the current architecture is not ARM, we have nothing to do.  */
   if (gdbarch_bfd_arch_info (target_gdbarch ())->arch != bfd_arch_arm)
     return;
 
   /* Update the architecture.  */
-  gdbarch_info_init (&info);
-
+  gdbarch_info info;
   if (!gdbarch_update_p (info))
     internal_error (__FILE__, __LINE__, _("could not update architecture"));
 }
@@ -13237,7 +13233,6 @@ static void
 arm_record_test (void)
 {
   struct gdbarch_info info;
-  gdbarch_info_init (&info);
   info.bfd_arch_info = bfd_scan_arch ("arm");
 
   struct gdbarch *gdbarch = gdbarch_find_by_info (info);
@@ -13329,7 +13324,6 @@ arm_analyze_prologue_test ()
   for (bfd_endian endianness : {BFD_ENDIAN_LITTLE, BFD_ENDIAN_BIG})
     {
       struct gdbarch_info info;
-      gdbarch_info_init (&info);
       info.byte_order = endianness;
       info.byte_order_for_code = endianness;
       info.bfd_arch_info = bfd_scan_arch ("arm");
