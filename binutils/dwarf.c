@@ -2546,6 +2546,10 @@ read_and_display_attr_value (unsigned long           attribute,
 					  offset_size, dwarf_version,
 					  debug_info_p, do_loc,
 					  section, this_set, delimiter, level);
+
+    case DW_FORM_implicit_const:
+      uvalue = implicit_const;
+      break;
     }
 
   switch (form)
@@ -9484,19 +9488,21 @@ display_debug_frames (struct dwarf_section *section,
 
 	    case DW_CFA_def_cfa_sf:
 	      READ_ULEB (fc->cfa_reg, start, block_end);
-	      READ_ULEB (fc->cfa_offset, start, block_end);
-	      fc->cfa_offset = fc->cfa_offset * fc->data_factor;
+	      READ_SLEB (l, start, block_end);
+	      l *= fc->data_factor;
+	      fc->cfa_offset = l;
 	      fc->cfa_exp = 0;
 	      if (! do_debug_frames_interp)
-		printf ("  DW_CFA_def_cfa_sf: %s ofs %d\n",
-			regname (fc->cfa_reg, 0), (int) fc->cfa_offset);
+		printf ("  DW_CFA_def_cfa_sf: %s ofs %ld\n",
+			regname (fc->cfa_reg, 0), (long) l);
 	      break;
 
 	    case DW_CFA_def_cfa_offset_sf:
-	      READ_ULEB (fc->cfa_offset, start, block_end);
-	      fc->cfa_offset *= fc->data_factor;
+	      READ_SLEB (l, start, block_end);
+	      l *= fc->data_factor;
+	      fc->cfa_offset = l;
 	      if (! do_debug_frames_interp)
-		printf ("  DW_CFA_def_cfa_offset_sf: %d\n", (int) fc->cfa_offset);
+		printf ("  DW_CFA_def_cfa_offset_sf: %ld\n", (long) l);
 	      break;
 
 	    case DW_CFA_MIPS_advance_loc8:

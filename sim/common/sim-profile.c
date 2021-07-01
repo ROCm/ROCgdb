@@ -1152,7 +1152,7 @@ profile_info (SIM_DESC sd, int verbose)
 #if WITH_PROFILE_MODEL_P
 	      || PROFILE_FLAGS (data) [PROFILE_MODEL_IDX]
 #endif
-#if WITH_PROFILE_SCACHE_P && WITH_SCACHE
+#if WITH_PROFILE_SCACHE_P && WITH_SCACHE && defined(CGEN_ARCH)
 	      || PROFILE_FLAGS (data) [PROFILE_SCACHE_IDX]
 #endif
 #if WITH_PROFILE_PC_P
@@ -1190,7 +1190,7 @@ profile_info (SIM_DESC sd, int verbose)
 	profile_print_model (cpu, verbose);
 #endif
 
-#if WITH_PROFILE_SCACHE_P && WITH_SCACHE
+#if WITH_PROFILE_SCACHE_P && WITH_SCACHE && defined(CGEN_ARCH)
       if (PROFILE_FLAGS (data) [PROFILE_SCACHE_IDX])
 	scache_print_profile (cpu, verbose);
 #endif
@@ -1216,10 +1216,12 @@ profile_info (SIM_DESC sd, int verbose)
 
 }
 
-/* Install profiling support in the simulator.  */
+/* Provide a prototype to silence -Wmissing-prototypes.  */
+SIM_RC sim_install_profile (SIM_DESC sd);
 
+/* Install profiling support in the simulator.  */
 SIM_RC
-profile_install (SIM_DESC sd)
+sim_install_profile (SIM_DESC sd)
 {
   int i;
 

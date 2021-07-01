@@ -1,3 +1,29 @@
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Remove [true] from cris, frv, iq2000, and lm32
+	SIM_TARGET calls.  Include frv/acinclude.m4.
+	* configure, Makefile.in: Regenerate.
+
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Call SIM_AC_OPTION_SCACHE.
+	(sim_scache): Delete.
+	* m4/sim_ac_option_scache.m4: Delete first arg.  Define WITH_SCACHE.
+	* m4/sim_ac_output.m4 (sim_scache): Delete.
+	* aclocal.m4, config.h.in, configure, Makefile.in: Regenerate.
+
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Remove [true] from bfin SIM_TARGET call.
+	* configure, Makefile.in: Regenerate.
+
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac (sim_default_model): Delete.
+	* m4/sim_ac_output.m4 (sim_default_model): Likewise.
+	* configure, Makefile.in: Regenerate.
+	* m4/sim_ac_option_default_model.m4: Removed.
+
 2021-06-29  Mike Frysinger  <vapier@gentoo.org>
 
 	* m4/sim_ac_option_warnings.m4: Add -Wunused-but-set-parameter.

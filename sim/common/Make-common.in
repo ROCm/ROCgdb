@@ -73,10 +73,8 @@ top_builddir = ..
 SHELL = @SHELL@
 
 SIM_BITSIZE = @sim_bitsize@
-SIM_DEFAULT_MODEL = @sim_default_model@
 SIM_FLOAT = @sim_float@
 SIM_RESERVED_BITS = @sim_reserved_bits@
-SIM_SCACHE = @sim_scache@
 SIM_WARN_CFLAGS = $(WARN_CFLAGS)
 SIM_WERROR_CFLAGS = $(WERROR_CFLAGS)
 
@@ -195,13 +193,11 @@ CGEN_INCLUDE_DEPS = \
 
 CONFIG_CFLAGS = \
 	-DHAVE_CONFIG_H \
-	$(SIM_DEFAULT_MODEL) \
 	$(SIM_BITSIZE) \
 	$(SIM_FLOAT) \
 	$(SIM_HW_CFLAGS) \
 	$(SIM_INLINE) \
 	$(SIM_RESERVED_BITS) \
-	$(SIM_SCACHE) \
 	$(SIM_WARN_CFLAGS) \
 	$(SIM_WERROR_CFLAGS) \
 	$(SIM_HARDWARE)

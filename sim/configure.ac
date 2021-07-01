@@ -114,16 +114,16 @@ if test "${enable_sim}" != no; then
     SIM_TARGET([aarch64*-*-*], [aarch64])
     SIM_TARGET([arm*-*-*], [arm])
     SIM_TARGET([avr*-*-*], [avr])
-    SIM_TARGET([bfin-*-*], [bfin], [true])
+    SIM_TARGET([bfin-*-*], [bfin])
     SIM_TARGET([bpf-*-*], [bpf], [true])
     SIM_TARGET([cr16*-*-*], [cr16])
-    SIM_TARGET([cris-*-* | crisv32-*-*], [cris], [true])
+    SIM_TARGET([cris-*-* | crisv32-*-*], [cris])
     SIM_TARGET([d10v-*-*], [d10v])
-    SIM_TARGET([frv-*-*], [frv], [true])
+    SIM_TARGET([frv-*-*], [frv])
     SIM_TARGET([ft32-*-*], [ft32])
     SIM_TARGET([h8300*-*-*], [h8300])
-    SIM_TARGET([iq2000-*-*], [iq2000], [true])
-    SIM_TARGET([lm32-*-*], [lm32], [true])
+    SIM_TARGET([iq2000-*-*], [iq2000])
+    SIM_TARGET([lm32-*-*], [lm32])
     SIM_TARGET([m32c-*-*], [m32c])
     SIM_TARGET([m32r-*-*], [m32r], [true])
     SIM_TARGET([m68hc11-*-*|m6811-*-*], [m68hc11])
@@ -161,6 +161,7 @@ SIM_AC_OPTION_ENVIRONMENT
 SIM_AC_OPTION_HARDWARE
 SIM_AC_OPTION_INLINE
 SIM_AC_OPTION_PROFILE
+SIM_AC_OPTION_SCACHE
 SIM_AC_OPTION_STDIO
 SIM_AC_OPTION_TRACE
 SIM_AC_OPTION_WARNINGS
@@ -171,11 +172,10 @@ dnl when the rest of the code is in the respective macros.  Once we merge the
 dnl respective SIM_AC_OPTION_xxx call above, we can drop these.
 AC_SUBST(sim_bitsize)
 AC_SUBST(sim_float)
-AC_SUBST(sim_scache)
-AC_SUBST(sim_default_model)
 AC_SUBST(sim_reserved_bits)
 
 dnl Some arches have unique configure flags.
+m4_include([frv/acinclude.m4])
 m4_include([rx/acinclude.m4])
 
 AC_CONFIG_FILES([arch-subdir.mk Makefile])

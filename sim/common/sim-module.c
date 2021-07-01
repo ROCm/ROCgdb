@@ -37,19 +37,9 @@ static MODULE_INSTALL_FN * const early_modules[] = {
   standard_install,
   sim_events_install,
   sim_model_install,
-  sim_engine_install,
-#if WITH_TRACE_ANY_P
-  trace_install,
-#endif
-#if WITH_PROFILE
-  profile_install,
-#endif
   sim_core_install,
   sim_memopt_install,
   sim_watchpoint_install,
-#if WITH_SCACHE
-  scache_install,
-#endif
 };
 static int early_modules_len = ARRAY_SIZE (early_modules);
 

@@ -1,3 +1,36 @@
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Removed.
+	* aclocal.m4: Removed.
+	* configure: Removed.
+	* acinclude.m4: New file.
+
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Delete SIM_AC_OPTION_SCACHE call.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.in (SIM_EXTRA_CFLAGS): Change to SIM_FRV_TRAPDUMP_FLAGS.
+	* configure.ac: Change sim-trapdump to sim-frv-trapdump.
+	* configure: Regenerate.
+
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Delete SIM_AC_OPTION_DEFAULT_MODEL call.
+	* sim-if.c (sim_open): Set STATE_MODEL_NAME.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2021-06-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* arch.c (sim_machs): Rename to ...
+	(frv_sim_machs): ... this.
+	* sim-if.c (frv_sim_machs): New decl.
+	(sim_open): Set STATE_MACH.
+
 2021-06-29  Mike Frysinger  <vapier@gentoo.org>
 
 	* arch.c (sim_machs): Mark const.

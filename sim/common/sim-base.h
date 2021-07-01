@@ -143,6 +143,14 @@ struct sim_state {
   const char *target;
 #define STATE_TARGET(sd) ((sd)->target)
 
+  /* List of machs available.  */
+  const SIM_MACH * const *machs;
+#define STATE_MACHS(sd) ((sd)->machs)
+
+  /* If non-NULL, the model to select for CPUs.  */
+  const char *model_name;
+#define STATE_MODEL_NAME(sd) ((sd)->model_name)
+
   /* In standalone simulator, this is the program's arguments passed
      on the command line.  */
   char **prog_argv;
