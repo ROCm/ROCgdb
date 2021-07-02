@@ -125,7 +125,7 @@ if test "${enable_sim}" != no; then
     SIM_TARGET([iq2000-*-*], [iq2000])
     SIM_TARGET([lm32-*-*], [lm32])
     SIM_TARGET([m32c-*-*], [m32c])
-    SIM_TARGET([m32r-*-*], [m32r], [true])
+    SIM_TARGET([m32r-*-*], [m32r])
     SIM_TARGET([m68hc11-*-*|m6811-*-*], [m68hc11])
     SIM_TARGET([mcore-*-*], [mcore])
     SIM_TARGET([microblaze-*-*], [microblaze])
@@ -161,6 +161,7 @@ SIM_AC_OPTION_ENVIRONMENT
 SIM_AC_OPTION_HARDWARE
 SIM_AC_OPTION_INLINE
 SIM_AC_OPTION_PROFILE
+SIM_AC_OPTION_RESERVED_BITS
 SIM_AC_OPTION_SCACHE
 SIM_AC_OPTION_STDIO
 SIM_AC_OPTION_TRACE
@@ -172,7 +173,6 @@ dnl when the rest of the code is in the respective macros.  Once we merge the
 dnl respective SIM_AC_OPTION_xxx call above, we can drop these.
 AC_SUBST(sim_bitsize)
 AC_SUBST(sim_float)
-AC_SUBST(sim_reserved_bits)
 
 dnl Some arches have unique configure flags.
 m4_include([frv/acinclude.m4])

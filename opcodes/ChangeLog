@@ -1,3 +1,55 @@
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.am (GUILE): New variable.
+	(CGEN): Use $(GUILE).
+	* Makefile.in: Regenerate.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* mep-asm.c (macros): Mark static & const.
+	(lookup_macro): Change return & m to const.
+	(expand_macro): Change mac to const.
+	(expand_string): Change pmacro to const.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* nds32-asm.c (operand_fields): Rename to ...
+	(nds32_operand_fields): ... this.
+	(keyword_gpr): Rename to ...
+	(nds32_keyword_gpr): ... this.
+	(keyword_usr, keyword_dxr, keyword_sr, keyword_cp, keyword_cpr,
+	keyword_fsr, keyword_fdr, keyword_abdim, keyword_abm,
+	keyword_dpref_st, keyword_cctl_lv, keyword_standby_st,
+	keyword_msync_st, keyword_im5_i, keyword_im5_m, keyword_accumulator,
+	keyword_aridx, keyword_aridx2, keyword_aridxi, keyword_aridxi_mx):
+	Mark static.
+	(keywords): Rename to ...
+	(nds32_keywords): ... this.
+	* nds32-dis.c: Rename operand_fields to nds32_operand_fields,
+	keywords to nds32_keywords, and keyword_gpr to nds32_keyword_gpr.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* z80-dis.c (opc_ed): Make const.
+	(pref_ed): Make p const.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* microblaze-dis.c (get_field_special): Make op const.
+	(read_insn_microblaze): Make opr & op const.  Rename opcodes to
+	microblaze_opcodes.
+	(print_insn_microblaze): Make op & pop const.
+	(get_insn_microblaze): Make op const.  Rename opcodes to
+	microblaze_opcodes.
+	(microblaze_get_target_address): Likewise.
+	* microblaze-opc.h (struct op_code_struct): Make const.
+	Rename opcodes to microblaze_opcodes.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* aarch64-gen.c (aarch64_opcode_table): Add const.
+	* aarch64-tbl.h (aarch64_opcode_table): Likewise.
+
 2021-06-22  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* cgen-dis.c (count_decodable_bits): Use __builtin_popcount when
@@ -367,7 +419,7 @@
 2021-03-29  Jan Beulich  <jbeulich@suse.com>
 
 	* i386-gen.c (process_i386_opcode_modifier): New parameter
-	"space". 
+	"space".
 	(output_i386_opcode): New local variable "space". Adjust
 	process_i386_opcode_modifier() invocation.
 	(process_i386_opcodes): Adjust process_i386_opcode_modifier()

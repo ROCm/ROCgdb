@@ -640,7 +640,6 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 SIM_RX_CYCLE_ACCURATE_FLAGS
 SIM_FRV_TRAPDUMP_FLAGS
-sim_reserved_bits
 sim_float
 sim_bitsize
 SIM_INLINE
@@ -840,6 +839,7 @@ enable_sim_environment
 enable_sim_hardware
 enable_sim_inline
 enable_sim_profile
+enable_sim_reserved_bits
 enable_sim_scache
 enable_sim_stdio
 enable_sim_trace
@@ -864,7 +864,6 @@ PKG_CONFIG_LIBDIR
 SDL_CFLAGS
 SDL_LIBS'
 ac_subdirs_all='bpf
-m32r
 mips
 mn10300
 or1k
@@ -1524,6 +1523,9 @@ Optional Features:
                           Specify which functions should be inlined
   --enable-sim-profile=opts
                           Enable profiling flags
+  --enable-sim-reserved-bits
+                          Specify whether to check reserved bits in
+                          instruction
   --enable-sim-scache=size
                           Specify simulator execution cache size
   --enable-sim-stdio      Specify whether to use stdio for console
@@ -12180,7 +12182,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 12183 "configure"
+#line 12185 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -12286,7 +12288,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 12289 "configure"
+#line 12291 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13976,8 +13978,11 @@ subdirs="$subdirs bpf"
       if test "${targ}" = "${target}"; then
         SIM_PRIMARY_TARGET=m32r
       fi
-            subdirs="$subdirs m32r"
+            ac_config_files="$ac_config_files m32r/Makefile.sim:m32r/Makefile.in"
 
+    ac_config_commands="$ac_config_commands m32r/Makefile"
+
+    as_fn_append SIM_SUBDIRS " m32r"
 
     ac_config_commands="$ac_config_commands depdir-m32r"
 
@@ -14530,6 +14535,31 @@ _ACEOF
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $sim_profile" >&5
 $as_echo "$sim_profile" >&6; }
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to check reserved bits in instruction" >&5
+$as_echo_n "checking whether to check reserved bits in instruction... " >&6; }
+# Check whether --enable-sim-reserved-bits was given.
+if test "${enable_sim_reserved_bits+set}" = set; then :
+  enableval=$enable_sim_reserved_bits; case "${enableval}" in
+yes|no) ;;
+*) as_fn_error $? "\"--enable-sim-reserved-bits does not take a value\"" "$LINENO" 5;;
+esac
+fi
+
+if test "x${enable_sim_reserved_bits}" != xno; then
+  sim_reserved_bits=1
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  sim_reserved_bits=0
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define WITH_RESERVED_BITS $sim_reserved_bits
+_ACEOF
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sim cache size" >&5
 $as_echo_n "checking for sim cache size... " >&6; }
 sim_scache="16384"
@@ -14703,7 +14733,6 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${WARN_CFLAGS} ${WERROR_CFLAGS}" >&5
 $as_echo "${WARN_CFLAGS} ${WERROR_CFLAGS}" >&6; }
 fi
-
 
 
 
@@ -15832,6 +15861,8 @@ do
     "m32c/Makefile.sim") CONFIG_FILES="$CONFIG_FILES m32c/Makefile.sim:m32c/Makefile.in" ;;
     "m32c/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS m32c/Makefile" ;;
     "depdir-m32c") CONFIG_COMMANDS="$CONFIG_COMMANDS depdir-m32c" ;;
+    "m32r/Makefile.sim") CONFIG_FILES="$CONFIG_FILES m32r/Makefile.sim:m32r/Makefile.in" ;;
+    "m32r/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS m32r/Makefile" ;;
     "depdir-m32r") CONFIG_COMMANDS="$CONFIG_COMMANDS depdir-m32r" ;;
     "m68hc11/Makefile.sim") CONFIG_FILES="$CONFIG_FILES m68hc11/Makefile.sim:m68hc11/Makefile.in" ;;
     "m68hc11/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS m68hc11/Makefile" ;;
@@ -17371,6 +17402,18 @@ $as_echo X"$file" |
  rm -f m32c/Makesim1.tmp m32c/Makesim2.tmp
  ;;
     "depdir-m32c":C) $SHELL $ac_aux_dir/mkinstalldirs m32c/$DEPDIR ;;
+    "m32r/Makefile":C) sed -n \
+	-e '/^## COMMON_PRE_/,/^## End COMMON_PRE_/ {
+		/^srcdir = / s:$:/m32r:
+		p
+	}' \
+	<Make-common.sim >m32r/Makesim1.tmp
+ sed -n -e '/^## COMMON_POST_/,/^## End COMMON_POST_/ p' <Make-common.sim >m32r/Makesim2.tmp
+ sed -e '/^## COMMON_PRE_/ r m32r/Makesim1.tmp' \
+	-e '/^## COMMON_POST_/ r m32r/Makesim2.tmp' \
+	<m32r/Makefile.sim >m32r/Makefile
+ rm -f m32r/Makesim1.tmp m32r/Makesim2.tmp
+ ;;
     "depdir-m32r":C) $SHELL $ac_aux_dir/mkinstalldirs m32r/$DEPDIR ;;
     "m68hc11/Makefile":C) sed -n \
 	-e '/^## COMMON_PRE_/,/^## End COMMON_PRE_/ {

@@ -1,3 +1,45 @@
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Removed.
+	* aclocal.m4: Removed.
+	* configure: Removed.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* traps.c (m32r_trap): Reformat indentation to GNU style.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.in (TRAPS_OBJ, SIM_EXTRA_CFLAGS): Delete.
+	* configure.ac (traps_obj, sim_extra_cflags): Delete.
+	* sim-if.c (M32R_DEFAULT_MEM_SIZE): New define.
+	(sim_create_inferior): Replace M32R_LINUX with STATE_ENVIRONMENT
+	check.
+	* sim-main.h (M32R_DEFAULT_MEM_SIZE): Delete.
+	* traps-linux.c: Merge with ...
+	* traps.c: ... this file.
+	* configure: Regenerate.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* traps-linux.c (conv_endian, conv_endian16,
+	translate_endian): Delete.
+	(translate_endian_h2t): New host-to-target function.
+	(translate_endian_t2h): New target-to-host function.
+	(m32r_trap): Replace conv_endian with H2T_4 & T2H_4, conv_endian16
+	with H2T_2 & T2H_2, and translate_endian with translate_endian_h2t
+	& translate_endian_t2h.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* traps-linux.c (m32r_trap): Change OPERATING_ENVIRONMENT check to
+	!USER_ENVIRONMENT.  Jump to default switch case.
+
+2021-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* syscall.h: Change __NR_ prefix on all symbols to TARGET_LINUX_SYS_.
+	* traps-linux.c: Likewise.  Include sim/callback.h & stdlib.h.
+
 2021-06-30  Mike Frysinger  <vapier@gentoo.org>
 
 	* configure.ac: Delete SIM_AC_OPTION_SCACHE call.
