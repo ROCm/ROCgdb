@@ -2095,6 +2095,7 @@ static abbrev_entry *
 get_type_abbrev_from_form (unsigned long form,
 			   unsigned long uvalue,
 			   dwarf_vma cu_offset,
+			   unsigned char *cu_end,
 			   const struct dwarf_section *section,
 			   unsigned long *abbrev_num_return,
 			   unsigned char **data_return,
@@ -2135,10 +2136,10 @@ get_type_abbrev_from_form (unsigned long form,
     case DW_FORM_ref4:
     case DW_FORM_ref8:
     case DW_FORM_ref_udata:
-      if (uvalue + cu_offset > section->size)
+      if (uvalue + cu_offset > (size_t) (cu_end - section->start))
 	{
-	  warn (_("Unable to resolve ref form: uvalue %lx + cu_offset %lx > section size %lx\n"),
-		uvalue, (long) cu_offset, (long) section->size);
+	  warn (_("Unable to resolve ref form: uvalue %lx + cu_offset %lx > CU size %lx\n"),
+		uvalue, (long) cu_offset, (long) (cu_end - section->start));
 	  return NULL;
 	}
       uvalue += cu_offset;
@@ -2254,6 +2255,7 @@ get_type_signedness (abbrev_entry *entry,
 	    type_abbrev = get_type_abbrev_from_form (attr->form,
 						     uvalue,
 						     cu_offset,
+						     end,
 						     section,
 						     NULL /* abbrev num return */,
 						     &type_data,
@@ -2992,8 +2994,10 @@ read_and_display_attr_value (unsigned long           attribute,
 	  unsigned char *type_data;
 	  abbrev_map *map;
 
-	  type_abbrev = get_type_abbrev_from_form (form, uvalue, cu_offset,
-						   section, NULL, &type_data, &map);
+	  type_abbrev = get_type_abbrev_from_form (form, uvalue,
+						   cu_offset, end,
+						   section, NULL,
+						   &type_data, &map);
 	  if (type_abbrev != NULL)
 	    {
 	      get_type_signedness (type_abbrev, section, type_data,
@@ -3326,7 +3330,7 @@ read_and_display_attr_value (unsigned long           attribute,
 	unsigned long abbrev_number;
 	abbrev_entry *entry;
 
-	entry = get_type_abbrev_from_form (form, uvalue, cu_offset,
+	entry = get_type_abbrev_from_form (form, uvalue, cu_offset, end,
 					   section, & abbrev_number, NULL, NULL);
 	if (entry == NULL)
 	  {

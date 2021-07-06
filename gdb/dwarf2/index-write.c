@@ -421,10 +421,10 @@ struct addrmap_index_data
 
   int operator() (CORE_ADDR start_addr, void *obj);
 
-  /* Non-zero if the previous_* fields are valid.
+  /* True if the previous_* fields are valid.
      We can't write an entry until we see the next entry (since it is only then
      that we know the end of the entry).  */
-  int previous_valid = 0;
+  bool previous_valid = false;
   /* Index of the CU in the table of all CUs in the index file.  */
   unsigned int previous_cu_index = 0;
   /* Start address of the CU.  */
@@ -460,10 +460,10 @@ addrmap_index_data::operator() (CORE_ADDR start_addr, void *obj)
       const auto it = cu_index_htab.find (pst);
       gdb_assert (it != cu_index_htab.cend ());
       previous_cu_index = it->second;
-      previous_valid = 1;
+      previous_valid = true;
     }
   else
-    previous_valid = 0;
+    previous_valid = false;
 
   return 0;
 }
@@ -584,58 +584,6 @@ write_psymbols (struct mapped_symtab *symtab,
 	  add_index_entry (symtab, name, is_static, kind, cu_index);
 	}
     }
-}
-
-/* A helper struct used when iterating over debug_types.  */
-struct signatured_type_index_data
-{
-  signatured_type_index_data (data_buf &types_list_,
-			      std::unordered_set<partial_symbol *> &psyms_seen_)
-    : types_list (types_list_), psyms_seen (psyms_seen_)
-  {}
-
-  struct objfile *objfile;
-  struct mapped_symtab *symtab;
-  data_buf &types_list;
-  std::unordered_set<partial_symbol *> &psyms_seen;
-  int cu_index;
-};
-
-/* A helper function that writes a single signatured_type to an
-   obstack.  */
-
-static int
-write_one_signatured_type (void **slot, void *d)
-{
-  struct signatured_type_index_data *info
-    = (struct signatured_type_index_data *) d;
-  struct signatured_type *entry = (struct signatured_type *) *slot;
-  partial_symtab *psymtab = entry->v.psymtab;
-
-  if (psymtab == nullptr)
-    {
-      /* We can end up here when processing a skeleton CU referring to a
-	 .dwo file that hasn't been found.  There's not much we can do in
-	 such a case, so skip this CU.  */
-      return 1;
-    }
-
-  write_psymbols (info->symtab, info->psyms_seen,
-		  psymtab->global_psymbols, info->cu_index,
-		  0);
-  write_psymbols (info->symtab, info->psyms_seen,
-		  psymtab->static_psymbols, info->cu_index,
-		  1);
-
-  info->types_list.append_uint (8, BFD_ENDIAN_LITTLE,
-				to_underlying (entry->sect_off));
-  info->types_list.append_uint (8, BFD_ENDIAN_LITTLE,
-				to_underlying (entry->type_offset_in_tu));
-  info->types_list.append_uint (8, BFD_ENDIAN_LITTLE, entry->signature);
-
-  ++info->cu_index;
-
-  return 1;
 }
 
 /* Recurse into all "included" dependencies and count their symbols as
@@ -940,32 +888,6 @@ public:
     m_debugstrlookup.file_write (file_str);
   }
 
-  /* A helper user data for write_one_signatured_type.  */
-  class write_one_signatured_type_data
-  {
-  public:
-    write_one_signatured_type_data (debug_names &nametable_,
-				    signatured_type_index_data &&info_)
-    : nametable (nametable_), info (std::move (info_))
-    {}
-    debug_names &nametable;
-    struct signatured_type_index_data info;
-  };
-
-  /* A helper function to pass write_one_signatured_type to
-     htab_traverse_noresize.  */
-  static int
-  write_one_signatured_type (void **slot, void *d)
-  {
-    write_one_signatured_type_data *data = (write_one_signatured_type_data *) d;
-    struct signatured_type_index_data *info = &data->info;
-    struct signatured_type *entry = (struct signatured_type *) *slot;
-
-    data->nametable.write_one_signatured_type (entry, info);
-
-    return 1;
-  }
-
 private:
 
   /* Storage for symbol names mapping them to their .debug_str section
@@ -1248,25 +1170,6 @@ private:
       }
   }
 
-  /* A helper function that writes a single signatured_type
-     to a debug_names.  */
-  void
-  write_one_signatured_type (struct signatured_type *entry,
-			     struct signatured_type_index_data *info)
-  {
-    partial_symtab *psymtab = entry->v.psymtab;
-
-    write_psymbols (info->psyms_seen, psymtab->global_psymbols,
-		    info->cu_index, false, unit_kind::tu);
-    write_psymbols (info->psyms_seen, psymtab->static_psymbols,
-		    info->cu_index, true, unit_kind::tu);
-
-    info->types_list.append_uint (dwarf5_offset_size (), m_dwarf5_byte_order,
-				  to_underlying (entry->sect_off));
-
-    ++info->cu_index;
-  }
-
   /* Store value of each symbol.  */
   std::unordered_map<c_str_view, std::set<symbol_value>, c_str_view_hasher>
     m_name_to_value_set;
@@ -1421,6 +1324,9 @@ write_gdbindex (dwarf2_per_objfile *per_objfile, FILE *out_file,
   psym_index_map cu_index_htab;
   cu_index_htab.reserve (per_objfile->per_bfd->all_comp_units.size ());
 
+  /* Store out the .debug_type CUs, if any.  */
+  data_buf types_cu_list;
+
   /* The CU list is already sorted, so we don't need to do additional
      work here.  Also, the debug_types entries do not appear in
      all_comp_units, but only in their own hash table.  */
@@ -1428,53 +1334,51 @@ write_gdbindex (dwarf2_per_objfile *per_objfile, FILE *out_file,
   std::unordered_set<partial_symbol *> psyms_seen
     (psyms_seen_size (per_objfile));
   int counter = 0;
+  int types_counter = 0;
   for (int i = 0; i < per_objfile->per_bfd->all_comp_units.size (); ++i)
     {
       dwarf2_per_cu_data *per_cu
 	= per_objfile->per_bfd->all_comp_units[i].get ();
-      if (per_cu->is_debug_types)
-	continue;
-
       partial_symtab *psymtab = per_cu->v.psymtab;
+
+      int &this_counter = per_cu->is_debug_types ? types_counter : counter;
 
       if (psymtab != NULL)
 	{
 	  if (psymtab->user == NULL)
 	    recursively_write_psymbols (objfile, psymtab, &symtab,
-					psyms_seen, i);
+					psyms_seen, this_counter);
 
-	  const auto insertpair = cu_index_htab.emplace (psymtab, counter);
+	  const auto insertpair = cu_index_htab.emplace (psymtab,
+							 this_counter);
 	  gdb_assert (insertpair.second);
 	}
 
       /* The all_comp_units list contains CUs read from the objfile as well as
 	 from the eventual dwz file.  We need to place the entry in the
 	 corresponding index.  */
-      data_buf &cu_list = per_cu->is_dwz ? dwz_cu_list : objfile_cu_list;
+      data_buf &cu_list = (per_cu->is_debug_types
+			   ? types_cu_list
+			   : per_cu->is_dwz ? dwz_cu_list : objfile_cu_list);
       cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
 			   to_underlying (per_cu->sect_off));
-      cu_list.append_uint (8, BFD_ENDIAN_LITTLE, per_cu->length);
-      ++counter;
+      if (per_cu->is_debug_types)
+	{
+	  signatured_type *sig_type = (signatured_type *) per_cu;
+	  cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
+			       to_underlying (sig_type->type_offset_in_tu));
+	  cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
+			       sig_type->signature);
+	}
+      else
+	cu_list.append_uint (8, BFD_ENDIAN_LITTLE, per_cu->length);
+
+      ++this_counter;
     }
 
   /* Dump the address map.  */
   data_buf addr_vec;
   write_address_map (per_objfile->per_bfd, addr_vec, cu_index_htab);
-
-  /* Write out the .debug_type entries, if any.  */
-  data_buf types_cu_list;
-  if (per_objfile->per_bfd->signatured_types)
-    {
-      signatured_type_index_data sig_data (types_cu_list,
-					   psyms_seen);
-
-      sig_data.objfile = objfile;
-      sig_data.symtab = &symtab;
-      sig_data.cu_index = (per_objfile->per_bfd->all_comp_units.size ()
-			   - per_objfile->per_bfd->tu_stats.nr_tus);
-      htab_traverse_noresize (per_objfile->per_bfd->signatured_types.get (),
-			      write_one_signatured_type, &sig_data);
-    }
 
   /* Now that we've processed all symbols we can shrink their cu_indices
      lists.  */
@@ -1512,17 +1416,16 @@ write_debug_names (dwarf2_per_objfile *per_objfile,
      work here.  Also, the debug_types entries do not appear in
      all_comp_units, but only in their own hash table.  */
   data_buf cu_list;
+  data_buf types_cu_list;
   debug_names nametable (per_objfile, dwarf5_is_dwarf64, dwarf5_byte_order);
   std::unordered_set<partial_symbol *>
     psyms_seen (psyms_seen_size (per_objfile));
   int counter = 0;
+  int types_counter = 0;
   for (int i = 0; i < per_objfile->per_bfd->all_comp_units.size (); ++i)
     {
       const dwarf2_per_cu_data *per_cu
 	= per_objfile->per_bfd->all_comp_units[i].get ();
-      if (per_cu->is_debug_types)
-	continue;
-
       partial_symtab *psymtab = per_cu->v.psymtab;
 
       /* CU of a shared file from 'dwz -m' may be unused by this main
@@ -1531,29 +1434,17 @@ write_debug_names (dwarf2_per_objfile *per_objfile,
       if (psymtab == NULL)
 	continue;
 
+      int &this_counter = per_cu->is_debug_types ? types_counter : counter;
+      data_buf &this_list = per_cu->is_debug_types ? types_cu_list : cu_list;
+
       if (psymtab->user == NULL)
 	nametable.recursively_write_psymbols (objfile, psymtab, psyms_seen,
-					      counter);
+					      this_counter);
 
-      cu_list.append_uint (nametable.dwarf5_offset_size (), dwarf5_byte_order,
-			   to_underlying (per_cu->sect_off));
-      ++counter;
-    }
-
-  /* Write out the .debug_type entries, if any.  */
-  data_buf types_cu_list;
-  if (per_objfile->per_bfd->signatured_types)
-    {
-      debug_names::write_one_signatured_type_data sig_data (nametable,
-			signatured_type_index_data (types_cu_list, psyms_seen));
-
-      sig_data.info.objfile = objfile;
-      /* It is used only for gdb_index.  */
-      sig_data.info.symtab = nullptr;
-      sig_data.info.cu_index = 0;
-      htab_traverse_noresize (per_objfile->per_bfd->signatured_types.get (),
-			      debug_names::write_one_signatured_type,
-			      &sig_data);
+      this_list.append_uint (nametable.dwarf5_offset_size (),
+			     dwarf5_byte_order,
+			     to_underlying (per_cu->sect_off));
+      ++this_counter;
     }
 
   nametable.build ();
