@@ -488,6 +488,15 @@ public:
     return std::shared_ptr<dwarf_value> (nullptr);
   }
 
+  /* Make a slice of a location description with an added bit offset
+     BIT_OFFSET and BIT_SIZE size in bits.
+
+     In the case of a composite location description, function returns
+     a minimum subset of that location description that starts on a
+     given offset of a given size.  */
+  virtual std::shared_ptr<dwarf_location> slice (LONGEST bit_offset,
+						 LONGEST bit_size) const;
+
   /* Read contents from the descripbed location.
 
      The read operation is performed in the context of a FRAME.
@@ -615,6 +624,17 @@ protected:
      DW_OP_GNU_uninit operation.  */
   bool m_initialised;
 };
+
+/* This is a default implementation used on
+   non-composite location descriptions.  */
+
+std::shared_ptr<dwarf_location>
+dwarf_location::slice (LONGEST bit_offset, LONGEST bit_size) const
+{
+  auto location_slice = this->clone ()->to_location (m_arch);
+  location_slice->add_bit_offset (bit_offset);
+  return location_slice;
+}
 
 std::shared_ptr<dwarf_value>
 dwarf_location::deref (frame_info *frame, const property_addr_info *addr_info,
@@ -1637,6 +1657,9 @@ public:
     return std::make_shared<dwarf_composite> (*this);
   }
 
+  std::shared_ptr<dwarf_location> slice (LONGEST bit_offset,
+					 LONGEST bit_size) const override;
+
   void add_piece (std::shared_ptr<dwarf_location> location, ULONGEST bit_size)
   {
     gdb_assert (location != nullptr);
@@ -1707,6 +1730,65 @@ private:
   /* True if location description is completed.  */
   bool m_completed = false;
 };
+
+std::shared_ptr<dwarf_location>
+dwarf_composite::slice (LONGEST bit_offset, LONGEST bit_size) const
+{
+  /* Size 0 is never expected at this point.  */
+  gdb_assert (bit_size != 0);
+
+  unsigned int pieces_num = m_pieces.size ();
+  LONGEST total_bit_size = bit_size;
+  LONGEST total_bits_to_skip = m_offset * HOST_CHAR_BIT
+			       + m_bit_suboffset + bit_offset;
+  std::vector<piece> piece_slices;
+  unsigned int i;
+
+  for (i = 0; i < pieces_num; i++)
+    {
+      LONGEST piece_bit_size = m_pieces[i].m_size;
+
+      if (total_bits_to_skip < piece_bit_size)
+	break;
+
+      total_bits_to_skip -= piece_bit_size;
+    }
+
+  for (; i < pieces_num; i++)
+    {
+      if (total_bit_size == 0)
+	break;
+
+      gdb_assert (total_bit_size > 0);
+
+      LONGEST slice_bit_size = m_pieces[i].m_size - total_bits_to_skip;
+
+      if (total_bit_size < slice_bit_size)
+	slice_bit_size = total_bit_size;
+
+      auto slice = m_pieces[i].m_location->slice (total_bits_to_skip,
+						  slice_bit_size);
+      piece_slices.emplace_back (slice, slice_bit_size);
+
+      total_bit_size -= slice_bit_size;
+      total_bits_to_skip = 0;
+    }
+
+  unsigned int slices_num = piece_slices.size ();
+
+  /* Only one piece found, so there is no reason to
+      make a composite location description.  */
+  if (slices_num == 1)
+    return piece_slices[0].m_location;
+
+  auto composite_slice
+    = std::make_shared<dwarf_composite> (m_arch, m_per_cu);
+
+  for (const class piece &piece : piece_slices)
+    composite_slice->add_piece (piece.m_location, piece.m_size);
+
+  return composite_slice;
+}
 
 void
 dwarf_composite::read (frame_info *frame, gdb_byte *buf,
@@ -2864,15 +2946,14 @@ dwarf_expr_context::create_select_composite (ULONGEST piece_bit_size,
 
   for (i = 0; i < pieces_count; i++)
     {
-      std::shared_ptr<dwarf_location> piece;
+      std::shared_ptr<dwarf_location> slice;
 
       if ((mask_buf_data[i / HOST_CHAR_BIT] >> (i % HOST_CHAR_BIT)) & 1)
-	piece = std::dynamic_pointer_cast<dwarf_location> (one->clone ());
+	slice = one->slice (i * piece_bit_size, piece_bit_size);
       else
-	piece = std::dynamic_pointer_cast<dwarf_location> (zero->clone ());
+	slice = zero->slice (i * piece_bit_size, piece_bit_size);
 
-      piece->add_bit_offset (i * piece_bit_size);
-      composite->add_piece (piece, piece_bit_size);
+      composite->add_piece (slice, piece_bit_size);
     }
 
   composite->set_completed (true);
