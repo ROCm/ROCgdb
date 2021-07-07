@@ -1,3 +1,39 @@
+2021-07-06  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* configure.ac: Remove things that were moved from
+	testsuite/configure.ac.
+	* configure: Re-generate.
+
+2021-07-05  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* config.in, configure: Re-generate.
+
+2021-07-04  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* solib-darwin.c (darwin_solib_create_inferior_hook): Return
+	early if no execution.
+
+2021-07-03  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 11.0.90.DATE-git.
+
+2021-07-03  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 11.0.90 released.
+
+2021-07-03  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 11.0.90.
+
+2021-07-03  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Replace "Changes since GDB 10" by "Changes in GDB 11".
+
+2021-07-03  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 11 branch created (4b51505e33441c6165e7789fa2b6d21930242927):
+	* version.in: Bump version to 11.0.90.DATE-git.
+
 2021-07-02  Tom Tromey  <tromey@adacore.com>
 
 	* ada-exp.y (chop_selector, chop_separator, write_selectors)
