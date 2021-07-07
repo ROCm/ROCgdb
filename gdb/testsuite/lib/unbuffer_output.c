@@ -1,4 +1,5 @@
 /* Copyright (C) 2008-2021 Free Software Foundation, Inc.
+   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -25,6 +26,7 @@
 static void
 gdb_unbuffer_output (void)
 {
+#ifndef __AMDGPU__
   /* Always force this for Windows testing.  To a native Windows
      program running under a Cygwin shell/ssh, stdin is really a
      Windows pipe, thus not a tty and its outputs ends up fully
@@ -36,4 +38,5 @@ gdb_unbuffer_output (void)
       setvbuf (stdout, NULL, _IONBF, BUFSIZ);
       setvbuf (stderr, NULL, _IONBF, BUFSIZ);
     }
+#endif
 }

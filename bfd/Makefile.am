@@ -1,6 +1,7 @@
 ## Process this file with automake to generate Makefile.in
 #
 #   Copyright (C) 2012-2021 Free Software Foundation, Inc.
+#   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -92,6 +93,7 @@ BFD64_LIBS_CFILES = archive64.c
 ALL_MACHINES = \
 	cpu-aarch64.lo \
 	cpu-alpha.lo \
+	cpu-amdgcn.lo \
 	cpu-arc.lo \
 	cpu-arm.lo \
 	cpu-avr.lo \
@@ -176,6 +178,7 @@ ALL_MACHINES = \
 ALL_MACHINES_CFILES = \
 	cpu-aarch64.c \
 	cpu-alpha.c \
+	cpu-amdgcn.c \
 	cpu-arc.c \
 	cpu-arm.c \
 	cpu-avr.c \
@@ -543,6 +546,7 @@ BFD64_BACKENDS = \
 	elf32-score.lo \
 	elf32-score7.lo \
 	elf64-alpha.lo \
+	elf64-amdgcn.lo \
 	elf64-gen.lo \
 	elf64-hppa.lo \
 	elf64-ia64.lo \
@@ -584,6 +588,7 @@ BFD64_BACKENDS_CFILES = \
 	elf32-score.c \
 	elf32-score7.c \
 	elf64-alpha.c \
+	elf64-amdgcn.c \
 	elf64-gen.c \
 	elf64-hppa.c \
 	elf64-ia64-vms.c \

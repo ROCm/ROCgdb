@@ -1,0 +1,137 @@
+# Copyright (C) 2019-2021 Free Software Foundation, Inc.
+# Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+
+# Set breakpoint in device code.
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_continue_to_breakpoint "bit_extract_kernel"
+
+#Test1
+# Check "info agents".
+# vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"
+# vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
+gdb_test_sequence "info agents" "info agents" {
+    {\s+Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+Location}
+    {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+}
+
+#Test2
+#Check info threads
+#sample output
+#* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
+#  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
+gdb_test_sequence "info threads" "info threads" {
+    {Id\s+Target\s+Id\s+Frame}
+    {\d+\s+AMDGPU\sThread\s\d+\:\d+\:\d+\:\d+\s\(\d+,\d+,\d+\)/\d+}
+}
+
+#Test3
+#Show architecture info while debugging in device code
+#Sample output "The target architecture is set automatically (currently amdgcn:gfx906)"
+gdb_test "show architecture" \
+    {The target architecture is set to "auto" \(currently "amdgcn:gfx\w+"\)\.}
+
+#Test4
+gdb_test_sequence "show convenience" "show convenience" {
+    {\$_thread = \d+}
+    {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
+
+}
+
+#Test5
+#info sharedlibrary
+#sample output
+#From                To                  Syms Read   Shared Object Library
+#0x00007fd120664ac0  0x00007fd120682790  Yes (*)     /lib64/ld-linux-x86-64.so.2
+#...
+#0x00007fd0125d8ec0  0x00007fd015f21630  Yes (*)     /opt/rocm-3.5.0/hip/lib/../../lib/libamd_comgr.so
+#0x00007fd11d74e870  0x00007fd11d75a868  Yes (*)     /lib/x86_64-linux-gnu/libtinfo.so.5
+#0x00007fd11d008000  0x00007fd11d00adc0  Yes (*)     memory://95557/mem#offset=0x7fd0083e7f60&size=41416
+#0x00007fd11d001000  0x00007fd11d00173c  Yes         file:///home/rocm/examples/bit_extract#offset=6477&size=10832
+#(*): Shared library is missing debugging information.
+
+#code_object_uri ::== file_uri | memory_uri
+#file_uri        ::== "file://" file_path [ range_specifier ]
+#memory_uri      ::== "memory://" process_id range_specifier
+#range_specifier ::== [ "#" | "?" ] "offset=" number "&" "size=" number
+#file_path       ::== URI_ENCODED_OS_FILE_PATH
+#process_id      ::== DECIMAL_NUMBER
+#number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+
+set number $decimal|$hex|0\[0-7\]+
+set process_id $decimal
+set file_path "(\\/\[^/ ]*)+\\/?"
+set range_specifier (#|\\?)offset=(${number})&size=(${number})
+set memory_uri "memory:\\/\\/$process_id$range_specifier"
+set file_uri "file://$file_path\($range_specifier\)?"
+
+gdb_test_sequence "info sharedlibrary" "info sharedlibrary" [list \
+    "From\\s+To\\s+Syms\\s+Read\\s+Shared Object Library" \
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$file_path" \
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$memory_uri" \
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$file_uri"
+]
+
+#Test6
+#info break
+#sample output
+#Num     Type           Disp Enb Address            What
+#1       breakpoint     keep y   0x0000000000400d49 in main(int, char**) at bit_extract.cpp:54
+#        breakpoint already hit 1 time
+#2       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
+#        breakpoint already hit 1 time
+gdb_test_sequence "info break" "info break" {
+    {Num\s+Type\s+Disp\sEnb Address\s+What}
+    {\d+\s+breakpoint\s+keep\s+y}
+    {breakpoint already hit\s\d+\stime}
+}
+
+#Test7
+#info inferiors
+#  Num  Description       Executable
+#* 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
+gdb_test_sequence "info inferiors" "info inferiors" {
+    {Num\s+Description\s+Connection\s+Executable}
+    {\*\s\d+\s+process\s+\d+}
+}
+
+gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"
+gdb_test "continue" {.+Inferior\s\d+.+\sexited\snormally.+}
+
+gdb_exit
+}

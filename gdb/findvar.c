@@ -1,6 +1,7 @@
 /* Find a variable's value in memory, for GDB, the GNU debugger.
 
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -869,6 +870,7 @@ read_frame_register_value (struct value *value, struct frame_info *frame)
   struct gdbarch *gdbarch = get_frame_arch (frame);
   LONGEST offset = 0;
   LONGEST reg_offset = value_offset (value);
+  LONGEST bit_offset = value_bitpos (value);
   int regnum = VALUE_REGNUM (value);
   int len = type_length_units (check_typedef (value_type (value)));
 
@@ -892,7 +894,8 @@ read_frame_register_value (struct value *value, struct frame_info *frame)
       if (reg_len > len)
 	reg_len = len;
 
-      value_contents_copy (value, offset, regval, reg_offset, reg_len);
+      value_contents_copy (value, offset, regval, reg_offset,
+			   bit_offset, reg_len);
 
       offset += reg_len;
       len -= reg_len;
@@ -993,6 +996,10 @@ address_from_register (int regnum, struct frame_info *frame)
 
       return unpack_long (type, buf);
     }
+
+  /* FIXME: Here we need a way for a arch to give back the
+	    matching pointer type depending on the address space.  */
+  type = register_type (gdbarch, regnum);
 
   value = gdbarch_value_from_register (gdbarch, type, regnum, null_frame_id);
   read_frame_register_value (value, frame);

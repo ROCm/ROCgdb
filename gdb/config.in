@@ -246,6 +246,9 @@
 /* Define if you have the mpfr library. */
 #undef HAVE_LIBMPFR
 
+/* Define to 1 if you have the <rocm-dbgapi.h> header file. */
+#undef HAVE_ROCM_DBGAPI_H
+
 /* Define to 1 if you have the <libunwind-ia64.h> header file. */
 #undef HAVE_LIBUNWIND_IA64_H
 

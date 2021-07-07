@@ -64,7 +64,7 @@ dwarf2_cu::start_symtab (const char *name, const char *comp_dir,
 
   list_in_scope = get_builder ()->get_file_symbols ();
 
-  get_builder ()->record_debugformat ("DWARF 2");
+  get_builder ()->record_debugformat (xstrprintf ("DWARF %d", this->header.version));
   get_builder ()->record_producer (producer);
 
   processing_has_namespace_info = false;

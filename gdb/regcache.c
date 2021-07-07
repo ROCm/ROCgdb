@@ -1,6 +1,7 @@
 /* Cache and manage the values of registers for GDB, the GNU debugger.
 
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1859,7 +1860,8 @@ cooked_read_test (struct gdbarch *gdbarch)
 	{
 	  auto bfd_arch = gdbarch_bfd_arch_info (gdbarch)->arch;
 
-	  if (bfd_arch == bfd_arch_frv || bfd_arch == bfd_arch_h8300
+	  if (bfd_arch == bfd_arch_amdgcn
+	      || bfd_arch == bfd_arch_frv || bfd_arch == bfd_arch_h8300
 	      || bfd_arch == bfd_arch_m32c || bfd_arch == bfd_arch_sh
 	      || bfd_arch == bfd_arch_alpha || bfd_arch == bfd_arch_v850
 	      || bfd_arch == bfd_arch_msp430 || bfd_arch == bfd_arch_mep

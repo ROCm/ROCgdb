@@ -1,5 +1,6 @@
 /* elfedit.c -- Update the ELF header of an ELF format file
    Copyright (C) 2010-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GNU Binutils.
 
@@ -297,6 +298,7 @@ elf_class (int mach)
       return ELF_CLASS_32;
     case EM_L1OM:
     case EM_K1OM:
+    case EM_AMDGPU:
       return ELF_CLASS_64;
     case EM_X86_64:
     case EM_NONE:
@@ -849,6 +851,8 @@ elf_machine (const char *mach)
     return EM_X86_64;
   if (strcasecmp (mach, "x86-64") == 0)
     return EM_X86_64;
+  if (strcasecmp (mach, "amdgcn") == 0)
+    return EM_AMDGPU;
   if (strcasecmp (mach, "none") == 0)
     return EM_NONE;
 

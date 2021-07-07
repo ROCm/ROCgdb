@@ -1,5 +1,6 @@
 /* Disassemble support for GDB.
    Copyright (C) 2002-2021 Free Software Foundation, Inc.
+   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -57,12 +58,12 @@ public:
   struct gdbarch *arch ()
   { return m_gdbarch; }
 
+  struct ui_file *stream ()
+  { return (struct ui_file *) m_di.stream; }
+
 protected:
   gdb_disassembler (struct gdbarch *gdbarch, struct ui_file *file,
 		    di_read_memory_ftype func);
-
-  struct ui_file *stream ()
-  { return (struct ui_file *) m_di.stream; }
 
 private:
   struct gdbarch *m_gdbarch;

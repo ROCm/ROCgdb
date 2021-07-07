@@ -1,4 +1,5 @@
 # Copyright (C) 1989-2021 Free Software Foundation, Inc.
+# Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -636,7 +637,7 @@ INTERNAL_LDFLAGS = \
 CLIBS = $(SIM) $(READLINE) $(OPCODES) $(LIBCTF) $(BFD) $(ZLIB) \
         $(LIBSUPPORT) $(INTL) $(LIBIBERTY) $(LIBDECNUMBER) \
 	$(XM_CLIBS) $(GDBTKLIBS) \
-	@LIBS@ @GUILE_LIBS@ @PYTHON_LIBS@ \
+	@LIBS@ @GUILE_LIBS@ @PYTHON_LIBS@ @ROCM_DBGAPI_LIBS@ \
 	$(LIBEXPAT) $(LIBLZMA) $(LIBBABELTRACE) $(LIBIPT) \
 	$(WIN32LIBS) $(LIBGNU) $(LIBGNU_EXTRA_LIBS) $(LIBICONV) \
 	$(LIBMPFR) $(LIBGMP) $(SRCHIGH_LIBS) $(LIBXXHASH) $(PTHREAD_LIBS) \
@@ -1061,6 +1062,7 @@ COMMON_SFILES = \
 	frame-unwind.c \
 	gcore.c \
 	gdb-demangle.c \
+	gdb-hip-test-mode.c \
 	gdb_bfd.c \
 	gdb_obstack.c \
 	gdb_regex.c \
@@ -1235,6 +1237,7 @@ HFILES_NO_SRCDIR = \
 	amd64-nat.h \
 	amd64-ravenscar-thread.h \
 	amd64-tdep.h \
+	amdgcn-rocm-tdep.h \
 	annotate.h \
 	arc-tdep.h \
 	arch-utils.h \
@@ -1405,6 +1408,7 @@ HFILES_NO_SRCDIR = \
 	riscv-fbsd-tdep.h \
 	riscv-ravenscar-thread.h \
 	riscv-tdep.h \
+	rocm-tdep.h \
 	rs6000-aix-tdep.h \
 	rs6000-tdep.h \
 	run-on-main-thread.h \
@@ -2144,6 +2148,7 @@ ALLDEPFILES = \
 	amd64-ravenscar-thread.c \
 	amd64-sol2-tdep.c \
 	amd64-tdep.c \
+	amdgcn-rocm-tdep.c \
 	arc-linux-nat.c \
 	arc-tdep.c \
 	arm.c \
@@ -2266,6 +2271,7 @@ ALLDEPFILES = \
 	riscv-none-tdep.c \
 	riscv-ravenscar-thread.c \
 	riscv-tdep.c \
+	rocm-tdep.c \
 	rl78-tdep.c \
 	rs6000-lynx178-tdep.c \
 	rs6000-nat.c \
@@ -2285,6 +2291,7 @@ ALLDEPFILES = \
 	sh-tdep.c \
 	sol2-tdep.c \
 	solib-aix.c \
+	solib-rocm.c \
 	solib-svr4.c \
 	sparc-linux-nat.c \
 	sparc-linux-tdep.c \

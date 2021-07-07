@@ -1,6 +1,7 @@
 /* Displaced stepping related things.
 
    Copyright (C) 2020-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -25,6 +26,7 @@
 
 struct gdbarch;
 struct thread_info;
+struct target_ops;
 
 /* True if we are debugging displaced stepping.  */
 
@@ -206,5 +208,15 @@ private:
 
   std::vector<displaced_step_buffer> m_buffers;
 };
+
+bool default_supports_displaced_step (target_ops *target, thread_info *thread);
+
+displaced_step_prepare_status
+  default_displaced_step_prepare (target_ops *target, thread_info *thread,
+				  CORE_ADDR &displaced_pc);
+
+displaced_step_finish_status
+  default_displaced_step_finish (target_ops *target, thread_info *thread,
+				 gdb_signal sig);
 
 #endif /* DISPLACED_STEPPING_H */

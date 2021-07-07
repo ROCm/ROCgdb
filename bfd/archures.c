@@ -1,5 +1,6 @@
 /* BFD library support routines for architectures.
    Copyright (C) 1990-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
    Hacked by John Gilmore and Steve Chamberlain of Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -555,6 +556,23 @@ DESCRIPTION
 .#define bfd_mach_ck807		6
 .#define bfd_mach_ck810		7
 .#define bfd_mach_ck860		8
+.  bfd_arch_amdgcn,     {* AMD GPU Architecture. Must match EF_AMDGPU_MACH_* *}
+.#define bfd_mach_amdgcn_unknown 0x000
+.#define bfd_mach_amdgcn_gfx801  0x028
+.#define bfd_mach_amdgcn_gfx802  0x029
+.#define bfd_mach_amdgcn_gfx803  0x02a
+.#define bfd_mach_amdgcn_gfx810  0x02b
+.#define bfd_mach_amdgcn_gfx900  0x02c
+.#define bfd_mach_amdgcn_gfx902  0x02d
+.#define bfd_mach_amdgcn_gfx904  0x02e
+.#define bfd_mach_amdgcn_gfx906  0x02f
+.#define bfd_mach_amdgcn_gfx908  0x030
+.#define bfd_mach_amdgcn_gfx90a  0x03f
+.#define bfd_mach_amdgcn_gfx1010 0x033
+.#define bfd_mach_amdgcn_gfx1011 0x034
+.#define bfd_mach_amdgcn_gfx1012 0x035
+.#define bfd_mach_amdgcn_gfx1030 0x036
+.#define bfd_mach_amdgcn_gfx1031 0x037
 .  bfd_arch_last
 .  };
 */
@@ -610,6 +628,7 @@ DESCRIPTION
 
 extern const bfd_arch_info_type bfd_aarch64_arch;
 extern const bfd_arch_info_type bfd_alpha_arch;
+extern const bfd_arch_info_type bfd_amdgcn_arch;
 extern const bfd_arch_info_type bfd_arc_arch;
 extern const bfd_arch_info_type bfd_arm_arch;
 extern const bfd_arch_info_type bfd_avr_arch;
@@ -699,6 +718,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
 #else
     &bfd_aarch64_arch,
     &bfd_alpha_arch,
+    &bfd_amdgcn_arch,
     &bfd_arc_arch,
     &bfd_arm_arch,
     &bfd_avr_arch,

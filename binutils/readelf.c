@@ -1,5 +1,6 @@
 /* readelf.c -- display contents of an ELF format file
    Copyright (C) 1998-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Originally developed by Eric Youngdale <eric@andante.jic.com>
    Modifications by Nick Clifton <nickc@redhat.com>
@@ -91,6 +92,7 @@
 
 #include "elf/aarch64.h"
 #include "elf/alpha.h"
+#include "elf/amdgcn.h"
 #include "elf/arc.h"
 #include "elf/arm.h"
 #include "elf/avr.h"
@@ -1652,6 +1654,10 @@ dump_relocations (Filedata *          filedata,
 
 	case EM_Z80:
 	  rtype = elf_z80_reloc_type (type);
+	  break;
+
+	case EM_AMDGPU:
+	  rtype = elf_amdgcn_reloc_type (type);
 	  break;
 	}
 
@@ -3426,6 +3432,32 @@ get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 	    }
 	  break;
 
+	case EM_AMDGPU:
+	  switch (e_flags & EF_AMDGPU_MACH)
+	    {
+	    case EF_AMDGPU_MACH_AMDGCN_GFX801 : strcat (buf, ", gfx801"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX802 : strcat (buf, ", gfx802"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX803 : strcat (buf, ", gfx803"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX810 : strcat (buf, ", gfx810"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX900 : strcat (buf, ", gfx900"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX902 : strcat (buf, ", gfx902"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX904 : strcat (buf, ", gfx904"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX906 : strcat (buf, ", gfx906"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX908 : strcat (buf, ", gfx908"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX90A : strcat (buf, ", gfx90a"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX1010 : strcat (buf, ", gfx1010"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX1011 : strcat (buf, ", gfx1011"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX1012 : strcat (buf, ", gfx1012"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX1030 : strcat (buf, ", gfx1030"); break;
+	    case EF_AMDGPU_MACH_AMDGCN_GFX1031 : strcat (buf, ", gfx1031"); break;
+	    default: strcat (buf, _(", <unknown AMDGPU gpu type>")); break;
+	    }
+
+	  if (e_flags & ~ EF_AMDGPU_MACH)
+	    sprintf (buf + strlen (buf), _(", unknown flags bits: %#x"),
+		     e_flags & ~ EF_AMDGPU_MACH);
+	  break;
+
 	case EM_CYGNUS_MEP:
 	  switch (e_flags & EF_MEP_CPU_MASK)
 	    {
@@ -3979,6 +4011,15 @@ get_osabi_name (Filedata * filedata, unsigned int osabi)
       if (osabi >= 64)
 	switch (filedata->file_header.e_machine)
 	  {
+	  case EM_AMDGPU:
+	    switch (osabi)
+	      {
+	      case ELFOSABI_AMDGPU_HSA: return "AMD HSA Runtime";
+	      default:
+		break;
+	      }
+	    break;
+
 	  case EM_ARM:
 	    switch (osabi)
 	      {
@@ -19163,6 +19204,82 @@ decode_x86_compat_2_isa (unsigned int bitmask)
     }
 }
 
+static const char *
+get_amd_elf_note_type (unsigned e_type)
+{
+  static char buff[64];
+
+  switch (e_type)
+    {
+    case NT_AMDGPU_HSA_CODE_OBJECT_VERSION:
+      return _("NT_AMDGPU_HSA_CODE_OBJECT_VERSION (code object version)");
+    case NT_AMDGPU_HSA_HSAIL:
+      return _("NT_AMDGPU_HSA_HSAIL (hsail)");
+    case NT_AMDGPU_HSA_ISA:
+      return _("NT_AMDGPU_HSA_ISA (ISA name)");
+    case NT_AMDGPU_HSA_PRODUCER:
+      return _("NT_AMDGPU_HSA_PRODUCER (producer name)");
+    case NT_AMDGPU_HSA_PRODUCER_OPTIONS:
+      return _("NT_AMDGPU_HSA_PRODUCER_OPTIONS (producer options");
+    case NT_AMDGPU_HSA_EXTENSION:
+      return _("NT_AMDGPU_HSA_EXTENSION (extension)");
+    case NT_AMDGPU_HSA_METADATA:
+      return _("NT_AMDGPU_HSA_METADATA (code object metadata)");
+    case NT_AMDGPU_ISA:
+      return _("NT_AMDGPU_ISA");
+    case NT_AMDGPU_PAL_METADATA:
+      return _("NT_AMDGPU_PAL_METADATA (code object metadata)");
+    case NT_AMDGPU_METADATA:
+      return _("NT_AMDGPU_METADATA (code object metadata)");
+    default:
+      break;
+    }
+
+  snprintf (buff, sizeof (buff), _("Unknown note type: (0x%08x)"), e_type);
+  return buff;
+}
+
+static int
+print_amd_note (Elf_Internal_Note *pnote)
+{
+  switch (pnote->type)
+    {
+    case NT_AMDGPU_HSA_CODE_OBJECT_VERSION:
+      {
+        unsigned int major, minor;
+
+        major = byte_get ((unsigned char*) pnote->descdata, 4);
+        minor = byte_get ((unsigned char*) pnote->descdata + 4, 4);
+
+        printf (_("    Version: %d.%d\n"), major, minor);
+      }
+      break;
+
+    case NT_AMDGPU_HSA_ISA:
+      {
+        unsigned long i, vendorsz;
+        unsigned int major, minor, stepping;
+
+        vendorsz = byte_get ((unsigned char*) pnote->descdata, 2);
+        major = byte_get ((unsigned char*) pnote->descdata + 4, 4);
+        minor = byte_get ((unsigned char*) pnote->descdata + 8, 4);
+        stepping = byte_get ((unsigned char*) pnote->descdata + 12, 4);
+
+        printf (_("    Vendor: "));
+        for (i = 16; i < pnote->descsz && pnote->descdata[i] != '\0'; ++i)
+          printf ("%c", pnote->descdata[i]);
+        printf (_(", Architecture: "));
+        for (i = 16 + vendorsz; i < pnote->descsz && pnote->descdata[i] != '\0'; ++i)
+          printf ("%c", pnote->descdata[i]);
+
+        printf (_(", Version: %d.%d.%d"), major, minor, stepping);
+        printf ("\n");
+      }
+      break;
+    }
+  return 1;
+}
+
 static void
 decode_x86_isa (unsigned int bitmask)
 {
@@ -20682,6 +20799,11 @@ process_note (Elf_Internal_Note *  pnote,
     /* GNU-specific object file notes.  */
     nt = get_gnu_elf_note_type (pnote->type);
 
+  else if (startswith (pnote->namedata, "AMD")
+           || startswith (pnote->namedata, "AMDGPU"))
+    /* AMD-specific object file notes.  */
+    nt = get_amd_elf_note_type (pnote->type);
+
   else if (startswith (pnote->namedata, "FreeBSD"))
     /* FreeBSD-specific core file notes.  */
     nt = get_freebsd_elfcore_note_type (filedata, pnote->type);
@@ -20737,6 +20859,9 @@ process_note (Elf_Internal_Note *  pnote,
     return print_ia64_vms_note (pnote);
   else if (startswith (pnote->namedata, "GNU"))
     return print_gnu_note (filedata, pnote);
+  else if (startswith (pnote->namedata, "AMD")
+           || startswith (pnote->namedata, "AMDGPU"))
+    return print_amd_note (pnote);
   else if (startswith (pnote->namedata, "stapsdt"))
     return print_stapsdt_note (pnote);
   else if (startswith (pnote->namedata, "CORE"))

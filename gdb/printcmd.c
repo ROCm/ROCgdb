@@ -1,6 +1,7 @@
 /* Print values for GNU debugger GDB.
 
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -3213,7 +3214,7 @@ Default count is 1.  Default address is following last thing printed\n\
 with this command or \"print\"."));
   set_cmd_completer_handle_brkchars (c, display_and_x_command_completer);
 
-  add_info ("display", info_display_command, _("\
+  c = add_info ("display", info_display_command, _("\
 Expressions to display when program stops, with code numbers.\n\
 Usage: info display"));
 
@@ -3225,6 +3226,7 @@ No argument means cancel all automatic-display expressions.\n\
 \"delete display\" has the same effect as this command.\n\
 Do \"info display\" to see current list of code numbers."),
 	   &cmdlist);
+  add_info_alias ("disp", c, 1);
 
   c = add_com ("display", class_vars, display_command, _("\
 Print value of expression EXP each time the program stops.\n\
@@ -3236,6 +3238,7 @@ and examining is done as in the \"x\" command.\n\n\
 With no argument, display all currently requested auto-display expressions.\n\
 Use \"undisplay\" to cancel display requests previously made."));
   set_cmd_completer_handle_brkchars (c, display_and_x_command_completer);
+  add_com_alias ("disp", c, class_vars, 1);
 
   add_cmd ("display", class_vars, enable_display_command, _("\
 Enable some expressions to be displayed when program stops.\n\

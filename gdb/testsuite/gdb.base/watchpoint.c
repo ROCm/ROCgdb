@@ -1,3 +1,7 @@
+/*
+  Copyright 1992-2021 Free Software Foundation, Inc.
+  Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+*/
 #include <stdio.h>
 #include <unistd.h>
 /*
@@ -187,9 +191,11 @@ int main ()
   marker2 ();
   if (doread)
     {
+#ifndef __AMDGPU__
       static char msg[] = "type stuff for buf now:";
       write (1, msg, sizeof (msg) - 1);
       read (0, &buf[0], 5);
+#endif
     }
   marker4 ();
 

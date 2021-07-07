@@ -1,5 +1,6 @@
 /* BFD back-end data structures for ELF files.
    Copyright (C) 1992-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -496,6 +497,7 @@ enum elf_target_id
 {
   AARCH64_ELF_DATA = 1,
   ALPHA_ELF_DATA,
+  AMDGCN_ELF_DATA,
   ARC_ELF_DATA,
   ARM_ELF_DATA,
   AVR_ELF_DATA,

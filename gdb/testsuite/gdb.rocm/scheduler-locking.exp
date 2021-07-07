@@ -1,0 +1,148 @@
+# Copyright (C) 2019-2021 Free Software Foundation, Inc.
+# Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+set breakpoint_loc [gdb_get_line_number "location line"]
+set threadid {16}
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+# Set the symbolic breakpont in device code and turn on scheduler-locking.
+# Run "next" and "clear <location>" commands.
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test_no_output "set scheduler-locking on"
+gdb_test "info line" "Line $breakpoint_loc.*"
+gdb_test "next" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
+gdb_test "info line" "Line [expr $breakpoint_loc+1].*"
+gdb_test "next + 2" "\[^\r\n\]*[expr $breakpoint_loc+1+2].*"
+gdb_test_no_output "set scheduler-locking off"
+gdb_test "clear bit_extract_kernel"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+
+# Set the symbolic breakpont in device code and turn on scheduler-locking.
+# Run "next", step, enable/disable <breakpont no>,continue commands.
+clean_restart ${binfile}
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test_no_output "set scheduler-locking on"
+gdb_test "info line" "Line $breakpoint_loc.*"
+gdb_test "next + 3" "\[^\r\n\]*[expr $breakpoint_loc+3].*"
+gdb_test "step" "\[^\r\n\]*__bitextract_u32.*"
+gdb_test_no_output "set scheduler-locking off"
+gdb_test "disable 1"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "enable 1"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test "delete 1"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+# Set the breakpont through line no and turn on scheduler-locking.
+# Check "info agents", "info threads", "show architecture", "show convenience"
+# "info breakpoint" etc. commands in it.
+clean_restart ${binfile}
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+gdb_test_no_output "set scheduler-locking on"
+
+# Check "info agents".
+# vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"
+# vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
+gdb_test_sequence "info agents" "info agents" {
+    {\s+Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+Location}
+    {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+}
+
+# Check "info threads".
+# Sample output:
+# * 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
+#   6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
+gdb_test_sequence "info threads" "info threads" {
+    {Id\s+Target\s+Id\s+Frame}
+    {\d+\s+AMDGPU\sThread\s\d+\:\d+\:\d+\:\d+\s}
+}
+
+
+# Show architecture info while debugging in device code.
+# Sample output: "The target architecture is set automatically (currently amdgcn:gfx906)".
+gdb_test "show architecture" \
+    {The target architecture is set to "auto" \(currently "amdgcn:gfx\w+"\)\.}
+
+gdb_test_sequence "show convenience" "show convenience" {
+    {\$_thread = \d+}
+    {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
+
+}
+
+
+# Check "info break".
+# Sample output:
+# Num     Type           Disp Enb Address            What
+# 1       breakpoint     keep y   0x0000000000400d49 in main(int, char**) at bit_extract.cpp:54
+#         breakpoint already hit 1 time
+# 2       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
+#         breakpoint already hit 1 time
+gdb_test_sequence "info break" "info break" {
+    {Num\s+Type\s+Disp\sEnb Address\s+What}
+    {\d+\s+breakpoint\s+keep\s+y}
+    {breakpoint already hit\s\d+\stime}
+}
+
+
+# Check "info inferiors".
+#   Num  Description       Executable
+# * 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
+gdb_test_sequence "info inferiors" "info inferiors" {
+    {Num\s+Description\s+Connection\s+Executable}
+    {\*\s\d+\s+process\s+\d+}
+}
+
+# Switch to AMDGPU thread id.
+gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
+
+# Turn on step scheduler-locking and check "next" , "clear <location>"
+# "continue" commands in it.
+gdb_test_no_output "set scheduler-locking step"
+gdb_test "info line" "Line $breakpoint_loc.*"
+gdb_test "next " "\[^\r\n\]*[expr $breakpoint_loc].*"
+gdb_test "clear $srcfile:$breakpoint_loc"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+gdb_exit
+
+}

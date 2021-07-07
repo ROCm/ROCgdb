@@ -1,5 +1,6 @@
 /* MI Command Set for GDB, the GNU debugger.
    Copyright (C) 2000-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -43,6 +44,7 @@ static struct mi_cmd mi_cmds[] =
 
   DEF_MI_CMD_MI ("ada-task-info", mi_cmd_ada_task_info),
   DEF_MI_CMD_MI ("add-inferior", mi_cmd_add_inferior),
+  DEF_MI_CMD_CLI ("agent-info", "info agents", 1),
   DEF_MI_CMD_CLI_1 ("break-after", "ignore", 1,
 		    &mi_suppress_notification.breakpoint),
   DEF_MI_CMD_MI_1 ("break-condition", mi_cmd_break_condition,
@@ -96,6 +98,7 @@ static struct mi_cmd mi_cmds[] =
 		   &mi_suppress_notification.memory),
   DEF_MI_CMD_MI ("data-write-register-values",
 		 mi_cmd_data_write_register_values),
+  DEF_MI_CMD_CLI ("dispatch-info", "info dispatches -full", 1),
   DEF_MI_CMD_MI ("enable-timings", mi_cmd_enable_timings),
   DEF_MI_CMD_MI ("enable-pretty-printing", mi_cmd_enable_pretty_printing),
   DEF_MI_CMD_MI ("enable-frame-filters", mi_cmd_enable_frame_filters),
@@ -141,6 +144,7 @@ static struct mi_cmd mi_cmds[] =
   DEF_MI_CMD_MI ("list-features", mi_cmd_list_features),
   DEF_MI_CMD_MI ("list-target-features", mi_cmd_list_target_features),
   DEF_MI_CMD_MI ("list-thread-groups", mi_cmd_list_thread_groups),
+  DEF_MI_CMD_CLI ("queue-info", "info queues", 1),
   DEF_MI_CMD_MI ("remove-inferior", mi_cmd_remove_inferior),
   DEF_MI_CMD_MI ("stack-info-depth", mi_cmd_stack_info_depth),
   DEF_MI_CMD_MI ("stack-info-frame", mi_cmd_stack_info_frame),

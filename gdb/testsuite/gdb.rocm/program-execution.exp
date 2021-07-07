@@ -1,0 +1,154 @@
+# Copyright (C) 2019-2021 Free Software Foundation, Inc.
+# Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+set num_waves 16
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+# Some GPUs have 32 lanes per wave, while others have 64.  Use 32
+# threads per block so that we can control number of waves using the
+# number of blocks on all GPUs.
+set options [list \
+		 debug \
+		 hip \
+		 additional_flags=-DGRID_DIM=$num_waves \
+		 additional_flags=-DBLOCK_DIM=32 \
+		]
+if {[build_executable "failed to prepare ${testfile}" $testfile $srcfile $options]} {
+    return -1
+}
+
+# Issue CMD and wait for breakpoint hits, using BP_HIT_RE.  MODE can
+# either be "all-stop" or "non-stop". In all-stop mode we only expect
+# one breakpoint hit.  In non-stop mode, we expect a hit for each
+# wave.  TEST is the test name.  If not specified, defaults to CMD.
+# Careful to not use an overeager ".+" or ".*" in BP_HIT_RE, as that
+# could consume the prompt by mistake.
+
+proc run_and_wait_break_hits {mode cmd bp_hit_re {test ""}} {
+    global gdb_prompt
+
+    if {$test == ""} {
+	set test $cmd
+    }
+
+    if {$mode == "non-stop"} {
+	global num_waves
+
+	set hits 0
+	set seen_prompt 0
+
+	# We don't know what order the interesting things will arrive
+	# in.  Using a pattern of the form 'x|y|z' instead of -re x
+	# ... -re y ... -re z ensures that expect always chooses the
+	# match that occurs leftmost in the input, and not the pattern
+	# appearing first in the script that occurs anywhere in the
+	# input, so that we don't skip anything.
+	gdb_test_multiple $cmd $test {
+	    -re "($gdb_prompt)|($bp_hit_re)" {
+		if {[info exists expect_out(1,string)]} {
+		    incr seen_prompt
+		} elseif {[info exists expect_out(2,string)]} {
+		    incr hits
+		}
+		array unset expect_out
+
+		if {$hits > $num_waves || $seen_prompt > 1} {
+		    fail $gdb_test_name
+		} else {
+		    if {$hits < $num_waves || $seen_prompt == 0} {
+			exp_continue
+		    } else {
+			pass $gdb_test_name
+		    }
+		}
+	    }
+	}
+    } else {
+	gdb_test_multiple $cmd $test {
+	    -re "$bp_hit_re.*$gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+    }
+}
+
+# Test "start" and "quit" while stopped at a breakpoint in device
+# code.  MODE is the mode being tested.  It can either be "all-stop",
+# "sched-lock" or "non-stop".
+
+proc test {mode} {
+    global gdb_prompt binfile
+
+    clean_restart ${binfile}
+
+    if {$mode == "non-stop"} {
+	gdb_test_no_output "set non-stop on"
+    }
+
+    set bp_hit_re {hit Breakpoint [\d]+, bit_extract_kernel \([^\r\n]*\)\sat}
+
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+
+    run_and_wait_break_hits $mode "run" $bp_hit_re
+
+    if {$mode == "sched-lock"} {
+	gdb_test_no_output "set scheduler-locking on"
+    }
+
+    gdb_test_multiple "run" "run in device function" {
+	-re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
+	    send_gdb "y\n"
+	    run_and_wait_break_hits $mode "" $bp_hit_re $gdb_test_name
+	}
+    }
+
+    gdb_test_multiple "start" "start in device function" {
+	-re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
+	    send_gdb "y\n"
+	    exp_continue
+	}
+	-re "Temporary breakpoint \[1-9\].*$gdb_prompt $" {
+	    pass $gdb_test_name
+	}
+    }
+
+    run_and_wait_break_hits $mode "continue" $bp_hit_re
+
+    gdb_test_multiple "quit" "quit in device function" {
+	-re "A debugging session is active.*Quit anyway.*y or n. $" {
+	    send_gdb "y\n"
+	    pass $gdb_test_name
+	}
+    }
+}
+
+with_rocm_gpu_lock {
+    foreach_with_prefix mode {"all-stop" "sched-lock" "non-stop"} {
+	test $mode
+    }
+
+    gdb_exit
+}

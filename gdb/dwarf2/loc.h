@@ -1,6 +1,7 @@
 /* DWARF 2 location expression support for GDB.
 
    Copyright (C) 2003-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -53,16 +54,32 @@ extern void func_get_frame_base_dwarf_block (struct symbol *framefunc,
 					     const gdb_byte **start,
 					     size_t *length);
 
+/* Fetch call_site_parameter from caller matching KIND and KIND_U.
+   FRAME is for callee.
+
+   Function always returns non-NULL, it throws NO_ENTRY_VALUE_ERROR
+   otherwise.  */
+
+struct call_site_parameter *dwarf_expr_reg_to_entry_parameter
+    (struct frame_info *frame,
+     enum call_site_parameter_kind kind,
+     union call_site_parameter_u kind_u,
+     dwarf2_per_cu_data **per_cu_return,
+     dwarf2_per_objfile **per_objfile_return);
+
+
 /* Evaluate a location description, starting at DATA and with length
    SIZE, to find the current location of variable of TYPE in the context
-   of FRAME.  */
+   of FRAME.  AS_LVAL defines if the resulting struct value is expected to
+   be a value or a location description.  */
 
 struct value *dwarf2_evaluate_loc_desc (struct type *type,
 					struct frame_info *frame,
 					const gdb_byte *data,
 					size_t size,
 					dwarf2_per_cu_data *per_cu,
-					dwarf2_per_objfile *per_objfile);
+					dwarf2_per_objfile *per_objfile,
+					bool as_lval = true);
 
 /* A chain of addresses that might be needed to resolve a dynamic
    property.  */
@@ -83,6 +100,11 @@ struct property_addr_info
      the object described by this node.  */
   struct property_addr_info *next;
 };
+
+/* A helper function to find the definition of NAME and compute its
+   value.  Returns nullptr if the name is not found.  */
+
+value *compute_var_value (const char *name);
 
 /* Converts a dynamic property into a static one.  FRAME is the frame in which
    the property is evaluated; if NULL, the selected frame (if any) is used
@@ -262,5 +284,19 @@ extern int dwarf_reg_to_regnum (struct gdbarch *arch, int dwarf_reg);
 
 extern int dwarf_reg_to_regnum_or_error (struct gdbarch *arch,
 					 ULONGEST dwarf_reg);
+
+/* Helper function which throws an error if a synthetic pointer is
+   invalid.  */
+
+extern void invalid_synthetic_pointer (void);
+
+/* Fetch the value pointed to by a synthetic pointer.  */
+
+extern struct value *indirect_synthetic_pointer
+    (sect_offset die, LONGEST byte_offset,
+     dwarf2_per_cu_data *per_cu,
+     dwarf2_per_objfile *per_objfile,
+     struct frame_info *frame,
+     struct type *type, bool resolve_abstract_p = false);
 
 #endif /* dwarf2loc.h */

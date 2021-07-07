@@ -1,0 +1,116 @@
+# Copyright (C) 2020-2021 Free Software Foundation, Inc.
+# Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test stepping over breakpoints using displaced stepping.  Some instructions,
+# for example s_getpc, s_swappc, s_setpc, etc... are simulated by the debugger
+# API library, so make sure the instruction behaves as expected.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+proc set_regs { regs val test } {
+    global gdb_prompt
+
+    set all_passed 1
+
+    foreach reg ${regs} {
+	set one_passed 0
+	set cmd_re [string_to_regexp "set \$${reg} = ${val}"]
+	gdb_test_multiple "set \$${reg} = ${val}" $test {
+	    -re "^$cmd_re\r\n$gdb_prompt $" {
+		set one_passed 1
+	    }
+	}
+	if {!$one_passed} {
+	    set all_passed 0
+	    break
+	 }
+    }
+
+    if {$all_passed} {
+	pass $test
+    }
+}
+
+with_rocm_gpu_lock {
+
+    gdb_test_no_output "set displaced-stepping on"
+
+    if ![runto_main] {
+	fail "can't run to main"
+	return -1
+    }
+
+    gdb_breakpoint "kernel" temporary allow-pending
+    gdb_continue_to_breakpoint "kernel"
+
+    gdb_breakpoint [gdb_get_line_number "getpc breakpoint here"]
+    gdb_breakpoint [gdb_get_line_number "swappc breakpoint here"]
+    gdb_breakpoint [gdb_get_line_number "call breakpoint here"]
+    gdb_breakpoint [gdb_get_line_number "setpc breakpoint here"]
+    gdb_breakpoint [gdb_get_line_number "last breakpoint here"]
+
+    gdb_continue_to_breakpoint "getpc"
+
+    with_test_prefix "getpc" {
+	set_regs { "s0" "s1" } 0 "clear s0,s1"
+
+	gdb_test "continue" \
+	    "Continuing.*Breakpoint.*, kernel ().*s_swappc_b64.*" \
+	    "displaced-step s_getpc_b64"
+
+	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 8)" \
+	    " = true" "check s0,s1"
+    }
+
+    with_test_prefix "swappc" {
+	gdb_test "stepi" \
+	    ".*Breakpoint.*, kernel ().*s_call_b64.*" \
+	    "displaced-step s_swappc_b64"
+
+	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 4)" \
+	    " = true" "check s0,s1"
+    }
+
+    with_test_prefix "call" {
+	gdb_test "continue" \
+	    "Continuing.*Breakpoint.*, kernel ().*s_setpc_b64.*" \
+	    "displaced-step s_call_b64"
+
+	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 12)" \
+	    " = true" "check s0,s1"
+    }
+
+    with_test_prefix "setpc" {
+	gdb_test "stepi" \
+	    ".*Breakpoint.*, kernel ().*s_nop.*" \
+	    "displaced-step s_setpc_b64"
+    }
+
+    gdb_exit
+}

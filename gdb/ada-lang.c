@@ -1,6 +1,7 @@
 /* Ada language support routines for GDB, the GNU debugger.
 
    Copyright (C) 1992-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -538,7 +539,7 @@ coerce_unspec_val_to_type (struct value *val, struct type *type)
       else
 	{
 	  result = allocate_value (type);
-	  value_contents_copy (result, 0, val, 0, TYPE_LENGTH (type));
+	  value_contents_copy (result, 0, val, 0, 0, TYPE_LENGTH (type));
 	}
       set_value_component_location (result, val);
       set_value_bitsize (result, value_bitsize (val));

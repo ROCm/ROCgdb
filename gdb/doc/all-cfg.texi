@@ -1,6 +1,7 @@
 @c GDB MANUAL configuration file.  
 @c
 @c Copyright (C) 1993--2021 Free Software Foundation, Inc.
+@c Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 @c
 @c NOTE: While the GDB manual is configurable (by changing these
 @c switches), its configuration is ***NOT*** automatically tied in to
@@ -32,7 +33,7 @@
 @set GDBP gdb
 @c 
 @c Name of GDB product.  Used in running text.
-@set GDBN @sc{gdb}
+@set GDBN @sc{rocgdb}
 @c
 @c Name of host.  Should not be used in generic configs, but generic
 @c value may catch some flubs.

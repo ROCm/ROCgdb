@@ -1,0 +1,484 @@
+# Copyright 2021 Free Software Foundation, Inc.
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This file is a dejagnu "board file" and is used to run the testsuite
+# against C/C++ device code compiled with hipcc.
+#
+# Example usage:
+#  bash$ make check RUNTESTFLAGS='--target_board=hip'
+
+# Running tests against the GPU device is accomplished with linking
+# lib/hip/hip-driver.cc into every testcase.  That file contains both
+# the host's main() entry point, and a kernel entry point.  The kernel
+# calls the testcase's main, in GPU context.
+#
+# Then the board overrides gdb_compile to compile the C/C++ testcase
+# files targeting the device, and link in the driver.
+#
+# Ideally we would not have to modify any of the testcases sources.
+# Unfortunately that isn't possible, but we can avoid a number of
+# classes of changes, effectively reducing required absolute changes
+# significantly.
+#
+# For example, to force the compiler to emit __device__ functions
+# without sprinkling __device__ all over the place in all functions in
+# all testcases, we use:
+#
+#  #pragma clang force_cuda_host_device begin
+#
+# And to force the compiler to emit __device__ globals, we use:
+#
+#  #pragma clang attribute (__device__, apply_to = variable (is_global))
+#
+# The board file tweaks the compilation routine to inject that in
+# translation units by compiling a wrapper hip-test-wrapper.cc instead
+# of the desired file.  The wrapper file does the magic mentioned
+# above and includes the file we wanted to compile.
+#
+# The hip-test-wrapper.cc file is also responsible for renaming the
+# testcase's main function, so that it doesn't conflict with the
+# host's main:
+#
+#  #define main gdb_hip_test_main
+#
+# The testsuite, for each testcase, normally compiles the test
+# program, and then runs it to main (like "b main; run").  Because we
+# rename the device/testcase "main" function, "b main" sets a
+# breakpoint on the host "main" function, not the testcase's entry
+# point.  That is addressed by having GDB itself rename the
+# "gdb_hip_test_main" function at symbol read time, pretending that
+# it's really called "main".  The host "main" function is also renamed
+# to get it out of the way.
+#
+# Parallel mode testing is supported by making use of the file locking
+# implemented in lib/rocm.exp and also used by the gdb.rocm/
+# testcases.  That means that only one GDB at a time runs, but, most
+# compilations run in parallel, which still provides a speed
+# improvement, since compiling for the GPU is slow.
+#
+# Note that HIP is C++ based, so we're running all C testcases in C++
+# mode.  E.g., most gdb.base/ testcases.
+#
+# The multi-threading testcases are disabled. The device kernel runs a
+# single work-item.
+
+load_generic_config "unix"
+process_multilib_options ""
+
+set_board_info compiler [find_hipcc]
+set_board_info c++compiler [find_hipcc]
+
+set_board_info gdb,cannot_call_functions 1
+
+set_board_info gdb,can_reverse 0
+set_board_info gdb,use_precord 0
+
+# Override the target set in build/gdb/testsuite/site.exp.
+set target_alias amdgcn-amd-amdhsa
+set target_triplet amdgcn-amd-amdhsa
+
+# This is needed otherwise dejagnu tries to rsh to host "hip".
+load_board_description "local-board"
+
+# ROCM_PATH is used by hipcc as well.
+if {[info exists env(ROCM_PATH)]} {
+    set gdb_hip_rocm_path $env(ROCM_PATH)
+} else {
+    set gdb_hip_rocm_path "/opt/rocm"
+}
+
+# Get the gpu target to be passed to e.g., -mcpu=.
+proc hip_amdgpu_target {} {
+    global gdb_hip_gpu
+    global gdb_hip_rocm_path
+
+    if {![info exists gdb_hip_gpu]} {
+	# Look for HCC_AMDGPU_TARGET (same env var hipcc uses).  If
+	# that fails, try using rocm_agent_enumerator (again, same as
+	# hipcc does).
+	if {[info exists env(HCC_AMDGPU_TARGET)]} {
+	    set targets = $env(HCC_AMDGPU_TARGET);
+	} else {
+	    set result \
+		[remote_exec host \
+		     "${gdb_hip_rocm_path}/bin/rocm_agent_enumerator -t GPU"]
+	    if {[lindex $result 0] != 0} {
+		error "rocm_agent_enumerator failed"
+	    }
+	    set targets [lindex $result 1]
+	}
+
+	set gdb_hip_gpu ""
+	foreach val $targets {
+	    # Ignore the 'gfx000' target reported by
+	    # rocm_agent_enumerator.
+	    if {$val != "gfx000"} {
+		set gdb_hip_gpu $val
+		break
+	    }
+	}
+
+	if {$gdb_hip_gpu == ""} {
+	    error "No valid AMD GPU target specified or found.\
+		   Please specify a valid target using the\
+		   HCC_AMDGPU_TARGET environment variable."
+	}
+    }
+
+    return $gdb_hip_gpu
+}
+
+# So we can override skip_gdbserver_tests.
+load_lib gdbserver-support.exp
+
+# Tell GDB to enable the HIP test mode.  This renames the main and
+# gdb_hip_test_name functions to provide the illusion that the
+# kernel's main is the real main.
+set ::env(GDB_HIP_TEST_MODE) 1
+
+proc skip_gdbserver_tests {} {
+    return 1
+}
+
+proc skip_fortran_tests {} {
+    return 1
+}
+
+proc skip_ada_tests {} {
+    return 1
+}
+
+proc skip_go_tests {} {
+    return 1
+}
+
+proc skip_d_tests {} {
+    return 1
+}
+
+proc skip_rust_tests {} {
+    return 1
+}
+
+proc skip_shlib_tests {} {
+    return 1
+}
+
+proc skip_btrace_tests {} {
+    return 1
+}
+
+proc skip_compile_feature_tests {} {
+    return 1
+}
+
+# So we can override skip_opencl_tests.
+load_lib "opencl.exp"
+
+proc skip_opencl_tests {} {
+    return 1
+}
+
+# So we can override skip_hipcc_tests.
+load_lib rocm.exp
+
+# Yup, we don't want to run the gdb.rocm/ tests against this board.
+# That would be kind of recursive.  Those tests really expect that
+# "main()" is host code and start kernels themselves.
+proc skip_hipcc_tests {} {
+    return 1
+}
+
+# Override this to fail faster.  If we let the default run, tests
+# compile successfully, but fail at link time.
+proc gdb_compile_pthreads {source dest type options} {
+    unsupported "skipped compiling [file tail $source]: pthreads tests disabled on HIP"
+    return -1
+}
+
+proc do_gpu_lock_release {} {
+    global gpu_lock_rc
+    if {[info exists gpu_lock_rc]} {
+        lock_file_release $gpu_lock_rc
+	unset gpu_lock_rc
+    }
+}
+
+# Because building the testcases is so slow, it's quite a speed boost
+# to run the testsuite in parallel mode, so that multiple programs are
+# compiled at the same time.  However, only one GDB may be using the
+# GPU at a time.  So we use a lock file to synchronize access to the
+# GPU -- we acquire the GPU lock when GDB is started, and release it
+# when GDB exits.  Generally testcases compile their programs before
+# starting GDB.  We hook into gdb_start and gdb_exit here to do just
+# that.
+
+if {[info exists GDB_PARALLEL]} {
+    if { [info procs hip_org_gdb_spawn] == "" } {
+	rename gdb_spawn hip_org_gdb_spawn
+    }
+    proc gdb_spawn {} {
+	global gdb_spawn_id
+
+	if ![info exists gdb_spawn_id] {
+	    global gpu_lock_filename
+	    global gpu_lock_rc
+	    set gpu_lock_rc [lock_file_acquire $gpu_lock_filename]
+	}
+
+	set res [hip_org_gdb_spawn]
+	if {$res != 0} {
+	    lock_file_release $gpu_lock_rc
+	    unset gpu_lock_rc
+	}
+	return $res
+    }
+
+    if { [info procs hip_org_gdb_exit] == "" } {
+	rename gdb_exit hip_org_gdb_exit
+    }
+    proc gdb_exit {} {
+	verbose -log "hip: gdb_exit"
+
+	set res [hip_org_gdb_exit]
+
+	do_gpu_lock_release
+
+	return $res
+    }
+
+    if { [info procs hip_org_mi_gdb_exit] == "" } {
+	rename mi_gdb_exit hip_org_mi_gdb_exit
+    }
+    proc mi_gdb_exit {} {
+	verbose -log "hip: mi_gdb_exit"
+
+	set res [hip_org_mi_gdb_exit]
+
+	do_gpu_lock_release
+
+	return $res
+    }
+}
+
+# As a speed optimization, avoid recompiling the driver over and over
+# for each testcase program.
+global gdb_saved_hip_driver_obj
+set gdb_saved_hip_driver_obj ""
+
+# Likewise, the empty host object put in bundles when compiling
+# assembly files.
+global gdb_saved_hip_empty_host_obj
+set gdb_saved_hip_empty_host_obj ""
+
+# True if compiling lib/hip/hip-driver.cc.  If true, we don't want to
+# use the hip-test-wrapper.cc wrapper.
+global compiling_hip_driver
+set compiling_hip_driver 0
+
+proc hip_get_compile_language {options} {
+    foreach lang {c++ rust ada f77 f90 go hip} {
+	if {[lsearch -exact $options $lang] != -1} {
+	    return $lang
+	}
+    }
+
+    return c
+}
+
+# Override gdb_compile, to inject our driver, which has a host main()
+# function that starts a device kernel that calls the testcase's entry
+# point (main renamed to gdb_hip_test_main).
+
+if { [info procs hip_org_gdb_compile] == "" } {
+    rename gdb_compile hip_org_gdb_compile
+}
+proc gdb_compile {source dest type options} {
+    global srcdir objdir
+    global gdb_saved_hip_driver_obj
+    global compiling_hip_driver
+
+    set lang [hip_get_compile_language {$options}]
+
+    if {[lsearch -exact $options getting_compiler_info] == -1
+	&& ($lang == "c" || $lang == "c++")} {
+
+	global CC_FOR_TARGET
+	if {[board_info target exists compiler]} {
+	    set compiler [target_info compiler]
+	} elseif {[info exists CC_FOR_TARGET]} {
+	    set compiler $CC_FOR_TARGET
+	}
+	if {[string first "hipcc" $compiler] != -1} {
+
+	    # Remove "c++" from the options when linking, otherwise we
+	    # would get:
+	    #
+	    #  build/gdb/testsuite/hip-driver.o:1:1: error: expected unqualified-id
+	    #  <U+007F>ELF<U+0002><U+0001><U+0001><U+0000><U+0000><U+0000><U+0000><U+0000>
+	    #
+	    # ... because -x c++ would make Clang blindly treat the
+	    # input .o files as C++.
+	    #
+	    set idx [lsearch -exact $options "c++"]
+	    set options [lreplace $options $idx $idx]
+
+	    # Since we wrap translation units with hip-test-wrapper.cc
+	    # when compiling C/C++ source files (see below), we can't
+	    # mix source and object input files in the same
+	    # compilation.  Fix that by forcing separate compilation
+	    # for each input file that doesn't look like an object
+	    # file, and replacing the corresponding SOURCE array
+	    # element with the corresponding built object file.
+	    if { $type == "executable" } {
+		set new_source {}
+		foreach src $source {
+		    if {[file extension $src] != ".o"} {
+			set out [standard_temp_file [file tail $src].o]
+			set res [gdb_compile $src $out object $options]
+			if {$res != ""} {
+			    return $res
+			}
+			lappend new_source $out
+		    } else {
+			lappend new_source $src
+		    }
+		}
+		set source $new_source
+
+		# Compile the driver.
+		if { $gdb_saved_hip_driver_obj == "" } {
+		    verbose "compiling hip-driver"
+		    set hip_driver_src ${srcdir}/lib/hip/hip-driver.cc
+		    set hip_driver_obj ${objdir}/hip-driver.o
+
+		    set compiling_hip_driver 1
+		    set result [gdb_compile "${hip_driver_src}" "${hip_driver_obj}" object {debug}]
+		    set compiling_hip_driver 0
+
+		    if { $result != "" } {
+			return $result
+		    }
+		    if {[is_remote host]} {
+			set gdb_saved_hip_driver_obj hip-driver.o
+		    } else {
+			set gdb_saved_hip_driver_obj ${objdir}/hip-driver.o
+		    }
+		    # Link a copy of the output object, because the
+		    # original may be automatically deleted.
+		    remote_download host $hip_driver_obj $gdb_saved_hip_driver_obj
+		}
+		lappend options "ldflags=$gdb_saved_hip_driver_obj"
+
+		lappend options "early_flags=-fgpu-rdc"
+
+		# All compiled.  Now link, and we're done.
+		return [hip_org_gdb_compile $source $dest $type $options]
+	    }
+
+	    # Compiling some source file to an object file.
+
+	    # If we're not linking, then we're guaranteed to only have
+	    # one source file, due to the recursion in the
+	    # "executable" case above.
+	    if {[llength $source] != 1} {
+		error "more than one source file?"
+	    }
+
+	    # See if we're actually compiling an assembly file.
+	    set src [lindex $source 0]
+	    if {[file extension $src] == ".S" || [file extension $src] == ".s"} {
+		set gpu_target [hip_amdgpu_target]
+
+		global gdb_hip_rocm_path
+		global gdb_saved_hip_empty_host_obj
+
+		set asm_options "early_flags=-O0\
+				 -target amdgcn-amd-amdhsa\
+				 -mcpu=$gpu_target -nogpulib\
+				 -fno-autolink\
+				 -faddrsig"
+		lappend options $asm_options
+
+		# Assemble the device side of the bundle.
+		set tmp_o [standard_temp_file [file tail $dest].tmp.o]
+		set res [hip_org_gdb_compile $source $tmp_o $type $options]
+		if {$res != ""} {
+		    return $res
+		}
+
+		# Assemble an empty .o for the host side of the
+		# bundle.  Only do it once as an optimization.
+		if { $gdb_saved_hip_empty_host_obj == "" } {
+		    verbose "compiling empty host object"
+		    set empty_src [standard_temp_file empty-host.c]
+		    set gdb_saved_hip_empty_host_obj ${objdir}/empty-host.o
+		    set f [open $empty_src "w"]
+		    close $f
+		    set res [hip_org_gdb_compile $empty_src $gdb_saved_hip_empty_host_obj object {}]
+		    if {$res != ""} {
+			return $res
+		    }
+		}
+
+		# Bundle device and host objects.
+		set res [remote_exec host \
+			     "${gdb_hip_rocm_path}/llvm/bin/clang-offload-bundler\
+				-type=o\
+				-targets=hip-amdgcn-amd-amdhsa-${gpu_target},host-x86_64-unknown-linux-gnu\
+				-outputs=$dest\
+				-inputs=$tmp_o,$gdb_saved_hip_empty_host_obj"]
+		# We're done.
+		return [lindex $res 1]
+	    }
+
+	    # We need explicit -O0, because hipcc optimizes by
+	    # default.
+	    #
+	    # -std=gnu++11 because hipcc defaults to -std=c++11, and
+	    # some testcases assume GNU extensions.
+	    #
+	    # -fgpu-rdc enables separate compilation mode, so we can
+	    # compile the kernel from multiple translation units.
+
+	    set hip_options "early_flags=-O0 -std=gnu++11 -fgpu-rdc"
+
+	    # Make HIP/C++ look a little bit more like C.
+	    if {$lang == "c"} {
+		append hip_options "\
+				    -Wno-writable-strings\
+				    -Wno-c++11-narrowing"
+	    }
+
+	    # Clang automatically includes
+	    # __clang_hip_runtime_wrapper.h via -include on the
+	    # command line.  We need to override the malloc definition
+	    # so we need to wrap the wrapper header...  Our wrapper
+	    # lives in the lib/hip/ dir.
+	    append hip_options " -I ${srcdir}/lib/hip/"
+
+	    if {!$compiling_hip_driver} {
+		# Wrap the file we actually want to compile with
+		# hip-test-wrapper.cc.
+		append hip_options " -DINC_TEST_FILE=\"$source\""
+		set source "${srcdir}/lib/hip/hip-test-wrapper.cc"
+	    }
+
+	    lappend options $hip_options
+	}
+    }
+    hip_org_gdb_compile $source $dest $type $options
+}

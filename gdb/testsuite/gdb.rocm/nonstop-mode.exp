@@ -1,0 +1,205 @@
+# Copyright (C) 2019-2021 Free Software Foundation, Inc.
+# Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# exp_internal 1
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+set num_waves 16
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+# Some GPUs have 32 lanes per wave, while others have 64.  Use 32
+# threads per block so that we can control number of waves using the
+# number of blocks on all GPUs.
+set options [list \
+		 debug \
+		 hip \
+		 additional_flags=-DGRID_DIM=$num_waves \
+		 additional_flags=-DBLOCK_DIM=32 \
+		]
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile $options]} {
+    return -1
+}
+
+# Run and wait until all threads/waves report a breakpoint hit.
+
+proc run_and_wait {test} {
+    global gdb_prompt
+    global num_waves
+
+    set hits 0
+
+    # Use background "run" so that we get the prompt immediately.
+    gdb_test_multiple "run&" $test {
+	-re "$gdb_prompt" {
+	    gdb_test_multiple "" $test {
+		-re "hit Breakpoint \[1-9\]" {
+		    incr hits
+		    if {$hits < $num_waves} {
+			exp_continue
+		    } else {
+			pass $test
+		    }
+		}
+	    }
+	}
+    }
+}
+
+with_rocm_gpu_lock {
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+# Fetch the thread id of the first wave.
+
+# Set breakpoint in device code.
+gdb_breakpoint "VectorAdd" "allow-pending"
+gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
+
+set threadid ""
+
+gdb_test_multiple "info threads" "extract thread id" {
+    -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+\\d+\:\\d+:\\d+:\\d+\\s+\\(\\d+,\\d+,\\d+\\)/\\d+.*$gdb_prompt $" {
+	set threadid "$expect_out(1,string)"
+	pass $gdb_test_name
+    }
+}
+
+if {$threadid == ""} {
+    return
+}
+
+verbose -log "threadid=$threadid"
+
+clean_restart ${binfile}
+
+# Turn on non-stop mode.
+
+gdb_test_no_output "set non-stop on"
+gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+gdb_breakpoint "VectorAdd" "allow-pending"
+
+run_and_wait "run to VectorAdd Breakpoint"
+
+gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
+gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+run_and_wait "run to VectorAdd Breakpoint after inferior exit"
+
+gdb_test "thread $threadid" ".Switching to thread $threadid.*AMDGPU Thread.*"
+
+# Check "info agents".
+# vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"
+# vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
+gdb_test_sequence "info agents" "info agents" {
+    {Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+Location}
+    {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+}
+
+# Check "info threads".
+# Sample output:
+#* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
+#  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
+gdb_test_sequence "info threads" "info threads" {
+    {Id\s+Target\s+Id\s+Frame}
+    {\d+\s+AMDGPU\sThread\s\d+\:\d+:\d+:\d+}
+}
+
+# Show architecture info while debugging in device code.
+# Sample output "The target architecture is set automatically (currently amdgcn:gfx906)"
+gdb_test "show architecture" \
+    {The target architecture is set to "auto" \(currently "amdgcn:gfx\w+"\)\.}
+
+gdb_test_sequence "show convenience" "show convenience" {
+    {\$_thread = \d+}
+    {\$_wave_id = \"\(\d+,\d+,\d+\)/\d+\"}
+}
+
+
+# Check "info sharedlibrary"
+# Sample output
+# From                To                  Syms Read   Shared Object Library
+# 0x00007ffbdfe05000  0x00007ffbdfe07a2c  Yes (*)     AMDGPU shared object [loaded from memory 0xab9900..0xac3470]
+# 0x00007ffbdc201000  0x00007ffbdc201c94  Yes         AMDGPU shared object [loaded from memory 0x9b71d0..0x9bae28]
+# gdb_test_sequence "info sharedlibrary" "info sharedlibrary" {
+# {From\s+To\s+Syms\s+Read\s+Shared Object Library}
+# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s\(\*\)\s+AMDGPU shared object.}
+# {0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+Yes\s+AMDGPU shared object.}
+# }
+
+
+# Check "info break".
+# Sample output:
+# Num     Type           Disp Enb Address            What
+# 1       breakpoint     keep y   0x00007ffbdc2012dc in bit_extract_kernel() at bit_extract.cpp:38
+#         breakpoint already hit 1 time
+gdb_test_sequence "info break" "info break" {
+    {Num\s+Type\s+Disp\sEnb Address\s+What}
+    {\d+\s+breakpoint\s+keep\s+y}
+    {breakpoint already hit\s\d+\stime}
+}
+
+
+# Check "info inferiors".
+#   Num  Description       Executable
+# * 1    process 34544     /home/amd/rohit/samples/0_Intro/bit_extract/bit_extrac
+gdb_test_sequence "info inferiors" "info inferiors" {
+    {Num\s+Description\s+Connection\s+Executable}
+    {\*\s\d+\s+process\s+\d+}
+}
+
+gdb_test "disable 1"
+gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
+gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "enable 1"
+run_and_wait "run to VectorAdd after disable/enable Breakpoint No"
+
+gdb_test "clear VectorAdd"
+gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
+gdb_test "start" {.+hit\sTemporary\sbreakpoint\s[\d].*}
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+gdb_breakpoint "VectorAdd" "allow-pending"
+run_and_wait "Again setting Breakpoint and running to Breakpoint after inferior exit"
+
+gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+# Switch to all stop mode.
+
+gdb_test_no_output "set non-stop off"
+gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
+gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
+gdb_test "disable 3"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "enable 3"
+gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sVectorAdd\s\(.*\)\sat.*}
+gdb_test "clear VectorAdd"
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+
+gdb_exit
+}

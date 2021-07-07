@@ -2,6 +2,7 @@
    Declarations and definitions of codes relating to the DWARF2 and
    DWARF3 symbolic debugging information formats.
    Copyright (C) 1992-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Written by Gary Funck (gary@intrepid.com) The Ada Joint Program
    Office (AJPO), Florida State University and Silicon Graphics Inc.
@@ -704,6 +705,17 @@ DW_OP (DW_OP_PGI_omp_thread_num, 0xf8)
    to 0 except explicitly documented for one action.  Please refer AArch64 DWARF
    ABI documentation for details.  */
 DW_OP (DW_OP_AARCH64_operation, 0xea)
+/* DWARF 6 proposed extensions for heterogeneous targets */
+DW_OP_DUP (DW_OP_LLVM_form_aspace_address, 0xe1)
+DW_OP_DUP (DW_OP_LLVM_offset, 0xe3)
+DW_OP_DUP (DW_OP_LLVM_offset_constu, 0xe4)
+DW_OP_DUP (DW_OP_LLVM_bit_offset, 0xe5)
+DW_OP_DUP (DW_OP_LLVM_call_frame_entry_reg, 0xe6)
+DW_OP (DW_OP_LLVM_undefined, 0xe7)
+DW_OP (DW_OP_LLVM_aspace_bregx, 0xe8)
+DW_OP_DUP (DW_OP_LLVM_piece_end, 0xea)
+DW_OP (DW_OP_LLVM_extend, 0xeb)
+DW_OP (DW_OP_LLVM_select_bit_piece, 0xec)
 DW_END_OP
 
 DW_FIRST_ATE (DW_ATE_void, 0x0)
@@ -779,6 +791,8 @@ DW_CFA (DW_CFA_def_cfa_offset_sf, 0x13)
 DW_CFA (DW_CFA_val_offset, 0x14)
 DW_CFA (DW_CFA_val_offset_sf, 0x15)
 DW_CFA (DW_CFA_val_expression, 0x16)
+/* DWARF 6.  */
+DW_CFA (DW_CFA_def_aspace_cfa, 0x30)
 
 DW_CFA (DW_CFA_lo_user, 0x1c)
 DW_CFA (DW_CFA_hi_user, 0x3f)

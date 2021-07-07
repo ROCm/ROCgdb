@@ -1,6 +1,7 @@
 /* DWARF 2 debugging format support for GDB.
 
    Copyright (C) 1994-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
    Inc.  with support from Florida State University (under contract
@@ -29,6 +30,7 @@
    E.g., load_partial_dies, read_partial_die.  */
 
 #include "defs.h"
+#include "gdb-hip-test-mode.h"
 #include "dwarf2/read.h"
 #include "dwarf2/abbrev.h"
 #include "dwarf2/attribute.h"
@@ -9751,6 +9753,12 @@ dw2_linkage_name (struct die_info *die, struct dwarf2_cu *cu)
       && strchr (linkage_name, '{') != NULL)
     linkage_name = NULL;
 
+  if (linkage_name != nullptr)
+    {
+      linkage_name = gdb_hip_test_mode_frob_names (cu->per_objfile->objfile,
+						   linkage_name);
+    }
+
   return linkage_name;
 }
 
@@ -19172,6 +19180,14 @@ partial_die_info::read (const struct die_reader_specs *reader,
 	     assume they will be the same, and we only store the last
 	     one we see.  */
 	  linkage_name = attr.as_string ();
+
+	  if (linkage_name != nullptr)
+	    {
+	      linkage_name
+		= gdb_hip_test_mode_frob_names (cu->per_objfile->objfile,
+						linkage_name);
+	    }
+
 	  break;
 	case DW_AT_low_pc:
 	  has_low_pc_attr = 1;
@@ -22835,8 +22851,12 @@ dwarf2_name (struct die_info *die, struct dwarf2_cu *cu)
     }
 
   if (!attr->canonical_string_p ())
-    attr->set_string_canonical (dwarf2_canonicalize_name (attr_name, cu,
-							  objfile));
+    {
+      attr_name = gdb_hip_test_mode_frob_names (cu->per_objfile->objfile,
+						attr_name);
+      attr->set_string_canonical (dwarf2_canonicalize_name (attr_name, cu,
+							    objfile));
+    }
   return attr->as_string ();
 }
 

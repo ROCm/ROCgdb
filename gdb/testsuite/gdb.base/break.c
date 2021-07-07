@@ -1,6 +1,7 @@
 /* This testcase is part of GDB, the GNU debugger.
 
    Copyright 1992-2021 Free Software Foundation, Inc.
+   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,8 +42,12 @@ int
 main (int argc, char **argv, char **envp)
 {
     if (argc == 12345) {  /* an unlikely value < 2^16, in case uninited */ /* set breakpoint 6 here */
-	fprintf (stderr, "usage:  factorial <number>\n");
-	return 1;
+#ifndef __AMDGPU__
+      fprintf (stderr, "usage:  factorial <number>\n");
+#else
+      printf ("usage:  factorial <number>\n");
+#endif
+      return 1;
     }
     printf ("%d\n", factorial (atoi ("6")));  /* set breakpoint 1 here */
     /* set breakpoint 12 here */

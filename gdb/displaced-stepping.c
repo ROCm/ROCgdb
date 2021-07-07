@@ -1,6 +1,7 @@
 /* Displaced stepping related things.
 
    Copyright (C) 2020-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -302,4 +303,30 @@ When non-zero, displaced stepping specific debugging is enabled."),
 			    NULL,
 			    show_debug_displaced,
 			    &setdebuglist, &showdebuglist);
+}
+
+bool
+default_supports_displaced_step (target_ops *target, thread_info *thread)
+{
+  /* Only check for the presence of `prepare`.  The gdbarch verification ensures
+     that if `prepare` is provided, so is `finish`.  */
+  gdbarch *arch = get_thread_regcache (thread)->arch ();
+  return gdbarch_displaced_step_prepare_p (arch);
+}
+
+displaced_step_prepare_status
+default_displaced_step_prepare (target_ops *target, thread_info *thread,
+				CORE_ADDR &displaced_pc)
+{
+  gdbarch *arch = get_thread_regcache (thread)->arch ();
+  return gdbarch_displaced_step_prepare (arch, thread, displaced_pc);
+}
+
+displaced_step_finish_status
+default_displaced_step_finish (target_ops *target,
+			       thread_info *thread,
+			       gdb_signal sig)
+{
+  gdbarch *arch = get_thread_regcache (thread)->arch ();
+  return gdbarch_displaced_step_finish (arch, thread, sig);
 }

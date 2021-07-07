@@ -1,6 +1,7 @@
 /* OS ABI variant handling for GDB.
 
    Copyright (C) 2001-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -82,6 +83,7 @@ static const struct osabi_names gdb_osabi_names[] =
   { "Newlib", NULL },
   { "SDE", NULL },
   { "PikeOS", NULL },
+  { "AMD HSA Runtime" },
 
   { "<invalid>", NULL }
 };

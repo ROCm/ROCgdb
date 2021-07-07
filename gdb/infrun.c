@@ -2,6 +2,7 @@
    process.
 
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -429,6 +430,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
       return true;
     }
 
+  thread_info *child_thr = nullptr;
+
   if (!follow_child)
     {
       /* Detach new forked process?  */
@@ -478,7 +481,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  switch_to_no_thread ();
 	  child_inf->symfile_flags = SYMFILE_NO_READ;
 	  child_inf->push_target (parent_inf->process_target ());
-	  thread_info *child_thr
+	  child_thr
 	    = add_thread_silent (child_inf->process_target (), child_ptid);
 
 	  /* If this is a vfork child, then the address-space is
@@ -514,17 +517,6 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	      /* solib_create_inferior_hook relies on the current
 		 thread.  */
 	      switch_to_thread (child_thr);
-
-	      /* Let the shared library layer (e.g., solib-svr4) learn
-		 about this new process, relocate the cloned exec, pull
-		 in shared libraries, and install the solib event
-		 breakpoint.  If a "cloned-VM" event was propagated
-		 better throughout the core, this wouldn't be
-		 required.  */
-	      scoped_restore restore_in_initial_library_scan
-		= make_scoped_restore (&child_inf->in_initial_library_scan,
-				       true);
-	      solib_create_inferior_hook (0);
 	    }
 	}
 
@@ -633,7 +625,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	child_inf->push_target (target);
       }
 
-      thread_info *child_thr = add_thread_silent (target, child_ptid);
+      child_thr = add_thread_silent (target, child_ptid);
 
       /* If this is a vfork child, then the address-space is shared
 	 with the parent.  If we detached from the parent, then we can
@@ -653,21 +645,22 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  child_inf->symfile_flags = SYMFILE_NO_READ;
 	  set_current_program_space (child_inf->pspace);
 	  clone_program_space (child_inf->pspace, parent_pspace);
-
-	  /* Let the shared library layer (e.g., solib-svr4) learn
-	     about this new process, relocate the cloned exec, pull in
-	     shared libraries, and install the solib event breakpoint.
-	     If a "cloned-VM" event was propagated better throughout
-	     the core, this wouldn't be required.  */
-	  scoped_restore restore_in_initial_library_scan
-	    = make_scoped_restore (&child_inf->in_initial_library_scan, true);
-	  solib_create_inferior_hook (0);
 	}
 
       switch_to_thread (child_thr);
     }
 
   target_follow_fork (follow_child, detach_fork);
+
+  /* If we ended up creating a new inferior, call post_create_inferior to inform
+     the various subcomponents.  */
+  if (child_thr != nullptr)
+    {
+      scoped_restore_current_thread restore;
+      switch_to_thread (child_thr);
+
+      post_create_inferior (0);
+    }
 
   return false;
 }
@@ -1541,15 +1534,15 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
 			"to step over breakpoints is %s.\n"), value);
 }
 
-/* Return true if the gdbarch implements the required methods to use
-   displaced stepping.  */
+/* Return true if the target behing THREAD supports displaced stepping.  */
 
 static bool
-gdbarch_supports_displaced_stepping (gdbarch *arch)
+target_supports_displaced_stepping (thread_info *thread)
 {
-  /* Only check for the presence of `prepare`.  The gdbarch verification ensures
-     that if `prepare` is provided, so is `finish`.  */
-  return gdbarch_displaced_step_prepare_p (arch);
+  inferior *inf = thread->inf;
+  target_ops *target = inf->top_target ();
+
+  return target->supports_displaced_step (thread);
 }
 
 /* Return non-zero if displaced stepping can/should be used to step
@@ -1568,11 +1561,8 @@ use_displaced_stepping (thread_info *tp)
       && !target_is_non_stop_p ())
     return false;
 
-  gdbarch *gdbarch = get_thread_regcache (tp)->arch ();
-
-  /* If the architecture doesn't implement displaced stepping, don't use
-     it.  */
-  if (!gdbarch_supports_displaced_stepping (gdbarch))
+  /* If the target doesn't support displaced stepping, don't use it.  */
+  if (!target_supports_displaced_stepping (tp))
     return false;
 
   /* If recording, don't use displaced stepping.  */
@@ -1644,9 +1634,9 @@ displaced_step_prepare_throw (thread_info *tp)
   displaced_step_thread_state &disp_step_thread_state
     = tp->displaced_step_state;
 
-  /* We should never reach this function if the architecture does not
+  /* We should never reach this function if the target does not
      support displaced stepping.  */
-  gdb_assert (gdbarch_supports_displaced_stepping (gdbarch));
+  gdb_assert (target_supports_displaced_stepping (tp));
 
   /* Nor if the thread isn't meant to step over a breakpoint.  */
   gdb_assert (tp->control.trap_expected);
@@ -1684,7 +1674,7 @@ displaced_step_prepare_throw (thread_info *tp)
   CORE_ADDR displaced_pc;
 
   displaced_step_prepare_status status
-    = gdbarch_displaced_step_prepare (gdbarch, tp, displaced_pc);
+    = tp->inf->top_target ()->displaced_step_prepare (tp, displaced_pc);
 
   if (status == DISPLACED_STEP_PREPARE_STATUS_CANT)
     {
@@ -1792,8 +1782,9 @@ displaced_step_finish (thread_info *event_thread, enum gdb_signal signal)
 
   /* Do the fixup, and release the resources acquired to do the displaced
      step. */
-  return gdbarch_displaced_step_finish (displaced->get_original_gdbarch (),
-					event_thread, signal);
+  return
+    event_thread->inf->top_target ()->displaced_step_finish (event_thread,
+							     signal);
 }
 
 /* Data to be passed around while handling an event.  This data is
@@ -5507,7 +5498,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	   enforced during gdbarch validation to support architectures
 	   which support displaced stepping but not forks.  */
 	if (ecs->ws.kind == TARGET_WAITKIND_FORKED
-	    && gdbarch_supports_displaced_stepping (gdbarch))
+	    && target_supports_displaced_stepping (ecs->event_thread))
 	  gdbarch_displaced_step_restore_all_in_ptid
 	    (gdbarch, parent_inf, ecs->ws.value.related_pid);
 

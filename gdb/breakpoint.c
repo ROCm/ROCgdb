@@ -1,6 +1,7 @@
 /* Everything about breakpoints, for GDB.
 
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -368,7 +369,10 @@ show_automatic_hardware_breakpoints (struct ui_file *file, int from_tty,
    breakpoints until the next resume, and removes them again when the
    target fully stops.  This is a bit safer in case GDB crashes while
    processing user input.  */
-static bool always_inserted_mode = false;
+/* FIXME: this is a temporary workaround to make sure waves created while
+   all known threads are stopped, and the gdb prompt is presented, do not
+   execute past the enabled breakpoints.  */
+static bool always_inserted_mode = true;
 
 static void
 show_always_inserted_mode (struct ui_file *file, int from_tty,

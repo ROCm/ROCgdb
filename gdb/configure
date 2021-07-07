@@ -4,6 +4,7 @@
 #
 #
 # Copyright (C) 1992-1996, 1998-2012 Free Software Foundation, Inc.
+# Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 #
 #
 # This configure script is free software; the Free Software Foundation
@@ -776,6 +777,7 @@ PKG_CONFIG_PATH
 PKG_CONFIG
 HAVE_NATIVE_GCORE_TARGET
 TARGET_OBS
+ROCM_DBGAPI_LIBS
 RPATH_ENVVAR
 GDB_DATADIR
 DEBUGDIR
@@ -885,6 +887,7 @@ with_auto_load_safe_path
 enable_shared
 enable_targets
 enable_64_bit_bfd
+with_rocm_dbgapi
 enable_gdbmi
 enable_tui
 enable_gdbtk
@@ -1630,6 +1633,8 @@ Optional Packages:
                           [--with-auto-load-dir]
   --without-auto-load-safe-path
                           do not restrict auto-loaded files locations
+  --with-rocm-dbgapi=PATH specify prefix directory for installed ROCm-dbgapi
+                          package
   --with-debuginfod       Enable debuginfo lookups with debuginfod
                           (auto/yes/no)
   --with-libunwind-ia64   use libunwind frame unwinding for ia64 targets
@@ -6790,6 +6795,137 @@ _ACEOF
     TARGET_OBS='$(ALL_TARGET_OBS) $(ALL_64_TARGET_OBS)'
   else
     TARGET_OBS='$(ALL_TARGET_OBS)'
+  fi
+fi
+
+# ROCm dbgapi support.
+
+
+# Check whether --with-rocm-dbgapi was given.
+if test "${with_rocm_dbgapi+set}" = set; then :
+  withval=$with_rocm_dbgapi;
+else
+  with_rocm_dbgapi=/opt/rocm
+fi
+
+
+save_CPPFLAGS=${CPPFLAGS}
+CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
+for ac_header in amd-dbgapi.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "amd-dbgapi.h" "ac_cv_header_amd_dbgapi_h" "$ac_includes_default"
+if test "x$ac_cv_header_amd_dbgapi_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_AMD_DBGAPI_H 1
+_ACEOF
+
+fi
+
+done
+
+
+if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_h" = xyes; then
+  gdb_rocm_dbgapi_required_version_major=0
+  gdb_rocm_dbgapi_required_version_minor=47
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for the correct version of amd-dbgapi.h" >&5
+$as_echo_n "checking for the correct version of amd-dbgapi.h... " >&6; }
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "amd-dbgapi.h"
+int
+main ()
+{
+
+#define AMD_DBGAPI_VERSION_NUM(M, m) (((M) << 16L) | (m))
+#define VERSION_NUM AMD_DBGAPI_VERSION_NUM \
+  (AMD_DBGAPI_VERSION_MAJOR, AMD_DBGAPI_VERSION_MINOR)
+#if VERSION_NUM < AMD_DBGAPI_VERSION_NUM \
+  ($gdb_rocm_dbgapi_required_version_major, \
+   $gdb_rocm_dbgapi_required_version_minor)
+# error
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  as_fn_error $? "amdgcn*-*-* requires version \
+$gdb_rocm_dbgapi_required_version_major.$gdb_rocm_dbgapi_required_version_minor+" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+CPPFLAGS=${save_CPPFLAGS}
+
+save_LIBS=${LIBS}
+save_LDFLAGS=${LDFLAGS}
+LDFLAGS="${LDFLAGS} -L$with_rocm_dbgapi/lib"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for amd_dbgapi_initialize in -lrocm-dbgapi" >&5
+$as_echo_n "checking for amd_dbgapi_initialize in -lrocm-dbgapi... " >&6; }
+if ${ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lrocm-dbgapi  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char amd_dbgapi_initialize ();
+int
+main ()
+{
+return amd_dbgapi_initialize ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize=yes
+else
+  ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" >&5
+$as_echo "$ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" >&6; }
+if test "x$ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBROCM_DBGAPI 1
+_ACEOF
+
+  LIBS="-lrocm-dbgapi $LIBS"
+
+fi
+
+LDFLAGS=${save_LDFLAGS}
+LIBS=${save_LIBS}
+
+if test x"$ac_cv_header_amd_dbgapi_h" = xyes \
+    -a x"$ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" = xyes; then
+
+  if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then
+    TARGET_OBS="$TARGET_OBS amdgcn-rocm-tdep.o rocm-tdep.o solib-rocm.o"
+  fi
+
+  CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
+  ROCM_DBGAPI_LIBS="-Wl,--rpath,\$\${LD_RUN_PATH:-$with_rocm_dbgapi/lib} $with_rocm_dbgapi/lib/librocm-dbgapi.so"
+
+else
+  if test x"$require_rocm_dbgapi" = xyes; then
+    as_fn_error $? "amdgcn*-*-* requires rocm-dbgapi to be installed, or use \
+--with-rocm-dbgapi=PATH" "$LINENO" 5
   fi
 fi
 

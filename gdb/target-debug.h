@@ -1,6 +1,7 @@
 /* GDB target debugging macros
 
    Copyright (C) 2014-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -48,6 +49,8 @@
   target_debug_do_print (plongest (X))
 #define target_debug_print_CORE_ADDR(X)		\
   target_debug_do_print (core_addr_to_string (X))
+#define target_debug_print_CORE_ADDR_r(X)	\
+  target_debug_do_print (core_addr_to_string (X))
 #define target_debug_print_const_char_p(X)	\
   target_debug_do_print (((X) ? (X) : "(null)"))
 #define target_debug_print_char_p(X)		\
@@ -79,6 +82,8 @@
 #define target_debug_print_gdb_byte_pp(X)	\
   target_debug_do_print (host_address_to_string (*(X)))
 #define target_debug_print_enum_gdb_signal(X)	\
+  target_debug_do_print (gdb_signal_to_name (X))
+#define target_debug_print_gdb_signal(X)	\
   target_debug_do_print (gdb_signal_to_name (X))
 #define target_debug_print_ULONGEST(X)		\
   target_debug_do_print (hex_string (X))
@@ -174,6 +179,10 @@
   target_debug_do_print (host_address_to_string (X.data ()))
 #define target_debug_print_gdb_unique_xmalloc_ptr_char(X) \
   target_debug_do_print (X.get ())
+#define target_debug_print_displaced_step_finish_status(X) \
+  target_debug_do_print (host_address_to_string (X))
+#define target_debug_print_displaced_step_prepare_status(X) \
+  target_debug_do_print (host_address_to_string (X))
 
 static void
 target_debug_print_struct_target_waitstatus_p (struct target_waitstatus *status)

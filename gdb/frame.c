@@ -1,6 +1,7 @@
 /* Cache and manage frames for GDB, the GNU debugger.
 
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1373,7 +1374,7 @@ read_frame_register_unsigned (frame_info *frame, int regnum,
 
 void
 put_frame_register (struct frame_info *frame, int regnum,
-		    const gdb_byte *buf)
+		    const gdb_byte *buf, LONGEST offset)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   int realnum;
@@ -1390,12 +1391,19 @@ put_frame_register (struct frame_info *frame, int regnum,
     {
     case lval_memory:
       {
-	write_memory (addr, buf, register_size (gdbarch, regnum));
+	write_memory (addr + offset, buf, register_size (gdbarch, regnum));
 	break;
       }
     case lval_register:
-      get_current_regcache ()->cooked_write (realnum, buf);
-      break;
+      {
+	/* Register written can be bigger then the value we are writing.  */
+	gdb::byte_vector temp_buf (register_size (gdbarch, realnum));
+	get_current_regcache ()->cooked_read (realnum, temp_buf.data ());
+	memcpy ((char *) temp_buf.data () + offset, buf,
+		register_size (gdbarch, regnum));
+	get_current_regcache ()->cooked_write (realnum, temp_buf.data ());
+	break;
+      }
     default:
       error (_("Attempt to assign to an unmodifiable value."));
     }
@@ -1531,26 +1539,51 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
   while (len > 0)
     {
       int curr_len = register_size (gdbarch, regnum) - offset;
+      struct value *value = frame_unwind_register_value (frame->next,
+							 regnum);
+      LONGEST added_offset = value == NULL ? 0 : value_offset (value);
 
       if (curr_len > len)
 	curr_len = len;
 
       const gdb_byte *myaddr = buffer.data ();
-      if (curr_len == register_size (gdbarch, regnum))
+      /*  Compute value is a special new case.  The problem is that
+	  the computed callback mechanism only supports a struct
+	  value arguments, so we need to make one.  */
+      if (value != NULL && VALUE_LVAL (value) == lval_computed)
 	{
-	  put_frame_register (frame, regnum, myaddr);
+	  struct value *from_value;
+	  const struct lval_funcs *funcs = value_computed_funcs (value);
+	  struct type * reg_type = register_type (gdbarch, regnum);
+
+	  if (funcs->write == NULL)
+	    error (_("Attempt to assign to an unmodifiable value."));
+
+	  from_value = allocate_value (reg_type);
+	  memcpy (value_contents_raw (from_value), myaddr,
+		  TYPE_LENGTH (reg_type));
+
+	  set_value_offset (value, added_offset + offset);
+
+	  funcs->write (value, from_value);
+	  release_value (from_value);
+	}
+      else if (curr_len == register_size (gdbarch, regnum))
+	{
+	  put_frame_register (frame, regnum, myaddr, added_offset);
 	}
       else
 	{
-	  struct value *value = frame_unwind_register_value (frame->next,
-							     regnum);
 	  gdb_assert (value != NULL);
 
-	  memcpy ((char *) value_contents_writeable (value) + offset, myaddr,
-		  curr_len);
-	  put_frame_register (frame, regnum, value_contents_raw (value));
-	  release_value (value);
+	  memcpy ((char *) value_contents_writeable (value) + offset,
+		  myaddr, curr_len);
+	  put_frame_register (frame, regnum, value_contents_raw (value),
+			      added_offset);
 	}
+
+      if (value != NULL)
+	release_value (value);
 
       myaddr += curr_len;
       len -= curr_len;

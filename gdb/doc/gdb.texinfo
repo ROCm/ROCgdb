@@ -1,5 +1,6 @@
 \input texinfo      @c -*-texinfo-*-
 @c Copyright (C) 1988--2021 Free Software Foundation, Inc.
+@c Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 @c
 @c %**start of header
 @c makeinfo ignores cmds prev to setfilename, so its arg cannot make use
@@ -44,8 +45,8 @@
 @c manuals to an info tree.
 @dircategory Software development
 @direntry
-* Gdb: (gdb).                     The GNU debugger.
-* gdbserver: (gdb) Server.        The GNU debugging server.
+* ROCgdb: (gdb).                  The AMD ROCm GNU debugger.
+@c * gdbserver: (gdb) Server.        The GNU debugging server.
 @end direntry
 
 @copying
@@ -62,7 +63,36 @@ and with the Back-Cover Texts as in (a) below.
 (a) The FSF's Back-Cover Text is: ``You are free to copy and modify
 this GNU Manual.  Buying copies from GNU Press supports the FSF in
 developing GNU and promoting software freedom.''
-@c man end
+
+@emph{Disclaimer}
+
+The information contained herein is for informational purposes only,
+and is subject to change without notice.  While every precaution has
+been taken in the preparation of this document, it may contain
+technical inaccuracies, omissions and typographical errors, and AMD is
+under no obligation to update or otherwise correct this information.
+Advanced Micro Devices, Inc. makes no representations or warranties
+with respect to the accuracy or completeness of the contents of this
+document, and assumes no liability of any kind, including the implied
+warranties of noninfringement, merchantability or fitness for
+particular purposes, with respect to the operation or use of AMD
+hardware, software or other products described herein.  No license,
+including implied or arising by estoppel, to any intellectual property
+rights is granted by this document.  Terms and limitations applicable
+to the purchase or use of AMD’s products are as set forth in a signed
+agreement between the parties or in AMD's Standard Terms and
+Conditions of Sale.
+
+AMD@registeredsymbol{}, the AMD Arrow logo, AMD Instinct@registeredsymbol{},
+Radeon@registeredsymbol{}, ROCm@registeredsymbol{} and combinations thereof are
+trademarks of Advanced Micro Devices, Inc.  Linux@registeredsymbol{} is the
+registered trademark of Linus Torvalds in the U.S. and other countries.
+PCIe@registeredsymbol{} is a registered trademark of PCI-SIG Corporation. Other
+product names used in this publication are for identification purposes only and
+may be trademarks of their respective companies.
+
+Copyright @copyright{} 2019-2021 Advanced Micro Devices, Inc.  All
+rights reserved.
 @end copying
 
 @ifnottex
@@ -97,11 +127,12 @@ Version @value{GDBVN}.
 }
 @end tex
 
-@vskip 0pt plus 1filll
-Published by the Free Software Foundation @*
-51 Franklin Street, Fifth Floor,
-Boston, MA 02110-1301, USA@*
-ISBN 978-0-9831592-3-0 @*
+@c Comment out publisher until upstreamed:
+@c @vskip 0pt plus 1filll
+@c Published by the Free Software Foundation @*
+@c 51 Franklin Street, Fifth Floor,
+@c Boston, MA 02110-1301, USA@*
+@c ISBN 978-0-9831592-3-0 @*
 
 @insertcopying
 @end titlepage
@@ -150,11 +181,12 @@ software in general.  We will miss him.
 * Altering::                    Altering execution
 * GDB Files::                   @value{GDBN} files
 * Targets::                     Specifying a debugging target
+* Heterogeneous Debugging::     Debugging Heterogeneous Programs
 * Remote Debugging::            Debugging remote programs
 * Configurations::              Configuration-specific information
 * Controlling GDB::             Controlling @value{GDBN}
 * Extending GDB::               Extending @value{GDBN}
-* Interpreters::		Command Interpreters
+* Interpreters::                Command Interpreters
 * TUI::                         @value{GDBN} Text User Interface
 * Emacs::                       Using @value{GDBN} under @sc{gnu} Emacs
 * GDB/MI::                      @value{GDBN}'s Machine Interface.
@@ -174,23 +206,23 @@ software in general.  We will miss him.
 @end ifclear
 * In Memoriam::                 In Memoriam
 * Formatting Documentation::    How to format and print @value{GDBN} documentation
-* Installing GDB::              Installing GDB
+* Installing GDB::              Installing @value{GDBN}
 * Maintenance Commands::        Maintenance Commands
 * Remote Protocol::             GDB Remote Serial Protocol
-* Agent Expressions::           The GDB Agent Expression Mechanism
+* Agent Expressions::           The @value{GDBN} Agent Expression Mechanism
 * Target Descriptions::         How targets can describe themselves to
                                 @value{GDBN}
 * Operating System Information:: Getting additional information from
                                  the operating system
-* Trace File Format::		GDB trace file format
+* Trace File Format::		@value{GDBN} trace file format
 * Index Section Format::        .gdb_index section format
 * Man Pages::			Manual pages
 * Copying::			GNU General Public License says
-                                how you can copy and share GDB
+                                how you can copy and share @value{GDBN}
 * GNU Free Documentation License::  The license for this documentation
 * Concept Index::               Index of @value{GDBN} concepts
 * Command and Variable Index::  Index of @value{GDBN} commands, variables,
-                                  functions, and Python data types
+                                functions, and Python data types
 @end menu
 
 @end ifnottex
@@ -560,6 +592,11 @@ Stafford Horne.
 Weimin Pan, David Faust and Jose E. Marchesi contributed support for
 the Linux kernel BPF virtual architecture.  This work was sponsored by
 Oracle.
+
+Initial support for heterogeneous program debugging and @acronym{AMD
+GPU} targets was developed by the following people at the Advanced
+Micro Devices company: Scott Linder, Laurent Morichetti, Qingchuan
+Shi, Tony Tye, and Zoran Zaric.
 
 @node Sample Session
 @chapter A Sample @value{GDBN} Session
@@ -1653,7 +1690,7 @@ the @var{command} from the @var{shell_command}.
 Example:
 @smallexample
 @group
-(gdb) p var
+(@value{GDBP}) p var
 $1 = @{
   black = 144,
   red = 233,
@@ -1663,13 +1700,13 @@ $1 = @{
 @}
 @end group
 @group
-(gdb) pipe p var|wc
+(@value{GDBP}) pipe p var|wc
       7      19      80
-(gdb) |p var|wc -l
+(@value{GDBP}) |p var|wc -l
 7
 @end group
 @group
-(gdb) p /x var
+(@value{GDBP}) p /x var
 $4 = @{
   black = 0x90,
   red = 0xe9,
@@ -1677,15 +1714,15 @@ $4 = @{
   blue = 0x262,
   white = 0x3db
 @}
-(gdb) ||grep red
+(@value{GDBP}) ||grep red
   red => 0xe9,
 @end group
 @group
-(gdb) | -d ! echo this contains a | char\n ! sed -e 's/|/PIPE/'
+(@value{GDBP}) | -d ! echo this contains a | char\n ! sed -e 's/|/PIPE/'
 this contains a PIPE char
-(gdb) | -d xxx echo this contains a | char!\n xxx sed -e 's/|/PIPE/'
+(@value{GDBP}) | -d xxx echo this contains a | char!\n xxx sed -e 's/|/PIPE/'
 this contains a PIPE char!
-(gdb)
+(@value{GDBP})
 @end group
 @end smallexample
 @end table
@@ -1816,8 +1853,8 @@ The settings can also be changed interactively during the debugging
 session.  For example, to change the limit of array elements to print,
 you can do the following:
 @smallexample
-(@value{GDBN}) set print elements 10
-(@value{GDBN}) print some_array
+(@value{GDBP}) set print elements 10
+(@value{GDBP}) print some_array
 $1 = @{0, 10, 20, 30, 40, 50, 60, 70, 80, 90...@}
 @end smallexample
 
@@ -1833,7 +1870,7 @@ allow overriding relevant global print settings as set by @code{set
 print} subcommands.  @xref{print options}.  The example above could be
 rewritten as:
 @smallexample
-(@value{GDBN}) print -elements 10 -- some_array
+(@value{GDBP}) print -elements 10 -- some_array
 $1 = @{0, 10, 20, 30, 40, 50, 60, 70, 80, 90...@}
 @end smallexample
 
@@ -1863,14 +1900,14 @@ free-form arguments, such as expressions or filenames.
 
 For example, the command
 @smallexample
-(@value{GDBN}) with print array on -- print some_array
+(@value{GDBP}) with print array on -- print some_array
 @end smallexample
 @noindent
 is equivalent to the following 3 commands:
 @smallexample
-(@value{GDBN}) set print array on
-(@value{GDBN}) print some_array
-(@value{GDBN}) set print array off
+(@value{GDBP}) set print array on
+(@value{GDBP}) print some_array
+(@value{GDBP}) set print array off
 @end smallexample
 
 The @code{with} command is particularly useful when you want to
@@ -1878,7 +1915,7 @@ override a setting while running user-defined commands, or commands
 defined in Python or Guile.  @xref{Extending GDB,, Extending GDB}.
 
 @smallexample
-(@value{GDBN}) with print pretty on -- my_complex_command
+(@value{GDBP}) with print pretty on -- my_complex_command
 @end smallexample
 
 To change several settings for the same command, you can nest
@@ -2440,31 +2477,38 @@ is stored in the object file; it describes the data type of each
 variable or function and the correspondence between source line numbers
 and addresses in the executable code.
 
-To request debugging information, specify the @samp{-g} option when you run
-the compiler.
+To request debugging information, specify the @option{-g} option when
+you run the compiler.  However, to use the most expressive format
+available, including @value{GDBN} extensions if at all possible,
+@value{NGCC}, the @sc{gnu} C/C@t{++} compiler, supports
+@w{@option{-ggdb}} which produces debugging information for use by
+@value{GDBN}.  We recommend that you @emph{always} use
+@w{@option{-ggdb}} instead of plain @option{-g} if it is supported by
+the compiler you are using.
 
 Programs that are to be shipped to your customers are compiled with
-optimizations, using the @samp{-O} compiler option.  However, some
-compilers are unable to handle the @samp{-g} and @samp{-O} options
+optimizations, using the @option{-O} compiler option.  However, some
+compilers are unable to handle the @option{-g} and @option{-O} options
 together.  Using those compilers, you cannot generate optimized
 executables containing debugging information.
 
-@value{NGCC}, the @sc{gnu} C/C@t{++} compiler, supports @samp{-g} with or
-without @samp{-O}, making it possible to debug optimized code.  We
-recommend that you @emph{always} use @samp{-g} whenever you compile a
-program.  You may think your program is correct, but there is no sense
-in pushing your luck.  For more information, see @ref{Optimized Code}.
+@value{NGCC} supports @option{-g} with or without @option{-O}, making
+it possible to debug optimized code.  We recommend that you
+@emph{always} use @option{-g} whenever you compile a program.  You may
+think your program is correct, but there is no sense in pushing your
+luck.  For more information, see @ref{Optimized Code}.
 
 Older versions of the @sc{gnu} C compiler permitted a variant option
-@w{@samp{-gg}} for debugging information.  @value{GDBN} no longer supports this
-format; if your @sc{gnu} C compiler has this option, do not use it.
+@w{@option{-gg}} for debugging information.  @value{GDBN} no longer
+supports this format; if your @sc{gnu} C compiler has this option, do
+not use it.
 
 @value{GDBN} knows about preprocessor macros and can show you their
 expansion (@pxref{Macros}).  Most compilers do not include information
 about preprocessor macros in the debugging information if you specify
 the @option{-g} flag alone.  Version 3.1 and later of @value{NGCC},
 the @sc{gnu} C compiler, provides macro information if you are using
-the DWARF debugging format, and specify the option @option{-g3}.
+the DWARF debugging format, and specify the option @w{@option{-g3}}.
 
 @xref{Debugging Options,,Options for Debugging Your Program or GCC,
 gcc, Using the @sc{gnu} Compiler Collection (GCC)}, for more
@@ -3485,7 +3529,7 @@ programs:
 @item automatic notification of new threads
 @item @samp{thread @var{thread-id}}, a command to switch among threads
 @item @samp{info threads}, a command to inquire about existing threads
-@item @samp{thread apply [@var{thread-id-list} | all] @var{args}},
+@item @samp{thread apply @r{[}@var{thread-id-list} @r{|} all@r{]} @var{args}},
 a command to apply a command to a list of threads
 @item thread-specific breakpoints
 @item @samp{set print thread-events}, which controls printing of 
@@ -3505,6 +3549,7 @@ program information from the perspective of the current thread.
 
 @cindex @code{New} @var{systag} message
 @cindex thread identifier (system)
+@anchor{target system thread identifier}
 @c FIXME-implementors!! It would be more helpful if the [New...] message
 @c included GDB's numeric thread handle, so you could just go to that
 @c thread without first checking `info threads'.
@@ -3554,8 +3599,8 @@ Until you create a second inferior, @value{GDBN} does not show the
 the full @var{inferior-num}.@var{thread-num} form to refer to threads
 of inferior 1, the initial inferior.
 
-@anchor{thread ID lists}
-@cindex thread ID lists
+@anchor{thread ID list}
+@cindex thread ID list
 Some commands accept a space-separated @dfn{thread ID list} as
 argument.  A list element can be:
 
@@ -3587,7 +3632,7 @@ expanded qualified form, the same as @samp{1.1 1.2 1.3 4.5 6.7 6.8 6.9
 7.1}.
 
 
-@anchor{global thread numbers}
+@anchor{global thread number}
 @cindex global thread number
 @cindex global thread identifier (GDB)
 In addition to a @emph{per-inferior} number, each thread is also
@@ -3602,9 +3647,13 @@ program's ``main thread'' even if the program is not multi-threaded.
 
 @vindex $_thread@r{, convenience variable}
 @vindex $_gthread@r{, convenience variable}
-The debugger convenience variables @samp{$_thread} and
-@samp{$_gthread} contain, respectively, the per-inferior thread number
-and the global thread number of the current thread.  You may find this
+@vindex $_thread_systag@r{, convenience variable}
+@vindex $_thread_name@r{, convenience variable}
+The debugger convenience variables @samp{$_thread}, @samp{$_gthread},
+@samp{$_thread_systag}, and @samp{$_thread_name} contain,
+respectively, the per-inferior thread number, the global thread
+number, the target system's thread identifier (@var{systag}) string,
+and the thread name string of the current thread.  You may find this
 useful in writing breakpoint conditional expressions, command scripts,
 and so forth.  @xref{Convenience Vars,, Convenience Variables}, for
 general information on convenience variables.
@@ -3625,12 +3674,12 @@ Thread 1 "main" received signal SIGINT, Interrupt.
 
 @table @code
 @kindex info threads
-@item info threads @r{[}@var{thread-id-list}@r{]}
+@item info threads @r{[}-gid@r{]} @r{[}@var{thread-id-list}@r{]}
 
 Display information about one or more threads.  With no arguments
 displays information about all threads.  You can specify the list of
 threads that you want to display using the thread ID list syntax
-(@pxref{thread ID lists}).
+(@pxref{thread ID list}).
 
 @value{GDBN} displays for each thread (in this order):
 
@@ -3639,8 +3688,8 @@ threads that you want to display using the thread ID list syntax
 the per-inferior thread number assigned by @value{GDBN}
 
 @item
-the global thread number assigned by @value{GDBN}, if the @samp{-gid}
-option was specified
+the global thread number assigned by @value{GDBN}, if the
+@w{@option{-gid}} option was specified
 
 @item
 the target system's thread identifier (@var{systag})
@@ -3668,18 +3717,17 @@ For example,
 * 1    process 35 thread 13  main (argc=1, argv=0x7ffffff8)
   2    process 35 thread 23  0x34e5 in sigpause ()
   3    process 35 thread 27  0x34e5 in sigpause ()
-    at threadtest.c:68
 @end smallexample
 
 If you're debugging multiple inferiors, @value{GDBN} displays thread
 IDs using the qualified @var{inferior-num}.@var{thread-num} format.
 Otherwise, only @var{thread-num} is shown.
 
-If you specify the @samp{-gid} option, @value{GDBN} displays a column
-indicating each thread's global thread ID:
+If you specify the @w{@option{-gid}} option, @value{GDBN} displays a
+column indicating each thread's global thread ID:
 
 @smallexample
-(@value{GDBP}) info threads
+(@value{GDBP}) info threads -gid
   Id   GId  Target Id             Frame
   1.1  1    process 35 thread 13  main (argc=1, argv=0x7ffffff8)
   1.2  3    process 35 thread 23  0x34e5 in sigpause ()
@@ -3698,12 +3746,15 @@ Display info on Solaris user threads.
 @end table
 
 @table @code
-@kindex thread @var{thread-id}
-@item thread @var{thread-id}
+@kindex thread @r{[}-gid@r{]} @var{thread-id}
+@item thread @r{[}-gid@r{]} @var{thread-id}
 Make thread ID @var{thread-id} the current thread.  The command
-argument @var{thread-id} is the @value{GDBN} thread ID, as shown in
-the first field of the @samp{info threads} display, with or without an
-inferior qualifier (e.g., @samp{2.1} or @samp{1}).
+argument @var{thread-id} is the @value{GDBN} thread ID: if the
+@w{@option{-gid}} option is given it is a global thread identifier, as
+shown in the second field of the @samp{info threads -gid} display;
+otherwise it is a per process thread identifier, with or without an
+inferior qualifier (e.g., @samp{2.1} or @samp{1}), as shown in the
+first field of the @samp{info threads} display.
 
 @value{GDBN} responds by displaying the system identifier of the
 thread you selected, and its current stack frame summary:
@@ -3723,11 +3774,11 @@ threads.
 @anchor{thread apply all}
 @kindex thread apply
 @cindex apply command to several threads
-@item thread apply [@var{thread-id-list} | all [-ascending]] [@var{flag}]@dots{} @var{command}
+@item thread apply @r{[}@var{thread-id-list} @r{|} all @r{[}-ascending@r{]]} @r{[}@var{flag}@r{]@dots{}} @var{command}
 The @code{thread apply} command allows you to apply the named
 @var{command} to one or more threads.  Specify the threads that you
 want affected using the thread ID list syntax (@pxref{thread ID
-lists}), or specify @code{all} to apply to all threads.  To apply a
+list}), or specify @code{all} to apply to all threads.  To apply a
 command to all threads in descending order, type @kbd{thread apply all
 @var{command}}.  To apply a command to all threads in ascending order,
 type @kbd{thread apply all -ascending @var{command}}.
@@ -3763,7 +3814,7 @@ Flags @code{-c} and @code{-s} cannot be used together.
 @kindex taas
 @cindex apply command to all threads (ignoring errors and empty output)
 @item taas [@var{option}]@dots{} @var{command}
-Shortcut for @code{thread apply all -s [@var{option}]@dots{} @var{command}}.
+Shortcut for @code{thread apply all -s @r{[}@var{option}@r{]@dots{}} @var{command}}.
 Applies @var{command} on all threads, ignoring errors and empty output.
 
 The @code{taas} command accepts the same options as the @code{thread
@@ -3772,7 +3823,7 @@ apply all} command.  @xref{thread apply all}.
 @kindex tfaas
 @cindex apply a command to all frames of all threads (ignoring errors and empty output)
 @item tfaas [@var{option}]@dots{} @var{command}
-Shortcut for @code{thread apply all -s -- frame apply all -s [@var{option}]@dots{} @var{command}}.
+Shortcut for @code{thread apply all -s -- frame apply all -s @r{[}@var{option}@r{]@dots{}} @var{command}}.
 Applies @var{command} on all frames of all threads, ignoring errors
 and empty output.  Note that the flag @code{-s} is specified twice:
 The first @code{-s} ensures that @code{thread apply} only shows the thread
@@ -3793,6 +3844,7 @@ apply} command.  @xref{Frame Apply,,frame apply}.
 
 @kindex thread name
 @cindex name a thread
+@anchor{thread name}
 @item thread name [@var{name}]
 This command assigns a name to the current thread.  If no argument is
 given, any existing user-specified name is removed.  The thread name
@@ -3801,14 +3853,16 @@ appears in the @samp{info threads} display.
 On some systems, such as @sc{gnu}/Linux, @value{GDBN} is able to
 determine the name of the thread as given by the OS.  On these
 systems, a name specified with @samp{thread name} will override the
-system-give name, and removing the user-specified name will cause
+system-specified name, and removing the user-specified name will cause
 @value{GDBN} to once again display the system-specified name.
 
 @kindex thread find
 @cindex search for a thread
+@anchor{thread find}
 @item thread find [@var{regexp}]
 Search for and display thread ids whose name or @var{systag}
-matches the supplied regular expression.
+matches the supplied regular expression.  The syntax of the regular
+expression is that specified by Python's regular expression support.
 
 As well as being the complement to the @samp{thread name} command, 
 this command also allows you to identify a thread by its target 
@@ -3816,9 +3870,9 @@ this command also allows you to identify a thread by its target
 is the LWP id.
 
 @smallexample
-(@value{GDBN}) thread find 26688
+(@value{GDBP}) thread find 26688
 Thread 4 has target id 'Thread 0x41e02940 (LWP 26688)'
-(@value{GDBN}) info thread 4
+(@value{GDBP}) info thread 4
   Id   Target Id         Frame 
   4    Thread 0x41e02940 (LWP 26688) 0x00000031ca6cd372 in select ()
 @end smallexample
@@ -3888,7 +3942,7 @@ Setting @code{libthread-db-search-path} is currently implemented
 only on some platforms.
 
 @kindex show libthread-db-search-path 
-@item show libthread-db-search-path 
+@item show libthread-db-search-path
 Display current libthread_db search path.
 
 @kindex set debug libthread-db
@@ -3899,6 +3953,9 @@ Display current libthread_db search path.
 Turns on or off display of @code{libthread_db}-related events.
 Use @code{1} to enable, @code{0} to disable.
 @end table
+
+See @ref{Heterogeneous Debugging} for additional information related
+to threads in heterogeneous systems.
 
 @node Forks
 @section Debugging Forks
@@ -4042,7 +4099,7 @@ For example:
 
 @smallexample
 (@value{GDBP}) info inferiors
-(gdb) info inferior
+(@value{GDBP}) info inferior
   Id   Description   Executable
 * 1    <null>        prog1
 (@value{GDBP}) run
@@ -5831,16 +5888,16 @@ that is a standard I/O stream assigned to the variable @code{mylog},
 you could do the following:
 
 @example
-(gdb) set dprintf-style call
-(gdb) set dprintf-function fprintf
-(gdb) set dprintf-channel mylog
-(gdb) dprintf 25,"at line 25, glob=%d\n",glob
+(@value{GDBP}) set dprintf-style call
+(@value{GDBP}) set dprintf-function fprintf
+(@value{GDBP}) set dprintf-channel mylog
+(@value{GDBP}) dprintf 25,"at line 25, glob=%d\n",glob
 Dprintf 1 at 0x123456: file main.c, line 25.
-(gdb) info break
+(@value{GDBP}) info break
 1       dprintf        keep y   0x00123456 in main at main.c:25
         call (void) fprintf (mylog,"at line 25, glob=%d\n",glob)
         continue
-(gdb)
+(@value{GDBP})
 @end example
 
 Note that the @code{info break} displays the dynamic printf commands
@@ -6441,7 +6498,7 @@ Functions in files matching @var{file-glob-pattern} will be skipped
 over when stepping.
 
 @smallexample
-(gdb) skip -gfi utils/*.c
+(@value{GDBP}) skip -gfi utils/*.c
 @end smallexample
 
 @item -function @var{linespec}
@@ -6463,14 +6520,14 @@ the template arguments are.  Specifying the function to be skipped as a
 regular expression makes this easier.
 
 @smallexample
-(gdb) skip -rfu ^std::(allocator|basic_string)<.*>::~?\1 *\(
+(@value{GDBP}) skip -rfu ^std::(allocator|basic_string)<.*>::~?\1 *\(
 @end smallexample
 
 If you want to skip every templated C@t{++} constructor and destructor
 in the @code{std} namespace you can do:
 
 @smallexample
-(gdb) skip -rfu ^std::([a-zA-z0-9_]+)<.*>::~?\1 *\(
+(@value{GDBP}) skip -rfu ^std::([a-zA-z0-9_]+)<.*>::~?\1 *\(
 @end smallexample
 @end table
 
@@ -6495,7 +6552,7 @@ After running this command, any function whose source lives in @var{filename}
 will be skipped over when stepping.
 
 @smallexample
-(gdb) skip file boring.c
+(@value{GDBP}) skip file boring.c
 File boring.c will be skipped when stepping.
 @end smallexample
 
@@ -7728,13 +7785,13 @@ often suffices to specify an older processor that @value{GDBN}
 supports.
 
 @smallexample
-(gdb) info record
+(@value{GDBP}) info record
 Active record target: record-btrace
 Recording format: Intel Processor Trace.
 Buffer size: 16kB.
 Failed to configure the Intel Processor Trace decoder: unknown cpu.
-(gdb) set record btrace cpu intel:6/158
-(gdb) info record
+(@value{GDBP}) set record btrace cpu intel:6/158
+(@value{GDBP}) info record
 Active record target: record-btrace
 Recording format: Intel Processor Trace.
 Buffer size: 16kB.
@@ -8390,7 +8447,7 @@ Select the frame with stack address @var{stack-address}.  The
 @command{info frame}, for example:
 
 @smallexample
-(gdb) info frame
+(@value{GDBP}) info frame
 Stack level 1, frame at 0x7fffffffda30:
  rip = 0x40066d in b (amd64-entry-value.cc:59); saved rip 0x4004c5
  tail call frame, caller of frame at 0x7fffffffda30
@@ -8690,18 +8747,18 @@ variable @code{j} can only be successfully printed in the outermost
 
 @smallexample
 @group
-(gdb) frame apply all p j
+(@value{GDBP}) frame apply all p j
 #0  some_function (i=5) at fun.c:4
 No symbol "j" in current context.
-(gdb) frame apply all -c p j
+(@value{GDBP}) frame apply all -c p j
 #0  some_function (i=5) at fun.c:4
 No symbol "j" in current context.
 #1  0x565555fb in main (argc=1, argv=0xffffd2c4) at fun.c:11
 $1 = 5
-(gdb) frame apply all -s p j
+(@value{GDBP}) frame apply all -s p j
 #1  0x565555fb in main (argc=1, argv=0xffffd2c4) at fun.c:11
 $2 = 5
-(gdb)
+(@value{GDBP})
 @end group
 @end smallexample
 
@@ -8710,22 +8767,22 @@ information before the command output:
 
 @smallexample
 @group
-(gdb) frame apply all p $sp
+(@value{GDBP}) frame apply all p $sp
 #0  some_function (i=5) at fun.c:4
 $4 = (void *) 0xffffd1e0
 #1  0x565555fb in main (argc=1, argv=0xffffd2c4) at fun.c:11
 $5 = (void *) 0xffffd1f0
-(gdb)
+(@value{GDBP})
 @end group
 @end smallexample
 
 If the flag @code{-q} is given, no frame information is printed:
 @smallexample
 @group
-(gdb) frame apply all -q p $sp
+(@value{GDBP}) frame apply all -q p $sp
 $12 = (void *) 0xffffd1e0
 $13 = (void *) 0xffffd1f0
-(gdb)
+(@value{GDBP})
 @end group
 @end smallexample
 
@@ -8797,7 +8854,7 @@ filter and is used when @code{all} is not the option for
 Example:
 
 @smallexample
-(gdb) info frame-filter
+(@value{GDBP}) info frame-filter
 
 global frame-filters:
   Priority  Enabled  Name
@@ -8812,8 +8869,8 @@ objfile /build/test frame-filters:
   Priority  Enabled  Name
   999       Yes      BuildProgramFilter
 
-(gdb) disable frame-filter /build/test BuildProgramFilter
-(gdb) info frame-filter
+(@value{GDBP}) disable frame-filter /build/test BuildProgramFilter
+(@value{GDBP}) info frame-filter
 
 global frame-filters:
   Priority  Enabled  Name
@@ -8828,8 +8885,8 @@ objfile /build/test frame-filters:
   Priority  Enabled  Name
   999       No       BuildProgramFilter
 
-(gdb) enable frame-filter global PrimaryFunctionFilter
-(gdb) info frame-filter
+(@value{GDBP}) enable frame-filter global PrimaryFunctionFilter
+(@value{GDBP}) info frame-filter
 
 global frame-filters:
   Priority  Enabled  Name
@@ -8864,7 +8921,7 @@ dictionary resides.
 Example:
 
 @smallexample
-(gdb) info frame-filter
+(@value{GDBP}) info frame-filter
 
 global frame-filters:
   Priority  Enabled  Name
@@ -8879,8 +8936,8 @@ objfile /build/test frame-filters:
   Priority  Enabled  Name
   999       No       BuildProgramFilter
 
-(gdb) set frame-filter priority global Reverse 50
-(gdb) info frame-filter
+(@value{GDBP}) set frame-filter priority global Reverse 50
+(@value{GDBP}) info frame-filter
 
 global frame-filters:
   Priority  Enabled  Name
@@ -9842,7 +9899,7 @@ End of assembler dump.
 Here is another example showing raw instructions in hex for AMD x86-64,
 
 @smallexample
-(gdb) disas /r 0x400281,+10
+(@value{GDBP}) disas /r 0x400281,+10
 Dump of assembler code from 0x400281 to 0x40028b:
    0x0000000000400281:  38 36  cmp    %dh,(%rsi)
    0x0000000000400283:  2d 36 34 2e 73 sub    $0x732e3436,%eax
@@ -10118,7 +10175,7 @@ then, the value of the variable @code{cs} can be explored using the
 @code{explore} command as follows.
 
 @smallexample
-(gdb) explore cs
+(@value{GDBP}) explore cs
 The value of `cs' is a struct/class of type `struct ComplexStruct' with
 the following fields:
 
@@ -10181,7 +10238,7 @@ same example as above, your can explore the type
 @code{struct ComplexStruct} to the @code{explore} command.
 
 @smallexample
-(gdb) explore struct ComplexStruct
+(@value{GDBP}) explore struct ComplexStruct
 @end smallexample
 
 @noindent
@@ -10589,11 +10646,11 @@ to @ref{set print entry-values}.
 @smallexample
 Breakpoint 1, d (i=30) at gdb.base/entry-value.c:29
 29	  i++;
-(gdb) next
+(@value{GDBP}) next
 30	  e (i);
-(gdb) print i
+(@value{GDBP}) print i
 $1 = 31
-(gdb) print i@@entry
+(@value{GDBP}) print i@@entry
 $2 = 30
 @end smallexample
 
@@ -10611,9 +10668,9 @@ signed char var1[] = "A";
 
 You get during debugging
 @smallexample
-(gdb) print var0
+(@value{GDBP}) print var0
 $1 = "A"
-(gdb) print var1
+(@value{GDBP}) print var1
 $2 = @{65 'A', 0 '\0'@}
 @end smallexample
 
@@ -11640,12 +11697,12 @@ either increase the print max-depth, or they can print the elements of
 the structure that are visible, for example
 
 @smallexample
-(gdb) set print max-depth 2
-(gdb) p var
+(@value{GDBP}) set print max-depth 2
+(@value{GDBP}) p var
 $1 = @{d = @{c = @{...@}@}@}
-(gdb) p var.d
+(@value{GDBP}) p var.d
 $2 = @{c = @{b = @{...@}@}@}
-(gdb) p var.d.c
+(@value{GDBP}) p var.d.c
 $3 = @{b = @{a = 3@}@}
 @end smallexample
 
@@ -12026,42 +12083,42 @@ another from library2.so named @code{bar} that prints two types of objects,
 @code{bar1} and @code{bar2}.
 
 @smallexample
-(gdb) info pretty-printer
+(@value{GDBP}) info pretty-printer
 library1.so:
   foo
 library2.so:
   bar
     bar1
     bar2
-(gdb) info pretty-printer library2
+(@value{GDBP}) info pretty-printer library2
 library2.so:
   bar
     bar1
     bar2
-(gdb) disable pretty-printer library1
+(@value{GDBP}) disable pretty-printer library1
 1 printer disabled
 2 of 3 printers enabled
-(gdb) info pretty-printer
+(@value{GDBP}) info pretty-printer
 library1.so:
   foo [disabled]
 library2.so:
   bar
     bar1
     bar2
-(gdb) disable pretty-printer library2 bar;bar1
+(@value{GDBP}) disable pretty-printer library2 bar;bar1
 1 printer disabled
 1 of 3 printers enabled
-(gdb) info pretty-printer library2
+(@value{GDBP}) info pretty-printer library2
 library1.so:
   foo [disabled]
 library2.so:
   bar
     bar1 [disabled]
     bar2
-(gdb) disable pretty-printer library2 bar
+(@value{GDBP}) disable pretty-printer library2 bar
 1 printer disabled
 0 of 3 printers enabled
-(gdb) info pretty-printer library2
+(@value{GDBP}) info pretty-printer library2
 library1.so:
   foo [disabled]
 library2.so:
@@ -12358,7 +12415,15 @@ Programs, ,Debugging Multiple Inferiors Connections and Programs}.
 The thread number of the current thread.  @xref{thread numbers}.
 
 @item $_gthread
-The global number of the current thread.  @xref{global thread numbers}.
+The global number of the current thread.  @xref{global thread number}.
+
+@item $_thread_systag
+The target system's thread identifier (@var{systag}) string of the
+current thread.  @xref{target system thread identifier}.
+
+@item $_thread_name
+The thread name string of the current thread, or the empty string if
+no name has been assigned.  @xref{thread name}.
 
 @item $_gdb_major
 @itemx $_gdb_minor
@@ -12385,6 +12450,70 @@ automatically maintains the variables @code{$_shell_exitcode}
 and @code{$_shell_exitsignal} according to the exit status of the last
 launched command.  These variables are set and used similarly to
 the variables @code{$_exitcode} and @code{$_exitsignal}.
+
+@item $_agent
+The per-inferior heterogeneous agent number of the current thread, or 0
+if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
+Debugging}.
+
+@item $_agent_systag
+The target system's heterogeneous agent identifier (@var{agent_systag}) string
+of the heterogeneous agent of the current thread.
+
+@item $_queue
+The per-inferior heterogeneous queue number of the current thread, or 0
+if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
+Debugging}.
+
+@item $_queue_systag
+The target system's heterogeneous queue identifier (@var{queue_systag}) string
+of the heterogeneous queue of the current thread.
+
+@item $_dispatch
+The per-inferior heterogeneous dispatch number of the current thread, or
+0 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
+Debugging}.
+
+@item $_dispatch_systag
+The target system's heterogeneous dispatch identifier (@var{disatch_systag})
+string of the heterogeneous dispatch of the current thread.
+
+@item $_lane
+The per-inferior heterogeneous lane number of the current
+heterogeneous lane of the current thread.  @xref{Heterogeneous
+Debugging}.
+
+@c FIXME-implementors!!  Should there be @code{$_lane_index},
+@c @code{$_lane_active} and @code{$_lane_count} convenience variables?
+@c Note that the lane count needs to take into account when a grid
+@c size is not a multiple of the work-group size (resulting in partial
+@c work-groups on the dimension edges of the grid), and the work-group
+@c size is not a multiple of the wavefront size.
+
+@item $_glane
+The global heterogeneous lane number of the current heterogeneous
+lane.  @xref{Heterogeneous Debugging}.
+
+@item $_lane_systag
+The target system's heterogeneous lane identifier (@var{lane_systag}) string of
+the current heterogeneous lane in the current thread.  @xref{target system lane
+identifier}.
+
+@item $_lane_name
+The heterogeneous lane name string of the current heterogeneous lane, or
+the empty string if no name has been assigned by the @samp{lane name}
+command.  @xref{Heterogeneous Debugging}.
+
+@item $_dispatch_pos
+The heterogeneous dispatch position string of the current thread, or the
+empty string if not associated with a heterogeneous dispatch.
+@xref{Heterogeneous Debugging}.
+
+@item $_thread_workgroup_pos
+@itemx $_lane_workgroup_pos
+The heterogeneous work-group position string of the current thread or
+heterogeneous lane respectively, or the empty string if not associated
+with a heterogeneous dispatch.  @xref{Heterogeneous Debugging}.
 
 @end table
 
@@ -12565,7 +12694,7 @@ Otherwise it returns zero.
 @findex $_regex@r{, convenience function}
 Returns one if the string @var{str} matches the regular expression
 @var{regex}.  Otherwise it returns zero.
-The syntax of the regular expression is that specified by @code{Python}'s
+The syntax of the regular expression is that specified by Python's
 regular expression support.
 
 @item $_streq(@var{str1}, @var{str2})
@@ -12589,7 +12718,7 @@ The default is 1.
 Example:
 
 @smallexample
-(gdb) backtrace
+(@value{GDBP}) backtrace
 #0  bottom_func ()
     at testsuite/gdb.python/py-caller-is.c:21
 #1  0x00000000004005a0 in middle_func ()
@@ -12598,9 +12727,9 @@ Example:
     at testsuite/gdb.python/py-caller-is.c:33
 #3  0x00000000004005b6 in main ()
     at testsuite/gdb.python/py-caller-is.c:39
-(gdb) print $_caller_is ("middle_func")
+(@value{GDBP}) print $_caller_is ("middle_func")
 $1 = 1
-(gdb) print $_caller_is ("top_func", 2)
+(@value{GDBP}) print $_caller_is ("top_func", 2)
 $1 = 1
 @end smallexample
 
@@ -12650,7 +12779,7 @@ enumeration value.  For example, assuming the variable @var{node} is of
 an enumerated type:
 
 @smallexample
-(gdb) printf "Visiting node of type %s\n", $_as_string(node)
+(@value{GDBP}) printf "Visiting node of type %s\n", $_as_string(node)
 Visiting node of type NODE_INTEGER
 @end smallexample
 
@@ -12664,6 +12793,55 @@ the complex number @var{value}.
 The type of the imaginary or real part depends on the type of the
 complex number, e.g., using @code{$_cimag} on a @code{float complex}
 will return an imaginary part of type @code{float}.
+
+@item $_thread_find(@var{regex})
+@findex $_thread_find@r{, convenience function}
+Searches for threads whose name or @var{systag} matches the supplied
+regular expression.  The syntax of the regular expression is that
+specified by Python's regular expression support.
+
+Returns a string that is the space separated list of per-inferior
+thread numbers of the found threads.  If debugging multiple inferiors,
+the thread numbers are qualified with the inferior number.  If no
+threads are found, the empty string is returned.  The string can be
+used in commands that accept a thread ID list.  @xref{thread ID
+list}.
+
+@c FIXME-implementors!!  Should this convenience function return a
+@c tuple rather than a string?
+
+For example, the following command lists all threads that are part of
+the heterogeneous work-group with dispatch position @samp{[1,2,3]}
+(@pxref{Heterogeneous Debugging}):
+
+@smallexample
+(@value{GDBP}) info threads $_thread_find ("[1,2,3]")
+@end smallexample
+
+@item $_thread_find_first_gid(@var{regex})
+@findex $_thread_find_first_gid@r{, convenience function}
+Similar to the @code{$_thread_find} convenience function, except it
+returns a number that is the global thread number of one of the
+threads found, or 0 if no threads were found.  The number can be used
+in commands that accept a global thread number.  @xref{global thread
+number}.
+
+@c FIXME-implementors!!  If @code{$_thread_find} returns a tuple then
+@c this convenience function may not be necessary as one can simply
+@c add @samp{[0]} to access the first element of a tuple.
+
+For example, the following command sets the current thread to one of
+the threads that are part of the heterogeneous work-group with
+dispatch position @samp{[1,2,3]} (@pxref{Heterogeneous Debugging}):
+
+@smallexample
+(@value{GDBP}) thread -gid $_thread_find_first_gid ("[1,2,3]")
+@end smallexample
+
+@item $_lane_find(@var{regex})
+@itemx $_lane_find_first_gid(@var{regex})
+Similar to @samp{$_thread_find} and @samp{$_thread_find_first_gid}
+except for heterogeneous lanes.  @xref{Heterogeneous Debugging}.
 
 @end table
 
@@ -13720,26 +13898,26 @@ hello ()
 you get during debugging:
 
 @smallexample
-(gdb) find &hello[0], +sizeof(hello), "hello"
+(@value{GDBP}) find &hello[0], +sizeof(hello), "hello"
 0x804956d <hello.1620+6>
 1 pattern found
-(gdb) find &hello[0], +sizeof(hello), 'h', 'e', 'l', 'l', 'o'
+(@value{GDBP}) find &hello[0], +sizeof(hello), 'h', 'e', 'l', 'l', 'o'
 0x8049567 <hello.1620>
 0x804956d <hello.1620+6>
 2 patterns found.
-(gdb) find &hello[0], +sizeof(hello), @{char[5]@}"hello"
+(@value{GDBP}) find &hello[0], +sizeof(hello), @{char[5]@}"hello"
 0x8049567 <hello.1620>
 0x804956d <hello.1620+6>
 2 patterns found.
-(gdb) find /b1 &hello[0], +sizeof(hello), 'h', 0x65, 'l'
+(@value{GDBP}) find /b1 &hello[0], +sizeof(hello), 'h', 0x65, 'l'
 0x8049567 <hello.1620>
 1 pattern found
-(gdb) find &mixed, +sizeof(mixed), (char) 'c', (short) 0x1234, (int) 0x87654321
+(@value{GDBP}) find &mixed, +sizeof(mixed), (char) 'c', (short) 0x1234, (int) 0x87654321
 0x8049560 <mixed.1625>
 1 pattern found
-(gdb) print $numfound
+(@value{GDBP}) print $numfound
 $1 = 1
-(gdb) print $_
+(@value{GDBP}) print $_
 $2 = (void *) 0x8049560
 @end smallexample
 
@@ -13904,9 +14082,9 @@ this information.
 kind by text @code{tail call frame} such as in this sample @value{GDBN} output:
 
 @smallexample
-(gdb) x/i $pc - 2
+(@value{GDBP}) x/i $pc - 2
    0x40066b <b(int, double)+11>: jmp 0x400640 <c(int, double)>
-(gdb) info frame
+(@value{GDBP}) info frame
 Stack level 1, frame at 0x7fffffffda30:
  rip = 0x40066d in b (amd64-entry-value.cc:59); saved rip 0x4004c5
  tail call frame, caller of frame at 0x7fffffffda30
@@ -13953,7 +14131,7 @@ Breakpoint 1, DW_OP_entry_value resolving cannot find
 DW_TAG_call_site 0x40039a in main
 a () at t.c:3
 3	static void __attribute__((noinline, noclone)) a (void) @{ x++; @}
-(gdb) bt
+(@value{GDBP}) bt
 #0  a () at t.c:3
 #1  0x000000000040039a in main () at t.c:5
 @end smallexample
@@ -13974,7 +14152,7 @@ int main (void) @{ a (); return 0; @}
 tailcall: initial: 0x4004d2(a) 0x4004ce(b) 0x4004b2(c) 0x4004a2(d)
 tailcall: compare: 0x4004d2(a) 0x4004cc(b) 0x400492(e)
 tailcall: reduced: 0x4004d2(a) |
-(gdb) bt
+(@value{GDBP}) bt
 #0  f () at t.c:2
 #1  0x00000000004004d2 in a () at t.c:8
 #2  0x0000000000400395 in main () at t.c:9
@@ -14024,7 +14202,7 @@ static void __attribute__((noinline, noclone)) a (int i)
 @{ if (i) b (i - 1); else c (0); @}
 int main (void) @{ a (5); return 0; @}
 
-(gdb) bt
+(@value{GDBP}) bt
 #0  c (i=i@@entry=0) at t.c:2
 #1  0x0000000000400428 in a (DW_OP_entry_value resolving has found
 function "a" at 0x400420 can call itself via tail calls
@@ -16348,6 +16526,7 @@ language reference or tutorial.
 * Rust::                        Rust
 * Modula-2::                    Modula-2
 * Ada::                         Ada
+* HIP::                         HIP
 @end menu
 
 @node C
@@ -16870,9 +17049,9 @@ You can set a breakpoint on such functions simply as if they had no
 tag.  For example:
 
 @smallexample
-(gdb) b function(int)
+(@value{GDBP}) b function(int)
 Breakpoint 2 at 0x40060d: file main.cc, line 10.
-(gdb) info breakpoints
+(@value{GDBP}) info breakpoints
 Num     Type           Disp Enb Address    What
 1       breakpoint     keep y   0x0040060d in function[abi:cxx11](int)
                                            at main.cc:10
@@ -16949,8 +17128,8 @@ func main () @{
 When stopped inside @code{main} either of these work:
 
 @example
-(gdb) p myglob
-(gdb) p main.myglob
+(@value{GDBP}) p myglob
+(@value{GDBP}) p main.myglob
 @end example
 
 @cindex builtin Go types
@@ -18766,6 +18945,16 @@ Show if descriptive types are ignored by @value{GDBN}.
 
 @end table
 
+@node HIP
+@subsection HIP
+@cindex HIP
+
+@value{GDBN} supports the
+@url{https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_kernel_language.md,
+HIP Programming Language}.
+
+@c TODO: Add any language specific differences.
+
 @node Unsupported Languages
 @section Unsupported Languages
 
@@ -20524,11 +20713,11 @@ Therefore, if you cast a variable to a type defined in the
 need to resolve the type can be achieved.
 
 @smallexample
-(gdb) compile code static struct a @{ int a; @} v = @{ 42 @}; argv = &v;
-(gdb) compile code printf ("%d\n", ((struct a *) argv)->a);
+(@value{GDBP}) compile code static struct a @{ int a; @} v = @{ 42 @}; argv = &v;
+(@value{GDBP}) compile code printf ("%d\n", ((struct a *) argv)->a);
 gdb command line:1:36: error: dereferencing pointer to incomplete type ‘struct a’
 Compilation failed.
-(gdb) compile code struct a @{ int a; @}; printf ("%d\n", ((struct a *) argv)->a);
+(@value{GDBP}) compile code struct a @{ int a; @}; printf ("%d\n", ((struct a *) argv)->a);
 42
 @end smallexample
 
@@ -20593,9 +20782,9 @@ program.  To debug a core dump of a previous run, you must also tell
 * File Caching::                Information about @value{GDBN}'s file caching
 * Separate Debug Files::        Debugging information in separate files
 * MiniDebugInfo::               Debugging information in a special section
-* Index Files::                 Index files speed up GDB
+* Index Files::                 Index files speed up @value{GDBN}
 * Symbol Errors::               Errors reading symbol files
-* Data Files::                  GDB data files
+* Data Files::                  @value{GDBN} data files
 @end menu
 
 @node Files
@@ -20814,14 +21003,14 @@ file to remove can be identified by its @var{filename} or by an @var{address}
 that lies within the boundaries of this symbol file in memory.  Example:
 
 @smallexample
-(gdb) add-symbol-file /home/user/gdb/mylib.so 0x7ffff7ff9480
+(@value{GDBP}) add-symbol-file /home/user/gdb/mylib.so 0x7ffff7ff9480
 add symbol table from file "/home/user/gdb/mylib.so" at
     .text_addr = 0x7ffff7ff9480
 (y or n) y
 Reading symbols from /home/user/gdb/mylib.so...
-(gdb) remove-symbol-file -a 0x7ffff7ff9480
+(@value{GDBP}) remove-symbol-file -a 0x7ffff7ff9480
 Remove symbol table from file "/home/user/gdb/mylib.so"? (y or n) y
-(gdb)
+(@value{GDBP})
 @end smallexample
 
 
@@ -21879,7 +22068,7 @@ it.
 @end table
 
 @node Data Files
-@section GDB Data Files
+@section @value{GDBN} Data Files
 
 @cindex prefix for data files
 @value{GDBN} will sometimes read an auxiliary data file.  These files
@@ -22208,6 +22397,1122 @@ Note that these commands merely adjust interpretation of symbolic
 data on the host, and that they have absolutely no effect on the
 target system.
 
+@node Heterogeneous Debugging
+@chapter Debugging Heterogeneous Programs
+@cindex heterogeneous debugging
+
+@cartouche
+@quotation
+@emph{Note:} The commands presented in this chapter are not currently fully
+implemented.  See @ref{AMD GPU} for the current support available.
+@end quotation
+@end cartouche
+
+@cindex heterogeneous system
+@cindex heterogeneous program
+In some operating systems, such as Linux with the @acronym{AMD ROCm}
+platform installed, a single program may have multiple threads in the
+same process, executing on different devices which may have different
+target architectures.  Such a system is termed a @dfn{heterogeneous
+system} and a program that uses the multiple devices is termed a
+@dfn{heterogeneous program}.
+
+@cindex heterogeneous agent
+The multiple devices of a heterogeneous system are termed
+@dfn{heterogeneous agents}.  They can include the following kinds of
+devices: @acronym{CPU, Central Processing Unit}, @acronym{GPU,
+Graphics Processing Unit}, @acronym{DSP, Digital Signal Processor},
+@acronym{FPGA, Field Programmable Gate Array}, as well as other
+specialized hardware.
+
+@cindex heterogeneous host agent
+The device of a heterogeneous system that starts the execution of the
+program is termed the @dfn{heterogeneous host agent}.
+
+The precise way threads are created on different heterogeneous agents
+may vary from one heterogeneous system to another, but in general the
+threads behave similarly no matter what heterogeneous agent is
+executing them, except that the target architecture may be different.
+
+@cindex heterogeneous queue
+@cindex heterogeneous packet
+A heterogeneous program can create @dfn{heterogeneous queues}
+associated with a heterogeneous agent.  The heterogeneous program can
+then place @dfn{heterogeneous packets} on a heterogeneous queue to
+control the actions of the associated heterogeneous agent.  A
+heterogeneous agent removes heterogeneous packets from the
+heterogeneous queues assocated with it and performs the requested
+actions.  The packet actions and scheduling of packet processing
+varies depending on the heterogeneous system and the target
+architecture of the heterogeneous agent.  @xref{Architectures}.
+
+@cindex heterogeneous dispatch packet
+@cindex heterogeneous dispatch
+A @dfn{heterogeneous dispatch packet} is used to initiate code
+execution on a heterogeneous agent.  A single heterogeneous dispatch
+packet may specify that the heterogeneous agent create a set of
+threads that are all associated with a corresponding
+@dfn{heterogeneous dispatch}.  Each thread typically has an associated
+position within the heterogeneous dispatch, possibly expressed as a
+multi-dimensional grid position.  The heterogeneous agent typically
+can create multiple threads that execute concurrently.  If a
+heterogeneous dispatch is larger than the number of concurrent threads
+that can be created, the heterogeneous agent creates threads of the
+heterogeneous dispatch as other threads complete.  When all the
+threads of a heterogeneous dispatch have been created and have
+completed, the heterogeneous dispatch is considered complete.
+
+@cindex heterogeneous work-group
+The threads of a heterogeneous dispatch may be grouped into
+@dfn{heterogeneous work-groups}.  The threads that belong to the same
+heterogeneous work-group may have special shared memory, and efficient
+execution synchronization abilities.  A thread that is part of a
+heterogeneous work-group typically has an associated position within
+the heterogeneous work-group, possibly also expressed as a
+multi-dimensional grid position.
+
+Other heterogeneous packets may control heterogeneous packet
+scheduling, memory visibility between the threads of a heterogeneous
+dispatch and other threads, or other services supported by the
+heterogeneous system.
+
+@cindex heterogeneous lane
+On some heterogeneous systems there can be heterogeneous agents that
+support @acronym{SIMD, Single Instruction Multiple Data} or
+@acronym{SIMT, Single Instruction Multiple Threads} machine
+instructions.  On these target architectures, a single machine
+instruction can operate in parallel on multiple @dfn{heterogeneous
+lanes}.
+
+@cindex divergent control flow
+Source languages used by heterogeneous programs can be implemented on
+target architectures that support multiple heterogeneous lanes by
+mapping a source language thread of execution onto a heterogeneous
+lane of a single target architecture thread.  Control flow in the
+source language may be implemented by controlling which heterogeneous
+lanes are active.  If the source language control flow may result in
+some heterogeneous lanes becoming inactive while some remain active,
+the control flow is said to be @dfn{divergent}.  Typically, the
+machine code may execute different divergent paths for different sets
+of heterogeneous lanes, before the control flow reconverges and all
+heterogeneous lanes become active.
+
+Just because a target architecture supports multiple lanes, does not
+mean that the source language is mapped to use them to implement
+source language threads of execution.  Therefore, a thread is only
+considered to have multiple heterogeneous lanes if it's current frame
+corresponds to a source language that does do such a mapping.
+
+@anchor{Address Space}
+@cindex address space
+On some heterogeneous systems there can be heterogeneous agents with
+target architectures that support multiple @dfn{address spaces}.  In
+these target architectures, there may be memory that is physically
+disjoint from regular global virtual memory.  There can also be cases
+when the same underlying memory can be accessed using linear addresses
+that map to the underlying physical memory in an interleaved manner.
+In these target architectures there can be distinct machine
+instructions to access the distinct address spaces.  For example,
+there may be physical hardware scratch pad memory that is allocated
+and accessible only to the threads that are associated with the same
+heterogeneous work-group.  There may be hardware address swizzle logic
+that allows regular global virtual memory to be allocated per
+heterogeneous lane such that they have a linear address view, which in
+fact maps to an interleaved global virtual memory access to improve
+cache performance.
+
+@value{GDBN} provides these facilities for debugging heterogeneous
+programs:
+
+@itemize @bullet
+
+@item @code{info sharedlibrary}, command supports code objects for
+multiple architectures
+
+@item debugger convenience variables for heterogeneous entities
+
+@item @code{show architecture}, @code{x/i}, @code{disassemble}, commands
+to disassemble multiple architectures in the same inferior
+
+@item @code{info threads}, @code{thread}, commands support threads
+executing on multiple heterogeneous agents
+
+@item @code{info agents}, @code{info queues}, @code{info packets},
+@code{info dispatches}, commands to inquire about the heterogeneous
+system
+
+@item @code{queue find}, @code{dispatch find}, commands to find heterogeneous
+entities
+
+@item @code{info lanes}, @code{lane}, commands support source language
+threads of execution that are mapped to SIMD-like lanes of a thread
+
+@item @code{$_thread_find}, @code{$_thread_find_first_gid},
+@code{$_lane_find}, @code{$_lane_find_first_gid} debugger convenience
+functions can find threads and heterogeneous lanes associated with
+specific heterogeneous entities
+
+@item @code{maint print address-spaces}, command together with address
+qualifiers supports multiple address spaces
+
+@end itemize
+
+A heterogeneous system may use separate code objects for the different
+target architectures of the heterogeneous agents.  The @code{info
+sharedlibrary} command lists all the code objects currently loaded,
+regardless of their target architecture.
+
+The following rules apply in determining the target architecture used
+by commands when debugging heterogeneous programs:
+
+@enumerate
+
+@item
+Typically the target architecture of the heterogeneous host agent is
+the target architecture of the program's code object.  The @code{set
+architecture} command (@pxref{Targets,,Specifying a Debugging Target})
+can be used to change this target architecture.  The target
+architecture of other heterogeneous agents is typically the target
+architecture of the associated device.
+
+@item
+The target architecture of a thread is the target architecture of the
+selected stack frame.  Typically stack frames will have the same
+target architecture as the heterogeneous agent on which the thread was
+created, however, a target may assocociate different target
+architectures for different stack frames.
+
+@item
+The current target architecture is the target architecture of the
+selected thread, or the target architecture of the heterogeneous host
+agent if there are no threads.
+
+@end enumerate
+
+@value{GDBN} handles the heterogeneous agent, queue, and dispatch
+entities in a similar manner to threads (@pxref{Threads}):
+
+@itemize @bullet
+
+@item
+For debugging purposes, @value{GDBN} associates its own number
+---always a single integer---with each heterogeneous entity of an
+inferior.  This number is unique between all instances of
+heterogeneous entities of an inferior, but not unique between
+heterogeneous entities of different inferiors.
+
+@item
+@anchor{qualified heterogeneous entity numbers}
+You can refer to a given heterogeneous entity in an inferior using the
+qualified @var{inferior-num}.@var{heterogeneous-entity-num} syntax,
+also known as a @dfn{qualified heterogeneous entity ID}, with
+@var{inferior-num} being the inferior number and
+@var{heterogeneous-entity-num} being the heterogeneous entity number
+of the given inferior.  If you omit @var{inferior-num}, then
+@value{GDBN} infers you're referring to a heterogeneous entity of the
+current inferior.
+
+@item
+Until you create a second inferior, @value{GDBN} does not show the
+@var{inferior-num} part of heterogeneous entity IDs, even though you
+can always use the full
+@var{inferior-num}.@var{heterogeneous-entity-num} form to refer to
+heterogeneous entities of inferior 1, the initial inferior.
+
+@item
+@anchor{heterogeneous entity ID list}
+@cindex heterogeneous entity ID list
+Some commands accept a space-separated @dfn{heterogeneous entity ID
+list} as argument.  The list element has the same forms as for thread
+ID lists.  @xref{thread ID list}.
+
+@item
+@anchor{global heterogeneous entity numbers}
+In addition to a @emph{per-inferior} number, some heterogeneous
+entities are also assigned a unique @emph{global} number, also known
+as @dfn{global heterogeneous entity ID}, a single integer.  Unlike the
+heterogeneous entity number component of the heterogeneous entity ID,
+no two entities have the same global heterogeneous entity ID, even
+when you're debugging multiple inferiors.
+
+@end itemize
+
+The following debugger convenience variables (@pxref{Convenience
+Vars,,Convenience Variables}) are related to heterogeneous debugging.
+You may find these useful in writing breakpoint conditional
+expressions, command scripts, and so forth.
+
+@table @code
+
+@item $_thread
+@itemx $_gthread
+@itemx $_thread_systag
+@itemx $_thread_name
+@xref{Convenience Vars,,Convenience Variables}.
+
+@vindex $_agent@r{, convenience variable}
+@vindex $_queue@r{, convenience variable}
+@vindex $_dispatch@r{, convenience variable}
+@item $_agent
+@itemx $_queue
+@itemx $_dispatch
+There are debugger convenience variables that contain the number of
+each heterogeneous entity associated with the current thread if it was
+created by a heterogeneous dispatch, or 0 otherwise.  @code{$_agent},
+@code{$_queue}, and @code{$_dispatch} contain the corresponding
+per-inferior heterogeneous entity number.
+
+@vindex $_lane@r{, convenience variable}
+@vindex $_glane@r{, convenience variable}
+@item $_lane
+@itemx $_glane
+The heterogeneous lane number of the current lane of the current thread.
+@code{$_lane} contains the corresponding per-inferior heterogeneous lane
+number.  While @code{$_glane} contains the corresponding global
+heterogeneous lane number.  If the current thread does not have multiple
+heterogeneous lanes, it is treated as if it has a single heterogeneous
+lane number.
+
+@vindex $_dispatch_pos@r{, convenience variable}
+@item $_dispatch_pos
+The heterogeneous dispatch position string of the current thread within
+its associated heterogeneous dispatch if it is was created by a
+heterogeneous dispatch, or the empty string otherwise.  The format
+varies depending on the heterogeneous system and target architecture
+of the heterogeneous agent.  @xref{Architectures}.
+
+@vindex $_lane_name@r{, convenience variable}
+@item $_lane_name
+The heterogeneous lane name string of the current heterogeneous lane, or
+the empty string if no name has been assigned by the @code{lane name}
+command.
+
+@vindex $_thread_workgroup_pos@r{, convenience variable}
+@vindex $_lane_workgroup_pos@r{, convenience variable}
+@item $_thread_workgroup_pos
+@item $_lane_workgroup_pos
+The heterogeneous work-group position string of the current thread or
+heterogeneous lane within its associated heterogeneous dispatch if it
+is was created by a heterogeneous dispatch, or the empty string
+otherwise.  The format varies depending on the heterogeneous system
+and target architecture of the heterogeneous agent.
+@xref{Architectures}.
+
+@vindex $_lane_systag@r{, convenience variable}
+@item $_lane_systag
+The target system's heterogeneous lane identifier (@var{lane_systag})
+string of the current heterogeneous lane.  @xref{target system lane
+identifier}.
+
+@vindex $_agent_systag@r{, convenience variable}
+The target system's heterogeneous agent identifier (@var{agent_systag}) string
+of the heterogeneous agent of the current thread.
+
+@vindex $_queue_systag@r{, convenience variable}
+The target system's heterogeneous queue identifier (@var{queue_systag}) string
+of the heterogeneous queue of the current thread.
+
+@vindex $_dispatch_systag@r{, convenience variable}
+@item $_dispatch_systag
+The target system's heterogeneous dispatch identifier (@var{dispatch_systag})
+string of the heterogeneous dispatch of the current thread.
+
+@end table
+
+The following debugger convenience functions (@pxref{Convenience
+Funs,,Convenience Functions}) are related to heterogeneous debugging.
+Given the very large number of threads on heterogeneous systems, these
+may be very useful.  They allow threads or thread lists to be
+specified based on the target system's thread identifier
+(@var{systag}) or thread name, and allow heterogeneous lanes or
+heterogeneous lane lists to be specified based on the target system's
+heterogeneous lane identifier (@var{lane_systag}) or heterogeneous
+lane name.
+
+@table @code
+
+@item $_thread_find
+@itemx $_thread_find_first_gid
+@xref{Convenience Funs,,Convenience Functions}.
+
+@findex $_lane_find@r{, convenience function}
+@item $_lane_find(@var{regex})
+Searches for heterogeneous lanes whose name or @var{lane_systag}
+matches the supplied regular expression.  The syntax of the regular
+expression is that specified by @code{Python}'s regular expression
+support.
+
+Returns a string that is the space separated list of per-inferior
+heterogeneous lane numbers of the found heterogeneous lanes.  If
+debugging multiple inferiors, the heterogeneous lane numbers are
+qualified with the inferior number.  If no heterogeneous lane are
+found, the empty string is returned.  The string can be used in
+commands that accept a heterogeneous lane ID list.
+@xref{heterogeneous entity ID list}.
+
+For example, the following command lists all heterogeneous lanes that
+are part of a heterogeneous work-group with work-group position
+@samp{(1,2,3)} (@pxref{Heterogeneous Debugging}):
+
+@smallexample
+(@value{GDBP}) info lanes $_thread_find ("(1,2,3)")
+@end smallexample
+
+@item $_lane_find_first_gid(@var{regex})
+@findex $_lane_find_first_gid@r{, convenience function}
+Similar to the @code{$_lane_find} convenience function, except it
+returns a number that is the global heterogeneous lane number of one
+of the heterogeneous lanes found, or 0 if no heterogeneous lanes were
+found.  The number can be used in commands that accept a global
+heterogeneous lane number.  @xref{global heterogeneous entity
+numbers}.
+
+For example, the following command sets the current heterogeneous lane
+to one of the heterogeneous lanes that are part of a heterogeneous
+work-group with work-item position @samp{[1,2,3]}:
+
+@smallexample
+(@value{GDBP}) lane -gid $_lane_find_first_gid ("[1,2,3]")
+@end smallexample
+
+@end table
+
+The following commands are related to heterogeneous debugging:
+
+@table @code
+
+@item info agents @r{[}@var{agent-id-list}@r{]}
+@kindex info agents
+The @code{info agents} command lists the following information for
+each heterogeneous agent (in this order):
+
+@enumerate
+@item
+The heterogeneous agent ID.  @xref{qualified heterogeneous entity
+numbers}.
+
+@item
+The target system's heterogeneous agent identifier.
+
+@item
+The target system's device name.
+
+@item
+The number of compute unit cores.
+
+@item
+The total number of threads.  The number of threads that a core can execute
+concurrently is dependent on the target architecture of the device.
+
+@item
+The target-specific string identifying the location of the agent.  For
+example, some target agents may use the @acronym{PCI} slot number in
+@acronym{BDF, Bus:Device.Function} notation.
+
+@end enumerate
+
+@noindent
+An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous agent number
+indicates the heterogeneous agent executing the current thread.
+
+Some heterogeneous agents may not be listed until the inferior has started
+execution of the program.
+
+With no arguments displays information about all heterogeneous agents.  You can
+specify the list of heterogeneous agents that you want to display using the
+heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID list}).
+
+For example,
+
+@smallexample
+(@value{GDBP}) info agents
+  Id   Target Id                  Device Name Cores Threads Location
+* 1    AMDGPU Agent (GPUID 45151) vega20      240   2400    0a:00.0
+  2    AMDGPU Agent (GPUID 39113) vega20      240   2400    44:00.0
+@end smallexample
+
+If you're debugging multiple inferiors, @value{GDBN} displays
+heterogeneous agent IDs using the qualified
+@var{inferior-num}.@var{agent-num} format.  Otherwise, only
+@var{agent-num} is shown.
+
+@item info queues @r{[}@var{queue-id-list}@r{]}
+@kindex info queues
+The @code{info queues} command lists the following information for
+each heterogeneous queue (in this order):
+
+@enumerate
+@item
+The heterogeneous queue ID.  @xref{qualified heterogeneous entity
+numbers}.
+
+@item
+The target system's heterogeneous queue identifier.
+
+@item
+The type of the heterogeneous queue.  The meaning of the queue types is target
+architecture and operating system depentent.
+
+@item
+The target system's heterogeneous packet identifier for the next packet that
+will be read from the heterogeneous queue by the device.
+
+@item
+The target system's heterogeneous packet identifier for the next packet that
+will be written to the heterogeneous queue for submission to the device.
+
+@item
+The size in bytes of the heterogeneous queue packet buffer.
+
+@item
+The global memory address of the heterogeneous queue packet buffer.
+
+@end enumerate
+
+@noindent
+An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous queue number
+indicates the heterogeneous queue executing the current thread.
+
+With no arguments displays information about all heterogeneous queues.  You can
+specify the list of heterogeneous queues that you want to display using the
+heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID list}).
+
+For example,
+
+@smallexample
+(@value{GDBP}) info queues
+  Id   Target Id                Type         Read   Write  Size     Address
+* 1    AMDGPU Queue 1:1 (QID 1) HSA (Multi)  0      2      65536    0x00007ffff7f60000
+  2    AMDGPU Queue 1:2 (QID 2) DMA                        1048576  0x00007ffde4e00000
+  3    AMDGPU Queue 1:3 (QID 0) HSA (Multi)  4      4      262144   0x00007ffff7f00000
+@end smallexample
+
+If you're debugging multiple inferiors, @value{GDBN} displays
+heterogeneous queue IDs using the qualified
+@var{inferior-num}.@var{queue-num} format.  Otherwise, only
+@var{queue-num} is shown.
+
+@item info dispatches @r{[}-full@r{]} @r{[}@var{dispatch-id-list}@r{]}
+@kindex info dispatches
+The @code{info dispatches} command lists the following information for each
+heterogeneous dispatch (in this order):
+
+@enumerate
+@item
+The heterogeneous dispatch ID.  @xref{qualified heterogeneous entity
+numbers}.
+
+@item
+The target system's identifier of the dispatch packet that initiated the
+dispatch.
+
+@item
+The x, y, and z heterogeneous grid dimensions, in that order, in terms of
+work-items of the heterogeneous dispatch.  The number of dimensions displayed
+matches the dimensionality of the heterogeneous dispatch.
+
+@item
+The x, y, and z heterogeneous work-group dimensions, in that order, in terms of
+work-items of the heterogeneous dispatch.  The number of dimensions displayed
+matches the dimensionality of the heterogeneous dispatch.
+
+@item
+The fences associated with the heterogeneous dispatch packet.  The kinds of
+fences are target architecture dependent.
+
+@item
+The size in bytes of address spaces associated with the heterogeneous dispatch.
+The address spaces are target architecture dependent.  Only displayed if the
+@option{-full} option is specified.
+
+@item
+The global memory address of the kernel descriptor for the heterogeneous
+dispatch.  The descriptor is target architecture dependent.  Only displayed if
+the @option{-full} option is specified.
+
+@item
+The global memory address of the kernel arguments for the heterogeneous
+dispatch.  Only displayed if the @option{-full} option is specified.
+
+@item
+The global memory address of the completion event for the heterogeneous
+dispatch.  Omitted if the heterogeneous dispatch has no completion event.  The
+event is target architecture and operating system dependent.  Only displayed if
+the @option{-full} option is specified.
+
+@item
+The kernel function prototype.
+
+@end enumerate
+
+@noindent
+An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous dispatch
+number indicates the heterogeneous dispatch executing the current thread.
+
+With no arguments displays information about all heterogeneous dispatches.  You
+can specify the list of heterogeneous dispatches that you want to display using
+the heterogeneous entity ID list syntax (@pxref{heterogeneous entity ID list}).
+
+For example,
+
+@smallexample
+(@value{GDBP}) info dispatches -full
+  Id   Target Id                      Grid      Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
+* 1    AMDGPU Dispatch 1:1:1 (PKID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
+@end smallexample
+
+If you're debugging multiple inferiors, @value{GDBN} displays
+heterogeneous dispatch IDs using the qualified
+@var{inferior-num}.@var{dispatch-num} format.  Otherwise, only
+@var{dispatch-num} is shown.
+
+@item queue find @var{regexp}
+@cindex search for a heterogeneous queue
+@itemx dispatch find @var{regexp}
+@cindex search for a heterogeneous dispatch
+These commands operate the same way as the @samp{thread find} command
+(@pxref{thread find, ,@samp{thread find}}) except that they use the target
+system's heterogeneous agent, queue, and dispatch identifiers respectively.
+
+@item info packets @r{[}@var{queue-id-list}@r{]}
+@kindex info packets
+Display information about the heterogeneous packets on one or more
+heterogeneous queues.  With no arguments displays information about
+all heterogeneous queues.  You can specify the list of heterogeneous
+queues that you want to display using the heterogeneous queue ID list
+syntax (@pxref{heterogeneous entity ID list}).
+
+Since heterogeneous agents may be processing heterogeneous packets
+asynchronously, the display is at best a snapshot, and may be
+inconsistent due to the heterogeneous queues being updated while they
+are being inspected.
+
+The heterogeneous packets are listed contiguously for each
+heterogeneous agent, and for each heterogeneous queue of that
+heterogeneous agent, with the oldest packet first.
+
+@value{GDBN} displays for each heterogeneous packet (in this order):
+
+@enumerate
+@item
+The associated heterogeneous agent ID.  @xref{qualified heterogeneous
+entity numbers}.
+
+@item
+The associated heterogeneous queue ID.  @xref{qualified heterogeneous
+entity numbers}.
+
+@item
+The packet position in the heterogeneous queue, with the oldest one
+being 1.
+
+@item
+Additional information about the heterogeneous packet that varies
+depending on the heterogeneous system and may vary depending on the
+target architecture of the heterogeneous entity
+(@pxref{Architectures}).
+
+@end enumerate
+
+@item info threads @r{[}-gid@r{]} @r{[}@var{thread-id-list}@r{]}
+The @code{info threads} command (@pxref{Threads}) lists the threads
+created on all the heterogeneous agents.
+
+If any of the threads listed have multiple heterogeneous lanes, then
+an additional @emph{Lanes} column is displayed before the target
+system's thread identifier (@var{systag}) column.  For threads that
+have multiple heterogeneous lanes, the number of heterogeneous lanes
+that are active followed by a slash and the total number of
+heterogeneous lanes of the current frame of the thread is displayed.
+Otherwise, nothing is displayed.
+
+The target system's thread identifier (@var{systag}) (@pxref{target
+system thread identifier}) for threads associated with heterogeneous
+dispatches varies depending on the heterogeneous system and target
+architecture of the heterogeneous agent.  However, it typically will
+include information about the heterogeneous agent, heterogeneous
+queue, heterogeneous dispatch, heterogeneous work-group position
+within the heterogeneous dispatch, and thread position within the
+heterogeneous work-group.  @xref{Architectures}.
+
+The stack frame summary displayed is for the active lanes of the
+thread.  This may differ from the stack frame information for the
+current lane if the focus is on an inactive lane.  Use the @code{info
+lanes} command for information about individual lanes of a thread.
+@xref{Threads}.
+
+For example,
+@end table
+@c end table here to get a little more width for example
+
+@smallexample
+(@value{GDBP}) info threads
+  Id  Lanes  Target Id                                       Frame
+  1          Thread 0x7ffff7fc4cc0 (LWP 74764) "bit_extract" 0x00007ffff6b56f37 in sched_yield () from /lib/x86_64-linux-gnu/libc.so.6
+  2          Thread 0x7ffff59cb700 (LWP 74773) "bit_extract" 0x00007ffff6b696d7 in ioctl () from /lib/x86_64-linux-gnu/libc.so.6
+  4          Thread 0x7ffff7fc1700 (LWP 74775) "bit_extract" 0x00007ffff6b696d7 in ioctl () from /lib/x86_64-linux-gnu/libc.so.6
+* 5   62/64  AMDGPU Thread 1:1:1:1 (0,0,0)/0 "bit_extract"   bit_extract_kernel (C_d=0x7ffde8800000, A_d=0x7ffde8e00000, N=4000000) at bit_extract.cpp:38
+  6   2/64   AMDGPU Thread 1:1:1:2 (0,0,0)/1 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+  7   64/64  AMDGPU Thread 1:1:1:3 (1,0,0)/0 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+  8   8/64   AMDGPU Thread 1:1:1:4 (1,0,0)/1 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+@end smallexample
+
+@table @code
+@cindex heterogeneous lane index
+@item thread @r{[}-gid@r{]} @var{thread-id} @r{[}@var{lane-index}@r{]}
+The @code{thread} command has an optional @var{lane-index} argument to
+specify the @dfn{heterogeneous lane index}.  If the value is not
+between 1 and the number of heterogeneous lanes of the current frame
+of the thread, then @value{GDBN} will print an error.  If omitted it
+defaults to 1.
+
+The current thread is set to @var{thread-id} and the current
+heterogeneous lane is set to the heterogeneous lane corresponding to
+the specified heterogeneous lane index.
+
+If the thread has multiple heterogeneous lanes, @value{GDBN} responds
+by displaying the system identifier of the heterogeneous lane you
+selected, otherwise it responds with the system identifier of the
+thread you selected, followed by its current stack frame summary.
+
+@item thread apply @r{[}@var{thread-id-list} @r{|} all @r{[}-ascending@r{]]} @r{[}@var{flag}@r{]@dots{}} @var{command}
+@itemx taas [@var{option}]@dots{} @var{command}
+@itemx tfaas [@var{option}]@dots{} @var{command}
+@itemx thread name @r{[}@var{name}@r{]}
+@itemx thread find @var{regexp}
+These commands operate the same way for all threads, regardless of
+whether or not the thread is associated with a heterogeneous dispatch.
+
+If the thread's frame has multiple heterogeneous lanes then the
+heterogeneous lane index 1 is used.  Use the heterogeneous lane
+counterpart commands if it is desired to perform the the @var{command}
+on each lane of a thread.
+
+@xref{Threads}.
+
+@cindex lane identifier (system)
+@item info lanes @r{[}-gid@r{]} @var{lane-id}
+Display information about one or more heterogeneous lanes.  With no
+arguments displays information about all heterogeneous lanes.  You can
+specify the list of heterogeneous lanes that you want to display using
+the heterogeneous lane ID list syntax (@pxref{heterogeneous entity ID
+list}).
+
+@value{GDBN} displays for each heterogeneous lane (in this order):
+
+@enumerate
+@item
+The heterogeneous lane ID assigned by @value{GDBN}.  @xref{qualified
+heterogeneous entity numbers}.
+
+@item
+The global heterogeneous lane ID, if the @w{@option{-gid}} option was
+specified.  @xref{global heterogeneous entity numbers}.
+
+@item
+The thread number assigned by @value{GDBN} for the thread that
+contains the heterogeneous lane.  This is displayed as a global thread
+number if the @w{@option{-gid}} option was specified, otherwise as a
+per-inferior thread number.  If the thread has multiple heterogeneous
+lanes then this is followed by a slash and the heterogeneous lane
+index of the heterogeneous lane within the thread with the first lane
+being 1.
+
+@item
+An indication of whether the heterogeneous lane is active or inactive.
+
+@anchor{target system lane identifier}
+@item
+The target system's heterogeneous lane identifier (@var{lane_systag}).
+This varies depending on the system and target architecture of the
+heterogeneous agent.  However, for heterogeneous agents it typically
+will include information about the heterogeneous agent, heterogeneous
+queue, heterogeneous dispatch, heterogeneous work-group position
+within the heterogeneous dispatch, and position of the heterogeneous
+lane in the heterogeneous work-group.  @xref{Architectures}.
+
+@item
+The heterogeneous lane's name, if one is assigned by the user (see
+@code{lane name}, below).
+
+@item
+The current stack frame summary for that heterogeneous lane.  If the
+heterogeneous lane is inactive this is the source position at which the
+heterogeneous lane will resume.
+@end enumerate
+
+@noindent
+An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous
+lane number indicates the current heterogeneous lane.
+
+For example,
+@end table
+@c end table here to get a little more width for example
+
+@smallexample
+(@value{GDBP}) info lanes
+  Id  Thread  Active  Target Id                                          Frame
+* 1   4       Y       process 35 thread 13                               main (argc=1, argv=0x7ffffff8)
+  2   5/2     Y       AMDGPU Lane 1:2:3:463/2 (2,3,4) work-item(1,2,4)   0x34e5 in saxpy ()
+  3   6/12    N       AMDGPU Lane 1:2:4:456/12 (2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
+@end smallexample
+
+If you're debugging multiple inferiors, @value{GDBN} displays
+heterogeneous lane IDs using the qualified
+@var{inferior-num}.@var{lane-num} format.  Otherwise, only
+@var{lane-num} is shown.
+
+If you specify the @w{@option{-gid}} option, @value{GDBN} displays a
+column indicating each heterogeneous lane's global heterogeneous lane
+ID, and displays the thread's global thread number:
+
+@smallexample
+(@value{GDBP}) info lanes -gid
+  Id   GId  Thread  Active  Target Id                                          Frame
+* 1.1  1    4       Y       process 35 thread 13                               main (argc=1, argv=0x7ffffff8)
+  1.2  3    5/2     Y       AMDGPU Lane 1:2:3:463/2 (2,3,4) work-item(1,2,4)   0x34e5 in saxpy ()
+  2.1  1    4       Y       process 65 thread 1                                main (argc=1, argv=0x7ffffff8)
+  2.2  4    6/12    N       AMDGPU Lane 1:2:4:456/12 (2,4,4) work-item(1,2,3)  0x34e5 in saxpy ()
+@end smallexample
+
+@table @code
+@kindex lane
+@item lane @r{[}-gid@r{]} @var{lane-id}
+Make heterogeneous lane ID @var{lane-id} the current heterogeneous
+lane and the thread that contains the heterogeneous lane the current
+thread.  The command argument @var{lane-id} is the @value{GDBN}
+heterogeneous lane ID: if the @w{@option{-gid}} option is given it is
+a global heterogeneous lane identifier, as shown in the second field
+of the @code{info lanes -gid} display; otherwise it is a per-inferior
+heterogeneous lane identifier, with or without an inferior qualifier
+(e.g., @samp{2.1} or @samp{1}), as shown in the first field of the
+@code{info lanes} display.
+
+@value{GDBN} responds by displaying the system identifier of the
+heterogeneous lane you selected, and its current stack frame summary:
+
+@smallexample
+(@value{GDBP}) lane 2
+[Switching to lane 2 (Thread 0xb7fdab70 (LWP 12747))]
+#0  some_function (ignore=0x0) at example.c:8
+8	    printf ("hello\n");
+@end smallexample
+
+@noindent
+As with the @samp{[New @dots{}]} message, the form of the text after
+@samp{Switching to} depends on your system's conventions for identifying
+heterogeneous lanes.
+
+@kindex lane name
+@cindex name a heterogeneous lane
+@anchor{heterogeneous lane name}
+@item lane name [@var{name}]
+This command assigns a name to the current heterogeneous lane.  If no
+argument is given, any existing user-specified name is removed.  The
+heterogeneous lane name appears in the @code{info lanes} display.
+
+@kindex lane find
+@cindex search for a heterogeneous lane
+@anchor{lane find}
+@item lane find [@var{regexp}]
+Search for and display heterogeneous lane ids whose name or
+@var{lane_systag} matches the supplied regular expression.  The syntax
+of the regular expression is that specified by @code{Python}'s regular
+expression support.
+
+As well as being the complement to the @code{lane name} command, this
+command also allows you to identify a heterogeneous lane by its target
+@var{lane_systag}.  For instance, on the @acronym{AMD ROCm} platform,
+the target @var{lane_systag} is the heterogeneous agent, heterogeneous
+queue, heterogeneous dispatch, heterogeneous work-group position and
+heterogeneous work-item position.
+
+@smallexample
+(@value{GDBP}) lane find "work-group(2,3,4)"
+Lane 2 has lane id 'ROCm process 35 agent 1 queue 2 dispatch 3 work-group(2,3,4) work-item(1,2,4)'
+(@value{GDBP}) info lane 2
+  Id  Thread  Active  Target Id                                Frame
+  2   5/2     Y       AMDGPU Lane 1:2:3:324/2 (2,3,4)[]1,2,4]  0x34e5 in saxpy ()
+@end smallexample
+
+@c FIXME-implementors!!  Perhaps better ways to find lanes and threads
+@c would be beneficial.  If the @var{systag} and ${lane_systag} were
+@c considered as tuples and not a plain strings, structured queries
+@c could be used.  Maybe that would also support the sort order of the
+@c returned list.  SQL is an example to examine.
+@c
+@c User defined pretty printing functions could be allowed so that
+@c users can control how @var{systag} and ${lane_systag} values are
+@c displayed in commands that display them.  This would allow cater to
+@c situations that benefit from full verbose output, and those where
+@c partial terse output is all that is needed.  But the underlying
+@c @var{systag} and ${lane_systag} values always have the full
+@c information.
+@c
+@c Ways for commands that list lanes and threads to aggregate the
+@c output would be beneficial in heterogeneous systems that tend to
+@c have very large counts.  For example, all lanes that have adjacent
+@c dispatch positions, and that are at the same source position, could
+@c be displayed as a single row that specifies the range of positions.
+@c Perhaps target or user defined functions could be allowed to guide
+@c the aggregation, and return the aggregated range.  That would allow
+@c different heterogeneous system to be supported that had different
+@c ways to represent dispatch positions.  There may even be multiple
+@c ways to aggregate on some system.
+
+@item lane apply @r{[}@var{thread-id-list} @r{|} all @r{[}-ascending@r{]]} @r{[}@var{flag}@r{]@dots{}} @var{command}
+@itemx laas [@var{option}]@dots{} @var{command}
+@itemx lfaas [@var{option}]@dots{} @var{command}
+@code{lane apply}, @code{laas}, and @code{lfass} commands are similar
+to their thread counterparts @code{thread apply}, @code{taas}, and
+@code{tfaas} respectively, except they operate on heterogeneous lanes.
+@xref{Threads}.
+
+@item backtrace [@var{option}]@dots{} [@var{qualifier}]@dots{} [@var{count}]
+@itemx frame @r{[} @var{frame-selection-spec} @r{]}
+@itemx frame apply [all | @var{count} | @var{-count} | level @var{level}@dots{}] [@var{option}]@dots{} @var{command}
+@itemx select-frame @r{[} @var{frame-selection-spec} @r{]}
+@itemx up-silently @var{n}
+@itemx down-silently @var{n}
+@itemx info frame
+@itemx info args [-q] [-t @var{type_regexp}] [@var{regexp}]
+@itemx info locals [-q] [-t @var{type_regexp}] [@var{regexp}]
+@itemx faas @var{command}
+The frame commands apply to the current heterogeneous lane.
+
+If the frame is switched from one that has multiple heterogeneous
+lanes to one with fewer (including only one) then the current lane is
+switched to the heterogeneous lane corresponding to the highest
+heterogeneous lane index of the new frame and @value{GDBN} responds by
+displaying the system identifier of the heterogeneous lane selected.
+
+@xref{Stack, ,Examining the Stack}.
+
+@item set libthread-db-search-path
+@itemx show libthread-db-search-path
+@itemx set debug libthread-db
+@itemx show debug libthread-db
+These commands only apply to threads created on the heterogeneous host
+agent that are not associated with a heterogeneous dispatch.  There
+are no commands that support reporting of heterogeneous dispatch
+thread events.
+
+@item x/i
+@itemx display/i
+The @code{x/i} and @code{display/i} commands (@pxref{Memory,,Examining
+Memory}) can be used to disassemble machine instructions.  They use
+the current target architecture.
+
+@item disassemble
+The @code{disassemble} command (@pxref{Machine Code,,Source and
+Machine Code}) can also be used to disassemble machine instructions.
+If the start address of the range is within a loaded code object, then
+the target architecture of the code object is used.  Otherwise, the
+current target architecture is used.
+
+@c FIXME-implementors!!  It would be more helpful if @code{set
+@c architecture} was an inferior setting used by both @code{x/i} and
+@c @code{disassemble} when not set to @code{auto}.  When set to
+@c @code{auto} then the architecture of the code object containing the
+@c start address should be used by both commands.  Otherwise, the
+@c thread target architecture should be used, or the heterogeneous host
+@c agent target architecture if there are no threads.  That way a user
+@c can choose what architecture to disassemble in, and will get
+@c sensible behavior if they specify the default of @code{auto} even
+@c for heterogeneous systems.
+
+@item info registers
+@itemx info all-registers
+@itemx maint print reggroups
+The register commands display information about the current
+architecture.
+
+@item print
+The @code{print} command evaluates the source language expression in
+the context of the current heterogeneous lane.
+
+@item step
+@itemx next
+@itemx finish
+@itemx until
+@itemx stepi
+@itemx nexti
+If the current heterogeneous lane is set to an inactive heterogeneous
+lane, then the @code{step}, @code{next}, @code{finish} and
+@code{until} commands (@pxref{Continuing and Stepping, ,Continuing and
+Stepping}) may cause other heterogeneous lanes of the same thread to
+advance so that the current heterogeneous lane becomes active.  This
+may result in other heterogeneous lanes completing whole functions.
+
+If the current heterogeneous lane is set to an inactive heterogeneous
+lane, then the @code{stepi} and @code{nexti} commands
+(@pxref{Continuing and Stepping, ,Continuing and Stepping}) may not
+cause the source position to appear to move until execution reaches a
+point that makes the current heterogeneous lane active.  However,
+other heterogeneous lanes of the same thread will advance.
+
+@item break @r{[}-lane @var{lane-index}@r{]} @r{[}location@r{]} @r{[}if @var{cond}@r{]}
+@itemx tbreak @r{[}-lane @var{lane-index}@r{]} @r{[}location@r{]} @r{[}if @var{cond}@r{]}
+@itemx hbreak @r{[}-lane @var{lane-index}@r{]} @r{[}location@r{]} @r{[}if @var{cond}@r{]}
+@itemx thbreak @r{[}-lane @var{lane-index}@r{]} @r{[}location@r{]} @r{[}if @var{cond}@r{]}
+@itemx rbreak @r{[}-lane @var{lane-index}@r{]} @var{regex}
+@itemx info breakpoints @r{[}@var{list}@dots{}@r{]}
+@itemx watch @r{[}-lane @var{lane-index}@r{]} @r{[}-l@r{|}-location@r{]} @var{expr} @r{[}thread @var{thread-id}@r{]} @r{[}mask @var{maskvalue}@r{]}
+@itemx rwatch @r{[}-lane @var{lane-index}@r{]} @r{[}-l@r{|}-location@r{]} @var{expr} @r{[}thread @var{thread-id}@r{]} @r{[}mask @var{maskvalue}@r{]}
+@itemx awatch @r{[}-lane @var{lane-index}@r{]} @r{[}-l@r{|}-location@r{]} @var{expr} @r{[}thread @var{thread-id}@r{]} @r{[}mask @var{maskvalue}@r{]}
+@itemx info watchpoints @r{[}@var{list}@dots{}@r{]}
+@itemx catch @r{[}-lane @var{lane-index}@r{]} @var{event}
+@itemx tcatch @r{[}-lane @var{lane-index}@r{]} @var{event}
+When a breakpoint, watchpoint, or catchpoint (@pxref{Breakpoints,
+,Breakpoints; Watchpoints; and Catchpoints}) is hit by a frame of a
+thread with multiple heterogeneous lanes, each active lane is treated
+independently:
+
+@itemize @bullet
+
+@item
+The breakpoint condition, if present, is evaluated for each active
+heterogeneous lane.
+
+@item
+The breakpoint command, if present, is evaluated for each active
+heterogeneous lane that evaluates the breakpoint condition to true.
+
+@item
+If the breakpoint causes the heterogeneous lane to halt then he
+current heterogeneous lane is set to the halting heterogeneous lane
+and @value{GDBN} responds by displaying the system identifier of the
+heterogeneous lane selected.
+
+@item
+If the breakpoint is a temporary breakpoint, then it will be removed,
+and so any remaining heterogeneous lanes will not report the
+breakpoint.
+
+@item
+In non-stop mode all heterogeneous lanes that halt at the breakpoint
+will be reported.
+
+@item
+In all-stop mode, continuing from the breakpoint will cause the next
+heterogeneous ative lane that hit the breakpoint to be processed.
+
+@end itemize
+
+If a heterogeneous lane causes a thread to halt, then the other
+heterogeneous lanes of the thread will no longer execute even if in
+non-stop mode.
+
+For @code{break}, @code{watch}, @code{catch}, and their variants, the
+@w{@option{-lane @var{lane-index}}} option can be specified.  This
+limits @value{GDBN} to only process breakpoints if the heterogeneous
+lane has a heterogeneous lane index that matches @var{lane-index}.
+
+The @code{info break} and @code{info watch} commands add a @emph{Lane}
+column before the @emph{Address} column if any breakpoint has a
+@var{lane-index} specified that displays the heterogeneous lane index.
+
+@c FIXME-implementors!!  Should there be way to request all pending
+@c breakpoints to be processed?  This may result in multiple
+@c lanes/threads being reported as halted.  This would avoid the user
+@c having to continue a very large number of times to get all the
+@c threads/lanes that have unprocessed breakpoints to be processed.
+@c
+@c In addition, a way to list all the threads/lanes that are halted at
+@c a breakpoint.  If this was available as a convenience function, then
+@c the @code{thread apply} and @code{lane apply} commands could be
+@c used to perform a command on all such threads in one action.
+
+@anchor{maint print address-spaces}
+@c FIXME-implementers!!  This is not a maintenance command as it is
+@c displaying imformation about available address spaces that can be
+@c used.  It has been defined as a @code{maint} command only to match
+@c the @code{maint print reggroups} command which also should not be a
+@c maintenance command for the same reason.
+@item maint print address-spaces @r{[}@var{file}@r{]}
+@code{maint print address-spaces} displays the address space names
+supported by each target architecture.  The optional argument
+@var{file} tells to what file to write the information.
+
+The address spaces info looks like this:
+
+@smallexample
+(@value{GDBP}) @kbd{maint print address-spaces}
+ Class      Arch
+ global     All
+ group      AMDGPU
+ private    AMDGPU
+ generic    AMDGPU
+@end smallexample
+
+The @var{global} address space corresponds to the default global
+virtual memory address space and is available for all target
+architectures.
+
+Every address entered or displayed can optionally specify the address
+space qualifier by appending an @samp{@@} followed by an address space
+name.  @value{GDBN} will print an error if the address space name is
+not supported by the current architecture.
+
+For example,
+
+@smallexample
+(@value{GDBP}) x/x 0x10021608@@group
+0x10021608@@group:     0x0022fd98
+@end smallexample
+
+@c FIXME-implementors!!  Perhaps the gdb internal types (such as used
+@c for register types) can be extended to support addresses in address
+@c spaces.
+
+If there is no current thread then the only address space that can be
+specified is @var{global}.
+
+If entering an address and no address space is specified, the
+@var{global} address space is used.
+
+If an address is displayed, the address space qualifier is omitted for
+the @var{global} address space.
+
+@end table
+
+Heterogeneous systems often have very large numbers of threads.
+Breakpoint conditions can be used to limit the number of threads
+reporting breakpoint hits.  For example,
+
+@smallexample
+break kernel_foo if $_streq($_lane_workgroup_pos, "(0,0,0)")
+@end smallexample
+
+The @code{tbreak} command can be used so only one heterogeneous lane
+will report the breakpoint.  Before continuing execution, the
+breakpoint will need to be set again if necessary.
+
+The @code{set scheduler-locking on} command (@pxref{Non-Stop Mode})
+together with the @w{@option{-lane}} breakpoint option can be used to
+lock @value{GDBN} to only resume the current thread, and only report
+breakpoints for a fixed heterogeneous lane index.  This avoids the
+overhead of resuming a large number of threads every time resuming
+from a breakpoint, and also avoids the focus being switched to other
+threads that hit the breakpoints.  Note however that other threads
+will not be executed.
+
+The scheduler locking commands can also be helpful to prevent
+@value{GDBN} switching to other threads while concentrating on
+debugging one particular thread.  The non-stop mode can be hepful to
+prevent the @code{continue} command from resuming other threads that
+are intentionally halted or from cancelling a single step command that
+is in progress by another thread and resuming it instead.
+@xref{Non-Stop Mode}.
+
+@c TODO:
+@c Change command parsing so convienence variable
+@c substitution will work as shown.  Investigate using tuples and
+@c lists the result of convienence variables and convienence
+@c functions.
+@c Update MI commands for heterogeneous commands.
+@c Update Python bindings for heterogeneous commands.
+@c Update gdbserver remote protocol for heterogeneous commands.
 
 @node Remote Debugging
 @chapter Debugging Remote Programs
@@ -22698,7 +24003,7 @@ The @code{stdio} connection is useful when starting @code{gdbserver}
 with ssh:
 
 @smallexample
-(gdb) target remote | ssh -T hostname gdbserver - hello
+(@value{GDBP}) target remote | ssh -T hostname gdbserver - hello
 @end smallexample
 
 The @samp{-T} option to ssh is provided because we don't need a remote pty,
@@ -23932,7 +25237,7 @@ This example shows the open file descriptors for a process using a
 tty for standard input and output as well as two network sockets:
 
 @smallexample
-(gdb) info proc files 22136
+(@value{GDBP}) info proc files 22136
 process 22136
 Open files:
 
@@ -25191,6 +26496,7 @@ all uses of @value{GDBN} with the architecture, both native and cross.
 * Nios II::
 * Sparc64::
 * S12Z::
+* AMD GPU::            @acronym{AMD GPU} architectures
 @end menu
 
 @node AArch64
@@ -25659,6 +26965,934 @@ This command displays the current value of the microprocessor's
 BDCCSR register.
 @end table
 
+@node AMD GPU
+@subsection @acronym{AMD GPU}
+@cindex @acronym{AMD GPU} support
+
+@value{GDBN} provides support for systems that have heterogeneous
+agents associated with commercially available @acronym{AMD GPU}
+devices (@pxref{Heterogeneous Debugging}) when the
+@url{https://rocmdocs.amd.com/, @acronym{AMD ROCm}} platform is
+installed.
+
+The following AMD GPU chips are supported:
+
+@table @emph
+
+@item AMD Vega 10
+Displayed as @samp{vega10} by @value{GDBN} and denoted as
+@samp{gfx900} by the compiler.
+
+@item AMD Vega 7nm
+Displayed as @samp{vega20} by @value{GDBN} and denoted as
+@samp{gfx906} by the compiler.
+
+@item AMD Instinct@registeredsymbol{} MI100 accelerator
+Displayed as @samp{arcturus} by @value{GDBN} and denoted as
+@samp{gfx908} by the compiler.
+
+@item Aldebaran
+Displayed as @samp{aldebaran} by @value{GDBN} and denoted as
+@samp{gfx90a} by the compiler.
+
+@item Navi10
+Displayed as @samp{navi10} by @value{GDBN} and denoted as
+@samp{gfx1010} by the compiler.
+
+@item Navi12
+Displayed as @samp{navi12} by @value{GDBN} and denoted as
+@samp{gfx1011} by the compiler.
+
+@item Navi14
+Displayed as @samp{navi14} by @value{GDBN} and denoted as
+@samp{gfx1012} by the compiler.
+
+@item Sienna Cichlid
+Displayed as @samp{sienna_cichlid} by @value{GDBN} and denoted as
+@samp{gfx1030} by the compiler.
+
+@item Navy Flounder
+Displayed as @samp{navy_flounder} by @value{GDBN} and denoted as
+@samp{gfx1031} by the compiler.
+
+@end table
+
+@value{GDBN} supports the following source languages:
+
+@table @emph
+
+@item HIP
+The
+@url{https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_kernel_language.md,
+HIP Programming Language} is supported.
+
+When compiling, the @w{@option{-ggdb}} option should be used to
+produce debugging information suitable for use by @value{GDBN}.  The
+@w{@option{--offload-arch}} option is used to specify the AMD GPU
+chips that the executable is required to support.  For example, to
+compile a HIP program that can utilize ``Vega 10'' and ``Vega 7nm''
+AMD GPU devices, with no optimization:
+
+@smallexample
+hipcc -O0 -ggdb ---offload-arch=gfx900 --offload-arch=gfx906 \
+        bit_extract.cpp -o bit_extract
+@end smallexample
+
+The @acronym{AMD ROCm} compiler maps HIP source language device
+function work-items to the lanes of an AMD GPU wavefront, which are
+represented in @value{GDBN} as heterogeneous lanes.
+
+@item Assembly Code
+Assembly code kernels are supported.
+
+@item Other Languages
+Other languages, including OpenCL and Fortran, are currently supported
+as the minimal pseudo-language, provided they are compiled specifying
+at least the AMD GPU Code Object V3 and DWARF 4 formats.
+@xref{Unsupported Languages}.
+
+@end table
+
+@acronym{AMD GPU} heterogeneous agents are not listed by the @samp{info agents}
+command until the inferior has started executing the program.
+
+The @acronym{AMD GPU} heterogeneous queue types reported by the @samp{info
+agents} command are:
+
+@table @emph
+
+@item HSA
+An HSA AQL queue.  The @samp{(Single)} suffix indicates it uses the
+single-producer protocol, @samp{(Multi)} suffix indicates the multi-producer
+protocol, and @samp{(Coop)} suffix indicates the multi-producer cooperative
+dispatch protocol.
+
+@item PM4
+An AMD PM4 queue.
+
+@item DMA
+A DMA queue.
+
+@item XGMI
+An XGMI queue.
+
+@end table
+
+@acronym{AMD GPU} supports the following address spaces for the @samp{info
+dispatches} command:
+
+@table @emph
+
+@item Shared
+Per work-group storage.
+
+@item Private
+Per work-item storage.
+
+@end table
+
+The @samp{info dispatches} command uses the following BNF syntax for
+@acronym{AMD GPU} heterogeneous dispatch fences:
+
+@smallexample
+fence     ::== [ barrier ] [ separator ] [ acquire ]  [ separator ] [ release ]
+separator ::== "|"
+barrier   ::== "B"
+acquire   ::== "A" scope
+release   ::== "R" scope
+scope     ::== system | agent
+system    ::== "s"
+agent     ::== "a"
+@end smallexample
+
+@noindent
+Where:
+
+@table @var
+
+@item separator
+The elements are separated by @samp{|}.
+
+@item barrier
+If present indicates the next heterogeneous packet will not be initiated until
+heterogeneous dispatch completes.
+
+@item acquire
+Indicates an acquire memory fence was performed before initiating the
+heterogeneous dispatch.
+
+@item release
+Indicates a release memory fence will be performed when the heterogeneous
+dispatch completes.
+
+@item system
+Indicates the memory fence is performed at the system memory scope.
+
+@item agent
+Indicates the memory fence is performed at the agent memory scope.
+
+@end table
+
+An AMD GPU wavefront is represented in @value{GDBN} as a thread.
+
+@acronym{AMD GPU} supports the following @var{reggroup} values for the
+@samp{info registers @var{reggroup} @dots{}} command:
+
+@itemize @bullet
+
+@item
+general
+
+@item
+vector
+
+@item
+scalar
+
+@item
+system
+
+@end itemize
+
+The number of scalar and vector registers is configured when a
+wavefront is created.  Only allocated registers are displayed.  Scalar
+registers are reported as 32-bit signed integer values.  Vector
+registers are reported as a wavefront size vector of signed 32-bit
+values.  The @code{pc} is reported as a function pointer value.  The
+@code{exec} register is reported as a wavefront size-bit unsigned
+integer value.  The @code{vcc} and @code{xnack_mask} pseudo registers
+are reported as a wavefront size-bit unsigned integer value.  The
+@code{flat_scratch} pseudo register is reported as a 64-bit unsigned
+integer value.
+
+The @code{info sharedlibrary} command will show the AMD GPU code objects
+together with the CPU code objects.  For example:
+
+@smallexample
+(@value{GDBP}) info sharedlibrary
+From                To                  Syms Read   Shared Object Library
+0x00007fd120664ac0  0x00007fd120682790  Yes (*)     /lib64/ld-linux-x86-64.so.2
+...
+0x00007fd0125d8ec0  0x00007fd015f21630  Yes (*)     /opt/rocm-3.5.0/hip/lib/../../lib/libamd_comgr.so
+0x00007fd11d74e870  0x00007fd11d75a868  Yes (*)     /lib/x86_64-linux-gnu/libtinfo.so.5
+0x00007fd11d001000  0x00007fd11d00173c  Yes         file:///home/rocm/examples/bit_extract#offset=6477&size=10832
+0x00007fd11d008000  0x00007fd11d00adc0  Yes (*)     memory://95557/mem#offset=0x7fd0083e7f60&size=41416
+(*): Shared library is missing debugging information.
+(@value{GDBP})
+@end smallexample
+
+The code object path for AMD GPU code objects is shown as a
+@acronym{URI, Universal Location Identifier} with a syntax defined by
+the following BNF syntax:
+
+@smallexample
+code_object_uri ::== file_uri | memory_uri
+file_uri        ::== "file://" file_path [ range_specifier ]
+memory_uri      ::== "memory://" process_id range_specifier
+range_specifier ::== [ "#" | "?" ] "offset=" number "&" "size=" number
+file_path       ::== URI_ENCODED_OS_FILE_PATH
+process_id      ::== DECIMAL_NUMBER
+number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+@end smallexample
+
+@noindent
+Where:
+
+@table @var
+
+@item number
+A C integral literal where hexadecimal values are prefixed by
+@samp{0x} or @samp{0X}, and octal values by @samp{0}.
+
+@item file_path
+The file's path specified as a URI encoded UTF-8 string.  In URI
+encoding, every character that is not in the regular expression
+@samp{[a-zA-Z0-9/_.~-]} is encoded as two uppercase hexidecimal digits
+proceeded by @samp{%}.  Directories in the path are separated by
+@samp{/}.
+
+@item offset
+A 0-based byte offset to the start of the code object.  For a file
+URI, it is from the start of the file specified by the
+@var{file_path}, and if omitted defaults to 0. For a memory URI, it is
+the memory address and is required.
+
+@item size
+The number of bytes in the code object.  For a file URI, if omitted it
+defaults to the size of the file.  It is required for a memory URI.
+
+@item process_id
+The identity of the process owning the memory.  For Linux it is the C
+unsigned integral decimal literal for the process @var{pid}.
+
+@end table
+
+AMD GPU code objects are loaded into each AMD GPU device separately.
+The @code{info sharedlibrary} command will therefore show the same
+code object loaded multiple times.  As a consequence, setting a
+breakpoint in AMD GPU code will result in multiple breakpoints if
+there are multiple AMD GPU devices.
+
+If the source language runtime defers loading code objects until
+kernels are launched, then setting breakpoints may result in pending
+breakpoints that will be set when the code object is finally loaded.
+
+The @acronym{AMD GPU} heterogeneous entities have the following target
+identifier and convenience variable formats:
+
+@table @asis
+
+@item @emph{Agent Target ID}
+The @acronym{AMD GPU} agent target identifier @var{agent_systag} string has the
+following format:
+
+@smallexample
+AMDGPU Agent (GPUID @var{target-agent-id})
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info agents} command and
+is available using the @var{$_agent_systag} convenience variable.
+
+@item @emph{Queue Target ID}
+The @acronym{AMD GPU} queue target identifier @var{queue_systag} string has the
+following format:
+
+@smallexample
+AMDGPU Queue @var{agent-id}:@var{queue-id} (QID @var{target-queue-id})
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info queues} command and
+is available using the @var{$_queue_systag} convenience variable.
+
+@item @emph{Dispatch Target ID}
+The @acronym{AMD GPU} dispatch target identifier @var{dispatch_systag} string
+has the following format:
+
+@smallexample
+AMDGPU Dispatch @var{agent-id}:@var{queue-id}:@var{dispatch-id} (PKID @var{target-packet-id})
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info dispatches} command
+and is available using the @var{$_dispatch_systag} convenience variable.  The
+@var{target-packet-id} corresponds to the dispatch packet that initiated the
+dispatch.
+
+@item @emph{Thread Target ID}
+The @acronym{AMD GPU} thread target identifier (@var{systag}) string has the
+following format:
+
+@smallexample
+AMDGPU Thread @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info threads} command
+and is available using the @var{$_thread_systag} convenience variable.
+
+@item @emph{Lane Target ID}
+The @acronym{AMD GPU} lane target identifier (@var{lane_systag}) string has the
+following format:
+
+@smallexample
+AMDGPU Lane @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id}/@var{lane-index} (@var{work-group-x},@var{work-group-y},@var{work-group-z})[@var{work-item-x},@var{work-item-y},@var{work-item-z}]
+@end smallexample
+
+It is used in the @samp{Target ID} column of the @samp{info lanes} command and
+is available using the @var{$_lane_systag} convenience variable.
+
+@item @code{$_dispatch_pos}
+The string returned by the @code{$_dispatch_pos} debugger convenience
+variable has the following format:
+
+@smallexample
+(@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+@end smallexample
+
+@item @code{$_thread_workgroup_pos}
+The string returned by the @code{$_thread_workgroup_pos} debugger
+convenience variable has the following format:
+
+@smallexample
+@var{work-group-thread-index}
+@end smallexample
+
+@item @code{$_lane_workgroup_pos}
+The string returned by the @code{$_lane_workgroup_pos} debugger
+convenience variable has the following format:
+
+@smallexample
+[@var{work-item-x},@var{work-item-y},@var{work-item-z}]
+@end smallexample
+
+@end table
+
+@noindent
+Where:
+
+@table @var
+
+@item agent-id
+@itemx queue-id
+@itemx dispatch-id
+@itemx wave-id
+The @acronym{AMD GPU} target agent identifier, queue identifier, dispatch
+identifier, and wave identifier respectively.  The identifiers are global across
+all inferiors.
+
+@item target-agent-id
+@itemx target-queue-id
+The @acronym{AMD GPU} target driver agent identifier and queue identifier
+identifier respectively.  The identifiers are per process.
+
+@item target-packet-id
+The @acronym{AMD GPU} target driver packet identifier.  The identifier is per
+queue.
+
+@item work-group-x
+@itemx work-group-y
+@itemx work-group-z
+The grid position of the thread's work-group within the heterogeneous dispatch.
+
+@item work-group-thread-index
+The thread's number within the heterogeneous work-group.
+
+@item lane-index
+The heterogeneous lane index within the thread.
+
+@item work-item-x
+@itemx work-item-y
+@itemx work-item-z
+The position of the heterogeneous lane's work-item within the heterogeneous
+work-group.
+
+@end table
+
+@acronym{AMD GPU} heterogeneous agents support the following address
+spaces:
+
+@table @code
+
+@item global
+the default global virtual address space
+
+@item group
+the per heterogeneous work-group shared address space (@acronym{LDS,
+Local Data Store})
+
+@item private
+the per heterogeneous lane private address space (Scratch)
+
+@item generic
+the generic address space that can access the @var{global},
+@var{group}, or @var{private} address spaces (Flat)
+
+@end table
+
+A wavefront can report memory violation and address watch access
+events.  However, the program location at which they are reported may
+be after the machine instruction that caused them.  This can result in
+the reported source statement being incorrect.  The following commands
+can be used to control this behavior:
+
+@table @code
+
+@kindex set amdgpu precise-memory
+@cindex AMD GPU precise memory event reporting
+@item set amdgpu precise-memory @var{mode}
+@code{set amdgpu precise-memory} controls how the AMD GPU detects
+memory violations and address watch events.  Where @var{mode} can be:
+
+@table @code
+
+@item off
+The program location may not be immediately after the instruction that
+caused the memory violation or address watch event.  This is the
+default.
+
+@item on
+Requests that the program location will be immediately after the
+instruction that caused a memory violation or address watch event.
+Enabling this mode may make the AMD GPU execution significantly slower
+as it has to wait for each memory operation to complete before
+executing the next instruction.
+
+@end table
+
+For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory off
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is off
+(@value{GDBP})
+@end smallexample
+
+If a memory violation or address watch access event is reported for an
+AMD GPU thread that supports controlling precise memory detection when
+the mode is @samp{off}, then the message includes an indication that
+the position may not be accurate.  For example:
+
+@smallexample
+(@value{GDBP}) run
+Thread 6 "bit_extract" received signal SIGSEGV, Segmentation fault.
+0x00007ffee6a0a028 in bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:38
+38     size_t offset = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x);
+('set amdgpu precise-memory on' is not enabled so reported location may not be accurate)
+(@value{GDBP})
+@end smallexample
+
+The precise memory mode cannot be enabled until the inferior is started
+or attached.  If at that time all AMD GPU chips accessible to the
+inferior support the @samp{on} mode, then it is enabled.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP}) run
+...
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently enabled)
+(@value{GDBP})
+@end smallexample
+
+Alternatively, if at that time any of the AMD GPU chips accessible to
+the inferior do not support the @samp{on} mode, then a warning is
+reported and the mode is not enabled.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP}) run
+AMDGPU precise memory access reporting could not be enabled
+(@value{GDBP})
+@end smallexample
+
+If the inferior is already executing when setting the @samp{on} mode,
+then a warning will be reported immediately.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+AMDGPU precise memory access reporting could not be enabled
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP})
+@end smallexample
+
+Otherwise, setting the @samp{on} mode will enable it immediately.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu precise-memory on
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently enabled)
+(@value{GDBP})
+@end smallexample
+
+@kindex show amdgpu precise-memory
+@cindex AMD GPU precise memory event reporting
+@item show amdgpu precise-memory
+@code{show amdgpu precise-memory} displays the currently requested AMD
+GPU precise memory setting.  If @samp{on} has been requested, the
+message also indicates if it is currently enabled.  For example:
+
+@smallexample
+(@value{GDBP}) show amdgpu precise-memory
+AMDGPU precise memory access reporting is on (currently disabled)
+(@value{GDBP})
+@end smallexample
+
+@end table
+
+The @code{set debug amdgpu log-level @var{level}} command can be used
+to enable diagnostic messages for the AMD GPU target.  The @code{show
+debug amdgpu log-level} command displays the current AMD GPU target
+log level.  @xref{set debug amdgpu}.
+
+For example, the following will enable information messages and send
+the log to a new file:
+
+@smallexample
+(@value{GDBP}) set debug amdgpu log-level info
+(@value{GDBP}) set logging overwrite
+(@value{GDBP}) set logging file log.out
+(@value{GDBP}) set logging debugredirect on
+(@value{GDBP}) set logging on
+@end smallexample
+
+If you want to print the log to both the console and a file, omit the
+@code{set logging debugredirect on} command.  @xref{Logging Output}.
+
+@c TODO: Add when support available:
+@c
+@c By default, the kernel driver causes all @acronym{AMD GPU} wavefronts
+@c created when @value{GDBN} is not attached to be unable to report the
+@c heterogeneous dispatch associated with the wavefront, or the wavefront's
+@c heterogeneous work-group position.  This does not affect wavefronts created
+@c while @value{GDBN} is attached which are always capable of reporting this
+@c information.  If the @env{HSA_ENABLE_FULL_GDB_SUPPORT} environment variable
+@c is set to @samp{1} when the @acronym{AMD ROCm} runtime is initialized, then
+@c this information will be available even for wavefronts created when
+@c @value{GDBN} was not attached, but may very marginally reduce wavefront
+@c launch latency for very short lived wavefronts.
+
+@value{GDBN} @acronym{AMD GPU} support is currently a prototype and
+has the following restrictions.  Future releases aim to address these
+restrictions.
+
+@enumerate
+
+@item
+The debugger convenience variables, convenience functions, and
+commands described in @ref{Heterogeneous Debugging} are not yet
+implemented unless noted below.
+
+The command line interface @code{info agents}, @code{info queues}, @code{info
+dispatches}, @code{queue find}, and @code{dispatch find} commands are
+supported.  However, these have no Python bindings.
+
+The debugger convenience variable @code{$_wave_id} is available which
+returns a string that has the format:
+
+@smallexample
+(@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+@end smallexample
+
+@noindent
+Where:
+
+@table @var
+
+@item work-group-x
+@itemx work-group-y
+@itemx work-group-z
+The grid position of the thread's work-group within the heterogeneous
+dispatch.
+
+@item work-group-thread-index
+The thread's number within the heterogeneous work-group.
+
+@end table
+
+The address space qualification of addresses described in
+@ref{Heterogeneous Debugging} is not implemented.  However, the
+default address space for AMD GPU threads is @code{generic}.  This
+allows a generic address to be used to read or write in the
+@code{global}, @code{group}, or @code{private} address spaces.  For
+the @acronym{AMD ROCm} platform the AMD GPU generic address value for
+@code{global} addresses is the same, for @code{group} addresses it has
+the most significant 32-bits of the address set to 0x00010000, and for
+@code{private} addresses is has the host significant 32-bits of the
+address set to 0x00020000.  A generic private address only accesses
+lane 0 of the currently focused wavefront.  A group address accesses
+the @code{group} segment memory shared by all wavefronts that are
+members of the same work-group as the currently focused wavefront.
+
+@item
+If a memory violation or address watch access event is reported for an
+AMD GPU thread that supports controlling precise memory detection when
+the mode is @samp{off}, then the message does not currently include an
+indication that the position may not be accurate.
+
+@item
+The @acronym{AMD ROCm} compiler currently does not support generating
+valid AMD GPU DWARF information for symbolic variables and call frame
+information.  As a consequence:
+
+@itemize @bullet{}
+
+@item
+Source variables or expressions cannot be specified in any command,
+such as the @code{print} command and breakpoint conditions.  This
+includes static variables, local variables, function arguments, and
+any language types.  However, global symbols for functions and
+variables can be specified, and source line information is available.
+
+@item
+The @code{backtrace} command can only show the current frame and
+parent frames that are fully inlined.  Function or kernel arguments
+will not be displayed and instead an empty formal argument list may be
+shown.
+
+@item
+The @code{next} command may not step over function calls, but instead
+stop at the first statement of the called function.
+
+@item
+Breakpoints are only reported for wavefronts.  There is no support for
+HIP work-items that are mapped to heterogeneous lanes.  The HIP
+work-item ID of a heterogeneous lane is not available.
+
+@end itemize
+
+The @acronym{AMD ROCm} compiler currently adds the
+@w{@option{-gline-tables-only}}, @w{@option{-mllvm
+-disable-dwarf-locations}}, and @w{@option{-mllvm
+-amdgpu-spill-cfi-saved-regs}} options for AMD GPU when the
+@w{@option{-ggdb}} option is specified.  These ensure source line
+information is generated, but not invalid DWARF for source variables,
+and registers not currently supported by the CFI generation are saved
+so the CFI information is correct.  If these options are not used, the
+invalid DWARF may cause @value{GDBN} to report that it is unable to
+read memory (such as when reading arguments in a backtrace).
+
+@item
+Only AMD GPU Code Object V3 and above is supported.  This is the
+default for the @acronym{AMD ROCm} compiler.  The following error will
+be reported for incompatible code objects:
+
+@smallexample
+Error while mapping shared library sections:
+`file:///rocm/bit_extract#offset=6751&size=3136': ELF file ABI version (0) is not supported.
+@end smallexample
+
+@item
+DWARF 5 is not yet supported.  There is no support for compressed or split
+DWARF.
+
+DWARF 4 is the default for the @acronym{AMD ROCm} compiler.
+
+@item
+No support yet for AMD GPU core dumps.
+
+@item
+When in all-stop mode, AMD GPU does not currently prevent new
+wavefronts from being created, which may report breakpoints being hit.
+However, @value{GDBN} is configured by default to not remove
+breakpoints when at the command line in all-stop mode.  This prevents
+breakpoints being missed by wavefronts created after at the command
+line in all-stop mode.  The @code{set breakpoint always-inserted on}
+command can be used to change the default to remove breakpoints when
+at the command line in all-stop mode, but this may result in new
+wavefronts missing breakpoints.
+
+@item
+The performance of resuming from a breakpoint when a large number of
+threads have hit a breakpoint can currently take up to 10 seconds on a
+fully occupied single AMD GPU device.  The techniques described in
+@ref{Heterogeneous Debugging} can be used to mitigate this.  Once
+continued from the first breakpoint hit, the responsiveness of
+commands normally is better.  Other techniques that can improve
+responsiveness are:
+
+@itemize @bullet{}
+
+@item
+Try to avoid having a lot of threads stopping at a breakpoint.  For
+example, by placing breakpoints in conditional paths only executed by
+one thread.
+
+@item
+Use of @code{tbreak} so only one thread reports the breakpoint and the
+other threads hitting the breakpoint will be continued.  A similar
+effect can be achieved by deleting the breakpoint manually when it is
+hit.
+
+@item
+Reduce the number of wavefronts when debugging if practical.
+
+@end itemize
+
+@item
+Currently each AMD GPU device can only be in use by one process that
+is being debugged by @value{GDBN}.  The Linux @emph{cgroups} facility
+can be used to limit which AMD GPU devices are used by a process.  In
+order for a @value{GDBN} process to access the AMD GPU devices of the
+process it is debugging, the AMD GPU devices must be included in the
+@value{GDBN} process @emph{cgroup}.
+
+Therefore, multiple @value{GDBN} processes can each debug a process
+provided the @emph{cgroups} specify disjoint sets of AMD GPU devices.
+However, a single @value{GDBN} process cannot debug multiple inferiors
+that use AMD GPU devices even if those inferiors have @emph{cgroups}
+that specify disjoint AMD GPU devices.  This is because the
+@value{GDBN} process must have all the AMD GPU devices in its
+@emph{cgroups} and so will attempt to enable debugging for all AMD GPU
+devices for all inferiors it is debugging.
+
+It is suggested to use @emph{Docker} rather than @emph{cgroups}
+directly to limit the AMD GPU devices visible inside a container:
+
+@enumerate
+
+@item
+@samp{/dev/kfd} must be mapped into the container.
+
+@item
+The @samp{/dev/dri/renderD@var{<render-minor-number>}} and
+@samp{/dev/drm/card@var{<node-number>}} files corresponding to each AMD
+GPU device that is to be visible must be mapped into the container.
+Note that non-AMD GPU cards may also be present.
+
+The @var{render-minor-number} for a device can be obtained by looking
+at the @samp{drm_render_minor} field value from:
+
+@smallexample
+cat /sys/class/kfd/kfd/topology/nodes/@var{<node-number>}/properties
+@end smallexample
+
+@item
+Make sure the container user is a member of the @var{render} group for
+Ubuntu 20.04 onward and the @var{video} group for all other
+distributions.
+
+@item
+Specify the @samp{--cap-add=SYS_PTRACE} and
+@samp{--security-opt seccomp=unconfined} options.
+
+@item
+Install the @acronym{AMD ROCm} packages in the container.  See
+@uref{https://github.com/RadeonOpenCompute/ROCm-docker}.
+
+@end enumerate
+
+All processes running in the container will see the same subset of
+devices.  By having two containers with non-overlapping sets of AMD
+GPUs, it is possible to use @value{GDBN} in both containers at the
+same time since each AMD GPU will only have one @value{GDBN} process
+accessing it.
+
+For example:
+
+@smallexample
+docker run -it --rm --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+    --device=/dev/kfd --device=/dev/drm/card0 --device=/dev/dri/renderD128 \
+    --group-add render ubuntu:20.04 /bin/bash
+@end smallexample
+
+@item
+The HIP runtime currently performs deferred code object loading by
+default.  AMD GPU code objects are not loaded until the first kernel
+is launched.  Before then, all breakpoints have to be set as pending
+breakpoints.
+
+If source line positions are used that only correspond to source lines
+in unloaded code objects, then @value{GDBN} may not set pending
+breakpoints, and instead set breakpoints in unpredictable places of
+the loaded code objects if they contain code from the same file.  This
+can result in unexpected breakpoint hits being reported.  When the
+code object containing the source lines is loaded, the incorrect
+breakpoints will be removed and replaced by the correct ones.  This
+problem can be avoided by only setting breakpoints in unloaded code
+objects using symbol or function names.
+
+The @code{HIP_ENABLE_DEFERRED_LOADING} environment variable can be
+used to disable deferred code object loading by the HIP runtime.  This
+ensures all code objects will be loaded when the inferior reaches the
+beginning of the @code{main} function.
+
+For example,
+
+@smallexample
+export HIP_ENABLE_DEFERRED_LOADING=0
+@end smallexample
+
+@emph{Note:}  If deferred code object loading is disabled and the
+application performs a @code{fork}, then the program may crash.
+
+@item
+The @acronym{AMD ROCm} runtime can currently cause the inferior to
+terminate before a memory violation caused by an AMD GPU wavefront is
+reported.  This can be avoided by setting a breakpoint in @code{abort}
+and using the non-stop mode (@pxref{Non-Stop Mode}).  This will
+prevent the @acronym{AMD ROCm} runtime from terminating the inferior,
+while allowing @value{GDBN} to report the memory violation.
+
+@item
+@value{GDBN} may report errors if execution is continued after the
+@acronym{AMD ROCm} runtime aborts the application.  For example:
+
+@smallexample
+warning: unable to open /proc file '/proc/1234/status'
+@end smallexample
+
+This can happen due to memory violations in the AMD GPU code as
+described in the previous item.  To prevent the errors, do not
+continue the application after the @acronym{AMD ROCm} runtime has
+invoked @code{abort}.
+
+@item
+@value{GDBN} supports watchpoints, but limits the capabilities to the
+lowest common denominator of the heterogeneous agents in the system.
+Hardware supported watchpoints are used when possible, otherwise
+software emulation is used.  Software emulation involves using-single
+stepping and reading memory to determine if values have changed, and
+as a result performs substantially slower than hardware watchpoints.
+
+The AMD GPU supported architectures provide a maximum of 4 hardware
+write watchpoints.  Precise read watchpoints or access watchpoints are
+not supported.
+
+The x86 architecture provides 4 hardware watchpoints that can each
+monitor up to 8 bytes.
+
+When @value{GDBN} is used with x86 and AMD GPU devices, hardware
+watchpoints are therefore limited to at most 4 write watchpoints that
+have a collective size of up to 32 bytes.  The collective size is
+calculated by adding the size of each watchpoint rounded up to a
+multiple of 8 bytes.  Software emulation will be used for watchpoints
+that exceed the hardware limitations.
+
+Currently, watchpoints are only created on the CPU, and not the AMD
+GPU, until the @acronym{AMD ROCm} runtime is initialized.  With
+deferred code object loading disabled this does not happen until the
+inferior reaches the beginning of the @code{main} function.  With
+deferred code object loading enabled this does not happen until the
+first kernel is executed.  This also means that, when the inferior is
+re-run, watchpoints are only re-activated on the CPU, not on the AMD
+GPU.
+
+@item
+Watchpoints are not reported for memory that is written by memory
+transfers performed by @acronym{DMA, Direct Memory Access} hardware.
+The @env{HSA_ENABLE_SDMA} environment variable can be set to @samp{0}
+to disable the @acronym{AMD ROCm} runtime from using @acronym{DMA} for
+transfers between the CPU and @acronym{AMD GPU}.
+
+@item
+When single stepping there can be times when @value{GDBN} appears to
+wait indefinitely for the single step to complete.  If this happens,
+@samp{Ctrl-C} can be used to cancel the single step command so it can
+be tried again.
+
+@item
+The HIP runtime currently loads code objects from memory, including
+when loading modules from a file, which results in code object URIs
+being reported as @samp{memory://}.
+
+The @env{HSA_LOADER_ENABLE_MMAP_URI} environment variable can be used
+to request that the @acronym{AMD ROCm} runtime attempt to determine
+the file containing the code object memory so that @samp{file://} URIs
+can be reported.
+
+For example,
+
+@smallexample
+export HSA_LOADER_ENABLE_MMAP_URI=1
+@end smallexample
+
+@item
+AMD GPU does not currently support calling inferior functions.
+
+@item
+The @code{gdbserver} is not supported.
+
+@item
+No language specific support for Fortran or OpenCL.  No OpenMP
+language extension support for C, C++, or Fortran.
+
+@item
+Does not support the @acronym{AMD ROCm} HCC compiler or runtime
+available as part of releases before ROCm 3.5.
+
+@item
+AMD GPU does not currently support the compiler address, memory, or
+thread sanitizers.
+
+@item
+@value{GDBN} support for AMD GPU is not currently available under
+virtualization.
+
+@end enumerate
 
 @node Controlling GDB
 @chapter Controlling @value{GDBN}
@@ -25724,7 +27958,7 @@ is displayed.
 For example:
 
 @smallexample
-set extended-prompt Current working directory: \w (gdb)
+set extended-prompt Current working directory: \w (@value{GDBP})
 @end smallexample
 
 Note that when an extended-prompt is set, it takes control of the
@@ -26335,7 +28569,7 @@ Show whether auto-loading of each specific @samp{auto-load} file(s) is enabled
 or disabled.
 
 @smallexample
-(gdb) show auto-load
+(@value{GDBP}) show auto-load
 gdb-scripts:  Auto-loading of canned sequences of commands scripts is on.
 libthread-db:  Auto-loading of inferior specific libthread_db is on.
 local-gdbinit:  Auto-loading of .gdbinit script from current directory
@@ -26354,7 +28588,7 @@ Print whether each specific @samp{auto-load} file(s) have been auto-loaded or
 not.
 
 @smallexample
-(gdb) info auto-load
+(@value{GDBP}) info auto-load
 gdb-scripts:
 Loaded  Script
 Yes     /home/user/gdb/gdb-gdb.gdb
@@ -26635,8 +28869,8 @@ For example the list of directories from which it is safe to auto-load files
 may not be too obvious while setting it up.
 
 @smallexample
-(gdb) set debug auto-load on
-(gdb) file ~/src/t/true
+(@value{GDBP}) set debug auto-load on
+(@value{GDBP}) file ~/src/t/true
 auto-load: Loading canned sequences of commands script "/tmp/true-gdb.gdb"
            for objfile "/tmp/true".
 auto-load: Updating directories of "/usr:/opt".
@@ -26807,6 +29041,37 @@ Display debugging messages about inner workings of the AIX thread
 module.
 @item show debug aix-thread
 Show the current state of AIX thread debugging info display.
+
+@cindex AMD GPU debugging info
+@anchor{set debug amdgpu}
+@item set debug amdgpu
+@itemx show debug amdgpu
+
+The @code{set debug amdgpu log-level @var{level}} command can be used
+to enable diagnostic messages for the AMD GPU target, where
+@var{level} can be:
+
+@table @code
+
+@item off
+no logging is enabled
+
+@item error
+fatal errors are reported
+
+@item warning
+fatal errors and warnings are reported
+
+@item info
+fatal errors, warnings, and info messages are reported
+
+@item verbose
+all messages are reported
+
+@end table
+
+The @code{show debug amdgpu log-level} command displays the current
+AMD GPU target log level.
 
 @item set debug check-physname
 @cindex physname
@@ -27298,30 +29563,30 @@ prefix command, the subcommands of the redefined command are kept
 
 Example:
 @example
-(gdb) define-prefix abc
-(gdb) define-prefix abc def
-(gdb) define abc def
+(@value{GDBP}) define-prefix abc
+(@value{GDBP}) define-prefix abc def
+(@value{GDBP}) define abc def
 Type commands for definition of "abc def".
 End with a line saying just "end".
 >echo command initial def\n
 >end
-(gdb) define abc def ghi
+(@value{GDBP}) define abc def ghi
 Type commands for definition of "abc def ghi".
 End with a line saying just "end".
 >echo command ghi\n
 >end
-(gdb) define abc def
+(@value{GDBP}) define abc def
 Keeping subcommands of prefix command "def".
 Redefine command "def"? (y or n) y
 Type commands for definition of "abc def".
 End with a line saying just "end".
 >echo command def\n
 >end
-(gdb) abc def ghi
+(@value{GDBP}) abc def ghi
 command ghi
-(gdb) abc def
+(@value{GDBP}) abc def
 command def
-(gdb)
+(@value{GDBP})
 @end example
 
 @kindex dont-repeat
@@ -27829,7 +30094,7 @@ the @samp{disassemble} command and you wanted an even shorter version
 named @samp{di}.  The following will accomplish this.
 
 @smallexample
-(gdb) alias -a di = disas
+(@value{GDBP}) alias -a di = disas
 @end smallexample
 
 Note that aliases are different from user-defined commands.  With a
@@ -27843,10 +30108,10 @@ This is to show that you can make an abbreviation of any part
 of a command.
 
 @smallexample
-(gdb) alias -a set print elms = set print elements
-(gdb) alias -a show print elms = show print elements
-(gdb) set p elms 20
-(gdb) show p elms
+(@value{GDBP}) alias -a set print elms = set print elements
+(@value{GDBP}) alias -a show print elms = show print elements
+(@value{GDBP}) set p elms 20
+(@value{GDBP}) show p elms
 Limit on string chars or array elements to print is 200.
 @end smallexample
 
@@ -27858,7 +30123,7 @@ Unambiguously abbreviated commands are allowed in @var{command} and
 @var{alias}, just as they are normally.
 
 @smallexample
-(gdb) alias -a set pr elms = set p ele
+(@value{GDBP}) alias -a set pr elms = set p ele
 @end smallexample
 
 Finally, here is an example showing the creation of a one word
@@ -27866,8 +30131,8 @@ alias for a more complex command.
 This creates alias @samp{spe} of the command @samp{set print elements}.
 
 @smallexample
-(gdb) alias spe = set print elements
-(gdb) spe 20
+(@value{GDBP}) alias spe = set print elements
+(@value{GDBP}) spe 20
 @end smallexample
 
 @menu
@@ -29094,7 +31359,7 @@ Emacs Manual}).
 
 @cindex @sc{gdb/mi}, its purpose
 @sc{gdb/mi} is a line based machine oriented text interface to
-@value{GDBN} and is activated by specifying using the
+@value{GDBN} and is activated by specifying the
 @option{--interpreter} command line option (@pxref{Mode Options}).  It
 is specifically intended to support the development of systems which
 use the debugger as just one small component of a larger system.
@@ -29150,6 +31415,7 @@ may repeat one or more times.
 * GDB/MI Ada Tasking Commands::
 * GDB/MI Program Execution::
 * GDB/MI Stack Manipulation::
+* GDB/MI Heterogeneous Debugging Commands::
 * GDB/MI Variable Objects::
 * GDB/MI Data Manipulation::
 * GDB/MI Tracepoint Commands::
@@ -29172,7 +31438,7 @@ may repeat one or more times.
 @section @sc{gdb/mi} General Design
 @cindex GDB/MI General Design
 
-Interaction of a @sc{GDB/MI} frontend with @value{GDBN} involves three
+Interaction of a @sc{gdb/mi} frontend with @value{GDBN} involves three
 parts---commands sent to @value{GDBN}, responses to those commands
 and notifications.  Each command results in exactly one response,
 indicating either successful completion of the command, or an error.
@@ -29373,7 +31639,7 @@ The key observation is that regardless of the structure of the
 target, MI can have a global list of threads, because most commands that 
 accept the @samp{--thread} option do not need to know what process that
 thread belongs to.  Therefore, it is not necessary to introduce
-neither additional @samp{--process} option, nor an notion of the
+neither additional @samp{--process} option, nor a notion of the
 current process in the MI interface.  The only strictly new feature
 that is required is the ability to find how the threads are grouped
 into processes.
@@ -29389,14 +31655,14 @@ debugging at the moment.  By passing an identifier of a thread group
 to the @code{-list-thread-groups} command, it is possible to obtain
 the members of specific thread group.
 
-To allow the user to easily discover processes, and other objects, he
-wishes to debug, a concept of @dfn{available thread group} is
-introduced.  Available thread group is an thread group that
+To allow users to easily discover processes, and other objects, they
+wish to debug, a concept of @dfn{available thread group} is
+introduced.  Available thread group is a thread group that
 @value{GDBN} is not debugging, but that can be attached to, using the
 @code{-target-attach} command.  The list of available top-level thread
 groups can be obtained using @samp{-list-thread-groups --available}.
-In general, the content of a thread group may be only retrieved only
-after attaching to that thread group.
+In general, the content of a thread group may be retrieved only after
+attaching to that thread group.
 
 Thread groups are related to inferiors (@pxref{Inferiors Connections and
 Programs}).  Each inferior corresponds to a thread group of a special
@@ -29525,7 +31791,7 @@ corresponding output for that command will also be prefixed by that same
 @code{"done" | "running" | "connected" | "error" | "exit"}
 
 @item @var{async-class} @expansion{}
-@code{"stopped" | @var{others}} (where @var{others} will be added
+@code{"stopped" | "running" | @var{others}} (where @var{others} will be added
 depending on the needs---this is still in development).
 
 @item @var{result} @expansion{}
@@ -29591,7 +31857,7 @@ prefixed by @samp{+}.
 @item
 @cindex async output in @sc{gdb/mi}
 @var{exec-async-output} contains asynchronous state change on the target
-(stopped, started, disappeared).  All async output is prefixed by
+(stopped, running).  All async output is prefixed by
 @samp{*}.
 
 @item
@@ -29696,7 +31962,7 @@ The following table gives a summary of the released versions of the MI
 interface: the version number, the version of GDB in which it first appeared
 and the breaking changes compared to the previous version.
 
-@multitable @columnfractions .05 .05 .9
+@multitable @columnfractions .1 .1 .8
 @headitem MI version @tab GDB version @tab Breaking changes
 
 @item
@@ -29715,7 +31981,7 @@ None
 @itemize
 @item
 The @code{-environment-pwd}, @code{-environment-directory} and
-@code{-environment-path} commands now returns values using the MI output
+@code{-environment-path} commands now return values using the MI output
 syntax, rather than CLI output syntax.
 
 @item
@@ -29774,6 +32040,9 @@ follow development on @email{gdb@@sourceware.org} and
 * GDB/MI Breakpoint Information::
 * GDB/MI Frame Information::
 * GDB/MI Thread Information::
+* GDB/MI Heterogeneous Agent Information::
+* GDB/MI Heterogeneous Queue Information::
+* GDB/MI Heterogeneous Dispatch Information::
 * GDB/MI Ada Exception Information::
 @end menu
 
@@ -30065,7 +32334,7 @@ for existing method and format values.
 Reports that a parameter of the command @code{set @var{param}} is
 changed to @var{value}.  In the multi-word @code{set} command,
 the @var{param} is the whole parameter list to @code{set} command.
-For example, In command @code{set check type on}, @var{param}
+For example, in command @code{set check type on}, @var{param}
 is @code{check type} and @var{value} is @code{on}.
 
 @item =memory-changed,thread-group=@var{id},addr=@var{addr},len=@var{len}[,type="code"]
@@ -30265,7 +32534,7 @@ For example, here is what the output of @code{-break-insert}
 @node GDB/MI Frame Information
 @subsection @sc{gdb/mi} Frame Information
 
-Response from many MI commands includes an information about stack
+Response from many MI commands includes information about a stack
 frame.  This information is a tuple that may have the following
 fields:
 
@@ -30295,7 +32564,7 @@ The source line corresponding to the frames' code address.  This field
 may be absent.
 
 @item from
-The name of the binary file (either executable or shared library) the
+The name of the binary file (either executable or shared library) that
 corresponds to the frame's code address.  This field may be absent.
 
 @end table
@@ -30303,7 +32572,7 @@ corresponds to the frame's code address.  This field may be absent.
 @node GDB/MI Thread Information
 @subsection @sc{gdb/mi} Thread Information
 
-Whenever @value{GDBN} has to report an information about a thread, it
+Whenever @value{GDBN} has to report information about a thread, it
 uses a tuple with the following fields.  The fields are always present unless
 stated otherwise.
 
@@ -30338,6 +32607,183 @@ if the thread is stopped.  Its format is documented in
 @item core
 The value of this field is an integer number of the processor core the
 thread was last seen on.  This field is optional.
+@end table
+
+@node GDB/MI Heterogeneous Agent Information
+@subsection @sc{gdb/mi} Heterogeneous Agent Information
+
+Whenever @value{GDBN} has to report information about a heterogeneous
+agent (@pxref{Heterogeneous Debugging}), it uses a tuple with the
+following fields.  The fields are always present unless stated
+otherwise.
+
+@table @code
+@item id
+The qualified heterogeneous agent ID.  @xref{qualified heterogeneous
+entity numbers}.
+
+@item target-id
+The target-specific string identifying the heterogeneous agent.
+
+@item details
+Additional information about the heterogeneous agent provided by the
+target.  It is supposed to be human-readable and not interpreted by
+the frontend.  This field is optional.
+
+@item device-name
+The target system's heterogeneous agent identifier.  This field is
+optional.
+
+@item cores
+The number of compute unit cores.
+
+@item threads
+The total number of threads.  The number of threads that a core can
+execute concurrently is dependent on the target architecture of the
+device.
+
+@item location
+The target-specific string identifying the location of the agent.  For
+example, some target agents may use the @acronym{PCI} slot number in
+@acronym{BDF, Bus:Device.Function} notation.
+@end table
+
+@node GDB/MI Heterogeneous Queue Information
+@subsection @sc{gdb/mi} Heterogeneous Queue Information
+
+Whenever @value{GDBN} has to report information about a heterogeneous
+queue (@pxref{Heterogeneous Debugging}), it uses a tuple with the
+following fields.  The fields are always present unless stated
+otherwise.
+
+@table @code
+@item id
+The qualified heterogeneous queue ID.  @xref{qualified heterogeneous
+entity numbers}.
+
+@item agent-id
+The qualified heterogeneous agent ID with which the heterogeneous
+queue is associated.  @xref{qualified heterogeneous entity numbers}.
+
+@item target-id
+The target-specific string identifying the heterogeneous queue.
+
+@item details
+Additional information about the heterogeneous queue provided by the
+target.  It is supposed to be human-readable and not interpreted by
+the frontend.  This field is optional.
+
+@item type
+The type of the heterogeneous queue.  The meaning of the queue types
+is target architecture and operating system dependant.
+
+@item read
+The target system's heterogeneous packet identifier for the next
+packet that will be read from the heterogeneous queue by the device.
+
+@item write
+The target system's heterogeneous packet identifier for the next
+packet that will be written to the heterogeneous queue for submission
+to the device.
+
+@item size
+The size in bytes of the heterogeneous queue packet buffer.
+
+@item addr
+The global memory address of the heterogeneous queue packet buffer.
+@end table
+
+@node GDB/MI Heterogeneous Dispatch Information
+@subsection @sc{gdb/mi} Heterogeneous Dispatch Information
+
+Whenever @value{GDBN} has to report information about a heterogeneous
+dispatch (@pxref{Heterogeneous Debugging}), it uses a tuple with the
+following fields. The fields are always present unless stated
+otherwise.
+
+@table @code
+@item id
+The qualified heterogeneous dispatch ID.  @xref{qualified
+heterogeneous entity numbers}.
+
+@item queue-id
+The qualified heterogeneous queue ID with which the heterogeneous
+dispatch is associated.  @xref{qualified heterogeneous entity
+numbers}.
+
+@item target-id
+The target-specific string identifying the heterogeneous dispatch.
+
+@item details
+Additional information about the heterogeneous dispatch provided by
+the target.  It is supposed to be human-readable and not interpreted
+by the frontend.  This field is optional.
+
+@item grid
+A list of the x, y, and z heterogeneous grid dimensions, in that
+order, in terms of work-items of the heterogeneous dispatch.  The
+number of elements matches the dimensionality of the heterogeneous
+dispatch.
+
+@item workgroup
+A list of the x, y, and z heterogeneous work-group dimensions, in that
+order in terms of work-items of the heterogeneous dispatch.  The
+number of elements matches the dimensionality of the heterogeneous
+dispatch.
+
+@item fences
+A list of the fences associated with the heterogeneous dispatch
+packet.  The kinds of fences are target architecture dependent.  Each
+fence is a tuple with the following fields:
+
+@table @code
+@item name
+The name of the fence.
+
+@item value
+The value of the fence.  This field is optional.  If omitted then the
+fence is present if in the list.
+
+@item abbrev
+An abbreviation that can be used to display the fence and its value.
+This field is optional.
+@end table
+
+@item address-spaces
+A list of address spaces associated with the heterogeneous dispatch
+packet.  The address spaces are target architecture dependent.  Each
+address space is a tuple with the following fields:
+
+@table @code
+@item name
+The name of the address space.
+
+@item size
+The size in bytes of the address space.
+
+@item abbrev
+An abbreviation that can be used to display the address space.  This
+field is optional.
+@end table
+
+@item kernel-desc
+The global memory address of the kernel descriptor for the
+heterogeneous dispatch.  The descriptor is target architecture
+dependent.
+
+@item kernel-args
+The global memory address of the kernel arguments for the
+heterogeneous dispatch.
+
+@item completion
+The global memory address of the completion event for the
+heterogeneous dispatch.  Omitted if the heterogeneous dispatch has no
+completion event.  The event is target architecture and operating
+system dependent.
+
+@item kernel-function
+The global memory address of the kernel function entry point for the
+heterogeneous dispatch.
 @end table
 
 @node GDB/MI Ada Exception Information
@@ -32873,6 +35319,181 @@ The corresponding @value{GDBN} commands are @samp{frame}, @samp{up},
 (gdb)
 -stack-select-frame 2
 ^done
+(gdb)
+@end smallexample
+
+@c %%%%%%%%%%%%%%%%%%%%%%%%%%%% SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+@node GDB/MI Heterogeneous Debugging Commands
+@section @sc{gdb/mi} Heterogeneous Debugging Commands
+
+@cindex heterogeneous debugging commands for @sc{gdb/mi}
+@cindex @sc{gdb/mi}, heterogeneous debugging commands
+This section documents @sc{gdb/mi} commands for heterogeneous
+debugging (@pxref{Heterogeneous Debugging}).
+
+@subheading The @code{-agent-info} Command
+@findex -agent-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -agent-info [ @var{agent-id} ]
+@end smallexample
+
+Reports information about either a specific heterogeneous agent, if
+the @var{agent-id} parameter is present, or about all heterogeneous
+agents.  @var{agent-id} is the qualified heterogeneous agent ID.  When
+printing information about all heterogeneous agents, also reports the
+qualified heterogeneous agent ID of the current heterogeneous agent.
+@xref{qualified heterogeneous entity numbers}.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info agents}.
+
+@subsubheading Result
+
+The result contains the following attributes:
+
+@table @code
+@item agents
+A list of heterogeneous agents.  The format of the elements of the
+list is described in @ref{GDB/MI Heterogeneous Agent Information}.
+
+@item current-agent-id
+The qualified heterogeneous agent ID of the heterogeneous agent
+associated with the currently selected thread.  This field is omitted
+if there is no selected thread (for example, when the selected
+inferior is not running, and therefore has no threads), the selected
+thread is not associated with a heterogeneous agent, or if a
+@var{agent-id} argument was passed to the command.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-agent-info
+^done,agents=[
+@{id="1.1",target-id="AMDGPU Agent (GPUID 45151)",
+  device-name="vega20",cores="240",threads="2400",location="0a:00.0"@}​​​​​,
+@{id="1.2",target-id="AMDGPU Agent (GPUID 39113)",
+  device-name="vega20",cores="240",threads="2400",location="44:00.0"@}​​​​​],
+current-agent-id="1.1"
+(gdb)
+@end smallexample
+
+@subheading The @code{-queue-info} Command
+@findex -queue-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -queue-info [ @var{queue-id} ]
+@end smallexample
+
+Reports information about either a specific heterogeneous queue, if
+the @var{queue-id} parameter is present, or about all heterogeneous
+queues.  @var{queue-id} is the qualified heterogeneous queue ID.  When
+printing information about all heterogeneous queues, also reports the
+qualified heterogeneous queue ID of the current heterogeneous queue.
+@xref{qualified heterogeneous entity numbers}.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info queues}.
+
+@subsubheading Result
+
+The result contains the following attributes:
+
+@table @code
+@item queues
+A list of heterogeneous queues.  The format of the elements of the
+list is described in @ref{GDB/MI Heterogeneous Queue Information}.
+
+@item current-queue-id
+The qualified heterogeneous queue ID of the heterogeneous queue
+associated with the currently selected thread.  This field is omitted
+if there is no selected thread (for example, when the selected
+inferior is not running, and therefore has no threads), the selected
+thread is not associated with a heterogeneous queue, or if a
+@var{queue-id} argument was passed to the command.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-queue-info
+^done,queues=[
+@{id="1.1",agent-id="1.1",target-id="AMDGPU Queue 1:1 (QID 2)",type="HSA (Multi)",
+  read="0",write="2",size="65536",addr="0x00007ffff7ee0000"@}​​​​​,
+@{id="1.2",agent-id="1.1",target-id="AMDGPU Queue 1:2 (QID 3)",type="DMA",
+  size="1048576",addr="0x00007ffde4800000"@}​​​​​],
+@{id="1.3",agent-id="1.1",target-id="AMDGPU Queue 2:3 (QID 1)",type="HSA (Multi)",
+  read="2",write="2",size="262144",addr="0x00007ffff7e80000"@}​​​​​,
+@{id="1.4",agent-id="1.1",target-id="AMDGPU Queue 1:4 (QID 0)",type="HSA (Multi)",
+  read="4",write="4",size="262144",addr="0x00007ffff7f80000"@}​​​​​],
+current-queue-id="1.1"
+(gdb)
+@end smallexample
+
+@subheading The @code{-dispatch-info} Command
+@findex -agent-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -dispatch-info [ @var{dispatch-id} ]
+@end smallexample
+
+Reports information about either a specific heterogeneous dispatch, if
+the @var{dispatch-id} parameter is present, or about all heterogeneous
+dispatches.  @var{dispatch-id} is the qualified heterogeneous dispatch
+ID.  When printing information about all heterogeneous dispatches,
+also reports the qualified heterogeneous dispatch ID of the current
+heterogeneous dispatch.  @xref{qualified heterogeneous entity
+numbers}.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info dispatches}.
+
+@subsubheading Result
+
+The result contains the following attributes:
+
+@table @code
+@item dispatches
+A list of heterogeneous dispatches.  The format of the elements of the
+list is described in @ref{GDB/MI Heterogeneous Dispatch Information}.
+
+@item current-dispatch-id
+The qualified heterogeneous dispatch ID of the heterogeneous dispatch
+associated with the currently selected thread.  This field is omitted
+if there is no selected thread (for example, when the selected
+inferior is not running, and therefore has no threads), the selected
+thread is not associated with a heterogeneous dispatch, or if a
+@var{dispatch-id} argument was passed to the command.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-dispatch-info
+^done,dispatches=[
+@{id="1.1",queue_id="1.1",target-id="AMDGPU Dispatch 1:1:1 (PKID 0)",
+  grid="[1024,1,1]",workgroup="[256,1,1]",
+  fences=[@{name="Barrier", abbrev="B"@},@{name="Aquire", value="System", abbrev="As"@}],
+  address-spaces=[@{name="Shared", size="0"@},@{name="Private", size="0"@}],
+  kernel-desc="0x00007ffde7e00740",kernel-args="0x00007fffeff00000",
+  completion="0x0000000000000000",kernel-function="0x00007ffde7e01000"@}​​​​​],
+current-dispatch-id="1.1"
 (gdb)
 @end smallexample
 
@@ -39354,6 +41975,13 @@ frame cache.  This command is useful when debugging issues related to
 register fetching, or frame unwinding.  The command @code{flushregs}
 is deprecated in favor of @code{maint flush register-cache}.
 
+@kindex maint print address-spaces
+@item maint print address-spaces @r{[}@var{file}@r{]}
+Print @value{GDBN}'s internal address space data structures.  The
+optional argument @var{file} tells to what file to write the
+information.  @xref{maint print address-spaces,, @code{maint print
+address-spaces}}.
+
 @kindex maint print objfiles
 @cindex info for known object files
 @item maint print objfiles @r{[}@var{regexp}@r{]}
@@ -39450,7 +42078,7 @@ always see the disassembly form.
 Here is an example of the resulting disassembly:
 
 @smallexample
-(gdb) info addr argc
+(@value{GDBP}) info addr argc
 Symbol "argc" is a complex DWARF expression:
      1: DW_OP_fbreg 0
 @end smallexample
@@ -45839,7 +48467,7 @@ defining them with @samp{flags}:
 One can fetch individual fields like in @samp{C}.
 
 @smallexample
-(gdb) print $my_struct_reg.field3
+(@value{GDBP}) print $my_struct_reg.field3
 $1 = 42
 @end smallexample
 
@@ -45997,7 +48625,7 @@ Given that description, a value of 3 for the @samp{flags} register
 would be printed as:
 
 @smallexample
-(gdb) info register flags
+(@value{GDBP}) info register flags
 flags 0x3 [ X LEVEL=high ]
 @end smallexample
 
@@ -47356,10 +49984,10 @@ descriptor.  For example:
 @smallexample
 @ifset man
 @c @file would wrap it as F</dev/ttyb>.
-(gdb) target remote /dev/ttyb
+(@value{GDBP}) target remote /dev/ttyb
 @end ifset
 @ifclear man
-(gdb) target remote @file{/dev/ttyb}
+(@value{GDBP}) target remote @file{/dev/ttyb}
 @end ifclear
 @end smallexample
 
@@ -47367,7 +49995,7 @@ descriptor.  For example:
 communicates with the server via serial line @file{/dev/ttyb}, and:
 
 @smallexample
-(gdb) target remote the-target:2345
+(@value{GDBP}) target remote the-target:2345
 @end smallexample
 
 @noindent
@@ -47389,7 +50017,7 @@ the @value{GDBN} manual in node @code{Inferiors Connections and Programs}
 In such case use the @code{extended-remote} @value{GDBN} command variant:
 
 @smallexample
-(gdb) target extended-remote the-target:2345
+(@value{GDBP}) target extended-remote the-target:2345
 @end smallexample
 
 The @command{gdbserver} option @option{--multi} may or may not be used in such

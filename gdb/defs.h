@@ -2,6 +2,7 @@
 		      for now.  */
 /* Basic, host-specific, and target-specific definitions for GDB.
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -626,6 +627,15 @@ enum user_selected_what_flag
     USER_SELECTED_FRAME = 1 << 3
   };
 DEF_ENUM_FLAGS_TYPE (enum user_selected_what_flag, user_selected_what);
+
+/* FIXME: Needs to be removed when address space support is implemented.  */
+#ifndef ROCM_ASPACE_BIT_OFFSET
+#define ROCM_ASPACE_BIT_OFFSET 56
+#endif
+
+#ifndef ROCM_ASPACE_MASK
+#define ROCM_ASPACE_MASK 0xff00000000000000
+#endif
 
 #include "utils.h"
 

@@ -1,6 +1,7 @@
 /* Definitions for values of C expressions, for GDB.
 
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
+   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -678,6 +679,8 @@ extern struct value *value_field_bitfield (struct type *type, int fieldno,
 					   const struct value *val);
 
 extern void pack_long (gdb_byte *buf, struct type *type, LONGEST num);
+extern void pack_unsigned_long (gdb_byte *buf, struct type *type,
+				ULONGEST num);
 
 extern struct value *value_from_longest (struct type *type, LONGEST num);
 extern struct value *value_from_ulongest (struct type *type, ULONGEST num);
@@ -738,7 +741,7 @@ extern struct value *allocate_value (struct type *type);
 extern struct value *allocate_value_lazy (struct type *type);
 extern void value_contents_copy (struct value *dst, LONGEST dst_offset,
 				 struct value *src, LONGEST src_offset,
-				 LONGEST length);
+				 LONGEST src_bit_offset, LONGEST length);
 
 extern struct value *allocate_repeat_value (struct type *type, int count);
 

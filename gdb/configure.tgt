@@ -149,6 +149,11 @@ alpha*-*-openbsd*)
 			alpha-netbsd-tdep.o alpha-obsd-tdep.o nbsd-tdep.o"
 	;;
 
+amdgcn*-*-*)
+	# Target: AMDGPU
+	require_rocm_dbgapi=yes
+	;;
+
 am33_2.0*-*-linux*)
 	# Target: Matsushita mn10300 (AM33) running Linux
 	gdb_target_obs="mn10300-tdep.o mn10300-linux-tdep.o linux-tdep.o \
