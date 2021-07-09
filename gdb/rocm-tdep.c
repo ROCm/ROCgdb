@@ -240,31 +240,44 @@ rocm_target_id_string (amd_dbgapi_wave_id_t wave_id)
   amd_dbgapi_agent_id_t agent_id;
   uint32_t group_ids[3], wave_in_group;
 
-  if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_DISPATCH,
-				sizeof (dispatch_id), &dispatch_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_QUEUE,
-				   sizeof (queue_id), &queue_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_AGENT,
-				   sizeof (agent_id), &agent_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_wave_get_info (wave_id,
+  std::string str = "AMDGPU Thread";
+
+  str += (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_AGENT,
+				    sizeof (agent_id), &agent_id)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	   ? string_printf (" %ld", agent_id.handle)
+	   : " ?";
+
+  str += (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_QUEUE,
+				    sizeof (queue_id), &queue_id)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	   ? string_printf (":%ld", queue_id.handle)
+	   : ":?";
+
+  str += (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_DISPATCH,
+				    sizeof (dispatch_id), &dispatch_id)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	   ? string_printf (":%ld", dispatch_id.handle)
+	   : ":?";
+
+  str += string_printf (":%ld", wave_id.handle);
+
+  str += amd_dbgapi_wave_get_info (wave_id,
 				   AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD,
 				   sizeof (group_ids), &group_ids)
-	   != AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_wave_get_info (
+	     == AMD_DBGAPI_STATUS_SUCCESS
+	   ? string_printf (" (%d,%d,%d)", group_ids[0], group_ids[1],
+			    group_ids[2])
+	   : " (?,?,?)";
+
+  str += amd_dbgapi_wave_get_info (
 	   wave_id, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
 	   sizeof (wave_in_group), &wave_in_group)
-	   != AMD_DBGAPI_STATUS_SUCCESS)
-    /* The wave could have exited, so return a simple string to indicate this
-       is a GPU thread.  */
-    return "AMDGPU Thread";
+	     == AMD_DBGAPI_STATUS_SUCCESS
+	   ? string_printf ("/%d", wave_in_group)
+	   : "/?";
 
-  return string_printf ("AMDGPU Thread %ld:%ld:%ld:%ld (%d,%d,%d)/%d",
-			agent_id.handle, queue_id.handle, dispatch_id.handle,
-			wave_id.handle, group_ids[0], group_ids[1],
-			group_ids[2], wave_in_group);
+  return str;
 }
 
 /* Return the target id string for a given dispatch.  */
@@ -1732,7 +1745,8 @@ rocm_target_ops::displaced_step_prepare (thread_info *thread,
     = amd_dbgapi_displaced_stepping_start (wave_id, overwritten_bytes.get (),
 					   &stepping_id);
 
-  if (status == AMD_DBGAPI_STATUS_ERROR_DISPLACED_STEPPING_BUFFER_UNAVAILABLE)
+  if (status
+      == AMD_DBGAPI_STATUS_ERROR_DISPLACED_STEPPING_BUFFER_NOT_AVAILABLE)
     return DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE;
   else if (status == AMD_DBGAPI_STATUS_ERROR_ILLEGAL_INSTRUCTION)
     return DISPLACED_STEP_PREPARE_STATUS_CANT;
