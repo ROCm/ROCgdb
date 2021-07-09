@@ -331,6 +331,7 @@ main (int argc, char **argv)
 
   link_info.allow_undefined_version = true;
   link_info.keep_memory = true;
+  link_info.max_cache_size = (bfd_size_type) -1;
   link_info.combreloc = true;
   link_info.strip_discarded = true;
   link_info.prohibit_multiple_definition_absolute = false;
@@ -346,6 +347,7 @@ main (int argc, char **argv)
   link_info.relax_pass = 1;
   link_info.extern_protected_data = -1;
   link_info.dynamic_undefined_weak = -1;
+  link_info.indirect_extern_access = -1;
   link_info.pei386_auto_import = -1;
   link_info.spare_dynamic_tags = 5;
   link_info.path_separator = ':';

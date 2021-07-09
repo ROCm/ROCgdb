@@ -1972,6 +1972,8 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    break;
 	  }
 
+      eh = (struct elf_x86_link_hash_entry *) h;
+
       if (h != NULL)
 	{
 	  /* It is referenced by a non-shared object. */
@@ -2008,7 +2010,6 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
       if (h == htab->elf.hgot)
 	htab->got_referenced = true;
 
-      eh = (struct elf_x86_link_hash_entry *) h;
       switch (r_type)
 	{
 	case R_X86_64_TLSLD:
@@ -2263,6 +2264,9 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		     adjust_dynamic_symbol.  */
 		  h->non_got_ref = 1;
 
+		  if (!elf_has_indirect_extern_access (sec->owner))
+		    eh->non_got_ref_without_indirect_extern_access = 1;
+
 		  /* We may need a .plt entry if the symbol is a function
 		     defined in a shared lib or is a function referenced
 		     from the code or read-only section.  */
@@ -2365,13 +2369,14 @@ elf_x86_64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
   if (elf_section_data (sec)->this_hdr.contents != contents)
     {
-      if (!converted && !info->keep_memory)
+      if (!converted && !_bfd_link_keep_memory (info))
 	free (contents);
       else
 	{
 	  /* Cache the section contents for elf_link_input_bfd if any
 	     load is converted or --no-keep-memory isn't used.  */
 	  elf_section_data (sec)->this_hdr.contents = contents;
+	  info->cache_size += sec->size;
 	}
     }
 
@@ -3160,6 +3165,8 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 		       || (no_copyreloc_p
 			   && h->def_dynamic
 			   && !(h->root.u.def.section->flags & SEC_CODE))))
+		  || (bfd_link_pie (info)
+		      && h->root.type == bfd_link_hash_undefweak)
 		  || bfd_link_dll (info)))
 	    {
 	      bool fail = false;
@@ -3173,8 +3180,9 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 		{
 		  /* We can only use PC-relative relocations in PIE
 		     from non-code sections.  */
-		  if (h->type == STT_FUNC
-		      && (sec->flags & SEC_CODE) != 0)
+		  if (h->root.type == bfd_link_hash_undefweak
+		      || (h->type == STT_FUNC
+			  && (sec->flags & SEC_CODE) != 0))
 		    fail = true;
 		}
 	      else if (no_copyreloc_p || bfd_link_dll (info))
