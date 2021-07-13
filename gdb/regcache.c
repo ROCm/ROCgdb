@@ -2040,15 +2040,19 @@ regcache_thread_ptid_changed ()
   /* Prepare two targets with one thread each, with the same ptid.  */
   scoped_mock_context<test_target_ops> target1 (arch);
   scoped_mock_context<test_target_ops> target2 (arch);
-  target2.mock_inferior.next = &target1.mock_inferior;
 
   ptid_t old_ptid (111, 222);
   ptid_t new_ptid (111, 333);
 
   target1.mock_inferior.pid = old_ptid.pid ();
   target1.mock_thread.ptid = old_ptid;
+  target1.mock_inferior.ptid_thread_map.clear ();
+  target1.mock_inferior.ptid_thread_map[old_ptid] = &target1.mock_thread;
+
   target2.mock_inferior.pid = old_ptid.pid ();
   target2.mock_thread.ptid = old_ptid;
+  target2.mock_inferior.ptid_thread_map.clear ();
+  target2.mock_inferior.ptid_thread_map[old_ptid] = &target2.mock_thread;
 
   gdb_assert (regcaches.empty ());
 

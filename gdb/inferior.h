@@ -55,12 +55,15 @@ struct thread_info;
 #include "gdbsupport/refcounted-object.h"
 #include "gdbsupport/forward-scope-exit.h"
 #include "gdbsupport/gdb_unique_ptr.h"
+#include "gdbsupport/intrusive_list.h"
 
 #include "gdbsupport/common-inferior.h"
 #include "gdbthread.h"
 
 #include "process-stratum-target.h"
 #include "displaced-stepping.h"
+
+#include <unordered_map>
 
 struct infcall_suspend_state;
 struct infcall_control_state;
@@ -339,7 +342,8 @@ extern void switch_to_inferior_no_thread (inferior *inf);
    listed exactly once in the inferior list, so placing an inferior in
    the inferior list is an implicit, not counted strong reference.  */
 
-class inferior : public refcounted_object
+class inferior : public refcounted_object,
+		 public intrusive_list_node<inferior>
 {
 public:
   explicit inferior (int pid);
@@ -360,8 +364,7 @@ public:
   }
 
   /* Unpush T from this inferior's target stack.  */
-  int unpush_target (struct target_ops *t)
-  { return m_target_stack.unpush (t); }
+  int unpush_target (struct target_ops *t);
 
   /* Returns true if T is pushed in this inferior's target stack.  */
   bool target_is_pushed (target_ops *t)
@@ -387,11 +390,12 @@ public:
   bool has_execution ()
   { return target_has_execution (this); }
 
-  /* Pointer to next inferior in singly-linked list of inferiors.  */
-  struct inferior *next = NULL;
+  /* This inferior's thread list, sorted by creation order.  */
+  intrusive_list<thread_info> thread_list;
 
-  /* This inferior's thread list.  */
-  thread_info *thread_list = nullptr;
+  /* A map of ptid_t to thread_info*, for average O(1) ptid_t lookup.
+     Exited threads do not appear in the map.  */
+  std::unordered_map<ptid_t, thread_info *, hash_ptid> ptid_thread_map;
 
   /* Returns a range adapter covering the inferior's threads,
      including exited threads.  Used like this:
@@ -400,7 +404,7 @@ public:
 	 { .... }
   */
   inf_threads_range threads ()
-  { return inf_threads_range (this->thread_list); }
+  { return inf_threads_range (this->thread_list.begin ()); }
 
   /* Returns a range adapter covering the inferior's non-exited
      threads.  Used like this:
@@ -409,7 +413,7 @@ public:
 	 { .... }
   */
   inf_non_exited_threads_range non_exited_threads ()
-  { return inf_non_exited_threads_range (this->thread_list); }
+  { return inf_non_exited_threads_range (this->thread_list.begin ()); }
 
   /* Like inferior::threads(), but returns a range adapter that can be
      used with range-for, safely.  I.e., it is safe to delete the
@@ -420,7 +424,11 @@ public:
 	 delete f;
   */
   inline safe_inf_threads_range threads_safe ()
-  { return safe_inf_threads_range (this->thread_list); }
+  { return safe_inf_threads_range (this->thread_list.begin ()); }
+
+  /* Delete all threads in the thread list.  If SILENT, exit threads
+     silently.  */
+  void clear_thread_list (bool silent);
 
   /* Continuations-related methods.  A continuation is an std::function
      to be called to finish the execution of a command when running
@@ -649,7 +657,7 @@ private:
 
 /* Traverse all inferiors.  */
 
-extern struct inferior *inferior_list;
+extern intrusive_list<inferior> inferior_list;
 
 /* Pull in the internals of the inferiors ranges and iterators.  Must
    be done after struct inferior is defined.  */

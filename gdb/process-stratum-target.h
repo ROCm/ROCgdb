@@ -22,6 +22,8 @@
 
 #include "target.h"
 #include <set>
+#include "gdbsupport/intrusive_list.h"
+#include "gdbthread.h"
 
 /* Abstract base class inherited by all process_stratum targets.  */
 
@@ -78,6 +80,24 @@ public:
      may have spawned new threads we haven't heard of yet.  */
   bool threads_executing = false;
 
+  /* If THREAD is resumed and has a pending wait status, add it to the
+     target's "resumed with pending wait status" list.  */
+  void maybe_add_resumed_with_pending_wait_status (thread_info *thread);
+
+  /* If THREAD is resumed and has a pending wait status, remove it from the
+     target's "resumed with pending wait status" list.  */
+  void maybe_remove_resumed_with_pending_wait_status (thread_info *thread);
+
+  /* Return true if this target has at least one resumed thread with a pending
+     wait status.  */
+  bool has_resumed_with_pending_wait_status () const
+  { return !m_resumed_with_pending_wait_status.empty (); }
+
+  /* Return a random resumed thread with pending wait status belonging to INF
+     and matching FILTER_PTID.  */
+  thread_info *random_resumed_with_pending_wait_status
+    (inferior *inf, ptid_t filter_ptid);
+
   /* The connection number.  Visible in "info connections".  */
   int connection_number = 0;
 
@@ -112,6 +132,17 @@ public:
      coalesce multiple resumption requests in a single vCont
      packet.  */
   bool commit_resumed_state = false;
+
+private:
+  /* List of threads managed by this target which simultaneously are resumed
+     and have a pending wait status.
+
+     This is done for optimization reasons, it would be possible to walk the
+     inferior thread lists to find these threads.  But since this is something
+     we need to do quite frequently in the hot path, maintaining this list
+     avoids walking the thread lists repeatedly.  */
+  thread_info_resumed_with_pending_wait_status_list
+    m_resumed_with_pending_wait_status;
 };
 
 /* Downcast TARGET to process_stratum_target.  */
