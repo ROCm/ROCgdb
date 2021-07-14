@@ -1531,6 +1531,15 @@ rocm_target_ops::mourn_inferior ()
 void
 rocm_target_ops::detach (inferior *inf, int from_tty)
 {
+  /* We're about to resume the waves by detaching the dbgapi library from the
+     inferior, so we need to remove all breakpoints that are still inserted.
+
+     Breakpoints may still be inserted because the inferior may be running in
+     non-stop mode, or because ROCgdb changed the default setting to leave all
+     breakpoints inserted in all-stop mode when all threads are stopped.
+   */
+  remove_breakpoints_inf (current_inferior ());
+
   rocm_disable (inf);
   beneath ()->detach (inf, from_tty);
 }
