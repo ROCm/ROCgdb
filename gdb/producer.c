@@ -123,8 +123,16 @@ producer_is_icc (const char *producer, int *major, int *minor)
 bool
 producer_is_llvm (const char *producer)
 {
-  return ((producer != NULL) && (startswith (producer, "clang ")
-				 || startswith (producer, " F90 Flang ")));
+  if (producer != nullptr)
+    {
+      const char *p = strstr (producer, "clang ");
+      if (p == producer
+	  || (p != nullptr && p[-1] == ' '))
+	return true;
+      if (startswith (producer, " F90 Flang "))
+        return true;
+    }
+  return false;
 }
 
 #if defined GDB_SELF_TEST
@@ -220,6 +228,24 @@ Version 18.0 Beta";
     SELF_CHECK (!producer_is_icc (flang_llvm_exp, NULL, NULL));
     SELF_CHECK (!producer_is_gcc (flang_llvm_exp, &major, &minor));
     SELF_CHECK (producer_is_llvm (flang_llvm_exp));
+  }
+
+  {
+    static const char flang_llvm_exp[]
+      = "AMD clang version 12.0.0 (CLANG: bld#8)";
+    int major = 0, minor = 0;
+    SELF_CHECK (!producer_is_icc (flang_llvm_exp, NULL, NULL));
+    SELF_CHECK (!producer_is_gcc (flang_llvm_exp, &major, &minor));
+    SELF_CHECK (producer_is_llvm (flang_llvm_exp));
+  }
+
+  {
+    static const char flang_llvm_exp[]
+      = "fooclang version 12.0.0 (CLANG: bld#8)";
+    int major = 0, minor = 0;
+    SELF_CHECK (!producer_is_icc (flang_llvm_exp, NULL, NULL));
+    SELF_CHECK (!producer_is_gcc (flang_llvm_exp, &major, &minor));
+    SELF_CHECK (!producer_is_llvm (flang_llvm_exp));
   }
 }
 }

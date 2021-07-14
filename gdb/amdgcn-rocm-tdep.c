@@ -30,6 +30,7 @@
 #include "inferior.h"
 #include "objfiles.h"
 #include "osabi.h"
+#include "producer.h"
 #include "reggroups.h"
 #include "rocm-tdep.h"
 
@@ -484,7 +485,7 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 	 one after.  We trust clang to emit usable line notes.  */
       if (post_prologue_pc
 	  && (cust != NULL && COMPUNIT_PRODUCER (cust) != NULL
-	      && startswith (COMPUNIT_PRODUCER (cust), "clang ")))
+	      && producer_is_llvm (COMPUNIT_PRODUCER (cust))))
 	return std::max (start_pc, post_prologue_pc);
     }
 
