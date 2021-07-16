@@ -20,13 +20,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "gdbthread.h"
 #include "symtab.h"
 #include "frame.h"
 #include "inferior.h"
 #include "gdbsupport/environ.h"
 #include "value.h"
 #include "target.h"
-#include "gdbthread.h"
 #include "command.h"
 #include "gdbcmd.h"
 #include "regcache.h"
