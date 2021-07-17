@@ -70,8 +70,8 @@ struct gdbarch_tdep
   /* A map of register_class_ids keyed by their name.  */
   std::unordered_map<std::string, amd_dbgapi_register_class_id_t>
     register_class_map;
-  /* A cache of vector types.  */
-  std::unordered_map<std::string, struct type *> vector_type_map;
+  /* A cache of types created from the amd-dbgapi type strings.  */
+  std::unordered_map<std::string, struct type *> type_map;
 };
 
 #endif /* amdgcn-rocm-tdep.h */
