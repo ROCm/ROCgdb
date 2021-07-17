@@ -28,9 +28,14 @@
 #include "gdbarch.h"
 #include "gdbsupport/gdb_unique_ptr.h"
 #include "inferior.h"
+#include "objfiles.h"
 #include "osabi.h"
 #include "reggroups.h"
 #include "rocm-tdep.h"
+
+#include <iterator>
+#include <regex>
+#include <string>
 
 bool
 rocm_is_amdgcn_gdbarch (struct gdbarch *arch)
@@ -74,6 +79,110 @@ amdgcn_return_value (struct gdbarch *gdbarch, struct value *function,
   return RETURN_VALUE_STRUCT_CONVENTION;
 }
 
+static struct type *gdb_type_from_type_name (struct gdbarch *gdbarch,
+					     const std::string &type_name);
+
+static struct type *
+amdgcn_enum_type (struct gdbarch *gdbarch, int bits,
+		  const std::string &type_name, const std::string &fields)
+{
+  gdb_assert (bits == 32 || bits == 64);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  auto it = tdep->type_map.find (type_name);
+  if (it != tdep->type_map.end ())
+    return it->second;
+
+  /* If the enum type is not defined, return a default unsigned type.  */
+  if (fields.empty ())
+    return bits == 32 ? builtin_type (gdbarch)->builtin_uint32
+		      : builtin_type (gdbarch)->builtin_uint64;
+
+  struct type *enum_type
+    = arch_type (gdbarch, TYPE_CODE_ENUM, bits, type_name.c_str ());
+
+  std::regex regex ("(\\w+)\\s*=\\s*(\\d+)\\s*(,|$)");
+  auto begin = std::sregex_iterator (fields.begin (), fields.end (), regex);
+  auto end = std::sregex_iterator ();
+  size_t count = std::distance (begin, end);
+
+  enum_type->set_num_fields (count);
+  enum_type->set_fields (
+    (struct field *) TYPE_ZALLOC (enum_type, sizeof (struct field) * count));
+  enum_type->set_is_unsigned (true);
+
+  size_t i = 0;
+  for (auto item = begin; item != end; ++item, ++i)
+    {
+      std::smatch match = *item;
+
+      auto enumval = std::stoul (match[2].str ());
+      if (bits == 32 && enumval > std::numeric_limits<uint32_t>::max ())
+	TYPE_LENGTH (enum_type) = (bits = 64) / TARGET_CHAR_BIT;
+
+      TYPE_FIELD_NAME (enum_type, i) = xstrdup (match[1].str ().c_str ());
+      SET_FIELD_ENUMVAL (enum_type->field (i), enumval);
+    }
+
+  tdep->type_map.emplace (type_name, enum_type);
+  return enum_type;
+}
+
+static struct type *
+amdgcn_flags_type (struct gdbarch *gdbarch, int bits,
+		   const std::string &type_name, const std::string &fields)
+{
+  gdb_assert (bits == 32 || bits == 64);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  auto it = tdep->type_map.find (type_name);
+  if (it != tdep->type_map.end ())
+    return it->second;
+
+  /* If the flags type is not defined, return a default unsigned type.  */
+  if (fields.empty ())
+    return bits == 32 ? builtin_type (gdbarch)->builtin_uint32
+		      : builtin_type (gdbarch)->builtin_uint64;
+
+  struct type *flags_type
+    = arch_flags_type (gdbarch, type_name.c_str (), bits);
+
+  std::regex regex (
+    string_printf (/* 1: field_type  */
+		   "(bool|uint%d_t|enum\\s+\\w+\\s*(\\{[^\\}]*\\})?)\\s+"
+		   /* 3: field_name */ "([[:alnum:]_\\.]+)\\s+"
+		   /* 4,5: bit_position(s) */ "@(\\d+)(-\\d+)?\\s*;",
+		   bits));
+
+  for (std::sregex_iterator item
+       = std::sregex_iterator (fields.begin (), fields.end (), regex);
+       item != std::sregex_iterator (); ++item)
+    {
+      std::smatch match = *item;
+      std::string field_type = match[1].str ();
+      std::string field_name = match[3].str ();
+
+      if (field_type == "bool")
+	{
+	  int pos = std::stoi (match[4].str ());
+	  append_flags_type_flag (flags_type, pos, field_name.c_str ());
+	}
+      else if (match[5].length ()) /* non-boolean fields require a start bit
+				      position and an end bit position.  */
+	{
+	  int start = std::stoi (match[4].str ());
+	  int end = std::stoi (match[5].str ().substr (1));
+	  append_flags_type_field (flags_type, start, end - start + 1,
+				   gdb_type_from_type_name (gdbarch,
+							    field_type),
+				   field_name.c_str ());
+	}
+    }
+
+  tdep->type_map.emplace (type_name, flags_type);
+  return flags_type;
+}
+
 static struct type *
 gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 {
@@ -84,8 +193,8 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
     {
       struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-      auto it = tdep->vector_type_map.find (type_name);
-      if (it != tdep->vector_type_map.end ())
+      auto it = tdep->type_map.find (type_name);
+      if (it != tdep->type_map.end ())
 	return it->second;
 
       struct type *vector_type
@@ -95,8 +204,7 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 			    std::stoi (type_name.substr (pos + 1)));
 
       vector_type->set_name (
-	tdep->vector_type_map.emplace (type_name, vector_type)
-	  .first->first.c_str ());
+	tdep->type_map.emplace (type_name, vector_type).first->first.c_str ());
 
       return vector_type;
     }
@@ -115,6 +223,36 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
     return builtin_type (gdbarch)->builtin_double;
   else if (type_name == "void (*)()")
     return builtin_type (gdbarch)->builtin_func_ptr;
+  else if (type_name.find ("flags32_t") == 0
+	   || type_name.find ("flags64_t") == 0)
+    {
+      std::regex regex (
+	"(flags32_t|flags64_t)\\s+(\\w+)\\s*(\\{\\s*(.*)\\})?");
+
+      /* Split 'type_name' into 3 tokens: "(type) (name) { (fields) }".  */
+      std::sregex_token_iterator iter (type_name.begin (), type_name.end (),
+				       regex, { 1, 2, 4 });
+      std::vector<std::string> tokens (iter, std::sregex_token_iterator ());
+
+      if (tokens.size () == 3)
+	return amdgcn_flags_type (gdbarch, tokens[0] == "flags32_t" ? 32 : 64,
+				  "builtin_type_amdgcn_flags_" + tokens[1],
+				  tokens[2]);
+    }
+  else if (type_name.find ("enum") == 0)
+    {
+      std::regex regex ("enum\\s+(\\w+)\\s*(\\{\\s*(.*)\\})?");
+
+      /* Split 'type_name' into 2 tokens: "(name) { (fields) }".  */
+      std::sregex_token_iterator iter (type_name.begin (), type_name.end (),
+				       regex, { 1, 3 });
+      std::vector<std::string> tokens (iter, std::sregex_token_iterator ());
+
+      if (tokens.size () == 2)
+	return amdgcn_enum_type (gdbarch, 32 /* enum is implicitly a uint  */,
+				 "builtin_type_amdgcn_enum_" + tokens[0],
+				 tokens[1]);
+    }
 
   return builtin_type (gdbarch)->builtin_void;
 }
@@ -459,8 +597,8 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
-  gdb::unique_xmalloc_ptr<amd_dbgapi_register_id_t> register_ids_holder
-    (register_ids);
+  gdb::unique_xmalloc_ptr<amd_dbgapi_register_id_t> register_ids_holder (
+    register_ids);
 
   tdep->register_ids.insert (tdep->register_ids.end (), &register_ids[0],
 			     &register_ids[register_count]);
