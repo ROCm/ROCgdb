@@ -269,6 +269,34 @@ proc gdb_compile {source dest type options} {
 	&& !$calling_rocm_assemble
 	&& ($lang == "c" || $lang == "c++")} {
 
+	# We need:
+	#
+	# . explicit -O0, because hipcc optimizes by default.
+	#
+	# . -std=gnu++11 because hipcc defaults to -std=c++11, and
+	#   some testcases assume GNU extensions.
+	#
+	# . -fgpu-rdc enables separate compilation mode, so we can
+	#   compile the kernel from multiple translation units.
+	#
+	# . -amdgpu-spill-cfi-saved-regs makes backtraces actually
+	#   work.
+	#
+	# . -Wno-unused-command-line-argument is needed otherwise we
+	#   get this warning during linking, even though the option is
+	#   really needed when linking:
+	#
+	#    clang: warning: argument unused during compilation:
+	#    '-mllvm -amdgpu-spill-cfi-saved-regs'
+	#    [-Wunused-command-line-argument]
+	#
+	set hip_options "early_flags=\
+			 -O0\
+			 -std=gnu++11\
+			 -fgpu-rdc\
+			 -mllvm -amdgpu-spill-cfi-saved-regs\
+			 -Wno-unused-command-line-argument"
+
 	global CC_FOR_TARGET
 	if {[board_info target exists compiler]} {
 	    set compiler [target_info compiler]
@@ -336,7 +364,7 @@ proc gdb_compile {source dest type options} {
 		}
 		lappend options "ldflags=$gdb_saved_hip_driver_obj"
 
-		lappend options "early_flags=-fgpu-rdc"
+		lappend options $hip_options
 
 		# All compiled.  Now link, and we're done.
 		return [hip_org_gdb_compile $source $dest $type $options]
@@ -359,17 +387,6 @@ proc gdb_compile {source dest type options} {
 		set calling_rocm_assemble 0
 		return $res
 	    }
-
-	    # We need explicit -O0, because hipcc optimizes by
-	    # default.
-	    #
-	    # -std=gnu++11 because hipcc defaults to -std=c++11, and
-	    # some testcases assume GNU extensions.
-	    #
-	    # -fgpu-rdc enables separate compilation mode, so we can
-	    # compile the kernel from multiple translation units.
-
-	    set hip_options "early_flags=-O0 -std=gnu++11 -fgpu-rdc"
 
 	    # Make HIP/C++ look a little bit more like C.
 	    if {$lang == "c"} {
