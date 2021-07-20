@@ -1,3 +1,41 @@
+2021-07-14  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (have_index): New proc.
+	* gdb.base/gold-gdb-index.exp: Use have_index.
+
+2021-07-13  Pedro Alves  <pedro@palves.net>
+
+	PR gdb/28080
+	* gdb.base/detach-sysroot-target.exp: New.
+	* gdb.base/detach-sysroot-target.c: New.
+
+2021-07-13  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/27690
+	* gdb.threads/check-libthread-db.exp: Update patterns for glibc 2.33.
+
+2021-07-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* gdb.mi/interrupt-thread-group.c: New.
+	* gdb.mi/interrupt-thread-group.exp: New.
+
+2021-07-12  Tom de Vries  <tdevries@suse.de>
+
+	PR testsuite/28057
+	* gdb.btrace/tsx.exp: Add pattern for system with tsx disabled in
+	microcode.
+
+2021-07-12  Tom de Vries  <tdevries@suse.de>
+
+	* lib/mi-support.exp (mi_readnow): New proc.
+	* gdb.mi/mi-info-sources.exp: Use nosharedlibrary.  Update patterns.
+	Skip tests for readnow.  Use "maint expand-symtabs".
+
+2021-07-08  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.guile/scm-breakpoint.exp: Make additional "ERROR: " prefix in
+	exception printing optional.
+
 2021-07-06  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* configure.ac: Restore.

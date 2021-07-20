@@ -1,3 +1,68 @@
+2021-07-17  Sergey Belyashov  <Sergey.Belyashov@gmail.com>
+
+	* Makefile.in (ALL_TARGET_OBS): Add z80-tdep.c.
+	* NEWS: Mention z80 support.
+	* configure.tgt: Handle z80*.
+	* features/Makefile (XMLTOC): Add z80.xml.
+	* features/z80-cpu.xml: New.
+	* features/z80.c: Generate.
+	* features/z80.xml: New.
+	* z80-tdep.c: New file.
+	* z80-tdep.h: New file.
+
+2021-07-13  Lancelot Six  <lsix@lancelotsix.com>
+
+	* make-init-c: Use /bin/sh as shebang.
+
+2021-07-13  Pedro Alves  <pedro@palves.net>
+
+	PR gdb/28080
+	* gdb_bfd.c (gdb_bfd_close_warning): New.
+	(gdb_bfd_iovec_fileio_close): Wrap target_fileio_close in
+	try/catch and print warning on exception.
+	(gdb_bfd_close_or_warn): Use gdb_bfd_close_warning.
+
+2021-07-13  Pedro Alves  <pedro@palves.net>
+
+	PR gdb/28080
+	* remote.c (remote_unpush_target): Invalidate file I/O target
+	handles.
+	* target.c (fileio_handles_invalidate_target): Make extern.
+	* target.h (fileio_handles_invalidate_target): Declare.
+
+2021-07-13  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* mi/mi-main.c (mi_cmd_exec_interrupt): Use
+	scoped_disable_commit_resumed in the --thread-group case.
+
+2021-07-13  John Ericson  <git@JohnEricson.me>
+
+	* sparc-tdep.h: Fix comment.
+	* netbsd-tdep.c (nbsd_info_proc_mappings_header): Fix comment.
+	(nbsd_init_abi): Fix comment.
+	* configure.tgt (*-*-netbsd* | *-*-knetbsd*-gnu): Fix netbsd
+	file name.
+	(alpha*-*-openbsd*): Likewise.
+	(sparc-*-openbsd*): Likewise.
+	(sparc64-*-openbsd*): Likewise.
+
+2021-07-11  Tom Tromey  <tom@tromey.com>
+
+	Committed by Joel Brobecker  <brobecker@adacore.com>:
+	* gdb/symtab.c (info_sources_filter::matches): Add default
+	case hander in switch statement.
+
+2021-07-08  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* s390-linux-tdep.c (s390_linux_init_abi_any): Pass 1 (number
+	of displaced stepping buffers to linux_init_abi.
+	* s390-tdep.c (s390_gdbarch_init): Don't set the Linux-specific
+	displaced-stepping gdbarch callbacks.
+
+2021-07-08  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* Makefile.in (SUBDIRS): Remove testsuite.
+
 2021-07-06  Simon Marchi  <simon.marchi@polymtl.ca>
 
 	* configure.ac: Remove things that were moved from
