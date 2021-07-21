@@ -162,6 +162,19 @@ show_debug_infrun (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("Inferior debugging is %s.\n"), value);
 }
 
+/* See infrun.h.  */
+bool maint_lane_divergence_support = true;
+
+/* Implementation of "maint show lane-divergence-support".  */
+
+static void
+maint_show_lane_divergence_support (ui_file *file, int from_tty,
+				    cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("Lane divergence debugging support is %s.\n"),
+		    value);
+}
+
 /* Support for disabling address space randomization.  */
 
 bool disable_randomization = true;
@@ -9733,6 +9746,16 @@ or signalled."),
 			   show_observer_mode,
 			   &setlist,
 			   &showlist);
+
+  add_setshow_boolean_cmd ("lane-divergence-support", class_maintenance,
+			   &maint_lane_divergence_support,  _("\
+Set lane divergence debugging support."), _("\
+Show lane divergence debugging support."), _("\
+When non-zero, lane divergence debugging is enabled."),
+			   nullptr,
+			   maint_show_lane_divergence_support,
+			   &maintenance_set_cmdlist,
+			   &maintenance_show_cmdlist);
 
 #if GDB_SELF_TEST
   selftests::register_test ("infrun_thread_ptid_changed",
