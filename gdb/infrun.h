@@ -427,5 +427,8 @@ private:
   bool m_prev_enable_commit_resumed;
 };
 
+/* True if lane divergence debugging support is enabled.  Controlled
+   with "maint set lane-divergence".  */
+extern bool maint_lane_divergence_support;
 
 #endif /* GDB_INFRUN_H */
