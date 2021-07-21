@@ -2917,6 +2917,9 @@ get_frame_lane_pc_if_available (frame_info_ptr frame, CORE_ADDR *pc)
 static value *
 get_frame_lane_pc_val_1 (frame_info_ptr frame, bool want_array)
 {
+  if (!maint_lane_divergence_support)
+    return nullptr;
+
   struct gdbarch *gdbarch = get_frame_arch (frame);
 
   const block *func = get_frame_function_block (frame);
