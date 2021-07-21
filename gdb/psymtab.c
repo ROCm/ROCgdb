@@ -953,26 +953,9 @@ psymtab_to_fullname (struct partial_symtab *ps)
      to handle cases like the file being moved.  */
   if (ps->fullname == NULL)
     {
-      gdb::unique_xmalloc_ptr<char> fullname;
-      scoped_fd fd = find_and_open_source (ps->filename, ps->dirname,
-					   &fullname);
+      gdb::unique_xmalloc_ptr<char> fullname
+	= find_source_or_rewrite (ps->filename, ps->dirname);
       ps->fullname = fullname.release ();
-
-      if (fd.get () < 0)
-	{
-	  /* rewrite_source_path would be applied by find_and_open_source, we
-	     should report the pathname where GDB tried to find the file.  */
-
-	  if (ps->dirname == NULL || IS_ABSOLUTE_PATH (ps->filename))
-	    fullname.reset (xstrdup (ps->filename));
-	  else
-	    fullname.reset (concat (ps->dirname, SLASH_STRING,
-				    ps->filename, (char *) NULL));
-
-	  ps->fullname = rewrite_source_path (fullname.get ()).release ();
-	  if (ps->fullname == NULL)
-	    ps->fullname = fullname.release ();
-	}
     }
 
   return ps->fullname;
@@ -1130,6 +1113,9 @@ psymbol_functions::expand_symtabs_matching
   if (lookup_name != nullptr)
     psym_lookup_name = lookup_name->make_ignore_params ();
 
+  /* This invariant is documented in quick-functions.h.  */
+  gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
+
   for (partial_symtab *ps : m_partial_symtabs->range ())
     {
       QUIT;
@@ -1157,7 +1143,7 @@ psymbol_functions::expand_symtabs_matching
 	    continue;
 	}
 
-      if ((symbol_matcher == NULL && lookup_name == NULL)
+      if (lookup_name == nullptr
 	  || recursively_search_psymtabs (ps, objfile, search_flags,
 					  domain, search,
 					  *psym_lookup_name,

@@ -1194,7 +1194,9 @@ static struct die_info *die_specification (struct die_info *die,
 static line_header_up dwarf_decode_line_header (sect_offset sect_off,
 						struct dwarf2_cu *cu);
 
-static void dwarf_decode_lines (struct line_header *, const char *,
+struct file_and_directory;
+static void dwarf_decode_lines (struct line_header *,
+				const file_and_directory &,
 				struct dwarf2_cu *, dwarf2_psymtab *,
 				CORE_ADDR, int decode_mapping);
 
@@ -1533,18 +1535,20 @@ struct file_and_directory
   const char *name;
 
   /* The compilation directory.  NULL if not known.  If we needed to
-     compute a new string, this points to COMP_DIR_STORAGE, otherwise,
-     points directly to the DW_AT_comp_dir string attribute owned by
-     the obstack that owns the DIE.  */
+     compute a new string, it will be stored in the per-BFD string
+     bcache; otherwise, points directly to the DW_AT_comp_dir string
+     attribute owned by the obstack that owns the DIE.  */
   const char *comp_dir;
-
-  /* If we needed to build a new string for comp_dir, this is what
-     owns the storage.  */
-  std::string comp_dir_storage;
 };
 
 static file_and_directory find_file_and_directory (struct die_info *die,
 						   struct dwarf2_cu *cu);
+
+static const char *compute_include_file_name
+     (const struct line_header *lh,
+      const file_entry &fe,
+      const file_and_directory &cu_info,
+      gdb::unique_xmalloc_ptr<char> *name_holder);
 
 static htab_up allocate_signatured_type_table ();
 
@@ -1658,7 +1662,10 @@ dwarf2_per_bfd::dwarf2_per_bfd (bfd *obfd, const dwarf2_debug_sections *names,
 dwarf2_per_bfd::~dwarf2_per_bfd ()
 {
   for (auto &per_cu : all_comp_units)
-    per_cu->imported_symtabs_free ();
+    {
+      per_cu->imported_symtabs_free ();
+      per_cu->free_cached_file_names ();
+    }
 
   /* Everything else should be on this->obstack.  */
 }
@@ -1970,6 +1977,10 @@ struct quick_file_names
   /* The number of entries in file_names, real_names.  */
   unsigned int num_file_names;
 
+  /* The CU directory, as given by DW_AT_comp_dir.  May be
+     nullptr.  */
+  const char *comp_dir;
+
   /* The file names from the line table, after being run through
      file_full_name.  */
   const char **file_names;
@@ -1993,9 +2004,9 @@ struct dwarf2_per_cu_quick_data
      expand_symtabs_matching.  */
   unsigned int mark : 1;
 
-  /* True if we've tried to read the file table and found there isn't one.
-     There will be no point in trying to read it again next time.  */
-  unsigned int no_file_data : 1;
+  /* True if we've tried to read the file table.  There will be no
+     point in trying to read it again next time.  */
+  bool files_read : 1;
 };
 
 /* A subclass of psymbol_functions that arranges to read the DWARF
@@ -2166,25 +2177,6 @@ eq_file_name_entry (const void *a, const void *b)
   return eq_stmt_list_entry (&ea->hash, &eb->hash);
 }
 
-/* Delete function for a quick_file_names.  */
-
-static void
-delete_file_name_entry (void *e)
-{
-  struct quick_file_names *file_data = (struct quick_file_names *) e;
-  int i;
-
-  for (i = 0; i < file_data->num_file_names; ++i)
-    {
-      xfree ((void*) file_data->file_names[i]);
-      if (file_data->real_names)
-	xfree ((void*) file_data->real_names[i]);
-    }
-
-  /* The space for the struct itself lives on the obstack, so we don't
-     free it here.  */
-}
-
 /* Create a quick_file_names hash table.  */
 
 static htab_up
@@ -2192,7 +2184,7 @@ create_quick_file_names_table (unsigned int nr_initial_entries)
 {
   return htab_up (htab_create_alloc (nr_initial_entries,
 				     hash_file_name_entry, eq_file_name_entry,
-				     delete_file_name_entry, xcalloc, xfree));
+				     nullptr, xcalloc, xfree));
 }
 
 /* Read in CU (dwarf2_cu object) for PER_CU in the context of PER_OBJFILE.  This
@@ -2901,13 +2893,11 @@ dw2_get_file_names_reader (const struct die_reader_specs *reader,
 
   gdb_assert (! this_cu->is_debug_types);
 
+  this_cu->v.quick->files_read = true;
   /* Our callers never want to match partial units -- instead they
      will match the enclosing full CU.  */
   if (comp_unit_die->tag == DW_TAG_partial_unit)
-    {
-      this_cu->v.quick->no_file_data = 1;
-      return;
-    }
+    return;
 
   lh_cu = this_cu;
   slot = NULL;
@@ -2936,33 +2926,50 @@ dw2_get_file_names_reader (const struct die_reader_specs *reader,
 
       lh = dwarf_decode_line_header (line_offset, cu);
     }
-  if (lh == NULL)
-    {
-      lh_cu->v.quick->no_file_data = 1;
-      return;
-    }
-
-  qfn = XOBNEW (&per_objfile->per_bfd->obstack, struct quick_file_names);
-  qfn->hash.dwo_unit = cu->dwo_unit;
-  qfn->hash.line_sect_off = line_offset;
-  gdb_assert (slot != NULL);
-  *slot = qfn;
 
   file_and_directory fnd = find_file_and_directory (comp_unit_die, cu);
 
   int offset = 0;
   if (strcmp (fnd.name, "<unknown>") != 0)
     ++offset;
+  else if (lh == nullptr)
+    return;
 
-  qfn->num_file_names = offset + lh->file_names_size ();
+  qfn = XOBNEW (&per_objfile->per_bfd->obstack, struct quick_file_names);
+  qfn->hash.dwo_unit = cu->dwo_unit;
+  qfn->hash.line_sect_off = line_offset;
+  /* There may not be a DW_AT_stmt_list.  */
+  if (slot != nullptr)
+    *slot = qfn;
+
+  std::vector<const char *> include_names;
+  if (lh != nullptr)
+    {
+      for (const auto &entry : lh->file_names ())
+	{
+	  gdb::unique_xmalloc_ptr<char> name_holder;
+	  const char *include_name =
+	    compute_include_file_name (lh.get (), entry, fnd, &name_holder);
+	  if (include_name != nullptr)
+	    {
+	      include_name = per_objfile->objfile->intern (include_name);
+	      include_names.push_back (include_name);
+	    }
+	}
+    }
+
+  qfn->num_file_names = offset + include_names.size ();
+  qfn->comp_dir = fnd.comp_dir;
   qfn->file_names =
     XOBNEWVEC (&per_objfile->per_bfd->obstack, const char *,
 	       qfn->num_file_names);
   if (offset != 0)
     qfn->file_names[0] = xstrdup (fnd.name);
-  for (int i = 0; i < lh->file_names_size (); ++i)
-    qfn->file_names[i + offset] = lh->file_full_name (i + 1,
-						      fnd.comp_dir).release ();
+
+  if (!include_names.empty ())
+    memcpy (&qfn->file_names[offset], include_names.data (),
+	    include_names.size () * sizeof (const char *));
+
   qfn->real_names = NULL;
 
   lh_cu->v.quick->file_names = qfn;
@@ -2980,18 +2987,13 @@ dw2_get_file_names (dwarf2_per_cu_data *this_cu,
   /* Nor type unit groups.  */
   gdb_assert (! this_cu->type_unit_group_p ());
 
-  if (this_cu->v.quick->file_names != NULL)
+  if (this_cu->v.quick->files_read)
     return this_cu->v.quick->file_names;
-  /* If we know there is no line data, no point in looking again.  */
-  if (this_cu->v.quick->no_file_data)
-    return NULL;
 
   cutu_reader reader (this_cu, per_objfile);
   if (!reader.dummy_p)
     dw2_get_file_names_reader (&reader, reader.comp_unit_die);
 
-  if (this_cu->v.quick->no_file_data)
-    return NULL;
   return this_cu->v.quick->file_names;
 }
 
@@ -3007,7 +3009,17 @@ dw2_get_real_path (dwarf2_per_objfile *per_objfile,
 				      qfn->num_file_names, const char *);
 
   if (qfn->real_names[index] == NULL)
-    qfn->real_names[index] = gdb_realpath (qfn->file_names[index]).release ();
+    {
+      const char *dirname = nullptr;
+
+      if (!IS_ABSOLUTE_PATH (qfn->file_names[index]))
+	dirname = qfn->comp_dir;
+
+      gdb::unique_xmalloc_ptr<char> fullname;
+      fullname = find_source_or_rewrite (qfn->file_names[index], dirname);
+
+      qfn->real_names[index] = fullname.release ();
+    }
 
   return qfn->real_names[index];
 }
@@ -3026,25 +3038,23 @@ dwarf2_base_index_functions::find_last_source_symtab (struct objfile *objfile)
   return compunit_primary_filetab (cust);
 }
 
-/* Traversal function for dw2_forget_cached_source_info.  */
+/* See read.h.  */
 
-static int
-dw2_free_cached_file_names (void **slot, void *info)
+void
+dwarf2_per_cu_data::free_cached_file_names ()
 {
-  struct quick_file_names *file_data = (struct quick_file_names *) *slot;
+  if (per_bfd == nullptr || !per_bfd->using_index || v.quick == nullptr)
+    return;
 
-  if (file_data->real_names)
+  struct quick_file_names *file_data = v.quick->file_names;
+  if (file_data != nullptr && file_data->real_names != nullptr)
     {
-      int i;
-
-      for (i = 0; i < file_data->num_file_names; ++i)
+      for (int i = 0; i < file_data->num_file_names; ++i)
 	{
-	  xfree ((void*) file_data->real_names[i]);
-	  file_data->real_names[i] = NULL;
+	  xfree ((void *) file_data->real_names[i]);
+	  file_data->real_names[i] = nullptr;
 	}
     }
-
-  return 1;
 }
 
 void
@@ -3053,8 +3063,8 @@ dwarf2_base_index_functions::forget_cached_source_info
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
-  htab_traverse_noresize (per_objfile->per_bfd->quick_file_names_table.get (),
-			  dw2_free_cached_file_names, NULL);
+  for (auto &per_cu : per_objfile->per_bfd->all_comp_units)
+    per_cu->free_cached_file_names ();
 }
 
 /* Struct used to manage iterating over all CUs looking for a symbol.  */
@@ -4321,7 +4331,9 @@ dwarf2_gdb_index::expand_symtabs_matching
 
   dw_expand_symtabs_matching_file_matcher (per_objfile, file_matcher);
 
-  if (symbol_matcher == NULL && lookup_name == NULL)
+  /* This invariant is documented in quick-functions.h.  */
+  gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
+  if (lookup_name == nullptr)
     {
       for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
 	{
@@ -4432,7 +4444,8 @@ dwarf2_base_index_functions::map_symbol_filenames
 
   for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
     {
-      if (per_objfile->symtab_set_p (per_cu.get ()))
+      if (!per_cu->is_debug_types
+	  && per_objfile->symtab_set_p (per_cu.get ()))
 	{
 	  if (per_cu->v.quick->file_names != nullptr)
 	    qfn_cache.insert (per_cu->v.quick->file_names);
@@ -4442,7 +4455,8 @@ dwarf2_base_index_functions::map_symbol_filenames
   for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
     {
       /* We only need to look at symtabs not already expanded.  */
-      if (per_objfile->symtab_set_p (per_cu.get ()))
+      if (per_cu->is_debug_types
+	  || per_objfile->symtab_set_p (per_cu.get ()))
 	continue;
 
       quick_file_names *file_data = dw2_get_file_names (per_cu.get (),
@@ -4454,18 +4468,19 @@ dwarf2_base_index_functions::map_symbol_filenames
       for (int j = 0; j < file_data->num_file_names; ++j)
 	{
 	  const char *filename = file_data->file_names[j];
-	  filenames_cache.seen (filename);
+	  const char *key = filename;
+	  const char *fullname = nullptr;
+
+	  if (need_fullname)
+	    {
+	      fullname = dw2_get_real_path (per_objfile, file_data, j);
+	      key = fullname;
+	    }
+
+	  if (!filenames_cache.seen (key))
+	    fun (filename, fullname);
 	}
     }
-
-  filenames_cache.traverse ([&] (const char *filename)
-    {
-      gdb::unique_xmalloc_ptr<char> this_real_name;
-
-      if (need_fullname)
-	this_real_name = gdb_realpath (filename);
-      fun (filename, this_real_name.get ());
-    });
 }
 
 bool
@@ -5309,7 +5324,9 @@ dwarf2_debug_names_index::expand_symtabs_matching
 
   dw_expand_symtabs_matching_file_matcher (per_objfile, file_matcher);
 
-  if (symbol_matcher == NULL && lookup_name == NULL)
+  /* This invariant is documented in quick-functions.h.  */
+  gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
+  if (lookup_name == nullptr)
     {
       for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
 	{
@@ -5726,6 +5743,7 @@ dwarf2_create_include_psymtab (dwarf2_per_bfd *per_bfd,
 static void
 dwarf2_build_include_psymtabs (struct dwarf2_cu *cu,
 			       struct die_info *die,
+			       const file_and_directory &fnd,
 			       dwarf2_psymtab *pst)
 {
   line_header_up lh;
@@ -5741,7 +5759,7 @@ dwarf2_build_include_psymtabs (struct dwarf2_cu *cu,
      that we pass in the raw text_low here; that is ok because we're
      only decoding the line table to make include partial symtabs, and
      so the addresses aren't really used.  */
-  dwarf_decode_lines (lh.get (), pst->dirname, cu, pst,
+  dwarf_decode_lines (lh.get (), fnd, cu, pst,
 		      pst->raw_text_low (), 1);
 }
 
@@ -6892,7 +6910,6 @@ process_psymtab_comp_unit_reader (const struct die_reader_specs *reader,
   CORE_ADDR best_lowpc = 0, best_highpc = 0;
   dwarf2_psymtab *pst;
   enum pc_bounds_kind cu_bounds_kind;
-  const char *filename;
 
   gdb_assert (! per_cu->is_debug_types);
 
@@ -6901,18 +6918,16 @@ process_psymtab_comp_unit_reader (const struct die_reader_specs *reader,
   /* Allocate a new partial symbol table structure.  */
   gdb::unique_xmalloc_ptr<char> debug_filename;
   static const char artificial[] = "<artificial>";
-  filename = dwarf2_string_attr (comp_unit_die, DW_AT_name, cu);
-  if (filename == NULL)
-    filename = "";
-  else if (strcmp (filename, artificial) == 0)
+  file_and_directory fnd = find_file_and_directory (comp_unit_die, cu);
+  if (strcmp (fnd.name, artificial) == 0)
     {
       debug_filename.reset (concat (artificial, "@",
 				    sect_offset_str (per_cu->sect_off),
 				    (char *) NULL));
-      filename = debug_filename.get ();
+      fnd.name = debug_filename.get ();
     }
 
-  pst = create_partial_symtab (per_cu, per_objfile, filename);
+  pst = create_partial_symtab (per_cu, per_objfile, fnd.name);
 
   /* This must be done before calling dwarf2_build_include_psymtabs.  */
   pst->dirname = dwarf2_string_attr (comp_unit_die, DW_AT_comp_dir, cu);
@@ -6998,7 +7013,7 @@ process_psymtab_comp_unit_reader (const struct die_reader_specs *reader,
 
   /* Get the list of files included in the current compilation unit,
      and build a psymtab for each of them.  */
-  dwarf2_build_include_psymtabs (cu, comp_unit_die, pst);
+  dwarf2_build_include_psymtabs (cu, comp_unit_die, fnd, pst);
 
   dwarf_read_debug_printf ("Psymtab for %s unit @%s: %s - %s"
 			   ", %d global, %d static syms",
@@ -10391,9 +10406,10 @@ find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
       && producer_is_gcc_lt_4_3 (cu) && res.name != NULL
       && IS_ABSOLUTE_PATH (res.name))
     {
-      res.comp_dir_storage = ldirname (res.name);
-      if (!res.comp_dir_storage.empty ())
-	res.comp_dir = res.comp_dir_storage.c_str ();
+      std::string comp_dir_storage = ldirname (res.name);
+      if (!comp_dir_storage.empty ())
+	res.comp_dir
+	  = cu->per_objfile->objfile->intern (comp_dir_storage.c_str ());
     }
   if (res.comp_dir != NULL)
     {
@@ -10418,7 +10434,7 @@ find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
 
 static void
 handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
-			const char *comp_dir, CORE_ADDR lowpc) /* ARI: editCase function */
+			const file_and_directory &fnd, CORE_ADDR lowpc) /* ARI: editCase function */
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct attribute *attr;
@@ -10506,7 +10522,7 @@ handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
       gdb_assert (die->tag != DW_TAG_partial_unit);
     }
   decode_mapping = (die->tag != DW_TAG_partial_unit);
-  dwarf_decode_lines (cu->line_header, comp_dir, cu, NULL, lowpc,
+  dwarf_decode_lines (cu->line_header, fnd, cu, nullptr, lowpc,
 		      decode_mapping);
 
 }
@@ -10547,7 +10563,7 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
   /* Decode line number information if present.  We do this before
      processing child DIEs, so that the line header table is available
      for DW_AT_decl_file.  */
-  handle_DW_AT_stmt_list (die, cu, fnd.comp_dir, lowpc);
+  handle_DW_AT_stmt_list (die, cu, fnd, lowpc);
 
   /* Process all dies in compilation unit.  */
   if (die->child != NULL)
@@ -20618,30 +20634,28 @@ dwarf_decode_line_header (sect_offset sect_off, struct dwarf2_cu *cu)
 }
 
 /* Subroutine of dwarf_decode_lines to simplify it.
-   Return the file name of the psymtab for the given file_entry.
-   COMP_DIR is the compilation directory (DW_AT_comp_dir) or NULL if unknown.
+   Return the file name for the given file_entry.
+   CU_INFO describes the CU's DW_AT_name and DW_AT_comp_dir.
    If space for the result is malloc'd, *NAME_HOLDER will be set.
-   Returns NULL if FILE_INDEX should be ignored, i.e., it is pst->filename.  */
+   Returns NULL if FILE_INDEX should be ignored, i.e., it is
+   equivalent to CU_INFO.  */
 
 static const char *
-psymtab_include_file_name (const struct line_header *lh, const file_entry &fe,
-			   const dwarf2_psymtab *pst,
-			   const char *comp_dir,
+compute_include_file_name (const struct line_header *lh, const file_entry &fe,
+			   const file_and_directory &cu_info,
 			   gdb::unique_xmalloc_ptr<char> *name_holder)
 {
   const char *include_name = fe.name;
   const char *include_name_to_compare = include_name;
-  const char *pst_filename;
-  int file_is_pst;
 
   const char *dir_name = fe.include_dir (lh);
 
   gdb::unique_xmalloc_ptr<char> hold_compare;
   if (!IS_ABSOLUTE_PATH (include_name)
-      && (dir_name != NULL || comp_dir != NULL))
+      && (dir_name != NULL || cu_info.comp_dir != NULL))
     {
-      /* Avoid creating a duplicate psymtab for PST.
-	 We do this by comparing INCLUDE_NAME and PST_FILENAME.
+      /* Avoid creating a duplicate name for CU_INFO.
+	 We do this by comparing INCLUDE_NAME and CU_INFO.
 	 Before we do the comparison, however, we need to account
 	 for DIR_NAME and COMP_DIR.
 	 First prepend dir_name (if non-NULL).  If we still don't
@@ -20668,27 +20682,25 @@ psymtab_include_file_name (const struct line_header *lh, const file_entry &fe,
 	  include_name = name_holder->get ();
 	  include_name_to_compare = include_name;
 	}
-      if (!IS_ABSOLUTE_PATH (include_name) && comp_dir != NULL)
+      if (!IS_ABSOLUTE_PATH (include_name) && cu_info.comp_dir != nullptr)
 	{
-	  hold_compare.reset (concat (comp_dir, SLASH_STRING,
+	  hold_compare.reset (concat (cu_info.comp_dir, SLASH_STRING,
 				      include_name, (char *) NULL));
 	  include_name_to_compare = hold_compare.get ();
 	}
     }
 
-  pst_filename = pst->filename;
   gdb::unique_xmalloc_ptr<char> copied_name;
-  if (!IS_ABSOLUTE_PATH (pst_filename) && pst->dirname != NULL)
+  const char *cu_filename = cu_info.name;
+  if (!IS_ABSOLUTE_PATH (cu_filename) && cu_info.comp_dir != nullptr)
     {
-      copied_name.reset (concat (pst->dirname, SLASH_STRING,
-				 pst_filename, (char *) NULL));
-      pst_filename = copied_name.get ();
+      copied_name.reset (concat (cu_info.comp_dir, SLASH_STRING,
+				 cu_filename, (char *) NULL));
+      cu_filename = copied_name.get ();
     }
 
-  file_is_pst = FILENAME_CMP (include_name_to_compare, pst_filename) == 0;
-
-  if (file_is_pst)
-    return NULL;
+  if (FILENAME_CMP (include_name_to_compare, cu_filename) == 0)
+    return nullptr;
   return include_name;
 }
 
@@ -21358,16 +21370,15 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
       the list of files included by the unit represented by PST, and
       builds all the associated partial symbol tables.
 
-   COMP_DIR is the compilation directory (DW_AT_comp_dir) or NULL if unknown.
+   FND holds the CU file name and directory, if known.
    It is used for relative paths in the line table.
-   NOTE: When processing partial symtabs (pst != NULL),
-   comp_dir == pst->dirname.
 
-   NOTE: It is important that psymtabs have the same file name (via strcmp)
-   as the corresponding symtab.  Since COMP_DIR is not used in the name of the
-   symtab we don't use it in the name of the psymtabs we create.
-   E.g. expand_line_sal requires this when finding psymtabs to expand.
-   A good testcase for this is mb-inline.exp.
+   NOTE: It is important that psymtabs have the same file name (via
+   strcmp) as the corresponding symtab.  Since the directory is not
+   used in the name of the symtab we don't use it in the name of the
+   psymtabs we create.  E.g. expand_line_sal requires this when
+   finding psymtabs to expand.  A good testcase for this is
+   mb-inline.exp.
 
    LOWPC is the lowest address in CU (or 0 if not known).
 
@@ -21376,7 +21387,7 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
    table is read in.  */
 
 static void
-dwarf_decode_lines (struct line_header *lh, const char *comp_dir,
+dwarf_decode_lines (struct line_header *lh, const file_and_directory &fnd,
 		    struct dwarf2_cu *cu, dwarf2_psymtab *pst,
 		    CORE_ADDR lowpc, int decode_mapping)
 {
@@ -21395,8 +21406,7 @@ dwarf_decode_lines (struct line_header *lh, const char *comp_dir,
 	  {
 	    gdb::unique_xmalloc_ptr<char> name_holder;
 	    const char *include_name =
-	      psymtab_include_file_name (lh, file_entry, pst,
-					 comp_dir, &name_holder);
+	      compute_include_file_name (lh, file_entry, fnd, &name_holder);
 	    if (include_name != NULL)
 	      dwarf2_create_include_psymtab
 		(cu->per_objfile->per_bfd, include_name, pst,
