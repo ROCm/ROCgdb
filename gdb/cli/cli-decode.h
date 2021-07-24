@@ -168,17 +168,17 @@ struct cmd_list_element
      cagney/2002-02-02: This function signature is evolving.  For
      the moment suggest sticking with either set_cmd_cfunc() or
      set_cmd_sfunc().  */
-  void (*func) (struct cmd_list_element *c, const char *args, int from_tty)
-    = nullptr;
+  cmd_func_ftype *func;
+
   /* The command's real callback.  At present func() bounces through
      to one of the below.  */
   union
     {
-      /* If type is not_set_cmd, call it like this: */
-      cmd_const_cfunc_ftype *const_cfunc;
-      /* If type is set_cmd or show_cmd, first set the variables,
-	 and then call this: */
-      cmd_const_sfunc_ftype *sfunc;
+      /* Most commands don't need the cmd_list_element parameter passed to FUNC.
+	 They therefore register a command of this type, which doesn't have the
+	 cmd_list_element parameter.  do_simple_func is installed as FUNC, and
+	 acts as a shim between the two.  */
+      cmd_simple_func_ftype *simple_func;
     }
   function;
 

@@ -115,52 +115,19 @@ show_inferior_tty_command (struct ui_file *file, int from_tty,
 {
   /* Note that we ignore the passed-in value in favor of computing it
      directly.  */
-  const char *inferior_tty = current_inferior ()->tty ();
+  const std::string &inferior_tty = current_inferior ()->tty ();
 
-  if (inferior_tty == nullptr)
-    inferior_tty = "";
   fprintf_filtered (gdb_stdout,
 		    _("Terminal for future runs of program being debugged "
-		      "is \"%s\".\n"), inferior_tty);
-}
-
-const char *
-get_inferior_args (void)
-{
-  if (current_inferior ()->argc != 0)
-    {
-      gdb::array_view<char * const> args (current_inferior ()->argv,
-					  current_inferior ()->argc);
-      std::string n = construct_inferior_arguments (args);
-      set_inferior_args (n.c_str ());
-    }
-
-  if (current_inferior ()->args == NULL)
-    current_inferior ()->args = make_unique_xstrdup ("");
-
-  return current_inferior ()->args.get ();
-}
-
-/* Set the arguments for the current inferior.  Ownership of
-   NEWARGS is not transferred.  */
-
-void
-set_inferior_args (const char *newargs)
-{
-  if (newargs != nullptr)
-    current_inferior ()->args = make_unique_xstrdup (newargs);
-  else
-    current_inferior ()->args.reset ();
-
-  current_inferior ()->argc = 0;
-  current_inferior ()->argv = 0;
+		      "is \"%s\".\n"), inferior_tty.c_str ());
 }
 
 void
 set_inferior_args_vector (int argc, char **argv)
 {
-  current_inferior ()->argc = argc;
-  current_inferior ()->argv = argv;
+  gdb::array_view<char * const> args (argv, argc);
+  std::string n = construct_inferior_arguments (args);
+  current_inferior ()->set_args (std::move (n));
 }
 
 /* Notice when `set args' is run.  */
@@ -170,7 +137,7 @@ set_args_command (const char *args, int from_tty, struct cmd_list_element *c)
 {
   /* CLI has assigned the user-provided value to inferior_args_scratch.
      Now route it to current inferior.  */
-  set_inferior_args (inferior_args_scratch);
+  current_inferior ()->set_args (inferior_args_scratch);
 }
 
 /* Notice when `show args' is run.  */
@@ -181,30 +148,16 @@ show_args_command (struct ui_file *file, int from_tty,
 {
   /* Note that we ignore the passed-in value in favor of computing it
      directly.  */
-  deprecated_show_value_hack (file, from_tty, c, get_inferior_args ());
+  deprecated_show_value_hack (file, from_tty, c,
+			      current_inferior ()->args ().c_str ());
 }
 
 /* See gdbsupport/common-inferior.h.  */
 
-void
-set_inferior_cwd (const char *cwd)
-{
-  struct inferior *inf = current_inferior ();
-
-  gdb_assert (inf != NULL);
-
-  if (cwd == NULL)
-    inf->cwd.reset ();
-  else
-    inf->cwd.reset (xstrdup (cwd));
-}
-
-/* See gdbsupport/common-inferior.h.  */
-
-const char *
+const std::string &
 get_inferior_cwd ()
 {
-  return current_inferior ()->cwd.get ();
+  return current_inferior ()->cwd ();
 }
 
 /* Handle the 'set cwd' command.  */
@@ -212,10 +165,7 @@ get_inferior_cwd ()
 static void
 set_cwd_command (const char *args, int from_tty, struct cmd_list_element *c)
 {
-  if (*inferior_cwd_scratch == '\0')
-    set_inferior_cwd (NULL);
-  else
-    set_inferior_cwd (inferior_cwd_scratch);
+  current_inferior ()->set_cwd (inferior_cwd_scratch);
 }
 
 /* Handle the 'show cwd' command.  */
@@ -224,9 +174,9 @@ static void
 show_cwd_command (struct ui_file *file, int from_tty,
 		  struct cmd_list_element *c, const char *value)
 {
-  const char *cwd = get_inferior_cwd ();
+  const std::string &cwd = current_inferior ()->cwd ();
 
-  if (cwd == NULL)
+  if (cwd.empty ())
     fprintf_filtered (gdb_stdout,
 		      _("\
 You have not set the inferior's current working directory.\n\
@@ -235,7 +185,8 @@ server's cwd if remote debugging.\n"));
   else
     fprintf_filtered (gdb_stdout,
 		      _("Current working directory that will be used "
-			"when starting the inferior is \"%s\".\n"), cwd);
+			"when starting the inferior is \"%s\".\n"),
+		      cwd.c_str ());
 }
 
 
@@ -480,7 +431,7 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
 
   /* If there were other args, beside '&', process them.  */
   if (args != NULL)
-    set_inferior_args (args);
+    current_inferior ()->set_args (args);
 
   if (from_tty)
     {
@@ -489,17 +440,13 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
       if (exec_file)
 	uiout->field_string ("execfile", exec_file);
       uiout->spaces (1);
-      /* We call get_inferior_args() because we might need to compute
-	 the value now.  */
-      uiout->field_string ("infargs", get_inferior_args ());
+      uiout->field_string ("infargs", current_inferior ()->args ());
       uiout->text ("\n");
       uiout->flush ();
     }
 
-  /* We call get_inferior_args() because we might need to compute
-     the value now.  */
   run_target->create_inferior (exec_file,
-			       std::string (get_inferior_args ()),
+			       current_inferior ()->args (),
 			       current_inferior ()->environment.envp (),
 			       from_tty);
   /* to_create_inferior should push the target, so after this point we

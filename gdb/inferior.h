@@ -204,10 +204,6 @@ extern void post_create_inferior (int from_tty);
 
 extern void attach_command (const char *, int);
 
-extern const char *get_inferior_args (void);
-
-extern void set_inferior_args (const char *);
-
 extern void set_inferior_args_vector (int, char **);
 
 extern void registers_info (const char *, int);
@@ -438,13 +434,48 @@ public:
   void add_continuation (std::function<void ()> &&cont);
   void do_all_continuations ();
 
-  /* Set/get file name for default use for standard in/out in the
-     inferior.  On Unix systems, we try to make TERMINAL_NAME the
-     inferior's controlling terminal.  If TERMINAL_NAME is nullptr or
-     the empty string, then the inferior inherits GDB's terminal (or
-     GDBserver's if spawning a remote process).  */
-  void set_tty (const char *terminal_name);
-  const char *tty ();
+  /* Set/get file name for default use for standard in/out in the inferior.
+
+     On Unix systems, we try to make TERMINAL_NAME the inferior's controlling
+     terminal.
+
+     If TERMINAL_NAME is the empty string, then the inferior inherits GDB's
+     terminal (or GDBserver's if spawning a remote process).  */
+  void set_tty (std::string terminal_name);
+  const std::string &tty ();
+
+  /* Set the argument string to use when running this inferior.
+
+     An empty string can be used to represent "no arguments".  */
+  void set_args (std::string args)
+  {
+    m_args = std::move (args);
+  };
+
+  /* Get the argument string to use when running this inferior.
+
+     No arguments is represented by an empty string.  */
+  const std::string &args () const
+  {
+    return m_args;
+  }
+
+  /* Set the inferior current working directory.
+
+     If CWD is empty, unset the directory.  */
+  void set_cwd (std::string cwd)
+  {
+    m_cwd = std::move (cwd);
+  }
+
+  /* Get the inferior current working directory.
+
+     Return an empty string if the current working directory is not
+     specified.  */
+  const std::string &cwd () const
+  {
+    return m_cwd;
+  }
 
   /* Convenient handle (GDB inferior id).  Unique across all
      inferiors.  */
@@ -474,22 +505,6 @@ public:
 
   /* The program space bound to this inferior.  */
   struct program_space *pspace = NULL;
-
-  /* The arguments string to use when running.  */
-  gdb::unique_xmalloc_ptr<char> args;
-
-  /* The size of elements in argv.  */
-  int argc = 0;
-
-  /* The vector version of arguments.  If ARGC is nonzero,
-     then we must compute ARGS from this (via the target).
-     This is always coming from main's argv and therefore
-     should never be freed.  */
-  char **argv = NULL;
-
-  /* The current working directory that will be used when starting
-     this inferior.  */
-  gdb::unique_xmalloc_ptr<char> cwd;
 
   /* The terminal state as set by the last target_terminal::terminal_*
      call.  */
@@ -574,10 +589,17 @@ private:
   target_stack m_target_stack;
 
   /* The name of terminal device to use for I/O.  */
-  gdb::unique_xmalloc_ptr<char> m_terminal;
+  std::string m_terminal;
 
   /* The list of continuations.  */
   std::list<std::function<void ()>> m_continuations;
+
+  /* The arguments string to use when running.  */
+  std::string m_args;
+
+  /* The current working directory that will be used when starting
+     this inferior.  */
+  std::string m_cwd;
 };
 
 /* Keep a registry of per-inferior data-pointers required by other GDB
