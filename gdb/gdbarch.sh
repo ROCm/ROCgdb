@@ -1323,7 +1323,6 @@ cat <<EOF
 #include "frame.h"
 #include "dis-asm.h"
 #include "gdb_obstack.h"
-#include "infrun.h"
 #include "osabi.h"
 #include "displaced-stepping.h"
 
