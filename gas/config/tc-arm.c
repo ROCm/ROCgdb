@@ -365,6 +365,8 @@ static const arm_feature_set fpu_neon_ext_v8_1 =
   ARM_FEATURE_COPROC (FPU_NEON_EXT_RDMA);
 static const arm_feature_set fpu_neon_ext_dotprod =
   ARM_FEATURE_COPROC (FPU_NEON_EXT_DOTPROD);
+static const arm_feature_set pacbti_ext =
+  ARM_FEATURE_CORE_HIGH_HIGH (ARM_EXT3_PACBTI);
 
 static int mfloat_abi_opt = -1;
 /* Architecture feature bits selected by the last -mcpu/-march or .cpu/.arch
@@ -945,6 +947,7 @@ struct asm_opcode
 			  "and source operands makes instruction UNPREDICTABLE")
 #define BAD_EL_TYPE	_("bad element type for instruction")
 #define MVE_BAD_QREG	_("MVE vector register Q[0..7] expected")
+#define BAD_PACBTI	_("selected processor does not support PACBTI extention")
 
 static htab_t  arm_ops_hsh;
 static htab_t  arm_cond_hsh;
@@ -7115,6 +7118,8 @@ enum operand_parse_code
 
   /* New operands for Armv8.1-M Mainline.  */
   OP_LR,	/* ARM LR register */
+  OP_SP,	/* ARM SP register */
+  OP_R12,
   OP_RRe,	/* ARM register, only even numbered.  */
   OP_RRo,	/* ARM register, only odd numbered, not r13 or r15.  */
   OP_RRnpcsp_I32, /* ARM register (no BadReg) or literal 1 .. 32 */
@@ -7425,6 +7430,8 @@ parse_operands (char *str, const unsigned int *pattern, bool thumb)
 	case OP_RRo:
 	case OP_LR:
 	case OP_oLR:
+	case OP_SP:
+	case OP_R12:
 	case OP_RR:    po_reg_or_fail (REG_TYPE_RN);	  break;
 	case OP_RCP:   po_reg_or_fail (REG_TYPE_CP);	  break;
 	case OP_RCN:   po_reg_or_fail (REG_TYPE_CN);	  break;
@@ -8120,6 +8127,16 @@ parse_operands (char *str, const unsigned int *pattern, bool thumb)
 	case OP_oLR:
 	  if (inst.operands[i].reg != REG_LR)
 	    inst.error = _("operand must be LR register");
+	  break;
+
+	case OP_SP:
+	  if (inst.operands[i].reg != REG_SP)
+	    inst.error = _("operand must be SP register");
+	  break;
+
+	case OP_R12:
+	  if (inst.operands[i].reg != REG_R12)
+	    inst.error = _("operand must be r12");
 	  break;
 
 	case OP_RMQRZ:
@@ -11436,6 +11453,8 @@ encode_thumb32_addr_mode (int i, bool is_t, bool is_d)
   X(_ands,  4000, ea100000),			\
   X(_asr,   1000, fa40f000),			\
   X(_asrs,  1000, fa50f000),			\
+  X(_aut,   0000, f3af802d),			\
+  X(_autg,   0000, fb500f00),			\
   X(_b,     e000, f000b000),			\
   X(_bcond, d000, f0008000),			\
   X(_bf,    0000, f040e001),			\
@@ -11445,6 +11464,7 @@ encode_thumb32_addr_mode (int i, bool is_t, bool is_d)
   X(_bflx,  0000, f070e001),			\
   X(_bic,   4380, ea200000),			\
   X(_bics,  4380, ea300000),			\
+  X(_bxaut, 0000, fb500f10),			\
   X(_cinc,  0000, ea509000),			\
   X(_cinv,  0000, ea50a000),			\
   X(_cmn,   42c0, eb100f00),			\
@@ -11491,6 +11511,9 @@ encode_thumb32_addr_mode (int i, bool is_t, bool is_d)
   X(_negs,  4240, f1d00000), /* rsbs #0 */	\
   X(_orr,   4300, ea400000),			\
   X(_orrs,  4300, ea500000),			\
+  X(_pac,   0000, f3af801d),			\
+  X(_pacbti, 0000, f3af800d),			\
+  X(_pacg,  0000, fb60f000),			\
   X(_pop,   bc00, e8bd0000), /* ldmia sp!,... */	\
   X(_push,  b400, e92d0000), /* stmdb sp!,... */	\
   X(_rev,   ba00, fa90f080),			\
@@ -22317,6 +22340,36 @@ do_vmmla (void)
   neon_three_args (1);
 }
 
+static void
+do_t_pacbti (void)
+{
+  inst.instruction = THUMB_OP32 (inst.instruction);
+}
+
+static void
+do_t_pacbti_nonop (void)
+{
+  constraint (!ARM_CPU_HAS_FEATURE (cpu_variant, pacbti_ext),
+	      _(BAD_PACBTI));
+
+  inst.instruction = THUMB_OP32 (inst.instruction);
+  inst.instruction |= inst.operands[0].reg << 12;
+  inst.instruction |= inst.operands[1].reg << 16;
+  inst.instruction |= inst.operands[2].reg;
+}
+
+static void
+do_t_pacbti_pacg (void)
+{
+  constraint (!ARM_CPU_HAS_FEATURE (cpu_variant, pacbti_ext),
+	      _(BAD_PACBTI));
+
+  inst.instruction = THUMB_OP32 (inst.instruction);
+  inst.instruction |= inst.operands[0].reg << 8;
+  inst.instruction |= inst.operands[1].reg << 16;
+  inst.instruction |= inst.operands[2].reg;
+}
+
 
 /* Overall per-instruction processing.	*/
 
@@ -23904,6 +23957,9 @@ static const struct reg_entry reg_names[] =
 
   /* XScale accumulator registers.  */
   REGNUM(acc,0,XSCALE), REGNUM(ACC,0,XSCALE),
+
+  /* Alias 'ra_auth_code' to r12 for pacbti.  */
+  REGDEF(ra_auth_code,12,RN),
 };
 #undef REGDEF
 #undef REGNUM
@@ -26305,6 +26361,13 @@ static const struct asm_opcode insns[] =
  /* Armv8.1-M Mainline instructions.  */
 #undef  THUMB_VARIANT
 #define THUMB_VARIANT & arm_ext_v8_1m_main
+ toU("aut",   _aut, 3, (R12, LR, SP), t_pacbti),
+ toU("autg",  _autg, 3, (RR, RR, RR), t_pacbti_nonop),
+ ToU("bti",   f3af800f, 0, (), noargs),
+ toU("bxaut", _bxaut, 3, (RR, RR, RR), t_pacbti_nonop),
+ toU("pac",   _pac,   3, (R12, LR, SP), t_pacbti),
+ toU("pacbti", _pacbti, 3, (R12, LR, SP), t_pacbti),
+ toU("pacg",   _pacg,   3, (RR, RR, RR), t_pacbti_pacg),
  toU("cinc",  _cinc,  3, (RRnpcsp, RR_ZR, COND),	t_cond),
  toU("cinv",  _cinv,  3, (RRnpcsp, RR_ZR, COND),	t_cond),
  toU("cneg",  _cneg,  3, (RRnpcsp, RR_ZR, COND),	t_cond),
@@ -31907,6 +31970,7 @@ static const struct arm_ext_table armv8_1m_main_ext_table[] =
 			ARM_EXT2_FP16_INST | ARM_EXT2_MVE | ARM_EXT2_MVE_FP,
 			FPU_VFP_V5_SP_D16 | FPU_VFP_EXT_FP16 | FPU_VFP_EXT_FMA)),
   CDE_EXTENSIONS,
+  ARM_ADD ("pacbti", ARM_FEATURE_CORE_HIGH_HIGH (ARM_AEXT3_V8_1M_MAIN_PACBTI)),
   { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
 };
 

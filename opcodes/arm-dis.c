@@ -4652,6 +4652,23 @@ static const struct opcode16 thumb_opcodes[] =
    makes heavy use of special-case bit patterns.  */
 static const struct opcode32 thumb32_opcodes[] =
 {
+  /* Arm v8.1-M Mainline Pointer Authentication and Branch Target
+     Identification Extension.  */
+  {ARM_FEATURE_CORE_HIGH (ARM_EXT2_V8_1M_MAIN),
+   0xf3af802d, 0xffffffff, "aut\tr12, lr, sp"},
+  {ARM_FEATURE_CORE_HIGH_HIGH (ARM_EXT3_PACBTI),
+   0xfb500f00, 0xfff00ff0, "autg%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_FEATURE_CORE_HIGH (ARM_EXT2_V8_1M_MAIN),
+   0xf3af800f, 0xffffffff, "bti"},
+  {ARM_FEATURE_CORE_HIGH_HIGH (ARM_EXT3_PACBTI),
+   0xfb500f10, 0xfff00ff0, "bxaut%c\t%12-15r, %16-19r, %0-3r"},
+  {ARM_FEATURE_CORE_HIGH (ARM_EXT2_V8_1M_MAIN),
+   0xf3af801d, 0xffffffff, "pac\tr12, lr, sp"},
+  {ARM_FEATURE_CORE_HIGH (ARM_EXT2_V8_1M_MAIN),
+   0xf3af800d, 0xffffffff, "pacbti\tr12, lr, sp"},
+  {ARM_FEATURE_CORE_HIGH_HIGH (ARM_EXT3_PACBTI),
+   0xfb60f000, 0xfff0f0f0, "pacg%c\t%8-11r, %16-19r, %0-3r"},
+
   /* Armv8.1-M Mainline and Armv8.1-M Mainline Security Extensions
      instructions.  */
   {ARM_FEATURE_CORE_HIGH (ARM_EXT2_V8_1M_MAIN),
