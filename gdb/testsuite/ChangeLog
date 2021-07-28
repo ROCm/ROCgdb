@@ -1,3 +1,44 @@
+2021-07-26  Tankut Baris Aktemur  <tankut.baris.aktemur@intel.com>
+
+	PR gdb/28076
+	* gdb.mi/mi-break.exp: Add more tests to check clearing the
+	breakpoint condition.
+
+2021-07-22  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/formatted_ref.exp: Add xfail for PR gcc/101575.
+	* gdb.ada/iwide.exp: Same.
+	* gdb.ada/pkd_arr_elem.exp: Same.
+
+2021-07-22  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.cp/step-and-next-inline.cc (tree_check, get_alias_set, main):
+	Tag closing brace with comment.
+	* gdb.cp/step-and-next-inline.h: Update to keep identical with
+	step-and-next-inline.cc.
+	* gdb.cp/step-and-next-inline.exp: Issue extra next when required.
+
+2021-07-21  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gcc_major_version): New proc.
+	* gdb.base/ptype-offsets.cc: Define static member static_member::Empty.
+	* gdb.cp/templates.exp: Define static member using -DGCC_BUG.
+	* gdb.cp/m-static.exp: Add
+	additional_flags=-fno-eliminate-unused-debug-types.
+	* gdb.cp/pr-574.exp: Same.
+	* gdb.cp/pr9167.exp: Same.
+
+2021-07-21  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.ada/arrayptr.exp: Add KFAILs for PR20991 and PR28115.
+	* gdb.ada/exprs.exp: Add KFAILs for PR20991.
+	* gdb.ada/packed_array_assign.exp: Same.
+
+2021-07-19  Tom Tromey  <tromey@adacore.com>
+
+	PR gdb/28093
+	* gdb.base/langs.exp: Add tests.
+
 2021-07-14  Tom de Vries  <tdevries@suse.de>
 
 	* lib/gdb.exp (have_index): New proc.
