@@ -39524,7 +39524,7 @@ N.A.
  -gdb-set
 @end smallexample
 
-Set an internal @value{GDBN} variable.
+Set an internal @value{GDBN} variable or setting.
 @c IS THIS A DOLLAR VARIABLE? OR SOMETHING LIKE ANNOTATE ?????
 
 @subsubheading @value{GDBN} Command
@@ -39536,6 +39536,9 @@ The corresponding @value{GDBN} command is @samp{set}.
 @smallexample
 (gdb)
 -gdb-set $foo=3
+^done
+(gdb)
+-gdb-set print object on
 ^done
 (gdb)
 @end smallexample
@@ -39550,18 +39553,27 @@ The corresponding @value{GDBN} command is @samp{set}.
  -gdb-show
 @end smallexample
 
-Show the current value of a @value{GDBN} variable.
+Show the current value of a @value{GDBN} variable or setting.
 
 @subsubheading @value{GDBN} Command
 
 The corresponding @value{GDBN} command is @samp{show}.
 
+@subheading Result
+
+The @samp{value} result has the variable's or setting's current value.
+Settings include a @samp{verbose} result that provides the string as shown
+by the CLI @samp{show} command.
+
 @subsubheading Example
 
 @smallexample
 (gdb)
--gdb-show annotate
-^done,value="0"
+-gdb-show $foo
+^done,value="3"
+(gdb)
+-gdb-show target-charset
+^done,value="auto",verbose="The target character set is auto; currently UTF-8."
 (gdb)
 @end smallexample
 
