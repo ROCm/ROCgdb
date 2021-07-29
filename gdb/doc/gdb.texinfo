@@ -27057,13 +27057,66 @@ at least the @acronym{AMD GPU} Code Object V3 and DWARF 4 formats.
 
 @end table
 
-@subsubsection @acronym{AMD GPU} Heterogeneous Agents, Queues, and Dispatches
+@subsubsection @acronym{AMD GPU} Device Driver and @acronym{AMD ROCm} Runtime
 
-@acronym{AMD GPU} heterogeneous agents are not listed by the @samp{info agents}
-command until the inferior has started executing the program.
+@value{GDBN} requires a compatible @acronym{AMD GPU} device driver to
+be installed.  A warning message is displayed if either the device
+driver version or the version of the debug support it implements is
+unsupported.  For example,
 
-The @acronym{AMD GPU} heterogeneous queue types reported by the @samp{info
-agents} command are:
+@smallexample
+amd-dbgapi: warning: AMD GPU driver's version 1.6 not supported (version 2.x where x >= 1 required)
+amd-dbgapi: warning: AMD GPU driver's debug support version 9.0 not supported (version 10.x where x >= 1) required
+@end smallexample
+
+@value{GDBN} will continue to function except no @acronym{AMD GPU}
+debugging will be possible.
+
+@value{GDBN} requires each agent to have compatible firmware installed
+by the device driver.  A warning message is displayed if unsupported
+firmware is detected.  For example,
+
+@smallexample
+amd-dbgapi: warning: AMD GPU gpu_id 17619's firmware version 458 not supported (version >= 555 required)
+@end smallexample
+
+@value{GDBN} will continue to function except no @acronym{AMD GPU}
+debugging will be possible on the agent.
+
+@value{GDBN} requires a compatible @acronym{AMD ROCm} runtime to be
+loaded in order to detect @acronym{AMD GPU} code objects and
+wavefronts.  A warning message is displayed if an unsupported
+@acronym{AMD ROCm} runtime is detected, or there is an error or
+restriction that prevents debugging.  For example,
+
+@smallexample
+amd_dbgapi: warning: AMD GPU runtime's r_debug::r_version 5 not supported (r_debug::r_version >= 6 required)
+@end smallexample
+
+@value{GDBN} will continue to function except no @acronym{AMD GPU}
+debugging will be possible.
+
+@subsubsection @acronym{AMD GPU} Heterogeneous Agents
+
+@acronym{AMD GPU} heterogeneous agents are not listed by the
+@samp{info agents} command until the inferior has started executing
+the program.
+
+If the agent's architecture is not supported by @value{GDBN} then
+@samp{(Unsupported Architecture)} is appended to the device name of
+the @samp{info agents} command.
+
+If the agent's firmware version is not supported by @value{GDBN} then
+@samp{(Unsupported Firmware)} is appended to the device name of the
+@samp{info agents} command.
+
+Unsupported agents cannot be debugged and do not report any queues,
+dispatches or wavefronts.
+
+@subsubsection @acronym{AMD GPU} Heterogeneous Queues
+
+The @acronym{AMD GPU} heterogeneous queue types reported by the
+@samp{info queues} command are:
 
 @table @emph
 
@@ -27083,6 +27136,8 @@ A DMA queue.
 An XGMI queue.
 
 @end table
+
+@subsubsection @acronym{AMD GPU} Heterogeneous Dispatches
 
 @acronym{AMD GPU} supports the following address spaces for the @samp{info
 dispatches} command:
@@ -27169,6 +27224,35 @@ instructions.  Continuing such wavefronts will not hit any breakpoints
 nor report completion of a single step command.  If necessary,
 @samp{Ctrl-C} can be used to cancel the command.
 
+By default, the @acronym{AMD GPU} device driver causes all
+@acronym{AMD GPU} wavefronts created when @value{GDBN} is not attached
+to be unable to report the heterogeneous dispatch associated with the
+wavefront, or the wavefront's heterogeneous work-group position.  The
+@samp{info threads} command will display this missing information with
+a @samp{?}.
+
+For example,
+
+@smallexample
+(gdb) info threads
+  Id   Target Id                                       Frame
+* 1    Thread 0x7ffff6987840 (LWP 62056) "bit_extract" 0x00007ffff6da489b in sched_yield () at ../sysdeps/unix/syscall-template.S:78
+  2    Thread 0x7ffff6986700 (LWP 62064) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  3    Thread 0x7ffff5f7f700 (LWP 62066) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  4    Thread 0x7ffff597f700 (LWP 62067) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  5    AMDGPU Thread 1:2:?:1 (?,?,?)/? "bit_extract"   bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:41
+@end smallexample
+
+This does not affect wavefronts created while @value{GDBN} is attached
+which are always capable of reporting this information.
+
+If the @env{HSA_ENABLE_DEBUG} environment variable is set to @samp{1}
+when the @acronym{AMD ROCm} runtime is initialized, then this
+information will be available even for wavefronts created when
+@value{GDBN} was not attached.  Setting this environment variable may
+very marginally reduce wavefront launch latency for very short lived
+wavefronts.
+
 @subsubsection @acronym{AMD GPU} Registers
 
 @acronym{AMD GPU} supports the following @var{reggroup} values for the
@@ -27191,15 +27275,37 @@ system
 @end itemize
 
 The number of scalar and vector registers is configured when a
-wavefront is created.  Only allocated registers are displayed.  Scalar
-registers are reported as 32-bit signed integer values.  Vector
-registers are reported as a wavefront size vector of signed 32-bit
-values.  The @code{pc} is reported as a function pointer value.  The
-@code{exec} register is reported as a wavefront size-bit unsigned
-integer value.  The @code{vcc} and @code{xnack_mask} pseudo registers
-are reported as a wavefront size-bit unsigned integer value.  The
-@code{flat_scratch} pseudo register is reported as a 64-bit unsigned
+wavefront is created.  Only allocated registers are displayed.
+
+Scalar registers are reported as 32-bit signed integer values.
+
+Vector registers are reported as a wavefront size vector of signed
+32-bit values.
+
+The @code{pc} is reported as a function pointer value.
+
+The @code{exec} register is reported as a wavefront size-bit unsigned
 integer value.
+
+The @code{vcc} and @code{xnack_mask} pseudo registers are reported as
+a wavefront size-bit unsigned integer value.
+
+The @code{flat_scratch} pseudo register is reported as a 64-bit
+unsigned integer value.
+
+The @code{mode}, @code{status}, and @code{trapsts} registers are
+reported as flag values.  For example,
+
+@smallexample
+(gdb) p $mode
+$1 = [ FP_ROUND.32=NEAREST_EVEN FP_ROUND.64_16=NEAREST_EVEN FP_DENORM.32=FLUSH_NONE FP_DENORM.64_16=FLUSH_NONE DX10_CLAMP IEEE CSP=0 ]
+(gdb) p $status
+$2 = [ SPI_PRIO=0 USER_PRIO=0 TRAP_EN VCCZ VALID ]
+(gdb) p $trapsts
+$3 = [ EXCP_CYCLE=0 DP_RATE=FULL ]
+@end smallexample
+
+Use the @samp{ptype} command to see the type of any register.
 
 @subsubsection @acronym{AMD GPU} Code Objects
 
@@ -27696,18 +27802,6 @@ the log to a new file:
 If you want to print the log to both the console and a file, omit the
 @samp{set logging debugredirect on} command.  @xref{Logging Output}.
 
-By default, the kernel driver causes all @acronym{AMD GPU} wavefronts
-created when @value{GDBN} is not attached to be unable to report the
-heterogeneous dispatch associated with the wavefront, or the
-wavefront's heterogeneous work-group position.  This does not affect
-wavefronts created while @value{GDBN} is attached which are always
-capable of reporting this information.  If the @env{HSA_ENABLE_DEBUG}
-environment variable is set to @samp{1} when the @acronym{AMD ROCm}
-runtime is initialized, then this information will be available even
-for wavefronts created when @value{GDBN} was not attached, but may
-very marginally reduce wavefront launch latency for very short lived
-wavefronts.
-
 @subsubsection @acronym{AMD GPU} Restrictions
 
 @value{GDBN} @acronym{AMD GPU} support is currently a prototype and
@@ -27771,8 +27865,8 @@ currently include an indication that the position may not be accurate.
 
 @item
 The @acronym{AMD ROCm} compiler currently does not support generating
-valid @acronym{AMD GPU} DWARF information for symbolic variables and
-call frame information.  As a consequence:
+valid @acronym{AMD GPU} DWARF information for symbolic variables.  As
+a consequence:
 
 @itemize @bullet{}
 
@@ -27784,14 +27878,11 @@ any language types.  However, global symbols for functions and
 variables can be specified, and source line information is available.
 
 @item
-The @code{backtrace} command can only show the current frame and
-parent frames that are fully inlined.  Function or kernel arguments
-will not be displayed and instead an empty formal argument list may be
-shown.
-
-@item
-The @code{next} command may not step over function calls, but instead
-stop at the first statement of the called function.
+The @code{backtrace} command can show the current frame, parent
+inlined frames, and parent non-inlined frames provided the
+@acronym{AMD ROCm} compiler @w{@option{-ggdb}} option is specified.
+Function or kernel arguments will not be displayed and instead an
+empty formal argument list may be shown.
 
 @item
 Breakpoints are only reported for wavefronts.  There is no support for
@@ -27822,33 +27913,29 @@ Error while mapping shared library sections:
 @end smallexample
 
 @item
-DWARF 5 is not yet supported.  There is no support for compressed or split
-DWARF.
-
-DWARF 4 is the default for the @acronym{AMD ROCm} compiler.
-
-@item
 No support yet for @acronym{AMD GPU} core dumps.
 
 @item
-When in all-stop mode, @acronym{AMD GPU} does not currently prevent
-new wavefronts from being created, which may report breakpoints being
-hit.  However, @value{GDBN} is configured by default to not remove
-breakpoints when at the command line in all-stop mode.  This prevents
-breakpoints being missed by wavefronts created after at the command
-line in all-stop mode.  The @code{set breakpoint always-inserted on}
-command can be used to change the default to remove breakpoints when
-at the command line in all-stop mode, but this may result in new
-wavefronts missing breakpoints.
+When in non-stop mode, wavefronts may not hit breakpoints inserted
+while not stopped, nor see memory updates made while not stopped,
+until the wavefront is next stopped.  Memory updated by non-stopped
+wavefronts may not be visible until the wavefront is next stopped.
+
+@item
+Single-stepping or resuming execution from an illegal instruction may
+execute differently in @value{GDBN} than on real hardware.
+
+@item
+Halting all @acronym{AMD GPU} wavefronts in an inferior can result in
+preventing other inferiors from executing @acronym{AMD GPU}
+wavefronts.
 
 @item
 The performance of resuming from a breakpoint when a large number of
-threads have hit a breakpoint can currently take up to 10 seconds on a
-fully occupied single @acronym{AMD GPU} device.  The techniques
-described in @ref{Heterogeneous Debugging} can be used to mitigate
-this.  Once continued from the first breakpoint hit, the
-responsiveness of commands normally is better.  Other techniques that
-can improve responsiveness are:
+threads have hit a breakpoint on a fully occupied single @acronym{AMD
+GPU} device is comparable to CPU debugging.  However, the techniques
+described in @ref{Heterogeneous Debugging} can be used to improve
+responsiveness.  Other techniques that can improve responsiveness are:
 
 @itemize @bullet{}
 
@@ -27869,13 +27956,22 @@ Reduce the number of wavefronts when debugging if practical.
 @end itemize
 
 @item
-Currently each @acronym{AMD GPU} device can only be in use by one
-process that is being debugged by @value{GDBN}.  The Linux
-@emph{cgroups} facility can be used to limit which @acronym{AMD GPU}
-devices are used by a process.  In order for a @value{GDBN} process to
-access the @acronym{AMD GPU} devices of the process it is debugging,
-the @acronym{AMD GPU} devices must be included in the @value{GDBN}
-process @emph{cgroup}.
+Some @acronym{AMD GPU} devices, such as @samp{gfx90a}, can be in use
+by multiple processes that are being debugged by @value{GDBN}.  For
+other devices the following warning message may be displayed.
+
+@smallexample
+amd-dbgapi: warning: At least one agent is busy (debugging may be enabled by another process)
+@end smallexample
+
+@value{GDBN} will continue to function except no @acronym{AMD GPU}
+debugging will be possible.
+
+The Linux @emph{cgroups} facility can be used to limit which
+@acronym{AMD GPU} devices are used by a process.  In order for a
+@value{GDBN} process to access the @acronym{AMD GPU} devices of the
+process it is debugging, the @acronym{AMD GPU} devices must be
+included in the @value{GDBN} process @emph{cgroup}.
 
 Therefore, multiple @value{GDBN} processes can each debug a process
 provided the @emph{cgroups} specify disjoint sets of @acronym{AMD GPU}
@@ -27968,27 +28064,6 @@ export HIP_ENABLE_DEFERRED_LOADING=0
 
 @emph{Note:}  If deferred code object loading is disabled and the
 application performs a @code{fork}, then the program may crash.
-
-@item
-The @acronym{AMD ROCm} runtime can currently cause the inferior to
-terminate before a memory violation caused by an @acronym{AMD GPU}
-wavefront is reported.  This can be avoided by setting a breakpoint in
-@code{abort} and using the non-stop mode (@pxref{Non-Stop Mode}).
-This will prevent the @acronym{AMD ROCm} runtime from terminating the
-inferior, while allowing @value{GDBN} to report the memory violation.
-
-@item
-@value{GDBN} may report errors if execution is continued after the
-@acronym{AMD ROCm} runtime aborts the application.  For example:
-
-@smallexample
-warning: unable to open /proc file '/proc/1234/status'
-@end smallexample
-
-This can happen due to memory violations in the @acronym{AMD GPU} code
-as described in the previous item.  To prevent the errors, do not
-continue the application after the @acronym{AMD ROCm} runtime has
-invoked @code{abort}.
 
 @item
 @value{GDBN} supports watchpoints, but limits the capabilities to the
@@ -28089,6 +28164,15 @@ wavefront may also suppress the same signal raised by other
 being notified.
 
 @xref{AMD GPU Signals, , @acronym{AMD GPU} Signals}.
+
+@item
+If the inferior exits while there are wavefronts that have reported
+events, such as breakpoints, that @value{GDBN} has not completed
+processing, then the following error may be displayed.
+
+@smallexample
+Couldn't get registers: No such process.
+@end smallexample
 
 @end enumerate
 
