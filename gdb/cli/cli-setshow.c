@@ -695,6 +695,17 @@ get_setshow_command_value_string (const cmd_list_element *c)
   return std::move (stb.string ());
 }
 
+/* Format the value VAL of setting C in its verbose form (as shown on the
+   CLI).  */
+
+static void
+show_setting_value (ui_file *out, int from_tty, cmd_list_element *c, const char *val)
+{
+  if (c->show_value_func != nullptr)
+    c->show_value_func (out, from_tty, c, val);
+  else
+    deprecated_show_value_hack (out, from_tty, c, val);
+}
 
 /* Do a "show" command.  ARG is NULL if no argument, or the
    text of the argument, and FROM_TTY is nonzero if this command is
@@ -714,14 +725,15 @@ do_show_command (const char *arg, int from_tty, struct cmd_list_element *c)
      versions of code to print the value out.  */
 
   if (uiout->is_mi_like_p ())
-    uiout->field_string ("value", val);
-  else
     {
-      if (c->show_value_func != NULL)
-	c->show_value_func (gdb_stdout, from_tty, c, val.c_str ());
-      else
-	deprecated_show_value_hack (gdb_stdout, from_tty, c, val.c_str ());
+      uiout->field_string ("value", val);
+
+      string_file out;
+      show_setting_value (&out, from_tty, c, val.c_str ());
+      uiout->field_string ("verbose", out.string ());
     }
+  else
+    show_setting_value (gdb_stdout, from_tty, c, val.c_str ());
 
   c->func (c, NULL, from_tty);
 }
