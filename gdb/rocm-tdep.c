@@ -1899,6 +1899,10 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
     if (it != info->breakpoint_map.end ())
       return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
 
+    /* We need to find the address in the given inferior's program space.  */
+    scoped_restore_current_thread restore_thread;
+    switch_to_inferior_no_thread (inf);
+
     /* Create a new breakpoint.  */
     struct obj_section *section = find_pc_section (address);
     if (!section || !section->objfile)
