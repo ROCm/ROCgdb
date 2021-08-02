@@ -2797,7 +2797,8 @@ value_as_address (struct value *val)
       && !TYPE_IS_REFERENCE (value_type (val))
       && gdbarch_integer_to_address_p (gdbarch))
     return gdbarch_integer_to_address (gdbarch, value_type (val),
-				       value_contents (val));
+				       value_contents (val),
+				       ARCH_ADDR_SPACE_ID_DEFAULT);
 
   return unpack_long (value_type (val), value_contents (val));
 #endif

@@ -551,15 +551,10 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
       /* FIXME: We current have no way to specify the address space, so it is
 	 encoded in the "unused" bits of a canonical address.  */
       uint64_t dwarf_address_space
-	= (offset & ROCM_ASPACE_MASK) >> ROCM_ASPACE_BIT_OFFSET;
+	= (uint64_t) amdgcn_address_space_id_from_core_address (offset);
 
       amd_dbgapi_segment_address_t segment_address
-	= offset & ~ROCM_ASPACE_MASK;
-
-      /* FIXME: Default to the generic address space to allow the examine
-	 command to work with flat addresses without special syntax.  */
-      if (!dwarf_address_space)
-	dwarf_address_space = /*DW_ASPACE_AMDGPU_generic*/ 1;
+	= amdgcn_segment_address_from_core_address (offset);
 
       amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
       amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
@@ -3087,6 +3082,32 @@ info_dispatches_command (const char *args, int from_tty)
   gdb_flush (gdb_stdout);
 }
 
+/* Dump out a table of address spaces for the current architecture.  */
+
+static void
+address_spaces_dump (struct gdbarch *gdbarch, struct ui_file *file)
+{
+  if (!gdbarch_address_spaces_p (gdbarch))
+    return;
+
+  auto address_spaces = gdbarch_address_spaces (gdbarch);
+
+  fprintf_unfiltered (file, " Name\n");
+
+  for (const auto &address_space : address_spaces)
+    {
+      fprintf_unfiltered (file, " %-10s\n", address_space.name.get ());
+    }
+}
+
+/* Dump out a table of register groups for the current architecture.  */
+
+static void
+maintenance_print_address_spaces (const char *args, int from_tty)
+{
+  address_spaces_dump (get_current_arch (), gdb_stdout);
+}
+
 static void
 dispatch_find_command (const char *arg, int from_tty)
 {
@@ -3289,4 +3310,11 @@ Otherwise, all dispatches are displayed."),
   auto *c = add_info ("dispatches", info_dispatches_command,
 		      info_dispatches_help.c_str ());
   set_cmd_completer_handle_brkchars (c, info_dispatches_command_completer);
+
+  add_cmd ("address-spaces", class_maintenance,
+	   maintenance_print_address_spaces, _("\
+Displays the address space names supported by \
+each target architecture.\n\
+Takes an optional file parameter."),
+	   &maintenanceprintlist);
 }

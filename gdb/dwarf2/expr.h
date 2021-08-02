@@ -131,7 +131,4 @@ extern const gdb_byte *safe_read_sleb128 (const gdb_byte *buf,
 extern const gdb_byte *safe_skip_leb128 (const gdb_byte *buf,
 					 const gdb_byte *buf_end);
 
-extern CORE_ADDR aspace_address_to_flat_address (CORE_ADDR address,
-						 unsigned int address_space);
-
 #endif /* dwarf2expr.h */

@@ -358,8 +358,8 @@ avr_pointer_to_address (struct gdbarch *gdbarch,
 }
 
 static CORE_ADDR
-avr_integer_to_address (struct gdbarch *gdbarch,
-			struct type *type, const gdb_byte *buf)
+avr_integer_to_address (struct gdbarch *gdbarch, struct type *type,
+			const gdb_byte *buf, unsigned int aspace)
 {
   ULONGEST addr = unpack_long (type, buf);
 

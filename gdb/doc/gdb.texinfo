@@ -23429,50 +23429,40 @@ column before the @emph{Address} column if any breakpoint has a
 @c used.  It has been defined as a @code{maint} command only to match
 @c the @code{maint print reggroups} command which also should not be a
 @c maintenance command for the same reason.
-@item maint print address-spaces @r{[}@var{file}@r{]}
+@item maint print address-spaces
 @code{maint print address-spaces} displays the address space names
-supported by each target architecture.  The optional argument
-@var{file} tells to what file to write the information.
+supported by the current architecture.
 
 The address spaces info looks like this:
 
 @smallexample
 (@value{GDBP}) @kbd{maint print address-spaces}
- Class      Arch
- global     All
- group      AMDGPU
- private    AMDGPU
- generic    AMDGPU
+ Name
+ global
+ generic
+ region
+ local
+ private_lane
+ private_wave
 @end smallexample
 
-The @var{global} address space corresponds to the default global
-virtual memory address space and is available for all target
-architectures.
+Any expression that evaluates to an integral value, can be used
+as an address.  It can optionally specify an address space qualifier
+by prepending an address space name followed by a @samp{#}.
+@value{GDBN} will print an error if the address space name is not
+supported by the current architecture.  If no address space is
+specified the current architecture's default address space (generally
+the global address space) is used.
 
-Every address entered or displayed can optionally specify the address
-space qualifier by appending an @samp{@@} followed by an address space
-name.  @value{GDBN} will print an error if the address space name is
-not supported by the current architecture.
+The same syntax is used when an address that is not in the current
+architecture's default address space is displayed.
 
 For example,
 
 @smallexample
-(@value{GDBP}) x/x 0x10021608@@group
-0x10021608@@group:     0x0022fd98
+(@value{GDBP}) x/x local#0x10021608
+local#0x10021608:     0x0022fd98
 @end smallexample
-
-@c FIXME-implementors!!  Perhaps the gdb internal types (such as used
-@c for register types) can be extended to support addresses in address
-@c spaces.
-
-If there is no current thread then the only address space that can be
-specified is @var{global}.
-
-If entering an address and no address space is specified, the
-@var{global} address space is used.
-
-If an address is displayed, the address space qualifier is omitted for
-the @var{global} address space.
 
 @end table
 
@@ -27543,6 +27533,12 @@ the generic address space that can access the @var{global},
 
 @end table
 
+The @acronym{AMD GPU} architecture default address space is @code{global}.
+
+The @ref{maint print address-spaces,, @code{maint print address-spaces}}
+command can be used to display the @acronym{AMD GPU} architecture address
+spaces.
+
 @anchor{AMD GPU Signals}
 @subsubsection @acronym{AMD GPU} Signals
 
@@ -27845,21 +27841,6 @@ dispatch.
 The thread's number within the heterogeneous work-group.
 
 @end table
-
-The address space qualification of addresses described in
-@ref{Heterogeneous Debugging} is not implemented.  However, the
-default address space for @acronym{AMD GPU} threads is @code{generic}.
-This allows a generic address to be used to read or write in the
-@code{global}, @code{group}, or @code{private} address spaces.  For
-the @acronym{AMD ROCm} platform the @acronym{AMD GPU} generic address
-value for @code{global} addresses is the same, for @code{group}
-addresses it has the most significant 32-bits of the address set to
-0x00010000, and for @code{private} addresses is has the host
-significant 32-bits of the address set to 0x00020000.  A generic
-private address only accesses lane 0 of the currently focused
-wavefront.  A group address accesses the @code{group} segment memory
-shared by all wavefronts that are members of the same work-group as
-the currently focused wavefront.
 
 @item
 If a memory violation or address watch access event is reported for an

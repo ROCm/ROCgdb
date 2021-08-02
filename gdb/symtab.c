@@ -2431,7 +2431,7 @@ language_defn::lookup_symbol_nonlocal (const char *name,
       struct gdbarch *gdbarch;
 
       if (block == NULL)
-	gdbarch = target_gdbarch ();
+	gdbarch = get_current_arch ();
       else
 	gdbarch = block_gdbarch (block);
       result.symbol = language_lookup_primitive_type_as_symbol (this,
@@ -2630,7 +2630,7 @@ lookup_global_or_static_symbol (const char *name,
       lookup_data.block_index = block_index;
       lookup_data.domain = domain;
       gdbarch_iterate_over_objfiles_in_search_order
-	(objfile != NULL ? objfile->arch () : target_gdbarch (),
+	(objfile != NULL ? objfile->arch () : get_current_arch (),
 	 lookup_symbol_global_or_static_iterator_cb, &lookup_data, objfile);
       result = lookup_data.result;
     }

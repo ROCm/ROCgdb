@@ -75,6 +75,7 @@
 #include "gdbarch.h"
 #include "cli-out.h"
 #include "gdbsupport/gdb-safe-ctype.h"
+#include "arch-utils.h"
 
 void (*deprecated_error_begin_hook) (void);
 
@@ -2867,9 +2868,32 @@ address_significant (gdbarch *gdbarch, CORE_ADDR addr)
   return addr;
 }
 
+std::string
+paspace (struct gdbarch *gdbarch, CORE_ADDR addr)
+{
+  arch_addr_space_id address_space_id
+    = gdbarch_address_space_id_from_core_address (gdbarch, addr);
+
+  /* For backward compatibility, dont print the address
+     space name of the default address space, even if
+     the architecture have a name for it.  */
+  if (address_space_id == ARCH_ADDR_SPACE_ID_DEFAULT)
+   return "";
+
+  const char *address_space_name
+    = gdbarch_address_space_id_to_name (gdbarch, address_space_id);
+
+  if (address_space_name == nullptr)
+    return "";
+
+  return std::string(address_space_name) + "#";
+}
+
 const char *
 paddress (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
+  addr = gdbarch_segment_address_from_core_address (gdbarch, addr);
+
   /* Truncate address to the size of a target address, avoiding shifts
      larger or equal than the width of a CORE_ADDR.  The local
      variable ADDR_BIT stops the compiler reporting a shift overflow

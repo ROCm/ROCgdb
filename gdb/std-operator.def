@@ -195,6 +195,9 @@ OP (UNOP_CAST)
 /* Like UNOP_CAST, but the type is a subexpression.  */
 OP (UNOP_CAST_TYPE)
 
+/* OP_ASPACE.  */
+OP (OP_ASPACE)
+
 /* The C++ dynamic_cast operator.  */
 OP (UNOP_DYNAMIC_CAST)
 

@@ -628,14 +628,26 @@ enum user_selected_what_flag
   };
 DEF_ENUM_FLAGS_TYPE (enum user_selected_what_flag, user_selected_what);
 
-/* FIXME: Needs to be removed when address space support is implemented.  */
-#ifndef ROCM_ASPACE_BIT_OFFSET
-#define ROCM_ASPACE_BIT_OFFSET 56
-#endif
+/* Architecture address space id type.  */
+typedef uint64_t arch_addr_space_id;
 
-#ifndef ROCM_ASPACE_MASK
-#define ROCM_ASPACE_MASK 0xff00000000000000
-#endif
+/* Default address space id used when the id is not
+   specified or the address spaces are not supported.  */
+constexpr arch_addr_space_id ARCH_ADDR_SPACE_ID_DEFAULT = 0;
+
+/* Architecture address space descriptor.  */
+
+struct arch_addr_space
+{
+  arch_addr_space (arch_addr_space_id id,
+		   gdb::unique_xmalloc_ptr<char> name)
+    : id (id), name (std::move (name))
+  {}
+
+  const arch_addr_space_id id;
+
+  gdb::unique_xmalloc_ptr<char> name;
+};
 
 #include "utils.h"
 

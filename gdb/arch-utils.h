@@ -305,4 +305,34 @@ extern void default_read_core_file_mappings (struct gdbarch *gdbarch,
 								      ULONGEST file_ofs,
 								      const char *filename)>
 					       loop_cb);
+
+/* Architecture address space handling.  */
+
+/* Convert address space name to an address space id.  */
+extern gdb::optional<arch_addr_space_id> gdbarch_name_to_address_space_id
+  (struct gdbarch *gdbarch, const char *name);
+
+/* Convert address space id to an address space name.  */
+extern const char *gdbarch_address_space_id_to_name
+  (struct gdbarch *gdbarch, arch_addr_space_id addr_space_id);
+
+/* Default implementation of
+   gdbarch_dwarf_address_space_to_address_space_id.  */
+extern arch_addr_space_id default_dwarf_address_space_to_address_space_id
+  (LONGEST dwarf_addr_space);
+
+/* TODO: Following default address space hooks are a quick fix until a proper
+	 address space support is added and should not be pushed upstream.  */
+
+/* Default implementation of gdbarch_address_space_id_from_core_address.  */
+extern arch_addr_space_id default_address_space_id_from_core_address
+  (CORE_ADDR address);
+
+/* Default implementation of gdbarch_segment_address_from_core_address.  */
+extern CORE_ADDR default_segment_address_from_core_address (CORE_ADDR address);
+
+/* Default implementation of gdbarch_segment_address_to_core_address.  */
+extern CORE_ADDR default_segment_address_to_core_address
+  (arch_addr_space_id address_space_id, CORE_ADDR address);
+
 #endif /* ARCH_UTILS_H */

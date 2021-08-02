@@ -521,9 +521,49 @@ extern void set_gdbarch_address_to_pointer (struct gdbarch *gdbarch, gdbarch_add
 
 extern bool gdbarch_integer_to_address_p (struct gdbarch *gdbarch);
 
-typedef CORE_ADDR (gdbarch_integer_to_address_ftype) (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
-extern CORE_ADDR gdbarch_integer_to_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
+typedef CORE_ADDR (gdbarch_integer_to_address_ftype) (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id);
+extern CORE_ADDR gdbarch_integer_to_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id);
 extern void set_gdbarch_integer_to_address (struct gdbarch *gdbarch, gdbarch_integer_to_address_ftype *integer_to_address);
+
+/* Return a list of supported address spaces. */
+
+extern bool gdbarch_address_spaces_p (struct gdbarch *gdbarch);
+
+typedef gdb::array_view<const arch_addr_space> (gdbarch_address_spaces_ftype) (struct gdbarch *gdbarch);
+extern gdb::array_view<const arch_addr_space> gdbarch_address_spaces (struct gdbarch *gdbarch);
+extern void set_gdbarch_address_spaces (struct gdbarch *gdbarch, gdbarch_address_spaces_ftype *address_spaces);
+
+/* Extracts address space from core address.
+   TODO: This hook is a quick fix until a proper address space support
+         is added and should not be pushed upstream. */
+
+typedef arch_addr_space_id (gdbarch_address_space_id_from_core_address_ftype) (CORE_ADDR address);
+extern arch_addr_space_id gdbarch_address_space_id_from_core_address (struct gdbarch *gdbarch, CORE_ADDR address);
+extern void set_gdbarch_address_space_id_from_core_address (struct gdbarch *gdbarch, gdbarch_address_space_id_from_core_address_ftype *address_space_id_from_core_address);
+
+/* Extracts segment address from core address.
+   TODO: This hook is a quick fix until a proper address space support
+         is added and should not be pushed upstream. */
+
+typedef CORE_ADDR (gdbarch_segment_address_from_core_address_ftype) (CORE_ADDR address);
+extern CORE_ADDR gdbarch_segment_address_from_core_address (struct gdbarch *gdbarch, CORE_ADDR address);
+extern void set_gdbarch_segment_address_from_core_address (struct gdbarch *gdbarch, gdbarch_segment_address_from_core_address_ftype *segment_address_from_core_address);
+
+/* Converts segment address to core address.
+   TODO: This hook is a quick fix until a proper address space support
+         is added and should not be pushed upstream. */
+
+typedef CORE_ADDR (gdbarch_segment_address_to_core_address_ftype) (arch_addr_space_id address_space_id, CORE_ADDR address);
+extern CORE_ADDR gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, arch_addr_space_id address_space_id, CORE_ADDR address);
+extern void set_gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address);
+
+/* Converts DWARF address space number to address space id.
+   TODO: This hook is a quick fix until a proper address space support
+         is added and should not be pushed upstream. */
+
+typedef arch_addr_space_id (gdbarch_dwarf_address_space_to_address_space_id_ftype) (LONGEST dwarf_addr_space);
+extern arch_addr_space_id gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, LONGEST dwarf_addr_space);
+extern void set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id);
 
 /* Return the return-value convention that will be used by FUNCTION
    to return a value of type VALTYPE.  FUNCTION may be NULL in which

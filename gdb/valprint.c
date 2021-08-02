@@ -506,6 +506,7 @@ print_ref_address (struct type *type, const gdb_byte *address_buffer,
 	= extract_typed_address (address_buffer + embedded_offset, type);
 
       fprintf_filtered (stream, "@");
+      fputs_filtered (paspace (gdbarch, address).c_str (), stream);
       fputs_filtered (paddress (gdbarch, address), stream);
     }
   /* Else: we have a non-addressable value, such as a DW_AT_const_value.  */

@@ -72,6 +72,20 @@ struct gdbarch_tdep
     register_class_map;
   /* A cache of types created from the amd-dbgapi type strings.  */
   std::unordered_map<std::string, struct type *> type_map;
+
+  /* A vector of address spaces available in this architecture.
+
+     This information is queried from dbgapi and cached here as an
+     optimization.  */
+  std::vector<arch_addr_space> address_spaces;
 };
+
+/* Extract address space from a core address ADDR.  */
+
+arch_addr_space_id amdgcn_address_space_id_from_core_address (CORE_ADDR addr);
+
+/* Extract segment address from a core address ADDR.  */
+
+CORE_ADDR amdgcn_segment_address_from_core_address (CORE_ADDR addr);
 
 #endif /* amdgcn-rocm-tdep.h */

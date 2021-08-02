@@ -1011,9 +1011,10 @@ dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
 	  else
 	    cache->cfa += fs.regs.cfa_offset;
 
-	  /* FIXME: Support address spaces in CORE_ADDR.  */
-	  cache->cfa = aspace_address_to_flat_address (cache->cfa,
-						       fs.regs.cfa_aspace);
+	  cache->cfa
+	    = gdbarch_segment_address_to_core_address (gdbarch,
+						       fs.regs.cfa_aspace,
+						       cache->cfa);
 	  break;
 
 	case CFA_EXP:
