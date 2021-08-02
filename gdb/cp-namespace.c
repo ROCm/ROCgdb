@@ -25,6 +25,7 @@
 #include "symfile.h"
 #include "block.h"
 #include "objfiles.h"
+#include "arch-utils.h"
 #include "gdbtypes.h"
 #include "dictionary.h"
 #include "command.h"
@@ -192,7 +193,7 @@ cp_lookup_bare_symbol (const struct language_defn *langdef,
       struct gdbarch *gdbarch;
 
       if (block == NULL)
-	gdbarch = target_gdbarch ();
+	gdbarch = get_current_arch ();
       else
 	gdbarch = block_gdbarch (block);
       sym.symbol

@@ -743,6 +743,7 @@ void
 print_address (struct gdbarch *gdbarch,
 	       CORE_ADDR addr, struct ui_file *stream)
 {
+  fputs_filtered (paspace (gdbarch, addr).c_str (), stream);
   fputs_styled (paddress (gdbarch, addr), address_style.style (), stream);
   print_address_symbolic (gdbarch, addr, stream, asm_demangle, " ");
 }
@@ -776,6 +777,7 @@ print_address_demangle (const struct value_print_options *opts,
 {
   if (opts->addressprint)
     {
+      fputs_filtered (paspace (gdbarch, addr).c_str (), stream);
       fputs_styled (paddress (gdbarch, addr), address_style.style (), stream);
       print_address_symbolic (gdbarch, addr, stream, do_demangle, " ");
     }
@@ -911,7 +913,8 @@ read_memory_backward (struct gdbarch *gdbarch,
 	  if (errcode != 0)
 	    {
 	      /* The read was unsuccessful, so exit the loop.  */
-	      printf_filtered (_("Cannot access memory at address %s\n"),
+	      printf_filtered (_("Cannot access memory at address %s%s\n"),
+			       paspace (gdbarch, memaddr).c_str (),
 			       paddress (gdbarch, memaddr));
 	      break;
 	    }

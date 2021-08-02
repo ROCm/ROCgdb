@@ -979,6 +979,11 @@ exp	:	CONST_CAST '<' type_exp '>' '(' exp ')' %prec UNARY
 			  pstate->wrap2<unop_cast_type_operation> (); }
 	;
 
+exp	:	name '#' exp
+			{ pstate->push_new<aspace_operation>
+			    (pstate->pop (), copy_name ($1)); }
+	;
+
 string_exp:
 		STRING
 			{
@@ -2871,6 +2876,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     case '?':
     case ':':
     case '=':
+    case '#':
     case '{':
     case '}':
     symbol:

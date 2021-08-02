@@ -1085,6 +1085,74 @@ default_read_core_file_mappings (struct gdbarch *gdbarch,
 {
 }
 
+/* See arch-utils.h.  */
+gdb::optional<arch_addr_space_id>
+gdbarch_name_to_address_space_id (struct gdbarch *gdbarch, const char *name)
+{
+  if (!gdbarch_address_spaces_p (gdbarch))
+    return {};
+
+  auto address_spaces = gdbarch_address_spaces (gdbarch);
+
+  for (const auto &address_space : address_spaces)
+    if (streq (name, address_space.name.get ()))
+      {
+	gdb_assert (address_space.id <= UINT_MAX);
+	return address_space.id;
+      }
+
+  return {};
+}
+
+/* See arch-utils.h.  */
+const char*
+gdbarch_address_space_id_to_name (struct gdbarch *gdbarch,
+				  arch_addr_space_id address_space_id)
+{
+  if (!gdbarch_address_spaces_p (gdbarch))
+    return nullptr;
+
+  auto address_spaces = gdbarch_address_spaces (gdbarch);
+
+  for (const auto &address_space : address_spaces)
+    if (address_space.id == address_space_id)
+	return address_space.name.get ();
+
+  return nullptr;
+}
+
+/* See arch-utils.h.  */
+arch_addr_space_id
+default_address_space_id_from_core_address (CORE_ADDR address)
+{
+  return ARCH_ADDR_SPACE_ID_DEFAULT;
+}
+
+/* See arch-utils.h.  */
+CORE_ADDR
+default_segment_address_from_core_address (CORE_ADDR address)
+{
+  return address;
+}
+
+/* See arch-utils.h.  */
+CORE_ADDR
+default_segment_address_to_core_address (arch_addr_space_id address_space_id,
+					 CORE_ADDR address)
+{
+  if (address_space_id != ARCH_ADDR_SPACE_ID_DEFAULT)
+    warning (_("This architecture doesn't handle \
+non-default address spaces."));
+  return address;
+}
+
+/* See arch-utils.h.  */
+arch_addr_space_id
+default_dwarf_address_space_to_address_space_id (LONGEST dwarf_addr_space)
+{
+  return (arch_addr_space_id) dwarf_addr_space;
+}
+
 void _initialize_gdbarch_utils ();
 void
 _initialize_gdbarch_utils ()

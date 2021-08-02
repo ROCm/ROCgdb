@@ -494,7 +494,30 @@ m;struct value *;value_from_register;struct type *type, int regnum, struct frame
 #
 m;CORE_ADDR;pointer_to_address;struct type *type, const gdb_byte *buf;type, buf;;unsigned_pointer_to_address;;0
 m;void;address_to_pointer;struct type *type, gdb_byte *buf, CORE_ADDR addr;type, buf, addr;;unsigned_address_to_pointer;;0
-M;CORE_ADDR;integer_to_address;struct type *type, const gdb_byte *buf;type, buf
+M;CORE_ADDR;integer_to_address;struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id;type, buf, address_space_id
+
+# Return a list of supported address spaces.
+M;gdb::array_view<const arch_addr_space>;address_spaces;void;
+
+# Extracts address space from core address.
+# TODO: This hook is a quick fix until a proper address space support
+#       is added and should not be pushed upstream.
+f;arch_addr_space_id;address_space_id_from_core_address;CORE_ADDR address;address;;;default_address_space_id_from_core_address
+
+# Extracts segment address from core address.
+# TODO: This hook is a quick fix until a proper address space support
+#       is added and should not be pushed upstream.
+f;CORE_ADDR;segment_address_from_core_address;CORE_ADDR address;address;;;default_segment_address_from_core_address
+
+# Converts segment address to core address.
+# TODO: This hook is a quick fix until a proper address space support
+#       is added and should not be pushed upstream.
+f;CORE_ADDR;segment_address_to_core_address;arch_addr_space_id address_space_id, CORE_ADDR address;address_space_id, address;;;default_segment_address_to_core_address
+
+# Converts DWARF address space number to address space id.
+# TODO: This hook is a quick fix until a proper address space support
+#       is added and should not be pushed upstream.
+f;arch_addr_space_id;dwarf_address_space_to_address_space_id;LONGEST dwarf_addr_space;dwarf_addr_space;;;default_dwarf_address_space_to_address_space_id
 
 # Return the return-value convention that will be used by FUNCTION
 # to return a value of type VALTYPE.  FUNCTION may be NULL in which

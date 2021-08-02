@@ -33,6 +33,7 @@
 #include "observable.h"
 #include "cli/cli-utils.h"
 #include "gdbarch.h"
+#include "arch-utils.h"
 
 /* You can have any number of hooks for `exec_file_command' command to
    call.  If there's only one hook, it is set in exec_file_display
@@ -167,10 +168,12 @@ memory_error_message (enum target_xfer_status err,
     case TARGET_XFER_E_IO:
       /* Actually, address between memaddr and memaddr + len was out of
 	 bounds.  */
-      return string_printf (_("Cannot access memory at address %s"),
+      return string_printf (_("Cannot access memory at address %s%s"),
+			    paspace (gdbarch, memaddr).c_str (),
 			    paddress (gdbarch, memaddr));
     case TARGET_XFER_UNAVAILABLE:
-      return string_printf (_("Memory at address %s unavailable."),
+      return string_printf (_("Memory at address %s%s unavailable."),
+			    paspace (gdbarch, memaddr).c_str (),
 			    paddress (gdbarch, memaddr));
     default:
       internal_error (__FILE__, __LINE__,
@@ -188,7 +191,7 @@ memory_error (enum target_xfer_status err, CORE_ADDR memaddr)
   enum errors exception = GDB_NO_ERROR;
 
   /* Build error string.  */
-  std::string str = memory_error_message (err, target_gdbarch (), memaddr);
+  std::string str = memory_error_message (err, get_current_arch (), memaddr);
 
   /* Choose the right error to throw.  */
   switch (err)

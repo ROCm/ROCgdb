@@ -38,6 +38,14 @@
 #include <regex>
 #include <string>
 
+/* Bit mask of the address space information in the core address.  */
+constexpr CORE_ADDR AMDGCN_ADDRESS_SPACE_MASK = 0xffff000000000000;
+
+/* Bit offset from the start of the core address
+ that represent the address space information.  */
+constexpr unsigned int AMDGCN_ADDRESS_SPACE_BIT_OFFSET = 48;
+
+
 bool
 rocm_is_amdgcn_gdbarch (struct gdbarch *arch)
 {
@@ -467,6 +475,46 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *info)
   return static_cast<int> (instruction_size);
 }
 
+/* Convert address space and segment address into a core address.  */
+static CORE_ADDR
+amdgcn_segment_address_to_core_address (arch_addr_space_id address_space_id,
+					CORE_ADDR address)
+{
+  gdb_assert ((address & AMDGCN_ADDRESS_SPACE_MASK) == 0);
+  gdb_assert (address_space_id <= (AMDGCN_ADDRESS_SPACE_MASK >> AMDGCN_ADDRESS_SPACE_BIT_OFFSET));
+  return address | (((CORE_ADDR) address_space_id) << AMDGCN_ADDRESS_SPACE_BIT_OFFSET);
+}
+
+/* Convert an integer to an address of a given segment address.  */
+static CORE_ADDR
+amdgcn_integer_to_address (struct gdbarch *gdbarch,
+			   struct type *type, const gdb_byte *buf,
+			   arch_addr_space_id address_space_id)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR segment_address
+    = extract_signed_integer (buf, TYPE_LENGTH (type), byte_order);
+
+  return amdgcn_segment_address_to_core_address (address_space_id,
+						 segment_address);
+}
+
+/* See amdgcn-rocm-tdep.h.  */
+
+arch_addr_space_id
+amdgcn_address_space_id_from_core_address (CORE_ADDR addr)
+{
+  return (addr & AMDGCN_ADDRESS_SPACE_MASK) >> AMDGCN_ADDRESS_SPACE_BIT_OFFSET;
+}
+
+/* See amdgcn-rocm-tdep.h.  */
+
+CORE_ADDR
+amdgcn_segment_address_from_core_address (CORE_ADDR addr)
+{
+  return addr & ~AMDGCN_ADDRESS_SPACE_MASK;
+}
+
 static CORE_ADDR
 amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 {
@@ -493,6 +541,13 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
      instructions.  */
 
   return start_pc;
+}
+
+static gdb::array_view<const arch_addr_space>
+amdgcn_address_spaces (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  return tdep->address_spaces;
 }
 
 static struct gdbarch *
@@ -533,6 +588,16 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_float_format (gdbarch, floatformats_ieee_single);
   set_gdbarch_double_format (gdbarch, floatformats_ieee_double);
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_double);
+
+/* Address space handling.  */
+  set_gdbarch_integer_to_address (gdbarch, amdgcn_integer_to_address);
+  set_gdbarch_address_space_id_from_core_address
+    (gdbarch, amdgcn_address_space_id_from_core_address);
+  set_gdbarch_segment_address_from_core_address
+    (gdbarch, amdgcn_segment_address_from_core_address);
+  set_gdbarch_segment_address_to_core_address
+    (gdbarch, amdgcn_segment_address_to_core_address);
+  set_gdbarch_address_spaces (gdbarch, amdgcn_address_spaces);
 
   /* Frame Interpretation.  */
   set_gdbarch_skip_prologue (gdbarch, amdgcn_skip_prologue);
@@ -704,6 +769,44 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     error (_ ("amd_dbgapi_architecture_get_info failed"));
 
   set_gdbarch_decr_pc_after_break (gdbarch, pc_adjust);
+
+  /* Get info about address spaces.  */
+  size_t address_space_count;
+  amd_dbgapi_address_space_id_t *address_spaces;
+
+  if (amd_dbgapi_architecture_address_space_list (architecture_id,
+						  &address_space_count,
+						  &address_spaces)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_architecture_address_space_list failed"));
+
+  gdb::unique_xmalloc_ptr<amd_dbgapi_address_space_id_t[]> address_spaces_holder
+    (address_spaces);
+
+  for (size_t i = 0; i < address_space_count; ++i)
+    {
+      char *address_space_name;
+
+      if (amd_dbgapi_address_space_get_info
+	    (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_NAME,
+	     sizeof (address_space_name), &address_space_name)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_address_space_get_info (name) failed"));
+
+      gdb_assert (address_space_name != nullptr);
+      gdb::unique_xmalloc_ptr<char> address_space_name_holder
+	(address_space_name);
+
+      arch_addr_space_id address_space_dwarf_num;
+      if (amd_dbgapi_address_space_get_info
+	    (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_DWARF,
+	     sizeof (address_space_dwarf_num), &address_space_dwarf_num)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_address_space_get_info (dwarf) failed"));
+
+      tdep->address_spaces.emplace_back (address_space_dwarf_num,
+					 std::move (address_space_name_holder));
+    }
 
   tdep.release ();
   gdbarch_u.release ();

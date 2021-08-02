@@ -2408,6 +2408,15 @@ inside_main_func (frame_info *this_frame)
       /* In some language (for example Fortran) there will be no minimal
 	 symbol with the name of the main function.  In this case we should
 	 search the full symbols to see if we can find a match.  */
+
+      /* Currently selected frame might be different then the frame that
+	 this check is done on (this_frame).
+
+	 To get a correct result, we need to temporarily select this_frame
+	 as a currently selected frame.  */
+      scoped_restore_selected_frame restore_selected_frame;
+      select_frame (this_frame);
+
       struct block_symbol bs = lookup_symbol (name, NULL, VAR_DOMAIN, 0);
       if (bs.symbol == nullptr)
 	return false;

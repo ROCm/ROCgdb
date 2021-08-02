@@ -38,6 +38,7 @@
 #include "gdbarch.h"
 #include "compile/compile-internal.h"
 #include "c-exp.h"
+#include "arch-utils.h"
 
 /* Given a C string type, STR_TYPE, return the corresponding target
    character set name.  */
@@ -684,6 +685,37 @@ c_string_operation::evaluate (struct type *expect_type,
 				type);
     }
   return result;
+}
+
+value *aspace_operation::evaluate (struct type *expect_type,
+				   struct expression *exp, enum noside noside)
+{
+  value *val = std::get<0> (m_storage)->evaluate (nullptr, exp,
+						  EVAL_AVOID_SIDE_EFFECTS);
+  struct type *val_type = value_type (val);
+
+  if (!is_integral_type (val_type))
+    error (_("Non-integral right operand for \"#\" operator."));
+
+  if (!gdbarch_address_spaces_p (exp->gdbarch))
+    error (_("Address space conversion is not supported by the architecture"));
+
+  const std::string &name = std::get<1> (m_storage);
+  gdb::optional<arch_addr_space_id> address_space_id
+    = gdbarch_name_to_address_space_id (exp->gdbarch, name.c_str ());
+
+  if (!address_space_id.has_value ())
+    error (_("Address space %s not recognised by the architecture"),
+	name.c_str ());
+
+  CORE_ADDR adddress
+    = gdbarch_integer_to_address (exp->gdbarch, val_type,
+				  value_contents (val), *address_space_id);
+
+  struct type *generic_ptr_type =
+    lookup_pointer_type (builtin_type (exp->gdbarch)->builtin_void);
+
+  return value_from_pointer (generic_ptr_type, adddress);
 }
 
 } /* namespace expr */

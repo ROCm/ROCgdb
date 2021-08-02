@@ -7921,8 +7921,8 @@ mips_register_sim_regno (struct gdbarch *gdbarch, int regnum)
    guarantees a correctly sign extended address.  */
 
 static CORE_ADDR
-mips_integer_to_address (struct gdbarch *gdbarch,
-			 struct type *type, const gdb_byte *buf)
+mips_integer_to_address (struct gdbarch *gdbarch, struct type *type,
+			 const gdb_byte *buf, unsigned int aspace)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   return extract_signed_integer (buf, TYPE_LENGTH (type), byte_order);

@@ -48,13 +48,6 @@ struct dwarf_gdbarch_types
   struct type *dw_types[3];
 };
 
-/* FIXME: This needs to be removed when CORE_ADDR supports address spaces.  */
-CORE_ADDR
-aspace_address_to_flat_address (CORE_ADDR address, unsigned int address_space)
-{
-  return address | ((ULONGEST) address_space) << ROCM_ASPACE_BIT_OFFSET;
-}
-
 /* Allocate and fill in dwarf_gdbarch_types for an arch.  */
 
 static void *
@@ -826,7 +819,8 @@ dwarf_value::to_location (gdbarch *arch)
   LONGEST offset;
 
   if (gdbarch_integer_to_address_p (arch))
-    offset = gdbarch_integer_to_address (arch, m_type, m_contents.get ());
+    offset = gdbarch_integer_to_address (arch, m_type, m_contents.get (),
+					 ARCH_ADDR_SPACE_ID_DEFAULT);
   else
     offset = extract_unsigned_integer (m_contents.get (), TYPE_LENGTH (m_type),
 				       type_byte_order (m_type));
@@ -901,8 +895,9 @@ public:
 class dwarf_memory : public dwarf_location
 {
 public:
-  dwarf_memory (gdbarch *arch, LONGEST offset, LONGEST bit_suboffset = 0,
-		bool stack = false, unsigned int address_space = 0)
+  dwarf_memory (gdbarch *arch, LONGEST offset,
+		LONGEST bit_suboffset = 0, bool stack = false,
+		arch_addr_space_id address_space = ARCH_ADDR_SPACE_ID_DEFAULT)
     : dwarf_location (arch, offset, bit_suboffset),
       m_stack (stack), m_address_space (address_space)
   {}
@@ -923,7 +918,7 @@ public:
     m_stack = stack;
   };
 
-  void set_address_space (unsigned int address_space)
+  void set_address_space (arch_addr_space_id address_space)
   {
     m_address_space = address_space;
   };
@@ -954,7 +949,7 @@ private:
   bool m_stack;
 
   /* Address space of the location.  */
-  unsigned int m_address_space;
+  arch_addr_space_id m_address_space;
 };
 
 std::shared_ptr<dwarf_value>
@@ -977,8 +972,9 @@ dwarf_memory::read (frame_info *frame, gdb_byte *buf,
     = m_offset + (m_bit_suboffset + total_bits_to_skip) / HOST_CHAR_BIT;
   gdb::byte_vector temp_buf;
 
-  start_address = aspace_address_to_flat_address (start_address,
-						  m_address_space);
+  start_address
+    = gdbarch_segment_address_to_core_address (m_arch, m_address_space,
+					       start_address);
 
   *optimized = 0;
   total_bits_to_skip += m_bit_suboffset;
@@ -1023,8 +1019,9 @@ dwarf_memory::write (frame_info *frame, const gdb_byte *buf,
   total_bits_to_skip += m_bit_suboffset;
   *optimized = 0;
 
-  start_address = aspace_address_to_flat_address (start_address,
-						  m_address_space);
+  start_address
+    = gdbarch_segment_address_to_core_address (m_arch, m_address_space,
+					       start_address);
 
   if (total_bits_to_skip % HOST_CHAR_BIT == 0
       && bit_size % HOST_CHAR_BIT == 0
@@ -1144,8 +1141,9 @@ dwarf_memory::to_gdb_value (frame_info *frame, struct type *type,
   struct type *ptr_type = builtin_type (m_arch)->builtin_data_ptr;
   CORE_ADDR address = m_offset;
 
-  address = aspace_address_to_flat_address (address,
-					    m_address_space);
+  address
+    = gdbarch_segment_address_to_core_address (m_arch, m_address_space,
+					       address);
 
   if (subobj_type->code () == TYPE_CODE_FUNC
       || subobj_type->code () == TYPE_CODE_METHOD)
@@ -2372,8 +2370,17 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
 						 type_byte_order (type));
       }
     case lval_memory:
-      return std::make_shared<dwarf_memory> (arch, value_address (value),
-					     0, value_stack (value));
+      {
+	arch_addr_space_id address_space = ARCH_ADDR_SPACE_ID_DEFAULT;
+	CORE_ADDR address = value_address (value);
+
+	address_space
+	  = gdbarch_address_space_id_from_core_address (arch, address);
+	address = gdbarch_segment_address_from_core_address (arch, address);
+
+	return std::make_shared<dwarf_memory>
+	  (arch, address, 0, value_stack (value), address_space);
+      }
     case lval_register:
       return std::make_shared<dwarf_register> (arch, VALUE_REGNUM (value),
 					       false, offset);
@@ -4140,11 +4147,15 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    auto address_value = fetch (0)->to_value (address_type);
 	    pop ();
 
+	    dwarf_require_integral (aspace_value->get_type ());
+	    arch_addr_space_id address_space
+	      = gdbarch_dwarf_address_space_to_address_space_id
+		  (arch, aspace_value->to_long ());
+
 	    result_entry
 	      = std::make_shared<dwarf_memory> (arch,
 						address_value->to_long (), 0,
-						false,
-						aspace_value->to_long ());
+						false, address_space);
 	  }
 	  break;
 
@@ -4272,7 +4283,11 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    pop ();
 
 	    dwarf_require_integral (aspace_value->get_type ());
-	    memory->set_address_space (aspace_value->to_long ());
+	    arch_addr_space_id address_space
+	      = gdbarch_dwarf_address_space_to_address_space_id
+		  (arch, aspace_value->to_long ());
+	    memory->set_address_space (address_space);
+
 	    result_entry = memory;
 	  }
 	  break;

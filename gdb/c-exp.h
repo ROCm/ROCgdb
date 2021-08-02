@@ -215,6 +215,25 @@ public:
   { return TERNOP_COND; }
 };
 
+/* The # address space conversion operator.  */
+class aspace_operation
+  : public tuple_holding_operation<operation_up, std::string>
+{
+public:
+
+  value *evaluate (struct type *expect_type,
+		   struct expression *exp,
+		   enum noside noside) override;
+
+  enum exp_opcode opcode () const override
+  { return OP_ASPACE; }
+
+protected:
+
+  using tuple_holding_operation::tuple_holding_operation;
+
+};
+
 }/* namespace expr */
 
 #endif /* C_EXP_H */
