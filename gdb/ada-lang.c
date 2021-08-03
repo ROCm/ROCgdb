@@ -847,6 +847,21 @@ const struct ada_opname_map ada_opname_table[] = {
   {NULL, NULL}
 };
 
+/* If STR is a decoded version of a compiler-provided suffix (like the
+   "[cold]" in "symbol[cold]"), return true.  Otherwise, return
+   false.  */
+
+static bool
+is_compiler_suffix (const char *str)
+{
+  gdb_assert (*str == '[');
+  ++str;
+  while (*str != '\0' && isalpha (*str))
+    ++str;
+  /* We accept a missing "]" in order to support completion.  */
+  return *str == '\0' || (str[0] == ']' && str[1] == '\0');
+}
+
 /* The "encoded" form of DECODED, according to GNAT conventions.  If
    THROW_ERRORS, throw an error if invalid operator name is found.
    Otherwise, return the empty string in that case.  */
@@ -862,6 +877,13 @@ ada_encode_1 (const char *decoded, bool throw_errors)
     {
       if (*p == '.')
 	encoding_buffer.append ("__");
+      else if (*p == '[' && is_compiler_suffix (p))
+	{
+	  encoding_buffer = encoding_buffer + "." + (p + 1);
+	  if (encoding_buffer.back () == ']')
+	    encoding_buffer.pop_back ();
+	  break;
+	}
       else if (*p == '"')
 	{
 	  const struct ada_opname_map *mapping;
@@ -978,6 +1000,24 @@ ada_remove_po_subprogram_suffix (const char *encoded, int *len)
     *len = *len - 1;
 }
 
+/* If ENCODED ends with a compiler-provided suffix (like ".cold"),
+   then update *LEN to remove the suffix and return the offset of the
+   character just past the ".".  Otherwise, return -1.  */
+
+static int
+remove_compiler_suffix (const char *encoded, int *len)
+{
+  int offset = *len - 1;
+  while (offset > 0 && isalpha (encoded[offset]))
+    --offset;
+  if (offset > 0 && encoded[offset] == '.')
+    {
+      *len = offset;
+      return offset + 1;
+    }
+  return -1;
+}
+
 /* See ada-lang.h.  */
 
 std::string
@@ -988,6 +1028,7 @@ ada_decode (const char *encoded, bool wrap)
   const char *p;
   int at_start_name;
   std::string decoded;
+  int suffix = -1;
 
   /* With function descriptors on PPC64, the value of a symbol named
      ".FN", if it exists, is the entry point of the function "FN".  */
@@ -1007,6 +1048,8 @@ ada_decode (const char *encoded, bool wrap)
     goto Suppress;
 
   len0 = strlen (encoded);
+
+  suffix = remove_compiler_suffix (encoded, &len0);
 
   ada_remove_trailing_digits (encoded, &len0);
   ada_remove_po_subprogram_suffix (encoded, &len0);
@@ -1212,6 +1255,10 @@ ada_decode (const char *encoded, bool wrap)
   for (i = 0; i < decoded.length(); ++i)
     if (isupper (decoded[i]) || decoded[i] == ' ')
       goto Suppress;
+
+  /* If the compiler added a suffix, append it now.  */
+  if (suffix >= 0)
+    decoded = decoded + "[" + &encoded[suffix] + "]";
 
   return decoded;
 
@@ -3426,6 +3473,29 @@ ada_resolve_funcall (struct symbol *sym, const struct block *block,
   return candidates[i];
 }
 
+/* Resolve a mention of a name where the context type is an
+   enumeration type.  */
+
+static int
+ada_resolve_enum (std::vector<struct block_symbol> &syms,
+		  const char *name, struct type *context_type,
+		  bool parse_completion)
+{
+  gdb_assert (context_type->code () == TYPE_CODE_ENUM);
+  context_type = ada_check_typedef (context_type);
+
+  for (int i = 0; i < syms.size (); ++i)
+    {
+      /* We already know the name matches, so we're just looking for
+	 an element of the correct enum type.  */
+      if (ada_check_typedef (SYMBOL_TYPE (syms[i].symbol)) == context_type)
+	return i;
+    }
+
+  error (_("No name '%s' in enumeration type '%s'"), name,
+	 ada_type_name (context_type));
+}
+
 /* See ada-lang.h.  */
 
 block_symbol
@@ -3475,6 +3545,10 @@ ada_resolve_variable (struct symbol *sym, const struct block *block,
     error (_("No definition found for %s"), sym->print_name ());
   else if (candidates.size () == 1)
     i = 0;
+  else if (context_type != nullptr
+	   && context_type->code () == TYPE_CODE_ENUM)
+    i = ada_resolve_enum (candidates, sym->linkage_name (), context_type,
+			  parse_completion);
   else if (deprocedure_p && !is_nonfunction (candidates))
     {
       i = ada_resolve_function
@@ -4523,19 +4597,6 @@ ada_lookup_simple_minsym (const char *name)
   return result;
 }
 
-/* For all subprograms that statically enclose the subprogram of the
-   selected frame, add symbols matching identifier NAME in DOMAIN
-   and their blocks to the list of data in RESULT, as for
-   ada_add_block_symbols (q.v.).   If WILD_MATCH_P, treat as NAME
-   with a wildcard prefix.  */
-
-static void
-add_symbols_from_enclosing_procs (std::vector<struct block_symbol> &result,
-				  const lookup_name_info &lookup_name,
-				  domain_enum domain)
-{
-}
-
 /* True if TYPE is definitely an artificial type supplied to a symbol
    for which no debugging information was given in the symbol file.  */
 
@@ -4938,38 +4999,27 @@ remove_irrelevant_renamings (std::vector<struct block_symbol> *syms,
 }
 
 /* Add to RESULT all symbols from BLOCK (and its super-blocks)
-   whose name and domain match NAME and DOMAIN respectively.
-   If no match was found, then extend the search to "enclosing"
-   routines (in other words, if we're inside a nested function,
-   search the symbols defined inside the enclosing functions).
-   If WILD_MATCH_P is nonzero, perform the naming matching in
-   "wild" mode (see function "wild_match" for more info).
+   whose name and domain match LOOKUP_NAME and DOMAIN respectively.
 
-   Note: This function assumes that RESULT has 0 (zero) element in it.  */
+   Note: This function assumes that RESULT is empty.  */
 
 static void
 ada_add_local_symbols (std::vector<struct block_symbol> &result,
 		       const lookup_name_info &lookup_name,
 		       const struct block *block, domain_enum domain)
 {
-  int block_depth = 0;
-
   while (block != NULL)
     {
-      block_depth += 1;
       ada_add_block_symbols (result, block, lookup_name, domain, NULL);
 
-      /* If we found a non-function match, assume that's the one.  */
-      if (is_nonfunction (result))
+      /* If we found a non-function match, assume that's the one.  We
+	 only check this when finding a function boundary, so that we
+	 can accumulate all results from intervening blocks first.  */
+      if (BLOCK_FUNCTION (block) != nullptr && is_nonfunction (result))
 	return;
 
       block = BLOCK_SUPERBLOCK (block);
     }
-
-  /* If no luck so far, try to find NAME as a local symbol in some lexically
-     enclosing subprogram.  */
-  if (result.empty () && block_depth > 2)
-    add_symbols_from_enclosing_procs (result, lookup_name, domain);
 }
 
 /* An object of this type is used as the callback argument when
@@ -10123,6 +10173,83 @@ ada_binop_exp (struct type *expect_type,
 
 namespace expr
 {
+
+/* See ada-exp.h.  */
+
+operation_up
+ada_resolvable::replace (operation_up &&owner,
+			 struct expression *exp,
+			 bool deprocedure_p,
+			 bool parse_completion,
+			 innermost_block_tracker *tracker,
+			 struct type *context_type)
+{
+  if (resolve (exp, deprocedure_p, parse_completion, tracker, context_type))
+    return (make_operation<ada_funcall_operation>
+	    (std::move (owner),
+	     std::vector<operation_up> ()));
+  return std::move (owner);
+}
+
+/* Convert the character literal whose ASCII value would be VAL to the
+   appropriate value of type TYPE, if there is a translation.
+   Otherwise return VAL.  Hence, in an enumeration type ('A', 'B'),
+   the literal 'A' (VAL == 65), returns 0.  */
+
+static LONGEST
+convert_char_literal (struct type *type, LONGEST val)
+{
+  char name[7];
+  int f;
+
+  if (type == NULL)
+    return val;
+  type = check_typedef (type);
+  if (type->code () != TYPE_CODE_ENUM)
+    return val;
+
+  if ((val >= 'a' && val <= 'z') || (val >= '0' && val <= '9'))
+    xsnprintf (name, sizeof (name), "Q%c", (int) val);
+  else
+    xsnprintf (name, sizeof (name), "QU%02x", (int) val);
+  size_t len = strlen (name);
+  for (f = 0; f < type->num_fields (); f += 1)
+    {
+      /* Check the suffix because an enum constant in a package will
+	 have a name like "pkg__QUxx".  This is safe enough because we
+	 already have the correct type, and because mangling means
+	 there can't be clashes.  */
+      const char *ename = TYPE_FIELD_NAME (type, f);
+      size_t elen = strlen (ename);
+
+      if (elen >= len && strcmp (name, ename + elen - len) == 0)
+	return TYPE_FIELD_ENUMVAL (type, f);
+    }
+  return val;
+}
+
+/* See ada-exp.h.  */
+
+operation_up
+ada_char_operation::replace (operation_up &&owner,
+			     struct expression *exp,
+			     bool deprocedure_p,
+			     bool parse_completion,
+			     innermost_block_tracker *tracker,
+			     struct type *context_type)
+{
+  operation_up result = std::move (owner);
+
+  if (context_type != nullptr && context_type->code () == TYPE_CODE_ENUM)
+    {
+      gdb_assert (result.get () == this);
+      std::get<0> (m_storage) = context_type;
+      std::get<1> (m_storage)
+	= convert_char_literal (context_type, std::get<1> (m_storage));
+    }
+
+  return make_operation<ada_wrapped_operation> (std::move (result));
+}
 
 value *
 ada_wrapped_operation::evaluate (struct type *expect_type,

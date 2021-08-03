@@ -68,10 +68,6 @@ struct name_info {
 
 static struct parser_state *pstate = NULL;
 
-/* If expression is in the context of TYPE'(...), then TYPE, else
- * NULL.  */
-static struct type *type_qualifier;
-
 int yyparse (void);
 
 static int yylex (void);
@@ -90,8 +86,6 @@ static struct type* write_var_or_type (struct parser_state *,
 static void write_name_assoc (struct parser_state *, struct stoken);
 
 static const struct block *block_lookup (const struct block *, const char *);
-
-static LONGEST convert_char_literal (struct type *, LONGEST);
 
 static void write_ambiguous_var (struct parser_state *,
 				 const struct block *, const char *, int);
@@ -119,16 +113,13 @@ resolve (operation_up &&op, bool deprocedure_p, struct type *context_type)
 {
   operation_up result = std::move (op);
   ada_resolvable *res = dynamic_cast<ada_resolvable *> (result.get ());
-  if (res != nullptr
-      && res->resolve (pstate->expout.get (),
-		       deprocedure_p,
-		       pstate->parse_completion,
-		       pstate->block_tracker,
-		       context_type))
-    result
-      = make_operation<ada_funcall_operation> (std::move (result),
-					       std::vector<operation_up> ());
-
+  if (res != nullptr)
+    return res->replace (std::move (result),
+			 pstate->expout.get (),
+			 deprocedure_p,
+			 pstate->parse_completion,
+			 pstate->block_tracker,
+			 context_type);
   return result;
 }
 
@@ -433,8 +424,6 @@ pop_associations (int n)
 %type <bval> block
 %type <lval> arglist tick_arglist
 
-%type <tval> save_qualifier
-
 %token DOT_ALL
 
 /* Special type cases, put in to allow the parser to distinguish different
@@ -521,8 +510,7 @@ primary :	primary '(' arglist ')'
 			}
 	;
 
-primary :	var_or_type '\'' save_qualifier { type_qualifier = $1; } 
-		   '(' exp ')'
+primary :	var_or_type '\'' '(' exp ')'
 			{
 			  if ($1 == NULL)
 			    error (_("Type required for qualification"));
@@ -530,11 +518,7 @@ primary :	var_or_type '\'' save_qualifier { type_qualifier = $1; }
 						      check_typedef ($1));
 			  pstate->push_new<ada_qual_operation>
 			    (std::move (arg), $1);
-			  type_qualifier = $3;
 			}
-	;
-
-save_qualifier : 	{ $$ = type_qualifier; }
 	;
 
 primary :
@@ -872,11 +856,9 @@ primary	:	INT
 	;
 
 primary	:	CHARLIT
-		  { write_int (pstate,
-			       convert_char_literal (type_qualifier, $1.val),
-			       (type_qualifier == NULL) 
-			       ? $1.type : type_qualifier);
-		  }
+			{
+			  pstate->push_new<ada_char_operation> ($1.type, $1.val);
+			}
 	;
 
 primary	:	FLOAT
@@ -1100,7 +1082,6 @@ ada_parse (struct parser_state *par_state)
   pstate = par_state;
 
   lexer_init (yyin);		/* (Re-)initialize lexer.  */
-  type_qualifier = NULL;
   obstack_free (&temp_parse_space, NULL);
   obstack_init (&temp_parse_space);
   components.clear ();
@@ -1719,43 +1700,6 @@ write_name_assoc (struct parser_state *par_state, struct stoken name)
       error (_("Invalid use of type."));
 
   push_association<ada_name_association> (ada_pop ());
-}
-
-/* Convert the character literal whose ASCII value would be VAL to the
-   appropriate value of type TYPE, if there is a translation.
-   Otherwise return VAL.  Hence, in an enumeration type ('A', 'B'),
-   the literal 'A' (VAL == 65), returns 0.  */
-
-static LONGEST
-convert_char_literal (struct type *type, LONGEST val)
-{
-  char name[7];
-  int f;
-
-  if (type == NULL)
-    return val;
-  type = check_typedef (type);
-  if (type->code () != TYPE_CODE_ENUM)
-    return val;
-
-  if ((val >= 'a' && val <= 'z') || (val >= '0' && val <= '9'))
-    xsnprintf (name, sizeof (name), "Q%c", (int) val);
-  else
-    xsnprintf (name, sizeof (name), "QU%02x", (int) val);
-  size_t len = strlen (name);
-  for (f = 0; f < type->num_fields (); f += 1)
-    {
-      /* Check the suffix because an enum constant in a package will
-	 have a name like "pkg__QUxx".  This is safe enough because we
-	 already have the correct type, and because mangling means
-	 there can't be clashes.  */
-      const char *ename = TYPE_FIELD_NAME (type, f);
-      size_t elen = strlen (ename);
-
-      if (elen >= len && strcmp (name, ename + elen - len) == 0)
-	return TYPE_FIELD_ENUMVAL (type, f);
-    }
-  return val;
 }
 
 static struct type *
