@@ -212,6 +212,10 @@ struct rocm_target_ops final : public target_ops
 
   void follow_exec (inferior *follow_inf, ptid_t ptid,
 		    const char *execd_pathname) override;
+
+  void follow_fork (inferior *child_inf, ptid_t child_ptid,
+		    target_waitkind fork_kind, bool follow_child,
+		    bool detach_fork) override;
 };
 
 /* ROCm's target vector.  */
@@ -1439,6 +1443,14 @@ rocm_enable (inferior *inf)
     }
 
   auto *info = get_rocm_inferior_info (inf);
+
+  /* Are we already attached?  */
+  if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
+    {
+      gdb_assert (inf->target_is_pushed (&rocm_ops));
+      return;
+    }
+
   amd_dbgapi_status_t status
     = amd_dbgapi_process_attach (reinterpret_cast<
 				   amd_dbgapi_client_process_id_t> (inf),
@@ -1850,6 +1862,29 @@ rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
 
   gdb_assert (current_inferior () == follow_inf);
   rocm_enable (follow_inf);
+}
+
+void
+rocm_target_ops::follow_fork (inferior *child_inf, ptid_t child_ptid,
+			      target_waitkind fork_kind, bool follow_child,
+			      bool detach_fork)
+{
+  beneath ()->follow_fork (child_inf, child_ptid, fork_kind, follow_child,
+			   detach_fork);
+
+  if (child_inf != nullptr)
+    {
+      /* Copy precise-memory requested value from parent to child.  */
+      rocm_inferior_info *parent_info
+	= get_rocm_inferior_info (current_inferior ());
+      rocm_inferior_info *child_info = get_rocm_inferior_info (child_inf);
+      child_info->precise_memory.requested
+	= parent_info->precise_memory.requested;
+
+      scoped_restore_current_thread restore_thread;
+      switch_to_thread (*child_inf->threads ().begin ());
+      rocm_enable (child_inf);
+    }
 }
 
 static cli_style_option warning_style ("rocm_warning", ui_file_style::RED);
