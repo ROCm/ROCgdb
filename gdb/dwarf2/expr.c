@@ -34,6 +34,7 @@
 #include "gdbsupport/underlying.h"
 #include "gdbarch.h"
 #include "inferior.h"
+#include "objfiles.h"
 #include "observable.h"
 
 /* Cookie for gdbarch data.  */
