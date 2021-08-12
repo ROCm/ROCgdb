@@ -512,7 +512,7 @@ const char EXP_CHARS[] = "eE";
 /* Chars that mean this number is a floating point constant
    As in 0f12.456
    or    0d1.2345e12.  */
-const char FLT_CHARS[] = "fFdDxX";
+const char FLT_CHARS[] = "fFdDxXhHbB";
 
 /* Tables for lexical analysis.  */
 static char mnemonic_chars[256];
@@ -1356,6 +1356,8 @@ const pseudo_typeS md_pseudo_table[] =
   {"ffloat", float_cons, 'f'},
   {"dfloat", float_cons, 'd'},
   {"tfloat", float_cons, 'x'},
+  {"hfloat", float_cons, 'h'},
+  {"bfloat16", float_cons, 'b'},
   {"value", cons, 2},
   {"slong", signed_cons, 4},
   {"noopt", s_ignore, 0},
@@ -10227,6 +10229,19 @@ x86_cons_fix_new (fragS *frag, unsigned int off, unsigned int len,
 #endif
 
   fix_new_exp (frag, off, len, exp, 0, r);
+}
+
+/* Return the number of padding LITTLENUMs following a tbyte floating
+   point value.  */
+
+int
+x86_tfloat_pad (void)
+{
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
+   if (IS_ELF)
+     return object_64bit ? 3 : 1;
+#endif
+   return 0;
 }
 
 /* Export the ABI address size for use by TC_ADDRESS_BYTES for the

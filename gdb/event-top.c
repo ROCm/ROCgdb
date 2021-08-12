@@ -46,6 +46,10 @@
 #include "readline/readline.h"
 #include "readline/history.h"
 
+#ifdef HAVE_EXECINFO_H
+# include <execinfo.h>
+#endif /* HAVE_EXECINFO_H */
+
 /* readline defines this.  */
 #undef savestring
 
@@ -58,7 +62,6 @@ static void handle_sigquit (int sig);
 #ifdef SIGHUP
 static void handle_sighup (int sig);
 #endif
-static void handle_sigfpe (int sig);
 
 /* Functions to be invoked by the event loop in response to
    signals.  */
@@ -68,7 +71,6 @@ static void async_do_nothing (gdb_client_data);
 #ifdef SIGHUP
 static void async_disconnect (gdb_client_data);
 #endif
-static void async_float_handler (gdb_client_data);
 #ifdef SIGTSTP
 static void async_sigtstp_handler (gdb_client_data);
 #endif
@@ -98,6 +100,38 @@ bool exec_done_display_p = false;
    run again.  */
 int call_stdin_event_handler_again_p;
 
+/* When true GDB will produce a minimal backtrace when a fatal signal is
+   reached (within GDB code).  */
+static bool bt_on_fatal_signal
+#ifdef HAVE_EXECINFO_BACKTRACE
+  = true;
+#else
+  = false;
+#endif /* HAVE_EXECINFO_BACKTRACE */
+
+/* Implement 'maintenance show backtrace-on-fatal-signal'.  */
+
+static void
+show_bt_on_fatal_signal (struct ui_file *file, int from_tty,
+			 struct cmd_list_element *cmd, const char *value)
+{
+  fprintf_filtered (file, _("Backtrace on a fatal signal is %s.\n"), value);
+}
+
+/* Implement 'maintenance set backtrace-on-fatal-signal'.  */
+
+static void
+set_bt_on_fatal_signal (const char *args, int from_tty, cmd_list_element *c)
+{
+#ifndef HAVE_EXECINFO_BACKTRACE
+  if (bt_on_fatal_signal)
+    {
+      bt_on_fatal_signal = false;
+      error (_("support for this feature is not compiled into GDB"));
+    }
+#endif
+}
+
 /* Signal handling variables.  */
 /* Each of these is a pointer to a function that the event loop will
    invoke if the corresponding signal has received.  The real signal
@@ -111,7 +145,6 @@ static struct async_signal_handler *sighup_token;
 #ifdef SIGQUIT
 static struct async_signal_handler *sigquit_token;
 #endif
-static struct async_signal_handler *sigfpe_token;
 #ifdef SIGTSTP
 static struct async_signal_handler *sigtstp_token;
 #endif
@@ -849,6 +882,84 @@ gdb_readline_no_editing_callback (gdb_client_data client_data)
 }
 
 
+/* Attempt to unblock signal SIG, return true if the signal was unblocked,
+   otherwise, return false.  */
+
+static bool
+unblock_signal (int sig)
+{
+#if HAVE_SIGPROCMASK
+  sigset_t sigset;
+  sigemptyset (&sigset);
+  sigaddset (&sigset, sig);
+  gdb_sigmask (SIG_UNBLOCK, &sigset, 0);
+  return true;
+#endif
+
+  return false;
+}
+
+/* Called to handle fatal signals.  SIG is the signal number.  */
+
+static void ATTRIBUTE_NORETURN
+handle_fatal_signal (int sig)
+{
+#ifdef HAVE_EXECINFO_BACKTRACE
+  const auto sig_write = [] (const char *msg) -> void
+  {
+    gdb_stderr->write_async_safe (msg, strlen (msg));
+  };
+
+  if (bt_on_fatal_signal)
+    {
+      sig_write ("\n\n");
+      sig_write (_("Fatal signal: "));
+      sig_write (strsignal (sig));
+      sig_write ("\n");
+
+      /* Allow up to 25 frames of backtrace.  */
+      void *buffer[25];
+      int frames = backtrace (buffer, ARRAY_SIZE (buffer));
+      sig_write (_("----- Backtrace -----\n"));
+      if (gdb_stderr->fd () > -1)
+	{
+	  backtrace_symbols_fd (buffer, frames, gdb_stderr->fd ());
+	  if (frames == ARRAY_SIZE (buffer))
+	    sig_write (_("Backtrace might be incomplete.\n"));
+	}
+      else
+	sig_write (_("Backtrace unavailable\n"));
+      sig_write ("---------------------\n");
+      sig_write (_("A fatal error internal to GDB has been detected, "
+		   "further\ndebugging is not possible.  GDB will now "
+		   "terminate.\n\n"));
+      sig_write (_("This is a bug, please report it."));
+      if (REPORT_BUGS_TO[0] != '\0')
+	{
+	  sig_write (_("  For instructions, see:\n"));
+	  sig_write (REPORT_BUGS_TO);
+	  sig_write (".");
+	}
+      sig_write ("\n\n");
+
+      gdb_stderr->flush ();
+    }
+#endif /* HAVE_EXECINF_BACKTRACE */
+
+  /* If possible arrange for SIG to have its default behaviour (which
+     should be to terminate the current process), unblock SIG, and reraise
+     the signal.  This ensures GDB terminates with the expected signal.  */
+  if (signal (sig, SIG_DFL) != SIG_ERR
+      && unblock_signal (sig))
+    raise (sig);
+
+  /* The above failed, so try to use SIGABRT to terminate GDB.  */
+#ifdef SIGABRT
+  signal (SIGABRT, SIG_DFL);
+#endif
+  abort ();		/* ARI: abort */
+}
+
 /* The SIGSEGV handler for this thread, or NULL if there is none.  GDB
    always installs a global SIGSEGV handler, and then lets threads
    indicate their interest in handling the signal by setting this
@@ -890,7 +1001,7 @@ handle_sigsegv (int sig)
   install_handle_sigsegv ();
 
   if (thread_local_segv_handler == nullptr)
-    abort ();			/* ARI: abort */
+    handle_fatal_signal (sig);
   thread_local_segv_handler (sig);
 }
 
@@ -902,51 +1013,43 @@ handle_sigsegv (int sig)
    handler.  */
 static struct serial_event *quit_serial_event;
 
-/* Initialization of signal handlers and tokens.  There is a function
-   handle_sig* for each of the signals GDB cares about.  Specifically:
-   SIGINT, SIGFPE, SIGQUIT, SIGTSTP, SIGHUP, SIGWINCH.  These
-   functions are the actual signal handlers associated to the signals
-   via calls to signal().  The only job for these functions is to
-   enqueue the appropriate event/procedure with the event loop.  Such
-   procedures are the old signal handlers.  The event loop will take
-   care of invoking the queued procedures to perform the usual tasks
-   associated with the reception of the signal.  */
-/* NOTE: 1999-04-30 This is the asynchronous version of init_signals.
-   init_signals will become obsolete as we move to have to event loop
-   as the default for gdb.  */
+/* Initialization of signal handlers and tokens.  There are a number of
+   different strategies for handling different signals here.
+
+   For SIGINT, SIGTERM, SIGQUIT, SIGHUP, SIGTSTP, there is a function
+   handle_sig* for each of these signals.  These functions are the actual
+   signal handlers associated to the signals via calls to signal().  The
+   only job for these functions is to enqueue the appropriate
+   event/procedure with the event loop.  The event loop will take care of
+   invoking the queued procedures to perform the usual tasks associated
+   with the reception of the signal.
+
+   For SIGSEGV the handle_sig* function does all the work for handling this
+   signal.
+
+   For SIGFPE, SIGBUS, and SIGABRT, these signals will all cause GDB to
+   terminate immediately.  */
 void
-async_init_signals (void)
+gdb_init_signals (void)
 {
   initialize_async_signal_handlers ();
 
   quit_serial_event = make_serial_event ();
 
-  signal (SIGINT, handle_sigint);
   sigint_token =
     create_async_signal_handler (async_request_quit, NULL, "sigint");
-  signal (SIGTERM, handle_sigterm);
+  signal (SIGINT, handle_sigint);
+
   async_sigterm_token
     = create_async_signal_handler (async_sigterm_handler, NULL, "sigterm");
-
-  /* If SIGTRAP was set to SIG_IGN, then the SIG_IGN will get passed
-     to the inferior and breakpoints will be ignored.  */
-#ifdef SIGTRAP
-  signal (SIGTRAP, SIG_DFL);
-#endif
+  signal (SIGTERM, handle_sigterm);
 
 #ifdef SIGQUIT
-  /* If we initialize SIGQUIT to SIG_IGN, then the SIG_IGN will get
-     passed to the inferior, which we don't want.  It would be
-     possible to do a "signal (SIGQUIT, SIG_DFL)" after we fork, but
-     on BSD4.3 systems using vfork, that can affect the
-     GDB process as well as the inferior (the signal handling tables
-     might be in memory, shared between the two).  Since we establish
-     a handler for SIGQUIT, when we call exec it will set the signal
-     to SIG_DFL for us.  */
-  signal (SIGQUIT, handle_sigquit);
   sigquit_token =
     create_async_signal_handler (async_do_nothing, NULL, "sigquit");
+  signal (SIGQUIT, handle_sigquit);
 #endif
+
 #ifdef SIGHUP
   if (signal (SIGHUP, handle_sighup) != SIG_IGN)
     sighup_token =
@@ -955,13 +1058,22 @@ async_init_signals (void)
     sighup_token =
       create_async_signal_handler (async_do_nothing, NULL, "sighup");
 #endif
-  signal (SIGFPE, handle_sigfpe);
-  sigfpe_token =
-    create_async_signal_handler (async_float_handler, NULL, "sigfpe");
 
 #ifdef SIGTSTP
   sigtstp_token =
     create_async_signal_handler (async_sigtstp_handler, NULL, "sigtstp");
+#endif
+
+#ifdef SIGFPE
+  signal (SIGFPE, handle_fatal_signal);
+#endif
+
+#ifdef SIGBUS
+  signal (SIGBUS, handle_fatal_signal);
+#endif
+
+#ifdef SIGABRT
+  signal (SIGABRT, handle_fatal_signal);
 #endif
 
   install_handle_sigsegv ();
@@ -1177,16 +1289,7 @@ async_sigtstp_handler (gdb_client_data arg)
   char *prompt = get_prompt ();
 
   signal (SIGTSTP, SIG_DFL);
-#if HAVE_SIGPROCMASK
-  {
-    sigset_t zero;
-
-    sigemptyset (&zero);
-    gdb_sigmask (SIG_SETMASK, &zero, 0);
-  }
-#elif HAVE_SIGSETMASK
-  sigsetmask (0);
-#endif
+  unblock_signal (SIGTSTP);
   raise (SIGTSTP);
   signal (SIGTSTP, handle_sigtstp);
   printf_unfiltered ("%s", prompt);
@@ -1198,23 +1301,6 @@ async_sigtstp_handler (gdb_client_data arg)
 }
 #endif /* SIGTSTP */
 
-/* Tell the event loop what to do if SIGFPE is received.
-   See event-signal.c.  */
-static void
-handle_sigfpe (int sig)
-{
-  mark_async_signal_handler (sigfpe_token);
-  signal (sig, handle_sigfpe);
-}
-
-/* Event loop will call this function to process a SIGFPE.  */
-static void
-async_float_handler (gdb_client_data arg)
-{
-  /* This message is based on ANSI C, section 4.7.  Note that integer
-     divide by zero causes this, so "float" is a misnomer.  */
-  error (_("Erroneous arithmetic operation."));
-}
 
 
 /* Set things up for readline to be invoked via the alternate
@@ -1354,4 +1440,17 @@ Control whether to show event loop-related debug messages."),
 			set_debug_event_loop_command,
 			show_debug_event_loop_command,
 			&setdebuglist, &showdebuglist);
+
+  add_setshow_boolean_cmd ("backtrace-on-fatal-signal", class_maintenance,
+			   &bt_on_fatal_signal, _("\
+Set whether to produce a backtrace if GDB receives a fatal signal."), _("\
+Show whether GDB will produce a backtrace if it receives a fatal signal."), _("\
+Use \"on\" to enable, \"off\" to disable.\n\
+If enabled, GDB will produce a minimal backtrace if it encounters a fatal\n\
+signal from within GDB itself.  This is a mechanism to help diagnose\n\
+crashes within GDB, not a mechanism for debugging inferiors."),
+			   set_bt_on_fatal_signal,
+			   show_bt_on_fatal_signal,
+			   &maintenance_set_cmdlist,
+			   &maintenance_show_cmdlist);
 }

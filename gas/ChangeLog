@@ -1,3 +1,33 @@
+2021-08-11  Darius Galis  <darius.galis@cyberthorstudios.com>
+
+	* config/rx-parse.y (DECNT): Fixed typo.
+	* testsuite/gas/rx/dpopm.sm (DECNT): Fixed typo.
+	* testsuite/gas/rx/dpushm.sm (DECNT): Fixed typo.
+	* testsuite/gas/rx/macros.inc (DECNT): Fixed typo.
+
+2021-08-11  Nick Clifton  <nickc@redhat.com>
+
+	PR 28215
+	* config/tc-csky.c (md_apply_fix): Correctly handle a fixup that
+	involves an overlarge constant.
+
+2021-08-11  Matt Jacobson  <mhjacobson@me.com>
+
+	* config/tc-avr.c (enum options): Add option flag.
+	(struct option): Add option -mno-dollar-line-separator.
+	(md_parse_option): Adjust treatment of $ when option is present.
+	(usage): Mention the new option.
+	* config/tc-avr.h: Use avr_line_separator_chars.
+	* doc/c-avr.texi: Document the new option.
+
+2021-08-11  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-tic4x.c (tic4x_gen_to_words): Fix typo.
+
+2021-08-10  Nick Clifton  <nickc@redhat.com>
+
+	* po/ru.po: Updated Russian translation.
+
 2021-08-09  Nick Clifton  <nickc@redhat.com>
 
 	* dwarf2dbg.c (get_directory_table_entry): Ensure that dir[0]
