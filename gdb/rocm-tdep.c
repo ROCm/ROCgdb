@@ -918,7 +918,7 @@ rocm_target_ops::stop (ptid_t ptid)
 	get_rocm_inferior_info (thread->inf)
 	  ->wave_events.emplace_back (thread->ptid,
 				      target_waitstatus{
-					TARGET_WAITKIND_THREAD_EXITED, 0 });
+					TARGET_WAITKIND_THREAD_EXITED, { 0 }});
 
 	if (target_is_async_p ())
 	  async_event_handler_mark ();
@@ -1270,7 +1270,7 @@ rocm_consume_one_event (ptid_t ptid)
     }
 
   if (info->wave_events.empty ())
-    return { minus_one_ptid, target_waitstatus{ TARGET_WAITKIND_IGNORE, 0 } };
+    return { minus_one_ptid, target_waitstatus{ TARGET_WAITKIND_IGNORE, { 0 }} };
 
   auto event = info->wave_events.front ();
   info->wave_events.pop_front ();
