@@ -5732,6 +5732,13 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
   /* Remember the SIMD mask.  */
   bs->simd_lane_mask = thread->active_simd_lanes_mask ();
 
+  /* If the breakpoint is set for a specific lane, mask all other
+     lanes.  */
+  if (b->thread != -1
+      && b->thread == thread->global_num
+      && b->lane >= 0)
+    bs->simd_lane_mask &= (simd_lanes_mask_t) 1 << b->lane;
+
   /* If we hit the breakpoint with all lanes inactive, don't stop.
      This can happen in conditional/divergent code -- the compiler may
      decide it's cheaper to execute a block of instructions unmasked
@@ -6850,7 +6857,11 @@ print_one_breakpoint_location (struct breakpoint *b,
 	{
 	  struct thread_info *thr = find_thread_global_id (b->thread);
 
-	  uiout->field_string ("thread", print_thread_id (thr));
+	  if (b->lane >= 0)
+	    uiout->field_fmt ("thread", "%s, lane %d",
+			      print_thread_id (thr), b->lane);
+	  else
+	    uiout->field_string ("thread", print_thread_id (thr));
 	}
       uiout->text ("\n");
     }
@@ -7375,10 +7386,15 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 	    else if (b.thread != -1)
 	      {
 		struct thread_info *thr = find_thread_global_id (b.thread);
-		gdb_printf (" (thread %s)", print_thread_id (thr));
+		gdb_printf (" (thread %s", print_thread_id (thr));
+		if (b.lane >= 0)
+		  gdb_printf (", lane %d)", b.lane);
+		else
+		  gdb_printf (")");
 	      }
 	    else if (b.task != -1)
 	      gdb_printf (" (task %d)", b.task);
+
 	    gdb_printf ("%s%s ",
 			((b.enable_state == bp_disabled
 			  || b.enable_state == bp_call_disabled)

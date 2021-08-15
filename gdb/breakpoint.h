@@ -863,6 +863,10 @@ struct breakpoint : public intrusive_list_node<breakpoint>
      care.  */
   int thread = -1;
 
+  /* Lane number for thread specific breakpoint, or -1 if don't care.
+     It is taken into consideration iff THREAD is specified.  */
+  int lane = -1;
+
   /* Inferior number for inferior-specific breakpoint, or -1 if this
      breakpoint is for all inferiors.  */
   int inferior = -1;
