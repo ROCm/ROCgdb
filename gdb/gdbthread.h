@@ -976,6 +976,9 @@ extern int find_first_active_simd_lane (simd_lanes_mask_t mask);
 /* Return true if LANE is unmasked in MASK.  */
 extern bool is_simd_lane_active (simd_lanes_mask_t mask, int lane);
 
+/* Warn if the current lane is inactive.  */
+extern void warn_if_current_lane_is_inactive ();
+
 /* Execute function FUNC for all active lanes in MASK.  FUNC should
    have the following prototype:
 
