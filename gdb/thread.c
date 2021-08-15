@@ -1364,6 +1364,305 @@ info_threads_command_completer (struct cmd_list_element *ignore,
     }
 }
 
+/* The options for the "info lanes" command.  */
+
+struct info_lanes_opts
+{
+  /* For "-all".  */
+  bool show_all = false;
+
+  /* For "-active".  */
+  bool only_active = false;
+
+  /* For "-inactive".  */
+  bool only_inactive = false;
+};
+
+static const gdb::option::option_def info_lanes_option_defs[] = {
+
+  gdb::option::flag_option_def<info_lanes_opts> {
+    "all",
+    [] (info_lanes_opts *opts) { return &opts->show_all; },
+    N_("All lanes (active, inactive and unused)."),
+  },
+
+  gdb::option::flag_option_def<info_lanes_opts> {
+    "active",
+    [] (info_lanes_opts *opts) { return &opts->only_active; },
+    N_("Only active lanes."),
+  },
+
+  gdb::option::flag_option_def<info_lanes_opts> {
+    "inactive",
+    [] (info_lanes_opts *opts) { return &opts->only_inactive; },
+    N_("Only inactive lanes."),
+  },
+};
+
+/* Create an option_def_group for the "info lanes" options, with OPTS
+   as context.  */
+
+static inline gdb::option::option_def_group
+make_info_lanes_options_def_group (info_lanes_opts *opts)
+{
+  return {{info_lanes_option_defs}, opts};
+}
+
+/* Helper for print_lane_info.  Returns true if LANE should be
+   printed.  If REQUESTED_LANES, a list of GDB ids/ranges, is not
+   NULL, only print LANE if its ID is included in the list.  */
+
+static bool
+should_print_lane (const char *requested_lanes, thread_info *thr, int lane,
+		   const info_lanes_opts &opts,
+		   int lane_used_count)
+{
+  if (opts.show_all)
+    ;
+  else if (opts.only_active && !thr->is_simd_lane_active (lane))
+    return false;
+  else if (opts.only_inactive && thr->is_simd_lane_active (lane))
+    return false;
+  else if (lane >= lane_used_count)
+    return false;
+
+  if (requested_lanes != NULL && *requested_lanes != '\0')
+    {
+      if (!number_is_in_list (requested_lanes, lane))
+	return false;
+    }
+
+  return true;
+}
+
+/* Print one row in the "info lanes" table.  TP is the thread related
+   to the printed row.  LANE is the lane of the thread to be printed.
+   IS_CURRENT shows whether we print the current lane of the current
+   thread.  */
+
+static void
+print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
+{
+  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+
+  if (!uiout->is_mi_like_p ())
+    {
+      if (is_current)
+	uiout->field_string ("current", "*");
+      else
+	uiout->field_skip ("current");
+
+      uiout->field_signed ("id", lane);
+    }
+
+  gdbarch *arch = target_thread_architecture (tp->ptid);
+  int used_lanes_count = gdbarch_used_lanes_count (arch, tp);
+
+  auto lane_state = [&] ()
+    {
+      if (lane >= used_lanes_count)
+	{
+	  /* Unused in workgroup.  */
+	  return "U";
+	}
+
+      if (tp->state == THREAD_RUNNING)
+	{
+	  /* Running.  */
+	  return "R";
+	}
+
+      if (tp->is_simd_lane_active (lane))
+	{
+	  /* Active.  */
+	  return "A";
+	}
+
+      /* Inactive.  */
+      return "I";
+    };
+
+  uiout->field_string ("state", lane_state ());
+
+  uiout->field_string ("target-id", target_lane_to_str (tp, lane));
+
+  if (uiout->is_mi_like_p ())
+    {
+      if (tp->state == THREAD_RUNNING)
+	uiout->field_string ("state", "running");
+      else
+	uiout->field_string ("state", "stopped");
+    }
+
+  if (tp->state == THREAD_RUNNING)
+    uiout->text ("(running)\n");
+  else
+    {
+      if (lane >= used_lanes_count)
+	{
+	  /* This lane is unused.  */
+	  uiout->text ("(unused)\n");
+	}
+      else
+	{
+	  if (tp->is_simd_lane_active (lane))
+	    {
+	      frame_info *curr_frame = get_current_frame ();
+
+	      print_stack_frame (curr_frame,
+				 /* For MI output, print frame level.  */
+				 uiout->is_mi_like_p (),
+				 LOCATION, 0);
+	    }
+	  else
+	    {
+	      /* Lanes in this row are inactive.  */
+	      uiout->text ("(inactive)\n");
+	    }
+	}
+    }
+}
+
+/* Print info about the current thread's lanes specified in
+   REQUESTED_LANES.  */
+
+static void
+print_lane_info (struct ui_out *uiout, const char *requested_lanes,
+		 const info_lanes_opts &opts)
+{
+  if (inferior_ptid == null_ptid)
+    {
+      uiout->message (_("No thread selected.\n"));
+      return;
+    }
+
+  thread_info *thr = inferior_thread ();
+
+  {
+    /* For backward compatibility, we make a list for MI.  A table is
+       preferable for the CLI, though, because it shows table headers.
+       XXX: Actually, there's no backward compatibility issue here,
+       this is copied verbatim from the thread printing code.  */
+    gdb::optional<ui_out_emit_list> list_emitter;
+    gdb::optional<ui_out_emit_table> table_emitter;
+
+    int n_lanes = 0;
+
+    int current_lane = thr->current_simd_lane ();
+
+    scoped_restore_current_simd_lane restore_lane (thr);
+
+    /* The width of the "Target Id" column.  Grown below to
+       accommodate the largest entry.  */
+    size_t target_id_col_width = 17;
+
+    gdbarch *arch = target_thread_architecture (thr->ptid);
+    int lane_count = gdbarch_supported_lanes_count (arch, thr);
+    int lane_used_count = gdbarch_used_lanes_count (arch, thr);
+
+    for (int lane = 0; lane < lane_count; ++lane)
+      {
+	if (!should_print_lane (requested_lanes, thr, lane, opts,
+				lane_used_count))
+	  continue;
+
+	if (!uiout->is_mi_like_p ())
+	  {
+	    target_id_col_width
+	      = std::max (target_id_col_width,
+			  target_lane_to_str (thr, lane).size ());
+	  }
+
+	++n_lanes;
+      }
+
+    if (n_lanes == 0)
+      {
+	if (requested_lanes == NULL || *requested_lanes == '\0')
+	  uiout->message (_("No lanes.\n"));
+	else
+	  uiout->message (_("No lanes match '%s'.\n"),
+			  requested_lanes);
+	return;
+      }
+
+    if (uiout->is_mi_like_p ())
+      list_emitter.emplace (uiout, "lanes");
+    else
+      {
+	table_emitter.emplace (uiout, 5, n_lanes, "lanes");
+
+	uiout->table_header (1, ui_left, "current", "");
+	uiout->table_header (4, ui_left, "id", "Id");
+	uiout->table_header (5, ui_left, "state", "State");
+	uiout->table_header (target_id_col_width, ui_left,
+			     "target-id", "Target Id");
+	uiout->table_header (1, ui_left, "frame", "Frame");
+	uiout->table_body ();
+      }
+
+    if (thr->has_simd_lanes ())
+      {
+	for (int lane = 0; lane < lane_count; ++lane)
+	  {
+	    if (!should_print_lane (requested_lanes, thr, lane, opts,
+				    lane_used_count))
+	      continue;
+
+	    thr->set_current_simd_lane (lane);
+
+	    bool is_current = lane == current_lane;
+	    print_lane_row (uiout, thr, lane, is_current);
+	  }
+      }
+    else
+      {
+	if (should_print_lane (requested_lanes, thr, 0, opts, 1))
+	  print_lane_row (uiout, thr, 0, true);
+      }
+  }
+
+  /* This end scope restores the current lane and the frame selected
+     before the "info lanes" command, and it finishes the ui-out
+     list or table.  */
+}
+
+/* Implementation of the "info lanes" command.  */
+
+static void
+info_lanes_command (const char *arg, int from_tty)
+{
+  info_lanes_opts opts;
+
+  auto grp = make_info_lanes_options_def_group (&opts);
+  gdb::option::process_options
+    (&arg, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
+
+  print_lane_info (current_uiout, arg, opts);
+}
+
+/* Completer for the "info lanes" command.  */
+
+static void
+info_lanes_command_completer (struct cmd_list_element *ignore,
+			      completion_tracker &tracker,
+			      const char *text, const char *word_ignored)
+{
+  const auto grp = make_info_lanes_options_def_group (nullptr);
+
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp))
+    return;
+
+  /* Convenience to let the user know what the option can accept.  */
+  if (*text == '\0')
+    {
+      gdb::option::complete_on_all_options (tracker, grp);
+      /* Keep this "ID" in sync with what "help info lanes" says.  */
+      tracker.add_completion (make_unique_xstrdup ("ID"));
+    }
+}
+
 /* See gdbthread.h.  */
 
 void
@@ -1937,6 +2236,68 @@ thread_command (const char *tidstr, int from_tty)
     }
 }
 
+/* See gdbthread.h.  Note we issue a warning instead of erroring out
+   because it's safer -- we can have times the execution mask is
+   0.  */
+
+void
+warn_if_current_lane_is_inactive ()
+{
+  struct thread_info *tp = inferior_thread ();
+
+  if (!tp->executing
+      && !tp->is_simd_lane_active (tp->current_simd_lane ()))
+    warning (_("Current lane is inactive."));
+}
+
+/* Switch to the specified lane, or print the current lane.  */
+
+static void
+lane_command (const char *tidstr, int from_tty)
+{
+  if (inferior_ptid == null_ptid)
+    error (_("No thread selected"));
+
+  struct thread_info *tp = inferior_thread ();
+
+  if (tidstr == NULL)
+    {
+      if (target_has_stack ())
+	{
+	  int lane = tp->current_simd_lane ();
+
+	  if (tp->state == THREAD_EXITED)
+	    printf_filtered (_("[Current lane is %d, thread %s (%s) (exited)]\n"),
+			     lane,
+			     print_thread_id (tp),
+			     target_lane_to_str (tp, lane).c_str ());
+	  else
+	    printf_filtered (_("[Current lane is %d, thread %s (%s)]\n"),
+			     lane,
+			     print_thread_id (tp),
+			     target_lane_to_str (tp, lane).c_str ());
+	}
+      else
+	error (_("No stack."));
+    }
+  else
+    {
+      int lane = parse_and_eval_long (tidstr);
+
+      gdbarch *arch = target_thread_architecture (tp->ptid);
+      int lane_count = gdbarch_supported_lanes_count (arch, tp);
+      if (lane < 0 || lane >= lane_count)
+	error (_("Lane %d does not exist on this thread."), lane);
+
+      tp->set_current_simd_lane (lane);
+
+      select_frame (get_current_frame ());
+
+      gdb::observers::user_selected_context_changed.notify
+	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
+    }
+}
+
 /* Implementation of `thread name'.  */
 
 static void
@@ -2078,7 +2439,11 @@ print_selected_thread_frame (struct ui_out *uiout,
   else if (selection & USER_SELECTED_FRAME)
     {
       if (selection & USER_SELECTED_THREAD)
-	uiout->text ("\n");
+	{
+	  uiout->text ("\n");
+
+	  warn_if_current_lane_is_inactive ();
+	}
 
       if (has_stack_frames ())
 	print_stack_frame_to_uiout (uiout, get_selected_frame (NULL),
@@ -2177,7 +2542,7 @@ global_thread_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 }
 
 /* Commands with a prefix of `thread'.  */
-struct cmd_list_element *thread_cmd_list = NULL;
+struct cmd_list_element *thread_cmd_list = nullptr;
 
 /* Implementation of `thread' variable.  */
 
@@ -2196,6 +2561,9 @@ static const struct internalvar_funcs gthread_funcs =
   NULL,
   NULL
 };
+
+/* Commands with a prefix of `lane'.  */
+struct cmd_list_element *lane_cmd_list = NULL;
 
 void _initialize_thread ();
 void
@@ -2221,6 +2589,30 @@ Options:\n\
 
   c = add_info ("threads", info_threads_command, info_threads_help.c_str ());
   set_cmd_completer_handle_brkchars (c, info_threads_command_completer);
+
+  const auto info_lanes_opts = make_info_lanes_options_def_group (nullptr);
+
+  /* Note: keep this "ID" in sync with what "info lanes [TAB]"
+     suggests.  */
+  static std::string info_lanes_help
+    = gdb::option::build_help (_("\
+Display currently known lanes.\n\
+Usage: info lanes [OPTION]... [ID]...\n\
+\n\
+Options:\n\
+%OPTIONS%\
+\n\n\
+If ID is given, it is a space-separated list of IDs of lanes to display.\n\
+Otherwise, all lanes are displayed."),
+			       info_lanes_opts);
+
+  c = add_info ("lanes", info_lanes_command, info_lanes_help.c_str ());
+  set_cmd_completer_handle_brkchars (c, info_lanes_command_completer);
+
+  add_prefix_cmd ("lane", class_run, lane_command, _("\
+Use this command to switch between lanes.\n\
+The new lane ID must be currently known."),
+		  &lane_cmd_list, 1, &cmdlist);
 
   cmd_list_element *thread_cmd
     = add_prefix_cmd ("thread", class_run, thread_command, _("\

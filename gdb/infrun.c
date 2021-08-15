@@ -8566,6 +8566,8 @@ normal_stop (void)
 			       target_pid_to_str (thr->ptid).c_str ());
 	    }
 
+	  warn_if_current_lane_is_inactive ();
+
 	  annotate_thread_changed ();
 	}
       previous_inferior_ptid = inferior_ptid;
