@@ -1838,32 +1838,45 @@ tp_array_compar_descending (const thread_info_ref &a, const thread_info_ref &b)
   return (a->per_inf_num > b->per_inf_num);
 }
 
-/* Assuming that THR is the current thread, execute CMD.
-   FLAGS.QUIET controls the printing of the thread information.
-   FLAGS.CONT and FLAGS.SILENT control how to handle errors.  Can throw an
-   exception if !FLAGS.SILENT and !FLAGS.CONT and CMD fails.  */
+/* Switch to lane LANE of thread THR and execute CMD.  FLAGS.QUIET
+   controls the printing of the thread information.  FLAGS.CONT and
+   FLAGS.SILENT control how to handle errors.  Can throw an exception
+   if !FLAGS.SILENT and !FLAGS.CONT and CMD fails.  */
 
 static void
-thr_try_catch_cmd (thread_info *thr, const char *cmd, int from_tty,
-		   const qcs_flags &flags)
+thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
+			const char *cmd, int from_tty,
+			const qcs_flags &flags)
 {
   gdb_assert (is_current_thread (thr));
 
   /* The thread header is computed before running the command since
-     the command can change the inferior, which is not permitted
-     by thread_target_id_str.  */
-  std::string thr_header =
-    string_printf (_("\nThread %s (%s):\n"), print_thread_id (thr),
-		   thread_target_id_str (thr).c_str ());
+     the command can change the inferior, which is not permitted by
+     thread_target_id_str.  */
+  std::string header;
+
+  if (lane_mode)
+    header
+      = string_printf (_("\nLane %d (%s):\n"), lane,
+		       target_lane_to_str (thr, lane).c_str ());
+  else
+    header
+      = string_printf (_("\nThread %s (%s):\n"), print_thread_id (thr),
+		       thread_target_id_str (thr).c_str ());
 
   try
     {
-      std::string cmd_result = execute_command_to_string
-	(cmd, from_tty, gdb_stdout->term_out ());
+      /* Switch to the lane on which the command is executed.  */
+      thr->set_current_simd_lane (lane);
+
+      std::string cmd_result
+	= execute_command_to_string (cmd, from_tty,
+				     gdb_stdout->term_out ());
+
       if (!flags.silent || cmd_result.length () > 0)
 	{
 	  if (!flags.quiet)
-	    printf_filtered ("%s", thr_header.c_str ());
+	    puts_filtered (header.c_str ());
 	  printf_filtered ("%s", cmd_result.c_str ());
 	}
     }
@@ -1872,7 +1885,8 @@ thr_try_catch_cmd (thread_info *thr, const char *cmd, int from_tty,
       if (!flags.silent)
 	{
 	  if (!flags.quiet)
-	    printf_filtered ("%s", thr_header.c_str ());
+	    puts_filtered (header.c_str ());
+
 	  if (flags.cont)
 	    printf_filtered ("%s\n", ex.what ());
 	  else
@@ -1899,7 +1913,7 @@ using qcs_flag_option_def
 static const gdb::option::option_def thr_qcs_flags_option_defs[] = {
   qcs_flag_option_def {
     "q", [] (qcs_flags *opt) { return &opt->quiet; },
-    N_("Disables printing the thread information."),
+    N_("Disables printing the thread or lane information."),
   },
 
   qcs_flag_option_def {
@@ -1985,7 +1999,7 @@ thread_apply_all_command (const char *cmd, int from_tty)
 
       for (thread_info_ref &thr : thr_list_cpy)
 	if (switch_to_thread_if_alive (thr.get ()))
-	  thr_try_catch_cmd (thr.get (), cmd, from_tty, flags);
+	  thr_lane_try_catch_cmd (false, thr.get (), 0, cmd, from_tty, flags);
     }
 }
 
@@ -2147,10 +2161,205 @@ thread_apply_command (const char *tidlist, int from_tty)
 	  continue;
 	}
 
-      thr_try_catch_cmd (tp, cmd, from_tty, flags);
+      thr_lane_try_catch_cmd (false, tp, 0, cmd, from_tty, flags);
     }
 }
 
+/* Create an option_def_group for the "lane apply" / "lane apply all"
+   options, with FLAGS and IL as context.  */
+
+static inline std::array<gdb::option::option_def_group, 2>
+make_lane_apply_options_def_group (qcs_flags *flags,
+				   info_lanes_opts *il)
+{
+  return {{
+    { {thr_qcs_flags_option_defs}, flags },
+    { {info_lanes_option_defs}, il },
+  }};
+}
+
+/* Apply a GDB command to a list of lanes of the current thread.  List
+   syntax is a whitespace separated list of numbers, or ranges, or the
+   keyword `all'.  Ranges consist of two numbers separated by a
+   hyphen.  Examples:
+
+   lane apply 1 2 7 4 backtrace       Apply 'backtrace' cmd to lanes 1,2,7,4
+   lane apply 2-7 9 p foo             Apply 'p foo' cmd to lanes 2->7 & 9
+   lane apply all x/i $lane_pc        Apply 'x/i $lane_pc' cmd to all lanes.
+*/
+
+static void
+lane_apply_all_command (const char *cmd, int from_tty)
+{
+  qcs_flags flags;
+  info_lanes_opts il_opts;
+
+  auto group = make_lane_apply_options_def_group (&flags, &il_opts);
+  gdb::option::process_options
+    (&cmd, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group);
+
+  validate_flags_qcs ("lane apply all", &flags);
+
+  if (cmd == NULL || *cmd == '\000')
+    error (_("Please specify a command at the end of 'lane apply all'"));
+
+  if (inferior_ptid == null_ptid)
+    return;
+
+  thread_info *thr = inferior_thread ();
+  scoped_restore_current_simd_lane restore_lane (thr);
+  scoped_restore_selected_frame restore_frame;
+
+  gdbarch *arch = target_thread_architecture (thr->ptid);
+  int lane_count = gdbarch_supported_lanes_count (arch, thr);
+  int lane_used_count = gdbarch_used_lanes_count (arch, thr);
+
+  for (int lane = 0; lane < lane_count; ++lane)
+    {
+      if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
+	continue;
+
+      frame_info *curr_frame = get_current_frame ();
+      select_frame (curr_frame);
+
+      thr_lane_try_catch_cmd (true, thr, lane, cmd, from_tty, flags);
+    }
+}
+
+/* Completer for the "lane apply ..." commands.  */
+
+static void
+lane_apply_completer (completion_tracker &tracker, const char *text)
+{
+  const auto group = make_lane_apply_options_def_group (nullptr, nullptr);
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group))
+    return;
+
+  complete_nested_command_line (tracker, text);
+}
+
+/* Completer for "lane apply [ID list]".  */
+
+static void
+lane_apply_command_completer (cmd_list_element *ignore,
+			      completion_tracker &tracker,
+			      const char *text, const char * /*word*/)
+{
+  /* Don't leave this to complete_options because there's an early
+     return below.  */
+  tracker.set_use_custom_word_point (true);
+
+  number_or_range_parser parser (text);
+
+  try
+    {
+      while (!parser.finished ())
+	{
+	  /* Call for effect.  */
+	  parser.get_number ();
+
+	  if (parser.in_range ())
+	    parser.skip_range ();
+	}
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      /* get_number throws if it parses a negative number, for
+	 example.  But a seemingly negative number may be the start of
+	 an option instead.  */
+    }
+
+  const char *cmd = parser.cur_tok ();
+
+  if (cmd == text)
+    {
+      /* No lane ID list yet.  */
+      return;
+    }
+
+  /* Check if we're past a valid lane ID already.  */
+  if (parser.finished ()
+      && cmd > text && !isspace (cmd[-1]))
+    return;
+
+  /* We're past the lane ID list, advance word point.  */
+  tracker.advance_custom_word_point_by (cmd - text);
+  text = cmd;
+
+  lane_apply_completer (tracker, text);
+}
+
+/* Completer for "lane apply all".  */
+
+static void
+lane_apply_all_command_completer (cmd_list_element *ignore,
+				  completion_tracker &tracker,
+				  const char *text, const char *word)
+{
+  lane_apply_completer (tracker, text);
+}
+
+/* Implementation of the "lane apply" command.  */
+
+static void
+lane_apply_command (const char *id_list, int from_tty)
+{
+  qcs_flags flags;
+  info_lanes_opts il_opts;
+  const char *cmd = nullptr;
+  number_or_range_parser parser;
+
+  if (id_list == nullptr || *id_list == '\000')
+    error (_("Please specify a lane ID list"));
+
+  parser.init (id_list);
+  while (!parser.finished ())
+    parser.get_number ();
+
+  cmd = parser.cur_tok ();
+
+  auto group = make_lane_apply_options_def_group (&flags, &il_opts);
+  gdb::option::process_options
+    (&cmd, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group);
+
+  validate_flags_qcs ("lane apply", &flags);
+
+  if (*cmd == '\0')
+    error (_("Please specify a command following the lane ID list"));
+
+  if (id_list == cmd || isdigit (cmd[0]))
+    invalid_thread_id_error (cmd);
+
+  thread_info *thr = inferior_thread ();
+  scoped_restore_current_simd_lane restore_lane (thr);
+  scoped_restore_selected_frame restore_frame;
+
+  gdbarch *arch = target_thread_architecture (thr->ptid);
+  int lane_count = gdbarch_supported_lanes_count (arch, thr);
+  int lane_used_count = gdbarch_used_lanes_count (arch, thr);
+
+  parser.init (id_list);
+  while (!parser.finished ())
+    {
+      int lane = parser.get_number ();
+
+      if (lane >= lane_count)
+	{
+	  /* Be consistent with "thread apply" and warn.  */
+	  warning (_("Lane %d does not exist on this thread."), lane);
+	  continue;
+	}
+
+      if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
+	continue;
+
+      frame_info *curr_frame = get_current_frame ();
+      select_frame (curr_frame);
+
+      thr_lane_try_catch_cmd (true, thr, lane, cmd, from_tty, flags);
+    }
+}
 
 /* Implementation of the "taas" command.  */
 
@@ -2570,6 +2779,7 @@ void
 _initialize_thread ()
 {
   static struct cmd_list_element *thread_apply_list = NULL;
+  static struct cmd_list_element *lane_apply_list = NULL;
   cmd_list_element *c;
 
   const auto info_threads_opts = make_info_threads_options_def_group (nullptr);
@@ -2661,6 +2871,48 @@ THREAD_APPLY_OPTION_HELP),
 	       thread_apply_all_help.c_str (),
 	       &thread_apply_list);
   set_cmd_completer_handle_brkchars (c, thread_apply_all_command_completer);
+
+  /* lane apply ... commands.  */
+  {
+#define LANE_APPLY_OPTION_HELP "\
+Prints lane number and target system's lane id\n\
+followed by COMMAND output.\n\
+\n\
+By default, an error raised during the execution of COMMAND\n\
+aborts \"lane apply\".\n\
+\n\
+Options:\n\
+%OPTIONS%"
+
+    const auto lane_apply_opts = make_lane_apply_options_def_group (nullptr,
+								    nullptr);
+
+    static std::string lane_apply_help
+      = gdb::option::build_help (_("\
+Apply a command to a list of lanes.\n\
+Usage: lane apply ID... [OPTION]... COMMAND\n\
+ID is a space-separated list of IDs of lanes to apply COMMAND on.\n"
+LANE_APPLY_OPTION_HELP),
+				 lane_apply_opts);
+
+    c = add_prefix_cmd ("apply", class_run, lane_apply_command,
+			lane_apply_help.c_str (),
+			&lane_apply_list, 1, &lane_cmd_list);
+    set_cmd_completer_handle_brkchars (c, lane_apply_command_completer);
+
+    static std::string lane_apply_all_help
+      = gdb::option::build_help (_("\
+Apply a command to all lanes.\n\
+\n\
+Usage: lane apply all [OPTION]... COMMAND\n"
+LANE_APPLY_OPTION_HELP),
+				 lane_apply_opts);
+
+    c = add_cmd ("all", class_run, lane_apply_all_command,
+		 lane_apply_all_help.c_str (),
+		 &lane_apply_list);
+    set_cmd_completer_handle_brkchars (c, lane_apply_all_command_completer);
+  }
 
   c = add_com ("taas", class_run, taas_command, _("\
 Apply a command to all threads (ignoring errors and empty output).\n\
