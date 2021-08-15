@@ -358,8 +358,6 @@ number_is_in_list (const char *list, int number)
     {
       int gotnum = parser.get_number ();
 
-      if (gotnum == 0)
-	error (_("Arguments must be numbers or '$' variables."));
       if (gotnum == number)
 	return 1;
     }
