@@ -27766,6 +27766,10 @@ AMDGPU precise memory access reporting is on (currently enabled)
 (@value{GDBP})
 @end smallexample
 
+The @code{set amdgpu precise-memory} parameter is per-inferior.  When an
+inferior forks and a child inferior is created as a result, the child inferior
+inherits the parameter value of the parent inferior.
+
 @kindex show amdgpu precise-memory
 @cindex AMD GPU precise memory event reporting
 @item show amdgpu precise-memory
