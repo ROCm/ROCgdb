@@ -74,7 +74,7 @@ show_jit_debug (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("JIT debugging is %s.\n"), value);
 }
 
-/* Implementation of "maintenance info jit" command.  */
+/* Implementation of the "maintenance info jit" command.  */
 
 static void
 maint_info_jit_cmd (const char *args, int from_tty)
@@ -82,6 +82,7 @@ maint_info_jit_cmd (const char *args, int from_tty)
   inferior *inf = current_inferior ();
   bool printed_header = false;
 
+  /* Print a line for each JIT-ed objfile.  */
   for (objfile *obj : inf->pspace->objfiles ())
     {
       if (obj->jited_data == nullptr)
@@ -89,11 +90,11 @@ maint_info_jit_cmd (const char *args, int from_tty)
 
       if (!printed_header)
 	{
-	  printf_filtered ("Inferior address of known JIT-ed objfiles:\n");
+	  printf_filtered ("Base address of known JIT-ed objfiles:\n");
 	  printed_header = true;
 	}
 
-      printf_filtered (" - %s\n", paddress (obj->arch (), obj->jited_data->addr));
+      printf_filtered ("  %s\n", paddress (obj->arch (), obj->jited_data->addr));
     }
 }
 
@@ -1272,7 +1273,8 @@ _initialize_jit ()
 			   &setdebuglist, &showdebuglist);
 
   add_cmd ("jit", class_maintenance, maint_info_jit_cmd,
-	   _("Info about JIT-ed code."), &maintenanceinfolist);
+	   _("Print information about JIT-ed code objects."),
+	   &maintenanceinfolist);
 
   gdb::observers::inferior_created.attach (jit_inferior_created_hook, "jit");
   gdb::observers::inferior_execd.attach (jit_inferior_created_hook, "jit");

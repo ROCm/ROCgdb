@@ -481,8 +481,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  switch_to_no_thread ();
 	  child_inf->symfile_flags = SYMFILE_NO_READ;
 	  child_inf->push_target (parent_inf->process_target ());
-	  child_thr
-	    = add_thread_silent (child_inf->process_target (), child_ptid);
+	  child_thr = add_thread_silent (child_inf->process_target (),
+					 child_ptid);
 
 	  /* If this is a vfork child, then the address-space is
 	     shared with the parent.  */
