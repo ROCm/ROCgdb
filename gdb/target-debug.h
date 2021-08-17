@@ -183,6 +183,8 @@
   target_debug_do_print (host_address_to_string (X))
 #define target_debug_print_displaced_step_prepare_status(X) \
   target_debug_do_print (host_address_to_string (X))
+#define target_debug_print_target_waitkind(X) \
+  target_debug_do_print (pulongest (X))
 
 static void
 target_debug_print_struct_target_waitstatus_p (struct target_waitstatus *status)
