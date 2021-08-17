@@ -773,10 +773,25 @@ pc_prefix (CORE_ADDR addr)
 {
   if (has_stack_frames ())
     {
-      CORE_ADDR pc;
       frame_info_ptr frame = get_selected_frame (NULL);
-      if (get_frame_lane_pc_if_available (frame, &pc) && pc == addr)
-	return "=> ";
+      CORE_ADDR logical_pc = 0;
+      CORE_ADDR phys_pc = 0;
+
+      get_frame_pc_if_available (frame, &phys_pc);
+      get_frame_lane_pc_if_available (frame, &logical_pc);
+
+      if (phys_pc != logical_pc)
+	{
+	  if (addr == phys_pc)
+	    return "P> ";
+	  if (addr == logical_pc)
+	    return "L> ";
+	}
+      else
+	{
+	  if (addr == phys_pc)
+	    return "=> ";
+	}
     }
   return "   ";
 }
