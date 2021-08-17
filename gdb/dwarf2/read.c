@@ -13616,7 +13616,6 @@ dwarf2_rnglists_process (unsigned offset, struct dwarf2_cu *cu,
   /* Base address selection entry.  */
   gdb::optional<CORE_ADDR> base;
   const gdb_byte *buffer;
-  CORE_ADDR baseaddr;
   bool overflow = false;
   ULONGEST addr_index;
   struct dwarf2_section_info *rnglists_section;
@@ -13632,8 +13631,6 @@ dwarf2_rnglists_process (unsigned offset, struct dwarf2_cu *cu,
       return false;
     }
   buffer = rnglists_section->buffer + offset;
-
-  baseaddr = objfile->text_section_offset ();
 
   while (1)
     {
@@ -13776,7 +13773,7 @@ dwarf2_rnglists_process (unsigned offset, struct dwarf2_cu *cu,
 
       /* A not-uncommon case of bad debug info.
 	 Don't pollute the addrmap with bad data.  */
-      if (range_beginning + baseaddr == 0
+      if (range_beginning == 0
 	  && !per_objfile->per_bfd->has_section_at_zero)
 	{
 	  complaint (_(".debug_rnglists entry has start address of zero"
@@ -13818,7 +13815,6 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
   gdb::optional<CORE_ADDR> base;
   unsigned int dummy;
   const gdb_byte *buffer;
-  CORE_ADDR baseaddr;
 
   if (cu_header->version >= 5)
     return dwarf2_rnglists_process (offset, cu, tag, callback);
@@ -13833,8 +13829,6 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
       return 0;
     }
   buffer = per_objfile->per_bfd->ranges.buffer + offset;
-
-  baseaddr = objfile->text_section_offset ();
 
   while (1)
     {
@@ -13886,7 +13880,7 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
 
       /* A not-uncommon case of bad debug info.
 	 Don't pollute the addrmap with bad data.  */
-      if (range_beginning + baseaddr == 0
+      if (range_beginning == 0
 	  && !per_objfile->per_bfd->has_section_at_zero)
 	{
 	  complaint (_(".debug_ranges entry has start address of zero"
@@ -18239,7 +18233,22 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
       baton->locexpr.per_cu = cu->per_cu;
       baton->locexpr.per_objfile = per_objfile;
 
-      struct dwarf_block *block = attr->as_block ();
+      struct dwarf_block *block;
+      if (attr->form == DW_FORM_data16)
+	{
+	  size_t data_size = 16;
+	  block = XOBNEW (obstack, struct dwarf_block);
+	  block->size = (data_size
+			 + 2 /* Extra bytes for DW_OP and arg.  */);
+	  gdb_byte *data = XOBNEWVEC (obstack, gdb_byte, block->size);
+	  data[0] = DW_OP_implicit_value;
+	  data[1] = data_size;
+	  memcpy (&data[2], attr->as_block ()->data, data_size);
+	  block->data = data;
+	}
+      else
+	block = attr->as_block ();
+
       baton->locexpr.size = block->size;
       baton->locexpr.data = block->data;
       switch (attr->name)

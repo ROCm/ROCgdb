@@ -1,3 +1,28 @@
+2021-08-06  Simon Marchi  <simon.marchi@polymtl.ca>
+	    Tom de Vries  <tdevries@suse.de>
+
+	PR symtab/28004
+	* dwarf2/read.c (dwarf2_rnglists_process, dwarf2_ranges_process):
+	Fix zero address complaint.
+
+2021-08-02  Tom Tromey  <tromey@adacore.com>
+
+	PR varobj/28131
+	* varobj.c (~varobj): Delete 'dynamic' before 'root'.
+
+2021-08-02  Shahab Vahedi  <shahab@synopsys.com>
+
+	PR gdb/28104
+	* gdbtypes.c (gdbtypes_post_init): Use
+	"arch_boolean_type (..., unsigned=1, ...) to construct
+	"boolean".
+	cp-valprint.c (test_print_flags): New.
+	(_initialize_cp_valprint): Run the "test_print_flags" unit-test.
+
+2021-07-28  Tom de Vries  <tdevries@suse.de>
+
+	* dwarf2/read.c (attr_to_dynamic_prop): Handle DW_FORM_data16.
+
 2021-07-27  Tom de Vries  <tdevries@suse.de>
 
 	PR testsuite/26904
