@@ -250,7 +250,7 @@ rocm_target_id_string (amd_dbgapi_wave_id_t wave_id)
   amd_dbgapi_agent_id_t agent_id;
   uint32_t group_ids[3], wave_in_group;
 
-  std::string str = "AMDGPU Thread";
+  std::string str = "AMDGPU Wave";
 
   str += (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_AGENT,
 				    sizeof (agent_id), &agent_id)
