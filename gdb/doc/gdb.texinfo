@@ -23051,10 +23051,10 @@ For example,
   1          Thread 0x7ffff7fc4cc0 (LWP 74764) "bit_extract" 0x00007ffff6b56f37 in sched_yield () from /lib/x86_64-linux-gnu/libc.so.6
   2          Thread 0x7ffff59cb700 (LWP 74773) "bit_extract" 0x00007ffff6b696d7 in ioctl () from /lib/x86_64-linux-gnu/libc.so.6
   4          Thread 0x7ffff7fc1700 (LWP 74775) "bit_extract" 0x00007ffff6b696d7 in ioctl () from /lib/x86_64-linux-gnu/libc.so.6
-* 5   62/64  AMDGPU Thread 1:1:1:1 (0,0,0)/0 "bit_extract"   bit_extract_kernel (C_d=0x7ffde8800000, A_d=0x7ffde8e00000, N=4000000) at bit_extract.cpp:38
-  6   2/64   AMDGPU Thread 1:1:1:2 (0,0,0)/1 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
-  7   64/64  AMDGPU Thread 1:1:1:3 (1,0,0)/0 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
-  8   8/64   AMDGPU Thread 1:1:1:4 (1,0,0)/1 "bit_extract"   __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+* 5   62/64  AMDGPU Wave 1:1:1:1 (0,0,0)/0 "bit_extract"     bit_extract_kernel (C_d=0x7ffde8800000, A_d=0x7ffde8e00000, N=4000000) at bit_extract.cpp:38
+  6   2/64   AMDGPU Wave 1:1:1:2 (0,0,0)/1 "bit_extract"     __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+  7   64/64  AMDGPU Wave 1:1:1:3 (1,0,0)/0 "bit_extract"     __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
+  8   8/64   AMDGPU Wave 1:1:1:4 (1,0,0)/1 "bit_extract"     __hip_get_block_dim_x () at /opt/rocm-3.8.0-3471/hip/include/hip/hcc_detail/hip_runtime.h:462
 @end smallexample
 
 @table @code
@@ -27230,7 +27230,7 @@ For example,
   2    Thread 0x7ffff6986700 (LWP 62064) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
   3    Thread 0x7ffff5f7f700 (LWP 62066) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
   4    Thread 0x7ffff597f700 (LWP 62067) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
-  5    AMDGPU Thread 1:2:?:1 (?,?,?)/? "bit_extract"   bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:41
+  5    AMDGPU Wave 1:2:?:1 (?,?,?)/? "bit_extract"     bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:41
 @end smallexample
 
 This does not affect wavefronts created while @value{GDBN} is attached
@@ -27419,7 +27419,7 @@ The @acronym{AMD GPU} thread target identifier (@var{systag}) string has the
 following format:
 
 @smallexample
-AMDGPU Thread @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+AMDGPU Wave @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
 @end smallexample
 
 It is used in the @samp{Target ID} column of the @samp{info threads} command

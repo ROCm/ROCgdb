@@ -149,7 +149,7 @@ proc_with_prefix process_attach_tests {} {
 
     set threadid ""
     gdb_test_multiple "info threads" "extract thread id" {
-        -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+.*$gdb_prompt $" {
+        -re  "\\s+(\\d+)\\s+AMDGPU Wave\\s+.*$gdb_prompt $" {
             set threadid "$expect_out(1,string)"
             pass "$test"
         }

@@ -90,11 +90,11 @@ gdb_test_sequence "info agents" "info agents" {
 
 # Check "info threads".
 # Sample output:
-# * 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
-#   6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
+# * 5    AMDGPU Wave 1:1:1:1 (0,0,0)/0 "bit_extract_kernel"  bit_extract_kernel () at bit_extract.cpp:38
+#   6    AMDGPU Wave 1:1:1:2 (0,0,0)/1 "bit_extract_kernel"  __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
     {Id\s+Target\s+Id\s+Frame}
-    {\d+\s+AMDGPU\sThread\s\d+\:\d+\:\d+\:\d+\s}
+    {\d+\s+AMDGPU\sWave\s\d+\:\d+\:\d+\:\d+\s}
 }
 
 

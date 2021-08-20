@@ -83,7 +83,7 @@ gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
 set threadid ""
 
 gdb_test_multiple "info threads" "extract thread id" {
-    -re  "\\s+(\\d+)\\s+AMDGPU Thread\\s+\\d+\:\\d+:\\d+:\\d+\\s+\\(\\d+,\\d+,\\d+\\)/\\d+.*$gdb_prompt $" {
+    -re  "\\s+(\\d+)\\s+AMDGPU Wave\\s+\\d+\:\\d+:\\d+:\\d+\\s+\\(\\d+,\\d+,\\d+\\)/\\d+.*$gdb_prompt $" {
 	set threadid "$expect_out(1,string)"
 	pass $gdb_test_name
     }
@@ -122,11 +122,11 @@ gdb_test_sequence "info agents" "info agents" {
 
 # Check "info threads".
 # Sample output:
-#* 5    AMDGPU Thread 1.1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
-#  6    AMDGPU Thread 1.2 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
+#* 5    AMDGPU Wave 1:1:1:1 (0,0,0)/0 "bit_extract_kernel"      bit_extract_kernel () at bit_extract.cpp:38
+#  6    AMDGPU Wave 1:1:1:1 (0,0,0)/1 "bit_extract_kernel"      __hip_get_block_dim_x ()
 gdb_test_sequence "info threads" "info threads" {
     {Id\s+Target\s+Id\s+Frame}
-    {\d+\s+AMDGPU\sThread\s\d+\:\d+:\d+:\d+}
+    {\d+\s+AMDGPU\sWave\s\d+\:\d+:\d+:\d+}
 }
 
 # Show architecture info while debugging in device code.

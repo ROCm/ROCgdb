@@ -87,7 +87,7 @@ set wave_id ""
 set threadid ""
 
 gdb_test_multiple "info threads" "info threads" {
-    -re "\\s+(\\d+)\\s+AMDGPU Thread\\s+\\d+\:\\d+\:\\d+\:\\d+\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
+    -re "\\s+(\\d+)\\s+AMDGPU Wave\\s+\\d+\:\\d+\:\\d+\:\\d+\\s+(\\(\\d+,\\d+,\\d+\\)/\\d+).*$gdb_prompt $" {
 	set threadid "$expect_out(1,string)"
 	set wave_id "$expect_out(2,string)"
     }
