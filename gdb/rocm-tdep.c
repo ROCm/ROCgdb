@@ -2097,14 +2097,22 @@ void
 rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
 			      const char *execd_pathname)
 {
+  inferior *orig_inf = current_inferior ();
+
   /* The inferior has EXEC'd and the process image has changed.  The dbgapi is
      attached to the old process image, so we need to detach and re-attach to
      the new process image.  */
-  rocm_disable (current_inferior ());
+  rocm_disable (orig_inf);
 
   beneath ()->follow_exec (follow_inf, ptid, execd_pathname);
-
   gdb_assert (current_inferior () == follow_inf);
+
+  /* If using "follow-exec-mode new", carry over the precise-memory setting
+     to the new inferior (otherwise, FOLLOW_INF and ORIG_INF point to the same
+     inferior, so this is a no-op).  */
+  get_rocm_inferior_info (follow_inf)->precise_memory.requested
+    = get_rocm_inferior_info (orig_inf)->precise_memory.requested;
+
   rocm_enable (follow_inf);
 }
 
