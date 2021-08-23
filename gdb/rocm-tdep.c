@@ -49,6 +49,7 @@
 #include "solist.h"
 #include "symfile.h"
 #include "tid-parse.h"
+#include "cli/cli-decode.h"
 
 #include <dlfcn.h>
 #include <list>
@@ -2431,6 +2432,13 @@ get_precise_memory_mode ()
   return info->precise_memory.requested;
 }
 
+static bool
+get_effective_precise_memory_mode ()
+{
+  rocm_inferior_info *info = get_rocm_inferior_info ();
+  return info->precise_memory.enabled;
+};
+
 /* List of set/show amdgpu commands.  */
 struct cmd_list_element *set_amdgpu_list;
 struct cmd_list_element *show_amdgpu_list;
@@ -3537,14 +3545,17 @@ _initialize_rocm_tdep ()
 		       _ ("Generic command for showing amdgpu flags."),
 		       &show_amdgpu_list, 0, &showlist);
 
-  add_setshow_boolean_cmd ("precise-memory", no_class,
-			   _ ("Set precise-memory mode."),
-			   _ ("Show precise-memory mode."), _ ("\
+  set_show_commands cmds
+    = add_setshow_boolean_cmd ("precise-memory", no_class,
+			       _ ("Set precise-memory mode."),
+			       _ ("Show precise-memory mode."), _ ("\
 If on, precise memory reporting is enabled if/when the inferior is running.\n\
 If off (default), precise memory reporting is disabled."),
-			   set_precise_memory_mode, get_precise_memory_mode,
-			   show_precise_memory_mode,
-			   &set_amdgpu_list, &show_amdgpu_list);
+			       set_precise_memory_mode, get_precise_memory_mode,
+			       show_precise_memory_mode,
+			       &set_amdgpu_list, &show_amdgpu_list);
+
+  cmds.show->var->set_effective_value_getter (get_effective_precise_memory_mode);
 
   add_basic_prefix_cmd ("amdgpu", no_class,
 			_ ("Generic command for setting amdgpu debugging "

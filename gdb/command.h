@@ -299,6 +299,24 @@ struct setting
     return old_value != this->get<T> ();
   }
 
+  template<typename T>
+  void set_effective_value_getter (setting_getter_ftype<T> getter)
+  {
+    gdb_assert (var_type_uses<T> (m_var_type));
+    m_effective_getter = reinterpret_cast<void (*) ()> (getter);
+  }
+
+  template<typename T>
+  gdb::optional<T> effective_value () const
+  {
+    if (m_effective_getter == nullptr)
+      return {};
+
+    gdb_assert (var_type_uses<T> (m_var_type));
+    auto getter = reinterpret_cast<setting_getter_ftype<T>> (m_effective_getter);
+    return getter ();
+  }
+
 private:
   /* The type of the variable M_VAR is pointing to, or that M_GETTER / M_SETTER
      get or set.  */
@@ -315,6 +333,9 @@ private:
 
   /* Pointer to a user provided setter.  */
   void (*m_setter) () = nullptr;
+
+  /* Pointer to a user provided effective value getter.  */
+  void (*m_effective_getter) () = nullptr;
 };
 
 /* This structure records one command'd definition.  */
