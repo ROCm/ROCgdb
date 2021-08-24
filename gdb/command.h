@@ -97,16 +97,15 @@ typedef enum var_types
 
     /* String which the user enters with escapes (e.g. the user types
        \n and it is a real newline in the stored string).
-       *VAR is a malloc'd string, or NULL if the string is empty.  */
+       *VAR is a std::string, "" if the string is empty.  */
     var_string,
     /* String which stores what the user types verbatim.
-       *VAR is a malloc'd string, or NULL if the string is empty.  */
+       *VAR is std::string, "" if the string is empty.  */
     var_string_noescape,
-    /* String which stores a filename.  (*VAR) is a malloc'd string,
-       or "" if the string was empty.  */
+    /* String which stores a filename.  (*VAR) is a std::string,
+       "" if the string was empty.  */
     var_optional_filename,
-    /* String which stores a filename.  (*VAR) is a malloc'd
-       string.  */
+    /* String which stores a filename.  (*VAR) is a std::string.  */
     var_filename,
     /* ZeroableInteger.  *VAR is an int.  Like var_integer except
        that zero really means zero.  */
@@ -166,9 +165,9 @@ inline bool var_type_uses<int> (var_types t)
 	  || t == var_zuinteger_unlimited);
 }
 
-/* Return true if a setting of type T is backed by a char * variable.  */
+/* Return true if a setting of type T is backed by a std::string variable.  */
 template<>
-inline bool var_type_uses<char *> (var_types t)
+inline bool var_type_uses<std::string> (var_types t)
 {
   return (t == var_string || t == var_string_noescape
 	  || t == var_optional_filename || t == var_filename);
@@ -181,6 +180,16 @@ inline bool var_type_uses<const char *> (var_types t)
 {
   return t == var_enum;
 }
+
+/* Function signature for a callback used to get a value from a setting.  */
+
+template<typename T>
+using setting_getter_ftype = T (*) ();
+
+/* Function signature for a callback used to set a value to a setting.  */
+
+template<typename T>
+using setting_setter_ftype = void (*) (T);
 
 /* Interface for getting and setting a setting's value.
 
@@ -198,11 +207,30 @@ struct setting
     gdb_assert (var_type_uses<T> (var_type));
   }
 
+  /* Create a setting backed by setter and getter functions
+
+     Type T must match the var type VAR_TYPE (see VAR_TYPE_USES).  */
+  template<typename T>
+  setting (var_types var_type,
+	   setting_setter_ftype<T> setter,
+	   setting_getter_ftype<T> getter)
+    : m_var_type (var_type)
+  {
+    gdb_assert (var_type_uses<T> (var_type));
+
+    /* Getters and setters are cast to and from the arbitrary `void (*) ()`
+       function pointer type.  Make sure that the two types are really of the
+       same size.  */
+    gdb_static_assert (sizeof (m_getter) == sizeof (getter));
+    gdb_static_assert (sizeof (m_setter) == sizeof (setter));
+
+    m_getter = reinterpret_cast<void (*) ()> (getter);
+    m_setter = reinterpret_cast<void (*) ()> (setter);
+  }
+
   /* Access the type of the current var.  */
   var_types type () const
-  {
-    return m_var_type;
-  }
+  { return m_var_type; }
 
   /* Return the current value (by pointer).
 
@@ -222,36 +250,92 @@ struct setting
 
   /* Return the current value.
 
+     If we have a user-provided getter, use it to get the setting's value.
+     Otherwise, return the value from the internally referenced buffer.
+
      See get_p for discussion on the return type and template parameters.  */
   template<typename T>
   T get () const
   {
-    return *get_p<T> ();
+    gdb_assert (var_type_uses<T> (m_var_type));
+
+    if (m_var == nullptr)
+      {
+	gdb_assert (m_getter != nullptr);
+	auto getter = reinterpret_cast<setting_getter_ftype<T>> (m_getter);
+	return getter ();
+      }
+    else
+      return *get_p<T> ();
   }
 
   /* Sets the value of the setting to V.
+
+     If we have a user-provided setter, use it to set the setting.  Otherwise
+     copy the value V to the internally referenced buffer.
 
      The template parameter T indicates the type of the variable used to store
      the setting.
 
      The var_type of the setting must match T.  */
   template<typename T>
-  void set (T v)
+  bool set (T v)
   {
     /* Check that the current instance is of one of the supported types for
        this instantiation.  */
     gdb_assert (var_type_uses<T> (m_var_type));
 
-    *static_cast<T *> (m_var) = v;
+    const T old_value = this->get<T> ();
+
+    if (m_var == nullptr)
+      {
+	gdb_assert (m_setter != nullptr);
+	auto setter = reinterpret_cast<setting_setter_ftype<T>> (m_setter);
+	setter (v);
+      }
+    else
+      *static_cast<T *> (m_var) = v;
+
+    return old_value != this->get<T> ();
+  }
+
+  template<typename T>
+  void set_effective_value_getter (setting_getter_ftype<T> getter)
+  {
+    gdb_assert (var_type_uses<T> (m_var_type));
+    m_effective_getter = reinterpret_cast<void (*) ()> (getter);
+  }
+
+  template<typename T>
+  gdb::optional<T> effective_value () const
+  {
+    if (m_effective_getter == nullptr)
+      return {};
+
+    gdb_assert (var_type_uses<T> (m_var_type));
+    auto getter = reinterpret_cast<setting_getter_ftype<T>> (m_effective_getter);
+    return getter ();
   }
 
 private:
-  /* The type of the variable M_VAR is pointing to.  */
+  /* The type of the variable M_VAR is pointing to, or that M_GETTER / M_SETTER
+     get or set.  */
   var_types m_var_type;
 
-  /* Pointer to the enclosed variable.  The type of the variable is encoded
-     in M_VAR_TYPE.  */
-  void *m_var;
+  /* Pointer to the enclosed variable
+
+     Either M_VAR is non-nullptr, or both M_GETTER and M_SETTER are
+     non-nullptr.  */
+  void *m_var = nullptr;
+
+  /* Pointer to a user provided getter.  */
+  void (*m_getter) () = nullptr;
+
+  /* Pointer to a user provided setter.  */
+  void (*m_setter) () = nullptr;
+
+  /* Pointer to a user provided effective value getter.  */
+  void (*m_effective_getter) () = nullptr;
 };
 
 /* This structure records one command'd definition.  */
@@ -535,11 +619,26 @@ extern set_show_commands add_setshow_enum_cmd
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
+extern set_show_commands add_setshow_enum_cmd
+  (const char *name, command_class theclass, const char *const *enumlist,
+   const char *set_doc, const char *show_doc,
+   const char *help_doc, setting_setter_ftype<const char *> set_func,
+   setting_getter_ftype<const char *> get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
 extern set_show_commands add_setshow_auto_boolean_cmd
   (const char *name, command_class theclass, auto_boolean *var,
    const char *set_doc, const char *show_doc, const char *help_doc,
    cmd_func_ftype *set_func, show_value_ftype *show_func,
    cmd_list_element **set_list, cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_auto_boolean_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<enum auto_boolean> set_func,
+   setting_getter_ftype<enum auto_boolean> get_func,
+   show_value_ftype *show_func, cmd_list_element **set_list,
+   cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_boolean_cmd
   (const char *name, command_class theclass, bool *var, const char *set_doc,
@@ -547,27 +646,64 @@ extern set_show_commands add_setshow_boolean_cmd
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
+extern set_show_commands add_setshow_boolean_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<bool> set_func,
+   setting_getter_ftype<bool> get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
 extern set_show_commands add_setshow_filename_cmd
-  (const char *name, command_class theclass, char **var, const char *set_doc,
+  (const char *name, command_class theclass, std::string *var, const char *set_doc,
+   const char *show_doc, const char *help_doc, cmd_func_ftype *set_func,
+   show_value_ftype *show_func, cmd_list_element **set_list,
+   cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_filename_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<std::string> set_func,
+   setting_getter_ftype<std::string> get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_string_cmd
+  (const char *name, command_class theclass, std::string *var, const char *set_doc,
    const char *show_doc, const char *help_doc, cmd_func_ftype *set_func,
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_string_cmd
-  (const char *name, command_class theclass, char **var, const char *set_doc,
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<std::string> set_func,
+   setting_getter_ftype<std::string> get_func,
+   show_value_ftype *show_func, cmd_list_element **set_list,
+   cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_string_noescape_cmd
+  (const char *name, command_class theclass, std::string *var, const char *set_doc,
    const char *show_doc, const char *help_doc, cmd_func_ftype *set_func,
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_string_noescape_cmd
-  (const char *name, command_class theclass, char **var, const char *set_doc,
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<std::string> set_func,
+   setting_getter_ftype<std::string> get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_optional_filename_cmd
+  (const char *name, command_class theclass, std::string *var, const char *set_doc,
    const char *show_doc, const char *help_doc, cmd_func_ftype *set_func,
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_optional_filename_cmd
-  (const char *name, command_class theclass, char **var, const char *set_doc,
-   const char *show_doc, const char *help_doc, cmd_func_ftype *set_func,
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<std::string> set_func,
+   setting_getter_ftype<std::string> get_func,
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
@@ -577,10 +713,24 @@ extern set_show_commands add_setshow_integer_cmd
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
+extern set_show_commands add_setshow_integer_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<int> set_func,
+   setting_getter_ftype<int> get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
 extern set_show_commands add_setshow_uinteger_cmd
   (const char *name, command_class theclass, unsigned int *var,
    const char *set_doc, const char *show_doc, const char *help_doc,
    cmd_func_ftype *set_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_uinteger_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<unsigned int> set_func,
+   setting_getter_ftype<unsigned int> get_func, show_value_ftype *show_func,
    cmd_list_element **set_list, cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_zinteger_cmd
@@ -589,15 +739,36 @@ extern set_show_commands add_setshow_zinteger_cmd
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 
+extern set_show_commands add_setshow_zinteger_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<int> set_func,
+   setting_getter_ftype<int> get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
 extern set_show_commands add_setshow_zuinteger_cmd
   (const char *name, command_class theclass, unsigned int *var,
    const char *set_doc, const char *show_doc, const char *help_doc,
    cmd_func_ftype *set_func, show_value_ftype *show_func,
    cmd_list_element **set_list, cmd_list_element **show_list);
 
+extern set_show_commands add_setshow_zuinteger_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<unsigned int> set_func,
+   setting_getter_ftype<unsigned int> get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
 extern set_show_commands add_setshow_zuinteger_unlimited_cmd
   (const char *name, command_class theclass, int *var, const char *set_doc,
    const char *show_doc, const char *help_doc, cmd_func_ftype *set_func,
+   show_value_ftype *show_func, cmd_list_element **set_list,
+   cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_zuinteger_unlimited_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_setter_ftype<int> set_func, setting_getter_ftype<int> get_func,
    show_value_ftype *show_func, cmd_list_element **set_list,
    cmd_list_element **show_list);
 

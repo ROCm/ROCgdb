@@ -1,0 +1,66 @@
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that when "amdgpu precise-memory" is off, hitting a watchpoint shows a
+# warning about the stop location maybe being inaccurate.
+
+load_lib rocm.exp
+
+if { ![istarget "*-linux*"] } then {
+    continue
+}
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test { } {
+    clean_restart $::binfile
+
+    if ![runto kernel allow-pending] {
+	fail "can't run to main"
+	return
+    }
+
+    # We can't use "watch global" at the moment, because that finds the
+    # host-side `global` symbol.  Work around this by using "info address",
+    # which gives the device-side address, and make a watchpoint from that.
+    set var_address ""
+    gdb_test_multiple "info address global" "" {
+      -re -wrap ".*is static storage at address (${::hex})." {
+	set var_address $expect_out(1,string)
+	pass $gdb_test_name
+      }
+    }
+
+    gdb_test "watch *((int *) $var_address)" \
+	"Hardware watchpoint $::decimal: .*" \
+	"insert watchpoint"
+
+    gdb_test "continue" \
+	"Warning: precise memory signal reporting is not enabled.*hit Hardware watchpoint $::decimal.*" \
+	"continue to watchpoint"
+}
+
+do_test

@@ -27706,10 +27706,12 @@ indication that the position may not be accurate.  For example:
 
 @smallexample
 (@value{GDBP}) run
+Warning: precise memory violation signal reporting is not enabled, reported
+location may not be accurate.  See "show amdgpu precise-memory".
+
 Thread 6 "bit_extract" received signal SIGSEGV, Segmentation fault.
 0x00007ffee6a0a028 in bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:38
 38     size_t offset = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x);
-('set amdgpu precise-memory on' is not enabled so reported location may not be accurate)
 (@value{GDBP})
 @end smallexample
 
@@ -39553,8 +39555,17 @@ The corresponding @value{GDBN} command is @samp{show}.
 @subheading Result
 
 The @samp{value} result has the variable's or setting's current value.
+
 Settings include a @samp{verbose} result that provides the string as shown
 by the CLI @samp{show} command.
+
+Some settings include an additional @samp{effective-value} field, used to
+convey the effective value of the setting when it may differ from the
+user-selected value.  For example, a setting that can accept an @samp{auto} may
+have an @samp{effective-value} field to indicate what is the auto-detected
+value.  A setting for which the effective value may differ from the
+user-selected value (because it depends on target capabilities) may also
+include an @samp{effective-value} field.
 
 @subsubheading Example
 
@@ -39565,6 +39576,9 @@ by the CLI @samp{show} command.
 (gdb)
 -gdb-show target-charset
 ^done,value="auto",verbose="The target character set is auto; currently UTF-8."
+(gdb)
+-gdb-show amdgpu precise-memory
+^done,value="on",verbose="AMDGPU precise memory access reporting is on (currently disabled).\n",effective-value="off"
 (gdb)
 @end smallexample
 
