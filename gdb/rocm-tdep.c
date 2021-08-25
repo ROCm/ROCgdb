@@ -2337,8 +2337,6 @@ rocm_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 static const struct internalvar_funcs rocm_wave_id_funcs
   = { rocm_wave_id_make_value, NULL, NULL };
 
-static bool precise_memory_mode = false;
-
 static void
 show_precise_memory_mode (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)
@@ -2353,12 +2351,11 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
 }
 
 static void
-set_precise_memory_mode (const char *args, int from_tty,
-			 struct cmd_list_element *c)
+set_precise_memory_mode (bool value)
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
-  info->precise_memory.requested = precise_memory_mode;
+  info->precise_memory.requested = value;
 
   if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
     {
@@ -2373,6 +2370,13 @@ set_precise_memory_mode (const char *args, int from_tty,
 	warning (
 	  _ ("AMDGPU precise memory access reporting could not be enabled."));
     }
+}
+
+static bool
+get_precise_memory_mode ()
+{
+  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  return info->precise_memory.requested;
 }
 
 /* List of set/show amdgpu commands.  */
@@ -3478,12 +3482,13 @@ _initialize_rocm_tdep ()
 		       _ ("Generic command for showing amdgpu flags."),
 		       &show_amdgpu_list, 0, &showlist);
 
-  add_setshow_boolean_cmd ("precise-memory", no_class, &precise_memory_mode,
+  add_setshow_boolean_cmd ("precise-memory", no_class,
 			   _ ("Set precise-memory mode."),
 			   _ ("Show precise-memory mode."), _ ("\
 If on, precise memory reporting is enabled if/when the inferior is running.\n\
 If off (default), precise memory reporting is disabled."),
-			   set_precise_memory_mode, show_precise_memory_mode,
+			   set_precise_memory_mode, get_precise_memory_mode,
+			   show_precise_memory_mode,
 			   &set_amdgpu_list, &show_amdgpu_list);
 
   add_basic_prefix_cmd ("amdgpu", no_class,

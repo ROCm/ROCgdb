@@ -1,0 +1,50 @@
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that the "set amdgpu precise-memory" setting is inherited by a fork
+# child.
+
+load_lib rocm.exp
+
+clean_restart
+
+gdb_test "show amdgpu precise-memory" \
+    "AMDGPU precise memory access reporting is off \\(currently disabled\\)." \
+    "show initial value, inferior 1"
+gdb_test "python print(gdb.parameter(\"amdgpu precise-memory\"))" \
+    "False" \
+    "show initial value using Python, inferior 1"
+gdb_test_no_output "set amdgpu precise-memory" \
+    "set on inferior 1"
+gdb_test "show amdgpu precise-memory" \
+    "AMDGPU precise memory access reporting is on \\(currently disabled\\)." \
+    "show new value, inferior 1"
+gdb_test "python print(gdb.parameter(\"amdgpu precise-memory\"))" \
+    "True" \
+    "show new value using Python, inferior 1"
+
+gdb_test "add-inferior" \
+    "Added inferior 2"
+gdb_test "inferior 2" \
+    "Switching to inferior 2 .*"
+
+gdb_test "show amdgpu precise-memory" \
+    "AMDGPU precise memory access reporting is off \\(currently disabled\\)." \
+    "show initial value, inferior 2"
+gdb_test "python print(gdb.parameter(\"amdgpu precise-memory\"))" \
+    "False" \
+    "show initial value using Python, inferior 2"
