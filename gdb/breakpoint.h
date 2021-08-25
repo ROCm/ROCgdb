@@ -1811,4 +1811,8 @@ extern void catch_exception_event (enum exception_event_kind ex_event,
 				   const char *regex, bool tempflag,
 				   int from_tty);
 
+/* Return true if BPT is of any hardware watchpoint kind.  */
+
+bool is_hardware_watchpoint (const struct breakpoint *bpt);
+
 #endif /* !defined (BREAKPOINT_H) */

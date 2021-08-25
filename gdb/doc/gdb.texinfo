@@ -27706,10 +27706,12 @@ indication that the position may not be accurate.  For example:
 
 @smallexample
 (@value{GDBP}) run
+Warning: precise memory violation signal reporting is not enabled, reported
+location may not be accurate.  See "show amdgpu precise-memory".
+
 Thread 6 "bit_extract" received signal SIGSEGV, Segmentation fault.
 0x00007ffee6a0a028 in bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:38
 38     size_t offset = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x);
-('set amdgpu precise-memory on' is not enabled so reported location may not be accurate)
 (@value{GDBP})
 @end smallexample
 

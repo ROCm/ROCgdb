@@ -2139,6 +2139,58 @@ rocm_target_ops::follow_fork (inferior *child_inf, ptid_t child_ptid,
     }
 }
 
+static void
+rocm_target_signal_received (gdb_signal sig)
+{
+  rocm_inferior_info *info = get_rocm_inferior_info ();
+
+  if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
+    return;
+
+  if (!ptid_is_gpu (inferior_thread ()->ptid))
+    return;
+
+  if (sig != GDB_SIGNAL_SEGV && sig != GDB_SIGNAL_BUS)
+    return;
+
+  if (!info->precise_memory.enabled)
+      printf_filtered ("\
+Warning: precise memory violation signal reporting is not enabled, reported\n\
+location may not be accurate.  See \"show amdgpu precise-memory\".\n");
+}
+
+static void
+rocm_target_normal_stop (bpstat bs_list, int print_frame)
+{
+  rocm_inferior_info *info = get_rocm_inferior_info ();
+
+  if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
+    return;
+
+  if (info->precise_memory.enabled)
+    return;
+
+  if (!ptid_is_gpu (inferior_thread ()->ptid))
+    return;
+
+  bool found_hardware_watchpoint = false;
+
+  for (bpstat bs = bs_list; bs != nullptr; bs = bs->next)
+    if (bs->breakpoint_at != nullptr
+	&& is_hardware_watchpoint(bs->breakpoint_at))
+      {
+	found_hardware_watchpoint = true;
+	break;
+      }
+
+  if (!found_hardware_watchpoint)
+    return;
+
+  printf_filtered ("\
+Warning: precise memory signal reporting is not enabled, watchpoint stop\n\
+location may not be accurate.  See \"show amdgpu precise-memory\".\n");
+}
+
 static cli_style_option warning_style ("rocm_warning", ui_file_style::RED);
 static cli_style_option info_style ("rocm_info", ui_file_style::GREEN);
 static cli_style_option verbose_style ("rocm_verbose", ui_file_style::BLUE);
@@ -3471,6 +3523,9 @@ _initialize_rocm_tdep ()
 					     "rocm-tdep");
   gdb::observers::inferior_created.attach (rocm_target_inferior_created,
 					   "rocm-tdep");
+  gdb::observers::signal_received.attach (rocm_target_signal_received,
+					  "rocm-tdep");
+  gdb::observers::normal_stop.attach (rocm_target_normal_stop, "rocm-tdep");
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
