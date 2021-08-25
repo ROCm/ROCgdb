@@ -36,27 +36,29 @@ if {[build_executable "failed to prepare $testfile" $testfile $srcfile {debug}]}
 }
 
 proc do_test { follow-exec-mode } {
-    clean_restart $::binfile
+	clean_restart $::binfile
 
-    if ![runto_main] {
-	fail "can't run to main"
-	return
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    fail "can't run to main"
+	    return
+	}
+
+	# Set precise-memory on the inferior before exec.
+	gdb_test "show amdgpu precise-memory" " is off.*" \
+	    "show amdgpu precise-memory before set"
+	gdb_test "set amdgpu precise-memory on"
+	gdb_test "show amdgpu precise-memory" " is on.*" \
+	    "show amdgpu precise-memory after set"
+
+	# Continue past exec.  The precise-memory setting should
+	# be on.
+	gdb_test_no_output "set follow-exec-mode ${follow-exec-mode}"
+	gdb_test "break second"
+	gdb_test "continue" "Breakpoint 1, main .*"
+	gdb_test "show amdgpu precise-memory" " is on.*" \
+	    "show amdgpu precise-memory after exec"
     }
-
-    # Set precise-memory on the inferior before exec.
-    gdb_test "show amdgpu precise-memory" " is off.*" \
-	"show amdgpu precise-memory before set"
-    gdb_test "set amdgpu precise-memory on"
-    gdb_test "show amdgpu precise-memory" " is on.*" \
-	"show amdgpu precise-memory after set"
-
-    # Continue past exec.  The precise-memory setting should
-    # be on.
-    gdb_test_no_output "set follow-exec-mode ${follow-exec-mode}"
-    gdb_test "break second"
-    gdb_test "continue" "Breakpoint 1, main .*"
-    gdb_test "show amdgpu precise-memory" " is on.*" \
-	"show amdgpu precise-memory after exec"
 }
 
 foreach_with_prefix follow-exec-mode {same new} {

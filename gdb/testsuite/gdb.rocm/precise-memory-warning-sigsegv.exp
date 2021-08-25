@@ -38,14 +38,16 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
 proc do_test { } {
     clean_restart $::binfile
 
-    if ![runto_main] {
-	fail "can't run to main"
-	return
-    }
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    fail "can't run to main"
+	    return
+	}
 
-    gdb_test_no_output "set amdgpu precise-memory off"
-    gdb_test "continue" \
-	"Warning: precise memory violation signal reporting is not enabled.*SIGSEGV, Segmentation fault.*"
+	gdb_test_no_output "set amdgpu precise-memory off"
+	gdb_test "continue" \
+	    "Warning: precise memory violation signal reporting is not enabled.*SIGSEGV, Segmentation fault.*"
+    }
 }
 
 do_test
