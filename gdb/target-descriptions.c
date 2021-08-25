@@ -508,10 +508,6 @@ target_desc_info_free (struct target_desc_info *tdesc_info)
   delete tdesc_info;
 }
 
-/* The string manipulated by the "set tdesc filename ..." command.  */
-
-static std::string tdesc_filename_cmd_string;
-
 /* Fetch the current target's description, and switch the current
    architecture to one which incorporates that description.  */
 
@@ -1281,18 +1277,24 @@ set_tdesc_osabi (struct target_desc *target_desc, enum gdb_osabi osabi)
 static struct cmd_list_element *tdesc_set_cmdlist, *tdesc_show_cmdlist;
 static struct cmd_list_element *tdesc_unset_cmdlist;
 
-/* Helper functions for the CLI commands.  */
+/* Setter for the "tdesc filename" setting.  */
 
 static void
-set_tdesc_filename_cmd (const char *args, int from_tty,
-			struct cmd_list_element *c)
+set_tdesc_filename (std::string value)
 {
   target_desc_info *tdesc_info = get_tdesc_info (current_inferior ());
 
-  tdesc_info->filename = tdesc_filename_cmd_string;
-
+  tdesc_info->filename = value;
   target_clear_description ();
   target_find_description ();
+}
+
+/* Getter for the "tdesc filename" setting.  */
+
+static std::string
+get_tdesc_filename ()
+{
+  return get_tdesc_info (current_inferior ())->filename;
 }
 
 static void
@@ -1300,14 +1302,12 @@ show_tdesc_filename_cmd (struct ui_file *file, int from_tty,
 			 struct cmd_list_element *c,
 			 const char *value)
 {
-  value = get_tdesc_info (current_inferior ())->filename.data ();
-
-  if (value != NULL && *value != '\0')
-    printf_filtered (_("The target description will be read from \"%s\".\n"),
-		     value);
+  if (strlen (value) != 0)
+    fprintf_filtered (file, _("The target description will be read from \"%s\".\n"),
+		      value);
   else
-    printf_filtered (_("The target description will be "
-		       "read from the target.\n"));
+    fprintf_filtered (file, _("The target description will be "
+			      "read from the target.\n"));
 }
 
 static void
@@ -1976,13 +1976,13 @@ Unset target description specific variables."),
 			0 /* allow-unknown */, &unsetlist);
 
   add_setshow_filename_cmd ("filename", class_obscure,
-			    &tdesc_filename_cmd_string,
 			    _("\
 Set the file to read for an XML target description."), _("\
 Show the file to read for an XML target description."), _("\
 When set, GDB will read the target description from a local\n\
 file instead of querying the remote target."),
-			    set_tdesc_filename_cmd,
+			    set_tdesc_filename,
+			    get_tdesc_filename,
 			    show_tdesc_filename_cmd,
 			    &tdesc_set_cmdlist, &tdesc_show_cmdlist);
 
