@@ -428,13 +428,11 @@ display_gdb_prompt (const char *new_prompt)
 static std::string
 top_level_prompt (void)
 {
-  char *prompt;
-
   /* Give observers a chance of changing the prompt.  E.g., the python
      `gdb.prompt_hook' is installed as an observer.  */
-  gdb::observers::before_prompt.notify (get_prompt ());
+  gdb::observers::before_prompt.notify (get_prompt ().c_str ());
 
-  prompt = get_prompt ();
+  const std::string &prompt = get_prompt ();
 
   if (annotation_level >= 2)
     {
@@ -445,7 +443,7 @@ top_level_prompt (void)
 	 beginning.  */
       const char suffix[] = "\n\032\032prompt\n";
 
-      return std::string (prefix) + prompt + suffix;
+      return std::string (prefix) + prompt.c_str () + suffix;
     }
 
   return prompt;
@@ -1174,7 +1172,7 @@ handle_sigtstp (int sig)
 static void
 async_sigtstp_handler (gdb_client_data arg)
 {
-  char *prompt = get_prompt ();
+  const std::string &prompt = get_prompt ();
 
   signal (SIGTSTP, SIG_DFL);
 #if HAVE_SIGPROCMASK
@@ -1189,7 +1187,7 @@ async_sigtstp_handler (gdb_client_data arg)
 #endif
   raise (SIGTSTP);
   signal (SIGTSTP, handle_sigtstp);
-  printf_unfiltered ("%s", prompt);
+  printf_unfiltered ("%s", prompt.c_str ());
   gdb_flush (gdb_stdout);
 
   /* Forget about any previous command -- null line now will do
