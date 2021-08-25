@@ -35,22 +35,24 @@ if {[prepare_for_testing "failed to prepare $testfile" $testfile $srcfile {debug
     return
 }
 
-if ![runto_main] {
-    fail "can't run to main"
-    return
+with_rocm_gpu_lock {
+    if ![runto_main] {
+	fail "can't run to main"
+	return
+    }
+
+    # Set precise-memory on in the parent, before fork.
+    gdb_test "show amdgpu precise-memory" " is off.*" \
+	"show amdgpu precise-memory before set"
+    gdb_test "set amdgpu precise-memory on"
+    gdb_test "show amdgpu precise-memory" " is on.*" \
+	"show amdgpu precise-memory after set"
+
+    # Continue past fork, following the child.  The precise-memory setting should
+    # be on.
+    gdb_test "set follow-fork-mode child"
+    gdb_test "break child"
+    gdb_test "continue" "Thread 2.1 .* hit Breakpoint .*"
+    gdb_test "show amdgpu precise-memory" " is on.*" \
+	"show amdgpu precise-memory after fork"
 }
-
-# Set precise-memory on in the parent, before fork.
-gdb_test "show amdgpu precise-memory" " is off.*" \
-    "show amdgpu precise-memory before set"
-gdb_test "set amdgpu precise-memory on"
-gdb_test "show amdgpu precise-memory" " is on.*" \
-    "show amdgpu precise-memory after set"
-
-# Continue past fork, following the child.  The precise-memory setting should
-# be on.
-gdb_test "set follow-fork-mode child"
-gdb_test "break child"
-gdb_test "continue" "Thread 2.1 .* hit Breakpoint .*"
-gdb_test "show amdgpu precise-memory" " is on.*" \
-    "show amdgpu precise-memory after fork"
