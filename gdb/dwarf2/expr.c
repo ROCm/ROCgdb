@@ -1093,7 +1093,8 @@ dwarf_memory::deref (frame_info *frame, const property_addr_info *addr_info,
 
   /* We shouldn't have a case where we read from a passed in
      memory and the same memory being marked as stack. */
-  if (!m_stack && this_size && addr_info != nullptr)
+  if (!m_stack && this_size && addr_info != nullptr
+      && addr_info->valaddr.data () != nullptr)
     {
       CORE_ADDR offset = (CORE_ADDR) m_offset - addr_info->addr;
       /* Using second buffer here because the copy_bitwise
@@ -1211,8 +1212,9 @@ dwarf_register::read (frame_info *frame, gdb_byte *buf,
 {
   LONGEST total_bits_to_skip = bits_to_skip;
   size_t read_bit_limit = location_bit_limit;
-  int reg = dwarf_reg_to_regnum_or_error (m_arch, m_regnum);
-  ULONGEST reg_bits = HOST_CHAR_BIT * register_size (m_arch, reg);
+  gdbarch *arch = get_frame_arch (frame);
+  int reg = dwarf_reg_to_regnum_or_error (arch, m_regnum);
+  ULONGEST reg_bits = HOST_CHAR_BIT * register_size (arch, reg);
   gdb::byte_vector temp_buf;
 
   if (big_endian)
@@ -1254,8 +1256,9 @@ dwarf_register::write (frame_info *frame, const gdb_byte *buf,
 {
   LONGEST total_bits_to_skip = bits_to_skip;
   size_t write_bit_limit = location_bit_limit;
-  int gdb_regnum = dwarf_reg_to_regnum_or_error (m_arch, m_regnum);
-  ULONGEST reg_bits = HOST_CHAR_BIT * register_size (m_arch, gdb_regnum);
+  gdbarch *arch = get_frame_arch (frame);
+  int gdb_regnum = dwarf_reg_to_regnum_or_error (arch, m_regnum);
+  ULONGEST reg_bits = HOST_CHAR_BIT * register_size (arch, gdb_regnum);
   gdb::byte_vector temp_buf;
 
   if (m_on_entry)
@@ -1300,7 +1303,8 @@ dwarf_register::to_gdb_value (frame_info *frame, struct type *type,
 			      struct type *subobj_type,
 			      LONGEST subobj_offset)
 {
-  int gdb_regnum = dwarf_reg_to_regnum_or_error (m_arch, m_regnum);
+  gdbarch *arch = get_frame_arch (frame);
+  int gdb_regnum = dwarf_reg_to_regnum_or_error (arch, m_regnum);
 
   if (subobj_type == nullptr)
     subobj_type = type;
@@ -1313,7 +1317,7 @@ dwarf_register::to_gdb_value (frame_info *frame, struct type *type,
 
   /* Construct the value.  */
   value *retval
-    = gdbarch_value_from_register (m_arch, type,
+    = gdbarch_value_from_register (arch, type,
 				   gdb_regnum, get_frame_id (frame));
   LONGEST retval_offset = value_offset (retval);
 

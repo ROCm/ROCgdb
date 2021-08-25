@@ -248,9 +248,8 @@ mri_script_command:
 	|	CASE casesymlist
 	|	EXTERN extern_name_list
 	|	INCLUDE filename
-		{ ldlex_script (); ldfile_open_command_file($2); }
+		{ ldfile_open_command_file ($2); }
 		mri_script_lines END
-		{ ldlex_popstate (); }
 	|	START NAME
 		{ lang_add_entry ($2, false); }
 	|
@@ -281,18 +280,12 @@ casesymlist:
 	| casesymlist ',' NAME
 	;
 
-/* Parsed as expressions so that commas separate entries */
 extern_name_list:
-	{ ldlex_expression (); }
-	extern_name_list_body
-	{ ldlex_popstate (); }
-
-extern_name_list_body:
-	  NAME
+	NAME
 			{ ldlang_add_undef ($1, false); }
-	| extern_name_list_body NAME
+	| extern_name_list NAME
 			{ ldlang_add_undef ($2, false); }
-	| extern_name_list_body ',' NAME
+	| extern_name_list ',' NAME
 			{ ldlang_add_undef ($3, false); }
 	;
 
@@ -346,9 +339,8 @@ ifile_p1:
 	|	MAP '(' filename ')'
 		{ lang_add_map($3); }
 	|	INCLUDE filename
-		{ ldlex_script (); ldfile_open_command_file($2); }
+		{ ldfile_open_command_file ($2); }
 		ifile_list END
-		{ ldlex_popstate (); }
 	|	NOCROSSREFS '(' nocrossref_list ')'
 		{
 		  lang_add_nocrossref ($3);
@@ -357,7 +349,8 @@ ifile_p1:
 		{
 		  lang_add_nocrossref_to ($3);
 		}
-	|	EXTERN '(' extern_name_list ')'
+	|	EXTERN '(' { ldlex_expression (); } extern_name_list ')'
+			{ ldlex_popstate (); }
 	|	INSERT_K AFTER NAME
 		{ lang_add_insert ($3, 0); }
 	|	INSERT_K BEFORE NAME
@@ -428,20 +421,10 @@ statement_anywhere:
 		  lang_add_assignment (exp_assert ($4, $6)); }
 	;
 
-/* The '*' and '?' cases are there because the lexer returns them as
-   separate tokens rather than as NAME.  */
 wildcard_name:
 		NAME
 			{
 			  $$ = $1;
-			}
-	|	'*'
-			{
-			  $$ = "*";
-			}
-	|	'?'
-			{
-			  $$ = "?";
 			}
 	;
 
@@ -697,11 +680,9 @@ statement:
 		}
 	| INCLUDE filename
 		{
-		  ldlex_script ();
 		  ldfile_open_command_file ($2);
 		}
 	  statement_list_opt END
-		{ ldlex_popstate (); }
 	;
 
 statement_list:
@@ -814,9 +795,8 @@ memory_spec:	NAME
 		origin_spec opt_comma length_spec
 		{}
 	|	INCLUDE filename
-		{ ldlex_script (); ldfile_open_command_file($2); }
+		{ ldfile_open_command_file ($2); }
 		memory_spec_list_opt END
-		{ ldlex_popstate (); }
 	;
 
 origin_spec:
@@ -1083,6 +1063,18 @@ section:	NAME
 			{ ldlex_popstate (); }
 		memspec_opt memspec_at_opt phdr_opt fill_opt
 			{
+			  /* fill_opt may have switched the lexer into
+			     expression state, and back again, but in
+			     order to find the end of the fill
+			     expression the parser must look ahead one
+			     token.  If it is a NAME, throw it away as
+			     it will have been lexed in the wrong
+			     state.  */
+			  if (yychar == NAME)
+			    {
+			      yyclearin;
+			      ldlex_backup ();
+			    }
 			  lang_leave_output_section_statement ($17, $14,
 							       $16, $15);
 			}
@@ -1099,6 +1091,11 @@ section:	NAME
 		'}'
 		memspec_opt memspec_at_opt phdr_opt fill_opt
 			{
+			  if (yychar == NAME)
+			    {
+			      yyclearin;
+			      ldlex_backup ();
+			    }
 			  lang_leave_overlay ($5, (int) $4,
 					      $15, $12, $14, $13);
 			}
@@ -1117,11 +1114,9 @@ section:	NAME
 		'{' sec_or_group_p1 '}'
 	|	INCLUDE filename
 			{
-			  ldlex_script ();
 			  ldfile_open_command_file ($2);
 			}
 		sec_or_group_p1 END
-			{ ldlex_popstate (); }
 	;
 
 type:
@@ -1201,6 +1196,11 @@ overlay_section:
 			{ ldlex_popstate (); }
 		phdr_opt fill_opt
 			{
+			  if (yychar == NAME)
+			    {
+			      yyclearin;
+			      ldlex_backup ();
+			    }
 			  lang_leave_overlay_section ($9, $8);
 			}
 		opt_comma
