@@ -623,7 +623,6 @@ if [gas_32_check] then {
 	run_dump_test "intel-movs16"
 	run_dump_test "intel-cmps32"
 	run_dump_test "intel-cmps16"
-	run_dump_test "fp-elf32"
 	run_list_test "inval-equ-1" "-al"
 	run_list_test "inval-equ-2" "-al"
 	run_dump_test "ifunc"
@@ -647,6 +646,7 @@ if [gas_32_check] then {
 	run_dump_test "dw2-compress-2"
 	run_dump_test "dw2-compressed-2"
 
+	run_dump_test "bad-bcast"
 	run_dump_test "bad-size"
 
 	run_dump_test "size-1"
@@ -697,8 +697,6 @@ if [gas_32_check] then {
 	    run_dump_test "iamcu-5"
 	    run_list_test "iamcu-inval-1" "-march=iamcu -al"
 	}
-    } else {
-	run_dump_test "fp"
     }
 
     # This is a PE specific test.
@@ -727,6 +725,7 @@ run_dump_test rept
 run_dump_test pr19498
 run_list_test "nop-bad-1" ""
 run_list_test "unspec" ""
+run_dump_test "fp"
 if {[is_elf_format] || [istarget "*-*-vxworks*"]} then {
     run_list_test_stdin "list-1" "-al"
     run_list_test_stdin "list-2" "-al"
@@ -1276,7 +1275,6 @@ if [gas_64_check] then {
 	run_list_test "reloc64" "--defsym _bad_=1"
 	run_dump_test "mixed-mode-reloc64"
 	run_dump_test "rela"
-	run_dump_test "fp-elf64"
 	run_dump_test "x86-64-ifunc"
 	run_dump_test "x86-64-opcode-inval"
 	run_dump_test "x86-64-opcode-inval-intel"
