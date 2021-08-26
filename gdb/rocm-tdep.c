@@ -2577,11 +2577,12 @@ info_agents_command (const char *args, int from_tty)
 	}
 
       /* Header:  */
-      table_emitter.emplace (uiout, 7, n_agents, "InfoRocmAgentsTable");
+      table_emitter.emplace (uiout, 8, n_agents, "InfoRocmAgentsTable");
 
       uiout->table_header (1, ui_left, "current", "");
       uiout->table_header (std::max (2ul, max_id_width), ui_left,
 			   "id", "Id");
+      uiout->table_header (5, ui_left, "state", "State");
       uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
 			   "target-id", "Target Id");
       uiout->table_header (std::max (11ul, max_name_width), ui_left, "name",
@@ -2633,6 +2634,24 @@ info_agents_command (const char *args, int from_tty)
 						   agent_id.handle)
 				  : string_printf ("%ld", agent_id.handle))
 				 .c_str ());
+
+	  /* supported  */
+	  amd_dbgapi_agent_state_t agent_state;
+	  if ((status = amd_dbgapi_agent_get_info (agent_id,
+						   AMD_DBGAPI_AGENT_INFO_STATE,
+						   sizeof (agent_state),
+						   &agent_state))
+	      != AMD_DBGAPI_STATUS_SUCCESS)
+	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	  switch (agent_state)
+	    {
+	    case AMD_DBGAPI_AGENT_STATE_SUPPORTED:
+	      uiout->field_string ("state", "A");
+	      break;
+	    case AMD_DBGAPI_AGENT_STATE_NOT_SUPPORTED:
+	      uiout->field_string ("state", "U");
+	      break;
+	    }
 
 	  /* target_id  */
 	  uiout->field_string ("target-id", rocm_target_id_string (agent_id));
