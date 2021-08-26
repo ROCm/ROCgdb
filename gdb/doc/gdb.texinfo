@@ -27214,34 +27214,10 @@ instructions.  Continuing such wavefronts will not hit any breakpoints
 nor report completion of a single step command.  If necessary,
 @samp{Ctrl-C} can be used to cancel the command.
 
-By default, the @acronym{AMD GPU} device driver causes all
-@acronym{AMD GPU} wavefronts created when @value{GDBN} is not attached
-to be unable to report the heterogeneous dispatch associated with the
-wavefront, or the wavefront's heterogeneous work-group position.  The
-@samp{info threads} command will display this missing information with
-a @samp{?}.
-
-For example,
-
-@smallexample
-(gdb) info threads
-  Id   Target Id                                       Frame
-* 1    Thread 0x7ffff6987840 (LWP 62056) "bit_extract" 0x00007ffff6da489b in sched_yield () at ../sysdeps/unix/syscall-template.S:78
-  2    Thread 0x7ffff6986700 (LWP 62064) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
-  3    Thread 0x7ffff5f7f700 (LWP 62066) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
-  4    Thread 0x7ffff597f700 (LWP 62067) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
-  5    AMDGPU Wave 1:2:?:1 (?,?,?)/? "bit_extract"     bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:41
-@end smallexample
-
-This does not affect wavefronts created while @value{GDBN} is attached
-which are always capable of reporting this information.
-
-If the @env{HSA_ENABLE_DEBUG} environment variable is set to @samp{1}
-when the @acronym{AMD ROCm} runtime is initialized, then this
-information will be available even for wavefronts created when
-@value{GDBN} was not attached.  Setting this environment variable may
-very marginally reduce wavefront launch latency for very short lived
-wavefronts.
+Note that some @acronym{AMD GPU} architectures may have restrictions
+on providing information about @acronym{AMD GPU} wavefronts created
+when @value{GDBN} is not attached (@pxref{AMD GPU Attaching
+Restrictions, , @acronym{AMD GPU} Attaching Restrictions}).
 
 @subsubsection @acronym{AMD GPU} Registers
 
@@ -28151,6 +28127,37 @@ wavefront may also suppress the same signal raised by other
 being notified.
 
 @xref{AMD GPU Signals, , @acronym{AMD GPU} Signals}.
+
+@anchor{AMD GPU Attaching Restrictions}
+@item
+By default, for some architectures, the @acronym{AMD GPU} device
+driver causes all @acronym{AMD GPU} wavefronts created when
+@value{GDBN} is not attached to be unable to report the heterogeneous
+dispatch associated with the wavefront, or the wavefront's
+heterogeneous work-group position.  The @samp{info threads} command
+will display this missing information with a @samp{?}.
+
+For example,
+
+@smallexample
+(gdb) info threads
+  Id   Target Id                                       Frame
+* 1    Thread 0x7ffff6987840 (LWP 62056) "bit_extract" 0x00007ffff6da489b in sched_yield () at ../sysdeps/unix/syscall-template.S:78
+  2    Thread 0x7ffff6986700 (LWP 62064) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  3    Thread 0x7ffff5f7f700 (LWP 62066) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  4    Thread 0x7ffff597f700 (LWP 62067) "bit_extract" 0x00007ffff6db650b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  5    AMDGPU Wave 1:2:?:1 (?,?,?)/? "bit_extract"     bit_extract_kernel (C_d=<optimized out>, A_d=<optimized out>, N=<optimized out>) at bit_extract.cpp:41
+@end smallexample
+
+This does not affect wavefronts created while @value{GDBN} is attached
+which are always capable of reporting this information.
+
+If the @env{HSA_ENABLE_DEBUG} environment variable is set to @samp{1}
+when the @acronym{AMD ROCm} runtime is initialized, then this
+information will be available for all archiectures even for wavefronts
+created when @value{GDBN} was not attached.  Setting this environment
+variable may very marginally reduce wavefront launch latency for some
+architectures for very short lived wavefronts.
 
 @item
 If the inferior exits while there are wavefronts that have reported
