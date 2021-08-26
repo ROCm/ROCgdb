@@ -45,11 +45,11 @@ constexpr CORE_ADDR AMDGCN_ADDRESS_SPACE_MASK = 0xffff000000000000;
  that represent the address space information.  */
 constexpr unsigned int AMDGCN_ADDRESS_SPACE_BIT_OFFSET = 48;
 
-
 bool
 rocm_is_amdgcn_gdbarch (struct gdbarch *arch)
 {
-  return (gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn);
+  gdb_assert (arch != nullptr);
+  return gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn;
 }
 
 /* Return the name of register REGNUM.  */
