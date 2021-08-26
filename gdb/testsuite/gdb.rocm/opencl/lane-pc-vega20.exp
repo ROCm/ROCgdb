@@ -115,6 +115,10 @@ set asmfile3 $srcfile3.S
 set binfile3 [standard_output_file $srcfile3].o
 set shlibfile [standard_output_file $srcfile3].so
 
+# Wrap DWARF assembling as well, because Dwarf::assemble internally
+# may spawn GDB.
+with_rocm_gpu_lock {
+
 # Create the DWARF for the kernel.
 Dwarf::assemble $asmfile2 {
     set const_struct_src [gdb_target_symbol const_struct]
@@ -2025,4 +2029,6 @@ with_test_prefix "line 115" {
 
     # Step out from kernel and finish the test.
     gdb_test "next" "exited normally.*" "next out of kernel"
+}
+
 }
