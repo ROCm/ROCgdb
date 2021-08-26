@@ -22792,6 +22792,12 @@ The heterogeneous agent ID.  @xref{qualified heterogeneous entity
 numbers}.
 
 @item
+The target system's heterogeneous agent state.  Agents that support
+debugging are marked with @samp{A} for active.  @samp{U} marks
+unsupported agents which cannot be debugged and so do not report any
+queues, dispatches, or wavefronts.
+
+@item
 The target system's heterogeneous agent identifier.
 
 @item
@@ -22826,9 +22832,9 @@ For example,
 
 @smallexample
 (@value{GDBP}) info agents
-  Id   Target Id                  Device Name Cores Threads Location
-* 1    AMDGPU Agent (GPUID 45151) vega20      240   2400    0a:00.0
-  2    AMDGPU Agent (GPUID 39113) vega20      240   2400    44:00.0
+  Id Status Target Id                  Device Name Cores Threads Location
+* 1  A      AMDGPU Agent (GPUID 45151) vega20      240   2400    0a:00.0
+  2  A      AMDGPU Agent (GPUID 39113) vega20      240   2400    44:00.0
 @end smallexample
 
 If you're debugging multiple inferiors, @value{GDBN} displays
@@ -27092,16 +27098,9 @@ debugging will be possible.
 @samp{info agents} command until the inferior has started executing
 the program.
 
-If the agent's architecture is not supported by @value{GDBN} then
-@samp{(Unsupported Architecture)} is appended to the device name of
-the @samp{info agents} command.
-
-If the agent's firmware version is not supported by @value{GDBN} then
-@samp{(Unsupported Firmware)} is appended to the device name of the
-@samp{info agents} command.
-
-Unsupported agents cannot be debugged and do not report any queues,
-dispatches or wavefronts.
+Debugging an agent is unsupported if it has an architecture that is
+not supported by @value{GDBN} or the @acronym{AMD GPU} device driver,
+or the firmware version is not supported by @value{GDBN}.
 
 @subsubsection @acronym{AMD GPU} Heterogeneous Queues
 
@@ -32904,6 +32903,10 @@ otherwise.
 The qualified heterogeneous agent ID.  @xref{qualified heterogeneous
 entity numbers}.
 
+@item state
+The state of the the heterogeneous agent.  The value is @samp{U} if
+debugging is unsupported and @samp{A} if debugging is active.
+
 @item target-id
 The target-specific string identifying the heterogeneous agent.
 
@@ -35659,9 +35662,9 @@ thread is not associated with a heterogeneous agent, or if a
 (gdb)
 -agent-info
 ^done,agents=[
-@{id="1.1",target-id="AMDGPU Agent (GPUID 45151)",
+@{id="1.1",status="A",target-id="AMDGPU Agent (GPUID 45151)",
   device-name="vega20",cores="240",threads="2400",location="0a:00.0"@}​​​​​,
-@{id="1.2",target-id="AMDGPU Agent (GPUID 39113)",
+@{id="1.2",status="A",target-id="AMDGPU Agent (GPUID 39113)",
   device-name="vega20",cores="240",threads="2400",location="44:00.0"@}​​​​​],
 current-agent-id="1.1"
 (gdb)
