@@ -2526,14 +2526,26 @@ info_agents_command (const char *args, int from_tty)
     list_emitter.emplace (uiout, "agents");
   else
     {
-      size_t n_agents{ 0 }, max_name_len{ 0 }, max_target_id_width{ 0 };
+      size_t n_agents{ 0 }, max_id_width{ 0 }, max_target_id_width{ 0 },
+	max_name_width{ 0 };
 
       for (auto &&value : all_filtered_agents)
 	{
+	  inferior *inf = value.first;
 	  auto &agents = value.second;
 
 	  for (auto &&agent_id : agents)
 	    {
+	      /* id  */
+	      max_id_width
+		= std::max (max_id_width,
+			    (show_inferior_qualified_tids ()
+				 || uiout->is_mi_like_p ()
+			       ? string_printf ("%d.%ld", inf->num,
+						agent_id.handle)
+			       : string_printf ("%ld", agent_id.handle))
+			      .size ());
+
 	      /* target id  */
 	      max_target_id_width
 		= std::max (max_target_id_width,
@@ -2548,7 +2560,7 @@ info_agents_command (const char *args, int from_tty)
 		  != AMD_DBGAPI_STATUS_SUCCESS)
 		error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
 
-	      max_name_len = std::max (max_name_len, strlen (agent_name));
+	      max_name_width = std::max (max_name_width, strlen (agent_name));
 	      xfree (agent_name);
 
 	      ++n_agents;
@@ -2565,14 +2577,15 @@ info_agents_command (const char *args, int from_tty)
 	}
 
       /* Header:  */
-      table_emitter.emplace (uiout, 7, n_agents, "InfoRocmAgentsTable");
+      table_emitter.emplace (uiout, 8, n_agents, "InfoRocmAgentsTable");
 
       uiout->table_header (1, ui_left, "current", "");
-      uiout->table_header (show_inferior_qualified_tids () ? 6 : 4, ui_left,
+      uiout->table_header (std::max (2ul, max_id_width), ui_left,
 			   "id", "Id");
+      uiout->table_header (5, ui_left, "state", "State");
       uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
 			   "target-id", "Target Id");
-      uiout->table_header (std::max (11ul, max_name_len), ui_left, "name",
+      uiout->table_header (std::max (11ul, max_name_width), ui_left, "name",
 			   "Device Name");
       uiout->table_header (5, ui_left, "cores", "Cores");
       uiout->table_header (7, ui_left, "threads", "Threads");
@@ -2621,6 +2634,24 @@ info_agents_command (const char *args, int from_tty)
 						   agent_id.handle)
 				  : string_printf ("%ld", agent_id.handle))
 				 .c_str ());
+
+	  /* supported  */
+	  amd_dbgapi_agent_state_t agent_state;
+	  if ((status = amd_dbgapi_agent_get_info (agent_id,
+						   AMD_DBGAPI_AGENT_INFO_STATE,
+						   sizeof (agent_state),
+						   &agent_state))
+	      != AMD_DBGAPI_STATUS_SUCCESS)
+	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	  switch (agent_state)
+	    {
+	    case AMD_DBGAPI_AGENT_STATE_SUPPORTED:
+	      uiout->field_string ("state", "A");
+	      break;
+	    case AMD_DBGAPI_AGENT_STATE_NOT_SUPPORTED:
+	      uiout->field_string ("state", "U");
+	      break;
+	    }
 
 	  /* target_id  */
 	  uiout->field_string ("target-id", rocm_target_id_string (agent_id));

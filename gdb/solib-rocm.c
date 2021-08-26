@@ -460,21 +460,23 @@ rocm_update_solib_list ()
 
   for (size_t i = 0; i < count; ++i)
     {
-      struct so_list *so = XCNEW (struct so_list);
-      lm_info_svr4 *li = new lm_info_svr4;
-      so->lm_info = li;
-
+      CORE_ADDR l_addr;
       char *uri_bytes;
 
       if (amd_dbgapi_code_object_get_info (
 	    code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_LOAD_ADDRESS,
-	    sizeof (li->l_addr), &li->l_addr)
+	    sizeof (l_addr), &l_addr)
 	    != AMD_DBGAPI_STATUS_SUCCESS
 	  || amd_dbgapi_code_object_get_info (
 	       code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_URI_NAME,
 	       sizeof (uri_bytes), &uri_bytes)
 	       != AMD_DBGAPI_STATUS_SUCCESS)
 	continue;
+
+      struct so_list *so = XCNEW (struct so_list);
+      lm_info_svr4 *li = new lm_info_svr4;
+      li->l_addr = l_addr;
+      so->lm_info = li;
 
       strncpy (so->so_name, uri_bytes, sizeof (so->so_name));
       so->so_name[sizeof (so->so_name) - 1] = '\0';
