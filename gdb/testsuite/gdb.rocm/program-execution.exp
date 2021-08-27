@@ -109,7 +109,7 @@ proc test {mode} {
     }
 
     set any "\[^\r\n\]*"
-    set bp_hit_re "hit Breakpoint $::decimal, with SIMD lanes \\\[$any\\\], bit_extract_kernel \\\($any\\\)\\\sat"
+    set bp_hit_re "hit Breakpoint $::decimal, with lanes \\\[$any\\\], bit_extract_kernel \\\($any\\\)\\\sat"
 
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
 

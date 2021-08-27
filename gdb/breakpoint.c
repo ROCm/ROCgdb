@@ -12627,9 +12627,9 @@ bkpt_print_it (bpstat bs)
 	    });
 
 	  if (hit_lanes.size () > 1)
-	    uiout->text ("with SIMD lanes ");
+	    uiout->text ("with lanes ");
 	  else
-	    uiout->text ("with SIMD lane ");
+	    uiout->text ("with lane ");
 
 	  uiout->text (make_ranges_from_sorted_vector (hit_lanes).c_str ());
 	  uiout->text (", ");
