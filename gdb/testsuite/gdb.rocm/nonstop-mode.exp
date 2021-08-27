@@ -113,11 +113,11 @@ run_and_wait "run to VectorAdd Breakpoint after inferior exit"
 gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
 
 # Check "info agents".
-# vega10 sample output "1    (GPUID 39113) vega10      224   2240    44:00.0"
-# vega20 sample output "1    (GPUID 45151) vega20      240   2400    0a:00.0"
+# vega10 sample output "1  A     (GPUID 39113) vega10      224   2240    44:00.0"
+# vega20 sample output "2  A     (GPUID 45151) vega20      240   2400    0a:00.0"
 gdb_test_sequence "info agents" "info agents" {
-    {Id\s+Target Id\s+Device Name\s+Cores\s+Threads\s+Location}
-    {\d+\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+    {Id\s+State\s+Target Id\s+Device Name\s+Cores\s+Threads\s+Location}
+    {\d+\s+[AU]\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
 }
 
 # Check "info threads".
