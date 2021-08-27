@@ -1687,6 +1687,17 @@ rocm_enable (inferior *inf)
       return;
     }
 
+  /* dbgapi can't attach to a vfork child (a process born from a vfork that
+     hasn't exec'ed yet) while we are still attached to the parent.  It would
+     not be useful for us to attach to vfork children anyway, because vfork
+     children are very restricted in what they can do (see vfork(2)) and aren't
+     going to launch some GPU programs that we need to debug.  To avoid this
+     problem, we don't push the rocm target / attach dbgapi in vfork children.
+     If a vfork child execs, we'll try enabling the rocm target through the
+     inferior_execd observer.  */
+  if (inf->vfork_parent != nullptr)
+    return;
+
   auto *info = get_rocm_inferior_info (inf);
 
   /* Are we already attached?  */
@@ -2117,6 +2128,12 @@ rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
   rocm_enable (follow_inf);
 }
 
+static void
+rocm_inferior_execd (inferior *inf)
+{
+  rocm_enable (inf);
+}
+
 void
 rocm_target_ops::follow_fork (inferior *child_inf, ptid_t child_ptid,
 			      target_waitkind fork_kind, bool follow_child,
@@ -2134,9 +2151,12 @@ rocm_target_ops::follow_fork (inferior *child_inf, ptid_t child_ptid,
       child_info->precise_memory.requested
 	= parent_info->precise_memory.requested;
 
-      scoped_restore_current_thread restore_thread;
-      switch_to_thread (*child_inf->threads ().begin ());
-      rocm_enable (child_inf);
+      if (fork_kind != TARGET_WAITKIND_VFORKED)
+	{
+	  scoped_restore_current_thread restore_thread;
+	  switch_to_thread (*child_inf->threads ().begin ());
+	  rocm_enable (child_inf);
+	}
     }
 }
 
@@ -3565,6 +3585,7 @@ _initialize_rocm_tdep ()
   gdb::observers::signal_received.attach (rocm_target_signal_received,
 					  "rocm-tdep");
   gdb::observers::normal_stop.attach (rocm_target_normal_stop, "rocm-tdep");
+  gdb::observers::inferior_execd.attach (rocm_inferior_execd, "rocm-tdep");
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 

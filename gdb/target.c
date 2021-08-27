@@ -4378,7 +4378,17 @@ void
 target_async (int enable)
 {
   infrun_async (enable);
-  current_inferior ()->top_target ()->async (enable);
+
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+  scoped_restore_current_thread restore_thread;
+
+  for (inferior *inf : all_inferiors (proc_target))
+    {
+      if (current_inferior () != inf)
+	switch_to_inferior_no_thread (inf);
+
+      inf->top_target ()->async (enable);
+    }
 }
 
 /* See target.h.  */
