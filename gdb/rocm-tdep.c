@@ -2281,18 +2281,15 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
       return AMD_DBGAPI_STATUS_ERROR;
 
     /* Find our breakpoint in the breakpoint list.  */
-    auto bp_loc = std::make_pair (inf->aspace, address);
-    auto bp = breakpoint_find_if (
-      [] (struct breakpoint *b, void *data)
-      {
-	auto *arg = static_cast<decltype (&bp_loc)> (data);
-	if (b->ops == &rocm_breakpoint_ops && b->loc
-	    && b->loc->pspace->aspace == arg->first
-	    && b->loc->address == arg->second)
-	  return 1;
-	return 0;
-      },
-      reinterpret_cast<void *> (&bp_loc));
+    breakpoint *bp = nullptr;
+    for (breakpoint *b : all_breakpoints ())
+      if (b->ops == &rocm_breakpoint_ops && b->loc
+	  && b->loc->pspace->aspace == inf->aspace
+	  && b->loc->address == address)
+	{
+	  bp = b;
+	  break;
+	}
 
     if (!bp)
       error (_ ("Could not find breakpoint"));
