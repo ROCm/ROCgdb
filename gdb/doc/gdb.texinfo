@@ -28183,6 +28183,32 @@ wait indefinitely for the single step to complete.  If this happens,
 be tried again.
 
 @item
+If no CPU thread is running, then @samp{Ctrl-C} is not able to stop
+@acronym{AMD GPU} threads.  This can happen for example if you enable
+@code{scheduler-locking} after the whole program stopped, and then
+resume an @acronym{AMD GPU} thread.  For example:
+
+@smallexample
+Thread 6 hit Breakpoint 1, with lanes [0-63], kernel () at test.cpp:38
+38          size_t l = 0;
+(@value{GDBP}) info threads
+  Id   Target Id                            Frame
+  1    Thread 0x7ffff6493880 (LWP 2222574)  0x00007ffff6cb989b in sched_yield () at ../sysdeps/unix/syscall-template.S:78
+  2    Thread 0x7ffff6492700 (LWP 2222582)  0x00007ffff6ccb50b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  4    Thread 0x7ffff5aff700 (LWP 2222584)  0x00007ffff6ccb50b in ioctl () at ../sysdeps/unix/syscall-template.S:78
+  5    Thread 0x7ffff515d700 (LWP 2222585)  0x00007ffff6764d81 in rocr::core::InterruptSignal::WaitRelaxed() from /opt/rocm/lib/libhsa-runtime64.so.1
+* 6    AMDGPU Wave 1:1:1:1 (0,0,0)/0        kernel () at test.cpp:38
+(@value{GDBP}) del 1
+(@value{GDBP}) set scheduler-locking on
+(@value{GDBP}) c
+Continuing.
+^C
+@end smallexample
+
+Above, @value{GDBN} does not respond to @samp{Ctrl-C}.  The only way
+to unblock the situation is to kill the @value{GDBN} process.
+
+@item
 The HIP runtime currently loads code objects from memory, including
 when loading modules from a file, which results in code object URIs
 being reported as @samp{memory://}.
