@@ -557,14 +557,19 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
       program_space *parent_pspace = parent_inf->pspace;
 
       /* If this is a vfork child, then the address-space is shared
-	 with the parent.  If we detached from the parent, then we can
-	 reuse the parent's program/address spaces.  */
-      if (has_vforked || detach_fork)
+	 with the parent.  */
+      if (has_vforked)
 	{
 	  child_inf->pspace = parent_pspace;
 	  child_inf->aspace = child_inf->pspace->aspace;
 
 	  exec_on_vfork (child_inf);
+	}
+      else if (detach_fork)
+	{
+	  child_inf->aspace = new_address_space ();
+	  child_inf->pspace = new program_space (child_inf->aspace);
+	  clone_program_space (child_inf->pspace, parent_pspace);
 	}
       else
 	{

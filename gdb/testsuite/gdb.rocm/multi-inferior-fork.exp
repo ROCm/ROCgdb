@@ -1,0 +1,78 @@
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Verify that we can debug multiple programs that fork.  The bug that prompted
+# writing this test was that with "follow-fork-mode child", multiple inferiors
+# wrongly shared a single program space, leading to all sorts of problems.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" ${binfile} ${srcfile} {debug hip}]} {
+    return
+}
+
+proc do_test { stop_at } {
+    clean_restart $::binfile
+
+    gdb_test_no_output "set follow-fork-mode child"
+
+    with_rocm_gpu_lock {
+	if { ![runto $stop_at allow-pending message] } {
+	    return
+	}
+
+	gdb_test "inferior" "Current inferior is 2 .*"
+	gdb_test "inferior 1" "Switching to inferior 1 .*"
+
+	gdb_test_multiple "run" "run" {
+	    -re "At least one agent is busy" {
+		if {[hcc_amdgpu_target] != "gfx90a"} {
+		    unsupported $gdb_test_name
+		} else {
+		    fail $gdb_test_name
+		}
+		return
+	    }
+
+	    -re -wrap "Thread 3.${::decimal} .* hit Breakpoint ${::decimal}, ${stop_at} .*" {
+		pass $gdb_test_name
+	    }
+	}
+
+	# Continue inferior 3 to end.  We must use extra=1 because there is a bit
+	# of expected chat between "Continuing." and the "Inferior exited normally"
+	# message.
+	gdb_continue_to_end "continue inferior 3 to end" "continue" 1
+
+	# Continue inferior 2 to end.
+	gdb_test "inferior 2"
+	gdb_continue_to_end "continue inferior 2 to end" "continue" 1
+    }
+}
+
+# Different modes of failure were seen when stopping in the kernel and in the
+# kernel, so test both.
+#
+# When stopped on `kernel` we would hit some internal error in rocm-tdep.c.
+#
+# When stopping on `child_after_fork`, trying to continue inferior 2 until the
+# end wouldn't work, the process was stuck on / kept hitting the breakpoint.
+foreach_with_prefix stop_at { kernel child_after_fork } {
+    do_test $stop_at
+}
