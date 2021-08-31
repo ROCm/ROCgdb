@@ -75,7 +75,7 @@ proc gdb_print_active_lanes {expr lane_values} {
 
     foreach active [gdb_exec_mask] value $lane_values {
 	if {$active == "1"} {
-	    gdb_test_no_output "lane $i" ""
+	    gdb_test "lane $i" "Switching to thread 5, lane $i .*" ""
 
 	    if {[gdb_test "print $expr" " = $value" ""] != 0} {
 		verbose -log "IFAIL: $test, lane $i"
@@ -1331,6 +1331,9 @@ if  { [gdb_compile_ocl_kernel "$asmfile2 ${srcdir}/${subdir}/${asmfile3}" \
 
 clean_restart $binfile
 
+# Don't skip over code regions where the current lane is inactive.
+gdb_test_no_output "maint set lane-divergence-support off"
+
 # Workaround for
 # https://github.com/RadeonOpenCompute/ROCm/issues/1131.
 gdb_test \
@@ -1350,7 +1353,7 @@ gdb_test_multiple "c" "continue to AddrClassTest" {
 	fail "$gdb_test_name (program exited)"
 	return -1
     }
-    -wrap -re "hit Breakpoint $decimal, AddrClassTest .*" {
+    -wrap -re "hit Breakpoint $decimal, with lanes \\\[0-31\\\], AddrClassTest .*" {
 	pass $gdb_test_name
     }
 }
