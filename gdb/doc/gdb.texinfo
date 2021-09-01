@@ -28304,6 +28304,21 @@ processing, then the following error may be displayed.
 Couldn't get registers: No such process.
 @end smallexample
 
+@item
+The current @value{GDBN} implementation represents addresess using a
+64 bit value in which the top 8 bits are used to represent information
+about the address space.  This means that an explicit conversion
+between an integral value and a pointer (for example, in a user
+entered expression) may result in the top eight bits of that value
+being forced to zero.  The same happens if an integral value used with
+the @samp{#} address space qualifier is large enough to have the top
+eight bits non-zero.
+
+@c TODO:
+@c Report an error if the integral value has the top eight bits set for
+@c non default address space or implement the address space support
+@c without using the top eight bits of an address.
+
 @end enumerate
 
 @node Controlling GDB

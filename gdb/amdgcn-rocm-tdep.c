@@ -39,11 +39,11 @@
 #include <string>
 
 /* Bit mask of the address space information in the core address.  */
-constexpr CORE_ADDR AMDGCN_ADDRESS_SPACE_MASK = 0xffff000000000000;
+constexpr CORE_ADDR AMDGCN_ADDRESS_SPACE_MASK = 0xff00000000000000;
 
 /* Bit offset from the start of the core address
- that represent the address space information.  */
-constexpr unsigned int AMDGCN_ADDRESS_SPACE_BIT_OFFSET = 48;
+   that represent the address space information.  */
+constexpr unsigned int AMDGCN_ADDRESS_SPACE_BIT_OFFSET = 56;
 
 bool
 rocm_is_amdgcn_gdbarch (struct gdbarch *arch)
@@ -480,9 +480,8 @@ static CORE_ADDR
 amdgcn_segment_address_to_core_address (arch_addr_space_id address_space_id,
 					CORE_ADDR address)
 {
-  gdb_assert ((address & AMDGCN_ADDRESS_SPACE_MASK) == 0);
-  gdb_assert (address_space_id <= (AMDGCN_ADDRESS_SPACE_MASK >> AMDGCN_ADDRESS_SPACE_BIT_OFFSET));
-  return address | (((CORE_ADDR) address_space_id) << AMDGCN_ADDRESS_SPACE_BIT_OFFSET);
+  return (address & ~AMDGCN_ADDRESS_SPACE_MASK)
+	 | (((CORE_ADDR) address_space_id) << AMDGCN_ADDRESS_SPACE_BIT_OFFSET);
 }
 
 /* Convert an integer to an address of a given segment address.  */
