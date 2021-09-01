@@ -2205,6 +2205,9 @@ location may not be accurate.  See \"show amdgpu precise-memory\".\n");
 static void
 rocm_target_normal_stop (bpstat bs_list, int print_frame)
 {
+  if (bs_list == nullptr || !print_frame)
+    return;
+
   rocm_inferior_info *info = get_rocm_inferior_info ();
 
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
