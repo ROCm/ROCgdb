@@ -41,7 +41,7 @@ proc do_test { stop_at } {
 	gdb_test "inferior 1" "Switching to inferior 1 .*"
 
 	gdb_test_multiple "run" "run" {
-	    -re "At least one agent is busy" {
+	    -re -wrap "At least one agent is busy.*" {
 		if {[hcc_amdgpu_target] != "gfx90a"} {
 		    unsupported $gdb_test_name
 		} else {
