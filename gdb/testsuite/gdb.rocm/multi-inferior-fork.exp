@@ -50,7 +50,7 @@ proc do_test { stop_at } {
 		return
 	    }
 
-	    -re -wrap "Thread 3.${::decimal} .* hit Breakpoint ${::decimal}, ${stop_at} .*" {
+	    -re -wrap "Thread 3.${::decimal} .* hit Breakpoint ${::decimal},.* ${stop_at} .*" {
 		pass $gdb_test_name
 	    }
 	}
