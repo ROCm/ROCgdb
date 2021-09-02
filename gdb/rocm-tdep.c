@@ -94,6 +94,14 @@ struct rocm_inferior_info
     AMD_DBGAPI_RUNTIME_STATE_UNLOADED
   };
 
+  /* This value mirrors the current forward progress needed value for this
+     process in dbgapi.  It is used to avoid unnecessary calls to
+     amd_dbgapi_process_set_progress, to reduce the noise in the logs dbgapi
+     logs
+
+     Initialized to true, since that's the default in dbgapi too.  */
+  bool forward_progress_required = true;
+
   struct
   {
     /* Whether precise memory reporting is requested.  */
@@ -583,6 +591,43 @@ get_rocm_inferior_info (struct inferior *inferior)
   return info;
 }
 
+/* Set forward progress requirement to REQUIRE for all processes matching
+   PTID.  */
+
+static void
+require_forward_progress (ptid_t ptid, process_stratum_target *proc_target,
+			  bool require)
+{
+  for (inferior *inf : all_inferiors (proc_target))
+    {
+      if (ptid != minus_one_ptid && inf->pid != ptid.pid ())
+	continue;
+
+      rocm_inferior_info *info = get_rocm_inferior_info (inf);
+
+      if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
+	continue;
+
+      /* Don't to unnecessary calls to dbgapi to avoid polluting the logs.  */
+      if (info->forward_progress_required == require)
+	continue;
+
+      amd_dbgapi_status_t status
+	= amd_dbgapi_process_set_progress
+	    (info->process_id, (require
+				? AMD_DBGAPI_PROGRESS_NORMAL
+				: AMD_DBGAPI_PROGRESS_NO_FORWARD));
+      gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
+
+      info->forward_progress_required = require;
+
+      /* If ptid targets a single inferior and we have found it, no need to
+         continue.  */
+      if (ptid != minus_one_ptid)
+	break;
+    }
+}
+
 /* Fetch the amd_dbgapi_process_id for the given inferior.  */
 
 amd_dbgapi_process_id_t
@@ -1061,20 +1106,19 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	     gdb_signal_to_name (signo));
     }
 
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  /* Disable forward progress requirement.  */
+  require_forward_progress (ptid, proc_target, false);
+
   for (thread_info *thread :
        all_non_exited_threads (current_inferior ()->process_target (), ptid))
     {
       if (!ptid_is_gpu (thread->ptid))
 	continue;
 
-      struct rocm_inferior_info *info = get_rocm_inferior_info (thread->inf);
-      amd_dbgapi_status_t status
-	= amd_dbgapi_process_set_progress (info->process_id,
-					   AMD_DBGAPI_PROGRESS_NO_FORWARD);
-      gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
-
       amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
-      status
+      amd_dbgapi_status_t status
 	= amd_dbgapi_wave_resume (wave_id,
 				  (step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
 					: AMD_DBGAPI_RESUME_MODE_NORMAL),
@@ -1096,17 +1140,7 @@ rocm_target_ops::commit_resumed ()
   beneath ()->commit_resumed ();
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
-  for (inferior *inf : all_non_exited_inferiors (proc_target))
-    {
-      rocm_inferior_info *info = get_rocm_inferior_info (inf);
-      if (info->runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
-	continue;
-
-      amd_dbgapi_status_t status
-	= amd_dbgapi_process_set_progress (info->process_id,
-					   AMD_DBGAPI_PROGRESS_NORMAL);
-      gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
-    }
+  require_forward_progress (minus_one_ptid, proc_target, true);
 }
 
 void
@@ -1137,7 +1171,6 @@ rocm_target_ops::stop (ptid_t ptid)
 
     amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
     amd_dbgapi_wave_state_t state;
-
     amd_dbgapi_status_t status
       = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STATE,
 				  sizeof (state), &state);
@@ -1178,6 +1211,9 @@ rocm_target_ops::stop (ptid_t ptid)
   };
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  /* Disable forward progress requirement.  */
+  require_forward_progress (ptid, proc_target, false);
 
   if (!many_threads)
     {
@@ -1564,24 +1600,10 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
     });
 
   auto *proc_target = current_inferior ()->process_target ();
-  amd_dbgapi_process_id_t process_id;
-
-  if (ptid != minus_one_ptid)
-    {
-      gdb_assert (ptid.is_pid ());
-      inferior *inf = find_inferior_pid (proc_target, ptid.pid ());
-
-      gdb_assert (inf != nullptr);
-      process_id = get_rocm_inferior_info (inf)->process_id;
-
-      gdb_assert (process_id != AMD_DBGAPI_PROCESS_NONE);
-    }
-  else
-    process_id = AMD_DBGAPI_PROCESS_NONE;
 
   /* Disable forward progress for the specified pid in ptid if it isn't
      minus_on_ptid, or all attached processes if ptid is minus_one_ptid.  */
-  amd_dbgapi_process_set_progress (process_id, AMD_DBGAPI_PROGRESS_NO_FORWARD);
+  require_forward_progress (ptid, proc_target, false);
 
   target_waitstatus gpu_waitstatus;
   std::tie (event_ptid, gpu_waitstatus) = rocm_consume_one_event (ptid);
