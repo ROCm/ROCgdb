@@ -540,7 +540,6 @@ struct elf_sym_strtab
 {
   Elf_Internal_Sym sym;
   unsigned long dest_index;
-  unsigned long destshndx_index;
 };
 
 struct bfd_link_needed_list
@@ -623,10 +622,6 @@ struct elf_link_hash_table
   /* The string table of dynamic symbols, which becomes the .dynstr
      section.  */
   struct elf_strtab_hash *dynstr;
-
-  /* The number of symbol strings found in the link which must be put
-     into the .strtab section.  */
-  bfd_size_type strtabcount;
 
   /* The array size of the symbol string table, which becomes the
      .strtab section.  */
