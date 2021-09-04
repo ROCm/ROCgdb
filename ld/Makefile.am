@@ -123,8 +123,8 @@ CXX_FOR_TARGET = ` \
   fi`
 
 # Strip out sanitization options as we want to test building binaries without any extra paraphernalia
-CFLAGS_FOR_TARGET = `echo $(CFLAGS) | sed -e 's/-fsanitize=address//g' -e 's/-fsanitize=undefined//g'`
-CXXFLAGS_FOR_TARGET = `echo $(CXXFLAGS) | sed -e 's/-fsanitize=address//g' -e 's/-fsanitize=undefined//g'`
+CFLAGS_FOR_TARGET = `echo $(CFLAGS) | sed -e 's/-fsanitize=[^ ]*//g'`
+CXXFLAGS_FOR_TARGET = `echo $(CXXFLAGS) | sed -e 's/-fsanitize=[^ ]*//g'`
 
 transform = s/^ld-new$$/$(installed_linker)/;@program_transform_name@
 bin_PROGRAMS = ld-new
@@ -258,8 +258,8 @@ ALL_EMULATION_SOURCES = \
 	eelf32or1k_linux.c \
 	eelf32ppc.c \
 	eelf32ppc_fbsd.c \
-	eelf32ppclinux.c \
 	eelf32ppchaiku.c \
+	eelf32ppclinux.c \
 	eelf32ppcnto.c \
 	eelf32ppcsim.c \
 	eelf32ppcvxworks.c \
@@ -285,8 +285,8 @@ ALL_EMULATION_SOURCES = \
 	eelf_i386_ldso.c \
 	eelf_i386_sol2.c \
 	eelf_i386_vxworks.c \
-	eelf_mipsel_haiku.c \
 	eelf_iamcu.c \
+	eelf_mipsel_haiku.c \
 	eelf_s390.c \
 	eh8300elf.c \
 	eh8300elf_linux.c \
@@ -459,8 +459,8 @@ ALL_64_EMULATION_SOURCES = \
 	eelf_k1om_fbsd.c \
 	eelf_x86_64.c \
 	eelf_x86_64_cloudabi.c \
-	eelf_x86_64_haiku.c \
 	eelf_x86_64_fbsd.c \
+	eelf_x86_64_haiku.c \
 	eelf_x86_64_sol2.c \
 	ehppa64linux.c \
 	ei386pep.c \
@@ -980,9 +980,12 @@ check-DEJAGNU: site.exp
 	runtest=$(RUNTEST); \
 	if $(SHELL) -c "$$runtest --version" > /dev/null 2>&1; then \
 	  $$runtest --tool $(DEJATOOL) --srcdir $${srcroot}/testsuite \
-		CC="$(CC_FOR_TARGET)" CFLAGS="$(CFLAGS_FOR_TARGET)" \
-		CXX="$(CXX_FOR_TARGET)" CXXFLAGS="$(CXXFLAGS_FOR_TARGET)" \
-		CC_FOR_HOST="$(CC)" CFLAGS_FOR_HOST="$(CFLAGS)" \
+		CC="$(CC)" CFLAGS="$(CFLAGS)" \
+		CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" \
+		CC_FOR_TARGET="$(CC_FOR_TARGET)" \
+		CFLAGS_FOR_TARGET="$(CFLAGS_FOR_TARGET)" \
+		CXX_FOR_TARGET="$(CXX_FOR_TARGET)" \
+		CXXFLAGS_FOR_TARGET="$(CXXFLAGS_FOR_TARGET)" \
 		OFILES="$(OFILES)" BFDLIB="$(TESTBFDLIB)" CTFLIB="$(TESTCTFLIB) $(ZLIB)" \
 		LIBIBERTY="$(LIBIBERTY) $(LIBINTL)" LIBS="$(LIBS)" \
 		DO_COMPARE="`echo '$(do_compare)' | sed -e 's,\\$$,,g'`" \
