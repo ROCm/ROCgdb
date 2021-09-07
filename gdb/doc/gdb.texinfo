@@ -27596,6 +27596,11 @@ spaces:
 @item global
 the default global virtual address space
 
+@item region
+the per heterogeneous agent shared address space (@acronym{GDS, Global
+Data Store}) (@pxref{AMD GPU region Address Space Restrictions, ,
+@acronym{AMD GPU} @code{region} Address Space Restrictions})
+
 @item group
 the per heterogeneous work-group shared address space (@acronym{LDS,
 Local Data Store})
@@ -28312,7 +28317,7 @@ Couldn't get registers: No such process.
 @end smallexample
 
 @item
-The current @value{GDBN} implementation represents addresess using a
+The current @value{GDBN} implementation represents addresses using a
 64 bit value in which the top 8 bits are used to represent information
 about the address space.  This means that an explicit conversion
 between an integral value and a pointer (for example, in a user
@@ -28325,6 +28330,11 @@ eight bits non-zero.
 @c Report an error if the integral value has the top eight bits set for
 @c non default address space or implement the address space support
 @c without using the top eight bits of an address.
+
+@anchor{AMD GPU region Address Space Restrictions}
+@item
+@value{GDBN} does not support reading or writing to the @code{region}
+address space.  A memory access error is reported.
 
 @end enumerate
 
