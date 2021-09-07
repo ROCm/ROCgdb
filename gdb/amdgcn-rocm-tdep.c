@@ -88,6 +88,60 @@ amdgcn_return_value (struct gdbarch *gdbarch, struct value *function,
   return RETURN_VALUE_STRUCT_CONVENTION;
 }
 
+/* Return the gdb register type from a C style type string.  The type string
+   syntax is defined by the following BNF syntax:
+
+       type          ::= integer_type
+		       | float_type
+		       | function_type
+		       | flags_type
+		       | array_type
+       array_type    ::= ( integer_type
+			 | float_type
+			 | function_type
+			 | flags_type
+			 ) "[" element_count "]"
+       element_count ::= DECIMAL_NUMBER
+       integer_type  ::= "uint32_t"
+		       | "uint64_t"
+       float_type    ::= "float"
+		       | "double"
+       function_type ::= "void(void)"
+       flags_type    ::= ( "flags32_t"
+			 | "flags64_t"
+			 )
+			 type_name
+			 [ "{" [ fields ] "}" ]
+       fields        ::= field ";" [ fields ]
+       field         ::= "bool" field_name
+			 "@" bit_position
+		       | ( integer_type
+			 | enum_type
+			 )
+			 field_name
+			 "@" bit_position
+			 "-" bit_position
+       field_name    ::= IDENTIFIER
+       enum_type     ::= "enum" type_name
+			 [ "{" [ enum_values ] "}" ]
+       enum_values   ::= enum_value [ "," enum_values ]
+       enum_value    ::= enum_name "=" enum_ordinal
+       enum_name     ::= IDENTIFIER
+       enum_ordinal  ::= DECIMAL_NUMBER
+       type_name     ::= IDENTIFIER
+       bit_position  ::= DECIMAL_NUMBER
+
+   ``IDENTIFIER`` is a string starting with an alphabetic character followed by
+   zero or more alphebetic, numeric, "_", or "." characters.
+
+   ``DECIMAL_NUMBER`` is a decimal C integral literal.
+
+   Whitespace is allowed between lexical tokens.
+
+   The type size matches the size of the register.  uint32_t, float, and
+   flags32_t types are 4 bytes.  uint64_t, double, and flags64_t types
+   are 8 bytes.  void(void) is the size of a global address.
+*/
 static struct type *gdb_type_from_type_name (struct gdbarch *gdbarch,
 					     const std::string &type_name);
 
