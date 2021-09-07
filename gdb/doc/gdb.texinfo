@@ -28138,6 +28138,13 @@ export HIP_ENABLE_DEFERRED_LOADING=0
 @emph{Note:}  If deferred code object loading is disabled and the
 application performs a @code{fork}, then the program may crash.
 
+@emph{Note:}  Disabling code object loading can result in errors being
+reported when executing @value{GDBN} due to open file limitations when
+the application contains a large number of embedded device code
+objects.  With deferred code object loading enabled, only the device
+code objects actually invoked are loaded, and so @value{GDBN} opens
+fewer files.
+
 @item
 @value{GDBN} supports watchpoints, but limits the capabilities to the
 lowest common denominator of the heterogeneous agents in the system.
