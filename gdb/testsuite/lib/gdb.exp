@@ -409,6 +409,9 @@ proc gdb_run_cmd { {inferior_args {}} } {
 	-notransfer -re "$gdb_prompt $" {
 	    # There is no more input expected.
 	}
+	-notransfer -re "A problem internal to GDB has been detected" {
+	    # Let caller handle this.
+	}
     }
 
     return 0
@@ -769,6 +772,10 @@ proc gdb_internal_error_resync {} {
 	    }
 	    timeout {
 		perror "Could not resync from internal error (timeout)"
+		return 0
+	    }
+	    eof {
+		perror "Could not resync from internal error (eof)"
 		return 0
 	    }
 	}

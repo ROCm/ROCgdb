@@ -31,7 +31,6 @@
 #include "symfile.h"
 #include "objfiles.h"
 #include "stabsread.h"
-#include "complaints.h"
 #include "demangle.h"
 #include "psympriv.h"
 #include "filenames.h"
