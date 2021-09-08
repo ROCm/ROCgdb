@@ -1666,7 +1666,7 @@ watchpoint_in_thread_scope (struct watchpoint *b)
   return (b->pspace == current_program_space
 	  && (b->watchpoint_thread == null_ptid
 	      || (inferior_ptid == b->watchpoint_thread
-		  && !inferior_thread ()->executing)));
+		  && !inferior_thread ()->executing ())));
 }
 
 /* Set watchpoint B to disp_del_at_next_stop, even including its possible
@@ -4530,7 +4530,7 @@ get_bpstat_thread ()
     return NULL;
 
   thread_info *tp = inferior_thread ();
-  if (tp->state == THREAD_EXITED || tp->executing)
+  if (tp->state == THREAD_EXITED || tp->executing ())
     return NULL;
   return tp;
 }

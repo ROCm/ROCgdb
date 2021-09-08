@@ -1821,7 +1821,7 @@ has_stack_frames ()
 	return false;
 
       /* ... or from a spinning thread.  */
-      if (tp->executing)
+      if (tp->executing ())
 	return false;
     }
 
