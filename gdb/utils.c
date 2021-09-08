@@ -281,16 +281,29 @@ static const char *const internal_problem_modes[] =
   NULL
 };
 
-/* Print a message reporting an internal error/warning.  Ask the user
-   if they want to continue, dump core, or just exit.  Return
-   something to indicate a quit.  */
+/* Data structure used to control how the internal_vproblem function
+   should behave.  An instance of this structure is created for each
+   problem type that GDB supports.  */
 
 struct internal_problem
 {
+  /* The name of this problem type.  This must not contain white space as
+     this string is used to build command names.  */
   const char *name;
-  int user_settable_should_quit;
+
+  /* When this is true then a user command is created (based on NAME) that
+     allows the SHOULD_QUIT field to be modified, otherwise, SHOULD_QUIT
+     can't be changed from its default value by the user.  */
+  bool user_settable_should_quit;
+
+  /* Reference a value from internal_problem_modes to indicate if GDB
+     should quit when it hits a problem of this type.  */
   const char *should_quit;
-  int user_settable_should_dump_core;
+
+  /* Like USER_SETTABLE_SHOULD_QUIT but for SHOULD_DUMP_CORE.  */
+  bool user_settable_should_dump_core;
+
+  /* Like SHOULD_QUIT, but whether GDB should dump core.  */
   const char *should_dump_core;
 };
 
@@ -436,7 +449,7 @@ internal_vproblem (struct internal_problem *problem,
 }
 
 static struct internal_problem internal_error_problem = {
-  "internal-error", 1, internal_problem_ask, 1, internal_problem_ask
+  "internal-error", true, internal_problem_ask, true, internal_problem_ask,
 };
 
 void
@@ -447,7 +460,7 @@ internal_verror (const char *file, int line, const char *fmt, va_list ap)
 }
 
 static struct internal_problem internal_warning_problem = {
-  "internal-warning", 1, internal_problem_ask, 1, internal_problem_ask
+  "internal-warning", true, internal_problem_ask, true, internal_problem_ask,
 };
 
 void
@@ -457,7 +470,7 @@ internal_vwarning (const char *file, int line, const char *fmt, va_list ap)
 }
 
 static struct internal_problem demangler_warning_problem = {
-  "demangler-warning", 1, internal_problem_ask, 0, internal_problem_no
+  "demangler-warning", true, internal_problem_ask, false, internal_problem_no,
 };
 
 void
@@ -496,19 +509,21 @@ add_internal_problem_command (struct internal_problem *problem)
 {
   struct cmd_list_element **set_cmd_list;
   struct cmd_list_element **show_cmd_list;
-  char *set_doc;
-  char *show_doc;
 
   set_cmd_list = XNEW (struct cmd_list_element *);
   show_cmd_list = XNEW (struct cmd_list_element *);
   *set_cmd_list = NULL;
   *show_cmd_list = NULL;
 
-  set_doc = xstrprintf (_("Configure what GDB does when %s is detected."),
-			problem->name);
-
-  show_doc = xstrprintf (_("Show what GDB does when %s is detected."),
-			 problem->name);
+  /* The add_basic_prefix_cmd and add_show_prefix_cmd functions take
+     ownership of the string passed in, which is why we don't need to free
+     set_doc and show_doc in this function.  */
+  const char *set_doc
+    = xstrprintf (_("Configure what GDB does when %s is detected."),
+		  problem->name);
+  const char *show_doc
+    = xstrprintf (_("Show what GDB does when %s is detected."),
+		  problem->name);
 
   add_basic_prefix_cmd (problem->name, class_maintenance, set_doc,
 			set_cmd_list,
@@ -520,48 +535,42 @@ add_internal_problem_command (struct internal_problem *problem)
 
   if (problem->user_settable_should_quit)
     {
-      set_doc = xstrprintf (_("Set whether GDB should quit "
-			      "when an %s is detected."),
-			    problem->name);
-      show_doc = xstrprintf (_("Show whether GDB will quit "
-			       "when an %s is detected."),
-			     problem->name);
+      std::string set_quit_doc
+	= string_printf (_("Set whether GDB should quit when an %s is "
+			   "detected."), problem->name);
+      std::string show_quit_doc
+	= string_printf (_("Show whether GDB will quit when an %s is "
+			   "detected."), problem->name);
       add_setshow_enum_cmd ("quit", class_maintenance,
 			    internal_problem_modes,
 			    &problem->should_quit,
-			    set_doc,
-			    show_doc,
+			    set_quit_doc.c_str (),
+			    show_quit_doc.c_str (),
 			    NULL, /* help_doc */
 			    NULL, /* setfunc */
 			    NULL, /* showfunc */
 			    set_cmd_list,
 			    show_cmd_list);
-
-      xfree (set_doc);
-      xfree (show_doc);
     }
 
   if (problem->user_settable_should_dump_core)
     {
-      set_doc = xstrprintf (_("Set whether GDB should create a core "
-			      "file of GDB when %s is detected."),
-			    problem->name);
-      show_doc = xstrprintf (_("Show whether GDB will create a core "
-			       "file of GDB when %s is detected."),
-			     problem->name);
+      std::string set_core_doc
+	= string_printf (_("Set whether GDB should create a core file of "
+			   "GDB when %s is detected."), problem->name);
+      std::string show_core_doc
+	= string_printf (_("Show whether GDB will create a core file of "
+			   "GDB when %s is detected."), problem->name);
       add_setshow_enum_cmd ("corefile", class_maintenance,
 			    internal_problem_modes,
 			    &problem->should_dump_core,
-			    set_doc,
-			    show_doc,
+			    set_core_doc.c_str (),
+			    show_core_doc.c_str (),
 			    NULL, /* help_doc */
 			    NULL, /* setfunc */
 			    NULL, /* showfunc */
 			    set_cmd_list,
 			    show_cmd_list);
-
-      xfree (set_doc);
-      xfree (show_doc);
     }
 }
 

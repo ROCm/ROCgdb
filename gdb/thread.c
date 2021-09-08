@@ -408,7 +408,7 @@ thread_info::set_executing (bool executing)
 {
   m_executing = executing;
   if (executing)
-    this->set_stop_pc (~(CORE_ADDR) 0);
+    this->clear_stop_pc ();
 }
 
 /* See gdbthread.h.  */
