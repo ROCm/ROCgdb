@@ -28336,6 +28336,14 @@ eight bits non-zero.
 @value{GDBN} does not support reading or writing to the @code{region}
 address space.  A memory access error is reported.
 
+@item
+If an @acronym{AMD GPU} wavefront has the @code{DX10_CLAMP} bit set in
+the @code{MODE} register, enabled arithmetic exceptions will not be
+reported as @code{SIGFPE} signals.  This happens if the
+@code{DX10_CLAMP} kernel descriptor field is enabled.
+
+@xref{AMD GPU Signals, , @acronym{AMD GPU} Signals}.
+
 @end enumerate
 
 @node Controlling GDB
