@@ -16,27 +16,6 @@ if test x"$silent" != x"yes" && test x"$sim_bitsize" != x""; then
 fi],[sim_bitsize=""])dnl
 
 
-AC_ARG_ENABLE(sim-config,
-[  --enable-sim-config=file		Override default config file],
-[case "${enableval}" in
-  yes|no)	AC_MSG_ERROR("No value supplied for --enable-sim-config=file");;
-  *)		if test -f "${srcdir}/${enableval}"; then
-		  sim_config="${enableval}";
-		elif test -f "${srcdir}/${enableval}-config.h"; then
-		  sim_config="${enableval}-config.h"
-		else
-		  AC_MSG_ERROR("Config file $enableval was not found");
-		  sim_config=std-config.h
-		fi;;
-esac
-if test x"$silent" != x"yes" && test x"$sim_config" != x""; then
-  echo "Setting config flags = $sim_config" 6>&1
-fi],[sim_config="std-config.h"
-if test x"$silent" != x"yes"; then
-  echo "Setting config flags = $sim_config" 6>&1
-fi])dnl
-
-
 AC_ARG_ENABLE(sim-decode-mechanism,
 [  --enable-sim-decode-mechanism=which		Specify the instruction decode mechanism.],
 [case "${enableval}" in
@@ -418,43 +397,6 @@ if test x"$silent" != x"yes" && test x"$sim_timebase" != x""; then
 fi],[sim_timebase=""])dnl
 
 
-dnl TODO: Switch to common $(WARN_CFLAGS).
-sim_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith
--Wno-unused -Wunused-value -Wunused-function
--Wno-switch -Wno-char-subscripts
--Wempty-body -Wunused-but-set-parameter
--Wno-error=maybe-uninitialized
--Wno-missing-declarations
--Wno-missing-prototypes
--Wdeclaration-after-statement -Wmissing-parameter-type
--Wno-pointer-sign
--Wold-style-declaration -Wold-style-definition
-"
-AC_ARG_ENABLE(sim-warnings,
-[  --enable-sim-warnings=opts		Extra CFLAGS for turning on compiler warnings except for idecode.o, semantics.o and psim.o],
-[case "${enableval}" in
-  yes)	;;
-  no)	sim_warnings="-w";;
-  *)	sim_warnings=`echo "${enableval}" | sed -e "s/,/ /g"`;;
-esac
-if test x"$silent" != x"yes" && test x"$sim_warnings" != x""; then
-  echo "Setting warning flags = $sim_warnings" 6>&1
-fi])dnl
-if test "x${sim_warnings}" != x -a "x$GCC" = xyes; then
-  AC_MSG_CHECKING(compiler warning flags)
-  build_warnings="${sim_warnings}"
-  sim_warnings=
-  for w in ${build_warnings}; do
-    dnl Check that GCC accepts it
-    saved_CFLAGS="$CFLAGS"
-    CFLAGS="$CFLAGS -Werror $w"
-    AC_TRY_COMPILE([],[],sim_warnings="${sim_warnings} $w",)
-    CFLAGS="$saved_CFLAGS"
-  done
-  AC_MSG_RESULT(${sim_warnings})
-fi
-
-
 AC_ARG_ENABLE(sim-xor-endian,
 [  --enable-sim-xor-endian=n		Specify number bytes involved in PowerPC XOR bi-endian mode (default 8).],
 [case "${enableval}" in
@@ -657,9 +599,7 @@ else
   rm -rf $tempdir
 fi
 
-AC_SUBST(sim_warnings)
 AC_SUBST(sim_line_nr)
-AC_SUBST(sim_config)
 AC_SUBST(sim_opcode)
 AC_SUBST(sim_switch)
 AC_SUBST(sim_dup)
