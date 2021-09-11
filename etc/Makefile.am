@@ -1,5 +1,7 @@
-# Copyright 2013-2021 Free Software Foundation, Inc.
-
+## Process this file with automake to generate Makefile.in
+#
+#   Copyright (C) 1992-2021 Free Software Foundation, Inc.
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -13,18 +15,5 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-load_lib selftest-support.exp
-load_lib gdb-python.exp
-
-proc selftest_python {} {
-    if {[skip_python_tests]} {
-	return -1
-    }
-
-    gdb_test_no_output "set variable gdb_python_initialized = 0"
-    gdb_test "call catch_command_errors(execute_command, \"python print(5)\", 0, true)" \
-	"Python not initialized.* = 0"
-    return 0
-}
-
-do_self_tests captured_command_loop selftest_python
+AUTOMAKE_OPTIONS = foreign no-dist
+ACLOCAL_AMFLAGS = -I.. -I../config
