@@ -255,7 +255,7 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
 
   value *result_val
     = dwarf2_evaluate (exp, len, true, per_objfile, nullptr,
-		       this_frame, addr_size, &init_values, nullptr);
+		       this_frame, addr_size, &init_values, nullptr, type);
 
   /* We need to clean up all the values that are not needed any more.
      The problem with a value_ref_ptr class is that it disconnects the

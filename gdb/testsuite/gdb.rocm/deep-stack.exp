@@ -1,0 +1,63 @@
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this- program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test inspired by the reproducer in SWDEV-294225.
+#
+# When stopped at /* break here */, GDB would fail to unwind the stack due to
+# the way the PC register was saved.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+if {[build_executable "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+    clean_restart $::binfile
+
+    if { ![runto_main] } {
+	fail "could not run to main"
+	return
+    }
+
+    set line [gdb_get_line_number "break here"]
+    gdb_test "break $line" "Breakpoint $::decimal at $hex.*"
+
+    gdb_test "continue" "Thread $decimal \"deep-stack\" hit Breakpoint $decimal.*"
+    gdb_test "backtrace" \
+	[multi_line \
+	    "#0 .* base_case .*" \
+	    "#1 .* deep<0u> .*" \
+	    "#2 .* deep<1u> .*" \
+	    "#3 .* deep<2u> .*" \
+	    "#4 .* deep<3u> .*" \
+	    "#5 .* deep<4u> .*" \
+	    "#6 .* deep<5u> .*" \
+	    "#7 .* deep<6u> .*" \
+	    "#8 .* deep<7u> .*" \
+	    "#9 .* deep<8u> .*" \
+	    "#10 .* deep<9u> .*" \
+	    "#11 .* deep<10u> .*" \
+	    "#12 .* hip_deep .*"]
+}
