@@ -1641,6 +1641,73 @@ line_header_eq_voidp (const void *item_lhs, const void *item_rhs)
 
 
 
+/* An iterator for all_comp_units that is based on index.  This
+   approach makes it possible to iterate over all_comp_units safely,
+   when some caller in the loop may add new units.  */
+
+class all_comp_units_iterator
+{
+public:
+
+  all_comp_units_iterator (dwarf2_per_bfd *per_bfd, bool start)
+    : m_per_bfd (per_bfd),
+      m_index (start ? 0 : per_bfd->all_comp_units.size ())
+  {
+  }
+
+  all_comp_units_iterator &operator++ ()
+  {
+    ++m_index;
+    return *this;
+  }
+
+  dwarf2_per_cu_data *operator* () const
+  {
+    return m_per_bfd->get_cu (m_index);
+  }
+
+  bool operator== (const all_comp_units_iterator &other) const
+  {
+    return m_index == other.m_index;
+  }
+
+
+  bool operator!= (const all_comp_units_iterator &other) const
+  {
+    return m_index != other.m_index;
+  }
+
+private:
+
+  dwarf2_per_bfd *m_per_bfd;
+  size_t m_index;
+};
+
+/* A range adapter for the all_comp_units_iterator.  */
+class all_comp_units_range
+{
+public:
+
+  all_comp_units_range (dwarf2_per_bfd *per_bfd)
+    : m_per_bfd (per_bfd)
+  {
+  }
+
+  all_comp_units_iterator begin ()
+  {
+    return all_comp_units_iterator (m_per_bfd, true);
+  }
+
+  all_comp_units_iterator end ()
+  {
+    return all_comp_units_iterator (m_per_bfd, false);
+  }
+
+private:
+
+  dwarf2_per_bfd *m_per_bfd;
+};
+
 /* See declaration.  */
 
 dwarf2_per_bfd::dwarf2_per_bfd (bfd *obfd, const dwarf2_debug_sections *names,
@@ -1705,9 +1772,9 @@ private:
 bool
 dwarf2_per_objfile::symtab_set_p (const dwarf2_per_cu_data *per_cu) const
 {
-  gdb_assert (per_cu->index < this->m_symtabs.size ());
-
-  return this->m_symtabs[per_cu->index] != nullptr;
+  if (per_cu->index < this->m_symtabs.size ())
+    return this->m_symtabs[per_cu->index] != nullptr;
+  return false;
 }
 
 /* See read.h.  */
@@ -1715,9 +1782,9 @@ dwarf2_per_objfile::symtab_set_p (const dwarf2_per_cu_data *per_cu) const
 compunit_symtab *
 dwarf2_per_objfile::get_symtab (const dwarf2_per_cu_data *per_cu) const
 {
-  gdb_assert (per_cu->index < this->m_symtabs.size ());
-
-  return this->m_symtabs[per_cu->index];
+  if (per_cu->index < this->m_symtabs.size ())
+    return this->m_symtabs[per_cu->index];
+  return nullptr;
 }
 
 /* See read.h.  */
@@ -1726,9 +1793,9 @@ void
 dwarf2_per_objfile::set_symtab (const dwarf2_per_cu_data *per_cu,
 				compunit_symtab *symtab)
 {
-  gdb_assert (per_cu->index < this->m_symtabs.size ());
+  if (per_cu->index >= this->m_symtabs.size ())
+    this->m_symtabs.resize (per_cu->index + 1);
   gdb_assert (this->m_symtabs[per_cu->index] == nullptr);
-
   this->m_symtabs[per_cu->index] = symtab;
 }
 
@@ -4323,11 +4390,12 @@ dwarf2_gdb_index::expand_symtabs_matching
 
   if (symbol_matcher == NULL && lookup_name == NULL)
     {
-      for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
+      for (dwarf2_per_cu_data *per_cu
+	     : all_comp_units_range (per_objfile->per_bfd))
 	{
 	  QUIT;
 
-	  if (!dw2_expand_symtabs_matching_one (per_cu.get (), per_objfile,
+	  if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile,
 						file_matcher,
 						expansion_notify))
 	    return false;
@@ -4439,14 +4507,14 @@ dwarf2_base_index_functions::map_symbol_filenames
 	}
     }
 
-  for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
+  for (dwarf2_per_cu_data *per_cu
+	 : all_comp_units_range (per_objfile->per_bfd))
     {
       /* We only need to look at symtabs not already expanded.  */
-      if (per_objfile->symtab_set_p (per_cu.get ()))
+      if (per_cu->is_debug_types || per_objfile->symtab_set_p (per_cu))
 	continue;
 
-      quick_file_names *file_data = dw2_get_file_names (per_cu.get (),
-							per_objfile);
+      quick_file_names *file_data = dw2_get_file_names (per_cu, per_objfile);
       if (file_data == nullptr
 	  || qfn_cache.find (file_data) != qfn_cache.end ())
 	continue;
@@ -5311,11 +5379,12 @@ dwarf2_debug_names_index::expand_symtabs_matching
 
   if (symbol_matcher == NULL && lookup_name == NULL)
     {
-      for (const auto &per_cu : per_objfile->per_bfd->all_comp_units)
+      for (dwarf2_per_cu_data *per_cu
+	     : all_comp_units_range (per_objfile->per_bfd))
 	{
 	  QUIT;
 
-	  if (!dw2_expand_symtabs_matching_one (per_cu.get (), per_objfile,
+	  if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile,
 						file_matcher,
 						expansion_notify))
 	    return false;
@@ -5423,7 +5492,6 @@ dwarf2_initialize_objfile (struct objfile *objfile)
       if (per_bfd->using_index)
 	{
 	  dwarf_read_debug_printf ("using_index already set");
-	  per_objfile->resize_symtabs ();
 	  objfile->qf.push_front (make_dwarf_gdb_index ());
 	  return;
 	}
@@ -5432,7 +5500,6 @@ dwarf2_initialize_objfile (struct objfile *objfile)
       create_all_comp_units (per_objfile);
       per_bfd->quick_file_names_table
 	= create_quick_file_names_table (per_bfd->all_comp_units.size ());
-      per_objfile->resize_symtabs ();
 
       for (int i = 0; i < per_bfd->all_comp_units.size (); ++i)
 	{
@@ -5454,7 +5521,6 @@ dwarf2_initialize_objfile (struct objfile *objfile)
   if (per_bfd->debug_names_table != nullptr)
     {
       dwarf_read_debug_printf ("re-using shared debug names table");
-      per_objfile->resize_symtabs ();
       objfile->qf.push_front (make_dwarf_debug_names ());
       return;
     }
@@ -5464,7 +5530,6 @@ dwarf2_initialize_objfile (struct objfile *objfile)
   if (per_bfd->index_table != nullptr)
     {
       dwarf_read_debug_printf ("re-using shared index table");
-      per_objfile->resize_symtabs ();
       objfile->qf.push_front (make_dwarf_gdb_index ());
       return;
     }
@@ -5484,7 +5549,6 @@ dwarf2_initialize_objfile (struct objfile *objfile)
   if (dwarf2_read_debug_names (per_objfile))
     {
       dwarf_read_debug_printf ("found debug names");
-      per_objfile->resize_symtabs ();
       objfile->qf.push_front (make_dwarf_debug_names ());
       return;
     }
@@ -5494,7 +5558,6 @@ dwarf2_initialize_objfile (struct objfile *objfile)
 			     get_gdb_index_contents_from_section<dwz_file>))
     {
       dwarf_read_debug_printf ("found gdb index from file");
-      per_objfile->resize_symtabs ();
       objfile->qf.push_front (make_dwarf_gdb_index ());
       return;
     }
@@ -5506,7 +5569,6 @@ dwarf2_initialize_objfile (struct objfile *objfile)
     {
       dwarf_read_debug_printf ("found gdb index from cache");
       global_index_cache.hit ();
-      per_objfile->resize_symtabs ();
       objfile->qf.push_front (make_dwarf_gdb_index ());
       return;
     }
@@ -5536,7 +5598,6 @@ dwarf2_build_psymtabs (struct objfile *objfile, psymbol_functions *psf)
 	}
       else
 	psf->set_partial_symtabs (per_bfd->partial_symtabs);
-      per_objfile->resize_symtabs ();
       return;
     }
 
@@ -5562,8 +5623,6 @@ dwarf2_build_psymtabs (struct objfile *objfile, psymbol_functions *psf)
       psymtab_discarder psymtabs (partial_symtabs.get ());
       dwarf2_build_psymtabs_hard (per_objfile);
       psymtabs.keep ();
-
-      per_objfile->resize_symtabs ();
 
       /* (maybe) store an index in the cache.  */
       global_index_cache.store (per_objfile);
@@ -5905,8 +5964,6 @@ add_type_unit (dwarf2_per_objfile *per_objfile, ULONGEST sig, void **slot)
   signatured_type_up sig_type_holder
     = per_objfile->per_bfd->allocate_signatured_type (sig);
   signatured_type *sig_type = sig_type_holder.get ();
-
-  per_objfile->resize_symtabs ();
 
   per_objfile->per_bfd->all_comp_units.emplace_back
     (sig_type_holder.release ());

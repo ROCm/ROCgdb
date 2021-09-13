@@ -1,3 +1,17 @@
+2021-09-10  Tom de Vries  <tdevries@suse.de>
+
+	* lib/gdb.exp (gdb_compile_test): Handle unrecognized command line
+	option.
+
+2021-09-09  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.base/coredump-filter-build-id.exp: Handle older eu-unstrip.
+
+2021-09-09  Tom de Vries  <tdevries@suse.de>
+
+	* gdb.mi/mi-sym-info.exp: Fix regexps.  Add missing message argument
+	to mi_gdb_test.  Factor out regexps for functions and variables.
+
 2021-09-04  Tom de Vries  <tdevries@suse.de>
 
 	PR testsuite/26950
