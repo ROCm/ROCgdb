@@ -1881,8 +1881,6 @@ do_start_initialization ()
   return true;
 }
 
-#endif /* HAVE_PYTHON */
-
 #if GDB_SELF_TEST
 namespace selftests {
 
@@ -1923,6 +1921,8 @@ test_python ()
 
 } // namespace selftests
 #endif /* GDB_SELF_TEST */
+
+#endif /* HAVE_PYTHON */
 
 /* See python.h.  */
 cmd_list_element *python_cmd_element = nullptr;
@@ -2023,9 +2023,11 @@ python executable."),
 				&user_set_python_list,
 				&user_show_python_list);
 
+#ifdef HAVE_PYTHON
 #if GDB_SELF_TEST
   selftests::register_test ("python", selftests::test_python);
 #endif /* GDB_SELF_TEST */
+#endif /* HAVE_PYTHON */
 }
 
 #ifdef HAVE_PYTHON
