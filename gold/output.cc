@@ -1412,10 +1412,17 @@ Output_data_got<got_size, big_endian>::Got_entry::write(
 	      default:
 		gold_unreachable();
 	      }
+	    // If this is a GOT entry for a known value global symbol,
+	    // then the value should include the addend.  If the value
+	    // is not known leave the value as zero; The GOT entry
+	    // will be set by a dynamic relocation.
+	    if (this->addend_ && gsym->final_value_is_known())
+	      val += this->addend_;
 	    if (this->use_plt_or_tls_offset_
 		&& gsym->type() == elfcpp::STT_TLS)
 	      val += parameters->target().tls_offset_for_global(gsym,
-								got_indx);
+								got_indx,
+								this->addend_);
 	  }
       }
       break;
@@ -1444,7 +1451,8 @@ Output_data_got<got_size, big_endian>::Got_entry::write(
 	    val = convert_types<Valtype, uint64_t>(lval);
 	    if (this->use_plt_or_tls_offset_ && is_tls)
 	      val += parameters->target().tls_offset_for_local(object, lsi,
-							       got_indx);
+							       got_indx,
+							       this->addend_);
 	  }
       }
       break;
@@ -1461,15 +1469,15 @@ Output_data_got<got_size, big_endian>::Got_entry::write(
 
 template<int got_size, bool big_endian>
 bool
-Output_data_got<got_size, big_endian>::add_global(
-    Symbol* gsym,
-    unsigned int got_type)
+Output_data_got<got_size, big_endian>::add_global(Symbol* gsym,
+						  unsigned int got_type,
+						  uint64_t addend)
 {
-  if (gsym->has_got_offset(got_type))
+  if (gsym->has_got_offset(got_type, addend))
     return false;
 
-  unsigned int got_offset = this->add_got_entry(Got_entry(gsym, false));
-  gsym->set_got_offset(got_type, got_offset);
+  unsigned int got_offset = this->add_got_entry(Got_entry(gsym, false, addend));
+  gsym->set_got_offset(got_type, got_offset, addend);
   return true;
 }
 
@@ -1478,13 +1486,14 @@ Output_data_got<got_size, big_endian>::add_global(
 template<int got_size, bool big_endian>
 bool
 Output_data_got<got_size, big_endian>::add_global_plt(Symbol* gsym,
-						      unsigned int got_type)
+						      unsigned int got_type,
+						      uint64_t addend)
 {
-  if (gsym->has_got_offset(got_type))
+  if (gsym->has_got_offset(got_type, addend))
     return false;
 
-  unsigned int got_offset = this->add_got_entry(Got_entry(gsym, true));
-  gsym->set_got_offset(got_type, got_offset);
+  unsigned int got_offset = this->add_got_entry(Got_entry(gsym, true, addend));
+  gsym->set_got_offset(got_type, got_offset, addend);
   return true;
 }
 
@@ -1497,14 +1506,15 @@ Output_data_got<got_size, big_endian>::add_global_with_rel(
     Symbol* gsym,
     unsigned int got_type,
     Output_data_reloc_generic* rel_dyn,
-    unsigned int r_type)
+    unsigned int r_type,
+    uint64_t addend)
 {
-  if (gsym->has_got_offset(got_type))
+  if (gsym->has_got_offset(got_type, addend))
     return;
 
   unsigned int got_offset = this->add_got_entry(Got_entry());
-  gsym->set_got_offset(got_type, got_offset);
-  rel_dyn->add_global_generic(gsym, r_type, this, got_offset, 0);
+  gsym->set_got_offset(got_type, got_offset, addend);
+  rel_dyn->add_global_generic(gsym, r_type, this, got_offset, addend);
 }
 
 // Add a pair of entries for a global symbol to the GOT, and add
@@ -1517,38 +1527,19 @@ Output_data_got<got_size, big_endian>::add_global_pair_with_rel(
     unsigned int got_type,
     Output_data_reloc_generic* rel_dyn,
     unsigned int r_type_1,
-    unsigned int r_type_2)
+    unsigned int r_type_2,
+    uint64_t addend)
 {
-  if (gsym->has_got_offset(got_type))
+  if (gsym->has_got_offset(got_type, addend))
     return;
 
   unsigned int got_offset = this->add_got_entry_pair(Got_entry(), Got_entry());
-  gsym->set_got_offset(got_type, got_offset);
-  rel_dyn->add_global_generic(gsym, r_type_1, this, got_offset, 0);
+  gsym->set_got_offset(got_type, got_offset, addend);
+  rel_dyn->add_global_generic(gsym, r_type_1, this, got_offset, addend);
 
   if (r_type_2 != 0)
     rel_dyn->add_global_generic(gsym, r_type_2, this,
-				got_offset + got_size / 8, 0);
-}
-
-// Add an entry for a local symbol to the GOT.  This returns true if
-// this is a new GOT entry, false if the symbol already has a GOT
-// entry.
-
-template<int got_size, bool big_endian>
-bool
-Output_data_got<got_size, big_endian>::add_local(
-    Relobj* object,
-    unsigned int symndx,
-    unsigned int got_type)
-{
-  if (object->local_has_got_offset(symndx, got_type))
-    return false;
-
-  unsigned int got_offset = this->add_got_entry(Got_entry(object, symndx,
-							  false));
-  object->set_local_got_offset(symndx, got_type, got_offset);
-  return true;
+				got_offset + got_size / 8, addend);
 }
 
 // Add an entry for a local symbol plus ADDEND to the GOT.  This returns
@@ -1579,35 +1570,16 @@ bool
 Output_data_got<got_size, big_endian>::add_local_plt(
     Relobj* object,
     unsigned int symndx,
-    unsigned int got_type)
+    unsigned int got_type,
+    uint64_t addend)
 {
-  if (object->local_has_got_offset(symndx, got_type))
+  if (object->local_has_got_offset(symndx, got_type, addend))
     return false;
 
   unsigned int got_offset = this->add_got_entry(Got_entry(object, symndx,
-							  true));
-  object->set_local_got_offset(symndx, got_type, got_offset);
+							  true, addend));
+  object->set_local_got_offset(symndx, got_type, got_offset, addend);
   return true;
-}
-
-// Add an entry for a local symbol to the GOT, and add a dynamic
-// relocation of type R_TYPE for the GOT entry.
-
-template<int got_size, bool big_endian>
-void
-Output_data_got<got_size, big_endian>::add_local_with_rel(
-    Relobj* object,
-    unsigned int symndx,
-    unsigned int got_type,
-    Output_data_reloc_generic* rel_dyn,
-    unsigned int r_type)
-{
-  if (object->local_has_got_offset(symndx, got_type))
-    return;
-
-  unsigned int got_offset = this->add_got_entry(Got_entry());
-  object->set_local_got_offset(symndx, got_type, got_offset);
-  rel_dyn->add_local_generic(object, symndx, r_type, this, got_offset, 0);
 }
 
 // Add an entry for a local symbol plus ADDEND to the GOT, and add a dynamic
@@ -1620,7 +1592,8 @@ Output_data_got<got_size, big_endian>::add_local_with_rel(
     unsigned int symndx,
     unsigned int got_type,
     Output_data_reloc_generic* rel_dyn,
-    unsigned int r_type, uint64_t addend)
+    unsigned int r_type,
+    uint64_t addend)
 {
   if (object->local_has_got_offset(symndx, got_type, addend))
     return;
@@ -1629,32 +1602,6 @@ Output_data_got<got_size, big_endian>::add_local_with_rel(
   object->set_local_got_offset(symndx, got_type, got_offset, addend);
   rel_dyn->add_local_generic(object, symndx, r_type, this, got_offset,
                              addend);
-}
-
-// Add a pair of entries for a local symbol to the GOT, and add
-// a dynamic relocation of type R_TYPE using the section symbol of
-// the output section to which input section SHNDX maps, on the first.
-// The first got entry will have a value of zero, the second the
-// value of the local symbol.
-template<int got_size, bool big_endian>
-void
-Output_data_got<got_size, big_endian>::add_local_pair_with_rel(
-    Relobj* object,
-    unsigned int symndx,
-    unsigned int shndx,
-    unsigned int got_type,
-    Output_data_reloc_generic* rel_dyn,
-    unsigned int r_type)
-{
-  if (object->local_has_got_offset(symndx, got_type))
-    return;
-
-  unsigned int got_offset =
-      this->add_got_entry_pair(Got_entry(),
-			       Got_entry(object, symndx, false));
-  object->set_local_got_offset(symndx, got_type, got_offset);
-  Output_section* os = object->output_section(shndx);
-  rel_dyn->add_output_section_generic(os, r_type, this, got_offset, 0);
 }
 
 // Add a pair of entries for a local symbol plus ADDEND to the GOT, and add
@@ -1670,7 +1617,8 @@ Output_data_got<got_size, big_endian>::add_local_pair_with_rel(
     unsigned int shndx,
     unsigned int got_type,
     Output_data_reloc_generic* rel_dyn,
-    unsigned int r_type, uint64_t addend)
+    unsigned int r_type,
+    uint64_t addend)
 {
   if (object->local_has_got_offset(symndx, got_type, addend))
     return;
@@ -1694,16 +1642,17 @@ Output_data_got<got_size, big_endian>::add_local_tls_pair(
     unsigned int symndx,
     unsigned int got_type,
     Output_data_reloc_generic* rel_dyn,
-    unsigned int r_type)
+    unsigned int r_type,
+    uint64_t addend)
 {
-  if (object->local_has_got_offset(symndx, got_type))
+  if (object->local_has_got_offset(symndx, got_type, addend))
     return;
 
   unsigned int got_offset
     = this->add_got_entry_pair(Got_entry(),
-			       Got_entry(object, symndx, true));
-  object->set_local_got_offset(symndx, got_type, got_offset);
-  rel_dyn->add_local_generic(object, 0, r_type, this, got_offset, 0);
+			       Got_entry(object, symndx, true, addend));
+  object->set_local_got_offset(symndx, got_type, got_offset, addend);
+  rel_dyn->add_local_generic(object, 0, r_type, this, got_offset, addend);
 }
 
 // Reserve a slot in the GOT for a local symbol or the second slot of a pair.
@@ -1714,10 +1663,11 @@ Output_data_got<got_size, big_endian>::reserve_local(
     unsigned int i,
     Relobj* object,
     unsigned int sym_index,
-    unsigned int got_type)
+    unsigned int got_type,
+    uint64_t addend)
 {
   this->do_reserve_slot(i);
-  object->set_local_got_offset(sym_index, got_type, this->got_offset(i));
+  object->set_local_got_offset(sym_index, got_type, this->got_offset(i), addend);
 }
 
 // Reserve a slot in the GOT for a global symbol.
@@ -1727,10 +1677,11 @@ void
 Output_data_got<got_size, big_endian>::reserve_global(
     unsigned int i,
     Symbol* gsym,
-    unsigned int got_type)
+    unsigned int got_type,
+    uint64_t addend)
 {
   this->do_reserve_slot(i);
-  gsym->set_got_offset(got_type, this->got_offset(i));
+  gsym->set_got_offset(got_type, this->got_offset(i), addend);
 }
 
 // Write out the GOT.
