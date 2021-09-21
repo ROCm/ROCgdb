@@ -730,9 +730,9 @@ allocate_filenum (const char * pathname)
 	}
       else
 	{
-	  if (filename_ncmp (pathname, dirname, last_used_dir_len) == 0
-	      && IS_DIR_SEPARATOR (pathname [last_used_dir_len])
-	      && filename_cmp (pathname + last_used_dir_len + 1,
+	  if (filename_ncmp (pathname, dirname, last_used_dir_len - 1) == 0
+	      && IS_DIR_SEPARATOR (pathname [last_used_dir_len - 1])
+	      && filename_cmp (pathname + last_used_dir_len,
 			       files[last_used].filename) == 0)
 	    return last_used;
 	}
@@ -792,19 +792,23 @@ purge_generated_debug (void)
 
   for (s = all_segs; s; s = s->next)
     {
-      struct line_subseg *lss = s->head;
-      struct line_entry *e, *next;
+      struct line_subseg *lss;
 
-      for (e = lss->head; e; e = next)
+      for (lss = s->head; lss; lss = lss->next)
 	{
-	  know (e->loc.filenum == -1u);
-	  next = e->next;
-	  free (e);
-	}
+	  struct line_entry *e, *next;
 
-      lss->head = NULL;
-      lss->ptail = &lss->head;
-      lss->pmove_tail = &lss->head;
+	  for (e = lss->head; e; e = next)
+	    {
+	      know (e->loc.filenum == -1u);
+	      next = e->next;
+	      free (e);
+	    }
+
+	  lss->head = NULL;
+	  lss->ptail = &lss->head;
+	  lss->pmove_tail = &lss->head;
+	}
     }
 }
 
@@ -2887,14 +2891,20 @@ dwarf2_finish (void)
 			     SEC_READONLY | SEC_DEBUGGING | SEC_OCTETS);
     }
 
+  for (s = all_segs; s; s = s->next)
+    {
+      struct line_subseg *lss;
+
+      for (lss = s->head; lss; lss = lss->next)
+	if (lss->head)
+	  do_allocate_filenum (lss->head);
+    }
+
   /* For each subsection, chain the debug entries together.  */
   for (s = all_segs; s; s = s->next)
     {
       struct line_subseg *lss = s->head;
       struct line_entry **ptail = lss->ptail;
-
-      if (lss->head && SEG_NORMAL (s->seg))
-	do_allocate_filenum (lss->head);
 
       /* Reset the initial view of the first subsection of the
 	 section.  */
