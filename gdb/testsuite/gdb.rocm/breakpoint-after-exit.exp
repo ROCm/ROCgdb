@@ -1,0 +1,49 @@
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Verify that we can set a breakpoint by line after the program has exited and
+# the last presented stop was in GPU code.  The bug that prompted writing this
+# test was that the "last displayed symtab" pointed to a symtab belonging to
+# the device code objfile, which was freed when unloading the device code after
+# completing the kernel execution.  Setting the breakpoint after the program
+# exit would try to use that stale symtab.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" ${binfile} ${srcfile} {debug hip}]} {
+    return
+}
+
+proc do_test { } {
+    clean_restart $::binfile
+
+    with_rocm_gpu_lock {
+	# Stop somwewhere in the kernel.
+	if { ![runto the_kernel allow-pending message] } {
+	    return
+	}
+
+	# Continue to end and try to set a breakpoint by line.
+	gdb_continue_to_end "continue to end" "continue" 1
+	set line [gdb_get_line_number "set breakpoint here"]
+	gdb_test "break $line" "Breakpoint $::decimal at $::hex:.*" "set breakpoint after exit"
+    }
+}
+
+do_test
