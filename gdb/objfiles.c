@@ -53,6 +53,7 @@
 #include "gdb_bfd.h"
 #include "btrace.h"
 #include "gdbsupport/pathstuff.h"
+#include "stack.h"
 
 #include <algorithm>
 #include <vector>
@@ -594,6 +595,11 @@ objfile::~objfile ()
     if (cursal.symtab && SYMTAB_OBJFILE (cursal.symtab) == this)
       clear_current_source_symtab_and_line ();
   }
+
+  /* Likewise, but for the last displayed symtab.  */
+  symtab *s = get_last_displayed_symtab ();
+  if (s != nullptr && SYMTAB_OBJFILE (s) == this)
+    clear_last_displayed_sal ();
 
   /* Free the obstacks for non-reusable objfiles.  */
   obstack_free (&objfile_obstack, 0);
