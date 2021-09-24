@@ -118,7 +118,7 @@ struct ravenscar_thread_target final : public target_ops
 
   std::string pid_to_str (ptid_t) override;
 
-  ptid_t get_ada_task_ptid (long lwp, long thread) override;
+  ptid_t get_ada_task_ptid (long lwp, ULONGEST thread) override;
 
   struct btrace_target_info *enable_btrace (ptid_t ptid,
 					    const struct btrace_config *conf)
@@ -164,7 +164,7 @@ private:
      needed because sometimes the runtime will report an active task
      that hasn't yet been put on the list of tasks that is read by
      ada-tasks.c.  */
-  std::unordered_map<long, int> m_cpu_map;
+  std::unordered_map<ULONGEST, int> m_cpu_map;
 };
 
 /* Return true iff PTID corresponds to a ravenscar task.  */
@@ -251,7 +251,7 @@ ravenscar_thread_target::get_base_thread_from_ravenscar_task (ptid_t ptid)
     return ptid;
 
   base_cpu = get_thread_base_cpu (ptid);
-  return ptid_t (ptid.pid (), base_cpu, 0);
+  return ptid_t (ptid.pid (), base_cpu);
 }
 
 /* Fetch the ravenscar running thread from target memory, make sure
@@ -469,7 +469,8 @@ ravenscar_thread_target::pid_to_str (ptid_t ptid)
   if (!is_ravenscar_task (ptid))
     return beneath ()->pid_to_str (ptid);
 
-  return string_printf ("Ravenscar Thread %#x", (int) ptid.tid ());
+  return string_printf ("Ravenscar Thread 0x%s",
+			phex_nz (ptid.tid (), sizeof (ULONGEST)));
 }
 
 /* Temporarily set the ptid of a regcache to some other value.  When
@@ -681,7 +682,7 @@ ravenscar_inferior_created (inferior *inf)
 }
 
 ptid_t
-ravenscar_thread_target::get_ada_task_ptid (long lwp, long thread)
+ravenscar_thread_target::get_ada_task_ptid (long lwp, ULONGEST thread)
 {
   return ptid_t (m_base_ptid.pid (), 0, thread);
 }

@@ -600,7 +600,7 @@ ada_get_tcb_types_info (void)
 static ptid_t
 ptid_from_atcb_common (struct value *common_value)
 {
-  long thread = 0;
+  ULONGEST thread;
   CORE_ADDR lwp = 0;
   struct value *ll_value;
   ptid_t ptid;
@@ -1233,7 +1233,8 @@ info_task (struct ui_out *uiout, const char *taskno_str, struct inferior *inf)
     fprintf_styled (gdb_stdout, metadata_style.style (), _("<no name>\n"));
 
   /* Print the TID and LWP.  */
-  printf_filtered (_("Thread: %#lx\n"), task_info->ptid.tid ());
+  printf_filtered (_("Thread: 0x%s\n"), phex_nz (task_info->ptid.tid (),
+						 sizeof (ULONGEST)));
   printf_filtered (_("LWP: %#lx\n"), task_info->ptid.lwp ());
 
   /* If set, print the base CPU.  */

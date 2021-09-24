@@ -493,7 +493,7 @@ public:
 
   const char *extra_thread_info (struct thread_info *) override;
 
-  ptid_t get_ada_task_ptid (long lwp, long thread) override;
+  ptid_t get_ada_task_ptid (long lwp, ULONGEST thread) override;
 
   thread_info *thread_handle_to_thread_info (const gdb_byte *thread_handle,
 					     int handle_len,
@@ -3091,7 +3091,7 @@ read_ptid (const char *buf, const char **obuf)
       pp = unpack_varlen_hex (p + 1, &tid);
       if (obuf)
 	*obuf = pp;
-      return ptid_t (pid, tid, 0);
+      return ptid_t (pid, tid);
     }
 
   /* No multi-process.  Just a tid.  */
@@ -3116,7 +3116,7 @@ read_ptid (const char *buf, const char **obuf)
 
   if (obuf)
     *obuf = pp;
-  return ptid_t (pid, tid, 0);
+  return ptid_t (pid, tid);
 }
 
 static int
@@ -4126,9 +4126,9 @@ remote_target::static_tracepoint_markers_by_strid (const char *strid)
 /* Implement the to_get_ada_task_ptid function for the remote targets.  */
 
 ptid_t
-remote_target::get_ada_task_ptid (long lwp, long thread)
+remote_target::get_ada_task_ptid (long lwp, ULONGEST thread)
 {
-  return ptid_t (inferior_ptid.pid (), lwp, 0);
+  return ptid_t (inferior_ptid.pid (), lwp);
 }
 
 
@@ -6232,7 +6232,7 @@ remote_target::append_resumption (char *p, char *endp,
       ptid_t nptid;
 
       /* All (-1) threads of process.  */
-      nptid = ptid_t (ptid.pid (), -1, 0);
+      nptid = ptid_t (ptid.pid (), -1);
 
       p += xsnprintf (p, endp - p, ":");
       p = write_ptid (p, endp, nptid);
@@ -6897,8 +6897,9 @@ remote_target::remote_stop_ns (ptid_t ptid)
 	    == resume_state::RESUMED_PENDING_VCONT)
 	  {
 	    remote_debug_printf ("Enqueueing phony stop reply for thread pending "
-				 "vCont-resume (%d, %ld, %ld)", tp->ptid.pid(),
-				 tp->ptid.lwp (), tp->ptid.tid ());
+				 "vCont-resume (%d, %ld, %s)", tp->ptid.pid(),
+				 tp->ptid.lwp (),
+				 pulongest (tp->ptid.tid ()));
 
 	    /* Check that the thread wasn't resumed with a signal.
 	       Generating a phony stop would result in losing the
@@ -6949,7 +6950,7 @@ remote_target::remote_stop_ns (ptid_t ptid)
 
       if (ptid.is_pid ())
 	  /* All (-1) threads of process.  */
-	nptid = ptid_t (ptid.pid (), -1, 0);
+	nptid = ptid_t (ptid.pid (), -1);
       else
 	{
 	  /* Small optimization: if we already have a stop reply for
