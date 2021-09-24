@@ -201,5 +201,4 @@ gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sVectorAdd\s\(.*\)\sat.*}
 gdb_test "clear VectorAdd"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
-gdb_exit
 }

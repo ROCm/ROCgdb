@@ -55,5 +55,4 @@ gdb_test_sequence "info threads" "info threads" {
     "\\d+\\s+Thread"
 }
 
-gdb_exit
 }

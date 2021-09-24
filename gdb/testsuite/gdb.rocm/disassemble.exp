@@ -126,5 +126,4 @@ gdb_test_multiple "n" "next after disassemble-next-line on" {
     }
 }
 
-gdb_exit
 }

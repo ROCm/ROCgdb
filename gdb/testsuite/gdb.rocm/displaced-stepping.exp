@@ -111,6 +111,4 @@ with_rocm_gpu_lock {
 	    ".*Breakpoint.*, kernel ().*s_nop.*" \
 	    "displaced-step s_setpc_b64"
     }
-
-    gdb_exit
 }

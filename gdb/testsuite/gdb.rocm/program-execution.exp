@@ -150,6 +150,4 @@ with_rocm_gpu_lock {
     foreach_with_prefix mode {"all-stop" "sched-lock" "non-stop"} {
 	test $mode
     }
-
-    gdb_exit
 }

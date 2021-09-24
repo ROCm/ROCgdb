@@ -123,6 +123,4 @@ gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[
 gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 
-
-gdb_exit
 }
