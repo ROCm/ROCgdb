@@ -178,7 +178,8 @@ proc lock_file_release {info} {
     }
 }
 
-# Run body under the GPU lock.
+# Run body under the GPU lock.  Also calls gdb_exit before releasing
+# the GPU lock.
 
 proc with_rocm_gpu_lock { body } {
     global gpu_lock_filename
@@ -189,6 +190,10 @@ proc with_rocm_gpu_lock { body } {
     }
 
     set code [catch {uplevel 1 $body} result]
+
+    # In case BODY returned early due to some testcase failing, and
+    # left GDB running, debugging the GPU.
+    gdb_exit
 
     if {[info exists GDB_PARALLEL]} {
 	lock_file_release $lock_rc

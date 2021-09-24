@@ -202,7 +202,4 @@ gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 delete_breakpoints
 gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
 
-
-gdb_exit
-
 }

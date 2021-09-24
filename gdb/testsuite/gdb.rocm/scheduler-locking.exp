@@ -143,6 +143,4 @@ gdb_test "next " "\[^\r\n\]*[expr $breakpoint_loc].*"
 gdb_test "clear $srcfile:$breakpoint_loc"
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 
-gdb_exit
-
 }

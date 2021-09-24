@@ -175,6 +175,4 @@ proc_with_prefix process_attach_tests {} {
 with_rocm_gpu_lock {
     process_attach_tests
     process_attach_cmdline_tests
-
-    gdb_exit
 }
