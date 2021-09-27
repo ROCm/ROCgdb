@@ -119,6 +119,10 @@ struct dcache_struct
 
   /* The selected lane of the last thread to use the cache or -1.  */
   int lane;
+
+  /* The process target of last inferior to use the cache or
+     nullptr.  */
+  process_stratum_target *proc_target;
 };
 
 typedef void (block_func) (struct dcache_block *block, void *param);
@@ -253,6 +257,7 @@ dcache_invalidate (DCACHE *dcache)
   dcache->size = 0;
   dcache->ptid = null_ptid;
   dcache->lane = -1;
+  dcache->proc_target = nullptr;
 
   if (dcache->line_size != dcache_line_size)
     {
@@ -458,6 +463,7 @@ dcache_init (void)
   dcache->line_size = dcache_line_size;
   dcache->ptid = null_ptid;
   dcache->lane = -1;
+  dcache->proc_target = nullptr;
 
   return dcache;
 }
@@ -486,11 +492,14 @@ dcache_read_memory_partial (struct target_ops *ops, DCACHE *dcache,
 		      ? 0
 		      : inferior_thread ()->current_simd_lane ());
 
-  if (inferior_ptid != dcache->ptid || current_lane != dcache->lane)
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+  if (proc_target != dcache->proc_target || inferior_ptid != dcache->ptid
+      || current_lane != dcache->lane)
     {
       dcache_invalidate (dcache);
       dcache->ptid = inferior_ptid;
       dcache->lane = current_lane;
+      dcache->proc_target = proc_target;
     }
 
   for (i = 0; i < len; i++)

@@ -1954,7 +1954,10 @@ extern std::string target_lane_workgroup_pos_str (thread_info *thr, int lane);
 extern const char *target_extra_thread_info (thread_info *tp);
 
 /* Return the thread's name, or NULL if the target is unable to determine it.
-   The returned value must not be freed by the caller.  */
+   The returned value must not be freed by the caller.
+
+   You likely don't want to call this function, but use the thread_name
+   function instead, which prefers the user-given thread name, if set.  */
 
 extern const char *target_thread_name (struct thread_info *);
 

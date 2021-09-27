@@ -311,6 +311,7 @@ proc function_range { func src {options {debug}} } {
 	}
     }
 
+<<<<<<< HEAD
     if [istarget "amdgcn-amd-amdhsa"] {
 
 	# Find out the start address of the device code DSO, to
@@ -344,8 +345,10 @@ proc function_range { func src {options {debug}} } {
 	    return ""
 	}
 
+	gdb_exit
 	return [list $adj_func_start $func_length]
     } else {
+	gdb_exit
 	return [list "${func}_label - $func_label_offset" $func_length]
     }
 }

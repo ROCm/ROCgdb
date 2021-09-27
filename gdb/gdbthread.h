@@ -236,7 +236,6 @@ class thread_info : public refcounted_object,
 {
 public:
   explicit thread_info (inferior *inf, ptid_t ptid);
-  ~thread_info ();
 
   bool deletable () const;
 
@@ -287,9 +286,21 @@ public:
   /* The inferior this thread belongs to.  */
   struct inferior *inf;
 
-  /* The name of the thread, as specified by the user.  This is NULL
-     if the thread does not have a user-given name.  */
-  char *name = NULL;
+  /* The user-given name of the thread.
+
+     Returns nullptr if the thread does not have a user-given name.  */
+  const char *name () const
+  {
+    return m_name.get ();
+  }
+
+  /* Set the user-given name of the thread.
+
+     Pass nullptr to clear the name.  */
+  void set_name (gdb::unique_xmalloc_ptr<char> name)
+  {
+    m_name = std::move (name);
+  }
 
   bool executing () const
   { return m_executing; }
@@ -542,6 +553,11 @@ private:
      number or do not want to change the currently selected SIMD
      lane.  */
   int m_current_simd_lane = 0;
+
+  /* The user-given name of the thread.
+
+     Nullptr if the thread does not have a user-given name.  */
+  gdb::unique_xmalloc_ptr<char> m_name;
 
 public:
   /* Return true if this thread has SIMD lanes.  */
@@ -1035,5 +1051,11 @@ for_active_lanes (simd_lanes_mask_t mask, Func func, Args &...args)
       mask >>= 1;
     }
 }
+
+/* Return THREAD's name.
+
+   If THREAD has a user-given name, return it.  Otherwise, query the thread's
+   target to get the name.  May return nullptr.  */
+extern const char *thread_name (thread_info *thread);
 
 #endif /* GDBTHREAD_H */
