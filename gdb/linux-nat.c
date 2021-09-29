@@ -421,9 +421,8 @@ static int
 num_lwps (int pid)
 {
   int count = 0;
-  struct lwp_info *lp;
 
-  for (lp = lwp_list; lp; lp = lp->next)
+  for (const lwp_info *lp ATTRIBUTE_UNUSED : all_lwps ())
     if (lp->ptid.pid () == pid)
       count++;
 
@@ -700,17 +699,31 @@ lwp_lwpid_htab_add_lwp (struct lwp_info *lp)
    creation order.  This order is assumed in some cases.  E.g.,
    reaping status after killing alls lwps of a process: the leader LWP
    must be reaped last.  */
-struct lwp_info *lwp_list;
+
+static intrusive_list<lwp_info> lwp_list;
+
+/* See linux-nat.h.  */
+
+lwp_info_range
+all_lwps ()
+{
+  return lwp_info_range (lwp_list.begin ());
+}
+
+/* See linux-nat.h.  */
+
+lwp_info_safe_range
+all_lwps_safe ()
+{
+  return lwp_info_safe_range (lwp_list.begin ());
+}
 
 /* Add LP to sorted-by-reverse-creation-order doubly-linked list.  */
 
 static void
 lwp_list_add (struct lwp_info *lp)
 {
-  lp->next = lwp_list;
-  if (lwp_list != NULL)
-    lwp_list->prev = lp;
-  lwp_list = lp;
+  lwp_list.push_front (*lp);
 }
 
 /* Remove LP from sorted-by-reverse-creation-order doubly-linked
@@ -720,12 +733,7 @@ static void
 lwp_list_remove (struct lwp_info *lp)
 {
   /* Remove from sorted-by-creation-order list.  */
-  if (lp->next != NULL)
-    lp->next->prev = lp->prev;
-  if (lp->prev != NULL)
-    lp->prev->next = lp->next;
-  if (lp == lwp_list)
-    lwp_list = lp->next;
+  lwp_list.erase (lwp_list.iterator_to (*lp));
 }
 
 
@@ -793,13 +801,10 @@ static int check_ptrace_stopped_lwp_gone (struct lwp_info *lp);
 
 /* Destroy and free LP.  */
 
-static void
-lwp_free (struct lwp_info *lp)
+lwp_info::~lwp_info ()
 {
   /* Let the arch specific bits release arch_lwp_info.  */
-  linux_target->low_delete_thread (lp->arch_private);
-
-  xfree (lp);
+  linux_target->low_delete_thread (this->arch_private);
 }
 
 /* Traversal function for purge_lwp_list.  */
@@ -814,7 +819,7 @@ lwp_lwpid_htab_remove_pid (void **slot, void *info)
     {
       htab_clear_slot (lwp_lwpid_htab, slot);
       lwp_list_remove (lp);
-      lwp_free (lp);
+      delete lp;
     }
 
   return 1;
@@ -845,19 +850,10 @@ purge_lwp_list (int pid)
 static struct lwp_info *
 add_initial_lwp (ptid_t ptid)
 {
-  struct lwp_info *lp;
-
   gdb_assert (ptid.lwp_p ());
 
-  lp = XNEW (struct lwp_info);
+  lwp_info *lp = new lwp_info (ptid);
 
-  memset (lp, 0, sizeof (struct lwp_info));
-
-  lp->last_resume_kind = resume_continue;
-  lp->waitstatus.kind = TARGET_WAITKIND_IGNORE;
-
-  lp->ptid = ptid;
-  lp->core = -1;
 
   /* Add to sorted-by-reverse-creation-order list.  */
   lwp_list_add (lp);
@@ -893,16 +889,13 @@ add_lwp (ptid_t ptid)
 static void
 delete_lwp (ptid_t ptid)
 {
-  struct lwp_info *lp;
-  void **slot;
-  struct lwp_info dummy;
+  lwp_info dummy (ptid);
 
-  dummy.ptid = ptid;
-  slot = htab_find_slot (lwp_lwpid_htab, &dummy, NO_INSERT);
+  void **slot = htab_find_slot (lwp_lwpid_htab, &dummy, NO_INSERT);
   if (slot == NULL)
     return;
 
-  lp = *(struct lwp_info **) slot;
+  lwp_info *lp = *(struct lwp_info **) slot;
   gdb_assert (lp != NULL);
 
   htab_clear_slot (lwp_lwpid_htab, slot);
@@ -911,7 +904,7 @@ delete_lwp (ptid_t ptid)
   lwp_list_remove (lp);
 
   /* Release.  */
-  lwp_free (lp);
+  delete lp;
 }
 
 /* Return a pointer to the structure describing the LWP corresponding
@@ -920,18 +913,15 @@ delete_lwp (ptid_t ptid)
 static struct lwp_info *
 find_lwp_pid (ptid_t ptid)
 {
-  struct lwp_info *lp;
   int lwp;
-  struct lwp_info dummy;
 
   if (ptid.lwp_p ())
     lwp = ptid.lwp ();
   else
     lwp = ptid.pid ();
 
-  dummy.ptid = ptid_t (0, lwp);
-  lp = (struct lwp_info *) htab_find (lwp_lwpid_htab, &dummy);
-  return lp;
+  lwp_info dummy (ptid_t (0, lwp));
+  return (struct lwp_info *) htab_find (lwp_lwpid_htab, &dummy);
 }
 
 /* See nat/linux-nat.h.  */
@@ -940,12 +930,8 @@ struct lwp_info *
 iterate_over_lwps (ptid_t filter,
 		   gdb::function_view<iterate_over_lwps_ftype> callback)
 {
-  struct lwp_info *lp, *lpnext;
-
-  for (lp = lwp_list; lp; lp = lpnext)
+  for (lwp_info *lp : all_lwps_safe ())
     {
-      lpnext = lp->next;
-
       if (lp->ptid.matches (filter))
 	{
 	  if (callback (lp) != 0)
@@ -3733,8 +3719,6 @@ linux_nat_target::thread_alive (ptid_t ptid)
 void
 linux_nat_target::update_thread_list ()
 {
-  struct lwp_info *lwp;
-
   /* We add/delete threads from the list as clone/exit events are
      processed, so just try deleting exited threads still in the
      thread list.  */
@@ -3742,7 +3726,7 @@ linux_nat_target::update_thread_list ()
 
   /* Update the processor core that each lwp/thread was last seen
      running on.  */
-  ALL_LWPS (lwp)
+  for (lwp_info *lwp : all_lwps ())
     {
       /* Avoid accessing /proc if the thread hasn't run since we last
 	 time we fetched the thread's core.  Accessing /proc becomes
@@ -3966,7 +3950,7 @@ linux_proc_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
 
   /* Iterate over LWPs of the current inferior, trying to access
      memory through one of them.  */
-  for (lwp_info *lp = lwp_list; lp != nullptr; lp = lp->next)
+  for (lwp_info *lp : all_lwps ())
     {
       if (lp->ptid.pid () != cur_pid)
 	continue;

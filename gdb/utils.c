@@ -75,6 +75,7 @@
 #include "gdbarch.h"
 #include "cli-out.h"
 #include "gdbsupport/gdb-safe-ctype.h"
+#include "bt-utils.h"
 #include "arch-utils.h"
 
 void (*deprecated_error_begin_hook) (void);
@@ -305,6 +306,13 @@ struct internal_problem
 
   /* Like SHOULD_QUIT, but whether GDB should dump core.  */
   const char *should_dump_core;
+
+  /* Like USER_SETTABLE_SHOULD_QUIT but for SHOULD_PRINT_BACKTRACE.  */
+  bool user_settable_should_print_backtrace;
+
+  /* When this is true GDB will print a backtrace when a problem of this
+     type is encountered.  */
+  bool should_print_backtrace;
 };
 
 /* Report a problem, internal to GDB, to the user.  Once the problem
@@ -378,8 +386,12 @@ internal_vproblem (struct internal_problem *problem,
   /* Emit the message unless query will emit it below.  */
   if (problem->should_quit != internal_problem_ask
       || !confirm
-      || !filtered_printing_initialized ())
+      || !filtered_printing_initialized ()
+      || problem->should_print_backtrace)
     fprintf_unfiltered (gdb_stderr, "%s\n", reason.c_str ());
+
+  if (problem->should_print_backtrace)
+    gdb_internal_backtrace ();
 
   if (problem->should_quit == internal_problem_ask)
     {
@@ -450,6 +462,7 @@ internal_vproblem (struct internal_problem *problem,
 
 static struct internal_problem internal_error_problem = {
   "internal-error", true, internal_problem_ask, true, internal_problem_ask,
+  true, GDB_PRINT_INTERNAL_BACKTRACE_INIT_ON
 };
 
 void
@@ -461,6 +474,7 @@ internal_verror (const char *file, int line, const char *fmt, va_list ap)
 
 static struct internal_problem internal_warning_problem = {
   "internal-warning", true, internal_problem_ask, true, internal_problem_ask,
+  true, false
 };
 
 void
@@ -471,6 +485,7 @@ internal_vwarning (const char *file, int line, const char *fmt, va_list ap)
 
 static struct internal_problem demangler_warning_problem = {
   "demangler-warning", true, internal_problem_ask, false, internal_problem_no,
+  false, false
 };
 
 void
@@ -571,6 +586,25 @@ add_internal_problem_command (struct internal_problem *problem)
 			    NULL, /* showfunc */
 			    set_cmd_list,
 			    show_cmd_list);
+    }
+
+  if (problem->user_settable_should_print_backtrace)
+    {
+      std::string set_bt_doc
+	= string_printf (_("Set whether GDB should print a backtrace of "
+			   "GDB when %s is detected."), problem->name);
+      std::string show_bt_doc
+	= string_printf (_("Show whether GDB will print a backtrace of "
+			   "GDB when %s is detected."), problem->name);
+      add_setshow_boolean_cmd ("backtrace", class_maintenance,
+			       &problem->should_print_backtrace,
+			       set_bt_doc.c_str (),
+			       show_bt_doc.c_str (),
+			       NULL, /* help_doc */
+			       gdb_internal_backtrace_set_cmd,
+			       NULL, /* showfunc */
+			       set_cmd_list,
+			       show_cmd_list);
     }
 }
 
