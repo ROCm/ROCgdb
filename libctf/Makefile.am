@@ -42,7 +42,8 @@ noinst_LTLIBRARIES = libctf.la libctf-nobfd.la
 endif
 
 libctf_nobfd_la_LIBADD = @CTF_LIBADD@ $(ZLIB)
-libctf_nobfd_la_LDFLAGS = -version-info 0:0:0 @SHARED_LDFLAGS@ @VERSION_FLAGS@
+libctf_ldflags_nover = -version-info 0:0:0 @SHARED_LDFLAGS@
+libctf_nobfd_la_LDFLAGS = $(libctf_ldflags_nover) @VERSION_FLAGS_NOBFD@
 libctf_nobfd_la_CPPFLAGS = $(AM_CPPFLAGS) -DNOBFD=1
 libctf_nobfd_la_SOURCES = ctf-archive.c ctf-dump.c ctf-create.c ctf-decl.c ctf-error.c \
 			  ctf-hash.c ctf-labels.c ctf-dedup.c ctf-link.c ctf-lookup.c \
@@ -52,9 +53,13 @@ if NEED_CTF_QSORT_R
 libctf_nobfd_la_SOURCES += ctf-qsort_r.c
 endif
 
-libctf_la_LIBADD = ../bfd/libbfd.la $(libctf_nobfd_la_LIBADD)
+# @CTF_LIBADD@ appears here twice: once, to force libiberty to get searched before
+# install-time libbfd adds a -L to the install dir (possibly pointing at an
+# incompatible libiberty), and once via lictf_nobfd_la_LIBADD so that the
+# references in there get picked up.
+libctf_la_LIBADD =  @CTF_LIBADD@ ../bfd/libbfd.la $(libctf_nobfd_la_LIBADD)
 libctf_la_CPPFLAGS = $(AM_CPPFLAGS) -DNOBFD=0
-libctf_la_LDFLAGS = $(libctf_nobfd_la_LDFLAGS)
+libctf_la_LDFLAGS = $(libctf_ldflags_nover) @VERSION_FLAGS@
 libctf_la_SOURCES = $(libctf_nobfd_la_SOURCES) ctf-open-bfd.c
 
 # Setup the testing framework, if you have one
