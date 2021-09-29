@@ -74,115 +74,130 @@ proc_with_prefix check_fork_catchpoints {} {
 # execute the program past the fork.  If the value of WHO or DETACH is
 # 'default', the corresponding GDB command is skipped for that test.
 # The value of CMD must be either 'next 2' or 'continue'.
-proc_with_prefix test_follow_fork { who detach cmd } {
+proc_with_prefix test_follow_fork { follow-fork-mode detach-on-fork cmd } {
     global gdb_prompt
     global srcfile
     global testfile
 
-    with_test_prefix "follow $who, detach $detach, command \"$cmd\"" {
+    # Start a new debugger session each time so defaults are legitimate.
+    if { ![setup] } {
+	return
+    }
 
-	# Start a new debugger session each time so defaults are legitimate.
-	if { ![setup] } {
-	    return
+    # The "Detaching..." and "Attaching..." messages may be hidden by
+    # default.
+    gdb_test_no_output "set verbose"
+
+    # Set follow-fork-mode if we aren't using the default.
+    if {${follow-fork-mode} == "default"} {
+	set follow-fork-mode "parent"
+    } else {
+	gdb_test_no_output "set follow-fork ${follow-fork-mode}"
+    }
+
+    gdb_test "show follow-fork" \
+    "Debugger response to a program call of fork or vfork is \"${follow-fork-mode}\"."
+
+    # Set detach-on-fork mode if we aren't using the default.
+    if {${detach-on-fork} == "default"} {
+	set detach-on-fork "on"
+    } else {
+	gdb_test_no_output "set detach-on-fork ${detach-on-fork}"
+    }
+
+    gdb_test "show detach-on-fork" \
+	     "Whether gdb will detach.* fork is ${detach-on-fork}."
+
+    # Set a breakpoint after the fork if we aren't single-stepping
+    # past the fork.
+    if {$cmd == "continue"} {
+	set bp_after_fork [gdb_get_line_number "set breakpoint here"]
+	gdb_test "break ${srcfile}:$bp_after_fork" \
+		 "Breakpoint.*, line $bp_after_fork.*" \
+		 "set breakpoint after fork"
+    }
+
+    # Set up the output we expect to see after we run.
+    set expected_re ""
+    if {${follow-fork-mode} == "child"} {
+	set expected_re "\\\[Attaching after.* fork to.*"
+	if {${detach-on-fork} == "on"} {
+	    append expected_re "\\\[Detaching after fork from .*"
 	}
+	append expected_re "set breakpoint here.*"
+    } elseif {${follow-fork-mode} == "parent" && ${detach-on-fork} == "on"} {
+	set expected_re "\\\[Detaching after fork from .*set breakpoint here.*"
+    } else {
+	set expected_re ".*set breakpoint here.*"
+    }
 
-	# The "Detaching..." and "Attaching..." messages may be hidden by
-	# default.
-	gdb_test_no_output "set verbose"
+    # Test running past and following the fork, using the parameters
+    # set above.
+    gdb_test $cmd $expected_re "$cmd past fork"
 
-	# Set follow-fork-mode if we aren't using the default.
-	if {$who == "default"} {
-	    set who "parent"
-	} else {
-	    gdb_test_no_output "set follow-fork $who"
+    # Check that we have the inferiors arranged correctly after
+    # following the fork.
+    set resume_unfollowed 0
+    if {${follow-fork-mode} == "parent" && ${detach-on-fork} == "on"} {
+
+	# Follow parent / detach child: the only inferior is the parent.
+	gdb_test "info inferiors" "\\* 1 .* process.*"
+
+    } elseif {${follow-fork-mode} == "parent" && ${detach-on-fork} == "off"} {
+
+	# Follow parent / keep child: two inferiors under debug, the
+	# parent is the current inferior.
+	gdb_test "info inferiors" "\\* 1 .*process.* 2 .*process.*"
+
+	gdb_test "inferior 2" "Switching to inferior 2 .*"
+	set resume_unfollowed 1
+
+    } elseif {${follow-fork-mode} == "child" && ${detach-on-fork} == "on"} {
+
+	# Follow child / detach parent: the child is under debug and is
+	# the current inferior.  The parent is listed but is not under
+	# debug.
+	gdb_test "info inferiors" " 1 .*<null>.*\\* 2 .*process.*"
+
+    } elseif {${follow-fork-mode} == "child" && ${detach-on-fork} == "off"} {
+
+	# Follow child / keep parent: two inferiors under debug, the
+	# child is the current inferior.
+	gdb_test "info inferiors" " 1 .*process.*\\* 2 .*process.*"
+
+	gdb_test "inferior 1" "Switching to inferior 1 .*"
+	set resume_unfollowed 1
+    }
+
+    if {$resume_unfollowed == 1} {
+	if {$cmd == "next 2"} {
+
+	    gdb_continue_to_end "continue unfollowed inferior to end"
+
+	} elseif {$cmd == "continue"} {
+
+	    gdb_continue_to_breakpoint \
+		"continue unfollowed inferior to bp" \
+		".* set breakpoint here.*"
 	}
+    }
 
-	gdb_test "show follow-fork" \
-	"Debugger response to a program call of fork or vfork is \"$who\"."
-
-	# Set detach-on-fork mode if we aren't using the default.
-	if {$detach == "default"} {
-	    set detach "on"
-	} else {
-	    gdb_test_no_output "set detach-on-fork $detach"
-	}
-
-	gdb_test "show detach-on-fork" \
-		 "Whether gdb will detach.* fork is $detach."
-
-	# Set a breakpoint after the fork if we aren't single-stepping
-	# past the fork.
-	if {$cmd == "continue"} {
-	    set bp_after_fork [gdb_get_line_number "set breakpoint here"]
-	    gdb_test "break ${srcfile}:$bp_after_fork" \
-		     "Breakpoint.*, line $bp_after_fork.*" \
-		     "set breakpoint after fork"
-	}
-
-	# Set up the output we expect to see after we run.
-	set expected_re ""
-	if {$who == "child"} {
-	    set expected_re "\\\[Attaching after.* fork to.*"
-	    if {$detach == "on"} {
-		append expected_re "\\\[Detaching after fork from .*"
+    # If we end up with two inferiors, verify that they each end up with their
+    # own program space.  Do this by setting a breakpoint, if we see two
+    # locations it means there are two program spaces.
+    if {${detach-on-fork} == "off" || ${follow-fork-mode} == "child"} {
+	set bpnum "<unset>"
+	gdb_test_multiple "break callee" "break callee" {
+	    -re -wrap "Breakpoint ($::decimal) at $::hex: callee\\. \\(2 locations\\)" {
+		set bpnum $expect_out(1,string)
+		pass $gdb_test_name
 	    }
-	    append expected_re "set breakpoint here.*"
-	} elseif {$who == "parent" && $detach == "on"} {
-	    set expected_re "\\\[Detaching after fork from .*set breakpoint here.*"
-	} else {
-	    set expected_re ".*set breakpoint here.*"
 	}
-
-	# Test running past and following the fork, using the parameters
-	# set above.
-	gdb_test $cmd $expected_re "$cmd past fork"
-
-	# Check that we have the inferiors arranged correctly after 
-	# following the fork.
-	set resume_unfollowed 0
-	if {$who == "parent" && $detach == "on"} {
-
-	    # Follow parent / detach child: the only inferior is the parent.
-	    gdb_test "info inferiors" "\\* 1 .* process.*"
-
-	} elseif {$who == "parent" && $detach == "off"} {
-
-	    # Follow parent / keep child: two inferiors under debug, the
-	    # parent is the current inferior.
-	    gdb_test "info inferiors" "\\* 1 .*process.* 2 .*process.*"
-
-	    gdb_test "inferior 2" "Switching to inferior 2 .*"
-	    set resume_unfollowed 1
-
-	} elseif {$who == "child" && $detach == "on"} {
-
-	    # Follow child / detach parent: the child is under debug and is
-	    # the current inferior.  The parent is listed but is not under
-	    # debug.
-	    gdb_test "info inferiors" " 1 .*<null>.*\\* 2 .*process.*"
-
-	} elseif {$who == "child" && $detach == "off"} {
-
-	    # Follow child / keep parent: two inferiors under debug, the
-	    # child is the current inferior.
-	    gdb_test "info inferiors" " 1 .*process.*\\* 2 .*process.*"
-
-	    gdb_test "inferior 1" "Switching to inferior 1 .*"
-	    set resume_unfollowed 1
-	}
-
-	if {$resume_unfollowed == 1} {
-	    if {$cmd == "next 2"} {
-
-		gdb_continue_to_end "continue unfollowed inferior to end"
-
-	    } elseif {$cmd == "continue"} {
-
-		gdb_continue_to_breakpoint \
-		    "continue unfollowed inferior to bp" \
-		    ".* set breakpoint here.*"
-	    }
-	}
+	gdb_test "info breakpoints $bpnum" \
+	    [multi_line \
+		"$bpnum\\.1 .* inf 1" \
+		"$bpnum\\.2 .* inf 2"] \
+	    "info breakpoints"
     }
 }
 
@@ -395,15 +410,15 @@ if { ![check_fork_catchpoints] } {
 # The first loop should be sufficient to test the defaults.  There
 # is no need to test using the defaults in other permutations (e.g.
 # "default" "on", "parent" "default", etc.).
-foreach cmd {"next 2" "continue"} {
+foreach_with_prefix cmd {"next 2" "continue"} {
     test_follow_fork "default" "default" $cmd
 }
 
 # Now test all explicit permutations.
-foreach who {"parent" "child"} {
-    foreach detach {"on" "off"} {
-	foreach cmd {"next 2" "continue"} {
-	    test_follow_fork $who $detach $cmd
+foreach_with_prefix follow-fork-mode {"parent" "child"} {
+    foreach_with_prefix detach-on-fork {"on" "off"} {
+	foreach_with_prefix cmd {"next 2" "continue"} {
+	    test_follow_fork ${follow-fork-mode} ${detach-on-fork} $cmd
 	}
     }
 }
