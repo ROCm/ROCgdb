@@ -75,6 +75,8 @@ proc run_and_wait_break_hits {mode cmd bp_hit_re {test ""}} {
 		}
 		array unset expect_out
 
+		verbose -log "num_waves=$num_waves, seen_prompt=$seen_prompt, hits=$hits"
+
 		if {$hits > $num_waves || $seen_prompt > 1} {
 		    fail $gdb_test_name
 		} else {
