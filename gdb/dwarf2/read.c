@@ -9052,9 +9052,9 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 
 #define RUST_ENUM_PREFIX "RUST$ENCODED$ENUM$"
   if (type->num_fields () == 1
-      && startswith (TYPE_FIELD_NAME (type, 0), RUST_ENUM_PREFIX))
+      && startswith (type->field (0).name (), RUST_ENUM_PREFIX))
     {
-      const char *name = TYPE_FIELD_NAME (type, 0) + strlen (RUST_ENUM_PREFIX);
+      const char *name = type->field (0).name () + strlen (RUST_ENUM_PREFIX);
 
       /* Decode the field name to find the offset of the
 	 discriminant.  */
@@ -9072,7 +9072,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	    {
 	      complaint (_("Could not parse Rust enum encoding string \"%s\""
 			   "[in module %s]"),
-			 TYPE_FIELD_NAME (type, 0),
+			 type->field (0).name (),
 			 objfile_name (objfile));
 	      return;
 	    }
@@ -9094,17 +9094,17 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       /* Put the discriminant at index 0.  */
       type->field (0).set_type (field_type);
       TYPE_FIELD_ARTIFICIAL (type, 0) = 1;
-      TYPE_FIELD_NAME (type, 0) = "<<discriminant>>";
+      type->field (0).set_name ("<<discriminant>>");
       SET_FIELD_BITPOS (type->field (0), bit_offset);
 
       /* The order of fields doesn't really matter, so put the real
 	 field at index 1 and the data-less field at index 2.  */
       type->field (1) = saved_field;
-      TYPE_FIELD_NAME (type, 1)
-	= rust_last_path_segment (type->field (1).type ()->name ());
+      type->field (1).set_name
+	(rust_last_path_segment (type->field (1).type ()->name ()));
       type->field (1).type ()->set_name
 	(rust_fully_qualify (&objfile->objfile_obstack, type->name (),
-			     TYPE_FIELD_NAME (type, 1)));
+			     type->field (1).name ()));
 
       const char *dataless_name
 	= rust_fully_qualify (&objfile->objfile_obstack, type->name (),
@@ -9114,7 +9114,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       type->field (2).set_type (dataless_type);
       /* NAME points into the original discriminant name, which
 	 already has the correct lifetime.  */
-      TYPE_FIELD_NAME (type, 2) = name;
+      type->field (2).set_name (name);
       SET_FIELD_BITPOS (type->field (2), 0);
 
       /* Indicate that this is a variant type.  */
@@ -9123,7 +9123,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
     }
   /* A union with a single anonymous field is probably an old-style
      univariant enum.  */
-  else if (type->num_fields () == 1 && streq (TYPE_FIELD_NAME (type, 0), ""))
+  else if (type->num_fields () == 1 && streq (type->field (0).name (), ""))
     {
       /* Smash this type to be a structure type.  We have to do this
 	 because the type has already been recorded.  */
@@ -9132,7 +9132,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       struct type *field_type = type->field (0).type ();
       const char *variant_name
 	= rust_last_path_segment (field_type->name ());
-      TYPE_FIELD_NAME (type, 0) = variant_name;
+      type->field (0).set_name (variant_name);
       field_type->set_name
 	(rust_fully_qualify (&objfile->objfile_obstack,
 			     type->name (), variant_name));
@@ -9156,7 +9156,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	      /* Could be data-less variant, so keep going.  */
 	      disr_type = nullptr;
 	    }
-	  else if (strcmp (TYPE_FIELD_NAME (disr_type, 0),
+	  else if (strcmp (disr_type->field (0).name (),
 			   "RUST$ENUM$DISR") != 0)
 	    {
 	      /* Not a Rust enum.  */
@@ -9191,7 +9191,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       /* Install the discriminant at index 0 in the union.  */
       type->field (0) = *disr_field;
       TYPE_FIELD_ARTIFICIAL (type, 0) = 1;
-      TYPE_FIELD_NAME (type, 0) = "<<discriminant>>";
+      type->field (0).set_name ("<<discriminant>>");
 
       /* We need a way to find the correct discriminant given a
 	 variant name.  For convenience we build a map here.  */
@@ -9202,7 +9202,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	  if (TYPE_FIELD_LOC_KIND (enum_type, i) == FIELD_LOC_KIND_ENUMVAL)
 	    {
 	      const char *name
-		= rust_last_path_segment (TYPE_FIELD_NAME (enum_type, i));
+		= rust_last_path_segment (enum_type->field (i).name ());
 	      discriminant_map[name] = TYPE_FIELD_ENUMVAL (enum_type, i);
 	    }
 	}
@@ -9241,7 +9241,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	      sub_type->set_num_fields (sub_type->num_fields () - 1);
 	      sub_type->set_fields (sub_type->fields () + 1);
 	    }
-	  TYPE_FIELD_NAME (type, i) = variant_name;
+	  type->field (i).set_name (variant_name);
 	  sub_type->set_name
 	    (rust_fully_qualify (&objfile->objfile_obstack,
 				 type->name (), variant_name));
@@ -9512,7 +9512,7 @@ process_full_comp_unit (dwarf2_cu *cu, enum language pretend_language)
       if (gcc_4_minor >= 5)
 	cust->epilogue_unwind_valid = 1;
 
-      cust->call_site_htab = cu->call_site_htab;
+      cust->set_call_site_htab (cu->call_site_htab);
     }
 
   per_objfile->set_symtab (cu->per_cu, cust);
@@ -13349,7 +13349,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
   struct gdbarch *gdbarch = objfile->arch ();
   CORE_ADDR pc, baseaddr;
   struct attribute *attr;
-  struct call_site *call_site, call_site_local;
+  struct call_site *call_site;
   void **slot;
   int nparams;
   struct die_info *child_die;
@@ -13377,8 +13377,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
     cu->call_site_htab = htab_create_alloc_ex (16, core_addr_hash, core_addr_eq,
 					       NULL, &objfile->objfile_obstack,
 					       hashtab_obstack_allocate, NULL);
-  call_site_local.pc = pc;
-  slot = htab_find_slot (cu->call_site_htab, &call_site_local, INSERT);
+  slot = htab_find_slot (cu->call_site_htab, &pc, INSERT);
   if (*slot != NULL)
     {
       complaint (_("Duplicate PC %s for DW_TAG_call_site "
@@ -14645,7 +14644,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 
       /* The name is already allocated along with this objfile, so we don't
 	 need to duplicate it for the type.  */
-      fp->name = fieldname;
+      fp->set_name (fieldname);
 
       /* Change accessibility for artificial fields (e.g. virtual table
 	 pointer or virtual base class pointer) to private.  */
@@ -14692,7 +14691,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 	 need to duplicate it for the type.  */
       SET_FIELD_PHYSNAME (*fp, physname ? physname : "");
       fp->set_type (die_type (die, cu));
-      FIELD_NAME (*fp) = fieldname;
+      fp->set_name (fieldname);
     }
   else if (die->tag == DW_TAG_inheritance)
     {
@@ -14700,7 +14699,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       handle_member_location (die, cu, fp);
       FIELD_BITSIZE (*fp) = 0;
       fp->set_type (die_type (die, cu));
-      FIELD_NAME (*fp) = fp->type ()->name ();
+      fp->set_name (fp->type ()->name ());
     }
   else
     gdb_assert_not_reached ("missing case in dwarf2_add_field");
@@ -15335,10 +15334,10 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
     return;
 
   /* Check for __pfn and __delta members.  */
-  if (TYPE_FIELD_NAME (type, 0) == NULL
-      || strcmp (TYPE_FIELD_NAME (type, 0), "__pfn") != 0
-      || TYPE_FIELD_NAME (type, 1) == NULL
-      || strcmp (TYPE_FIELD_NAME (type, 1), "__delta") != 0)
+  if (type->field (0).name () == NULL
+      || strcmp (type->field (0).name (), "__pfn") != 0
+      || type->field (1).name () == NULL
+      || strcmp (type->field (1).name (), "__delta") != 0)
     return;
 
   /* Find the type of the method.  */
@@ -15429,10 +15428,10 @@ quirk_ada_thick_pointer_struct (struct die_info *die, struct dwarf2_cu *cu,
     return;
 
   /* Check for P_ARRAY and P_BOUNDS members.  */
-  if (TYPE_FIELD_NAME (type, 0) == NULL
-      || strcmp (TYPE_FIELD_NAME (type, 0), "P_ARRAY") != 0
-      || TYPE_FIELD_NAME (type, 1) == NULL
-      || strcmp (TYPE_FIELD_NAME (type, 1), "P_BOUNDS") != 0)
+  if (type->field (0).name () == NULL
+      || strcmp (type->field (0).name (), "P_ARRAY") != 0
+      || type->field (1).name () == NULL
+      || strcmp (type->field (1).name (), "P_BOUNDS") != 0)
     return;
 
   /* Make sure we're looking at a pointer to an array.  */
@@ -15945,7 +15944,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 		       i >= TYPE_N_BASECLASSES (t);
 		       --i)
 		    {
-		      const char *fieldname = TYPE_FIELD_NAME (t, i);
+		      const char *fieldname = t->field (i).name ();
 
 		      if (is_vtable_name (fieldname, cu))
 			{
@@ -15978,7 +15977,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 		   i >= TYPE_N_BASECLASSES (type);
 		   --i)
 		{
-		  if (strcmp (TYPE_FIELD_NAME (type, i), "__vfp") == 0)
+		  if (strcmp (type->field (i).name (), "__vfp") == 0)
 		    {
 		      set_type_vptr_fieldno (type, i);
 		      set_type_vptr_basetype (type, type);
@@ -16149,7 +16148,7 @@ update_enumeration_type_from_children (struct die_info *die,
 
       fields.emplace_back ();
       struct field &field = fields.back ();
-      FIELD_NAME (field) = dwarf2_physname (name, child_die, cu);
+      field.set_name (dwarf2_physname (name, child_die, cu));
       SET_FIELD_ENUMVAL (field, value);
     }
 
@@ -16523,9 +16522,9 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
 
       /* Set the name of each field in the bounds.  */
       xsnprintf (name, sizeof (name), "LB%d", i / 2);
-      FIELD_NAME (range_fields[i]) = objfile->intern (name);
+      range_fields[i].set_name (objfile->intern (name));
       xsnprintf (name, sizeof (name), "UB%d", i / 2);
-      FIELD_NAME (range_fields[i + 1]) = objfile->intern (name);
+      range_fields[i + 1].set_name (objfile->intern (name));
     }
 
   struct type *bounds = alloc_type (objfile);
@@ -16567,10 +16566,10 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
   /* The names are chosen to coincide with what the compiler does with
      -fgnat-encodings=all, which the Ada code in gdb already
      understands.  */
-  TYPE_FIELD_NAME (result, 0) = "P_ARRAY";
+  result->field (0).set_name ("P_ARRAY");
   result->field (0).set_type (lookup_pointer_type (type));
 
-  TYPE_FIELD_NAME (result, 1) = "P_BOUNDS";
+  result->field (1).set_name ("P_BOUNDS");
   result->field (1).set_type (lookup_pointer_type (bounds));
   SET_FIELD_BITPOS (result->field (1), 8 * bounds_offset);
 

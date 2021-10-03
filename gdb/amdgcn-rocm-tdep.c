@@ -183,7 +183,7 @@ amdgcn_enum_type (struct gdbarch *gdbarch, int bits,
       if (bits == 32 && enumval > std::numeric_limits<uint32_t>::max ())
 	TYPE_LENGTH (enum_type) = (bits = 64) / TARGET_CHAR_BIT;
 
-      TYPE_FIELD_NAME (enum_type, i) = xstrdup (match[1].str ().c_str ());
+      enum_type->field (i).set_name (xstrdup (match[1].str ().c_str ()));
       SET_FIELD_ENUMVAL (enum_type->field (i), enumval);
     }
 

@@ -9051,6 +9051,18 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
                    | AARCH64_FEATURE_RCPC
                    | AARCH64_FEATURE_SSBS),
    "Cortex-A78C"},
+  {"cortex-a510", AARCH64_FEATURE (AARCH64_ARCH_V9,
+                  AARCH64_FEATURE_BFLOAT16
+                  | AARCH64_FEATURE_I8MM
+                  | AARCH64_FEATURE_MEMTAG
+                  | AARCH64_FEATURE_SVE2_BITPERM),
+   "Cortex-A510"},
+  {"cortex-a710", AARCH64_FEATURE (AARCH64_ARCH_V9,
+                  AARCH64_FEATURE_BFLOAT16
+                  | AARCH64_FEATURE_I8MM
+                  | AARCH64_FEATURE_MEMTAG
+                  | AARCH64_FEATURE_SVE2_BITPERM),
+   "Cortex-A710"},
   {"ares", AARCH64_FEATURE (AARCH64_ARCH_V8_2,
 				  AARCH64_FEATURE_RCPC | AARCH64_FEATURE_F16
 				  | AARCH64_FEATURE_DOTPROD
@@ -9120,6 +9132,12 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
                 | AARCH64_FEATURE_SSBS
                 | AARCH64_FEATURE_PROFILE),
                 "Cortex-X1"},
+  {"cortex-x2", AARCH64_FEATURE (AARCH64_ARCH_V9,
+                AARCH64_FEATURE_BFLOAT16
+                | AARCH64_FEATURE_I8MM
+                | AARCH64_FEATURE_MEMTAG
+                | AARCH64_FEATURE_SVE2_BITPERM),
+                "Cortex-X2"},
   {"generic", AARCH64_ARCH_V8, NULL},
 
   {NULL, AARCH64_ARCH_NONE, NULL}
@@ -9144,6 +9162,7 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"armv8.6-a", AARCH64_ARCH_V8_6},
   {"armv8.7-a", AARCH64_ARCH_V8_7},
   {"armv8-r",	AARCH64_ARCH_V8_R},
+  {"armv9-a",	AARCH64_ARCH_V9},
   {NULL, AARCH64_ARCH_NONE}
 };
 
