@@ -1345,17 +1345,20 @@ set_pspace_remote_exec_file (program_space *pspace, const std::string &value)
 /* Setter for the "remote exec-file" setting.  */
 
 static void
-set_remote_exec_file (std::string value)
+set_remote_exec_file (const std::string &value)
 {
   set_pspace_remote_exec_file (current_program_space, value);
 }
 
 /* Getter for the "remote exec-file" setting.  */
 
-static std::string
+static const std::string &
 get_remote_exec_file_std_str ()
 {
-  return get_remote_exec_file ();
+  /* Until we convert get_remote_exec_file to return an std::string.  */
+  static std::string scratch;
+  scratch = get_remote_exec_file ();
+  return scratch;
 }
 
 static int
@@ -2229,12 +2232,13 @@ show_remote_protocol_packet_cmd (struct ui_file *file, int from_tty,
 				 const char *value)
 {
   struct packet_config *packet;
+  gdb_assert (c->var.has_value ());
 
   for (packet = remote_protocol_packets;
        packet < &remote_protocol_packets[PACKET_MAX];
        packet++)
     {
-      if (&packet->detect == c->var->get_p<enum auto_boolean> ())
+      if (&packet->detect == &c->var->get<enum auto_boolean> ())
 	{
 	  show_packet_config_cmd (packet);
 	  return;

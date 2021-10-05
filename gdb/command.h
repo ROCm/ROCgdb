@@ -132,7 +132,7 @@ var_types;
    parameter is not a type used to back a var_type and it is most likely a
    programming error.  */
 template<typename T>
-inline bool var_type_uses (var_types var_type);
+bool var_type_uses (var_types var_type) = delete;
 
 /* Return true if a setting of type T is backed by a bool variable.  */
 template<>
@@ -184,12 +184,16 @@ inline bool var_type_uses<const char *> (var_types t)
 /* Function signature for a callback used to get a value from a setting.  */
 
 template<typename T>
-using setting_getter_ftype = T (*) ();
+using setting_getter_ftype = const T &(*) ();
 
 /* Function signature for a callback used to set a value to a setting.  */
 
 template<typename T>
-using setting_setter_ftype = void (*) (T);
+using setting_setter_ftype = void (*) (const T &);
+
+/* Generic/type-erased function pointer.  */
+
+using erased_func = void (*) ();
 
 /* Interface for getting and setting a setting's value.
 
@@ -207,7 +211,51 @@ struct setting
     gdb_assert (var_type_uses<T> (var_type));
   }
 
-  /* Create a setting backed by setter and getter functions
+  /* A setting can also be constructed with a pre-validated
+     type-erased variable.  Use the following function to
+     validate & type-erase said variable/function pointers.  */
+
+  struct erased_args
+  {
+    void *var;
+    erased_func setter;
+    erased_func getter;
+  };
+
+  template<typename T>
+  static erased_args erase_args (var_types var_type,
+				 T *var,
+				 setting_setter_ftype<T> set_setting_func,
+				 setting_getter_ftype<T> get_setting_func)
+  {
+    gdb_assert (var_type_uses<T> (var_type));
+  /* The getter and the setter must be both provided or both omitted.  */
+    gdb_assert
+      ((set_setting_func == nullptr) == (get_setting_func == nullptr));
+
+  /* The caller must provide a pointer to a variable or get/set functions, but
+     not both.  */
+    gdb_assert ((set_setting_func == nullptr) != (var == nullptr));
+
+    return {
+	var,
+	reinterpret_cast<erased_func> (set_setting_func),
+	reinterpret_cast<erased_func> (get_setting_func)
+    };
+  }
+
+  /* Create a setting backed by pre-validated type-erased args.
+     ERASED_VAR's fields' real types must match the var type VAR_TYPE
+     (see VAR_TYPE_USES).  */
+  setting (var_types var_type, const erased_args &args)
+    : m_var_type (var_type),
+      m_var (args.var),
+      m_getter (args.getter),
+      m_setter (args.setter)
+  {
+  }
+
+  /* Create a setting backed by setter and getter functions.
 
      Type T must match the var type VAR_TYPE (see VAR_TYPE_USES).  */
   template<typename T>
@@ -224,40 +272,23 @@ struct setting
     gdb_static_assert (sizeof (m_getter) == sizeof (getter));
     gdb_static_assert (sizeof (m_setter) == sizeof (setter));
 
-    m_getter = reinterpret_cast<void (*) ()> (getter);
-    m_setter = reinterpret_cast<void (*) ()> (setter);
+    m_getter = reinterpret_cast<erased_func> (getter);
+    m_setter = reinterpret_cast<erased_func> (setter);
   }
 
-  /* Access the type of the current var.  */
+  /* Access the type of the current setting.  */
   var_types type () const
   { return m_var_type; }
 
-  /* Return the current value (by pointer).
+  /* Return the current value.
 
      The template parameter T is the type of the variable used to store the
-     setting.
-
-     The returned value cannot be NULL (this is checked at runtime).  */
+     setting.  */
   template<typename T>
-  T const *
-  get_p () const
+  const T &get () const
   {
     gdb_assert (var_type_uses<T> (m_var_type));
     gdb_assert (m_var != nullptr);
-
-    return static_cast<T const *> (m_var);
-  }
-
-  /* Return the current value.
-
-     If we have a user-provided getter, use it to get the setting's value.
-     Otherwise, return the value from the internally referenced buffer.
-
-     See get_p for discussion on the return type and template parameters.  */
-  template<typename T>
-  T get () const
-  {
-    gdb_assert (var_type_uses<T> (m_var_type));
 
     if (m_var == nullptr)
       {
@@ -266,10 +297,12 @@ struct setting
 	return getter ();
       }
     else
-      return *get_p<T> ();
+      return *static_cast<const T *> (m_var);
   }
 
-  /* Sets the value of the setting to V.
+  /* Sets the value of the setting to V.  Returns true if the setting was
+     effectively changed, false if the update failed and the setting is left
+     unchanged.
 
      If we have a user-provided setter, use it to set the setting.  Otherwise
      copy the value V to the internally referenced buffer.
@@ -279,7 +312,7 @@ struct setting
 
      The var_type of the setting must match T.  */
   template<typename T>
-  bool set (T v)
+  bool set (const T &v)
   {
     /* Check that the current instance is of one of the supported types for
        this instantiation.  */
@@ -303,7 +336,7 @@ struct setting
   void set_effective_value_getter (setting_getter_ftype<T> getter)
   {
     gdb_assert (var_type_uses<T> (m_var_type));
-    m_effective_getter = reinterpret_cast<void (*) ()> (getter);
+    m_effective_getter = reinterpret_cast<erased_func> (getter);
   }
 
   template<typename T>
@@ -329,13 +362,13 @@ private:
   void *m_var = nullptr;
 
   /* Pointer to a user provided getter.  */
-  void (*m_getter) () = nullptr;
+  erased_func m_getter = nullptr;
 
   /* Pointer to a user provided setter.  */
-  void (*m_setter) () = nullptr;
+  erased_func m_setter = nullptr;
 
   /* Pointer to a user provided effective value getter.  */
-  void (*m_effective_getter) () = nullptr;
+  erased_func m_effective_getter = nullptr;
 };
 
 /* This structure records one command'd definition.  */

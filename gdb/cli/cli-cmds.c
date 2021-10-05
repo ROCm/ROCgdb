@@ -246,6 +246,7 @@ with_command_1 (const char *set_cmd_prefix,
   if (nested_cmd == nullptr)
     nested_cmd = skip_spaces (delim + 2);
 
+  gdb_assert (set_cmd->var.has_value ());
   std::string org_value = get_setshow_command_value_string (*set_cmd->var);
 
   /* Tweak the setting to the new temporary value.  */
@@ -2155,14 +2156,22 @@ value_from_setting (const setting &var, struct gdbarch *gdbarch)
     case var_filename:
     case var_enum:
       {
-        std::string value;
+	const char *value;
+	size_t len;
 	if (var.type () == var_enum)
-	  value = var.get<const char *> ();
+	  {
+	    value = var.get<const char *> ();
+	    len = strlen (value);
+	  }
 	else
-	  value = var.get<std::string> ();
+	  {
+	    const std::string &st = var.get<std::string> ();
+	    value = st.c_str ();
+	    len = st.length ();
+	  }
 
-	if (!value.empty ())
-	  return value_cstring (value.c_str (), value.length (),
+	if (len > 0)
+	  return value_cstring (value, len,
 				builtin_type (gdbarch)->builtin_char);
 	else
 	  return value_cstring ("", 1,
@@ -2231,17 +2240,25 @@ str_value_from_setting (const setting &var, struct gdbarch *gdbarch)
     case var_enum:
       /* For these cases, we do not use get_setshow_command_value_string,
 	 as this function handle some characters specially, e.g. by
-	 escaping quotevar.  So, we directly use the cmd->var string value,
+	 escaping quotevar.  So, we directly use the var string value,
 	 similarly to the value_from_setting code for these casevar.  */
       {
-        std::string value;
+	const char *value;
+	size_t len;
 	if (var.type () == var_enum)
-	  value = var.get<const char *> ();
+	  {
+	    value = var.get<const char *> ();
+	    len = strlen (value);
+	  }
 	else
-	  value = var.get<std::string> ();
+	  {
+	    const std::string &st = var.get<std::string> ();
+	    value = st.c_str ();
+	    len = st.length ();
+	  }
 
-	if (!value.empty ())
-	  return value_cstring (value.c_str (), value.length (),
+	if (len > 0)
+	  return value_cstring (value, len,
 				builtin_type (gdbarch)->builtin_char);
 	else
 	  return value_cstring ("", 1,

@@ -466,15 +466,12 @@ empty_func (const char *args, int from_tty, cmd_list_element *c)
    the setting value.
    DOC is the documentation string.  */
 
-template<typename T>
 static struct cmd_list_element *
 add_set_or_show_cmd (const char *name,
 		     enum cmd_types type,
 		     enum command_class theclass,
 		     var_types var_type,
-		     T *var,
-		     setting_setter_ftype<T> set_setting_func,
-		     setting_getter_ftype<T> get_setting_func,
+		     const setting::erased_args &arg,
 		     const char *doc,
 		     struct cmd_list_element **list)
 {
@@ -482,18 +479,7 @@ add_set_or_show_cmd (const char *name,
 
   gdb_assert (type == set_cmd || type == show_cmd);
   c->type = type;
-
-  /* The getter and the setter must be both provided or both omitted.  */
-  gdb_assert ((set_setting_func == nullptr) == (get_setting_func == nullptr));
-
-  /* The caller must provide a pointer to a variable or get/set functions, but
-     not both.  */
-  gdb_assert ((var == nullptr) != (set_setting_func == nullptr));
-
-  if (var != nullptr)
-    c->var.emplace (var_type, var);
-  else
-    c->var.emplace (var_type, set_setting_func, get_setting_func);
+  c->var.emplace (var_type, arg);
 
   /* This needs to be something besides NULL so that this isn't
      treated as a help class.  */
@@ -512,19 +498,17 @@ add_set_or_show_cmd (const char *name,
 
    Return the newly created set and show commands.  */
 
-template<typename T>
 static set_show_commands
-add_setshow_cmd_full (const char *name,
-		      enum command_class theclass,
-		      var_types var_type, T *var,
-		      const char *set_doc, const char *show_doc,
-		      const char *help_doc,
-		      setting_setter_ftype<T> set_setting_func,
-		      setting_getter_ftype<T> get_setting_func,
-		      cmd_func_ftype *set_func,
-		      show_value_ftype *show_func,
-		      struct cmd_list_element **set_list,
-		      struct cmd_list_element **show_list)
+add_setshow_cmd_full_erased (const char *name,
+			     enum command_class theclass,
+			     var_types var_type,
+			     const setting::erased_args &args,
+			     const char *set_doc, const char *show_doc,
+			     const char *help_doc,
+			     cmd_func_ftype *set_func,
+			     show_value_ftype *show_func,
+			     struct cmd_list_element **set_list,
+			     struct cmd_list_element **show_list)
 {
   struct cmd_list_element *set;
   struct cmd_list_element *show;
@@ -541,17 +525,15 @@ add_setshow_cmd_full (const char *name,
       full_set_doc = xstrdup (set_doc);
       full_show_doc = xstrdup (show_doc);
     }
-  set = add_set_or_show_cmd<T> (name, set_cmd, theclass, var_type, var,
-				set_setting_func, get_setting_func,
-				full_set_doc, set_list);
+  set = add_set_or_show_cmd (name, set_cmd, theclass, var_type, args,
+			     full_set_doc, set_list);
   set->doc_allocated = 1;
 
   if (set_func != NULL)
     set->func = set_func;
 
-  show = add_set_or_show_cmd<T> (name, show_cmd, theclass, var_type, var,
-				 set_setting_func, get_setting_func,
-				 full_show_doc, show_list);
+  show = add_set_or_show_cmd (name, show_cmd, theclass, var_type, args,
+			      full_show_doc, show_list);
   show->doc_allocated = 1;
   show->show_value_func = show_func;
   /* Disable the default symbol completer.  Doesn't make much sense
@@ -559,6 +541,35 @@ add_setshow_cmd_full (const char *name,
   set_cmd_completer (show, nullptr);
 
   return {set, show};
+}
+
+template<typename T>
+static set_show_commands
+add_setshow_cmd_full (const char *name,
+		      enum command_class theclass,
+		      var_types var_type, T *var,
+		      const char *set_doc, const char *show_doc,
+		      const char *help_doc,
+		      setting_setter_ftype<T> set_setting_func,
+		      setting_getter_ftype<T> get_setting_func,
+		      cmd_func_ftype *set_func,
+		      show_value_ftype *show_func,
+		      struct cmd_list_element **set_list,
+		      struct cmd_list_element **show_list)
+{
+  auto erased_args
+    = setting::erase_args (var_type, var,
+			   set_setting_func, get_setting_func);
+
+  return add_setshow_cmd_full_erased (name,
+				      theclass,
+				      var_type, erased_args,
+				      set_doc, show_doc,
+				      help_doc,
+				      set_func,
+				      show_func,
+				      set_list,
+				      show_list);
 }
 
 /* Add element named NAME to command list LIST (the list for set or
@@ -887,7 +898,7 @@ add_setshow_optional_filename_cmd (const char *name, enum command_class theclass
 					 var, set_doc, show_doc, help_doc,
 					 nullptr, nullptr, set_func, show_func,
 					 set_list, show_list);
-		
+
   set_cmd_completer (commands.set, filename_completer);
 
   return commands;

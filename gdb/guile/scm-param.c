@@ -599,7 +599,7 @@ pascm_param_value (const setting &var, int arg_pos, const char *func_name)
     case var_optional_filename:
     case var_filename:
       {
-	const std::string str = var.get<std::string> ();
+	const std::string &str = var.get<std::string> ();
 	return gdbscm_scm_from_host_string (str.c_str (), str.length ());
       }
 

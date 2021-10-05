@@ -224,7 +224,7 @@ struct cmd_list_element
      used to finalize the CONTEXT field, if needed.  */
   void (*destroyer) (struct cmd_list_element *self, void *context) = nullptr;
 
-  /* Setting affected by "set" and "show".  Not used if type is not_set.  */
+  /* Setting affected by "set" and "show".  Not used if type is not_set_cmd.  */
   gdb::optional<setting> var;
 
   /* Pointer to NULL terminated list of enumerated values (like

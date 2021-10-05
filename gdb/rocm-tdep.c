@@ -2446,7 +2446,7 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
 }
 
 static void
-set_precise_memory_mode (bool value)
+set_precise_memory_mode (const bool &value)
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
@@ -2467,14 +2467,14 @@ set_precise_memory_mode (bool value)
     }
 }
 
-static bool
+static const bool &
 get_precise_memory_mode ()
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
   return info->precise_memory.requested;
 }
 
-static bool
+static const bool &
 get_effective_precise_memory_mode ()
 {
   rocm_inferior_info *info = get_rocm_inferior_info ();

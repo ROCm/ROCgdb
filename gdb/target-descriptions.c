@@ -1280,7 +1280,7 @@ static struct cmd_list_element *tdesc_unset_cmdlist;
 /* Setter for the "tdesc filename" setting.  */
 
 static void
-set_tdesc_filename (std::string value)
+set_tdesc_filename (const std::string &value)
 {
   target_desc_info *tdesc_info = get_tdesc_info (current_inferior ());
 
@@ -1291,7 +1291,7 @@ set_tdesc_filename (std::string value)
 
 /* Getter for the "tdesc filename" setting.  */
 
-static std::string
+static const std::string &
 get_tdesc_filename ()
 {
   return get_tdesc_info (current_inferior ())->filename;

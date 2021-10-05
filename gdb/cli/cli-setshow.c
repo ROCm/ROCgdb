@@ -630,7 +630,7 @@ get_setshow_command_value_string (const setting &var)
     case var_uinteger:
     case var_zuinteger:
       {
-	unsigned int const value = var.get<unsigned int> ();
+	const unsigned int value = var.get<unsigned int> ();
 
 	if (var.type () == var_uinteger
 	    && value == UINT_MAX)
@@ -642,7 +642,7 @@ get_setshow_command_value_string (const setting &var)
     case var_integer:
     case var_zinteger:
       {
-	int const value = var.get<int> ();
+	const int value = var.get<int> ();
 
 	if (var.type () == var_integer
 	    && value == INT_MAX)
@@ -653,7 +653,7 @@ get_setshow_command_value_string (const setting &var)
       break;
     case var_zuinteger_unlimited:
       {
-	int const value = var.get<int> ();
+	const int value = var.get<int> ();
 	if (value == -1)
 	  stb.puts ("unlimited");
 	else

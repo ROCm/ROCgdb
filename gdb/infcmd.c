@@ -85,14 +85,14 @@ int stopped_by_random_signal;
 /* Setter for the "inferior-tty" setting.  */
 
 static void
-set_inferior_tty (std::string value)
+set_inferior_tty (const std::string &value)
 {
-  current_inferior ()->set_tty (std::move (value));
+  current_inferior ()->set_tty (value);
 }
 
 /* Getter for the "inferior-tty" setting.  */
 
-static std::string
+static const std::string &
 get_inferior_tty ()
 {
   return current_inferior ()->tty ();
@@ -118,14 +118,14 @@ set_inferior_args_vector (int argc, char **argv)
 /* Setter for the "args" setting.  */
 
 static void
-set_args_command (std::string value)
+set_args_command (const std::string &value)
 {
   current_inferior ()->set_args (std::move (value));
 }
 
 /* Getter for the "args" setting.  */
 
-static std::string
+static const std::string &
 get_args ()
 {
   return current_inferior ()->args ();
@@ -142,17 +142,9 @@ get_inferior_cwd ()
 /* Setter for the "cwd" setting.  */
 
 static void
-set_cwd (std::string value)
+set_cwd (const std::string &value)
 {
-  current_inferior ()->set_cwd (std::move (value));
-}
-
-/* Getter for the "cwd" setting.  */
-
-static std::string
-get_cwd ()
-{
-  return current_inferior ()->cwd ();
+  current_inferior ()->set_cwd (value);
 }
 
 /* Handle the 'show cwd' command.  */
@@ -3004,7 +2996,7 @@ Use this command to change the current working directory that will be used\n\
 when the inferior is started.  This setting does not affect GDB's current\n\
 working directory."),
 				   set_cwd,
-				   get_cwd,
+				   get_inferior_cwd,
 				   show_cwd_command,
 				   &setlist, &showlist);
   c = lookup_cmd (&cmd_name, setlist, "", NULL, -1, 1);
