@@ -6520,6 +6520,10 @@ eval ac_res=\$$cachevar
 $as_echo "$ac_res" >&6; }
       if eval test x\$$cachevar = xyes; then
         CXX_DIALECT="$switch"
+        CXX="$CXX $switch"
+        if test -n "$CXXCPP" ; then
+          CXXCPP="$CXXCPP $switch"
+        fi
         ac_success=yes
         break
       fi
@@ -6839,6 +6843,10 @@ eval ac_res=\$$cachevar
 $as_echo "$ac_res" >&6; }
         if eval test x\$$cachevar = xyes; then
           CXX_DIALECT="$switch"
+          CXX="$CXX $switch"
+          if test -n "$CXXCPP" ; then
+            CXXCPP="$CXXCPP $switch"
+          fi
           ac_success=yes
           break
         fi
@@ -10284,13 +10292,6 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-
-
-TARGET_WORD_SIZE=`sed -n 's,#define BFD_ARCH_SIZE \(.*\)$,\1,p' ../bfd/bfd-in3.h`
-
-cat >>confdefs.h <<_ACEOF
-#define TARGET_WORD_SIZE $TARGET_WORD_SIZE
-_ACEOF
 
 
 case ${host} in

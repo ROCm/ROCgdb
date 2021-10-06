@@ -37,6 +37,7 @@
 #include "cp-support.h"
 #include "bcache.h"
 #include "dwarf2/loc.h"
+#include "dwarf2/read.h"
 #include "gdbcore.h"
 #include "floatformat.h"
 #include "f-lang.h"
@@ -3077,8 +3078,8 @@ check_stub_method (struct type *type, int method_id, int signature_id)
   struct gdbarch *gdbarch = type->arch ();
   struct fn_field *f;
   char *mangled_name = gdb_mangle_name (type, method_id, signature_id);
-  char *demangled_name = gdb_demangle (mangled_name,
-				       DMGL_PARAMS | DMGL_ANSI);
+  gdb::unique_xmalloc_ptr<char> demangled_name
+    = gdb_demangle (mangled_name, DMGL_PARAMS | DMGL_ANSI);
   char *argtypetext, *p;
   int depth = 0, argcount = 1;
   struct field *argtypes;
@@ -3086,7 +3087,7 @@ check_stub_method (struct type *type, int method_id, int signature_id)
 
   /* Make sure we got back a function string that we can use.  */
   if (demangled_name)
-    p = strchr (demangled_name, '(');
+    p = strchr (demangled_name.get (), '(');
   else
     p = NULL;
 
@@ -3177,8 +3178,6 @@ check_stub_method (struct type *type, int method_id, int signature_id)
 			argtypes, argcount, p[-2] == '.');
   mtype->set_is_stub (false);
   TYPE_FN_FIELD_STUB (f, signature_id) = 0;
-
-  xfree (demangled_name);
 }
 
 /* This is the external interface to check_stub_method, above.  This
@@ -6306,6 +6305,17 @@ objfile_type (struct objfile *objfile)
 
   objfile_type_data.set (objfile, objfile_type);
   return objfile_type;
+}
+
+/* See gdbtypes.h.  */
+
+CORE_ADDR
+call_site::pc () const
+{
+  compunit_symtab *cust = this->per_objfile->get_symtab (this->per_cu);
+  CORE_ADDR delta
+	= this->per_objfile->objfile->section_offsets[COMPUNIT_BLOCK_LINE_SECTION (cust)];
+  return m_unrelocated_pc + delta;
 }
 
 void _initialize_gdbtypes ();

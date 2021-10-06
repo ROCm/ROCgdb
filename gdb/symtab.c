@@ -337,7 +337,13 @@ compunit_symtab::find_call_site (CORE_ADDR pc) const
   if (m_call_site_htab == nullptr)
     return nullptr;
 
-  void **slot = htab_find_slot (m_call_site_htab, &pc, NO_INSERT);
+  CORE_ADDR delta
+    = this->objfile->section_offsets[COMPUNIT_BLOCK_LINE_SECTION (this)];
+  CORE_ADDR unrelocated_pc = pc - delta;
+
+  struct call_site call_site_local (unrelocated_pc, nullptr, nullptr);
+  void **slot
+    = htab_find_slot (m_call_site_htab, &call_site_local, NO_INSERT);
   if (slot == nullptr)
     return nullptr;
 
@@ -815,11 +821,11 @@ create_demangled_names_hash (struct objfile_per_bfd_storage *per_bfd)
 
 /* See symtab.h  */
 
-char *
+gdb::unique_xmalloc_ptr<char>
 symbol_find_demangled_name (struct general_symbol_info *gsymbol,
 			    const char *mangled)
 {
-  char *demangled = NULL;
+  gdb::unique_xmalloc_ptr<char> demangled;
   int i;
 
   if (gsymbol->language () == language_unknown)
@@ -925,8 +931,8 @@ general_symbol_info::compute_and_set_names (gdb::string_view linkage_name,
 	linkage_name_copy = linkage_name;
 
       if (demangled_name.get () == nullptr)
-	 demangled_name.reset
-	   (symbol_find_demangled_name (this, linkage_name_copy.data ()));
+	 demangled_name
+	   = symbol_find_demangled_name (this, linkage_name_copy.data ());
 
       /* Suppose we have demangled_name==NULL, copy_name==0, and
 	 linkage_name_copy==linkage_name.  In this case, we already have the
@@ -1852,9 +1858,10 @@ demangle_for_lookup (const char *name, enum language lang,
      lookup, so we can always binary search.  */
   if (lang == language_cplus)
     {
-      char *demangled_name = gdb_demangle (name, DMGL_ANSI | DMGL_PARAMS);
+      gdb::unique_xmalloc_ptr<char> demangled_name
+	= gdb_demangle (name, DMGL_ANSI | DMGL_PARAMS);
       if (demangled_name != NULL)
-	return storage.set_malloc_ptr (demangled_name);
+	return storage.set_malloc_ptr (std::move (demangled_name));
 
       /* If we were given a non-mangled name, canonicalize it
 	 according to the language (so far only for C++).  */
@@ -1864,16 +1871,16 @@ demangle_for_lookup (const char *name, enum language lang,
     }
   else if (lang == language_d)
     {
-      char *demangled_name = d_demangle (name, 0);
+      gdb::unique_xmalloc_ptr<char> demangled_name = d_demangle (name, 0);
       if (demangled_name != NULL)
-	return storage.set_malloc_ptr (demangled_name);
+	return storage.set_malloc_ptr (std::move (demangled_name));
     }
   else if (lang == language_go)
     {
-      char *demangled_name
+      gdb::unique_xmalloc_ptr<char> demangled_name
 	= language_def (language_go)->demangle_symbol (name, 0);
       if (demangled_name != NULL)
-	return storage.set_malloc_ptr (demangled_name);
+	return storage.set_malloc_ptr (std::move (demangled_name));
     }
 
   return name;
