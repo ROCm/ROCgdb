@@ -321,6 +321,9 @@ write_closure_value (value *to, value *from);
 static void
 read_closure_value (value *v);
 
+static bool
+is_optimized_out_closure_value (value *v);
+
 static value *
 indirect_closure_value (value *value);
 
@@ -333,6 +336,7 @@ coerce_closure_ref (const value *value);
 static const lval_funcs closure_value_funcs = {
   read_closure_value,
   write_closure_value,
+  is_optimized_out_closure_value,
   indirect_closure_value,
   coerce_closure_ref,
   check_synthetic_pointer,
@@ -603,6 +607,21 @@ public:
 					int bit_length = 0) const
   {
     return nullptr;
+  }
+
+/* Check if location description resolves into optimized out.
+
+   The check operation is performed in the context of a FRAME.
+   BIG_ENDIAN defines the endianness of the target, BIT_SIZE is the
+   number of bits to read and BITS_TO_SKIP is a bit offset into the
+   location.  LOCATION_BIT_LIMIT is a maximum number of bits that
+   location can hold, where value zero signifies that there is
+   no such restriction.  */
+  virtual bool is_optimized_out (frame_info *frame, bool big_endian,
+				 LONGEST bits_to_skip, size_t bit_size,
+				 size_t location_bit_limit) const
+  {
+    return false;
   }
 
 protected:
@@ -891,6 +910,13 @@ public:
     mark_value_bytes_optimized_out (retval, subobj_offset,
 				    TYPE_LENGTH (subobj_type));
     return retval;
+  }
+
+  bool is_optimized_out (frame_info *frame, bool big_endian,
+			 LONGEST bits_to_skip, size_t bit_size,
+			 size_t location_bit_limit) const override
+  {
+    return true;
   }
 };
 
@@ -1195,6 +1221,10 @@ public:
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
 
+  bool is_optimized_out (frame_info *frame, bool big_endian,
+			 LONGEST bits_to_skip, size_t bit_size,
+			 size_t location_bit_limit) const override;
+
 private:
   /* DWARF register number.  */
   unsigned int m_regnum;
@@ -1346,6 +1376,24 @@ dwarf_register::to_gdb_value (frame_info *frame, struct type *type,
     }
 
   return retval;
+}
+
+bool
+dwarf_register::is_optimized_out (frame_info *frame, bool big_endian,
+				  LONGEST bits_to_skip, size_t bit_size,
+				  size_t location_bit_limit) const
+{
+  int optimized, unavailable;
+  gdb::byte_vector temp_buf (bit_size);
+
+  this->read (frame, temp_buf.data (), 0, bit_size,
+	      bits_to_skip, location_bit_limit,
+	      big_endian, &optimized, &unavailable);
+
+  if (optimized)
+    return true;
+
+  return false;
 }
 
 /* Implicit location description entry.  Describes a location
@@ -1709,6 +1757,10 @@ public:
   value *to_gdb_value (frame_info *frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
+
+  bool is_optimized_out (frame_info *frame, bool big_endian,
+			 LONGEST bits_to_skip, size_t bit_size,
+			 size_t location_bit_limit) const override;
 
 private:
   /* Composite piece that contains a piece location
@@ -2086,6 +2138,48 @@ dwarf_composite::to_gdb_value (frame_info *frame, struct type *type,
   return retval;
 }
 
+bool
+dwarf_composite::is_optimized_out (frame_info *frame, bool big_endian,
+				   LONGEST bits_to_skip, size_t bit_size,
+				   size_t location_bit_limit) const
+{
+  ULONGEST total_bits_to_skip
+    = bits_to_skip + HOST_CHAR_BIT * m_offset + m_bit_suboffset;
+  ULONGEST remaining_bit_size = bit_size;
+  unsigned int pieces_num = m_pieces.size ();
+  unsigned int i;
+
+  /* Advance to the first non-skipped piece.  */
+  for (i = 0; i < pieces_num; i++)
+    {
+      ULONGEST piece_bit_size = m_pieces[i].m_size;
+
+      if (total_bits_to_skip < piece_bit_size)
+	break;
+
+      total_bits_to_skip -= piece_bit_size;
+    }
+
+  for (; i < pieces_num; i++)
+    {
+      auto location = m_pieces[i].m_location;
+      ULONGEST piece_bit_size = m_pieces[i].m_size;
+      size_t this_bit_size = piece_bit_size - total_bits_to_skip;
+
+      if (this_bit_size > remaining_bit_size)
+	this_bit_size = remaining_bit_size;
+
+      if (location->is_optimized_out (frame, big_endian, total_bits_to_skip,
+				      this_bit_size, piece_bit_size))
+	return true;
+
+      remaining_bit_size -= this_bit_size;
+      total_bits_to_skip = 0;
+    }
+
+  return false;
+}
+
 /* Set of functions that perform different arithmetic operations
    on a given DWARF value arguments.
 
@@ -2253,6 +2347,45 @@ rw_closure_value (value *v, value *from)
       location->read_from_gdb_value (frame, from, bit_offset, bits_to_skip,
 				     max_bit_size - bit_offset, 0);
     }
+}
+
+/* Read or write a closure value V.  If FROM != NULL, operate in "write
+   mode": copy FROM into the closure comprising V.  If FROM == NULL,
+   operate in "read mode": fetch the contents of the (lazy) value V by
+   composing it from its closure.  */
+
+static bool
+is_optimized_out_closure_value (value *v)
+{
+  LONGEST max_bit_size;
+  computed_closure *closure = (computed_closure*) value_computed_closure (v);
+  bool big_endian = type_byte_order (value_type (v)) == BFD_ENDIAN_BIG;
+  auto location = closure->get_location ();
+
+  if (value_type (v) != value_enclosing_type (v))
+    internal_error (__FILE__, __LINE__,
+		    _("Should not be able to create a lazy value with "
+		      "an enclosing type"));
+
+  ULONGEST bits_to_skip = HOST_CHAR_BIT * value_offset (v);
+
+  /* If there are bits that don't complete a byte, count them in.  */
+  if (value_bitsize (v))
+    {
+      bits_to_skip += HOST_CHAR_BIT * value_offset (value_parent (v))
+		      + value_bitpos (v);
+      max_bit_size = value_bitsize (v);
+    }
+  else
+    max_bit_size = HOST_CHAR_BIT * TYPE_LENGTH (value_type (v));
+
+  frame_info *frame = closure->get_frame ();
+
+  if (frame == NULL)
+    frame = frame_find_by_id (closure->get_frame_id ());
+
+  return location->is_optimized_out (frame, big_endian, bits_to_skip,
+				     max_bit_size, 0);
 }
 
 static void
