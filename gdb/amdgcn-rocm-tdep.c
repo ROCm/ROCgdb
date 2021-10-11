@@ -184,7 +184,7 @@ amdgcn_enum_type (struct gdbarch *gdbarch, int bits,
 	TYPE_LENGTH (enum_type) = (bits = 64) / TARGET_CHAR_BIT;
 
       enum_type->field (i).set_name (xstrdup (match[1].str ().c_str ()));
-      SET_FIELD_ENUMVAL (enum_type->field (i), enumval);
+      enum_type->field (i).set_loc_enumval (enumval);
     }
 
   tdep->type_map.emplace (type_name, enum_type);

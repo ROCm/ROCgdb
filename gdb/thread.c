@@ -1860,9 +1860,9 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
       /* Switch to the lane on which the command is executed.  */
       thr->set_current_simd_lane (lane);
 
-      std::string cmd_result
-	= execute_command_to_string (cmd, from_tty,
-				     gdb_stdout->term_out ());
+      std::string cmd_result;
+      execute_command_to_string
+	(cmd_result, cmd, from_tty, gdb_stdout->term_out ());
 
       if (!flags.silent || cmd_result.length () > 0)
 	{

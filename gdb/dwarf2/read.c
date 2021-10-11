@@ -9095,7 +9095,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       type->field (0).set_type (field_type);
       TYPE_FIELD_ARTIFICIAL (type, 0) = 1;
       type->field (0).set_name ("<<discriminant>>");
-      SET_FIELD_BITPOS (type->field (0), bit_offset);
+      type->field (0).set_loc_bitpos (bit_offset);
 
       /* The order of fields doesn't really matter, so put the real
 	 field at index 1 and the data-less field at index 2.  */
@@ -9115,7 +9115,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       /* NAME points into the original discriminant name, which
 	 already has the correct lifetime.  */
       type->field (2).set_name (name);
-      SET_FIELD_BITPOS (type->field (2), 0);
+      type->field (2).set_loc_bitpos (0);
 
       /* Indicate that this is a variant type.  */
       static discriminant_range ranges[1] = { { 0, 0 } };
@@ -13477,7 +13477,8 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
       /* This was a pre-DWARF-5 GNU extension alias for DW_AT_call_origin.  */
       attr = dwarf2_attr (die, DW_AT_abstract_origin, cu);
     }
-  SET_FIELD_DWARF_BLOCK (call_site->target, NULL);
+
+  call_site->target.set_loc_dwarf_block (nullptr);
   if (!attr || (attr->form_is_block () && attr->as_block ()->size == 0))
     /* Keep NULL DWARF_BLOCK.  */;
   else if (attr->form_is_block ())
@@ -13491,7 +13492,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
       dlbaton->per_objfile = per_objfile;
       dlbaton->per_cu = cu->per_cu;
 
-      SET_FIELD_DWARF_BLOCK (call_site->target, dlbaton);
+      call_site->target.set_loc_dwarf_block (dlbaton);
     }
   else if (attr->form_is_ref ())
     {
@@ -13513,7 +13514,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 			 "physname, for referencing DIE %s [in module %s]"),
 		       sect_offset_str (die->sect_off), objfile_name (objfile));
 	  else
-	    SET_FIELD_PHYSNAME (call_site->target, target_physname);
+	    call_site->target.set_loc_physname (target_physname);
 	}
       else
 	{
@@ -13529,7 +13530,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 	    {
 	      lowpc = (gdbarch_adjust_dwarf2_addr (gdbarch, lowpc + baseaddr)
 		       - baseaddr);
-	      SET_FIELD_PHYSADDR (call_site->target, lowpc);
+	      call_site->target.set_loc_physaddr (lowpc);
 	    }
 	}
     }
@@ -14491,7 +14492,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
       if (attr->form_is_constant ())
 	{
 	  LONGEST offset = attr->constant_value (0);
-	  SET_FIELD_BITPOS (*field, offset * bits_per_byte);
+	  field->set_loc_bitpos (offset * bits_per_byte);
 	}
       else if (attr->form_is_section_offset ())
 	dwarf2_complex_location_expr_complaint ();
@@ -14500,7 +14501,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	  bool handled;
 	  CORE_ADDR offset = decode_locdesc (attr->as_block (), cu, &handled);
 	  if (handled)
-	    SET_FIELD_BITPOS (*field, offset * bits_per_byte);
+	    field->set_loc_bitpos (offset * bits_per_byte);
 	  else
 	    {
 	      dwarf2_per_objfile *per_objfile = cu->per_objfile;
@@ -14517,7 +14518,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	      dlbaton->per_objfile = per_objfile;
 	      dlbaton->per_cu = cu->per_cu;
 
-	      SET_FIELD_DWARF_BLOCK (*field, dlbaton);
+	      field->set_loc_dwarf_block (dlbaton);
 	    }
 	}
       else
@@ -14527,7 +14528,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
     {
       attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
       if (attr != nullptr)
-	SET_FIELD_BITPOS (*field, attr->constant_value (0));
+	field->set_loc_bitpos (attr->constant_value (0));
     }
 }
 
@@ -14576,7 +14577,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       /* Get type of field.  */
       fp->set_type (die_type (die, cu));
 
-      SET_FIELD_BITPOS (*fp, 0);
+      fp->set_loc_bitpos (0);
 
       /* Get bit size of field (zero if none).  */
       attr = dwarf2_attr (die, DW_AT_bit_size, cu);
@@ -14601,8 +14602,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		 anonymous object to the MSB of the field.  We don't
 		 have to do anything special since we don't need to
 		 know the size of the anonymous object.  */
-	      SET_FIELD_BITPOS (*fp, (FIELD_BITPOS (*fp)
-				      + attr->constant_value (0)));
+	      fp->set_loc_bitpos ((FIELD_BITPOS (*fp) + attr->constant_value (0)));
 	    }
 	  else
 	    {
@@ -14631,10 +14631,9 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		     bit field.  */
 		  anonymous_size = TYPE_LENGTH (fp->type ());
 		}
-	      SET_FIELD_BITPOS (*fp,
-				(FIELD_BITPOS (*fp)
-				 + anonymous_size * bits_per_byte
-				 - bit_offset - FIELD_BITSIZE (*fp)));
+	      fp->set_loc_bitpos (FIELD_BITPOS (*fp)
+			      + anonymous_size * bits_per_byte
+			      - bit_offset - FIELD_BITSIZE (*fp));
 	    }
 	}
 
@@ -14690,7 +14689,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 
       /* The name is already allocated along with this objfile, so we don't
 	 need to duplicate it for the type.  */
-      SET_FIELD_PHYSNAME (*fp, physname ? physname : "");
+      fp->set_loc_physname (physname ? physname : "");
       fp->set_type (die_type (die, cu));
       fp->set_name (fieldname);
     }
@@ -16150,7 +16149,7 @@ update_enumeration_type_from_children (struct die_info *die,
       fields.emplace_back ();
       struct field &field = fields.back ();
       field.set_name (dwarf2_physname (name, child_die, cu));
-      SET_FIELD_ENUMVAL (field, value);
+      field.set_loc_enumval (value);
     }
 
   if (!fields.empty ())
@@ -16424,7 +16423,7 @@ recognize_bound_expression (struct die_info *die, enum dwarf_attribute name,
   else
     return false;
 
-  SET_FIELD_BITPOS (*field, 8 * offset);
+  field->set_loc_bitpos (8 * offset);
   if (size != TYPE_LENGTH (field->type ()))
     FIELD_BITSIZE (*field) = 8 * size;
 
@@ -16572,7 +16571,7 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
 
   result->field (1).set_name ("P_BOUNDS");
   result->field (1).set_type (lookup_pointer_type (bounds));
-  SET_FIELD_BITPOS (result->field (1), 8 * bounds_offset);
+  result->field (1).set_loc_bitpos (8 * bounds_offset);
 
   result->set_name (type->name ());
   TYPE_LENGTH (result) = (TYPE_LENGTH (result->field (0).type ())
