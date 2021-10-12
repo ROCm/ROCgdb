@@ -4122,21 +4122,81 @@ arm_neon_quad_type (struct gdbarch *gdbarch)
   return tdep->neon_quad_type;
 }
 
+/* Return true if REGNUM is a Q pseudo register.  Return false
+   otherwise.
+
+   REGNUM is the raw register number and not a pseudo-relative register
+   number.  */
+
+static bool
+is_q_pseudo (struct gdbarch *gdbarch, int regnum)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  /* Q pseudo registers are available for both NEON (Q0~Q15) and
+     MVE (Q0~Q7) features.  */
+  if (tdep->have_q_pseudos
+      && regnum >= tdep->q_pseudo_base
+      && regnum < (tdep->q_pseudo_base + tdep->q_pseudo_count))
+    return true;
+
+  return false;
+}
+
+/* Return true if REGNUM is a VFP S pseudo register.  Return false
+   otherwise.
+
+   REGNUM is the raw register number and not a pseudo-relative register
+   number.  */
+
+static bool
+is_s_pseudo (struct gdbarch *gdbarch, int regnum)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (tdep->have_s_pseudos
+      && regnum >= tdep->s_pseudo_base
+      && regnum < (tdep->s_pseudo_base + tdep->s_pseudo_count))
+    return true;
+
+  return false;
+}
+
+/* Return true if REGNUM is a MVE pseudo register (P0).  Return false
+   otherwise.
+
+   REGNUM is the raw register number and not a pseudo-relative register
+   number.  */
+
+static bool
+is_mve_pseudo (struct gdbarch *gdbarch, int regnum)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (tdep->have_mve
+      && regnum >= tdep->mve_pseudo_base
+      && regnum < tdep->mve_pseudo_base + tdep->mve_pseudo_count)
+    return true;
+
+  return false;
+}
+
 /* Return the GDB type object for the "standard" data type of data in
    register N.  */
 
 static struct type *
 arm_register_type (struct gdbarch *gdbarch, int regnum)
 {
-  int num_regs = gdbarch_num_regs (gdbarch);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  if (gdbarch_tdep (gdbarch)->have_vfp_pseudos
-      && regnum >= num_regs && regnum < num_regs + 32)
+  if (is_s_pseudo (gdbarch, regnum))
     return builtin_type (gdbarch)->builtin_float;
 
-  if (gdbarch_tdep (gdbarch)->have_neon_pseudos
-      && regnum >= num_regs + 32 && regnum < num_regs + 32 + 16)
+  if (is_q_pseudo (gdbarch, regnum))
     return arm_neon_quad_type (gdbarch);
+
+  if (is_mve_pseudo (gdbarch, regnum))
+    return builtin_type (gdbarch)->builtin_int16;
 
   /* If the target description has register information, we are only
      in this function so that we can override the types of
@@ -4147,7 +4207,7 @@ arm_register_type (struct gdbarch *gdbarch, int regnum)
 
       if (regnum >= ARM_D0_REGNUM && regnum < ARM_D0_REGNUM + 32
 	  && t->code () == TYPE_CODE_FLT
-	  && gdbarch_tdep (gdbarch)->have_neon)
+	  && tdep->have_neon)
 	return arm_neon_double_type (gdbarch);
       else
 	return t;
@@ -4155,7 +4215,7 @@ arm_register_type (struct gdbarch *gdbarch, int regnum)
 
   if (regnum >= ARM_F0_REGNUM && regnum < ARM_F0_REGNUM + NUM_FREGS)
     {
-      if (!gdbarch_tdep (gdbarch)->have_fpa_registers)
+      if (!tdep->have_fpa_registers)
 	return builtin_type (gdbarch)->builtin_void;
 
       return arm_ext_type (gdbarch);
@@ -8551,37 +8611,39 @@ show_disassembly_style_sfunc (struct ui_file *file, int from_tty,
 static const char *
 arm_register_name (struct gdbarch *gdbarch, int i)
 {
-  const int num_regs = gdbarch_num_regs (gdbarch);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  if (gdbarch_tdep (gdbarch)->have_vfp_pseudos
-      && i >= num_regs && i < num_regs + 32)
+  if (is_s_pseudo (gdbarch, i))
     {
-      static const char *const vfp_pseudo_names[] = {
+      static const char *const s_pseudo_names[] = {
 	"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
 	"s8", "s9", "s10", "s11", "s12", "s13", "s14", "s15",
 	"s16", "s17", "s18", "s19", "s20", "s21", "s22", "s23",
 	"s24", "s25", "s26", "s27", "s28", "s29", "s30", "s31",
       };
 
-      return vfp_pseudo_names[i - num_regs];
+      return s_pseudo_names[i - tdep->s_pseudo_base];
     }
 
-  if (gdbarch_tdep (gdbarch)->have_neon_pseudos
-      && i >= num_regs + 32 && i < num_regs + 32 + 16)
+  if (is_q_pseudo (gdbarch, i))
     {
-      static const char *const neon_pseudo_names[] = {
+      static const char *const q_pseudo_names[] = {
 	"q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
 	"q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15",
       };
 
-      return neon_pseudo_names[i - num_regs - 32];
+      return q_pseudo_names[i - tdep->q_pseudo_base];
     }
+
+  if (is_mve_pseudo (gdbarch, i))
+    return "p0";
 
   if (i >= ARRAY_SIZE (arm_register_names))
     /* These registers are only supported on targets which supply
        an XML description.  */
     return "";
 
+  /* Non-pseudo registers.  */
   return arm_register_names[i];
 }
 
@@ -8709,6 +8771,19 @@ arm_neon_quad_read (struct gdbarch *gdbarch, readable_regcache *regcache,
   return REG_VALID;
 }
 
+/* Read the contents of the MVE pseudo register REGNUM and store it
+   in BUF.  */
+
+static enum register_status
+arm_mve_pseudo_read (struct gdbarch *gdbarch, readable_regcache *regcache,
+		     int regnum, gdb_byte *buf)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  /* P0 is the first 16 bits of VPR.  */
+  return regcache->raw_read_part (tdep->mve_vpr_regnum, 0, 2, buf);
+}
+
 static enum register_status
 arm_pseudo_read (struct gdbarch *gdbarch, readable_regcache *regcache,
 		 int regnum, gdb_byte *buf)
@@ -8719,15 +8794,22 @@ arm_pseudo_read (struct gdbarch *gdbarch, readable_regcache *regcache,
   int offset, double_regnum;
 
   gdb_assert (regnum >= num_regs);
-  regnum -= num_regs;
 
-  if (gdbarch_tdep (gdbarch)->have_neon_pseudos && regnum >= 32 && regnum < 48)
-    /* Quad-precision register.  */
-    return arm_neon_quad_read (gdbarch, regcache, regnum - 32, buf);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (is_q_pseudo (gdbarch, regnum))
+    {
+      /* Quad-precision register.  */
+      return arm_neon_quad_read (gdbarch, regcache,
+				 regnum - tdep->q_pseudo_base, buf);
+    }
+  else if (is_mve_pseudo (gdbarch, regnum))
+    return arm_mve_pseudo_read (gdbarch, regcache, regnum, buf);
   else
     {
       enum register_status status;
 
+      regnum -= tdep->s_pseudo_base;
       /* Single-precision register.  */
       gdb_assert (regnum < 32);
 
@@ -8777,6 +8859,18 @@ arm_neon_quad_write (struct gdbarch *gdbarch, struct regcache *regcache,
   regcache->raw_write (double_regnum + 1, buf + offset);
 }
 
+/* Store the contents of BUF to the MVE pseudo register REGNUM.  */
+
+static void
+arm_mve_pseudo_write (struct gdbarch *gdbarch, struct regcache *regcache,
+		      int regnum, const gdb_byte *buf)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  /* P0 is the first 16 bits of VPR.  */
+  regcache->raw_write_part (tdep->mve_vpr_regnum, 0, 2, buf);
+}
+
 static void
 arm_pseudo_write (struct gdbarch *gdbarch, struct regcache *regcache,
 		  int regnum, const gdb_byte *buf)
@@ -8787,13 +8881,20 @@ arm_pseudo_write (struct gdbarch *gdbarch, struct regcache *regcache,
   int offset, double_regnum;
 
   gdb_assert (regnum >= num_regs);
-  regnum -= num_regs;
 
-  if (gdbarch_tdep (gdbarch)->have_neon_pseudos && regnum >= 32 && regnum < 48)
-    /* Quad-precision register.  */
-    arm_neon_quad_write (gdbarch, regcache, regnum - 32, buf);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (is_q_pseudo (gdbarch, regnum))
+    {
+      /* Quad-precision register.  */
+      arm_neon_quad_write (gdbarch, regcache,
+			   regnum - tdep->q_pseudo_base, buf);
+    }
+  else if (is_mve_pseudo (gdbarch, regnum))
+    arm_mve_pseudo_write (gdbarch, regcache, regnum, buf);
   else
     {
+      regnum -= tdep->s_pseudo_base;
       /* Single-precision register.  */
       gdb_assert (regnum < 32);
 
@@ -8889,6 +8990,11 @@ arm_register_g_packet_guesses (struct gdbarch *gdbarch)
       register_remote_g_packet_guess (gdbarch,
 				      ARM_CORE_REGS_SIZE + ARM_VFP2_REGS_SIZE,
 				      tdesc);
+      /* M-profile plus MVE.  */
+      tdesc = arm_read_mprofile_description (ARM_M_TYPE_MVE);
+      register_remote_g_packet_guess (gdbarch, ARM_CORE_REGS_SIZE
+				      + ARM_VFP2_REGS_SIZE
+				      + ARM_INT_REGISTER_SIZE, tdesc);
     }
 
   /* Otherwise we don't have a useful guess.  */
@@ -8940,11 +9046,15 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   int i;
   bool is_m = false;
   int vfp_register_count = 0;
-  bool have_vfp_pseudos = false, have_neon_pseudos = false;
+  bool have_s_pseudos = false, have_q_pseudos = false;
   bool have_wmmx_registers = false;
   bool have_neon = false;
   bool have_fpa_registers = true;
   const struct target_desc *tdesc = info.target_desc;
+  bool have_vfp = false;
+  bool have_mve = false;
+  int mve_vpr_regnum = -1;
+  int register_count = ARM_NUM_REGS;
 
   /* If we have an object to base this architecture on, try to determine
      its ABI.  */
@@ -9059,6 +9169,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	      if (!tdesc_has_registers (tdesc)
 		  && (attr_arch == TAG_CPU_ARCH_V6_M
 		      || attr_arch == TAG_CPU_ARCH_V6S_M
+		      || attr_arch == TAG_CPU_ARCH_V8_1M_MAIN
 		      || attr_profile == 'M'))
 		is_m = true;
 #endif
@@ -9228,8 +9339,10 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	  if (!valid_p)
 	    return NULL;
 
+	  have_vfp = true;
+
 	  if (tdesc_unnumbered_register (feature, "s0") == 0)
-	    have_vfp_pseudos = true;
+	    have_s_pseudos = true;
 
 	  vfp_register_count = i;
 
@@ -9248,9 +9361,42 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 		 their type; otherwise (normally) provide them with
 		 the default type.  */
 	      if (tdesc_unnumbered_register (feature, "q0") == 0)
-		have_neon_pseudos = true;
+		have_q_pseudos = true;
+	    }
+	}
 
-	      have_neon = true;
+      /* Check for MVE after all the checks for GPR's, VFP and Neon.
+	 MVE (Helium) is an M-profile extension.  */
+      if (is_m)
+	{
+	  /* Do we have the MVE feature?  */
+	  feature = tdesc_find_feature (tdesc,"org.gnu.gdb.arm.m-profile-mve");
+
+	  if (feature != nullptr)
+	    {
+	      /* If we have MVE, we must always have the VPR register.  */
+	      valid_p &= tdesc_numbered_register (feature, tdesc_data.get (),
+						  register_count, "vpr");
+	      if (!valid_p)
+		{
+		  warning (_("MVE feature is missing required register vpr."));
+		  return nullptr;
+		}
+
+	      have_mve = true;
+	      mve_vpr_regnum = register_count;
+	      register_count++;
+
+	      /* We can't have Q pseudo registers available here, as that
+		 would mean we have NEON features, and that is only available
+		 on A and R profiles.  */
+	      gdb_assert (!have_q_pseudos);
+
+	      /* Given we have a M-profile target description, if MVE is
+		 enabled and there are VFP registers, we should have Q
+		 pseudo registers (Q0 ~ Q7).  */
+	      if (have_vfp)
+		have_q_pseudos = true;
 	    }
 	}
     }
@@ -9298,9 +9444,16 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	      || vfp_register_count == 16
 	      || vfp_register_count == 32);
   tdep->vfp_register_count = vfp_register_count;
-  tdep->have_vfp_pseudos = have_vfp_pseudos;
-  tdep->have_neon_pseudos = have_neon_pseudos;
+  tdep->have_s_pseudos = have_s_pseudos;
+  tdep->have_q_pseudos = have_q_pseudos;
   tdep->have_neon = have_neon;
+
+  /* Adjust the MVE feature settings.  */
+  if (have_mve)
+    {
+      tdep->have_mve = true;
+      tdep->mve_vpr_regnum = mve_vpr_regnum;
+    }
 
   arm_register_g_packet_guesses (gdbarch);
 
@@ -9387,7 +9540,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Information about registers, etc.  */
   set_gdbarch_sp_regnum (gdbarch, ARM_SP_REGNUM);
   set_gdbarch_pc_regnum (gdbarch, ARM_PC_REGNUM);
-  set_gdbarch_num_regs (gdbarch, ARM_NUM_REGS);
+  set_gdbarch_num_regs (gdbarch, register_count);
   set_gdbarch_register_type (gdbarch, arm_register_type);
   set_gdbarch_register_reggroup_p (gdbarch, arm_register_reggroup_p);
 
@@ -9470,29 +9623,55 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_long_double_format (gdbarch, floatformats_ieee_double);
     }
 
-  if (have_vfp_pseudos)
-    {
-      /* NOTE: These are the only pseudo registers used by
-	 the ARM target at the moment.  If more are added, a
-	 little more care in numbering will be needed.  */
-
-      int num_pseudos = 32;
-      if (have_neon_pseudos)
-	num_pseudos += 16;
-      set_gdbarch_num_pseudo_regs (gdbarch, num_pseudos);
-      set_gdbarch_pseudo_register_read (gdbarch, arm_pseudo_read);
-      set_gdbarch_pseudo_register_write (gdbarch, arm_pseudo_write);
-    }
-
   if (tdesc_data != nullptr)
     {
       set_tdesc_pseudo_register_name (gdbarch, arm_register_name);
 
       tdesc_use_registers (gdbarch, tdesc, std::move (tdesc_data));
+      register_count = gdbarch_num_regs (gdbarch);
 
       /* Override tdesc_register_type to adjust the types of VFP
 	 registers for NEON.  */
       set_gdbarch_register_type (gdbarch, arm_register_type);
+    }
+
+  /* Initialize the pseudo register data.  */
+  int num_pseudos = 0;
+  if (tdep->have_s_pseudos)
+    {
+      /* VFP single precision pseudo registers (S0~S31).  */
+      tdep->s_pseudo_base = register_count;
+      tdep->s_pseudo_count = 32;
+      num_pseudos += tdep->s_pseudo_count;
+
+      if (tdep->have_q_pseudos)
+	{
+	  /* NEON quad precision pseudo registers (Q0~Q15).  */
+	  tdep->q_pseudo_base = register_count + num_pseudos;
+
+	  if (have_neon)
+	    tdep->q_pseudo_count = 16;
+	  else if (have_mve)
+	    tdep->q_pseudo_count = ARM_MVE_NUM_Q_REGS;
+
+	  num_pseudos += tdep->q_pseudo_count;
+	}
+    }
+
+  /* Do we have any MVE pseudo registers?  */
+  if (have_mve)
+    {
+      tdep->mve_pseudo_base = register_count + num_pseudos;
+      tdep->mve_pseudo_count = 1;
+      num_pseudos += tdep->mve_pseudo_count;
+    }
+
+  /* Set some pseudo register hooks, if we have pseudo registers.  */
+  if (tdep->have_s_pseudos || have_mve)
+    {
+      set_gdbarch_num_pseudo_regs (gdbarch, num_pseudos);
+      set_gdbarch_pseudo_register_read (gdbarch, arm_pseudo_read);
+      set_gdbarch_pseudo_register_write (gdbarch, arm_pseudo_write);
     }
 
   /* Add standard register aliases.  We add aliases even for those
@@ -9526,12 +9705,28 @@ arm_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
 		      (int) tdep->have_wmmx_registers);
   fprintf_unfiltered (file, _("arm_dump_tdep: vfp_register_count = %i\n"),
 		      (int) tdep->vfp_register_count);
-  fprintf_unfiltered (file, _("arm_dump_tdep: have_vfp_pseudos = %i\n"),
-		      (int) tdep->have_vfp_pseudos);
-  fprintf_unfiltered (file, _("arm_dump_tdep: have_neon_pseudos = %i\n"),
-		      (int) tdep->have_neon_pseudos);
+  fprintf_unfiltered (file, _("arm_dump_tdep: have_s_pseudos = %s\n"),
+		      tdep->have_s_pseudos? "true" : "false");
+  fprintf_unfiltered (file, _("arm_dump_tdep: s_pseudo_base = %i\n"),
+		      (int) tdep->s_pseudo_base);
+  fprintf_unfiltered (file, _("arm_dump_tdep: s_pseudo_count = %i\n"),
+		      (int) tdep->s_pseudo_count);
+  fprintf_unfiltered (file, _("arm_dump_tdep: have_q_pseudos = %s\n"),
+		      tdep->have_q_pseudos? "true" : "false");
+  fprintf_unfiltered (file, _("arm_dump_tdep: q_pseudo_base = %i\n"),
+		      (int) tdep->q_pseudo_base);
+  fprintf_unfiltered (file, _("arm_dump_tdep: q_pseudo_count = %i\n"),
+		      (int) tdep->q_pseudo_count);
   fprintf_unfiltered (file, _("arm_dump_tdep: have_neon = %i\n"),
 		      (int) tdep->have_neon);
+  fprintf_unfiltered (file, _("arm_dump_tdep: have_mve = %s\n"),
+		      tdep->have_mve? "yes" : "no");
+  fprintf_unfiltered (file, _("arm_dump_tdep: mve_vpr_regnum = %i\n"),
+		      tdep->mve_vpr_regnum);
+  fprintf_unfiltered (file, _("arm_dump_tdep: mve_pseudo_base = %i\n"),
+		      tdep->mve_pseudo_base);
+  fprintf_unfiltered (file, _("arm_dump_tdep: mve_pseudo_count = %i\n"),
+		      tdep->mve_pseudo_count);
   fprintf_unfiltered (file, _("arm_dump_tdep: Lowest pc = 0x%lx\n"),
 		      (unsigned long) tdep->lowest_pc);
 }
