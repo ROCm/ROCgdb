@@ -673,9 +673,9 @@ Dwarf::assemble $asmfile2 {
 	}
     }
 
-    loclists {
+    loclists {} {
 	# The lists in this table are accessed by index (DW_FORM_rnglistx).
-	table -post-header-label cu_table {
+	table {post-header-label cu_table} {
 
 	    # For variable plocal_content.
 	    list_ {
