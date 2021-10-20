@@ -1123,7 +1123,11 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 				  (step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
 					: AMD_DBGAPI_RESUME_MODE_NORMAL),
 				  exception);
-      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+      if (status != AMD_DBGAPI_STATUS_SUCCESS
+	  /* Ignore the error that wave is no longer valid as that could
+             indicate that the process has exited.  GDB treats resuming a
+	     thread that no longer exists as being successful.  */
+	  && status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
 	error (_ ("wave_resume for wave_%ld failed (rc=%d)"), wave_id.handle,
 	       status);
     }
@@ -1577,7 +1581,17 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 
   ptid_t event_ptid = beneath ()->wait (ptid, ws, target_options);
   if (event_ptid != minus_one_ptid)
-    return event_ptid;
+    {
+      if (ws->kind () == TARGET_WAITKIND_EXITED
+         || ws->kind () == TARGET_WAITKIND_SIGNALLED)
+       {
+         /* This inferior has exited so drain its ROCm event queue.  */
+         while (rocm_consume_one_event (ptid_t (event_ptid.pid ())).first
+                != minus_one_ptid)
+           ;
+       }
+      return event_ptid;
+    }
 
   gdb_assert (ws->kind () == TARGET_WAITKIND_NO_RESUMED
 	      || ws->kind () == TARGET_WAITKIND_IGNORE);
