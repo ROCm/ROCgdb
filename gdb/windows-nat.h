@@ -249,6 +249,12 @@ private:
      needed.  */
   void wait_for_debug_event_main_thread (DEBUG_EVENT *event);
 
+  /* This continues the last debug event, dispatching to the worker
+     thread as needed.  */
+  void continue_last_debug_event_main_thread (const char *context_str,
+					      DWORD continue_status,
+					      bool last_call = false);
+
   /* Force the process_thread thread to return from WaitForDebugEvent.
      PROCESS_ALIVE is set to false if the inferior process exits while
      we're trying to break out the process_thread thread.  This can

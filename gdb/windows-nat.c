@@ -261,6 +261,28 @@ windows_nat_target::wait_for_debug_event_main_thread (DEBUG_EVENT *event)
   m_continued = false;
 }
 
+void
+windows_nat_target::continue_last_debug_event_main_thread
+  (const char *context_str, DWORD continue_status, bool last_call)
+{
+  std::optional<unsigned> err;
+  do_synchronously ([&] ()
+    {
+      if (!continue_last_debug_event (continue_status, debug_events))
+	err = (unsigned) GetLastError ();
+
+      /* On the last call, do not block waiting for an event that will
+	 never come.  */
+      return !last_call;
+    });
+  if (err.has_value ())
+    throw_winerror_with_name (string_printf (_("ContinueDebugEvent failed: %s"),
+					     context_str).c_str (),
+			      *err);
+
+  m_continued = !last_call;
+}
+
 /* See nat/windows-nat.h.  */
 
 windows_thread_info *
@@ -711,22 +733,9 @@ windows_nat_target::windows_continue (DWORD continue_status, int id,
 	th->resume ();
       }
 
-  std::optional<unsigned> err;
-  do_synchronously ([&] ()
-    {
-      if (!continue_last_debug_event (continue_status, debug_events))
-	err = (unsigned) GetLastError ();
-      /* On the last call, do not block waiting for an event that will
-	 never come.  */
-      return !last_call;
-    });
-
-  if (err.has_value ())
-    throw_winerror_with_name (_("Failed to resume program execution"
-				" - ContinueDebugEvent failed"),
-			      *err);
-
-  m_continued = !last_call;
+  continue_last_debug_event_main_thread
+    (_("Failed to resume program execution"), continue_status,
+     last_call);
 
   return TRUE;
 }
@@ -1188,7 +1197,7 @@ windows_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 
 	      /* All-stop, suspend all threads until they are
 		 explicitly resumed.  */
-	      for (auto &thr : windows_process.thread_list)
+	      for (auto &thr : windows_process->thread_list)
 		thr->suspend ();
 	    }
 
