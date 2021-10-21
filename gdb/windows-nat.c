@@ -705,14 +705,12 @@ windows_per_inferior::handle_access_violation
 }
 
 /* Resume thread specified by ID, or all artificially suspended
-   threads, if we are continuing execution.  KILLED non-zero means we
-   have killed the inferior, so we should ignore weird errors due to
-   threads shutting down.  LAST_CALL is true if we expect this to be
-   the last call to continue the inferior -- we are either mourning it
-   or detaching.  */
+   threads, if we are continuing execution.  See description of
+   windows_continue_flags for CONT_FLAGS.  */
+
 BOOL
 windows_nat_target::windows_continue (DWORD continue_status, int id,
-				      int killed, bool last_call)
+				      windows_continue_flags cont_flags)
 {
   windows_process->desired_stop_thread_id = id;
 
@@ -728,6 +726,7 @@ windows_nat_target::windows_continue (DWORD continue_status, int id,
   for (auto &th : windows_process->thread_list)
     if (id == -1 || id == (int) th->tid)
       {
+	bool killed = (cont_flags & WCONT_KILLED) != 0;
 	thread_context_continue (th.get (), killed);
 
 	th->resume ();
@@ -735,7 +734,7 @@ windows_nat_target::windows_continue (DWORD continue_status, int id,
 
   continue_last_debug_event_main_thread
     (_("Failed to resume program execution"), continue_status,
-     last_call);
+     cont_flags & WCONT_LAST_CALL);
 
   return TRUE;
 }
@@ -832,9 +831,9 @@ windows_nat_target::resume (ptid_t ptid, int step, enum gdb_signal sig)
      Otherwise complain.  */
 
   if (resume_all)
-    windows_continue (continue_status, -1, 0);
+    windows_continue (continue_status, -1);
   else
-    windows_continue (continue_status, ptid.lwp (), 0);
+    windows_continue (continue_status, ptid.lwp ());
 }
 
 /* Interrupt the inferior.  */
@@ -1538,7 +1537,7 @@ windows_nat_target::detach (inferior *inf, int from_tty)
   if (m_continued)
     break_out_process_thread (process_alive);
 
-  windows_continue (DBG_CONTINUE, -1, 0, true);
+  windows_continue (DBG_CONTINUE, -1, WCONT_LAST_CALL);
 
   std::optional<unsigned> err;
   if (process_alive)
@@ -2286,13 +2285,13 @@ windows_nat_target::create_inferior (const char *exec_file,
 
   do_initial_windows_stuff (pi.dwProcessId, 0);
 
-  /* windows_continue (DBG_CONTINUE, -1, 0); */
+  /* windows_continue (DBG_CONTINUE, -1); */
 }
 
 void
 windows_nat_target::mourn_inferior ()
 {
-  (void) windows_continue (DBG_CONTINUE, -1, 0, true);
+  windows_continue (DBG_CONTINUE, -1, WCONT_LAST_CALL);
   cleanup_windows_arch ();
   if (windows_process->open_process_used)
     {
@@ -2350,7 +2349,7 @@ windows_nat_target::kill ()
 
   for (;;)
     {
-      if (!windows_continue (DBG_CONTINUE, -1, 1))
+      if (!windows_continue (DBG_CONTINUE, -1, WCONT_KILLED))
 	break;
       wait_for_debug_event_main_thread (&windows_process->current_event);
       if (windows_process->current_event.dwDebugEventCode

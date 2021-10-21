@@ -44,6 +44,22 @@ struct windows_solib
   std::string name;
 };
 
+/* Flags that can be passed to windows_continue.  */
+
+enum windows_continue_flag
+  {
+    /* This means we have killed the inferior, so windows_continue
+       should ignore weird errors due to threads shutting down.  */
+    WCONT_KILLED = 1,
+
+    /* This means we expect this windows_continue call to be the last
+       call to continue the inferior -- we are either mourning it or
+       detaching.  */
+    WCONT_LAST_CALL = 2,
+  };
+
+DEF_ENUM_FLAGS_TYPE (windows_continue_flag, windows_continue_flags);
+
 struct windows_per_inferior : public windows_nat::windows_process_info
 {
   windows_thread_info *find_thread (ptid_t ptid) override;
@@ -227,8 +243,8 @@ private:
   void delete_thread (ptid_t ptid, DWORD exit_code, bool main_thread_p);
   DWORD fake_create_process ();
 
-  BOOL windows_continue (DWORD continue_status, int id, int killed,
-			 bool last_call = false);
+  BOOL windows_continue (DWORD continue_status, int id,
+			 windows_continue_flags cont_flags = 0);
 
   /* Helper function to start process_thread.  */
   static DWORD WINAPI process_thread_starter (LPVOID self);
