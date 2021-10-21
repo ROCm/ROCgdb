@@ -329,7 +329,7 @@ public:
   /* Construct a bp_location with type TYPE.  */
   bp_location (breakpoint *owner, bp_loc_type type);
 
-  virtual ~bp_location ();
+  virtual ~bp_location () = default;
 
   /* Chain pointer to the next breakpoint location for
      the same parent breakpoint.  */
@@ -468,7 +468,7 @@ public:
      with it.  */
   bound_probe probe {};
 
-  char *function_name = NULL;
+  gdb::unique_xmalloc_ptr<char> function_name;
 
   /* Details of the placed breakpoint, when inserted.  */
   bp_target_info target_info {};
@@ -721,7 +721,7 @@ using bp_location_range = next_range<bp_location>;
 
 struct breakpoint
 {
-  virtual ~breakpoint ();
+  virtual ~breakpoint () = default;
 
   /* Return a range of this breakpoint's locations.  */
   bp_location_range locations ();
@@ -786,11 +786,11 @@ struct breakpoint
   int input_radix = 0;
   /* String form of the breakpoint condition (malloc'd), or NULL if
      there is no condition.  */
-  char *cond_string = NULL;
+  gdb::unique_xmalloc_ptr<char> cond_string;
 
   /* String form of extra parameters, or NULL if there are none.
      Malloc'd.  */
-  char *extra_string = NULL;
+  gdb::unique_xmalloc_ptr<char> extra_string;
 
   /* Holds the address of the related watchpoint_scope breakpoint when
      using watchpoints on local variables (might the concept of a
@@ -832,13 +832,11 @@ struct breakpoint
 
 struct watchpoint : public breakpoint
 {
-  ~watchpoint () override;
-
   /* String form of exp to use for displaying to the user (malloc'd),
      or NULL if none.  */
-  char *exp_string;
+  gdb::unique_xmalloc_ptr<char> exp_string;
   /* String form to use for reparsing of EXP (malloc'd) or NULL.  */
-  char *exp_string_reparse;
+  gdb::unique_xmalloc_ptr<char> exp_string_reparse;
 
   /* The expression we are watching, or NULL if not a watchpoint.  */
   expression_up exp;

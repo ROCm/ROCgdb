@@ -433,7 +433,7 @@ bppy_get_expression (PyObject *self, void *closure)
 
   wp = (struct watchpoint *) obj->bp;
 
-  str = wp->exp_string;
+  str = wp->exp_string.get ();
   if (! str)
     str = "";
 
@@ -449,7 +449,7 @@ bppy_get_condition (PyObject *self, void *closure)
 
   BPPY_REQUIRE_VALID (obj);
 
-  str = obj->bp->cond_string;
+  str = obj->bp->cond_string.get ();
   if (! str)
     Py_RETURN_NONE;
 

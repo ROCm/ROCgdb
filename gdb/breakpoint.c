@@ -868,8 +868,7 @@ set_breakpoint_condition (struct breakpoint *b, const char *exp,
 {
   if (*exp == 0)
     {
-      xfree (b->cond_string);
-      b->cond_string = nullptr;
+      b->cond_string.reset ();
 
       if (is_watchpoint (b))
 	static_cast<watchpoint *> (b)->cond_exp.reset ();
@@ -950,8 +949,7 @@ set_breakpoint_condition (struct breakpoint *b, const char *exp,
 
       /* We know that the new condition parsed successfully.  The
 	 condition string of the breakpoint can be safely updated.  */
-      xfree (b->cond_string);
-      b->cond_string = xstrdup (exp);
+      b->cond_string = make_unique_xstrdup (exp);
       b->condition_not_parsed = 0;
     }
   mark_breakpoint_modified (b);
@@ -1849,7 +1847,9 @@ update_watchpoint (struct watchpoint *b, int reparse)
       const char *s;
 
       b->exp.reset ();
-      s = b->exp_string_reparse ? b->exp_string_reparse : b->exp_string;
+      s = (b->exp_string_reparse
+	   ? b->exp_string_reparse.get ()
+	   : b->exp_string.get ());
       b->exp = parse_exp_1 (&s, 0, b->exp_valid_block, 0);
       /* If the meaning of expression itself changed, the old value is
 	 no longer relevant.  We don't want to report a watchpoint hit
@@ -1865,7 +1865,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
 	{
 	  b->cond_exp.reset ();
 
-	  s = b->cond_string;
+	  s = b->cond_string.get ();
 	  b->cond_exp = parse_exp_1 (&s, 0, b->cond_exp_valid_block, 0);
 	}
     }
@@ -2445,7 +2445,7 @@ build_target_command_list (struct bp_location *bl)
 		 need to parse the command to bytecodes again.  */
 	      loc->cmd_bytecode
 		= parse_cmd_to_aexpr (bl->address,
-				      loc->owner->extra_string);
+				      loc->owner->extra_string.get ());
 	    }
 
 	  /* If we have a NULL bytecode expression, it means something
@@ -5991,7 +5991,7 @@ print_breakpoint_location (struct breakpoint *b,
 	    uiout->text (",");
 	  else
 	    uiout->text (" ");
-	  uiout->text (b->extra_string);
+	  uiout->text (b->extra_string.get ());
 	}
     }
 
@@ -6184,7 +6184,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 	  if (opts.addressprint)
 	    uiout->field_skip ("addr");
 	  annotate_field (5);
-	  uiout->field_string ("what", w->exp_string);
+	  uiout->field_string ("what", w->exp_string.get ());
 	}
       else if (!is_catchpoint (b) || is_exception_catchpoint (b)
 	       || is_ada_exception_catchpoint (b))
@@ -6273,7 +6273,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 	uiout->text ("\ttrace only if ");
       else
 	uiout->text ("\tstop only if ");
-      uiout->field_string ("cond", b->cond_string);
+      uiout->field_string ("cond", b->cond_string.get ());
 
       /* Print whether the target is doing the breakpoint's condition
 	 evaluation.  If GDB is doing the evaluation, don't print anything.  */
@@ -6411,7 +6411,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 	{
 	  struct watchpoint *w = (struct watchpoint *) b;
 
-	  uiout->field_string ("original-location", w->exp_string);
+	  uiout->field_string ("original-location", w->exp_string.get ());
 	}
       else if (b->location != NULL
 	       && event_location_to_string (b->location.get ()) != NULL)
@@ -7243,7 +7243,7 @@ set_breakpoint_location_function (struct bp_location *loc)
 	find_pc_partial_function (loc->address, &function_name, NULL, NULL);
 
       if (function_name)
-	loc->function_name = xstrdup (function_name);
+	loc->function_name = make_unique_xstrdup (function_name);
     }
 }
 
@@ -8026,21 +8026,14 @@ static struct breakpoint_ops catch_vfork_breakpoint_ops;
 
 struct solib_catchpoint : public breakpoint
 {
-  ~solib_catchpoint () override;
-
   /* True for "catch load", false for "catch unload".  */
   bool is_load;
 
   /* Regular expression to match, if any.  COMPILED is only valid when
      REGEX is non-NULL.  */
-  char *regex;
+  gdb::unique_xmalloc_ptr<char> regex;
   std::unique_ptr<compiled_regex> compiled;
 };
-
-solib_catchpoint::~solib_catchpoint ()
-{
-  xfree (this->regex);
-}
 
 static int
 insert_catch_solib (struct bp_location *ignore)
@@ -8157,14 +8150,16 @@ print_one_catch_solib (struct breakpoint *b, struct bp_location **locs)
   if (self->is_load)
     {
       if (self->regex)
-	msg = string_printf (_("load of library matching %s"), self->regex);
+	msg = string_printf (_("load of library matching %s"),
+			     self->regex.get ());
       else
 	msg = _("load of library");
     }
   else
     {
       if (self->regex)
-	msg = string_printf (_("unload of library matching %s"), self->regex);
+	msg = string_printf (_("unload of library matching %s"),
+			     self->regex.get ());
       else
 	msg = _("unload of library");
     }
@@ -8192,7 +8187,7 @@ print_recreate_catch_solib (struct breakpoint *b, struct ui_file *fp)
 		      b->disposition == disp_del ? "tcatch" : "catch",
 		      self->is_load ? "load" : "unload");
   if (self->regex)
-    fprintf_unfiltered (fp, " %s", self->regex);
+    fprintf_unfiltered (fp, " %s", self->regex.get ());
   fprintf_unfiltered (fp, "\n");
 }
 
@@ -8215,7 +8210,7 @@ add_solib_catchpoint (const char *arg, bool is_load, bool is_temp, bool enabled)
     {
       c->compiled.reset (new compiled_regex (arg, REG_NOSUB,
 					     _("Invalid regexp")));
-      c->regex = xstrdup (arg);
+      c->regex = make_unique_xstrdup (arg);
     }
 
   c->is_load = is_load;
@@ -8267,7 +8262,10 @@ init_catchpoint (struct breakpoint *b,
 
   init_raw_breakpoint (b, gdbarch, sal, bp_catchpoint, ops);
 
-  b->cond_string = (cond_string == NULL) ? NULL : xstrdup (cond_string);
+  if (cond_string == nullptr)
+    b->cond_string.reset ();
+  else
+    b->cond_string = make_unique_xstrdup (cond_string);
   b->disposition = temp ? disp_del : disp_donttouch;
 }
 
@@ -8308,20 +8306,11 @@ create_fork_vfork_event_catchpoint (struct gdbarch *gdbarch,
 
 struct exec_catchpoint : public breakpoint
 {
-  ~exec_catchpoint () override;
-
   /* Filename of a program whose exec triggered this catchpoint.
      This field is only valid immediately after this catchpoint has
      triggered.  */
-  char *exec_pathname;
+  gdb::unique_xmalloc_ptr<char> exec_pathname;
 };
-
-/* Exec catchpoint destructor.  */
-
-exec_catchpoint::~exec_catchpoint ()
-{
-  xfree (this->exec_pathname);
-}
 
 static int
 insert_catch_exec (struct bp_location *bl)
@@ -8345,7 +8334,7 @@ breakpoint_hit_catch_exec (const struct bp_location *bl,
   if (ws->kind != TARGET_WAITKIND_EXECD)
     return 0;
 
-  c->exec_pathname = xstrdup (ws->value.execd_pathname);
+  c->exec_pathname = make_unique_xstrdup (ws->value.execd_pathname);
   return 1;
 }
 
@@ -8369,7 +8358,7 @@ print_it_catch_exec (bpstat bs)
     }
   uiout->field_signed ("bkptno", b->number);
   uiout->text (" (exec'd ");
-  uiout->field_string ("new-exec", c->exec_pathname);
+  uiout->field_string ("new-exec", c->exec_pathname.get ());
   uiout->text ("), ");
 
   return PRINT_SRC_AND_LOC;
@@ -8394,7 +8383,7 @@ print_one_catch_exec (struct breakpoint *b, struct bp_location **last_loc)
   if (c->exec_pathname != NULL)
     {
       uiout->text (", program \"");
-      uiout->field_string ("what", c->exec_pathname);
+      uiout->field_string ("what", c->exec_pathname.get ());
       uiout->text ("\" ");
     }
 
@@ -8791,7 +8780,7 @@ bp_loc_is_permanent (struct bp_location *loc)
 static void
 update_dprintf_command_list (struct breakpoint *b)
 {
-  char *dprintf_args = b->extra_string;
+  const char *dprintf_args = b->extra_string.get ();
   char *printf_line = NULL;
 
   if (!dprintf_args)
@@ -8916,8 +8905,8 @@ init_breakpoint_sal (struct breakpoint *b, struct gdbarch *gdbarch,
 	  b->thread = thread;
 	  b->task = task;
 
-	  b->cond_string = cond_string.release ();
-	  b->extra_string = extra_string.release ();
+	  b->cond_string = std::move (cond_string);
+	  b->extra_string = std::move (extra_string);
 	  b->ignore_count = ignore_count;
 	  b->enable_state = enabled ? bp_enabled : bp_disabled;
 	  b->disposition = disposition;
@@ -8984,7 +8973,7 @@ init_breakpoint_sal (struct breakpoint *b, struct gdbarch *gdbarch,
 	    error (_("Format string required"));
 	}
       else if (b->extra_string)
-	error (_("Garbage '%s' at end of command"), b->extra_string);
+	error (_("Garbage '%s' at end of command"), b->extra_string.get ());
     }
 
 
@@ -8994,8 +8983,8 @@ init_breakpoint_sal (struct breakpoint *b, struct gdbarch *gdbarch,
   for (bp_location *loc : b->locations ())
     {
       if (b->cond_string != nullptr)
-	set_breakpoint_location_condition (b->cond_string, loc, b->number,
-					   loc_num);
+	set_breakpoint_location_condition (b->cond_string.get (), loc,
+					   b->number, loc_num);
 
       ++loc_num;
     }
@@ -9220,13 +9209,14 @@ check_fast_tracepoint_sals (struct gdbarch *gdbarch,
 
 static void
 find_condition_and_thread (const char *tok, CORE_ADDR pc,
-			   char **cond_string, int *thread, int *task,
-			   char **rest)
+			   gdb::unique_xmalloc_ptr<char> *cond_string,
+			   int *thread, int *task,
+			   gdb::unique_xmalloc_ptr<char> *rest)
 {
-  *cond_string = NULL;
+  cond_string->reset ();
   *thread = -1;
   *task = 0;
-  *rest = NULL;
+  rest->reset ();
   bool force = false;
 
   while (tok && *tok)
@@ -9240,7 +9230,7 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
 
       if ((*tok == '"' || *tok == ',') && rest)
 	{
-	  *rest = savestring (tok, strlen (tok));
+	  rest->reset (savestring (tok, strlen (tok)));
 	  return;
 	}
 
@@ -9263,7 +9253,7 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
 		tok = tok + strlen (tok);
 	    }
 	  cond_end = tok;
-	  *cond_string = savestring (cond_start, cond_end - cond_start);
+	  cond_string->reset (savestring (cond_start, cond_end - cond_start));
 	}
       else if (toklen >= 1 && strncmp (tok, "-force-condition", toklen) == 0)
 	{
@@ -9296,7 +9286,7 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
 	}
       else if (rest)
 	{
-	  *rest = savestring (tok, strlen (tok));
+	  rest->reset (savestring (tok, strlen (tok)));
 	  return;
 	}
       else
@@ -9311,16 +9301,18 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
 
 static void
 find_condition_and_thread_for_sals (const std::vector<symtab_and_line> &sals,
-				    const char *input, char **cond_string,
-				    int *thread, int *task, char **rest)
+				    const char *input,
+				    gdb::unique_xmalloc_ptr<char> *cond_string,
+				    int *thread, int *task,
+				    gdb::unique_xmalloc_ptr<char> *rest)
 {
   int num_failures = 0;
   for (auto &sal : sals)
     {
-      char *cond = nullptr;
+      gdb::unique_xmalloc_ptr<char> cond;
       int thread_id = 0;
       int task_id = 0;
-      char *remaining = nullptr;
+      gdb::unique_xmalloc_ptr<char> remaining;
 
       /* Here we want to parse 'arg' to separate condition from thread
 	 number.  But because parsing happens in a context and the
@@ -9332,10 +9324,10 @@ find_condition_and_thread_for_sals (const std::vector<symtab_and_line> &sals,
 	{
 	  find_condition_and_thread (input, sal.pc, &cond, &thread_id,
 				     &task_id, &remaining);
-	  *cond_string = cond;
+	  *cond_string = std::move (cond);
 	  *thread = thread_id;
 	  *task = task_id;
-	  *rest = remaining;
+	  *rest = std::move (remaining);
 	  break;
 	}
       catch (const gdb_exception_error &e)
@@ -9506,15 +9498,15 @@ create_breakpoint (struct gdbarch *gdbarch,
 
       if (parse_extra)
 	{
-	  char *rest;
-	  char *cond;
+	  gdb::unique_xmalloc_ptr<char> rest;
+	  gdb::unique_xmalloc_ptr<char> cond;
 
 	  const linespec_sals &lsal = canonical.lsals[0];
 
 	  find_condition_and_thread_for_sals (lsal.sals, extra_string,
 					      &cond, &thread, &task, &rest);
-	  cond_string_copy.reset (cond);
-	  extra_string_copy.reset (rest);
+	  cond_string_copy = std::move (cond);
+	  extra_string_copy = std::move (rest);
 	}
       else
 	{
@@ -9577,12 +9569,16 @@ create_breakpoint (struct gdbarch *gdbarch,
       else
 	{
 	  /* Create a private copy of condition string.  */
-	  b->cond_string = cond_string != NULL ? xstrdup (cond_string) : NULL;
+	  b->cond_string.reset (cond_string != NULL
+				? xstrdup (cond_string)
+				: NULL);
 	  b->thread = thread;
 	}
 
       /* Create a private copy of any extra string.  */
-      b->extra_string = extra_string != NULL ? xstrdup (extra_string) : NULL;
+      b->extra_string.reset (extra_string != NULL
+			     ? xstrdup (extra_string)
+			     : NULL);
       b->ignore_count = ignore_count;
       b->disposition = tempflag ? disp_del : disp_donttouch;
       b->condition_not_parsed = 1;
@@ -10120,14 +10116,6 @@ watchpoint_exp_is_const (const struct expression *exp)
   return exp->op->constant_p ();
 }
 
-/* Watchpoint destructor.  */
-
-watchpoint::~watchpoint ()
-{
-  xfree (this->exp_string);
-  xfree (this->exp_string_reparse);
-}
-
 /* Implement the "re_set" breakpoint_ops method for watchpoints.  */
 
 static void
@@ -10362,7 +10350,7 @@ print_mention_watchpoint (struct breakpoint *b)
   ui_out_emit_tuple tuple_emitter (uiout, tuple_name);
   uiout->field_signed ("number", b->number);
   uiout->text (": ");
-  uiout->field_string ("exp", w->exp_string);
+  uiout->field_string ("exp", w->exp_string.get ());
 }
 
 /* Implement the "print_recreate" breakpoint_ops method for
@@ -10390,7 +10378,7 @@ print_recreate_watchpoint (struct breakpoint *b, struct ui_file *fp)
 		      _("Invalid watchpoint type."));
     }
 
-  fprintf_unfiltered (fp, " %s", w->exp_string);
+  fprintf_unfiltered (fp, " %s", w->exp_string.get ());
   print_recreate_thread (b, fp);
 }
 
@@ -10555,7 +10543,7 @@ print_mention_masked_watchpoint (struct breakpoint *b)
   ui_out_emit_tuple tuple_emitter (uiout, tuple_name);
   uiout->field_signed ("number", b->number);
   uiout->text (": ");
-  uiout->field_string ("exp", w->exp_string);
+  uiout->field_string ("exp", w->exp_string.get ());
 }
 
 /* Implement the "print_recreate" breakpoint_ops method for
@@ -10582,7 +10570,7 @@ print_recreate_masked_watchpoint (struct breakpoint *b, struct ui_file *fp)
 		      _("Invalid hardware watchpoint type."));
     }
 
-  fprintf_unfiltered (fp, " %s mask 0x%s", w->exp_string,
+  fprintf_unfiltered (fp, " %s mask 0x%s", w->exp_string.get (),
 		      phex (w->hw_wp_mask, sizeof (CORE_ADDR)));
   print_recreate_thread (b, fp);
 }
@@ -10861,13 +10849,14 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       CORE_ADDR addr = value_as_address (val.get ());
 
       w->exp_string_reparse
-	= current_language->watch_location_expression (t, addr).release ();
+	= current_language->watch_location_expression (t, addr);
 
-      w->exp_string = xstrprintf ("-location %.*s",
-				  (int) (exp_end - exp_start), exp_start);
+      w->exp_string.reset (xstrprintf ("-location %.*s",
+				       (int) (exp_end - exp_start),
+				       exp_start));
     }
   else
-    w->exp_string = savestring (exp_start, exp_end - exp_start);
+    w->exp_string.reset (savestring (exp_start, exp_end - exp_start));
 
   if (use_mask)
     {
@@ -10882,7 +10871,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     }
 
   if (cond_start)
-    w->cond_string = savestring (cond_start, cond_end - cond_start);
+    w->cond_string.reset (savestring (cond_start, cond_end - cond_start));
   else
     w->cond_string = 0;
 
@@ -11382,7 +11371,7 @@ catch_exec_command_1 (const char *arg, int from_tty,
   std::unique_ptr<exec_catchpoint> c (new exec_catchpoint ());
   init_catchpoint (c.get (), gdbarch, temp, cond_string,
 		   &catch_exec_breakpoint_ops);
-  c->exec_pathname = NULL;
+  c->exec_pathname.reset ();
 
   install_breakpoint (0, std::move (c), 1);
 }
@@ -12258,13 +12247,13 @@ say_where (struct breakpoint *b)
 	{
 	  printf_filtered (_(" (%s,%s) pending."),
 			   event_location_to_string (b->location.get ()),
-			   b->extra_string);
+			   b->extra_string.get ());
 	}
       else
 	{
 	  printf_filtered (_(" (%s %s) pending."),
 			   event_location_to_string (b->location.get ()),
-			   b->extra_string);
+			   b->extra_string.get ());
 	}
     }
   else
@@ -12304,19 +12293,6 @@ say_where (struct breakpoint *b)
 	  printf_filtered (" (%d locations)", n);
 	}
     }
-}
-
-bp_location::~bp_location ()
-{
-  xfree (function_name);
-}
-
-/* Destructor for the breakpoint base class.  */
-
-breakpoint::~breakpoint ()
-{
-  xfree (this->cond_string);
-  xfree (this->extra_string);
 }
 
 /* See breakpoint.h.  */
@@ -12676,7 +12652,7 @@ bkpt_print_recreate (struct breakpoint *tp, struct ui_file *fp)
   /* Print out extra_string if this breakpoint is pending.  It might
      contain, for example, conditions that were set by the user.  */
   if (tp->loc == NULL && tp->extra_string != NULL)
-    fprintf_unfiltered (fp, " %s", tp->extra_string);
+    fprintf_unfiltered (fp, " %s", tp->extra_string.get ());
 
   print_recreate_thread (tp, fp);
 }
@@ -13085,7 +13061,7 @@ dprintf_print_recreate (struct breakpoint *tp, struct ui_file *fp)
 {
   fprintf_unfiltered (fp, "dprintf %s,%s",
 		      event_location_to_string (tp->location.get ()),
-		      tp->extra_string);
+		      tp->extra_string.get ());
   print_recreate_thread (tp, fp);
 }
 
@@ -13415,7 +13391,7 @@ ambiguous_names_p (struct bp_location *loc)
   for (l = loc; l != NULL; l = l->next)
     {
       const char **slot;
-      const char *name = l->function_name;
+      const char *name = l->function_name.get ();
 
       /* Allow for some names to be NULL, ignore them.  */
       if (name == NULL)
@@ -13675,7 +13651,7 @@ update_breakpoint_locations (struct breakpoint *b,
 	{
 	  const char *s;
 
-	  s = b->cond_string;
+	  s = b->cond_string.get ();
 	  try
 	    {
 	      new_loc->cond = parse_exp_1 (&s, sal.pc,
@@ -13734,7 +13710,8 @@ update_breakpoint_locations (struct breakpoint *b,
 	      {
 		for (bp_location *l : b->locations ())
 		  if (l->function_name
-		      && strcmp (e->function_name, l->function_name) == 0)
+		      && strcmp (e->function_name.get (),
+				 l->function_name.get ()) == 0)
 		    {
 		      l->enabled = e->enabled;
 		      l->disabled_by_cond = e->disabled_by_cond;
@@ -13808,22 +13785,19 @@ location_to_sals (struct breakpoint *b, struct event_location *location,
 	resolve_sal_pc (&sal);
       if (b->condition_not_parsed && b->extra_string != NULL)
 	{
-	  char *cond_string, *extra_string;
+	  gdb::unique_xmalloc_ptr<char> cond_string, extra_string;
 	  int thread, task;
 
-	  find_condition_and_thread_for_sals (sals, b->extra_string,
+	  find_condition_and_thread_for_sals (sals, b->extra_string.get (),
 					      &cond_string, &thread,
 					      &task, &extra_string);
 	  gdb_assert (b->cond_string == NULL);
 	  if (cond_string)
-	    b->cond_string = cond_string;
+	    b->cond_string = std::move (cond_string);
 	  b->thread = thread;
 	  b->task = task;
 	  if (extra_string)
-	    {
-	      xfree (b->extra_string);
-	      b->extra_string = extra_string;
-	    }
+	    b->extra_string = std::move (extra_string);
 	  b->condition_not_parsed = 0;
 	}
 
@@ -15131,7 +15105,7 @@ save_breakpoints (const char *filename, int from_tty,
 	 instead.  */
 
       if (tp->cond_string)
-	fp.printf ("  condition $bpnum %s\n", tp->cond_string);
+	fp.printf ("  condition $bpnum %s\n", tp->cond_string.get ());
 
       if (tp->ignore_count)
 	fp.printf ("  ignore $bpnum %d\n", tp->ignore_count);
