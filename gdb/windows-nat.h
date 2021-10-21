@@ -63,9 +63,10 @@ DEF_ENUM_FLAGS_TYPE (windows_continue_flag, windows_continue_flags);
 struct windows_per_inferior : public windows_nat::windows_process_info
 {
   windows_thread_info *find_thread (ptid_t ptid) override;
-  DWORD handle_output_debug_string (struct target_waitstatus *ourstatus) override;
+  DWORD handle_output_debug_string (const DEBUG_EVENT &current_event,
+				    struct target_waitstatus *ourstatus) override;
   void handle_load_dll (const char *dll_name, LPVOID base) override;
-  void handle_unload_dll () override;
+  void handle_unload_dll (const DEBUG_EVENT &current_event) override;
   bool handle_access_violation (const EXCEPTION_RECORD *rec) override;
 
   /* Invalidate the thread context.  */
@@ -172,7 +173,8 @@ struct windows_nat_target : public inf_child_target
   const char *thread_name (struct thread_info *) override;
 
   ptid_t get_windows_debug_event (int pid, struct target_waitstatus *ourstatus,
-				  target_wait_flags options);
+				  target_wait_flags options,
+				  DEBUG_EVENT *current_event);
 
   void do_initial_windows_stuff (DWORD pid, bool attaching);
 
@@ -244,7 +246,7 @@ private:
   windows_thread_info *add_thread (ptid_t ptid, HANDLE h, void *tlb,
 				   bool main_thread_p);
   void delete_thread (ptid_t ptid, DWORD exit_code, bool main_thread_p);
-  DWORD fake_create_process ();
+  DWORD fake_create_process (const DEBUG_EVENT &current_event);
 
   void continue_one_thread (windows_thread_info *th,
 			    windows_continue_flags cont_flags);
