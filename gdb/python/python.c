@@ -1876,6 +1876,7 @@ do_start_initialization ()
       || gdbpy_initialize_registers () < 0
       || gdbpy_initialize_xmethods () < 0
       || gdbpy_initialize_unwind () < 0
+      || gdbpy_initialize_membuf () < 0
       || gdbpy_initialize_tui () < 0)
     return false;
 
@@ -2323,6 +2324,10 @@ Set the value of the convenience variable $NAME." },
     "register_window_type (NAME, CONSTRUCSTOR) -> None\n\
 Register a TUI window constructor." },
 #endif	/* TUI */
+
+  { "architecture_names", gdbpy_all_architecture_names, METH_NOARGS,
+    "architecture_names () -> List.\n\
+Return a list of all the architecture names GDB understands." },
 
   {NULL, NULL, 0, NULL}
 };

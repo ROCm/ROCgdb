@@ -122,9 +122,9 @@ typedef struct bfd bfd;
 #endif
 
 /* Silence "applying zero offset to null pointer" UBSAN warnings.  */
-#define PTR_ADD(P,A) ((A) ? (P) + (A) : (P))
+#define PTR_ADD(P,A) ((A) != 0 ? (P) + (A) : (P))
 /* Also prevent non-zero offsets from being applied to a null pointer.  */
-#define NPTR_ADD(P,A) ((P) ? (P) + (A) : (P))
+#define NPTR_ADD(P,A) ((P) != NULL ? (P) + (A) : (P))
 
 #ifdef BFD64
 
@@ -1938,6 +1938,9 @@ enum bfd_architecture
 #define bfd_mach_ck807         6
 #define bfd_mach_ck810         7
 #define bfd_mach_ck860         8
+  bfd_arch_loongarch,       /* LoongArch */
+#define bfd_mach_loongarch32   1
+#define bfd_mach_loongarch64   2
   bfd_arch_amdgcn,     /* AMD GPU Architecture. Must match EF_AMDGPU_MACH_* */
 #define bfd_mach_amdgcn_unknown 0x000
 #define bfd_mach_amdgcn_gfx801  0x028
@@ -6286,6 +6289,51 @@ assembler and not (currently) written to any object files.  */
 
 /* S12Z relocations.  */
   BFD_RELOC_S12Z_OPR,
+
+/* LARCH relocations.  */
+  BFD_RELOC_LARCH_TLS_DTPMOD32,
+  BFD_RELOC_LARCH_TLS_DTPREL32,
+  BFD_RELOC_LARCH_TLS_DTPMOD64,
+  BFD_RELOC_LARCH_TLS_DTPREL64,
+  BFD_RELOC_LARCH_TLS_TPREL32,
+  BFD_RELOC_LARCH_TLS_TPREL64,
+  BFD_RELOC_LARCH_MARK_LA,
+  BFD_RELOC_LARCH_MARK_PCREL,
+  BFD_RELOC_LARCH_SOP_PUSH_PCREL,
+  BFD_RELOC_LARCH_SOP_PUSH_ABSOLUTE,
+  BFD_RELOC_LARCH_SOP_PUSH_DUP,
+  BFD_RELOC_LARCH_SOP_PUSH_GPREL,
+  BFD_RELOC_LARCH_SOP_PUSH_TLS_TPREL,
+  BFD_RELOC_LARCH_SOP_PUSH_TLS_GOT,
+  BFD_RELOC_LARCH_SOP_PUSH_TLS_GD,
+  BFD_RELOC_LARCH_SOP_PUSH_PLT_PCREL,
+  BFD_RELOC_LARCH_SOP_ASSERT,
+  BFD_RELOC_LARCH_SOP_NOT,
+  BFD_RELOC_LARCH_SOP_SUB,
+  BFD_RELOC_LARCH_SOP_SL,
+  BFD_RELOC_LARCH_SOP_SR,
+  BFD_RELOC_LARCH_SOP_ADD,
+  BFD_RELOC_LARCH_SOP_AND,
+  BFD_RELOC_LARCH_SOP_IF_ELSE,
+  BFD_RELOC_LARCH_SOP_POP_32_S_10_5,
+  BFD_RELOC_LARCH_SOP_POP_32_U_10_12,
+  BFD_RELOC_LARCH_SOP_POP_32_S_10_12,
+  BFD_RELOC_LARCH_SOP_POP_32_S_10_16,
+  BFD_RELOC_LARCH_SOP_POP_32_S_10_16_S2,
+  BFD_RELOC_LARCH_SOP_POP_32_S_5_20,
+  BFD_RELOC_LARCH_SOP_POP_32_S_0_5_10_16_S2,
+  BFD_RELOC_LARCH_SOP_POP_32_S_0_10_10_16_S2,
+  BFD_RELOC_LARCH_SOP_POP_32_U,
+  BFD_RELOC_LARCH_ADD8,
+  BFD_RELOC_LARCH_ADD16,
+  BFD_RELOC_LARCH_ADD24,
+  BFD_RELOC_LARCH_ADD32,
+  BFD_RELOC_LARCH_ADD64,
+  BFD_RELOC_LARCH_SUB8,
+  BFD_RELOC_LARCH_SUB16,
+  BFD_RELOC_LARCH_SUB24,
+  BFD_RELOC_LARCH_SUB32,
+  BFD_RELOC_LARCH_SUB64,
   BFD_RELOC_UNUSED };
 
 typedef enum bfd_reloc_code_real bfd_reloc_code_real_type;

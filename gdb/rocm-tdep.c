@@ -1198,10 +1198,11 @@ rocm_target_ops::stop (ptid_t ptid)
 
     if (report_thread_events)
       {
+	target_waitstatus ws;
+	ws.set_thread_exited (0);
+
 	get_rocm_inferior_info (thread->inf)
-	  ->wave_events.emplace_back (thread->ptid,
-				      target_waitstatus{
-					TARGET_WAITKIND_THREAD_EXITED, { 0 }});
+	  ->wave_events.emplace_back (thread->ptid, ws);
 
 	if (target_is_async_p ())
 	  async_event_handler_mark ();
@@ -1362,21 +1363,18 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 	if (status == AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID
 	    && event_kind == AMD_DBGAPI_EVENT_KIND_WAVE_COMMAND_TERMINATED)
 	  {
-	    ws.kind = TARGET_WAITKIND_THREAD_EXITED;
-	    ws.value.integer = 0;
+	    ws.set_thread_exited (0);
 	  }
 	else if (status == AMD_DBGAPI_STATUS_SUCCESS)
 	  {
-	    ws.kind = TARGET_WAITKIND_STOPPED;
-
 	    if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_APERTURE_VIOLATION)
-	      ws.value.sig = GDB_SIGNAL_BUS;
+	      ws.set_stopped (GDB_SIGNAL_BUS);
 	    else if (stop_reason
 		     & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
-	      ws.value.sig = GDB_SIGNAL_SEGV;
+	      ws.set_stopped (GDB_SIGNAL_SEGV);
 	    else if (stop_reason
 		     & AMD_DBGAPI_WAVE_STOP_REASON_ILLEGAL_INSTRUCTION)
-	      ws.value.sig = GDB_SIGNAL_ILL;
+	      ws.set_stopped (GDB_SIGNAL_ILL);
 	    else if (stop_reason
 		     & (AMD_DBGAPI_WAVE_STOP_REASON_FP_INPUT_DENORMAL
 			| AMD_DBGAPI_WAVE_STOP_REASON_FP_DIVIDE_BY_0
@@ -1385,18 +1383,18 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
 			| AMD_DBGAPI_WAVE_STOP_REASON_FP_INEXACT
 			| AMD_DBGAPI_WAVE_STOP_REASON_FP_INVALID_OPERATION
 			| AMD_DBGAPI_WAVE_STOP_REASON_INT_DIVIDE_BY_0))
-	      ws.value.sig = GDB_SIGNAL_FPE;
+	      ws.set_stopped (GDB_SIGNAL_FPE);
 	    else if (stop_reason
 		     & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
 			| AMD_DBGAPI_WAVE_STOP_REASON_WATCHPOINT
 			| AMD_DBGAPI_WAVE_STOP_REASON_SINGLE_STEP
 			| AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP
 			| AMD_DBGAPI_WAVE_STOP_REASON_TRAP))
-	      ws.value.sig = GDB_SIGNAL_TRAP;
+	      ws.set_stopped (GDB_SIGNAL_TRAP);
 	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP)
-	      ws.value.sig = GDB_SIGNAL_ABRT;
+	      ws.set_stopped (GDB_SIGNAL_ABRT);
 	    else
-	      ws.value.sig = GDB_SIGNAL_0;
+	      ws.set_stopped (GDB_SIGNAL_0);
 
 	    thread_info *thread = find_thread_ptid (proc_target, event_ptid);
 	    if (thread == nullptr)
@@ -1556,7 +1554,7 @@ rocm_consume_one_event (ptid_t ptid)
     }
 
   if (info->wave_events.empty ())
-    return { minus_one_ptid, target_waitstatus{ TARGET_WAITKIND_IGNORE, { 0 }} };
+    return { minus_one_ptid, {} };
 
   auto event = info->wave_events.front ();
   info->wave_events.pop_front ();
@@ -1581,8 +1579,8 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   if (event_ptid != minus_one_ptid)
     return event_ptid;
 
-  gdb_assert (ws->kind == TARGET_WAITKIND_NO_RESUMED
-	      || ws->kind == TARGET_WAITKIND_IGNORE);
+  gdb_assert (ws->kind () == TARGET_WAITKIND_NO_RESUMED
+	      || ws->kind () == TARGET_WAITKIND_IGNORE);
 
   /* Flush the async handler first.  */
   if (target_is_async_p ())
@@ -1621,7 +1619,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 	  if (ptid == minus_one_ptid)
 	    more_events.release ();
 
-	  if (ws->kind == TARGET_WAITKIND_NO_RESUMED)
+	  if (ws->kind () == TARGET_WAITKIND_NO_RESUMED)
 	    {
 	      /* We can't easily check that all GPU waves are stopped, and no
 		 new waves can be created (the GPU has fixed function hardware
@@ -1635,7 +1633,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 		    && get_rocm_inferior_info (inf)->runtime_state
 			 == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
 		  {
-		    ws->kind = TARGET_WAITKIND_IGNORE;
+		    ws->set_ignore ();
 		    break;
 		  }
 	    }
