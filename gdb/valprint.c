@@ -484,7 +484,7 @@ generic_value_print_ptr (struct value *val, struct ui_file *stream,
     {
       struct type *type = check_typedef (value_type (val));
       struct type *elttype = check_typedef (TYPE_TARGET_TYPE (type));
-      const gdb_byte *valaddr = value_contents_for_printing (val);
+      const gdb_byte *valaddr = value_contents_for_printing (val).data ();
       CORE_ADDR addr = unpack_pointer (type, valaddr);
 
       print_unpacked_pointer (type, elttype, addr, stream, options);
@@ -521,7 +521,7 @@ get_value_addr_contents (struct value *deref_val)
   gdb_assert (deref_val != NULL);
 
   if (value_lval_const (deref_val) == lval_memory)
-    return value_contents_for_printing_const (value_addr (deref_val));
+    return value_contents_for_printing_const (value_addr (deref_val)).data ();
   else
     {
       /* We have a non-addressable value, such as a DW_AT_const_value.  */
@@ -546,7 +546,7 @@ generic_val_print_ref (struct type *type,
   const int must_coerce_ref = ((options->addressprint && value_is_synthetic)
 			       || options->deref_ref);
   const int type_is_defined = elttype->code () != TYPE_CODE_UNDEF;
-  const gdb_byte *valaddr = value_contents_for_printing (original_value);
+  const gdb_byte *valaddr = value_contents_for_printing (original_value).data ();
 
   if (must_coerce_ref && type_is_defined)
     {
@@ -694,7 +694,7 @@ generic_val_print_enum (struct type *type,
 
   gdb_assert (!options->format);
 
-  const gdb_byte *valaddr = value_contents_for_printing (original_value);
+  const gdb_byte *valaddr = value_contents_for_printing (original_value).data ();
 
   val = unpack_long (type, valaddr + embedded_offset * unit_size);
 
@@ -741,7 +741,7 @@ generic_value_print_bool
     }
   else
     {
-      const gdb_byte *valaddr = value_contents_for_printing (value);
+      const gdb_byte *valaddr = value_contents_for_printing (value).data ();
       struct type *type = check_typedef (value_type (value));
       LONGEST val = unpack_long (type, valaddr);
       if (val == 0)
@@ -784,7 +784,7 @@ generic_value_print_char (struct value *value, struct ui_file *stream,
     {
       struct type *unresolved_type = value_type (value);
       struct type *type = check_typedef (unresolved_type);
-      const gdb_byte *valaddr = value_contents_for_printing (value);
+      const gdb_byte *valaddr = value_contents_for_printing (value).data ();
 
       LONGEST val = unpack_long (type, valaddr);
       if (type->is_unsigned ())
@@ -805,7 +805,7 @@ generic_val_print_float (struct type *type, struct ui_file *stream,
 {
   gdb_assert (!options->format);
 
-  const gdb_byte *valaddr = value_contents_for_printing (original_value);
+  const gdb_byte *valaddr = value_contents_for_printing (original_value).data ();
 
   print_floating (valaddr, type, stream);
 }
@@ -822,7 +822,7 @@ generic_val_print_fixed_point (struct value *val, struct ui_file *stream,
     {
       struct type *type = value_type (val);
 
-      const gdb_byte *valaddr = value_contents_for_printing (val);
+      const gdb_byte *valaddr = value_contents_for_printing (val).data ();
       gdb_mpf f;
 
       f.read_fixed_point (gdb::make_array_view (valaddr, TYPE_LENGTH (type)),
@@ -868,7 +868,7 @@ generic_value_print_memberptr
       /* Member pointers are essentially specific to C++, and so if we
 	 encounter one, we should print it according to C++ rules.  */
       struct type *type = check_typedef (value_type (val));
-      const gdb_byte *valaddr = value_contents_for_printing (val);
+      const gdb_byte *valaddr = value_contents_for_printing (val).data ();
       cp_print_class_member (valaddr, type, stream, "&");
     }
   else
@@ -978,7 +978,7 @@ generic_value_print (struct value *val, struct ui_file *stream, int recurse,
       break;
 
     case TYPE_CODE_METHODPTR:
-      cplus_print_method_ptr (value_contents_for_printing (val), type,
+      cplus_print_method_ptr (value_contents_for_printing (val).data (), type,
 			      stream);
       break;
 
@@ -1194,7 +1194,7 @@ static void
 val_print_type_code_flags (struct type *type, struct value *original_value,
 			   int embedded_offset, struct ui_file *stream)
 {
-  const gdb_byte *valaddr = (value_contents_for_printing (original_value)
+  const gdb_byte *valaddr = (value_contents_for_printing (original_value).data ()
 			     + embedded_offset);
   ULONGEST val = unpack_long (type, valaddr);
   int field, nfields = type->num_fields ();
@@ -1268,7 +1268,7 @@ value_print_scalar_formatted (struct value *val,
   /* value_contents_for_printing fetches all VAL's contents.  They are
      needed to check whether VAL is optimized-out or unavailable
      below.  */
-  const gdb_byte *valaddr = value_contents_for_printing (val);
+  const gdb_byte *valaddr = value_contents_for_printing (val).data ();
 
   /* A scalar object that does not have all bits available can't be
      printed, because all bits contribute to its representation.  */
@@ -3156,7 +3156,7 @@ test_print_flags (gdbarch *arch)
   append_flags_type_field (flags_type, 5, 3, field_type, "C");
 
   value *val = allocate_value (flags_type);
-  gdb_byte *contents = value_contents_writeable (val);
+  gdb_byte *contents = value_contents_writeable (val).data ();
   store_unsigned_integer (contents, 4, gdbarch_byte_order (arch), 0xaa);
 
   string_file out;

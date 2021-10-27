@@ -1157,7 +1157,7 @@ frame_register_unwind (frame_info *next_frame, int regnum,
   if (bufferp)
     {
       if (!*optimizedp && !*unavailablep)
-	memcpy (bufferp, value_contents_all (value),
+	memcpy (bufferp, value_contents_all (value).data (),
 		TYPE_LENGTH (value_type (value)));
       else
 	memset (bufferp, 0, TYPE_LENGTH (value_type (value)));
@@ -1262,7 +1262,7 @@ frame_unwind_register_value (frame_info *next_frame, int regnum)
 	  else
 	    {
 	      int i;
-	      const gdb_byte *buf = value_contents (value);
+	      const gdb_byte *buf = value_contents (value).data ();
 
 	      fprintf_unfiltered (&debug_file, " bytes=");
 	      fprintf_unfiltered (&debug_file, "[");
@@ -1305,7 +1305,7 @@ frame_unwind_register_signed (frame_info *next_frame, int regnum)
 		   _("Register %d is not available"), regnum);
     }
 
-  LONGEST r = extract_signed_integer (value_contents_all (value), size,
+  LONGEST r = extract_signed_integer (value_contents_all (value).data (), size,
 				      byte_order);
 
   release_value (value);
@@ -1339,8 +1339,8 @@ frame_unwind_register_unsigned (frame_info *next_frame, int regnum)
 		   _("Register %d is not available"), regnum);
     }
 
-  ULONGEST r = extract_unsigned_integer (value_contents_all (value), size,
-					 byte_order);
+  ULONGEST r = extract_unsigned_integer (value_contents_all (value).data (),
+					 size, byte_order);
 
   release_value (value);
   return r;
@@ -1365,7 +1365,8 @@ read_frame_register_unsigned (frame_info *frame, int regnum,
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       int size = register_size (gdbarch, VALUE_REGNUM (regval));
 
-      *val = extract_unsigned_integer (value_contents (regval), size, byte_order);
+      *val = extract_unsigned_integer (value_contents (regval).data (), size,
+				       byte_order);
       return true;
     }
 
@@ -1504,7 +1505,8 @@ get_frame_register_bytes (frame_info *frame, int regnum,
 	      return false;
 	    }
 
-	  memcpy (myaddr, value_contents_all (value) + offset, curr_len);
+	  memcpy (myaddr, value_contents_all (value).data () + offset,
+		  curr_len);
 	  release_value (value);
 	}
 
@@ -1559,7 +1561,7 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
 	    error (_("Attempt to assign to an unmodifiable value."));
 
 	  struct value *from_value = allocate_value (reg_type);
-	  memcpy (value_contents_raw (from_value), myaddr,
+	  memcpy (value_contents_raw (from_value).data (), myaddr,
 		  TYPE_LENGTH (reg_type));
 
 	  set_value_offset (value, added_offset + offset);
@@ -1575,9 +1577,9 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
 	{
 	  gdb_assert (value != NULL);
 
-	  memcpy ((char *) value_contents_writeable (value) + offset,
+	  memcpy ((char *) value_contents_writeable (value).data () + offset,
 		  myaddr, curr_len);
-	  put_frame_register (frame, regnum, value_contents_raw (value),
+	  put_frame_register (frame, regnum, value_contents_raw (value).data (),
 			      added_offset);
 	}
 

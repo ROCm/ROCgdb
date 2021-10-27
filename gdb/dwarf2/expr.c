@@ -695,7 +695,7 @@ dwarf_location::read_from_gdb_value (frame_info *frame, struct value *value,
   int optimized, unavailable;
   bool big_endian = type_byte_order (value_type (value)) == BFD_ENDIAN_BIG;
 
-  this->write (frame, value_contents (value), value_bit_offset,
+  this->write (frame, value_contents (value).data (), value_bit_offset,
 	       bit_size, bits_to_skip, location_bit_limit,
 	       big_endian, &optimized, &unavailable);
 
@@ -720,7 +720,7 @@ dwarf_location::write_to_gdb_value (frame_info *frame, struct value *value,
   int optimized, unavailable;
   bool big_endian = type_byte_order (value_type (value)) == BFD_ENDIAN_BIG;
 
-  this->read (frame, value_contents_raw (value), value_bit_offset,
+  this->read (frame, value_contents_raw (value).data (), value_bit_offset,
 	      bit_size, bits_to_skip, location_bit_limit,
 	      big_endian, &optimized, &unavailable);
 
@@ -829,7 +829,7 @@ dwarf_value::convert_to_gdb_value (struct type *type, LONGEST offset) const
     invalid_synthetic_pointer ();
 
   value *retval = allocate_value (type);
-  memcpy (value_contents_raw (retval),
+  memcpy (value_contents_raw (retval).data (),
 	  m_contents.get () + offset, type_len);
   return retval;
 }
@@ -1522,7 +1522,7 @@ dwarf_implicit::to_gdb_value (frame_info *frame, struct type *type,
   if (m_byte_order == BFD_ENDIAN_BIG)
     subobj_offset += m_size - type_len;
 
-  memcpy ((void *)value_contents_raw (retval),
+  memcpy ((void *)value_contents_raw (retval).data (),
 	  (void *)(m_contents.get () + subobj_offset), subtype_len);
 
   return retval;
@@ -1634,7 +1634,7 @@ dwarf_implicit_pointer::read (frame_info *frame, gdb_byte *buf,
 				  m_per_objfile, actual_frame, type);
 
   gdb_byte *value_contents
-    = value_contents_raw (value) + total_bits_to_skip / HOST_CHAR_BIT;
+    = value_contents_raw (value).data () + total_bits_to_skip / HOST_CHAR_BIT;
 
   if (total_bits_to_skip % HOST_CHAR_BIT == 0
       && bit_size % HOST_CHAR_BIT == 0
@@ -2227,7 +2227,7 @@ dwarf_value_binary_op (std::shared_ptr<const dwarf_value> arg1,
   value *arg2_value = arg2->convert_to_gdb_value (arg2->get_type ());
   value *result = value_binop (arg1_value, arg2_value, op);
 
-  return std::make_shared<dwarf_value> (value_contents_raw (result),
+  return std::make_shared<dwarf_value> (value_contents_raw (result).data (),
 				        value_type (result));
 }
 
@@ -2239,7 +2239,7 @@ dwarf_value_negation_op (std::shared_ptr<const dwarf_value> arg)
 {
   value *result
     = value_neg (arg->convert_to_gdb_value (arg->get_type ()));
-  return std::make_shared<dwarf_value> (value_contents_raw (result),
+  return std::make_shared<dwarf_value> (value_contents_raw (result).data (),
 					value_type (result));
 }
 
@@ -2251,7 +2251,7 @@ dwarf_value_complement_op (std::shared_ptr<const dwarf_value> arg)
 {
   value *result
     = value_complement (arg->convert_to_gdb_value (arg->get_type ()));
-  return std::make_shared<dwarf_value> (value_contents_raw (result),
+  return std::make_shared<dwarf_value> (value_contents_raw (result).data (),
 					value_type (result));
 }
 
@@ -2263,7 +2263,7 @@ dwarf_value_cast_op (std::shared_ptr<const dwarf_value> arg, struct type *type)
 {
   value *result
     = value_cast (type, arg->convert_to_gdb_value (arg->get_type ()));
-  return std::make_shared<dwarf_value> (value_contents_raw (result), type);
+  return std::make_shared<dwarf_value> (value_contents_raw (result).data (), type);
 }
 
 static void *
@@ -2452,7 +2452,7 @@ indirect_closure_value (value *value)
      encode address spaces and other things in CORE_ADDR.  */
   bfd_endian byte_order = gdbarch_byte_order (get_frame_arch (frame));
   LONGEST pointer_offset
-    = extract_signed_integer (value_contents (value),
+    = extract_signed_integer (value_contents (value).data (),
 			      TYPE_LENGTH (type), byte_order);
 
   return closure->get_location ()->indirect_implicit_ptr (frame, type,
@@ -2502,7 +2502,7 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
 	 not_lval.  */
     case not_lval:
       {
-	gdb_byte *contents_start = value_contents_raw (value) + offset;
+	gdb_byte *contents_start = value_contents_raw (value).data () + offset;
 
 	return std::make_shared<dwarf_implicit> (arch, contents_start,
 						 TYPE_LENGTH (type),

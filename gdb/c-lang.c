@@ -303,7 +303,7 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
       && (*length < 0 || *length <= fetchlimit))
     {
       int i;
-      const gdb_byte *contents = value_contents (value);
+      const gdb_byte *contents = value_contents (value).data ();
 
       /* If a length is specified, use that.  */
       if (*length >= 0)
@@ -676,7 +676,7 @@ c_string_operation::evaluate (struct type *expect_type,
 	    error (_("Too many array elements"));
 
 	  result = allocate_value (expect_type);
-	  memcpy (value_contents_raw (result), obstack_base (&output),
+	  memcpy (value_contents_raw (result).data (), obstack_base (&output),
 		  obstack_object_size (&output));
 	}
       else
@@ -710,7 +710,7 @@ value *aspace_operation::evaluate (struct type *expect_type,
 
   CORE_ADDR adddress
     = gdbarch_integer_to_address (exp->gdbarch, val_type,
-				  value_contents (val), *address_space_id);
+				  value_contents (val).data (), *address_space_id);
 
   struct type *generic_ptr_type =
     lookup_pointer_type (builtin_type (exp->gdbarch)->builtin_void);
