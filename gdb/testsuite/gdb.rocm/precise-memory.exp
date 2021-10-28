@@ -1,0 +1,70 @@
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test showing the "amdgpu precise-memory" setting.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}"
+    return
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test { } {
+    clean_restart $::binfile
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	gdb_test "show amdgpu precise-memory" \
+	    "AMDGPU precise memory access reporting is off \\(currently disabled\\)." \
+	    "show precise-memory setting in CLI before"
+	gdb_test "interpreter-exec mi \"-gdb-show amdgpu precise-memory\"" \
+	    "\\^done,value=\"off\",verbose=\"AMDGPU precise memory access reporting is off \\(currently disabled\\).\\\\n\",effective-value=\"off\"" \
+	    "show precise-memory setting in MI before"
+
+	if {[hip_device_supports_precise_memory]} {
+	    gdb_test_no_output "set amdgpu precise-memory on"
+	    set mi_effective_value "on"
+	    set cli_effective_value "enabled"
+	} else {
+	    gdb_test "set amdgpu precise-memory on" \
+		"warning: AMDGPU precise memory access reporting could not be enabled."
+	    set mi_effective_value "off"
+	    set cli_effective_value "disabled"
+	}
+
+	gdb_test "show amdgpu precise-memory" \
+	    "AMDGPU precise memory access reporting is on \\(currently ${cli_effective_value}\\)." \
+	    "show precise-memory setting in CLI after"
+	gdb_test "interpreter-exec mi \"-gdb-show amdgpu precise-memory\"" \
+	    "\\^done,value=\"on\",verbose=\"AMDGPU precise memory access reporting is on \\(currently ${cli_effective_value}\\).\\\\n\",effective-value=\"${mi_effective_value}\"" \
+	    "show precise-memory setting in MI after"
+
+    }
+}
+
+do_test
+
