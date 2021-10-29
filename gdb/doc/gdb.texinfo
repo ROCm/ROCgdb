@@ -2178,10 +2178,10 @@ on @code{-} after the command name.  For example:
 
 @smallexample
 (@value{GDBP}) print -@key{TAB}@key{TAB}
--address         -max-depth       -raw-values      -union
--array           -null-stop       -repeats         -vtbl
--array-indexes   -object          -static-members
--elements        -pretty          -symbol
+-address         -max-depth               -pretty          -symbol
+-array           -memory-tag-violations   -raw-values      -union
+-array-indexes   -null-stop               -repeats         -vtbl
+-elements        -object                  -static-members
 @end smallexample
 
 Completion will in some cases guide you with a suggestion of what kind
@@ -10062,6 +10062,10 @@ Set limit on string chars or array elements to print.  The value
 @item -max-depth @var{depth}|@code{unlimited}
 Set the threshold after which nested structures are replaced with
 ellipsis.  Related setting: @ref{set print max-depth}.
+
+@item -memory-tag-violations [@code{on}|@code{off}]
+Set printing of additional information about memory tag violations.
+@xref{set print memory-tag-violations}.
 
 @item -null-stop [@code{on}|@code{off}]
 Set printing of char arrays to stop at first null char.  Related
@@ -42585,6 +42589,13 @@ print a message showing how many tests were run, and how many failed.
 If a @var{filter} is passed, only the tests with @var{filter} in their
 name will be ran.  If @code{-verbose} is passed, the self tests can be
 more verbose.
+
+@kindex maint set selftest verbose
+@kindex maint show selftest verbose
+@cindex self tests
+@item maint set selftest verbose
+@item maint show selftest verbose
+Control whether self tests are run verbosely or not.
 
 @kindex maint info selftests
 @cindex self tests
