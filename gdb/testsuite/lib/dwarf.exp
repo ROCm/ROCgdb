@@ -1235,7 +1235,12 @@ namespace eval Dwarf {
 
 		DW_OP_call4 {
 		   _get_args $line $opcode label
-		   _op .4byte $argvec(label)
+
+		   # Label reference.
+		   variable _cu_label
+
+		   set cu_offset "$argvec(label) - $_cu_label"
+		   _op .4byte $cu_offset
 		}
 
 		DW_OP_implicit_value {
