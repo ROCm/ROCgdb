@@ -7922,7 +7922,8 @@ mips_register_sim_regno (struct gdbarch *gdbarch, int regnum)
 
 static CORE_ADDR
 mips_integer_to_address (struct gdbarch *gdbarch, struct type *type,
-			 const gdb_byte *buf, unsigned int aspace)
+			 const gdb_byte *buf,
+			 arch_addr_space_id address_space_id)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   return extract_signed_integer (buf, TYPE_LENGTH (type), byte_order);
