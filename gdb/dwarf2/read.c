@@ -9067,7 +9067,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	  name = tail;
 	  if (*name != '$'
 	      || index >= field_type->num_fields ()
-	      || (TYPE_FIELD_LOC_KIND (field_type, index)
+	      || (field_type->field (index).loc_kind ()
 		  != FIELD_LOC_KIND_BITPOS))
 	    {
 	      complaint (_("Could not parse Rust enum encoding string \"%s\""
@@ -9078,7 +9078,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	    }
 	  ++name;
 
-	  bit_offset += TYPE_FIELD_BITPOS (field_type, index);
+	  bit_offset += field_type->field (index).loc_bitpos ();
 	  field_type = field_type->field (index).type ();
 	}
 
@@ -9199,11 +9199,11 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       std::unordered_map<std::string, ULONGEST> discriminant_map;
       for (int i = 0; i < enum_type->num_fields (); ++i)
 	{
-	  if (TYPE_FIELD_LOC_KIND (enum_type, i) == FIELD_LOC_KIND_ENUMVAL)
+	  if (enum_type->field (i).loc_kind () == FIELD_LOC_KIND_ENUMVAL)
 	    {
 	      const char *name
 		= rust_last_path_segment (enum_type->field (i).name ());
-	      discriminant_map[name] = TYPE_FIELD_ENUMVAL (enum_type, i);
+	      discriminant_map[name] = enum_type->field (i).loc_enumval ();
 	    }
 	}
 
@@ -14602,7 +14602,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		 anonymous object to the MSB of the field.  We don't
 		 have to do anything special since we don't need to
 		 know the size of the anonymous object.  */
-	      fp->set_loc_bitpos ((FIELD_BITPOS (*fp) + attr->constant_value (0)));
+	      fp->set_loc_bitpos (fp->loc_bitpos () + attr->constant_value (0));
 	    }
 	  else
 	    {
@@ -14631,9 +14631,9 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		     bit field.  */
 		  anonymous_size = TYPE_LENGTH (fp->type ());
 		}
-	      fp->set_loc_bitpos (FIELD_BITPOS (*fp)
-			      + anonymous_size * bits_per_byte
-			      - bit_offset - FIELD_BITSIZE (*fp));
+	      fp->set_loc_bitpos (fp->loc_bitpos ()
+				  + anonymous_size * bits_per_byte
+				  - bit_offset - FIELD_BITSIZE (*fp));
 	    }
 	}
 
@@ -16538,7 +16538,7 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
 	  bounds->num_fields () * sizeof (struct field));
 
   int last_fieldno = range_fields.size () - 1;
-  int bounds_size = (TYPE_FIELD_BITPOS (bounds, last_fieldno) / 8
+  int bounds_size = (bounds->field (last_fieldno).loc_bitpos () / 8
 		     + TYPE_LENGTH (bounds->field (last_fieldno).type ()));
   TYPE_LENGTH (bounds) = align_up (bounds_size, max_align);
 

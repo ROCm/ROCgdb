@@ -195,7 +195,7 @@ vtable_address_point_offset (struct gdbarch *gdbarch)
   struct type *vtable_type
     = (struct type *) gdbarch_data (gdbarch, vtable_type_gdbarch_data);
 
-  return (TYPE_FIELD_BITPOS (vtable_type, vtable_field_virtual_functions)
+  return (vtable_type->field (vtable_field_virtual_functions).loc_bitpos ()
 	  / TARGET_CHAR_BIT);
 }
 
@@ -464,12 +464,12 @@ gnuv3_baseclass_offset (struct type *type, int index,
     return TYPE_BASECLASS_BITPOS (type, index) / 8;
 
   /* If we have a DWARF expression for the offset, evaluate it.  */
-  if (TYPE_FIELD_LOC_KIND (type, index) == FIELD_LOC_KIND_DWARF_BLOCK)
+  if (type->field (index).loc_kind () == FIELD_LOC_KIND_DWARF_BLOCK)
     {
       struct dwarf2_property_baton baton;
       baton.property_type
 	= lookup_pointer_type (type->field (index).type ());
-      baton.locexpr = *TYPE_FIELD_DWARF_BLOCK (type, index);
+      baton.locexpr = *type->field (index).loc_dwarf_block ();
 
       struct dynamic_prop prop;
       prop.set_locexpr (&baton);

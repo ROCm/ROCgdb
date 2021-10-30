@@ -641,7 +641,7 @@ call_site_to_target_addr (struct gdbarch *call_site_gdbarch,
 			  struct call_site *call_site,
 			  struct frame_info *caller_frame)
 {
-  switch (FIELD_LOC_KIND (call_site->target))
+  switch (call_site->target.loc_kind ())
     {
     case FIELD_LOC_KIND_DWARF_BLOCK:
       {
@@ -650,7 +650,7 @@ call_site_to_target_addr (struct gdbarch *call_site_gdbarch,
 	struct type *caller_core_addr_type;
 	struct gdbarch *caller_arch;
 
-	dwarf_block = FIELD_DWARF_BLOCK (call_site->target);
+	dwarf_block = call_site->target.loc_dwarf_block ();
 	if (dwarf_block == NULL)
 	  {
 	    struct bound_minimal_symbol msym;
@@ -695,7 +695,7 @@ call_site_to_target_addr (struct gdbarch *call_site_gdbarch,
 	const char *physname;
 	struct bound_minimal_symbol msym;
 
-	physname = FIELD_STATIC_PHYSNAME (call_site->target);
+	physname = call_site->target.loc_physname ();
 
 	/* Handle both the mangled and demangled PHYSNAME.  */
 	msym = lookup_minimal_symbol (physname, NULL, NULL);
@@ -720,7 +720,7 @@ call_site_to_target_addr (struct gdbarch *call_site_gdbarch,
 	int sect_idx = COMPUNIT_BLOCK_LINE_SECTION (cust);
 	CORE_ADDR delta = per_objfile->objfile->section_offsets[sect_idx];
 
-	return FIELD_STATIC_PHYSADDR (call_site->target) + delta;
+	return call_site->target.loc_physaddr () + delta;
       }
 
     default:

@@ -1192,7 +1192,7 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 	      /* Make sure we carry our offset when we expand the
 		 struct/union.  */
 	      local_podata.offset_bitpos
-		= podata->offset_bitpos + TYPE_FIELD_BITPOS (type, i);
+		= podata->offset_bitpos + type->field (i).loc_bitpos ();
 	      /* We're entering a struct/union.  Right now,
 		 PODATA->END_BITPOS points right *after* the
 		 struct/union.  However, when printing the first field
@@ -1596,11 +1596,11 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 	      wrap_here ("    ");
 	      fputs_styled (type->field (i).name (),
 			    variable_name_style.style (), stream);
-	      if (lastval != TYPE_FIELD_ENUMVAL (type, i))
+	      if (lastval != type->field (i).loc_enumval ())
 		{
 		  fprintf_filtered (stream, " = %s",
-				    plongest (TYPE_FIELD_ENUMVAL (type, i)));
-		  lastval = TYPE_FIELD_ENUMVAL (type, i);
+				    plongest (type->field (i).loc_enumval ()));
+		  lastval = type->field (i).loc_enumval ();
 		}
 	      lastval++;
 	    }
@@ -1646,11 +1646,11 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 				stream, show, level + 4,
 				language, &local_flags, podata);
 		fprintf_filtered (stream, " @%s",
-				  plongest (TYPE_FIELD_BITPOS (type, i)));
+				  plongest (type->field (i).loc_bitpos ()));
 		if (TYPE_FIELD_BITSIZE (type, i) > 1)
 		  {
 		    fprintf_filtered (stream, "-%s",
-				      plongest (TYPE_FIELD_BITPOS (type, i)
+				      plongest (type->field (i).loc_bitpos ()
 						+ TYPE_FIELD_BITSIZE (type, i)
 						- 1));
 		  }

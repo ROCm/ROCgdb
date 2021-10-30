@@ -143,7 +143,7 @@ print_offset_data::update (struct type *type, unsigned int field_idx,
       return;
     }
 
-  unsigned int bitpos = TYPE_FIELD_BITPOS (type, field_idx);
+  unsigned int bitpos = type->field (field_idx).loc_bitpos ();
   unsigned int fieldsize_byte = TYPE_LENGTH (ftype);
   unsigned int fieldsize_bit = fieldsize_byte * TARGET_CHAR_BIT;
 
@@ -626,7 +626,7 @@ print_type_scalar (struct type *type, LONGEST val, struct ui_file *stream)
       len = type->num_fields ();
       for (i = 0; i < len; i++)
 	{
-	  if (TYPE_FIELD_ENUMVAL (type, i) == val)
+	  if (type->field (i).loc_enumval () == val)
 	    {
 	      break;
 	    }

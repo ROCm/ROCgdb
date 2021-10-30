@@ -609,7 +609,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
   for (i = 0; i < len; i++)
     {
       QUIT;
-      if (val == TYPE_FIELD_ENUMVAL (type, i))
+      if (val == type->field (i).loc_enumval ())
 	{
 	  break;
 	}
@@ -631,7 +631,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
 	{
 	  QUIT;
 
-	  ULONGEST enumval = TYPE_FIELD_ENUMVAL (type, i);
+	  ULONGEST enumval = type->field (i).loc_enumval ();
 	  int nbits = count_one_bits_ll (enumval);
 
 	  gdb_assert (nbits == 0 || nbits == 1);
@@ -646,7 +646,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
 	      else
 		fputs_filtered (" | ", stream);
 
-	      val &= ~TYPE_FIELD_ENUMVAL (type, i);
+	      val &= ~type->field (i).loc_enumval ();
 	      fputs_styled (type->field (i).name (),
 			    variable_name_style.style (), stream);
 	    }
@@ -1215,7 +1215,7 @@ val_print_type_code_flags (struct type *type, struct value *original_value,
 		 int.  */
 	      && TYPE_FIELD_BITSIZE (type, field) == 1)
 	    {
-	      if (val & ((ULONGEST)1 << TYPE_FIELD_BITPOS (type, field)))
+	      if (val & ((ULONGEST)1 << type->field (field).loc_bitpos ()))
 		fprintf_filtered
 		  (stream, " %ps",
 		   styled_string (variable_name_style.style (),
@@ -1224,7 +1224,7 @@ val_print_type_code_flags (struct type *type, struct value *original_value,
 	  else
 	    {
 	      unsigned field_len = TYPE_FIELD_BITSIZE (type, field);
-	      ULONGEST field_val = val >> TYPE_FIELD_BITPOS (type, field);
+	      ULONGEST field_val = val >> type->field (field).loc_bitpos ();
 
 	      if (field_len < sizeof (ULONGEST) * TARGET_CHAR_BIT)
 		field_val &= ((ULONGEST) 1 << field_len) - 1;
