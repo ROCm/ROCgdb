@@ -20,6 +20,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+static void
+break_here_execer ()
+{}
+
 int
 main (int argc, char* argv[])
 {
@@ -28,6 +32,7 @@ main (int argc, char* argv[])
   if (pid != 0)
     {
       /* Parent.  */
+      break_here_execer ();
     }
   else
     {
