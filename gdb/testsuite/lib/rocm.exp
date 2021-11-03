@@ -301,3 +301,11 @@ proc gdb_compile_ocl {source dest type options} {
 
     return $result
 }
+
+# Return true if the device supports precise memory.
+
+proc hip_device_supports_precise_memory {} {
+    set target [hcc_amdgpu_target]
+    set supported_targets {gfx90a}
+    return [expr [lsearch -exact $supported_targets $target] >= 0]
+}
