@@ -15,7 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Verify that we can debug a GPU program in a child after a (v)fork + exec.
+# Verify handling of a GPU program that does a (v)fork + exec to execute
+# a non-GPU program.
 
 load_lib rocm.exp
 
@@ -32,7 +33,7 @@ set binfile_execee "$binfile-execee"
 
 # Compile two versions of execer, one that uses fork and one that uses vfork.
 foreach_with_prefix fork_func { fork vfork } {
-    set opts [list additional_flags=-DFORK=$fork_func \
+    set opts [list debug hip additional_flags=-DFORK=$fork_func \
 	additional_flags=-DEXECEE="${::binfile_execee}"]
     if {[build_executable "failed to prepare" ${::binfile}-execer-${fork_func} \
 	    $srcfile_execer $opts]} {
@@ -41,7 +42,7 @@ foreach_with_prefix fork_func { fork vfork } {
 }
 
 if {[build_executable "failed to prepare" $binfile_execee $srcfile_execee \
-	{debug hip}]} {
+	{debug}]} {
     return
 }
 

@@ -15,22 +15,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <hip/hip_runtime.h>
-
-__device__ static void
-break_here_execee ()
+static void
+break_here_execee (void)
 {}
 
-__global__ void
-kernel ()
+int
+main (void)
 {
   break_here_execee ();
-}
-
-int
-main (int argc, char* argv[])
-{
-  hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
-  hipDeviceSynchronize ();
   return 0;
 }
