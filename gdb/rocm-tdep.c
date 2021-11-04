@@ -231,6 +231,7 @@ struct rocm_target_ops final : public target_ops
   void follow_fork (inferior *child_inf, ptid_t child_ptid,
 		    target_waitkind fork_kind, bool follow_child,
 		    bool detach_fork) override;
+  void prevent_new_threads (bool prevent, inferior *inf) override;
 };
 
 /* ROCm's target vector.  */
@@ -2393,6 +2394,25 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
     fputs_unfiltered ("\n", out_file);
   }
 };
+
+void
+rocm_target_ops::prevent_new_threads (bool prevent, inferior *inf)
+{
+  beneath ()->prevent_new_threads (prevent, inf);
+
+  rocm_inferior_info *info = get_rocm_inferior_info ();
+  if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
+    return;
+
+  amd_dbgapi_wave_creation_t mode
+    = (prevent
+       ? AMD_DBGAPI_WAVE_CREATION_STOP
+       : AMD_DBGAPI_WAVE_CREATION_NORMAL);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_process_set_wave_creation (info->process_id, mode);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to set wave creation mode (rc=%d)"), status);
+}
 
 void
 rocm_target_ops::close ()
