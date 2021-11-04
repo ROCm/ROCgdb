@@ -15,6 +15,7 @@ struct dummy_target : public target_ops
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
   void commit_resumed () override;
+  void prevent_new_threads (bool arg0, inferior *arg1) override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -197,6 +198,7 @@ struct debug_target : public target_ops
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
   void commit_resumed () override;
+  void prevent_new_threads (bool arg0, inferior *arg1) override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -479,6 +481,29 @@ debug_target::commit_resumed ()
   fprintf_unfiltered (gdb_stdlog, "-> %s->commit_resumed (...)\n", this->beneath ()->shortname ());
   this->beneath ()->commit_resumed ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->commit_resumed (", this->beneath ()->shortname ());
+  fputs_unfiltered (")\n", gdb_stdlog);
+}
+
+void
+target_ops::prevent_new_threads (bool arg0, inferior *arg1)
+{
+  this->beneath ()->prevent_new_threads (arg0, arg1);
+}
+
+void
+dummy_target::prevent_new_threads (bool arg0, inferior *arg1)
+{
+}
+
+void
+debug_target::prevent_new_threads (bool arg0, inferior *arg1)
+{
+  fprintf_unfiltered (gdb_stdlog, "-> %s->prevent_new_threads (...)\n", this->beneath ()->shortname ());
+  this->beneath ()->prevent_new_threads (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->prevent_new_threads (", this->beneath ()->shortname ());
+  target_debug_print_bool (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_inferior_p (arg1);
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 

@@ -139,8 +139,11 @@ extern void set_last_target_status (process_stratum_target *target, ptid_t ptid,
    target_wait().  */
 extern void nullify_last_target_wait_ptid ();
 
-/* Stop all threads.  Only returns after everything is halted.  */
-extern void stop_all_threads (void);
+/* Stop all threads of all targets.  Only returns after everything is halted.
+
+   Upon return, all targets in `target_ops::prevent_new_threads (true)`
+   state.  */
+extern void stop_all_threads (const char *reason);
 
 extern void prepare_for_detach (void);
 

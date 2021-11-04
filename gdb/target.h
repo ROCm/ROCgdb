@@ -496,6 +496,20 @@ struct target_ops
     virtual void commit_resumed ()
       TARGET_DEFAULT_IGNORE ();
 
+    /* On some targets, threads may spuriously appear while all existing
+       threads are stopped (for example, a hardware scheduler that reads jobs
+       requests from a queue and spawns threads on its own).  This is
+       problematic because GDB sometimes needs to remove breakpoints from the
+       program (for example, while doing an in-line step).  If a thread can
+       randomly appear and execute during that window, it could miss a
+       breakpoint.
+
+       GDB calls `prevent_new_threads (true)` to ask the target to prevent the
+       creation of such threads and calls `prevent_new_threads (false)` to
+       restore the normal state.  */
+    virtual void prevent_new_threads (bool prevent, inferior *inf)
+      TARGET_DEFAULT_IGNORE ();
+
     /* See target_wait's description.  Note that implementations of
        this method must not assume that inferior_ptid on entry is
        pointing at the thread or inferior that ends up reporting an
