@@ -4599,7 +4599,7 @@ remote_target::process_initial_stop_replies (int from_tty)
      the inferiors.  */
   if (!non_stop)
     {
-      stop_all_threads ();
+      stop_all_threads ("remote connect");
 
       /* If all threads of an inferior were already stopped, we
 	 haven't setup the inferior yet.  */

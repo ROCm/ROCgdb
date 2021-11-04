@@ -42,10 +42,10 @@ proc do_test { stop_at } {
 
 	gdb_test_multiple "run" "run" {
 	    -re -wrap "At least one agent is busy.*" {
-		if {[hcc_amdgpu_target] != "gfx90a"} {
-		    unsupported $gdb_test_name
-		} else {
+		if {[hip_device_supports_debug_multi_process]} {
 		    fail $gdb_test_name
+		} else {
+		    unsupported $gdb_test_name
 		}
 		return
 	    }

@@ -301,3 +301,37 @@ proc gdb_compile_ocl {source dest type options} {
 
     return $result
 }
+
+# Return true if the device supports precise memory.
+
+proc hip_device_supports_precise_memory {} {
+    set target [hcc_amdgpu_target]
+    set supported_targets {gfx90a}
+    return [expr [lsearch -exact $supported_targets $target] >= 0]
+}
+
+# Run "info threads INF_NUM", return the number of "AMDGPU Wave" threads found.
+
+proc info_threads_get_wave_count { inf_num } {
+    set wave_count 0
+    gdb_test_multiple "info threads ${inf_num}.*" "" {
+        -re "AMDGPU Wave\[^\r\n\]+\r\n" {
+            incr wave_count
+            exp_continue
+        }
+
+        -re "$::gdb_prompt " {
+            pass $gdb_test_name
+        }
+    }
+
+    return $wave_count
+}
+
+# Return true if the device supports debugging multiple processes using the GPU.
+
+proc hip_device_supports_debug_multi_process {} {
+    set target [hcc_amdgpu_target]
+    set supported_targets {gfx90a}
+    return [expr [lsearch -exact $supported_targets $target] >= 0]
+}

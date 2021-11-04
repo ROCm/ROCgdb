@@ -2069,6 +2069,34 @@ maybe_software_singlestep (struct gdbarch *gdbarch, CORE_ADDR pc)
   return hw_step;
 }
 
+static void
+prevent_new_threads (bool prevent, process_stratum_target *filter_target,
+		     int filter_pid, const char *reason)
+{
+  infrun_debug_printf ("prevent=%d, filter_target=%s, filter_pid=%d, reason=%s",
+		       prevent,
+		       (filter_target != nullptr
+			? filter_target->connection_string () : "nullptr"),
+		       filter_pid, reason);
+
+  /* If a filter_pid is passed, a filter_target must be passed.  Otherwise, the
+     pid could erroneously match inferiors with the same pid in different
+     targets.  */
+  if (filter_pid != -1)
+    gdb_assert (filter_target != nullptr);
+
+  scoped_restore_current_thread restore_thread;
+
+  for (inferior *inf : all_inferiors (filter_target))
+    {
+      if (filter_pid != -1 && filter_pid != inf->pid)
+	continue;
+
+      switch_to_inferior_no_thread (inf);
+      inf->top_target ()->prevent_new_threads (prevent, inf);
+    }
+}
+
 /* See infrun.h.  */
 
 ptid_t
@@ -2388,7 +2416,8 @@ resume_1 (enum gdb_signal sig)
 	  /* Fallback to stepping over the breakpoint in-line.  */
 
 	  if (target_is_non_stop_p ())
-	    stop_all_threads ();
+	    stop_all_threads ("starting in-line step-over (fallback from "
+			      "displaced step)");
 
 	  set_step_over_info (regcache->aspace (),
 			      regcache_read_pc (regcache), 0, tp->global_num);
@@ -3268,6 +3297,21 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	if (!ecs->wait_some_more)
 	  error (_("Command aborted."));
       }
+
+    /* keep_going_pass_signal has inserted the breakpoints, it's now safe
+       to allow the target to spawn new random threads.  Unless an in-line step
+       over is in progress, in which case a breakpoint is out and no thread
+       other than the stepping thread must run.  And unless scheduler-locking is
+       enabled, in which case new threads aren't allowed to run.  */
+    bool prevent_new_threads
+      = step_over_info_valid_p () || schedlock_applies (cur_thr);
+    infrun_debug_printf ("step_over_info_valid_p=%d, schedlock_applies=%d, "
+			 "prevent_new_threads=%d",
+			 step_over_info_valid_p (),
+			 schedlock_applies (cur_thr),
+			 prevent_new_threads);
+    ::prevent_new_threads (prevent_new_threads, resume_target, resume_ptid.pid (),
+			   "proceeding");
 
     disable_commit_resumed.reset_and_commit ();
   }
@@ -4929,7 +4973,7 @@ handle_one (const wait_one_event &event)
 /* See infrun.h.  */
 
 void
-stop_all_threads (void)
+stop_all_threads (const char *reason)
 {
   /* We may need multiple passes to discover all threads.  */
   int pass;
@@ -4941,12 +4985,23 @@ stop_all_threads (void)
 
   scoped_restore_current_thread restore_thread;
 
-  /* Enable thread events of all targets.  */
+  /* Enable thread events of all targets: if a thread spawns another thread
+     we'll get an event and both the "parent" and "child" will be stopped,
+     allowing us to converge towards all threads being stopped.  Also, if a
+     thread exits just before we try to stop it, we'll get notified, so we won't
+     wait forever for a stop of a thread that doesn't exist anymore.  */
   for (auto *target : all_non_exited_process_targets ())
     {
       switch_to_target_no_thread (target);
       target_thread_events (true);
     }
+
+  /* Prevent targets from spuriously creating new threads.  Again, this allows
+     us to converge towards all threads stopped.  Note that unlike thread
+     events, we leave this set after returning so that no new threads appear
+     during the window of time where all threads are stopped (during the time
+     the user is at the prompt in all-stop, for example).   */
+  prevent_new_threads (true, nullptr, -1, reason);
 
   SCOPE_EXIT
     {
@@ -5885,6 +5940,11 @@ finish_step_over (struct execution_control_state *ecs)
       insert_breakpoints ();
 
       restart_threads (ecs->event_thread);
+
+      /* Now that breakpoints are re-inserted, it's safe to allow the target to
+         spawn new random threads.
+	 FIXME: we might want to use some filter here */
+      prevent_new_threads (false, nullptr, -1, "finish step over");
 
       /* If we have events pending, go through handle_inferior_event
 	 again, picking up a pending event at random.  This avoids
@@ -8030,7 +8090,7 @@ stop_waiting (struct execution_control_state *ecs)
   /* If all-stop, but there exists a non-stop target, stop all
      threads now that we're presenting the stop to the user.  */
   if (!non_stop && exists_non_stop_target ())
-    stop_all_threads ();
+    stop_all_threads ("all-stop stop");
 }
 
 /* Like keep_going, but passes the signal to the inferior, even if the
@@ -8132,7 +8192,7 @@ keep_going_pass_signal (struct execution_control_state *ecs)
 	 we're about to step over, otherwise other threads could miss
 	 it.  */
       if (step_over_info_valid_p () && target_is_non_stop_p ())
-	stop_all_threads ();
+	stop_all_threads ("starting in-line step-over");
 
       /* Stop stepping if inserting breakpoints fails.  */
       try
@@ -8428,6 +8488,8 @@ maybe_remove_breakpoints (void)
 {
   if (!breakpoints_should_be_inserted_now () && target_has_execution ())
     {
+      prevent_new_threads (true, nullptr, -1, "removing breakpoints");
+
       if (remove_breakpoints ())
 	{
 	  target_terminal::ours_for_output ();
