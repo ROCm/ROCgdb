@@ -16,21 +16,40 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
+#include <unistd.h>
 
-__device__ static void
-break_here_execee ()
+__global__ static void
+kernel1 ()
 {}
 
-__global__ void
-kernel ()
+__device__ static void
+break_here_execer ()
 {
-  break_here_execee ();
+}
+
+__global__ static void
+kernel2 ()
+{
+  break_here_execer ();
 }
 
 int
 main (int argc, char* argv[])
 {
-  hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
+  /* Launch a first kernel to make sure the runtime is active by the time we
+     call fork.  */
+  hipLaunchKernelGGL (kernel1, dim3 (1), dim3 (1), 0, 0);
+
+  /* fork + exec while the runtime is active.  */
+  if (FORK () == 0)
+    {
+      int ret = execl (EXECEE, EXECEE, NULL);
+      perror ("exec");
+      abort ();
+    }
+
+  hipLaunchKernelGGL (kernel2, dim3 (1), dim3 (1), 0, 0);
+
   hipDeviceSynchronize ();
   return 0;
 }
