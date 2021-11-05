@@ -572,8 +572,8 @@ add_setshow_cmd_full (const char *name,
 		      var_types var_type, T *var,
 		      const char *set_doc, const char *show_doc,
 		      const char *help_doc,
-		      setting_setter_ftype<T> set_setting_func,
-		      setting_getter_ftype<T> get_setting_func,
+		      typename setting_func_types<T>::set set_setting_func,
+		      typename setting_func_types<T>::get get_setting_func,
 		      cmd_func_ftype *set_func,
 		      show_value_ftype *show_func,
 		      struct cmd_list_element **set_list,
@@ -628,8 +628,8 @@ set_show_commands
 add_setshow_enum_cmd (const char *name, command_class theclass,
 		      const char *const *enumlist, const char *set_doc,
 		      const char *show_doc, const char *help_doc,
-		      setting_setter_ftype<const char *> set_func,
-		      setting_getter_ftype<const char *> get_func,
+		      setting_func_types<const char *>::set set_func,
+		      setting_func_types<const char *>::get get_func,
 		      show_value_ftype *show_func,
 		      cmd_list_element **set_list,
 		      cmd_list_element **show_list)
@@ -682,8 +682,8 @@ set_show_commands
 add_setshow_auto_boolean_cmd (const char *name, command_class theclass,
 			      const char *set_doc, const char *show_doc,
 			      const char *help_doc,
-			      setting_setter_ftype<enum auto_boolean> set_func,
-			      setting_getter_ftype<enum auto_boolean> get_func,
+			      setting_func_types<enum auto_boolean>::set set_func,
+			      setting_func_types<enum auto_boolean>::get get_func,
 			      show_value_ftype *show_func,
 			      cmd_list_element **set_list,
 			      cmd_list_element **show_list)
@@ -737,8 +737,8 @@ set_show_commands
 add_setshow_boolean_cmd (const char *name, command_class theclass,
 			 const char *set_doc, const char *show_doc,
 			 const char *help_doc,
-			 setting_setter_ftype<bool> set_func,
-			 setting_getter_ftype<bool> get_func,
+			 setting_func_types<bool>::set set_func,
+			 setting_func_types<bool>::get get_func,
 			 show_value_ftype *show_func,
 			 cmd_list_element **set_list,
 			 cmd_list_element **show_list)
@@ -784,8 +784,8 @@ set_show_commands
 add_setshow_filename_cmd (const char *name, command_class theclass,
 			  const char *set_doc, const char *show_doc,
 			  const char *help_doc,
-			  setting_setter_ftype<std::string> set_func,
-			  setting_getter_ftype<std::string> get_func,
+			  setting_func_types<std::string>::set set_func,
+			  setting_func_types<std::string>::get get_func,
 			  show_value_ftype *show_func,
 			  cmd_list_element **set_list,
 			  cmd_list_element **show_list)
@@ -833,8 +833,8 @@ set_show_commands
 add_setshow_string_cmd (const char *name, command_class theclass,
 			const char *set_doc, const char *show_doc,
 			const char *help_doc,
-			setting_setter_ftype<std::string> set_func,
-			setting_getter_ftype<std::string> get_func,
+			setting_func_types<std::string>::set set_func,
+			setting_func_types<std::string>::get get_func,
 			show_value_ftype *show_func,
 			cmd_list_element **set_list,
 			cmd_list_element **show_list)
@@ -883,8 +883,8 @@ set_show_commands
 add_setshow_string_noescape_cmd (const char *name, command_class theclass,
 				 const char *set_doc, const char *show_doc,
 				 const char *help_doc,
-				 setting_setter_ftype<std::string> set_func,
-				 setting_getter_ftype<std::string> get_func,
+				 setting_func_types<std::string>::set set_func,
+				 setting_func_types<std::string>::get get_func,
 				 show_value_ftype *show_func,
 				 cmd_list_element **set_list,
 				 cmd_list_element **show_list)
@@ -933,8 +933,8 @@ set_show_commands
 add_setshow_optional_filename_cmd (const char *name, command_class theclass,
 				   const char *set_doc, const char *show_doc,
 				   const char *help_doc,
-				   setting_setter_ftype<std::string> set_func,
-				   setting_getter_ftype<std::string> get_func,
+				   setting_func_types<std::string>::set set_func,
+				   setting_func_types<std::string>::get get_func,
 				   show_value_ftype *show_func,
 				   cmd_list_element **set_list,
 				   cmd_list_element **show_list)
@@ -1001,8 +1001,8 @@ set_show_commands
 add_setshow_integer_cmd (const char *name, command_class theclass,
 			 const char *set_doc, const char *show_doc,
 			 const char *help_doc,
-			 setting_setter_ftype<int> set_func,
-			 setting_getter_ftype<int> get_func,
+			 setting_func_types<int>::set set_func,
+			 setting_func_types<int>::get get_func,
 			 show_value_ftype *show_func,
 			 cmd_list_element **set_list,
 			 cmd_list_element **show_list)
@@ -1050,8 +1050,8 @@ set_show_commands
 add_setshow_uinteger_cmd (const char *name, command_class theclass,
 			  const char *set_doc, const char *show_doc,
 			  const char *help_doc,
-			  setting_setter_ftype<unsigned int> set_func,
-			  setting_getter_ftype<unsigned int> get_func,
+			  setting_func_types<unsigned int>::set set_func,
+			  setting_func_types<unsigned int>::get get_func,
 			  show_value_ftype *show_func,
 			  cmd_list_element **set_list,
 			  cmd_list_element **show_list)
@@ -1095,8 +1095,8 @@ set_show_commands
 add_setshow_zinteger_cmd (const char *name, command_class theclass,
 			  const char *set_doc, const char *show_doc,
 			  const char *help_doc,
-			  setting_setter_ftype<int> set_func,
-			  setting_getter_ftype<int> get_func,
+			  setting_func_types<int>::set set_func,
+			  setting_func_types<int>::get get_func,
 			  show_value_ftype *show_func,
 			  cmd_list_element **set_list,
 			  cmd_list_element **show_list)
@@ -1137,8 +1137,8 @@ set_show_commands
 add_setshow_zuinteger_unlimited_cmd (const char *name, command_class theclass,
 				     const char *set_doc, const char *show_doc,
 				     const char *help_doc,
-				     setting_setter_ftype<int> set_func,
-				     setting_getter_ftype<int> get_func,
+				     setting_func_types<int>::set set_func,
+				     setting_func_types<int>::get get_func,
 				     show_value_ftype *show_func,
 				     cmd_list_element **set_list,
 				     cmd_list_element **show_list)
@@ -1182,8 +1182,8 @@ set_show_commands
 add_setshow_zuinteger_cmd (const char *name, command_class theclass,
 			   const char *set_doc, const char *show_doc,
 			   const char *help_doc,
-			   setting_setter_ftype<unsigned int> set_func,
-			   setting_getter_ftype<unsigned int> get_func,
+			   setting_func_types<unsigned int>::set set_func,
+			   setting_func_types<unsigned int>::get get_func,
 			   show_value_ftype *show_func,
 			   cmd_list_element **set_list,
 			   cmd_list_element **show_list)
@@ -1351,16 +1351,11 @@ static void
 fput_aliases_definition_styled (struct cmd_list_element *cmd,
 				struct ui_file *stream)
 {
-  if (cmd->aliases != nullptr)
-    {
-      for (cmd_list_element *iter = cmd->aliases;
-	   iter;
-	   iter = iter->alias_chain)
-	{
-	  if (!iter->default_args.empty ())
-	    fput_alias_definition_styled (iter, stream);
-	}
-    }
+  for (cmd_list_element *iter = cmd->aliases;
+       iter != nullptr;
+       iter = iter->alias_chain)
+    if (!iter->default_args.empty ())
+      fput_alias_definition_styled (iter, stream);
 }
 
 
@@ -1377,15 +1372,14 @@ fput_command_names_styled (struct cmd_list_element *c,
 {
   if (always_fput_c_name ||  c->aliases != nullptr)
     fput_command_name_styled (c, stream);
-  if (c->aliases != nullptr)
+
+  for (cmd_list_element *iter = c->aliases; iter; iter = iter->alias_chain)
     {
-      for (cmd_list_element *iter = c->aliases; iter; iter = iter->alias_chain)
-	{
-	  fputs_filtered (", ", stream);
-	  wrap_here ("   ");
-	  fput_command_name_styled (iter, stream);
-	}
+      fputs_filtered (", ", stream);
+      wrap_here ("   ");
+      fput_command_name_styled (iter, stream);
     }
+
   if (always_fput_c_name ||  c->aliases != nullptr)
     fputs_filtered (postfix, stream);
 }

@@ -2478,7 +2478,7 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
 }
 
 static void
-set_precise_memory_mode (const bool &value)
+set_precise_memory_mode (bool value)
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
 
@@ -2499,14 +2499,14 @@ set_precise_memory_mode (const bool &value)
     }
 }
 
-static const bool &
+static bool
 get_precise_memory_mode ()
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
   return info->precise_memory.requested;
 }
 
-static const bool &
+static bool
 get_effective_precise_memory_mode ()
 {
   rocm_inferior_info *info = get_rocm_inferior_info ();
@@ -3661,7 +3661,8 @@ If off (default), precise memory reporting is disabled."),
 			       show_precise_memory_mode,
 			       &set_amdgpu_list, &show_amdgpu_list);
 
-  cmds.show->var->set_effective_value_getter (get_effective_precise_memory_mode);
+  cmds.show->var->set_effective_value_getter<bool>
+    (get_effective_precise_memory_mode);
 
   add_basic_prefix_cmd ("amdgpu", no_class,
 			_ ("Generic command for setting amdgpu debugging "
