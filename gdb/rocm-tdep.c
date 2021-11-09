@@ -643,7 +643,7 @@ rocm_breakpoint_re_set (struct breakpoint *b)
 }
 
 static void
-rocm_breakpoint_check_status (struct bpstats *bs)
+rocm_breakpoint_check_status (struct bpstat *bs)
 {
   struct rocm_inferior_info *info = get_rocm_inferior_info ();
   amd_dbgapi_status_t status;
@@ -2216,7 +2216,7 @@ location may not be accurate.  See \"show amdgpu precise-memory\".\n");
 }
 
 static void
-rocm_target_normal_stop (bpstat bs_list, int print_frame)
+rocm_target_normal_stop (bpstat *bs_list, int print_frame)
 {
   if (bs_list == nullptr || !print_frame)
     return;
@@ -2234,7 +2234,7 @@ rocm_target_normal_stop (bpstat bs_list, int print_frame)
 
   bool found_hardware_watchpoint = false;
 
-  for (bpstat bs = bs_list; bs != nullptr; bs = bs->next)
+  for (bpstat *bs = bs_list; bs != nullptr; bs = bs->next)
     if (bs->breakpoint_at != nullptr
 	&& is_hardware_watchpoint(bs->breakpoint_at))
       {
