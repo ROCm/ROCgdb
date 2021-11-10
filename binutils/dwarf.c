@@ -2772,6 +2772,8 @@ read_and_display_attr_value (unsigned long           attribute,
       
     default:
       warn (_("Unrecognized form: 0x%lx\n"), form);
+      /* What to do?  Consume a byte maybe?  */
+      ++data;
       break;
     }
 
