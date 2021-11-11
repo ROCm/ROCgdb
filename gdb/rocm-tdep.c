@@ -2563,110 +2563,6 @@ info_agents_command (const char *args, int from_tty)
   struct ui_out *uiout = current_uiout;
   amd_dbgapi_status_t status;
 
-  gdb::optional<ui_out_emit_list> list_emitter;
-  gdb::optional<ui_out_emit_table> table_emitter;
-
-  std::vector<std::pair<inferior *, std::vector<amd_dbgapi_agent_id_t>>>
-    all_filtered_agents;
-
-  for (inferior *inf : all_inferiors ())
-    {
-      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
-      amd_dbgapi_agent_id_t *agent_list;
-      size_t agent_count;
-
-      if (process_id == AMD_DBGAPI_PROCESS_NONE)
-	continue;
-
-      if (amd_dbgapi_process_agent_list (process_id, &agent_count, &agent_list,
-					 nullptr)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	continue;
-
-      std::vector<amd_dbgapi_agent_id_t> filtered_agents;
-      std::copy_if (&agent_list[0], &agent_list[agent_count],
-		    std::back_inserter (filtered_agents),
-		    [=] (auto agent_id)
-		    {
-		      return tid_is_in_list (args, current_inferior ()->num,
-					     inf->num, agent_id.handle);
-		    });
-
-      all_filtered_agents.emplace_back (inf, std::move (filtered_agents));
-      xfree (agent_list);
-    }
-
-  if (uiout->is_mi_like_p ())
-    list_emitter.emplace (uiout, "agents");
-  else
-    {
-      size_t n_agents{ 0 }, max_id_width{ 0 }, max_target_id_width{ 0 },
-	max_name_width{ 0 };
-
-      for (auto &&value : all_filtered_agents)
-	{
-	  inferior *inf = value.first;
-	  auto &agents = value.second;
-
-	  for (auto &&agent_id : agents)
-	    {
-	      /* id  */
-	      max_id_width
-		= std::max (max_id_width,
-			    (show_inferior_qualified_tids ()
-				 || uiout->is_mi_like_p ()
-			       ? string_printf ("%d.%ld", inf->num,
-						agent_id.handle)
-			       : string_printf ("%ld", agent_id.handle))
-			      .size ());
-
-	      /* target id  */
-	      max_target_id_width
-		= std::max (max_target_id_width,
-			    rocm_target_id_string (agent_id).size ());
-	      /* name  */
-	      char *agent_name;
-	      if ((status
-		   = amd_dbgapi_agent_get_info (agent_id,
-						AMD_DBGAPI_AGENT_INFO_NAME,
-						sizeof (agent_name),
-						&agent_name))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
-
-	      max_name_width = std::max (max_name_width, strlen (agent_name));
-	      xfree (agent_name);
-
-	      ++n_agents;
-	    }
-	}
-
-      if (!n_agents)
-	{
-	  if (args == nullptr || *args == '\0')
-	    uiout->message (_ ("No agents are currently active.\n"));
-	  else
-	    uiout->message (_ ("No active agents match '%s'.\n"), args);
-	  return;
-	}
-
-      /* Header:  */
-      table_emitter.emplace (uiout, 8, n_agents, "InfoRocmAgentsTable");
-
-      uiout->table_header (1, ui_left, "current", "");
-      uiout->table_header (std::max (2ul, max_id_width), ui_left,
-			   "id", "Id");
-      uiout->table_header (5, ui_left, "state", "State");
-      uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
-			   "target-id", "Target Id");
-      uiout->table_header (std::max (11ul, max_name_width), ui_left, "name",
-			   "Device Name");
-      uiout->table_header (5, ui_left, "cores", "Cores");
-      uiout->table_header (7, ui_left, "threads", "Threads");
-      uiout->table_header (8, ui_left, "location", "Location");
-      uiout->table_body ();
-    }
-
   amd_dbgapi_agent_id_t current_agent_id;
   if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
       || !ptid_is_gpu (inferior_ptid)
@@ -2677,109 +2573,221 @@ info_agents_command (const char *args, int from_tty)
 	   != AMD_DBGAPI_STATUS_SUCCESS)
     current_agent_id = AMD_DBGAPI_AGENT_NONE;
 
-  /* Rows:  */
-  for (auto &&value : all_filtered_agents)
-    {
-      inferior *inf = value.first;
-      auto &agents = value.second;
+  {
+    gdb::optional<ui_out_emit_list> list_emitter;
+    gdb::optional<ui_out_emit_table> table_emitter;
 
-      std::sort (agents.begin (), agents.end (),
-		 [] (amd_dbgapi_agent_id_t lhs, amd_dbgapi_agent_id_t rhs)
-		 { return lhs.handle < rhs.handle; });
+    std::vector<std::pair<inferior *, std::vector<amd_dbgapi_agent_id_t>>>
+      all_filtered_agents;
 
-      for (auto &&agent_id : agents)
-	{
-	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+    for (inferior *inf : all_inferiors ())
+      {
+	amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+	amd_dbgapi_agent_id_t *agent_list;
+	size_t agent_count;
 
-	  /* current  */
-	  if (!uiout->is_mi_like_p ())
-	    {
-	      if (agent_id == current_agent_id)
-		uiout->field_string ("current", "*");
-	      else
-		uiout->field_skip ("current");
-	    }
+	if (process_id == AMD_DBGAPI_PROCESS_NONE)
+	  continue;
 
-	  /* id-in-th  */
-	  uiout->field_string ("id",
-			       (show_inferior_qualified_tids ()
-				    || uiout->is_mi_like_p ()
-				  ? string_printf ("%d.%ld", inf->num,
-						   agent_id.handle)
-				  : string_printf ("%ld", agent_id.handle))
-				 .c_str ());
+	if (amd_dbgapi_process_agent_list (process_id, &agent_count,
+					   &agent_list, nullptr)
+	    != AMD_DBGAPI_STATUS_SUCCESS)
+	  continue;
 
-	  /* supported  */
-	  amd_dbgapi_agent_state_t agent_state;
-	  if ((status = amd_dbgapi_agent_get_info (agent_id,
-						   AMD_DBGAPI_AGENT_INFO_STATE,
-						   sizeof (agent_state),
-						   &agent_state))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
-	  switch (agent_state)
-	    {
-	    case AMD_DBGAPI_AGENT_STATE_SUPPORTED:
-	      uiout->field_string ("state", "A");
-	      break;
-	    case AMD_DBGAPI_AGENT_STATE_NOT_SUPPORTED:
-	      uiout->field_string ("state", "U");
-	      break;
-	    }
+	std::vector<amd_dbgapi_agent_id_t> filtered_agents;
+	std::copy_if (&agent_list[0], &agent_list[agent_count],
+		      std::back_inserter (filtered_agents),
+		      [=] (auto agent_id)
+		      {
+			return tid_is_in_list (args, current_inferior ()->num,
+					       inf->num, agent_id.handle);
+		      });
 
-	  /* target_id  */
-	  uiout->field_string ("target-id", rocm_target_id_string (agent_id));
+	all_filtered_agents.emplace_back (inf, std::move (filtered_agents));
+	xfree (agent_list);
+      }
 
-	  /* name  */
-	  char *agent_name;
-	  if ((status
-	       = amd_dbgapi_agent_get_info (agent_id,
-					    AMD_DBGAPI_AGENT_INFO_NAME,
-					    sizeof (agent_name), &agent_name))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+    if (uiout->is_mi_like_p ())
+      list_emitter.emplace (uiout, "agents");
+    else
+      {
+	size_t n_agents{ 0 }, max_id_width{ 0 }, max_target_id_width{ 0 },
+	  max_name_width{ 0 };
 
-	  uiout->field_string ("name", agent_name);
-	  xfree (agent_name);
+	for (auto &&value : all_filtered_agents)
+	  {
+	    inferior *inf = value.first;
+	    auto &agents = value.second;
 
-	  /* cores  */
-	  size_t cores;
-	  if ((status = amd_dbgapi_agent_get_info (
-		 agent_id, AMD_DBGAPI_AGENT_INFO_EXECUTION_UNIT_COUNT,
-		 sizeof (cores), &cores))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	    for (auto &&agent_id : agents)
+	      {
+		/* id  */
+		max_id_width
+		  = std::max (max_id_width,
+			      (show_inferior_qualified_tids ()
+				   || uiout->is_mi_like_p ()
+				 ? string_printf ("%d.%ld", inf->num,
+						  agent_id.handle)
+				 : string_printf ("%ld", agent_id.handle))
+				.size ());
 
-	  uiout->field_signed ("cores", cores);
+		/* target id  */
+		max_target_id_width
+		  = std::max (max_target_id_width,
+			      rocm_target_id_string (agent_id).size ());
+		/* name  */
+		char *agent_name;
+		if ((status
+		     = amd_dbgapi_agent_get_info (agent_id,
+						  AMD_DBGAPI_AGENT_INFO_NAME,
+						  sizeof (agent_name),
+						  &agent_name))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"),
+			 status);
 
-	  /* threads  */
-	  size_t threads;
-	  if ((status = amd_dbgapi_agent_get_info (
-		 agent_id, AMD_DBGAPI_AGENT_INFO_MAX_WAVES_PER_EXECUTION_UNIT,
-		 sizeof (threads), &threads))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+		max_name_width
+		  = std::max (max_name_width, strlen (agent_name));
+		xfree (agent_name);
 
-	  uiout->field_signed ("threads", cores * threads);
+		++n_agents;
+	      }
+	  }
 
-	  /* location  */
-	  uint16_t location;
-	  if ((status
-	       = amd_dbgapi_agent_get_info (agent_id,
-					    AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
-					    sizeof (location), &location))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	if (!n_agents)
+	  {
+	    if (args == nullptr || *args == '\0')
+	      uiout->message (_ ("No agents are currently active.\n"));
+	    else
+	      uiout->message (_ ("No active agents match '%s'.\n"), args);
+	    return;
+	  }
 
-	  uiout->field_string ("location",
-			       string_printf ("%02x:%02x.%d",
-					      (location >> 8) & 0xFF,
-					      (location >> 3) & 0x1F,
-					      location & 0x7));
+	/* Header:  */
+	table_emitter.emplace (uiout, 8, n_agents, "InfoRocmAgentsTable");
 
-	  uiout->text ("\n");
-	}
-    }
+	uiout->table_header (1, ui_left, "current", "");
+	uiout->table_header (std::max (2ul, max_id_width), ui_left, "id",
+			     "Id");
+	uiout->table_header (5, ui_left, "state", "State");
+	uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
+			     "target-id", "Target Id");
+	uiout->table_header (std::max (11ul, max_name_width), ui_left, "name",
+			     "Device Name");
+	uiout->table_header (5, ui_left, "cores", "Cores");
+	uiout->table_header (7, ui_left, "threads", "Threads");
+	uiout->table_header (8, ui_left, "location", "Location");
+	uiout->table_body ();
+      }
+
+    /* Rows:  */
+    for (auto &&value : all_filtered_agents)
+      {
+	inferior *inf = value.first;
+	auto &agents = value.second;
+
+	std::sort (agents.begin (), agents.end (),
+		   [] (amd_dbgapi_agent_id_t lhs, amd_dbgapi_agent_id_t rhs)
+		   { return lhs.handle < rhs.handle; });
+
+	for (auto &&agent_id : agents)
+	  {
+	    ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+
+	    /* current  */
+	    if (!uiout->is_mi_like_p ())
+	      {
+		if (agent_id == current_agent_id)
+		  uiout->field_string ("current", "*");
+		else
+		  uiout->field_skip ("current");
+	      }
+
+	    /* id-in-th  */
+	    uiout->field_string ("id",
+				 (show_inferior_qualified_tids ()
+				      || uiout->is_mi_like_p ()
+				    ? string_printf ("%d.%ld", inf->num,
+						     agent_id.handle)
+				    : string_printf ("%ld", agent_id.handle))
+				   .c_str ());
+
+	    /* supported  */
+	    amd_dbgapi_agent_state_t agent_state;
+	    if ((status
+		 = amd_dbgapi_agent_get_info (agent_id,
+					      AMD_DBGAPI_AGENT_INFO_STATE,
+					      sizeof (agent_state),
+					      &agent_state))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	    switch (agent_state)
+	      {
+	      case AMD_DBGAPI_AGENT_STATE_SUPPORTED:
+		uiout->field_string ("state", "A");
+		break;
+	      case AMD_DBGAPI_AGENT_STATE_NOT_SUPPORTED:
+		uiout->field_string ("state", "U");
+		break;
+	      }
+
+	    /* target_id  */
+	    uiout->field_string ("target-id",
+				 rocm_target_id_string (agent_id));
+
+	    /* name  */
+	    char *agent_name;
+	    if ((status
+		 = amd_dbgapi_agent_get_info (agent_id,
+					      AMD_DBGAPI_AGENT_INFO_NAME,
+					      sizeof (agent_name),
+					      &agent_name))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+
+	    uiout->field_string ("name", agent_name);
+	    xfree (agent_name);
+
+	    /* cores  */
+	    size_t cores;
+	    if ((status = amd_dbgapi_agent_get_info (
+		   agent_id, AMD_DBGAPI_AGENT_INFO_EXECUTION_UNIT_COUNT,
+		   sizeof (cores), &cores))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+
+	    uiout->field_signed ("cores", cores);
+
+	    /* threads  */
+	    size_t threads;
+	    if ((status = amd_dbgapi_agent_get_info (
+		   agent_id,
+		   AMD_DBGAPI_AGENT_INFO_MAX_WAVES_PER_EXECUTION_UNIT,
+		   sizeof (threads), &threads))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+
+	    uiout->field_signed ("threads", cores * threads);
+
+	    /* location  */
+	    uint16_t location;
+	    if ((status
+		 = amd_dbgapi_agent_get_info (agent_id,
+					      AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
+					      sizeof (location), &location))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+
+	    uiout->field_string ("location",
+				 string_printf ("%02x:%02x.%d",
+						(location >> 8) & 0xFF,
+						(location >> 3) & 0x1F,
+						location & 0x7));
+
+	    uiout->text ("\n");
+	  }
+      }
+  }
 
   if (uiout->is_mi_like_p () && current_agent_id != AMD_DBGAPI_AGENT_NONE)
     uiout->field_signed ("current-agent-id", current_agent_id.handle);
@@ -2796,86 +2804,6 @@ info_queues_command (const char *args, int from_tty)
   struct ui_out *uiout = current_uiout;
   amd_dbgapi_status_t status;
 
-  gdb::optional<ui_out_emit_list> list_emitter;
-  gdb::optional<ui_out_emit_table> table_emitter;
-
-  std::vector<std::pair<inferior *, std::vector<amd_dbgapi_queue_id_t>>>
-    all_filtered_queues;
-
-  for (inferior *inf : all_inferiors ())
-    {
-      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
-      amd_dbgapi_queue_id_t *queue_list;
-      size_t queue_count;
-
-      if (process_id == AMD_DBGAPI_PROCESS_NONE)
-	continue;
-
-      if (amd_dbgapi_process_queue_list (process_id, &queue_count, &queue_list,
-					 nullptr)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	continue;
-
-      std::vector<amd_dbgapi_queue_id_t> filtered_queues;
-      std::copy_if (&queue_list[0], &queue_list[queue_count],
-		    std::back_inserter (filtered_queues),
-		    [=] (auto queue_id)
-		    {
-		      return tid_is_in_list (args, current_inferior ()->num,
-					     inf->num, queue_id.handle);
-		    });
-
-      all_filtered_queues.emplace_back (inf, std::move (filtered_queues));
-      xfree (queue_list);
-    }
-
-  if (uiout->is_mi_like_p ())
-    list_emitter.emplace (uiout, "queues");
-  else
-    {
-      size_t n_queues{ 0 }, max_target_id_width{ 0 };
-
-      for (auto &&value : all_filtered_queues)
-	{
-	  auto &queues = value.second;
-
-	  for (auto &&queue_id : queues)
-	    {
-	      /* target id  */
-	      max_target_id_width
-		= std::max (max_target_id_width,
-			    rocm_target_id_string (queue_id).size ());
-
-	      ++n_queues;
-	    }
-	}
-
-      if (!n_queues)
-	{
-	  if (args == nullptr || *args == '\0')
-	    uiout->message (_ ("No queues are currently active.\n"));
-	  else
-	    uiout->message (_ ("No active queues match '%s'.\n"), args);
-	  return;
-	}
-
-      /* Header:  */
-      table_emitter.emplace (uiout, 8, n_queues, "InfoRocmQueuesTable");
-
-      uiout->table_header (1, ui_left, "current", "");
-      uiout->table_header (show_inferior_qualified_tids () ? 6 : 4, ui_left,
-			   "id", "Id");
-      uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
-			   "target-id", "Target Id");
-      uiout->table_header (12, ui_left, "type", "Type");
-      uiout->table_header (6, ui_left, "read", "Read");
-      uiout->table_header (6, ui_left, "write", "Write");
-      uiout->table_header (8, ui_left, "size", "Size");
-      uiout->table_header (2 + (gdbarch_ptr_bit (gdbarch) / 4), ui_left,
-			   "addr", "Address");
-      uiout->table_body ();
-    }
-
   amd_dbgapi_queue_id_t current_queue_id;
   if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
       || !ptid_is_gpu (inferior_ptid)
@@ -2886,115 +2814,201 @@ info_queues_command (const char *args, int from_tty)
 	   != AMD_DBGAPI_STATUS_SUCCESS)
     current_queue_id = AMD_DBGAPI_QUEUE_NONE;
 
-  /* Rows:  */
-  for (auto &&value : all_filtered_queues)
-    {
-      inferior *inf = value.first;
-      auto &queues = value.second;
+  {
+    gdb::optional<ui_out_emit_list> list_emitter;
+    gdb::optional<ui_out_emit_table> table_emitter;
 
-      std::sort (queues.begin (), queues.end (),
-		 [] (amd_dbgapi_queue_id_t lhs, amd_dbgapi_queue_id_t rhs)
-		 { return lhs.handle < rhs.handle; });
+    std::vector<std::pair<inferior *, std::vector<amd_dbgapi_queue_id_t>>>
+      all_filtered_queues;
 
-      for (auto &&queue_id : queues)
-	{
-	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+    for (inferior *inf : all_inferiors ())
+      {
+	amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+	amd_dbgapi_queue_id_t *queue_list;
+	size_t queue_count;
 
-	  if (!uiout->is_mi_like_p ())
-	    {
-	      /* current  */
-	      if (queue_id == current_queue_id)
-		uiout->field_string ("current", "*");
-	      else
-		uiout->field_skip ("current");
-	    }
+	if (process_id == AMD_DBGAPI_PROCESS_NONE)
+	  continue;
 
-	  /* id  */
-	  uiout->field_string ("id",
-			       (show_inferior_qualified_tids ()
-				    || uiout->is_mi_like_p ()
-				  ? string_printf ("%d.%ld", inf->num,
-						   queue_id.handle)
-				  : string_printf ("%ld", queue_id.handle))
-				 .c_str ());
+	if (amd_dbgapi_process_queue_list (process_id, &queue_count,
+					   &queue_list, nullptr)
+	    != AMD_DBGAPI_STATUS_SUCCESS)
+	  continue;
 
-	  /* target-id  */
-	  uiout->field_string ("target-id", rocm_target_id_string (queue_id));
+	std::vector<amd_dbgapi_queue_id_t> filtered_queues;
+	std::copy_if (&queue_list[0], &queue_list[queue_count],
+		      std::back_inserter (filtered_queues),
+		      [=] (auto queue_id)
+		      {
+			return tid_is_in_list (args, current_inferior ()->num,
+					       inf->num, queue_id.handle);
+		      });
 
-	  /* type  */
-	  amd_dbgapi_os_queue_type_t type;
-	  if ((status = amd_dbgapi_queue_get_info (queue_id,
-						   AMD_DBGAPI_QUEUE_INFO_TYPE,
-						   sizeof (type), &type))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	all_filtered_queues.emplace_back (inf, std::move (filtered_queues));
+	xfree (queue_list);
+      }
 
-	  uiout->field_string (
-	    "type",
-	    [type] ()
-	    {
-	      switch (type)
-		{
-		case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_MULTIPLE_PRODUCER:
-		  return "HSA (Multi)";
-		case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_SINGLE_PRODUCER:
-		  return "HSA (Single)";
-		case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_COOPERATIVE:
-		  return "HSA (Coop)";
-		case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_PM4:
-		  return "PM4";
-		case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA:
-		  return "DMA";
-		case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA_XGMI:
-		  return "XGMI";
-		case AMD_DBGAPI_OS_QUEUE_TYPE_UNKNOWN:
-		default:
-		  return "Unknown";
-		}
-	    }());
+    if (uiout->is_mi_like_p ())
+      list_emitter.emplace (uiout, "queues");
+    else
+      {
+	size_t n_queues{ 0 }, max_target_id_width{ 0 };
 
-	  /* read, write  */
-	  amd_dbgapi_os_queue_packet_id_t read, write;
-	  size_t unused;
-	  if ((status = amd_dbgapi_queue_packet_list (queue_id, &read, &write,
-						      &unused, nullptr))
-	      == AMD_DBGAPI_STATUS_SUCCESS)
-	    {
-	      uiout->field_signed ("read", read);
-	      uiout->field_signed ("write", write);
-	    }
-	  else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
-	    {
-	      uiout->field_skip ("read");
-	      uiout->field_skip ("write");
-	    }
-	  else
-	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	for (auto &&value : all_filtered_queues)
+	  {
+	    auto &queues = value.second;
 
-	  /* size  */
-	  amd_dbgapi_size_t size;
-	  if ((status = amd_dbgapi_queue_get_info (queue_id,
-						   AMD_DBGAPI_QUEUE_INFO_SIZE,
-						   sizeof (size), &size))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	    for (auto &&queue_id : queues)
+	      {
+		/* target id  */
+		max_target_id_width
+		  = std::max (max_target_id_width,
+			      rocm_target_id_string (queue_id).size ());
 
-	  uiout->field_signed ("size", size);
+		++n_queues;
+	      }
+	  }
 
-	  /* addr */
-	  amd_dbgapi_global_address_t addr;
-	  if ((status
-	       = amd_dbgapi_queue_get_info (queue_id,
-					    AMD_DBGAPI_QUEUE_INFO_ADDRESS,
-					    sizeof (addr), &addr))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	if (!n_queues)
+	  {
+	    if (args == nullptr || *args == '\0')
+	      uiout->message (_ ("No queues are currently active.\n"));
+	    else
+	      uiout->message (_ ("No active queues match '%s'.\n"), args);
+	    return;
+	  }
 
-	  uiout->field_core_addr ("addr", gdbarch, addr);
+	/* Header:  */
+	table_emitter.emplace (uiout, 8, n_queues, "InfoRocmQueuesTable");
 
-	  uiout->text ("\n");
-	}
-    }
+	uiout->table_header (1, ui_left, "current", "");
+	uiout->table_header (show_inferior_qualified_tids () ? 6 : 4, ui_left,
+			     "id", "Id");
+	uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
+			     "target-id", "Target Id");
+	uiout->table_header (12, ui_left, "type", "Type");
+	uiout->table_header (6, ui_left, "read", "Read");
+	uiout->table_header (6, ui_left, "write", "Write");
+	uiout->table_header (8, ui_left, "size", "Size");
+	uiout->table_header (2 + (gdbarch_ptr_bit (gdbarch) / 4), ui_left,
+			     "addr", "Address");
+	uiout->table_body ();
+      }
+
+    /* Rows:  */
+    for (auto &&value : all_filtered_queues)
+      {
+	inferior *inf = value.first;
+	auto &queues = value.second;
+
+	std::sort (queues.begin (), queues.end (),
+		   [] (amd_dbgapi_queue_id_t lhs, amd_dbgapi_queue_id_t rhs)
+		   { return lhs.handle < rhs.handle; });
+
+	for (auto &&queue_id : queues)
+	  {
+	    ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+
+	    if (!uiout->is_mi_like_p ())
+	      {
+		/* current  */
+		if (queue_id == current_queue_id)
+		  uiout->field_string ("current", "*");
+		else
+		  uiout->field_skip ("current");
+	      }
+
+	    /* id  */
+	    uiout->field_string ("id",
+				 (show_inferior_qualified_tids ()
+				      || uiout->is_mi_like_p ()
+				    ? string_printf ("%d.%ld", inf->num,
+						     queue_id.handle)
+				    : string_printf ("%ld", queue_id.handle))
+				   .c_str ());
+
+	    /* target-id  */
+	    uiout->field_string ("target-id",
+				 rocm_target_id_string (queue_id));
+
+	    /* type  */
+	    amd_dbgapi_os_queue_type_t type;
+	    if ((status
+		 = amd_dbgapi_queue_get_info (queue_id,
+					      AMD_DBGAPI_QUEUE_INFO_TYPE,
+					      sizeof (type), &type))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+
+	    uiout->field_string (
+	      "type",
+	      [type] ()
+	      {
+		switch (type)
+		  {
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_MULTIPLE_PRODUCER:
+		    return "HSA (Multi)";
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_SINGLE_PRODUCER:
+		    return "HSA (Single)";
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_COOPERATIVE:
+		    return "HSA (Coop)";
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_PM4:
+		    return "PM4";
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA:
+		    return "DMA";
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA_XGMI:
+		    return "XGMI";
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_UNKNOWN:
+		  default:
+		    return "Unknown";
+		  }
+	      }());
+
+	    /* read, write  */
+	    amd_dbgapi_os_queue_packet_id_t read, write;
+	    size_t unused;
+	    if ((status
+		 = amd_dbgapi_queue_packet_list (queue_id, &read, &write,
+						 &unused, nullptr))
+		== AMD_DBGAPI_STATUS_SUCCESS)
+	      {
+		uiout->field_signed ("read", read);
+		uiout->field_signed ("write", write);
+	      }
+	    else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
+	      {
+		uiout->field_skip ("read");
+		uiout->field_skip ("write");
+	      }
+	    else
+	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+
+	    /* size  */
+	    amd_dbgapi_size_t size;
+	    if ((status
+		 = amd_dbgapi_queue_get_info (queue_id,
+					      AMD_DBGAPI_QUEUE_INFO_SIZE,
+					      sizeof (size), &size))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+
+	    uiout->field_signed ("size", size);
+
+	    /* addr */
+	    amd_dbgapi_global_address_t addr;
+	    if ((status
+		 = amd_dbgapi_queue_get_info (queue_id,
+					      AMD_DBGAPI_QUEUE_INFO_ADDRESS,
+					      sizeof (addr), &addr))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+
+	    uiout->field_core_addr ("addr", gdbarch, addr);
+
+	    uiout->text ("\n");
+	  }
+      }
+  }
 
   if (uiout->is_mi_like_p () && current_queue_id != AMD_DBGAPI_QUEUE_NONE)
     uiout->field_signed ("current-queue-id", current_queue_id.handle);
@@ -3139,161 +3153,6 @@ info_dispatches_command (const char *args, int from_tty)
 				gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR,
 				grp);
 
-  gdb::optional<ui_out_emit_list> list_emitter;
-  gdb::optional<ui_out_emit_table> table_emitter;
-
-  std::vector<std::pair<inferior *, std::vector<amd_dbgapi_dispatch_id_t>>>
-    all_filtered_dispatches;
-
-  /* We'll be switching inferiors temporarily below.  */
-  inferior *curr_inferior = current_inferior ();
-  scoped_restore_current_thread restore_thread;
-
-  for (inferior *inf : all_inferiors ())
-    {
-      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
-      amd_dbgapi_dispatch_id_t *dispatch_list;
-      size_t dispatch_count;
-
-      if (process_id == AMD_DBGAPI_PROCESS_NONE)
-	continue;
-
-      if (amd_dbgapi_process_dispatch_list (process_id, &dispatch_count,
-					    &dispatch_list, nullptr)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	continue;
-
-      std::vector<amd_dbgapi_dispatch_id_t> filtered_dispatches;
-      std::copy_if (&dispatch_list[0], &dispatch_list[dispatch_count],
-		    std::back_inserter (filtered_dispatches),
-		    [=] (auto dispatch_id)
-		    {
-		      return tid_is_in_list (args, curr_inferior->num,
-					     inf->num, dispatch_id.handle);
-		    });
-
-      all_filtered_dispatches.emplace_back (inf,
-					    std::move (filtered_dispatches));
-      xfree (dispatch_list);
-    }
-
-  if (uiout->is_mi_like_p ())
-    list_emitter.emplace (uiout, "dispatches");
-  else
-    {
-      size_t n_dispatches{ 0 }, max_target_id_width{ 0 }, max_grid_width{ 0 },
-	max_workgroup_width{ 0 }, max_address_spaces_width{ 0 };
-
-      for (auto &&value : all_filtered_dispatches)
-	{
-	  auto &dispatches = value.second;
-
-	  for (auto &&dispatch_id : dispatches)
-	    {
-	      /* target id  */
-	      max_target_id_width
-		= std::max (max_target_id_width,
-			    rocm_target_id_string (dispatch_id).size ());
-
-	      /* grid  */
-	      uint32_t dims;
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_DIMENSIONS,
-		     sizeof (dims), &dims))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
-
-	      uint32_t grid_sizes[3];
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
-		     sizeof (grid_sizes), &grid_sizes[0]))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
-
-	      max_grid_width
-		= std::max (max_grid_width,
-			    ndim_string (dims, grid_sizes).size ());
-
-	      /* workgroup  */
-	      uint16_t work_group_sizes[3];
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
-		     sizeof (work_group_sizes), &work_group_sizes[0]))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
-
-	      max_workgroup_width
-		= std::max (max_workgroup_width,
-			    ndim_string (dims, work_group_sizes).size ());
-
-	      /* address-spaces  */
-	      amd_dbgapi_size_t shared_size, private_size;
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GROUP_SEGMENT_SIZE,
-		     sizeof (shared_size), &shared_size))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id,
-		     AMD_DBGAPI_DISPATCH_INFO_PRIVATE_SEGMENT_SIZE,
-		     sizeof (private_size), &private_size))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
-
-	      max_address_spaces_width
-		= std::max (max_address_spaces_width,
-			    string_printf ("Shared(%ld), Private(%ld)",
-					   shared_size, private_size)
-			      .size ());
-
-	      ++n_dispatches;
-	    }
-	}
-
-      if (!n_dispatches)
-	{
-	  if (args == nullptr || *args == '\0')
-	    uiout->message (_ ("No dispatches are currently active.\n"));
-	  else
-	    uiout->message (_ ("No active dispatches match '%s'.\n"), args);
-	  return;
-	}
-
-      /* Header:  */
-      table_emitter.emplace (uiout, opts.full ? 11 : 7, n_dispatches,
-			     "InfoRocmDispatchesTable");
-      size_t addr_width = 2 + (gdbarch_ptr_bit (gdbarch) / 4);
-
-      uiout->table_header (1, ui_left, "current", "");
-      uiout->table_header (show_inferior_qualified_tids () ? 6 : 4, ui_left,
-			   "id", "Id");
-      uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
-			   "target-id", "Target Id");
-      uiout->table_header (std::max (4ul, max_grid_width), ui_left, "grid",
-			   "Grid");
-      uiout->table_header (std::max (9ul, max_workgroup_width), ui_left,
-			   "workgroup", "Workgroup");
-      uiout->table_header (7, ui_left, "fence", "Fence");
-      if (opts.full)
-	{
-	  uiout->table_header (std::max (14ul, max_address_spaces_width),
-			       ui_left, "address-spaces", "Address Spaces");
-	  uiout->table_header (std::max (17ul, addr_width), ui_left,
-			       "kernel-desc", "Kernel Descriptor");
-	  uiout->table_header (std::max (11ul, addr_width), ui_left,
-			       "kernel-args", "Kernel Args");
-	  uiout->table_header (std::max (17ul, addr_width), ui_left,
-			       "completion", "Completion Signal");
-	}
-      uiout->table_header (1, ui_left, "kernel-function", "Kernel Function");
-      uiout->table_body ();
-    }
-
   amd_dbgapi_dispatch_id_t current_dispatch_id;
   if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
       || !ptid_is_gpu (inferior_ptid)
@@ -3304,202 +3163,369 @@ info_dispatches_command (const char *args, int from_tty)
 	   != AMD_DBGAPI_STATUS_SUCCESS)
     current_dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
 
-  /* Rows:  */
-  for (auto &&value : all_filtered_dispatches)
-    {
-      inferior *inf = value.first;
-      auto &dispatches = value.second;
+  {
+    gdb::optional<ui_out_emit_list> list_emitter;
+    gdb::optional<ui_out_emit_table> table_emitter;
 
-      std::sort (dispatches.begin (), dispatches.end (),
-		 [] (amd_dbgapi_dispatch_id_t lhs,
-		     amd_dbgapi_dispatch_id_t rhs)
-		 { return lhs.handle < rhs.handle; });
+    std::vector<std::pair<inferior *, std::vector<amd_dbgapi_dispatch_id_t>>>
+      all_filtered_dispatches;
 
-      /* Switch the inferior since we are doing a symbol lookup in this
-	 inferior's program space.  */
-      switch_to_inferior_no_thread (inf);
+    /* We'll be switching inferiors temporarily below.  */
+    inferior *curr_inferior = current_inferior ();
+    scoped_restore_current_thread restore_thread;
 
-      for (auto &&dispatch_id : dispatches)
-	{
-	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+    for (inferior *inf : all_inferiors ())
+      {
+	amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+	amd_dbgapi_dispatch_id_t *dispatch_list;
+	size_t dispatch_count;
 
-	  if (!uiout->is_mi_like_p ())
-	    {
-	      /* current  */
-	      if (dispatch_id == current_dispatch_id)
-		uiout->field_string ("current", "*");
-	      else
-		uiout->field_skip ("current");
-	    }
+	if (process_id == AMD_DBGAPI_PROCESS_NONE)
+	  continue;
 
-	  /* id  */
-	  uiout->field_string ("id",
-			       (show_inferior_qualified_tids ()
-				    || uiout->is_mi_like_p ()
-				  ? string_printf ("%d.%ld", inf->num,
-						   dispatch_id.handle)
-				  : string_printf ("%ld", dispatch_id.handle))
-				 .c_str ());
-
-	  /* target-id  */
-	  uiout->field_string ("target-id",
-			       rocm_target_id_string (dispatch_id));
-
-	  /* grid  */
-	  uint32_t dims;
-	  if ((status = amd_dbgapi_dispatch_get_info (
-		 dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_DIMENSIONS,
-		 sizeof (dims), &dims))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
-
-	  uint32_t grid_sizes[3];
-	  if ((status = amd_dbgapi_dispatch_get_info (
-		 dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
-		 sizeof (grid_sizes), &grid_sizes[0]))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
-
-	  uiout->field_string ("grid", ndim_string (dims, grid_sizes));
-
-	  /* workgroup  */
-	  uint16_t work_group_sizes[3];
-	  if ((status = amd_dbgapi_dispatch_get_info (
-		 dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
-		 sizeof (work_group_sizes), &work_group_sizes[0]))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
-
-	  uiout->field_string ("workgroup",
-			       ndim_string (dims, work_group_sizes));
-
-	  /* fence  */
-	  amd_dbgapi_dispatch_barrier_t barrier;
-	  if (
-	    (status
-	     = amd_dbgapi_dispatch_get_info (dispatch_id,
-					     AMD_DBGAPI_DISPATCH_INFO_BARRIER,
-					     sizeof (barrier), &barrier))
+	if (amd_dbgapi_process_dispatch_list (process_id, &dispatch_count,
+					      &dispatch_list, nullptr)
 	    != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
+	  continue;
 
-	  amd_dbgapi_dispatch_fence_scope_t acquire, release;
-	  if ((status = amd_dbgapi_dispatch_get_info (
-		 dispatch_id, AMD_DBGAPI_DISPATCH_INFO_ACQUIRE_FENCE,
-		 sizeof (acquire), &acquire))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
-	  if ((status = amd_dbgapi_dispatch_get_info (
-		 dispatch_id, AMD_DBGAPI_DISPATCH_INFO_RELEASE_FENCE,
-		 sizeof (release), &release))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
+	std::vector<amd_dbgapi_dispatch_id_t> filtered_dispatches;
+	std::copy_if (&dispatch_list[0], &dispatch_list[dispatch_count],
+		      std::back_inserter (filtered_dispatches),
+		      [=] (auto dispatch_id)
+		      {
+			return tid_is_in_list (args, curr_inferior->num,
+					       inf->num, dispatch_id.handle);
+		      });
 
-	  std::stringstream ss;
-	  if (barrier == AMD_DBGAPI_DISPATCH_BARRIER_PRESENT)
-	    ss << "B";
+	all_filtered_dispatches.emplace_back (inf,
+					      std::move (filtered_dispatches));
+	xfree (dispatch_list);
+      }
 
-	  if (barrier && acquire)
-	    ss << "|";
+    if (uiout->is_mi_like_p ())
+      list_emitter.emplace (uiout, "dispatches");
+    else
+      {
+	size_t n_dispatches{ 0 }, max_target_id_width{ 0 },
+	  max_grid_width{ 0 }, max_workgroup_width{ 0 },
+	  max_address_spaces_width{ 0 };
 
-	  if (acquire == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_AGENT)
-	    ss << "Aa";
-	  else if (acquire == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_SYSTEM)
-	    ss << "As";
+	for (auto &&value : all_filtered_dispatches)
+	  {
+	    auto &dispatches = value.second;
 
-	  if ((barrier | acquire) && release)
-	    ss << "|";
+	    for (auto &&dispatch_id : dispatches)
+	      {
+		/* target id  */
+		max_target_id_width
+		  = std::max (max_target_id_width,
+			      rocm_target_id_string (dispatch_id).size ());
 
-	  if (release == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_AGENT)
-	    ss << "Ra";
-	  else if (release == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_SYSTEM)
-	    ss << "Rs";
+		/* grid  */
+		uint32_t dims;
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_DIMENSIONS,
+		       sizeof (dims), &dims))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
 
-	  uiout->field_string ("fence", ss.str ());
+		uint32_t grid_sizes[3];
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
+		       sizeof (grid_sizes), &grid_sizes[0]))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
 
-	  if (opts.full || uiout->is_mi_like_p ())
-	    {
-	      /* address-spaces  */
-	      amd_dbgapi_size_t shared_size, private_size;
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GROUP_SEGMENT_SIZE,
-		     sizeof (shared_size), &shared_size))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id,
-		     AMD_DBGAPI_DISPATCH_INFO_PRIVATE_SEGMENT_SIZE,
-		     sizeof (private_size), &private_size))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
+		max_grid_width
+		  = std::max (max_grid_width,
+			      ndim_string (dims, grid_sizes).size ());
 
-	      uiout->field_string ("address-spaces",
-				   string_printf ("Shared(%ld), Private(%ld)",
-						  shared_size, private_size));
+		/* workgroup  */
+		uint16_t work_group_sizes[3];
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
+		       sizeof (work_group_sizes), &work_group_sizes[0]))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
 
-	      /* kernel-desc  */
-	      amd_dbgapi_global_address_t kernel_desc;
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id,
-		     AMD_DBGAPI_DISPATCH_INFO_KERNEL_DESCRIPTOR_ADDRESS,
-		     sizeof (kernel_desc), &kernel_desc))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
+		max_workgroup_width
+		  = std::max (max_workgroup_width,
+			      ndim_string (dims, work_group_sizes).size ());
 
-	      uiout->field_core_addr ("kernel-desc", gdbarch, kernel_desc);
+		/* address-spaces  */
+		amd_dbgapi_size_t shared_size, private_size;
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id,
+		       AMD_DBGAPI_DISPATCH_INFO_GROUP_SEGMENT_SIZE,
+		       sizeof (shared_size), &shared_size))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id,
+		       AMD_DBGAPI_DISPATCH_INFO_PRIVATE_SEGMENT_SIZE,
+		       sizeof (private_size), &private_size))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
 
-	      /* kernel-args  */
-	      amd_dbgapi_global_address_t kernel_args;
-	      if ((status = amd_dbgapi_dispatch_get_info (
+		max_address_spaces_width
+		  = std::max (max_address_spaces_width,
+			      string_printf ("Shared(%ld), Private(%ld)",
+					     shared_size, private_size)
+				.size ());
+
+		++n_dispatches;
+	      }
+	  }
+
+	if (!n_dispatches)
+	  {
+	    if (args == nullptr || *args == '\0')
+	      uiout->message (_ ("No dispatches are currently active.\n"));
+	    else
+	      uiout->message (_ ("No active dispatches match '%s'.\n"), args);
+	    return;
+	  }
+
+	/* Header:  */
+	table_emitter.emplace (uiout, opts.full ? 11 : 7, n_dispatches,
+			       "InfoRocmDispatchesTable");
+	size_t addr_width = 2 + (gdbarch_ptr_bit (gdbarch) / 4);
+
+	uiout->table_header (1, ui_left, "current", "");
+	uiout->table_header (show_inferior_qualified_tids () ? 6 : 4, ui_left,
+			     "id", "Id");
+	uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
+			     "target-id", "Target Id");
+	uiout->table_header (std::max (4ul, max_grid_width), ui_left, "grid",
+			     "Grid");
+	uiout->table_header (std::max (9ul, max_workgroup_width), ui_left,
+			     "workgroup", "Workgroup");
+	uiout->table_header (7, ui_left, "fence", "Fence");
+	if (opts.full)
+	  {
+	    uiout->table_header (std::max (14ul, max_address_spaces_width),
+				 ui_left, "address-spaces", "Address Spaces");
+	    uiout->table_header (std::max (17ul, addr_width), ui_left,
+				 "kernel-desc", "Kernel Descriptor");
+	    uiout->table_header (std::max (11ul, addr_width), ui_left,
+				 "kernel-args", "Kernel Args");
+	    uiout->table_header (std::max (17ul, addr_width), ui_left,
+				 "completion", "Completion Signal");
+	  }
+	uiout->table_header (1, ui_left, "kernel-function", "Kernel Function");
+	uiout->table_body ();
+      }
+
+    /* Rows:  */
+    for (auto &&value : all_filtered_dispatches)
+      {
+	inferior *inf = value.first;
+	auto &dispatches = value.second;
+
+	std::sort (dispatches.begin (), dispatches.end (),
+		   [] (amd_dbgapi_dispatch_id_t lhs,
+		       amd_dbgapi_dispatch_id_t rhs)
+		   { return lhs.handle < rhs.handle; });
+
+	/* Switch the inferior since we are doing a symbol lookup in this
+	   inferior's program space.  */
+	switch_to_inferior_no_thread (inf);
+
+	for (auto &&dispatch_id : dispatches)
+	  {
+	    ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+
+	    if (!uiout->is_mi_like_p ())
+	      {
+		/* current  */
+		if (dispatch_id == current_dispatch_id)
+		  uiout->field_string ("current", "*");
+		else
+		  uiout->field_skip ("current");
+	      }
+
+	    /* id  */
+	    uiout->field_string ("id", (show_inferior_qualified_tids ()
+					    || uiout->is_mi_like_p ()
+					  ? string_printf ("%d.%ld", inf->num,
+							   dispatch_id.handle)
+					  : string_printf ("%ld",
+							   dispatch_id.handle))
+					 .c_str ());
+
+	    /* target-id  */
+	    uiout->field_string ("target-id",
+				 rocm_target_id_string (dispatch_id));
+
+	    /* grid  */
+	    uint32_t dims;
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_DIMENSIONS,
+		   sizeof (dims), &dims))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+		     status);
+
+	    uint32_t grid_sizes[3];
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
+		   sizeof (grid_sizes), &grid_sizes[0]))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+		     status);
+
+	    uiout->field_string ("grid", ndim_string (dims, grid_sizes));
+
+	    /* workgroup  */
+	    uint16_t work_group_sizes[3];
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
+		   sizeof (work_group_sizes), &work_group_sizes[0]))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+		     status);
+
+	    uiout->field_string ("workgroup",
+				 ndim_string (dims, work_group_sizes));
+
+	    /* fence  */
+	    amd_dbgapi_dispatch_barrier_t barrier;
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_BARRIER,
+		   sizeof (barrier), &barrier))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+		     status);
+
+	    amd_dbgapi_dispatch_fence_scope_t acquire, release;
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_ACQUIRE_FENCE,
+		   sizeof (acquire), &acquire))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+		     status);
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_RELEASE_FENCE,
+		   sizeof (release), &release))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+		     status);
+
+	    std::stringstream ss;
+	    if (barrier == AMD_DBGAPI_DISPATCH_BARRIER_PRESENT)
+	      ss << "B";
+
+	    if (barrier && acquire)
+	      ss << "|";
+
+	    if (acquire == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_AGENT)
+	      ss << "Aa";
+	    else if (acquire == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_SYSTEM)
+	      ss << "As";
+
+	    if ((barrier | acquire) && release)
+	      ss << "|";
+
+	    if (release == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_AGENT)
+	      ss << "Ra";
+	    else if (release == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_SYSTEM)
+	      ss << "Rs";
+
+	    uiout->field_string ("fence", ss.str ());
+
+	    if (opts.full || uiout->is_mi_like_p ())
+	      {
+		/* address-spaces  */
+		amd_dbgapi_size_t shared_size, private_size;
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id,
+		       AMD_DBGAPI_DISPATCH_INFO_GROUP_SEGMENT_SIZE,
+		       sizeof (shared_size), &shared_size))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id,
+		       AMD_DBGAPI_DISPATCH_INFO_PRIVATE_SEGMENT_SIZE,
+		       sizeof (private_size), &private_size))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
+
+		uiout
+		  ->field_string ("address-spaces",
+				  string_printf ("Shared(%ld), Private(%ld)",
+						 shared_size, private_size));
+
+		/* kernel-desc  */
+		amd_dbgapi_global_address_t kernel_desc;
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id,
+		       AMD_DBGAPI_DISPATCH_INFO_KERNEL_DESCRIPTOR_ADDRESS,
+		       sizeof (kernel_desc), &kernel_desc))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
+
+		uiout->field_core_addr ("kernel-desc", gdbarch, kernel_desc);
+
+		/* kernel-args  */
+		amd_dbgapi_global_address_t kernel_args;
+		if (
+		  (status = amd_dbgapi_dispatch_get_info (
 		     dispatch_id,
 		     AMD_DBGAPI_DISPATCH_INFO_KERNEL_ARGUMENT_SEGMENT_ADDRESS,
 		     sizeof (kernel_args), &kernel_args))
 		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
 
-	      uiout->field_core_addr ("kernel-args", gdbarch, kernel_args);
+		uiout->field_core_addr ("kernel-args", gdbarch, kernel_args);
 
-	      /* completion  */
-	      amd_dbgapi_global_address_t completion;
-	      if ((status = amd_dbgapi_dispatch_get_info (
-		     dispatch_id,
-		     AMD_DBGAPI_DISPATCH_INFO_KERNEL_COMPLETION_ADDRESS,
-		     sizeof (completion), &completion))
-		  != AMD_DBGAPI_STATUS_SUCCESS)
-		error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		       status);
+		/* completion  */
+		amd_dbgapi_global_address_t completion;
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id,
+		       AMD_DBGAPI_DISPATCH_INFO_KERNEL_COMPLETION_ADDRESS,
+		       sizeof (completion), &completion))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+			 status);
 
-	      if (completion || uiout->is_mi_like_p ())
-		uiout->field_core_addr ("completion", gdbarch, completion);
-	      else
-		uiout->field_string ("completion", "(nil)");
-	    }
+		if (completion || uiout->is_mi_like_p ())
+		  uiout->field_core_addr ("completion", gdbarch, completion);
+		else
+		  uiout->field_string ("completion", "(nil)");
+	      }
 
-	  /* kernel-function  */
-	  amd_dbgapi_global_address_t kernel_code;
-	  if ((status = amd_dbgapi_dispatch_get_info (
-		 dispatch_id,
-		 AMD_DBGAPI_DISPATCH_INFO_KERNEL_CODE_ENTRY_ADDRESS,
-		 sizeof (kernel_code), &kernel_code))
-	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
+	    /* kernel-function  */
+	    amd_dbgapi_global_address_t kernel_code;
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id,
+		   AMD_DBGAPI_DISPATCH_INFO_KERNEL_CODE_ENTRY_ADDRESS,
+		   sizeof (kernel_code), &kernel_code))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
+		     status);
 
-	  auto msymbol
-	    = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
-	  if (msymbol.minsym && !uiout->is_mi_like_p ())
-	    uiout->field_string ("kernel-function",
-				 msymbol.minsym->print_name (),
-				 function_name_style.style ());
-	  else
-	    uiout->field_core_addr ("kernel-function", gdbarch, kernel_code);
+	    auto msymbol
+	      = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
+	    if (msymbol.minsym && !uiout->is_mi_like_p ())
+	      uiout->field_string ("kernel-function",
+				   msymbol.minsym->print_name (),
+				   function_name_style.style ());
+	    else
+	      uiout->field_core_addr ("kernel-function", gdbarch, kernel_code);
 
-	  uiout->text ("\n");
-	}
-    }
+	    uiout->text ("\n");
+	  }
+      }
+  }
 
   if (uiout->is_mi_like_p ()
       && current_dispatch_id != AMD_DBGAPI_DISPATCH_NONE)
