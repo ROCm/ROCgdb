@@ -27921,6 +27921,17 @@ the log to a new file:
 If you want to print the log to both the console and a file, omit the
 @samp{set logging debugredirect on} command.  @xref{Logging Output}.
 
+@subsubsection @acronym{AMD GPU} Version
+
+The @samp{show amdgpu version} command can be used to print the ROCdbgapi
+library version and file path.  For example:
+
+@smallexample
+(@value{GDBP}) show amdgpu version
+ROCdbgapi 0.56.0 (0.56.0-rocm-rel-4.5-56)
+Loaded from `/opt/rocm-4.5.0/lib/librocm-dbgapi.so.0'
+@end smallexample
+
 @subsubsection @acronym{AMD GPU} Restrictions
 
 @value{GDBN} @acronym{AMD GPU} support is currently a prototype and

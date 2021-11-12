@@ -2513,6 +2513,28 @@ get_effective_precise_memory_mode ()
   return info->precise_memory.enabled;
 };
 
+static const char *
+get_dbgapi_library_file_path ()
+{
+  Dl_info dl_info{};
+  if (!dladdr ((void*) amd_dbgapi_get_version, &dl_info))
+    return "";
+  return dl_info.dli_fname;
+}
+
+static void
+show_dbgapi_version (const char *args, int from_tty)
+{
+  uint32_t major, minor, patch;
+  amd_dbgapi_get_version (&major, &minor, &patch);
+
+  printf_filtered ("%p[ROCdbgapi %d.%d.%d (%s)%p]\nLoaded from `%ps'\n",
+                   version_style.style ().ptr (), major, minor, patch,
+		   amd_dbgapi_get_build_name (), nullptr,
+		   styled_string (file_name_style.style (),
+				  get_dbgapi_library_file_path ()));
+}
+
 /* List of set/show amdgpu commands.  */
 struct cmd_list_element *set_amdgpu_list;
 struct cmd_list_element *show_amdgpu_list;
@@ -3689,6 +3711,10 @@ If off (default), precise memory reporting is disabled."),
 
   cmds.show->var->set_effective_value_getter<bool>
     (get_effective_precise_memory_mode);
+
+  add_cmd ("version", no_set_class, show_dbgapi_version,
+	   _("Show the ROCdbgapi library version and build information."),
+	   &show_amdgpu_list);
 
   add_basic_prefix_cmd ("amdgpu", no_class,
 			_ ("Generic command for setting amdgpu debugging "
