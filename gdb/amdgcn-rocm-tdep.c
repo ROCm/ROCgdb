@@ -52,12 +52,18 @@ rocm_is_amdgcn_gdbarch (struct gdbarch *arch)
   return gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn;
 }
 
+amdgcn_gdbarch_tdep *
+get_amdgcn_gdbarch_tdep (gdbarch *arch)
+{
+  return static_cast<amdgcn_gdbarch_tdep *> (gdbarch_tdep (arch));
+}
+
 /* Return the name of register REGNUM.  */
 static const char *
 amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
 {
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
 
   amd_dbgapi_register_exists_t register_exists;
   if (amd_dbgapi_wave_register_exists (wave_id, tdep->register_ids[regnum],
@@ -72,7 +78,7 @@ amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
 static int
 amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int dwarf_reg)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
 
   if (dwarf_reg < tdep->dwarf_regnum_to_gdb_regnum.size ())
     return tdep->dwarf_regnum_to_gdb_regnum[dwarf_reg];
@@ -150,7 +156,7 @@ amdgcn_enum_type (struct gdbarch *gdbarch, int bits,
 		  const std::string &type_name, const std::string &fields)
 {
   gdb_assert (bits == 32 || bits == 64);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
 
   auto it = tdep->type_map.find (type_name);
   if (it != tdep->type_map.end ())
@@ -196,7 +202,7 @@ amdgcn_flags_type (struct gdbarch *gdbarch, int bits,
 		   const std::string &type_name, const std::string &fields)
 {
   gdb_assert (bits == 32 || bits == 64);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
 
   auto it = tdep->type_map.find (type_name);
   if (it != tdep->type_map.end ())
@@ -254,7 +260,7 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
   /* vector types.  */
   if ((pos = type_name.find_last_of ('[')) != std::string::npos)
     {
-      struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+      amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
 
       auto it = tdep->type_map.find (type_name);
       if (it != tdep->type_map.end ())
@@ -323,7 +329,7 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 static struct type *
 amdgcn_register_type (struct gdbarch *gdbarch, int regnum)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
   char *bytes;
 
   if (amd_dbgapi_register_get_info (tdep->register_ids[regnum],
@@ -344,7 +350,7 @@ static int
 amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			    struct reggroup *group)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
   const char *name = reggroup_name (group);
 
   auto it = tdep->register_class_map.find (name);
@@ -366,14 +372,14 @@ amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 static int
 amdgcn_breakpoint_kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *)
 {
-  return gdbarch_tdep (gdbarch)->breakpoint_instruction_size;
+  return get_amdgcn_gdbarch_tdep (gdbarch)->breakpoint_instruction_size;
 }
 
 static const gdb_byte *
 amdgcn_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
 {
   *size = kind;
-  return gdbarch_tdep (gdbarch)->breakpoint_instruction_bytes.get ();
+  return get_amdgcn_gdbarch_tdep (gdbarch)->breakpoint_instruction_bytes.get ();
 }
 
 struct amdgcn_frame_cache
@@ -718,7 +724,7 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 static gdb::array_view<const arch_addr_space>
 amdgcn_address_spaces (struct gdbarch *gdbarch)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
   return tdep->address_spaces;
 }
 
@@ -821,7 +827,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   };
 
   /* Allocate space for the new architecture.  */
-  std::unique_ptr<struct gdbarch_tdep> tdep (new struct gdbarch_tdep);
+  std::unique_ptr<amdgcn_gdbarch_tdep> tdep (new amdgcn_gdbarch_tdep);
   std::unique_ptr<struct gdbarch, gdbarch_deleter> gdbarch_u (
     gdbarch_alloc (&info, tdep.get ()));
 

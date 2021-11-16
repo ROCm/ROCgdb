@@ -101,8 +101,6 @@ foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.c]] {
     set opts(timeout) ""
     set opts(mach) ""
     set opts(xerror) "no"
-    set opts(dest) "$testname.x"
-    set opts(simenv) ""
     set opts(kfail) ""
     set opts(xfail) ""
     set opts(target) ""
@@ -188,8 +186,7 @@ foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.c]] {
 
     verbose -log "Compiling $src with $opts(cc)"
 
-    set dest "$opts(dest)"
-    if { [target_compile $src $dest "executable" "$opts(cc)" ] != "" } {
+    if { [target_compile $src "$testname.x" "executable" "$opts(cc)" ] != "" } {
 	unresolved $testname
 	continue
     }
@@ -212,8 +209,8 @@ foreach src [lsort [glob -nocomplain $srcdir/$subdir/*.c]] {
 	eval setup_kfail $opts(kfail)
     }
 
-    set result [sim_run $dest "$opts(sim,$mach)" "$opts(progoptions)" \
-	"" "$opts(simenv)"]
+    set result [sim_run "$testname.x" "$opts(sim,$mach)" "$opts(progoptions)" \
+	"" ""]
     set return_code [lindex $result 0]
     set output [lindex $result 1]
 

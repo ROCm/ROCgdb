@@ -470,10 +470,9 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	      ptid_t process_ptid = ptid_t (child_ptid.pid ());
 
 	      target_terminal::ours_for_output ();
-	      fprintf_filtered (gdb_stdlog,
-				_("[Detaching after %s from child %s]\n"),
-				has_vforked ? "vfork" : "fork",
-				target_pid_to_str (process_ptid).c_str ());
+	      printf_filtered (_("[Detaching after %s from child %s]\n"),
+			       has_vforked ? "vfork" : "fork",
+			       target_pid_to_str (process_ptid).c_str ());
 	    }
 	}
       else
@@ -537,11 +536,10 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  std::string child_pid = target_pid_to_str (child_ptid);
 
 	  target_terminal::ours_for_output ();
-	  fprintf_filtered (gdb_stdlog,
-			    _("[Attaching after %s %s to child %s]\n"),
-			    parent_pid.c_str (),
-			    has_vforked ? "vfork" : "fork",
-			    child_pid.c_str ());
+	  printf_filtered (_("[Attaching after %s %s to child %s]\n"),
+			   parent_pid.c_str (),
+			   has_vforked ? "vfork" : "fork",
+			   child_pid.c_str ());
 	}
 
       /* Add the new inferior first, so that the target_detach below
@@ -649,10 +647,9 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	      ptid_t process_ptid = ptid_t (parent_ptid.pid ());
 
 	      target_terminal::ours_for_output ();
-	      fprintf_filtered (gdb_stdlog,
-				_("[Detaching after fork from "
-				  "parent %s]\n"),
-				target_pid_to_str (process_ptid).c_str ());
+	      printf_filtered (_("[Detaching after fork from "
+				 "parent %s]\n"),
+			       target_pid_to_str (process_ptid).c_str ());
 	    }
 
 	  target_detach (parent_inf, 0);
@@ -972,15 +969,13 @@ handle_vfork_child_exec_or_exit (int exec)
 
 	      if (exec)
 		{
-		  fprintf_filtered (gdb_stdlog,
-				    _("[Detaching vfork parent %s "
-				      "after child exec]\n"), pidstr.c_str ());
+		  printf_filtered (_("[Detaching vfork parent %s "
+				     "after child exec]\n"), pidstr.c_str ());
 		}
 	      else
 		{
-		  fprintf_filtered (gdb_stdlog,
-				    _("[Detaching vfork parent %s "
-				      "after child exit]\n"), pidstr.c_str ());
+		  printf_filtered (_("[Detaching vfork parent %s "
+				     "after child exit]\n"), pidstr.c_str ());
 		}
 	    }
 

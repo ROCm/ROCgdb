@@ -22,6 +22,7 @@
 #define AMDGCN_TDEP_H
 
 #include <gdbsupport/gdb_unique_ptr.h>
+#include <gdbarch.h>
 
 #include <unordered_map>
 
@@ -49,7 +50,7 @@ struct register_id_equal_to
 };
 
 /* amdgcn architecture specific information.  */
-struct gdbarch_tdep
+struct amdgcn_gdbarch_tdep : gdbarch_tdep
 {
   /* This architecture's breakpoint instruction.  */
   gdb::unique_xmalloc_ptr<gdb_byte> breakpoint_instruction_bytes;
@@ -79,6 +80,8 @@ struct gdbarch_tdep
      optimization.  */
   std::vector<arch_addr_space> address_spaces;
 };
+
+amdgcn_gdbarch_tdep *get_amdgcn_gdbarch_tdep (gdbarch *arch);
 
 /* Extract address space from a core address ADDR.  */
 

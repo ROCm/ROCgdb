@@ -97,6 +97,9 @@ sim_state_free (SIM_DESC sd)
   SIM_STATE_FREE (sd);
 #endif
 
+  free (STATE_PROG_FILE (sd));
+  free (STATE_PROG_ARGV0 (sd));
+  freeargv (STATE_PROG_ENVP (sd));
   free (sd);
 }
 

@@ -1851,7 +1851,7 @@ void
 rocm_target_ops::fetch_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
 
   /* delegate to the host routines when not on the device */
 
@@ -1885,7 +1885,7 @@ void
 rocm_target_ops::store_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgcn_gdbarch_tdep *tdep = get_amdgcn_gdbarch_tdep (gdbarch);
   gdb_byte raw[AMDGCN_MAX_REGISTER_SIZE];
 
   if (!rocm_is_amdgcn_gdbarch (gdbarch))
@@ -2040,7 +2040,7 @@ rocm_target_ops::displaced_step_prepare (thread_info *thread,
   CORE_ADDR original_pc = regcache_read_pc (get_thread_regcache (thread));
 
   gdbarch *arch = get_thread_regcache (thread)->arch ();
-  size_t size = gdbarch_tdep (arch)->breakpoint_instruction_size;
+  size_t size = get_amdgcn_gdbarch_tdep (arch)->breakpoint_instruction_size;
   gdb::unique_xmalloc_ptr<gdb_byte> overwritten_bytes (
     static_cast<gdb_byte *> (xmalloc (size)));
 

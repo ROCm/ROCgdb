@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <stdlib.h>
 
+#include "sim/callback.h"
 #include "sim-options.h"
 #include "libiberty.h"
 #include "bfd.h"
@@ -93,11 +94,7 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback, struct bfd *abfd,
   sim_do_commandf (sd, "memory region 0x%x,0x%x", IQ2000_DATA_VALUE, IQ2000_DATA_MEM_SIZE); 
 
   /* check for/establish the reference program image */
-  if (sim_analyze_program (sd,
-			   (STATE_PROG_ARGV (sd) != NULL
-			    ? *STATE_PROG_ARGV (sd)
-			    : NULL),
-			   abfd) != SIM_RC_OK)
+  if (sim_analyze_program (sd, STATE_PROG_FILE (sd), abfd) != SIM_RC_OK)
     {
       free_state (sd);
       return 0;
@@ -135,9 +132,10 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback, struct bfd *abfd,
 
 SIM_RC
 sim_create_inferior (SIM_DESC sd, struct bfd *abfd, char * const *argv,
-		     char * const *envp)
+		     char * const *env)
 {
   SIM_CPU *current_cpu = STATE_CPU (sd, 0);
+  host_callback *cb = STATE_CALLBACK (sd);
   SIM_ADDR addr;
 
   if (abfd != NULL)
@@ -155,6 +153,15 @@ sim_create_inferior (SIM_DESC sd, struct bfd *abfd, char * const *argv,
       freeargv (STATE_PROG_ARGV (sd));
       STATE_PROG_ARGV (sd) = dupargv (argv);
     }
+
+  if (STATE_PROG_ENVP (sd) != env)
+    {
+      freeargv (STATE_PROG_ENVP (sd));
+      STATE_PROG_ENVP (sd) = dupargv (env);
+    }
+
+  cb->argv = STATE_PROG_ARGV (sd);
+  cb->envp = STATE_PROG_ENVP (sd);
 
   return SIM_RC_OK;
 }
