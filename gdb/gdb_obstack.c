@@ -19,6 +19,7 @@
 
 #include "defs.h"
 #include "gdb_obstack.h"
+#include <stdio.h>
 
 /* Concatenate NULL terminated variable argument list of `const char *'
    strings; return the new string.  Space is found in the OBSTACKP.
@@ -44,4 +45,35 @@ obconcat (struct obstack *obstackp, ...)
   obstack_1grow (obstackp, 0);
 
   return (char *) obstack_finish (obstackp);
+}
+
+/* See gdb_obstack.h.  */
+
+const char *
+gdb_obstack_vprintf (obstack *ob, const char *fmt, va_list args)
+{
+  va_list args_copy;
+
+  va_copy (args_copy, args);
+  size_t size = vsnprintf (nullptr, 0, fmt, args_copy);
+  va_end (args_copy);
+
+  char *str = XOBNEWVEC (ob, char, size + 1);
+  vsprintf (str, fmt, args);
+
+  return str;
+}
+
+/* See gdb_obstack.h.  */
+
+const char *
+gdb_obstack_printf (obstack *ob, const char *fmt, ...)
+{
+  va_list args;
+
+  va_start (args, fmt);
+  const char *str = gdb_obstack_vprintf (ob, fmt, args);
+  va_end (args);
+
+  return str;
 }

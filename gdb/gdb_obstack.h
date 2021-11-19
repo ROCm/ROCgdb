@@ -21,6 +21,7 @@
 #define GDB_OBSTACK_H 1
 
 #include "obstack.h"
+#include <stdarg.h>
 
 /* Utility macros - wrap obstack alloc into something more robust.  */
 
@@ -115,6 +116,13 @@ obstack_strndup (struct obstack *obstackp, const char *string, size_t n)
 {
   return (char *) obstack_copy0 (obstackp, string, n);
 }
+
+/* Write a formatted string to obstack OB.  */
+
+const char *gdb_obstack_vprintf (obstack *ob, const char *fmt, va_list args)
+  ATTRIBUTE_PRINTF (2, 0);
+const char *gdb_obstack_printf (obstack *ob, const char *fmt, ...)
+  ATTRIBUTE_PRINTF (2, 3);
 
 /* An obstack that frees itself on scope exit.  */
 struct auto_obstack : obstack
