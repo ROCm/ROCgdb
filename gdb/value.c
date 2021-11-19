@@ -1165,7 +1165,7 @@ value_contents_all_raw (struct value *value)
 {
   allocate_value_contents (value);
 
-  ULONGEST length = TYPE_LENGTH (value_type (value));
+  ULONGEST length = TYPE_LENGTH (value_enclosing_type (value));
   return gdb::make_array_view (value->contents.get (), length);
 }
 
@@ -1222,7 +1222,7 @@ value_actual_type (struct value *value, int resolve_simple_types,
 void
 error_value_optimized_out (void)
 {
-  error (_("value has been optimized out"));
+  throw_error (OPTIMIZED_OUT_ERROR, _("value has been optimized out"));
 }
 
 static void
@@ -1231,7 +1231,8 @@ require_not_optimized_out (const struct value *value)
   if (!value->optimized_out.empty ())
     {
       if (value->lval == lval_register)
-	error (_("register has not been saved in frame"));
+	throw_error (OPTIMIZED_OUT_ERROR,
+		     _("register has not been saved in frame"));
       else
 	error_value_optimized_out ();
     }
@@ -1250,7 +1251,7 @@ value_contents_for_printing (struct value *value)
   if (value->lazy)
     value_fetch_lazy (value);
 
-  ULONGEST length = TYPE_LENGTH (value_type (value));
+  ULONGEST length = TYPE_LENGTH (value_enclosing_type (value));
   return gdb::make_array_view (value->contents.get (), length);
 }
 
@@ -1259,7 +1260,7 @@ value_contents_for_printing_const (const struct value *value)
 {
   gdb_assert (!value->lazy);
 
-  ULONGEST length = TYPE_LENGTH (value_type (value));
+  ULONGEST length = TYPE_LENGTH (value_enclosing_type (value));
   return gdb::make_array_view (value->contents.get (), length);
 }
 

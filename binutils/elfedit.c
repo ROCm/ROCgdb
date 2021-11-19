@@ -57,6 +57,8 @@ static int input_elf_type = -1;
 static int output_elf_type = -1;
 static int input_elf_osabi = -1;
 static int output_elf_osabi = -1;
+static int input_elf_abiversion = -1;
+static int output_elf_abiversion = -1;
 enum elfclass
   {
     ELF_CLASS_UNKNOWN = -1,
@@ -311,7 +313,7 @@ elf_class (int mach)
 static int
 update_elf_header (const char *file_name, FILE *file)
 {
-  int class, machine, type, status, osabi;
+  int class, machine, type, status, osabi, abiversion;
 
   if (elf_header.e_ident[EI_VERSION] != EV_CURRENT)
     {
@@ -382,6 +384,18 @@ update_elf_header (const char *file_name, FILE *file)
       return 0;
     }
 
+  abiversion = elf_header.e_ident[EI_ABIVERSION];
+
+  /* Skip if ABIVERSION doesn't match. */
+  if (input_elf_abiversion != -1
+      && abiversion != input_elf_abiversion)
+    {
+      error
+	(_("%s: Unmatched EI_ABIVERSION: %d is not %d\n"),
+	 file_name, abiversion, input_elf_abiversion);
+      return 0;
+    }
+
   /* Update e_machine, e_type and EI_OSABI.  */
   switch (class)
     {
@@ -396,6 +410,8 @@ update_elf_header (const char *file_name, FILE *file)
 	BYTE_PUT (ehdr32.e_type, output_elf_type);
       if (output_elf_osabi != -1)
 	ehdr32.e_ident[EI_OSABI] = output_elf_osabi;
+      if (output_elf_abiversion != -1)
+	ehdr32.e_ident[EI_ABIVERSION] = output_elf_abiversion;
       status = fwrite (&ehdr32, sizeof (ehdr32), 1, file) == 1;
       break;
     case ELFCLASS64:
@@ -405,6 +421,8 @@ update_elf_header (const char *file_name, FILE *file)
 	BYTE_PUT (ehdr64.e_type, output_elf_type);
       if (output_elf_osabi != -1)
 	ehdr64.e_ident[EI_OSABI] = output_elf_osabi;
+      if (output_elf_abiversion != -1)
+	ehdr64.e_ident[EI_ABIVERSION] = output_elf_abiversion;
       status = fwrite (&ehdr64, sizeof (ehdr64), 1, file) == 1;
       break;
     }
@@ -888,6 +906,8 @@ enum command_line_switch
     OPTION_OUTPUT_TYPE,
     OPTION_INPUT_OSABI,
     OPTION_OUTPUT_OSABI,
+    OPTION_INPUT_ABIVERSION,
+    OPTION_OUTPUT_ABIVERSION,
 #ifdef HAVE_MMAP
     OPTION_ENABLE_X86_FEATURE,
     OPTION_DISABLE_X86_FEATURE,
@@ -902,6 +922,8 @@ static struct option options[] =
   {"output-type",	required_argument, 0, OPTION_OUTPUT_TYPE},
   {"input-osabi",	required_argument, 0, OPTION_INPUT_OSABI},
   {"output-osabi",	required_argument, 0, OPTION_OUTPUT_OSABI},
+  {"input-abiversion",	required_argument, 0, OPTION_INPUT_ABIVERSION},
+  {"output-abiversion",	required_argument, 0, OPTION_OUTPUT_ABIVERSION},
 #ifdef HAVE_MMAP
   {"enable-x86-feature",
 			required_argument, 0, OPTION_ENABLE_X86_FEATURE},
@@ -938,7 +960,11 @@ usage (FILE *stream, int exit_status)
   --input-osabi [%s]\n\
                               Set input OSABI\n\
   --output-osabi [%s]\n\
-                              Set output OSABI\n"),
+                              Set output OSABI\n\
+  --input-abiversion [0-255]\n\
+                              Set input ABIVERSION\n\
+  --output-abiversion [0-255]\n\
+                              Set output ABIVERSION\n"),
 	   osabi, osabi);
 #ifdef HAVE_MMAP
   fprintf (stream, _("\
@@ -962,6 +988,7 @@ int
 main (int argc, char ** argv)
 {
   int c, status;
+  char *end;
 
 #ifdef HAVE_LC_MESSAGES
   setlocale (LC_MESSAGES, "");
@@ -1019,6 +1046,28 @@ main (int argc, char ** argv)
 	    return 1;
 	  break;
 
+	case OPTION_INPUT_ABIVERSION:
+	  input_elf_abiversion = strtoul (optarg, &end, 0);
+	  if (*end != '\0'
+	      || input_elf_abiversion < 0
+	      || input_elf_abiversion > 255)
+	    {
+	      error (_("Invalid ABIVERSION: %s\n"), optarg);
+	      return 1;
+	    }
+	  break;
+
+	case OPTION_OUTPUT_ABIVERSION:
+	  output_elf_abiversion = strtoul (optarg, &end, 0);
+	  if (*end != '\0'
+	      || output_elf_abiversion < 0
+	      || output_elf_abiversion > 255)
+	    {
+	      error (_("Invalid ABIVERSION: %s\n"), optarg);
+	      return 1;
+	    }
+	  break;
+
 #ifdef HAVE_MMAP
 	case OPTION_ENABLE_X86_FEATURE:
 	  if (elf_x86_feature (optarg, 1) < 0)
@@ -1050,7 +1099,8 @@ main (int argc, char ** argv)
 	 && ! disable_x86_features
 #endif
 	  && output_elf_type == -1
-	  && output_elf_osabi == -1))
+	  && output_elf_osabi == -1
+	  && output_elf_abiversion == -1))
     usage (stderr, 1);
 
   status = 0;

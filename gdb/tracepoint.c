@@ -2641,7 +2641,7 @@ info_scope_command (const char *args_in, int from_tty)
 		  printf_filtered ("optimized out.\n");
 		  continue;
 		case LOC_COMPUTED:
-		  gdb_assert_not_reached (_("LOC_COMPUTED variable missing a method"));
+		  gdb_assert_not_reached ("LOC_COMPUTED variable missing a method");
 		}
 	    }
 	  if (SYMBOL_TYPE (sym))
@@ -2809,7 +2809,7 @@ all_tracepoint_actions (struct breakpoint *t)
   if (!default_collect.empty ())
     {
       gdb::unique_xmalloc_ptr<char> default_collect_line
-	(xstrprintf ("collect %s", default_collect.c_str ()));
+	= xstrprintf ("collect %s", default_collect.c_str ());
 
       validate_actionline (default_collect_line.get (), t);
       actions.reset (new struct command_line (simple_control,

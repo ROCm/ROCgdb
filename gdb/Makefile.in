@@ -1422,7 +1422,6 @@ HFILES_NO_SRCDIR = \
 	riscv-tdep.h \
 	rocm-tdep.h \
 	rs6000-aix-tdep.h \
-	rs6000-tdep.h \
 	run-on-main-thread.h \
 	s390-linux-tdep.h \
 	s390-tdep.h \
@@ -2294,8 +2293,8 @@ ALLDEPFILES = \
 	riscv-tdep.c \
 	rocm-tdep.c \
 	rl78-tdep.c \
+	rs6000-aix-nat.c \
 	rs6000-lynx178-tdep.c \
-	rs6000-nat.c \
 	rs6000-tdep.c \
 	rx-tdep.c \
 	s390-linux-nat.c \

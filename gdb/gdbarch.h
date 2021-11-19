@@ -130,9 +130,21 @@ enum class memtag_type
   allocation,
 };
 
+/* Callback types for 'read_core_file_mappings' gdbarch method.  */
+
+using read_core_file_mappings_pre_loop_ftype =
+  gdb::function_view<void (ULONGEST count)>;
+
+using read_core_file_mappings_loop_ftype =
+  gdb::function_view<void (int num,
+			   ULONGEST start,
+			   ULONGEST end,
+			   ULONGEST file_ofs,
+			   const char *filename,
+			   const bfd_build_id *build_id)>;
+
 /* 64-bits is sufficient for all known architectures.  */
 typedef uint64_t simd_lanes_mask_t;
-
 
 
 /* The following are pre-initialized by GDBARCH.  */
@@ -1775,8 +1787,8 @@ extern void set_gdbarch_get_pc_address_flags (struct gdbarch *gdbarch, gdbarch_g
 
 /* Read core file mappings */
 
-typedef void (gdbarch_read_core_file_mappings_ftype) (struct gdbarch *gdbarch, struct bfd *cbfd, gdb::function_view<void (ULONGEST count)> pre_loop_cb, gdb::function_view<void (int num, ULONGEST start, ULONGEST end, ULONGEST file_ofs, const char *filename)> loop_cb);
-extern void gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd, gdb::function_view<void (ULONGEST count)> pre_loop_cb, gdb::function_view<void (int num, ULONGEST start, ULONGEST end, ULONGEST file_ofs, const char *filename)> loop_cb);
+typedef void (gdbarch_read_core_file_mappings_ftype) (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_pre_loop_ftype pre_loop_cb, read_core_file_mappings_loop_ftype loop_cb);
+extern void gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_pre_loop_ftype pre_loop_cb, read_core_file_mappings_loop_ftype loop_cb);
 extern void set_gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, gdbarch_read_core_file_mappings_ftype *read_core_file_mappings);
 
 extern struct gdbarch_tdep *gdbarch_tdep (struct gdbarch *gdbarch);

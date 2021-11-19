@@ -197,6 +197,8 @@ aarch64_select_operand_for_sizeq_field_coding (const aarch64_opcode *opcode)
     significant_operand_index [get_data_pattern (opcode->qualifiers_list[0])];
 }
 
+/* Instruction bit-fields.
++   Keep synced with 'enum aarch64_field_kind'.  */
 const aarch64_field fields[] =
 {
     {  0,  0 },	/* NIL.  */
@@ -242,6 +244,7 @@ const aarch64_field fields[] =
     { 11,  4 },	/* imm4: in advsimd ext and advsimd ins instructions.  */
     {  0,  4 },	/* imm4_2: in rmif instructions.  */
     { 10,  4 },	/* imm4_3: in adddg/subg instructions.  */
+    {  5,  4 }, /* imm4_5: in SME instructions.  */
     { 16,  5 },	/* imm5: in conditional compare (immediate) instructions.  */
     { 15,  7 },	/* imm7: in load/store pair pre/post index instructions.  */
     { 13,  8 },	/* imm8: in floating-point scalar move immediate inst.  */
@@ -321,6 +324,18 @@ const aarch64_field fields[] =
     { 19,  2 }, /* SVE_tszl_19: triangular size select low, bits [20,19].  */
     { 14,  1 }, /* SVE_xs_14: UXTW/SXTW select (bit 14).  */
     { 22,  1 }, /* SVE_xs_22: UXTW/SXTW select (bit 22).  */
+    {  0,  2 }, /* SME ZAda tile ZA0-ZA3.  */
+    {  0,  3 }, /* SME ZAda tile ZA0-ZA7.  */
+    { 22,  2 }, /* SME_size_10: size<1>, size<0> class field, [23:22].  */
+    { 16,  1 }, /* SME_Q: Q class bit, bit 16.  */
+    { 15,  1 }, /* SME_V: (horizontal / vertical tiles), bit 15.  */
+    { 13,  2 }, /* SME_Rv: vector select register W12-W15, bits [14:13].  */
+    { 13,  3 }, /* SME Pm second source scalable predicate register P0-P7.  */
+    { 0,   8 }, /* SME_zero_mask: list of up to 8 tile names separated by commas [7:0].  */
+    { 16,  2 }, /* SME_Rm: index base register W12-W15 [17:16].  */
+    { 23,  1 }, /* SME_i1: immediate field, bit 23.  */
+    { 22,  1 }, /* SME_tszh: immediate and qualifier field, bit 22.  */
+    { 18,  3 }, /* SME_tshl: immediate and qualifier field, bits [20:18].  */
     { 11,  2 }, /* rotate1: FCMLA immediate rotate.  */
     { 13,  2 }, /* rotate2: Indexed element FCMLA immediate rotate.  */
     { 12,  1 }, /* rotate3: FCADD immediate rotate.  */
@@ -1509,7 +1524,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  if (!aarch64_stack_pointer_p (opnd))
 	    {
 	      set_other_error (mismatch_detail, idx,
-			       _("stack pointer register expected"));
+		       _("stack pointer register expected"));
 	      return 0;
 	    }
 	  break;
@@ -1826,6 +1841,14 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    }
 	  break;
 
+	case AARCH64_OPND_SME_ADDR_RI_U4xVL:
+	  if (!value_in_range_p (opnd->addr.offset.imm, 0, 15))
+	    {
+	      set_offset_out_of_range_error (mismatch_detail, idx, 0, 15);
+	      return 0;
+	    }
+	  break;
+
 	case AARCH64_OPND_SVE_ADDR_RI_S4xVL:
 	case AARCH64_OPND_SVE_ADDR_RI_S4x2xVL:
 	case AARCH64_OPND_SVE_ADDR_RI_S4x3xVL:
@@ -1923,6 +1946,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	case AARCH64_OPND_SVE_ADDR_RR_LSL1:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL2:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL3:
+	case AARCH64_OPND_SVE_ADDR_RR_LSL4:
 	case AARCH64_OPND_SVE_ADDR_RX:
 	case AARCH64_OPND_SVE_ADDR_RX_LSL1:
 	case AARCH64_OPND_SVE_ADDR_RX_LSL2:
@@ -2572,11 +2596,15 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  /* MSR UAO, #uimm4
 	     MSR PAN, #uimm4
 	     MSR SSBS,#uimm4
+	     MSR SVCRSM, #uimm4
+	     MSR SVCRZA, #uimm4
+	     MSR SVCRSMZA, #uimm4
 	     The immediate must be #0 or #1.  */
 	  if ((opnd->pstatefield == 0x03	/* UAO.  */
 	       || opnd->pstatefield == 0x04	/* PAN.  */
 	       || opnd->pstatefield == 0x19     /* SSBS.  */
-	       || opnd->pstatefield == 0x1a)	/* DIT.  */
+	       || opnd->pstatefield == 0x1a	/* DIT.  */
+	       || opnd->pstatefield == 0x1b)	/* SVCRSM, SVCRZA or SVCRSMZA.  */
 	      && opnds[1].imm.value > 1)
 	    {
 	      set_imm_out_of_range_error (mismatch_detail, idx, 0, 1);
@@ -2741,21 +2769,51 @@ aarch64_match_operands_constraint (aarch64_inst *inst,
 
   DEBUG_TRACE ("enter");
 
-  /* Check for cases where a source register needs to be the same as the
-     destination register.  Do this before matching qualifiers since if
-     an instruction has both invalid tying and invalid qualifiers,
-     the error about qualifiers would suggest several alternative
-     instructions that also have invalid tying.  */
   i = inst->opcode->tied_operand;
-  if (i > 0 && (inst->operands[0].reg.regno != inst->operands[i].reg.regno))
+
+  if (i > 0)
     {
-      if (mismatch_detail)
-	{
-	  mismatch_detail->kind = AARCH64_OPDE_UNTIED_OPERAND;
-	  mismatch_detail->index = i;
-	  mismatch_detail->error = NULL;
-	}
-      return 0;
+      /* Check for tied_operands with specific opcode iclass.  */
+      switch (inst->opcode->iclass)
+        {
+        /* For SME LDR and STR instructions #imm must have the same numerical
+           value for both operands.
+        */
+        case sme_ldr:
+        case sme_str:
+          assert (inst->operands[0].type == AARCH64_OPND_SME_ZA_array);
+          assert (inst->operands[1].type == AARCH64_OPND_SME_ADDR_RI_U4xVL);
+          if (inst->operands[0].za_tile_vector.index.imm
+              != inst->operands[1].addr.offset.imm)
+            {
+              if (mismatch_detail)
+                {
+                  mismatch_detail->kind = AARCH64_OPDE_UNTIED_IMMS;
+                  mismatch_detail->index = i;
+                }
+              return 0;
+            }
+          break;
+
+        default:
+          /* Check for cases where a source register needs to be the same as the
+             destination register.  Do this before matching qualifiers since if
+             an instruction has both invalid tying and invalid qualifiers,
+             the error about qualifiers would suggest several alternative
+             instructions that also have invalid tying.  */
+          if (inst->operands[0].reg.regno
+              != inst->operands[i].reg.regno)
+            {
+              if (mismatch_detail)
+                {
+                  mismatch_detail->kind = AARCH64_OPDE_UNTIED_OPERAND;
+                  mismatch_detail->index = i;
+                  mismatch_detail->error = NULL;
+                }
+              return 0;
+            }
+          break;
+        }
     }
 
   /* Match operands' qualifier.
@@ -3131,6 +3189,46 @@ print_register_offset_address (char *buf, size_t size,
   snprintf (buf, size, "[%s, %s%s]", base, offset, tb);
 }
 
+/* Print ZA tiles from imm8 in ZERO instruction.
+
+   The preferred disassembly of this instruction uses the shortest list of tile
+   names that represent the encoded immediate mask.
+
+   For example:
+    * An all-ones immediate is disassembled as {ZA}.
+    * An all-zeros immediate is disassembled as an empty list { }.
+*/
+static void
+print_sme_za_list(char *buf, size_t size, int mask)
+{
+  const char* zan[] = { "za",    "za0.h", "za1.h", "za0.s",
+                        "za1.s", "za2.s", "za3.s", "za0.d",
+                        "za1.d", "za2.d", "za3.d", "za4.d",
+                        "za5.d", "za6.d", "za7.d", " " };
+  const int zan_v[] = { 0xff, 0x55, 0xaa, 0x11,
+                        0x22, 0x44, 0x88, 0x01,
+                        0x02, 0x04, 0x08, 0x10,
+                        0x20, 0x40, 0x80, 0x00 };
+  int i, k;
+  const int ZAN_SIZE = sizeof(zan) / sizeof(zan[0]);
+
+  k = snprintf (buf, size, "{");
+  for (i = 0; i < ZAN_SIZE; i++)
+    {
+      if ((mask & zan_v[i]) == zan_v[i])
+        {
+          mask &= ~zan_v[i];
+          if (k > 1)
+            k += snprintf (buf + k, size - k, ", %s", zan[i]);
+          else
+            k += snprintf (buf + k, size - k, "%s", zan[i]);
+        }
+      if (mask == 0)
+        break;
+    }
+  snprintf (buf + k, size - k, "}");
+}
+
 /* Generate the string representation of the operand OPNDS[IDX] for OPCODE
    in *BUF.  The caller should pass in the maximum size of *BUF in SIZE.
    PC, PCREL_P and ADDRESS are used to pass in and return information about
@@ -3304,6 +3402,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_Pm:
     case AARCH64_OPND_SVE_Pn:
     case AARCH64_OPND_SVE_Pt:
+    case AARCH64_OPND_SME_Pm:
       if (opnd->qualifier == AARCH64_OPND_QLF_NIL)
 	snprintf (buf, size, "p%d", opnd->reg.regno);
       else if (opnd->qualifier == AARCH64_OPND_QLF_P_Z
@@ -3343,6 +3442,47 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       snprintf (buf, size, "z%d.%s[%" PRIi64 "]", opnd->reglane.regno,
 		aarch64_get_qualifier_name (opnd->qualifier),
 		opnd->reglane.index);
+      break;
+
+    case AARCH64_OPND_SME_ZAda_2b:
+    case AARCH64_OPND_SME_ZAda_3b:
+      snprintf (buf, size, "za%d.%s", opnd->reg.regno,
+                aarch64_get_qualifier_name (opnd->qualifier));
+      break;
+
+    case AARCH64_OPND_SME_ZA_HV_idx_src:
+    case AARCH64_OPND_SME_ZA_HV_idx_dest:
+    case AARCH64_OPND_SME_ZA_HV_idx_ldstr:
+      snprintf (buf, size, "%sza%d%c.%s[w%d, %d]%s",
+                opnd->type == AARCH64_OPND_SME_ZA_HV_idx_ldstr ? "{" : "",
+                opnd->za_tile_vector.regno,
+                opnd->za_tile_vector.v == 1 ? 'v' : 'h',
+                aarch64_get_qualifier_name (opnd->qualifier),
+                opnd->za_tile_vector.index.regno,
+                opnd->za_tile_vector.index.imm,
+                opnd->type == AARCH64_OPND_SME_ZA_HV_idx_ldstr ? "}" : "");
+      break;
+
+    case AARCH64_OPND_SME_list_of_64bit_tiles:
+      print_sme_za_list (buf, size, opnd->reg.regno);
+      break;
+
+    case AARCH64_OPND_SME_ZA_array:
+      snprintf (buf, size, "za[w%d, %d]",
+                opnd->za_tile_vector.index.regno,
+                opnd->za_tile_vector.index.imm);
+      break;
+
+    case AARCH64_OPND_SME_SM_ZA:
+      snprintf (buf, size, "%s", opnd->reg.regno == 's' ? "sm" : "za");
+      break;
+
+    case AARCH64_OPND_SME_PnT_Wm_imm:
+      snprintf (buf, size, "p%d.%s[w%d, %d]",
+                opnd->za_tile_vector.regno,
+                aarch64_get_qualifier_name (opnd->qualifier),
+                opnd->za_tile_vector.index.regno,
+                opnd->za_tile_vector.index.imm);
       break;
 
     case AARCH64_OPND_CRn:
@@ -3608,6 +3748,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_ADDR_RR_LSL1:
     case AARCH64_OPND_SVE_ADDR_RR_LSL2:
     case AARCH64_OPND_SVE_ADDR_RR_LSL3:
+    case AARCH64_OPND_SVE_ADDR_RR_LSL4:
     case AARCH64_OPND_SVE_ADDR_RX:
     case AARCH64_OPND_SVE_ADDR_RX_LSL1:
     case AARCH64_OPND_SVE_ADDR_RX_LSL2:
@@ -3648,6 +3789,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_ADDR_SIMM11:
     case AARCH64_OPND_ADDR_SIMM13:
     case AARCH64_OPND_ADDR_OFFSET:
+    case AARCH64_OPND_SME_ADDR_RI_U4xVL:
     case AARCH64_OPND_SVE_ADDR_RI_S4x16:
     case AARCH64_OPND_SVE_ADDR_RI_S4x32:
     case AARCH64_OPND_SVE_ADDR_RI_S4xVL:
@@ -3739,8 +3881,17 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
     case AARCH64_OPND_PSTATEFIELD:
       for (i = 0; aarch64_pstatefields[i].name; ++i)
-	if (aarch64_pstatefields[i].value == opnd->pstatefield)
-	  break;
+        if (aarch64_pstatefields[i].value == opnd->pstatefield)
+          {
+            /* PSTATEFIELD name is encoded partially in CRm[3:1] for SVCRSM,
+               SVCRZA and SVCRSMZA.  */
+            uint32_t flags = aarch64_pstatefields[i].flags;
+            if (flags & F_REG_IN_CRM
+                && (PSTATE_DECODE_CRM (opnd->sysreg.flags)
+                    != PSTATE_DECODE_CRM (flags)))
+              continue;
+            break;
+          }
       assert (aarch64_pstatefields[i].name);
       snprintf (buf, size, "%s", aarch64_pstatefields[i].name);
       break;
@@ -3836,6 +3987,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 #define SR_V8_4(n,e,f)	  SR_FEAT (n,e,f,V8_4)
 #define SR_PAN(n,e,f)	  SR_FEAT (n,e,f,PAN)
 #define SR_RAS(n,e,f)	  SR_FEAT (n,e,f,RAS)
+#define SR_SME(n,e,f)	  SR_FEAT (n,e,f,SME)
 #define SR_SSBS(n,e,f)	  SR_FEAT (n,e,f,SSBS)
 #define SR_SVE(n,e,f)	  SR_FEAT (n,e,f,SVE)
 #define SR_ID_PFR2(n,e,f) SR_FEAT (n,e,f,ID_PFR2)
@@ -4686,6 +4838,18 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   SR_CORE ("gpccr_el3",     CPENC (3,6,C2,C1,6), 0),
   SR_CORE ("gptbr_el3",     CPENC (3,6,C2,C1,4), 0),
 
+  SR_SME ("svcr",             CPENC (3,3,C4,C2,2),  0),
+  SR_SME ("id_aa64smfr0_el1", CPENC (3,0,C0,C4,5),  F_REG_READ),
+  SR_SME ("smcr_el1",         CPENC (3,0,C1,C2,6),  0),
+  SR_SME ("smcr_el12",        CPENC (3,5,C1,C2,6),  0),
+  SR_SME ("smcr_el2",         CPENC (3,4,C1,C2,6),  0),
+  SR_SME ("smcr_el3",         CPENC (3,6,C1,C2,6),  0),
+  SR_SME ("smpri_el1",        CPENC (3,0,C1,C2,4),  0),
+  SR_SME ("smprimap_el2",     CPENC (3,4,C1,C2,5),  0),
+  SR_SME ("smidr_el1",        CPENC (3,1,C0,C0,6),  F_REG_READ),
+  SR_SME ("tpidr2_el0",       CPENC (3,3,C13,C0,5), 0),
+  SR_SME ("mpamsm_el1",       CPENC (3,0,C10,C5,3), 0),
+
   { 0, CPENC (0,0,0,0,0), 0, 0 }
 };
 
@@ -4712,6 +4876,9 @@ const aarch64_sys_reg aarch64_pstatefields [] =
   SR_SSBS ("ssbs",	  0x19, 0),
   SR_V8_4 ("dit",	  0x1a,	0),
   SR_MEMTAG ("tco",	  0x1c,	0),
+  SR_SME  ("svcrsm",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x2,0x1)),
+  SR_SME  ("svcrza",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x4,0x1)),
+  SR_SME  ("svcrsmza",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x6,0x1)),
   { 0,	  CPENC (0,0,0,0,0), 0, 0 },
 };
 
@@ -5277,6 +5444,7 @@ verify_constraints (const struct aarch64_inst *inst,
 		  case AARCH64_OPND_SVE_Pm:
 		  case AARCH64_OPND_SVE_Pn:
 		  case AARCH64_OPND_SVE_Pt:
+		  case AARCH64_OPND_SME_Pm:
 		    inst_pred = inst_op;
 		    inst_pred_idx = i;
 		    break;

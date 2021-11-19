@@ -1442,7 +1442,7 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
     case AMD_DBGAPI_EVENT_KIND_BREAKPOINT_RESUME:
       /* Breakpoint resume events should be handled by the breakpoint
 	 action, and this code should not reach this.  */
-      gdb_assert_not_reached (_ ("unhandled event kind"));
+      gdb_assert_not_reached ("unhandled event kind");
       break;
 
     case AMD_DBGAPI_EVENT_KIND_RUNTIME:

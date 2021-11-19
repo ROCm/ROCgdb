@@ -99,6 +99,17 @@ enum vector_el_type
   NT_merge
 };
 
+/* SME horizontal or vertical slice indicator, encoded in "V".
+   Values:
+     0 - Horizontal
+     1 - vertical
+*/
+enum sme_hv_slice
+{
+  HV_horizontal = 0,
+  HV_vertical = 1
+};
+
 /* Bits for DEFINED field in vector_type_el.  */
 #define NTA_HASTYPE     1
 #define NTA_HASINDEX    2
@@ -278,6 +289,9 @@ struct reloc_entry
   BASIC_REG_TYPE(VN)	/* v[0-31] */	\
   BASIC_REG_TYPE(ZN)	/* z[0-31] */	\
   BASIC_REG_TYPE(PN)	/* p[0-15] */	\
+  BASIC_REG_TYPE(ZA)	/* za[0-15] */	\
+  BASIC_REG_TYPE(ZAH)	/* za[0-15]h */	\
+  BASIC_REG_TYPE(ZAV)	/* za[0-15]v */	\
   /* Typecheck: any 64-bit int reg         (inc SP exc XZR).  */	\
   MULTI_REG_TYPE(R64_SP, REG_TYPE(R_64) | REG_TYPE(SP_64))		\
   /* Typecheck: same, plus SVE registers.  */				\
@@ -4164,6 +4178,542 @@ parse_bti_operand (char **str,
   return 0;
 }
 
+/* Parse STR for reg of REG_TYPE and following '.' and QUALIFIER.
+   Function returns REG_ENTRY struct and QUALIFIER [bhsdq] or NULL
+   on failure. Format:
+
+     REG_TYPE.QUALIFIER
+
+   Side effect: Update STR with current parse position of success.
+*/
+
+static const reg_entry *
+parse_reg_with_qual (char **str, aarch64_reg_type reg_type,
+                     aarch64_opnd_qualifier_t *qualifier)
+{
+  char *q;
+
+  reg_entry *reg = parse_reg (str);
+  if (reg != NULL && reg->type == reg_type)
+    {
+      if (!skip_past_char (str, '.'))
+        {
+          set_syntax_error (_("missing ZA tile element size separator"));
+          return NULL;
+        }
+
+      q = *str;
+      switch (TOLOWER (*q))
+        {
+        case 'b':
+          *qualifier = AARCH64_OPND_QLF_S_B;
+          break;
+        case 'h':
+          *qualifier = AARCH64_OPND_QLF_S_H;
+          break;
+        case 's':
+          *qualifier = AARCH64_OPND_QLF_S_S;
+          break;
+        case 'd':
+          *qualifier = AARCH64_OPND_QLF_S_D;
+          break;
+        case 'q':
+          *qualifier = AARCH64_OPND_QLF_S_Q;
+          break;
+        default:
+          return NULL;
+        }
+      q++;
+
+      *str = q;
+      return reg;
+    }
+
+  return NULL;
+}
+
+/* Parse SME ZA tile encoded in <ZAda> assembler symbol.
+   Function return tile QUALIFIER on success.
+
+   Tiles are in example format: za[0-9]\.[bhsd]
+
+   Function returns <ZAda> register number or PARSE_FAIL.
+*/
+static int
+parse_sme_zada_operand (char **str, aarch64_opnd_qualifier_t *qualifier)
+{
+  int regno;
+  const reg_entry *reg = parse_reg_with_qual (str, REG_TYPE_ZA, qualifier);
+
+  if (reg == NULL)
+    return PARSE_FAIL;
+  regno = reg->number;
+
+  switch (*qualifier)
+    {
+    case AARCH64_OPND_QLF_S_B:
+      if (regno != 0x00)
+      {
+        set_syntax_error (_("invalid ZA tile register number, expected za0"));
+        return PARSE_FAIL;
+      }
+      break;
+    case AARCH64_OPND_QLF_S_H:
+      if (regno > 0x01)
+      {
+        set_syntax_error (_("invalid ZA tile register number, expected za0-za1"));
+        return PARSE_FAIL;
+      }
+      break;
+    case AARCH64_OPND_QLF_S_S:
+      if (regno > 0x03)
+      {
+        /* For the 32-bit variant: is the name of the ZA tile ZA0-ZA3.  */
+        set_syntax_error (_("invalid ZA tile register number, expected za0-za3"));
+        return PARSE_FAIL;
+      }
+      break;
+    case AARCH64_OPND_QLF_S_D:
+      if (regno > 0x07)
+      {
+        /* For the 64-bit variant: is the name of the ZA tile ZA0-ZA7  */
+        set_syntax_error (_("invalid ZA tile register number, expected za0-za7"));
+        return PARSE_FAIL;
+      }
+      break;
+    default:
+      set_syntax_error (_("invalid ZA tile element size, allowed b, h, s and d"));
+      return PARSE_FAIL;
+    }
+
+  return regno;
+}
+
+/* Parse STR for unsigned, immediate (1-2 digits) in format:
+
+     #<imm>
+     <imm>
+
+  Function return TRUE if immediate was found, or FALSE.
+*/
+static bool
+parse_sme_immediate (char **str, int64_t *imm)
+{
+  int64_t val;
+  if (! parse_constant_immediate (str, &val, REG_TYPE_R_N))
+    return false;
+
+  *imm = val;
+  return true;
+}
+
+/* Parse index with vector select register and immediate:
+
+   [<Wv>, <imm>]
+   [<Wv>, #<imm>]
+   where <Wv> is in W12-W15 range and # is optional for immediate.
+
+   Function performs extra check for mandatory immediate value if REQUIRE_IMM
+   is set to true.
+
+   On success function returns TRUE and populated VECTOR_SELECT_REGISTER and
+   IMM output.
+*/
+static bool
+parse_sme_za_hv_tiles_operand_index (char **str,
+                                     int *vector_select_register,
+                                     int64_t *imm)
+{
+  const reg_entry *reg;
+
+  if (!skip_past_char (str, '['))
+    {
+      set_syntax_error (_("expected '['"));
+      return false;
+    }
+
+  /* Vector select register W12-W15 encoded in the 2-bit Rv field.  */
+  reg = parse_reg (str);
+  if (reg == NULL || reg->type != REG_TYPE_R_32
+      || reg->number < 12 || reg->number > 15)
+    {
+      set_syntax_error (_("expected vector select register W12-W15"));
+      return false;
+    }
+  *vector_select_register = reg->number;
+
+  if (!skip_past_char (str, ','))    /* Optional index offset immediate.  */
+    {
+      set_syntax_error (_("expected ','"));
+      return false;
+    }
+
+  if (!parse_sme_immediate (str, imm))
+    {
+      set_syntax_error (_("index offset immediate expected"));
+      return false;
+    }
+
+  if (!skip_past_char (str, ']'))
+    {
+      set_syntax_error (_("expected ']'"));
+      return false;
+    }
+
+  return true;
+}
+
+/* Parse SME ZA horizontal or vertical vector access to tiles.
+   Function extracts from STR to SLICE_INDICATOR <HV> horizontal (0) or
+   vertical (1) ZA tile vector orientation. VECTOR_SELECT_REGISTER
+   contains <Wv> select register and corresponding optional IMMEDIATE.
+   In addition QUALIFIER is extracted.
+
+   Field format examples:
+
+   ZA0<HV>.B[<Wv>, #<imm>]
+   <ZAn><HV>.H[<Wv>, #<imm>]
+   <ZAn><HV>.S[<Wv>, #<imm>]
+   <ZAn><HV>.D[<Wv>, #<imm>]
+   <ZAn><HV>.Q[<Wv>, #<imm>]
+
+   Function returns <ZAda> register number or PARSE_FAIL.
+*/
+static int
+parse_sme_za_hv_tiles_operand (char **str,
+                               enum sme_hv_slice *slice_indicator,
+                               int *vector_select_register,
+                               int *imm,
+                               aarch64_opnd_qualifier_t *qualifier)
+{
+  char *qh, *qv;
+  int regno;
+  int regno_limit;
+  int64_t imm_limit;
+  int64_t imm_value;
+  const reg_entry *reg;
+
+  qh = qv = *str;
+  if ((reg = parse_reg_with_qual (&qh, REG_TYPE_ZAH, qualifier)) != NULL)
+    {
+      *slice_indicator = HV_horizontal;
+      *str = qh;
+    }
+  else if ((reg = parse_reg_with_qual (&qv, REG_TYPE_ZAV, qualifier)) != NULL)
+    {
+      *slice_indicator = HV_vertical;
+      *str = qv;
+    }
+  else
+    return PARSE_FAIL;
+  regno = reg->number;
+
+  switch (*qualifier)
+    {
+    case AARCH64_OPND_QLF_S_B:
+      regno_limit = 0;
+      imm_limit = 15;
+      break;
+    case AARCH64_OPND_QLF_S_H:
+      regno_limit = 1;
+      imm_limit = 7;
+      break;
+    case AARCH64_OPND_QLF_S_S:
+      regno_limit = 3;
+      imm_limit = 3;
+      break;
+    case AARCH64_OPND_QLF_S_D:
+      regno_limit = 7;
+      imm_limit = 1;
+      break;
+    case AARCH64_OPND_QLF_S_Q:
+      regno_limit = 15;
+      imm_limit = 0;
+      break;
+    default:
+      set_syntax_error (_("invalid ZA tile element size, allowed b, h, s, d and q"));
+      return PARSE_FAIL;
+    }
+
+  /* Check if destination register ZA tile vector is in range for given
+     instruction variant.  */
+  if (regno < 0 || regno > regno_limit)
+    {
+      set_syntax_error (_("ZA tile vector out of range"));
+      return PARSE_FAIL;
+    }
+
+  if (!parse_sme_za_hv_tiles_operand_index (str, vector_select_register,
+                                            &imm_value))
+    return PARSE_FAIL;
+
+  /* Check if optional index offset is in the range for instruction
+     variant.  */
+  if (imm_value < 0 || imm_value > imm_limit)
+    {
+      set_syntax_error (_("index offset out of range"));
+      return PARSE_FAIL;
+    }
+
+  *imm = imm_value;
+
+  return regno;
+}
+
+
+static int
+parse_sme_za_hv_tiles_operand_with_braces (char **str,
+                                           enum sme_hv_slice *slice_indicator,
+                                           int *vector_select_register,
+                                           int *imm,
+                                           aarch64_opnd_qualifier_t *qualifier)
+{
+  int regno;
+
+  if (!skip_past_char (str, '{'))
+    {
+      set_syntax_error (_("expected '{'"));
+      return PARSE_FAIL;
+    }
+
+  regno = parse_sme_za_hv_tiles_operand (str, slice_indicator,
+                                         vector_select_register, imm,
+                                         qualifier);
+
+  if (regno == PARSE_FAIL)
+    return PARSE_FAIL;
+
+  if (!skip_past_char (str, '}'))
+    {
+      set_syntax_error (_("expected '}'"));
+      return PARSE_FAIL;
+    }
+
+  return regno;
+}
+
+/* Parse list of up to eight 64-bit element tile names separated by commas in
+   SME's ZERO instruction:
+
+     ZERO { <mask> }
+
+   Function returns <mask>:
+
+     an 8-bit list of 64-bit element tiles named ZA0.D to ZA7.D.
+*/
+static int
+parse_sme_zero_mask(char **str)
+{
+  char *q;
+  int mask;
+  aarch64_opnd_qualifier_t qualifier;
+
+  mask = 0x00;
+  q = *str;
+  do
+    {
+      const reg_entry *reg = parse_reg_with_qual (&q, REG_TYPE_ZA, &qualifier);
+      if (reg)
+        {
+          int regno = reg->number;
+          if (qualifier == AARCH64_OPND_QLF_S_B && regno == 0)
+            {
+              /* { ZA0.B } is assembled as all-ones immediate.  */
+              mask = 0xff;
+            }
+          else if (qualifier == AARCH64_OPND_QLF_S_H && regno < 2)
+            mask |= 0x55 << regno;
+          else if (qualifier == AARCH64_OPND_QLF_S_S && regno < 4)
+            mask |= 0x11 << regno;
+          else if (qualifier == AARCH64_OPND_QLF_S_D && regno < 8)
+            mask |= 0x01 << regno;
+          else
+            {
+              set_syntax_error (_("wrong ZA tile element format"));
+              return PARSE_FAIL;
+            }
+          continue;
+        }
+      else if (strncasecmp (q, "za", 2) == 0
+               && !ISALNUM (q[2]))
+        {
+          /* { ZA } is assembled as all-ones immediate.  */
+          mask = 0xff;
+          q += 2;
+          continue;
+        }
+      else
+        {
+          set_syntax_error (_("wrong ZA tile element format"));
+          return PARSE_FAIL;
+        }
+    }
+  while (skip_past_char (&q, ','));
+
+  *str = q;
+  return mask;
+}
+
+/* Wraps in curly braces <mask> operand ZERO instruction:
+
+   ZERO { <mask> }
+
+   Function returns value of <mask> bit-field.
+*/
+static int
+parse_sme_list_of_64bit_tiles (char **str)
+{
+  int regno;
+
+  if (!skip_past_char (str, '{'))
+    {
+      set_syntax_error (_("expected '{'"));
+      return PARSE_FAIL;
+    }
+
+  /* Empty <mask> list is an all-zeros immediate.  */
+  if (!skip_past_char (str, '}'))
+    {
+      regno = parse_sme_zero_mask (str);
+      if (regno == PARSE_FAIL)
+         return PARSE_FAIL;
+
+      if (!skip_past_char (str, '}'))
+        {
+          set_syntax_error (_("expected '}'"));
+          return PARSE_FAIL;
+        }
+    }
+  else
+    regno = 0x00;
+
+  return regno;
+}
+
+/* Parse ZA array operand used in e.g. STR and LDR instruction.
+   Operand format:
+
+   ZA[<Wv>, <imm>]
+   ZA[<Wv>, #<imm>]
+
+   Function returns <Wv> or PARSE_FAIL.
+*/
+static int
+parse_sme_za_array (char **str, int *imm)
+{
+  char *p, *q;
+  int regno;
+  int64_t imm_value;
+
+  p = q = *str;
+  while (ISALPHA (*q))
+    q++;
+
+  if ((q - p != 2) || strncasecmp ("za", p, q - p) != 0)
+    {
+      set_syntax_error (_("expected ZA array"));
+      return PARSE_FAIL;
+    }
+
+  if (! parse_sme_za_hv_tiles_operand_index (&q, &regno, &imm_value))
+    return PARSE_FAIL;
+
+  if (imm_value < 0 || imm_value > 15)
+    {
+      set_syntax_error (_("offset out of range"));
+      return PARSE_FAIL;
+    }
+
+  *imm = imm_value;
+  *str = q;
+  return regno;
+}
+
+/* Parse streaming mode operand for SMSTART and SMSTOP.
+
+   {SM | ZA}
+
+   Function returns 's' if SM or 'z' if ZM is parsed. Otherwise PARSE_FAIL.
+*/
+static int
+parse_sme_sm_za (char **str)
+{
+  char *p, *q;
+
+  p = q = *str;
+  while (ISALPHA (*q))
+    q++;
+
+  if ((q - p != 2)
+      || (strncasecmp ("sm", p, 2) != 0 && strncasecmp ("za", p, 2) != 0))
+    {
+      set_syntax_error (_("expected SM or ZA operand"));
+      return PARSE_FAIL;
+    }
+
+  *str = q;
+  return TOLOWER (p[0]);
+}
+
+/* Parse the name of the source scalable predicate register, the index base
+   register W12-W15 and the element index. Function performs element index
+   limit checks as well as qualifier type checks.
+
+   <Pn>.<T>[<Wv>, <imm>]
+   <Pn>.<T>[<Wv>, #<imm>]
+
+   On success function sets <Wv> to INDEX_BASE_REG, <T> to QUALIFIER and
+   <imm> to IMM.
+   Function returns <Pn>, or PARSE_FAIL.
+*/
+static int
+parse_sme_pred_reg_with_index(char **str,
+                              int *index_base_reg,
+                              int *imm,
+                              aarch64_opnd_qualifier_t *qualifier)
+{
+  int regno;
+  int64_t imm_limit;
+  int64_t imm_value;
+  const reg_entry *reg = parse_reg_with_qual (str, REG_TYPE_PN, qualifier);
+
+  if (reg == NULL)
+    return PARSE_FAIL;
+  regno = reg->number;
+
+  switch (*qualifier)
+    {
+    case AARCH64_OPND_QLF_S_B:
+      imm_limit = 15;
+      break;
+    case AARCH64_OPND_QLF_S_H:
+      imm_limit = 7;
+      break;
+    case AARCH64_OPND_QLF_S_S:
+      imm_limit = 3;
+      break;
+    case AARCH64_OPND_QLF_S_D:
+      imm_limit = 1;
+      break;
+    default:
+      set_syntax_error (_("wrong predicate register element size, allowed b, h, s and d"));
+      return PARSE_FAIL;
+    }
+
+  if (! parse_sme_za_hv_tiles_operand_index (str, index_base_reg, &imm_value))
+    return PARSE_FAIL;
+
+  if (imm_value < 0 || imm_value > imm_limit)
+    {
+      set_syntax_error (_("element index out of range for given variant"));
+      return PARSE_FAIL;
+    }
+
+  *imm = imm_value;
+
+  return regno;
+}
+
 /* Parse a system register or a PSTATE field name for an MSR/MRS instruction.
    Returns the encoding for the option, or PARSE_FAIL.
 
@@ -4970,9 +5520,15 @@ output_operand_error_record (const operand_error_record *record, char *str)
 	}
       break;
 
+    case AARCH64_OPDE_UNTIED_IMMS:
+      handler (_("operand %d must have the same immediate value "
+                 "as operand 1 -- `%s'"),
+               detail->index + 1, str);
+      break;
+
     case AARCH64_OPDE_UNTIED_OPERAND:
       handler (_("operand %d must be the same register as operand 1 -- `%s'"),
-	       detail->index + 1, str);
+               detail->index + 1, str);
       break;
 
     case AARCH64_OPDE_OUT_OF_RANGE:
@@ -5801,6 +6357,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Pm:
 	case AARCH64_OPND_SVE_Pn:
 	case AARCH64_OPND_SVE_Pt:
+	case AARCH64_OPND_SME_Pm:
 	  reg_type = REG_TYPE_PN;
 	  goto vector_reg;
 
@@ -6560,9 +7117,39 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  /* No qualifier.  */
 	  break;
 
+	case AARCH64_OPND_SME_SM_ZA:
+	  /* { SM | ZA }  */
+	  if ((val = parse_sme_sm_za (&str)) == PARSE_FAIL)
+	    {
+	      set_syntax_error (_("unknown or missing PSTATE field name"));
+	      goto failure;
+	    }
+	  info->reg.regno = val;
+	  break;
+
+	case AARCH64_OPND_SME_PnT_Wm_imm:
+	  /* <Pn>.<T>[<Wm>, #<imm>]  */
+	  {
+	    int index_base_reg;
+	    int imm;
+	    val = parse_sme_pred_reg_with_index (&str,
+	                                         &index_base_reg,
+	                                         &imm,
+	                                         &qualifier);
+	    if (val == PARSE_FAIL)
+	        goto failure;
+
+	    info->za_tile_vector.regno = val;
+	    info->za_tile_vector.index.regno = index_base_reg;
+	    info->za_tile_vector.index.imm = imm;
+	    info->qualifier = qualifier;
+	    break;
+	  }
+
 	case AARCH64_OPND_SVE_ADDR_RI_S4x16:
 	case AARCH64_OPND_SVE_ADDR_RI_S4x32:
 	case AARCH64_OPND_SVE_ADDR_RI_S4xVL:
+	case AARCH64_OPND_SME_ADDR_RI_U4xVL:
 	case AARCH64_OPND_SVE_ADDR_RI_S4x2xVL:
 	case AARCH64_OPND_SVE_ADDR_RI_S4x3xVL:
 	case AARCH64_OPND_SVE_ADDR_RI_S4x4xVL:
@@ -6618,11 +7205,12 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	      goto failure;
 	    }
 	  goto regoff_addr;
-	  
+
 	case AARCH64_OPND_SVE_ADDR_RR:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL1:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL2:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL3:
+	case AARCH64_OPND_SVE_ADDR_RR_LSL4:
 	case AARCH64_OPND_SVE_ADDR_RX:
 	case AARCH64_OPND_SVE_ADDR_RX_LSL1:
 	case AARCH64_OPND_SVE_ADDR_RX_LSL2:
@@ -6747,14 +7335,18 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  }
 
 	case AARCH64_OPND_PSTATEFIELD:
-	  if ((val = parse_sys_reg (&str, aarch64_pstatefield_hsh, 0, 1, NULL))
-	      == PARSE_FAIL)
-	    {
-	      set_syntax_error (_("unknown or missing PSTATE field name"));
-	      goto failure;
-	    }
-	  inst.base.operands[i].pstatefield = val;
-	  break;
+	  {
+	    uint32_t sysreg_flags;
+	    if ((val = parse_sys_reg (&str, aarch64_pstatefield_hsh, 0, 1,
+				      &sysreg_flags)) == PARSE_FAIL)
+	      {
+	        set_syntax_error (_("unknown or missing PSTATE field name"));
+	        goto failure;
+	      }
+	    inst.base.operands[i].pstatefield = val;
+	    inst.base.operands[i].sysreg.flags = sysreg_flags;
+	    break;
+	  }
 
 	case AARCH64_OPND_SYSREG_IC:
 	  inst.base.operands[i].sysins_op =
@@ -6866,6 +7458,62 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  if (val == PARSE_FAIL)
 	    goto failure;
 	  break;
+
+	case AARCH64_OPND_SME_ZAda_2b:
+	case AARCH64_OPND_SME_ZAda_3b:
+	  val = parse_sme_zada_operand (&str, &qualifier);
+	  if (val == PARSE_FAIL)
+	    goto failure;
+	  info->reg.regno = val;
+	  info->qualifier = qualifier;
+	  break;
+
+	case AARCH64_OPND_SME_ZA_HV_idx_src:
+	case AARCH64_OPND_SME_ZA_HV_idx_dest:
+	case AARCH64_OPND_SME_ZA_HV_idx_ldstr:
+	  {
+	    enum sme_hv_slice slice_indicator;
+	    int vector_select_register;
+	    int imm;
+
+	    if (operands[i] == AARCH64_OPND_SME_ZA_HV_idx_ldstr)
+	      val = parse_sme_za_hv_tiles_operand_with_braces (&str,
+	                                                       &slice_indicator,
+	                                                       &vector_select_register,
+	                                                       &imm,
+	                                                       &qualifier);
+	    else
+	      val = parse_sme_za_hv_tiles_operand (&str, &slice_indicator,
+	                                           &vector_select_register,
+	                                           &imm,
+	                                           &qualifier);
+	    if (val == PARSE_FAIL)
+	      goto failure;
+	    info->za_tile_vector.regno = val;
+	    info->za_tile_vector.index.regno = vector_select_register;
+	    info->za_tile_vector.index.imm = imm;
+	    info->za_tile_vector.v = slice_indicator;
+	    info->qualifier = qualifier;
+	    break;
+	  }
+
+	  case AARCH64_OPND_SME_list_of_64bit_tiles:
+	    val = parse_sme_list_of_64bit_tiles (&str);
+	    if (val == PARSE_FAIL)
+	      goto failure;
+	    info->imm.value = val;
+	    break;
+
+	  case AARCH64_OPND_SME_ZA_array:
+	    {
+	      int imm;
+	      val = parse_sme_za_array (&str, &imm);
+	      if (val == PARSE_FAIL)
+	        goto failure;
+	      info->za_tile_vector.index.regno = val;
+	      info->za_tile_vector.index.imm = imm;
+	      break;
+	    }
 
 	default:
 	  as_fatal (_("unhandled operand code %d"), operands[i]);
@@ -7411,11 +8059,17 @@ aarch64_canonicalize_symbol_name (char *name)
 #define REGDEF(s,n,t) { #s, n, REG_TYPE_##t, true }
 #define REGDEF_ALIAS(s, n, t) { #s, n, REG_TYPE_##t, false}
 #define REGNUM(p,n,t) REGDEF(p##n, n, t)
+#define REGNUMS(p,n,s,t) REGDEF(p##n##s, n, t)
 #define REGSET16(p,t) \
   REGNUM(p, 0,t), REGNUM(p, 1,t), REGNUM(p, 2,t), REGNUM(p, 3,t), \
   REGNUM(p, 4,t), REGNUM(p, 5,t), REGNUM(p, 6,t), REGNUM(p, 7,t), \
   REGNUM(p, 8,t), REGNUM(p, 9,t), REGNUM(p,10,t), REGNUM(p,11,t), \
   REGNUM(p,12,t), REGNUM(p,13,t), REGNUM(p,14,t), REGNUM(p,15,t)
+#define REGSET16S(p,s,t) \
+  REGNUMS(p, 0,s,t), REGNUMS(p, 1,s,t), REGNUMS(p, 2,s,t), REGNUMS(p, 3,s,t), \
+  REGNUMS(p, 4,s,t), REGNUMS(p, 5,s,t), REGNUMS(p, 6,s,t), REGNUMS(p, 7,s,t), \
+  REGNUMS(p, 8,s,t), REGNUMS(p, 9,s,t), REGNUMS(p,10,s,t), REGNUMS(p,11,s,t), \
+  REGNUMS(p,12,s,t), REGNUMS(p,13,s,t), REGNUMS(p,14,s,t), REGNUMS(p,15,s,t)
 #define REGSET31(p,t) \
   REGSET16(p, t), \
   REGNUM(p,16,t), REGNUM(p,17,t), REGNUM(p,18,t), REGNUM(p,19,t), \
@@ -7463,7 +8117,16 @@ static const reg_entry reg_names[] = {
   REGSET (z, ZN), REGSET (Z, ZN),
 
   /* SVE predicate registers.  */
-  REGSET16 (p, PN), REGSET16 (P, PN)
+  REGSET16 (p, PN), REGSET16 (P, PN),
+
+  /* SME ZA tile registers.  */
+  REGSET16 (za, ZA), REGSET16 (ZA, ZA),
+
+  /* SME ZA tile registers (horizontal slice).  */
+  REGSET16S (za, h, ZAH), REGSET16S (ZA, H, ZAH),
+
+  /* SME ZA tile registers (vertical slice).  */
+  REGSET16S (za, v, ZAV), REGSET16S (ZA, V, ZAV)
 };
 
 #undef REGDEF
@@ -9244,6 +9907,17 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
 					 | AARCH64_FEATURE_SHA3, 0)},
   {"sve2-bitperm",	AARCH64_FEATURE (AARCH64_FEATURE_SVE2_BITPERM, 0),
 			AARCH64_FEATURE (AARCH64_FEATURE_SVE2, 0)},
+  {"sme",		AARCH64_FEATURE (AARCH64_FEATURE_SME, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_SVE2
+					 | AARCH64_FEATURE_BFLOAT16, 0)},
+  {"sme-f64",		AARCH64_FEATURE (AARCH64_FEATURE_SME_F64, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_SME
+					 | AARCH64_FEATURE_SVE2
+					 | AARCH64_FEATURE_BFLOAT16, 0)},
+  {"sme-i64",		AARCH64_FEATURE (AARCH64_FEATURE_SME_I64, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_SME
+					 | AARCH64_FEATURE_SVE2
+					 | AARCH64_FEATURE_BFLOAT16, 0)},
   {"bf16",		AARCH64_FEATURE (AARCH64_FEATURE_BFLOAT16, 0),
 			AARCH64_ARCH_NONE},
   {"i8mm",		AARCH64_FEATURE (AARCH64_FEATURE_I8MM, 0),

@@ -51,6 +51,7 @@ typedef uint32_t aarch64_insn;
 #define AARCH64_FEATURE_V8_4	     (1ULL << 11) /* ARMv8.4 processors.  */
 #define AARCH64_FEATURE_V8_R	     (1ULL << 12) /* Armv8-R processors.  */
 #define AARCH64_FEATURE_V8_7	     (1ULL << 13) /* Armv8.7 processors.  */
+#define AARCH64_FEATURE_SME	     (1ULL << 14) /* Scalable Matrix Extension.  */
 #define AARCH64_FEATURE_LS64	     (1ULL << 15) /* Atomic 64-byte load/store.  */
 #define AARCH64_FEATURE_PAC	     (1ULL << 16) /* v8.3 Pointer Authentication.  */
 #define AARCH64_FEATURE_FP	     (1ULL << 17) /* FP instructions.  */
@@ -91,6 +92,8 @@ typedef uint32_t aarch64_insn;
 #define AARCH64_FEATURE_F64MM	     (1ULL << 54)
 #define AARCH64_FEATURE_FLAGM	     (1ULL << 55) /* v8.4 Flag Manipulation.  */
 #define AARCH64_FEATURE_V9	     (1ULL << 56) /* Armv9.0-A processors.  */
+#define AARCH64_FEATURE_SME_F64	     (1ULL << 57) /* SME F64.  */
+#define AARCH64_FEATURE_SME_I64	     (1ULL << 58) /* SME I64.  */
 
 /* Crypto instructions are the combination of AES and SHA2.  */
 #define AARCH64_FEATURE_CRYPTO	(AARCH64_FEATURE_SHA2 | AARCH64_FEATURE_AES)
@@ -334,7 +337,6 @@ enum aarch64_opnd
   AARCH64_OPND_PRFOP,		/* Prefetch operation.  */
   AARCH64_OPND_BARRIER_PSB,	/* Barrier operand for PSB.  */
   AARCH64_OPND_BTI_TARGET,	/* BTI {<target>}.  */
-
   AARCH64_OPND_SVE_ADDR_RI_S4x16,   /* SVE [<Xn|SP>, #<simm4>*16].  */
   AARCH64_OPND_SVE_ADDR_RI_S4x32,   /* SVE [<Xn|SP>, #<simm4>*32].  */
   AARCH64_OPND_SVE_ADDR_RI_S4xVL,   /* SVE [<Xn|SP>, #<simm4>, MUL VL].  */
@@ -352,6 +354,7 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_ADDR_RR_LSL1,    /* SVE [<Xn|SP>, <Xm|XZR>, LSL #1].  */
   AARCH64_OPND_SVE_ADDR_RR_LSL2,    /* SVE [<Xn|SP>, <Xm|XZR>, LSL #2].  */
   AARCH64_OPND_SVE_ADDR_RR_LSL3,    /* SVE [<Xn|SP>, <Xm|XZR>, LSL #3].  */
+  AARCH64_OPND_SVE_ADDR_RR_LSL4,    /* SVE [<Xn|SP>, <Xm|XZR>, LSL #4].  */
   AARCH64_OPND_SVE_ADDR_RX,	    /* SVE [<Xn|SP>, <Xm>].  */
   AARCH64_OPND_SVE_ADDR_RX_LSL1,    /* SVE [<Xn|SP>, <Xm>, LSL #1].  */
   AARCH64_OPND_SVE_ADDR_RX_LSL2,    /* SVE [<Xn|SP>, <Xm>, LSL #2].  */
@@ -442,6 +445,17 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_ZnxN,	/* SVE vector register list in Zn.  */
   AARCH64_OPND_SVE_Zt,		/* SVE vector register in Zt.  */
   AARCH64_OPND_SVE_ZtxN,	/* SVE vector register list in Zt.  */
+  AARCH64_OPND_SME_ZAda_2b,	/* SME <ZAda>.S, 2-bits.  */
+  AARCH64_OPND_SME_ZAda_3b,	/* SME <ZAda>.D, 3-bits.  */
+  AARCH64_OPND_SME_ZA_HV_idx_src,	/* SME source ZA tile vector.  */
+  AARCH64_OPND_SME_ZA_HV_idx_dest,	/* SME destination ZA tile vector.  */
+  AARCH64_OPND_SME_Pm,		/* SME scalable predicate register, bits [15:13].  */
+  AARCH64_OPND_SME_list_of_64bit_tiles, /* SME list of ZA tiles.  */
+  AARCH64_OPND_SME_ZA_HV_idx_ldstr,	/* SME destination ZA tile vector.  */
+  AARCH64_OPND_SME_ZA_array,        /* SME ZA[<Wv>{, #<imm>}].  */
+  AARCH64_OPND_SME_ADDR_RI_U4xVL,   /* SME [<Xn|SP>{, #<imm>, MUL VL}].  */
+  AARCH64_OPND_SME_SM_ZA,           /* SME {SM | ZA}.  */
+  AARCH64_OPND_SME_PnT_Wm_imm,           /* SME <Pn>.<T>[<Wm>, #<imm>].  */
   AARCH64_OPND_TME_UIMM16,	/* TME unsigned 16-bit immediate.  */
   AARCH64_OPND_SM3_IMM2,	/* SM3 encodes lane in bits [13, 14].  */
 };
@@ -606,6 +620,11 @@ enum aarch64_insn_class
   movewide,
   pcreladdr,
   ic_system,
+  sme_misc,
+  sme_ldr,
+  sme_str,
+  sme_start,
+  sme_stop,
   sve_cpy,
   sve_index,
   sve_limm,
@@ -1107,6 +1126,18 @@ struct aarch64_opnd_info
 	  uint32_t flags;
 	} sysreg;
 
+      /* ZA tile vector, e.g. <ZAn><HV>.D[<Wv>{, <imm>}]  */
+      struct
+	{
+	  int regno;      /* <ZAn> */
+	  struct
+	  {
+	    int regno;    /* <Wv>  */
+	    int imm;      /* <imm>  */
+	  } index;
+	  unsigned v : 1;	/* <HV> horizontal or vertical vector indicator.  */
+	} za_tile_vector;
+
       const aarch64_cond *cond;
       /* The encoding of the PSTATE field.  */
       aarch64_insn pstatefield;
@@ -1193,6 +1224,10 @@ struct aarch64_inst
      No syntax error, but the operands are not a valid combination, e.g.
      FMOV D0,S0
 
+   AARCH64_OPDE_UNTIED_IMMS
+     The asm failed to use the same immediate for a destination operand
+     and a tied source operand.
+
    AARCH64_OPDE_UNTIED_OPERAND
      The asm failed to use the same register for a destination operand
      and a tied source operand.
@@ -1233,6 +1268,7 @@ enum aarch64_operand_error_kind
   AARCH64_OPDE_SYNTAX_ERROR,
   AARCH64_OPDE_FATAL_SYNTAX_ERROR,
   AARCH64_OPDE_INVALID_VARIANT,
+  AARCH64_OPDE_UNTIED_IMMS,
   AARCH64_OPDE_UNTIED_OPERAND,
   AARCH64_OPDE_OUT_OF_RANGE,
   AARCH64_OPDE_UNALIGNED,

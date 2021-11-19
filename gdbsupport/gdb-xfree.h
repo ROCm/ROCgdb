@@ -1,4 +1,4 @@
-/* Copyright (C) 2006-2021 Free Software Foundation, Inc.
+/* Copyright (C) 1986-2021 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -15,10 +15,27 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef RS6000_TDEP_H
-#define RS6000_TDEP_H
+#ifndef GDBSUPPORT_GDB_XFREE_H
+#define GDBSUPPORT_GDB_XFREE_H
 
-/* Minimum possible text address in AIX.  */
-#define AIX_TEXT_SEGMENT_BASE 0x10000000
+#include "gdbsupport/poison.h"
 
-#endif /* RS6000_TDEP_H */
+/* GDB uses this instead of 'free', it detects when it is called on an
+   invalid type.  */
+
+template <typename T>
+static void
+xfree (T *ptr)
+{
+  static_assert (IsFreeable<T>::value, "Trying to use xfree with a non-POD \
+data type.  Use operator delete instead.");
+
+  if (ptr != NULL)
+#ifdef GNULIB_NAMESPACE
+    GNULIB_NAMESPACE::free (ptr);	/* ARI: free */
+#else
+    free (ptr);				/* ARI: free */
+#endif
+}
+
+#endif /* GDBSUPPORT_GDB_XFREE_H */

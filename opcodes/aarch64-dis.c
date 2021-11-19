@@ -664,7 +664,7 @@ aarch64_ext_shll_imm (const aarch64_operand *self ATTRIBUTE_UNUSED,
 bool
 aarch64_ext_imm (const aarch64_operand *self, aarch64_opnd_info *info,
 		 const aarch64_insn code,
-		 const aarch64_inst *inst ATTRIBUTE_UNUSED,
+		 const aarch64_inst *inst,
 		 aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
   uint64_t imm;
@@ -681,6 +681,10 @@ aarch64_ext_imm (const aarch64_operand *self, aarch64_opnd_info *info,
 
   if (info->type == AARCH64_OPND_ADDR_ADRP)
     imm <<= 12;
+
+  if (inst->operands[0].type == AARCH64_OPND_PSTATEFIELD
+      && inst->operands[0].sysreg.flags & F_IMM_IN_CRM)
+    imm &= PSTATE_DECODE_CRM_IMM (inst->operands[0].sysreg.flags);
 
   info->imm.value = imm;
   return true;
@@ -1226,11 +1230,20 @@ aarch64_ext_pstatefield (const aarch64_operand *self ATTRIBUTE_UNUSED,
 			 aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
   int i;
+  aarch64_insn fld_crm = extract_field (FLD_CRm, code, 0);
   /* op1:op2 */
   info->pstatefield = extract_fields (code, 0, 2, FLD_op1, FLD_op2);
   for (i = 0; aarch64_pstatefields[i].name != NULL; ++i)
     if (aarch64_pstatefields[i].value == (aarch64_insn)info->pstatefield)
-      return true;
+      {
+        /* PSTATEFIELD name can be encoded partially in CRm[3:1].  */
+        uint32_t flags = aarch64_pstatefields[i].flags;
+        if ((flags & F_REG_IN_CRM)
+            && ((fld_crm & 0xe) != PSTATE_DECODE_CRM (flags)))
+          continue;
+        info->sysreg.flags = flags;
+        return true;
+      }
   /* Reserved value in <pstatefield>.  */
   return false;
 }
@@ -1745,6 +1758,178 @@ aarch64_ext_sve_float_zero_one (const aarch64_operand *self,
   else
     info->imm.value = 0x0;
   info->imm.is_fp = true;
+  return true;
+}
+
+/* Decode ZA tile vector, vector indicator, vector selector, qualifier and
+   immediate on numerous SME instruction fields such as MOVA.  */
+bool
+aarch64_ext_sme_za_hv_tiles (const aarch64_operand *self,
+                             aarch64_opnd_info *info, aarch64_insn code,
+                             const aarch64_inst *inst ATTRIBUTE_UNUSED,
+                             aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int fld_size = extract_field (self->fields[0], code, 0);
+  int fld_q = extract_field (self->fields[1], code, 0);
+  int fld_v = extract_field (self->fields[2], code, 0);
+  int fld_rv = extract_field (self->fields[3], code, 0);
+  int fld_zan_imm = extract_field (self->fields[4], code, 0);
+
+  /* Deduce qualifier encoded in size and Q fields.  */
+  if (fld_size == 0)
+    info->qualifier = AARCH64_OPND_QLF_S_B;
+  else if (fld_size == 1)
+    info->qualifier = AARCH64_OPND_QLF_S_H;
+  else if (fld_size == 2)
+    info->qualifier = AARCH64_OPND_QLF_S_S;
+  else if (fld_size == 3 && fld_q == 0)
+    info->qualifier = AARCH64_OPND_QLF_S_D;
+  else if (fld_size == 3 && fld_q == 1)
+    info->qualifier = AARCH64_OPND_QLF_S_Q;
+
+  info->za_tile_vector.index.regno = fld_rv + 12;
+  info->za_tile_vector.v = fld_v;
+
+  switch (info->qualifier)
+    {
+    case AARCH64_OPND_QLF_S_B:
+      info->za_tile_vector.regno = 0;
+      info->za_tile_vector.index.imm = fld_zan_imm;
+      break;
+    case AARCH64_OPND_QLF_S_H:
+      info->za_tile_vector.regno = fld_zan_imm >> 3;
+      info->za_tile_vector.index.imm = fld_zan_imm & 0x07;
+      break;
+    case AARCH64_OPND_QLF_S_S:
+      info->za_tile_vector.regno = fld_zan_imm >> 2;
+      info->za_tile_vector.index.imm = fld_zan_imm & 0x03;
+      break;
+    case AARCH64_OPND_QLF_S_D:
+      info->za_tile_vector.regno = fld_zan_imm >> 1;
+      info->za_tile_vector.index.imm = fld_zan_imm & 0x01;
+      break;
+    case AARCH64_OPND_QLF_S_Q:
+      info->za_tile_vector.regno = fld_zan_imm;
+      info->za_tile_vector.index.imm = 0;
+      break;
+    default:
+      assert (0);
+    }
+
+  return true;
+}
+
+/* Decode in SME instruction ZERO list of up to eight 64-bit element tile names
+   separated by commas, encoded in the "imm8" field.
+
+   For programmer convenience an assembler must also accept the names of
+   32-bit, 16-bit and 8-bit element tiles which are converted into the
+   corresponding set of 64-bit element tiles.
+*/
+bool
+aarch64_ext_sme_za_list (const aarch64_operand *self,
+                         aarch64_opnd_info *info, aarch64_insn code,
+                         const aarch64_inst *inst ATTRIBUTE_UNUSED,
+                         aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int mask = extract_field (self->fields[0], code, 0);
+  info->imm.value = mask;
+  return true;
+}
+
+/* Decode ZA array vector select register (Rv field), optional vector and
+   memory offset (imm4 field).
+*/
+bool
+aarch64_ext_sme_za_array (const aarch64_operand *self,
+                          aarch64_opnd_info *info, aarch64_insn code,
+                          const aarch64_inst *inst ATTRIBUTE_UNUSED,
+                          aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int regno = extract_field (self->fields[0], code, 0) + 12;
+  int imm = extract_field (self->fields[1], code, 0);
+  info->za_tile_vector.index.regno = regno;
+  info->za_tile_vector.index.imm = imm;
+  return true;
+}
+
+bool
+aarch64_ext_sme_addr_ri_u4xvl (const aarch64_operand *self,
+                               aarch64_opnd_info *info, aarch64_insn code,
+                               const aarch64_inst *inst ATTRIBUTE_UNUSED,
+                               aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int regno = extract_field (self->fields[0], code, 0);
+  int imm = extract_field (self->fields[1], code, 0);
+  info->addr.base_regno = regno;
+  info->addr.offset.imm = imm;
+  /* MUL VL operator is always present for this operand.  */
+  info->shifter.kind = AARCH64_MOD_MUL_VL;
+  info->shifter.operator_present = (imm != 0);
+  return true;
+}
+
+/* Decode {SM|ZA} filed for SMSTART and SMSTOP instructions.  */
+bool
+aarch64_ext_sme_sm_za (const aarch64_operand *self,
+                       aarch64_opnd_info *info, aarch64_insn code,
+                       const aarch64_inst *inst ATTRIBUTE_UNUSED,
+                       aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  info->pstatefield = 0x1b;
+  aarch64_insn fld_crm = extract_field (self->fields[0], code, 0);
+  fld_crm >>= 1;    /* CRm[3:1].  */
+
+  if (fld_crm == 0x1)
+    info->reg.regno = 's';
+  else if (fld_crm == 0x2)
+    info->reg.regno = 'z';
+  else
+    assert (0);
+
+  return true;
+}
+
+bool
+aarch64_ext_sme_pred_reg_with_index (const aarch64_operand *self,
+				     aarch64_opnd_info *info, aarch64_insn code,
+				     const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				     aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  aarch64_insn fld_rm = extract_field (self->fields[0], code, 0);
+  aarch64_insn fld_pn = extract_field (self->fields[1], code, 0);
+  aarch64_insn fld_i1 = extract_field (self->fields[2], code, 0);
+  aarch64_insn fld_tszh = extract_field (self->fields[3], code, 0);
+  aarch64_insn fld_tszl = extract_field (self->fields[4], code, 0);
+  int imm;
+
+  info->za_tile_vector.regno = fld_pn;
+  info->za_tile_vector.index.regno = fld_rm + 12;
+
+  if (fld_tszh == 0x1 && fld_tszl == 0x0)
+    {
+      info->qualifier = AARCH64_OPND_QLF_S_D;
+      imm = fld_i1;
+    }
+  else if (fld_tszl == 0x4)
+    {
+      info->qualifier = AARCH64_OPND_QLF_S_S;
+      imm = (fld_i1 << 1) | fld_tszh;
+    }
+  else if ((fld_tszl & 0x3) == 0x2)
+    {
+      info->qualifier = AARCH64_OPND_QLF_S_H;
+      imm = (fld_i1 << 2) | (fld_tszh << 1) | (fld_tszl >> 2);
+    }
+  else if (fld_tszl & 0x1)
+    {
+      info->qualifier = AARCH64_OPND_QLF_S_B;
+      imm = (fld_i1 << 3) | (fld_tszh << 2) | (fld_tszl >> 1);
+    }
+  else
+    return false;
+
+  info->za_tile_vector.index.imm = imm;
   return true;
 }
 
