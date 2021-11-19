@@ -1,6 +1,5 @@
 /* Build symbol tables in GDB's internal format.
    Copyright (C) 1986-2021 Free Software Foundation, Inc.
-   Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -260,7 +259,7 @@ struct buildsym_compunit
 
   void record_debugformat (const char *format)
   {
-    m_debugformat = make_unique_xstrdup (format);
+    m_debugformat = format;
   }
 
   void record_producer (const char *producer)
@@ -327,8 +326,9 @@ private:
      the same lifetime as objfile.  */
   const char *m_producer = nullptr;
 
-  /* Space for this is malloc'd.  */
-  gdb::unique_xmalloc_ptr<char> m_debugformat;
+  /* Space for this is not malloc'd, and is assumed to have at least
+     the same lifetime as objfile.  */
+  const char *m_debugformat = nullptr;
 
   /* The compunit we are building.  */
   struct compunit_symtab *m_compunit_symtab = nullptr;
