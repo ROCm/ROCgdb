@@ -134,6 +134,11 @@ Dwarf::assemble $asmfile2 {
     set const_struct_src [gdb_target_symbol const_struct]
     set const_array_src [gdb_target_symbol const_array]
 
+# TODO: Modify the test so that all location lists are using the
+#       appropriate assembly labels instead using the DWARF base
+#       address (CU's DW_AT_low_pc) plus offset.
+    set code_start [gdb_target_symbol GenValue]
+
     # Registers used in expressions.
     set wave_size 0x40
     set piece_size 0x40
@@ -679,7 +684,7 @@ Dwarf::assemble $asmfile2 {
 
 	    # For variable plocal_content.
 	    list_ {
-		start_length 0x404 0x30C {
+		start_length "$code_start + 0x404" 0x30C {
 		    DW_OP_regx $vgpr0_num
 		    DW_OP_LLVM_push_lane
 		    DW_OP_constu 0x4
@@ -687,7 +692,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_LLVM_offset
 		}
 
-		start_length 0x710 0x2A4 {
+		start_length "$code_start + 0x710" 0x2A4 {
 		    DW_OP_regx $vgpr41_num
 		    DW_OP_LLVM_push_lane
 		    DW_OP_constu 0x4
@@ -698,7 +703,7 @@ Dwarf::assemble $asmfile2 {
 
 	    # For variable plocal_content.
 	    list_ {
-		start_length 0x9b4 0x98 {
+		start_length "$code_start + 0x9b4" 0x98 {
 		    DW_OP_regx $vgpr1_num
 		    DW_OP_LLVM_push_lane
 		    DW_OP_constu 0x4
@@ -713,7 +718,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_piece 0x4
 		}
 
-		start_length 0xa4c 0x1e8 {
+		start_length "$code_start + 0xa4c" 0x1e8 {
 		    DW_OP_regx $vgpr40_num
 		    DW_OP_LLVM_push_lane
 		    DW_OP_constu 0x4
@@ -731,19 +736,19 @@ Dwarf::assemble $asmfile2 {
 
 	    # For variable AddrClassTest virtual lane pc.
 	    list_ {
-		start_length 0xc4c 0x130 {
+		start_length "$code_start + 0xc4c" 0x130 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0xe98 0x1c {
+		start_length "$code_start + 0xe98" 0x1c {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0xf5c 0x58 {
+		start_length "$code_start + 0xf5c" 0x58 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0xdc0 0xd4 {
+		start_length "$code_start + 0xdc0" 0xd4 {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -765,7 +770,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xd80 0x3c {
+		start_length "$code_start + 0xd80" 0x3c {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -787,7 +792,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xeb8 0x4c {
+		start_length "$code_start + 0xeb8" 0x4c {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -809,7 +814,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xf08 0x50 {
+		start_length "$code_start + 0xf08" 0x50 {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -835,11 +840,11 @@ Dwarf::assemble $asmfile2 {
 	    # For variable GenValue virtual lane pc.
 	    list_ {
 
-		start_length 0x0 0x33c {
+		start_length $code_start 0x33c {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x33c 0xc {
+		start_length "$code_start + 0x33c" 0xc {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -858,11 +863,11 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x348 0x28 {
+		start_length "$code_start + 0x348" 0x28 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x370 0x20 {
+		start_length "$code_start + 0x370" 0x20 {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -881,14 +886,14 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x350 0x70 {
+		start_length "$code_start + 0x350" 0x70 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 	    }
 
 	    # For variable SendResult virtual lane pc.
 	    list_ {
-		start_length 0x9b4 0xa4 {
+		start_length "$code_start + 0x9b4" 0xa4 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
@@ -911,7 +916,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xa88 0x1c0 {
+		start_length "$code_start + 0xa88" 0x1c0 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 	    }
@@ -919,35 +924,35 @@ Dwarf::assemble $asmfile2 {
 	    # For variable ChangeLocalContent virtual lane pc.
 	    list_ {
 
-		start_length 0x404 0x3c0 {
+		start_length "$code_start + 0x404" 0x3c0 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x8c8 0x14 {
+		start_length "$code_start + 0x8c8" 0x14 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x8f0 0xc0 {
+		start_length "$code_start + 0x8f0" 0xc0 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x814 0x28 {
+		start_length "$code_start + 0x814" 0x28 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x878 0x24 {
+		start_length "$code_start + 0x878" 0x24 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x8d8 0x18 {
+		start_length "$code_start + 0x8d8" 0x18 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x7c8 0x50 {
+		start_length "$code_start + 0x7c8" 0x50 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x840 0x40 {
+		start_length "$code_start + 0x840" 0x40 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr_base
 
 		    DW_OP_addr VPC_LINE_66
@@ -965,7 +970,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x8a0 0xc {
+		start_length "$code_start + 0x8a0" 0xc {
 		    DW_OP_call4 $if_line_61_lane_pc_expr_base
 
 		    DW_OP_addr VPC_LINE_71
@@ -982,7 +987,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x8ac 0x24 {
+		start_length "$code_start + 0x8ac" 0x24 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr_base
 
 		    DW_OP_addr VPC_LINE_71_2
@@ -1002,7 +1007,7 @@ Dwarf::assemble $asmfile2 {
 
 	    # For global argument in.
 	    list_ {
-		start_length 0xc4c 0x44 {
+		start_length "$code_start + 0xc4c" 0x44 {
 		    DW_OP_regx $sgpr8_num
 		    DW_OP_piece 0x4
 		    DW_OP_regx $sgpr9_num
@@ -1013,7 +1018,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_LLVM_form_aspace_address
 		}
 
-		start_length 0xc8c 0x330 {
+		start_length "$code_start + 0xc8c" 0x330 {
 		    DW_OP_regx $sgpr56_num
 		    DW_OP_piece 0x4
 		    DW_OP_regx $sgpr57_num
@@ -1027,7 +1032,7 @@ Dwarf::assemble $asmfile2 {
 
 	    # For global argument out.
 	    list_ {
-		start_length 0xc4c 0x44 {
+		start_length "$code_start + 0xc4c" 0x44 {
 		    DW_OP_regx $sgpr8_num
 		    DW_OP_piece 0x4
 		    DW_OP_regx $sgpr9_num
@@ -1039,7 +1044,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_LLVM_offset_constu 0x8
 		}
 
-		start_length 0xc8c 0x330 {
+		start_length "$code_start + 0xc8c" 0x330 {
 		    DW_OP_regx $sgpr56_num
 		    DW_OP_piece 0x4
 		    DW_OP_regx $sgpr57_num
@@ -1054,19 +1059,19 @@ Dwarf::assemble $asmfile2 {
 
 	    # For variable lane_pc.
 	    list_ {
-		start_length 0xc4c 0x130 {
+		start_length "$code_start + 0xc4c" 0x130 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0xe98 0x1c {
+		start_length "$code_start + 0xe98" 0x1c {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0xf5c 0x58 {
+		start_length "$code_start + 0xf5c" 0x58 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0xdc0 0xd4 {
+		start_length "$code_start + 0xdc0" 0xd4 {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -1088,7 +1093,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xd80 0x3c {
+		start_length "$code_start + 0xd80" 0x3c {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -1110,7 +1115,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xeb8 0x4c {
+		start_length "$code_start + 0xeb8" 0x4c {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -1132,7 +1137,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xf08 0x50 {
+		start_length "$code_start + 0xf08" 0x50 {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -1154,11 +1159,11 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x0 0x33c {
+		start_length "$code_start" 0x33c {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x33c 0xc {
+		start_length "$code_start + 0x33c" 0xc {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -1177,11 +1182,11 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x348 0x28 {
+		start_length "$code_start + 0x348" 0x28 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x370 0x20 {
+		start_length "$code_start + 0x370" 0x20 {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -1200,15 +1205,15 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x350 0x70 {
+		start_length "$code_start + 0x350" 0x70 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x9b4 0xa4 {
+		start_length "$code_start + 0x9b4" 0xa4 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0xa58 0x30 {
+		start_length "$code_start + 0xa58" 0x30 {
 		    DW_OP_LLVM_undefined
 		    DW_OP_LLVM_extend $piece_size $wave_size
 
@@ -1227,39 +1232,39 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0xa88 0x1c0 {
+		start_length "$code_start + 0xa88" 0x1c0 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x404 0x3c0 {
+		start_length "$code_start + 0x404" 0x3c0 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x8c8 0x14 {
+		start_length "$code_start + 0x8c8" 0x14 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x8f0 0xc0 {
+		start_length "$code_start + 0x8f0" 0xc0 {
 		    DW_OP_call4 $default_lane_pc_expr
 		}
 
-		start_length 0x814 0x28 {
+		start_length "$code_start + 0x814" 0x28 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x878 0x24 {
+		start_length "$code_start + 0x878" 0x24 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x8d8 0x18 {
+		start_length "$code_start + 0x8d8" 0x18 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x7c8 0x50 {
+		start_length "$code_start + 0x7c8" 0x50 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr
 		}
 
-		start_length 0x840 0x40 {
+		start_length "$code_start + 0x840" 0x40 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr_base
 
 		    DW_OP_addr VPC_LINE_66
@@ -1277,7 +1282,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x8a0 0xc {
+		start_length "$code_start + 0x8a0" 0xc {
 		    DW_OP_call4 $if_line_61_lane_pc_expr_base
 
 		    DW_OP_addr VPC_LINE_71
@@ -1294,7 +1299,7 @@ Dwarf::assemble $asmfile2 {
 		    DW_OP_call4 $default_lane_pc_expr_base
 		}
 
-		start_length 0x8ac 0x24 {
+		start_length "$code_start + 0x8ac" 0x24 {
 		    DW_OP_call4 $if_line_61_lane_pc_expr_base
 
 		    DW_OP_addr VPC_LINE_71_2
