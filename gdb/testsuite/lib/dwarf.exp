@@ -198,6 +198,145 @@ proc build_executable_and_dwo_files { testname executable options args } {
     return 0
 }
 
+# Utility function for procs shared_gdb_*.
+
+proc init_shared_gdb {} {
+    global shared_gdb_enabled
+    global shared_gdb_started
+
+    if { ! [info exists shared_gdb_enabled] } {
+	set shared_gdb_enabled 0
+	set shared_gdb_started 0
+    }
+}
+
+# Cluster of four procs:
+# - shared_gdb_enable
+# - shared_gdb_disable
+# - shared_gdb_start_use SRC OPTIONS
+# - shared_gdb_end_use
+#
+# Can be used like so:
+#
+#   {
+#     if { $share } shared_gdb_enable
+#     ...
+#     shared_gdb_start_use $src $options
+#     ...
+#     shared_gdb_end_use
+#     ...
+#     shared_gdb_start_use $src $options
+#     ...
+#     shared_gdb_end_use
+#     ...
+#     if { $share } shared_gdb_disable
+#   }
+#
+# to write functionalty that could share ($share == 1) or could not
+# share ($share == 0) a gdb session between two uses.
+
+proc shared_gdb_enable {} {
+    set me shared_gdb_enable
+
+    init_shared_gdb
+    global shared_gdb_enabled
+    global shared_gdb_started
+
+    if { $shared_gdb_enabled } {
+	error "$me: gdb sharing already enabled"
+    }
+    set shared_gdb_enabled 1
+
+    if { $shared_gdb_started } {
+	error "$me: gdb sharing not stopped"
+    }
+}
+
+# See above.
+
+proc shared_gdb_disable {} {
+    init_shared_gdb
+    global shared_gdb_enabled
+    global shared_gdb_started
+
+    if { ! $shared_gdb_enabled } {
+	error "$me: gdb sharing not enabled"
+    }
+    set shared_gdb_enabled 0
+
+    if { $shared_gdb_started } {
+	gdb_exit
+	set shared_gdb_started 0
+    }
+}
+
+# See above.
+
+proc shared_gdb_start_use { src options } {
+    set me shared_gdb_start_use
+
+    init_shared_gdb
+    global shared_gdb_enabled
+    global shared_gdb_started
+    global shared_gdb_src
+    global shared_gdb_options
+
+    set do_start 1
+    if { $shared_gdb_enabled && $shared_gdb_started } {
+	if { $shared_gdb_src != $src
+	     || $shared_gdb_options != $options } {
+	    error "$me: gdb sharing inconsistent"
+	}
+
+	set do_start 0
+    }
+
+    if { $do_start } {
+	set exe [standard_temp_file func_addr[pid].x]
+
+	gdb_compile $src $exe executable $options
+
+	gdb_exit
+	gdb_start
+	gdb_load "$exe"
+
+	if { $shared_gdb_enabled } {
+	    set shared_gdb_started 1
+	    set shared_gdb_src $src
+	    set shared_gdb_options $options
+	}
+    }
+}
+
+# See above.
+
+proc shared_gdb_end_use {} {
+    init_shared_gdb
+    global shared_gdb_enabled
+
+    if { ! $shared_gdb_enabled } {
+	gdb_exit
+    }
+}
+
+# Enable gdb session sharing within BODY.
+
+proc with_shared_gdb { body } {
+    shared_gdb_enable
+    set code [catch { uplevel 1 $body } result]
+    shared_gdb_disable
+
+    # Return as appropriate.
+    if { $code == 1 } {
+	global errorInfo errorCode
+	return -code error -errorinfo $errorInfo -errorcode $errorCode $result
+    } elseif { $code > 1 } {
+	return -code $code $result
+    }
+
+    return $result
+}
+
 # Return a list of expressions about function FUNC's address and length.
 # The first expression is the address of function FUNC, and the second
 # one is FUNC's length.  SRC is the source file having function FUNC.
@@ -229,16 +368,7 @@ proc build_executable_and_dwo_files { testname executable options args } {
 proc function_range { func src {options {debug}} } {
     global decimal gdb_prompt
 
-    set exe [standard_temp_file func_addr[pid].x]
-
-    if {[gdb_compile $src $exe executable $options] != ""} {
-	perror "failed to extract function start, compilation failed"
-	return ""
-    }
-
-    gdb_exit
-    gdb_start
-    gdb_load "$exe"
+    shared_gdb_start_use $src $options
 
     # Maybe match function parameters, in case we have a C++ symbol.
     # Note we want a non-capturing group here to avoid confusing
@@ -334,7 +464,7 @@ proc function_range { func src {options {debug}} } {
 	verbose -log "dso_start = $dso_start"
 	verbose -log "adj_func_start = $adj_func_start"
 
-	gdb_exit
+	shared_gdb_end_use
 
 	if {$adj_func_start < 0} {
 	    # This happens when the function wasn't emitted for the
@@ -344,16 +474,17 @@ proc function_range { func src {options {debug}} } {
 	    return ""
 	}
 
-	gdb_exit
 	return [list $adj_func_start $func_length]
     } else {
-	gdb_exit
+	shared_gdb_end_use
 	return [list "${func}_label - $func_label_offset" $func_length]
     }
+
 }
 
 # Extract the start, length, and end for function called NAME and
 # create suitable variables in the callers scope.
+# Return the list of created variables.
 proc get_func_info { name {options {debug}} } {
     global srcdir subdir srcfile
 
@@ -366,6 +497,11 @@ proc get_func_info { name {options {debug}} } {
 		 ${options}]  \
 	func_start func_len
     set func_end "$func_start + $func_len"
+
+    return [list \
+		"${name}_start" \
+		"${name}_len" \
+		"${name}_end"]
 }
 
 # A DWARF assembler.
@@ -2115,6 +2251,9 @@ namespace eval Dwarf {
     #                default = 4
     # addr_size n  - the size of addresses in bytes: 4, 8, or default
     #                default = default
+    # seg_sel_size n
+    #              - the size of segment selector_size in bytes:
+    #                default = 0
     #
     # LABEL is the label of the current unit (which is probably
     # referenced by a DW_AT_stmt_list), or "" if there is no such
@@ -2133,23 +2272,37 @@ namespace eval Dwarf {
     proc lines {options label body} {
 	variable _line_count
 	variable _line_saw_file
+	variable _line_include_dirs
+	variable _line_file_names
+	variable _line_header_finalized
 	variable _line_saw_program
 	variable _line_header_end_label
+	variable _line_unit_version
+	variable _line_is_64
+	variable _line_string_form
 
 	# Establish the defaults.
-	set is_64 0
-	set _unit_version 4
+	set _line_is_64 0
+	set _line_unit_version 4
 	set _unit_addr_size default
 	set _line_saw_program 0
 	set _line_saw_file 0
+	set _line_include_dirs {}
+	set _line_file_names {}
+	set _line_header_finalized 0
 	set _default_is_stmt 1
+	set _seg_sel_size 0
+	#set _line_string_form string
+	set _line_string_form line_strp
 
 	foreach { name value } $options {
 	    switch -exact -- $name {
-		is_64 { set is_64 $value }
-		version { set _unit_version $value }
+		is_64 { set _line_is_64 $value }
+		version { set _line_unit_version $value }
 		addr_size { set _unit_addr_size $value }
+		seg_sel_size { set _seg_sel_size $value }
 		default_is_stmt { set _default_is_stmt $value }
+		string_form { set $_line_string_form $value }
 		default { error "unknown option $name" }
 	    }
 	}
@@ -2176,7 +2329,7 @@ namespace eval Dwarf {
 	set header_len_label [_compute_label "line${_line_count}_header_start"]
 	set _line_header_end_label [_compute_label "line${_line_count}_header_end"]
 
-	if {$is_64} {
+	if {$_line_is_64} {
 	    _op .4byte 0xffffffff
 	    _op .8byte "$unit_end_label - $unit_len_label" "unit_length"
 	} else {
@@ -2185,9 +2338,15 @@ namespace eval Dwarf {
 
 	define_label $unit_len_label
 
-	_op .2byte $_unit_version version
+	_op .2byte $_line_unit_version version
 
-	if {$is_64} {
+	if { $_line_unit_version >= 5 } {
+	    _op .byte $_unit_addr_size "address_size"
+	    # Hardcode to 0 for now.
+	    _op .byte $_seg_sel_size "seg_sel_size"
+	}
+
+	if {$_line_is_64} {
 	    _op .8byte "$_line_header_end_label - $header_len_label" "header_length"
 	} else {
 	    _op .4byte "$_line_header_end_label - $header_len_label" "header_length"
@@ -2196,6 +2355,10 @@ namespace eval Dwarf {
 	define_label $header_len_label
 
 	_op .byte 1 "minimum_instruction_length"
+	if { $_line_unit_version >= 4 } {
+	    # Assume non-VLIW for now.
+	    _op .byte 1 "maximum_operations_per_instruction"
+	}
 	_op .byte $_default_is_stmt "default_is_stmt"
 	_op .byte 1 "line_base"
 	_op .byte 1 "line_range"
@@ -2218,21 +2381,147 @@ namespace eval Dwarf {
 	_op .byte 1 "standard opcode 9"
 
 	proc include_dir {dirname} {
-	    _op .ascii [_quote $dirname]
+	    variable _line_include_dirs
+	    lappend _line_include_dirs $dirname
 	}
 
 	proc file_name {filename diridx} {
-	    variable _line_saw_file
-	    if "! $_line_saw_file" {
-		# Terminate the dir list.
-		_op .byte 0 "Terminator."
-		set _line_saw_file 1
+	    variable _line_file_names
+	    lappend _line_file_names $filename $diridx
+
+	    variable _line_saw_file 1
+	    set _line_saw_file 1
+	}
+
+	proc _line_finalize_header {} {
+	    variable _line_header_finalized
+	    if { $_line_header_finalized } {
+		return
+	    }
+	    set _line_header_finalized 1
+
+	    variable _line_include_dirs
+	    variable _line_file_names
+
+	    variable _line_unit_version
+	    variable _line_is_64
+	    variable _line_string_form
+	    if { $_line_unit_version >= 5 } {
+		_op .byte 1 "directory_entry_format_count"
+		_op .uleb128 1 \
+		    "directory_entry_format (content type code: DW_LNCT_path)"
+		switch $_line_string_form {
+		    string {
+			_op .uleb128 0x08 \
+			    "directory_entry_format (form: DW_FORM_string)"
+		    }
+		    line_strp {
+			_op .uleb128 0x1f \
+			    "directory_entry_format (form: DW_FORM_line_strp)"
+		    }
+		}
+
+		set nr_dirs [llength $_line_include_dirs]
+		# For entry 0.
+		set nr_dirs [expr $nr_dirs + 1]
+		_op .byte $nr_dirs "directory_count"
+
+		# Entry 0.
+		set dirname [lindex $_line_include_dirs 0]
+		set _line_include_dirs \
+		    [concat [list $dirname] $_line_include_dirs]
+
+		foreach dirname $_line_include_dirs {
+		    switch $_line_string_form {
+			string {
+			    _op .ascii [_quote $dirname]
+			}
+			line_strp {
+			    declare_labels string_ptr
+			    _defer_output .debug_line_str {
+				string_ptr:
+				_op .ascii [_quote $dirname]
+			    }
+			    if { $_line_is_64 } {
+				_op .8byte $string_ptr
+			    } else {
+				_op .4byte $string_ptr
+			    }
+			}
+		    }
+		}
+
+		_op .byte 2 "file_name_entry_format_count"
+		_op .uleb128 1 \
+		    "file_name_entry_format (content type code: DW_LNCT_path)"
+		switch $_line_string_form {
+		    string {
+			_op .uleb128 0x08 \
+			    "directory_entry_format (form: DW_FORM_string)"
+		    }
+		    line_strp {
+			_op .uleb128 0x1f \
+			    "directory_entry_format (form: DW_FORM_line_strp)"
+		    }
+		}
+		_op .uleb128 2 \
+		    "file_name_entry_format (content type code: DW_LNCT_directory_index)"
+		_op .uleb128 0x0f \
+		    "file_name_entry_format (form: DW_FORM_udata)"
+
+		set nr_files [expr [llength $_line_file_names] / 2]
+		# For entry 0.
+		set nr_files [expr $nr_files + 1]
+		_op .byte $nr_files "file_names_count"
+
+		# Entry 0.
+		set filename [lindex $_line_file_names 0]
+		set diridx [lindex $_line_file_names 1]
+		set _line_file_names \
+		    [concat [list $filename $diridx] $_line_file_names]
+
+		foreach { filename diridx } $_line_file_names {
+		    switch $_line_string_form {
+			string {
+			    _op .ascii [_quote $filename]
+			}
+			line_strp {
+			    declare_labels string_ptr
+			    _defer_output .debug_line_str {
+				string_ptr:
+				_op .ascii [_quote $filename]
+			    }
+			    if { $_line_is_64 } {
+				_op .8byte $string_ptr
+			    } else {
+				_op .4byte $string_ptr
+			    }
+			}
+		    }
+		    _op .uleb128 $diridx
+		}
+	    } else {
+		foreach dirname $_line_include_dirs {
+		    _op .ascii [_quote $dirname]
+		}
+
+		_op .byte 0 "Terminator (include_directories)"
+
+		foreach { filename diridx } $_line_file_names {
+		    _op .ascii [_quote $filename]
+		    _op .sleb128 $diridx
+		    _op .sleb128 0 "mtime"
+		    _op .sleb128 0 "length"
+		}
+
+		_op .byte 0 "Terminator (file_names)"
 	    }
 
-	    _op .ascii [_quote $filename]
-	    _op .sleb128 $diridx
-	    _op .sleb128 0 "mtime"
-	    _op .sleb128 0 "length"
+	    set _line_include_dirs {}
+	    set _line_file_names {}
+
+	    variable _line_header_end_label
+	    define_label $_line_header_end_label
 	}
 
 	proc program {statements} {
@@ -2240,14 +2529,11 @@ namespace eval Dwarf {
 	    variable _line_header_end_label
 	    variable _line
 
+	    set _line_saw_program 1
+
 	    set _line 1
 
-	    if "! $_line_saw_program" {
-		# Terminate the file list.
-		_op .byte 0 "Terminator."
-		define_label $_line_header_end_label
-		set _line_saw_program 1
-	    }
+	    _line_finalize_header
 
 	    proc DW_LNE_set_address {addr} {
 		_op .byte 0
@@ -2338,16 +2624,7 @@ namespace eval Dwarf {
 	rename include_dir ""
 	rename file_name ""
 
-	# Terminate dir list if we saw no files.
-	if "! $_line_saw_file" {
-	    _op .byte 0 "Terminator."
-	}
-
-	# Terminate the file list.
-	if "! $_line_saw_program" {
-	    _op .byte 0 "Terminator."
-	    define_label $_line_header_end_label
-	}
+	_line_finalize_header
 
 	define_label $unit_end_label
     }
@@ -2721,10 +2998,12 @@ namespace eval Dwarf {
 	# the first in .debug_info.
 	dummy_cu
 
-	# Not "uplevel" here, because we want to evaluate in this
-	# namespace.  This is somewhat bad because it means we can't
-	# readily refer to outer variables.
-	eval $body
+	with_shared_gdb {
+	    # Not "uplevel" here, because we want to evaluate in this
+	    # namespace.  This is somewhat bad because it means we can't
+	    # readily refer to outer variables.
+	    eval $body
+	}
 
 	# Dummy CU at the end to ensure that the last CU in $body is not
 	# the last in .debug_info.
