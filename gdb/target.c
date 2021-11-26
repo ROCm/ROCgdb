@@ -391,7 +391,17 @@ target_can_lock_scheduler ()
 bool
 target_can_async_p ()
 {
-  return current_inferior ()->top_target ()->can_async_p ();
+  return target_can_async_p (current_inferior ()->top_target ());
+}
+
+/* See target.h.  */
+
+bool
+target_can_async_p (struct target_ops *target)
+{
+  if (!target_async_permitted)
+    return false;
+  return target->can_async_p ();
 }
 
 /* See target.h.  */
@@ -399,7 +409,9 @@ target_can_async_p ()
 bool
 target_is_async_p ()
 {
-  return current_inferior ()->top_target ()->is_async_p ();
+  bool result = current_inferior ()->top_target ()->is_async_p ();
+  gdb_assert (target_async_permitted || !result);
+  return result;
 }
 
 exec_direction_kind
@@ -2602,7 +2614,7 @@ target_wait (ptid_t ptid, struct target_waitstatus *status,
 
   gdb_assert (!proc_target->commit_resumed_state);
 
-  if (!target->can_async_p ())
+  if (!target_can_async_p (target))
     gdb_assert ((options & TARGET_WNOHANG) == 0);
 
   return target->wait (ptid, status, options);
@@ -4376,6 +4388,9 @@ maintenance_print_target_stack (const char *cmd, int from_tty)
 void
 target_async (int enable)
 {
+  /* If we are trying to enable async mode then it must be the case that
+     async mode is possible for this target.  */
+  gdb_assert (!enable || target_can_async_p ());
   infrun_async (enable);
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
