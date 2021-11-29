@@ -1320,8 +1320,8 @@ either use --disable-source-highlight or dnl
       # This situation can occur for instance when using a source highlight
       # library compiled with g++ 7.5.0 while building gdb with g++ 4.8.5.
       AC_LANG_PUSH(C++)
-      save_CFLAGS=$CFLAGS
-      save_LDFLAGS=$LDFLAGS
+      save_CFLAGS="$CFLAGS"
+      save_LDFLAGS="$LDFLAGS"
       CFLAGS="$CFLAGS $srchigh_pkg_cflags"
       LDFLAGS="$LDFLAGS $srchigh_pkg_libs"
       AC_LINK_IFELSE(
@@ -1333,8 +1333,8 @@ either use --disable-source-highlight or dnl
         [have_usable_source_highlight=yes],
         [have_usable_source_highlight=no]
       )
-      CFLAGS="$SAVE_CFLAGS"
-      LDFLAGS="$SAVE_LDFLAGS"
+      CFLAGS="$save_CFLAGS"
+      LDFLAGS="$save_LDFLAGS"
       AC_LANG_POP(C++)
 
       if test "${have_usable_source_highlight}" = "yes"; then
