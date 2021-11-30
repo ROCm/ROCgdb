@@ -32,7 +32,8 @@
    --bytes=min-len
    -n min-len
    -min-len	Print graphic char sequences, MIN-LEN or more bytes long,
-		that are followed by a NUL or a newline.  Default is 4.
+		that are followed by a NUL or a non-displayable character.
+		Default is 4.
 
    --radix={o,x,d}
    -t {o,x,d}	Print the offset within the file before each string,
@@ -56,7 +57,7 @@
 		Specify a non-default object file format.
 
   --unicode={default|locale|invalid|hex|escape|highlight}
-  -u {d|l|i|x|e|h}
+  -U {d|l|i|x|e|h}
 		Determine how to handle UTF-8 unicode characters.  The default
 		is no special treatment.  All other versions of this option
 		only apply if the encoding is valid and enabling the option
@@ -1323,8 +1324,8 @@ usage (FILE *stream, int status)
 
   fprintf (stream, _("\
   -f --print-file-name      Print the name of the file before each string\n\
-  -n --bytes=[number]       Locate & print any NUL-terminated sequence of at\n\
-  -<number>                   least [number] characters (default 4).\n\
+  -n <number>               Locate & print any sequence of at least <number>\n\
+    --bytes=<number>         displayable characters.  (The default is 4).\n\
   -t --radix={o,d,x}        Print the location of the string in base 8, 10 or 16\n\
   -w --include-all-whitespace Include all whitespace as valid string characters\n\
   -o                        An alias for --radix=o\n\
@@ -1332,7 +1333,7 @@ usage (FILE *stream, int status)
   -e --encoding={s,S,b,l,B,L} Select character size and endianness:\n\
                             s = 7-bit, S = 8-bit, {b,l} = 16-bit, {B,L} = 32-bit\n\
   --unicode={default|show|invalid|hex|escape|highlight}\n\
-  -u {d|s|i|x|e|h}          Specify how to treat UTF-8 encoded unicode characters\n\
+  -U {d|s|i|x|e|h}          Specify how to treat UTF-8 encoded unicode characters\n\
   -s --output-separator=<string> String used to separate strings in output.\n\
   @<file>                   Read options from <file>\n\
   -h --help                 Display this information\n\

@@ -25,6 +25,7 @@ AC_CONFIG_SRCDIR(ar.c)
 AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
+AM_SILENT_RULES([yes])
 
 AC_PROG_CC
 AC_GNU_SOURCE
@@ -534,7 +535,7 @@ AC_SUBST(docdir)
 AC_SUBST(htmldir)
 AC_SUBST(pdfdir)
 
-AC_CONFIG_FILES(Makefile doc/Makefile po/Makefile.in:po/Make-in)
+AC_CONFIG_FILES(Makefile po/Makefile.in:po/Make-in)
 AC_OUTPUT
 
 GNU_MAKE_JOBSERVER
