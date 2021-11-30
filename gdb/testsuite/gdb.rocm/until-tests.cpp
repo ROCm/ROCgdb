@@ -71,8 +71,8 @@ int main(int argc, char* argv[]) {
     CHECK(hipMemcpy(A_d, A_h, Nbytes, hipMemcpyHostToDevice));
 
     printf("info: launch 'bit_extract_kernel' \n");
-    const unsigned blocks = 16;
-    const unsigned threadsPerBlock = 64;
+    const unsigned blocks = GRID_DIM;
+    const unsigned threadsPerBlock = BLOCK_DIM;
     hipLaunchKernelGGL(bit_extract_kernel, dim3(blocks), dim3(threadsPerBlock), 0, 0, C_d, A_d, N);
 
     printf("info: copy Device2Host\n");
