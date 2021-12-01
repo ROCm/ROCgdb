@@ -42390,6 +42390,7 @@ possible to have a backtrace of @value{GDBN} printed to the standard
 error stream.  This is @samp{on} by default for @code{internal-error}
 and @samp{off} by default for @code{internal-warning}.
 
+@anchor{maint packet}
 @kindex maint packet
 @item maint packet @var{text}
 If @value{GDBN} is talking to an inferior via the serial protocol,
@@ -42397,6 +42398,9 @@ then this command sends the string @var{text} to the inferior, and
 displays the response packet.  @value{GDBN} supplies the initial
 @samp{$} character, the terminating @samp{#} character, and the
 checksum.
+
+Any non-printable characters in the reply are printed as escaped hex,
+e.g. @samp{\x00}, @samp{\x01}, etc.
 
 @kindex maint print architecture
 @item maint print architecture @r{[}@var{file}@r{]}

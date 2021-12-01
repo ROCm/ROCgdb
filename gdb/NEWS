@@ -39,6 +39,14 @@ set logging enabled on|off
 show logging enabled
   These commands set or show whether logging is enabled or disabled.
 
+* Changed commands
+
+maint packet
+  This command can now print a reply, if the reply includes
+  non-printable characters.  Any non-printable characters are printed
+  as escaped hex, e.g. \x?? where '??' is replaces with the value of
+  the non-printable character.
+
 * Python API
 
   ** New function gdb.add_history(), which takes a gdb.Value object
@@ -58,6 +66,27 @@ show logging enabled
 
   ** New function gdb.Architecture.integer_type(), which returns an
      integer type given a size and a signed-ness.
+
+  ** New gdb.TargetConnection object type that represents a connection
+     (as displayed by the 'info connections' command).  A sub-class,
+     gdb.RemoteTargetConnection, is used to represent 'remote' and
+     'extended-remote' connections.
+
+  ** The gdb.Inferior type now has a 'connection' property which is an
+     instance of gdb.TargetConnection, the connection used by this
+     inferior.  This can be None if the inferior has no connection.
+
+  ** New 'gdb.events.connection_removed' event registry, which emits a
+     'gdb.ConnectionEvent' when a connection is removed from GDB.
+     This event has a 'connection' property, a gdb.TargetConnection
+     object for the connection being removed.
+
+  ** New gdb.connections() function that returns a list of all
+     currently active connections.
+
+  ** New gdb.RemoteTargetConnection.send_packet(PACKET) method.  This
+     is equivalent to the existing 'maint packet' CLI command; it
+     allows a user specified packet to be sent to the remote target.
 
 * New features in the GDB remote stub, GDBserver
 
