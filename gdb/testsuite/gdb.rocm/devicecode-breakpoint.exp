@@ -43,43 +43,53 @@ if ![runto_main] {
 #break <device_function_name>
 #break bit_extract_kernel
 # Set breakpoing in device code
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
+with_test_prefix "break DEVICE_FUNCTION_NAME" {
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
 
-# Do continue to check the breakpoint is created at device
-gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    # Do continue to check the breakpoint is created at device
+    gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+}
 
-clean_restart ${binfile}
 
 
 #TEST2
 #tbreak <device_function_name>
 #tbreak bit_extract_kernel
-gdb_breakpoint "bit_extract_kernel" "allow-pending" "temporary"
-gdb_test "run" {.+hit\sTemporary\sbreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "tbreak DEVICE_FUNCTION_NAME" {
+    clean_restart ${binfile}
+    gdb_breakpoint "bit_extract_kernel" "allow-pending" "temporary"
+    gdb_test "run" {.+hit\sTemporary\sbreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
-clean_restart ${binfile}
 
 #TEST3
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+with_test_prefix "break FILE:LINENO" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*" \
+	"break FILE:LINENO"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+}
 
-clean_restart ${binfile}
 
 #TEST4
 #break <lineNo>
 #e.g break 35
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+with_test_prefix "break LINENO" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $breakpoint_loc" "Breakpoint .* at .*${testfile}.*" \
+	"break LINENO"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+}
 
-clean_restart ${binfile}
 
 # Fetch thread Id and corresponding wave_id.
 # Set breakpoing in device code.
+clean_restart ${binfile}
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sbit_extract_kernel\s\(.*\)\sat.*}
 
@@ -96,29 +106,33 @@ gdb_test_multiple "info threads" "info threads" {
 verbose -log "threadid=$threadid"
 verbose -log "wave_id=$wave_id"
 
-clean_restart ${binfile}
 
 #TEST5
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_thread==<threadno>
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "break FILE:LINENO if DEVICE_THREAD_COND" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" \
+	"Breakpoint .* at .*${testfile}.*" "break FILE:LINENO if DEVICE_THREAD_COND"
+    gdb_test "run" ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
 
-clean_restart ${binfile}
 #TEST6
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_streq($_wave_id,(0,0,1)/2)
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" "Thread.+hit.+Breakpoint.*${testfile}.cpp:$breakpoint_loc.*"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "break FILE:LINE if WAVE_ID_CONDITION" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" \
+	"Breakpoint .* at .*${testfile}.*" "break FILE:LINE if WAVE_ID_CONDITION"
+    gdb_test "run" "Thread.+hit.+Breakpoint.*${testfile}.cpp:$breakpoint_loc.*"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
 
-
-clean_restart ${binfile}
 
 #TEST7
 #enable\disable the breakpoint in device thread
@@ -130,58 +144,79 @@ clean_restart ${binfile}
 #run //to check that test running without hitting any breakpoint as it disabled
 #enable <breakpoint no>
 ##run //to hit the breakpoint in device thread after enabling the breakpoint
+with_test_prefix "break DEVICE_FUNCTION_NAME; enable/disable pkpoint" {
+    clean_restart ${binfile}
+    # Set breakpoing in device code
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
 
-# Set breakpoing in device code
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    # Do continue to check the breakpoint is created at device
+    with_test_prefix "disable" {
+	gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+	gdb_test "disable 1"
+	gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+    }
+    with_test_prefix "enable" {
+	gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
+	gdb_test "enable 1"
+	gdb_test "run" \
+	    {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*} \
+	    "run after enable 1"
+    }
+}
 
-# Do continue to check the breakpoint is created at device
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "disable 1"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
-gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
-gdb_test "enable 1"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-
-clean_restart ${binfile}
 
 #TEST8
 #clear the breakpoint in device thread
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "clear $breakpoint_loc"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "clear breakpoint in device thread" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*" \
+	"break FILE:LINENO"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test "continue" \
+	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test "clear $breakpoint_loc"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"continue after clear"
+}
 
-
-clean_restart ${binfile}
 #TEST9
 #delete all the breakpoints in device thread
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-#gdb_test "delete 1"
-delete_breakpoints
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "delete breakpoint in device thread" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*" \
+	"break FILE:LINENO"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test "continue" \
+	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    #gdb_test "delete 1"
+    delete_breakpoints
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"continue after delete all breakpoints"
+}
 
-clean_restart ${binfile}
 #TEST10
 #delete single breakpoint in device thread
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "delete 1"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "delete single breakpoint in device thread" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*" \
+	"break FILE:LINENO"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test "continue" \
+	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test "delete 1"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"continue after delete 1"
+}
 
-clean_restart ${binfile}
 #TEST11
 #disable the breakpoint in device thread and then delete_breakpoints
 #break <device_function_name>
@@ -191,15 +226,17 @@ clean_restart ${binfile}
 #continue //to exit inferior normally
 #delete breakpoints
 ##run //to hit the breakpoint in device thread after enabling the breakpoint
+with_test_prefix "disable breakpoint in dev thread, then delete breakpoints" {
+    clean_restart ${binfile}
+    # Set breakpoing in device code
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
 
-# Set breakpoing in device code
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
-
-# Do continue to check the breakpoint is created at device
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "disable 1"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
-delete_breakpoints
-gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
-
+    # Do continue to check the breakpoint is created at device
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test "disable 1"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+    delete_breakpoints
+    gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"run after delete_breakpoints"
+}
 }

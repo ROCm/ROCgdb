@@ -38,7 +38,9 @@ set options [list \
 		 additional_flags=-DGRID_DIM=$num_waves \
 		 additional_flags=-DBLOCK_DIM=32 \
 		]
-if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile $options]} {
+
+if {[prepare_for_testing "failed to prepare ${testfile}" \
+			 $testfile $srcfile $options]} {
     return -1
 }
 
@@ -49,42 +51,53 @@ if ![runto_main] {
     return -1
 }
 
-
 # Set breakpoint in device code function in hip.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
 # Until tests and other tests after turning on scheduler-locking.
-gdb_test_no_output "set scheduler-locking on"
-gdb_test "info line" "Line $breakpoint_loc.*"
-gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
-gdb_test_no_output "set scheduler-locking off"
-gdb_test "clear bit_extract_kernel"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "until with scheduler-locking on" {
+    gdb_test_no_output "set scheduler-locking on"
+    gdb_test "info line" "Line $breakpoint_loc.*"
+    gdb_test "until [expr $breakpoint_loc+3]" \
+        "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
+    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
+        "info line at breakpoint_loc + 3"
+    gdb_test_no_output "set scheduler-locking off"
+    gdb_test "clear bit_extract_kernel"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
 # Until tests without specifying location.
-clean_restart ${binfile}
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test_no_output "set scheduler-locking on"
-gdb_test "info line" "Line $breakpoint_loc.*"
-gdb_test "until" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
-gdb_test "info line" "Line [expr $breakpoint_loc+1].*"
-gdb_test_no_output "set scheduler-locking off"
-gdb_test "clear bit_extract_kernel"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
-
+with_test_prefix "until without location; scheduler-locking on" {
+    clean_restart ${binfile}
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test_no_output "set scheduler-locking on"
+    gdb_test "info line" "Line $breakpoint_loc.*"
+    gdb_test "until" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
+    gdb_test "info line" "Line [expr $breakpoint_loc+1].*" \
+        "info line at breakpoint_loc + 1"
+    gdb_test_no_output "set scheduler-locking off"
+    gdb_test "clear bit_extract_kernel"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
 # Until tests and other tests after setting conditional breakpoint on AMDGPU thread.
-clean_restart ${binfile}
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" "Breakpoint .* at .*${testfile}.*"
-gdb_test "run" ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
-gdb_test "info line" "Line $breakpoint_loc.*"
-gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "until with HIP_ENABLE_DEFERRED_LOADING=0" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" \
+        "Breakpoint .* at .*${testfile}.*"
+    gdb_test "run" \
+        ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
+    gdb_test "info line" "Line $breakpoint_loc.*"
+    gdb_test "until [expr $breakpoint_loc+3]" \
+        "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
+    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
+        "info line at breakppoint_loc + 3"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
 # Run and wait until all threads/waves report a breakpoint hit.
 
@@ -112,15 +125,20 @@ proc run_and_wait {test} {
 }
 
 # Until and other tests in non-stop mode.
-clean_restart ${binfile}
-gdb_test_no_output "set non-stop on"
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
-run_and_wait "run to bit_extract_kernel Breakpoint"
+with_test_prefix "until with non-stop on" {
+    clean_restart ${binfile}
+    gdb_test_no_output "set non-stop on"
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    run_and_wait "run to bit_extract_kernel Breakpoint"
 
-gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
-gdb_test "info line" "Line $breakpoint_loc.*"
-gdb_test "until [expr $breakpoint_loc+3]" "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-gdb_test "info line" "Line [expr $breakpoint_loc+3].*"
-gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+    gdb_test "thread $threadid" \
+        "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
+    gdb_test "info line" "Line $breakpoint_loc.*"
+    gdb_test "until [expr $breakpoint_loc+3]" \
+        "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
+    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
+        "info line at breakpoint_loc + 3"
+    gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
 }

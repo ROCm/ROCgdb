@@ -140,10 +140,9 @@ proc_with_prefix process_attach_tests {} {
     # Verify that we can attach to the process just by giving the
     # process ID.
 
-    set test "attach, without file"
-    gdb_test_multiple "attach $testpid" "$test" {
+    gdb_test_multiple "attach $testpid" "attach, without file" {
         -re "Attaching to process $testpid.*$gdb_prompt $" {
-            pass "$test"
+            pass $gdb_test_name
         }
     }
 
@@ -151,7 +150,7 @@ proc_with_prefix process_attach_tests {} {
     gdb_test_multiple "info threads" "extract thread id" {
         -re  "\\s+(\\d+)\\s+AMDGPU Wave\\s+.*$gdb_prompt $" {
             set threadid "$expect_out(1,string)"
-            pass "$test"
+            pass $gdb_test_name
         }
     }
 

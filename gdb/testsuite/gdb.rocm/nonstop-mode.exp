@@ -38,7 +38,8 @@ set options [list \
 		 additional_flags=-DGRID_DIM=$num_waves \
 		 additional_flags=-DBLOCK_DIM=32 \
 		]
-if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile $options]} {
+if {[prepare_for_testing "failed to prepare ${testfile}" \
+			 $testfile $srcfile $options]} {
     return -1
 }
 
@@ -98,19 +99,24 @@ verbose -log "threadid=$threadid"
 clean_restart ${binfile}
 
 # Turn on non-stop mode.
+with_test_prefix "non-stop" {
+    gdb_test_no_output "set non-stop on"
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+    gdb_breakpoint "VectorAdd" "allow-pending"
 
-gdb_test_no_output "set non-stop on"
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_breakpoint "VectorAdd" "allow-pending"
+    run_and_wait "run to VectorAdd Breakpoint"
 
-run_and_wait "run to VectorAdd Breakpoint"
+    gdb_test "thread $threadid" \
+	"Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*" \
+	"thread TID before inferior exit"
+    gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 
-gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
-gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+    run_and_wait "run to VectorAdd Breakpoint after inferior exit"
 
-run_and_wait "run to VectorAdd Breakpoint after inferior exit"
-
-gdb_test "thread $threadid" "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
+    gdb_test "thread $threadid" \
+	"Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*" \
+	"thread TID after run to VectorAdd"
+}
 
 # Check "info agents".
 # vega10 sample output "1  A     (GPUID 39113) gfx900  vega10      224   2240    44:00.0"
@@ -173,32 +179,41 @@ gdb_test_sequence "info inferiors" "info inferiors" {
 }
 
 gdb_test "disable 1"
-gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
+gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+} \
+    "continue -a after disable 1"
 gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
 gdb_test "enable 1"
 run_and_wait "run to VectorAdd after disable/enable Breakpoint No"
 
 gdb_test "clear VectorAdd"
-gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+}
+gdb_test "continue -a" {.+Inferior\s\d+.+\sexited\snormally.+} \
+    "continue -a after clear VectorAdd"
 gdb_test "start" {.+hit\sTemporary\sbreakpoint\s[\d].*}
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
+    "continue after start"
 
 gdb_breakpoint "VectorAdd" "allow-pending"
 run_and_wait "Again setting Breakpoint and running to Breakpoint after inferior exit"
 
-gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
+gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+} \
+    "continue -a until exit"
 
 # Switch to all stop mode.
-
-gdb_test_no_output "set non-stop off"
-gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
-gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
-gdb_test "disable 3"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
-gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
-gdb_test "enable 3"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sVectorAdd\s\(.*\)\sat.*}
-gdb_test "clear VectorAdd"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "all-stop" {
+    gdb_test_no_output "set non-stop off"
+    gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
+    gdb_test "continue" {.+hit\sBreakpoint\s\d+.+\sVectorAdd\s\(.*\)\sat.*}
+    gdb_test "disable 3"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"continue after disable 3"
+    gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"run after exit"
+    gdb_test "enable 3"
+    gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sVectorAdd\s\(.*\)\sat.*} \
+	"run after enable 3"
+    gdb_test "clear VectorAdd"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"continue after clear VectorAdd"
+}
 
 }
