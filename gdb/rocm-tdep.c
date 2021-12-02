@@ -1874,9 +1874,7 @@ rocm_target_ops::fetch_registers (struct regcache *regcache, int regno)
     {
       regcache->raw_supply (regno, raw);
     }
-  /* FIXME: The dbgapi should differentiate argument compatibility error from
-     register not available in the given wavefront errors.  */
-  else if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT_COMPATIBILITY)
+  else if (status != AMD_DBGAPI_STATUS_ERROR_REGISTER_NOT_AVAILABLE)
     {
       warning (_ ("Couldn't read register %s (#%d)."),
 	       gdbarch_register_name (gdbarch, regno), regno);
