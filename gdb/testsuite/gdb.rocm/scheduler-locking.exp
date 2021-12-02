@@ -28,7 +28,8 @@ if [skip_hipcc_tests] {
     return 0
 }
 
-if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+if {[prepare_for_testing "failed to prepare ${testfile}" \
+			 $testfile $srcfile {debug hip}]} {
     return -1
 }
 
@@ -41,35 +42,44 @@ if ![runto_main] {
 
 # Set the symbolic breakpont in device code and turn on scheduler-locking.
 # Run "next" and "clear <location>" commands.
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
-gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test_no_output "set scheduler-locking on"
-gdb_test "info line" "Line $breakpoint_loc.*"
-gdb_test "next" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
-gdb_test "info line" "Line [expr $breakpoint_loc+1].*"
-gdb_test "next + 2" "\[^\r\n\]*[expr $breakpoint_loc+1+2].*"
-gdb_test_no_output "set scheduler-locking off"
-gdb_test "clear bit_extract_kernel"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
-
+with_test_prefix "bp on symbol, next" {
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test_no_output "set scheduler-locking on"
+    gdb_test "info line" "Line $breakpoint_loc.*" "info line after bp"
+    gdb_test "next" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
+    gdb_test "info line" "Line [expr $breakpoint_loc+1].*" \
+	"info line after next"
+    gdb_test "next + 2" "\[^\r\n\]*[expr $breakpoint_loc+1+2].*"
+    gdb_test_no_output "set scheduler-locking off"
+    gdb_test "clear bit_extract_kernel"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+}
 
 # Set the symbolic breakpont in device code and turn on scheduler-locking.
 # Run "next", step, enable/disable <breakpont no>,continue commands.
-clean_restart ${binfile}
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test_no_output "set scheduler-locking on"
-gdb_test "info line" "Line $breakpoint_loc.*"
-gdb_test "next + 3" "\[^\r\n\]*[expr $breakpoint_loc+3].*"
-gdb_test "step" "\[^\r\n\]*__bitextract_u32.*"
-gdb_test_no_output "set scheduler-locking off"
-gdb_test "disable 1"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
-gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+}
-gdb_test "enable 1"
-gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
-gdb_test "delete 1"
-gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+with_test_prefix "break on symbol, next, step, enable-disable" {
+    clean_restart ${binfile}
+    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    gdb_test "run" \
+	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+    gdb_test_no_output "set scheduler-locking on"
+    gdb_test "info line" "Line $breakpoint_loc.*"
+    gdb_test "next + 3" "\[^\r\n\]*[expr $breakpoint_loc+3].*"
+    gdb_test "step" "\[^\r\n\]*__bitextract_u32.*"
+    gdb_test_no_output "set scheduler-locking off"
+    gdb_test "disable 1"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+    gdb_test "run" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"run after disable 1"
+    gdb_test "enable 1"
+    gdb_test "run" \
+	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*} \
+	"run after enable 1"
+    gdb_test "delete 1"
+    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
+	"continue to exit"
+}
 
 # Set the breakpont through line no and turn on scheduler-locking.
 # Check "info agents", "info threads", "show architecture", "show convenience"
