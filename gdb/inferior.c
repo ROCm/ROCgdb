@@ -1,6 +1,7 @@
 /* Multi-process control for GDB, the GNU debugger.
 
    Copyright (C) 2008-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -949,6 +950,10 @@ clone_inferior_command (const char *args, int from_tty)
       for (const std::string &unset_var
 	   : orginf->environment.user_unset_env ())
 	inf->environment.unset (unset_var.c_str ());
+
+      /* Notify that the inferior has been cloned so target dependent logic
+	 can be applied if necessary.  */
+      gdb::observers::inferior_cloned.notify (orginf, inf);
     }
 }
 

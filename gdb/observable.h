@@ -1,6 +1,7 @@
 /* Observers
 
    Copyright (C) 2016-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -187,6 +188,12 @@ extern observable<struct inferior */* inf */> inferior_exit;
 /* The inferior INF has been removed from the list of inferiors.
    This method is called immediately before freeing INF.  */
 extern observable<struct inferior */* inf */> inferior_removed;
+
+/* The inferior CLONE has been created by cloning INF.
+   This method is called after all required operations for the clone have
+   been performed.  */
+extern observable<struct inferior */* inf */, struct inferior */* clone */>
+    inferior_cloned;
 
 /* Bytes from DATA to DATA + LEN have been written to the inferior
    at ADDR.  */
