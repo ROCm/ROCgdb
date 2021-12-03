@@ -1,6 +1,7 @@
 /* GDB Notifications to Observers.
 
    Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -64,6 +65,7 @@ DEFINE_OBSERVABLE (inferior_added);
 DEFINE_OBSERVABLE (inferior_appeared);
 DEFINE_OBSERVABLE (inferior_exit);
 DEFINE_OBSERVABLE (inferior_removed);
+DEFINE_OBSERVABLE (inferior_cloned);
 DEFINE_OBSERVABLE (memory_changed);
 DEFINE_OBSERVABLE (before_prompt);
 DEFINE_OBSERVABLE (gdb_datadir_changed);
