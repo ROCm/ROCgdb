@@ -160,13 +160,6 @@ static aarch64_instruction inst;
 static bool parse_operands (char *, const aarch64_opcode *);
 static bool programmer_friendly_fixup (aarch64_instruction *);
 
-#ifdef OBJ_ELF
-#  define now_instr_sequence seg_info \
-		(now_seg)->tc_segment_info_data.insn_sequence
-#else
-static struct aarch64_instr_sequence now_instr_sequence;
-#endif
-
 /* Diagnostics inline function utilities.
 
    These are lightweight utilities which should only be called by parse_operands
@@ -3925,6 +3918,22 @@ parse_sve_address (char **str, aarch64_opnd_info *operand,
 			     SHIFTED_MUL_VL);
 }
 
+/* Parse a register X0-X30.  The register must be 64-bit and register 31
+   is unallocated.  */
+static bool
+parse_x0_to_x30 (char **str, aarch64_opnd_info *operand)
+{
+  const reg_entry *reg = parse_reg (str);
+  if (!reg || !aarch64_check_reg_type (reg, REG_TYPE_R_64))
+    {
+      set_syntax_error (_(get_reg_expected_msg (REG_TYPE_R_64)));
+      return false;
+    }
+  operand->reg.regno = reg->number;
+  operand->qualifier = AARCH64_OPND_QLF_X;
+  return true;
+}
+
 /* Parse an operand for a MOVZ, MOVN or MOVK instruction.
    Return TRUE on success; otherwise return FALSE.  */
 static bool
@@ -5010,6 +5019,8 @@ const char* operand_mismatch_kind_names[] =
 {
   "AARCH64_OPDE_NIL",
   "AARCH64_OPDE_RECOVERABLE",
+  "AARCH64_OPDE_A_SHOULD_FOLLOW_B",
+  "AARCH64_OPDE_EXPECTED_A_AFTER_B",
   "AARCH64_OPDE_SYNTAX_ERROR",
   "AARCH64_OPDE_FATAL_SYNTAX_ERROR",
   "AARCH64_OPDE_INVALID_VARIANT",
@@ -5031,7 +5042,10 @@ operand_error_higher_severity_p (enum aarch64_operand_error_kind lhs,
 				 enum aarch64_operand_error_kind rhs)
 {
   gas_assert (AARCH64_OPDE_RECOVERABLE > AARCH64_OPDE_NIL);
-  gas_assert (AARCH64_OPDE_SYNTAX_ERROR > AARCH64_OPDE_RECOVERABLE);
+  gas_assert (AARCH64_OPDE_A_SHOULD_FOLLOW_B > AARCH64_OPDE_RECOVERABLE);
+  gas_assert (AARCH64_OPDE_EXPECTED_A_AFTER_B > AARCH64_OPDE_RECOVERABLE);
+  gas_assert (AARCH64_OPDE_SYNTAX_ERROR > AARCH64_OPDE_A_SHOULD_FOLLOW_B);
+  gas_assert (AARCH64_OPDE_SYNTAX_ERROR > AARCH64_OPDE_EXPECTED_A_AFTER_B);
   gas_assert (AARCH64_OPDE_FATAL_SYNTAX_ERROR > AARCH64_OPDE_SYNTAX_ERROR);
   gas_assert (AARCH64_OPDE_INVALID_VARIANT > AARCH64_OPDE_FATAL_SYNTAX_ERROR);
   gas_assert (AARCH64_OPDE_OUT_OF_RANGE > AARCH64_OPDE_INVALID_VARIANT);
@@ -5224,9 +5238,9 @@ record_operand_error_with_data (const aarch64_opcode *opcode, int idx,
   info.index = idx;
   info.kind = kind;
   info.error = error;
-  info.data[0] = extra_data[0];
-  info.data[1] = extra_data[1];
-  info.data[2] = extra_data[2];
+  info.data[0].i = extra_data[0];
+  info.data[1].i = extra_data[1];
+  info.data[2].i = extra_data[2];
   info.non_fatal = false;
   record_operand_error_info (opcode, &info);
 }
@@ -5401,6 +5415,19 @@ output_operand_error_record (const operand_error_record *record, char *str)
     case AARCH64_OPDE_NIL:
       gas_assert (0);
       break;
+
+    case AARCH64_OPDE_A_SHOULD_FOLLOW_B:
+      handler (_("this `%s' should have an immediately preceding `%s'"
+		 " -- `%s'"),
+	       detail->data[0].s, detail->data[1].s, str);
+      break;
+
+    case AARCH64_OPDE_EXPECTED_A_AFTER_B:
+      handler (_("the preceding `%s' should be followed by `%s` rather"
+		 " than `%s` -- `%s'"),
+	       detail->data[1].s, detail->data[0].s, opcode->name, str);
+      break;
+
     case AARCH64_OPDE_SYNTAX_ERROR:
     case AARCH64_OPDE_RECOVERABLE:
     case AARCH64_OPDE_FATAL_SYNTAX_ERROR:
@@ -5532,31 +5559,31 @@ output_operand_error_record (const operand_error_record *record, char *str)
       break;
 
     case AARCH64_OPDE_OUT_OF_RANGE:
-      if (detail->data[0] != detail->data[1])
+      if (detail->data[0].i != detail->data[1].i)
 	handler (_("%s out of range %d to %d at operand %d -- `%s'"),
 		 detail->error ? detail->error : _("immediate value"),
-		 detail->data[0], detail->data[1], idx + 1, str);
+		 detail->data[0].i, detail->data[1].i, idx + 1, str);
       else
 	handler (_("%s must be %d at operand %d -- `%s'"),
 		 detail->error ? detail->error : _("immediate value"),
-		 detail->data[0], idx + 1, str);
+		 detail->data[0].i, idx + 1, str);
       break;
 
     case AARCH64_OPDE_REG_LIST:
-      if (detail->data[0] == 1)
+      if (detail->data[0].i == 1)
 	handler (_("invalid number of registers in the list; "
 		   "only 1 register is expected at operand %d -- `%s'"),
 		 idx + 1, str);
       else
 	handler (_("invalid number of registers in the list; "
 		   "%d registers are expected at operand %d -- `%s'"),
-	       detail->data[0], idx + 1, str);
+	       detail->data[0].i, idx + 1, str);
       break;
 
     case AARCH64_OPDE_UNALIGNED:
       handler (_("immediate value must be a multiple of "
 		 "%d at operand %d -- `%s'"),
-	       detail->data[0], idx + 1, str);
+	       detail->data[0].i, idx + 1, str);
       break;
 
     default:
@@ -7498,6 +7525,21 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	      break;
 	    }
 
+	case AARCH64_OPND_MOPS_ADDR_Rd:
+	case AARCH64_OPND_MOPS_ADDR_Rs:
+	  po_char_or_fail ('[');
+	  if (!parse_x0_to_x30 (&str, info))
+	    goto failure;
+	  po_char_or_fail (']');
+	  po_char_or_fail ('!');
+	  break;
+
+	case AARCH64_OPND_MOPS_WB_Rn:
+	  if (!parse_x0_to_x30 (&str, info))
+	    goto failure;
+	  po_char_or_fail ('!');
+	  break;
+
 	default:
 	  as_fatal (_("unhandled operand code %d"), operands[i]);
 	}
@@ -7801,11 +7843,15 @@ warn_unpredictable_ldst (aarch64_instruction *instr, char *str)
 static void
 force_automatic_sequence_close (void)
 {
-  if (now_instr_sequence.instr)
+  struct aarch64_segment_info_type *tc_seg_info;
+
+  tc_seg_info = &seg_info (now_seg)->tc_segment_info_data;
+  if (tc_seg_info->insn_sequence.instr)
     {
-      as_warn (_("previous `%s' sequence has not been closed"),
-	       now_instr_sequence.instr->opcode->name);
-      init_insn_sequence (NULL, &now_instr_sequence);
+      as_warn_where (tc_seg_info->last_file, tc_seg_info->last_line,
+		     _("previous `%s' sequence has not been closed"),
+		     tc_seg_info->insn_sequence.instr->opcode->name);
+      init_insn_sequence (NULL, &tc_seg_info->insn_sequence);
     }
 }
 
@@ -7855,6 +7901,7 @@ md_assemble (char *str)
 {
   templates *template;
   const aarch64_opcode *opcode;
+  struct aarch64_segment_info_type *tc_seg_info;
   aarch64_inst *inst_base;
   unsigned saved_cond;
 
@@ -7867,7 +7914,9 @@ md_assemble (char *str)
     }
 
   /* Update the current insn_sequence from the segment.  */
-  insn_sequence = &seg_info (now_seg)->tc_segment_info_data.insn_sequence;
+  tc_seg_info = &seg_info (now_seg)->tc_segment_info_data;
+  insn_sequence = &tc_seg_info->insn_sequence;
+  tc_seg_info->last_file = as_where (&tc_seg_info->last_line);
 
   inst.reloc.type = BFD_RELOC_UNUSED;
 
@@ -9820,6 +9869,7 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"armv8.5-a", AARCH64_ARCH_V8_5},
   {"armv8.6-a", AARCH64_ARCH_V8_6},
   {"armv8.7-a", AARCH64_ARCH_V8_7},
+  {"armv8.8-a", AARCH64_ARCH_V8_8},
   {"armv8-r",	AARCH64_ARCH_V8_R},
   {"armv9-a",	AARCH64_ARCH_V9},
   {NULL, AARCH64_ARCH_NONE}
@@ -9927,6 +9977,10 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"flagm",		AARCH64_FEATURE (AARCH64_FEATURE_FLAGM, 0),
 			AARCH64_ARCH_NONE},
   {"pauth",		AARCH64_FEATURE (AARCH64_FEATURE_PAC, 0),
+			AARCH64_ARCH_NONE},
+  {"mops",		AARCH64_FEATURE (AARCH64_FEATURE_MOPS, 0),
+			AARCH64_ARCH_NONE},
+  {"hbc",		AARCH64_FEATURE (AARCH64_FEATURE_HBC, 0),
 			AARCH64_ARCH_NONE},
   {NULL,		AARCH64_ARCH_NONE, AARCH64_ARCH_NONE},
 };

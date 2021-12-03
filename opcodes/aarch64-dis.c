@@ -2053,6 +2053,17 @@ aarch64_ext_sve_shrimm (const aarch64_operand *self,
   info->imm.value = get_top_bit (info->imm.value) * 2 - info->imm.value;
   return true;
 }
+
+/* Decode X0-X30.  Register 31 is unallocated.  */
+bool
+aarch64_ext_x0_to_x30 (const aarch64_operand *self, aarch64_opnd_info *info,
+		       const aarch64_insn code,
+		       const aarch64_inst *inst ATTRIBUTE_UNUSED,
+		       aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  info->reg.regno = extract_field (self->fields[0], code, 0);
+  return info->reg.regno <= 30;
+}
 
 /* Bitfields that are commonly used to encode certain operands' information
    may be partially used as part of the base opcode in some instructions.
@@ -3377,10 +3388,29 @@ print_verifier_notes (aarch64_operand_error *detail,
   assert (detail->non_fatal);
   assert (detail->error);
 
-  /* If there are multiple verifier messages, concat them up to 1k.  */
-  (*info->fprintf_func) (info->stream, "  // note: %s", detail->error);
-  if (detail->index >= 0)
-     (*info->fprintf_func) (info->stream, " at operand %d", detail->index + 1);
+  (*info->fprintf_func) (info->stream, "  // note: ");
+  switch (detail->kind)
+    {
+    case AARCH64_OPDE_A_SHOULD_FOLLOW_B:
+      (*info->fprintf_func) (info->stream,
+			     _("this `%s' should have an immediately"
+			       " preceding `%s'"),
+			     detail->data[0].s, detail->data[1].s);
+      break;
+
+    case AARCH64_OPDE_EXPECTED_A_AFTER_B:
+      (*info->fprintf_func) (info->stream,
+			     _("expected `%s' after previous `%s'"),
+			     detail->data[0].s, detail->data[1].s);
+      break;
+
+    default:
+      (*info->fprintf_func) (info->stream, "%s", detail->error);
+      if (detail->index >= 0)
+	(*info->fprintf_func) (info->stream, " at operand %d",
+			       detail->index + 1);
+      break;
+    }
 }
 
 /* Print the instruction according to *INST.  */

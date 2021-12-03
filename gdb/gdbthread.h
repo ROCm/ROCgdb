@@ -1058,4 +1058,20 @@ for_active_lanes (simd_lanes_mask_t mask, Func func, Args &...args)
    target to get the name.  May return nullptr.  */
 extern const char *thread_name (thread_info *thread);
 
+/* Switch to thread TP if it is alive.  Returns true if successfully
+   switched, false otherwise.  */
+
+extern bool switch_to_thread_if_alive (thread_info *thr);
+
+/* Switch to lane LANE of thread THR and execute CMD.  If ADA_TASK is not
+   empty, it is the Ada task ID, and will be printed instead of the thread
+   information.  FLAGS.QUIET controls the printing of the thread information.
+   FLAGS.CONT and FLAGS.SILENT control how to handle errors.  Can throw an
+   exception if !FLAGS.SILENT and !FLAGS.CONT and CMD fails.  */
+
+extern void thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
+				    gdb::optional<int> ada_task,
+				    const char *cmd, int from_tty,
+				    const qcs_flags &flags);
+
 #endif /* GDBTHREAD_H */

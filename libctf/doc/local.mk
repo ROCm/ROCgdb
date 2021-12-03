@@ -17,17 +17,25 @@
 # <http://www.gnu.org/licenses/>.
 #
 
-AUTOMAKE_OPTIONS = info-in-builddir foreign no-texinfo.tex
+if BUILD_INFO
 
-info_TEXINFOS = ctf-spec.texi
+info_TEXINFOS += %D%/ctf-spec.texi
 libctf_TEXINFOS = $(info_TEXINFOS)
 
 AM_MAKEINFOFLAGS = --no-split
 
-DISTCLEANFILES = texput.log
-MAINTAINERCLEANFILES = ctf-spec.info
+DISTCLEANFILES += texput.log
+MAINTAINERCLEANFILES += %D%/ctf-spec.info
 
-html-local: ctf-spec/index.html
-ctf-spec/index.html: ctf-spec.texi
-	$(AM_V_at)$(MAKEINFOHTML) $(AM_MAKEINFOHTMLFLAGS) $(MAKEINFOFLAGS) \
-	  --split=node -I$(srcdir) $(srcdir)/ctf-spec.texi
+html-local: %D%/ctf-spec/index.html
+%D%/ctf-spec/index.html: %D%/ctf-spec.texi %D%/$(am__dirstamp)
+	$(AM_V_GEN)$(MAKEINFOHTML) $(AM_MAKEINFOHTMLFLAGS) $(MAKEINFOFLAGS) \
+	  --split=node -I$(srcdir) --output %D%/ctf-spec $(srcdir)/%D%/ctf-spec.texi
+
+else
+
+# Workaround bug in automake: it can't handle conditionally building info pages
+# since GNU projects normally include info pages in the source distributions.
+%D%/ctf-spec.info:
+
+endif

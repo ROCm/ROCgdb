@@ -26,9 +26,9 @@ if {![runto_main]} {
     return -1
 }
 
-# This test requires DWARF.
+# This test also requires DWARF.
 get_debug_format
-if {![test_debug_format "DWARF *"]} {
+if {![test_debug_format "DWARF \[0-9\]"]} {
     return -1
 }
 

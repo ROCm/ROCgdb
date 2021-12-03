@@ -87,6 +87,8 @@ typedef uint32_t aarch64_insn;
 #define AARCH64_FEATURE_SSBS	     (1ULL << 47) /* SSBS mechanism enabled.  */
 #define AARCH64_FEATURE_MEMTAG       (1ULL << 48) /* Memory Tagging Extension.  */
 #define AARCH64_FEATURE_TME	     (1ULL << 49) /* Transactional Memory Extension.  */
+#define AARCH64_FEATURE_MOPS	     (1ULL << 50) /* Standardization of memory operations.  */
+#define AARCH64_FEATURE_HBC	     (1ULL << 51) /* Hinted conditional branches.  */
 #define AARCH64_FEATURE_I8MM	     (1ULL << 52) /* Matrix Multiply instructions.  */
 #define AARCH64_FEATURE_F32MM	     (1ULL << 53)
 #define AARCH64_FEATURE_F64MM	     (1ULL << 54)
@@ -94,6 +96,7 @@ typedef uint32_t aarch64_insn;
 #define AARCH64_FEATURE_V9	     (1ULL << 56) /* Armv9.0-A processors.  */
 #define AARCH64_FEATURE_SME_F64	     (1ULL << 57) /* SME F64.  */
 #define AARCH64_FEATURE_SME_I64	     (1ULL << 58) /* SME I64.  */
+#define AARCH64_FEATURE_V8_8	     (1ULL << 59) /* Armv8.8 processors.  */
 
 /* Crypto instructions are the combination of AES and SHA2.  */
 #define AARCH64_FEATURE_CRYPTO	(AARCH64_FEATURE_SHA2 | AARCH64_FEATURE_AES)
@@ -141,6 +144,10 @@ typedef uint32_t aarch64_insn;
 #define AARCH64_ARCH_V8_7	AARCH64_FEATURE (AARCH64_ARCH_V8_6,	\
 						 AARCH64_FEATURE_V8_7	\
 						 | AARCH64_FEATURE_LS64)
+#define AARCH64_ARCH_V8_8	AARCH64_FEATURE (AARCH64_ARCH_V8_7,	\
+						 AARCH64_FEATURE_V8_8	\
+						 | AARCH64_FEATURE_MOPS	\
+						 | AARCH64_FEATURE_HBC)
 #define AARCH64_ARCH_V8_R	(AARCH64_FEATURE (AARCH64_ARCH_V8_4,	\
 						 AARCH64_FEATURE_V8_R)	\
 			      & ~(AARCH64_FEATURE_V8_A | AARCH64_FEATURE_LOR))
@@ -458,6 +465,9 @@ enum aarch64_opnd
   AARCH64_OPND_SME_PnT_Wm_imm,           /* SME <Pn>.<T>[<Wm>, #<imm>].  */
   AARCH64_OPND_TME_UIMM16,	/* TME unsigned 16-bit immediate.  */
   AARCH64_OPND_SM3_IMM2,	/* SM3 encodes lane in bits [13, 14].  */
+  AARCH64_OPND_MOPS_ADDR_Rd,	/* [Rd]!, in bits [0, 4].  */
+  AARCH64_OPND_MOPS_ADDR_Rs,	/* [Rs]!, in bits [16, 20].  */
+  AARCH64_OPND_MOPS_WB_Rn	/* Rn!, in bits [5, 9].  */
 };
 
 /* Qualifier constrains an operand.  It either specifies a variant of an
@@ -919,7 +929,11 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* This instruction's operation width is determined by the operand with the
    largest element size.  */
 #define C_MAX_ELEM (1U << 1)
-/* Next bit is 2.  */
+#define C_SCAN_MOPS_P (1U << 2)
+#define C_SCAN_MOPS_M (2U << 2)
+#define C_SCAN_MOPS_E (3U << 2)
+#define C_SCAN_MOPS_PME (3U << 2)
+/* Next bit is 4.  */
 
 static inline bool
 alias_opcode_p (const aarch64_opcode *opcode)
@@ -1213,6 +1227,17 @@ struct aarch64_inst
      Less severe error found during the parsing, very possibly because that
      GAS has picked up a wrong instruction template for the parsing.
 
+   AARCH64_OPDE_A_SHOULD_FOLLOW_B
+     The instruction forms (or is expected to form) part of a sequence,
+     but the preceding instruction in the sequence wasn't the expected one.
+     The message refers to two strings: the name of the current instruction,
+     followed by the name of the expected preceding instruction.
+
+   AARCH64_OPDE_EXPECTED_A_AFTER_B
+     Same as AARCH64_OPDE_A_SHOULD_FOLLOW_B, but shifting the focus
+     so that the current instruction is assumed to be the incorrect one:
+     "since the previous instruction was B, the current one should be A".
+
    AARCH64_OPDE_SYNTAX_ERROR
      General syntax error; it can be either a user error, or simply because
      that GAS is trying a wrong instruction template.
@@ -1247,11 +1272,8 @@ struct aarch64_inst
      Error of the highest severity and used for any severe issue that does not
      fall into any of the above categories.
 
-   The enumerators are only interesting to GAS.  They are declared here (in
-   libopcodes) because that some errors are detected (and then notified to GAS)
-   by libopcodes (rather than by GAS solely).
-
-   The first three errors are only deteced by GAS while the
+   AARCH64_OPDE_RECOVERABLE, AARCH64_OPDE_SYNTAX_ERROR and
+   AARCH64_OPDE_FATAL_SYNTAX_ERROR are only deteced by GAS while the
    AARCH64_OPDE_INVALID_VARIANT error can only be spotted by libopcodes as
    only libopcodes has the information about the valid variants of each
    instruction.
@@ -1265,6 +1287,8 @@ enum aarch64_operand_error_kind
 {
   AARCH64_OPDE_NIL,
   AARCH64_OPDE_RECOVERABLE,
+  AARCH64_OPDE_A_SHOULD_FOLLOW_B,
+  AARCH64_OPDE_EXPECTED_A_AFTER_B,
   AARCH64_OPDE_SYNTAX_ERROR,
   AARCH64_OPDE_FATAL_SYNTAX_ERROR,
   AARCH64_OPDE_INVALID_VARIANT,
@@ -1282,7 +1306,11 @@ struct aarch64_operand_error
   enum aarch64_operand_error_kind kind;
   int index;
   const char *error;
-  int data[3];	/* Some data for extra information.  */
+  /* Some data for extra information.  */
+  union {
+    int i;
+    const char *s;
+  } data[3];
   bool non_fatal;
 };
 
@@ -1290,15 +1318,13 @@ struct aarch64_operand_error
    dependencies for both assembler and disassembler.  */
 struct aarch64_instr_sequence
 {
-  /* The instruction that caused this sequence to be opened.  */
+  /* The instructions in the sequence, starting with the one that
+     caused it to be opened.  */
   aarch64_inst *instr;
-  /* The number of instructions the above instruction allows one to be kept in the
-     sequence before an automatic close is done.  */
-  int num_insns;
-  /* The instructions currently added to the sequence.  */
-  aarch64_inst **current_insns;
   /* The number of instructions already in the sequence.  */
-  int next_insn;
+  int num_added_insns;
+  /* The number of instructions allocated to the sequence.  */
+  int num_allocated_insns;
 };
 
 /* Encoding entrypoint.  */

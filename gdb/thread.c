@@ -746,10 +746,9 @@ thread_alive (thread_info *tp)
   return target_thread_alive (tp->ptid);
 }
 
-/* Switch to thread TP if it is alive.  Returns true if successfully
-   switched, false otherwise.  */
+/* See gdbthreads.h.  */
 
-static bool
+bool
 switch_to_thread_if_alive (thread_info *thr)
 {
   scoped_restore_current_thread restore_thread;
@@ -1827,15 +1826,12 @@ tp_array_compar_descending (const thread_info_ref &a, const thread_info_ref &b)
   return (a->per_inf_num > b->per_inf_num);
 }
 
-/* Switch to lane LANE of thread THR and execute CMD.  FLAGS.QUIET
-   controls the printing of the thread information.  FLAGS.CONT and
-   FLAGS.SILENT control how to handle errors.  Can throw an exception
-   if !FLAGS.SILENT and !FLAGS.CONT and CMD fails.  */
+/* See gdbthread.h.  */
 
-static void
+void
 thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
-			const char *cmd, int from_tty,
-			const qcs_flags &flags)
+			gdb::optional<int> ada_task, const char *cmd,
+			int from_tty, const qcs_flags &flags)
 {
   gdb_assert (is_current_thread (thr));
 
@@ -1848,6 +1844,8 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
     header
       = string_printf (_("\nLane %d (%s):\n"), lane,
 		       target_lane_to_str (thr, lane).c_str ());
+  else if (ada_task.has_value ())
+    header = string_printf (_("\nTask ID %d:\n"), *ada_task);
   else
     header
       = string_printf (_("\nThread %s (%s):\n"), print_thread_id (thr),
@@ -1988,7 +1986,8 @@ thread_apply_all_command (const char *cmd, int from_tty)
 
       for (thread_info_ref &thr : thr_list_cpy)
 	if (switch_to_thread_if_alive (thr.get ()))
-	  thr_lane_try_catch_cmd (false, thr.get (), 0, cmd, from_tty, flags);
+	  thr_lane_try_catch_cmd (false, thr.get (), 0, {}, cmd, from_tty,
+				  flags);
     }
 }
 
@@ -2150,7 +2149,7 @@ thread_apply_command (const char *tidlist, int from_tty)
 	  continue;
 	}
 
-      thr_lane_try_catch_cmd (false, tp, 0, cmd, from_tty, flags);
+      thr_lane_try_catch_cmd (false, tp, 0, {}, cmd, from_tty, flags);
     }
 }
 
@@ -2211,7 +2210,7 @@ lane_apply_all_command (const char *cmd, int from_tty)
       frame_info *curr_frame = get_current_frame ();
       select_frame (curr_frame);
 
-      thr_lane_try_catch_cmd (true, thr, lane, cmd, from_tty, flags);
+      thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);
     }
 }
 
@@ -2346,7 +2345,7 @@ lane_apply_command (const char *id_list, int from_tty)
       frame_info *curr_frame = get_current_frame ();
       select_frame (curr_frame);
 
-      thr_lane_try_catch_cmd (true, thr, lane, cmd, from_tty, flags);
+      thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);
     }
 }
 

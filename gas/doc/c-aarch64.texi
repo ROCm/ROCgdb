@@ -110,8 +110,8 @@ issue an error message if an attempt is made to assemble an
 instruction which will not execute on the target architecture.  The
 following architecture names are recognized: @code{armv8-a},
 @code{armv8.1-a}, @code{armv8.2-a}, @code{armv8.3-a}, @code{armv8.4-a}
-@code{armv8.5-a}, @code{armv8.6-a}, @code{armv8.7-a}, @code{armv8-r}, and
-@code{armv9-a}.
+@code{armv8.5-a}, @code{armv8.6-a}, @code{armv8.7-a}, @code{armv8.8-a},
+@code{armv8-r}, and @code{armv9-a}.
 
 If both @option{-mcpu} and @option{-march} are specified, the
 assembler will use the setting for @option{-mcpu}.  If neither are
@@ -183,6 +183,8 @@ automatically cause those extensions to be disabled.
  @tab Enable ARMv8.2 16-bit floating-point support.  This implies @code{fp}.
 @item @code{fp} @tab ARMv8-A @tab ARMv8-A or later
  @tab Enable floating-point extensions.
+@item @code{hbc} @tab @tab Armv8.8-A or later
+ @tab Enable Armv8.8-A hinted conditional branch instructions
 @item @code{i8mm} @tab ARMv8.2-A @tab ARMv8.6-A or later
  @tab Enable Int8 Matrix Multiply extension.
 @item @code{lor} @tab ARMv8-A @tab ARMv8.1-A or later
@@ -193,6 +195,8 @@ automatically cause those extensions to be disabled.
  @tab Enable Large System extensions.
 @item @code{memtag} @tab ARMv8.5-A @tab No
  @tab Enable ARMv8.5-A Memory Tagging Extensions.
+@item @code{mops} @tab @tab Armv8.8-A or later
+ @tab Enable Armv8.8-A memcpy and memset acceleration instructions
 @item @code{pan} @tab ARMv8-A @tab ARMv8.1-A or later
  @tab Enable Privileged Access Never support.
 @item @code{pauth} @tab ARMv8-A @tab No

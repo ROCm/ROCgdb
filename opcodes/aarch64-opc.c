@@ -1351,8 +1351,8 @@ set_out_of_range_error (aarch64_operand_error *mismatch_detail,
   if (mismatch_detail == NULL)
     return;
   set_error (mismatch_detail, AARCH64_OPDE_OUT_OF_RANGE, idx, error);
-  mismatch_detail->data[0] = lower_bound;
-  mismatch_detail->data[1] = upper_bound;
+  mismatch_detail->data[0].i = lower_bound;
+  mismatch_detail->data[1].i = upper_bound;
 }
 
 static inline void
@@ -1424,7 +1424,7 @@ set_unaligned_error (aarch64_operand_error *mismatch_detail, int idx,
   if (mismatch_detail == NULL)
     return;
   set_error (mismatch_detail, AARCH64_OPDE_UNALIGNED, idx, NULL);
-  mismatch_detail->data[0] = alignment;
+  mismatch_detail->data[0].i = alignment;
 }
 
 static inline void
@@ -1434,7 +1434,7 @@ set_reg_list_error (aarch64_operand_error *mismatch_detail, int idx,
   if (mismatch_detail == NULL)
     return;
   set_error (mismatch_detail, AARCH64_OPDE_REG_LIST, idx, NULL);
-  mismatch_detail->data[0] = expected_num;
+  mismatch_detail->data[0].i = expected_num;
 }
 
 static inline void
@@ -1474,6 +1474,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
   uint64_t uvalue, mask;
   const aarch64_opnd_info *opnd = opnds + idx;
   aarch64_opnd_qualifier_t qualifier = opnd->qualifier;
+  int i;
 
   assert (opcode->operands[idx] == opnd->type && opnd->type == type);
 
@@ -2592,32 +2593,15 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
       switch (type)
 	{
 	case AARCH64_OPND_PSTATEFIELD:
+	  for (i = 0; aarch64_pstatefields[i].name; ++i)
+	    if (aarch64_pstatefields[i].value == opnd->pstatefield)
+	      break;
+	  assert (aarch64_pstatefields[i].name);
 	  assert (idx == 0 && opnds[1].type == AARCH64_OPND_UIMM4);
-	  /* MSR UAO, #uimm4
-	     MSR PAN, #uimm4
-	     MSR SSBS,#uimm4
-	     MSR SVCRSM, #uimm4
-	     MSR SVCRZA, #uimm4
-	     MSR SVCRSMZA, #uimm4
-	     The immediate must be #0 or #1.  */
-	  if ((opnd->pstatefield == 0x03	/* UAO.  */
-	       || opnd->pstatefield == 0x04	/* PAN.  */
-	       || opnd->pstatefield == 0x19     /* SSBS.  */
-	       || opnd->pstatefield == 0x1a	/* DIT.  */
-	       || opnd->pstatefield == 0x1b)	/* SVCRSM, SVCRZA or SVCRSMZA.  */
-	      && opnds[1].imm.value > 1)
+	  max_value = F_GET_REG_MAX_VALUE (aarch64_pstatefields[i].flags);
+	  if (opnds[1].imm.value < 0 || opnds[1].imm.value > max_value)
 	    {
-	      set_imm_out_of_range_error (mismatch_detail, idx, 0, 1);
-	      return 0;
-	    }
-	  /* MSR SPSel, #uimm4
-	     Uses uimm4 as a control value to select the stack pointer: if
-	     bit 0 is set it selects the current exception level's stack
-	     pointer, if bit 0 is clear it selects shared EL0 stack pointer.
-	     Bits 1 to 3 of uimm4 are reserved and should be zero.  */
-	  if (opnd->pstatefield == 0x05 /* spsel */ && opnds[1].imm.value > 1)
-	    {
-	      set_imm_out_of_range_error (mismatch_detail, idx, 0, 1);
+	      set_imm_out_of_range_error (mismatch_detail, 1, 0, max_value);
 	      return 0;
 	    }
 	  break;
@@ -3937,6 +3921,17 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	snprintf (buf, size, "%s", opnd->hint_option->name);
       break;
 
+    case AARCH64_OPND_MOPS_ADDR_Rd:
+    case AARCH64_OPND_MOPS_ADDR_Rs:
+      snprintf (buf, size, "[%s]!",
+		get_int_reg_name (opnd->reg.regno, AARCH64_OPND_QLF_X, 0));
+      break;
+
+    case AARCH64_OPND_MOPS_WB_Rn:
+      snprintf (buf, size, "%s!",
+		get_int_reg_name (opnd->reg.regno, AARCH64_OPND_QLF_X, 0));
+      break;
+
     default:
       snprintf (buf, size, "<invalid>");
       break;
@@ -3991,6 +3986,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 #define SR_V8_4(n,e,f)	  SR_FEAT (n,e,f,V8_4)
 #define SR_V8_6(n,e,f)	  SR_FEAT (n,e,f,V8_6)
 #define SR_V8_7(n,e,f)	  SR_FEAT (n,e,f,V8_7)
+#define SR_V8_8(n,e,f)	  SR_FEAT (n,e,f,V8_8)
 /* Has no separate libopcodes feature flag, but separated out for clarity.  */
 #define SR_GIC(n,e,f)	  SR_CORE (n,e,f)
 /* Has no separate libopcodes feature flag, but separated out for clarity.  */
@@ -4098,6 +4094,7 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   SR_CORE ("id_aa64dfr1_el1",	CPENC (3,0,C0,C5,1),	F_REG_READ),
   SR_CORE ("id_aa64isar0_el1",	CPENC (3,0,C0,C6,0),	F_REG_READ),
   SR_CORE ("id_aa64isar1_el1",	CPENC (3,0,C0,C6,1),	F_REG_READ),
+  SR_CORE ("id_aa64isar2_el1",	CPENC (3,0,C0,C6,2),	F_REG_READ),
   SR_CORE ("id_aa64mmfr0_el1",	CPENC (3,0,C0,C7,0),	F_REG_READ),
   SR_CORE ("id_aa64mmfr1_el1",	CPENC (3,0,C0,C7,1),	F_REG_READ),
   SR_CORE ("id_aa64mmfr2_el1",	CPENC (3,0,C0,C7,2),	F_REG_READ),
@@ -5015,6 +5012,9 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   SR_V8_7 ("pmsnevfr_el1",      CPENC (3,0,C9,C9,1),    0),
   SR_V8_7 ("hcrx_el2",          CPENC (3,4,C1,C2,2),    0),
 
+  SR_V8_8 ("allint",            CPENC (3,0,C4,C3,0),    0),
+  SR_V8_8 ("icc_nmiar1_el1",    CPENC (3,0,C12,C9,5),   F_REG_READ),
+
   { 0, CPENC (0,0,0,0,0), 0, 0 }
 };
 
@@ -5033,17 +5033,21 @@ aarch64_sys_reg_deprecated_p (const uint32_t reg_flags)
    0b011010 (0x1a).  */
 const aarch64_sys_reg aarch64_pstatefields [] =
 {
-  SR_CORE ("spsel",	  0x05,	0),
-  SR_CORE ("daifset",	  0x1e,	0),
-  SR_CORE ("daifclr",	  0x1f,	0),
-  SR_PAN  ("pan",	  0x04, 0),
-  SR_V8_2 ("uao",	  0x03, 0),
-  SR_SSBS ("ssbs",	  0x19, 0),
-  SR_V8_4 ("dit",	  0x1a,	0),
-  SR_MEMTAG ("tco",	  0x1c,	0),
-  SR_SME  ("svcrsm",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x2,0x1)),
-  SR_SME  ("svcrza",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x4,0x1)),
-  SR_SME  ("svcrsmza",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x6,0x1)),
+  SR_CORE ("spsel",	  0x05,	F_REG_MAX_VALUE (1)),
+  SR_CORE ("daifset",	  0x1e,	F_REG_MAX_VALUE (15)),
+  SR_CORE ("daifclr",	  0x1f,	F_REG_MAX_VALUE (15)),
+  SR_PAN  ("pan",	  0x04, F_REG_MAX_VALUE (1)),
+  SR_V8_2 ("uao",	  0x03, F_REG_MAX_VALUE (1)),
+  SR_SSBS ("ssbs",	  0x19, F_REG_MAX_VALUE (1)),
+  SR_V8_4 ("dit",	  0x1a,	F_REG_MAX_VALUE (1)),
+  SR_MEMTAG ("tco",	  0x1c,	F_REG_MAX_VALUE (1)),
+  SR_SME  ("svcrsm",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x2,0x1)
+				| F_REG_MAX_VALUE (1)),
+  SR_SME  ("svcrza",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x4,0x1)
+				| F_REG_MAX_VALUE (1)),
+  SR_SME  ("svcrsmza",	  0x1b, PSTATE_ENCODE_CRM_AND_IMM(0x6,0x1)
+				| F_REG_MAX_VALUE (1)),
+  SR_V8_8 ("allint",	  0x08,	F_REG_MAX_VALUE (1)),
   { 0,	  CPENC (0,0,0,0,0), 0, 0 },
 };
 
@@ -5416,6 +5420,45 @@ verify_elem_sd (const struct aarch64_inst *inst, const aarch64_insn insn,
   return ERR_OK;
 }
 
+/* Check an instruction that takes three register operands and that
+   requires the register numbers to be distinct from one another.  */
+
+static enum err_type
+verify_three_different_regs (const struct aarch64_inst *inst,
+			     const aarch64_insn insn ATTRIBUTE_UNUSED,
+			     bfd_vma pc ATTRIBUTE_UNUSED,
+			     bool encoding ATTRIBUTE_UNUSED,
+			     aarch64_operand_error *mismatch_detail
+			       ATTRIBUTE_UNUSED,
+			     aarch64_instr_sequence *insn_sequence
+			       ATTRIBUTE_UNUSED)
+{
+  int rd, rs, rn;
+
+  rd = inst->operands[0].reg.regno;
+  rs = inst->operands[1].reg.regno;
+  rn = inst->operands[2].reg.regno;
+  if (rd == rs || rd == rn || rs == rn)
+    {
+      mismatch_detail->kind = AARCH64_OPDE_SYNTAX_ERROR;
+      mismatch_detail->error
+	= _("the three register operands must be distinct from one another");
+      mismatch_detail->index = -1;
+      return ERR_UND;
+    }
+
+  return ERR_OK;
+}
+
+/* Add INST to the end of INSN_SEQUENCE.  */
+
+static void
+add_insn_to_sequence (const struct aarch64_inst *inst,
+		      aarch64_instr_sequence *insn_sequence)
+{
+  insn_sequence->instr[insn_sequence->num_added_insns++] = *inst;
+}
+
 /* Initialize an instruction sequence insn_sequence with the instruction INST.
    If INST is NULL the given insn_sequence is cleared and the sequence is left
    uninitialized.  */
@@ -5425,16 +5468,11 @@ init_insn_sequence (const struct aarch64_inst *inst,
 		    aarch64_instr_sequence *insn_sequence)
 {
   int num_req_entries = 0;
-  insn_sequence->next_insn = 0;
-  insn_sequence->num_insns = num_req_entries;
-  if (insn_sequence->instr)
-    XDELETE (insn_sequence->instr);
-  insn_sequence->instr = NULL;
 
-  if (inst)
+  if (insn_sequence->instr)
     {
-      insn_sequence->instr = XNEW (aarch64_inst);
-      memcpy (insn_sequence->instr, inst, sizeof (aarch64_inst));
+      XDELETE (insn_sequence->instr);
+      insn_sequence->instr = NULL;
     }
 
   /* Handle all the cases here.  May need to think of something smarter than
@@ -5442,20 +5480,93 @@ init_insn_sequence (const struct aarch64_inst *inst,
      best.  */
   if (inst && inst->opcode->constraints & C_SCAN_MOVPRFX)
     num_req_entries = 1;
+  if (inst && (inst->opcode->constraints & C_SCAN_MOPS_PME) == C_SCAN_MOPS_P)
+    num_req_entries = 2;
 
-  if (insn_sequence->current_insns)
-    XDELETEVEC (insn_sequence->current_insns);
-  insn_sequence->current_insns = NULL;
+  insn_sequence->num_added_insns = 0;
+  insn_sequence->num_allocated_insns = num_req_entries;
 
   if (num_req_entries != 0)
     {
-      size_t size = num_req_entries * sizeof (aarch64_inst);
-      insn_sequence->current_insns
-	= (aarch64_inst**) XNEWVEC (aarch64_inst, num_req_entries);
-      memset (insn_sequence->current_insns, 0, size);
+      insn_sequence->instr = XCNEWVEC (aarch64_inst, num_req_entries);
+      add_insn_to_sequence (inst, insn_sequence);
     }
 }
 
+/* Subroutine of verify_constraints.  Check whether the instruction
+   is part of a MOPS P/M/E sequence and, if so, whether sequencing
+   expectations are met.  Return true if the check passes, otherwise
+   describe the problem in MISMATCH_DETAIL.
+
+   IS_NEW_SECTION is true if INST is assumed to start a new section.
+   The other arguments are as for verify_constraints.  */
+
+static bool
+verify_mops_pme_sequence (const struct aarch64_inst *inst,
+			  bool is_new_section,
+			  aarch64_operand_error *mismatch_detail,
+			  aarch64_instr_sequence *insn_sequence)
+{
+  const struct aarch64_opcode *opcode;
+  const struct aarch64_inst *prev_insn;
+  int i;
+
+  opcode = inst->opcode;
+  if (insn_sequence->instr)
+    prev_insn = insn_sequence->instr + (insn_sequence->num_added_insns - 1);
+  else
+    prev_insn = NULL;
+
+  if (prev_insn
+      && (prev_insn->opcode->constraints & C_SCAN_MOPS_PME)
+      && prev_insn->opcode != opcode - 1)
+    {
+      mismatch_detail->kind = AARCH64_OPDE_EXPECTED_A_AFTER_B;
+      mismatch_detail->index = -1;
+      mismatch_detail->data[0].s = prev_insn->opcode[1].name;
+      mismatch_detail->data[1].s = prev_insn->opcode->name;
+      mismatch_detail->non_fatal = true;
+      return false;
+    }
+
+  if (opcode->constraints & C_SCAN_MOPS_PME)
+    {
+      if (is_new_section || !prev_insn || prev_insn->opcode != opcode - 1)
+	{
+	  mismatch_detail->kind = AARCH64_OPDE_A_SHOULD_FOLLOW_B;
+	  mismatch_detail->index = -1;
+	  mismatch_detail->data[0].s = opcode->name;
+	  mismatch_detail->data[1].s = opcode[-1].name;
+	  mismatch_detail->non_fatal = true;
+	  return false;
+	}
+
+      for (i = 0; i < 3; ++i)
+	/* There's no specific requirement for the data register to be
+	   the same between consecutive SET* instructions.  */
+	if ((opcode->operands[i] == AARCH64_OPND_MOPS_ADDR_Rd
+	     || opcode->operands[i] == AARCH64_OPND_MOPS_ADDR_Rs
+	     || opcode->operands[i] == AARCH64_OPND_MOPS_WB_Rn)
+	    && prev_insn->operands[i].reg.regno != inst->operands[i].reg.regno)
+	  {
+	    mismatch_detail->kind = AARCH64_OPDE_SYNTAX_ERROR;
+	    if (opcode->operands[i] == AARCH64_OPND_MOPS_ADDR_Rd)
+	      mismatch_detail->error = _("destination register differs from "
+					 "preceding instruction");
+	    else if (opcode->operands[i] == AARCH64_OPND_MOPS_ADDR_Rs)
+	      mismatch_detail->error = _("source register differs from "
+					 "preceding instruction");
+	    else
+	      mismatch_detail->error = _("size register differs from "
+					 "preceding instruction");
+	    mismatch_detail->index = i;
+	    mismatch_detail->non_fatal = true;
+	    return false;
+	  }
+    }
+
+  return true;
+}
 
 /*  This function verifies that the instruction INST adheres to its specified
     constraints.  If it does then ERR_OK is returned, if not then ERR_VFI is
@@ -5505,13 +5616,22 @@ verify_constraints (const struct aarch64_inst *inst,
       return res;
     }
 
+  bool is_new_section = (!encoding && pc == 0);
+  if (!verify_mops_pme_sequence (inst, is_new_section, mismatch_detail,
+				 insn_sequence))
+    {
+      res = ERR_VFI;
+      if ((opcode->constraints & C_SCAN_MOPS_PME) != C_SCAN_MOPS_M)
+	init_insn_sequence (NULL, insn_sequence);
+    }
+
   /* Verify constraints on an existing sequence.  */
   if (insn_sequence->instr)
     {
       const struct aarch64_opcode* inst_opcode = insn_sequence->instr->opcode;
       /* If we're decoding and we hit PC=0 with an open sequence then we haven't
 	 closed a previous one that we should have.  */
-      if (!encoding && pc == 0)
+      if (is_new_section && res == ERR_OK)
 	{
 	  mismatch_detail->kind = AARCH64_OPDE_SYNTAX_ERROR;
 	  mismatch_detail->error = _("previous `movprfx' sequence not closed");
@@ -5728,17 +5848,12 @@ verify_constraints (const struct aarch64_inst *inst,
 	}
 
     done:
-      /* Add the new instruction to the sequence.  */
-      memcpy (insn_sequence->current_insns + insn_sequence->next_insn++,
-	      inst, sizeof (aarch64_inst));
-
-      /* Check if sequence is now full.  */
-      if (insn_sequence->next_insn >= insn_sequence->num_insns)
-	{
-	  /* Sequence is full, but we don't have anything special to do for now,
-	     so clear and reset it.  */
-	  init_insn_sequence (NULL, insn_sequence);
-	}
+      if (insn_sequence->num_added_insns == insn_sequence->num_allocated_insns)
+	/* We've checked the last instruction in the sequence and so
+	   don't need the sequence any more.  */
+	init_insn_sequence (NULL, insn_sequence);
+      else
+	add_insn_to_sequence (inst, insn_sequence);
     }
 
   return res;

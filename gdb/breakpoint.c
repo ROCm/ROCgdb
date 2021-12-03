@@ -10607,6 +10607,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
      the hardware watchpoint.  */
   bool use_mask = false;
   CORE_ADDR mask = 0;
+  int task = 0;
 
   /* Make sure that we actually have parameters to parse.  */
   if (arg != NULL && arg[0] != '\0')
@@ -10661,6 +10662,16 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 		invalid_thread_id_error (value_start);
 
 	      thread = thr->global_num;
+	    }
+	  else if (toklen == 4 && startswith (tok, "task"))
+	    {
+	      char *tmp;
+
+	      task = strtol (value_start, &tmp, 0);
+	      if (tmp == value_start)
+		error (_("Junk after task keyword."));
+	      if (!valid_task_id (task))
+		error (_("Unknown task %d."), task);
 	    }
 	  else if (toklen == 4 && startswith (tok, "mask"))
 	    {
@@ -10835,6 +10846,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     init_raw_breakpoint_without_location (w.get (), NULL, bp_type,
 					  &watchpoint_breakpoint_ops);
   w->thread = thread;
+  w->task = task;
   w->disposition = disp_donttouch;
   w->pspace = current_program_space;
   w->exp = std::move (exp);

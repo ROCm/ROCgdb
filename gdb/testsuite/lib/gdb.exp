@@ -3685,7 +3685,7 @@ gdb_caching_proc skip_ifunc_tests {
 
 proc skip_inline_frame_tests {} {
     # GDB only recognizes inlining information in DWARF.
-    if { ! [test_debug_format "DWARF *"] } {
+    if { ! [test_debug_format "DWARF \[0-9\]"] } {
 	return 1
     }
 
@@ -3704,7 +3704,7 @@ proc skip_inline_frame_tests {} {
 
 proc skip_inline_var_tests {} {
     # GDB only recognizes inlining information in DWARF.
-    if { ! [test_debug_format "DWARF *"] } {
+    if { ! [test_debug_format "DWARF \[0-9\]"] } {
 	return 1
     }
 
