@@ -2452,8 +2452,7 @@ indirect_closure_value (value *value)
      encode address spaces and other things in CORE_ADDR.  */
   bfd_endian byte_order = gdbarch_byte_order (get_frame_arch (frame));
   LONGEST pointer_offset
-    = extract_signed_integer (value_contents (value).data (),
-			      TYPE_LENGTH (type), byte_order);
+    = extract_signed_integer (value_contents (value), byte_order);
 
   return closure->get_location ()->indirect_implicit_ptr (frame, type,
 							  pointer_offset,
