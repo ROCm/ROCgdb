@@ -2649,7 +2649,7 @@ info_agents_command (const char *args, int from_tty)
     else
       {
 	size_t n_agents{ 0 }, max_id_width{ 0 }, max_target_id_width{ 0 },
-	  max_name_width{ 0 };
+	  max_name_width{ 0 }, max_architecture_width{ 0 };
 
 	for (auto &&value : all_filtered_agents)
 	  {
@@ -2672,6 +2672,34 @@ info_agents_command (const char *args, int from_tty)
 		max_target_id_width
 		  = std::max (max_target_id_width,
 			      rocm_target_id_string (agent_id).size ());
+
+		/* architecture  */
+		amd_dbgapi_architecture_id_t architecture_id;
+
+		status = amd_dbgapi_agent_get_info (
+		  agent_id, AMD_DBGAPI_AGENT_INFO_ARCHITECTURE,
+		  sizeof (architecture_id), &architecture_id);
+
+		if (status == AMD_DBGAPI_STATUS_SUCCESS)
+		  {
+		    char *architecture_name;
+		    if ((status = amd_dbgapi_architecture_get_info (
+			   architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_NAME,
+			   sizeof (architecture_name), &architecture_name))
+			!= AMD_DBGAPI_STATUS_SUCCESS)
+		      error (_ ("amd_dbgapi_architecture_get_info failed "
+				"(rc=%d)"),
+			     status);
+
+		    max_architecture_width
+		      = std::max (max_architecture_width,
+				  strlen (architecture_name));
+		    xfree (architecture_name);
+		  }
+		else if (status != AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
+		  error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"),
+			 status);
+
 		/* name  */
 		char *agent_name;
 		if ((status
@@ -2701,7 +2729,7 @@ info_agents_command (const char *args, int from_tty)
 	  }
 
 	/* Header:  */
-	table_emitter.emplace (uiout, 8, n_agents, "InfoRocmAgentsTable");
+	table_emitter.emplace (uiout, 9, n_agents, "InfoRocmAgentsTable");
 
 	uiout->table_header (1, ui_left, "current", "");
 	uiout->table_header (std::max (2ul, max_id_width), ui_left, "id",
@@ -2709,6 +2737,8 @@ info_agents_command (const char *args, int from_tty)
 	uiout->table_header (5, ui_left, "state", "State");
 	uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
 			     "target-id", "Target Id");
+	uiout->table_header (std::max (12ul, max_architecture_width), ui_left,
+			     "architecture", "Architecture");
 	uiout->table_header (std::max (11ul, max_name_width), ui_left, "name",
 			     "Device Name");
 	uiout->table_header (5, ui_left, "cores", "Cores");
@@ -2771,6 +2801,34 @@ info_agents_command (const char *args, int from_tty)
 	    /* target_id  */
 	    uiout->field_string ("target-id",
 				 rocm_target_id_string (agent_id));
+
+	    /* architecture  */
+	    amd_dbgapi_architecture_id_t architecture_id;
+
+	    status
+	      = amd_dbgapi_agent_get_info (agent_id,
+					   AMD_DBGAPI_AGENT_INFO_ARCHITECTURE,
+					   sizeof (architecture_id),
+					   &architecture_id);
+
+	    if (status == AMD_DBGAPI_STATUS_SUCCESS)
+	      {
+		char *architecture_name;
+		if ((status = amd_dbgapi_architecture_get_info (
+		       architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_NAME,
+		       sizeof (architecture_name), &architecture_name))
+		    != AMD_DBGAPI_STATUS_SUCCESS)
+		  error (_ ("amd_dbgapi_architecture_get_info failed "
+			    "(rc=%d)"),
+			 status);
+
+		uiout->field_string ("architecture", architecture_name);
+		xfree (architecture_name);
+	      }
+	    else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
+	      uiout->field_string ("architecture", "unknown");
+	    else
+	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
 
 	    /* name  */
 	    char *agent_name;

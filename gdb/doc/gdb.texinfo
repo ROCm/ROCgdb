@@ -22901,6 +22901,9 @@ queues, dispatches, or wavefronts.
 The target system's heterogeneous agent identifier.
 
 @item
+The target system's architecture name.
+
+@item
 The target system's device name.
 
 @item
@@ -22932,9 +22935,9 @@ For example,
 
 @smallexample
 (@value{GDBP}) info agents
-  Id Status Target Id                  Device Name Cores Threads Location
-* 1  A      AMDGPU Agent (GPUID 45151) vega20      240   2400    0a:00.0
-  2  A      AMDGPU Agent (GPUID 39113) vega20      240   2400    44:00.0
+  Id State Target Id                  Architecture Device Name Cores Threads Location
+* 1  A     AMDGPU Agent (GPUID 45151) gfx906       vega20      240   2400    0a:00.0
+  2  A     AMDGPU Agent (GPUID 39113) gfx906       vega20      240   2400    44:00.0
 @end smallexample
 
 If you're debugging multiple inferiors, @value{GDBN} displays
@@ -35922,10 +35925,10 @@ thread is not associated with a heterogeneous agent, or if a
 (gdb)
 -agent-info
 ^done,agents=[
-@{id="1.1",status="A",target-id="AMDGPU Agent (GPUID 45151)",
-  device-name="vega20",cores="240",threads="2400",location="0a:00.0"@}​​​​​,
-@{id="1.2",status="A",target-id="AMDGPU Agent (GPUID 39113)",
-  device-name="vega20",cores="240",threads="2400",location="44:00.0"@}​​​​​],
+@{id="1.1",state="A",target-id="AMDGPU Agent (GPUID 45151)",architecture="gfx906",
+  name="vega20",cores="240",threads="2400",location="0a:00.0"@},
+@{id="1.2",state="A",target-id="AMDGPU Agent (GPUID 39113)",architecture="gfx906",
+  name="vega20",cores="240",threads="2400",location="44:00.0"@}],
 current-agent-id="1.1"
 (gdb)
 @end smallexample
