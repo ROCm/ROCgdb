@@ -2175,6 +2175,22 @@ rocm_target_inferior_created (inferior *inf)
   rocm_enable (inf);
 }
 
+/* Callback called when an inferior is cloned.  */
+
+static void
+rocm_target_inferior_cloned (inferior *original_inferior,
+			     inferior *new_inferior)
+{
+  auto *orig_info = get_rocm_inferior_info (original_inferior);
+  auto *new_info = get_rocm_inferior_info (new_inferior);
+
+  /* At this point, the process is not started.  Therefore it is sufficient to
+     copy the precise memory request, it will be applied when the process
+     starts.  */
+  gdb_assert (new_info->process_id == AMD_DBGAPI_PROCESS_NONE);
+  new_info->precise_memory.requested = orig_info->precise_memory.requested;
+}
+
 void
 rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
 			      const char *execd_pathname)
@@ -3777,6 +3793,8 @@ _initialize_rocm_tdep ()
 					     "rocm-tdep");
   gdb::observers::inferior_created.attach (rocm_target_inferior_created,
 					   "rocm-tdep");
+  gdb::observers::inferior_cloned.attach (rocm_target_inferior_cloned,
+					  "rocm-tdep");
   gdb::observers::signal_received.attach (rocm_target_signal_received,
 					  "rocm-tdep");
   gdb::observers::normal_stop.attach (rocm_target_normal_stop, "rocm-tdep");
