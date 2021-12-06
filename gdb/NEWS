@@ -242,6 +242,13 @@ info sources
   and for each objfile the source files that are part of that objfile
   are listed.
 
+clone-inferior
+  The clone-inferior command now ensures that the TTY, CMD and ARGS
+  settings are copied from the original inferior to the new one.
+  All modifications to the environment variables done using the 'set
+  environment' or 'unset environment' commands are also copied to the new
+  inferior.
+
 * Removed targets and native configurations
 
 ARM Symbian			arm*-*-symbianelf*
