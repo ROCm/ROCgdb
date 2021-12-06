@@ -48,3 +48,26 @@ gdb_test "show amdgpu precise-memory" \
 gdb_test "python print(gdb.parameter(\"amdgpu precise-memory\"))" \
     "False" \
     "show initial value using Python, inferior 2"
+
+proc copy_precise_memory_on_clone {precise_memory} {
+    set value $precise_memory
+    if {$precise_memory == "unspecified"} {
+	set value off
+    }
+    clean_restart
+    gdb_test "show amdgpu precise-memory" "is off.*" \
+	"show default amdgpu precise-memory"
+    if {$precise_memory != "unspecified"} {
+	gdb_test_no_output "set amdgpu precise-memory $value"
+	gdb_test "show amdgpu precise-memory" "is $value.*" \
+		 "show amdgpu precise-memory on original inferior"
+    }
+    gdb_test "clone-inferior" "Added inferior 2.*"
+    gdb_test "inferior 2"
+    gdb_test "show amdgpu precise-memory" "is $value.*" \
+	"show amdgpu precise-memory on cloned inferior"
+}
+
+foreach_with_prefix precise_memory { unspecified on off } {
+    copy_precise_memory_on_clone $precise_memory
+}
