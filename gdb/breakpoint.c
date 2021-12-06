@@ -1956,6 +1956,14 @@ update_watchpoint (struct watchpoint *b, int reparse)
 		    }
 
 		  addr = value_address (v);
+
+		  /* Watchpoints for addresses that are not in the default
+		     address space are currently not supported.  */
+		  if (gdbarch_address_space_id_from_core_address
+			(value_type (v)->arch (), addr)
+		      != ARCH_ADDR_SPACE_ID_DEFAULT)
+		    error (_("Only global memory watchpoints are supported."));
+
 		  if (bitsize != 0)
 		    {
 		      /* Skip the bytes that don't contain the bitfield.  */
