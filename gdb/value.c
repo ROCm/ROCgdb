@@ -1345,21 +1345,25 @@ value_contents_copy_raw (struct value *dst, LONGEST dst_offset,
 					     TARGET_CHAR_BIT * dst_offset,
 					     TARGET_CHAR_BIT * length));
 
-  /* Copy the data.  */
   bit_length = length * unit_size * HOST_CHAR_BIT;
+
+  /* Copy the data.  */
+  gdb::array_view<gdb_byte> dst_contents
+    = value_contents_all_raw (dst).slice (dst_offset * unit_size,
+					  length * unit_size);
+  gdb::array_view<const gdb_byte> src_contents
+    = value_contents_all_raw (src).slice (src_offset * unit_size,
+					  length * unit_size);
 
   if (src_bit_offset)
     {
       bool big_endian = type_byte_order (value_type (dst)) == BFD_ENDIAN_BIG;
 
-      copy_bitwise (value_contents_all_raw (dst).data () + dst_offset * unit_size, 0,
-		    value_contents_all_raw (src).data () + src_offset * unit_size,
+      copy_bitwise (dst_contents.data (), 0, src_contents.data (),
 		    src_bit_offset, bit_length, big_endian);
     }
   else
-    memcpy (value_contents_all_raw (dst).data () + dst_offset * unit_size,
-	    value_contents_all_raw (src).data () + src_offset * unit_size,
-	    length * unit_size);
+    copy (src_contents, dst_contents);
 
   /* Copy the meta-data, adjusted.  */
   src_total_bit_offset = src_offset * unit_size * HOST_CHAR_BIT
@@ -1736,13 +1740,11 @@ value_copy (struct value *arg)
   val->stack = arg->stack;
   val->is_zero = arg->is_zero;
   val->initialized = arg->initialized;
-  if (!value_lazy (val))
-    {
-      memcpy (value_contents_all_raw (val).data (),
-	      value_contents_all_raw (arg).data (),
-	      TYPE_LENGTH (value_enclosing_type (arg)));
 
-    }
+  if (!value_lazy (val))
+    copy (value_contents_all_raw (arg),
+	  value_contents_all_raw (val));
+
   val->unavailable = arg->unavailable;
   val->optimized_out = arg->optimized_out;
   val->parent = arg->parent;
@@ -1787,9 +1789,7 @@ value_non_lval (struct value *arg)
       struct type *enc_type = value_enclosing_type (arg);
       struct value *val = allocate_value (enc_type);
 
-      memcpy (value_contents_all_raw (val).data (),
-	      value_contents_all (arg).data (),
-	      TYPE_LENGTH (enc_type));
+      copy (value_contents_all (arg), value_contents_all_raw (val));
       val->type = arg->type;
       set_value_embedded_offset (val, value_embedded_offset (arg));
       set_value_pointed_to_offset (val, value_pointed_to_offset (arg));
@@ -4028,7 +4028,7 @@ value_fetch_lazy_register (struct value *val)
       else
 	{
 	  int i;
-	  const gdb_byte *buf = value_contents (new_val).data ();
+	  gdb::array_view<const gdb_byte> buf = value_contents (new_val);
 
 	  if (VALUE_LVAL (new_val) == lval_register)
 	    fprintf_unfiltered (&debug_file, " register=%d",
