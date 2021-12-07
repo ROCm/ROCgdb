@@ -55,13 +55,18 @@ int main(int argc, char *argv[])
   char *binary_buf;
   cl_int binary_status;
 
-  /* Load kernel binary */
-  fp = fopen("./outputs/gdb.rocm/lane-pc-vega20/lane-pc-vega20-kernel.so", "r");
+  /* Load kernel binary.  KERNEL_SO_NAME is the name of the .so file,
+     and is defined by the .exp file.  Try loading it from
+     KERNEL_SO_PATH first (also defined by the .exp file), and
+     fallback to loading it from the current directory.  The latter is
+     useful for standalone development, particularly when developing
+     non-GDB tools.  */
+  fp = fopen(KERNEL_SO_PATH "/" KERNEL_SO_NAME, "r");
 
   if (!fp)
     {
       /* Try on current directory */
-      fp = fopen("./lane-pc-vega20-kernel.so", "r");
+      fp = fopen("./" KERNEL_SO_NAME, "r");
 
       if (!fp)
 	return 1;
