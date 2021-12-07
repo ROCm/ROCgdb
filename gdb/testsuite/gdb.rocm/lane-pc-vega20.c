@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
   cl_int binary_status;
 
   /* Load kernel binary */
-  fp = fopen("./outputs/gdb.rocm/opencl/lane-pc-vega20/lane-pc-vega20-kernel.so", "r");
+  fp = fopen("./outputs/gdb.rocm/lane-pc-vega20/lane-pc-vega20-kernel.so", "r");
 
   if (!fp)
     {
