@@ -20,6 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef SIM_HW_H
 #define SIM_HW_H
 
+#include <stdarg.h>
+
+#include "ansidecl.h"
 
 /* Parse a hardware definition */
 

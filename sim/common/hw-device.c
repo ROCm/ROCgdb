@@ -22,11 +22,12 @@
 /* This must come before any other includes.  */
 #include "defs.h"
 
-#include "hw-main.h"
-#include "hw-base.h"
-
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "hw-main.h"
+#include "hw-base.h"
 
 /* Address methods */
 

@@ -1950,6 +1950,8 @@ ada_is_unconstrained_packed_array_type (struct type *type)
       /* The structure's first field is a pointer to an array, so this
 	 fetches the array type.  */
       type = TYPE_TARGET_TYPE (type->field (0).type ());
+      if (type->code () == TYPE_CODE_TYPEDEF)
+	type = ada_typedef_target_type (type);
       /* Now we can see if the array elements are packed.  */
       return TYPE_FIELD_BITSIZE (type, 0) > 0;
     }
@@ -2587,7 +2589,9 @@ ada_value_assign (struct value *toval, struct value *fromval)
       write_memory_with_notification (to_addr, buffer, len);
 
       val = value_copy (toval);
-      copy (value_contents (fromval), value_contents_raw (val));
+      memcpy (value_contents_raw (val).data (),
+	      value_contents (fromval).data (),
+	      TYPE_LENGTH (type));
       deprecated_set_value_type (val, type);
 
       return val;

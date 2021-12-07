@@ -23,6 +23,13 @@
 #ifndef SIM_IO_H
 #define SIM_IO_H
 
+#include <stdarg.h>
+#include <stdint.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "ansidecl.h"
+
 /* See the file include/callbacks.h for a description */
 
 int sim_io_init (SIM_DESC sd);
@@ -85,9 +92,6 @@ void sim_io_poll_quit (SIM_DESC sd);
 
 /* Returns -1 and sets (host) EAGAIN if not ready. */
 int sim_io_poll_read (SIM_DESC sd, int, char *, int);
-
-#include <sys/types.h>
-#include <sys/stat.h>
 
 int sim_io_stat (SIM_DESC sd, const char *path, struct stat *buf);
 

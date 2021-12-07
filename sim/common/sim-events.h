@@ -23,6 +23,9 @@
 #ifndef SIM_EVENTS_H
 #define SIM_EVENTS_H
 
+#include <stdarg.h>
+
+#include "ansidecl.h"
 
 /* Notes:
 

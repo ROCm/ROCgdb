@@ -21,10 +21,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "defs.h"
 
 #include <errno.h>
+#include <stdarg.h>
 #include <stdlib.h>
+
+#include "bfd.h"
 #include "diagnostics.h"
 #include "dis-asm.h"
-#include "bfd.h"
+
 #include "sim-main.h"
 #include "sim-fpu.h"
 #include "sim/callback.h"

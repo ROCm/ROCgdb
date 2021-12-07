@@ -23,6 +23,9 @@
 #ifndef HW_TREE
 #define HW_TREE
 
+#include <stdarg.h>
+
+#include "ansidecl.h"
 
 struct hw *hw_tree_create
 (SIM_DESC sd,

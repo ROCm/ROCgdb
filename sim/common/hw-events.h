@@ -20,6 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef HW_EVENTS_H
 #define HW_EVENTS_H
 
+#include <stdarg.h>
+
+#include "ansidecl.h"
+
 /* Event manager customized for hardware models.
 
    This interface is discussed further in sim-events.h. */

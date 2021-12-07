@@ -23,6 +23,9 @@
 #ifndef HW_DEVICE_H
 #define HW_DEVICE_H
 
+#include <stdarg.h>
+
+#include "ansidecl.h"
 
 /* Introduction:
 
