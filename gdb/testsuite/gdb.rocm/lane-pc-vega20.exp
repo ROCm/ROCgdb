@@ -103,7 +103,7 @@ if {![dwarf2_support]} {
     return 0
 }
 
-standard_testfile .c -kernel-dwarf -kernel
+standard_testfile .c
 
 # This test can only be run on amdgcn targets.
 if [skip_hipcc_tests] {
@@ -119,18 +119,20 @@ if {$gpu_target != "gfx906"} {
     return 0
 }
 
-set asmfile2 [standard_output_file $srcfile2].S
-set binfile2 [standard_output_file $srcfile2].o
-set asmfile3 $srcfile3.S
-set binfile3 [standard_output_file $srcfile3].o
-set shlibfile [standard_output_file $srcfile3].so
+set dwarf_base ${testfile}-kernel-dwarf
+set kernel_base ${testfile}-kernel
+set asmfile_dwarf [standard_output_file $dwarf_base.S]
+set asmfile_kernel $kernel_base.S
+set shlibfile_name $kernel_base.so
+set shlibfile_path [standard_output_file {}]
+set shlibfile [standard_output_file $shlibfile_name]
 
 # Wrap DWARF assembling as well, because Dwarf::assemble internally
 # may spawn GDB.
 with_rocm_gpu_lock {
 
 # Create the DWARF for the kernel.
-Dwarf::assemble $asmfile2 {
+Dwarf::assemble $asmfile_dwarf {
     set const_struct_src [gdb_target_symbol const_struct]
     set const_array_src [gdb_target_symbol const_array]
 
@@ -1318,7 +1320,9 @@ Dwarf::assemble $asmfile2 {
 # Compile OpenCL application.
 set cc_flags "-fstack-protector\
 	      -I${rocm_path}/opencl/include/\
-	      -Wl,-lOpenCL,-L${rocm_path}/lib/"
+	      -Wl,-lOpenCL,-L${rocm_path}/lib/\
+	      -DKERNEL_SO_PATH=\"${shlibfile_path}\"\
+	      -DKERNEL_SO_NAME=\"${shlibfile_name}\""
 
 set options [list debug additional_flags=$cc_flags]
 
@@ -1333,7 +1337,7 @@ set asm_options "-target amdgcn-amd-amdhsa -mcpu=$gpu_target"
 
 set options [list additional_flags=$asm_options]
 
-if  { [gdb_compile_ocl_kernel "$asmfile2 ${srcdir}/${subdir}/${asmfile3}" \
+if  { [gdb_compile_ocl_kernel "$asmfile_dwarf ${srcdir}/${subdir}/${asmfile_kernel}" \
 			      "$shlibfile" $options] != "" } {
     untested "OpenCL kernel debug info failed to assemble"
     return -1
