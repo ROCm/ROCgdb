@@ -1913,6 +1913,21 @@ rocm_target_ops::store_registers (struct regcache *regcache, int regno)
 
   regcache->raw_collect (regno, &raw);
 
+  /* If the register has read-only bits, invalidate the value in the regcache
+     as the value actualy written may differ.  */
+  if (tdep->register_properties[regno]
+	& AMD_DBGAPI_REGISTER_PROPERTY_READONLY_BITS)
+    regcache->invalidate (regno);
+
+  /* Invalidate all volatile registers if this register has the invalidate
+     volatile property.  For example, writting to VCC may change the content
+     of STATUS.VCCZ.  */
+  if (tdep->register_properties[regno]
+        & AMD_DBGAPI_REGISTER_PROPERTY_INVALIDATE_VOLATILE)
+    for (size_t r = 0; r < tdep->register_properties.size (); ++r)
+      if (tdep->register_properties[r] & AMD_DBGAPI_REGISTER_PROPERTY_VOLATILE)
+	regcache->invalidate (r);
+
   amd_dbgapi_status_t status
     = amd_dbgapi_write_register (wave_id, tdep->register_ids[regno], 0,
 				 TYPE_LENGTH (register_type (gdbarch, regno)),

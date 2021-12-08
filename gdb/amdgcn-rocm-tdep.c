@@ -934,6 +934,19 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->register_ids.insert (tdep->register_ids.end (), &register_ids[0],
 			     &register_ids[register_count]);
 
+  tdep->register_properties.resize (register_count,
+				    AMD_DBGAPI_REGISTER_PROPERTY_NONE);
+  for (size_t regnum = 0; regnum < register_count; ++regnum)
+    {
+      auto &register_properties = tdep->register_properties[regnum];
+      if (amd_dbgapi_register_get_info (register_ids[regnum],
+					AMD_DBGAPI_REGISTER_INFO_PROPERTIES,
+					sizeof (register_properties),
+					&register_properties)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_ ("amd_dbgapi_register_get_info failed"));
+    }
+
   set_gdbarch_num_regs (gdbarch, register_count);
   set_gdbarch_num_pseudo_regs (gdbarch, 0);
 
