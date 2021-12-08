@@ -1394,6 +1394,8 @@
 #define AT_FREEBSD_ENVC         30      /* Environment count. */
 #define AT_FREEBSD_ENVV         31      /* Environment vvector. */
 #define AT_FREEBSD_PS_STRINGS   32      /* struct ps_strings. */
+#define AT_FREEBSD_FXRNG        33      /* Pointer to root RNG seed version. */
+#define AT_FREEBSD_KPRELOAD     34      /* Base of vdso. */
 
 #define AT_SUN_UID      2000    /* Effective user ID.  */
 #define AT_SUN_RUID     2001    /* Real user ID.  */
