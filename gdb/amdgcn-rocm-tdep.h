@@ -57,6 +57,8 @@ struct gdbarch_tdep
 
   /* A vector of register_ids indexed by their equivalent gdb regnum.  */
   std::vector<amd_dbgapi_register_id_t> register_ids;
+  /* A vector of register_properties indexed by their equivalent regnum.  */
+  std::vector<amd_dbgapi_register_properties_t> register_properties;
   /* A vector of GDB register numbers indexed by DWARF register number.
 
      Unused DWARF register numbers map to value -1. */
