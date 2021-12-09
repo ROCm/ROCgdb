@@ -7119,6 +7119,28 @@ linux_process_target::thread_handle (ptid_t ptid, gdb_byte **handle,
 }
 #endif
 
+thread_info *
+linux_process_target::thread_pending_parent (thread_info *thread)
+{
+  lwp_info *parent = get_thread_lwp (thread)->pending_parent ();
+
+  if (parent == nullptr)
+    return nullptr;
+
+  return get_lwp_thread (parent);
+}
+
+thread_info *
+linux_process_target::thread_pending_child (thread_info *thread)
+{
+  lwp_info *child = get_thread_lwp (thread)->pending_child ();
+
+  if (child == nullptr)
+    return nullptr;
+
+  return get_lwp_thread (child);
+}
+
 /* Default implementation of linux_target_ops method "set_pc" for
    32-bit pc register which is literally named "pc".  */
 

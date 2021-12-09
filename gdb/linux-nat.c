@@ -1234,6 +1234,45 @@ linux_nat_target::attach (const char *args, int from_tty)
     target_async (1);
 }
 
+/* Ptrace-detach the thread with pid PID.  */
+
+static void
+detach_one_pid (int pid, int signo)
+{
+  if (ptrace (PTRACE_DETACH, pid, 0, signo) < 0)
+    {
+      int save_errno = errno;
+
+      /* We know the thread exists, so ESRCH must mean the lwp is
+	 zombie.  This can happen if one of the already-detached
+	 threads exits the whole thread group.  In that case we're
+	 still attached, and must reap the lwp.  */
+      if (save_errno == ESRCH)
+	{
+	  int ret, status;
+
+	  ret = my_waitpid (pid, &status, __WALL);
+	  if (ret == -1)
+	    {
+	      warning (_("Couldn't reap LWP %d while detaching: %s"),
+		       pid, safe_strerror (errno));
+	    }
+	  else if (!WIFEXITED (status) && !WIFSIGNALED (status))
+	    {
+	      warning (_("Reaping LWP %d while detaching "
+			 "returned unexpected status 0x%x"),
+		       pid, status);
+	    }
+	}
+      else
+	error (_("Can't detach %d: %s"),
+	       pid, safe_strerror (save_errno));
+    }
+  else
+    linux_nat_debug_printf ("PTRACE_DETACH (%d, %s, 0) (OK)",
+			    pid, strsignal (signo));
+}
+
 /* Get pending signal of THREAD as a host signal number, for detaching
    purposes.  This is the signal the thread last stopped for, which we
    need to deliver to the thread when detaching, otherwise, it'd be
@@ -1276,7 +1315,16 @@ get_detach_signal (struct lwp_info *lp)
       if (target_is_non_stop_p () && !tp->executing ())
 	{
 	  if (tp->has_pending_waitstatus ())
-	    signo = tp->pending_waitstatus ().sig ();
+	    {
+	      /* If the thread has a pending event, and it was stopped with a
+	         signal, use that signal to resume it.  If it has a pending
+		 event of another kind, it was not stopped with a signal, so
+		 resume it without a signal.  */
+	      if (tp->pending_waitstatus ().kind () == TARGET_WAITKIND_STOPPED)
+		signo = tp->pending_waitstatus ().sig ();
+	      else
+		signo = GDB_SIGNAL_0;
+	    }
 	  else
 	    signo = tp->stop_signal ();
 	}
@@ -1328,6 +1376,48 @@ detach_one_lwp (struct lwp_info *lp, int *signo_p)
 
   gdb_assert (lp->status == 0 || WIFSTOPPED (lp->status));
 
+  /* If the lwp/thread we are about to detach has a pending fork event,
+     there is a process GDB is attached to that the core of GDB doesn't know
+     about.  Detach from it.  */
+
+  /* Check in lwp_info::status.  */
+  if (WIFSTOPPED (lp->status) && linux_is_extended_waitstatus (lp->status))
+    {
+      int event = linux_ptrace_get_extended_event (lp->status);
+
+      if (event == PTRACE_EVENT_FORK || event == PTRACE_EVENT_VFORK)
+	{
+	  unsigned long child_pid;
+	  int ret = ptrace (PTRACE_GETEVENTMSG, lp->ptid.lwp (), 0, &child_pid);
+	  if (ret == 0)
+	    detach_one_pid (child_pid, 0);
+	  else
+	    perror_warning_with_name (_("Failed to detach fork child"));
+	}
+    }
+
+  /* Check in lwp_info::waitstatus.  */
+  if (lp->waitstatus.kind () == TARGET_WAITKIND_VFORKED
+      || lp->waitstatus.kind () == TARGET_WAITKIND_FORKED)
+    detach_one_pid (lp->waitstatus.child_ptid ().pid (), 0);
+
+
+  /* Check in thread_info::pending_waitstatus.  */
+  thread_info *tp = find_thread_ptid (linux_target, lp->ptid);
+  if (tp->has_pending_waitstatus ())
+    {
+      const target_waitstatus &ws = tp->pending_waitstatus ();
+
+      if (ws.kind () == TARGET_WAITKIND_VFORKED
+	  || ws.kind () == TARGET_WAITKIND_FORKED)
+	detach_one_pid (ws.child_ptid ().pid (), 0);
+    }
+
+  /* Check in thread_info::pending_follow.  */
+  if (tp->pending_follow.kind () == TARGET_WAITKIND_VFORKED
+      || tp->pending_follow.kind () == TARGET_WAITKIND_FORKED)
+    detach_one_pid (tp->pending_follow.child_ptid ().pid (), 0);
+
   if (lp->status != 0)
     linux_nat_debug_printf ("Pending %s for %s on detach.",
 			    strsignal (WSTOPSIG (lp->status)),
@@ -1364,42 +1454,7 @@ detach_one_lwp (struct lwp_info *lp, int *signo_p)
 	throw;
     }
 
-  if (ptrace (PTRACE_DETACH, lwpid, 0, signo) < 0)
-    {
-      int save_errno = errno;
-
-      /* We know the thread exists, so ESRCH must mean the lwp is
-	 zombie.  This can happen if one of the already-detached
-	 threads exits the whole thread group.  In that case we're
-	 still attached, and must reap the lwp.  */
-      if (save_errno == ESRCH)
-	{
-	  int ret, status;
-
-	  ret = my_waitpid (lwpid, &status, __WALL);
-	  if (ret == -1)
-	    {
-	      warning (_("Couldn't reap LWP %d while detaching: %s"),
-		       lwpid, safe_strerror (errno));
-	    }
-	  else if (!WIFEXITED (status) && !WIFSIGNALED (status))
-	    {
-	      warning (_("Reaping LWP %d while detaching "
-			 "returned unexpected status 0x%x"),
-		       lwpid, status);
-	    }
-	}
-      else
-	{
-	  error (_("Can't detach %s: %s"),
-		 target_pid_to_str (lp->ptid).c_str (),
-		 safe_strerror (save_errno));
-	}
-    }
-  else
-    linux_nat_debug_printf ("PTRACE_DETACH (%s, %s, 0) (OK)",
-			    target_pid_to_str (lp->ptid).c_str (),
-			    strsignal (signo));
+  detach_one_pid (lwpid, signo);
 
   delete_lwp (lp->ptid);
 }

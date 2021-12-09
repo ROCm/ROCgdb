@@ -488,6 +488,14 @@ public:
   virtual bool thread_handle (ptid_t ptid, gdb_byte **handle,
 			      int *handle_len);
 
+  /* If THREAD is a fork child that was not reported to GDB, return its parent
+     else nullptr.  */
+  virtual thread_info *thread_pending_parent (thread_info *thread);
+
+  /* If THREAD is the parent of a fork child that was not reported to GDB,
+     return this child, else nullptr.  */
+  virtual thread_info *thread_pending_child (thread_info *thread);
+
   /* Returns true if the target can software single step.  */
   virtual bool supports_software_single_step ();
 
@@ -697,6 +705,18 @@ void done_accessing_memory (void);
 
 #define target_thread_handle(ptid, handle, handle_len) \
   the_target->thread_handle (ptid, handle, handle_len)
+
+static inline thread_info *
+target_thread_pending_parent (thread_info *thread)
+{
+  return the_target->thread_pending_parent (thread);
+}
+
+static inline thread_info *
+target_thread_pending_child (thread_info *thread)
+{
+  return the_target->thread_pending_child (thread);
+}
 
 int read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len);
 
