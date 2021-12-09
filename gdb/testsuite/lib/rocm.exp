@@ -335,3 +335,25 @@ proc hip_device_supports_debug_multi_process {} {
     set supported_targets {gfx90a}
     return [expr [lsearch -exact $supported_targets $target] >= 0]
 }
+
+# Return true if the current device's version is less than VERSION.
+#
+# VERSION must be the "gfx" name of the device, such as gfx906 or gfx90a.
+
+proc hip_device_is_less_than { version } {
+  set target [hcc_amdgpu_target]
+
+  # Strip "gfx" prefix.
+  regexp {gfx(.*)} $version unused version
+  regexp {gfx(.*)} $target unused target
+
+  # Pad with many zeroes to make sure we have strings of the same length.
+  set version [format %08s $version]
+  set target [format %08s $target]
+
+  # Do a lexicographical comparison.
+  set res [expr {[string compare $target $version] < 0}]
+  verbose -log "$target is less than $version: $res"
+
+  return $res
+}
