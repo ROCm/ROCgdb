@@ -99,7 +99,7 @@ Dwarf::assemble $asmfile2 {
 
 	    struct_label: structure_type {
 		{DW_AT_name test_struct}
-		{DW_AT_byte_size 0x85 DW_FORM_sdata}
+		{DW_AT_byte_size 0x88 DW_FORM_sdata}
 		{DW_AT_decl_file 1 DW_FORM_sdata}
 		{DW_AT_decl_line 19 DW_FORM_sdata}
 	    } {
