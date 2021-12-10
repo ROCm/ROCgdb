@@ -30,9 +30,6 @@
 #define PLATFORM_ID 0
 #define DEVICE_ID 0
 
-#define MEM_SIZE (1024)
-#define MAX_BINARY_SIZE (0x100000)
-
 int main(int argc, char *argv[])
 {
   cl_platform_id sPlatforms[QUARY_SIZE];
@@ -51,8 +48,8 @@ int main(int argc, char *argv[])
   cl_int _err;
 
   FILE *fp;
-  size_t binary_size;
-  char *binary_buf;
+  size_t binary_size[QUARY_SIZE] = { 0 };
+  char *binary_buf[QUARY_SIZE] = { NULL };
   cl_int binary_status;
 
   /* Load kernel binary.  KERNEL_SO_NAME is the name of the .so file,
@@ -72,8 +69,14 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-  binary_buf = (char *)malloc(MAX_BINARY_SIZE);
-  binary_size = fread(binary_buf, 1, MAX_BINARY_SIZE, fp);
+  fseek(fp, 0L, SEEK_END);
+  binary_size[DEVICE_ID] = ftell(fp);
+
+  binary_buf[DEVICE_ID] = (char *)malloc(binary_size[DEVICE_ID]);
+
+  fseek (fp, 0L, SEEK_SET);
+  binary_size[DEVICE_ID]
+      = fread(binary_buf[DEVICE_ID], 1, binary_size[DEVICE_ID], fp);
 
   fclose(fp);
 
@@ -113,8 +116,8 @@ int main(int argc, char *argv[])
   sContext = clCreateContext(NULL, iNumDevices, sDevices, NULL, NULL, &_err);
 
   sProgram = clCreateProgramWithBinary(sContext, iNumDevices,
-				       sDevices, (const size_t *)&binary_size,
-  (const unsigned char **)&binary_buf, &binary_status, &_err);
+				       sDevices, (const size_t *)binary_size,
+  (const unsigned char **)binary_buf, &binary_status, &_err);
 
   if (clBuildProgram(sProgram, iNumDevices,
 		     sDevices, "", NULL, NULL) != CL_SUCCESS)
