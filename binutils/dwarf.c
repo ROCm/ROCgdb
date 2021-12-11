@@ -11105,6 +11105,9 @@ load_separate_debug_info (const char *            main_filename,
   char *         canon_dir;
   size_t         canon_dirlen;
   size_t         dirlen;
+  char *         canon_filename;
+  char *         canon_debug_filename;
+  bool		 self;
 
   if ((separate_filename = parse_func (xlink, func_data)) == NULL)
     {
@@ -11116,7 +11119,8 @@ load_separate_debug_info (const char *            main_filename,
   /* Attempt to locate the separate file.
      This should duplicate the logic in bfd/opncls.c:find_separate_debug_file().  */
 
-  canon_dir = lrealpath (main_filename);
+  canon_filename = lrealpath (main_filename);
+  canon_dir = xstrdup (canon_filename);
 
   for (canon_dirlen = strlen (canon_dir); canon_dirlen > 0; canon_dirlen--)
     if (IS_DIR_SEPARATOR (canon_dir[canon_dirlen - 1]))
@@ -11148,6 +11152,7 @@ load_separate_debug_info (const char *            main_filename,
     {
       warn (_("Out of memory"));
       free (canon_dir);
+      free (canon_filename);
       return NULL;
     }
 
@@ -11266,10 +11271,21 @@ load_separate_debug_info (const char *            main_filename,
 
   free (canon_dir);
   free (debug_filename);
+  free (canon_filename);
   return NULL;
 
  found:
   free (canon_dir);
+
+  canon_debug_filename = lrealpath (debug_filename);
+  self = strcmp (canon_debug_filename, canon_filename) == 0;
+  free (canon_filename);
+  free (canon_debug_filename);
+  if (self)
+    {
+      free (debug_filename);
+      return NULL;
+    }
 
   void * debug_handle;
 
