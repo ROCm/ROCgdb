@@ -1,5 +1,6 @@
 /* Multi-process/thread control defs for GDB, the GNU debugger.
    Copyright (C) 1987-2021 Free Software Foundation, Inc.
+   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
    Contributed by Lynx Real-Time Systems, Inc.  Los Gatos, CA.
    
 
