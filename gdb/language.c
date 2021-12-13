@@ -1,6 +1,7 @@
 /* Multiple source language support for GDB.
 
    Copyright (C) 1991-2021 Free Software Foundation, Inc.
+   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by the Department of Computer Science at the State University
    of New York at Buffalo.
