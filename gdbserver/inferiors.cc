@@ -41,7 +41,7 @@ add_thread (ptid_t thread_id, void *target_data)
   all_threads.push_back (new_thread);
 
   if (current_thread == NULL)
-    current_thread = new_thread;
+    switch_to_thread (new_thread);
 
   return new_thread;
 }
@@ -99,7 +99,7 @@ remove_thread (struct thread_info *thread)
   discard_queued_stop_replies (ptid_of (thread));
   all_threads.remove (thread);
   if (current_thread == thread)
-    current_thread = NULL;
+    switch_to_thread (nullptr);
   free_one_thread (thread);
 }
 
@@ -129,7 +129,7 @@ clear_inferiors (void)
 
   clear_dlls ();
 
-  current_thread = NULL;
+  switch_to_thread (nullptr);
 }
 
 struct process_info *
@@ -215,7 +215,15 @@ void
 switch_to_thread (process_stratum_target *ops, ptid_t ptid)
 {
   gdb_assert (ptid != minus_one_ptid);
-  current_thread = find_thread_ptid (ptid);
+  switch_to_thread (find_thread_ptid (ptid));
+}
+
+/* See gdbthread.h.  */
+
+void
+switch_to_thread (thread_info *thread)
+{
+  current_thread = thread;
 }
 
 /* See inferiors.h.  */
@@ -225,7 +233,7 @@ switch_to_process (process_info *proc)
 {
   int pid = pid_of (proc);
 
-  current_thread = find_any_thread_of_pid (pid);
+  switch_to_thread (find_any_thread_of_pid (pid));
 }
 
 /* See gdbsupport/common-inferior.h.  */
@@ -242,4 +250,17 @@ void
 set_inferior_cwd (std::string cwd)
 {
   current_inferior_cwd = std::move (cwd);
+}
+
+scoped_restore_current_thread::scoped_restore_current_thread ()
+{
+  m_thread = current_thread;
+}
+
+scoped_restore_current_thread::~scoped_restore_current_thread ()
+{
+  if (m_dont_restore)
+    return;
+
+  switch_to_thread (m_thread);
 }

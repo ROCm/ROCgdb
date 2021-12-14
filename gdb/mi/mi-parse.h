@@ -49,7 +49,7 @@ struct mi_parse
     enum mi_command_type op;
     char *command;
     char *token;
-    const struct mi_cmd *cmd;
+    const struct mi_command *cmd;
     struct mi_timestamp *cmd_start;
     char *args;
     char **argv;
@@ -78,5 +78,9 @@ extern std::unique_ptr<struct mi_parse> mi_parse (const char *cmd,
 /* Parse a string argument into a print_values value.  */
 
 enum print_values mi_parse_print_values (const char *name);
+
+/* Split ARGS into argc/argv and store the result in PARSE.  */
+
+extern void mi_parse_argv (const char *args, struct mi_parse *parse);
 
 #endif /* MI_MI_PARSE_H */

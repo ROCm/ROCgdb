@@ -90,8 +90,6 @@ int mi_proceeded;
 
 static void mi_cmd_execute (struct mi_parse *parse);
 
-static void mi_execute_cli_command (const char *cmd, int args_p,
-				    const char *args);
 static void mi_execute_async_cli_command (const char *cli_command,
 					  char **argv, int argc);
 static bool register_changed_p (int regnum, readonly_detached_regcache *,
@@ -408,7 +406,7 @@ run_one_inferior (inferior *inf, bool start_p)
 {
   const char *run_cmd = start_p ? "start" : "run";
   struct target_ops *run_target = find_run_target ();
-  int async_p = mi_async && target_can_async_p (run_target);
+  bool async_p = mi_async && target_can_async_p (run_target);
 
   if (inf->pid != 0)
     {
@@ -473,7 +471,7 @@ mi_cmd_exec_run (const char *command, char **argv, int argc)
     {
       const char *run_cmd = start_p ? "start" : "run";
       struct target_ops *run_target = find_run_target ();
-      int async_p = mi_async && target_can_async_p (run_target);
+      bool async_p = mi_async && target_can_async_p (run_target);
 
       mi_execute_cli_command (run_cmd, async_p,
 			      async_p ? "&" : NULL);
@@ -1936,11 +1934,6 @@ mi_execute_command (const char *cmd, int from_tty)
     {
       ptid_t previous_ptid = inferior_ptid;
 
-      gdb::optional<scoped_restore_tmpl<int>> restore_suppress;
-
-      if (command->cmd != NULL && command->cmd->suppress_notification != NULL)
-	restore_suppress.emplace (command->cmd->suppress_notification, 1);
-
       command->token = token;
 
       if (do_timings)
@@ -2079,48 +2072,28 @@ mi_cmd_execute (struct mi_parse *parse)
 
   current_context = parse;
 
-  if (parse->cmd->argv_func != NULL)
-    {
-      parse->cmd->argv_func (parse->command, parse->argv, parse->argc);
-    }
-  else if (parse->cmd->cli.cmd != 0)
-    {
-      /* FIXME: DELETE THIS. */
-      /* The operation is still implemented by a cli command.  */
-      /* Must be a synchronous one.  */
-      mi_execute_cli_command (parse->cmd->cli.cmd, parse->cmd->cli.args_p,
-			      parse->args);
-    }
-  else
-    {
-      /* FIXME: DELETE THIS.  */
-      string_file stb;
-
-      stb.puts ("Undefined mi command: ");
-      stb.putstr (parse->command, '"');
-      stb.puts (" (missing implementation)");
-
-      error_stream (stb);
-    }
+  gdb_assert (parse->cmd != nullptr);
+  parse->cmd->invoke (parse);
 }
 
-/* FIXME: This is just a hack so we can get some extra commands going.
-   We don't want to channel things through the CLI, but call libgdb directly.
-   Use only for synchronous commands.  */
+/* See mi-main.h.  */
 
 void
-mi_execute_cli_command (const char *cmd, int args_p, const char *args)
+mi_execute_cli_command (const char *cmd, bool args_p, const char *args)
 {
-  if (cmd != 0)
+  if (cmd != nullptr)
     {
-      std::string run = cmd;
+      std::string run (cmd);
 
       if (args_p)
 	run = run + " " + args;
+      else
+	gdb_assert (args == nullptr);
+
       if (mi_debug_p)
-	/* FIXME: gdb_???? */
 	fprintf_unfiltered (gdb_stdout, "cli=%s run=%s\n",
 			    cmd, run.c_str ());
+
       execute_command (run.c_str (), 0 /* from_tty */ );
     }
 }
