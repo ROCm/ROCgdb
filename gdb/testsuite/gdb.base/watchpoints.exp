@@ -18,6 +18,10 @@
 
 standard_testfile
 
+if {[skip_watchpoint_tests]} {
+    return
+}
+
 set wp_set 1
 
 if [get_compiler_info] {

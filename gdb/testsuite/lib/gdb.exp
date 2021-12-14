@@ -3710,6 +3710,21 @@ proc skip_inline_var_tests {} {
     return 0
 }
 
+# Return 1 if we should skip tests that involve watchpoints, either
+# software or hardware.
+
+proc skip_watchpoint_tests {} {
+    if [istarget "amdgcn-amd-amdhsa"] {
+	# Until the compiler emits proper DWARF for variables.
+	# Otherwise, we'd run into very long timeout sequences,
+	# particularly on tests that use software watchpoints.
+	untested "Skipping watchpoint tests because of missing proper compiler support"
+	return 1
+    }
+
+    return 0
+}
+
 # Return a 1 if we should skip tests that require hardware breakpoints
 
 proc skip_hw_breakpoint_tests {} {
