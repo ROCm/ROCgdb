@@ -20,6 +20,10 @@
 # The goal is not to test gdb functionality, which is done by other
 # tests, but to verify the correct output response to MI operations.
 
+if {[skip_watchpoint_tests]} {
+    return
+}
+
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 

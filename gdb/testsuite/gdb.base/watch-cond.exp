@@ -19,6 +19,10 @@
 
 standard_testfile .c
 
+if {[skip_watchpoint_tests]} {
+    return
+}
+
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
     return -1
 }

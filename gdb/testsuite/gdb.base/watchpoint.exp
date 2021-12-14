@@ -19,6 +19,10 @@
 
 standard_testfile
 
+if {[skip_watchpoint_tests]} {
+    return
+}
+
 if [get_compiler_info] {
     return -1
 }
