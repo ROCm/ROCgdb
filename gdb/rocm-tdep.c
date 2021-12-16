@@ -1081,9 +1081,6 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 
   bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
 
-  /* A specific PTID means `step only this process id'.  */
-  gdb_assert (!many_threads || !step);
-
   if (!ptid_is_gpu (ptid) || many_threads)
     {
       beneath ()->resume (ptid, step, signo);
@@ -1134,11 +1131,19 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	continue;
 
       amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
-      amd_dbgapi_status_t status
-	= amd_dbgapi_wave_resume (wave_id,
-				  (step ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
-					: AMD_DBGAPI_RESUME_MODE_NORMAL),
-				  exception);
+      amd_dbgapi_status_t status;
+      if (thread->ptid == inferior_ptid)
+	status
+	  = amd_dbgapi_wave_resume (wave_id,
+				    (step
+				     ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
+				     : AMD_DBGAPI_RESUME_MODE_NORMAL),
+				    exception);
+      else
+	status
+	  = amd_dbgapi_wave_resume (wave_id, AMD_DBGAPI_RESUME_MODE_NORMAL,
+				    AMD_DBGAPI_EXCEPTION_NONE);
+
       if (status != AMD_DBGAPI_STATUS_SUCCESS
 	  /* Ignore the error that wave is no longer valid as that could
              indicate that the process has exited.  GDB treats resuming a
