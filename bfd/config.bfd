@@ -49,6 +49,7 @@ targ_underscore=no
 
 # Catch obsolete configurations.
 case $targ in
+ m32c-*-rtems* | \
  ns32k-*-netbsd* | \
  null)
     if test "x$enable_obsolete" != xyes; then
