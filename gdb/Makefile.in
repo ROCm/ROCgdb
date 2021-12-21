@@ -1077,7 +1077,6 @@ COMMON_SFILES = \
 	gdb_bfd.c \
 	gdb_obstack.c \
 	gdb_regex.c \
-	gdbarch.c \
 	gdbtypes.c \
 	gmp-utils.c \
 	gnu-v2-abi.c \
