@@ -448,8 +448,6 @@ extern void puts_unfiltered (const char *);
 
 extern void puts_filtered_tabular (char *string, int width, int right);
 
-extern void puts_debug (char *prefix, char *string, char *suffix);
-
 extern void vprintf_filtered (const char *, va_list) ATTRIBUTE_PRINTF (1, 0);
 
 extern void vfprintf_filtered (struct ui_file *, const char *, va_list)
@@ -470,11 +468,9 @@ extern void fprintf_unfiltered (struct ui_file *, const char *, ...)
 
 extern void printf_unfiltered (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
-extern void print_spaces (int, struct ui_file *);
-
 extern void print_spaces_filtered (int, struct ui_file *);
 
-extern char *n_spaces (int);
+extern const char *n_spaces (int);
 
 extern void fputstr_filtered (const char *str, int quotr,
 			      struct ui_file * stream);
