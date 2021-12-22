@@ -80,11 +80,434 @@ amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int dwarf_reg)
   return -1;
 }
 
+/* Up to 32 registers can be used for argument passing purposes.  */
+constexpr unsigned int AMDGCN_MAX_NUM_REGS_FOR_ARGS_RET = 32;
+
+/* See https://llvm.org/docs/AMDGPUUsage.html#register-identifier */
+constexpr unsigned int AMDGCN_VGPR0_WAVE32_REGNUM = 1536;
+constexpr unsigned int AMDGCN_VGPR0_WAVE64_REGNUM = 2560;
+
+/* VGPR registers are 32 bits wide.  */
+constexpr int AMDGCN_VGPR_LEN = 4;
+
+/* Return the register number of VGPR0 for the platform, which is the first
+   register in which function arguments and return values are passed.  */
+static int
+first_regnum_for_arg_or_return_value (gdbarch *gdbarch, ptid_t ptid)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  const amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (ptid);
+
+  size_t lanecount;
+  if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_LANE_COUNT,
+				sizeof (lanecount), &lanecount)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("Failed to fetch the number of lanes for current wave"));
+
+  const unsigned int dwarf_register_number = [lanecount]()
+    {
+      switch (lanecount)
+	{
+	case 32:
+	  return AMDGCN_VGPR0_WAVE32_REGNUM;
+	case 64:
+	   return AMDGCN_VGPR0_WAVE64_REGNUM;
+	default:
+	   error (_("Unsupported wave length"));
+	}
+    }();
+
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (amd_dbgapi_get_architecture
+      (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed"));
+
+  amd_dbgapi_register_id_t r;
+  if (amd_dbgapi_dwarf_register_to_register
+        (architecture_id, dwarf_register_number, &r)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_register_to_register failed"));
+
+  auto reg = tdep->regnum_map.find (r);
+  if (reg == tdep->regnum_map.end ())
+    error (_("Unknown DFARF register number"));
+
+  return reg->second;
+}
+
+namespace {
+
+/* Describe how an argument should be placed in registers for argument passing
+   or value return purposes.  */
+
+class amdgcn_arg_placement
+{
+public:
+
+  /* Map a portion of a value into a register.  */
+  struct part_placement
+  {
+    part_placement (int offset, int size, int regno, bool sign_extend)
+      : offset { offset }, size { size }, regno { regno }
+    , sign_extend { sign_extend }
+    {}
+
+    /* Offset (in bytes) from the start of the containing structure.  */
+    int offset;
+
+    /* Size (in bytes) of the part to map to the register.  */
+    int size;
+
+    /* Register number, relative to the first register for argument
+       passing (VGPR0).  Count starts at 0.  */
+    int regno;
+
+    /* If size is less than a register size (32 bits), indicate if the
+       most significant bits should be sign extended (if true) or
+       0 extended (if false).  */
+    bool sign_extend;
+  };
+
+  /* Compute how a value of type TYPE should be placed in registers,
+     assuming an unlimited number of registers.  If PACKED is true,
+     aggregates are treated as a block, otherwise they are decomposed
+     recursively into their elements.  */
+  amdgcn_arg_placement (struct type *type, bool packed)
+  {
+    alloc_for_type (check_typedef (type), 0, packed);
+  }
+
+  const std::vector<part_placement> &allocation () const
+  {
+    return m_allocation;
+  }
+
+protected:
+  /* List describing in which registers each part of a value should be
+     placed.  */
+  std::vector<part_placement> m_allocation;
+
+  /* Allocate the next available register.
+
+     It will contain data located at OFFSET bytes (from the beginning of the
+     top most encompassing aggregate) and occupying SIZE bytes.
+     If SIGN_EXTEND is true and SIZE is less than the size of the register,
+     the value should be sign-extended to fill the entire register.  If
+     SIGN_EXTEND is false and SIZE is less than the size of the register,
+     the value should be 0-extended.  If the size of the part equals the
+     size of a register, SIGN_EXTEND is ignored.  */
+  void alloc_reg_for_part (int offset, int size, bool sign_extend)
+  {
+    m_allocation.emplace_back (offset, size, m_allocation.size (),
+			       sign_extend);
+  }
+
+  /* Allocate registers for a value of type TYPE, which is placed at OFFSET
+     bytes from the start of the top most encompassing aggregate.  If PACKED,
+     aggregate values should not be decomposed into their members.  */
+  void alloc_for_type (struct type *type, int offset, bool packed);
+
+  /* Allocate registers for a struct type.  */
+  void alloc_for_struct (struct type *type, int offset);
+
+  /* Allocate registers for an array type.  */
+  void alloc_for_array (struct type *type, int offset);
+};
+
+void
+amdgcn_arg_placement::alloc_for_type (struct type *type, int offset,
+				      bool packed)
+{
+  type = check_typedef (type);
+  if (!packed)
+    switch (type->code ())
+      {
+      case TYPE_CODE_ARRAY:
+	alloc_for_array (type, offset);
+	return;
+      case TYPE_CODE_STRUCT:
+	alloc_for_struct (type, offset);
+	return;
+      }
+
+  const int typelen = TYPE_LENGTH (type);
+  /* Non-aggregate non packed type whose size is under 1 register might
+     have to be sign extended.  */
+  if (!packed && is_integral_type (type) && typelen < AMDGCN_VGPR_LEN)
+    {
+      /* For the purpose of calling convention, an enum is treated as its
+	 underlying type.  */
+      if (type->code () == TYPE_CODE_ENUM)
+	type = check_typedef (TYPE_TARGET_TYPE (type));
+
+      bool sign_extend = false;
+      if ((type->code () == TYPE_CODE_CHAR && !type->has_no_signedness ())
+	  || type->code () == TYPE_CODE_INT)
+	sign_extend = !type->is_unsigned ();
+
+      alloc_reg_for_part (offset, typelen, sign_extend);
+    }
+
+  /* Non aggregate or packed type.  */
+  else
+    {
+      int type_offset = 0;
+      while (type_offset < typelen)
+	{
+	  alloc_reg_for_part (offset + type_offset,
+			      std::min (AMDGCN_VGPR_LEN,
+					typelen - type_offset),
+			      false);
+	  type_offset += AMDGCN_VGPR_LEN;
+	}
+    }
+}
+
+void
+amdgcn_arg_placement::alloc_for_struct (struct type *type, int offset)
+{
+  /* We normally allocate registers for the members of the struct.  An empty
+     struct, or a struct only containing static fields, should still be
+     allocated 1 register even if it has no members.  For this purpose, keep
+     track of the presence of non static fields so we can adjust things at the
+     end if no allocatable members have been seen.  */
+  bool has_non_static_fields = false;
+
+  int field_num = 0;
+  while (field_num < type->num_fields ())
+    {
+      /* Allocation units (which contains bitfields) are packed.  */
+      if (TYPE_FIELD_PACKED (type, field_num))
+	{
+	  has_non_static_fields = true;
+	  /* The first element of the pack must be byte aligned.  */
+	  gdb_assert
+	    (TYPE_FIELD_BITPOS (type, field_num) % HOST_CHAR_BIT == 0);
+	  int bf_offset
+	    = TYPE_FIELD_BITPOS (type, field_num) / HOST_CHAR_BIT;
+
+	  int pack_end = field_num;
+	  int pack_size = 0;
+	  while (pack_end < type->num_fields ()
+		 && TYPE_FIELD_PACKED (type, pack_end))
+	    {
+	      pack_size += type->field (pack_end).bitsize;
+	      pack_end++;
+	    }
+
+	  /* From here on, the size is expressed in bytes.  */
+	  pack_size = (pack_size + (HOST_CHAR_BIT - 1)) / HOST_CHAR_BIT;
+
+	  /* Place the entire allocation unit packed in adjacent registers.  */
+	  while (pack_size > 0)
+	    {
+	      alloc_reg_for_part (offset + bf_offset,
+				  std::min (AMDGCN_VGPR_LEN, pack_size),
+				  false);
+	      bf_offset += std::min (AMDGCN_VGPR_LEN, pack_size);
+	      pack_size -= AMDGCN_VGPR_LEN;
+	    }
+
+	  field_num = pack_end;
+	}
+
+      else
+	{
+	  const field &field = type->field (field_num);
+	  struct type *field_type = check_typedef (field.type ());
+
+	  /* Ignore static fields.  */
+	  if (!field_is_static (&type->field (field_num)))
+	    {
+	      has_non_static_fields = true;
+	      gdb_assert (FIELD_BITPOS (field) % HOST_CHAR_BIT == 0);
+	      const int field_offset = FIELD_BITPOS (field) / HOST_CHAR_BIT;
+	      alloc_for_type (field_type, offset + field_offset, false);
+	    }
+	  field_num++;
+	}
+    }
+
+  if (!has_non_static_fields)
+    {
+      if (TYPE_LENGTH (type) != 1)
+	warning (_("Empty struct should have a length of 1 byte.  "
+		   "Assuming a size of 1 for ABI purposes."));
+
+      alloc_reg_for_part (offset, 1, false);
+    }
+}
+
+void
+amdgcn_arg_placement::alloc_for_array (struct type *type, int offset)
+{
+  const int typelen = TYPE_LENGTH (type);
+  if (type->is_vector () && typelen <= 2)
+    alloc_reg_for_part (offset, 2, false);
+  else
+    {
+      /* Check how one element of the array is mapped to registers.  */
+      const amdgcn_arg_placement elem_placement (TYPE_TARGET_TYPE (type),
+						 false);
+
+      /* Repeat the same mapping pattern for each element of the array.  */
+      const int element_type_length = TYPE_LENGTH (TYPE_TARGET_TYPE (type));
+      const unsigned element_align = type_align (TYPE_TARGET_TYPE (type));
+      const int padding
+	= ((element_align - (element_type_length % element_align))
+	   % element_align);
+
+      int array_offset = 0;
+      while (array_offset < typelen)
+	{
+	  for (const auto & part_allocation : elem_placement.allocation ())
+	    alloc_reg_for_part (offset + array_offset + part_allocation.offset,
+				part_allocation.size,
+				part_allocation.sign_extend);
+
+	  array_offset += element_type_length + padding;
+	}
+    }
+}
+
+} // anonymous namespace
+
+/* Checks if the type TYPE contains a flexible array member.  */
+
+static bool
+has_flexible_array_member (type *type)
+{
+  type = check_typedef (type);
+  if (type->code () != TYPE_CODE_STRUCT)
+    return false;
+
+  /* A struct with a flexible array must have at least one other named field.
+   */
+  if (type->num_fields () < 2)
+    return false;
+
+  /* A flexible array member, if present, has to be the last element of the
+     record.  */
+  const field &last_member = type->field (type->num_fields () - 1);
+  struct type *last_member_type = check_typedef (last_member.type ());
+  if (last_member_type->code () != TYPE_CODE_ARRAY)
+    return false;
+
+  /* For a flexible array, we have a default lower bound set to 0, and an
+     unknown upper bound (i.e. missing upper bound).  */
+  return
+    last_member_type->index_type ()->bounds ()->high.kind () == PROP_UNDEFINED;
+}
+
+/* Helper function for amdgcn_return_value.  */
+
+static void
+amdgcn_return_value_load_store (gdbarch *gdbarch, regcache *regcache,
+				const amdgcn_arg_placement &alloc,
+				gdb_byte *readbuf, const gdb_byte *writebuf)
+{
+  gdb_assert (regcache != nullptr);
+
+  const int base_regno
+    = first_regnum_for_arg_or_return_value (gdbarch, regcache->ptid ());
+  const int lanenumber
+    = find_thread_ptid (current_inferior (),
+			regcache->ptid ())->current_simd_lane ();
+
+  for (const auto &piece : alloc.allocation ())
+    {
+      if (piece.size == 0)
+	continue;
+
+      if (readbuf != nullptr)
+	regcache->raw_read_part
+	  (base_regno + piece.regno, lanenumber * AMDGCN_VGPR_LEN,
+	   piece.size, readbuf + piece.offset);
+
+      if (writebuf != nullptr)
+	{
+	  gdb_byte regval[AMDGCN_VGPR_LEN] = {0x0, 0x0, 0x0, 0x0};
+
+	  int i = 0;
+	  for (; i < piece.size; ++i)
+	    regval[i] = writebuf[piece.offset + i];
+	  if (piece.sign_extend && writebuf[piece.offset + i - 1] & 0x80)
+	    for (; i < AMDGCN_VGPR_LEN; ++i)
+	      regval[i] = 0xff;
+
+	  regcache->raw_write_part
+	    (base_regno + piece.regno, lanenumber * AMDGCN_VGPR_LEN,
+	     AMDGCN_VGPR_LEN, regval);
+	}
+    }
+}
+
+/* Handle return values from AMDGCN.
+
+   Based on the de facto ABI hipcc uses.  This is described in LLVM
+   clang/lib/CodeGen/TargetInfo.cpp in the following method:
+   - ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const
+
+   Partial description of the calling convention is available at [1].
+
+   [1] https://llvm.org/docs/AMDGPUUsage.html#non-kernel-functions
+*/
 static enum return_value_convention
 amdgcn_return_value (struct gdbarch *gdbarch, struct value *function,
 		     struct type *type, struct regcache *regcache,
 		     gdb_byte *readbuf, const gdb_byte *writebuf)
 {
+  type = check_typedef (type);
+
+  /* Non-trivial objects are not returned by value.  */
+  if (!language_pass_by_reference (type).trivially_copyable)
+    return RETURN_VALUE_STRUCT_CONVENTION;
+
+  /* Struct with flexible array are never returned by value.  */
+  if (has_flexible_array_member (type))
+    return RETURN_VALUE_STRUCT_CONVENTION;
+
+  /* Nothing particular to do for empty strucs.  We still use
+     RETURN_VALUE_REGISTER_CONVENTION so GDB can display the (empty) value.  */
+  if (type->code () == TYPE_CODE_STRUCT)
+    {
+      bool has_non_static_fields = false;
+      for (int i = 0; i < type->num_fields (); ++i)
+	has_non_static_fields
+	  = has_non_static_fields || !field_is_static (&type->field (i));
+
+      if (!has_non_static_fields)
+	return RETURN_VALUE_REGISTER_CONVENTION;
+    }
+
+  /* Types of size under 8 bytes are returned packed in v0-1.  */
+  if (TYPE_LENGTH (type) <= 2 * AMDGCN_VGPR_LEN)
+    {
+      if (regcache != nullptr)
+	{
+	  /* Pack aggregates, but not scalar types so sign extension can be
+	     done if necessary.  */
+	  const bool pack = (type->code () == TYPE_CODE_STRUCT
+			     ||type->code () == TYPE_CODE_ARRAY);
+	  const amdgcn_arg_placement alloc (type, pack);
+
+	  amdgcn_return_value_load_store (gdbarch, regcache,
+					  alloc, readbuf, writebuf);
+	}
+      return RETURN_VALUE_REGISTER_CONVENTION;
+    }
+
+  const amdgcn_arg_placement alloc (type, false);
+  if (alloc.allocation ().size () <= AMDGCN_MAX_NUM_REGS_FOR_ARGS_RET)
+    {
+      if (regcache != nullptr)
+	amdgcn_return_value_load_store (gdbarch, regcache, alloc,
+					readbuf, writebuf);
+      return RETURN_VALUE_REGISTER_CONVENTION;
+    }
+
+  /* The value is passed in a way GDB cannot handle.  Ignoring it.  */
   return RETURN_VALUE_STRUCT_CONVENTION;
 }
 
