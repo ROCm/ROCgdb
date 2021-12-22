@@ -1790,7 +1790,7 @@ gdbarch_software_single_step routine, and true otherwise.
 """,
     type="bool",
     name="displaced_step_hw_singlestep",
-    params=(),
+    params=[],
     predefault="default_displaced_step_hw_singlestep",
     invalid=False,
 )
@@ -1992,7 +1992,7 @@ Return a type suitable to inspect extra signal information.
 """,
     type="struct type *",
     name="get_siginfo_type",
-    params=(),
+    params=[],
     predicate=True,
     invalid=True,
 )
@@ -2338,7 +2338,7 @@ True if inferiors share an address space (e.g., uClinux).
 """,
     type="int",
     name="has_shared_address_space",
-    params=(),
+    params=[],
     predefault="default_has_shared_address_space",
     invalid=False,
 )
@@ -2374,7 +2374,7 @@ Return the "auto" target charset.
 """,
     type="const char *",
     name="auto_charset",
-    params=(),
+    params=[],
     predefault="default_auto_charset",
     invalid=False,
 )
@@ -2385,7 +2385,7 @@ Return the "auto" target wide charset.
 """,
     type="const char *",
     name="auto_wide_charset",
-    params=(),
+    params=[],
     predefault="default_auto_wide_charset",
     invalid=False,
 )
@@ -2622,7 +2622,7 @@ they can override it.
 """,
     type="std::string",
     name="gcc_target_options",
-    params=(),
+    params=[],
     predefault="default_gcc_target_options",
     invalid=False,
 )
@@ -2637,7 +2637,7 @@ case.
 """,
     type="const char *",
     name="gnu_triplet_regexp",
-    params=(),
+    params=[],
     predefault="default_gnu_triplet_regexp",
     invalid=False,
 )
@@ -2650,7 +2650,7 @@ each address in memory.
 """,
     type="int",
     name="addressable_memory_unit_size",
-    params=(),
+    params=[],
     predefault="default_addressable_memory_unit_size",
     invalid=False,
 )
