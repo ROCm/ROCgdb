@@ -40,6 +40,16 @@ struct symtab;
 struct inferior;
 struct process_stratum_target;
 
+/* When true, print debug messages related to GDB thread creation and
+   deletion.  */
+
+extern bool debug_threads;
+
+/* Print a "threads" debug statement.  */
+
+#define threads_debug_printf(fmt, ...) \
+  debug_prefixed_printf_cond (debug_threads, "threads", fmt, ##__VA_ARGS__)
+
 /* Frontend view of the thread state.  Possible extensions: stepping,
    finishing, until(ling),...
 
@@ -237,6 +247,7 @@ class thread_info : public refcounted_object,
 {
 public:
   explicit thread_info (inferior *inf, ptid_t ptid);
+  ~thread_info ();
 
   bool deletable () const;
 
