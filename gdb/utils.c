@@ -781,14 +781,6 @@ uinteger_pow (ULONGEST v1, LONGEST v2)
     }
 }
 
-/* Print a host address.  */
-
-void
-gdb_print_host_address_1 (const void *addr, struct ui_file *stream)
-{
-  fprintf_filtered (stream, "%s", host_address_to_string (addr));
-}
-
 
 
 /* An RAII class that sets up to handle input and then tears down
@@ -3049,34 +3041,6 @@ gdb_argv::reset (const char *s)
 
   freeargv (m_argv);
   m_argv = argv;
-}
-
-#define AMBIGUOUS_MESS1	".\nMatching formats:"
-#define AMBIGUOUS_MESS2	\
-  ".\nUse \"set gnutarget format-name\" to specify the format."
-
-std::string
-gdb_bfd_errmsg (bfd_error_type error_tag, char **matching)
-{
-  char **p;
-
-  /* Check if errmsg just need simple return.  */
-  if (error_tag != bfd_error_file_ambiguously_recognized || matching == NULL)
-    return bfd_errmsg (error_tag);
-
-  std::string ret (bfd_errmsg (error_tag));
-  ret += AMBIGUOUS_MESS1;
-
-  for (p = matching; *p; p++)
-    {
-      ret += " ";
-      ret += *p;
-    }
-  ret += AMBIGUOUS_MESS2;
-
-  xfree (matching);
-
-  return ret;
 }
 
 /* Return ARGS parsed as a valid pid, or throw an error.  */

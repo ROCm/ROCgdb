@@ -110,13 +110,6 @@ compare_cstrings (const char *str1, const char *str2)
   return strcmp (str1, str2) < 0;
 }
 
-/* A wrapper for bfd_errmsg to produce a more helpful error message
-   in the case of bfd_error_file_ambiguously recognized.
-   MATCHING, if non-NULL, is the corresponding argument to
-   bfd_check_format_matches, and will be freed.  */
-
-extern std::string gdb_bfd_errmsg (bfd_error_type error_tag, char **matching);
-
 /* Reset the prompt_for_continue clock.  */
 void reset_prompt_for_continue_wait_time (void);
 /* Return the time spent in prompt_for_continue.  */
@@ -535,13 +528,6 @@ extern void fputs_highlighted (const char *str, const compiled_regex &highlight,
 /* Reset the terminal style to the default, if needed.  */
 
 extern void reset_terminal_style (struct ui_file *stream);
-
-/* Display the host ADDR on STREAM formatted as ``0x%x''.  */
-extern void gdb_print_host_address_1 (const void *addr, struct ui_file *stream);
-
-/* Wrapper that avoids adding a pointless cast to all callers.  */
-#define gdb_print_host_address(ADDR, STREAM) \
-  gdb_print_host_address_1 ((const void *) ADDR, STREAM)
 
 /* Return the address only having significant bits.  */
 extern CORE_ADDR address_significant (gdbarch *gdbarch, CORE_ADDR addr);
