@@ -376,18 +376,18 @@ show_endian (struct ui_file *file, int from_tty, struct cmd_list_element *c,
 {
   if (target_byte_order_user == BFD_ENDIAN_UNKNOWN)
     if (gdbarch_byte_order (get_current_arch ()) == BFD_ENDIAN_BIG)
-      fprintf_unfiltered (file, _("The target endianness is set automatically "
-				  "(currently big endian).\n"));
+      fprintf_filtered (file, _("The target endianness is set automatically "
+				"(currently big endian).\n"));
     else
-      fprintf_unfiltered (file, _("The target endianness is set automatically "
-				  "(currently little endian).\n"));
+      fprintf_filtered (file, _("The target endianness is set automatically "
+				"(currently little endian).\n"));
   else
     if (target_byte_order_user == BFD_ENDIAN_BIG)
-      fprintf_unfiltered (file,
-			  _("The target is set to big endian.\n"));
+      fprintf_filtered (file,
+			_("The target is set to big endian.\n"));
     else
-      fprintf_unfiltered (file,
-			  _("The target is set to little endian.\n"));
+      fprintf_filtered (file,
+			_("The target is set to little endian.\n"));
 }
 
 static void
@@ -406,7 +406,8 @@ set_endian (const char *ignore_args, int from_tty, struct cmd_list_element *c)
     {
       info.byte_order = BFD_ENDIAN_LITTLE;
       if (! gdbarch_update_p (info))
-	printf_unfiltered (_("Little endian target not supported by GDB\n"));
+	fprintf_unfiltered (gdb_stderr,
+			    _("Little endian target not supported by GDB\n"));
       else
 	target_byte_order_user = BFD_ENDIAN_LITTLE;
     }
@@ -414,7 +415,8 @@ set_endian (const char *ignore_args, int from_tty, struct cmd_list_element *c)
     {
       info.byte_order = BFD_ENDIAN_BIG;
       if (! gdbarch_update_p (info))
-	printf_unfiltered (_("Big endian target not supported by GDB\n"));
+	fprintf_unfiltered (gdb_stderr,
+			    _("Big endian target not supported by GDB\n"));
       else
 	target_byte_order_user = BFD_ENDIAN_BIG;
     }
@@ -568,8 +570,9 @@ set_architecture (const char *ignore_args,
       if (gdbarch_update_p (info))
 	target_architecture_user = info.bfd_arch_info;
       else
-	printf_unfiltered (_("Architecture `%s' not recognized.\n"),
-			   set_architecture_string);
+	fprintf_unfiltered (gdb_stderr,
+			    _("Architecture `%s' not recognized.\n"),
+			    set_architecture_string);
     }
   show_architecture (gdb_stdout, from_tty, NULL, NULL);
 }
