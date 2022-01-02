@@ -1,7 +1,7 @@
 /* Wrapper translation unit for testing against AMDGCN devices, using HIP.
 
    Copyright (C) 2021 Free Software Foundation, Inc.
-   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 

@@ -1,7 +1,7 @@
 /* Frame unwinder for frames with DWARF Call Frame Information.
 
    Copyright (C) 2003-2022 Free Software Foundation, Inc.
-   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Mark Kettenis.
 

@@ -1,7 +1,7 @@
 /* Interface between GDB and target environments, including files and processes
 
    Copyright (C) 1990-2022 Free Software Foundation, Inc.
-   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.  Written by John Gilmore.
 

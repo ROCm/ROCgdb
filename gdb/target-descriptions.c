@@ -1,7 +1,7 @@
 /* Target description support for GDB.
 
    Copyright (C) 2006-2022 Free Software Foundation, Inc.
-   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by CodeSourcery.
 
