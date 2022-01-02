@@ -1,7 +1,7 @@
 /* Target-dependent code for the MIPS architecture, for GDB, the GNU Debugger.
 
    Copyright (C) 1988-2022 Free Software Foundation, Inc.
-   Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Alessandro Forin(af@cs.cmu.edu) at CMU
    and by Per Bothner(bothner@cs.wisc.edu) at U.Wisconsin.

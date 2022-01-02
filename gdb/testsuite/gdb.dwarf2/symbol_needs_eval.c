@@ -1,7 +1,7 @@
 /* This testcase is part of GDB, the GNU debugger.
 
    Copyright 2017-2022 Free Software Foundation, Inc.
-   Copyright (C) 2020-2021 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
