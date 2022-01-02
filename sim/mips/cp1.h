@@ -1,6 +1,6 @@
 /*> cp1.h <*/
 /* MIPS Simulator FPU (CoProcessor 1) definitions.
-   Copyright (C) 1997-2021 Free Software Foundation, Inc.
+   Copyright (C) 1997-2022 Free Software Foundation, Inc.
    Derived from sim-main.h contributed by Cygnus Solutions,
    modified substantially by Ed Satterthwaite of Broadcom Corporation
    (SiByte).
@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef CP1_H
 #define CP1_H
 
-/* See sim-main.h for allocation of registers FCR0 and FCR31 (FCSR) 
+/* See sim-main.h for allocation of registers FCR0 and FCR31 (FCSR)
    in CPU state (struct sim_cpu), and for FPU functions.  */
 
 #define fcsr_FCC_mask      (0xFE800000)

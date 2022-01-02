@@ -1,6 +1,6 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2021 Free Software Foundation, Inc.
+   Copyright (C) 1998-2022 Free Software Foundation, Inc.
    Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.

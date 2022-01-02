@@ -1,7 +1,7 @@
 // -*- C -*-
 
 // Simulator definition for the MIPS DSP REV 2 ASE.
-// Copyright (C) 2007-2021 Free Software Foundation, Inc.
+// Copyright (C) 2007-2022 Free Software Foundation, Inc.
 // Contributed by MIPS Technologies, Inc.
 // Written by Chao-ying Fu (fu@mips.com).
 //
@@ -151,7 +151,7 @@
   signed64 prod;
   unsigned32 result;
   w1 = (signed32) v1;
-  w2 = (signed32 )v2;
+  w2 = (signed32) v2;
   if (w1 == (signed32) 0x80000000 && w2 == (signed32) 0x80000000)
     {
       DSPCR |= DSPCR_OUFLAG5;
