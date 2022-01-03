@@ -1,5 +1,5 @@
 /* Generic target-file-type support for the BFD library.
-   Copyright (C) 1990-2021 Free Software Foundation, Inc.
+   Copyright (C) 1990-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
    Written by Cygnus Support.
 

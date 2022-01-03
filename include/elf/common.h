@@ -1,5 +1,5 @@
 /* ELF support for BFD.
-   Copyright (C) 1991-2021 Free Software Foundation, Inc.
+   Copyright (C) 1991-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Written by Fred Fish @ Cygnus Support, from information published

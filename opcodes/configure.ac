@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-dnl   Copyright (C) 2012-2021 Free Software Foundation, Inc.
+dnl   Copyright (C) 2012-2022 Free Software Foundation, Inc.
 dnl   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 dnl
 dnl This file is free software; you can redistribute it and/or modify
