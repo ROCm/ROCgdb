@@ -304,27 +304,26 @@ struct rocm_code_object_stream_memory final : public rocm_code_object_stream
 {
   DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream_memory);
 
-  rocm_code_object_stream_memory (ULONGEST offset, ULONGEST size);
+  rocm_code_object_stream_memory (gdb::byte_vector &&buffer);
 
   file_ptr read (void *buf, file_ptr size, file_ptr offset) override;
 
 protected:
 
-  /* The offset of the ELF file image in the target memory.  */
-  ULONGEST m_offset;
-
-  /* The size of the ELF file image in target memory.  */
-  ULONGEST m_size;
+  /* Snapshot of the original ELF image taken during load.  This is done to
+     support the situation where an inferior uses an in-memory image, and
+     releases or re-uses this memory before GDB is done using it.  */
+  gdb::byte_vector m_objfile_image;
 
   LONGEST size () override
   {
-    return m_size;
+    return m_objfile_image.size ();
   }
 };
 
 rocm_code_object_stream_memory::rocm_code_object_stream_memory
-  (ULONGEST offset, ULONGEST size)
-     : m_offset { offset }, m_size { size }
+  (gdb::byte_vector &&buffer)
+     : m_objfile_image { std::move (buffer) }
 {
 }
 
@@ -332,12 +331,10 @@ file_ptr
 rocm_code_object_stream_memory::read (void *buf, file_ptr size,
 				      file_ptr offset)
 {
-  if (target_read_memory (m_offset + offset, (gdb_byte *) buf, size)
-      != 0)
-    {
-      bfd_set_error (bfd_error_invalid_operation);
-      return -1;
-    }
+  if (size > m_objfile_image.size () - offset)
+    size = m_objfile_image.size () - offset;
+
+  memcpy (buf, m_objfile_image.data () + offset, size);
   return size;
 }
 
@@ -445,7 +442,15 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 	      return nullptr;
 	    }
 
-	  return new rocm_code_object_stream_memory (offset, size);
+	  gdb::byte_vector buffer (size);
+	  if (target_read_memory (offset, buffer.data (), size) != 0)
+	    {
+	      warning (_("Failed to copy the code object from the inferior"));
+	      bfd_set_error (bfd_error_bad_value);
+	      return nullptr;
+	    }
+
+	  return new rocm_code_object_stream_memory (std::move (buffer));
 	}
     }
   catch (...)
