@@ -12216,7 +12216,10 @@ ordinary_breakpoint::print_it (const bpstat *bs) const
 	  else
 	    uiout->text ("with lane ");
 
-	  uiout->text (make_ranges_from_sorted_vector (hit_lanes).c_str ());
+	  std::string lanes
+	    = make_ranges_from_sorted_vector (hit_lanes,
+					      !current_uiout->is_mi_like_p ());
+	  uiout->field_string ("hit-lanes", lanes.c_str ());
 	  uiout->text (", ");
 	}
     }

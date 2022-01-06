@@ -427,6 +427,8 @@ mi_interp::on_normal_stop (struct bpstat *bs, int print_frame)
 	print_stop_event (this->cli_uiout);
 
       mi_uiout->field_signed ("thread-id", tp->global_num);
+      if (tp->has_simd_lanes ())
+	mi_uiout->field_signed ("lane-id", tp->current_simd_lane ());
       if (non_stop)
 	{
 	  ui_out_emit_list list_emitter (mi_uiout, "stopped-threads");
