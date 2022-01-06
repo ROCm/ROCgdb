@@ -1,6 +1,7 @@
 /* MI Command Set - MI parser.
 
    Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -220,6 +221,7 @@ mi_parse::mi_parse ()
     all (0),
     thread_group (-1),
     thread (-1),
+    lane (-1),
     frame (-1),
     language (language_unknown)
 {
@@ -294,8 +296,9 @@ mi_parse (const char *cmd, char **token)
       size_t as = sizeof ("--all ") - 1;
       size_t tgs = sizeof ("--thread-group ") - 1;
       size_t ts = sizeof ("--thread ") - 1;
+      size_t lane_s = sizeof ("--lane ") - 1;
       size_t fs = sizeof ("--frame ") - 1;
-      size_t ls = sizeof ("--language ") - 1;
+      size_t lang_s = sizeof ("--language ") - 1;
 
       if (strncmp (chp, "--all ", as) == 0)
 	{
@@ -333,6 +336,17 @@ mi_parse (const char *cmd, char **token)
 	  parse->thread = strtol (chp, &endp, 10);
 	  chp = endp;
 	}
+      else if (strncmp (chp, "--lane ", lane_s) == 0)
+	{
+	  char *endp;
+
+	  option = "--lane";
+	  if (parse->lane != -1)
+	    error (_("Duplicate '--lane' option"));
+	  chp += lane_s;
+	  parse->lane = strtol (chp, &endp, 10);
+	  chp = endp;
+	}
       else if (strncmp (chp, "--frame ", fs) == 0)
 	{
 	  char *endp;
@@ -344,10 +358,10 @@ mi_parse (const char *cmd, char **token)
 	  parse->frame = strtol (chp, &endp, 10);
 	  chp = endp;
 	}
-      else if (strncmp (chp, "--language ", ls) == 0)
+      else if (strncmp (chp, "--language ", lang_s) == 0)
 	{
 	  option = "--language";
-	  chp += ls;
+	  chp += lang_s;
 	  std::string lang_name = extract_arg (&chp);
 
 	  parse->language = language_enum (lang_name.c_str ());

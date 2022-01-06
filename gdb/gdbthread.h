@@ -726,6 +726,9 @@ extern void switch_to_no_thread ();
 /* Switch from one thread to another.  Does not read registers.  */
 extern void switch_to_thread_no_regs (struct thread_info *thread);
 
+/* Switch current thread to lane LANE.  */
+extern void switch_to_lane (int lane);
+
 /* Marks or clears thread(s) PTID of TARG as resumed.  If PTID is
    MINUS_ONE_PTID, applies to all threads of TARG.  If
    ptid_is_pid(PTID) is true, applies to all threads of the process

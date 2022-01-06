@@ -2461,6 +2461,22 @@ warn_if_current_lane_is_inactive ()
     warning (_("Current lane is inactive."));
 }
 
+/* See gdbthread.h.  */
+
+void
+switch_to_lane (int lane)
+{
+  thread_info *tp = inferior_thread ();
+  gdbarch *arch = target_thread_architecture (tp->ptid);
+  int lane_count = gdbarch_supported_lanes_count (arch, tp);
+  if (lane < 0 || lane >= lane_count)
+    error (_("Lane %d does not exist on this thread."), lane);
+
+  tp->set_current_simd_lane (lane);
+
+  select_frame (get_current_frame ());
+}
+
 /* Switch to the specified lane, or print the current lane.  */
 
 static void
@@ -2495,14 +2511,7 @@ lane_command (const char *tidstr, int from_tty)
     {
       int lane = parse_and_eval_long (tidstr);
 
-      gdbarch *arch = target_thread_architecture (tp->ptid);
-      int lane_count = gdbarch_supported_lanes_count (arch, tp);
-      if (lane < 0 || lane >= lane_count)
-	error (_("Lane %d does not exist on this thread."), lane);
-
-      tp->set_current_simd_lane (lane);
-
-      select_frame (get_current_frame ());
+      switch_to_lane (lane);
 
       gdb::observers::user_selected_context_changed.notify
 	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);

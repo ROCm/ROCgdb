@@ -1,5 +1,8 @@
 /* MI Command Set - MI Command Parser.
+
    Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
    Contributed by Cygnus Solutions (a Red Hat company).
 
    This file is part of GDB.
@@ -57,6 +60,7 @@ struct mi_parse
     int all;
     int thread_group; /* At present, the same as inferior number.  */
     int thread;
+    int lane;
     int frame;
 
     /* The language that should be used to evaluate the MI command.
