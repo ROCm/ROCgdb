@@ -2024,6 +2024,9 @@ mi_cmd_execute (struct mi_parse *parse)
   if (parse->all && parse->thread != -1)
     error (_("Cannot specify --thread together with --all"));
 
+  if (parse->all && parse->lane != -1)
+    error (_("Cannot specify --lane together with --all"));
+
   if (parse->thread_group != -1 && parse->thread != -1)
     error (_("Cannot specify --thread together with --thread-group"));
 
@@ -2070,6 +2073,18 @@ mi_cmd_execute (struct mi_parse *parse)
 	thread_saver.emplace ();
 
       switch_to_thread (tp);
+    }
+
+  std::optional<scoped_restore_current_simd_lane> lane_saver;
+  if (parse->lane != -1)
+    {
+      if (inferior_ptid == null_ptid)
+	error (_("No selected thread."));
+
+      if (parse->cmd->preserve_user_selected_context ())
+	lane_saver.emplace (inferior_thread ());
+
+      switch_to_lane (parse->lane);
     }
 
   std::optional<scoped_restore_selected_frame> frame_saver;

@@ -264,6 +264,16 @@ mi_parse::set_thread (const char *arg, char **endp)
 /* See mi-parse.h.  */
 
 void
+mi_parse::set_lane (const char *arg, char **endp)
+{
+  if (lane != -1)
+    error (_("Duplicate '--lane' option"));
+  lane = strtol (arg, endp, 10);
+}
+
+/* See mi-parse.h.  */
+
+void
 mi_parse::set_frame (const char *arg, char **endp)
 {
   if (frame != -1)
@@ -342,8 +352,9 @@ mi_parse::mi_parse (const char *cmd, std::string *token)
       size_t as = sizeof ("--all ") - 1;
       size_t tgs = sizeof ("--thread-group ") - 1;
       size_t ts = sizeof ("--thread ") - 1;
+      size_t lane_s = sizeof ("--lane ") - 1;
       size_t fs = sizeof ("--frame ") - 1;
-      size_t ls = sizeof ("--language ") - 1;
+      size_t lang_s = sizeof ("--language ") - 1;
 
       if (strncmp (chp, "--all ", as) == 0)
 	{
@@ -374,6 +385,15 @@ mi_parse::mi_parse (const char *cmd, std::string *token)
 	  this->set_thread (chp, &endp);
 	  chp = endp;
 	}
+      else if (strncmp (chp, "--lane ", lane_s) == 0)
+	{
+	  char *endp;
+
+	  option = "--lane";
+	  chp += lane_s;
+	  this->set_lane (chp, &endp);
+	  chp = endp;
+	}
       else if (strncmp (chp, "--frame ", fs) == 0)
 	{
 	  char *endp;
@@ -383,10 +403,10 @@ mi_parse::mi_parse (const char *cmd, std::string *token)
 	  this->set_frame (chp, &endp);
 	  chp = endp;
 	}
-      else if (strncmp (chp, "--language ", ls) == 0)
+      else if (strncmp (chp, "--language ", lang_s) == 0)
 	{
 	  option = "--language";
-	  chp += ls;
+	  chp += lang_s;
 	  this->set_language (chp, &chp);
 	}
       else
@@ -448,6 +468,13 @@ mi_parse::mi_parse (gdb::unique_xmalloc_ptr<char> command,
 	  if (i == args.size ())
 	    error ("No argument to '--thread'");
 	  this->set_thread (args[i].get (), nullptr);
+	}
+      else if (strcmp (chp, "--lane") == 0)
+	{
+	  ++i;
+	  if (i == args.size ())
+	    error ("No argument to '--lane'");
+	  this->set_lane (args[i].get (), nullptr);
 	}
       else if (strcmp (chp, "--frame") == 0)
 	{
