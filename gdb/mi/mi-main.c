@@ -1,6 +1,7 @@
 /* MI Command Set.
 
    Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -2011,6 +2012,9 @@ mi_cmd_execute (struct mi_parse *parse)
   if (parse->all && parse->thread != -1)
     error (_("Cannot specify --thread together with --all"));
 
+  if (parse->all && parse->lane != -1)
+    error (_("Cannot specify --lane together with --all"));
+
   if (parse->thread_group != -1 && parse->thread != -1)
     error (_("Cannot specify --thread together with --thread-group"));
 
@@ -2052,6 +2056,9 @@ mi_cmd_execute (struct mi_parse *parse)
 
       switch_to_thread (tp);
     }
+
+  if (parse->lane != -1)
+    switch_to_lane (parse->lane);
 
   if (parse->frame != -1)
     {
