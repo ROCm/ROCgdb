@@ -1,6 +1,6 @@
 /* Handle ROCm Code Objects for GDB, the GNU Debugger.
 
-   Copyright (C) 2019-2021 Free Software Foundation, Inc.
+   Copyright (C) 2019-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
