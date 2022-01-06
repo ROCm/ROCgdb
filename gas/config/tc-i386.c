@@ -4986,23 +4986,27 @@ md_assemble (char *line)
     return;
 
   if (sse_check != check_none
-      && !i.tm.opcode_modifier.noavx
-      && !i.tm.cpu_flags.bitfield.cpuavx
-      && !i.tm.cpu_flags.bitfield.cpuavx512f
-      && (i.tm.cpu_flags.bitfield.cpusse
-	  || i.tm.cpu_flags.bitfield.cpusse2
-	  || i.tm.cpu_flags.bitfield.cpusse3
-	  || i.tm.cpu_flags.bitfield.cpussse3
-	  || i.tm.cpu_flags.bitfield.cpusse4_1
-	  || i.tm.cpu_flags.bitfield.cpusse4_2
-	  || i.tm.cpu_flags.bitfield.cpupclmul
-	  || i.tm.cpu_flags.bitfield.cpuaes
-	  || i.tm.cpu_flags.bitfield.cpusha
-	  || i.tm.cpu_flags.bitfield.cpugfni))
+      /* The opcode space check isn't strictly needed; it's there only to
+	 bypass the logic below when easily possible.  */
+      && t->opcode_modifier.opcodespace >= SPACE_0F
+      && t->opcode_modifier.opcodespace <= SPACE_0F3A
+      && !i.tm.cpu_flags.bitfield.cpusse4a
+      && !is_any_vex_encoding (t))
     {
-      (sse_check == check_warning
-       ? as_warn
-       : as_bad) (_("SSE instruction `%s' is used"), i.tm.name);
+      bool simd = false;
+
+      for (j = 0; j < t->operands; ++j)
+	{
+	  if (t->operand_types[j].bitfield.class == RegMMX)
+	    break;
+	  if (t->operand_types[j].bitfield.class == RegSIMD)
+	    simd = true;
+	}
+
+      if (j >= t->operands && simd)
+	(sse_check == check_warning
+	 ? as_warn
+	 : as_bad) (_("SSE instruction `%s' is used"), i.tm.name);
     }
 
   if (i.tm.opcode_modifier.fwait)
@@ -8857,6 +8861,8 @@ output_branch (void)
       off = 0;
     }
 
+  frag_now->tc_frag_data.code64 = flag_code == CODE_64BIT;
+
   /* 1 possible extra opcode + 4 byte displacement go in var part.
      Pass reloc in fr_var.  */
   frag_var (rs_machine_dependent, 5, i.reloc[0], subtype, sym, off, p);
@@ -8985,8 +8991,8 @@ output_jump (void)
     }
 
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
-  if (size == 4
-      && jump_reloc == NO_RELOC
+  if (flag_code == CODE_64BIT && size == 4
+      && jump_reloc == NO_RELOC && i.op[0].disps->X_add_number == 0
       && need_plt32_p (i.op[0].disps->X_add_symbol))
     jump_reloc = BFD_RELOC_X86_64_PLT32;
 #endif
@@ -12294,7 +12300,8 @@ md_estimate_size_before_relax (fragS *fragP, segT segment)
       else if (size == 2)
 	reloc_type = BFD_RELOC_16_PCREL;
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
-      else if (need_plt32_p (fragP->fr_symbol))
+      else if (fragP->tc_frag_data.code64 && fragP->fr_offset == 0
+	       && need_plt32_p (fragP->fr_symbol))
 	reloc_type = BFD_RELOC_X86_64_PLT32;
 #endif
       else

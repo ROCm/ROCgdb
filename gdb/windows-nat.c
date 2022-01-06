@@ -1905,11 +1905,8 @@ windows_nat_target::attach (const char *args, int from_tty)
   pid = parse_pid_to_attach (args);
 
   if (set_process_privilege (SE_DEBUG_NAME, TRUE) < 0)
-    {
-      printf_unfiltered ("Warning: Failed to get SE_DEBUG_NAME privilege\n");
-      printf_unfiltered ("This can cause attach to "
-			 "fail on Windows NT/2K/XP\n");
-    }
+    warning ("Failed to get SE_DEBUG_NAME privilege\n"
+	     "This can cause attach to fail on Windows NT/2K/XP");
 
   windows_init_thread_list ();
   ok = DebugActiveProcess (pid);
@@ -1932,17 +1929,7 @@ windows_nat_target::attach (const char *args, int from_tty)
 
   DebugSetProcessKillOnExit (FALSE);
 
-  if (from_tty)
-    {
-      const char *exec_file = get_exec_file (0);
-
-      if (exec_file)
-	printf_unfiltered ("Attaching to program `%s', %s\n", exec_file,
-			   target_pid_to_str (ptid_t (pid)).c_str ());
-      else
-	printf_unfiltered ("Attaching to %s\n",
-			   target_pid_to_str (ptid_t (pid)).c_str ());
-    }
+  target_announce_attach (from_tty, pid);
 
 #ifdef __x86_64__
   HANDLE h = OpenProcess (PROCESS_QUERY_INFORMATION, FALSE, pid);
@@ -1975,14 +1962,8 @@ windows_nat_target::detach (inferior *inf, int from_tty)
     }
   DebugSetProcessKillOnExit (FALSE);
 
-  if (detached && from_tty)
-    {
-      const char *exec_file = get_exec_file (0);
-      if (exec_file == 0)
-	exec_file = "";
-      printf_unfiltered ("Detaching from program: %s, Pid %u\n", exec_file,
-			 (unsigned) current_event.dwProcessId);
-    }
+  if (detached)
+    target_announce_detach (from_tty);
 
   x86_cleanup_dregs ();
   switch_to_no_thread ();
