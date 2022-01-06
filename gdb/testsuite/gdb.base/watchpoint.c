@@ -1,5 +1,5 @@
 /*
-  Copyright 1992-2021 Free Software Foundation, Inc.
+  Copyright 1992-2022 Free Software Foundation, Inc.
   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 */
 #include <stdio.h>
