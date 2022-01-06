@@ -442,7 +442,8 @@ validate_flags_qcs (const char *which_command, qcs_flags *flags)
 /* See documentation in cli-utils.h.  */
 
 std::string
-make_ranges_from_sorted_vector (const std::vector<int> &numbers)
+make_ranges_from_sorted_vector (const std::vector<int> &numbers,
+				bool want_brackets)
 {
   gdb_assert (std::is_sorted (numbers.begin (), numbers.end ()));
   std::string result;
@@ -489,7 +490,7 @@ make_ranges_from_sorted_vector (const std::vector<int> &numbers)
       has_brackets = true;
     }
 
-  if (has_brackets)
+  if (want_brackets && has_brackets)
     result = "[" + result + "]";
 
   return result;

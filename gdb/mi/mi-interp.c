@@ -1,6 +1,7 @@
 /* MI Interpreter Definitions and Commands for GDB, the GNU debugger.
 
    Copyright (C) 2002-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -651,6 +652,8 @@ mi_on_normal_stop_1 (struct bpstats *bs, int print_frame)
 	print_stop_event (mi->cli_uiout);
 
       mi_uiout->field_signed ("thread-id", tp->global_num);
+      if (tp->has_simd_lanes ())
+	mi_uiout->field_signed ("lane-id", tp->current_simd_lane ());
       if (non_stop)
 	{
 	  ui_out_emit_list list_emitter (mi_uiout, "stopped-threads");
