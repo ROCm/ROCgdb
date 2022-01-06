@@ -1,5 +1,6 @@
 /* MI Command Set - varobj commands.
    Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -73,7 +74,13 @@ print_varobj (struct varobj *var, enum print_values print_values,
 
   thread_id = varobj_get_thread_id (var);
   if (thread_id > 0)
-    uiout->field_signed ("thread-id", thread_id);
+    {
+      uiout->field_signed ("thread-id", thread_id);
+
+      int lane = varobj_get_lane (var);
+      if (lane >= 0)
+	uiout->field_signed ("lane-id", lane);
+    }
 
   if (varobj_get_frozen (var))
     uiout->field_signed ("frozen", 1);
