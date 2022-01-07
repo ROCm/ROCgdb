@@ -858,6 +858,12 @@ extern void print_thread_info (struct ui_out *uiout,
 			       const char *requested_threads,
 			       int pid);
 
+/* Prints the list of lanes of the current thread and their details on
+   UIOUT.  If REQUESTED_LANES, a list of GDB ids/ranges, is not NULL,
+   only print lanes whose ID is included in the list.  */
+extern void print_lane_info (struct ui_out *uiout,
+			     const char *requested_lanes);
+
 /* Save/restore current inferior/thread/frame.  */
 
 class scoped_restore_current_thread
