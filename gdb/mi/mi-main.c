@@ -549,8 +549,45 @@ mi_cmd_target_flash_erase (const char *command, char **argv, int argc)
 void
 mi_cmd_thread_select (const char *command, char **argv, int argc)
 {
+  int lane = -1;
+
+  /* Parse the command options.  */
+  enum opt
+    {
+      LANE_OPT,
+    };
+  static const struct mi_opt opts[] =
+    {
+      /* Note: this can't be "--lane", because we have a global --lane
+	 option parsed by mi_parse.  "-thread-select --lane 3 4" would
+	 select lane 3 of the current thread instead of the lane of
+	 the passed-in thread, only to be then be "overwritten" when
+	 thread 4 is selected.  */
+      {"l", LANE_OPT, 1},
+      {NULL, 0, 0},
+    };
+
+  int oind = 0;
+  char *oarg;
+
+  while (1)
+    {
+      int opt = mi_getopt ("-thread-select", argc, argv, opts, &oind, &oarg);
+
+      if (opt < 0)
+	break;
+      switch ((enum opt) opt)
+	{
+	case LANE_OPT:
+	  lane = atoi (oarg);
+	  break;
+	}
+    }
+  argv += oind;
+  argc -= oind;
+
   if (argc != 1)
-    error (_("-thread-select: USAGE: threadnum."));
+    error (_("-thread-select: USAGE: [-l lanenum] threadnum."));
 
   int num = value_as_long (parse_and_eval (argv[0]));
   thread_info *thr = find_thread_global_id (num);
@@ -558,14 +595,18 @@ mi_cmd_thread_select (const char *command, char **argv, int argc)
     error (_("Thread ID %d not known."), num);
 
   ptid_t previous_ptid = inferior_ptid;
+  int prev_lane = (inferior_ptid != null_ptid
+		   ? inferior_thread ()->current_simd_lane ()
+		   : -1);
 
-  thread_select (argv[0], thr);
+  thread_select (argv[0], thr, lane);
 
   print_selected_thread_frame (current_uiout,
 			       USER_SELECTED_THREAD | USER_SELECTED_FRAME);
 
-  /* Notify if the thread has effectively changed.  */
-  if (inferior_ptid != previous_ptid)
+  /* Notify if either the thread or lane have effectively changed.  */
+  if (inferior_ptid != previous_ptid
+      || inferior_thread ()->current_simd_lane () != prev_lane)
     {
       gdb::observers::user_selected_context_changed.notify
 	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
