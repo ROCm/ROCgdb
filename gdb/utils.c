@@ -2870,24 +2870,25 @@ address_significant (gdbarch *gdbarch, CORE_ADDR addr)
 }
 
 std::string
-paspace (struct gdbarch *gdbarch, CORE_ADDR addr)
+paspace_and_addr (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  arch_addr_space_id address_space_id
+  std::string addr_str = paddress (gdbarch, addr);
+  arch_addr_space_id addr_space_id
     = gdbarch_address_space_id_from_core_address (gdbarch, addr);
 
   /* For backward compatibility, dont print the address
      space name of the default address space, even if
      the architecture have a name for it.  */
-  if (address_space_id == ARCH_ADDR_SPACE_ID_DEFAULT)
-   return "";
+  if (addr_space_id == ARCH_ADDR_SPACE_ID_DEFAULT)
+   return addr_str;
 
-  const char *address_space_name
-    = gdbarch_address_space_id_to_name (gdbarch, address_space_id);
+  const char *addr_space_str
+    = gdbarch_address_space_id_to_name (gdbarch, addr_space_id);
 
-  if (address_space_name == nullptr)
-    return "";
+  if (addr_space_str == nullptr)
+    return addr_str;
 
-  return std::string(address_space_name) + "#";
+  return std::string (addr_space_str) + "#" + addr_str;
 }
 
 const char *

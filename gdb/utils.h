@@ -540,9 +540,13 @@ extern void gdb_print_host_address_1 (const void *addr, struct ui_file *stream);
 /* Return the address only having significant bits.  */
 extern CORE_ADDR address_significant (gdbarch *gdbarch, CORE_ADDR addr);
 
-/* Convert CORE_ADDR address space to string in platform-specific manner.
-   This is usually formatted similar to <aspace>#.  */
-extern std::string paspace (struct gdbarch *gdbarch, CORE_ADDR addr);
+/* Convert CORE_ADDR address to string that includes the address space
+   name of that address in platform-specific manner.  In the case of
+   default address space, the address space name is omitted for
+   backward compatibility.
+
+   This is usually formatted as <aspace>#0x%lx.  */
+extern std::string paspace_and_addr (struct gdbarch *gdbarch, CORE_ADDR addr);
 
 /* Convert CORE_ADDR to string in platform-specific manner.
    This is usually formatted similar to 0x%lx.  */

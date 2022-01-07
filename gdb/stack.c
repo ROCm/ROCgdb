@@ -1,6 +1,7 @@
 /* Print and select stack frames for GDB, the GNU debugger.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1552,7 +1553,9 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
     {
       printf_filtered (_("Stack frame at "));
     }
-  fputs_filtered (paddress (gdbarch, get_frame_base (fi)), gdb_stdout);
+
+  fputs_filtered (paspace_and_addr (gdbarch, get_frame_base (fi)).c_str (),
+		  gdb_stdout);
   printf_filtered (":\n");
   printf_filtered (" %s = ", pc_regname);
   if (frame_pc_p)
@@ -1626,8 +1629,10 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 		     frame_relative_level (get_prev_frame (fi)));
   else
     {
+      CORE_ADDR calling_fb_addr = get_frame_base (calling_frame_info);
+
       printf_filtered (" called by frame at ");
-      fputs_filtered (paddress (gdbarch, get_frame_base (calling_frame_info)),
+      fputs_filtered (paspace_and_addr (gdbarch, calling_fb_addr).c_str (),
 		      gdb_stdout);
     }
   if (get_next_frame (fi) && calling_frame_info)
@@ -1635,8 +1640,10 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
   wrap_here ("   ");
   if (get_next_frame (fi))
     {
+      CORE_ADDR caller_fb_addr = get_frame_base (get_next_frame (fi));
+
       printf_filtered (" caller of frame at ");
-      fputs_filtered (paddress (gdbarch, get_frame_base (get_next_frame (fi))),
+      fputs_filtered (paspace_and_addr (gdbarch, caller_fb_addr).c_str (),
 		      gdb_stdout);
     }
   if (get_next_frame (fi) || calling_frame_info)
@@ -1657,7 +1664,8 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
     else
       {
 	printf_filtered (" Arglist at ");
-	fputs_filtered (paddress (gdbarch, arg_list), gdb_stdout);
+	fputs_filtered (paspace_and_addr (gdbarch, arg_list).c_str (),
+			gdb_stdout);
 	printf_filtered (",");
 
 	if (!gdbarch_frame_num_args_p (gdbarch))
@@ -1690,7 +1698,8 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
     else
       {
 	printf_filtered (" Locals at ");
-	fputs_filtered (paddress (gdbarch, arg_list), gdb_stdout);
+	fputs_filtered (paspace_and_addr (gdbarch, arg_list).c_str (),
+			gdb_stdout);
 	printf_filtered (",");
       }
   }
@@ -1730,9 +1739,11 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 	      }
 	    else if (VALUE_LVAL (value) == lval_memory)
 	      {
+		const char *prev_sp_addr_str
+		  = paspace_and_addr (gdbarch, value_address (value)).c_str ();
+
 		printf_filtered (" Previous frame's sp at ");
-		fputs_filtered (paddress (gdbarch, value_address (value)),
-				gdb_stdout);
+		fputs_filtered (prev_sp_addr_str, gdb_stdout);
 		printf_filtered ("\n");
 	      }
 	    else if (VALUE_LVAL (value) == lval_register)
@@ -1775,7 +1786,8 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 	      wrap_here (" ");
 	      printf_filtered (" %s at ",
 			       gdbarch_register_name (gdbarch, i));
-	      fputs_filtered (paddress (gdbarch, addr), gdb_stdout);
+	      fputs_filtered (paspace_and_addr (gdbarch, addr).c_str (),
+			      gdb_stdout);
 	      count++;
 	    }
 	}

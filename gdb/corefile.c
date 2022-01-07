@@ -169,13 +169,11 @@ memory_error_message (enum target_xfer_status err,
     case TARGET_XFER_E_IO:
       /* Actually, address between memaddr and memaddr + len was out of
 	 bounds.  */
-      return string_printf (_("Cannot access memory at address %s%s"),
-			    paspace (gdbarch, memaddr).c_str (),
-			    paddress (gdbarch, memaddr));
+      return string_printf (_("Cannot access memory at address %s"),
+			    paspace_and_addr (gdbarch, memaddr).c_str ());
     case TARGET_XFER_UNAVAILABLE:
-      return string_printf (_("Memory at address %s%s unavailable."),
-			    paspace (gdbarch, memaddr).c_str (),
-			    paddress (gdbarch, memaddr));
+      return string_printf (_("Memory at address %s unavailable."),
+			    paspace_and_addr (gdbarch, memaddr).c_str ());
     default:
       internal_error (__FILE__, __LINE__,
 		      "unhandled target_xfer_status: %s (%s)",
