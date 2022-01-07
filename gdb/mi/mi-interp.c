@@ -878,6 +878,10 @@ mi_interp::on_user_selected_context_changed (user_selected_what selection)
       gdb_printf (this->event_channel, "thread-selected,id=\"%d\"",
 		  tp->global_num);
 
+      if (tp->has_simd_lanes ())
+	gdb_printf (this->event_channel,
+		    ",lane-id=\"%d\"", tp->current_simd_lane ());
+
       if (tp->state != THREAD_RUNNING)
 	{
 	  if (has_stack_frames ())
