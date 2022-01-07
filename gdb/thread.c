@@ -1410,7 +1410,7 @@ make_info_lanes_options_def_group (info_lanes_opts *opts)
   return {{info_lanes_option_defs}, opts};
 }
 
-/* Helper for print_lane_info.  Returns true if LANE should be
+/* Helper for print_lane_info_1.  Returns true if LANE should be
    printed.  If REQUESTED_LANES, a list of GDB ids/ranges, is not
    NULL, only print LANE if its ID is included in the list.  */
 
@@ -1453,9 +1453,9 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
 	uiout->field_string ("current", "*");
       else
 	uiout->field_skip ("current");
-
-      uiout->field_signed ("id", lane);
     }
+
+  uiout->field_signed ("id", lane);
 
   gdbarch *arch = target_thread_architecture (tp->ptid);
   int used_lanes_count = gdbarch_used_lanes_count (arch, tp);
@@ -1487,14 +1487,6 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
   uiout->field_string ("state", lane_state ());
 
   uiout->field_string ("target-id", target_lane_to_str (tp, lane));
-
-  if (uiout->is_mi_like_p ())
-    {
-      if (tp->state == THREAD_RUNNING)
-	uiout->field_string ("state", "running");
-      else
-	uiout->field_string ("state", "stopped");
-    }
 
   if (tp->state == THREAD_RUNNING)
     uiout->text ("(running)\n");
@@ -1529,14 +1521,11 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
    REQUESTED_LANES.  */
 
 static void
-print_lane_info (struct ui_out *uiout, const char *requested_lanes,
-		 const info_lanes_opts &opts)
+print_lane_info_1 (struct ui_out *uiout, const char *requested_lanes,
+		   const info_lanes_opts &opts)
 {
   if (inferior_ptid == null_ptid)
-    {
-      uiout->message (_("No thread selected.\n"));
-      return;
-    }
+    error (_("No thread selected."));
 
   thread_info *thr = inferior_thread ();
 
@@ -1629,6 +1618,18 @@ print_lane_info (struct ui_out *uiout, const char *requested_lanes,
      list or table.  */
 }
 
+/* See gdbthread.h.  */
+
+void
+print_lane_info (struct ui_out *uiout, const char *requested_lanes)
+{
+  info_lanes_opts opts;
+
+  opts.show_all = true;
+
+  print_lane_info_1 (current_uiout, requested_lanes, opts);
+}
+
 /* Implementation of the "info lanes" command.  */
 
 static void
@@ -1640,7 +1641,7 @@ info_lanes_command (const char *arg, int from_tty)
   gdb::option::process_options
     (&arg, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
 
-  print_lane_info (current_uiout, arg, opts);
+  print_lane_info_1 (current_uiout, arg, opts);
 }
 
 /* Completer for the "info lanes" command.  */

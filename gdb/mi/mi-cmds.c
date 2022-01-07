@@ -173,6 +173,7 @@ static struct mi_cmd mi_cmds[] =
   DEF_MI_CMD_MI ("target-flash-erase", mi_cmd_target_flash_erase),
   DEF_MI_CMD_CLI ("target-select", "target", 1),
   DEF_MI_CMD_MI ("thread-info", mi_cmd_thread_info),
+  DEF_MI_CMD_MI ("lane-info", mi_cmd_lane_info),
   DEF_MI_CMD_MI ("thread-list-ids", mi_cmd_thread_list_ids),
   DEF_MI_CMD_MI_1 ("thread-select", mi_cmd_thread_select,
 		   &mi_suppress_notification.user_selected_context),
