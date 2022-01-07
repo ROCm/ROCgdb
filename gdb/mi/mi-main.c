@@ -611,6 +611,15 @@ mi_cmd_thread_list_ids (const char *command, const char *const *argv, int argc)
 }
 
 void
+mi_cmd_lane_info (const char *command, const char *const *argv, int argc)
+{
+  if (argc != 0 && argc != 1)
+    error (_("Invalid MI command"));
+
+  print_lane_info (current_uiout, argv[0]);
+}
+
+void
 mi_cmd_thread_info (const char *command, const char *const *argv, int argc)
 {
   if (argc != 0 && argc != 1)
