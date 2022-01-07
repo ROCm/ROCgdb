@@ -530,15 +530,52 @@ mi_cmd_target_flash_erase (const char *command, const char *const *argv,
 void
 mi_cmd_thread_select (const char *command, const char *const *argv, int argc)
 {
+  int lane = -1;
+
+  /* Parse the command options.  */
+  enum opt
+    {
+      LANE_OPT,
+    };
+  static const struct mi_opt opts[] =
+    {
+      /* Note: this can't be "--lane", because we have a global --lane
+	 option parsed by mi_parse.  "-thread-select --lane 3 4" would
+	 select lane 3 of the current thread instead of the lane of
+	 the passed-in thread, only to be then be "overwritten" when
+	 thread 4 is selected.  */
+      {"l", LANE_OPT, 1},
+      {NULL, 0, 0},
+    };
+
+  int oind = 0;
+  const char *oarg;
+
+  while (1)
+    {
+      int opt = mi_getopt ("-thread-select", argc, argv, opts, &oind, &oarg);
+
+      if (opt < 0)
+	break;
+      switch ((enum opt) opt)
+	{
+	case LANE_OPT:
+	  lane = atoi (oarg);
+	  break;
+	}
+    }
+  argv += oind;
+  argc -= oind;
+
   if (argc != 1)
-    error (_("-thread-select: USAGE: threadnum."));
+    error (_("-thread-select: USAGE: [-l lanenum] threadnum."));
 
   int num = value_as_long (parse_and_eval (argv[0]));
   thread_info *thr = find_thread_global_id (num);
   if (thr == NULL)
     error (_("Thread ID %d not known."), num);
 
-  thread_select (argv[0], thr);
+  thread_select (argv[0], thr, lane);
 
   print_selected_thread_frame (current_uiout,
 			       USER_SELECTED_THREAD | USER_SELECTED_FRAME);
