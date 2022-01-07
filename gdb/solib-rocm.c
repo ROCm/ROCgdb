@@ -155,20 +155,194 @@ rocm_solib_current_sos (void)
   return head;
 }
 
+namespace {
+
+/* Interface to interact with a rocm code object stream.  */
+
 struct rocm_code_object_stream
 {
-  /* The target file descriptor for this stream if the URI is a file. For
-    memory URIs, fd is set to -1.  */
-  int fd;
+  DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream);
 
-  /* The offset (or address) of the ELF file image in the target file (or
-     memory).  */
-  ULONGEST offset;
+  /* Copy SIZE bytes from the underlying objfile storage starting at OFFSET
+     into the user provided buffer BUF.  Return the number of bytes actually
+     copied (might be inferior to SIZE if the end of the stream is reached).
+   */
+  virtual file_ptr read (void *buf, file_ptr size, file_ptr offset) = 0;
 
-  /* The size of the ELF file image.  size is optional for file URIs, but
-     required for memory URIs.  */
-  ULONGEST size;
+  /* Retrieve file information in SB.  Return 0 on success.  On failure,
+     set the bfd appropriate error number (using bfd_set_error) and return -1.
+   */
+  int stat (struct stat *sb);
+
+  virtual ~rocm_code_object_stream () = default;
+
+protected:
+  rocm_code_object_stream () = default;
+
+  /* Return the size of the object file, or -1 if the size cannot be
+     determined.
+
+     This is a helper function for stat.  */
+  virtual LONGEST size () = 0;
 };
+
+int
+rocm_code_object_stream::stat (struct stat *sb)
+{
+  const LONGEST size = this->size ();
+  if (size == -1)
+    return -1;
+
+  memset (sb, '\0', sizeof (struct stat));
+  sb->st_size = size;
+  return 0;
+}
+
+/* Interface to a rocm object stream which is embedded in an ELF file
+   accessible to the debuggee.  */
+
+struct rocm_code_object_stream_file final : rocm_code_object_stream
+{
+  DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream_file);
+
+  rocm_code_object_stream_file (int fd, ULONGEST offset, ULONGEST size);
+
+  file_ptr read (void *buf, file_ptr size, file_ptr offset) override;
+
+  LONGEST size () override;
+
+  ~rocm_code_object_stream_file () override;
+
+protected:
+
+  /* The target file descriptor for this stream.  */
+  int m_fd;
+
+  /* The offset of the ELF file image in the target file.  */
+  ULONGEST m_offset;
+
+  /* The size of the ELF file image.  The value 0 means that it was
+     unspecified in the URI descriptor.  */
+  ULONGEST m_size;
+};
+
+rocm_code_object_stream_file::rocm_code_object_stream_file
+  (int fd, ULONGEST offset, ULONGEST size)
+     : m_fd { fd }, m_offset { offset }, m_size { size }
+{
+}
+
+file_ptr
+rocm_code_object_stream_file::read (void *buf, file_ptr size,
+				    file_ptr offset)
+{
+  int target_errno;
+  file_ptr nbytes = 0;
+  while (size > 0)
+    {
+      QUIT;
+
+      file_ptr bytes_read
+	= target_fileio_pread (m_fd, static_cast<gdb_byte *> (buf) + nbytes,
+			       size, m_offset + offset + nbytes,
+			       &target_errno);
+
+      if (bytes_read == 0)
+	break;
+
+      if (bytes_read < 0)
+	{
+	  /* FIXME: Should we set errno?  */
+	  /* errno = fileio_errno_to_host (target_errno); */
+	  bfd_set_error (bfd_error_system_call);
+	  return -1;
+	}
+
+      nbytes += bytes_read;
+      size -= bytes_read;
+    }
+
+  return nbytes;
+}
+
+LONGEST
+rocm_code_object_stream_file::size ()
+{
+  if (m_size == 0)
+    {
+      int target_errno;
+      struct stat stat;
+      if (target_fileio_fstat (m_fd, &stat, &target_errno) < 0)
+	{
+	  /* FIXME: Should we set errno?  */
+	  /* errno = fileio_errno_to_host (target_errno); */
+	  bfd_set_error (bfd_error_system_call);
+	  return -1;
+	}
+
+      /* Check that the offset is valid.  */
+      if (m_offset >= stat.st_size)
+	{
+	  bfd_set_error (bfd_error_bad_value);
+	  return -1;
+	}
+
+      m_size = stat.st_size - m_offset;
+    }
+
+  return m_size;
+}
+
+rocm_code_object_stream_file::~rocm_code_object_stream_file ()
+{
+  int target_errno;
+  target_fileio_close (m_fd, &target_errno);
+}
+
+/* Interface to a code object which lives in the inferior's memory.  */
+
+struct rocm_code_object_stream_memory final : public rocm_code_object_stream
+{
+  DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream_memory);
+
+  rocm_code_object_stream_memory (ULONGEST offset, ULONGEST size);
+
+  file_ptr read (void *buf, file_ptr size, file_ptr offset) override;
+
+protected:
+
+  /* The offset of the ELF file image in the target memory.  */
+  ULONGEST m_offset;
+
+  /* The size of the ELF file image in target memory.  */
+  ULONGEST m_size;
+
+  LONGEST size () override
+  {
+    return m_size;
+  }
+};
+
+rocm_code_object_stream_memory::rocm_code_object_stream_memory
+  (ULONGEST offset, ULONGEST size)
+     : m_offset { offset }, m_size { size }
+{
+}
+
+file_ptr
+rocm_code_object_stream_memory::read (void *buf, file_ptr size,
+				      file_ptr offset)
+{
+  if (target_read_memory (m_offset + offset, (gdb_byte *) buf, size)
+      != 0)
+    {
+      bfd_set_error (bfd_error_invalid_operation);
+      return -1;
+    }
+  return size;
+}
+
+} // anonymous namespace
 
 static void *
 rocm_bfd_iovec_open (bfd *abfd, void *inferior)
@@ -225,17 +399,18 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 				     token.substr (delim + 1));
 		 });
 
-  gdb::unique_xmalloc_ptr<rocm_code_object_stream> stream (
-    XCNEW (rocm_code_object_stream));
   try
     {
+      ULONGEST offset = 0;
+      ULONGEST size = 0;
+
       auto offset_it = params.find ("offset");
       if (offset_it != params.end ())
-	stream->offset = std::stoul (offset_it->second, nullptr, 0);
+	offset = std::stoul (offset_it->second, nullptr, 0);
 
       auto size_it = params.find ("size");
       if (size_it != params.end ())
-	if (!(stream->size = std::stoul (size_it->second, nullptr, 0)))
+	if (!(size = std::stoul (size_it->second, nullptr, 0)))
 	  {
 	    bfd_set_error (bfd_error_bad_value);
 	    return nullptr;
@@ -244,12 +419,12 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
       if (protocol == "file")
 	{
 	  int target_errno;
-	  stream->fd
+	  int fd
 	    = target_fileio_open (static_cast<struct inferior *> (inferior),
 				  decoded_path.c_str (), FILEIO_O_RDONLY,
 				  false, 0, &target_errno);
 
-	  if (stream->fd == -1)
+	  if (fd == -1)
 	    {
 	      /* FIXME: Should we set errno?  Move fileio_errno_to_host from
 		 gdb_bfd.c to fileio.cc  */
@@ -258,7 +433,7 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 	      return nullptr;
 	    }
 
-	  return stream.release ();
+	  return new rocm_code_object_stream_file (fd, offset, size);
 	}
       else if (protocol == "memory")
 	{
@@ -271,8 +446,7 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 	      return nullptr;
 	    }
 
-	  stream->fd = -1;
-	  return stream.release ();
+	  return new rocm_code_object_stream_memory (offset, size);
 	}
     }
   catch (...)
@@ -290,15 +464,8 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 static int
 rocm_bfd_iovec_close (bfd *nbfd, void *data)
 {
-  auto *stream = static_cast<rocm_code_object_stream *> (data);
+  delete static_cast<rocm_code_object_stream *> (data);
 
-  if (stream->fd != -1)
-    {
-      int target_errno;
-      target_fileio_close (stream->fd, &target_errno);
-    }
-
-  xfree (stream);
   return 0;
 }
 
@@ -306,86 +473,14 @@ static file_ptr
 rocm_bfd_iovec_pread (bfd *abfd, void *data, void *buf, file_ptr size,
 		      file_ptr offset)
 {
-  auto *stream = static_cast<rocm_code_object_stream *> (data);
-  int target_errno;
-
-  /* If stream->fd is not valid, we read the code object from the inferior's
-     memory.  */
-  if (stream->fd == -1)
-    {
-      if (target_read_memory (stream->offset + offset, (gdb_byte *) buf, size)
-	  != 0)
-	{
-	  bfd_set_error (bfd_error_invalid_operation);
-	  return -1;
-	}
-      return size;
-    }
-
-  /* stream->fd is valid, read from the target's file.  */
-  file_ptr nbytes = 0;
-  while (size > 0)
-    {
-      QUIT;
-
-      file_ptr bytes_read
-	= target_fileio_pread (stream->fd,
-			       static_cast<gdb_byte *> (buf) + nbytes, size,
-			       stream->offset + offset + nbytes,
-			       &target_errno);
-
-      if (bytes_read == 0)
-	break;
-
-      if (bytes_read < 0)
-	{
-	  /* FIXME: Should we set errno?  */
-	  /* errno = fileio_errno_to_host (target_errno); */
-	  bfd_set_error (bfd_error_system_call);
-	  return -1;
-	}
-
-      nbytes += bytes_read;
-      size -= bytes_read;
-    }
-
-  return nbytes;
+  return static_cast<rocm_code_object_stream *> (data)->read (buf, size,
+							      offset);
 }
 
 static int
 rocm_bfd_iovec_stat (bfd *abfd, void *data, struct stat *sb)
 {
-  auto *stream = static_cast<rocm_code_object_stream *> (data);
-  int target_errno;
-
-  /* If stream->size is 0, the URI size parameter was not set.  */
-  if (!stream->size)
-    {
-      gdb_assert (stream->fd != -1
-		  && "the size parameter is only optional for file URIs");
-
-      struct stat stat;
-      if (target_fileio_fstat (stream->fd, &stat, &target_errno) < 0)
-	{
-	  /* FIXME: Should we set errno?  */
-	  /* errno = fileio_errno_to_host (target_errno); */
-	  bfd_set_error (bfd_error_system_call);
-	  return -1;
-	}
-
-      /* Check that the offset is valid.  */
-      if (stream->offset >= stat.st_size)
-	{
-	  bfd_set_error (bfd_error_bad_value);
-	  return -1;
-	}
-
-      stream->size = stat.st_size - stream->offset;
-    }
-
-  memset (sb, '\0', sizeof (struct stat));
-  sb->st_size = stream->size;
-  return 0;
+  return static_cast<rocm_code_object_stream *> (data)->stat (sb);
 }
 
 static gdb_bfd_ref_ptr
