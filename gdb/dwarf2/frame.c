@@ -1174,8 +1174,6 @@ dwarf2_frame_this_id (struct frame_info *this_frame, void **this_cache,
 
   if (cache->unavailable_retaddr)
     (*this_id) = frame_id_build_unavailable_stack (get_frame_func (this_frame));
-  else if (cache->undefined_retaddr)
-    return;
   else
     (*this_id) = frame_id_build (cache->cfa, get_frame_func (this_frame));
 }

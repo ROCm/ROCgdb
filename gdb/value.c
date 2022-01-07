@@ -4034,9 +4034,12 @@ value_fetch_lazy_register (struct value *val)
 	    fprintf_unfiltered (&debug_file, " register=%d",
 				VALUE_REGNUM (new_val));
 	  else if (VALUE_LVAL (new_val) == lval_memory)
-	    fprintf_unfiltered (&debug_file, " address=%s",
-				paddress (gdbarch,
-					  value_address (new_val)));
+	    {
+	      const char *addr_str
+		= paspace_and_addr (gdbarch, value_address (new_val)).c_str ();
+
+	      fprintf_unfiltered (&debug_file, " address=%s", addr_str);
+	    }
 	  else
 	    fprintf_unfiltered (&debug_file, " computed");
 
