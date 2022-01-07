@@ -2672,17 +2672,18 @@ print_selected_thread_frame (struct ui_out *uiout,
     {
       if (uiout->is_mi_like_p ())
 	{
-	  uiout->field_signed ("new-thread-id",
-			       inferior_thread ()->global_num);
+	  uiout->field_signed ("new-thread-id", tp->global_num);
+	  if (tp->has_simd_lanes ())
+	    uiout->field_signed ("lane-id", tp->current_simd_lane ());
 	}
       else
 	{
 	  uiout->text ("[Switching to thread ");
-	  uiout->field_string ("new-thread-id", print_thread_id (tp));
+	  uiout->text (print_thread_id (tp));
 	  if (tp->has_simd_lanes ())
 	    uiout->text (string_printf (", lane %d", tp->current_simd_lane ()));
 	  uiout->text (" (");
-	  if (!uiout->is_mi_like_p () && tp->has_simd_lanes ())
+	  if (tp->has_simd_lanes ())
 	    uiout->text (target_lane_to_str (tp, tp->current_simd_lane ()));
 	  else
 	    uiout->text (target_pid_to_str (inferior_ptid));
