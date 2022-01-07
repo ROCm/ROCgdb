@@ -1258,6 +1258,10 @@ mi_user_selected_context_changed (user_selected_what selection)
 			      "thread-selected,id=\"%d\"",
 			      tp->global_num);
 
+	  if (tp->has_simd_lanes ())
+	    fprintf_unfiltered (mi->event_channel,
+				",lane-id=\"%d\"", tp->current_simd_lane ());
+
 	  if (tp->state != THREAD_RUNNING)
 	    {
 	      if (has_stack_frames ())
