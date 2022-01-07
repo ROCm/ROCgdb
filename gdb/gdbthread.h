@@ -970,8 +970,9 @@ extern void print_selected_thread_frame (struct ui_out *uiout,
 /* Helper for the CLI's "thread" command and for MI's -thread-select.
    Selects thread THR.  TIDSTR is the original string the thread ID
    was parsed from.  This is used in the error message if THR is not
-   alive anymore.  */
-extern void thread_select (const char *tidstr, class thread_info *thr);
+   alive anymore.  If LANE is not -1, select that lane.  */
+extern void thread_select (const char *tidstr, class thread_info *thr,
+			   int lane = -1);
 
 /* Return the number of the first active lane in MASK or -1 if MASK is
    0.  */
