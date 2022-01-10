@@ -32,6 +32,7 @@
 #include "solib.h"
 #include "solist.h"
 #include "symfile.h"
+#include "gdbsupport/fileio.h"
 
 #include <functional>
 #include <string>
@@ -252,8 +253,7 @@ rocm_code_object_stream_file::read (void *buf, file_ptr size,
 
       if (bytes_read < 0)
 	{
-	  /* FIXME: Should we set errno?  */
-	  /* errno = fileio_errno_to_host (target_errno); */
+	  errno = fileio_errno_to_host (target_errno);
 	  bfd_set_error (bfd_error_system_call);
 	  return -1;
 	}
@@ -274,8 +274,7 @@ rocm_code_object_stream_file::size ()
       struct stat stat;
       if (target_fileio_fstat (m_fd, &stat, &target_errno) < 0)
 	{
-	  /* FIXME: Should we set errno?  */
-	  /* errno = fileio_errno_to_host (target_errno); */
+	  errno = fileio_errno_to_host (target_errno);
 	  bfd_set_error (bfd_error_system_call);
 	  return -1;
 	}
