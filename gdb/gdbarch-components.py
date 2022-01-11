@@ -865,7 +865,7 @@ Return a list of supported address spaces.
 """,
     type="gdb::array_view<const arch_addr_space>",
     name="address_spaces",
-    params=(),
+    params=[],
     predicate=True,
     invalid=True,
 )
