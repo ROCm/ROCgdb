@@ -1,6 +1,7 @@
 /* Definitions for BFD wrappers used by GDB.
 
    Copyright (C) 2011-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -31,6 +32,7 @@
 #endif
 #include "target.h"
 #include "gdb/fileio.h"
+#include "gdbsupport/fileio.h"
 #include "inferior.h"
 
 /* An object of this type is stored in the section's user data when
@@ -297,59 +299,6 @@ gdb_bfd_open_from_target_memory (CORE_ADDR addr, ULONGEST size,
 			      mem_bfd_iovec_pread,
 			      mem_bfd_iovec_close,
 			      mem_bfd_iovec_stat);
-}
-
-/* Return the system error number corresponding to ERRNUM.  */
-
-static int
-fileio_errno_to_host (int errnum)
-{
-  switch (errnum)
-    {
-      case FILEIO_EPERM:
-	return EPERM;
-      case FILEIO_ENOENT:
-	return ENOENT;
-      case FILEIO_EINTR:
-	return EINTR;
-      case FILEIO_EIO:
-	return EIO;
-      case FILEIO_EBADF:
-	return EBADF;
-      case FILEIO_EACCES:
-	return EACCES;
-      case FILEIO_EFAULT:
-	return EFAULT;
-      case FILEIO_EBUSY:
-	return EBUSY;
-      case FILEIO_EEXIST:
-	return EEXIST;
-      case FILEIO_ENODEV:
-	return ENODEV;
-      case FILEIO_ENOTDIR:
-	return ENOTDIR;
-      case FILEIO_EISDIR:
-	return EISDIR;
-      case FILEIO_EINVAL:
-	return EINVAL;
-      case FILEIO_ENFILE:
-	return ENFILE;
-      case FILEIO_EMFILE:
-	return EMFILE;
-      case FILEIO_EFBIG:
-	return EFBIG;
-      case FILEIO_ENOSPC:
-	return ENOSPC;
-      case FILEIO_ESPIPE:
-	return ESPIPE;
-      case FILEIO_EROFS:
-	return EROFS;
-      case FILEIO_ENOSYS:
-	return ENOSYS;
-      case FILEIO_ENAMETOOLONG:
-	return ENAMETOOLONG;
-    }
-  return -1;
 }
 
 /* bfd_openr_iovec OPEN_CLOSURE data for gdb_bfd_open.  */
