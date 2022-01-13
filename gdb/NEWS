@@ -64,6 +64,23 @@ set debug threads on|off
 show debug threads
   Print additional debug messages about thread creation and deletion.
 
+set debug linux-nat on|off
+show debug linux-nat
+  These new commands replaced the old 'set debug lin-lwp' and 'show
+  debug lin-lwp' respectively.  Turning this setting on prints debug
+  messages relating to GDB's handling of native Linux inferiors.
+
+maint flush source-cache
+  Flush the contents of the source code cache.
+
+maint set gnu-source-highlight enabled on|off
+maint show gnu-source-highlight enabled
+  Whether GDB should use the GNU Source Highlight library for adding
+  styling to source code.  When off, the library will not be used, even
+  when available.  When GNU Source Highlight isn't used, or can't add
+  styling to a particular source file, then the Python Pygments
+  library will be used instead.
+
 * Changed commands
 
 maint packet
@@ -78,6 +95,12 @@ clone-inferior
   All modifications to the environment variables done using the 'set
   environment' or 'unset environment' commands are also copied to the new
   inferior.
+
+set debug lin-lwp on|off
+show debug lin-lwp
+  These commands have been removed from GDB.  The new command 'set
+  debug linux-nat' and 'show debug linux-nat' should be used
+  instead.
 
 * Python API
 
@@ -119,6 +142,9 @@ clone-inferior
   ** New gdb.RemoteTargetConnection.send_packet(PACKET) method.  This
      is equivalent to the existing 'maint packet' CLI command; it
      allows a user specified packet to be sent to the remote target.
+
+  ** New function gdb.host_charset(), returns a string, which is the
+     name of the current host charset.
 
 * New features in the GDB remote stub, GDBserver
 

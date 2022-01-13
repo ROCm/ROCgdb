@@ -709,6 +709,7 @@ struct elf_link_hash_table
   asection *irelplt;
   asection *irelifunc;
   asection *dynsym;
+  asection *srelrdyn;
 };
 
 /* Returns TRUE if the hash table is a struct elf_link_hash_table.  */
@@ -1105,6 +1106,16 @@ struct elf_backend_data
   bool (*check_relocs)
     (bfd *abfd, struct bfd_link_info *info, asection *o,
      const Elf_Internal_Rela *relocs);
+
+  /* The SIZE_RELATIVE_RELOCS function is called to size relative
+     relocations when mappig sections to segments.  */
+  bool (*size_relative_relocs)
+    (struct bfd_link_info *info, bool *need_layout);
+
+  /* The FINISH_RELATIVE_RELOCS function is called to finish relative
+     relocations in bfd_elf_final_link.  */
+  bool (*finish_relative_relocs)
+    (struct bfd_link_info *info);
 
   /* The CHECK_DIRECTIVES function is called once per input file by
      the add_symbols phase of the ELF backend linker.  The function
@@ -2718,7 +2729,7 @@ extern struct elf_segment_map * _bfd_elf_make_dynamic_segment
   (bfd *, asection *);
 
 extern bool _bfd_elf_map_sections_to_segments
-  (bfd *, struct bfd_link_info *);
+  (bfd *, struct bfd_link_info *, bool *);
 
 extern bool _bfd_elf_is_function_type (unsigned int);
 

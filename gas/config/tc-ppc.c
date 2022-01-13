@@ -110,6 +110,7 @@ static void ppc_change_csect (symbolS *, offsetT);
 static void ppc_file (int);
 static void ppc_function (int);
 static void ppc_extern (int);
+static void ppc_globl (int);
 static void ppc_lglobl (int);
 static void ppc_ref (int);
 static void ppc_section (int);
@@ -119,6 +120,8 @@ static void ppc_rename (int);
 static void ppc_toc (int);
 static void ppc_xcoff_cons (int);
 static void ppc_vbyte (int);
+static void ppc_weak (int);
+static void ppc_GNU_visibility (int);
 #endif
 
 #ifdef OBJ_ELF
@@ -230,6 +233,7 @@ const pseudo_typeS md_pseudo_table[] =
   { "extern",	ppc_extern,	0 },
   { "file",	ppc_file,	0 },
   { "function",	ppc_function,	0 },
+  { "globl",    ppc_globl,	0 },
   { "lglobl",	ppc_lglobl,	0 },
   { "ref",	ppc_ref,	0 },
   { "rename",	ppc_rename,	0 },
@@ -242,6 +246,12 @@ const pseudo_typeS md_pseudo_table[] =
   { "word",	ppc_xcoff_cons,	1 },
   { "short",	ppc_xcoff_cons,	1 },
   { "vbyte",    ppc_vbyte,	0 },
+  { "weak",     ppc_weak,	0 },
+
+  /* Enable GNU syntax for symbol visibility.  */
+  {"internal",  ppc_GNU_visibility, SYM_V_INTERNAL},
+  {"hidden",    ppc_GNU_visibility, SYM_V_HIDDEN},
+  {"protected", ppc_GNU_visibility, SYM_V_PROTECTED},
 #endif
 
 #ifdef OBJ_ELF
@@ -4285,6 +4295,71 @@ ppc_byte (int ignore ATTRIBUTE_UNUSED)
    to handle symbol suffixes for such symbols.  */
 static bool ppc_stab_symbol;
 
+/* Retrieve the visiblity input for pseudo-ops having ones.  */
+static unsigned short
+ppc_xcoff_get_visibility (void) {
+  SKIP_WHITESPACE();
+
+  if (startswith (input_line_pointer, "exported"))
+    {
+      input_line_pointer += 8;
+      return SYM_V_EXPORTED;
+    }
+
+  if (startswith (input_line_pointer, "hidden"))
+    {
+      input_line_pointer += 6;
+      return SYM_V_HIDDEN;
+    }
+
+  if (startswith (input_line_pointer, "internal"))
+    {
+      input_line_pointer += 8;
+      return SYM_V_INTERNAL;
+    }
+
+  if (startswith (input_line_pointer, "protected"))
+    {
+      input_line_pointer += 9;
+      return SYM_V_PROTECTED;
+    }
+
+  return 0;
+}
+
+/* Retrieve visiblity using GNU syntax.  */
+static void ppc_GNU_visibility (int visibility) {
+  int c;
+  char *name;
+  symbolS *symbolP;
+  coff_symbol_type *coffsym;
+
+  do
+    {
+      if ((name = read_symbol_name ()) == NULL)
+	break;
+      symbolP = symbol_find_or_make (name);
+      coffsym = coffsymbol (symbol_get_bfdsym (symbolP));
+
+      coffsym->native->u.syment.n_type &= ~SYM_V_MASK;
+      coffsym->native->u.syment.n_type |= visibility;
+
+      c = *input_line_pointer;
+      if (c == ',')
+	{
+	  input_line_pointer ++;
+
+	  SKIP_WHITESPACE ();
+
+	  if (*input_line_pointer == '\n')
+	    c = '\n';
+	}
+    }
+  while (c == ',');
+
+  demand_empty_rest_of_line ();
+}
+
 /* The .comm and .lcomm pseudo-ops for XCOFF.  XCOFF puts common
    symbols in the .bss segment as though they were local common
    symbols, and uses a different smclas.  The native Aix 4.3.3 assembler
@@ -4305,6 +4380,7 @@ ppc_comm (int lcomm)
   symbolS *lcomm_sym = NULL;
   symbolS *sym;
   char *pfrag;
+  unsigned short visibility = 0;
   struct ppc_xcoff_section *section;
 
   endc = get_symbol_name (&name);
@@ -4340,6 +4416,19 @@ ppc_comm (int lcomm)
 	    {
 	      as_warn (_("ignoring bad alignment"));
 	      align = 2;
+	    }
+
+	  /* The fourth argument to .comm is the visibility.  */
+	  if (*input_line_pointer == ',')
+	    {
+	      input_line_pointer++;
+	      visibility = ppc_xcoff_get_visibility ();
+	      if (!visibility)
+		{
+		  as_bad (_("Unknown visibility field in .comm"));
+		  ignore_rest_of_line ();
+		  return;
+		}
 	    }
 	}
     }
@@ -4461,6 +4550,14 @@ ppc_comm (int lcomm)
       symbol_set_frag (sym, symbol_get_frag (lcomm_sym));
       S_SET_VALUE (sym, symbol_get_frag (lcomm_sym)->fr_offset);
       symbol_get_frag (lcomm_sym)->fr_offset += size;
+    }
+
+  if (!lcomm && visibility)
+    {
+      /* Add visibility to .comm symbol.  */
+      coff_symbol_type *coffsym = coffsymbol (symbol_get_bfdsym (sym));
+      coffsym->native->u.syment.n_type &= ~SYM_V_MASK;
+      coffsym->native->u.syment.n_type |= visibility;
     }
 
   subseg_set (current_seg, current_subseg);
@@ -4842,13 +4939,102 @@ static void
 ppc_extern (int ignore ATTRIBUTE_UNUSED)
 {
   char *name;
-  char endc;
+  symbolS *sym;
 
-  endc = get_symbol_name (&name);
+  if ((name = read_symbol_name ()) == NULL)
+    return;
 
-  (void) symbol_find_or_make (name);
+  sym = symbol_find_or_make (name);
 
-  (void) restore_line_pointer (endc);
+  if (*input_line_pointer == ',')
+    {
+      unsigned short visibility;
+      coff_symbol_type *coffsym = coffsymbol (symbol_get_bfdsym (sym));
+
+      input_line_pointer++;
+      visibility = ppc_xcoff_get_visibility ();
+      if (!visibility)
+	{
+	  as_bad (_("Unknown visibility field in .extern"));
+	  ignore_rest_of_line ();
+	  return;
+	}
+
+      coffsym->native->u.syment.n_type &= ~SYM_V_MASK;
+      coffsym->native->u.syment.n_type |= visibility;
+    }
+
+  demand_empty_rest_of_line ();
+}
+
+/* XCOFF semantic for .globl says that the second parameter is
+   the symbol visibility.  */
+
+static void
+ppc_globl (int ignore ATTRIBUTE_UNUSED)
+{
+  char *name;
+  symbolS *sym;
+
+  if ((name = read_symbol_name ()) == NULL)
+    return;
+
+  sym = symbol_find_or_make (name);
+  S_SET_EXTERNAL (sym);
+
+  if (*input_line_pointer == ',')
+    {
+      unsigned short visibility;
+      coff_symbol_type *coffsym = coffsymbol (symbol_get_bfdsym (sym));
+
+      input_line_pointer++;
+      visibility = ppc_xcoff_get_visibility ();
+      if (!visibility)
+	{
+	  as_bad (_("Unknown visibility field in .globl"));
+	  ignore_rest_of_line ();
+	  return;
+	}
+
+      coffsym->native->u.syment.n_type &= ~SYM_V_MASK;
+      coffsym->native->u.syment.n_type |= visibility;
+    }
+
+  demand_empty_rest_of_line ();
+}
+
+/* XCOFF semantic for .weak says that the second parameter is
+   the symbol visibility.  */
+
+static void
+ppc_weak (int ignore ATTRIBUTE_UNUSED)
+{
+  char *name;
+  symbolS *sym;
+
+  if ((name = read_symbol_name ()) == NULL)
+    return;
+
+  sym = symbol_find_or_make (name);
+  S_SET_WEAK (sym);
+
+  if (*input_line_pointer == ',')
+    {
+      unsigned short visibility;
+      coff_symbol_type *coffsym = coffsymbol (symbol_get_bfdsym (sym));
+
+      input_line_pointer++;
+      visibility = ppc_xcoff_get_visibility ();
+      if (!visibility)
+	{
+	  as_bad (_("Unknown visibility field in .weak"));
+	  ignore_rest_of_line ();
+	  return;
+	}
+
+      coffsym->native->u.syment.n_type &= ~SYM_V_MASK;
+      coffsym->native->u.syment.n_type |= visibility;
+    }
 
   demand_empty_rest_of_line ();
 }

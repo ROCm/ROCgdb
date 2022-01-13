@@ -2714,6 +2714,7 @@ static const struct bfd_elf_special_section special_sections_r[] =
 {
   { STRING_COMMA_LEN (".rodata"), -2, SHT_PROGBITS, SHF_ALLOC },
   { STRING_COMMA_LEN (".rodata1"), 0, SHT_PROGBITS, SHF_ALLOC },
+  { STRING_COMMA_LEN (".relr.dyn"), 0, SHT_RELR, SHF_ALLOC },
   { STRING_COMMA_LEN (".rela"),	  -1, SHT_RELA,	    0 },
   { STRING_COMMA_LEN (".rel"),	  -1, SHT_REL,	    0 },
   { NULL,		    0,	   0, 0,	    0 }
@@ -4608,10 +4609,13 @@ elf_modify_segment_map (bfd *abfd,
 #define IS_TBSS(s) \
   ((s->flags & (SEC_THREAD_LOCAL | SEC_LOAD)) == SEC_THREAD_LOCAL)
 
-/* Set up a mapping from BFD sections to program segments.  */
+/* Set up a mapping from BFD sections to program segments.  Update
+   NEED_LAYOUT if the section layout is changed.  */
 
 bool
-_bfd_elf_map_sections_to_segments (bfd *abfd, struct bfd_link_info *info)
+_bfd_elf_map_sections_to_segments (bfd *abfd,
+				   struct bfd_link_info *info,
+				   bool *need_layout)
 {
   unsigned int count;
   struct elf_segment_map *m;
@@ -4622,7 +4626,17 @@ _bfd_elf_map_sections_to_segments (bfd *abfd, struct bfd_link_info *info)
   no_user_phdrs = elf_seg_map (abfd) == NULL;
 
   if (info != NULL)
-    info->user_phdrs = !no_user_phdrs;
+    {
+      info->user_phdrs = !no_user_phdrs;
+
+      /* Size the relative relocations if DT_RELR is enabled.  */
+      if (info->enable_dt_relr
+	  && need_layout != NULL
+	  && bed->size_relative_relocs
+	  && !bed->size_relative_relocs (info, need_layout))
+	info->callbacks->einfo
+	  (_("%F%P: failed to size relative relocations\n"));
+    }
 
   if (no_user_phdrs && bfd_count_sections (abfd) != 0)
     {
@@ -5415,7 +5429,7 @@ assign_file_positions_for_load_sections (bfd *abfd,
   unsigned int opb = bfd_octets_per_byte (abfd, NULL);
 
   if (link_info == NULL
-      && !_bfd_elf_map_sections_to_segments (abfd, link_info))
+      && !_bfd_elf_map_sections_to_segments (abfd, link_info, NULL))
     return false;
 
   alloc = 0;

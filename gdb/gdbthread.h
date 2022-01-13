@@ -1086,4 +1086,8 @@ extern void thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
 				    const char *cmd, int from_tty,
 				    const qcs_flags &flags);
 
+/* Return a string representation of STATE.  */
+
+extern const char *thread_state_string (enum thread_state state);
+
 #endif /* GDBTHREAD_H */
