@@ -1,6 +1,6 @@
-/* This testcase is part of GDB, the GNU debugger.
+/* Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
-   Copyright 2012-2022 Free Software Foundation, Inc.
+   This file is part of GDB.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,34 +13,25 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
-int
-myfunction (int aa)
+#include <hip/hip_runtime.h>
+
+__global__ void
+kernel ()
 {
-  int i;
-
-  i = aa + 42;
-
-  /* These lines are intentionally left blank such that the tests trying
-     to place breakpoints at line -10 relative to the "set.breakpoint.here"
-     line below land on a valid breakpoint location, inside the function.  */
-
-
-
-
-
-
-  return i;    /* set breakpoint here */
+  int x = 0;
+  x++; /* break here */
 }
 
 int
-main (void)
+main (int argc, char **argv)
 {
-  int a;
+  hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
 
-  a = myfunction (a);
+  /* Wait until kernel finishes.  */
+  hipDeviceSynchronize ();
 
- here:
-  return a;
+  return 0;
 }
