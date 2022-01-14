@@ -1274,7 +1274,35 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
 
 	  try
 	    {
-	      value_fetch_lazy (value);
+	      /* If the value's address is of an address space that is
+		 thread or lane specific, we need to fetch the value
+		 in the context of the right thread/lane.  */
+	      gdb::optional<scoped_restore_current_thread> restore_thread;
+	      gdb::optional<scoped_restore_current_simd_lane> restore_lane;
+
+	      if (var->root->thread_id > 0)
+		{
+		  thread_info *thread = find_thread_global_id (var->root->thread_id);
+		  if (thread != nullptr)
+		    {
+		      restore_thread.emplace ();
+		      switch_to_thread (thread);
+
+		      if (var->root->lane != -1)
+			{
+			  restore_lane.emplace (thread);
+			  thread->set_current_simd_lane (var->root->lane);
+			}
+		    }
+		  else
+		    {
+		      /* See comment in the catch block.  */
+		      value = nullptr;
+		    }
+		}
+
+	      if (value != nullptr)
+		value_fetch_lazy (value);
 	    }
 
 	  catch (const gdb_exception_error &except)
