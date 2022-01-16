@@ -1,6 +1,6 @@
 /* C language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2021 Free Software Foundation, Inc.
+   Copyright (C) 1992-2022 Free Software Foundation, Inc.
    Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -90,7 +90,7 @@ classify_type (struct type *elttype, struct gdbarch *gdbarch,
     {
       const char *name = elttype->name ();
 
-      if (elttype->code () == TYPE_CODE_CHAR || !name)
+      if (name == nullptr)
 	{
 	  result = C_CHAR;
 	  goto done;

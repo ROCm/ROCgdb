@@ -1,6 +1,6 @@
 /* TUI window generic functions.
 
-   Copyright (C) 1998-2021 Free Software Foundation, Inc.
+   Copyright (C) 1998-2022 Free Software Foundation, Inc.
    Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Hewlett-Packard Company.

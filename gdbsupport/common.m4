@@ -1,5 +1,5 @@
 dnl Autoconf configure snippets for common.
-dnl Copyright (C) 1995-2021 Free Software Foundation, Inc.
+dnl Copyright (C) 1995-2022 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl 
@@ -54,6 +54,11 @@ AC_DEFUN([GDB_AC_COMMON], [
   AC_CHECK_FUNCS([fdwalk getrlimit pipe pipe2 poll socketpair sigaction \
 		  ptrace64 sbrk setns sigaltstack sigprocmask \
 		  setpgid setpgrp getrusage getauxval sigtimedwait])
+
+  # This is needed for RHEL 5 and uclibc-ng < 1.0.39.
+  # These did not define ADDR_NO_RANDOMIZE in sys/personality.h,
+  # only in linux/personality.h.
+  AC_CHECK_DECLS([ADDR_NO_RANDOMIZE],,, [#include <sys/personality.h>])
 
   AC_CHECK_DECLS([strstr])
 

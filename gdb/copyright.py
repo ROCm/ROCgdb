@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# Copyright (C) 2011-2021 Free Software Foundation, Inc.
+# Copyright (C) 2011-2022 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -209,6 +209,7 @@ def main():
 EXCLUDE_LIST = (
     "gdb/nat/glibc_thread_db.h",
     "gdb/CONTRIBUTE",
+    "gdbsupport/Makefile.in",
     "gnulib/import",
     "gnulib/config.in",
     "gnulib/Makefile.in",

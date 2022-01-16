@@ -1,3 +1,27 @@
+2021-12-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR gdb/28405
+	* gdb.server/ext-attach.exp (run_test): New proc containing all of
+	the old code for running the core of the test.  This proc is then
+	called multiple times from the global scope.
+
+2021-12-11  Bruno Larsen  <blarsen@redhat.com>
+
+	PR gdb/28480
+
+	Pushed by Joel Brobecker  <brobecker@adacore.com>
+	* gdb.cp/ambiguous.cc: Add code to permit ambiguous member testing.
+	* gdb.cp/ambiguous.exp: Add ambiguous member test.
+
+2021-10-22  Tom de Vries  <tdevries@suse.de>
+
+	PR tui/28483
+	* gdb.tui/break.exp: New file.
+
+2021-09-13  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.base/default.exp: Change $_gdb_minor to 2.
+
 2021-09-10  Tom de Vries  <tdevries@suse.de>
 
 	* lib/gdb.exp (gdb_compile_test): Handle unrecognized command line
@@ -25099,6 +25123,6 @@ For older changes see ChangeLog-1993-2013.
 ;; version-control: never
 ;; End:
 
-    Copyright 2014-2021 Free Software Foundation, Inc.
+    Copyright 2014-2022 Free Software Foundation, Inc.
   Copying and distribution of this file, with or without modification,
   are permitted provided the copyright notice and this notice are preserved.

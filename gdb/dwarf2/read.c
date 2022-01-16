@@ -1,6 +1,6 @@
 /* DWARF 2 debugging format support for GDB.
 
-   Copyright (C) 1994-2021 Free Software Foundation, Inc.
+   Copyright (C) 1994-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
@@ -18185,16 +18185,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	break;
       case DW_ATE_UTF:
 	{
-	  if (bits == 16)
-	    type = builtin_type (arch)->builtin_char16;
-	  else if (bits == 32)
-	    type = builtin_type (arch)->builtin_char32;
-	  else
-	    {
-	      complaint (_("unsupported DW_ATE_UTF bit size: '%d'"),
-			 bits);
-	      type = dwarf2_init_integer_type (cu, objfile, bits, 1, name);
-	    }
+	  type = init_character_type (objfile, bits, 1, name);
 	  return set_die_type (die, type, cu);
 	}
 	break;
@@ -18214,7 +18205,9 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	break;
     }
 
-  if (name && strcmp (name, "char") == 0)
+  if (type->code () == TYPE_CODE_INT
+      && name != nullptr
+      && strcmp (name, "char") == 0)
     type->set_has_no_signedness (true);
 
   maybe_set_alignment (cu, die, type);

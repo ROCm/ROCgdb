@@ -2,7 +2,7 @@
 
 # Architecture commands for GDB, the GNU debugger.
 #
-# Copyright (C) 1998-2021 Free Software Foundation, Inc.
+# Copyright (C) 1998-2022 Free Software Foundation, Inc.
 # Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
 #
 # This file is part of GDB.
@@ -1299,8 +1299,12 @@ cat <<EOF
 
 /* Dynamic architecture support for GDB, the GNU debugger.
 
+<<<<<<< HEAD
    Copyright (C) 1998-2021 Free Software Foundation, Inc.
    Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+=======
+   Copyright (C) 1998-2022 Free Software Foundation, Inc.
+>>>>>>> ef6ec3333e80e39ce207c6c5d5628bdd5402111d
 
    This file is part of GDB.
 

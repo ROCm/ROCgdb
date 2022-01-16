@@ -1,3 +1,74 @@
+2022-01-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 11.2.
+
+2022-01-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbarch.sh: Update end year of copyright year range for
+	copyright header of generated files.
+
+2022-01-16  Joel Brobecker  <brobecker@adacore.com>
+
+	Update copyright year in header of all GDB files to 2022,
+	using the gdb/copyright.py script
+
+2022-01-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* copyright.py (EXCLUDE_LIST): Add "gdbsupport/Makefile.in".
+
+2022-01-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* top.c: Update year range in copyright notice.
+	(print_gdb_version): Update copyright year to 2022.
+
+2021-12-23  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	PR gdb/28405
+	* remote.c (remote_target::remote_add_thread): Add new silent_p
+	argument, use as needed.
+	(remote_target::remote_notice_new_inferior): Pass additional
+	argument to remote_add_thread.
+	(remote_target::remote_notice_new_inferior): Likewise.
+	(extended_remote_target::attach): Call remote_add_thread instead
+	of add_thred_silent directly.
+	(remote_target::select_thread_for_ambiguous_stop_reply): Move
+	assert earlier, before we use the thing we're asserting is not
+	nullptr.
+
+2021-12-11  Bruno Larsen  <blarsen@redhat.com>
+
+	PR gdb/28480
+
+	Pushed by Joel Brobecker  <brobecker@adacore.com>
+	* valops.c (struct_field_searcher::update_result): Improve
+	ambiguous member detection.
+
+2021-11-03  Luis Machado  <luis.machado@linaro.org>
+
+	PR gdb/28355
+
+	* arch/aarch64.h (struct aarch64_features): New struct.
+
+2021-10-22  Tom de Vries  <tdevries@suse.de>
+
+	PR tui/28483
+	* tui/tui-winsource.c (tui_source_window_base::update_breakpoint_info):
+	Fix returns in loop body.
+
+2021-10-04  Tom de Vries  <tdevries@suse.de>
+
+	PR build/28318
+	* ax_cxx_compile_stdcxx.m4: Add CXX_DIALECT to CXX.
+	* configure: Regenerate.
+
+2021-09-13  Joel Brobecker  <brobecker@adacore.com>
+
+	* version.in: Set GDB version number to 11.1.90.DATE-git.
+
+2021-09-13  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 11.1 released.
+
 2021-09-13  Joel Brobecker  <brobecker@adacore.com>
 
 	* version.in: Set GDB version number to 11.1.
