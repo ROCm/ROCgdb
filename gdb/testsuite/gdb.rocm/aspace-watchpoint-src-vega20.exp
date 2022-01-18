@@ -27,7 +27,7 @@ if {![dwarf2_support]} {
 # The base name of the source file(s).
 set srcfile_base lane-pc-vega20
 
-standard_testfile ${srcfile_base}.c
+standard_testfile ${srcfile_base}.cpp
 
 # This test can only be run on amdgcn targets.
 if [skip_hipcc_tests] {
@@ -155,18 +155,15 @@ Dwarf::assemble $asmfile_dwarf {
     }
 }
 
-# Compile OpenCL application.
-set cc_flags "-fstack-protector\
-	      -I${rocm_path}/opencl/include/\
-	      -Wl,-lOpenCL,-L${rocm_path}/lib/\
-	      -DKERNEL_SO_PATH=\"${shlibfile_path}\"\
+# Compile the HIP application.
+set cc_flags "-DKERNEL_SO_PATH=\"${shlibfile_path}\"\
 	      -DKERNEL_SO_NAME=\"${shlibfile_name}\""
 
-set options [list debug additional_flags=$cc_flags]
+set options [list debug hip additional_flags=$cc_flags]
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" $binfile\
-	   executable $options] != "" } {
-    untested "OpenCL application failed to compile"
+if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
+        ${options}] } {
+    untested "HIP application failed to compile"
     return -1
 }
 
