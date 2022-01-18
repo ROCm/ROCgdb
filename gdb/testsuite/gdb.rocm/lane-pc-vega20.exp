@@ -77,7 +77,7 @@ proc gdb_print_active_lanes {expr lane_values} {
 	if {$active == "1"} {
 	    with_test_prefix "$test, lane $i" {
 		if {[gdb_test_multiple "lane $i" "switch lane" {
-		    -wrap -re "Switching to thread 5, lane $i .*" {
+		    -wrap -re "Switching to thread \\d+, lane $i .*" {
 		    }
 		}] != 0} {
 		    set result 0
@@ -103,7 +103,7 @@ if {![dwarf2_support]} {
     return 0
 }
 
-standard_testfile .c
+standard_testfile .cpp
 
 # This test can only be run on amdgcn targets.
 if [skip_hipcc_tests] {
@@ -1322,18 +1322,15 @@ Dwarf::assemble $asmfile_dwarf {
     }
 }
 
-# Compile OpenCL application.
-set cc_flags "-fstack-protector\
-	      -I${rocm_path}/opencl/include/\
-	      -Wl,-lOpenCL,-L${rocm_path}/lib/\
-	      -DKERNEL_SO_PATH=\"${shlibfile_path}\"\
+# Compile the HIP application.
+set cc_flags "-DKERNEL_SO_PATH=\"${shlibfile_path}\"\
 	      -DKERNEL_SO_NAME=\"${shlibfile_name}\""
 
-set options [list debug additional_flags=$cc_flags]
+set options [list debug hip additional_flags=$cc_flags]
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" $binfile\
-	   executable $options] != "" } {
-    untested "OpenCL application failed to compile"
+if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
+        ${options}] } {
+    untested "HIP application failed to compile"
     return -1
 }
 
