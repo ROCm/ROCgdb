@@ -283,7 +283,7 @@ rocm_target_id_string (amd_dbgapi_wave_id_t wave_id)
   str += string_printf (":%ld", wave_id.handle);
 
   str += amd_dbgapi_wave_get_info (wave_id,
-				   AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD,
+				   AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
 				   sizeof (group_ids), &group_ids)
 	     == AMD_DBGAPI_STATUS_SUCCESS
 	   ? string_printf (" (%d,%d,%d)", group_ids[0], group_ids[1],
@@ -291,7 +291,7 @@ rocm_target_id_string (amd_dbgapi_wave_id_t wave_id)
 	   : " (?,?,?)";
 
   str += amd_dbgapi_wave_get_info (
-	   wave_id, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+	   wave_id, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
 	   sizeof (wave_in_group), &wave_in_group)
 	     == AMD_DBGAPI_STATUS_SUCCESS
 	   ? string_printf ("/%d", wave_in_group)
@@ -334,12 +334,12 @@ static std::string
 dispatch_pos_string (thread_info *tp)
 {
   uint32_t group_ids[3];
-  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD, group_ids)
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD, group_ids)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return "(?,?,?)/?";
 
   uint32_t wave_in_group;
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
 		       wave_in_group);
 
   return string_printf ("(%d,%d,%d)/%d",
@@ -387,7 +387,7 @@ static std::string
 thread_workgroup_pos_string (thread_info *tp)
 {
   uint32_t wave_in_group;
-  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
 		     wave_in_group) != AMD_DBGAPI_STATUS_SUCCESS)
     return "?";
 
@@ -442,7 +442,7 @@ struct work_item_info
     return wave_in_group * lane_count + lane_index;
   }
 
-  /* Store in PARTIAL_WORK_GROUP_SIZES the work-group item sizes for
+  /* Store in PARTIAL_WORKGROUP_SIZES the work-group item sizes for
      each axis, taking into account the work-items that actually fit
      in the grid.  */
   void partial_work_group_sizes (size_t partial_work_group_sizes[3]) const
@@ -479,13 +479,13 @@ make_work_item_info (thread_info *tp, int lane, work_item_info *wi)
 			   wi->grid_sizes);
 
   dispatch_get_info_throw (wi->dispatch_id,
-			   AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
+			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 			   wi->work_group_sizes);
 
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD,
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
 		       wi->work_group_ids);
 
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
 		       wi->wave_in_group);
 
   wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, wi->lane_count);
@@ -550,7 +550,7 @@ lane_target_id_string (thread_info *tp, int lane)
 
   str += string_printf (":%ld/%d", wave_id.handle, lane);
 
-  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD,
+  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
 			 group_ids)
 	  == AMD_DBGAPI_STATUS_SUCCESS
 	  ? string_printf (" (%d,%d,%d)", group_ids[0], group_ids[1],
@@ -2494,11 +2494,11 @@ rocm_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
       uint32_t group_ids[3], wave_in_group;
 
       if (amd_dbgapi_wave_get_info (wave_id,
-				    AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD,
+				    AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
 				    sizeof (group_ids), &group_ids)
 	    == AMD_DBGAPI_STATUS_SUCCESS
 	  && amd_dbgapi_wave_get_info (
-	       wave_id, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+	       wave_id, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
 	       sizeof (wave_in_group), &wave_in_group)
 	       == AMD_DBGAPI_STATUS_SUCCESS)
 	{
@@ -3378,7 +3378,7 @@ info_dispatches_command (const char *args, int from_tty)
 		/* workgroup  */
 		uint16_t work_group_sizes[3];
 		if ((status = amd_dbgapi_dispatch_get_info (
-		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
+		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 		       sizeof (work_group_sizes), &work_group_sizes[0]))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
 		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
@@ -3517,7 +3517,7 @@ info_dispatches_command (const char *args, int from_tty)
 	    /* workgroup  */
 	    uint16_t work_group_sizes[3];
 	    if ((status = amd_dbgapi_dispatch_get_info (
-		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 		   sizeof (work_group_sizes), &work_group_sizes[0]))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
 	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),

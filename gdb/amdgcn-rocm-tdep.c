@@ -772,14 +772,14 @@ amdgcn_rocm_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 
   uint16_t work_group_sizes[3];
   dispatch_get_info_throw (dispatch_id,
-			   AMD_DBGAPI_DISPATCH_INFO_WORK_GROUP_SIZES,
+			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 			   work_group_sizes);
 
   uint32_t group_ids[3];
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WORK_GROUP_COORD, group_ids);
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD, group_ids);
 
   uint32_t wave_in_group;
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORK_GROUP,
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
 		       wave_in_group);
 
   size_t lane_count;
