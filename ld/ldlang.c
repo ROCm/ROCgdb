@@ -6465,36 +6465,24 @@ static bool
 lang_size_relro_segment (bool *relax, bool check_regions)
 {
   bool do_reset = false;
-  bool do_data_relro;
-  bfd_vma data_initial_base, data_relro_end;
 
   if (link_info.relro && expld.dataseg.relro_end)
     {
-      do_data_relro = true;
-      data_initial_base = expld.dataseg.base;
-      data_relro_end = lang_size_relro_segment_1 (&expld.dataseg);
-    }
-  else
-    {
-      do_data_relro = false;
-      data_initial_base = data_relro_end = 0;
-    }
+      bfd_vma data_initial_base = expld.dataseg.base;
+      bfd_vma data_relro_end = lang_size_relro_segment_1 (&expld.dataseg);
 
-  if (do_data_relro)
-    {
       lang_reset_memory_regions ();
       one_lang_size_sections_pass (relax, check_regions);
 
       /* Assignments to dot, or to output section address in a user
 	 script have increased padding over the original.  Revert.  */
-      if (do_data_relro && expld.dataseg.relro_end > data_relro_end)
+      if (expld.dataseg.relro_end > data_relro_end)
 	{
 	  expld.dataseg.base = data_initial_base;;
 	  do_reset = true;
 	}
     }
-
-  if (!do_data_relro && lang_size_segment (&expld.dataseg))
+  else if (lang_size_segment (&expld.dataseg))
     do_reset = true;
 
   return do_reset;
@@ -6992,6 +6980,43 @@ static void
 lang_finalize_start_stop (void)
 {
   foreach_start_stop (set_start_stop);
+}
+
+static void
+lang_symbol_tweaks (void)
+{
+  /* Give initial values for __start and __stop symbols, so that  ELF
+     gc_sections will keep sections referenced by these symbols.  Must
+     be done before lang_do_assignments.  */
+  if (config.build_constructors)
+    lang_init_start_stop ();
+
+  /* Make __ehdr_start hidden, and set def_regular even though it is
+     likely undefined at this stage.  For lang_check_relocs.  */
+  if (is_elf_hash_table (link_info.hash)
+      && !bfd_link_relocatable (&link_info))
+    {
+      struct elf_link_hash_entry *h = (struct elf_link_hash_entry *)
+	bfd_link_hash_lookup (link_info.hash, "__ehdr_start",
+			      false, false, true);
+
+      /* Only adjust the export class if the symbol was referenced
+	 and not defined, otherwise leave it alone.  */
+      if (h != NULL
+	  && (h->root.type == bfd_link_hash_new
+	      || h->root.type == bfd_link_hash_undefined
+	      || h->root.type == bfd_link_hash_undefweak
+	      || h->root.type == bfd_link_hash_common))
+	{
+	  const struct elf_backend_data *bed;
+	  bed = get_elf_backend_data (link_info.output_bfd);
+	  (*bed->elf_backend_hide_symbol) (&link_info, h, true);
+	  if (ELF_ST_VISIBILITY (h->other) != STV_INTERNAL)
+	    h->other = (h->other & ~ELF_ST_VISIBILITY (-1)) | STV_HIDDEN;
+	  h->def_regular = 1;
+	  h->root.linker_def = 1;
+	}
+    }
 }
 
 static void
@@ -8210,11 +8235,7 @@ lang_process (void)
      files.  */
   ldctor_build_sets ();
 
-  /* Give initial values for __start and __stop symbols, so that  ELF
-     gc_sections will keep sections referenced by these symbols.  Must
-     be done before lang_do_assignments below.  */
-  if (config.build_constructors)
-    lang_init_start_stop ();
+  lang_symbol_tweaks ();
 
   /* PR 13683: We must rerun the assignments prior to running garbage
      collection in order to make sure that all symbol aliases are resolved.  */
