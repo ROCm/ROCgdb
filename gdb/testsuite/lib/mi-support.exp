@@ -1319,9 +1319,12 @@ proc mi_expect_stop { reason func args file line extra test } {
 
     set a $after_reason
 
-    verbose -log "mi_expect_stop: expecting: \\*stopped,${ebn}${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$func\",args=$args,(?:file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"$line\",arch=\"$any\"|from=\"$file\")\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re"
+    set hit_lanes "(?:hit-lanes=\"$any\",)?"
+    set lane_id "(?:lane-id=\"$any\",)?"
+
+    verbose -log "mi_expect_stop: expecting: \\*stopped,${ebn}${r}${a}${bn}${hit_lanes}frame=\{addr=\"$hex\",func=\"$func\",args=$args,(?:file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"$line\",arch=\"$any\"|from=\"$file\")\}$after_stopped,thread-id=\"$decimal\",${lane_id}stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re"
     gdb_expect {
-	-re "\\*stopped,${ebn}${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$func\",args=$args,(?:file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"($line)\",arch=\"$any\"|from=\"$file\")\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re" {
+	-re "\\*stopped,${ebn}${r}${a}${bn}${hit_lanes}frame=\{addr=\"$hex\",func=\"$func\",args=$args,(?:file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"($line)\",arch=\"$any\"|from=\"$file\")\}$after_stopped,thread-id=\"$decimal\",${lane_id}stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re" {
 	    pass "$test"
 	    if {[array names expect_out "2,string"] != ""} {
 		return $expect_out(2,string)
@@ -1329,7 +1332,7 @@ proc mi_expect_stop { reason func args file line extra test } {
 	    # No debug info available but $file does match.
 	    return 0
 	}
-	-re "\\*stopped,${ebn}${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$any\",args=\[\\\[\{\]$any\[\\\]\}\],file=\"$any\",fullname=\"${fullname_syntax}$any\",line=\"\[0-9\]*\",arch=\"$any\"\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re" {
+	-re "\\*stopped,${ebn}${r}${a}${bn}${hit_lanes}frame=\{addr=\"$hex\",func=\"$any\",args=\[\\\[\{\]$any\[\\\]\}\],file=\"$any\",fullname=\"${fullname_syntax}$any\",line=\"\[0-9\]*\",arch=\"$any\"\}$after_stopped,thread-id=\"$decimal\",${lane_id}stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re" {
 	    verbose -log "got $expect_out(buffer)"
 	    fail "$test (stopped at wrong place)"
 	    return -1
@@ -2726,6 +2729,126 @@ proc mi_make_breakpoint_pending {args} {
 
     append result "\\\}"
     return $result
+}
+
+# Construct an expected regexp string for a "*stopped" event.  REASON
+# is the value of "reason" attribute.  Accepts options that map to
+# expected MI attributes:
+#
+#  Option                   => MI
+#  ========================    =============================
+#  -addr ADDR               => addr="ADDR"
+#  -func FUNC               => func="FUNC" (frame attribute)
+#  -func-args ARGS          => args="ARGS" (frame attribute)
+#  -file FILE               => file="FILE" (frame attribute)
+#  -line LINE               => line="LINE" (frame attribute)
+#  -thread-id TID           => thread-id="TID"
+#  -lane-id LID             => lane-id="LID"
+#  -stopped-threads STOPPED => stopped-threads="STOPPED"
+#
+# If reason is "breakpoint-hit", also handles the following options,
+# with corresponding MI mapping:
+#
+#  -disp DISP               => disp="DISP"
+#  -bkptno BKPTNO           => bkptno="BKPTNO"
+#  -hit-lanes LANES         => hit-lanes="LANES"
+#
+# If some option is not specified, the option is expected, with a
+# default value regexp that accepts any valid value.
+#
+# Note we have "-func-args" instead of the naturally expect -args, to
+# match MI's "args", because $args is a special variable in TCL.
+#
+# Do not pass .* for any argument if you are expecting more than one
+# stop.
+proc mi_make_stopped {reason args} {
+    global hex decimal fullname_syntax
+    set any "\[^\n\]*"
+
+    set options {
+	{addr $hex} {func $any} {func-args $any}
+	{file $any} {line $decimal}
+	{thread-id $decimal} {lane-id $decimal}
+	{stopped-threads "($decimal|all)"}
+    }
+
+    if {$reason == "breakpoint-hit"} {
+	lappend options {disp $any} {bkptno $decimal} {hit-lanes $any}
+    }
+
+    parse_list 1 args $options "-" true
+
+    set attr_list {}
+
+    if {$reason == "breakpoint-hit"} {
+	foreach attr [list disp bkptno hit-lanes] {
+	    lappend attr_list $attr [set $attr]
+	}
+    }
+
+    set f ""
+    append f "\\{"
+    append f "addr=\"$addr\","
+    append f "func=\"$func\","
+    append f "args=${func-args},"
+    append f "(?:file=\"$any$file\","
+    append f "fullname=\"${fullname_syntax}$file\","
+    append f "line=\"$line\","
+    append f "arch=\"$any\"|from=\"$file\")"
+    append f "\\}"
+
+    lappend attr_list "frame" $f
+
+    foreach attr [list thread-id lane-id stopped-threads] {
+	lappend attr_list $attr [set $attr]
+    }
+
+    return "\\*stopped,reason=\"$reason\",[mi_build_kv_pairs $attr_list]"
+}
+
+# Expect a *stopped, with reason REASON.  ARGS is passed to
+# mi_make_stopped.  See that function for description of supported
+# options.
+proc mi_expect_stopped_reason {test reason args} {
+    global async
+    global mi_gdb_prompt
+
+    set re [mi_make_stopped $reason {*}$args]
+
+    if {$async} {
+	set prompt_re ""
+    } else {
+	set prompt_re "$mi_gdb_prompt$"
+    }
+
+    verbose -log "expecting: $re"
+    gdb_expect {
+	-re "$re.*${prompt_re}.*" {
+	    pass "$test"
+	    return 0
+	}
+	-re ".*\r\n$mi_gdb_prompt$" {
+	    verbose -log "got $expect_out(buffer)"
+	    fail "$test (unknown output after running)"
+	    return -1
+	}
+	timeout {
+	    fail "$test (timeout)"
+	    return -1
+	}
+    }
+}
+
+# Expect a *stopped,reason="breakpoint-hit" stop.  See mi_make_stopped
+# for description of supported options.
+proc mi_expect_breakpoint_stop {test args} {
+    mi_expect_stopped_reason $test "breakpoint-hit" {*}$args
+}
+
+# Expect a *stopped,reason="end-stepping-range" stop.  See
+# mi_make_stopped for description of supported options.
+proc mi_expect_step_stop {test args} {
+    mi_expect_stopped_reason $test "end-stepping-range" {*}$args
 }
 
 # Construct a breakpoint regexp.  This may be used to test the output of
