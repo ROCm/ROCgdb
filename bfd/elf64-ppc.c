@@ -5389,8 +5389,7 @@ ppc64_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		    p->pc_count += 1;
 		  if ((r_type == R_PPC64_ADDR64 || r_type == R_PPC64_TOC)
 		      && rel->r_offset % 2 == 0
-		      && sec->alignment_power != 0
-		      && ((!NO_OPD_RELOCS && is_opd) || !ifunc))
+		      && sec->alignment_power != 0)
 		    p->rel_count += 1;
 		}
 	      else
@@ -5435,8 +5434,7 @@ ppc64_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  p->count += 1;
 		  if ((r_type == R_PPC64_ADDR64 || r_type == R_PPC64_TOC)
 		      && rel->r_offset % 2 == 0
-		      && sec->alignment_power != 0
-		      && ((!NO_OPD_RELOCS && is_opd) || !is_ifunc))
+		      && sec->alignment_power != 0)
 		    p->rel_count += 1;
 		}
 	    }
@@ -7283,10 +7281,7 @@ dec_dynrel_count (const Elf_Internal_Rela *rel,
 		p->pc_count -= 1;
 	      if ((r_type == R_PPC64_ADDR64 || r_type == R_PPC64_TOC)
 		  && rel->r_offset % 2 == 0
-		  && sec->alignment_power != 0
-		  && ((!NO_OPD_RELOCS
-		       && ppc64_elf_section_data (sec)->sec_type == sec_opd)
-		      || h->type != STT_GNU_IFUNC))
+		  && sec->alignment_power != 0)
 		p->rel_count -= 1;
 	      p->count -= 1;
 	      if (p->count == 0)
@@ -7321,10 +7316,7 @@ dec_dynrel_count (const Elf_Internal_Rela *rel,
 	    {
 	      if ((r_type == R_PPC64_ADDR64 || r_type == R_PPC64_TOC)
 		  && rel->r_offset % 2 == 0
-		  && sec->alignment_power != 0
-		  && ((!NO_OPD_RELOCS
-		       && ppc64_elf_section_data (sec)->sec_type == sec_opd)
-		      || !is_ifunc))
+		  && sec->alignment_power != 0)
 		p->rel_count -= 1;
 	      p->count -= 1;
 	      if (p->count == 0)
@@ -10014,7 +10006,11 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 	  if (eh->elf.type == STT_GNU_IFUNC)
 	    sreloc = htab->elf.irelplt;
 	  count = p->count;
-	  if (info->enable_dt_relr && SYMBOL_REFERENCES_LOCAL (info, h))
+	  if (info->enable_dt_relr
+	      && ((!NO_OPD_RELOCS
+		   && ppc64_elf_section_data (p->sec)->sec_type == sec_opd)
+		  || (eh->elf.type != STT_GNU_IFUNC
+		      && SYMBOL_REFERENCES_LOCAL (info, h))))
 	    count -= p->rel_count;
 	  sreloc->size += count * sizeof (Elf64_External_Rela);
 	}
@@ -10264,7 +10260,11 @@ ppc64_elf_size_dynamic_sections (bfd *output_bfd,
 		  asection *srel;
 
 		  count = p->count;
-		  if (info->enable_dt_relr)
+		  if (info->enable_dt_relr
+		      && ((!NO_OPD_RELOCS
+			   && (ppc64_elf_section_data (p->sec)->sec_type
+			       == sec_opd))
+			  || !p->ifunc))
 		    count -= p->rel_count;
 		  srel = elf_section_data (p->sec)->sreloc;
 		  if (p->ifunc)
@@ -10318,8 +10318,9 @@ ppc64_elf_size_dynamic_sections (bfd *output_bfd,
 			htab->got_reli_size += rel_size;
 		      }
 		    else if (bfd_link_pic (info)
-			     && !(ent->tls_type != 0
-				  && bfd_link_executable (info)))
+			     && (ent->tls_type == 0
+				 ? !info->enable_dt_relr
+				 : !bfd_link_executable (info)))
 		      {
 			asection *srel = ppc64_elf_tdata (ibfd)->relgot;
 			srel->size += rel_size;
@@ -10355,7 +10356,8 @@ ppc64_elf_size_dynamic_sections (bfd *output_bfd,
 		    s = htab->pltlocal;
 		    ent->plt.offset = s->size;
 		    s->size += LOCAL_PLT_ENTRY_SIZE (htab);
-		    if (bfd_link_pic (info))
+		    if (bfd_link_pic (info)
+			&& !(info->enable_dt_relr && !htab->opd_abi))
 		      htab->relpltlocal->size += sizeof (Elf64_External_Rela);
 		  }
 	      }
@@ -12815,8 +12817,9 @@ ppc64_elf_layout_multitoc (struct bfd_link_info *info)
 		  htab->got_reli_size += rel_size;
 		}
 	      else if (bfd_link_pic (info)
-		       && !(ent->tls_type != 0
-			    && bfd_link_executable (info)))
+		       && (ent->tls_type == 0
+			   ? !info->enable_dt_relr
+			   : !bfd_link_executable (info)))
 		{
 		  asection *srel = ppc64_elf_tdata (ibfd)->relgot;
 		  srel->size += rel_size;
