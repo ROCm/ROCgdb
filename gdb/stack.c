@@ -56,6 +56,7 @@
 #include "gdbsupport/def-vector.h"
 #include "cli/cli-option.h"
 #include "cli/cli-style.h"
+#include "gdbsupport/buildargv.h"
 
 /* The possible choices of "set print frame-arguments", and the value
    of this setting.  */

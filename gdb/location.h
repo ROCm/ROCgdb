@@ -109,16 +109,10 @@ struct explicit_location
 extern enum event_location_type
   event_location_type (const struct event_location *);
 
-/* Return a malloc'd explicit string representation of the given
-   explicit location.  The location must already be canonicalized/valid.  */
+/* Return a linespec string representation of the given explicit
+   location.  The location must already be canonicalized/valid.  */
 
-extern char *
-  explicit_location_to_string (const struct explicit_location *explicit_loc);
-
-/* Return a malloc'd linespec string representation of the given
-   explicit location.  The location must already be canonicalized/valid.  */
-
-extern char *
+extern std::string
   explicit_location_to_linespec (const struct explicit_location *explicit_loc);
 
 /* Return a string representation of the LOCATION.
@@ -175,7 +169,7 @@ extern const char *
 
 /* Create a new probe location.  */
 
-extern event_location_up new_probe_location (const char *probe);
+extern event_location_up new_probe_location (std::string &&probe);
 
 /* Return the probe location (a string) of the given event_location
    (which must be of type PROBE_LOCATION).  */
@@ -281,11 +275,10 @@ extern event_location_up
 
 extern int event_location_empty_p (const struct event_location *location);
 
-/* Set the location's string representation.  If STRING is NULL, clear
-   the string representation.  */
+/* Set the location's string representation.  */
 
 extern void
   set_event_location_string (struct event_location *location,
-			     const char *string);
+			     std::string &&string);
 
 #endif /* LOCATION_H */
