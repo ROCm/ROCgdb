@@ -23222,6 +23222,7 @@ supplied regular expression.
 @xref{Threads}.
 
 @cindex lane identifier (system)
+@anchor{info lanes}
 @item info lanes @r{[}-all | -active | -inactived@r{]} @var{lane-id-list}
 Display information about one or more heterogeneous lanes of the
 current thread.  With no arguments displays information about all used
@@ -23518,6 +23519,7 @@ cause the source position to appear to move until execution reaches a
 point that makes the current heterogeneous lane active.  However,
 other heterogeneous lanes of the same thread will advance.
 
+@anchor{break commands}
 @item break @r{[}-lane @var{lane-index}@r{]} @r{[}location@r{]} @r{[}if @var{cond}@r{]}
 @itemx tbreak @r{[}-lane @var{lane-index}@r{]} @r{[}location@r{]} @r{[}if @var{cond}@r{]}
 @itemx hbreak @r{[}-lane @var{lane-index}@r{]} @r{[}location@r{]} @r{[}if @var{cond}@r{]}
@@ -32029,40 +32031,43 @@ the user interface.
 @subsubsection Threads and Frames
 
 In most cases when @value{GDBN} accesses the target, this access is
-done in context of a specific thread and frame (@pxref{Frames}).
+done in context of a specific thread and frame (@pxref{Frames}).  If
+the thread has multiple lanes (@pxref{Heterogeneous Debugging}), then
+the access is further done in the context of a specific lane of the
+thread.
 Often, even when accessing global data, the target requires that a thread
-be specified.  The CLI interface maintains the selected thread and frame,
+be specified.  The CLI interface maintains the selected thread, lane, and frame,
 and supplies them to target on each command.  This is convenient,
 because a command line user would not want to specify that information
 explicitly on each command, and because user interacts with
 @value{GDBN} via a single terminal, so no confusion is possible as 
-to what thread and frame are the current ones.
+to what thread, lane, and frame are the current ones.
 
-In the case of MI, the concept of selected thread and frame is less
+In the case of MI, the concept of selected thread, lane, and frame is less
 useful.  First, a frontend can easily remember this information
 itself.  Second, a graphical frontend can have more than one window,
 each one used for debugging a different thread, and the frontend might
 want to access additional threads for internal purposes.  This
 increases the risk that by relying on implicitly selected thread, the
 frontend may be operating on a wrong one.  Therefore, each MI command
-should explicitly specify which thread and frame to operate on.  To
-make it possible, each MI command accepts the @samp{--thread} and
+should explicitly specify which thread, lane, and frame to operate on.  To
+make it possible, each MI command accepts the @samp{--thread},  @samp{--lane}, and
 @samp{--frame} options, the value to each is @value{GDBN} global
-identifier for thread and frame to operate on.
+identifier for thread, lane, and frame to operate on.
 
 Usually, each top-level window in a frontend allows the user to select
-a thread and a frame, and remembers the user selection for further
+a thread, lane, and a frame, and remembers the user selection for further
 operations.  However, in some cases @value{GDBN} may suggest that the
-current thread or frame be changed.  For example, when stopping on a
+current thread, lane, or frame be changed.  For example, when stopping on a
 breakpoint it is reasonable to switch to the thread where breakpoint is
-hit.  For another example, if the user issues the CLI @samp{thread} or
+hit.  For another example, if the user issues the CLI @samp{thread}, @samp{lane} or
 @samp{frame} commands via the frontend, it is desirable to change the
 frontend's selection to the one specified by user.  @value{GDBN}
-communicates the suggestion to change current thread and frame using the
+communicates the suggestion to change current thread, lane, and frame using the
 @samp{=thread-selected} notification.
 
-Note that historically, MI shares the selected thread with CLI, so 
-frontends used the @code{-thread-select} to execute commands in the
+Note that historically, MI shares the selected thread with the CLI, so
+frontends used the @code{-thread-select} command to execute commands in the
 right context.  However, getting this to work right is cumbersome.  The
 simplest way is for frontend to emit @code{-thread-select} command
 before every command.  This doubles the number of commands that need
@@ -32075,8 +32080,8 @@ selected thread, then the behaviour of subsequent commands will
 change.  So, a frontend should either wait for response from such
 problematic commands, or explicitly add @code{-thread-select} for
 all subsequent commands.  No frontend is known to do this exactly
-right, so it is suggested to just always pass the @samp{--thread} and
-@samp{--frame} options.
+right, so it is suggested to just always pass the @samp{--thread},
+@samp{--lane}, and @samp{--frame} options.
 
 @subsubsection Language
 
@@ -32685,7 +32690,7 @@ because it cannot resume all threads together, or even for a single
 thread, if the thread must be stepped though some code before letting
 it run freely.
 
-@item *stopped,reason="@var{reason}",thread-id="@var{id}",stopped-threads="@var{stopped}",core="@var{core}"
+@item *stopped,reason="@var{reason}",thread-id="@var{tid}",[lane-id="@var{lid}",]stopped-threads="@var{stopped}",core="@var{core}"
 The target has stopped.  The @var{reason} field can have one of the
 following values:
 
@@ -32737,8 +32742,15 @@ The inferior called @code{exec}.  This is reported when @code{catch exec}
 (@pxref{Set Catchpoints}) has been used.
 @end table
 
-The @var{id} field identifies the global thread ID of the thread
+The @var{tid} field identifies the global thread ID of the thread
 that directly caused the stop -- for example by hitting a breakpoint.
+The @var{lane-id} field is present if the thread has multiple lanes,
+in which case @var{lid} indentifies the lane ID of the lane that
+@value{GDBN} is reporting the stop for, and thus gets the focus.  This
+lane is the one for which the arguments in the frame field are for.
+No stop record is reported for the other lanes in the thread.  Note
+that the @var{lane-id} field always indicates one lane only, while
+@var{hit-lanes} may indicate a set of lanes.
 Depending on whether all-stop
 mode is in effect (@pxref{All-Stop Mode}), @value{GDBN} may either
 stop all threads, or only the thread that directly triggered the stop.
@@ -32778,14 +32790,14 @@ A thread either was created, or has exited.  The @var{id} field
 contains the global @value{GDBN} identifier of the thread.  The @var{gid}
 field identifies the thread group this thread belongs to.
 
-@item =thread-selected,id="@var{id}"[,frame="@var{frame}"]
-Informs that the selected thread or frame were changed.  This notification
+@item =thread-selected,id="@var{tid}"[,lane="@var{lid}"][,frame="@var{frame}"]
+Informs that the selected thread, lane, or frame were changed.  This notification
 is not emitted as result of the @code{-thread-select} or
 @code{-stack-select-frame} commands, but is emitted whenever an MI command
-that is not documented to change the selected thread and frame actually
+that is not documented to change the selected thread, lane, and frame actually
 changes them.  In particular, invoking, directly or indirectly
-(via user-defined command), the CLI @code{thread} or @code{frame} commands,
-will generate this notification.  Changing the thread or frame from another
+(via user-defined command), the CLI @code{thread}, @code{lane}, or @code{frame} commands,
+will generate this notification.  Changing the thread, lane, or frame from another
 user interface (see @ref{Interpreters}) will also generate this notification.
 
 The @var{frame} field is only present if the newly selected thread is
@@ -32904,6 +32916,30 @@ indicates the exact type of catchpoint.
 This is the breakpoint disposition---either @samp{del}, meaning that
 the breakpoint will be deleted at the next stop, or @samp{keep},
 meaning that the breakpoint will not be deleted.
+
+@item hit-lanes
+Optional field that is present if the thread that caused the stop has
+multiple lanes.  It lists the lanes that were active when the
+breakpoint was hit.  The field's value is formatted as a lane ID list
+(@pxref{lane ID list}).  If the breakpoint is conditional, the list is
+further reduced to include only lanes for which the breakpoint
+condition evaluates true.  I.e., the list only includes the lanes
+which explain the stop.  For example, here is what the field looks
+like if lanes 0, 2, 3, 4, and 10 were active and for which the
+breakpoint condition evaluates as true:
+
+@smallexample
+*stopped,reason="breakpoint-hit",disp="keep",bkptno="1",
+   hit-lanes="0 2-4 10",
+   frame=@{level="0",addr="0x00007ffff580b8b4",func="kernel",
+           args=[]@}@},
+   thread-id="3",lane-id="0",stopped-threads="all"@}
+@end smallexample
+
+@xref{break commands, description of how break commands and
+heterogeneous debugging interact}, for the description of how
+@value{GDBN} behaves around breakpoints, breakpoint conditions,
+breakpoint commands and lanes.
 
 @item enabled
 This indicates whether the breakpoint is enabled, in which case the
@@ -34770,6 +34806,72 @@ current-thread-id="1"
 (gdb)
 @end smallexample
 
+@subheading The @code{-lane-info} Command
+@findex -lane-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -lane-info [ @var{lane-id} ]
+@end smallexample
+
+Reports information about either a specific lane, if the @var{lane-id}
+parameter is present, or about all lanes of the current thread.
+
+@subsubheading @value{GDBN} Command
+
+The @samp{info lanes} command prints the same information about lanes.
+
+@subsubheading Result
+
+The result contains the following attributes:
+
+@table @samp
+@item lanes
+
+A list of lanes.  The format of each element of the list is a tuple
+with the following fields.  The fields are always present unless
+stated otherwise.
+
+@table @code
+@item id
+The numeric id assigned to the lane by @value{GDBN}.
+
+@item state
+The state of the lane, either @samp{A}, @samp{I}, or
+@samp{U}. @xref{info lanes} for a description of what these states
+mean.
+
+@item target-id
+The target-specific string identifying the lane.
+
+@item frame
+The stack frame currently executing in the lane.  This field is only
+present if the lane's thread is stopped.  Its format is documented in
+@ref{GDB/MI Frame Information}.
+@end table
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+
+-lane-info
+^done,lanes=[
+@{id="0",state="A",target-id="AMDGPU Lane 1:2:1:1/0 (0,0,0)[0,0,0]",
+   frame=@{level="0",addr="0x00007ffff580b8b4",func="kernel",
+           args=[]@}@},
+@{id="1",state="I",target-id="AMDGPU Lane 1:2:1:1/1 (0,0,0)[1,0,0]",
+   frame=@{level="0",addr="0x00007ffff580b8b4",func="kernel",
+           args=[]@}@},
+...
+@{id="31",state="A",target-id="AMDGPU Lane 1:2:1:1/31 (0,0,0)[1,0,0]",
+   frame=@{level="0",addr="0x00007ffff580b8b4",func="kernel",
+           args=[]@}@}]
+(gdb)
+@end smallexample
+
 @subheading The @code{-thread-list-ids} Command
 @findex -thread-list-ids
 
@@ -34807,19 +34909,21 @@ current-thread-id="1",number-of-threads="3"
 @subsubheading Synopsis
 
 @smallexample
- -thread-select @var{thread-id}
+ -thread-select [ -l @var{lane-id} ] @var{thread-id}
 @end smallexample
 
 Make thread with global thread number @var{thread-id} the current
-thread.  It prints the number of the new current thread, and the
-topmost frame for that thread.
+thread, and if present, the lane with number @var{lane-id} the current
+lane.  It prints the number of the new current thread, and the
+topmost frame for that thread.  If the new current thread supports
+lanes, the command prints the number of the new current lane as well.
 
 This command is deprecated in favor of explicitly using the
-@samp{--thread} option to each command.
+@samp{--thread} and @samp{--lane} options to each command.
 
 @subsubheading @value{GDBN} Command
 
-The corresponding @value{GDBN} command is @samp{thread}.
+The corresponding @value{GDBN} commands are @samp{thread} and @samp{lane}.
 
 @subsubheading Example
 
@@ -34841,6 +34945,15 @@ number-of-threads="3"
 frame=@{level="0",func="vprintf",
 args=[@{name="format",value="0x8048e9c \"%*s%c %d %c\\n\""@},
 @{name="arg",value="0x2"@}],file="vprintf.c",line="31",arch="i386:x86_64"@}
+(gdb)
+@end smallexample
+
+@smallexample
+(gdb)
+-thread-select -l 2 3
+^done,new-thread-id="3",lane-id="2",
+frame=@{level="0",func="kernel",
+args=[],file="kernel.cc",line="20",arch="amdgcn:gfx906"@}
 (gdb)
 @end smallexample
 
@@ -36155,10 +36268,12 @@ object will report the value of @code{state} in the current frame.
 
 If an expression specified when creating a fixed variable object
 refers to a local variable, the variable object becomes bound to the
-thread and frame in which the variable object is created.  When such
-variable object is updated, @value{GDBN} makes sure that the
-thread/frame combination the variable object is bound to still exists,
-and re-evaluates the variable object in context of that thread/frame.
+thread, lane (if available, @pxref{heterogeneous lane}), and frame in
+which the variable object is created.
+When such variable object is updated, @value{GDBN} makes
+sure that the thread/lane/frame combination the variable object is
+bound to still exists, and re-evaluates the variable object in context
+of that thread/lane/frame.
 
 The following is the complete set of @sc{gdb/mi} operations defined to
 access this functionality:
@@ -36302,6 +36417,10 @@ would be printed by the @value{GDBN} CLI.  If @samp{print object}
 @item thread-id
 If a variable object is bound to a specific thread, then this is the
 thread's global identifier.
+
+@item lane-id
+If a variable object is bound to a specific lane, then this is the
+lane's identifier.
 
 @item has_more
 For a dynamic varobj, this indicates whether there appear to be any
@@ -36484,6 +36603,10 @@ If values were requested, this is the value.
 @item thread-id
 If this variable object is associated with a thread, this is the
 thread's global thread id.  Otherwise this result is not present.
+
+@item lane-id
+If this variable object is associated with a lane, this is the lane's
+id.  Otherwise this result is not present.
 
 @item frozen
 If the variable object is frozen, this variable will be present with a value of 1.
