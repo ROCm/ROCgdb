@@ -28,7 +28,7 @@
 #include "symfile.h"
 #include "objfiles.h"
 #include "gdbcmd.h"
-#include "gdb_regex.h"
+#include "gdbsupport/gdb_regex.h"
 #include "expression.h"
 #include "language.h"
 #include "demangle.h"
@@ -48,7 +48,7 @@
 #include "hashtab.h"
 #include "typeprint.h"
 
-#include "gdb_obstack.h"
+#include "gdbsupport/gdb_obstack.h"
 #include "block.h"
 #include "dictionary.h"
 
