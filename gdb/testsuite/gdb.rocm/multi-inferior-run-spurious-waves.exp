@@ -25,14 +25,15 @@
 #   - Start a second inferior (while the first one is stopped).  A faulty GDB
 #     would present a stop in newly created waves of the first inferior.
 
-# This test is disabled because it can't work reliably until the multi-process
-# dispatch problems are fixed.  See:
-#
-#   https://ontrack-internal.amd.com/browse/SWDEV-307156
-untested "test disabled"
-return
-
 load_lib rocm.exp
+
+if { [hip_device_is_less_than gfx90a] } {
+    # Scheduling does not work in an intuitive manner before gfx90a due to
+    # hardware limitations of forward progress and halted waves, leading to
+    # some deadlocks.
+    unsupported "device older than gfx90a"
+    return
+}
 
 standard_testfile .cpp hog.cpp
 
