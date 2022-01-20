@@ -1343,13 +1343,15 @@ mi_cmd_data_read_memory (const char *command, char **argv, int argc)
     error (_("Unable to read memory."));
 
   /* Output the header information.  */
-  uiout->field_core_addr ("addr", gdbarch, addr);
+  uiout->field_aspace_and_addr ("addr", gdbarch, addr);
   uiout->field_signed ("nr-bytes", nr_bytes);
   uiout->field_signed ("total-bytes", total_bytes);
-  uiout->field_core_addr ("next-row", gdbarch, addr + word_size * nr_cols);
-  uiout->field_core_addr ("prev-row", gdbarch, addr - word_size * nr_cols);
-  uiout->field_core_addr ("next-page", gdbarch, addr + total_bytes);
-  uiout->field_core_addr ("prev-page", gdbarch, addr - total_bytes);
+  uiout->field_aspace_and_addr ("next-row", gdbarch,
+				addr + word_size * nr_cols);
+  uiout->field_aspace_and_addr ("prev-row", gdbarch,
+				addr - word_size * nr_cols);
+  uiout->field_aspace_and_addr ("next-page", gdbarch, addr + total_bytes);
+  uiout->field_aspace_and_addr ("prev-page", gdbarch, addr - total_bytes);
 
   /* Build the result as a two dimensional table.  */
   {
@@ -1368,7 +1370,7 @@ mi_cmd_data_read_memory (const char *command, char **argv, int argc)
 	struct value_print_options print_opts;
 
 	ui_out_emit_tuple tuple_emitter (uiout, NULL);
-	uiout->field_core_addr ("addr", gdbarch, addr + row_byte);
+	uiout->field_aspace_and_addr ("addr", gdbarch, addr + row_byte);
 	/* ui_out_field_core_addr_symbolic (uiout, "saddr", addr +
 	   row_byte); */
 	{
@@ -1467,9 +1469,10 @@ mi_cmd_data_read_memory_bytes (const char *command, char **argv, int argc)
     {
       ui_out_emit_tuple tuple_emitter (uiout, NULL);
 
-      uiout->field_core_addr ("begin", gdbarch, read_result.begin);
-      uiout->field_core_addr ("offset", gdbarch, read_result.begin - addr);
-      uiout->field_core_addr ("end", gdbarch, read_result.end);
+      uiout->field_aspace_and_addr ("begin", gdbarch, read_result.begin);
+      uiout->field_aspace_and_addr ("offset", gdbarch,
+				    read_result.begin - addr);
+      uiout->field_aspace_and_addr ("end", gdbarch, read_result.end);
 
       std::string data = bin2hex (read_result.data.get (),
 				  (read_result.end - read_result.begin)

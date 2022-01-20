@@ -490,6 +490,14 @@ ui_out::field_core_addr (const char *fldname, struct gdbarch *gdbarch,
 }
 
 void
+ui_out::field_aspace_and_addr (const char *fldname, struct gdbarch *gdbarch,
+			       CORE_ADDR address)
+{
+  field_string (fldname, print_aspace_and_address (gdbarch, address).c_str (),
+		address_style.style ());
+}
+
+void
 ui_out::field_stream (const char *fldname, string_file &stream,
 		      const ui_file_style &style)
 {

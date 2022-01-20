@@ -2872,7 +2872,12 @@ address_significant (gdbarch *gdbarch, CORE_ADDR addr)
 std::string
 paspace_and_addr (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  std::string addr_str = paddress (gdbarch, addr);
+  return paspace (gdbarch, addr) + paddress (gdbarch, addr);
+}
+
+std::string
+paspace (struct gdbarch *gdbarch, CORE_ADDR addr)
+{
   arch_addr_space_id addr_space_id
     = gdbarch_address_space_id_from_core_address (gdbarch, addr);
 
@@ -2880,15 +2885,15 @@ paspace_and_addr (struct gdbarch *gdbarch, CORE_ADDR addr)
      space name of the default address space, even if
      the architecture have a name for it.  */
   if (addr_space_id == ARCH_ADDR_SPACE_ID_DEFAULT)
-   return addr_str;
+   return "";
 
   const char *addr_space_str
     = gdbarch_address_space_id_to_name (gdbarch, addr_space_id);
 
   if (addr_space_str == nullptr)
-    return addr_str;
+    return "";
 
-  return std::string (addr_space_str) + "#" + addr_str;
+  return std::string (addr_space_str) + "#";
 }
 
 const char *
@@ -2917,6 +2922,8 @@ paddress (struct gdbarch *gdbarch, CORE_ADDR addr)
 const char *
 print_core_address (struct gdbarch *gdbarch, CORE_ADDR address)
 {
+  address = gdbarch_segment_address_from_core_address (gdbarch, address);
+
   int addr_bit = gdbarch_addr_bit (gdbarch);
 
   if (addr_bit < (sizeof (CORE_ADDR) * HOST_CHAR_BIT))
@@ -2929,6 +2936,12 @@ print_core_address (struct gdbarch *gdbarch, CORE_ADDR address)
     return hex_string_custom (address, 8);
   else
     return hex_string_custom (address, 16);
+}
+
+std::string
+print_aspace_and_address (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  return paspace (gdbarch, address) + print_core_address (gdbarch, address);
 }
 
 /* Callback hash_f for htab_create_alloc or htab_create_alloc_ex.  */

@@ -548,6 +548,15 @@ extern CORE_ADDR address_significant (gdbarch *gdbarch, CORE_ADDR addr);
    This is usually formatted as <aspace>#0x%lx.  */
 extern std::string paspace_and_addr (struct gdbarch *gdbarch, CORE_ADDR addr);
 
+/* Return the address space prefix part of a string representation of
+   an address.  This returns the address space name that the CORE_ADDR
+   address belongs to in a platform-specific manner, followed by "#".
+   In the case of the default address space, the whole prefix is the
+   empty string for backward compatibility.  I.e., this returns
+   "<aspace>#" for non-default address spaces, and the empty string
+   for the default address space.  */
+extern std::string paspace (struct gdbarch *gdbarch, CORE_ADDR addr);
+
 /* Convert CORE_ADDR to string in platform-specific manner.
    This is usually formatted similar to 0x%lx.  */
 extern const char *paddress (struct gdbarch *gdbarch, CORE_ADDR addr);
@@ -557,6 +566,13 @@ extern const char *paddress (struct gdbarch *gdbarch, CORE_ADDR addr);
 
 extern const char *print_core_address (struct gdbarch *gdbarch,
 				       CORE_ADDR address);
+
+/* Return a string representation in hexadecimal notation of ADDRESS,
+   that includes the address space name (unless the address space is
+   the default address space) and which is suitable for printing.  */
+
+extern std::string print_aspace_and_address (struct gdbarch *gdbarch,
+					     CORE_ADDR address);
 
 /* Callback hash_f and eq_f for htab_create_alloc or htab_create_alloc_ex.  */
 extern hashval_t core_addr_hash (const void *ap);
