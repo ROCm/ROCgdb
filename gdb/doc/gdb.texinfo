@@ -27135,16 +27135,15 @@ The
 @url{https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_kernel_language.md,
 HIP Programming Language} is supported.
 
-When compiling, the @w{@option{-ggdb}} option should be used to
-produce debugging information suitable for use by @value{GDBN}.  The
+When compiling, the @w{@option{-g}} option should be used to produce
+debugging information suitable for use by @value{GDBN}.  The
 @w{@option{--offload-arch}} option is used to specify the @acronym{AMD
 GPU} chips that the executable is required to support.  For example,
 to compile a HIP program that can utilize ``Vega 10'' and ``Vega 7nm''
 @acronym{AMD GPU} devices, with no optimization:
 
 @smallexample
-hipcc -O0 -ggdb ---offload-arch=gfx900 --offload-arch=gfx906 \
-        bit_extract.cpp -o bit_extract
+hipcc -O0 -g --offload-arch=gfx900 --offload-arch=gfx906 bit_extract.cpp -o bit_extract
 @end smallexample
 
 The @acronym{AMD ROCm} compiler maps HIP source language device
@@ -27951,43 +27950,17 @@ detection when the mode is @samp{off}, then the message does not
 currently include an indication that the position may not be accurate.
 
 @item
-The @acronym{AMD ROCm} compiler currently does not support generating
-valid @acronym{AMD GPU} DWARF information for symbolic variables.  As
-a consequence:
+The @acronym{AMD ROCm} compiler currently only has support for
+generating valid @acronym{AMD GPU} DWARF information for symbolic
+variables at @w{@option{-O0}.
 
-@itemize @bullet{}
-
-@item
-Source variables or expressions cannot be specified in any command,
-such as the @code{print} command and breakpoint conditions.  This
-includes static variables, local variables, function arguments, and
-any language types.  However, global symbols for functions and
-variables can be specified, and source line information is available.
-
-@item
-The @code{backtrace} command can show the current frame, parent
-inlined frames, and parent non-inlined frames provided the
-@acronym{AMD ROCm} compiler @w{@option{-ggdb}} option is specified.
-Function or kernel arguments will not be displayed and instead an
-empty formal argument list may be shown.
-
-@item
-Breakpoints are only reported for wavefronts.  There is no support for
-HIP work-items that are mapped to heterogeneous lanes.  The HIP
-work-item ID of a heterogeneous lane is not available.
-
-@end itemize
-
-The @acronym{AMD ROCm} compiler currently adds the
-@w{@option{-gline-tables-only}}, @w{@option{-mllvm
--disable-dwarf-locations}}, and @w{@option{-mllvm
--amdgpu-spill-cfi-saved-regs}} options for @acronym{AMD GPU} when the
-@w{@option{-ggdb}} option is specified.  These ensure source line
-information is generated, but not invalid DWARF for source variables,
-and registers not currently supported by the CFI generation are saved
-so the CFI information is correct.  If these options are not used, the
-invalid DWARF may cause @value{GDBN} to report that it is unable to
-read memory (such as when reading arguments in a backtrace).
+The @acronym{AMD ROCm} compiler currently adds the @w{@option{-mllvm
+-amdgpu-spill-cfi-saved-regs}} option for @acronym{AMD GPU} when the
+@w{@option{-g}} option is specified.  This ensures registers not
+currently supported by the CFI generation are saved so the CFI
+information is correct.  If this option is not used, the invalid DWARF
+may cause @value{GDBN} to report that it is unable to read memory
+(such as when reading arguments in a backtrace).
 
 @item
 @value{GDBN} does not currently make use of debug information
@@ -28023,7 +27996,7 @@ Single-stepping or resuming execution from an illegal instruction may
 execute differently in @value{GDBN} than on real hardware.
 
 @item
-Halting all @acronym{AMD GPU} wavefronts in an inferior can result in
+Halting @acronym{AMD GPU} wavefronts in an inferior can result in
 preventing other inferiors from executing @acronym{AMD GPU}
 wavefronts.
 
