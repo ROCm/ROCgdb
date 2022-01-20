@@ -189,6 +189,11 @@ class ui_out
   void field_unsigned (const char *fldname, ULONGEST value);
   void field_core_addr (const char *fldname, struct gdbarch *gdbarch,
 			CORE_ADDR address);
+  /* Like field_core_addr, but in addition it prints an address space
+     name at the start of the string if the address space is not the
+     default address space.  */
+  void field_aspace_and_addr (const char *fldname, struct gdbarch *gdbarch,
+			      CORE_ADDR address);
   void field_string (const char *fldname, const char *string,
 		     const ui_file_style &style = ui_file_style ());
   void field_string (const char *fldname, const std::string &string,
