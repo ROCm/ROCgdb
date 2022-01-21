@@ -120,6 +120,7 @@ struct gdbarch
   gdbarch_segment_address_from_core_address_ftype *segment_address_from_core_address;
   gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address;
   gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id;
+  gdbarch_address_scope_ftype *address_scope;
   gdbarch_return_value_ftype *return_value;
   gdbarch_return_in_first_hidden_param_p_ftype *return_in_first_hidden_param_p;
   gdbarch_skip_prologue_ftype *skip_prologue;
@@ -483,6 +484,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
     gdbarch->segment_address_to_core_address = default_segment_address_to_core_address;
   if (gdbarch->dwarf_address_space_to_address_space_id == 0)
     gdbarch->dwarf_address_space_to_address_space_id = default_dwarf_address_space_to_address_space_id;
+  if (gdbarch->address_scope == 0)
+    gdbarch->address_scope = default_address_scope;
   /* Skip verify of return_value, has predicate.  */
   /* Skip verify of return_in_first_hidden_param_p, invalid_p == 0 */
   if (gdbarch->skip_prologue == 0)
@@ -915,6 +918,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_filtered (file,
                       "gdbarch_dump: dwarf_address_space_to_address_space_id = <%s>\n",
                       host_address_to_string (gdbarch->dwarf_address_space_to_address_space_id));
+  fprintf_filtered (file,
+                      "gdbarch_dump: address_scope = <%s>\n",
+                      host_address_to_string (gdbarch->address_scope));
   fprintf_filtered (file,
                       "gdbarch_dump: gdbarch_return_value_p() = %d\n",
                       gdbarch_return_value_p (gdbarch));
@@ -2833,6 +2839,23 @@ set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch,
                                                      gdbarch_dwarf_address_space_to_address_space_id_ftype dwarf_address_space_to_address_space_id)
 {
   gdbarch->dwarf_address_space_to_address_space_id = dwarf_address_space_to_address_space_id;
+}
+
+enum address_scope
+gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->address_scope != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_address_scope called\n");
+  return gdbarch->address_scope (gdbarch, address);
+}
+
+void
+set_gdbarch_address_scope (struct gdbarch *gdbarch,
+                           gdbarch_address_scope_ftype address_scope)
+{
+  gdbarch->address_scope = address_scope;
 }
 
 bool

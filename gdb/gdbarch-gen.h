@@ -480,6 +480,12 @@ typedef arch_addr_space_id (gdbarch_dwarf_address_space_to_address_space_id_ftyp
 extern arch_addr_space_id gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, LONGEST dwarf_addr_space);
 extern void set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id);
 
+/* Return the address's scope. */
+
+typedef enum address_scope (gdbarch_address_scope_ftype) (struct gdbarch *gdbarch, CORE_ADDR address);
+extern enum address_scope gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address);
+extern void set_gdbarch_address_scope (struct gdbarch *gdbarch, gdbarch_address_scope_ftype *address_scope);
+
 /* Return the return-value convention that will be used by FUNCTION
    to return a value of type VALTYPE.  FUNCTION may be NULL in which
    case the return convention is computed based only on VALTYPE.

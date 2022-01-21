@@ -14034,8 +14034,7 @@ enable_delete_command (const char *args, int from_tty)
    GDB itself.  */
 
 static void
-invalidate_bp_value_on_memory_change (struct inferior *inferior,
-				      CORE_ADDR addr, ssize_t len,
+invalidate_bp_value_on_memory_change (CORE_ADDR addr, ssize_t len,
 				      const bfd_byte *data)
 {
   for (breakpoint *bp : all_breakpoints ())

@@ -266,8 +266,7 @@ write_to_memory (CORE_ADDR address, const gdb_byte *buffer,
 {
   xfer_memory (address, nullptr, buffer, length, stack, unavailable);
 
-  gdb::observers::memory_changed.notify (current_inferior (), address,
-					 length, buffer);
+  gdb::observers::memory_changed.notify (address, length, buffer);
 }
 
 

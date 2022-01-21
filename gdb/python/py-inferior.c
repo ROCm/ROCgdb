@@ -133,7 +133,7 @@ python_on_inferior_call_post (ptid_t thread, CORE_ADDR address)
    'set' command). */
 
 static void
-python_on_memory_change (struct inferior *inferior, CORE_ADDR addr, ssize_t len, const bfd_byte *data)
+python_on_memory_change (CORE_ADDR addr, ssize_t len, const bfd_byte *data)
 {
   gdbpy_enter enter_py (target_gdbarch ());
 
