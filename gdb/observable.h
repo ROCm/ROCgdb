@@ -195,9 +195,8 @@ extern observable<struct inferior */* inf */> inferior_removed;
 extern observable<struct inferior */* inf */, struct inferior */* clone */>
     inferior_cloned;
 
-/* Bytes from DATA to DATA + LEN have been written to the inferior
-   at ADDR.  */
-extern observable<struct inferior */* inferior */, CORE_ADDR /* addr */,
+/* Bytes from DATA to DATA + LEN have been written at ADDR.  */
+extern observable<CORE_ADDR /* addr */,
 		  ssize_t /* len */, const bfd_byte */* data */>
     memory_changed;
 

@@ -722,6 +722,58 @@ amdgcn_address_spaces (struct gdbarch *gdbarch)
   return tdep->address_spaces;
 }
 
+static enum address_scope
+amdgcn_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  amd_dbgapi_segment_address_dependency_t segment_address_dependency;
+
+  uint64_t dwarf_address_space
+    = (uint64_t) amdgcn_address_space_id_from_core_address (address);
+
+  amd_dbgapi_segment_address_t segment_address
+    = amdgcn_segment_address_from_core_address (address);
+
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (amd_dbgapi_get_architecture
+      (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed"));
+
+  amd_dbgapi_address_space_id_t address_space_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space (architecture_id,
+						       dwarf_address_space,
+						       &address_space_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  if (amd_dbgapi_address_dependency (address_space_id,
+				     segment_address,
+				     &segment_address_dependency)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_address_dependency failed"));
+
+  switch (segment_address_dependency)
+    {
+    case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_LANE:
+      return ADDRESS_SCOPE_LANE;
+
+    case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_WAVE:
+      return ADDRESS_SCOPE_THREAD;
+
+    case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_PROCESS:
+      return ADDRESS_SCOPE_PROCESS;
+
+    case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_WORKGROUP:
+    case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_AGENT:
+      /* GDB currently doesn't model workgroups or agents as first
+	 class citizens, so the mapping here isn't perfect.  */
+      return ADDRESS_SCOPE_PROCESS;
+
+    default:
+      error (_("unhandled segment address dependency kind"));
+    }
+}
+
 static simd_lanes_mask_t
 amdgcn_rocm_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
@@ -851,6 +903,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_segment_address_to_core_address
     (gdbarch, amdgcn_segment_address_to_core_address);
   set_gdbarch_address_spaces (gdbarch, amdgcn_address_spaces);
+  set_gdbarch_address_scope (gdbarch, amdgcn_address_scope);
 
   /* Frame Interpretation.  */
   set_gdbarch_skip_prologue (gdbarch, amdgcn_skip_prologue);

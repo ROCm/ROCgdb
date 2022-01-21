@@ -363,7 +363,7 @@ write_memory_with_notification (CORE_ADDR memaddr, const bfd_byte *myaddr,
 				ssize_t len)
 {
   write_memory (memaddr, myaddr, len);
-  gdb::observers::memory_changed.notify (current_inferior (), memaddr, len, myaddr);
+  gdb::observers::memory_changed.notify (memaddr, len, myaddr);
 }
 
 /* Store VALUE at ADDR in the inferior as a LEN-byte unsigned

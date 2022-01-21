@@ -511,6 +511,9 @@ M;CORE_ADDR;integer_to_address;struct type *type, const gdb_byte *buf, arch_addr
 # Return a list of supported address spaces.
 M;gdb::array_view<const arch_addr_space>;address_spaces;void;
 
+# Return the address's scope.
+m;enum address_scope;address_scope;CORE_ADDR address;address;;0;default_address_scope
+
 # Extracts address space from core address.
 # TODO: This hook is a quick fix until a proper address space support
 #       is added and should not be pushed upstream.
@@ -1437,6 +1440,19 @@ enum class memtag_type
 
 /* 64-bits is sufficient for all known architectures.  */
 typedef uint64_t simd_lanes_mask_t;
+
+/* The scope of a given address's address space.  */
+enum address_scope
+{
+  /* The address is of an address space that is process-wide.  */
+  ADDRESS_SCOPE_PROCESS,
+
+  /* The address is of an address space that is thread-specific.  */
+  ADDRESS_SCOPE_THREAD,
+
+  /* The address is of an address space that is lane-specific.  */
+  ADDRESS_SCOPE_LANE,
+};
 
 EOF
 

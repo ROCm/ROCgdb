@@ -18,16 +18,17 @@
 
 #include <hip/hip_runtime.h>
 
+int global_var;
+
 __device__ void
-aspace_test (unsigned gid)
+aspace_test ()
 {
 }
 
 __global__ void
 kernel ()
 {
-  unsigned gid0 = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
-  aspace_test (gid0);
+  aspace_test ();
 }
 
 int
@@ -36,7 +37,9 @@ main ()
   dim3 grid_dim (1);
   dim3 block_dim (32);
 
-  hipLaunchKernelGGL (kernel, grid_dim, block_dim, 0, 0);
+  /* Allocate a bit of LDS, so that the .exp file can poke at
+     local#0.  */
+  hipLaunchKernelGGL (kernel, grid_dim, block_dim, 1024, 0);
 
   hipDeviceSynchronize ();
 

@@ -4,7 +4,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
-   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -230,6 +230,7 @@ struct gdbarch
   gdbarch_address_to_pointer_ftype *address_to_pointer;
   gdbarch_integer_to_address_ftype *integer_to_address;
   gdbarch_address_spaces_ftype *address_spaces;
+  gdbarch_address_scope_ftype *address_scope;
   gdbarch_address_space_id_from_core_address_ftype *address_space_id_from_core_address;
   gdbarch_segment_address_from_core_address_ftype *segment_address_from_core_address;
   gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address;
@@ -622,6 +623,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of address_to_pointer, invalid_p == 0 */
   /* Skip verify of integer_to_address, has predicate.  */
   /* Skip verify of address_spaces, has predicate.  */
+  if (gdbarch->address_scope == 0)
+    gdbarch->address_scope = default_address_scope;
   if (gdbarch->address_space_id_from_core_address == 0)
     gdbarch->address_space_id_from_core_address = default_address_space_id_from_core_address;
   if (gdbarch->segment_address_from_core_address == 0)
@@ -816,6 +819,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: address_class_type_flags_to_name = <%s>\n",
                       host_address_to_string (gdbarch->address_class_type_flags_to_name));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: address_scope = <%s>\n",
+                      host_address_to_string (gdbarch->address_scope));
   fprintf_unfiltered (file,
                       "gdbarch_dump: address_space_id_from_core_address = <%s>\n",
                       host_address_to_string (gdbarch->address_space_id_from_core_address));
@@ -2920,6 +2926,23 @@ set_gdbarch_address_spaces (struct gdbarch *gdbarch,
                             gdbarch_address_spaces_ftype address_spaces)
 {
   gdbarch->address_spaces = address_spaces;
+}
+
+enum address_scope
+gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->address_scope != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_address_scope called\n");
+  return gdbarch->address_scope (gdbarch, address);
+}
+
+void
+set_gdbarch_address_scope (struct gdbarch *gdbarch,
+                           gdbarch_address_scope_ftype address_scope)
+{
+  gdbarch->address_scope = address_scope;
 }
 
 arch_addr_space_id

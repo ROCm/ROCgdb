@@ -4,7 +4,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
-   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -131,6 +131,19 @@ enum class memtag_type
 
 /* 64-bits is sufficient for all known architectures.  */
 typedef uint64_t simd_lanes_mask_t;
+
+/* The scope of a given address's address space.  */
+enum address_scope
+{
+  /* The address is of an address space that is process-wide.  */
+  ADDRESS_SCOPE_PROCESS,
+
+  /* The address is of an address space that is thread-specific.  */
+  ADDRESS_SCOPE_THREAD,
+
+  /* The address is of an address space that is lane-specific.  */
+  ADDRESS_SCOPE_LANE,
+};
 
 
 
@@ -556,6 +569,12 @@ extern bool gdbarch_address_spaces_p (struct gdbarch *gdbarch);
 typedef gdb::array_view<const arch_addr_space> (gdbarch_address_spaces_ftype) (struct gdbarch *gdbarch);
 extern gdb::array_view<const arch_addr_space> gdbarch_address_spaces (struct gdbarch *gdbarch);
 extern void set_gdbarch_address_spaces (struct gdbarch *gdbarch, gdbarch_address_spaces_ftype *address_spaces);
+
+/* Return the address's scope. */
+
+typedef enum address_scope (gdbarch_address_scope_ftype) (struct gdbarch *gdbarch, CORE_ADDR address);
+extern enum address_scope gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address);
+extern void set_gdbarch_address_scope (struct gdbarch *gdbarch, gdbarch_address_scope_ftype *address_scope);
 
 /* Extracts address space from core address.
    TODO: This hook is a quick fix until a proper address space support

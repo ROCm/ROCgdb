@@ -336,6 +336,9 @@ extern CORE_ADDR default_segment_address_from_core_address (CORE_ADDR address);
 extern CORE_ADDR default_segment_address_to_core_address
   (arch_addr_space_id address_space_id, CORE_ADDR address);
 
+/* Return the address's scope.  */
+extern enum address_scope default_address_scope (struct gdbarch *gdbarch,
+						 CORE_ADDR address);
 
 extern int default_supported_lanes_count (struct gdbarch *gdbarch,
 					  thread_info *tp);

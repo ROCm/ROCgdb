@@ -205,7 +205,7 @@ proc_with_prefix test_mi_varobjs {} {
 	"\\^done,value=\"5\"" "eval varobj"
 
     mi_gdb_test "-data-evaluate-expression --thread $gpu_thr --lane 5 gid=555" \
-	"=memory-changed,thread-group=\"i1\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"555\"" \
+	"=memory-changed,thread-id=\"$gpu_thr\",lane-id=\"5\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"555\"" \
 	"frob value"
 
     # Test updating the varobj while a lane other than 3 is
@@ -238,7 +238,7 @@ proc_with_prefix test_mi_varobjs {} {
     # Test updating the varobj while a CPU thread is selected.
     with_test_prefix "cpu thread" {
 	mi_gdb_test "-data-evaluate-expression --thread $gpu_thr --lane 5 gid=666" \
-	    "=memory-changed,thread-group=\"i1\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"666\"" \
+	    "=memory-changed,thread-id=\"$gpu_thr\",lane-id=\"5\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"666\"" \
 	    "frob value"
 
 	mi_gdb_test "-thread-select 1" \
@@ -259,7 +259,7 @@ proc_with_prefix test_mi_varobjs {} {
     }
 
     mi_gdb_test "-data-evaluate-expression --thread $gpu_thr --lane 5 gid=5" \
-	"=memory-changed,thread-group=\"i1\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"5\"" \
+	"=memory-changed,thread-id=\"$gpu_thr\",lane-id=\"5\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"5\"" \
 	"restore value"
 }
 
