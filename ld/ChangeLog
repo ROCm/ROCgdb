@@ -1,3 +1,18 @@
+2022-01-22  Alexander von Gluck IV  <kallisti5@unixzen.com>
+
+	* configure.tgt (arm-haiku): Fix typo.
+	* emulparams/armelf_haiku.su (MAXPAGESIZE): Use the default value.
+	(COMMONPAGESIZE): Likewise.
+
+2022-01-22  Nick Clifton  <nickc@redhat.com>
+
+	* configure: Regenerate.
+	* po/ld.pot: Regenerate.
+
+2022-01-22  Nick Clifton  <nickc@redhat.com>
+
+	* 2.38 release branch created.
+
 2022-01-21  Nick Clifton  <nickc@redhat.com>
 
 	* po/sr.po: Updated Serbian translation.
