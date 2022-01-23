@@ -482,7 +482,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -2056,6 +2055,8 @@ installdirs-am:
 	for dir in "$(DESTDIR)$(bfdlibdir)" "$(DESTDIR)$(infodir)" "$(DESTDIR)$(bfdincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-recursive
 install-exec: install-exec-recursive
 install-data: install-data-recursive
 uninstall: uninstall-recursive
@@ -2528,10 +2529,6 @@ doc/bfdver.texi: $(srcdir)/Makefile.in
 	if test -n "$(REPORT_BUGS_TEXI)"; then \
 	  echo "@set BUGURL $(REPORT_BUGS_TEXI)" >> $@; \
 	fi
-
-# We want install to imply install-info as per GNU standards, despite the
-# cygnus option.
-install: install-info
 
 html-local: doc/bfd/index.html
 doc/bfd/index.html: doc/bfd.texi $(bfd_TEXINFOS) doc/$(am__dirstamp)
