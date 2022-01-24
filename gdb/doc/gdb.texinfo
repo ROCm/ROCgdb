@@ -23341,7 +23341,7 @@ warning: Current lane is inactive.
 @end smallexample
 
 @xref{stepping lanes, description of how execution commands and
-heterogeneous debugging interact} for what happens if you run a
+heterogeneous debugging interact}, for what happens if you run a
 stepping command with an inactive lane selected.
 
 @kindex lane name
