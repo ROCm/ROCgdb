@@ -532,8 +532,10 @@ proc get_section_offset {section file} {
 #  ...
 
 proc hip_get_clang_compile_unit_range {file} {
-    set cmd "${::rocm_path}/llvm/bin/llvm-dwarfdump $file\
-               | grep -B 5 \"AT_producer.*clang\"\
+    # Ignore warnings (SWDEV-320473).
+    set cmd "${::rocm_path}/llvm/bin/llvm-dwarfdump $file 2>&1\
+	       | grep -v \"warning\"\
+	       | grep -B 5 \"AT_producer.*clang\"\
 	       | grep \"Compile Unit:\""
     verbose -log "executing: $cmd"
     set status [catch "exec $cmd" output]
