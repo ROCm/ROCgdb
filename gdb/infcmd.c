@@ -1081,7 +1081,7 @@ jump_command (const char *arg, int from_tty)
   if (from_tty)
     {
       printf_filtered (_("Continuing at "));
-      fputs_filtered (paddress (gdbarch, addr), gdb_stdout);
+      puts_filtered (paddress (gdbarch, addr));
       printf_filtered (".\n");
     }
 

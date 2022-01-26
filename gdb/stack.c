@@ -1551,12 +1551,11 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
       printf_filtered (_("Stack frame at "));
     }
 
-  fputs_filtered (paspace_and_addr (gdbarch, get_frame_base (fi)).c_str (),
-		  gdb_stdout);
+  puts_filtered (paspace_and_addr (gdbarch, get_frame_base (fi)).c_str ());
   printf_filtered (":\n");
   printf_filtered (" %s = ", pc_regname);
   if (frame_pc_p)
-    fputs_filtered (paddress (gdbarch, get_frame_pc (fi)), gdb_stdout);
+    puts_filtered (paddress (gdbarch, get_frame_pc (fi)));
   else
     fputs_styled ("<unavailable>", metadata_style.style (), gdb_stdout);
 
@@ -1564,7 +1563,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
   if (funname)
     {
       printf_filtered (" in ");
-      fputs_filtered (funname, gdb_stdout);
+      puts_filtered (funname);
     }
   wrap_here ("   ");
   if (sal.symtab)
@@ -1606,7 +1605,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
     }
 
   if (caller_pc_p)
-    fputs_filtered (paddress (gdbarch, caller_pc), gdb_stdout);
+    puts_filtered (paddress (gdbarch, caller_pc));
   printf_filtered ("\n");
 
   if (calling_frame_info == NULL)
@@ -1628,8 +1627,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
       CORE_ADDR calling_fb_addr = get_frame_base (calling_frame_info);
 
       printf_filtered (" called by frame at ");
-      fputs_filtered (paspace_and_addr (gdbarch, calling_fb_addr).c_str (),
-		      gdb_stdout);
+      puts_filtered (paspace_and_addr (gdbarch, calling_fb_addr).c_str ());
     }
   if (get_next_frame (fi) && calling_frame_info)
     puts_filtered (",");
@@ -1639,8 +1637,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
       CORE_ADDR caller_fb_addr = get_frame_base (get_next_frame (fi));
 
       printf_filtered (" caller of frame at ");
-      fputs_filtered (paspace_and_addr (gdbarch, caller_fb_addr).c_str (),
-		      gdb_stdout);
+      puts_filtered (paspace_and_addr (gdbarch, caller_fb_addr).c_str ());
     }
   if (get_next_frame (fi) || calling_frame_info)
     puts_filtered ("\n");
@@ -1660,8 +1657,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
     else
       {
 	printf_filtered (" Arglist at ");
-	fputs_filtered (paspace_and_addr (gdbarch, arg_list).c_str (),
-			gdb_stdout);
+	puts_filtered (paspace_and_addr (gdbarch, arg_list).c_str ());
 	printf_filtered (",");
 
 	if (!gdbarch_frame_num_args_p (gdbarch))
@@ -1694,8 +1690,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
     else
       {
 	printf_filtered (" Locals at ");
-	fputs_filtered (paspace_and_addr (gdbarch, arg_list).c_str (),
-			gdb_stdout);
+	puts_filtered (paspace_and_addr (gdbarch, arg_list).c_str ());
 	printf_filtered (",");
       }
   }
@@ -1730,7 +1725,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 		  (value_contents_all (value).data (), sp_size, byte_order);
 
 		printf_filtered (" Previous frame's sp is ");
-		fputs_filtered (paddress (gdbarch, sp), gdb_stdout);
+		puts_filtered (paddress (gdbarch, sp));
 		printf_filtered ("\n");
 	      }
 	    else if (VALUE_LVAL (value) == lval_memory)
@@ -1739,7 +1734,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 		  = paspace_and_addr (gdbarch, value_address (value)).c_str ();
 
 		printf_filtered (" Previous frame's sp at ");
-		fputs_filtered (prev_sp_addr_str, gdb_stdout);
+		puts_filtered (prev_sp_addr_str);
 		printf_filtered ("\n");
 	      }
 	    else if (VALUE_LVAL (value) == lval_register)
@@ -1782,8 +1777,7 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 	      wrap_here (" ");
 	      printf_filtered (" %s at ",
 			       gdbarch_register_name (gdbarch, i));
-	      fputs_filtered (paspace_and_addr (gdbarch, addr).c_str (),
-			      gdb_stdout);
+	      puts_filtered (paspace_and_addr (gdbarch, addr).c_str ());
 	      count++;
 	    }
 	}

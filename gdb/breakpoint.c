@@ -8313,10 +8313,9 @@ handle_automatic_hardware_breakpoints (bp_location *bl)
 	      bl->loc_type = new_type;
 	      if (!said)
 		{
-		  fprintf_filtered (gdb_stdout,
-				    _("Note: automatically using "
-				      "hardware breakpoints for "
-				      "read-only addresses.\n"));
+		  printf_filtered (_("Note: automatically using "
+				     "hardware breakpoints for "
+				     "read-only addresses.\n"));
 		  said = true;
 		}
 	    }
@@ -13141,9 +13140,10 @@ update_breakpoint_locations (struct breakpoint *b,
       /* Ranged breakpoints have only one start location and one end
 	 location.  */
       b->enable_state = bp_disabled;
-      printf_unfiltered (_("Could not reset ranged breakpoint %d: "
-			   "multiple locations found\n"),
-			 b->number);
+      fprintf_unfiltered (gdb_stderr,
+			  _("Could not reset ranged breakpoint %d: "
+			    "multiple locations found\n"),
+			  b->number);
       return;
     }
 
