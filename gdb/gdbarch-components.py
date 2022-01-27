@@ -924,6 +924,17 @@ is added and should not be pushed upstream.
 
 Method(
     comment="""
+Return the address's scope.
+""",
+    type="enum address_scope",
+    name="address_scope",
+    params=[("CORE_ADDR", "address")],
+    postdefault="default_address_scope",
+    invalid=True,
+)
+
+Method(
+    comment="""
 Return the return-value convention that will be used by FUNCTION
 to return a value of type VALTYPE.  FUNCTION may be NULL in which
 case the return convention is computed based only on VALTYPE.

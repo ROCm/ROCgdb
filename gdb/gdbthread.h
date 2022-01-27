@@ -785,6 +785,9 @@ extern void switch_to_no_thread ();
 /* Switch from one thread to another.  Does not read registers.  */
 extern void switch_to_thread_no_regs (struct thread_info *thread);
 
+/* Switch current thread to lane LANE.  */
+extern void switch_to_lane (int lane);
+
 /* Marks or clears thread(s) PTID of TARG as resumed.  If PTID is
    MINUS_ONE_PTID, applies to all threads of TARG.  If
    ptid_is_pid(PTID) is true, applies to all threads of the process
@@ -854,6 +857,12 @@ extern bool print_thread_events;
 extern void print_thread_info (struct ui_out *uiout,
 			       const char *requested_threads,
 			       int pid);
+
+/* Prints the list of lanes of the current thread and their details on
+   UIOUT.  If REQUESTED_LANES, a list of GDB ids/ranges, is not NULL,
+   only print lanes whose ID is included in the list.  */
+extern void print_lane_info (struct ui_out *uiout,
+			     const char *requested_lanes);
 
 /* Save/restore current inferior/thread/frame.  */
 
@@ -1026,8 +1035,9 @@ extern void print_selected_thread_frame (struct ui_out *uiout,
 /* Helper for the CLI's "thread" command and for MI's -thread-select.
    Selects thread THR.  TIDSTR is the original string the thread ID
    was parsed from.  This is used in the error message if THR is not
-   alive anymore.  */
-extern void thread_select (const char *tidstr, class thread_info *thr);
+   alive anymore.  If LANE is not -1, select that lane.  */
+extern void thread_select (const char *tidstr, class thread_info *thr,
+			   int lane = -1);
 
 /* Return the number of the first active lane in MASK or -1 if MASK is
    0.  */

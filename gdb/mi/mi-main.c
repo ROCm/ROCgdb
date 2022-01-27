@@ -1,6 +1,7 @@
 /* MI Command Set.
 
    Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -548,8 +549,45 @@ mi_cmd_target_flash_erase (const char *command, char **argv, int argc)
 void
 mi_cmd_thread_select (const char *command, char **argv, int argc)
 {
+  int lane = -1;
+
+  /* Parse the command options.  */
+  enum opt
+    {
+      LANE_OPT,
+    };
+  static const struct mi_opt opts[] =
+    {
+      /* Note: this can't be "--lane", because we have a global --lane
+	 option parsed by mi_parse.  "-thread-select --lane 3 4" would
+	 select lane 3 of the current thread instead of the lane of
+	 the passed-in thread, only to be then be "overwritten" when
+	 thread 4 is selected.  */
+      {"l", LANE_OPT, 1},
+      {NULL, 0, 0},
+    };
+
+  int oind = 0;
+  char *oarg;
+
+  while (1)
+    {
+      int opt = mi_getopt ("-thread-select", argc, argv, opts, &oind, &oarg);
+
+      if (opt < 0)
+	break;
+      switch ((enum opt) opt)
+	{
+	case LANE_OPT:
+	  lane = atoi (oarg);
+	  break;
+	}
+    }
+  argv += oind;
+  argc -= oind;
+
   if (argc != 1)
-    error (_("-thread-select: USAGE: threadnum."));
+    error (_("-thread-select: USAGE: [-l lanenum] threadnum."));
 
   int num = value_as_long (parse_and_eval (argv[0]));
   thread_info *thr = find_thread_global_id (num);
@@ -557,14 +595,18 @@ mi_cmd_thread_select (const char *command, char **argv, int argc)
     error (_("Thread ID %d not known."), num);
 
   ptid_t previous_ptid = inferior_ptid;
+  int prev_lane = (inferior_ptid != null_ptid
+		   ? inferior_thread ()->current_simd_lane ()
+		   : -1);
 
-  thread_select (argv[0], thr);
+  thread_select (argv[0], thr, lane);
 
   print_selected_thread_frame (current_uiout,
 			       USER_SELECTED_THREAD | USER_SELECTED_FRAME);
 
-  /* Notify if the thread has effectively changed.  */
-  if (inferior_ptid != previous_ptid)
+  /* Notify if either the thread or lane have effectively changed.  */
+  if (inferior_ptid != previous_ptid
+      || inferior_thread ()->current_simd_lane () != prev_lane)
     {
       gdb::observers::user_selected_context_changed.notify
 	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
@@ -598,6 +640,15 @@ mi_cmd_thread_list_ids (const char *command, char **argv, int argc)
   if (current_thread != -1)
     current_uiout->field_signed ("current-thread-id", current_thread);
   current_uiout->field_signed ("number-of-threads", num);
+}
+
+void
+mi_cmd_lane_info (const char *command, char **argv, int argc)
+{
+  if (argc != 0 && argc != 1)
+    error (_("Invalid MI command"));
+
+  print_lane_info (current_uiout, argv[0]);
 }
 
 void
@@ -2011,6 +2062,9 @@ mi_cmd_execute (struct mi_parse *parse)
   if (parse->all && parse->thread != -1)
     error (_("Cannot specify --thread together with --all"));
 
+  if (parse->all && parse->lane != -1)
+    error (_("Cannot specify --lane together with --all"));
+
   if (parse->thread_group != -1 && parse->thread != -1)
     error (_("Cannot specify --thread together with --thread-group"));
 
@@ -2052,6 +2106,9 @@ mi_cmd_execute (struct mi_parse *parse)
 
       switch_to_thread (tp);
     }
+
+  if (parse->lane != -1)
+    switch_to_lane (parse->lane);
 
   if (parse->frame != -1)
     {

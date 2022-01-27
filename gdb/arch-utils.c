@@ -1162,6 +1162,13 @@ default_dwarf_address_space_to_address_space_id (LONGEST dwarf_addr_space)
 }
 
 /* See arch-utils.h.  */
+enum address_scope
+default_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  return ADDRESS_SCOPE_PROCESS;
+}
+
+/* See arch-utils.h.  */
 
 int
 default_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)

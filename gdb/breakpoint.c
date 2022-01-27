@@ -12098,7 +12098,7 @@ bkpt_print_it (bpstat *bs)
   else
     uiout->message ("Breakpoint %pF, ",
 		    signed_field ("bkptno", b->number));
-  if (show_thread_that_caused_stop () && bs->simd_lane_mask != 0)
+  if (bs->simd_lane_mask != 0)
     {
       if (inferior_thread ()->has_simd_lanes ())
 	{
@@ -12114,7 +12114,10 @@ bkpt_print_it (bpstat *bs)
 	  else
 	    uiout->text ("with lane ");
 
-	  uiout->text (make_ranges_from_sorted_vector (hit_lanes).c_str ());
+	  std::string lanes
+	    = make_ranges_from_sorted_vector (hit_lanes,
+					      !current_uiout->is_mi_like_p ());
+	  uiout->field_string ("hit-lanes", lanes.c_str ());
 	  uiout->text (", ");
 	}
     }
@@ -14031,8 +14034,7 @@ enable_delete_command (const char *args, int from_tty)
    GDB itself.  */
 
 static void
-invalidate_bp_value_on_memory_change (struct inferior *inferior,
-				      CORE_ADDR addr, ssize_t len,
+invalidate_bp_value_on_memory_change (CORE_ADDR addr, ssize_t len,
 				      const bfd_byte *data)
 {
   for (breakpoint *bp : all_breakpoints ())

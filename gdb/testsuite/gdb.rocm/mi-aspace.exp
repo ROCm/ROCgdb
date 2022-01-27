@@ -1,0 +1,163 @@
+# Copyright 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This testcase exercises MI support for address spaces.
+#
+load_lib rocm.exp
+load_lib mi-support.exp
+set MIFLAGS "-i=mi"
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Test MI =memory-changed event.
+
+proc_with_prefix test_mi_memory_changed {} {
+    global decimal hex mi_gdb_prompt
+
+    set global_var_addr ""
+
+    # Extract the address of the "gid" variable, confirming it's in
+    # private_lane address space.  We'll use this to make sure the MI
+    # =memory-changed event emits the same address.
+    gdb_test_multiple \
+	"-data-evaluate-expression &global_var" \
+	"get global_var address" \
+	-prompt "$mi_gdb_prompt" {
+
+	-re "\\^done,value=\"($hex) <global_var>\"\r\n${mi_gdb_prompt}" {
+	    set global_var_addr $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
+    if {$global_var_addr == ""} {
+	untested "couldn't retrieve global_var address"
+	return
+    }
+
+    set gpu_thr ""
+
+    gdb_test_multiple \
+	"-data-evaluate-expression \$_thread" \
+	"get gpu thread" \
+	-prompt "$mi_gdb_prompt" {
+
+	-re "\\^done,value=\"($decimal)\"\r\n${mi_gdb_prompt}" {
+	    set gpu_thr $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
+    if {$gpu_thr == ""} {
+	untested "couldn't retrieve gpu thread"
+	return
+    }
+
+    # Switch to a lane that is not zero, just protect against GDB
+    # having a bug that always prints lane-id=0...
+    mi_gdb_test "-thread-select -l 5 $gpu_thr" \
+	".*\\^done,new-thread-id=\"$gpu_thr\",lane-id=\"5\",frame={.*}"
+
+    # Convert the returned address to a regular expression that
+    # accepts any number of zeros after "0x", e.g.,
+    #
+    #  "0x50" => "0x0000000000000050".
+    #
+    # This is done because MI addresses have the leading 0s, while the
+    # result of -data-evaluate-expression does not.
+    set global_var_addr_re [regsub "0x" $global_var_addr "0x0*"]
+
+    mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(private_lane#0)=55\"" \
+	"=memory-changed,thread-id=\"3\",lane-id=\"5\",addr=\"private_lane#0x0000000000000000\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
+	"=memory-changed, private_lane"
+
+    mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(private_wave#0)=55\"" \
+	"=memory-changed,thread-id=\"3\",addr=\"private_wave#0x0000000000000000\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
+	"=memory-changed, private_wave"
+
+    mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(local#0)=55\"" \
+	"=memory-changed,thread-group=\"i1\",addr=\"local#0x0000000000000000\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
+	"=memory-changed, local"
+
+    mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(generic#$global_var_addr)=55\"" \
+	"=memory-changed,thread-group=\"i1\",addr=\"generic#$global_var_addr_re\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
+	"=memory-changed, generic"
+
+    mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(global#$global_var_addr)=55\"" \
+	"=memory-changed,thread-group=\"i1\",addr=\"$global_var_addr_re\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
+	"=memory-changed, global"
+}
+
+# Anonymous append.  Like TCL append, but avoids the need to specify a
+# variable name.
+
+proc anon_append {args} {
+    set r ""
+    append r {*}$args
+    return $r
+}
+
+# Test MI -data-read-memory.
+
+proc_with_prefix test_mi_data_read_memory {} {
+    global hex
+
+    mi_gdb_test "-data-read-memory private_lane#1 x 1 1 1" \
+	[anon_append \
+	     "\\^done," \
+	     "addr=\"private_lane#0x0000000000000001\"," \
+	     "nr-bytes=\"1\"," \
+	     "total-bytes=\"1\"," \
+	     "next-row=\"private_lane#0x0000000000000002\"," \
+	     "prev-row=\"private_lane#0x0000000000000000\"," \
+	     "next-page=\"private_lane#0x0000000000000002\"," \
+	     "prev-page=\"private_lane#0x0000000000000000\"," \
+	     "memory=\\\[\\\{addr=\"private_lane#0x0000000000000001\",data=\\\[\"$hex\"\\\]\\\}\\\]"]
+
+    # Note how wraparound doesn't work correctly below --
+    # prev-row/prev-page lose the address space (or rather, they lose
+    # the high bits).  This will be fixed once the address space bit
+    # hack are eliminated, at which point this test will start failing
+    # and it should be adjusted.
+    mi_gdb_test "-data-read-memory private_lane#0 x 1 1 1" \
+	[anon_append \
+	     "\\^done," \
+	     "addr=\"private_lane#0x0000000000000000\"," \
+	     "nr-bytes=\"1\"," \
+	     "total-bytes=\"1\"," \
+	     "next-row=\"private_lane#0x0000000000000001\"," \
+	     "prev-row=\"0x00ffffffffffffff\"," \
+	     "next-page=\"private_lane#0x0000000000000001\"," \
+	     "prev-page=\"0x00ffffffffffffff\"," \
+	     "memory=\\\[\\\{addr=\"private_lane#0x0000000000000000\",data=\\\[\"$hex\"\\\]\\\}\\\]"]
+}
+
+with_rocm_gpu_lock {
+    mi_clean_restart $::binfile
+    mi_runto "aspace_test" -pending
+
+    test_mi_memory_changed
+    test_mi_data_read_memory
+}

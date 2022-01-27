@@ -1,6 +1,7 @@
 /* MI Interpreter Definitions and Commands for GDB, the GNU debugger.
 
    Copyright (C) 2002-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -88,8 +89,8 @@ static void mi_breakpoint_created (struct breakpoint *b);
 static void mi_breakpoint_deleted (struct breakpoint *b);
 static void mi_breakpoint_modified (struct breakpoint *b);
 static void mi_command_param_changed (const char *param, const char *value);
-static void mi_memory_changed (struct inferior *inf, CORE_ADDR memaddr,
-			       ssize_t len, const bfd_byte *myaddr);
+static void mi_memory_changed (CORE_ADDR memaddr, ssize_t len,
+			       const bfd_byte *myaddr);
 static void mi_on_sync_execution_done (void);
 
 /* Display the MI prompt.  */
@@ -651,6 +652,8 @@ mi_on_normal_stop_1 (struct bpstat *bs, int print_frame)
 	print_stop_event (mi->cli_uiout);
 
       mi_uiout->field_signed ("thread-id", tp->global_num);
+      if (tp->has_simd_lanes ())
+	mi_uiout->field_signed ("lane-id", tp->current_simd_lane ());
       if (non_stop)
 	{
 	  ui_out_emit_list list_emitter (mi_uiout, "stopped-threads");
@@ -1165,11 +1168,12 @@ mi_command_param_changed (const char *param, const char *value)
 /* Emit notification about the target memory change.  */
 
 static void
-mi_memory_changed (struct inferior *inferior, CORE_ADDR memaddr,
-		   ssize_t len, const bfd_byte *myaddr)
+mi_memory_changed (CORE_ADDR memaddr, ssize_t len, const bfd_byte *myaddr)
 {
   if (mi_suppress_notification.memory)
     return;
+
+  address_scope scope = gdbarch_address_scope (get_current_arch (), memaddr);
 
   SWITCH_THRU_ALL_UIS ()
     {
@@ -1189,7 +1193,16 @@ mi_memory_changed (struct inferior *inferior, CORE_ADDR memaddr,
 
       mi_uiout->redirect (mi->event_channel);
 
-      mi_uiout->field_fmt ("thread-group", "i%d", inferior->num);
+      if (scope == ADDRESS_SCOPE_LANE)
+	{
+	  mi_uiout->field_signed ("thread-id", inferior_thread ()->global_num);
+	  mi_uiout->field_signed ("lane-id", inferior_thread ()->current_simd_lane ());
+	}
+      else if (scope == ADDRESS_SCOPE_THREAD)
+	mi_uiout->field_signed ("thread-id", inferior_thread ()->global_num);
+      else
+	mi_uiout->field_fmt ("thread-group", "i%d", current_inferior ()->num);
+
       mi_uiout->field_aspace_and_addr ("addr", get_current_arch (), memaddr);
       mi_uiout->field_string ("len", hex_string (len));
 
@@ -1254,6 +1267,10 @@ mi_user_selected_context_changed (user_selected_what selection)
 	  fprintf_unfiltered (mi->event_channel,
 			      "thread-selected,id=\"%d\"",
 			      tp->global_num);
+
+	  if (tp->has_simd_lanes ())
+	    fprintf_unfiltered (mi->event_channel,
+				",lane-id=\"%d\"", tp->current_simd_lane ());
 
 	  if (tp->state != THREAD_RUNNING)
 	    {

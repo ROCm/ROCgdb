@@ -1427,7 +1427,7 @@ make_info_lanes_options_def_group (info_lanes_opts *opts)
   return {{info_lanes_option_defs}, opts};
 }
 
-/* Helper for print_lane_info.  Returns true if LANE should be
+/* Helper for print_lane_info_1.  Returns true if LANE should be
    printed.  If REQUESTED_LANES, a list of GDB ids/ranges, is not
    NULL, only print LANE if its ID is included in the list.  */
 
@@ -1470,9 +1470,9 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
 	uiout->field_string ("current", "*");
       else
 	uiout->field_skip ("current");
-
-      uiout->field_signed ("id", lane);
     }
+
+  uiout->field_signed ("id", lane);
 
   gdbarch *arch = target_thread_architecture (tp->ptid);
   int used_lanes_count = gdbarch_used_lanes_count (arch, tp);
@@ -1504,14 +1504,6 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
   uiout->field_string ("state", lane_state ());
 
   uiout->field_string ("target-id", target_lane_to_str (tp, lane));
-
-  if (uiout->is_mi_like_p ())
-    {
-      if (tp->state == THREAD_RUNNING)
-	uiout->field_string ("state", "running");
-      else
-	uiout->field_string ("state", "stopped");
-    }
 
   if (tp->state == THREAD_RUNNING)
     uiout->text ("(running)\n");
@@ -1546,14 +1538,11 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
    REQUESTED_LANES.  */
 
 static void
-print_lane_info (struct ui_out *uiout, const char *requested_lanes,
-		 const info_lanes_opts &opts)
+print_lane_info_1 (struct ui_out *uiout, const char *requested_lanes,
+		   const info_lanes_opts &opts)
 {
   if (inferior_ptid == null_ptid)
-    {
-      uiout->message (_("No thread selected.\n"));
-      return;
-    }
+    error (_("No thread selected."));
 
   thread_info *thr = inferior_thread ();
 
@@ -1646,6 +1635,18 @@ print_lane_info (struct ui_out *uiout, const char *requested_lanes,
      list or table.  */
 }
 
+/* See gdbthread.h.  */
+
+void
+print_lane_info (struct ui_out *uiout, const char *requested_lanes)
+{
+  info_lanes_opts opts;
+
+  opts.show_all = true;
+
+  print_lane_info_1 (current_uiout, requested_lanes, opts);
+}
+
 /* Implementation of the "info lanes" command.  */
 
 static void
@@ -1657,7 +1658,7 @@ info_lanes_command (const char *arg, int from_tty)
   gdb::option::process_options
     (&arg, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
 
-  print_lane_info (current_uiout, arg, opts);
+  print_lane_info_1 (current_uiout, arg, opts);
 }
 
 /* Completer for the "info lanes" command.  */
@@ -2478,6 +2479,22 @@ warn_if_current_lane_is_inactive ()
     warning (_("Current lane is inactive."));
 }
 
+/* See gdbthread.h.  */
+
+void
+switch_to_lane (int lane)
+{
+  thread_info *tp = inferior_thread ();
+  gdbarch *arch = target_thread_architecture (tp->ptid);
+  int lane_count = gdbarch_supported_lanes_count (arch, tp);
+  if (lane < 0 || lane >= lane_count)
+    error (_("Lane %d does not exist on this thread."), lane);
+
+  tp->set_current_simd_lane (lane);
+
+  select_frame (get_current_frame ());
+}
+
 /* Switch to the specified lane, or print the current lane.  */
 
 static void
@@ -2512,14 +2529,7 @@ lane_command (const char *tidstr, int from_tty)
     {
       int lane = parse_and_eval_long (tidstr);
 
-      gdbarch *arch = target_thread_architecture (tp->ptid);
-      int lane_count = gdbarch_supported_lanes_count (arch, tp);
-      if (lane < 0 || lane >= lane_count)
-	error (_("Lane %d does not exist on this thread."), lane);
-
-      tp->set_current_simd_lane (lane);
-
-      select_frame (get_current_frame ());
+      switch_to_lane (lane);
 
       gdb::observers::user_selected_context_changed.notify
 	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
@@ -2636,10 +2646,13 @@ show_print_thread_events (struct ui_file *file, int from_tty,
 /* See gdbthread.h.  */
 
 void
-thread_select (const char *tidstr, thread_info *tp)
+thread_select (const char *tidstr, thread_info *tp, int lane)
 {
   if (!switch_to_thread_if_alive (tp))
     error (_("Thread ID %s has terminated."), tidstr);
+
+  if (lane != -1)
+    switch_to_lane (lane);
 
   annotate_thread_changed ();
 
@@ -2660,17 +2673,18 @@ print_selected_thread_frame (struct ui_out *uiout,
     {
       if (uiout->is_mi_like_p ())
 	{
-	  uiout->field_signed ("new-thread-id",
-			       inferior_thread ()->global_num);
+	  uiout->field_signed ("new-thread-id", tp->global_num);
+	  if (tp->has_simd_lanes ())
+	    uiout->field_signed ("lane-id", tp->current_simd_lane ());
 	}
       else
 	{
 	  uiout->text ("[Switching to thread ");
-	  uiout->field_string ("new-thread-id", print_thread_id (tp));
+	  uiout->text (print_thread_id (tp));
 	  if (tp->has_simd_lanes ())
 	    uiout->text (string_printf (", lane %d", tp->current_simd_lane ()));
 	  uiout->text (" (");
-	  if (!uiout->is_mi_like_p () && tp->has_simd_lanes ())
+	  if (tp->has_simd_lanes ())
 	    uiout->text (target_lane_to_str (tp, tp->current_simd_lane ()));
 	  else
 	    uiout->text (target_pid_to_str (inferior_ptid));
