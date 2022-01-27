@@ -2418,11 +2418,11 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 	target_terminal::ours_for_output ();
       }
 
-    if (filtered_printing_initialized ())
-      wrap_here ("");
-
     struct ui_file *out_file
       = (level >= AMD_DBGAPI_LOG_LEVEL_INFO) ? gdb_stdlog : gdb_stderr;
+
+    if (filtered_printing_initialized ())
+      out_file->wrap_here (0);
 
     switch (level)
       {

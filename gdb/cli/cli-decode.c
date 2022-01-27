@@ -145,6 +145,20 @@ cmd_list_element::prefixname () const
   return prefixname;
 }
 
+/* See cli/cli-decode.h.  */
+
+std::vector<std::string>
+cmd_list_element::command_components () const
+{
+  std::vector<std::string> result;
+
+  if (this->prefix != nullptr)
+    result = this->prefix->command_components ();
+
+  result.emplace_back (std::string (this->name));
+  return result;
+}
+
 /* Add element named NAME.
    Space for NAME and DOC must be allocated by the caller.
    CLASS is the top level category into which commands are broken down
@@ -613,6 +627,16 @@ add_setshow_enum_cmd (const char *name,
 		      struct cmd_list_element **set_list,
 		      struct cmd_list_element **show_list)
 {
+  /* We require *VAR to be initialized before this call, and
+     furthermore it must be == to one of the values in ENUMLIST.  */
+  gdb_assert (var != nullptr && *var != nullptr);
+  for (int i = 0; ; ++i)
+    {
+      gdb_assert (enumlist[i] != nullptr);
+      if (*var == enumlist[i])
+	break;
+    }
+
   set_show_commands commands
     =  add_setshow_cmd_full<const char *> (name, theclass, var_enum, var,
 					   set_doc, show_doc, help_doc,
@@ -1390,7 +1414,7 @@ fput_command_names_styled (const cmd_list_element &c,
 	continue;
 
       fputs_filtered (", ", stream);
-      wrap_here ("   ");
+      stream->wrap_here (3);
       fput_command_name_styled (alias, stream);
     }
 
@@ -1627,7 +1651,7 @@ help_list (struct cmd_list_element *list, const char *cmdtype,
       fprintf_filtered (stream, "\n\
 Type \"help%s\" followed by a class name for a list of commands in ",
 			cmdtype1);
-      wrap_here ("");
+      stream->wrap_here (0);
       fprintf_filtered (stream, "that class.");
 
       fprintf_filtered (stream, "\n\
@@ -1636,16 +1660,16 @@ Type \"help all\" for the list of all commands.");
 
   fprintf_filtered (stream, "\nType \"help%s\" followed by %scommand name ",
 		    cmdtype1, cmdtype2);
-  wrap_here ("");
+  stream->wrap_here (0);
   fputs_filtered ("for ", stream);
-  wrap_here ("");
+  stream->wrap_here (0);
   fputs_filtered ("full ", stream);
-  wrap_here ("");
+  stream->wrap_here (0);
   fputs_filtered ("documentation.\n", stream);
   fputs_filtered ("Type \"apropos word\" to search "
 		  "for commands related to \"word\".\n", stream);
   fputs_filtered ("Type \"apropos -v word\" for full documentation", stream);
-  wrap_here ("");
+  stream->wrap_here (0);
   fputs_filtered (" of commands related to \"word\".\n", stream);
   fputs_filtered ("Command name abbreviations are allowed if unambiguous.\n",
 		  stream);

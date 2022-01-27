@@ -172,9 +172,9 @@ mi_ui_out::do_message (const ui_file_style &style,
 }
 
 void
-mi_ui_out::do_wrap_hint (const char *identstring)
+mi_ui_out::do_wrap_hint (int indent)
 {
-  wrap_here (identstring);
+  m_streams.back ()->wrap_here (indent);
 }
 
 void

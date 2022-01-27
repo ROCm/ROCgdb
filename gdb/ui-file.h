@@ -107,6 +107,23 @@ public:
     return false;
   }
 
+  /* Indicate that if the next sequence of characters overflows the
+     line, a newline should be inserted here rather than when it hits
+     the end.  If INDENT is non-zero, it is a number of spaces to be
+     printed to indent the wrapped part on the next line.
+
+     If the line is already overfull, we immediately print a newline and
+     the indentation, and disable further wrapping.
+
+     If we don't know the width of lines, but we know the page height,
+     we must not wrap words, but should still keep track of newlines
+     that were explicitly printed.
+
+     This routine is guaranteed to force out any output which has been
+     squirreled away in the wrap_buffer, so wrap_here (0) can be
+     used to force out output from the wrap_buffer.  */
+  void wrap_here (int indent);
+
 private:
 
   /* Helper function for putstr and putstrn.  Print the character C on
@@ -160,17 +177,19 @@ public:
   /* string_file-specific public API.  */
 
   /* Accesses the std::string containing the entire output collected
-     so far.
+     so far.  */
+  const std::string &string () { return m_string; }
 
-     Returns a non-const reference so that it's easy to move the
-     string contents out of the string_file.  E.g.:
+  /* Return an std::string containing the entire output collected so far.
 
-      string_file buf;
-      buf.printf (....);
-      buf.printf (....);
-      return std::move (buf.string ());
-  */
-  std::string &string () { return m_string; }
+     The internal buffer is cleared, such that it's ready to build a new
+     string.  */
+  std::string release ()
+  {
+    std::string ret = std::move (m_string);
+    m_string.clear ();
+    return ret;
+  }
 
   /* Provide a few convenience methods with the same API as the
      underlying std::string.  */

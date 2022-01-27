@@ -660,7 +660,7 @@ get_setshow_command_value_string (const setting &var)
       gdb_assert_not_reached ("bad var_type");
     }
 
-  return std::move (stb.string ());
+  return stb.release ();
 }
 
 /* Format the value VAL of setting C in its verbose form (as shown on the

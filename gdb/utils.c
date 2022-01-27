@@ -156,7 +156,7 @@ vwarning (const char *string, va_list args)
 	  target_terminal::ours_for_output ();
 	}
       if (filtered_printing_initialized ())
-	wrap_here ("");		/* Force out any buffered output.  */
+	gdb_stdout->wrap_here (0);	/* Force out any buffered output.  */
       gdb_flush (gdb_stdout);
       if (warning_pre_print)
 	fputs_unfiltered (warning_pre_print, gdb_stderr);
@@ -883,7 +883,7 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
     {
       target_terminal::scoped_restore_terminal_state term_state;
       target_terminal::ours_for_output ();
-      wrap_here ("");
+      gdb_stdout->wrap_here (0);
       vfprintf_filtered (gdb_stdout, ctlstr, args);
 
       printf_filtered (_("(%s or %s) [answered %c; "
@@ -1177,9 +1177,8 @@ static bool filter_initialized = false;
    already been counted in chars_printed).  */
 static std::string wrap_buffer;
 
-/* String to indent by if the wrap occurs.  Must not be NULL if wrap_column
-   is non-zero.  */
-static const char *wrap_indent;
+/* String to indent by if the wrap occurs.  */
+static int wrap_indent;
 
 /* Column number on the screen where wrap_buffer begins, or 0 if wrapping
    is not in effect.  */
@@ -1522,34 +1521,15 @@ get_chars_per_line ()
   return chars_per_line;
 }
 
-/* Indicate that if the next sequence of characters overflows the line,
-   a newline should be inserted here rather than when it hits the end.
-   If INDENT is non-null, it is a string to be printed to indent the
-   wrapped part on the next line.  INDENT must remain accessible until
-   the next call to wrap_here() or until a newline is printed through
-   fputs_filtered().
-
-   If the line is already overfull, we immediately print a newline and
-   the indentation, and disable further wrapping.
-
-   If we don't know the width of lines, but we know the page height,
-   we must not wrap words, but should still keep track of newlines
-   that were explicitly printed.
-
-   INDENT should not contain tabs, as that will mess up the char count
-   on the next line.  FIXME.
-
-   This routine is guaranteed to force out any output which has been
-   squirreled away in the wrap_buffer, so wrap_here ((char *)0) can be
-   used to force out output from the wrap_buffer.  */
+/* See ui-file.h.  */
 
 void
-wrap_here (const char *indent)
+ui_file::wrap_here (int indent)
 {
   /* This should have been allocated, but be paranoid anyway.  */
   gdb_assert (filter_initialized);
 
-  flush_wrap_buffer (gdb_stdout);
+  flush_wrap_buffer (this);
   if (chars_per_line == UINT_MAX)	/* No line overflow checking.  */
     {
       wrap_column = 0;
@@ -1557,17 +1537,14 @@ wrap_here (const char *indent)
   else if (chars_printed >= chars_per_line)
     {
       puts_filtered ("\n");
-      if (indent != NULL)
-	puts_filtered (indent);
+      if (indent != 0)
+	puts_filtered (n_spaces (indent));
       wrap_column = 0;
     }
   else
     {
       wrap_column = chars_printed;
-      if (indent == NULL)
-	wrap_indent = "";
-      else
-	wrap_indent = indent;
+      wrap_indent = indent;
       wrap_style = applied_style;
     }
 }
@@ -1674,7 +1651,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 		       {
 			 wrap_buffer.clear ();
 			 wrap_column = 0;
-			 wrap_indent = "";
+			 wrap_indent = 0;
 		       });
 
   /* Go through and output each character.  Show line extension
@@ -1779,7 +1756,7 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 	      /* Now output indentation and wrapped string.  */
 	      if (wrap_column)
 		{
-		  stream->puts (wrap_indent);
+		  stream->puts (n_spaces (wrap_indent));
 
 		  /* Having finished inserting the wrapping we should
 		     restore the style as it was at the WRAP_COLUMN.  */
@@ -1793,14 +1770,9 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 		     in WRAP_BUFFER.  */
 		  applied_style = save_style;
 
-		  /* FIXME, this strlen is what prevents wrap_indent from
-		     containing tabs.  However, if we recurse to print it
-		     and count its chars, we risk trouble if wrap_indent is
-		     longer than (the user settable) chars_per_line.
-		     Note also that this can set chars_printed > chars_per_line
+		  /* Note that this can set chars_printed > chars_per_line
 		     if we are printing a long string.  */
-		  chars_printed = strlen (wrap_indent)
-		    + (save_chars - wrap_column);
+		  chars_printed = wrap_indent + (save_chars - wrap_column);
 		  wrap_column = 0;	/* And disable fancy wrap */
 		}
 	      else if (did_paginate && stream->can_emit_style_escape ())
@@ -1811,8 +1783,8 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
       if (*lineptr == '\n')
 	{
 	  chars_printed = 0;
-	  wrap_here ((char *) 0);	/* Spit out chars, cancel
-					   further wraps.  */
+	  stream->wrap_here (0); /* Spit out chars, cancel
+				    further wraps.  */
 	  lines_printed++;
 	  /* XXX: The ideal thing would be to call
 	     'stream->putc' here, but we can't because it
@@ -1988,7 +1960,7 @@ vfprintf_unfiltered (struct ui_file *stream, const char *format, va_list args)
       /* Print the message.  */
       string_file sfile;
       cli_ui_out (&sfile, 0).vmessage (ui_file_style (), format, args);
-      std::string linebuffer = std::move (sfile.string ());
+      const std::string &linebuffer = sfile.string ();
       fputs_unfiltered (linebuffer.c_str (), stream);
 
       size_t len = linebuffer.length ();

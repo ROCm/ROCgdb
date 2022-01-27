@@ -9513,7 +9513,7 @@ escape_buffer (const char *buf, int n)
   string_file stb;
 
   stb.putstrn (buf, n, '\\');
-  return std::move (stb.string ());
+  return stb.release ();
 }
 
 int

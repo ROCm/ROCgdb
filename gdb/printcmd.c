@@ -318,7 +318,7 @@ print_formatted (struct value *val, int size,
 
 	case 'i':
 	  /* We often wrap here if there are long symbolic names.  */
-	  wrap_here ("    ");
+	  stream->wrap_here (4);
 	  next_address = (value_address (val)
 			  + gdb_print_insn (type->arch (),
 					    value_address (val), stream,
@@ -829,7 +829,7 @@ find_instruction_backward (struct gdbarch *gdbarch, CORE_ADDR addr,
 	     is calculated after the loop.  */
 	  printf_filtered (_("No line number information available "
 			     "for address "));
-	  wrap_here ("  ");
+	  gdb_stdout->wrap_here (2);
 	  print_address (gdbarch, loop_start - 1, gdb_stdout);
 	  printf_filtered ("\n");
 	  break;
@@ -1501,7 +1501,7 @@ output_command (const char *exp, int from_tty)
 
   annotate_value_end ();
 
-  wrap_here ("");
+  gdb_stdout->wrap_here (0);
   gdb_flush (gdb_stdout);
 }
 
@@ -2898,7 +2898,7 @@ printf_command (const char *arg, int from_tty)
 {
   ui_printf (arg, gdb_stdout);
   reset_terminal_style (gdb_stdout);
-  wrap_here ("");
+  gdb_stdout->wrap_here (0);
   gdb_stdout->flush ();
 }
 
