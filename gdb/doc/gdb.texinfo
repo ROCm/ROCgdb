@@ -28026,15 +28026,9 @@ The thread's number within the heterogeneous work-group.
 @end table
 
 @item
-If a memory violation or address watch access event is reported for an
-@acronym{AMD GPU} thread that supports controlling precise memory
-detection when the mode is @samp{off}, then the message does not
-currently include an indication that the position may not be accurate.
-
-@item
 The @acronym{AMD ROCm} compiler currently only has support for
 generating valid @acronym{AMD GPU} DWARF information for symbolic
-variables at @w{@option{-O0}.
+variables at @w{@option{-O0}}.
 
 The @acronym{AMD ROCm} compiler currently adds the @w{@option{-mllvm
 -amdgpu-spill-cfi-saved-regs}} option for @acronym{AMD GPU} when the
