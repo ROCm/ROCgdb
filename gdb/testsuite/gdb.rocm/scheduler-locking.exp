@@ -85,8 +85,7 @@ with_test_prefix "break on symbol, next, step, enable-disable" {
 # Check "info agents", "info threads", "show architecture", "show convenience"
 # "info breakpoint" etc. commands in it.
 clean_restart ${binfile}
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-gdb_test "break $srcfile:$breakpoint_loc" "Breakpoint .* at .*${testfile}.*"
+gdb_breakpoint $srcfile:$breakpoint_loc allow-pending
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 gdb_test_no_output "set scheduler-locking on"
 
