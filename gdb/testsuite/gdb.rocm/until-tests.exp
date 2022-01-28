@@ -84,11 +84,9 @@ with_test_prefix "until without location; scheduler-locking on" {
 }
 
 # Until tests and other tests after setting conditional breakpoint on AMDGPU thread.
-with_test_prefix "until with HIP_ENABLE_DEFERRED_LOADING=0" {
+with_test_prefix "until after conditional breakpoint" {
     clean_restart ${binfile}
-    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-    gdb_test "break $srcfile:$breakpoint_loc if \$_thread==$threadid" \
-        "Breakpoint .* at .*${testfile}.*"
+    gdb_breakpoint "$srcfile:$breakpoint_loc if \$_thread==$threadid" allow-pending
     gdb_test "run" \
         ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
     gdb_test "info line" "Line $breakpoint_loc.*"
