@@ -119,6 +119,22 @@ proc anon_append {args} {
     return $r
 }
 
+# Test MI -data-read-memory-bytes.
+
+proc_with_prefix test_mi_data_read_memory_bytes {} {
+    set any "\[^\r\n\]*"
+
+    mi_gdb_test "-data-read-memory-bytes private_lane#4 1" \
+	[anon_append \
+	     "\\^done,memory=" \
+	     "\\\[\\\{" \
+	     "begin=\"private_lane#0x0000000000000004\"," \
+	     "offset=\"0x0000000000000000\"," \
+	     "end=\"private_lane#0x0000000000000005\"," \
+	     "contents=\"$any\"" \
+	     "\\\}\\\]"]
+}
+
 # Test MI -data-read-memory.
 
 proc_with_prefix test_mi_data_read_memory {} {
@@ -159,5 +175,6 @@ with_rocm_gpu_lock {
     mi_runto "aspace_test" -pending
 
     test_mi_memory_changed
+    test_mi_data_read_memory_bytes
     test_mi_data_read_memory
 }
