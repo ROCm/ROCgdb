@@ -2713,17 +2713,118 @@ down_command (const char *count_exp, int from_tty)
   gdb::observers::user_selected_context_changed.notify (USER_SELECTED_FRAME);
 }
 
+namespace {
+
+/* All data required to process a return command.
+
+   This class encapsulates everything required to force the return value of a
+   function within a single thread of execution.
+
+   The constructor might throw (using error).  */
+
+struct return_arg
+{
+  /* Parse the expression EXPR and evaluate it.  This result can be used as a
+   * forced returned value for the function THISFUN (in frame THISFRAME).  */
+  return_arg (const char *expr, frame_info *thisframe, symbol *thisfun,
+	      gdbarch *gdbarch);
+
+  /* The mechanism by which the target returns from THISFUN.  */
+  enum return_value_convention rv_conv = RETURN_VALUE_REGISTER_CONVENTION;
+
+  /* The evaluated value the user wants to return.  */
+  value *return_value = nullptr;
+
+  /* The function the user wants to return from.  */
+  value *function = nullptr;
+
+  /* Any relevant information the user should be warned about before performing
+     the return.  */
+  std::string query_prefix;
+};
+
+return_arg::return_arg (const char *expr, frame_info *thisframe,
+			symbol *thisfun, gdbarch *gdbarch)
+{
+  if (expr == nullptr)
+    return;
+
+  expression_up retval_expr = parse_expression (expr);
+
+  /* Compute the return value.  Should the computation fail, this
+     call throws an error.  */
+  return_value = evaluate_expression (retval_expr.get ());
+
+  /* Find out what type THISFUN returns..  */
+  struct type *return_type = nullptr;
+  if (thisfun != nullptr)
+    return_type = TYPE_TARGET_TYPE (thisfun->type ());
+
+  if (return_type == nullptr)
+    {
+      if (retval_expr->first_opcode () != UNOP_CAST
+	  && retval_expr->first_opcode () != UNOP_CAST_TYPE)
+	error (_("Return value type not available for selected "
+		 "stack frame.\n"
+		 "Please use an explicit cast of the value to return."));
+      return_type = value_type (return_value);
+    }
+
+  return_type = check_typedef (return_type);
+
+  /* Cast return value to the return type of the function.  Should
+     the cast fail, this call throws an error.  */
+  return_value = value_cast (return_type, return_value);
+
+  /* Make sure the value is fully evaluated.  It may live in the
+     stack frame we're about to pop.  */
+  if (value_lazy (return_value))
+    value_fetch_lazy (return_value);
+
+  if (thisfun != nullptr)
+    function = read_var_value (thisfun, nullptr, thisframe);
+
+  if (return_type->code () == TYPE_CODE_VOID)
+    /* If the return-type is "void", don't try to find the
+       return-value's location.  However, do still evaluate the
+       return expression so that, even when the expression result
+       is discarded, side effects such as "return i++" still
+       occur.  */
+    return_value = nullptr;
+  else if (thisfun != nullptr)
+    {
+      if (is_nocall_function (check_typedef (value_type (function))))
+	{
+	  query_prefix =
+	    string_printf ("Function '%s' does not follow the target "
+			   "calling convention.\n"
+			   "If you continue, setting the return value "
+			   "will probably lead to unpredictable "
+			   "behaviors.\n",
+			   thisfun->print_name ());
+	}
+
+      rv_conv = struct_return_convention (gdbarch, function, return_type);
+      if (rv_conv == RETURN_VALUE_STRUCT_CONVENTION
+	  || rv_conv == RETURN_VALUE_ABI_RETURNS_ADDRESS)
+	{
+	  query_prefix = "The location at which to store the "
+	    "function's return value is unknown.\n"
+	    "If you continue, the return value "
+	    "that you specified will be ignored.\n";
+	  return_value = nullptr;
+	}
+    }
+}
+
+} // anonymous namespace
+
 void
 return_command (const char *retval_exp, int from_tty)
 {
-  /* Initialize it just to avoid a GCC false warning.  */
-  enum return_value_convention rv_conv = RETURN_VALUE_STRUCT_CONVENTION;
   struct frame_info *thisframe;
   struct gdbarch *gdbarch;
   struct symbol *thisfun;
-  struct value *return_value = NULL;
-  struct value *function = NULL;
-  std::string query_prefix;
 
   thisframe = get_selected_frame ("No selected frame.");
   thisfun = get_frame_function (thisframe);
@@ -2736,72 +2837,7 @@ return_command (const char *retval_exp, int from_tty)
      let it bail.  If the return type can't be handled, set
      RETURN_VALUE to NULL, and QUERY_PREFIX to an informational
      message.  */
-  if (retval_exp)
-    {
-      expression_up retval_expr = parse_expression (retval_exp);
-      struct type *return_type = NULL;
-
-      /* Compute the return value.  Should the computation fail, this
-	 call throws an error.  */
-      return_value = evaluate_expression (retval_expr.get ());
-
-      /* Cast return value to the return type of the function.  Should
-	 the cast fail, this call throws an error.  */
-      if (thisfun != NULL)
-	return_type = TYPE_TARGET_TYPE (thisfun->type ());
-      if (return_type == NULL)
-	{
-	  if (retval_expr->first_opcode () != UNOP_CAST
-	      && retval_expr->first_opcode () != UNOP_CAST_TYPE)
-	    error (_("Return value type not available for selected "
-		     "stack frame.\n"
-		     "Please use an explicit cast of the value to return."));
-	  return_type = value_type (return_value);
-	}
-      return_type = check_typedef (return_type);
-      return_value = value_cast (return_type, return_value);
-
-      /* Make sure the value is fully evaluated.  It may live in the
-	 stack frame we're about to pop.  */
-      if (value_lazy (return_value))
-	value_fetch_lazy (return_value);
-
-      if (thisfun != NULL)
-	function = read_var_value (thisfun, NULL, thisframe);
-
-      rv_conv = RETURN_VALUE_REGISTER_CONVENTION;
-      if (return_type->code () == TYPE_CODE_VOID)
-	/* If the return-type is "void", don't try to find the
-	   return-value's location.  However, do still evaluate the
-	   return expression so that, even when the expression result
-	   is discarded, side effects such as "return i++" still
-	   occur.  */
-	return_value = NULL;
-      else if (thisfun != NULL)
-	{
-	  if (is_nocall_function (check_typedef (value_type (function))))
-	    {
-	      query_prefix =
-		string_printf ("Function '%s' does not follow the target "
-			       "calling convention.\n"
-			       "If you continue, setting the return value "
-			       "will probably lead to unpredictable "
-			       "behaviors.\n",
-			       thisfun->print_name ());
-	    }
-
-	  rv_conv = struct_return_convention (gdbarch, function, return_type);
-	  if (rv_conv == RETURN_VALUE_STRUCT_CONVENTION
-	      || rv_conv == RETURN_VALUE_ABI_RETURNS_ADDRESS)
-	    {
-	      query_prefix = "The location at which to store the "
-		"function's return value is unknown.\n"
-		"If you continue, the return value "
-		"that you specified will be ignored.\n";
-	      return_value = NULL;
-	    }
-	}
-    }
+  return_arg return_value (retval_exp, thisframe, thisfun, gdbarch);
 
   /* Does an interactive user really want to do this?  Include
      information, such as how well GDB can handle the return value, in
@@ -2812,13 +2848,13 @@ return_command (const char *retval_exp, int from_tty)
 
       if (thisfun == NULL)
 	confirmed = query (_("%sMake selected stack frame return now? "),
-			   query_prefix.c_str ());
+			   return_value.query_prefix.c_str ());
       else
 	{
 	  if (TYPE_NO_RETURN (thisfun->type ()))
 	    warning (_("Function does not return normally to caller."));
 	  confirmed = query (_("%sMake %s return now? "),
-			     query_prefix.c_str (),
+			     return_value.query_prefix.c_str (),
 			     thisfun->print_name ());
 	}
       if (!confirmed)
@@ -2829,13 +2865,13 @@ return_command (const char *retval_exp, int from_tty)
   frame_pop (get_selected_frame (NULL));
 
   /* Store RETURN_VALUE in the just-returned register set.  */
-  if (return_value != NULL)
+  if (return_value.return_value != nullptr)
     {
-      struct type *return_type = value_type (return_value);
+      struct type *return_type = value_type (return_value.return_value);
       struct gdbarch *cache_arch = get_current_regcache ()->arch ();
 
-      gdb_assert (rv_conv != RETURN_VALUE_STRUCT_CONVENTION
-		  && rv_conv != RETURN_VALUE_ABI_RETURNS_ADDRESS);
+      gdb_assert (return_value.rv_conv != RETURN_VALUE_STRUCT_CONVENTION
+	      && return_value.rv_conv != RETURN_VALUE_ABI_RETURNS_ADDRESS);
 
       thread_info *thr = inferior_thread ();
       const simd_lanes_mask_t mask = thr->active_simd_lanes_mask ();
@@ -2845,9 +2881,9 @@ return_command (const char *retval_exp, int from_tty)
 	{
 	  thr->set_current_simd_lane (lane);
 	  gdbarch_return_value
-	    (cache_arch, function, return_type, get_current_regcache (),
-	     nullptr /*read*/,
-	     value_contents (return_value).data () /*write*/);
+	    (cache_arch, return_value.function, return_type,
+	     get_current_regcache (), nullptr /*read*/,
+	     value_contents (return_value.return_value).data () /*write*/);
 	  return true;
 	});
     }
