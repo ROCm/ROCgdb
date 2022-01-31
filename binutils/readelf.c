@@ -241,6 +241,7 @@ static bool decompress_dumps = false;
 static bool do_not_show_symbol_truncation = false;
 static bool do_demangle = false;	/* Pretty print C++ symbol names.  */
 static bool process_links = false;
+static bool dump_any_debugging = false;
 static int demangle_flags = DMGL_ANSI | DMGL_PARAMS;
 static int sym_base = 0;
 
@@ -5372,6 +5373,7 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	case 'P':
 	  process_links = true;
 	  do_follow_links = true;
+	  dump_any_debugging = true;
 	  break;
 	case 'x':
 	  request_dump (dumpdata, HEX_DUMP);
@@ -5387,6 +5389,7 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	  break;
 	case 'w':
 	  do_dump = true;
+	  dump_any_debugging = true;
 	  if (optarg == NULL)
 	    {
 	      do_debugging = true;
@@ -5400,6 +5403,7 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	  break;
 	case OPTION_DEBUG_DUMP:
 	  do_dump = true;
+	  dump_any_debugging = true;
 	  if (optarg == NULL)
 	    {
 	      do_debugging = true;
@@ -15952,6 +15956,9 @@ load_debug_section (enum dwarf_section_display_enum debug, void * data)
   struct dwarf_section * section = &debug_displays [debug].section;
   Elf_Internal_Shdr * sec;
   Filedata * filedata = (Filedata *) data;
+
+  if (!dump_any_debugging)
+    return false;
 
   /* Without section headers we cannot find any sections.  */
   if (filedata->section_headers == NULL)
