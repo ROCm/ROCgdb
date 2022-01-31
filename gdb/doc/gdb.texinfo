@@ -13565,14 +13565,19 @@ the machine you are using, with or without the initial @samp{$}.
 @cindex process status register
 @cindex frame pointer register
 @cindex standard registers
-@value{GDBN} has four ``standard'' register names that are available (in
+@value{GDBN} has several ``standard'' register names that are available (in
 expressions) on most machines---whenever they do not conflict with an
 architecture's canonical mnemonics for registers.  The register names
 @code{$pc} and @code{$sp} are used for the program counter register and
 the stack pointer.  @code{$fp} is used for a register that contains a
 pointer to the current stack frame, and @code{$ps} is used for a
-register that contains the processor status.  For example,
-you could print the program counter in hex with
+register that contains the processor status.  @code{$lane_pc} is used
+for divergent lane debugging (@pxref{Heterogeneous Debugging}).
+It contains a lane's logical program counter, the address
+of the instruction that the lane will execute next once it becomes
+active, while @code{$pc} contains the thread's physical program counter.
+
+For example, you could print the program counter in hex with
 
 @smallexample
 p/x $pc
@@ -13598,7 +13603,7 @@ see @ref{Returning, ,Returning from a Function}.} with
 set $sp += 4
 @end smallexample
 
-Whenever possible, these four standard register names are available on
+Whenever possible, these standard register names are available on
 your machine even though the machine has different canonical mnemonics,
 so long as there is no conflict.  The @code{info registers} command
 shows the canonical names.  For example, on the SPARC, @code{info
@@ -23687,6 +23692,9 @@ entities
 @item @code{info lanes}, @code{lane}, commands support source language
 threads of execution that are mapped to SIMD-like lanes of a thread
 
+@item @code{lane_pc} user register that contains the logical current
+program counter of a divergent lane.
+
 @item @code{$_thread_find}, @code{$_thread_find_first_gid},
 @code{$_lane_find}, @code{$_lane_find_first_gid} debugger convenience
 functions can find threads and heterogeneous lanes associated with
@@ -23800,6 +23808,16 @@ A range of lane IDs, as in @var{lane1}-@var{lane2}.  E.g.,
 @samp{0-20}.
 
 @end enumerate
+
+When divergence debug information is available, the @code{$lane_pc}
+user register contains the logical current program counter of a
+divergent lane.  This is the address of the instruction that the lane
+will execute next once it becomes active.  If the lane is active, then
+@code{$lane_pc} contains the physical/thread program counter, the same
+address as @code{$pc}.  When divergence debug information is not
+available, the @code{$lane_pc} user register always contains the
+physical/thread program counter, thus it becomes equivalent to
+@code{$pc}.
 
 The following debugger convenience variables (@pxref{Convenience
 Vars,,Convenience Variables}) are related to heterogeneous debugging.
@@ -24309,14 +24327,16 @@ The heterogeneous lane ID assigned by @value{GDBN}.  @xref{lane ID}.
 
 @item
 The state of the heterogeneous lane.  If a thread is stopped, then its
-lanes can be either in the @samp{A} (active), or @samp{I} (inactive)
-states.  An unused lane (@pxref{unused heterogeneous lane}) is always
-shown in the @samp{U} (unused) state.  When a thread is running (as
-opposed to stopped), whether one of its lanes is active or inactive
-can't be determined, as the thread is executing instructions and may
-be constinuously changing its lanes between active and inactive
-states.  Therefore, when a thread is running, all its used lanes are
-in the @samp{R} (running) state.
+lanes can be either in the @samp{A} (active), @samp{D} (divergent), or
+@samp{I} (inactive).  A lane is shown as divergent if it is inactive
+and, @value{GDBN} is able to determine from the debug info where its
+logical stop PC is.  An unused lane (@pxref{unused heterogeneous
+lane}) is always shown in the @samp{U} (unused) state.  When a thread
+is running (as opposed to stopped), whether one of its lanes is active
+or inactive can't be determined, as the thread is executing
+instructions and may be constinuously changing its lanes between
+active and inactive states.  Therefore, when a thread is running, all
+its used lanes are in the @samp{R} (running) state.
 
 @anchor{target system lane identifier}
 @item
@@ -24345,18 +24365,24 @@ determined, it is ``(inactive)''.  If the lane is running, it is
 An asterisk @samp{*} to the left of the @value{GDBN} heterogeneous
 lane number indicates the current heterogeneous lane.
 
-For example,
-@end table
-@c end table here to get a little more width for example
+For example, without divergence debug information available:
 
 @smallexample
-(@value{GDBP}) info lanes 1-2
+(@value{GDBP}) info lanes 0-1
   Id  State   Target Id                                Frame
-* 1   A       AMDGPU Lane 1:2:3:463/2 (2,3,4)[1,2,4]   0x34e5 in saxpy ()
-  2   I       AMDGPU Lane 1:2:4:456/12 (2,4,4)[1,2,3]  (inactive)
+* 0   A       AMDGPU Lane 1:2:1:1/0 (0,0,0)[0,0,0]     0x34e5 in saxpy ()
+  1   I       AMDGPU Lane 1:2:1:1/1 (0,0,0)[1,0,0]     (inactive)
 @end smallexample
 
-@table @code
+Here's an example with divergence debug information available:
+
+@smallexample
+(@value{GDBP}) info lanes 0-1
+  Id  State   Target Id                                Frame
+* 0   A       AMDGPU Lane 1:2:1:1/0 (0,0,0)[0,0,0]     saxpy () at kernel.cc:102
+  1   D       AMDGPU Lane 1:2:1:1/1 (0,0,0)[1,0,0]     func () at kernel.cc:97
+@end smallexample
+
 @kindex lane
 @item lane @var{lane-id}
 
@@ -24380,9 +24406,10 @@ As with the @samp{[New @dots{}]} message, the form of the text in
 parentheses after @samp{Switching to} depends on your system's
 conventions for identifying heterogeneous lanes.
 
-If you switch to an inactive lane, @value{GDBN} displays a warning, so
-that you are made aware that values of local variables, function
-arguments, etc. will have meaningless values.  For example:
+If you switch to an inactive lane with no lane divergence debug
+information available, @value{GDBN} displays a warning, so that you
+are made aware that values of local variables, function arguments,
+etc. will have meaningless values.  For example:
 
 @smallexample
 (gdb) lane 1
@@ -24390,6 +24417,18 @@ arguments, etc. will have meaningless values.  For example:
 warning: Current lane is inactive.
 #0  some_function (ignore=0x0) at example.c:8
 8	    printf ("hello\n");
+@end smallexample
+
+If lane divergence debug information is available, @value{GDBN}
+automatically selects the first frame where the lane was last active.
+For example:
+
+@smallexample
+(gdb) lane 1
+warning: lane is divergent, selecting first active frame.
+[Switching to thread 6, lane 1 (AMDGPU Lane 1:1:1:2/1 (0,0,0)[65,0,0])]
+#1  other_function () at example.c:114
+42	    res = some_function ();
 @end smallexample
 
 @xref{stepping lanes, description of how execution commands and
@@ -24495,6 +24534,30 @@ lanes to one with fewer (including only one) then the current lane is
 switched to the heterogeneous lane corresponding to the highest
 heterogeneous lane index of the new frame and @value{GDBN} responds by
 displaying the system identifier of the heterogeneous lane selected.
+
+If divergent lane PC debug information is available, the
+@code{backtrace}, @code{up}, and @code{down} commands hide frames for
+which the lane is inactive due to divergence and was already divergent
+on function entry.  @value{GDBN} refers to such frames as the lane's
+@dfn{inactive frames}.  The first frame displayed by a backtrace is
+the first frame for which the lane is active, which isn't necessarily
+frame number 0.  For example:
+
+@smallexample
+(@value{GDBP}) bt
+warning: lane is divergent, skipping inactive frames
+#1  func1 () at kernel.cc:114
+#2  0x00007ffff5805c3c in kernel () at kernel.cc:151
+(@value{GDBP}) frame
+#1  func1 () at kernel.cc:114
+(@value{GDBP}) down
+Bottom (innermost) frame selected; you cannot go down.
+@end smallexample
+
+It is still possible to force @value{GDBN} to select an inactive frame
+using the @file{frame} command.  E.g., with @code{frame 0}.  In this
+case the presented frame location corresponds to the thread's physical
+PC.
 
 @xref{Stack, ,Examining the Stack}.
 
@@ -24654,13 +24717,29 @@ Control whether or not @value{GDBN} understands lane divergence.
 When set to @samp{on}, which is the default, execution commands such
 as @code{step}, @code{next}, @code{finish} and @code{until}
 automatically skip over code regions where the selected lane is
-inactive, and @value{GDBN} ignores breakpoint hits that trigger with
-all lanes inactive.
+inactive, @value{GDBN} ignores breakpoint hits that trigger with all
+lanes inactive, and @value{GDBN} displays the logical divergent lane
+PC as current location for inactive lanes.
 
 When set to @samp{off}, execution commands ignore lane active/inactive
 state, and may thus present stops in code regions where the selected
-lane is inactive.  Also, breakpoint hits are reported even if all
-lanes are inactive.
+lane is inactive.  Also, @value{GDBN} ignores logical divergent lane
+PC debug information, thus always presents the physical wave PC
+location as lane location, even for inactive lanes, and, breakpoint
+hits are reported even if all lanes are inactive.
+
+@kindex maint set skip-divergent-regions-with-breakpoint
+@item maint set skip-divergent-regions-with-breakpoint
+@kindex maint show skip-divergent-regions-with-breakpoint
+@item maint show skip-divergent-regions-with-breakpoint
+Control whether divergent regions are skipped with a breakpoint.
+
+When set to @samp{on}, which is the default, execution commands skip
+over code regions where the selected lane is inactive by placing a
+breakpoint at the address where the lane will become active, according
+to divergence debug information, and running to it.  When set to
+@samp{off}, @value{GDBN} single-steps until the current lane becomes
+active.
 
 @c FIXME-implementors!!  Should there be way to request all pending
 @c breakpoints to be processed?  This may result in multiple
@@ -29615,14 +29694,15 @@ may cause @value{GDBN} to report that it is unable to read memory
 @end itemize
 
 @item
-@value{GDBN} does not currently make use of debug information
-describing an inactive lane's logical current PC (and the @acronym{AMD
-ROCm} compiler currently does not generate it).  Such debug
-information informs the debugger about what the instruction an
-inactive lane will execute next once it becomes active.  Thus,
-currently, source locations displayed for inactive lanes always point
-to the wave's physical PC.  This is the same PC address as the PC of
-the lanes that are active.
+The @acronym{AMD ROCm} compiler currently does not
+generate debug information describing an inactive lane's logical
+current PC.  Such debug information informs the debugger about
+the instruction an inactive lane will execute once it becomes
+active.  Thus, currently, source locations displayed for inactive
+lanes always point to the wave's physical PC.  This is the same PC
+address as the PC of the lanes that are active.  When such debug
+information is available, source locations point to the logical
+PC instead.
 
 @item
 Only @acronym{AMD GPU} Code Object V3 and above is supported.  This is
