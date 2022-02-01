@@ -93,7 +93,7 @@ thread_info::active_simd_lanes_mask ()
   gdb_assert (this->inf != nullptr);
 
   scoped_restore_current_thread restore_thread;
-  switch_to_inferior_no_thread (this->inf);
+  switch_to_thread (this);
   gdbarch *arch = target_thread_architecture (this->ptid);
 
   if (gdbarch_active_lanes_mask_p (arch))
