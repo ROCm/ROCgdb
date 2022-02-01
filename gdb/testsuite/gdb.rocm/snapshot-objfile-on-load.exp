@@ -57,8 +57,7 @@ with_rocm_gpu_lock {
 
 clean_restart $::binfile
 gdb_test_no_output "set args ${hipmodule_path}" "set args"
-gdb_breakpoint "printId" allow-pending
-gdb_run_cmd
+runto "printId" allow-pending
 gdb_test "bt" \
     [multi_line \
 	"#0\[ \t\]*printId \\(\\) at \[^\r\n\]+" \
