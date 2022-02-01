@@ -42,7 +42,7 @@ with_rocm_gpu_lock {
     }
 
     set line [gdb_get_line_number "break here"]
-    gdb_test "break $line" "Breakpoint $::decimal at $hex.*"
+    gdb_breakpoint "$line" allow-pending
 
     gdb_test "continue" "Thread $decimal \"deep-stack\" hit Breakpoint $decimal.*"
     gdb_test "backtrace" \
