@@ -342,6 +342,17 @@ proc with_shared_gdb { body } {
     return $result
 }
 
+# Return true if TARGET_ARG is TARGET or, TARGET is the DejaGnu
+# target.  Return false otherwise.
+
+proc arg_istarget {target_arg target} {
+    if {$target_arg == $target || [istarget $target]} {
+	return 1
+    } else {
+	return 0
+    }
+}
+
 # Return a list of expressions about function FUNC's address and length.
 # The first expression is the address of function FUNC, and the second
 # one is FUNC's length.  SRC is the source file having function FUNC.
@@ -370,17 +381,19 @@ proc with_shared_gdb { body } {
 # static void func (void) {}
 #
 
-proc function_range { func src {options {debug}} } {
+proc function_range { func src args } {
     global decimal gdb_prompt
 
-    set amdgcn [istarget "amdgcn-amd-amdhsa"]
+    parse_args {{exe ""} {options {debug}} {target ""}}
 
     init_shared_gdb
-    if {!$::shared_gdb_started && $amdgcn} {
+    if {!$::shared_gdb_started && [istarget "amdgcn-amd-amdhsa"]} {
 
-	set exe [standard_temp_file function_range_exe[pid].x]
+	if {$exe == ""} {
+	    set exe [standard_temp_file function_range_exe[pid].x]
 
-	gdb_compile $src $exe executable $options
+	    gdb_compile $src $exe executable $options
+	}
 
 	# Unbundle the device code.  The result is a shared library,
 	# which we load into GDB directly (thus no host code is
@@ -395,6 +408,8 @@ proc function_range { func src {options {debug}} } {
     }
 
     shared_gdb_start_use $src $options $exe
+
+    set amdgcn [arg_istarget $target "amdgcn-amd-amdhsa"]
 
     if {$amdgcn} {
 	# The tests are compiled with HIP, which is a C++ variant.
@@ -483,7 +498,7 @@ proc get_func_info { name {options {debug}} } {
 
     lassign [function_range ${name} \
 		 [list ${srcdir}/${subdir}/$srcfile] \
-		 ${options}]  \
+		 -options ${options}]  \
 	func_start func_len
     set func_end "$func_start + $func_len"
 
@@ -587,6 +602,15 @@ namespace eval Dwarf {
 
     # The current output file.
     variable _output_file
+
+    # The pre-built template executable we can use to extract function
+    # ranges.
+    variable _template_executable ""
+
+    # The target we're assembling the debug info for.  This is set
+    # when generating assembly for a secondary target, like e.g., the
+    # GPU device in a HIP program.
+    variable _target ""
 
     # Note: The _cu_ values here also apply to type units (TUs).
     # Think of a TU as a special kind of CU.
@@ -987,6 +1011,8 @@ namespace eval Dwarf {
 
     proc _handle_macro_at_range { attr_value } {
 	variable _cu_is_fission
+	variable _template_executable
+	variable _target
 
 	if {[llength $attr_value] != 1} {
 	    error "usage: MACRO_AT_range { func }"
@@ -995,7 +1021,10 @@ namespace eval Dwarf {
 	set func [lindex $attr_value 0]
 	global srcdir subdir srcfile
 	set src ${srcdir}/${subdir}/${srcfile}
-	set result [function_range $func $src]
+
+	set result [function_range $func $src \
+			-exe $_template_executable \
+			-target $_target]
 
 	set form DW_FORM_addr
 	if { $_cu_is_fission } {
@@ -3433,6 +3462,11 @@ namespace eval Dwarf {
     #           - Whether to add dummy CUs before and after the CUs
     #             added in the BODY.
     #             default = 1.
+    #
+    #  exe TEMPLATE_EXECUTABLE
+    #           - The template executable.
+    #  target TARGET
+    #
     # As a special case, if OPTIONS is a list of length 1, it's
     # interpreted as specifing the filename.
     # BODY is Tcl code to emit the assembly.  It is evaluated via
@@ -3451,6 +3485,21 @@ namespace eval Dwarf {
     #        }
     #    }
     proc assemble {options body} {
+	if { [llength $options] == 1 } {
+	    set options [list filename [lindex $options 0]]
+	}
+
+	parse_options {
+	    { filename "" }
+	    { file_id "" }
+	    { add_dummy_cus 1 }
+	    { exe "" }
+	    { target "" }
+	}
+
+	variable _template_executable $exe
+	variable _target $target
+
 	variable _initialized
 	variable _output_file
 	variable _deferred_output
@@ -3462,16 +3511,6 @@ namespace eval Dwarf {
 	variable _line_header_end_label
 	variable _debug_ranges_64_bit
 	variable _debug_addr_index
-
-	if { [llength $options] == 1 } {
-	    set options [list filename [lindex $options 0]]
-	}
-
-	parse_options {
-	    { filename "" }
-	    { file_id "" }
-	    { add_dummy_cus 1 }
-	}
 
 	if {!$_initialized} {
 	    _read_constants
