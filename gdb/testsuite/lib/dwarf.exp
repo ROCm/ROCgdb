@@ -62,6 +62,44 @@ proc strip_dwo_information { filename } {
     return 0
 }
 
+# Extract address of lines, using GDB.
+#
+# Usage:
+#  extract_lineno_addr [-exe EXE] LINENO...
+#
+# For each LINENO, use "info line" to figure out the line's code
+# address.  Returns a list of addresses, one per requested line.
+
+proc extract_lineno_addr {args} {
+    parse_args {{exe ""}}
+
+    clean_restart $exe
+
+    set addrs {}
+
+    foreach lineno $args {
+
+	set address ""
+	gdb_test_multiple "info line $::srcfile:$lineno" "" {
+	    -wrap -re "Line $lineno of .* starts at address ($::hex).*" {
+		set address $expect_out(1,string)
+	    }
+	    -wrap -re "Line $lineno of .* is at address ($::hex).*" {
+		set address $expect_out(1,string)
+	    }
+	}
+
+	if {$address == ""} {
+	    error "could not find address for line $lineno"
+	}
+
+	verbose -log "lineno=$lineno => $address"
+	lappend addrs $address
+    }
+
+    return $addrs
+}
+
 # Build an executable, with the debug information split out into a
 # separate .dwo file.
 #

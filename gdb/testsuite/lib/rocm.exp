@@ -498,6 +498,133 @@ proc rocm_generate_core_file { corefile_path } {
     return 0
 }
 
+# Get file offset of SECTION in FILE.  We find it using objdump, and
+# looking for output that looks like this:
+#
+#  Idx Name          Size      VMA               LMA               File off  Algn
+#   11 .hip_fatbin   0000e528  0000000000201000  0000000000201000  00001000  2**12
+#                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+#
+# The offset we need is in the "File off" column.
+
+proc get_section_offset {section file} {
+    set objdump [gdb_find_objdump]
+    set cmd "$objdump --section=$section -h $file | grep $section | awk \"{print \\\$6}\""
+    verbose -log "executing: $cmd"
+    set status [catch "exec $cmd" output]
+
+    if {[lindex $status 0] != 0} {
+	error "section offset failed: $status, \"$output\""
+    }
+
+    return "0x$output"
+}
+
+# Get the DW_TAG_compile_unit range (list of start, length) for the
+# compilation unit emitted by the Clang compiler.  We find it by using
+# llvm-dwarfdump, and looking for output that looks like this:
+#
+#  ...
+#  0x0000052b: Compile Unit: length = 0x00000028, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x024a, addr_size = 0x08 (next unit at 0x00000557)
+#
+#  0x00000537: DW_TAG_compile_unit
+#                DW_AT_producer    ("AMD clang version 13.0.0 (ssh://gerritgit/lightning/ec/llvm-project amd-mainline-open 21301 6e7a17507da98b214810082932cbb3cb29f7f3ae)")
+#  ...
+
+proc hip_get_clang_compile_unit_range {file} {
+    set cmd "${::rocm_path}/llvm/bin/llvm-dwarfdump $file\
+               | grep -B 5 \"AT_producer.*clang\"\
+	       | grep \"Compile Unit:\""
+    verbose -log "executing: $cmd"
+    set status [catch "exec $cmd" output]
+
+    if {[lindex $status 0] != 0} {
+	error "comp unit range failed: $status, \"$output\""
+    }
+
+    regexp "^($::hex):.*length = ($::hex).*" $output -> start length
+
+    # Get past the header.
+    incr start 12
+
+    verbose -log "start=$start length=$length"
+
+    return [list $start $length]
+}
+
+# Zap away the compilation unit Clang emitted for the device code, in
+# a fully linked bundle binary.  Even with -gline-tables-only, Clang
+# outputs a mostly-empty compilation unit.  This compile unit has a
+# ranges list, and this confuses GDB, because block/function look ups
+# by PC may find this bare compilation unit, instead of our manually
+# written compilation unit.  To address this, we zap away Clang's
+# compilation unit using this function.  We do this by finding it in
+# the embedded/bundled device ELF file in the executable, then finding
+# the relevant compilation unit within it, and overwriting its DIE
+# with 0, the padding byte.  Consumers just skip over the padding
+# bytes silently.
+
+proc hip_zap_clang_compile_unit {file} {
+    set file_device_so [standard_output_file $file.device.so]
+    set bundle_offset [hip_extract_offload_bundle $file $file_device_so]
+    if {$bundle_offset == -1} {
+	perror "failed to extract bundle for zapping compile unit"
+	return 0
+    }
+    verbose -log "zap: bundle_offset=$bundle_offset"
+
+    # BUNDLE_OFFSET is relative to the ".hip_fatbin" section.  Find
+    # the offset of that section in the main file.
+    set hip_fatbin_offset [get_section_offset ".hip_fatbin" $file]
+    verbose -log "zap: hip_fatbin_offset=$hip_fatbin_offset"
+
+    # Now find the file offset of the .debug_info section, in the
+    # bundled device ELF.
+    set debug_info_offset [get_section_offset ".debug_info" $file_device_so]
+    verbose -log "zap: debug_info_offset=$debug_info_offset"
+
+    # Now find the .debug_info offset for the compile unit we're
+    # interested in.
+    lassign [hip_get_clang_compile_unit_range $file_device_so] \
+	start length
+    verbose -log "zap: start=$start length=$length"
+
+    set final_offset \
+	[expr {$hip_fatbin_offset + $bundle_offset + $debug_info_offset + $start}]
+    verbose -log "zap: final_offset=$final_offset"
+
+    # Finally, write LENGTH zeros at FINAL_OFFSET, and we're done.
+
+    set fp [open $file "r+"]
+    fconfigure $fp -translation binary
+
+    seek $fp $final_offset
+    for {set i 0} {$i < $length} {incr i} {
+	puts -nonewline $fp "\0"
+    }
+
+    close $fp
+}
+
+# Extract the DW_AT_stmt_list offset for SRC from EXE.
+# Usage:
+#  hip_extract_stmt_list EXE SRC
+
+proc hip_extract_stmt_list {exe src} {
+    set cmd "${::rocm_path}/llvm/bin/llvm-dwarfdump $exe \
+	     | grep $src -A 4 \
+	     | grep stmt_list \
+	     | sed {s/.*DW_AT_stmt_list\[ |\t\]*(\\(.*\\))/\\1/g}"
+    verbose -log "executing: $cmd"
+    set status [catch "exec $cmd" output]
+
+    if {[lindex $status 0] != 0} {
+	error "stmt_list failed: $status, \"$output\""
+    }
+
+    return $output
+}
+
 # Extract the offload bundle from INPUT and write it to OUTPUT.
 
 proc hip_extract_offload_bundle {input output} {
