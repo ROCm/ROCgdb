@@ -766,7 +766,9 @@ proc runto { linespec args } {
     }
 
     gdb_run_cmd
-    
+
+    set with_lane_re "with ((lane $decimal)|(lanes \\\[${decimal}(\[ -\]$decimal)+\\\]))"
+
     # the "at foo.c:36" output we get with -g.
     # the "in func" output we get without -g.
     gdb_expect {
@@ -776,7 +778,7 @@ proc runto { linespec args } {
 	    }
 	    return 1
 	}
-	-re "(?:Breakpoint|Temporary breakpoint) $bkptno_numopt_re, \[0-9xa-f\]* in .*$gdb_prompt $" {
+	-re "(?:Breakpoint|Temporary breakpoint) $bkptno_numopt_re, (${with_lane_re}, )?\[0-9xa-f\]* in .*$gdb_prompt $" {
 	    if { $print_pass } {
 		pass $test_name
 	    }
