@@ -18,7 +18,7 @@
 # We don't currently need our own test case for testing, so grab
 # another one.
 
-if {[prepare_for_testing "failed to prepare" linespecs memattr.c]} {
+if {[prepare_for_testing "failed to prepare" linespecs keywords.c]} {
   return -1
 }
 
@@ -27,3 +27,21 @@ gdb_test "list c:/foo/bar/baz.c:1" "No source file named c:/foo/bar/baz.c."
 gdb_test "list c:/foo/bar/baz.c" "Function \"c:/foo/bar/baz.c\" not defined."
 gdb_test "list fooc:/foo/bar/baz.c:1" "No source file named fooc."
 gdb_test "list fooc:/foo/bar/baz.c" "No source file named fooc."
+
+# PR cli/28665, gdb/28797
+save_vars { env(EDITOR) } {
+    setenv EDITOR true
+
+    foreach cmd {list edit} {
+	gdb_test "${cmd} task 123" \
+	    "Junk at end of line specification\\."
+	gdb_test "${cmd} if (0)" \
+	    "Junk at end of line specification\\."
+	gdb_test "${cmd} thread 1" \
+	    "Junk at end of line specification\\."
+	gdb_test "${cmd} -force-condition" \
+	    "Junk at end of line specification\\."
+	gdb_test "${cmd} ,," \
+	    "Junk at end of line specification\\."
+    }
+}
