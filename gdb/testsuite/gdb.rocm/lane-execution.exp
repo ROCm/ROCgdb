@@ -224,12 +224,12 @@ proc test_step {branch} {
 	    gdb_test "bt" \
 		[multi_line \
 		     "bt" \
-		     "#0  foo \\(val=<optimized out>\\) at .*/${::srcfile}:${::decimal}" \
+		     "#0  foo \\(val=.*\\) at .*/${::srcfile}:${::decimal}" \
 		     "#1  $::hex in lane_pc_test \\(.*\\) at .*:$::if_2_then_line" \
 		     "#2  $::hex in kernel .*"] \
 		"bt on then lane"
 
-	    do_step_check_div "bar \\(val=<optimized out>\\) at "
+	    do_step_check_div "bar \\(val=.*\\) at "
 	} else {
 	    do_step " if_1_else "
 
