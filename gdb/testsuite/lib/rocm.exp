@@ -19,6 +19,12 @@
 # Support library for testing ROCm GDB features
 
 proc skip_hipcc_tests { } {
+    # Only the native target supports ROCm debugging.  E.g., when
+    # testing against GDBserver, there's no point in running the ROCm
+    # tests.
+    if {[target_info gdb_protocol] != ""} {
+        return 1
+    }
     return 0
 }
 
