@@ -20,6 +20,11 @@
 
 load_lib rocm.exp
 
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
 clean_restart
 
 set test_python ![skip_python_tests]

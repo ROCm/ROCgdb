@@ -24,6 +24,11 @@
 
 load_lib rocm.exp
 
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
 standard_testfile .cpp
 
 if {[build_executable "failed to prepare" ${binfile} ${srcfile} {debug hip}]} {
