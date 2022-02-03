@@ -44,7 +44,7 @@ if ![runto_main] {
 gdb_test_no_output "set print asm-demangle on"
 
 # Set breakpoint in device code.
-gdb_breakpoint "kernel" "allow-pending"
+gdb_breakpoint "kernel" "allow-pending" "qualified"
 gdb_continue_to_breakpoint "kernel"
 
 # Check "disassemble /r kernel".

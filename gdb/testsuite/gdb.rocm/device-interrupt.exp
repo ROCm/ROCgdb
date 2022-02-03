@@ -49,7 +49,7 @@ proc test {schedlock interrupt_how} {
 	return -1
     }
 
-    gdb_breakpoint "kernel" temporary allow-pending
+    gdb_breakpoint "kernel" temporary allow-pending qualified
     gdb_continue_to_breakpoint "kernel"
     gdb_test_no_output "set scheduler-locking $schedlock"
 
