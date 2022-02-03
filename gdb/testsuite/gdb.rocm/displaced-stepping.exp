@@ -66,7 +66,7 @@ with_rocm_gpu_lock {
 	return -1
     }
 
-    gdb_breakpoint "kernel" temporary allow-pending
+    gdb_breakpoint "kernel" temporary allow-pending qualified
     gdb_continue_to_breakpoint "kernel"
 
     gdb_breakpoint [gdb_get_line_number "getpc breakpoint here"]
