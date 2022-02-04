@@ -1080,7 +1080,7 @@ parse_escape (struct gdbarch *gdbarch, const char **string_ptr)
       case '6':
       case '7':
 	{
-	  int i = host_hex_value (c);
+	  int i = fromhex (c);
 	  int count = 0;
 	  while (++count < 3)
 	    {
@@ -1089,7 +1089,7 @@ parse_escape (struct gdbarch *gdbarch, const char **string_ptr)
 		{
 		  (*string_ptr)++;
 		  i *= 8;
-		  i += host_hex_value (c);
+		  i += fromhex (c);
 		}
 	      else
 		{
