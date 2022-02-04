@@ -38,7 +38,7 @@ proc do_test { stop_at } {
     gdb_test_no_output "set follow-fork-mode child"
 
     with_rocm_gpu_lock {
-	if { ![runto $stop_at allow-pending message] } {
+	if { ![runto $stop_at allow-pending qualified message] } {
 	    return
 	}
 
