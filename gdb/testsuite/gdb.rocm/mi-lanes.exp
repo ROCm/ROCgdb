@@ -191,7 +191,7 @@ proc_with_prefix test_mi_varobjs {} {
 	-re "\\^done,value=\"5\"\r\n${mi_gdb_prompt}" {
 	    pass $gdb_test_name
 	}
-	-re "\\^done,value=\"<unavailable>\"\r\n${mi_gdb_prompt}" {
+	-re "\\^done,value=\"<optimized out>\"\r\n${mi_gdb_prompt}" {
 	    pass "$gdb_test_name"
 	    untested "MI varobjs, no debug info"
 	    return
