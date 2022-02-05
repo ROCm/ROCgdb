@@ -23561,7 +23561,6 @@ The address spaces info looks like this:
  Name
  global
  generic
- region
  local
  private_lane
  private_wave
@@ -27954,10 +27953,22 @@ The thread's number within the heterogeneous work-group.
 @end table
 
 @item
-The @acronym{AMD ROCm} compiler currently only has support for
-generating valid @acronym{AMD GPU} DWARF information for symbolic
-variables at @w{@option{-O0}}.
+The @acronym{AMD ROCm} compiler currently has the following
+limitations:
 
+@itemize @bullet{}
+
+@item
+DWARF information for symbolic variables is not always generated at
+optimization levels above @w{@option{-O0}}.
+
+@item
+DWARF information for symbolic variables allocated in the local
+address space is not generated correctly.  The locations of these
+variables are always reported with an address of 0x0 in the local
+address space.
+
+@item
 The @acronym{AMD ROCm} compiler currently adds the @w{@option{-mllvm
 -amdgpu-spill-cfi-saved-regs}} option for @acronym{AMD GPU} when the
 @w{@option{-g}} option is specified.  This ensures registers not
@@ -27965,6 +27976,8 @@ currently supported by the CFI generation are saved so the CFI
 information is correct.  If this option is not used, the invalid DWARF
 may cause @value{GDBN} to report that it is unable to read memory
 (such as when reading arguments in a backtrace).
+
+@end itemize
 
 @item
 @value{GDBN} does not currently make use of debug information
