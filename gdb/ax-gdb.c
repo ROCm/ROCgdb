@@ -510,7 +510,7 @@ static void
 gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
 {
   /* Dereference any typedefs.  */
-  value->type = check_typedef (SYMBOL_TYPE (var));
+  value->type = check_typedef (var->type ());
   value->optimized_out = 0;
 
   if (SYMBOL_COMPUTED_OPS (var) != NULL)
@@ -520,7 +520,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
     }
 
   /* I'm imitating the code in read_var_value.  */
-  switch (SYMBOL_CLASS (var))
+  switch (var->aclass ())
     {
     case LOC_CONST:		/* A constant, like an enum value.  */
       ax_const_l (ax, (LONGEST) SYMBOL_VALUE (var));

@@ -631,7 +631,7 @@ psymbol_functions::find_last_source_symtab (struct objfile *ofp)
 
 	  if (cust == NULL)
 	    return NULL;
-	  return compunit_primary_filetab (cust);
+	  return cust->primary_filetab ();
 	}
     }
   return NULL;
@@ -1801,7 +1801,7 @@ maintenance_check_psymtabs (const char *ignore, int from_tty)
 	      /* Now do checks requiring the associated symtab.  */
 	      if (cust == NULL)
 		continue;
-	      bv = COMPUNIT_BLOCKVECTOR (cust);
+	      bv = cust->blockvector ();
 	      b = BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK);
 	      for (partial_symbol *psym : ps->static_psymbols)
 		{

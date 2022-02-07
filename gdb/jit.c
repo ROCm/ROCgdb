@@ -509,11 +509,11 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
     });
 
   cust = allocate_compunit_symtab (objfile, stab->file_name.c_str ());
-  allocate_symtab (cust, stab->file_name.c_str ());
+  symtab *filetab = allocate_symtab (cust, stab->file_name.c_str ());
   add_compunit_symtab_to_objfile (cust);
 
   /* JIT compilers compile in memory.  */
-  COMPUNIT_DIRNAME (cust) = NULL;
+  cust->set_dirname (nullptr);
 
   /* Copy over the linetable entry if one was provided.  */
   if (stab->linetable)
@@ -521,17 +521,16 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       size_t size = ((stab->linetable->nitems - 1)
 		     * sizeof (struct linetable_entry)
 		     + sizeof (struct linetable));
-      SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust))
-	= (struct linetable *) obstack_alloc (&objfile->objfile_obstack, size);
-      memcpy (SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust)),
-	      stab->linetable.get (), size);
+      filetab->set_linetable ((struct linetable *)
+			      obstack_alloc (&objfile->objfile_obstack, size));
+      memcpy (filetab->linetable (), stab->linetable.get (), size);
     }
 
   blockvector_size = (sizeof (struct blockvector)
 		      + (actual_nblocks - 1) * sizeof (struct block *));
   bv = (struct blockvector *) obstack_alloc (&objfile->objfile_obstack,
 					     blockvector_size);
-  COMPUNIT_BLOCKVECTOR (cust) = bv;
+  cust->set_blockvector (bv);
 
   /* At the end of this function, (begin, end) will contain the PC range this
      entire blockvector spans.  */
@@ -560,10 +559,10 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       BLOCK_END (new_block) = (CORE_ADDR) gdb_block_iter.end;
 
       /* The name.  */
-      SYMBOL_DOMAIN (block_name) = VAR_DOMAIN;
-      SYMBOL_ACLASS_INDEX (block_name) = LOC_BLOCK;
-      symbol_set_symtab (block_name, COMPUNIT_FILETABS (cust));
-      SYMBOL_TYPE (block_name) = lookup_function_type (block_type);
+      block_name->set_domain (VAR_DOMAIN);
+      block_name->set_aclass_index (LOC_BLOCK);
+      symbol_set_symtab (block_name, filetab);
+      block_name->set_type (lookup_function_type (block_type));
       SYMBOL_BLOCK_VALUE (block_name) = new_block;
 
       block_name->m_name = obstack_strdup (&objfile->objfile_obstack,

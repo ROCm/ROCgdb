@@ -311,7 +311,7 @@ select_source_symtab (struct symtab *s)
   if (s)
     {
       current_source_location *loc
-	= get_source_location (SYMTAB_PSPACE (s));
+	= get_source_location (s->pspace ());
       loc->set (s, 1);
       return;
     }
@@ -323,7 +323,7 @@ select_source_symtab (struct symtab *s)
   /* Make the default place to list be the function `main'
      if one exists.  */
   block_symbol bsym = lookup_symbol (main_name (), 0, VAR_DOMAIN, 0);
-  if (bsym.symbol != nullptr && SYMBOL_CLASS (bsym.symbol) == LOC_BLOCK)
+  if (bsym.symbol != nullptr && bsym.symbol->aclass () == LOC_BLOCK)
     {
       symtab_and_line sal = find_function_start_sal (bsym.symbol, true);
       if (sal.symtab == NULL)
@@ -344,7 +344,7 @@ select_source_symtab (struct symtab *s)
     {
       for (compunit_symtab *cu : ofp->compunits ())
 	{
-	  for (symtab *symtab : compunit_filetabs (cu))
+	  for (symtab *symtab : cu->filetabs ())
 	    {
 	      const char *name = symtab->filename;
 	      int len = strlen (name);
@@ -424,7 +424,7 @@ forget_cached_source_info_for_objfile (struct objfile *objfile)
 {
   for (compunit_symtab *cu : objfile->compunits ())
     {
-      for (symtab *s : compunit_filetabs (cu))
+      for (symtab *s : cu->filetabs ())
 	{
 	  if (s->fullname != NULL)
 	    {
@@ -711,10 +711,10 @@ info_source_command (const char *ignore, int from_tty)
       return;
     }
 
-  cust = SYMTAB_COMPUNIT (s);
+  cust = s->compunit ();
   printf_filtered (_("Current source file is %s\n"), s->filename);
-  if (SYMTAB_DIRNAME (s) != NULL)
-    printf_filtered (_("Compilation directory is %s\n"), SYMTAB_DIRNAME (s));
+  if (s->dirname () != NULL)
+    printf_filtered (_("Compilation directory is %s\n"), s->dirname ());
   if (s->fullname)
     printf_filtered (_("Located in %s\n"), s->fullname);
   const std::vector<off_t> *offsets;
@@ -722,15 +722,16 @@ info_source_command (const char *ignore, int from_tty)
     printf_filtered (_("Contains %d line%s.\n"), (int) offsets->size (),
 		     offsets->size () == 1 ? "" : "s");
 
-  printf_filtered (_("Source language is %s.\n"), language_str (s->language));
+  printf_filtered (_("Source language is %s.\n"),
+		   language_str (s->language ()));
   printf_filtered (_("Producer is %s.\n"),
-		   COMPUNIT_PRODUCER (cust) != NULL
-		   ? COMPUNIT_PRODUCER (cust) : _("unknown"));
+		   (cust->producer ()) != nullptr
+		    ? cust->producer () : _("unknown"));
   printf_filtered (_("Compiled with %s debugging format.\n"),
-		   COMPUNIT_DEBUGFORMAT (cust));
+		   cust->debugformat ());
   printf_filtered (_("%s preprocessor macro info.\n"),
-		   COMPUNIT_MACRO_TABLE (cust) != NULL
-		   ? "Includes" : "Does not include");
+		   (cust->macro_table () != nullptr
+		    ? "Includes" : "Does not include"));
 }
 
 
@@ -1179,21 +1180,21 @@ open_source_file (struct symtab *s)
 
   gdb::unique_xmalloc_ptr<char> fullname (s->fullname);
   s->fullname = NULL;
-  scoped_fd fd = find_and_open_source (s->filename, SYMTAB_DIRNAME (s),
+  scoped_fd fd = find_and_open_source (s->filename, s->dirname (),
 				       &fullname);
 
   if (fd.get () < 0)
     {
-      if (SYMTAB_COMPUNIT (s) != nullptr)
+      if (s->compunit () != nullptr)
 	{
-	  const objfile *ofp = COMPUNIT_OBJFILE (SYMTAB_COMPUNIT (s));
+	  const objfile *ofp = s->compunit ()->objfile ();
 
 	  std::string srcpath;
 	  if (IS_ABSOLUTE_PATH (s->filename))
 	    srcpath = s->filename;
-	  else if (SYMTAB_DIRNAME (s) != nullptr)
+	  else if (s->dirname () != nullptr)
 	    {
-	      srcpath = SYMTAB_DIRNAME (s);
+	      srcpath = s->dirname ();
 	      srcpath += SLASH_STRING;
 	      srcpath += s->filename;
 	    }
@@ -1267,10 +1268,10 @@ symtab_to_fullname (struct symtab *s)
 	  /* rewrite_source_path would be applied by find_and_open_source, we
 	     should report the pathname where GDB tried to find the file.  */
 
-	  if (SYMTAB_DIRNAME (s) == NULL || IS_ABSOLUTE_PATH (s->filename))
+	  if (s->dirname () == NULL || IS_ABSOLUTE_PATH (s->filename))
 	    fullname.reset (xstrdup (s->filename));
 	  else
-	    fullname.reset (concat (SYMTAB_DIRNAME (s), SLASH_STRING,
+	    fullname.reset (concat (s->dirname (), SLASH_STRING,
 				    s->filename, (char *) NULL));
 
 	  s->fullname = rewrite_source_path (fullname.get ()).release ();
@@ -1558,7 +1559,7 @@ info_line_command (const char *arg, int from_tty)
       else if (sal.line > 0
 	       && find_line_pc_range (sal, &start_pc, &end_pc))
 	{
-	  struct gdbarch *gdbarch = SYMTAB_OBJFILE (sal.symtab)->arch ();
+	  struct gdbarch *gdbarch = sal.symtab->objfile ()->arch ();
 
 	  if (start_pc == end_pc)
 	    {

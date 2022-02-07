@@ -393,10 +393,10 @@ do_mixed_source_and_assembly_deprecated
   int num_displayed = 0;
   print_source_lines_flags psl_flags = 0;
 
-  gdb_assert (symtab != NULL && SYMTAB_LINETABLE (symtab) != NULL);
+  gdb_assert (symtab != nullptr && symtab->linetable () != nullptr);
 
-  nlines = SYMTAB_LINETABLE (symtab)->nitems;
-  le = SYMTAB_LINETABLE (symtab)->item;
+  nlines = symtab->linetable ()->nitems;
+  le = symtab->linetable ()->item;
 
   if (flags & DISASSEMBLY_FILENAME)
     psl_flags |= PRINT_SOURCE_LINES_FILENAME;
@@ -535,7 +535,7 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
   struct symtab *last_symtab;
   int last_line;
 
-  gdb_assert (main_symtab != NULL && SYMTAB_LINETABLE (main_symtab) != NULL);
+  gdb_assert (main_symtab != NULL && main_symtab->linetable () != NULL);
 
   /* First pass: collect the list of all source files and lines.
      We do this so that we can only print lines containing code once.
@@ -553,8 +553,8 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
      line after the opening brace.  We still want to print this opening brace.
      first_le is used to implement this.  */
 
-  nlines = SYMTAB_LINETABLE (main_symtab)->nitems;
-  le = SYMTAB_LINETABLE (main_symtab)->item;
+  nlines = main_symtab->linetable ()->nitems;
+  le = main_symtab->linetable ()->item;
   first_le = NULL;
 
   /* Skip all the preceding functions.  */
@@ -850,8 +850,8 @@ gdb_disassembly (struct gdbarch *gdbarch, struct ui_out *uiout,
   /* Assume symtab is valid for whole PC range.  */
   symtab = find_pc_line_symtab (low);
 
-  if (symtab != NULL && SYMTAB_LINETABLE (symtab) != NULL)
-    nlines = SYMTAB_LINETABLE (symtab)->nitems;
+  if (symtab != NULL && symtab->linetable () != NULL)
+    nlines = symtab->linetable ()->nitems;
 
   if (!(flags & (DISASSEMBLY_SOURCE_DEPRECATED | DISASSEMBLY_SOURCE))
       || nlines <= 0)
@@ -891,14 +891,21 @@ gdb_insn_length (struct gdbarch *gdbarch, CORE_ADDR addr)
   return gdb_print_insn (gdbarch, addr, &null_stream, NULL);
 }
 
-/* fprintf-function for gdb_buffered_insn_length.  This function is a
-   nop, we don't want to print anything, we just want to compute the
-   length of the insn.  */
+/* An fprintf-function for use by the disassembler when we know we don't
+   want to print anything.  Always returns success.  */
 
 static int ATTRIBUTE_PRINTF (2, 3)
-gdb_buffered_insn_length_fprintf (void *stream, const char *format, ...)
+gdb_disasm_null_printf (void *stream, const char *format, ...)
 {
   return 0;
+}
+
+/* See disasm.h.  */
+
+void
+init_disassemble_info_for_no_printing (struct disassemble_info *dinfo)
+{
+  init_disassemble_info (dinfo, nullptr, gdb_disasm_null_printf);
 }
 
 /* Initialize a struct disassemble_info for gdb_buffered_insn_length.
@@ -912,7 +919,7 @@ gdb_buffered_insn_length_init_dis (struct gdbarch *gdbarch,
 				   CORE_ADDR addr,
 				   std::string *disassembler_options_holder)
 {
-  init_disassemble_info (di, NULL, gdb_buffered_insn_length_fprintf);
+  init_disassemble_info_for_no_printing (di);
 
   /* init_disassemble_info installs buffer_read_memory, etc.
      so we don't need to do that here.

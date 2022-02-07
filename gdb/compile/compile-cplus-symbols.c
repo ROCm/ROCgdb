@@ -49,16 +49,16 @@ convert_one_symbol (compile_cplus_instance *instance,
   /* Squash compiler warning.  */
   gcc_type sym_type = 0;
   const char *filename = symbol_symtab (sym.symbol)->filename;
-  unsigned short line = SYMBOL_LINE (sym.symbol);
+  unsigned short line = sym.symbol->line ();
 
   instance->error_symbol_once (sym.symbol);
 
-  if (SYMBOL_CLASS (sym.symbol) == LOC_LABEL)
+  if (sym.symbol->aclass () == LOC_LABEL)
     sym_type = 0;
   else
-    sym_type = instance->convert_type (SYMBOL_TYPE (sym.symbol));
+    sym_type = instance->convert_type (sym.symbol->type ());
 
-  if (SYMBOL_DOMAIN (sym.symbol) == STRUCT_DOMAIN)
+  if (sym.symbol->domain () == STRUCT_DOMAIN)
     {
       /* Nothing to do.  */
     }
@@ -70,12 +70,12 @@ convert_one_symbol (compile_cplus_instance *instance,
       std::string name;
       gdb::unique_xmalloc_ptr<char> symbol_name;
 
-      switch (SYMBOL_CLASS (sym.symbol))
+      switch (sym.symbol->aclass ())
 	{
 	case LOC_TYPEDEF:
-	  if (SYMBOL_TYPE (sym.symbol)->code () == TYPE_CODE_TYPEDEF)
+	  if (sym.symbol->type ()->code () == TYPE_CODE_TYPEDEF)
 	    kind = GCC_CP_SYMBOL_TYPEDEF;
-	  else  if (SYMBOL_TYPE (sym.symbol)->code () == TYPE_CODE_NAMESPACE)
+	  else  if (sym.symbol->type ()->code () == TYPE_CODE_NAMESPACE)
 	    return;
 	  break;
 
@@ -88,13 +88,13 @@ convert_one_symbol (compile_cplus_instance *instance,
 	  {
 	    kind = GCC_CP_SYMBOL_FUNCTION;
 	    addr = BLOCK_START (SYMBOL_BLOCK_VALUE (sym.symbol));
-	    if (is_global && SYMBOL_TYPE (sym.symbol)->is_gnu_ifunc ())
+	    if (is_global && sym.symbol->type ()->is_gnu_ifunc ())
 	      addr = gnu_ifunc_resolve_addr (target_gdbarch (), addr);
 	  }
 	  break;
 
 	case LOC_CONST:
-	  if (SYMBOL_TYPE (sym.symbol)->code () == TYPE_CODE_ENUM)
+	  if (sym.symbol->type ()->code () == TYPE_CODE_ENUM)
 	    {
 	      /* Already handled by convert_enum.  */
 	      return;
@@ -190,7 +190,7 @@ convert_one_symbol (compile_cplus_instance *instance,
 	    {
 	      compile_scope scope
 		= instance->new_scope (sym.symbol->natural_name (),
-				       SYMBOL_TYPE (sym.symbol));
+				       sym.symbol->type ());
 	      if (scope.nested_type () != GCC_TYPE_NONE)
 		{
 		  /* We found a symbol for this type that was defined inside
@@ -374,7 +374,7 @@ gcc_cplus_convert_symbol (void *datum,
 	    {
 	      found = true;
 	      convert_symbol_sym (instance, identifier, it,
-				  SYMBOL_DOMAIN (it.symbol));
+				  it.symbol->domain ());
 	    }
 	}
 
@@ -435,14 +435,14 @@ gcc_cplus_symbol_address (void *datum, struct gcc_cp_context *gcc_context,
       struct symbol *sym
 	= lookup_symbol (identifier, nullptr, VAR_DOMAIN, nullptr).symbol;
 
-      if (sym != nullptr && SYMBOL_CLASS (sym) == LOC_BLOCK)
+      if (sym != nullptr && sym->aclass () == LOC_BLOCK)
 	{
 	  if (compile_debug)
 	    fprintf_unfiltered (gdb_stdlog,
 				"gcc_symbol_address \"%s\": full symbol\n",
 				identifier);
 	  result = BLOCK_START (SYMBOL_BLOCK_VALUE (sym));
-	  if (SYMBOL_TYPE (sym)->is_gnu_ifunc ())
+	  if (sym->type ()->is_gnu_ifunc ())
 	    result = gnu_ifunc_resolve_addr (target_gdbarch (), result);
 	  found = 1;
 	}

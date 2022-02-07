@@ -2774,13 +2774,13 @@ deduce_language_from_filename (const char *filename)
 struct symtab *
 allocate_symtab (struct compunit_symtab *cust, const char *filename)
 {
-  struct objfile *objfile = cust->objfile;
+  struct objfile *objfile = cust->objfile ();
   struct symtab *symtab
     = OBSTACK_ZALLOC (&objfile->objfile_obstack, struct symtab);
 
   symtab->filename = objfile->intern (filename);
   symtab->fullname = NULL;
-  symtab->language = deduce_language_from_filename (filename);
+  symtab->set_language (deduce_language_from_filename (filename));
 
   /* This can be very verbose with lots of headers.
      Only print at higher debug levels.  */
@@ -2804,19 +2804,10 @@ allocate_symtab (struct compunit_symtab *cust, const char *filename)
     }
 
   /* Add it to CUST's list of symtabs.  */
-  if (cust->filetabs == NULL)
-    {
-      cust->filetabs = symtab;
-      cust->last_filetab = symtab;
-    }
-  else
-    {
-      cust->last_filetab->next = symtab;
-      cust->last_filetab = symtab;
-    }
+  cust->add_filetab (symtab);
 
   /* Backlink to the containing compunit symtab.  */
-  symtab->compunit_symtab = cust;
+  symtab->set_compunit (cust);
 
   return symtab;
 }
@@ -2832,7 +2823,7 @@ allocate_compunit_symtab (struct objfile *objfile, const char *name)
 					       struct compunit_symtab);
   const char *saved_name;
 
-  cu->objfile = objfile;
+  cu->set_objfile (objfile);
 
   /* The name we record here is only for display/debugging purposes.
      Just save the basename to avoid path issues (too long for display,
@@ -2840,7 +2831,7 @@ allocate_compunit_symtab (struct objfile *objfile, const char *name)
   saved_name = lbasename (name);
   cu->name = obstack_strdup (&objfile->objfile_obstack, saved_name);
 
-  COMPUNIT_DEBUGFORMAT (cu) = "unknown";
+  cu->set_debugformat ("unknown");
 
   if (symtab_create_debug)
     {
@@ -2858,8 +2849,8 @@ allocate_compunit_symtab (struct objfile *objfile, const char *name)
 void
 add_compunit_symtab_to_objfile (struct compunit_symtab *cu)
 {
-  cu->next = cu->objfile->compunit_symtabs;
-  cu->objfile->compunit_symtabs = cu;
+  cu->next = cu->objfile ()->compunit_symtabs;
+  cu->objfile ()->compunit_symtabs = cu;
 }
 
 

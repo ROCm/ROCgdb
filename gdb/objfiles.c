@@ -593,13 +593,13 @@ objfile::~objfile ()
   {
     struct symtab_and_line cursal = get_current_source_symtab_and_line ();
 
-    if (cursal.symtab && SYMTAB_OBJFILE (cursal.symtab) == this)
+    if (cursal.symtab && cursal.symtab->objfile () == this)
       clear_current_source_symtab_and_line ();
   }
 
   /* Likewise, but for the last displayed symtab.  */
   symtab *s = get_last_displayed_symtab ();
-  if (s != nullptr && SYMTAB_OBJFILE (s) == this)
+  if (s != nullptr && s->objfile () == this)
     clear_last_displayed_sal ();
 
   /* Free the obstacks for non-reusable objfiles.  */
@@ -623,8 +623,8 @@ relocate_one_symbol (struct symbol *sym, struct objfile *objfile,
      any symbols in STRUCT_DOMAIN or UNDEF_DOMAIN.
      But I'm leaving out that test, on the theory that
      they can't possibly pass the tests below.  */
-  if ((SYMBOL_CLASS (sym) == LOC_LABEL
-       || SYMBOL_CLASS (sym) == LOC_STATIC)
+  if ((sym->aclass () == LOC_LABEL
+       || sym->aclass () == LOC_STATIC)
       && sym->section_index () >= 0)
     {
       SET_SYMBOL_VALUE_ADDRESS (sym,
@@ -658,24 +658,24 @@ objfile_relocate1 (struct objfile *objfile,
   {
     for (compunit_symtab *cust : objfile->compunits ())
       {
-	for (symtab *s : compunit_filetabs (cust))
+	for (symtab *s : cust->filetabs ())
 	  {
 	    struct linetable *l;
 
 	    /* First the line table.  */
-	    l = SYMTAB_LINETABLE (s);
+	    l = s->linetable ();
 	    if (l)
 	      {
 		for (int i = 0; i < l->nitems; ++i)
-		  l->item[i].pc += delta[COMPUNIT_BLOCK_LINE_SECTION (cust)];
+		  l->item[i].pc += delta[cust->block_line_section ()];
 	      }
 	  }
       }
 
     for (compunit_symtab *cust : objfile->compunits ())
       {
-	const struct blockvector *bv = COMPUNIT_BLOCKVECTOR (cust);
-	int block_line_section = COMPUNIT_BLOCK_LINE_SECTION (cust);
+	const struct blockvector *bv = cust->blockvector ();
+	int block_line_section = cust->block_line_section ();
 
 	if (BLOCKVECTOR_MAP (bv))
 	  addrmap_relocate (BLOCKVECTOR_MAP (bv), delta[block_line_section]);

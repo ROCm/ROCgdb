@@ -330,7 +330,7 @@ set_symbol_address (struct objfile *of, struct symbol *sym, const char *name)
   if (msym.minsym != NULL)
     {
       SET_SYMBOL_VALUE_ADDRESS (sym, BMSYMBOL_VALUE_ADDRESS (msym));
-      SYMBOL_ACLASS_INDEX (sym) = LOC_STATIC;
+      sym->set_aclass_index (LOC_STATIC);
       sym->set_section_index (msym.minsym->section_index ());
     }
 }
@@ -450,9 +450,9 @@ ctf_add_enum_member_cb (const char *name, int enum_value, void *arg)
 
       sym->set_language (language_c, &ccp->of->objfile_obstack);
       sym->compute_and_set_names (name, false, ccp->of->per_bfd);
-      SYMBOL_ACLASS_INDEX (sym) = LOC_CONST;
-      SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
-      SYMBOL_TYPE (sym) = fip->ptype;
+      sym->set_aclass_index (LOC_CONST);
+      sym->set_domain (VAR_DOMAIN);
+      sym->set_type (fip->ptype);
       add_symbol_to_list (sym, ccp->builder->get_global_symbols ());
     }
 
@@ -479,11 +479,11 @@ new_symbol (struct ctf_context *ccp, struct type *type, ctf_id_t tid)
 
       sym->set_language (language_c, &objfile->objfile_obstack);
       sym->compute_and_set_names (name, false, objfile->per_bfd);
-      SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
-      SYMBOL_ACLASS_INDEX (sym) = LOC_OPTIMIZED_OUT;
+      sym->set_domain (VAR_DOMAIN);
+      sym->set_aclass_index (LOC_OPTIMIZED_OUT);
 
       if (type != nullptr)
-	SYMBOL_TYPE (sym) = type;
+	sym->set_type (type);
 
       uint32_t kind = ctf_type_kind (fp, tid);
       switch (kind)
@@ -491,22 +491,22 @@ new_symbol (struct ctf_context *ccp, struct type *type, ctf_id_t tid)
 	  case CTF_K_STRUCT:
 	  case CTF_K_UNION:
 	  case CTF_K_ENUM:
-	    SYMBOL_ACLASS_INDEX (sym) = LOC_TYPEDEF;
-	    SYMBOL_DOMAIN (sym) = STRUCT_DOMAIN;
+	    sym->set_aclass_index (LOC_TYPEDEF);
+	    sym->set_domain (STRUCT_DOMAIN);
 	    break;
 	  case CTF_K_FUNCTION:
-	    SYMBOL_ACLASS_INDEX (sym) = LOC_STATIC;
+	    sym->set_aclass_index (LOC_STATIC);
 	    set_symbol_address (objfile, sym, sym->linkage_name ());
 	    break;
 	  case CTF_K_CONST:
-	    if (SYMBOL_TYPE (sym)->code () == TYPE_CODE_VOID)
-	      SYMBOL_TYPE (sym) = objfile_type (objfile)->builtin_int;
+	    if (sym->type ()->code () == TYPE_CODE_VOID)
+	      sym->set_type (objfile_type (objfile)->builtin_int);
 	    break;
 	  case CTF_K_TYPEDEF:
 	  case CTF_K_INTEGER:
 	  case CTF_K_FLOAT:
-	    SYMBOL_ACLASS_INDEX (sym) = LOC_TYPEDEF;
-	    SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
+	    sym->set_aclass_index (LOC_TYPEDEF);
+	    sym->set_domain (VAR_DOMAIN);
 	    break;
 	  case CTF_K_POINTER:
 	    break;
@@ -1169,9 +1169,9 @@ ctf_add_var_cb (const char *name, ctf_id_t id, void *arg)
 	  }
 	sym = new (&ccp->of->objfile_obstack) symbol;
 	OBJSTAT (ccp->of, n_syms++);
-	SYMBOL_TYPE (sym) = type;
-	SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
-	SYMBOL_ACLASS_INDEX (sym) = LOC_OPTIMIZED_OUT;
+	sym->set_type (type);
+	sym->set_domain (VAR_DOMAIN);
+	sym->set_aclass_index (LOC_OPTIMIZED_OUT);
 	sym->compute_and_set_names (name, false, ccp->of->per_bfd);
 	add_symbol_to_list (sym, ccp->builder->get_file_symbols ());
 	break;
@@ -1205,9 +1205,9 @@ add_stt_entries (struct ctf_context *ccp, int functions)
 	continue;
       sym = new (&ccp->of->objfile_obstack) symbol;
       OBJSTAT (ccp->of, n_syms++);
-      SYMBOL_TYPE (sym) = type;
-      SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
-      SYMBOL_ACLASS_INDEX (sym) = LOC_STATIC;
+      sym->set_type (type);
+      sym->set_domain (VAR_DOMAIN);
+      sym->set_aclass_index (LOC_STATIC);
       sym->compute_and_set_names (tname, false, ccp->of->per_bfd);
       add_symbol_to_list (sym, ccp->builder->get_global_symbols ());
       set_symbol_address (ccp->of, sym, tname);

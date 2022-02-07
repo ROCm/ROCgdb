@@ -826,7 +826,7 @@ step_1 (int skip_subroutines, int single_inst, const char *count_string)
      steps.  */
   thr = inferior_thread ();
   step_sm = new step_command_fsm (command_interp ());
-  thr->thread_fsm = step_sm;
+  thr->set_thread_fsm (std::unique_ptr<thread_fsm> (step_sm));
 
   step_command_fsm_prepare (step_sm, skip_subroutines,
 			    single_inst, count, thr);
@@ -843,7 +843,7 @@ step_1 (int skip_subroutines, int single_inst, const char *count_string)
 
       /* Stepped into an inline frame.  Pretend that we've
 	 stopped.  */
-      thr->thread_fsm->clean_up (thr);
+      thr->thread_fsm ()->clean_up (thr);
       proceeded = normal_stop ();
       if (!proceeded)
 	inferior_event_handler (INF_EXEC_COMPLETE);
@@ -954,7 +954,7 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 	  if (inline_skipped_frames (tp) > 0)
 	    {
 	      symbol *sym = inline_skipped_symbol (tp);
-	      if (SYMBOL_CLASS (sym) == LOC_BLOCK)
+	      if (sym->aclass () == LOC_BLOCK)
 		{
 		  const block *block = SYMBOL_BLOCK_VALUE (sym);
 		  if (BLOCK_END (block) < tp->control.step_range_end)
@@ -1333,7 +1333,7 @@ until_next_command (int from_tty)
   delete_longjmp_breakpoint_cleanup lj_deleter (thread);
 
   sm = new until_next_fsm (command_interp (), tp->global_num);
-  tp->thread_fsm = sm;
+  tp->set_thread_fsm (std::unique_ptr<thread_fsm> (sm));
   lj_deleter.release ();
 
   proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
@@ -1545,7 +1545,7 @@ finish_command_fsm::should_stop (struct thread_info *tp)
       /* We're done.  */
       set_finished ();
 
-      rv->type = TYPE_TARGET_TYPE (SYMBOL_TYPE (function));
+      rv->type = TYPE_TARGET_TYPE (function->type ());
       if (rv->type == NULL)
 	internal_error (__FILE__, __LINE__,
 			_("finish_command: function has no target type"));
@@ -1740,7 +1740,7 @@ finish_command (const char *arg, int from_tty)
 
   sm = new finish_command_fsm (command_interp ());
 
-  tp->thread_fsm = sm;
+  tp->set_thread_fsm (std::unique_ptr<thread_fsm> (sm));
 
   /* Finishing from an inline frame is completely different.  We don't
      try to show the "return value" - no way to locate it.  */
@@ -1781,7 +1781,7 @@ finish_command (const char *arg, int from_tty)
 	printf_filtered (_("Run back to call of "));
       else
 	{
-	  if (sm->function != NULL && TYPE_NO_RETURN (sm->function->type)
+	  if (sm->function != NULL && TYPE_NO_RETURN (sm->function->type ())
 	      && !query (_("warning: Function %s does not return normally.\n"
 			   "Try to finish anyway? "),
 			 sm->function->print_name ()))

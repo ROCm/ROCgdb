@@ -121,7 +121,7 @@ find_function_in_inferior (const char *name, struct objfile **objf_p)
   sym = lookup_symbol (name, 0, VAR_DOMAIN, 0);
   if (sym.symbol != NULL)
     {
-      if (SYMBOL_CLASS (sym.symbol) != LOC_BLOCK)
+      if (sym.symbol->aclass () != LOC_BLOCK)
 	{
 	  error (_("\"%s\" exists in this program but is not a function."),
 		 name);
@@ -1422,7 +1422,7 @@ value_of_variable (struct symbol *var, const struct block *b)
 struct value *
 address_of_variable (struct symbol *var, const struct block *b)
 {
-  struct type *type = SYMBOL_TYPE (var);
+  struct type *type = var->type ();
   struct value *val;
 
   /* Evaluate it first; if the result is a memory address, we're fine.
@@ -2869,7 +2869,7 @@ find_overload_match (gdb::array_view<value *> args,
 	     the function part.  Do not try this for non-functions (e.g.
 	     function pointers).  */
 	  if (qualified_name
-	      && (check_typedef (SYMBOL_TYPE (fsym))->code ()
+	      && (check_typedef (fsym->type ())->code ()
 		  == TYPE_CODE_FUNC))
 	    {
 	      temp_func = cp_func_name (qualified_name);
@@ -3223,14 +3223,14 @@ find_oload_champ (gdb::array_view<value *> args,
 	      static_offset = oload_method_static_p (methods, ix);
 	    }
 	  else
-	    nparms = SYMBOL_TYPE (functions[ix])->num_fields ();
+	    nparms = functions[ix]->type ()->num_fields ();
 
 	  parm_types.reserve (nparms);
 	  for (jj = 0; jj < nparms; jj++)
 	    {
 	      type *t = (methods != NULL
 			 ? (TYPE_FN_FIELD_ARGS (methods, ix)[jj].type ())
-			 : SYMBOL_TYPE (functions[ix])->field (jj).type ());
+			 : functions[ix]->type ()->field (jj).type ());
 	      parm_types.push_back (t);
 	    }
 	}
@@ -3815,8 +3815,8 @@ value_maybe_namespace_elt (const struct type *curtype,
   if (sym.symbol == NULL)
     return NULL;
   else if ((noside == EVAL_AVOID_SIDE_EFFECTS)
-	   && (SYMBOL_CLASS (sym.symbol) == LOC_TYPEDEF))
-    result = allocate_value (SYMBOL_TYPE (sym.symbol));
+	   && (sym.symbol->aclass () == LOC_TYPEDEF))
+    result = allocate_value (sym.symbol->type ());
   else
     result = value_of_variable (sym.symbol, sym.block);
 

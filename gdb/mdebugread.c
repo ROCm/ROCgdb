@@ -562,16 +562,16 @@ add_data_symbol (SYMR *sh, union aux_ext *ax, int bigend,
 		 struct symbol *s, int aclass_index, struct block *b,
 		 struct objfile *objfile, const char *name)
 {
-  SYMBOL_DOMAIN (s) = VAR_DOMAIN;
-  SYMBOL_ACLASS_INDEX (s) = aclass_index;
+  s->set_domain (VAR_DOMAIN);
+  s->set_aclass_index (aclass_index);
   add_symbol (s, top_stack->cur_st, b);
 
   /* Type could be missing if file is compiled without debugging info.  */
   if (SC_IS_UNDEF (sh->sc)
       || sh->sc == scNil || sh->index == indexNil)
-    SYMBOL_TYPE (s) = objfile_type (objfile)->nodebug_data_symbol;
+    s->set_type (objfile_type (objfile)->nodebug_data_symbol);
   else
-    SYMBOL_TYPE (s) = parse_type (cur_fd, ax, sh->index, 0, bigend, name);
+    s->set_type (parse_type (cur_fd, ax, sh->index, 0, bigend, name));
   /* Value of a data symbol is its memory address.  */
 }
 
@@ -628,7 +628,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       break;
 
     case stGlobal:		/* External symbol, goes into global block.  */
-      b = BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (top_stack->cur_st),
+      b = BLOCKVECTOR_BLOCK (top_stack->cur_st->blockvector (),
 			     GLOBAL_BLOCK);
       s = new_symbol (name);
       SET_SYMBOL_VALUE_ADDRESS (s, (CORE_ADDR) sh->value);
@@ -675,38 +675,38 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	name = "this";		/* FIXME, not alloc'd in obstack.  */
       s = new_symbol (name);
 
-      SYMBOL_DOMAIN (s) = VAR_DOMAIN;
-      SYMBOL_IS_ARGUMENT (s) = 1;
+      s->set_domain (VAR_DOMAIN);
+      s->set_is_argument (1);
       switch (sh->sc)
 	{
 	case scRegister:
 	  /* Pass by value in register.  */
-	  SYMBOL_ACLASS_INDEX (s) = mdebug_register_index;
+	  s->set_aclass_index (mdebug_register_index);
 	  break;
 	case scVar:
 	  /* Pass by reference on stack.  */
-	  SYMBOL_ACLASS_INDEX (s) = LOC_REF_ARG;
+	  s->set_aclass_index (LOC_REF_ARG);
 	  break;
 	case scVarRegister:
 	  /* Pass by reference in register.  */
-	  SYMBOL_ACLASS_INDEX (s) = mdebug_regparm_index;
+	  s->set_aclass_index (mdebug_regparm_index);
 	  break;
 	default:
 	  /* Pass by value on stack.  */
-	  SYMBOL_ACLASS_INDEX (s) = LOC_ARG;
+	  s->set_aclass_index (LOC_ARG);
 	  break;
 	}
       SYMBOL_VALUE (s) = svalue;
-      SYMBOL_TYPE (s) = parse_type (cur_fd, ax, sh->index, 0, bigend, name);
+      s->set_type (parse_type (cur_fd, ax, sh->index, 0, bigend, name));
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
       break;
 
     case stLabel:		/* label, goes into current block.  */
       s = new_symbol (name);
-      SYMBOL_DOMAIN (s) = VAR_DOMAIN;	/* So that it can be used */
-      SYMBOL_ACLASS_INDEX (s) = LOC_LABEL;	/* but not misused.  */
+      s->set_domain (VAR_DOMAIN);	/* So that it can be used */
+      s->set_aclass_index (LOC_LABEL);	/* but not misused.  */
       SET_SYMBOL_VALUE_ADDRESS (s, (CORE_ADDR) sh->value);
-      SYMBOL_TYPE (s) = objfile_type (objfile)->builtin_int;
+      s->set_type (objfile_type (objfile)->builtin_int);
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
       break;
 
@@ -744,8 +744,8 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	  break;
 	}
       s = new_symbol (name);
-      SYMBOL_DOMAIN (s) = VAR_DOMAIN;
-      SYMBOL_ACLASS_INDEX (s) = LOC_BLOCK;
+      s->set_domain (VAR_DOMAIN);
+      s->set_aclass_index (LOC_BLOCK);
       /* Type of the return value.  */
       if (SC_IS_UNDEF (sh->sc) || sh->sc == scNil)
 	t = objfile_type (objfile)->builtin_int;
@@ -771,7 +771,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       if (sh->st == stProc)
 	{
 	  const struct blockvector *bv
-	    = SYMTAB_BLOCKVECTOR (top_stack->cur_st);
+	    = top_stack->cur_st->blockvector ();
 
 	  /* The next test should normally be true, but provides a
 	     hook for nested functions (which we don't want to make
@@ -787,12 +787,12 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       add_symbol (s, top_stack->cur_st, b);
 
       /* Make a type for the procedure itself.  */
-      SYMBOL_TYPE (s) = lookup_function_type (t);
+      s->set_type (lookup_function_type (t));
 
       /* All functions in C++ have prototypes.  For C we don't have enough
 	 information in the debug info.  */
       if (s->language () == language_cplus)
-	SYMBOL_TYPE (s)->set_is_prototyped (true);
+	s->type ()->set_is_prototyped (true);
 
       /* Create and enter a new lexical context.  */
       b = new_block (FUNCTION_BLOCK, s->language ());
@@ -809,7 +809,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       push_parse_stack ();
       top_stack->cur_block = b;
       top_stack->blocktype = sh->st;
-      top_stack->cur_type = SYMBOL_TYPE (s);
+      top_stack->cur_type = s->type ();
       top_stack->cur_field = -1;
       top_stack->procadr = sh->value;
       top_stack->numargs = 0;
@@ -1065,9 +1065,9 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		enum_sym->set_linkage_name
 		  (obstack_strdup (&mdebugread_objfile->objfile_obstack,
 				   f->name ()));
-		SYMBOL_ACLASS_INDEX (enum_sym) = LOC_CONST;
-		SYMBOL_TYPE (enum_sym) = t;
-		SYMBOL_DOMAIN (enum_sym) = VAR_DOMAIN;
+		enum_sym->set_aclass_index (LOC_CONST);
+		enum_sym->set_type (t);
+		enum_sym->set_domain (VAR_DOMAIN);
 		SYMBOL_VALUE (enum_sym) = tsym.value;
 		if (SYMBOL_VALUE (enum_sym) < 0)
 		  unsigned_enum = 0;
@@ -1097,10 +1097,10 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	  }
 
 	s = new_symbol (name);
-	SYMBOL_DOMAIN (s) = STRUCT_DOMAIN;
-	SYMBOL_ACLASS_INDEX (s) = LOC_TYPEDEF;
+	s->set_domain (STRUCT_DOMAIN);
+	s->set_aclass_index (LOC_TYPEDEF);
 	SYMBOL_VALUE (s) = 0;
-	SYMBOL_TYPE (s) = t;
+	s->set_type (t);
 	add_symbol (s, top_stack->cur_st, top_stack->cur_block);
 	break;
 
@@ -1144,7 +1144,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	{
 	  /* Finished with procedure */
 	  const struct blockvector *bv
-	    = SYMTAB_BLOCKVECTOR (top_stack->cur_st);
+	    = top_stack->cur_st->blockvector ();
 	  struct mdebug_extra_func_info *e;
 	  struct block *cblock = top_stack->cur_block;
 	  struct type *ftype = top_stack->cur_type;
@@ -1154,9 +1154,9 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
 	  /* Make up special symbol to contain procedure specific info.  */
 	  s = new_symbol (MDEBUG_EFI_SYMBOL_NAME);
-	  SYMBOL_DOMAIN (s) = LABEL_DOMAIN;
-	  SYMBOL_ACLASS_INDEX (s) = LOC_CONST;
-	  SYMBOL_TYPE (s) = objfile_type (mdebugread_objfile)->builtin_void;
+	  s->set_domain (LABEL_DOMAIN);
+	  s->set_aclass_index (LOC_CONST);
+	  s->set_type (objfile_type (mdebugread_objfile)->builtin_void);
 	  e = OBSTACK_ZALLOC (&mdebugread_objfile->objfile_obstack,
 			      mdebug_extra_func_info);
 	  SYMBOL_VALUE_BYTES (s) = (gdb_byte *) e;
@@ -1202,9 +1202,9 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		      if (iparams == nparams)
 			break;
 
-		      if (SYMBOL_IS_ARGUMENT (sym))
+		      if (sym->is_argument ())
 			{
-			  ftype->field (iparams).set_type (SYMBOL_TYPE (sym));
+			  ftype->field (iparams).set_type (sym->type ());
 			  TYPE_FIELD_ARTIFICIAL (ftype, iparams) = 0;
 			  iparams++;
 			}
@@ -1295,20 +1295,20 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       if (has_opaque_xref (cur_fdr, sh))
 	break;
       s = new_symbol (name);
-      SYMBOL_DOMAIN (s) = VAR_DOMAIN;
-      SYMBOL_ACLASS_INDEX (s) = LOC_TYPEDEF;
+      s->set_domain (VAR_DOMAIN);
+      s->set_aclass_index (LOC_TYPEDEF);
       SYMBOL_BLOCK_VALUE (s) = top_stack->cur_block;
-      SYMBOL_TYPE (s) = t;
+      s->set_type (t);
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
 
       /* Incomplete definitions of structs should not get a name.  */
-      if (SYMBOL_TYPE (s)->name () == NULL
-	  && (SYMBOL_TYPE (s)->num_fields () != 0
-	      || (SYMBOL_TYPE (s)->code () != TYPE_CODE_STRUCT
-		  && SYMBOL_TYPE (s)->code () != TYPE_CODE_UNION)))
+      if (s->type ()->name () == NULL
+	  && (s->type ()->num_fields () != 0
+	      || (s->type ()->code () != TYPE_CODE_STRUCT
+		  && s->type ()->code () != TYPE_CODE_UNION)))
 	{
-	  if (SYMBOL_TYPE (s)->code () == TYPE_CODE_PTR
-	      || SYMBOL_TYPE (s)->code () == TYPE_CODE_FUNC)
+	  if (s->type ()->code () == TYPE_CODE_PTR
+	      || s->type ()->code () == TYPE_CODE_FUNC)
 	    {
 	      /* If we are giving a name to a type such as "pointer to
 		 foo" or "function returning foo", we better not set
@@ -1330,7 +1330,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		 for anything except pointers or functions.  */
 	    }
 	  else
-	    SYMBOL_TYPE (s)->set_name (s->linkage_name ());
+	    s->type ()->set_name (s->linkage_name ());
 	}
       break;
 
@@ -1965,7 +1965,7 @@ parse_procedure (PDR *pr, struct compunit_symtab *search_symtab,
 #else
       s = mylookup_symbol
 	(sh_name,
-	 BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (search_symtab),
+	 BLOCKVECTOR_BLOCK (search_symtab->blockvector (),
 			    STATIC_BLOCK),
 	 VAR_DOMAIN,
 	 LOC_BLOCK);
@@ -1987,10 +1987,10 @@ parse_procedure (PDR *pr, struct compunit_symtab *search_symtab,
 #else
 /* FIXME -- delete.  We can't do symbol allocation now; it's all done.  */
       s = new_symbol (sh_name);
-      SYMBOL_DOMAIN (s) = VAR_DOMAIN;
+      s->set_domain (VAR_DOMAIN);
       SYMBOL_CLASS (s) = LOC_BLOCK;
       /* Don't know its type, hope int is ok.  */
-      SYMBOL_TYPE (s)
+      s->type ()
 	= lookup_function_type (objfile_type (pst->objfile)->builtin_int);
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
       /* Won't have symbols for this one.  */
@@ -2044,8 +2044,8 @@ parse_procedure (PDR *pr, struct compunit_symtab *search_symtab,
 
   if (processing_gcc_compilation == 0
       && found_ecoff_debugging_info == 0
-      && TYPE_TARGET_TYPE (SYMBOL_TYPE (s))->code () == TYPE_CODE_VOID)
-    SYMBOL_TYPE (s) = objfile_type (mdebugread_objfile)->nodebug_text_symbol;
+      && TYPE_TARGET_TYPE (s->type ())->code () == TYPE_CODE_VOID)
+    s->set_type (objfile_type (mdebugread_objfile)->nodebug_text_symbol);
 }
 
 /* Parse the external symbol ES.  Just call parse_symbol() after
@@ -3987,9 +3987,9 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 				      mdebug_extra_func_info);
 		  struct symbol *s = new_symbol (MDEBUG_EFI_SYMBOL_NAME);
 
-		  SYMBOL_DOMAIN (s) = LABEL_DOMAIN;
-		  SYMBOL_ACLASS_INDEX (s) = LOC_CONST;
-		  SYMBOL_TYPE (s) = objfile_type (objfile)->builtin_void;
+		  s->set_domain (LABEL_DOMAIN);
+		  s->set_aclass_index (LOC_CONST);
+		  s->set_type (objfile_type (objfile)->builtin_void);
 		  SYMBOL_VALUE_BYTES (s) = (gdb_byte *) e;
 		  e->pdr.framereg = -1;
 		  add_symbol_to_list (s, get_local_symbols ());
@@ -4084,19 +4084,20 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 
 	  /* The proper language was already determined when building
 	     the psymtab, use it.  */
-	  COMPUNIT_FILETABS (cust)->language = PST_PRIVATE (pst)->pst_language;
+	  cust->primary_filetab ()->set_language
+	    (PST_PRIVATE (pst)->pst_language);
 	}
 
-      psymtab_language = COMPUNIT_FILETABS (cust)->language;
+      psymtab_language = cust->primary_filetab ()->language ();
 
-      lines = SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust));
+      lines = cust->primary_filetab ()->linetable ();
 
       /* Get a new lexical context.  */
 
       push_parse_stack ();
-      top_stack->cur_st = COMPUNIT_FILETABS (cust);
+      top_stack->cur_st = cust->primary_filetab ();
       top_stack->cur_block
-	= BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust), STATIC_BLOCK);
+	= BLOCKVECTOR_BLOCK (cust->blockvector (), STATIC_BLOCK);
       BLOCK_START (top_stack->cur_block) = pst->text_low (objfile);
       BLOCK_END (top_stack->cur_block) = 0;
       top_stack->blocktype = stFile;
@@ -4173,19 +4174,19 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
       size = lines->nitems;
       if (size > 1)
 	--size;
-      SYMTAB_LINETABLE (COMPUNIT_FILETABS (cust))
-	= ((struct linetable *)
-	   obstack_copy (&mdebugread_objfile->objfile_obstack,
-			 lines, (sizeof (struct linetable)
-				 + size * sizeof (lines->item))));
+      cust->primary_filetab ()->set_linetable
+	((struct linetable *)
+	 obstack_copy (&mdebugread_objfile->objfile_obstack,
+		       lines, (sizeof (struct linetable)
+			       + size * sizeof (lines->item))));
       xfree (lines);
 
       /* .. and our share of externals.
 	 XXX use the global list to speed up things here.  How?
 	 FIXME, Maybe quit once we have found the right number of ext's?  */
-      top_stack->cur_st = COMPUNIT_FILETABS (cust);
+      top_stack->cur_st = cust->primary_filetab ();
       top_stack->cur_block
-	= BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (top_stack->cur_st),
+	= BLOCKVECTOR_BLOCK (top_stack->cur_st->blockvector (),
 			     GLOBAL_BLOCK);
       top_stack->blocktype = stFile;
 
@@ -4201,7 +4202,7 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 	{
 	  printf_filtered (_("File %s contains %d unresolved references:"),
 			   symtab_to_filename_for_display
-			     (COMPUNIT_FILETABS (cust)),
+			     (cust->primary_filetab ()),
 			   n_undef_symbols);
 	  printf_filtered ("\n\t%4d variables\n\t%4d "
 			   "procedures\n\t%4d labels\n",
@@ -4211,7 +4212,7 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 	}
       pop_parse_stack ();
 
-      sort_blocks (COMPUNIT_FILETABS (cust));
+      sort_blocks (cust->primary_filetab ());
     }
 
   /* Now link the psymtab and the symtab.  */
@@ -4466,8 +4467,8 @@ mylookup_symbol (const char *name, const struct block *block,
   ALL_BLOCK_SYMBOLS (block, iter, sym)
     {
       if (sym->linkage_name ()[0] == inc
-	  && SYMBOL_DOMAIN (sym) == domain
-	  && SYMBOL_CLASS (sym) == theclass
+	  && sym->domain () == domain
+	  && sym->aclass () == theclass
 	  && strcmp (sym->linkage_name (), name) == 0)
 	return sym;
     }
@@ -4495,14 +4496,14 @@ add_block (struct block *b, struct symtab *s)
 {
   /* Cast away "const", but that's ok because we're building the
      symtab and blockvector here.  */
-  struct blockvector *bv = (struct blockvector *) SYMTAB_BLOCKVECTOR (s);
+  struct blockvector *bv = (struct blockvector *) s->blockvector ();
 
   bv = (struct blockvector *) xrealloc ((void *) bv,
 					(sizeof (struct blockvector)
 					 + BLOCKVECTOR_NBLOCKS (bv)
 					 * sizeof (bv->block)));
-  if (bv != SYMTAB_BLOCKVECTOR (s))
-    SYMTAB_BLOCKVECTOR (s) = bv;
+  if (bv != s->blockvector ())
+    s->compunit ()->set_blockvector (bv);
 
   BLOCKVECTOR_BLOCK (bv, BLOCKVECTOR_NBLOCKS (bv)++) = b;
 }
@@ -4565,7 +4566,7 @@ sort_blocks (struct symtab *s)
 {
   /* We have to cast away const here, but this is ok because we're
      constructing the blockvector in this code.  */
-  struct blockvector *bv = (struct blockvector *) SYMTAB_BLOCKVECTOR (s);
+  struct blockvector *bv = (struct blockvector *) s->blockvector ();
 
   if (BLOCKVECTOR_NBLOCKS (bv) <= FIRST_LOCAL_BLOCK)
     {
@@ -4623,7 +4624,7 @@ new_symtab (const char *name, int maxlines, struct objfile *objfile)
   add_compunit_symtab_to_objfile (cust);
   symtab = allocate_symtab (cust, name);
 
-  SYMTAB_LINETABLE (symtab) = new_linetable (maxlines);
+  symtab->set_linetable (new_linetable (maxlines));
   lang = compunit_language (cust);
 
   /* All symtabs must have at least two blocks.  */
@@ -4632,9 +4633,9 @@ new_symtab (const char *name, int maxlines, struct objfile *objfile)
   BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK) = new_block (NON_FUNCTION_BLOCK, lang);
   BLOCK_SUPERBLOCK (BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK)) =
     BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
-  COMPUNIT_BLOCKVECTOR (cust) = bv;
+  cust->set_blockvector (bv);
 
-  COMPUNIT_DEBUGFORMAT (cust) = "ECOFF";
+  cust->set_debugformat ("ECOFF");
   return cust;
 }
 

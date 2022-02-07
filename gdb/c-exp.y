@@ -1099,7 +1099,7 @@ block	:	block COLONCOLON name
 			    = lookup_symbol (copy.c_str (), $1,
 					     VAR_DOMAIN, NULL).symbol;
 
-			  if (!tem || SYMBOL_CLASS (tem) != LOC_BLOCK)
+			  if (!tem || tem->aclass () != LOC_BLOCK)
 			    error (_("No function \"%s\" in specified context."),
 				   copy.c_str ());
 			  $$ = SYMBOL_BLOCK_VALUE (tem); }
@@ -1108,7 +1108,7 @@ block	:	block COLONCOLON name
 variable:	name_not_typename ENTRY
 			{ struct symbol *sym = $1.sym.symbol;
 
-			  if (sym == NULL || !SYMBOL_IS_ARGUMENT (sym)
+			  if (sym == NULL || !sym->is_argument ()
 			      || !symbol_read_needs_frame (sym))
 			    error (_("@entry can be used only for function "
 				     "parameters, not for \"%s\""),
@@ -3074,7 +3074,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
 			par_state->language ()->name_of_this ()
 			? &is_a_field_of_this : NULL);
 
-  if (bsym.symbol && SYMBOL_CLASS (bsym.symbol) == LOC_BLOCK)
+  if (bsym.symbol && bsym.symbol->aclass () == LOC_BLOCK)
     {
       yylval.ssym.sym = bsym;
       yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
@@ -3097,7 +3097,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
 				&inner_is_a_field_of_this);
 	  if (bsym.symbol != NULL)
 	    {
-	      yylval.tsym.type = SYMBOL_TYPE (bsym.symbol);
+	      yylval.tsym.type = bsym.symbol->type ();
 	      return TYPENAME;
 	    }
 	}
@@ -3116,16 +3116,16 @@ classify_name (struct parser_state *par_state, const struct block *block,
 	  symtab = lookup_symtab (copy.c_str ());
 	  if (symtab)
 	    {
-	      yylval.bval = BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (symtab),
+	      yylval.bval = BLOCKVECTOR_BLOCK (symtab->blockvector (),
 					       STATIC_BLOCK);
 	      return FILENAME;
 	    }
 	}
     }
 
-  if (bsym.symbol && SYMBOL_CLASS (bsym.symbol) == LOC_TYPEDEF)
+  if (bsym.symbol && bsym.symbol->aclass () == LOC_TYPEDEF)
     {
-      yylval.tsym.type = SYMBOL_TYPE (bsym.symbol);
+      yylval.tsym.type = bsym.symbol->type ();
       return TYPENAME;
     }
 
@@ -3142,7 +3142,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
 	  sym = lookup_struct_typedef (copy.c_str (),
 				       par_state->expression_context_block, 1);
 	  if (sym)
-	    yylval.theclass.type = SYMBOL_TYPE (sym);
+	    yylval.theclass.type = sym->type ();
 	  return CLASSNAME;
 	}
     }
@@ -3218,7 +3218,7 @@ classify_inner_name (struct parser_state *par_state,
       return ERROR;
     }
 
-  switch (SYMBOL_CLASS (yylval.ssym.sym.symbol))
+  switch (yylval.ssym.sym.symbol->aclass ())
     {
     case LOC_BLOCK:
     case LOC_LABEL:
@@ -3238,7 +3238,7 @@ classify_inner_name (struct parser_state *par_state,
       return ERROR;
 
     case LOC_TYPEDEF:
-      yylval.tsym.type = SYMBOL_TYPE (yylval.ssym.sym.symbol);
+      yylval.tsym.type = yylval.ssym.sym.symbol->type ();
       return TYPENAME;
 
     default:

@@ -595,13 +595,8 @@ extern CORE_ADDR get_symbol_address (const struct symbol *sym);
 extern gdb::unique_xmalloc_ptr<char> symbol_find_demangled_name
      (struct general_symbol_info *gsymbol, const char *mangled);
 
-/* Return true if NAME matches the "search" name of SYMBOL, according
+/* Return true if NAME matches the "search" name of GSYMBOL, according
    to the symbol's language.  */
-#define SYMBOL_MATCHES_SEARCH_NAME(symbol, name)                       \
-  symbol_matches_search_name ((symbol), (name))
-
-/* Helper for SYMBOL_MATCHES_SEARCH_NAME that works with both symbols
-   and psymbols.  */
 extern bool symbol_matches_search_name
   (const struct general_symbol_info *gsymbol,
    const lookup_name_info &name);
@@ -1110,17 +1105,19 @@ enum symbol_subclass_kind
   SYMBOL_RUST_VTABLE
 };
 
+extern const struct symbol_impl *symbol_impls;
+
 /* This structure is space critical.  See space comments at the top.  */
 
 struct symbol : public general_symbol_info, public allocate_on_obstack
 {
   symbol ()
     /* Class-initialization of bitfields is only allowed in C++20.  */
-    : domain (UNDEF_DOMAIN),
-      aclass_index (0),
-      is_objfile_owned (1),
-      is_argument (0),
-      is_inlined (0),
+    : m_domain (UNDEF_DOMAIN),
+      m_aclass_index (0),
+      m_is_objfile_owned (1),
+      m_is_argument (0),
+      m_is_inlined (0),
       maybe_copied (0),
       subclass (SYMBOL_NONE),
       artificial (false)
@@ -1141,9 +1138,94 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
   symbol (const symbol &) = default;
   symbol &operator= (const symbol &) = default;
 
+  unsigned int aclass_index () const
+  {
+    return m_aclass_index;
+  }
+
+  void set_aclass_index (unsigned int aclass_index)
+  {
+    m_aclass_index = aclass_index;
+  }
+
+  const symbol_impl &impl () const
+  {
+    return symbol_impls[this->aclass_index ()];
+  }
+
+  address_class aclass () const
+  {
+    return this->impl ().aclass;
+  }
+
+  domain_enum domain () const
+  {
+    return m_domain;
+  }
+
+  void set_domain (domain_enum domain)
+  {
+    m_domain = domain;
+  }
+
+  bool is_objfile_owned () const
+  {
+    return m_is_objfile_owned;
+  }
+
+  void set_is_objfile_owned (bool is_objfile_owned)
+  {
+    m_is_objfile_owned = is_objfile_owned;
+  }
+
+  bool is_argument () const
+  {
+    return m_is_argument;
+  }
+
+  void set_is_argument (bool is_argument)
+  {
+    m_is_argument = is_argument;
+  }
+
+  bool is_inlined () const
+  {
+    return m_is_inlined;
+  }
+
+  void set_is_inlined (bool is_inlined)
+  {
+    m_is_inlined = is_inlined;
+  }
+
+  bool is_cplus_template_function () const
+  {
+    return this->subclass == SYMBOL_TEMPLATE;
+  }
+
+  struct type *type () const
+  {
+    return m_type;
+  }
+
+  void set_type (struct type *type)
+  {
+    m_type = type;
+  }
+
+  unsigned short line () const
+  {
+    return m_line;
+  }
+
+  void set_line (unsigned short line)
+  {
+    m_line = line;
+  }
+
   /* Data type of value */
 
-  struct type *type = nullptr;
+  struct type *m_type = nullptr;
 
   /* The owner of this symbol.
      Which one to use is defined by symbol.is_objfile_owned.  */
@@ -1161,25 +1243,25 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
 
   /* Domain code.  */
 
-  ENUM_BITFIELD(domain_enum_tag) domain : SYMBOL_DOMAIN_BITS;
+  ENUM_BITFIELD(domain_enum_tag) m_domain : SYMBOL_DOMAIN_BITS;
 
   /* Address class.  This holds an index into the 'symbol_impls'
      table.  The actual enum address_class value is stored there,
      alongside any per-class ops vectors.  */
 
-  unsigned int aclass_index : SYMBOL_ACLASS_BITS;
+  unsigned int m_aclass_index : SYMBOL_ACLASS_BITS;
 
   /* If non-zero then symbol is objfile-owned, use owner.symtab.
        Otherwise symbol is arch-owned, use owner.arch.  */
 
-  unsigned int is_objfile_owned : 1;
+  unsigned int m_is_objfile_owned : 1;
 
   /* Whether this is an argument.  */
 
-  unsigned is_argument : 1;
+  unsigned m_is_argument : 1;
 
   /* Whether this is an inlined function (class LOC_BLOCK only).  */
-  unsigned is_inlined : 1;
+  unsigned m_is_inlined : 1;
 
   /* For LOC_STATIC only, if this is set, then the symbol might be
      subject to copy relocation.  In this case, a minimal symbol
@@ -1208,7 +1290,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
      to debug files longer than 64K lines?  What about machine
      generated programs?  */
 
-  unsigned short line = 0;
+  unsigned short m_line = 0;
 
   /* An arbitrary data pointer, allowing symbol readers to record
      additional information on a per-symbol basis.  Note that this data
@@ -1240,25 +1322,12 @@ struct block_symbol
   const struct block *block;
 };
 
-extern const struct symbol_impl *symbol_impls;
-
 /* Note: There is no accessor macro for symbol.owner because it is
    "private".  */
 
-#define SYMBOL_DOMAIN(symbol)	(symbol)->domain
-#define SYMBOL_IMPL(symbol)		(symbol_impls[(symbol)->aclass_index])
-#define SYMBOL_ACLASS_INDEX(symbol)	(symbol)->aclass_index
-#define SYMBOL_CLASS(symbol)		(SYMBOL_IMPL (symbol).aclass)
-#define SYMBOL_OBJFILE_OWNED(symbol)	((symbol)->is_objfile_owned)
-#define SYMBOL_IS_ARGUMENT(symbol)	(symbol)->is_argument
-#define SYMBOL_INLINED(symbol)		(symbol)->is_inlined
-#define SYMBOL_IS_CPLUS_TEMPLATE_FUNCTION(symbol) \
-  (((symbol)->subclass) == SYMBOL_TEMPLATE)
-#define SYMBOL_TYPE(symbol)		(symbol)->type
-#define SYMBOL_LINE(symbol)		(symbol)->line
-#define SYMBOL_COMPUTED_OPS(symbol)	(SYMBOL_IMPL (symbol).ops_computed)
-#define SYMBOL_BLOCK_OPS(symbol)	(SYMBOL_IMPL (symbol).ops_block)
-#define SYMBOL_REGISTER_OPS(symbol)	(SYMBOL_IMPL (symbol).ops_register)
+#define SYMBOL_COMPUTED_OPS(symbol)	((symbol)->impl ().ops_computed)
+#define SYMBOL_BLOCK_OPS(symbol)	((symbol)->impl ().ops_block)
+#define SYMBOL_REGISTER_OPS(symbol)	((symbol)->impl ().ops_register)
 #define SYMBOL_LOCATION_BATON(symbol)   (symbol)->aux_value
 
 extern int register_symbol_computed_impl (enum address_class,
@@ -1294,7 +1363,7 @@ extern void symbol_set_symtab (struct symbol *symbol, struct symtab *symtab);
 
 /* An instance of this type is used to represent a C++ template
    function.  A symbol is really of this type iff
-   SYMBOL_IS_CPLUS_TEMPLATE_FUNCTION is true.  */
+   symbol::is_cplus_template_function is true.  */
 
 struct template_symbol : public symbol
 {
@@ -1373,6 +1442,44 @@ typedef std::vector<CORE_ADDR> section_offsets;
 
 struct symtab
 {
+  struct compunit_symtab *compunit () const
+  {
+    return m_compunit;
+  }
+
+  void set_compunit (struct compunit_symtab *compunit)
+  {
+    m_compunit = compunit;
+  }
+
+  struct linetable *linetable () const
+  {
+    return m_linetable;
+  }
+
+  void set_linetable (struct linetable *linetable)
+  {
+    m_linetable = linetable;
+  }
+
+  enum language language () const
+  {
+    return m_language;
+  }
+
+  void set_language (enum language language)
+  {
+    m_language = language;
+  }
+
+  const struct blockvector *blockvector () const;
+
+  struct objfile *objfile () const;
+
+  program_space *pspace () const;
+
+  const char *dirname () const;
+
   /* Unordered chain of all filetabs in the compunit,  with the exception
      that the "main" source file is the first entry in the list.  */
 
@@ -1380,12 +1487,12 @@ struct symtab
 
   /* Backlink to containing compunit symtab.  */
 
-  struct compunit_symtab *compunit_symtab;
+  struct compunit_symtab *m_compunit;
 
   /* Table mapping core addresses to line numbers for this file.
      Can be NULL if none.  Never shared between different symtabs.  */
 
-  struct linetable *linetable;
+  struct linetable *m_linetable;
 
   /* Name of this source file.  This pointer is never NULL.  */
 
@@ -1393,7 +1500,7 @@ struct symtab
 
   /* Language of this source file.  */
 
-  enum language language;
+  enum language m_language;
 
   /* Full name of file as found by searching the source path.
      NULL if not yet known.  */
@@ -1401,16 +1508,9 @@ struct symtab
   char *fullname;
 };
 
-#define SYMTAB_COMPUNIT(symtab) ((symtab)->compunit_symtab)
-#define SYMTAB_LINETABLE(symtab) ((symtab)->linetable)
-#define SYMTAB_LANGUAGE(symtab) ((symtab)->language)
-#define SYMTAB_BLOCKVECTOR(symtab) \
-  COMPUNIT_BLOCKVECTOR (SYMTAB_COMPUNIT (symtab))
-#define SYMTAB_OBJFILE(symtab) \
-  COMPUNIT_OBJFILE (SYMTAB_COMPUNIT (symtab))
-#define SYMTAB_PSPACE(symtab) (SYMTAB_OBJFILE (symtab)->pspace)
-#define SYMTAB_DIRNAME(symtab) \
-  COMPUNIT_DIRNAME (SYMTAB_COMPUNIT (symtab))
+/* A range adapter to allowing iterating over all the file tables in a list.  */
+
+using symtab_range = next_range<symtab>;
 
 /* Compunit symtabs contain the actual "symbol table", aka blockvector, as well
    as the list of all source files (what gdb has historically associated with
@@ -1449,6 +1549,124 @@ struct symtab
 
 struct compunit_symtab
 {
+  struct objfile *objfile () const
+  {
+    return m_objfile;
+  }
+
+  void set_objfile (struct objfile *objfile)
+  {
+    m_objfile = objfile;
+  }
+
+  symtab_range filetabs () const
+  {
+    return symtab_range (m_filetabs);
+  }
+
+  void add_filetab (symtab *filetab)
+  {
+    if (m_filetabs == nullptr)
+      {
+	m_filetabs = filetab;
+	m_last_filetab = filetab;
+      }
+    else
+      {
+	m_last_filetab->next = filetab;
+	m_last_filetab = filetab;
+      }
+  }
+
+  const char *debugformat () const
+  {
+    return m_debugformat;
+  }
+
+  void set_debugformat (const char *debugformat)
+  {
+    m_debugformat = debugformat;
+  }
+
+  const char *producer () const
+  {
+    return m_producer;
+  }
+
+  void set_producer (const char *producer)
+  {
+    m_producer = producer;
+  }
+
+  const char *dirname () const
+  {
+    return m_dirname;
+  }
+
+  void set_dirname (const char *dirname)
+  {
+    m_dirname = dirname;
+  }
+
+  const struct blockvector *blockvector () const
+  {
+    return m_blockvector;
+  }
+
+  void set_blockvector (const struct blockvector *blockvector)
+  {
+    m_blockvector = blockvector;
+  }
+
+  int block_line_section () const
+  {
+    return m_block_line_section;
+  }
+
+  void set_block_line_section (int block_line_section)
+  {
+    m_block_line_section = block_line_section;
+  }
+
+  bool locations_valid () const
+  {
+    return m_locations_valid;
+  }
+
+  void set_locations_valid (bool locations_valid)
+  {
+    m_locations_valid = locations_valid;
+  }
+
+  bool epilogue_unwind_valid () const
+  {
+    return m_epilogue_unwind_valid;
+  }
+
+  void set_epilogue_unwind_valid (bool epilogue_unwind_valid)
+  {
+    m_epilogue_unwind_valid = epilogue_unwind_valid;
+  }
+
+  struct macro_table *macro_table () const
+  {
+    return m_macro_table;
+  }
+
+  void set_macro_table (struct macro_table *macro_table)
+  {
+    m_macro_table = macro_table;
+  }
+
+  /* Make PRIMARY_FILETAB the primary filetab of this compunit symtab.
+
+     PRIMARY_FILETAB must already be a filetab of this compunit symtab.  */
+
+  void set_primary_filetab (symtab *primary_filetab);
+
+  /* Return the primary filetab of the compunit.  */
+  symtab *primary_filetab () const;
+
   /* Set m_call_site_htab.  */
   void set_call_site_htab (htab_t call_site_htab);
 
@@ -1459,7 +1677,7 @@ struct compunit_symtab
   struct compunit_symtab *next;
 
   /* Object file from which this symtab information was read.  */
-  struct objfile *objfile;
+  struct objfile *m_objfile;
 
   /* Name of the symtab.
      This is *not* intended to be a usable filename, and is
@@ -1470,43 +1688,43 @@ struct compunit_symtab
      source file (e.g., .c, .cc) is guaranteed to be first.
      Each symtab is a file, either the "main" source file (e.g., .c, .cc)
      or header (e.g., .h).  */
-  struct symtab *filetabs;
+  symtab *m_filetabs;
 
   /* Last entry in FILETABS list.
      Subfiles are added to the end of the list so they accumulate in order,
      with the main source subfile living at the front.
      The main reason is so that the main source file symtab is at the head
      of the list, and the rest appear in order for debugging convenience.  */
-  struct symtab *last_filetab;
+  symtab *m_last_filetab;
 
   /* Non-NULL string that identifies the format of the debugging information,
      such as "stabs", "dwarf 1", "dwarf 2", "coff", etc.  This is mostly useful
      for automated testing of gdb but may also be information that is
      useful to the user.  */
-  const char *debugformat;
+  const char *m_debugformat;
 
   /* String of producer version information, or NULL if we don't know.  */
-  const char *producer;
+  const char *m_producer;
 
   /* Directory in which it was compiled, or NULL if we don't know.  */
-  const char *dirname;
+  const char *m_dirname;
 
   /* List of all symbol scope blocks for this symtab.  It is shared among
      all symtabs in a given compilation unit.  */
-  const struct blockvector *blockvector;
+  const struct blockvector *m_blockvector;
 
   /* Section in objfile->section_offsets for the blockvector and
      the linetable.  Probably always SECT_OFF_TEXT.  */
-  int block_line_section;
+  int m_block_line_section;
 
   /* Symtab has been compiled with both optimizations and debug info so that
      GDB may stop skipping prologues as variables locations are valid already
      at function entry points.  */
-  unsigned int locations_valid : 1;
+  unsigned int m_locations_valid : 1;
 
   /* DWARF unwinder for this CU is valid even for epilogues (PC at the return
      instruction).  This is supported by GCC since 4.5.0.  */
-  unsigned int epilogue_unwind_valid : 1;
+  unsigned int m_epilogue_unwind_valid : 1;
 
   /* struct call_site entries for this compilation unit or NULL.  */
   htab_t m_call_site_htab;
@@ -1515,7 +1733,7 @@ struct compunit_symtab
      is shared between different symtabs in a given compilation unit.
      It's debatable whether it *should* be shared among all the symtabs in
      the given compilation unit, but it currently is.  */
-  struct macro_table *macro_table;
+  struct macro_table *m_macro_table;
 
   /* If non-NULL, then this points to a NULL-terminated vector of
      included compunits.  When searching the static or global
@@ -1535,32 +1753,23 @@ struct compunit_symtab
 
 using compunit_symtab_range = next_range<compunit_symtab>;
 
-#define COMPUNIT_OBJFILE(cust) ((cust)->objfile)
-#define COMPUNIT_FILETABS(cust) ((cust)->filetabs)
-#define COMPUNIT_DEBUGFORMAT(cust) ((cust)->debugformat)
-#define COMPUNIT_PRODUCER(cust) ((cust)->producer)
-#define COMPUNIT_DIRNAME(cust) ((cust)->dirname)
-#define COMPUNIT_BLOCKVECTOR(cust) ((cust)->blockvector)
-#define COMPUNIT_BLOCK_LINE_SECTION(cust) ((cust)->block_line_section)
-#define COMPUNIT_LOCATIONS_VALID(cust) ((cust)->locations_valid)
-#define COMPUNIT_EPILOGUE_UNWIND_VALID(cust) ((cust)->epilogue_unwind_valid)
-#define COMPUNIT_MACRO_TABLE(cust) ((cust)->macro_table)
-
-/* A range adapter to allowing iterating over all the file tables
-   within a compunit.  */
-
-using symtab_range = next_range<symtab>;
-
-static inline symtab_range
-compunit_filetabs (compunit_symtab *cu)
+inline const struct blockvector *
+symtab::blockvector () const
 {
-  return symtab_range (cu->filetabs);
+  return this->compunit ()->blockvector ();
 }
 
-/* Return the primary symtab of CUST.  */
+inline struct objfile *
+symtab::objfile () const
+{
+  return this->compunit ()->objfile ();
+}
 
-extern struct symtab *
-  compunit_primary_filetab (const struct compunit_symtab *cust);
+inline const char *
+symtab::dirname () const
+{
+  return this->compunit ()->dirname ();
+}
 
 /* Return the language of CUST.  */
 
@@ -1571,7 +1780,7 @@ extern enum language compunit_language (const struct compunit_symtab *cust);
 static inline bool
 is_main_symtab_of_compunit_symtab (struct symtab *symtab)
 {
-  return symtab == COMPUNIT_FILETABS (SYMTAB_COMPUNIT (symtab));
+  return symtab == symtab->compunit ()->primary_filetab ();
 }
 
 

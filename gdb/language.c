@@ -976,7 +976,7 @@ language_arch_info::bool_type () const
       sym = lookup_symbol (m_bool_type_name, NULL, VAR_DOMAIN, NULL).symbol;
       if (sym != nullptr)
 	{
-	  struct type *type = SYMBOL_TYPE (sym);
+	  struct type *type = sym->type ();
 	  if (type != nullptr && type->code () == TYPE_CODE_BOOL)
 	    return type;
 	}
@@ -999,11 +999,11 @@ language_arch_info::type_and_symbol::alloc_type_symbol
   symbol->m_name = type->name ();
   symbol->set_language (lang, nullptr);
   symbol->owner.arch = gdbarch;
-  SYMBOL_OBJFILE_OWNED (symbol) = 0;
+  symbol->set_is_objfile_owned (0);
   symbol->set_section_index (0);
-  SYMBOL_TYPE (symbol) = type;
-  SYMBOL_DOMAIN (symbol) = VAR_DOMAIN;
-  SYMBOL_ACLASS_INDEX (symbol) = LOC_TYPEDEF;
+  symbol->set_type (type);
+  symbol->set_domain (VAR_DOMAIN);
+  symbol->set_aclass_index (LOC_TYPEDEF);
   return symbol;
 }
 

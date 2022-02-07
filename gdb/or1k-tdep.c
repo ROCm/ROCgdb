@@ -471,8 +471,8 @@ or1k_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	{
 	  struct symtab_and_line prologue_sal = find_pc_line (start_pc, 0);
 	  struct compunit_symtab *compunit
-	    = SYMTAB_COMPUNIT (prologue_sal.symtab);
-	  const char *debug_format = COMPUNIT_DEBUGFORMAT (compunit);
+	    = prologue_sal.symtab->compunit ();
+	  const char *debug_format = compunit->debugformat ();
 
 	  if ((NULL != debug_format)
 	      && (strlen ("dwarf") <= strlen (debug_format))

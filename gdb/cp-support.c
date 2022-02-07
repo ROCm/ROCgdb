@@ -166,7 +166,7 @@ inspect_type (struct demangle_parse_info *info,
 
   if (sym != NULL)
     {
-      struct type *otype = SYMBOL_TYPE (sym);
+      struct type *otype = sym->type ();
 
       if (finder != NULL)
 	{
@@ -512,7 +512,7 @@ replace_typedefs (struct demangle_parse_info *info,
 
 	      if (sym != NULL)
 		{
-		  struct type *otype = SYMBOL_TYPE (sym);
+		  struct type *otype = sym->type ();
 		  const char *new_name = (*finder) (otype, data);
 
 		  if (new_name != NULL)
@@ -1215,7 +1215,7 @@ overload_list_add_symbol (struct symbol *sym,
 {
   /* If there is no type information, we can't do anything, so
      skip.  */
-  if (SYMBOL_TYPE (sym) == NULL)
+  if (sym->type () == NULL)
     return;
 
   /* skip any symbols that we've already considered.  */
@@ -1464,7 +1464,7 @@ add_symbol_overload_list_qualified (const char *func_name,
       for (compunit_symtab *cust : objfile->compunits ())
 	{
 	  QUIT;
-	  b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust), GLOBAL_BLOCK);
+	  b = BLOCKVECTOR_BLOCK (cust->blockvector (), GLOBAL_BLOCK);
 	  add_symbol_overload_list_block (func_name, b, overload_list);
 	}
     }
@@ -1474,7 +1474,7 @@ add_symbol_overload_list_qualified (const char *func_name,
       for (compunit_symtab *cust : objfile->compunits ())
 	{
 	  QUIT;
-	  b = BLOCKVECTOR_BLOCK (COMPUNIT_BLOCKVECTOR (cust), STATIC_BLOCK);
+	  b = BLOCKVECTOR_BLOCK (cust->blockvector (), STATIC_BLOCK);
 	  /* Don't do this block twice.  */
 	  if (b == surrounding_static_block)
 	    continue;
@@ -1501,13 +1501,13 @@ cp_lookup_rtti_type (const char *name, const struct block *block)
       return NULL;
     }
 
-  if (SYMBOL_CLASS (rtti_sym) != LOC_TYPEDEF)
+  if (rtti_sym->aclass () != LOC_TYPEDEF)
     {
       warning (_("RTTI symbol for class '%s' is not a type"), name);
       return NULL;
     }
 
-  rtti_type = check_typedef (SYMBOL_TYPE (rtti_sym));
+  rtti_type = check_typedef (rtti_sym->type ());
 
   switch (rtti_type->code ())
     {

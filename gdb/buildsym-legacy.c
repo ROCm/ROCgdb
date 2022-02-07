@@ -301,9 +301,9 @@ restart_symtab (struct compunit_symtab *cust,
   gdb_assert (buildsym_compunit == nullptr);
 
   buildsym_compunit
-    = new struct buildsym_compunit (COMPUNIT_OBJFILE (cust),
+    = new struct buildsym_compunit (cust->objfile (),
 				    name,
-				    COMPUNIT_DIRNAME (cust),
+				    cust->dirname (),
 				    compunit_language (cust),
 				    start_addr,
 				    cust);

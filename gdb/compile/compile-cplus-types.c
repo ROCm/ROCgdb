@@ -161,7 +161,7 @@ type_name_to_scope (const char *type_name, const struct block *block)
 
 	  scope.push_back (comp);
 
-	  if (SYMBOL_TYPE (bsymbol.symbol)->code () != TYPE_CODE_NAMESPACE)
+	  if (bsymbol.symbol->type ()->code () != TYPE_CODE_NAMESPACE)
 	    {
 	      /* We're done.  */
 	      break;
@@ -271,7 +271,7 @@ compile_cplus_instance::enter_scope (compile_scope &&new_scope)
 	(m_scopes.back ().begin (), m_scopes.back ().end () - 1,
 	 [this] (const scope_component &comp)
 	 {
-	  gdb_assert (SYMBOL_TYPE (comp.bsymbol.symbol)->code ()
+	  gdb_assert (comp.bsymbol.symbol->type ()->code ()
 		      == TYPE_CODE_NAMESPACE);
 
 	  const char *ns = (comp.name == CP_ANONYMOUS_NAMESPACE_STR ? nullptr
@@ -313,7 +313,7 @@ compile_cplus_instance::leave_scope ()
       std::for_each
 	(current.begin (),current.end () - 1,
 	 [this] (const scope_component &comp) {
-	  gdb_assert (SYMBOL_TYPE (comp.bsymbol.symbol)->code ()
+	  gdb_assert (comp.bsymbol.symbol->type ()->code ()
 		      == TYPE_CODE_NAMESPACE);
 	  this->plugin ().pop_binding_level (comp.name.c_str ());
 	});
@@ -345,14 +345,14 @@ compile_cplus_instance::new_scope (const char *type_name, struct type *type)
 	 unqualified name of the type to process.  */
       scope_component &comp = scope.back ();
 
-      if (!types_equal (type, SYMBOL_TYPE (comp.bsymbol.symbol))
+      if (!types_equal (type, comp.bsymbol.symbol->type ())
 	  && (m_scopes.empty ()
 	      || (m_scopes.back ().back ().bsymbol.symbol
 		  != comp.bsymbol.symbol)))
 	{
 	  /* The type is defined inside another class(es).  Convert that
 	     type instead of defining this type.  */
-	  convert_type (SYMBOL_TYPE (comp.bsymbol.symbol));
+	  convert_type (comp.bsymbol.symbol->type ());
 
 	  /* If the original type (passed in to us) is defined in a nested
 	     class, the previous call will give us that type's gcc_type.
@@ -626,7 +626,7 @@ compile_cplus_convert_struct_or_union_members
 		    continue;
 		  }
 		const char *filename = symbol_symtab (sym.symbol)->filename;
-		unsigned int line = SYMBOL_LINE (sym.symbol);
+		unsigned int line = sym.symbol->line ();
 
 		physaddr = SYMBOL_VALUE_ADDRESS (sym.symbol);
 		instance->plugin ().build_decl
@@ -765,7 +765,7 @@ compile_cplus_convert_struct_or_union_methods (compile_cplus_instance *instance,
 	    }
 
 	  const char *filename = symbol_symtab (sym.symbol)->filename;
-	  unsigned int line = SYMBOL_LINE (sym.symbol);
+	  unsigned int line = sym.symbol->line ();
 	  CORE_ADDR address = BLOCK_START (SYMBOL_BLOCK_VALUE (sym.symbol));
 	  const char *kind;
 

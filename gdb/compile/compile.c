@@ -484,7 +484,7 @@ get_expr_block_and_pc (CORE_ADDR *pc)
       struct symtab_and_line cursal = get_current_source_symtab_and_line ();
 
       if (cursal.symtab)
-	block = BLOCKVECTOR_BLOCK (SYMTAB_BLOCKVECTOR (cursal.symtab),
+	block = BLOCKVECTOR_BLOCK (cursal.symtab->blockvector (),
 				   STATIC_BLOCK);
       if (block != NULL)
 	*pc = BLOCK_ENTRY_PC (block);
@@ -561,11 +561,11 @@ get_selected_pc_producer_options (void)
   struct compunit_symtab *symtab = find_pc_compunit_symtab (pc);
   const char *cs;
 
-  if (symtab == NULL || symtab->producer == NULL
-      || !startswith (symtab->producer, "GNU "))
+  if (symtab == NULL || symtab->producer () == NULL
+      || !startswith (symtab->producer (), "GNU "))
     return NULL;
 
-  cs = symtab->producer;
+  cs = symtab->producer ();
   while (*cs != 0 && *cs != '-')
     cs = skip_spaces (skip_to_space (cs));
   if (*cs != '-')

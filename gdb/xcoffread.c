@@ -1562,7 +1562,7 @@ process_xcoff_symbol (struct coff_symbol *cs, struct objfile *objfile)
 
   /* default assumptions */
   SET_SYMBOL_VALUE_ADDRESS (sym, cs->c_value + off);
-  SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
+  sym->set_domain (VAR_DOMAIN);
   sym->set_section_index (secnum_to_section (cs->c_secnum, objfile));
 
   if (ISFCN (cs->c_type))
@@ -1572,9 +1572,9 @@ process_xcoff_symbol (struct coff_symbol *cs, struct objfile *objfile)
 	 patch_block_stabs (), unless the file was compiled without -g.  */
 
       sym->set_linkage_name (SYMNAME_ALLOC (name, symname_alloced));
-      SYMBOL_TYPE (sym) = objfile_type (objfile)->nodebug_text_symbol;
+      sym->set_type (objfile_type (objfile)->nodebug_text_symbol);
 
-      SYMBOL_ACLASS_INDEX (sym) = LOC_BLOCK;
+      sym->set_aclass_index (LOC_BLOCK);
       sym2 = new (&objfile->objfile_obstack) symbol (*sym);
 
       if (cs->c_sclass == C_EXT || C_WEAKEXT)
@@ -1585,7 +1585,7 @@ process_xcoff_symbol (struct coff_symbol *cs, struct objfile *objfile)
   else
     {
       /* In case we can't figure out the type, provide default.  */
-      SYMBOL_TYPE (sym) = objfile_type (objfile)->nodebug_data_symbol;
+      sym->set_type (objfile_type (objfile)->nodebug_data_symbol);
 
       switch (cs->c_sclass)
 	{

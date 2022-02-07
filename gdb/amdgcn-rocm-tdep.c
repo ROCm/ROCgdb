@@ -710,8 +710,8 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
       /* Clang always emits a line note before the prologue and another
 	 one after.  We trust clang to emit usable line notes.  */
       if (post_prologue_pc
-	  && (cust != NULL && COMPUNIT_PRODUCER (cust) != NULL
-	      && producer_is_llvm (COMPUNIT_PRODUCER (cust))))
+	  && (cust != NULL && cust->producer () != NULL
+	      && producer_is_llvm (cust->producer ())))
 	return std::max (start_pc, post_prologue_pc);
     }
 

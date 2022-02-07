@@ -50,15 +50,15 @@ mi_cmd_symbol_list_lines (const char *command, char **argv, int argc)
      already sorted by increasing values in the symbol table, so no
      need to perform any other sorting.  */
 
-  gdbarch = SYMTAB_OBJFILE (s)->arch ();
+  gdbarch = s->objfile ()->arch ();
 
   ui_out_emit_list list_emitter (uiout, "lines");
-  if (SYMTAB_LINETABLE (s) != NULL && SYMTAB_LINETABLE (s)->nitems > 0)
-    for (i = 0; i < SYMTAB_LINETABLE (s)->nitems; i++)
+  if (s->linetable () != NULL && s->linetable ()->nitems > 0)
+    for (i = 0; i < s->linetable ()->nitems; i++)
       {
 	ui_out_emit_tuple tuple_emitter (uiout, NULL);
-	uiout->field_core_addr ("pc", gdbarch, SYMTAB_LINETABLE (s)->item[i].pc);
-	uiout->field_signed ("line", SYMTAB_LINETABLE (s)->item[i].line);
+	uiout->field_core_addr ("pc", gdbarch, s->linetable ()->item[i].pc);
+	uiout->field_signed ("line", s->linetable ()->item[i].line);
       }
 }
 
@@ -74,14 +74,14 @@ output_debug_symbol (ui_out *uiout, enum search_domain kind,
 {
   ui_out_emit_tuple tuple_emitter (uiout, NULL);
 
-  if (SYMBOL_LINE (sym) != 0)
-    uiout->field_unsigned ("line", SYMBOL_LINE (sym));
+  if (sym->line () != 0)
+    uiout->field_unsigned ("line", sym->line ());
   uiout->field_string ("name", sym->print_name ());
 
   if (kind == FUNCTIONS_DOMAIN || kind == VARIABLES_DOMAIN)
     {
       string_file tmp_stream;
-      type_print (SYMBOL_TYPE (sym), "", &tmp_stream, -1);
+      type_print (sym->type (), "", &tmp_stream, -1);
       uiout->field_string ("type", tmp_stream.string ());
 
       std::string str = symbol_to_info_string (sym, block, kind);
