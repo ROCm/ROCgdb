@@ -2184,16 +2184,32 @@ thread_apply_command (const char *tidlist, int from_tty)
     }
 }
 
+struct lane_apply_options
+{
+  /* For "-preserve-frame".  */
+  bool preserve_frame = false;
+};
+
+static const gdb::option::option_def lane_apply_option_defs[] = {
+    gdb::option::flag_option_def<lane_apply_options> {
+	"preserve-frame",
+	[] (lane_apply_options *opts) { return &opts->preserve_frame; },
+	_("Preserve currently selected frame."),
+    }
+};
+
 /* Create an option_def_group for the "lane apply" / "lane apply all"
    options, with FLAGS and IL as context.  */
 
-static inline std::array<gdb::option::option_def_group, 2>
+static inline std::array<gdb::option::option_def_group, 3>
 make_lane_apply_options_def_group (qcs_flags *flags,
-				   info_lanes_opts *il)
+				   info_lanes_opts *il,
+				   lane_apply_options *la)
 {
   return {{
     { {thr_qcs_flags_option_defs}, flags },
     { {info_lanes_option_defs}, il },
+    { {lane_apply_option_defs}, la },
   }};
 }
 
@@ -2212,8 +2228,9 @@ lane_apply_all_command (const char *cmd, int from_tty)
 {
   qcs_flags flags;
   info_lanes_opts il_opts;
+  lane_apply_options la_opts;
 
-  auto group = make_lane_apply_options_def_group (&flags, &il_opts);
+  auto group = make_lane_apply_options_def_group (&flags, &il_opts, &la_opts);
   gdb::option::process_options
     (&cmd, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group);
 
@@ -2238,8 +2255,15 @@ lane_apply_all_command (const char *cmd, int from_tty)
       if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
 	continue;
 
+      frame_id saved_frame;
+      int saved_level;
+      save_selected_frame (&saved_frame, &saved_level);
+
       frame_info *curr_frame = get_current_frame ();
       select_frame (curr_frame);
+
+      if (la_opts.preserve_frame)
+	restore_selected_frame (saved_frame, saved_level);
 
       thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);
     }
@@ -2250,7 +2274,8 @@ lane_apply_all_command (const char *cmd, int from_tty)
 static void
 lane_apply_completer (completion_tracker &tracker, const char *text)
 {
-  const auto group = make_lane_apply_options_def_group (nullptr, nullptr);
+  const auto group = make_lane_apply_options_def_group (nullptr, nullptr,
+							nullptr);
   if (gdb::option::complete_options
       (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group))
     return;
@@ -2326,6 +2351,7 @@ lane_apply_command (const char *id_list, int from_tty)
 {
   qcs_flags flags;
   info_lanes_opts il_opts;
+  lane_apply_options la_opts;
   const char *cmd = nullptr;
   number_or_range_parser parser;
 
@@ -2338,7 +2364,7 @@ lane_apply_command (const char *id_list, int from_tty)
 
   cmd = parser.cur_tok ();
 
-  auto group = make_lane_apply_options_def_group (&flags, &il_opts);
+  auto group = make_lane_apply_options_def_group (&flags, &il_opts, &la_opts);
   gdb::option::process_options
     (&cmd, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group);
 
@@ -2373,8 +2399,15 @@ lane_apply_command (const char *id_list, int from_tty)
       if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
 	continue;
 
+      frame_id saved_frame;
+      int saved_level;
+      save_selected_frame (&saved_frame, &saved_level);
+
       frame_info *curr_frame = get_current_frame ();
       select_frame (curr_frame);
+
+      if (la_opts.preserve_frame)
+	restore_selected_frame (saved_frame, saved_level);
 
       thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);
     }
@@ -3119,6 +3152,7 @@ Options:\n\
 %OPTIONS%"
 
     const auto lane_apply_opts = make_lane_apply_options_def_group (nullptr,
+								    nullptr,
 								    nullptr);
 
     static std::string lane_apply_help

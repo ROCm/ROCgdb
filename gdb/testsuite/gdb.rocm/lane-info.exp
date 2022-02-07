@@ -530,6 +530,33 @@ proc_with_prefix test {} {
 	    }
 	}
     }
+
+    # Select a frame which is not-0, and check that "lane apply -preserve-frame"
+    # behaves as expected.
+    with_test_prefix "preserve frame" {
+	gdb_test "frame 2" "\\#2\[ \t\]*$::hex\[ \t\]*in kernel \\(\\).*"
+	set count 0
+	gdb_test_multiple "lane apply all -preserve-frame -- p \$_frame" "" {
+	    -re "\\\$$::decimal = 2" {
+		incr count
+		exp_continue
+	    }
+	    -re "$::gdb_prompt " {
+		gdb_assert {$count == 5} $gdb_test_name
+	    }
+	}
+
+	set count 0
+	gdb_test_multiple "lane apply 1-3 -preserve-frame -- p \$_frame" "" {
+	    -re "\\\$$::decimal = 2" {
+		incr count
+		exp_continue
+	    }
+	    -re "$::gdb_prompt " {
+		gdb_assert {$count == 3} $gdb_test_name
+	    }
+	}
+    }
 }
 
 with_rocm_gpu_lock {
