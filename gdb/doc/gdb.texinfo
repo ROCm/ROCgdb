@@ -8148,14 +8148,18 @@ address serves as the address of the frame.  Usually this address is kept
 in a register called the @dfn{frame pointer register}
 (@pxref{Registers, $fp}) while execution is going on in that frame.
 
+@anchor{frame level}
 @cindex frame level
 @cindex frame number
+@vindex $_frame@r{, convinience variable}
 @value{GDBN} labels each existing stack frame with a @dfn{level}, a
 number that is zero for the innermost frame, one for the frame that
 called it, and so on upward.  These level numbers give you a way of
 designating stack frames in @value{GDBN} commands.  The terms
 @dfn{frame number} and @dfn{frame level} can be used interchangeably to
-describe this number.
+describe this number.  @value{GDBN} provides the @samp{$_frame}
+convenience variable to represent the level of the currently selected
+frame.
 
 @c The -fomit-frame-pointer below perennially causes hbox overflow
 @c underflow problems.
@@ -12470,6 +12474,9 @@ Programs, ,Debugging Multiple Inferiors Connections and Programs}.
 
 @item $_thread
 The thread number of the current thread.  @xref{thread numbers}.
+
+@item $_frame
+The number of the currently selected frame.  @xref{frame level}.
 
 @item $_gthread
 The global number of the current thread.  @xref{global thread number}.

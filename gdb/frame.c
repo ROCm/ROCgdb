@@ -3156,6 +3156,21 @@ the rest of the stack trace."),
   },
 };
 
+/* Handle the _frame internal variable.  */
+
+static struct value *
+frame_make_value (struct gdbarch *gdbarch, internalvar *var, void *ignore)
+{
+  return value_from_longest (builtin_type (gdbarch)->builtin_int,
+			     frame_relative_level (get_selected_frame ()));
+}
+
+static const internalvar_funcs frame_funcs =
+{
+  frame_make_value,
+  nullptr,
+};
+
 void _initialize_frame ();
 void
 _initialize_frame ()
@@ -3200,4 +3215,6 @@ When non-zero, frame specific internal debugging is enabled."),
 			   NULL,
 			   show_frame_debug,
 			   &setdebuglist, &showdebuglist);
+
+  create_internalvar_type_lazy ("_frame", &frame_funcs, nullptr);
 }
