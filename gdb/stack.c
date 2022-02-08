@@ -1729,20 +1729,13 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 		printf_filtered ("\n");
 	      }
 	    else if (VALUE_LVAL (value) == lval_memory)
-	      {
-		const char *prev_sp_addr_str
-		  = paspace_and_addr (gdbarch, value_address (value)).c_str ();
-
-		printf_filtered (" Previous frame's sp at ");
-		puts_filtered (prev_sp_addr_str);
-		printf_filtered ("\n");
-	      }
+	      printf_filtered
+		(" Previous frame's sp at %s\n",
+		 paspace_and_addr (gdbarch, value_address (value)).c_str ());
 	    else if (VALUE_LVAL (value) == lval_register)
-	      {
-		printf_filtered (" Previous frame's sp in %s\n",
-				 gdbarch_register_name (gdbarch,
-							VALUE_REGNUM (value)));
-	      }
+	      printf_filtered (" Previous frame's sp in %s\n",
+			       gdbarch_register_name (gdbarch,
+						      VALUE_REGNUM (value)));
 
 	    release_value (value);
 	    need_nl = 0;
