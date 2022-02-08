@@ -40,6 +40,7 @@ struct symtab;
 
 struct inferior;
 struct process_stratum_target;
+struct prepared_return_values;
 
 /* When true, print debug messages related to GDB thread creation and
    deletion.  */
@@ -549,6 +550,10 @@ public:
 
   /* Displaced-step state for this thread.  */
   displaced_step_thread_state displaced_step_state;
+
+  /* The user can associate with a thread values it want to return from one of
+     the thread's frame.  */
+  std::unique_ptr<struct prepared_return_values> prepared_return_values;
 
 private:
   /* True if this thread is resumed from infrun's perspective.

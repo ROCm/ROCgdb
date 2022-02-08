@@ -44,6 +44,7 @@ foo ()
       /* RETURN HERE.  */
       return 8;
     }
+  /* RETURN2 HERE.  */
   return 6;
 }
 
@@ -72,6 +73,7 @@ f ()
     }
 
   int returned_value = bar ();
+  returned_value = bar ();
 }
 
 __global__ void

@@ -171,9 +171,12 @@ proc_with_prefix return_force_value_all_active_lanes_at_callsite {} {
 
     gdb_test "finish"
 
+    # Go past the end of the line so the returned value is assigned
+    # to the variable we are about to inspect.
+    gdb_test "until +1"
+
     # The return value for lane 0 and 2 is the one we specified
     # with the return command, the other lanes (1 and 3) return 0.
-    gdb_test "next"
     foreach_with_prefix lane {0 2} {
 	gdb_test "lane $lane" "\\\[Switching to thread $::decimal, lane $lane .*"
 	gdb_test "p returned_value" "= 42"
@@ -182,6 +185,56 @@ proc_with_prefix return_force_value_all_active_lanes_at_callsite {} {
 	gdb_test "lane $lane" "\\\[Switching to thread $::decimal, lane $lane .*"
 	gdb_test "p returned_value" "= 0"
     }
+}
+
+proc_with_prefix return_per_lane_value {} {
+    gdb_breakpoint [gdb_get_line_number "RETURN2 HERE"]
+    gdb_continue_to_breakpoint "break in foo"
+    gdb_test "frame 1" "\\#1  $::hex in bar \\(\\) at .*"
+
+    # Set the default return value on 21
+    gdb_test_no_output "return-prepare 21"
+
+    # Lane 1 and 2 will return their lane number.
+    gdb_test_no_output "lane apply  1-2 -s -preserve-frame -- return-prepare \$_lane"
+
+    # Check the prepared return value
+    set space "\[ \t\]"
+    gdb_test "info return" \
+	[multi_line "$space*Lane$space+Active$space+Return value$space*" \
+		    "$space*0$space+A$space+21$space*"\
+		    "$space*1$space+A$space+1$space*"\
+		    "$space*2$space+A$space+2$space*"\
+		    "$space*3$space+A$space*default \\(21\\)$space*"]
+
+    with_test_prefix "info return other frame" {
+	gdb_test "up"
+	gdb_test "info return" "warning: Return values are prepared for a frame different from the currently selected one."
+	gdb_test "down"
+    }
+
+    gdb_test_multiple "return" "" {
+	-re "Make bar\\(\\) return now.*y or n. $" {
+	    send_gdb "y\n"
+	    exp_continue
+	}
+	-re ".*returned_value = bar \\(\\);.*$::gdb_prompt $" {
+	    pass $gdb_test_name
+	}
+    }
+
+    # Go past the end of the line so the returned value is assigned
+    # to the variable we are about to inspect.
+    gdb_test "until +1"
+
+    gdb_test "lane 0" "\\\[Switching to thread $::decimal, lane 0.*"
+    gdb_test "print returned_value" "= 21" "value returned lane 0"
+    gdb_test "lane 1" "\\\[Switching to thread $::decimal, lane 1.*"
+    gdb_test "print returned_value" "= 1" "value returned lane 1"
+    gdb_test "lane 2" "\\\[Switching to thread $::decimal, lane 2.*"
+    gdb_test "print returned_value" "= 2" "value returned lane 2"
+    gdb_test "lane 3" "\\\[Switching to thread $::decimal, lane 3.*"
+    gdb_test "print returned_value" "= 21" "value returned lane 3"
 }
 
 with_rocm_gpu_lock {
@@ -194,6 +247,7 @@ with_rocm_gpu_lock {
 
     return_scalar
     return_force_value_all_active_lanes_at_callsite
+    return_per_lane_value
 
     gdb_continue_to_end "finish process" continue 1
 }

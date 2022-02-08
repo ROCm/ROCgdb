@@ -2819,12 +2819,70 @@ return_arg::return_arg (const char *expr, frame_info *thisframe,
 
 } // anonymous namespace
 
-void
-return_command (const char *retval_exp, int from_tty)
+/* TODO Base this on top of lane-divergence support.  */
+
+static simd_lanes_mask_t
+active_lanes_in_frame (struct frame_info *frame)
 {
+  scoped_restore_selected_frame restore_frame;
+  select_frame (frame);
+
+  expression_up retval_expr = parse_expression ("$exec");
+  struct value *val = evaluate_expression (retval_expr.get ());
+
+  return (simd_lanes_mask_t) value_as_long (val);
+}
+
+struct return_prepare_options
+{
+  bool set_default = false;
+};
+
+static const gdb::option::option_def return_prepare_option_defs[] = {
+  gdb::option::flag_option_def<return_prepare_options> {
+    "default",
+    [] (return_prepare_options *opts) { return &opts->set_default; },
+    _("Use this value for all lanes which did not specify an explicit value"),
+  }
+};
+
+static inline std::array<gdb::option::option_def_group, 2>
+make_return_prepare_options_def_group (return_prepare_options *rpo)
+{
+  return {{
+    { { return_prepare_option_defs }, rpo }
+  }};
+}
+
+static void
+return_prepare_command_completer (cmd_list_element *ignore,
+				  completion_tracker &tracker,
+				  const char *text, const char * /*word*/)
+{
+  const auto grp = make_return_prepare_options_def_group (nullptr);
+  tracker.set_use_custom_word_point (true);
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, grp))
+    return;
+
+  const char *word
+    = advance_to_expression_complete_word_point (tracker, text);
+  expression_completer (ignore, tracker, text, word);
+}
+
+static void
+return_prepare_command (const char *exp, int from_tty)
+{
+  return_prepare_options opts;
+  auto group = make_return_prepare_options_def_group (&opts);
+  gdb::option::process_options
+    (&exp, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group);
+
   struct frame_info *thisframe;
   struct gdbarch *gdbarch;
   struct symbol *thisfun;
+  thread_info *current_thread = inferior_thread ();
+  const int lane = current_thread->current_simd_lane ();
 
   thisframe = get_selected_frame ("No selected frame.");
   thisfun = get_frame_function (thisframe);
@@ -2837,7 +2895,172 @@ return_command (const char *retval_exp, int from_tty)
      let it bail.  If the return type can't be handled, set
      RETURN_VALUE to NULL, and QUERY_PREFIX to an informational
      message.  */
-  return_arg return_value (retval_exp, thisframe, thisfun, gdbarch);
+  return_arg return_value (exp, thisframe, thisfun, gdbarch);
+
+  if (return_value.return_value == nullptr && return_value.query_prefix != "")
+    warning ("%s", return_value.query_prefix.c_str ());
+
+  if (current_thread->prepared_return_values != nullptr
+      && !frame_id_eq (current_thread->prepared_return_values->frame,
+		       get_frame_id (thisframe)))
+    {
+      warning (_("replacing prepared return values for another frame."));
+      current_thread->prepared_return_values.reset ();
+    }
+
+  if (return_value.return_value == nullptr)
+    {
+      /* If the user did not provide a value, this means that she/he wants to
+         reset any previously explicit value for the current lane, if any.  */
+      if (current_thread->prepared_return_values != nullptr)
+	{
+	  auto &values = current_thread->prepared_return_values->values;
+	  auto val_for_lane = values.find (lane);
+	  if (val_for_lane != values.end ())
+	    values.erase (val_for_lane);
+	}
+
+      return;
+    }
+
+  if (current_thread->prepared_return_values == nullptr)
+      current_thread->prepared_return_values.reset
+	(new prepared_return_values (return_value.function,
+				     return_value.rv_conv,
+				     get_frame_id (thisframe),
+				     return_value.return_value));
+
+  if (opts.set_default)
+    {
+      value_incref (return_value.return_value);
+      current_thread->prepared_return_values->default_value.reset
+        (return_value.return_value);
+    }
+
+  auto &rvs = current_thread->prepared_return_values.get ()->values;
+
+  auto search = rvs.find (lane);
+  value_incref (return_value.return_value);
+  if (search == rvs.end ())
+    rvs.insert ({ lane, value_ref_ptr (return_value.return_value) });
+  else
+    search->second.reset (return_value.return_value);
+}
+
+static void
+info_return_command (const char *exp, int from_tty)
+{
+  thread_info *current_thread = inferior_thread ();
+
+  if (current_thread->prepared_return_values == nullptr)
+    {
+      printf_filtered (_("No value prepared\n"));
+      return;
+    }
+
+  struct ui_out *ui_out = current_uiout;
+  struct frame_info *frame = get_selected_frame ("No stack.");
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct frame_info *callsite;
+
+  {
+    int count = 1;
+    callsite = find_relative_frame (frame, &count);
+    if (count != 0)
+      error (_("Cannot find caller frame."));
+  }
+  const auto mask = active_lanes_in_frame (callsite);
+  const int num_lanes = gdbarch_used_lanes_count (gdbarch, current_thread);
+  const prepared_return_values *pr
+    = current_thread->prepared_return_values.get ();
+
+  if (!frame_id_eq (pr->frame, get_frame_id (frame)))
+    {
+      warning (_("Return values are prepared for a frame different from "
+		 "the currently selected one."));
+      return;
+    }
+
+  ui_out_emit_table table_emitter (ui_out, 3, num_lanes, "ret_values");
+
+  ui_out->table_header (5, ui_right, "lane", _("Lane"));
+  ui_out->table_header (7, ui_right, "active", _("Active"));
+  ui_out->table_header (0, ui_left, "return_value", _("Return value"));
+  ui_out->table_body ();
+
+  struct value_print_options opts;
+  get_user_print_options (&opts);
+
+  for (int lane_id = 0; lane_id < num_lanes; ++lane_id)
+    {
+      ui_out_emit_tuple tuple_emitter (ui_out, "value");
+
+      ui_out->field_signed ("lane", lane_id);
+
+      if ((mask & (1 << lane_id)) != 0)
+	{
+	  ui_out->field_string ("active", "A");
+
+	  string_file stb;
+	  common_val_print (pr->value_for_lane (lane_id), &stb, 0, &opts,
+			    current_language);
+	  if (pr->values.find (lane_id) == pr->values.end ())
+	    stb = string_printf (_("default (%s)"), stb.c_str ());
+
+	  ui_out->field_stream ("return_value", stb);
+	}
+      else
+	ui_out->field_string ("active", "I");
+
+      ui_out->text ("\n");
+    }
+}
+
+void
+return_command (const char *retval_exp, int from_tty)
+{
+  struct frame_info *thisframe;
+  struct gdbarch *gdbarch;
+  struct symbol *thisfun;
+
+  thisframe = get_selected_frame ("No selected frame.");
+  thisfun = get_frame_function (thisframe);
+  gdbarch = get_frame_arch (thisframe);
+  std::unique_ptr<prepared_return_values> prv;
+
+  if (get_frame_type (get_current_frame ()) == INLINE_FRAME)
+    error (_("Can not force return from an inlined function."));
+
+  /* Check if some return value have been prepared.  */
+  if (inferior_thread ()->prepared_return_values != nullptr
+      && frame_id_eq (get_frame_id (thisframe),
+		      inferior_thread ()->prepared_return_values->frame))
+    prv = std::move (inferior_thread ()->prepared_return_values);
+
+  std::string query_prefix;
+  {
+    /* Compute the return value from argument.  If the computation triggers
+       an error, let it bail.  If the return type can't be handled, set
+       RETURN_VALUE to NULL, and QUERY_PREFIX to an informational message.
+    */
+    return_arg return_value (retval_exp, thisframe, thisfun, gdbarch);
+
+    /* If the user gave an argument, use it as default return value.  */
+    if (return_value.return_value != nullptr)
+      {
+	if (prv != nullptr)
+	  {
+	    value_incref (return_value.return_value);
+	    prv->default_value.reset (return_value.return_value);
+	  }
+	else
+	  prv.reset (new prepared_return_values (return_value.function,
+						 return_value.rv_conv,
+						 get_frame_id (thisframe),
+						 return_value.return_value));
+	query_prefix = std::move (return_value.query_prefix);
+      }
+  }
 
   /* Does an interactive user really want to do this?  Include
      information, such as how well GDB can handle the return value, in
@@ -2848,13 +3071,13 @@ return_command (const char *retval_exp, int from_tty)
 
       if (thisfun == NULL)
 	confirmed = query (_("%sMake selected stack frame return now? "),
-			   return_value.query_prefix.c_str ());
+			   query_prefix.c_str ());
       else
 	{
 	  if (TYPE_NO_RETURN (thisfun->type ()))
 	    warning (_("Function does not return normally to caller."));
 	  confirmed = query (_("%sMake %s return now? "),
-			     return_value.query_prefix.c_str (),
+			     query_prefix.c_str (),
 			     thisfun->print_name ());
 	}
       if (!confirmed)
@@ -2865,13 +3088,12 @@ return_command (const char *retval_exp, int from_tty)
   frame_pop (get_selected_frame (NULL));
 
   /* Store RETURN_VALUE in the just-returned register set.  */
-  if (return_value.return_value != nullptr)
+  if (prv != nullptr)
     {
-      struct type *return_type = value_type (return_value.return_value);
+      struct type *return_type = value_type (prv->default_value.get ());
       struct gdbarch *cache_arch = get_current_regcache ()->arch ();
-
-      gdb_assert (return_value.rv_conv != RETURN_VALUE_STRUCT_CONVENTION
-	      && return_value.rv_conv != RETURN_VALUE_ABI_RETURNS_ADDRESS);
+      gdb_assert (prv->rv_conv != RETURN_VALUE_STRUCT_CONVENTION
+		  && prv->rv_conv != RETURN_VALUE_ABI_RETURNS_ADDRESS);
 
       thread_info *thr = inferior_thread ();
       const simd_lanes_mask_t mask = thr->active_simd_lanes_mask ();
@@ -2880,10 +3102,11 @@ return_command (const char *retval_exp, int from_tty)
       for_active_lanes (mask, [&] (int lane)
 	{
 	  thr->set_current_simd_lane (lane);
+	  value *v = prv->value_for_lane (lane);
 	  gdbarch_return_value
-	    (cache_arch, return_value.function, return_type,
+	    (cache_arch, prv->function, return_type,
 	     get_current_regcache (), nullptr /*read*/,
-	     value_contents (return_value.return_value).data () /*write*/);
+	     value_contents (v).data () /*write*/);
 	  return true;
 	});
     }
@@ -3343,6 +3566,15 @@ Make selected stack frame return to its caller.\n\
 Control remains in the debugger, but when you continue\n\
 execution will resume in the frame above the one now selected.\n\
 If an argument is given, it is an expression for the value to return."));
+
+  cmd = add_com ("return-prepare", class_stack, return_prepare_command, _("\
+Save a value to be returned from the current frame when calling return"));
+  set_cmd_completer_handle_brkchars (cmd, return_prepare_command_completer);
+
+  add_com ("return-status", class_stack, info_return_command, _("\
+Show the currently stashed values."));
+  add_info ("return", info_return_command,
+	    _("Show values the return-commit command will use."));
 
   add_com ("up", class_stack, up_command, _("\
 Select and print stack frame that called this one.\n\

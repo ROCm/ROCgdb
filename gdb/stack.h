@@ -20,6 +20,57 @@
 #ifndef STACK_H
 #define STACK_H
 
+#include <map>
+#include "defs.h"
+#include "frame.h"
+#include "value.h"
+
+/* Using the return-prepare command, a user can set values that will be used
+   by the return command later.  The prepared_return_value class is indended
+   to capture all the information which needs be remembered between those two
+   commands.
+
+   This is intended to be used with SIMT threads where each lane of the thread
+   can return a distinct value.  */
+
+struct prepared_return_values
+{
+  explicit prepared_return_values (value *function,
+				   enum return_value_convention rvc,
+				   frame_id fi,
+				   value *default_value)
+    : function (function), rv_conv (rvc), frame (fi),
+      default_value (default_value)
+  {
+    value_incref (default_value);
+  }
+
+  value *value_for_lane (int lane) const
+    {
+      auto search = values.find (lane);
+      if (search == values.end ())
+	return default_value.get ();
+      else
+	return search->second.get ();
+    }
+
+  /* The function we are returning from.  */
+  struct value *function;
+
+  /* The return value contention used to return from m_frame_id. */
+  enum return_value_convention rv_conv;
+
+  /* The frame the values are being prepared for.  */
+  struct frame_id frame;
+
+  /* The values which will be returned for each lane.  */
+  std::map<int, value_ref_ptr> values;
+
+  /* For any active lane which does not have a value provided in m_values, use
+     m_default_value.  */
+  value_ref_ptr default_value;
+};
+
 gdb::unique_xmalloc_ptr<char> find_frame_funname (struct frame_info *frame,
 						  enum language *funlang,
 						  struct symbol **funcp);
