@@ -1251,12 +1251,9 @@ frame_unwind_register_value (frame_info *next_frame, int regnum)
 	    fprintf_unfiltered (&debug_file, " register=%d",
 				VALUE_REGNUM (value));
 	  else if (VALUE_LVAL (value) == lval_memory)
-	    {
-	      const char *addr_str
-		= paspace_and_addr (gdbarch, value_address (value)).c_str ();
-
-	      fprintf_unfiltered (&debug_file, " address=%s", addr_str);
-	    }
+	    fprintf_unfiltered
+	      (&debug_file, " address=%s",
+	       paspace_and_addr (gdbarch, value_address (value)).c_str ());
 	  else
 	    fprintf_unfiltered (&debug_file, " computed");
 
