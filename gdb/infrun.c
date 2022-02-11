@@ -8633,11 +8633,11 @@ normal_stop (void)
      informing of a stop.  */
   if (!non_stop
       && target_has_execution ()
-      && (previous_inferior_ptid != inferior_ptid
-	  || previous_lane != inferior_thread ()->current_simd_lane ())
       && last.kind () != TARGET_WAITKIND_SIGNALLED
       && last.kind () != TARGET_WAITKIND_EXITED
-      && last.kind () != TARGET_WAITKIND_NO_RESUMED)
+      && last.kind () != TARGET_WAITKIND_NO_RESUMED
+      && (previous_inferior_ptid != inferior_ptid
+	  || previous_lane != inferior_thread ()->current_simd_lane ()))
     {
       thread_info *thr = inferior_thread ();
 
