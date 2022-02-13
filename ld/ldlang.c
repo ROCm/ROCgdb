@@ -5665,9 +5665,10 @@ os_region_check (lang_output_section_statement_type *os,
 }
 
 static void
-ldlang_check_relro_region (lang_statement_union_type *s,
-			   seg_align_type *seg)
+ldlang_check_relro_region (lang_statement_union_type *s)
 {
+  seg_align_type *seg = &expld.dataseg;
+
   if (seg->relro == exp_seg_relro_start)
     {
       if (!seg->relro_start_stat)
@@ -6166,7 +6167,7 @@ lang_size_sections_1
 			   output_section_statement->bfd_section,
 			   &newdot);
 
-	    ldlang_check_relro_region (s, &expld.dataseg);
+	    ldlang_check_relro_region (s);
 
 	    expld.dataseg.relro = exp_seg_relro_none;
 
@@ -6346,18 +6347,19 @@ one_lang_size_sections_pass (bool *relax, bool check_regions)
 }
 
 static bool
-lang_size_segment (seg_align_type *seg)
+lang_size_segment (void)
 {
   /* If XXX_SEGMENT_ALIGN XXX_SEGMENT_END pair was seen, check whether
      a page could be saved in the data segment.  */
+  seg_align_type *seg = &expld.dataseg;
   bfd_vma first, last;
 
-  first = -seg->base & (seg->pagesize - 1);
-  last = seg->end & (seg->pagesize - 1);
+  first = -seg->base & (seg->commonpagesize - 1);
+  last = seg->end & (seg->commonpagesize - 1);
   if (first && last
-      && ((seg->base & ~(seg->pagesize - 1))
-	  != (seg->end & ~(seg->pagesize - 1)))
-      && first + last <= seg->pagesize)
+      && ((seg->base & ~(seg->commonpagesize - 1))
+	  != (seg->end & ~(seg->commonpagesize - 1)))
+      && first + last <= seg->commonpagesize)
     {
       seg->phase = exp_seg_adjust;
       return true;
@@ -6368,14 +6370,14 @@ lang_size_segment (seg_align_type *seg)
 }
 
 static bfd_vma
-lang_size_relro_segment_1 (seg_align_type *seg)
+lang_size_relro_segment_1 (void)
 {
+  seg_align_type *seg = &expld.dataseg;
   bfd_vma relro_end, desired_end;
   asection *sec;
 
   /* Compute the expected PT_GNU_RELRO/PT_LOAD segment end.  */
-  relro_end = ((seg->relro_end + seg->pagesize - 1)
-	       & ~(seg->pagesize - 1));
+  relro_end = (seg->relro_end + seg->relropagesize - 1) & -seg->relropagesize;
 
   /* Adjust by the offset arg of XXX_SEGMENT_RELRO_END.  */
   desired_end = relro_end - seg->relro_offset;
@@ -6416,7 +6418,7 @@ lang_size_relro_segment (bool *relax, bool check_regions)
   if (link_info.relro && expld.dataseg.relro_end)
     {
       bfd_vma data_initial_base = expld.dataseg.base;
-      bfd_vma data_relro_end = lang_size_relro_segment_1 (&expld.dataseg);
+      bfd_vma data_relro_end = lang_size_relro_segment_1 ();
 
       lang_reset_memory_regions ();
       one_lang_size_sections_pass (relax, check_regions);
@@ -6425,11 +6427,11 @@ lang_size_relro_segment (bool *relax, bool check_regions)
 	 script have increased padding over the original.  Revert.  */
       if (expld.dataseg.relro_end > data_relro_end)
 	{
-	  expld.dataseg.base = data_initial_base;;
+	  expld.dataseg.base = data_initial_base;
 	  do_reset = true;
 	}
     }
-  else if (lang_size_segment (&expld.dataseg))
+  else if (lang_size_segment ())
     do_reset = true;
 
   return do_reset;
@@ -7680,7 +7682,6 @@ find_relro_section_callback (lang_wild_statement_type *ptr ATTRIBUTE_UNUSED,
 
 static void
 lang_find_relro_sections_1 (lang_statement_union_type *s,
-			    seg_align_type *seg,
 			    bool *has_relro_section)
 {
   if (*has_relro_section)
@@ -7688,7 +7689,7 @@ lang_find_relro_sections_1 (lang_statement_union_type *s,
 
   for (; s != NULL; s = s->header.next)
     {
-      if (s == seg->relro_end_stat)
+      if (s == expld.dataseg.relro_end_stat)
 	break;
 
       switch (s->header.type)
@@ -7700,15 +7701,15 @@ lang_find_relro_sections_1 (lang_statement_union_type *s,
 	  break;
 	case lang_constructors_statement_enum:
 	  lang_find_relro_sections_1 (constructor_list.head,
-				      seg, has_relro_section);
+				      has_relro_section);
 	  break;
 	case lang_output_section_statement_enum:
 	  lang_find_relro_sections_1 (s->output_section_statement.children.head,
-				      seg, has_relro_section);
+				      has_relro_section);
 	  break;
 	case lang_group_statement_enum:
 	  lang_find_relro_sections_1 (s->group_statement.children.head,
-				      seg, has_relro_section);
+				      has_relro_section);
 	  break;
 	default:
 	  break;
@@ -7724,7 +7725,7 @@ lang_find_relro_sections (void)
   /* Check all sections in the link script.  */
 
   lang_find_relro_sections_1 (expld.dataseg.relro_start_stat,
-			      &expld.dataseg, &has_relro_section);
+			      &has_relro_section);
 
   if (!has_relro_section)
     link_info.relro = false;
