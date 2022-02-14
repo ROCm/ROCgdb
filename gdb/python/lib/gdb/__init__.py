@@ -248,23 +248,3 @@ def with_parameter(name, value):
         yield None
     finally:
         set_parameter(name, old_value)
-
-
-try:
-    from pygments import formatters, lexers, highlight
-
-    def colorize(filename, contents):
-        # Don't want any errors.
-        try:
-            lexer = lexers.get_lexer_for_filename(filename, stripnl=False)
-            formatter = formatters.TerminalFormatter()
-            return highlight(contents, lexer, formatter).encode(
-                host_charset(), "backslashreplace"
-            )
-        except:
-            return None
-
-except:
-
-    def colorize(filename, contents):
-        return None
