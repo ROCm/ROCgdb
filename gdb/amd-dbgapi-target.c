@@ -2483,6 +2483,9 @@ amd_dbgapi_target::close ()
   status = amd_dbgapi_initialize (&dbgapi_callbacks);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd-dbgapi failed to initialize (rc=%d)"), status);
+
+  if (amd_dbgapi_async_event_handler != nullptr)
+    delete_async_event_handler (&amd_dbgapi_async_event_handler);
 }
 
 /* Implementation of `_wave_id' variable.  */
