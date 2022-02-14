@@ -792,7 +792,7 @@ generic_value_print_char (struct value *value, struct ui_file *stream,
       else
 	fprintf_filtered (stream, "%d", (int) val);
       fputs_filtered (" ", stream);
-      LA_PRINT_CHAR (val, unresolved_type, stream);
+      current_language->printchar (val, unresolved_type, stream);
     }
 }
 
@@ -2768,10 +2768,9 @@ val_print_string (struct type *elttype, const char *encoding,
      But if we fetch something and then get an error, print the string
      and then the error message.  */
   if (err == 0 || bytes_read > 0)
-    {
-      LA_PRINT_STRING (stream, elttype, buffer.get (), bytes_read / width,
-		       encoding, force_ellipsis, options);
-    }
+    current_language->printstr (stream, elttype, buffer.get (),
+				bytes_read / width,
+				encoding, force_ellipsis, options);
 
   if (err != 0)
     {
