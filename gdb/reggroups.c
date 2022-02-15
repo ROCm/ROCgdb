@@ -188,7 +188,7 @@ reggroups_dump (gdbarch *gdbarch, ui_out *out)
 
   for (const struct reggroup *group : gdbarch_reggroups (gdbarch))
     {
-      ui_out_emit_tuple tuple_emitter (out, nullptr);
+      ui_out_emit_tuple tuple_emitter (out);
 
       /* Group name.  */
       out->field_string ("group", group->name ());

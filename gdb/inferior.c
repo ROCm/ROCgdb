@@ -588,7 +588,7 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
       if (!number_is_in_list (requested_inferiors, inf->num))
 	continue;
 
-      ui_out_emit_tuple tuple_emitter (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout);
 
       if (inf == current_inf)
 	uiout->field_string ("current", "*");

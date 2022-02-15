@@ -1237,7 +1237,7 @@ maintenance_info_bfds (const char *arg, int from_tty)
   for (auto abfd : all_bfds)
     {
       auto gdata = static_cast<gdb_bfd_data *> (bfd_usrdata (abfd));
-      ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+      ui_out_emit_tuple tuple_emitter (uiout);
       uiout->field_signed ("refcount", gdata->refc);
       uiout->field_string ("addr", host_address_to_string (abfd));
       uiout->field_string ("filename", bfd_get_filename (abfd),

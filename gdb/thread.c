@@ -1186,7 +1186,7 @@ do_print_thread (ui_out *uiout, const char *requested_threads,
 			    global_ids, pid, tp))
     return;
 
-  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+  ui_out_emit_tuple tuple_emitter (uiout);
 
   if (!uiout->is_mi_like_p ())
     {

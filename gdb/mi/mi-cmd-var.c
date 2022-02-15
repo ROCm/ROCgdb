@@ -679,7 +679,7 @@ varobj_update_one (struct varobj *var, enum print_values print_values,
     {
       int from, to;
 
-      ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+      ui_out_emit_tuple tuple_emitter (uiout);
       uiout->field_string ("name", varobj_get_objname (r.varobj));
 
       switch (r.status)
@@ -737,7 +737,7 @@ varobj_update_one (struct varobj *var, enum print_values print_values,
 
 	  for (varobj *child : r.newobj)
 	    {
-	      ui_out_emit_tuple inner_tuple_emitter (uiout, NULL);
+	      ui_out_emit_tuple inner_tuple_emitter (uiout);
 	      print_varobj (child, print_values, 1 /* print_expression */);
 	    }
 	}

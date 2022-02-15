@@ -331,7 +331,7 @@ gdb_pretty_print_disassembler::pretty_print_insn (const struct disasm_insn *insn
   struct gdbarch *gdbarch = arch ();
 
   {
-    ui_out_emit_tuple tuple_emitter (m_uiout, NULL);
+    ui_out_emit_tuple tuple_emitter (m_uiout);
     pc = insn->addr;
 
     if (insn->number != 0)

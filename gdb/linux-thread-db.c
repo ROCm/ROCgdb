@@ -1936,7 +1936,7 @@ info_auto_load_libthread_db (const char *args, int from_tty)
     /* Note I is incremented inside the cycle, not at its end.  */
     for (i = 0; i < array.size ();)
       {
-	ui_out_emit_tuple tuple_emitter (uiout, NULL);
+	ui_out_emit_tuple tuple_emitter (uiout);
 
 	info = array[i];
 	uiout->field_string ("filename", info->filename,

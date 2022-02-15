@@ -725,7 +725,7 @@ mi_output_solib_attribs_1 (ui_out *uiout, const solib &solib,
       uiout->field_fmt ("thread-group", "i%d", current_inferior ()->num);
 
   ui_out_emit_list list_emitter (uiout, "ranges");
-  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+  ui_out_emit_tuple tuple_emitter (uiout);
   if (solib.addr_high != 0)
     {
       uiout->field_core_addr ("from", gdbarch, solib.addr_low);

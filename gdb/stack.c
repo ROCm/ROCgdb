@@ -424,7 +424,7 @@ print_frame_arg (const frame_print_options &fp_opts,
 		  && arg->entry_kind == print_entry_values_compact));
 
   annotate_arg_emitter arg_emitter;
-  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+  ui_out_emit_tuple tuple_emitter (uiout);
   gdb_puts (arg->sym->print_name (), &stb);
   if (arg->entry_kind == print_entry_values_compact)
     {

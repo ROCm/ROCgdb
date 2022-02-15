@@ -7009,7 +7009,7 @@ print_one_breakpoint (breakpoint *b, const bp_location **last_loc, int allflag)
 	  int n = 1;
 	  for (bp_location &loc : b->locations ())
 	    {
-	      ui_out_emit_tuple loc_tuple_emitter (uiout, NULL);
+	      ui_out_emit_tuple loc_tuple_emitter (uiout);
 	      print_one_breakpoint_location (b, &loc, n, last_loc,
 					     allflag, allflag);
 	      n++;

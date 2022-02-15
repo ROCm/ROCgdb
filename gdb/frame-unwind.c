@@ -453,7 +453,7 @@ maintenance_info_frame_unwinders (const char *args, int from_tty)
 
   for (const auto &unwinder : table)
     {
-      ui_out_emit_list tuple_emitter (uiout, nullptr);
+      ui_out_emit_list tuple_emitter (uiout);
       uiout->field_string ("name", unwinder->name ());
       uiout->field_string ("type", frame_type_str (unwinder->type ()));
       uiout->field_string ("class", frame_unwinder_class_str (

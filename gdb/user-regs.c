@@ -223,7 +223,7 @@ maintenance_print_user_registers (const char *args, int from_tty)
 
   for (reg = regs->first; reg != NULL; reg = reg->next, ++regnum)
     {
-      ui_out_emit_tuple tuple_emitter (current_uiout, nullptr);
+      ui_out_emit_tuple tuple_emitter (current_uiout);
       current_uiout->field_string ("name", reg->name);
       current_uiout->field_signed ("regnum", regnum);
       current_uiout->text ("\n");

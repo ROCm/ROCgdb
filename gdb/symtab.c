@@ -4385,7 +4385,7 @@ output_source_filename_data::output (const char *disp_name,
   if (!m_filter.matches (fullname))
     return;
 
-  ui_out_emit_tuple ui_emitter (m_uiout, nullptr);
+  ui_out_emit_tuple ui_emitter (m_uiout);
 
   /* Print it and reset *FIRST.  */
   if (!m_first)

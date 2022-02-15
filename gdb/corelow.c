@@ -1940,7 +1940,7 @@ core_target::info_proc_mappings (struct gdbarch *gdbarch)
       ULONGEST file_ofs = tsp.the_bfd_section->filepos;
       const char *filename = bfd_get_filename (tsp.the_bfd_section->owner);
 
-      ui_out_emit_tuple tuple_emitter (current_uiout, nullptr);
+      ui_out_emit_tuple tuple_emitter (current_uiout);
       current_uiout->field_core_addr ("start", gdbarch, start);
       current_uiout->field_core_addr ("end", gdbarch, end);
       /* These next two aren't really addresses and so shouldn't be

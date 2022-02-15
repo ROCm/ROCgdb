@@ -55,7 +55,7 @@ mi_cmd_info_ada_exceptions (const char *command, const char *const *argv,
 
   for (const ada_exc_info &info : exceptions)
     {
-      ui_out_emit_tuple tuple_emitter (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout);
       uiout->field_string ("name", info.name);
       uiout->field_core_addr ("address", gdbarch, info.addr);
     }

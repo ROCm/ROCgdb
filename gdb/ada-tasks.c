@@ -1137,7 +1137,7 @@ print_ada_task_info (struct ui_out *uiout,
       if (taskno_arg && taskno != taskno_arg)
 	continue;
 
-      ui_out_emit_tuple tuple_emitter (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout);
 
       /* Print a star if this task is the current task (or the task
 	 currently selected).  */

@@ -421,7 +421,7 @@ class ui_out_emit_type
 {
 public:
 
-  ui_out_emit_type (struct ui_out *uiout, const char *id)
+  ui_out_emit_type (struct ui_out *uiout, const char *id = nullptr)
     : m_uiout (uiout)
   {
     uiout->begin (Type, id);
