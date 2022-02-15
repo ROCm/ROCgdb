@@ -1422,19 +1422,27 @@ advance_command (const char *arg, int from_tty)
   until_break_command (arg, from_tty, 1);
 }
 
-/* Return the value of the result of a function at the end of a 'finish'
-   command/BP.  DTOR_DATA (if not NULL) can represent inferior registers
-   right after an inferior call has finished.  */
+/* See inferior.h.  */
 
 struct value *
-get_return_value (struct value *function, struct type *value_type)
+get_return_value (struct symbol *func_symbol, struct value *function)
 {
   regcache *stop_regs = get_current_regcache ();
   struct gdbarch *gdbarch = stop_regs->arch ();
   struct value *value;
 
-  value_type = check_typedef (value_type);
+  struct type *value_type
+    = check_typedef (TYPE_TARGET_TYPE (func_symbol->type ()));
   gdb_assert (value_type->code () != TYPE_CODE_VOID);
+
+  if (is_nocall_function (check_typedef (::value_type (function))))
+    {
+      warning (_("Function '%s' does not follow the target calling "
+		 "convention, cannot determine its returned value."),
+	       func_symbol->print_name ());
+
+      return nullptr;
+    }
 
   /* FIXME: 2003-09-27: When returning from a nested inferior function
      call, it's possible (with no help from the architecture vector)
@@ -1594,7 +1602,7 @@ finish_command_fsm::should_stop (struct thread_info *tp)
 	  struct value *func;
 
 	  func = read_var_value (function, NULL, get_current_frame ());
-	  rv->value = get_return_value (func, rv->type);
+	  rv->value = get_return_value (function, func);
 	  if (rv->value != NULL)
 	    rv->value_history_index = record_latest_value (rv->value);
 	}
