@@ -1171,6 +1171,9 @@ typedef struct bfd_section
     This is used when support for non-contiguous memory regions is enabled.  */
  struct bfd_section *already_assigned;
 
+  /* Explicitly specified section type, if non-zero. */
+  unsigned int type;
+
 } asection;
 
 /* Relax table contains information about instructions which can
@@ -1353,8 +1356,8 @@ discarded_section (const asection *sec)
   /* symbol,                    symbol_ptr_ptr,                     */ \
      (struct bfd_symbol *) SYM, &SEC.symbol,                           \
                                                                        \
-  /* map_head, map_tail, already_assigned                           */ \
-     { NULL }, { NULL }, NULL                                          \
+  /* map_head, map_tail, already_assigned, type                     */ \
+     { NULL }, { NULL }, NULL, 0                                       \
                                                                        \
     }
 
