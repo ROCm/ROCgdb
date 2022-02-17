@@ -550,12 +550,8 @@ amdgcn_integer_to_address (struct gdbarch *gdbarch,
 			   struct type *type, const gdb_byte *buf,
 			   arch_addr_space_id address_space_id)
 {
-  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  CORE_ADDR segment_address
-    = extract_signed_integer (buf, TYPE_LENGTH (type), byte_order);
-
   return amdgcn_segment_address_to_core_address (address_space_id,
-						 segment_address);
+						 unpack_long (type, buf));
 }
 
 /* See amdgcn-rocm-tdep.h.  */
