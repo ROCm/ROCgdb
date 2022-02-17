@@ -1,4 +1,4 @@
-/* Target-dependent code for the ROCm amdgcn architecture.
+/* Target-dependent code for the AMDGCN architecture.
 
    Copyright (C) 2019-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
@@ -20,7 +20,7 @@
 
 #include "defs.h"
 
-#include "amdgcn-rocm-tdep.h"
+#include "amdgcn-tdep.h"
 #include "arch-utils.h"
 #include "dwarf2/frame.h"
 #include "frame-base.h"
@@ -971,7 +971,7 @@ amdgcn_integer_to_address (struct gdbarch *gdbarch,
 						 unpack_long (type, buf));
 }
 
-/* See amdgcn-rocm-tdep.h.  */
+/* See amdgcn-tdep.h.  */
 
 arch_addr_space_id
 amdgcn_address_space_id_from_core_address (CORE_ADDR addr)
@@ -979,7 +979,7 @@ amdgcn_address_space_id_from_core_address (CORE_ADDR addr)
   return (addr & AMDGCN_ADDRESS_SPACE_MASK) >> AMDGCN_ADDRESS_SPACE_BIT_OFFSET;
 }
 
-/* See amdgcn-rocm-tdep.h.  */
+/* See amdgcn-tdep.h.  */
 
 CORE_ADDR
 amdgcn_segment_address_from_core_address (CORE_ADDR addr)
@@ -1078,8 +1078,8 @@ amdgcn_address_class_type_flags_to_name (struct gdbarch *gdbarch,
 	 passed in.
 
 	 At the moment, we assume that the language is OpenCL and we
-	 apply 1-1 mapping between its address classes and rocm address
-	 spaces.  */
+	 apply 1-1 mapping between its address classes and the AMDGCN
+	 address spaces.  */
 static CORE_ADDR
 amdgcn_pointer_to_address (struct gdbarch *gdbarch,
 			   struct type *type, const gdb_byte *buf)
@@ -1194,7 +1194,7 @@ amdgcn_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
 }
 
 static simd_lanes_mask_t
-amdgcn_rocm_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
+amdgcn_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
   gdb_static_assert (sizeof (simd_lanes_mask_t) >= sizeof (uint64_t));
 
@@ -1207,7 +1207,7 @@ amdgcn_rocm_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 }
 
 static int
-amdgcn_rocm_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+amdgcn_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 {
   size_t count;
   if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, count)
@@ -1223,7 +1223,7 @@ amdgcn_rocm_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
    work-groups.  */
 
 static int
-amdgcn_rocm_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+amdgcn_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 {
   amd_dbgapi_dispatch_id_t dispatch_id;
   if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH, dispatch_id)
@@ -1233,7 +1233,7 @@ amdgcn_rocm_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 	 may not have an associated dispatch if attaching to a process
 	 with already existing waves.  In that case, all we can do is
 	 claim that all lanes are used.  */
-      return amdgcn_rocm_supported_lanes_count (gdbarch, tp);
+      return amdgcn_supported_lanes_count (gdbarch, tp);
     }
 
   uint32_t grid_sizes[3];
@@ -1483,9 +1483,9 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_max_insn_length (gdbarch, max_insn_length);
 
   /* Lane debugging.  */
-  set_gdbarch_active_lanes_mask (gdbarch, amdgcn_rocm_active_lanes_mask);
-  set_gdbarch_supported_lanes_count (gdbarch, amdgcn_rocm_supported_lanes_count);
-  set_gdbarch_used_lanes_count (gdbarch, amdgcn_rocm_used_lanes_count);
+  set_gdbarch_active_lanes_mask (gdbarch, amdgcn_active_lanes_mask);
+  set_gdbarch_supported_lanes_count (gdbarch, amdgcn_supported_lanes_count);
+  set_gdbarch_used_lanes_count (gdbarch, amdgcn_used_lanes_count);
 
   if (amd_dbgapi_architecture_get_info (
 	architecture_id,
@@ -1564,10 +1564,10 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_amdgcn_rocm_tdep;
+extern initialize_file_ftype _initialize_amdgcn_tdep;
 
 void
-_initialize_amdgcn_rocm_tdep ()
+_initialize_amdgcn_tdep ()
 {
   gdbarch_register (bfd_arch_amdgcn, amdgcn_gdbarch_init, NULL);
 }
