@@ -20,7 +20,7 @@
 
 #include "defs.h"
 
-#include "amdgcn-rocm-tdep.h"
+#include "amdgcn-tdep.h"
 #include "arch-utils.h"
 #include "async-event.h"
 #include "cli/cli-style.h"

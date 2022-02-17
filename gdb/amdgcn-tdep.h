@@ -1,4 +1,4 @@
-/* Target-dependent code the amdgcn architecture.
+/* Target-dependent code for the AMDGCN architecture.
 
    Copyright (C) 2019-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
@@ -93,4 +93,4 @@ arch_addr_space_id amdgcn_address_space_id_from_core_address (CORE_ADDR addr);
 
 CORE_ADDR amdgcn_segment_address_from_core_address (CORE_ADDR addr);
 
-#endif /* amdgcn-rocm-tdep.h */
+#endif /* AMDGCN_TDEP_H */

@@ -1252,7 +1252,7 @@ HFILES_NO_SRCDIR = \
 	amd64-nat.h \
 	amd64-ravenscar-thread.h \
 	amd64-tdep.h \
-	amdgcn-rocm-tdep.h \
+	amdgcn-tdep.h \
 	annotate.h \
 	arc-tdep.h \
 	arch-utils.h \
@@ -2172,7 +2172,7 @@ ALLDEPFILES = \
 	amd64-ravenscar-thread.c \
 	amd64-sol2-tdep.c \
 	amd64-tdep.c \
-	amdgcn-rocm-tdep.c \
+	amdgcn-tdep.c \
 	arc-linux-nat.c \
 	arc-tdep.c \
 	arm.c \
