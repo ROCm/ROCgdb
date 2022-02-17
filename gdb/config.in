@@ -84,6 +84,9 @@
    */
 #undef HAVE_ALLOCA_H
 
+/* Define to 1 if you have the <amd-dbgapi.h> header file. */
+#undef HAVE_AMD_DBGAPI_H
+
 /* Define to 1 if you have the `btowc' function. */
 #undef HAVE_BTOWC
 
@@ -259,8 +262,8 @@
 /* Define if you have the mpfr library. */
 #undef HAVE_LIBMPFR
 
-/* Define to 1 if you have the <rocm-dbgapi.h> header file. */
-#undef HAVE_ROCM_DBGAPI_H
+/* Define to 1 if you have the `rocm-dbgapi' library (-lrocm-dbgapi). */
+#undef HAVE_LIBROCM_DBGAPI
 
 /* Define to 1 if you have the <libunwind-ia64.h> header file. */
 #undef HAVE_LIBUNWIND_IA64_H

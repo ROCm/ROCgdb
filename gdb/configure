@@ -4,7 +4,6 @@
 #
 #
 # Copyright (C) 1992-1996, 1998-2012 Free Software Foundation, Inc.
-# Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 #
 #
 # This configure script is free software; the Free Software Foundation
@@ -773,9 +772,9 @@ PKG_CONFIG_PATH
 PKG_CONFIG
 HAVE_NATIVE_GCORE_TARGET
 TARGET_OBS
+ROCM_DBGAPI_LIBS
 ENABLE_BFD_64_BIT_FALSE
 ENABLE_BFD_64_BIT_TRUE
-ROCM_DBGAPI_LIBS
 subdirs
 GDB_DATADIR
 DEBUGDIR
