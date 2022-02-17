@@ -467,6 +467,23 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 	format = 0;
     }
 
+  /* Printing a pointer type as 'f' doesn't have a meaning,
+     while printing it as 'a' is handled later in the code.  */
+  if (format != 'f' && format != 'a'
+      && type->code () == TYPE_CODE_PTR)
+	{
+	  if (!val_long.has_value ())
+	    val_long.emplace (unpack_long (type, valaddr));
+
+	  fputs_filtered (paspace (gdbarch, *val_long).c_str (), stream);
+	  val_long.emplace
+	    (gdbarch_segment_address_from_core_address (gdbarch, *val_long));
+	  converted_bytes.resize (TYPE_LENGTH (type));
+	  store_signed_integer (converted_bytes.data (), TYPE_LENGTH (type),
+				byte_order, *val_long);
+	  valaddr = converted_bytes.data ();
+	}
+
   switch (format)
     {
     case 'o':
