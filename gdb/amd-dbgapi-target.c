@@ -74,11 +74,11 @@ DEFINE_OBSERVABLE (amd_dbgapi_code_object_list_updated);
 
 #undef DEFINE_OBSERVABLE
 
-/* ROCm-specific inferior data.  */
+/* amd-dbgapi-specific inferior data.  */
 
-struct rocm_inferior_info
+struct amd_dbgapi_inferior_info
 {
-  explicit rocm_inferior_info (inferior *inf) : inf (inf) {}
+  explicit amd_dbgapi_inferior_info (inferior *inf) : inf (inf) {}
 
   /* Backlink to inferior.  */
   inferior *inf;
@@ -89,7 +89,7 @@ struct rocm_inferior_info
   /* The amd_dbgapi_notifier_t for this inferior.  */
   amd_dbgapi_notifier_t notifier{ -1 };
 
-  /* True if the ROCm runtime is loaded.  */
+  /* True if the runtime is loaded.  */
   amd_dbgapi_runtime_state_t runtime_state{
     AMD_DBGAPI_RUNTIME_STATE_UNLOADED
   };
@@ -117,7 +117,7 @@ struct rocm_inferior_info
   std::map<CORE_ADDR, std::pair<CORE_ADDR, amd_dbgapi_watchpoint_id_t>>
     watchpoint_map;
 
-  /* List of pending events the rocm target retrieved from the dbgapi.  */
+  /* List of pending events the amd-dbgapi target retrieved from the dbgapi.  */
   std::list<std::pair<ptid_t, target_waitstatus>> wave_events;
 
   std::unordered_map<thread_info *,
@@ -125,28 +125,30 @@ struct rocm_inferior_info
     stepping_id_map;
 };
 
-static amd_dbgapi_event_id_t rocm_process_event_queue (
+static amd_dbgapi_event_id_t amd_dbgapi_process_event_queue (
   amd_dbgapi_process_id_t process_id = AMD_DBGAPI_PROCESS_NONE,
   amd_dbgapi_event_kind_t until_event_kind = AMD_DBGAPI_EVENT_KIND_NONE);
 
-/* Return the inferior's rocm_inferior_info struct.  */
-static struct rocm_inferior_info *
-get_rocm_inferior_info (struct inferior *inferior = nullptr);
+/* Return the inferior's amd_dbgapi_inferior_info struct.  */
+static struct amd_dbgapi_inferior_info *
+get_amd_dbgapi_inferior_info (struct inferior *inferior = nullptr);
 
-static const target_info rocm_ops_info
-  = { "rocm", N_ ("ROCm GPU debugging support"),
-      N_ ("ROCm GPU debugging support") };
+static const target_info amd_dbgapi_target_info = {
+  "amd-dbgapi",
+  N_("AMD Debugger API"),
+  N_("GPU debugging using the AMD Debugger API")
+};
 
 static amd_dbgapi_log_level_t get_debug_amdgpu_log_level ();
 
-struct rocm_target_ops final : public target_ops
+struct amd_dbgapi_target final : public target_ops
 {
   bool report_thread_events = false;
 
   const target_info &
   info () const override
   {
-    return rocm_ops_info;
+    return amd_dbgapi_target_info;
   }
   strata
   stratum () const override
@@ -234,14 +236,14 @@ struct rocm_target_ops final : public target_ops
   void prevent_new_threads (bool prevent, inferior *inf) override;
 };
 
-/* ROCm's target vector.  */
-static struct rocm_target_ops rocm_ops;
+static struct amd_dbgapi_target the_amd_dbgapi_target;
 
-/* ROCm breakpoint ops.  */
-static struct breakpoint_ops rocm_breakpoint_ops;
+/* amd-dbgapi breakpoint ops.  */
+static struct breakpoint_ops amd_dbgapi_breakpoint_ops;
 
 /* Per-inferior data key.  */
-static const struct inferior_key<rocm_inferior_info> rocm_inferior_data;
+static const struct inferior_key<amd_dbgapi_inferior_info>
+  amd_dbgapi_inferior_data;
 
 /* The async event handler registered with the event loop, indicating that we
    might have events to report to the core and that we'd like our wait method
@@ -249,11 +251,11 @@ static const struct inferior_key<rocm_inferior_info> rocm_inferior_data;
 
    This is nullptr when async is disabled and non-nullptr when async is
    enabled.  */
-static async_event_handler *rocm_async_event_handler = nullptr;
+static async_event_handler *amd_dbgapi_async_event_handler = nullptr;
 
 /* Return the target id string for a given wave.  */
 static std::string
-rocm_target_id_string (amd_dbgapi_wave_id_t wave_id)
+amd_dbgapi_target_id_string (amd_dbgapi_wave_id_t wave_id)
 {
   amd_dbgapi_dispatch_id_t dispatch_id;
   amd_dbgapi_queue_id_t queue_id;
@@ -302,7 +304,7 @@ rocm_target_id_string (amd_dbgapi_wave_id_t wave_id)
 
 /* Return the target id string for a given dispatch.  */
 static std::string
-rocm_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
+amd_dbgapi_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 {
   amd_dbgapi_queue_id_t queue_id;
   amd_dbgapi_agent_id_t agent_id;
@@ -349,7 +351,7 @@ dispatch_pos_string (thread_info *tp)
 
 /* Return the target id string for a given queue.  */
 static std::string
-rocm_target_id_string (amd_dbgapi_queue_id_t queue_id)
+amd_dbgapi_target_id_string (amd_dbgapi_queue_id_t queue_id)
 {
   amd_dbgapi_agent_id_t agent_id;
   amd_dbgapi_os_queue_id_t os_id;
@@ -369,7 +371,7 @@ rocm_target_id_string (amd_dbgapi_queue_id_t queue_id)
 
 /* Return the target id string for a given agent.  */
 static std::string
-rocm_target_id_string (amd_dbgapi_agent_id_t agent_id)
+amd_dbgapi_target_id_string (amd_dbgapi_agent_id_t agent_id)
 {
   amd_dbgapi_os_agent_id_t os_id;
   if (amd_dbgapi_agent_get_info (agent_id, AMD_DBGAPI_AGENT_INFO_OS_ID,
@@ -565,29 +567,29 @@ lane_target_id_string (thread_info *tp, int lane)
 static void
 async_event_handler_clear ()
 {
-  gdb_assert (rocm_async_event_handler != nullptr);
-  clear_async_event_handler (rocm_async_event_handler);
+  gdb_assert (amd_dbgapi_async_event_handler != nullptr);
+  clear_async_event_handler (amd_dbgapi_async_event_handler);
 }
 
 static void
 async_event_handler_mark ()
 {
-  gdb_assert (rocm_async_event_handler != nullptr);
-  mark_async_event_handler (rocm_async_event_handler);
+  gdb_assert (amd_dbgapi_async_event_handler != nullptr);
+  mark_async_event_handler (amd_dbgapi_async_event_handler);
 }
 
-/* Fetch the rocm_inferior_info data for the given inferior.  */
+/* Fetch the amd_dbgapi_inferior_info data for the given inferior.  */
 
-static struct rocm_inferior_info *
-get_rocm_inferior_info (struct inferior *inferior)
+static struct amd_dbgapi_inferior_info *
+get_amd_dbgapi_inferior_info (struct inferior *inferior)
 {
   if (!inferior)
     inferior = current_inferior ();
 
-  struct rocm_inferior_info *info = rocm_inferior_data.get (inferior);
+  amd_dbgapi_inferior_info *info = amd_dbgapi_inferior_data.get (inferior);
 
   if (!info)
-    info = rocm_inferior_data.emplace (inferior, inferior);
+    info = amd_dbgapi_inferior_data.emplace (inferior, inferior);
 
   return info;
 }
@@ -604,7 +606,7 @@ require_forward_progress (ptid_t ptid, process_stratum_target *proc_target,
       if (ptid != minus_one_ptid && inf->pid != ptid.pid ())
 	continue;
 
-      rocm_inferior_info *info = get_rocm_inferior_info (inf);
+      amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
       if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
 	continue;
@@ -634,18 +636,18 @@ require_forward_progress (ptid_t ptid, process_stratum_target *proc_target,
 amd_dbgapi_process_id_t
 get_amd_dbgapi_process_id (struct inferior *inferior)
 {
-  return get_rocm_inferior_info (inferior)->process_id;
+  return get_amd_dbgapi_inferior_info (inferior)->process_id;
 }
 
 static void
-rocm_breakpoint_re_set (struct breakpoint *b)
+amd_dbgapi_breakpoint_re_set (struct breakpoint *b)
 {
 }
 
 static void
-rocm_breakpoint_check_status (struct bpstats *bs)
+amd_dbgapi_breakpoint_check_status (struct bpstats *bs)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
   amd_dbgapi_status_t status;
 
   bs->stop = 0;
@@ -683,7 +685,7 @@ rocm_breakpoint_check_status (struct bpstats *bs)
      a breakpoint resume event for this breakpoint_id is seen.  */
 
   amd_dbgapi_event_id_t resume_event_id
-    = rocm_process_event_queue (info->process_id,
+    = amd_dbgapi_process_event_queue (info->process_id,
 				AMD_DBGAPI_EVENT_KIND_BREAKPOINT_RESUME);
 
   /* We should always get a breakpoint_resume event after processing all
@@ -711,7 +713,7 @@ rocm_breakpoint_check_status (struct bpstats *bs)
 }
 
 bool
-rocm_target_ops::thread_alive (ptid_t ptid)
+amd_dbgapi_target::thread_alive (ptid_t ptid)
 {
   if (!ptid_is_gpu (ptid))
     return beneath ()->thread_alive (ptid);
@@ -726,7 +728,7 @@ rocm_target_ops::thread_alive (ptid_t ptid)
 }
 
 const char *
-rocm_target_ops::thread_name (thread_info *tp)
+amd_dbgapi_target::thread_name (thread_info *tp)
 {
   if (!ptid_is_gpu (tp->ptid))
     return beneath ()->thread_name (tp);
@@ -767,18 +769,18 @@ rocm_target_ops::thread_name (thread_info *tp)
 }
 
 std::string
-rocm_target_ops::pid_to_str (ptid_t ptid)
+amd_dbgapi_target::pid_to_str (ptid_t ptid)
 {
   if (!ptid_is_gpu (ptid))
     {
       return beneath ()->pid_to_str (ptid);
     }
 
-  return rocm_target_id_string (get_amd_dbgapi_wave_id (ptid));
+  return amd_dbgapi_target_id_string (get_amd_dbgapi_wave_id (ptid));
 }
 
 std::string
-rocm_target_ops::lane_to_str (thread_info *thr, int lane)
+amd_dbgapi_target::lane_to_str (thread_info *thr, int lane)
 {
   if (!ptid_is_gpu (thr->ptid))
     return beneath ()->lane_to_str (thr, lane);
@@ -789,7 +791,7 @@ rocm_target_ops::lane_to_str (thread_info *thr, int lane)
 /* Implementation of target_workgroup_pos_str.  */
 
 std::string
-rocm_target_ops::dispatch_pos_str (thread_info *thr)
+amd_dbgapi_target::dispatch_pos_str (thread_info *thr)
 {
   if (!ptid_is_gpu (thr->ptid))
     return beneath ()->dispatch_pos_str (thr);
@@ -798,7 +800,7 @@ rocm_target_ops::dispatch_pos_str (thread_info *thr)
 }
 
 std::string
-rocm_target_ops::thread_workgroup_pos_str (thread_info *thr)
+amd_dbgapi_target::thread_workgroup_pos_str (thread_info *thr)
 {
   if (!ptid_is_gpu (thr->ptid))
     return beneath ()->thread_workgroup_pos_str (thr);
@@ -809,7 +811,7 @@ rocm_target_ops::thread_workgroup_pos_str (thread_info *thr)
 /* Implementation of target_lane_workgroup_pos_str.  */
 
 std::string
-rocm_target_ops::lane_workgroup_pos_str (thread_info *thr, int lane)
+amd_dbgapi_target::lane_workgroup_pos_str (thread_info *thr, int lane)
 {
   if (!ptid_is_gpu (thr->ptid))
     return beneath ()->lane_workgroup_pos_str (thr, lane);
@@ -818,7 +820,7 @@ rocm_target_ops::lane_workgroup_pos_str (thread_info *thr, int lane)
 }
 
 const char *
-rocm_target_ops::extra_thread_info (thread_info *tp)
+amd_dbgapi_target::extra_thread_info (thread_info *tp)
 {
   if (!ptid_is_gpu (tp->ptid))
     beneath ()->extra_thread_info (tp);
@@ -827,7 +829,7 @@ rocm_target_ops::extra_thread_info (thread_info *tp)
 }
 
 enum target_xfer_status
-rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
+amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 			       gdb_byte *readbuf, const gdb_byte *writebuf,
 			       ULONGEST offset, ULONGEST requested_len,
 			       ULONGEST *xfered_len)
@@ -890,7 +892,7 @@ rocm_target_ops::xfer_partial (enum target_object object, const char *annex,
 }
 
 static int
-rocm_insert_one_watchpoint (rocm_inferior_info *info, CORE_ADDR addr, int len)
+amd_dbgapi_insert_one_watchpoint (amd_dbgapi_inferior_info *info, CORE_ADDR addr, int len)
 {
   amd_dbgapi_watchpoint_id_t watch_id;
   amd_dbgapi_global_address_t adjusted_address;
@@ -934,7 +936,7 @@ rocm_insert_one_watchpoint (rocm_inferior_info *info, CORE_ADDR addr, int len)
 }
 
 static void
-insert_initial_watchpoints (rocm_inferior_info *info)
+insert_initial_watchpoints (amd_dbgapi_inferior_info *info)
 {
   gdb_assert (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS);
 
@@ -943,7 +945,7 @@ insert_initial_watchpoints (rocm_inferior_info *info)
       if (loc->loc_type == bp_loc_hardware_watchpoint
 	  && loc->pspace == info->inf->pspace)
 	{
-	  if (rocm_insert_one_watchpoint (info, loc->address, loc->length)
+	  if (amd_dbgapi_insert_one_watchpoint (info, loc->address, loc->length)
 	      != 0)
 	    warning (_ (
 	      "Failed to insert existing watchpoint after loading runtime."));
@@ -952,11 +954,11 @@ insert_initial_watchpoints (rocm_inferior_info *info)
 }
 
 int
-rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
+amd_dbgapi_target::insert_watchpoint (CORE_ADDR addr, int len,
 				    enum target_hw_bp_type type,
 				    struct expression *cond)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
   if (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS
       && type != hw_write)
@@ -967,7 +969,7 @@ rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
   if (ret || info->runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
     return ret;
 
-  ret = rocm_insert_one_watchpoint (info, addr, len);
+  ret = amd_dbgapi_insert_one_watchpoint (info, addr, len);
   if (ret != 0)
     {
       /* We failed to insert the GPU watchpoint, so remove the CPU watchpoint
@@ -979,11 +981,11 @@ rocm_target_ops::insert_watchpoint (CORE_ADDR addr, int len,
 }
 
 int
-rocm_target_ops::remove_watchpoint (CORE_ADDR addr, int len,
+amd_dbgapi_target::remove_watchpoint (CORE_ADDR addr, int len,
 				    enum target_hw_bp_type type,
 				    struct expression *cond)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
   int ret = beneath ()->remove_watchpoint (addr, len, type, cond);
   if (info->runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
@@ -1010,7 +1012,7 @@ rocm_target_ops::remove_watchpoint (CORE_ADDR addr, int len,
 }
 
 bool
-rocm_target_ops::stopped_by_watchpoint ()
+amd_dbgapi_target::stopped_by_watchpoint ()
 {
   if (!ptid_is_gpu (inferior_ptid))
     return beneath ()->stopped_by_watchpoint ();
@@ -1027,9 +1029,9 @@ rocm_target_ops::stopped_by_watchpoint ()
 }
 
 bool
-rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
+amd_dbgapi_target::stopped_data_address (CORE_ADDR *addr_p)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
   if (!ptid_is_gpu (inferior_ptid))
     return beneath ()->stopped_data_address (addr_p);
@@ -1069,13 +1071,13 @@ rocm_target_ops::stopped_data_address (CORE_ADDR *addr_p)
 }
 
 void
-rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
+amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 {
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: rocm_target_ops::resume "
+			"\e[1;34minfrun: amd_dbgapi_target::resume "
 			"([%d,%ld,%ld])\e[0m\n",
 			ptid.pid (), ptid.lwp (), ptid.tid ());
 
@@ -1155,11 +1157,11 @@ rocm_target_ops::resume (ptid_t ptid, int step, enum gdb_signal signo)
 }
 
 void
-rocm_target_ops::commit_resumed ()
+amd_dbgapi_target::commit_resumed ()
 {
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: rocm_target_ops::commit_resumed "
+			"\e[1;34minfrun: amd_dbgapi_target::commit_resumed "
 			"()\e[0m\n");
 
   beneath ()->commit_resumed ();
@@ -1169,13 +1171,13 @@ rocm_target_ops::commit_resumed ()
 }
 
 void
-rocm_target_ops::stop (ptid_t ptid)
+amd_dbgapi_target::stop (ptid_t ptid)
 {
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: rocm_target_ops::stop "
+			"\e[1;34minfrun: amd_dbgapi_target::stop "
 			"([%d,%ld,%ld])\e[0m\n",
 			ptid.pid (), ptid.lwp (), ptid.tid ());
 
@@ -1223,7 +1225,7 @@ rocm_target_ops::stop (ptid_t ptid)
 
     if (report_thread_events)
       {
-	get_rocm_inferior_info (thread->inf)
+	get_amd_dbgapi_inferior_info (thread->inf)
 	  ->wave_events.emplace_back (thread->ptid,
 				      target_waitstatus{
 					TARGET_WAITKIND_THREAD_EXITED, { 0 }});
@@ -1264,12 +1266,12 @@ handle_target_event (gdb_client_data client_data)
 }
 
 /* Called when a dbgapi notifier fd is readable.  CLIENT_DATA is the
-   rocm_inferior_info object corresponding to the notifier.  */
+   amd_dbgapi_inferior_info object corresponding to the notifier.  */
 
 static void
 dbgapi_notifier_handler (int error, gdb_client_data client_data)
 {
-  rocm_inferior_info *info = (rocm_inferior_info *) client_data;
+  amd_dbgapi_inferior_info *info = (amd_dbgapi_inferior_info *) client_data;
   int ret;
 
   /* Drain the notifier pipe.  */
@@ -1285,37 +1287,38 @@ dbgapi_notifier_handler (int error, gdb_client_data client_data)
 }
 
 void
-rocm_target_ops::async (int enable)
+amd_dbgapi_target::async (int enable)
 {
-  infrun_debug_printf ("rocm async enable=%d", enable);
+  infrun_debug_printf ("amd-dbgapi async enable=%d", enable);
 
   beneath ()->async (enable);
 
   if (enable)
     {
-      if (rocm_async_event_handler != nullptr)
+      if (amd_dbgapi_async_event_handler != nullptr)
 	{
 	  /* Already enabled.  */
 	  return;
 	}
 
       /* The library gives us one notifier file descriptor per inferior (even
-	 the ones that have not yet loaded the ROCm runtime).  Register them
+	 the ones that have not yet loaded their runtime).  Register them
 	 all with the event loop.  */
       process_stratum_target *proc_target
 	= current_inferior ()->process_target ();
 
       for (inferior *inf : all_non_exited_inferiors (proc_target))
 	{
-	  rocm_inferior_info *info = get_rocm_inferior_info (inf);
+	  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
 	  if (info->notifier != -1)
 	    add_file_handler (info->notifier, dbgapi_notifier_handler, info,
-			      "rocm dbgapi notifier");
+			      "amd-dbgapi dbgapi notifier");
 	}
 
-      rocm_async_event_handler
-	= create_async_event_handler (handle_target_event, nullptr, "rocm");
+      amd_dbgapi_async_event_handler
+	= create_async_event_handler (handle_target_event, nullptr,
+				      "amd-dbgapi");
 
       /* There may be pending events to handle.  Tell the event loop to poll
 	 them.  */
@@ -1323,23 +1326,23 @@ rocm_target_ops::async (int enable)
     }
   else
     {
-      if (rocm_async_event_handler == nullptr)
+      if (amd_dbgapi_async_event_handler == nullptr)
 	return;
 
       for (inferior *inf : all_inferiors ())
 	{
-	  rocm_inferior_info *info = get_rocm_inferior_info (inf);
+	  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
 	  if (info->notifier != -1)
 	    delete_file_handler (info->notifier);
 	}
 
-      delete_async_event_handler (&rocm_async_event_handler);
+      delete_async_event_handler (&amd_dbgapi_async_event_handler);
     }
 }
 
 static void
-rocm_process_one_event (amd_dbgapi_event_id_t event_id,
+amd_dbgapi_process_one_event (amd_dbgapi_event_id_t event_id,
 			amd_dbgapi_event_kind_t event_kind)
 {
   amd_dbgapi_status_t status;
@@ -1362,7 +1365,7 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
   auto *proc_target = current_inferior ()->process_target ();
   inferior *inf = find_inferior_pid (proc_target, pid);
   gdb_assert (inf != nullptr && "Could not find inferior");
-  struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
   switch (event_kind)
     {
@@ -1519,9 +1522,9 @@ rocm_process_one_event (amd_dbgapi_event_id_t event_id,
    process_id is AMD_DBGAPI_PROCESS_NONE.  Stop processing the events if an
    event of a given kind is requested and `process_id` is not
    AMD_DBGAPI_PROCESS_NONE. Wave stop events that are not returned are queued
-   into their inferior's rocm_inferior_info pending wave events. */
+   into their inferior's amd_dbgapi_inferior_info pending wave events. */
 static amd_dbgapi_event_id_t
-rocm_process_event_queue (amd_dbgapi_process_id_t process_id,
+amd_dbgapi_process_event_queue (amd_dbgapi_process_id_t process_id,
 			  amd_dbgapi_event_kind_t until_event_kind)
 {
   /* An event of a given type can only be requested from a single process_id.
@@ -1544,30 +1547,30 @@ rocm_process_event_queue (amd_dbgapi_process_id_t process_id,
       if (event_id == AMD_DBGAPI_EVENT_NONE || event_kind == until_event_kind)
 	return event_id;
 
-      rocm_process_one_event (event_id, event_kind);
+      amd_dbgapi_process_one_event (event_id, event_kind);
     }
 }
 
 bool
-rocm_target_ops::has_pending_events ()
+amd_dbgapi_target::has_pending_events ()
 {
-  if (rocm_async_event_handler != nullptr
-      && async_event_handler_marked (rocm_async_event_handler))
+  if (amd_dbgapi_async_event_handler != nullptr
+      && async_event_handler_marked (amd_dbgapi_async_event_handler))
     return true;
 
   return beneath ()->has_pending_events ();
 }
 
 static std::pair<ptid_t, target_waitstatus>
-rocm_consume_one_event (ptid_t ptid)
+amd_dbgapi_consume_one_event (ptid_t ptid)
 {
   auto *target = current_inferior ()->process_target ();
-  struct rocm_inferior_info *info = nullptr;
+  struct amd_dbgapi_inferior_info *info = nullptr;
 
   if (ptid == minus_one_ptid)
     {
       for (inferior *inf : all_inferiors (target))
-	if (!(info = get_rocm_inferior_info (inf))->wave_events.empty ())
+	if (!(info = get_amd_dbgapi_inferior_info (inf))->wave_events.empty ())
 	  break;
       gdb_assert (info != nullptr);
     }
@@ -1577,7 +1580,7 @@ rocm_consume_one_event (ptid_t ptid)
       inferior *inf = find_inferior_pid (target, ptid.pid ());
 
       gdb_assert (inf != nullptr);
-      info = get_rocm_inferior_info (inf);
+      info = get_amd_dbgapi_inferior_info (inf);
     }
 
   if (info->wave_events.empty ())
@@ -1590,7 +1593,7 @@ rocm_consume_one_event (ptid_t ptid)
 }
 
 ptid_t
-rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
+amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
 		       target_wait_flags target_options)
 {
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
@@ -1598,7 +1601,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: rocm_target_ops::wait (%d, %ld, "
+			"\e[1;34minfrun: amd_dbgapi_target::wait (%d, %ld, "
 			"%ld)\e[0m\n",
 			ptid.pid (), ptid.lwp (), ptid.tid ());
 
@@ -1608,8 +1611,8 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
       if (ws->kind == TARGET_WAITKIND_EXITED
          || ws->kind == TARGET_WAITKIND_SIGNALLED)
        {
-         /* This inferior has exited so drain its ROCm event queue.  */
-         while (rocm_consume_one_event (ptid_t (event_ptid.pid ())).first
+         /* This inferior has exited so drain its dbgapi event queue.  */
+         while (amd_dbgapi_consume_one_event (ptid_t (event_ptid.pid ())).first
                 != minus_one_ptid)
            ;
        }
@@ -1625,7 +1628,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 
   /* There may be more events to process (either already in `wave_events` or
      that we need to fetch from dbgapi.  Mark the async event handler so that
-     rocm_target_ops::wait gets called again and again, until it eventually
+     amd_dbgapi_target::wait gets called again and again, until it eventually
      returns minus_one_ptid.  */
   auto more_events = make_scope_exit (
     [] ()
@@ -1641,13 +1644,13 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
   require_forward_progress (ptid, proc_target, false);
 
   target_waitstatus gpu_waitstatus;
-  std::tie (event_ptid, gpu_waitstatus) = rocm_consume_one_event (ptid);
+  std::tie (event_ptid, gpu_waitstatus) = amd_dbgapi_consume_one_event (ptid);
   if (event_ptid == minus_one_ptid)
     {
       /* Drain the events from the amd_dbgapi and preserve the ordering.  */
-      rocm_process_event_queue ();
+      amd_dbgapi_process_event_queue ();
 
-      std::tie (event_ptid, gpu_waitstatus) = rocm_consume_one_event (ptid);
+      std::tie (event_ptid, gpu_waitstatus) = amd_dbgapi_consume_one_event (ptid);
       if (event_ptid == minus_one_ptid)
 	{
 	  /* If we requested a specific ptid, and nothing came out, assume
@@ -1663,11 +1666,11 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 		 to create new threads), so even if the target beneath returns
 		 waitkind_no_resumed, we have to report waitkind_ignore if GPU
 		 debugging is enabled for at least one resumed inferior handled
-		 by the ROCm target.  */
+		 by the amd-dbgapi target.  */
 
 	      for (inferior *inf : all_inferiors ())
-		if (inf->target_at (arch_stratum) == &rocm_ops
-		    && get_rocm_inferior_info (inf)->runtime_state
+		if (inf->target_at (arch_stratum) == &the_amd_dbgapi_target
+		    && get_amd_dbgapi_inferior_info (inf)->runtime_state
 			 == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
 		  {
 		    ws->kind = TARGET_WAITKIND_IGNORE;
@@ -1686,7 +1689,7 @@ rocm_target_ops::wait (ptid_t ptid, struct target_waitstatus *ws,
 }
 
 bool
-rocm_target_ops::stopped_by_sw_breakpoint ()
+amd_dbgapi_target::stopped_by_sw_breakpoint ()
 {
   if (!ptid_is_gpu (inferior_ptid))
     return beneath ()->stopped_by_sw_breakpoint ();
@@ -1701,9 +1704,9 @@ rocm_target_ops::stopped_by_sw_breakpoint ()
 }
 
 bool
-rocm_target_ops::stopped_by_hw_breakpoint ()
+amd_dbgapi_target::stopped_by_hw_breakpoint ()
 {
-  /* The rocm target does not support hw breakpoints.  */
+  /* The amd-dbgapi target does not support hw breakpoints.  */
   return !ptid_is_gpu (inferior_ptid)
 	 && beneath ()->stopped_by_hw_breakpoint ();
 }
@@ -1721,7 +1724,7 @@ rocm_target_ops::stopped_by_hw_breakpoint ()
    An error is thrown if setting the precision results in a status other than
    ::AMD_DBGAPI_STATUS_SUCCESS or ::AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED.  */
 static bool
-rocm_set_process_memory_precision (amd_dbgapi_process_id_t process_id,
+amd_dbgapi_set_process_memory_precision (amd_dbgapi_process_id_t process_id,
 				   amd_dbgapi_memory_precision_t precision)
 {
   amd_dbgapi_status_t status
@@ -1736,7 +1739,7 @@ rocm_set_process_memory_precision (amd_dbgapi_process_id_t process_id,
 }
 
 static void
-rocm_enable (inferior *inf)
+amd_dbgapi_enable (inferior *inf)
 {
   if (!target_can_async_p ())
     {
@@ -1749,18 +1752,18 @@ rocm_enable (inferior *inf)
      not be useful for us to attach to vfork children anyway, because vfork
      children are very restricted in what they can do (see vfork(2)) and aren't
      going to launch some GPU programs that we need to debug.  To avoid this
-     problem, we don't push the rocm target / attach dbgapi in vfork children.
-     If a vfork child execs, we'll try enabling the rocm target through the
-     inferior_execd observer.  */
+     problem, we don't push the amd-dbgapi target / attach dbgapi in vfork
+     children.  If a vfork child execs, we'll try enabling the amd-dbgapi target
+     through the inferior_execd observer.  */
   if (inf->vfork_parent != nullptr)
     return;
 
-  auto *info = get_rocm_inferior_info (inf);
+  auto *info = get_amd_dbgapi_inferior_info (inf);
 
   /* Are we already attached?  */
   if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
     {
-      gdb_assert (inf->target_is_pushed (&rocm_ops));
+      gdb_assert (inf->target_is_pushed (&the_amd_dbgapi_target));
       return;
     }
 
@@ -1790,14 +1793,14 @@ rocm_enable (inferior *inf)
   amd_dbgapi_memory_precision_t memory_precision
     = info->precise_memory.requested ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
 				     : AMD_DBGAPI_MEMORY_PRECISION_NONE;
-  if (rocm_set_process_memory_precision (info->process_id, memory_precision))
+  if (amd_dbgapi_set_process_memory_precision (info->process_id, memory_precision))
     info->precise_memory.enabled = info->precise_memory.requested;
   else
     warning (
       _ ("AMDGPU precise memory access reporting could not be enabled."));
 
-  gdb_assert (!inf->target_is_pushed (&rocm_ops));
-  inf->push_target (&rocm_ops);
+  gdb_assert (!inf->target_is_pushed (&the_amd_dbgapi_target));
+  inf->push_target (&the_amd_dbgapi_target);
 
   /* The underlying target will already be async if we are running, but not if
      we are attaching.  */
@@ -1806,18 +1809,18 @@ rocm_enable (inferior *inf)
       /* Make sure our async event handler is created.  */
       target_async (1);
 
-      /* If the rocm target was already async, it didn't register the new fd,
-	 so make sure it is registered.  This call is idempotent so it's ok if
-	 it's already registered.  */
+      /* If the amd-dbgapi target was already async, it didn't register the new
+         fd, so make sure it is registered.  This call is idempotent so it's ok
+	 if it's already registered.  */
       add_file_handler (info->notifier, dbgapi_notifier_handler, info,
-			"rocm dbgapi notifier");
+			"amd-dbgapi notifier");
     }
 }
 
 static void
-rocm_disable (inferior *inf)
+amd_dbgapi_disable (inferior *inf)
 {
-  auto *info = get_rocm_inferior_info (inf);
+  auto *info = get_amd_dbgapi_inferior_info (inf);
 
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
@@ -1833,28 +1836,28 @@ rocm_disable (inferior *inf)
   gdb_assert (info->notifier != -1);
   delete_file_handler (info->notifier);
 
-  gdb_assert (inf->target_is_pushed (&rocm_ops));
-  inf->unpush_target (&rocm_ops);
+  gdb_assert (inf->target_is_pushed (&the_amd_dbgapi_target));
+  inf->unpush_target (&the_amd_dbgapi_target);
 
   /* Delete the breakpoints that are still active.  */
   for (auto &&value : info->breakpoint_map)
     delete_breakpoint (value.second);
 
-  /* Reset the rocm_inferior_info, except for precise_memory_mode.  */
+  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode.  */
   bool precise_memory_requested = info->precise_memory.requested;
-  *info = rocm_inferior_info (inf);
+  *info = amd_dbgapi_inferior_info (inf);
   info->precise_memory.requested = precise_memory_requested;
 }
 
 void
-rocm_target_ops::mourn_inferior ()
+amd_dbgapi_target::mourn_inferior ()
 {
-  rocm_disable (current_inferior ());
+  amd_dbgapi_disable (current_inferior ());
   beneath ()->mourn_inferior ();
 }
 
 void
-rocm_target_ops::detach (inferior *inf, int from_tty)
+amd_dbgapi_target::detach (inferior *inf, int from_tty)
 {
   /* We're about to resume the waves by detaching the dbgapi library from the
      inferior, so we need to remove all breakpoints that are still inserted.
@@ -1865,12 +1868,12 @@ rocm_target_ops::detach (inferior *inf, int from_tty)
    */
   remove_breakpoints_inf (current_inferior ());
 
-  rocm_disable (inf);
+  amd_dbgapi_disable (inf);
   beneath ()->detach (inf, from_tty);
 }
 
 void
-rocm_target_ops::fetch_registers (struct regcache *regcache, int regno)
+amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
@@ -1904,7 +1907,7 @@ rocm_target_ops::fetch_registers (struct regcache *regcache, int regno)
 }
 
 void
-rocm_target_ops::store_registers (struct regcache *regcache, int regno)
+amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
@@ -1951,7 +1954,7 @@ rocm_target_ops::store_registers (struct regcache *regcache, int regno)
    architecture was set to the host (could be fixed in core GDB).  */
 
 static void
-rocm_target_breakpoint_fixup (struct breakpoint *b)
+amd_dbgapi_target_breakpoint_fixup (struct breakpoint *b)
 {
   if (b->location.get ()
       && event_location_type (b->location.get ()) == ADDRESS_LOCATION
@@ -1963,7 +1966,7 @@ rocm_target_breakpoint_fixup (struct breakpoint *b)
 }
 
 struct gdbarch *
-rocm_target_ops::thread_architecture (ptid_t ptid)
+amd_dbgapi_target::thread_architecture (ptid_t ptid)
 {
   static std::result_of<decltype (&ptid_t::tid) (ptid_t)>::type last_tid = 0;
   static struct gdbarch *cached_arch = nullptr;
@@ -2005,7 +2008,7 @@ rocm_target_ops::thread_architecture (ptid_t ptid)
 }
 
 void
-rocm_target_ops::update_thread_list ()
+amd_dbgapi_target::update_thread_list ()
 {
   for (inferior *inf : all_inferiors ())
     {
@@ -2065,7 +2068,7 @@ rocm_target_ops::update_thread_list ()
 }
 
 displaced_step_prepare_status
-rocm_target_ops::displaced_step_prepare (thread_info *thread,
+amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
 					 CORE_ADDR &displaced_pc)
 {
   if (!ptid_is_gpu (thread->ptid))
@@ -2102,7 +2105,7 @@ rocm_target_ops::displaced_step_prepare (thread_info *thread,
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd_dbgapi_displaced_stepping_start failed (rc=%d)"), status);
 
-  struct rocm_inferior_info *info = get_rocm_inferior_info (thread->inf);
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (thread->inf);
   if (!info->stepping_id_map.emplace (thread, stepping_id.handle).second)
     {
       amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
@@ -2126,7 +2129,7 @@ rocm_target_ops::displaced_step_prepare (thread_info *thread,
 }
 
 displaced_step_finish_status
-rocm_target_ops::displaced_step_finish (thread_info *thread, gdb_signal sig)
+amd_dbgapi_target::displaced_step_finish (thread_info *thread, gdb_signal sig)
 {
   if (!ptid_is_gpu (thread->ptid))
     return beneath ()->displaced_step_finish (thread, sig);
@@ -2134,7 +2137,7 @@ rocm_target_ops::displaced_step_finish (thread_info *thread, gdb_signal sig)
   gdb_assert (thread->displaced_step_state.in_progress ());
 
   /* Find the stepping_id for this thread.  */
-  struct rocm_inferior_info *info = get_rocm_inferior_info (thread->inf);
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (thread->inf);
   auto it = info->stepping_id_map.find (thread);
   gdb_assert (it != info->stepping_id_map.end ());
 
@@ -2167,24 +2170,24 @@ rocm_target_ops::displaced_step_finish (thread_info *thread, gdb_signal sig)
 }
 
 static void
-rocm_target_inferior_created (inferior *inf)
+amd_dbgapi_target_inferior_created (inferior *inf)
 {
   /* If the inferior is not running on the native target (e.g. it is running
      on a remote target), we don't want to deal with it.  */
   if (inf->process_target () != get_native_target ())
     return;
 
-  rocm_enable (inf);
+  amd_dbgapi_enable (inf);
 }
 
 /* Callback called when an inferior is cloned.  */
 
 static void
-rocm_target_inferior_cloned (inferior *original_inferior,
+amd_dbgapi_target_inferior_cloned (inferior *original_inferior,
 			     inferior *new_inferior)
 {
-  auto *orig_info = get_rocm_inferior_info (original_inferior);
-  auto *new_info = get_rocm_inferior_info (new_inferior);
+  auto *orig_info = get_amd_dbgapi_inferior_info (original_inferior);
+  auto *new_info = get_amd_dbgapi_inferior_info (new_inferior);
 
   /* At this point, the process is not started.  Therefore it is sufficient to
      copy the precise memory request, it will be applied when the process
@@ -2194,7 +2197,7 @@ rocm_target_inferior_cloned (inferior *original_inferior,
 }
 
 void
-rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
+amd_dbgapi_target::follow_exec (inferior *follow_inf, ptid_t ptid,
 			      const char *execd_pathname)
 {
   inferior *orig_inf = current_inferior ();
@@ -2202,7 +2205,7 @@ rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
   /* The inferior has EXEC'd and the process image has changed.  The dbgapi is
      attached to the old process image, so we need to detach and re-attach to
      the new process image.  */
-  rocm_disable (orig_inf);
+  amd_dbgapi_disable (orig_inf);
 
   beneath ()->follow_exec (follow_inf, ptid, execd_pathname);
   gdb_assert (current_inferior () == follow_inf);
@@ -2210,20 +2213,20 @@ rocm_target_ops::follow_exec (inferior *follow_inf, ptid_t ptid,
   /* If using "follow-exec-mode new", carry over the precise-memory setting
      to the new inferior (otherwise, FOLLOW_INF and ORIG_INF point to the same
      inferior, so this is a no-op).  */
-  get_rocm_inferior_info (follow_inf)->precise_memory.requested
-    = get_rocm_inferior_info (orig_inf)->precise_memory.requested;
+  get_amd_dbgapi_inferior_info (follow_inf)->precise_memory.requested
+    = get_amd_dbgapi_inferior_info (orig_inf)->precise_memory.requested;
 
-  rocm_enable (follow_inf);
+  amd_dbgapi_enable (follow_inf);
 }
 
 static void
-rocm_inferior_execd (inferior *inf)
+amd_dbgapi_inferior_execd (inferior *inf)
 {
-  rocm_enable (inf);
+  amd_dbgapi_enable (inf);
 }
 
 void
-rocm_target_ops::follow_fork (inferior *child_inf, ptid_t child_ptid,
+amd_dbgapi_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 			      target_waitkind fork_kind, bool follow_child,
 			      bool detach_fork)
 {
@@ -2233,9 +2236,9 @@ rocm_target_ops::follow_fork (inferior *child_inf, ptid_t child_ptid,
   if (child_inf != nullptr)
     {
       /* Copy precise-memory requested value from parent to child.  */
-      rocm_inferior_info *parent_info
-	= get_rocm_inferior_info (current_inferior ());
-      rocm_inferior_info *child_info = get_rocm_inferior_info (child_inf);
+      amd_dbgapi_inferior_info *parent_info
+	= get_amd_dbgapi_inferior_info (current_inferior ());
+      amd_dbgapi_inferior_info *child_info = get_amd_dbgapi_inferior_info (child_inf);
       child_info->precise_memory.requested
 	= parent_info->precise_memory.requested;
 
@@ -2243,15 +2246,15 @@ rocm_target_ops::follow_fork (inferior *child_inf, ptid_t child_ptid,
 	{
 	  scoped_restore_current_thread restore_thread;
 	  switch_to_thread (*child_inf->threads ().begin ());
-	  rocm_enable (child_inf);
+	  amd_dbgapi_enable (child_inf);
 	}
     }
 }
 
 static void
-rocm_target_signal_received (gdb_signal sig)
+amd_dbgapi_target_signal_received (gdb_signal sig)
 {
-  rocm_inferior_info *info = get_rocm_inferior_info ();
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
@@ -2269,12 +2272,12 @@ location may not be accurate.  See \"show amdgpu precise-memory\".\n");
 }
 
 static void
-rocm_target_normal_stop (bpstat bs_list, int print_frame)
+amd_dbgapi_target_normal_stop (bpstat bs_list, int print_frame)
 {
   if (bs_list == nullptr || !print_frame)
     return;
 
-  rocm_inferior_info *info = get_rocm_inferior_info ();
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
@@ -2303,9 +2306,9 @@ Warning: precise memory signal reporting is not enabled, watchpoint stop\n\
 location may not be accurate.  See \"show amdgpu precise-memory\".\n");
 }
 
-static cli_style_option warning_style ("rocm_warning", ui_file_style::RED);
-static cli_style_option info_style ("rocm_info", ui_file_style::GREEN);
-static cli_style_option verbose_style ("rocm_verbose", ui_file_style::BLUE);
+static cli_style_option warning_style ("amd_dbgapi_warning", ui_file_style::RED);
+static cli_style_option info_style ("amd_dbgapi_info", ui_file_style::GREEN);
+static cli_style_option verbose_style ("amd_dbgapi_verbose", ui_file_style::BLUE);
 
 static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   /* allocate_memory.  */
@@ -2334,16 +2337,16 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 	amd_dbgapi_breakpoint_id_t breakpoint_id)
   {
     inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+    struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
     /* Initialize the breakpoint ops lazily since we depend on
        bkpt_breakpoint_ops and we can't control the order in which
        initializers are called.  */
-    if (rocm_breakpoint_ops.check_status == NULL)
+    if (amd_dbgapi_breakpoint_ops.check_status == NULL)
       {
-	rocm_breakpoint_ops = bkpt_breakpoint_ops;
-	rocm_breakpoint_ops.check_status = rocm_breakpoint_check_status;
-	rocm_breakpoint_ops.re_set = rocm_breakpoint_re_set;
+	amd_dbgapi_breakpoint_ops = bkpt_breakpoint_ops;
+	amd_dbgapi_breakpoint_ops.check_status = amd_dbgapi_breakpoint_check_status;
+	amd_dbgapi_breakpoint_ops.re_set = amd_dbgapi_breakpoint_re_set;
       }
 
     auto it = info->breakpoint_map.find (breakpoint_id.handle);
@@ -2367,14 +2370,14 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 			    /*bptype*/ bp_breakpoint,
 			    /*ignore_count*/ 0,
 			    /*pending_break*/ AUTO_BOOLEAN_FALSE,
-			    /*ops*/ &rocm_breakpoint_ops, /*from_tty*/ 0,
+			    /*ops*/ &amd_dbgapi_breakpoint_ops, /*from_tty*/ 0,
 			    /*enabled*/ 1, /*internal*/ 1, /*flags*/ 0))
       return AMD_DBGAPI_STATUS_ERROR;
 
     /* Find our breakpoint in the breakpoint list.  */
     breakpoint *bp = nullptr;
     for (breakpoint *b : all_breakpoints ())
-      if (b->ops == &rocm_breakpoint_ops && b->loc
+      if (b->ops == &amd_dbgapi_breakpoint_ops && b->loc
 	  && b->loc->pspace->aspace == inf->aspace
 	  && b->loc->address == address)
 	{
@@ -2395,7 +2398,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 	amd_dbgapi_breakpoint_id_t breakpoint_id)
   {
     inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct rocm_inferior_info *info = get_rocm_inferior_info (inf);
+    struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
     auto it = info->breakpoint_map.find (breakpoint_id.handle);
     if (it == info->breakpoint_map.end ())
@@ -2449,11 +2452,11 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 };
 
 void
-rocm_target_ops::prevent_new_threads (bool prevent, inferior *inf)
+amd_dbgapi_target::prevent_new_threads (bool prevent, inferior *inf)
 {
   beneath ()->prevent_new_threads (prevent, inf);
 
-  rocm_inferior_info *info = get_rocm_inferior_info ();
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
 
@@ -2468,7 +2471,7 @@ rocm_target_ops::prevent_new_threads (bool prevent, inferior *inf)
 }
 
 void
-rocm_target_ops::close ()
+amd_dbgapi_target::close ()
 {
   /* Finalize and re-initialize the debugger API so that the handle ID numbers
      will all start from the beginning again.  */
@@ -2485,7 +2488,7 @@ rocm_target_ops::close ()
 /* Implementation of `_wave_id' variable.  */
 
 static struct value *
-rocm_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
+amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 			 void *ignore)
 {
   if (ptid_is_gpu (inferior_ptid))
@@ -2514,14 +2517,14 @@ rocm_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
   return allocate_value (builtin_type (gdbarch)->builtin_void);
 }
 
-static const struct internalvar_funcs rocm_wave_id_funcs
-  = { rocm_wave_id_make_value, NULL, NULL };
+static const struct internalvar_funcs amd_dbgapi_wave_id_funcs
+  = { amd_dbgapi_wave_id_make_value, NULL, NULL };
 
 static void
 show_precise_memory_mode (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
   fprintf_filtered (file,
 		    _ ("AMDGPU precise memory access reporting is %s "
@@ -2533,7 +2536,7 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
 static void
 set_precise_memory_mode (bool value)
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
   info->precise_memory.requested = value;
 
@@ -2543,7 +2546,7 @@ set_precise_memory_mode (bool value)
 	= info->precise_memory.requested ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
 					 : AMD_DBGAPI_MEMORY_PRECISION_NONE;
 
-      if (rocm_set_process_memory_precision (info->process_id,
+      if (amd_dbgapi_set_process_memory_precision (info->process_id,
 					     memory_precision))
 	info->precise_memory.enabled = info->precise_memory.requested;
       else
@@ -2555,14 +2558,14 @@ set_precise_memory_mode (bool value)
 static bool
 get_precise_memory_mode ()
 {
-  struct rocm_inferior_info *info = get_rocm_inferior_info ();
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
   return info->precise_memory.requested;
 }
 
 static bool
 get_effective_precise_memory_mode ()
 {
-  rocm_inferior_info *info = get_rocm_inferior_info ();
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
   return info->precise_memory.enabled;
 };
 
@@ -2709,7 +2712,7 @@ info_agents_command (const char *args, int from_tty)
 		/* target id  */
 		max_target_id_width
 		  = std::max (max_target_id_width,
-			      rocm_target_id_string (agent_id).size ());
+			      amd_dbgapi_target_id_string (agent_id).size ());
 
 		/* architecture  */
 		amd_dbgapi_architecture_id_t architecture_id;
@@ -2838,7 +2841,7 @@ info_agents_command (const char *args, int from_tty)
 
 	    /* target_id  */
 	    uiout->field_string ("target-id",
-				 rocm_target_id_string (agent_id));
+				 amd_dbgapi_target_id_string (agent_id));
 
 	    /* architecture  */
 	    amd_dbgapi_architecture_id_t architecture_id;
@@ -2996,7 +2999,7 @@ info_queues_command (const char *args, int from_tty)
 		/* target id  */
 		max_target_id_width
 		  = std::max (max_target_id_width,
-			      rocm_target_id_string (queue_id).size ());
+			      amd_dbgapi_target_id_string (queue_id).size ());
 
 		++n_queues;
 	      }
@@ -3062,7 +3065,7 @@ info_queues_command (const char *args, int from_tty)
 
 	    /* target-id  */
 	    uiout->field_string ("target-id",
-				 rocm_target_id_string (queue_id));
+				 amd_dbgapi_target_id_string (queue_id));
 
 	    /* type  */
 	    amd_dbgapi_os_queue_type_t type;
@@ -3181,7 +3184,7 @@ queue_find_command (const char *arg, int from_tty)
 
       for (auto &&queue_id : queues)
 	{
-	  std::string target_id = rocm_target_id_string (queue_id);
+	  std::string target_id = amd_dbgapi_target_id_string (queue_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
 	      printf_filtered (_ ("Queue %ld has Target Id '%s'\n"),
@@ -3352,7 +3355,7 @@ info_dispatches_command (const char *args, int from_tty)
 		/* target id  */
 		max_target_id_width
 		  = std::max (max_target_id_width,
-			      rocm_target_id_string (dispatch_id).size ());
+			      amd_dbgapi_target_id_string (dispatch_id).size ());
 
 		/* grid  */
 		uint32_t dims;
@@ -3493,7 +3496,7 @@ info_dispatches_command (const char *args, int from_tty)
 
 	    /* target-id  */
 	    uiout->field_string ("target-id",
-				 rocm_target_id_string (dispatch_id));
+				 amd_dbgapi_target_id_string (dispatch_id));
 
 	    /* grid  */
 	    uint32_t dims;
@@ -3734,7 +3737,7 @@ dispatch_find_command (const char *arg, int from_tty)
 
       for (auto &&dispatch_id : dispatches)
 	{
-	  std::string target_id = rocm_target_id_string (dispatch_id);
+	  std::string target_id = amd_dbgapi_target_id_string (dispatch_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
 	      printf_filtered (_ ("Dispatch %ld has Target Id '%s'\n"),
@@ -3782,7 +3785,7 @@ _initialize_amd_dbgapi_target ()
 	   major, minor, patch, AMD_DBGAPI_VERSION_MAJOR,
 	   AMD_DBGAPI_VERSION_MINOR);
 
-  /* Initialize the ROCm Debug API.  */
+  /* Initialize the AMD Debugger API.  */
   amd_dbgapi_status_t status = amd_dbgapi_initialize (&dbgapi_callbacks);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_ ("amd-dbgapi failed to initialize (rc=%d)"), status);
@@ -3791,18 +3794,18 @@ _initialize_amd_dbgapi_target ()
   amd_dbgapi_set_log_level (get_debug_amdgpu_log_level ());
 
   /* Install observers.  */
-  gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup,
-					     "rocm-dbgapi");
-  gdb::observers::inferior_created.attach (rocm_target_inferior_created,
-					   "rocm-dbgapi");
-  gdb::observers::inferior_cloned.attach (rocm_target_inferior_cloned,
-					  "rocm-dbgapi");
-  gdb::observers::signal_received.attach (rocm_target_signal_received,
-					  "rocm-dbgapi");
-  gdb::observers::normal_stop.attach (rocm_target_normal_stop, "rocm-dbgapi");
-  gdb::observers::inferior_execd.attach (rocm_inferior_execd, "rocm-dbgapi");
+  gdb::observers::breakpoint_created.attach (amd_dbgapi_target_breakpoint_fixup,
+					     "amd-dbgapi");
+  gdb::observers::inferior_created.attach (amd_dbgapi_target_inferior_created,
+					   "amd-dbgapi");
+  gdb::observers::inferior_cloned.attach (amd_dbgapi_target_inferior_cloned,
+					  "amd-dbgapi");
+  gdb::observers::signal_received.attach (amd_dbgapi_target_signal_received,
+					  "amd-dbgapi");
+  gdb::observers::normal_stop.attach (amd_dbgapi_target_normal_stop, "amd-dbgapi");
+  gdb::observers::inferior_execd.attach (amd_dbgapi_inferior_execd, "amd-dbgapi");
 
-  create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
+  create_internalvar_type_lazy ("_wave_id", &amd_dbgapi_wave_id_funcs, NULL);
 
   add_basic_prefix_cmd ("amdgpu", no_class,
 			_ ("Generic command for setting amdgpu flags."),
