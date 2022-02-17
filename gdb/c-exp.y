@@ -980,7 +980,7 @@ exp	:	CONST_CAST '<' type_exp '>' '(' exp ')' %prec UNARY
 			  pstate->wrap2<unop_cast_type_operation> (); }
 	;
 
-exp	:	name '#' exp
+exp	:	name '#' exp %prec UNARY
 			{ pstate->push_new<aspace_operation>
 			    (pstate->pop (), copy_name ($1)); }
 	;
