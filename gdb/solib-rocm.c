@@ -27,7 +27,7 @@
 #include "inferior.h"
 #include "objfiles.h"
 #include "observable.h"
-#include "rocm-tdep.h"
+#include "amd-dbgapi-target.h"
 #include "solib-svr4.h"
 #include "solib.h"
 #include "solist.h"

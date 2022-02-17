@@ -1,4 +1,4 @@
-/* Target-dependent code for ROCm.
+/* Target used to communicate with the AMD Debugger API.
 
    Copyright (C) 2019-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef _ROCM_TDEP_H
-#define _ROCM_TDEP_H 1
+#ifndef AMD_DBGAPI_TARGET_H
+#define AMD_DBGAPI_TARGET_H 1
 
 #include "gdbsupport/common-defs.h"
 #include "gdbsupport/observable.h"
@@ -66,7 +66,7 @@ operator!= (const T &lhs, const T &rhs)
   return !(lhs == rhs);
 }
 
-/* ROCm Debug API event observers.  */
+/* AMD debugger API event observers.  */
 
 extern gdb::observers::observable<> amd_dbgapi_runtime_loaded;
 extern gdb::observers::observable<> amd_dbgapi_runtime_unloaded;
@@ -144,4 +144,4 @@ dispatch_get_info_throw (amd_dbgapi_dispatch_id_t dispatch_id,
 	   dispatch_id.handle);
 }
 
-#endif /* rocm-tdep.h */
+#endif /* AMD_DBGAPI_TARGET_H */
