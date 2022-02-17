@@ -276,7 +276,7 @@ if test x"$ac_cv_header_amd_dbgapi_h" = xyes \
     -a x"$ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" = xyes; then
 
   if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then
-    TARGET_OBS="$TARGET_OBS amdgcn-tdep.o rocm-tdep.o solib-rocm.o"
+    TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o amdgcn-tdep.o solib-rocm.o"
   fi
 
   CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"

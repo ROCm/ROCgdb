@@ -32,7 +32,7 @@
 #include "osabi.h"
 #include "producer.h"
 #include "reggroups.h"
-#include "rocm-tdep.h"
+#include "amd-dbgapi-target.h"
 
 #include <iterator>
 #include <regex>

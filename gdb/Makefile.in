@@ -1247,6 +1247,7 @@ HFILES_NO_SRCDIR = \
 	addrmap.h \
 	alpha-bsd-tdep.h \
 	alpha-tdep.h \
+	amd-dbgapi-target.h \
 	amd64-darwin-tdep.h \
 	amd64-linux-tdep.h \
 	amd64-nat.h \
@@ -1424,7 +1425,6 @@ HFILES_NO_SRCDIR = \
 	riscv-fbsd-tdep.h \
 	riscv-ravenscar-thread.h \
 	riscv-tdep.h \
-	rocm-tdep.h \
 	rs6000-aix-tdep.h \
 	run-on-main-thread.h \
 	s390-linux-tdep.h \
@@ -2157,6 +2157,7 @@ ALLDEPFILES = \
 	alpha-netbsd-tdep.c \
 	alpha-obsd-tdep.c \
 	alpha-tdep.c \
+	amd-dbgapi-target.c \
 	amd64-bsd-nat.c \
 	amd64-darwin-tdep.c \
 	amd64-dicos-tdep.c \
@@ -2299,7 +2300,6 @@ ALLDEPFILES = \
 	riscv-none-tdep.c \
 	riscv-ravenscar-thread.c \
 	riscv-tdep.c \
-	rocm-tdep.c \
 	rl78-tdep.c \
 	rs6000-aix-nat.c \
 	rs6000-lynx178-tdep.c \

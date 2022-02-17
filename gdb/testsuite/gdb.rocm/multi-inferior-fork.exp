@@ -74,7 +74,8 @@ proc do_test { stop_at } {
 # Different modes of failure were seen when stopping in the kernel and in the
 # kernel, so test both.
 #
-# When stopped on `kernel` we would hit some internal error in rocm-tdep.c.
+# When stopped on `kernel` we would hit some internal error in
+# amd-dbgapi-target.c.
 #
 # When stopping on `child_after_fork`, trying to continue inferior 2 until the
 # end wouldn't work, the process was stuck on / kept hitting the breakpoint.

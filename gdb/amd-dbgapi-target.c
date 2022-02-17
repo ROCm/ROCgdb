@@ -1,4 +1,4 @@
-/* Target-dependent code for ROCm.
+/* Target used to communicate with the AMD Debugger API.
 
    Copyright (C) 2019-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
@@ -44,7 +44,7 @@
 #include "observable.h"
 #include "progspace-and-thread.h"
 #include "regcache.h"
-#include "rocm-tdep.h"
+#include "amd-dbgapi-target.h"
 #include "solib.h"
 #include "solist.h"
 #include "symfile.h"
@@ -3765,10 +3765,10 @@ dispatch_find_command (const char *arg, int from_tty)
 }
 
 /* -Wmissing-prototypes */
-extern initialize_file_ftype _initialize_rocm_tdep;
+extern initialize_file_ftype _initialize_amd_dbgapi_target;
 
 void
-_initialize_rocm_tdep ()
+_initialize_amd_dbgapi_target ()
 {
   /* Make sure the loaded debugger library version is greater than or equal to
      the one used to build ROCgdb.  */
@@ -3790,15 +3790,15 @@ _initialize_rocm_tdep ()
 
   /* Install observers.  */
   gdb::observers::breakpoint_created.attach (rocm_target_breakpoint_fixup,
-					     "rocm-tdep");
+					     "rocm-dbgapi");
   gdb::observers::inferior_created.attach (rocm_target_inferior_created,
-					   "rocm-tdep");
+					   "rocm-dbgapi");
   gdb::observers::inferior_cloned.attach (rocm_target_inferior_cloned,
-					  "rocm-tdep");
+					  "rocm-dbgapi");
   gdb::observers::signal_received.attach (rocm_target_signal_received,
-					  "rocm-tdep");
-  gdb::observers::normal_stop.attach (rocm_target_normal_stop, "rocm-tdep");
-  gdb::observers::inferior_execd.attach (rocm_inferior_execd, "rocm-tdep");
+					  "rocm-dbgapi");
+  gdb::observers::normal_stop.attach (rocm_target_normal_stop, "rocm-dbgapi");
+  gdb::observers::inferior_execd.attach (rocm_inferior_execd, "rocm-dbgapi");
 
   create_internalvar_type_lazy ("_wave_id", &rocm_wave_id_funcs, NULL);
 
