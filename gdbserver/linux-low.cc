@@ -3659,9 +3659,9 @@ linux_process_target::wait_1 (ptid_t ptid, target_waitstatus *ourstatus,
 
   if (debug_threads)
     {
-      debug_printf ("wait_1 ret = %s, %d, %d\n",
+      debug_printf ("wait_1 ret = %s, %s\n",
 		    target_pid_to_str (ptid_of (current_thread)),
-		    ourstatus->kind, ourstatus->value.sig);
+		    target_waitstatus_to_string (ourstatus).c_str ());
       debug_exit ();
     }
 
