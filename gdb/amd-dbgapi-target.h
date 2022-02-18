@@ -85,9 +85,6 @@ ptid_is_gpu (ptid_t ptid)
   return ptid.pid () != 1 && ptid.lwp () == 1;
 }
 
-/* Return true if this is the AMDGCN architecture.  */
-extern bool rocm_is_amdgcn_gdbarch (struct gdbarch *gdbarch);
-
 /* Return the current inferior's amd_dbgapi process id.  */
 extern amd_dbgapi_process_id_t
 get_amd_dbgapi_process_id (struct inferior *inferior = nullptr);

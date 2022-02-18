@@ -46,7 +46,7 @@ constexpr CORE_ADDR AMDGCN_ADDRESS_SPACE_MASK = 0xff00000000000000;
 constexpr unsigned int AMDGCN_ADDRESS_SPACE_BIT_OFFSET = 56;
 
 bool
-rocm_is_amdgcn_gdbarch (struct gdbarch *arch)
+is_amdgcn_arch (struct gdbarch *arch)
 {
   gdb_assert (arch != nullptr);
   return gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn;
