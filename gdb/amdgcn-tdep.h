@@ -82,6 +82,9 @@ struct gdbarch_tdep
   std::vector<arch_addr_space> address_spaces;
 };
 
+/* Return true if GDBARCH is of the amdgcn architecture.  */
+bool is_amdgcn_arch (struct gdbarch *gdbarch);
+
 /* Extract address space from a core address ADDR.  */
 
 arch_addr_space_id amdgcn_address_space_id_from_core_address (CORE_ADDR addr);

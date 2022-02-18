@@ -1880,7 +1880,7 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 
   /* delegate to the host routines when not on the device */
 
-  if (!rocm_is_amdgcn_gdbarch (gdbarch))
+  if (!is_amdgcn_arch (gdbarch))
     {
       beneath ()->fetch_registers (regcache, regno);
       return;
@@ -1913,7 +1913,7 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   gdb_byte raw[AMDGCN_MAX_REGISTER_SIZE];
 
-  if (!rocm_is_amdgcn_gdbarch (gdbarch))
+  if (!is_amdgcn_arch (gdbarch))
     {
       beneath ()->store_registers (regcache, regno);
       return;
