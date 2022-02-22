@@ -2227,9 +2227,6 @@ do_target_resume (ptid_t resume_ptid, bool step, enum gdb_signal sig)
     target_pass_signals (signal_pass);
 
   target_resume (resume_ptid, step, sig);
-
-  if (target_can_async_p ())
-    target_async (1);
 }
 
 /* Resume the inferior.  SIG is the signal to give the inferior
@@ -3692,7 +3689,7 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
 
   /* We can't ask a non-async target to do a non-blocking wait, so this will be
      a blocking wait.  */
-  if (!target_can_async_p ())
+  if (!target_is_async_p ())
     options &= ~TARGET_WNOHANG;
 
   if (deprecated_target_wait_hook)

@@ -65,6 +65,7 @@
 #include "gdbsupport/filestuff.h"
 #include "objfiles.h"
 #include "nat/linux-namespaces.h"
+#include "gdbsupport/block-signals.h"
 #include "gdbsupport/fileio.h"
 #include "gdbsupport/scope-exit.h"
 #include "gdbsupport/gdb-sigmask.h"
@@ -111,11 +112,11 @@ and target events, so neither blocking waitpid nor sigsuspend are
 viable options.  Instead, we should asynchronously notify the GDB main
 event loop whenever there's an unprocessed event from the target.  We
 detect asynchronous target events by handling SIGCHLD signals.  To
-notify the event loop about target events, the self-pipe trick is used
---- a pipe is registered as waitable event source in the event loop,
+notify the event loop about target events, an event pipe is used
+--- the pipe is registered as waitable event source in the event loop,
 the event loop select/poll's on the read end of this pipe (as well on
-other event sources, e.g., stdin), and the SIGCHLD handler writes a
-byte to this pipe.  This is more portable than relying on
+other event sources, e.g., stdin), and the SIGCHLD handler marks the
+event pipe to raise an event.  This is more portable than relying on
 pselect/ppoll, since on kernels that lack those syscalls, libc
 emulates them with select/poll+sigprocmask, and that is racy
 (a.k.a. plain broken).
@@ -225,54 +226,6 @@ static struct simple_pid_list *stopped_pids;
 
 /* Whether target_thread_events is in effect.  */
 static int report_thread_events;
-
-/* Async mode support.  */
-
-/* The read/write ends of the pipe registered as waitable file in the
-   event loop.  */
-static int linux_nat_event_pipe[2] = { -1, -1 };
-
-/* True if we're currently in async mode.  */
-#define linux_is_async_p() (linux_nat_event_pipe[0] != -1)
-
-/* Flush the event pipe.  */
-
-static void
-async_file_flush (void)
-{
-  int ret;
-  char buf;
-
-  do
-    {
-      ret = read (linux_nat_event_pipe[0], &buf, 1);
-    }
-  while (ret >= 0 || (ret == -1 && errno == EINTR));
-}
-
-/* Put something (anything, doesn't matter what, or how much) in event
-   pipe, so that the select/poll in the event-loop realizes we have
-   something to process.  */
-
-static void
-async_file_mark (void)
-{
-  int ret;
-
-  /* It doesn't really matter what the pipe contains, as long we end
-     up with something in it.  Might as well flush the previous
-     left-overs.  */
-  async_file_flush ();
-
-  do
-    {
-      ret = write (linux_nat_event_pipe[1], "+", 1);
-    }
-  while (ret == -1 && errno == EINTR);
-
-  /* Ignore EAGAIN.  If the pipe is full, the event loop will already
-     be awakened anyway.  */
-}
 
 static int kill_lwp (int lwpid, int signo);
 
@@ -1180,9 +1133,6 @@ linux_nat_target::attach (const char *args, int from_tty)
      threads and associate pthread info with each LWP.  */
   linux_proc_attach_tgid_threads (lp->ptid.pid (),
 				  attach_proc_task_lwp_callback);
-
-  if (target_can_async_p ())
-    target_async (1);
 }
 
 /* Ptrace-detach the thread with pid PID.  */
@@ -1724,9 +1674,6 @@ linux_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 			   ? strsignal (gdb_signal_to_host (signo)) : "0"));
 
   linux_resume_one_lwp (lp, step, signo);
-
-  if (target_can_async_p ())
-    target_async (1);
 }
 
 /* Send a signal to an LWP.  */
@@ -4081,14 +4028,6 @@ linux_nat_target::static_tracepoint_markers_by_strid (const char *strid)
   return markers;
 }
 
-/* target_is_async_p implementation.  */
-
-bool
-linux_nat_target::is_async_p ()
-{
-  return linux_is_async_p ();
-}
-
 /* target_can_async_p implementation.  */
 
 bool
@@ -4140,10 +4079,11 @@ sigchld_handler (int signo)
   if (debug_linux_nat)
     gdb_stdlog->write_async_safe ("sigchld\n", sizeof ("sigchld\n") - 1);
 
-  if (signo == SIGCHLD
-      && linux_nat_event_pipe[0] != -1)
-    async_file_mark (); /* Let the event loop know that there are
-			   events to handle.  */
+  if (signo == SIGCHLD)
+    {
+      /* Let the event loop know that there are events to handle.  */
+      linux_nat_target::async_file_mark_if_open ();
+    }
 
   errno = old_errno;
 }
@@ -4156,73 +4096,35 @@ handle_target_event (int error, gdb_client_data client_data)
   inferior_event_handler (INF_REG_EVENT);
 }
 
-/* Create/destroy the target events pipe.  Returns previous state.  */
-
-static int
-linux_async_pipe (int enable)
-{
-  int previous = linux_is_async_p ();
-
-  if (previous != enable)
-    {
-      sigset_t prev_mask;
-
-      /* Block child signals while we create/destroy the pipe, as
-	 their handler writes to it.  */
-      block_child_signals (&prev_mask);
-
-      if (enable)
-	{
-	  if (gdb_pipe_cloexec (linux_nat_event_pipe) == -1)
-	    internal_error (__FILE__, __LINE__,
-			    "creating event pipe failed.");
-
-	  fcntl (linux_nat_event_pipe[0], F_SETFL, O_NONBLOCK);
-	  fcntl (linux_nat_event_pipe[1], F_SETFL, O_NONBLOCK);
-	}
-      else
-	{
-	  close (linux_nat_event_pipe[0]);
-	  close (linux_nat_event_pipe[1]);
-	  linux_nat_event_pipe[0] = -1;
-	  linux_nat_event_pipe[1] = -1;
-	}
-
-      restore_child_signals_mask (&prev_mask);
-    }
-
-  return previous;
-}
-
-int
-linux_nat_target::async_wait_fd ()
-{
-  return linux_nat_event_pipe[0];
-}
-
 /* target_async implementation.  */
 
 void
 linux_nat_target::async (int enable)
 {
+  if ((enable != 0) == is_async_p ())
+    return;
+
+  /* Block child signals while we create/destroy the pipe, as their
+     handler writes to it.  */
+  gdb::block_signals blocker;
+
   if (enable)
     {
-      if (!linux_async_pipe (1))
-	{
-	  add_file_handler (linux_nat_event_pipe[0],
-			    handle_target_event, NULL,
-			    "linux-nat");
-	  /* There may be pending events to handle.  Tell the event loop
-	     to poll them.  */
-	  async_file_mark ();
-	}
+      if (!async_file_open ())
+	internal_error (__FILE__, __LINE__, "creating event pipe failed.");
+
+      add_file_handler (async_wait_fd (), handle_target_event, NULL,
+			"linux-nat");
+
+      /* There may be pending events to handle.  Tell the event loop
+	 to poll them.  */
+      async_file_mark ();
     }
   else
     {
-      delete_file_handler (linux_nat_event_pipe[0]);
-      linux_async_pipe (0);
+      delete_file_handler (async_wait_fd ());
+      async_file_close ();
     }
-  return;
 }
 
 /* Stop an LWP, and push a GDB_SIGNAL_0 stop status if no other
@@ -4269,16 +4171,6 @@ linux_nat_target::stop (ptid_t ptid)
 {
   LINUX_NAT_SCOPED_DEBUG_ENTER_EXIT;
   iterate_over_lwps (ptid, linux_nat_stop_lwp);
-}
-
-void
-linux_nat_target::close ()
-{
-  /* Unregister from the event loop.  */
-  if (is_async_p ())
-    async (0);
-
-  inf_ptrace_target::close ();
 }
 
 /* When requests are passed down from the linux-nat layer to the

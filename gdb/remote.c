@@ -6177,16 +6177,12 @@ extended_remote_target::attach (const char *args, int from_tty)
 	=  remote_notif_parse (this, &notif_client_stop, wait_status);
 
       push_stop_reply ((struct stop_reply *) reply);
-
-      if (target_can_async_p ())
-	target_async (1);
     }
   else
     {
       gdb_assert (wait_status == NULL);
 
       gdb_assert (target_can_async_p ());
-      target_async (1);
     }
 }
 
@@ -6564,16 +6560,6 @@ remote_target::resume (ptid_t ptid, int step, enum gdb_signal siggnal)
   /* Update resumed state tracked by the remote target.  */
   for (thread_info *tp : all_non_exited_threads (this, ptid))
     get_remote_thread_info (tp)->set_resumed ();
-
-  /* We are about to start executing the inferior, let's register it
-     with the event loop.  NOTE: this is the one place where all the
-     execution commands end up.  We could alternatively do this in each
-     of the execution commands in infcmd.c.  */
-  /* FIXME: ezannoni 1999-09-28: We may need to move this out of here
-     into infcmd.c in order to allow inferior function calls to work
-     NOT asynchronously.  */
-  if (target_can_async_p ())
-    target_async (1);
 
   /* We've just told the target to resume.  The remote server will
      wait for the inferior to stop, and then send a stop reply.  In

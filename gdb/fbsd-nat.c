@@ -18,7 +18,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "gdbsupport/block-signals.h"
 #include "gdbsupport/byte-vector.h"
+#include "gdbsupport/event-loop.h"
 #include "gdbcore.h"
 #include "inferior.h"
 #include "regcache.h"
@@ -28,6 +30,7 @@
 #include "gdbthread.h"
 #include "gdbsupport/buildargv.h"
 #include "gdbsupport/gdb_wait.h"
+#include "inf-loop.h"
 #include "inf-ptrace.h"
 #include <sys/types.h>
 #ifdef HAVE_SYS_PROCCTL_H
@@ -815,9 +818,9 @@ fbsd_nat_target::thread_name (struct thread_info *thr)
      if a name has not been set explicitly.  Return a NULL name in
      that case.  */
   if (!fbsd_fetch_kinfo_proc (pid, &kp))
-    perror_with_name (_("Failed to fetch process information"));
+    return nullptr;
   if (ptrace (PT_LWPINFO, lwp, (caddr_t) &pl, sizeof pl) == -1)
-    perror_with_name (("ptrace"));
+    return nullptr;
   if (strcmp (kp.ki_comm, pl.pl_tdname) == 0)
     return NULL;
   xsnprintf (buf, sizeof buf, "%s", pl.pl_tdname);
@@ -846,22 +849,22 @@ fbsd_enable_proc_events (pid_t pid)
 
   if (ptrace (PT_GET_EVENT_MASK, pid, (PTRACE_TYPE_ARG3)&events,
 	      sizeof (events)) == -1)
-    perror_with_name (("ptrace"));
+    perror_with_name (("ptrace (PT_GET_EVENT_MASK)"));
   events |= PTRACE_FORK | PTRACE_LWP;
 #ifdef PTRACE_VFORK
   events |= PTRACE_VFORK;
 #endif
   if (ptrace (PT_SET_EVENT_MASK, pid, (PTRACE_TYPE_ARG3)&events,
 	      sizeof (events)) == -1)
-    perror_with_name (("ptrace"));
+    perror_with_name (("ptrace (PT_SET_EVENT_MASK)"));
 #else
 #ifdef TDP_RFPPWAIT
   if (ptrace (PT_FOLLOW_FORK, pid, (PTRACE_TYPE_ARG3)0, 1) == -1)
-    perror_with_name (("ptrace"));
+    perror_with_name (("ptrace (PT_FOLLOW_FORK)"));
 #endif
 #ifdef PT_LWP_EVENTS
   if (ptrace (PT_LWP_EVENTS, pid, (PTRACE_TYPE_ARG3)0, 1) == -1)
-    perror_with_name (("ptrace"));
+    perror_with_name (("ptrace (PT_LWP_EVENTS)"));
 #endif
 #endif
 }
@@ -880,13 +883,13 @@ fbsd_add_threads (fbsd_nat_target *target, pid_t pid)
   gdb_assert (!in_thread_list (target, ptid_t (pid)));
   nlwps = ptrace (PT_GETNUMLWPS, pid, NULL, 0);
   if (nlwps == -1)
-    perror_with_name (("ptrace"));
+    perror_with_name (("ptrace (PT_GETNUMLWPS)"));
 
   gdb::unique_xmalloc_ptr<lwpid_t[]> lwps (XCNEWVEC (lwpid_t, nlwps));
 
   nlwps = ptrace (PT_GETLWPLIST, pid, (caddr_t) lwps.get (), nlwps);
   if (nlwps == -1)
-    perror_with_name (("ptrace"));
+    perror_with_name (("ptrace (PT_GETLWPLIST)"));
 
   for (i = 0; i < nlwps; i++)
     {
@@ -900,7 +903,7 @@ fbsd_add_threads (fbsd_nat_target *target, pid_t pid)
 	  /* Don't add exited threads.  Note that this is only called
 	     when attaching to a multi-threaded process.  */
 	  if (ptrace (PT_LWPINFO, lwps[i], (caddr_t) &pl, sizeof pl) == -1)
-	    perror_with_name (("ptrace"));
+	    perror_with_name (("ptrace (PT_LWPINFO)"));
 	  if (pl.pl_flags & PL_FLAG_EXITED)
 	    continue;
 #endif
@@ -924,6 +927,70 @@ fbsd_nat_target::update_thread_list ()
 
   fbsd_add_threads (this, inferior_ptid.pid ());
 #endif
+}
+
+/* Async mode support.  */
+
+/* Implement the "can_async_p" target method.  */
+
+bool
+fbsd_nat_target::can_async_p ()
+{
+  /* This flag should be checked in the common target.c code.  */
+  gdb_assert (target_async_permitted);
+
+  /* Otherwise, this targets is always able to support async mode.  */
+  return true;
+}
+
+/* SIGCHLD handler notifies the event-loop in async mode.  */
+
+static void
+sigchld_handler (int signo)
+{
+  int old_errno = errno;
+
+  fbsd_nat_target::async_file_mark_if_open ();
+
+  errno = old_errno;
+}
+
+/* Callback registered with the target events file descriptor.  */
+
+static void
+handle_target_event (int error, gdb_client_data client_data)
+{
+  inferior_event_handler (INF_REG_EVENT);
+}
+
+/* Implement the "async" target method.  */
+
+void
+fbsd_nat_target::async (int enable)
+{
+  if ((enable != 0) == is_async_p ())
+    return;
+
+  /* Block SIGCHILD while we create/destroy the pipe, as the handler
+     writes to it.  */
+  gdb::block_signals blocker;
+
+  if (enable)
+    {
+      if (!async_file_open ())
+	internal_error (__FILE__, __LINE__, "failed to create event pipe.");
+
+      add_file_handler (async_wait_fd (), handle_target_event, NULL, "fbsd-nat");
+
+      /* Trigger a poll in case there are pending events to
+	 handle.  */
+      async_file_mark ();
+    }
+  else
+    {
+      delete_file_handler (async_wait_fd ());
+      async_file_close ();
+    }
 }
 
 #ifdef TDP_RFPPWAIT
@@ -997,6 +1064,11 @@ static void
 fbsd_add_vfork_done (ptid_t pid)
 {
   fbsd_pending_vfork_done.push_front (pid);
+
+  /* If we're in async mode, need to tell the event loop there's
+     something here to process.  */
+  if (target_is_async_p ())
+    async_file_mark ();
 }
 
 /* Check for a pending vfork done event for a specific PID.  */
@@ -1045,8 +1117,9 @@ fbsd_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
     return;
 #endif
 
-  fbsd_lwp_debug_printf ("ptid (%d, %ld, %s)", ptid.pid (), ptid.lwp (),
-			 pulongest (ptid.tid ()));
+  fbsd_nat_debug_printf ("[%s], step %d, signo %d (%s)",
+			 target_pid_to_str (ptid).c_str (), step, signo,
+			 gdb_signal_to_name (signo));
   if (ptid.lwp_p ())
     {
       /* If ptid is a specific LWP, suspend all other LWPs in the process.  */
@@ -1062,7 +1135,9 @@ fbsd_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	    request = PT_SUSPEND;
 
 	  if (ptrace (request, tp->ptid.lwp (), NULL, 0) == -1)
-	    perror_with_name (("ptrace"));
+	    perror_with_name (request == PT_RESUME ?
+			      ("ptrace (PT_RESUME)") :
+			      ("ptrace (PT_SUSPEND)"));
 	}
     }
   else
@@ -1071,7 +1146,7 @@ fbsd_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	 until the process is continued however).  */
       for (thread_info *tp : all_non_exited_threads (this, ptid))
 	if (ptrace (PT_RESUME, tp->ptid.lwp (), NULL, 0) == -1)
-	  perror_with_name (("ptrace"));
+	  perror_with_name (("ptrace (PT_RESUME)"));
       ptid = inferior_ptid;
     }
 
@@ -1101,7 +1176,7 @@ fbsd_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
   if (step)
     {
       if (ptrace (PT_SETSTEP, get_ptrace_pid (ptid), NULL, 0) == -1)
-	perror_with_name (("ptrace"));
+	perror_with_name (("ptrace (PT_SETSTEP)"));
       step = 0;
     }
   ptid = ptid_t (ptid.pid ());
@@ -1165,8 +1240,8 @@ fbsd_handle_debug_trap (fbsd_nat_target *target, ptid_t ptid,
    the status in *OURSTATUS.  */
 
 ptid_t
-fbsd_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
-		       target_wait_flags target_options)
+fbsd_nat_target::wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
+			 target_wait_flags target_options)
 {
   ptid_t wptid;
 
@@ -1189,7 +1264,7 @@ fbsd_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 
 	  pid = wptid.pid ();
 	  if (ptrace (PT_LWPINFO, pid, (caddr_t) &pl, sizeof pl) == -1)
-	    perror_with_name (("ptrace"));
+	    perror_with_name (("ptrace (PT_LWPINFO)"));
 
 	  wptid = ptid_t (pid, pl.pl_lwpid);
 
@@ -1221,7 +1296,7 @@ fbsd_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 		  delete_thread (thr);
 		}
 	      if (ptrace (PT_CONTINUE, pid, (caddr_t) 1, 0) == -1)
-		perror_with_name (("ptrace"));
+		perror_with_name (("ptrace (PT_CONTINUE)"));
 	      continue;
 	    }
 #endif
@@ -1284,7 +1359,7 @@ fbsd_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 		  gdb_assert (pid == child);
 
 		  if (ptrace (PT_LWPINFO, child, (caddr_t)&pl, sizeof pl) == -1)
-		    perror_with_name (("ptrace"));
+		    perror_with_name (("ptrace (PT_LWPINFO)"));
 
 		  gdb_assert (pl.pl_flags & PL_FLAG_CHILD);
 		  child_ptid = ptid_t (child, pl.pl_lwpid);
@@ -1373,12 +1448,42 @@ fbsd_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 		 and once system call stops are enabled on a process
 		 it stops for all system call entries and exits.  */
 	      if (ptrace (PT_CONTINUE, pid, (caddr_t) 1, 0) == -1)
-		perror_with_name (("ptrace"));
+		perror_with_name (("ptrace (PT_CONTINUE)"));
 	      continue;
 	    }
 	}
       return wptid;
     }
+}
+
+ptid_t
+fbsd_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
+		       target_wait_flags target_options)
+{
+  ptid_t wptid;
+
+  fbsd_nat_debug_printf ("[%s], [%s]", target_pid_to_str (ptid).c_str (),
+			 target_options_to_string (target_options).c_str ());
+
+  /* Ensure any subsequent events trigger a new event in the loop.  */
+  if (is_async_p ())
+    async_file_flush ();
+
+  wptid = wait_1 (ptid, ourstatus, target_options);
+
+  /* If we are in async mode and found an event, there may still be
+     another event pending.  Trigger the event pipe so that that the
+     event loop keeps polling until no event is returned.  */
+  if (is_async_p ()
+      && ((ourstatus->kind () != TARGET_WAITKIND_IGNORE
+	  && ourstatus->kind() != TARGET_WAITKIND_NO_RESUMED)
+	  || ptid != minus_one_ptid))
+    async_file_mark ();
+
+  fbsd_nat_debug_printf ("returning [%s], [%s]",
+			 target_pid_to_str (wptid).c_str (),
+			 ourstatus->to_string ().c_str ());
+  return wptid;
 }
 
 #ifdef USE_SIGTRAP_SIGINFO
@@ -1490,7 +1595,7 @@ fbsd_nat_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 	 infrun.c.  */
 
       if (ptrace (PT_DETACH, child_pid, (PTRACE_TYPE_ARG3)1, 0) == -1)
-	perror_with_name (("ptrace"));
+	perror_with_name (("ptrace (PT_DETACH)"));
 
 #ifndef PTRACE_VFORK
       if (fork_kind () == TARGET_WAITKIND_VFORKED)
@@ -1679,4 +1784,7 @@ Enables printf debugging output."),
 			   NULL,
 			   &show_fbsd_nat_debug,
 			   &setdebuglist, &showdebuglist);
+
+  /* Install a SIGCHLD handler.  */
+  signal (SIGCHLD, sigchld_handler);
 }

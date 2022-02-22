@@ -66,6 +66,10 @@ public:
 
   void update_thread_list () override;
 
+  bool can_async_p () override;
+
+  void async (int) override;
+
   thread_control_capabilities get_thread_control_capabilities () override
   { return tc_schedlock; }
 
@@ -110,6 +114,8 @@ protected:
   void post_startup_inferior (ptid_t) override;
 
 private:
+  ptid_t wait_1 (ptid_t, struct target_waitstatus *, target_wait_flags);
+
   /* Helper routines for use in fetch_registers and store_registers in
      subclasses.  These routines fetch and store a single set of
      registers described by REGSET.  The REGSET's 'regmap' field must
