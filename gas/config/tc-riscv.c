@@ -89,6 +89,20 @@ struct riscv_csr_extra
   struct riscv_csr_extra *next;
 };
 
+/* This structure contains information about errors that occur within the
+   riscv_ip function */
+struct riscv_ip_error
+{
+  /* General error message */
+  const char* msg;
+
+  /* Statement that caused the error */
+  char* statement;
+
+  /* Missing extension that needs to be enabled */
+  const char* missing_ext;
+};
+
 #ifndef DEFAULT_ARCH
 #define DEFAULT_ARCH "riscv64"
 #endif
@@ -882,38 +896,44 @@ riscv_csr_address (const char *csr_name,
 {
   struct riscv_csr_extra *saved_entry = entry;
   enum riscv_csr_class csr_class = entry->csr_class;
-  bool need_check_version = true;
-  bool result = true;
+  bool need_check_version = false;
+  bool rv32_only = true;
+  const char* extension = NULL;
 
   switch (csr_class)
     {
-    case CSR_CLASS_I:
-      result = riscv_subset_supports (&riscv_rps_as, "i");
-      break;
     case CSR_CLASS_I_32:
-      result = (xlen == 32 && riscv_subset_supports (&riscv_rps_as, "i"));
+      rv32_only = (xlen == 32);
+      /* Fall through.  */
+    case CSR_CLASS_I:
+      need_check_version = true;
+      extension = "i";
       break;
     case CSR_CLASS_F:
-      result = riscv_subset_supports (&riscv_rps_as, "f");
-      need_check_version = false;
+      extension = "f";
       break;
     case CSR_CLASS_ZKR:
-      result = riscv_subset_supports (&riscv_rps_as, "zkr");
-      need_check_version = false;
+      extension = "zkr";
       break;
     case CSR_CLASS_V:
-      result = riscv_subset_supports (&riscv_rps_as, "v");
-      need_check_version = false;
+      extension = "v";
       break;
     case CSR_CLASS_DEBUG:
-      need_check_version = false;
       break;
     default:
       as_bad (_("internal: bad RISC-V CSR class (0x%x)"), csr_class);
     }
 
-  if (riscv_opts.csr_check && !result)
-    as_warn (_("invalid CSR `%s' for the current ISA"), csr_name);
+  if (riscv_opts.csr_check)
+    {
+      if (!rv32_only)
+	as_warn (_("invalid CSR `%s', needs rv32i extension"), csr_name);
+
+      if (extension != NULL
+	  && !riscv_subset_supports (&riscv_rps_as, extension))
+	as_warn (_("invalid CSR `%s', needs `%s' extension"),
+		 csr_name, extension);
+    }
 
   while (entry != NULL)
     {
@@ -2215,7 +2235,7 @@ riscv_is_priv_insn (insn_t insn)
    side effect, it sets the global variable imm_reloc to the type of
    relocation to do if one of the operands is an address expression.  */
 
-static const char *
+static struct riscv_ip_error
 riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	  bfd_reloc_code_real_type *imm_reloc, htab_t hash)
 {
@@ -2228,7 +2248,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   unsigned int regno;
   int argnum;
   const struct percent_op_match *p;
-  const char *error = "unrecognized opcode";
+  struct riscv_ip_error error;
+  error.msg = "unrecognized opcode";
+  error.statement = str;
+  error.missing_ext = NULL;
   /* Indicate we are assembling instruction with CSR.  */
   bool insn_with_csr = false;
 
@@ -2251,10 +2274,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	continue;
 
       if (!riscv_multi_subset_supports (&riscv_rps_as, insn->insn_class))
-	continue;
+	{
+	  error.missing_ext = riscv_multi_subset_supports_ext (&riscv_rps_as,
+							       insn->insn_class);
+	  continue;
+	}
 
       /* Reset error message of the previous round.  */
-      error = _("illegal operands");
+      error.msg = _("illegal operands");
+      error.missing_ext = NULL;
       create_insn (ip, insn);
       argnum = 1;
 
@@ -2304,14 +2332,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      && riscv_subset_supports (&riscv_rps_as, "zve32x")
 		      && !riscv_subset_supports (&riscv_rps_as, "zve64x"))
 		    {
-		      error = _("illegal opcode for zve32x");
+		      error.msg = _("illegal opcode for zve32x");
 		      break;
 		    }
 		}
 	      if (*asarg != '\0')
 		break;
 	      /* Successful assembly.  */
-	      error = NULL;
+	      error.msg = NULL;
 	      insn_with_csr = false;
 	      goto out;
 
@@ -3247,11 +3275,16 @@ md_assemble (char *str)
 
   riscv_mapping_state (MAP_INSN, 0);
 
-  const char *error = riscv_ip (str, &insn, &imm_expr, &imm_reloc, op_hash);
+  const struct riscv_ip_error error = riscv_ip (str, &insn, &imm_expr,
+						&imm_reloc, op_hash);
 
-  if (error)
+  if (error.msg)
     {
-      as_bad ("%s `%s'", error, str);
+      if (error.missing_ext)
+	as_bad ("%s `%s', extension `%s' required", error.msg,
+		error.statement, error.missing_ext);
+      else
+	as_bad ("%s `%s'", error.msg, error.statement);
       return;
     }
 
@@ -4260,17 +4293,23 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
 
   riscv_mapping_state (MAP_INSN, 0);
 
-  const char *error = riscv_ip (str, &insn, &imm_expr,
+  struct riscv_ip_error error = riscv_ip (str, &insn, &imm_expr,
 				&imm_reloc, insn_type_hash);
-  if (error)
+  if (error.msg)
     {
       char *save_in = input_line_pointer;
-      error = riscv_ip_hardcode (str, &insn, &imm_expr, error);
+      error.msg = riscv_ip_hardcode (str, &insn, &imm_expr, error.msg);
       input_line_pointer = save_in;
     }
 
-  if (error)
-    as_bad ("%s `%s'", error, str);
+  if (error.msg)
+    {
+      if (error.missing_ext)
+	as_bad ("%s `%s', extension `%s' required", error.msg, error.statement,
+		error.missing_ext);
+      else
+	as_bad ("%s `%s'", error.msg, error.statement);
+    }
   else
     {
       gas_assert (insn.insn_mo->pinfo != INSN_MACRO);
