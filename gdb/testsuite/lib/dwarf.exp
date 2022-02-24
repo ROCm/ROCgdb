@@ -1451,6 +1451,11 @@ namespace eval Dwarf {
 		    _op .byte $argvec(size)
 		}
 
+		DW_OP_breg0 {
+		    _get_args $line $opcode offset
+		    _op .sleb128 $argvec(offset)
+		}
+
 		DW_OP_bregx {
 		    _get_args $line $opcode register offset
 		    _op .uleb128 $argvec(register)
@@ -1474,6 +1479,17 @@ namespace eval Dwarf {
 		DW_OP_LLVM_select_bit_piece {
 		    _op .uleb128 [lindex $line 1]
 		    _op .uleb128 [lindex $line 2]
+		}
+
+		DW_OP_LLVM_call_frame_entry_reg {
+		    _get_args $line $opcode register
+		    _op .uleb128 $argvec(register)
+		}
+
+		DW_OP_LLVM_aspace_bregx {
+		    _get_args $line $opcode register offset
+		    _op .uleb128 $argvec(register)
+		    _op .sleb128 $argvec(offset)
 		}
 
 		default {

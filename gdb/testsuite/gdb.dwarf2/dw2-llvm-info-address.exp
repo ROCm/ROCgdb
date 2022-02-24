@@ -1,0 +1,162 @@
+# Copyright (C) 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test if all LLVM DWARF extensions for heterogenous debugging
+# (https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html) show
+# up in "info address" command.
+#
+# We also need to make sure that the existing "nice" printout is
+# backward compatible.
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+if {![dwarf2_support]} {
+    return 0
+}
+
+# Choose suitable integer registers for the test.
+
+set dwarf_regnum 0
+
+if { [is_aarch64_target] } {
+    set regname x0
+} elseif { [is_aarch32_target]
+	   || [istarget "s390*-*-*" ]
+	   || [istarget "powerpc*-*-*"]
+	   || [istarget "rs6000*-*-aix*"] } {
+    set regname r0
+} elseif { [is_x86_like_target] } {
+    set regname eax
+} elseif { [is_amd64_regs_target] } {
+    set regname rax
+} else {
+    verbose "Skipping ${gdb_test_file_name}."
+    return
+}
+
+standard_testfile var-access.c ${gdb_test_file_name}-dw.S
+
+# Make some DWARF for the test.
+
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    global dwarf_regnum regname srcdir subdir srcfile
+    set main_result [function_range main ${srcdir}/${subdir}/${srcfile}]
+    set main_start [lindex $main_result 0]
+    set main_length [lindex $main_result 1]
+
+    cu {} {
+	DW_TAG_compile_unit {
+	    {DW_AT_name var-access.c}
+	    {DW_AT_comp_dir /tmp}
+	} {
+	    declare_labels int_type_label
+
+	    # Define int type.
+	    int_type_label: DW_TAG_base_type {
+		{DW_AT_name "int"}
+		{DW_AT_encoding @DW_ATE_signed}
+		{DW_AT_byte_size 4 DW_FORM_sdata}
+	    }
+
+	    DW_TAG_subprogram {
+		{DW_AT_name main}
+		{DW_AT_low_pc $main_start addr}
+		{DW_AT_high_pc $main_length data8}
+	    } {
+		# Define variable 'a' with all extensions.
+		DW_TAG_variable {
+		    {DW_AT_name a}
+		    {DW_AT_type :$int_type_label}
+		    {DW_AT_location {
+			# This is not a meaningful expression.  It's a
+			# list of all the opcodes we want to be sure we
+			# can dump with 'info address'.
+			DW_OP_LLVM_push_lane
+			DW_OP_lit0
+			DW_OP_lit1
+			DW_OP_LLVM_form_aspace_address
+			DW_OP_LLVM_offset_constu 8
+			DW_OP_LLVM_offset
+			DW_OP_LLVM_bit_offset
+			DW_OP_LLVM_undefined
+			DW_OP_LLVM_extend 64 64
+			DW_OP_LLVM_select_bit_piece 64 64
+			DW_OP_LLVM_piece_end
+			DW_OP_LLVM_call_frame_entry_reg $dwarf_regnum
+			DW_OP_LLVM_aspace_bregx $dwarf_regnum 0
+		    } SPECIAL_expr}
+		}
+
+		# Define a variable 'b', which location can be printed
+		# in a nicer way, as the expression does not contain the
+		# LLVM DWARF extensions.
+		DW_TAG_variable {
+		    {DW_AT_name b}
+		    {DW_AT_type :$int_type_label}
+		    {DW_AT_location {
+			DW_OP_reg0
+			DW_OP_piece 4
+			DW_OP_regx $dwarf_regnum
+			DW_OP_bit_piece 0 32
+			DW_OP_breg0 0
+			DW_OP_piece 4
+			DW_OP_lit1
+			DW_OP_stack_value
+			DW_OP_piece 4
+			DW_OP_addr 4
+			DW_OP_form_tls_address
+			DW_OP_piece 4
+		    } SPECIAL_expr}
+		}
+	    }
+	}
+    }
+}
+
+if { [prepare_for_testing ${testfile}.exp ${testfile} \
+     [list $srcfile $asm_file] {nodebug}] } {
+    return -1
+}
+
+if ![runto_main] {
+    return -1
+}
+
+# Test if all LLVM DWARF operations are printed correctly.
+gdb_test "info address a" \
+".*0\\: DW_OP_LLVM_push_lane.*\
+   1\\: DW_OP_lit0.*\
+   2\\: DW_OP_lit1.*\
+   3\\: DW_OP_LLVM_form_aspace_address.*\
+   4\\: DW_OP_LLVM_offset_constu 8.*\
+   6\\: DW_OP_LLVM_offset.*\
+   7\\: DW_OP_LLVM_bit_offset.*\
+   8\\: DW_OP_LLVM_undefined.*\
+   9\\: DW_OP_LLVM_extend piece size 64 \\(bits\\) pieces count 64.*\
+   12\\: DW_OP_LLVM_select_bit_piece piece size 64 \\(bits\\) pieces count 64.*\
+   15\\: DW_OP_LLVM_piece_end.*\
+   16\\: DW_OP_LLVM_call_frame_entry_reg register 0 \\\[\\$$regname\\\].*\
+   18\\: DW_OP_LLVM_aspace_bregx register 0 \\\[\\$$regname\\\] offset 0.*"
+
+# Test if "nice" printout is still backward compatible.
+gdb_test "info address b" \
+".*Symbol \\\"b\\\" is a variable in \\\$$regname \\\[4-byte piece\\\],\
+ and a variable in \\\$$regname \\\[0-bit piece, offset 32 bits\\\], and\
+ a variable at offset 0 from base reg .* \\\[4-byte piece\\\],\
+ and the constant 1 \\\[4-byte piece\\\], and a thread-local variable at\
+ offset 0x4 in the thread-local storage for.*\\\[4-byte piece\\\].*"
