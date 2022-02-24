@@ -23,6 +23,14 @@
 
 #include "elf/reloc-macros.h"
 
+/* e_ident[EI_ABIVERSION] values, when e_ident[EI_OSABI] is
+   ELFOSABI_AMDGPU_HSA.  */
+
+#define ELFABIVERSION_AMDGPU_HSA_V2 0
+#define ELFABIVERSION_AMDGPU_HSA_V3 1
+#define ELFABIVERSION_AMDGPU_HSA_V4 2
+#define ELFABIVERSION_AMDGPU_HSA_V5 3
+
 /* Bits in the e_flags field of the Elf64_Ehdr:  */
 
 #define EF_AMDGPU_MACH      0x0ff /* Processor selection mask for EF_AMDGPU_MACH_* values. */
