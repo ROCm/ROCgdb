@@ -3122,7 +3122,8 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
   struct gdbarch *gdbarch = objfile->arch ();
   size_t leb128_size;
 
-  if (data[0] >= DW_OP_reg0 && data[0] <= DW_OP_reg31)
+  if (data[0] >= DW_OP_reg0 && data[0] <= DW_OP_reg31
+      && piece_end_p (data + 1, end))
     {
       fprintf_filtered (stream, _("a variable in $%s"),
 			locexpr_regname (gdbarch, data[0] - DW_OP_reg0));
@@ -3131,8 +3132,15 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
   else if (data[0] == DW_OP_regx)
     {
       uint64_t reg;
+      const gdb_byte *save_data = data;
 
       data = safe_read_uleb128 (data + 1, end, &reg);
+
+      /* If the next operation doesn't define the end of a piece, the
+	 expression is too complex to be described here.  */
+      if (!piece_end_p (data, end))
+	return save_data;
+
       fprintf_filtered (stream, _("a variable in $%s"),
 			locexpr_regname (gdbarch, reg));
     }
@@ -3172,13 +3180,19 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 	  frame_reg = base_data[0] - DW_OP_breg0;
 	  buf_end = safe_read_sleb128 (base_data + 1, base_data + base_size,
 				       &base_offset);
+	/* If a location description is allowed to be placed on a DWARF
+	   stack, this becomes a valid case which is too complex to be
+	   described here.  */
 	  if (buf_end != base_data + base_size)
-	    error (_("Unexpected opcode after "
-		     "DW_OP_breg%u for symbol \"%s\"."),
-		   frame_reg, symbol->print_name ());
+	    return save_data;
 	}
       else if (base_data[0] >= DW_OP_reg0 && base_data[0] <= DW_OP_reg31)
 	{
+	/* If the next operation doesn't define the end of a piece, the
+	   expression is too complex to be described here.  */
+	  if (!piece_end_p (base_data + 1, base_data + base_size))
+	    return save_data;
+
 	  /* The frame base is just the register, with no offset.  */
 	  frame_reg = base_data[0] - DW_OP_reg0;
 	  base_offset = 0;
@@ -3195,12 +3209,17 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 			locexpr_regname (gdbarch, frame_reg),
 			plongest (base_offset), plongest (frame_offset));
     }
-  else if (data[0] >= DW_OP_breg0 && data[0] <= DW_OP_breg31
-	   && piece_end_p (data, end))
+  else if (data[0] >= DW_OP_breg0 && data[0] <= DW_OP_breg31)
     {
       int64_t offset;
+      const gdb_byte *save_data = data;
 
       data = safe_read_sleb128 (data + 1, end, &offset);
+
+      /* If the next operation doesn't define the end of a piece,
+	 the expression is too complex to be described here.  */
+      if (!piece_end_p (data, end))
+	return save_data;
 
       fprintf_filtered (stream,
 			_("a variable at offset %s from base reg $%s"),
@@ -3265,16 +3284,185 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
       ++data;
     }
 
+  /* If the next operation (after the DW_OP_litX + DW_OP_stack_value
+     pair) doesn't define the end of a piece, the expression is too
+     complex to be described here.  */
   else if (data[0] >= DW_OP_lit0
 	   && data[0] <= DW_OP_lit31
 	   && data + 1 < end
-	   && data[1] == DW_OP_stack_value)
+	   && data[1] == DW_OP_stack_value
+	   && piece_end_p (data + 2, end))
     {
       fprintf_filtered (stream, _("the constant %d"), data[0] - DW_OP_lit0);
       data += 2;
     }
 
   return data;
+}
+
+/* Check if the expression can be described in a nicer way on a per
+   piece basis.  This function only considers operations currently
+   handled by the locexpr_describe_location_piece function.  */
+
+static bool
+locexpr_must_disassemble (const gdb_byte *data, const gdb_byte *end,
+			  unsigned int addr_size)
+{
+  while (data < end)
+    {
+      enum dwarf_location_atom op = (enum dwarf_location_atom) *data++;
+
+      switch (op)
+	{
+	case DW_OP_addr:
+	  data += addr_size;
+	  break;
+
+	case DW_OP_const1u:
+	case DW_OP_const1s:
+	  data += 1;
+	  break;
+
+	case DW_OP_const2u:
+	case DW_OP_const2s:
+	  data += 2;
+	  break;
+
+	case DW_OP_const4u:
+	case DW_OP_const4s:
+	  data += 4;
+	  break;
+
+	case DW_OP_const8s:
+	case DW_OP_const8u:
+	  data += 8;
+	  break;
+
+	case DW_OP_constu:
+	case DW_OP_consts:
+	  data += skip_leb128 (data, end);
+	  break;
+
+	case DW_OP_lit0:
+	case DW_OP_lit1:
+	case DW_OP_lit2:
+	case DW_OP_lit3:
+	case DW_OP_lit4:
+	case DW_OP_lit5:
+	case DW_OP_lit6:
+	case DW_OP_lit7:
+	case DW_OP_lit8:
+	case DW_OP_lit9:
+	case DW_OP_lit10:
+	case DW_OP_lit11:
+	case DW_OP_lit12:
+	case DW_OP_lit13:
+	case DW_OP_lit14:
+	case DW_OP_lit15:
+	case DW_OP_lit16:
+	case DW_OP_lit17:
+	case DW_OP_lit18:
+	case DW_OP_lit19:
+	case DW_OP_lit20:
+	case DW_OP_lit21:
+	case DW_OP_lit22:
+	case DW_OP_lit23:
+	case DW_OP_lit24:
+	case DW_OP_lit25:
+	case DW_OP_lit26:
+	case DW_OP_lit27:
+	case DW_OP_lit28:
+	case DW_OP_lit29:
+	case DW_OP_lit30:
+	case DW_OP_lit31:
+	case DW_OP_reg0:
+	case DW_OP_reg1:
+	case DW_OP_reg2:
+	case DW_OP_reg3:
+	case DW_OP_reg4:
+	case DW_OP_reg5:
+	case DW_OP_reg6:
+	case DW_OP_reg7:
+	case DW_OP_reg8:
+	case DW_OP_reg9:
+	case DW_OP_reg10:
+	case DW_OP_reg11:
+	case DW_OP_reg12:
+	case DW_OP_reg13:
+	case DW_OP_reg14:
+	case DW_OP_reg15:
+	case DW_OP_reg16:
+	case DW_OP_reg17:
+	case DW_OP_reg18:
+	case DW_OP_reg19:
+	case DW_OP_reg20:
+	case DW_OP_reg21:
+	case DW_OP_reg22:
+	case DW_OP_reg23:
+	case DW_OP_reg24:
+	case DW_OP_reg25:
+	case DW_OP_reg26:
+	case DW_OP_reg27:
+	case DW_OP_reg28:
+	case DW_OP_reg29:
+	case DW_OP_reg30:
+	case DW_OP_reg31:
+	case DW_OP_GNU_push_tls_address:
+	case DW_OP_form_tls_address:
+	case DW_OP_stack_value:
+	  break;
+
+	case DW_OP_regx:
+	case DW_OP_breg0:
+	case DW_OP_breg1:
+	case DW_OP_breg2:
+	case DW_OP_breg3:
+	case DW_OP_breg4:
+	case DW_OP_breg5:
+	case DW_OP_breg6:
+	case DW_OP_breg7:
+	case DW_OP_breg8:
+	case DW_OP_breg9:
+	case DW_OP_breg10:
+	case DW_OP_breg11:
+	case DW_OP_breg12:
+	case DW_OP_breg13:
+	case DW_OP_breg14:
+	case DW_OP_breg15:
+	case DW_OP_breg16:
+	case DW_OP_breg17:
+	case DW_OP_breg18:
+	case DW_OP_breg19:
+	case DW_OP_breg20:
+	case DW_OP_breg21:
+	case DW_OP_breg22:
+	case DW_OP_breg23:
+	case DW_OP_breg24:
+	case DW_OP_breg25:
+	case DW_OP_breg26:
+	case DW_OP_breg27:
+	case DW_OP_breg28:
+	case DW_OP_breg29:
+	case DW_OP_breg30:
+	case DW_OP_breg31:
+	case DW_OP_fbreg:
+	case DW_OP_piece:
+	case DW_OP_GNU_const_index:
+	  data += skip_leb128 (data, end);
+	  break;
+
+	case DW_OP_bregx:
+	case DW_OP_bit_piece:
+	  data += skip_leb128 (data, end);
+	  data += skip_leb128 (data, end);
+	  break;
+
+	default:
+	  return true;
+	}
+    }
+
+  return false;
 }
 
 /* Disassemble an expression, stopping at the end of a piece or at the
@@ -3743,6 +3931,15 @@ locexpr_describe_location_1 (struct symbol *symbol, CORE_ADDR addr,
   const gdb_byte *end = data + size;
   int first_piece = 1, bad = 0;
   objfile *objfile = per_objfile->objfile;
+
+  if (locexpr_must_disassemble (data, end, addr_size))
+    {
+      fprintf_filtered (stream, _("a complex DWARF expression:\n"));
+      data = disassemble_dwarf_expression (stream, objfile->arch (), addr_size,
+					   offset_size, data, data, end, 0, 1,
+					   per_cu, per_objfile);
+      return;
+    }
 
   while (data < end)
     {
