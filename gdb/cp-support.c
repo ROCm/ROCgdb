@@ -1692,6 +1692,12 @@ cp_search_name_hash (const char *search_name)
 	  && string[5] != ':')
 	break;
 
+      /* Ignore template parameter lists.  */
+      if (string[0] == '<'
+	  && string[1] != '(' && string[1] != '<' && string[1] != '='
+	  && string[1] != ' ' && string[1] != '\0')
+	break;
+
       hash = SYMBOL_HASH_NEXT (hash, *string);
     }
   return hash;
@@ -1745,7 +1751,7 @@ cp_symbol_name_matches_1 (const char *symbol_search_name,
   while (true)
     {
       if (strncmp_iw_with_mode (sname, lookup_name, lookup_name_len,
-				mode, language_cplus, match_for_lcd) == 0)
+				mode, language_cplus, match_for_lcd, true) == 0)
 	{
 	  if (comp_match_res != NULL)
 	    {
@@ -2197,6 +2203,80 @@ info_vtbl_command (const char *arg, int from_tty)
 
   value = parse_and_eval (arg);
   cplus_print_vtable (value);
+}
+
+/* See description in cp-support.h.  */
+
+const char *
+find_toplevel_char (const char *s, char c)
+{
+  int quoted = 0;		/* zero if we're not in quotes;
+				   '"' if we're in a double-quoted string;
+				   '\'' if we're in a single-quoted string.  */
+  int depth = 0;		/* Number of unclosed parens we've seen.  */
+  const char *scan;
+
+  for (scan = s; *scan; scan++)
+    {
+      if (quoted)
+	{
+	  if (*scan == quoted)
+	    quoted = 0;
+	  else if (*scan == '\\' && *(scan + 1))
+	    scan++;
+	}
+      else if (*scan == c && ! quoted && depth == 0)
+	return scan;
+      else if (*scan == '"' || *scan == '\'')
+	quoted = *scan;
+      else if (*scan == '(' || *scan == '<')
+	depth++;
+      else if ((*scan == ')' || *scan == '>') && depth > 0)
+	depth--;
+      else if (*scan == 'o' && !quoted && depth == 0)
+	{
+	  /* Handle C++ operator names.  */
+	  if (strncmp (scan, CP_OPERATOR_STR, CP_OPERATOR_LEN) == 0)
+	    {
+	      scan += CP_OPERATOR_LEN;
+	      if (*scan == c)
+		return scan;
+	      while (ISSPACE (*scan))
+		{
+		  ++scan;
+		  if (*scan == c)
+		    return scan;
+		}
+	      if (*scan == '\0')
+		break;
+
+	      switch (*scan)
+		{
+		  /* Skip over one less than the appropriate number of
+		     characters: the for loop will skip over the last
+		     one.  */
+		case '<':
+		  if (scan[1] == '<')
+		    {
+		      scan++;
+		      if (*scan == c)
+			return scan;
+		    }
+		  break;
+		case '>':
+		  if (scan[1] == '>')
+		    {
+		      scan++;
+		      if (*scan == c)
+			return scan;
+		    }
+		  break;
+		}
+	    }
+	}
+    }
+
+  return 0;
 }
 
 void _initialize_cp_support ();
