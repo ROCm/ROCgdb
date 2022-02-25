@@ -120,24 +120,6 @@
 
 /* Note segments. */
 
-#define NT_AMDGPU_HSA_RESERVED_0          0
-#define NT_AMDGPU_HSA_CODE_OBJECT_VERSION 1
-#define NT_AMDGPU_HSA_HSAIL               2
-#define NT_AMDGPU_HSA_ISA                 3
-#define NT_AMDGPU_HSA_PRODUCER            4
-#define NT_AMDGPU_HSA_PRODUCER_OPTIONS    5
-#define NT_AMDGPU_HSA_EXTENSION           6
-#define NT_AMDGPU_HSA_RESERVED_7          7
-#define NT_AMDGPU_HSA_RESERVED_8          8
-#define NT_AMDGPU_HSA_RESERVED_9          9
-
-/* Code Object V2. */
-/* Note types with values between 0 and 9 (inclusive) are reserved. */
-#define NT_AMDGPU_HSA_METADATA            10
-#define NT_AMDGPU_ISA                     11
-#define NT_AMDGPU_PAL_METADATA            12
-
-/* Code Object V3. */
 /* Note types with values between 0 and 31 (inclusive) are reserved. */
 #define NT_AMDGPU_METADATA                32
 

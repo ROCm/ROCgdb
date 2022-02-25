@@ -19594,30 +19594,12 @@ decode_x86_compat_2_isa (unsigned int bitmask)
 }
 
 static const char *
-get_amd_elf_note_type (unsigned e_type)
+get_amdgpu_elf_note_type (unsigned e_type)
 {
   static char buff[64];
 
   switch (e_type)
     {
-    case NT_AMDGPU_HSA_CODE_OBJECT_VERSION:
-      return _("NT_AMDGPU_HSA_CODE_OBJECT_VERSION (code object version)");
-    case NT_AMDGPU_HSA_HSAIL:
-      return _("NT_AMDGPU_HSA_HSAIL (hsail)");
-    case NT_AMDGPU_HSA_ISA:
-      return _("NT_AMDGPU_HSA_ISA (ISA name)");
-    case NT_AMDGPU_HSA_PRODUCER:
-      return _("NT_AMDGPU_HSA_PRODUCER (producer name)");
-    case NT_AMDGPU_HSA_PRODUCER_OPTIONS:
-      return _("NT_AMDGPU_HSA_PRODUCER_OPTIONS (producer options");
-    case NT_AMDGPU_HSA_EXTENSION:
-      return _("NT_AMDGPU_HSA_EXTENSION (extension)");
-    case NT_AMDGPU_HSA_METADATA:
-      return _("NT_AMDGPU_HSA_METADATA (code object metadata)");
-    case NT_AMDGPU_ISA:
-      return _("NT_AMDGPU_ISA");
-    case NT_AMDGPU_PAL_METADATA:
-      return _("NT_AMDGPU_PAL_METADATA (code object metadata)");
     case NT_AMDGPU_METADATA:
       return _("NT_AMDGPU_METADATA (code object metadata)");
     default:
@@ -19626,47 +19608,6 @@ get_amd_elf_note_type (unsigned e_type)
 
   snprintf (buff, sizeof (buff), _("Unknown note type: (0x%08x)"), e_type);
   return buff;
-}
-
-static int
-print_amd_note (Elf_Internal_Note *pnote)
-{
-  switch (pnote->type)
-    {
-    case NT_AMDGPU_HSA_CODE_OBJECT_VERSION:
-      {
-        unsigned int major, minor;
-
-        major = byte_get ((unsigned char*) pnote->descdata, 4);
-        minor = byte_get ((unsigned char*) pnote->descdata + 4, 4);
-
-        printf (_("    Version: %d.%d\n"), major, minor);
-      }
-      break;
-
-    case NT_AMDGPU_HSA_ISA:
-      {
-        unsigned long i, vendorsz;
-        unsigned int major, minor, stepping;
-
-        vendorsz = byte_get ((unsigned char*) pnote->descdata, 2);
-        major = byte_get ((unsigned char*) pnote->descdata + 4, 4);
-        minor = byte_get ((unsigned char*) pnote->descdata + 8, 4);
-        stepping = byte_get ((unsigned char*) pnote->descdata + 12, 4);
-
-        printf (_("    Vendor: "));
-        for (i = 16; i < pnote->descsz && pnote->descdata[i] != '\0'; ++i)
-          printf ("%c", pnote->descdata[i]);
-        printf (_(", Architecture: "));
-        for (i = 16 + vendorsz; i < pnote->descsz && pnote->descdata[i] != '\0'; ++i)
-          printf ("%c", pnote->descdata[i]);
-
-        printf (_(", Version: %d.%d.%d"), major, minor, stepping);
-        printf ("\n");
-      }
-      break;
-    }
-  return 1;
 }
 
 static void
@@ -21258,10 +21199,9 @@ process_note (Elf_Internal_Note *  pnote,
     /* GNU-specific object file notes.  */
     nt = get_gnu_elf_note_type (pnote->type);
 
-  else if (startswith (pnote->namedata, "AMD")
-           || startswith (pnote->namedata, "AMDGPU"))
-    /* AMD-specific object file notes.  */
-    nt = get_amd_elf_note_type (pnote->type);
+  else if (startswith (pnote->namedata, "AMDGPU"))
+    /* AMDGPU-specific object file notes.  */
+    nt = get_amdgpu_elf_note_type (pnote->type);
 
   else if (startswith (pnote->namedata, "FreeBSD"))
     /* FreeBSD-specific core file notes.  */
@@ -21322,9 +21262,6 @@ process_note (Elf_Internal_Note *  pnote,
     return print_ia64_vms_note (pnote);
   else if (startswith (pnote->namedata, "GNU"))
     return print_gnu_note (filedata, pnote);
-  else if (startswith (pnote->namedata, "AMD")
-           || startswith (pnote->namedata, "AMDGPU"))
-    return print_amd_note (pnote);
   else if (startswith (pnote->namedata, "stapsdt"))
     return print_stapsdt_note (pnote);
   else if (startswith (pnote->namedata, "CORE"))
