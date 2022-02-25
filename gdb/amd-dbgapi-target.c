@@ -89,7 +89,7 @@ struct amd_dbgapi_inferior_info
   /* The amd_dbgapi_notifier_t for this inferior.  */
   amd_dbgapi_notifier_t notifier{ -1 };
 
-  /* True if the runtime is loaded.  */
+  /* The status of the inferior's runtime support.  */
   amd_dbgapi_runtime_state_t runtime_state{
     AMD_DBGAPI_RUNTIME_STATE_UNLOADED
   };
