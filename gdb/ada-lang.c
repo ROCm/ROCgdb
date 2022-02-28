@@ -8787,7 +8787,13 @@ ada_enum_name (const char *name)
 
       if (name[1] == 'U' || name[1] == 'W')
 	{
-	  if (sscanf (name + 2, "%x", &v) != 1)
+	  int offset = 2;
+	  if (name[1] == 'W' && name[2] == 'W')
+	    {
+	      /* Also handle the QWW case.  */
+	      ++offset;
+	    }
+	  if (sscanf (name + offset, "%x", &v) != 1)
 	    return name;
 	}
       else if (((name[1] >= '0' && name[1] <= '9')
@@ -8803,9 +8809,11 @@ ada_enum_name (const char *name)
       if (isascii (v) && isprint (v))
 	storage = string_printf ("'%c'", v);
       else if (name[1] == 'U')
-	storage = string_printf ("[\"%02x\"]", v);
+	storage = string_printf ("'[\"%02x\"]'", v);
+      else if (name[2] != 'W')
+	storage = string_printf ("'[\"%04x\"]'", v);
       else
-	storage = string_printf ("[\"%04x\"]", v);
+	storage = string_printf ("'[\"%06x\"]'", v);
 
       return storage.c_str ();
     }
@@ -10180,7 +10188,7 @@ ada_resolvable::replace (operation_up &&owner,
   return std::move (owner);
 }
 
-/* Convert the character literal whose ASCII value would be VAL to the
+/* Convert the character literal whose value would be VAL to the
    appropriate value of type TYPE, if there is a translation.
    Otherwise return VAL.  Hence, in an enumeration type ('A', 'B'),
    the literal 'A' (VAL == 65), returns 0.  */
@@ -10188,7 +10196,7 @@ ada_resolvable::replace (operation_up &&owner,
 static LONGEST
 convert_char_literal (struct type *type, LONGEST val)
 {
-  char name[7];
+  char name[12];
   int f;
 
   if (type == NULL)
@@ -10199,8 +10207,12 @@ convert_char_literal (struct type *type, LONGEST val)
 
   if ((val >= 'a' && val <= 'z') || (val >= '0' && val <= '9'))
     xsnprintf (name, sizeof (name), "Q%c", (int) val);
+  else if (val >= 0 && val < 256)
+    xsnprintf (name, sizeof (name), "QU%02x", (unsigned) val);
+  else if (val >= 0 && val < 0x10000)
+    xsnprintf (name, sizeof (name), "QW%04x", (unsigned) val);
   else
-    xsnprintf (name, sizeof (name), "QU%02x", (int) val);
+    xsnprintf (name, sizeof (name), "QWW%08lx", (unsigned long) val);
   size_t len = strlen (name);
   for (f = 0; f < type->num_fields (); f += 1)
     {
@@ -12998,9 +13010,11 @@ public:
     add (arch_integer_type (gdbarch, gdbarch_short_bit (gdbarch),
 			    0, "short_integer"));
     struct type *char_type = arch_character_type (gdbarch, TARGET_CHAR_BIT,
-						  0, "character");
+						  1, "character");
     lai->set_string_char_type (char_type);
     add (char_type);
+    add (arch_character_type (gdbarch, 16, 1, "wide_character"));
+    add (arch_character_type (gdbarch, 32, 1, "wide_wide_character"));
     add (arch_float_type (gdbarch, gdbarch_float_bit (gdbarch),
 			  "float", gdbarch_float_format (gdbarch)));
     add (arch_float_type (gdbarch, gdbarch_double_bit (gdbarch),

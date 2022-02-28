@@ -37,6 +37,7 @@
 #include "readline/tilde.h"
 #include "progspace-and-thread.h"
 #include "gdbsupport/buildargv.h"
+#include "cli/cli-style.h"
 
 /* Keep a registry of per-inferior data-pointers required by other GDB
    modules.  */
@@ -522,7 +523,8 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
       uiout->field_string ("connection-id", conn);
 
       if (inf->pspace->exec_filename != nullptr)
-	uiout->field_string ("exec", inf->pspace->exec_filename.get ());
+	uiout->field_string ("exec", inf->pspace->exec_filename.get (),
+			     file_name_style.style ());
       else
 	uiout->field_skip ("exec");
 
