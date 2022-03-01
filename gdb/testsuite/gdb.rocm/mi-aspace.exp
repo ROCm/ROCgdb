@@ -90,11 +90,11 @@ proc_with_prefix test_mi_memory_changed {} {
     set global_var_addr_re [regsub "0x" $global_var_addr "0x0*"]
 
     mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(private_lane#0)=55\"" \
-	"=memory-changed,thread-id=\"3\",lane-id=\"5\",addr=\"private_lane#0x0000000000000000\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
+	"=memory-changed,thread-id=\"$gpu_thr\",lane-id=\"5\",addr=\"private_lane#0x0000000000000000\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
 	"=memory-changed, private_lane"
 
     mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(private_wave#0)=55\"" \
-	"=memory-changed,thread-id=\"3\",addr=\"private_wave#0x0000000000000000\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
+	"=memory-changed,thread-id=\"$gpu_thr\",addr=\"private_wave#0x0000000000000000\",len=\"0x4\"\r\n\\^done,value=\"55\"" \
 	"=memory-changed, private_wave"
 
     mi_gdb_test "-data-evaluate-expression \"*(unsigned int *)(local#0)=55\"" \
