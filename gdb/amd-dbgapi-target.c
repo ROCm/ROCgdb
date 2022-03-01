@@ -305,23 +305,32 @@ static std::string
 dispatch_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 {
   amd_dbgapi_queue_id_t queue_id;
-  amd_dbgapi_agent_id_t agent_id;
-  amd_dbgapi_os_queue_packet_id_t os_id;
-
-  if (amd_dbgapi_dispatch_get_info (dispatch_id,
+  amd_dbgapi_status_t status
+    = amd_dbgapi_dispatch_get_info (dispatch_id,
 				    AMD_DBGAPI_DISPATCH_INFO_QUEUE,
-				    sizeof (queue_id), &queue_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_dispatch_get_info (dispatch_id,
-				       AMD_DBGAPI_DISPATCH_INFO_AGENT,
-				       sizeof (agent_id), &agent_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_dispatch_get_info (
-	   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_OS_QUEUE_PACKET_ID,
-	   sizeof (os_id), &os_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_dispatch_get_info for dispatch_%ld failed "),
-	   dispatch_id.handle);
+				    sizeof (queue_id), &queue_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dispatch_get_info failed to get queue id for "
+	     "dispatch_%ld: %s"),
+	   dispatch_id.handle, get_status_string (status));
+
+  amd_dbgapi_agent_id_t agent_id;
+  status = amd_dbgapi_dispatch_get_info (dispatch_id,
+					 AMD_DBGAPI_DISPATCH_INFO_AGENT,
+					 sizeof (agent_id), &agent_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dispatch_get_info failed to get agent id for "
+	     "dispatch_%ld: %s"),
+	   dispatch_id.handle, get_status_string (status));
+
+  amd_dbgapi_os_queue_packet_id_t os_id;
+  status = amd_dbgapi_dispatch_get_info
+    (dispatch_id, AMD_DBGAPI_DISPATCH_INFO_OS_QUEUE_PACKET_ID,
+     sizeof (os_id), &os_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dispatch_get_info failed to get OS queue packet id "
+	     "for dispatch_%ld: %s"),
+	   dispatch_id.handle, get_status_string (status));
 
   return string_printf ("AMDGPU Dispatch %ld:%ld:%ld (PKID %ld)",
 			agent_id.handle, queue_id.handle, dispatch_id.handle,
@@ -352,16 +361,21 @@ static std::string
 queue_target_id_string (amd_dbgapi_queue_id_t queue_id)
 {
   amd_dbgapi_agent_id_t agent_id;
-  amd_dbgapi_os_queue_id_t os_id;
+  amd_dbgapi_status_t status
+    = amd_dbgapi_queue_get_info (queue_id, AMD_DBGAPI_QUEUE_INFO_AGENT,
+				 sizeof (agent_id), &agent_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_queue_get_info failed to get agent id for "
+	     "queue_%ld: %s"),
+	   queue_id.handle, get_status_string (status));
 
-  if (amd_dbgapi_queue_get_info (queue_id, AMD_DBGAPI_QUEUE_INFO_AGENT,
-				 sizeof (agent_id), &agent_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_queue_get_info (queue_id, AMD_DBGAPI_QUEUE_INFO_OS_ID,
-				    sizeof (os_id), &os_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_queue_get_info for queue_%ld failed "),
-	   queue_id.handle);
+  amd_dbgapi_os_queue_id_t os_id;
+  status = amd_dbgapi_queue_get_info (queue_id, AMD_DBGAPI_QUEUE_INFO_OS_ID,
+				      sizeof (os_id), &os_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_queue_get_info failed to get OS queue id for "
+	     "queue_%ld: %s"),
+	   queue_id.handle, get_status_string (status));
 
   return string_printf ("AMDGPU Queue %ld:%ld (QID %ld)", agent_id.handle,
 			queue_id.handle, os_id);
@@ -372,11 +386,13 @@ static std::string
 agent_target_id_string (amd_dbgapi_agent_id_t agent_id)
 {
   amd_dbgapi_os_agent_id_t os_id;
-  if (amd_dbgapi_agent_get_info (agent_id, AMD_DBGAPI_AGENT_INFO_OS_ID,
-				 sizeof (os_id), &os_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_agent_get_info for agent_%ld failed "),
-	   agent_id.handle);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_agent_get_info (agent_id, AMD_DBGAPI_AGENT_INFO_OS_ID,
+				 sizeof (os_id), &os_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_agent_get_info failed to get OS agent id for "
+	     "agent_%ld: %s"),
+	   agent_id.handle, get_status_string (status));
 
   return string_printf ("AMDGPU Agent (GPUID %ld)", os_id);
 }
@@ -672,9 +688,10 @@ amd_dbgapi_target_breakpoint_check_status (struct bpstat *bs)
 					     &action);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_report_breakpoint_hit failed: breakpoint_%ld "
-	      "at %#lx (rc=%d)"),
-	   breakpoint_id.handle, bs->bp_location_at->address, status);
+    error (_("amd_dbgapi_report_breakpoint_hit failed: breakpoint_%ld "
+	     "at %#lx (%s)"),
+	   breakpoint_id.handle, bs->bp_location_at->address,
+	   get_status_string (status));
 
   if (action == AMD_DBGAPI_BREAKPOINT_ACTION_RESUME)
     return;
@@ -697,7 +714,7 @@ amd_dbgapi_target_breakpoint_check_status (struct bpstat *bs)
 				      &resume_breakpoint_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_event_get_info failed (rc=%d)"), status);
+    error (_("amd_dbgapi_event_get_info failed (%s)"), get_status_string (status));
 
   /* The debugger API guarantees that [breakpoint_hit...resume_breakpoint]
      sequences cannot interleave, so this breakpoint resume event must be
@@ -1159,8 +1176,8 @@ amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
              indicate that the process has exited.  GDB treats resuming a
 	     thread that no longer exists as being successful.  */
 	  && status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-	error (_ ("wave_resume for wave_%ld failed (rc=%d)"), wave_id.handle,
-	       status);
+	error (_("wave_resume for wave_%ld failed (%s)"), wave_id.handle,
+	       get_status_string (status));
     }
 }
 
@@ -1220,12 +1237,12 @@ amd_dbgapi_target::stop (ptid_t ptid)
 	  return;
 
 	if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-	  error (_ ("wave_stop for wave_%ld failed (rc=%d)"), wave_id.handle,
-		 status);
+	  error (_("wave_stop for wave_%ld failed (%s)"), wave_id.handle,
+		 get_status_string (status));
       }
     else if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-      error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
-	     status);
+      error (_("wave_get_info for wave_%ld failed (%s)"), wave_id.handle,
+	     get_status_string (status));
 
     /* The status is AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID.  The wave
        could have terminated since the last time the wave list was
@@ -1360,16 +1377,16 @@ process_one_event (amd_dbgapi_event_id_t event_id,
   status = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_PROCESS,
 				      sizeof (process_id), &process_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("event_get_info for event_%ld failed (rc=%d)"), event_id.handle,
-	   status);
+    error (_("event_get_info for event_%ld failed (%s)"), event_id.handle,
+	   get_status_string (status));
 
   amd_dbgapi_os_process_id_t pid;
   status
     = amd_dbgapi_process_get_info (process_id, AMD_DBGAPI_PROCESS_INFO_OS_ID,
 				   sizeof (pid), &pid);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("process_get_info for process_%ld failed (rc=%d)"),
-	   process_id.handle, status);
+    error (_("process_get_info for process_%ld failed (%s)"),
+	   process_id.handle, get_status_string (status));
 
   auto *proc_target = current_inferior ()->process_target ();
   inferior *inf = find_inferior_pid (proc_target, pid);
@@ -1386,8 +1403,8 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 	  = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_WAVE,
 				       sizeof (wave_id), &wave_id);
 	if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	  error (_ ("event_get_info for event_%ld failed (rc=%d)"),
-		 event_id.handle, status);
+	  error (_("event_get_info for event_%ld failed (%s)"),
+		 event_id.handle, get_status_string (status));
 
 	ptid_t event_ptid (pid, 1, wave_id.handle);
 	target_waitstatus ws;
@@ -1459,8 +1476,8 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 	      }
 	  }
 	else
-	  error (_ ("wave_get_info for wave_%ld failed (rc=%d)"),
-		 wave_id.handle, status);
+	  error (_("wave_get_info for wave_%ld failed (%s)"),
+		 wave_id.handle, get_status_string (status));
 
 	info->wave_events.emplace_back (event_ptid, ws);
 	break;
@@ -1486,8 +1503,8 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 					  sizeof (runtime_state),
 					  &runtime_state))
 	    != AMD_DBGAPI_STATUS_SUCCESS)
-	  error (_ ("event_get_info for event_%ld failed (rc=%d)"),
-		 event_id.handle, status);
+	  error (_("event_get_info for event_%ld failed (%s)"),
+		 event_id.handle, get_status_string (status));
 
 	switch (runtime_state)
 	  {
@@ -1546,7 +1563,7 @@ process_event_queue (amd_dbgapi_process_id_t process_id,
 						 &event_kind);
 
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_ ("next_pending_event failed (rc=%d)"), status);
+	error (_("next_pending_event failed (%s)"), get_status_string (status));
 
       if (event_id == AMD_DBGAPI_EVENT_NONE || event_kind == until_event_kind)
 	return event_id;
@@ -1737,7 +1754,8 @@ set_process_memory_precision (amd_dbgapi_process_id_t process_id,
   if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
     return false;
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_set_memory_precision failed (rc=%d)"), status);
+    error (_("amd_dbgapi_set_memory_precision failed (%s)"),
+	   get_status_string (status));
 
   return true;
 }
@@ -1783,7 +1801,8 @@ enable_amd_dbgapi (inferior *inf)
       return;
     }
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("Could not attach to process %d (rc=%d)"), inf->pid, status);
+    error (_("Could not attach to process %d (%s)"),
+	   inf->pid, get_status_string (status));
 
   if (amd_dbgapi_process_get_info (info->process_id,
 				   AMD_DBGAPI_PROCESS_INFO_NOTIFIER,
@@ -1834,7 +1853,8 @@ disable_amd_dbgapi (inferior *inf)
 
   amd_dbgapi_status_t status = amd_dbgapi_process_detach (info->process_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    warning (_ ("Could not detach from process %d (rc=%d)"), inf->pid, status);
+    warning (_ ("Could not detach from process %d (%s)"),
+	     inf->pid, get_status_string (status));
 
   gdb_assert (info->notifier != -1);
   delete_file_handler (info->notifier);
@@ -2031,7 +2051,8 @@ amd_dbgapi_target::update_thread_list ()
       if ((status = amd_dbgapi_process_wave_list (process_id, &count,
 						  &wave_list, &changed))
 	  != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_ ("amd_dbgapi_wave_list failed (rc=%d)"), status);
+	error (_("amd_dbgapi_wave_list failed (%s)"),
+	       get_status_string (status));
 
       if (changed == AMD_DBGAPI_CHANGED_NO)
 	continue;
@@ -2106,7 +2127,8 @@ amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
   else if (status == AMD_DBGAPI_STATUS_ERROR_ILLEGAL_INSTRUCTION)
     return DISPLACED_STEP_PREPARE_STATUS_CANT;
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_displaced_stepping_start failed (rc=%d)"), status);
+    error (_("amd_dbgapi_displaced_stepping_start failed (%s)"),
+	   get_status_string (status));
 
   struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (thread->inf);
   if (!info->stepping_id_map.emplace (thread, stepping_id.handle).second)
@@ -2120,7 +2142,8 @@ amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     {
       amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
-      error (_ ("amd_dbgapi_wave_get_info failed (rc=%d)"), status);
+      error (_("amd_dbgapi_wave_get_info failed (%s)"),
+	     get_status_string (status));
     }
 
   displaced_debug_printf ("selected buffer at %#lx", displaced_pc);
@@ -2155,14 +2178,14 @@ amd_dbgapi_target::displaced_step_finish (thread_info *thread, gdb_signal sig)
 				sizeof (stop_reason), &stop_reason);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("wave_get_info for wave_%ld failed (rc=%d)"), wave_id.handle,
-	   status);
+    error (_("wave_get_info for wave_%ld failed (%s)"), wave_id.handle,
+	   get_status_string (status));
 
   status = amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_displaced_stepping_complete failed (rc=%d)"),
-	   status);
+    error (_("amd_dbgapi_displaced_stepping_complete failed (%s)"),
+	   get_status_string (status));
 
   /* We may have written some registers, so flush the register cache.  */
   registers_changed_thread (thread);
@@ -2475,7 +2498,8 @@ amd_dbgapi_target::prevent_new_threads (bool prevent, inferior *inf)
   amd_dbgapi_status_t status
     = amd_dbgapi_process_set_wave_creation (info->process_id, mode);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd-dbgapi failed to set wave creation mode (rc=%d)"), status);
+    error (_("amd-dbgapi failed to set wave creation mode (%s)"),
+	   get_status_string (status));
 }
 
 void
@@ -2486,11 +2510,13 @@ amd_dbgapi_target::close ()
 
   amd_dbgapi_status_t status = amd_dbgapi_finalize ();
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd-dbgapi failed to finalize (rc=%d)"), status);
+    error (_("amd-dbgapi failed to finalize (%s)"),
+	   get_status_string (status));
 
   status = amd_dbgapi_initialize (&dbgapi_callbacks);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd-dbgapi failed to initialize (rc=%d)"), status);
+    error (_("amd-dbgapi failed to initialize (%s)"),
+	   get_status_string (status));
 
   if (amd_dbgapi_async_event_handler != nullptr)
     delete_async_event_handler (&amd_dbgapi_async_event_handler);
@@ -2738,9 +2764,8 @@ info_agents_command (const char *args, int from_tty)
 			   architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_NAME,
 			   sizeof (architecture_name), &architecture_name))
 			!= AMD_DBGAPI_STATUS_SUCCESS)
-		      error (_ ("amd_dbgapi_architecture_get_info failed "
-				"(rc=%d)"),
-			     status);
+		      error (_("amd_dbgapi_architecture_get_info failed (%s)"),
+			     get_status_string (status));
 
 		    max_architecture_width
 		      = std::max (max_architecture_width,
@@ -2748,8 +2773,8 @@ info_agents_command (const char *args, int from_tty)
 		    xfree (architecture_name);
 		  }
 		else if (status != AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
-		  error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_agent_get_info failed (%s)"),
+			 get_status_string (status));
 
 		/* name  */
 		char *agent_name;
@@ -2759,8 +2784,8 @@ info_agents_command (const char *args, int from_tty)
 						  sizeof (agent_name),
 						  &agent_name))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_agent_get_info failed (%s)"),
+			 get_status_string (status));
 
 		max_name_width
 		  = std::max (max_name_width, strlen (agent_name));
@@ -2838,7 +2863,8 @@ info_agents_command (const char *args, int from_tty)
 					      sizeof (agent_state),
 					      &agent_state))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_agent_get_info failed (%s)"),
+		     get_status_string (status));
 	    switch (agent_state)
 	      {
 	      case AMD_DBGAPI_AGENT_STATE_SUPPORTED:
@@ -2869,9 +2895,8 @@ info_agents_command (const char *args, int from_tty)
 		       architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_NAME,
 		       sizeof (architecture_name), &architecture_name))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_architecture_get_info failed "
-			    "(rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_architecture_get_info failed (%s)"),
+			 get_status_string (status));
 
 		uiout->field_string ("architecture", architecture_name);
 		xfree (architecture_name);
@@ -2879,7 +2904,8 @@ info_agents_command (const char *args, int from_tty)
 	    else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
 	      uiout->field_string ("architecture", "unknown");
 	    else
-	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_agent_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    /* name  */
 	    char *agent_name;
@@ -2889,7 +2915,8 @@ info_agents_command (const char *args, int from_tty)
 					      sizeof (agent_name),
 					      &agent_name))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_agent_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_string ("name", agent_name);
 	    xfree (agent_name);
@@ -2900,7 +2927,8 @@ info_agents_command (const char *args, int from_tty)
 		   agent_id, AMD_DBGAPI_AGENT_INFO_EXECUTION_UNIT_COUNT,
 		   sizeof (cores), &cores))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_agent_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_signed ("cores", cores);
 
@@ -2911,7 +2939,8 @@ info_agents_command (const char *args, int from_tty)
 		   AMD_DBGAPI_AGENT_INFO_MAX_WAVES_PER_EXECUTION_UNIT,
 		   sizeof (threads), &threads))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_agent_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_signed ("threads", cores * threads);
 
@@ -2922,7 +2951,8 @@ info_agents_command (const char *args, int from_tty)
 					      AMD_DBGAPI_AGENT_INFO_PCI_SLOT,
 					      sizeof (location), &location))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_agent_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_string ("location",
 				 string_printf ("%02x:%02x.%d",
@@ -3084,7 +3114,8 @@ info_queues_command (const char *args, int from_tty)
 					      AMD_DBGAPI_QUEUE_INFO_TYPE,
 					      sizeof (type), &type))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_queue_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_string (
 	      "type",
@@ -3127,7 +3158,8 @@ info_queues_command (const char *args, int from_tty)
 		uiout->field_skip ("write");
 	      }
 	    else
-	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_queue_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    /* size  */
 	    amd_dbgapi_size_t size;
@@ -3136,7 +3168,8 @@ info_queues_command (const char *args, int from_tty)
 					      AMD_DBGAPI_QUEUE_INFO_SIZE,
 					      sizeof (size), &size))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_queue_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_signed ("size", size);
 
@@ -3147,7 +3180,8 @@ info_queues_command (const char *args, int from_tty)
 					      AMD_DBGAPI_QUEUE_INFO_ADDRESS,
 					      sizeof (addr), &addr))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_queue_get_info failed (rc=%d)"), status);
+	      error (_("amd_dbgapi_queue_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_core_addr ("addr", gdbarch, addr);
 
@@ -3373,16 +3407,16 @@ info_dispatches_command (const char *args, int from_tty)
 		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_DIMENSIONS,
 		       sizeof (dims), &dims))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		uint32_t grid_sizes[3];
 		if ((status = amd_dbgapi_dispatch_get_info (
 		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
 		       sizeof (grid_sizes), &grid_sizes[0]))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		max_grid_width
 		  = std::max (max_grid_width,
@@ -3394,8 +3428,8 @@ info_dispatches_command (const char *args, int from_tty)
 		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 		       sizeof (work_group_sizes), &work_group_sizes[0]))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		max_workgroup_width
 		  = std::max (max_workgroup_width,
@@ -3408,15 +3442,15 @@ info_dispatches_command (const char *args, int from_tty)
 		       AMD_DBGAPI_DISPATCH_INFO_GROUP_SEGMENT_SIZE,
 		       sizeof (shared_size), &shared_size))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 		if ((status = amd_dbgapi_dispatch_get_info (
 		       dispatch_id,
 		       AMD_DBGAPI_DISPATCH_INFO_PRIVATE_SEGMENT_SIZE,
 		       sizeof (private_size), &private_size))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		max_address_spaces_width
 		  = std::max (max_address_spaces_width,
@@ -3514,16 +3548,16 @@ info_dispatches_command (const char *args, int from_tty)
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_DIMENSIONS,
 		   sizeof (dims), &dims))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		     status);
+	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uint32_t grid_sizes[3];
 	    if ((status = amd_dbgapi_dispatch_get_info (
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
 		   sizeof (grid_sizes), &grid_sizes[0]))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		     status);
+	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_string ("grid", ndim_string (dims, grid_sizes));
 
@@ -3533,8 +3567,8 @@ info_dispatches_command (const char *args, int from_tty)
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 		   sizeof (work_group_sizes), &work_group_sizes[0]))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		     status);
+	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    uiout->field_string ("workgroup",
 				 ndim_string (dims, work_group_sizes));
@@ -3545,22 +3579,22 @@ info_dispatches_command (const char *args, int from_tty)
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_BARRIER,
 		   sizeof (barrier), &barrier))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		     status);
+	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    amd_dbgapi_dispatch_fence_scope_t acquire, release;
 	    if ((status = amd_dbgapi_dispatch_get_info (
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_ACQUIRE_FENCE,
 		   sizeof (acquire), &acquire))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		     status);
+	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		     get_status_string (status));
 	    if ((status = amd_dbgapi_dispatch_get_info (
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_RELEASE_FENCE,
 		   sizeof (release), &release))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		     status);
+	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    std::stringstream ss;
 	    if (barrier == AMD_DBGAPI_DISPATCH_BARRIER_PRESENT)
@@ -3593,15 +3627,15 @@ info_dispatches_command (const char *args, int from_tty)
 		       AMD_DBGAPI_DISPATCH_INFO_GROUP_SEGMENT_SIZE,
 		       sizeof (shared_size), &shared_size))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 		if ((status = amd_dbgapi_dispatch_get_info (
 		       dispatch_id,
 		       AMD_DBGAPI_DISPATCH_INFO_PRIVATE_SEGMENT_SIZE,
 		       sizeof (private_size), &private_size))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		uiout
 		  ->field_string ("address-spaces",
@@ -3615,8 +3649,8 @@ info_dispatches_command (const char *args, int from_tty)
 		       AMD_DBGAPI_DISPATCH_INFO_KERNEL_DESCRIPTOR_ADDRESS,
 		       sizeof (kernel_desc), &kernel_desc))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		uiout->field_core_addr ("kernel-desc", gdbarch, kernel_desc);
 
@@ -3628,8 +3662,8 @@ info_dispatches_command (const char *args, int from_tty)
 		     AMD_DBGAPI_DISPATCH_INFO_KERNEL_ARGUMENT_SEGMENT_ADDRESS,
 		     sizeof (kernel_args), &kernel_args))
 		  != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		uiout->field_core_addr ("kernel-args", gdbarch, kernel_args);
 
@@ -3640,8 +3674,8 @@ info_dispatches_command (const char *args, int from_tty)
 		       AMD_DBGAPI_DISPATCH_INFO_KERNEL_COMPLETION_ADDRESS,
 		       sizeof (completion), &completion))
 		    != AMD_DBGAPI_STATUS_SUCCESS)
-		  error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-			 status);
+		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+			 get_status_string (status));
 
 		if (completion || uiout->is_mi_like_p ())
 		  uiout->field_core_addr ("completion", gdbarch, completion);
@@ -3656,8 +3690,8 @@ info_dispatches_command (const char *args, int from_tty)
 		   AMD_DBGAPI_DISPATCH_INFO_KERNEL_CODE_ENTRY_ADDRESS,
 		   sizeof (kernel_code), &kernel_code))
 		!= AMD_DBGAPI_STATUS_SUCCESS)
-	      error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"),
-		     status);
+	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		     get_status_string (status));
 
 	    auto msymbol
 	      = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
@@ -3761,7 +3795,8 @@ dispatch_find_command (const char *arg, int from_tty)
 		 AMD_DBGAPI_DISPATCH_INFO_KERNEL_CODE_ENTRY_ADDRESS,
 		 sizeof (kernel_code), &kernel_code))
 	      != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_ ("amd_dbgapi_dispatch_get_info failed (rc=%d)"), status);
+	    error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
+		   get_status_string (status));
 
 	  auto msymbol
 	    = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
@@ -3797,7 +3832,8 @@ _initialize_amd_dbgapi_target ()
   /* Initialize the AMD Debugger API.  */
   amd_dbgapi_status_t status = amd_dbgapi_initialize (&dbgapi_callbacks);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd-dbgapi failed to initialize (rc=%d)"), status);
+    error (_("amd-dbgapi failed to initialize (%s)"),
+	   get_status_string (status));
 
   /* Set the initial log level.  */
   amd_dbgapi_set_log_level (get_debug_amdgpu_log_level ());

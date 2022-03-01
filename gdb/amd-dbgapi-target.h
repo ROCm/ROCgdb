@@ -109,6 +109,19 @@ wave_get_info (thread_info *tp, amd_dbgapi_wave_info_t query, Res &res)
   return amd_dbgapi_wave_get_info (wave_id, query, sizeof (res), &res);
 }
 
+/* Get the textual version of STATUS.
+
+   Always returns non-nullptr, and asserts that STATUS has a valid value.  */
+
+static inline const char *
+get_status_string (amd_dbgapi_status_t status)
+{
+  const char *ret;
+  status = amd_dbgapi_get_status_string (status, &ret);
+  gdb_assert (status == AMD_DBGAPI_STATUS_SUCCESS);
+  return ret;
+}
+
 /* Like wave_get_info above, but throws an error if the dbgapi call
    fails.  */
 
@@ -117,11 +130,11 @@ static void
 wave_get_info_throw (thread_info *tp, amd_dbgapi_wave_info_t query, Res &res)
 {
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
-
-  if (amd_dbgapi_wave_get_info (wave_id, query, sizeof (res), &res)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_wave_get_info for wave_%ld failed "),
-	   wave_id.handle);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_wave_get_info (wave_id, query, sizeof (res), &res);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_wave_get_info for wave_%ld failed: %s"),
+	   wave_id.handle, get_status_string (status));
 }
 
 /* Convenience wrapper around amd_dbgapi_dispatch_get_info that avoids
@@ -133,10 +146,11 @@ static void
 dispatch_get_info_throw (amd_dbgapi_dispatch_id_t dispatch_id,
 			 amd_dbgapi_dispatch_info_t query, Res &res)
 {
-  if (amd_dbgapi_dispatch_get_info (dispatch_id, query, sizeof (res), &res)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_ ("amd_dbgapi_dispatch_get_info for dispatch_%ld failed "),
-	   dispatch_id.handle);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_dispatch_get_info (dispatch_id, query, sizeof (res), &res);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dispatch_get_info for dispatch_%ld failed: %s"),
+	   dispatch_id.handle, get_status_string (status));
 }
 
 #endif /* AMD_DBGAPI_TARGET_H */
