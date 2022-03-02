@@ -61,7 +61,7 @@
 #include <signal.h>
 #include <stdarg.h>
 
-#include <amd-dbgapi.h>
+#include <amd-dbgapi/amd-dbgapi.h>
 
 /* Big enough to hold the size of the largest register in bytes.  */
 #define AMDGCN_MAX_REGISTER_SIZE 256

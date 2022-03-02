@@ -244,20 +244,16 @@ AS_HELP_STRING([--with-rocm-dbgapi=PATH],
 
 save_CPPFLAGS=${CPPFLAGS}
 CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
-AC_CHECK_HEADERS(amd-dbgapi.h)
+AC_CHECK_HEADERS(amd-dbgapi/amd-dbgapi.h)
 
-if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_h" = xyes; then
+if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes; then
   gdb_rocm_dbgapi_required_version_major=0
-  gdb_rocm_dbgapi_required_version_minor=64
+  gdb_rocm_dbgapi_required_version_minor=65
 
   AC_MSG_CHECKING([for the correct version of amd-dbgapi.h])
-  AC_TRY_COMPILE([#include "amd-dbgapi.h"],[
-#define AMD_DBGAPI_VERSION_NUM(M, m) (((M) << 16L) | (m))
-#define VERSION_NUM AMD_DBGAPI_VERSION_NUM \
-  (AMD_DBGAPI_VERSION_MAJOR, AMD_DBGAPI_VERSION_MINOR)
-#if VERSION_NUM < AMD_DBGAPI_VERSION_NUM \
-  ($gdb_rocm_dbgapi_required_version_major, \
-   $gdb_rocm_dbgapi_required_version_minor)
+  AC_TRY_COMPILE([#include "amd-dbgapi/amd-dbgapi.h"],[
+#if AMD_DBGAPI_VERSION_MAJOR != $gdb_rocm_dbgapi_required_version_major \
+    || AMD_DBGAPI_VERSION_MINOR < $gdb_rocm_dbgapi_required_version_minor
 # error
 #endif
 ], [AC_MSG_RESULT([yes])], [AC_MSG_ERROR([amdgcn*-*-* requires version \
@@ -272,7 +268,7 @@ AC_CHECK_LIB(rocm-dbgapi,amd_dbgapi_initialize)
 LDFLAGS=${save_LDFLAGS}
 LIBS=${save_LIBS}
 
-if test x"$ac_cv_header_amd_dbgapi_h" = xyes \
+if test x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes \
     -a x"$ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" = xyes; then
 
   if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then

@@ -26,7 +26,7 @@
 
 #include <unordered_map>
 
-#include <amd-dbgapi.h>
+#include <amd-dbgapi/amd-dbgapi.h>
 
 /* Provide std::unordered_map::Hash for amd_dbgapi_register_id_t.  */
 struct register_id_hash

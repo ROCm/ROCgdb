@@ -84,8 +84,8 @@
    */
 #undef HAVE_ALLOCA_H
 
-/* Define to 1 if you have the <amd-dbgapi.h> header file. */
-#undef HAVE_AMD_DBGAPI_H
+/* Define to 1 if you have the <amd-dbgapi/amd-dbgapi.h> header file. */
+#undef HAVE_AMD_DBGAPI_AMD_DBGAPI_H
 
 /* Define to 1 if you have the `btowc' function. */
 #undef HAVE_BTOWC
