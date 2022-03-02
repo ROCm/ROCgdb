@@ -30764,7 +30764,7 @@ of a command.
 @smallexample
 (@value{GDBP}) alias -a set print elms = set print elements
 (@value{GDBP}) alias -a show print elms = show print elements
-(@value{GDBP}) set p elms 20
+(@value{GDBP}) set p elms 200
 (@value{GDBP}) show p elms
 Limit on string chars or array elements to print is 200.
 @end smallexample
