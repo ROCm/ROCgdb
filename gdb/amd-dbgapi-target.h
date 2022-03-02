@@ -25,7 +25,7 @@
 #include "gdbsupport/observable.h"
 #include "gdbsupport/traits.h"
 
-#include <amd-dbgapi.h>
+#include <amd-dbgapi/amd-dbgapi.h>
 
 namespace detail
 {
