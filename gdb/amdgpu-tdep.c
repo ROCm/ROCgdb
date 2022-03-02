@@ -766,7 +766,13 @@ amdgpu_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
   auto it = tdep->register_class_map.find (name);
   if (it == tdep->register_class_map.end ())
-    return group == all_reggroup;
+    {
+      if (group == all_reggroup)
+	return true;
+      if (group == save_reggroup || group == restore_reggroup)
+	return regnum < gdbarch_num_regs (gdbarch);
+      return false;
+    }
 
   amd_dbgapi_register_class_state_t state;
 
