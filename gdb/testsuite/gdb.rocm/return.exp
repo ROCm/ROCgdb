@@ -1,0 +1,200 @@
+# Copyright (C) 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This testcase checks that GDB can force return values on SIMT architectures.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# This testcase check that the "return" command forces the return value
+# for all the active lanes at the callsite.  For the test, only lane 0
+# and 2 are active.
+proc_with_prefix return_scalar {} {
+
+    with_test_prefix "int" {
+	gdb_breakpoint "returnVal<int>" "allow-pending"
+	gdb_continue_to_breakpoint "returnVal<int>"
+	gdb_test_multiple "return -41" "" {
+	    -re "Make returnVal<int>\\(int\\) return now.*y or n. $" {
+		send_gdb "y\n"
+		exp_continue
+	    }
+	    -re ".*t1 = returnVal<int>.*$::gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+    }
+
+    with_test_prefix "short" {
+	gdb_breakpoint "returnVal<short>"
+	gdb_continue_to_breakpoint "returnVal<short>"
+	gdb_test_multiple "return -42" "" {
+	    -re "Make returnVal<short>\\(short\\) return now.*y or n. $" {
+		send_gdb "y\n"
+		exp_continue
+	    }
+	    -re ".*t2 = returnVal<short>.*$::gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+	gdb_test "p/z \$v0\[0\]" "0xffffffd6" "sign extend"
+    }
+
+    with_test_prefix "unsigned short" {
+	gdb_breakpoint "returnVal<unsigned short>"
+	gdb_continue_to_breakpoint "returnVal<unsigned short>"
+	gdb_test_multiple "return 0xf00d" "" {
+	    -re "Make returnVal<unsigned short>\\(unsigned short\\) return now.*y or n. $" {
+		send_gdb "y\n"
+		exp_continue
+	    }
+	    -re ".*t3 = returnVal<unsigned short>.*$::gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+	gdb_test "p/z \$v0\[0\]" "0x0000f00d" "zero extend"
+    }
+
+    with_test_prefix "long" {
+	gdb_breakpoint "returnVal<long>"
+	gdb_continue_to_breakpoint "returnVal<long>"
+	gdb_test_multiple "return 0xf00dbeefbeeff00d" "" {
+	    -re "Make returnVal<long>\\(long\\) return now.*y or n. $" {
+		send_gdb "y\n"
+		exp_continue
+	    }
+	    -re ".*t4 = returnVal<long>.*$::gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+    }
+
+    with_test_prefix "float" {
+	gdb_breakpoint "returnVal<float>"
+	gdb_continue_to_breakpoint "returnVal<float>"
+	gdb_test_multiple "return 3.14" "" {
+	    -re "Make returnVal<float>\\(float\\) return now.*y or n. $" {
+		send_gdb "y\n"
+		exp_continue
+	    }
+	    -re ".*t5 = returnVal<float>.*$::gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+    }
+
+    with_test_prefix "long double" {
+	gdb_breakpoint "returnVal<long double>"
+	    gdb_continue_to_breakpoint "returnVal<long double>"
+	    gdb_test_multiple "return 6.62607015e-34" "" {
+		-re "Make returnVal<long double>\\(long double\\) return now.*y or n. $" {
+		    send_gdb "y\n"
+		    exp_continue
+		}
+		-re ".*t6 = returnVal<long double>.*$::gdb_prompt $" {
+		    pass $gdb_test_name
+		}
+	    }
+    }
+
+    # The test forces the return value for even lanes (odd lanes are inactives)
+    gdb_breakpoint [gdb_get_line_number "BREAK HERE"]
+    gdb_continue_to_breakpoint "before print"
+
+    foreach_with_prefix lane {0 2} {
+	gdb_test "lane $lane" "\\\[Switching to thread $::decimal, lane $lane .*"
+	gdb_test "p t1" "= -41"
+	gdb_test "p t2" "= -42"
+	gdb_test "p t3" "= 61453"
+	gdb_test "p t4" "= -1149052392999751667"
+	gdb_test "p t5" "= 3\\.1400001"
+	gdb_test "p t6" "= 6\\.6260701499999998e-34"
+    }
+}
+
+# In this test, the execution stops at a breakpoint where only one lane
+# (lane 2) is active.  However, at the entry point of the function where
+# this breakpoint is, 2 lanes are active (0 and 2).  At this point, entering
+# "return 42" should make the current function return 42 for both lane 0 and
+# 3.  Lanes 1 and 3 should be un-affected.
+proc_with_prefix return_force_value_all_active_lanes_at_callsite {} {
+    gdb_breakpoint [gdb_get_line_number "RETURN HERE"]
+    gdb_continue_to_breakpoint "break in foo"
+
+    # At this point, only lane 2 is active
+    gdb_test "info lane -active" \
+	[multi_line \
+	    ".*Id.*State.*Target.*Id.*Frame.*" \
+	    "\\*\[ \]*2 .*foo \\(\\).*" ]
+
+    gdb_test_multiple "return 42" "" {
+	-re "Make foo\\(\\) return now.*y or n. $" {
+	    send_gdb "y\n"
+	    exp_continue
+	}
+	-re ".*return foo \\(\\);.*$::gdb_prompt $" {
+	    pass $gdb_test_name
+	}
+    }
+
+    # At callsite, 2 lanes (0, 2) are active
+    gdb_test "info lane -active" \
+	[multi_line \
+	    ".*Id.*State.*Target.*Id.*Frame.*" \
+	    "\\*?\[ \]*0 .*bar \\(\\).*" \
+	    "\\*?\[ \]*2 .*bar \\(\\).*" ] "return reactivates lanes"
+
+    gdb_test "finish"
+
+    # The return value for lane 0 and 2 is the one we specified
+    # with the return command, the other lanes (1 and 3) return 0.
+    gdb_test "next"
+    foreach_with_prefix lane {0 2} {
+	gdb_test "lane $lane" "\\\[Switching to thread $::decimal, lane $lane .*"
+	gdb_test "p returned_value" "= 42"
+    }
+    foreach_with_prefix lane {1 3} {
+	gdb_test "lane $lane" "\\\[Switching to thread $::decimal, lane $lane .*"
+	gdb_test "p returned_value" "= 0"
+    }
+}
+
+with_rocm_gpu_lock {
+    clean_restart $::binfile
+    runto_main
+    gdb_test_no_output "set print repeats unlimited"
+
+    clean_restart $::binfile
+    runto_main
+
+    return_scalar
+    return_force_value_all_active_lanes_at_callsite
+
+    gdb_continue_to_end "finish process" continue 1
+}
+
