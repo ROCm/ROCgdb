@@ -22,7 +22,7 @@
 #include "bfd.h"
 #include "libbfd.h"
 #include "elf-bfd.h"
-#include "elf/amdgcn.h"
+#include "elf/amdgpu.h"
 
 #include <string.h>
 

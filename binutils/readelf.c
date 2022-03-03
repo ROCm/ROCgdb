@@ -92,7 +92,7 @@
 
 #include "elf/aarch64.h"
 #include "elf/alpha.h"
-#include "elf/amdgcn.h"
+#include "elf/amdgpu.h"
 #include "elf/arc.h"
 #include "elf/arm.h"
 #include "elf/avr.h"
@@ -1657,7 +1657,7 @@ dump_relocations (Filedata *          filedata,
 	  break;
 
 	case EM_AMDGPU:
-	  rtype = elf_amdgcn_reloc_type (type);
+	  rtype = elf_amdgpu_reloc_type (type);
 	  break;
 	}
 
