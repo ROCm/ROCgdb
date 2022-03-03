@@ -1,4 +1,4 @@
-/* Target-dependent code for the AMDGCN architecture.
+/* Target-dependent code for the AMDGPU architectures.
 
    Copyright (C) 2019-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
@@ -20,7 +20,7 @@
 
 #include "defs.h"
 
-#include "amdgcn-tdep.h"
+#include "amdgpu-tdep.h"
 #include "arch-utils.h"
 #include "dwarf2/frame.h"
 #include "frame-base.h"
@@ -39,25 +39,31 @@
 #include <string>
 
 /* Bit mask of the address space information in the core address.  */
-constexpr CORE_ADDR AMDGCN_ADDRESS_SPACE_MASK = 0xff00000000000000;
+constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK = 0xff00000000000000;
 
 /* Bit offset from the start of the core address
    that represent the address space information.  */
-constexpr unsigned int AMDGCN_ADDRESS_SPACE_BIT_OFFSET = 56;
+constexpr unsigned int AMDGPU_ADDRESS_SPACE_BIT_OFFSET = 56;
 
 bool
-is_amdgcn_arch (struct gdbarch *arch)
+is_amdgpu_arch (struct gdbarch *arch)
 {
   gdb_assert (arch != nullptr);
   return gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn;
 }
 
+amdgpu_gdbarch_tdep *
+get_amdgpu_gdbarch_tdep (gdbarch *arch)
+{
+  return static_cast<amdgpu_gdbarch_tdep *> (gdbarch_tdep (arch));
+}
+
 /* Return the name of register REGNUM.  */
 static const char *
-amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
+amdgpu_register_name (struct gdbarch *gdbarch, int regnum)
 {
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   amd_dbgapi_register_exists_t register_exists;
   if (amd_dbgapi_wave_register_exists (wave_id, tdep->register_ids[regnum],
@@ -70,9 +76,9 @@ amdgcn_register_name (struct gdbarch *gdbarch, int regnum)
 }
 
 static int
-amdgcn_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int dwarf_reg)
+amdgpu_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int dwarf_reg)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   if (dwarf_reg < tdep->dwarf_regnum_to_gdb_regnum.size ())
     return tdep->dwarf_regnum_to_gdb_regnum[dwarf_reg];
@@ -95,7 +101,7 @@ constexpr int AMDGCN_VGPR_LEN = 4;
 static int
 first_regnum_for_arg_or_return_value (gdbarch *gdbarch, ptid_t ptid)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   const amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (ptid);
 
   size_t lanecount;
@@ -400,7 +406,7 @@ has_flexible_array_member (type *type)
     last_member_type->index_type ()->bounds ()->high.kind () == PROP_UNDEFINED;
 }
 
-/* Helper function for amdgcn_return_value.  */
+/* Helper function for amdgpu_return_value.  */
 
 static void
 amdgcn_return_value_load_store (gdbarch *gdbarch, regcache *regcache,
@@ -454,10 +460,12 @@ amdgcn_return_value_load_store (gdbarch *gdbarch, regcache *regcache,
    [1] https://llvm.org/docs/AMDGPUUsage.html#non-kernel-functions
 */
 static enum return_value_convention
-amdgcn_return_value (struct gdbarch *gdbarch, struct value *function,
+amdgpu_return_value (struct gdbarch *gdbarch, struct value *function,
 		     struct type *type, struct regcache *regcache,
 		     gdb_byte *readbuf, const gdb_byte *writebuf)
 {
+  gdb_assert (gdbarch_bfd_arch_info (gdbarch)->arch == bfd_arch_amdgcn);
+
   type = check_typedef (type);
 
   /* Non-trivial objects are not returned by value.  */
@@ -569,11 +577,11 @@ static struct type *gdb_type_from_type_name (struct gdbarch *gdbarch,
 					     const std::string &type_name);
 
 static struct type *
-amdgcn_enum_type (struct gdbarch *gdbarch, int bits,
+amdgpu_enum_type (struct gdbarch *gdbarch, int bits,
 		  const std::string &type_name, const std::string &fields)
 {
   gdb_assert (bits == 32 || bits == 64);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   auto it = tdep->type_map.find (type_name);
   if (it != tdep->type_map.end ())
@@ -615,11 +623,11 @@ amdgcn_enum_type (struct gdbarch *gdbarch, int bits,
 }
 
 static struct type *
-amdgcn_flags_type (struct gdbarch *gdbarch, int bits,
+amdgpu_flags_type (struct gdbarch *gdbarch, int bits,
 		   const std::string &type_name, const std::string &fields)
 {
   gdb_assert (bits == 32 || bits == 64);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   auto it = tdep->type_map.find (type_name);
   if (it != tdep->type_map.end ())
@@ -677,7 +685,7 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
   /* vector types.  */
   if ((pos = type_name.find_last_of ('[')) != std::string::npos)
     {
-      struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+      amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
       auto it = tdep->type_map.find (type_name);
       if (it != tdep->type_map.end ())
@@ -721,8 +729,8 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
       std::vector<std::string> tokens (iter, std::sregex_token_iterator ());
 
       if (tokens.size () == 3)
-	return amdgcn_flags_type (gdbarch, tokens[0] == "flags32_t" ? 32 : 64,
-				  "builtin_type_amdgcn_flags_" + tokens[1],
+	return amdgpu_flags_type (gdbarch, tokens[0] == "flags32_t" ? 32 : 64,
+				  "builtin_type_amdgpu_flags_" + tokens[1],
 				  tokens[2]);
     }
   else if (type_name.find ("enum") == 0)
@@ -735,8 +743,8 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
       std::vector<std::string> tokens (iter, std::sregex_token_iterator ());
 
       if (tokens.size () == 2)
-	return amdgcn_enum_type (gdbarch, 32 /* enum is implicitly a uint  */,
-				 "builtin_type_amdgcn_enum_" + tokens[0],
+	return amdgpu_enum_type (gdbarch, 32 /* enum is implicitly a uint  */,
+				 "builtin_type_amdgpu_enum_" + tokens[0],
 				 tokens[1]);
     }
 
@@ -744,9 +752,9 @@ gdb_type_from_type_name (struct gdbarch *gdbarch, const std::string &type_name)
 }
 
 static struct type *
-amdgcn_register_type (struct gdbarch *gdbarch, int regnum)
+amdgpu_register_type (struct gdbarch *gdbarch, int regnum)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   char *bytes;
 
   if (amd_dbgapi_register_get_info (tdep->register_ids[regnum],
@@ -764,10 +772,10 @@ amdgcn_register_type (struct gdbarch *gdbarch, int regnum)
 }
 
 static int
-amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
+amdgpu_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			    struct reggroup *group)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   const char *name = reggroup_name (group);
 
   auto it = tdep->register_class_map.find (name);
@@ -787,32 +795,32 @@ amdgcn_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 }
 
 static int
-amdgcn_breakpoint_kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *)
+amdgpu_breakpoint_kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *)
 {
-  return gdbarch_tdep (gdbarch)->breakpoint_instruction_size;
+  return get_amdgpu_gdbarch_tdep (gdbarch)->breakpoint_instruction_size;
 }
 
 static const gdb_byte *
-amdgcn_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
+amdgpu_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
 {
   *size = kind;
-  return gdbarch_tdep (gdbarch)->breakpoint_instruction_bytes.get ();
+  return get_amdgpu_gdbarch_tdep (gdbarch)->breakpoint_instruction_bytes.get ();
 }
 
-struct amdgcn_frame_cache
+struct amdgpu_frame_cache
 {
   CORE_ADDR base;
   CORE_ADDR pc;
 };
 
-static struct amdgcn_frame_cache *
-amdgcn_frame_cache (struct frame_info *this_frame, void **this_cache)
+static struct amdgpu_frame_cache *
+amdgpu_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
   if (*this_cache)
-    return (struct amdgcn_frame_cache *) *this_cache;
+    return (struct amdgpu_frame_cache *) *this_cache;
 
-  struct amdgcn_frame_cache *cache
-    = FRAME_OBSTACK_ZALLOC (struct amdgcn_frame_cache);
+  struct amdgpu_frame_cache *cache
+    = FRAME_OBSTACK_ZALLOC (struct amdgpu_frame_cache);
   (*this_cache) = cache;
 
   cache->pc = get_frame_func (this_frame);
@@ -822,11 +830,11 @@ amdgcn_frame_cache (struct frame_info *this_frame, void **this_cache)
 }
 
 static void
-amdgcn_frame_this_id (struct frame_info *this_frame, void **this_cache,
+amdgpu_frame_this_id (struct frame_info *this_frame, void **this_cache,
 		      struct frame_id *this_id)
 {
-  struct amdgcn_frame_cache *cache
-    = amdgcn_frame_cache (this_frame, this_cache);
+  struct amdgpu_frame_cache *cache
+    = amdgpu_frame_cache (this_frame, this_cache);
 
   if (get_frame_type (this_frame) == INLINE_FRAME)
     (*this_id) = frame_id_build (cache->base, cache->pc);
@@ -836,7 +844,7 @@ amdgcn_frame_this_id (struct frame_info *this_frame, void **this_cache,
   if (frame_debug)
     {
       fprintf_unfiltered (gdb_stdlog,
-			  "{ amdgcn_frame_this_id (this_frame=%d) type=%d"
+			  "{ amdgpu_frame_this_id (this_frame=%d) type=%d"
 			  " -> %s }\n",
 			  frame_relative_level (this_frame),
 			  get_frame_type (this_frame),
@@ -847,24 +855,24 @@ amdgcn_frame_this_id (struct frame_info *this_frame, void **this_cache,
 }
 
 static struct frame_id
-amdgcn_dummy_id (struct gdbarch *gdbarch, struct frame_info *this_frame)
+amdgpu_dummy_id (struct gdbarch *gdbarch, struct frame_info *this_frame)
 {
   return frame_id_build (0, get_frame_pc (this_frame));
 }
 
 static struct value *
-amdgcn_frame_prev_register (struct frame_info *this_frame, void **this_cache,
+amdgpu_frame_prev_register (struct frame_info *this_frame, void **this_cache,
 			    int regnum)
 {
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind amdgcn_frame_unwind = {
+static const struct frame_unwind amdgpu_frame_unwind = {
   "amdgpu prologue",
   NORMAL_FRAME,
   default_frame_unwind_stop_reason,
-  amdgcn_frame_this_id,
-  amdgcn_frame_prev_register,
+  amdgpu_frame_this_id,
+  amdgpu_frame_prev_register,
   NULL,
   default_frame_sniffer,
   NULL,
@@ -872,7 +880,7 @@ static const struct frame_unwind amdgcn_frame_unwind = {
 };
 
 static int
-print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *info)
+print_insn_amdgpu (bfd_vma memaddr, struct disassemble_info *info)
 {
   gdb_disassembler *di
     = static_cast<gdb_disassembler *> (info->application_data);
@@ -954,37 +962,37 @@ print_insn_amdgcn (bfd_vma memaddr, struct disassemble_info *info)
 
 /* Convert address space and segment address into a core address.  */
 static CORE_ADDR
-amdgcn_segment_address_to_core_address (arch_addr_space_id address_space_id,
+amdgpu_segment_address_to_core_address (arch_addr_space_id address_space_id,
 					CORE_ADDR address)
 {
-  return (address & ~AMDGCN_ADDRESS_SPACE_MASK)
-	 | (((CORE_ADDR) address_space_id) << AMDGCN_ADDRESS_SPACE_BIT_OFFSET);
+  return (address & ~AMDGPU_ADDRESS_SPACE_MASK)
+	 | (((CORE_ADDR) address_space_id) << AMDGPU_ADDRESS_SPACE_BIT_OFFSET);
 }
 
 /* Convert an integer to an address of a given segment address.  */
 static CORE_ADDR
-amdgcn_integer_to_address (struct gdbarch *gdbarch,
+amdgpu_integer_to_address (struct gdbarch *gdbarch,
 			   struct type *type, const gdb_byte *buf,
 			   arch_addr_space_id address_space_id)
 {
-  return amdgcn_segment_address_to_core_address (address_space_id,
+  return amdgpu_segment_address_to_core_address (address_space_id,
 						 unpack_long (type, buf));
 }
 
-/* See amdgcn-tdep.h.  */
+/* See amdgpu-tdep.h.  */
 
 arch_addr_space_id
-amdgcn_address_space_id_from_core_address (CORE_ADDR addr)
+amdgpu_address_space_id_from_core_address (CORE_ADDR addr)
 {
-  return (addr & AMDGCN_ADDRESS_SPACE_MASK) >> AMDGCN_ADDRESS_SPACE_BIT_OFFSET;
+  return (addr & AMDGPU_ADDRESS_SPACE_MASK) >> AMDGPU_ADDRESS_SPACE_BIT_OFFSET;
 }
 
-/* See amdgcn-tdep.h.  */
+/* See amdgpu-tdep.h.  */
 
 CORE_ADDR
-amdgcn_segment_address_from_core_address (CORE_ADDR addr)
+amdgpu_segment_address_from_core_address (CORE_ADDR addr)
 {
-  return addr & ~AMDGCN_ADDRESS_SPACE_MASK;
+  return addr & ~AMDGPU_ADDRESS_SPACE_MASK;
 }
 
 /* Address class to address space mapping.
@@ -1015,7 +1023,7 @@ constexpr unsigned int DWARF_PRIVATE_LANE_ADDR_CLASS = 5;
 
 /* Map DWARF2_ADDR_CLASS address class to type instance flags.  */
 static type_instance_flags
-amdgcn_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+amdgpu_address_class_type_flags (int byte_size, int dwarf2_addr_class)
 {
   if (dwarf2_addr_class == DWARF_GENERIC_ADDR_CLASS)
     return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1
@@ -1030,7 +1038,7 @@ amdgcn_address_class_type_flags (int byte_size, int dwarf2_addr_class)
 
 /* Map TYPE_FLAGS type instance flags to address class.  */
 static unsigned int
-amdgcn_type_flags_to_addr_class (type_instance_flags type_flags)
+amdgpu_type_flags_to_addr_class (type_instance_flags type_flags)
 {
   if ((type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
       && (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2))
@@ -1053,10 +1061,10 @@ amdgcn_type_flags_to_addr_class (type_instance_flags type_flags)
 	 At the moment, we assume that the language is OpenCL and
 	 provide matching address class names.  */
 static const char*
-amdgcn_address_class_type_flags_to_name (struct gdbarch *gdbarch,
+amdgpu_address_class_type_flags_to_name (struct gdbarch *gdbarch,
 					 type_instance_flags type_flags)
 {
-  unsigned int addr_class = amdgcn_type_flags_to_addr_class (type_flags);
+  unsigned int addr_class = amdgpu_type_flags_to_addr_class (type_flags);
 
   if (addr_class == DWARF_GENERIC_ADDR_CLASS)
     return "generic";
@@ -1078,17 +1086,17 @@ amdgcn_address_class_type_flags_to_name (struct gdbarch *gdbarch,
 	 passed in.
 
 	 At the moment, we assume that the language is OpenCL and we
-	 apply 1-1 mapping between its address classes and the AMDGCN
+	 apply 1-1 mapping between its address classes and the AMDGPU
 	 address spaces.  */
 static CORE_ADDR
-amdgcn_pointer_to_address (struct gdbarch *gdbarch,
+amdgpu_pointer_to_address (struct gdbarch *gdbarch,
 			   struct type *type, const gdb_byte *buf)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR address
     = extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
   unsigned int address_class
-    = amdgcn_type_flags_to_addr_class (type->instance_flags ());
+    = amdgpu_type_flags_to_addr_class (type->instance_flags ());
 
   /* Address might be in a converted format already, so even if the
      class is global, the address might have the address space part
@@ -1099,15 +1107,15 @@ amdgcn_pointer_to_address (struct gdbarch *gdbarch,
   /* In the current implementation, we shouldn't have a case where we
      have both type address class information as well as address
      space information in a core address.  */
-  gdb_assert (!amdgcn_address_space_id_from_core_address (address));
+  gdb_assert (!amdgpu_address_space_id_from_core_address (address));
 
-  address = amdgcn_segment_address_from_core_address (address);
+  address = amdgpu_segment_address_from_core_address (address);
 
-  return amdgcn_segment_address_to_core_address (address_class, address);
+  return amdgpu_segment_address_to_core_address (address_class, address);
 }
 
 static CORE_ADDR
-amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
+amdgpu_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 {
   CORE_ADDR func_addr;
 
@@ -1135,22 +1143,22 @@ amdgcn_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 }
 
 static gdb::array_view<const arch_addr_space>
-amdgcn_address_spaces (struct gdbarch *gdbarch)
+amdgpu_address_spaces (struct gdbarch *gdbarch)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   return tdep->address_spaces;
 }
 
 static enum address_scope
-amdgcn_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+amdgpu_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
 {
   amd_dbgapi_segment_address_dependency_t segment_address_dependency;
 
   uint64_t dwarf_address_space
-    = (uint64_t) amdgcn_address_space_id_from_core_address (address);
+    = (uint64_t) amdgpu_address_space_id_from_core_address (address);
 
   amd_dbgapi_segment_address_t segment_address
-    = amdgcn_segment_address_from_core_address (address);
+    = amdgpu_segment_address_from_core_address (address);
 
   amd_dbgapi_architecture_id_t architecture_id;
   if (amd_dbgapi_get_architecture
@@ -1194,7 +1202,7 @@ amdgcn_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
 }
 
 static simd_lanes_mask_t
-amdgcn_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
+amdgpu_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
   gdb_static_assert (sizeof (simd_lanes_mask_t) >= sizeof (uint64_t));
 
@@ -1207,7 +1215,7 @@ amdgcn_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 }
 
 static int
-amdgcn_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+amdgpu_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 {
   size_t count;
   if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, count)
@@ -1223,7 +1231,7 @@ amdgcn_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
    work-groups.  */
 
 static int
-amdgcn_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+amdgpu_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 {
   amd_dbgapi_dispatch_id_t dispatch_id;
   if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH, dispatch_id)
@@ -1233,7 +1241,7 @@ amdgcn_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 	 may not have an associated dispatch if attaching to a process
 	 with already existing waves.  In that case, all we can do is
 	 claim that all lanes are used.  */
-      return amdgcn_supported_lanes_count (gdbarch, tp);
+      return amdgpu_supported_lanes_count (gdbarch, tp);
     }
 
   uint32_t grid_sizes[3];
@@ -1275,7 +1283,7 @@ amdgcn_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
 }
 
 static struct gdbarch *
-amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
+amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
   /* If there is already a candidate, use it.  */
   arches = gdbarch_list_lookup_by_info (arches, &info);
@@ -1292,7 +1300,7 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   };
 
   /* Allocate space for the new architecture.  */
-  std::unique_ptr<struct gdbarch_tdep> tdep (new struct gdbarch_tdep);
+  std::unique_ptr<amdgpu_gdbarch_tdep> tdep (new amdgpu_gdbarch_tdep);
   std::unique_ptr<struct gdbarch, gdbarch_deleter> gdbarch_u (
     gdbarch_alloc (&info, tdep.get ()));
 
@@ -1314,28 +1322,28 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_double);
 
 /* Address space handling.  */
-  set_gdbarch_integer_to_address (gdbarch, amdgcn_integer_to_address);
+  set_gdbarch_integer_to_address (gdbarch, amdgpu_integer_to_address);
   set_gdbarch_address_space_id_from_core_address
-    (gdbarch, amdgcn_address_space_id_from_core_address);
+    (gdbarch, amdgpu_address_space_id_from_core_address);
   set_gdbarch_segment_address_from_core_address
-    (gdbarch, amdgcn_segment_address_from_core_address);
+    (gdbarch, amdgpu_segment_address_from_core_address);
   set_gdbarch_segment_address_to_core_address
-    (gdbarch, amdgcn_segment_address_to_core_address);
-  set_gdbarch_address_spaces (gdbarch, amdgcn_address_spaces);
-  set_gdbarch_address_scope (gdbarch, amdgcn_address_scope);
+    (gdbarch, amdgpu_segment_address_to_core_address);
+  set_gdbarch_address_spaces (gdbarch, amdgpu_address_spaces);
+  set_gdbarch_address_scope (gdbarch, amdgpu_address_scope);
 
   /* Frame Interpretation.  */
-  set_gdbarch_skip_prologue (gdbarch, amdgcn_skip_prologue);
+  set_gdbarch_skip_prologue (gdbarch, amdgpu_skip_prologue);
   set_gdbarch_inner_than (gdbarch, core_addr_greaterthan);
   dwarf2_append_unwinders (gdbarch);
-  frame_unwind_append_unwinder (gdbarch, &amdgcn_frame_unwind);
-  set_gdbarch_dummy_id (gdbarch, amdgcn_dummy_id);
+  frame_unwind_append_unwinder (gdbarch, &amdgpu_frame_unwind);
+  set_gdbarch_dummy_id (gdbarch, amdgpu_dummy_id);
 
-  set_gdbarch_pointer_to_address (gdbarch, amdgcn_pointer_to_address);
+  set_gdbarch_pointer_to_address (gdbarch, amdgpu_pointer_to_address);
   set_gdbarch_address_class_type_flags
-    (gdbarch, amdgcn_address_class_type_flags);
+    (gdbarch, amdgpu_address_class_type_flags);
   set_gdbarch_address_class_type_flags_to_name
-    (gdbarch, amdgcn_address_class_type_flags_to_name);
+    (gdbarch, amdgpu_address_class_type_flags_to_name);
 
   /* Registers and Memory.  */
   amd_dbgapi_architecture_id_t architecture_id;
@@ -1460,17 +1468,17 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sp_regnum (gdbarch, -1);
   set_gdbarch_fp0_regnum (gdbarch, -1);
 
-  set_gdbarch_dwarf2_reg_to_regnum (gdbarch, amdgcn_dwarf_reg_to_regnum);
+  set_gdbarch_dwarf2_reg_to_regnum (gdbarch, amdgpu_dwarf_reg_to_regnum);
 
-  set_gdbarch_return_value (gdbarch, amdgcn_return_value);
+  set_gdbarch_return_value (gdbarch, amdgpu_return_value);
 
   /* Register Representation.  */
-  set_gdbarch_register_name (gdbarch, amdgcn_register_name);
-  set_gdbarch_register_type (gdbarch, amdgcn_register_type);
-  set_gdbarch_register_reggroup_p (gdbarch, amdgcn_register_reggroup_p);
+  set_gdbarch_register_name (gdbarch, amdgpu_register_name);
+  set_gdbarch_register_type (gdbarch, amdgpu_register_type);
+  set_gdbarch_register_reggroup_p (gdbarch, amdgpu_register_reggroup_p);
 
   /* Disassembly.  */
-  set_gdbarch_print_insn (gdbarch, print_insn_amdgcn);
+  set_gdbarch_print_insn (gdbarch, print_insn_amdgpu);
 
   /* Instructions.  */
   amd_dbgapi_size_t max_insn_length = 0;
@@ -1483,9 +1491,9 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_max_insn_length (gdbarch, max_insn_length);
 
   /* Lane debugging.  */
-  set_gdbarch_active_lanes_mask (gdbarch, amdgcn_active_lanes_mask);
-  set_gdbarch_supported_lanes_count (gdbarch, amdgcn_supported_lanes_count);
-  set_gdbarch_used_lanes_count (gdbarch, amdgcn_used_lanes_count);
+  set_gdbarch_active_lanes_mask (gdbarch, amdgpu_active_lanes_mask);
+  set_gdbarch_supported_lanes_count (gdbarch, amdgpu_supported_lanes_count);
+  set_gdbarch_used_lanes_count (gdbarch, amdgpu_used_lanes_count);
 
   if (amd_dbgapi_architecture_get_info (
 	architecture_id,
@@ -1505,9 +1513,9 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->breakpoint_instruction_bytes.reset (breakpoint_instruction_bytes);
 
   set_gdbarch_breakpoint_kind_from_pc (gdbarch,
-				       amdgcn_breakpoint_kind_from_pc);
+				       amdgpu_breakpoint_kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
-				       amdgcn_sw_breakpoint_from_kind);
+				       amdgpu_sw_breakpoint_from_kind);
 
   amd_dbgapi_size_t pc_adjust;
   if (amd_dbgapi_architecture_get_info (
@@ -1564,10 +1572,10 @@ amdgcn_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_amdgcn_tdep;
+extern initialize_file_ftype _initialize_amdgpu_tdep;
 
 void
-_initialize_amdgcn_tdep ()
+_initialize_amdgpu_tdep ()
 {
-  gdbarch_register (bfd_arch_amdgcn, amdgcn_gdbarch_init, NULL);
+  gdbarch_register (bfd_arch_amdgcn, amdgpu_gdbarch_init, NULL);
 }

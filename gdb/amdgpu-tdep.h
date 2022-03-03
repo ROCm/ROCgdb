@@ -1,4 +1,4 @@
-/* Target-dependent code for the AMDGCN architecture.
+/* Target-dependent code for the AMDGPU architectures.
 
    Copyright (C) 2019-2022 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef AMDGCN_TDEP_H
-#define AMDGCN_TDEP_H
+#ifndef AMDGPU_TDEP_H
+#define AMDGPU_TDEP_H
 
 #include <gdbsupport/gdb_unique_ptr.h>
 
@@ -48,8 +48,8 @@ struct register_id_equal_to
   }
 };
 
-/* amdgcn architecture specific information.  */
-struct gdbarch_tdep
+/* AMDGPU architecture specific information.  */
+typedef struct gdbarch_tdep
 {
   /* This architecture's breakpoint instruction.  */
   gdb::unique_xmalloc_ptr<gdb_byte> breakpoint_instruction_bytes;
@@ -80,17 +80,19 @@ struct gdbarch_tdep
      This information is queried from dbgapi and cached here as an
      optimization.  */
   std::vector<arch_addr_space> address_spaces;
-};
+} amdgpu_gdbarch_tdep;
 
-/* Return true if GDBARCH is of the amdgcn architecture.  */
-bool is_amdgcn_arch (struct gdbarch *gdbarch);
+/* Return true if GDBARCH is of an AMDGPU architecture.  */
+bool is_amdgpu_arch (struct gdbarch *gdbarch);
+
+amdgpu_gdbarch_tdep *get_amdgpu_gdbarch_tdep (gdbarch *arch);
 
 /* Extract address space from a core address ADDR.  */
 
-arch_addr_space_id amdgcn_address_space_id_from_core_address (CORE_ADDR addr);
+arch_addr_space_id amdgpu_address_space_id_from_core_address (CORE_ADDR addr);
 
 /* Extract segment address from a core address ADDR.  */
 
-CORE_ADDR amdgcn_segment_address_from_core_address (CORE_ADDR addr);
+CORE_ADDR amdgpu_segment_address_from_core_address (CORE_ADDR addr);
 
-#endif /* AMDGCN_TDEP_H */
+#endif /* AMDGPU_TDEP_H */

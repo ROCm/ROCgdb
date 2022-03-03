@@ -20,7 +20,7 @@
 
 #include "defs.h"
 
-#include "amdgcn-tdep.h"
+#include "amdgpu-tdep.h"
 #include "arch-utils.h"
 #include "async-event.h"
 #include "cli/cli-style.h"
@@ -64,7 +64,7 @@
 #include <amd-dbgapi/amd-dbgapi.h>
 
 /* Big enough to hold the size of the largest register in bytes.  */
-#define AMDGCN_MAX_REGISTER_SIZE 256
+#define AMDGPU_MAX_REGISTER_SIZE 256
 
 #define DEFINE_OBSERVABLE(name) decltype (name) name (#name)
 
@@ -846,10 +846,10 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
       /* FIXME: We current have no way to specify the address space, so it is
 	 encoded in the "unused" bits of a canonical address.  */
       uint64_t dwarf_address_space
-	= (uint64_t) amdgcn_address_space_id_from_core_address (offset);
+	= (uint64_t) amdgpu_address_space_id_from_core_address (offset);
 
       amd_dbgapi_segment_address_t segment_address
-	= amdgcn_segment_address_from_core_address (offset);
+	= amdgpu_segment_address_from_core_address (offset);
 
       amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
       amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
@@ -1876,11 +1876,11 @@ void
 amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   /* delegate to the host routines when not on the device */
 
-  if (!is_amdgcn_arch (gdbarch))
+  if (!is_amdgpu_arch (gdbarch))
     {
       beneath ()->fetch_registers (regcache, regno);
       return;
@@ -1888,7 +1888,7 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
 
-  gdb_byte raw[AMDGCN_MAX_REGISTER_SIZE];
+  gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
 
   amd_dbgapi_status_t status
     = amd_dbgapi_read_register (wave_id, tdep->register_ids[regno], 0,
@@ -1910,10 +1910,10 @@ void
 amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  gdb_byte raw[AMDGCN_MAX_REGISTER_SIZE];
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
+  gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
 
-  if (!is_amdgcn_arch (gdbarch))
+  if (!is_amdgpu_arch (gdbarch))
     {
       beneath ()->store_registers (regcache, regno);
       return;
@@ -2080,7 +2080,7 @@ amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
   CORE_ADDR original_pc = regcache_read_pc (get_thread_regcache (thread));
 
   gdbarch *arch = get_thread_regcache (thread)->arch ();
-  size_t size = gdbarch_tdep (arch)->breakpoint_instruction_size;
+  size_t size = get_amdgpu_gdbarch_tdep (arch)->breakpoint_instruction_size;
   gdb::unique_xmalloc_ptr<gdb_byte> overwritten_bytes (
     static_cast<gdb_byte *> (xmalloc (size)));
 

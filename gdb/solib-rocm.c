@@ -28,7 +28,7 @@
 #include "objfiles.h"
 #include "observable.h"
 #include "amd-dbgapi-target.h"
-#include "amdgcn-tdep.h"
+#include "amdgpu-tdep.h"
 #include "solib-svr4.h"
 #include "solib.h"
 #include "solist.h"
@@ -89,7 +89,7 @@ static void
 rocm_solib_relocate_section_addresses (struct so_list *so,
 				       struct target_section *sec)
 {
-  if (!is_amdgcn_arch (gdbarch_from_bfd (so->abfd)))
+  if (!is_amdgpu_arch (gdbarch_from_bfd (so->abfd)))
     {
       svr4_so_ops.relocate_section_addresses (so, sec);
       return;
