@@ -20,7 +20,7 @@ load_lib rocm.exp
 
 standard_testfile .cpp
 
-set num_waves 16
+set num_waves 32
 
 if [skip_hipcc_tests] {
     verbose "Skipping hip test: ${testfile}."
