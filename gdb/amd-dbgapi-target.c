@@ -1956,8 +1956,8 @@ amd_dbgapi_target_breakpoint_fixup (struct breakpoint *b)
 {
   if (b->location.get ()
       && event_location_type (b->location.get ()) == ADDRESS_LOCATION
-      && gdbarch_bfd_arch_info (b->loc->gdbarch)->arch == bfd_arch_amdgcn
-      && gdbarch_bfd_arch_info (b->gdbarch)->arch != bfd_arch_amdgcn)
+      && is_amdgpu_arch (b->loc->gdbarch)
+      && !is_amdgpu_arch (b->gdbarch))
     {
       b->gdbarch = b->loc->gdbarch;
     }
