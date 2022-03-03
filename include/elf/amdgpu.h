@@ -1,4 +1,4 @@
-/* AMDGCN ELF support for BFD.
+/* AMDGPU ELF support for BFD.
 
    Copyright (C) 2019-2021 Free Software Foundation, Inc.
    Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef _ELF_AMDGCN_H
-#define _ELF_AMDGCN_H
+#ifndef _ELF_AMDGPU_H
+#define _ELF_AMDGPU_H
 
 #include "elf/reloc-macros.h"
 
@@ -113,7 +113,7 @@
 #define EF_AMDGPU_SRAM_ECC 0x200
 
 
-/* Additional symbol types for AMDGCN.  */
+/* Additional symbol types for AMDGPU.  */
 
 #define STT_AMDGPU_HSA_KERNEL 10 /* Symbol is a kernel descriptor */
 
@@ -129,7 +129,7 @@
 
 /* Relocation types.  */
 
-START_RELOC_NUMBERS (elf_amdgcn_reloc_type)
+START_RELOC_NUMBERS (elf_amdgpu_reloc_type)
  RELOC_NUMBER (R_AMDGPU_NONE,           0)
  RELOC_NUMBER (R_AMDGPU_ABS32_LO,       1)
  RELOC_NUMBER (R_AMDGPU_ABS32_HI,       2)
@@ -146,4 +146,4 @@ START_RELOC_NUMBERS (elf_amdgcn_reloc_type)
 END_RELOC_NUMBERS (R_AMDGPU_max)
 
 
-#endif /* _ELF_AMDGCN_H */
+#endif /* _ELF_AMDGPU_H */
