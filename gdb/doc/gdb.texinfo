@@ -22717,6 +22717,9 @@ specific heterogeneous entities
 @item @code{maint print address-spaces}, command together with address
 qualifiers supports multiple address spaces
 
+@item @code{return-prepare}, @code{info return}, commands to force return
+values from a function simultaneously from multiple lanes
+
 @end itemize
 
 A heterogeneous system may use separate code objects for the different
@@ -23727,6 +23730,62 @@ For example,
 (@value{GDBP}) x/x local#0x10021608
 local#0x10021608:     0x0022fd98
 @end smallexample
+
+@anchor{return-command command}
+@item return-prepare
+@item return-prepare @r{[}-default@r{]} @var{expr}
+@code{return-prepare} evaluates the expression @var{expr} in the context of the
+selected frame and saves the resulting value for later use by the @code{return}
+command.
+
+If the @option{-default} is specified, or if the @code{return-prepare} have not
+yet been invoked in the current frame, the evaluated value will be saved
+@itemize
+@item to be returned by the current lane,
+@item to be returned by any lane for which a return value have not been
+specified using @code{return-prepare}.
+@end itemize
+
+If @code{return-prepare} is called without arguments, it clears the value
+currently saved for the current lane (if any).
+
+The following example shows how to specify that the following invocation of the
+@code{return} command should return the work item's position in the work group
+for the first 32 lanes, and return 0 for all other lanes:
+
+@smallexample
+(gdb) return-prepare 0
+(gdb) lane apply 0-31 -preserve-frame -- return-prepare $_lane_workgroup_pos
+@end smallexample
+
+@item info return
+The @code{info return} command allows the user to inspect the value
+@value{GDBN} would force if the @code{return} command was executed.  The lane
+status reported by this command tells if the lane is active in the frame where
+the execution will resume once the @code{return} command is used.
+
+@smallexample
+(gdb) info return
+ Lane  Active Return value
+    0       A 0
+    1       A 1
+    2       A default (0)
+    3       A default (0)
+@end smallexample
+
+@item return
+@itemx return @var{expr}
+The @code{return} command causes the currently selected frame (and any inner
+frame) to be dropped.  If the function currently selected returns a value, then
+the values prepared using the @code{return-prepare} command are forced.
+
+If the user provides an expression @var{expr}, then this expression is
+evaluated in the context of the currently selected frame and the resulting
+value replaces the default value previously specified using
+@code{return-prepare}.
+
+If no value was prepared and no default value is available, then the value
+returned by the current function is unspecified.
 
 @end table
 
