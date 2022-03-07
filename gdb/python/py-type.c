@@ -433,6 +433,40 @@ typy_get_objfile (PyObject *self, void *closure)
   return objfile_to_objfile_object (objfile).release ();
 }
 
+/* Return true if this is a scalar type, otherwise, returns false.  */
+
+static PyObject *
+typy_is_scalar (PyObject *self, void *closure)
+{
+  struct type *type = ((type_object *) self)->type;
+
+  if (is_scalar_type (type))
+    Py_RETURN_TRUE;
+  else
+    Py_RETURN_FALSE;
+}
+
+/* Return true if this type is signed.  Raises a ValueError if this type
+   is not a scalar type.  */
+
+static PyObject *
+typy_is_signed (PyObject *self, void *closure)
+{
+  struct type *type = ((type_object *) self)->type;
+
+  if (!is_scalar_type (type))
+    {
+      PyErr_SetString (PyExc_ValueError,
+		       _("Type must be a scalar type"));
+      return nullptr;
+    }
+
+  if (type->is_unsigned ())
+    Py_RETURN_FALSE;
+  else
+    Py_RETURN_TRUE;
+}
+
 /* Return the type, stripped of typedefs. */
 static PyObject *
 typy_strip_typedefs (PyObject *self, PyObject *args)
@@ -1487,6 +1521,10 @@ static gdb_PyGetSetDef type_object_getset[] =
     "The tag name for this type, or None.", NULL },
   { "objfile", typy_get_objfile, NULL,
     "The objfile this type was defined in, or None.", NULL },
+  { "is_scalar", typy_is_scalar, nullptr,
+    "Is this a scalar type?", nullptr },
+  { "is_signed", typy_is_signed, nullptr,
+    "Is this an signed type?", nullptr },
   { NULL }
 };
 

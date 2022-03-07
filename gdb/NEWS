@@ -3,6 +3,8 @@
 
 *** Changes since GDB 11
 
+* DBX mode is deprecated, and will be removed in GDB 13
+
 * Improved C++ template support
 
   GDB now treats functions/types involving C++ templates like it does function
@@ -111,6 +113,12 @@ show style disassembler enabled
   package is available, then, when this setting is on, disassembler
   output will have styling applied.
 
+set ada source-charset
+show ada source-charset
+  Set the character set encoding that is assumed for Ada symbols.  Valid
+  values for this follow the values that can be passed to the GNAT
+  compiler via the '-gnati' option.  The default is ISO-8859-1.
+
 * Changed commands
 
 maint packet
@@ -135,6 +143,24 @@ show debug lin-lwp
 info win
   This command now includes information about the width of the tui
   windows in its output.
+
+* GDB's Ada parser now supports an extension for specifying the exact
+  byte contents of a floating-point literal.  This can be useful for
+  setting floating-point registers to a precise value without loss of
+  precision.  The syntax is an extension of the based literal syntax.
+  Use, e.g., "16lf#0123abcd#" -- the number of "l"s controls the width
+  of the floating-point type, and the "f" is the marker for floating
+  point.
+
+* MI changes
+
+ ** The '-add-inferior' with no option flags now inherits the
+    connection of the current inferior, this restores the behaviour of
+    GDB as it was prior to GDB 10.
+
+ ** The '-add-inferior' command now accepts a '--no-connection'
+    option, which causes the new inferior to start without a
+    connection.
 
 * New targets
 
@@ -205,6 +231,14 @@ GNU/Linux/LoongArch    loongarch*-*-linux*
      either a string, containing additional, target specific thread
      state information, or None, if there is no such additional
      information.
+
+  ** New read-only attribute gdb.Type.is_scalar, which is True for
+     scalar types, and False for all other types.
+
+  ** New read-only attribute gdb.Type.is_signed.  This attribute
+     should only be read when Type.is_scalar is True, and will be True
+     for signed types, and False for all other types.  Attempting to
+     read this attribute for non-scalar types will raise a ValueError.
 
 * New features in the GDB remote stub, GDBserver
 
