@@ -2849,7 +2849,6 @@ static const struct internalvar_funcs thread_funcs =
 {
   thread_id_per_inf_num_make_value,
   NULL,
-  NULL
 };
 
 /* Implementation of `gthread' variable.  */
@@ -2858,7 +2857,6 @@ static const struct internalvar_funcs gthread_funcs =
 {
   global_thread_id_make_value,
   NULL,
-  NULL
 };
 
 /* Commands with a prefix of `lane'.  */
@@ -2888,7 +2886,6 @@ lane_make_value (struct gdbarch *gdbarch, internalvar *var, void *ignore)
 static const struct internalvar_funcs lane_funcs =
 {
   lane_make_value,
-  NULL,
   NULL
 };
 
@@ -2919,7 +2916,6 @@ lane_count_make_value (struct gdbarch *gdbarch, internalvar *var, void *ignore)
 static const struct internalvar_funcs lane_count_funcs =
 {
   lane_count_make_value,
-  NULL,
   NULL
 };
 
@@ -2963,7 +2959,6 @@ thread_workgroup_pos_make_value (struct gdbarch *gdbarch, internalvar *var,
 static const struct internalvar_funcs thread_workgroup_pos_funcs =
 {
   thread_workgroup_pos_make_value,
-  NULL,
   NULL
 };
 
@@ -2986,7 +2981,6 @@ dispatch_pos_make_value (struct gdbarch *gdbarch, internalvar *var,
 static const struct internalvar_funcs dispatch_pos_funcs =
 {
   dispatch_pos_make_value,
-  NULL,
   NULL
 };
 
@@ -3011,7 +3005,6 @@ lane_workgroup_pos_make_value (struct gdbarch *gdbarch, internalvar *var,
 static const struct internalvar_funcs lane_workgroup_pos_funcs =
 {
   lane_workgroup_pos_make_value,
-  NULL,
   NULL
 };
 

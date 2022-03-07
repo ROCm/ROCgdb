@@ -1005,12 +1005,6 @@ struct internalvar_funcs
 			 struct agent_expr *expr,
 			 struct axs_value *value,
 			 void *data);
-
-  /* If non-NULL, this is called to destroy DATA.  The DATA argument
-     passed to this function is the same argument that was passed to
-     `create_internalvar_type_lazy'.  */
-
-  void (*destroy) (void *data);
 };
 
 extern struct internalvar *create_internalvar_type_lazy (const char *name,
@@ -1136,7 +1130,7 @@ extern void preserve_values (struct objfile *);
 
 /* From values.c */
 
-extern struct value *value_copy (struct value *);
+extern struct value *value_copy (const value *);
 
 extern struct value *value_non_lval (struct value *);
 

@@ -2518,7 +2518,7 @@ amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 }
 
 static const struct internalvar_funcs amd_dbgapi_wave_id_funcs
-  = { amd_dbgapi_wave_id_make_value, NULL, NULL };
+  = { amd_dbgapi_wave_id_make_value, NULL };
 
 static void
 show_precise_memory_mode (struct ui_file *file, int from_tty,

@@ -1718,7 +1718,7 @@ value_release_to_mark (const struct value *mark)
    but it's a different block of storage.  */
 
 struct value *
-value_copy (struct value *arg)
+value_copy (const value *arg)
 {
   struct type *encl_type = value_enclosing_type (arg);
   struct value *val;
@@ -1728,7 +1728,7 @@ value_copy (struct value *arg)
   else
     val = allocate_value (encl_type);
   val->type = arg->type;
-  VALUE_LVAL (val) = VALUE_LVAL (arg);
+  VALUE_LVAL (val) = arg->lval;
   val->location = arg->location;
   val->offset = arg->offset;
   val->bitpos = arg->bitpos;
@@ -1742,8 +1742,13 @@ value_copy (struct value *arg)
   val->initialized = arg->initialized;
 
   if (!value_lazy (val))
-    copy (value_contents_all_raw (arg),
-	  value_contents_all_raw (val));
+    {
+      gdb_assert (arg->contents != nullptr);
+      ULONGEST length = TYPE_LENGTH (value_enclosing_type (arg));
+      const auto &arg_view
+	= gdb::make_array_view (arg->contents.get (), length);
+      copy (arg_view, value_contents_all_raw (val));
+    }
 
   val->unavailable = arg->unavailable;
   val->optimized_out = arg->optimized_out;
@@ -2462,11 +2467,6 @@ clear_internalvar (struct internalvar *var)
 
     case INTERNALVAR_STRING:
       xfree (var->u.string);
-      break;
-
-    case INTERNALVAR_MAKE_VALUE:
-      if (var->u.make_value.functions->destroy != NULL)
-	var->u.make_value.functions->destroy (var->u.make_value.data);
       break;
 
     default:
