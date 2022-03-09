@@ -44,12 +44,22 @@ proc do_test { } {
 	    return
 	}
 
-	# We can't use "watch global" at the moment, because that finds the
-	# host-side `global` symbol.  Work around this by using "info address",
-	# which gives the device-side address, and make a watchpoint from that.
 	set var_address ""
-	gdb_test_multiple "info address global" "" {
-	  -re -wrap ".*is static storage at address (${::hex})." {
+
+	# TODO: Compiler currently describes all memory location
+	# descriptions for global variables as addresses in the
+	# generic address space, insted of the addresses in the
+	# global address space.  One such case is the location
+	# of the variable 'global' which is currently handled as
+	# a separate patern case and should be removed once the
+	# location description for global variables is described
+	# using the addresses in the global memory address space.
+	gdb_test_multiple "print &global" "" {
+	  -re "\\\$${::decimal} = \\(.*\\) (${::hex}).*" {
+	    set var_address $expect_out(1,string)
+	    pass $gdb_test_name
+	  }
+	  -re "\\\$${::decimal} = \\(.*\\) generic#(${::hex}).*" {
 	    set var_address $expect_out(1,string)
 	    pass $gdb_test_name
 	  }
