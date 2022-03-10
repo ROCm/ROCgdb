@@ -59,7 +59,7 @@ proc test {schedlock interrupt_how} {
 
     proc maybe_kfail {schedlock} {
 	if {$schedlock == "on"} {
-	    setup_kfail "*-*-*" "SWDEV/260837"
+	    setup_kfail "*-*-*" "xxxx"
 	}
     }
 

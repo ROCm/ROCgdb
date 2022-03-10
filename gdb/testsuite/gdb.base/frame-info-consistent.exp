@@ -33,7 +33,7 @@ proc compare_frames {frames dwarf_unwinder} {
     foreach_with_prefix compare_frame $frames {
 
 	if {!$dwarf_unwinder} {
-	    setup_kfail "amdgcn-amd-amdhsa" "AMD SWDEV 301442"
+	    setup_kfail "amdgcn-amd-amdhsa" "xxxx"
 	}
 	if {[gdb_test \
 		 "frame function $compare_frame" \

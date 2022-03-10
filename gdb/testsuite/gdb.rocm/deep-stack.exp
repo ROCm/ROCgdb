@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this- program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test inspired by the reproducer in SWDEV-294225.
-#
 # When stopped at /* break here */, GDB would fail to unwind the stack due to
 # the way the PC register was saved.
 

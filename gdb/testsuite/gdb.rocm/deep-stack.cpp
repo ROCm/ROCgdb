@@ -22,8 +22,8 @@
 __device__ void
 base_case ()
 {
-  /* That printf is necessary to reproduce the exact failure as reported in
-     SWDEV-294225.  */
+  /* That printf is necessary to reproduce the exact failure as initially
+     seen.  */
   printf ("Hello device\n");
   return; /* break here */
 }
