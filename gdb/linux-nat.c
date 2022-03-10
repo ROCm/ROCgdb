@@ -247,6 +247,14 @@ static void save_stop_reason (struct lwp_info *lp);
 static void close_proc_mem_file (pid_t pid);
 static void open_proc_mem_file (ptid_t ptid);
 
+/* Return TRUE if LWP is the leader thread of the process.  */
+
+static bool
+is_leader (lwp_info *lp)
+{
+  return lp->ptid.pid () == lp->ptid.lwp ();
+}
+
 
 /* LWP accessors.  */
 
@@ -2776,45 +2784,66 @@ linux_nat_filter_event (int lwpid, int status)
 
   lp = find_lwp_pid (ptid_t (lwpid));
 
-  /* Check for stop events reported by a process we didn't already
-     know about - anything not already in our LWP list.
-
-     If we're expecting to receive stopped processes after
-     fork, vfork, and clone events, then we'll just add the
-     new one to our list and go back to waiting for the event
-     to be reported - the stopped process might be returned
-     from waitpid before or after the event is.
-
-     But note the case of a non-leader thread exec'ing after the
-     leader having exited, and gone from our lists.  The non-leader
-     thread changes its tid to the tgid.  */
-
-  if (WIFSTOPPED (status) && lp == NULL
-      && (WSTOPSIG (status) == SIGTRAP && event == PTRACE_EVENT_EXEC))
+  /* Check for events reported by anything not in our LWP list.  */
+  if (lp == nullptr)
     {
-      /* A multi-thread exec after we had seen the leader exiting.  */
-      linux_nat_debug_printf ("Re-adding thread group leader LWP %d.", lwpid);
+      if (WIFSTOPPED (status))
+	{
+	  if (WSTOPSIG (status) == SIGTRAP && event == PTRACE_EVENT_EXEC)
+	    {
+	      /* A non-leader thread exec'ed after we've seen the
+		 leader zombie, and removed it from our lists (in
+		 check_zombie_leaders).  The non-leader thread changes
+		 its tid to the tgid.  */
+	      linux_nat_debug_printf
+		("Re-adding thread group leader LWP %d after exec.",
+		 lwpid);
 
-      lp = add_lwp (ptid_t (lwpid, lwpid));
-      lp->stopped = 1;
-      lp->resumed = 1;
-      add_thread (linux_target, lp->ptid);
+	      lp = add_lwp (ptid_t (lwpid, lwpid));
+	      lp->stopped = 1;
+	      lp->resumed = 1;
+	      add_thread (linux_target, lp->ptid);
+	    }
+	  else
+	    {
+	      /* A process we are controlling has forked and the new
+		 child's stop was reported to us by the kernel.  Save
+		 its PID and go back to waiting for the fork event to
+		 be reported - the stopped process might be returned
+		 from waitpid before or after the fork event is.  */
+	      linux_nat_debug_printf
+		("Saving LWP %d status %s in stopped_pids list",
+		 lwpid, status_to_str (status).c_str ());
+	      add_to_pid_list (&stopped_pids, lwpid, status);
+	    }
+	}
+      else
+	{
+	  /* Don't report an event for the exit of an LWP not in our
+	     list, i.e. not part of any inferior we're debugging.
+	     This can happen if we detach from a program we originally
+	     forked and then it exits.  However, note that we may have
+	     earlier deleted a leader of an inferior we're debugging,
+	     in check_zombie_leaders.  Re-add it back here if so.  */
+	  for (inferior *inf : all_inferiors (linux_target))
+	    {
+	      if (inf->pid == lwpid)
+		{
+		  linux_nat_debug_printf
+		    ("Re-adding thread group leader LWP %d after exit.",
+		     lwpid);
+
+		  lp = add_lwp (ptid_t (lwpid, lwpid));
+		  lp->resumed = 1;
+		  add_thread (linux_target, lp->ptid);
+		  break;
+		}
+	    }
+	}
+
+      if (lp == nullptr)
+	return;
     }
-
-  if (WIFSTOPPED (status) && !lp)
-    {
-      linux_nat_debug_printf ("saving LWP %ld status %s in stopped_pids list",
-			      (long) lwpid, status_to_str (status).c_str ());
-      add_to_pid_list (&stopped_pids, lwpid, status);
-      return;
-    }
-
-  /* Make sure we don't report an event for the exit of an LWP not in
-     our list, i.e. not part of the current process.  This can happen
-     if we detach from a program we originally forked and then it
-     exits.  */
-  if (!WIFSTOPPED (status) && !lp)
-    return;
 
   /* This LWP is stopped now.  (And if dead, this prevents it from
      ever being continued.)  */
@@ -2860,13 +2889,12 @@ linux_nat_filter_event (int lwpid, int status)
   /* Check if the thread has exited.  */
   if (WIFEXITED (status) || WIFSIGNALED (status))
     {
-      if (!report_thread_events
-	  && num_lwps (lp->ptid.pid ()) > 1)
+      if (!report_thread_events && !is_leader (lp))
 	{
 	  linux_nat_debug_printf ("%s exited.",
 				  lp->ptid.to_string ().c_str ());
 
-	  /* If there is at least one more LWP, then the exit signal
+	  /* If this was not the leader exiting, then the exit signal
 	     was not the end of the debugged application and should be
 	     ignored.  */
 	  exit_lwp (lp);
@@ -3009,33 +3037,63 @@ check_zombie_leaders (void)
       leader_lp = find_lwp_pid (ptid_t (inf->pid));
       if (leader_lp != NULL
 	  /* Check if there are other threads in the group, as we may
-	     have raced with the inferior simply exiting.  */
+	     have raced with the inferior simply exiting.  Note this
+	     isn't a watertight check.  If the inferior is
+	     multi-threaded and is exiting, it may be we see the
+	     leader as zombie before we reap all the non-leader
+	     threads.  See comments below.  */
 	  && num_lwps (inf->pid) > 1
 	  && linux_proc_pid_is_zombie (inf->pid))
 	{
+	  /* A zombie leader in a multi-threaded program can mean one
+	     of three things:
+
+	     #1 - Only the leader exited, not the whole program, e.g.,
+	     with pthread_exit.  Since we can't reap the leader's exit
+	     status until all other threads are gone and reaped too,
+	     we want to delete the zombie leader right away, as it
+	     can't be debugged, we can't read its registers, etc.
+	     This is the main reason we check for zombie leaders
+	     disappearing.
+
+	     #2 - The whole thread-group/process exited (a group exit,
+	     via e.g. exit(3), and there is (or will be shortly) an
+	     exit reported for each thread in the process, and then
+	     finally an exit for the leader once the non-leaders are
+	     reaped.
+
+	     #3 - There are 3 or more threads in the group, and a
+	     thread other than the leader exec'd.  See comments on
+	     exec events at the top of the file.
+
+	     Ideally we would never delete the leader for case #2.
+	     Instead, we want to collect the exit status of each
+	     non-leader thread, and then finally collect the exit
+	     status of the leader as normal and use its exit code as
+	     whole-process exit code.  Unfortunately, there's no
+	     race-free way to distinguish cases #1 and #2.  We can't
+	     assume the exit events for the non-leaders threads are
+	     already pending in the kernel, nor can we assume the
+	     non-leader threads are in zombie state already.  Between
+	     the leader becoming zombie and the non-leaders exiting
+	     and becoming zombie themselves, there's a small time
+	     window, so such a check would be racy.  Temporarily
+	     pausing all threads and checking to see if all threads
+	     exit or not before re-resuming them would work in the
+	     case that all threads are running right now, but it
+	     wouldn't work if some thread is currently already
+	     ptrace-stopped, e.g., due to scheduler-locking.
+
+	     So what we do is we delete the leader anyhow, and then
+	     later on when we see its exit status, we re-add it back.
+	     We also make sure that we only report a whole-process
+	     exit when we see the leader exiting, as opposed to when
+	     the last LWP in the LWP list exits, which can be a
+	     non-leader if we deleted the leader here.  */
 	  linux_nat_debug_printf ("Thread group leader %d zombie "
-				  "(it exited, or another thread execd).",
+				  "(it exited, or another thread execd), "
+				  "deleting it.",
 				  inf->pid);
-
-	  /* A leader zombie can mean one of two things:
-
-	     - It exited, and there's an exit status pending
-	     available, or only the leader exited (not the whole
-	     program).  In the latter case, we can't waitpid the
-	     leader's exit status until all other threads are gone.
-
-	     - There are 3 or more threads in the group, and a thread
-	     other than the leader exec'd.  See comments on exec
-	     events at the top of the file.  We could try
-	     distinguishing the exit and exec cases, by waiting once
-	     more, and seeing if something comes out, but it doesn't
-	     sound useful.  The previous leader _does_ go away, and
-	     we'll re-add the new one once we see the exec event
-	     (which is just the same as what would happen if the
-	     previous leader did exit voluntarily before some other
-	     thread execs).  */
-
-	  linux_nat_debug_printf ("Thread group leader %d vanished.", inf->pid);
 	  exit_lwp (leader_lp);
 	}
     }
@@ -3052,7 +3110,7 @@ filter_exit_event (struct lwp_info *event_child,
 {
   ptid_t ptid = event_child->ptid;
 
-  if (num_lwps (ptid.pid ()) > 1)
+  if (!is_leader (event_child))
     {
       if (report_thread_events)
 	ourstatus->set_thread_exited (0);

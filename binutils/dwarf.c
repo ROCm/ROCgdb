@@ -110,6 +110,9 @@ int do_debug_cu_index;
 int do_wide;
 int do_debug_links;
 int do_follow_links = DEFAULT_FOR_FOLLOW_LINKS;
+#ifdef HAVE_LIBDEBUGINFOD
+int use_debuginfod = 1;
+#endif
 bool do_checks;
 
 int dwarf_cutoff_level = -1;
@@ -11090,7 +11093,7 @@ debuginfod_fetch_separate_debug_info (struct dwarf_section * section,
 
   return false;
 }
-#endif
+#endif /* HAVE_LIBDEBUGINFOD  */
 
 static void *
 load_separate_debug_info (const char *            main_filename,
@@ -11209,9 +11212,10 @@ load_separate_debug_info (const char *            main_filename,
   {
     char * tmp_filename;
 
-    if (debuginfod_fetch_separate_debug_info (xlink,
-                                              & tmp_filename,
-                                              file))
+    if (use_debuginfod
+	&& debuginfod_fetch_separate_debug_info (xlink,
+						 & tmp_filename,
+						 file))
       {
         /* File successfully downloaded from server, replace
            debug_filename with the file's path.  */
@@ -11259,13 +11263,15 @@ load_separate_debug_info (const char *            main_filename,
       warn (_("tried: %s\n"), debug_filename);
 
 #if HAVE_LIBDEBUGINFOD
-      {
-	char *urls = getenv (DEBUGINFOD_URLS_ENV_VAR);
-	if (urls == NULL)
-	  urls = "";
+      if (use_debuginfod)
+	{
+	  char *urls = getenv (DEBUGINFOD_URLS_ENV_VAR);
 
-	warn (_("tried: DEBUGINFOD_URLS=%s\n"), urls);
-      }
+	  if (urls == NULL)
+	    urls = "";
+
+	  warn (_("tried: DEBUGINFOD_URLS=%s\n"), urls);
+	}
 #endif
     }
 
@@ -11759,6 +11765,9 @@ dwarf_select_sections_by_names (const char *names)
       { "aranges", & do_debug_aranges, 1 },
       { "cu_index", & do_debug_cu_index, 1 },
       { "decodedline", & do_debug_lines, FLAG_DEBUG_LINES_DECODED },
+#ifdef HAVE_LIBDEBUGINFOD
+      { "do-not-use-debuginfod", & use_debuginfod, 0 },
+#endif
       { "follow-links", & do_follow_links, 1 },
       { "frames", & do_debug_frames, 1 },
       { "frames-interp", & do_debug_frames_interp, 1 },
@@ -11782,6 +11791,9 @@ dwarf_select_sections_by_names (const char *names)
       { "trace_abbrev", & do_trace_abbrevs, 1 },
       { "trace_aranges", & do_trace_aranges, 1 },
       { "trace_info", & do_trace_info, 1 },
+#ifdef HAVE_LIBDEBUGINFOD
+      { "use-debuginfod", & use_debuginfod, 1 },
+#endif
       { NULL, NULL, 0 }
     };
 
@@ -11835,6 +11847,10 @@ dwarf_select_sections_by_letters (const char *letters)
       case 'A':	do_debug_addr = 1; break;
       case 'a':	do_debug_abbrevs = 1; break;
       case 'c':	do_debug_cu_index = 1; break;
+#ifdef HAVE_LIBDEBUGINFOD
+      case 'D': use_debuginfod = 1; break;
+      case 'E': use_debuginfod = 0; break;
+#endif
       case 'F':	do_debug_frames_interp = 1; /* Fall through.  */
       case 'f':	do_debug_frames = 1; break;
       case 'g':	do_gdb_index = 1; break;
