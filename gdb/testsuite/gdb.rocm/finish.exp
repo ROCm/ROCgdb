@@ -100,7 +100,7 @@ proc_with_prefix bitfield {} {
     with_test_prefix "unpacked" {
 	gdb_breakpoint "returnNotPackedWithBitField if \$_lane == 4"
 	gdb_continue_to_breakpoint "returnNotPackedWithBitField"
-	setup_xfail "*-*-*" SWDEV-317999
+	setup_xfail "*-*-*"
 	gdb_test "finish" \
 	    "Value returned is \\\$$::decimal = \\\{foo = \\\{4, 5, 6, 7\\\}, x = 8, y = 9, z = 10, c1 = 97 'a', c2 = 98 'b', c3 = 99 'c', c4 = 100 'd', c5 = 101 'e', c6 = 102 'f'\\\}"
     }
@@ -136,7 +136,7 @@ proc_with_prefix reference {} {
     gdb_breakpoint "returnRef2 if \$_lane == 4"
     with_test_prefix "private address" {
 	gdb_continue_to_breakpoint "returnRef2"
-	setup_xfail "*-*-*" SWDEV-192553
+	setup_xfail "*-*-*"
 	gdb_test "finish" \
 	    "Value returned is \\\$$::decimal = \\(int &\\) @$::hex: 4"
     }
