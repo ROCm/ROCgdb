@@ -2950,8 +2950,14 @@ value_static_field (struct type *type, int fieldno)
     case FIELD_LOC_KIND_PHYSNAME:
     {
       const char *phys_name = TYPE_FIELD_STATIC_PHYSNAME (type, fieldno);
-      /* TYPE_FIELD_NAME (type, fieldno); */
-      struct block_symbol sym = lookup_symbol (phys_name, 0, VAR_DOMAIN, 0);
+      const struct block *block =  nullptr;
+      if (target_has_stack ())
+	block
+	  = block_static_block (get_frame_block (get_selected_frame (nullptr),
+						 0));
+
+      struct block_symbol sym = lookup_symbol (phys_name, block, VAR_DOMAIN,
+					       nullptr);
 
       if (sym.symbol == NULL)
 	{
