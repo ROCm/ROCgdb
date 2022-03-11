@@ -47,7 +47,6 @@ proc_with_prefix emptyStruct {} {
     gdb_breakpoint "returnEmptyWithStatic" "allow-pending"
     with_test_prefix "ignore static values" {
 	gdb_continue_to_breakpoint "returnEmpty"
-	setup_xfail "*-*-*" "SWDEV-313804"
 	gdb_test "finish" "Value returned is \\\$$::decimal = {static something = 56}"
     }
 }
@@ -151,13 +150,8 @@ proc_with_prefix reference {} {
 
 proc_with_prefix struct_with_static {} {
     gdb_breakpoint "returnWithStatic"
-    with_test_prefix "ignore static values" {
-	gdb_continue_to_breakpoint "returnWithStatic"
-	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\\{a = \\\{8, 16\\\}, sub = \\\{static something = $::decimal\\\}, b = 3.1400001, static c = 0, d = 1.60218e-19\\\}"
-    }
+    gdb_continue_to_breakpoint "returnWithStatic"
 
-    setup_xfail "*-*-*" "SWDEV-313804"
     gdb_test "finish" \
 	"Value returned is \\\$$::decimal = \\\{a = \\\{8, 16\\\}, sub = \\\{static something = 12\\\}, b = 3.1400001, static c = 42, d = 1.60218e-19\\\}"
 }
