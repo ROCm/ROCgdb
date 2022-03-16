@@ -1,3 +1,17 @@
+2022-03-15  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* gprofng/src/gp-collect-app.cc (collect::check_args): Use
+	fallthrough comment instead of attribute.
+
+2022-03-11  Vladimir Mezentsev  <vladimir.mezentsev@oracle.com>
+
+	* Makefile.def: Add gprofng module.
+	* configure.ac: Add --enable-gprofng option.
+	* src-release.sh: Add gprofng.
+	* Makefile.in: Regenerate.
+	* configure: Regenerate.
+	* gprofng: New directory.
+
 2022-01-22  Nick Clifton  <nickc@redhat.com>
 
 	* 2.38 release branch created.

@@ -455,7 +455,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of dwarf2_reg_to_regnum, invalid_p == 0 */
   if (gdbarch->register_name == 0)
     log.puts ("\n\tregister_name");
-  /* Skip verify of register_type, has predicate.  */
+  if (gdbarch->register_type == 0)
+    log.puts ("\n\tregister_type");
   /* Skip verify of dummy_id, invalid_p == 0 */
   /* Skip verify of active_lanes_mask, has predicate.  */
   /* Skip verify of supported_lanes_count, invalid_p == 0 */
@@ -472,7 +473,10 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of cannot_fetch_register, invalid_p == 0 */
   /* Skip verify of cannot_store_register, invalid_p == 0 */
   /* Skip verify of get_longjmp_target, has predicate.  */
+  /* Skip verify of believe_pcc_promotion, invalid_p == 0 */
   /* Skip verify of convert_register_p, invalid_p == 0 */
+  /* Skip verify of register_to_value, invalid_p == 0 */
+  /* Skip verify of value_to_register, invalid_p == 0 */
   /* Skip verify of value_from_register, invalid_p == 0 */
   /* Skip verify of pointer_to_address, invalid_p == 0 */
   /* Skip verify of address_to_pointer, invalid_p == 0 */
@@ -515,6 +519,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of frame_num_args, has predicate.  */
   /* Skip verify of frame_align, has predicate.  */
   /* Skip verify of stabs_argument_has_addr, invalid_p == 0 */
+  /* Skip verify of frame_red_zone_size, invalid_p == 0 */
   /* Skip verify of convert_from_func_ptr_addr, invalid_p == 0 */
   /* Skip verify of addr_bits_remove, invalid_p == 0 */
   /* Skip verify of significant_addr_bit, invalid_p == 0 */
@@ -565,6 +570,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   if ((! gdbarch->displaced_step_finish) != (! gdbarch->displaced_step_prepare))
     log.puts ("\n\tdisplaced_step_finish");
   /* Skip verify of displaced_step_copy_insn_closure_by_addr, has predicate.  */
+  /* Skip verify of displaced_step_restore_all_in_ptid, invalid_p == 0 */
   /* Skip verify of relocate_instruction, has predicate.  */
   /* Skip verify of overlay_update, has predicate.  */
   /* Skip verify of core_read_description, has predicate.  */
@@ -600,6 +606,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of guess_tracepoint_registers, invalid_p == 0 */
   /* Skip verify of auto_charset, invalid_p == 0 */
   /* Skip verify of auto_wide_charset, invalid_p == 0 */
+  /* Skip verify of solib_symbols_extension, invalid_p == 0 */
   /* Skip verify of has_dos_based_file_system, invalid_p == 0 */
   /* Skip verify of gen_return_address, invalid_p == 0 */
   /* Skip verify of info_proc, has predicate.  */
@@ -806,9 +813,6 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_filtered (file,
                       "gdbarch_dump: register_name = <%s>\n",
                       host_address_to_string (gdbarch->register_name));
-  fprintf_filtered (file,
-                      "gdbarch_dump: gdbarch_register_type_p() = %d\n",
-                      gdbarch_register_type_p (gdbarch));
   fprintf_filtered (file,
                       "gdbarch_dump: register_type = <%s>\n",
                       host_address_to_string (gdbarch->register_type));
@@ -2278,13 +2282,6 @@ set_gdbarch_register_name (struct gdbarch *gdbarch,
   gdbarch->register_name = register_name;
 }
 
-bool
-gdbarch_register_type_p (struct gdbarch *gdbarch)
-{
-  gdb_assert (gdbarch != NULL);
-  return gdbarch->register_type != NULL;
-}
-
 struct type *
 gdbarch_register_type (struct gdbarch *gdbarch, int reg_nr)
 {
@@ -2613,6 +2610,7 @@ int
 gdbarch_believe_pcc_promotion (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
+  /* Skip verify of believe_pcc_promotion, invalid_p == 0 */
   if (gdbarch_debug >= 2)
     fprintf_unfiltered (gdb_stdlog, "gdbarch_believe_pcc_promotion called\n");
   return gdbarch->believe_pcc_promotion;
@@ -3328,6 +3326,7 @@ int
 gdbarch_frame_red_zone_size (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
+  /* Skip verify of frame_red_zone_size, invalid_p == 0 */
   if (gdbarch_debug >= 2)
     fprintf_unfiltered (gdb_stdlog, "gdbarch_frame_red_zone_size called\n");
   return gdbarch->frame_red_zone_size;
@@ -5059,6 +5058,7 @@ const char *
 gdbarch_solib_symbols_extension (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
+  /* Skip verify of solib_symbols_extension, invalid_p == 0 */
   if (gdbarch_debug >= 2)
     fprintf_unfiltered (gdb_stdlog, "gdbarch_solib_symbols_extension called\n");
   return gdbarch->solib_symbols_extension;

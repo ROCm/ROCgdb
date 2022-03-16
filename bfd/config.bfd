@@ -323,7 +323,7 @@ case "${targ}" in
     targ_defvec=alpha_ecoff_le_vec
     want64=true
     ;;
-  amdgcn-*-amdhsa)
+  amdgcn-*-*)
     targ_defvec=amdgcn_elf64_le_vec
     want64=true
     ;;

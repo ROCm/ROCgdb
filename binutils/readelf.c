@@ -1,6 +1,5 @@
 /* readelf.c -- display contents of an ELF format file
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
-   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Originally developed by Eric Youngdale <eric@andante.jic.com>
    Modifications by Nick Clifton <nickc@redhat.com>
@@ -46,6 +45,10 @@
 #include <time.h>
 #include <zlib.h>
 #include <wchar.h>
+
+#if defined HAVE_MSGPACK
+#include <msgpack.h>
+#endif
 
 #if __GNUC__ >= 2
 /* Define BFD64 here, even if our default architecture is 32 bit ELF
@@ -3570,6 +3573,153 @@ decode_NDS32_machine_flags (unsigned e_flags, char buf[], size_t size)
     r += snprintf (buf + r, size -r, ", L2C");
 }
 
+static void
+decode_AMDGPU_machine_flags (Filedata *filedata, unsigned int e_flags,
+			     char *buf)
+{
+  unsigned char *e_ident = filedata->file_header.e_ident;
+  unsigned char osabi = e_ident[EI_OSABI];
+  unsigned char abiversion = e_ident[EI_ABIVERSION];
+  unsigned int mach;
+
+  /* HSA OS ABI v2 used a different encoding, but we don't need to support it,
+     it has been deprecated for a while.
+
+     The PAL, MESA3D and NONE OS ABIs are not properly versioned, at the time
+     of writing, they use the same flags as HSA v3, so the code below uses that
+     assumption.  */
+  if (osabi == ELFOSABI_AMDGPU_HSA && abiversion < ELFABIVERSION_AMDGPU_HSA_V3)
+    return;
+
+  mach = e_flags & EF_AMDGPU_MACH;
+  switch (mach)
+    {
+#define AMDGPU_CASE(code, string) \
+  case code: strcat (buf, ", " string); break;
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036")
+    default:
+      sprintf (buf, _(", <unknown AMDGPU GPU type: %#x>"), mach);
+      break;
+#undef AMDGPU_CASE
+    }
+
+  buf += strlen (buf);
+  e_flags &= ~EF_AMDGPU_MACH;
+
+  if ((osabi == ELFOSABI_AMDGPU_HSA
+       && abiversion == ELFABIVERSION_AMDGPU_HSA_V3)
+      || osabi != ELFOSABI_AMDGPU_HSA)
+    {
+      /* For HSA v3 and other OS ABIs.  */
+      if (e_flags & EF_AMDGPU_FEATURE_XNACK_V3)
+	{
+	  strcat (buf, ", xnack on");
+	  buf += strlen (buf);
+	  e_flags &= ~EF_AMDGPU_FEATURE_XNACK_V3;
+	}
+
+      if (e_flags & EF_AMDGPU_FEATURE_SRAMECC_V3)
+	{
+	  strcat (buf, ", sramecc on");
+	  buf += strlen (buf);
+	  e_flags &= ~EF_AMDGPU_FEATURE_SRAMECC_V3;
+	}
+    }
+  else
+    {
+      /* For HSA v4+.  */
+      int xnack, sramecc;
+
+      xnack = e_flags & EF_AMDGPU_FEATURE_XNACK_V4;
+      switch (xnack)
+	{
+	case EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+	  break;
+
+	case EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+	  strcat (buf, ", xnack any");
+	  break;
+
+	case EF_AMDGPU_FEATURE_XNACK_OFF_V4:
+	  strcat (buf, ", xnack off");
+	  break;
+
+	case EF_AMDGPU_FEATURE_XNACK_ON_V4:
+	  strcat (buf, ", xnack on");
+	  break;
+
+	default:
+	  sprintf (buf, _(", <unknown xnack value: %#x>"), xnack);
+	  break;
+	}
+
+      buf += strlen (buf);
+      e_flags &= ~EF_AMDGPU_FEATURE_XNACK_V4;
+
+      sramecc = e_flags & EF_AMDGPU_FEATURE_SRAMECC_V4;
+      switch (sramecc)
+	{
+	case EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+	  break;
+
+	case EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+	  strcat (buf, ", sramecc any");
+	  break;
+
+	case EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+	  strcat (buf, ", sramecc off");
+	  break;
+
+	case EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+	  strcat (buf, ", sramecc on");
+	  break;
+
+	default:
+	  sprintf (buf, _(", <unknown sramecc value: %#x>"), sramecc);
+	  break;
+	}
+
+      buf += strlen (buf);
+      e_flags &= ~EF_AMDGPU_FEATURE_SRAMECC_V4;
+    }
+
+  if (e_flags != 0)
+    sprintf (buf, _(", unknown flags bits: %#x"), e_flags);
+}
+
 static char *
 get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 {
@@ -3723,29 +3873,7 @@ get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 	  break;
 
 	case EM_AMDGPU:
-	  switch (e_flags & EF_AMDGPU_MACH)
-	    {
-	    case EF_AMDGPU_MACH_AMDGCN_GFX801 : strcat (buf, ", gfx801"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX802 : strcat (buf, ", gfx802"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX803 : strcat (buf, ", gfx803"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX810 : strcat (buf, ", gfx810"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX900 : strcat (buf, ", gfx900"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX902 : strcat (buf, ", gfx902"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX904 : strcat (buf, ", gfx904"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX906 : strcat (buf, ", gfx906"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX908 : strcat (buf, ", gfx908"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX90A : strcat (buf, ", gfx90a"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX1010 : strcat (buf, ", gfx1010"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX1011 : strcat (buf, ", gfx1011"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX1012 : strcat (buf, ", gfx1012"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX1030 : strcat (buf, ", gfx1030"); break;
-	    case EF_AMDGPU_MACH_AMDGCN_GFX1031 : strcat (buf, ", gfx1031"); break;
-	    default: strcat (buf, _(", <unknown AMDGPU gpu type>")); break;
-	    }
-
-	  if (e_flags & ~ EF_AMDGPU_MACH)
-	    sprintf (buf + strlen (buf), _(", unknown flags bits: %#x"),
-		     e_flags & ~ EF_AMDGPU_MACH);
+	  decode_AMDGPU_machine_flags (filedata, e_flags, buf);
 	  break;
 
 	case EM_CYGNUS_MEP:
@@ -4318,7 +4446,9 @@ get_osabi_name (Filedata * filedata, unsigned int osabi)
 	  case EM_AMDGPU:
 	    switch (osabi)
 	      {
-	      case ELFOSABI_AMDGPU_HSA: return "AMD HSA Runtime";
+	      case ELFOSABI_AMDGPU_HSA:    return "AMD HSA";
+	      case ELFOSABI_AMDGPU_PAL:    return "AMD PAL";
+	      case ELFOSABI_AMDGPU_MESA3D: return "AMD Mesa3D";
 	      default:
 		break;
 	      }
@@ -19602,20 +19732,19 @@ decode_x86_compat_2_isa (unsigned int bitmask)
 }
 
 static const char *
-get_amdgpu_elf_note_type (unsigned e_type)
+get_amdgpu_elf_note_type (unsigned int e_type)
 {
-  static char buff[64];
-
   switch (e_type)
     {
     case NT_AMDGPU_METADATA:
       return _("NT_AMDGPU_METADATA (code object metadata)");
     default:
-      break;
+      {
+	static char buf[64];
+	snprintf (buf, sizeof (buf), _("Unknown note type: (0x%08x)"), e_type);
+	return buf;
+      }
     }
-
-  snprintf (buff, sizeof (buff), _("Unknown note type: (0x%08x)"), e_type);
-  return buff;
 }
 
 static void
@@ -21185,6 +21314,177 @@ print_gnu_build_attribute_name (Elf_Internal_Note * pnote)
   return true;
 }
 
+/* Print the contents of PNOTE as hex.  */
+
+static void
+print_note_contents_hex (Elf_Internal_Note *pnote)
+{
+  if (pnote->descsz)
+    {
+      unsigned long i;
+
+      printf (_("   description data: "));
+      for (i = 0; i < pnote->descsz; i++)
+	printf ("%02x ", pnote->descdata[i] & 0xff);
+      if (!do_wide)
+	printf ("\n");
+    }
+
+  if (do_wide)
+    printf ("\n");
+}
+
+#if defined HAVE_MSGPACK
+
+static void
+print_indents (int n)
+{
+  printf ("    ");
+
+  for (int i = 0; i < n; i++)
+    printf ("  ");
+}
+
+/* Print OBJ in human-readable form.  */
+
+static void
+dump_msgpack_obj (const msgpack_object *obj, int indent)
+{
+  switch (obj->type)
+    {
+    case MSGPACK_OBJECT_NIL:
+      printf ("(nil)");
+      break;
+
+    case MSGPACK_OBJECT_BOOLEAN:
+      printf ("%s", obj->via.boolean ? "true" : "false");
+      break;
+
+    case MSGPACK_OBJECT_POSITIVE_INTEGER:
+      printf ("%" PRIu64, obj->via.u64);
+      break;
+
+    case MSGPACK_OBJECT_NEGATIVE_INTEGER:
+      printf ("%" PRIi64, obj->via.i64);
+      break;
+
+    case MSGPACK_OBJECT_FLOAT32:
+    case MSGPACK_OBJECT_FLOAT64:
+      printf ("%f", obj->via.f64);
+      break;
+
+    case MSGPACK_OBJECT_STR:
+      printf ("\"%.*s\"", obj->via.str.size, obj->via.str.ptr);
+      break;
+
+    case MSGPACK_OBJECT_ARRAY:
+      {
+	const msgpack_object_array *array = &obj->via.array;
+
+	printf ("[\n");
+	++indent;
+
+	for (uint32_t i = 0; i < array->size; ++i)
+	  {
+	    const msgpack_object *item = &array->ptr[i];
+
+	    print_indents (indent);
+	    dump_msgpack_obj (item, indent);
+	    printf (",\n");
+	  }
+
+	--indent;
+	print_indents (indent);
+	printf ("]");
+	break;
+      }
+      break;
+
+    case MSGPACK_OBJECT_MAP:
+      {
+	const msgpack_object_map *map = &obj->via.map;
+
+	printf ("{\n");
+	++indent;
+
+	for (uint32_t i = 0; i < map->size; ++i)
+	  {
+	    const msgpack_object_kv *kv = &map->ptr[i];
+	    const msgpack_object *key = &kv->key;
+	    const msgpack_object *val = &kv->val;
+
+	    print_indents (indent);
+	    dump_msgpack_obj (key, indent);
+	    printf (": ");
+	    dump_msgpack_obj (val, indent);
+
+	    printf (",\n");
+	  }
+
+	--indent;
+	print_indents (indent);
+	printf ("}");
+
+	break;
+      }
+
+    case MSGPACK_OBJECT_BIN:
+      printf ("(bin)");
+      break;
+
+    case MSGPACK_OBJECT_EXT:
+      printf ("(ext)");
+      break;
+    }
+}
+
+static void
+dump_msgpack (const msgpack_unpacked *msg)
+{
+  print_indents (0);
+  dump_msgpack_obj (&msg->data, 0);
+  printf ("\n");
+}
+
+#endif /* defined HAVE_MSGPACK */
+
+static bool
+print_amdgpu_note (Elf_Internal_Note *pnote)
+{
+#if defined HAVE_MSGPACK
+  /* If msgpack is available, decode and dump the note's content.  */
+  bool ret;
+  msgpack_unpacked msg;
+  msgpack_unpack_return msgpack_ret;
+
+  assert (pnote->type == NT_AMDGPU_METADATA);
+
+  msgpack_unpacked_init (&msg);
+  msgpack_ret = msgpack_unpack_next (&msg, pnote->descdata, pnote->descsz,
+				     NULL);
+
+  switch (msgpack_ret)
+    {
+    case MSGPACK_UNPACK_SUCCESS:
+      dump_msgpack (&msg);
+      ret = true;
+      break;
+
+    default:
+      error (_("failed to unpack msgpack contents in NT_AMDGPU_METADATA note"));
+      ret = false;
+      break;
+    }
+
+  msgpack_unpacked_destroy (&msg);
+  return ret;
+#else
+  /* msgpack is not available, dump contents as hex.  */
+  print_note_contents_hex (pnote);
+  return true;
+#endif
+}
+
 /* Note that by the ELF standard, the name field is already null byte
    terminated, and namesz includes the terminating null byte.
    I.E. the value of namesz for the name "FSF" is 4.
@@ -21282,21 +21582,11 @@ process_note (Elf_Internal_Note *  pnote,
 	   && (pnote->type == NT_GNU_BUILD_ATTRIBUTE_OPEN
 	       || pnote->type == NT_GNU_BUILD_ATTRIBUTE_FUNC))
     return print_gnu_build_attribute_description (pnote, filedata);
+  else if (startswith (pnote->namedata, "AMDGPU")
+	   && pnote->type == NT_AMDGPU_METADATA)
+    return print_amdgpu_note (pnote);
 
-  if (pnote->descsz)
-    {
-      unsigned long i;
-
-      printf (_("   description data: "));
-      for (i = 0; i < pnote->descsz; i++)
-	printf ("%02x ", pnote->descdata[i] & 0xff);
-      if (!do_wide)
-	printf ("\n");
-    }
-
-  if (do_wide)
-    printf ("\n");
-
+  print_note_contents_hex (pnote);
   return true;
 }
 

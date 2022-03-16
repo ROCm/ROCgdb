@@ -1,9 +1,8 @@
-/* Support for AMDHSA ELF.
+/* AMDGCN ELF support for BFD.
 
-   Copyright (C) 2019-2021 Free Software Foundation, Inc.
-   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2022 Free Software Foundation, Inc.
 
-   This file is part of GDB.
+   This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,6 +17,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+/* This file handles ELF files that are of the AMDGCN architecture.  The
+   format is documented here:
+
+     https://llvm.org/docs/AMDGPUUsage.html#elf-code-object */
+
 #include "sysdep.h"
 #include "bfd.h"
 #include "libbfd.h"
@@ -31,21 +35,31 @@ elf64_amdgcn_object_p (bfd *abfd)
 {
   Elf_Internal_Ehdr *hdr = elf_elfheader (abfd);
   unsigned int mach;
+  unsigned char osabi;
   unsigned char osabi_version;
 
-  /* We should not get here if the OS ABI is not HSA, since we define
-     ELF_OSABI below.  */
-  BFD_ASSERT (hdr->e_ident[EI_OSABI] == ELFOSABI_AMDGPU_HSA);
+  BFD_ASSERT (hdr->e_machine == EM_AMDGPU);
 
-  /* We only support HSA code objects v3 and above.  */
+  osabi = hdr->e_ident[EI_OSABI];
   osabi_version = hdr->e_ident[EI_ABIVERSION];
-  if (osabi_version < ELFABIVERSION_AMDGPU_HSA_V3)
+
+  /* Objects with OS ABI HSA version 2 encoded the GPU model differently (in a
+     note), but they are deprecated, so we don't need to support them.  Reject
+     them specifically.
+
+     At the time of writing, all AMDGCN objects encode the specific GPU
+     model in the EF_AMDGPU_MACH field of e_flags.  */
+  if (osabi == ELFOSABI_AMDGPU_HSA
+      && osabi_version < ELFABIVERSION_AMDGPU_HSA_V3)
     return false;
 
-  /* Read the specific processor model from e_flags.  */
   mach = elf_elfheader (abfd)->e_flags & EF_AMDGPU_MACH;
-  bfd_default_set_arch_mach (abfd, bfd_arch_amdgcn, mach);
 
+  /* Avoid matching non-AMDGCN AMDGPU objects (e.g. r600).  */
+  if (mach < EF_AMDGPU_MACH_AMDGCN_MIN)
+    return false;
+
+  bfd_default_set_arch_mach (abfd, bfd_arch_amdgcn, mach);
   return true;
 }
 
@@ -55,16 +69,12 @@ elf64_amdgcn_object_p (bfd *abfd)
 #define ELF_ARCH		bfd_arch_amdgcn
 #define ELF_TARGET_ID		AMDGCN_ELF_DATA
 #define ELF_MACHINE_CODE	EM_AMDGPU
-#define ELF_OSABI		ELFOSABI_AMDGPU_HSA
 #define ELF_MAXPAGESIZE		0x10000 /* 64KB */
 #define ELF_COMMONPAGESIZE	0x1000  /* 4KB */
 
-#define bfd_elf64_bfd_reloc_type_lookup \
-  bfd_default_reloc_type_lookup
-#define bfd_elf64_bfd_reloc_name_lookup \
-  _bfd_norelocs_bfd_reloc_name_lookup
+#define bfd_elf64_bfd_reloc_type_lookup bfd_default_reloc_type_lookup
+#define bfd_elf64_bfd_reloc_name_lookup _bfd_norelocs_bfd_reloc_name_lookup
 
-#define elf_backend_object_p \
-  elf64_amdgcn_object_p
+#define elf_backend_object_p elf64_amdgcn_object_p
 
 #include "elf64-target.h"

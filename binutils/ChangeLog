@@ -1,3 +1,54 @@
+2022-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* readelf.c (dump_relocations): Handle EM_AMDGPU.
+
+2022-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* Makefile.am (readelf_CFLAGS): New.
+	(readelf_LDADD): Add MSGPACK_LIBS.
+	* Makefile.in: Re-generate.
+	* config.in: Re-generate.
+	* configure: Re-generate.
+	* configure.ac: Add --with-msgpack flag and check for msgpack
+	using pkg-config.
+	* readelf.c: Include msgpack.h if HAVE_MSGPACK.
+	(print_note_contents_hex): New.
+	(print_indents): New.
+	(dump_msgpack_obj): New.
+	(dump_msgpack): New.
+	(print_amdgpu_note): New.
+	(process_note): Handle NT_AMDGPU_METADATA note contents.
+	Use print_note_contents_hex.
+
+2022-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* readelf.c (get_amdgpu_elf_note_type): New.
+	(process_note): Handle "AMDGPU" notes.
+
+2022-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* readelf.c: Include elf/amdgcn.h.
+	(decode_AMDGPU_machine_flags): New.
+	(get_machine_flags): Handle flags for EM_AMDGPU machine type.
+
+2022-03-16  Simon Marchi  <simon.marchi@efficios.com>
+
+	* readelf.c (get_osabi_name): Handle EM_AMDGPU OS ABIs.
+
+2022-03-16  Nick Clifton  <nickc@redhat.com>
+
+	* po/sr.po: Updated Serbian translation.
+
+2022-03-15  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf-mode.el: Now 1.7.
+	(dwarf--sentinel): Switch to the process buffer.
+
+2022-03-11  Vladimir Mezentsev  <vladimir.mezentsev@oracle.com>
+
+	* MAINTAINERS: Add gprofng maintainer.
+	* README-how-to-make-a-release: Add gprofng.
+
 2022-03-10  Nick Clifton  <nickc@redhat.com>
 
 	* dwarf.c (use_debuginfod): New variable.  Set to 1.

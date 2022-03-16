@@ -1,6 +1,5 @@
 /* ELF support for BFD.
    Copyright (C) 1991-2022 Free Software Foundation, Inc.
-   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Written by Fred Fish @ Cygnus Support, from information published
    in "UNIX System V Release 4, Programmers Guide: ANSI C and
@@ -78,9 +77,11 @@
 #define ELFOSABI_OPENVOS     18 /* Stratus Technologies OpenVOS */
 
 #define ELFOSABI_C6000_ELFABI 64 /* Bare-metal TMS320C6000 */
-#define ELFOSABI_AMDGPU_HSA  64 /* AMD HSA runtime */
+#define ELFOSABI_AMDGPU_HSA  64 /* AMD HSA Runtime */
 #define ELFOSABI_C6000_LINUX 65 /* Linux TMS320C6000 */
+#define ELFOSABI_AMDGPU_PAL  65 /* AMD PAL Runtime */
 #define ELFOSABI_ARM_FDPIC   65 /* ARM FDPIC */
+#define ELFOSABI_AMDGPU_MESA3D 66 /* AMD Mesa3D Runtime */
 #define ELFOSABI_ARM	     97	/* ARM */
 #define ELFOSABI_STANDALONE 255	/* Standalone (embedded) application */
 
