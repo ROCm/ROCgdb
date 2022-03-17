@@ -594,23 +594,10 @@ mi_cmd_thread_select (const char *command, char **argv, int argc)
   if (thr == NULL)
     error (_("Thread ID %d not known."), num);
 
-  ptid_t previous_ptid = inferior_ptid;
-  int prev_lane = (inferior_ptid != null_ptid
-		   ? inferior_thread ()->current_simd_lane ()
-		   : -1);
-
   thread_select (argv[0], thr, lane);
 
   print_selected_thread_frame (current_uiout,
 			       USER_SELECTED_THREAD | USER_SELECTED_FRAME);
-
-  /* Notify if either the thread or lane have effectively changed.  */
-  if (inferior_ptid != previous_ptid
-      || inferior_thread ()->current_simd_lane () != prev_lane)
-    {
-      gdb::observers::user_selected_context_changed.notify
-	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
-    }
 }
 
 void
@@ -2029,6 +2016,45 @@ mi_execute_command (const char *cmd, int from_tty)
     }
 }
 
+/* Captures the current user selected context state, that is the current
+   thread and frame.  Later we can then check if the user selected context
+   has changed at all.  */
+
+struct user_selected_context
+{
+  /* Constructor.  */
+  user_selected_context ()
+    : m_previous_ptid (inferior_ptid),
+      m_previous_lane (inferior_ptid != null_ptid
+		       ? inferior_thread ()->current_simd_lane ()
+		       : -1),
+      m_previous_frame (deprecated_safe_get_selected_frame ())
+  { /* Nothing.  */ }
+
+  /* Return true if the user selected context has changed since this object
+     was created.  */
+  bool has_changed () const
+  {
+    return ((m_previous_ptid != null_ptid
+	     && inferior_ptid != null_ptid
+	     && (m_previous_ptid != inferior_ptid
+		 || inferior_thread ()->current_simd_lane () != m_previous_lane))
+	    || m_previous_frame != deprecated_safe_get_selected_frame ());
+  }
+private:
+  /* The previously selected thread.  This might be null_ptid if there was
+     no previously selected thread.  */
+  ptid_t m_previous_ptid;
+
+  /* The previously selected lane.  This might be -1 if there was no
+     previously selected lane.  */
+  int m_previous_lane;
+
+  /* The previously selected frame.  This might be nullptr if there was no
+     previously selected frame.  */
+  frame_info *m_previous_frame;
+};
+
 static void
 mi_cmd_execute (struct mi_parse *parse)
 {
@@ -2071,6 +2097,8 @@ mi_cmd_execute (struct mi_parse *parse)
 	switch_to_no_thread ();
       set_current_program_space (inf->pspace);
     }
+
+  user_selected_context current_user_selected_context;
 
   gdb::optional<scoped_restore_current_thread> thread_saver;
   if (parse->thread != -1)
@@ -2120,7 +2148,16 @@ mi_cmd_execute (struct mi_parse *parse)
   current_context = parse;
 
   gdb_assert (parse->cmd != nullptr);
+
+  gdb::optional<scoped_restore_tmpl<int>> restore_suppress_notification
+    = parse->cmd->do_suppress_notification ();
+
   parse->cmd->invoke (parse);
+
+  if (!parse->cmd->preserve_user_selected_context ()
+      && current_user_selected_context.has_changed ())
+    gdb::observers::user_selected_context_changed.notify
+      (USER_SELECTED_THREAD | USER_SELECTED_FRAME);
 }
 
 /* See mi-main.h.  */
