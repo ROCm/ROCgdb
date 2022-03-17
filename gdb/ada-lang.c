@@ -10553,6 +10553,17 @@ convert_char_literal (struct type *type, LONGEST val)
   return val;
 }
 
+value *
+ada_char_operation::evaluate (struct type *expect_type,
+			      struct expression *exp,
+			      enum noside noside)
+{
+  value *result = long_const_operation::evaluate (expect_type, exp, noside);
+  if (expect_type != nullptr)
+    result = ada_value_cast (expect_type, result);
+  return result;
+}
+
 /* See ada-exp.h.  */
 
 operation_up
@@ -10573,7 +10584,7 @@ ada_char_operation::replace (operation_up &&owner,
 	= convert_char_literal (context_type, std::get<1> (m_storage));
     }
 
-  return make_operation<ada_wrapped_operation> (std::move (result));
+  return result;
 }
 
 value *
@@ -10604,12 +10615,108 @@ ada_string_operation::evaluate (struct type *expect_type,
 				struct expression *exp,
 				enum noside noside)
 {
-  value *result = string_operation::evaluate (expect_type, exp, noside);
-  /* The result type will have code OP_STRING, bashed there from 
-     OP_ARRAY.  Bash it back.  */
-  if (value_type (result)->code () == TYPE_CODE_STRING)
-    value_type (result)->set_code (TYPE_CODE_ARRAY);
-  return result;
+  struct type *char_type;
+  if (expect_type != nullptr && ada_is_string_type (expect_type))
+    char_type = ada_array_element_type (expect_type, 1);
+  else
+    char_type = language_string_char_type (exp->language_defn, exp->gdbarch);
+
+  const std::string &str = std::get<0> (m_storage);
+  const char *encoding;
+  switch (TYPE_LENGTH (char_type))
+    {
+    case 1:
+      {
+	/* Simply copy over the data -- this isn't perhaps strictly
+	   correct according to the encodings, but it is gdb's
+	   historical behavior.  */
+	struct type *stringtype
+	  = lookup_array_range_type (char_type, 1, str.length ());
+	struct value *val = allocate_value (stringtype);
+	memcpy (value_contents_raw (val).data (), str.c_str (),
+		str.length ());
+	return val;
+      }
+
+    case 2:
+      if (gdbarch_byte_order (exp->gdbarch) == BFD_ENDIAN_BIG)
+	encoding = "UTF-16BE";
+      else
+	encoding = "UTF-16LE";
+      break;
+
+    case 4:
+      if (gdbarch_byte_order (exp->gdbarch) == BFD_ENDIAN_BIG)
+	encoding = "UTF-32BE";
+      else
+	encoding = "UTF-32LE";
+      break;
+
+    default:
+      error (_("unexpected character type size %s"),
+	     pulongest (TYPE_LENGTH (char_type)));
+    }
+
+  auto_obstack converted;
+  convert_between_encodings (host_charset (), encoding,
+			     (const gdb_byte *) str.c_str (),
+			     str.length (), 1,
+			     &converted, translit_none);
+
+  struct type *stringtype
+    = lookup_array_range_type (char_type, 1,
+			       obstack_object_size (&converted)
+			       / TYPE_LENGTH (char_type));
+  struct value *val = allocate_value (stringtype);
+  memcpy (value_contents_raw (val).data (),
+	  obstack_base (&converted),
+	  obstack_object_size (&converted));
+  return val;
+}
+
+value *
+ada_concat_operation::evaluate (struct type *expect_type,
+				struct expression *exp,
+				enum noside noside)
+{
+  /* If one side is a literal, evaluate the other side first so that
+     the expected type can be set properly.  */
+  const operation_up &lhs_expr = std::get<0> (m_storage);
+  const operation_up &rhs_expr = std::get<1> (m_storage);
+
+  value *lhs, *rhs;
+  if (dynamic_cast<ada_string_operation *> (lhs_expr.get ()) != nullptr)
+    {
+      rhs = rhs_expr->evaluate (nullptr, exp, noside);
+      lhs = lhs_expr->evaluate (value_type (rhs), exp, noside);
+    }
+  else if (dynamic_cast<ada_char_operation *> (lhs_expr.get ()) != nullptr)
+    {
+      rhs = rhs_expr->evaluate (nullptr, exp, noside);
+      struct type *rhs_type = check_typedef (value_type (rhs));
+      struct type *elt_type = nullptr;
+      if (rhs_type->code () == TYPE_CODE_ARRAY)
+	elt_type = TYPE_TARGET_TYPE (rhs_type);
+      lhs = lhs_expr->evaluate (elt_type, exp, noside);
+    }
+  else if (dynamic_cast<ada_string_operation *> (rhs_expr.get ()) != nullptr)
+    {
+      lhs = lhs_expr->evaluate (nullptr, exp, noside);
+      rhs = rhs_expr->evaluate (value_type (lhs), exp, noside);
+    }
+  else if (dynamic_cast<ada_char_operation *> (rhs_expr.get ()) != nullptr)
+    {
+      lhs = lhs_expr->evaluate (nullptr, exp, noside);
+      struct type *lhs_type = check_typedef (value_type (lhs));
+      struct type *elt_type = nullptr;
+      if (lhs_type->code () == TYPE_CODE_ARRAY)
+	elt_type = TYPE_TARGET_TYPE (lhs_type);
+      rhs = rhs_expr->evaluate (elt_type, exp, noside);
+    }
+  else
+    return concat_operation::evaluate (expect_type, exp, noside);
+
+  return value_concat (lhs, rhs);
 }
 
 value *

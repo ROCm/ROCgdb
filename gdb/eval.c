@@ -1078,16 +1078,21 @@ eval_op_register (struct type *expect_type, struct expression *exp,
     return val;
 }
 
-/* Helper function that implements the body of OP_STRING.  */
-
-struct value *
-eval_op_string (struct type *expect_type, struct expression *exp,
-		enum noside noside, int len, const char *string)
+namespace expr
 {
+
+value *
+string_operation::evaluate (struct type *expect_type,
+			    struct expression *exp,
+			    enum noside noside)
+{
+  const std::string &str = std::get<0> (m_storage);
   struct type *type = language_string_char_type (exp->language_defn,
 						 exp->gdbarch);
-  return value_string (string, len, type);
+  return value_string (str.c_str (), str.size (), type);
 }
+
+} /* namespace expr */
 
 /* Helper function that implements the body of OP_OBJC_SELECTOR.  */
 
@@ -1099,18 +1104,6 @@ eval_op_objc_selector (struct type *expect_type, struct expression *exp,
   struct type *selector_type = builtin_type (exp->gdbarch)->builtin_data_ptr;
   return value_from_longest (selector_type,
 			     lookup_child_selector (exp->gdbarch, sel));
-}
-
-/* Helper function that implements the body of BINOP_CONCAT.  */
-
-struct value *
-eval_op_concat (struct type *expect_type, struct expression *exp,
-		enum noside noside, struct value *arg1, struct value *arg2)
-{
-  if (binop_user_defined_p (BINOP_CONCAT, arg1, arg2))
-    return value_x_binop (arg1, arg2, BINOP_CONCAT, OP_NULL, noside);
-  else
-    return value_concat (arg1, arg2);
 }
 
 /* A helper function for TERNOP_SLICE.  */

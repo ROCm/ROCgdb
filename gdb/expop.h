@@ -64,10 +64,6 @@ extern struct value *eval_op_func_static_var (struct type *expect_type,
 extern struct value *eval_op_register (struct type *expect_type,
 				       struct expression *exp,
 				       enum noside noside, const char *name);
-extern struct value *eval_op_string (struct type *expect_type,
-				     struct expression *exp,
-				     enum noside noside, int len,
-				     const char *string);
 extern struct value *eval_op_ternop (struct type *expect_type,
 				     struct expression *exp,
 				     enum noside noside,
@@ -84,10 +80,6 @@ extern struct value *eval_op_structop_ptr (struct type *expect_type,
 					   struct value *arg1,
 					   const char *string);
 extern struct value *eval_op_member (struct type *expect_type,
-				     struct expression *exp,
-				     enum noside noside,
-				     struct value *arg1, struct value *arg2);
-extern struct value *eval_op_concat (struct type *expect_type,
 				     struct expression *exp,
 				     enum noside noside,
 				     struct value *arg1, struct value *arg2);
@@ -912,12 +904,7 @@ public:
 
   value *evaluate (struct type *expect_type,
 		   struct expression *exp,
-		   enum noside noside) override
-  {
-    const std::string &str = std::get<0> (m_storage);
-    return eval_op_string (expect_type, exp, noside,
-			   str.size (), str.c_str ());
-  }
+		   enum noside noside) override;
 
   enum exp_opcode opcode () const override
   { return OP_STRING; }
@@ -1167,7 +1154,7 @@ public:
       = std::get<0> (m_storage)->evaluate_with_coercion (exp, noside);
     value *rhs
       = std::get<1> (m_storage)->evaluate_with_coercion (exp, noside);
-    return eval_op_concat (expect_type, exp, noside, lhs, rhs);
+    return value_concat (lhs, rhs);
   }
 
   enum exp_opcode opcode () const override
