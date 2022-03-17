@@ -838,7 +838,6 @@ ALL_TARGET_OBS = \
 	s12z-tdep.o \
 	s390-linux-tdep.o \
 	s390-tdep.o \
-	score-tdep.o \
 	sh-linux-tdep.o \
 	sh-netbsd-tdep.o \
 	sh-tdep.o \
@@ -1430,7 +1429,6 @@ HFILES_NO_SRCDIR = \
 	run-on-main-thread.h \
 	s390-linux-tdep.h \
 	s390-tdep.h \
-	score-tdep.h \
 	selftest-arch.h \
 	sentinel-frame.h \
 	ser-base.h \
@@ -2309,7 +2307,6 @@ ALLDEPFILES = \
 	s390-linux-nat.c \
 	s390-linux-tdep.c \
 	s390-tdep.c \
-	score-tdep.c \
 	ser-go32.c \
 	ser-mingw.c \
 	ser-pipe.c \
