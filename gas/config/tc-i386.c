@@ -1963,6 +1963,12 @@ cpu_flags_match (const insn_template *t)
 	return match;
       x.bitfield.cpuavx512vl = 0;
 
+      /* AVX and AVX2 present at the same time express an operand size
+	 dependency - strip AVX2 for the purposes here.  The operand size
+	 dependent check occurs in check_vecOperands().  */
+      if (x.bitfield.cpuavx && x.bitfield.cpuavx2)
+	x.bitfield.cpuavx2 = 0;
+
       cpu = cpu_flags_and (x, cpu);
       if (!cpu_flags_all_zero (&cpu))
 	{
@@ -2369,13 +2375,15 @@ operand_type_register_match (i386_operand_type g0,
       && g0.bitfield.zmmword == g1.bitfield.zmmword)
     return 1;
 
-  if (!(t0.bitfield.byte & t1.bitfield.byte)
-      && !(t0.bitfield.word & t1.bitfield.word)
-      && !(t0.bitfield.dword & t1.bitfield.dword)
-      && !(t0.bitfield.qword & t1.bitfield.qword)
-      && !(t0.bitfield.xmmword & t1.bitfield.xmmword)
-      && !(t0.bitfield.ymmword & t1.bitfield.ymmword)
-      && !(t0.bitfield.zmmword & t1.bitfield.zmmword))
+  /* If expectations overlap in no more than a single size, all is fine. */
+  g0 = operand_type_and (t0, t1);
+  if (g0.bitfield.byte
+      + g0.bitfield.word
+      + g0.bitfield.dword
+      + g0.bitfield.qword
+      + g0.bitfield.xmmword
+      + g0.bitfield.ymmword
+      + g0.bitfield.zmmword <= 1)
     return 1;
 
   i.error = register_type_mismatch;
@@ -5986,6 +5994,23 @@ check_VecOperands (const insn_template *t)
 	  if (t->operand_types[op].bitfield.zmmword
 	      && (i.types[op].bitfield.ymmword
 		  || i.types[op].bitfield.xmmword))
+	    {
+	      i.error = unsupported;
+	      return 1;
+	    }
+	}
+    }
+
+  /* Somewhat similarly, templates specifying both AVX and AVX2 are
+     requiring AVX2 support if the actual operand size is YMMword.  */
+  if (t->cpu_flags.bitfield.cpuavx
+      && t->cpu_flags.bitfield.cpuavx2
+      && !cpu_arch_flags.bitfield.cpuavx2)
+    {
+      for (op = 0; op < t->operands; ++op)
+	{
+	  if (t->operand_types[op].bitfield.xmmword
+	      && i.types[op].bitfield.ymmword)
 	    {
 	      i.error = unsupported;
 	      return 1;
@@ -12952,17 +12977,18 @@ parse_register (char *reg_string, char **end_op)
 	{
 	  const expressionS *e = symbol_get_value_expression (symbolP);
 
-	  know (e->X_op == O_register);
-	  know (e->X_add_number >= 0
-		&& (valueT) e->X_add_number < i386_regtab_size);
-	  r = i386_regtab + e->X_add_number;
-	  if (!check_register (r))
+	  if (e->X_op == O_register
+	      && (valueT) e->X_add_number < i386_regtab_size)
 	    {
-	      as_bad (_("register '%s%s' cannot be used here"),
-		      register_prefix, r->reg_name);
-	      r = &bad_reg;
+	      r = i386_regtab + e->X_add_number;
+	      if (!check_register (r))
+		{
+		  as_bad (_("register '%s%s' cannot be used here"),
+			  register_prefix, r->reg_name);
+		  r = &bad_reg;
+		}
+	      *end_op = input_line_pointer;
 	    }
-	  *end_op = input_line_pointer;
 	}
       *input_line_pointer = c;
       input_line_pointer = save;
