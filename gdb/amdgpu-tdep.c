@@ -109,7 +109,7 @@ first_regnum_for_arg_or_return_value (gdbarch *gdbarch, ptid_t ptid)
       != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("Failed to fetch the number of lanes for current wave"));
 
-  const unsigned int dwarf_register_number = [lanecount]()
+  const unsigned int dwarf_register_number = [lanecount] ()
     {
       switch (lanecount)
 	{
@@ -183,7 +183,7 @@ protected:
   /* Allocate the next available register.
 
      It will contain data located at OFFSET bytes (from the beginning of the
-     top most encompassing aggregate) and occupying SIZE bytes.
+     top most encompassing aggregate) and occupying SIZE bytes.
      If SIGN_EXTEND is true and SIZE is less than the size of the register,
      the value should be sign-extended to fill the entire register.  If
      SIGN_EXTEND is false and SIZE is less than the size of the register,
@@ -324,7 +324,7 @@ amdgcn_arg_placement::alloc_for_struct (struct type *type, int offset)
   if (!has_non_static_fields)
     {
       if (TYPE_LENGTH (type) != 1)
-	warning (_("Empty struct should have a length of 1 byte.  "
+	warning (_("Empty struct should have a length of 1 byte.  "
 		   "Assuming a size of 1 for ABI purposes."));
 
       alloc_reg_for_part (offset, 1, false);
