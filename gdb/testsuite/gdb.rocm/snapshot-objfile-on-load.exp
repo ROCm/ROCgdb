@@ -36,7 +36,7 @@ load_lib rocm.exp
 standard_testfile .cpp
 
 if [skip_hipcc_tests] {
-  verbose "Skipping hip test: ${testfile}."
+  verbose "Skipping hip test: ${testfile}."
   return 0
 }
 
