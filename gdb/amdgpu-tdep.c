@@ -101,7 +101,6 @@ constexpr int AMDGCN_VGPR_LEN = 4;
 static int
 first_regnum_for_arg_or_return_value (gdbarch *gdbarch, ptid_t ptid)
 {
-  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   const amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (ptid);
 
   size_t lanecount;
@@ -123,23 +122,10 @@ first_regnum_for_arg_or_return_value (gdbarch *gdbarch, ptid_t ptid)
 	}
     }();
 
-  amd_dbgapi_architecture_id_t architecture_id;
-  if (amd_dbgapi_get_architecture
-      (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd_dbgapi_get_architecture failed"));
-
-  amd_dbgapi_register_id_t r;
-  if (amd_dbgapi_dwarf_register_to_register
-        (architecture_id, dwarf_register_number, &r)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd_dbgapi_dwarf_register_to_register failed"));
-
-  auto reg = tdep->regnum_map.find (r);
-  if (reg == tdep->regnum_map.end ())
-    error (_("Unknown DFARF register number"));
-
-  return reg->second;
+  const int regnum = amdgpu_dwarf_reg_to_regnum (gdbarch,
+						 dwarf_register_number);
+  gdb_assert (regnum != -1);
+  return regnum;
 }
 
 namespace {
