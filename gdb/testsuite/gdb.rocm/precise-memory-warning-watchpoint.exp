@@ -44,28 +44,7 @@ proc do_test { } {
 	    return
 	}
 
-	set var_address ""
-
-	# TODO: Compiler currently describes all memory location
-	# descriptions for global variables as addresses in the
-	# generic address space, insted of the addresses in the
-	# global address space.  One such case is the location
-	# of the variable 'global' which is currently handled as
-	# a separate patern case and should be removed once the
-	# location description for global variables is described
-	# using the addresses in the global memory address space.
-	gdb_test_multiple "print &global" "" {
-	  -re "\\\$${::decimal} = \\(.*\\) (${::hex}).*" {
-	    set var_address $expect_out(1,string)
-	    pass $gdb_test_name
-	  }
-	  -re "\\\$${::decimal} = \\(.*\\) generic#(${::hex}).*" {
-	    set var_address $expect_out(1,string)
-	    pass $gdb_test_name
-	  }
-	}
-
-	gdb_test "watch *((int *) $var_address)" \
+	gdb_test "watch global" \
 	    "Hardware watchpoint $::decimal: .*" \
 	    "insert watchpoint"
 
