@@ -881,16 +881,18 @@ regcache::raw_write (int regnum, gdb::array_view<const gdb_byte> src)
   target_prepare_to_store (this);
   raw_supply (regnum, src);
 
-  /* Invalidate the register after it is written, in case of a
-     failure.  */
-  auto invalidator
-    = make_scope_exit ([&] { this->invalidate (regnum); });
-
-  target_store_registers (this, regnum);
-
-  /* The target did not throw an error so we can discard invalidating
-     the register.  */
-  invalidator.release ();
+  try
+    {
+      target_store_registers (this, regnum);
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      /* The write failed.  If the target is closed, the regcache is
+	 destroyed and is not accessible.  */
+      if (ex.error != TARGET_CLOSE_ERROR)
+	invalidate (regnum);
+      throw;
+    }
 }
 
 void

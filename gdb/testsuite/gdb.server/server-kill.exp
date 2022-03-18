@@ -148,7 +148,27 @@ proc_with_prefix test_stepi {} {
     gdb_test "stepi" "(Target disconnected|Remote connection closed|Remote communication error).*"
 }
 
+# Regression test for a use-after-free bug in the regcache when the remote
+# connection is dropped during register write.  The regcache is destroyed in
+# this case.
+
+proc_with_prefix test_register_write {} {
+    if {![prepare]} {
+	return
+    }
+
+    # Ensure the frame-id is cached before killing gdbserver.  Otherwise,
+    # GDB notices the dead connection when computing the frame-id.
+    gdb_test "info frame" "Stack level 0, .*"
+    kill_server
+
+    # Write a register to the already killed remote connection.
+    gdb_test "set \$pc = \$pc + 1" \
+	"(Target disconnected|Remote (connection closed|communication error)).*"
+}
+
 test_tstatus
 test_unwind_nosyms
 test_unwind_syms
 test_stepi
+test_register_write
