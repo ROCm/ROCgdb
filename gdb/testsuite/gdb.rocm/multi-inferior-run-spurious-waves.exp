@@ -1,0 +1,122 @@
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Verify that when running an inferior, we don't have a spurious stop in an
+# inferior that is supposed to be stopped.  The test scenario is:
+#
+#   - Start a background process to hog some GPU resources
+#   - Start a first inferior.  Not all of its waves are created because of the
+#     hogging process.
+#   - Stop the hogging process.
+#   - Start a second inferior (while the first one is stopped).  A faulty GDB
+#     would present a stop in newly created waves of the first inferior.
+
+load_lib rocm.exp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if { [hip_device_is_less_than gfx90a] } {
+    # Scheduling does not work in an intuitive manner before gfx90a due to
+    # hardware limitations of forward progress and halted waves, leading to
+    # some deadlocks.
+    unsupported "device older than gfx90a"
+    return
+}
+
+standard_testfile .cpp hog.cpp
+
+set binfile_hog ${binfile}-hog
+
+if {[build_executable "failed to prepare" ${binfile} ${srcfile} {debug hip}]} {
+    return
+}
+
+if {[build_executable "failed to prepare" ${binfile_hog} ${srcfile2} {debug hip}]} {
+    return
+}
+
+proc do_test { } {
+    with_rocm_gpu_lock {
+	clean_restart ${::binfile}
+
+	if { ![runto_main] } {
+	    return
+	}
+
+	set hog_pid [spawn ${::binfile_hog}]
+	if { $hog_pid == 0 } {
+	    fail "start hog"
+	    return
+	}
+
+	set hog_spawn_id $spawn_id
+	verbose -log "spawned hog as pid $hog_pid, spawn id $spawn_id"
+
+	gdb_breakpoint bit_extract_kernel allow-pending
+
+	# On gfx90a / MI200, running the kernel while the hog process runs
+	# hangs, not much we can do here.
+	if { [hcc_amdgpu_target] == "gfx90a" } {
+	    setup_xfail "*-*-*"
+	}
+	set res [gdb_test "continue" "Thread $::decimal .* hit Breakpoint $::decimal.*" \
+		    "continue to kernel"]
+	close -i $hog_spawn_id
+	if { $res != 0 } {
+	    return
+	}
+
+	delete_breakpoints
+
+	set count [info_threads_get_wave_count 1]
+	verbose -log "Inferior 1 has $count waves"
+
+	gdb_test "add-inferior" "Added inferior 2 .*"
+	gdb_test "inferior 2" "Switching to inferior 2 .*"
+	gdb_test "file ${::binfile}" "Reading symbols from .*" "load file"
+
+	# Make sure "run" results in a stop in inferior 2.
+	gdb_test_multiple "run" "" {
+	    -re -wrap "At least one agent is busy.*" {
+		if {[hip_device_supports_debug_multi_process]} {
+		    fail $gdb_test_name
+		} else {
+		    unsupported $gdb_test_name
+		}
+
+		return
+	    }
+
+	    -re -wrap "Thread 2\\.$::decimal .* hit Breakpoint .*" {
+		pass $gdb_test_name
+	    }
+	}
+
+	set count [info_threads_get_wave_count 2]
+	verbose -log "Inferior 2 has $count waves"
+
+	# Try to continue inferior 1 to completion.
+	gdb_test "inferior 1"
+	delete_breakpoints
+	gdb_test "continue" ".*" "continue to end"
+    }
+}
+
+do_test

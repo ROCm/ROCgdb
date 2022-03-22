@@ -1,0 +1,363 @@
+# Copyright (C) 2019-2022 Free Software Foundation, Inc.
+# Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Support library for testing ROCm GDB features
+
+proc skip_hipcc_tests { } {
+    # Only the native target supports ROCm debugging.  E.g., when
+    # testing against GDBserver, there's no point in running the ROCm
+    # tests.
+    if {[target_info gdb_protocol] != ""} {
+        return 1
+    }
+    return 0
+}
+
+# ROCM_PATH is used by hipcc as well.
+if {[info exists env(ROCM_PATH)]} {
+    set rocm_path $env(ROCM_PATH)
+} else {
+    set rocm_path "/opt/rocm"
+}
+
+# Get the gpu target to be passed to e.g., -mcpu=.
+#
+# If HCC_AMDGPU_TARGET is set in the environment, use it.  Otherwise,
+# try reading it from the system using the rocm_agent_enumerator
+# utility.
+
+proc hcc_amdgpu_target {} {
+    global gdb_hip_gpu
+    global rocm_path
+
+    if {![info exists gdb_hip_gpu]} {
+	# Look for HCC_AMDGPU_TARGET (same env var hipcc uses).  If
+	# that fails, try using rocm_agent_enumerator (again, same as
+	# hipcc does).
+	if {[info exists env(HCC_AMDGPU_TARGET)]} {
+	    set targets = $env(HCC_AMDGPU_TARGET);
+	} else {
+	    set result \
+		[remote_exec host \
+		     "${rocm_path}/bin/rocm_agent_enumerator -t GPU"]
+	    if {[lindex $result 0] != 0} {
+		error "rocm_agent_enumerator failed"
+	    }
+	    set targets [lindex $result 1]
+	}
+
+	set gdb_hip_gpu ""
+	foreach val $targets {
+	    # Ignore the 'gfx000' target reported by
+	    # rocm_agent_enumerator.
+	    if {$val != "gfx000"} {
+		set gdb_hip_gpu $val
+		break
+	    }
+	}
+
+	if {$gdb_hip_gpu == ""} {
+	    error "No valid AMD GPU target specified or found.\
+		   Please specify a valid target using the\
+		   HCC_AMDGPU_TARGET environment variable."
+	}
+    }
+
+    return $gdb_hip_gpu
+}
+
+# The empty host object put in bundles when compiling assembly files.
+# As a speed optimization, avoid recompiling it over and over for each
+# testcase program.
+global gdb_saved_hip_empty_host_obj
+set gdb_saved_hip_empty_host_obj ""
+
+# Assemble SOURCE and put the resulting object in an offload bundle at
+# DEST.  OPTIONS are regular gdb_compile options.
+
+proc rocm_assemble {source dest {options ""}} {
+    global objdir
+
+    set gpu_target [hcc_amdgpu_target]
+
+    global rocm_path
+    global gdb_saved_hip_empty_host_obj
+
+    set asm_options "early_flags=-O0\
+				 -target amdgcn-amd-amdhsa\
+				 -mcpu=$gpu_target -nogpulib\
+				 -fno-autolink\
+				 -faddrsig"
+    lappend options "hip"
+    lappend options $asm_options
+
+    # Assemble the device side of the bundle.
+    set tmp_o [standard_temp_file [file tail $dest].tmp.o]
+    set res [gdb_compile $source $tmp_o object $options]
+    if {$res != ""} {
+	return $res
+    }
+
+    # Assemble an empty .o for the host side of the bundle.  Only do
+    # it once as an optimization.
+    if { $gdb_saved_hip_empty_host_obj == "" } {
+	verbose "compiling empty host object"
+	set empty_src [standard_temp_file empty-host.c]
+	set gdb_saved_hip_empty_host_obj ${objdir}/empty-host.o
+	set f [open $empty_src "w"]
+	close $f
+	set res [gdb_compile $empty_src $gdb_saved_hip_empty_host_obj object hip]
+	if {$res != ""} {
+	    return $res
+	}
+    }
+
+    # Bundle device and host objects.
+    set res [remote_exec host \
+		 "${rocm_path}/llvm/bin/clang-offload-bundler\
+				-type=o\
+				-targets=hip-amdgcn-amd-amdhsa-${gpu_target},host-x86_64-unknown-linux-gnu\
+				-outputs=$dest\
+				-inputs=$tmp_o,$gdb_saved_hip_empty_host_obj"]
+    # We're done.
+    return [lindex $res 1]
+}
+
+# The lock file used to ensure that only one GDB has access to the GPU
+# at a time.
+set gpu_lock_filename $objdir/gpu-parallel.lock
+
+# Acquire lock file LOCKFILE.  Tries forever until the lock file is
+# successfully created.
+
+proc lock_file_acquire {lockfile} {
+    global subdir gdb_test_file_name
+
+    verbose -log "acquiring lock file: $subdir/${gdb_test_file_name}.exp"
+    while {true} {
+	if {![catch {open $lockfile {WRONLY CREAT EXCL}} rc]} {
+	    set msg "locked by $subdir/${gdb_test_file_name}.exp"
+	    verbose -log "lock file: $msg"
+	    # For debugging, put info in the lockfile about who owns
+	    # it.
+	    puts  $rc $msg
+	    flush $rc
+	    return [list $rc $lockfile]
+	}
+	after 10
+    }
+}
+
+# Release a lock file.
+
+proc lock_file_release {info} {
+    global subdir gdb_test_file_name
+
+    verbose -log "releasing lock file: $subdir/${gdb_test_file_name}.exp"
+
+    if {![catch {fconfigure [lindex $info 0]}]} {
+	if {![catch {
+	    close [lindex $info 0]
+	    file delete -force [lindex $info 1]
+	} rc]} {
+	    return ""
+	} else {
+	    return -code error "Error releasing lockfile: '$rc'"
+	}
+    } else {
+	error "invalid lock"
+    }
+}
+
+# Run body under the GPU lock.  Also calls gdb_exit before releasing
+# the GPU lock.
+
+proc with_rocm_gpu_lock { body } {
+    global gpu_lock_filename
+    global GDB_PARALLEL
+
+    if {[info exists GDB_PARALLEL]} {
+	set lock_rc [lock_file_acquire $gpu_lock_filename]
+    }
+
+    set code [catch {uplevel 1 $body} result]
+
+    # In case BODY returned early due to some testcase failing, and
+    # left GDB running, debugging the GPU.
+    gdb_exit
+
+    if {[info exists GDB_PARALLEL]} {
+	lock_file_release $lock_rc
+    }
+
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+# Build an OpenCL kernel library from SOURCES.
+# Ignore target boards multilib_flags.
+
+proc gdb_compile_ocl_kernel {sources dest options} {
+    set outdir [file dirname $dest]
+    set objects ""
+    foreach source $sources {
+	if {[file extension $source] == ".o"} {
+	    # Already a .o file.
+	    lappend objects $source
+	    continue
+	}
+
+	set sourcebase [file tail $source]
+	set object ${outdir}/${sourcebase}.o
+
+	if {[gdb_compile_ocl $source $object object \
+	     $options] != ""} {
+	    return -1
+	}
+
+	lappend objects $object
+    }
+
+    if {[gdb_compile_ocl "${objects}" "${dest}" executable $options] != ""} {
+	return -1
+    }
+
+    return ""
+}
+
+# Compile OpenCL kernel source files specified by SOURCE into a binary
+# of type TYPE at path DEST.  gdb_compile is implemented using
+# DejaGnu's target_compile, so the type parameter and most options are
+# passed directly to it.
+#
+# The type can be one of the following:
+#
+#   - object: Compile into an object file.
+#   - executable: Compile and link into an executable.
+#   - preprocess: Preprocess the source files.
+#   - assembly: Generate assembly listing.
+#
+# And here are some of the not too obscure options understood by DejaGnu that
+# influence the compilation:
+#
+#   - additional_flags=flag: Add FLAG to the compiler flags.
+#   - libs=library: Add LIBRARY to the libraries passed to the linker.  The
+#     argument can be a file, in which case it's added to the sources, or a
+#     linker flag.
+#   - ldflags=flag: Add FLAG to the linker flags.
+#   - incdir=path: Add PATH to the searched include directories.
+#   - libdir=path: Add PATH to the linker searched directories.
+#   - debug: Build with debug information.
+#   - optimize: Build with optimization.
+
+proc gdb_compile_ocl {source dest type options} {
+    global rocm_path
+    global CC_FOR_TARGET
+    global CXX_FOR_TARGET
+    global board
+
+    set outdir [file dirname $dest]
+
+    verbose "options are $options"
+    verbose "source is $source $dest $type $options"
+
+    # Override the host compiler with a rocm one.
+    save_vars {CC_FOR_TARGET CXX_FOR_TARGET} {
+	set CC_FOR_TARGET ${rocm_path}/llvm/bin/clang
+	set CXX_FOR_TARGET ${rocm_path}/llvm/bin/clang
+
+	# target_compile always adds -lm which is not supported for
+	# kernel compilation.
+        set board [target_info name]
+	if [board_info $board exists mathlib] {
+	    set mathlib [board_info $board mathlib]
+	    set_board_info mathlib ""
+	    set result [target_compile $source $dest $type $options]
+	    set_board_info mathlib $mathlib
+	} else {
+	    set_board_info mathlib ""
+	    set result [target_compile $source $dest $type $options]
+	    unset_board_info mathlib
+	}
+    }
+
+    # Prune uninteresting compiler (and linker) output.
+    regsub "Creating library file: \[^\r\n\]*\[\r\n\]+" $result "" result
+    regsub "\[\r\n\]*$" "$result" "" result
+    regsub "^\[\r\n\]*" "$result" "" result
+
+    return $result
+}
+
+# Return true if the device supports precise memory.
+
+proc hip_device_supports_precise_memory {} {
+    set target [hcc_amdgpu_target]
+    set supported_targets {gfx90a}
+    return [expr [lsearch -exact $supported_targets $target] >= 0]
+}
+
+# Run "info threads INF_NUM", return the number of "AMDGPU Wave" threads found.
+
+proc info_threads_get_wave_count { inf_num } {
+    set wave_count 0
+    gdb_test_multiple "info threads ${inf_num}.*" "" {
+        -re "AMDGPU Wave\[^\r\n\]+\r\n" {
+            incr wave_count
+            exp_continue
+        }
+
+        -re "$::gdb_prompt " {
+            pass $gdb_test_name
+        }
+    }
+
+    return $wave_count
+}
+
+# Return true if the device supports debugging multiple processes using the GPU.
+
+proc hip_device_supports_debug_multi_process {} {
+    set target [hcc_amdgpu_target]
+    set supported_targets {gfx90a}
+    return [expr [lsearch -exact $supported_targets $target] >= 0]
+}
+
+# Return true if the current device's version is less than VERSION.
+#
+# VERSION must be the "gfx" name of the device, such as gfx906 or gfx90a.
+
+proc hip_device_is_less_than { version } {
+  set target [hcc_amdgpu_target]
+
+  # Strip "gfx" prefix.
+  regexp {gfx(.*)} $version unused version
+  regexp {gfx(.*)} $target unused target
+
+  # Pad with many zeroes to make sure we have strings of the same length.
+  set version [format %08s $version]
+  set target [format %08s $target]
+
+  # Do a lexicographical comparison.
+  set res [expr {[string compare $target $version] < 0}]
+  verbose -log "$target is less than $version: $res"
+
+  return $res
+}

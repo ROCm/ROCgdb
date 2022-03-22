@@ -1,6 +1,7 @@
 /* DWARF 2 location expression support for GDB.
 
    Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -65,8 +66,8 @@ value *compute_var_value (const char *name);
    otherwise.  */
 
 struct call_site_parameter *dwarf_expr_reg_to_entry_parameter
-  (struct frame_info *frame, enum call_site_parameter_kind kind,
-   union call_site_parameter_u kind_u, dwarf2_per_cu_data **per_cu_return,
+  (frame_info *frame, call_site_parameter_kind kind,
+   call_site_parameter_u kind_u, dwarf2_per_cu_data **per_cu_return,
    dwarf2_per_objfile **per_objfile_return);
 
 
@@ -289,9 +290,9 @@ extern void invalid_synthetic_pointer ();
 
 /* Fetch the value pointed to by a synthetic pointer.  */
 
-extern struct value *indirect_synthetic_pointer
+extern value *indirect_synthetic_pointer
   (sect_offset die, LONGEST byte_offset, dwarf2_per_cu_data *per_cu,
-   dwarf2_per_objfile *per_objfile, struct frame_info *frame,
+   dwarf2_per_objfile *per_objfile, frame_info *frame,
    struct type *type, bool resolve_abstract_p = false);
 
 #endif /* dwarf2loc.h */

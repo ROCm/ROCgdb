@@ -1,0 +1,168 @@
+# Copyright (C) 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This testcase checks that GDB can print the value returned by a function
+# when using the 'finish' command, for various return value types.  This
+# exercises GDB's knowledge of the AMDGPU ABI.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+clean_restart $::binfile
+runto_main
+gdb_test_no_output "set print repeats unlimited"
+
+proc_with_prefix emptyStruct {} {
+    gdb_breakpoint "returnEmpty" "allow-pending"
+    with_test_prefix "empty struct" {
+	gdb_continue_to_breakpoint "returnEmpty"
+	gdb_test "finish" "Value returned is \\\$$::decimal = {<No data fields>}"
+    }
+
+    gdb_breakpoint "returnEmptyWithStatic" "allow-pending"
+    with_test_prefix "ignore static values" {
+	gdb_continue_to_breakpoint "returnEmpty"
+	gdb_test "finish" "Value returned is \\\$$::decimal = {static something = 56}"
+    }
+}
+
+proc_with_prefix structWithCharArray {} {
+    # When dealing with a struct of size up to 8 bytes, it is returned packed
+    # in registers (V0 and V1).  Above that, we allocate one register per element
+    # in the struct (recursively), up to 32 registers.
+    foreach_with_prefix size { 1 2 4 8 9 16 32 } {
+	gdb_breakpoint "returnSized<${size}ul> if \$_lane == 3" "allow-pending"
+	gdb_continue_to_breakpoint "returnSized<${size}ul>"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\\{data = \"d\{$size\}\"\\\}"
+    }
+
+    # For elements that needs more than 32 registers, the value is returned by
+    # ref.  Since the hidden first parameter is not returned available when the
+    # function returns, GDB cannot print the actual value.
+    foreach_with_prefix size { 64 128 } {
+	gdb_breakpoint "returnSized<${size}ul> if \$_lane == 3" "allow-pending"
+	gdb_continue_to_breakpoint "returnSized<${size}ul>"
+	gdb_test "finish" \
+	    "Value returned has type: Custom<char, ${size}ul>. Cannot determine contents"
+    }
+}
+
+proc_with_prefix unionMember {} {
+    foreach_with_prefix size  { 2 4 6 8 16 } {
+	gdb_breakpoint "returnCustomWithUnion<${size}ul>" "allow-pending"
+	gdb_continue_to_breakpoint "returnCustomWithUnion<${size}ul>"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\\{data = \\\{(\\\{as_int = 1633771873, as_chars = \"aaaa\"\\\}(, )?)\{$size\}\\\}\\\}"
+    }
+}
+
+proc_with_prefix flexibleAraryMember {} {
+    gdb_breakpoint "returnFlexibleArrayMember" "allow-pending"
+    gdb_continue_to_breakpoint "returnFlexibleArrayMember"
+    gdb_test "finish" \
+	"Value returned has type: FlexibleArrayMember. Cannot determine contents"
+}
+
+proc_with_prefix bitfield {} {
+    with_test_prefix "packed" {
+	gdb_breakpoint "returnPackedWithBitField if \$_lane == 4"
+	gdb_continue_to_breakpoint "returnPackedWithBitField"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\\{x = 4, y = 5, z = 6\\\}"
+    }
+
+    with_test_prefix "unpacked" {
+	gdb_breakpoint "returnNotPackedWithBitField if \$_lane == 4"
+	gdb_continue_to_breakpoint "returnNotPackedWithBitField"
+	setup_xfail "*-*-*"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\\{foo = \\\{4, 5, 6, 7\\\}, x = 8, y = 9, z = 10, c1 = 97 'a', c2 = 98 'b', c3 = 99 'c', c4 = 100 'd', c5 = 101 'e', c6 = 102 'f'\\\}"
+    }
+}
+
+proc_with_prefix pointer {} {
+    gdb_breakpoint "returnPtr if \$_lane == 4"
+    gdb_continue_to_breakpoint "returnPtr"
+    gdb_test "finish" \
+	"Value returned is \\\$$::decimal = \\(const Custom<char, 8ul> \\*\\) $::hex <returnPtr\\(\\)::vv>"
+
+    gdb_breakpoint "returnPtr2 if \$_lane == 3"
+    with_test_prefix "private address" {
+	gdb_continue_to_breakpoint "returnPtr2"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\(int \\*\\) $::hex"
+    }
+
+    with_test_prefix "global address" {
+	gdb_continue_to_breakpoint "returnPtr2"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\(int \\*\\) $::hex <someGlobal>"
+    }
+
+}
+
+proc_with_prefix reference {} {
+    gdb_breakpoint "returnRef if \$_lane == 4"
+    gdb_continue_to_breakpoint "returnRef"
+    gdb_test "finish" \
+	"Value returned is \\\$$::decimal = \\(const Custom<char, 8ul> &\\) @$::hex: \\{data = \"abcdefgh\"\\}"
+
+    gdb_breakpoint "returnRef2 if \$_lane == 4"
+    with_test_prefix "private address" {
+	gdb_continue_to_breakpoint "returnRef2"
+	setup_xfail "*-*-*"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\(int &\\) @$::hex: 4"
+    }
+
+    with_test_prefix "global_address" {
+	gdb_continue_to_breakpoint "returnRef2"
+	gdb_test "finish" \
+	    "Value returned is \\\$$::decimal = \\(int &\\) @$::hex: 42"
+    }
+}
+
+proc_with_prefix struct_with_static {} {
+    gdb_breakpoint "returnWithStatic"
+    gdb_continue_to_breakpoint "returnWithStatic"
+
+    gdb_test "finish" \
+	"Value returned is \\\$$::decimal = \\\{a = \\\{8, 16\\\}, sub = \\\{static something = 12\\\}, b = 3.1400001, static c = 42, d = 1.60218e-19\\\}"
+}
+
+with_rocm_gpu_lock {
+    emptyStruct
+    structWithCharArray
+    unionMember
+    flexibleAraryMember
+    bitfield
+    pointer
+    reference
+    struct_with_static
+}

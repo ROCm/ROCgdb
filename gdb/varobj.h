@@ -1,5 +1,6 @@
 /* GDB variable objects API.
    Copyright (C) 1999-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -264,6 +265,8 @@ extern enum varobj_display_formats varobj_get_display_format (
 						const struct varobj *var);
 
 extern int varobj_get_thread_id (const struct varobj *var);
+
+extern int varobj_get_lane (const struct varobj *var);
 
 extern void varobj_set_frozen (struct varobj *var, bool frozen);
 

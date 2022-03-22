@@ -1,6 +1,7 @@
 /* Everything about breakpoints, for GDB.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1625,9 +1626,10 @@ is_breakpoint (const struct breakpoint *bpt)
 	  || bpt->type == bp_dprintf);
 }
 
-/* Return true if BPT is of any hardware watchpoint kind.  */
 
-static bool
+/* See breakpoint.h.  */
+
+bool
 is_hardware_watchpoint (const struct breakpoint *bpt)
 {
   return (bpt->type == bp_hardware_watchpoint
@@ -1954,6 +1956,14 @@ update_watchpoint (struct watchpoint *b, int reparse)
 		    }
 
 		  addr = value_address (v);
+
+		  /* Watchpoints for addresses that are not in the default
+		     address space are currently not supported.  */
+		  if (gdbarch_address_space_id_from_core_address
+			(value_type (v)->arch (), addr)
+		      != ARCH_ADDR_SPACE_ID_DEFAULT)
+		    error (_("Only global memory watchpoints are supported."));
+
 		  if (bitsize != 0)
 		    {
 		      /* Skip the bytes that don't contain the bitfield.  */
@@ -4259,7 +4269,8 @@ bpstat::bpstat (const bpstat &other)
     commands (other.commands),
     print (other.print),
     stop (other.stop),
-    print_it (other.print_it)
+    print_it (other.print_it),
+    simd_lane_mask (other.simd_lane_mask)
 {
   if (other.old_val != NULL)
     old_val = release_value (value_copy (other.old_val.get ()));
@@ -4440,6 +4451,11 @@ bpstat_do_actions_1 (bpstat **bsp)
   bs = *bsp;
 
   breakpoint_proceeded = 0;
+
+  /* After all actions are done, restore the original SIMD lane.  */
+  thread_info *thread = inferior_thread ();
+  scoped_restore_current_simd_lane restore_lane (thread);
+
   for (; bs != NULL; bs = bs->next)
     {
       struct command_line *cmd = NULL;
@@ -4462,6 +4478,13 @@ bpstat_do_actions_1 (bpstat **bsp)
 	{
 	  /* The action has been already done by bpstat_stop_status.  */
 	  cmd = cmd->next;
+	}
+
+      if (cmd != nullptr && thread->has_simd_lanes ())
+	{
+	  /* Apply actions to the first hit lane.  */
+	  int lane = find_first_active_simd_lane (bs->simd_lane_mask);
+	  thread->set_current_simd_lane (lane);
 	}
 
       while (cmd != NULL)
@@ -4751,7 +4774,8 @@ bpstat::bpstat (struct bp_location *bl, bpstat ***bs_link_pointer)
     commands (NULL),
     print (0),
     stop (0),
-    print_it (print_it_normal)
+    print_it (print_it_normal),
+    simd_lane_mask (0)
 {
   **bs_link_pointer = this;
   *bs_link_pointer = &next;
@@ -4763,7 +4787,8 @@ bpstat::bpstat ()
     commands (NULL),
     print (0),
     stop (0),
-    print_it (print_it_normal)
+    print_it (print_it_normal),
+    simd_lane_mask (0)
 {
 }
 
@@ -5224,6 +5249,19 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
       return;
     }
 
+  /* Remember the SIMD mask.  */
+  bs->simd_lane_mask = thread->active_simd_lanes_mask ();
+
+  /* If we hit the breakpoint with all lanes inactive, don't stop.
+     This can happen in conditional/divergent code -- the compiler may
+     decide it's cheaper to execute a block of instructions unmasked
+     than to emit a jump over the instruction block.  */
+  if (maint_lane_divergence_support && bs->simd_lane_mask == 0)
+    {
+      bs->stop = 0;
+      return;
+    }
+
   /* If this is a thread/task-specific breakpoint, don't waste cpu
      evaluating the condition if this isn't the specified
      thread/task.  */
@@ -5300,7 +5338,27 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
 	{
 	  try
 	    {
-	      condition_result = breakpoint_cond_eval (cond);
+	      scoped_restore_current_simd_lane restore_lane {thread};
+	      simd_lanes_mask_t condition_mask = 0;
+
+	      /* Evaluate the condition for all SIMD lanes which might have
+		 caused the stop.  */
+	      for_active_lanes (bs->simd_lane_mask, [&] (int lane)
+		{
+		  thread->set_current_simd_lane (lane);
+		  if (breakpoint_cond_eval (cond))
+		    {
+		      /* Unmask the lane if the condition is true.  */
+		      condition_mask |= (simd_lanes_mask_t) 1 << lane;
+		    }
+
+		  return true;
+		});
+
+	      /* If at least one lane is unmasked, then the condition
+		 was held.  Update the SIMD lanes mask.  */
+	      condition_result = condition_mask != 0;
+	      bs->simd_lane_mask = condition_mask;
 	    }
 	  catch (const gdb_exception &ex)
 	    {
@@ -12042,6 +12100,29 @@ bkpt_print_it (bpstat *bs)
   else
     uiout->message ("Breakpoint %pF, ",
 		    signed_field ("bkptno", b->number));
+  if (bs->simd_lane_mask != 0)
+    {
+      if (inferior_thread ()->has_simd_lanes ())
+	{
+	  std::vector<int> hit_lanes;
+	  for_active_lanes (bs->simd_lane_mask, [&] (int lane)
+	    {
+	      hit_lanes.push_back (lane);
+	      return true;
+	    });
+
+	  if (hit_lanes.size () > 1)
+	    uiout->text ("with lanes ");
+	  else
+	    uiout->text ("with lane ");
+
+	  std::string lanes
+	    = make_ranges_from_sorted_vector (hit_lanes,
+					      !current_uiout->is_mi_like_p ());
+	  uiout->field_string ("hit-lanes", lanes.c_str ());
+	  uiout->text (", ");
+	}
+    }
 
   return PRINT_SRC_AND_LOC;
 }
@@ -13955,8 +14036,7 @@ enable_delete_command (const char *args, int from_tty)
    GDB itself.  */
 
 static void
-invalidate_bp_value_on_memory_change (struct inferior *inferior,
-				      CORE_ADDR addr, ssize_t len,
+invalidate_bp_value_on_memory_change (CORE_ADDR addr, ssize_t len,
 				      const bfd_byte *data)
 {
   for (breakpoint *bp : all_breakpoints ())

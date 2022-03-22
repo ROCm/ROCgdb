@@ -1,6 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -25,7 +26,6 @@
 #include "frame.h"
 #include "dis-asm.h"
 #include "gdbsupport/gdb_obstack.h"
-#include "infrun.h"
 #include "osabi.h"
 #include "displaced-stepping.h"
 
@@ -139,6 +139,22 @@ using read_core_file_mappings_loop_ftype =
 			   ULONGEST file_ofs,
 			   const char *filename,
 			   const bfd_build_id *build_id)>;
+
+/* 64-bits is sufficient for all known architectures.  */
+typedef uint64_t simd_lanes_mask_t;
+
+/* The scope of a given address's address space.  */
+enum address_scope
+  {
+    /* The address is of an address space that is process-wide.  */
+    ADDRESS_SCOPE_PROCESS,
+
+    /* The address is of an address space that is thread-specific.  */
+    ADDRESS_SCOPE_THREAD,
+
+    /* The address is of an address space that is lane-specific.  */
+    ADDRESS_SCOPE_LANE,
+  };
 
 #include "gdbarch-gen.h"
 

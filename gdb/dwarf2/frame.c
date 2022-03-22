@@ -1,6 +1,7 @@
 /* Frame unwinder for frames with DWARF Call Frame Information.
 
    Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Mark Kettenis.
 
@@ -193,6 +194,18 @@ dwarf2_frame_state::dwarf2_frame_state (CORE_ADDR pc_, struct dwarf2_cie *cie)
 {
 }
 
+/* Return the value of register number REG (a DWARF register number),
+   read as an address in a given FRAME.  */
+
+static CORE_ADDR
+read_addr_from_reg (frame_info *frame, int reg)
+{
+  gdbarch *arch = get_frame_arch (frame);
+  int regnum = dwarf_reg_to_regnum_or_error (arch, reg);
+
+  return address_from_register (regnum, frame);
+}
+
 /* Execute the required actions for both the DW_CFA_restore and
 DW_CFA_restore_extended instructions.  */
 static void
@@ -224,21 +237,35 @@ register %s (#%d) at %s"),
     }
 }
 
-static CORE_ADDR
+static value *
 execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
 		  struct frame_info *this_frame, CORE_ADDR initial,
-		  int initial_in_stack_memory, dwarf2_per_objfile *per_objfile)
+		  int initial_in_stack_memory, dwarf2_per_objfile *per_objfile,
+		  struct type* type = nullptr, bool as_lval = true)
 {
-  dwarf_expr_context ctx (per_objfile, addr_size);
   scoped_value_mark free_values;
+  struct type *init_type = address_type (per_objfile->objfile->arch (),
+					 addr_size);
 
-  ctx.push_address (initial, initial_in_stack_memory);
-  value *result_val = ctx.evaluate (exp, len, true, nullptr, this_frame);
+  value *init_value = value_at_lazy (init_type, initial);
+  std::vector<value *> init_values;
 
-  if (VALUE_LVAL (result_val) == lval_memory)
-    return value_address (result_val);
-  else
-    return value_as_address (result_val);
+  set_value_stack (init_value, initial_in_stack_memory);
+  init_values.push_back (init_value);
+
+  value *result_val
+    = dwarf2_evaluate (exp, len, true, per_objfile, nullptr,
+		       this_frame, addr_size, &init_values, nullptr, type);
+
+  /* We need to clean up all the values that are not needed any more.
+     The problem with a value_ref_ptr class is that it disconnects the
+     RETVAL from the value garbage collection, so we need to make
+     a copy of that value on the stack to keep everything consistent.
+     The value_ref_ptr will clean up after itself at the end of this block.  */
+  value_ref_ptr value_holder = value_ref_ptr::new_reference (result_val);
+  free_values.free_to_mark ();
+
+  return value_copy (result_val);
 }
 
 
@@ -409,6 +436,22 @@ bad CFI data; mismatched DW_CFA_restore_state at %s"),
 	      fs->regs.cfa_exp = insn_ptr;
 	      fs->regs.cfa_how = CFA_EXP;
 	      insn_ptr += fs->regs.cfa_exp_len;
+	      break;
+
+	    case DW_CFA_def_aspace_cfa:
+	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &reg);
+	      fs->regs.cfa_reg = reg;
+	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &utmp);
+
+	      if (fs->armcc_cfa_offsets_sf)
+		utmp *= fs->data_align;
+
+	      fs->regs.cfa_offset = utmp;
+
+	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &utmp);
+	      fs->regs.cfa_aspace = utmp;
+
+	      fs->regs.cfa_how = CFA_REG_OFFSET;
 	      break;
 
 	    case DW_CFA_expression:
@@ -675,6 +718,7 @@ dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
     = (struct dwarf2_frame_ops *) gdbarch_data (gdbarch, dwarf2_frame_data);
 
   ops->init_reg (gdbarch, regnum, reg, this_frame);
+  reg->evaluated = false;
 }
 
 /* Set the architecture-specific signal trampoline recognition
@@ -966,13 +1010,22 @@ dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
 	    cache->cfa -= fs.regs.cfa_offset;
 	  else
 	    cache->cfa += fs.regs.cfa_offset;
+
+	  cache->cfa
+	    = gdbarch_segment_address_to_core_address (gdbarch,
+						       fs.regs.cfa_aspace,
+						       cache->cfa);
 	  break;
 
 	case CFA_EXP:
-	  cache->cfa =
-	    execute_stack_op (fs.regs.cfa_exp, fs.regs.cfa_exp_len,
-			      cache->addr_size, this_frame, 0, 0,
-			      cache->per_objfile);
+	  {
+	    struct value *value
+	      = execute_stack_op (fs.regs.cfa_exp, fs.regs.cfa_exp_len,
+				  cache->addr_size, this_frame, 0, 0,
+				  cache->per_objfile);
+	    cache->cfa = value_address (value);
+	  }
+
 	  break;
 
 	default:
@@ -1088,10 +1141,10 @@ incomplete CFI data; unspecified registers (e.g., %s) at %s"),
   if (fs.retaddr_column < fs.regs.reg.size ()
       && fs.regs.reg[fs.retaddr_column].how == DWARF2_FRAME_REG_UNDEFINED)
     cache->undefined_retaddr = 1;
-
-  dwarf2_tailcall_sniffer_first (this_frame, &cache->tailcall_cache,
-				 (entry_cfa_sp_offset_p
-				  ? &entry_cfa_sp_offset : NULL));
+  else
+    dwarf2_tailcall_sniffer_first (this_frame, &cache->tailcall_cache,
+				   (entry_cfa_sp_offset_p
+				    ? &entry_cfa_sp_offset : NULL));
 
   return cache;
 }
@@ -1121,8 +1174,6 @@ dwarf2_frame_this_id (struct frame_info *this_frame, void **this_cache,
 
   if (cache->unavailable_retaddr)
     (*this_id) = frame_id_build_unavailable_stack (get_frame_func (this_frame));
-  else if (cache->undefined_retaddr)
-    return;
   else
     (*this_id) = frame_id_build (cache->cfa, get_frame_func (this_frame));
 }
@@ -1153,6 +1204,10 @@ dwarf2_frame_prev_register (struct frame_info *this_frame, void **this_cache,
 	return val;
     }
 
+  if (cache->reg[regnum].evaluated)
+    error (_("Cyclic register dependency detected. "
+	   "Possibly caused by an ill formed DWARF expression"));
+
   switch (cache->reg[regnum].how)
     {
     case DWARF2_FRAME_REG_UNDEFINED:
@@ -1170,24 +1225,35 @@ dwarf2_frame_prev_register (struct frame_info *this_frame, void **this_cache,
       return frame_unwind_got_register (this_frame, regnum, realnum);
 
     case DWARF2_FRAME_REG_SAVED_EXP:
-      addr = execute_stack_op (cache->reg[regnum].loc.exp.start,
-			       cache->reg[regnum].loc.exp.len,
-			       cache->addr_size,
-			       this_frame, cache->cfa, 1,
-			       cache->per_objfile);
-      return frame_unwind_got_memory (this_frame, regnum, addr);
+      {
+	struct value *value;
+	cache->reg[regnum].evaluated = true;
+	value = execute_stack_op (cache->reg[regnum].loc.exp.start,
+				  cache->reg[regnum].loc.exp.len,
+				  cache->addr_size, this_frame,
+				  cache->cfa, 1, cache->per_objfile,
+				  register_type (gdbarch, regnum));
+	cache->reg[regnum].evaluated = false;
+	return value;
+      }
 
     case DWARF2_FRAME_REG_SAVED_VAL_OFFSET:
       addr = cache->cfa + cache->reg[regnum].loc.offset;
       return frame_unwind_got_constant (this_frame, regnum, addr);
 
     case DWARF2_FRAME_REG_SAVED_VAL_EXP:
-      addr = execute_stack_op (cache->reg[regnum].loc.exp.start,
-			       cache->reg[regnum].loc.exp.len,
-			       cache->addr_size,
-			       this_frame, cache->cfa, 1,
-			       cache->per_objfile);
-      return frame_unwind_got_constant (this_frame, regnum, addr);
+      {
+	struct value *value;
+	cache->reg[regnum].evaluated = true;
+	value = execute_stack_op (cache->reg[regnum].loc.exp.start,
+				  cache->reg[regnum].loc.exp.len,
+				  cache->addr_size, this_frame,
+				  cache->cfa, 1, cache->per_objfile,
+				  register_type (gdbarch, regnum), false);
+	cache->reg[regnum].evaluated = false;
+	return value;
+      }
+
 
     case DWARF2_FRAME_REG_UNSPECIFIED:
       /* GCC, in its infinite wisdom decided to not provide unwind

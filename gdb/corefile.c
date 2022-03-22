@@ -1,6 +1,7 @@
 /* Core dump and executable file functions above target vector, for GDB.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -33,6 +34,7 @@
 #include "observable.h"
 #include "cli/cli-utils.h"
 #include "gdbarch.h"
+#include "arch-utils.h"
 
 /* You can have any number of hooks for `exec_file_command' command to
    call.  If there's only one hook, it is set in exec_file_display
@@ -168,10 +170,10 @@ memory_error_message (enum target_xfer_status err,
       /* Actually, address between memaddr and memaddr + len was out of
 	 bounds.  */
       return string_printf (_("Cannot access memory at address %s"),
-			    paddress (gdbarch, memaddr));
+			    paspace_and_addr (gdbarch, memaddr).c_str ());
     case TARGET_XFER_UNAVAILABLE:
       return string_printf (_("Memory at address %s unavailable."),
-			    paddress (gdbarch, memaddr));
+			    paspace_and_addr (gdbarch, memaddr).c_str ());
     default:
       internal_error (__FILE__, __LINE__,
 		      "unhandled target_xfer_status: %s (%s)",
@@ -188,7 +190,7 @@ memory_error (enum target_xfer_status err, CORE_ADDR memaddr)
   enum errors exception = GDB_NO_ERROR;
 
   /* Build error string.  */
-  std::string str = memory_error_message (err, target_gdbarch (), memaddr);
+  std::string str = memory_error_message (err, get_current_arch (), memaddr);
 
   /* Choose the right error to throw.  */
   switch (err)
@@ -361,7 +363,7 @@ write_memory_with_notification (CORE_ADDR memaddr, const bfd_byte *myaddr,
 				ssize_t len)
 {
   write_memory (memaddr, myaddr, len);
-  gdb::observers::memory_changed.notify (current_inferior (), memaddr, len, myaddr);
+  gdb::observers::memory_changed.notify (memaddr, len, myaddr);
 }
 
 /* Store VALUE at ADDR in the inferior as a LEN-byte unsigned

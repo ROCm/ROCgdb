@@ -1,4 +1,5 @@
 #   Copyright 1988-2022 Free Software Foundation, Inc.
+#   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -582,6 +583,11 @@ set show_conv_list \
     { \
 	{$_sdata = void} \
 	{$_siginfo = void} \
+	{$_lane_workgroup_pos = ""} \
+	{$_thread_workgroup_pos = ""} \
+	{$_dispatch_pos = ""} \
+	{$_lane_count = 0} \
+	{$_lane = 0} \
 	{$_thread = 0} \
 	{$_gthread = 0} \
 	{$_inferior = 1} \

@@ -1,6 +1,7 @@
 /* Handle set and show GDB commands.
 
    Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -118,7 +119,7 @@ parse_cli_boolean_value (const char *arg)
 
 
 void
-deprecated_show_value_hack (struct ui_file *ignore_file,
+deprecated_show_value_hack (struct ui_file *file,
 			    int ignore_from_tty,
 			    struct cmd_list_element *c,
 			    const char *value)
@@ -129,7 +130,7 @@ deprecated_show_value_hack (struct ui_file *ignore_file,
 
   /* Print doc minus "Show " at start.  Tell print_doc_line that
      this is for a 'show value' prefix.  */
-  print_doc_line (gdb_stdout, c->doc + 5, true);
+  print_doc_line (file, c->doc + 5, true);
 
   gdb_assert (c->var.has_value ());
 
@@ -140,11 +141,11 @@ deprecated_show_value_hack (struct ui_file *ignore_file,
     case var_optional_filename:
     case var_filename:
     case var_enum:
-      printf_filtered ((" is \"%s\".\n"), value);
+      fprintf_filtered (file, (" is \"%s\".\n"), value);
       break;
 
     default:
-      printf_filtered ((" is %s.\n"), value);
+      fprintf_filtered (file, (" is %s.\n"), value);
       break;
     }
 }
@@ -662,6 +663,41 @@ get_setshow_command_value_string (const setting &var)
   return stb.release ();
 }
 
+/* Format the value VAL of setting C in its verbose form (as shown on the
+   CLI).  */
+
+static void
+show_setting_value (ui_file *out, int from_tty, cmd_list_element *c, const char *val)
+{
+  if (c->show_value_func != nullptr)
+    c->show_value_func (out, from_tty, c, val);
+  else
+    deprecated_show_value_hack (out, from_tty, c, val);
+}
+
+static gdb::optional<std::string>
+get_effective_value_string (const setting &var)
+{
+  switch (var.type ())
+    {
+    case var_boolean:
+      {
+	gdb::optional<bool> value = var.effective_value<bool> ();
+
+	if (!value.has_value ())
+	  return {};
+
+	return std::string (*value ? "on" : "off");
+      }
+      break;
+
+    default:
+      {
+	/* Not implemented.  */
+	return {};
+      }
+    }
+}
 
 /* Do a "show" command.  ARG is NULL if no argument, or the
    text of the argument, and FROM_TTY is nonzero if this command is
@@ -682,14 +718,20 @@ do_show_command (const char *arg, int from_tty, struct cmd_list_element *c)
      versions of code to print the value out.  */
 
   if (uiout->is_mi_like_p ())
-    uiout->field_string ("value", val);
-  else
     {
-      if (c->show_value_func != NULL)
-	c->show_value_func (gdb_stdout, from_tty, c, val.c_str ());
-      else
-	deprecated_show_value_hack (gdb_stdout, from_tty, c, val.c_str ());
+      uiout->field_string ("value", val);
+
+      string_file out;
+      show_setting_value (&out, from_tty, c, val.c_str ());
+      uiout->field_string ("verbose", out.string ());
+
+      gdb::optional<std::string> effective_value
+	= get_effective_value_string (*c->var);
+      if (effective_value.has_value ())
+	uiout->field_string ("effective-value", *effective_value);
     }
+  else
+    show_setting_value (gdb_stdout, from_tty, c, val.c_str ());
 
   c->func (NULL, from_tty, c);
 }

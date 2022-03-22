@@ -1,0 +1,66 @@
+# Copyright (C) 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Code running on a GPU can be loaded directly from a memory buffer.  In such
+# situation no actual file is ever used.  To support this, GDB accesses the
+# objfile directly from the buffer in the memory of the debuggee.  However,
+# some programs might be tempted to dispose of (or reuse) the memory buffer
+# containing the objfile's image as soon as they transferred the machine code
+# to the device.  If they do that, they might destroy debug information GDB
+# requires, without GDB being aware of it.  This can lead to crashes if GDB
+# tries to decode random data.
+#
+# To prevent that, GDB makes a copy of the entire objfile when it first
+# encounters it.
+#
+# This test checks that GDB can handle a program which disposes of its objfile
+# buffer while the associated code is still running on the device.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+  verbose "Skipping hip test: ${testfile}."
+  return 0
+}
+
+set hipmodule_path [standard_output_file ${testfile}.hipfb]
+
+if { [gdb_compile  $srcdir/$subdir/$srcfile \
+	$hipmodule_path object \
+	{ debug hip additional_flags=--genco } ] != "" } {
+    return -1
+}
+
+if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
+	{debug hip}] } {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+clean_restart $::binfile
+gdb_test_no_output "set args ${hipmodule_path}" "set args"
+runto "printId" allow-pending
+gdb_test "bt" \
+    [multi_line \
+	"#0\[ \t\]*printId \\(\\) at \[^\r\n\]+" \
+	"#1\[ \t\]*${::hex} in kernel \\(\\) at \[^\r\n\]+"]
+
+}

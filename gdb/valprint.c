@@ -1,6 +1,7 @@
 /* Print values for GDB, the GNU debugger.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -506,7 +507,7 @@ print_ref_address (struct type *type, const gdb_byte *address_buffer,
 	= extract_typed_address (address_buffer + embedded_offset, type);
 
       fprintf_filtered (stream, "@");
-      fputs_filtered (paddress (gdbarch, address), stream);
+      fputs_filtered (paspace_and_addr (gdbarch, address).c_str (), stream);
     }
   /* Else: we have a non-addressable value, such as a DW_AT_const_value.  */
 }

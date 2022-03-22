@@ -1,6 +1,7 @@
 /* Standard language operator definitions for GDB, the GNU debugger.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -194,6 +195,9 @@ OP (UNOP_CAST)
 
 /* Like UNOP_CAST, but the type is a subexpression.  */
 OP (UNOP_CAST_TYPE)
+
+/* OP_ASPACE.  */
+OP (OP_ASPACE)
 
 /* The C++ dynamic_cast operator.  */
 OP (UNOP_DYNAMIC_CAST)

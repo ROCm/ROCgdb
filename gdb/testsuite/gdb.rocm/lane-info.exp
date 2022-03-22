@@ -1,0 +1,537 @@
+# Copyright 2021-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Misc lane info debugging tests:
+#
+# Test the $_lane_count convenience variable, checking that it takes
+# into account unused lanes.
+#
+# Test "info lanes" and its different arguments, checking that it
+# takes into account unused lanes, running lanes, active/inactive
+# lanes, etc.
+#
+# Test "lane apply" and its different arguments, likewise taking into
+# account unused lanes, etc.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Consume the prompt and issue a fail with message MESSAGE.
+
+proc prompt_and_fail {message} {
+    gdb_test_multiple "" $message {
+	-re "$::gdb_prompt " {
+	    fail $gdb_test_name
+	}
+    }
+}
+
+# Run an "info lanes"-like command specified in CMD, and check that
+# the right set of lanes is listed.  LANE_STATE_NAME is the name of
+# the array variable that contains the lane states, as extracted with
+# "info lanes -all".  VALID_STATES is a list containing the set of
+# lane states the "info lanes" command variant lists.
+
+proc info_lanes {cmd lane_state_name valid_states} {
+    set any "\[^\r\n\]*"
+    upvar $lane_state_name lane_state
+
+    array unset lane_state2
+    for {set i 0} {$i < [array size lane_state]} {incr i} {
+	set lane_state2($i) ""
+    }
+
+    gdb_test_multiple "$cmd" "" {
+	-re "($::decimal) +(.) +AMDGPU Lane ${any}\r\n" {
+	    set lane $expect_out(1,string)
+	    set lane_state2($lane) $expect_out(2,string)
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    set ok 1
+	    for {set i 0} {$i < [array size lane_state]} {incr i} {
+		if {[lsearch $valid_states $lane_state($i)] != -1} {
+		    set should_see 1
+		} else {
+		    set should_see 0
+		}
+
+		set lane_seen [expr {$lane_state2($i) != ""}]
+
+		if {$should_see != $lane_seen} {
+		    verbose -log \
+			"lane $i, $should_see, $lane_seen, $lane_state($i), $lane_state2($i)"
+		    set ok 0
+		} elseif {$lane_seen && $lane_state($i) != $lane_state2($i)} {
+		    verbose -log \
+			"lane $i, $should_see, $lane_seen, $lane_state($i), $lane_state2($i)"
+		    set ok 0
+		}
+	    }
+	    gdb_assert {$ok} $gdb_test_name
+	}
+    }
+}
+
+# Run a "lane apply"-like command specified in CMD, and check that the
+# right set of lanes is iterated.  LANE_STATE_NAME is the name of the
+# array variable that contains the lane states, as extracted with
+# "info lanes -all".  VALID_STATES is a list containing the set of
+# lane states the "lane apply" command variant applies the command to.
+
+proc lane_apply {cmd lane_state_name valid_states} {
+    set any "\[^\r\n\]*"
+    upvar $lane_state_name lane_state
+
+    array unset lane_seen
+    for {set i 0} {$i < [array size lane_state]} {incr i} {
+	set lane_seen($i) 0
+    }
+
+    gdb_test_multiple "$cmd print \$_lane" "" {
+	-re "Lane ($::decimal) \\\($any\\\):\r\n.$::decimal = ($::decimal)" {
+	    set lane1 $expect_out(1,string)
+	    set lane2 $expect_out(1,string)
+
+	    if {$lane1 != $lane2} {
+		prompt_and_fail "$gdb_test_name (inconsistent lane)"
+	    } else {
+		set lane_seen($lane1) 1
+		exp_continue
+	    }
+	}
+	-re "$::gdb_prompt " {
+	    set ok 1
+	    for {set i 0} {$i < [array size lane_state]} {incr i} {
+		if {[lsearch $valid_states $lane_state($i)] != -1} {
+		    set should_see 1
+		} else {
+		    set should_see 0
+		}
+
+		if {$should_see != $lane_seen($i)} {
+		    verbose -log \
+			"lane $i, $should_see, $lane_seen($i), $lane_state($i)"
+		    set ok 0
+		}
+	    }
+	    gdb_assert {$ok} $gdb_test_name
+	}
+    }
+}
+
+proc_with_prefix test {} {
+    clean_restart $::binfile
+
+    if ![runto "bar" allow-pending message] {
+	return
+    }
+
+    with_test_prefix "bad" {
+	gdb_test "info lanes -1" "Unrecognized option at: -1"
+	gdb_test "info lanes 64" "No lanes match '64'\."
+
+	gdb_test "lane -1" "Lane -1 does not exist on this thread\."
+	gdb_test "lane 64" "Lane 64 does not exist on this thread\."
+
+	gdb_test "lane apply -1 print 1" "negative value"
+    }
+
+    set any "\[^\r\n\]*"
+
+    # Which wave has unused lanes.
+    set partial_wave 0
+
+    set num_used_lanes 5
+
+    with_test_prefix "\$_lane_count" {
+	# The first and last waves.
+	set first_wave 0
+	set last_wave 0
+
+	set saw_partial 0
+	set saw_full 0
+	set saw_cpu 0
+	gdb_test_multiple "thread apply all -ascending print \$_lane_count" "" {
+	    -re "Thread ($::decimal) \\\((AMDGPU Wave|Thread) $any\r\n\\$${::decimal} = ($::decimal)\r\n" {
+		set thread_num $expect_out(1,string)
+		set target_id $expect_out(2,string)
+		set lane_count $expect_out(3,string)
+		verbose -log "thread_num=$thread_num, target_id=\"$target_id\", lane_count=$lane_count"
+
+		if {$target_id == "AMDGPU Wave"} {
+		    # GPU.
+		    if {$first_wave == 0} {
+			set first_wave $thread_num
+		    }
+		    set last_wave $thread_num
+
+		    if {$lane_count == $num_used_lanes} {
+			incr saw_partial
+			set partial_wave $thread_num
+		    } elseif {$lane_count == 32 || $lane_count == 64} {
+			incr saw_full
+		    } else {
+			prompt_and_fail $gdb_test_name
+			return
+		    }
+		} elseif {$target_id == "Thread"} {
+		    # CPU.
+		    if {$lane_count != 0} {
+			prompt_and_fail $gdb_test_name
+			return
+		    }
+		    incr saw_cpu
+		} else {
+		    error "unexpected"
+		}
+		exp_continue
+	    }
+	    -re "$::gdb_prompt $" {
+		gdb_assert \
+		    {$partial_wave != 0 \
+			 && $saw_partial == 1 \
+			 && $saw_full > 0 \
+			 && $saw_cpu > 0} \
+		    $gdb_test_name
+	    }
+	}
+    }
+
+    # Test "info lanes".
+    with_test_prefix "info lanes" {
+	# Show active and inactive lanes, but not unused lanes.
+	# Validate the info in the "target id" column.
+	with_test_prefix "default, target id" {
+	    set work_item_pos 0
+	    for {set t $first_wave} {$t <= $last_wave} {incr t} {
+		with_test_prefix "thread $t" {
+		    gdb_test "thread $t" "Switching .*"
+
+		    set lane 0
+		    gdb_test_multiple "info lanes" "" {
+			-re "($::decimal) +(?:A|I) +AMDGPU Lane ${::decimal}:${::decimal}:${::decimal}:${::decimal}/($::decimal) \\\(0,0,0\\\)\\\[($::decimal),0,0\\\] +" {
+
+			    set lane_m $expect_out(1,string)
+			    set lane2_m $expect_out(2,string)
+			    set wi_pos_m $expect_out(3,string)
+
+			    verbose -log "lane: lane_m=$lane_m, lane2_m=$lane2_m, wi_pos_m=$wi_pos_m"
+			    verbose -log "lane: lane=$lane, work_item_pos=$work_item_pos"
+
+			    if {$lane != $lane_m
+				|| $lane != $lane2_m
+				|| $work_item_pos != $wi_pos_m} {
+				prompt_and_fail $gdb_test_name
+			    } else {
+				incr lane
+				incr work_item_pos
+				exp_continue
+			    }
+			}
+			-re "$::gdb_prompt" {
+			    verbose -log "prompt: lane=$lane, work_item_pos=$work_item_pos"
+
+			    if {$t == $partial_wave} {
+				gdb_assert {$lane == $num_used_lanes} \
+				    $gdb_test_name
+			    } else {
+				gdb_assert {$lane == 32 || $lane == 64} \
+				    $gdb_test_name
+			    }
+			}
+		    }
+		}
+	    }
+	}
+
+	# The state of each lane, per "info lanes -all".
+	array unset lane_state
+
+	# Show all lanes including unused lanes & collect lane states
+	# for subsequent tests.
+	with_test_prefix "all" {
+	    gdb_test "thread $partial_wave" "Switching .*" \
+		"switch to partial wave"
+
+	    # The last seen lane.
+	    set lane -1
+	    # The next lane we should see.
+	    set next_lane 0
+
+	    gdb_test_multiple "info lanes -all" "" {
+		-re "($::decimal) +(.) +AMDGPU Lane " {
+		    set lane $expect_out(1,string)
+		    set state $expect_out(2,string)
+
+		    verbose -log "got lane=$lane, $state"
+
+		    if {$lane != $next_lane} {
+			prompt_and_fail "$gdb_test_name (unexpected lane)"
+		    } elseif {$lane >= 64} {
+			prompt_and_fail "$gdb_test_name (lane too high)"
+		    } elseif {$state != "A" && $state != "I" && $state != "U"} {
+			prompt_and_fail "$gdb_test_name (unexpected state)"
+		    } else {
+			incr next_lane
+			set lane_state($lane) $state
+
+			# Expect the "Frame" column, which depends on
+			# state.
+			set f_ok 0
+			if {$state == "A"} {
+			    gdb_test_multiple "" "$gdb_test_name (frame column)" {
+				-re "bar \\\(\\\)${any}\r\n" {
+				    set f_ok 1
+				}
+			    }
+			} elseif {$state == "I"} {
+			    gdb_test_multiple "" "$gdb_test_name (frame column)" {
+				-re "\\\(inactive\\\)\r\n" {
+				    set f_ok 1
+				}
+			    }
+			} elseif {$state == "U"} {
+			    gdb_test_multiple "" "$gdb_test_name (frame column)" {
+				-re "\\\(unused\\\)\r\n" {
+				    set f_ok 1
+				}
+			    }
+			} else {
+			    error "unexpected state"
+			}
+			if {$f_ok} {
+			    exp_continue
+			}
+		    }
+		}
+		-re "$::gdb_prompt" {
+		    verbose -log "lane=$lane"
+
+		    set ok 1
+
+		    if {$lane != 31 && $lane != 63} {
+			set ok 0
+		    } else {
+			set used_count 0
+			set unused_count 0
+			for {set i 0} {$i < $lane} {incr i} {
+			    if {$lane_state($i) == "A"
+				|| $lane_state($i) == "I"} {
+				incr used_count
+				if {$i >= $num_used_lanes} {
+				    set ok 0
+				}
+			    } elseif {$lane_state($i) == "U"} {
+				incr unused_count
+				if {$i < $num_used_lanes} {
+				    set ok 0
+				}
+			    } else {
+				verbose -log "unexpected state"
+				set ok 0
+			    }
+			}
+
+			if {$used_count != $num_used_lanes} {
+			    set ok 0
+			}
+		    }
+
+		    gdb_assert {$ok} $gdb_test_name
+		}
+	    }
+	}
+
+	# The following tests all work with the wave that has unused
+	# lanes.
+	gdb_test "thread $partial_wave" "Switching .*" "switch to partial wave"
+
+	with_test_prefix "state filter" {
+	    # Test "info lanes" without options again, but this time check
+	    # whether we only print active lanes, and whether we print
+	    # them all, compared to the active lanes shown by "info lanes
+	    # -all".
+	    info_lanes "info lanes" lane_state {"A" "I"}
+
+	    # Check that -active and -inactive filter lanes correctly.
+	    info_lanes "info lanes -active" lane_state {"A"}
+	    info_lanes "info lanes -inactive" lane_state {"I"}
+	}
+
+	# Test "info lanes" when the wave is running.
+	with_test_prefix "running" {
+	    delete_breakpoints
+	    gdb_test "cont&" "Continuing\."
+
+	    set count 0
+	    gdb_test_multiple "info lanes" "" {
+		-re "($::decimal) +R +AMDGPU Lane ${any}\\\(running\\\)\r\n" {
+		    set lane $expect_out(1,string)
+		    if {$lane >= $num_used_lanes} {
+			prompt_and_fail "wrong state"
+		    } else {
+			incr count
+			exp_continue
+		    }
+		}
+		-re "($::decimal) +${any}\r\n" {
+		    prompt_and_fail "$gdb_test_name (unexpected state)"
+		}
+		-re "$::gdb_prompt " {
+		    verbose -log "count=$count"
+		    gdb_assert {$count == $num_used_lanes} $gdb_test_name
+		}
+	    }
+
+	    set r_count 0
+	    set u_count 0
+	    gdb_test_multiple "info lanes -all" "" {
+		-re "($::decimal) +(.) +AMDGPU Lane " {
+		    set lane $expect_out(1,string)
+		    set state $expect_out(2,string)
+		    if {$state != "R" && $state != "U"} {
+			prompt_and_fail "$gdb_test_name (unexpected state)"
+		    } elseif {$state == "R" && $lane >= $num_used_lanes} {
+			prompt_and_fail "$gdb_test_name (wrong state)"
+		    } elseif {$state == "U" && $lane < $num_used_lanes} {
+			prompt_and_fail "$gdb_test_name (wrong state)"
+		    } else {
+			if {$state == "R"} {
+			    incr r_count
+			} else {
+			    incr u_count
+			}
+
+			set f_ok 0
+			gdb_test_multiple "" "$gdb_test_name (frame column)" {
+			    -re "\\\(running\\\)\r\n" {
+				set f_ok 1
+			    }
+			}
+			if {$f_ok} {
+			    exp_continue
+			}
+		    }
+		}
+		-re "$::gdb_prompt " {
+		    verbose -log "r_count=$r_count, u_count=$u_count"
+		    gdb_assert \
+			{$r_count == $num_used_lanes \
+			     && ($u_count == (32 - $num_used_lanes) \
+				     || $u_count == (64 - $num_used_lanes))} \
+			$gdb_test_name
+		}
+	    }
+
+	    # Interrupt threads/waves, to prepare for following tests.
+	    with_test_prefix "stop waves" {
+		gdb_test_multiple "interrupt" "" {
+		    -re "$::gdb_prompt " {
+			gdb_test_multiple "" $gdb_test_name {
+			    -re "received signal SIGINT" {
+				pass $gdb_test_name
+			    }
+			}
+		    }
+		}
+		gdb_test "thread $partial_wave" "Switching .*" \
+		    "switch to partial wave"
+	    }
+	}
+    }
+
+    with_test_prefix "lane apply" {
+
+	with_test_prefix "state filter" {
+	    lane_apply "lane apply all" lane_state {"A" "I"}
+	    lane_apply "lane apply all -all" lane_state {"A" "I" "U"}
+	    lane_apply "lane apply all -active" lane_state {"A"}
+	    lane_apply "lane apply all -inactive" lane_state {"I"}
+	}
+
+	# Find an active lane and an inactive lane.
+	set active_lane -1
+	set inactive_lane -1
+	for {set i 0} {$i < [array size lane_state]} {incr i} {
+	    if {$lane_state($i) == "A"} {
+		set active_lane $i
+	    } elseif {$lane_state($i) == "I"} {
+		set inactive_lane $i
+	    }
+	}
+
+	# Test that "-active" when the lane list does not include any
+	# active lane ends up not printing anything.  Same for
+	# "-inactive".
+	with_test_prefix "no match" {
+	    gdb_test_no_output "lane apply $active_lane -inactive print 1"
+	    gdb_test_no_output "lane apply $inactive_lane -active print 1"
+
+	    # Double check that -active really prints the active lane,
+	    # and same for -inactive.
+	    gdb_test "lane apply $active_lane -active print \$_lane" \
+		"Lane $active_lane .*= $active_lane"
+	    gdb_test "lane apply $inactive_lane -inactive print \$_lane" \
+		"Lane $inactive_lane .*= $inactive_lane"
+
+	}
+    }
+
+    # Check that "thread find" hits lane target Ids too.
+    with_test_prefix "thread find" {
+
+	# A regexp that hits all work-items.  We should see 64 + 5
+	# hits, which is the total number of used lanes.
+	set count 0
+	gdb_test_multiple "thread find AMDGPU Lane" "" {
+	    -re "Thread $::decimal, lane $::decimal has target id 'AMDGPU Lane $any'" {
+		incr count
+		exp_continue
+	    }
+	    -wrap -re "" {
+		gdb_assert {$count == 64 + 5} "thread find hit all used lanes"
+	    }
+	}
+
+	# A regexp that hits a specific work-item.  We should see only
+	# 1 hit.
+	set count 0
+	gdb_test_multiple "thread find AMDGPU Lane.*\\\[0,0,0\\\]" "" {
+	    -re "Thread $::decimal, lane $::decimal has target id 'AMDGPU Lane $any'" {
+		incr count
+		exp_continue
+	    }
+	    -wrap -re "" {
+		gdb_assert {$count == 1} "thread find hit expected lane"
+	    }
+	}
+    }
+}
+
+with_rocm_gpu_lock {
+    test
+}

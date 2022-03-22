@@ -1,5 +1,6 @@
 /* Data structures associated with breakpoints in GDB.
    Copyright (C) 1992-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -35,6 +36,7 @@
 #include "gdbsupport/refcounted-object.h"
 #include "gdbsupport/safe-iterator.h"
 #include "cli/cli-script.h"
+#include "gdbarch.h"
 
 struct block;
 struct gdbpy_breakpoint_object;
@@ -1189,6 +1191,12 @@ struct bpstat
     /* Tell bpstat_print and print_bp_stop_message how to print stuff
        associated with this element of the bpstat chain.  */
     enum bp_print_how print_it;
+
+    /* Which SIMD lanes where active when the breakpoint was hit.  If
+       the breakpoint is conditional, then this is further restricted
+       to which lanes the breakpoint conditional evaluated true
+       for.  */
+    simd_lanes_mask_t simd_lane_mask;
   };
 
 enum inf_context
@@ -1296,6 +1304,8 @@ extern void set_ignore_count (int, int, int);
 extern void breakpoint_init_inferior (enum inf_context);
 
 extern void breakpoint_auto_delete (bpstat *);
+
+using walk_bp_location_callback = gdb::function_view<void(bp_location *)>;
 
 /* Return the chain of command lines to execute when this breakpoint
    is hit.  */
@@ -1783,5 +1793,9 @@ extern bool fix_multi_location_breakpoint_output_globally;
 extern void catch_exception_event (enum exception_event_kind ex_event,
 				   const char *regex, bool tempflag,
 				   int from_tty);
+
+/* Return true if BPT is of any hardware watchpoint kind.  */
+
+bool is_hardware_watchpoint (const struct breakpoint *bpt);
 
 #endif /* !defined (BREAKPOINT_H) */

@@ -1,6 +1,7 @@
 /* Cache and manage frames for GDB, the GNU debugger.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1250,9 +1251,9 @@ frame_unwind_register_value (frame_info *next_frame, int regnum)
 	    fprintf_unfiltered (&debug_file, " register=%d",
 				VALUE_REGNUM (value));
 	  else if (VALUE_LVAL (value) == lval_memory)
-	    fprintf_unfiltered (&debug_file, " address=%s",
-				paddress (gdbarch,
-					  value_address (value)));
+	    fprintf_unfiltered
+	      (&debug_file, " address=%s",
+	       paspace_and_addr (gdbarch, value_address (value)).c_str ());
 	  else
 	    fprintf_unfiltered (&debug_file, " computed");
 
@@ -1372,7 +1373,7 @@ read_frame_register_unsigned (frame_info *frame, int regnum,
 
 void
 put_frame_register (struct frame_info *frame, int regnum,
-		    const gdb_byte *buf)
+		    const gdb_byte *buf, LONGEST offset)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   int realnum;
@@ -1389,12 +1390,19 @@ put_frame_register (struct frame_info *frame, int regnum,
     {
     case lval_memory:
       {
-	write_memory (addr, buf, register_size (gdbarch, regnum));
+	write_memory (addr + offset, buf, register_size (gdbarch, regnum));
 	break;
       }
     case lval_register:
-      get_current_regcache ()->cooked_write (realnum, buf);
-      break;
+      {
+	/* Register written can be bigger then the value we are writing.  */
+	gdb::byte_vector temp_buf (register_size (gdbarch, realnum));
+	get_current_regcache ()->cooked_read (realnum, temp_buf.data ());
+	memcpy ((char *) temp_buf.data () + offset, buf,
+		register_size (gdbarch, regnum));
+	get_current_regcache ()->cooked_write (realnum, temp_buf.data ());
+	break;
+      }
     default:
       error (_("Attempt to assign to an unmodifiable value."));
     }
@@ -1531,27 +1539,50 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
   while (len > 0)
     {
       int curr_len = register_size (gdbarch, regnum) - offset;
+      struct value *value = frame_unwind_register_value (frame->next,
+							 regnum);
+      LONGEST added_offset = value == NULL ? 0 : value_offset (value);
 
       if (curr_len > len)
 	curr_len = len;
 
       const gdb_byte *myaddr = buffer.data ();
-      if (curr_len == register_size (gdbarch, regnum))
+      /*  Compute value is a special new case.  The problem is that
+	  the computed callback mechanism only supports a struct
+	  value arguments, so we need to make one.  */
+      if (value != NULL && VALUE_LVAL (value) == lval_computed)
 	{
-	  put_frame_register (frame, regnum, myaddr);
+	  const lval_funcs *funcs = value_computed_funcs (value);
+	  type * reg_type = register_type (gdbarch, regnum);
+
+	  if (funcs->write == NULL)
+	    error (_("Attempt to assign to an unmodifiable value."));
+
+	  struct value *from_value = allocate_value (reg_type);
+	  memcpy (value_contents_raw (from_value).data (), myaddr,
+		  TYPE_LENGTH (reg_type));
+
+	  set_value_offset (value, added_offset + offset);
+
+	  funcs->write (value, from_value);
+	  release_value (from_value);
+	}
+      else if (curr_len == register_size (gdbarch, regnum))
+	{
+	  put_frame_register (frame, regnum, myaddr, added_offset);
 	}
       else
 	{
-	  struct value *value = frame_unwind_register_value (frame->next,
-							     regnum);
 	  gdb_assert (value != NULL);
 
 	  memcpy ((char *) value_contents_writeable (value).data () + offset,
 		  myaddr, curr_len);
-	  put_frame_register (frame, regnum,
-			      value_contents_raw (value).data ());
-	  release_value (value);
+	  put_frame_register (frame, regnum, value_contents_raw (value).data (),
+			      added_offset);
 	}
+
+      if (value != NULL)
+	release_value (value);
 
       myaddr += curr_len;
       len -= curr_len;
@@ -2426,6 +2457,15 @@ inside_main_func (frame_info *this_frame)
       /* In some language (for example Fortran) there will be no minimal
 	 symbol with the name of the main function.  In this case we should
 	 search the full symbols to see if we can find a match.  */
+
+      /* Currently selected frame might be different then the frame that
+	 this check is done on (this_frame).
+
+	 To get a correct result, we need to temporarily select this_frame
+	 as a currently selected frame.  */
+      scoped_restore_selected_frame restore_selected_frame;
+      select_frame (this_frame);
+
       struct block_symbol bs = lookup_symbol (name, NULL, VAR_DOMAIN, 0);
       if (bs.symbol == nullptr)
 	return false;

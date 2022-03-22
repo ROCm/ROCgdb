@@ -1,4 +1,5 @@
 # Copyright 2021-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,9 +27,14 @@ if { [build_executable "failed to prepare" $testfile $srcfile] } {
 }
 
 # Unwind to each function in FRAMES, and compare "info frame" output
-# to what was saved in the 'info_frame_before' array.
-proc compare_frames {frames} {
+# to what was saved in the 'info_frame_before' array.  DWARF_UNWINDER
+# indicates whether the DWARF unwinder is enabled.
+proc compare_frames {frames dwarf_unwinder} {
     foreach_with_prefix compare_frame $frames {
+
+	if {!$dwarf_unwinder} {
+	    setup_kfail "amdgcn-amd-amdhsa" "xxxx"
+	}
 	if {[gdb_test \
 		 "frame function $compare_frame" \
 		 " $compare_frame .*"] != 0} {
@@ -124,7 +130,9 @@ proc test {dwarf_unwinder} {
 	}
 
 	if {$idx_funcs != 0} {
-	    compare_frames [lreverse [lrange $funcs 0 $idx_funcs-1]]
+	    compare_frames \
+		[lreverse [lrange $funcs 0 $idx_funcs-1]] \
+		$dwarf_unwinder
 	}
 	incr idx_funcs
     }

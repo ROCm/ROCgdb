@@ -1,4 +1,5 @@
 /* Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -138,8 +139,11 @@ extern void set_last_target_status (process_stratum_target *target, ptid_t ptid,
    target_wait().  */
 extern void nullify_last_target_wait_ptid ();
 
-/* Stop all threads.  Only returns after everything is halted.  */
-extern void stop_all_threads (void);
+/* Stop all threads of all targets.  Only returns after everything is halted.
+
+   Upon return, all targets in `target_ops::prevent_new_threads (true)`
+   state.  */
+extern void stop_all_threads (const char *reason);
 
 extern void prepare_for_detach (void);
 
@@ -371,5 +375,8 @@ private:
   bool m_prev_enable_commit_resumed;
 };
 
+/* True if lane divergence debugging support is enabled.  Controlled
+   with "maint set lane-divergence".  */
+extern bool maint_lane_divergence_support;
 
 #endif /* INFRUN_H */

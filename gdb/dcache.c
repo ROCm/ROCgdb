@@ -1,6 +1,7 @@
 /* Caching code for GDB, the GNU debugger.
 
    Copyright (C) 1992-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -114,8 +115,11 @@ struct dcache_struct
   int size;
   CORE_ADDR line_size;  /* current line_size.  */
 
-  /* The ptid of last inferior to use cache or null_ptid.  */
+  /* The ptid of the last thread to use the cache or null_ptid.  */
   ptid_t ptid;
+
+  /* The selected lane of the last thread to use the cache or -1.  */
+  int lane;
 
   /* The process target of last inferior to use the cache or
      nullptr.  */
@@ -253,6 +257,7 @@ dcache_invalidate (DCACHE *dcache)
   dcache->oldest = NULL;
   dcache->size = 0;
   dcache->ptid = null_ptid;
+  dcache->lane = -1;
   dcache->proc_target = nullptr;
 
   if (dcache->line_size != dcache_line_size)
@@ -458,6 +463,7 @@ dcache_init (void)
   dcache->size = 0;
   dcache->line_size = dcache_line_size;
   dcache->ptid = null_ptid;
+  dcache->lane = -1;
   dcache->proc_target = nullptr;
 
   return dcache;
@@ -476,14 +482,24 @@ dcache_read_memory_partial (struct target_ops *ops, DCACHE *dcache,
 {
   ULONGEST i;
 
-  /* If this is a different thread from what we've recorded, flush the
-     cache.  */
+  /* If this is a different thread or lane from what we've recorded,
+     flush the cache.  */
+
+  /* When we're detaching breakpoints from a fork child before
+     detaching it ("set detach-on-fork on"), inferior_ptid points to
+     the child, and the current inferior points to the parent.  We can
+     detect the situation because the pids don't match.  */
+  int current_lane = (inferior_ptid.pid () != current_inferior ()->pid
+		      ? 0
+		      : inferior_thread ()->current_simd_lane ());
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
-  if (proc_target != dcache->proc_target || inferior_ptid != dcache->ptid)
+  if (proc_target != dcache->proc_target || inferior_ptid != dcache->ptid
+      || current_lane != dcache->lane)
     {
       dcache_invalidate (dcache);
       dcache->ptid = inferior_ptid;
+      dcache->lane = current_lane;
       dcache->proc_target = proc_target;
     }
 

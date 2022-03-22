@@ -1,6 +1,7 @@
 /* CLI utilities.
 
    Copyright (C) 2011-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -21,6 +22,7 @@
 #include "cli/cli-utils.h"
 #include "value.h"
 
+#include <algorithm>
 #include <ctype.h>
 
 /* See documentation in cli-utils.h.  */
@@ -358,8 +360,6 @@ number_is_in_list (const char *list, int number)
     {
       int gotnum = parser.get_number ();
 
-      if (gotnum == 0)
-	error (_("Arguments must be numbers or '$' variables."));
       if (gotnum == number)
 	return 1;
     }
@@ -439,3 +439,59 @@ validate_flags_qcs (const char *which_command, qcs_flags *flags)
     error (_("%s: -c and -s are mutually exclusive"), which_command);
 }
 
+/* See documentation in cli-utils.h.  */
+
+std::string
+make_ranges_from_sorted_vector (const std::vector<int> &numbers,
+				bool want_brackets)
+{
+  gdb_assert (std::is_sorted (numbers.begin (), numbers.end ()));
+  std::string result;
+
+  if (numbers.empty ())
+    return result;
+
+  std::vector<int>::const_iterator start = numbers.begin ();
+  result = std::to_string(*start);
+
+  int previous_value = *start;
+  bool has_brackets = false;
+
+  for (auto it = start + 1; it != numbers.end(); it++)
+    {
+      if ((previous_value + 1) < *it)
+        {
+	  /* The current range ends.  */
+	  has_brackets = true;
+
+	  if (*start != previous_value)
+	    {
+	      /* The previous value is the end of the current
+		 range.  */
+	      result += "-" + std::to_string (previous_value);
+	    }
+	  else
+	    {
+	      /* The range consists of only the starting number, which
+		 is already included in the result.  */
+	    }
+
+	  /* The current value is the beginning of a new range.  */
+          start = it;
+          result += " " + std::to_string (*start);
+        }
+      previous_value = *it;
+    }
+
+  if (*start != previous_value)
+    {
+      /* Close the last range.  */
+      result += "-" + std::to_string (previous_value);
+      has_brackets = true;
+    }
+
+  if (want_brackets && has_brackets)
+    result = "[" + result + "]";
+
+  return result;
+}

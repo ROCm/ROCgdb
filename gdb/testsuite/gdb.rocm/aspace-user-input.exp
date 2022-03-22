@@ -1,0 +1,98 @@
+# Copyright (C) 2021-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Test user input using '#' syntax for creating a segment address in
+# the specified address space.
+
+load_lib rocm.exp
+
+standard_testfile bit-extract.cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return 0
+}
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+# Set breakpoint in device code.
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_continue_to_breakpoint "bit_extract_kernel"
+
+# Simple pointer manipulation.
+gdb_test "print private_lane#0x0" " = \\(void \\*\\) private_lane#0x0"
+gdb_test "print/d private_lane#0x0" " = private_lane#0"
+gdb_test "print/o private_lane#0x8" " = private_lane#010"
+gdb_test "print private_lane#0xffffffff" " = \\(void \\*\\) private_lane#0xffffffff"
+
+gdb_test_no_output "set var \$addr = 0xffffffff"
+gdb_test "print private_lane#\$addr" " = \\(void \\*\\) private_lane#0xffffffff"
+
+# Cast to pointer type.
+gdb_test "print \(unsigned int \*\) private_lane#0x0" \
+	 " = \\(unsigned int \\*\\) private_lane#0x0"
+gdb_test "print \(unsigned int \*\) private_lane#\$addr" \
+	 " = \\(unsigned int \\*\\) private_lane#0xffffffff"
+gdb_test "print \(int \*\) private_lane#0x0" \
+	 " = \\(int \\*\\) private_lane#0x0"
+
+# Memory write.
+gdb_test "print \*\(unsigned int \*\) private_lane#0x0 = 3" " = 3"
+gdb_test "print \*\(unsigned int \*\) private_lane#0x0" " = 3"
+
+gdb_test "print \*\(char \*\) private_lane#0x0 = \'t\'" "\\'t\\'"
+gdb_test "print \*\(char \*\) private_lane#0x1 = \'e\'" "\\'e\\'"
+gdb_test "print \*\(char \*\) private_lane#0x2 = \'s\'" "\\'s\\'"
+gdb_test "print \*\(char \*\) private_lane#0x3 = \'t\'" "\\'t\\'"
+gdb_test "print \*\(char \*\) private_lane#0x4 = \'\\0\'" " = 0.*"
+gdb_test "print \(char \*\) private_lane#0x0" " = private_lane#0x0 \\\"test\\\""
+
+gdb_test "print \*\(unsigned int \*\) \(private_lane#\$addr + 1\) = 8" " = 8"
+
+# Pointer variables in different address spaces.
+gdb_test_no_output "set var \$private_lane_ptr = \(unsigned int \*\) private_lane#0x0"
+gdb_test "print \$private_lane_ptr" " = \\(unsigned int \\*\\) private_lane#0x0"
+
+gdb_test_no_output "set var \$private_wave_ptr = \(unsigned int \*\) private_wave#0x0"
+gdb_test "print \$private_wave_ptr" \
+	 " = \\(unsigned int \\*\\) private_wave#0x0"
+
+# Conversion to integral types.
+gdb_test_no_output "set var \$long_long = \(unsigned long long\) private_lane#0x0"
+
+# Two representation of the same test.
+gdb_test_no_output "set var \$generic_ptr = \(unsigned int \*\) \$long_long"
+gdb_test_no_output "set var \*\$private_lane_ptr = 1"
+gdb_test "print \*\$private_lane_ptr" " = 1" "expect one in private_lane"
+gdb_test "print \*\$generic_ptr" " = 1" "expect one in generic"
+
+gdb_test_no_output "set var \*\$generic_ptr = 2"
+gdb_test "print \*\$generic_ptr" " = 2" "expect two in generic"
+gdb_test "print \*\$private_lane_ptr" " = 2" "expect two in private_lane"
+
+gdb_test "print \*\$generic_ptr == \*\$private_lane_ptr" "true"
+}

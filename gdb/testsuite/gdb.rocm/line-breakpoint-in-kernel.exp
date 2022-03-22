@@ -1,0 +1,59 @@
+# Copyright (C) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that placing a line breakpoint in a kernel before it is loaded results
+# in a pending breakpoint.  More importantly, that it does "drift" and place a
+# breakpoint on the next host function.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+proc do_test {} {
+    with_rocm_gpu_lock {
+	clean_restart $::binfile
+
+	# Just to make things easier, to we don't have to deal with the question.
+	gdb_test_no_output "set breakpoint pending on"
+
+	set lineno [gdb_get_line_number "break here"]
+	gdb_test "break $lineno" "No compiled code for line $lineno in the current file.\r\nBreakpoint 1 \\($lineno\\) pending."
+
+	gdb_run_cmd
+
+	gdb_test_multiple "" "stop on kernel breakpoint" {
+	    -re -wrap "Thread ($::decimal) .* hit Breakpoint 1, .*break here.*" {
+		pass $gdb_test_name
+
+		# Validate that it's not the host main thread that hit the breakpoint.
+		set thread_num $expect_out(1,string)
+		gdb_assert { $thread_num > 1 } "non-main thread hit breakpoint"
+	    }
+	}
+    }
+}
+
+do_test

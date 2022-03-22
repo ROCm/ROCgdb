@@ -1,6 +1,7 @@
 /* Target-dependent code for Atmel AVR, for GDB.
 
    Copyright (C) 1996-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -363,8 +364,9 @@ avr_pointer_to_address (struct gdbarch *gdbarch,
 }
 
 static CORE_ADDR
-avr_integer_to_address (struct gdbarch *gdbarch,
-			struct type *type, const gdb_byte *buf)
+avr_integer_to_address (struct gdbarch *gdbarch, struct type *type,
+			const gdb_byte *buf,
+			arch_addr_space_id address_space_id)
 {
   ULONGEST addr = unpack_long (type, buf);
 

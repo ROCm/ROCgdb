@@ -1,0 +1,392 @@
+# Copyright 2021-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This testcase exercises execution-related scenarios involving lanes,
+# and some related lane debugging features.  Mainly:
+#
+# - Test that GDB automatically steps over code regions where the
+#   current lane is inactive.
+#
+# - Test breakpoint hits with some lanes inactive.  Also test that GDB
+#   evaluates the breakpoint condition on each lane.
+#
+# - Test that GDB warns when you select an inactive lane.
+#
+# - Test $_lane and the "lane" command.
+#
+# Note the tests below assume we don't have DW_AT_LLVM_lane_pc info,
+# meaning GDB has no idea what is the logical PC a divergent lane is
+# stopped at.  All it knows is the current wave/physical PC, and that
+# the lane is inactive.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Usage:
+#  my_lineno [TEXT]...
+#
+# For each TEXT, find line number of the first line containing TEXT.
+# The found line number is stored in a global called TEXT_line.
+
+proc my_lineno {args} {
+    foreach text $args {
+       global ${text}_line
+       set ${text}_line [gdb_get_line_number $text]
+    }
+}
+
+my_lineno \
+    "if_1_cond" "if_1_then" "if_1_else" "if_1_end" \
+    "if_2_cond" "if_2_then" "if_2_else" "if_2_end" \
+    "if_3_cond" "if_3_then" "if_3_else" "if_3_end"
+
+# Issue a "next" command, expecting to step at a source line with a
+# LABEL comment.
+
+proc do_next {label} {
+    gdb_test "next" \
+	"$label.*" \
+	"next to \"$label\""
+}
+
+# Issue a "step" command, expecting to step at a source line with a
+# LABEL comment.
+
+proc do_step {label} {
+    gdb_test "step" \
+	"$label.*" \
+	"step to \"$label\""
+}
+
+# Switch to lane LANE, expecting that GDB does not print a warning
+# about the lane being inactive.  LABEL is the expected text comment
+# present in the current source line.  MESSAGE is the test message.
+
+proc lane_cmd_active {lane label message} {
+    gdb_test_multiple "lane $lane" $message {
+	-re -wrap "warning.*" {
+	    fail $gdb_test_name
+
+	}
+	-re -wrap " $label .*" {
+	    pass $gdb_test_name
+	}
+    }
+}
+
+# Switch to lane LANE, expecting that GDB prints a warning about the
+# lane being inactive.  LABEL is the expected text comment present in
+# the current source line.  MESSAGE is the test message.
+
+proc lane_cmd_inactive {lane label message} {
+    gdb_test "lane $lane" \
+	"warning: Current lane is inactive.* $label .*"\
+	$message
+}
+
+# Setup for testing.  Restarts GDB, and extracts which lane is the
+# "then" lane, and which lane is the "else" lane out of lanes 0-2.
+# The results are written to the LANE_THEN_NAME and LANE_ELSE_NAME
+# variables in the caller.  Returns true on success, false otherwise.
+
+proc setup {lane_then_name lane_else_name} {
+    upvar $lane_then_name lane_then
+    upvar $lane_else_name lane_else
+
+    clean_restart $::binfile
+
+    if ![runto "lane_pc_test" allow-pending] {
+	return 0
+    }
+
+    gdb_test_no_output "set scheduler-locking on"
+
+    gdb_test_no_output "maint set lane-divergence-support off"
+    do_step " if_0_else "
+
+    set lane_then -1
+    set lane_else -1
+    gdb_test_multiple "info lanes 0-2" "" {
+	-re "($::decimal)    (A|I)" {
+	    set lane $expect_out(1,string)
+	    set state $expect_out(2,string)
+
+	    if {$state == "A"} {
+		set lane_else $lane
+	    } else {
+		set lane_then $lane
+	    }
+	    exp_continue
+	}
+	-wrap -re "" {
+	    gdb_assert {$lane_else != -1 && $lane_then != -1} \
+		$gdb_test_name
+	}
+    }
+    verbose -log "lane_else=$lane_else, lane_then=$lane_then"
+
+    if {$lane_then == -1 || $lane_else == -1} {
+	return 0
+    }
+
+    do_step " if_0_then "
+    do_step "const_struct.int_elem"
+    gdb_test_no_output "maint set lane-divergence-support on"
+
+    return 1
+}
+
+# If BRANCH is "then", switch to LANE_THEN lane.  Otherwise, switch to
+# the LANE_ELSE lane.
+
+proc switch_to_lane_branch {branch lane_then lane_else} {
+    if {$branch == "then"} {
+	gdb_test "lane $lane_then" \
+	    "Switching to thread $::decimal, lane $lane_then.*" \
+	    "switch to \"then\" lane"
+    } else {
+	gdb_test "lane $lane_else" \
+	    "Switching to thread $::decimal, lane $lane_else.*" \
+	    "switch to \"else\" lane"
+    }
+}
+
+# Test stepping lanes with "step".  BRANCH indicates which set of lane
+# we expect to be active -- it's either "then" or "else".
+
+proc test_step {branch} {
+    with_test_prefix "step: $branch" {
+	if ![setup lane_then lane_else] {
+	    return
+	}
+
+	switch_to_lane_branch $branch $lane_then $lane_else
+
+	do_step "const_struct.char_elem"
+	do_step " if_1_cond "
+
+	if {$branch == "then"} {
+	    do_step " if_1_then "
+
+	    # Check that when we're stopped at the "then", the "else"
+	    # lane is inactive and GDB warns about it.
+	    lane_cmd_inactive $lane_else \
+		"if_1_then" \
+		"else lane inactive at if_1_then"
+
+	    # Switching back to the "then" lane, GDB should not warn.
+	    lane_cmd_active $lane_then \
+		"if_1_then" \
+		"then lane active at if_1_then"
+
+	    do_step " if_1_then_2 "
+	    do_step " if_2_cond "
+	    do_step " if_2_then "
+
+	    # The next step is interesting, because it steps into a
+	    # function, while the else lanes are divergent.
+
+	    # Step, and check that lane LANE_ELSE is divergent.
+	    proc do_step_check_div {label} {
+		upvar lane_else lane_else
+
+		do_step $label
+		gdb_test "info lanes $lane_else" \
+		    "$lane_else \+I.*"\
+		    "lane else is inactive at '$label'"
+	    }
+
+	    do_step_check_div "foo.*return bar \\(val\\);"
+
+	    gdb_test "bt" \
+		[multi_line \
+		     "bt" \
+		     "#0  foo \\(val=.*\\) at .*/${::srcfile}:${::decimal}" \
+		     "#1  $::hex in lane_pc_test \\(.*\\) at .*:$::if_2_then_line" \
+		     "#2  $::hex in kernel .*"] \
+		"bt on then lane"
+
+	    do_step_check_div "bar \\(val=.*\\) at "
+	} else {
+	    do_step " if_1_else "
+
+	    # Check that when we're stopped at the "else", the "then"
+	    # lane is inactive.
+	    lane_cmd_inactive $lane_then \
+		"if_1_else" \
+		"then lane inactive at if_1_else"
+
+	    # Switching back to the then lane, GDB should not warn.
+	    lane_cmd_active $lane_else \
+		"if_1_else" \
+		"else lane active at if_1_else"
+
+	    do_step " if_1_else_2 "
+	    do_step " if_2_cond "
+	    do_step " if_2_else "
+	}
+
+	# The last "if" condition is always false for all lanes.
+	do_step " if_3_cond "
+	do_step " if_3_else "
+	do_step "atomicAdd "
+    }
+}
+
+# Test issuing the "step" command while the current lane is divergent.
+
+proc test_step_divergent {branch} {
+    with_test_prefix "step divergent: $branch" {
+	if ![setup lane_then lane_else] {
+	    return
+	}
+
+	switch_to_lane_branch $branch $lane_then $lane_else
+
+	do_step "const_struct.char_elem"
+	do_step " if_1_cond "
+
+	if {$branch == "then"} {
+	    do_step " if_1_then "
+	    lane_cmd_inactive $lane_else \
+		"if_1_then" \
+		"else lane inactive at if_1_then"
+	    do_step " if_2_cond "
+	} else {
+	    do_step " if_1_else "
+	    lane_cmd_inactive $lane_then \
+		"if_1_else" \
+		"then lane inactive at if_1_else"
+	    do_step " if_1_then "
+	}
+    }
+}
+
+# Test stepping lanes with "next".  BRANCH is either "then" or "else".
+
+proc test_next {branch} {
+    with_test_prefix "next: $branch" {
+	if ![setup lane_then lane_else] {
+	    return
+	}
+
+	switch_to_lane_branch $branch $lane_then $lane_else
+
+	do_next "const_struct.char_elem"
+	do_next " if_1_cond "
+
+	if {$branch == "then"} {
+	    do_next " if_1_then "
+
+	    # Check that when we're stopped at the "then", the "else"
+	    # lane is inactive.
+	    lane_cmd_inactive $lane_else \
+		"if_1_then" \
+		"else lane inactive at if_2_cond"
+
+	    lane_cmd_active $lane_then \
+		"if_1_then" \
+		"then lane active at if_1_then"
+
+	    do_next " if_1_then_2 "
+	    do_next " if_2_cond "
+	    do_next " if_2_then "
+	} else {
+	    do_next " if_1_else "
+
+	    # Check that when we're stopped at the "else", the "then"
+	    # lane is inactive.
+	    lane_cmd_inactive $lane_then \
+		"if_1_else" \
+		"then lane inactive at if_1_else"
+	    lane_cmd_active $lane_else \
+		"if_1_else" \
+		"else lane active at if_1_else"
+
+	    do_next " if_1_else_2 "
+	    do_next " if_2_cond "
+	    do_next " if_2_else "
+	}
+
+	# The last "if" condition is always false for all lanes.
+	do_next " if_3_cond "
+	do_next " if_3_else "
+	do_next "atomicAdd "
+    }
+}
+
+# Test conditional breakpoints with conditions that only eval true for
+# some lane or lanes.
+
+proc_with_prefix test_breakpoint_lane_cond {} {
+    if ![setup lane_then lane_else] {
+	return
+    }
+
+    # Set a breakpoint with a condition that only evals true on a
+    # given lane.
+    gdb_test "break $::if_1_else_line if \$_lane == $lane_else" ".*"
+
+    # And a breakpoint with a breakpoint condition that we know should
+    # eval false.
+    gdb_test "break $::if_1_then_line if \$_lane == $lane_else" ".*"
+
+    # There are multiple lanes active, but GDB should only mention the
+    # lanes where the condition was true.
+    gdb_test "continue" \
+	"hit Breakpoint $::decimal, with lane $lane_else, lane_pc_test .*" \
+	"continue to '\$lane_else' breakpoint"
+
+    # Make sure GDB doesn't present a stop for lane 0 if the condition
+    # is to stop for all lanes but 0.  GDB's breakpoint condition
+    # evaluation code used to have a left shift overflow bug (doing '1
+    # << lane' with lane > 32) that would result in showing a stop for
+    # lanes that evaluated false.
+    gdb_test "break $::if_2_then_line if \$_lane > 0" \
+	"Breakpoint $::decimal at .*"
+
+    gdb_test_multiple "continue" "continue to '\$_lane > 0' breakpoint" {
+	-wrap -re "hit Breakpoint $::decimal, with lane(s)? \\\[0.*" {
+	    fail $gdb_test_name
+	}
+	-wrap -re "hit Breakpoint $::decimal, with lanes \\\[$::decimal.*" {
+	    pass $gdb_test_name
+	}
+    }
+}
+
+with_rocm_gpu_lock {
+    test_step "then"
+    test_step "else"
+
+    test_step_divergent "then"
+    test_step_divergent "else"
+
+    test_next "then"
+    test_next "else"
+
+    test_breakpoint_lane_cond
+}

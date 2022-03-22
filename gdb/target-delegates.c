@@ -35,6 +35,7 @@ struct dummy_target : public target_ops
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
   void commit_resumed () override;
+  void prevent_new_threads (bool arg0, inferior *arg1) override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -88,6 +89,10 @@ struct dummy_target : public target_ops
   std::string pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
+  std::string lane_to_str (thread_info *arg0, int arg1) override;
+  std::string dispatch_pos_str (thread_info *arg0) override;
+  std::string thread_workgroup_pos_str (thread_info *arg0) override;
+  std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::byte_vector thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -196,6 +201,9 @@ struct dummy_target : public target_ops
   bool supports_memory_tagging () override;
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
+  bool supports_displaced_step (thread_info *arg0) override;
+  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
+  displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
 
 struct debug_target : public target_ops
@@ -209,6 +217,7 @@ struct debug_target : public target_ops
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
   void commit_resumed () override;
+  void prevent_new_threads (bool arg0, inferior *arg1) override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -262,6 +271,10 @@ struct debug_target : public target_ops
   std::string pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
+  std::string lane_to_str (thread_info *arg0, int arg1) override;
+  std::string dispatch_pos_str (thread_info *arg0) override;
+  std::string thread_workgroup_pos_str (thread_info *arg0) override;
+  std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::byte_vector thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -370,6 +383,9 @@ struct debug_target : public target_ops
   bool supports_memory_tagging () override;
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
+  bool supports_displaced_step (thread_info *arg0) override;
+  displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
+  displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
 };
 
 void
@@ -483,6 +499,29 @@ debug_target::commit_resumed ()
   fprintf_unfiltered (gdb_stdlog, "-> %s->commit_resumed (...)\n", this->beneath ()->shortname ());
   this->beneath ()->commit_resumed ();
   fprintf_unfiltered (gdb_stdlog, "<- %s->commit_resumed (", this->beneath ()->shortname ());
+  fputs_unfiltered (")\n", gdb_stdlog);
+}
+
+void
+target_ops::prevent_new_threads (bool arg0, inferior *arg1)
+{
+  this->beneath ()->prevent_new_threads (arg0, arg1);
+}
+
+void
+dummy_target::prevent_new_threads (bool arg0, inferior *arg1)
+{
+}
+
+void
+debug_target::prevent_new_threads (bool arg0, inferior *arg1)
+{
+  fprintf_unfiltered (gdb_stdlog, "-> %s->prevent_new_threads (...)\n", this->beneath ()->shortname ());
+  this->beneath ()->prevent_new_threads (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->prevent_new_threads (", this->beneath ()->shortname ());
+  target_debug_print_bool (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_inferior_p (arg1);
   fputs_unfiltered (")\n", gdb_stdlog);
 }
 
@@ -1837,6 +1876,114 @@ debug_target::thread_name (thread_info *arg0)
   target_debug_print_thread_info_p (arg0);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_const_char_p (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+std::string
+target_ops::lane_to_str (thread_info *arg0, int arg1)
+{
+  return this->beneath ()->lane_to_str (arg0, arg1);
+}
+
+std::string
+dummy_target::lane_to_str (thread_info *arg0, int arg1)
+{
+  return default_lane_to_str (this, arg0, arg1);
+}
+
+std::string
+debug_target::lane_to_str (thread_info *arg0, int arg1)
+{
+  std::string result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->lane_to_str (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->lane_to_str (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->lane_to_str (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_int (arg1);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_std_string (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+std::string
+target_ops::dispatch_pos_str (thread_info *arg0)
+{
+  return this->beneath ()->dispatch_pos_str (arg0);
+}
+
+std::string
+dummy_target::dispatch_pos_str (thread_info *arg0)
+{
+  return default_dispatch_pos_str (this, arg0);
+}
+
+std::string
+debug_target::dispatch_pos_str (thread_info *arg0)
+{
+  std::string result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->dispatch_pos_str (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->dispatch_pos_str (arg0);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->dispatch_pos_str (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_std_string (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+std::string
+target_ops::thread_workgroup_pos_str (thread_info *arg0)
+{
+  return this->beneath ()->thread_workgroup_pos_str (arg0);
+}
+
+std::string
+dummy_target::thread_workgroup_pos_str (thread_info *arg0)
+{
+  return default_thread_workgroup_pos_str (this, arg0);
+}
+
+std::string
+debug_target::thread_workgroup_pos_str (thread_info *arg0)
+{
+  std::string result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->thread_workgroup_pos_str (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->thread_workgroup_pos_str (arg0);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->thread_workgroup_pos_str (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_std_string (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+std::string
+target_ops::lane_workgroup_pos_str (thread_info *arg0, int arg1)
+{
+  return this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
+}
+
+std::string
+dummy_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
+{
+  return default_lane_workgroup_pos_str (this, arg0, arg1);
+}
+
+std::string
+debug_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
+{
+  std::string result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->lane_workgroup_pos_str (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->lane_workgroup_pos_str (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_int (arg1);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_std_string (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }
@@ -4532,6 +4679,88 @@ debug_target::store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector
   target_debug_print_int (arg3);
   fputs_unfiltered (") = ", gdb_stdlog);
   target_debug_print_bool (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+bool
+target_ops::supports_displaced_step (thread_info *arg0)
+{
+  return this->beneath ()->supports_displaced_step (arg0);
+}
+
+bool
+dummy_target::supports_displaced_step (thread_info *arg0)
+{
+  return default_supports_displaced_step (this, arg0);
+}
+
+bool
+debug_target::supports_displaced_step (thread_info *arg0)
+{
+  bool result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->supports_displaced_step (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->supports_displaced_step (arg0);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->supports_displaced_step (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_bool (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+displaced_step_prepare_status
+target_ops::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
+{
+  return this->beneath ()->displaced_step_prepare (arg0, arg1);
+}
+
+displaced_step_prepare_status
+dummy_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
+{
+  return default_displaced_step_prepare (this, arg0, arg1);
+}
+
+displaced_step_prepare_status
+debug_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
+{
+  displaced_step_prepare_status result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->displaced_step_prepare (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->displaced_step_prepare (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->displaced_step_prepare (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_CORE_ADDR_r (arg1);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_displaced_step_prepare_status (result);
+  fputs_unfiltered ("\n", gdb_stdlog);
+  return result;
+}
+
+displaced_step_finish_status
+target_ops::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+{
+  return this->beneath ()->displaced_step_finish (arg0, arg1);
+}
+
+displaced_step_finish_status
+dummy_target::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+{
+  return default_displaced_step_finish (this, arg0, arg1);
+}
+
+displaced_step_finish_status
+debug_target::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+{
+  displaced_step_finish_status result;
+  fprintf_unfiltered (gdb_stdlog, "-> %s->displaced_step_finish (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->displaced_step_finish (arg0, arg1);
+  fprintf_unfiltered (gdb_stdlog, "<- %s->displaced_step_finish (", this->beneath ()->shortname ());
+  target_debug_print_thread_info_p (arg0);
+  fputs_unfiltered (", ", gdb_stdlog);
+  target_debug_print_gdb_signal (arg1);
+  fputs_unfiltered (") = ", gdb_stdlog);
+  target_debug_print_displaced_step_finish_status (result);
   fputs_unfiltered ("\n", gdb_stdlog);
   return result;
 }

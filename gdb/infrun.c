@@ -2,6 +2,7 @@
    process.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -141,11 +142,12 @@ show_step_stop_if_no_debug (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("Mode of the step operation is %s.\n"), value);
 }
 
-/* proceed and normal_stop use this to notify the user when the
-   inferior stopped in a different thread than it had been running
-   in.  */
+/* proceed and normal_stop use these to notify the user when the
+   inferior stopped in a different thread/lane than it had been
+   running in.  */
 
 static ptid_t previous_inferior_ptid;
+static int previous_lane;
 
 /* If set (default for legacy reasons), when following a fork, GDB
    will detach from one of the fork branches, child or parent.
@@ -160,6 +162,19 @@ show_debug_infrun (struct ui_file *file, int from_tty,
 		   struct cmd_list_element *c, const char *value)
 {
   fprintf_filtered (file, _("Inferior debugging is %s.\n"), value);
+}
+
+/* See infrun.h.  */
+bool maint_lane_divergence_support = true;
+
+/* Implementation of "maint show lane-divergence-support".  */
+
+static void
+maint_show_lane_divergence_support (ui_file *file, int from_tty,
+				    cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("Lane divergence debugging support is %s.\n"),
+		    value);
 }
 
 /* Support for disabling address space randomization.  */
@@ -1529,15 +1544,15 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
 			"to step over breakpoints is %s.\n"), value);
 }
 
-/* Return true if the gdbarch implements the required methods to use
-   displaced stepping.  */
+/* Return true if the target behing THREAD supports displaced stepping.  */
 
 static bool
-gdbarch_supports_displaced_stepping (gdbarch *arch)
+target_supports_displaced_stepping (thread_info *thread)
 {
-  /* Only check for the presence of `prepare`.  The gdbarch verification ensures
-     that if `prepare` is provided, so is `finish`.  */
-  return gdbarch_displaced_step_prepare_p (arch);
+  inferior *inf = thread->inf;
+  target_ops *target = inf->top_target ();
+
+  return target->supports_displaced_step (thread);
 }
 
 /* Return non-zero if displaced stepping can/should be used to step
@@ -1556,11 +1571,8 @@ use_displaced_stepping (thread_info *tp)
       && !target_is_non_stop_p ())
     return false;
 
-  gdbarch *gdbarch = get_thread_regcache (tp)->arch ();
-
-  /* If the architecture doesn't implement displaced stepping, don't use
-     it.  */
-  if (!gdbarch_supports_displaced_stepping (gdbarch))
+  /* If the target doesn't support displaced stepping, don't use it.  */
+  if (!target_supports_displaced_stepping (tp))
     return false;
 
   /* If recording, don't use displaced stepping.  */
@@ -1632,9 +1644,9 @@ displaced_step_prepare_throw (thread_info *tp)
   displaced_step_thread_state &disp_step_thread_state
     = tp->displaced_step_state;
 
-  /* We should never reach this function if the architecture does not
+  /* We should never reach this function if the target does not
      support displaced stepping.  */
-  gdb_assert (gdbarch_supports_displaced_stepping (gdbarch));
+  gdb_assert (target_supports_displaced_stepping (tp));
 
   /* Nor if the thread isn't meant to step over a breakpoint.  */
   gdb_assert (tp->control.trap_expected);
@@ -1672,7 +1684,7 @@ displaced_step_prepare_throw (thread_info *tp)
   CORE_ADDR displaced_pc;
 
   displaced_step_prepare_status status
-    = gdbarch_displaced_step_prepare (gdbarch, tp, displaced_pc);
+    = tp->inf->top_target ()->displaced_step_prepare (tp, displaced_pc);
 
   if (status == DISPLACED_STEP_PREPARE_STATUS_CANT)
     {
@@ -1780,8 +1792,9 @@ displaced_step_finish (thread_info *event_thread, enum gdb_signal signal)
 
   /* Do the fixup, and release the resources acquired to do the displaced
      step. */
-  return gdbarch_displaced_step_finish (displaced->get_original_gdbarch (),
-					event_thread, signal);
+  return
+    event_thread->inf->top_target ()->displaced_step_finish (event_thread,
+							     signal);
 }
 
 /* Data to be passed around while handling an event.  This data is
@@ -2070,6 +2083,34 @@ maybe_software_singlestep (struct gdbarch *gdbarch)
     hw_step = !insert_single_step_breakpoints (gdbarch);
 
   return hw_step;
+}
+
+static void
+prevent_new_threads (bool prevent, process_stratum_target *filter_target,
+		     int filter_pid, const char *reason)
+{
+  infrun_debug_printf ("prevent=%d, filter_target=%s, filter_pid=%d, reason=%s",
+		       prevent,
+		       (filter_target != nullptr
+			? filter_target->connection_string () : "nullptr"),
+		       filter_pid, reason);
+
+  /* If a filter_pid is passed, a filter_target must be passed.  Otherwise, the
+     pid could erroneously match inferiors with the same pid in different
+     targets.  */
+  if (filter_pid != -1)
+    gdb_assert (filter_target != nullptr);
+
+  scoped_restore_current_thread restore_thread;
+
+  for (inferior *inf : all_inferiors (filter_target))
+    {
+      if (filter_pid != -1 && filter_pid != inf->pid)
+	continue;
+
+      switch_to_inferior_no_thread (inf);
+      inf->top_target ()->prevent_new_threads (prevent, inf);
+    }
 }
 
 /* See infrun.h.  */
@@ -2388,7 +2429,8 @@ resume_1 (enum gdb_signal sig)
 	  /* Fallback to stepping over the breakpoint in-line.  */
 
 	  if (target_is_non_stop_p ())
-	    stop_all_threads ();
+	    stop_all_threads ("starting in-line step-over (fallback from "
+			      "displaced step)");
 
 	  set_step_over_info (regcache->aspace (),
 			      regcache_read_pc (regcache), 0, tp->global_num);
@@ -3064,8 +3106,9 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       return;
     }
 
-  /* We'll update this if & when we switch to a new thread.  */
+  /* We'll update these if & when we switch to a new thread/lane.  */
   previous_inferior_ptid = inferior_ptid;
+  previous_lane = inferior_thread ()->current_simd_lane ();
 
   regcache = get_current_regcache ();
   gdbarch = regcache->arch ();
@@ -3266,6 +3309,21 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 	  error (_("Command aborted."));
       }
 
+    /* keep_going_pass_signal has inserted the breakpoints, it's now safe
+       to allow the target to spawn new random threads.  Unless an in-line step
+       over is in progress, in which case a breakpoint is out and no thread
+       other than the stepping thread must run.  And unless scheduler-locking is
+       enabled, in which case new threads aren't allowed to run.  */
+    bool prevent_new_threads
+      = step_over_info_valid_p () || schedlock_applies (cur_thr);
+    infrun_debug_printf ("step_over_info_valid_p=%d, schedlock_applies=%d, "
+			 "prevent_new_threads=%d",
+			 step_over_info_valid_p (),
+			 schedlock_applies (cur_thr),
+			 prevent_new_threads);
+    ::prevent_new_threads (prevent_new_threads, resume_target, resume_ptid.pid (),
+			   "proceeding");
+
     disable_commit_resumed.reset_and_commit ();
   }
 
@@ -3330,6 +3388,10 @@ init_wait_for_inferior (void)
   nullify_last_target_wait_ptid ();
 
   previous_inferior_ptid = inferior_ptid;
+  if (inferior_ptid != null_ptid)
+    previous_lane = inferior_thread ()->current_simd_lane ();
+  else
+    previous_lane = -1;
 }
 
 
@@ -4904,7 +4966,7 @@ handle_one (const wait_one_event &event)
 /* See infrun.h.  */
 
 void
-stop_all_threads (void)
+stop_all_threads (const char *reason)
 {
   /* We may need multiple passes to discover all threads.  */
   int pass;
@@ -4916,12 +4978,23 @@ stop_all_threads (void)
 
   scoped_restore_current_thread restore_thread;
 
-  /* Enable thread events of all targets.  */
+  /* Enable thread events of all targets: if a thread spawns another thread
+     we'll get an event and both the "parent" and "child" will be stopped,
+     allowing us to converge towards all threads being stopped.  Also, if a
+     thread exits just before we try to stop it, we'll get notified, so we won't
+     wait forever for a stop of a thread that doesn't exist anymore.  */
   for (auto *target : all_non_exited_process_targets ())
     {
       switch_to_target_no_thread (target);
       target_thread_events (true);
     }
+
+  /* Prevent targets from spuriously creating new threads.  Again, this allows
+     us to converge towards all threads stopped.  Note that unlike thread
+     events, we leave this set after returning so that no new threads appear
+     during the window of time where all threads are stopped (during the time
+     the user is at the prompt in all-stop, for example).   */
+  prevent_new_threads (true, nullptr, -1, reason);
 
   SCOPE_EXIT
     {
@@ -5454,7 +5527,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	   enforced during gdbarch validation to support architectures
 	   which support displaced stepping but not forks.  */
 	if (ecs->ws.kind () == TARGET_WAITKIND_FORKED
-	    && gdbarch_supports_displaced_stepping (gdbarch))
+	    && target_supports_displaced_stepping (ecs->event_thread))
 	  gdbarch_displaced_step_restore_all_in_ptid
 	    (gdbarch, parent_inf, ecs->ws.child_ptid ());
 
@@ -5854,6 +5927,11 @@ finish_step_over (struct execution_control_state *ecs)
       insert_breakpoints ();
 
       restart_threads (ecs->event_thread);
+
+      /* Now that breakpoints are re-inserted, it's safe to allow the target to
+         spawn new random threads.
+	 FIXME: we might want to use some filter here */
+      prevent_new_threads (false, nullptr, -1, "finish step over");
 
       /* If we have events pending, go through handle_inferior_event
 	 again, picking up a pending event at random.  This avoids
@@ -6420,6 +6498,38 @@ handle_signal_stop (struct execution_control_state *ecs)
   process_event_stop_test (ecs);
 }
 
+/* Switch to an active lane that caused the stop.  If we stopped for a
+   breakpoint, use the breakpoint's lane mask to determine candidate
+   active lanes, as it may have been further restricted from the
+   thread's execution mask.  Otherwise, use the thread's execution
+   mask.  If the previous current lane is still active, do not change
+   lanes.  Otherwise, select the first active lane.  If all lanes are
+   masked out, leave the previous current lane selected.  */
+
+static void
+switch_to_active_lane (thread_info *thr)
+{
+  simd_lanes_mask_t mask;
+  if (thr->control.stop_bpstat != nullptr)
+    mask = thr->control.stop_bpstat->simd_lane_mask;
+  else
+    mask = thr->active_simd_lanes_mask ();
+
+  if (mask != 0)
+    {
+      int current_simd_lane = thr->current_simd_lane ();
+      /* If previous SIMD lane matches the SIMD lane mask, do not
+	 change it.  Otherwise, find a new one.  */
+      if (!is_simd_lane_active (mask, current_simd_lane))
+	{
+	  /* If a specific SIMD lane caused the stop, then switch the
+	     thread to this lane.  */
+	  int first_lane = find_first_active_simd_lane (mask);
+	  thr->set_current_simd_lane (first_lane);
+	}
+    }
+}
+
 /* Come here when we've got some debug event / signal we can explain
    (IOW, not a random signal), and test whether it should cause a
    stop, or whether we should resume the inferior (transparently).
@@ -6695,6 +6805,21 @@ process_event_stop_test (struct execution_control_state *ecs)
     {
       infrun_debug_printf ("no stepping, continue");
       /* Likewise if we aren't even stepping.  */
+      keep_going (ecs);
+      return;
+    }
+
+  /* If this lane is divergent, keep stepping until it becomes
+     active.  */
+  if (maint_lane_divergence_support
+      && (!ecs->event_thread->is_simd_lane_active
+	  (ecs->event_thread->current_simd_lane ())))
+    {
+      infrun_debug_printf
+	("stepping divergent lane %s",
+	 target_lane_to_str (ecs->event_thread,
+			     ecs->event_thread->current_simd_lane ()).c_str ());
+
       keep_going (ecs);
       return;
     }
@@ -7957,7 +8082,7 @@ stop_waiting (struct execution_control_state *ecs)
   /* If all-stop, but there exists a non-stop target, stop all
      threads now that we're presenting the stop to the user.  */
   if (!non_stop && exists_non_stop_target ())
-    stop_all_threads ();
+    stop_all_threads ("all-stop stop");
 }
 
 /* Like keep_going, but passes the signal to the inferior, even if the
@@ -8057,7 +8182,7 @@ keep_going_pass_signal (struct execution_control_state *ecs)
 	 we're about to step over, otherwise other threads could miss
 	 it.  */
       if (step_over_info_valid_p () && target_is_non_stop_p ())
-	stop_all_threads ();
+	stop_all_threads ("starting in-line step-over");
 
       /* Stop stepping if inserting breakpoints fails.  */
       try
@@ -8351,6 +8476,8 @@ maybe_remove_breakpoints (void)
 {
   if (!breakpoints_should_be_inserted_now () && target_has_execution ())
     {
+      prevent_new_threads (true, nullptr, -1, "removing breakpoints");
+
       if (remove_breakpoints ())
 	{
 	  target_terminal::ours_for_output ();
@@ -8471,6 +8598,12 @@ normal_stop (void)
      instead of after.  */
   update_thread_list ();
 
+  if (target_has_execution ()
+      && last.kind () != TARGET_WAITKIND_SIGNALLED
+      && last.kind () != TARGET_WAITKIND_EXITED
+      && last.kind () != TARGET_WAITKIND_NO_RESUMED)
+    switch_to_active_lane (inferior_thread ());
+
   if (last.kind () == TARGET_WAITKIND_STOPPED && stopped_by_random_signal)
     gdb::observers::signal_received.notify (inferior_thread ()->stop_signal ());
 
@@ -8491,20 +8624,40 @@ normal_stop (void)
      after this event is handled, so we're not really switching, only
      informing of a stop.  */
   if (!non_stop
-      && previous_inferior_ptid != inferior_ptid
       && target_has_execution ()
       && last.kind () != TARGET_WAITKIND_SIGNALLED
       && last.kind () != TARGET_WAITKIND_EXITED
-      && last.kind () != TARGET_WAITKIND_NO_RESUMED)
+      && last.kind () != TARGET_WAITKIND_NO_RESUMED
+      && (previous_inferior_ptid != inferior_ptid
+	  || previous_lane != inferior_thread ()->current_simd_lane ()))
     {
+      thread_info *thr = inferior_thread ();
+
       SWITCH_THRU_ALL_UIS ()
 	{
 	  target_terminal::ours_for_output ();
-	  printf_filtered (_("[Switching to %s]\n"),
-			   target_pid_to_str (inferior_ptid).c_str ());
+
+	  if (thr->has_simd_lanes ())
+	    {
+	      int lane = thr->current_simd_lane ();
+
+	      printf_filtered (_("[Switching to thread %s, lane %d (%s)]\n"),
+			       print_thread_id (thr), lane,
+			       target_lane_to_str (thr, lane).c_str ());
+	    }
+	  else
+	    {
+	      printf_filtered (_("[Switching to thread %s (%s)]\n"),
+			       print_thread_id (thr),
+			       target_pid_to_str (thr->ptid).c_str ());
+	    }
+
+	  warn_if_current_lane_is_inactive ();
+
 	  annotate_thread_changed ();
 	}
       previous_inferior_ptid = inferior_ptid;
+      previous_lane = thr->current_simd_lane ();
     }
 
   if (last.kind () == TARGET_WAITKIND_NO_RESUMED)
@@ -9742,6 +9895,16 @@ or signalled."),
 			   show_observer_mode,
 			   &setlist,
 			   &showlist);
+
+  add_setshow_boolean_cmd ("lane-divergence-support", class_maintenance,
+			   &maint_lane_divergence_support,  _("\
+Set lane divergence debugging support."), _("\
+Show lane divergence debugging support."), _("\
+When non-zero, lane divergence debugging is enabled."),
+			   nullptr,
+			   maint_show_lane_divergence_support,
+			   &maintenance_set_cmdlist,
+			   &maintenance_show_cmdlist);
 
 #if GDB_SELF_TEST
   selftests::register_test ("infrun_thread_ptid_changed",

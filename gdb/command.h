@@ -1,6 +1,7 @@
 /* Header file for command creation.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -346,6 +347,26 @@ struct setting
     return old_value != this->get<T> ();
   }
 
+  template<typename T>
+  void set_effective_value_getter (typename setting_func_types<T>::get getter)
+  {
+    gdb_assert (var_type_uses<T> (m_var_type));
+    m_effective_getter = reinterpret_cast<erased_func> (getter);
+  }
+
+  template<typename T>
+  gdb::optional<T> effective_value () const
+  {
+    if (m_effective_getter == nullptr)
+      return {};
+
+    gdb_assert (var_type_uses<T> (m_var_type));
+    auto getter =
+      reinterpret_cast<typename setting_func_types<T>::get>
+	(m_effective_getter);
+    return getter ();
+  }
+
 private:
   /* The type of the variable M_VAR is pointing to, or that M_GETTER / M_SETTER
      get or set.  */
@@ -362,6 +383,9 @@ private:
 
   /* Pointer to a user provided setter.  */
   erased_func m_setter = nullptr;
+
+  /* Pointer to a user provided effective value getter.  */
+  erased_func m_effective_getter = nullptr;
 };
 
 /* This structure records one command'd definition.  */

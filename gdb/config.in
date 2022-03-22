@@ -84,6 +84,9 @@
    */
 #undef HAVE_ALLOCA_H
 
+/* Define to 1 if you have the <amd-dbgapi/amd-dbgapi.h> header file. */
+#undef HAVE_AMD_DBGAPI_AMD_DBGAPI_H
+
 /* Define to 1 if you have the `btowc' function. */
 #undef HAVE_BTOWC
 
@@ -259,6 +262,9 @@
 /* Define if you have the mpfr library. */
 #undef HAVE_LIBMPFR
 
+/* Define to 1 if you have the `rocm-dbgapi' library (-lrocm-dbgapi). */
+#undef HAVE_LIBROCM_DBGAPI
+
 /* Define to 1 if you have the <libunwind-ia64.h> header file. */
 #undef HAVE_LIBUNWIND_IA64_H
 
@@ -369,9 +375,6 @@
 
 /* Define if sys/ptrace.h defines the PT_GETDBREGS request. */
 #undef HAVE_PT_GETDBREGS
-
-/* Define if sys/ptrace.h defines the PT_GETXMMREGS request. */
-#undef HAVE_PT_GETXMMREGS
 
 /* Define to 1 if you have the `pt_insn_event' function. */
 #undef HAVE_PT_INSN_EVENT

@@ -1,6 +1,7 @@
 /* Select target systems and architectures at runtime for GDB.
 
    Copyright (C) 1990-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.
 
@@ -2641,6 +2642,30 @@ target_pid_to_str (ptid_t ptid)
   return current_inferior ()->top_target ()->pid_to_str (ptid);
 }
 
+std::string
+target_lane_to_str (thread_info *thr, int lane)
+{
+  return current_inferior ()->top_target ()->lane_to_str (thr, lane);
+}
+
+std::string
+target_dispatch_pos_str (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->dispatch_pos_str (thr);
+}
+
+std::string
+target_thread_workgroup_pos_str (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->thread_workgroup_pos_str (thr);
+}
+
+std::string
+target_lane_workgroup_pos_str (thread_info *thr, int lane)
+{
+  return current_inferior ()->top_target ()->lane_workgroup_pos_str (thr, lane);
+}
+
 const char *
 target_thread_name (struct thread_info *info)
 {
@@ -3717,6 +3742,30 @@ default_pid_to_str (struct target_ops *ops, ptid_t ptid)
   return normal_pid_to_str (ptid);
 }
 
+static std::string
+default_lane_to_str (struct target_ops *ops, thread_info *thr, int lane)
+{
+  return target_pid_to_str (thr->ptid);
+}
+
+static std::string
+default_dispatch_pos_str (struct target_ops *ops, thread_info *thr)
+{
+  return {};
+}
+
+static std::string
+default_thread_workgroup_pos_str (struct target_ops *ops, thread_info *thr)
+{
+  return {};
+}
+
+static std::string
+default_lane_workgroup_pos_str (struct target_ops *ops, thread_info *thr, int lane)
+{
+  return {};
+}
+
 /* Error-catcher for target_find_memory_regions.  */
 static int
 dummy_find_memory_regions (struct target_ops *self,
@@ -4370,7 +4419,17 @@ target_async (int enable)
      async mode is possible for this target.  */
   gdb_assert (!enable || target_can_async_p ());
   infrun_async (enable);
-  current_inferior ()->top_target ()->async (enable);
+
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+  scoped_restore_current_thread restore_thread;
+
+  for (inferior *inf : all_inferiors (proc_target))
+    {
+      if (current_inferior () != inf)
+	switch_to_inferior_no_thread (inf);
+
+      inf->top_target ()->async (enable);
+    }
 }
 
 /* See target.h.  */

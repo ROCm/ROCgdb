@@ -1,6 +1,7 @@
 /* GDB routines for manipulating objfiles.
 
    Copyright (C) 1992-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support, using pieces from other GDB modules.
 
@@ -53,6 +54,7 @@
 #include "gdb_bfd.h"
 #include "btrace.h"
 #include "gdbsupport/pathstuff.h"
+#include "stack.h"
 
 #include <algorithm>
 #include <vector>
@@ -594,6 +596,11 @@ objfile::~objfile ()
     if (cursal.symtab && cursal.symtab->objfile () == this)
       clear_current_source_symtab_and_line ();
   }
+
+  /* Likewise, but for the last displayed symtab.  */
+  symtab *s = get_last_displayed_symtab ();
+  if (s != nullptr && s->objfile () == this)
+    clear_last_displayed_sal ();
 
   /* Free the obstacks for non-reusable objfiles.  */
   obstack_free (&objfile_obstack, 0);

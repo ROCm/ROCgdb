@@ -4,6 +4,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -93,6 +94,9 @@ struct gdbarch
   gdbarch_register_name_ftype *register_name;
   gdbarch_register_type_ftype *register_type;
   gdbarch_dummy_id_ftype *dummy_id;
+  gdbarch_active_lanes_mask_ftype *active_lanes_mask;
+  gdbarch_supported_lanes_count_ftype *supported_lanes_count;
+  gdbarch_used_lanes_count_ftype *used_lanes_count;
   int deprecated_fp_regnum;
   gdbarch_push_dummy_call_ftype *push_dummy_call;
   int call_dummy_location;
@@ -113,6 +117,12 @@ struct gdbarch
   gdbarch_pointer_to_address_ftype *pointer_to_address;
   gdbarch_address_to_pointer_ftype *address_to_pointer;
   gdbarch_integer_to_address_ftype *integer_to_address;
+  gdbarch_address_spaces_ftype *address_spaces;
+  gdbarch_address_space_id_from_core_address_ftype *address_space_id_from_core_address;
+  gdbarch_segment_address_from_core_address_ftype *segment_address_from_core_address;
+  gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address;
+  gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id;
+  gdbarch_address_scope_ftype *address_scope;
   gdbarch_return_value_ftype *return_value;
   gdbarch_return_in_first_hidden_param_p_ftype *return_in_first_hidden_param_p;
   gdbarch_skip_prologue_ftype *skip_prologue;
@@ -303,6 +313,8 @@ gdbarch_alloc (const struct gdbarch_info *info,
   gdbarch->sdb_reg_to_regnum = no_op_reg_to_regnum;
   gdbarch->dwarf2_reg_to_regnum = no_op_reg_to_regnum;
   gdbarch->dummy_id = default_dummy_id;
+  gdbarch->supported_lanes_count = default_supported_lanes_count;
+  gdbarch->used_lanes_count = gdbarch_supported_lanes_count;
   gdbarch->deprecated_fp_regnum = -1;
   gdbarch->call_dummy_location = AT_ENTRY_POINT;
   gdbarch->code_of_frame_writable = default_code_of_frame_writable;
@@ -446,6 +458,9 @@ verify_gdbarch (struct gdbarch *gdbarch)
   if (gdbarch->register_type == 0)
     log.puts ("\n\tregister_type");
   /* Skip verify of dummy_id, invalid_p == 0 */
+  /* Skip verify of active_lanes_mask, has predicate.  */
+  /* Skip verify of supported_lanes_count, invalid_p == 0 */
+  /* Skip verify of used_lanes_count, invalid_p == 0 */
   /* Skip verify of deprecated_fp_regnum, invalid_p == 0 */
   /* Skip verify of push_dummy_call, has predicate.  */
   /* Skip verify of call_dummy_location, invalid_p == 0 */
@@ -466,6 +481,17 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of pointer_to_address, invalid_p == 0 */
   /* Skip verify of address_to_pointer, invalid_p == 0 */
   /* Skip verify of integer_to_address, has predicate.  */
+  /* Skip verify of address_spaces, has predicate.  */
+  if (gdbarch->address_space_id_from_core_address == 0)
+    gdbarch->address_space_id_from_core_address = default_address_space_id_from_core_address;
+  if (gdbarch->segment_address_from_core_address == 0)
+    gdbarch->segment_address_from_core_address = default_segment_address_from_core_address;
+  if (gdbarch->segment_address_to_core_address == 0)
+    gdbarch->segment_address_to_core_address = default_segment_address_to_core_address;
+  if (gdbarch->dwarf_address_space_to_address_space_id == 0)
+    gdbarch->dwarf_address_space_to_address_space_id = default_dwarf_address_space_to_address_space_id;
+  if (gdbarch->address_scope == 0)
+    gdbarch->address_scope = default_address_scope;
   /* Skip verify of return_value, has predicate.  */
   /* Skip verify of return_in_first_hidden_param_p, invalid_p == 0 */
   if (gdbarch->skip_prologue == 0)
@@ -794,6 +820,18 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
                       "gdbarch_dump: dummy_id = <%s>\n",
                       host_address_to_string (gdbarch->dummy_id));
   fprintf_filtered (file,
+                      "gdbarch_dump: gdbarch_active_lanes_mask_p() = %d\n",
+                      gdbarch_active_lanes_mask_p (gdbarch));
+  fprintf_filtered (file,
+                      "gdbarch_dump: active_lanes_mask = <%s>\n",
+                      host_address_to_string (gdbarch->active_lanes_mask));
+  fprintf_filtered (file,
+                      "gdbarch_dump: supported_lanes_count = <%s>\n",
+                      host_address_to_string (gdbarch->supported_lanes_count));
+  fprintf_filtered (file,
+                      "gdbarch_dump: used_lanes_count = <%s>\n",
+                      host_address_to_string (gdbarch->used_lanes_count));
+  fprintf_filtered (file,
                       "gdbarch_dump: deprecated_fp_regnum = %s\n",
                       plongest (gdbarch->deprecated_fp_regnum));
   fprintf_filtered (file,
@@ -868,6 +906,27 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_filtered (file,
                       "gdbarch_dump: integer_to_address = <%s>\n",
                       host_address_to_string (gdbarch->integer_to_address));
+  fprintf_filtered (file,
+                      "gdbarch_dump: gdbarch_address_spaces_p() = %d\n",
+                      gdbarch_address_spaces_p (gdbarch));
+  fprintf_filtered (file,
+                      "gdbarch_dump: address_spaces = <%s>\n",
+                      host_address_to_string (gdbarch->address_spaces));
+  fprintf_filtered (file,
+                      "gdbarch_dump: address_space_id_from_core_address = <%s>\n",
+                      host_address_to_string (gdbarch->address_space_id_from_core_address));
+  fprintf_filtered (file,
+                      "gdbarch_dump: segment_address_from_core_address = <%s>\n",
+                      host_address_to_string (gdbarch->segment_address_from_core_address));
+  fprintf_filtered (file,
+                      "gdbarch_dump: segment_address_to_core_address = <%s>\n",
+                      host_address_to_string (gdbarch->segment_address_to_core_address));
+  fprintf_filtered (file,
+                      "gdbarch_dump: dwarf_address_space_to_address_space_id = <%s>\n",
+                      host_address_to_string (gdbarch->dwarf_address_space_to_address_space_id));
+  fprintf_filtered (file,
+                      "gdbarch_dump: address_scope = <%s>\n",
+                      host_address_to_string (gdbarch->address_scope));
   fprintf_filtered (file,
                       "gdbarch_dump: gdbarch_return_value_p() = %d\n",
                       gdbarch_return_value_p (gdbarch));
@@ -2257,6 +2316,64 @@ set_gdbarch_dummy_id (struct gdbarch *gdbarch,
   gdbarch->dummy_id = dummy_id;
 }
 
+bool
+gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->active_lanes_mask != NULL;
+}
+
+simd_lanes_mask_t
+gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->active_lanes_mask != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_active_lanes_mask called\n");
+  return gdbarch->active_lanes_mask (gdbarch, tp);
+}
+
+void
+set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch,
+                               gdbarch_active_lanes_mask_ftype active_lanes_mask)
+{
+  gdbarch->active_lanes_mask = active_lanes_mask;
+}
+
+int
+gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->supported_lanes_count != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_supported_lanes_count called\n");
+  return gdbarch->supported_lanes_count (gdbarch, tp);
+}
+
+void
+set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch,
+                                   gdbarch_supported_lanes_count_ftype supported_lanes_count)
+{
+  gdbarch->supported_lanes_count = supported_lanes_count;
+}
+
+int
+gdbarch_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->used_lanes_count != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_used_lanes_count called\n");
+  return gdbarch->used_lanes_count (gdbarch, tp);
+}
+
+void
+set_gdbarch_used_lanes_count (struct gdbarch *gdbarch,
+                              gdbarch_used_lanes_count_ftype used_lanes_count)
+{
+  gdbarch->used_lanes_count = used_lanes_count;
+}
+
 int
 gdbarch_deprecated_fp_regnum (struct gdbarch *gdbarch)
 {
@@ -2616,13 +2733,13 @@ gdbarch_integer_to_address_p (struct gdbarch *gdbarch)
 }
 
 CORE_ADDR
-gdbarch_integer_to_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf)
+gdbarch_integer_to_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->integer_to_address != NULL);
   if (gdbarch_debug >= 2)
     fprintf_unfiltered (gdb_stdlog, "gdbarch_integer_to_address called\n");
-  return gdbarch->integer_to_address (gdbarch, type, buf);
+  return gdbarch->integer_to_address (gdbarch, type, buf, address_space_id);
 }
 
 void
@@ -2630,6 +2747,115 @@ set_gdbarch_integer_to_address (struct gdbarch *gdbarch,
                                 gdbarch_integer_to_address_ftype integer_to_address)
 {
   gdbarch->integer_to_address = integer_to_address;
+}
+
+bool
+gdbarch_address_spaces_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->address_spaces != NULL;
+}
+
+gdb::array_view<const arch_addr_space>
+gdbarch_address_spaces (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->address_spaces != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_address_spaces called\n");
+  return gdbarch->address_spaces (gdbarch);
+}
+
+void
+set_gdbarch_address_spaces (struct gdbarch *gdbarch,
+                            gdbarch_address_spaces_ftype address_spaces)
+{
+  gdbarch->address_spaces = address_spaces;
+}
+
+arch_addr_space_id
+gdbarch_address_space_id_from_core_address (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->address_space_id_from_core_address != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_address_space_id_from_core_address called\n");
+  return gdbarch->address_space_id_from_core_address (address);
+}
+
+void
+set_gdbarch_address_space_id_from_core_address (struct gdbarch *gdbarch,
+                                                gdbarch_address_space_id_from_core_address_ftype address_space_id_from_core_address)
+{
+  gdbarch->address_space_id_from_core_address = address_space_id_from_core_address;
+}
+
+CORE_ADDR
+gdbarch_segment_address_from_core_address (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->segment_address_from_core_address != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_segment_address_from_core_address called\n");
+  return gdbarch->segment_address_from_core_address (address);
+}
+
+void
+set_gdbarch_segment_address_from_core_address (struct gdbarch *gdbarch,
+                                               gdbarch_segment_address_from_core_address_ftype segment_address_from_core_address)
+{
+  gdbarch->segment_address_from_core_address = segment_address_from_core_address;
+}
+
+CORE_ADDR
+gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, arch_addr_space_id address_space_id, CORE_ADDR address)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->segment_address_to_core_address != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_segment_address_to_core_address called\n");
+  return gdbarch->segment_address_to_core_address (address_space_id, address);
+}
+
+void
+set_gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch,
+                                             gdbarch_segment_address_to_core_address_ftype segment_address_to_core_address)
+{
+  gdbarch->segment_address_to_core_address = segment_address_to_core_address;
+}
+
+arch_addr_space_id
+gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, LONGEST dwarf_addr_space)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->dwarf_address_space_to_address_space_id != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_dwarf_address_space_to_address_space_id called\n");
+  return gdbarch->dwarf_address_space_to_address_space_id (dwarf_addr_space);
+}
+
+void
+set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch,
+                                                     gdbarch_dwarf_address_space_to_address_space_id_ftype dwarf_address_space_to_address_space_id)
+{
+  gdbarch->dwarf_address_space_to_address_space_id = dwarf_address_space_to_address_space_id;
+}
+
+enum address_scope
+gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->address_scope != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_address_scope called\n");
+  return gdbarch->address_scope (gdbarch, address);
+}
+
+void
+set_gdbarch_address_scope (struct gdbarch *gdbarch,
+                           gdbarch_address_scope_ftype address_scope)
+{
+  gdbarch->address_scope = address_scope;
 }
 
 bool

@@ -1,5 +1,6 @@
 dnl Autoconf configure script for GDB, the GNU debugger.
 dnl Copyright (C) 1995-2022 Free Software Foundation, Inc.
+dnl Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -231,6 +232,56 @@ if test x${all_targets} = xtrue; then
     TARGET_OBS='$(ALL_TARGET_OBS) $(ALL_64_TARGET_OBS)'
   else
     TARGET_OBS='$(ALL_TARGET_OBS)'
+  fi
+fi
+
+# ROCm dbgapi support.
+
+AC_ARG_WITH(rocm-dbgapi,
+AS_HELP_STRING([--with-rocm-dbgapi=PATH],
+               [specify prefix directory for installed ROCm-dbgapi package]),,
+  [with_rocm_dbgapi=/opt/rocm])
+
+save_CPPFLAGS=${CPPFLAGS}
+CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
+AC_CHECK_HEADERS(amd-dbgapi/amd-dbgapi.h)
+
+if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes; then
+  gdb_rocm_dbgapi_required_version_major=0
+  gdb_rocm_dbgapi_required_version_minor=65
+
+  AC_MSG_CHECKING([for the correct version of amd-dbgapi.h])
+  AC_TRY_COMPILE([#include "amd-dbgapi/amd-dbgapi.h"],[
+#if AMD_DBGAPI_VERSION_MAJOR != $gdb_rocm_dbgapi_required_version_major \
+    || AMD_DBGAPI_VERSION_MINOR < $gdb_rocm_dbgapi_required_version_minor
+# error
+#endif
+], [AC_MSG_RESULT([yes])], [AC_MSG_ERROR([amdgcn*-*-* requires version \
+$gdb_rocm_dbgapi_required_version_major.$gdb_rocm_dbgapi_required_version_minor+])])
+fi
+CPPFLAGS=${save_CPPFLAGS}
+
+save_LIBS=${LIBS}
+save_LDFLAGS=${LDFLAGS}
+LDFLAGS="${LDFLAGS} -L$with_rocm_dbgapi/lib"
+AC_CHECK_LIB(rocm-dbgapi,amd_dbgapi_initialize)
+LDFLAGS=${save_LDFLAGS}
+LIBS=${save_LIBS}
+
+if test x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes \
+    -a x"$ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" = xyes; then
+
+  if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then
+    TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o amdgpu-tdep.o solib-rocm.o"
+  fi
+
+  CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
+  ROCM_DBGAPI_LIBS="-Wl,--rpath,\$\${LD_RUN_PATH:-$with_rocm_dbgapi/lib} $with_rocm_dbgapi/lib/librocm-dbgapi.so"
+  AC_SUBST(ROCM_DBGAPI_LIBS)
+else
+  if test x"$require_rocm_dbgapi" = xyes; then
+    AC_MSG_ERROR([amdgcn*-*-* requires rocm-dbgapi to be installed, or use \
+--with-rocm-dbgapi=PATH])
   fi
 fi
 

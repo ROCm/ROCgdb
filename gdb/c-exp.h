@@ -1,6 +1,7 @@
 /* Definitions for C expressions
 
    Copyright (C) 2020-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -213,6 +214,25 @@ public:
 
   enum exp_opcode opcode () const override
   { return TERNOP_COND; }
+};
+
+/* The # address space conversion operator.  */
+class aspace_operation
+  : public tuple_holding_operation<operation_up, std::string>
+{
+public:
+
+  value *evaluate (struct type *expect_type,
+		   struct expression *exp,
+		   enum noside noside) override;
+
+  enum exp_opcode opcode () const override
+  { return OP_ASPACE; }
+
+protected:
+
+  using tuple_holding_operation::tuple_holding_operation;
+
 };
 
 }/* namespace expr */

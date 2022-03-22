@@ -1,6 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -300,4 +301,41 @@ extern void default_read_core_file_mappings
    struct bfd *cbfd,
    read_core_file_mappings_pre_loop_ftype pre_loop_cb,
    read_core_file_mappings_loop_ftype loop_cb);
+
+/* Architecture address space handling.  */
+
+/* Convert address space name to an address space id.  */
+extern gdb::optional<arch_addr_space_id> gdbarch_name_to_address_space_id
+  (struct gdbarch *gdbarch, const char *name);
+
+/* Convert address space id to an address space name.  */
+extern const char *gdbarch_address_space_id_to_name
+  (struct gdbarch *gdbarch, arch_addr_space_id addr_space_id);
+
+/* Default implementation of
+   gdbarch_dwarf_address_space_to_address_space_id.  */
+extern arch_addr_space_id default_dwarf_address_space_to_address_space_id
+  (LONGEST dwarf_addr_space);
+
+/* TODO: Following default address space hooks are a quick fix until a proper
+	 address space support is added and should not be pushed upstream.  */
+
+/* Default implementation of gdbarch_address_space_id_from_core_address.  */
+extern arch_addr_space_id default_address_space_id_from_core_address
+  (CORE_ADDR address);
+
+/* Default implementation of gdbarch_segment_address_from_core_address.  */
+extern CORE_ADDR default_segment_address_from_core_address (CORE_ADDR address);
+
+/* Default implementation of gdbarch_segment_address_to_core_address.  */
+extern CORE_ADDR default_segment_address_to_core_address
+  (arch_addr_space_id address_space_id, CORE_ADDR address);
+
+/* Return the address's scope.  */
+extern enum address_scope default_address_scope (struct gdbarch *gdbarch,
+						 CORE_ADDR address);
+
+extern int default_supported_lanes_count (struct gdbarch *gdbarch,
+					  thread_info *tp);
+
 #endif /* ARCH_UTILS_H */

@@ -1,6 +1,7 @@
 /* DWARF 2 location expression support for GDB.
 
    Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Daniel Jacobowitz, MontaVista Software, Inc.
 
@@ -1475,15 +1476,15 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
   if (size == 0)
     return allocate_optimized_out_value (subobj_type);
 
-  dwarf_expr_context ctx (per_objfile, per_cu->addr_size ());
-
   value *retval;
   scoped_value_mark free_values;
 
   try
     {
-      retval = ctx.evaluate (data, size, as_lval, per_cu, frame, nullptr,
-			     type, subobj_type, subobj_byte_offset);
+      retval
+	= dwarf2_evaluate (data, size, as_lval, per_objfile, per_cu,
+			   frame, per_cu->addr_size (), nullptr, nullptr,
+			   type, subobj_type, subobj_byte_offset);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1554,23 +1555,28 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 
   dwarf2_per_objfile *per_objfile = dlbaton->per_objfile;
   dwarf2_per_cu_data *per_cu = dlbaton->per_cu;
-  dwarf_expr_context ctx (per_objfile, per_cu->addr_size ());
 
   value *result;
   scoped_value_mark free_values;
+  std::vector<value *> init_values;
 
   if (push_initial_value)
     {
+      struct type *type = address_type (per_objfile->objfile->arch (),
+					per_cu->addr_size ());
+
       if (addr_stack != nullptr)
-	ctx.push_address (addr_stack->addr, false);
+	init_values.push_back (value_at_lazy (type, addr_stack->addr));
       else
-	ctx.push_address (0, false);
+	init_values.push_back (value_at_lazy (type, 0));
     }
 
   try
     {
-      result = ctx.evaluate (dlbaton->data, dlbaton->size,
-			     true, per_cu, frame, addr_stack);
+      result
+	= dwarf2_evaluate (dlbaton->data, dlbaton->size, true, per_objfile,
+			   per_cu, frame, per_cu->addr_size (), &init_values,
+			   addr_stack);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1587,9 +1593,6 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
       else
 	throw;
     }
-
-  if (value_optimized_out (result))
-    return 0;
 
   if (VALUE_LVAL (result) == lval_memory)
     *valp = value_address (result);
@@ -1920,6 +1923,11 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	case DW_OP_nop:
 	case DW_OP_GNU_uninit:
 	case DW_OP_push_object_address:
+	case DW_OP_LLVM_offset:
+	case DW_OP_LLVM_bit_offset:
+	case DW_OP_LLVM_undefined:
+	case DW_OP_LLVM_piece_end:
+	case DW_OP_LLVM_form_aspace_address:
 	  break;
 
 	case DW_OP_form_tls_address:
@@ -1937,6 +1945,7 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	case DW_OP_constu:
 	case DW_OP_plus_uconst:
 	case DW_OP_piece:
+	case DW_OP_LLVM_offset_constu:
 	  op_ptr = safe_skip_leb128 (op_ptr, expr_end);
 	  break;
 
@@ -1945,6 +1954,8 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	  break;
 
 	case DW_OP_bit_piece:
+	case DW_OP_LLVM_select_bit_piece:
+	case DW_OP_LLVM_extend:
 	  op_ptr = safe_skip_leb128 (op_ptr, expr_end);
 	  op_ptr = safe_skip_leb128 (op_ptr, expr_end);
 	  break;
@@ -2052,6 +2063,9 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 	case DW_OP_GNU_parameter_ref:
 	case DW_OP_regval_type:
 	case DW_OP_GNU_regval_type:
+	case DW_OP_LLVM_call_frame_entry_reg:
+	case DW_OP_LLVM_aspace_bregx:
+	case DW_OP_LLVM_push_lane:
 	  symbol_needs = SYMBOL_NEEDS_FRAME;
 	  break;
 
@@ -3652,6 +3666,48 @@ disassemble_dwarf_expression (struct ui_file *stream,
 					 gdbarch_byte_order (arch));
 	  data += offset_size;
 	  fprintf_filtered (stream, " offset %s", phex_nz (ul, offset_size));
+	  break;
+
+	case DW_OP_LLVM_offset_constu:
+	  data = safe_read_uleb128 (data, end, &ul);
+	  fprintf_filtered (stream, " %s", pulongest (ul));
+	  break;
+
+	case DW_OP_LLVM_select_bit_piece:
+	  {
+	    uint64_t count;
+
+	    data = safe_read_uleb128 (data, end, &ul);
+	    data = safe_read_uleb128 (data, end, &count);
+	    fprintf_filtered (stream, " piece size %s (bits) pieces count %s",
+			      pulongest (ul), pulongest (count));
+	  }
+	  break;
+
+	case DW_OP_LLVM_extend:
+	  {
+	    uint64_t count;
+
+	    data = safe_read_uleb128 (data, end, &ul);
+	    data = safe_read_uleb128 (data, end, &count);
+	    fprintf_filtered (stream, " piece size %s (bits) pieces count %s",
+	                      pulongest (ul), pulongest (count));
+	  }
+	  break;
+
+	case DW_OP_LLVM_call_frame_entry_reg:
+	  data = safe_read_uleb128 (data, end, &ul);
+	  fprintf_filtered (stream, " register %s [$%s]",
+			    pulongest (ul), locexpr_regname (arch, (int) ul));
+	  break;
+
+	case DW_OP_LLVM_aspace_bregx:
+	  data = safe_read_uleb128 (data, end, &ul);
+	  data = safe_read_sleb128 (data, end, &l);
+	  fprintf_filtered (stream, " register %s [$%s] offset %s",
+			    pulongest (ul),
+			    locexpr_regname (arch, (int) ul),
+			    plongest (l));
 	  break;
 	}
 

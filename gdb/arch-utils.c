@@ -1,6 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1090,6 +1091,89 @@ default_read_core_file_mappings
    read_core_file_mappings_pre_loop_ftype pre_loop_cb,
    read_core_file_mappings_loop_ftype loop_cb)
 {
+}
+
+/* See arch-utils.h.  */
+gdb::optional<arch_addr_space_id>
+gdbarch_name_to_address_space_id (struct gdbarch *gdbarch, const char *name)
+{
+  if (!gdbarch_address_spaces_p (gdbarch))
+    return {};
+
+  auto address_spaces = gdbarch_address_spaces (gdbarch);
+
+  for (const auto &address_space : address_spaces)
+    if (streq (name, address_space.name.get ()))
+      {
+	gdb_assert (address_space.id <= UINT_MAX);
+	return address_space.id;
+      }
+
+  return {};
+}
+
+/* See arch-utils.h.  */
+const char*
+gdbarch_address_space_id_to_name (struct gdbarch *gdbarch,
+				  arch_addr_space_id address_space_id)
+{
+  if (!gdbarch_address_spaces_p (gdbarch))
+    return nullptr;
+
+  auto address_spaces = gdbarch_address_spaces (gdbarch);
+
+  for (const auto &address_space : address_spaces)
+    if (address_space.id == address_space_id)
+	return address_space.name.get ();
+
+  return nullptr;
+}
+
+/* See arch-utils.h.  */
+arch_addr_space_id
+default_address_space_id_from_core_address (CORE_ADDR address)
+{
+  return ARCH_ADDR_SPACE_ID_DEFAULT;
+}
+
+/* See arch-utils.h.  */
+CORE_ADDR
+default_segment_address_from_core_address (CORE_ADDR address)
+{
+  return address;
+}
+
+/* See arch-utils.h.  */
+CORE_ADDR
+default_segment_address_to_core_address (arch_addr_space_id address_space_id,
+					 CORE_ADDR address)
+{
+  if (address_space_id != ARCH_ADDR_SPACE_ID_DEFAULT)
+    warning (_("This architecture doesn't handle \
+non-default address spaces."));
+  return address;
+}
+
+/* See arch-utils.h.  */
+arch_addr_space_id
+default_dwarf_address_space_to_address_space_id (LONGEST dwarf_addr_space)
+{
+  return (arch_addr_space_id) dwarf_addr_space;
+}
+
+/* See arch-utils.h.  */
+enum address_scope
+default_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  return ADDRESS_SCOPE_PROCESS;
+}
+
+/* See arch-utils.h.  */
+
+int
+default_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  return 0;
 }
 
 /* Static function declarations */

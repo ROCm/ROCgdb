@@ -4,6 +4,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -313,6 +314,27 @@ typedef struct frame_id (gdbarch_dummy_id_ftype) (struct gdbarch *gdbarch, struc
 extern struct frame_id gdbarch_dummy_id (struct gdbarch *gdbarch, struct frame_info *this_frame);
 extern void set_gdbarch_dummy_id (struct gdbarch *gdbarch, gdbarch_dummy_id_ftype *dummy_id);
 
+/* Return the active SIMD lanes mask for a thread TP. */
+
+extern bool gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch);
+
+typedef simd_lanes_mask_t (gdbarch_active_lanes_mask_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern simd_lanes_mask_t gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch, gdbarch_active_lanes_mask_ftype *active_lanes_mask);
+
+/* Return the number of lanes supported by the thread. */
+
+typedef int (gdbarch_supported_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern int gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch, gdbarch_supported_lanes_count_ftype *supported_lanes_count);
+
+/* Return the number of lanes used by the thread, accounting for
+   partial work-groups.  Defaults to the number of supported lanes. */
+
+typedef int (gdbarch_used_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern int gdbarch_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_used_lanes_count (struct gdbarch *gdbarch, gdbarch_used_lanes_count_ftype *used_lanes_count);
+
 /* Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
    deprecated_fp_regnum. */
 
@@ -414,9 +436,55 @@ extern void set_gdbarch_address_to_pointer (struct gdbarch *gdbarch, gdbarch_add
 
 extern bool gdbarch_integer_to_address_p (struct gdbarch *gdbarch);
 
-typedef CORE_ADDR (gdbarch_integer_to_address_ftype) (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
-extern CORE_ADDR gdbarch_integer_to_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
+typedef CORE_ADDR (gdbarch_integer_to_address_ftype) (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id);
+extern CORE_ADDR gdbarch_integer_to_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id);
 extern void set_gdbarch_integer_to_address (struct gdbarch *gdbarch, gdbarch_integer_to_address_ftype *integer_to_address);
+
+/* Return a list of supported address spaces. */
+
+extern bool gdbarch_address_spaces_p (struct gdbarch *gdbarch);
+
+typedef gdb::array_view<const arch_addr_space> (gdbarch_address_spaces_ftype) (struct gdbarch *gdbarch);
+extern gdb::array_view<const arch_addr_space> gdbarch_address_spaces (struct gdbarch *gdbarch);
+extern void set_gdbarch_address_spaces (struct gdbarch *gdbarch, gdbarch_address_spaces_ftype *address_spaces);
+
+/* Extracts address space from core address.
+   TODO: This hook is a quick fix until a proper address space support
+   is added and should not be pushed upstream. */
+
+typedef arch_addr_space_id (gdbarch_address_space_id_from_core_address_ftype) (CORE_ADDR address);
+extern arch_addr_space_id gdbarch_address_space_id_from_core_address (struct gdbarch *gdbarch, CORE_ADDR address);
+extern void set_gdbarch_address_space_id_from_core_address (struct gdbarch *gdbarch, gdbarch_address_space_id_from_core_address_ftype *address_space_id_from_core_address);
+
+/* Extracts segment address from core address.
+   TODO: This hook is a quick fix until a proper address space support
+   is added and should not be pushed upstream. */
+
+typedef CORE_ADDR (gdbarch_segment_address_from_core_address_ftype) (CORE_ADDR address);
+extern CORE_ADDR gdbarch_segment_address_from_core_address (struct gdbarch *gdbarch, CORE_ADDR address);
+extern void set_gdbarch_segment_address_from_core_address (struct gdbarch *gdbarch, gdbarch_segment_address_from_core_address_ftype *segment_address_from_core_address);
+
+/* Converts segment address to core address.
+   TODO: This hook is a quick fix until a proper address space support
+   is added and should not be pushed upstream. */
+
+typedef CORE_ADDR (gdbarch_segment_address_to_core_address_ftype) (arch_addr_space_id address_space_id, CORE_ADDR address);
+extern CORE_ADDR gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, arch_addr_space_id address_space_id, CORE_ADDR address);
+extern void set_gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address);
+
+/* Converts DWARF address space number to address space id.
+   TODO: This hook is a quick fix until a proper address space support
+   is added and should not be pushed upstream. */
+
+typedef arch_addr_space_id (gdbarch_dwarf_address_space_to_address_space_id_ftype) (LONGEST dwarf_addr_space);
+extern arch_addr_space_id gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, LONGEST dwarf_addr_space);
+extern void set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id);
+
+/* Return the address's scope. */
+
+typedef enum address_scope (gdbarch_address_scope_ftype) (struct gdbarch *gdbarch, CORE_ADDR address);
+extern enum address_scope gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address);
+extern void set_gdbarch_address_scope (struct gdbarch *gdbarch, gdbarch_address_scope_ftype *address_scope);
 
 /* Return the return-value convention that will be used by FUNCTION
    to return a value of type VALTYPE.  FUNCTION may be NULL in which

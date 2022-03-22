@@ -1,5 +1,6 @@
 /* MI Command Set for GDB, the GNU debugger.
    Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -199,6 +200,7 @@ add_builtin_mi_commands ()
 {
   add_mi_cmd_mi ("ada-task-info", mi_cmd_ada_task_info);
   add_mi_cmd_mi ("add-inferior", mi_cmd_add_inferior);
+  add_mi_cmd_cli ("agent-info", "info agents", 1),
   add_mi_cmd_cli ("break-after", "ignore", 1,
 		  &mi_suppress_notification.breakpoint);
   add_mi_cmd_mi ("break-condition",mi_cmd_break_condition,
@@ -253,6 +255,7 @@ add_builtin_mi_commands ()
 		 &mi_suppress_notification.memory);
   add_mi_cmd_mi ("data-write-register-values",
 		 mi_cmd_data_write_register_values);
+  add_mi_cmd_cli ("dispatch-info", "info dispatches -full", 1),
   add_mi_cmd_mi ("enable-timings", mi_cmd_enable_timings);
   add_mi_cmd_mi ("enable-pretty-printing", mi_cmd_enable_pretty_printing);
   add_mi_cmd_mi ("enable-frame-filters", mi_cmd_enable_frame_filters);
@@ -298,6 +301,7 @@ add_builtin_mi_commands ()
   add_mi_cmd_mi ("list-features", mi_cmd_list_features);
   add_mi_cmd_mi ("list-target-features", mi_cmd_list_target_features);
   add_mi_cmd_mi ("list-thread-groups", mi_cmd_list_thread_groups);
+  add_mi_cmd_cli ("queue-info", "info queues", 1),
   add_mi_cmd_mi ("remove-inferior", mi_cmd_remove_inferior);
   add_mi_cmd_mi ("stack-info-depth", mi_cmd_stack_info_depth);
   add_mi_cmd_mi ("stack-info-frame", mi_cmd_stack_info_frame);
@@ -326,6 +330,7 @@ add_builtin_mi_commands ()
   add_mi_cmd_mi ("target-flash-erase", mi_cmd_target_flash_erase);
   add_mi_cmd_cli ("target-select", "target", 1);
   add_mi_cmd_mi ("thread-info", mi_cmd_thread_info);
+  add_mi_cmd_mi ("lane-info", mi_cmd_lane_info);
   add_mi_cmd_mi ("thread-list-ids", mi_cmd_thread_list_ids);
   add_mi_cmd_mi ("thread-select", mi_cmd_thread_select,
 		 &mi_suppress_notification.user_selected_context);

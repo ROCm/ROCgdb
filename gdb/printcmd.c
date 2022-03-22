@@ -1,6 +1,7 @@
 /* Print values for GNU debugger GDB.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -461,6 +462,23 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 	format = 0;
     }
 
+  /* Printing a pointer type as 'f' doesn't have a meaning,
+     while printing it as 'a' is handled later in the code.  */
+  if (format != 'f' && format != 'a'
+      && type->code () == TYPE_CODE_PTR)
+	{
+	  if (!val_long.has_value ())
+	    val_long.emplace (unpack_long (type, valaddr));
+
+	  fputs_filtered (paspace (gdbarch, *val_long).c_str (), stream);
+	  val_long.emplace
+	    (gdbarch_segment_address_from_core_address (gdbarch, *val_long));
+	  converted_bytes.resize (TYPE_LENGTH (type));
+	  store_signed_integer (converted_bytes.data (), TYPE_LENGTH (type),
+				byte_order, *val_long);
+	  valaddr = converted_bytes.data ();
+	}
+
   switch (format)
     {
     case 'o':
@@ -737,7 +755,8 @@ void
 print_address (struct gdbarch *gdbarch,
 	       CORE_ADDR addr, struct ui_file *stream)
 {
-  fputs_styled (paddress (gdbarch, addr), address_style.style (), stream);
+  fputs_styled (paspace_and_addr (gdbarch, addr).c_str (),
+		address_style.style (), stream);
   print_address_symbolic (gdbarch, addr, stream, asm_demangle, " ");
 }
 
@@ -770,7 +789,8 @@ print_address_demangle (const struct value_print_options *opts,
 {
   if (opts->addressprint)
     {
-      fputs_styled (paddress (gdbarch, addr), address_style.style (), stream);
+      fputs_styled (paspace_and_addr (gdbarch, addr).c_str (),
+		    address_style.style (), stream);
       print_address_symbolic (gdbarch, addr, stream, do_demangle, " ");
     }
   else
@@ -906,7 +926,7 @@ read_memory_backward (struct gdbarch *gdbarch,
 	    {
 	      /* The read was unsuccessful, so exit the loop.  */
 	      printf_filtered (_("Cannot access memory at address %s\n"),
-			       paddress (gdbarch, memaddr));
+			       paspace_and_addr (gdbarch, memaddr).c_str ());
 	      break;
 	    }
 	}
@@ -3231,7 +3251,7 @@ Default count is 1.  Default address is following last thing printed\n\
 with this command or \"print\"."));
   set_cmd_completer_handle_brkchars (c, display_and_x_command_completer);
 
-  add_info ("display", info_display_command, _("\
+  c = add_info ("display", info_display_command, _("\
 Expressions to display when program stops, with code numbers.\n\
 Usage: info display"));
 
@@ -3243,6 +3263,7 @@ No argument means cancel all automatic-display expressions.\n\
 \"delete display\" has the same effect as this command.\n\
 Do \"info display\" to see current list of code numbers."),
 	   &cmdlist);
+  add_info_alias ("disp", c, 1);
 
   c = add_com ("display", class_vars, display_command, _("\
 Print value of expression EXP each time the program stops.\n\
@@ -3254,6 +3275,7 @@ and examining is done as in the \"x\" command.\n\n\
 With no argument, display all currently requested auto-display expressions.\n\
 Use \"undisplay\" to cancel display requests previously made."));
   set_cmd_completer_handle_brkchars (c, display_and_x_command_completer);
+  add_com_alias ("disp", c, class_vars, 1);
 
   add_cmd ("display", class_vars, enable_display_command, _("\
 Enable some expressions to be displayed when program stops.\n\

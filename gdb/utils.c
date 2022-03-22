@@ -1,6 +1,7 @@
 /* General utility routines for GDB, the GNU debugger.
 
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -77,6 +78,7 @@
 #include "gdbsupport/gdb-safe-ctype.h"
 #include "bt-utils.h"
 #include "gdbsupport/buildargv.h"
+#include "arch-utils.h"
 
 void (*deprecated_error_begin_hook) (void);
 
@@ -3320,9 +3322,38 @@ address_significant (gdbarch *gdbarch, CORE_ADDR addr)
   return addr;
 }
 
+std::string
+paspace_and_addr (struct gdbarch *gdbarch, CORE_ADDR addr)
+{
+  return paspace (gdbarch, addr) + paddress (gdbarch, addr);
+}
+
+std::string
+paspace (struct gdbarch *gdbarch, CORE_ADDR addr)
+{
+  arch_addr_space_id addr_space_id
+    = gdbarch_address_space_id_from_core_address (gdbarch, addr);
+
+  /* For backward compatibility, dont print the address
+     space name of the default address space, even if
+     the architecture have a name for it.  */
+  if (addr_space_id == ARCH_ADDR_SPACE_ID_DEFAULT)
+   return "";
+
+  const char *addr_space_str
+    = gdbarch_address_space_id_to_name (gdbarch, addr_space_id);
+
+  if (addr_space_str == nullptr)
+    return "";
+
+  return std::string (addr_space_str) + "#";
+}
+
 const char *
 paddress (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
+  addr = gdbarch_segment_address_from_core_address (gdbarch, addr);
+
   /* Truncate address to the size of a target address, avoiding shifts
      larger or equal than the width of a CORE_ADDR.  The local
      variable ADDR_BIT stops the compiler reporting a shift overflow
@@ -3344,6 +3375,8 @@ paddress (struct gdbarch *gdbarch, CORE_ADDR addr)
 const char *
 print_core_address (struct gdbarch *gdbarch, CORE_ADDR address)
 {
+  address = gdbarch_segment_address_from_core_address (gdbarch, address);
+
   int addr_bit = gdbarch_addr_bit (gdbarch);
 
   if (addr_bit < (sizeof (CORE_ADDR) * HOST_CHAR_BIT))
@@ -3356,6 +3389,12 @@ print_core_address (struct gdbarch *gdbarch, CORE_ADDR address)
     return hex_string_custom (address, 8);
   else
     return hex_string_custom (address, 16);
+}
+
+std::string
+print_aspace_and_address (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  return paspace (gdbarch, address) + print_core_address (gdbarch, address);
 }
 
 /* Convert a string back into a CORE_ADDR.  */

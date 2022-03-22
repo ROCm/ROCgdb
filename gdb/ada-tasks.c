@@ -1,4 +1,5 @@
 /* Copyright (C) 1992-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1561,8 +1562,8 @@ task_apply_all_command (const char *cmd, int from_tty)
 
   for (const auto &info : thr_list_cpy)
     if (switch_to_thread_if_alive (info.second.get ()))
-      thread_try_catch_cmd (info.second.get (), info.first, cmd,
-			    from_tty, flags);
+      thr_lane_try_catch_cmd (false, info.second.get (), 0, info.first, cmd,
+			      from_tty, flags);
 }
 
 /* Implementation of 'task apply'.  */
@@ -1625,8 +1626,8 @@ task_apply_command (const char *tidlist, int from_tty)
 
   for (const auto &info : thr_list_cpy)
     if (switch_to_thread_if_alive (info.second.get ()))
-      thread_try_catch_cmd (info.second.get (), info.first, cmd,
-			    from_tty, flags);
+      thr_lane_try_catch_cmd (false, info.second.get (), 0, info.first, cmd,
+			      from_tty, flags);
 }
 
 void _initialize_tasks ();

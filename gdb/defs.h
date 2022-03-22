@@ -2,6 +2,7 @@
 		      for now.  */
 /* Basic, host-specific, and target-specific definitions for GDB.
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -643,6 +644,27 @@ enum user_selected_what_flag
     USER_SELECTED_FRAME = 1 << 3
   };
 DEF_ENUM_FLAGS_TYPE (enum user_selected_what_flag, user_selected_what);
+
+/* Architecture address space id type.  */
+typedef uint64_t arch_addr_space_id;
+
+/* Default address space id used when the id is not
+   specified or the address spaces are not supported.  */
+constexpr arch_addr_space_id ARCH_ADDR_SPACE_ID_DEFAULT = 0;
+
+/* Architecture address space descriptor.  */
+
+struct arch_addr_space
+{
+  arch_addr_space (arch_addr_space_id id,
+		   gdb::unique_xmalloc_ptr<char> name)
+    : id (id), name (std::move (name))
+  {}
+
+  const arch_addr_space_id id;
+
+  gdb::unique_xmalloc_ptr<char> name;
+};
 
 #include "utils.h"
 

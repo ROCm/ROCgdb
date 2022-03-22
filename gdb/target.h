@@ -1,6 +1,7 @@
 /* Interface between GDB and target environments, including files and processes
 
    Copyright (C) 1990-2022 Free Software Foundation, Inc.
+   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.  Written by John Gilmore.
 
@@ -81,6 +82,7 @@ struct inferior;
 #include "command.h"
 #include "disasm.h"
 #include "tracepoint.h"
+#include "displaced-stepping.h"
 
 #include "gdbsupport/break-common.h" /* For enum target_hw_bp_type.  */
 
@@ -494,6 +496,20 @@ struct target_ops
     virtual void commit_resumed ()
       TARGET_DEFAULT_IGNORE ();
 
+    /* On some targets, threads may spuriously appear while all existing
+       threads are stopped (for example, a hardware scheduler that reads jobs
+       requests from a queue and spawns threads on its own).  This is
+       problematic because GDB sometimes needs to remove breakpoints from the
+       program (for example, while doing an in-line step).  If a thread can
+       randomly appear and execute during that window, it could miss a
+       breakpoint.
+
+       GDB calls `prevent_new_threads (true)` to ask the target to prevent the
+       creation of such threads and calls `prevent_new_threads (false)` to
+       restore the normal state.  */
+    virtual void prevent_new_threads (bool prevent, inferior *inf)
+      TARGET_DEFAULT_IGNORE ();
+
     /* See target_wait's description.  Note that implementations of
        this method must not assume that inferior_ptid on entry is
        pointing at the thread or inferior that ends up reporting an
@@ -673,6 +689,14 @@ struct target_ops
       TARGET_DEFAULT_RETURN (NULL);
     virtual const char *thread_name (thread_info *)
       TARGET_DEFAULT_RETURN (NULL);
+    virtual std::string lane_to_str (thread_info *, int)
+      TARGET_DEFAULT_FUNC (default_lane_to_str);
+    virtual std::string dispatch_pos_str (thread_info *)
+      TARGET_DEFAULT_FUNC (default_dispatch_pos_str);
+    virtual std::string thread_workgroup_pos_str (thread_info *)
+      TARGET_DEFAULT_FUNC (default_thread_workgroup_pos_str);
+    virtual std::string lane_workgroup_pos_str (thread_info *, int)
+      TARGET_DEFAULT_FUNC (default_lane_workgroup_pos_str);
     virtual thread_info *thread_handle_to_thread_info (const gdb_byte *,
 						       int,
 						       inferior *inf)
@@ -1320,6 +1344,16 @@ struct target_ops
     virtual bool store_memtags (CORE_ADDR address, size_t len,
 				const gdb::byte_vector &tags, int type)
       TARGET_DEFAULT_NORETURN (tcomplain ());
+
+    virtual bool supports_displaced_step (thread_info *thread)
+      TARGET_DEFAULT_FUNC (default_supports_displaced_step);
+
+    virtual displaced_step_prepare_status displaced_step_prepare (thread_info *thread,
+								  CORE_ADDR &displaced_pc)
+      TARGET_DEFAULT_FUNC (default_displaced_step_prepare);
+
+    virtual displaced_step_finish_status displaced_step_finish (thread_info *thread, gdb_signal sig)
+      TARGET_DEFAULT_FUNC (default_displaced_step_finish);
   };
 
 /* Deleter for std::unique_ptr.  See comments in
@@ -1911,6 +1945,16 @@ extern exec_direction_kind target_execution_direction ();
 extern std::string target_pid_to_str (ptid_t ptid);
 
 extern std::string normal_pid_to_str (ptid_t ptid);
+
+/* Convert lane LANE of THR to a string.  */
+extern std::string target_lane_to_str (thread_info *thr, int lane);
+
+/* Get the thread's dispatch position as a string.  */
+extern std::string target_dispatch_pos_str (thread_info *thr);
+/* Get the thread's workgroup position as a string.  */
+extern std::string target_thread_workgroup_pos_str (thread_info *thr);
+/* Get the lane's workgroup position as a string.  */
+extern std::string target_lane_workgroup_pos_str (thread_info *thr, int lane);
 
 /* Return a short string describing extra information about PID,
    e.g. "sleeping", "runnable", "running on LWP 3".  Null return value

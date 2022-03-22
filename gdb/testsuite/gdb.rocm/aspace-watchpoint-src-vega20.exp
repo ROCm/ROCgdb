@@ -1,0 +1,211 @@
+# Copyright (C) 2021-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Test address space watchpoint error output.
+
+load_lib dwarf.exp
+load_lib rocm.exp
+
+# This test can only be run on targets which support DWARF-2.
+if {![dwarf2_support]} {
+    return 0
+}
+
+# The base name of the source file(s).
+set srcfile_base lane-pc-vega20
+
+standard_testfile ${srcfile_base}.cpp
+
+# This test can only be run on amdgcn targets.
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: $gdb_test_file_name.exp"
+    return 0
+}
+
+set gpu_target [hcc_amdgpu_target]
+
+# This test can only be run on vega20 GPUs.
+if {$gpu_target != "gfx906"} {
+    verbose "skipping vega20 test: $gdb_test_file_name.exp"
+    return 0
+}
+
+set dwarf_base ${srcfile_base}-kernel-dwarf
+set kernel_base ${srcfile_base}-kernel
+set asmfile_dwarf [standard_output_file $dwarf_base.S]
+set asmfile_kernel $kernel_base.S
+set shlibfile_name $kernel_base.so
+set shlibfile_path [standard_output_file {}]
+set shlibfile [standard_output_file $shlibfile_name]
+
+# Wrap DWARF assembling as well, because Dwarf::assemble internally
+# may spawn GDB.
+with_rocm_gpu_lock {
+
+# Create the DWARF for the kernel.
+Dwarf::assemble $asmfile_dwarf {
+    cu {
+	version 5
+    }  {
+	DW_TAG_compile_unit {
+		{DW_AT_loclists_base cu_table DW_FORM_sec_offset}
+		{DW_AT_language @DW_LANG_OpenCL}
+		{DW_AT_name <stdin>}
+		{DW_AT_producer "clang version 12.0.0"}
+		{DW_AT_comp_dir ./}
+		{DW_AT_low_pc "GenValue" addr}
+		{DW_AT_high_pc "Lfunc_end6" addr}
+		{DW_AT_stmt_list 0x0 DW_FORM_sec_offset}
+		{DW_AT_ranges 0x0 DW_FORM_sec_offset}
+	    } {
+	    declare_labels struct_label int_label char_label \
+			   subrange_label array_int_label
+
+	    subrange_label: DW_TAG_base_type {
+		{DW_AT_byte_size 8 DW_FORM_sdata}
+		{DW_AT_encoding @DW_ATE_unsigned}
+		{DW_AT_name __ARRAY_SIZE_TYPE__}
+	    }
+
+	    int_label: DW_TAG_base_type {
+		{DW_AT_byte_size 4 DW_FORM_sdata}
+		{DW_AT_encoding @DW_ATE_signed}
+		{DW_AT_name int}
+	    }
+
+	    char_label: DW_TAG_base_type {
+		{DW_AT_byte_size 1 DW_FORM_sdata}
+		{DW_AT_encoding @DW_ATE_signed_char}
+		{DW_AT_name char}
+	    }
+
+	    array_int_label: DW_TAG_array_type {
+		{DW_AT_type :$int_label}
+	    } {
+		DW_TAG_subrange_type {
+		    {DW_AT_type :$subrange_label}
+		    {DW_AT_lower_bound 0 DW_FORM_data1}
+		    {DW_AT_upper_bound 0x1F DW_FORM_data1}
+		}
+	    }
+
+	    struct_label: structure_type {
+		{DW_AT_name test_struct}
+		{DW_AT_byte_size 0x88 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_sdata}
+		{DW_AT_decl_line 19 DW_FORM_sdata}
+	    } {
+		member {
+		    {DW_AT_name int_elem}
+		    {DW_AT_type :$int_label}
+		    {DW_AT_decl_file 1 DW_FORM_sdata}
+		    {DW_AT_decl_line 21 DW_FORM_sdata}
+		    {DW_AT_data_member_location 0 DW_FORM_sdata}
+		}
+		member {
+		    {DW_AT_name char_elem}
+		    {DW_AT_type :$char_label}
+		    {DW_AT_decl_file 1 DW_FORM_sdata}
+		    {DW_AT_decl_line 22 DW_FORM_sdata}
+		    {DW_AT_data_member_location 4 DW_FORM_sdata}
+		}
+		member {
+		    {DW_AT_name array_elem}
+		    {DW_AT_type :$array_int_label}
+		    {DW_AT_decl_file 1 DW_FORM_sdata}
+		    {DW_AT_decl_line 23 DW_FORM_sdata}
+		    {DW_AT_data_member_location 0x8 DW_FORM_sdata}
+		}
+	    }
+
+	    DW_TAG_subprogram {
+		{DW_AT_name AddrClassTest}
+		{DW_AT_low_pc "AddrClassTest" addr}
+		{DW_AT_high_pc "Lfunc_end6" addr}
+		{DW_AT_decl_file 1 DW_FORM_sdata}
+		{DW_AT_decl_line 96 DW_FORM_sdata}
+	    } {
+		DW_TAG_variable {
+		    {DW_AT_name local_struct}
+		    {DW_AT_type :$struct_label}
+		    {DW_AT_decl_file 1 DW_FORM_sdata}
+		    {DW_AT_decl_line 98 DW_FORM_sdata}
+		    {DW_AT_location {
+			DW_OP_constu 0x0
+			DW_OP_constu 0x3
+			DW_OP_LLVM_form_aspace_address
+		    } SPECIAL_expr}
+		    {external 1 flag}
+		}
+	    }
+	}
+    }
+}
+
+# Compile the HIP application.
+set cc_flags "-DKERNEL_SO_PATH=\"${shlibfile_path}\"\
+	      -DKERNEL_SO_NAME=\"${shlibfile_name}\""
+
+set options [list debug hip additional_flags=$cc_flags]
+
+if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
+        ${options}] } {
+    untested "HIP application failed to compile"
+    return -1
+}
+
+# Compile OpenCL kernel.
+set asm_options "-target amdgcn-amd-amdhsa -mcpu=$gpu_target"
+
+set options [list additional_flags=$asm_options]
+
+if  { [gdb_compile_ocl_kernel "$asmfile_dwarf ${srcdir}/${subdir}/${asmfile_kernel}" \
+			      "$shlibfile" $options] != "" } {
+    untested "OpenCL kernel debug info failed to assemble"
+    return -1
+}
+
+clean_restart $binfile
+
+# Workaround for
+# https://github.com/RadeonOpenCompute/ROCm/issues/1131.
+gdb_test \
+    "set exec-wrapper env 'LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${rocm_path}/lib'"
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+gdb_breakpoint "AddrClassTest" "allow-pending"
+
+gdb_test_multiple "c" "continue to AddrClassTest" {
+    -wrap -re "exited with code .*" {
+	# This happens when the program can't open the CL runtime (see
+	# workaround above).
+	fail "$gdb_test_name (program exited)"
+	return -1
+    }
+    -wrap -re "hit Breakpoint $decimal, with lanes \\\[0-31\\\], AddrClassTest .*" {
+	pass $gdb_test_name
+    }
+}
+
+# Check for the correct error message when inserting
+# a watchpoint for a variable in the local address space.
+gdb_test "watch local_struct" "Only global memory watchpoints are supported\\."
+
+}

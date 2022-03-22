@@ -1,0 +1,269 @@
+# Copyright 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This testcase exercises MI support for lane debugging features.
+#
+load_lib rocm.exp
+load_lib mi-support.exp
+set MIFLAGS "-i=mi"
+
+standard_testfile lane-execution.cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test."
+    return 0
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Usage:
+#  my_lineno [TEXT]...
+#
+# For each TEXT, find line number of the first line containing TEXT.
+# The found line number is stored in a global called TEXT_line.
+
+proc my_lineno {args} {
+    foreach text $args {
+       global ${text}_line
+       set ${text}_line [gdb_get_line_number $text]
+    }
+}
+
+my_lineno \
+    "if_1_cond" "if_1_then" "if_1_else" "if_1_end" \
+    "if_2_cond" "if_2_then" "if_2_else" "if_2_end" \
+    "if_3_cond" "if_3_then" "if_3_else" "if_3_end"
+
+# The GPU thread's id.
+set gpu_thr ""
+
+# Test MI lanes support.
+
+proc_with_prefix test_mi_lanes {} {
+    global hex decimal mi_gdb_prompt
+    global gpu_thr
+
+    set any "\[^\n\]*"
+
+    set lane_re_A "\\\{id=\"$decimal\",state=\"A\",target-id=\"$any\",frame=\\\{level=\"$decimal\",addr=\"$hex\",func=\"$any\",$any\\\}"
+    set lane_re_I "\\\{id=\"$decimal\",state=\"I\",target-id=\"$any\"\\\}"
+    set lane_re "($lane_re_A|$lane_re_I)"
+
+    mi_clean_restart $::binfile
+
+    with_test_prefix "no execution" {
+	set no_thr_selected_err "\\^error,msg=\"No thread selected\\.\""
+	mi_gdb_test "-lane-info" $no_thr_selected_err
+	mi_gdb_test "-lane-info 0" $no_thr_selected_err
+    }
+
+    mi_runto "lane_pc_test" -pending
+
+    with_test_prefix "breakpoint stop" {
+	mi_create_breakpoint "$::if_1_else_line" "break-insert lineno" \
+	    -number 2 -func "lane_pc_test\\(.*\\)" -file ".*lane-execution.cpp" \
+	    -line $::if_1_else_line
+
+	gdb_test_multiple \
+	    "-data-evaluate-expression \$_thread" \
+	    "get gpu thread" \
+	    -prompt "$mi_gdb_prompt" {
+
+	    -re "\\^done,value=\"($decimal)\"\r\n${mi_gdb_prompt}" {
+		set gpu_thr $expect_out(1,string)
+		pass $gdb_test_name
+	    }
+	}
+
+	if {$gpu_thr == ""} {
+	    untested "couldn't retrieve gpu thread"
+	    return
+	}
+
+	mi_send_resuming_command "exec-continue" "continuing execution"
+
+	mi_expect_breakpoint_stop "breakpoint stop, hit-lanes" \
+	    -hit-lanes "0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30" \
+	    -func "lane_pc_test" \
+	    -file "lane-execution.cpp" \
+	    -thread-id $gpu_thr \
+	    -lane-id 0
+    }
+
+    # Check that end-stepping-range stops also include the "lane-id"
+    # attribute.
+    with_test_prefix "step" {
+
+	# Switch to a lane other than 0 to check that GDB isn't always
+	# printing "lane-id" as 0.
+	mi_gdb_test "-thread-select -l 2 $gpu_thr" \
+	    ".*\\^done,new-thread-id=\"$gpu_thr\",lane-id=\"2\",frame={.*}"
+
+	mi_send_resuming_command "exec-next" "next"
+
+	mi_expect_step_stop "step stop" \
+	    -func "lane_pc_test" \
+	    -file "lane-execution.cpp" \
+	    -thread-id $gpu_thr \
+	    -lane-id 2
+    }
+
+    with_test_prefix "lane-info" {
+	mi_gdb_test "-lane-info -1" "\\^error,msg=\"negative value\""
+	mi_gdb_test "-lane-info 0" "\\^done,lanes=\\\[$lane_re_A\\\]"
+	mi_gdb_test "-lane-info 1" "\\^done,lanes=\\\[$lane_re_I\\\]"
+
+	mi_gdb_test "-lane-info 0-1" "\\^done,lanes=\\\[$lane_re\\\]"
+
+	mi_gdb_test "-lane-info 0-1 4" "\\^error,msg=\"Invalid MI command\""
+	mi_gdb_test "-lane-info \"0-1 4\"" "\\^done,lanes=\\\[$lane_re,$lane_re,$lane_re\\\]"
+
+	mi_gdb_test "-lane-info" "\\^done,lanes=\\\[($lane_re)+\\\]"
+    }
+
+    with_test_prefix "--lane" {
+	mi_gdb_test "-data-evaluate-expression \$_lane" \
+	    "\\^done,value=\"2\"" \
+	    "-data-evaluate-expression without --lane"
+
+	mi_gdb_test "-data-evaluate-expression --lane 1 \$_lane" \
+	    "\\^done,value=\"1\"" \
+	    "-data-evaluate-expression with --lane"
+
+	mi_gdb_test "-data-evaluate-expression --thread $gpu_thr --lane 4 \$_lane" \
+	    "\\^done,value=\"4\"" \
+	    "-data-evaluate-expression with --thread --lane"
+    }
+
+    with_test_prefix "-thread-select -l" {
+	mi_gdb_test "-thread-select -l 4" \
+	    "\\^error,msg=\"-thread-select: USAGE: .*" \
+	    "missing thread"
+
+	mi_gdb_test "-thread-select -l 5 $gpu_thr" \
+	    ".*\\^done,new-thread-id=\"$gpu_thr\",lane-id=\"5\",frame={.*}" \
+	    "with thread"
+    }
+
+    with_test_prefix "=thread-selected" {
+	mi_gdb_test "thread 1" \
+	    ".*=thread-selected,id=\"1\",frame={.*}\r\n\\^done" \
+	    "thread cpu"
+
+	mi_gdb_test "thread $gpu_thr" \
+	    ".*=thread-selected,id=\"$gpu_thr\",lane-id=\"5\",frame={.*}\r\n\\^done" \
+	    "thread gpu"
+
+	mi_gdb_test "lane 5" \
+	    ".*=thread-selected,id=\"$gpu_thr\",lane-id=\"5\",frame={.*}\r\n\\^done" \
+	    "lane cmd"
+    }
+}
+
+# Test varobjs.
+
+proc_with_prefix test_mi_varobjs {} {
+    global hex mi_gdb_prompt
+    global gpu_thr
+
+    # Check that we're using a compiler that can emit debug info for
+    # locals.
+    gdb_test_multiple \
+	"-data-evaluate-expression gid" \
+	"probe for debug info" \
+	-prompt "$mi_gdb_prompt" {
+
+	-re "\\^done,value=\"5\"\r\n${mi_gdb_prompt}" {
+	    pass $gdb_test_name
+	}
+	-re "\\^done,value=\"<optimized out>\"\r\n${mi_gdb_prompt}" {
+	    pass "$gdb_test_name"
+	    untested "MI varobjs, no debug info"
+	    return
+	}
+    }
+
+    mi_gdb_test "-var-create var * gid" \
+	"\\^done,name=\"var\",numchild=\"0\",value=\"5\",type=\"unsigned int\",thread-id=\"$gpu_thr\",lane-id=\"5\",has_more=\"0\""
+
+    mi_gdb_test "-var-evaluate-expression var" \
+	"\\^done,value=\"5\"" "eval varobj"
+
+    mi_gdb_test "-data-evaluate-expression --thread $gpu_thr --lane 5 gid=555" \
+	"=memory-changed,thread-id=\"$gpu_thr\",lane-id=\"5\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"555\"" \
+	"frob value"
+
+    # Test updating the varobj while a lane other than 3 is
+    # selected.
+    with_test_prefix "another lane" {
+	mi_gdb_test "-thread-select -l 0 $gpu_thr" \
+	    ".*\\^done,new-thread-id=\"$gpu_thr\",lane-id=\"0\",frame={.*}" \
+	    "-thread-select another lane"
+
+	# The value of "gid" for the current lane should not be
+	# "555".  This ensures that GDB correctly changes lane to
+	# update the varobj.
+	mi_gdb_test "-data-evaluate-expression gid" \
+	    "\\^done,value=\"0\"" \
+	    "value for current lane"
+
+	mi_gdb_test "-var-update var" \
+	    "\\^done,changelist=\\\[\\{name=\"var\",in_scope=\"true\",type_changed=\"false\",has_more=\"0\"\\}\\\]"
+
+	mi_gdb_test "524-var-evaluate-expression var" \
+	    "524\\^done,value=\"555\""
+
+	# Check GDB did not lose the selected thread/lane.
+	mi_gdb_test "-data-evaluate-expression \$_thread" \
+	    "\\^done,value=\"$gpu_thr\""
+	mi_gdb_test "-data-evaluate-expression \$_lane" \
+	    "\\^done,value=\"0\""
+    }
+
+    # Test updating the varobj while a CPU thread is selected.
+    with_test_prefix "cpu thread" {
+	mi_gdb_test "-data-evaluate-expression --thread $gpu_thr --lane 5 gid=666" \
+	    "=memory-changed,thread-id=\"$gpu_thr\",lane-id=\"5\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"666\"" \
+	    "frob value"
+
+	mi_gdb_test "-thread-select 1" \
+	    ".*\\^done,new-thread-id=\"1\",frame={.*}" \
+	    "-thread-select host thread"
+
+	mi_gdb_test "-var-update var" \
+	    "\\^done,changelist=\\\[\\{name=\"var\",in_scope=\"true\",type_changed=\"false\",has_more=\"0\"\\}\\\]"
+
+	mi_gdb_test "-var-evaluate-expression var" \
+	    "\\^done,value=\"666\""
+
+	# Check that GDB did not lose the selected thread/lane.
+	mi_gdb_test "-data-evaluate-expression \$_thread" \
+	    "\\^done,value=\"1\""
+	mi_gdb_test "-data-evaluate-expression \$_lane" \
+	    "\\^done,value=\"0\""
+    }
+
+    mi_gdb_test "-data-evaluate-expression --thread $gpu_thr --lane 5 gid=5" \
+	"=memory-changed,thread-id=\"$gpu_thr\",lane-id=\"5\",addr=\"private_lane#$hex\",len=\"0x4\"\r\n\\^done,value=\"5\"" \
+	"restore value"
+}
+
+with_rocm_gpu_lock {
+    test_mi_lanes
+    test_mi_varobjs
+}

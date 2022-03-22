@@ -1,6 +1,7 @@
 # Dynamic architecture support for GDB, the GNU debugger.
 
 # Copyright (C) 1998-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -595,6 +596,40 @@ frame.
     invalid=False,
 )
 
+Method(
+    comment="""
+Return the active SIMD lanes mask for a thread TP.
+""",
+    type="simd_lanes_mask_t",
+    name="active_lanes_mask",
+    params=[("thread_info *", "tp")],
+    predicate=True,
+    invalid=True,
+)
+
+Method(
+    comment="""
+Return the number of lanes supported by the thread.
+""",
+    type="int",
+    name="supported_lanes_count",
+    params=[("thread_info *", "tp")],
+    predefault="default_supported_lanes_count",
+    invalid=False,
+)
+
+Method(
+    comment="""
+Return the number of lanes used by the thread, accounting for
+partial work-groups.  Defaults to the number of supported lanes.
+""",
+    type="int",
+    name="used_lanes_count",
+    params=[("thread_info *", "tp")],
+    predefault="gdbarch_supported_lanes_count",
+    invalid=False,
+)
+
 Value(
     comment="""
 Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
@@ -814,8 +849,86 @@ Method(
 Method(
     type="CORE_ADDR",
     name="integer_to_address",
-    params=[("struct type *", "type"), ("const gdb_byte *", "buf")],
+    params=[
+        ("struct type *", "type"),
+        ("const gdb_byte *", "buf"),
+        ("arch_addr_space_id", "address_space_id"),
+    ],
     predicate=True,
+    invalid=True,
+)
+
+Method(
+    comment="""
+Return a list of supported address spaces.
+""",
+    type="gdb::array_view<const arch_addr_space>",
+    name="address_spaces",
+    params=[],
+    predicate=True,
+    invalid=True,
+)
+
+Function(
+    comment="""
+Extracts address space from core address.
+TODO: This hook is a quick fix until a proper address space support
+is added and should not be pushed upstream.
+""",
+    type="arch_addr_space_id",
+    name="address_space_id_from_core_address",
+    params=[("CORE_ADDR", "address")],
+    postdefault="default_address_space_id_from_core_address",
+    invalid=True,
+)
+
+Function(
+    comment="""
+Extracts segment address from core address.
+TODO: This hook is a quick fix until a proper address space support
+is added and should not be pushed upstream.
+""",
+    type="CORE_ADDR",
+    name="segment_address_from_core_address",
+    params=[("CORE_ADDR", "address")],
+    postdefault="default_segment_address_from_core_address",
+    invalid=True,
+)
+
+Function(
+    comment="""
+Converts segment address to core address.
+TODO: This hook is a quick fix until a proper address space support
+is added and should not be pushed upstream.
+""",
+    type="CORE_ADDR",
+    name="segment_address_to_core_address",
+    params=[("arch_addr_space_id", "address_space_id"), ("CORE_ADDR", "address")],
+    postdefault="default_segment_address_to_core_address",
+    invalid=True,
+)
+
+Function(
+    comment="""
+Converts DWARF address space number to address space id.
+TODO: This hook is a quick fix until a proper address space support
+is added and should not be pushed upstream.
+""",
+    type="arch_addr_space_id",
+    name="dwarf_address_space_to_address_space_id",
+    params=[("LONGEST", "dwarf_addr_space")],
+    postdefault="default_dwarf_address_space_to_address_space_id",
+    invalid=True,
+)
+
+Method(
+    comment="""
+Return the address's scope.
+""",
+    type="enum address_scope",
+    name="address_scope",
+    params=[("CORE_ADDR", "address")],
+    postdefault="default_address_scope",
     invalid=True,
 )
 

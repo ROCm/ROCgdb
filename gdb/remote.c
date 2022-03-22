@@ -1,6 +1,7 @@
 /* Remote target communications for serial-line targets in custom GDB protocol
 
    Copyright (C) 1988-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1029,12 +1030,6 @@ is_remote_target (process_stratum_target *target)
 static const struct program_space_key<char, gdb::xfree_deleter<char>>
   remote_pspace_data;
 
-/* The variable registered as the control variable used by the
-   remote exec-file commands.  While the remote exec-file setting is
-   per-program-space, the set/show machinery uses this as the 
-   location of the remote exec-file value.  */
-static std::string remote_exec_file_var;
-
 /* The size to align memory write packets, when practical.  The protocol
    does not guarantee any alignment, and gdb will generate short
    writes and unaligned writes, but even as a best-effort attempt this
@@ -1365,32 +1360,31 @@ get_remote_exec_file (void)
 /* Set the remote exec file for PSPACE.  */
 
 static void
-set_pspace_remote_exec_file (struct program_space *pspace,
-			     const char *remote_exec_file)
+set_pspace_remote_exec_file (program_space *pspace, const std::string &value)
 {
   char *old_file = remote_pspace_data.get (pspace);
 
   xfree (old_file);
-  remote_pspace_data.set (pspace, xstrdup (remote_exec_file));
+  remote_pspace_data.set (pspace, xstrdup (value.c_str ()));
 }
 
-/* The "set/show remote exec-file" set command hook.  */
+/* Setter for the "remote exec-file" setting.  */
 
 static void
-set_remote_exec_file (const char *ignored, int from_tty,
-		      struct cmd_list_element *c)
+set_remote_exec_file (const std::string &value)
 {
-  set_pspace_remote_exec_file (current_program_space,
-			       remote_exec_file_var.c_str ());
+  set_pspace_remote_exec_file (current_program_space, value);
 }
 
-/* The "set/show remote exec-file" show command hook.  */
+/* Getter for the "remote exec-file" setting.  */
 
-static void
-show_remote_exec_file (struct ui_file *file, int from_tty,
-		       struct cmd_list_element *cmd, const char *value)
+static const std::string &
+get_remote_exec_file_std_str ()
 {
-  fprintf_filtered (file, "%s\n", get_remote_exec_file ());
+  /* Until we convert get_remote_exec_file to return an std::string.  */
+  static std::string scratch;
+  scratch = get_remote_exec_file ();
+  return scratch;
 }
 
 static int
@@ -4641,7 +4635,7 @@ remote_target::process_initial_stop_replies (int from_tty)
 	gdb_assert (!this->is_async_p ());
 	SCOPE_EXIT { target_async (0); };
 	target_async (1);
-	stop_all_threads ();
+	stop_all_threads ("remote connect");
       }
 
       /* If all threads of an inferior were already stopped, we
@@ -15369,11 +15363,12 @@ Transfer files to and from the remote target system."),
 	   &remote_cmdlist);
 
   add_setshow_string_noescape_cmd ("exec-file", class_files,
-				   &remote_exec_file_var, _("\
+				   _("\
 Set the remote pathname for \"run\"."), _("\
 Show the remote pathname for \"run\"."), NULL,
 				   set_remote_exec_file,
-				   show_remote_exec_file,
+				   get_remote_exec_file_std_str,
+				   nullptr,
 				   &remote_set_cmdlist,
 				   &remote_show_cmdlist);
 

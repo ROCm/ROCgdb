@@ -1,4 +1,5 @@
 # Copyright 2019-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,10 +38,10 @@ with_test_prefix "set inf 2" {
 
 with_test_prefix "show inf 1" {
     gdb_test "inferior 1" "Switching to inferior 1.*"
-    gdb_test "show remote exec-file" "prog1"
+    gdb_test "show remote exec-file" "The remote pathname for \"run\" is \"prog1\"."
 }
 
 with_test_prefix "show inf 2" {
     gdb_test "inferior 2" "Switching to inferior 2.*"
-    gdb_test "show remote exec-file" "prog2"
+    gdb_test "show remote exec-file" "The remote pathname for \"run\" is \"prog2\"."
 }

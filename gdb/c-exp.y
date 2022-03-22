@@ -1,5 +1,6 @@
 /* YACC parser for C expressions, for GDB.
    Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -977,6 +978,11 @@ exp	:	CONST_CAST '<' type_exp '>' '(' exp ')' %prec UNARY
 			{ /* We could do more error checking here, but
 			     it doesn't seem worthwhile.  */
 			  pstate->wrap2<unop_cast_type_operation> (); }
+	;
+
+exp	:	name '#' exp %prec UNARY
+			{ pstate->push_new<aspace_operation>
+			    (pstate->pop (), copy_name ($1)); }
 	;
 
 string_exp:
@@ -2870,6 +2876,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     case '?':
     case ':':
     case '=':
+    case '#':
     case '{':
     case '}':
     symbol:

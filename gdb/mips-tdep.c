@@ -1,6 +1,7 @@
 /* Target-dependent code for the MIPS architecture, for GDB, the GNU Debugger.
 
    Copyright (C) 1988-2022 Free Software Foundation, Inc.
+   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Alessandro Forin(af@cs.cmu.edu) at CMU
    and by Per Bothner(bothner@cs.wisc.edu) at U.Wisconsin.
@@ -7950,8 +7951,9 @@ mips_register_sim_regno (struct gdbarch *gdbarch, int regnum)
    guarantees a correctly sign extended address.  */
 
 static CORE_ADDR
-mips_integer_to_address (struct gdbarch *gdbarch,
-			 struct type *type, const gdb_byte *buf)
+mips_integer_to_address (struct gdbarch *gdbarch, struct type *type,
+			 const gdb_byte *buf,
+			 arch_addr_space_id address_space_id)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   return extract_signed_integer (buf, TYPE_LENGTH (type), byte_order);
