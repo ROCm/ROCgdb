@@ -46,6 +46,8 @@
 #include "gdbsupport/filestuff.h"
 #include "build-id.h"
 #include "gdbsupport/pathstuff.h"
+#include "gdbsupport/scoped_fd.h"
+#include "debuginfod-support.h"
 #include <unordered_map>
 #include <unordered_set>
 #include "gdbcmd.h"
@@ -229,6 +231,11 @@ core_target::build_file_mappings ()
 	       canonical) pathname will be provided.  */
 	    gdb::unique_xmalloc_ptr<char> expanded_fname
 	      = exec_file_find (filename, NULL);
+
+	    if (expanded_fname == nullptr && build_id != nullptr)
+	      debuginfod_exec_query (build_id->data, build_id->size,
+				     filename, &expanded_fname);
+
 	    if (expanded_fname == nullptr)
 	      {
 		m_core_unavailable_mappings.emplace_back (start, end - start);
@@ -282,6 +289,17 @@ core_target::build_file_mappings ()
 
 	/* Set target_section fields.  */
 	m_core_file_mappings.emplace_back (start, end, sec);
+
+	/* If this is a bfd of a shared library, record its soname
+	   and build id.  */
+	if (build_id != nullptr)
+	  {
+	    gdb::unique_xmalloc_ptr<char> soname
+	      = gdb_bfd_read_elf_soname (bfd->filename);
+	    if (soname != nullptr)
+	      set_cbfd_soname_build_id (current_program_space->cbfd,
+					soname.get (), build_id);
+	  }
       });
 
   normalize_mem_ranges (&m_core_unavailable_mappings);
@@ -398,6 +416,27 @@ locate_exec_from_corefile_build_id (bfd *abfd, int from_tty)
 
   gdb_bfd_ref_ptr execbfd
     = build_id_to_exec_bfd (build_id->size, build_id->data);
+
+  if (execbfd == nullptr)
+    {
+      /* Attempt to query debuginfod for the executable.  */
+      gdb::unique_xmalloc_ptr<char> execpath;
+      scoped_fd fd = debuginfod_exec_query (build_id->data, build_id->size,
+					    abfd->filename, &execpath);
+
+      if (fd.get () >= 0)
+	{
+	  execbfd = gdb_bfd_open (execpath.get (), gnutarget);
+
+	  if (execbfd == nullptr)
+	    warning (_("\"%s\" from debuginfod cannot be opened as bfd: %s"),
+		     execpath.get (),
+		     gdb_bfd_errmsg (bfd_get_error (), nullptr).c_str ());
+	  else if (!build_id_verify (execbfd.get (), build_id->size,
+				     build_id->data))
+	    execbfd.reset (nullptr);
+	}
+    }
 
   if (execbfd != nullptr)
     {
