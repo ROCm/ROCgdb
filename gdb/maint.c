@@ -1184,11 +1184,11 @@ maintenance_selftest_completer (cmd_list_element *cmd,
     return;
 
 #if GDB_SELF_TEST
-  selftests::for_each_selftest ([&tracker, text] (const std::string &name)
+  for (const auto &test : selftests::all_selftests ())
     {
-      if (startswith (name.c_str (), text))
-	tracker.add_completion (make_unique_xstrdup (name.c_str ()));
-    });
+      if (startswith (test.name.c_str (), text))
+	tracker.add_completion (make_unique_xstrdup (test.name.c_str ()));
+    }
 #endif
 }
 
@@ -1197,9 +1197,8 @@ maintenance_info_selftests (const char *arg, int from_tty)
 {
 #if GDB_SELF_TEST
   printf_filtered ("Registered selftests:\n");
-  selftests::for_each_selftest ([] (const std::string &name) {
-    printf_filtered (" - %s\n", name.c_str ());
-  });
+  for (const auto &test : selftests::all_selftests ())
+    printf_filtered (" - %s\n", test.name.c_str ());
 #else
   printf_filtered (_("\
 Selftests have been disabled for this build.\n"));
