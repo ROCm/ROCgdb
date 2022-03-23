@@ -1138,6 +1138,8 @@ fbsd_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	    perror_with_name (request == PT_RESUME ?
 			      ("ptrace (PT_RESUME)") :
 			      ("ptrace (PT_SUSPEND)"));
+	  if (request == PT_RESUME)
+	    low_prepare_to_resume (tp);
 	}
     }
   else
@@ -1145,8 +1147,11 @@ fbsd_nat_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
       /* If ptid is a wildcard, resume all matching threads (they won't run
 	 until the process is continued however).  */
       for (thread_info *tp : all_non_exited_threads (this, ptid))
-	if (ptrace (PT_RESUME, tp->ptid.lwp (), NULL, 0) == -1)
-	  perror_with_name (("ptrace (PT_RESUME)"));
+	{
+	  if (ptrace (PT_RESUME, tp->ptid.lwp (), NULL, 0) == -1)
+	    perror_with_name (("ptrace (PT_RESUME)"));
+	  low_prepare_to_resume (tp);
+	}
       ptid = inferior_ptid;
     }
 
@@ -1293,6 +1298,7 @@ fbsd_nat_target::wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
 		  if (print_thread_events)
 		    printf_unfiltered (_("[%s exited]\n"),
 				       target_pid_to_str (wptid).c_str ());
+		  low_delete_thread (thr);
 		  delete_thread (thr);
 		}
 	      if (ptrace (PT_CONTINUE, pid, (caddr_t) 1, 0) == -1)
@@ -1379,6 +1385,8 @@ fbsd_nat_target::wait_1 (ptid_t ptid, struct target_waitstatus *ourstatus,
 	      else
 		warning (_("Failed to fetch process information"));
 #endif
+
+	      low_new_fork (wptid, child);
 
 	      if (is_vfork)
 		ourstatus->set_vforked (child_ptid);
@@ -1762,6 +1770,22 @@ fbsd_nat_target::store_register_set (struct regcache *regcache, int regnum,
       return true;
     }
   return false;
+}
+
+/* See fbsd-nat.h.  */
+
+bool
+fbsd_nat_get_siginfo (ptid_t ptid, siginfo_t *siginfo)
+{
+  struct ptrace_lwpinfo pl;
+  pid_t pid = get_ptrace_pid (ptid);
+
+  if (ptrace (PT_LWPINFO, pid, (caddr_t) &pl, sizeof pl) == -1)
+    return false;
+  if (!(pl.pl_flags & PL_FLAG_SI))
+    return false;;
+  *siginfo = pl.pl_siginfo;
+  return (true);
 }
 
 void _initialize_fbsd_nat ();

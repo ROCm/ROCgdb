@@ -109,6 +109,20 @@ public:
 
   bool supports_disable_randomization () override;
 
+  /* Methods meant to be overridden by arch-specific target
+     classes.  */
+
+  virtual void low_new_fork (ptid_t parent, pid_t child)
+  {}
+
+  /* The method to call, if any, when a thread is destroyed.  */
+  virtual void low_delete_thread (thread_info *)
+  {}
+
+  /* Hook to call prior to resuming a thread.  */
+  virtual void low_prepare_to_resume (thread_info *)
+  {}
+
 protected:
 
   void post_startup_inferior (ptid_t) override;
@@ -159,5 +173,9 @@ protected:
 			       &regs, sizeof (regs));
   }
 };
+
+/* Fetch the signal information for PTID and store it in *SIGINFO.
+   Return true if successful.  */
+bool fbsd_nat_get_siginfo (ptid_t ptid, siginfo_t *siginfo);
 
 #endif /* fbsd-nat.h */
