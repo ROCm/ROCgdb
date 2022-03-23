@@ -317,11 +317,6 @@ eval_python_command (const char *command)
   if (v == NULL)
     return -1;
 
-#ifndef IS_PY3K
-  if (Py_FlushLine ())
-    PyErr_Clear ();
-#endif
-
   return 0;
 }
 
@@ -690,7 +685,7 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
     }
 
   if (to_string)
-    return PyString_FromString (to_string_res.c_str ());
+    return PyUnicode_FromString (to_string_res.c_str ());
   Py_RETURN_NONE;
 }
 
@@ -936,7 +931,7 @@ gdbpy_decode_line (PyObject *self, PyObject *args)
 
   if (arg != NULL && strlen (arg) > 0)
     {
-      unparsed.reset (PyString_FromString (arg));
+      unparsed.reset (PyUnicode_FromString (arg));
       if (unparsed == NULL)
 	return NULL;
     }
@@ -1098,7 +1093,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 
       if (PyCallable_Check (hook.get ()))
 	{
-	  gdbpy_ref<> current_prompt (PyString_FromString (current_gdb_prompt));
+	  gdbpy_ref<> current_prompt (PyUnicode_FromString (current_gdb_prompt));
 	  if (current_prompt == NULL)
 	    {
 	      gdbpy_print_stack ();
@@ -1117,7 +1112,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 	  /* Return type should be None, or a String.  If it is None,
 	     fall through, we will not set a prompt.  If it is a
 	     string, set  PROMPT.  Anything else, set an exception.  */
-	  if (result != Py_None && ! PyString_Check (result.get ()))
+	  if (result != Py_None && !PyUnicode_Check (result.get ()))
 	    {
 	      PyErr_Format (PyExc_RuntimeError,
 			    _("Return from prompt_hook must " \
@@ -1176,7 +1171,7 @@ gdbpy_colorize (const std::string &filename, const std::string &contents)
   if (!PyCallable_Check (hook.get ()))
     return {};
 
-  gdbpy_ref<> fname_arg (PyString_FromString (filename.c_str ()));
+  gdbpy_ref<> fname_arg (PyUnicode_FromString (filename.c_str ()));
   if (fname_arg == nullptr)
     {
       gdbpy_print_stack ();
@@ -1390,7 +1385,7 @@ gdbpy_format_address (PyObject *self, PyObject *args, PyObject *kw)
   /* Format the address, and return it as a string.  */
   string_file buf;
   print_address (gdbarch, addr, &buf);
-  return PyString_FromString (buf.c_str ());
+  return PyUnicode_FromString (buf.c_str ());
 }
 
 
@@ -1904,7 +1899,6 @@ finalize_python (void *ignore)
   restore_active_ext_lang (previous_active);
 }
 
-#ifdef IS_PY3K
 static struct PyModuleDef python_GdbModuleDef =
 {
   PyModuleDef_HEAD_INIT,
@@ -1927,7 +1921,6 @@ init__gdb_module (void)
 {
   return PyModule_Create (&python_GdbModuleDef);
 }
-#endif
 
 /* Emit a gdb.GdbExitingEvent, return a negative value if there are any
    errors, otherwise, return 0.  */
@@ -1974,7 +1967,6 @@ do_start_initialization ()
   gdb::unique_xmalloc_ptr<char> progname
     (concat (ldirname (python_libdir.c_str ()).c_str (), SLASH_STRING, "bin",
 	      SLASH_STRING, "python", (char *) NULL));
-#ifdef IS_PY3K
   /* Python documentation indicates that the memory given
      to Py_SetProgramName cannot be freed.  However, it seems that
      at least Python 3.7.4 Py_SetProgramName takes a copy of the
@@ -2003,9 +1995,6 @@ do_start_initialization ()
 
   /* Define _gdb as a built-in module.  */
   PyImport_AppendInittab ("_gdb", init__gdb_module);
-#else
-  Py_SetProgramName (progname.release ());
-#endif
 #endif
 
   Py_Initialize ();
@@ -2016,11 +2005,7 @@ do_start_initialization ()
   PyEval_InitThreads ();
 #endif
 
-#ifdef IS_PY3K
   gdb_module = PyImport_ImportModule ("_gdb");
-#else
-  gdb_module = Py_InitModule ("_gdb", python_GdbMethods);
-#endif
   if (gdb_module == NULL)
     return false;
 
@@ -2096,22 +2081,22 @@ do_start_initialization ()
 #include "py-event-types.def"
 #undef GDB_PY_DEFINE_EVENT_TYPE
 
-  gdbpy_to_string_cst = PyString_FromString ("to_string");
+  gdbpy_to_string_cst = PyUnicode_FromString ("to_string");
   if (gdbpy_to_string_cst == NULL)
     return false;
-  gdbpy_children_cst = PyString_FromString ("children");
+  gdbpy_children_cst = PyUnicode_FromString ("children");
   if (gdbpy_children_cst == NULL)
     return false;
-  gdbpy_display_hint_cst = PyString_FromString ("display_hint");
+  gdbpy_display_hint_cst = PyUnicode_FromString ("display_hint");
   if (gdbpy_display_hint_cst == NULL)
     return false;
-  gdbpy_doc_cst = PyString_FromString ("__doc__");
+  gdbpy_doc_cst = PyUnicode_FromString ("__doc__");
   if (gdbpy_doc_cst == NULL)
     return false;
-  gdbpy_enabled_cst = PyString_FromString ("enabled");
+  gdbpy_enabled_cst = PyUnicode_FromString ("enabled");
   if (gdbpy_enabled_cst == NULL)
     return false;
-  gdbpy_value_cst = PyString_FromString ("value");
+  gdbpy_value_cst = PyUnicode_FromString ("value");
   if (gdbpy_value_cst == NULL)
     return false;
 
@@ -2321,16 +2306,12 @@ do_initialize (const struct extension_language_defn *extlang)
   /* If sys.path is not defined yet, define it first.  */
   if (!(sys_path && PyList_Check (sys_path)))
     {
-#ifdef IS_PY3K
       PySys_SetPath (L"");
-#else
-      PySys_SetPath ("");
-#endif
       sys_path = PySys_GetObject ("path");
     }
   if (sys_path && PyList_Check (sys_path))
     {
-      gdbpy_ref<> pythondir (PyString_FromString (gdb_pythondir.c_str ()));
+      gdbpy_ref<> pythondir (PyUnicode_FromString (gdb_pythondir.c_str ()));
       if (pythondir == NULL || PyList_Insert (sys_path, 0, pythondir.get ()))
 	return false;
     }

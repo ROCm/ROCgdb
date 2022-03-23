@@ -12974,22 +12974,29 @@ parse_register (char *reg_string, char **end_op)
       input_line_pointer = reg_string;
       c = get_symbol_name (&reg_string);
       symbolP = symbol_find (reg_string);
+      while (symbolP && S_GET_SEGMENT (symbolP) != reg_section)
+	{
+	  const expressionS *e = symbol_get_value_expression(symbolP);
+
+	  if (e->X_op != O_symbol || e->X_add_number)
+	    break;
+	  symbolP = e->X_add_symbol;
+	}
       if (symbolP && S_GET_SEGMENT (symbolP) == reg_section)
 	{
 	  const expressionS *e = symbol_get_value_expression (symbolP);
 
-	  if (e->X_op == O_register
-	      && (valueT) e->X_add_number < i386_regtab_size)
+	  know (e->X_op == O_register);
+	  know (e->X_add_number >= 0
+		&& (valueT) e->X_add_number < i386_regtab_size);
+	  r = i386_regtab + e->X_add_number;
+	  if (!check_register (r))
 	    {
-	      r = i386_regtab + e->X_add_number;
-	      if (!check_register (r))
-		{
-		  as_bad (_("register '%s%s' cannot be used here"),
-			  register_prefix, r->reg_name);
-		  r = &bad_reg;
-		}
-	      *end_op = input_line_pointer;
+	      as_bad (_("register '%s%s' cannot be used here"),
+		      register_prefix, r->reg_name);
+	      r = &bad_reg;
 	    }
+	  *end_op = input_line_pointer;
 	}
       *input_line_pointer = c;
       input_line_pointer = save;
@@ -13000,11 +13007,12 @@ parse_register (char *reg_string, char **end_op)
 int
 i386_parse_name (char *name, expressionS *e, char *nextcharP)
 {
-  const reg_entry *r;
+  const reg_entry *r = NULL;
   char *end = input_line_pointer;
 
   *end = *nextcharP;
-  r = parse_register (name, &input_line_pointer);
+  if (*name == REGISTER_PREFIX || allow_naked_reg)
+    r = parse_real_register (name, &input_line_pointer);
   if (r && end <= input_line_pointer)
     {
       *nextcharP = *input_line_pointer;
@@ -14180,6 +14188,17 @@ i386_cons_align (int ignore ATTRIBUTE_UNUSED)
 int
 i386_validate_fix (fixS *fixp)
 {
+  if (fixp->fx_addsy && S_GET_SEGMENT(fixp->fx_addsy) == reg_section)
+    {
+      reloc_howto_type *howto;
+
+      howto = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
+      as_bad_where (fixp->fx_file, fixp->fx_line,
+		    _("invalid %s relocation against register"),
+		    howto ? howto->name : "<unknown>");
+      return 0;
+    }
+
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
   if (fixp->fx_r_type == BFD_RELOC_SIZE32
       || fixp->fx_r_type == BFD_RELOC_SIZE64)

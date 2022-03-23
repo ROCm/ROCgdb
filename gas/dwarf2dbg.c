@@ -2137,7 +2137,7 @@ out_dir_and_file_list (segT line_seg, int sizeof_offset)
   bool emit_timestamps = true;
   bool emit_filesize = true;
   segT line_str_seg = NULL;
-  symbolS *line_strp;
+  symbolS *line_strp, *file0_strp = NULL;
 
   /* Output the Directory Table.  */
   if (DWARF2_LINE_VERSION >= 5)
@@ -2170,18 +2170,10 @@ out_dir_and_file_list (segT line_seg, int sizeof_offset)
       line_str_seg->entsize = 1;
 
       /* DWARF5 uses slot zero, but that is only set explicitly
-	 using a .file 0 directive.  If that isn't used, but dir
-	 one is used, then use that as main file directory.
-	 Otherwise use pwd as main file directory.  */
-      if (dirs_in_use > 0 && dirs != NULL && dirs[0] != NULL)
+	 using a .file 0 directive.  Otherwise use pwd as main file
+	 directory.  */
+      if (dirs_in_use > 0 && dirs[0] != NULL)
 	dir = remap_debug_filename (dirs[0]);
-      else if (dirs_in_use > 1
-	       && dirs != NULL
-	       && dirs[1] != NULL
-	       /* DWARF-5 directory tables expect dir[0] to be the same as
-		  DW_AT_comp_dir, which is the same as pwd.  */
-	       && dwarf_level < 5)
-	dir = remap_debug_filename (dirs[1]);
       else
 	dir = remap_debug_filename (getpwd ());
 
@@ -2279,11 +2271,15 @@ out_dir_and_file_list (segT line_seg, int sizeof_offset)
 
       if (files[i].filename == NULL)
 	{
-	  /* Prevent a crash later, particularly for file 1.  DWARF5
-	     uses slot zero, but that is only set explicitly using a
-	     .file 0 directive.  If that isn't used, but file 1 is,
-	     then use that as main file name.  */
-	  if (DWARF2_LINE_VERSION >= 5 && i == 0 && files_in_use >= 1 && files[0].filename == NULL)
+	  if (DWARF2_LINE_VERSION < 5 || i != 0)
+	    {
+	      as_bad (_("unassigned file number %ld"), (long) i);
+	      continue;
+	    }
+	  /* DWARF5 uses slot zero, but that is only set explicitly using
+	     a .file 0 directive.  If that isn't used, but file 1 is, then
+	     use that as main file name.  */
+	  if (files_in_use > 1 && files[1].filename != NULL)
 	    {
 	      files[0].filename = files[1].filename;
 	      files[0].dir = files[1].dir;
@@ -2292,12 +2288,7 @@ out_dir_and_file_list (segT line_seg, int sizeof_offset)
 		  files[0].md5[j] = files[1].md5[j];
 	    }
 	  else
-	    files[i].filename = "";
-	  if (DWARF2_LINE_VERSION < 5 || i != 0)
-	    {
-	      as_bad (_("unassigned file number %ld"), (long) i);
-	      continue;
-	    }
+	    files[0].filename = "";
 	}
 
       fullfilename = DWARF2_FILE_NAME (files[i].filename,
@@ -2310,9 +2301,17 @@ out_dir_and_file_list (segT line_seg, int sizeof_offset)
 	}
       else
 	{
-	  line_strp = add_line_strp (line_str_seg, fullfilename);
+	  if (!file0_strp)
+	    line_strp = add_line_strp (line_str_seg, fullfilename);
+	  else
+	    line_strp = file0_strp;
 	  subseg_set (line_seg, 0);
 	  TC_DWARF2_EMIT_OFFSET (line_strp, sizeof_offset);
+	  if (i == 0 && files_in_use > 1
+	      && files[0].filename == files[1].filename)
+	    file0_strp = line_strp;
+	  else
+	    file0_strp = NULL;
 	}
 
       /* Directory number.  */

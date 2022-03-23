@@ -125,12 +125,8 @@ static PyObject *show_doc_cst;
 static PyObject *
 get_attr (PyObject *obj, PyObject *attr_name)
 {
-  if (PyString_Check (attr_name)
-#ifdef IS_PY3K
+  if (PyUnicode_Check (attr_name)
       && ! PyUnicode_CompareWithASCIIString (attr_name, "value"))
-#else
-      && ! strcmp (PyString_AsString (attr_name), "value"))
-#endif
     {
       parmpy_object *self = (parmpy_object *) obj;
 
@@ -247,7 +243,7 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 	long l;
 	int ok;
 
-	if (! PyInt_Check (value))
+	if (!PyLong_Check (value))
 	  {
 	    PyErr_SetString (PyExc_RuntimeError,
 			     _("The value must be integer."));
@@ -312,12 +308,8 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 static int
 set_attr (PyObject *obj, PyObject *attr_name, PyObject *val)
 {
-  if (PyString_Check (attr_name)
-#ifdef IS_PY3K
+  if (PyUnicode_Check (attr_name)
       && ! PyUnicode_CompareWithASCIIString (attr_name, "value"))
-#else
-      && ! strcmp (PyString_AsString (attr_name), "value"))
-#endif
     {
       if (!val)
 	{
@@ -455,7 +447,7 @@ get_set_value (const char *args, int from_tty,
   gdb::unique_xmalloc_ptr<char> set_doc_string;
 
   gdbpy_enter enter_py;
-  gdbpy_ref<> set_doc_func (PyString_FromString ("get_set_string"));
+  gdbpy_ref<> set_doc_func (PyUnicode_FromString ("get_set_string"));
 
   if (set_doc_func == NULL)
     {
@@ -490,7 +482,7 @@ get_show_value (struct ui_file *file, int from_tty,
   gdb::unique_xmalloc_ptr<char> show_doc_string;
 
   gdbpy_enter enter_py;
-  gdbpy_ref<> show_doc_func (PyString_FromString ("get_show_string"));
+  gdbpy_ref<> show_doc_func (PyUnicode_FromString ("get_show_string"));
 
   if (show_doc_func == NULL)
     {
@@ -500,7 +492,7 @@ get_show_value (struct ui_file *file, int from_tty,
 
   if (PyObject_HasAttr (obj, show_doc_func.get ()))
     {
-      gdbpy_ref<> val_obj (PyString_FromString (value));
+      gdbpy_ref<> val_obj (PyUnicode_FromString (value));
 
       if (val_obj == NULL)
 	{
@@ -843,10 +835,10 @@ gdbpy_initialize_parameters (void)
   if (PyType_Ready (&parmpy_object_type) < 0)
     return -1;
 
-  set_doc_cst = PyString_FromString ("set_doc");
+  set_doc_cst = PyUnicode_FromString ("set_doc");
   if (! set_doc_cst)
     return -1;
-  show_doc_cst = PyString_FromString ("show_doc");
+  show_doc_cst = PyUnicode_FromString ("show_doc");
   if (! show_doc_cst)
     return -1;
 
