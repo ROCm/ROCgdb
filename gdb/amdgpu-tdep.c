@@ -1268,6 +1268,17 @@ amdgpu_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
   return std::min (work_items_left, lane_count);
 }
 
+static bool
+amdgpu_supports_arch_info (const struct bfd_arch_info *info)
+{
+  amd_dbgapi_architecture_id_t architecture_id;
+  amd_dbgapi_status_t status
+    = amd_dbgapi_get_architecture (info->mach, &architecture_id);
+
+  gdb_assert (status != AMD_DBGAPI_STATUS_ERROR_NOT_INITIALIZED);
+  return status == AMD_DBGAPI_STATUS_SUCCESS;
+}
+
 static struct gdbarch *
 amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -1563,5 +1574,6 @@ extern initialize_file_ftype _initialize_amdgpu_tdep;
 void
 _initialize_amdgpu_tdep ()
 {
-  gdbarch_register (bfd_arch_amdgcn, amdgpu_gdbarch_init, NULL);
+  gdbarch_register (bfd_arch_amdgcn, amdgpu_gdbarch_init, NULL,
+		    amdgpu_supports_arch_info);
 }
