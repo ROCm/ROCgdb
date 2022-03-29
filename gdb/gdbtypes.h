@@ -52,6 +52,7 @@
 #include "gdbsupport/enum-flags.h"
 #include "gdbsupport/underlying.h"
 #include "gdbsupport/print-utils.h"
+#include "gdbsupport/function-view.h"
 #include "dwarf2.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "gmp-utils.h"
@@ -1824,52 +1825,77 @@ enum call_site_parameter_kind
 
 struct call_site_target
 {
-  field_loc_kind loc_kind () const
+  /* The kind of location held by this call site target.  */
+  enum kind
   {
-    return m_loc_kind;
-  }
-
-  CORE_ADDR loc_physaddr () const
-  {
-    gdb_assert (m_loc_kind == FIELD_LOC_KIND_PHYSADDR);
-    return m_loc.physaddr;
-  }
+    /* An address.  */
+    PHYSADDR,
+    /* A name.  */
+    PHYSNAME,
+    /* A DWARF block.  */
+    DWARF_BLOCK,
+    /* An array of addresses.  */
+    ADDRESSES,
+  };
 
   void set_loc_physaddr (CORE_ADDR physaddr)
   {
-    m_loc_kind = FIELD_LOC_KIND_PHYSADDR;
+    m_loc_kind = PHYSADDR;
     m_loc.physaddr = physaddr;
-  }
-
-  const char *loc_physname () const
-  {
-    gdb_assert (m_loc_kind == FIELD_LOC_KIND_PHYSNAME);
-    return m_loc.physname;
   }
 
   void set_loc_physname (const char *physname)
     {
-      m_loc_kind = FIELD_LOC_KIND_PHYSNAME;
+      m_loc_kind = PHYSNAME;
       m_loc.physname = physname;
     }
 
-  dwarf2_locexpr_baton *loc_dwarf_block () const
-  {
-    gdb_assert (m_loc_kind == FIELD_LOC_KIND_DWARF_BLOCK);
-    return m_loc.dwarf_block;
-  }
-
   void set_loc_dwarf_block (dwarf2_locexpr_baton *dwarf_block)
     {
-      m_loc_kind = FIELD_LOC_KIND_DWARF_BLOCK;
+      m_loc_kind = DWARF_BLOCK;
       m_loc.dwarf_block = dwarf_block;
     }
 
-  union field_location m_loc;
+  void set_loc_array (unsigned length, const CORE_ADDR *data)
+  {
+    m_loc_kind = ADDRESSES;
+    m_loc.addresses.length = length;
+    m_loc.addresses.values = data;
+  }
+
+  /* Callback type for iterate_over_addresses.  */
+
+  using iterate_ftype = gdb::function_view<void (CORE_ADDR)>;
+
+  /* Call CALLBACK for each DW_TAG_call_site's DW_AT_call_target
+     address.  CALLER_FRAME (for registers) can be NULL if it is not
+     known.  This function always may throw NO_ENTRY_VALUE_ERROR.  */
+
+  void iterate_over_addresses (struct gdbarch *call_site_gdbarch,
+			       const struct call_site *call_site,
+			       struct frame_info *caller_frame,
+			       iterate_ftype callback) const;
+
+private:
+
+  union
+  {
+    /* Address.  */
+    CORE_ADDR physaddr;
+    /* Mangled name.  */
+    const char *physname;
+    /* DWARF block.  */
+    struct dwarf2_locexpr_baton *dwarf_block;
+    /* Array of addresses.  */
+    struct
+    {
+      unsigned length;
+      const CORE_ADDR *values;
+    } addresses;
+  } m_loc;
 
   /* * Discriminant for union field_location.  */
-
-  ENUM_BITFIELD(field_loc_kind) m_loc_kind : 3;
+  enum kind m_loc_kind;
 };
 
 union call_site_parameter_u
@@ -1948,6 +1974,19 @@ struct call_site
     /* Return the address of the first instruction after this call.  */
 
     CORE_ADDR pc () const;
+
+    /* Call CALLBACK for each target address.  CALLER_FRAME (for
+       registers) can be NULL if it is not known.  This function may
+       throw NO_ENTRY_VALUE_ERROR.  */
+
+    void iterate_over_addresses (struct gdbarch *call_site_gdbarch,
+				 struct frame_info *caller_frame,
+				 call_site_target::iterate_ftype callback)
+      const
+    {
+      return target.iterate_over_addresses (call_site_gdbarch, this,
+					    caller_frame, callback);
+    }
 
     /* * List successor with head in FUNC_TYPE.TAIL_CALL_LIST.  */
 
