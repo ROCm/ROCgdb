@@ -2027,32 +2027,56 @@ struct user_selected_context
     : m_previous_ptid (inferior_ptid),
       m_previous_lane (inferior_ptid != null_ptid
 		       ? inferior_thread ()->current_simd_lane ()
-		       : -1),
-      m_previous_frame (deprecated_safe_get_selected_frame ())
-  { /* Nothing.  */ }
+		       : -1)
+  {
+    save_selected_frame (&m_previous_frame_id, &m_previous_frame_level);
+  }
 
   /* Return true if the user selected context has changed since this object
      was created.  */
   bool has_changed () const
   {
-    return ((m_previous_ptid != null_ptid
-	     && inferior_ptid != null_ptid
-	     && (m_previous_ptid != inferior_ptid
-		 || inferior_thread ()->current_simd_lane () != m_previous_lane))
-	    || m_previous_frame != deprecated_safe_get_selected_frame ());
+    /* Did the selected thread or lane change?  */
+    if (m_previous_ptid != null_ptid && inferior_ptid != null_ptid
+	&& (m_previous_ptid != inferior_ptid
+	    || inferior_thread ()->current_simd_lane () != m_previous_lane))
+      return true;
+
+    /* Grab details of the currently selected frame, for comparison.  */
+    frame_id current_frame_id;
+    int current_frame_level;
+    save_selected_frame (&current_frame_id, &current_frame_level);
+
+    /* Did the selected frame level change?  */
+    if (current_frame_level != m_previous_frame_level)
+      return true;
+
+    /* Did the selected frame id change?  If the innermost frame is
+       selected then the level will be -1, and the frame-id will be
+       null_frame_id.  As comparing null_frame_id with itself always
+       reports not-equal, we only do the equality test if we have something
+       other than the innermost frame selected.  */
+    if (current_frame_level != -1
+	&& !frame_id_eq (current_frame_id, m_previous_frame_id))
+      return true;
+
+    /* Nothing changed!  */
+    return false;
   }
 private:
   /* The previously selected thread.  This might be null_ptid if there was
      no previously selected thread.  */
   ptid_t m_previous_ptid;
 
-  /* The previously selected lane.  This might be -1 if there was no
+  /* The previously selected lane.  This will be -1 if there was no
      previously selected lane.  */
   int m_previous_lane;
 
-  /* The previously selected frame.  This might be nullptr if there was no
-     previously selected frame.  */
-  frame_info *m_previous_frame;
+  /* The previously selected frame.  If the innermost frame is selected, or
+     no frame is selected, then the frame_id will be null_frame_id, and the
+     level will be -1.  */
+  frame_id m_previous_frame_id;
+  int m_previous_frame_level;
 };
 
 static void
