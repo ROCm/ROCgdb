@@ -2431,26 +2431,25 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 
     switch (level)
       {
-      case AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR:
-	fputs_unfiltered ("amd-dbgapi: ", out_file);
-	break;
       case AMD_DBGAPI_LOG_LEVEL_WARNING:
-	fputs_styled_unfiltered ("amd-dbgapi: ", warning_style.style (),
-				 out_file);
+	out_file->emit_style_escape (warning_style.style ());
 	break;
       case AMD_DBGAPI_LOG_LEVEL_INFO:
-	fputs_styled_unfiltered ("amd-dbgapi: ", info_style.style (),
-				 out_file);
+	out_file->emit_style_escape (info_style.style ());
 	break;
       case AMD_DBGAPI_LOG_LEVEL_TRACE:
       case AMD_DBGAPI_LOG_LEVEL_VERBOSE:
-	fputs_styled_unfiltered ("amd-dbgapi: ", verbose_style.style (),
-				 out_file);
+	out_file->emit_style_escape (verbose_style.style ());
+	break;
+      default:
 	break;
       }
 
-    fputs_unfiltered (message, out_file);
-    fputs_unfiltered ("\n", out_file);
+    out_file->puts_unfiltered ("amd-dbgapi: ");
+    out_file->emit_style_escape (ui_file_style ());
+
+    out_file->puts_unfiltered (message);
+    out_file->puts_unfiltered ("\n");
   }
 };
 
