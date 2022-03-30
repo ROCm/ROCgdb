@@ -148,9 +148,6 @@ vwarning (const char *string, va_list args)
 	  term_state.emplace ();
 	  target_terminal::ours_for_output ();
 	}
-      if (filtered_printing_initialized ())
-	gdb_stdout->wrap_here (0);	/* Force out any buffered output.  */
-      gdb_flush (gdb_stdout);
       if (warning_pre_print)
 	gdb_puts (warning_pre_print, gdb_stderr);
       gdb_vprintf (gdb_stderr, string, args);
@@ -652,9 +649,6 @@ void
 print_sys_errmsg (const char *string, int errcode)
 {
   const char *err = safe_strerror (errcode);
-  /* We want anything which was printed on stdout to come out first, before
-     this message.  */
-  gdb_flush (gdb_stdout);
   gdb_printf (gdb_stderr, "%s: %s.\n", string, err);
 }
 
@@ -1506,15 +1500,14 @@ pager_file::wrap_here (int indent)
     }
 }
 
-/* Print input string to gdb_stdout, filtered, with wrap, 
-   arranging strings in columns of n chars.  String can be
-   right or left justified in the column.  Never prints 
-   trailing spaces.  String should never be longer than
-   width.  FIXME: this could be useful for the EXAMINE 
-   command, which currently doesn't tabulate very well.  */
+/* Print input string to gdb_stdout arranging strings in columns of n
+   chars.  String can be right or left justified in the column.  Never
+   prints trailing spaces.  String should never be longer than width.
+   FIXME: this could be useful for the EXAMINE command, which
+   currently doesn't tabulate very well.  */
 
 void
-puts_filtered_tabular (char *string, int width, int right)
+puts_tabular (char *string, int width, int right)
 {
   int spaces = 0;
   int stringlen;
@@ -1840,17 +1833,6 @@ fprintf_styled (struct ui_file *stream, const ui_file_style &style,
   stream->emit_style_escape (ui_file_style ());
 }
 
-/* See utils.h.  */
-
-void
-vfprintf_styled (struct ui_file *stream, const ui_file_style &style,
-		 const char *format, va_list args)
-{
-  stream->emit_style_escape (style);
-  gdb_vprintf (stream, format, args);
-  stream->emit_style_escape (ui_file_style ());
-}
-
 void
 gdb_printf (const char *format, ...)
 {
@@ -1909,21 +1891,21 @@ n_spaces (int n)
 
 /* Print N spaces.  */
 void
-print_spaces_filtered (int n, struct ui_file *stream)
+print_spaces (int n, struct ui_file *stream)
 {
   gdb_puts (n_spaces (n), stream);
 }
 
 /* C++/ObjC demangler stuff.  */
 
-/* fprintf_symbol_filtered attempts to demangle NAME, a symbol in language
+/* fprintf_symbol attempts to demangle NAME, a symbol in language
    LANG, using demangling args ARG_MODE, and print it filtered to STREAM.
    If the name is not mangled, or the language for the name is unknown, or
    demangling is off, the name is printed in its "raw" form.  */
 
 void
-fprintf_symbol_filtered (struct ui_file *stream, const char *name,
-			 enum language lang, int arg_mode)
+fprintf_symbol (struct ui_file *stream, const char *name,
+		enum language lang, int arg_mode)
 {
   if (name != NULL)
     {

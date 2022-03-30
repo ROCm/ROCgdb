@@ -1930,7 +1930,7 @@ value_print_array_elements (struct value *val, struct ui_file *stream,
 	  if (options->prettyformat_arrays)
 	    {
 	      gdb_printf (stream, ",\n");
-	      print_spaces_filtered (2 + 2 * recurse, stream);
+	      print_spaces (2 + 2 * recurse, stream);
 	    }
 	  else
 	    gdb_printf (stream, ", ");
@@ -1938,7 +1938,7 @@ value_print_array_elements (struct value *val, struct ui_file *stream,
       else if (options->prettyformat_arrays)
 	{
 	  gdb_printf (stream, "\n");
-	  print_spaces_filtered (2 + 2 * recurse, stream);
+	  print_spaces (2 + 2 * recurse, stream);
 	}
       stream->wrap_here (2 + 2 * recurse);
       maybe_print_array_index (index_type, i + low_bound,
@@ -1986,7 +1986,7 @@ value_print_array_elements (struct value *val, struct ui_file *stream,
   if (options->prettyformat_arrays)
     {
       gdb_printf (stream, "\n");
-      print_spaces_filtered (2 * recurse, stream);
+      print_spaces (2 * recurse, stream);
     }
 }
 

@@ -194,11 +194,8 @@ extern struct ui_file **current_ui_gdb_stdin_ptr (void);
 extern struct ui_file **current_ui_gdb_stderr_ptr (void);
 extern struct ui_file **current_ui_gdb_stdlog_ptr (void);
 
-/* Flush STREAM.  This is a wrapper for ui_file_flush that also
-   flushes any output pending from uses of the *_filtered output
-   functions; that output is kept in a special buffer so that
-   pagination and styling are handled properly.  */
-extern void gdb_flush (struct ui_file *);
+/* Flush STREAM.  */
+extern void gdb_flush (struct ui_file *stream);
 
 /* The current top level's ui_file streams.  */
 
@@ -206,20 +203,16 @@ extern void gdb_flush (struct ui_file *);
 #define gdb_stdout (*current_ui_gdb_stdout_ptr ())
 /* Input stream */
 #define gdb_stdin (*current_ui_gdb_stdin_ptr ())
-/* Serious error notifications */
+/* Serious error notifications.  This bypasses the pager, if one is in
+   use.  */
 #define gdb_stderr (*current_ui_gdb_stderr_ptr ())
-/* Log/debug/trace messages that should bypass normal stdout/stderr
-   filtering.  For moment, always call this stream using
-   *_unfiltered.  In the very near future that restriction shall be
-   removed - either call shall be unfiltered.  (cagney 1999-06-13).  */
+/* Log/debug/trace messages that bypasses the pager, if one is in
+   use.  */
 #define gdb_stdlog (*current_ui_gdb_stdlog_ptr ())
 
 /* Truly global ui_file streams.  These are all defined in main.c.  */
 
-/* Target output that should bypass normal stdout/stderr filtering.
-   For moment, always call this stream using *_unfiltered.  In the
-   very near future that restriction shall be removed - either call
-   shall be unfiltered.  (cagney 1999-07-02).  */
+/* Target output that should bypass the pager, if one is in use.  */
 extern struct ui_file *gdb_stdtarg;
 extern struct ui_file *gdb_stdtargerr;
 extern struct ui_file *gdb_stdtargin;
@@ -228,11 +221,7 @@ extern struct ui_file *gdb_stdtargin;
 
 extern void set_screen_width_and_height (int width, int height);
 
-/* More generic printf like operations.  Filtered versions may return
-   non-locally on error.  As an extension over plain printf, these
-   support some GDB-specific format specifiers.  Particularly useful
-   here are the styling formatters: '%p[', '%p]' and '%ps'.  See
-   ui_out::message for details.  */
+/* Generic stdio-like operations.  */
 
 extern void gdb_puts (const char *, struct ui_file *);
 
@@ -242,7 +231,12 @@ extern int gdb_putc (int c);
 
 extern void gdb_puts (const char *);
 
-extern void puts_filtered_tabular (char *string, int width, int right);
+extern void puts_tabular (char *string, int width, int right);
+
+/* Generic printf-like operations.  As an extension over plain
+   printf, these support some GDB-specific format specifiers.
+   Particularly useful here are the styling formatters: '%p[', '%p]'
+   and '%ps'.  See ui_out::message for details.  */
 
 extern void gdb_vprintf (const char *, va_list) ATTRIBUTE_PRINTF (1, 0);
 
@@ -256,7 +250,7 @@ extern void gdb_printf (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
 extern void printf_unfiltered (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
-extern void print_spaces_filtered (int, struct ui_file *);
+extern void print_spaces (int, struct ui_file *);
 
 extern const char *n_spaces (int);
 
@@ -271,12 +265,6 @@ extern void fprintf_styled (struct ui_file *stream,
 			    const char *fmt,
 			    ...)
   ATTRIBUTE_PRINTF (3, 4);
-
-extern void vfprintf_styled (struct ui_file *stream,
-			     const ui_file_style &style,
-			     const char *fmt,
-			     va_list args)
-  ATTRIBUTE_PRINTF (3, 0);
 
 /* Like gdb_puts, but styles the output according to STYLE, when
    appropriate.  */
@@ -330,8 +318,8 @@ extern std::string print_aspace_and_address (struct gdbarch *gdbarch,
 
 extern CORE_ADDR string_to_core_addr (const char *my_string);
 
-extern void fprintf_symbol_filtered (struct ui_file *, const char *,
-				     enum language, int);
+extern void fprintf_symbol (struct ui_file *, const char *,
+			    enum language, int);
 
 extern void throw_perror_with_name (enum errors errcode, const char *string)
   ATTRIBUTE_NORETURN;
