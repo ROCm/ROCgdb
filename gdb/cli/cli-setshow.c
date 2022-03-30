@@ -141,11 +141,11 @@ deprecated_show_value_hack (struct ui_file *file,
     case var_optional_filename:
     case var_filename:
     case var_enum:
-      fprintf_filtered (file, (" is \"%s\".\n"), value);
+      gdb_printf (file, (" is \"%s\".\n"), value);
       break;
 
     default:
-      fprintf_filtered (file, (" is %s.\n"), value);
+      gdb_printf (file, (" is %s.\n"), value);
       break;
     }
 }

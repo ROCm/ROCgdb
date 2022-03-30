@@ -62,7 +62,7 @@ static void
 show_debug_threads (struct ui_file *file, int from_tty,
 		    struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Thread debugging is \"%s\".\n"), value);
+  gdb_printf (file, _("Thread debugging is \"%s\".\n"), value);
 }
 
 /* Definition of struct thread_info exported to gdbthread.h.  */
@@ -378,7 +378,7 @@ add_thread_with_info (process_stratum_target *targ, ptid_t ptid,
   result->priv.reset (priv);
 
   if (print_thread_events)
-    printf_filtered (_("[New %s]\n"), target_pid_to_str (ptid).c_str ());
+    gdb_printf (_("[New %s]\n"), target_pid_to_str (ptid).c_str ());
 
   annotate_new_thread ();
   return result;
@@ -1895,7 +1895,7 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
 	{
 	  if (!flags.quiet)
 	    gdb_puts (header.c_str ());
-	  printf_filtered ("%s", cmd_result.c_str ());
+	  gdb_printf ("%s", cmd_result.c_str ());
 	}
     }
   catch (const gdb_exception_error &ex)
@@ -1906,7 +1906,7 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
 	    gdb_puts (header.c_str ());
 
 	  if (flags.cont)
-	    printf_filtered ("%s\n", ex.what ());
+	    gdb_printf ("%s\n", ex.what ());
 	  else
 	    throw;
 	}
@@ -2418,24 +2418,24 @@ thread_command (const char *tidstr, int from_tty)
 	  struct thread_info *tp = inferior_thread ();
 
 	  if (tp->state == THREAD_EXITED)
-	    printf_filtered (_("[Current thread is %s (%s) (exited)]\n"),
-			     print_thread_id (tp),
-			     target_pid_to_str (inferior_ptid).c_str ());
+	    gdb_printf (_("[Current thread is %s (%s) (exited)]\n"),
+			print_thread_id (tp),
+			target_pid_to_str (inferior_ptid).c_str ());
 	  else
 	    {
 	      if (tp->has_simd_lanes ())
 		{
 		  int lane = tp->current_simd_lane ();
 
-		  printf_filtered (_("[Current thread is %s, lane %d (%s)]\n"),
-				   print_thread_id (tp), lane,
-				   target_lane_to_str (tp, lane).c_str ());
+		  gdb_printf (_("[Current thread is %s, lane %d (%s)]\n"),
+			      print_thread_id (tp), lane,
+			      target_lane_to_str (tp, lane).c_str ());
 		}
 	      else
 		{
-		  printf_filtered (_("[Current thread is %s (%s)]\n"),
-				   print_thread_id (tp),
-				   target_pid_to_str (inferior_ptid).c_str ());
+		  gdb_printf (_("[Current thread is %s (%s)]\n"),
+			      print_thread_id (tp),
+			      target_pid_to_str (inferior_ptid).c_str ());
 		}
 	    }
 	}
@@ -2511,15 +2511,15 @@ lane_command (const char *tidstr, int from_tty)
 	  int lane = tp->current_simd_lane ();
 
 	  if (tp->state == THREAD_EXITED)
-	    printf_filtered (_("[Current lane is %d, thread %s (%s) (exited)]\n"),
-			     lane,
-			     print_thread_id (tp),
-			     target_lane_to_str (tp, lane).c_str ());
+	    gdb_printf (_("[Current lane is %d, thread %s (%s) (exited)]\n"),
+			lane,
+			print_thread_id (tp),
+			target_lane_to_str (tp, lane).c_str ());
 	  else
-	    printf_filtered (_("[Current lane is %d, thread %s (%s)]\n"),
-			     lane,
-			     print_thread_id (tp),
-			     target_lane_to_str (tp, lane).c_str ());
+	    gdb_printf (_("[Current lane is %d, thread %s (%s)]\n"),
+			lane,
+			print_thread_id (tp),
+			target_lane_to_str (tp, lane).c_str ());
 	}
       else
 	error (_("No stack."));
@@ -2577,16 +2577,16 @@ thread_find_command (const char *arg, int from_tty)
 
       if (tp->name () != nullptr && re_exec (tp->name ()))
 	{
-	  printf_filtered (_("Thread %s has name '%s'\n"),
-			   print_thread_id (tp), tp->name ());
+	  gdb_printf (_("Thread %s has name '%s'\n"),
+		      print_thread_id (tp), tp->name ());
 	  match++;
 	}
 
       tmp = target_thread_name (tp);
       if (tmp != NULL && re_exec (tmp))
 	{
-	  printf_filtered (_("Thread %s has target name '%s'\n"),
-			   print_thread_id (tp), tmp);
+	  gdb_printf (_("Thread %s has target name '%s'\n"),
+		      print_thread_id (tp), tmp);
 	  match++;
 	}
 
@@ -2602,8 +2602,8 @@ thread_find_command (const char *arg, int from_tty)
 	      std::string name = target_lane_to_str (tp, lane);
 	      if (!name.empty () && re_exec (name.c_str ()))
 		{
-		  printf_filtered (_("Thread %s, lane %d has target id '%s'\n"),
-				   print_thread_id (tp), lane, name.c_str ());
+		  gdb_printf (_("Thread %s, lane %d has target id '%s'\n"),
+			      print_thread_id (tp), lane, name.c_str ());
 		  match++;
 		}
 	    }
@@ -2613,8 +2613,8 @@ thread_find_command (const char *arg, int from_tty)
 	  std::string name = target_pid_to_str (tp->ptid);
 	  if (!name.empty () && re_exec (name.c_str ()))
 	    {
-	      printf_filtered (_("Thread %s has target id '%s'\n"),
-			       print_thread_id (tp), name.c_str ());
+	      gdb_printf (_("Thread %s has target id '%s'\n"),
+			  print_thread_id (tp), name.c_str ());
 	      match++;
 	    }
 	}
@@ -2622,13 +2622,13 @@ thread_find_command (const char *arg, int from_tty)
       tmp = target_extra_thread_info (tp);
       if (tmp != NULL && re_exec (tmp))
 	{
-	  printf_filtered (_("Thread %s has extra info '%s'\n"),
-			   print_thread_id (tp), tmp);
+	  gdb_printf (_("Thread %s has extra info '%s'\n"),
+		      print_thread_id (tp), tmp);
 	  match++;
 	}
     }
   if (!match)
-    printf_filtered (_("No threads match '%s'\n"), arg);
+    gdb_printf (_("No threads match '%s'\n"), arg);
 }
 
 /* Print notices when new threads are attached and detached.  */
@@ -2637,9 +2637,9 @@ static void
 show_print_thread_events (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file,
-		    _("Printing of thread events is %s.\n"),
-		    value);
+  gdb_printf (file,
+	      _("Printing of thread events is %s.\n"),
+	      value);
 }
 
 /* See gdbthread.h.  */

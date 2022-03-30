@@ -139,7 +139,7 @@ static void
 show_step_stop_if_no_debug (struct ui_file *file, int from_tty,
 			    struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Mode of the step operation is %s.\n"), value);
+  gdb_printf (file, _("Mode of the step operation is %s.\n"), value);
 }
 
 /* proceed and normal_stop use these to notify the user when the
@@ -161,7 +161,7 @@ static void
 show_debug_infrun (struct ui_file *file, int from_tty,
 		   struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Inferior debugging is %s.\n"), value);
+  gdb_printf (file, _("Inferior debugging is %s.\n"), value);
 }
 
 /* See infrun.h.  */
@@ -173,8 +173,7 @@ static void
 maint_show_lane_divergence_support (ui_file *file, int from_tty,
 				    cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Lane divergence debugging support is %s.\n"),
-		    value);
+  gdb_printf (file, _("Lane divergence debugging support is %s.\n"), value);
 }
 
 /* Support for disabling address space randomization.  */
@@ -186,10 +185,10 @@ show_disable_randomization (struct ui_file *file, int from_tty,
 			    struct cmd_list_element *c, const char *value)
 {
   if (target_supports_disable_randomization ())
-    fprintf_filtered (file,
-		      _("Disabling randomization of debuggee's "
-			"virtual address space is %s.\n"),
-		      value);
+    gdb_printf (file,
+		_("Disabling randomization of debuggee's "
+		  "virtual address space is %s.\n"),
+		value);
   else
     gdb_puts (_("Disabling randomization of debuggee's "
 		"virtual address space is unsupported on\n"
@@ -228,9 +227,9 @@ static void
 show_non_stop (struct ui_file *file, int from_tty,
 	       struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file,
-		    _("Controlling the inferior in non-stop mode is %s.\n"),
-		    value);
+  gdb_printf (file,
+	      _("Controlling the inferior in non-stop mode is %s.\n"),
+	      value);
 }
 
 /* "Observer mode" is somewhat like a more extreme version of
@@ -272,15 +271,15 @@ set_observer_mode (const char *args, int from_tty,
     }
 
   if (from_tty)
-    printf_filtered (_("Observer mode is now %s.\n"),
-		     (observer_mode ? "on" : "off"));
+    gdb_printf (_("Observer mode is now %s.\n"),
+		(observer_mode ? "on" : "off"));
 }
 
 static void
 show_observer_mode (struct ui_file *file, int from_tty,
 		    struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Observer mode is %s.\n"), value);
+  gdb_printf (file, _("Observer mode is %s.\n"), value);
 }
 
 /* This updates the value of observer mode based on changes in
@@ -300,8 +299,8 @@ update_observer_mode (void)
 
   /* Let the user know if things change.  */
   if (newval != observer_mode)
-    printf_filtered (_("Observer mode is now %s.\n"),
-		     (newval ? "on" : "off"));
+    gdb_printf (_("Observer mode is now %s.\n"),
+		(newval ? "on" : "off"));
 
   observer_mode = observer_mode_1 = newval;
 }
@@ -373,8 +372,8 @@ static void
 show_stop_on_solib_events (struct ui_file *file, int from_tty,
 			   struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Stopping for shared library events is %s.\n"),
-		    value);
+  gdb_printf (file, _("Stopping for shared library events is %s.\n"),
+	      value);
 }
 
 /* True after stop if current stack frame should be printed.  */
@@ -404,10 +403,10 @@ static void
 show_follow_fork_mode_string (struct ui_file *file, int from_tty,
 			      struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file,
-		    _("Debugger response to a program "
-		      "call of fork or vfork is \"%s\".\n"),
-		    value);
+  gdb_printf (file,
+	      _("Debugger response to a program "
+		"call of fork or vfork is \"%s\".\n"),
+	      value);
 }
 
 
@@ -437,7 +436,7 @@ follow_fork_inferior (bool follow_child, bool detach_fork)
 	 the parent stays blocked.  If we're telling the parent to run
 	 in the foreground, the user will not be able to ctrl-c to get
 	 back the terminal, effectively hanging the debug session.  */
-      fprintf_filtered (gdb_stderr, _("\
+      gdb_printf (gdb_stderr, _("\
 Can not resume the parent process over vfork in the foreground while\n\
 holding the child stopped.  Try \"set detach-on-fork\" or \
 \"set schedule-multiple\".\n"));
@@ -471,9 +470,9 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	      ptid_t process_ptid = ptid_t (child_ptid.pid ());
 
 	      target_terminal::ours_for_output ();
-	      printf_filtered (_("[Detaching after %s from child %s]\n"),
-			       has_vforked ? "vfork" : "fork",
-			       target_pid_to_str (process_ptid).c_str ());
+	      gdb_printf (_("[Detaching after %s from child %s]\n"),
+			  has_vforked ? "vfork" : "fork",
+			  target_pid_to_str (process_ptid).c_str ());
 	    }
 	}
       else
@@ -537,10 +536,10 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  std::string child_pid = target_pid_to_str (child_ptid);
 
 	  target_terminal::ours_for_output ();
-	  printf_filtered (_("[Attaching after %s %s to child %s]\n"),
-			   parent_pid.c_str (),
-			   has_vforked ? "vfork" : "fork",
-			   child_pid.c_str ());
+	  gdb_printf (_("[Attaching after %s %s to child %s]\n"),
+		      parent_pid.c_str (),
+		      has_vforked ? "vfork" : "fork",
+		      child_pid.c_str ());
 	}
 
       /* Add the new inferior first, so that the target_detach below
@@ -665,9 +664,9 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	      ptid_t process_ptid = ptid_t (parent_ptid.pid ());
 
 	      target_terminal::ours_for_output ();
-	      printf_filtered (_("[Detaching after fork from "
-				 "parent %s]\n"),
-			       target_pid_to_str (process_ptid).c_str ());
+	      gdb_printf (_("[Detaching after fork from "
+			    "parent %s]\n"),
+			  target_pid_to_str (process_ptid).c_str ());
 	    }
 
 	  target_detach (parent_inf, 0);
@@ -977,13 +976,13 @@ handle_vfork_child_exec_or_exit (int exec)
 
 	      if (exec)
 		{
-		  printf_filtered (_("[Detaching vfork parent %s "
-				     "after child exec]\n"), pidstr.c_str ());
+		  gdb_printf (_("[Detaching vfork parent %s "
+				"after child exec]\n"), pidstr.c_str ());
 		}
 	      else
 		{
-		  printf_filtered (_("[Detaching vfork parent %s "
-				     "after child exit]\n"), pidstr.c_str ());
+		  gdb_printf (_("[Detaching vfork parent %s "
+				"after child exit]\n"), pidstr.c_str ());
 		}
 	    }
 
@@ -1064,7 +1063,7 @@ static void
 show_follow_exec_mode_string (struct ui_file *file, int from_tty,
 			      struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Follow exec mode is \"%s\".\n"),  value);
+  gdb_printf (file, _("Follow exec mode is \"%s\".\n"),  value);
 }
 
 /* EXEC_FILE_TARGET is assumed to be non-NULL.  */
@@ -1145,9 +1144,9 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
 
   /* What is this a.out's name?  */
   process_ptid = ptid_t (pid);
-  printf_filtered (_("%s is executing new program: %s\n"),
-		   target_pid_to_str (process_ptid).c_str (),
-		   exec_file_target);
+  gdb_printf (_("%s is executing new program: %s\n"),
+	      target_pid_to_str (process_ptid).c_str (),
+	      exec_file_target);
 
   /* We've followed the inferior through an exec.  Therefore, the
      inferior has essentially been killed & reborn.  */
@@ -1534,14 +1533,14 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
 				 const char *value)
 {
   if (can_use_displaced_stepping == AUTO_BOOLEAN_AUTO)
-    fprintf_filtered (file,
-		      _("Debugger's willingness to use displaced stepping "
-			"to step over breakpoints is %s (currently %s).\n"),
-		      value, target_is_non_stop_p () ? "on" : "off");
+    gdb_printf (file,
+		_("Debugger's willingness to use displaced stepping "
+		  "to step over breakpoints is %s (currently %s).\n"),
+		value, target_is_non_stop_p () ? "on" : "off");
   else
-    fprintf_filtered (file,
-		      _("Debugger's willingness to use displaced stepping "
-			"to step over breakpoints is %s.\n"), value);
+    gdb_printf (file,
+		_("Debugger's willingness to use displaced stepping "
+		  "to step over breakpoints is %s.\n"), value);
 }
 
 /* Return true if the target behing THREAD supports displaced stepping.  */
@@ -2046,10 +2045,10 @@ static void
 show_scheduler_mode (struct ui_file *file, int from_tty,
 		     struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file,
-		    _("Mode for locking scheduler "
-		      "during execution is \"%s\".\n"),
-		    value);
+  gdb_printf (file,
+	      _("Mode for locking scheduler "
+		"during execution is \"%s\".\n"),
+	      value);
 }
 
 static void
@@ -4221,7 +4220,7 @@ fetch_inferior_event ()
       && exec_done_display_p
       && (inferior_ptid == null_ptid
 	  || inferior_thread ()->state != THREAD_RUNNING))
-    printf_filtered (_("completed.\n"));
+    gdb_printf (_("completed.\n"));
 }
 
 /* See infrun.h.  */
@@ -8481,9 +8480,9 @@ maybe_remove_breakpoints (void)
       if (remove_breakpoints ())
 	{
 	  target_terminal::ours_for_output ();
-	  printf_filtered (_("Cannot remove breakpoints because "
-			     "program is no longer writable.\nFurther "
-			     "execution is probably impossible.\n"));
+	  gdb_printf (_("Cannot remove breakpoints because "
+			"program is no longer writable.\nFurther "
+			"execution is probably impossible.\n"));
 	}
     }
 }
@@ -8641,15 +8640,15 @@ normal_stop (void)
 	    {
 	      int lane = thr->current_simd_lane ();
 
-	      printf_filtered (_("[Switching to thread %s, lane %d (%s)]\n"),
-			       print_thread_id (thr), lane,
-			       target_lane_to_str (thr, lane).c_str ());
+	      gdb_printf (_("[Switching to thread %s, lane %d (%s)]\n"),
+			  print_thread_id (thr), lane,
+			  target_lane_to_str (thr, lane).c_str ());
 	    }
 	  else
 	    {
-	      printf_filtered (_("[Switching to thread %s (%s)]\n"),
-			       print_thread_id (thr),
-			       target_pid_to_str (thr->ptid).c_str ());
+	      gdb_printf (_("[Switching to thread %s (%s)]\n"),
+			  print_thread_id (thr),
+			  target_pid_to_str (thr->ptid).c_str ());
 	    }
 
 	  warn_if_current_lane_is_inactive ();
@@ -8666,7 +8665,7 @@ normal_stop (void)
 	if (current_ui->prompt_state == PROMPT_BLOCKED)
 	  {
 	    target_terminal::ours_for_output ();
-	    printf_filtered (_("No unwaited-for children left.\n"));
+	    gdb_printf (_("No unwaited-for children left.\n"));
 	  }
     }
 
@@ -8850,8 +8849,8 @@ signal_catch_update (const unsigned int *info)
 static void
 sig_print_header (void)
 {
-  printf_filtered (_("Signal        Stop\tPrint\tPass "
-		     "to program\tDescription\n"));
+  gdb_printf (_("Signal        Stop\tPrint\tPass "
+		"to program\tDescription\n"));
 }
 
 static void
@@ -8863,12 +8862,12 @@ sig_print_info (enum gdb_signal oursig)
   if (name_padding <= 0)
     name_padding = 0;
 
-  printf_filtered ("%s", name);
-  printf_filtered ("%*.*s ", name_padding, name_padding, "                 ");
-  printf_filtered ("%s\t", signal_stop[oursig] ? "Yes" : "No");
-  printf_filtered ("%s\t", signal_print[oursig] ? "Yes" : "No");
-  printf_filtered ("%s\t\t", signal_program[oursig] ? "Yes" : "No");
-  printf_filtered ("%s\n", gdb_signal_to_string (oursig));
+  gdb_printf ("%s", name);
+  gdb_printf ("%*.*s ", name_padding, name_padding, "                 ");
+  gdb_printf ("%s\t", signal_stop[oursig] ? "Yes" : "No");
+  gdb_printf ("%s\t", signal_print[oursig] ? "Yes" : "No");
+  gdb_printf ("%s\t\t", signal_program[oursig] ? "Yes" : "No");
+  gdb_printf ("%s\n", gdb_signal_to_string (oursig));
 }
 
 /* Specify how various signals in the inferior should be handled.  */
@@ -9004,7 +9003,7 @@ Are you sure you want to change it? "),
 		      sigs[signum] = 1;
 		    }
 		  else
-		    printf_filtered (_("Not confirmed, unchanged.\n"));
+		    gdb_printf (_("Not confirmed, unchanged.\n"));
 		}
 	      break;
 	    case GDB_SIGNAL_0:
@@ -9099,7 +9098,7 @@ info_signals_command (const char *signum_exp, int from_tty)
       return;
     }
 
-  printf_filtered ("\n");
+  gdb_printf ("\n");
   /* These ugly casts brought to you by the native VAX compiler.  */
   for (oursig = GDB_SIGNAL_FIRST;
        (int) oursig < (int) GDB_SIGNAL_LAST;
@@ -9112,8 +9111,8 @@ info_signals_command (const char *signum_exp, int from_tty)
 	sig_print_info (oursig);
     }
 
-  printf_filtered (_("\nUse the \"handle\" command "
-		     "to change these tables.\n"));
+  gdb_printf (_("\nUse the \"handle\" command "
+		"to change these tables.\n"));
 }
 
 /* The $_siginfo convenience variable is a bit special.  We don't know
@@ -9486,10 +9485,10 @@ show_exec_direction_func (struct ui_file *out, int from_tty,
 {
   switch (execution_direction) {
   case EXEC_FORWARD:
-    fprintf_filtered (out, _("Forward.\n"));
+    gdb_printf (out, _("Forward.\n"));
     break;
   case EXEC_REVERSE:
-    fprintf_filtered (out, _("Reverse.\n"));
+    gdb_printf (out, _("Reverse.\n"));
     break;
   default:
     internal_error (__FILE__, __LINE__,
@@ -9502,8 +9501,8 @@ static void
 show_schedule_multiple (struct ui_file *file, int from_tty,
 			struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Resuming the execution of threads "
-			    "of all processes is %s.\n"), value);
+  gdb_printf (file, _("Resuming the execution of threads "
+		      "of all processes is %s.\n"), value);
 }
 
 /* Implementation of `siginfo' variable.  */

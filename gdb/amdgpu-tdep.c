@@ -829,12 +829,11 @@ amdgpu_frame_this_id (struct frame_info *this_frame, void **this_cache,
 
   if (frame_debug)
     {
-      fprintf_unfiltered (gdb_stdlog,
-			  "{ amdgpu_frame_this_id (this_frame=%d) type=%d"
-			  " -> %s }\n",
-			  frame_relative_level (this_frame),
-			  get_frame_type (this_frame),
-			  this_id->to_string ().c_str ());
+      gdb_printf (gdb_stdlog,
+		  "{ amdgpu_frame_this_id (this_frame=%d) type=%d -> %s }\n",
+		  frame_relative_level (this_frame),
+		  get_frame_type (this_frame),
+		  this_id->to_string ().c_str ());
     }
 
   return;

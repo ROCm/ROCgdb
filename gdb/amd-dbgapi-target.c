@@ -1075,10 +1075,10 @@ amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
   if (debug_infrun)
-    fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: amd_dbgapi_target::resume "
-			"([%d,%ld,%ld])\e[0m\n",
-			ptid.pid (), ptid.lwp (), ptid.tid ());
+    gdb_printf (gdb_stdlog,
+		"\e[1;34minfrun: amd_dbgapi_target::resume "
+		"([%d,%ld,%ld])\e[0m\n",
+		ptid.pid (), ptid.lwp (), ptid.tid ());
 
   bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
 
@@ -1159,9 +1159,8 @@ void
 amd_dbgapi_target::commit_resumed ()
 {
   if (debug_infrun)
-    fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: amd_dbgapi_target::commit_resumed "
-			"()\e[0m\n");
+    gdb_printf (gdb_stdlog,
+		"\e[1;34minfrun: amd_dbgapi_target::commit_resumed ()\e[0m\n");
 
   beneath ()->commit_resumed ();
 
@@ -1175,10 +1174,10 @@ amd_dbgapi_target::stop (ptid_t ptid)
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
   if (debug_infrun)
-    fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: amd_dbgapi_target::stop "
-			"([%d,%ld,%ld])\e[0m\n",
-			ptid.pid (), ptid.lwp (), ptid.tid ());
+    gdb_printf (gdb_stdlog,
+		"\e[1;34minfrun: amd_dbgapi_target::stop "
+		"([%d,%ld,%ld])\e[0m\n",
+		ptid.pid (), ptid.lwp (), ptid.tid ());
 
   bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
 
@@ -1597,10 +1596,10 @@ amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
   gdb_assert (ptid == minus_one_ptid || ptid.is_pid ());
 
   if (debug_infrun)
-    fprintf_unfiltered (gdb_stdlog,
-			"\e[1;34minfrun: amd_dbgapi_target::wait (%d, %ld, "
-			"%ld)\e[0m\n",
-			ptid.pid (), ptid.lwp (), ptid.tid ());
+    gdb_printf (gdb_stdlog,
+		"\e[1;34minfrun: amd_dbgapi_target::wait (%d, %ld, "
+		"%ld)\e[0m\n",
+		ptid.pid (), ptid.lwp (), ptid.tid ());
 
   ptid_t event_ptid = beneath ()->wait (ptid, ws, target_options);
   if (event_ptid != minus_one_ptid)
@@ -2264,7 +2263,7 @@ amd_dbgapi_target_signal_received (gdb_signal sig)
     return;
 
   if (!info->precise_memory.enabled)
-      printf_filtered ("\
+      gdb_printf ("\
 Warning: precise memory violation signal reporting is not enabled, reported\n\
 location may not be accurate.  See \"show amdgpu precise-memory\".\n");
 }
@@ -2299,7 +2298,7 @@ amd_dbgapi_target_normal_stop (bpstat *bs_list, int print_frame)
   if (!found_hardware_watchpoint)
     return;
 
-  printf_filtered ("\
+  gdb_printf ("\
 Warning: precise memory signal reporting is not enabled, watchpoint stop\n\
 location may not be accurate.  See \"show amdgpu precise-memory\".\n");
 }
@@ -2531,11 +2530,11 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
 {
   struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
 
-  fprintf_filtered (file,
-		    _ ("AMDGPU precise memory access reporting is %s "
-		       "(currently %s).\n"),
-		    info->precise_memory.requested ? "on" : "off",
-		    info->precise_memory.enabled ? "enabled" : "disabled");
+  gdb_printf (file,
+	      _ ("AMDGPU precise memory access reporting is %s "
+		 "(currently %s).\n"),
+	      info->precise_memory.requested ? "on" : "off",
+	      info->precise_memory.enabled ? "enabled" : "disabled");
 }
 
 static void
@@ -2588,11 +2587,11 @@ show_dbgapi_version (const char *args, int from_tty)
   uint32_t major, minor, patch;
   amd_dbgapi_get_version (&major, &minor, &patch);
 
-  printf_filtered ("%p[ROCdbgapi %d.%d.%d (%s)%p]\nLoaded from `%ps'\n",
-                   version_style.style ().ptr (), major, minor, patch,
-		   amd_dbgapi_get_build_name (), nullptr,
-		   styled_string (file_name_style.style (),
-				  get_dbgapi_library_file_path ()));
+  gdb_printf ("%p[ROCdbgapi %d.%d.%d (%s)%p]\nLoaded from `%ps'\n",
+	      version_style.style ().ptr (), major, minor, patch,
+	      amd_dbgapi_get_build_name (), nullptr,
+	      styled_string (file_name_style.style (),
+			     get_dbgapi_library_file_path ()));
 }
 
 /* List of set/show amdgpu commands.  */
@@ -2636,7 +2635,7 @@ static void
 show_debug_amdgpu_log_level (struct ui_file *file, int from_tty,
 			     struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _ ("The amdgpu log level is %s.\n"), value);
+  gdb_printf (file, _ ("The amdgpu log level is %s.\n"), value);
 }
 
 static void
@@ -3191,15 +3190,15 @@ queue_find_command (const char *arg, int from_tty)
 	  std::string target_id = queue_target_id_string (queue_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
-	      printf_filtered (_ ("Queue %ld has Target Id '%s'\n"),
-			       queue_id.handle, target_id.c_str ());
+	      gdb_printf (_ ("Queue %ld has Target Id '%s'\n"),
+			  queue_id.handle, target_id.c_str ());
 	      ++matches;
 	    }
 	}
     }
 
   if (!matches)
-    printf_filtered (_ ("No queues match '%s'\n"), arg);
+    gdb_printf (_ ("No queues match '%s'\n"), arg);
 }
 
 template <typename T>
@@ -3684,11 +3683,11 @@ address_spaces_dump (struct gdbarch *gdbarch, struct ui_file *file)
 
   auto address_spaces = gdbarch_address_spaces (gdbarch);
 
-  fprintf_unfiltered (file, " Name\n");
+  gdb_printf (file, " Name\n");
 
   for (const auto &address_space : address_spaces)
     {
-      fprintf_unfiltered (file, " %-10s\n", address_space.name.get ());
+      gdb_printf (file, " %-10s\n", address_space.name.get ());
     }
 }
 
@@ -3744,8 +3743,8 @@ dispatch_find_command (const char *arg, int from_tty)
 	  std::string target_id = dispatch_target_id_string (dispatch_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
-	      printf_filtered (_ ("Dispatch %ld has Target Id '%s'\n"),
-			       dispatch_id.handle, target_id.c_str ());
+	      gdb_printf (_ ("Dispatch %ld has Target Id '%s'\n"),
+			  dispatch_id.handle, target_id.c_str ());
 	      ++matches;
 	    }
 
@@ -3761,16 +3760,16 @@ dispatch_find_command (const char *arg, int from_tty)
 	    = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
 	  if (msymbol.minsym && re_exec (msymbol.minsym->print_name ()))
 	    {
-	      printf_filtered (_ ("Dispatch %ld has Kernel Function '%s'\n"),
-			       dispatch_id.handle,
-			       msymbol.minsym->print_name ());
+	      gdb_printf (_ ("Dispatch %ld has Kernel Function '%s'\n"),
+			  dispatch_id.handle,
+			  msymbol.minsym->print_name ());
 	      ++matches;
 	    }
 	}
     }
 
   if (!matches)
-    printf_filtered (_ ("No dispatches match '%s'\n"), arg);
+    gdb_printf (_ ("No dispatches match '%s'\n"), arg);
 }
 
 /* -Wmissing-prototypes */

@@ -53,7 +53,7 @@ gdb_hip_test_mode_frob_names (struct objfile *objfile, gdb::string_view name)
       && name == "main")
     {
       if (gdb_hip_test_mode > 1)
-	fprintf_unfiltered (gdb_stdlog, "frob: got host main\n");
+	gdb_printf (gdb_stdlog, "frob: got host main\n");
       return host_name_sv;
     }
   else if (objfile->obfd->arch_info->arch != bfd_arch_amdgcn
@@ -63,16 +63,16 @@ gdb_hip_test_mode_frob_names (struct objfile *objfile, gdb::string_view name)
 	   lld::elf::LinkerDriver::main(llvm::ArrayRef<char const*>)
 	 before we reach the device's main.  */
       if (gdb_hip_test_mode > 1)
-	fprintf_unfiltered (gdb_stdlog, "frob: got host %.*s\n",
-			    (int) name.size (), name.data ());
+	gdb_printf (gdb_stdlog, "frob: got host %.*s\n",
+		    (int) name.size (), name.data ());
       /* Same, with uppercase "Main".  */
       return "_ZN3lld3elf12LinkerDriver4MainEN4llvm8ArrayRefIPKcEE";
     }
   else if (name.find ("gdb_hip_test_main") != gdb::string_view::npos)
     {
       if (gdb_hip_test_mode > 1)
-	fprintf_unfiltered (gdb_stdlog, "frob: got %.*s\n",
-			    (int) name.size (), name.data ());
+	gdb_printf (gdb_stdlog, "frob: got %.*s\n",
+		    (int) name.size (), name.data ());
       return device_name_sv;
     }
 
@@ -96,6 +96,6 @@ _initialize_gdb_hip_test_mode ()
   if (p != nullptr)
     gdb_hip_test_mode = atoi (p);
   if (gdb_hip_test_mode > 1)
-    fprintf_unfiltered (gdb_stdlog, "gdb hip test mode enabled, mode=%d\n",
-			gdb_hip_test_mode);
+    gdb_printf (gdb_stdlog, "gdb hip test mode enabled, mode=%d\n",
+		gdb_hip_test_mode);
 }

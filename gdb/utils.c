@@ -109,9 +109,9 @@ static void
 show_sevenbit_strings (struct ui_file *file, int from_tty,
 		       struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Printing of 8-bit characters "
-			    "in strings as \\nnn is %s.\n"),
-		    value);
+  gdb_printf (file, _("Printing of 8-bit characters "
+		      "in strings as \\nnn is %s.\n"),
+	      value);
 }
 
 /* String to be printed before warning messages, if any.  */
@@ -123,7 +123,7 @@ static void
 show_pagination_enabled (struct ui_file *file, int from_tty,
 			 struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("State of pagination is %s.\n"), value);
+  gdb_printf (file, _("State of pagination is %s.\n"), value);
 }
 
 
@@ -154,7 +154,7 @@ vwarning (const char *string, va_list args)
       if (warning_pre_print)
 	gdb_puts (warning_pre_print, gdb_stderr);
       gdb_vprintf (gdb_stderr, string, args);
-      fprintf_unfiltered (gdb_stderr, "\n");
+      gdb_printf (gdb_stderr, "\n");
     }
 }
 
@@ -242,10 +242,10 @@ can_dump_core (enum resource_limit_kind limit_kind)
 void
 warn_cant_dump_core (const char *reason)
 {
-  fprintf_unfiltered (gdb_stderr,
-		      _("%s\nUnable to dump core, use `ulimit -c"
-			" unlimited' before executing GDB next time.\n"),
-		      reason);
+  gdb_printf (gdb_stderr,
+	      _("%s\nUnable to dump core, use `ulimit -c"
+		" unlimited' before executing GDB next time.\n"),
+	      reason);
 }
 
 /* Check whether GDB will be able to dump core using the dump_core
@@ -383,7 +383,7 @@ internal_vproblem (struct internal_problem *problem,
       || !confirm
       || !filtered_printing_initialized ()
       || problem->should_print_backtrace)
-    fprintf_unfiltered (gdb_stderr, "%s\n", reason.c_str ());
+    gdb_printf (gdb_stderr, "%s\n", reason.c_str ());
 
   if (problem->should_print_backtrace)
     gdb_internal_backtrace ();
@@ -408,8 +408,8 @@ internal_vproblem (struct internal_problem *problem,
 
   gdb_puts (_("\nThis is a bug, please report it."), gdb_stderr);
   if (REPORT_BUGS_TO[0])
-    fprintf_unfiltered (gdb_stderr, _("  For instructions, see:\n%s."),
-			REPORT_BUGS_TO);
+    gdb_printf (gdb_stderr, _("  For instructions, see:\n%s."),
+		REPORT_BUGS_TO);
   gdb_puts ("\n\n", gdb_stderr);
 
   if (problem->should_dump_core == internal_problem_ask)
@@ -655,7 +655,7 @@ print_sys_errmsg (const char *string, int errcode)
   /* We want anything which was printed on stdout to come out first, before
      this message.  */
   gdb_flush (gdb_stdout);
-  fprintf_unfiltered (gdb_stderr, "%s: %s.\n", string, err);
+  gdb_printf (gdb_stderr, "%s: %s.\n", string, err);
 }
 
 /* Control C eventually causes this to be called, at a convenient time.  */
@@ -879,9 +879,9 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
       gdb_stdout->wrap_here (0);
       gdb_vprintf (gdb_stdout, ctlstr, args);
 
-      printf_filtered (_("(%s or %s) [answered %c; "
-			 "input not from terminal]\n"),
-		       y_string, n_string, def_answer);
+      gdb_printf (_("(%s or %s) [answered %c; "
+		    "input not from terminal]\n"),
+		  y_string, n_string, def_answer);
 
       return def_value;
     }
@@ -916,7 +916,7 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
 
       if (response == NULL)	/* C-d  */
 	{
-	  printf_filtered ("EOF [assumed %c]\n", def_answer);
+	  gdb_printf ("EOF [assumed %c]\n", def_answer);
 	  retval = def_value;
 	  break;
 	}
@@ -943,15 +943,15 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
 	  break;
 	}
       /* Invalid entries are not defaulted and require another selection.  */
-      printf_filtered (_("Please answer %s or %s.\n"),
-		       y_string, n_string);
+      gdb_printf (_("Please answer %s or %s.\n"),
+		  y_string, n_string);
     }
 
   /* Add time spend in this routine to prompt_for_continue_wait_time.  */
   prompt_for_continue_wait_time += steady_clock::now () - prompt_started;
 
   if (annotation_level > 1)
-    printf_filtered (("\n\032\032post-query\n"));
+    gdb_printf (("\n\032\032post-query\n"));
   return retval;
 }
 
@@ -1132,9 +1132,9 @@ static void
 show_lines_per_page (struct ui_file *file, int from_tty,
 		     struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file,
-		    _("Number of lines gdb thinks are in a page is %s.\n"),
-		    value);
+  gdb_printf (file,
+	      _("Number of lines gdb thinks are in a page is %s.\n"),
+	      value);
 }
 
 /* Number of chars per line or UINT_MAX if line folding is disabled.  */
@@ -1143,10 +1143,10 @@ static void
 show_chars_per_line (struct ui_file *file, int from_tty,
 		     struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file,
-		    _("Number of characters gdb thinks "
-		      "are in a line is %s.\n"),
-		    value);
+  gdb_printf (file,
+	      _("Number of characters gdb thinks "
+		"are in a line is %s.\n"),
+	      value);
 }
 
 /* Current count of lines printed on this page, chars on this line.  */
@@ -1816,17 +1816,7 @@ gdb_vprintf (const char *format, va_list args)
 }
 
 void
-fprintf_filtered (struct ui_file *stream, const char *format, ...)
-{
-  va_list args;
-
-  va_start (args, format);
-  gdb_vprintf (stream, format, args);
-  va_end (args);
-}
-
-void
-fprintf_unfiltered (struct ui_file *stream, const char *format, ...)
+gdb_printf (struct ui_file *stream, const char *format, ...)
 {
   va_list args;
 
@@ -1862,7 +1852,7 @@ vfprintf_styled (struct ui_file *stream, const ui_file_style &style,
 }
 
 void
-printf_filtered (const char *format, ...)
+gdb_printf (const char *format, ...)
 {
   va_list args;
 
@@ -3108,8 +3098,8 @@ static void
 show_debug_timestamp (struct ui_file *file, int from_tty,
 		      struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Timestamping debugging messages is %s.\n"),
-		    value);
+  gdb_printf (file, _("Timestamping debugging messages is %s.\n"),
+	      value);
 }
 
 
