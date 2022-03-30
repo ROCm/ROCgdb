@@ -244,11 +244,7 @@ extern int fputc_unfiltered (int c, struct ui_file *);
 
 extern int putchar_filtered (int c);
 
-extern int putchar_unfiltered (int c);
-
 extern void puts_filtered (const char *);
-
-extern void puts_unfiltered (const char *);
 
 extern void puts_filtered_tabular (char *string, int width, int right);
 
@@ -294,14 +290,6 @@ extern void vfprintf_styled (struct ui_file *stream,
 			     va_list args)
   ATTRIBUTE_PRINTF (3, 0);
 
-/* Like vfprintf_styled, but do not process gdb-specific format
-   specifiers.  */
-extern void vfprintf_styled_no_gdbfmt (struct ui_file *stream,
-				       const ui_file_style &style,
-				       bool filter,
-				       const char *fmt, va_list args)
-  ATTRIBUTE_PRINTF (4, 0);
-
 /* Like fputs_filtered, but styles the output according to STYLE, when
    appropriate.  */
 
@@ -320,10 +308,6 @@ extern void fputs_styled_unfiltered (const char *linebuffer,
 
 extern void fputs_highlighted (const char *str, const compiled_regex &highlight,
 			       struct ui_file *stream);
-
-/* Reset the terminal style to the default, if needed.  */
-
-extern void reset_terminal_style (struct ui_file *stream);
 
 /* Return the address only having significant bits.  */
 extern CORE_ADDR address_significant (gdbarch *gdbarch, CORE_ADDR addr);
