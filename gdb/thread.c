@@ -1894,7 +1894,7 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
       if (!flags.silent || cmd_result.length () > 0)
 	{
 	  if (!flags.quiet)
-	    puts_filtered (header.c_str ());
+	    gdb_puts (header.c_str ());
 	  printf_filtered ("%s", cmd_result.c_str ());
 	}
     }
@@ -1903,7 +1903,7 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
       if (!flags.silent)
 	{
 	  if (!flags.quiet)
-	    puts_filtered (header.c_str ());
+	    gdb_puts (header.c_str ());
 
 	  if (flags.cont)
 	    printf_filtered ("%s\n", ex.what ());

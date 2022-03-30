@@ -470,7 +470,7 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 	  if (!val_long.has_value ())
 	    val_long.emplace (unpack_long (type, valaddr));
 
-	  fputs_filtered (paspace (gdbarch, *val_long).c_str (), stream);
+	  gdb_puts (paspace (gdbarch, *val_long).c_str (), stream);
 	  val_long.emplace
 	    (gdbarch_segment_address_from_core_address (gdbarch, *val_long));
 	  converted_bytes.resize (TYPE_LENGTH (type));
@@ -580,11 +580,11 @@ print_address_symbolic (struct gdbarch *gdbarch, CORE_ADDR addr,
 			      &offset, &filename, &line, &unmapped))
     return 0;
 
-  fputs_filtered (leadin, stream);
+  gdb_puts (leadin, stream);
   if (unmapped)
-    fputs_filtered ("<*", stream);
+    gdb_puts ("<*", stream);
   else
-    fputs_filtered ("<", stream);
+    gdb_puts ("<", stream);
   fputs_styled (name.c_str (), function_name_style.style (), stream);
   if (offset != 0)
     fprintf_filtered (stream, "%+d", offset);
@@ -593,15 +593,15 @@ print_address_symbolic (struct gdbarch *gdbarch, CORE_ADDR addr,
      line # of this addr, if we have it; else line # of the nearest symbol.  */
   if (print_symbol_filename && !filename.empty ())
     {
-      fputs_filtered (line == -1 ? " in " : " at ", stream);
+      gdb_puts (line == -1 ? " in " : " at ", stream);
       fputs_styled (filename.c_str (), file_name_style.style (), stream);
       if (line != -1)
 	fprintf_filtered (stream, ":%d", line);
     }
   if (unmapped)
-    fputs_filtered ("*>", stream);
+    gdb_puts ("*>", stream);
   else
-    fputs_filtered (">", stream);
+    gdb_puts (">", stream);
 
   return 1;
 }
@@ -1170,7 +1170,7 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	}
 
       if (format == 'i')
-	puts_filtered (pc_prefix (next_address));
+	gdb_puts (pc_prefix (next_address));
       print_address (next_gdbarch, next_address, gdb_stdout);
       printf_filtered (":");
       for (i = maxelts;
@@ -1698,7 +1698,7 @@ info_address_command (const char *exp, int from_tty)
     }
 
   printf_filtered ("Symbol \"");
-  puts_filtered (sym->print_name ());
+  gdb_puts (sym->print_name ());
   printf_filtered ("\" is ");
   val = SYMBOL_VALUE (sym);
   if (sym->is_objfile_owned ())
@@ -2176,7 +2176,7 @@ do_one_display (struct display *d)
 
       annotate_display_expression ();
 
-      puts_filtered (d->exp_string.c_str ());
+      gdb_puts (d->exp_string.c_str ());
       annotate_display_expression_end ();
 
       if (d->format.count != 1 || d->format.format == 'i')
@@ -2215,7 +2215,7 @@ do_one_display (struct display *d)
 
       annotate_display_expression ();
 
-      puts_filtered (d->exp_string.c_str ());
+      gdb_puts (d->exp_string.c_str ());
       annotate_display_expression_end ();
 
       printf_filtered (" = ");
@@ -2302,7 +2302,7 @@ Num Enb Expression\n"));
 			 d->format.format);
       else if (d->format.format)
 	printf_filtered ("/%c ", d->format.format);
-      puts_filtered (d->exp_string.c_str ());
+      gdb_puts (d->exp_string.c_str ());
       if (d->block && !contained_in (get_selected_block (0), d->block, true))
 	printf_filtered (_(" (cannot be evaluated in the current context)"));
       printf_filtered ("\n");
@@ -2644,7 +2644,7 @@ printf_floating (struct ui_file *stream, const char *format,
   /* Convert the value to a string and print it.  */
   std::string str
     = target_float_to_string (value_contents (value).data (), fmt_type, format);
-  fputs_filtered (str.c_str (), stream);
+  gdb_puts (str.c_str (), stream);
 }
 
 /* Subroutine of ui_printf to simplify it.
@@ -2882,7 +2882,7 @@ ui_printf (const char *arg, struct ui_file *stream)
 	    /* Print a portion of the format string that has no
 	       directives.  Note that this will not include any
 	       ordinary %-specs, but it might include "%%".  That is
-	       why we use printf_filtered and not puts_filtered here.
+	       why we use printf_filtered and not gdb_puts here.
 	       Also, we pass a dummy argument because some platforms
 	       have modified GCC to include -Wformat-security by
 	       default, which will warn here if there is no
