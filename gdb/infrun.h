@@ -41,8 +41,8 @@ extern bool debug_infrun;
 
 /* Print "infrun" start/end debug statements.  */
 
-#define INFRUN_SCOPED_DEBUG_START_END(msg) \
-  scoped_debug_start_end (debug_infrun, "infrun", msg)
+#define INFRUN_SCOPED_DEBUG_START_END(fmt, ...) \
+  scoped_debug_start_end (debug_infrun, "infrun", fmt, ##__VA_ARGS__)
 
 /* Print "infrun" enter/exit debug statements.  */
 
@@ -139,10 +139,10 @@ extern void set_last_target_status (process_stratum_target *target, ptid_t ptid,
    target_wait().  */
 extern void nullify_last_target_wait_ptid ();
 
-/* Stop all threads of all targets.  Only returns after everything is halted.
+/* Stop all threads.  Only returns after everything is halted.
 
-   Upon return, all targets in `target_ops::prevent_new_threads (true)`
-   state.  */
+   REASON is a string indicating the reason why we stop all threads, used in
+   debug messages.  */
 extern void stop_all_threads (const char *reason);
 
 extern void prepare_for_detach (void);

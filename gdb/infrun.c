@@ -2428,8 +2428,7 @@ resume_1 (enum gdb_signal sig)
 	  /* Fallback to stepping over the breakpoint in-line.  */
 
 	  if (target_is_non_stop_p ())
-	    stop_all_threads ("starting in-line step-over (fallback from "
-			      "displaced step)");
+	    stop_all_threads ("displaced stepping falling back on inline stepping");
 
 	  set_step_over_info (regcache->aspace (),
 			      regcache_read_pc (regcache), 0, tp->global_num);
@@ -4973,7 +4972,7 @@ stop_all_threads (const char *reason)
 
   gdb_assert (exists_non_stop_target ());
 
-  infrun_debug_printf ("starting");
+  INFRUN_SCOPED_DEBUG_START_END ("reason=%s", reason);
 
   scoped_restore_current_thread restore_thread;
 
@@ -8081,7 +8080,7 @@ stop_waiting (struct execution_control_state *ecs)
   /* If all-stop, but there exists a non-stop target, stop all
      threads now that we're presenting the stop to the user.  */
   if (!non_stop && exists_non_stop_target ())
-    stop_all_threads ("all-stop stop");
+    stop_all_threads ("presenting stop to user in all-stop");
 }
 
 /* Like keep_going, but passes the signal to the inferior, even if the

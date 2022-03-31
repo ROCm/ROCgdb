@@ -1618,6 +1618,16 @@ This GDB was configured as follows:\n\
 "));
 #endif
 
+#if CXX_STD_THREAD
+  gdb_printf (stream, _("\
+	     --enable-threading\n\
+"));
+#else
+  gdb_print (stream, _("\
+	     --disable-threading\n\
+"));
+#endif
+
 #ifdef RELOC_SRCDIR
   gdb_printf (stream, _("\
 	     --with-relocated-sources=%s\n\
