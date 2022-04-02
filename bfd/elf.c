@@ -11010,10 +11010,7 @@ elfcore_grok_freebsd_note (bfd *abfd, Elf_Internal_Note *note)
       return elfcore_grok_freebsd_psinfo (abfd, note);
 
     case NT_FREEBSD_THRMISC:
-      if (note->namesz == 8)
-	return elfcore_make_note_pseudosection (abfd, ".thrmisc", note);
-      else
-	return true;
+      return elfcore_make_note_pseudosection (abfd, ".thrmisc", note);
 
     case NT_FREEBSD_PROCSTAT_PROC:
       return elfcore_make_note_pseudosection (abfd, ".note.freebsdcore.proc",
@@ -11030,11 +11027,11 @@ elfcore_grok_freebsd_note (bfd *abfd, Elf_Internal_Note *note)
     case NT_FREEBSD_PROCSTAT_AUXV:
       return elfcore_make_auxv_note_section (abfd, note, 4);
 
+    case NT_FREEBSD_X86_SEGBASES:
+      return elfcore_make_note_pseudosection (abfd, ".reg-x86-segbases", note);
+
     case NT_X86_XSTATE:
-      if (note->namesz == 8)
-	return elfcore_grok_xstatereg (abfd, note);
-      else
-	return true;
+      return elfcore_grok_xstatereg (abfd, note);
 
     case NT_FREEBSD_PTLWPINFO:
       return elfcore_make_note_pseudosection (abfd, ".note.freebsdcore.lwpinfo",
@@ -11911,6 +11908,15 @@ elfcore_write_xstatereg (bfd *abfd, char *buf, int *bufsiz,
 }
 
 char *
+elfcore_write_x86_segbases (bfd *abfd, char *buf, int *bufsiz,
+			    const void *regs, int size)
+{
+  char *note_name = "FreeBSD";
+  return elfcore_write_note (abfd, buf, bufsiz,
+			     note_name, NT_FREEBSD_X86_SEGBASES, regs, size);
+}
+
+char *
 elfcore_write_ppc_vmx (bfd *abfd,
 		       char *buf,
 		       int *bufsiz,
@@ -12447,6 +12453,8 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_prxfpreg (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-xstate") == 0)
     return elfcore_write_xstatereg (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-x86-segbases") == 0)
+    return elfcore_write_x86_segbases (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-ppc-vmx") == 0)
     return elfcore_write_ppc_vmx (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-ppc-vsx") == 0)
