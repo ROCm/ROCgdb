@@ -1571,10 +1571,9 @@ dwarf2_evaluate_loc_desc (struct type *type, struct frame_info *frame,
    evaluated.  ADDR_STACK is a context (location of a variable) and
    might be needed to evaluate the location expression.
 
-   PUSH_INITIAL_VALUE is true if the first address from ADDR_STACK, should
-   be pushed on the DWARF expression evaluation stack before evaluating the
-   expression; this is required by certain forms of DWARF expression.  When
-   PUSH_INITIAL_VALUE is true ADDR_STACK can't be nullptr.
+   PUSH_VALUES is an array of values to be pushed to the expression stack
+   before evaluation starts.  PUSH_VALUES[0] is pushed first, then
+   PUSH_VALUES[1], and so on.
 
    Returns 1 on success, 0 otherwise.  */
 
@@ -1583,7 +1582,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			   struct frame_info *frame,
 			   const struct property_addr_info *addr_stack,
 			   CORE_ADDR *valp,
-			   bool push_initial_value,
+			   gdb::array_view<CORE_ADDR> push_values,
 			   bool *is_reference)
 {
   if (dlbaton == NULL || dlbaton->size == 0)
@@ -1596,13 +1595,14 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
   scoped_value_mark free_values;
   std::vector<value *> init_values;
 
-  if (push_initial_value)
+  /* Place any initial values onto the expression stack.  */
+  for (const auto &val : push_values)
     {
       struct type *type = address_type (per_objfile->objfile->arch (),
 					per_cu->addr_size ());
 
       gdb_assert (addr_stack != nullptr);
-      init_values.push_back (value_at_lazy (type, addr_stack->addr));
+      init_values.push_back (value_at_lazy (type, val));
     }
 
   try
@@ -1648,7 +1648,7 @@ dwarf2_evaluate_property (const struct dynamic_prop *prop,
 			  struct frame_info *frame,
 			  const struct property_addr_info *addr_stack,
 			  CORE_ADDR *value,
-			  bool push_initial_value)
+			  gdb::array_view<CORE_ADDR> push_values)
 {
   if (prop == NULL)
     return false;
@@ -1666,7 +1666,7 @@ dwarf2_evaluate_property (const struct dynamic_prop *prop,
 
 	bool is_reference = baton->locexpr.is_reference;
 	if (dwarf2_locexpr_baton_eval (&baton->locexpr, frame, addr_stack,
-				       value, push_initial_value, &is_reference))
+				       value, push_values, &is_reference))
 	  {
 	    if (is_reference)
 	      {
