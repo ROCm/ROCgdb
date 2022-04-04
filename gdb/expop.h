@@ -997,19 +997,25 @@ public:
     return std::get<1> (m_storage);
   }
 
-  /* Used for completion.  Evaluate the LHS for type.  */
-  value *evaluate_lhs (struct expression *exp)
-  {
-    return std::get<0> (m_storage)->evaluate (nullptr, exp,
-					      EVAL_AVOID_SIDE_EFFECTS);
-  }
-
   value *evaluate_funcall (struct type *expect_type,
 			   struct expression *exp,
 			   enum noside noside,
 			   const std::vector<operation_up> &args) override;
 
+  /* Try to complete this operation in the context of EXP.  TRACKER is
+     the completion tracker to update.  Return true if completion was
+     possible, false otherwise.  */
+  virtual bool complete (struct expression *exp, completion_tracker &tracker)
+  {
+    return complete (exp, tracker, "");
+  }
+
 protected:
+
+  /* Do the work of the public 'complete' method.  PREFIX is prepended
+     to each result.  */
+  bool complete (struct expression *exp, completion_tracker &tracker,
+		 const char *prefix);
 
   using tuple_holding_operation::tuple_holding_operation;
 };
