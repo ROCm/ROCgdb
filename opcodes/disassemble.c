@@ -630,7 +630,12 @@ disassemble_init_for_target (struct disassemble_info * info)
       info->disassembler_needs_relocs = true;
       break;
 #endif
-
+#ifdef ARCH_i386
+    case bfd_arch_i386:
+    case bfd_arch_iamcu:
+      info->created_styled_output = true;
+      break;
+#endif
 #ifdef ARCH_ia64
     case bfd_arch_ia64:
       info->skip_zeroes = 16;
@@ -706,6 +711,7 @@ disassemble_init_for_target (struct disassemble_info * info)
 #ifdef ARCH_riscv
     case bfd_arch_riscv:
       info->symbol_is_valid = riscv_symbol_is_valid;
+      info->created_styled_output = true;
       break;
 #endif
 #ifdef ARCH_wasm32
@@ -857,4 +863,17 @@ opcodes_assert (const char *file, int line)
   opcodes_error_handler (_("assertion fail %s:%d"), file, line);
   opcodes_error_handler (_("Please report this bug"));
   abort ();
+}
+
+/* Set the stream, and the styled and unstyled printf functions within
+   INFO.  */
+
+void
+disassemble_set_printf (struct disassemble_info *info, void *stream,
+			fprintf_ftype unstyled_printf,
+			fprintf_styled_ftype styled_printf)
+{
+  info->stream = stream;
+  info->fprintf_func = unstyled_printf;
+  info->fprintf_styled_func = styled_printf;
 }
