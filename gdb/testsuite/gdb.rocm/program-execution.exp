@@ -67,7 +67,7 @@ proc run_and_wait_break_hits {mode cmd bp_hit_re {test ""}} {
 	# appearing first in the script that occurs anywhere in the
 	# input, so that we don't skip anything.
 	gdb_test_multiple $cmd $test {
-	    -re "($gdb_prompt)|($bp_hit_re)" {
+	    -re "($gdb_prompt )|($bp_hit_re)" {
 		if {[info exists expect_out(1,string)]} {
 		    incr seen_prompt
 		} elseif {[info exists expect_out(2,string)]} {
@@ -140,7 +140,7 @@ proc test {mode} {
 	    }
 
 	    -timeout 5
-	    -re "$gdb_prompt" {
+	    -re "$gdb_prompt " {
 		fail $gdb_test_name
 	    }
 
@@ -174,7 +174,7 @@ proc test {mode} {
 	# Same idea as above, we won't see a breakpoint hit in GPU code.
 	gdb_test_multiple "continue" "" {
 	    -timeout 5
-	    -re "$gdb_prompt" {
+	    -re "$gdb_prompt " {
 		fail $gdb_test_name
 	    }
 
