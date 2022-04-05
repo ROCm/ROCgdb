@@ -52,16 +52,16 @@ gdb_continue_to_breakpoint "kernel"
 # Sample vega20 output:
 #
 #  Dump of assembler code for function kernel():
-#  0x00007efe8de01600 <+0>:     ff 00 a0 be 00 04 00 00 s_mov_b32 s32, 0x400
-#  0x00007efe8de01608 <+8>:     80 00 a1 be     s_mov_b32 s33, 0
-#  0x00007efe8de0160c <+12>:    04 07 66 80     s_add_u32 flat_scratch_lo, s4, s7
+#     0x00007efe8de01600 <+0>:     ff 00 a0 be 00 04 00 00 s_mov_b32 s32, 0x400
+#     0x00007efe8de01608 <+8>:     80 00 a1 be     s_mov_b32 s33, 0
+#     0x00007efe8de0160c <+12>:    04 07 66 80     s_add_u32 flat_scratch_lo, s4, s7
 #  .
 #  .
 #  End of assembler dump.
 gdb_test_sequence "disassemble /r kernel" "disassemble raw" [list \
-    "Dump of assembler code for function kernel.+:" \
-    "\\s+$hex\\s+<\\+0>:\\s+(\[0-9a-fA-F]+\\s)+.+" \
-    "End of assembler dump\."
+    "Dump of assembler code for function kernel\\(\\):" \
+    "\\s+$hex\\s+<\\+0>:\\s+(\[0-9a-fA-F]+\\s)+\[^\r\n\]+" \
+    "End of assembler dump\." \
 ]
 
 # Check "disassemble /m kernel".
@@ -69,16 +69,18 @@ gdb_test_sequence "disassemble /r kernel" "disassemble raw" [list \
 # Sample vega20 output:
 #
 #  Dump of assembler code for function kernel():
-#  0x00007efe8de01600 <+0>:     s_mov_b32 s32, 0x400
-#  0x00007efe8de01608 <+8>:     s_mov_b32 s33, 0
-#  0x00007efe8de0160c <+12>:    s_add_u32 flat_scratch_lo, s4, s7
+#  24      \{
+#     0x00007efe8de01600 <+0>:     s_mov_b32 s32, 0x400
+#     0x00007efe8de01608 <+8>:     s_mov_b32 s33, 0
+#     0x00007efe8de0160c <+12>:    s_add_u32 flat_scratch_lo, s4, s7
 #  .
 #  .
-# End of assembler dump.
+#  End of assembler dump.
 gdb_test_sequence "disassemble /m kernel" "disassemble machine code" [list \
-    "Dump of assembler code for function kernel.+:\\s+$decimal\\s+" \
-    "\\s+$hex\\s+<\\+0>:\\s+.+" \
-    "End of assembler dump\."
+    "Dump of assembler code for function kernel\\(\\):" \
+    "$decimal\\s+\{" \
+    "\\s+$hex\\s+<\\+0>:\\s+\[^\n\r\]+" \
+    "End of assembler dump\." \
 ]
 
 # Check "x/3i kernel".
