@@ -22,6 +22,7 @@
 
 #include "amdgpu-tdep.h"
 #include "arch-utils.h"
+#include "disasm.h"
 #include "dwarf2/frame.h"
 #include "frame-base.h"
 #include "frame-unwind.h"

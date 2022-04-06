@@ -80,7 +80,7 @@ struct inferior;
 #include "btrace.h"
 #include "record.h"
 #include "command.h"
-#include "disasm.h"
+#include "disasm-flags.h"
 #include "tracepoint.h"
 #include "displaced-stepping.h"
 
