@@ -61,11 +61,11 @@
 /* Control debugging information emitted in this file.  */
 static bool csky_debug = false;
 
-static struct reggroup *cr_reggroup;
-static struct reggroup *fr_reggroup;
-static struct reggroup *vr_reggroup;
-static struct reggroup *mmu_reggroup;
-static struct reggroup *prof_reggroup;
+static const reggroup *cr_reggroup;
+static const reggroup *fr_reggroup;
+static const reggroup *vr_reggroup;
+static const reggroup *mmu_reggroup;
+static const reggroup *prof_reggroup;
 
 /* Convenience function to print debug messages in prologue analysis.  */
 
@@ -2050,8 +2050,6 @@ csky_init_reggroup ()
 static void
 csky_add_reggroups (struct gdbarch *gdbarch)
 {
-  reggroup_add (gdbarch, all_reggroup);
-  reggroup_add (gdbarch, general_reggroup);
   reggroup_add (gdbarch, cr_reggroup);
   reggroup_add (gdbarch, fr_reggroup);
   reggroup_add (gdbarch, vr_reggroup);
@@ -2063,7 +2061,7 @@ csky_add_reggroups (struct gdbarch *gdbarch)
 
 static int
 csky_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-			  struct reggroup *reggroup)
+			  const struct reggroup *reggroup)
 {
   int raw_p;
 

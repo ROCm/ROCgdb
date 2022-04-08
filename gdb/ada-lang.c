@@ -4710,9 +4710,9 @@ cache_symbol (const char *name, domain_enum domain, struct symbol *sym,
      the symbol is local or not, we check the block where we found it
      against the global and static blocks of its associated symtab.  */
   if (sym
-      && BLOCKVECTOR_BLOCK (symbol_symtab (sym)->blockvector (),
+      && BLOCKVECTOR_BLOCK (symbol_symtab (sym)->compunit ()->blockvector (),
 			    GLOBAL_BLOCK) != block
-      && BLOCKVECTOR_BLOCK (symbol_symtab (sym)->blockvector (),
+      && BLOCKVECTOR_BLOCK (symbol_symtab (sym)->compunit ()->blockvector (),
 			    STATIC_BLOCK) != block)
     return;
 
@@ -11863,8 +11863,8 @@ is_known_support_routine (struct frame_info *frame)
       re_comp (known_runtime_file_name_patterns[i]);
       if (re_exec (lbasename (sal.symtab->filename)))
 	return 1;
-      if (sal.symtab->objfile () != NULL
-	  && re_exec (objfile_name (sal.symtab->objfile ())))
+      if (sal.symtab->compunit ()->objfile () != NULL
+	  && re_exec (objfile_name (sal.symtab->compunit ()->objfile ())))
 	return 1;
     }
 

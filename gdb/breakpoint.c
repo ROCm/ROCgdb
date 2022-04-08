@@ -7267,7 +7267,7 @@ get_sal_arch (struct symtab_and_line sal)
   if (sal.section)
     return sal.section->objfile->arch ();
   if (sal.symtab)
-    return sal.symtab->objfile ()->arch ();
+    return sal.symtab->compunit ()->objfile ()->arch ();
 
   return NULL;
 }
@@ -9309,8 +9309,9 @@ resolve_sal_pc (struct symtab_and_line *sal)
 	  sym = block_linkage_function (b);
 	  if (sym != NULL)
 	    {
-	      fixup_symbol_section (sym, sal->symtab->objfile ());
-	      sal->section = sym->obj_section (sal->symtab->objfile ());
+	      fixup_symbol_section (sym, sal->symtab->compunit ()->objfile ());
+	      sal->section
+		= sym->obj_section (sal->symtab->compunit ()->objfile ());
 	    }
 	  else
 	    {
@@ -14760,7 +14761,7 @@ void
 breakpoint_free_objfile (struct objfile *objfile)
 {
   for (bp_location *loc : all_bp_locations ())
-    if (loc->symtab != NULL && loc->symtab->objfile () == objfile)
+    if (loc->symtab != NULL && loc->symtab->compunit ()->objfile () == objfile)
       loc->symtab = NULL;
 }
 

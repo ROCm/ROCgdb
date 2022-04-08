@@ -1008,7 +1008,7 @@ edit_command (const char *arg, int from_tty)
 	    error (_("No source file for address %s."),
 		   paddress (get_current_arch (), sal.pc));
 
-	  gdbarch = sal.symtab->objfile ()->arch ();
+	  gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
 	  sym = find_pc_function (sal.pc);
 	  if (sym)
 	    gdb_printf ("%s is in %s (%s:%d).\n",
@@ -1347,7 +1347,7 @@ list_command (const char *arg, int from_tty)
 	error (_("No source file for address %s."),
 	       paddress (get_current_arch (), sal.pc));
 
-      gdbarch = sal.symtab->objfile ()->arch ();
+      gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
       sym = find_pc_function (sal.pc);
       if (sym)
 	gdb_printf ("%s is in %s (%s:%d).\n",
@@ -2060,8 +2060,8 @@ ambiguous_line_spec (gdb::array_view<const symtab_and_line> sals,
 static int
 cmp_symtabs (const symtab_and_line &sala, const symtab_and_line &salb)
 {
-  const char *dira = sala.symtab->dirname ();
-  const char *dirb = salb.symtab->dirname ();
+  const char *dira = sala.symtab->compunit ()->dirname ();
+  const char *dirb = salb.symtab->compunit ()->dirname ();
   int r;
 
   if (dira == NULL)

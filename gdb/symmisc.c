@@ -131,7 +131,7 @@ dump_objfile (struct objfile *objfile)
 	      gdb_printf ("%s at %s",
 			  symtab_to_filename_for_display (symtab),
 			  host_address_to_string (symtab));
-	      if (symtab->objfile () != objfile)
+	      if (symtab->compunit ()->objfile () != objfile)
 		gdb_printf (", NOT ON CHAIN!");
 	      gdb_printf ("\n");
 	    }
@@ -234,7 +234,7 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
 static void
 dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
 {
-  struct objfile *objfile = symtab->objfile ();
+  struct objfile *objfile = symtab->compunit ()->objfile ();
   struct gdbarch *gdbarch = objfile->arch ();
   int i;
   struct mdict_iterator miter;
@@ -249,9 +249,9 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
 	      symtab_to_filename_for_display (symtab),
 	      host_address_to_string (symtab));
 
-  if (symtab->dirname () != NULL)
+  if (symtab->compunit ()->dirname () != NULL)
     gdb_printf (outfile, "Compilation directory is %s\n",
-		symtab->dirname ());
+		symtab->compunit ()->dirname ());
   gdb_printf (outfile, "Read from object file %s (%s)\n",
 	      objfile_name (objfile),
 	      host_address_to_string (objfile));
@@ -278,7 +278,7 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
   if (is_main_symtab_of_compunit_symtab (symtab))
     {
       gdb_printf (outfile, "\nBlockvector:\n\n");
-      bv = symtab->blockvector ();
+      bv = symtab->compunit ()->blockvector ();
       len = BLOCKVECTOR_NBLOCKS (bv);
       for (i = 0; i < len; i++)
 	{

@@ -1004,12 +1004,12 @@ tdesc_remote_register_number (struct gdbarch *gdbarch, int regno)
 
 int
 tdesc_register_in_reggroup_p (struct gdbarch *gdbarch, int regno,
-			      struct reggroup *reggroup)
+			      const struct reggroup *reggroup)
 {
   struct tdesc_reg *reg = tdesc_find_register (gdbarch, regno);
 
   if (reg != NULL && !reg->group.empty ()
-      && (reg->group == reggroup_name (reggroup)))
+      && (reg->group == reggroup->name ()))
 	return 1;
 
   if (reg != NULL
@@ -1025,7 +1025,7 @@ tdesc_register_in_reggroup_p (struct gdbarch *gdbarch, int regno,
 
 static int
 tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regno,
-			   struct reggroup *reggroup)
+			   const struct reggroup *reggroup)
 {
   int num_regs = gdbarch_num_regs (gdbarch);
   int num_pseudo_regs = gdbarch_num_pseudo_regs (gdbarch);

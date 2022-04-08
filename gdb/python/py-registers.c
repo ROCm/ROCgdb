@@ -34,7 +34,7 @@ struct register_descriptor_iterator_object {
 
   /* The register group that the user is iterating over.  This will never
      be NULL.  */
-  struct reggroup *reggroup;
+  const struct reggroup *reggroup;
 
   /* The next register number to lookup.  Starts at 0 and counts up.  */
   int regnum;
@@ -64,8 +64,8 @@ extern PyTypeObject register_descriptor_object_type
 struct reggroup_iterator_object {
   PyObject_HEAD
 
-  /* The last register group returned.  Initially this will be NULL.  */
-  struct reggroup *reggroup;
+  /* The index into GROUPS for the next group to return.  */
+  std::vector<const reggroup *>::size_type index;
 
   /* Pointer back to the architecture we're finding registers for.  */
   struct gdbarch *gdbarch;
@@ -79,7 +79,7 @@ struct reggroup_object {
   PyObject_HEAD
 
   /* The register group being described.  */
-  struct reggroup *reggroup;
+  const struct reggroup *reggroup;
 };
 
 extern PyTypeObject reggroup_object_type
@@ -100,12 +100,12 @@ gdbpy_register_object_data_init (struct gdbarch *gdbarch)
    returned for the same REGGROUP pointer.  */
 
 static gdbpy_ref<>
-gdbpy_get_reggroup (struct reggroup *reggroup)
+gdbpy_get_reggroup (const reggroup *reggroup)
 {
   /* Map from GDB's internal reggroup objects to the Python representation.
      GDB's reggroups are global, and are never deleted, so using a map like
      this is safe.  */
-  static std::unordered_map<struct reggroup *,gdbpy_ref<>>
+  static std::unordered_map<const struct reggroup *,gdbpy_ref<>>
     gdbpy_reggroup_object_map;
 
   /* If there is not already a suitable Python object in the map then
@@ -134,10 +134,9 @@ static PyObject *
 gdbpy_reggroup_to_string (PyObject *self)
 {
   reggroup_object *group = (reggroup_object *) self;
-  struct reggroup *reggroup = group->reggroup;
+  const reggroup *reggroup = group->reggroup;
 
-  const char *name = reggroup_name (reggroup);
-  return PyUnicode_FromString (name);
+  return PyUnicode_FromString (reggroup->name ());
 }
 
 /* Implement gdb.RegisterGroup.name (self) -> String.
@@ -224,17 +223,18 @@ gdbpy_reggroup_iter_next (PyObject *self)
 {
   reggroup_iterator_object *iter_obj
     = (reggroup_iterator_object *) self;
-  struct gdbarch *gdbarch = iter_obj->gdbarch;
 
-  struct reggroup *next_group = reggroup_next (gdbarch, iter_obj->reggroup);
-  if (next_group == NULL)
+  const std::vector<const reggroup *> &groups
+    = gdbarch_reggroups (iter_obj->gdbarch);
+  if (iter_obj->index >= groups.size ())
     {
       PyErr_SetString (PyExc_StopIteration, _("No more groups"));
       return NULL;
     }
 
-  iter_obj->reggroup = next_group;
-  return gdbpy_get_reggroup (iter_obj->reggroup).release ();
+  const reggroup *group = groups[iter_obj->index];
+  iter_obj->index++;
+  return gdbpy_get_reggroup (group).release ();
 }
 
 /* Return a new gdb.RegisterGroupsIterator over all the register groups in
@@ -251,7 +251,7 @@ gdbpy_new_reggroup_iterator (struct gdbarch *gdbarch)
 		    &reggroup_iterator_object_type);
   if (iter == NULL)
     return NULL;
-  iter->reggroup = NULL;
+  iter->index = 0;
   iter->gdbarch = gdbarch;
   return (PyObject *) iter;
 }
@@ -268,7 +268,7 @@ PyObject *
 gdbpy_new_register_descriptor_iterator (struct gdbarch *gdbarch,
 					const char *group_name)
 {
-  struct reggroup *grp = NULL;
+  const reggroup *grp = NULL;
 
   /* Lookup the requested register group, or find the default.  */
   if (group_name == NULL || *group_name == '\0')

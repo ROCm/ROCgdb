@@ -760,12 +760,11 @@ amdgpu_register_type (struct gdbarch *gdbarch, int regnum)
 
 static int
 amdgpu_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-			    struct reggroup *group)
+			    const struct reggroup *group)
 {
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
-  const char *name = reggroup_name (group);
 
-  auto it = tdep->register_class_map.find (name);
+  auto it = tdep->register_class_map.find (group->name ());
   if (it == tdep->register_class_map.end ())
     return group == all_reggroup;
 
@@ -1348,8 +1347,6 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     return nullptr;
 
   /* Add register groups.  */
-  reggroup_add (gdbarch, all_reggroup);
-
   for (size_t i = 0; i < register_class_count; ++i)
     {
       char *bytes;

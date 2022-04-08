@@ -712,10 +712,10 @@ xtensa_pseudo_register_write (struct gdbarch *gdbarch,
 		    _("invalid register number %d"), regnum);
 }
 
-static struct reggroup *xtensa_ar_reggroup;
-static struct reggroup *xtensa_user_reggroup;
-static struct reggroup *xtensa_vectra_reggroup;
-static struct reggroup *xtensa_cp[XTENSA_MAX_COPROCESSOR];
+static const reggroup *xtensa_ar_reggroup;
+static const reggroup *xtensa_user_reggroup;
+static const reggroup *xtensa_vectra_reggroup;
+static const reggroup *xtensa_cp[XTENSA_MAX_COPROCESSOR];
 
 static void
 xtensa_init_reggroups (void)
@@ -734,28 +734,17 @@ xtensa_init_reggroups (void)
 static void
 xtensa_add_reggroups (struct gdbarch *gdbarch)
 {
-  int i;
-
-  /* Predefined groups.  */
-  reggroup_add (gdbarch, all_reggroup);
-  reggroup_add (gdbarch, save_reggroup);
-  reggroup_add (gdbarch, restore_reggroup);
-  reggroup_add (gdbarch, system_reggroup);
-  reggroup_add (gdbarch, vector_reggroup);
-  reggroup_add (gdbarch, general_reggroup);
-  reggroup_add (gdbarch, float_reggroup);
-
   /* Xtensa-specific groups.  */
   reggroup_add (gdbarch, xtensa_ar_reggroup);
   reggroup_add (gdbarch, xtensa_user_reggroup);
   reggroup_add (gdbarch, xtensa_vectra_reggroup);
 
-  for (i = 0; i < XTENSA_MAX_COPROCESSOR; i++)
+  for (int i = 0; i < XTENSA_MAX_COPROCESSOR; i++)
     reggroup_add (gdbarch, xtensa_cp[i]);
 }
 
 static int 
-xtensa_coprocessor_register_group (struct reggroup *group)
+xtensa_coprocessor_register_group (const struct reggroup *group)
 {
   int i;
 
@@ -776,7 +765,7 @@ xtensa_coprocessor_register_group (struct reggroup *group)
 static int
 xtensa_register_reggroup_p (struct gdbarch *gdbarch,
 			    int regnum,
-			    struct reggroup *group)
+			    const struct reggroup *group)
 {
   xtensa_gdbarch_tdep *tdep = (xtensa_gdbarch_tdep *) gdbarch_tdep (gdbarch);
   xtensa_register_t* reg = &tdep->regmap[regnum];

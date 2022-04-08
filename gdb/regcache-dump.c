@@ -192,16 +192,11 @@ protected:
     else
       {
 	const char *sep = "";
-	struct reggroup *group;
-
-	for (group = reggroup_next (m_gdbarch, NULL);
-	     group != NULL;
-	     group = reggroup_next (m_gdbarch, group))
+	for (const struct reggroup *group : gdbarch_reggroups (m_gdbarch))
 	  {
 	    if (gdbarch_register_reggroup_p (m_gdbarch, regnum, group))
 	      {
-		gdb_printf (file,
-			    "%s%s", sep, reggroup_name (group));
+		gdb_printf (file, "%s%s", sep, group->name ());
 		sep = ",";
 	      }
 	  }

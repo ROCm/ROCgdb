@@ -35,7 +35,7 @@
 
 /* The m32c tdep structure.  */
 
-static struct reggroup *m32c_dma_reggroup;
+static const reggroup *m32c_dma_reggroup;
 
 /* The type of a function that moves the value of REG between CACHE or
    BUF --- in either direction.  */
@@ -252,7 +252,7 @@ m32c_debug_info_reg_to_regnum (struct gdbarch *gdbarch, int reg_nr)
 
 static int
 m32c_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-			  struct reggroup *group)
+			  const struct reggroup *group)
 {
   m32c_gdbarch_tdep *tdep = (m32c_gdbarch_tdep *) gdbarch_tdep (gdbarch);
   struct m32c_reg *reg = &tdep->regs[regnum];
@@ -981,11 +981,6 @@ make_regs (struct gdbarch *arch)
   set_gdbarch_dwarf2_reg_to_regnum (arch, m32c_debug_info_reg_to_regnum);
   set_gdbarch_register_reggroup_p (arch, m32c_register_reggroup_p);
 
-  reggroup_add (arch, general_reggroup);
-  reggroup_add (arch, all_reggroup);
-  reggroup_add (arch, save_reggroup);
-  reggroup_add (arch, restore_reggroup);
-  reggroup_add (arch, system_reggroup);
   reggroup_add (arch, m32c_dma_reggroup);
 }
 

@@ -4531,8 +4531,8 @@ i386_svr4_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 /* i386 register groups.  In addition to the normal groups, add "mmx"
    and "sse".  */
 
-static struct reggroup *i386_sse_reggroup;
-static struct reggroup *i386_mmx_reggroup;
+static const reggroup *i386_sse_reggroup;
+static const reggroup *i386_mmx_reggroup;
 
 static void
 i386_init_reggroups (void)
@@ -4546,18 +4546,11 @@ i386_add_reggroups (struct gdbarch *gdbarch)
 {
   reggroup_add (gdbarch, i386_sse_reggroup);
   reggroup_add (gdbarch, i386_mmx_reggroup);
-  reggroup_add (gdbarch, general_reggroup);
-  reggroup_add (gdbarch, float_reggroup);
-  reggroup_add (gdbarch, all_reggroup);
-  reggroup_add (gdbarch, save_reggroup);
-  reggroup_add (gdbarch, restore_reggroup);
-  reggroup_add (gdbarch, vector_reggroup);
-  reggroup_add (gdbarch, system_reggroup);
 }
 
 int
 i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-			  struct reggroup *group)
+			  const struct reggroup *group)
 {
   const i386_gdbarch_tdep *tdep = (i386_gdbarch_tdep *) gdbarch_tdep (gdbarch);
   int fp_regnum_p, mmx_regnum_p, xmm_regnum_p, mxcsr_regnum_p,

@@ -1346,8 +1346,8 @@ m68hc11_elf_make_msymbol_special (asymbol *sym, struct minimal_symbol *msym)
 /* 68HC11/68HC12 register groups.
    Identify real hard registers and soft registers used by gcc.  */
 
-static struct reggroup *m68hc11_soft_reggroup;
-static struct reggroup *m68hc11_hard_reggroup;
+static const reggroup *m68hc11_soft_reggroup;
+static const reggroup *m68hc11_hard_reggroup;
 
 static void
 m68hc11_init_reggroups (void)
@@ -1361,18 +1361,11 @@ m68hc11_add_reggroups (struct gdbarch *gdbarch)
 {
   reggroup_add (gdbarch, m68hc11_hard_reggroup);
   reggroup_add (gdbarch, m68hc11_soft_reggroup);
-  reggroup_add (gdbarch, general_reggroup);
-  reggroup_add (gdbarch, float_reggroup);
-  reggroup_add (gdbarch, all_reggroup);
-  reggroup_add (gdbarch, save_reggroup);
-  reggroup_add (gdbarch, restore_reggroup);
-  reggroup_add (gdbarch, vector_reggroup);
-  reggroup_add (gdbarch, system_reggroup);
 }
 
 static int
 m68hc11_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-			     struct reggroup *group)
+			     const struct reggroup *group)
 {
   /* We must save the real hard register as well as gcc
      soft registers including the frame pointer.  */

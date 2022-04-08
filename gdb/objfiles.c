@@ -593,13 +593,13 @@ objfile::~objfile ()
   {
     struct symtab_and_line cursal = get_current_source_symtab_and_line ();
 
-    if (cursal.symtab && cursal.symtab->objfile () == this)
+    if (cursal.symtab && cursal.symtab->compunit ()->objfile () == this)
       clear_current_source_symtab_and_line ();
   }
 
   /* Likewise, but for the last displayed symtab.  */
   symtab *s = get_last_displayed_symtab ();
-  if (s != nullptr && s->objfile () == this)
+  if (s != nullptr && s->compunit ()->objfile () == this)
     clear_last_displayed_sal ();
 
   /* Free the obstacks for non-reusable objfiles.  */

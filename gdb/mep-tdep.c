@@ -1021,14 +1021,14 @@ mep_register_name (struct gdbarch *gdbarch, int regnr)
 
 
 /* Custom register groups for the MeP.  */
-static struct reggroup *mep_csr_reggroup; /* control/special */
-static struct reggroup *mep_cr_reggroup;  /* coprocessor general-purpose */
-static struct reggroup *mep_ccr_reggroup; /* coprocessor control */
+static const reggroup *mep_csr_reggroup; /* control/special */
+static const reggroup *mep_cr_reggroup;  /* coprocessor general-purpose */
+static const reggroup *mep_ccr_reggroup; /* coprocessor control */
 
 
 static int
 mep_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-			 struct reggroup *group)
+			 const struct reggroup *group)
 {
   /* Filter reserved or unused register numbers.  */
   {
@@ -2427,10 +2427,6 @@ mep_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_stab_reg_to_regnum (gdbarch, mep_debug_reg_to_regnum);
 
   set_gdbarch_register_reggroup_p (gdbarch, mep_register_reggroup_p);
-  reggroup_add (gdbarch, all_reggroup);
-  reggroup_add (gdbarch, general_reggroup);
-  reggroup_add (gdbarch, save_reggroup);
-  reggroup_add (gdbarch, restore_reggroup);
   reggroup_add (gdbarch, mep_csr_reggroup);
   reggroup_add (gdbarch, mep_cr_reggroup);
   reggroup_add (gdbarch, mep_ccr_reggroup);
