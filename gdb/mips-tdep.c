@@ -436,13 +436,13 @@ mips_elf_make_msymbol_special (asymbol * sym, struct minimal_symbol *msym)
 
   if (ELF_ST_IS_MICROMIPS (st_other))
     {
-      MSYMBOL_TARGET_FLAG_MICROMIPS (msym) = 1;
-      SET_MSYMBOL_VALUE_ADDRESS (msym, MSYMBOL_VALUE_RAW_ADDRESS (msym) | 1);
+      SET_MSYMBOL_TARGET_FLAG_MICROMIPS (msym);
+      msym->set_value_address (msym->value_raw_address () | 1);
     }
   else if (ELF_ST_IS_MIPS16 (st_other))
     {
-      MSYMBOL_TARGET_FLAG_MIPS16 (msym) = 1;
-      SET_MSYMBOL_VALUE_ADDRESS (msym, MSYMBOL_VALUE_RAW_ADDRESS (msym) | 1);
+      SET_MSYMBOL_TARGET_FLAG_MIPS16 (msym);
+      msym->set_value_address (msym->value_raw_address () | 1);
     }
 }
 
@@ -487,7 +487,7 @@ mips_make_symbol_special (struct symbol *sym, struct objfile *objfile)
   if (sym->aclass () == LOC_BLOCK)
     {
       /* We are in symbol reading so it is OK to cast away constness.  */
-      struct block *block = (struct block *) SYMBOL_BLOCK_VALUE (sym);
+      struct block *block = (struct block *) sym->value_block ();
       CORE_ADDR compact_block_start;
       struct bound_minimal_symbol msym;
 
@@ -7831,17 +7831,17 @@ mips_skip_pic_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
      which jumps to foo.  */
   msym = lookup_minimal_symbol_by_pc (pc);
   if (msym.minsym == NULL
-      || BMSYMBOL_VALUE_ADDRESS (msym) != pc
+      || msym.value_address () != pc
       || msym.minsym->linkage_name () == NULL
       || !startswith (msym.minsym->linkage_name (), ".pic."))
     return 0;
 
   /* A two-instruction header.  */
-  if (MSYMBOL_SIZE (msym.minsym) == 8)
+  if (msym.minsym->size () == 8)
     return pc + 8;
 
   /* A three-instruction (plus delay slot) trampoline.  */
-  if (MSYMBOL_SIZE (msym.minsym) == 16)
+  if (msym.minsym->size () == 16)
     {
       if (target_read_memory (pc, stub_code, 16) != 0)
 	return 0;

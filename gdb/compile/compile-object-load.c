@@ -766,12 +766,12 @@ compile_object_load (const compile_file_names &file_names,
 
       bmsym = lookup_minimal_symbol (sym->name, NULL, NULL);
       switch (bmsym.minsym == NULL
-	      ? mst_unknown : MSYMBOL_TYPE (bmsym.minsym))
+	      ? mst_unknown : bmsym.minsym->type ())
 	{
 	case mst_text:
 	case mst_bss:
 	case mst_data:
-	  sym->value = BMSYMBOL_VALUE_ADDRESS (bmsym);
+	  sym->value = bmsym.value_address ();
 	  if (compile_debug)
 	    gdb_printf (gdb_stdlog,
 			"ELF mst_text symbol \"%s\" relocated to %s\n",
@@ -780,7 +780,7 @@ compile_object_load (const compile_file_names &file_names,
 	  break;
 	case mst_text_gnu_ifunc:
 	  sym->value = gnu_ifunc_resolve_addr (target_gdbarch (),
-					       BMSYMBOL_VALUE_ADDRESS (bmsym));
+					       bmsym.value_address ());
 	  if (compile_debug)
 	    gdb_printf (gdb_stdlog,
 			"ELF mst_text_gnu_ifunc symbol \"%s\" "

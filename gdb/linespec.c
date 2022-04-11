@@ -2169,7 +2169,7 @@ create_sals_line_offset (struct linespec_state *self,
 	    if (!was_exact
 		&& sym != nullptr
 		&& sym->aclass () == LOC_BLOCK
-		&& sal->pc == BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym))
+		&& sal->pc == BLOCK_ENTRY_PC (sym->value_block ())
 		&& val.line < sym->line ())
 	      continue;
 
@@ -2266,15 +2266,15 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 		   && sym.symbol->aclass () == LOC_BLOCK)
 		{
 		  const CORE_ADDR addr
-		    = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym.symbol));
+		    = BLOCK_ENTRY_PC (sym.symbol->value_block ());
 
 		  for (const auto &elem : ls->minimal_symbols)
 		    {
-		      if (MSYMBOL_TYPE (elem.minsym) == mst_text_gnu_ifunc
-			  || MSYMBOL_TYPE (elem.minsym) == mst_data_gnu_ifunc)
+		      if (elem.minsym->type () == mst_text_gnu_ifunc
+			  || elem.minsym->type () == mst_data_gnu_ifunc)
 			{
-			  CORE_ADDR msym_addr = BMSYMBOL_VALUE_ADDRESS (elem);
-			  if (MSYMBOL_TYPE (elem.minsym) == mst_data_gnu_ifunc)
+			  CORE_ADDR msym_addr = elem.value_address ();
+			  if (elem.minsym->type () == mst_data_gnu_ifunc)
 			    {
 			      struct gdbarch *gdbarch
 				= elem.objfile->arch ();
@@ -4028,7 +4028,7 @@ find_label_symbols (struct linespec_state *self,
 	  fn_sym = elt.symbol;
 	  set_current_program_space
 	    (symbol_symtab (fn_sym)->compunit ()->objfile ()->pspace);
-	  block = SYMBOL_BLOCK_VALUE (fn_sym);
+	  block = fn_sym->value_block ();
 
 	  find_label_symbols_in_block (block, name, fn_sym, completion_mode,
 				       &result, label_funcs_ret);
@@ -4188,8 +4188,8 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
     {
       const char *msym_name = msymbol->linkage_name ();
 
-      if (MSYMBOL_TYPE (msymbol) == mst_text_gnu_ifunc
-	  || MSYMBOL_TYPE (msymbol) == mst_data_gnu_ifunc)
+      if (msymbol->type () == mst_text_gnu_ifunc
+	  || msymbol->type () == mst_data_gnu_ifunc)
 	want_start_sal = gnu_ifunc_resolve_name (msym_name, &func_addr);
       else
 	want_start_sal = true;
@@ -4208,7 +4208,7 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
       if (is_function)
 	sal.pc = func_addr;
       else
-	sal.pc = MSYMBOL_VALUE_ADDRESS (objfile, msymbol);
+	sal.pc = msymbol->value_address (objfile);
       sal.pspace = current_program_space;
     }
 
@@ -4326,7 +4326,7 @@ search_minsyms_for_name (struct collect_info *info,
   for (const bound_minimal_symbol &item : minsyms)
     {
       bool skip = false;
-      if (MSYMBOL_TYPE (item.minsym) == mst_solib_trampoline)
+      if (item.minsym->type () == mst_solib_trampoline)
 	{
 	  for (const bound_minimal_symbol &item2 : minsyms)
 	    {
@@ -4335,7 +4335,7 @@ search_minsyms_for_name (struct collect_info *info,
 
 	      /* Trampoline symbols can only jump to exported
 		 symbols.  */
-	      if (msymbol_type_is_static (MSYMBOL_TYPE (item2.minsym)))
+	      if (msymbol_type_is_static (item2.minsym->type ()))
 		continue;
 
 	      if (strcmp (item.minsym->linkage_name (),
@@ -4419,13 +4419,13 @@ symbol_to_sal (struct symtab_and_line *result,
     }
   else
     {
-      if (sym->aclass () == LOC_LABEL && SYMBOL_VALUE_ADDRESS (sym) != 0)
+      if (sym->aclass () == LOC_LABEL && sym->value_address () != 0)
 	{
 	  *result = {};
 	  result->symtab = symbol_symtab (sym);
 	  result->symbol = sym;
 	  result->line = sym->line ();
-	  result->pc = SYMBOL_VALUE_ADDRESS (sym);
+	  result->pc = sym->value_address ();
 	  result->pspace = result->symtab->compunit ()->objfile ()->pspace;
 	  result->explicit_pc = 1;
 	  return 1;
@@ -4441,7 +4441,7 @@ symbol_to_sal (struct symtab_and_line *result,
 	  result->symtab = symbol_symtab (sym);
 	  result->symbol = sym;
 	  result->line = sym->line ();
-	  result->pc = SYMBOL_VALUE_ADDRESS (sym);
+	  result->pc = sym->value_address ();
 	  result->pspace = result->symtab->compunit ()->objfile ()->pspace;
 	  return 1;
 	}

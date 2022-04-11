@@ -415,16 +415,29 @@ compunit_language (const struct compunit_symtab *cust)
   return symtab->language ();
 }
 
+/* The relocated address of the minimal symbol, using the section
+   offsets from OBJFILE.  */
+
+CORE_ADDR
+minimal_symbol::value_address (objfile *objfile) const
+{
+  if (this->maybe_copied)
+    return get_msymbol_address (objfile, this);
+  else
+    return (this->value_raw_address ()
+	    + objfile->section_offsets[this->section_index ()]);
+}
+
 /* See symtab.h.  */
 
 bool
 minimal_symbol::data_p () const
 {
-  return type == mst_data
-    || type == mst_bss
-    || type == mst_abs
-    || type == mst_file_data
-    || type == mst_file_bss;
+  return m_type == mst_data
+    || m_type == mst_bss
+    || m_type == mst_abs
+    || m_type == mst_file_data
+    || m_type == mst_file_bss;
 }
 
 /* See symtab.h.  */
@@ -432,12 +445,12 @@ minimal_symbol::data_p () const
 bool
 minimal_symbol::text_p () const
 {
-  return type == mst_text
-    || type == mst_text_gnu_ifunc
-    || type == mst_data_gnu_ifunc
-    || type == mst_slot_got_plt
-    || type == mst_solib_trampoline
-    || type == mst_file_text;
+  return m_type == mst_text
+    || m_type == mst_text_gnu_ifunc
+    || m_type == mst_data_gnu_ifunc
+    || m_type == mst_slot_got_plt
+    || m_type == mst_solib_trampoline
+    || m_type == mst_file_text;
 }
 
 /* See whether FILENAME matches SEARCH_NAME using the rule that we
@@ -1806,10 +1819,10 @@ fixup_symbol_section (struct symbol *sym, struct objfile *objfile)
     {
     case LOC_STATIC:
     case LOC_LABEL:
-      addr = SYMBOL_VALUE_ADDRESS (sym);
+      addr = sym->value_address ();
       break;
     case LOC_BLOCK:
-      addr = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym));
+      addr = BLOCK_ENTRY_PC (sym->value_block ());
       break;
 
     default:
@@ -3084,7 +3097,7 @@ find_symbol_at_address (CORE_ADDR address)
 	  ALL_BLOCK_SYMBOLS (b, iter, sym)
 	    {
 	      if (sym->aclass () == LOC_STATIC
-		  && SYMBOL_VALUE_ADDRESS (sym) == addr)
+		  && sym->value_address () == addr)
 		return sym;
 	    }
 	}
@@ -3226,7 +3239,7 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
    */
   msymbol = lookup_minimal_symbol_by_pc (pc);
   if (msymbol.minsym != NULL)
-    if (MSYMBOL_TYPE (msymbol.minsym) == mst_solib_trampoline)
+    if (msymbol.minsym->type () == mst_solib_trampoline)
       {
 	struct bound_minimal_symbol mfunsym
 	  = lookup_minimal_symbol_text (msymbol.minsym->linkage_name (),
@@ -3246,8 +3259,8 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
 	     msymbol->linkage_name ()); */
 	  ;
 	/* fall through */
-	else if (BMSYMBOL_VALUE_ADDRESS (mfunsym)
-		 == BMSYMBOL_VALUE_ADDRESS (msymbol))
+	else if (mfunsym.value_address ()
+		 == msymbol.value_address ())
 	  /* Avoid infinite recursion */
 	  /* See above comment about why warning is commented out.  */
 	  /* warning ("In stub for %s; unable to find real function/line info",
@@ -3259,12 +3272,12 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
 	    /* Detect an obvious case of infinite recursion.  If this
 	       should occur, we'd like to know about it, so error out,
 	       fatally.  */
-	    if (BMSYMBOL_VALUE_ADDRESS (mfunsym) == pc)
+	    if (mfunsym.value_address () == pc)
 	      internal_error (__FILE__, __LINE__,
 		_("Infinite recursion detected in find_pc_sect_line;"
 		  "please file a bug report"));
 
-	    return find_pc_line (BMSYMBOL_VALUE_ADDRESS (mfunsym), 0);
+	    return find_pc_line (mfunsym.value_address (), 0);
 	  }
       }
 
@@ -3767,7 +3780,7 @@ find_function_start_sal (symbol *sym, bool funfirstline)
 {
   fixup_symbol_section (sym, NULL);
   symtab_and_line sal
-    = find_function_start_sal_1 (BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym)),
+    = find_function_start_sal_1 (BLOCK_ENTRY_PC (sym->value_block ()),
 				 sym->obj_section (symbol_objfile (sym)),
 				 funfirstline);
   sal.symbol = sym;
@@ -3896,7 +3909,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
       fixup_symbol_section (sym, NULL);
 
       objfile = symbol_objfile (sym);
-      pc = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym));
+      pc = BLOCK_ENTRY_PC (sym->value_block ());
       section = sym->obj_section (objfile);
       name = sym->linkage_name ();
     }
@@ -3909,7 +3922,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
 	return;
 
       objfile = msymbol.objfile;
-      pc = BMSYMBOL_VALUE_ADDRESS (msymbol);
+      pc = msymbol.value_address ();
       section = msymbol.minsym->obj_section (objfile);
       name = msymbol.minsym->linkage_name ();
     }
@@ -3972,8 +3985,8 @@ skip_prologue_sal (struct symtab_and_line *sal)
       /* Check if gdbarch_skip_prologue left us in mid-line, and the next
 	 line is still part of the same function.  */
       if (skip && start_sal.pc != pc
-	  && (sym ? (BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym)) <= start_sal.end
-		     && start_sal.end < BLOCK_END (SYMBOL_BLOCK_VALUE (sym)))
+	  && (sym ? (BLOCK_ENTRY_PC (sym->value_block ()) <= start_sal.end
+		     && start_sal.end < BLOCK_END (sym->value_block ()))
 	      : (lookup_minimal_symbol_by_pc_section (start_sal.end, section).minsym
 		 == lookup_minimal_symbol_by_pc_section (pc, section).minsym)))
 	{
@@ -4170,7 +4183,7 @@ find_function_alias_target (bound_minimal_symbol msymbol)
   symbol *sym = find_pc_function (func_addr);
   if (sym != NULL
       && sym->aclass () == LOC_BLOCK
-      && BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym)) == func_addr)
+      && BLOCK_ENTRY_PC (sym->value_block ()) == func_addr)
     return sym;
 
   return NULL;
@@ -4739,7 +4752,7 @@ bool
 global_symbol_searcher::is_suitable_msymbol
 	(const enum search_domain kind, const minimal_symbol *msymbol)
 {
-  switch (MSYMBOL_TYPE (msymbol))
+  switch (msymbol->type ())
     {
     case mst_data:
     case mst_bss:
@@ -4823,8 +4836,7 @@ global_symbol_searcher::expand_symtabs
 		     the symbols tables are expanded.  */
 		  if (kind == FUNCTIONS_DOMAIN
 		      ? (find_pc_compunit_symtab
-			 (MSYMBOL_VALUE_ADDRESS (objfile, msymbol))
-			 == NULL)
+			 (msymbol->value_address (objfile)) == NULL)
 		      : (lookup_symbol_in_objfile_from_linkage_name
 			 (objfile, msymbol->linkage_name (),
 			  VAR_DOMAIN)
@@ -4946,8 +4958,7 @@ global_symbol_searcher::add_matching_msymbols
 		 symbol might be found via find_pc_symtab.  */
 	      if (kind != FUNCTIONS_DOMAIN
 		  || (find_pc_compunit_symtab
-		      (MSYMBOL_VALUE_ADDRESS (objfile, msymbol))
-		      == NULL))
+		      (msymbol->value_address (objfile)) == NULL))
 		{
 		  if (lookup_symbol_in_objfile_from_linkage_name
 		      (objfile, msymbol->linkage_name (),
@@ -5169,11 +5180,11 @@ print_msymbol_info (struct bound_minimal_symbol msymbol)
   char *tmp;
 
   if (gdbarch_addr_bit (gdbarch) <= 32)
-    tmp = hex_string_custom (BMSYMBOL_VALUE_ADDRESS (msymbol)
+    tmp = hex_string_custom (msymbol.value_address ()
 			     & (CORE_ADDR) 0xffffffff,
 			     8);
   else
-    tmp = hex_string_custom (BMSYMBOL_VALUE_ADDRESS (msymbol),
+    tmp = hex_string_custom (msymbol.value_address (),
 			     16);
 
   ui_file_style sym_style = (msymbol.minsym->text_p ()
@@ -5757,7 +5768,7 @@ symbol_is_function_or_method (symbol *sym)
 bool
 symbol_is_function_or_method (minimal_symbol *msymbol)
 {
-  switch (MSYMBOL_TYPE (msymbol))
+  switch (msymbol->type ())
     {
     case mst_text:
     case mst_text_gnu_ifunc:
@@ -5781,17 +5792,17 @@ find_gnu_ifunc (const symbol *sym)
 				symbol_name_match_type::SEARCH_NAME);
   struct objfile *objfile = symbol_objfile (sym);
 
-  CORE_ADDR address = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym));
+  CORE_ADDR address = BLOCK_ENTRY_PC (sym->value_block ());
   minimal_symbol *ifunc = NULL;
 
   iterate_over_minimal_symbols (objfile, lookup_name,
 				[&] (minimal_symbol *minsym)
     {
-      if (MSYMBOL_TYPE (minsym) == mst_text_gnu_ifunc
-	  || MSYMBOL_TYPE (minsym) == mst_data_gnu_ifunc)
+      if (minsym->type () == mst_text_gnu_ifunc
+	  || minsym->type () == mst_data_gnu_ifunc)
 	{
-	  CORE_ADDR msym_addr = MSYMBOL_VALUE_ADDRESS (objfile, minsym);
-	  if (MSYMBOL_TYPE (minsym) == mst_data_gnu_ifunc)
+	  CORE_ADDR msym_addr = minsym->value_address (objfile);
+	  if (minsym->type () == mst_data_gnu_ifunc)
 	    {
 	      struct gdbarch *gdbarch = objfile->arch ();
 	      msym_addr = gdbarch_convert_from_func_ptr_addr
@@ -6635,9 +6646,9 @@ get_symbol_address (const struct symbol *sym)
       bound_minimal_symbol minsym
 	= lookup_minimal_symbol_linkage (linkage_name, objfile);
       if (minsym.minsym != nullptr)
-	return BMSYMBOL_VALUE_ADDRESS (minsym);
+	return minsym.value_address ();
     }
-  return sym->value.address;
+  return sym->m_value.address;
 }
 
 /* See symtab.h.  */
@@ -6658,10 +6669,10 @@ get_msymbol_address (struct objfile *objf, const struct minimal_symbol *minsym)
 	  bound_minimal_symbol found
 	    = lookup_minimal_symbol_linkage (linkage_name, objfile);
 	  if (found.minsym != nullptr)
-	    return BMSYMBOL_VALUE_ADDRESS (found);
+	    return found.value_address ();
 	}
     }
-  return (minsym->value.address
+  return (minsym->m_value.address
 	  + objf->section_offsets[minsym->section_index ()]);
 }
 

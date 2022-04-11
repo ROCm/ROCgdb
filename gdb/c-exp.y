@@ -1081,7 +1081,7 @@ exp     :       FALSEKEYWORD
 block	:	BLOCKNAME
 			{
 			  if ($1.sym.symbol)
-			    $$ = SYMBOL_BLOCK_VALUE ($1.sym.symbol);
+			    $$ = $1.sym.symbol->value_block ();
 			  else
 			    error (_("No file or function \"%s\"."),
 				   copy_name ($1.stoken).c_str ());
@@ -1102,7 +1102,7 @@ block	:	block COLONCOLON name
 			  if (!tem || tem->aclass () != LOC_BLOCK)
 			    error (_("No function \"%s\" in specified context."),
 				   copy.c_str ());
-			  $$ = SYMBOL_BLOCK_VALUE (tem); }
+			  $$ = tem->value_block (); }
 	;
 
 variable:	name_not_typename ENTRY
@@ -1238,14 +1238,14 @@ variable:	name_not_typename
 				 is important for example for "p
 				 *__errno_location()".  */
 			      symbol *alias_target
-				= ((msymbol.minsym->type != mst_text_gnu_ifunc
-				    && msymbol.minsym->type != mst_data_gnu_ifunc)
+				= ((msymbol.minsym->type () != mst_text_gnu_ifunc
+				    && msymbol.minsym->type () != mst_data_gnu_ifunc)
 				   ? find_function_alias_target (msymbol)
 				   : NULL);
 			      if (alias_target != NULL)
 				{
 				  block_symbol bsym { alias_target,
-				    SYMBOL_BLOCK_VALUE (alias_target) };
+				    alias_target->value_block () };
 				  pstate->push_new<var_value_operation> (bsym);
 				}
 			      else

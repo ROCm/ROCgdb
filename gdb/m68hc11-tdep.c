@@ -58,16 +58,16 @@
    MSYMBOL_IS_RTI       Tests the "RTC" bit in a minimal symbol.  */
 
 #define MSYMBOL_SET_RTC(msym)                           \
-	MSYMBOL_TARGET_FLAG_1 (msym) = 1
+	(msym)->set_target_flag_1 (true)
 
 #define MSYMBOL_SET_RTI(msym)                           \
-	MSYMBOL_TARGET_FLAG_2 (msym) = 1
+	(msym)->set_target_flag_2 (true)
 
 #define MSYMBOL_IS_RTC(msym)				\
-	MSYMBOL_TARGET_FLAG_1 (msym)
+	(msym)->target_flag_1 ()
 
 #define MSYMBOL_IS_RTI(msym)				\
-	MSYMBOL_TARGET_FLAG_2 (msym)
+	(msym)->target_flag_2 ()
 
 enum insn_return_kind {
   RETURN_RTS,
@@ -215,7 +215,7 @@ m68hc11_get_register_info (struct m68hc11_soft_reg *reg, const char *name)
   msymbol = lookup_minimal_symbol (name, NULL, NULL);
   if (msymbol.minsym)
     {
-      reg->addr = BMSYMBOL_VALUE_ADDRESS (msymbol);
+      reg->addr = msymbol.value_address ();
       reg->name = xstrdup (name);
 
       /* Keep track of the address range for soft registers.  */

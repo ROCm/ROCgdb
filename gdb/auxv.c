@@ -94,14 +94,14 @@ ld_so_xfer_auxv (gdb_byte *readbuf,
   if (msym.minsym == NULL)
     return TARGET_XFER_E_IO;
 
-  if (MSYMBOL_SIZE (msym.minsym) != ptr_size)
+  if (msym.minsym->size () != ptr_size)
     return TARGET_XFER_E_IO;
 
   /* POINTER_ADDRESS is a location where the `_dl_auxv' variable
      resides.  DATA_ADDRESS is the inferior value present in
      `_dl_auxv', therefore the real inferior AUXV address.  */
 
-  pointer_address = BMSYMBOL_VALUE_ADDRESS (msym);
+  pointer_address = msym.value_address ();
 
   /* The location of the _dl_auxv symbol may no longer be correct if
      ld.so runs at a different address than the one present in the

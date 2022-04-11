@@ -244,8 +244,8 @@ add_pe_forwarded_sym (minimal_symbol_reader &reader,
 			      " \"%s\" in dll \"%s\", pointing to \"%s\"\n"),
 		sym_name, dll_name, forward_qualified_name);
 
-  vma = BMSYMBOL_VALUE_ADDRESS (msymbol);
-  msymtype = MSYMBOL_TYPE (msymbol.minsym);
+  vma = msymbol.value_address ();
+  msymtype = msymbol.minsym->type ();
   section = msymbol.minsym->section_index ();
 
   /* Generate a (hopefully unique) qualified name using the first part

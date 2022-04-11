@@ -88,12 +88,12 @@ convert_one_symbol (compile_c_instance *context,
 
 	case LOC_LABEL:
 	  kind = GCC_C_SYMBOL_LABEL;
-	  addr = SYMBOL_VALUE_ADDRESS (sym.symbol);
+	  addr = sym.symbol->value_address ();
 	  break;
 
 	case LOC_BLOCK:
 	  kind = GCC_C_SYMBOL_FUNCTION;
-	  addr = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym.symbol));
+	  addr = BLOCK_ENTRY_PC (sym.symbol->value_block ());
 	  if (is_global && sym.symbol->type ()->is_gnu_ifunc ())
 	    addr = gnu_ifunc_resolve_addr (target_gdbarch (), addr);
 	  break;
@@ -106,7 +106,7 @@ convert_one_symbol (compile_c_instance *context,
 	    }
 	  context->plugin ().build_constant
 	    (sym_type, sym.symbol->natural_name (),
-	     SYMBOL_VALUE (sym.symbol),
+	     sym.symbol->value_longest (),
 	     filename, line);
 	  return;
 
@@ -179,7 +179,7 @@ convert_one_symbol (compile_c_instance *context,
 
 	case LOC_STATIC:
 	  kind = GCC_C_SYMBOL_VARIABLE;
-	  addr = SYMBOL_VALUE_ADDRESS (sym.symbol);
+	  addr = sym.symbol->value_address ();
 	  break;
 
 	case LOC_FINAL_VALUE:
@@ -270,10 +270,10 @@ convert_symbol_bmsym (compile_c_instance *context,
   gcc_decl decl;
   CORE_ADDR addr;
 
-  addr = MSYMBOL_VALUE_ADDRESS (objfile, msym);
+  addr = msym->value_address (objfile);
 
   /* Conversion copied from write_exp_msymbol.  */
-  switch (MSYMBOL_TYPE (msym))
+  switch (msym->type ())
     {
     case mst_text:
     case mst_file_text:
@@ -404,7 +404,7 @@ gcc_symbol_address (void *datum, struct gcc_c_context *gcc_context,
 	    gdb_printf (gdb_stdlog,
 			"gcc_symbol_address \"%s\": full symbol\n",
 			identifier);
-	  result = BLOCK_ENTRY_PC (SYMBOL_BLOCK_VALUE (sym));
+	  result = BLOCK_ENTRY_PC (sym->value_block ());
 	  if (sym->type ()->is_gnu_ifunc ())
 	    result = gnu_ifunc_resolve_addr (target_gdbarch (), result);
 	  found = 1;
@@ -421,8 +421,8 @@ gcc_symbol_address (void *datum, struct gcc_c_context *gcc_context,
 			    "gcc_symbol_address \"%s\": minimal "
 			    "symbol\n",
 			    identifier);
-	      result = BMSYMBOL_VALUE_ADDRESS (msym);
-	      if (MSYMBOL_TYPE (msym.minsym) == mst_text_gnu_ifunc)
+	      result = msym.value_address ();
+	      if (msym.minsym->type () == mst_text_gnu_ifunc)
 		result = gnu_ifunc_resolve_addr (target_gdbarch (), result);
 	      found = 1;
 	    }

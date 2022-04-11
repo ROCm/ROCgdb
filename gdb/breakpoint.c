@@ -3266,7 +3266,7 @@ create_overlay_event_breakpoint (void)
 	  bp_objfile_data->overlay_msym = m;
 	}
 
-      addr = BMSYMBOL_VALUE_ADDRESS (bp_objfile_data->overlay_msym);
+      addr = bp_objfile_data->overlay_msym.value_address ();
       b = create_internal_breakpoint (objfile->arch (), addr,
 				      bp_overlay_event,
 				      &internal_breakpoint_ops);
@@ -3376,7 +3376,7 @@ create_longjmp_master_breakpoint_names (objfile *objfile)
 	  bp_objfile_data->longjmp_msym[i] = m;
 	}
 
-      addr = BMSYMBOL_VALUE_ADDRESS (bp_objfile_data->longjmp_msym[i]);
+      addr = bp_objfile_data->longjmp_msym[i].value_address ();
       b = create_internal_breakpoint (gdbarch, addr, bp_longjmp_master,
 				      &internal_breakpoint_ops);
       initialize_explicit_location (&explicit_loc);
@@ -3449,8 +3449,8 @@ create_std_terminate_master_breakpoint (void)
 	      struct bound_minimal_symbol m;
 
 	      m = lookup_minimal_symbol (func_name, NULL, objfile);
-	      if (m.minsym == NULL || (MSYMBOL_TYPE (m.minsym) != mst_text
-				       && MSYMBOL_TYPE (m.minsym) != mst_file_text))
+	      if (m.minsym == NULL || (m.minsym->type () != mst_text
+				       && m.minsym->type () != mst_file_text))
 		{
 		  /* Prevent future lookups in this objfile.  */
 		  bp_objfile_data->terminate_msym.minsym = &msym_not_found;
@@ -3459,7 +3459,7 @@ create_std_terminate_master_breakpoint (void)
 	      bp_objfile_data->terminate_msym = m;
 	    }
 
-	  addr = BMSYMBOL_VALUE_ADDRESS (bp_objfile_data->terminate_msym);
+	  addr = bp_objfile_data->terminate_msym.value_address ();
 	  b = create_internal_breakpoint (objfile->arch (), addr,
 					  bp_std_terminate_master,
 					  &internal_breakpoint_ops);
@@ -3557,7 +3557,7 @@ create_exception_master_breakpoint_hook (objfile *objfile)
       bp_objfile_data->exception_msym = debug_hook;
     }
 
-  addr = BMSYMBOL_VALUE_ADDRESS (bp_objfile_data->exception_msym);
+  addr = bp_objfile_data->exception_msym.value_address ();
   addr = gdbarch_convert_from_func_ptr_addr
     (gdbarch, addr, current_inferior ()->top_target ());
   b = create_internal_breakpoint (gdbarch, addr, bp_exception_master,
@@ -4938,8 +4938,7 @@ watchpoint_check (bpstat *bs)
 
 	  function = get_frame_function (fr);
 	  if (function == NULL
-	      || !contained_in (b->exp_valid_block,
-				SYMBOL_BLOCK_VALUE (function)))
+	      || !contained_in (b->exp_valid_block, function->value_block ()))
 	    within_current_scope = 0;
 	}
 
@@ -7234,8 +7233,8 @@ set_breakpoint_location_function (struct bp_location *loc)
       const char *function_name;
 
       if (loc->msymbol != NULL
-	  && (MSYMBOL_TYPE (loc->msymbol) == mst_text_gnu_ifunc
-	      || MSYMBOL_TYPE (loc->msymbol) == mst_data_gnu_ifunc))
+	  && (loc->msymbol->type () == mst_text_gnu_ifunc
+	      || loc->msymbol->type () == mst_data_gnu_ifunc))
 	{
 	  struct breakpoint *b = loc->owner;
 

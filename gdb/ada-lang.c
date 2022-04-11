@@ -820,7 +820,7 @@ ada_main_name (void)
 
   if (msym.minsym != NULL)
     {
-      CORE_ADDR main_program_name_addr = BMSYMBOL_VALUE_ADDRESS (msym);
+      CORE_ADDR main_program_name_addr = msym.value_address ();
       if (main_program_name_addr == 0)
 	error (_("Invalid address for Ada main program name."));
 
@@ -4826,7 +4826,7 @@ lesseq_defined_than (struct symbol *sym0, struct symbol *sym1)
 		  && startswith (name1 + len0, "___XV")));
       }
     case LOC_CONST:
-      return SYMBOL_VALUE (sym0) == SYMBOL_VALUE (sym1)
+      return sym0->value_longest () == sym1->value_longest ()
 	&& equiv_types (sym0->type (), sym1->type ());
 
     case LOC_STATIC:
@@ -4834,7 +4834,7 @@ lesseq_defined_than (struct symbol *sym0, struct symbol *sym1)
 	const char *name0 = sym0->linkage_name ();
 	const char *name1 = sym1->linkage_name ();
 	return (strcmp (name0, name1) == 0
-		&& SYMBOL_VALUE_ADDRESS (sym0) == SYMBOL_VALUE_ADDRESS (sym1));
+		&& sym0->value_address () == sym1->value_address ());
       }
 
     default:
@@ -4899,7 +4899,7 @@ ada_lookup_simple_minsym (const char *name)
       for (minimal_symbol *msymbol : objfile->msymbols ())
 	{
 	  if (match_name (msymbol->linkage_name (), lookup_name, NULL)
-	      && MSYMBOL_TYPE (msymbol) != mst_solib_trampoline)
+	      && msymbol->type () != mst_solib_trampoline)
 	    {
 	      result.minsym = msymbol;
 	      result.objfile = objfile;
@@ -5004,7 +5004,7 @@ symbols_are_identical_enums (const std::vector<struct block_symbol> &syms)
 
   /* Quick check: They should all have the same value.  */
   for (i = 1; i < syms.size (); i++)
-    if (SYMBOL_VALUE (syms[i].symbol) != SYMBOL_VALUE (syms[0].symbol))
+    if (syms[i].symbol->value_longest () != syms[0].symbol->value_longest ())
       return 0;
 
   /* Quick check: They should all have the same number of enumerals.  */
@@ -5078,8 +5078,8 @@ remove_extra_symbols (std::vector<struct block_symbol> *syms)
 			     (*syms)[j].symbol->linkage_name ()) == 0
 		  && ((*syms)[i].symbol->aclass ()
 		      == (*syms)[j].symbol->aclass ())
-		  && SYMBOL_VALUE_ADDRESS ((*syms)[i].symbol)
-		  == SYMBOL_VALUE_ADDRESS ((*syms)[j].symbol))
+		  && (*syms)[i].symbol->value_address ()
+		  == (*syms)[j].symbol->value_address ())
 		remove_p = 1;
 	    }
 	}
@@ -11718,7 +11718,7 @@ ada_has_this_exception_support (const struct exception_support_info *einfo)
       struct bound_minimal_symbol msym
 	= lookup_minimal_symbol (einfo->catch_exception_sym, NULL, NULL);
 
-      if (msym.minsym && MSYMBOL_TYPE (msym.minsym) != mst_solib_trampoline)
+      if (msym.minsym && msym.minsym->type () != mst_solib_trampoline)
 	error (_("Your Ada runtime appears to be missing some debugging "
 		 "information.\nCannot insert Ada exception catchpoint "
 		 "in this configuration."));
@@ -11741,7 +11741,7 @@ ada_has_this_exception_support (const struct exception_support_info *einfo)
       struct bound_minimal_symbol msym
 	= lookup_minimal_symbol (einfo->catch_handlers_sym, NULL, NULL);
 
-      if (msym.minsym && MSYMBOL_TYPE (msym.minsym) != mst_solib_trampoline)
+      if (msym.minsym && msym.minsym->type () != mst_solib_trampoline)
 	error (_("Your Ada runtime appears to be missing some debugging "
 		 "information.\nCannot insert Ada exception catchpoint "
 		 "in this configuration."));
@@ -12988,7 +12988,7 @@ ada_add_standard_exceptions (compiled_regex *preg,
 	  if (msymbol.minsym != NULL)
 	    {
 	      struct ada_exc_info info
-		= {name, BMSYMBOL_VALUE_ADDRESS (msymbol)};
+		= {name, msymbol.value_address ()};
 
 	      exceptions->push_back (info);
 	    }
@@ -13030,7 +13030,7 @@ ada_add_exceptions_from_frame (compiled_regex *preg,
 	      if (ada_is_exception_sym (sym))
 		{
 		  struct ada_exc_info info = {sym->print_name (),
-					      SYMBOL_VALUE_ADDRESS (sym)};
+					      sym->value_address ()};
 
 		  exceptions->push_back (info);
 		}
@@ -13106,7 +13106,7 @@ ada_add_global_exceptions (compiled_regex *preg,
 		    && name_matches_regex (sym->natural_name (), preg))
 		  {
 		    struct ada_exc_info info
-		      = {sym->print_name (), SYMBOL_VALUE_ADDRESS (sym)};
+		      = {sym->print_name (), sym->value_address ()};
 
 		    exceptions->push_back (info);
 		  }
