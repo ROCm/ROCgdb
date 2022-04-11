@@ -54,18 +54,11 @@ proc_with_prefix process_attach_cmdline_tests {} {
     set testpid [spawn_id_get_pid $test_spawn_id]
     gdb_exit
 
-    set res [gdb_spawn_with_cmdline_opts \
-      "-quiet -iex \"set height 0\" -iex \"set width 0\" --pid=$testpid"]
-    set test "attaching rocgdb with pid"
-    gdb_test_multiple "" $test {
-        -re "Attaching to process $testpid\r\n.*\r\n$gdb_prompt $" {
-            pass "$test"
-        }
+    if { [gdb_spawn_attach_cmdline $testpid] } {
+	gdb_test "detach" \
+	    "Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
+	    "detach the process"
     }
-
-    gdb_test "detach" \
-    "Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
-    "detach the process"
 
     # Get rid of the process.
     kill_wait_spawned_process $test_spawn_id
@@ -81,92 +74,47 @@ proc_with_prefix process_attach_tests {} {
     global subdir
     global decimal
 
-    clean_restart $binfile
-
     # Start the program running and then wait for a bit, to be sure
     # that it can be attached to.
 
     set test_spawn_id [spawn_wait_for_attach $binfile]
     set testpid [spawn_id_get_pid $test_spawn_id]
 
-    # Verify that we can attach to the process by first giving its
-    # executable name via the file command, and using attach with the
-    # process ID.
+    foreach_with_prefix preloadfile { on off } {
+	clean_restart
 
-    # (Actually, the test system appears to do this automatically for
-    # us.  So, we must also be prepared to be asked if we want to
-    # discard an existing set of symbols.)
+	if { $preloadfile == on } {
+	    gdb_test \
+		"file $binfile" \
+		"Reading symbols from $escapedbinfile\.\.\.*" \
+		"file \$binfile"
+	}
 
-    set test "set file, before attach"
-    gdb_test_multiple "file $binfile" "$test" {
-        -re "Load new symbol table from.*y or n. $" {
-            gdb_test "y" "Reading symbols from $escapedbinfile\.\.\.*" \
-            "$test (re-read)"
-        }
-        -re "Reading symbols from $escapedbinfile\.\.\.*$gdb_prompt $" {
-            pass "$test"
-        }
+	if { [gdb_attach $testpid] } {
+	    set threadid ""
+	    gdb_test_multiple "info threads" "extract thread id" {
+		-re  "\\s+(\\d+)\\s+AMDGPU Wave\\s+.*$gdb_prompt $" {
+		    set threadid "$expect_out(1,string)"
+		    pass $gdb_test_name
+		}
+	    }
+
+	    if {$threadid != ""} {
+		gdb_test "thread $threadid" \
+		    "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
+
+		# Show architecture info while debugging in device code.
+		# Sample output "The target architecture is set automatically (currently amdgcn:gfx906)".
+		gdb_test "show architecture" \
+		    {The target architecture is set to "auto" \(currently "amdgcn:gfx\w+"\)\.}
+	    }
+
+	    gdb_test "detach" \
+		"Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
+		"detach, with file"
+	}
+
     }
-
-    set test "attach, after setting file"
-    gdb_test_multiple "attach $testpid" "$test" {
-        -re "Attaching to program.*`?$escapedbinfile'?, process $testpid.*$gdb_prompt $" {
-            pass "$test"
-        }
-    }
-
-
-    # Detach the process.
-
-    gdb_test "detach" \
-    "Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
-    "detach, with file"
-
-    # Wait a bit for gdb to finish detaching
-
-    exec sleep 1
-
-    # Purge the symbols from gdb's brain.  (We want to be certain the
-    # next attach, which won't be preceded by a "file" command, is
-    # really getting the executable file without our help.)
-
-    set test "attach, purging symbols after detach"
-    gdb_test_multiple "file" "$test" {
-        -re "No executable file now.*Discard symbol table.*y or n. $" {
-            gdb_test "y" "No symbol file now." "$test"
-        }
-    }
-
-    # Verify that we can attach to the process just by giving the
-    # process ID.
-
-    gdb_test_multiple "attach $testpid" "attach, without file" {
-        -re "Attaching to process $testpid.*$gdb_prompt $" {
-            pass $gdb_test_name
-        }
-    }
-
-    set threadid ""
-    gdb_test_multiple "info threads" "extract thread id" {
-        -re  "\\s+(\\d+)\\s+AMDGPU Wave\\s+.*$gdb_prompt $" {
-            set threadid "$expect_out(1,string)"
-            pass $gdb_test_name
-        }
-    }
-
-    if {$threadid != ""} {
-        gdb_test "thread $threadid" \
-	    "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
-
-        # Show architecture info while debugging in device code.
-        # Sample output "The target architecture is set automatically (currently amdgcn:gfx906)".
-        gdb_test "show architecture" \
-           {The target architecture is set to "auto" \(currently "amdgcn:gfx\w+"\)\.}
-    }
-
-    gdb_test "detach" \
-    "Detaching from program: .*$escapedbinfile, process $testpid\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
-    "detach, without file"
 
     kill_wait_spawned_process $test_spawn_id
 }
