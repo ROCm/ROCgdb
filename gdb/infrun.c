@@ -6043,6 +6043,12 @@ restart_threads (struct thread_info *event_thread, inferior *inf)
 	  keep_going_pass_signal (ecs);
 	}
     }
+
+  if (!schedlock_applies (event_thread))
+    {
+      /* FIXME: we might want to use some filter here.  */
+      prevent_new_threads (false, nullptr, -1, "restart_threads");
+    }
 }
 
 /* Callback for iterate_over_threads.  Find a resumed thread that has
@@ -6105,11 +6111,6 @@ finish_step_over (struct execution_control_state *ecs)
       insert_breakpoints ();
 
       restart_threads (ecs->event_thread);
-
-      /* Now that breakpoints are re-inserted, it's safe to allow the target to
-         spawn new random threads.
-	 FIXME: we might want to use some filter here */
-      prevent_new_threads (false, nullptr, -1, "finish step over");
 
       /* If we have events pending, go through handle_inferior_event
 	 again, picking up a pending event at random.  This avoids
