@@ -1082,6 +1082,46 @@ amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 
   bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
 
+  /* The amd_dbgapi_exceptions_t matching signo will only be used if the
+     thread which is the target of the signal SIGNO is a GPU thread.  If so,
+     make sure that there is a corresponding amd_dbgapi_exceptions_t for SIGNO
+     before we try to resume any thread.
+
+     The target thread is:
+     - INFERIOR_PTID if ptid is a wildcard pid
+     - PTID otherwise.  */
+  amd_dbgapi_exceptions_t exception = AMD_DBGAPI_EXCEPTION_NONE;
+  if ((many_threads && ptid_is_gpu (inferior_ptid)) || ptid_is_gpu (ptid))
+    {
+      switch (signo)
+	{
+	case GDB_SIGNAL_BUS:
+	  exception = AMD_DBGAPI_EXCEPTION_WAVE_APERTURE_VIOLATION;
+	  break;
+	case GDB_SIGNAL_SEGV:
+	  exception = AMD_DBGAPI_EXCEPTION_WAVE_MEMORY_VIOLATION;
+	  break;
+	case GDB_SIGNAL_ILL:
+	  exception = AMD_DBGAPI_EXCEPTION_WAVE_ILLEGAL_INSTRUCTION;
+	  break;
+	case GDB_SIGNAL_FPE:
+	  exception = AMD_DBGAPI_EXCEPTION_WAVE_MATH_ERROR;
+	  break;
+	case GDB_SIGNAL_ABRT:
+	  exception = AMD_DBGAPI_EXCEPTION_WAVE_ABORT;
+	  break;
+	case GDB_SIGNAL_TRAP:
+	  exception = AMD_DBGAPI_EXCEPTION_WAVE_TRAP;
+	  break;
+	case GDB_SIGNAL_0:
+	  exception = AMD_DBGAPI_EXCEPTION_NONE;
+	  break;
+	default:
+	  error (_ ("Resuming with signal %s is not supported by this agent."),
+		 gdb_signal_to_name (signo));
+	}
+    }
+
   if (!ptid_is_gpu (ptid) || many_threads)
     {
       beneath ()->resume (ptid, step, signo);
@@ -1089,35 +1129,6 @@ amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
       /* The request is for a single thread, we are done.  */
       if (!many_threads)
 	return;
-    }
-
-  amd_dbgapi_exceptions_t exception;
-  switch (signo)
-    {
-    case GDB_SIGNAL_BUS:
-      exception = AMD_DBGAPI_EXCEPTION_WAVE_APERTURE_VIOLATION;
-      break;
-    case GDB_SIGNAL_SEGV:
-      exception = AMD_DBGAPI_EXCEPTION_WAVE_MEMORY_VIOLATION;
-      break;
-    case GDB_SIGNAL_ILL:
-      exception = AMD_DBGAPI_EXCEPTION_WAVE_ILLEGAL_INSTRUCTION;
-      break;
-    case GDB_SIGNAL_FPE:
-      exception = AMD_DBGAPI_EXCEPTION_WAVE_MATH_ERROR;
-      break;
-    case GDB_SIGNAL_ABRT:
-      exception = AMD_DBGAPI_EXCEPTION_WAVE_ABORT;
-      break;
-    case GDB_SIGNAL_TRAP:
-      exception = AMD_DBGAPI_EXCEPTION_WAVE_TRAP;
-      break;
-    case GDB_SIGNAL_0:
-      exception = AMD_DBGAPI_EXCEPTION_NONE;
-      break;
-    default:
-      error (_ ("Resuming with signal %s is not supported by this agent."),
-	     gdb_signal_to_name (signo));
     }
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
