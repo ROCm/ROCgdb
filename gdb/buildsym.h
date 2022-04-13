@@ -20,6 +20,7 @@
 #define BUILDSYM_H 1
 
 #include "gdbsupport/gdb_obstack.h"
+#include "symtab.h"
 
 struct objfile;
 struct symbol;
@@ -45,15 +46,20 @@ struct dynamic_prop;
 
 struct subfile
 {
-  struct subfile *next;
-  /* Space for this is malloc'd.  */
-  char *name;
-  /* Space for this is malloc'd.  */
-  struct linetable *line_vector;
-  int line_vector_length;
-  enum language language;
-  struct symtab *symtab;
+  subfile () = default;
+
+  /* There's nothing wrong with copying a subfile, but we don't need to, so use
+     this to avoid copying one by mistake.  */
+  DISABLE_COPY_AND_ASSIGN (subfile);
+
+  struct subfile *next = nullptr;
+  std::string name;
+  std::vector<linetable_entry> line_vector_entries;
+  enum language language = language_unknown;
+  struct symtab *symtab = nullptr;
 };
+
+using subfile_up = std::unique_ptr<subfile>;
 
 /* Record the symbols defined for each context in a list.  We don't
    create a struct block for the context until we know how long to
@@ -144,7 +150,7 @@ struct buildsym_compunit
 		     CORE_ADDR last_addr, struct compunit_symtab *cust)
     : m_objfile (objfile_),
       m_last_source_file (name == nullptr ? nullptr : xstrdup (name)),
-      m_comp_dir (comp_dir_ == nullptr ? nullptr : xstrdup (comp_dir_)),
+      m_comp_dir (comp_dir_ == nullptr ? "" : comp_dir_),
       m_compunit_symtab (cust),
       m_language (language_),
       m_last_source_start_addr (last_addr)
@@ -332,7 +338,7 @@ private:
   gdb::unique_xmalloc_ptr<char> m_last_source_file;
 
   /* E.g., DW_AT_comp_dir if DWARF.  Space for this is malloc'd.  */
-  gdb::unique_xmalloc_ptr<char> m_comp_dir;
+  std::string m_comp_dir;
 
   /* Space for this is not malloc'd, and is assumed to have at least
      the same lifetime as objfile.  */
