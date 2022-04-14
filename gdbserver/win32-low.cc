@@ -1042,15 +1042,6 @@ fake_breakpoint_event (void)
 /* See nat/windows-nat.h.  */
 
 bool
-windows_nat::windows_process_info::handle_ms_vc_exception
-     (const EXCEPTION_RECORD *rec)
-{
-  return false;
-}
-
-/* See nat/windows-nat.h.  */
-
-bool
 windows_nat::windows_process_info::handle_access_violation
      (const EXCEPTION_RECORD *rec)
 {
@@ -1509,6 +1500,15 @@ void
 win32_process_target::write_pc (struct regcache *regcache, CORE_ADDR pc)
 {
   return (*the_low_target.set_pc) (regcache, pc);
+}
+
+const char *
+win32_process_target::thread_name (ptid_t thread)
+{
+  windows_thread_info *th
+    = windows_process.thread_rec (current_thread_ptid (),
+				  DONT_INVALIDATE_CONTEXT);
+  return th->thread_name ();
 }
 
 /* The win32 target ops object.  */

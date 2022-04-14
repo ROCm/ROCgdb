@@ -19,6 +19,11 @@
 #include "gdbsupport/common-defs.h"
 #include "nat/windows-nat.h"
 #include "gdbsupport/common-debug.h"
+#include "target/target.h"
+
+#ifdef __CYGWIN__
+#define __USEWIDE
+#endif
 
 namespace windows_nat
 {
@@ -52,6 +57,10 @@ Wow64SetThreadContext_ftype *Wow64SetThreadContext;
 Wow64GetThreadSelectorEntry_ftype *Wow64GetThreadSelectorEntry;
 #endif
 GenerateConsoleCtrlEvent_ftype *GenerateConsoleCtrlEvent;
+
+#define GetThreadDescription dyn_GetThreadDescription
+typedef HRESULT WINAPI (GetThreadDescription_ftype) (HANDLE, PWSTR *);
+static GetThreadDescription_ftype *GetThreadDescription;
 
 /* Note that 'debug_events' must be locally defined in the relevant
    functions.  */
@@ -99,6 +108,29 @@ windows_thread_info::resume ()
 	}
     }
   suspended = 0;
+}
+
+const char *
+windows_thread_info::thread_name ()
+{
+  if (GetThreadDescription != nullptr)
+    {
+      PWSTR value;
+      HRESULT result = GetThreadDescription (h, &value);
+      if (SUCCEEDED (result))
+	{
+	  size_t needed = wcstombs (nullptr, value, 0);
+	  if (needed != (size_t) -1)
+	    {
+	      name.reset ((char *) xmalloc (needed));
+	      if (wcstombs (name.get (), value, needed) == (size_t) -1)
+		name.reset ();
+	    }
+	  LocalFree (value);
+	}
+    }
+
+  return name.get ();
 }
 
 /* Return the name of the DLL referenced by H at ADDRESS.  UNICODE
@@ -158,6 +190,45 @@ get_image_name (HANDLE h, void *address, int unicode)
   return buf;
 }
 
+/* See nat/windows-nat.h.  */
+
+bool
+windows_process_info::handle_ms_vc_exception (const EXCEPTION_RECORD *rec)
+{
+  if (rec->NumberParameters >= 3
+      && (rec->ExceptionInformation[0] & 0xffffffff) == 0x1000)
+    {
+      DWORD named_thread_id;
+      windows_thread_info *named_thread;
+      CORE_ADDR thread_name_target;
+
+      thread_name_target = rec->ExceptionInformation[1];
+      named_thread_id = (DWORD) (0xffffffff & rec->ExceptionInformation[2]);
+
+      if (named_thread_id == (DWORD) -1)
+	named_thread_id = current_event.dwThreadId;
+
+      named_thread = thread_rec (ptid_t (current_event.dwProcessId,
+					 named_thread_id, 0),
+				 DONT_INVALIDATE_CONTEXT);
+      if (named_thread != NULL)
+	{
+	  int thread_name_len;
+	  gdb::unique_xmalloc_ptr<char> thread_name
+	    = target_read_string (thread_name_target, 1025, &thread_name_len);
+	  if (thread_name_len > 0)
+	    {
+	      thread_name.get ()[thread_name_len - 1] = '\0';
+	      named_thread->name = std::move (thread_name);
+	    }
+	}
+
+      return true;
+    }
+
+  return false;
+}
+
 /* The exception thrown by a program to tell the debugger the name of
    a thread.  The exception record contains an ID of a thread and a
    name to give it.  This exception has no documented name, but MSDN
@@ -182,6 +253,8 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
   /* Record the context of the current thread.  */
   thread_rec (ptid_t (current_event.dwProcessId, current_event.dwThreadId, 0),
 	      DONT_SUSPEND);
+
+  last_sig = GDB_SIGNAL_0;
 
   switch (code)
     {
@@ -243,8 +316,10 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
 	     on startup, first a BREAKPOINT for the 64bit ntdll.dll,
 	     then a WX86_BREAKPOINT for the 32bit ntdll.dll.
 	     Here we only care about the WX86_BREAKPOINT's.  */
+	  DEBUG_EXCEPTION_SIMPLE ("EXCEPTION_BREAKPOINT - ignore_first_breakpoint");
 	  ourstatus->set_spurious ();
 	  ignore_first_breakpoint = false;
+	  break;
 	}
       else if (wow64_process)
 	{
@@ -255,7 +330,7 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
 	     gdb lets the target process continue.
 	     So handle it as SIGINT instead, then the target is stopped
 	     unconditionally.  */
-	  DEBUG_EXCEPTION_SIMPLE ("EXCEPTION_BREAKPOINT");
+	  DEBUG_EXCEPTION_SIMPLE ("EXCEPTION_BREAKPOINT - wow64_process");
 	  rec->ExceptionCode = DBG_CONTROL_C;
 	  ourstatus->set_stopped (GDB_SIGNAL_INT);
 	  break;
@@ -614,6 +689,7 @@ initialize_loadable ()
       GPA (hm, Wow64GetThreadSelectorEntry);
 #endif
       GPA (hm, GenerateConsoleCtrlEvent);
+      GPA (hm, GetThreadDescription);
     }
 
   /* Set variables to dummy versions of these processes if the function
@@ -668,6 +744,15 @@ initialize_loadable ()
       if (!OpenProcessToken || !LookupPrivilegeValueA
 	  || !AdjustTokenPrivileges)
 	OpenProcessToken = bad;
+    }
+
+  /* On some versions of Windows, this function is only available in
+     KernelBase.dll, not kernel32.dll.  */
+  if (GetThreadDescription == nullptr)
+    {
+      hm = LoadLibrary (TEXT ("KernelBase.dll"));
+      if (hm)
+	GPA (hm, GetThreadDescription);
     }
 
 #undef GPA
