@@ -159,10 +159,19 @@ rust_tuple_struct_type_p (struct type *type)
 static bool
 rust_slice_type_p (struct type *type)
 {
-  return (type->code () == TYPE_CODE_STRUCT
-	  && type->name () != NULL
-	  && (strncmp (type->name (), "&[", 2) == 0
-	      || strcmp (type->name (), "&str") == 0));
+  if (type->code () == TYPE_CODE_STRUCT
+      && type->name () != NULL
+      && type->num_fields () == 2)
+    {
+      /* The order of fields doesn't matter.  While it would be nice
+	 to check for artificiality here, the Rust compiler doesn't
+	 emit this information.  */
+      const char *n1 = type->field (0).name ();
+      const char *n2 = type->field (1).name ();
+      return ((streq (n1, "data_ptr") && streq (n2, "length"))
+	      || (streq (n2, "data_ptr") && streq (n1, "length")));
+    }
+  return false;
 }
 
 /* Return true if TYPE is a range type, otherwise false.  */
@@ -296,19 +305,57 @@ rust_language::printstr (struct ui_file *stream, struct type *type,
 
 
 
-/* Helper function to print a string slice.  */
+static const struct generic_val_print_decorations rust_decorations =
+{
+  /* Complex isn't used in Rust, but we provide C-ish values just in
+     case.  */
+  "",
+  " + ",
+  " * I",
+  "true",
+  "false",
+  "()",
+  "[",
+  "]"
+};
+
+/* Helper function to print a slice.  */
 
 static void
-rust_val_print_str (struct ui_file *stream, struct value *val,
-		    const struct value_print_options *options)
+rust_val_print_slice (struct value *val, struct ui_file *stream, int recurse,
+		      const struct value_print_options *options)
 {
   struct value *base = value_struct_elt (&val, {}, "data_ptr", NULL,
 					 "slice");
   struct value *len = value_struct_elt (&val, {}, "length", NULL, "slice");
 
-  val_print_string (TYPE_TARGET_TYPE (value_type (base)), "UTF-8",
-		    value_as_address (base), value_as_long (len), stream,
-		    options);
+  struct type *type = check_typedef (value_type (val));
+  if (strcmp (type->name (), "&str") == 0)
+    val_print_string (TYPE_TARGET_TYPE (value_type (base)), "UTF-8",
+		      value_as_address (base), value_as_long (len), stream,
+		      options);
+  else
+    {
+      LONGEST llen = value_as_long (len);
+
+      type_print (value_type (val), "", stream, -1);
+      gdb_printf (stream, " ");
+
+      if (llen == 0)
+	gdb_printf (stream, "[]");
+      else
+	{
+	  struct type *elt_type = TYPE_TARGET_TYPE (value_type (base));
+	  struct type *array_type = lookup_array_range_type (elt_type, 0,
+							     llen - 1);
+	  struct value *array = allocate_value_lazy (array_type);
+	  VALUE_LVAL (array) = lval_memory;
+	  set_value_address (array, value_as_address (base));
+	  value_fetch_lazy (array);
+	  generic_value_print (array, stream, recurse, options,
+			       &rust_decorations);
+	}
+    }
 }
 
 /* See rust-lang.h.  */
@@ -322,17 +369,9 @@ rust_language::val_print_struct
   int first_field;
   struct type *type = check_typedef (value_type (val));
 
-  if (rust_slice_type_p (type) && strcmp (type->name (), "&str") == 0)
+  if (rust_slice_type_p (type))
     {
-      /* If what we are printing here is actually a string within a
-	 structure then VAL will be the original parent value, while TYPE
-	 will be the type of the structure representing the string we want
-	 to print.
-	 However, RUST_VAL_PRINT_STR looks up the fields of the string
-	 inside VAL, assuming that VAL is the string.
-	 So, recreate VAL as a value representing just the string.  */
-      val = value_at_lazy (type, value_address (val));
-      rust_val_print_str (stream, val, options);
+      rust_val_print_slice (val, stream, recurse, options);
       return;
     }
 
@@ -476,20 +515,6 @@ rust_language::print_enum (struct value *val, struct ui_file *stream,
     gdb_puts ("}", stream);
 }
 
-static const struct generic_val_print_decorations rust_decorations =
-{
-  /* Complex isn't used in Rust, but we provide C-ish values just in
-     case.  */
-  "",
-  " + ",
-  " * I",
-  "true",
-  "false",
-  "()",
-  "[",
-  "]"
-};
-
 /* See language.h.  */
 
 void
@@ -597,6 +622,27 @@ rust_language::value_print_inner
       /* Nothing special yet.  */
       generic_value_print (val, stream, recurse, &opts, &rust_decorations);
     }
+}
+
+/* See language.h.  */
+
+void
+rust_language::value_print
+	(struct value *val, struct ui_file *stream,
+	 const struct value_print_options *options) const
+{
+  value_print_options opts = *options;
+  opts.deref_ref = true;
+
+  struct type *type = check_typedef (value_type (val));
+  if (type->is_pointer_or_reference ())
+    {
+      gdb_printf (stream, "(");
+      type_print (value_type (val), "", stream, -1);
+      gdb_printf (stream, ") ");
+    }
+
+  return common_val_print (val, stream, 0, &opts, this);
 }
 
 
