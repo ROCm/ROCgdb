@@ -1067,19 +1067,12 @@ gdb_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
       /* (assume no half-trace half-real blocks for now) */
     }
 
-  res = prepare_to_access_memory ();
-  if (res == 0)
-    {
-      if (set_desired_thread ())
-	res = read_inferior_memory (memaddr, myaddr, len);
-      else
-	res = 1;
-      done_accessing_memory ();
-
-      return res == 0 ? len : -1;
-    }
+  if (set_desired_thread ())
+    res = read_inferior_memory (memaddr, myaddr, len);
   else
-    return -1;
+    res = 1;
+
+  return res == 0 ? len : -1;
 }
 
 /* Write trace frame or inferior memory.  Actually, writing to trace
@@ -1095,15 +1088,10 @@ gdb_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
     {
       int ret;
 
-      ret = prepare_to_access_memory ();
-      if (ret == 0)
-	{
-	  if (set_desired_thread ())
-	    ret = target_write_memory (memaddr, myaddr, len);
-	  else
-	    ret = EIO;
-	  done_accessing_memory ();
-	}
+      if (set_desired_thread ())
+	ret = target_write_memory (memaddr, myaddr, len);
+      else
+	ret = EIO;
       return ret;
     }
 }
@@ -1691,47 +1679,28 @@ handle_qxfer_threads_worker (thread_info *thread, struct buffer *buffer)
 static bool
 handle_qxfer_threads_proper (struct buffer *buffer)
 {
-  client_state &cs = get_client_state ();
-
-  scoped_restore_current_thread restore_thread;
-  scoped_restore save_current_general_thread
-    = make_scoped_restore (&cs.general_thread);
-
   buffer_grow_str (buffer, "<threads>\n");
 
-  process_info *error_proc = find_process ([&] (process_info *process)
+  /* The target may need to access memory and registers (e.g. via
+     libthread_db) to fetch thread properties.  Even if don't need to
+     stop threads to access memory, we still will need to be able to
+     access registers, and other ptrace accesses like
+     PTRACE_GET_THREAD_AREA that require a paused thread.  Pause all
+     threads here, so that we pause each thread at most once for all
+     accesses.  */
+  if (non_stop)
+    target_pause_all (true);
+
+  for_each_thread ([&] (thread_info *thread)
     {
-      /* The target may need to access memory and registers (e.g. via
-	 libthread_db) to fetch thread properties.  Prepare for memory
-	 access here, so that we potentially pause threads just once
-	 for all accesses.  Note that even if someday we stop needing
-	 to pause threads to access memory, we will need to be able to
-	 access registers, or other ptrace accesses like
-	 PTRACE_GET_THREAD_AREA.  */
-
-      /* Need to switch to each process in turn, because
-	 prepare_to_access_memory prepares for an access in the
-	 current process pointed to by general_thread.  */
-      switch_to_process (process);
-      cs.general_thread = current_thread->id;
-
-      int res = prepare_to_access_memory ();
-      if (res == 0)
-	{
-	  for_each_thread (process->pid, [&] (thread_info *thread)
-	    {
-	      handle_qxfer_threads_worker (thread, buffer);
-	    });
-
-	  done_accessing_memory ();
-	  return false;
-	}
-      else
-	return true;
+      handle_qxfer_threads_worker (thread, buffer);
     });
 
+  if (non_stop)
+    target_unpause_all (true);
+
   buffer_grow_str0 (buffer, "</threads>\n");
-  return error_proc == nullptr;
+  return true;
 }
 
 /* Handle qXfer:threads:read.  */
