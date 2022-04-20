@@ -2741,7 +2741,7 @@ find_frame_sal (frame_info *frame)
       symtab_and_line sal;
       if (sym->line () != 0)
 	{
-	  sal.symtab = symbol_symtab (sym);
+	  sal.symtab = sym->symtab ();
 	  sal.line = sym->line ();
 	}
       else

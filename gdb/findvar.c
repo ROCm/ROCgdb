@@ -637,7 +637,7 @@ language_defn::read_var_value (struct symbol *var,
       v = allocate_value (type);
       if (overlay_debugging)
 	{
-	  struct objfile *var_objfile = symbol_objfile (var);
+	  struct objfile *var_objfile = var->objfile ();
 	  addr = symbol_overlayed_address (var->value_address (),
 					   var->obj_section (var_objfile));
 	  store_typed_address (value_contents_raw (v).data (), type, addr);
@@ -664,7 +664,7 @@ language_defn::read_var_value (struct symbol *var,
       if (overlay_debugging)
 	addr
 	  = symbol_overlayed_address (var->value_address (),
-				      var->obj_section (symbol_objfile (var)));
+				      var->obj_section (var->objfile ()));
       else
 	addr = var->value_address ();
       break;
@@ -706,7 +706,7 @@ language_defn::read_var_value (struct symbol *var,
       if (overlay_debugging)
 	addr = symbol_overlayed_address
 	  (BLOCK_ENTRY_PC (var->value_block ()),
-	   var->obj_section (symbol_objfile (var)));
+	   var->obj_section (var->objfile ()));
       else
 	addr = BLOCK_ENTRY_PC (var->value_block ());
       break;
@@ -754,9 +754,9 @@ language_defn::read_var_value (struct symbol *var,
 	lookup_data.name = var->linkage_name ();
 
 	gdbarch_iterate_over_objfiles_in_search_order
-	  (symbol_arch (var),
+	  (var->arch (),
 	   minsym_lookup_iterator_cb, &lookup_data,
-	   symbol_objfile (var));
+	   var->objfile ());
 	msym = lookup_data.result.minsym;
 
 	/* If we can't find the minsym there's a problem in the symbol info.
@@ -765,7 +765,7 @@ language_defn::read_var_value (struct symbol *var,
 	if (msym == NULL)
 	  {
 	    const char *flavour_name
-	      = objfile_flavour_name (symbol_objfile (var));
+	      = objfile_flavour_name (var->objfile ());
 
 	    /* We can't get here unless we've opened the file, so flavour_name
 	       can't be NULL.  */

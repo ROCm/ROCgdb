@@ -1188,7 +1188,7 @@ enum symbol_subclass_kind
   SYMBOL_RUST_VTABLE
 };
 
-extern const struct symbol_impl *symbol_impls;
+extern gdb::array_view<const struct symbol_impl> symbol_impls;
 
 /* This structure is space critical.  See space comments at the top.  */
 
@@ -1203,7 +1203,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
       m_is_inlined (0),
       maybe_copied (0),
       subclass (SYMBOL_NONE),
-      artificial (false)
+      m_artificial (false)
     {
       /* We can't use an initializer list for members of a base class, and
 	 general_symbol_info needs to stay a POD type.  */
@@ -1221,11 +1221,6 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
   symbol (const symbol &) = default;
   symbol &operator= (const symbol &) = default;
 
-  unsigned int aclass_index () const
-  {
-    return m_aclass_index;
-  }
-
   void set_aclass_index (unsigned int aclass_index)
   {
     m_aclass_index = aclass_index;
@@ -1233,7 +1228,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
 
   const symbol_impl &impl () const
   {
-    return symbol_impls[this->aclass_index ()];
+    return symbol_impls[this->m_aclass_index];
   }
 
   address_class aclass () const
@@ -1369,6 +1364,40 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
     m_value.chain = sym;
   }
 
+  /* Return true if this symbol was marked as artificial.  */
+  bool is_artificial () const
+  {
+    return m_artificial;
+  }
+
+  /* Set the 'artificial' flag on this symbol.  */
+  void set_is_artificial (bool artificial)
+  {
+    m_artificial = artificial;
+  }
+
+  /* Return the OBJFILE of this symbol.  It is an error to call this
+     if is_objfile_owned is false, which only happens for
+     architecture-provided types.  */
+
+  struct objfile *objfile () const;
+
+  /* Return the ARCH of this symbol.  */
+
+  struct gdbarch *arch () const;
+
+  /* Return the symtab of this symbol.  It is an error to call this if
+     is_objfile_owned is false, which only happens for
+     architecture-provided types.  */
+
+  struct symtab *symtab () const;
+
+  /* Set the symtab of this symbol to SYMTAB.  It is an error to call
+     this if is_objfile_owned is false, which only happens for
+     architecture-provided types.  */
+
+  void set_symtab (struct symtab *symtab);
+
   /* Data type of value */
 
   struct type *m_type = nullptr;
@@ -1423,7 +1452,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack
 
   /* Whether this symbol is artificial.  */
 
-  bool artificial : 1;
+  bool m_artificial : 1;
 
   /* Line number of this symbol's definition, except for inlined
      functions.  For an inlined function (class LOC_BLOCK and
@@ -1484,28 +1513,6 @@ extern int register_symbol_block_impl (enum address_class aclass,
 
 extern int register_symbol_register_impl (enum address_class,
 					  const struct symbol_register_ops *);
-
-/* Return the OBJFILE of SYMBOL.
-   It is an error to call this if symbol.is_objfile_owned is false, which
-   only happens for architecture-provided types.  */
-
-extern struct objfile *symbol_objfile (const struct symbol *symbol);
-
-/* Return the ARCH of SYMBOL.  */
-
-extern struct gdbarch *symbol_arch (const struct symbol *symbol);
-
-/* Return the SYMTAB of SYMBOL.
-   It is an error to call this if symbol.is_objfile_owned is false, which
-   only happens for architecture-provided types.  */
-
-extern struct symtab *symbol_symtab (const struct symbol *symbol);
-
-/* Set the symtab of SYMBOL to SYMTAB.
-   It is an error to call this if symbol.is_objfile_owned is false, which
-   only happens for architecture-provided types.  */
-
-extern void symbol_set_symtab (struct symbol *symbol, struct symtab *symtab);
 
 /* An instance of this type is used to represent a C++ template
    function.  A symbol is really of this type iff

@@ -48,7 +48,7 @@ block_objfile (const struct block *block)
   const struct global_block *global_block;
 
   if (BLOCK_FUNCTION (block) != NULL)
-    return symbol_objfile (BLOCK_FUNCTION (block));
+    return BLOCK_FUNCTION (block)->objfile ();
 
   global_block = (struct global_block *) block_global_block (block);
   return global_block->compunit_symtab->objfile ();
@@ -60,7 +60,7 @@ struct gdbarch *
 block_gdbarch (const struct block *block)
 {
   if (BLOCK_FUNCTION (block) != NULL)
-    return symbol_arch (BLOCK_FUNCTION (block));
+    return BLOCK_FUNCTION (block)->arch ();
 
   return block_objfile (block)->arch ();
 }

@@ -1701,10 +1701,10 @@ info_address_command (const char *exp, int from_tty)
   gdb_printf ("\" is ");
   val = sym->value_longest ();
   if (sym->is_objfile_owned ())
-    section = sym->obj_section (symbol_objfile (sym));
+    section = sym->obj_section (sym->objfile ());
   else
     section = NULL;
-  gdbarch = symbol_arch (sym);
+  gdbarch = sym->arch ();
 
   if (SYMBOL_COMPUTED_OPS (sym) != NULL)
     {

@@ -3682,7 +3682,7 @@ See set/show multiple-symbol."));
 	  struct symtab *symtab = NULL;
 
 	  if (syms[i].symbol->is_objfile_owned ())
-	    symtab = symbol_symtab (syms[i].symbol);
+	    symtab = syms[i].symbol->symtab ();
 
 	  if (syms[i].symbol->line () != 0 && symtab != NULL)
 	    {
@@ -3855,7 +3855,7 @@ ada_resolve_variable (struct symbol *sym, const struct block *block,
       candidates.end (),
       [] (block_symbol &bsym)
       {
-       return bsym.symbol->artificial;
+	return bsym.symbol->is_artificial ();
       }),
      candidates.end ());
 
@@ -4713,9 +4713,9 @@ cache_symbol (const char *name, domain_enum domain, struct symbol *sym,
      the symbol is local or not, we check the block where we found it
      against the global and static blocks of its associated symtab.  */
   if (sym
-      && BLOCKVECTOR_BLOCK (symbol_symtab (sym)->compunit ()->blockvector (),
+      && BLOCKVECTOR_BLOCK (sym->symtab ()->compunit ()->blockvector (),
 			    GLOBAL_BLOCK) != block
-      && BLOCKVECTOR_BLOCK (symbol_symtab (sym)->compunit ()->blockvector (),
+      && BLOCKVECTOR_BLOCK (sym->symtab ()->compunit ()->blockvector (),
 			    STATIC_BLOCK) != block)
     return;
 
@@ -13457,9 +13457,9 @@ public:
   }
 
   /* See language.h.  */
-  virtual bool symbol_printing_suppressed (struct symbol *symbol) const override
+  bool symbol_printing_suppressed (struct symbol *symbol) const override
   {
-    return symbol->artificial;
+    return symbol->is_artificial ();
   }
 
   /* See language.h.  */
