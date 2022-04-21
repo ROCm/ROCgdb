@@ -1282,7 +1282,7 @@ static const char *compute_include_file_name
      (const struct line_header *lh,
       const file_entry &fe,
       const file_and_directory &cu_info,
-      gdb::unique_xmalloc_ptr<char> *name_holder);
+      std::string &name_holder);
 
 static htab_up allocate_signatured_type_table ();
 
@@ -2782,9 +2782,9 @@ dw2_get_file_names_reader (const struct die_reader_specs *reader,
     {
       for (const auto &entry : lh->file_names ())
 	{
-	  gdb::unique_xmalloc_ptr<char> name_holder;
+	  std::string name_holder;
 	  const char *include_name =
-	    compute_include_file_name (lh.get (), entry, fnd, &name_holder);
+	    compute_include_file_name (lh.get (), entry, fnd, name_holder);
 	  if (include_name != nullptr)
 	    {
 	      include_name = per_objfile->objfile->intern (include_name);
@@ -5342,18 +5342,13 @@ dwarf2_initialize_objfile (struct objfile *objfile)
 
 /* Build a partial symbol table.  */
 
-void
-dwarf2_build_psymtabs (struct objfile *objfile, bool already_attached)
+static void
+dwarf2_build_psymtabs (struct objfile *objfile)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
-  if (already_attached)
-    {
-      if (per_objfile->per_bfd->index_table != nullptr)
-	return;
-    }
-  else
-    objfile->qf.push_front (make_cooked_index_funcs ());
+  if (per_objfile->per_bfd->index_table != nullptr)
+    return;
 
   try
     {
@@ -11106,14 +11101,13 @@ open_dwo_file (dwarf2_per_objfile *per_objfile,
 
   if (comp_dir != NULL)
     {
-      gdb::unique_xmalloc_ptr<char> path_to_try
-	(concat (comp_dir, SLASH_STRING, file_name, (char *) NULL));
+      std::string path_to_try = path_join (comp_dir, file_name);
 
       /* NOTE: If comp_dir is a relative path, this will also try the
 	 search path, which seems useful.  */
-      gdb_bfd_ref_ptr abfd (try_open_dwop_file (per_objfile, path_to_try.get (),
-						0 /*is_dwp*/,
-						1 /*search_cwd*/));
+      gdb_bfd_ref_ptr abfd (try_open_dwop_file
+	(per_objfile, path_to_try.c_str (), 0 /*is_dwp*/, 1 /*search_cwd*/));
+
       if (abfd != NULL)
 	return abfd;
     }
@@ -18476,7 +18470,7 @@ struct cooked_index_functions : public dwarf2_base_index_functions
   void read_partial_symbols (struct objfile *objfile) override
   {
     if (dwarf2_has_info (objfile, nullptr))
-      dwarf2_build_psymtabs (objfile, true);
+      dwarf2_build_psymtabs (objfile);
   }
 };
 
@@ -19715,14 +19709,14 @@ dwarf_decode_line_header (sect_offset sect_off, struct dwarf2_cu *cu)
 static const char *
 compute_include_file_name (const struct line_header *lh, const file_entry &fe,
 			   const file_and_directory &cu_info,
-			   gdb::unique_xmalloc_ptr<char> *name_holder)
+			   std::string &name_holder)
 {
   const char *include_name = fe.name;
   const char *include_name_to_compare = include_name;
 
   const char *dir_name = fe.include_dir (lh);
 
-  gdb::unique_xmalloc_ptr<char> hold_compare;
+  std::string hold_compare;
   if (!IS_ABSOLUTE_PATH (include_name)
       && (dir_name != nullptr || cu_info.get_comp_dir () != nullptr))
     {
@@ -19749,27 +19743,24 @@ compute_include_file_name (const struct line_header *lh, const file_entry &fe,
 
       if (dir_name != NULL)
 	{
-	  name_holder->reset (concat (dir_name, SLASH_STRING,
-				      include_name, (char *) NULL));
-	  include_name = name_holder->get ();
+	  name_holder = path_join (dir_name, include_name);
+	  include_name = name_holder.c_str ();
 	  include_name_to_compare = include_name;
 	}
       if (!IS_ABSOLUTE_PATH (include_name)
 	  && cu_info.get_comp_dir () != nullptr)
 	{
-	  hold_compare.reset (concat (cu_info.get_comp_dir (), SLASH_STRING,
-				      include_name, (char *) NULL));
-	  include_name_to_compare = hold_compare.get ();
+	  hold_compare = path_join (cu_info.get_comp_dir (), include_name);
+	  include_name_to_compare = hold_compare.c_str ();
 	}
     }
 
-  gdb::unique_xmalloc_ptr<char> copied_name;
+  std::string copied_name;
   const char *cu_filename = cu_info.get_name ();
   if (!IS_ABSOLUTE_PATH (cu_filename) && cu_info.get_comp_dir () != nullptr)
     {
-      copied_name.reset (concat (cu_info.get_comp_dir (), SLASH_STRING,
-				 cu_filename, (char *) NULL));
-      cu_filename = copied_name.get ();
+      copied_name = path_join (cu_info.get_comp_dir (), cu_filename);
+      cu_filename = copied_name.c_str ();
     }
 
   if (FILENAME_CMP (include_name_to_compare, cu_filename) == 0)
@@ -20504,7 +20495,7 @@ static void
 dwarf2_start_subfile (struct dwarf2_cu *cu, const char *filename,
 		      const char *dirname)
 {
-  gdb::unique_xmalloc_ptr<char> copy;
+  std::string copy;
 
   /* In order not to lose the line information directory,
      we concatenate it to the filename when it makes sense.
@@ -20515,8 +20506,8 @@ dwarf2_start_subfile (struct dwarf2_cu *cu, const char *filename,
 
   if (!IS_ABSOLUTE_PATH (filename) && dirname != NULL)
     {
-      copy.reset (concat (dirname, SLASH_STRING, filename, (char *) NULL));
-      filename = copy.get ();
+      copy = path_join (dirname, filename);
+      filename = copy.c_str ();
     }
 
   cu->get_builder ()->start_subfile (filename);
