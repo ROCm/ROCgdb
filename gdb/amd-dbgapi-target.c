@@ -1090,7 +1090,7 @@ amd_dbgapi_target::stopped_data_address (CORE_ADDR *addr_p)
 }
 
 void
-amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
+amd_dbgapi_target::resume (ptid_t scope_ptid, int step, enum gdb_signal signo)
 {
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
@@ -1098,20 +1098,14 @@ amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
     gdb_printf (gdb_stdlog,
 		"\e[1;34minfrun: amd_dbgapi_target::resume "
 		"([%d,%ld,%ld])\e[0m\n",
-		ptid.pid (), ptid.lwp (), ptid.tid ());
-
-  bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
+		scope_ptid.pid (), scope_ptid.lwp (), scope_ptid.tid ());
 
   /* The amd_dbgapi_exceptions_t matching signo will only be used if the
      thread which is the target of the signal SIGNO is a GPU thread.  If so,
      make sure that there is a corresponding amd_dbgapi_exceptions_t for SIGNO
-     before we try to resume any thread.
-
-     The target thread is:
-     - INFERIOR_PTID if ptid is a wildcard pid
-     - PTID otherwise.  */
+     before we try to resume any thread.  */
   amd_dbgapi_exceptions_t exception = AMD_DBGAPI_EXCEPTION_NONE;
-  if ((many_threads && ptid_is_gpu (inferior_ptid)) || ptid_is_gpu (ptid))
+  if (ptid_is_gpu (inferior_ptid))
     {
       switch (signo)
 	{
@@ -1142,22 +1136,22 @@ amd_dbgapi_target::resume (ptid_t ptid, int step, enum gdb_signal signo)
 	}
     }
 
-  if (!ptid_is_gpu (ptid) || many_threads)
+  if (!ptid_is_gpu (inferior_ptid) || scope_ptid != inferior_ptid)
     {
-      beneath ()->resume (ptid, step, signo);
+      beneath ()->resume (scope_ptid, step, signo);
 
-      /* The request is for a single thread, we are done.  */
-      if (!many_threads)
+      /* If the request is for a single thread, we are done.  */
+      if (scope_ptid == inferior_ptid)
 	return;
     }
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
 
   /* Disable forward progress requirement.  */
-  require_forward_progress (ptid, proc_target, false);
+  require_forward_progress (scope_ptid, proc_target, false);
 
   for (thread_info *thread :
-       all_non_exited_threads (current_inferior ()->process_target (), ptid))
+       all_non_exited_threads (current_inferior ()->process_target (), scope_ptid))
     {
       if (!ptid_is_gpu (thread->ptid))
 	continue;
