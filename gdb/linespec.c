@@ -228,7 +228,7 @@ struct symbol_searcher_collect_info
 
 /* Token types  */
 
-enum ls_token_type
+enum linespec_token_type
 {
   /* A keyword  */
   LSTOKEN_KEYWORD = 0,
@@ -251,7 +251,6 @@ enum ls_token_type
   /* Consumed token  */
   LSTOKEN_CONSUMED
 };
-typedef enum ls_token_type linespec_token_type;
 
 /* List of keywords.  This is NULL-terminated so that it can be used
    as enum completer.  */
@@ -1190,9 +1189,9 @@ iterate_over_all_matching_symtabs
 		  int i;
 		  const blockvector *bv = symtab->compunit ()->blockvector ();
 
-		  for (i = FIRST_LOCAL_BLOCK; i < BLOCKVECTOR_NBLOCKS (bv); i++)
+		  for (i = FIRST_LOCAL_BLOCK; i < bv->num_blocks (); i++)
 		    {
-		      block = BLOCKVECTOR_BLOCK (bv, i);
+		      block = bv->block (i);
 		      state->language->iterate_over_symbols
 			(block, lookup_name, name_domain,
 			 [&] (block_symbol *bsym)
@@ -1231,10 +1230,9 @@ iterate_over_file_blocks
 {
   const struct block *block;
 
-  for (block = BLOCKVECTOR_BLOCK (symtab->compunit ()->blockvector (),
-				  STATIC_BLOCK);
+  for (block = symtab->compunit ()->blockvector ()->static_block ();
        block != NULL;
-       block = BLOCK_SUPERBLOCK (block))
+       block = block->superblock ())
     current_language->iterate_over_symbols (block, name, domain, callback);
 }
 
@@ -2169,7 +2167,7 @@ create_sals_line_offset (struct linespec_state *self,
 	    if (!was_exact
 		&& sym != nullptr
 		&& sym->aclass () == LOC_BLOCK
-		&& sal->pc == BLOCK_ENTRY_PC (sym->value_block ())
+		&& sal->pc == sym->value_block ()->entry_pc ()
 		&& val.line < sym->line ())
 	      continue;
 
@@ -2266,7 +2264,7 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 		   && sym.symbol->aclass () == LOC_BLOCK)
 		{
 		  const CORE_ADDR addr
-		    = BLOCK_ENTRY_PC (sym.symbol->value_block ());
+		    = sym.symbol->value_block ()->entry_pc ();
 
 		  for (const auto &elem : ls->minimal_symbols)
 		    {
@@ -4009,14 +4007,14 @@ find_label_symbols (struct linespec_state *self,
       block = get_current_search_block ();
 
       for (;
-	   block && !BLOCK_FUNCTION (block);
-	   block = BLOCK_SUPERBLOCK (block))
+	   block && !block->function ();
+	   block = block->superblock ())
 	;
 
       if (!block)
 	return {};
 
-      fn_sym = BLOCK_FUNCTION (block);
+      fn_sym = block->function ();
 
       find_label_symbols_in_block (block, name, fn_sym, completion_mode,
 				   &result, label_funcs_ret);

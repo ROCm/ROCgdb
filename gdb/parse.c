@@ -454,7 +454,7 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
   if (!expression_context_block)
     expression_context_block = get_selected_block (&expression_context_pc);
   else if (pc == 0)
-    expression_context_pc = BLOCK_ENTRY_PC (expression_context_block);
+    expression_context_pc = expression_context_block->entry_pc ();
   else
     expression_context_pc = pc;
 
@@ -463,12 +463,13 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
   if (!expression_context_block)
     {
       struct symtab_and_line cursal = get_current_source_symtab_and_line ();
+
       if (cursal.symtab)
 	expression_context_block
-	  = BLOCKVECTOR_BLOCK (cursal.symtab->compunit ()->blockvector (),
-			       STATIC_BLOCK);
+	  = cursal.symtab->compunit ()->blockvector ()->static_block ();
+
       if (expression_context_block)
-	expression_context_pc = BLOCK_ENTRY_PC (expression_context_block);
+	expression_context_pc = expression_context_block->entry_pc ();
     }
 
   if (language_mode == language_mode_auto && block != NULL)

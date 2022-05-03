@@ -236,13 +236,9 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
 {
   struct objfile *objfile = symtab->compunit ()->objfile ();
   struct gdbarch *gdbarch = objfile->arch ();
-  int i;
   struct mdict_iterator miter;
-  int len;
   struct linetable *l;
-  const struct blockvector *bv;
   struct symbol *sym;
-  const struct block *b;
   int depth;
 
   gdb_printf (outfile, "\nSymtab for file %s at %s\n",
@@ -263,8 +259,8 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
   if (l)
     {
       gdb_printf (outfile, "\nLine table:\n\n");
-      len = l->nitems;
-      for (i = 0; i < len; i++)
+      int len = l->nitems;
+      for (int i = 0; i < len; i++)
 	{
 	  gdb_printf (outfile, " line %d at ", l->item[i].line);
 	  gdb_puts (paddress (gdbarch, l->item[i].pc), outfile);
@@ -278,41 +274,40 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
   if (is_main_symtab_of_compunit_symtab (symtab))
     {
       gdb_printf (outfile, "\nBlockvector:\n\n");
-      bv = symtab->compunit ()->blockvector ();
-      len = BLOCKVECTOR_NBLOCKS (bv);
-      for (i = 0; i < len; i++)
+      const blockvector *bv = symtab->compunit ()->blockvector ();
+      for (int i = 0; i < bv->num_blocks (); i++)
 	{
-	  b = BLOCKVECTOR_BLOCK (bv, i);
+	  const block *b = bv->block (i);
 	  depth = block_depth (b) * 2;
 	  gdb_printf (outfile, "%*sblock #%03d, object at %s",
 		      depth, "", i,
 		      host_address_to_string (b));
-	  if (BLOCK_SUPERBLOCK (b))
+	  if (b->superblock ())
 	    gdb_printf (outfile, " under %s",
-			host_address_to_string (BLOCK_SUPERBLOCK (b)));
+			host_address_to_string (b->superblock ()));
 	  /* drow/2002-07-10: We could save the total symbols count
 	     even if we're using a hashtable, but nothing else but this message
 	     wants it.  */
 	  gdb_printf (outfile, ", %d syms/buckets in ",
-		      mdict_size (BLOCK_MULTIDICT (b)));
-	  gdb_puts (paddress (gdbarch, BLOCK_START (b)), outfile);
+		      mdict_size (b->multidict ()));
+	  gdb_puts (paddress (gdbarch, b->start ()), outfile);
 	  gdb_printf (outfile, "..");
-	  gdb_puts (paddress (gdbarch, BLOCK_END (b)), outfile);
-	  if (BLOCK_FUNCTION (b))
+	  gdb_puts (paddress (gdbarch, b->end ()), outfile);
+	  if (b->function ())
 	    {
 	      gdb_printf (outfile, ", function %s",
-			  BLOCK_FUNCTION (b)->linkage_name ());
-	      if (BLOCK_FUNCTION (b)->demangled_name () != NULL)
+			  b->function ()->linkage_name ());
+	      if (b->function ()->demangled_name () != NULL)
 		{
 		  gdb_printf (outfile, ", %s",
-			      BLOCK_FUNCTION (b)->demangled_name ());
+			      b->function ()->demangled_name ());
 		}
 	    }
 	  gdb_printf (outfile, "\n");
 	  /* Now print each symbol in this block (in no particular order, if
 	     we're using a hashtable).  Note that we only want this
 	     block, not any blocks from included symtabs.  */
-	  ALL_DICT_SYMBOLS (BLOCK_MULTIDICT (b), miter, sym)
+	  ALL_DICT_SYMBOLS (b->multidict (), miter, sym)
 	    {
 	      try
 		{
@@ -351,7 +346,7 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
 	  gdb_printf (outfile, "Compunit user: %s\n", addr);
 	}
       if (cust->includes != nullptr)
-	for (i = 0; ; ++i)
+	for (int i = 0; ; ++i)
 	  {
 	    struct compunit_symtab *include = cust->includes[i];
 	    if (include == nullptr)
@@ -631,8 +626,8 @@ print_symbol (struct gdbarch *gdbarch, struct symbol *symbol,
 	  gdb_printf
 	    (outfile, "block object %s, %s..%s",
 	     host_address_to_string (symbol->value_block ()),
-	     paddress (gdbarch, BLOCK_START (symbol->value_block ())),
-	     paddress (gdbarch, BLOCK_END (symbol->value_block ())));
+	     paddress (gdbarch, symbol->value_block()->start ()),
+	     paddress (gdbarch, symbol->value_block()->end ()));
 	  if (section)
 	    gdb_printf (outfile, " section %s",
 			bfd_section_name (section->the_bfd_section));
@@ -939,7 +934,7 @@ block_depth (const struct block *block)
 {
   int i = 0;
 
-  while ((block = BLOCK_SUPERBLOCK (block)) != NULL)
+  while ((block = block->superblock ()) != NULL)
     {
       i++;
     }

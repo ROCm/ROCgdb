@@ -535,7 +535,7 @@ get_hosting_frame (struct symbol *var, const struct block *var_block,
       /* Assuming we have a block for this frame: if we are at the function
 	 level, the immediate upper lexical block is in an outer function:
 	 follow the static link.  */
-      else if (BLOCK_FUNCTION (frame_block))
+      else if (frame_block->function ())
 	{
 	  const struct dynamic_prop *static_link
 	    = block_static_link (frame_block);
@@ -560,7 +560,7 @@ get_hosting_frame (struct symbol *var, const struct block *var_block,
       else
 	/* We must be in some function nested lexical block.  Just get the
 	   outer block: both must share the same frame.  */
-	frame_block = BLOCK_SUPERBLOCK (frame_block);
+	frame_block = frame_block->superblock ();
     }
 
   /* Old compilers may not provide a static link, or they may provide an
@@ -572,11 +572,11 @@ get_hosting_frame (struct symbol *var, const struct block *var_block,
       frame = block_innermost_frame (var_block);
       if (frame == NULL)
 	{
-	  if (BLOCK_FUNCTION (var_block)
+	  if (var_block->function ()
 	      && !block_inlined_p (var_block)
-	      && BLOCK_FUNCTION (var_block)->print_name ())
+	      && var_block->function ()->print_name ())
 	    error (_("No frame is currently executing in block %s."),
-		   BLOCK_FUNCTION (var_block)->print_name ());
+		   var_block->function ()->print_name ());
 	  else
 	    error (_("No frame is currently executing in specified"
 		     " block"));
@@ -705,10 +705,10 @@ language_defn::read_var_value (struct symbol *var,
     case LOC_BLOCK:
       if (overlay_debugging)
 	addr = symbol_overlayed_address
-	  (BLOCK_ENTRY_PC (var->value_block ()),
+	  (var->value_block ()->entry_pc (),
 	   var->obj_section (var->objfile ()));
       else
-	addr = BLOCK_ENTRY_PC (var->value_block ());
+	addr = var->value_block ()->entry_pc ();
       break;
 
     case LOC_REGISTER:

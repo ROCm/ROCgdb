@@ -238,9 +238,6 @@ struct amd_dbgapi_target final : public target_ops
 
 static struct amd_dbgapi_target the_amd_dbgapi_target;
 
-/* amd-dbgapi breakpoint ops.  */
-static struct breakpoint_ops amd_dbgapi_target_breakpoint_ops;
-
 /* Per-inferior data key.  */
 static const struct inferior_key<amd_dbgapi_inferior_info>
   amd_dbgapi_inferior_data;
@@ -639,13 +636,37 @@ get_amd_dbgapi_process_id (struct inferior *inferior)
   return get_amd_dbgapi_inferior_info (inferior)->process_id;
 }
 
-static void
-amd_dbgapi_target_breakpoint_re_set (struct breakpoint *b)
+/* A breakpoint dbgapi wants us to insert, to handle shared library
+   loading/unloading.  */
+
+struct amd_dbgapi_target_breakpoint : public base_breakpoint
 {
+  amd_dbgapi_target_breakpoint (struct gdbarch *gdbarch, CORE_ADDR address)
+    : base_breakpoint ()
+  {
+    /* Should be a ctor.  */
+
+    symtab_and_line sal;
+    sal.pc = address;
+    sal.section = find_pc_overlay (sal.pc);
+    sal.pspace = current_program_space;
+
+    init_raw_breakpoint (this, gdbarch, sal, bp_breakpoint,
+			 &base_breakpoint_ops);
+  }
+
+  void re_set () override;
+  void check_status (struct bpstat *bs) override;
+};
+
+void
+amd_dbgapi_target_breakpoint::re_set ()
+{
+  /* Nothing.  */
 }
 
-static void
-amd_dbgapi_target_breakpoint_check_status (struct bpstat *bs)
+void
+amd_dbgapi_target_breakpoint::check_status (struct bpstat *bs)
 {
   struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
   amd_dbgapi_status_t status;
@@ -2347,18 +2368,6 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
     inferior *inf = reinterpret_cast<inferior *> (client_process_id);
     struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
-    /* Initialize the breakpoint ops lazily since we depend on
-       bkpt_breakpoint_ops and we can't control the order in which
-       initializers are called.  */
-    if (amd_dbgapi_target_breakpoint_ops.check_status == NULL)
-      {
-	amd_dbgapi_target_breakpoint_ops = bkpt_breakpoint_ops;
-	amd_dbgapi_target_breakpoint_ops.check_status
-	  = amd_dbgapi_target_breakpoint_check_status;
-	amd_dbgapi_target_breakpoint_ops.re_set
-	  = amd_dbgapi_target_breakpoint_re_set;
-      }
-
     auto it = info->breakpoint_map.find (breakpoint_id.handle);
     if (it != info->breakpoint_map.end ())
       return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
@@ -2372,31 +2381,11 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
     if (!section || !section->objfile)
       return AMD_DBGAPI_STATUS_ERROR;
 
-    event_location_up location = new_address_location (address, nullptr, 0);
-    if (!create_breakpoint (section->objfile->arch (), location.get (),
-			    /*cond_string*/ NULL, /*thread*/ -1,
-			    /*extra_string*/ NULL, false /*force_condition*/,
-			    /*parse_extra*/ 0, /*tempflag*/ 0,
-			    /*bptype*/ bp_breakpoint,
-			    /*ignore_count*/ 0,
-			    /*pending_break*/ AUTO_BOOLEAN_FALSE,
-			    /*ops*/ &amd_dbgapi_target_breakpoint_ops, /*from_tty*/ 0,
-			    /*enabled*/ 1, /*internal*/ 1, /*flags*/ 0))
-      return AMD_DBGAPI_STATUS_ERROR;
+    std::unique_ptr<breakpoint> bp_up
+      (new amd_dbgapi_target_breakpoint (section->objfile->arch (),
+					 address));
 
-    /* Find our breakpoint in the breakpoint list.  */
-    breakpoint *bp = nullptr;
-    for (breakpoint *b : all_breakpoints ())
-      if (b->ops == &amd_dbgapi_target_breakpoint_ops && b->loc
-	  && b->loc->pspace->aspace == inf->aspace
-	  && b->loc->address == address)
-	{
-	  bp = b;
-	  break;
-	}
-
-    if (!bp)
-      error (_ ("Could not find breakpoint"));
+    breakpoint *bp = install_breakpoint (true, std::move (bp_up), 1);
 
     info->breakpoint_map.emplace (breakpoint_id.handle, bp);
     return AMD_DBGAPI_STATUS_SUCCESS;

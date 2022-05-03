@@ -562,10 +562,10 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 
   /* At the end of this function, (begin, end) will contain the PC range this
      entire blockvector spans.  */
-  BLOCKVECTOR_MAP (bv) = NULL;
+  bv->set_map (nullptr);
   begin = stab->blocks.front ().begin;
   end = stab->blocks.front ().end;
-  BLOCKVECTOR_NBLOCKS (bv) = actual_nblocks;
+  bv->set_num_blocks (actual_nblocks);
 
   /* First run over all the gdb_block objects, creating a real block
      object for each.  Simultaneously, keep setting the real_block
@@ -580,11 +580,11 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 					   TARGET_CHAR_BIT,
 					   "void");
 
-      BLOCK_MULTIDICT (new_block)
-	= mdict_create_linear (&objfile->objfile_obstack, NULL);
+      new_block->set_multidict
+	(mdict_create_linear (&objfile->objfile_obstack, NULL));
       /* The address range.  */
-      BLOCK_START (new_block) = (CORE_ADDR) gdb_block_iter.begin;
-      BLOCK_END (new_block) = (CORE_ADDR) gdb_block_iter.end;
+      new_block->set_start (gdb_block_iter.begin);
+      new_block->set_end (gdb_block_iter.end);
 
       /* The name.  */
       block_name->set_domain (VAR_DOMAIN);
@@ -596,13 +596,13 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       block_name->m_name = obstack_strdup (&objfile->objfile_obstack,
 					   gdb_block_iter.name.get ());
 
-      BLOCK_FUNCTION (new_block) = block_name;
+      new_block->set_function (block_name);
 
-      BLOCKVECTOR_BLOCK (bv, block_idx) = new_block;
-      if (begin > BLOCK_START (new_block))
-	begin = BLOCK_START (new_block);
-      if (end < BLOCK_END (new_block))
-	end = BLOCK_END (new_block);
+      bv->set_block (block_idx, new_block);
+      if (begin > new_block->start ())
+	begin = new_block->start ();
+      if (end < new_block->end ())
+	end = new_block->end ();
 
       gdb_block_iter.real_block = new_block;
 
@@ -618,15 +618,15 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       new_block = (i == GLOBAL_BLOCK
 		   ? allocate_global_block (&objfile->objfile_obstack)
 		   : allocate_block (&objfile->objfile_obstack));
-      BLOCK_MULTIDICT (new_block)
-	= mdict_create_linear (&objfile->objfile_obstack, NULL);
-      BLOCK_SUPERBLOCK (new_block) = block_iter;
+      new_block->set_multidict
+	(mdict_create_linear (&objfile->objfile_obstack, NULL));
+      new_block->set_superblock (block_iter);
       block_iter = new_block;
 
-      BLOCK_START (new_block) = (CORE_ADDR) begin;
-      BLOCK_END (new_block) = (CORE_ADDR) end;
+      new_block->set_start (begin);
+      new_block->set_end (end);
 
-      BLOCKVECTOR_BLOCK (bv, i) = new_block;
+      bv->set_block (i, new_block);
 
       if (i == GLOBAL_BLOCK)
 	set_block_compunit_symtab (new_block, cust);
@@ -640,14 +640,14 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 	{
 	  /* If the plugin specifically mentioned a parent block, we
 	     use that.  */
-	  BLOCK_SUPERBLOCK (gdb_block_iter.real_block) =
-	    gdb_block_iter.parent->real_block;
+	  gdb_block_iter.real_block->set_superblock
+	    (gdb_block_iter.parent->real_block);
+
 	}
       else
 	{
 	  /* And if not, we set a default parent block.  */
-	  BLOCK_SUPERBLOCK (gdb_block_iter.real_block) =
-	    BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK);
+	  gdb_block_iter.real_block->set_superblock (bv->static_block ());
 	}
     }
 }

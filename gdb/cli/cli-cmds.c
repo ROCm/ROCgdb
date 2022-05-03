@@ -1429,7 +1429,7 @@ print_disassembly (struct gdbarch *gdbarch, const char *name,
       if (name != NULL)
 	gdb_printf (_("for function %ps:\n"),
 		    styled_string (function_name_style.style (), name));
-      if (block == nullptr || BLOCK_CONTIGUOUS_P (block))
+      if (block == nullptr || block->is_contiguous ())
 	{
 	  if (name == NULL)
 	    gdb_printf (_("from %ps to %ps:\n"),
@@ -1443,10 +1443,11 @@ print_disassembly (struct gdbarch *gdbarch, const char *name,
 	}
       else
 	{
-	  for (int i = 0; i < BLOCK_NRANGES (block); i++)
+	  for (const blockrange &range : block->ranges ())
 	    {
-	      CORE_ADDR range_low = BLOCK_RANGE_START (block, i);
-	      CORE_ADDR range_high = BLOCK_RANGE_END (block, i);
+	      CORE_ADDR range_low = range.start ();
+	      CORE_ADDR range_high = range.end ();
+
 	      gdb_printf (_("Address range %ps to %ps:\n"),
 			  styled_string (address_style.style (),
 					 paddress (gdbarch, range_low)),

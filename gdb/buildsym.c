@@ -217,25 +217,26 @@ buildsym_compunit::finish_block_internal
 
   if (symbol)
     {
-      BLOCK_MULTIDICT (block)
-	= mdict_create_linear (&m_objfile->objfile_obstack, *listhead);
+      block->set_multidict
+	(mdict_create_linear (&m_objfile->objfile_obstack, *listhead));
     }
   else
     {
       if (expandable)
 	{
-	  BLOCK_MULTIDICT (block) = mdict_create_hashed_expandable (m_language);
-	  mdict_add_pending (BLOCK_MULTIDICT (block), *listhead);
+	  block->set_multidict
+	    (mdict_create_hashed_expandable (m_language));
+	  mdict_add_pending (block->multidict (), *listhead);
 	}
       else
 	{
-	  BLOCK_MULTIDICT (block) =
-	    mdict_create_hashed (&m_objfile->objfile_obstack, *listhead);
+	  block->set_multidict
+	    (mdict_create_hashed (&m_objfile->objfile_obstack, *listhead));
 	}
     }
 
-  BLOCK_START (block) = start;
-  BLOCK_END (block) = end;
+  block->set_start (start);
+  block->set_end (end);
 
   /* Put the block in as the value of the symbol that names it.  */
 
@@ -244,7 +245,7 @@ buildsym_compunit::finish_block_internal
       struct type *ftype = symbol->type ();
       struct mdict_iterator miter;
       symbol->set_value_block (block);
-      BLOCK_FUNCTION (block) = symbol;
+      block->set_function (symbol);
 
       if (ftype->num_fields () <= 0)
 	{
@@ -256,7 +257,7 @@ buildsym_compunit::finish_block_internal
 
 	  /* Here we want to directly access the dictionary, because
 	     we haven't fully initialized the block yet.  */
-	  ALL_DICT_SYMBOLS (BLOCK_MULTIDICT (block), miter, sym)
+	  ALL_DICT_SYMBOLS (block->multidict (), miter, sym)
 	    {
 	      if (sym->is_argument ())
 		nparams++;
@@ -271,7 +272,7 @@ buildsym_compunit::finish_block_internal
 	      iparams = 0;
 	      /* Here we want to directly access the dictionary, because
 		 we haven't fully initialized the block yet.  */
-	      ALL_DICT_SYMBOLS (BLOCK_MULTIDICT (block), miter, sym)
+	      ALL_DICT_SYMBOLS (block->multidict (), miter, sym)
 		{
 		  if (iparams == nparams)
 		    break;
@@ -287,9 +288,7 @@ buildsym_compunit::finish_block_internal
 	}
     }
   else
-    {
-      BLOCK_FUNCTION (block) = NULL;
-    }
+    block->set_function (nullptr);
 
   if (static_link != NULL)
     objfile_register_static_link (m_objfile, block, static_link);
@@ -306,7 +305,7 @@ buildsym_compunit::finish_block_internal
   /* Check to be sure that the blocks have an end address that is
      greater than starting address.  */
 
-  if (BLOCK_END (block) < BLOCK_START (block))
+  if (block->end () < block->start ())
     {
       if (symbol)
 	{
@@ -318,11 +317,11 @@ buildsym_compunit::finish_block_internal
 	{
 	  complaint (_("block end address %s less than block "
 		       "start address %s (patched it)"),
-		     paddress (gdbarch, BLOCK_END (block)),
-		     paddress (gdbarch, BLOCK_START (block)));
+		     paddress (gdbarch, block->end ()),
+		     paddress (gdbarch, block->start ()));
 	}
       /* Better than nothing.  */
-      BLOCK_END (block) = BLOCK_START (block);
+      block->set_end (block->start ());
     }
 
   /* Install this block as the superblock of all blocks made since the
@@ -333,7 +332,7 @@ buildsym_compunit::finish_block_internal
        pblock && pblock != old_blocks; 
        pblock = pblock->next)
     {
-      if (BLOCK_SUPERBLOCK (pblock->block) == NULL)
+      if (pblock->block->superblock () == NULL)
 	{
 	  /* Check to be sure the blocks are nested as we receive
 	     them.  If the compiler/assembler/linker work, this just
@@ -342,9 +341,9 @@ buildsym_compunit::finish_block_internal
 	     Skip blocks which correspond to a function; they're not
 	     physically nested inside this other blocks, only
 	     lexically nested.  */
-	  if (BLOCK_FUNCTION (pblock->block) == NULL
-	      && (BLOCK_START (pblock->block) < BLOCK_START (block)
-		  || BLOCK_END (pblock->block) > BLOCK_END (block)))
+	  if (pblock->block->function () == NULL
+	      && (pblock->block->start () < block->start ()
+		  || pblock->block->end () > block->end ()))
 	    {
 	      if (symbol)
 		{
@@ -355,17 +354,19 @@ buildsym_compunit::finish_block_internal
 		{
 		  complaint (_("inner block (%s-%s) not "
 			       "inside outer block (%s-%s)"),
-			     paddress (gdbarch, BLOCK_START (pblock->block)),
-			     paddress (gdbarch, BLOCK_END (pblock->block)),
-			     paddress (gdbarch, BLOCK_START (block)),
-			     paddress (gdbarch, BLOCK_END (block)));
+			     paddress (gdbarch, pblock->block->start ()),
+			     paddress (gdbarch, pblock->block->end ()),
+			     paddress (gdbarch, block->start ()),
+			     paddress (gdbarch, block->end ()));
 		}
-	      if (BLOCK_START (pblock->block) < BLOCK_START (block))
-		BLOCK_START (pblock->block) = BLOCK_START (block);
-	      if (BLOCK_END (pblock->block) > BLOCK_END (block))
-		BLOCK_END (pblock->block) = BLOCK_END (block);
+
+	      if (pblock->block->start () < block->start ())
+		pblock->block->set_start (block->start ());
+
+	      if (pblock->block->end () > block->end ())
+		pblock->block->set_end (block->end ());
 	    }
-	  BLOCK_SUPERBLOCK (pblock->block) = block;
+	  pblock->block->set_superblock (block);
 	}
       opblock = pblock;
     }
@@ -413,8 +414,8 @@ buildsym_compunit::record_block_range (struct block *block,
      become interesting.  Note that even if this block doesn't have
      any "interesting" ranges, some later block might, so we still
      need to record this block in the addrmap.  */
-  if (start != BLOCK_START (block)
-      || end_inclusive + 1 != BLOCK_END (block))
+  if (start != block->start ()
+      || end_inclusive + 1 != block->end ())
     m_pending_addrmap_interesting = true;
 
   if (m_pending_addrmap == nullptr)
@@ -447,21 +448,19 @@ buildsym_compunit::make_blockvector ()
      each block into the list after its subblocks in order to make
      sure this is true.  */
 
-  BLOCKVECTOR_NBLOCKS (blockvector) = i;
+  blockvector->set_num_blocks (i);
   for (next = m_pending_blocks; next; next = next->next)
-    {
-      BLOCKVECTOR_BLOCK (blockvector, --i) = next->block;
-    }
+    blockvector->set_block (--i, next->block);
 
   free_pending_blocks ();
 
   /* If we needed an address map for this symtab, record it in the
      blockvector.  */
   if (m_pending_addrmap != nullptr && m_pending_addrmap_interesting)
-    BLOCKVECTOR_MAP (blockvector)
-      = addrmap_create_fixed (m_pending_addrmap, &m_objfile->objfile_obstack);
+    blockvector->set_map
+      (addrmap_create_fixed (m_pending_addrmap, &m_objfile->objfile_obstack));
   else
-    BLOCKVECTOR_MAP (blockvector) = 0;
+    blockvector->set_map (nullptr);
 
   /* Some compilers output blocks in the wrong order, but we depend on
      their being in the right order so we can binary search.  Check the
@@ -469,15 +468,15 @@ buildsym_compunit::make_blockvector ()
      Note: Remember that the first two blocks are the global and static
      blocks.  We could special case that fact and begin checking at block 2.
      To avoid making that assumption we do not.  */
-  if (BLOCKVECTOR_NBLOCKS (blockvector) > 1)
+  if (blockvector->num_blocks () > 1)
     {
-      for (i = 1; i < BLOCKVECTOR_NBLOCKS (blockvector); i++)
+      for (i = 1; i < blockvector->num_blocks (); i++)
 	{
-	  if (BLOCK_START (BLOCKVECTOR_BLOCK (blockvector, i - 1))
-	      > BLOCK_START (BLOCKVECTOR_BLOCK (blockvector, i)))
+	  if (blockvector->block (i - 1)->start ()
+	      > blockvector->block (i)->start ())
 	    {
 	      CORE_ADDR start
-		= BLOCK_START (BLOCKVECTOR_BLOCK (blockvector, i));
+		= blockvector->block (i)->start ();
 
 	      complaint (_("block at %s out of order"),
 			 hex_string ((LONGEST) start));
@@ -820,7 +819,7 @@ buildsym_compunit::end_compunit_symtab_get_static_block (CORE_ADDR end_addr,
       std::stable_sort (barray.begin (), barray.end (),
 			[] (const block *a, const block *b)
 			{
-			  return BLOCK_START (a) > BLOCK_START (b);
+			  return a->start () > b->start ();
 			});
 
       int i = 0;
@@ -878,7 +877,7 @@ buildsym_compunit::end_compunit_symtab_with_blockvector
   gdb_assert (static_block != NULL);
   gdb_assert (m_subfiles != NULL);
 
-  end_addr = BLOCK_END (static_block);
+  end_addr = static_block->end ();
 
   /* Create the GLOBAL_BLOCK and build the blockvector.  */
   finish_block_internal (NULL, get_global_symbols (), NULL, NULL,
@@ -982,7 +981,7 @@ buildsym_compunit::end_compunit_symtab_with_blockvector
 
   cu->set_blockvector (blockvector);
   {
-    struct block *b = BLOCKVECTOR_BLOCK (blockvector, GLOBAL_BLOCK);
+    struct block *b = blockvector->global_block ();
 
     set_block_compunit_symtab (b, cu);
   }
@@ -998,22 +997,22 @@ buildsym_compunit::end_compunit_symtab_with_blockvector
     /* The main source file's symtab.  */
     struct symtab *symtab = cu->primary_filetab ();
 
-    for (block_i = 0; block_i < BLOCKVECTOR_NBLOCKS (blockvector); block_i++)
+    for (block_i = 0; block_i < blockvector->num_blocks (); block_i++)
       {
-	struct block *block = BLOCKVECTOR_BLOCK (blockvector, block_i);
+	struct block *block = blockvector->block (block_i);
 	struct symbol *sym;
 	struct mdict_iterator miter;
 
 	/* Inlined functions may have symbols not in the global or
 	   static symbol lists.  */
-	if (BLOCK_FUNCTION (block) != NULL)
-	  if (BLOCK_FUNCTION (block)->symtab () == NULL)
-	    BLOCK_FUNCTION (block)->set_symtab (symtab);
+	if (block->function () != nullptr
+	    && block->function ()->symtab () == nullptr)
+	    block->function ()->set_symtab (symtab);
 
 	/* Note that we only want to fix up symbols from the local
 	   blocks, not blocks coming from included symtabs.  That is why
 	   we use ALL_DICT_SYMBOLS here and not ALL_BLOCK_SYMBOLS.  */
-	ALL_DICT_SYMBOLS (BLOCK_MULTIDICT (block), miter, sym)
+	ALL_DICT_SYMBOLS (block->multidict (), miter, sym)
 	  if (sym->symtab () == NULL)
 	    sym->set_symtab (symtab);
       }
@@ -1129,7 +1128,7 @@ void
 buildsym_compunit::augment_type_symtab ()
 {
   struct compunit_symtab *cust = m_compunit_symtab;
-  const struct blockvector *blockvector = cust->blockvector ();
+  struct blockvector *blockvector = cust->blockvector ();
 
   if (!m_context_stack.empty ())
     complaint (_("Context stack not empty in augment_type_symtab"));
@@ -1142,25 +1141,24 @@ buildsym_compunit::augment_type_symtab ()
 
   if (m_file_symbols != NULL)
     {
-      struct block *block = BLOCKVECTOR_BLOCK (blockvector, STATIC_BLOCK);
+      struct block *block = blockvector->static_block ();
 
       /* First mark any symbols without a specified symtab as belonging
 	 to the primary symtab.  */
       set_missing_symtab (m_file_symbols, cust);
 
-      mdict_add_pending (BLOCK_MULTIDICT (block), m_file_symbols);
+      mdict_add_pending (block->multidict (), m_file_symbols);
     }
 
   if (m_global_symbols != NULL)
     {
-      struct block *block = BLOCKVECTOR_BLOCK (blockvector, GLOBAL_BLOCK);
+      struct block *block = blockvector->global_block ();
 
       /* First mark any symbols without a specified symtab as belonging
 	 to the primary symtab.  */
       set_missing_symtab (m_global_symbols, cust);
 
-      mdict_add_pending (BLOCK_MULTIDICT (block),
-			m_global_symbols);
+      mdict_add_pending (block->multidict (), m_global_symbols);
     }
 }
 

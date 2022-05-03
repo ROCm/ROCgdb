@@ -37,6 +37,7 @@
 #include "gdbcmd.h"
 #include "objfiles.h"
 #include "ada-lang.h"
+#include "dwarf2/tag.h"
 
 #include <algorithm>
 #include <cmath>
@@ -569,7 +570,18 @@ public:
     const auto it = m_cu_index_htab.find (entry->per_cu);
     gdb_assert (it != m_cu_index_htab.cend ());
     const char *name = entry->full_name (&m_string_obstack);
-    insert (entry->tag, name, it->second, (entry->flags & IS_STATIC) != 0,
+
+    /* This is incorrect but it mirrors gdb's historical behavior; and
+       because the current .debug_names generation is also incorrect,
+       it seems better to follow what was done before, rather than
+       introduce a mismatch between the newer and older gdb.  */
+    dwarf_tag tag = entry->tag;
+    if (tag != DW_TAG_typedef && tag_is_type (tag))
+      tag = DW_TAG_structure_type;
+    else if (tag == DW_TAG_enumerator || tag == DW_TAG_constant)
+      tag = DW_TAG_variable;
+
+    insert (tag, name, it->second, (entry->flags & IS_STATIC) != 0,
 	    entry->per_cu->is_debug_types ? unit_kind::tu : unit_kind::cu,
 	    entry->per_cu->lang);
   }
@@ -1091,6 +1103,15 @@ write_cooked_index (cooked_index_vector *table,
 		    const cu_index_map &cu_index_htab,
 		    struct mapped_symtab *symtab)
 {
+  /* We track type names and only enter a given type once.  */
+  htab_up type_names (htab_create_alloc (10, htab_hash_string, htab_eq_string,
+					 nullptr, xcalloc, xfree));
+  /* Same with variable names.  However, if a type and variable share
+     a name, we want both, which is why there are two hash tables
+     here.  */
+  htab_up var_names (htab_create_alloc (10, htab_hash_string, htab_eq_string,
+					nullptr, xcalloc, xfree));
+
   for (const cooked_index_entry *entry : table->all_entries ())
     {
       /* GDB never put linkage names into .gdb_index.  The theory here
@@ -1112,12 +1133,24 @@ write_cooked_index (cooked_index_vector *table,
       else if (entry->tag == DW_TAG_variable
 	       || entry->tag == DW_TAG_constant
 	       || entry->tag == DW_TAG_enumerator)
-	kind = GDB_INDEX_SYMBOL_KIND_VARIABLE;
+	{
+	  kind = GDB_INDEX_SYMBOL_KIND_VARIABLE;
+	  void **slot = htab_find_slot (var_names.get (), name, INSERT);
+	  if (*slot != nullptr)
+	    continue;
+	  *slot = (void *) name;
+	}
       else if (entry->tag == DW_TAG_module
 	       || entry->tag == DW_TAG_common_block)
 	kind = GDB_INDEX_SYMBOL_KIND_OTHER;
       else
-	kind = GDB_INDEX_SYMBOL_KIND_TYPE;
+	{
+	  kind = GDB_INDEX_SYMBOL_KIND_TYPE;
+	  void **slot = htab_find_slot (type_names.get (), name, INSERT);
+	  if (*slot != nullptr)
+	    continue;
+	  *slot = (void *) name;
+	}
 
       add_index_entry (symtab, name, (entry->flags & IS_STATIC) != 0,
 		       kind, it->second);
@@ -1411,9 +1444,8 @@ write_dwarf_index (dwarf2_per_objfile *per_objfile, const char *dir,
   if (per_objfile->per_bfd->types.size () > 1)
     error (_("Cannot make an index when the file has multiple .debug_types sections"));
 
-  struct stat st;
-  if (stat (objfile_name (objfile), &st) < 0)
-    perror_with_name (objfile_name (objfile));
+
+  gdb_assert ((objfile->flags & OBJF_NOT_FILENAME) == 0);
 
   const char *index_suffix = (index_kind == dw_index_kind::DEBUG_NAMES
 			      ? INDEX5_SUFFIX : INDEX4_SUFFIX);
@@ -1472,10 +1504,8 @@ save_gdb_index_command (const char *arg, int from_tty)
 
   for (objfile *objfile : current_program_space->objfiles ())
     {
-      struct stat st;
-
       /* If the objfile does not correspond to an actual file, skip it.  */
-      if (stat (objfile_name (objfile), &st) < 0)
+      if ((objfile->flags & OBJF_NOT_FILENAME) != 0)
 	continue;
 
       dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);

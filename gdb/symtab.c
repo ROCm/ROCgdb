@@ -1822,7 +1822,7 @@ fixup_symbol_section (struct symbol *sym, struct objfile *objfile)
       addr = sym->value_address ();
       break;
     case LOC_BLOCK:
-      addr = BLOCK_ENTRY_PC (sym->value_block ());
+      addr = sym->value_block ()->entry_pc ();
       break;
 
     default:
@@ -2025,9 +2025,9 @@ lookup_language_this (const struct language_defn *lang,
 	    }
 	  return (struct block_symbol) {sym, block};
 	}
-      if (BLOCK_FUNCTION (block))
+      if (block->function ())
 	break;
-      block = BLOCK_SUPERBLOCK (block);
+      block = block->superblock ();
     }
 
   if (symbol_lookup_debug > 1)
@@ -2228,9 +2228,9 @@ lookup_local_symbol (const char *name,
 	    return blocksym;
 	}
 
-      if (BLOCK_FUNCTION (block) != NULL && block_inlined_p (block))
+      if (block->function () != NULL && block_inlined_p (block))
 	break;
-      block = BLOCK_SUPERBLOCK (block);
+      block = block->superblock ();
     }
 
   /* We've reached the end of the function without finding a result.  */
@@ -2328,7 +2328,7 @@ lookup_symbol_in_objfile_symtabs (struct objfile *objfile,
       struct block_symbol result;
 
       bv = cust->blockvector ();
-      block = BLOCKVECTOR_BLOCK (bv, block_index);
+      block = bv->block (block_index);
       result.symbol = block_lookup_symbol_primary (block, name, domain);
       result.block = block;
       if (result.symbol == NULL)
@@ -2461,7 +2461,7 @@ lookup_symbol_via_quick_fns (struct objfile *objfile,
     }
 
   bv = cust->blockvector ();
-  block = BLOCKVECTOR_BLOCK (bv, block_index);
+  block = bv->block (block_index);
   result.symbol = block_lookup_symbol (block, name,
 				       symbol_name_match_type::FULL, domain);
   if (result.symbol == NULL)
@@ -2811,7 +2811,7 @@ basic_lookup_transparent_type_quick (struct objfile *objfile,
     return NULL;
 
   bv = cust->blockvector ();
-  block = BLOCKVECTOR_BLOCK (bv, block_index);
+  block = bv->block (block_index);
   sym = block_find_symbol (block, name, STRUCT_DOMAIN,
 			   block_find_non_opaque_type, NULL);
   if (sym == NULL)
@@ -2836,7 +2836,7 @@ basic_lookup_transparent_type_1 (struct objfile *objfile,
   for (compunit_symtab *cust : objfile->compunits ())
     {
       bv = cust->blockvector ();
-      block = BLOCKVECTOR_BLOCK (bv, block_index);
+      block = bv->block (block_index);
       sym = block_find_symbol (block, name, STRUCT_DOMAIN,
 			       block_find_non_opaque_type, NULL);
       if (sym != NULL)
@@ -2981,17 +2981,16 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
       for (compunit_symtab *cust : obj_file->compunits ())
 	{
 	  const struct blockvector *bv = cust->blockvector ();
-	  const struct block *global_block
-	    = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
-	  CORE_ADDR start = BLOCK_START (global_block);
-	  CORE_ADDR end = BLOCK_END (global_block);
+	  const struct block *global_block = bv->global_block ();
+	  CORE_ADDR start = global_block->start ();
+	  CORE_ADDR end = global_block->end ();
 	  bool in_range_p = start <= pc && pc < end;
 	  if (!in_range_p)
 	    continue;
 
-	  if (BLOCKVECTOR_MAP (bv))
+	  if (bv->map () != nullptr)
 	    {
-	      if (addrmap_find (BLOCKVECTOR_MAP (bv), pc) == nullptr)
+	      if (addrmap_find (bv->map (), pc) == nullptr)
 		continue;
 
 	      return cust;
@@ -3031,7 +3030,7 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 		   b_index <= STATIC_BLOCK && sym == NULL;
 		   ++b_index)
 		{
-		  const struct block *b = BLOCKVECTOR_BLOCK (bv, b_index);
+		  const struct block *b = bv->block (b_index);
 		  ALL_BLOCK_SYMBOLS (b, iter, sym)
 		    {
 		      fixup_symbol_section (sym, obj_file);
@@ -3090,7 +3089,7 @@ find_symbol_at_address (CORE_ADDR address)
 
       for (int i = GLOBAL_BLOCK; i <= STATIC_BLOCK; ++i)
 	{
-	  const struct block *b = BLOCKVECTOR_BLOCK (bv, i);
+	  const struct block *b = bv->block (i);
 	  struct block_iterator iter;
 	  struct symbol *sym;
 
@@ -3407,7 +3406,7 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
       else if (alt)
 	val.end = alt->pc;
       else
-	val.end = BLOCK_END (BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK));
+	val.end = bv->global_block ()->end ();
     }
   val.section = section;
   return val;
@@ -3780,7 +3779,7 @@ find_function_start_sal (symbol *sym, bool funfirstline)
 {
   fixup_symbol_section (sym, NULL);
   symtab_and_line sal
-    = find_function_start_sal_1 (BLOCK_ENTRY_PC (sym->value_block ()),
+    = find_function_start_sal_1 (sym->value_block ()->entry_pc (),
 				 sym->obj_section (sym->objfile ()),
 				 funfirstline);
   sal.symbol = sym;
@@ -3909,7 +3908,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
       fixup_symbol_section (sym, NULL);
 
       objfile = sym->objfile ();
-      pc = BLOCK_ENTRY_PC (sym->value_block ());
+      pc = sym->value_block ()->entry_pc ();
       section = sym->obj_section (objfile);
       name = sym->linkage_name ();
     }
@@ -3985,8 +3984,8 @@ skip_prologue_sal (struct symtab_and_line *sal)
       /* Check if gdbarch_skip_prologue left us in mid-line, and the next
 	 line is still part of the same function.  */
       if (skip && start_sal.pc != pc
-	  && (sym ? (BLOCK_ENTRY_PC (sym->value_block ()) <= start_sal.end
-		     && start_sal.end < BLOCK_END (sym->value_block ()))
+	  && (sym ? (sym->value_block ()->entry_pc () <= start_sal.end
+		     && start_sal.end < sym->value_block()->end ())
 	      : (lookup_minimal_symbol_by_pc_section (start_sal.end, section).minsym
 		 == lookup_minimal_symbol_by_pc_section (pc, section).minsym)))
 	{
@@ -4043,17 +4042,17 @@ skip_prologue_sal (struct symtab_and_line *sal)
   function_block = NULL;
   while (b != NULL)
     {
-      if (BLOCK_FUNCTION (b) != NULL && block_inlined_p (b))
+      if (b->function () != NULL && block_inlined_p (b))
 	function_block = b;
-      else if (BLOCK_FUNCTION (b) != NULL)
+      else if (b->function () != NULL)
 	break;
-      b = BLOCK_SUPERBLOCK (b);
+      b = b->superblock ();
     }
   if (function_block != NULL
-      && BLOCK_FUNCTION (function_block)->line () != 0)
+      && function_block->function ()->line () != 0)
     {
-      sal->line = BLOCK_FUNCTION (function_block)->line ();
-      sal->symtab = BLOCK_FUNCTION (function_block)->symtab ();
+      sal->line = function_block->function ()->line ();
+      sal->symtab = function_block->function ()->symtab ();
     }
 }
 
@@ -4141,12 +4140,12 @@ skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
 	    {
 	      if (block_inlined_p (bl))
 		break;
-	      if (BLOCK_FUNCTION (bl))
+	      if (bl->function ())
 		{
 		  bl = NULL;
 		  break;
 		}
-	      bl = BLOCK_SUPERBLOCK (bl);
+	      bl = bl->superblock ();
 	    }
 	  if (bl != NULL)
 	    break;
@@ -4183,7 +4182,7 @@ find_function_alias_target (bound_minimal_symbol msymbol)
   symbol *sym = find_pc_function (func_addr);
   if (sym != NULL
       && sym->aclass () == LOC_BLOCK
-      && BLOCK_ENTRY_PC (sym->value_block ()) == func_addr)
+      && sym->value_block ()->entry_pc () == func_addr)
     return sym;
 
   return NULL;
@@ -4870,7 +4869,7 @@ global_symbol_searcher::add_matching_symbols
 	{
 	  struct block_iterator iter;
 	  struct symbol *sym;
-	  const struct block *b = BLOCKVECTOR_BLOCK (bv, block);
+	  const struct block *b = bv->block (block);
 
 	  ALL_BLOCK_SYMBOLS (b, iter, sym)
 	    {
@@ -5792,7 +5791,7 @@ find_gnu_ifunc (const symbol *sym)
 				symbol_name_match_type::SEARCH_NAME);
   struct objfile *objfile = sym->objfile ();
 
-  CORE_ADDR address = BLOCK_ENTRY_PC (sym->value_block ());
+  CORE_ADDR address = sym->value_block ()->entry_pc ();
   minimal_symbol *ifunc = NULL;
 
   iterate_over_minimal_symbols (objfile, lookup_name,
@@ -5833,7 +5832,6 @@ add_symtab_completions (struct compunit_symtab *cust,
 			enum type_code code)
 {
   struct symbol *sym;
-  const struct block *b;
   struct block_iterator iter;
   int i;
 
@@ -5843,7 +5841,8 @@ add_symtab_completions (struct compunit_symtab *cust,
   for (i = GLOBAL_BLOCK; i <= STATIC_BLOCK; i++)
     {
       QUIT;
-      b = BLOCKVECTOR_BLOCK (cust->blockvector (), i);
+
+      const struct block *b = cust->blockvector ()->block (i);
       ALL_BLOCK_SYMBOLS (b, iter, sym)
 	{
 	  if (completion_skip_symbol (mode, sym))
@@ -6012,9 +6011,9 @@ default_collect_symbol_completion_matches_break_on
 	/* Stop when we encounter an enclosing function.  Do not stop for
 	   non-inlined functions - the locals of the enclosing function
 	   are in scope for a nested function.  */
-	if (BLOCK_FUNCTION (b) != NULL && block_inlined_p (b))
+	if (b->function () != NULL && block_inlined_p (b))
 	  break;
-	b = BLOCK_SUPERBLOCK (b);
+	b = b->superblock ();
       }
 
   /* Add fields from the file's types; symbols will be added below.  */
