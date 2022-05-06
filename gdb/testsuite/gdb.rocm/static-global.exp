@@ -1,0 +1,73 @@
+# Copyright (C) 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test printing static globals, with and without -fgpu-rdc.
+#
+# On AMDGPU, static global variables may actually have external
+# linkage.  In addition, in separate compilation mode, i.e., with
+# -fgpu-rdc, such globals must each have their own linkage name,
+# because different translation units may have different static
+# globals with the same name.
+#
+#  0x00000048:   DW_TAG_variable
+#                 DW_AT_name      ("static_global")
+#                 DW_AT_type      (0x00000044 "int")
+#                 DW_AT_external  (true)
+#                 DW_AT_decl_file ("[...snip...]/static-globals.cpp")
+#                 DW_AT_decl_line (23)
+#                 DW_AT_location  (DW_OP_addr 0x3004, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
+#                 DW_AT_linkage_name      ("_ZL13static_global.static.e5e0dfb539fa610f")
+#
+# The demangler must be able to ignore this suffix.  This test makes
+# sure that GDB can work with such symbols.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}."
+    return
+}
+
+proc do_test {fgpu_rdc} {
+    global srcfile testfile
+
+    set options {debug hip}
+    if {$fgpu_rdc} {
+	lappend options "additional_flags=-fgpu-rdc"
+    }
+    if {[prepare_for_testing "failed to prepare" $testfile-$fgpu_rdc $srcfile $options]} {
+	return
+    }
+    clean_restart $::binfile-$fgpu_rdc
+
+    with_rocm_gpu_lock {
+	if ![runto done allow-pending qualified] {
+	    fail "can't run to done"
+	    return
+	}
+
+	gdb_test "print extern_global" " = 1"
+	gdb_test "print static_global" " = 2"
+    }
+}
+
+foreach_with_prefix fgpu-rdc {0 1} {
+    do_test ${fgpu-rdc}
+}

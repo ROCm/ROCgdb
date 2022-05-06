@@ -1,5 +1,6 @@
 /* Demangler for g++ V3 ABI.
    Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
    Written by Ian Lance Taylor <ian@wasabisystems.com>.
 
    This file is part of the libiberty library, which is part of GCC.
@@ -491,6 +492,9 @@ static int d_discriminator (struct d_info *);
 static struct demangle_component *d_lambda (struct d_info *);
 
 static struct demangle_component *d_unnamed_type (struct d_info *);
+
+static struct demangle_component *
+d_extern_static_suffix (struct d_info *, struct demangle_component *);
 
 static struct demangle_component *
 d_clone_suffix (struct d_info *, struct demangle_component *);
@@ -1222,7 +1226,8 @@ d_make_sub (struct d_info *di, const char *name, int len)
   return p;
 }
 
-/* <mangled-name> ::= _Z <encoding> [<clone-suffix>]*
+/* <mangled-name> ::= _Z <encoding> [<vendor-suffix>]*
+   <vendor-suffix> ::= <clone-suffix>|<extern-static-suffix>
 
    TOP_LEVEL is non-zero when called at the top level.  */
 
@@ -1242,14 +1247,24 @@ cplus_demangle_mangled_name (struct d_info *di, int top_level)
     return NULL;
   p = d_encoding (di, top_level);
 
-  /* If at top level and parsing parameters, check for a clone
-     suffix.  */
-  if (top_level && (di->options & DMGL_PARAMS) != 0)
-    while (d_peek_char (di) == '.'
-	   && (IS_LOWER (d_peek_next_char (di))
-	       || d_peek_next_char (di) == '_'
-	       || IS_DIGIT (d_peek_next_char (di))))
-      p = d_clone_suffix (di, p);
+  /* If at top level and parsing parameters, check for vendor
+     suffixes.  */
+  if (top_level
+      && (di->options & DMGL_PARAMS) != 0
+      && d_peek_char (di) == '.')
+    while (1)
+      {
+	const char *current_suffix = d_str (di);
+
+	p = d_extern_static_suffix (di, p);
+	p = d_clone_suffix (di, p);
+
+	/* Break if no suffix handler recognized the suffix.  Written
+	   this way so that we can handle symbols using multiple
+	   suffixes, without caring about order.  */
+	if (current_suffix == d_str (di))
+	  break;
+      }
 
   return p;
 }
@@ -1351,7 +1366,7 @@ d_encoding (struct d_info *di, int top_level)
       else
 	{
 	  peek = d_peek_char (di);
-	  if (peek != '\0' && peek != 'E')
+	  if (peek != '\0' && peek != 'E' && peek != '.')
 	    {
 	      struct demangle_component *ftype;
 
@@ -3874,6 +3889,37 @@ d_unnamed_type (struct d_info *di)
   return ret;
 }
 
+/* Used on AMDGPU to mangle externalized C++/HIP static symbols, i.e.,
+   static symbols that though static at the language level, still
+   require external linkage.  They get this suffix so that different
+   externalized static symbols of the same name in different
+   translation units get a different mangled name.  */
+
+/* <extern-static-suffix> ::= [ .static. <hex-char>+ ]  */
+
+static struct demangle_component *
+d_extern_static_suffix (struct d_info *di, struct demangle_component *encoding)
+{
+  const char *suffix = d_str (di);
+
+  if (strncmp (suffix, ".static.", 8) == 0)
+    {
+      const char *p = suffix + 8;
+
+      while (IS_DIGIT (*p) || IS_LOWER (*p))
+	p++;
+
+      if (*p == '\0' || *p == '.')
+	{
+	  /* Currently no tool wants to see this vendor suffix, so we
+	     just skip over it without making any component.  */
+	  d_advance (di, p - suffix);
+	}
+    }
+
+  return encoding;
+}
+
 /* <clone-suffix> ::= [ . <clone-type-identifier> ] [ . <nonnegative number> ]*
 */
 
@@ -3891,6 +3937,8 @@ d_clone_suffix (struct d_info *di, struct demangle_component *encoding)
       while (IS_LOWER (*pend) || IS_DIGIT (*pend) || *pend == '_')
 	++pend;
     }
+  else
+    return encoding;
   while (*pend == '.' && IS_DIGIT (pend[1]))
     {
       pend += 2;
