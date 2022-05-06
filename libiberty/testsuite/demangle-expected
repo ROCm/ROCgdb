@@ -1168,6 +1168,37 @@ _Z3fooPfS_S_j.sse4_1.2
 foo(float*, float*, float*, unsigned int) [clone .sse4_1.2]
 foo
 #
+# .static.$HASH suffix (externalized symbols) tests
+#
+--format=gnu-v3 --no-params
+_ZL10static_var.static.e5e0dfb539fa610f
+static_var
+static_var
+#
+# Mix externalized and cloned, in different orders.
+--format=gnu-v3 --no-params
+_ZL11static_funci.static.e5e0dfb539fa610f.clone.0
+static_func(int) [clone .clone.0]
+static_func
+#
+--format=gnu-v3 --no-params
+_ZL11static_funci.clone.0.static.e5e0dfb539fa610f
+static_func(int) [clone .clone.0]
+static_func
+#
+# Try mixing .static. with clones that either have no numeric part, or
+# have more than 2 numeric parts.
+--format=gnu-v3 --no-params
+_Z3foo.cl.static.2
+foo [clone .cl]
+foo
+#
+--format=gnu-v3 --no-params
+_Z3foo.cl.1.2.3.static.2
+foo [clone .cl.1.2.3]
+foo
+#
+#
 --format=gnu-v3 --no-params
 _Z1fIKFvvES0_Evv
 void f<void () const, void () const>()
