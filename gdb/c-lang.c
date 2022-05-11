@@ -853,7 +853,7 @@ public:
 		   struct ui_file *stream, int show, int level,
 		   const struct type_print_options *flags) const override
   {
-    c_print_type (type, varstring, stream, show, level, flags);
+    c_print_type (type, varstring, stream, show, level, la_language, flags);
   }
 
   /* See language.h.  */
@@ -999,7 +999,7 @@ public:
 		   struct ui_file *stream, int show, int level,
 		   const struct type_print_options *flags) const override
   {
-    c_print_type (type, varstring, stream, show, level, flags);
+    c_print_type (type, varstring, stream, show, level, la_language, flags);
   }
 
   /* See language.h.  */
@@ -1099,7 +1099,7 @@ public:
 		   struct ui_file *stream, int show, int level,
 		   const struct type_print_options *flags) const override
   {
-    c_print_type (type, varstring, stream, show, level, flags);
+    c_print_type (type, varstring, stream, show, level, la_language, flags);
   }
 
   /* See language.h.  */
@@ -1151,7 +1151,7 @@ public:
 		   struct ui_file *stream, int show, int level,
 		   const struct type_print_options *flags) const override
   {
-    c_print_type (type, varstring, stream, show, level, flags);
+    c_print_type (type, varstring, stream, show, level, la_language, flags);
   }
 
   /* See language.h.  */

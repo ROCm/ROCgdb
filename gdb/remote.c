@@ -1017,13 +1017,20 @@ struct stop_reply : public notif_event
   int core;
 };
 
+/* Return TARGET as a remote_target if it is one, else nullptr.  */
+
+static remote_target *
+as_remote_target (process_stratum_target *target)
+{
+  return dynamic_cast<remote_target *> (target);
+}
+
 /* See remote.h.  */
 
 bool
 is_remote_target (process_stratum_target *target)
 {
-  remote_target *rt = dynamic_cast<remote_target *> (target);
-  return rt != nullptr;
+  return as_remote_target (target) != nullptr;
 }
 
 /* Per-program-space data key.  */
@@ -5008,12 +5015,24 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
 	target_async (1);
     }
 
-  /* If we connected to a live target, do some additional setup.  */
-  if (target_has_execution ())
+  /* Give the target a chance to look up symbols.  */
+  for (inferior *inf : all_inferiors (this))
     {
+      /* The inferiors that exist at this point were created from what
+	 was found already running on the remote side, so we know they
+	 have execution.  */
+      gdb_assert (this->has_execution (inf));
+
       /* No use without a symbol-file.  */
-      if (current_program_space->symfile_object_file)
-	remote_check_symbols ();
+      if (inf->pspace->symfile_object_file == nullptr)
+	continue;
+
+      /* Need to switch to a specific thread, because remote_check_symbols
+         uses INFERIOR_PTID to set the general thread.  */
+      scoped_restore_current_thread restore_thread;
+      thread_info *thread = any_thread_of_inferior (inf);
+      switch_to_thread (thread);
+      this->remote_check_symbols ();
     }
 
   /* Possibly the target has been engaged in a trace run started
@@ -5110,13 +5129,10 @@ remote_target::remote_check_symbols ()
   char *tmp;
   int end;
 
-  /* The remote side has no concept of inferiors that aren't running
-     yet, it only knows about running processes.  If we're connected
-     but our current inferior is not running, we should not invite the
-     remote target to request symbol lookups related to its
-     (unrelated) current process.  */
-  if (!target_has_execution ())
-    return;
+  /* It doesn't make sense to send a qSymbol packet for an inferior that
+     doesn't have execution, because the remote side doesn't know about
+     inferiors without execution.  */
+  gdb_assert (target_has_execution ());
 
   if (packet_support (PACKET_qSymbol) == PACKET_DISABLE)
     return;
@@ -14569,28 +14585,55 @@ show_remote_cmd (const char *args, int from_tty)
 static void
 remote_new_objfile (struct objfile *objfile)
 {
-  remote_target *remote = get_current_remote_target ();
+  /* The objfile change happened in that program space.  */
+  program_space *pspace = current_program_space;
 
-  /* First, check whether the current inferior's process target is a remote
-     target.  */
-  if (remote == nullptr)
-    return;
+  /* The affected program space is possibly shared by multiple inferiors.
+     Consider sending a qSymbol packet for each of the inferiors using that
+     program space.  */
+  for (inferior *inf : all_inferiors ())
+    {
+      if (inf->pspace != pspace)
+	continue;
 
-  /* When we are attaching or handling a fork child and the shared library
-     subsystem reads the list of loaded libraries, we receive new objfile
-     events in between each found library.  The libraries are read in an
-     undefined order, so if we gave the remote side a chance to look up
-     symbols between each objfile, we might give it an inconsistent picture
-     of the inferior.  It could appear that a library A appears loaded but
-     a library B does not, even though library A requires library B.  That
-     would present a state that couldn't normally exist in the inferior.
+      /* Check whether the inferior's process target is a remote target.  */
+      remote_target *remote = as_remote_target (inf->process_target ());
+      if (remote == nullptr)
+	continue;
 
-     So, skip these events, we'll give the remote a chance to look up symbols
-     once all the loaded libraries and their symbols are known to GDB.  */
-  if (current_inferior ()->in_initial_library_scan)
-    return;
+      /* When we are attaching or handling a fork child and the shared library
+	 subsystem reads the list of loaded libraries, we receive new objfile
+	 events in between each found library.  The libraries are read in an
+	 undefined order, so if we gave the remote side a chance to look up
+	 symbols between each objfile, we might give it an inconsistent picture
+	 of the inferior.  It could appear that a library A appears loaded but
+	 a library B does not, even though library A requires library B.  That
+	 would present a state that couldn't normally exist in the inferior.
 
-  remote->remote_check_symbols ();
+	 So, skip these events, we'll give the remote a chance to look up
+	 symbols once all the loaded libraries and their symbols are known to
+	 GDB.  */
+      if (inf->in_initial_library_scan)
+	continue;
+
+      if (!remote->has_execution (inf))
+	continue;
+
+      /* Need to switch to a specific thread, because remote_check_symbols will
+         set the general thread using INFERIOR_PTID.
+
+	 It's possible to have inferiors with no thread here, because we are
+	 called very early in the connection process, while the inferior is
+	 being set up, before threads are added.  Just skip it, start_remote_1
+	 also calls remote_check_symbols when it's done setting things up.  */
+      thread_info *thread = any_thread_of_inferior (inf);
+      if (thread != nullptr)
+	{
+	  scoped_restore_current_thread restore_thread;
+	  switch_to_thread (thread);
+	  remote->remote_check_symbols ();
+	}
+  }
 }
 
 /* Pull all the tracepoints defined on the target and create local

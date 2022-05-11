@@ -588,15 +588,6 @@ struct breakpoint_ops
 				  int, int, int, unsigned);
 };
 
-/* Helper for breakpoint_ops->print_recreate implementations.  Prints
-   the "thread" or "task" condition of B, and then a newline.
-
-   Necessary because most breakpoint implementations accept
-   thread/task conditions at the end of the spec line, like "break foo
-   thread 1", which needs outputting before any breakpoint-type
-   specific extra command necessary for B's recreation.  */
-extern void print_recreate_thread (struct breakpoint *b, struct ui_file *fp);
-
 enum watchpoint_triggered
 {
   /* This watchpoint definitely did not trigger.  */
@@ -631,6 +622,17 @@ using bp_location_range = next_range<bp_location>;
 
 struct breakpoint
 {
+  breakpoint (struct gdbarch *gdbarch_, enum bptype bptype)
+    : type (bptype),
+      gdbarch (gdbarch_),
+      language (current_language->la_language),
+      input_radix (::input_radix),
+      related_breakpoint (this)
+  {
+  }
+
+  DISABLE_COPY_AND_ASSIGN (breakpoint);
+
   virtual ~breakpoint () = default;
 
   /* Allocate a location for this breakpoint.  */
@@ -679,19 +681,14 @@ struct breakpoint
      the breakpoint or watchpoint needs one debug register.  */
   virtual int resources_needed (const struct bp_location *);
 
-  /* Tell whether we can downgrade from a hardware watchpoint to a software
-     one.  If not, the user will not be able to enable the watchpoint when
-     there are not enough hardware resources available.  */
-  virtual int works_in_software_mode () const;
-
   /* The normal print routine for this breakpoint, called when we
      hit it.  */
-  virtual enum print_stop_action print_it (struct bpstat *bs);
+  virtual enum print_stop_action print_it (const bpstat *bs) const;
 
   /* Display information about this breakpoint, for "info
      breakpoints".  Returns false if this method should use the
      default behavior.  */
-  virtual bool print_one (struct bp_location **)
+  virtual bool print_one (bp_location **) const
   {
     return false;
   }
@@ -715,10 +712,10 @@ struct breakpoint
 
   /* Display information about this breakpoint after setting it
      (roughly speaking; this is called from "mention").  */
-  virtual void print_mention ();
+  virtual void print_mention () const;
 
   /* Print to FP the CLI command that recreates this breakpoint.  */
-  virtual void print_recreate (struct ui_file *fp);
+  virtual void print_recreate (struct ui_file *fp) const;
 
   /* Given the location (second parameter), this method decodes it and
      returns the SAL locations related to it.  For ordinary
@@ -732,9 +729,9 @@ struct breakpoint
 
   /* Return true if this breakpoint explains a signal.  See
      bpstat_explains_signal.  */
-  virtual int explains_signal (enum gdb_signal)
+  virtual bool explains_signal (enum gdb_signal)
   {
-    return 1;
+    return true;
   }
 
   /* Called after evaluating the breakpoint's condition,
@@ -744,12 +741,8 @@ struct breakpoint
     /* Nothing to do.  */
   }
 
-
   /* Return a range of this breakpoint's locations.  */
-  bp_location_range locations ();
-
-  /* Methods associated with this breakpoint.  */
-  const breakpoint_ops *ops = NULL;
+  bp_location_range locations () const;
 
   breakpoint *next = NULL;
   /* Type of breakpoint.  */
@@ -801,11 +794,11 @@ struct breakpoint
   event_location_up location_range_end;
 
   /* Architecture we used to set the breakpoint.  */
-  struct gdbarch *gdbarch = NULL;
+  struct gdbarch *gdbarch;
   /* Language we used to set the breakpoint.  */
-  enum language language = language_unknown;
+  enum language language;
   /* Input radix we used to set the breakpoint.  */
-  int input_radix = 0;
+  int input_radix;
   /* String form of the breakpoint condition (malloc'd), or NULL if
      there is no condition.  */
   gdb::unique_xmalloc_ptr<char> cond_string;
@@ -818,7 +811,7 @@ struct breakpoint
      using watchpoints on local variables (might the concept of a
      related breakpoint be useful elsewhere, if not just call it the
      watchpoint_scope breakpoint or something like that.  FIXME).  */
-  breakpoint *related_breakpoint = NULL;
+  breakpoint *related_breakpoint;
 
   /* Thread number for thread-specific breakpoint, or -1 if don't
      care.  */
@@ -848,6 +841,17 @@ struct breakpoint
 
   /* Same as py_bp_object, but for Scheme.  */
   gdbscm_breakpoint_object *scm_bp_object = NULL;
+
+protected:
+
+  /* Helper for breakpoint_ops->print_recreate implementations.  Prints
+     the "thread" or "task" condition of B, and then a newline.
+
+     Necessary because most breakpoint implementations accept
+     thread/task conditions at the end of the spec line, like "break foo
+     thread 1", which needs outputting before any breakpoint-type
+     specific extra command necessary for B's recreation.  */
+  void print_recreate_thread (struct ui_file *fp) const;
 };
 
 /* The structure to be inherit by all kinds of breakpoints (real
@@ -855,6 +859,8 @@ struct breakpoint
    breakpoints, etc.).  */
 struct base_breakpoint : public breakpoint
 {
+  using breakpoint::breakpoint;
+
   void re_set () override;
   int insert_location (struct bp_location *) override;
   int remove_location (struct bp_location *,
@@ -872,6 +878,8 @@ struct base_breakpoint : public breakpoint
 
 struct watchpoint : public breakpoint
 {
+  using breakpoint::breakpoint;
+
   void re_set () override;
   int insert_location (struct bp_location *) override;
   int remove_location (struct bp_location *,
@@ -882,11 +890,16 @@ struct watchpoint : public breakpoint
 		      const target_waitstatus &ws) override;
   void check_status (struct bpstat *bs) override;
   int resources_needed (const struct bp_location *) override;
-  int works_in_software_mode () const override;
-  enum print_stop_action print_it (struct bpstat *bs) override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
-  int explains_signal (enum gdb_signal) override;
+
+  /* Tell whether we can downgrade from a hardware watchpoint to a software
+     one.  If not, the user will not be able to enable the watchpoint when
+     there are not enough hardware resources available.  */
+  virtual bool works_in_software_mode () const;
+
+  enum print_stop_action print_it (const bpstat *bs) const override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
+  bool explains_signal (enum gdb_signal) override;
 
   /* String form of exp to use for displaying to the user (malloc'd),
      or NULL if none.  */
@@ -960,13 +973,15 @@ extern bool is_exception_catchpoint (breakpoint *bp);
 
 struct tracepoint : public breakpoint
 {
+  using breakpoint::breakpoint;
+
   void re_set () override;
   int breakpoint_hit (const struct bp_location *bl,
 		      const address_space *aspace, CORE_ADDR bp_addr,
 		      const target_waitstatus &ws) override;
   void print_one_detail (struct ui_out *uiout) const override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
   std::vector<symtab_and_line> decode_location
        (struct event_location *location,
 	struct program_space *search_pspace) override;
@@ -974,18 +989,18 @@ struct tracepoint : public breakpoint
 
   /* Number of times this tracepoint should single-step and collect
      additional data.  */
-  long step_count;
+  long step_count = 0;
 
   /* Number of times this tracepoint should be hit before
      disabling/ending.  */
-  int pass_count;
+  int pass_count = 0;
 
   /* The number of the tracepoint on the target.  */
-  int number_on_target;
+  int number_on_target = 0;
 
   /* The total space taken by all the trace frames for this
      tracepoint.  */
-  ULONGEST traceframe_usage;
+  ULONGEST traceframe_usage = 0;
 
   /* The static tracepoint marker id, if known.  */
   std::string static_trace_marker_id;
@@ -996,7 +1011,21 @@ struct tracepoint : public breakpoint
      the array of markers we found for the given marker ID for which
      this static tracepoint corresponds.  When resetting breakpoints,
      we will use this index to try to find the same marker again.  */
-  int static_trace_marker_id_idx;
+  int static_trace_marker_id_idx = 0;
+};
+
+/* The base class for catchpoints.  */
+
+struct catchpoint : public base_breakpoint
+{
+  /* If TEMP is true, then make the breakpoint temporary.  If
+     COND_STRING is not NULL, then store it in the breakpoint.  */
+  catchpoint (struct gdbarch *gdbarch, bool temp, const char *cond_string);
+
+  void re_set () override
+  {
+    /* For catchpoints, the default is to do nothing.  */
+  }
 };
 
 
@@ -1434,14 +1463,6 @@ extern void
 				 int tempflag,
 				 int enabled,
 				 int from_tty);
-
-/* Initialize a new breakpoint of the bp_catchpoint kind.  If TEMP
-   is true, then make the breakpoint temporary.  If COND_STRING is
-   not NULL, then store it in the breakpoint.  */
-
-extern void init_catchpoint (struct breakpoint *b,
-			     struct gdbarch *gdbarch, bool temp,
-			     const char *cond_string);
 
 /* Add breakpoint B on the breakpoint list, and notify the user, the
    target and breakpoint_created observers of its existence.  If
@@ -1884,8 +1905,7 @@ bool is_hardware_watchpoint (const struct breakpoint *bpt);
 extern void print_solib_event (bool is_catchpoint);
 
 extern void
-  init_raw_breakpoint (struct breakpoint *b, struct gdbarch *gdbarch,
-		       struct symtab_and_line sal, enum bptype bptype,
-		       const struct breakpoint_ops *ops);
+  init_raw_breakpoint (struct breakpoint *b, struct symtab_and_line sal,
+		       enum bptype bptype);
 
 #endif /* !defined (BREAKPOINT_H) */

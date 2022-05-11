@@ -198,6 +198,7 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	aarch64-fpu.xml \
 	aarch64-pauth.xml \
 	aarch64-mte.xml \
+	aarch64-tls.xml \
 	arc/v1-core.xml \
 	arc/v1-aux.xml \
 	arc/v2-core.xml \
@@ -208,6 +209,7 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	arm/arm-m-profile-mve.xml \
 	arm/arm-m-system.xml \
 	arm/arm-m-profile-with-fpa.xml \
+	arm/arm-tls.xml \
 	arm/arm-vfpv2.xml \
 	arm/arm-vfpv3.xml \
 	arm/xscale-iwmmxt.xml \

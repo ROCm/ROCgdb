@@ -38,8 +38,17 @@
 /* An instance of this type is used to represent a signal
    catchpoint.  */
 
-struct signal_catchpoint : public breakpoint
+struct signal_catchpoint : public catchpoint
 {
+  signal_catchpoint (struct gdbarch *gdbarch, bool temp,
+		     std::vector<gdb_signal> &&sigs,
+		     bool catch_all_)
+    : catchpoint (gdbarch, temp, nullptr),
+      signals_to_be_caught (std::move (sigs)),
+      catch_all (catch_all_)
+  {
+  }
+
   int insert_location (struct bp_location *) override;
   int remove_location (struct bp_location *,
 		       enum remove_bp_reason reason) override;
@@ -47,11 +56,11 @@ struct signal_catchpoint : public breakpoint
 		      const address_space *aspace,
 		      CORE_ADDR bp_addr,
 		      const target_waitstatus &ws) override;
-  enum print_stop_action print_it (struct bpstat *bs) override;
-  bool print_one (struct bp_location **) override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
-  int explains_signal (enum gdb_signal) override;
+  enum print_stop_action print_it (const bpstat *bs) const override;
+  bool print_one (bp_location **) const override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
+  bool explains_signal (enum gdb_signal) override;
 
   /* Signal numbers used for the 'catch signal' feature.  If no signal
      has been specified for filtering, it is empty.  Otherwise,
@@ -183,7 +192,7 @@ signal_catchpoint::breakpoint_hit (const struct bp_location *bl,
 /* Implement the "print_it" method for signal catchpoints.  */
 
 enum print_stop_action
-signal_catchpoint::print_it (bpstat *bs)
+signal_catchpoint::print_it (const bpstat *bs) const
 {
   struct target_waitstatus last;
   const char *signal_name;
@@ -204,7 +213,7 @@ signal_catchpoint::print_it (bpstat *bs)
 /* Implement the "print_one" method for signal catchpoints.  */
 
 bool
-signal_catchpoint::print_one (struct bp_location **last_loc)
+signal_catchpoint::print_one (bp_location **last_loc) const
 {
   struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
@@ -255,7 +264,7 @@ signal_catchpoint::print_one (struct bp_location **last_loc)
 /* Implement the "print_mention" method for signal catchpoints.  */
 
 void
-signal_catchpoint::print_mention ()
+signal_catchpoint::print_mention () const
 {
   if (!signals_to_be_caught.empty ())
     {
@@ -281,7 +290,7 @@ signal_catchpoint::print_mention ()
 /* Implement the "print_recreate" method for signal catchpoints.  */
 
 void
-signal_catchpoint::print_recreate (struct ui_file *fp)
+signal_catchpoint::print_recreate (struct ui_file *fp) const
 {
   gdb_printf (fp, "catch signal");
 
@@ -297,10 +306,10 @@ signal_catchpoint::print_recreate (struct ui_file *fp)
 
 /* Implement the "explains_signal" method for signal catchpoints.  */
 
-int
+bool
 signal_catchpoint::explains_signal (enum gdb_signal sig)
 {
-  return 1;
+  return true;
 }
 
 /* Create a new signal catchpoint.  TEMPFLAG is true if this should be
@@ -316,10 +325,8 @@ create_signal_catchpoint (int tempflag, std::vector<gdb_signal> &&filter,
 {
   struct gdbarch *gdbarch = get_current_arch ();
 
-  std::unique_ptr<signal_catchpoint> c (new signal_catchpoint ());
-  init_catchpoint (c.get (), gdbarch, tempflag, nullptr);
-  c->signals_to_be_caught = std::move (filter);
-  c->catch_all = catch_all;
+  std::unique_ptr<signal_catchpoint> c
+    (new signal_catchpoint (gdbarch, tempflag, std::move (filter), catch_all));
 
   install_breakpoint (0, std::move (c), 1);
 }

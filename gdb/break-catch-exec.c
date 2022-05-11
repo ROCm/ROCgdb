@@ -34,8 +34,13 @@
    A breakpoint is really of this type iff its ops pointer points to
    CATCH_EXEC_BREAKPOINT_OPS.  */
 
-struct exec_catchpoint : public breakpoint
+struct exec_catchpoint : public catchpoint
 {
+  exec_catchpoint (struct gdbarch *gdbarch, bool temp, const char *cond_string)
+    : catchpoint (gdbarch, temp, cond_string)
+  {
+  }
+
   int insert_location (struct bp_location *) override;
   int remove_location (struct bp_location *,
 		       enum remove_bp_reason reason) override;
@@ -43,10 +48,10 @@ struct exec_catchpoint : public breakpoint
 		      const address_space *aspace,
 		      CORE_ADDR bp_addr,
 		      const target_waitstatus &ws) override;
-  enum print_stop_action print_it (struct bpstat *bs) override;
-  bool print_one (struct bp_location **) override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
+  enum print_stop_action print_it (const bpstat *bs) const override;
+  bool print_one (bp_location **) const override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
 
   /* Filename of a program whose exec triggered this catchpoint.
      This field is only valid immediately after this catchpoint has
@@ -81,7 +86,7 @@ exec_catchpoint::breakpoint_hit (const struct bp_location *bl,
 }
 
 enum print_stop_action
-exec_catchpoint::print_it (bpstat *bs)
+exec_catchpoint::print_it (const bpstat *bs) const
 {
   struct ui_out *uiout = current_uiout;
 
@@ -105,7 +110,7 @@ exec_catchpoint::print_it (bpstat *bs)
 }
 
 bool
-exec_catchpoint::print_one (struct bp_location **last_loc)
+exec_catchpoint::print_one (bp_location **last_loc) const
 {
   struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
@@ -133,7 +138,7 @@ exec_catchpoint::print_one (struct bp_location **last_loc)
 }
 
 void
-exec_catchpoint::print_mention ()
+exec_catchpoint::print_mention () const
 {
   gdb_printf (_("Catchpoint %d (exec)"), number);
 }
@@ -141,10 +146,10 @@ exec_catchpoint::print_mention ()
 /* Implement the "print_recreate" method for exec catchpoints.  */
 
 void
-exec_catchpoint::print_recreate (struct ui_file *fp)
+exec_catchpoint::print_recreate (struct ui_file *fp) const
 {
   gdb_printf (fp, "catch exec");
-  print_recreate_thread (this, fp);
+  print_recreate_thread (fp);
 }
 
 /* This function attempts to parse an optional "if <cond>" clause
@@ -203,9 +208,8 @@ catch_exec_command_1 (const char *arg, int from_tty,
   if ((*arg != '\0') && !isspace (*arg))
     error (_("Junk at end of arguments."));
 
-  std::unique_ptr<exec_catchpoint> c (new exec_catchpoint ());
-  init_catchpoint (c.get (), gdbarch, temp, cond_string);
-  c->exec_pathname.reset ();
+  std::unique_ptr<exec_catchpoint> c
+    (new exec_catchpoint (gdbarch, temp, cond_string));
 
   install_breakpoint (0, std::move (c), 1);
 }

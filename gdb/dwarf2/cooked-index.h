@@ -295,6 +295,11 @@ public:
      "main".  This will return NULL if no such entry is available.  */
   const cooked_index_entry *get_main () const;
 
+  cooked_index_vector *index_for_writing () override
+  {
+    return this;
+  }
+
   quick_symbol_functions_up make_quick_functions () const override;
 
 private:
@@ -325,7 +330,7 @@ private:
   /* A future that tracks when the 'finalize' method is done.  Note
      that the 'get' method is never called on this future, only
      'wait'.  */
-  std::future<void> m_future;
+  gdb::future<void> m_future;
 };
 
 #endif /* GDB_DWARF2_COOKED_INDEX_H */

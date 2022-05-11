@@ -35,8 +35,15 @@
 /* An instance of this type is used to represent a syscall
    catchpoint.  */
 
-struct syscall_catchpoint : public breakpoint
+struct syscall_catchpoint : public catchpoint
 {
+  syscall_catchpoint (struct gdbarch *gdbarch, bool tempflag,
+		      std::vector<int> &&calls)
+    : catchpoint (gdbarch, tempflag, nullptr),
+      syscalls_to_be_caught (std::move (calls))
+  {
+  }
+
   int insert_location (struct bp_location *) override;
   int remove_location (struct bp_location *,
 		       enum remove_bp_reason reason) override;
@@ -44,10 +51,10 @@ struct syscall_catchpoint : public breakpoint
 		      const address_space *aspace,
 		      CORE_ADDR bp_addr,
 		      const target_waitstatus &ws) override;
-  enum print_stop_action print_it (struct bpstat *bs) override;
-  bool print_one (struct bp_location **) override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
+  enum print_stop_action print_it (const bpstat *bs) const override;
+  bool print_one (bp_location **) const override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
 
   /* Syscall numbers used for the 'catch syscall' feature.  If no
      syscall has been specified for filtering, it is empty.
@@ -180,7 +187,7 @@ syscall_catchpoint::breakpoint_hit (const struct bp_location *bl,
 /* Implement the "print_it" method for syscall catchpoints.  */
 
 enum print_stop_action
-syscall_catchpoint::print_it (bpstat *bs)
+syscall_catchpoint::print_it (const bpstat *bs) const
 {
   struct ui_out *uiout = current_uiout;
   struct breakpoint *b = bs->breakpoint_at;
@@ -231,7 +238,7 @@ syscall_catchpoint::print_it (bpstat *bs)
 /* Implement the "print_one" method for syscall catchpoints.  */
 
 bool
-syscall_catchpoint::print_one (struct bp_location **last_loc)
+syscall_catchpoint::print_one (bp_location **last_loc) const
 {
   struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
@@ -284,7 +291,7 @@ syscall_catchpoint::print_one (struct bp_location **last_loc)
 /* Implement the "print_mention" method for syscall catchpoints.  */
 
 void
-syscall_catchpoint::print_mention ()
+syscall_catchpoint::print_mention () const
 {
   struct gdbarch *gdbarch = loc->gdbarch;
 
@@ -314,7 +321,7 @@ syscall_catchpoint::print_mention ()
 /* Implement the "print_recreate" method for syscall catchpoints.  */
 
 void
-syscall_catchpoint::print_recreate (struct ui_file *fp)
+syscall_catchpoint::print_recreate (struct ui_file *fp) const
 {
   struct gdbarch *gdbarch = loc->gdbarch;
 
@@ -331,7 +338,7 @@ syscall_catchpoint::print_recreate (struct ui_file *fp)
 	gdb_printf (fp, " %d", s.number);
     }
 
-  print_recreate_thread (this, fp);
+  print_recreate_thread (fp);
 }
 
 /* Returns non-zero if 'b' is a syscall catchpoint.  */
@@ -347,9 +354,8 @@ create_syscall_event_catchpoint (int tempflag, std::vector<int> &&filter)
 {
   struct gdbarch *gdbarch = get_current_arch ();
 
-  std::unique_ptr<syscall_catchpoint> c (new syscall_catchpoint ());
-  init_catchpoint (c.get (), gdbarch, tempflag, nullptr);
-  c->syscalls_to_be_caught = std::move (filter);
+  std::unique_ptr<syscall_catchpoint> c
+    (new syscall_catchpoint (gdbarch, tempflag, std::move (filter)));
 
   install_breakpoint (0, std::move (c), 1);
 }

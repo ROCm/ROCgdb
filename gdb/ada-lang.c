@@ -11970,8 +11970,7 @@ ada_unhandled_exception_name_addr_from_raise (void)
    Return zero if the address could not be computed, or if not relevant.  */
 
 static CORE_ADDR
-ada_exception_name_addr_1 (enum ada_exception_catchpoint_kind ex,
-			   struct breakpoint *b)
+ada_exception_name_addr_1 (enum ada_exception_catchpoint_kind ex)
 {
   struct ada_inferior_data *data = get_ada_inferior_data (current_inferior ());
 
@@ -12069,14 +12068,13 @@ ada_exception_message (void)
    and zero is returned.  */
 
 static CORE_ADDR
-ada_exception_name_addr (enum ada_exception_catchpoint_kind ex,
-			 struct breakpoint *b)
+ada_exception_name_addr (enum ada_exception_catchpoint_kind ex)
 {
   CORE_ADDR result = 0;
 
   try
     {
-      result = ada_exception_name_addr_1 (ex, b);
+      result = ada_exception_name_addr_1 (ex);
     }
 
   catch (const gdb_exception_error &e)
@@ -12125,18 +12123,20 @@ public:
 
 struct ada_catchpoint : public base_breakpoint
 {
-  explicit ada_catchpoint (enum ada_exception_catchpoint_kind kind)
-    : m_kind (kind)
+  ada_catchpoint (struct gdbarch *gdbarch_,
+		  enum ada_exception_catchpoint_kind kind)
+    : base_breakpoint (gdbarch_, bp_catchpoint),
+      m_kind (kind)
   {
   }
 
   struct bp_location *allocate_location () override;
   void re_set () override;
   void check_status (struct bpstat *bs) override;
-  enum print_stop_action print_it (struct bpstat *bs) override;
-  bool print_one (struct bp_location **) override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
+  enum print_stop_action print_it (const bpstat *bs) const override;
+  bool print_one (bp_location **) const override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
 
   /* The name of the specific exception the user specified.  */
   std::string excep_string;
@@ -12298,7 +12298,7 @@ ada_catchpoint::check_status (bpstat *bs)
    catchpoint kinds.  */
 
 enum print_stop_action
-ada_catchpoint::print_it (bpstat *bs)
+ada_catchpoint::print_it (const bpstat *bs) const
 {
   struct ui_out *uiout = current_uiout;
 
@@ -12329,7 +12329,7 @@ ada_catchpoint::print_it (bpstat *bs)
       case ada_catch_exception_unhandled:
       case ada_catch_handlers:
 	{
-	  const CORE_ADDR addr = ada_exception_name_addr (m_kind, this);
+	  const CORE_ADDR addr = ada_exception_name_addr (m_kind);
 	  char exception_name[256];
 
 	  if (addr != 0)
@@ -12386,7 +12386,7 @@ ada_catchpoint::print_it (bpstat *bs)
    catchpoint kinds.  */
 
 bool
-ada_catchpoint::print_one (struct bp_location **last_loc)
+ada_catchpoint::print_one (bp_location **last_loc) const
 { 
   struct ui_out *uiout = current_uiout;
   struct value_print_options opts;
@@ -12443,7 +12443,7 @@ ada_catchpoint::print_one (struct bp_location **last_loc)
    for all exception catchpoint kinds.  */
 
 void
-ada_catchpoint::print_mention ()
+ada_catchpoint::print_mention () const
 {
   struct ui_out *uiout = current_uiout;
 
@@ -12495,7 +12495,7 @@ ada_catchpoint::print_mention ()
    exception catchpoint kinds.  */
 
 void
-ada_catchpoint::print_recreate (struct ui_file *fp)
+ada_catchpoint::print_recreate (struct ui_file *fp) const
 {
   switch (m_kind)
     {
@@ -12520,7 +12520,7 @@ ada_catchpoint::print_recreate (struct ui_file *fp)
       default:
 	internal_error (__FILE__, __LINE__, _("unexpected catchpoint type"));
     }
-  print_recreate_thread (this, fp);
+  print_recreate_thread (fp);
 }
 
 /* See ada-lang.h.  */
@@ -12760,7 +12760,7 @@ create_ada_exception_catchpoint (struct gdbarch *gdbarch,
   std::string addr_string;
   struct symtab_and_line sal = ada_exception_sal (ex_kind, &addr_string);
 
-  std::unique_ptr<ada_catchpoint> c (new ada_catchpoint (ex_kind));
+  std::unique_ptr<ada_catchpoint> c (new ada_catchpoint (gdbarch, ex_kind));
   init_ada_exception_breakpoint (c.get (), gdbarch, sal, addr_string.c_str (),
 				 tempflag, disabled, from_tty);
   c->excep_string = excep_string;

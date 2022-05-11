@@ -33,8 +33,20 @@
    A breakpoint is really of this type iff its ops pointer points to
    CATCH_SOLIB_BREAKPOINT_OPS.  */
 
-struct solib_catchpoint : public breakpoint
+struct solib_catchpoint : public catchpoint
 {
+  solib_catchpoint (struct gdbarch *gdbarch, bool temp,
+		    const char *cond_string,
+		    bool is_load_, const char *arg)
+    : catchpoint (gdbarch, temp, cond_string),
+      is_load (is_load_),
+      regex (arg == nullptr ? nullptr : make_unique_xstrdup (arg)),
+      compiled (arg == nullptr
+		? nullptr
+		: new compiled_regex (arg, REG_NOSUB, _("Invalid regexp")))
+  {
+  }
+
   int insert_location (struct bp_location *) override;
   int remove_location (struct bp_location *,
 		       enum remove_bp_reason reason) override;
@@ -43,10 +55,10 @@ struct solib_catchpoint : public breakpoint
 		      CORE_ADDR bp_addr,
 		      const target_waitstatus &ws) override;
   void check_status (struct bpstat *bs) override;
-  enum print_stop_action print_it (struct bpstat *bs) override;
-  bool print_one (struct bp_location **) override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
+  enum print_stop_action print_it (const bpstat *bs) const override;
+  bool print_one (bp_location **) const override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
 
   /* True for "catch load", false for "catch unload".  */
   bool is_load;
@@ -127,7 +139,7 @@ solib_catchpoint::check_status (struct bpstat *bs)
 }
 
 enum print_stop_action
-solib_catchpoint::print_it (bpstat *bs)
+solib_catchpoint::print_it (const bpstat *bs) const
 {
   struct breakpoint *b = bs->breakpoint_at;
   struct ui_out *uiout = current_uiout;
@@ -147,7 +159,7 @@ solib_catchpoint::print_it (bpstat *bs)
 }
 
 bool
-solib_catchpoint::print_one (struct bp_location **locs)
+solib_catchpoint::print_one (bp_location **locs) const
 {
   struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
@@ -189,14 +201,14 @@ solib_catchpoint::print_one (struct bp_location **locs)
 }
 
 void
-solib_catchpoint::print_mention ()
+solib_catchpoint::print_mention () const
 {
   gdb_printf (_("Catchpoint %d (%s)"), number,
 	      is_load ? "load" : "unload");
 }
 
 void
-solib_catchpoint::print_recreate (struct ui_file *fp)
+solib_catchpoint::print_recreate (struct ui_file *fp) const
 {
   gdb_printf (fp, "%s %s",
 	      disposition == disp_del ? "tcatch" : "catch",
@@ -216,18 +228,12 @@ add_solib_catchpoint (const char *arg, bool is_load, bool is_temp, bool enabled)
   if (!arg)
     arg = "";
   arg = skip_spaces (arg);
+  if (*arg == '\0')
+    arg = nullptr;
 
-  std::unique_ptr<solib_catchpoint> c (new solib_catchpoint ());
-
-  if (*arg != '\0')
-    {
-      c->compiled.reset (new compiled_regex (arg, REG_NOSUB,
-					     _("Invalid regexp")));
-      c->regex = make_unique_xstrdup (arg);
-    }
-
-  c->is_load = is_load;
-  init_catchpoint (c.get (), gdbarch, is_temp, NULL);
+  std::unique_ptr<solib_catchpoint> c (new solib_catchpoint (gdbarch, is_temp,
+							     nullptr,
+							     is_load, arg));
 
   c->enable_state = enabled ? bp_enabled : bp_disabled;
 

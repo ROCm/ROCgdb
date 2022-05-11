@@ -65,13 +65,27 @@ static const struct exception_names exception_functions[] =
 
 /* The type of an exception catchpoint.  */
 
-struct exception_catchpoint : public base_breakpoint
+struct exception_catchpoint : public catchpoint
 {
+  exception_catchpoint (struct gdbarch *gdbarch,
+			bool temp, const char *cond_string,
+			enum exception_event_kind kind_,
+			std::string &&except_rx)
+    : catchpoint (gdbarch, temp, cond_string),
+      kind (kind_),
+      exception_rx (std::move (except_rx)),
+      pattern (exception_rx.empty ()
+	       ? nullptr
+	       : new compiled_regex (exception_rx.c_str (), REG_NOSUB,
+				     _("invalid type-matching regexp")))
+  {
+  }
+
   void re_set () override;
-  enum print_stop_action print_it (struct bpstat *bs) override;
-  bool print_one (struct bp_location **) override;
-  void print_mention () override;
-  void print_recreate (struct ui_file *fp) override;
+  enum print_stop_action print_it (const bpstat *bs) const override;
+  bool print_one (bp_location **) const override;
+  void print_mention () const override;
+  void print_recreate (struct ui_file *fp) const override;
   void print_one_detail (struct ui_out *) const override;
   void check_status (struct bpstat *bs) override;
   struct bp_location *allocate_location () override;
@@ -228,7 +242,7 @@ exception_catchpoint::re_set ()
 }
 
 enum print_stop_action
-exception_catchpoint::print_it (bpstat *bs)
+exception_catchpoint::print_it (const bpstat *bs) const
 {
   struct ui_out *uiout = current_uiout;
   int bp_temp;
@@ -253,7 +267,7 @@ exception_catchpoint::print_it (bpstat *bs)
 }
 
 bool
-exception_catchpoint::print_one (struct bp_location **last_loc)
+exception_catchpoint::print_one (bp_location **last_loc) const
 {
   struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
@@ -302,7 +316,7 @@ exception_catchpoint::print_one_detail (struct ui_out *uiout) const
 }
 
 void
-exception_catchpoint::print_mention ()
+exception_catchpoint::print_mention () const
 {
   struct ui_out *uiout = current_uiout;
   int bp_temp;
@@ -320,7 +334,7 @@ exception_catchpoint::print_mention ()
    catchpoints.  */
 
 void
-exception_catchpoint::print_recreate (struct ui_file *fp)
+exception_catchpoint::print_recreate (struct ui_file *fp) const
 {
   int bp_temp;
 
@@ -338,7 +352,7 @@ exception_catchpoint::print_recreate (struct ui_file *fp)
       gdb_printf (fp, "rethrow");
       break;
     }
-  print_recreate_thread (this, fp);
+  print_recreate_thread (fp);
 }
 
 /* Implement the "allocate_location" method for throw and catch
@@ -355,20 +369,11 @@ handle_gnu_v3_exceptions (int tempflag, std::string &&except_rx,
 			  const char *cond_string,
 			  enum exception_event_kind ex_event, int from_tty)
 {
-  std::unique_ptr<compiled_regex> pattern;
+  struct gdbarch *gdbarch = get_current_arch ();
 
-  if (!except_rx.empty ())
-    {
-      pattern.reset (new compiled_regex (except_rx.c_str (), REG_NOSUB,
-					 _("invalid type-matching regexp")));
-    }
-
-  std::unique_ptr<exception_catchpoint> cp (new exception_catchpoint ());
-
-  init_catchpoint (cp.get (), get_current_arch (), tempflag, cond_string);
-  cp->kind = ex_event;
-  cp->exception_rx = std::move (except_rx);
-  cp->pattern = std::move (pattern);
+  std::unique_ptr<exception_catchpoint> cp
+    (new exception_catchpoint (gdbarch, tempflag, cond_string,
+			       ex_event, std::move (except_rx)));
 
   cp->re_set ();
 

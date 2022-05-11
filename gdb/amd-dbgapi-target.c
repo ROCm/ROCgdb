@@ -642,7 +642,7 @@ get_amd_dbgapi_process_id (struct inferior *inferior)
 struct amd_dbgapi_target_breakpoint : public base_breakpoint
 {
   amd_dbgapi_target_breakpoint (struct gdbarch *gdbarch, CORE_ADDR address)
-    : base_breakpoint ()
+    : base_breakpoint (gdbarch, bp_breakpoint)
   {
     /* Should be a ctor.  */
 
@@ -651,8 +651,7 @@ struct amd_dbgapi_target_breakpoint : public base_breakpoint
     sal.section = find_pc_overlay (sal.pc);
     sal.pspace = current_program_space;
 
-    init_raw_breakpoint (this, gdbarch, sal, bp_breakpoint,
-			 &base_breakpoint_ops);
+    init_raw_breakpoint (this, sal, bp_breakpoint);
   }
 
   void re_set () override;
