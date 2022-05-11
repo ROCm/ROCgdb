@@ -209,8 +209,9 @@ proc rocm_assemble {source dest {options ""}} {
 		 "${rocm_path}/llvm/bin/clang-offload-bundler\
 				-type=o\
 				-targets=hip-amdgcn-amd-amdhsa-${gpu_target},host-x86_64-unknown-linux-gnu\
-				-outputs=$dest\
-				-inputs=$tmp_o,$gdb_saved_hip_empty_host_obj"]
+				-output=$dest\
+				-input=$tmp_o\
+				-input=$gdb_saved_hip_empty_host_obj"]
     # We're done.
     return [lindex $res 1]
 }
