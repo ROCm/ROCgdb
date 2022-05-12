@@ -50,6 +50,17 @@ struct dwarf_gdbarch_types
 
 static const registry<gdbarch>::key<dwarf_gdbarch_types> dwarf_arch_cookie;
 
+/* Ensure that a thread is in focus and throw an exception
+   otherwise.  */
+static void
+ensure_have_thread (const char *op_name)
+{
+  if (inferior_ptid == null_ptid)
+    throw_error (GENERIC_ERROR,
+		 _("%s evaluation requires a thread to be in focus."),
+		 op_name);
+}
+
 /* Ensure that a FRAME is defined, throw an exception otherwise.  */
 
 static void
@@ -58,6 +69,8 @@ ensure_have_frame (frame_info_ptr frame, const char *op_name)
   if (frame == nullptr)
     throw_error (GENERIC_ERROR,
 		 _("%s evaluation requires a frame."), op_name);
+
+  ensure_have_thread (op_name);
 }
 
 /* Ensure that a PER_CU is defined and throw an exception otherwise.  */
@@ -68,6 +81,21 @@ ensure_have_per_cu (dwarf2_per_cu_data *per_cu, const char* op_name)
   if (per_cu == nullptr)
     throw_error (GENERIC_ERROR,
 		 _("%s evaluation requires a compilation unit."), op_name);
+}
+
+/* Ensure that a SIMD lane is in focus and throw an exception
+   otherwise.  */
+static void
+ensure_have_simd_lane (const char *op_name)
+{
+  ensure_have_thread (op_name);
+
+  int current_simd_lane
+    = find_thread_ptid (current_inferior (),
+			inferior_ptid)->current_simd_lane ();
+
+  if (current_simd_lane == -1)
+    error (_("%s evaluation requires a SIMD lane to be in focus."), op_name);
 }
 
 /* Return the number of bytes overlapping a contiguous chunk of N_BITS
@@ -3981,6 +4009,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 	case DW_OP_GNU_push_tls_address:
 	case DW_OP_form_tls_address:
+	  ensure_have_thread ("DW_OP_form_tls_address");
 	  /* Variable is at a constant offset in the thread-local
 	  storage block into the objfile for the current thread and
 	  the dynamic linker module containing this expression.  Here
@@ -4244,6 +4273,16 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    arch_addr_space_id address_space
 	      = gdbarch_dwarf_address_space_to_address_space_id
 		  (arch, aspace_value->to_long ());
+	    CORE_ADDR address = address_value->to_long ();
+	    address
+	      = gdbarch_segment_address_to_core_address (arch, address_space,
+							 address);
+	    address_scope scope = gdbarch_address_scope (arch, address);
+
+	    if (scope == ADDRESS_SCOPE_THREAD)
+	      ensure_have_thread ("DW_OP_LLVM_form_aspace_address");
+	    else if (scope == ADDRESS_SCOPE_LANE)
+	      ensure_have_simd_lane ("DW_OP_LLVM_form_aspace_address");
 
 	    result_entry
 	      = std::make_shared<dwarf_memory> (arch,
@@ -4360,9 +4399,10 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    ULONGEST reg_size = register_size (arch, regnum);
 	    std::shared_ptr<dwarf_location> location
 	      = std::make_shared<dwarf_register> (arch, reg);
-	    result_entry = location->deref (this->m_frame, this->m_addr_info,
-					    address_type, reg_size);
-	    location = result_entry->to_location (arch);
+	    std::shared_ptr<dwarf_value> address_value
+	      = location->deref (this->m_frame, this->m_addr_info,
+				 address_type, reg_size);
+	    location = address_value->to_location (arch);
 
 	    auto memory
 	      = std::dynamic_pointer_cast<dwarf_memory> (location);
@@ -4380,20 +4420,24 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	      = gdbarch_dwarf_address_space_to_address_space_id
 		  (arch, aspace_value->to_long ());
 	    memory->set_address_space (address_space);
-
 	    result_entry = memory;
+
+	    CORE_ADDR address
+	      = gdbarch_segment_address_to_core_address
+		  (arch, address_space, address_value->to_long ());
+	    address_scope scope = gdbarch_address_scope (arch, address);
+
+	    /* Only need to check if there is a SIMD lane in focus,
+	       previous check ensured that there is a frame so there
+	       must also be a thread in focus too.  */
+	    if (scope == ADDRESS_SCOPE_LANE)
+	      ensure_have_simd_lane ("DW_OP_LLVM_aspace_bregx");
 	  }
 	  break;
 	case DW_OP_LLVM_push_lane:
 	  {
-	    if (inferior_ptid == null_ptid)
-	      error (_("no thread selected"));
-
-	    thread_info *tp = inferior_thread ();
-	    if (!tp->has_simd_lanes ())
-	      error (_("thread has no lanes"));
-
-	    ULONGEST lane = tp->current_simd_lane ();
+	    ensure_have_simd_lane ("DW_OP_LLVM_push_lane");
+	    ULONGEST lane = inferior_thread ()->current_simd_lane ();
 	    result_entry = std::make_shared<dwarf_value> (lane, address_type);
 	  }
 	  break;
