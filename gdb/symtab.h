@@ -1111,12 +1111,6 @@ struct symbol_computed_ops
   struct value *(*read_variable_at_entry) (struct symbol *symbol,
 					   frame_info_ptr frame);
 
-  /* Find the "symbol_needs_kind" value for the given symbol.  This
-     value determines whether reading the symbol needs memory (e.g., a
-     global variable), just registers (a thread-local), or a frame (a
-     local variable).  */
-  enum symbol_needs_kind (*get_symbol_read_needs) (struct symbol * symbol);
-
   /* Write to STREAM a natural-language description of the location of
      SYMBOL, in the context of ADDR.  */
   void (*describe_location) (struct symbol * symbol, CORE_ADDR addr,

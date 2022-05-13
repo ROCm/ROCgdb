@@ -41,14 +41,6 @@ ada_imported_read_variable (struct symbol *symbol, frame_info_ptr frame)
   return value_at (symbol->type (), minsym.value_address ());
 }
 
-/* Implement the read_variable method from symbol_computed_ops.  */
-
-static enum symbol_needs_kind
-ada_imported_get_symbol_read_needs (struct symbol *symbol)
-{
-  return SYMBOL_NEEDS_NONE;
-}
-
 /* Implement the describe_location method from
    symbol_computed_ops.  */
 
@@ -89,7 +81,6 @@ const struct symbol_computed_ops ada_imported_funcs =
 {
   ada_imported_read_variable,
   nullptr,
-  ada_imported_get_symbol_read_needs,
   ada_imported_describe_location,
   0,
   ada_imported_tracepoint_var_ref,
