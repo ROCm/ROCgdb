@@ -963,6 +963,12 @@ struct lval_funcs
   bool (*check_synthetic_pointer) (const struct value *value,
 				   LONGEST offset, int length);
 
+  /* Collect memory address ranges encapsulated by the closure.  This
+     method may return false, if any part of the closure does not
+     describe a memory location.  */
+  bool (*mem_addr_ranges) (const struct value *value,
+			   std::vector<addr_range> &ranges);
+
   /* Return a duplicate of VALUE's closure, for use in a new value.
      This may simply return the same closure, if VALUE's is
      reference-counted or statically allocated.

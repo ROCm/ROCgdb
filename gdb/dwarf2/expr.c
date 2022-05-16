@@ -347,6 +347,9 @@ indirect_closure_value (value *value);
 static value *
 coerce_closure_ref (const value *value);
 
+static bool
+closure_mem_addr_ranges (const value *value, std::vector<addr_range> &ranges);
+
 /* Functions for accessing a variable described by DW_OP_piece,
    DW_OP_bit_piece or DW_OP_implicit_pointer.  */
 
@@ -357,6 +360,7 @@ static const lval_funcs closure_value_funcs = {
   indirect_closure_value,
   coerce_closure_ref,
   check_synthetic_pointer,
+  closure_mem_addr_ranges,
   copy_value_closure,
   free_value_closure
 };
@@ -613,6 +617,18 @@ public:
   virtual bool is_optimized_out (frame_info_ptr frame, bool big_endian,
 				 LONGEST bits_to_skip, size_t bit_size,
 				 size_t location_bit_limit) const
+  {
+    return false;
+  }
+
+  /* Collect memory address ranges represented by the location
+     description, of the given byte SIZE and starting at the BIT_OFFSET
+     bit offset.
+
+     Return false if any piece of the location description does not
+     describe a memory location.  */
+  virtual bool mem_addr_ranges (LONGEST bit_offset, size_t size,
+				std::vector<addr_range> &ranges) const
   {
     return false;
   }
@@ -963,6 +979,18 @@ public:
   value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
+
+  bool mem_addr_ranges (LONGEST bit_offset, size_t size,
+			std::vector<addr_range> &ranges) const override
+  {
+    ranges.emplace_back
+	     (gdbarch_segment_address_to_core_address
+		(m_arch, m_address_space,
+		 m_offset + (m_bit_suboffset + bit_offset) / HOST_CHAR_BIT),
+		 size);
+
+    return true;
+  }
 
 private:
   /* True if the location belongs to a stack memory region.  */
@@ -1753,6 +1781,9 @@ public:
 			 LONGEST bits_to_skip, size_t bit_size,
 			 size_t location_bit_limit) const override;
 
+  bool mem_addr_ranges (LONGEST bit_offset, size_t size,
+			std::vector<addr_range> &ranges) const override;
+
 private:
   /* Composite piece that contains a piece location
      description and it's size.  */
@@ -2177,6 +2208,50 @@ dwarf_composite::is_optimized_out (frame_info_ptr frame, bool big_endian,
   return false;
 }
 
+bool
+dwarf_composite::mem_addr_ranges (LONGEST bit_offset, size_t size,
+				  std::vector<addr_range> &ranges) const
+{
+  ULONGEST total_bit_offset
+    = bit_offset + HOST_CHAR_BIT * m_offset + m_bit_suboffset;
+  unsigned int pieces_num = m_pieces.size ();
+  unsigned int i;
+
+  /* Advance to the first non-skipped piece.  */
+  for (i = 0; i < pieces_num; i++)
+    {
+      ULONGEST piece_bit_size = m_pieces[i].m_size;
+
+      if (total_bit_offset < piece_bit_size)
+	break;
+
+      total_bit_offset -= piece_bit_size;
+    }
+
+  size_t total_size = 0;
+  for (; i < pieces_num; i++)
+    {
+      if (total_size >= size)
+	break;
+
+      size_t piece_size = m_pieces[i].m_size;
+
+      /* If the piece is bigger then the leftover amount,
+	 get that amount.  */
+      if (total_size + piece_size > size)
+	piece_size = size - total_size;
+
+      if (!m_pieces[i].m_location->mem_addr_ranges (total_bit_offset, piece_size,
+						    ranges))
+	return false;
+
+      total_size += piece_size;
+      total_bit_offset = 0;
+    }
+
+  return true;
+}
+
 /* Set of functions that perform different arithmetic operations
    on a given DWARF value arguments.
 
@@ -2456,6 +2531,26 @@ coerce_closure_ref (const value *value)
       /* Else: not a synthetic reference; do nothing.  */
       return NULL;
     }
+}
+
+/* Implementation of the mem_addr_ranges method of lval_funcs that
+   returns all memory locations encapsulated by the closure.  */
+
+static bool
+closure_mem_addr_ranges (const struct value *value,
+			 std::vector<addr_range> &ranges)
+{
+  LONGEST total_bit_offset = value->offset () * HOST_CHAR_BIT;
+
+  if (value->bitsize ())
+    total_bit_offset += value->bitpos ();
+
+  computed_closure *closure
+    = (computed_closure *) value->computed_closure ();
+
+  return closure->get_location ()->mem_addr_ranges (total_bit_offset,
+						    value->type ()->length (),
+						    ranges);
 }
 
 /* Convert struct value VALUE to the matching DWARF entry
