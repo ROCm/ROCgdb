@@ -12213,7 +12213,7 @@ ada_catchpoint::re_set ()
 {
   /* Call the base class's method.  This updates the catchpoint's
      locations.  */
-  this->breakpoint::re_set ();
+  this->base_breakpoint::re_set ();
 
   /* Reparse the exception conditional expressions.  One for each
      location.  */
