@@ -1661,6 +1661,104 @@ amdgpu_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
     }
 }
 
+/* Queries the Debug API for aliasing address ranges in the default
+   address space (global memory) for a given address range in a
+   specific address space.
+
+   Based on the address space, an address range can alias to multiple
+   smaller address ranges in the default address space.  In this case,
+   watching a given address range means watching all aliasing address
+   ranges instead.
+
+   In practice, this means that watching an address range in a non
+   default address space might take more hardware watchpoints then
+   watching the same address range in the default address space.  */
+
+static std::vector<addr_range>
+amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
+			      ptid_t ptid, int simd_lane,
+			      addr_range range)
+{
+  CORE_ADDR addr = range.addr;
+  arch_addr_space_id addr_space_id
+    = amdgpu_address_space_id_from_core_address (addr);
+  size_t size = range.size;
+
+  /* Addresses from the default address space are always watchable.  */
+  if (addr_space_id == ARCH_ADDR_SPACE_ID_DEFAULT)
+    return {range};
+
+  if (size == 0)
+    error (_("Watchpoint length must be non-zero number."));
+
+  /* We should never get a valid ptid here that is not a gpu
+     thread.  */
+  gdb_assert (ptid == null_ptid || ptid_is_gpu (ptid));
+
+  std::vector<addr_range> aliases;
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
+				   &architecture_id)
+	!= AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed"));
+
+  /* Get a dbgapi address space id for the original address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_from_addr_space_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, (uint64_t) addr_space_id,
+	 &dbgapi_from_addr_space_id)
+	!= AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  /* Get the dbgapi address space id for the default address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_to_addr_space_id;
+  gdb_assert (amd_dbgapi_dwarf_address_space_to_address_space
+	       (architecture_id, (uint64_t) ARCH_ADDR_SPACE_ID_DEFAULT,
+		&dbgapi_to_addr_space_id)
+	       == AMD_DBGAPI_STATUS_SUCCESS);
+
+  amd_dbgapi_wave_id_t wave_id = AMD_DBGAPI_WAVE_NONE;
+
+  if (ptid != null_ptid)
+    wave_id = get_amd_dbgapi_wave_id (ptid);
+
+  /* Aliasing address range might not have the same layout.  Because
+     of that, when ever there is a gap between the aliasing addresses,
+     create a new range.  */
+  while (true)
+    {
+      amd_dbgapi_size_t converted_size;
+      amd_dbgapi_segment_address_t to_offset;
+
+      /* Try to convert the address to an address in the
+	 default address space.  */
+      if (amd_dbgapi_convert_address_space
+	    (wave_id, simd_lane, dbgapi_from_addr_space_id,
+	     (amd_dbgapi_segment_address_t) addr,
+	     dbgapi_to_addr_space_id, &to_offset, &converted_size)
+	    != AMD_DBGAPI_STATUS_SUCCESS)
+	return {};
+
+      if (converted_size == 0)
+	return {};
+
+      if (size > converted_size)
+	{
+	  aliases.emplace_back (to_offset, converted_size);
+	  addr += converted_size;
+	  size -= converted_size;
+	}
+      else
+	{
+	  aliases.emplace_back (to_offset, size);
+	  break;
+	}
+
+    };
+
+  return aliases;
+}
+
 static simd_lanes_mask_t
 amdgpu_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
@@ -1793,6 +1891,7 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     (gdbarch, amdgpu_segment_address_to_core_address);
   set_gdbarch_address_spaces (gdbarch, amdgpu_address_spaces);
   set_gdbarch_address_scope (gdbarch, amdgpu_address_scope);
+  set_gdbarch_get_watchable_aliases (gdbarch, amdgpu_get_watchable_aliases);
 
   /* Frame interpretation.  */
   set_gdbarch_skip_prologue (gdbarch, amdgpu_skip_prologue);
