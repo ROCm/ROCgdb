@@ -16,13 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Test address space watchpoint error output.
+# Test watchpoints in default and private_lane address space.
+#
+# Watchpoints in the private_lane address space are only supported
+# if they have an alias address in the default address space
+# (global memory).
 
 load_lib rocm.exp
 
 require allow_hipcc_tests
 
-standard_testfile bit-extract.cpp
+standard_testfile .cpp
 
 if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
     return -1
@@ -30,12 +34,165 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
 
 with_rocm_gpu_lock {
 
-if ![runto_main] {
-    fail "can't run to main"
-    return -1
+with_test_prefix "private lane watchpoints" {
+    if ![runto_main] {
+	fail "can't run to main"
+	return -1
+    }
+
+    # Set breakpoint in device code.
+    gdb_breakpoint "kernel" "allow-pending" "qualified"
+    gdb_continue_to_breakpoint "kernel" ".*char array.*"
+
+    # Step over array initialization.
+    gdb_test "next" ".*array\\\[3\\\] = \\\'b\\\'.*"
+
+    # Set watchpoint on the whole array.
+    gdb_test "watch array" "Hardware watchpoint.*: array"
+
+    # Set watchpoint on an array element.
+    gdb_test "watch array\[3\]" "Hardware watchpoint.*: array\\\[3\\\]"
+
+    set elem_3_addr ""
+    gdb_test_multiple "p &array\[3\]" "" {
+	-re -wrap ".*private_lane#($::hex).*" {
+	    set elem_3_addr $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
+    # Set watchpoint on an array element address expression.
+    gdb_test "watch *((char *) private_lane#$elem_3_addr)" \
+	     "Hardware watchpoint.*: \\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\)" \
+	     "watchpoint on an array element expression"
+
+    # Set watchpoint on an array element address directly.
+    gdb_test "watch -l *((char *) private_lane#$elem_3_addr)" \
+	     "Hardware watchpoint.*: -location \\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\)" \
+	     "watchpoint on an array element address"
+
+    # Continue until the watchpoint is triggered by the first change.
+    set pattern ""
+    gdb_test "continue" \
+	[append pattern  \
+	    "Continuing." \
+	    ".*Hardware watchpoint.*array.*Old value = \\\"aaaa\\\".*New value = \\\"aaab\\\"" \
+	    ".*Hardware watchpoint.*array\\\[3\\\].*Old value = 97.*New value = 98" \
+	    ".*Hardware watchpoint.*\\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\).*Old value = 97.*New value = 98" \
+	    ".*Hardware watchpoint.*-location \\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\).*Old value = 97.*New value = 98.*"] \
+	"change an array element value from letter a to letter b"
+
+    set pattern ""
+    gdb_test "continue" \
+	[append pattern  \
+	    "Continuing." \
+	    ".*Hardware watchpoint.*array.*Old value = \\\"aaab\\\".*New value = \\\"baab\\\".*"] \
+	"change array content from aaab string to baab string"
+
+    gdb_test "bt" \
+	[multi_line \
+	    "#0.*__syncthreads.*" \
+	    "#1.*kernel.*"] \
+	"inside __syncthreads called by kernel"
+
+
+    gdb_breakpoint "change_memory" "allow-pending" "qualified"
+    gdb_test "continue" "Breakpoint \[0-9a-fA-F\]+, with lane 0, change_memory.*" \
+			"continue to change_memory function breakpoint"
+
+    # Continue until the watchpoint is triggered by the second change.
+    set pattern ""
+    gdb_test "continue" \
+	[append pattern  \
+	    "Continuing." \
+	    ".*Hardware watchpoint.*array.*Old value = \\\"baab\\\".*New value = \\\"baac\\\"" \
+	    ".*Hardware watchpoint.*array\\\[3\\\].*Old value = 98.*New value = 99" \
+	    ".*Hardware watchpoint.*\\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\).*Old value = 98.*New value = 99" \
+	    ".*Hardware watchpoint.*-location \\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\).*Old value = 98.*New value = 99.*"] \
+	"change an array element value from letter b to letter c"
+
+    set pattern ""
+    gdb_test "continue" \
+	[append pattern  \
+	    "Continuing." \
+	    ".*Hardware watchpoint.*array.*Old value = \\\"baac\\\".*New value = \\\"caac\\\".*"] \
+	"change array content from baac string to caac string"
+
+    gdb_test "bt" \
+	[multi_line \
+	     "#0.*__syncthreads.*" \
+	     "#1.*change_memory.*" \
+	     "#2.*kernel.*"] \
+	"inside __syncthreads called by change_memory"
+
+    delete_breakpoints
+
+    # Check if watchpoint is still hit in a caller frame.
+    gdb_test "watch -l *((char *) private_lane#$elem_3_addr)" \
+	     "Hardware watchpoint.*: -location \\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\)" \
+	     "check if lane context is preserved correctly"
+
+    set pattern ""
+    gdb_test "continue" \
+	[append pattern  \
+	    "Continuing." \
+	    ".*Hardware watchpoint.*-location \\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\).*Old value = 99.*New value = 100.*"] \
+	"change an array element value from letter c to letter d"
+
+    gdb_test "bt" \
+	[multi_line \
+	     "#0.*__syncthreads.*" \
+	     "#1.*kernel.*"] \
+	"back in __syncthreads called by kernel"
 }
 
-# Set breakpoing in device code.
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
-gdb_continue_to_breakpoint "bit_extract_kernel"
+clean_restart ${testfile}
+
+with_test_prefix "global memory watchpoint" {
+    if ![runto_main] {
+	fail "can't run to main"
+	return -1
+    }
+
+    # Set breakpoint in device code.
+    gdb_breakpoint "kernel" "allow-pending" "qualified"
+    gdb_continue_to_breakpoint "kernel" ".*char array.*"
+
+    # Set watchpoint on the pointer to global memory value.
+    gdb_test "watch *global_ptr" "Hardware watchpoint.*: \\\*global_ptr"
+
+    # Set watchpoint on the pointer to global memory value as location.
+    gdb_test "watch -l *global_ptr" "Hardware watchpoint.*: -location \\\*global_ptr"
+
+    # Set watchpoint on the address directly.
+    set pattern ""
+    gdb_test "continue" \
+	[append pattern  \
+	    "Continuing." \
+	    ".*Hardware watchpoint.* \\\*global_ptr.*Old value = 0.*New value = 1" \
+	    ".*Hardware watchpoint.*-location \\\*global_ptr.*Old value = 0.*New value = 1.*"] \
+	"change global_ptr content from 0 to 1"
+
+    gdb_test "bt" \
+	[multi_line \
+	     "#0.*__syncthreads.*" \
+	     "#1.*kernel.*"] \
+	"inside __syncthreads called by kernel"
+
+    # Check if watchpoint is also hit in a callee frame.
+    set pattern ""
+    gdb_test "continue" \
+	[append pattern  \
+	    "Continuing." \
+	    ".*Hardware watchpoint.* \\\*global_ptr.*Old value = 1.*New value = 2" \
+	    ".*Hardware watchpoint.*-location \\\*global_ptr.*Old value = 1.*New value = 2.*"] \
+	"change global_ptr content from 1 to 2"
+
+    gdb_test "bt" \
+	[multi_line \
+	     "#0.*__syncthreads.*" \
+	     "#1.*change_memory.*" \
+	     "#2.*kernel.*"] \
+	"inside __syncthreads called by change_memory"
+}
 }
