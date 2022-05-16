@@ -1322,6 +1322,7 @@ static const struct lval_funcs entry_data_value_funcs =
   NULL,	/* indirect */
   entry_data_value_coerce_ref,
   NULL,	/* check_synthetic_pointer */
+  NULL,	/* mem_addr_ranges */
   entry_data_value_copy_closure,
   entry_data_value_free_closure
 };
