@@ -639,19 +639,19 @@ get_amd_dbgapi_process_id (struct inferior *inferior)
 /* A breakpoint dbgapi wants us to insert, to handle shared library
    loading/unloading.  */
 
-struct amd_dbgapi_target_breakpoint : public base_breakpoint
+struct amd_dbgapi_target_breakpoint : public code_breakpoint
 {
   amd_dbgapi_target_breakpoint (struct gdbarch *gdbarch, CORE_ADDR address)
-    : base_breakpoint (gdbarch, bp_breakpoint)
+    : code_breakpoint (gdbarch, bp_breakpoint)
   {
-    /* Should be a ctor.  */
-
     symtab_and_line sal;
     sal.pc = address;
     sal.section = find_pc_overlay (sal.pc);
     sal.pspace = current_program_space;
+    add_location (sal);
 
-    init_raw_breakpoint (this, sal, bp_breakpoint);
+    pspace = current_program_space;
+    disposition = disp_donttouch;
   }
 
   void re_set () override;

@@ -12140,6 +12140,7 @@ another from library2.so named @code{bar} that prints two types of objects,
 @code{bar1} and @code{bar2}.
 
 @smallexample
+@group
 (@value{GDBP}) info pretty-printer
 library1.so:
   foo
@@ -12147,11 +12148,15 @@ library2.so:
   bar
     bar1
     bar2
+@end group
+@group
 (@value{GDBP}) info pretty-printer library2
 library2.so:
   bar
     bar1
     bar2
+@end group
+@group
 (@value{GDBP}) disable pretty-printer library1
 1 printer disabled
 2 of 3 printers enabled
@@ -12162,26 +12167,29 @@ library2.so:
   bar
     bar1
     bar2
+@end group
+@group
 (@value{GDBP}) disable pretty-printer library2 bar;bar1
 1 printer disabled
 1 of 3 printers enabled
 (@value{GDBP}) info pretty-printer library2
-library1.so:
-  foo [disabled]
 library2.so:
   bar
     bar1 [disabled]
     bar2
+@end group
+@group
 (@value{GDBP}) disable pretty-printer library2 bar
 1 printer disabled
 0 of 3 printers enabled
-(@value{GDBP}) info pretty-printer library2
+(@value{GDBP}) info pretty-printer
 library1.so:
   foo [disabled]
 library2.so:
   bar [disabled]
     bar1 [disabled]
     bar2
+@end group
 @end smallexample
 
 Note that for @code{bar} the entire printer can be disabled,
@@ -36701,9 +36709,6 @@ Once enabled, this feature cannot be disabled.
 
 Note that if Python support has not been compiled into @value{GDBN},
 this command will still succeed (and do nothing).
-
-This feature is currently (as of @value{GDBN} 7.0) experimental, and
-may work differently in future versions of @value{GDBN}.
 
 @subheading The @code{-var-create} Command
 @findex -var-create

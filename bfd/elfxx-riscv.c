@@ -1104,6 +1104,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zfh", "zicsr",	check_implicit_always},
   {"zqinx", "zdinx",	check_implicit_always},
   {"zdinx", "zfinx",	check_implicit_always},
+  {"zfinx", "zicsr",	check_implicit_always},
   {"zk", "zkn",		check_implicit_always},
   {"zk", "zkr",		check_implicit_always},
   {"zk", "zkt",		check_implicit_always},
@@ -1341,7 +1342,7 @@ riscv_recognized_prefixed_ext (const char *ext)
 }
 
 /* Canonical order for single letter extensions.  */
-static const char riscv_ext_canonical_order[] = "eigmafdqlcbjktpvn";
+static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvn";
 
 /* Array is used to compare the orders of standard extensions quickly.  */
 static int riscv_ext_order[26] = {0};
