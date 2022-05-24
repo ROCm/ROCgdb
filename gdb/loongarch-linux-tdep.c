@@ -20,6 +20,7 @@
 
 #include "defs.h"
 #include "glibc-tdep.h"
+#include "gregset.h"
 #include "inferior.h"
 #include "linux-tdep.h"
 #include "loongarch-tdep.h"
@@ -27,6 +28,11 @@
 #include "target-descriptions.h"
 #include "trad-frame.h"
 #include "tramp-frame.h"
+
+/* The general-purpose regset consists of 32 R registers, plus PC,
+   and BADV registers.  */
+
+#define LOONGARCH_LINUX_NUM_GREGSET	(34)
 
 /* Unpack an elf_gregset_t into GDB's register cache.  */
 
@@ -163,6 +169,23 @@ static const struct tramp_frame loongarch_linux_rt_sigframe =
   NULL
 };
 
+/* Implement the "iterate_over_regset_sections" gdbarch method.  */
+
+static void
+loongarch_iterate_over_regset_sections (struct gdbarch *gdbarch,
+					iterate_over_regset_sections_cb *cb,
+					void *cb_data,
+					const struct regcache *regcache)
+{
+  loongarch_gdbarch_tdep *tdep
+    = (loongarch_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  auto regs = tdep->regs;
+  int regsize = register_size (gdbarch, regs.r);
+
+  cb (".reg", LOONGARCH_LINUX_NUM_GREGSET * regsize,
+      LOONGARCH_LINUX_NUM_GREGSET * regsize, &loongarch_gregset, NULL, cb_data);
+}
+
 /* Initialize LoongArch Linux ABI info.  */
 
 static void
@@ -186,6 +209,9 @@ loongarch_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* Prepend tramp frame unwinder for signal.  */
   tramp_frame_prepend_unwinder (gdbarch, &loongarch_linux_rt_sigframe);
+
+  /* Core file support.  */
+  set_gdbarch_iterate_over_regset_sections (gdbarch, loongarch_iterate_over_regset_sections);
 }
 
 /* Initialize LoongArch Linux target support.  */
