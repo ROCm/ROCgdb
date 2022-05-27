@@ -267,6 +267,7 @@ struct instr_info
 
 
 #define EVEX_b_used 1
+#define EVEX_len_used 2
 
 /* Flags stored in PREFIXES.  */
 #define PREFIX_REPZ 1
@@ -9312,6 +9313,7 @@ print_insn (bfd_vma pc, instr_info *ins)
   int i;
   char *op_txt[MAX_OPERANDS];
   int needcomma;
+  bool intel_swap_2_3;
   int sizeflag, orig_sizeflag;
   const char *p;
   struct dis_private priv;
@@ -9769,6 +9771,7 @@ print_insn (bfd_vma pc, instr_info *ins)
 
   /* The enter and bound instructions are printed with operands in the same
      order as the intel book; everything else is printed in reverse order.  */
+  intel_swap_2_3 = false;
   if (ins->intel_syntax || ins->two_source_ops)
     {
       for (i = 0; i < MAX_OPERANDS; ++i)
@@ -9779,6 +9782,7 @@ print_insn (bfd_vma pc, instr_info *ins)
 	{
 	  op_txt[2] = ins->op_out[3];
 	  op_txt[3] = ins->op_out[2];
+	  intel_swap_2_3 = true;
 	}
 
       for (i = 0; i < (MAX_OPERANDS >> 1); ++i)
@@ -9803,6 +9807,20 @@ print_insn (bfd_vma pc, instr_info *ins)
   for (i = 0; i < MAX_OPERANDS; ++i)
     if (*op_txt[i])
       {
+	/* In Intel syntax embedded rounding / SAE are not separate operands.
+	   Instead they're attached to the prior register operand.  Simply
+	   suppress emission of the comma to achieve that effect.  */
+	switch (i & -(ins->intel_syntax && dp))
+	  {
+	  case 2:
+	    if (dp->op[2].rtn == OP_Rounding && !intel_swap_2_3)
+	      needcomma = 0;
+	    break;
+	  case 3:
+	    if (dp->op[3].rtn == OP_Rounding || intel_swap_2_3)
+	      needcomma = 0;
+	    break;
+	  }
 	if (needcomma)
 	  (*ins->info->fprintf_styled_func) (ins->info->stream,
 					     dis_style_text, ",");
@@ -10931,14 +10949,14 @@ intel_operand_size (instr_info *ins, int bytemode, int sizeflag)
 	  case x_mode:
 	  case evex_half_bcst_xmmq_mode:
 	    if (ins->vex.w)
-	      oappend (ins, "QWORD PTR ");
+	      oappend (ins, "QWORD BCST ");
 	    else
-	      oappend (ins, "DWORD PTR ");
+	      oappend (ins, "DWORD BCST ");
 	    break;
 	  case xh_mode:
 	  case evex_half_bcst_xmmqh_mode:
 	  case evex_half_bcst_xmmqdh_mode:
-	    oappend (ins, "WORD PTR ");
+	    oappend (ins, "WORD BCST ");
 	    break;
 	  default:
 	    ins->vex.no_broadcast = true;
@@ -11768,7 +11786,8 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
       if (ins->obufp == ins->op_out[0])
 	ins->vex.no_broadcast = true;
 
-      if (!ins->vex.no_broadcast)
+      if (!ins->vex.no_broadcast
+	  && (!ins->intel_syntax || !(ins->evex_used & EVEX_len_used)))
 	{
 	  if (bytemode == xh_mode)
 	    {
@@ -12484,6 +12503,7 @@ print_vector_reg (instr_info *ins, unsigned int reg, int bytemode)
 	  break;
 	case 512:
 	  names = att_names_ymm;
+	  ins->evex_used |= EVEX_len_used;
 	  break;
 	default:
 	  abort ();
@@ -12512,6 +12532,7 @@ print_vector_reg (instr_info *ins, unsigned int reg, int bytemode)
 	   && bytemode != d_mode
 	   && bytemode != q_mode)
     {
+      ins->evex_used |= EVEX_len_used;
       switch (ins->vex.length)
 	{
 	case 128:
@@ -13237,6 +13258,7 @@ OP_VEX (instr_info *ins, int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	{
 	case x_mode:
 	  names = att_names_xmm;
+	  ins->evex_used |= EVEX_len_used;
 	  break;
 	case dq_mode:
 	  if (ins->rex & REX_W)
@@ -13263,6 +13285,7 @@ OP_VEX (instr_info *ins, int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 	{
 	case x_mode:
 	  names = att_names_ymm;
+	  ins->evex_used |= EVEX_len_used;
 	  break;
 	case mask_bd_mode:
 	case mask_mode:
@@ -13281,6 +13304,7 @@ OP_VEX (instr_info *ins, int bytemode, int sizeflag ATTRIBUTE_UNUSED)
       break;
     case 512:
       names = att_names_zmm;
+      ins->evex_used |= EVEX_len_used;
       break;
     default:
       abort ();
