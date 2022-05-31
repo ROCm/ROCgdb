@@ -4122,14 +4122,14 @@ set gcc_compiled		0
 # -- chastain 2004-01-06
 
 proc get_compiler_info {{arg ""}} {
-    # For compiler.c and compiler.cc
+    # For compiler.c, compiler.cc and compiler.F90.
     global srcdir
 
     # I am going to play with the log to keep noise out.
     global outdir
     global tool
 
-    # These come from compiler.c or compiler.cc
+    # These come from compiler.c, compiler.cc or compiler.F90.
     global compiler_info
 
     # Legacy global data symbols.
@@ -4144,6 +4144,8 @@ proc get_compiler_info {{arg ""}} {
     set ifile "${srcdir}/lib/compiler.c"
     if { $arg == "c++" } {
 	set ifile "${srcdir}/lib/compiler.cc"
+    } elseif { $arg == "f90" } {
+	set ifile "${srcdir}/lib/compiler.F90"
     }
 
     # Run $ifile through the right preprocessor.
@@ -4174,6 +4176,10 @@ proc get_compiler_info {{arg ""}} {
 	    # eval this line
 	    verbose "get_compiler_info: $cppline" 2
 	    eval "$cppline"
+	} elseif { [ regexp "flang.*warning.*'-fdiagnostics-color=never'" "$cppline"] } {
+	    # Both flang preprocessors (llvm flang and classic flang) print a
+	    # warning for the unused -fdiagnostics-color=never, so we skip this
+	    # output line here.
 	} else {
 	    # unknown line
 	    verbose -log "get_compiler_info: $cppline"
@@ -4211,9 +4217,9 @@ proc get_compiler_info {{arg ""}} {
 # Otherwise the argument is a glob-style expression to match against
 # compiler_info.
 
-proc test_compiler_info { {compiler ""} } {
+proc test_compiler_info { {compiler ""} {language ""} } {
     global compiler_info
-    get_compiler_info
+    get_compiler_info $language
 
     # If no arg, return the compiler_info string.
     if [string match "" $compiler] {
@@ -4413,8 +4419,8 @@ set gdb_saved_set_unbuffered_mode_obj ""
 #   - ldflags=flag: Add FLAG to the linker flags.
 #   - incdir=path: Add PATH to the searched include directories.
 #   - libdir=path: Add PATH to the linker searched directories.
-#   - ada, c++, f77, f90, go, rust: Compile the file as Ada, C++,
-#     Fortran 77, Fortran 90, Go or Rust.
+#   - ada, c++, f90, go, rust: Compile the file as Ada, C++,
+#     Fortran 90, Go or Rust.
 #   - debug: Build with debug information.
 #   - optimize: Build with optimization.
 
@@ -4427,6 +4433,13 @@ proc gdb_compile {source dest type options} {
     global gdb_saved_set_unbuffered_mode_obj
 
     set outdir [file dirname $dest]
+
+    # If this is set, calling test_compiler_info will cause recursion.
+    if { [lsearch -exact $options getting_compiler_info] == -1 } {
+	set getting_compiler_info false
+    } else {
+	set getting_compiler_info true
+    }
 
     # Add platform-specific options if a shared library was specified using
     # "shlib=librarypath" in OPTIONS.
@@ -4446,10 +4459,9 @@ proc gdb_compile {source dest type options} {
     # default, unless you pass -Wno-unknown-warning-option as well.
     # We do that here, so that individual testcases don't have to
     # worry about it.
-    if {[lsearch -exact $options getting_compiler_info] == -1
+    if {!$getting_compiler_info
 	&& [lsearch -exact $options rust] == -1
 	&& [lsearch -exact $options ada] == -1
-	&& [lsearch -exact $options f77] == -1
 	&& [lsearch -exact $options f90] == -1
 	&& [lsearch -exact $options go] == -1
 	&& [test_compiler_info "clang-*"]} {
@@ -4458,7 +4470,7 @@ proc gdb_compile {source dest type options} {
 
     # Treating .c input files as C++ is deprecated in Clang, so
     # explicitly force C++ language.
-    if { [lsearch -exact $options getting_compiler_info] == -1
+    if { !$getting_compiler_info
 	 && [lsearch -exact $options c++] != -1
 	 && [string match *.c $source] != 0 } {
 
@@ -4477,19 +4489,24 @@ proc gdb_compile {source dest type options} {
     }
 
     # Place (and look for) Fortran `.mod` files in the output
-    # directory for this specific test.
-    if {[lsearch -exact $options f77] != -1 \
-	    || [lsearch -exact $options f90] != -1 } {
+    # directory for this specific test.  For Intel compilers the -J
+    # option is not supported so instead use the -module flag.
+    # Additionally, Intel compilers need the -debug-parameters flag set to
+    # emit debug info for all parameters in modules.
+    if { !$getting_compiler_info && [lsearch -exact $options f90] != -1 } {
 	# Fortran compile.
 	set mod_path [standard_output_file ""]
-	if [test_compiler_info "gcc-*"] {
+	if { [test_compiler_info {gfortran-*} f90] } {
 	    lappend new_options "additional_flags=-J${mod_path}"
+	} elseif { [test_compiler_info {ifort-*} f90]
+		   || [test_compiler_info {ifx-*} f90] } {
+	    lappend new_options "additional_flags=-module ${mod_path}"
+	    lappend new_options "additional_flags=-debug-parameters all"
 	}
     }
 
     set shlib_found 0
     set shlib_load 0
-    set getting_compiler_info 0
     foreach opt $options {
         if {[regexp {^shlib=(.*)} $opt dummy_var shlib_name]
 	    && $type == "executable"} {
@@ -4521,8 +4538,9 @@ proc gdb_compile {source dest type options} {
 	} elseif { $opt == "shlib_load" && $type == "executable" } {
 	    set shlib_load 1
 	} elseif { $opt == "getting_compiler_info" } {
-	    # If this is set, calling test_compiler_info will cause recursion.
-	    set getting_compiler_info 1
+	    # Ignore this setting here as it has been handled earlier in this
+	    # procedure.  Do not append it to new_options as this will cause
+	    # recursion.
         } elseif {[regexp "^text_segment=(.*)" $opt dummy_var addr]} {
             if { [linker_supports_Ttext_segment_flag] } {
                 # For GNU ld.
@@ -4545,7 +4563,7 @@ proc gdb_compile {source dest type options} {
     # DWARF line numbering.
     # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88432
     # This option defaults to on for Debian/Ubuntu.
-    if { $getting_compiler_info == 0
+    if { !$getting_compiler_info
 	 && [test_compiler_info {gcc-*-*}]
 	 && !([test_compiler_info {gcc-[0-3]-*}]
 	      || [test_compiler_info {gcc-4-0-*}])
@@ -4725,11 +4743,7 @@ proc gdb_compile {source dest type options} {
     }
 
     if {[lsearch $options quiet] < 0} {
-	# We shall update this on a per language basis, to avoid
-	# changing the entire testsuite in one go.
-	if {[lsearch $options f77] >= 0} {
-	    gdb_compile_test $source $result
-	} elseif { $result != "" } {
+	if { $result != "" } {
 	    clone_output "gdb compile failed, $result"
 	}
     }
@@ -4788,6 +4802,8 @@ proc gdb_compile_shlib_1 {sources dest options} {
     set info_options ""
     if { [lsearch -exact $options "c++"] >= 0 } {
 	set info_options "c++"
+    } elseif { [lsearch -exact $options "f90"] >= 0 } {
+	set info_options "f90"
     }
     if [get_compiler_info ${info_options}] {
        return -1
@@ -6975,6 +6991,8 @@ proc build_executable_from_specs {testname executable options args} {
     set info_options ""
     if { [lsearch -exact $options "c++"] >= 0 } {
 	set info_options "c++"
+    } elseif { [lsearch -exact $options "f90"] >= 0 } {
+	set info_options "f90"
     }
     if [get_compiler_info ${info_options}] {
         return -1
