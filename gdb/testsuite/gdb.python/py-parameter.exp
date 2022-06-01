@@ -371,6 +371,19 @@ proc_with_prefix test_throwing_parameter { } {
 	"gdb.GdbError does not show Python stack"
 }
 
+proc_with_prefix test_language {} {
+    gdb_test "python print(gdb.parameter('language'))" "auto" \
+	"print language parameter"
+    gdb_test "python print(gdb.current_language())" "c" \
+	"print current language"
+    gdb_test_no_output "set lang rust"
+    gdb_test "python print(gdb.parameter('language'))" "rust" \
+	"print language parameter for rust"
+    gdb_test "python print(gdb.current_language())" "rust" \
+	"print current language for rust"
+    gdb_test_no_output "set lang auto"
+}
+
 # Some parameters are per inferior.  The value returned by gdb.parameter for
 # them should be dependent on which is the current inferior.
 proc_with_prefix test_per_inferior_parameters { } {
@@ -413,6 +426,7 @@ test_really_undocumented_parameter
 test_deprecated_api_parameter
 test_integer_parameter
 test_throwing_parameter
+test_language
 test_per_inferior_parameters
 
 # This caused a gdb crash.

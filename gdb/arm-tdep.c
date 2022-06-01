@@ -1437,7 +1437,7 @@ thumb_analyze_prologue (struct gdbarch *gdbarch,
       cache->framesize = -regs[ARM_SP_REGNUM].k;
     }
 
-  for (i = 0; i < 16; i++)
+  for (i = 0; i < gdbarch_num_regs (gdbarch); i++)
     if (stack.find_reg (gdbarch, i, &offset))
       cache->saved_regs[i].set_addr (offset);
 
@@ -3438,13 +3438,13 @@ arm_m_exception_cache (struct frame_info *this_frame)
      "B1.5.6 Exception entry behavior" in
      "ARMv7-M Architecture Reference Manual".  */
   cache->saved_regs[0].set_addr (unwound_sp + sp_r0_offset);
-  cache->saved_regs[1].set_addr (unwound_sp + sp_r0_offset + 4);
-  cache->saved_regs[2].set_addr (unwound_sp + sp_r0_offset + 8);
-  cache->saved_regs[3].set_addr (unwound_sp + sp_r0_offset + 12);
-  cache->saved_regs[ARM_IP_REGNUM].set_addr (unwound_sp + sp_r0_offset + 16);
-  cache->saved_regs[ARM_LR_REGNUM].set_addr (unwound_sp + sp_r0_offset + 20);
-  cache->saved_regs[ARM_PC_REGNUM].set_addr (unwound_sp + sp_r0_offset + 24);
-  cache->saved_regs[ARM_PS_REGNUM].set_addr (unwound_sp + sp_r0_offset + 28);
+  cache->saved_regs[1].set_addr (unwound_sp + sp_r0_offset + 0x04);
+  cache->saved_regs[2].set_addr (unwound_sp + sp_r0_offset + 0x08);
+  cache->saved_regs[3].set_addr (unwound_sp + sp_r0_offset + 0x0C);
+  cache->saved_regs[ARM_IP_REGNUM].set_addr (unwound_sp + sp_r0_offset + 0x10);
+  cache->saved_regs[ARM_LR_REGNUM].set_addr (unwound_sp + sp_r0_offset + 0x14);
+  cache->saved_regs[ARM_PC_REGNUM].set_addr (unwound_sp + sp_r0_offset + 0x18);
+  cache->saved_regs[ARM_PS_REGNUM].set_addr (unwound_sp + sp_r0_offset + 0x1C);
 
   /* Check EXC_RETURN bit FTYPE if extended stack frame (FPU regs stored)
      type used.  */
@@ -3464,10 +3464,10 @@ arm_m_exception_cache (struct frame_info *this_frame)
 
       /* Extended stack frame type used.  */
       fpu_regs_stack_offset = unwound_sp + sp_r0_offset + 0x20;
-      for (i = 0; i < 16; i++)
+      for (i = 0; i < 8; i++)
 	{
 	  cache->saved_regs[ARM_D0_REGNUM + i].set_addr (fpu_regs_stack_offset);
-	  fpu_regs_stack_offset += 4;
+	  fpu_regs_stack_offset += 8;
 	}
       cache->saved_regs[ARM_FPSCR_REGNUM].set_addr (unwound_sp + sp_r0_offset + 0x60);
       fpu_regs_stack_offset += 4;
@@ -3476,10 +3476,10 @@ arm_m_exception_cache (struct frame_info *this_frame)
 	{
 	  /* Handle floating-point callee saved registers.  */
 	  fpu_regs_stack_offset = 0x90;
-	  for (i = 16; i < 32; i++)
+	  for (i = 8; i < 16; i++)
 	    {
 	      cache->saved_regs[ARM_D0_REGNUM + i].set_addr (fpu_regs_stack_offset);
-	      fpu_regs_stack_offset += 4;
+	      fpu_regs_stack_offset += 8;
 	    }
 
 	  arm_cache_set_active_sp_value (cache, tdep, unwound_sp + sp_r0_offset + 0xD0);
@@ -3499,7 +3499,8 @@ arm_m_exception_cache (struct frame_info *this_frame)
   /* If bit 9 of the saved xPSR is set, then there is a four-byte
      aligner between the top of the 32-byte stack frame and the
      previous context's stack pointer.  */
-  if (safe_read_memory_integer (unwound_sp + sp_r0_offset + 28, 4, byte_order, &xpsr)
+  if (safe_read_memory_integer (unwound_sp + sp_r0_offset + 0x1C, 4,
+				byte_order, &xpsr)
       && (xpsr & (1 << 9)) != 0)
     arm_cache_set_active_sp_value (cache, tdep,
 				   arm_cache_get_prev_sp_value (cache, tdep) + 4);
@@ -3556,15 +3557,6 @@ arm_m_exception_prev_register (struct frame_info *this_frame,
     {
       sp_value = arm_cache_get_sp_register (cache, tdep, prev_regnum);
       return frame_unwind_got_constant (this_frame, prev_regnum, sp_value);
-    }
-
-  if (prev_regnum == ARM_PC_REGNUM)
-    {
-      CORE_ADDR lr = frame_unwind_register_unsigned (this_frame, ARM_LR_REGNUM);
-      struct gdbarch *gdbarch = get_frame_arch (this_frame);
-
-      return frame_unwind_got_constant (this_frame, prev_regnum,
-					arm_addr_bits_remove (gdbarch, lr));
     }
 
   return trad_frame_get_prev_register (this_frame, cache->saved_regs,
