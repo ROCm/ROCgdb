@@ -21,8 +21,15 @@
 #include "gdbsupport/common-debug.h"
 #include "target/target.h"
 
-#ifdef __CYGWIN__
+#undef GetModuleFileNameEx
+
+#ifndef __CYGWIN__
+#define GetModuleFileNameEx GetModuleFileNameExA
+#else
+#include <sys/cygwin.h>
 #define __USEWIDE
+typedef wchar_t cygwin_buf_t;
+#define GetModuleFileNameEx GetModuleFileNameExW
 #endif
 
 namespace windows_nat
@@ -191,7 +198,7 @@ windows_process_info::get_exec_module_filename (char *exe_name_ret,
        to POSIX format into the destination buffer.  */
     cygwin_buf_t *pathbuf = (cygwin_buf_t *) alloca (exe_name_max_len * sizeof (cygwin_buf_t));
 
-    len = GetModuleFileNameEx (current_process_handle,
+    len = GetModuleFileNameEx (handle,
 			       dh_buf, pathbuf, exe_name_max_len);
     if (len == 0)
       error (_("Error getting executable filename: %u."),

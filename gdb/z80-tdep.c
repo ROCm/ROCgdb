@@ -109,7 +109,7 @@ struct z80_unwind_cache
   struct trad_frame_saved_reg *saved_regs;
 };
 
-enum instruction_type
+enum z80_instruction_type
 {
   insn_default,
   insn_z80,
@@ -139,17 +139,17 @@ enum instruction_type
   insn_force_nop /* invalid opcode prefix */
 };
 
-struct insn_info
+struct z80_insn_info
 {
   gdb_byte code;
   gdb_byte mask;
   gdb_byte size; /* without prefix(es) */
-  enum instruction_type type;
+  enum z80_instruction_type type;
 };
 
 /* Constants */
 
-static const struct insn_info *
+static const struct z80_insn_info *
 z80_get_insn_info (struct gdbarch *gdbarch, const gdb_byte *buf, int *size);
 
 static const char *z80_reg_names[] =
@@ -776,7 +776,7 @@ z80_software_single_step (struct regcache *regcache)
   ULONGEST addr;
   int opcode;
   int size;
-  const struct insn_info *info;
+  const struct z80_insn_info *info;
   std::vector<CORE_ADDR> ret (1);
   struct gdbarch *gdbarch = target_gdbarch ();
 
@@ -860,9 +860,9 @@ z80_software_single_step (struct regcache *regcache)
 static unsigned (*cache_ovly_region_table)[3] = 0;
 static unsigned cache_novly_regions;
 static CORE_ADDR cache_ovly_region_table_base = 0;
-enum ovly_index
+enum z80_ovly_index
   {
-    VMA, OSIZE, MAPPED_TO_LMA
+    Z80_VMA, Z80_OSIZE, Z80_MAPPED_TO_LMA
   };
 
 static void
@@ -952,12 +952,12 @@ z80_overlay_update_1 (struct obj_section *osect)
 
   /* find region corresponding to the section VMA */
   for (i = 0; i < cache_novly_regions; i++)
-    if (cache_ovly_region_table[i][VMA] == vma)
+    if (cache_ovly_region_table[i][Z80_VMA] == vma)
 	break;
   if (i == cache_novly_regions)
     return 0; /* no such region */
 
-  lma = cache_ovly_region_table[i][MAPPED_TO_LMA];
+  lma = cache_ovly_region_table[i][Z80_MAPPED_TO_LMA];
   i = 0;
 
   /* we have interest for sections with same VMA */
@@ -995,9 +995,9 @@ z80_overlay_update (struct obj_section *osect)
 	bfd_vma vma = bfd_section_vma (bsect);
 
 	for (int i = 0; i < cache_novly_regions; ++i)
-	  if (cache_ovly_region_table[i][VMA] == vma)
+	  if (cache_ovly_region_table[i][Z80_VMA] == vma)
 	    osect->ovly_mapped =
-	      (cache_ovly_region_table[i][MAPPED_TO_LMA] == lma);
+	      (cache_ovly_region_table[i][Z80_MAPPED_TO_LMA] == lma);
       }
 }
 
@@ -1007,7 +1007,7 @@ z80_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[8];
   int size;
-  const struct insn_info *info;
+  const struct z80_insn_info *info;
   read_memory (addr, buf, sizeof(buf));
   info = z80_get_insn_info (gdbarch, buf, &size);
   if (info)
@@ -1027,7 +1027,7 @@ z80_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[8];
   int size;
-  const struct insn_info *info;
+  const struct z80_insn_info *info;
   read_memory (addr, buf, sizeof(buf));
   info = z80_get_insn_info (gdbarch, buf, &size);
   if (info)
@@ -1046,7 +1046,7 @@ z80_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[8];
   int size;
-  const struct insn_info *info;
+  const struct z80_insn_info *info;
   read_memory (addr, buf, sizeof(buf));
   info = z80_get_insn_info (gdbarch, buf, &size);
   if (info)
@@ -1190,7 +1190,7 @@ z80_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 }
 
 /* Table to disassemble machine codes without prefix.  */
-static const struct insn_info
+static const struct z80_insn_info
 ez80_main_insn_table[] =
 { /* table with double prefix check */
   { 0100, 0377, 0, insn_force_nop}, //double prefix
@@ -1237,7 +1237,7 @@ ez80_main_insn_table[] =
   { 0000, 0000, 1, insn_default  }  //others
 } ;
 
-static const struct insn_info
+static const struct z80_insn_info
 ez80_adl_main_insn_table[] =
 { /* table with double prefix check */
   { 0100, 0377, 0, insn_force_nop}, //double prefix
@@ -1286,7 +1286,7 @@ ez80_adl_main_insn_table[] =
 /* ED prefix opcodes table.
    Note the instruction length does include the ED prefix (+ 1 byte)
 */
-static const struct insn_info
+static const struct z80_insn_info
 ez80_ed_insn_table[] =
 {
   /* eZ80 only instructions */
@@ -1306,7 +1306,7 @@ ez80_ed_insn_table[] =
   { 0000, 0000, 1, insn_default    }
 };
 
-static const struct insn_info
+static const struct z80_insn_info
 ez80_adl_ed_insn_table[] =
 {
   { 0002, 0366, 2, insn_default }, //"lea rr,ii+d"
@@ -1324,7 +1324,7 @@ ez80_adl_ed_insn_table[] =
 };
 
 /* table for FD and DD prefixed instructions */
-static const struct insn_info
+static const struct z80_insn_info
 ez80_ddfd_insn_table[] =
 {
   /* ez80 only instructions */
@@ -1355,7 +1355,7 @@ ez80_ddfd_insn_table[] =
   { 0000, 0000, 0, insn_default }  //not an instruction, exec DD/FD as NOP
 };
 
-static const struct insn_info
+static const struct z80_insn_info
 ez80_adl_ddfd_insn_table[] =
 {
   { 0007, 0307, 2, insn_default }, //"ld rr,(ii+d)"
@@ -1386,11 +1386,11 @@ ez80_adl_ddfd_insn_table[] =
 
 /* Return pointer to instruction information structure corresponded to opcode
    in buf.  */
-static const struct insn_info *
+static const struct z80_insn_info *
 z80_get_insn_info (struct gdbarch *gdbarch, const gdb_byte *buf, int *size)
 {
   int code;
-  const struct insn_info *info;
+  const struct z80_insn_info *info;
   unsigned long mach = gdbarch_bfd_arch_info (gdbarch)->mach;
   *size = 0;
   switch (mach)

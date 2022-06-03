@@ -79,11 +79,9 @@ static windows_process_info windows_process;
 
 #undef STARTUPINFO
 #undef CreateProcess
-#undef GetModuleFileNameEx
 
 #ifndef __CYGWIN__
 # define __PMAX	(MAX_PATH + 1)
-# define GetModuleFileNameEx GetModuleFileNameExA
 # define STARTUPINFO STARTUPINFOA
 # define CreateProcess CreateProcessA
 #else
@@ -93,7 +91,6 @@ static windows_process_info windows_process;
   static CORE_ADDR cygwin_load_end;
 #   define __USEWIDE
     typedef wchar_t cygwin_buf_t;
-#   define GetModuleFileNameEx GetModuleFileNameExW
 #   define STARTUPINFO STARTUPINFOW
 #   define CreateProcess CreateProcessW
 #endif
@@ -657,8 +654,8 @@ static std::vector<windows_solib> solibs;
 static windows_solib *
 windows_make_so (const char *name, LPVOID load_addr)
 {
-  char *p;
 #ifndef __CYGWIN__
+  char *p;
   char buf[__PMAX];
   char cwd[__PMAX];
   WIN32_FIND_DATA w32_fd;
@@ -714,10 +711,10 @@ windows_make_so (const char *name, LPVOID load_addr)
 #else
   if (buf[0])
     {
-      char name[SO_NAME_MAX_PATH_SIZE];
-      cygwin_conv_path (CCP_WIN_W_TO_POSIX, buf, name,
+      char cname[SO_NAME_MAX_PATH_SIZE];
+      cygwin_conv_path (CCP_WIN_W_TO_POSIX, buf, cname,
 			SO_NAME_MAX_PATH_SIZE);
-      so->name = name;
+      so->name = cname;
     }
   else
     {
@@ -741,7 +738,7 @@ windows_make_so (const char *name, LPVOID load_addr)
     {
       asection *text = NULL;
 
-      gdb_bfd_ref_ptr abfd (gdb_bfd_open (so->name, "pei-i386"));
+      gdb_bfd_ref_ptr abfd (gdb_bfd_open (so->name.c_str(), "pei-i386"));
 
       if (abfd == NULL)
 	return so;
@@ -887,7 +884,7 @@ windows_nat::windows_process_info::handle_output_debug_string
 	  if (!retval)
 	    retval = current_event.dwThreadId;
 	  else if ((x = (LPCVOID) (uintptr_t) strtoull (p, NULL, 0))
-		   && ReadProcessMemory (current_process_handle, x,
+		   && ReadProcessMemory (handle, x,
 					 &saved_context,
 					 __COPY_CONTEXT_SIZE, &n)
 		   && n == __COPY_CONTEXT_SIZE)
