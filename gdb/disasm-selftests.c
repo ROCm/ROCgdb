@@ -50,11 +50,29 @@ print_one_insn_test (struct gdbarch *gdbarch)
       len = sizeof (arm_insn);
       break;
     case bfd_arch_ia64:
-    case bfd_arch_mep:
-    case bfd_arch_mips:
-    case bfd_arch_tic6x:
-    case bfd_arch_xtensa:
+      /* We get:
+	 internal-error: gdbarch_sw_breakpoint_from_kind:
+	 Assertion `gdbarch->sw_breakpoint_from_kind != NULL' failed.  */
       return;
+    case bfd_arch_mep:
+      /* Disassembles as '*unknown*' insn, then len self-check fails.  */
+      return;
+    case bfd_arch_mips:
+      if (gdbarch_bfd_arch_info (gdbarch)->mach == bfd_mach_mips16)
+	/* Disassembles insn, but len self-check fails.  */
+	return;
+      goto generic_case;
+    case bfd_arch_tic6x:
+      /* Disassembles as '<undefined instruction 0x56454314>' insn, but len
+	 self-check passes, so let's allow it.  */
+      goto generic_case;
+    case bfd_arch_xtensa:
+      /* Disassembles insn, but len self-check fails.  */
+      return;
+    case bfd_arch_or1k:
+      /* Disassembles as '*unknown*' insn, but len self-check passes, so let's
+	 allow it.  */
+      goto generic_case;
     case bfd_arch_s390:
       /* nopr %r7 */
       static const gdb_byte s390_insn[] = {0x07, 0x07};
@@ -171,7 +189,7 @@ print_one_insn_test (struct gdbarch *gdbarch)
 				    const gdb_byte *insn,
 				    size_t len)
       : gdb_disassembler (gdbarch,
-			  (run_verbose () ? gdb_stdout : &null_stream),
+			  (run_verbose () ? gdb_stdlog : &null_stream),
 			  gdb_disassembler_test::read_memory),
 	m_insn (insn), m_len (len)
     {
@@ -180,16 +198,10 @@ print_one_insn_test (struct gdbarch *gdbarch)
     int
     print_insn (CORE_ADDR memaddr)
     {
-      if (run_verbose ())
-	{
-	  gdb_printf (stream (), "%s ",
-		      gdbarch_bfd_arch_info (arch ())->arch_name);
-	}
-
       int len = gdb_disassembler::print_insn (memaddr);
 
       if (run_verbose ())
-	gdb_printf (stream (), "\n");
+	debug_printf ("\n");
 
       return len;
     }
