@@ -28,6 +28,7 @@
 #include "dwarf2/index-cache.h"
 #include "dwarf2/mapped-index.h"
 #include "dwarf2/section.h"
+#include "dwarf2/cu.h"
 #include "filename-seen-cache.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "gdbsupport/hash_enum.h"
@@ -466,9 +467,6 @@ public:
 		     gdb::hash_enum<sect_offset>>
     abstract_to_concrete;
 
-  /* CUs that are queued to be read.  */
-  gdb::optional<std::queue<dwarf2_queue_item>> queue;
-
   /* The address map that is used by the DWARF index code.  */
   struct addrmap *index_addrmap = nullptr;
 };
@@ -547,7 +545,7 @@ struct dwarf2_per_objfile
   dwarf2_cu *get_cu (dwarf2_per_cu_data *per_cu);
 
   /* Set the dwarf2_cu matching PER_CU for this objfile.  */
-  void set_cu (dwarf2_per_cu_data *per_cu, dwarf2_cu *cu);
+  void set_cu (dwarf2_per_cu_data *per_cu, std::unique_ptr<dwarf2_cu> cu);
 
   /* Remove/free the dwarf2_cu matching PER_CU for this objfile.  */
   void remove_cu (dwarf2_per_cu_data *per_cu);
@@ -577,6 +575,9 @@ struct dwarf2_per_objfile
   /* The CU containing the m_builder in scope.  */
   dwarf2_cu *sym_cu = nullptr;
 
+  /* CUs that are queued to be read.  */
+  gdb::optional<std::queue<dwarf2_queue_item>> queue;
+
 private:
   /* Hold the corresponding compunit_symtab for each CU or TU.  This
      is indexed by dwarf2_per_cu_data::index.  A NULL value means
@@ -596,7 +597,8 @@ private:
 
   /* Map from the objfile-independent dwarf2_per_cu_data instances to the
      corresponding objfile-dependent dwarf2_cu instances.  */
-  std::unordered_map<dwarf2_per_cu_data *, dwarf2_cu *> m_dwarf2_cus;
+  std::unordered_map<dwarf2_per_cu_data *,
+		     std::unique_ptr<dwarf2_cu>> m_dwarf2_cus;
 };
 
 /* Get the dwarf2_per_objfile associated to OBJFILE.  */
