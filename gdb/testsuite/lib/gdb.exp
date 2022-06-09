@@ -3239,10 +3239,6 @@ gdb_caching_proc skip_altivec_tests {
     }
 
     # Make sure we have a compiler that understands altivec.
-    if [get_compiler_info] {
-       warning "Could not get compiler info"
-       return 1
-    }
     if [test_compiler_info gcc*] {
         set compile_flags "additional_flags=-maltivec"
     } elseif [test_compiler_info xlc*] {
@@ -3358,10 +3354,6 @@ gdb_caching_proc skip_vsx_tests {
     }
 
     # Make sure we have a compiler that understands altivec.
-    if [get_compiler_info] {
-       warning "Could not get compiler info"
-       return 1
-    }
     if [test_compiler_info gcc*] {
         set compile_flags "additional_flags=-mvsx"
     } elseif [test_compiler_info xlc*] {
@@ -4121,7 +4113,8 @@ set gcc_compiled		0
 #
 # -- chastain 2004-01-06
 
-proc get_compiler_info {{arg ""}} {
+proc get_compiler_info {{language "c"}} {
+
     # For compiler.c, compiler.cc and compiler.F90.
     global srcdir
 
@@ -4130,22 +4123,23 @@ proc get_compiler_info {{arg ""}} {
     global tool
 
     # These come from compiler.c, compiler.cc or compiler.F90.
-    global compiler_info
+    gdb_persistent_global compiler_info_cache
 
-    # Legacy global data symbols.
-    global gcc_compiled
-
-    if [info exists compiler_info] {
+    if [info exists compiler_info_cache($language)] {
 	# Already computed.
 	return 0
     }
 
     # Choose which file to preprocess.
-    set ifile "${srcdir}/lib/compiler.c"
-    if { $arg == "c++" } {
+    if { $language == "c++" } {
 	set ifile "${srcdir}/lib/compiler.cc"
-    } elseif { $arg == "f90" } {
+    } elseif { $language == "f90" } {
 	set ifile "${srcdir}/lib/compiler.F90"
+    } elseif { $language == "c" } {
+	set ifile "${srcdir}/lib/compiler.c"
+    } else {
+	perror "Unable to fetch compiler version for language: $language"
+	return -1
     }
 
     # Run $ifile through the right preprocessor.
@@ -4156,12 +4150,12 @@ proc get_compiler_info {{arg ""}} {
 	# We have to use -E and -o together, despite the comments
 	# above, because of how DejaGnu handles remote host testing.
 	set ppout "$outdir/compiler.i"
-	gdb_compile "${ifile}" "$ppout" preprocess [list "$arg" quiet getting_compiler_info]
+	gdb_compile "${ifile}" "$ppout" preprocess [list "$language" quiet getting_compiler_info]
 	set file [open $ppout r]
 	set cppout [read $file]
 	close $file
     } else {
-	set cppout [ gdb_compile "${ifile}" "" preprocess [list "$arg" quiet getting_compiler_info] ]
+	set cppout [ gdb_compile "${ifile}" "" preprocess [list "$language" quiet getting_compiler_info] ]
     }
     eval log_file $saved_log
 
@@ -4198,9 +4192,17 @@ proc get_compiler_info {{arg ""}} {
 	set compiler_info "unknown"
     }
 
-    # Set the legacy symbols.
-    set gcc_compiled 0
-    regexp "^gcc-(\[0-9\]+)-" "$compiler_info" matchall gcc_compiled
+    set compiler_info_cache($language) $compiler_info
+
+    # Set the legacy symbol gcc_compiled.
+    if { $language == "c" } {
+	# Legacy global data symbols.
+	gdb_persistent_global gcc_compiled
+
+	set gcc_compiled 0
+
+	regexp "^gcc-(\[0-9\]+)-" "$compiler_info" matchall gcc_compiled
+    }
 
     # Log what happened.
     verbose -log "get_compiler_info: $compiler_info"
@@ -4217,16 +4219,26 @@ proc get_compiler_info {{arg ""}} {
 # Otherwise the argument is a glob-style expression to match against
 # compiler_info.
 
-proc test_compiler_info { {compiler ""} {language ""} } {
-    global compiler_info
-    get_compiler_info $language
+proc test_compiler_info { {compiler ""} {language "c"} } {
+    gdb_persistent_global compiler_info_cache
+
+    if [get_compiler_info $language] {
+	# An error will already have been printed in this case.  Just
+	# return a suitable result depending on how the user called
+	# this function.
+	if [string match "" $compiler] {
+	    return ""
+	} else {
+	    return false
+	}
+    }
 
     # If no arg, return the compiler_info string.
     if [string match "" $compiler] {
-	return $compiler_info
+	return $compiler_info_cache($language)
     }
 
-    return [string match $compiler $compiler_info]
+    return [string match $compiler $compiler_info_cache($language)]
 }
 
 # Return the gcc major version, or -1.
@@ -4234,12 +4246,11 @@ proc test_compiler_info { {compiler ""} {language ""} } {
 # For gcc 7.5.0, the major version 7.
 
 proc gcc_major_version { } {
-    global compiler_info
     global decimal
     if { ![test_compiler_info "gcc-*"] } {
 	return -1
     }
-    set res [regexp gcc-($decimal)-($decimal)- $compiler_info \
+    set res [regexp gcc-($decimal)-($decimal)- [test_compiler_info] \
 		 dummy_var major minor]
     if { $res != 1 } {
 	return -1
@@ -4799,17 +4810,15 @@ proc gdb_compile_shlib_1 {sources dest options} {
 	set ada 1
     }
 
-    set info_options ""
     if { [lsearch -exact $options "c++"] >= 0 } {
 	set info_options "c++"
     } elseif { [lsearch -exact $options "f90"] >= 0 } {
 	set info_options "f90"
-    }
-    if [get_compiler_info ${info_options}] {
-       return -1
+    } else {
+	set info_options "c"
     }
 
-    switch -glob [test_compiler_info] {
+    switch -glob [test_compiler_info "" ${info_options}] {
         "xlc-*" {
             lappend obj_options "additional_flags=-qpic"
         }
@@ -6988,16 +6997,6 @@ proc build_executable_from_specs {testname executable options args} {
 
     set binfile [standard_output_file $executable]
 
-    set info_options ""
-    if { [lsearch -exact $options "c++"] >= 0 } {
-	set info_options "c++"
-    } elseif { [lsearch -exact $options "f90"] >= 0 } {
-	set info_options "f90"
-    }
-    if [get_compiler_info ${info_options}] {
-        return -1
-    }
-
     set func gdb_compile
     set func_index [lsearch -regexp $options {^(pthreads|shlib|shlib_pthreads|openmp)$}]
     if {$func_index != -1} {
@@ -8695,12 +8694,12 @@ proc get_set_option_choices {set_cmd} {
 # that the executable they produce can run.
 
 gdb_caching_proc arm_cc_for_target {
-    if {[info exists ARM_CC_FOR_TARGET]} {
+    if {[info exists ::ARM_CC_FOR_TARGET]} {
 	# If the user specified the compiler explicitly, then don't
 	# check whether the resulting binary runs outside GDB.  Assume
 	# that it does, and if it turns out it doesn't, then the user
 	# should get loud FAILs, instead of UNSUPPORTED.
-	return $ARM_CC_FOR_TARGET
+	return $::ARM_CC_FOR_TARGET
     }
 
     # Fallback to a few common compiler names.  Also confirm the
