@@ -28,7 +28,6 @@
 #else
 #include <sys/cygwin.h>
 #define __USEWIDE
-typedef wchar_t cygwin_buf_t;
 #define GetModuleFileNameEx GetModuleFileNameExW
 #endif
 
@@ -200,7 +199,7 @@ windows_process_info::get_exec_module_filename (char *exe_name_ret,
     /* Cygwin prefers that the path be in /x/y/z format, so extract
        the filename into a temporary buffer first, and then convert it
        to POSIX format into the destination buffer.  */
-    cygwin_buf_t *pathbuf = (cygwin_buf_t *) alloca (exe_name_max_len * sizeof (cygwin_buf_t));
+    wchar_t *pathbuf = (wchar_t *) alloca (exe_name_max_len * sizeof (wchar_t));
 
     len = GetModuleFileNameEx (handle,
 			       dh_buf, pathbuf, exe_name_max_len);
@@ -878,7 +877,7 @@ create_process (const wchar_t *image, wchar_t *command_line, DWORD flags,
 		void *environment, const wchar_t *cur_dir,
 		bool no_randomization,
 		STARTUPINFOW *startup_info,
-		PROCESS_INFORMATION *process_info);
+		PROCESS_INFORMATION *process_info)
 {
   return create_process_wrapper (CreateProcessW, image, command_line, flags,
 				 environment, cur_dir, no_randomization,

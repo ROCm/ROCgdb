@@ -156,8 +156,6 @@ static windows_per_inferior windows_process;
 # define STARTUPINFO STARTUPINFOA
 #else
 # define __PMAX	PATH_MAX
-#   define __USEWIDE
-    typedef wchar_t cygwin_buf_t;
 #   define STARTUPINFO STARTUPINFOW
 #endif
 
@@ -689,23 +687,16 @@ windows_make_so (const char *name, LPVOID load_addr)
       strcat (buf, "\\ntdll.dll");
     }
 #else
-  cygwin_buf_t buf[__PMAX];
+  wchar_t buf[__PMAX];
 
   buf[0] = 0;
   if (access (name, F_OK) != 0)
     {
       if (strcasecmp (name, "ntdll.dll") == 0)
-#ifdef __USEWIDE
 	{
 	  GetSystemDirectoryW (buf, sizeof (buf) / sizeof (wchar_t));
 	  wcscat (buf, L"\\ntdll.dll");
 	}
-#else
-	{
-	  GetSystemDirectoryA (buf, sizeof (buf) / sizeof (wchar_t));
-	  strcat (buf, "\\ntdll.dll");
-	}
-#endif
     }
 #endif
   windows_process.solibs.emplace_back ();
@@ -2351,13 +2342,13 @@ windows_nat_target::create_inferior (const char *exec_file,
 {
   STARTUPINFO si;
 #ifdef __CYGWIN__
-  cygwin_buf_t real_path[__PMAX];
-  cygwin_buf_t shell[__PMAX]; /* Path to shell */
-  cygwin_buf_t infcwd[__PMAX];
+  wchar_t real_path[__PMAX];
+  wchar_t shell[__PMAX]; /* Path to shell */
+  wchar_t infcwd[__PMAX];
   const char *sh;
-  cygwin_buf_t *toexec;
-  cygwin_buf_t *cygallargs;
-  cygwin_buf_t *args;
+  wchar_t *toexec;
+  wchar_t *cygallargs;
+  wchar_t *args;
   char **old_env = NULL;
   PWCHAR w32_env;
   size_t len;
@@ -2414,35 +2405,24 @@ windows_nat_target::create_inferior (const char *exec_file,
     {
       flags |= DEBUG_ONLY_THIS_PROCESS;
       if (cygwin_conv_path (CCP_POSIX_TO_WIN_W, exec_file, real_path,
-			    __PMAX * sizeof (cygwin_buf_t)) < 0)
+			    __PMAX * sizeof (wchar_t)) < 0)
 	error (_("Error starting executable: %d"), errno);
       toexec = real_path;
-#ifdef __USEWIDE
       len = mbstowcs (NULL, allargs, 0) + 1;
       if (len == (size_t) -1)
 	error (_("Error starting executable: %d"), errno);
       cygallargs = (wchar_t *) alloca (len * sizeof (wchar_t));
       mbstowcs (cygallargs, allargs, len);
-#else  /* !__USEWIDE */
-      cygallargs = allargs;
-#endif
     }
   else
     {
       sh = get_shell ();
       if (cygwin_conv_path (CCP_POSIX_TO_WIN_W, sh, shell, __PMAX) < 0)
 	error (_("Error starting executable via shell: %d"), errno);
-#ifdef __USEWIDE
       len = sizeof (L" -c 'exec  '") + mbstowcs (NULL, exec_file, 0)
 	    + mbstowcs (NULL, allargs, 0) + 2;
       cygallargs = (wchar_t *) alloca (len * sizeof (wchar_t));
       swprintf (cygallargs, len, L" -c 'exec %s %s'", exec_file, allargs);
-#else  /* !__USEWIDE */
-      len = (sizeof (" -c 'exec  '") + strlen (exec_file)
-	     + strlen (allargs) + 2);
-      cygallargs = (char *) alloca (len);
-      xsnprintf (cygallargs, len, " -c 'exec %s %s'", exec_file, allargs);
-#endif	/* __USEWIDE */
       toexec = shell;
       flags |= DEBUG_PROCESS;
     }
@@ -2452,18 +2432,11 @@ windows_nat_target::create_inferior (const char *exec_file,
 			   infcwd, strlen (inferior_cwd)) < 0)
     error (_("Error converting inferior cwd: %d"), errno);
 
-#ifdef __USEWIDE
-  args = (cygwin_buf_t *) alloca ((wcslen (toexec) + wcslen (cygallargs) + 2)
-				  * sizeof (wchar_t));
+  args = (wchar_t *) alloca ((wcslen (toexec) + wcslen (cygallargs) + 2)
+			     * sizeof (wchar_t));
   wcscpy (args, toexec);
   wcscat (args, L" ");
   wcscat (args, cygallargs);
-#else  /* !__USEWIDE */
-  args = (cygwin_buf_t *) alloca (strlen (toexec) + strlen (cygallargs) + 2);
-  strcpy (args, toexec);
-  strcat (args, " ");
-  strcat (args, cygallargs);
-#endif	/* !__USEWIDE */
 
 #ifdef CW_CVT_ENV_TO_WINENV
   /* First try to create a direct Win32 copy of the POSIX environment. */
@@ -2505,7 +2478,7 @@ windows_nat_target::create_inferior (const char *exec_file,
     }
 
   windows_init_thread_list ();
-  ret = create_process (args, flags, w32_env,
+  ret = create_process (nullptr, args, flags, w32_env,
 			inferior_cwd != nullptr ? infcwd : nullptr,
 			disable_randomization,
 			&si, &pi);
