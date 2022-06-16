@@ -540,6 +540,8 @@ int gdbpy_initialize_connection ()
 int gdbpy_initialize_micommands (void)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 void gdbpy_finalize_micommands ();
+int gdbpy_initialize_disasm ()
+  CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
 
 /* A wrapper for PyErr_Fetch that handles reference counting for the
    caller.  */
@@ -549,14 +551,12 @@ public:
 
   gdbpy_err_fetch ()
   {
-    PyErr_Fetch (&m_error_type, &m_error_value, &m_error_traceback);
-  }
+    PyObject *error_type, *error_value, *error_traceback;
 
-  ~gdbpy_err_fetch ()
-  {
-    Py_XDECREF (m_error_type);
-    Py_XDECREF (m_error_value);
-    Py_XDECREF (m_error_traceback);
+    PyErr_Fetch (&error_type, &error_value, &error_traceback);
+    m_error_type.reset (error_type);
+    m_error_value.reset (error_value);
+    m_error_traceback.reset (error_traceback);
   }
 
   /* Call PyErr_Restore using the values stashed in this object.
@@ -565,10 +565,9 @@ public:
 
   void restore ()
   {
-    PyErr_Restore (m_error_type, m_error_value, m_error_traceback);
-    m_error_type = nullptr;
-    m_error_value = nullptr;
-    m_error_traceback = nullptr;
+    PyErr_Restore (m_error_type.release (),
+		   m_error_value.release (),
+		   m_error_traceback.release ());
   }
 
   /* Return the string representation of the exception represented by
@@ -587,12 +586,19 @@ public:
 
   bool type_matches (PyObject *type) const
   {
-    return PyErr_GivenExceptionMatches (m_error_type, type);
+    return PyErr_GivenExceptionMatches (m_error_type.get (), type);
+  }
+
+  /* Return a new reference to the exception value object.  */
+
+  gdbpy_ref<> value ()
+  {
+    return m_error_value;
   }
 
 private:
 
-  PyObject *m_error_type, *m_error_value, *m_error_traceback;
+  gdbpy_ref<> m_error_type, m_error_value, m_error_traceback;
 };
 
 /* Called before entering the Python interpreter to install the
@@ -842,5 +848,19 @@ extern bool gdbpy_is_progspace (PyObject *obj);
 
 extern gdb::unique_xmalloc_ptr<char> gdbpy_fix_doc_string_indentation
   (gdb::unique_xmalloc_ptr<char> doc);
+
+/* Implement the 'print_insn' hook for Python.  Disassemble an instruction
+   whose address is ADDRESS for architecture GDBARCH.  The bytes of the
+   instruction should be read with INFO->read_memory_func as the
+   instruction being disassembled might actually be in a buffer.
+
+   Used INFO->fprintf_func to print the results of the disassembly, and
+   return the length of the instruction in octets.
+
+   If no instruction can be disassembled then return an empty value.  */
+
+extern gdb::optional<int> gdbpy_print_insn (struct gdbarch *gdbarch,
+					    CORE_ADDR address,
+					    disassemble_info *info);
 
 #endif /* PYTHON_PYTHON_INTERNAL_H */

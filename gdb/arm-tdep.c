@@ -288,6 +288,8 @@ struct arm_prologue_cache
 
   /* Active stack pointer.  */
   int active_sp_regnum;
+  int active_msp_regnum;
+  int active_psp_regnum;
 
   /* The frame base for this frame is just prev_sp - frame size.
      FRAMESIZE is the distance from the frame pointer to the
@@ -341,13 +343,26 @@ arm_cache_init (struct arm_prologue_cache *cache, struct frame_info *frame)
   arm_gdbarch_tdep *tdep = (arm_gdbarch_tdep *) gdbarch_tdep (gdbarch);
 
   arm_cache_init (cache, gdbarch);
+  cache->sp = get_frame_register_unsigned (frame, ARM_SP_REGNUM);
 
   if (tdep->have_sec_ext)
     {
+      CORE_ADDR msp_val = get_frame_register_unsigned (frame, tdep->m_profile_msp_regnum);
+      CORE_ADDR psp_val = get_frame_register_unsigned (frame, tdep->m_profile_psp_regnum);
+
       arm_cache_init_sp (tdep->m_profile_msp_s_regnum, &cache->msp_s, cache, frame);
       arm_cache_init_sp (tdep->m_profile_psp_s_regnum, &cache->psp_s, cache, frame);
       arm_cache_init_sp (tdep->m_profile_msp_ns_regnum, &cache->msp_ns, cache, frame);
       arm_cache_init_sp (tdep->m_profile_psp_ns_regnum, &cache->psp_ns, cache, frame);
+
+      if (msp_val == cache->msp_s)
+	cache->active_msp_regnum = tdep->m_profile_msp_s_regnum;
+      else if (msp_val == cache->msp_ns)
+	cache->active_msp_regnum = tdep->m_profile_msp_ns_regnum;
+      if (psp_val == cache->psp_s)
+	cache->active_psp_regnum = tdep->m_profile_psp_s_regnum;
+      else if (psp_val == cache->psp_ns)
+	cache->active_psp_regnum = tdep->m_profile_psp_ns_regnum;
 
       /* Use MSP_S as default stack pointer.  */
       if (cache->active_sp_regnum == ARM_SP_REGNUM)
@@ -370,9 +385,6 @@ static CORE_ADDR
 arm_cache_get_sp_register (struct arm_prologue_cache *cache,
 			   arm_gdbarch_tdep *tdep, int regnum)
 {
-  if (regnum == ARM_SP_REGNUM)
-    return cache->sp;
-
   if (tdep->have_sec_ext)
     {
       if (regnum == tdep->m_profile_msp_s_regnum)
@@ -383,6 +395,12 @@ arm_cache_get_sp_register (struct arm_prologue_cache *cache,
 	return cache->psp_s;
       if (regnum == tdep->m_profile_psp_ns_regnum)
 	return cache->psp_ns;
+      if (regnum == tdep->m_profile_msp_regnum)
+	return arm_cache_get_sp_register (cache, tdep, cache->active_msp_regnum);
+      if (regnum == tdep->m_profile_psp_regnum)
+	return arm_cache_get_sp_register (cache, tdep, cache->active_psp_regnum);
+      if (regnum == ARM_SP_REGNUM)
+	return arm_cache_get_sp_register (cache, tdep, cache->active_sp_regnum);
     }
   else if (tdep->is_m)
     {
@@ -390,7 +408,11 @@ arm_cache_get_sp_register (struct arm_prologue_cache *cache,
 	return cache->msp_s;
       if (regnum == tdep->m_profile_psp_regnum)
 	return cache->psp_s;
+      if (regnum == ARM_SP_REGNUM)
+	return arm_cache_get_sp_register (cache, tdep, cache->active_sp_regnum);
     }
+  else if (regnum == ARM_SP_REGNUM)
+    return cache->sp;
 
   gdb_assert_not_reached ("Invalid SP selection");
 }
@@ -411,12 +433,6 @@ static void
 arm_cache_set_active_sp_value (struct arm_prologue_cache *cache,
 			       arm_gdbarch_tdep *tdep, CORE_ADDR val)
 {
-  if (cache->active_sp_regnum == ARM_SP_REGNUM)
-    {
-      cache->sp = val;
-      return;
-    }
-
   if (tdep->have_sec_ext)
     {
       if (cache->active_sp_regnum == tdep->m_profile_msp_s_regnum)
@@ -437,6 +453,11 @@ arm_cache_set_active_sp_value (struct arm_prologue_cache *cache,
       else if (cache->active_sp_regnum == tdep->m_profile_psp_regnum)
 	cache->psp_s = val;
 
+      return;
+    }
+  else if (cache->active_sp_regnum == ARM_SP_REGNUM)
+    {
+      cache->sp = val;
       return;
     }
 
@@ -8290,8 +8311,8 @@ arm_displaced_step_fixup (struct gdbarch *gdbarch,
 static int
 gdb_print_insn_arm (bfd_vma memaddr, disassemble_info *info)
 {
-  gdb_disassembler *di
-    = static_cast<gdb_disassembler *>(info->application_data);
+  gdb_disassemble_info *di
+    = static_cast<gdb_disassemble_info *> (info->application_data);
   struct gdbarch *gdbarch = di->arch ();
 
   if (arm_pc_is_thumb (gdbarch, memaddr))

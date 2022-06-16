@@ -166,6 +166,8 @@ static const struct extension_language_ops python_extension_ops =
   gdbpy_colorize,
 
   gdbpy_colorize_disasm,
+
+  gdbpy_print_insn,
 };
 
 #endif /* HAVE_PYTHON */
@@ -1936,6 +1938,9 @@ init__gdb_module (void)
 static int
 emit_exiting_event (int exit_code)
 {
+  if (evregpy_no_listeners_p (gdb_py_events.gdb_exiting))
+    return 0;
+
   gdbpy_ref<> event_obj = create_event_object (&gdb_exiting_event_object_type);
   if (event_obj == nullptr)
     return -1;
@@ -2051,6 +2056,7 @@ do_start_initialization ()
 
   if (gdbpy_initialize_auto_load () < 0
       || gdbpy_initialize_values () < 0
+      || gdbpy_initialize_disasm () < 0
       || gdbpy_initialize_frames () < 0
       || gdbpy_initialize_commands () < 0
       || gdbpy_initialize_instruction () < 0
