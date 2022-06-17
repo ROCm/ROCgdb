@@ -412,8 +412,8 @@ bppy_get_location (PyObject *self, void *closure)
       && obj->bp->type != bp_hardware_breakpoint)
     Py_RETURN_NONE;
 
-  const char *str = event_location_to_string (obj->bp->location.get ());
-  if (! str)
+  const char *str = obj->bp->locspec->to_string ();
+  if (str == nullptr)
     str = "";
   return host_string_to_python_string (str).release ();
 }
@@ -821,7 +821,7 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	case bp_breakpoint:
 	case bp_hardware_breakpoint:
 	  {
-	    event_location_up location;
+	    location_spec_up locspec;
 	    symbol_name_match_type func_name_match_type
 	      = (qualified != NULL && PyObject_IsTrue (qualified)
 		  ? symbol_name_match_type::FULL
@@ -833,33 +833,36 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 		  copy_holder (xstrdup (skip_spaces (spec)));
 		const char *copy = copy_holder.get ();
 
-		location  = string_to_event_location (&copy,
-						      current_language,
-						      func_name_match_type);
+		locspec  = string_to_location_spec (&copy,
+						    current_language,
+						    func_name_match_type);
 	      }
 	    else
 	      {
-		struct explicit_location explicit_loc;
+		std::unique_ptr<explicit_location_spec> explicit_loc
+		  (new explicit_location_spec ());
 
-		initialize_explicit_location (&explicit_loc);
-		explicit_loc.source_filename = source;
-		explicit_loc.function_name = function;
-		explicit_loc.label_name = label;
+		explicit_loc->source_filename
+		  = source != nullptr ? xstrdup (source) : nullptr;
+		explicit_loc->function_name
+		  = function != nullptr ? xstrdup (function) : nullptr;
+		explicit_loc->label_name
+		  = label != nullptr ? xstrdup (label) : nullptr;
 
 		if (line != NULL)
-		  explicit_loc.line_offset =
-		    linespec_parse_line_offset (line.get ());
+		  explicit_loc->line_offset
+		    = linespec_parse_line_offset (line.get ());
 
-		explicit_loc.func_name_match_type = func_name_match_type;
+		explicit_loc->func_name_match_type = func_name_match_type;
 
-		location = new_explicit_location (&explicit_loc);
+		locspec.reset (explicit_loc.release ());
 	      }
 
-	    const struct breakpoint_ops *ops =
-	      breakpoint_ops_for_event_location (location.get (), false);
+	    const struct breakpoint_ops *ops
+	      = breakpoint_ops_for_location_spec (locspec.get (), false);
 
 	    create_breakpoint (gdbpy_enter::get_gdbarch (),
-			       location.get (), NULL, -1, NULL, false,
+			       locspec.get (), NULL, -1, NULL, false,
 			       0,
 			       temporary_bp, type,
 			       0,

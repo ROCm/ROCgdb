@@ -1978,8 +1978,8 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
 static void
 amd_dbgapi_target_breakpoint_fixup (struct breakpoint *b)
 {
-  if (b->location.get ()
-      && event_location_type (b->location.get ()) == ADDRESS_LOCATION
+  if (b->locspec != nullptr
+      && b->locspec->type () == ADDRESS_LOCATION_SPEC
       && is_amdgpu_arch (b->loc->gdbarch)
       && !is_amdgpu_arch (b->gdbarch))
     {
