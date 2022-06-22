@@ -1172,6 +1172,7 @@ static struct riscv_supported_ext riscv_supported_std_ext[] =
   {"c",		ISA_SPEC_CLASS_20190608,	2, 0, 0 },
   {"c",		ISA_SPEC_CLASS_2P2,		2, 0, 0 },
   {"v",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"h",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -1234,11 +1235,6 @@ static struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {NULL, 0, 0, 0, 0}
 };
 
-static struct riscv_supported_ext riscv_supported_std_h_ext[] =
-{
-  {NULL, 0, 0, 0, 0}
-};
-
 static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
 {
   {NULL, 0, 0, 0, 0}
@@ -1249,7 +1245,6 @@ const struct riscv_supported_ext *riscv_all_supported_ext[] =
   riscv_supported_std_ext,
   riscv_supported_std_z_ext,
   riscv_supported_std_s_ext,
-  riscv_supported_std_h_ext,
   riscv_supported_std_zxm_ext,
   NULL
 };
@@ -1259,7 +1254,6 @@ enum riscv_prefix_ext_class
 {
   RV_ISA_CLASS_Z = 1,
   RV_ISA_CLASS_S,
-  RV_ISA_CLASS_H,
   RV_ISA_CLASS_ZXM,
   RV_ISA_CLASS_X,
   RV_ISA_CLASS_UNKNOWN
@@ -1282,7 +1276,6 @@ static const struct riscv_parse_prefix_config parse_config[] =
   {RV_ISA_CLASS_ZXM, "zxm"},
   {RV_ISA_CLASS_Z, "z"},
   {RV_ISA_CLASS_S, "s"},
-  {RV_ISA_CLASS_H, "h"},
   {RV_ISA_CLASS_X, "x"},
   {RV_ISA_CLASS_UNKNOWN, NULL}
 };
@@ -1332,8 +1325,6 @@ riscv_recognized_prefixed_ext (const char *ext)
     return riscv_known_prefixed_ext (ext, riscv_supported_std_zxm_ext);
   case RV_ISA_CLASS_S:
     return riscv_known_prefixed_ext (ext, riscv_supported_std_s_ext);
-  case RV_ISA_CLASS_H:
-    return riscv_known_prefixed_ext (ext, riscv_supported_std_h_ext);
   case RV_ISA_CLASS_X:
     /* Only the single x is unrecognized.  */
     if (strcmp (ext, "x") != 0)
@@ -1345,7 +1336,7 @@ riscv_recognized_prefixed_ext (const char *ext)
 }
 
 /* Canonical order for single letter extensions.  */
-static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvn";
+static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvnh";
 
 /* Array is used to compare the orders of standard extensions quickly.  */
 static int riscv_ext_order[26] = {0};
@@ -1510,7 +1501,6 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     case RV_ISA_CLASS_ZXM: table = riscv_supported_std_zxm_ext; break;
     case RV_ISA_CLASS_Z: table = riscv_supported_std_z_ext; break;
     case RV_ISA_CLASS_S: table = riscv_supported_std_s_ext; break;
-    case RV_ISA_CLASS_H: table = riscv_supported_std_h_ext; break;
     case RV_ISA_CLASS_X:
       break;
     default:
@@ -1739,7 +1729,6 @@ riscv_parse_prefixed_ext (riscv_parse_subset_t *rps,
 {
   int major_version;
   int minor_version;
-  const char *last_name;
   enum riscv_prefix_ext_class class;
 
   while (*p)
@@ -1812,28 +1801,6 @@ riscv_parse_prefixed_ext (riscv_parse_subset_t *rps,
 	  rps->error_handler
 	    (_("%s: unknown prefixed ISA extension `%s'"),
 	     arch, subset);
-	  free (subset);
-	  return NULL;
-	}
-
-      /* Check that the extension isn't duplicate.  */
-      last_name = rps->subset_list->tail->name;
-      if (!strcasecmp (last_name, subset))
-	{
-	  rps->error_handler
-	    (_("%s: duplicate prefixed ISA extension `%s'"),
-	     arch, subset);
-	  free (subset);
-	  return NULL;
-	}
-
-      /* Check that the extension is in expected order.  */
-      if (riscv_compare_subsets (last_name, subset) > 0)
-	{
-	  rps->error_handler
-	    (_("%s: prefixed ISA extension `%s' is not in expected "
-	       "order.  It must come before `%s'"),
-	     arch, subset, last_name);
 	  free (subset);
 	  return NULL;
 	}
@@ -2423,6 +2390,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
 	      || riscv_subset_supports (rps, "zve32f"));
     case INSN_CLASS_SVINVAL:
       return riscv_subset_supports (rps, "svinval");
+    case INSN_CLASS_H:
+      return riscv_subset_supports (rps, "h");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2462,7 +2431,7 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
     case INSN_CLASS_F_AND_C:
       if (!riscv_subset_supports (rps, "f")
 	  && !riscv_subset_supports (rps, "c"))
-	return "f' and `c";
+	return _("f' and `c");
       else if (!riscv_subset_supports (rps, "f"))
 	return "f";
       else
@@ -2470,17 +2439,18 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
     case INSN_CLASS_D_AND_C:
       if (!riscv_subset_supports (rps, "d")
 	  && !riscv_subset_supports (rps, "c"))
-	return "d' and `c";
+	return _("d' and `c");
       else if (!riscv_subset_supports (rps, "d"))
 	return "d";
       else
 	return "c";
     case INSN_CLASS_F_OR_ZFINX:
-      return "f' or `zfinx";
+      /* i18n: Formatted like "extension `f' or `zfinx' required".  */
+      return _("f' or `zfinx");
     case INSN_CLASS_D_OR_ZDINX:
-      return "d' or `zdinx";
+      return _("d' or `zdinx");
     case INSN_CLASS_Q_OR_ZQINX:
-      return "q' or `zqinx";
+      return _("q' or `zqinx");
     case INSN_CLASS_ZBA:
       return "zba";
     case INSN_CLASS_ZBB:
@@ -2496,9 +2466,9 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
     case INSN_CLASS_ZBKX:
       return "zbkx";
     case INSN_CLASS_ZBB_OR_ZBKB:
-      return "zbb' or `zbkb";
+      return _("zbb' or `zbkb");
     case INSN_CLASS_ZBC_OR_ZBKC:
-      return "zbc' or `zbkc";
+      return _("zbc' or `zbkc");
     case INSN_CLASS_ZKND:
       return "zknd";
     case INSN_CLASS_ZKNE:
@@ -2506,25 +2476,27 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
     case INSN_CLASS_ZKNH:
       return "zknh";
     case INSN_CLASS_ZKND_OR_ZKNE:
-      return "zknd' or `zkne";
+      return _("zknd' or `zkne");
     case INSN_CLASS_ZKSED:
       return "zksed";
     case INSN_CLASS_ZKSH:
       return "zksh";
     case INSN_CLASS_V:
-      return "v' or `zve64x' or `zve32x";
+      return _("v' or `zve64x' or `zve32x");
     case INSN_CLASS_ZVEF:
-      return "v' or `zve64d' or `zve64f' or `zve32f";
+      return _("v' or `zve64d' or `zve64f' or `zve32f");
     case INSN_CLASS_SVINVAL:
       return "svinval";
     case INSN_CLASS_ZFH:
       return "zfh";
     case INSN_CLASS_ZFH_OR_ZHINX:
-      return "zfh' or 'zhinx";
+      return _("zfh' or 'zhinx");
     case INSN_CLASS_D_AND_ZFH_INX:
-      return "('d' and 'zfh') or 'zhinx";
+      return _("('d' and 'zfh') or 'zhinx");
     case INSN_CLASS_Q_AND_ZFH_INX:
-      return "('q' and 'zfh') or 'zhinx";
+      return _("('q' and 'zfh') or 'zhinx");
+    case INSN_CLASS_H:
+      return _("h");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

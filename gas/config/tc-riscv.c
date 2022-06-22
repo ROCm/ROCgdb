@@ -65,7 +65,9 @@ enum riscv_csr_class
   CSR_CLASS_F,		/* f-ext only */
   CSR_CLASS_ZKR,	/* zkr only */
   CSR_CLASS_V,		/* rvv only */
-  CSR_CLASS_DEBUG	/* debug CSR */
+  CSR_CLASS_DEBUG,	/* debug CSR */
+  CSR_CLASS_H,		/* hypervisor */
+  CSR_CLASS_H_32,	/* hypervisor, rv32 only */
 };
 
 /* This structure holds all restricted conditions for a CSR.  */
@@ -908,6 +910,12 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_I:
       need_check_version = true;
       extension = "i";
+      break;
+    case CSR_CLASS_H_32:
+      rv32_only = (xlen == 32);
+      /* Fall through.  */
+    case CSR_CLASS_H:
+      extension = "h";
       break;
     case CSR_CLASS_F:
       extension = "f";
@@ -2582,7 +2590,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    || imm_expr->X_add_number >= 64)
 			  {
 			    as_bad (_("bad value for compressed funct6 "
-				      "field, value must be 0...64"));
+				      "field, value must be 0...63"));
 			    break;
 			  }
 			INSERT_OPERAND (CFUNCT6, *ip, imm_expr->X_add_number);
