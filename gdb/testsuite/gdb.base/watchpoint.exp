@@ -23,10 +23,6 @@ if {[skip_watchpoint_tests]} {
     return
 }
 
-if [get_compiler_info] {
-    return -1
-}
-
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
      untested "failed to compile"
      return -1

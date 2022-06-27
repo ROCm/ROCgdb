@@ -704,8 +704,6 @@ fetch_indexed_string (dwarf_vma           idx,
   dwarf_vma index_offset;
   dwarf_vma str_offset;
   const char * ret;
-  unsigned char *curr, *end;
-  dwarf_vma length;
 
   if (index_section->start == NULL)
     return (dwo ? _("<no .debug_str_offsets.dwo section>")
@@ -715,99 +713,46 @@ fetch_indexed_string (dwarf_vma           idx,
     return (dwo ? _("<no .debug_str.dwo section>")
 		: _("<no .debug_str section>"));
 
-  curr = index_section->start;
-  end = curr + index_section->size;
-  /* FIXME: We should cache the length...  */
-  SAFE_BYTE_GET_AND_INC (length, curr, 4, end);
-  if (length == 0xffffffff)
-    {
-      if (offset_size != 8)
-	warn (_("Expected offset size of 8 but given %s"), dwarf_vmatoa ("x", offset_size));
-      SAFE_BYTE_GET_AND_INC (length, curr, 8, end);
-    }
-  else if (offset_size != 4)
-    {
-      warn (_("Expected offset size of 4 but given %s"), dwarf_vmatoa ("x", offset_size));
-    }
-
-  if (length == 0)
-    {
-      /* This is probably an old style .debug_str_offset section which
-	 just contains offsets and no header (and the first offset is 0).  */
-      curr = index_section->start;
-      length = index_section->size;
-    }
-  else
-    {
-      /* Skip the version and padding bytes.
-	 We assume that they are correct.  */
-      if (end - curr >= 4)
-	curr += 4;
-      else
-	curr = end;
-      if (length >= 4)
-	length -= 4;
-      else
-	length = 0;
-
-      if (this_set != NULL
-	  && this_set->section_sizes[DW_SECT_STR_OFFSETS] < length)
-	length = this_set->section_sizes[DW_SECT_STR_OFFSETS];
-
-      if (length > (dwarf_vma) (end - curr))
-	{
-	  warn (_("index table size too large for section %s vs %s\n"),
-		dwarf_vmatoa ("x", length),
-		dwarf_vmatoa ("x", index_section->size));
-	  length = end - curr;
-	}
-
-      if (length < offset_size)
-	{
-	  warn (_("index table size %s is too small\n"),
-		dwarf_vmatoa ("x", length));
-	  return _("<table too small>");
-	}
-    }
-
   index_offset = idx * offset_size;
 
   if (this_set != NULL)
     index_offset += this_set->section_offsets [DW_SECT_STR_OFFSETS];
 
-  if (index_offset >= length
-      || length - index_offset < offset_size)
+  index_offset += str_offsets_base;
+
+  if (index_offset + offset_size > index_section->size)
     {
-      warn (_("DW_FORM_GNU_str_index offset too big: 0x%s vs 0x%s\n"),
+      warn (_("string index of %s converts to an offset of 0x%s which is too big for section %s"),
+	    dwarf_vmatoa ("d", idx),
 	    dwarf_vmatoa ("x", index_offset),
-	    dwarf_vmatoa ("x", length));
-      return _("<index offset is too big>");
+	    str_section->name);
+
+      return _("<string index too big>");
     }
 
-  if (str_offsets_base > 0)
-    {
-      if (offset_size == 8)
-        str_offsets_base -= 16;
-      else
-        str_offsets_base -= 8;
-    }
+  /* FIXME: If we are being paranoid then we should also check to see if
+     IDX references an entry beyond the end of the string table pointed to
+     by STR_OFFSETS_BASE.  (Since there can be more than one string table
+     in a DWARF string section).  */
 
-  str_offset = byte_get (curr + index_offset + str_offsets_base, offset_size);
+  str_offset = byte_get (index_section->start + index_offset, offset_size);
+
   str_offset -= str_section->address;
   if (str_offset >= str_section->size)
     {
-      warn (_("DW_FORM_GNU_str_index indirect offset too big: 0x%s\n"),
+      warn (_("indirect offset too big: 0x%s\n"),
 	    dwarf_vmatoa ("x", str_offset));
       return _("<indirect index offset is too big>");
     }
 
   ret = (const char *) str_section->start + str_offset;
+
   /* Unfortunately we cannot rely upon str_section ending with a NUL byte.
      Since our caller is expecting to receive a well formed C string we test
      for the lack of a terminating byte here.  */
   if (strnlen (ret, str_section->size - str_offset)
       == str_section->size - str_offset)
-    ret = (const char *) _("<no NUL byte at end of section>");
+    return _("<no NUL byte at end of section>");
 
   return ret;
 }
@@ -839,7 +784,8 @@ fetch_indexed_addr (dwarf_vma offset, uint32_t num_bytes)
 
 static dwarf_vma
 fetch_indexed_value (dwarf_vma idx,
-		     enum dwarf_section_display_enum sec_enum)
+		     enum dwarf_section_display_enum sec_enum,
+		     dwarf_vma base_address)
 {
   struct dwarf_section *section = &debug_displays [sec_enum].section;
 
@@ -864,8 +810,12 @@ fetch_indexed_value (dwarf_vma idx,
  
   dwarf_vma offset = idx * pointer_size;
 
-  /* Offsets are biased by the size of the section header.  */
-  offset += bias;
+  /* Offsets are biased by the size of the section header
+     or base address.  */
+  if (sec_enum == loclists)
+    offset += base_address;
+  else
+    offset += bias;
 
   if (offset + pointer_size > section->size)
     {
@@ -2773,18 +2723,17 @@ read_and_display_attr_value (unsigned long           attribute,
 	{
 	  const char *suffix = section ? strrchr (section->name, '.') : NULL;
 	  bool dwo = suffix && strcmp (suffix, ".dwo") == 0;
+	  const char *strng;
 
+	  strng = fetch_indexed_string (uvalue, this_set, offset_size, dwo,
+					debug_info_p ? debug_info_p->str_offsets_base : 0);
 	  if (do_wide)
 	    /* We have already displayed the form name.  */
 	    printf (_("%c(offset: 0x%s): %s"), delimiter,
-		    dwarf_vmatoa ("x", uvalue),
-		    fetch_indexed_string (uvalue, this_set, offset_size, dwo,
-	                                  debug_info_p->str_offsets_base));
+		    dwarf_vmatoa ("x", uvalue), strng);
 	  else
 	    printf (_("%c(indexed string: 0x%s): %s"), delimiter,
-		    dwarf_vmatoa ("x", uvalue),
-		    fetch_indexed_string (uvalue, this_set, offset_size, dwo,
-	                                  debug_info_p->str_offsets_base));
+		    dwarf_vmatoa ("x", uvalue), strng);
 	}
       break;
 
@@ -2837,13 +2786,23 @@ read_and_display_attr_value (unsigned long           attribute,
 
 	  if (do_wide)
 	    /* We have already displayed the form name.  */
-	    printf (_("%c(index: 0x%s): %s"), delimiter,
-		    dwarf_vmatoa ("x", uvalue),
-		    dwarf_vmatoa ("x", fetch_indexed_addr (offset, pointer_size)));
+	    if (form == DW_FORM_loclistx)
+	      printf (_("%c(index: 0x%s): %s"), delimiter,
+	              dwarf_vmatoa ("x", uvalue),
+	              dwarf_vmatoa ("x", debug_info_p->loc_offsets [uvalue]));
+	    else
+	      printf (_("%c(index: 0x%s): %s"), delimiter,
+	              dwarf_vmatoa ("x", uvalue),
+	              dwarf_vmatoa ("x", fetch_indexed_addr (offset, pointer_size)));
 	  else
-	    printf (_("%c(addr_index: 0x%s): %s"), delimiter,
-		    dwarf_vmatoa ("x", uvalue),
-		    dwarf_vmatoa ("x", fetch_indexed_addr (offset, pointer_size)));
+	    if (form == DW_FORM_loclistx)
+	      printf (_("%c(addr_index: 0x%s): %s"), delimiter,
+	              dwarf_vmatoa ("x", uvalue),
+	              dwarf_vmatoa ("x", debug_info_p->loc_offsets [uvalue]));
+	    else
+	      printf (_("%c(addr_index: 0x%s): %s"), delimiter,
+	              dwarf_vmatoa ("x", uvalue),
+	              dwarf_vmatoa ("x", fetch_indexed_addr (offset, pointer_size)));
 	}
       break;
 
@@ -2927,9 +2886,8 @@ read_and_display_attr_value (unsigned long           attribute,
 			       lmax, sizeof (*debug_info_p->have_frame_base));
 		  debug_info_p->max_loc_offsets = lmax;
 		}
-
 	      if (form == DW_FORM_loclistx)
-		uvalue = fetch_indexed_value (uvalue, loclists);
+		uvalue = fetch_indexed_value (num, loclists, debug_info_p->loclists_base);
 	      else if (this_set != NULL)
 		uvalue += this_set->section_offsets [DW_SECT_LOC];
 
@@ -2998,7 +2956,7 @@ read_and_display_attr_value (unsigned long           attribute,
 		}
 
 	      if (form == DW_FORM_rnglistx)
-		uvalue = fetch_indexed_value (uvalue, rnglists);
+		uvalue = fetch_indexed_value (uvalue, rnglists, 0);
 
 	      debug_info_p->range_lists [num] = uvalue;
 	      debug_info_p->num_range_lists++;
@@ -10288,7 +10246,12 @@ display_debug_names (struct dwarf_section *section, void *file)
 	  printf (_("Out of %lu items there are %zu bucket clashes"
 		    " (longest of %zu entries).\n"),
 		  (unsigned long) name_count, hash_clash_count, longest_clash);
-	  assert (name_count == buckets_filled + hash_clash_count);
+	  
+	  if (name_count != buckets_filled + hash_clash_count)
+	    warn (_("The name_count (%lu) is not the same as the used bucket_count (%lu) + the hash clash count (%lu)"),
+		  (unsigned long) name_count,
+		  (unsigned long) buckets_filled,
+		  (unsigned long) hash_clash_count);
 	}
 
       struct abbrev_lookup_entry
