@@ -313,6 +313,60 @@ Contents of the .* section:
   DW_CFA_offset_extended_sf: r4675 \(vstval\) at cfa\+2316
   DW_CFA_offset_extended_sf: r4676 \(vsip\) at cfa\+2320
   DW_CFA_offset_extended_sf: r4736 \(vsatp\) at cfa\+2560
+  DW_CFA_offset_extended_sf: r4876 \(mstateen0\) at cfa\+3120
+  DW_CFA_offset_extended_sf: r4877 \(mstateen1\) at cfa\+3124
+  DW_CFA_offset_extended_sf: r4878 \(mstateen2\) at cfa\+3128
+  DW_CFA_offset_extended_sf: r4879 \(mstateen3\) at cfa\+3132
+  DW_CFA_offset_extended_sf: r4364 \(sstateen0\) at cfa\+1072
+  DW_CFA_offset_extended_sf: r4365 \(sstateen1\) at cfa\+1076
+  DW_CFA_offset_extended_sf: r4366 \(sstateen2\) at cfa\+1080
+  DW_CFA_offset_extended_sf: r4367 \(sstateen3\) at cfa\+1084
+  DW_CFA_offset_extended_sf: r5644 \(hstateen0\) at cfa\+6192
+  DW_CFA_offset_extended_sf: r5645 \(hstateen1\) at cfa\+6196
+  DW_CFA_offset_extended_sf: r5646 \(hstateen2\) at cfa\+6200
+  DW_CFA_offset_extended_sf: r5647 \(hstateen3\) at cfa\+6204
+  DW_CFA_offset_extended_sf: r4892 \(mstateen0h\) at cfa\+3184
+  DW_CFA_offset_extended_sf: r4893 \(mstateen1h\) at cfa\+3188
+  DW_CFA_offset_extended_sf: r4894 \(mstateen2h\) at cfa\+3192
+  DW_CFA_offset_extended_sf: r4895 \(mstateen3h\) at cfa\+3196
+  DW_CFA_offset_extended_sf: r5660 \(hstateen0h\) at cfa\+6256
+  DW_CFA_offset_extended_sf: r5661 \(hstateen1h\) at cfa\+6260
+  DW_CFA_offset_extended_sf: r5662 \(hstateen2h\) at cfa\+6264
+  DW_CFA_offset_extended_sf: r5663 \(hstateen3h\) at cfa\+6268
+  DW_CFA_offset_extended_sf: r7584 \(scountovf\) at cfa\+13952
+  DW_CFA_offset_extended_sf: r5923 \(mhpmevent3h\) at cfa\+7308
+  DW_CFA_offset_extended_sf: r5924 \(mhpmevent4h\) at cfa\+7312
+  DW_CFA_offset_extended_sf: r5925 \(mhpmevent5h\) at cfa\+7316
+  DW_CFA_offset_extended_sf: r5926 \(mhpmevent6h\) at cfa\+7320
+  DW_CFA_offset_extended_sf: r5927 \(mhpmevent7h\) at cfa\+7324
+  DW_CFA_offset_extended_sf: r5928 \(mhpmevent8h\) at cfa\+7328
+  DW_CFA_offset_extended_sf: r5929 \(mhpmevent9h\) at cfa\+7332
+  DW_CFA_offset_extended_sf: r5930 \(mhpmevent10h\) at cfa\+7336
+  DW_CFA_offset_extended_sf: r5931 \(mhpmevent11h\) at cfa\+7340
+  DW_CFA_offset_extended_sf: r5932 \(mhpmevent12h\) at cfa\+7344
+  DW_CFA_offset_extended_sf: r5933 \(mhpmevent13h\) at cfa\+7348
+  DW_CFA_offset_extended_sf: r5934 \(mhpmevent14h\) at cfa\+7352
+  DW_CFA_offset_extended_sf: r5935 \(mhpmevent15h\) at cfa\+7356
+  DW_CFA_offset_extended_sf: r5936 \(mhpmevent16h\) at cfa\+7360
+  DW_CFA_offset_extended_sf: r5937 \(mhpmevent17h\) at cfa\+7364
+  DW_CFA_offset_extended_sf: r5938 \(mhpmevent18h\) at cfa\+7368
+  DW_CFA_offset_extended_sf: r5939 \(mhpmevent19h\) at cfa\+7372
+  DW_CFA_offset_extended_sf: r5940 \(mhpmevent20h\) at cfa\+7376
+  DW_CFA_offset_extended_sf: r5941 \(mhpmevent21h\) at cfa\+7380
+  DW_CFA_offset_extended_sf: r5942 \(mhpmevent22h\) at cfa\+7384
+  DW_CFA_offset_extended_sf: r5943 \(mhpmevent23h\) at cfa\+7388
+  DW_CFA_offset_extended_sf: r5944 \(mhpmevent24h\) at cfa\+7392
+  DW_CFA_offset_extended_sf: r5945 \(mhpmevent25h\) at cfa\+7396
+  DW_CFA_offset_extended_sf: r5946 \(mhpmevent26h\) at cfa\+7400
+  DW_CFA_offset_extended_sf: r5947 \(mhpmevent27h\) at cfa\+7404
+  DW_CFA_offset_extended_sf: r5948 \(mhpmevent28h\) at cfa\+7408
+  DW_CFA_offset_extended_sf: r5949 \(mhpmevent29h\) at cfa\+7412
+  DW_CFA_offset_extended_sf: r5950 \(mhpmevent30h\) at cfa\+7416
+  DW_CFA_offset_extended_sf: r5951 \(mhpmevent31h\) at cfa\+7420
+  DW_CFA_offset_extended_sf: r4429 \(stimecmp\) at cfa\+1332
+  DW_CFA_offset_extended_sf: r4445 \(stimecmph\) at cfa\+1396
+  DW_CFA_offset_extended_sf: r4685 \(vstimecmp\) at cfa\+2356
+  DW_CFA_offset_extended_sf: r4701 \(vstimecmph\) at cfa\+2420
   DW_CFA_offset_extended_sf: r4163 \(utval\) at cfa\+268
   DW_CFA_offset_extended_sf: r4419 \(stval\) at cfa\+1292
   DW_CFA_offset_extended_sf: r4480 \(satp\) at cfa\+1536

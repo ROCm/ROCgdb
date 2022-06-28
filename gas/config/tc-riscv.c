@@ -68,6 +68,16 @@ enum riscv_csr_class
   CSR_CLASS_DEBUG,	/* debug CSR */
   CSR_CLASS_H,		/* hypervisor */
   CSR_CLASS_H_32,	/* hypervisor, rv32 only */
+  CSR_CLASS_SMSTATEEN,		/* Smstateen only */
+  CSR_CLASS_SMSTATEEN_AND_H,	/* Smstateen only (with H) */
+  CSR_CLASS_SMSTATEEN_32,	/* Smstateen RV32 only */
+  CSR_CLASS_SMSTATEEN_AND_H_32,	/* Smstateen RV32 only (with H) */
+  CSR_CLASS_SSCOFPMF,		/* Sscofpmf only */
+  CSR_CLASS_SSCOFPMF_32,	/* Sscofpmf RV32 only */
+  CSR_CLASS_SSTC,		/* Sstc only */
+  CSR_CLASS_SSTC_AND_H,		/* Sstc only (with H) */
+  CSR_CLASS_SSTC_32,		/* Sstc RV32 only */
+  CSR_CLASS_SSTC_AND_H_32,	/* Sstc RV32 only (with H) */
 };
 
 /* This structure holds all restricted conditions for a CSR.  */
@@ -899,20 +909,21 @@ riscv_csr_address (const char *csr_name,
   struct riscv_csr_extra *saved_entry = entry;
   enum riscv_csr_class csr_class = entry->csr_class;
   bool need_check_version = false;
-  bool rv32_only = true;
+  bool is_rv32_only = false;
+  bool is_h_required = false;
   const char* extension = NULL;
 
   switch (csr_class)
     {
     case CSR_CLASS_I_32:
-      rv32_only = (xlen == 32);
+      is_rv32_only = true;
       /* Fall through.  */
     case CSR_CLASS_I:
       need_check_version = true;
       extension = "i";
       break;
     case CSR_CLASS_H_32:
-      rv32_only = (xlen == 32);
+      is_rv32_only = true;
       /* Fall through.  */
     case CSR_CLASS_H:
       extension = "h";
@@ -926,6 +937,32 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_V:
       extension = "v";
       break;
+    case CSR_CLASS_SMSTATEEN:
+    case CSR_CLASS_SMSTATEEN_AND_H:
+    case CSR_CLASS_SMSTATEEN_32:
+    case CSR_CLASS_SMSTATEEN_AND_H_32:
+      is_rv32_only = (csr_class == CSR_CLASS_SMSTATEEN_32
+		      || csr_class == CSR_CLASS_SMSTATEEN_AND_H_32);
+      is_h_required = (csr_class == CSR_CLASS_SMSTATEEN_AND_H
+		      || csr_class == CSR_CLASS_SMSTATEEN_AND_H_32);
+      extension = "smstateen";
+      break;
+    case CSR_CLASS_SSCOFPMF_32:
+      is_rv32_only = true;
+      /* Fall through.  */
+    case CSR_CLASS_SSCOFPMF:
+      extension = "sscofpmf";
+      break;
+    case CSR_CLASS_SSTC:
+    case CSR_CLASS_SSTC_AND_H:
+    case CSR_CLASS_SSTC_32:
+    case CSR_CLASS_SSTC_AND_H_32:
+      is_rv32_only = (csr_class == CSR_CLASS_SSTC_32
+		      || csr_class == CSR_CLASS_SSTC_AND_H_32);
+      is_h_required = (csr_class == CSR_CLASS_SSTC_AND_H
+		      || csr_class == CSR_CLASS_SSTC_AND_H_32);
+      extension = "sstc";
+      break;
     case CSR_CLASS_DEBUG:
       break;
     default:
@@ -934,8 +971,10 @@ riscv_csr_address (const char *csr_name,
 
   if (riscv_opts.csr_check)
     {
-      if (!rv32_only)
+      if (is_rv32_only && xlen != 32)
 	as_warn (_("invalid CSR `%s', needs rv32i extension"), csr_name);
+      if (is_h_required && !riscv_subset_supports (&riscv_rps_as, "h"))
+	as_warn (_("invalid CSR `%s', needs `h' extension"), csr_name);
 
       if (extension != NULL
 	  && !riscv_subset_supports (&riscv_rps_as, extension))
