@@ -534,7 +534,11 @@ LIBGPROFNG = libgprofng.la
 # case both are empty.
 ZLIB = @zlibdir@ -lz
 ZLIBINC = @zlibinc@
-AM_CPPFLAGS = $(GPROFNG_CPPFLAGS) -DLOCALEDIR=\"@localedir@\" -I.. -I$(srcdir) \
+LOCALEDIR = @localedir@
+SYSCONFDIR = @sysconfdir@
+AM_CPPFLAGS = $(GPROFNG_CPPFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" \
+	-DSYSCONFDIR=\"$(SYSCONFDIR)\" \
+	-I.. -I$(srcdir) \
 	-I$(srcdir)/../common \
 	-I$(srcdir)/../../include -I$(srcdir)/../../opcodes \
 	-I../../bfd -I$(srcdir)/../../bfd $(ZLIBINC)
@@ -543,13 +547,6 @@ AM_CFLAGS = $(GPROFNG_CFLAGS) $(PTHREAD_CFLAGS) \
 	$(GPROFNG_NO_SWITCH_CFLAGS)
 
 AM_CXXFLAGS = $(AM_CFLAGS)
-man_MANS = gprofng.1 \
-	gp-archive.1 \
-	gp-collect-app.1 \
-	gp-display-src.1 \
-	gp-display-text.1
-
-MAINTAINERCLEANFILES = $(man_MANS)
 BUILT_SOURCES = QLParser.tab.hh
 EXTRA_DIST = QLParser.yy $(man_MANS)
 pkglib_LTLIBRARIES = $(LIBGPROFNG)
@@ -560,7 +557,7 @@ libgprofng_la_LIBADD = $(top_builddir)/../opcodes/libopcodes.la \
 	$(GPROFNG_LIBADD) \
 	$(PTHREAD_LIBS) -ldl
 
-dbedir = $(prefix)/etc
+dbedir = $(SYSCONFDIR)
 dbe_DATA = $(srcdir)/gprofng.rc
 gp_archive_SOURCES = gp-archive.cc ArchiveExp.cc
 gp_archive_LDADD = $(LIBGPROFNG) $(CLOCK_GETTIME_LINK) $(ZLIB)
@@ -572,6 +569,13 @@ gp_display_src_SOURCES = gp-display-src.cc
 gp_display_src_LDADD = $(LIBGPROFNG) $(CLOCK_GETTIME_LINK) $(ZLIB)
 gp_display_text_SOURCES = gp-display-text.cc ipc.cc ipcio.cc
 gp_display_text_LDADD = $(LIBGPROFNG) $(CLOCK_GETTIME_LINK) $(ZLIB)
+@BUILD_MAN_TRUE@man_MANS = gprofng.1 \
+@BUILD_MAN_TRUE@	gp-archive.1 \
+@BUILD_MAN_TRUE@	gp-collect-app.1 \
+@BUILD_MAN_TRUE@	gp-display-src.1 \
+@BUILD_MAN_TRUE@	gp-display-text.1
+
+@BUILD_MAN_TRUE@MAINTAINERCLEANFILES = $(man_MANS)
 
 # The man pages depend on the version number and on a help2man include file.
 @BUILD_MAN_TRUE@common_mandeps = $(top_srcdir)/../bfd/version.m4
