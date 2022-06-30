@@ -12221,7 +12221,10 @@ dwarf_select_sections_by_names (const char *names)
 	  if (strncmp (p, entry->option, len) == 0
 	      && (p[len] == ',' || p[len] == '\0'))
 	    {
-	      * entry->variable = entry->val;
+	      if (entry->val == 0)
+		* entry->variable = 0;
+	      else
+		* entry->variable = entry->val;
 	      result |= entry->val;
 
 	      p += len;
@@ -12265,7 +12268,10 @@ dwarf_select_sections_by_letters (const char *letters)
 	{
 	  if (entry->letter == * letters)
 	    {
-	      * entry->variable |= entry->val;
+	      if (entry->val == 0)
+		* entry->variable = 0;
+	      else
+		* entry->variable |= entry->val;
 	      result |= entry->val;
 	      break;
 	    }
