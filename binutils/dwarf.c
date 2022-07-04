@@ -4067,6 +4067,7 @@ process_debug_info (struct dwarf_section * section,
 	      need_base_address = 0;
 	      break;
 	    case DW_TAG_compile_unit:
+	    case DW_TAG_skeleton_unit:
 	      need_base_address = 1;	
 	      need_dwo_info = do_loc;
 	      break;
@@ -7829,6 +7830,7 @@ display_debug_str_offsets (struct dwarf_section *section,
   unsigned char *start = section->start;
   unsigned char *end = start + section->size;
   unsigned char *curr = start;
+  dwarf_vma debug_str_offsets_hdr_len;
 
   const char *suffix = strrchr (section->name, '.');
   bool dwo = suffix && strcmp (suffix, ".dwo") == 0;
@@ -7851,9 +7853,13 @@ display_debug_str_offsets (struct dwarf_section *section,
 	{
 	  SAFE_BYTE_GET_AND_INC (length, curr, 8, end);
 	  entry_length = 8;
+	  debug_str_offsets_hdr_len = 16;
 	}
       else
-	entry_length = 4;
+	{
+	  entry_length = 4;
+	  debug_str_offsets_hdr_len = 8;
+	}
 
       unsigned char *entries_end;
       if (length == 0)
@@ -7905,7 +7911,7 @@ display_debug_str_offsets (struct dwarf_section *section,
 	  SAFE_BYTE_GET_AND_INC (offset, curr, entry_length, entries_end);
 	  if (dwo)
 	    string = (const unsigned char *)
-	      fetch_indexed_string (idx, NULL, entry_length, dwo, 0);
+	      fetch_indexed_string (idx, NULL, entry_length, dwo, debug_str_offsets_hdr_len);
 	  else
 	    string = fetch_indirect_string (offset);
 
@@ -12065,7 +12071,7 @@ load_separate_debug_files (void * file, const char * filename)
 		      printf (_("  Directory: %s\n"), dir ? dir : _("<not-found>"));
 		      if (id != NULL)
 			display_data (printf (_("  ID:       ")), (unsigned char *) id, 8);
-		      else
+		      else if (debug_information[0].dwarf_version != 5)
 			printf (_("  ID:        <not specified>\n"));
 		      printf ("\n\n");
 		    }
