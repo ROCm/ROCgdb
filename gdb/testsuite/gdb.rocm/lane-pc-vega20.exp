@@ -259,28 +259,28 @@ Dwarf::assemble $asmfile_dwarf {
 	    struct_label: structure_type {
 		{DW_AT_name test_struct}
 		{DW_AT_byte_size 0x88 DW_FORM_sdata}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 19 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 19 DW_FORM_udata}
 	    } {
 		member {
 		    {DW_AT_name int_elem}
 		    {DW_AT_type :$int_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 21 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 21 DW_FORM_udata}
 		    {DW_AT_data_member_location 0 DW_FORM_sdata}
 		}
 		member {
 		    {DW_AT_name char_elem}
 		    {DW_AT_type :$char_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 22 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 22 DW_FORM_udata}
 		    {DW_AT_data_member_location 4 DW_FORM_sdata}
 		}
 		member {
 		    {DW_AT_name array_elem}
 		    {DW_AT_type :$array_32_int_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 23 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 23 DW_FORM_udata}
 		    {DW_AT_data_member_location 0x8 DW_FORM_sdata}
 		}
 	    }
@@ -296,28 +296,28 @@ Dwarf::assemble $asmfile_dwarf {
 	    local_struct_label: structure_type {
 		{DW_AT_name test_struct}
 		{DW_AT_byte_size 0x88 DW_FORM_sdata}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 19 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 19 DW_FORM_udata}
 	    } {
 		member {
 		    {DW_AT_name int_elem}
 		    {DW_AT_type :$int_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 21 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 21 DW_FORM_udata}
 		    {DW_AT_data_member_location 0 DW_FORM_sdata}
 		}
 		member {
 		    {DW_AT_name char_elem}
 		    {DW_AT_type :$char_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 22 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 22 DW_FORM_udata}
 		    {DW_AT_data_member_location 4 DW_FORM_sdata}
 		}
 		member {
 		    {DW_AT_name array_elem}
 		    {DW_AT_type :$array_32_int_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 23 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 23 DW_FORM_udata}
 		    {DW_AT_data_member_location 0x8 DW_FORM_sdata}
 		}
 	    }
@@ -381,16 +381,16 @@ Dwarf::assemble $asmfile_dwarf {
 	    DW_TAG_variable {
 		{DW_AT_type :$array_64_int_label}
 		{DW_AT_name "_lane_pc"}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 37 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 37 DW_FORM_udata}
 		{DW_AT_location 8 DW_FORM_loclistx}
 	    }
 
 	    DW_TAG_variable {
 		{DW_AT_name const_struct}
 		{DW_AT_type :$struct_label}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 26 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 26 DW_FORM_udata}
 		{DW_AT_location {
 		    DW_OP_addr $const_struct_src
 		} SPECIAL_expr}
@@ -400,8 +400,8 @@ Dwarf::assemble $asmfile_dwarf {
 	    DW_TAG_variable {
 		{DW_AT_name const_array}
 		{DW_AT_type :$array_32_int_label}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 29 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 29 DW_FORM_udata}
 		{DW_AT_location {
 		    DW_OP_addr $const_array_src
 		} SPECIAL_expr}
@@ -412,31 +412,31 @@ Dwarf::assemble $asmfile_dwarf {
 		{DW_AT_name AddrClassTest}
 		{DW_AT_low_pc "AddrClassTest" addr}
 		{DW_AT_high_pc "Lfunc_end6" addr}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 96 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 96 DW_FORM_udata}
 		{DW_AT_LLVM_lane_pc 2 DW_FORM_loclistx}
 	    } {
 		DW_TAG_formal_parameter {
 		    {DW_AT_type :$pointer_int_label}
 		    {DW_AT_name in}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 96 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 96 DW_FORM_udata}
 		    {DW_AT_location 6 DW_FORM_loclistx}
 		}
 
 		DW_TAG_formal_parameter {
 		    {DW_AT_type :$pointer_struct_label}
 		    {DW_AT_name out}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 96 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 96 DW_FORM_udata}
 		    {DW_AT_location 7 DW_FORM_loclistx}
 		}
 
 		DW_TAG_variable {
 		    {DW_AT_name gid}
 		    {DW_AT_type :$unsigned_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 97 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 97 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_regx $vgpr41_num
 			DW_OP_LLVM_push_lane
@@ -450,8 +450,8 @@ Dwarf::assemble $asmfile_dwarf {
 		DW_TAG_variable {
 		    {DW_AT_name local_struct}
 		    {DW_AT_type :$struct_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 98 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 98 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_constu 0x0
 			DW_OP_constu 0x3
@@ -465,15 +465,15 @@ Dwarf::assemble $asmfile_dwarf {
 		{DW_AT_name GenValue}
 		{DW_AT_low_pc "GenValue" addr}
 		{DW_AT_high_pc "Lfunc_end2" addr}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 35 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 35 DW_FORM_udata}
 		{DW_AT_LLVM_lane_pc 3 DW_FORM_loclistx}
 	    } {
 		DW_TAG_variable {
 		    {DW_AT_type :$array_32_int_label}
 		    {DW_AT_name array}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 38 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 38 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_bregx $sgpr33_num 0
 			DW_OP_constu $wave_size
@@ -486,8 +486,8 @@ Dwarf::assemble $asmfile_dwarf {
 		DW_TAG_variable {
 		    {DW_AT_name gid}
 		    {DW_AT_type :$unsigned_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 39 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 39 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_regx $vgpr0_num
 			DW_OP_LLVM_push_lane
@@ -501,8 +501,8 @@ Dwarf::assemble $asmfile_dwarf {
 		DW_TAG_variable {
 		    {DW_AT_type :$pointer_int_label}
 		    {DW_AT_name pconst_array_elem1}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 40 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 40 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_regx $vgpr1_num
 			DW_OP_LLVM_push_lane
@@ -522,8 +522,8 @@ Dwarf::assemble $asmfile_dwarf {
 		DW_TAG_variable {
 		    {DW_AT_type :$pointer_int_label}
 		    {DW_AT_name pconst_array_elem2}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 40 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 40 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_regx $vgpr3_num
 			DW_OP_LLVM_push_lane
@@ -546,23 +546,23 @@ Dwarf::assemble $asmfile_dwarf {
 		{DW_AT_name ChangeLocalContent}
 		{DW_AT_low_pc "ChangeLocalContent" addr}
 		{DW_AT_high_pc "Lfunc_end3" addr}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 55 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 55 DW_FORM_udata}
 		{DW_AT_LLVM_lane_pc 5 DW_FORM_loclistx}
 	    } {
 		DW_TAG_formal_parameter {
 		    {DW_AT_type :$local_pointer_int_label}
 		    {DW_AT_name plocal_content}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 55 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 55 DW_FORM_udata}
 		    {DW_AT_location 0 DW_FORM_loclistx}
 		}
 
 		DW_TAG_variable {
 		    {DW_AT_type :$array_32_int_label}
 		    {DW_AT_name array}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 58 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 58 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_bregx $sgpr33_num 0
 			DW_OP_constu $wave_size
@@ -577,8 +577,8 @@ Dwarf::assemble $asmfile_dwarf {
 		DW_TAG_variable {
 		    {DW_AT_name gid}
 		    {DW_AT_type :$unsigned_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 59 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 59 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_regx $vgpr40_num
 			DW_OP_LLVM_push_lane
@@ -590,14 +590,14 @@ Dwarf::assemble $asmfile_dwarf {
 		}
 
 		DW_TAG_lexical_block {
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 62 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 62 DW_FORM_udata}
 		} {
 		    DW_TAG_variable {
 			{DW_AT_name pconst_array_elem}
 			{DW_AT_type :$pointer_int_label}
-			{DW_AT_decl_file 1 DW_FORM_sdata}
-			{DW_AT_decl_line 63 DW_FORM_sdata}
+			{DW_AT_decl_file 1 DW_FORM_udata}
+			{DW_AT_decl_line 63 DW_FORM_udata}
 			{DW_AT_location {
 			    DW_OP_regx $vgpr0_num
 			    DW_OP_LLVM_push_lane
@@ -618,8 +618,8 @@ Dwarf::assemble $asmfile_dwarf {
 		    DW_TAG_variable {
 			{DW_AT_name temp}
 			{DW_AT_type :$int_label}
-			{DW_AT_decl_file 1 DW_FORM_sdata}
-			{DW_AT_decl_line 64 DW_FORM_sdata}
+			{DW_AT_decl_file 1 DW_FORM_udata}
+			{DW_AT_decl_line 64 DW_FORM_udata}
 			{DW_AT_location {
 			    DW_OP_regx $vgpr2_num
 			    DW_OP_LLVM_push_lane
@@ -636,15 +636,15 @@ Dwarf::assemble $asmfile_dwarf {
 		{DW_AT_name SendResults}
 		{DW_AT_low_pc "SendResults" addr}
 		{DW_AT_high_pc "Lfunc_end4" addr}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 82 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 82 DW_FORM_udata}
 		{DW_AT_LLVM_lane_pc 4 DW_FORM_loclistx}
 	    } {
 		DW_TAG_formal_parameter {
 		    {DW_AT_type :$local_pointer_struct_label}
 		    {DW_AT_name plocal_struct}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 82 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 82 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_regx $vgpr42_num
 			DW_OP_LLVM_push_lane
@@ -657,16 +657,16 @@ Dwarf::assemble $asmfile_dwarf {
 		DW_TAG_formal_parameter {
 		    {DW_AT_type :$pointer_struct_label}
 		    {DW_AT_name out}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 82 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 82 DW_FORM_udata}
 		    {DW_AT_location 1 DW_FORM_loclistx}
 		}
 
 		DW_TAG_variable {
 		    {DW_AT_name gid}
 		    {DW_AT_type :$unsigned_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 84 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 84 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_regx $vgpr0_num
 			DW_OP_LLVM_push_lane
