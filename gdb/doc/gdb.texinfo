@@ -27602,6 +27602,10 @@ Displayed as @samp{sienna_cichlid} by @value{GDBN} and denoted as
 Displayed as @samp{navy_flounder} by @value{GDBN} and denoted as
 @samp{gfx1031} by the compiler.
 
+@item Dimgrey Cavefish
+Displayed as @samp{dimgrey_cavefish} by @value{GDBN} and denoted as
+@samp{gfx1032} by the compiler.
+
 @end table
 
 @subsubsection @acronym{AMD ROCm} Source Languages
@@ -28831,7 +28835,7 @@ reported as @code{SIGFPE} signals.  This happens if the
 @item
 @value{GDBN} does not support single root I/O virtualization (SR-IOV)
 on any AMD GPU architecture that supports it.  That includes
-@samp{gfx1030} and @samp{gfx1031}.
+@samp{gfx1030}, @samp{gfx1031}, and @samp{gfx1032}.
 
 @end enumerate
 
