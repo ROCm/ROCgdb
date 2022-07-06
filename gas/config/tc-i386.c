@@ -2087,11 +2087,17 @@ operand_size_match (const insn_template *t)
     }
 
   /* Check reverse.  */
-  gas_assert (i.operands >= 2 && i.operands <= 3);
+  gas_assert ((i.operands >= 2 && i.operands <= 3)
+	      || t->opcode_modifier.vexsources);
 
   for (j = 0; j < i.operands; j++)
     {
       unsigned int given = i.operands - j - 1;
+
+      /* For 4- and 5-operand insns VEX.W controls just the first two
+	 register operands.  */
+      if (t->opcode_modifier.vexsources)
+	given = j < 2 ? 1 - j : j;
 
       if (t->operand_types[j].bitfield.class == Reg
 	  && !match_operand_size (t, j, given))
@@ -6722,14 +6728,19 @@ match_template (char mnem_suffix)
 	      if (!(size_match & MATCH_REVERSE))
 		continue;
 	      /* Try reversing direction of operands.  */
-	      overlap0 = operand_type_and (i.types[0], operand_types[i.operands - 1]);
-	      overlap1 = operand_type_and (i.types[i.operands - 1], operand_types[0]);
+	      j = t->opcode_modifier.vexsources ? 1 : i.operands - 1;
+	      overlap0 = operand_type_and (i.types[0], operand_types[j]);
+	      overlap1 = operand_type_and (i.types[j], operand_types[0]);
+	      overlap2 = operand_type_and (i.types[1], operand_types[1]);
+	      gas_assert (t->operands != 3 || !check_register);
 	      if (!operand_type_match (overlap0, i.types[0])
-		  || !operand_type_match (overlap1, i.types[i.operands - 1])
+		  || !operand_type_match (overlap1, i.types[j])
+		  || (t->operands == 3
+		      && !operand_type_match (overlap2, i.types[1]))
 		  || (check_register
 		      && !operand_type_register_match (i.types[0],
-						       operand_types[i.operands - 1],
-						       i.types[i.operands - 1],
+						       operand_types[j],
+						       i.types[j],
 						       operand_types[0])))
 		{
 		  /* Does not match either direction.  */
@@ -6741,6 +6752,11 @@ match_template (char mnem_suffix)
 		found_reverse_match = 0;
 	      else if (operand_types[0].bitfield.tbyte)
 		found_reverse_match = Opcode_FloatD;
+	      else if (t->opcode_modifier.vexsources)
+		{
+		  found_reverse_match = Opcode_VexW;
+		  goto check_operands_345;
+		}
 	      else if (operand_types[0].bitfield.xmmword
 		       || operand_types[i.operands - 1].bitfield.xmmword
 		       || operand_types[0].bitfield.class == RegMMX
@@ -6756,25 +6772,11 @@ match_template (char mnem_suffix)
 	  else
 	    {
 	      /* Found a forward 2 operand match here.  */
+	    check_operands_345:
 	      switch (t->operands)
 		{
 		case 5:
-		  overlap4 = operand_type_and (i.types[4],
-					       operand_types[4]);
-		  /* Fall through.  */
-		case 4:
-		  overlap3 = operand_type_and (i.types[3],
-					       operand_types[3]);
-		  /* Fall through.  */
-		case 3:
-		  overlap2 = operand_type_and (i.types[2],
-					       operand_types[2]);
-		  break;
-		}
-
-	      switch (t->operands)
-		{
-		case 5:
+		  overlap4 = operand_type_and (i.types[4], operand_types[4]);
 		  if (!operand_type_match (overlap4, i.types[4])
 		      || !operand_type_register_match (i.types[3],
 						       operand_types[3],
@@ -6783,6 +6785,7 @@ match_template (char mnem_suffix)
 		    continue;
 		  /* Fall through.  */
 		case 4:
+		  overlap3 = operand_type_and (i.types[3], operand_types[3]);
 		  if (!operand_type_match (overlap3, i.types[3])
 		      || ((check_register & 0xa) == 0xa
 			  && !operand_type_register_match (i.types[1],
@@ -6797,8 +6800,7 @@ match_template (char mnem_suffix)
 		    continue;
 		  /* Fall through.  */
 		case 3:
-		  /* Here we make use of the fact that there are no
-		     reverse match 3 operand instructions.  */
+		  overlap2 = operand_type_and (i.types[2], operand_types[2]);
 		  if (!operand_type_match (overlap2, i.types[2])
 		      || ((check_register & 5) == 5
 			  && !operand_type_register_match (i.types[0],
@@ -6939,8 +6941,12 @@ match_template (char mnem_suffix)
     i.tm.operand_types[addr_prefix_disp]
       = operand_types[addr_prefix_disp];
 
-  if (found_reverse_match)
+  switch (found_reverse_match)
     {
+    case 0:
+      break;
+
+    default:
       /* If we found a reverse match we must alter the opcode direction
 	 bit and clear/flip the regmem modifier one.  found_reverse_match
 	 holds bits to change (different for int & float insns).  */
@@ -6957,6 +6963,17 @@ match_template (char mnem_suffix)
 	= i.tm.opcode_modifier.modrm && i.tm.opcode_modifier.d
 	  && i.tm.operands > 2U - i.tm.opcode_modifier.sse2avx
 	  && !i.tm.opcode_modifier.regmem;
+      break;
+
+    case Opcode_VexW:
+      /* Only the first two register operands need reversing, alongside
+	 flipping VEX.W.  */
+      i.tm.opcode_modifier.vexw ^= VEXW0 ^ VEXW1;
+
+      j = i.tm.operand_types[0].bitfield.imm8;
+      i.tm.operand_types[j] = operand_types[j + 1];
+      i.tm.operand_types[j + 1] = operand_types[j];
+      break;
     }
 
   return t;
