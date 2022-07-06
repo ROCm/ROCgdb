@@ -105,28 +105,28 @@ Dwarf::assemble $asmfile_dwarf {
 	    struct_label: structure_type {
 		{DW_AT_name test_struct}
 		{DW_AT_byte_size 0x88 DW_FORM_sdata}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 19 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 19 DW_FORM_udata}
 	    } {
 		member {
 		    {DW_AT_name int_elem}
 		    {DW_AT_type :$int_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 21 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 21 DW_FORM_udata}
 		    {DW_AT_data_member_location 0 DW_FORM_sdata}
 		}
 		member {
 		    {DW_AT_name char_elem}
 		    {DW_AT_type :$char_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 22 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 22 DW_FORM_udata}
 		    {DW_AT_data_member_location 4 DW_FORM_sdata}
 		}
 		member {
 		    {DW_AT_name array_elem}
 		    {DW_AT_type :$array_int_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 23 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 23 DW_FORM_udata}
 		    {DW_AT_data_member_location 0x8 DW_FORM_sdata}
 		}
 	    }
@@ -135,14 +135,14 @@ Dwarf::assemble $asmfile_dwarf {
 		{DW_AT_name AddrClassTest}
 		{DW_AT_low_pc "AddrClassTest" addr}
 		{DW_AT_high_pc "Lfunc_end6" addr}
-		{DW_AT_decl_file 1 DW_FORM_sdata}
-		{DW_AT_decl_line 96 DW_FORM_sdata}
+		{DW_AT_decl_file 1 DW_FORM_udata}
+		{DW_AT_decl_line 96 DW_FORM_udata}
 	    } {
 		DW_TAG_variable {
 		    {DW_AT_name local_struct}
 		    {DW_AT_type :$struct_label}
-		    {DW_AT_decl_file 1 DW_FORM_sdata}
-		    {DW_AT_decl_line 98 DW_FORM_sdata}
+		    {DW_AT_decl_file 1 DW_FORM_udata}
+		    {DW_AT_decl_line 98 DW_FORM_udata}
 		    {DW_AT_location {
 			DW_OP_constu 0x0
 			DW_OP_constu 0x3
