@@ -122,6 +122,14 @@ void *mempcpy(void *, const void *, size_t);
 
 #define xfree free
 
+#if GCC_VERSION >= 7000
+#define gas_mul_overflow(a, b, res) __builtin_mul_overflow (a, b, res)
+#else
+/* Assumes unsigned values.  Careful!  Args evaluated multiple times.  */
+#define gas_mul_overflow(a, b, res) \
+  ((*res) = (a), (*res) *= (b), (b) != 0 && (*res) / (b) != (a))
+#endif
+
 #include "asintl.h"
 
 #define BAD_CASE(val)							    \
@@ -332,6 +340,9 @@ COMMON int flag_noexecstack;
 /* name of emitted object file */
 COMMON const char *out_file_name;
 
+/* Keep the output file.  */
+COMMON int keep_it;
+
 /* name of file defining extensions to the basic instruction set */
 COMMON char *insttbl_file_name;
 
@@ -530,10 +541,10 @@ int generic_force_reloc (struct fix *);
 
 #include "write.h"
 #include "frags.h"
-#include "hashtab.h"
-#include "hash.h"
 #include "read.h"
 #include "symbols.h"
+#include "hashtab.h"
+#include "hash.h"
 
 #include "tc.h"
 #include "obj.h"

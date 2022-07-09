@@ -187,8 +187,8 @@ do {								\
   symbol_get_tc (dest)->within = symbol_get_tc (src)->within;	\
 } while (0)
 
-extern void ppc_xcoff_end (void);
-#define md_end ppc_xcoff_end
+extern void ppc_xcoff_md_finish (void);
+#define md_finish ppc_xcoff_md_finish
 
 #define TC_PARSE_CONS_EXPRESSION(EXP, NBYTES)	\
   ppc_xcoff_parse_cons (EXP, NBYTES)
@@ -251,10 +251,13 @@ extern void ppc_frob_file_before_adjust (void);
 #define tc_adjust_symtab() ppc_elf_adjust_symtab ()
 extern void ppc_elf_adjust_symtab (void);
 
-extern void ppc_elf_end (void);
-#define md_end ppc_elf_end
+extern void ppc_elf_md_finish (void);
+#define md_finish ppc_elf_md_finish
 
 #endif /* OBJ_ELF */
+
+extern void ppc_md_end (void);
+#define md_end ppc_md_end
 
 #if defined (OBJ_ELF) || defined (OBJ_XCOFF)
 #define TC_FORCE_RELOCATION(FIX) ppc_force_relocation (FIX)

@@ -111,9 +111,6 @@ int flag_use_elf_stt_common = DEFAULT_GENERATE_ELF_STT_COMMON;
 bool flag_generate_build_notes = DEFAULT_GENERATE_BUILD_NOTES;
 #endif
 
-/* Keep the output file.  */
-static int keep_it = 0;
-
 segT reg_section;
 segT expr_section;
 segT text_section;
@@ -124,16 +121,6 @@ segT bss_section;
 static char *listing_filename = NULL;
 
 static struct defsym_list *defsyms;
-
-#ifdef HAVE_ITBL_CPU
-/* Keep a record of the itbl files we read in.  */
-struct itbl_file_list
-{
-  struct itbl_file_list *next;
-  char *name;
-};
-static struct itbl_file_list *itbl_files;
-#endif
 
 static long start_time;
 
@@ -601,7 +588,7 @@ parse_args (int * pargc, char *** pargv)
   old_argv = *pargv;
 
   /* Initialize a new argv that contains no options.  */
-  new_argv = XNEWVEC (char *, old_argc + 1);
+  new_argv = notes_alloc (sizeof (char *) * (old_argc + 1));
   new_argv[0] = old_argv[0];
   new_argc = 1;
   new_argv[new_argc] = NULL;
@@ -794,27 +781,19 @@ This program has absolutely no warranty.\n"));
 	  {
 	    /* optarg is the name of the file containing the instruction
 	       formats, opcodes, register names, etc.  */
-	    struct itbl_file_list *n;
-
 	    if (optarg == NULL)
 	      {
 		as_warn (_("no file name following -t option"));
 		break;
 	      }
 
-	    n = XNEW (struct itbl_file_list);
-	    n->next = itbl_files;
-	    n->name = optarg;
-	    itbl_files = n;
-
 	    /* Parse the file and add the new instructions to our internal
 	       table.  If multiple instruction tables are specified, the
 	       information from this table gets appended onto the existing
 	       internal table.  */
-	    itbl_files->name = xstrdup (optarg);
-	    if (itbl_parse (itbl_files->name) != 0)
+	    if (itbl_parse (optarg) != 0)
 	      as_fatal (_("failed to read instruction table %s\n"),
-			itbl_files->name);
+			optarg);
 	  }
 	  break;
 #endif
@@ -1017,7 +996,7 @@ This program has absolutely no warranty.\n"));
  	case OPTION_AL:
 	  listing |= LISTING_LISTING;
 	  if (optarg)
-	    listing_filename = xstrdup (optarg);
+	    listing_filename = notes_strdup (optarg);
 	  break;
 
  	case OPTION_ALTERNATE:
@@ -1071,7 +1050,7 @@ This program has absolutely no warranty.\n"));
 		      listing |= LISTING_SYMBOLS;
 		      break;
 		    case '=':
-		      listing_filename = xstrdup (optarg + 1);
+		      listing_filename = notes_strdup (optarg + 1);
 		      optarg += strlen (listing_filename);
 		      break;
 		    default:
@@ -1097,14 +1076,14 @@ This program has absolutely no warranty.\n"));
 
 	case 'I':
 	  {			/* Include file directory.  */
-	    char *temp = xstrdup (optarg);
+	    char *temp = notes_strdup (optarg);
 
 	    add_include_dir (temp);
 	    break;
 	  }
 
 	case 'o':
-	  out_file_name = xstrdup (optarg);
+	  out_file_name = notes_strdup (optarg);
 	  break;
 
 	case 'w':
@@ -1153,14 +1132,6 @@ dump_statistics (void)
 #ifdef obj_print_statistics
   obj_print_statistics (stderr);
 #endif
-}
-
-static void
-close_output_file (void)
-{
-  output_file_close (out_file_name);
-  if (!keep_it)
-    unlink_if_ordinary (out_file_name);
 }
 
 /* The interface between the macro code and gas expression handling.  */
@@ -1260,7 +1231,12 @@ perform_an_assembly_pass (int argc, char ** argv)
   if (!saw_a_file)
     read_a_source_file ("");
 }
-
+
+static void
+free_notes (void)
+{
+  _obstack_free (&notes, NULL);
+}
 
 int
 main (int argc, char ** argv)
@@ -1308,6 +1284,9 @@ main (int argc, char ** argv)
 #ifdef USE_EMULATIONS
   select_emulation_mode (argc, argv);
 #endif
+
+  obstack_begin (&notes, chunksize);
+  xatexit (free_notes);
 
   PROGRESS (1);
   /* Call parse_args before any of the init/begin functions
@@ -1361,7 +1340,7 @@ main (int argc, char ** argv)
   expr_begin ();
 
   /* It has to be called after dump_statistics ().  */
-  xatexit (close_output_file);
+  xatexit (output_file_close);
 
   if (flag_print_statistics)
     xatexit (dump_statistics);
@@ -1419,8 +1398,8 @@ main (int argc, char ** argv)
 
   cond_finish_check (-1);
 
-#ifdef md_end
-  md_end ();
+#ifdef md_finish
+  md_finish ();
 #endif
 
 #if defined OBJ_ELF || defined OBJ_MAYBE_ELF

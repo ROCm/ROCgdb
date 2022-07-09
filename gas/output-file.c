@@ -20,6 +20,8 @@
 
 #include "as.h"
 #include "subsegs.h"
+#include "sb.h"
+#include "macro.h"
 #include "output-file.h"
 
 #ifndef TARGET_MACH
@@ -64,12 +66,13 @@ stash_frchain_obs (asection *sec)
 }
 
 void
-output_file_close (const char *filename)
+output_file_close (void)
 {
   bool res;
   bfd *obfd = stdoutput;
   struct obstack **obs;
   asection *sec;
+  const char *filename;
 
   if (obfd == NULL)
     return;
@@ -97,8 +100,19 @@ output_file_close (const char *filename)
   else
     res = bfd_close (obfd);
 
+  filename = out_file_name;
+  out_file_name = NULL;
+  if (!keep_it && filename)
+    unlink_if_ordinary (filename);
+
+#ifdef md_end
+  md_end ();
+#endif
+  macro_end ();
+  read_end ();
+  symbol_end ();
   subsegs_end (obs);
 
-  if (! res)
+  if (!res)
     as_fatal ("%s: %s", filename, bfd_errmsg (bfd_get_error ()));
 }
