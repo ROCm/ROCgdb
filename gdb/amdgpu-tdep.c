@@ -867,8 +867,8 @@ static const struct frame_unwind amdgpu_frame_unwind = {
 static int
 print_insn_amdgpu (bfd_vma memaddr, struct disassemble_info *info)
 {
-  gdb_disassembler *di
-    = static_cast<gdb_disassembler *> (info->application_data);
+  gdb_disassemble_info *di
+    = static_cast<gdb_disassemble_info *> (info->application_data);
 
   /* Try to read at most instruction_size bytes.  */
 
@@ -905,8 +905,11 @@ print_insn_amdgpu (bfd_vma memaddr, struct disassemble_info *info)
 			amd_dbgapi_global_address_t address,
 			char **symbol_text) -> amd_dbgapi_status_t
   {
-    gdb_disassembler *disasm
-      = reinterpret_cast<gdb_disassembler *> (symbolizer_id);
+    gdb_disassemble_info *disasm_info
+      = reinterpret_cast<gdb_disassemble_info *> (symbolizer_id);
+    gdb_printing_disassembler *disasm
+      = dynamic_cast<gdb_printing_disassembler *> (disasm_info);
+    gdb_assert (disasm != nullptr);
 
     string_file string (disasm->stream ()->can_emit_style_escape ());
     print_address (disasm->arch (), address, &string);
@@ -931,13 +934,13 @@ print_insn_amdgpu (bfd_vma memaddr, struct disassemble_info *info)
 	  != AMD_DBGAPI_STATUS_SUCCESS)
 	error (_ ("amd_dbgapi_architecture_get_info failed"));
 
-      info->fprintf_func (info->stream, "<illegal instruction>");
+      info->fprintf_func (di, "<illegal instruction>");
       /* Skip to the next valid instruction address.  */
       return align_up (memaddr + 1, alignment) - memaddr;
     }
 
   /* Print the instruction.  */
-  info->fprintf_func (info->stream, "%s", instruction_text);
+  info->fprintf_func (di, "%s", instruction_text);
 
   /* Free the memory allocated by the amd-dbgapi.  */
   xfree (instruction_text);
