@@ -925,7 +925,7 @@ insert_one_watchpoint (amd_dbgapi_inferior_info *info, CORE_ADDR addr, int len)
     return 1;
 
   auto cleanup = make_scope_exit ([&] ()
-    { amd_dbgapi_remove_watchpoint (info->process_id, watch_id); });
+    { amd_dbgapi_remove_watchpoint (watch_id); });
 
   /* FIXME: A reduced range watchpoint may have been inserted, which would
      require additional watchpoints to be inserted to cover the requested
@@ -1023,7 +1023,7 @@ amd_dbgapi_target::remove_watchpoint (CORE_ADDR addr, int len,
 
   amd_dbgapi_watchpoint_id_t watch_id = it->second.second;
   info->watchpoint_map.erase (it);
-  if (amd_dbgapi_remove_watchpoint (info->process_id, watch_id)
+  if (amd_dbgapi_remove_watchpoint (watch_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return 1;
 

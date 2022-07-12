@@ -248,7 +248,7 @@ AC_CHECK_HEADERS(amd-dbgapi/amd-dbgapi.h)
 
 if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes; then
   gdb_rocm_dbgapi_required_version_major=0
-  gdb_rocm_dbgapi_required_version_minor=65
+  gdb_rocm_dbgapi_required_version_minor=66
 
   AC_MSG_CHECKING([for the correct version of amd-dbgapi.h])
   AC_TRY_COMPILE([#include "amd-dbgapi/amd-dbgapi.h"],[
