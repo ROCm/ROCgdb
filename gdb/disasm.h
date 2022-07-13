@@ -50,10 +50,6 @@ struct gdb_disassemble_info
   struct disassemble_info *disasm_info ()
   { return &m_di; }
 
-  /* The stream that disassembler output is being written too.  */
-  struct ui_file *stream ()
-  { return (struct ui_file *) m_di.stream; }
-
 protected:
 
   /* Types for the function callbacks within m_di.  */
