@@ -1161,6 +1161,12 @@ Additionally, @value{GDBN} only styles some value contents, so not
 every output string will contain escape sequences.
 
 When @code{False}, which is the default, no output styling is applied.
+
+@item summary
+@code{True} when just a summary should be printed.  In this mode,
+scalar values are printed in their entirety, but aggregates such as
+structures or unions are omitted.  This mode is used by @code{set
+print frame-arguments scalars} (@pxref{Print Settings}).
 @end table
 @end defun
 
@@ -1741,6 +1747,24 @@ default pretty-printer for a @code{gdb.Value}:
 This function takes a @code{gdb.Value} object as an argument.  If a
 pretty-printer for this value exists, then it is returned.  If no such
 printer exists, then this returns @code{None}.
+@end defun
+
+Normally, a pretty-printer can respect the user's print settings
+(including temporarily applied settings, such as @samp{/x}) simply by
+calling @code{Value.format_string} (@pxref{Values From Inferior}).
+However, these settings can also be queried directly:
+
+@findex gdb.print_options
+@defun gdb.print_options ()
+Return a dictionary whose keys are the valid keywords that can be
+given to @code{Value.format_string}, and whose values are the user's
+settings.  During a @code{print} or other operation, the values will
+reflect any flags that are temporarily in effect.
+
+@smallexample
+(gdb) python print (gdb.print_options ()['max_elements'])
+200
+@end smallexample
 @end defun
 
 @node Selecting Pretty-Printers
