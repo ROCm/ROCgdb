@@ -1,6 +1,6 @@
 /* This test program is part of GDB, the GNU debugger.
 
-   Copyright 2021-2022 Free Software Foundation, Inc.
+   Copyright 2022 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,7 +15,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Exercise AArch64's Memory Tagging Extension with tagged pointers.  */
+/* Exercise AArch64's Memory Tagging Extension corefile support.  We allocate
+   multiple memory mappings with PROT_MTE and assign tag values for all the
+   existing MTE granules.  */
 
 /* This test was based on the documentation for the AArch64 Memory Tagging
    Extension from the Linux Kernel, found in the sources in
@@ -50,21 +52,51 @@
 #define PR_MTE_TCF_SYNC		(1UL << PR_MTE_TCF_SHIFT)
 #define PR_MTE_TCF_ASYNC	(2UL << PR_MTE_TCF_SHIFT)
 #define PR_MTE_TAG_SHIFT	3
+#define PR_MTE_TAG_MASK		(0xffffUL << PR_MTE_TAG_SHIFT)
 #endif
 
-void
-access_memory (unsigned char *tagged_ptr, unsigned char *untagged_ptr)
+#ifdef ASYNC
+#define TCF_MODE PR_MTE_TCF_ASYNC
+#else
+#define TCF_MODE PR_MTE_TCF_SYNC
+#endif
+
+#define NMAPS 5
+
+/* We store the pointers and sizes of the memory maps we requested.  Each
+   of them has a different size.  */
+unsigned char *mmap_pointers[NMAPS];
+
+/* Set the allocation tag on the destination address.  */
+#define set_tag(tagged_addr) do {				  \
+  asm volatile("stg %0, [%0]" : : "r" (tagged_addr) : "memory");  \
+} while (0)
+
+
+uintptr_t
+set_logical_tag (uintptr_t ptr, unsigned char tag)
 {
-  tagged_ptr[0] = 'a';
+  ptr &= ~0xFF00000000000000ULL;
+  ptr |= ((uintptr_t) tag << 56);
+  return ptr;
+}
+
+void
+fill_map_with_tags (unsigned char *ptr, size_t size, unsigned char *tag)
+{
+  for (size_t start = 0; start < size; start += 16)
+    {
+      set_tag (set_logical_tag (((uintptr_t)ptr + start) & ~(0xFULL), *tag));
+      *tag = (*tag + 1) % 16;
+    }
 }
 
 int
 main (int argc, char **argv)
 {
   unsigned char *tagged_ptr;
-  unsigned char *untagged_ptr;
   unsigned long page_sz = sysconf (_SC_PAGESIZE);
-  unsigned long hwcap2 = getauxval(AT_HWCAP2);
+  unsigned long hwcap2 = getauxval (AT_HWCAP2);
 
   /* Bail out if MTE is not supported.  */
   if (!(hwcap2 & HWCAP2_MTE))
@@ -73,7 +105,7 @@ main (int argc, char **argv)
   /* Enable the tagged address ABI, synchronous MTE tag check faults and
      allow all non-zero tags in the randomly generated set.  */
   if (prctl (PR_SET_TAGGED_ADDR_CTRL,
-	     PR_TAGGED_ADDR_ENABLE | PR_MTE_TCF_SYNC
+	     PR_TAGGED_ADDR_ENABLE | TCF_MODE
 	     | (0xfffe << PR_MTE_TAG_SHIFT),
 	     0, 0, 0))
     {
@@ -81,32 +113,40 @@ main (int argc, char **argv)
       return 1;
     }
 
-  /* Create a mapping that will have PROT_MTE set.  */
-  tagged_ptr = mmap (0, page_sz, PROT_READ | PROT_WRITE,
-		     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (tagged_ptr == MAP_FAILED)
+  /* Map a big area of NMAPS * 2 pages.  */
+  unsigned char *big_map = mmap (0, NMAPS * 2 * page_sz, PROT_NONE,
+				 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  if (big_map == MAP_FAILED)
     {
       perror ("mmap () failed");
       return 1;
     }
 
-  /* Create another mapping that won't have PROT_MTE set.  */
-  untagged_ptr = mmap (0, page_sz, PROT_READ | PROT_WRITE,
-		       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (untagged_ptr == MAP_FAILED)
+  /* Start with a tag of 0x1 so we can crash later.  */
+  unsigned char tag = 1;
+
+  /* From that big area of NMAPS * 2 pages, go through each page and protect
+     alternating pages.  This should prevent the kernel from merging different
+     mmap's and force the creation of multiple individual MTE-protected entries
+     in /proc/<pid>/smaps.  */
+  for (int i = 0; i < NMAPS; i++)
     {
-      perror ("mmap () failed");
-      return 1;
+      mmap_pointers[i] = big_map + (i * 2 * page_sz);
+
+      /* Enable MTE on alternating pages.  */
+      if (mprotect (mmap_pointers[i], page_sz,
+		    PROT_READ | PROT_WRITE | PROT_MTE))
+	{
+	  perror ("mprotect () failed");
+	  return 1;
+	}
+
+      fill_map_with_tags (mmap_pointers[i], page_sz, &tag);
     }
 
-  /* Enable MTE on the above anonymous mmap.  */
-  if (mprotect (tagged_ptr, page_sz, PROT_READ | PROT_WRITE | PROT_MTE))
-    {
-      perror ("mprotect () failed");
-      return 1;
-    }
-
-  access_memory (tagged_ptr, untagged_ptr);
+  /* The following line causes a crash on purpose.  */
+  *mmap_pointers[0] = 0x4;
 
   return 0;
 }

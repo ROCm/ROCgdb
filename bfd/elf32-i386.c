@@ -1812,8 +1812,7 @@ elf_i386_scan_relocs (bfd *abfd,
 		      && h->type == STT_FUNC
 		      && eh->def_protected
 		      && !SYMBOL_DEFINED_NON_SHARED_P (h)
-		      && h->def_dynamic
-		      && elf_has_indirect_extern_access (h->root.u.def.section->owner))
+		      && h->def_dynamic)
 		    {
 		      /* Disallow non-canonical reference to canonical
 			 protected function.  */
@@ -4426,7 +4425,6 @@ elf_i386_link_setup_gnu_properties (struct bfd_link_info *info)
 #define elf_backend_got_header_size	12
 #define elf_backend_plt_alignment	4
 #define elf_backend_dtrel_excludes_plt	1
-#define elf_backend_extern_protected_data 1
 #define elf_backend_caches_rawsize	1
 #define elf_backend_want_dynrelro	1
 
