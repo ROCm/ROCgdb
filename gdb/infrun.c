@@ -4031,6 +4031,16 @@ prepare_for_detach (void)
     }
 }
 
+/* If all-stop, but there exists a non-stop target, stop all threads
+   now that we're presenting the stop to the user.  */
+
+static void
+stop_all_threads_if_all_stop_mode ()
+{
+  if (!non_stop && exists_non_stop_target ())
+    stop_all_threads ("presenting stop to user in all-stop");
+}
+
 /* Wait for control to return from inferior to debugger.
 
    If inferior gets a signal, we may decide to start it up again
@@ -4076,6 +4086,8 @@ wait_for_inferior (inferior *inf)
       if (!ecs->wait_some_more)
 	break;
     }
+
+  stop_all_threads_if_all_stop_mode ();
 
   /* No error, don't finish the state yet.  */
   finish_state.release ();
@@ -4299,6 +4311,8 @@ fetch_inferior_event ()
 	  {
 	    bool should_notify_stop = true;
 	    int proceeded = 0;
+
+	    stop_all_threads_if_all_stop_mode ();
 
 	    clean_up_just_stopped_threads_fsms (ecs);
 
@@ -8264,11 +8278,6 @@ stop_waiting (struct execution_control_state *ecs)
 
   /* Let callers know we don't want to wait for the inferior anymore.  */
   ecs->wait_some_more = 0;
-
-  /* If all-stop, but there exists a non-stop target, stop all
-     threads now that we're presenting the stop to the user.  */
-  if (!non_stop && exists_non_stop_target ())
-    stop_all_threads ("presenting stop to user in all-stop");
 }
 
 /* Like keep_going, but passes the signal to the inferior, even if the
