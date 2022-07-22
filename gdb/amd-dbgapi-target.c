@@ -1885,7 +1885,6 @@ void
 amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   /* delegate to the host routines when not on the device */
 
@@ -1895,8 +1894,8 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
       return;
     }
 
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
-
   gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
 
   amd_dbgapi_status_t status
@@ -1919,8 +1918,6 @@ void
 amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
-  gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
 
   if (!is_amdgpu_arch (gdbarch))
     {
@@ -1928,9 +1925,10 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
       return;
     }
 
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
-
+  gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
   regcache->raw_collect (regno, &raw);
+
+  amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   /* If the register has read-only bits, invalidate the value in the regcache
      as the value actualy written may differ.  */
@@ -1946,6 +1944,8 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
     for (size_t r = 0; r < tdep->register_properties.size (); ++r)
       if (tdep->register_properties[r] & AMD_DBGAPI_REGISTER_PROPERTY_VOLATILE)
 	regcache->invalidate (r);
+
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
 
   amd_dbgapi_status_t status
     = amd_dbgapi_write_register (wave_id, tdep->register_ids[regno], 0,
