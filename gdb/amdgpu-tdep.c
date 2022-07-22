@@ -56,7 +56,7 @@ is_amdgpu_arch (struct gdbarch *arch)
 amdgpu_gdbarch_tdep *
 get_amdgpu_gdbarch_tdep (gdbarch *arch)
 {
-  return static_cast<amdgpu_gdbarch_tdep *> (gdbarch_tdep (arch));
+  return gdbarch_tdep<amdgpu_gdbarch_tdep> (arch);
 }
 
 /* Return the name of register REGNUM.  */

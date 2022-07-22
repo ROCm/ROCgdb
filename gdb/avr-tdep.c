@@ -233,7 +233,7 @@ avr_register_type (struct gdbarch *gdbarch, int reg_nr)
   if (reg_nr == AVR_PC_REGNUM)
     return builtin_type (gdbarch)->builtin_uint32;
 
-  avr_gdbarch_tdep *tdep = (avr_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  avr_gdbarch_tdep *tdep = gdbarch_tdep<avr_gdbarch_tdep> (gdbarch);
   if (reg_nr == AVR_PSEUDO_PC_REGNUM)
     return tdep->pc_type;
 
@@ -752,7 +752,7 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
   gdb_assert (vpc < AVR_MAX_PROLOGUE_SIZE);
 
   /* Handle static small stack allocation using rcall or push.  */
-  avr_gdbarch_tdep *tdep = (avr_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  avr_gdbarch_tdep *tdep = gdbarch_tdep<avr_gdbarch_tdep> (gdbarch);
   while (scan_stage == 1 && vpc < len)
     {
       insn = extract_unsigned_integer (&prologue[vpc], 2, byte_order);
@@ -1055,7 +1055,7 @@ avr_frame_unwind_cache (struct frame_info *this_frame,
 
   /* The previous frame's SP needed to be computed.  Save the computed
      value.  */
-  avr_gdbarch_tdep *tdep = (avr_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  avr_gdbarch_tdep *tdep = gdbarch_tdep<avr_gdbarch_tdep> (gdbarch);
   info->saved_regs[AVR_SP_REGNUM].set_value (info->prev_sp
 					     - 1 + tdep->call_length);
 
@@ -1137,7 +1137,7 @@ avr_frame_prev_register (struct frame_info *this_frame,
 	  int i;
 	  gdb_byte buf[3];
 	  struct gdbarch *gdbarch = get_frame_arch (this_frame);
-	  avr_gdbarch_tdep *tdep = (avr_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+	  avr_gdbarch_tdep *tdep = gdbarch_tdep<avr_gdbarch_tdep> (gdbarch);
 
 	  read_memory (info->saved_regs[AVR_PC_REGNUM].addr (),
 		       buf, tdep->call_length);
@@ -1279,7 +1279,7 @@ avr_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 {
   int i;
   gdb_byte buf[3];
-  avr_gdbarch_tdep *tdep = (avr_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  avr_gdbarch_tdep *tdep = gdbarch_tdep<avr_gdbarch_tdep> (gdbarch);
   int call_length = tdep->call_length;
   CORE_ADDR return_pc = avr_convert_iaddr_to_raw (bp_addr);
   int regnum = AVR_ARGN_REGNUM;
@@ -1463,7 +1463,7 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
        best_arch = gdbarch_list_lookup_by_info (best_arch->next, &info))
     {
       avr_gdbarch_tdep *tdep
-	= (avr_gdbarch_tdep *) gdbarch_tdep (best_arch->gdbarch);
+	= gdbarch_tdep<avr_gdbarch_tdep> (best_arch->gdbarch);
 
       if (tdep->call_length == call_length)
 	return best_arch->gdbarch;

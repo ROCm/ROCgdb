@@ -28,6 +28,7 @@
 #include "gdbsupport/gdb_obstack.h"
 #include "osabi.h"
 #include "displaced-stepping.h"
+#include "gdbsupport/gdb-checked-static-cast.h"
 
 struct floatformat;
 struct ui_file;
@@ -58,7 +59,14 @@ struct inferior;
 
 #include "regcache.h"
 
-struct gdbarch_tdep {};
+/* The base class for every architecture's tdep sub-class.  The virtual
+   destructor ensures the class has RTTI information, which allows
+   gdb::checked_static_cast to be used, the gdbarch_tdep the function.  */
+
+struct gdbarch_tdep
+{
+  virtual ~gdbarch_tdep() = default;
+};
 
 /* The architecture associated with the inferior through the
    connection to the target.
@@ -158,8 +166,23 @@ enum address_scope
 
 #include "gdbarch-gen.h"
 
-extern struct gdbarch_tdep *gdbarch_tdep (struct gdbarch *gdbarch);
+/* An internal function that should _only_ be called from gdbarch_tdep.
+   Returns the gdbarch_tdep field held within GDBARCH.  */
 
+extern struct gdbarch_tdep *gdbarch_tdep_1 (struct gdbarch *gdbarch);
+
+/* Return the gdbarch_tdep object held within GDBARCH cast to the type
+   TDepType, which should be a sub-class of gdbarch_tdep.  There is no
+   checking done that the gdbarch_tdep within GDBARCH actually is of the
+   type TDepType, we just assume the caller knows what they are doing.  */
+
+template<typename TDepType>
+static inline TDepType *
+gdbarch_tdep (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep_1 (gdbarch);
+  return gdb::checked_static_cast<TDepType *> (tdep);
+}
 
 /* Mechanism for co-ordinating the selection of a specific
    architecture.
