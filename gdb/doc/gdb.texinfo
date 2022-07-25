@@ -23747,7 +23747,7 @@ concurrently is dependent on the target architecture of the device.
 
 @item
 The target-specific string identifying the location of the agent.  For
-example, some target agents may use the @acronym{PCI} slot number in
+example, some target agents may use the @acronym{PCI} domain and slot number in
 @acronym{BDF, Bus:Device.Function} notation.
 
 @end enumerate
@@ -23768,8 +23768,8 @@ For example,
 @smallexample
 (@value{GDBP}) info agents
   Id State Target Id                  Architecture Device Name                          Cores Threads Location
-* 1  A     AMDGPU Agent (GPUID 45151) gfx900       Vega 10 XL/XT [Radeon RX Vega 56/64] 256   2560    0a:00.0
-  2  A     AMDGPU Agent (GPUID 39113) gfx900       Vega 10 XL/XT [Radeon RX Vega 56/64] 256   2560    44:00.0
+* 1  A     AMDGPU Agent (GPUID 45151) gfx900       Vega 10 XL/XT [Radeon RX Vega 56/64] 256   2560    0000:0a:00.0
+  2  A     AMDGPU Agent (GPUID 39113) gfx900       Vega 10 XL/XT [Radeon RX Vega 56/64] 256   2560    0000:44:00.0
 @end smallexample
 
 If you're debugging multiple inferiors, @value{GDBN} displays

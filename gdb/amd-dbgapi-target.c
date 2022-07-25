@@ -3652,6 +3652,15 @@ info_agents_command (const char *args, int from_tty)
 
 	    uiout->field_signed ("threads", cores * threads);
 
+	    /* domain  */
+	    uint16_t domain;
+	    if ((status
+		 = amd_dbgapi_agent_get_info (agent_id,
+					      AMD_DBGAPI_AGENT_INFO_PCI_DOMAIN,
+					      sizeof (domain), &domain))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      error (_ ("amd_dbgapi_agent_get_info failed (rc=%d)"), status);
+
 	    /* location  */
 	    uint16_t location;
 	    if ((status
@@ -3663,7 +3672,7 @@ info_agents_command (const char *args, int from_tty)
 		     get_status_string (status));
 
 	    uiout->field_string ("location",
-				 string_printf ("%02x:%02x.%d",
+				 string_printf ("%04x:%02x:%02x.%d", domain,
 						(location >> 8) & 0xFF,
 						(location >> 3) & 0x1F,
 						location & 0x7));

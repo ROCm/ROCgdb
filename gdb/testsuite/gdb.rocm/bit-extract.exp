@@ -41,7 +41,7 @@ gdb_continue_to_breakpoint "bit_extract_kernel"
 # vega10 sample output "1  A     (GPUID 39113) vega10      224   2240    44:00.0"
 gdb_test_sequence "info agents" "info agents" {
     {\s+Id\s+State\s+Target Id\s+Architecture\s+Device Name\s+Cores\s+Threads\s+Location}
-    {\d+\s+[AU]\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+[^\r\n]+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+    {\d+\s+[AU]\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+[^\r\n]+\s+\d+\s+\d+\s+\w+:\w+:\d+\.\d}
 }
 
 # Check continue at device breakpoint in all-stop mode
