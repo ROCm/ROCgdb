@@ -160,7 +160,7 @@ struct amd_dbgapi_target final : public target_ops
   void mourn_inferior () override;
   void detach (inferior *inf, int from_tty) override;
 
-  void async (int enable) override;
+  void async (bool enable) override;
 
   bool has_pending_events () override;
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
@@ -1311,7 +1311,7 @@ dbgapi_notifier_handler (int error, gdb_client_data client_data)
 }
 
 void
-amd_dbgapi_target::async (int enable)
+amd_dbgapi_target::async (bool enable)
 {
   infrun_debug_printf ("amd-dbgapi async enable=%d", enable);
 

@@ -538,7 +538,7 @@ public:
 
   bool is_async_p () override;
 
-  void async (int) override;
+  void async (bool) override;
 
   int async_wait_fd () override;
 
@@ -4643,8 +4643,8 @@ remote_target::process_initial_stop_replies (int from_tty)
 	   the poll in stop_all_threads to consider events from it, so enable
 	   it temporarily.  */
 	gdb_assert (!this->is_async_p ());
-	SCOPE_EXIT { target_async (0); };
-	target_async (1);
+	SCOPE_EXIT { target_async (false); };
+	target_async (true);
 	stop_all_threads ("remote connect in all-stop");
       }
 
@@ -5012,7 +5012,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
       process_initial_stop_replies (from_tty);
 
       if (target_can_async_p ())
-	target_async (1);
+	target_async (true);
     }
 
   /* Give the target a chance to look up symbols.  */
@@ -10445,7 +10445,7 @@ extended_remote_target::create_inferior (const char *exec_file,
   /* If running asynchronously, register the target file descriptor
      with the event loop.  */
   if (target_can_async_p ())
-    target_async (1);
+    target_async (true);
 
   /* Disable address space randomization if requested (and supported).  */
   if (supports_disable_randomization ())
@@ -14489,7 +14489,7 @@ remote_target::async_wait_fd ()
 }
 
 void
-remote_target::async (int enable)
+remote_target::async (bool enable)
 {
   struct remote_state *rs = get_remote_state ();
 
