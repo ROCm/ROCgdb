@@ -3,6 +3,11 @@
 Full documentation for ROCgdb is available at
 [docs.amd.com](https://docs.amd.com/bundle/rocgdb)
 
+## (Unreleased) ROCgdb-15
+### Added
+- 'info agents' now prints the agent location as "DDD:BB:DD.F", where
+  "DDDD" is the agent's PCI domain.
+
 ## (Unreleased) ROCgdb-14
 ### Added
 - Introduce the `coremerge` utility to merge a host core dump and a GPU-only
