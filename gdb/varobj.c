@@ -33,6 +33,7 @@
 #include "parser-defs.h"
 #include "gdbarch.h"
 #include <algorithm>
+#include "observable.h"
 
 #if HAVE_PYTHON
 #include "python/python.h"
@@ -72,6 +73,12 @@ struct varobj_root
 {
   /* The expression for this parent.  */
   expression_up exp;
+
+  /* Cached arch from exp, for use in case exp gets invalidated.  */
+  struct gdbarch *gdbarch = nullptr;
+
+  /* Cached language from exp, for use in case exp gets invalidated.  */
+  const struct language_defn *language_defn = nullptr;
 
   /* Block for which this expression is valid.  */
   const struct block *valid_block = NULL;
@@ -211,7 +218,7 @@ is_root_p (const struct varobj *var)
 
 /* See python-internal.h.  */
 gdbpy_enter_varobj::gdbpy_enter_varobj (const struct varobj *var)
-: gdbpy_enter (var->root->exp->gdbarch, var->root->exp->language_defn)
+: gdbpy_enter (var->root->gdbarch, var->root->language_defn)
 {
 }
 
@@ -308,6 +315,11 @@ varobj_create (const char *objname,
       try
 	{
 	  var->root->exp = parse_exp_1 (&p, pc, block, 0, &tracker);
+
+	  /* Cache gdbarch and language_defn as they might be used even
+	     after var is invalidated and var->root->exp cleared.  */
+	  var->root->gdbarch = var->root->exp->gdbarch;
+	  var->root->language_defn = var->root->exp->language_defn;
 	}
 
       catch (const gdb_exception_error &except)
@@ -2408,22 +2420,28 @@ static void
 varobj_invalidate_iter (struct varobj *var)
 {
   /* global and floating var must be re-evaluated.  */
-  if (var->root->floating || var->root->valid_block == NULL)
+  if (var->root->floating || var->root->valid_block == nullptr)
     {
       struct varobj *tmp_var;
 
       /* Try to create a varobj with same expression.  If we succeed
 	 replace the old varobj, otherwise invalidate it.  */
-      tmp_var = varobj_create (NULL, var->name.c_str (), (CORE_ADDR) 0,
-			       USE_CURRENT_FRAME);
-      if (tmp_var != NULL) 
-	{ 
+      tmp_var = varobj_create (nullptr, var->name.c_str (), (CORE_ADDR) 0,
+			       var->root->floating
+			       ? USE_SELECTED_FRAME : USE_CURRENT_FRAME);
+      if (tmp_var != nullptr)
+	{
+	  gdb_assert (var->root->floating == tmp_var->root->floating);
 	  tmp_var->obj_name = var->obj_name;
 	  varobj_delete (var, 0);
 	  install_variable (tmp_var);
 	}
-      else
-	var->root->is_valid = false;
+      else if (!var->root->floating)
+	{
+	  /* Only invalidate globals as floating vars might still be valid in
+	     some other frame.  */
+	  var->root->is_valid = false;
+	}
     }
   else /* locals must be invalidated.  */
     var->root->is_valid = false;
@@ -2437,6 +2455,55 @@ void
 varobj_invalidate (void)
 {
   all_root_varobjs (varobj_invalidate_iter);
+}
+
+/* Ensure that no varobj keep references to OBJFILE.  */
+
+static void
+varobj_invalidate_if_uses_objfile (struct objfile *objfile)
+{
+  if (objfile->separate_debug_objfile_backlink != nullptr)
+    objfile = objfile->separate_debug_objfile_backlink;
+
+  all_root_varobjs ([objfile] (struct varobj *var)
+    {
+      if (var->root->valid_block != nullptr)
+	{
+	  struct objfile *bl_objfile = block_objfile (var->root->valid_block);
+	  if (bl_objfile->separate_debug_objfile_backlink != nullptr)
+	    bl_objfile = bl_objfile->separate_debug_objfile_backlink;
+
+	  if (bl_objfile == objfile)
+	    {
+	      /* The varobj is tied to a block which is going away.  There is
+		 no way to reconstruct something later, so invalidate the
+		 varobj completly and drop the reference to the block which is
+		 being freed.  */
+	      var->root->is_valid = false;
+	      var->root->valid_block = nullptr;
+	    }
+	}
+
+      if (var->root->exp != nullptr
+	  && exp_uses_objfile (var->root->exp.get (), objfile))
+	{
+	  /* The varobj's current expression references the objfile.  For
+	     globals and floating, it is possible that when we try to
+	     re-evaluate the expression later it is still valid with
+	     whatever is in scope at that moment.  Just invalidate the
+	     expression for now.  */
+	  var->root->exp.reset ();
+
+	  /* It only makes sense to keep a floating varobj around.  */
+	  if (!var->root->floating)
+	    var->root->is_valid = false;
+	}
+
+      /* var->value->type and var->type might also reference the objfile.
+	 This is taken care of in value.c:preserve_values which deals with
+	 making sure that objfile-owend types are replaced with
+	 gdbarch-owned equivalents.  */
+    });
 }
 
 /* A hash function for a varobj.  */
@@ -2473,4 +2540,7 @@ _initialize_varobj ()
 			     _("When non-zero, varobj debugging is enabled."),
 			     NULL, show_varobjdebug,
 			     &setdebuglist, &showdebuglist);
+
+  gdb::observers::free_objfile.attach (varobj_invalidate_if_uses_objfile,
+				       "varobj");
 }
