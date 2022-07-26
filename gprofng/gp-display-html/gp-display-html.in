@@ -54,7 +54,15 @@ INIT
 my $TRUE    = 1;
 my $FALSE   = 0;
 
+#------------------------------------------------------------------------------
+# Used to ensure correct alignment of columns.
+#------------------------------------------------------------------------------
 my $g_max_length_first_metric;
+
+#------------------------------------------------------------------------------
+# This variable contains the path used to execute $GP_DISPAY_TEXT.
+#------------------------------------------------------------------------------
+my $g_path_to_tools;
 
 #-------------------------------------------------------------------------------
 # Code debugging flag
@@ -282,9 +290,16 @@ sub main
 #------------------------------------------------------------------------------
 # OS commands executed and search paths.
 #------------------------------------------------------------------------------
-  my @selected_os_cmds = qw (rm mv cat hostname locale which printenv ls 
+  my @selected_os_cmds = qw (rm mv cat hostname locale which printenv ls
                              uname readelf mkdir);
-  my @search_paths_os_cmds = qw (/usr/bin /bin);
+  my @search_paths_os_cmds = qw (
+    /usr/bin
+    /bin
+    /usr/local/bin
+    /usr/local/sbin
+    /usr/sbin
+    /sbin
+  );
 
 #------------------------------------------------------------------------------
 # TBD: Eliminate these.
@@ -409,6 +424,11 @@ sub main
 # This part is like a preamble.  Before we continue we need to figure out some 
 # things that are needed later on.
 #------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Store the absolute path of the command executed.
+#------------------------------------------------------------------------------
+  my $location_gp_command = $0;
 
 #------------------------------------------------------------------------------
 # The very first thing to do is to quickly determine if the user has enabled 
@@ -695,10 +715,30 @@ sub main
   gp_message ("debug", $subr_name, "base_va_executable = $base_va_executable");
 
 #------------------------------------------------------------------------------
-# The gp-display-text tool is critical and has to be available in order to proceed.
+# The $GP_DISPLAY_TEXT tool is critical and has to be available in order 
+# to proceed.
+# This subroutine only returns a value if the tool can be found."
 #------------------------------------------------------------------------------
-  $ignore_value = check_availability_tool ();
+  $g_path_to_tools = ${ check_availability_tool (\$location_gp_command)};
 
+  $GP_DISPLAY_TEXT = $g_path_to_tools . $GP_DISPLAY_TEXT;
+
+  gp_message ("debug", $subr_name, "updated GP_DISPLAY_TEXT = $GP_DISPLAY_TEXT");
+
+#------------------------------------------------------------------------------
+# Check if $GP_DISPLAY_TEXT is executable for user, group, and other.
+# If not, print a warning only, since this may not be fatal but could
+# potentially lead to issues later on.
+#------------------------------------------------------------------------------
+  if (not is_file_executable ($GP_DISPLAY_TEXT))
+    {
+      my $msg = "file $GP_DISPLAY_TEXT is not executable for user, group, and other";
+      gp_message ("warning", $subr_name, $msg);
+    }
+
+#------------------------------------------------------------------------------
+# Find out what the decimal separator is, as set by the user.
+#------------------------------------------------------------------------------
   ($return_code, $decimal_separator, $convert_to_dot) = 
                                                 determine_decimal_separator ();
 
@@ -711,7 +751,7 @@ sub main
     }
   else
     {
-      my $msg = "the decimal separator can not be determined - set to $decimal_separator";
+      my $msg = "the decimal separator cannot be determined - set to $decimal_separator";
       gp_message ("warning", $subr_name, $msg);
     }
 
@@ -1246,8 +1286,8 @@ sub calculate_target_hex_address
   
   $length_of_string = length ($instruction_offset); 
   $first_char       = lcfirst (substr ($instruction_offset,0,1));
-  $d1               = hex ($instruction_offset);
-  $d2               = hex ($mask);
+  $d1               = bigint::hex ($instruction_offset);
+  $d2               = bigint::hex ($mask);
 #          if ($first_char eq "f")
   if (($first_char =~ /[89a-f]/) and ($length_of_string == $number_of_fields))
     {
@@ -1258,12 +1298,12 @@ sub calculate_target_hex_address
 # XOR the decimal representation and add 1 to the result.
 #------------------------------------------------------------------------------
       $result = ($d1 ^ $d2) + 1;
-      $dec_branch_target = hex ($instruction_address) - $result;
+      $dec_branch_target = bigint::hex ($instruction_address) - $result;
     }
   else
     {
       $result = $d1;
-      $dec_branch_target = hex ($instruction_address) + $result;
+      $dec_branch_target = bigint::hex ($instruction_address) + $result;
     }
 #------------------------------------------------------------------------------
 # Convert to hexadecimal.
@@ -1275,10 +1315,11 @@ sub calculate_target_hex_address
 } #-- End of subroutine calculate_target_hex_address
 
 #------------------------------------------------------------------------------
-# This subroutine sets the absolute path to all commands in array @cmds.  The
-# commands and their respective paths are stored in hash "g_mapped_cmds".
+# Sets the absolute path to all commands in array @cmds.  The commands and 
+# their respective paths are stored in hash "g_mapped_cmds".
 #
-# It is a fatal error if such a path can't be found.
+# If no such mapping is found, a warning is issued, but execution continues.
+# The warning(s) may help with troubleshooting, should a failure occur later.
 #------------------------------------------------------------------------------
 sub check_and_define_cmds
 {
@@ -1311,7 +1352,7 @@ sub check_and_define_cmds
       $found_match = $FALSE;
       for my $path (@search_path)
         {
-          $target_cmd = $path."/".$cmd; 
+          $target_cmd = $path . "/" . $cmd; 
           if (-x $target_cmd)
             {
               $found_match = $TRUE;
@@ -1335,9 +1376,12 @@ sub check_and_define_cmds
     {
       if ($mapped eq "road_to_nowhere")
         {
-          gp_message ("error", $subr_name, "cannot find a path for command $cmd");
+          my $msg = "cannot find a path for command $cmd - " .
+                    "assume this will still work without a path";
+          gp_message ("warning", $subr_name, $msg);
           $no_of_failed_mappings++; 
           $failed_cmds .= $cmd; 
+          $g_mapped_cmds{$cmd} = $cmd;
         }
       else
        {
@@ -1346,8 +1390,8 @@ sub check_and_define_cmds
     }
   if ($no_of_failed_mappings != 0)
     {
-      gp_message ("error", $subr_name, "failed to find a mapping for $failed_cmds");
-      gp_message ("error", $subr_name, "a total of $no_of_failed_mappings mapping failures");
+      gp_message ("debug", $subr_name, "failed to find a mapping for $failed_cmds");
+      gp_message ("debug", $subr_name, "a total of $no_of_failed_mappings mapping failures");
     }
 
   return ($no_of_failed_mappings);
@@ -1552,29 +1596,93 @@ sub check_and_proc_dis_func_call
 # Check for the $GP_DISPLAY_TEXT tool to be available.  This is a critical tool 
 # needed to provide the information.  If it can not be found, execution is 
 # terminated.
+#
+# We first search foe this tool in the current execution directory.  If it
+# cannot be found there, use $PATH to try to locate it.
 #------------------------------------------------------------------------------
 sub check_availability_tool
 {
   my $subr_name = get_my_name ();
 
-  my $target_cmd;
-  my $output_which_gp_display_text;
+  my ($location_gp_command_ref) = @_;
+
   my $error_code;
+  my $error_occurred;
+  my $msg;
+  my $output_which_gp_display_text;
+  my $return_value;
+  my $target_cmd;
 
-  $target_cmd = $g_mapped_cmds{"which"} . " $GP_DISPLAY_TEXT 2>&1";
+#------------------------------------------------------------------------------
+# Get the path to gp-display-text.
+#------------------------------------------------------------------------------
+  my ($error_occurred_ref, $return_value_ref) = find_path_to_gp_display_text (
+                                                       $location_gp_command_ref
+                                                        );
+  $error_occurred = ${ $error_occurred_ref};   
+  $return_value   = ${ $return_value_ref};
 
-  ($error_code, $output_which_gp_display_text) = execute_system_cmd ($target_cmd);
-   
-  if ($error_code == 0)
+  $msg = "error_occurred = $error_occurred return_value = $return_value";
+  gp_message ("debugXL", $subr_name, $msg);
+
+  if (not $error_occurred) 
+#------------------------------------------------------------------------------
+# All is well and gp-display-text has been located.
+#------------------------------------------------------------------------------
     {
-      gp_message ("debug", $subr_name, "tool $GP_DISPLAY_TEXT is in the search path");
-    } 
-  else
-    {
-      gp_message ("abort", $subr_name, "fatal error executing command $target_cmd");
+      $g_path_to_tools = $return_value;
+
+      $msg = "located $GP_DISPLAY_TEXT in execution directory";
+      gp_message ("debug", $subr_name, $msg);
+      $msg = "g_path_to_tools = $g_path_to_tools";
+      gp_message ("debug", $subr_name, $msg);
     }
+  else
+#------------------------------------------------------------------------------
+# Something went wrong, but perhaps we can still continue.  Try to find
+# $GP_DISPLAY_TEXT through the search path.
+#------------------------------------------------------------------------------
+    {
+      $msg = "error accessing $GP_DISPLAY_TEXT: $return_value - " .
+             "run time behaviour may be undefined";
+      gp_message ("warning", $subr_name, $msg);
+  
+#------------------------------------------------------------------------------
+# Check if we can find $GP_DISPLAY_TEXT in the search path.
+#------------------------------------------------------------------------------
+      $msg = "check for $GP_DISPLAY_TEXT in search path";
+      gp_message ("debug", $subr_name, $msg);
 
-  return (0);
+      $target_cmd = $g_mapped_cmds{"which"} . " $GP_DISPLAY_TEXT 2>&1";
+
+      ($error_code, $output_which_gp_display_text) = 
+                                               execute_system_cmd ($target_cmd);
+   
+      if ($error_code == 0)
+        {
+          my ($gp_file_name, $gp_path, $suffix_not_used) = 
+                                     fileparse ($output_which_gp_display_text);
+          $g_path_to_tools = $gp_path;
+
+          $msg = "using $GP_DISPLAY_TEXT in $g_path_to_tools instead";
+          gp_message ("warning", $subr_name, $msg);
+
+          $msg = "the $GP_DISPLAY_TEXT tool is in the search path";
+          gp_message ("debug", $subr_name, $msg);
+          $msg = "g_path_to_tools = $g_path_to_tools";
+          gp_message ("debug", $subr_name, $msg);
+        } 
+      else
+        {
+          $msg = "failure to find $GP_DISPLAY_TEXT in the search path";
+          gp_message ("debug", $subr_name, $msg);
+
+          $msg = "fatal error executing command $target_cmd";
+          gp_message ("abort", $subr_name, $msg);
+        }
+     }
+
+  return (\$g_path_to_tools);
 
 } #-- End of subroutine check_availability_tool
 
@@ -1765,7 +1873,7 @@ sub check_loadobjects_are_elf
           gp_message ("debug", $subr_name, "extracted name_path = $name_path name = $name");
 #              $error_extracting_information = $TRUE;
           $executable_name  = $name;
-          my $result_VA = hex ($vaddr) - hex ($foffset);
+          my $result_VA = bigint::hex ($vaddr) - bigint::hex ($foffset);
           my $hex_VA = sprintf ("0x%016x", $result_VA);
           $va_executable_in_hex = $hex_VA;
           gp_message ("debug", $subr_name, "set executable_name  = $executable_name");
@@ -2728,7 +2836,7 @@ sub determine_base_va_address
       $base_va_address = "0x0";
     }
    
-  my $decimal_address = hex ($base_va_address);
+  my $decimal_address = bigint::hex ($base_va_address);
   gp_message ("debugXL", $subr_name, "return base_va_address = $base_va_address (decimal: $decimal_address)");
 
   return ($base_va_address);
@@ -3602,7 +3710,7 @@ sub extract_info_from_map_xml
 #------------------------------------------------------------------------------
           $full_path_exec       = $name_path;
           $executable_name      = $name;
-          my $result_VA         = hex ($vaddr) - hex ($foffset);
+          my $result_VA         = bigint::hex ($vaddr) - bigint::hex ($foffset);
           $va_executable_in_hex = sprintf ("0x%016x", $result_VA);
 
 ##          $ARCHIVES_MAP_NAME  = $name;
@@ -3873,6 +3981,58 @@ sub find_keyword_in_string
   return (\$foundit, \@index_values);
 
 } #-- End of subroutine find_keyword_in_string
+
+#------------------------------------------------------------------------------
+# Retrieve the absolute path that was used to execute the command.  This path
+# is used to execute gp-display-text later on.
+#------------------------------------------------------------------------------
+sub find_path_to_gp_display_text
+{
+  my $subr_name = get_my_name ();
+
+  my ($full_command_ref) = @_;
+
+  my $full_command = ${ $full_command_ref };
+
+  my $error_occurred = $TRUE;
+  my $return_value;
+
+#------------------------------------------------------------------------------
+# Get the path name.
+#------------------------------------------------------------------------------
+  my ($gp_file_name, $gp_path, $suffix_not_used) = fileparse ($full_command);
+
+  gp_message ("debug", $subr_name, "full_command = $full_command");
+  gp_message ("debug", $subr_name, "gp_path  = $gp_path");
+
+  my $gp_display_text_instance = $gp_path . $GP_DISPLAY_TEXT;
+
+#------------------------------------------------------------------------------
+# Check if $GP_DISPLAY_TEXT exists, is not empty, and executable.
+#------------------------------------------------------------------------------
+  if (not -e $gp_display_text_instance)
+    {
+      $return_value = "file not found";
+    }
+  else
+    {
+      if (is_file_empty ($gp_display_text_instance))
+        {
+          $return_value = "file is empty";
+        }
+      else
+        {
+#------------------------------------------------------------------------------
+# All is well.  Capture the path.
+#------------------------------------------------------------------------------
+          $error_occurred = $FALSE;
+          $return_value = $gp_path;
+        }
+    }
+
+  return (\$error_occurred, \$return_value);
+
+} #-- End of subroutine find_path_to_gp_display_text
 
 #------------------------------------------------------------------------------
 # Scan the command line to see if the specified option is present.
@@ -4364,7 +4524,7 @@ sub function_info
               my ($segment,$offset);
               $segment = $1;
               $offset = $2;
-              $address_decimal = hex ($offset); # decimal
+              $address_decimal = bigint::hex ($offset); # decimal
               $full_address_field = '@'.$segment.":".$offset; # e.g. @2:0x0003f280
               $order[$index_val]{"addressobj"} = $address_decimal;
               $order[$index_val]{"addressobjtext"} = $full_address_field;
@@ -5406,7 +5566,8 @@ sub generate_dis_html
 
   $dis_regex  = '^(#{2}|\s{2})\s+';
   $dis_regex .= '(.*)';
-  $dis_regex .= '\[\s*([0-9?]+)\]\s+([0-9a-fA-F]+):\s+([a-z0-9]+)\s+(.*)';
+##  $dis_regex .= '\[\s*([0-9?]+)\]\s+([0-9a-fA-F]+):\s+([a-z0-9]+)\s+(.*)';
+  $dis_regex .= '\[\s*([0-9?]+)\]\s+([0-9a-fA-F]+):\s+([a-z0-9]+)(.*)';
 
   gp_message ("debugXL", $subr_name, "metric_regex = $metric_regex");
   gp_message ("debugXL", $subr_name, "dis_regex    = $dis_regex");
@@ -5475,15 +5636,22 @@ sub generate_dis_html
 
       if ( $input_line =~ /$dis_regex/ )
         {
+##          if ( defined ($1) and defined ($2) and defined ($3) and
+##               defined ($4) and defined ($5) and defined ($6) )
           if ( defined ($1) and defined ($2) and defined ($3) and
-               defined ($4) and defined ($5) and defined ($6) )
+               defined ($4) and defined ($5) )
             {
               $hot_line      = $1;
               $metric_values = $2;
               $src_line      = $3;
-              $dec_instr_address = hex ($4);
+              $dec_instr_address = bigint::hex ($4);
               $instruction   = $5;
-              $operands      = $6;
+              if (defined ($6))
+                {
+                  my $white_space_regex = '\s*';
+                  $operands = $6;
+                  $operands =~ s/$white_space_regex//;
+                }
 
               if ($hot_line eq "##")
                 {
@@ -5550,15 +5718,23 @@ sub generate_dis_html
       my $input_line = $disassembly_file[$line_no];
       if ( $input_line =~ /$dis_regex/ )
         {
+#          if ( defined ($1) and defined ($2) and defined ($3) and
+##               defined ($4) and defined ($5) and defined ($6) )
           if ( defined ($1) and defined ($2) and defined ($3) and
-               defined ($4) and defined ($5) and defined ($6) )
+               defined ($4) and defined ($5) )
             {
               $hot_line      = $1;
               $metric_values = $2;
               $src_line      = $3;
-              $dec_instr_address = hex ($4);
+              $dec_instr_address = bigint::hex ($4);
               $instruction   = $5;
-              $operands      = $6;
+##              $operands      = $6;
+              if (defined ($6))
+                {
+                  my $white_space_regex = '\s*';
+                  $operands = $6;
+                  $operands =~ s/$white_space_regex//;
+                }
 
               if (defined ($dec_instruction_start))
                 {
@@ -5610,8 +5786,9 @@ sub generate_dis_html
       if ( $input_line =~ /$dis_regex/ )
         {
           gp_message ("debugXL", $subr_name, "found a disassembly line: $input_line");
+
           if ( defined ($1) and defined ($2) and defined ($3) and
-               defined ($4) and defined ($5) and defined ($6) )
+               defined ($4) and defined ($5) )
             {
 #                      $branch_target{$hex_branch_target} = 1;
 #                      $extended_branch_target{$instruction_address} = $raw_hex_branch_target;
@@ -5620,9 +5797,17 @@ sub generate_dis_html
               $src_line      = $3;
               $orig_hex_instr_address = $4;
               $instruction   = $5;
-              $operands      = $6;
+##              $operands      = $6;
 
-              gp_message ("debugXL", $subr_name, "disassembly line: $1 $2 $3 $4 $5 \$6 = $6");
+              my $msg = "disassembly line: $1 $2 $3 $4 $5";
+              if (defined ($6))
+                {
+                  $msg .= " \$6 = $6";
+                  my $white_space_regex = '\s*';
+                  $operands = $6;
+                  $operands =~ s/$white_space_regex//;
+                }
+              gp_message ("debugXL", $subr_name, $msg);
 
 #------------------------------------------------------------------------------
 # Pad the line with the metrics to ensure correct alignment.
@@ -5711,7 +5896,7 @@ sub generate_dis_html
                 {
                   $branch_address = $extended_branch_target{$hex_instr_address};
 
-                  $dec_branch_address = hex ($branch_address);
+                  $dec_branch_address = bigint::hex ($branch_address);
 
                   if ( ($dec_branch_address >= $dec_instruction_start) and
                        ($dec_branch_address <= $dec_instruction_end) )
@@ -7469,11 +7654,16 @@ sub get_function_info
 
   my ($FSUMMARY_FILE) = @_;
 
-  my @function_info               = ();
-  my %functions_address_and_index = ();
-  my %LINUX_vDSO                  = ();
-  my %function_view_structure     = ();
-  my %addressobjtextm             = ();
+#------------------------------------------------------------------------------
+# The regex section.
+#------------------------------------------------------------------------------
+  my $white_space_regex = '\s*';
+
+  my @function_info              = ();
+  my %function_address_and_index = ();
+  my %LINUX_vDSO                 = ();
+  my %function_view_structure    = ();
+  my %addressobjtextm            = ();
 #------------------------------------------------------------------------------
 # TBD: This structure is no longer used and most likely can be removed.
 #------------------------------------------------------------------------------
@@ -7672,14 +7862,53 @@ sub get_function_info
 # or:
 #   Source File: <absolute_path>/name_of_source_file
 #------------------------------------------------------------------------------
-      if ( not ($line =~ /^(\s*)(.*):(\s+)([^\s]+|(.*))/))
+      $line =~ s/^\s+//;
+
+      my @input_fields   = split (":", $line);
+      my $no_of_elements = scalar (@input_fields);
+
+      gp_message ("debugXL", $subr_name, "#input_fields = $#input_fields");
+      gp_message ("debugXL", $subr_name, "no_of_elements = $no_of_elements");
+      gp_message ("debugXL", $subr_name, "input_fields[0] = $input_fields[0]");
+
+      if ($no_of_elements == 1)
         {
-          my $msg = "unexpected line format in summary file $FSUMMARY_FILE line  = $line";
+          $whatever = $input_fields[0];
+          $value    = "";
+        }
+      elsif ($no_of_elements == 2)
+        {
+#------------------------------------------------------------------------------
+# Note that value may consist of multiple fields (e.g. 1.651 ( 95.4%)).
+#------------------------------------------------------------------------------
+          $whatever = $input_fields[0];
+          $value    = $input_fields[1];
+        }
+      elsif ($no_of_elements == 3)
+        {
+#------------------------------------------------------------------------------
+# Assumption: must be an address field.  Restore the second colon.
+#------------------------------------------------------------------------------
+          $whatever = $input_fields[0];
+          $value    = $input_fields[1] . ":" . $input_fields[2];
+        }
+      else
+        {
+          my $msg = "unexpected: number of fields = " . $no_of_elements; 
           gp_message ("assertion", $subr_name, $msg);
         }
-      $whatever = $2;
-      $value    = $4;
+#------------------------------------------------------------------------------
+# Remove any leading whitespace characters.
+#------------------------------------------------------------------------------
+      $value =~ s/$white_space_regex//;
+
+      gp_message ("debugXL", $subr_name, "whatever = $whatever value = $value");
+
       $function_info[$i]{$whatever} = $value;
+
+#------------------------------------------------------------------------------
+# TBD: Seems to be not used anymore and can most likely be removed. Check this.
+#------------------------------------------------------------------------------
       if ($whatever =~ /Source File/)
         {
           if (!exists ($source_files{$value}))
@@ -7707,7 +7936,7 @@ sub get_function_info
 #------------------------------------------------------------------------------
 # Convert to a base 10 number
 #------------------------------------------------------------------------------
-              $address_decimal = hex ($offset); # decimal
+              $address_decimal = bigint::hex ($offset); # decimal
 #------------------------------------------------------------------------------
 # Construct the address field.  Note that we use the hex address here.
 #------------------------------------------------------------------------------
@@ -7717,9 +7946,13 @@ sub get_function_info
               $function_info[$i]{"addressobjtext"} = $full_address_field;
               $addressobjtextm{$full_address_field} = $i; # $RI
             }
-          if (not exists ($functions_address_and_index{$routine}{$value}))
+          if (not exists ($function_address_and_index{$routine}{$value}))
             {
-              $functions_address_and_index{$routine}{$value} = $i;
+              $function_address_and_index{$routine}{$value} = $i;
+
+              my $msg = "function_address_and_index{$routine}{$value} = " .
+                        $function_address_and_index{$routine}{$value};
+              gp_message ("debugXL", $subr_name, $msg);
             } 
           else 
             {
@@ -7948,13 +8181,13 @@ sub get_function_info
         }
     }
 #------------------------------------------------------------------------------
-# Print the data structure %functions_address_and_index. This is a nested hash.
+# Print the data structure %function_address_and_index. This is a nested hash.
 #------------------------------------------------------------------------------
-  for my $F (keys %functions_address_and_index)
+  for my $F (keys %function_address_and_index)
     {
-      for my $fields (sort keys %{ $functions_address_and_index{$F} })
+      for my $fields (sort keys %{ $function_address_and_index{$F} })
         {
-           gp_message ("debug", $subr_name, "on return: functions_address_and_index{$F}{$fields} = $functions_address_and_index{$F}{$fields}");
+           gp_message ("debug", $subr_name, "on return: function_address_and_index{$F}{$fields} = $function_address_and_index{$F}{$fields}");
         }
     }
 #------------------------------------------------------------------------------
@@ -8025,10 +8258,10 @@ sub get_function_info
          $multi_occurrences; 
   gp_message ("debug", $subr_name, $msg);
 
-  return (\@function_info, \%functions_address_and_index, \%addressobjtextm, \%LINUX_vDSO, \%function_view_structure);
+  return (\@function_info, \%function_address_and_index, \%addressobjtextm, 
+          \%LINUX_vDSO, \%function_view_structure);
 
 } #-- End of subroutine get_function_info
-
 #------------------------------------------------------------------------------
 # TBD
 #------------------------------------------------------------------------------
@@ -8852,6 +9085,8 @@ sub handle_module_availability
 {
   my $subr_name = get_my_name ();
 
+  gp_message ("verbose", $subr_name, "Handling module requirements");
+
 #------------------------------------------------------------------------------
 # This is clunky at best, but there is a chicken egg problem here.  For the
 # man page to be generated, the --help and --version options need to work,
@@ -8868,7 +9103,9 @@ sub handle_module_availability
                       "List::Util", 
                       "Cwd", 
                       "File::Basename", 
+                      "File::stat", 
                       "POSIX", 
+                      "bigint", 
                       "bignum");
 
   my @missing_modules = ();
@@ -8895,12 +9132,17 @@ sub handle_module_availability
             {
               $cmd = $m . "->import ( qw (min max))";
             }
+          elsif ($m eq "bigint")
+            {
+              $cmd = $m . "->import ( qw (hex))";
+            }
           else
             {
               $cmd = $m . "->import";
             }
           $cmd .= ";";
           $result = eval ("$cmd");
+          gp_message ("debugM", $subr_name, "cmd = $cmd");
         }
       else
         {
@@ -9189,6 +9431,107 @@ sub is_file_empty
   return ($is_empty);
 
 } #-- End of subroutine is_file_empty
+
+#------------------------------------------------------------------------------
+# Check if a file is executable and return $TRUE or $FALSE.
+#------------------------------------------------------------------------------
+sub is_file_executable
+{
+  my $subr_name = get_my_name ();
+
+  my ($filename) = @_;
+
+  my $file_permissions;
+  my $index_offset;
+  my $is_executable;
+  my $mode;
+  my $number_of_bytes; 
+  my @permission_settings = ();
+  my %permission_values = ();
+
+  chomp ($filename);
+
+  gp_message ("debug", $subr_name, "check if filename = $filename is executable");
+
+  if (not -e $filename)
+    {
+#------------------------------------------------------------------------------
+# The return value is used in the caller.  This is why we return the empty
+# string in case the file does not exist.
+#------------------------------------------------------------------------------
+      gp_message ("debug", $subr_name, "filename = $filename not found");
+      $is_executable = $FALSE;
+    }
+  else
+    {
+      $mode = stat ($filename)->mode;
+
+      gp_message ("debugXL", $subr_name, "mode = $mode");
+#------------------------------------------------------------------------------
+# Get username.  We currently do not do anything with this though and the
+# code is commented out.
+#
+#      my $my_name = getlogin () || getpwuid($<) || "Kilroy";;
+#      gp_message ("debug", $subr_name, "my_name = $my_name");
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Convert file permissions to octal, split the individual numbers and store
+# the values for the respective users.
+#------------------------------------------------------------------------------
+      $file_permissions = sprintf("%o", $mode & 07777);
+
+      @permission_settings = split (//, $file_permissions);
+
+      $number_of_bytes = scalar (@permission_settings);
+
+      gp_message ("debugXL", $subr_name, "file_permissions = $file_permissions");
+      gp_message ("debugXL", $subr_name, "permission_settings = @permission_settings");
+      gp_message ("debugXL", $subr_name, "number_of_settings = $number_of_bytes");
+
+      if ($number_of_bytes == 4)
+        {
+          $index_offset = 1;
+        }
+      elsif ($number_of_bytes == 3)
+        {
+          $index_offset = 0;
+        }
+      else
+        {
+          my $msg = "unexpected number of $number_of_bytes bytes " .
+                    "in permission settings: @permission_settings";
+          gp_message ("assertion", $subr_name, $msg);
+        }
+
+      $permission_values{user}  = $permission_settings[$index_offset++];
+      $permission_values{group} = $permission_settings[$index_offset++];
+      $permission_values{other} = $permission_settings[$index_offset];
+
+#------------------------------------------------------------------------------
+# The executable bit should be set for user, group and other.  If this fails
+# we mark the file as not executable.  Note that this is gprofng specific.
+#------------------------------------------------------------------------------
+      $is_executable = $TRUE;
+      for my $k (keys %permission_values)
+        {
+          my $msg = "permission_values{" . $k . "} = " .
+                    $permission_values{$k};
+          gp_message ("debugXL", $subr_name, $msg);
+    
+          if ($permission_values{$k} % 2 == 0)
+            {
+              $is_executable = $FALSE;
+              last;
+            }
+        }
+    }
+
+  gp_message ("debug", $subr_name, "is_executable = $is_executable");
+
+  return ($is_executable);
+
+} #-- End of subroutine is_file_executable
 
 #-------------------------------------------------------------------------------
 # TBD.
@@ -9847,12 +10190,12 @@ sub parse_dis_files
   my $subr_name = get_my_name ();
 
   my ($number_of_metrics_ref, $function_info_ref, 
-      $functions_address_and_index_ref, $input_string_ref, 
+      $function_address_and_index_ref, $input_string_ref, 
       $addressobj_index_ref) = @_;
 
 #------------------------------------------------------------------------------
-# Note that $functions_address_and_index_ref are is not used,
-# but we need to pass in the address into generate_dis_html.
+# Note that $function_address_and_index_ref is not used, but we need to pass 
+# in the address into generate_dis_html.
 #------------------------------------------------------------------------------
   my $number_of_metrics = ${ $number_of_metrics_ref };
   my @function_info     = @{ $function_info_ref };
@@ -9916,7 +10259,7 @@ sub parse_dis_files
                                           \$target_function,
                                           \$number_of_metrics, 
                                           $function_info_ref, 
-                                          $functions_address_and_index_ref, 
+                                          $function_address_and_index_ref, 
                                           \$outputdir, 
                                           \$filename, 
                                           \@source_line, 
@@ -11005,6 +11348,15 @@ sub process_function_files
             {
               $PCA = $function_address_info{$metric}[$INDEX]{"PC Address"};
 
+              if (not exists ($functions_per_metric_first_index{$metric}{$routine}{$PCA}))
+                {
+                  gp_message ("debugXL", $subr_name, "not exists: functions_per_metric_first_index{$metric}{$routine}{$PCA}");
+                }
+              if (not exists ($function_address_and_index{$routine}{$PCA}))
+                {
+                  gp_message ("debugXL", $subr_name, "not exists: function_address_and_index{$routine}{$PCA}");
+                }
+
               if (exists ($functions_per_metric_first_index{$metric}{$routine}{$PCA}) and 
                   exists ($function_address_and_index{$routine}{$PCA}))
                 {
@@ -11130,7 +11482,7 @@ sub process_function_files
 ###############################################################################
           gp_message ("debugXL", $subr_name, "before function_info[$routine_index]{addressobj} = $function_info[$routine_index]{'addressobj'}");
 
-          $function_info[$routine_index]{"addressobj"} += hex (
+          $function_info[$routine_index]{"addressobj"} += bigint::hex (
                                                 determine_base_va_address (
                                                   $executable_name, 
                                                   $base_va_executable, 
