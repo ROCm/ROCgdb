@@ -50,7 +50,7 @@ struct register_id_equal_to
 };
 
 /* AMDGPU architecture specific information.  */
-struct amdgpu_gdbarch_tdep : gdbarch_tdep
+struct amdgpu_gdbarch_tdep : gdbarch_tdep_base
 {
   /* This architecture's breakpoint instruction.  */
   gdb::unique_xmalloc_ptr<gdb_byte> breakpoint_instruction_bytes;
