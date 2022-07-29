@@ -3068,6 +3068,10 @@ elf32_avr_relax_section (bfd *abfd,
 				      "at address 0x%x deleted.\n",
 				      (int) dot + insn_size);
 
+			    elf_section_data (sec)->relocs = internal_relocs;
+			    elf_section_data (sec)->this_hdr.contents = contents;
+			    symtab_hdr->contents = (unsigned char *) isymbuf;
+
 			    /* Delete two bytes of data.  */
 			    if (!elf32_avr_relax_delete_bytes (abfd, sec,
 							       irel->r_offset + insn_size, 2,

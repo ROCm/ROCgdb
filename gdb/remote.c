@@ -1034,7 +1034,7 @@ is_remote_target (process_stratum_target *target)
 }
 
 /* Per-program-space data key.  */
-static const struct program_space_key<char, gdb::xfree_deleter<char>>
+static const registry<program_space>::key<char, gdb::xfree_deleter<char>>
   remote_pspace_data;
 
 /* The size to align memory write packets, when practical.  The protocol

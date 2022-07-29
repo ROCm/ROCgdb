@@ -239,7 +239,7 @@ struct amd_dbgapi_target final : public target_ops
 static struct amd_dbgapi_target the_amd_dbgapi_target;
 
 /* Per-inferior data key.  */
-static const struct inferior_key<amd_dbgapi_inferior_info>
+static const registry<inferior>::key<amd_dbgapi_inferior_info>
   amd_dbgapi_inferior_data;
 
 /* The async event handler registered with the event loop, indicating that we

@@ -1154,7 +1154,6 @@ COMMON_SFILES = \
 	regcache.c \
 	regcache-dump.c \
 	reggroups.c \
-	registry.c \
 	remote.c \
 	remote-fileio.c \
 	remote-notif.c \
