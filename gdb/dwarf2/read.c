@@ -951,14 +951,15 @@ static struct die_info *die_specification (struct die_info *die,
 					   struct dwarf2_cu **);
 
 static line_header_up dwarf_decode_line_header (sect_offset sect_off,
-						struct dwarf2_cu *cu);
+						struct dwarf2_cu *cu,
+						const char *comp_dir);
 
 static void dwarf_decode_lines (struct line_header *,
 				struct dwarf2_cu *,
 				CORE_ADDR, int decode_mapping);
 
-static void dwarf2_start_subfile (struct dwarf2_cu *, const char *,
-				  const char *);
+static void dwarf2_start_subfile (dwarf2_cu *cu, const file_entry &fe,
+				  const line_header &lh);
 
 static struct symbol *new_symbol (struct die_info *, struct type *,
 				  struct dwarf2_cu *, struct symbol * = NULL);
@@ -2748,6 +2749,8 @@ dw2_get_file_names_reader (const struct die_reader_specs *reader,
   line_header_up lh;
   sect_offset line_offset {};
 
+  file_and_directory &fnd = find_file_and_directory (comp_unit_die, cu);
+
   attr = dwarf2_attr (comp_unit_die, DW_AT_stmt_list, cu);
   if (attr != nullptr && attr->form_is_unsigned ())
     {
@@ -2767,10 +2770,8 @@ dw2_get_file_names_reader (const struct die_reader_specs *reader,
 	  return;
 	}
 
-      lh = dwarf_decode_line_header (line_offset, cu);
+      lh = dwarf_decode_line_header (line_offset, cu, fnd.get_comp_dir ());
     }
-
-  file_and_directory &fnd = find_file_and_directory (comp_unit_die, cu);
 
   int offset = 0;
   if (!fnd.is_unknown ())
@@ -9446,7 +9447,10 @@ find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
       && producer_is_gcc_lt_4_3 (cu)
       && res.get_name () != nullptr
       && IS_ABSOLUTE_PATH (res.get_name ()))
-    res.set_comp_dir (ldirname (res.get_name ()));
+    {
+      res.set_comp_dir (ldirname (res.get_name ()));
+      res.set_name (make_unique_xstrdup (lbasename (res.get_name ())));
+    }
 
   cu->per_cu->fnd.reset (new file_and_directory (std::move (res)));
   return *cu->per_cu->fnd;
@@ -9459,11 +9463,11 @@ find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
 
 static void
 handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
+			const file_and_directory &fnd,
 			CORE_ADDR lowpc) /* ARI: editCase function */
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct attribute *attr;
-  struct line_header line_header_local;
   hashval_t line_header_local_hash;
   void **slot;
   int decode_mapping;
@@ -9492,8 +9496,7 @@ handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
 				   xcalloc, xfree));
     }
 
-  line_header_local.sect_off = line_offset;
-  line_header_local.offset_in_dwz = cu->per_cu->is_dwz;
+  line_header line_header_local (line_offset, cu->per_cu->is_dwz);
   line_header_local_hash = line_header_hash (&line_header_local);
   if (per_objfile->line_header_hash != NULL)
     {
@@ -9514,7 +9517,8 @@ handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
 
   /* dwarf_decode_line_header does not yet provide sufficient information.
      We always have to call also dwarf_decode_lines for it.  */
-  line_header_up lh = dwarf_decode_line_header (line_offset, cu);
+  line_header_up lh = dwarf_decode_line_header (line_offset, cu,
+						fnd.get_comp_dir ());
   if (lh == NULL)
     return;
 
@@ -9592,7 +9596,7 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
      lnp_state_machine::check_line_address) will fail to properly
      exclude an entry that was removed via --gc-sections.  */
   if (lowpc != highpc)
-    handle_DW_AT_stmt_list (die, cu, lowpc);
+    handle_DW_AT_stmt_list (die, cu, fnd, lowpc);
 
   /* Process all dies in compilation unit.  */
   if (die->child != NULL)
@@ -9666,7 +9670,7 @@ dwarf2_cu::setup_type_unit_groups (struct die_info *die)
   if (attr != NULL && attr->form_is_unsigned ())
     {
       sect_offset line_offset = (sect_offset) attr->as_unsigned ();
-      lh = dwarf_decode_line_header (line_offset, this);
+      lh = dwarf_decode_line_header (line_offset, this, nullptr);
     }
   if (lh == NULL)
     {
@@ -9707,18 +9711,20 @@ dwarf2_cu::setup_type_unit_groups (struct die_info *die)
       for (i = 0; i < file_names.size (); ++i)
 	{
 	  file_entry &fe = file_names[i];
-	  dwarf2_start_subfile (this, fe.name,
-				fe.include_dir (line_header));
+	  dwarf2_start_subfile (this, fe, *line_header);
 	  buildsym_compunit *b = get_builder ();
-	  if (b->get_current_subfile ()->symtab == NULL)
+	  subfile *sf = b->get_current_subfile ();
+
+	  if (sf->symtab == nullptr)
 	    {
 	      /* NOTE: start_subfile will recognize when it's been
 		 passed a file it has already seen.  So we can't
 		 assume there's a simple mapping from
 		 cu->line_header->file_names to subfiles, plus
 		 cu->line_header->file_names may contain dups.  */
-	      const char *name = b->get_current_subfile ()->name.c_str ();
-	      b->get_current_subfile ()->symtab = allocate_symtab (cust, name);
+	      const char *name = sf->name.c_str ();
+	      const char *name_for_id = sf->name_for_id.c_str ();
+	      sf->symtab = allocate_symtab (cust, name, name_for_id);
 	    }
 
 	  fe.symtab = b->get_current_subfile ()->symtab;
@@ -19757,7 +19763,8 @@ get_debug_line_section (struct dwarf2_cu *cu)
    and must not be freed.  */
 
 static line_header_up
-dwarf_decode_line_header (sect_offset sect_off, struct dwarf2_cu *cu)
+dwarf_decode_line_header (sect_offset sect_off, struct dwarf2_cu *cu,
+			  const char *comp_dir)
 {
   struct dwarf2_section_info *section;
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
@@ -19774,7 +19781,8 @@ dwarf_decode_line_header (sect_offset sect_off, struct dwarf2_cu *cu)
     }
 
   return dwarf_decode_line_header (sect_off, cu->per_cu->is_dwz,
-				   per_objfile, section, &cu->header);
+				   per_objfile, section, &cu->header,
+				   comp_dir);
 }
 
 /* Subroutine of dwarf_decode_lines to simplify it.
@@ -20036,11 +20044,9 @@ lnp_state_machine::handle_set_file (file_name_index file)
     dwarf2_debug_line_missing_file_complaint ();
   else
     {
-      const char *dir = fe->include_dir (m_line_header);
-
       m_last_subfile = m_cu->get_builder ()->get_current_subfile ();
       m_line_has_non_zero_discriminator = m_discriminator != 0;
-      dwarf2_start_subfile (m_cu, fe->name, dir);
+      dwarf2_start_subfile (m_cu, *fe, *m_line_header);
     }
 }
 
@@ -20323,7 +20329,7 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
       const file_entry *fe = state_machine.current_file ();
 
       if (fe != NULL)
-	dwarf2_start_subfile (cu, fe->name, fe->include_dir (lh));
+	dwarf2_start_subfile (cu, *fe, *lh);
 
       /* Decode the table.  */
       while (line_ptr < line_end && !end_sequence)
@@ -20535,14 +20541,14 @@ dwarf_decode_lines (struct line_header *lh, struct dwarf2_cu *cu,
 
   for (auto &fe : lh->file_names ())
     {
-      dwarf2_start_subfile (cu, fe.name, fe.include_dir (lh));
-      if (builder->get_current_subfile ()->symtab == NULL)
-	{
-	  builder->get_current_subfile ()->symtab
-	    = allocate_symtab (cust,
-			       builder->get_current_subfile ()->name.c_str ());
-	}
-      fe.symtab = builder->get_current_subfile ()->symtab;
+      dwarf2_start_subfile (cu, fe, *lh);
+      subfile *sf = builder->get_current_subfile ();
+
+      if (sf->symtab == nullptr)
+	sf->symtab = allocate_symtab (cust, sf->name.c_str (),
+				      sf->name_for_id.c_str ());
+
+      fe.symtab = sf->symtab;
     }
 }
 
@@ -20570,10 +20576,12 @@ dwarf_decode_lines (struct line_header *lh, struct dwarf2_cu *cu,
    subfile's name.  */
 
 static void
-dwarf2_start_subfile (struct dwarf2_cu *cu, const char *filename,
-		      const char *dirname)
+dwarf2_start_subfile (dwarf2_cu *cu, const file_entry &fe,
+		      const line_header &lh)
 {
-  std::string copy;
+  std::string filename_holder;
+  const char *filename = fe.name;
+  const char *dirname = lh.include_dir_at (fe.d_index);
 
   /* In order not to lose the line information directory,
      we concatenate it to the filename when it makes sense.
@@ -20584,11 +20592,12 @@ dwarf2_start_subfile (struct dwarf2_cu *cu, const char *filename,
 
   if (!IS_ABSOLUTE_PATH (filename) && dirname != NULL)
     {
-      copy = path_join (dirname, filename);
-      filename = copy.c_str ();
+      filename_holder = path_join (dirname, filename);
+      filename = filename_holder.c_str ();
     }
 
-  cu->get_builder ()->start_subfile (filename);
+  std::string filename_for_id = lh.file_file_name (fe);
+  cu->get_builder ()->start_subfile (filename, filename_for_id.c_str ());
 }
 
 static void

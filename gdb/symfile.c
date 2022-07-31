@@ -2772,13 +2772,15 @@ deduce_language_from_filename (const char *filename)
    CUST is from the result of allocate_compunit_symtab.  */
 
 struct symtab *
-allocate_symtab (struct compunit_symtab *cust, const char *filename)
+allocate_symtab (struct compunit_symtab *cust, const char *filename,
+		 const char *filename_for_id)
 {
   struct objfile *objfile = cust->objfile ();
   struct symtab *symtab
     = OBSTACK_ZALLOC (&objfile->objfile_obstack, struct symtab);
 
   symtab->filename = objfile->intern (filename);
+  symtab->filename_for_id = objfile->intern (filename_for_id);
   symtab->fullname = NULL;
   symtab->set_language (deduce_language_from_filename (filename));
 
@@ -2794,13 +2796,13 @@ allocate_symtab (struct compunit_symtab *cust, const char *filename)
       if (last_objfile_name.empty () || last_objfile_name != this_objfile_name)
 	{
 	  last_objfile_name = this_objfile_name;
-	  gdb_printf (gdb_stdlog,
-		      "Creating one or more symtabs for objfile %s ...\n",
-		      this_objfile_name);
+
+	  symtab_create_debug_printf_v
+	    ("creating one or more symtabs for objfile %s", this_objfile_name);
 	}
-      gdb_printf (gdb_stdlog,
-		  "Created symtab %s for module %s.\n",
-		  host_address_to_string (symtab), filename);
+
+      symtab_create_debug_printf_v ("created symtab %s for module %s",
+				    host_address_to_string (symtab), filename);
     }
 
   /* Add it to CUST's list of symtabs.  */
@@ -2833,13 +2835,9 @@ allocate_compunit_symtab (struct objfile *objfile, const char *name)
 
   cu->set_debugformat ("unknown");
 
-  if (symtab_create_debug)
-    {
-      gdb_printf (gdb_stdlog,
-		  "Created compunit symtab %s for %s.\n",
-		  host_address_to_string (cu),
-		  cu->name);
-    }
+  symtab_create_debug_printf_v ("created compunit symtab %s for %s",
+				host_address_to_string (cu),
+				cu->name);
 
   return cu;
 }
