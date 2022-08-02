@@ -718,6 +718,16 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 	}
     }
 
+  if (pe_def_file->exclude_symbols)
+    {
+      def_file_exclude_symbol *ac = pe_def_file->exclude_symbols;
+      while (ac)
+	{
+	  pe_dll_add_excludes (ac->symbol_name, EXCLUDESYMS);
+	  ac = ac->next;
+	}
+    }
+
   /* If we are building an executable and there is nothing
      to export, we do not build an export table at all.  */
   if (bfd_link_executable (info) && pe_def_file->num_exports == 0
@@ -1812,10 +1822,8 @@ pe_dll_generate_def_file (const char *pe_out_def_filename)
 	  quoteput (pe_def_file->name, out, 1);
 
 	  if (pe_data (link_info.output_bfd)->pe_opthdr.ImageBase)
-	    {
-	      fprintf (out, " BASE=0x");
-	      fprintf_vma (out, ((bfd_vma) pe_data (link_info.output_bfd)->pe_opthdr.ImageBase));
-	    }
+	    fprintf (out, " BASE=0x%" PRIx64,
+		     (uint64_t) pe_data (link_info.output_bfd)->pe_opthdr.ImageBase);
 	  fprintf (out, "\n");
 	}
 
