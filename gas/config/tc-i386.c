@@ -3572,7 +3572,7 @@ build_vex_prefix (const insn_template *t)
 
       if (i.tm.opcode_modifier.d)
 	i.tm.base_opcode ^= (i.tm.base_opcode & 0xee) != 0x6e
-			    ? Opcode_SIMD_FloatD : Opcode_SIMD_IntD;
+			    ? Opcode_ExtD : Opcode_SIMD_IntD;
       else /* Use the next insn.  */
 	install_template (&t[1]);
     }
@@ -4329,24 +4329,19 @@ optimize_encoding (void)
 	   && !i.types[2].bitfield.xmmword
 	   && (i.tm.opcode_modifier.vex
 	       || ((!i.mask.reg || i.mask.zeroing)
-		   && i.rounding.type == rc_none
 		   && is_evex_encoding (&i.tm)
 		   && (i.vec_encoding != vex_encoding_evex
 		       || cpu_arch_isa_flags.bitfield.cpuavx512vl
 		       || i.tm.cpu_flags.bitfield.cpuavx512vl
 		       || (i.tm.operand_types[2].bitfield.zmmword
 			   && i.types[2].bitfield.ymmword))))
-	   && ((i.tm.base_opcode == 0x55
-		|| i.tm.base_opcode == 0x57
-		|| i.tm.base_opcode == 0xdf
-		|| i.tm.base_opcode == 0xef
-		|| i.tm.base_opcode == 0xf8
-		|| i.tm.base_opcode == 0xf9
-		|| i.tm.base_opcode == 0xfa
-		|| i.tm.base_opcode == 0xfb
-		|| i.tm.base_opcode == 0x42
-		|| i.tm.base_opcode == 0x47)
-	       && i.tm.extension_opcode == None))
+	   && i.tm.opcode_modifier.opcodespace == SPACE_0F
+	   && ((i.tm.base_opcode | 2) == 0x57
+	       || i.tm.base_opcode == 0xdf
+	       || i.tm.base_opcode == 0xef
+	       || (i.tm.base_opcode | 3) == 0xfb
+	       || i.tm.base_opcode == 0x42
+	       || i.tm.base_opcode == 0x47))
     {
       /* Optimize: -O1:
 	   VOP, one of vandnps, vandnpd, vxorps, vxorpd, vpsubb, vpsubd,
@@ -6753,13 +6748,13 @@ match_template (char mnem_suffix)
 		  found_reverse_match = Opcode_VexW;
 		  goto check_operands_345;
 		}
-	      else if (operand_types[0].bitfield.xmmword
-		       || operand_types[i.operands - 1].bitfield.xmmword
-		       || operand_types[0].bitfield.class == RegMMX
-		       || operand_types[i.operands - 1].bitfield.class == RegMMX
-		       || is_any_vex_encoding(t))
+	      else if (t->opcode_modifier.opcodespace != SPACE_BASE
+		       && (t->opcode_modifier.opcodespace != SPACE_0F
+			   /* MOV to/from CR/DR/TR, as an exception, follow
+			      the base opcode space encoding model.  */
+			   || (t->base_opcode | 7) != 0x27))
 		found_reverse_match = (t->base_opcode & 0xee) != 0x6e
-				      ? Opcode_SIMD_FloatD : Opcode_SIMD_IntD;
+				      ? Opcode_ExtD : Opcode_SIMD_IntD;
 	      else
 		found_reverse_match = Opcode_D;
 	      if (t->opcode_modifier.floatr)
