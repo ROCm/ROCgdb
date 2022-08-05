@@ -480,7 +480,17 @@ get_tdesc_info (struct inferior *inf)
 /* A handle for architecture-specific data associated with the
    target description (see struct tdesc_arch_data).  */
 
-static struct gdbarch_data *tdesc_data;
+static const registry<gdbarch>::key<tdesc_arch_data> tdesc_data;
+
+/* Get or create the tdesc_data.  */
+static tdesc_arch_data *
+get_arch_data (struct gdbarch *gdbarch)
+{
+  tdesc_arch_data *result = tdesc_data.get (gdbarch);
+  if (result == nullptr)
+    result = tdesc_data.emplace (gdbarch);
+  return result;
+}
 
 /* See target-descriptions.h.  */
 
@@ -559,8 +569,7 @@ target_find_description (void)
 	{
 	  struct tdesc_arch_data *data;
 
-	  data = ((struct tdesc_arch_data *)
-		  gdbarch_data (target_gdbarch (), tdesc_data));
+	  data = get_arch_data (target_gdbarch ());
 	  if (tdesc_has_registers (tdesc_info->tdesc)
 	      && data->arch_regs.empty ())
 	    warning (_("Target-supplied registers are not supported "
@@ -739,8 +748,7 @@ tdesc_feature_name (const struct tdesc_feature *feature)
 struct type *
 tdesc_find_type (struct gdbarch *gdbarch, const char *id)
 {
-  tdesc_arch_data *data
-    = (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+  tdesc_arch_data *data = get_arch_data (gdbarch);
 
   for (const tdesc_arch_reg &reg : data->arch_regs)
     {
@@ -757,15 +765,6 @@ tdesc_find_type (struct gdbarch *gdbarch, const char *id)
 /* Support for registers from target descriptions.  */
 
 /* Construct the per-gdbarch data.  */
-
-static void *
-tdesc_data_init (struct obstack *obstack)
-{
-  return obstack_new<tdesc_arch_data> (obstack);
-}
-
-/* Similar, but for the temporary copy used during architecture
-   initialization.  */
 
 tdesc_arch_data_up
 tdesc_data_alloc (void)
@@ -864,9 +863,8 @@ tdesc_register_bitsize (const struct tdesc_feature *feature, const char *name)
 static struct tdesc_arch_reg *
 tdesc_find_arch_register (struct gdbarch *gdbarch, int regno)
 {
-  struct tdesc_arch_data *data;
+  struct tdesc_arch_data *data = get_arch_data (gdbarch);
 
-  data = (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
   if (regno < data->arch_regs.size ())
     return &data->arch_regs[regno];
   else
@@ -895,8 +893,7 @@ tdesc_register_name (struct gdbarch *gdbarch, int regno)
 
   if (regno >= num_regs && regno < gdbarch_num_cooked_regs (gdbarch))
     {
-      struct tdesc_arch_data *data
-	= (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+      struct tdesc_arch_data *data = get_arch_data (gdbarch);
 
       gdb_assert (data->pseudo_register_name != NULL);
       return data->pseudo_register_name (gdbarch, regno);
@@ -915,8 +912,7 @@ tdesc_register_type (struct gdbarch *gdbarch, int regno)
 
   if (reg == NULL && regno >= num_regs && regno < num_regs + num_pseudo_regs)
     {
-      struct tdesc_arch_data *data
-	= (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+      struct tdesc_arch_data *data = get_arch_data (gdbarch);
 
       gdb_assert (data->pseudo_register_type != NULL);
       return data->pseudo_register_type (gdbarch, regno);
@@ -1033,8 +1029,7 @@ tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regno,
 
   if (regno >= num_regs && regno < num_regs + num_pseudo_regs)
     {
-      struct tdesc_arch_data *data
-	= (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+      struct tdesc_arch_data *data = get_arch_data (gdbarch);
 
       if (data->pseudo_register_reggroup_p != NULL)
 	return data->pseudo_register_reggroup_p (gdbarch, regno, reggroup);
@@ -1055,8 +1050,7 @@ void
 set_tdesc_pseudo_register_name (struct gdbarch *gdbarch,
 				gdbarch_register_name_ftype *pseudo_name)
 {
-  struct tdesc_arch_data *data
-    = (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+  struct tdesc_arch_data *data = get_arch_data (gdbarch);
 
   data->pseudo_register_name = pseudo_name;
 }
@@ -1065,8 +1059,7 @@ void
 set_tdesc_pseudo_register_type (struct gdbarch *gdbarch,
 				gdbarch_register_type_ftype *pseudo_type)
 {
-  struct tdesc_arch_data *data
-    = (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+  struct tdesc_arch_data *data = get_arch_data (gdbarch);
 
   data->pseudo_register_type = pseudo_type;
 }
@@ -1076,8 +1069,7 @@ set_tdesc_pseudo_register_reggroup_p
   (struct gdbarch *gdbarch,
    gdbarch_register_reggroup_p_ftype *pseudo_reggroup_p)
 {
-  struct tdesc_arch_data *data
-    = (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+  struct tdesc_arch_data *data = get_arch_data (gdbarch);
 
   data->pseudo_register_reggroup_p = pseudo_reggroup_p;
 }
@@ -1099,7 +1091,7 @@ tdesc_use_registers (struct gdbarch *gdbarch,
      included.  */
   gdb_assert (tdesc_has_registers (target_desc));
 
-  data = (struct tdesc_arch_data *) gdbarch_data (gdbarch, tdesc_data);
+  data = get_arch_data (gdbarch);
   data->arch_regs = std::move (early_data->arch_regs);
 
   /* Build up a set of all registers, so that we can assign register
@@ -1960,8 +1952,6 @@ void
 _initialize_target_descriptions ()
 {
   cmd_list_element *cmd;
-
-  tdesc_data = gdbarch_data_register_pre_init (tdesc_data_init);
 
   add_setshow_prefix_cmd ("tdesc", class_maintenance,
 			  _("Set target description specific variables."),

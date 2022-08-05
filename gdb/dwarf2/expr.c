@@ -38,30 +38,17 @@
 #include "objfiles.h"
 #include "observable.h"
 
-/* Cookie for gdbarch data.  */
-
-static struct gdbarch_data *dwarf_arch_cookie;
-
 /* This holds gdbarch-specific types used by the DWARF expression
    evaluator.  See comments in execute_stack_op.  */
 
 struct dwarf_gdbarch_types
 {
-  struct type *dw_types[3];
+  struct type *dw_types[3] {};
 };
 
-/* Allocate and fill in dwarf_gdbarch_types for an arch.  */
+/* Cookie for gdbarch data.  */
 
-static void *
-dwarf_gdbarch_types_init (struct gdbarch *gdbarch)
-{
-  struct dwarf_gdbarch_types *types
-    = GDBARCH_OBSTACK_ZALLOC (gdbarch, struct dwarf_gdbarch_types);
-
-  /* The types themselves are lazily initialized.  */
-
-  return types;
-}
+static const registry<gdbarch>::key<dwarf_gdbarch_types> dwarf_arch_cookie;
 
 /* Ensure that a FRAME is defined, throw an exception otherwise.  */
 
@@ -273,8 +260,9 @@ write_to_memory (CORE_ADDR address, const gdb_byte *buffer,
 type *
 address_type (gdbarch *arch, int addr_size)
 {
-  dwarf_gdbarch_types *types
-    = (dwarf_gdbarch_types *) gdbarch_data (arch, dwarf_arch_cookie);
+  dwarf_gdbarch_types *types = dwarf_arch_cookie.get (arch);
+  if (types == nullptr)
+    types = dwarf_arch_cookie.emplace (arch);
   int ndx;
 
   if (addr_size == 2)
@@ -4473,12 +4461,4 @@ dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
   return ctx.evaluate (addr, len, as_lval, per_cu,
 		       frame, init_values, addr_info,
 		       type, subobj_type, subobj_offset);
-}
-
-void _initialize_dwarf2expr ();
-void
-_initialize_dwarf2expr ()
-{
-  dwarf_arch_cookie
-    = gdbarch_data_register_post_init (dwarf_gdbarch_types_init);
 }

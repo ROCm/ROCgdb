@@ -623,22 +623,38 @@ execute_cfa_program_test (struct gdbarch *gdbarch)
 
 /* Architecture-specific operations.  */
 
-/* Per-architecture data key.  */
-static struct gdbarch_data *dwarf2_frame_data;
+static void dwarf2_frame_default_init_reg (struct gdbarch *gdbarch,
+					   int regnum,
+					   struct dwarf2_frame_state_reg *reg,
+					   struct frame_info *this_frame);
 
 struct dwarf2_frame_ops
 {
   /* Pre-initialize the register state REG for register REGNUM.  */
   void (*init_reg) (struct gdbarch *, int, struct dwarf2_frame_state_reg *,
-		    struct frame_info *);
+		    struct frame_info *)
+    = dwarf2_frame_default_init_reg;
 
   /* Check whether the THIS_FRAME is a signal trampoline.  */
-  int (*signal_frame_p) (struct gdbarch *, struct frame_info *);
+  int (*signal_frame_p) (struct gdbarch *, struct frame_info *) = nullptr;
 
   /* Convert .eh_frame register number to DWARF register number, or
      adjust .debug_frame register number.  */
-  int (*adjust_regnum) (struct gdbarch *, int, int);
+  int (*adjust_regnum) (struct gdbarch *, int, int) = nullptr;
 };
+
+/* Per-architecture data key.  */
+static const registry<gdbarch>::key<dwarf2_frame_ops> dwarf2_frame_data;
+
+/* Get or initialize the frame ops.  */
+static dwarf2_frame_ops *
+get_frame_ops (struct gdbarch *gdbarch)
+{
+  dwarf2_frame_ops *result = dwarf2_frame_data.get (gdbarch);
+  if (result == nullptr)
+    result = dwarf2_frame_data.emplace (gdbarch);
+  return result;
+}
 
 /* Default architecture-specific register state initialization
    function.  */
@@ -680,18 +696,6 @@ dwarf2_frame_default_init_reg (struct gdbarch *gdbarch, int regnum,
     reg->how = DWARF2_FRAME_REG_CFA;
 }
 
-/* Return a default for the architecture-specific operations.  */
-
-static void *
-dwarf2_frame_init (struct obstack *obstack)
-{
-  struct dwarf2_frame_ops *ops;
-  
-  ops = OBSTACK_ZALLOC (obstack, struct dwarf2_frame_ops);
-  ops->init_reg = dwarf2_frame_default_init_reg;
-  return ops;
-}
-
 /* Set the architecture-specific register state initialization
    function for GDBARCH to INIT_REG.  */
 
@@ -701,8 +705,7 @@ dwarf2_frame_set_init_reg (struct gdbarch *gdbarch,
 					     struct dwarf2_frame_state_reg *,
 					     struct frame_info *))
 {
-  struct dwarf2_frame_ops *ops
-    = (struct dwarf2_frame_ops *) gdbarch_data (gdbarch, dwarf2_frame_data);
+  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   ops->init_reg = init_reg;
 }
@@ -714,8 +717,7 @@ dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 		       struct dwarf2_frame_state_reg *reg,
 		       struct frame_info *this_frame)
 {
-  struct dwarf2_frame_ops *ops
-    = (struct dwarf2_frame_ops *) gdbarch_data (gdbarch, dwarf2_frame_data);
+  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   ops->init_reg (gdbarch, regnum, reg, this_frame);
   reg->evaluated = false;
@@ -729,8 +731,7 @@ dwarf2_frame_set_signal_frame_p (struct gdbarch *gdbarch,
 				 int (*signal_frame_p) (struct gdbarch *,
 							struct frame_info *))
 {
-  struct dwarf2_frame_ops *ops
-    = (struct dwarf2_frame_ops *) gdbarch_data (gdbarch, dwarf2_frame_data);
+  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   ops->signal_frame_p = signal_frame_p;
 }
@@ -742,8 +743,7 @@ static int
 dwarf2_frame_signal_frame_p (struct gdbarch *gdbarch,
 			     struct frame_info *this_frame)
 {
-  struct dwarf2_frame_ops *ops
-    = (struct dwarf2_frame_ops *) gdbarch_data (gdbarch, dwarf2_frame_data);
+  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   if (ops->signal_frame_p == NULL)
     return 0;
@@ -758,8 +758,7 @@ dwarf2_frame_set_adjust_regnum (struct gdbarch *gdbarch,
 				int (*adjust_regnum) (struct gdbarch *,
 						      int, int))
 {
-  struct dwarf2_frame_ops *ops
-    = (struct dwarf2_frame_ops *) gdbarch_data (gdbarch, dwarf2_frame_data);
+  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   ops->adjust_regnum = adjust_regnum;
 }
@@ -771,8 +770,7 @@ static int
 dwarf2_frame_adjust_regnum (struct gdbarch *gdbarch,
 			    int regnum, int eh_frame_p)
 {
-  struct dwarf2_frame_ops *ops
-    = (struct dwarf2_frame_ops *) gdbarch_data (gdbarch, dwarf2_frame_data);
+  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   if (ops->adjust_regnum == NULL)
     return regnum;
@@ -2267,8 +2265,6 @@ void _initialize_dwarf2_frame ();
 void
 _initialize_dwarf2_frame ()
 {
-  dwarf2_frame_data = gdbarch_data_register_pre_init (dwarf2_frame_init);
-
   add_setshow_boolean_cmd ("unwinders", class_obscure,
 			   &dwarf2_frame_unwinders_enabled_p , _("\
 Set whether the DWARF stack frame unwinders are used."), _("\

@@ -780,7 +780,7 @@ fetch_indexed_addr (dwarf_vma offset, uint32_t num_bytes)
 
 /* Fetch a value from a debug section that has been indexed by
    something in another section (eg DW_FORM_loclistx or DW_FORM_rnglistx).
-   Returns 0 if the value could not be found.  */
+   Returns -1 if the value could not be found.  */
 
 static dwarf_vma
 fetch_indexed_value (dwarf_vma idx,
@@ -792,7 +792,7 @@ fetch_indexed_value (dwarf_vma idx,
   if (section->start == NULL)
     {
       warn (_("Unable to locate %s section\n"), section->uncompressed_name);
-      return 0;
+      return -1;
     }
 
   uint32_t pointer_size, bias;
@@ -821,7 +821,7 @@ fetch_indexed_value (dwarf_vma idx,
     {
       warn (_("Offset into section %s too big: 0x%s\n"),
 	    section->name, dwarf_vmatoa ("x", offset));
-      return 0;
+      return -1;
     }
 
   return byte_get (section->start + offset, pointer_size);
@@ -2802,7 +2802,7 @@ read_and_display_attr_value (unsigned long           attribute,
     case DW_FORM_rnglistx:
       if (!do_loc)
 	{
-	  dwarf_vma base, index;
+	  dwarf_vma base, idx;
 	  const char *suffix = strrchr (section->name, '.');
 	  bool dwo = suffix && strcmp (suffix, ".dwo") == 0;
 
@@ -2810,29 +2810,37 @@ read_and_display_attr_value (unsigned long           attribute,
 	    {
 	      if (dwo)
 		{
-		  index = fetch_indexed_value (uvalue, loclists_dwo, 0);
-		  index += (offset_size == 8) ? 20 : 12;
+		  idx = fetch_indexed_value (uvalue, loclists_dwo, 0);
+		  if (idx != (dwarf_vma) -1)
+		    idx += (offset_size == 8) ? 20 : 12;
 		}
 	      else if (debug_info_p == NULL)
 		{
-		  index = fetch_indexed_value (uvalue, loclists, 0);
+		  idx = fetch_indexed_value (uvalue, loclists, 0);
 		}
 	      else
 		{
 		  /* We want to compute:
-		       index = fetch_indexed_value (uvalue, loclists, debug_info_p->loclists_base);
-		       index += debug_info_p->loclists_base;
+		       idx = fetch_indexed_value (uvalue, loclists, debug_info_p->loclists_base);
+		       idx += debug_info_p->loclists_base;
 		      Fortunately we already have that sum cached in the
 		      loc_offsets array.  */
-		  index = debug_info_p->loc_offsets [uvalue];
+		  if (uvalue < debug_info_p->num_loc_offsets)
+		    idx = debug_info_p->loc_offsets [uvalue];
+		  else
+		    {
+		      warn (_("loc_offset %" PRIu64 " too big\n"), uvalue);
+		      idx = -1;
+		    }
 		}
 	    }
 	  else if (form == DW_FORM_rnglistx)
 	    {
 	      if (dwo)
 		{
-		  index = fetch_indexed_value (uvalue, rnglists_dwo, 0);
-		  index += (offset_size == 8) ? 20 : 12;
+		  idx = fetch_indexed_value (uvalue, rnglists_dwo, 0);
+		  if (idx != (dwarf_vma) -1)
+		    idx += (offset_size == 8) ? 20 : 12;
 		}
 	      else
 		{
@@ -2842,8 +2850,9 @@ read_and_display_attr_value (unsigned long           attribute,
 		    base = debug_info_p->rnglists_base;
 		  /* We do not have a cached value this time, so we perform the
 		     computation manually.  */
-		  index = fetch_indexed_value (uvalue, rnglists, base);
-		  index += base;
+		  idx = fetch_indexed_value (uvalue, rnglists, base);
+		  if (idx != (dwarf_vma) -1)
+		    idx += base;
 		}
 	    }
 	  else
@@ -2856,13 +2865,14 @@ read_and_display_attr_value (unsigned long           attribute,
 		base = debug_info_p->addr_base;
 
 	      base += uvalue * pointer_size;
-	      index = fetch_indexed_addr (base, pointer_size);
+	      idx = fetch_indexed_addr (base, pointer_size);
 	    }
 
 	  /* We have already displayed the form name.  */
-	  printf (_("%c(index: 0x%s): %s"), delimiter,
-		  dwarf_vmatoa ("x", uvalue),
-		  dwarf_vmatoa ("x", index));
+	  if (idx != (dwarf_vma) -1)
+	    printf (_("%c(index: 0x%s): %s"), delimiter,
+		    dwarf_vmatoa ("x", uvalue),
+		    dwarf_vmatoa ("x", idx));
 	}
       break;
 
