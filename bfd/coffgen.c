@@ -1058,7 +1058,8 @@ coff_write_symbol (bfd *abfd,
 	  /* Adjust auxent only if this isn't the filename
 	     auxiliary entry.  */
 	  if (native->u.syment.n_sclass == C_FILE
-	      && (native + j + 1)->u.auxent.x_file.x_ftype)
+	      && (native + j + 1)->u.auxent.x_file.x_ftype
+	      && (native + j + 1)->extrap)
 	    coff_write_auxent_fname (abfd, (char *) (native + j + 1)->extrap,
 				     &(native + j + 1)->u.auxent, strtab, hash);
 
@@ -1538,9 +1539,10 @@ build_debug_section (bfd *abfd, asection ** sect_return)
     return NULL;
 
   sec_size = sect->size;
-  debug_section = (char *) _bfd_alloc_and_read (abfd, sec_size, sec_size);
+  debug_section = (char *) _bfd_alloc_and_read (abfd, sec_size + 1, sec_size);
   if (debug_section == NULL)
     return NULL;
+  debug_section[sec_size] = 0;
 
   if (bfd_seek (abfd, position, SEEK_SET) != 0)
     return NULL;
