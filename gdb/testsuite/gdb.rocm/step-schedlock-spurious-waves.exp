@@ -49,7 +49,8 @@ if {[build_executable "failed to prepare main file" ${binfile} ${srcfile} {debug
     return
 }
 
-if {[build_executable "failed to prepare hog file" ${binfile_hog} ${srcfile2} {debug hip}]} {
+if {[build_executable "failed to prepare hog file" ${binfile_hog} ${srcfile2} \
+     {debug hip additional_flags=-std=c++17}]} {
     return
 }
 
@@ -72,11 +73,6 @@ proc do_test {} {
 
 	gdb_breakpoint bit_extract_kernel allow-pending
 
-	# On gfx90a / MI200, running the kernel while the hog process runs
-	# hangs, not much we can do here.
-	if { [hcc_amdgpu_target] == "gfx90a" } {
-	    setup_xfail "*-*-*"
-	}
 	set res [gdb_test "continue" "Thread $::decimal .* hit Breakpoint $::decimal.*"]
 	close -i $hog_spawn_id
 	if { $res != 0 } {
