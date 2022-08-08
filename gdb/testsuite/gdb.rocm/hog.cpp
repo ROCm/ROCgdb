@@ -16,20 +16,125 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "hip/hip_runtime.h"
+#include <sstream>
+#include <iomanip>
+#include <fstream>
+#include <dirent.h>
+#include <iostream>
+#include <memory>
+#include <optional>
+
+#define CHECK(cmd)                                                           \
+    {                                                                        \
+	hipError_t error = cmd;                                              \
+	if (error != hipSuccess)                                             \
+	  {                                                                  \
+	    fprintf(stderr, "error: '%s'(%d) at %s:%d\n",                    \
+		    hipGetErrorString(error), error,                         \
+		    __FILE__, __LINE__);                                     \
+	    exit(EXIT_FAILURE);                                              \
+	  }                                                                  \
+    }
+
+struct dispatch_size
+{
+  dim3 blocks;
+  dim3 threadsPerBlock;
+};
+
+/* Compute the dispatch size necessary to occupy most but not all of the
+   resources of device HIP_DEVICE_ID.
+
+   We aim at occupying all but one wave slots in every CU in the GPU.
+
+   If the exact topology of the GPU cannot be accessed, return a default
+   dispatch size which might not be accurate.  */
+
+static dispatch_size
+hog_dispatch_size (int hip_device_id)
+{
+  hipDeviceProp_t props;
+  CHECK (hipGetDeviceProperties (&props, hip_device_id));
+
+  static const std::string kfd_topo_nodes_path
+    { "/sys/devices/virtual/kfd/kfd/topology/nodes/" };
+  std::unique_ptr<DIR, void (*) (DIR *)> dirp
+    { opendir (kfd_topo_nodes_path.c_str ()),
+      [] (DIR *d) { closedir (d); } };
+
+  if (dirp == nullptr)
+    {
+      perror ("Cannot access KFD topology");
+      exit (EXIT_FAILURE);
+    }
+
+  struct dirent *dir;
+  while ((dir = readdir (dirp.get ())) != nullptr)
+    {
+      if (strcmp (dir->d_name, ".") == 0
+	  || strcmp (dir->d_name, "..") == 0)
+	continue;
+
+      std::ifstream fs { kfd_topo_nodes_path + dir->d_name + "/properties" };
+
+      if (!fs.good ())
+	continue;
+
+      std::optional<uint32_t> kfd_max_waves_per_simd;
+      std::optional<uint32_t> kfd_simd_count;
+      std::optional<uint32_t> kfd_pci_domain;
+      std::optional<uint32_t> kfd_pci_location;
+
+      std::string name;
+      uint32_t value;
+      while (fs >> name >> value)
+	{
+	  if (name == "max_waves_per_simd")
+	    kfd_max_waves_per_simd.emplace (value);
+	  else if (name == "simd_count")
+	    kfd_simd_count.emplace (value);
+	  else if (name == "domain")
+	    kfd_pci_domain.emplace (value);
+	  else if (name == "location_id")
+	    kfd_pci_location.emplace (value);
+	}
+
+      if (kfd_max_waves_per_simd.has_value ()
+	  && kfd_simd_count.has_value ()
+	  && kfd_pci_domain.has_value ()
+	  && kfd_pci_location.has_value ()
+	  && props.pciDomainID == kfd_pci_domain.value ()
+	  && props.pciBusID == ((kfd_pci_location.value () >> 8) & 0xff)
+	  && props.pciDeviceID == ((kfd_pci_location.value () >> 3) & 0x1f))
+	{
+	  return {{kfd_simd_count.value ()
+		   * (kfd_max_waves_per_simd.value () - 1)},
+		{static_cast<uint32_t> (props.warpSize)}};
+	}
+    }
+
+  std::cerr << "Cannot find device topology.  Using arbitrary dispatch size."
+	    << std::endl;
+  return {{512}, {256}};
+}
 
 __global__ void
 hog_kernel ()
 {
-  while (true) {}
+  while (true)
+    __builtin_amdgcn_s_sleep (1);
 }
 
 int
 main ()
 {
-  const unsigned blocks = 512;
-  const unsigned threadsPerBlock = 256;
-  hipLaunchKernelGGL (hog_kernel, dim3 (blocks), dim3 (threadsPerBlock), 0, 0);
-  hipDeviceSynchronize ();
+  int deviceId;
+  CHECK (hipGetDevice (&deviceId));
+
+  auto dim = hog_dispatch_size (deviceId);
+
+  hipLaunchKernelGGL (hog_kernel, dim.blocks, dim.threadsPerBlock, 0, 0);
+  CHECK (hipDeviceSynchronize ());
   return 0;
 }
 
