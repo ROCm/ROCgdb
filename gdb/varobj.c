@@ -2414,52 +2414,36 @@ all_root_varobjs (gdb::function_view<void (struct varobj *var)> func)
     }
 }
 
-/* Invalidate varobj VAR if it is tied to locals and re-create it if it is
-   defined on globals.  It is a helper for varobj_invalidate.
-
-   This function is called after changing the symbol file, in this case the
-   pointers to "struct type" stored by the varobj are no longer valid.  All
-   varobj must be either re-evaluated, or marked as invalid here.  */
+/* Try to recreate the varobj VAR if it is a global or floating.  This is a
+   helper function for varobj_re_set.  */
 
 static void
-varobj_invalidate_iter (struct varobj *var)
+varobj_re_set_iter (struct varobj *var)
 {
-  /* global and floating var must be re-evaluated.  */
-  if (var->root->floating || var->root->global)
+  /* Invalidated global varobjs must be re-evaluated.  */
+  if (!var->root->is_valid && var->root->global)
     {
       struct varobj *tmp_var;
 
       /* Try to create a varobj with same expression.  If we succeed
-	 replace the old varobj, otherwise invalidate it.  */
+	 and have a global replace the old varobj.  */
       tmp_var = varobj_create (nullptr, var->name.c_str (), (CORE_ADDR) 0,
-			       var->root->floating
-			       ? USE_SELECTED_FRAME : USE_CURRENT_FRAME);
-      if (tmp_var != nullptr)
+			       USE_CURRENT_FRAME);
+      if (tmp_var != nullptr && tmp_var->root->global)
 	{
-	  gdb_assert (var->root->floating == tmp_var->root->floating);
 	  tmp_var->obj_name = var->obj_name;
 	  varobj_delete (var, 0);
 	  install_variable (tmp_var);
 	}
-      else if (var->root->global)
-	{
-	  /* Only invalidate globals as floating vars might still be valid in
-	     some other frame.  */
-	  var->root->is_valid = false;
-	}
     }
-  else /* locals must be invalidated.  */
-    var->root->is_valid = false;
 }
 
-/* Invalidate the varobjs that are tied to locals and re-create the ones that
-   are defined on globals.
-   Invalidated varobjs will be always printed in_scope="invalid".  */
+/* See varobj.h.  */
 
 void 
-varobj_invalidate (void)
+varobj_re_set (void)
 {
-  all_root_varobjs (varobj_invalidate_iter);
+  all_root_varobjs (varobj_re_set_iter);
 }
 
 /* Ensure that no varobj keep references to OBJFILE.  */
