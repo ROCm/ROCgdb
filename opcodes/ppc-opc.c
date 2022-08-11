@@ -2849,6 +2849,7 @@ const struct powerpc_operand powerpc_operands[] =
   /* The RM field in an X form instruction.  */
 #define RM BOP + 1
 #define DD RM
+#define mo1 RM
   { 0x3, 11, NULL, NULL, 0 },
 
 #define BH RM + 1
@@ -3507,6 +3508,8 @@ const struct powerpc_operand powerpc_operands[] =
   /* The TO field in a D or X form instruction.  */
 #define TO TBR + 1
 #define DUI TO
+#define SVme TO
+#define SVG TO
 #define TO_MASK (0x1f << 21)
   { 0x1f, 21, NULL, NULL, 0 },
 
@@ -3554,6 +3557,7 @@ const struct powerpc_operand powerpc_operands[] =
   /* The UIMM field in a VX form instruction.  */
 #define UIMM SIMM + 1
 #define DCTL UIMM
+#define rmm UIMM
   { 0x1f, 16, NULL, NULL, 0 },
 
   /* The 3-bit UIMM field in a VX form instruction.  */
@@ -3620,6 +3624,8 @@ const struct powerpc_operand powerpc_operands[] =
 #define PSWM WS + 1
   /* The BO16 field in a BD8 form instruction.  */
 #define BO16 PSWM
+  /* The pst field in a SVRM form instruction.  */
+#define pst PSWM
   {  0x1, 10, 0, 0, 0 },
 
   /* IDX bits for quantization in the pair singles instructions.  */
@@ -3644,6 +3650,7 @@ const struct powerpc_operand powerpc_operands[] =
   /* The RMC or CY field in a Z23 form instruction.  */
 #define RMC A_L + 1
 #define CY RMC
+#define ew RMC
   { 0x3, 9, NULL, NULL, 0 },
 
 #define R RMC + 1
@@ -3657,6 +3664,7 @@ const struct powerpc_operand powerpc_operands[] =
   { 0x1, 17, NULL, NULL, PPC_OPERAND_OPTIONAL },
 
 #define SP PRS + 1
+#define mi0 SP
   { 0x3, 19, NULL, NULL, 0 },
 
 #define S SP + 1
@@ -3824,7 +3832,45 @@ const struct powerpc_operand powerpc_operands[] =
   { 0x7, PPC_OPSHIFT_INV, insert_Ddd, extract_Ddd, 0 },
 
 #define HH DDD + 1
+#define mo0 HH
   { 0x3, 13, NULL, NULL, 0 },
+
+#define SVi HH + 1
+  { 0x3f, 9, NULL, NULL, PPC_OPERAND_NONZERO },
+
+#define vf SVi + 1
+#define sk vf
+  { 0x1, 6, NULL, NULL, 0 },
+
+#define vs vf + 1
+#define mm vs
+  { 0x1, 7, NULL, NULL, 0 },
+
+#define ms vs + 1
+#define yx ms
+  { 0x1, 8, NULL, NULL, 0 },
+
+#define SVLcr ms + 1
+  { 0x1, 5, NULL, NULL, 0 },
+
+#define SVxd SVLcr + 1
+  { 0x1f, 21, NULL, NULL, PPC_OPERAND_NONZERO },
+
+#define SVyd SVxd + 1
+  { 0x1f, 16, NULL, NULL, PPC_OPERAND_NONZERO },
+
+#define SVzd SVyd + 1
+#define SVd SVzd
+  { 0x1f, 11, NULL, NULL, PPC_OPERAND_NONZERO },
+
+#define SVrm SVzd + 1
+  { 0xf, 7, NULL, NULL, 0 },
+
+#define mi1 SVrm + 1
+  { 0x3, 17, NULL, NULL, 0 },
+
+#define mi2 mi1 + 1
+  { 0x3, 15, NULL, NULL, 0 },
 };
 
 const unsigned int num_powerpc_operands = (sizeof (powerpc_operands)
@@ -4700,6 +4746,31 @@ const unsigned int num_powerpc_operands = (sizeof (powerpc_operands)
 #define APU_RT_MASK (APU_MASK | RT_MASK)
 #define APU_RA_MASK (APU_MASK | RA_MASK)
 
+/* An SVL form instruction. */
+#define SVL(op, xop, rc)			\
+  (OP (op)					\
+   | ((((uint64_t)(xop)) & 0x1f) << 1)		\
+   | (((uint64_t)(rc)) & 1))
+#define SVL_MASK	SVL (0x3f, 0x1f, 1)
+
+/* An SVM form instruction. */
+#define SVM(op, xop)				\
+  (OP (op)					\
+   | (((uint64_t)(xop)) & 0x3f))
+#define SVM_MASK	SVM (0x3f, 0x3f)
+
+/* An SVRM form instruction. */
+#define SVRM(op, xop)				\
+  (OP (op)					\
+   | (((uint64_t)(xop)) & 0x3f))
+#define SVRM_MASK	SVRM (0x3f, 0x3f)
+
+/* An SVI form instruction. */
+#define SVI(op, xop)				\
+  (OP (op)					\
+   | (((uint64_t)(xop)) & 0x3f))
+#define SVI_MASK	SVI (0x3f, 0x3f)
+
 /* The BO encodings used in extended conditional branch mnemonics.  */
 #define BODNZF	(0x0)
 #define BODNZFP	(0x1)
@@ -4819,19 +4890,20 @@ const unsigned int num_powerpc_operands = (sizeof (powerpc_operands)
 #define PPCEFS2	PPC_OPCODE_EFS2
 #define PPCBRLK PPC_OPCODE_BRLOCK
 #define PPCPMR	PPC_OPCODE_PMR
-#define PPCTMR  PPC_OPCODE_TMR
+#define PPCTMR	PPC_OPCODE_TMR
 #define PPCCHLK PPC_OPCODE_CACHELCK
 #define PPCRFMCI PPC_OPCODE_RFMCI
-#define E500MC  PPC_OPCODE_E500MC
+#define E500MC	PPC_OPCODE_E500MC
 #define PPCA2	PPC_OPCODE_A2
-#define TITAN   PPC_OPCODE_TITAN
-#define MULHW   PPC_OPCODE_405 | PPC_OPCODE_440 | PPC_OPCODE_476 | TITAN
+#define TITAN	PPC_OPCODE_TITAN
+#define MULHW	PPC_OPCODE_405 | PPC_OPCODE_440 | PPC_OPCODE_476 | TITAN
 #define E500	PPC_OPCODE_E500
 #define E6500	PPC_OPCODE_E6500
-#define PPCVLE  PPC_OPCODE_VLE
-#define PPCHTM  PPC_OPCODE_POWER8
-#define E200Z4  PPC_OPCODE_E200Z4
-#define PPCLSP  PPC_OPCODE_LSP
+#define PPCVLE	PPC_OPCODE_VLE
+#define PPCHTM	PPC_OPCODE_POWER8
+#define E200Z4	PPC_OPCODE_E200Z4
+#define PPCLSP	PPC_OPCODE_LSP
+#define SVP64	PPC_OPCODE_SVP64
 /* Used to mark extended mnemonic in deprecated field so that -Mraw
    won't use this variant in disassembly.  */
 #define EXT	PPC_OPCODE_RAW
@@ -6767,6 +6839,18 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 
 {"rlmi",	M(22,0),	M_MASK,	     M601,	PPCVLE,		{RA, RS, RB, MBE, ME}},
 {"rlmi.",	M(22,1),	M_MASK,	     M601,	PPCVLE,		{RA, RS, RB, MBE, ME}},
+
+{"svstep",	SVL(22,19,0),	SVL_MASK,	SVP64,	PPCVLE,	{RT, SVi, vf}},
+{"svstep.",	SVL(22,19,1),	SVL_MASK,	SVP64,	PPCVLE,	{RT, SVi, vf}},
+
+{"svshape",	SVM(22,25),	SVM_MASK,	SVP64,	PPCVLE,	{SVxd, SVyd, SVzd, SVrm, vf}},
+
+{"setvl",	SVL(22,27,0),	SVL_MASK,	SVP64,	PPCVLE,	{RT, RA, SVi, vf, vs, ms}},
+{"setvl.",	SVL(22,27,1),	SVL_MASK,	SVP64,	PPCVLE,	{RT, RA, SVi, vf, vs, ms}},
+
+{"svindex",	SVI(22,41),	SVI_MASK,	SVP64,	PPCVLE,	{SVG, rmm, SVd, ew, yx, mm, sk}},
+
+{"svremap",	SVRM(22,57),	SVRM_MASK,	SVP64,	PPCVLE,	{SVme, mi0, mi1, mi2, mo0, mo1, pst}},
 
 {"rotlw",	MME(23,31,0),	MMBME_MASK,  PPCCOM,	PPCVLE|EXT,	{RA, RS, RB}},
 {"rlwnm",	M(23,0),	M_MASK,	     PPCCOM,	PPCVLE,		{RA, RS, RB, MBE, ME}},
