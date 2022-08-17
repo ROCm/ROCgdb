@@ -1365,7 +1365,7 @@ gdbarch_register (enum bfd_architecture bfd_architecture,
     }
   /* log it */
   if (gdbarch_debug)
-    gdb_printf (gdb_stdlog, "register_gdbarch_init (%s, %s)\n",
+    gdb_printf (gdb_stdlog, "gdbarch_register (%s, %s)\n",
 		bfd_arch_info->printable_name,
 		host_address_to_string (init));
   /* Append it */
@@ -1377,14 +1377,6 @@ gdbarch_register (enum bfd_architecture bfd_architecture,
   (*curr)->arches = NULL;
   (*curr)->next = NULL;
 }
-
-void
-register_gdbarch_init (enum bfd_architecture bfd_architecture,
-		       gdbarch_init_ftype *init)
-{
-  gdbarch_register (bfd_architecture, init, NULL);
-}
-
 
 /* Look for an architecture using gdbarch_info.  */
 
