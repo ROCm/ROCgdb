@@ -35,6 +35,8 @@
 #include "reggroups.h"
 #include "extract-store-integer.h"
 #include <optional>
+#include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 
 struct amdgpu_per_inferior
 {
@@ -93,6 +95,9 @@ amdgpu_get_segment_address_significant_bits (inferior *inf)
 
   return *per_inf.significant_bits;
 }
+
+/* List of maint info amdgpu commands.  */
+static struct cmd_list_element *maintenance_info_amdgpu_list;
 
 /* Return true if INFO is of an AMDGPU architecture.  */
 
@@ -1930,6 +1935,143 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
   return aliases;
 }
 
+/* Show for each address space supported by the current AMDGPU
+   architecture the aliases of a given ADDR, and the number of
+   consecutive bytes for which each aliasing is valid.
+
+   This is purely a diagnostic aid: it queries
+   amd_dbgapi_convert_address_space for every address space known to
+   the architecture and reports "<not reachable>" for the ones the
+   given address does not alias into.  */
+
+static void
+amdgpu_info_address_aliases_command (const char *exp, int from_tty)
+{
+  /* A series of sanity checks.  */
+  if (exp == nullptr || *exp == '\0')
+    error (_("Argument required."));
+
+  expression_up expr = parse_expression (exp);
+  struct gdbarch *gdbarch = expr->gdbarch;
+  if (!is_amdgpu_arch (gdbarch))
+    error (_("Current architecture is not AMDGPU."));
+
+  if (inferior_ptid == null_ptid)
+    error (_("No thread selected."));
+
+  if (!ptid_is_gpu (inferior_ptid))
+    error (_("Current thread is not an AMDGPU GPU thread."));
+
+  struct value *val = expr->evaluate ();
+  if (TYPE_IS_REFERENCE (val->type ()))
+    val = coerce_ref (val);
+  CORE_ADDR addr = value_as_address (val);
+
+  amd_dbgapi_architecture_id_t architecture_id;
+  amd_dbgapi_status_t status = amd_dbgapi_get_architecture
+    (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed (%s)"),
+	   get_status_string (status));
+
+  arch_addr_space_id src_aspace_num
+    = amdgpu_address_space_id_from_core_address (addr);
+
+  amd_dbgapi_address_space_id_t src_aspace;
+  status = amd_dbgapi_dwarf_address_space_to_address_space (architecture_id,
+							    src_aspace_num,
+							    &src_aspace);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed (%s)"),
+	   get_status_string (status));
+
+  CORE_ADDR offset = amdgpu_segment_address_from_core_address (addr);
+
+  /* amd_dbgapi_convert_address_space special-cases the NULL segment
+     address of the source space: it succeeds and returns the NULL
+     segment address of the destination space, without this being a
+     genuine alias.  Detect that case up front so it isn't reported
+     as a real hit below.  */
+  amd_dbgapi_segment_address_t src_null_address;
+  status = amd_dbgapi_address_space_get_info
+    (src_aspace, AMD_DBGAPI_ADDRESS_SPACE_INFO_NULL_ADDRESS,
+     sizeof (src_null_address), &src_null_address);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_address_space_get_info (NULL_ADDRESS) failed (%s)"),
+	   get_status_string (status));
+  bool src_is_null_address = (offset == src_null_address);
+
+  const amd_dbgapi_wave_id_t wave_id
+    = get_amd_dbgapi_wave_id (inferior_thread ()->ptid);
+  const amd_dbgapi_lane_id_t lane_id
+    = inferior_thread ()->current_simd_lane ();
+  const gdb::array_view<const arch_addr_space> aspaces
+    = amdgpu_address_spaces (gdbarch);
+
+  /* First pass: size the "Address space" column to the longest name.
+     Initialize with the header title width so the column is never
+     narrower than the label.  */
+  size_t max_aspace_name_len = strlen (_("Address space"));
+  for (const auto &address_space : aspaces)
+    max_aspace_name_len = std::max (max_aspace_name_len,
+				    strlen (address_space.name.get ()));
+
+  int addr_width = 4 + (gdbarch_ptr_bit (gdbarch) / 4);
+
+  struct ui_out *ui_out = current_uiout;
+  ui_out_emit_table table_emitter (ui_out, 3, aspaces.size (), "aliases");
+
+  ui_out->table_header (max_aspace_name_len, ui_left, "aspace",
+			_("Address space"));
+  /* Address form is: <name>#0xNN..NNN for a named space,
+     or just 0xNN..NNN for the default (global) space.  */
+  ui_out->table_header (max_aspace_name_len + addr_width,
+			ui_right, "addr", _("Address"));
+  ui_out->table_header (addr_width, ui_right, "valid", _("Valid for"));
+  ui_out->table_body ();
+
+  for (const auto &address_space : aspaces)
+    {
+      amd_dbgapi_address_space_id_t dst_aspace;
+      status = amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, address_space.id, &dst_aspace);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_dwarf_address_space_to_address_space failed (%s)"),
+	       get_status_string (status));
+
+      ui_out_emit_tuple tuple_emitter (ui_out, "alias");
+
+      amd_dbgapi_segment_address_t dst_offset;
+      amd_dbgapi_size_t cont_bytes;
+      status = amd_dbgapi_convert_address_space (wave_id, lane_id, src_aspace,
+						 offset, dst_aspace,
+						 &dst_offset, &cont_bytes);
+      ui_out->field_string ("aspace", address_space.name.get ());
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  ui_out->field_string ("addr", "<not reachable>");
+	  ui_out->field_string ("valid", "0x0");
+	}
+      else
+	{
+	  CORE_ADDR dst_address
+	    = amdgpu_segment_address_to_core_address (address_space.id,
+						      dst_offset);
+	  ui_out->field_string ("addr", paspace_and_addr (gdbarch,
+							  dst_address),
+				address_style.style ());
+
+	  /* Not a real alias, NULL just maps to NULL in every
+	     space.  */
+	  if (src_is_null_address)
+	    ui_out->field_string ("valid", "<null>");
+	  else
+	    ui_out->field_fmt ("valid", "0x%s", phex_nz (cont_bytes));
+	}
+      ui_out->text ("\n");
+    }
+}
+
 static simd_lanes_mask_t
 amdgpu_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
@@ -2434,6 +2576,18 @@ INIT_GDB_FILE (amdgpu_tdep)
 		    amdgpu_supports_arch_info);
   gdb::observers::inferior_appeared.attach (amdgpu_observer_inferior_appeared,
 					    "amdgpu_tdep");
+
+  add_basic_prefix_cmd ("amdgpu", class_maintenance, _("\
+Commands for showing internal info about the AMDGPU target."),
+			&maintenance_info_amdgpu_list, 0,
+			&maintenanceinfolist);
+
+  add_cmd ("address-aliases", class_maintenance,
+	   amdgpu_info_address_aliases_command, _("\
+Show ADDRESS aliases across AMDGPU address spaces.\n\
+Usage: maintenance info amdgpu address-aliases ADDRESS.\n"),
+	   &maintenance_info_amdgpu_list);
+
 #if defined GDB_SELF_TEST
   selftests::register_test ("amdgpu-register-type-parse-flags-fields",
 			    amdgpu_register_type_parse_test);

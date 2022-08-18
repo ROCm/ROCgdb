@@ -7,6 +7,11 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- The "maint info amdgpu address-aliases" command evaluate a given
+  expression to an address, and show what the address aliases to in
+  every address space known to the current AMD GPU selected
+  architecture.
+
 - Improve "maint print address-spaces" command to display properties
   of address spaces supported by an architecture.  For each address
   space, print its name, DWARF id, address size, null address, and
