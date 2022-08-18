@@ -45576,6 +45576,44 @@ packet history.
 @item maint info jit
 Print information about JIT code objects loaded in the current inferior.
 
+@kindex maint info amdgpu address-aliases
+@item maint info amdgpu address-aliases @var{expression}
+Evaluate @var{expression} to an address, and show the address it
+aliases to in every address space known to the current @acronym{AMD}
+@acronym{GPU} architecture.  The @samp{Valid for} column shows the
+number of consecutive bytes, starting at the given address, that map
+onto the alias.  If @var{expression} evaluates to the null address of
+its address space, an address space it converts into shows that
+space's null address, and the @samp{Valid for} column reads
+@samp{<null>}, since this is not a real alias.
+
+For example:
+
+@smallexample
+(gdb) maintenance info amdgpu address-aliases &idx
+Address space                      Address         Valid for
+global                      0x7ff7f4600c00               0x4
+generic            generic#0x2000000000030             0x3d0
+private_wave            private_wave#0xc00               0x4
+private_lane             private_lane#0x30             0x3d0
+local                      <not reachable>               0x0
+@end smallexample
+
+This command requires the selected thread to be an @acronym{AMD}
+@acronym{GPU} wavefront.  Some address spaces are private to a
+wavefront or to a lane of a wavefront; for those, @value{GDBN}
+performs the conversion using the currently selected wavefront and
+lane.
+
+The aliases shown reflect the state of the wavefront at the time the
+command is run.  Address space conversions are only guaranteed to be
+valid while the wavefront remains stopped; depending on the address
+spaces involved, a converted address may refer to different memory, or
+become invalid, once execution resumes.
+
+Not every address is reachable from every space: if it is not, the row
+for that space reads @samp{<not reachable>}.
+
 @anchor{maint info python-disassemblers}
 @kindex maint info python-disassemblers
 @item maint info python-disassemblers

@@ -19,6 +19,9 @@ Full documentation for ROCgdb is available at
   datadir caused these locations to be ignored.  The paths are part of the
   default `auto-load` search path and can be adjusted with the standard
   `set auto-load` settings.
+- The "maint info amdgpu address-aliases" command evaluates an
+  expression to an address and shows the address it aliases to in
+  every address space of the current AMD GPU architecture.
 
 ### Changed
 
