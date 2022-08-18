@@ -8,6 +8,10 @@ Full documentation for ROCgdb is available at
 ### Added
 
 - Add support for the gfx1250-strict architecture variant.
+- The "maint info amdgpu address-aliases" command evaluate a given
+  expression to an address, and show what the address aliases to in
+  every address space known to the current AMD GPU selected
+  architecture.
 
 ## ROCgdb-16.3 for ROCm-10.1
 
