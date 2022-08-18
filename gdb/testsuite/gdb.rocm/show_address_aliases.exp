@@ -1,0 +1,61 @@
+# Copyright (C) 2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the maint info amdgpu address-aliases
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hipcc_tests
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+gdb_breakpoint [gdb_get_line_number "Break here"] allow-pending
+gdb_continue_to_breakpoint "kern"
+
+# Show aliases of a private_wave data
+gdb_test "maint info amdgpu address-aliases &idx" \
+    [multi_line \
+	".*Address space\[ \t\]*Address\[ \t\]*Valid for\[ \t\]*" \
+	"global\[ \t\]*$::hex\[ \t\]*$::hex\[ \t\]*" \
+	"generic\[ \t\]*generic\#$::hex\[ \t\]*$::hex\[ \t\]*" \
+	"private_wave\[ \t\]*private_wave\#$::hex\[ \t\]*$::hex\[ \t\]*" \
+	"private_lane\[ \t\]*private_lane\#$::hex\[ \t\]*$::hex\[ \t\]*" \
+	"local\[ \t\]*<not reachable>\[ \t\]*0x0\[ \t\]*" ]
+
+# Show aliases of a LDS address
+gdb_test "main info amdgpu address-aliases gidx_p" \
+    [multi_line \
+	".*Address space\[ \t\]*Address\[ \t\]*Valid for\[ \t\]*" \
+	"global\[ \t\]*<not reachable>\[ \t\]*0x0\[ \t\]*" \
+	"generic\[ \t\]*generic\#$::hex\[ \t\]*$::hex\[ \t\]*" \
+	"private_wave\[ \t\]*<not reachable>\[ \t\]*0x0\[ \t\]*" \
+	"private_lane\[ \t\]*<not reachable>\[ \t\]*0x0\[ \t\]*" \
+	"local\[ \t\]*local\#$::hex\[ \t\]*$::hex\[ \t\]*" ]
+
+}
