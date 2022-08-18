@@ -1,0 +1,179 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the maint info amdgpu address-aliases command.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hip_tests
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Test: command before any inferior is running (no thread selected).
+gdb_test "maint info amdgpu address-aliases &main" \
+    "Current architecture is not AMDGPU\\." \
+    "address-aliases with no thread selected"
+
+# Test: command when architecture is forced to AMDGPU but no inferior
+# is running (no dbgapi context).
+gdb_test "set architecture amdgcn:gfx900" \
+    "The target architecture is set to \"amdgcn:gfx900\"\\." \
+    "force amdgcn arch"
+
+gdb_test "maint info amdgpu address-aliases &main" \
+    "No thread selected\\." \
+    "address-aliases with amdgcn arch but no inferior"
+
+gdb_test "set architecture auto" \
+    "The target architecture is set to \"auto\".*" \
+    "restore auto arch"
+
+with_rocm_gpu_lock {
+
+    if {![runto_main]} {
+	return -1
+    }
+
+    # Test: command when focused on a host (CPU) thread, right after
+    # reaching main.
+    gdb_test "maint info amdgpu address-aliases &main" \
+	"Current architecture is not AMDGPU\\." \
+	"address-aliases on host thread"
+
+    gdb_breakpoint [gdb_get_line_number "Break here"] -allow-pending
+    gdb_continue_to_breakpoint "kern"
+
+    set asname "\[^ \t\r\n\]+"
+    set trailer "\[^\r\n\]*(?=\r\n)"
+
+    # Count address spaces known to the architecture, and record the
+    # null address of each of them.
+    set aspaces 0
+    array set null_addr {}
+    gdb_test_multiple "maint print address-spaces" "" -lbl {
+	-re "\r\n(${asname})\[ \t\]+$::decimal\[ \t\]+$::decimal\[ \t\]+($::hex)\[ \t\]+" {
+	    set null_addr($expect_out(1,string)) $expect_out(2,string)
+	    incr aspaces
+	    exp_continue
+	}
+	-re -wrap "" {
+	    # Done collecting.
+	}
+    }
+
+    set seen_header 0
+    set seen_address 0
+
+    # The actual output can vary, we want to verify if GDB doesn't
+    # have any latent error.
+    gdb_test_multiple "maint info amdgpu address-aliases &idx" "" -lbl {
+	-re "Address space\[ \t\]+Address\[ \t\]+Valid for${trailer}" {
+	    # Match the header.
+	    incr seen_header
+	    exp_continue
+	}
+
+	-re "^\r\n(${asname})\[ \t\]+(?:\\1#)?$::hex\[ \t\]+$::hex${trailer}" {
+	    # Match a reachable alias.  The address is printed with the
+	    # address space prefix, except for the default (global)
+	    # space.
+	    incr seen_address
+	    exp_continue
+	}
+
+	-re "^\r\n${asname}\[ \t\]+<not reachable>\[ \t\]+0x0${trailer}" {
+	    # Match <not reachable> addresses.
+	    incr seen_address
+	    exp_continue
+	}
+
+	-re -wrap "" {
+	    # Done.  Every address space should have exactly one row.
+	    gdb_assert { $seen_header == 1 } "$gdb_test_name: seen header"
+	    gdb_assert { $seen_address == $aspaces } \
+		"$gdb_test_name: seen address space"
+	}
+    }
+
+    # Test the null address of the default address space.  Whether the
+    # null address converts into another address space depends on the
+    # architecture and on the address spaces involved, so do not
+    # hardcode the expected rows.  Instead check that each row is
+    # either the destination space's null address with "<null>" in the
+    # "Valid for" column, or "<not reachable>", and never a real alias.
+    set seen_header 0
+    set seen_null 0
+    set seen_unreachable 0
+    set seen_src_null 0
+    set bad_rows 0
+    gdb_test_multiple "maint info amdgpu address-aliases 0" \
+	"address-aliases of null address" -lbl {
+	-re "Address space\[ \t\]+Address\[ \t\]+Valid for${trailer}" {
+	    incr seen_header
+	    exp_continue
+	}
+
+	-re "^\r\n(${asname})\[ \t\]+((?:${asname}#)?)($::hex)\[ \t\]+<null>${trailer}" {
+	    # A converted null address.  The address must be the null
+	    # address of the destination space.  The row without an
+	    # address space prefix is the source (default) space.  The
+	    # prefix group must always participate in the match,
+	    # otherwise expect_out keeps a stale value from a previous
+	    # match.
+	    set name $expect_out(1,string)
+	    set prefix $expect_out(2,string)
+	    set addr $expect_out(3,string)
+	    if {[info exists null_addr($name)]
+		&& [expr {$null_addr($name) == $addr}]} {
+		incr seen_null
+		if {$prefix == ""} {
+		    incr seen_src_null
+		}
+	    } else {
+		verbose -log "unexpected null alias for $name: $addr"
+		incr bad_rows
+	    }
+	    exp_continue
+	}
+
+	-re "^\r\n${asname}\[ \t\]+<not reachable>\[ \t\]+0x0${trailer}" {
+	    incr seen_unreachable
+	    exp_continue
+	}
+
+	-re "^\r\n${asname}\[ \t\]+${trailer}" {
+	    # Any other row, e.g. a real alias with a byte count, or an
+	    # error message.
+	    incr bad_rows
+	    exp_continue
+	}
+
+	-re -wrap "" {
+	    gdb_assert { $seen_header == 1 } "$gdb_test_name: seen header"
+	    gdb_assert { $bad_rows == 0 } "$gdb_test_name: no real alias"
+	    gdb_assert { $seen_src_null == 1 } \
+		"$gdb_test_name: source space maps to its null address"
+	    gdb_assert { $seen_null + $seen_unreachable == $aspaces } \
+		"$gdb_test_name: seen address space"
+	}
+    }
+}
