@@ -68,8 +68,6 @@
 
 #define DEFINE_OBSERVABLE(name) decltype (name) name (#name)
 
-DEFINE_OBSERVABLE (amd_dbgapi_runtime_loaded);
-DEFINE_OBSERVABLE (amd_dbgapi_runtime_unloaded);
 DEFINE_OBSERVABLE (amd_dbgapi_code_object_list_updated);
 
 #undef DEFINE_OBSERVABLE
@@ -1511,13 +1509,11 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 			== AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
 	    info->runtime_state = runtime_state;
 	    insert_initial_watchpoints (info);
-	    amd_dbgapi_runtime_loaded.notify ();
 	    break;
 
 	  case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
 	    gdb_assert (info->runtime_state
 			!= AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
-	    amd_dbgapi_runtime_unloaded.notify ();
 	    info->runtime_state = runtime_state;
 	    break;
 
@@ -1847,8 +1843,6 @@ disable_amd_dbgapi (inferior *inf)
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
 
-  if (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
-    amd_dbgapi_runtime_unloaded.notify ();
   info->runtime_state = AMD_DBGAPI_RUNTIME_STATE_UNLOADED;
 
   amd_dbgapi_status_t status = amd_dbgapi_process_detach (info->process_id);
