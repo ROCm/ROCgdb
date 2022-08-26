@@ -22,7 +22,6 @@
 #define AMD_DBGAPI_TARGET_H 1
 
 #include "gdbsupport/common-defs.h"
-#include "gdbsupport/observable.h"
 #include "gdbsupport/traits.h"
 
 #include <amd-dbgapi/amd-dbgapi.h>
@@ -65,10 +64,6 @@ operator!= (const T &lhs, const T &rhs)
 {
   return !(lhs == rhs);
 }
-
-/* AMD debugger API event observers.  */
-
-extern gdb::observers::observable<> amd_dbgapi_code_object_list_updated;
 
 /* Return true if the given ptid is a GPU thread (wave) ptid.  */
 

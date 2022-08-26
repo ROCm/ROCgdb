@@ -66,12 +66,6 @@
 /* Big enough to hold the size of the largest register in bytes.  */
 #define AMDGPU_MAX_REGISTER_SIZE 256
 
-#define DEFINE_OBSERVABLE(name) decltype (name) name (#name)
-
-DEFINE_OBSERVABLE (amd_dbgapi_code_object_list_updated);
-
-#undef DEFINE_OBSERVABLE
-
 /* amd-dbgapi-specific inferior data.  */
 
 struct amd_dbgapi_inferior_info
@@ -1484,7 +1478,21 @@ process_one_event (amd_dbgapi_event_id_t event_id,
       }
 
     case AMD_DBGAPI_EVENT_KIND_CODE_OBJECT_LIST_UPDATED:
-      amd_dbgapi_code_object_list_updated.notify ();
+      /* We get here when the following sequence of events happens:
+
+	   - the inferior hits the amd-dbgapi "r_brk" internal breakpoint
+	   - amd_dbgapi_target_breakpoint::check_status calls
+	     amd_dbgapi_report_breakpoint_hit, which queues an event of this
+	     kind in dbgapi
+	   - amd_dbgapi_target_breakpoint::check_status calls
+	     process_event_queue, which pulls the event out of dbgapi, and
+	     gets us here
+
+	 When amd_dbgapi_target_breakpoint::check_status is called, the current
+	 inferior is the inferior that hit the breakpoint, which should still be
+	 the case now.  */
+      gdb_assert (inf == current_inferior ());
+      handle_solib_event ();
       break;
 
     case AMD_DBGAPI_EVENT_KIND_BREAKPOINT_RESUME:
