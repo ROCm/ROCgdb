@@ -28405,11 +28405,17 @@ to enable diagnostic messages from the @samp{amd-dbgapi} library.  The
 @samp{show debug amd-dbgapi-lib log-level} command displays the current
 @samp{amd-dbgapi} library log level.  @xref{set debug amd-dbgapi-lib}.
 
+The @samp{set debug amd-dbgapi} command can be used
+to enable diagnostic messages in the @samp{amd-dbgapi} target.  The
+@samp{show debug amd-dbgapi} command displays the current setting.
+@xref{set debug amd-dbgapi}.
+
 For example, the following will enable information messages and send
 the log to a new file:
 
 @smallexample
 (@value{GDBP}) set debug amd-dbgapi-lib log-level info
+(@value{GDBP}) set debug amd-dbgapi on
 (@value{GDBP}) set logging overwrite
 (@value{GDBP}) set logging file log.out
 (@value{GDBP}) set logging debugredirect on
@@ -30158,6 +30164,15 @@ all messages are reported
 
 The @code{show debug amd-dbgapi-lib log-level} command displays the current
 @acronym{amd-dbgapi} library log level.
+
+@anchor{set debug amd-dbgapi}
+@item set debug amd-dbgapi
+@itemx show debug amd-dbgapi
+
+The @samp{set debug amd-dbgapi} command can be used
+to enable diagnostic messages in the @samp{amd-dbgapi} target.  The
+@samp{show debug amd-dbgapi} command displays the current setting.
+@xref{set debug amd-dbgapi}.
 
 @item set debug check-physname
 @cindex physname

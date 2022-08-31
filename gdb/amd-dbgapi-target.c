@@ -63,6 +63,16 @@
 
 #include <amd-dbgapi/amd-dbgapi.h>
 
+/* When true, print debug messages relating to the amd-dbgapi target.  */
+
+static bool debug_amd_dbgapi = false;
+
+/* Print an amd-dbgapi debug statement.  */
+
+#define amd_dbgapi_debug_printf(fmt, ...) \
+  debug_prefixed_printf_cond (debug_amd_dbgapi, "amd-dbgapi", \
+			      fmt, ##__VA_ARGS__)
+
 /* Big enough to hold the size of the largest register in bytes.  */
 #define AMDGPU_MAX_REGISTER_SIZE 256
 
@@ -1103,11 +1113,7 @@ amd_dbgapi_target::resume (ptid_t scope_ptid, int step, enum gdb_signal signo)
 {
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
-  if (debug_infrun)
-    gdb_printf (gdb_stdlog,
-		"\e[1;34minfrun: amd_dbgapi_target::resume "
-		"([%d,%ld,%ld])\e[0m\n",
-		scope_ptid.pid (), scope_ptid.lwp (), scope_ptid.tid ());
+  amd_dbgapi_debug_printf ("scope_ptid = %s", scope_ptid.to_string ().c_str ());
 
   /* The amd_dbgapi_exceptions_t matching signo will only be used if the
      thread which is the target of the signal SIGNO is a GPU thread.  If so,
@@ -1192,9 +1198,7 @@ amd_dbgapi_target::resume (ptid_t scope_ptid, int step, enum gdb_signal signo)
 void
 amd_dbgapi_target::commit_resumed ()
 {
-  if (debug_infrun)
-    gdb_printf (gdb_stdlog,
-		"\e[1;34minfrun: amd_dbgapi_target::commit_resumed ()\e[0m\n");
+  amd_dbgapi_debug_printf ("called");
 
   beneath ()->commit_resumed ();
 
@@ -1207,11 +1211,7 @@ amd_dbgapi_target::stop (ptid_t ptid)
 {
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
 
-  if (debug_infrun)
-    gdb_printf (gdb_stdlog,
-		"\e[1;34minfrun: amd_dbgapi_target::stop "
-		"([%d,%ld,%ld])\e[0m\n",
-		ptid.pid (), ptid.lwp (), ptid.tid ());
+  amd_dbgapi_debug_printf ("ptid = %s", ptid.to_string ().c_str ());
 
   bool many_threads = ptid == minus_one_ptid || ptid.is_pid ();
 
@@ -1322,7 +1322,7 @@ dbgapi_notifier_handler (int error, gdb_client_data client_data)
 void
 amd_dbgapi_target::async (bool enable)
 {
-  infrun_debug_printf ("amd-dbgapi async enable=%d", enable);
+  amd_dbgapi_debug_printf ("enable=%d", enable);
 
   beneath ()->async (enable);
 
@@ -1641,11 +1641,7 @@ amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
   gdb_assert (!current_inferior ()->process_target ()->commit_resumed_state);
   gdb_assert (ptid == minus_one_ptid || ptid.is_pid ());
 
-  if (debug_infrun)
-    gdb_printf (gdb_stdlog,
-		"\e[1;34minfrun: amd_dbgapi_target::wait (%d, %ld, "
-		"%ld)\e[0m\n",
-		ptid.pid (), ptid.lwp (), ptid.tid ());
+  amd_dbgapi_debug_printf ("ptid = %s", ptid.to_string ().c_str ());
 
   ptid_t event_ptid = beneath ()->wait (ptid, ws, target_options);
   if (event_ptid != minus_one_ptid)
@@ -3890,6 +3886,16 @@ If off (default), precise memory reporting is disabled."),
 			show_debug_amd_dbgapi_log_level,
 			&set_debug_amd_dbgapi_lib_list,
 			&show_debug_amd_dbgapi_lib_list);
+
+  add_setshow_boolean_cmd ("amd-dbgapi", class_maintenance,
+			   &debug_amd_dbgapi,
+			   _("Set debugging of amd-dbgapi target."),
+			   _("Show debugging of amd-dbgapi target."),
+			   _("\
+When on, print debug messages relating to the amd-dbgapi target."),
+			   nullptr, nullptr,
+			   &setdebuglist, &showdebuglist);
+
 
   add_cmd ("agents", class_info, info_agents_command,
 	   _ ("(Display currently active heterogeneous agents.\n\
