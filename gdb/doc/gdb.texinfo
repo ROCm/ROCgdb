@@ -28400,16 +28400,16 @@ AMDGPU precise memory access reporting is on (currently disabled)
 
 @subsubsection @acronym{AMD GPU} Logging
 
-The @samp{set debug amdgpu log-level @var{level}} command can be used
-to enable diagnostic messages for the @acronym{AMD GPU} target.  The
-@samp{show debug amdgpu log-level} command displays the current
-@acronym{AMD GPU} target log level.  @xref{set debug amdgpu}.
+The @samp{set debug amd-dbgapi-lib log-level @var{level}} command can be used
+to enable diagnostic messages from the @samp{amd-dbgapi} library.  The
+@samp{show debug amd-dbgapi-lib log-level} command displays the current
+@samp{amd-dbgapi} library log level.  @xref{set debug amd-dbgapi-lib}.
 
 For example, the following will enable information messages and send
 the log to a new file:
 
 @smallexample
-(@value{GDBP}) set debug amdgpu log-level info
+(@value{GDBP}) set debug amd-dbgapi-lib log-level info
 (@value{GDBP}) set logging overwrite
 (@value{GDBP}) set logging file log.out
 (@value{GDBP}) set logging debugredirect on
@@ -30129,12 +30129,12 @@ module.
 Show the current state of AIX thread debugging info display.
 
 @cindex AMD GPU debugging info
-@anchor{set debug amdgpu}
-@item set debug amdgpu
-@itemx show debug amdgpu
+@anchor{set debug amd-dbgapi-lib}
+@item set debug amd-dbgapi-lib
+@itemx show debug amd-dbgapi-lib
 
-The @code{set debug amdgpu log-level @var{level}} command can be used
-to enable diagnostic messages for the @acronym{AMD GPU} target, where
+The @code{set debug amd-dbgapi-lib log-level @var{level}} command can be used
+to enable diagnostic messages from the  @samp{amd-dbgapi} library, where
 @var{level} can be:
 
 @table @code
@@ -30156,8 +30156,8 @@ all messages are reported
 
 @end table
 
-The @code{show debug amdgpu log-level} command displays the current
-@acronym{AMD GPU} target log level.
+The @code{show debug amd-dbgapi-lib log-level} command displays the current
+@acronym{amd-dbgapi} library log level.
 
 @item set debug check-physname
 @cindex physname
