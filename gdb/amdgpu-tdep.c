@@ -827,16 +827,10 @@ amdgpu_frame_this_id (struct frame_info *this_frame, void **this_cache,
   else
     (*this_id) = outer_frame_id;
 
-  if (frame_debug)
-    {
-      gdb_printf (gdb_stdlog,
-		  "{ amdgpu_frame_this_id (this_frame=%d) type=%d -> %s }\n",
-		  frame_relative_level (this_frame),
-		  get_frame_type (this_frame),
-		  this_id->to_string ().c_str ());
-    }
-
-  return;
+  frame_debug_printf ("this_frame=%d, type=%d, this_id=%s",
+		      frame_relative_level (this_frame),
+		      get_frame_type (this_frame),
+		      this_id->to_string ().c_str ());
 }
 
 static struct frame_id
