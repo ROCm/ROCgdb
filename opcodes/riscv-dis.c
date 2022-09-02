@@ -52,6 +52,8 @@ struct riscv_private_data
   bfd_vma gp;
   bfd_vma print_addr;
   bfd_vma hi_addr[OP_MASK_RD + 1];
+  bool to_print_addr;
+  bool has_gp;
 };
 
 /* Used for mapping symbols.  */
@@ -177,14 +179,21 @@ maybe_print_address (struct riscv_private_data *pd, int base_reg, int offset,
       pd->print_addr = (base_reg != 0 ? pd->hi_addr[base_reg] : 0) + offset;
       pd->hi_addr[base_reg] = -1;
     }
-  else if (base_reg == X_GP && pd->gp != (bfd_vma)-1)
+  else if (base_reg == X_GP && pd->has_gp)
     pd->print_addr = pd->gp + offset;
   else if (base_reg == X_TP || base_reg == 0)
     pd->print_addr = offset;
+  else
+    return;  /* Don't print the address.  */
+  pd->to_print_addr = true;
 
   /* Sign-extend a 32-bit value to a 64-bit value.  */
   if (wide)
     pd->print_addr = (bfd_vma)(int32_t) pd->print_addr;
+
+  /* Fit into a 32-bit value on RV32.  */
+  if (xlen == 32)
+    pd->print_addr = (bfd_vma)(uint32_t)pd->print_addr;
 }
 
 /* Print insn arguments for 32/64-bit code.  */
@@ -397,7 +406,7 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	case 'b':
 	case 's':
 	  if ((l & MASK_JALR) == MATCH_JALR)
-	    maybe_print_address (pd, rs1, 0, 0);
+	    maybe_print_address (pd, rs1, EXTRACT_ITYPE_IMM (l), 0);
 	  print (info->stream, dis_style_register, "%s", riscv_gpr_names[rs1]);
 	  break;
 
@@ -595,14 +604,19 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
       int i;
 
       pd = info->private_data = xcalloc (1, sizeof (struct riscv_private_data));
-      pd->gp = -1;
-      pd->print_addr = -1;
+      pd->gp = 0;
+      pd->print_addr = 0;
       for (i = 0; i < (int)ARRAY_SIZE (pd->hi_addr); i++)
 	pd->hi_addr[i] = -1;
+      pd->to_print_addr = false;
+      pd->has_gp = false;
 
       for (i = 0; i < info->symtab_size; i++)
 	if (strcmp (bfd_asymbol_name (info->symtab[i]), RISCV_GP_SYMBOL) == 0)
-	  pd->gp = bfd_asymbol_value (info->symtab[i]);
+	  {
+	    pd->gp = bfd_asymbol_value (info->symtab[i]);
+	    pd->has_gp = true;
+	  }
     }
   else
     pd = info->private_data;
@@ -662,13 +676,13 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	  print_insn_args (op->args, word, memaddr, info);
 
 	  /* Try to disassemble multi-instruction addressing sequences.  */
-	  if (pd->print_addr != (bfd_vma)-1)
+	  if (pd->to_print_addr)
 	    {
 	      info->target = pd->print_addr;
 	      (*info->fprintf_styled_func)
 		(info->stream, dis_style_comment_start, " # ");
 	      (*info->print_address_func) (info->target, info);
-	      pd->print_addr = -1;
+	      pd->to_print_addr = false;
 	    }
 
 	  /* Finish filling out insn_info fields.  */

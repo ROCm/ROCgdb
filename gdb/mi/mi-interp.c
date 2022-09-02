@@ -192,10 +192,6 @@ mi_interp::resume ()
   /* Route target error through the MI as well.  */
   gdb_stdtargerr = mi->targ;
 
-  /* Replace all the hooks that we know about.  There really needs to
-     be a better way of doing this... */
-  clear_interpreter_hooks ();
-
   deprecated_show_load_progress = mi_load_progress;
 }
 
@@ -820,15 +816,13 @@ mi_tsv_modified (const struct trace_state_variable *tsv)
       gdb_printf (mi->event_channel,
 		  "tsv-modified");
 
-      mi_uiout->redirect (mi->event_channel);
+      ui_out_redirect_pop redir (mi_uiout, mi->event_channel);
 
       mi_uiout->field_string ("name", tsv->name);
       mi_uiout->field_string ("initial",
-			   plongest (tsv->initial_value));
+			      plongest (tsv->initial_value));
       if (tsv->value_known)
 	mi_uiout->field_string ("current", plongest (tsv->value));
-
-      mi_uiout->redirect (NULL);
 
       gdb_flush (mi->event_channel);
     }
@@ -848,7 +842,7 @@ mi_print_breakpoint_for_event (struct mi_interp *mi, breakpoint *bp)
      break if anything is output to mi_uiout prior to calling the
      breakpoint_created notifications.  So, we use
      ui_out_redirect.  */
-  mi_uiout->redirect (mi->event_channel);
+  ui_out_redirect_pop redir (mi_uiout, mi->event_channel);
 
   try
     {
@@ -861,8 +855,6 @@ mi_print_breakpoint_for_event (struct mi_interp *mi, breakpoint *bp)
     {
       exception_print (gdb_stderr, ex);
     }
-
-  mi_uiout->redirect (NULL);
 }
 
 /* Emit notification about a created breakpoint.  */
@@ -1094,11 +1086,9 @@ mi_solib_loaded (struct so_list *solib)
 
       gdb_printf (mi->event_channel, "library-loaded");
 
-      uiout->redirect (mi->event_channel);
+      ui_out_redirect_pop redir (uiout, mi->event_channel);
 
       mi_output_solib_attribs (uiout, solib);
-
-      uiout->redirect (NULL);
 
       gdb_flush (mi->event_channel);
     }
@@ -1122,7 +1112,7 @@ mi_solib_unloaded (struct so_list *solib)
 
       gdb_printf (mi->event_channel, "library-unloaded");
 
-      uiout->redirect (mi->event_channel);
+      ui_out_redirect_pop redir (uiout, mi->event_channel);
 
       uiout->field_string ("id", solib->so_original_name);
       uiout->field_string ("target-name", solib->so_original_name);
@@ -1131,8 +1121,6 @@ mi_solib_unloaded (struct so_list *solib)
 	{
 	  uiout->field_fmt ("thread-group", "i%d", current_inferior ()->num);
 	}
-
-      uiout->redirect (NULL);
 
       gdb_flush (mi->event_channel);
     }
@@ -1161,12 +1149,10 @@ mi_command_param_changed (const char *param, const char *value)
 
       gdb_printf (mi->event_channel, "cmd-param-changed");
 
-      mi_uiout->redirect (mi->event_channel);
+      ui_out_redirect_pop redir (mi_uiout, mi->event_channel);
 
       mi_uiout->field_string ("param", param);
       mi_uiout->field_string ("value", value);
-
-      mi_uiout->redirect (NULL);
 
       gdb_flush (mi->event_channel);
     }
@@ -1198,7 +1184,7 @@ mi_memory_changed (CORE_ADDR memaddr, ssize_t len, const bfd_byte *myaddr)
 
       gdb_printf (mi->event_channel, "memory-changed");
 
-      mi_uiout->redirect (mi->event_channel);
+      ui_out_redirect_pop redir (mi_uiout, mi->event_channel);
 
       if (scope == ADDRESS_SCOPE_LANE)
 	{
@@ -1223,8 +1209,6 @@ mi_memory_changed (CORE_ADDR memaddr, ssize_t len, const bfd_byte *myaddr)
 	  if (flags & SEC_CODE)
 	    mi_uiout->field_string ("type", "code");
 	}
-
-      mi_uiout->redirect (NULL);
 
       gdb_flush (mi->event_channel);
     }
@@ -1257,8 +1241,7 @@ mi_user_selected_context_changed (user_selected_what selection)
 
       mi_uiout = top_level_interpreter ()->interp_ui_out ();
 
-      mi_uiout->redirect (mi->event_channel);
-      ui_out_redirect_pop redirect_popper (mi_uiout);
+      ui_out_redirect_pop redirect_popper (mi_uiout, mi->event_channel);
 
       target_terminal::scoped_restore_terminal_state term_state;
       target_terminal::ours_for_output ();
@@ -1328,7 +1311,6 @@ mi_interp::set_logging (ui_file_up logfile, bool logging_redirect,
 	}
 
       mi->raw_stdout = logging_redirect ? logfile_p : tee;
-      mi->raw_stdlog = debug_redirect ? logfile_p : tee;
     }
   else
     {

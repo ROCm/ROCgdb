@@ -295,26 +295,17 @@ unbuffer_stream (FILE *stream)
 /* See top.h.  */
 
 ui::ui (FILE *instream_, FILE *outstream_, FILE *errstream_)
-  : next (nullptr),
-    num (++highest_ui_num),
-    call_readline (nullptr),
-    input_handler (nullptr),
-    command_editing (0),
-    interp_info (nullptr),
-    async (0),
-    secondary_prompt_depth (0),
+  : num (++highest_ui_num),
     stdin_stream (instream_),
     instream (instream_),
     outstream (outstream_),
     errstream (errstream_),
     input_fd (fileno (instream)),
     m_input_interactive_p (ISATTY (instream)),
-    prompt_state (PROMPT_NEEDED),
     m_gdb_stdout (new pager_file (new stdio_file (outstream))),
     m_gdb_stdin (new stdio_file (instream)),
     m_gdb_stderr (new stderr_file (errstream)),
-    m_gdb_stdlog (m_gdb_stderr),
-    m_current_uiout (nullptr)
+    m_gdb_stdlog (m_gdb_stderr)
 {
   buffer_init (&line_buffer);
 
@@ -352,6 +343,8 @@ ui::~ui ()
   delete m_gdb_stdin;
   delete m_gdb_stdout;
   delete m_gdb_stderr;
+
+  buffer_free (&line_buffer);
 }
 
 /* Open file named NAME for read/write, making sure not to make it the
@@ -733,8 +726,7 @@ execute_fn_to_ui_file (struct ui_file *file, std::function<void(void)> fn)
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
   {
-    current_uiout->redirect (file);
-    ui_out_redirect_pop redirect_popper (current_uiout);
+    ui_out_redirect_pop redirect_popper (current_uiout, file);
 
     scoped_restore save_stdout
       = make_scoped_restore (&gdb_stdout, file);
