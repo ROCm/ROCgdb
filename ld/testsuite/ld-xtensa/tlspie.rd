@@ -28,7 +28,7 @@ Section Headers:
 Key to Flags:
 #...
 
-Elf file type is EXEC \(Executable file\)
+Elf file type is DYN \(Position-Independent Executable file\)
 Entry point 0x[0-9a-f]+
 There are [0-9]+ program headers, starting at offset [0-9]+
 
@@ -93,7 +93,7 @@ Symbol table '\.symtab' contains [0-9]+ entries:
  +[0-9]+: [0-9a-f]+ +0 +TLS +LOCAL +DEFAULT +8 sl8
  +[0-9]+: 0+ +0 +FILE +LOCAL +DEFAULT +ABS *
  +[0-9]+: 0+ +0 +TLS +LOCAL +DEFAULT +8 _TLS_MODULE_BASE_
- +[0-9]+: [0-9a-f]+ +0 +OBJECT +LOCAL +DEFAULT +9 _DYNAMIC
+ +[0-9]+: [0-9a-f]+ +0 +OBJECT +LOCAL +DEFAULT +ABS _DYNAMIC
  +[0-9]+: [0-9a-f]+ +0 +TLS +GLOBAL +DEFAULT +8 sg8
  +[0-9]+: [0-9a-f]+ +0 +TLS +GLOBAL +DEFAULT +8 sg3
  +[0-9]+: [0-9a-f]+ +0 +TLS +GLOBAL +HIDDEN +8 sh3
