@@ -5243,6 +5243,8 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 			ix, n_directories);
 		  directory = _("<corrupt>");
 		}
+	      else if (linfo.li_version >= 5)
+		directory = (char *) directory_table[ix];
 	      else
 		directory = (char *) directory_table[ix - 1];
 
@@ -5413,6 +5415,7 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 
 		  if (linfo.li_version < 5)
 		    --file;
+
 		  if (file_table == NULL || n_files == 0)
 		    printf (_("\n [Use file table entry %d]\n"), file);
 		  /* PR 20439 */
@@ -5434,6 +5437,10 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 			    dir, n_directories);
 		      printf (_("\n <over large directory table entry %u>\n"), dir);
 		    }
+		  else if (linfo.li_version >= 5)
+		    printf ("\n%s/%s:\n",
+			    /* The directory index starts counting at 0.  */
+			    directory_table[dir], file_table[file].name);
 		  else
 		    printf ("\n%s/%s:\n",
 			    /* The directory index starts counting at 1.  */
