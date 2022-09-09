@@ -123,6 +123,12 @@ amd_dbgapi_lib_debug_module ()
 			      amd_dbgapi_debug_module (), \
 			      fmt, ##__VA_ARGS__)
 
+/* Print amd-dbgapi start/end debug statements.  */
+
+#define AMD_DBGAPI_SCOPED_DEBUG_START_END(fmt, ...) \
+    scoped_debug_start_end (debug_infrun, amd_dbgapi_debug_module (), \
+			    fmt, ##__VA_ARGS__)
+
 /* Big enough to hold the size of the largest register in bytes.  */
 #define AMDGPU_MAX_REGISTER_SIZE 256
 
@@ -279,12 +285,6 @@ struct amd_dbgapi_target final : public target_ops
   displaced_step_finish_status displaced_step_finish (thread_info *thread,
 						      gdb_signal sig) override;
 
-  void follow_exec (inferior *follow_inf, ptid_t ptid,
-		    const char *execd_pathname) override;
-
-  void follow_fork (inferior *child_inf, ptid_t child_ptid,
-		    target_waitkind fork_kind, bool follow_child,
-		    bool detach_fork) override;
   void prevent_new_threads (bool prevent) override;
 };
 
@@ -1348,11 +1348,49 @@ handle_target_event (gdb_client_data client_data)
   inferior_event_handler (INF_REG_EVENT);
 }
 
+/* Set the wave creation mode for INF.  */
+
+static void
+set_wave_creation_mode (bool prevent, inferior *inf)
+{
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
+
+  amd_dbgapi_wave_creation_t mode
+    = (prevent
+       ? AMD_DBGAPI_WAVE_CREATION_STOP
+       : AMD_DBGAPI_WAVE_CREATION_NORMAL);
+  amd_dbgapi_status_t status
+    = amd_dbgapi_process_set_wave_creation (info->process_id, mode);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to set wave creation mode (%s)"),
+	   get_status_string (status));
+}
+
+struct scoped_amd_dbgapi_event_processed
+{
+  scoped_amd_dbgapi_event_processed (amd_dbgapi_event_id_t event_id)
+    : m_event_id (event_id)
+  {
+    gdb_assert (event_id != AMD_DBGAPI_EVENT_NONE);
+  }
+
+  ~scoped_amd_dbgapi_event_processed ()
+  {
+    amd_dbgapi_status_t status = amd_dbgapi_event_processed (m_event_id);
+    if (status != AMD_DBGAPI_STATUS_SUCCESS)
+      warning (_("Failed to acknowledge amd-dbgapi event %" PRIu64),
+	       m_event_id.handle);
+  }
+
+private:
+  amd_dbgapi_event_id_t m_event_id;
+};
+
 /* Called when a dbgapi notifier fd is readable.  CLIENT_DATA is the
    amd_dbgapi_inferior_info object corresponding to the notifier.  */
 
 static void
-dbgapi_notifier_handler (int error, gdb_client_data client_data)
+dbgapi_notifier_handler (int err, gdb_client_data client_data)
 {
   amd_dbgapi_inferior_info *info = (amd_dbgapi_inferior_info *) client_data;
   int ret;
@@ -1365,8 +1403,74 @@ dbgapi_notifier_handler (int error, gdb_client_data client_data)
     }
   while (ret >= 0 || (ret == -1 && errno == EINTR));
 
-  /* Signal our async handler.  */
-  async_event_handler_mark ();
+  if (info->inf->target_is_pushed (&the_amd_dbgapi_target))
+    {
+      /* Signal our async handler.  */
+      async_event_handler_mark ();
+    }
+  else
+    {
+      amd_dbgapi_event_id_t event_id;
+      amd_dbgapi_event_kind_t event_kind;
+      amd_dbgapi_status_t status
+	= amd_dbgapi_process_next_pending_event (info->process_id, &event_id,
+						 &event_kind);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("next_pending_event failed (%s)"), get_status_string (status));
+
+      if (event_id == AMD_DBGAPI_EVENT_NONE)
+	return;
+
+      gdb_assert (event_kind == AMD_DBGAPI_EVENT_KIND_RUNTIME);
+
+      scoped_amd_dbgapi_event_processed mark_event_processed (event_id);
+
+      amd_dbgapi_runtime_state_t runtime_state;
+      status = amd_dbgapi_event_get_info (event_id,
+					  AMD_DBGAPI_EVENT_INFO_RUNTIME_STATE,
+					  sizeof (runtime_state),
+					  &runtime_state);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("event_get_info for event_%ld failed (%s)"),
+	       event_id.handle, get_status_string (status));
+
+      switch (runtime_state)
+	{
+	case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS:
+	  gdb_assert (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
+	  info->runtime_state = runtime_state;
+	  amd_dbgapi_debug_printf ("pushing amd-dbgapi target");
+	  info->inf->push_target (&the_amd_dbgapi_target);
+	  insert_initial_watchpoints (info);
+
+	  set_wave_creation_mode (info->inf->prevent_new_threads (), info->inf);
+
+	  /* The underlying target will already be async if we are running, but not if
+	     we are attaching.  */
+	  if (info->inf->process_target ()->is_async_p ())
+	    {
+	      scoped_restore_current_thread restore_thread;
+	      switch_to_inferior_no_thread (info->inf);
+
+	      /* Make sure our async event handler is created.  */
+	      target_async (true);
+	    }
+	  break;
+
+	case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
+	  gdb_assert (info->runtime_state
+		      == AMD_DBGAPI_RUNTIME_STATE_LOADED_ERROR_RESTRICTION);
+	  info->runtime_state = runtime_state;
+	  break;
+
+	case AMD_DBGAPI_RUNTIME_STATE_LOADED_ERROR_RESTRICTION:
+	  gdb_assert (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
+	  info->runtime_state = runtime_state;
+	  warning (_("amd-dbgapi: unable to enable GPU debugging "
+		     "due to a restriction error"));
+	  break;
+	}
+    }
 }
 
 void
@@ -1577,29 +1681,14 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 	  error (_("event_get_info for event_%ld failed (%s)"),
 		 event_id.handle, get_status_string (status));
 
-	switch (runtime_state)
-	  {
-	  case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS:
-	    gdb_assert (info->runtime_state
-			== AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
-	    info->runtime_state = runtime_state;
-	    insert_initial_watchpoints (info);
-	    break;
+	gdb_assert (runtime_state == AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
+	gdb_assert
+	  (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS);
 
-	  case AMD_DBGAPI_RUNTIME_STATE_UNLOADED:
-	    gdb_assert (info->runtime_state
-			!= AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
-	    info->runtime_state = runtime_state;
-	    break;
+	info->runtime_state = runtime_state;
 
-	  case AMD_DBGAPI_RUNTIME_STATE_LOADED_ERROR_RESTRICTION:
-	    gdb_assert (info->runtime_state
-			== AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
-	    warning (_("amd-dbgapi: unable to enable GPU debugging "
-		       "due to a restriction error"));
-	    info->runtime_state = runtime_state;
-	    break;
-	  }
+	gdb_assert (inf->target_is_pushed (&the_amd_dbgapi_target));
+	inf->unpush_target (&the_amd_dbgapi_target);
       }
       break;
 
@@ -1830,6 +1919,13 @@ set_process_memory_precision (amd_dbgapi_process_id_t process_id,
 static void
 enable_amd_dbgapi (inferior *inf)
 {
+  AMD_DBGAPI_SCOPED_DEBUG_START_END ("inf num = %d", inf->num);
+
+  /* The target_can_async_p below is dependent on global context, ensure INF is
+     the current inferior.  */
+  scoped_restore_current_thread restore_thread;
+  switch_to_inferior_no_thread (inf);
+
   if (!target_can_async_p ())
     {
       warning (_("The amd-dbgapi target requires target-async, GPU debugging "
@@ -1853,7 +1949,8 @@ enable_amd_dbgapi (inferior *inf)
   /* Are we already attached?  */
   if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
     {
-      gdb_assert (inf->target_is_pushed (&the_amd_dbgapi_target));
+      amd_dbgapi_debug_printf
+	("already attached: process_id = %" PRIu64, info->process_id.handle);
       return;
     }
 
@@ -1881,6 +1978,9 @@ enable_amd_dbgapi (inferior *inf)
       error (_ ("Could not retrieve process %d's notifier"), inf->pid);
     }
 
+  amd_dbgapi_debug_printf ("process_id = %" PRIu64 ", notifier fd = %d",
+			   info->process_id.handle, info->notifier);
+
   amd_dbgapi_memory_precision_t memory_precision
     = info->precise_memory.requested ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
 				     : AMD_DBGAPI_MEMORY_PRECISION_NONE;
@@ -1890,27 +1990,22 @@ enable_amd_dbgapi (inferior *inf)
     warning (
       _ ("AMDGPU precise memory access reporting could not be enabled."));
 
-  gdb_assert (!inf->target_is_pushed (&the_amd_dbgapi_target));
-  inf->push_target (&the_amd_dbgapi_target);
+  /* If GDB is attaching to a process that has the runtime loaded, there will
+     already be a "runtime loaded" event available.  Consume it and push the
+     target.  */
+  dbgapi_notifier_handler (0, info);
 
-  /* The underlying target will already be async if we are running, but not if
-     we are attaching.  */
-  if (inf->process_target ()->is_async_p ())
-    {
-      /* Make sure our async event handler is created.  */
-      target_async (1);
-
-      /* If the amd-dbgapi target was already async, it didn't register the new
-         fd, so make sure it is registered.  This call is idempotent so it's ok
-	 if it's already registered.  */
-      add_file_handler (info->notifier, dbgapi_notifier_handler, info,
-			"amd-dbgapi notifier");
-    }
+  add_file_handler (info->notifier, dbgapi_notifier_handler, info,
+		    "amd-dbgapi notifier");
 }
+
+static void maybe_reset_amd_dbgapi ();
 
 static void
 disable_amd_dbgapi (inferior *inf)
 {
+  AMD_DBGAPI_SCOPED_DEBUG_START_END ("inf num = %d", inf->num);
+
   auto *info = get_amd_dbgapi_inferior_info (inf);
 
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
@@ -1926,7 +2021,7 @@ disable_amd_dbgapi (inferior *inf)
   gdb_assert (info->notifier != -1);
   delete_file_handler (info->notifier);
 
-  gdb_assert (inf->target_is_pushed (&the_amd_dbgapi_target));
+  /* This is a noop if the target is not pushed.  */
   inf->unpush_target (&the_amd_dbgapi_target);
 
   /* Delete the breakpoints that are still active.  */
@@ -1937,6 +2032,8 @@ disable_amd_dbgapi (inferior *inf)
   bool precise_memory_requested = info->precise_memory.requested;
   *info = amd_dbgapi_inferior_info (inf);
   info->precise_memory.requested = precise_memory_requested;
+
+  maybe_reset_amd_dbgapi ();
 }
 
 void
@@ -2289,48 +2386,36 @@ amd_dbgapi_target_inferior_cloned (inferior *original_inferior,
   new_info->precise_memory.requested = orig_info->precise_memory.requested;
 }
 
-void
-amd_dbgapi_target::follow_exec (inferior *follow_inf, ptid_t ptid,
-			      const char *execd_pathname)
-{
-  inferior *orig_inf = current_inferior ();
+/* inferior_execd observer.  */
 
+static void
+amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
+{
   /* The inferior has EXEC'd and the process image has changed.  The dbgapi is
      attached to the old process image, so we need to detach and re-attach to
      the new process image.  */
-  disable_amd_dbgapi (orig_inf);
-
-  beneath ()->follow_exec (follow_inf, ptid, execd_pathname);
-  gdb_assert (current_inferior () == follow_inf);
+  disable_amd_dbgapi (exec_inf);
 
   /* If using "follow-exec-mode new", carry over the precise-memory setting
      to the new inferior (otherwise, FOLLOW_INF and ORIG_INF point to the same
      inferior, so this is a no-op).  */
   get_amd_dbgapi_inferior_info (follow_inf)->precise_memory.requested
-    = get_amd_dbgapi_inferior_info (orig_inf)->precise_memory.requested;
+    = get_amd_dbgapi_inferior_info (exec_inf)->precise_memory.requested;
 
   enable_amd_dbgapi (follow_inf);
 }
+
+/* inferior_forked observer.  */
 
 static void
-amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
+amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
+			    target_waitkind fork_kind)
 {
-  enable_amd_dbgapi (follow_inf);
-}
-
-void
-amd_dbgapi_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
-			      target_waitkind fork_kind, bool follow_child,
-			      bool detach_fork)
-{
-  beneath ()->follow_fork (child_inf, child_ptid, fork_kind, follow_child,
-			   detach_fork);
-
   if (child_inf != nullptr)
     {
       /* Copy precise-memory requested value from parent to child.  */
       amd_dbgapi_inferior_info *parent_info
-	= get_amd_dbgapi_inferior_info (current_inferior ());
+	= get_amd_dbgapi_inferior_info (parent_inf);
       amd_dbgapi_inferior_info *child_info = get_amd_dbgapi_inferior_info (child_inf);
       child_info->precise_memory.requested
 	= parent_info->precise_memory.requested;
@@ -2342,6 +2427,28 @@ amd_dbgapi_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 	  enable_amd_dbgapi (child_inf);
 	}
     }
+
+}
+
+/* inferior_exit observer.
+
+   This covers normal exits, but also detached inferiors (including detached
+   fork parents).  */
+
+static void
+amd_dbgapi_inferior_exited (inferior *inf)
+{
+  disable_amd_dbgapi (inf);
+}
+
+static void
+amd_dbgapi_inferior_pre_detach (inferior *inf)
+{
+  /* We need to amd-dbgapi-detach before we ptrace-detach.  If the amd-dbgapi
+     target isn't pushed, do that now.  If the amd-dbgapi target is pushed,
+     we'll do it in amd_dbgapi_target::detach.  */
+  if (!inf->target_is_pushed (&the_amd_dbgapi_target))
+    disable_amd_dbgapi (inf);
 }
 
 static void
@@ -2521,37 +2628,12 @@ amd_dbgapi_target::prevent_new_threads (bool prevent)
 {
   beneath ()->prevent_new_threads (prevent);
 
-  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
-  if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
-    return;
-
-  amd_dbgapi_wave_creation_t mode
-    = (prevent
-       ? AMD_DBGAPI_WAVE_CREATION_STOP
-       : AMD_DBGAPI_WAVE_CREATION_NORMAL);
-  amd_dbgapi_status_t status
-    = amd_dbgapi_process_set_wave_creation (info->process_id, mode);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd-dbgapi failed to set wave creation mode (%s)"),
-	   get_status_string (status));
+  set_wave_creation_mode (prevent, current_inferior ());
 }
 
 void
 amd_dbgapi_target::close ()
 {
-  /* Finalize and re-initialize the debugger API so that the handle ID numbers
-     will all start from the beginning again.  */
-
-  amd_dbgapi_status_t status = amd_dbgapi_finalize ();
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd-dbgapi failed to finalize (%s)"),
-	   get_status_string (status));
-
-  status = amd_dbgapi_initialize (&dbgapi_callbacks);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd-dbgapi failed to initialize (%s)"),
-	   get_status_string (status));
-
   if (amd_dbgapi_async_event_handler != nullptr)
     delete_async_event_handler (&amd_dbgapi_async_event_handler);
 }
@@ -3845,6 +3927,32 @@ dispatch_find_command (const char *arg, int from_tty)
     gdb_printf (_ ("No dispatches match '%s'\n"), arg);
 }
 
+/* If amd-dbgapi is not attached to any process, finalize and re-initialize
+   amd-dbgapi so that the handle ID numbers will all start from the beginning
+   again.  This is only for convenience, not essential.  */
+
+static void
+maybe_reset_amd_dbgapi ()
+{
+  for (inferior *inf : all_non_exited_inferiors ())
+    {
+      amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
+
+      if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
+	return;
+    }
+
+  amd_dbgapi_status_t status = amd_dbgapi_finalize ();
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to finalize (%s)"),
+	   get_status_string (status));
+
+  status = amd_dbgapi_initialize (&dbgapi_callbacks);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to initialize (%s)"),
+	   get_status_string (status));
+}
+
 /* -Wmissing-prototypes */
 extern initialize_file_ftype _initialize_amd_dbgapi_target;
 
@@ -3880,6 +3988,9 @@ _initialize_amd_dbgapi_target ()
 					  "amd-dbgapi");
   gdb::observers::normal_stop.attach (amd_dbgapi_target_normal_stop, "amd-dbgapi");
   gdb::observers::inferior_execd.attach (amd_dbgapi_inferior_execd, "amd-dbgapi");
+  gdb::observers::inferior_forked.attach (amd_dbgapi_inferior_forked, "amd-dbgapi");
+  gdb::observers::inferior_exit.attach (amd_dbgapi_inferior_exited, "amd-dbgapi");
+  gdb::observers::inferior_pre_detach.attach (amd_dbgapi_inferior_pre_detach, "amd-dbgapi");
 
   create_internalvar_type_lazy ("_wave_id", &amd_dbgapi_wave_id_funcs, NULL);
 
