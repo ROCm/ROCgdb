@@ -585,6 +585,16 @@ regcache::raw_update (int regnum)
 
   if (get_register_status (regnum) == REG_UNKNOWN)
     {
+      /* Ensure the inferior this regcache belongs to is the current inferior,
+	 necessary for target_fetch_registers to hit the right target stack.  */
+      gdb::optional<scoped_restore_current_thread> restore_thread;
+      inferior *inf = find_inferior_ptid (this->target (), this->ptid ());
+      if (inf != current_inferior ())
+	{
+	  restore_thread.emplace ();
+	  switch_to_inferior_no_thread (inf);
+	}
+
       target_fetch_registers (this, regnum);
 
       /* A number of targets can't access the whole set of raw
@@ -1835,6 +1845,7 @@ cooked_read_test (struct gdbarch *gdbarch)
     }
 
   readwrite_regcache readwrite (&mockctx.mock_target, gdbarch);
+  readwrite.set_ptid (mockctx.mock_ptid);
   gdb::def_vector<gdb_byte> buf (register_size (gdbarch, nonzero_regnum));
 
   readwrite.raw_read (nonzero_regnum, buf.data ());
