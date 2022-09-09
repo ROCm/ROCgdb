@@ -2730,6 +2730,13 @@ target_commit_resumed ()
 }
 
 /* See target.h.  */
+void
+target_prevent_new_threads (bool prevent)
+{
+  current_inferior ()->top_target ()->prevent_new_threads (prevent);
+}
+
+/* See target.h.  */
 
 bool
 target_has_pending_events ()

@@ -283,7 +283,7 @@ struct amd_dbgapi_target final : public target_ops
   void follow_fork (inferior *child_inf, ptid_t child_ptid,
 		    target_waitkind fork_kind, bool follow_child,
 		    bool detach_fork) override;
-  void prevent_new_threads (bool prevent, inferior *inf) override;
+  void prevent_new_threads (bool prevent) override;
 };
 
 static struct amd_dbgapi_target the_amd_dbgapi_target;
@@ -2533,9 +2533,9 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
 };
 
 void
-amd_dbgapi_target::prevent_new_threads (bool prevent, inferior *inf)
+amd_dbgapi_target::prevent_new_threads (bool prevent)
 {
-  beneath ()->prevent_new_threads (prevent, inf);
+  beneath ()->prevent_new_threads (prevent);
 
   amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)

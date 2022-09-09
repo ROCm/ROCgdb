@@ -507,7 +507,7 @@ struct target_ops
        GDB calls `prevent_new_threads (true)` to ask the target to prevent the
        creation of such threads and calls `prevent_new_threads (false)` to
        restore the normal state.  */
-    virtual void prevent_new_threads (bool prevent, inferior *inf)
+    virtual void prevent_new_threads (bool prevent)
       TARGET_DEFAULT_IGNORE ();
 
     /* See target_wait's description.  Note that implementations of
@@ -1528,6 +1528,12 @@ extern void target_resume (ptid_t ptid, int step, enum gdb_signal signal);
    See the description of process_stratum_target::commit_resumed_state
    for more details.  */
 extern void target_commit_resumed ();
+
+/* Prevent (or don't prevent) new threads from appearing for the current
+   inferior.  When a target is pushed, it can consult
+   inferior::prevent_new_threads to know the current requested mode.  */
+
+extern void target_prevent_new_threads (bool prevent);
 
 /* For target_read_memory see target/target.h.  */
 
