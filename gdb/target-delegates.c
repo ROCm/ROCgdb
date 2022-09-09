@@ -35,7 +35,7 @@ struct dummy_target : public target_ops
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
   void commit_resumed () override;
-  void prevent_new_threads (bool arg0, inferior *arg1) override;
+  void prevent_new_threads (bool arg0) override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -217,7 +217,7 @@ struct debug_target : public target_ops
   void disconnect (const char *arg0, int arg1) override;
   void resume (ptid_t arg0, int arg1, enum gdb_signal arg2) override;
   void commit_resumed () override;
-  void prevent_new_threads (bool arg0, inferior *arg1) override;
+  void prevent_new_threads (bool arg0) override;
   ptid_t wait (ptid_t arg0, struct target_waitstatus *arg1, target_wait_flags arg2) override;
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
@@ -503,25 +503,23 @@ debug_target::commit_resumed ()
 }
 
 void
-target_ops::prevent_new_threads (bool arg0, inferior *arg1)
+target_ops::prevent_new_threads (bool arg0)
 {
-  this->beneath ()->prevent_new_threads (arg0, arg1);
+  this->beneath ()->prevent_new_threads (arg0);
 }
 
 void
-dummy_target::prevent_new_threads (bool arg0, inferior *arg1)
+dummy_target::prevent_new_threads (bool arg0)
 {
 }
 
 void
-debug_target::prevent_new_threads (bool arg0, inferior *arg1)
+debug_target::prevent_new_threads (bool arg0)
 {
   gdb_printf (gdb_stdlog, "-> %s->prevent_new_threads (...)\n", this->beneath ()->shortname ());
-  this->beneath ()->prevent_new_threads (arg0, arg1);
+  this->beneath ()->prevent_new_threads (arg0);
   gdb_printf (gdb_stdlog, "<- %s->prevent_new_threads (", this->beneath ()->shortname ());
   target_debug_print_bool (arg0);
-  gdb_puts (", ", gdb_stdlog);
-  target_debug_print_inferior_p (arg1);
   gdb_puts (")\n", gdb_stdlog);
 }
 

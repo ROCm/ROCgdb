@@ -2190,7 +2190,7 @@ prevent_new_threads (bool prevent, process_stratum_target *filter_target,
 	continue;
 
       switch_to_inferior_no_thread (inf);
-      inf->top_target ()->prevent_new_threads (prevent, inf);
+      target_prevent_new_threads (prevent);
     }
 }
 
