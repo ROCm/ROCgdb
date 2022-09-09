@@ -2515,6 +2515,8 @@ target_pre_inferior (int from_tty)
      the inferior was attached to.  */
   current_inferior ()->attach_flag = 0;
 
+  current_inferior ()->set_prevent_new_threads (false);
+
   current_inferior ()->highest_thread_num = 0;
 
   agent_capability_invalidate ();
@@ -2733,6 +2735,7 @@ target_commit_resumed ()
 void
 target_prevent_new_threads (bool prevent)
 {
+  current_inferior ()->set_prevent_new_threads (prevent);
   current_inferior ()->top_target ()->prevent_new_threads (prevent);
 }
 
