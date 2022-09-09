@@ -483,6 +483,20 @@ public:
     return m_cwd;
   }
 
+  /* Set "prevent new threads" state.  */
+
+  void set_prevent_new_threads (bool prevent)
+  {
+    m_prevent_new_threads = prevent;
+  }
+
+  /* Get "prevent new threads" state.  */
+
+  bool prevent_new_threads () const
+  {
+    return m_prevent_new_threads;
+  }
+
   /* Convenient handle (GDB inferior id).  Unique across all
      inferiors.  */
   int num = 0;
@@ -613,6 +627,11 @@ private:
   /* The current working directory that will be used when starting
      this inferior.  */
   std::string m_cwd;
+
+  /* The "prevent new threads" state for this inferior.  That is, the last value
+     with which target_prevent_new_threads was called with, for this
+     inferior.  */
+  bool m_prevent_new_threads = false;
 };
 
 /* Add an inferior to the inferior list, print a message that a new
