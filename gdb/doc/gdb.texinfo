@@ -23072,10 +23072,10 @@ For example,
 
 @smallexample
 (@value{GDBP}) info queues
-  Id   Target Id                Type         Read   Write  Size     Address
-* 1    AMDGPU Queue 1:1 (QID 1) HSA (Multi)  0      2      65536    0x00007ffff7f60000
-  2    AMDGPU Queue 1:2 (QID 2) DMA                        1048576  0x00007ffde4e00000
-  3    AMDGPU Queue 1:3 (QID 0) HSA (Multi)  4      4      262144   0x00007ffff7f00000
+  Id   Target Id                Type  Read   Write  Size     Address
+* 1    AMDGPU Queue 1:1 (QID 1) HSA   0      2      65536    0x00007ffff7f60000
+  2    AMDGPU Queue 1:2 (QID 2) DMA                 1048576  0x00007ffde4e00000
+  3    AMDGPU Queue 1:3 (QID 0) HSA   4      4      262144   0x00007ffff7f00000
 @end smallexample
 
 If you're debugging multiple inferiors, @value{GDBN} displays
@@ -27372,10 +27372,7 @@ The @acronym{AMD GPU} heterogeneous queue types reported by the
 @table @emph
 
 @item HSA
-An HSA AQL queue.  The @samp{(Single)} suffix indicates it uses the
-single-producer protocol, @samp{(Multi)} suffix indicates the multi-producer
-protocol, and @samp{(Coop)} suffix indicates the multi-producer cooperative
-dispatch protocol.
+An HSA AQL queue.
 
 @item PM4
 An AMD PM4 queue.
@@ -36266,13 +36263,13 @@ thread is not associated with a heterogeneous queue, or if a
 (gdb)
 -queue-info
 ^done,queues=[
-@{id="1.1",agent-id="1.1",target-id="AMDGPU Queue 1:1 (QID 2)",type="HSA (Multi)",
+@{id="1.1",agent-id="1.1",target-id="AMDGPU Queue 1:1 (QID 2)",type="HSA",
   read="0",write="2",size="65536",addr="0x00007ffff7ee0000"@}​​​​​,
 @{id="1.2",agent-id="1.1",target-id="AMDGPU Queue 1:2 (QID 3)",type="DMA",
   size="1048576",addr="0x00007ffde4800000"@}​​​​​],
-@{id="1.3",agent-id="1.1",target-id="AMDGPU Queue 2:3 (QID 1)",type="HSA (Multi)",
+@{id="1.3",agent-id="1.1",target-id="AMDGPU Queue 2:3 (QID 1)",type="HSA",
   read="2",write="2",size="262144",addr="0x00007ffff7e80000"@}​​​​​,
-@{id="1.4",agent-id="1.1",target-id="AMDGPU Queue 1:4 (QID 0)",type="HSA (Multi)",
+@{id="1.4",agent-id="1.1",target-id="AMDGPU Queue 1:4 (QID 0)",type="HSA",
   read="4",write="4",size="262144",addr="0x00007ffff7f80000"@}​​​​​],
 current-queue-id="1.1"
 (gdb)

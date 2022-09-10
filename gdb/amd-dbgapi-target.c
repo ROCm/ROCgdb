@@ -3123,12 +3123,8 @@ info_queues_command (const char *args, int from_tty)
 	      {
 		switch (type)
 		  {
-		  case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_MULTIPLE_PRODUCER:
-		    return "HSA (Multi)";
-		  case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_SINGLE_PRODUCER:
-		    return "HSA (Single)";
-		  case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_KERNEL_DISPATCH_COOPERATIVE:
-		    return "HSA (Coop)";
+		  case AMD_DBGAPI_OS_QUEUE_TYPE_HSA_AQL:
+		    return "HSA";
 		  case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_PM4:
 		    return "PM4";
 		  case AMD_DBGAPI_OS_QUEUE_TYPE_AMD_SDMA:
