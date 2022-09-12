@@ -62,7 +62,6 @@ typedef struct def_file_aligncomm {
 } def_file_aligncomm;
 
 typedef struct def_file_exclude_symbol {
-  struct def_file_exclude_symbol *next;	/* Chain pointer.  */
   char *symbol_name;		/* Name of excluded symbol.  */
 } def_file_exclude_symbol;
 
@@ -85,6 +84,7 @@ typedef struct def_file {
 
   /* From the EXPORTS commands.  */
   int num_exports;
+  unsigned int max_exports;
   def_file_export *exports;
 
   /* Used by imports for module names.  */
@@ -92,6 +92,7 @@ typedef struct def_file {
 
   /* From the IMPORTS commands.  */
   int num_imports;
+  unsigned int max_imports;
   def_file_import *imports;
 
   /* From the VERSION command, -1 if not specified.  */
@@ -101,6 +102,7 @@ typedef struct def_file {
   def_file_aligncomm *aligncomms;
 
   /* From EXCLUDE_SYMBOLS or embedded directives. */
+  unsigned int num_exclude_symbols, max_exclude_symbols;
   def_file_exclude_symbol *exclude_symbols;
 
 } def_file;
@@ -112,10 +114,10 @@ extern def_file *def_file_parse (const char *, def_file *);
 extern void def_file_free (def_file *);
 extern def_file_export *def_file_add_export (def_file *, const char *,
 					     const char *, int,
-					     const char *, int *);
+					     const char *, bool *);
 extern def_file_import *def_file_add_import (def_file *, const char *,
 					     const char *, int, const char *,
-					     const char *, int *);
+					     const char *, bool *);
 extern int def_file_add_import_from (def_file *fdef,
 				     int num_imports,
 				     const char *name,
