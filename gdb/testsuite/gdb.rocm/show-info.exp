@@ -41,13 +41,46 @@ if ![runto_main] {
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
+#Test0
+# Check that dbgapi is properly configured to display "info agents".
+#
+# In case dbgapi is not properly configured to find the pci.ids file (usually
+# in /usr/share/{hwdata,misc}/pci.ids), it will issue a warning and generate
+# a fallback name in the form "Device vvvv:dddd".
+#
+# It is however possible to have a name matching "Device vvvv:dddd" if dbgapi
+# is properly configured, but the device is not registered in the pci.ids file.
+# In such situation, a hard fail would be erroneous.  As a misconfiguration
+# of dbgapi is not really a GDB error, issue an XFAIL if either a warning is
+# issued or a device has a fallback name as both indicate an environment
+# problem.
+set seen_error 0
+gdb_test_multiple "info agents" "dbgapi properly configured" {
+  -re "amd-dbgapi: warning:" {
+    set seen_error 1
+    exp_continue
+  }
+  -re "Device \[0-9a-zA-Z\]\{4\}:\[0-9a-zA-Z\]\{4\}" {
+    set seen_error 1
+    exp_continue
+  }
+  -re -wrap "" {
+    if {$seen_error == 1} {
+      setup_xfail "*-*-*"
+      fail $gdb_test_name
+    } else {
+      pass $gdb_test_name
+    }
+  }
+}
+
 #Test1
 # Check "info agents".
 # vega10 sample output "1  A     (GPUID 39113) vega10      224   2240    44:00.0"
 # vega20 sample output "1  A     (GPUID 45151) vega20      240   2400    0a:00.0"
 gdb_test_sequence "info agents" "info agents" {
     {\s+Id\s+State\s+Target Id\s+Architecture\s+Device Name\s+Cores\s+Threads\s+Location}
-    {\d+\s+[AU]\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+\w+\s+\d+\s+\d+\s+\w+:\d+\.\d}
+    {\d+\s+[AU]\s+AMDGPU Agent \([^\)]*\)\s+\w+\s+[^\r\n]+\s+\d+\s+\d+\s+\w+:\d+\.\d}
 }
 
 #Test2
