@@ -2016,201 +2016,6 @@ csky_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
     }
 }
 
-/* Implement the memory_insert_breakpoint gdbarch method.  */
-
-static int
-csky_memory_insert_breakpoint (struct gdbarch *gdbarch,
-			       struct bp_target_info *bp_tgt)
-{
-  int val;
-  const unsigned char *bp;
-  gdb_byte bp_write_record1[] = { 0, 0, 0, 0 };
-  gdb_byte bp_write_record2[] = { 0, 0, 0, 0 };
-  gdb_byte bp_record[] = { 0, 0, 0, 0 };
-
-  /* Sanity-check bp_address.  */
-  if (bp_tgt->reqstd_address % 2)
-    warning (_("Invalid breakpoint address 0x%x is an odd number."),
-	     (unsigned int) bp_tgt->reqstd_address);
-  scoped_restore restore_memory
-    = make_scoped_restore_show_memory_breakpoints (1);
-
-  /* Determine appropriate breakpoint_kind for this address.  */
-  bp_tgt->kind = csky_breakpoint_kind_from_pc (gdbarch,
-					       &bp_tgt->reqstd_address);
-
-  /* Save the memory contents.  */
-  bp_tgt->shadow_len = bp_tgt->kind;
-
-  /* Fill bp_tgt->placed_address.  */
-  bp_tgt->placed_address = bp_tgt->reqstd_address;
-
-  if (bp_tgt->kind == CSKY_INSN_SIZE16)
-    {
-      if ((bp_tgt->reqstd_address % 4) == 0)
-	{
-	  /* Read two bytes.  */
-	  val = target_read_memory (bp_tgt->reqstd_address,
-				    bp_tgt->shadow_contents, 2);
-	  if (val)
-	    return val;
-
-	  /* Read two bytes.  */
-	  val = target_read_memory (bp_tgt->reqstd_address + 2,
-				    bp_record, 2);
-	  if (val)
-	    return val;
-
-	  /* Write the breakpoint.  */
-	  bp_write_record1[2] = bp_record[0];
-	  bp_write_record1[3] = bp_record[1];
-	  bp = bp_write_record1;
-	  val = target_write_raw_memory (bp_tgt->reqstd_address, bp,
-					 CSKY_WR_BKPT_MODE);
-	}
-      else
-	{
-	  val = target_read_memory (bp_tgt->reqstd_address,
-				    bp_tgt->shadow_contents, 2);
-	  if (val)
-	    return val;
-
-	  val = target_read_memory (bp_tgt->reqstd_address - 2,
-				    bp_record, 2);
-	  if (val)
-	    return val;
-
-	  /* Write the breakpoint.  */
-	  bp_write_record1[0] = bp_record[0];
-	  bp_write_record1[1] = bp_record[1];
-	  bp = bp_write_record1;
-	  val = target_write_raw_memory (bp_tgt->reqstd_address - 2,
-					 bp, CSKY_WR_BKPT_MODE);
-	}
-    }
-  else
-    {
-      if (bp_tgt->placed_address % 4 == 0)
-	{
-	  val = target_read_memory (bp_tgt->reqstd_address,
-				    bp_tgt->shadow_contents,
-				    CSKY_WR_BKPT_MODE);
-	  if (val)
-	    return val;
-
-	  /* Write the breakpoint.  */
-	  bp = bp_write_record1;
-	  val = target_write_raw_memory (bp_tgt->reqstd_address,
-					 bp, CSKY_WR_BKPT_MODE);
-	}
-      else
-	{
-	  val = target_read_memory (bp_tgt->reqstd_address,
-				    bp_tgt->shadow_contents,
-				    CSKY_WR_BKPT_MODE);
-	  if (val)
-	    return val;
-
-	  val = target_read_memory (bp_tgt->reqstd_address - 2,
-				    bp_record, 2);
-	  if (val)
-	    return val;
-
-	  val = target_read_memory (bp_tgt->reqstd_address + 4,
-				    bp_record + 2, 2);
-	  if (val)
-	    return val;
-
-	  bp_write_record1[0] = bp_record[0];
-	  bp_write_record1[1] = bp_record[1];
-	  bp_write_record2[2] = bp_record[2];
-	  bp_write_record2[3] = bp_record[3];
-
-	  /* Write the breakpoint.  */
-	  bp = bp_write_record1;
-	  val = target_write_raw_memory (bp_tgt->reqstd_address - 2, bp,
-					 CSKY_WR_BKPT_MODE);
-	  if (val)
-	    return val;
-
-	  /* Write the breakpoint.  */
-	  bp = bp_write_record2;
-	  val = target_write_raw_memory (bp_tgt->reqstd_address + 2, bp,
-					 CSKY_WR_BKPT_MODE);
-	}
-    }
-  return val;
-}
-
-/* Restore the breakpoint shadow_contents to the target.  */
-
-static int
-csky_memory_remove_breakpoint (struct gdbarch *gdbarch,
-			       struct bp_target_info *bp_tgt)
-{
-  int val;
-  gdb_byte bp_record[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-  /* Different for shadow_len 2 or 4.  */
-  if (bp_tgt->shadow_len == 2)
-    {
-      /* Do word-sized writes on word-aligned boundaries and read
-	 padding bytes as necessary.  */
-      if (bp_tgt->reqstd_address % 4 == 0)
-	{
-	  val = target_read_memory (bp_tgt->reqstd_address + 2,
-				    bp_record + 2, 2);
-	  if (val)
-	    return val;
-	  bp_record[0] = bp_tgt->shadow_contents[0];
-	  bp_record[1] = bp_tgt->shadow_contents[1];
-	  return target_write_raw_memory (bp_tgt->reqstd_address,
-					  bp_record, CSKY_WR_BKPT_MODE);
-	}
-      else
-	{
-	  val = target_read_memory (bp_tgt->reqstd_address - 2,
-				    bp_record, 2);
-	  if (val)
-	    return val;
-	  bp_record[2] = bp_tgt->shadow_contents[0];
-	  bp_record[3] = bp_tgt->shadow_contents[1];
-	  return target_write_raw_memory (bp_tgt->reqstd_address - 2,
-					  bp_record, CSKY_WR_BKPT_MODE);
-	}
-    }
-  else
-    {
-      /* Do word-sized writes on word-aligned boundaries and read
-	 padding bytes as necessary.  */
-      if (bp_tgt->placed_address % 4 == 0)
-	{
-	  return target_write_raw_memory (bp_tgt->reqstd_address,
-					  bp_tgt->shadow_contents,
-					  CSKY_WR_BKPT_MODE);
-	}
-      else
-	{
-	  val = target_read_memory (bp_tgt->reqstd_address - 2,
-				    bp_record, 2);
-	  if (val)
-	    return val;
-	  val = target_read_memory (bp_tgt->reqstd_address + 4,
-				    bp_record+6, 2);
-	  if (val)
-	    return val;
-
-	  bp_record[2] = bp_tgt->shadow_contents[0];
-	  bp_record[3] = bp_tgt->shadow_contents[1];
-	  bp_record[4] = bp_tgt->shadow_contents[2];
-	  bp_record[5] = bp_tgt->shadow_contents[3];
-
-	  return target_write_raw_memory (bp_tgt->reqstd_address - 2,
-					  bp_record,
-					  CSKY_WR_BKPT_MODE * 2);
-	}
-    }
-}
-
 /* Determine link register type.  */
 
 static lr_type_t
@@ -2358,20 +2163,70 @@ static const struct frame_unwind csky_unwind_cache = {
   NULL
 };
 
+static CORE_ADDR
+csky_check_long_branch (struct frame_info *frame, CORE_ADDR pc)
+{
+  gdb_byte buf[8];
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order_for_code
+	= gdbarch_byte_order_for_code (gdbarch);
 
+  if (target_read_memory (pc, buf, 8) == 0)
+    {
+      unsigned int data0
+	= extract_unsigned_integer (buf, 4, byte_order_for_code);
+      unsigned int data1
+	= extract_unsigned_integer (buf + 4, 4, byte_order_for_code);
+
+      /* Case: jmpi [pc+4] : 0xeac00001
+	 .long addr   */
+      if (data0 == CSKY_JMPI_PC_4)
+	return data1;
+
+      /* Case: lrw t1, [pc+8] : 0xea8d0002
+	       jmp t1         : 0x7834
+	       nop            : 0x6c03
+	       .long addr  */
+      if ((data0 == CSKY_LRW_T1_PC_8) && (data1 == CSKY_JMP_T1_VS_NOP))
+	{
+	  if (target_read_memory (pc + 8, buf, 4) == 0)
+	    return  extract_unsigned_integer (buf, 4, byte_order_for_code);
+	}
+
+      return 0;
+    }
+
+  return 0;
+}
 
 static int
 csky_stub_unwind_sniffer (const struct frame_unwind *self,
-			 struct frame_info *this_frame,
-			 void **this_prologue_cache)
+			  struct frame_info *this_frame,
+			  void **this_prologue_cache)
 {
-  CORE_ADDR addr_in_block;
+  CORE_ADDR addr_in_block, pc;
+  gdb_byte dummy[4];
+  const char *name;
+  CORE_ADDR start_addr;
 
+  /* Get pc */
   addr_in_block = get_frame_address_in_block (this_frame);
+  pc = get_frame_pc (this_frame);
 
-  if (find_pc_partial_function (addr_in_block, NULL, NULL, NULL) == 0
-      || in_plt_section (addr_in_block))
+  if (in_plt_section (addr_in_block)
+      || target_read_memory (pc, dummy, 4) != 0)
     return 1;
+
+  /* Find the starting address and name of the function containing the PC.  */
+  if (find_pc_partial_function (pc, &name, &start_addr, NULL) == 0)
+    {
+      start_addr = csky_check_long_branch (this_frame, pc);
+      /* if not long branch, return 0.  */
+      if (start_addr != 0)
+	return 1;
+
+      return 0;
+    }
 
   return 0;
 }
@@ -2588,30 +2443,6 @@ csky_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int dw_reg)
 
   /* Others, unknown.  */
   return -1;
-}
-
-/* Override interface for command: info register.  */
-
-static void
-csky_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
-			   struct frame_info *frame, int regnum, int all)
-{
-  /* Call default print_registers_info function.  */
-  default_print_registers_info (gdbarch, file, frame, regnum, all);
-
-  /* For command: info register.  */
-  if (regnum == -1 && all == 0)
-    {
-      default_print_registers_info (gdbarch, file, frame,
-				    CSKY_PC_REGNUM, 0);
-      default_print_registers_info (gdbarch, file, frame,
-				    CSKY_EPC_REGNUM, 0);
-      default_print_registers_info (gdbarch, file, frame,
-				    CSKY_CR0_REGNUM, 0);
-      default_print_registers_info (gdbarch, file, frame,
-				    CSKY_EPSR_REGNUM, 0);
-    }
-  return;
 }
 
 /* Check whether xml has discribled the essential regs.  */
@@ -2989,7 +2820,6 @@ csky_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_register_type (gdbarch, csky_register_type);
   set_gdbarch_read_pc (gdbarch, csky_read_pc);
   set_gdbarch_write_pc (gdbarch, csky_write_pc);
-  set_gdbarch_print_registers_info (gdbarch, csky_print_registers_info);
   csky_add_reggroups (gdbarch);
   set_gdbarch_register_reggroup_p (gdbarch, csky_register_reggroup_p);
   set_gdbarch_stab_reg_to_regnum (gdbarch, csky_dwarf_reg_to_regnum);
@@ -3011,12 +2841,6 @@ csky_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   dwarf2_append_unwinders (gdbarch);
   frame_unwind_append_unwinder (gdbarch, &csky_stub_unwind);
   frame_unwind_append_unwinder (gdbarch, &csky_unwind_cache);
-
-  /* Breakpoints.  */
-  set_gdbarch_memory_insert_breakpoint (gdbarch,
-					csky_memory_insert_breakpoint);
-  set_gdbarch_memory_remove_breakpoint (gdbarch,
-					csky_memory_remove_breakpoint);
 
   /* Hook in ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);
