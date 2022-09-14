@@ -682,7 +682,7 @@ proc build {} {
     for {set i 1} {$i <= 3} {incr i} {
 	gdb_test \
 	    [subst "x/-i \$::if_${i}_end_addr"] \
-	    "s_or_b64 exec, exec, .*" \
+	    "(s_or_b32 exec_lo, exec_lo|s_or_b64 exec, exec), .*" \
 	    "last insn of else branch of if $i is an exec mask restore"
     }
 
