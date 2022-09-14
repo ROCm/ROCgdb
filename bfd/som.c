@@ -2933,8 +2933,10 @@ som_write_fixups (bfd *abfd,
       asection *subsection;
 
       /* Find a space.  */
-      while (!som_is_space (section))
+      while (section && !som_is_space (section))
 	section = section->next;
+      if (!section)
+	break;
 
       /* Now iterate through each of its subspaces.  */
       for (subsection = abfd->sections;
@@ -5249,7 +5251,9 @@ som_set_reloc_info (unsigned char *fixup,
 		      section->contents = contents;
 		      deallocate_contents = 1;
 		    }
-		  else if (rptr->addend == 0)
+		  if (rptr->addend == 0
+		      && offset - var ('L') <= section->size
+		      && section->size - (offset - var ('L')) >= 4)
 		    rptr->addend = bfd_get_32 (section->owner,
 					       (section->contents
 						+ offset - var ('L')));
@@ -5267,7 +5271,10 @@ som_set_reloc_info (unsigned char *fixup,
 	}
     }
   if (deallocate_contents)
-    free (section->contents);
+    {
+      free (section->contents);
+      section->contents = NULL;
+    }
 
   return count;
 
