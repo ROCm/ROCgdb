@@ -383,8 +383,8 @@ proc function_range { func src {options {debug}} } {
 	# The tests are compiled with HIP, which is a C++ variant.
 	# Turn on demangling to make the symbol names closer to C
 	# names.
-	gdb_test_no_output "set print asm-demangle on" ""
-	gdb_test_no_output "set print demangle on" ""
+	gdb_test_no_output -nopass "set print asm-demangle on"
+	gdb_test_no_output -nopass "set print demangle on"
 
 	# The label offset computation doesn't work correct for GCN --
 	# GDB finds the host label first instead of the device label
