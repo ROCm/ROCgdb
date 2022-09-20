@@ -1,6 +1,7 @@
 # This testcase is part of GDB, the GNU debugger.
 
 # Copyright 2005-2022 Free Software Foundation, Inc.
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -77,5 +78,5 @@ gdb_test "source ${srcdir}/${subdir}/source-error.gdb" \
 # There was a case where sourcing a script containing "interpreter-exec"
 # commands would corrupt the interpreter mechanism and crash gdb.
 gdb_test "source ${srcdir}/${subdir}/interpreter-exec.gdb" \
-    "\\^done,value=\"off\"" \
+    "\\^done,value=\"off\",verbose=\"Verbosity is off\\.\\\\n\"" \
     "source interpreter-exec"
