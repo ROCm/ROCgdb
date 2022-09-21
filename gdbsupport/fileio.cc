@@ -25,7 +25,7 @@
 
 /* See fileio.h.  */
 
-int
+fileio_error
 host_to_fileio_error (int error)
 {
   switch (error)
@@ -79,7 +79,7 @@ host_to_fileio_error (int error)
 /* See fileio.h.  */
 
 int
-fileio_errno_to_host (int errnum)
+fileio_error_to_host (fileio_error errnum)
 {
   switch (errnum)
     {

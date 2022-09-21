@@ -1468,11 +1468,11 @@ enter_linenos (file_ptr file_offset, int first_line,
 static void
 patch_type (struct type *type, struct type *real_type)
 {
-  struct type *target = TYPE_TARGET_TYPE (type);
-  struct type *real_target = TYPE_TARGET_TYPE (real_type);
+  struct type *target = type->target_type ();
+  struct type *real_target = real_type->target_type ();
   int field_size = real_target->num_fields () * sizeof (struct field);
 
-  TYPE_LENGTH (target) = TYPE_LENGTH (real_target);
+  target->set_length (real_target->length ());
   target->set_num_fields (real_target->num_fields ());
 
   field *fields = (struct field *) TYPE_ALLOC (target, field_size);
@@ -1509,7 +1509,7 @@ patch_opaque_types (struct symtab *s)
       if (real_sym->aclass () == LOC_TYPEDEF
 	  && real_sym->domain () == VAR_DOMAIN
 	  && real_sym->type ()->code () == TYPE_CODE_PTR
-	  && TYPE_LENGTH (TYPE_TARGET_TYPE (real_sym->type ())) != 0)
+	  && real_sym->type ()->target_type ()->length () != 0)
 	{
 	  const char *name = real_sym->linkage_name ();
 	  int hash = hashname (name);
@@ -1699,8 +1699,8 @@ process_coff_symbol (struct coff_symbol *cs,
 	     references work themselves out via the magic of
 	     coff_lookup_type.  */
 	  if (sym->type ()->code () == TYPE_CODE_PTR
-	      && TYPE_LENGTH (TYPE_TARGET_TYPE (sym->type ())) == 0
-	      && TYPE_TARGET_TYPE (sym->type ())->code ()
+	      && sym->type ()->target_type ()->length () == 0
+	      && sym->type ()->target_type ()->code ()
 	      != TYPE_CODE_UNDEF)
 	    {
 	      int i = hashname (sym->linkage_name ());
@@ -1887,7 +1887,7 @@ decode_base_type (struct coff_symbol *cs,
 	  type->set_code (TYPE_CODE_STRUCT);
 	  type->set_name (NULL);
 	  INIT_CPLUS_SPECIFIC (type);
-	  TYPE_LENGTH (type) = 0;
+	  type->set_length (0);
 	  type->set_fields (nullptr);
 	  type->set_num_fields (0);
 	}
@@ -1907,7 +1907,7 @@ decode_base_type (struct coff_symbol *cs,
 	  type = coff_alloc_type (cs->c_symnum);
 	  type->set_name (NULL);
 	  INIT_CPLUS_SPECIFIC (type);
-	  TYPE_LENGTH (type) = 0;
+	  type->set_length (0);
 	  type->set_fields (nullptr);
 	  type->set_num_fields (0);
 	}
@@ -1928,7 +1928,7 @@ decode_base_type (struct coff_symbol *cs,
 	  type = coff_alloc_type (cs->c_symnum);
 	  type->set_code (TYPE_CODE_ENUM);
 	  type->set_name (NULL);
-	  TYPE_LENGTH (type) = 0;
+	  type->set_length (0);
 	  type->set_fields (nullptr);
 	  type->set_num_fields (0);
 	}
@@ -1996,7 +1996,7 @@ coff_read_struct_type (int index, int length, int lastsym,
   type = coff_alloc_type (index);
   type->set_code (TYPE_CODE_STRUCT);
   INIT_CPLUS_SPECIFIC (type);
-  TYPE_LENGTH (type) = length;
+  type->set_length (length);
 
   while (!done && symnum < lastsym && symnum < nlist_nsyms_global)
     {
@@ -2124,9 +2124,9 @@ coff_read_enum_type (int index, int length, int lastsym,
   /* Now fill in the fields of the type-structure.  */
 
   if (length > 0)
-    TYPE_LENGTH (type) = length;
+    type->set_length (length);
   else /* Assume ints.  */
-    TYPE_LENGTH (type) = gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT;
+    type->set_length (gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT);
   type->set_code (TYPE_CODE_ENUM);
   type->set_num_fields (nsyms);
   type->set_fields

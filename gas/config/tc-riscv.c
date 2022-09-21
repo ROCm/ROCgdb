@@ -257,6 +257,14 @@ riscv_set_rvc (bool rvc_value)
   riscv_opts.rvc = rvc_value;
 }
 
+/* Turn on the tso flag for elf_flags once we have enabled ztso extension.  */
+
+static void
+riscv_set_tso (void)
+{
+  elf_flags |= EF_RISCV_TSO;
+}
+
 /* This linked list records all enabled extensions, which are parsed from
    the architecture string.  The architecture string can be set by the
    -march option, the elf architecture attributes, and the --with-arch
@@ -307,6 +315,9 @@ riscv_set_arch (const char *s)
   riscv_set_rvc (false);
   if (riscv_subset_supports (&riscv_rps_as, "c"))
     riscv_set_rvc (true);
+
+  if (riscv_subset_supports (&riscv_rps_as, "ztso"))
+    riscv_set_tso ();
 }
 
 /* Indicate -mabi option is explictly set.  */
@@ -3113,12 +3124,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      my_getExpression (imm_expr, asarg);
 	      asarg = expr_end;
 	      if (strcmp (asarg, "@plt") == 0)
-		{
-		  *imm_reloc = BFD_RELOC_RISCV_CALL_PLT;
-		  asarg += 4;
-		}
-	      else
-		*imm_reloc = BFD_RELOC_RISCV_CALL;
+		asarg += 4;
+	      *imm_reloc = BFD_RELOC_RISCV_CALL_PLT;
 	      continue;
 
 	    case 'O':
@@ -3881,6 +3888,9 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
       riscv_set_rvc (false);
       if (riscv_subset_supports (&riscv_rps_as, "c"))
 	riscv_set_rvc (true);
+
+      if (riscv_subset_supports (&riscv_rps_as, "ztso"))
+	riscv_set_tso ();
     }
   else if (strcmp (name, "push") == 0)
     {

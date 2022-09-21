@@ -253,7 +253,7 @@ ppc_linux_return_value (struct gdbarch *gdbarch, struct value *function,
 {  
   if ((valtype->code () == TYPE_CODE_STRUCT
        || valtype->code () == TYPE_CODE_UNION)
-      && !((TYPE_LENGTH (valtype) == 16 || TYPE_LENGTH (valtype) == 8)
+      && !((valtype->length () == 16 || valtype->length () == 8)
 	   && valtype->is_vector ()))
     return RETURN_VALUE_STRUCT_CONVENTION;
   else
@@ -2126,7 +2126,7 @@ ppc_linux_init_abi (struct gdbarch_info info,
 	  powerpc_so_ops.in_dynsym_resolve_code =
 	    powerpc_linux_in_dynsym_resolve_code;
 	}
-      set_solib_ops (gdbarch, &powerpc_so_ops);
+      set_gdbarch_so_ops (gdbarch, &powerpc_so_ops);
 
       set_gdbarch_skip_solib_resolver (gdbarch, glibc_skip_solib_resolver);
     }

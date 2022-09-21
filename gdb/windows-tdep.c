@@ -244,9 +244,9 @@ windows_get_tlb_type (struct gdbarch *gdbarch)
   seh_type->set_name (xstrdup ("seh"));
 
   seh_ptr_type = arch_type (gdbarch, TYPE_CODE_PTR,
-			    TYPE_LENGTH (void_ptr_type) * TARGET_CHAR_BIT,
+			    void_ptr_type->length () * TARGET_CHAR_BIT,
 			    NULL);
-  TYPE_TARGET_TYPE (seh_ptr_type) = seh_type;
+  seh_ptr_type->set_target_type (seh_type);
 
   append_composite_type_field (seh_type, "next_seh", seh_ptr_type);
   append_composite_type_field (seh_type, "handler",
@@ -265,9 +265,9 @@ windows_get_tlb_type (struct gdbarch *gdbarch)
   append_composite_type_field (peb_ldr_type, "entry_in_progress",
 			       void_ptr_type);
   peb_ldr_ptr_type = arch_type (gdbarch, TYPE_CODE_PTR,
-				TYPE_LENGTH (void_ptr_type) * TARGET_CHAR_BIT,
+				void_ptr_type->length () * TARGET_CHAR_BIT,
 				NULL);
-  TYPE_TARGET_TYPE (peb_ldr_ptr_type) = peb_ldr_type;
+  peb_ldr_ptr_type->set_target_type (peb_ldr_type);
 
   /* struct UNICODE_STRING */
   uni_str_type = arch_composite_type (gdbarch, "unicode_string",
@@ -277,7 +277,7 @@ windows_get_tlb_type (struct gdbarch *gdbarch)
   append_composite_type_field (uni_str_type, "maximum_length", word_type);
   append_composite_type_field_aligned (uni_str_type, "buffer",
 				       wchar_ptr_type,
-				       TYPE_LENGTH (wchar_ptr_type));
+				       wchar_ptr_type->length ());
 
   /* struct _RTL_USER_PROCESS_PARAMETERS */
   rupp_type = arch_composite_type (gdbarch, "rtl_user_process_parameters",
@@ -291,7 +291,7 @@ windows_get_tlb_type (struct gdbarch *gdbarch)
   append_composite_type_field (rupp_type, "console_flags", dword32_type);
   append_composite_type_field_aligned (rupp_type, "standard_input",
 				       void_ptr_type,
-				       TYPE_LENGTH (void_ptr_type));
+				       void_ptr_type->length ());
   append_composite_type_field (rupp_type, "standard_output", void_ptr_type);
   append_composite_type_field (rupp_type, "standard_error", void_ptr_type);
   append_composite_type_field (rupp_type, "current_directory", uni_str_type);
@@ -312,7 +312,7 @@ windows_get_tlb_type (struct gdbarch *gdbarch)
   append_composite_type_field (rupp_type, "show_window_flags", dword32_type);
   append_composite_type_field_aligned (rupp_type, "window_title",
 				       uni_str_type,
-				       TYPE_LENGTH (void_ptr_type));
+				       void_ptr_type->length ());
   append_composite_type_field (rupp_type, "desktop_info", uni_str_type);
   append_composite_type_field (rupp_type, "shell_info", uni_str_type);
   append_composite_type_field (rupp_type, "runtime_data", uni_str_type);
@@ -335,9 +335,9 @@ windows_get_tlb_type (struct gdbarch *gdbarch)
   append_composite_type_field (peb_type, "process_heap", void_ptr_type);
   append_composite_type_field (peb_type, "fast_peb_lock", void_ptr_type);
   peb_ptr_type = arch_type (gdbarch, TYPE_CODE_PTR,
-			    TYPE_LENGTH (void_ptr_type) * TARGET_CHAR_BIT,
+			    void_ptr_type->length () * TARGET_CHAR_BIT,
 			    NULL);
-  TYPE_TARGET_TYPE (peb_ptr_type) = peb_type;
+  peb_ptr_type->set_target_type (peb_type);
 
 
   /* struct thread information block */
@@ -379,9 +379,9 @@ windows_get_tlb_type (struct gdbarch *gdbarch)
   append_composite_type_field (tib_type, "last_error_number", dword_ptr_type);
 
   tib_ptr_type = arch_type (gdbarch, TYPE_CODE_PTR,
-			    TYPE_LENGTH (void_ptr_type) * TARGET_CHAR_BIT,
+			    void_ptr_type->length () * TARGET_CHAR_BIT,
 			    NULL);
-  TYPE_TARGET_TYPE (tib_ptr_type) = tib_type;
+  tib_ptr_type->set_target_type (tib_type);
 
   windows_gdbarch_data->tib_ptr_type = tib_ptr_type;
 
@@ -855,7 +855,7 @@ windows_get_siginfo_type (struct gdbarch *gdbarch)
   append_composite_type_field (siginfo_type, "NumberParameters", dword_type);
   /* The 64-bit variant needs some padding.  */
   append_composite_type_field_aligned (siginfo_type, "",
-				       para_type, TYPE_LENGTH (ulongptr_type));
+				       para_type, ulongptr_type->length ());
 
   windows_gdbarch_data->siginfo_type = siginfo_type;
 
@@ -931,7 +931,7 @@ windows_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch)
   windows_so_ops = solib_target_so_ops;
   windows_so_ops.solib_create_inferior_hook
     = windows_solib_create_inferior_hook;
-  set_solib_ops (gdbarch, &windows_so_ops);
+  set_gdbarch_so_ops (gdbarch, &windows_so_ops);
 
   set_gdbarch_get_siginfo_type (gdbarch, windows_get_siginfo_type);
 }

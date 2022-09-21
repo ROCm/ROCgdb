@@ -1022,7 +1022,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 				 name, (char *) NULL));
 
 	t->set_code (type_code);
-	TYPE_LENGTH (t) = sh->value;
+	t->set_length (sh->value);
 	t->set_num_fields (nfields);
 	f = ((struct field *) TYPE_ALLOC (t, nfields * sizeof (struct field)));
 	t->set_fields (f);
@@ -1041,9 +1041,9 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	       are hopefully rare enough.
 	       Alpha cc -migrate has a sh.value field of zero, we adjust
 	       that too.  */
-	    if (TYPE_LENGTH (t) == t->num_fields ()
-		|| TYPE_LENGTH (t) == 0)
-	      TYPE_LENGTH (t) = gdbarch_int_bit (gdbarch) / HOST_CHAR_BIT;
+	    if (t->length () == t->num_fields ()
+		|| t->length () == 0)
+	      t->set_length (gdbarch_int_bit (gdbarch) / HOST_CHAR_BIT);
 	    for (ext_tsym = ext_sh + external_sym_size;
 		 ;
 		 ext_tsym += external_sym_size)
@@ -1645,7 +1645,7 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
 	 dereference them.  */
       while (tp->code () == TYPE_CODE_PTR
 	     || tp->code () == TYPE_CODE_ARRAY)
-	tp = TYPE_TARGET_TYPE (tp);
+	tp = tp->target_type ();
 
       /* Make sure that TYPE_CODE(tp) has an expected type code.
 	 Any type may be returned from cross_ref if file indirect entries
@@ -1869,7 +1869,7 @@ upgrade_type (int fd, struct type **tpp, int tq, union aux_ext *ax, int bigend,
 	 dbx seems to ignore it too.  */
 
       /* TYPE_TARGET_STUB now takes care of the zero TYPE_LENGTH problem.  */
-      if (TYPE_LENGTH (*tpp) == 0)
+      if ((*tpp)->length () == 0)
 	t->set_target_is_stub (true);
 
       *tpp = t;
@@ -2041,7 +2041,7 @@ parse_procedure (PDR *pr, struct compunit_symtab *search_symtab,
 
   if (processing_gcc_compilation == 0
       && found_ecoff_debugging_info == 0
-      && TYPE_TARGET_TYPE (s->type ())->code () == TYPE_CODE_VOID)
+      && s->type ()->target_type ()->code () == TYPE_CODE_VOID)
     s->set_type (objfile_type (mdebugread_objfile)->nodebug_text_symbol);
 }
 

@@ -105,7 +105,7 @@ enum type_code
        Regardless of the language, GDB represents multidimensional
        array types the way C does: as arrays of arrays.  So an
        instance of a GDB array type T can always be seen as a series
-       of instances of TYPE_TARGET_TYPE (T) laid out sequentially in
+       of instances of T->target_type () laid out sequentially in
        memory.
 
        Row-major languages like C lay out multi-dimensional arrays so
@@ -968,7 +968,7 @@ struct main_type
      the type.
      - Unused otherwise.  */
 
-  struct type *target_type;
+  struct type *m_target_type;
 
   /* * For structure and union types, a description of each field.
      For set and pascal array types, there is one "field",
@@ -1045,6 +1045,20 @@ struct type
     this->main_type->name = name;
   }
 
+  /* Note that if thistype is a TYPEDEF type, you have to call check_typedef.
+     But check_typedef does set the TYPE_LENGTH of the TYPEDEF type,
+     so you only have to call check_typedef once.  Since allocate_value
+     calls check_typedef, VALUE_TYPE (X)->length () is safe.  */
+  ULONGEST length () const
+  {
+    return this->m_length;
+  }
+
+  void set_length (ULONGEST length)
+  {
+    this->m_length = length;
+  }
+
   /* Get the number of fields of this type.  */
   int num_fields () const
   {
@@ -1079,6 +1093,16 @@ struct type
   type *index_type () const
   {
     return this->field (0).type ();
+  }
+
+  struct type *target_type () const
+  {
+    return this->main_type->m_target_type;
+  }
+
+  void set_target_type (struct type *target_type)
+  {
+    this->main_type->m_target_type = target_type;
   }
 
   void set_index_type (type *index_type)
@@ -1246,7 +1270,7 @@ struct type
   }
 
   /* Used only for TYPE_CODE_FUNC where it specifies the real function
-     address is returned by this function call.  TYPE_TARGET_TYPE
+     address is returned by this function call.  The target_type method
      determines the final returned function type to be presented to
      user.  */
 
@@ -1433,7 +1457,7 @@ struct type
   bool bit_size_differs_p () const
   {
     return (main_type->type_specific_field == TYPE_SPECIFIC_INT
-	    && main_type->type_specific.int_stuff.bit_size != 8 * length);
+	    && main_type->type_specific.int_stuff.bit_size != 8 * length ());
   }
 
   /* * Return the logical (bit) size for this integer type.  Only
@@ -1518,7 +1542,7 @@ struct type
      type_length_units function should be used in order to get the length
      expressed in target addressable memory units.  */
 
-  ULONGEST length;
+  ULONGEST m_length;
 
   /* * Core type, shared by a group of qualified types.  */
 
@@ -2087,16 +2111,10 @@ extern void allocate_gnat_aux_type (struct type *);
    allocate_fixed_point_type_info (type))
 
 #define TYPE_MAIN_TYPE(thistype) (thistype)->main_type
-#define TYPE_TARGET_TYPE(thistype) TYPE_MAIN_TYPE(thistype)->target_type
 #define TYPE_POINTER_TYPE(thistype) (thistype)->pointer_type
 #define TYPE_REFERENCE_TYPE(thistype) (thistype)->reference_type
 #define TYPE_RVALUE_REFERENCE_TYPE(thistype) (thistype)->rvalue_reference_type
 #define TYPE_CHAIN(thistype) (thistype)->chain
-/* * Note that if thistype is a TYPEDEF type, you have to call check_typedef.
-   But check_typedef does set the TYPE_LENGTH of the TYPEDEF type,
-   so you only have to call check_typedef once.  Since allocate_value
-   calls check_typedef, TYPE_LENGTH (VALUE_TYPE (X)) is safe.  */
-#define TYPE_LENGTH(thistype) (thistype)->length
 
 /* * Return the alignment of the type in target addressable memory
    units, or 0 if no alignment was specified.  */

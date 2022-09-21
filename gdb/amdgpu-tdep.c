@@ -224,7 +224,7 @@ amdgcn_arg_placement::alloc_for_type (struct type *type, int offset,
 	return;
       }
 
-  const int typelen = TYPE_LENGTH (type);
+  const int typelen = type->length ();
   /* Non-aggregate non packed type whose size is under 1 register might
      have to be sign extended.  */
   if (!packed && is_integral_type (type) && typelen < AMDGCN_VGPR_LEN)
@@ -232,7 +232,7 @@ amdgcn_arg_placement::alloc_for_type (struct type *type, int offset,
       /* For the purpose of calling convention, an enum is treated as its
 	 underlying type.  */
       if (type->code () == TYPE_CODE_ENUM)
-	type = check_typedef (TYPE_TARGET_TYPE (type));
+	type = check_typedef (type->target_type ());
 
       bool sign_extend = false;
       if ((type->code () == TYPE_CODE_CHAR && !type->has_no_signedness ())
@@ -324,7 +324,7 @@ amdgcn_arg_placement::alloc_for_struct (struct type *type, int offset)
 
   if (!has_non_static_fields)
     {
-      if (TYPE_LENGTH (type) != 1)
+      if (type->length () != 1)
 	warning (_("Empty struct should have a length of 1 byte.  "
 		   "Assuming a size of 1 for ABI purposes."));
 
@@ -335,18 +335,18 @@ amdgcn_arg_placement::alloc_for_struct (struct type *type, int offset)
 void
 amdgcn_arg_placement::alloc_for_array (struct type *type, int offset)
 {
-  const int typelen = TYPE_LENGTH (type);
+  const int typelen = type->length ();
   if (type->is_vector () && typelen <= 2)
     alloc_reg_for_part (offset, 2, false);
   else
     {
       /* Check how one element of the array is mapped to registers.  */
-      const amdgcn_arg_placement elem_placement (TYPE_TARGET_TYPE (type),
+      const amdgcn_arg_placement elem_placement (type->target_type (),
 						 false);
 
       /* Repeat the same mapping pattern for each element of the array.  */
-      const int element_type_length = TYPE_LENGTH (TYPE_TARGET_TYPE (type));
-      const unsigned element_align = type_align (TYPE_TARGET_TYPE (type));
+      const int element_type_length = type->target_type ()->length ();
+      const unsigned element_align = type_align (type->target_type ());
       const int padding
 	= ((element_align - (element_type_length % element_align))
 	   % element_align);
@@ -477,7 +477,7 @@ amdgpu_return_value (struct gdbarch *gdbarch, struct value *function,
     }
 
   /* Types of size under 8 bytes are returned packed in v0-1.  */
-  if (TYPE_LENGTH (type) <= 2 * AMDGCN_VGPR_LEN)
+  if (type->length () <= 2 * AMDGCN_VGPR_LEN)
     {
       if (regcache != nullptr)
 	{
@@ -599,7 +599,7 @@ amdgpu_enum_type (struct gdbarch *gdbarch, int bits,
 
       auto enumval = std::stoul (match[2].str ());
       if (bits == 32 && enumval > std::numeric_limits<uint32_t>::max ())
-	TYPE_LENGTH (enum_type) = (bits = 64) / TARGET_CHAR_BIT;
+	enum_type->set_length ((bits = 64) / TARGET_CHAR_BIT);
 
       enum_type->field (i).set_name (xstrdup (match[1].str ().c_str ()));
       enum_type->field (i).set_loc_enumval (enumval);
@@ -1082,7 +1082,7 @@ amdgpu_pointer_to_address (struct gdbarch *gdbarch,
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR address
-    = extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
+    = extract_unsigned_integer (buf, type->length (), byte_order);
   unsigned int address_class
     = amdgpu_type_flags_to_addr_class (type->instance_flags ());
 

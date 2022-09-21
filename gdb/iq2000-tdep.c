@@ -89,13 +89,13 @@ iq2000_pointer_to_address (struct gdbarch *gdbarch,
 			   struct type * type, const gdb_byte * buf)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  enum type_code target = TYPE_TARGET_TYPE (type)->code ();
+  enum type_code target = type->target_type ()->code ();
   CORE_ADDR addr
-    = extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
+    = extract_unsigned_integer (buf, type->length (), byte_order);
 
   if (target == TYPE_CODE_FUNC
       || target == TYPE_CODE_METHOD
-      || TYPE_CODE_SPACE (TYPE_TARGET_TYPE (type)))
+      || TYPE_CODE_SPACE (type->target_type ()))
     addr = insn_addr_from_ptr (addr);
 
   return addr;
@@ -109,11 +109,11 @@ iq2000_address_to_pointer (struct gdbarch *gdbarch,
 			   struct type *type, gdb_byte *buf, CORE_ADDR addr)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  enum type_code target = TYPE_TARGET_TYPE (type)->code ();
+  enum type_code target = type->target_type ()->code ();
 
   if (target == TYPE_CODE_FUNC || target == TYPE_CODE_METHOD)
     addr = insn_ptr_from_addr (addr);
-  store_unsigned_integer (buf, TYPE_LENGTH (type), byte_order, addr);
+  store_unsigned_integer (buf, type->length (), byte_order, addr);
 }
 
 /* Real register methods: */
@@ -482,7 +482,7 @@ static void
 iq2000_store_return_value (struct type *type, struct regcache *regcache,
 			   const void *valbuf)
 {
-  int len = TYPE_LENGTH (type);
+  int len = type->length ();
   int regno = E_FN_RETURN_REGNUM;
 
   while (len > 0)
@@ -507,7 +507,7 @@ iq2000_use_struct_convention (struct type *type)
 {
   return ((type->code () == TYPE_CODE_STRUCT)
 	  || (type->code () == TYPE_CODE_UNION))
-	 && TYPE_LENGTH (type) > 8;
+	 && type->length () > 8;
 }
 
 /* Function: extract_return_value
@@ -528,7 +528,7 @@ iq2000_extract_return_value (struct type *type, struct regcache *regcache,
      returned in a register, and if larger than 8 bytes, it is 
      returned in a stack location which is pointed to by the same
      register.  */
-  int len = TYPE_LENGTH (type);
+  int len = type->length ();
 
   if (len <= (2 * 4))
     {
@@ -556,7 +556,7 @@ iq2000_extract_return_value (struct type *type, struct regcache *regcache,
       ULONGEST return_buffer;
       regcache_cooked_read_unsigned (regcache, E_FN_RETURN_REGNUM,
 				     &return_buffer);
-      read_memory (return_buffer, valbuf, TYPE_LENGTH (type));
+      read_memory (return_buffer, valbuf, type->length ());
     }
 }
 
@@ -599,7 +599,7 @@ iq2000_pass_8bytetype_by_address (struct type *type)
 
   /* Skip typedefs.  */
   while (type->code () == TYPE_CODE_TYPEDEF)
-    type = TYPE_TARGET_TYPE (type);
+    type = type->target_type ();
   /* Non-struct and non-union types are always passed by value.  */
   if (type->code () != TYPE_CODE_STRUCT
       && type->code () != TYPE_CODE_UNION)
@@ -610,11 +610,11 @@ iq2000_pass_8bytetype_by_address (struct type *type)
   /* Get field type.  */
   ftype = type->field (0).type ();
   /* The field type must have size 8, otherwise pass by address.  */
-  if (TYPE_LENGTH (ftype) != 8)
+  if (ftype->length () != 8)
     return 1;
   /* Skip typedefs of field type.  */
   while (ftype->code () == TYPE_CODE_TYPEDEF)
-    ftype = TYPE_TARGET_TYPE (ftype);
+    ftype = ftype->target_type ();
   /* If field is int or float, pass by value.  */
   if (ftype->code () == TYPE_CODE_FLT
       || ftype->code () == TYPE_CODE_INT)
@@ -645,7 +645,7 @@ iq2000_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
        i++)
     {
       type = value_type (args[i]);
-      typelen = TYPE_LENGTH (type);
+      typelen = type->length ();
       if (typelen <= 4)
 	{
 	  /* Scalars of up to 4 bytes, 
@@ -711,7 +711,7 @@ iq2000_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   for (i = 0; i < nargs; i++)
     {
       type = value_type (args[i]);
-      typelen = TYPE_LENGTH (type);
+      typelen = type->length ();
       val = value_contents (args[i]).data ();
       if (typelen <= 4)
 	{

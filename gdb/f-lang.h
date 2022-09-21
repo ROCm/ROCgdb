@@ -175,7 +175,7 @@ public:
   {
     const char *type_encoding = get_encoding (elttype);
 
-    if (TYPE_LENGTH (elttype) == 4)
+    if (elttype->length () == 4)
       gdb_puts ("4_", stream);
 
     if (!encoding || !*encoding)
@@ -197,7 +197,7 @@ public:
     type = check_typedef (type);
     return (type->code () == TYPE_CODE_STRING
 	    || (type->code () == TYPE_CODE_ARRAY
-		&& TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_CHAR));
+		&& type->target_type ()->code () == TYPE_CODE_CHAR));
   }
 
   /* See language.h.  */

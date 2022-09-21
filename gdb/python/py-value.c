@@ -158,7 +158,7 @@ convert_buffer_and_type_to_value (PyObject *obj, struct type *type)
       return nullptr;
     }
 
-  if (TYPE_LENGTH (type) > py_buf.len)
+  if (type->length () > py_buf.len)
     {
       PyErr_SetString (PyExc_ValueError,
 		       _("Size of type is larger than that of buffer object."));
@@ -422,7 +422,7 @@ valpy_get_dynamic_type (PyObject *self, void *closure)
       type = check_typedef (type);
 
       if (type->is_pointer_or_reference ()
-	  && (TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_STRUCT))
+	  && (type->target_type ()->code () == TYPE_CODE_STRUCT))
 	{
 	  struct value *target;
 	  int was_pointer = type->code () == TYPE_CODE_PTR;
@@ -525,7 +525,7 @@ valpy_lazy_string (PyObject *self, PyObject *args, PyObject *kw)
 	      length = array_length;
 	    else if (array_length == -1)
 	      {
-		type = lookup_array_range_type (TYPE_TARGET_TYPE (realtype),
+		type = lookup_array_range_type (realtype->target_type (),
 						0, length - 1);
 	      }
 	    else if (length != array_length)
@@ -534,7 +534,7 @@ valpy_lazy_string (PyObject *self, PyObject *args, PyObject *kw)
 		   specified length.  */
 		if (length > array_length)
 		  error (_("Length is larger than array size."));
-		type = lookup_array_range_type (TYPE_TARGET_TYPE (realtype),
+		type = lookup_array_range_type (realtype->target_type (),
 						low_bound,
 						low_bound + length - 1);
 	      }
@@ -597,7 +597,7 @@ valpy_string (PyObject *self, PyObject *args, PyObject *kw)
 
   encoding = (user_encoding && *user_encoding) ? user_encoding : la_encoding;
   return PyUnicode_Decode ((const char *) buffer.get (),
-			   length * TYPE_LENGTH (char_type),
+			   length * char_type->length (),
 			   encoding, errors);
 }
 
@@ -886,7 +886,7 @@ value_has_field (struct value *v, PyObject *field)
       val_type = value_type (v);
       val_type = check_typedef (val_type);
       if (val_type->is_pointer_or_reference ())
-	val_type = check_typedef (TYPE_TARGET_TYPE (val_type));
+	val_type = check_typedef (val_type->target_type ());
 
       type_code = val_type->code ();
       if ((type_code == TYPE_CODE_STRUCT || type_code == TYPE_CODE_UNION)
@@ -1274,7 +1274,7 @@ enum valpy_opcode
 
 /* If TYPE is a reference, return the target; otherwise return TYPE.  */
 #define STRIP_REFERENCE(TYPE) \
-  (TYPE_IS_REFERENCE (TYPE) ? (TYPE_TARGET_TYPE (TYPE)) : (TYPE))
+  (TYPE_IS_REFERENCE (TYPE) ? ((TYPE)->target_type ()) : (TYPE))
 
 /* Helper for valpy_binop.  Returns a value object which is the result
    of applying the operation specified by OPCODE to the given

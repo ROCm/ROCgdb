@@ -32,6 +32,7 @@
 #include "sysdep.h"
 #include "bfd.h"
 #include "libiberty.h"
+#include "demangle.h"
 #include "libbfd.h"
 #include "elf-bfd.h"
 #include "dwarf2.h"
@@ -1711,31 +1712,52 @@ read_attribute (struct attribute *    attr,
   return info_ptr;
 }
 
-/* Return whether DW_AT_name will return the same as DW_AT_linkage_name
-   for a function.  */
+/* Return mangling style given LANG.  */
 
-static bool
-non_mangled (int lang)
+static int
+mangle_style (int lang)
 {
   switch (lang)
     {
+    case DW_LANG_Ada83:
+    case DW_LANG_Ada95:
+      return DMGL_GNAT;
+
+    case DW_LANG_C_plus_plus:
+    case DW_LANG_C_plus_plus_03:
+    case DW_LANG_C_plus_plus_11:
+    case DW_LANG_C_plus_plus_14:
+      return DMGL_GNU_V3;
+
+    case DW_LANG_Java:
+      return DMGL_JAVA;
+
+    case DW_LANG_D:
+      return DMGL_DLANG;
+
+    case DW_LANG_Rust:
+    case DW_LANG_Rust_old:
+      return DMGL_RUST;
+
     default:
-      return false;
+      return DMGL_AUTO;
 
     case DW_LANG_C89:
     case DW_LANG_C:
-    case DW_LANG_Ada83:
     case DW_LANG_Cobol74:
     case DW_LANG_Cobol85:
     case DW_LANG_Fortran77:
     case DW_LANG_Pascal83:
-    case DW_LANG_C99:
-    case DW_LANG_Ada95:
     case DW_LANG_PLI:
+    case DW_LANG_C99:
     case DW_LANG_UPC:
     case DW_LANG_C11:
     case DW_LANG_Mips_Assembler:
-      return true;
+    case DW_LANG_Upc:
+    case DW_LANG_HP_Basic91:
+    case DW_LANG_HP_IMacro:
+    case DW_LANG_HP_Assembler:
+      return 0;
     }
 }
 
@@ -1810,8 +1832,6 @@ struct funcinfo
   bool is_linkage;
   const char *name;
   struct arange arange;
-  /* Where the symbol is defined.  */
-  asection *sec;
   /* The offset of the funcinfo from the start of the unit.  */
   uint64_t unit_offset;
 };
@@ -1848,8 +1868,6 @@ struct varinfo
   const char *name;
   /* The address of the variable.  */
   bfd_vma addr;
-  /* Where the symbol is defined.  */
-  asection *sec;
   /* Is this a stack variable?  */
   bool stack;
 };
@@ -3270,7 +3288,7 @@ lookup_address_in_function_table (struct comp_unit *unit,
   struct lookup_funcinfo* lookup_funcinfo = NULL;
   struct funcinfo* funcinfo = NULL;
   struct funcinfo* best_fit = NULL;
-  bfd_vma best_fit_len = 0;
+  bfd_vma best_fit_len = (bfd_vma) -1;
   bfd_size_type low, high, mid, first;
   struct arange *arange;
 
@@ -3316,8 +3334,7 @@ lookup_address_in_function_table (struct comp_unit *unit,
 	  if (addr < arange->low || addr >= arange->high)
 	    continue;
 
-	  if (!best_fit
-	      || arange->high - arange->low < best_fit_len
+	  if (arange->high - arange->low < best_fit_len
 	      /* The following comparison is designed to return the same
 		 match as the previous algorithm for routines which have the
 		 same best fit length.  */
@@ -3349,44 +3366,33 @@ lookup_symbol_in_function_table (struct comp_unit *unit,
 				 const char **filename_ptr,
 				 unsigned int *linenumber_ptr)
 {
-  struct funcinfo* each_func;
+  struct funcinfo* each;
   struct funcinfo* best_fit = NULL;
-  bfd_vma best_fit_len = 0;
+  bfd_vma best_fit_len = (bfd_vma) -1;
   struct arange *arange;
   const char *name = bfd_asymbol_name (sym);
-  asection *sec = bfd_asymbol_section (sym);
 
-  for (each_func = unit->function_table;
-       each_func;
-       each_func = each_func->prev_func)
-    {
-      for (arange = &each_func->arange;
-	   arange;
-	   arange = arange->next)
+  for (each = unit->function_table; each; each = each->prev_func)
+    for (arange = &each->arange; arange; arange = arange->next)
+      if (addr >= arange->low
+	  && addr < arange->high
+	  && arange->high - arange->low < best_fit_len
+	  && each->file
+	  && each->name
+	  && strstr (name, each->name) != NULL)
 	{
-	  if ((!each_func->sec || each_func->sec == sec)
-	      && addr >= arange->low
-	      && addr < arange->high
-	      && each_func->name
-	      && strcmp (name, each_func->name) == 0
-	      && (!best_fit
-		  || arange->high - arange->low < best_fit_len))
-	    {
-	      best_fit = each_func;
-	      best_fit_len = arange->high - arange->low;
-	    }
+	  best_fit = each;
+	  best_fit_len = arange->high - arange->low;
 	}
-    }
 
   if (best_fit)
     {
-      best_fit->sec = sec;
       *filename_ptr = best_fit->file;
       *linenumber_ptr = best_fit->line;
       return true;
     }
-  else
-    return false;
+
+  return false;
 }
 
 /* Variable table functions.  */
@@ -3401,22 +3407,19 @@ lookup_symbol_in_variable_table (struct comp_unit *unit,
 				 const char **filename_ptr,
 				 unsigned int *linenumber_ptr)
 {
-  const char *name = bfd_asymbol_name (sym);
-  asection *sec = bfd_asymbol_section (sym);
   struct varinfo* each;
+  const char *name = bfd_asymbol_name (sym);
 
   for (each = unit->variable_table; each; each = each->prev_var)
-    if (! each->stack
+    if (each->addr == addr
+	&& !each->stack
 	&& each->file != NULL
 	&& each->name != NULL
-	&& each->addr == addr
-	&& (!each->sec || each->sec == sec)
-	&& strcmp (name, each->name) == 0)
+	&& strstr (name, each->name) != NULL)
       break;
 
   if (each)
     {
-      each->sec = sec;
       *filename_ptr = each->file;
       *linenumber_ptr = each->line;
       return true;
@@ -3609,7 +3612,7 @@ find_abstract_instance (struct comp_unit *unit,
 		  if (name == NULL && is_str_form (&attr))
 		    {
 		      name = attr.u.str;
-		      if (non_mangled (unit->lang))
+		      if (mangle_style (unit->lang) == 0)
 			*is_linkage = true;
 		    }
 		  break;
@@ -4105,7 +4108,7 @@ scan_unit_for_symbols (struct comp_unit *unit)
 		  if (func->name == NULL && is_str_form (&attr))
 		    {
 		      func->name = attr.u.str;
-		      if (non_mangled (unit->lang))
+		      if (mangle_style (unit->lang) == 0)
 			func->is_linkage = true;
 		    }
 		  break;
@@ -5075,11 +5078,10 @@ info_hash_lookup_funcinfo (struct info_hash_table *hash_table,
 {
   struct funcinfo* each_func;
   struct funcinfo* best_fit = NULL;
-  bfd_vma best_fit_len = 0;
+  bfd_vma best_fit_len = (bfd_vma) -1;
   struct info_list_node *node;
   struct arange *arange;
   const char *name = bfd_asymbol_name (sym);
-  asection *sec = bfd_asymbol_section (sym);
 
   for (node = lookup_info_hash_table (hash_table, name);
        node;
@@ -5090,11 +5092,9 @@ info_hash_lookup_funcinfo (struct info_hash_table *hash_table,
 	   arange;
 	   arange = arange->next)
 	{
-	  if ((!each_func->sec || each_func->sec == sec)
-	      && addr >= arange->low
+	  if (addr >= arange->low
 	      && addr < arange->high
-	      && (!best_fit
-		  || arange->high - arange->low < best_fit_len))
+	      && arange->high - arange->low < best_fit_len)
 	    {
 	      best_fit = each_func;
 	      best_fit_len = arange->high - arange->low;
@@ -5104,7 +5104,6 @@ info_hash_lookup_funcinfo (struct info_hash_table *hash_table,
 
   if (best_fit)
     {
-      best_fit->sec = sec;
       *filename_ptr = best_fit->file;
       *linenumber_ptr = best_fit->line;
       return true;
@@ -5126,20 +5125,17 @@ info_hash_lookup_varinfo (struct info_hash_table *hash_table,
 			  const char **filename_ptr,
 			  unsigned int *linenumber_ptr)
 {
-  const char *name = bfd_asymbol_name (sym);
-  asection *sec = bfd_asymbol_section (sym);
   struct varinfo* each;
   struct info_list_node *node;
+  const char *name = bfd_asymbol_name (sym);
 
   for (node = lookup_info_hash_table (hash_table, name);
        node;
        node = node->next)
     {
       each = (struct varinfo *) node->info;
-      if (each->addr == addr
-	  && (!each->sec || each->sec == sec))
+      if (each->addr == addr)
 	{
-	  each->sec = sec;
 	  *filename_ptr = each->file;
 	  *linenumber_ptr = each->line;
 	  return true;
@@ -5871,25 +5867,23 @@ _bfd_dwarf2_find_nearest_line_with_alt
 
       if (stash->info_hash_status == STASH_INFO_HASH_ON)
 	{
-	  found = stash_find_line_fast (stash, symbol, addr, filename_ptr,
-					linenumber_ptr);
+	  found = stash_find_line_fast (stash, symbol, addr,
+					filename_ptr, linenumber_ptr);
 	  if (found)
 	    goto done;
 	}
-      else
-	{
-	  /* Check the previously read comp. units first.  */
-	  for (each = stash->f.all_comp_units; each; each = each->next_unit)
-	    if ((symbol->flags & BSF_FUNCTION) == 0
-		|| each->arange.high == 0
-		|| comp_unit_contains_address (each, addr))
-	      {
-		found = comp_unit_find_line (each, symbol, addr, filename_ptr,
-					     linenumber_ptr);
-		if (found)
-		  goto done;
-	      }
-	}
+
+      /* Check the previously read comp. units first.  */
+      for (each = stash->f.all_comp_units; each; each = each->next_unit)
+	if ((symbol->flags & BSF_FUNCTION) == 0
+	    || each->arange.high == 0
+	    || comp_unit_contains_address (each, addr))
+	  {
+	    found = comp_unit_find_line (each, symbol, addr, filename_ptr,
+					 linenumber_ptr);
+	    if (found)
+	      goto done;
+	  }
     }
   else
     {

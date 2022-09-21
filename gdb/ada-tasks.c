@@ -437,7 +437,7 @@ read_fat_string_value (char *dest, struct value *val, int max_len)
 
       bounds_type = type->field (bounds_fieldno).type ();
       if (bounds_type->code () == TYPE_CODE_PTR)
-	bounds_type = TYPE_TARGET_TYPE (bounds_type);
+	bounds_type = bounds_type->target_type ();
       if (bounds_type->code () != TYPE_CODE_STRUCT)
 	error (_("Unknown task name format. Aborting"));
       upper_bound_fieldno = ada_get_field_index (bounds_type, "UB0", 0);
@@ -819,7 +819,7 @@ add_ada_task (CORE_ADDR task_id, struct inferior *inf)
 static bool
 read_known_tasks_array (struct ada_tasks_inferior_data *data)
 {
-  const int target_ptr_byte = TYPE_LENGTH (data->known_tasks_element);
+  const int target_ptr_byte = data->known_tasks_element->length ();
   const int known_tasks_size = target_ptr_byte * data->known_tasks_length;
   gdb_byte *known_tasks = (gdb_byte *) alloca (known_tasks_size);
   int i;
@@ -846,7 +846,7 @@ read_known_tasks_array (struct ada_tasks_inferior_data *data)
 static bool
 read_known_tasks_list (struct ada_tasks_inferior_data *data)
 {
-  const int target_ptr_byte = TYPE_LENGTH (data->known_tasks_element);
+  const int target_ptr_byte = data->known_tasks_element->length ();
   gdb_byte *known_tasks = (gdb_byte *) alloca (target_ptr_byte);
   CORE_ADDR task_id;
   const struct ada_tasks_pspace_data *pspace_data
@@ -910,7 +910,7 @@ ada_tasks_inferior_data_sniffer (struct ada_tasks_inferior_data *data)
 	  struct type *idxtype = NULL;
 
 	  if (type->code () == TYPE_CODE_ARRAY)
-	    eltype = check_typedef (TYPE_TARGET_TYPE (type));
+	    eltype = check_typedef (type->target_type ());
 	  if (eltype != NULL
 	      && eltype->code () == TYPE_CODE_PTR)
 	    idxtype = check_typedef (type->index_type ());

@@ -27,6 +27,7 @@
 #include "elf-bfd.h"
 #include "elf/tic6x.h"
 #include "gdbarch.h"
+#include "solib-dsbt.h"
 
 /* The offset from rt_sigframe pointer to SP register.  */
 #define TIC6X_SP_RT_SIGFRAME 8
@@ -161,7 +162,6 @@ tic6x_linux_syscall_next_pc (struct frame_info *frame)
 }
 
 
-extern struct target_so_ops dsbt_so_ops;
 static void
 tic6x_uclinux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -170,7 +170,7 @@ tic6x_uclinux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   linux_init_abi (info, gdbarch, 0);
 
   /* Shared library handling.  */
-  set_solib_ops (gdbarch, &dsbt_so_ops);
+  set_gdbarch_so_ops (gdbarch, &dsbt_so_ops);
 
   tdep->syscall_next_pc = tic6x_linux_syscall_next_pc;
 

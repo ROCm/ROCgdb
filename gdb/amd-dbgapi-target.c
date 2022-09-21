@@ -1927,7 +1927,7 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 
   amd_dbgapi_status_t status
     = amd_dbgapi_read_register (wave_id, tdep->register_ids[regno], 0,
-				TYPE_LENGTH (register_type (gdbarch, regno)),
+				register_type (gdbarch, regno)->length (),
 				raw);
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
@@ -1976,7 +1976,7 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
 
   amd_dbgapi_status_t status
     = amd_dbgapi_write_register (wave_id, tdep->register_ids[regno], 0,
-				 TYPE_LENGTH (register_type (gdbarch, regno)),
+				 register_type (gdbarch, regno)->length (),
 				 raw);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)

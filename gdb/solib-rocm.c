@@ -22,7 +22,6 @@
 
 #include "arch-utils.h"
 #include "elf-bfd.h"
-#include "gdb/fileio.h"
 #include "gdbcore.h"
 #include "inferior.h"
 #include "objfiles.h"
@@ -238,7 +237,7 @@ file_ptr
 rocm_code_object_stream_file::read (void *buf, file_ptr size,
 				    file_ptr offset)
 {
-  int target_errno;
+  fileio_error target_error;
   file_ptr nbytes = 0;
   while (size > 0)
     {
@@ -247,14 +246,14 @@ rocm_code_object_stream_file::read (void *buf, file_ptr size,
       file_ptr bytes_read
 	= target_fileio_pread (m_fd, static_cast<gdb_byte *> (buf) + nbytes,
 			       size, m_offset + offset + nbytes,
-			       &target_errno);
+			       &target_error);
 
       if (bytes_read == 0)
 	break;
 
       if (bytes_read < 0)
 	{
-	  errno = fileio_errno_to_host (target_errno);
+	  errno = fileio_error_to_host (target_error);
 	  bfd_set_error (bfd_error_system_call);
 	  return -1;
 	}
@@ -271,11 +270,11 @@ rocm_code_object_stream_file::size ()
 {
   if (m_size == 0)
     {
-      int target_errno;
+      fileio_error target_error;
       struct stat stat;
-      if (target_fileio_fstat (m_fd, &stat, &target_errno) < 0)
+      if (target_fileio_fstat (m_fd, &stat, &target_error) < 0)
 	{
-	  errno = fileio_errno_to_host (target_errno);
+	  errno = fileio_error_to_host (target_error);
 	  bfd_set_error (bfd_error_system_call);
 	  return -1;
 	}
@@ -295,8 +294,8 @@ rocm_code_object_stream_file::size ()
 
 rocm_code_object_stream_file::~rocm_code_object_stream_file ()
 {
-  int target_errno;
-  target_fileio_close (m_fd, &target_errno);
+  fileio_error target_error;
+  target_fileio_close (m_fd, &target_error);
 }
 
 /* Interface to a code object which lives in the inferior's memory.  */
@@ -415,11 +414,11 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 
       if (protocol == "file")
 	{
-	  int target_errno;
+	  fileio_error target_error;
 	  int fd
 	    = target_fileio_open (static_cast<struct inferior *> (inferior),
 				  decoded_path.c_str (), FILEIO_O_RDONLY,
-				  false, 0, &target_errno);
+				  false, 0, &target_error);
 
 	  if (fd == -1)
 	    {
@@ -614,7 +613,7 @@ rocm_update_solib_list ()
 	= rocm_solib_relocate_section_addresses;
 
       /* Engage the ROCm so_ops.  */
-      set_solib_ops (target_gdbarch (), &rocm_solib_ops);
+      set_gdbarch_so_ops (target_gdbarch (), &rocm_solib_ops);
     }
 
   solib_add (NULL, 0, auto_solib_add);

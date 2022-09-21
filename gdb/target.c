@@ -41,7 +41,7 @@
 #include "exec.h"
 #include "inline-frame.h"
 #include "tracepoint.h"
-#include "gdb/fileio.h"
+#include "gdbsupport/fileio.h"
 #include "gdbsupport/agent.h"
 #include "auxv.h"
 #include "target-debug.h"
@@ -3231,7 +3231,7 @@ fileio_fd_to_fh (int fd)
 int
 target_ops::fileio_open (struct inferior *inf, const char *filename,
 			 int flags, int mode, int warn_if_slow,
-			 int *target_errno)
+			 fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
@@ -3239,7 +3239,7 @@ target_ops::fileio_open (struct inferior *inf, const char *filename,
 
 int
 target_ops::fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
-			   ULONGEST offset, int *target_errno)
+			   ULONGEST offset, fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
@@ -3247,21 +3247,21 @@ target_ops::fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
 
 int
 target_ops::fileio_pread (int fd, gdb_byte *read_buf, int len,
-			  ULONGEST offset, int *target_errno)
+			  ULONGEST offset, fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
 }
 
 int
-target_ops::fileio_fstat (int fd, struct stat *sb, int *target_errno)
+target_ops::fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
 }
 
 int
-target_ops::fileio_close (int fd, int *target_errno)
+target_ops::fileio_close (int fd, fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
@@ -3269,7 +3269,7 @@ target_ops::fileio_close (int fd, int *target_errno)
 
 int
 target_ops::fileio_unlink (struct inferior *inf, const char *filename,
-			   int *target_errno)
+			   fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
@@ -3277,7 +3277,7 @@ target_ops::fileio_unlink (struct inferior *inf, const char *filename,
 
 gdb::optional<std::string>
 target_ops::fileio_readlink (struct inferior *inf, const char *filename,
-			     int *target_errno)
+			     fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return {};
@@ -3287,7 +3287,7 @@ target_ops::fileio_readlink (struct inferior *inf, const char *filename,
 
 int
 target_fileio_open (struct inferior *inf, const char *filename,
-		    int flags, int mode, bool warn_if_slow, int *target_errno)
+		    int flags, int mode, bool warn_if_slow, fileio_error *target_errno)
 {
   for (target_ops *t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
@@ -3321,15 +3321,15 @@ target_fileio_open (struct inferior *inf, const char *filename,
 
 int
 target_fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
-		      ULONGEST offset, int *target_errno)
+		      ULONGEST offset, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
 
   if (fh->is_closed ())
-    *target_errno = EBADF;
+    *target_errno = FILEIO_EBADF;
   else if (fh->target == NULL)
-    *target_errno = EIO;
+    *target_errno = FILEIO_EIO;
   else
     ret = fh->target->fileio_pwrite (fh->target_fd, write_buf,
 				     len, offset, target_errno);
@@ -3347,15 +3347,15 @@ target_fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
 
 int
 target_fileio_pread (int fd, gdb_byte *read_buf, int len,
-		     ULONGEST offset, int *target_errno)
+		     ULONGEST offset, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
 
   if (fh->is_closed ())
-    *target_errno = EBADF;
+    *target_errno = FILEIO_EBADF;
   else if (fh->target == NULL)
-    *target_errno = EIO;
+    *target_errno = FILEIO_EIO;
   else
     ret = fh->target->fileio_pread (fh->target_fd, read_buf,
 				    len, offset, target_errno);
@@ -3372,15 +3372,15 @@ target_fileio_pread (int fd, gdb_byte *read_buf, int len,
 /* See target.h.  */
 
 int
-target_fileio_fstat (int fd, struct stat *sb, int *target_errno)
+target_fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
 
   if (fh->is_closed ())
-    *target_errno = EBADF;
+    *target_errno = FILEIO_EBADF;
   else if (fh->target == NULL)
-    *target_errno = EIO;
+    *target_errno = FILEIO_EIO;
   else
     ret = fh->target->fileio_fstat (fh->target_fd, sb, target_errno);
 
@@ -3394,13 +3394,13 @@ target_fileio_fstat (int fd, struct stat *sb, int *target_errno)
 /* See target.h.  */
 
 int
-target_fileio_close (int fd, int *target_errno)
+target_fileio_close (int fd, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
 
   if (fh->is_closed ())
-    *target_errno = EBADF;
+    *target_errno = FILEIO_EBADF;
   else
     {
       if (fh->target != NULL)
@@ -3422,7 +3422,7 @@ target_fileio_close (int fd, int *target_errno)
 
 int
 target_fileio_unlink (struct inferior *inf, const char *filename,
-		      int *target_errno)
+		      fileio_error *target_errno)
 {
   for (target_ops *t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
@@ -3448,7 +3448,7 @@ target_fileio_unlink (struct inferior *inf, const char *filename,
 
 gdb::optional<std::string>
 target_fileio_readlink (struct inferior *inf, const char *filename,
-			int *target_errno)
+			fileio_error *target_errno)
 {
   for (target_ops *t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
@@ -3486,7 +3486,7 @@ public:
   {
     if (m_fd >= 0)
       {
-	int target_errno;
+	fileio_error target_errno;
 
 	target_fileio_close (m_fd, &target_errno);
       }
@@ -3518,7 +3518,7 @@ target_fileio_read_alloc_1 (struct inferior *inf, const char *filename,
   size_t buf_alloc, buf_pos;
   gdb_byte *buf;
   LONGEST n;
-  int target_errno;
+  fileio_error target_errno;
 
   scoped_target_fd fd (target_fileio_open (inf, filename, FILEIO_O_RDONLY,
 					   0700, false, &target_errno));

@@ -642,19 +642,19 @@ dwarf_location::deref (frame_info *frame, const property_addr_info *addr_info,
 		       struct type *type, size_t size) const
 {
   bool big_endian = type_byte_order (type) == BFD_ENDIAN_BIG;
-  size_t actual_size = size != 0 ? size : TYPE_LENGTH (type);
+  size_t actual_size = size != 0 ? size : type->length ();
 
-  if (actual_size > TYPE_LENGTH (type))
+  if (actual_size > type->length ())
     ill_formed_expression ();
 
     /* If the size of the object read from memory is different
      from the type length, we need to zero-extend it.  */
-  gdb::byte_vector read_buf (TYPE_LENGTH (type), 0);
+  gdb::byte_vector read_buf (type->length (), 0);
   gdb_byte *buf_ptr = read_buf.data ();
   int optimized, unavailable;
 
   if (big_endian)
-    buf_ptr += TYPE_LENGTH (type) - actual_size;
+    buf_ptr += type->length () - actual_size;
 
   this->read (frame, buf_ptr, 0, actual_size * HOST_CHAR_BIT,
 	      0, 0, big_endian, &optimized, &unavailable);
@@ -724,7 +724,7 @@ class dwarf_value : public dwarf_entry
 public:
   dwarf_value (const gdb_byte *contents, struct type *type)
   {
-    size_t type_len = TYPE_LENGTH (type);
+    size_t type_len = type->length ();
     m_contents.reset ((gdb_byte *) xzalloc (type_len));
 
     memcpy (m_contents.get (), contents, type_len);
@@ -733,7 +733,7 @@ public:
 
   dwarf_value (ULONGEST value, struct type *type)
   {
-    m_contents.reset ((gdb_byte *) xzalloc (TYPE_LENGTH (type)));
+    m_contents.reset ((gdb_byte *) xzalloc (type->length ()));
 
     pack_unsigned_long (m_contents.get (), type, value);
     m_type = type;
@@ -741,7 +741,7 @@ public:
 
   dwarf_value (LONGEST value, struct type *type)
   {
-    m_contents.reset ((gdb_byte *) xzalloc (TYPE_LENGTH (type)));
+    m_contents.reset ((gdb_byte *) xzalloc (type->length ()));
 
     pack_long (m_contents.get (), type, value);
     m_type = type;
@@ -750,7 +750,7 @@ public:
   dwarf_value (const dwarf_value &value)
   {
     struct type *type = value.m_type;
-    size_t type_len = TYPE_LENGTH (type);
+    size_t type_len = type->length ();
 
     m_contents.reset ((gdb_byte *) xzalloc (type_len));
 
@@ -810,9 +810,9 @@ private:
 value *
 dwarf_value::convert_to_gdb_value (struct type *type, LONGEST offset) const
 {
-  size_t type_len = TYPE_LENGTH (type);
+  size_t type_len = type->length ();
 
-  if (offset + type_len > TYPE_LENGTH (m_type))
+  if (offset + type_len > m_type->length ())
     invalid_synthetic_pointer ();
 
   value *retval = allocate_value (type);
@@ -830,7 +830,7 @@ dwarf_value::to_location (gdbarch *arch)
     offset = gdbarch_integer_to_address (arch, m_type, m_contents.get (),
 					 ARCH_ADDR_SPACE_ID_DEFAULT);
   else
-    offset = extract_unsigned_integer (m_contents.get (), TYPE_LENGTH (m_type),
+    offset = extract_unsigned_integer (m_contents.get (), m_type->length (),
 				       type_byte_order (m_type));
 
   auto memory = std::make_shared<dwarf_memory> (arch, offset);
@@ -895,7 +895,7 @@ public:
       subobj_type = type;
 
     mark_value_bytes_optimized_out (retval, subobj_offset,
-				    TYPE_LENGTH (subobj_type));
+				    subobj_type->length ());
     return retval;
   }
 
@@ -1085,18 +1085,18 @@ dwarf_memory::deref (frame_info *frame, const property_addr_info *addr_info,
 		     struct type *type, size_t size) const
 {
   bool big_endian = type_byte_order (type) == BFD_ENDIAN_BIG;
-  size_t actual_size = size != 0 ? size : TYPE_LENGTH (type);
+  size_t actual_size = size != 0 ? size : type->length ();
 
-  if (actual_size > TYPE_LENGTH (type))
+  if (actual_size > type->length ())
     ill_formed_expression ();
 
-  gdb::byte_vector read_buf (TYPE_LENGTH (type), 0);
+  gdb::byte_vector read_buf (type->length (), 0);
   size_t size_in_bits = actual_size * HOST_CHAR_BIT;
   gdb_byte *buf_ptr = read_buf.data ();
   bool passed_in_buf = false;
 
   if (big_endian)
-    buf_ptr += TYPE_LENGTH (type) - actual_size;
+    buf_ptr += type->length () - actual_size;
 
   /* Covers the case where we have a passed in memory that is not
      part of the target and requires for the location description
@@ -1339,7 +1339,7 @@ dwarf_register::to_gdb_value (frame_info *frame, struct type *type,
   LONGEST retval_offset = value_offset (retval);
 
   if (type_byte_order (type) == BFD_ENDIAN_BIG
-      && TYPE_LENGTH (type) + m_offset < retval_offset)
+      && type->length () + m_offset < retval_offset)
     /* Big-endian, and we want less than full size.  */
     set_value_offset (retval, retval_offset - m_offset);
   else
@@ -1358,7 +1358,7 @@ dwarf_register::to_gdb_value (frame_info *frame, struct type *type,
 	 return a generic optimized out value instead, so that we show
 	 <optimized out> instead of <not saved>.  */
       value *temp = allocate_value (subobj_type);
-      value_contents_copy (temp, 0, retval, 0, 0, TYPE_LENGTH (subobj_type));
+      value_contents_copy (temp, 0, retval, 0, 0, subobj_type->length ());
       retval = temp;
     }
 
@@ -1493,8 +1493,8 @@ dwarf_implicit::to_gdb_value (frame_info *frame, struct type *type,
   if (subobj_type == nullptr)
     subobj_type = type;
 
-  size_t subtype_len = TYPE_LENGTH (subobj_type);
-  size_t type_len = TYPE_LENGTH (type);
+  size_t subtype_len = subobj_type->length ();
+  size_t type_len = type->length ();
 
   /* To be compatible with expected error output of the existing
      tests, the invalid synthetic pointer is not reported for
@@ -2102,7 +2102,7 @@ dwarf_composite::to_gdb_value (frame_info *frame, struct type *type,
 
   /* Complain if the expression is larger than the size of the
      outer type.  */
-  if (bit_size > HOST_CHAR_BIT * TYPE_LENGTH (type))
+  if (bit_size > HOST_CHAR_BIT * type->length ())
     invalid_synthetic_pointer ();
 
   computed_closure *closure;
@@ -2310,14 +2310,14 @@ rw_closure_value (value *v, value *from)
       if (from != NULL && big_endian)
 	{
 	  /* Use the least significant bits of FROM.  */
-	  max_bit_size = HOST_CHAR_BIT * TYPE_LENGTH (value_type (from));
+	  max_bit_size = HOST_CHAR_BIT * value_type (from)->length ();
 	  bit_offset = max_bit_size - value_bitsize (v);
 	}
       else
 	max_bit_size = value_bitsize (v);
     }
   else
-    max_bit_size = HOST_CHAR_BIT * TYPE_LENGTH (value_type (v));
+    max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
 
   frame_info *frame = closure->get_frame ();
 
@@ -2364,7 +2364,7 @@ is_optimized_out_closure_value (value *v)
       max_bit_size = value_bitsize (v);
     }
   else
-    max_bit_size = HOST_CHAR_BIT * TYPE_LENGTH (value_type (v));
+    max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
 
   frame_info *frame = closure->get_frame ();
 
@@ -2419,7 +2419,7 @@ indirect_closure_value (value *value)
   if (type->code () != TYPE_CODE_PTR)
     return NULL;
 
-  LONGEST bit_length = HOST_CHAR_BIT * TYPE_LENGTH (type);
+  LONGEST bit_length = HOST_CHAR_BIT * type->length ();
   LONGEST bit_offset = HOST_CHAR_BIT * value_offset (value);
 
   if (value_bitsize (value))
@@ -2455,7 +2455,7 @@ coerce_closure_ref (const value *value)
   struct type *type = check_typedef (value_type (value));
 
   if (value_bits_synthetic_pointer (value, value_embedded_offset (value),
-				    TARGET_CHAR_BIT * TYPE_LENGTH (type)))
+				    TARGET_CHAR_BIT * type->length ()))
     {
       computed_closure *closure
 	= (computed_closure *) value_computed_closure (value);
@@ -2491,7 +2491,7 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
 	gdb_byte *contents_start = value_contents_raw (value).data () + offset;
 
 	return std::make_shared<dwarf_implicit> (arch, contents_start,
-						 TYPE_LENGTH (type),
+						 type->length (),
 						 type_byte_order (type));
       }
     case lval_memory:
@@ -2947,7 +2947,7 @@ dwarf_require_integral (struct type *type)
 static struct type *
 get_unsigned_type (struct gdbarch *gdbarch, struct type *type)
 {
-  switch (TYPE_LENGTH (type))
+  switch (type->length ())
     {
     case 1:
       return builtin_type (gdbarch)->builtin_uint8;
@@ -2969,7 +2969,7 @@ get_unsigned_type (struct gdbarch *gdbarch, struct type *type)
 static struct type *
 get_signed_type (struct gdbarch *gdbarch, struct type *type)
 {
-  switch (TYPE_LENGTH (type))
+  switch (type->length ())
     {
     case 1:
       return builtin_type (gdbarch)->builtin_int8;
@@ -3053,7 +3053,7 @@ dwarf_expr_context::create_select_composite (ULONGEST piece_bit_size,
 
   auto mask = fetch (0)->to_value (address_type ());
   type *mask_type = mask->get_type ();
-  mask_size = TYPE_LENGTH (mask_type);
+  mask_size = mask_type->length ();
   dwarf_require_integral (mask_type);
   pop ();
 
@@ -3197,7 +3197,7 @@ base_types_equal_p (struct type *t1, struct type *t2)
     return 0;
   if (t1->is_unsigned () != t2->is_unsigned ())
     return 0;
-  return TYPE_LENGTH (t1) == TYPE_LENGTH (t2);
+  return t1->length () == t2->length ();
 }
 
 /* See expr.h.  */
@@ -3592,7 +3592,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 	    result_entry = std::make_shared<dwarf_implicit>
 	      (arch, value->get_contents (),
-	       TYPE_LENGTH (type), type_byte_order (type));
+	       type->length (), type_byte_order (type));
 	  }
 	  break;
 
@@ -3790,7 +3790,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 		op_ptr = safe_read_uleb128 (op_ptr, op_end, &uoffset);
 		cu_offset type_die_cu_off = (cu_offset) uoffset;
 		type = get_base_type (type_die_cu_off);
-		addr_size = TYPE_LENGTH (type);
+		addr_size = type->length ();
 	      }
 
 	    auto location = fetch (0)->to_location (arch);
@@ -4201,7 +4201,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 	    struct type *type = get_base_type (type_die_cu_off);
 
-	    if (TYPE_LENGTH (type) != n)
+	    if (type->length () != n)
 	      error (_("DW_OP_const_type has different sizes for type and data"));
 
 	    result_entry = std::make_shared<dwarf_value> (data, type);
@@ -4251,7 +4251,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	      {
 		/* Nothing.  */
 	      }
-	    else if (TYPE_LENGTH (type) != TYPE_LENGTH (value->get_type ()))
+	    else if (type->length () != value->get_type ()->length ())
 	      error (_("DW_OP_reinterpret has wrong size"));
 	    else
 	      value

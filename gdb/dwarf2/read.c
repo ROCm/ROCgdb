@@ -8193,7 +8193,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 
 	  /* In Rust, each element should have the size of the
 	     enclosing enum.  */
-	  TYPE_LENGTH (type->field (i).type ()) = TYPE_LENGTH (type);
+	  type->field (i).type ()->set_length (type->length ());
 
 	  /* Remove the discriminant field, if it exists.  */
 	  struct type *sub_type = type->field (i).type ();
@@ -9020,7 +9020,7 @@ dwarf2_compute_name (const char *name,
 			{
 			  v = allocate_value (type);
 			  memcpy (value_contents_writeable (v).data (), bytes,
-				  TYPE_LENGTH (type));
+				  type->length ());
 			}
 		      else
 			v = value_from_longest (type, value);
@@ -9068,7 +9068,7 @@ dwarf2_compute_name (const char *name,
 		  if (type->num_fields () > 0
 		      && TYPE_FIELD_ARTIFICIAL (type, 0)
 		      && type->field (0).type ()->code () == TYPE_CODE_PTR
-		      && TYPE_CONST (TYPE_TARGET_TYPE (type->field (0).type ())))
+		      && TYPE_CONST (type->field (0).type ()->target_type ()))
 		    buf.puts (" const");
 		}
 	    }
@@ -13621,7 +13621,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		     the bit field must be inferred from the type
 		     attribute of the data member containing the
 		     bit field.  */
-		  anonymous_size = TYPE_LENGTH (fp->type ());
+		  anonymous_size = fp->type ()->length ();
 		}
 	      fp->set_loc_bitpos (fp->loc_bitpos ()
 				  + anonymous_size * bits_per_byte
@@ -14133,7 +14133,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
       /* TYPE is the domain of this method, and THIS_TYPE is the type
 	   of the method itself (TYPE_CODE_METHOD).  */
       smash_to_method_type (fnp->type, type,
-			    TYPE_TARGET_TYPE (this_type),
+			    this_type->target_type (),
 			    this_type->fields (),
 			    this_type->num_fields (),
 			    this_type->has_varargs ());
@@ -14234,8 +14234,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
 		}
 	      else
 		{
-		  fnp->fcontext
-		    = TYPE_TARGET_TYPE (this_type->field (0).type ());
+		  fnp->fcontext = this_type->field (0).type ()->target_type ();
 		}
 	    }
 	}
@@ -14336,19 +14335,19 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
   pfn_type = type->field (0).type ();
   if (pfn_type == NULL
       || pfn_type->code () != TYPE_CODE_PTR
-      || TYPE_TARGET_TYPE (pfn_type)->code () != TYPE_CODE_FUNC)
+      || pfn_type->target_type ()->code () != TYPE_CODE_FUNC)
     return;
 
   /* Look for the "this" argument.  */
-  pfn_type = TYPE_TARGET_TYPE (pfn_type);
+  pfn_type = pfn_type->target_type ();
   if (pfn_type->num_fields () == 0
       /* || pfn_type->field (0).type () == NULL */
       || pfn_type->field (0).type ()->code () != TYPE_CODE_PTR)
     return;
 
-  self_type = TYPE_TARGET_TYPE (pfn_type->field (0).type ());
+  self_type = pfn_type->field (0).type ()->target_type ();
   new_type = alloc_type (objfile);
-  smash_to_method_type (new_type, self_type, TYPE_TARGET_TYPE (pfn_type),
+  smash_to_method_type (new_type, self_type, pfn_type->target_type (),
 			pfn_type->fields (), pfn_type->num_fields (),
 			pfn_type->has_varargs ());
   smash_to_methodptr_type (type, new_type);
@@ -14368,7 +14367,7 @@ rewrite_array_type (struct type *type)
   range_bounds *current_bounds = index_type->bounds ();
 
   /* Handle multi-dimensional arrays.  */
-  struct type *new_target = rewrite_array_type (TYPE_TARGET_TYPE (type));
+  struct type *new_target = rewrite_array_type (type->target_type ());
   if (new_target == nullptr)
     {
       /* Maybe we don't need to rewrite this array.  */
@@ -14388,7 +14387,7 @@ rewrite_array_type (struct type *type)
   memcpy (new_fields, copy->fields (), nfields * sizeof (struct field));
   copy->set_fields (new_fields);
   if (new_target != nullptr)
-    TYPE_TARGET_TYPE (copy) = new_target;
+    copy->set_target_type (new_target);
 
   struct type *index_copy = copy_type (index_type);
   range_bounds *bounds
@@ -14436,7 +14435,7 @@ quirk_ada_thick_pointer_struct (struct die_info *die, struct dwarf2_cu *cu,
      because those may be referenced in other contexts where this
      rewriting is undesirable.  */
   struct type *new_ary_type
-    = rewrite_array_type (TYPE_TARGET_TYPE (type->field (0).type ()));
+    = rewrite_array_type (type->field (0).type ()->target_type ());
   if (new_ary_type != nullptr)
     type->field (0).set_type (lookup_pointer_type (new_ary_type));
 }
@@ -14649,23 +14648,22 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   if (attr != nullptr)
     {
       if (attr->form_is_constant ())
-	TYPE_LENGTH (type) = attr->constant_value (0);
+	type->set_length (attr->constant_value (0));
       else
 	{
 	  struct dynamic_prop prop;
 	  if (attr_to_dynamic_prop (attr, die, cu, &prop, cu->addr_type ()))
 	    type->add_dyn_prop (DYN_PROP_BYTE_SIZE, prop);
-	  TYPE_LENGTH (type) = 0;
+
+	  type->set_length (0);
 	}
     }
   else
-    {
-      TYPE_LENGTH (type) = 0;
-    }
+    type->set_length (0);
 
   maybe_set_alignment (cu, die, type);
 
-  if (producer_is_icc_lt_14 (cu) && (TYPE_LENGTH (type) == 0))
+  if (producer_is_icc_lt_14 (cu) && (type->length () == 0))
     {
       /* ICC<14 does not output the required DW_AT_declaration on
 	 incomplete types, but gives them a size of zero.  */
@@ -15204,18 +15202,14 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
     {
       struct type *underlying_type = die_type (die, cu);
 
-      TYPE_TARGET_TYPE (type) = underlying_type;
+      type->set_target_type (underlying_type);
     }
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
-    {
-      TYPE_LENGTH (type) = attr->constant_value (0);
-    }
+    type->set_length (attr->constant_value (0));
   else
-    {
-      TYPE_LENGTH (type) = 0;
-    }
+    type->set_length (0);
 
   maybe_set_alignment (cu, die, type);
 
@@ -15234,15 +15228,15 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
      can tell us the reality.  However, we defer to a local size
      attribute if one exists, because this lets the compiler override
      the underlying type if needed.  */
-  if (TYPE_TARGET_TYPE (type) != NULL && !TYPE_TARGET_TYPE (type)->is_stub ())
+  if (type->target_type () != NULL && !type->target_type ()->is_stub ())
     {
-      struct type *underlying_type = TYPE_TARGET_TYPE (type);
+      struct type *underlying_type = type->target_type ();
       underlying_type = check_typedef (underlying_type);
 
       type->set_is_unsigned (underlying_type->is_unsigned ());
 
-      if (TYPE_LENGTH (type) == 0)
-	TYPE_LENGTH (type) = TYPE_LENGTH (underlying_type);
+      if (type->length () == 0)
+	type->set_length (underlying_type->length ());
 
       if (TYPE_RAW_ALIGN (type) == 0
 	  && TYPE_RAW_ALIGN (underlying_type) != 0)
@@ -15423,7 +15417,7 @@ recognize_bound_expression (struct die_info *die, enum dwarf_attribute name,
     return false;
 
   field->set_loc_bitpos (8 * offset);
-  if (size != TYPE_LENGTH (field->type ()))
+  if (size != field->type ()->length ())
     FIELD_BITSIZE (*field) = 8 * size;
 
   return true;
@@ -15538,8 +15532,8 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
 
   int last_fieldno = range_fields.size () - 1;
   int bounds_size = (bounds->field (last_fieldno).loc_bitpos () / 8
-		     + TYPE_LENGTH (bounds->field (last_fieldno).type ()));
-  TYPE_LENGTH (bounds) = align_up (bounds_size, max_align);
+		     + bounds->field (last_fieldno).type ()->length ());
+  bounds->set_length (align_up (bounds_size, max_align));
 
   /* Rewrite the existing array type in place.  Specifically, we
      remove any dynamic properties we might have read, and we replace
@@ -15551,7 +15545,7 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
       iter->main_type->dyn_prop_list = nullptr;
       iter->set_index_type
 	(create_static_range_type (NULL, bounds->field (i).type (), 1, 0));
-      iter = TYPE_TARGET_TYPE (iter);
+      iter = iter->target_type ();
     }
 
   struct type *result = alloc_type (objfile);
@@ -15573,8 +15567,8 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
   result->field (1).set_loc_bitpos (8 * bounds_offset);
 
   result->set_name (type->name ());
-  TYPE_LENGTH (result) = (TYPE_LENGTH (result->field (0).type ())
-			  + TYPE_LENGTH (result->field (1).type ()));
+  result->set_length (result->field (0).type ()->length ()
+		      + result->field (1).type ()->length ());
 
   return result;
 }
@@ -15714,8 +15708,8 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr && attr->form_is_unsigned ())
     {
-      if (attr->as_unsigned () >= TYPE_LENGTH (type))
-	TYPE_LENGTH (type) = attr->as_unsigned ();
+      if (attr->as_unsigned () >= type->length ())
+	type->set_length (attr->as_unsigned ());
       else
 	complaint (_("DW_AT_byte_size for array type smaller "
 		     "than the total size of elements"));
@@ -15801,7 +15795,7 @@ read_set_type (struct die_info *die, struct dwarf2_cu *cu)
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr && attr->form_is_unsigned ())
-    TYPE_LENGTH (set_type) = attr->as_unsigned ();
+    set_type->set_length (attr->as_unsigned ());
 
   maybe_set_alignment (cu, die, set_type);
 
@@ -16172,7 +16166,7 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
   /* If the pointer size, alignment, or address class is different
      than the default, create a type variant marked as such and set
      the length accordingly.  */
-  if (TYPE_LENGTH (type) != byte_size
+  if (type->length () != byte_size
       || (alignment != 0 && TYPE_RAW_ALIGN (type) != 0
 	  && alignment != TYPE_RAW_ALIGN (type))
       || addr_class != DW_ADDR_none)
@@ -16186,7 +16180,7 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 		      == 0);
 	  type = make_type_with_address_space (type, type_flags);
 	}
-      else if (TYPE_LENGTH (type) != byte_size)
+      else if (type->length () != byte_size)
 	{
 	  complaint (_("invalid pointer size %d"), byte_size);
 	}
@@ -16203,7 +16197,7 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
-  TYPE_LENGTH (type) = byte_size;
+  type->set_length (byte_size);
   set_type_align (type, alignment);
   return set_die_type (die, type, cu);
 }
@@ -16232,7 +16226,7 @@ read_tag_ptr_to_member_type (struct die_info *die, struct dwarf2_cu *cu)
     {
       struct type *new_type = alloc_type (cu->per_objfile->objfile);
 
-      smash_to_method_type (new_type, domain, TYPE_TARGET_TYPE (to_type),
+      smash_to_method_type (new_type, domain, to_type->target_type (),
 			    to_type->fields (), to_type->num_fields (),
 			    to_type->has_varargs ());
       type = lookup_methodptr_type (new_type);
@@ -16266,13 +16260,10 @@ read_tag_reference_type (struct die_info *die, struct dwarf2_cu *cu,
   type = lookup_reference_type (target_type, refcode);
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
-    {
-      TYPE_LENGTH (type) = attr->constant_value (cu_header->addr_size);
-    }
+    type->set_length (attr->constant_value (cu_header->addr_size));
   else
-    {
-      TYPE_LENGTH (type) = cu_header->addr_size;
-    }
+    type->set_length (cu_header->addr_size);
+
   maybe_set_alignment (cu, die, type);
   return set_die_type (die, type, cu);
 }
@@ -16292,17 +16283,16 @@ add_array_cv_type (struct die_info *die, struct dwarf2_cu *cu,
   base_type = copy_type (base_type);
   inner_array = base_type;
 
-  while (TYPE_TARGET_TYPE (inner_array)->code () == TYPE_CODE_ARRAY)
+  while (inner_array->target_type ()->code () == TYPE_CODE_ARRAY)
     {
-      TYPE_TARGET_TYPE (inner_array) =
-	copy_type (TYPE_TARGET_TYPE (inner_array));
-      inner_array = TYPE_TARGET_TYPE (inner_array);
+      inner_array->set_target_type (copy_type (inner_array->target_type ()));
+      inner_array = inner_array->target_type ();
     }
 
-  el_type = TYPE_TARGET_TYPE (inner_array);
+  el_type = inner_array->target_type ();
   cnst |= TYPE_CONST (el_type);
   voltl |= TYPE_VOLATILE (el_type);
-  TYPE_TARGET_TYPE (inner_array) = make_cv_type (cnst, voltl, el_type, NULL);
+  inner_array->set_target_type (make_cv_type (cnst, voltl, el_type, NULL));
 
   return set_die_type (die, base_type, cu);
 }
@@ -16683,7 +16673,7 @@ read_typedef (struct die_info *die, struct dwarf2_cu *cu)
   set_die_type (die, this_type, cu);
   target_type = die_type (die, cu);
   if (target_type != this_type)
-    TYPE_TARGET_TYPE (this_type) = target_type;
+    this_type->set_target_type (target_type);
   else
     {
       /* Self-referential typedefs are, it seems, not allowed by the DWARF
@@ -16691,7 +16681,7 @@ read_typedef (struct die_info *die, struct dwarf2_cu *cu)
       complaint (_("Self-referential DW_TAG_typedef "
 		   "- DIE at %s [in module %s]"),
 		 sect_offset_str (die->sect_off), objfile_name (objfile));
-      TYPE_TARGET_TYPE (this_type) = NULL;
+      this_type->set_target_type (nullptr);
     }
   if (name == NULL)
     {
@@ -17106,7 +17096,7 @@ dwarf2_init_complex_target_type (struct dwarf2_cu *cu,
   /* If the type we found doesn't match the size we were looking for, then
      pretend we didn't find a type at all, the complex target type we
      create will then be nameless.  */
-  if (tt != nullptr && TYPE_LENGTH (tt) * TARGET_CHAR_BIT != bits)
+  if (tt != nullptr && tt->length () * TARGET_CHAR_BIT != bits)
     tt = nullptr;
 
   const char *name = (tt == nullptr) ? nullptr : tt->name ();
@@ -17298,14 +17288,14 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
   if (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_INT)
     {
       attr = dwarf2_attr (die, DW_AT_bit_size, cu);
-      if (attr != nullptr && attr->as_unsigned () <= 8 * TYPE_LENGTH (type))
+      if (attr != nullptr && attr->as_unsigned () <= 8 * type->length ())
 	{
 	  unsigned real_bit_size = attr->as_unsigned ();
 	  attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
 	  /* Only use the attributes if they make sense together.  */
 	  if (attr == nullptr
 	      || (attr->as_unsigned () + real_bit_size
-		  <= 8 * TYPE_LENGTH (type)))
+		  <= 8 * type->length ()))
 	    {
 	      TYPE_MAIN_TYPE (type)->type_specific.int_stuff.bit_size
 		= real_bit_size;
@@ -17636,7 +17626,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
      the bounds as signed, and thus sign-extend their values, when
      the base type is signed.  */
   negative_mask =
-    -((ULONGEST) 1 << (TYPE_LENGTH (base_type) * TARGET_CHAR_BIT - 1));
+    -((ULONGEST) 1 << (base_type->length () * TARGET_CHAR_BIT - 1));
   if (low.kind () == PROP_CONST
       && !base_type->is_unsigned () && (low.const_val () & negative_mask))
     low.set_const_val (low.const_val () | negative_mask);
@@ -17702,7 +17692,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
-    TYPE_LENGTH (range_type) = attr->constant_value (0);
+    range_type->set_length (attr->constant_value (0));
 
   maybe_set_alignment (cu, die, range_type);
 
@@ -21216,10 +21206,10 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
       {
 	gdb_byte *data;
 
-	if (TYPE_LENGTH (type) != cu_header->addr_size)
+	if (type->length () != cu_header->addr_size)
 	  dwarf2_const_value_length_mismatch_complaint (name,
 							cu_header->addr_size,
-							TYPE_LENGTH (type));
+							type->length ());
 	/* Symbols of this form are reasonably rare, so we just
 	   piggyback on the existing location code rather than writing
 	   a new implementation of symbol_computed_ops.  */
@@ -21254,9 +21244,9 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
     case DW_FORM_exprloc:
     case DW_FORM_data16:
       blk = attr->as_block ();
-      if (TYPE_LENGTH (type) != blk->size)
+      if (type->length () != blk->size)
 	dwarf2_const_value_length_mismatch_complaint (name, blk->size,
-						      TYPE_LENGTH (type));
+						      type->length ());
       *bytes = blk->data;
       break;
 
@@ -22555,7 +22545,7 @@ write_constant_as_bytes (struct obstack *obstack,
 {
   gdb_byte *result;
 
-  *len = TYPE_LENGTH (type);
+  *len = type->length ();
   result = (gdb_byte *) obstack_alloc (obstack, *len);
   store_unsigned_integer (result, *len, byte_order, value);
 

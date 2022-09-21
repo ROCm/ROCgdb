@@ -31,7 +31,6 @@
 #endif
 #endif
 #include "target.h"
-#include "gdb/fileio.h"
 #include "gdbsupport/fileio.h"
 #include "inferior.h"
 #include "cli/cli-style.h"
@@ -319,7 +318,8 @@ static void *
 gdb_bfd_iovec_fileio_open (struct bfd *abfd, void *open_closure)
 {
   const char *filename = bfd_get_filename (abfd);
-  int fd, target_errno;
+  int fd;
+  fileio_error target_errno;
   int *stream;
   gdb_bfd_open_closure *oclosure = (gdb_bfd_open_closure *) open_closure;
 
@@ -331,7 +331,7 @@ gdb_bfd_iovec_fileio_open (struct bfd *abfd, void *open_closure)
 			   &target_errno);
   if (fd == -1)
     {
-      errno = fileio_errno_to_host (target_errno);
+      errno = fileio_error_to_host (target_errno);
       bfd_set_error (bfd_error_system_call);
       return NULL;
     }
@@ -349,7 +349,7 @@ gdb_bfd_iovec_fileio_pread (struct bfd *abfd, void *stream, void *buf,
 			    file_ptr nbytes, file_ptr offset)
 {
   int fd = *(int *) stream;
-  int target_errno;
+  fileio_error target_errno;
   file_ptr pos, bytes;
 
   pos = 0;
@@ -365,7 +365,7 @@ gdb_bfd_iovec_fileio_pread (struct bfd *abfd, void *stream, void *buf,
 	break;
       if (bytes == -1)
 	{
-	  errno = fileio_errno_to_host (target_errno);
+	  errno = fileio_error_to_host (target_errno);
 	  bfd_set_error (bfd_error_system_call);
 	  return -1;
 	}
@@ -392,7 +392,7 @@ static int
 gdb_bfd_iovec_fileio_close (struct bfd *abfd, void *stream)
 {
   int fd = *(int *) stream;
-  int target_errno;
+  fileio_error target_errno;
 
   xfree (stream);
 
@@ -421,13 +421,13 @@ gdb_bfd_iovec_fileio_fstat (struct bfd *abfd, void *stream,
 			    struct stat *sb)
 {
   int fd = *(int *) stream;
-  int target_errno;
+  fileio_error target_errno;
   int result;
 
   result = target_fileio_fstat (fd, sb, &target_errno);
   if (result == -1)
     {
-      errno = fileio_errno_to_host (target_errno);
+      errno = fileio_error_to_host (target_errno);
       bfd_set_error (bfd_error_system_call);
     }
 

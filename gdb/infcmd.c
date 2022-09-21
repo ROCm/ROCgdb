@@ -1445,7 +1445,7 @@ get_return_value (struct symbol *func_symbol, struct value *function)
   struct value *value;
 
   struct type *value_type
-    = check_typedef (TYPE_TARGET_TYPE (func_symbol->type ()));
+    = check_typedef (func_symbol->type ()->target_type ());
   gdb_assert (value_type->code () != TYPE_CODE_VOID);
 
   if (is_nocall_function (check_typedef (::value_type (function))))
@@ -1605,7 +1605,7 @@ finish_command_fsm::should_stop (struct thread_info *tp)
       /* We're done.  */
       set_finished ();
 
-      rv->type = TYPE_TARGET_TYPE (function->type ());
+      rv->type = function->type ()->target_type ();
       if (rv->type == NULL)
 	internal_error (__FILE__, __LINE__,
 			_("finish_command: function has no target type"));
@@ -2130,7 +2130,7 @@ default_print_one_register_info (struct ui_file *file,
 	{
 	  pad_to_column (format_stream, value_column_2);
 	  format_stream.puts ("(raw ");
-	  print_hex_chars (&format_stream, valaddr, TYPE_LENGTH (regtype),
+	  print_hex_chars (&format_stream, valaddr, regtype->length (),
 			   byte_order, true);
 	  format_stream.putc (')');
 	}

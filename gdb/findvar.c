@@ -319,7 +319,7 @@ unsigned_pointer_to_address (struct gdbarch *gdbarch,
 {
   enum bfd_endian byte_order = type_byte_order (type);
 
-  return extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
+  return extract_unsigned_integer (buf, type->length (), byte_order);
 }
 
 CORE_ADDR
@@ -328,7 +328,7 @@ signed_pointer_to_address (struct gdbarch *gdbarch,
 {
   enum bfd_endian byte_order = type_byte_order (type);
 
-  return extract_signed_integer (buf, TYPE_LENGTH (type), byte_order);
+  return extract_signed_integer (buf, type->length (), byte_order);
 }
 
 /* Given an address, store it as a pointer of type TYPE in target
@@ -339,7 +339,7 @@ unsigned_address_to_pointer (struct gdbarch *gdbarch, struct type *type,
 {
   enum bfd_endian byte_order = type_byte_order (type);
 
-  store_unsigned_integer (buf, TYPE_LENGTH (type), byte_order, addr);
+  store_unsigned_integer (buf, type->length (), byte_order, addr);
 }
 
 void
@@ -348,7 +348,7 @@ address_to_signed_pointer (struct gdbarch *gdbarch, struct type *type,
 {
   enum bfd_endian byte_order = type_byte_order (type);
 
-  store_signed_integer (buf, TYPE_LENGTH (type), byte_order, addr);
+  store_signed_integer (buf, type->length (), byte_order, addr);
 }
 
 /* See value.h.  */
@@ -596,7 +596,7 @@ language_defn::read_var_value (struct symbol *var,
 	}
       /* Put the constant back in target format. */
       v = allocate_value (type);
-      store_signed_integer (value_contents_raw (v).data (), TYPE_LENGTH (type),
+      store_signed_integer (value_contents_raw (v).data (), type->length (),
 			    type_byte_order (type), var->value_longest ());
       VALUE_LVAL (v) = not_lval;
       return v;
@@ -625,7 +625,7 @@ language_defn::read_var_value (struct symbol *var,
 	}
       v = allocate_value (type);
       memcpy (value_contents_raw (v).data (), var->value_bytes (),
-	      TYPE_LENGTH (type));
+	      type->length ());
       VALUE_LVAL (v) = not_lval;
       return v;
 
@@ -797,7 +797,7 @@ struct value *
 default_value_from_register (struct gdbarch *gdbarch, struct type *type,
 			     int regnum, struct frame_id frame_id)
 {
-  int len = TYPE_LENGTH (type);
+  int len = type->length ();
   struct value *value = allocate_value (type);
   struct frame_info *frame;
 
@@ -905,9 +905,9 @@ value_from_register (struct type *type, int regnum, struct frame_info *frame)
       if (!ok)
 	{
 	  if (optim)
-	    mark_value_bytes_optimized_out (v, 0, TYPE_LENGTH (type));
+	    mark_value_bytes_optimized_out (v, 0, type->length ());
 	  if (unavail)
-	    mark_value_bytes_unavailable (v, 0, TYPE_LENGTH (type));
+	    mark_value_bytes_unavailable (v, 0, type->length ());
 	}
     }
   else
@@ -950,7 +950,7 @@ address_from_register (int regnum, struct frame_info *frame)
      pointer types.  Avoid constructing a value object in those cases.  */
   if (gdbarch_convert_register_p (gdbarch, regnum, type))
     {
-      gdb_byte *buf = (gdb_byte *) alloca (TYPE_LENGTH (type));
+      gdb_byte *buf = (gdb_byte *) alloca (type->length ());
       int optim, unavail, ok;
 
       ok = gdbarch_register_to_value (gdbarch, frame, regnum, type,

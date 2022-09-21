@@ -1158,9 +1158,9 @@ frame_register_unwind (frame_info *next_frame, int regnum,
     {
       if (!*optimizedp && !*unavailablep)
 	memcpy (bufferp, value_contents_all (value).data (),
-		TYPE_LENGTH (value_type (value)));
+		value_type (value)->length ());
       else
-	memset (bufferp, 0, TYPE_LENGTH (value_type (value)));
+	memset (bufferp, 0, value_type (value)->length ());
     }
 
   /* Dispose of the new value.  This prevents watchpoints from
@@ -1560,7 +1560,7 @@ put_frame_register_bytes (struct frame_info *frame, int regnum,
 
 	  struct value *from_value = allocate_value (reg_type);
 	  memcpy (value_contents_raw (from_value).data (), myaddr,
-		  TYPE_LENGTH (reg_type));
+		  reg_type->length ());
 
 	  set_value_offset (value, added_offset + offset);
 

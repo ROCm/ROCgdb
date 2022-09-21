@@ -183,7 +183,7 @@ value_arg_coerce (struct gdbarch *gdbarch, struct value *arg,
 	   convert it back to a reference.  This will issue an error
 	   if the value was not previously in memory - in some cases
 	   we should clearly be allowing this, but how?  */
-	new_value = value_cast (TYPE_TARGET_TYPE (type), arg);
+	new_value = value_cast (type->target_type (), arg);
 	new_value = value_ref (new_value, type->code ());
 	return new_value;
       }
@@ -194,21 +194,21 @@ value_arg_coerce (struct gdbarch *gdbarch, struct value *arg,
       /* If we don't have a prototype, coerce to integer type if necessary.  */
       if (!is_prototyped)
 	{
-	  if (TYPE_LENGTH (type) < TYPE_LENGTH (builtin->builtin_int))
+	  if (type->length () < builtin->builtin_int->length ())
 	    type = builtin->builtin_int;
 	}
       /* Currently all target ABIs require at least the width of an integer
 	 type for an argument.  We may have to conditionalize the following
 	 type coercion for future targets.  */
-      if (TYPE_LENGTH (type) < TYPE_LENGTH (builtin->builtin_int))
+      if (type->length () < builtin->builtin_int->length ())
 	type = builtin->builtin_int;
       break;
     case TYPE_CODE_FLT:
       if (!is_prototyped && coerce_float_to_double_p)
 	{
-	  if (TYPE_LENGTH (type) < TYPE_LENGTH (builtin->builtin_double))
+	  if (type->length () < builtin->builtin_double->length ())
 	    type = builtin->builtin_double;
-	  else if (TYPE_LENGTH (type) > TYPE_LENGTH (builtin->builtin_double))
+	  else if (type->length () > builtin->builtin_double->length ())
 	    type = builtin->builtin_long_double;
 	}
       break;
@@ -221,7 +221,7 @@ value_arg_coerce (struct gdbarch *gdbarch, struct value *arg,
 	 because they are passed by value.  */
       if (current_language->c_style_arrays_p ())
 	if (!type->is_vector ())
-	  type = lookup_pointer_type (TYPE_TARGET_TYPE (type));
+	  type = lookup_pointer_type (type->target_type ());
       break;
     case TYPE_CODE_UNDEF:
     case TYPE_CODE_PTR:
@@ -266,7 +266,7 @@ find_function_addr (struct value *function,
   else if (ftype->code () == TYPE_CODE_PTR)
     {
       funaddr = value_as_address (function);
-      ftype = check_typedef (TYPE_TARGET_TYPE (ftype));
+      ftype = check_typedef (ftype->target_type ());
       if (ftype->code () == TYPE_CODE_FUNC
 	  || ftype->code () == TYPE_CODE_METHOD)
 	funaddr = gdbarch_convert_from_func_ptr_addr
@@ -295,19 +295,19 @@ find_function_addr (struct value *function,
 		target_ftype = find_gnu_ifunc_target_type (resolver_addr);
 	      if (target_ftype != NULL)
 		{
-		  value_type = TYPE_TARGET_TYPE (check_typedef (target_ftype));
+		  value_type = check_typedef (target_ftype)->target_type ();
 		  ftype = target_ftype;
 		}
 	    }
 	}
       else
-	value_type = TYPE_TARGET_TYPE (ftype);
+	value_type = ftype->target_type ();
     }
   else if (ftype->code () == TYPE_CODE_INT)
     {
       /* Handle the case of functions lacking debugging info.
 	 Their values are characters since their addresses are char.  */
-      if (TYPE_LENGTH (ftype) == 1)
+      if (ftype->length () == 1)
 	funaddr = value_as_address (value_addr (function));
       else
 	{
@@ -452,7 +452,7 @@ get_call_return_value (struct call_return_meta_info *ri)
 	  retval = allocate_value (ri->value_type);
 	  read_value_memory (retval, 0, 1, ri->struct_addr,
 			     value_contents_raw (retval).data (),
-			     TYPE_LENGTH (ri->value_type));
+			     ri->value_type->length ());
 	}
     }
   else
@@ -681,7 +681,7 @@ reserve_stack_space (const type *values_type, CORE_ADDR &sp)
     {
       /* Stack grows downward.  Align STRUCT_ADDR and SP after
 	 making space.  */
-      sp -= TYPE_LENGTH (values_type);
+      sp -= values_type->length ();
       if (gdbarch_frame_align_p (gdbarch))
 	sp = gdbarch_frame_align (gdbarch, sp);
       addr = sp;
@@ -693,7 +693,7 @@ reserve_stack_space (const type *values_type, CORE_ADDR &sp)
       if (gdbarch_frame_align_p (gdbarch))
 	sp = gdbarch_frame_align (gdbarch, sp);
       addr = sp;
-      sp += TYPE_LENGTH (values_type);
+      sp += values_type->length ();
       if (gdbarch_frame_align_p (gdbarch))
 	sp = gdbarch_frame_align (gdbarch, sp);
     }
@@ -926,7 +926,7 @@ call_function_by_hand_dummy (struct value *function,
 	    else
 	      {
 		gdb_assert (sp <= lastval_addr);
-		sp = lastval_addr + TYPE_LENGTH (value_type (lastval));
+		sp = lastval_addr + value_type (lastval)->length ();
 	      }
 
 	    if (gdbarch_frame_align_p (gdbarch))
@@ -1027,7 +1027,7 @@ call_function_by_hand_dummy (struct value *function,
 	 prototyped.  Can we respect TYPE_VARARGS?  Probably not.  */
       if (ftype->code () == TYPE_CODE_METHOD)
 	prototyped = 1;
-      else if (TYPE_TARGET_TYPE (ftype) == NULL && ftype->num_fields () == 0
+      else if (ftype->target_type () == NULL && ftype->num_fields () == 0
 	       && default_return_type != NULL)
 	{
 	  /* Calling a no-debug function with the return type
@@ -1083,7 +1083,7 @@ call_function_by_hand_dummy (struct value *function,
 
       if (info.trivially_copy_constructible)
 	{
-	  int length = TYPE_LENGTH (param_type);
+	  int length = param_type->length ();
 	  write_memory (addr, value_contents (args[i]).data (), length);
 	}
       else

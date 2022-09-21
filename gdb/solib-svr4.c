@@ -672,7 +672,7 @@ elf_locate_base (void)
     {
       struct type *ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
       gdb_byte *pbuf;
-      int pbuf_size = TYPE_LENGTH (ptr_type);
+      int pbuf_size = ptr_type->length ();
 
       pbuf = (gdb_byte *) alloca (pbuf_size);
       /* DT_MIPS_RLD_MAP contains a pointer to the address
@@ -692,7 +692,7 @@ elf_locate_base (void)
     {
       struct type *ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
       gdb_byte *pbuf;
-      int pbuf_size = TYPE_LENGTH (ptr_type);
+      int pbuf_size = ptr_type->length ();
 
       pbuf = (gdb_byte *) alloca (pbuf_size);
       /* DT_MIPS_RLD_MAP_REL contains an offset from the address of the
@@ -868,7 +868,7 @@ open_symbol_file_object (int from_tty)
   CORE_ADDR lm, l_name;
   struct link_map_offsets *lmo = svr4_fetch_link_map_offsets ();
   struct type *ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
-  int l_name_size = TYPE_LENGTH (ptr_type);
+  int l_name_size = ptr_type->length ();
   gdb::byte_vector l_name_buf (l_name_size);
   struct svr4_info *info = get_svr4_info (current_program_space);
   symfile_add_flags add_flags = 0;
@@ -3026,7 +3026,7 @@ set_solib_svr4_fetch_link_map_offsets (struct gdbarch *gdbarch,
 
   ops->fetch_link_map_offsets = flmo;
 
-  set_solib_ops (gdbarch, &svr4_so_ops);
+  set_gdbarch_so_ops (gdbarch, &svr4_so_ops);
   set_gdbarch_iterate_over_objfiles_in_search_order
     (gdbarch, svr4_iterate_over_objfiles_in_search_order);
 }
@@ -3121,8 +3121,6 @@ svr4_lp64_fetch_link_map_offsets (void)
 }
 
 
-struct target_so_ops svr4_so_ops;
-
 /* Search order for ELF DSOs linked with -Bsymbolic.  Those DSOs have a
    different rule for symbol lookup.  The lookup begins here in the DSO, not in
    the main executable.  */
@@ -3163,24 +3161,28 @@ svr4_iterate_over_objfiles_in_search_order
     }
 }
 
+const struct target_so_ops svr4_so_ops =
+{
+  svr4_relocate_section_addresses,
+  svr4_free_so,
+  svr4_clear_so,
+  svr4_clear_solib,
+  svr4_solib_create_inferior_hook,
+  svr4_current_sos,
+  open_symbol_file_object,
+  svr4_in_dynsym_resolve_code,
+  solib_bfd_open,
+  nullptr,
+  svr4_same,
+  svr4_keep_data_in_core,
+  svr4_update_solib_event_breakpoints,
+  svr4_handle_solib_event,
+};
+
 void _initialize_svr4_solib ();
 void
 _initialize_svr4_solib ()
 {
-  svr4_so_ops.relocate_section_addresses = svr4_relocate_section_addresses;
-  svr4_so_ops.free_so = svr4_free_so;
-  svr4_so_ops.clear_so = svr4_clear_so;
-  svr4_so_ops.clear_solib = svr4_clear_solib;
-  svr4_so_ops.solib_create_inferior_hook = svr4_solib_create_inferior_hook;
-  svr4_so_ops.current_sos = svr4_current_sos;
-  svr4_so_ops.open_symbol_file_object = open_symbol_file_object;
-  svr4_so_ops.in_dynsym_resolve_code = svr4_in_dynsym_resolve_code;
-  svr4_so_ops.bfd_open = solib_bfd_open;
-  svr4_so_ops.same = svr4_same;
-  svr4_so_ops.keep_data_in_core = svr4_keep_data_in_core;
-  svr4_so_ops.update_breakpoints = svr4_update_solib_event_breakpoints;
-  svr4_so_ops.handle_event = svr4_handle_solib_event;
-
   gdb::observers::free_objfile.attach (svr4_free_objfile_observer,
 				       "solib-svr4");
 }
