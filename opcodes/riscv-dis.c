@@ -403,7 +403,6 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	    print (info->stream, dis_style_immediate, "0");
 	  break;
 
-	case 'b':
 	case 's':
 	  if ((l & MASK_JALR) == MATCH_JALR)
 	    maybe_print_address (pd, rs1, EXTRACT_ITYPE_IMM (l), 0);
@@ -563,7 +562,50 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	  print (info->stream, dis_style_text, "%d", rs1);
 	  break;
 
+	case 'X': /* Integer immediate.  */
+	  {
+	    size_t n;
+	    size_t s;
+	    bool sign;
+
+	    switch (*++oparg)
+	      {
+		case 'l': /* Literal.  */
+		  oparg++;
+		  while (*oparg && *oparg != ',')
+		    {
+		      print (info->stream, dis_style_text, "%c", *oparg);
+		      oparg++;
+		    }
+		  oparg--;
+		  break;
+		case 's': /* 'XsN@S' ... N-bit signed immediate at bit S.  */
+		  sign = true;
+		  goto print_imm;
+		case 'u': /* 'XuN@S' ... N-bit unsigned immediate at bit S.  */
+		  sign = false;
+		  goto print_imm;
+		print_imm:
+		  n = strtol (++oparg, (char **)&oparg, 10);
+		  if (*oparg != '@')
+		    goto undefined_modifier;
+		  s = strtol (++oparg, (char **)&oparg, 10);
+		  oparg--;
+
+		  if (!sign)
+		    print (info->stream, dis_style_immediate, "%u",
+			   (unsigned)EXTRACT_U_IMM (n, s, l));
+		  else
+		    print (info->stream, dis_style_immediate, "%i",
+			   (unsigned)EXTRACT_S_IMM (n, s, l));
+		  break;
+		default:
+		  goto undefined_modifier;
+	      }
+	  }
+	  break;
 	default:
+	undefined_modifier:
 	  /* xgettext:c-format */
 	  print (info->stream, dis_style_text,
 		 _("# internal error, undefined modifier (%c)"),

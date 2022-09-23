@@ -1162,6 +1162,7 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zifencei",		ISA_SPEC_CLASS_20190608,	2, 0,  0 },
   {"zihintpause",	ISA_SPEC_CLASS_DRAFT,		2, 0,  0 },
   {"zmmul",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zawrs",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zfh",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zfhmin",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zfinx",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
@@ -1222,12 +1223,28 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
   {NULL, 0, 0, 0, 0}
 };
 
+static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
+{
+  {"xtheadba",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadbb",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadbs",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadcmo",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadcondmov",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadfmemidx",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadmac",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadmemidx",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadmempair",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadsync",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {NULL, 0, 0, 0, 0}
+};
+
 const struct riscv_supported_ext *riscv_all_supported_ext[] =
 {
   riscv_supported_std_ext,
   riscv_supported_std_z_ext,
   riscv_supported_std_s_ext,
   riscv_supported_std_zxm_ext,
+  riscv_supported_vendor_x_ext,
   NULL
 };
 
@@ -1483,8 +1500,7 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     case RV_ISA_CLASS_ZXM: table = riscv_supported_std_zxm_ext; break;
     case RV_ISA_CLASS_Z: table = riscv_supported_std_z_ext; break;
     case RV_ISA_CLASS_S: table = riscv_supported_std_s_ext; break;
-    case RV_ISA_CLASS_X:
-      break;
+    case RV_ISA_CLASS_X: table = riscv_supported_vendor_x_ext; break;
     default:
       table = riscv_supported_std_ext;
     }
@@ -2294,6 +2310,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zmmul");
     case INSN_CLASS_A:
       return riscv_subset_supports (rps, "a");
+    case INSN_CLASS_ZAWRS:
+      return riscv_subset_supports (rps, "zawrs");
     case INSN_CLASS_F:
       return riscv_subset_supports (rps, "f");
     case INSN_CLASS_D:
@@ -2381,6 +2399,26 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "svinval");
     case INSN_CLASS_H:
       return riscv_subset_supports (rps, "h");
+    case INSN_CLASS_XTHEADBA:
+      return riscv_subset_supports (rps, "xtheadba");
+    case INSN_CLASS_XTHEADBB:
+      return riscv_subset_supports (rps, "xtheadbb");
+    case INSN_CLASS_XTHEADBS:
+      return riscv_subset_supports (rps, "xtheadbs");
+    case INSN_CLASS_XTHEADCMO:
+      return riscv_subset_supports (rps, "xtheadcmo");
+    case INSN_CLASS_XTHEADCONDMOV:
+      return riscv_subset_supports (rps, "xtheadcondmov");
+    case INSN_CLASS_XTHEADFMEMIDX:
+      return riscv_subset_supports (rps, "xtheadfmemidx");
+    case INSN_CLASS_XTHEADMAC:
+      return riscv_subset_supports (rps, "xtheadmac");
+    case INSN_CLASS_XTHEADMEMIDX:
+      return riscv_subset_supports (rps, "xtheadmemidx");
+    case INSN_CLASS_XTHEADMEMPAIR:
+      return riscv_subset_supports (rps, "xtheadmempair");
+    case INSN_CLASS_XTHEADSYNC:
+      return riscv_subset_supports (rps, "xtheadsync");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2411,6 +2449,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return _ ("m' or `zmmul");
     case INSN_CLASS_A:
       return "a";
+    case INSN_CLASS_ZAWRS:
+      return "zawrs";
     case INSN_CLASS_F:
       return "f";
     case INSN_CLASS_D:
@@ -2508,6 +2548,26 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "svinval";
     case INSN_CLASS_H:
       return _("h");
+    case INSN_CLASS_XTHEADBA:
+      return "xtheadba";
+    case INSN_CLASS_XTHEADBB:
+      return "xtheadbb";
+    case INSN_CLASS_XTHEADBS:
+      return "xtheadbs";
+    case INSN_CLASS_XTHEADCMO:
+      return "xtheadcmo";
+    case INSN_CLASS_XTHEADCONDMOV:
+      return "xtheadcondmov";
+    case INSN_CLASS_XTHEADFMEMIDX:
+      return "xtheadfmemidx";
+    case INSN_CLASS_XTHEADMAC:
+      return "xtheadmac";
+    case INSN_CLASS_XTHEADMEMIDX:
+      return "xtheadmemidx";
+    case INSN_CLASS_XTHEADMEMPAIR:
+      return "xtheadmempair";
+    case INSN_CLASS_XTHEADSYNC:
+      return "xtheadsync";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
