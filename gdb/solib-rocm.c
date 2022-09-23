@@ -99,6 +99,22 @@ rocm_solib_relocate_section_addresses (struct so_list *so,
   sec->endaddr = sec->endaddr + li->l_addr;
 }
 
+static void rocm_update_solib_list ();
+
+static void
+rocm_solib_handle_event ()
+{
+  /* Since we sit on top of svr4_so_ops, we might get called following an event
+     concerning host libraries.  We must therefore forward the call.  If the
+     event was for a ROCm code object, it will be a no-op.  On the other hand,
+     if the event was for host libraries, rocm_update_solib_list will be
+     essentially be a noop (it will reload the same code object list as was
+     previously loaded).  */
+  svr4_so_ops.handle_event ();
+
+  rocm_update_solib_list ();
+}
+
 /* Make a deep copy of the solib linked list.  */
 
 static struct so_list *
@@ -611,6 +627,7 @@ rocm_update_solib_list ()
       rocm_solib_ops.bfd_open = rocm_solib_bfd_open;
       rocm_solib_ops.relocate_section_addresses
 	= rocm_solib_relocate_section_addresses;
+      rocm_solib_ops.handle_event = rocm_solib_handle_event;
 
       /* Engage the ROCm so_ops.  */
       set_gdbarch_so_ops (target_gdbarch (), &rocm_solib_ops);
@@ -635,10 +652,6 @@ extern initialize_file_ftype _initialize_rocm_solib;
 void
 _initialize_rocm_solib ()
 {
-  /* Install our observers.  */
-  amd_dbgapi_code_object_list_updated.attach (rocm_update_solib_list,
-					      "solib-rocm");
-
   /* FIXME: remove this when we can clear the solist in
      rocm_solib_create_inferior_hook.  */
   gdb::observers::inferior_created.attach (rocm_solib_target_inferior_created,
