@@ -506,8 +506,12 @@ main (int argc, char **argv)
   if ((link_info.compress_debug & COMPRESS_DEBUG))
     {
       link_info.output_bfd->flags |= BFD_COMPRESS;
-      if (link_info.compress_debug == COMPRESS_DEBUG_GABI_ZLIB)
-	link_info.output_bfd->flags |= BFD_COMPRESS_GABI;
+      if (link_info.compress_debug != COMPRESS_DEBUG_GNU_ZLIB)
+	{
+	  link_info.output_bfd->flags |= BFD_COMPRESS_GABI;
+	  if (link_info.compress_debug == COMPRESS_DEBUG_ZSTD)
+	    link_info.output_bfd->flags |= BFD_COMPRESS_ZSTD;
+	}
     }
 
   ldwrite ();
@@ -549,7 +553,7 @@ main (int argc, char **argv)
   else
     {
       if (!bfd_close (link_info.output_bfd))
-	einfo (_("%F%P: %pB: final close failed: %E\n"), link_info.output_bfd);
+	einfo (_("%F%P: %s: final close failed: %E\n"), output_filename);
 
       /* If the --force-exe-suffix is enabled, and we're making an
 	 executable file and it doesn't end in .exe, copy it to one
