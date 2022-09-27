@@ -611,13 +611,6 @@ rocm_update_solib_list ()
 
   xfree (code_object_list);
 
-  /* Force GDB to reload the solibs.  */
-  current_inferior ()->pspace->clear_solib_cache ();
-
-  /* Switch terminal for any messages produced by
-     breakpoint_re_set.  */
-  target_terminal::ours_for_output ();
-
   if (rocm_solib_ops.current_sos == NULL)
     {
       /* Override what we need to */
@@ -633,11 +626,6 @@ rocm_update_solib_list ()
       /* Engage the ROCm so_ops.  */
       set_solib_ops (target_gdbarch (), &rocm_solib_ops);
     }
-
-  solib_add (NULL, 0, auto_solib_add);
-
-  /* Switch it back.  */
-  target_terminal::inferior ();
 }
 
 static void
@@ -645,6 +633,10 @@ rocm_solib_target_inferior_created (inferior *inf)
 {
   rocm_free_solib_list (get_solib_info (inf));
   rocm_update_solib_list ();
+
+  /* Force GDB to reload the solibs.  */
+  current_inferior ()->pspace->clear_solib_cache ();
+  solib_add (nullptr, 0, auto_solib_add);
 }
 
 /* -Wmissing-prototypes */
