@@ -28047,7 +28047,7 @@ the log to a new file:
 (@value{GDBP}) set logging overwrite
 (@value{GDBP}) set logging file log.out
 (@value{GDBP}) set logging debugredirect on
-(@value{GDBP}) set logging on
+(@value{GDBP}) set logging enabled on
 @end smallexample
 
 If you want to print the log to both the console and a file, omit the
