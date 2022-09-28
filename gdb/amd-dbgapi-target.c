@@ -67,10 +67,58 @@
 
 static bool debug_amd_dbgapi = false;
 
+/* Make a copy of S styled in green.  */
+
+static std::string
+make_green (const char *s)
+{
+  cli_style_option style (nullptr, ui_file_style::GREEN);
+  string_file sf (true);
+  sf.printf ("%ps", styled_string (style.style(), s));
+  return sf.release ();
+}
+
+/* Debug module names.  "amd-dbgapi" is for the target debug messages (this
+   file), whereas "amd-dbgapi-lib" is for logging messages output by the
+   amd-dbgapi library.  */
+
+static const char *amd_dbgapi_debug_module_unstyled = "amd-dbgapi";
+static const char *amd_dbgapi_lib_debug_module_unstyled
+  = "amd-dbgapi-lib";
+
+/* Styled variants of the above.  */
+
+static std::string amd_dbgapi_debug_module_styled;
+static std::string amd_dbgapi_lib_debug_module_styled;
+
+/* Return the styled or unstyled variant of the amd-dbgapi module name,
+   depending on whether gdb_stdlog can emit colors.  */
+
+static const char *
+amd_dbgapi_debug_module ()
+{
+  if (gdb_stdlog->can_emit_style_escape ())
+    return amd_dbgapi_debug_module_styled.c_str ();
+  else
+    return amd_dbgapi_debug_module_unstyled;
+}
+
+/* Same as the above, but for the amd-dbgapi-lib module name.  */
+
+static const char *
+amd_dbgapi_lib_debug_module ()
+{
+  if (gdb_stdlog->can_emit_style_escape ())
+    return amd_dbgapi_lib_debug_module_styled.c_str ();
+  else
+    return amd_dbgapi_lib_debug_module_unstyled;
+}
+
 /* Print an amd-dbgapi debug statement.  */
 
 #define amd_dbgapi_debug_printf(fmt, ...) \
-  debug_prefixed_printf_cond (debug_amd_dbgapi, "amd-dbgapi", \
+  debug_prefixed_printf_cond (debug_amd_dbgapi, \
+			      amd_dbgapi_debug_module (), \
 			      fmt, ##__VA_ARGS__)
 
 /* Big enough to hold the size of the largest register in bytes.  */
@@ -2334,9 +2382,16 @@ Warning: precise memory signal reporting is not enabled, watchpoint stop\n\
 location may not be accurate.  See \"show amdgpu precise-memory\".\n");
 }
 
-static cli_style_option warning_style ("amd_dbgapi_warning", ui_file_style::RED);
-static cli_style_option info_style ("amd_dbgapi_info", ui_file_style::GREEN);
-static cli_style_option verbose_style ("amd_dbgapi_verbose", ui_file_style::BLUE);
+/* Style for some kinds of messages.  */
+
+static cli_style_option fatal_error_style
+  ("amd_dbgapi_fatal_error", ui_file_style::RED);
+static cli_style_option warning_style
+  ("amd_dbgapi_warning", ui_file_style::YELLOW);
+
+/* BLACK + BOLD means dark gray.  */
+static cli_style_option trace_style
+  ("amd_dbgapi_trace", ui_file_style::BLACK, ui_file_style::BOLD);
 
 static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   /* allocate_memory.  */
@@ -2444,43 +2499,36 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   {
     gdb::optional<target_terminal::scoped_restore_terminal_state> tstate;
 
-    if (level > get_debug_amd_dbgapi_lib_log_level ())
-      return;
-
     if (target_supports_terminal_ours ())
       {
 	tstate.emplace ();
 	target_terminal::ours_for_output ();
       }
 
-    struct ui_file *out_file
-      = (level >= AMD_DBGAPI_LOG_LEVEL_INFO) ? gdb_stdlog : gdb_stderr;
-
-    if (filtered_printing_initialized ())
-      out_file->wrap_here (0);
-
-    switch (level)
+    /* Error and warning messages are meant to be printed to the user.  */
+    if (level == AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR
+	|| level == AMD_DBGAPI_LOG_LEVEL_WARNING)
       {
-      case AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR:
-	fputs_unfiltered ("amd-dbgapi: ", out_file);
-	break;
-      case AMD_DBGAPI_LOG_LEVEL_WARNING:
-	fputs_styled_unfiltered ("amd-dbgapi: ", warning_style.style (),
-				 out_file);
-	break;
-      case AMD_DBGAPI_LOG_LEVEL_INFO:
-	fputs_styled_unfiltered ("amd-dbgapi: ", info_style.style (),
-				 out_file);
-	break;
-      case AMD_DBGAPI_LOG_LEVEL_TRACE:
-      case AMD_DBGAPI_LOG_LEVEL_VERBOSE:
-	fputs_styled_unfiltered ("amd-dbgapi: ", verbose_style.style (),
-				 out_file);
-	break;
+	begin_line ();
+	ui_file_style style = (level == AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR
+			       ? fatal_error_style : warning_style).style ();
+	fprintf_unfiltered (gdb_stderr, "%ps\n",
+			    styled_string (style, message));
+	return;
       }
 
-    fputs_unfiltered (message, out_file);
-    fputs_unfiltered ("\n", out_file);
+    /* Print other messages as debug logs.  TRACE and VERBOSE messages are
+       very verbose, print them dark grey so it's easier to spot other messages
+       through the flood.  */
+    if (level >= AMD_DBGAPI_LOG_LEVEL_TRACE)
+      {
+	debug_prefixed_printf (amd_dbgapi_lib_debug_module (), nullptr, "%ps",
+			       styled_string (trace_style.style (), message));
+	return;
+      }
+
+    debug_prefixed_printf (amd_dbgapi_lib_debug_module (), nullptr, "%s",
+			   message);
   }
 };
 
@@ -3819,6 +3867,11 @@ extern initialize_file_ftype _initialize_amd_dbgapi_target;
 void
 _initialize_amd_dbgapi_target ()
 {
+  amd_dbgapi_debug_module_styled
+    = make_green (amd_dbgapi_debug_module_unstyled);
+  amd_dbgapi_lib_debug_module_styled
+    = make_green (amd_dbgapi_lib_debug_module_unstyled);
+
   /* Make sure the loaded debugger library version is greater than or equal to
      the one used to build GDB.  */
   uint32_t major, minor, patch;
