@@ -1,0 +1,63 @@
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Verify that we remove inserted breakpoints before detaching.  The basic steps
+# are:
+#
+#  - Use "set breakpoint always-inserted on", to keep breakpoints inserted when
+#    stopped.
+#  - Set a breakpoint and run to it.
+#  - Detach
+#  - Watch for existence of a file the detached process writes if everything
+#    goes well.
+
+standard_testfile
+
+if { [is_remote target] } {
+    # If the target is remote, write the file in whatever the current working
+    # directory is, with a somewhat unique name.
+    set touch_file_path ${testfile}-flag
+} else {
+    set touch_file_path [standard_output_file flag]
+}
+
+set opts [list debug "additional_flags=-DTOUCH_FILE_PATH=\"$touch_file_path\""]
+if {[build_executable "failed to prepare" $testfile $srcfile $opts]} {
+    return
+}
+
+proc do_test { } {
+    remote_file target delete $::touch_file_path
+    gdb_assert { ![remote_file target exists $::touch_file_path] } "file does not exist before test"
+
+    clean_restart $::binfile
+
+    if ![runto_main] {
+	return
+    }
+
+    gdb_test_no_output "set breakpoint always-inserted"
+
+    gdb_breakpoint "break_here"
+    gdb_continue_to_breakpoint "break_here"
+
+    gdb_test "detach"
+
+    gdb_assert { [target_file_exists_with_timeout $::touch_file_path] } "file exists after detach"
+}
+
+do_test
