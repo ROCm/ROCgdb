@@ -31,8 +31,8 @@
    Return 0 if *READPTR is already at the end of the buffer.
    Return -1 if there is insufficient buffer for a whole entry.
    Return 1 if an entry was read into *TYPEP and *VALP.  */
-extern int default_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
-			       gdb_byte *endptr, CORE_ADDR *typep,
+extern int default_auxv_parse (struct target_ops *ops, const gdb_byte **readptr,
+			       const gdb_byte *endptr, CORE_ADDR *typep,
 			       CORE_ADDR *valp);
 
 /* The SVR4 psABI implementation of to_auxv_parse, that uses an int to
@@ -42,16 +42,9 @@ extern int default_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
    Return 0 if *READPTR is already at the end of the buffer.
    Return -1 if there is insufficient buffer for a whole entry.
    Return 1 if an entry was read into *TYPEP and *VALP.  */
-extern int svr4_auxv_parse (struct gdbarch *gdbarch, gdb_byte **readptr,
-			    gdb_byte *endptr, CORE_ADDR *typep,
+extern int svr4_auxv_parse (struct gdbarch *gdbarch, const gdb_byte **readptr,
+			    const gdb_byte *endptr, CORE_ADDR *typep,
 			    CORE_ADDR *valp);
-
-/* Read one auxv entry from *READPTR, not reading locations >= ENDPTR.
-   Return 0 if *READPTR is already at the end of the buffer.
-   Return -1 if there is insufficient buffer for a whole entry.
-   Return 1 if an entry was read into *TYPEP and *VALP.  */
-extern int target_auxv_parse (gdb_byte **readptr, gdb_byte *endptr,
-			      CORE_ADDR *typep, CORE_ADDR *valp);
 
 /* Extract the auxiliary vector entry with a_type matching MATCH.
    Return zero if no such entry was found, or -1 if there was
@@ -73,9 +66,6 @@ extern void fprint_auxv_entry (struct ui_file *file, const char *name,
 extern void default_print_auxv_entry (struct gdbarch *gdbarch,
 				      struct ui_file *file, CORE_ADDR type,
 				      CORE_ADDR val);
-
-/* Print the contents of the target's AUXV on the specified file.  */
-extern int fprint_target_auxv (struct ui_file *file, struct target_ops *ops);
 
 extern target_xfer_partial_ftype memory_xfer_auxv;
 

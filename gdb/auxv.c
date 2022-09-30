@@ -250,14 +250,14 @@ memory_xfer_auxv (struct target_ops *ops,
    the auxv type field as a parameter.  */
 
 static int
-generic_auxv_parse (struct gdbarch *gdbarch, gdb_byte **readptr,
-		    gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp,
+generic_auxv_parse (struct gdbarch *gdbarch, const gdb_byte **readptr,
+		    const gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp,
 		    int sizeof_auxv_type)
 {
   struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
   const int sizeof_auxv_val = ptr_type->length ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  gdb_byte *ptr = *readptr;
+  const gdb_byte *ptr = *readptr;
 
   if (endptr == ptr)
     return 0;
@@ -281,8 +281,8 @@ generic_auxv_parse (struct gdbarch *gdbarch, gdb_byte **readptr,
 /* See auxv.h.  */
 
 int
-default_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
-		    gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
+default_auxv_parse (struct target_ops *ops, const gdb_byte **readptr,
+		    const gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
 {
   struct gdbarch *gdbarch = target_gdbarch ();
   struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
@@ -295,8 +295,8 @@ default_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
 /* See auxv.h.  */
 
 int
-svr4_auxv_parse (struct gdbarch *gdbarch, gdb_byte **readptr,
-		 gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
+svr4_auxv_parse (struct gdbarch *gdbarch, const gdb_byte **readptr,
+		 const gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
 {
   struct type *int_type = builtin_type (gdbarch)->builtin_int;
   const int sizeof_auxv_type = int_type->length ();
@@ -306,12 +306,16 @@ svr4_auxv_parse (struct gdbarch *gdbarch, gdb_byte **readptr,
 }
 
 /* Read one auxv entry from *READPTR, not reading locations >= ENDPTR.
+
+   Use the auxv_parse method from the current inferior's gdbarch, if defined,
+   else use the current inferior's target stack's auxv_parse.
+
    Return 0 if *READPTR is already at the end of the buffer.
    Return -1 if there is insufficient buffer for a whole entry.
    Return 1 if an entry was read into *TYPEP and *VALP.  */
-int
-target_auxv_parse (gdb_byte **readptr,
-		   gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
+static int
+parse_auxv (const gdb_byte **readptr, const gdb_byte *endptr, CORE_ADDR *typep,
+	    CORE_ADDR *valp)
 {
   struct gdbarch *gdbarch = target_gdbarch();
 
@@ -383,12 +387,12 @@ target_auxv_search (struct target_ops *ops, CORE_ADDR match, CORE_ADDR *valp)
   if (!info->data)
     return -1;
 
-  gdb_byte *data = info->data->data ();
-  gdb_byte *ptr = data;
+  const gdb_byte *data = info->data->data ();
+  const gdb_byte *ptr = data;
   size_t len = info->data->size ();
 
   while (1)
-    switch (target_auxv_parse (&ptr, data + len, &type, &val))
+    switch (parse_auxv (&ptr, data + len, &type, &val))
       {
       case 1:			/* Here's an entry, check it.  */
 	if (type == match)
@@ -546,7 +550,7 @@ default_print_auxv_entry (struct gdbarch *gdbarch, struct ui_file *file,
 
 /* Print the contents of the target's AUXV on the specified file.  */
 
-int
+static int
 fprint_target_auxv (struct ui_file *file, struct target_ops *ops)
 {
   struct gdbarch *gdbarch = target_gdbarch ();
@@ -557,11 +561,11 @@ fprint_target_auxv (struct ui_file *file, struct target_ops *ops)
   if (!info->data)
     return -1;
 
-  gdb_byte *data = info->data->data ();
-  gdb_byte *ptr = data;
+  const gdb_byte *data = info->data->data ();
+  const gdb_byte *ptr = data;
   size_t len = info->data->size ();
 
-  while (target_auxv_parse (&ptr, data + len, &type, &val) > 0)
+  while (parse_auxv (&ptr, data + len, &type, &val) > 0)
     {
       gdbarch_print_auxv_entry (gdbarch, file, type, val);
       ++ents;
