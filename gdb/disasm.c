@@ -457,26 +457,61 @@ gdb_pretty_print_disassembler::pretty_print_insn (const struct disasm_insn *insn
 	throw ex;
       }
 
-    if (flags & DISASSEMBLY_RAW_INSN)
+    if ((flags & (DISASSEMBLY_RAW_INSN | DISASSEMBLY_RAW_BYTES)) != 0)
       {
-	CORE_ADDR end_pc;
-	bfd_byte data;
-	const char *spacer = "";
-
 	/* Build the opcodes using a temporary stream so we can
 	   write them out in a single go for the MI.  */
 	m_opcode_stb.clear ();
 
-	end_pc = pc + size;
+	/* Read the instruction opcode data.  */
+	m_opcode_data.resize (size);
+	read_code (pc, m_opcode_data.data (), size);
 
-	for (;pc < end_pc; ++pc)
+	/* The disassembler provides information about the best way to
+	   display the instruction bytes to the user.  We provide some sane
+	   defaults in case the disassembler gets it wrong.  */
+	const struct disassemble_info *di = m_di.disasm_info ();
+	int bytes_per_line = std::max (di->bytes_per_line, size);
+	int bytes_per_chunk = std::max (di->bytes_per_chunk, 1);
+
+	/* If the user has requested the instruction bytes be displayed
+	   byte at a time, then handle that here.  Also, if the instruction
+	   is not a multiple of the chunk size (which probably indicates a
+	   disassembler problem) then avoid that causing display problems
+	   by switching to byte at a time mode.  */
+	if ((flags & DISASSEMBLY_RAW_BYTES) != 0
+	    || (size % bytes_per_chunk) != 0)
+	  bytes_per_chunk = 1;
+
+	/* Print the instruction opcodes bytes, grouped into chunks.  */
+	for (int i = 0; i < size; i += bytes_per_chunk)
 	  {
-	    read_code (pc, &data, 1);
-	    m_opcode_stb.printf ("%s%02x", spacer, (unsigned) data);
-	    spacer = " ";
+	    if (i > 0)
+	      m_opcode_stb.puts (" ");
+
+	    if (di->display_endian == BFD_ENDIAN_LITTLE)
+	      {
+		for (int k = bytes_per_chunk; k-- != 0; )
+		  m_opcode_stb.printf ("%02x", (unsigned) m_opcode_data[i + k]);
+	      }
+	    else
+	      {
+		for (int k = 0; k < bytes_per_chunk; k++)
+		  m_opcode_stb.printf ("%02x", (unsigned) m_opcode_data[i + k]);
+	      }
+	  }
+
+	/* Calculate required padding.  */
+	int nspaces = 0;
+	for (int i = size; i < bytes_per_line; i += bytes_per_chunk)
+	  {
+	    if (i > size)
+	      nspaces++;
+	    nspaces += bytes_per_chunk * 2;
 	  }
 
 	m_uiout->field_stream ("opcodes", m_opcode_stb);
+	m_uiout->spaces (nspaces);
 	m_uiout->text ("\t");
       }
 
@@ -937,23 +972,49 @@ gdb_disassembler::gdb_disassembler (struct gdbarch *gdbarch,
 				    read_memory_ftype func)
   : gdb_printing_disassembler (gdbarch, &m_buffer, func,
 			       dis_asm_memory_error, dis_asm_print_address),
-    /* The use of m_di.created_styled_output here is a bit of a cheat, but
-       it works fine for now.  Currently, for all targets that support
-       libopcodes styling, this field is set during the call to
-       disassemble_init_for_target, which was called as part of the
-       initialization of gdb_printing_disassembler.  And so, we are able to
-       spot if a target supports libopcodes styling, and create m_buffer in
-       the correct styling mode.
-
-       If there's ever a target that only sets created_styled_output during
-       the actual disassemble phase, then the logic here will have to
-       change.  */
-    m_buffer ((!use_ext_lang_colorization_p
-	       || (use_libopcodes_styling && m_di.created_styled_output))
-	      && disassembler_styling
-	      && file->can_emit_style_escape ()),
-    m_dest (file)
+    m_dest (file),
+    m_buffer (!use_ext_lang_for_styling () && use_libopcodes_for_styling ())
 { /* Nothing.  */ }
+
+/* See disasm.h.  */
+
+bool
+gdb_disassembler::use_ext_lang_for_styling () const
+{
+  /* The use of m_di.created_styled_output here is a bit of a cheat, but
+     it works fine for now.
+
+     This function is called in situations after m_di has been initialized,
+     but before the instruction has been disassembled.
+
+     Currently, every target that supports libopcodes styling sets the
+     created_styled_output field in disassemble_init_for_target, which was
+     called as part of the initialization of gdb_printing_disassembler.
+
+     This means that we are OK to check the created_styled_output field
+     here.
+
+     If, in the future, there's ever a target that only sets the
+     created_styled_output field during the actual instruction disassembly
+     phase, then we will need to update this code.  */
+  return (disassembler_styling
+	  && (!m_di.created_styled_output || !use_libopcodes_styling)
+	  && use_ext_lang_colorization_p
+	  && m_dest->can_emit_style_escape ());
+}
+
+/* See disasm.h.  */
+
+bool
+gdb_disassembler::use_libopcodes_for_styling () const
+{
+  /* See the comment on the use of m_di.created_styled_output in the
+     gdb_disassembler::use_ext_lang_for_styling function.  */
+  return (disassembler_styling
+	  && m_di.created_styled_output
+	  && use_libopcodes_styling
+	  && m_dest->can_emit_style_escape ());
+}
 
 /* See disasm.h.  */
 
@@ -1044,10 +1105,7 @@ gdb_disassembler::print_insn (CORE_ADDR memaddr,
      already styled the output for us, and, if the destination can support
      styling, then lets call into the extension languages in order to style
      this output.  */
-  if (length > 0 && disassembler_styling
-      && (!m_di.created_styled_output || !use_libopcodes_styling)
-      && use_ext_lang_colorization_p
-      && m_dest->can_emit_style_escape ())
+  if (length > 0 && use_ext_lang_for_styling ())
     {
       gdb::optional<std::string> ext_contents;
       ext_contents = ext_lang_colorize_disasm (m_buffer.string (), arch ());
@@ -1061,6 +1119,10 @@ gdb_disassembler::print_insn (CORE_ADDR memaddr,
 	     extension language for styling.  */
 	  use_ext_lang_colorization_p = false;
 
+	  /* We're about to disassemble this instruction again, reset the
+	     in-comment state.  */
+	  this->set_in_comment (false);
+
 	  /* The instruction we just disassembled, and the extension
 	     languages failed to style, might have otherwise had some
 	     minimal styling applied by GDB.  To regain that styling we
@@ -1073,7 +1135,7 @@ gdb_disassembler::print_insn (CORE_ADDR memaddr,
 			      string_file>::value));
 	  gdb_assert (!m_buffer.term_out ());
 	  m_buffer.~string_file ();
-	  new (&m_buffer) string_file (true);
+	  new (&m_buffer) string_file (use_libopcodes_for_styling ());
 	  length = gdb_print_insn_1 (arch (), memaddr, &m_di);
 	  gdb_assert (length > 0);
 	}

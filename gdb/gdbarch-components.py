@@ -100,6 +100,20 @@
 # argument, and NAME is the name.  Note that while the names could be
 # auto-generated, this approach lets the "comment" field refer to
 # arguments in a nicer way.  It is also just nicer for users.
+#
+# * "param_checks" - optional, a list of strings.  Each string is an
+# expression that is placed within a gdb_assert before the call is
+# made to the Function/Method implementation.  Each expression is
+# something that should be true, and it is expected that the
+# expression will make use of the parameters named in 'params' (though
+# this is not required).
+#
+# * "result_checks" - optional, a list of strings.  Each string is an
+# expression that is placed within a gdb_assert after the call to the
+# Function/Method implementation.  Within each expression the variable
+# 'result' can be used to reference the result of the function/method
+# implementation.  The 'result_checks' can only be used if the 'type'
+# of this Function/Method is not 'void'.
 
 Info(
     type="const struct bfd_arch_info *",
@@ -559,9 +573,18 @@ Return -1 for bad REGNUM.  Note: Several targets get this wrong.
 )
 
 Method(
+    comment="""
+Return the name of register REGNR for the specified architecture.
+REGNR can be any value greater than, or equal to zero, and less than
+'gdbarch_num_cooked_regs (GDBARCH)'.  If REGNR is not supported for
+GDBARCH, then this function will return an empty string, this function
+should never return nullptr.
+""",
     type="const char *",
     name="register_name",
     params=[("int", "regnr")],
+    param_checks=["regnr >= 0", "regnr < gdbarch_num_cooked_regs (gdbarch)"],
+    result_checks=["result != nullptr"],
     predefault="0",
     invalid=True,
 )

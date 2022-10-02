@@ -99,10 +99,7 @@ alpha_register_name (struct gdbarch *gdbarch, int regno)
     "pc",   "",     "unique"
   };
 
-  if (regno < 0)
-    return NULL;
-  if (regno >= ARRAY_SIZE(register_names))
-    return NULL;
+  gdb_static_assert (ALPHA_NUM_REGS == ARRAY_SIZE (register_names));
   return register_names[regno];
 }
 
@@ -143,8 +140,7 @@ alpha_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 {
   /* Filter out any registers eliminated, but whose regnum is 
      reserved for backward compatibility, e.g. the vfp.  */
-  if (gdbarch_register_name (gdbarch, regnum) == NULL
-      || *gdbarch_register_name (gdbarch, regnum) == '\0')
+  if (*gdbarch_register_name (gdbarch, regnum) == '\0')
     return 0;
 
   if (group == all_reggroup)

@@ -8010,7 +8010,10 @@ are printed in execution order.
 
 It can also print mixed source+disassembly if you specify the the
 @code{/m} or @code{/s} modifier, and print the raw instructions in hex
-as well as in symbolic form by specifying the @code{/r} modifier.
+as well as in symbolic form by specifying the @code{/r} or @code{/b}
+modifier.  The behaviour of the @code{/m}, @code{/s}, @code{/r}, and
+@code{/b} modifiers are the same as for the @kbd{disassemble} command
+(@pxref{disassemble,,@kbd{disassemble}}).
 
 The current position marker is printed for the instruction at the
 current program counter value.  This instruction can appear multiple
@@ -9924,6 +9927,7 @@ After @code{info line}, using @code{info line} again without
 specifying a location will display information about the next source
 line.
 
+@anchor{disassemble}
 @table @code
 @kindex disassemble
 @cindex assembly instructions
@@ -9934,16 +9938,17 @@ line.
 @itemx disassemble /m
 @itemx disassemble /s
 @itemx disassemble /r
+@itemx disassemble /b
 This specialized command dumps a range of memory as machine
 instructions.  It can also print mixed source+disassembly by specifying
-the @code{/m} or @code{/s} modifier and print the raw instructions in hex
-as well as in symbolic form by specifying the @code{/r} modifier.
-The default memory range is the function surrounding the
+the @code{/m} or @code{/s} modifier and print the raw instructions in
+hex as well as in symbolic form by specifying the @code{/r} or @code{/b}
+modifier.  The default memory range is the function surrounding the
 program counter of the selected frame.  A single argument to this
 command is a program counter value; @value{GDBN} dumps the function
-surrounding this value.  When two arguments are given, they should
-be separated by a comma, possibly surrounded by whitespace.  The
-arguments specify a range of addresses to dump, in one of two forms:
+surrounding this value.  When two arguments are given, they should be
+separated by a comma, possibly surrounded by whitespace.  The arguments
+specify a range of addresses to dump, in one of two forms:
 
 @table @code
 @item @var{start},@var{end}
@@ -9978,6 +9983,35 @@ Dump of assembler code from 0x32c4 to 0x32e4:
    0x32d8 <main+224>:      addil -0x800,dp
    0x32dc <main+228>:      ldo 0x588(r1),r26
    0x32e0 <main+232>:      ldil 0x3000,r31
+End of assembler dump.
+@end smallexample
+
+The following two examples are for RISC-V, and demonstrates the
+difference between the @code{/r} and @code{/b} modifiers.  First with
+@code{/b}, the bytes of the instruction are printed, in hex, in memory
+order:
+
+@smallexample
+(@value{GDBP}) disassemble /b 0x00010150,0x0001015c
+Dump of assembler code from 0x10150 to 0x1015c:
+   0x00010150 <call_me+4>:      22 dc                 	sw	s0,56(sp)
+   0x00010152 <call_me+6>:      80 00                 	addi	s0,sp,64
+   0x00010154 <call_me+8>:      23 26 a4 fe           	sw	a0,-20(s0)
+   0x00010158 <call_me+12>:     23 24 b4 fe           	sw	a1,-24(s0)
+End of assembler dump.
+@end smallexample
+
+In contrast, with @code{/r} the bytes of the instruction are displayed
+in the instruction order, for RISC-V this means that the bytes have been
+swapped to little-endian order:
+
+@smallexample
+(@value{GDBP}) disassemble /r 0x00010150,0x0001015c
+Dump of assembler code from 0x10150 to 0x1015c:
+   0x00010150 <call_me+4>:      dc22              	sw	s0,56(sp)
+   0x00010152 <call_me+6>:      0080              	addi	s0,sp,64
+   0x00010154 <call_me+8>:      fea42623        	sw	a0,-20(s0)
+   0x00010158 <call_me+12>:     feb42423        	sw	a1,-24(s0)
 End of assembler dump.
 @end smallexample
 
@@ -32620,6 +32654,10 @@ may repeat zero or more times.
 may repeat one or more times.
 
 @item
+@code{( @var{group} )} means that @var{group} inside the parentheses
+occurs exactly once.
+
+@item
 @code{"@var{string}"} means a literal @var{string}.
 @end itemize
 
@@ -37780,10 +37818,12 @@ For details about what an addressable memory unit is,
 
 @smallexample
  -data-disassemble
-    [ -s @var{start-addr} -e @var{end-addr} ]
-  | [ -a @var{addr} ]
-  | [ -f @var{filename} -l @var{linenum} [ -n @var{lines} ] ]
-  -- @var{mode}
+  ( -s @var{start-addr} -e @var{end-addr}
+  | -a @var{addr}
+  | -f @var{filename} -l @var{linenum} [ -n @var{lines} ] )
+  [ --opcodes @var{opcodes-mode} ]
+  [ --source ]
+  [ -- @var{mode} ]
 @end smallexample
 
 @noindent
@@ -37812,31 +37852,71 @@ specified.  If @var{end-addr} is specified as a non-zero value, and
 displayed; if @var{lines} is higher than the number of lines between
 @var{start-addr} and @var{end-addr}, only the lines up to @var{end-addr}
 are displayed.
-@item @var{mode}
-is one of:
-@itemize @bullet
-@item 0 disassembly only
-@item 1 mixed source and disassembly (deprecated)
-@item 2 disassembly with raw opcodes
-@item 3 mixed source and disassembly with raw opcodes (deprecated)
-@item 4 mixed source and disassembly
-@item 5 mixed source and disassembly with raw opcodes
-@end itemize
+@item @var{opcodes-mode}
+can only be used with @var{mode} 0, and should be one of the following:
+@table @samp
+@item none
+no opcode information will be included in the result.
 
+@item bytes
+opcodes will be included in the result, the opcodes will be formatted
+as for @kbd{disassemble /b}.
+
+@item display
+opcodes will be included in the result, the opcodes will be formatted
+as for @kbd{disassemble /r}.
+@end table
+@item @var{mode}
+the use of @var{mode} is deprecated in favour of using the
+@code{--opcodes} and @code{--source} options.  When no @var{mode} is
+given, @var{mode} 0 will be assumed.  However, the @var{mode} is still
+available for backward compatibility.  The @var{mode} should be one of:
+@table @samp
+@item 0
+@emph{disassembly only}, this is the default mode if no mode is
+specified.
+
+@item 1
+@emph{mixed source and disassembly (deprecated)}, it is not possible
+to recreate this mode using @code{--opcodes} and @code{--source}
+options.
+
+@item 2
+@emph{disassembly with raw opcodes}, this mode is equivalent to using
+@var{mode} 0 and passing @code{--opcodes bytes} to the command.
+
+@item 3
+@emph{mixed source and disassembly with raw opcodes (deprecated)}, it
+is not possible to recreate this mode using @code{--opcodes} and
+@code{--source} options.
+
+@item 4
+@emph{mixed source and disassembly}, this mode is equivalent to using
+@var{mode} 0 and passing @code{--source} to the command.
+
+@item 5
+@emph{mixed source and disassembly with raw opcodes}, this mode is
+equivalent to using @var{mode} 0 and passing @code{--opcodes bytes}
+and @code{--source} to the command.
+@end table
 Modes 1 and 3 are deprecated.  The output is ``source centric''
 which hasn't proved useful in practice.
 @xref{Machine Code}, for a discussion of the difference between
 @code{/m} and @code{/s} output of the @code{disassemble} command.
 @end table
 
+The @code{--source} can only be used with @var{mode} 0.  Passing this
+option will include the source code in the disassembly result as if
+@var{mode} 4 or 5 had been used.
+
 @subsubheading Result
 
 The result of the @code{-data-disassemble} command will be a list named
-@samp{asm_insns}, the contents of this list depend on the @var{mode}
-used with the @code{-data-disassemble} command.
+@samp{asm_insns}, the contents of this list depend on the options used
+with the @code{-data-disassemble} command.
 
-For modes 0 and 2 the @samp{asm_insns} list contains tuples with the
-following fields:
+For modes 0 and 2, and when the @code{--source} option is not used, the
+@samp{asm_insns} list contains tuples with the following fields:
 
 @table @code
 @item address
@@ -37852,15 +37932,28 @@ The decimal offset in bytes from the start of @samp{func-name}.
 The text disassembly for this @samp{address}.
 
 @item opcodes
-This field is only present for modes 2, 3 and 5.  This contains the
-raw opcode bytes for the @samp{inst} field.  The bytes are formatted
-as single bytes, in hex, in ascending address order, with a single
-space between each byte.
+This field is only present for modes 2, 3 and 5, or when the
+@code{--opcodes} option @samp{bytes} or @samp{display} is used.  This
+contains the raw opcode bytes for the @samp{inst} field.
 
+When the @samp{--opcodes} option is not passed to
+@code{-data-disassemble}, or the @samp{bytes} value is passed to
+@samp{--opcodes}, then the bytes are formatted as a series of single
+bytes, in hex, in ascending address order, with a single space between
+each byte.  This format is equivalent to the @samp{/b} option being
+used with the @kbd{disassemble} command
+(@pxref{disassemble,,@kbd{disassemble}}).
+
+When @samp{--opcodes} is passed the value @samp{display} then the bytes
+are formatted in the natural instruction display order.  This means
+multiple bytes can be grouped together, and the bytes might be
+byte-swapped.  This format is equivalent to the @samp{/r} option being
+used with the @kbd{disassemble} command.
 @end table
 
-For modes 1, 3, 4 and 5 the @samp{asm_insns} list contains tuples named
-@samp{src_and_asm_line}, each of which has the following fields:
+For modes 1, 3, 4 and 5, or when the @code{--source} option is used, the
+@samp{asm_insns} list contains tuples named @samp{src_and_asm_line},
+each of which has the following fields:
 
 @table @code
 @item line

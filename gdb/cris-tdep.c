@@ -1654,7 +1654,7 @@ cris_special_register_name (struct gdbarch *gdbarch, int regno)
 	return cris_spec_regs[i].name;
     }
   /* Special register not applicable to this CRIS version.  */
-  return NULL;
+  return "";
 }
 
 static const char *
@@ -1666,9 +1666,10 @@ cris_register_name (struct gdbarch *gdbarch, int regno)
     "r8",  "r9",  "r10", "r11", \
     "r12", "r13", "sp",  "pc" };
 
-  if (regno >= 0 && regno < NUM_GENREGS)
+  if (regno < NUM_GENREGS)
     {
       /* General register.  */
+      gdb_static_assert (ARRAY_SIZE (cris_genreg_names) == NUM_GENREGS);
       return cris_genreg_names[regno];
     }
   else if (regno >= NUM_GENREGS && regno < gdbarch_num_regs (gdbarch))
@@ -1678,7 +1679,7 @@ cris_register_name (struct gdbarch *gdbarch, int regno)
   else
     {
       /* Invalid register.  */
-      return NULL;
+      return "";
     }
 }
 

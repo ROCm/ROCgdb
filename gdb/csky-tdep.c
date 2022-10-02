@@ -660,20 +660,11 @@ static const char * const csky_register_names[] =
 static const char *
 csky_register_name (struct gdbarch *gdbarch, int reg_nr)
 {
-  int num_regs = gdbarch_num_regs (gdbarch);
-  int num_pseudo_regs =  gdbarch_num_pseudo_regs (gdbarch);
-
-  if ((reg_nr >= num_regs) && (reg_nr < (num_regs + num_pseudo_regs)))
+  if (reg_nr >= gdbarch_num_regs (gdbarch))
     return csky_pseudo_register_name (gdbarch, reg_nr);
 
   if (tdesc_has_registers (gdbarch_target_desc (gdbarch)))
     return tdesc_register_name (gdbarch, reg_nr);
-
-  if (reg_nr < 0)
-    return NULL;
-
-  if (reg_nr >= gdbarch_num_regs (gdbarch))
-    return NULL;
 
   return csky_register_names[reg_nr];
 }
@@ -2362,8 +2353,7 @@ csky_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 {
   int raw_p;
 
-  if (gdbarch_register_name (gdbarch, regnum) == NULL
-      || gdbarch_register_name (gdbarch, regnum)[0] == '\0')
+  if (gdbarch_register_name (gdbarch, regnum)[0] == '\0')
     return 0;
 
   if (reggroup == all_reggroup)
@@ -2543,15 +2533,15 @@ csky_pseudo_register_name (struct gdbarch *gdbarch, int regno)
       if (regno < tdep->fv_pseudo_registers_count)
         {
           if ((regno < 64) && ((regno % 4) >= 2) && !tdep->has_vr0)
-            return NULL;
+            return "";
           else if ((regno >= 64) && ((regno % 4) >= 2))
-            return NULL;
+            return "";
           else
             return fv_pseudo_names[regno];
         }
     }
 
-  return NULL;
+  return "";
 }
 
 /* Read for csky pseudo regs.  */

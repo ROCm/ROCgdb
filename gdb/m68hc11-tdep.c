@@ -388,19 +388,16 @@ m68hc11_register_name (struct gdbarch *gdbarch, int reg_nr)
 
   if (reg_nr == HARD_PC_REGNUM && use_page_register (gdbarch))
     return "ppc";
-  
-  if (reg_nr < 0)
-    return NULL;
 
   if (reg_nr >= M68HC11_ALL_REGS)
-    return NULL;
+    return "";
 
   m68hc11_initialize_register_info ();
 
   /* If we don't know the address of a soft register, pretend it
      does not exist.  */
   if (reg_nr > M68HC11_LAST_HARD_REG && soft_regs[reg_nr].name == 0)
-    return NULL;
+    return "";
 
   return m68hc11_register_names[reg_nr];
 }
@@ -1093,7 +1090,7 @@ m68hc11_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
     {
       const char *name = gdbarch_register_name (gdbarch, regno);
 
-      if (!name || !*name)
+      if (*name == '\0')
 	return;
 
       gdb_printf (file, "%-10s ", name);
