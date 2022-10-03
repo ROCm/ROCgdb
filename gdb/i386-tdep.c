@@ -8443,7 +8443,6 @@ i386_type_align (struct gdbarch *gdbarch, struct type *type)
 static struct gdbarch *
 i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
-  struct gdbarch *gdbarch;
   const struct target_desc *tdesc;
   int mm0_regnum;
   int ymm0_regnum;
@@ -8456,8 +8455,9 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     return arches->gdbarch;
 
   /* Allocate space for the new architecture.  Assume i386 for now.  */
-  i386_gdbarch_tdep *tdep = new i386_gdbarch_tdep;
-  gdbarch = gdbarch_alloc (&info, tdep);
+  gdbarch *gdbarch
+    = gdbarch_alloc (&info, gdbarch_tdep_up (new i386_gdbarch_tdep));
+  i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
 
   /* General-purpose registers.  */
   tdep->gregset_reg_offset = NULL;
@@ -8700,7 +8700,6 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   if (!i386_validate_tdesc_p (tdep, tdesc_data.get ()))
     {
-      delete tdep;
       gdbarch_free (gdbarch);
       return NULL;
     }
