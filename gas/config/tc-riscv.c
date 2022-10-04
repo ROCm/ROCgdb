@@ -265,11 +265,10 @@ riscv_set_tso (void)
   elf_flags |= EF_RISCV_TSO;
 }
 
-/* This linked list records all enabled extensions, which are parsed from
-   the architecture string.  The architecture string can be set by the
-   -march option, the elf architecture attributes, and the --with-arch
-   configure option.  */
-static riscv_subset_list_t *riscv_subsets = NULL;
+/* The linked list hanging off of .subsets_list records all enabled extensions,
+   which are parsed from the architecture string.  The architecture string can
+   be set by the -march option, the elf architecture attributes, and the
+   --with-arch configure option.  */
 static riscv_parse_subset_t riscv_rps_as =
 {
   NULL,			/* subset_list, we will set it later once
@@ -302,14 +301,13 @@ riscv_set_arch (const char *s)
       return;
     }
 
-  if (riscv_subsets == NULL)
+  if (riscv_rps_as.subset_list == NULL)
     {
-      riscv_subsets = XNEW (riscv_subset_list_t);
-      riscv_subsets->head = NULL;
-      riscv_subsets->tail = NULL;
-      riscv_rps_as.subset_list = riscv_subsets;
+      riscv_rps_as.subset_list = XNEW (riscv_subset_list_t);
+      riscv_rps_as.subset_list->head = NULL;
+      riscv_rps_as.subset_list->tail = NULL;
     }
-  riscv_release_subset_list (riscv_subsets);
+  riscv_release_subset_list (riscv_rps_as.subset_list);
   riscv_parse_subset (&riscv_rps_as, s);
 
   riscv_set_rvc (false);
@@ -1447,7 +1445,7 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	  || reloc_type == BFD_RELOC_RISCV_JMP)
 	{
 	  int j = reloc_type == BFD_RELOC_RISCV_JMP;
-	  int best_case = riscv_insn_length (ip->insn_opcode);
+	  int best_case = insn_length (ip);
 	  unsigned worst_case = relaxed_branch_length (NULL, NULL, 0);
 
 	  if (now_seg == absolute_section)
@@ -1478,7 +1476,6 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
     }
 
   add_fixed_insn (ip);
-  install_insn (ip);
 
   /* We need to start a new frag after any instruction that can be
      optimized away or compressed by the linker during relaxation, to prevent
@@ -3338,14 +3335,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      if (!sign)
 			{
 			  if (!VALIDATE_U_IMM (imm_expr->X_add_number, n))
-			    as_bad (_("improper immediate value (%lu)"),
-				    (unsigned long) imm_expr->X_add_number);
+			    as_bad (_("improper immediate value (%"PRIu64")"),
+				    imm_expr->X_add_number);
 			}
 		      else
 			{
 			  if (!VALIDATE_S_IMM (imm_expr->X_add_number, n))
-			    as_bad (_("improper immediate value (%li)"),
-				    (long) imm_expr->X_add_number);
+			    as_bad (_("improper immediate value (%"PRIi64")"),
+				    imm_expr->X_add_number);
 			}
 		      INSERT_IMM (n, s, *ip, imm_expr->X_add_number);
 		      imm_expr->X_op = O_absent;
@@ -3392,8 +3389,15 @@ riscv_ip_hardcode (char *str,
   do
     {
       expression (imm_expr);
-      if (imm_expr->X_op != O_constant)
+      switch (imm_expr->X_op)
 	{
+	case O_constant:
+	  values[num++] = (insn_t) imm_expr->X_add_number;
+	  break;
+	case O_big:
+	  values[num++] = generic_bignum[0];
+	  break;
+	default:
 	  /* The first value isn't constant, so it should be
 	     .insn <type> <operands>.  We have been parsed it
 	     in the riscv_ip.  */
@@ -3401,9 +3405,8 @@ riscv_ip_hardcode (char *str,
 	    return error;
 	  return _("values must be constant");
 	}
-      values[num++] = (insn_t) imm_expr->X_add_number;
     }
-  while (*input_line_pointer++ == ',' && num < 2);
+  while (*input_line_pointer++ == ',' && num < 2 && imm_expr->X_op != O_big);
 
   input_line_pointer--;
   if (*input_line_pointer != '\0')
@@ -3413,8 +3416,22 @@ riscv_ip_hardcode (char *str,
   insn->match = values[num - 1];
   create_insn (ip, insn);
   unsigned int bytes = riscv_insn_length (insn->match);
-  if ((bytes < sizeof(values[0]) && values[num - 1] >> (8 * bytes) != 0)
-      || (num == 2 && values[0] != bytes))
+
+  if (num == 2 && values[0] != bytes)
+    return _("value conflicts with instruction length");
+
+  if (imm_expr->X_op == O_big)
+    {
+      if (bytes != imm_expr->X_add_number * CHARS_PER_LITTLENUM)
+	return _("value conflicts with instruction length");
+      char *f = frag_more (bytes);
+      for (num = 0; num < imm_expr->X_add_number; ++num)
+	number_to_chars_littleendian (f + num * CHARS_PER_LITTLENUM,
+	                              generic_bignum[num], CHARS_PER_LITTLENUM);
+      return NULL;
+    }
+
+  if (bytes < sizeof(values[0]) && values[num - 1] >> (8 * bytes) != 0)
     return _("value conflicts with instruction length");
 
   return NULL;
@@ -3986,10 +4003,9 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
       s = XNEW (struct riscv_option_stack);
       s->next = riscv_opts_stack;
       s->options = riscv_opts;
-      s->subset_list = riscv_subsets;
+      s->subset_list = riscv_rps_as.subset_list;
       riscv_opts_stack = s;
-      riscv_subsets = riscv_copy_subset_list (s->subset_list);
-      riscv_rps_as.subset_list = riscv_subsets;
+      riscv_rps_as.subset_list = riscv_copy_subset_list (s->subset_list);
     }
   else if (strcmp (name, "pop") == 0)
     {
@@ -4000,11 +4016,10 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 	as_bad (_(".option pop with no .option push"));
       else
 	{
-	  riscv_subset_list_t *release_subsets = riscv_subsets;
+	  riscv_subset_list_t *release_subsets = riscv_rps_as.subset_list;
 	  riscv_opts_stack = s->next;
 	  riscv_opts = s->options;
-	  riscv_subsets = s->subset_list;
-	  riscv_rps_as.subset_list = riscv_subsets;
+	  riscv_rps_as.subset_list = s->subset_list;
 	  riscv_release_subset_list (release_subsets);
 	  free (s);
 	}
@@ -4481,7 +4496,7 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
       else
 	as_bad ("%s `%s'", error.msg, error.statement);
     }
-  else
+  else if (imm_expr.X_op != O_big)
     {
       gas_assert (insn.insn_mo->pinfo != INSN_MACRO);
       append_insn (&insn, &imm_expr, imm_reloc);
@@ -4505,7 +4520,7 @@ riscv_write_out_attrs (void)
   unsigned int i;
 
   /* Re-write architecture elf attribute.  */
-  arch_str = riscv_arch_str (xlen, riscv_subsets);
+  arch_str = riscv_arch_str (xlen, riscv_rps_as.subset_list);
   bfd_elf_add_proc_attr_string (stdoutput, Tag_RISCV_arch, arch_str);
   xfree ((void *) arch_str);
 

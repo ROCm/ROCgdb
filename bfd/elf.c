@@ -1199,43 +1199,45 @@ _bfd_elf_make_section_from_shdr (bfd *abfd,
 	}
     }
 
-  /* Compress/decompress DWARF debug sections with names: .debug_* and
-     .zdebug_*, after the section flags is set.  */
+  /* Compress/decompress DWARF debug sections with names: .debug_*,
+     .zdebug_*, .gnu.debuglto_.debug_, after the section flags is set.  */
   if ((newsect->flags & SEC_DEBUGGING) != 0
       && (newsect->flags & SEC_HAS_CONTENTS) != 0
-      && ((name[1] == 'd' && name[6] == '_')
-	  || (name[1] == 'z' && name[7] == '_')))
+      && (newsect->flags & SEC_ELF_OCTETS) != 0)
     {
       enum { nothing, compress, decompress } action = nothing;
       int compression_header_size;
       bfd_size_type uncompressed_size;
       unsigned int uncompressed_align_power;
+      unsigned int ch_type = 0;
       bool compressed
-	= bfd_is_section_compressed_with_header (abfd, newsect,
-						 &compression_header_size,
-						 &uncompressed_size,
-						 &uncompressed_align_power);
-      if (compressed)
-	{
-	  /* Compressed section.  Check if we should decompress.  */
-	  if ((abfd->flags & BFD_DECOMPRESS))
-	    action = decompress;
-	}
+	= bfd_is_section_compressed_info (abfd, newsect,
+					  &compression_header_size,
+					  &uncompressed_size,
+					  &uncompressed_align_power,
+					  &ch_type);
 
-      /* Compress the uncompressed section or convert from/to .zdebug*
-	 section.  Check if we should compress.  */
-      if (action == nothing)
+      /* Should we decompress?  */
+      if ((abfd->flags & BFD_DECOMPRESS) != 0 && compressed)
+	action = decompress;
+
+      /* Should we compress?  Or convert to a different compression?  */
+      else if ((abfd->flags & BFD_COMPRESS) != 0
+	       && newsect->size != 0
+	       && compression_header_size >= 0
+	       && uncompressed_size > 0)
 	{
-	  if (newsect->size != 0
-	      && (abfd->flags & BFD_COMPRESS)
-	      && compression_header_size >= 0
-	      && uncompressed_size > 0
-	      && (!compressed
-		  || ((compression_header_size > 0)
-		      != ((abfd->flags & BFD_COMPRESS_GABI) != 0))))
+	  if (!compressed)
 	    action = compress;
 	  else
-	    return true;
+	    {
+	      unsigned int new_ch_type = 0;
+	      if ((abfd->flags & BFD_COMPRESS_GABI) != 0)
+		new_ch_type = ((abfd->flags & BFD_COMPRESS_ZSTD) != 0
+			       ? ELFCOMPRESS_ZSTD : ELFCOMPRESS_ZLIB);
+	      if (new_ch_type != ch_type)
+		action = compress;
+	    }
 	}
 
       if (action == compress)
@@ -1244,20 +1246,17 @@ _bfd_elf_make_section_from_shdr (bfd *abfd,
 	    {
 	      _bfd_error_handler
 		/* xgettext:c-format */
-		(_("%pB: unable to initialize compress status for section %s"),
-		 abfd, name);
+		(_("%pB: unable to compress section %s"), abfd, name);
 	      return false;
 	    }
 	}
-      else
+      else if (action == decompress)
 	{
 	  if (!bfd_init_section_decompress_status (abfd, newsect))
 	    {
 	      _bfd_error_handler
 		/* xgettext:c-format */
-		(_("%pB: unable to initialize decompress status"
-		   " for section %s"),
-		 abfd, name);
+		(_("%pB: unable to decompress section %s"), abfd, name);
 	      return false;
 	    }
 #ifndef HAVE_ZSTD
@@ -1274,26 +1273,29 @@ _bfd_elf_make_section_from_shdr (bfd *abfd,
 #endif
 	}
 
-      if (abfd->is_linker_input)
+      if (action != nothing)
 	{
-	  if (name[1] == 'z'
-	      && (action == decompress
-		  || (action == compress
-		      && (abfd->flags & BFD_COMPRESS_GABI) != 0)))
+	  if (abfd->is_linker_input)
 	    {
-	      /* Convert section name from .zdebug_* to .debug_* so
-		 that linker will consider this section as a debug
-		 section.  */
-	      char *new_name = convert_zdebug_to_debug (abfd, name);
-	      if (new_name == NULL)
-		return false;
-	      bfd_rename_section (newsect, new_name);
+	      if (name[1] == 'z'
+		  && (action == decompress
+		      || (action == compress
+			  && (abfd->flags & BFD_COMPRESS_GABI) != 0)))
+		{
+		  /* Convert section name from .zdebug_* to .debug_* so
+		     that linker will consider this section as a debug
+		     section.  */
+		  char *new_name = convert_zdebug_to_debug (abfd, name);
+		  if (new_name == NULL)
+		    return false;
+		  bfd_rename_section (newsect, new_name);
+		}
 	    }
+	  else
+	    /* For objdump, don't rename the section.  For objcopy, delay
+	       section rename to elf_fake_sections.  */
+	    newsect->flags |= SEC_ELF_RENAME;
 	}
-      else
-	/* For objdump, don't rename the section.  For objcopy, delay
-	   section rename to elf_fake_sections.  */
-	newsect->flags |= SEC_ELF_RENAME;
     }
 
   /* GCC uses .gnu.lto_.lto.<some_hash> as a LTO bytecode information
@@ -3235,7 +3237,8 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
 	      name = new_name;
 	    }
 	}
-      else if (asect->compress_status == COMPRESS_SECTION_DONE)
+      else if (asect->compress_status == COMPRESS_SECTION_DONE
+	       && name[1] == 'd')
 	{
 	  /* PR binutils/18087: Compression does not always make a
 	     section smaller.  So only rename the section when
@@ -3247,7 +3250,6 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
 	      arg->failed = true;
 	      return;
 	    }
-	  BFD_ASSERT (name[1] != 'z');
 	  name = new_name;
 	}
     }
@@ -6690,7 +6692,8 @@ _bfd_elf_assign_file_positions_for_non_load (bfd *abfd)
 		    return false;
 
 		  if (sec->compress_status == COMPRESS_SECTION_DONE
-		      && (abfd->flags & BFD_COMPRESS_GABI) == 0)
+		      && (abfd->flags & BFD_COMPRESS_GABI) == 0
+		      && name[1] == 'd')
 		    {
 		      /* If section is compressed with zlib-gnu, convert
 			 section name from .debug_* to .zdebug_*.  */
