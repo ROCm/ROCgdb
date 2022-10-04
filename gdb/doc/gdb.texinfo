@@ -27740,8 +27740,7 @@ BDCCSR register.
 @value{GDBN} provides support for systems that have heterogeneous
 agents associated with commercially available @acronym{AMD GPU}
 devices (@pxref{Heterogeneous Debugging}) when the
-@url{https://rocmdocs.amd.com/, @acronym{AMD ROCm}} platform is
-installed.
+@url{https://docs.amd.com, @acronym{AMD ROCm}} platform is installed.
 
 @subsubsection @acronym{AMD GPU} Architectures
 
