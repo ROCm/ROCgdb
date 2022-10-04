@@ -40,6 +40,8 @@ static inline unsigned int riscv_insn_length (insn_t insn)
   /* 80- ... 176-bit instructions.  */
   if ((insn & 0x7f) == 0x7f && (insn & 0x7000) != 0x7000)
     return 10 + ((insn >> 11) & 0xe);
+  /* Maximum value returned by this function.  */
+#define RISCV_MAX_INSN_LEN 22
   /* Longer instructions not supported at the moment.  */
   return 2;
 }
@@ -389,14 +391,14 @@ enum riscv_insn_class
   INSN_CLASS_ZIHINTPAUSE,
   INSN_CLASS_ZMMUL,
   INSN_CLASS_ZAWRS,
-  INSN_CLASS_F_OR_ZFINX,
-  INSN_CLASS_D_OR_ZDINX,
-  INSN_CLASS_Q_OR_ZQINX,
-  INSN_CLASS_ZFH_OR_ZHINX,
+  INSN_CLASS_F_INX,
+  INSN_CLASS_D_INX,
+  INSN_CLASS_Q_INX,
+  INSN_CLASS_ZFH_INX,
   INSN_CLASS_ZFHMIN,
-  INSN_CLASS_ZFHMIN_OR_ZHINXMIN,
-  INSN_CLASS_ZFHMIN_AND_D,
-  INSN_CLASS_ZFHMIN_AND_Q,
+  INSN_CLASS_ZFHMIN_INX,
+  INSN_CLASS_ZFHMIN_AND_D_INX,
+  INSN_CLASS_ZFHMIN_AND_Q_INX,
   INSN_CLASS_ZBA,
   INSN_CLASS_ZBB,
   INSN_CLASS_ZBC,
