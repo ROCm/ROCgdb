@@ -2296,9 +2296,9 @@ amd_dbgapi_target::follow_exec (inferior *follow_inf, ptid_t ptid,
 }
 
 static void
-amd_dbgapi_inferior_execd (inferior *inf)
+amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
 {
-  enable_amd_dbgapi (inf);
+  enable_amd_dbgapi (follow_inf);
 }
 
 void
