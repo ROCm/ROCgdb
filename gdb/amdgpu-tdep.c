@@ -63,6 +63,30 @@ get_amdgpu_gdbarch_tdep (gdbarch *arch)
 static const char *
 amdgpu_register_name (struct gdbarch *gdbarch, int regnum)
 {
+  /* The list of registers reported by amd-dbgapi for a given architecture
+     contains some duplicate names.  For instance, there is an "exec" register
+     for waves in the wave32 mode and one for the waves in the wave64 mode.
+     However, at most one register with a given name is actually allocated for
+     a specific wave.  If INFERIOR_PTID represents a GPU wave, we query
+     amd-dbgapi to know whether the requested register actually exists for the
+     current wave, so there won't be duplicates in the the register names we
+     report for that wave.
+
+     But there are two known cases where INFERIOR_PTID doesn't represent a GPU
+     wave:
+
+      - The user does "set arch amdgcn:gfxNNN" followed with "maint print
+	registers"
+      - The "register_name" selftest
+
+     In these cases, we can't query amd-dbgapi to know whether we should hide
+     the register or not.  The "register_name" selftest checks that there aren't
+     duplicates in the register names returned by the gdbarch, so if we simply
+     return all register names, that test will fail.  The other simple option is
+     to never return a register name, which is what we do here.  */
+  if (!ptid_is_gpu (inferior_ptid))
+    return "";
+
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
