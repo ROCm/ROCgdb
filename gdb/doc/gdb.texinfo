@@ -27822,49 +27822,41 @@ devices (@pxref{Heterogeneous Debugging}) when the
 
 @subsubsection @acronym{AMD GPU} Architectures
 
-The following @acronym{AMD GPU} achitetures are supported:
+The following @acronym{AMD GPU} architectures are supported:
 
 @table @emph
 
-@item AMD Vega 10
-Displayed as @samp{vega10} by @value{GDBN} and denoted as
-@samp{gfx900} by the compiler.
+@item @samp{gfx900}
+AMD Vega 10 devices, displayed as @samp{vega10} by @value{GDBN}.
 
-@item AMD Vega 7nm
-Displayed as @samp{vega20} by @value{GDBN} and denoted as
-@samp{gfx906} by the compiler.
+@item @samp{gfx906}
+AMD Vega 7nm devices, displayed as @samp{vega20} by @value{GDBN}.
 
-@item AMD Instinct@registeredsymbol{} MI100 accelerator
-Displayed as @samp{arcturus} by @value{GDBN} and denoted as
-@samp{gfx908} by the compiler.
+@item @samp{gfx908}
+AMD Instinct@registeredsymbol{} MI100 accelerator devices, displayed as
+@samp{arcturus} by @value{GDBN}.
 
-@item Aldebaran
-Displayed as @samp{aldebaran} by @value{GDBN} and denoted as
-@samp{gfx90a} by the compiler.
+@item @samp{gfx90a}
+Aldebaran devices, displayed as @samp{aldebaran} by @value{GDBN}.
 
-@item Navi10
-Displayed as @samp{navi10} by @value{GDBN} and denoted as
-@samp{gfx1010} by the compiler.
+@item @samp{gfx1010}
+Navi10 devices, displayed as @samp{navi10} by @value{GDBN}.
 
-@item Navi12
-Displayed as @samp{navi12} by @value{GDBN} and denoted as
-@samp{gfx1011} by the compiler.
+@item @samp{gfx1011}
+Navi12 devices, displayed as @samp{navi12} by @value{GDBN}.
 
-@item Navi14
-Displayed as @samp{navi14} by @value{GDBN} and denoted as
-@samp{gfx1012} by the compiler.
+@item @samp{gfx1012}
+Navi14 devices, displayed as @samp{navi14} by @value{GDBN}.
 
-@item Sienna Cichlid
-Displayed as @samp{sienna_cichlid} by @value{GDBN} and denoted as
-@samp{gfx1030} by the compiler.
+@item @samp{gfx1030}
+Sienna Cichlid devices, displayed as @samp{sienna_cichlid} by @value{GDBN}.
 
-@item Navy Flounder
-Displayed as @samp{navy_flounder} by @value{GDBN} and denoted as
-@samp{gfx1031} by the compiler.
+@item @samp{gfx1031}
+Navy Flounder devices, displayed as @samp{navy_flounder} by @value{GDBN}.
 
-@item Dimgrey Cavefish
-Displayed as @samp{dimgrey_cavefish} by @value{GDBN} and denoted as
-@samp{gfx1032} by the compiler.
+@item @samp{gfx1032}
+Dimgrey Cavefish devices, displayed as @samp{dimgrey_cavefish} by
+@value{GDBN}.
 
 @item Plum Bonito
 Displayed as @samp{plum_bonito} by @value{GDBN} and denoted as
