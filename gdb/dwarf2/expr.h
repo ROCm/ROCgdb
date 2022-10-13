@@ -41,7 +41,7 @@ struct dwarf2_per_objfile;
 value *dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
 			dwarf2_per_objfile *per_objfile,
 			dwarf2_per_cu_data *per_cu,
-			frame_info *frame, int addr_size,
+			frame_info_ptr frame, int addr_size,
 			std::vector<value *> *init_values,
 			const struct property_addr_info *addr_info,
 			struct type *type = nullptr,

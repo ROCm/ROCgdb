@@ -96,7 +96,7 @@ static void mi_execute_async_cli_command (const char *cli_command,
 					  char **argv, int argc);
 static bool register_changed_p (int regnum, readonly_detached_regcache *,
 			       readonly_detached_regcache *);
-static void output_register (struct frame_info *, int regnum, int format,
+static void output_register (frame_info_ptr , int regnum, int format,
 			     int skip_unavailable);
 
 /* Controls whether the frontend wants MI in async mode.  */
@@ -1051,7 +1051,7 @@ void
 mi_cmd_data_list_register_values (const char *command, char **argv, int argc)
 {
   struct ui_out *uiout = current_uiout;
-  struct frame_info *frame;
+  frame_info_ptr frame;
   struct gdbarch *gdbarch;
   int regnum, numregs, format;
   int i;
@@ -1136,7 +1136,7 @@ mi_cmd_data_list_register_values (const char *command, char **argv, int argc)
    unavailable.  */
 
 static void
-output_register (struct frame_info *frame, int regnum, int format,
+output_register (frame_info_ptr frame, int regnum, int format,
 		 int skip_unavailable)
 {
   struct ui_out *uiout = current_uiout;
@@ -2051,7 +2051,7 @@ struct user_selected_context
        reports not-equal, we only do the equality test if we have something
        other than the innermost frame selected.  */
     if (current_frame_level != -1
-	&& !frame_id_eq (current_frame_id, m_previous_frame_id))
+	&& current_frame_id != m_previous_frame_id)
       return true;
 
     /* Nothing changed!  */
@@ -2141,7 +2141,7 @@ mi_cmd_execute (struct mi_parse *parse)
   gdb::optional<scoped_restore_selected_frame> frame_saver;
   if (parse->frame != -1)
     {
-      struct frame_info *fid;
+      frame_info_ptr fid;
       int frame = parse->frame;
 
       fid = find_relative_frame (get_current_frame (), &frame);
@@ -2676,7 +2676,7 @@ mi_cmd_trace_frame_collected (const char *command, char **argv, int argc)
      the trace frame info, but instead consult the register cache for
      register availability.  */
   {
-    struct frame_info *frame;
+    frame_info_ptr frame;
     struct gdbarch *gdbarch;
     int regnum;
     int numregs;

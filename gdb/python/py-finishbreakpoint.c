@@ -164,8 +164,8 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       (struct finish_breakpoint_object *) self;
   PyObject *frame_obj = NULL;
   int thread;
-  struct frame_info *frame = NULL; /* init for gcc -Wall */
-  struct frame_info *prev_frame = NULL;
+  frame_info_ptr frame = NULL; /* init for gcc -Wall */
+  frame_info_ptr prev_frame = NULL;
   struct frame_id frame_id;
   PyObject *internal = NULL;
   int internal_bp = 0;
@@ -207,7 +207,7 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	  else
 	    {
 	      frame_id = get_frame_id (prev_frame);
-	      if (frame_id_eq (frame_id, null_frame_id))
+	      if (frame_id == null_frame_id)
 		PyErr_SetString (PyExc_ValueError,
 				 _("Invalid ID for the `frame' object."));
 	    }

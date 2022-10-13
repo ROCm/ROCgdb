@@ -1220,7 +1220,7 @@ value_assign (struct value *toval, struct value *fromval)
 	   Below we will call put_frame_register_bytes which requires that
 	   we pass it the actual frame in which the register value is
 	   valid, i.e. not the next frame.  */
-	frame_info *frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (toval));
+	frame_info_ptr frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (toval));
 	frame = get_prev_frame_always (frame);
 
 	if (!frame)
@@ -1335,7 +1335,7 @@ value_assign (struct value *toval, struct value *fromval)
 	 re-find the previously selected frame automatically.  */
 
       {
-	struct frame_info *fi = frame_find_by_id (old_frame);
+	frame_info_ptr fi = frame_find_by_id (old_frame);
 
 	if (fi != NULL)
 	  select_frame (fi);
@@ -1411,7 +1411,7 @@ value_repeat (struct value *arg1, int count)
 struct value *
 value_of_variable (struct symbol *var, const struct block *b)
 {
-  struct frame_info *frame = NULL;
+  frame_info_ptr frame = NULL;
 
   if (symbol_read_needs_frame (var))
     frame = get_selected_frame (_("No frame selected."));
@@ -1444,7 +1444,7 @@ address_of_variable (struct symbol *var, const struct block *b)
     {
     case lval_register:
       {
-	struct frame_info *frame;
+	frame_info_ptr frame;
 	const char *regname;
 
 	frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (val));
@@ -3979,7 +3979,7 @@ value_of_this (const struct language_defn *lang)
 {
   struct block_symbol sym;
   const struct block *b;
-  struct frame_info *frame;
+  frame_info_ptr frame;
 
   if (lang->name_of_this () == NULL)
     error (_("no `this' in current language"));

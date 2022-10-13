@@ -11841,7 +11841,7 @@ ada_exception_support_info_sniffer (void)
    to most users.  */
 
 static int
-is_known_support_routine (struct frame_info *frame)
+is_known_support_routine (frame_info_ptr frame)
 {
   enum language func_lang;
   int i;
@@ -11900,7 +11900,7 @@ is_known_support_routine (struct frame_info *frame)
    part of the Ada run-time, starting from FI and moving upward.  */
 
 void
-ada_find_printable_frame (struct frame_info *fi)
+ada_find_printable_frame (frame_info_ptr fi)
 {
   for (; fi != NULL; fi = get_prev_frame (fi))
     {
@@ -11934,7 +11934,7 @@ static CORE_ADDR
 ada_unhandled_exception_name_addr_from_raise (void)
 {
   int frame_level;
-  struct frame_info *fi;
+  frame_info_ptr fi;
   struct ada_inferior_data *data = get_ada_inferior_data (current_inferior ());
 
   /* To determine the name of this exception, we need to select
@@ -13049,7 +13049,7 @@ ada_add_standard_exceptions (compiled_regex *preg,
 
 static void
 ada_add_exceptions_from_frame (compiled_regex *preg,
-			       struct frame_info *frame,
+			       frame_info_ptr frame,
 			       std::vector<ada_exc_info> *exceptions)
 {
   const struct block *block = get_frame_block (frame, 0);
@@ -13478,7 +13478,7 @@ public:
 
   struct value *read_var_value (struct symbol *var,
 				const struct block *var_block,
-				struct frame_info *frame) const override
+				frame_info_ptr frame) const override
   {
     /* The only case where default_read_var_value is not sufficient
        is when VAR is a renaming...  */

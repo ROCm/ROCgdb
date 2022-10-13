@@ -862,9 +862,18 @@ proc gdb_internal_error_resync {} {
 }
 
 # Fill in the default prompt if PROMPT_REGEXP is empty.
-proc fill_in_default_prompt {prompt_regexp} {
+#
+# If WITH_ANCHOR is true and the default prompt is used, append a `$` at the end
+# of the regexp, to anchor the match at the end of the buffer.
+proc fill_in_default_prompt {prompt_regexp with_anchor} {
     if { "$prompt_regexp" == "" } {
-	return "$::gdb_prompt $"
+	set prompt "$::gdb_prompt "
+
+	if { $with_anchor } {
+	    append prompt "$"
+	}
+
+	return $prompt
     }
     return $prompt_regexp
 }
@@ -994,14 +1003,18 @@ proc gdb_test_multiple { command message args } {
 	error "Too few arguments to gdb_test_multiple"
     }
 
-    set prompt_regexp [fill_in_default_prompt $prompt_regexp]
+    set prompt_regexp [fill_in_default_prompt $prompt_regexp true]
 
     if { $message == "" } {
 	set message $command
     }
 
     if [string match "*\[\r\n\]" $command] {
-	error "Invalid trailing newline in \"$message\" test"
+	error "Invalid trailing newline in \"$command\" command"
+    }
+
+    if [string match "*\[\003\004\]" $command] {
+	error "Invalid trailing control code in \"$command\" command"
     }
 
     if [string match "*\[\r\n\]*" $message] {
@@ -1366,6 +1379,10 @@ proc gdb_test_multiline { name args } {
 #
 # -prompt PROMPT_REGEXP specifies a regexp matching the expected prompt
 #   after the command output.  If empty, defaults to "$gdb_prompt $".
+# -no-prompt-anchor specifies that if the default prompt regexp is used, it
+#   should not be anchored at the end of the buffer.  This means that the
+#   pattern can match even if there is stuff output after the prompt.  Does not
+#   have any effect if -prompt is specified.
 # -lbl specifies that line-by-line matching will be used.
 # -nopass specifies that a PASS should not be issued.
 #
@@ -1380,6 +1397,7 @@ proc gdb_test { args } {
 
     parse_args {
 	{prompt ""}
+	{no-prompt-anchor}
 	{lbl}
 	{nopass}
     }
@@ -1395,7 +1413,7 @@ proc gdb_test { args } {
 	set message $command
     }
 
-    set prompt [fill_in_default_prompt $prompt]
+    set prompt [fill_in_default_prompt $prompt [expr !${no-prompt-anchor}]]
 
     set saw_question 0
 
@@ -1472,20 +1490,21 @@ if { [tcl_version_at_least 8 5] == 0 } {
 # gdb_test_no_output [-prompt PROMPT_REGEXP] [-nopass] COMMAND [MESSAGE]
 # Send a command to GDB and verify that this command generated no output.
 #
-# See gdb_test for a description of the -prompt, -nopass, COMMAND, and
-# MESSAGE parameters.
+# See gdb_test for a description of the -prompt, -no-prompt-anchor, -nopass,
+# COMMAND, and MESSAGE parameters.
 
 proc gdb_test_no_output { args } {
     global gdb_prompt
 
     parse_args {
 	{prompt ""}
+	{no-prompt-anchor}
 	{nopass}
     }
 
     lassign $args command message
 
-    set prompt [fill_in_default_prompt $prompt]
+    set prompt [fill_in_default_prompt $prompt [expr !${no-prompt-anchor}]]
 
     set command_regex [string_to_regexp $command]
     gdb_test_multiple $command $message -prompt $prompt {
@@ -7892,27 +7911,10 @@ proc capture_command_output { command prefix } {
     global gdb_prompt
     global expect_out
 
-    set code {
-	-re "^[string_to_regexp ${command}]\r\n" {
-	    if { $prefix != "" } {
-		exp_continue
-	    }
-	}
-    }
-
-    if { $prefix != "" } {
-	append code {
-	    -re "^${prefix}" {
-		# Nothing, we just move onto the next gdb_test_multiple
-		# call, which actually collects the command output.
-	    }
-	}
-    }
-
-    gdb_test_multiple "$command" "capture_command_output for $command" $code
+    set test "capture_command_output for $command"
 
     set output_string ""
-    gdb_test_multiple "" "" {
+    gdb_test_multiple $command $test {
 	-re "^(\[^\r\n\]+\r\n)" {
 	    if { ![string equal $output_string ""] } {
 		set output_string [join [list $output_string $expect_out(1,string)] ""]
@@ -7926,7 +7928,18 @@ proc capture_command_output { command prefix } {
 	}
     }
 
+    # Strip the command.
+    set command_re [string_to_regexp ${command}]
+    set output_string [regsub ^$command_re\r\n $output_string ""]
+
+    # Strip the prefix.
+    if { $prefix != "" } {
+	set output_string [regsub ^$prefix $output_string ""]
+    }
+
+    # Strip a trailing newline.
     set output_string [regsub "\r\n$" $output_string ""]
+
     return $output_string
 }
 
@@ -8184,6 +8197,28 @@ proc cmp_file_string { file str msg } {
 	pass "$msg"
     } else {
 	fail "$msg"
+    }
+}
+
+# Compare FILE1 and FILE2 as binary files.  Return 0 if the files are
+# equal, otherwise, return non-zero.
+
+proc cmp_binary_files { file1 file2 } {
+    set fd1 [open $file1]
+    fconfigure $fd1 -translation binary
+    set fd2 [open $file2]
+    fconfigure $fd2 -translation binary
+
+    set blk_size 1024
+    while {true} {
+	set blk1 [read $fd1 $blk_size]
+	set blk2 [read $fd2 $blk_size]
+	set diff [string compare $blk1 $blk2]
+	if {$diff != 0 || [eof $fd1] || [eof $fd2]} {
+	    close $fd1
+	    close $fd2
+	    return $diff
+	}
     }
 }
 

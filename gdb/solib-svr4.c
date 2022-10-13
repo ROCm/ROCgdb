@@ -428,14 +428,11 @@ read_program_header (int type, int *p_arch_size, CORE_ADDR *base_addr)
   int pt_phdr_p = 0;
 
   /* Get required auxv elements from target.  */
-  if (target_auxv_search (current_inferior ()->top_target (),
-			  AT_PHDR, &at_phdr) <= 0)
+  if (target_auxv_search (AT_PHDR, &at_phdr) <= 0)
     return {};
-  if (target_auxv_search (current_inferior ()->top_target (),
-			  AT_PHENT, &at_phent) <= 0)
+  if (target_auxv_search (AT_PHENT, &at_phent) <= 0)
     return {};
-  if (target_auxv_search (current_inferior ()->top_target (),
-			  AT_PHNUM, &at_phnum) <= 0)
+  if (target_auxv_search (AT_PHNUM, &at_phnum) <= 0)
     return {};
   if (!at_phdr || !at_phnum)
     return {};
@@ -1645,7 +1642,7 @@ solib_event_probe_action (struct probe_and_action *pa)
 {
   enum probe_action action;
   unsigned probe_argc = 0;
-  struct frame_info *frame = get_current_frame ();
+  frame_info_ptr frame = get_current_frame ();
 
   action = pa->action;
   if (action == DO_NOTHING || action == PROBES_INTERFACE_FAILED)
@@ -1780,7 +1777,7 @@ svr4_handle_solib_event (void)
   enum probe_action action;
   struct value *val = NULL;
   CORE_ADDR pc, debug_base, lm = 0;
-  struct frame_info *frame = get_current_frame ();
+  frame_info_ptr frame = get_current_frame ();
 
   /* Do nothing if not using the probes interface.  */
   if (info->probes_table == NULL)
@@ -2250,8 +2247,7 @@ enable_break (struct svr4_info *info, int from_tty)
       /* If we were not able to find the base address of the loader
 	 from our so_list, then try using the AT_BASE auxilliary entry.  */
       if (!load_addr_found)
-	if (target_auxv_search (current_inferior ()->top_target (),
-				AT_BASE, &load_addr) > 0)
+	if (target_auxv_search (AT_BASE, &load_addr) > 0)
 	  {
 	    int addr_bit = gdbarch_addr_bit (target_gdbarch ());
 
@@ -2479,8 +2475,7 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
   if ((bfd_get_file_flags (current_program_space->exec_bfd ()) & DYNAMIC) == 0)
     return 0;
 
-  if (target_auxv_search (current_inferior ()->top_target (),
-			  AT_ENTRY, &entry_point) <= 0)
+  if (target_auxv_search (AT_ENTRY, &entry_point) <= 0)
     return 0;
 
   exec_displacement

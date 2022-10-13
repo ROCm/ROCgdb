@@ -800,7 +800,7 @@ struct amdgpu_frame_cache
 };
 
 static struct amdgpu_frame_cache *
-amdgpu_frame_cache (struct frame_info *this_frame, void **this_cache)
+amdgpu_frame_cache (frame_info_ptr this_frame, void **this_cache)
 {
   if (*this_cache)
     return (struct amdgpu_frame_cache *) *this_cache;
@@ -816,7 +816,7 @@ amdgpu_frame_cache (struct frame_info *this_frame, void **this_cache)
 }
 
 static void
-amdgpu_frame_this_id (struct frame_info *this_frame, void **this_cache,
+amdgpu_frame_this_id (frame_info_ptr this_frame, void **this_cache,
 		      struct frame_id *this_id)
 {
   struct amdgpu_frame_cache *cache
@@ -834,13 +834,13 @@ amdgpu_frame_this_id (struct frame_info *this_frame, void **this_cache,
 }
 
 static struct frame_id
-amdgpu_dummy_id (struct gdbarch *gdbarch, struct frame_info *this_frame)
+amdgpu_dummy_id (struct gdbarch *gdbarch, frame_info_ptr this_frame)
 {
   return frame_id_build (0, get_frame_pc (this_frame));
 }
 
 static struct value *
-amdgpu_frame_prev_register (struct frame_info *this_frame, void **this_cache,
+amdgpu_frame_prev_register (frame_info_ptr this_frame, void **this_cache,
 			    int regnum)
 {
   return frame_unwind_got_register (this_frame, regnum, regnum);

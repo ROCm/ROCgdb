@@ -919,6 +919,10 @@ set_running_thread (struct thread_info *tp, bool running)
     started = true;
   tp->state = running ? THREAD_RUNNING : THREAD_STOPPED;
 
+  threads_debug_printf ("thread: %s, running? %d%s",
+			tp->ptid.to_string ().c_str (), running,
+			(started ? " (started" : ""));
+
   if (!running)
     {
       /* If the thread is now marked stopped, remove it from
@@ -1517,7 +1521,7 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
 	{
 	  if (tp->is_simd_lane_active (lane))
 	    {
-	      frame_info *curr_frame = get_current_frame ();
+	      frame_info_ptr curr_frame = get_current_frame ();
 
 	      print_stack_frame (curr_frame,
 				 /* For MI output, print frame level.  */
@@ -1687,6 +1691,9 @@ info_lanes_command_completer (struct cmd_list_element *ignore,
 void
 switch_to_thread_no_regs (struct thread_info *thread)
 {
+  gdb_assert (thread != nullptr);
+  threads_debug_printf ("thread = %s", thread->ptid.to_string ().c_str ());
+
   struct inferior *inf = thread->inf;
 
   set_current_program_space (inf->pspace);
@@ -1703,6 +1710,8 @@ switch_to_no_thread ()
 {
   if (current_thread_ == nullptr)
     return;
+
+  threads_debug_printf ("thread = NONE");
 
   current_thread_ = nullptr;
   inferior_ptid = null_ptid;
@@ -2238,7 +2247,7 @@ lane_apply_all_command (const char *cmd, int from_tty)
       if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
 	continue;
 
-      frame_info *curr_frame = get_current_frame ();
+      frame_info_ptr curr_frame = get_current_frame ();
       select_frame (curr_frame);
 
       thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);
@@ -2373,7 +2382,7 @@ lane_apply_command (const char *id_list, int from_tty)
       if (!should_print_lane ("", thr, lane, il_opts, lane_used_count))
 	continue;
 
-      frame_info *curr_frame = get_current_frame ();
+      frame_info_ptr curr_frame = get_current_frame ();
       select_frame (curr_frame);
 
       thr_lane_try_catch_cmd (true, thr, lane, {}, cmd, from_tty, flags);

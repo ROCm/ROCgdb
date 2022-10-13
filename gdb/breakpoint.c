@@ -1946,7 +1946,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
     within_current_scope = 1;
   else
     {
-      struct frame_info *fi = get_current_frame ();
+      frame_info_ptr fi = get_current_frame ();
       struct gdbarch *frame_arch = get_frame_arch (fi);
       CORE_ADDR frame_pc = get_frame_pc (fi);
 
@@ -4996,7 +4996,7 @@ static wp_check_result
 watchpoint_check (bpstat *bs)
 {
   struct watchpoint *b;
-  struct frame_info *fr;
+  frame_info_ptr fr;
   int within_current_scope;
 
   /* BS is built from an existing struct breakpoint.  */
@@ -5013,7 +5013,7 @@ watchpoint_check (bpstat *bs)
     within_current_scope = 1;
   else
     {
-      struct frame_info *frame = get_current_frame ();
+      frame_info_ptr frame = get_current_frame ();
       struct gdbarch *frame_arch = get_frame_arch (frame);
       CORE_ADDR frame_pc = get_frame_pc (frame);
 
@@ -5350,7 +5350,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
      breakpoint or a single step breakpoint.  */
 
   if (frame_id_p (b->frame_id)
-      && !frame_id_eq (b->frame_id, get_stack_frame_id (get_current_frame ())))
+      && b->frame_id != get_stack_frame_id (get_current_frame ()))
     {
       infrun_debug_printf ("incorrect frame %s not %s, not stopping",
 			   get_stack_frame_id (get_current_frame ()).to_string ().c_str (),
@@ -5423,7 +5423,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
 	select_frame (get_current_frame ());
       else
 	{
-	  struct frame_info *frame;
+	  frame_info_ptr frame;
 
 	  /* For local watchpoint expressions, which particular
 	     instance of a local is being watched matters, so we
@@ -7540,9 +7540,9 @@ check_longjmp_breakpoint_for_call_dummy (struct thread_info *tp)
 	   original dummy frame, hence frame_id_inner can't be used.  See
 	   the comments on frame_id_inner for more details.  */
 	bool unwind_finished_unexpectedly = false;
-	for (struct frame_info *fi = get_current_frame (); fi != nullptr; )
+	for (frame_info_ptr fi = get_current_frame (); fi != nullptr; )
 	  {
-	    struct frame_info *prev = get_prev_frame (fi);
+	    frame_info_ptr prev = get_prev_frame (fi);
 	    if (prev == nullptr)
 	      {
 		/* FI is the last stack frame.  Why did this frame not
@@ -10141,7 +10141,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   if (*tok)
     error (_("Junk at end of command."));
 
-  frame_info *wp_frame = block_innermost_frame (exp_valid_block);
+  frame_info_ptr wp_frame = block_innermost_frame (exp_valid_block);
 
   /* Save this because create_internal_breakpoint below invalidates
      'wp_frame'.  */
@@ -10532,7 +10532,7 @@ until_break_fsm::do_async_reply_reason ()
 void
 until_break_command (const char *arg, int from_tty, int anywhere)
 {
-  struct frame_info *frame;
+  frame_info_ptr frame;
   struct gdbarch *frame_gdbarch;
   struct frame_id stack_frame_id;
   struct frame_id caller_frame_id;
@@ -13608,7 +13608,7 @@ insert_single_step_breakpoints (struct gdbarch *gdbarch)
 
   if (!next_pcs.empty ())
     {
-      struct frame_info *frame = get_current_frame ();
+      frame_info_ptr frame = get_current_frame ();
       const address_space *aspace = get_frame_address_space (frame);
 
       for (CORE_ADDR pc : next_pcs)

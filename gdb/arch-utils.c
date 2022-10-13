@@ -133,7 +133,7 @@ default_get_memtag (struct gdbarch *gdbarch, struct value *address,
 }
 
 CORE_ADDR
-generic_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
+generic_skip_trampoline_code (frame_info_ptr frame, CORE_ADDR pc)
 {
   return 0;
 }
@@ -159,7 +159,7 @@ generic_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 int
 default_code_of_frame_writable (struct gdbarch *gdbarch,
-				struct frame_info *frame)
+				frame_info_ptr frame)
 {
   return 1;
 }
@@ -1078,7 +1078,7 @@ default_type_align (struct gdbarch *gdbarch, struct type *type)
 /* See arch-utils.h.  */
 
 std::string
-default_get_pc_address_flags (frame_info *frame, CORE_ADDR pc)
+default_get_pc_address_flags (frame_info_ptr frame, CORE_ADDR pc)
 {
   return "";
 }

@@ -206,7 +206,7 @@ set_tracepoint_num (int num)
    the traceframe context (line, function, file).  */
 
 static void
-set_traceframe_context (struct frame_info *trace_frame)
+set_traceframe_context (frame_info_ptr trace_frame)
 {
   CORE_ADDR trace_pc;
   struct symbol *traceframe_fun;
@@ -2190,8 +2190,7 @@ tfind_1 (enum trace_find_type type, int num,
 	 function and it's arguments) -- otherwise we'll just show the
 	 new source line.  */
 
-      if (frame_id_eq (old_frame_id,
-		       get_frame_id (get_current_frame ())))
+      if (old_frame_id == get_frame_id (get_current_frame ()))
 	print_what = SRC_LINE;
       else
 	print_what = SRC_AND_LOC;

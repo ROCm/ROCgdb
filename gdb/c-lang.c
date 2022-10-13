@@ -146,8 +146,8 @@ classify_type (struct type *elttype, struct gdbarch *gdbarch,
    for printing characters and strings is language specific.  */
 
 void
-c_emit_char (int c, struct type *type,
-	     struct ui_file *stream, int quoter)
+language_defn::emitchar (int c, struct type *type,
+			 struct ui_file *stream, int quoter) const
 {
   const char *encoding;
 
@@ -192,10 +192,10 @@ language_defn::printchar (int c, struct type *type,
    characters, or if FORCE_ELLIPSES.  */
 
 void
-c_printstr (struct ui_file *stream, struct type *type, 
-	    const gdb_byte *string, unsigned int length, 
-	    const char *user_encoding, int force_ellipses,
-	    const struct value_print_options *options)
+language_defn::printstr (struct ui_file *stream, struct type *type,
+			 const gdb_byte *string, unsigned int length,
+			 const char *user_encoding, int force_ellipses,
+			 const struct value_print_options *options) const
 {
   c_string_type str_type;
   const char *type_encoding;
@@ -1008,7 +1008,7 @@ public:
 
   /* See language.h.  */
 
-  CORE_ADDR skip_trampoline (struct frame_info *fi,
+  CORE_ADDR skip_trampoline (frame_info_ptr fi,
 			     CORE_ADDR pc) const override
   {
     return cplus_skip_trampoline (fi, pc);

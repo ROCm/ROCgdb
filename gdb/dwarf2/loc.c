@@ -49,7 +49,7 @@
 #include "gdbsupport/byte-vector.h"
 
 static struct value *dwarf2_evaluate_loc_desc_full
-  (struct type *type, struct frame_info *frame, const gdb_byte *data,
+  (struct type *type, frame_info_ptr frame, const gdb_byte *data,
    size_t size, dwarf2_per_cu_data *per_cu, dwarf2_per_objfile *per_objfile,
    struct type *subobj_type, LONGEST subobj_byte_offset, bool as_lval = true);
 
@@ -489,7 +489,7 @@ locexpr_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc,
    LOC_BLOCK functions using a DWARF expression as its DW_AT_frame_base.  */
 
 static CORE_ADDR
-locexpr_get_frame_base (struct symbol *framefunc, struct frame_info *frame)
+locexpr_get_frame_base (struct symbol *framefunc, frame_info_ptr frame)
 {
   struct gdbarch *gdbarch;
   struct type *type;
@@ -546,7 +546,7 @@ loclist_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc,
    LOC_BLOCK functions using a DWARF location list as its DW_AT_frame_base.  */
 
 static CORE_ADDR
-loclist_get_frame_base (struct symbol *framefunc, struct frame_info *frame)
+loclist_get_frame_base (struct symbol *framefunc, frame_info_ptr frame)
 {
   struct gdbarch *gdbarch;
   struct type *type;
@@ -639,7 +639,7 @@ void
 call_site_target::iterate_over_addresses
      (struct gdbarch *call_site_gdbarch,
       const struct call_site *call_site,
-      struct frame_info *caller_frame,
+      frame_info_ptr caller_frame,
       iterate_ftype callback) const
 {
   switch (m_loc_kind)
@@ -1127,7 +1127,7 @@ call_site_parameter_matches (struct call_site_parameter *parameter,
 /* See loc.h.  */
 
 struct call_site_parameter *
-dwarf_expr_reg_to_entry_parameter (struct frame_info *frame,
+dwarf_expr_reg_to_entry_parameter (frame_info_ptr frame,
 				   enum call_site_parameter_kind kind,
 				   union call_site_parameter_u kind_u,
 				   dwarf2_per_cu_data **per_cu_return,
@@ -1135,7 +1135,7 @@ dwarf_expr_reg_to_entry_parameter (struct frame_info *frame,
 {
   CORE_ADDR func_addr, caller_pc;
   struct gdbarch *gdbarch;
-  struct frame_info *caller_frame;
+  frame_info_ptr caller_frame;
   struct call_site *call_site;
   int iparams;
   /* Initialize it just to avoid a GCC false warning.  */
@@ -1252,7 +1252,7 @@ dwarf_expr_reg_to_entry_parameter (struct frame_info *frame,
 static struct value *
 dwarf_entry_parameter_to_value (struct call_site_parameter *parameter,
 				CORE_ADDR deref_size, struct type *type,
-				struct frame_info *caller_frame,
+				frame_info_ptr caller_frame,
 				dwarf2_per_cu_data *per_cu,
 				dwarf2_per_objfile *per_objfile)
 {
@@ -1334,13 +1334,13 @@ static const struct lval_funcs entry_data_value_funcs =
    cannot resolve the parameter for any reason.  */
 
 static struct value *
-value_of_dwarf_reg_entry (struct type *type, struct frame_info *frame,
+value_of_dwarf_reg_entry (struct type *type, frame_info_ptr frame,
 			  enum call_site_parameter_kind kind,
 			  union call_site_parameter_u kind_u)
 {
   struct type *checked_type = check_typedef (type);
   struct type *target_type = checked_type->target_type ();
-  struct frame_info *caller_frame = get_prev_frame (frame);
+  frame_info_ptr caller_frame = get_prev_frame (frame);
   struct value *outer_val, *target_val, *val;
   struct call_site_parameter *parameter;
   dwarf2_per_cu_data *caller_per_cu;
@@ -1390,7 +1390,7 @@ value_of_dwarf_reg_entry (struct type *type, struct frame_info *frame,
    cannot resolve the parameter for any reason.  */
 
 static struct value *
-value_of_dwarf_block_entry (struct type *type, struct frame_info *frame,
+value_of_dwarf_block_entry (struct type *type, frame_info_ptr frame,
 			    const gdb_byte *block, size_t block_len)
 {
   union call_site_parameter_u kind_u;
@@ -1451,7 +1451,7 @@ struct value *
 indirect_synthetic_pointer (sect_offset die, LONGEST byte_offset,
 			    dwarf2_per_cu_data *per_cu,
 			    dwarf2_per_objfile *per_objfile,
-			    struct frame_info *frame, struct type *type,
+			    frame_info_ptr frame, struct type *type,
 			    bool resolve_abstract_p)
 {
   /* Fetch the location expression of the DIE we're pointing to.  */
@@ -1491,7 +1491,7 @@ indirect_synthetic_pointer (sect_offset die, LONGEST byte_offset,
    SUBOBJ_BYTE_OFFSET within the variable of type TYPE.  */
 
 static struct value *
-dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
+dwarf2_evaluate_loc_desc_full (struct type *type, frame_info_ptr frame,
 			       const gdb_byte *data, size_t size,
 			       dwarf2_per_cu_data *per_cu,
 			       dwarf2_per_objfile *per_objfile,
@@ -1556,7 +1556,7 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
    passes 0 as the byte_offset.  */
 
 struct value *
-dwarf2_evaluate_loc_desc (struct type *type, struct frame_info *frame,
+dwarf2_evaluate_loc_desc (struct type *type, frame_info_ptr frame,
 			  const gdb_byte *data, size_t size,
 			  dwarf2_per_cu_data *per_cu,
 			  dwarf2_per_objfile *per_objfile, bool as_lval)
@@ -1579,7 +1579,7 @@ dwarf2_evaluate_loc_desc (struct type *type, struct frame_info *frame,
 
 static int
 dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
-			   struct frame_info *frame,
+			   frame_info_ptr frame,
 			   const struct property_addr_info *addr_stack,
 			   CORE_ADDR *valp,
 			   gdb::array_view<CORE_ADDR> push_values,
@@ -1645,7 +1645,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 
 bool
 dwarf2_evaluate_property (const struct dynamic_prop *prop,
-			  struct frame_info *frame,
+			  frame_info_ptr frame,
 			  const struct property_addr_info *addr_stack,
 			  CORE_ADDR *value,
 			  gdb::array_view<CORE_ADDR> push_values)
@@ -3061,7 +3061,7 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 /* Return the value of SYMBOL in FRAME using the DWARF-2 expression
    evaluator to calculate the location.  */
 static struct value *
-locexpr_read_variable (struct symbol *symbol, struct frame_info *frame)
+locexpr_read_variable (struct symbol *symbol, frame_info_ptr frame)
 {
   struct dwarf2_locexpr_baton *dlbaton
     = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (symbol);
@@ -3079,7 +3079,7 @@ locexpr_read_variable (struct symbol *symbol, struct frame_info *frame)
    will be thrown.  */
 
 static struct value *
-locexpr_read_variable_at_entry (struct symbol *symbol, struct frame_info *frame)
+locexpr_read_variable_at_entry (struct symbol *symbol, frame_info_ptr frame)
 {
   struct dwarf2_locexpr_baton *dlbaton
     = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (symbol);
@@ -4133,7 +4133,7 @@ const struct symbol_computed_ops dwarf2_locexpr_funcs = {
 /* Return the value of SYMBOL in FRAME using the DWARF-2 expression
    evaluator to calculate the location.  */
 static struct value *
-loclist_read_variable (struct symbol *symbol, struct frame_info *frame)
+loclist_read_variable (struct symbol *symbol, frame_info_ptr frame)
 {
   struct dwarf2_loclist_baton *dlbaton
     = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (symbol);
@@ -4158,7 +4158,7 @@ loclist_read_variable (struct symbol *symbol, struct frame_info *frame)
    if it cannot resolve the parameter for any reason.  */
 
 static struct value *
-loclist_read_variable_at_entry (struct symbol *symbol, struct frame_info *frame)
+loclist_read_variable_at_entry (struct symbol *symbol, frame_info_ptr frame)
 {
   struct dwarf2_loclist_baton *dlbaton
     = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (symbol);

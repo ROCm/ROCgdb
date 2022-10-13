@@ -3980,7 +3980,7 @@ value_fetch_lazy_memory (struct value *val)
 static void
 value_fetch_lazy_register (struct value *val)
 {
-  struct frame_info *next_frame;
+  frame_info_ptr next_frame;
   int regnum;
   struct type *type = check_typedef (value_type (val));
   struct value *new_val = val, *mark = value_mark ();
@@ -4022,7 +4022,7 @@ value_fetch_lazy_register (struct value *val)
 	 in this situation.  */
       if (VALUE_LVAL (new_val) == lval_register
 	  && value_lazy (new_val)
-	  && frame_id_eq (VALUE_NEXT_FRAME_ID (new_val), next_frame_id))
+	  && VALUE_NEXT_FRAME_ID (new_val) == next_frame_id)
 	internal_error (__FILE__, __LINE__,
 			_("infinite loop while fetching a register"));
     }
@@ -4047,7 +4047,7 @@ value_fetch_lazy_register (struct value *val)
   if (frame_debug)
     {
       struct gdbarch *gdbarch;
-      struct frame_info *frame;
+      frame_info_ptr frame;
       frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (val));
       frame = get_prev_frame_always (frame);
       regnum = VALUE_REGNUM (val);

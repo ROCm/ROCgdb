@@ -126,7 +126,7 @@ show_language_command (struct ui_file *file, int from_tty,
 
   if (has_stack_frames ())
     {
-      struct frame_info *frame;
+      frame_info_ptr frame;
 
       frame = get_selected_frame (NULL);
       flang = get_frame_language (frame);
@@ -161,7 +161,7 @@ set_language_command (const char *ignore,
 	      language_mode = language_mode_auto;
 	      try
 		{
-		  struct frame_info *frame;
+		  frame_info_ptr frame;
 
 		  frame = get_selected_frame (NULL);
 		  flang = get_frame_language (frame);
@@ -534,7 +534,7 @@ add_set_language_command ()
    Return the result from the first that returns non-zero, or 0 if all
    `fail'.  */
 CORE_ADDR 
-skip_language_trampoline (struct frame_info *frame, CORE_ADDR pc)
+skip_language_trampoline (frame_info_ptr frame, CORE_ADDR pc)
 {
   for (const auto &lang : language_defn::languages)
     {
@@ -632,27 +632,6 @@ language_defn::value_print_inner
 	 const struct value_print_options *options) const
 {
   return c_value_print_inner (val, stream, recurse, options);
-}
-
-/* See language.h.  */
-
-void
-language_defn::emitchar (int ch, struct type *chtype,
-			 struct ui_file * stream, int quoter) const
-{
-  c_emit_char (ch, chtype, stream, quoter);
-}
-
-/* See language.h.  */
-
-void
-language_defn::printstr (struct ui_file *stream, struct type *elttype,
-			 const gdb_byte *string, unsigned int length,
-			 const char *encoding, int force_ellipses,
-			 const struct value_print_options *options) const
-{
-  c_printstr (stream, elttype, string, length, encoding, force_ellipses,
-	      options);
 }
 
 /* See language.h.  */

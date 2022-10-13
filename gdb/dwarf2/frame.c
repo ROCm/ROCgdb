@@ -198,7 +198,7 @@ dwarf2_frame_state::dwarf2_frame_state (CORE_ADDR pc_, struct dwarf2_cie *cie)
    read as an address in a given FRAME.  */
 
 static CORE_ADDR
-read_addr_from_reg (frame_info *frame, int reg)
+read_addr_from_reg (frame_info_ptr frame, int reg)
 {
   gdbarch *arch = get_frame_arch (frame);
   int regnum = dwarf_reg_to_regnum_or_error (arch, reg);
@@ -239,7 +239,7 @@ register %s (#%d) at %s"),
 
 static value *
 execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
-		  struct frame_info *this_frame, CORE_ADDR initial,
+		  frame_info_ptr this_frame, CORE_ADDR initial,
 		  int initial_in_stack_memory, dwarf2_per_objfile *per_objfile,
 		  struct type* type = nullptr, bool as_lval = true)
 {
@@ -626,17 +626,17 @@ execute_cfa_program_test (struct gdbarch *gdbarch)
 static void dwarf2_frame_default_init_reg (struct gdbarch *gdbarch,
 					   int regnum,
 					   struct dwarf2_frame_state_reg *reg,
-					   struct frame_info *this_frame);
+					   frame_info_ptr this_frame);
 
 struct dwarf2_frame_ops
 {
   /* Pre-initialize the register state REG for register REGNUM.  */
   void (*init_reg) (struct gdbarch *, int, struct dwarf2_frame_state_reg *,
-		    struct frame_info *)
+		    frame_info_ptr)
     = dwarf2_frame_default_init_reg;
 
   /* Check whether the THIS_FRAME is a signal trampoline.  */
-  int (*signal_frame_p) (struct gdbarch *, struct frame_info *) = nullptr;
+  int (*signal_frame_p) (struct gdbarch *, frame_info_ptr) = nullptr;
 
   /* Convert .eh_frame register number to DWARF register number, or
      adjust .debug_frame register number.  */
@@ -662,7 +662,7 @@ get_frame_ops (struct gdbarch *gdbarch)
 static void
 dwarf2_frame_default_init_reg (struct gdbarch *gdbarch, int regnum,
 			       struct dwarf2_frame_state_reg *reg,
-			       struct frame_info *this_frame)
+			       frame_info_ptr this_frame)
 {
   /* If we have a register that acts as a program counter, mark it as
      a destination for the return address.  If we have a register that
@@ -703,7 +703,7 @@ void
 dwarf2_frame_set_init_reg (struct gdbarch *gdbarch,
 			   void (*init_reg) (struct gdbarch *, int,
 					     struct dwarf2_frame_state_reg *,
-					     struct frame_info *))
+					     frame_info_ptr ))
 {
   struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
@@ -715,7 +715,7 @@ dwarf2_frame_set_init_reg (struct gdbarch *gdbarch,
 static void
 dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 		       struct dwarf2_frame_state_reg *reg,
-		       struct frame_info *this_frame)
+		       frame_info_ptr this_frame)
 {
   struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
@@ -729,7 +729,7 @@ dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 void
 dwarf2_frame_set_signal_frame_p (struct gdbarch *gdbarch,
 				 int (*signal_frame_p) (struct gdbarch *,
-							struct frame_info *))
+							frame_info_ptr ))
 {
   struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
@@ -741,7 +741,7 @@ dwarf2_frame_set_signal_frame_p (struct gdbarch *gdbarch,
 
 static int
 dwarf2_frame_signal_frame_p (struct gdbarch *gdbarch,
-			     struct frame_info *this_frame)
+			     frame_info_ptr this_frame)
 {
   struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
@@ -910,7 +910,7 @@ struct dwarf2_frame_cache
 };
 
 static struct dwarf2_frame_cache *
-dwarf2_frame_cache (struct frame_info *this_frame, void **this_cache)
+dwarf2_frame_cache (frame_info_ptr this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   const int num_regs = gdbarch_num_cooked_regs (gdbarch);
@@ -1148,7 +1148,7 @@ incomplete CFI data; unspecified registers (e.g., %s) at %s"),
 }
 
 static enum unwind_stop_reason
-dwarf2_frame_unwind_stop_reason (struct frame_info *this_frame,
+dwarf2_frame_unwind_stop_reason (frame_info_ptr this_frame,
 				 void **this_cache)
 {
   struct dwarf2_frame_cache *cache
@@ -1164,7 +1164,7 @@ dwarf2_frame_unwind_stop_reason (struct frame_info *this_frame,
 }
 
 static void
-dwarf2_frame_this_id (struct frame_info *this_frame, void **this_cache,
+dwarf2_frame_this_id (frame_info_ptr this_frame, void **this_cache,
 		      struct frame_id *this_id)
 {
   struct dwarf2_frame_cache *cache =
@@ -1177,7 +1177,7 @@ dwarf2_frame_this_id (struct frame_info *this_frame, void **this_cache,
 }
 
 static struct value *
-dwarf2_frame_prev_register (struct frame_info *this_frame, void **this_cache,
+dwarf2_frame_prev_register (frame_info_ptr this_frame, void **this_cache,
 			    int regnum)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
@@ -1292,9 +1292,10 @@ dwarf2_frame_prev_register (struct frame_info *this_frame, void **this_cache,
    call frames chain.  */
 
 static void
-dwarf2_frame_dealloc_cache (struct frame_info *self, void *this_cache)
+dwarf2_frame_dealloc_cache (frame_info *self, void *this_cache)
 {
-  struct dwarf2_frame_cache *cache = dwarf2_frame_cache (self, &this_cache);
+  struct dwarf2_frame_cache *cache
+      = dwarf2_frame_cache (frame_info_ptr (self), &this_cache);
 
   if (cache->tailcall_cache)
     dwarf2_tailcall_frame_unwind.dealloc_cache (self, cache->tailcall_cache);
@@ -1302,7 +1303,7 @@ dwarf2_frame_dealloc_cache (struct frame_info *self, void *this_cache)
 
 static int
 dwarf2_frame_sniffer (const struct frame_unwind *self,
-		      struct frame_info *this_frame, void **this_cache)
+		      frame_info_ptr this_frame, void **this_cache)
 {
   if (!dwarf2_frame_unwinders_enabled_p)
     return 0;
@@ -1378,7 +1379,7 @@ dwarf2_append_unwinders (struct gdbarch *gdbarch)
    response to the "info frame" command.  */
 
 static CORE_ADDR
-dwarf2_frame_base_address (struct frame_info *this_frame, void **this_cache)
+dwarf2_frame_base_address (frame_info_ptr this_frame, void **this_cache)
 {
   struct dwarf2_frame_cache *cache =
     dwarf2_frame_cache (this_frame, this_cache);
@@ -1395,7 +1396,7 @@ static const struct frame_base dwarf2_frame_base =
 };
 
 const struct frame_base *
-dwarf2_frame_base_sniffer (struct frame_info *this_frame)
+dwarf2_frame_base_sniffer (frame_info_ptr this_frame)
 {
   CORE_ADDR block_addr = get_frame_address_in_block (this_frame);
 
@@ -1410,7 +1411,7 @@ dwarf2_frame_base_sniffer (struct frame_info *this_frame)
    DW_OP_call_frame_cfa.  */
 
 CORE_ADDR
-dwarf2_frame_cfa (struct frame_info *this_frame)
+dwarf2_frame_cfa (frame_info_ptr this_frame)
 {
   if (frame_unwinder_is (this_frame, &record_btrace_tailcall_frame_unwind)
       || frame_unwinder_is (this_frame, &record_btrace_frame_unwind))

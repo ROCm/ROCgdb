@@ -53,7 +53,7 @@ static const registry<gdbarch>::key<dwarf_gdbarch_types> dwarf_arch_cookie;
 /* Ensure that a FRAME is defined, throw an exception otherwise.  */
 
 static void
-ensure_have_frame (frame_info *frame, const char *op_name)
+ensure_have_frame (frame_info_ptr frame, const char *op_name)
 {
   if (frame == nullptr)
     throw_error (GENERIC_ERROR,
@@ -98,7 +98,7 @@ ill_formed_expression ()
    accordingly  */
 
 static void
-read_from_register (frame_info *frame, int regnum,
+read_from_register (frame_info_ptr frame, int regnum,
 		    CORE_ADDR offset, gdb::array_view<gdb_byte> buf,
 		    int *optimized, int *unavailable)
 {
@@ -141,7 +141,7 @@ read_from_register (frame_info *frame, int regnum,
    accordingly. */
 
 static void
-write_to_register (frame_info *frame, int regnum,
+write_to_register (frame_info_ptr frame, int regnum,
 		   CORE_ADDR offset, gdb::array_view<gdb_byte> buf,
 		   int *optimized, int *unavailable)
 {
@@ -344,7 +344,7 @@ public:
   {}
 
   computed_closure (std::shared_ptr<dwarf_location> location,
-		    struct frame_info *frame)
+		    frame_info_ptr frame)
     : m_location (location), m_frame (frame)
   {}
 
@@ -358,7 +358,7 @@ public:
     return m_frame_id;
   }
 
-  frame_info *get_frame () const
+  frame_info_ptr get_frame () const
   {
     return m_frame;
   }
@@ -373,7 +373,7 @@ private:
   /* In the case of frame expression evaluator the frame_id
      is not safe to use because the frame itself is being built.
      Only in these cases we set and use frame info directly.  */
-  frame_info *m_frame = NULL;
+  frame_info_ptr m_frame = NULL;
 };
 
 /* Base class that describes entries found on a DWARF expression
@@ -404,7 +404,7 @@ public:
      if specified, will be used for more precise description of the
      source variable type information.  Where SUBOBJ_OFFSET defines an
      offset into the DWARF entry contents.  */
-  virtual value *to_gdb_value (frame_info *frame, struct type *type,
+  virtual value *to_gdb_value (frame_info_ptr frame, struct type *type,
 			       struct type *subobj_type,
 			       LONGEST subobj_offset) = 0;
 };
@@ -498,7 +498,7 @@ public:
 
      If the location is optimized out or unavailable, the OPTIMIZED and
      UNAVAILABLE outputs are set accordingly.  */
-  virtual void read (frame_info *frame, gdb_byte *buf,
+  virtual void read (frame_info_ptr frame, gdb_byte *buf,
 		     int buf_bit_offset, size_t bit_size,
 		     LONGEST bits_to_skip, size_t location_bit_limit,
 		     bool big_endian, int *optimized,
@@ -520,7 +520,7 @@ public:
 
      If the location is optimized out or unavailable, the OPTIMIZED and
      UNAVAILABLE outputs are set.  */
-  virtual void write (frame_info *frame, const gdb_byte *buf,
+  virtual void write (frame_info_ptr frame, const gdb_byte *buf,
 		      int buf_bit_offset, size_t bit_size,
 		      LONGEST bits_to_skip, size_t location_bit_limit,
 		      bool big_endian, int *optimized,
@@ -535,7 +535,7 @@ public:
      If SIZE is smaller then the type size, the value will be zero
      extended to the difference.  */
   virtual std::shared_ptr<dwarf_value> deref
-    (frame_info *frame, const property_addr_info *addr_info,
+    (frame_info_ptr frame, const property_addr_info *addr_info,
      struct type *type, size_t size = 0) const;
 
 /* Read data from the VALUE contents to the location specified by the
@@ -549,7 +549,7 @@ public:
    restriction.
 
    Note that some location types can be read without a FRAME context.  */
-  virtual void read_from_gdb_value (frame_info *frame, struct value *value,
+  virtual void read_from_gdb_value (frame_info_ptr frame, struct value *value,
 				    int value_bit_offset,
 				    LONGEST bits_to_skip, size_t bit_size,
 				    size_t location_bit_limit);
@@ -565,7 +565,7 @@ public:
    restriction.
 
    Note that some location types can be read without a FRAME context.  */
-  virtual void write_to_gdb_value (frame_info *frame, struct value *value,
+  virtual void write_to_gdb_value (frame_info_ptr frame, struct value *value,
 				   int value_bit_offset,
 				   LONGEST bits_to_skip, size_t bit_size,
 				   size_t location_bit_limit);
@@ -588,7 +588,7 @@ public:
 
      Indirecting is only performed on the implicit pointer location
      description parts of the location.  */
-  virtual value *indirect_implicit_ptr (frame_info *frame, struct type *type,
+  virtual value *indirect_implicit_ptr (frame_info_ptr frame, struct type *type,
 					LONGEST pointer_offset = 0,
 					LONGEST bit_offset = 0,
 					int bit_length = 0) const
@@ -604,7 +604,7 @@ public:
    location.  LOCATION_BIT_LIMIT is a maximum number of bits that
    location can hold, where value zero signifies that there is
    no such restriction.  */
-  virtual bool is_optimized_out (frame_info *frame, bool big_endian,
+  virtual bool is_optimized_out (frame_info_ptr frame, bool big_endian,
 				 LONGEST bits_to_skip, size_t bit_size,
 				 size_t location_bit_limit) const
   {
@@ -638,7 +638,7 @@ dwarf_location::slice (LONGEST bit_offset, LONGEST bit_size) const
 }
 
 std::shared_ptr<dwarf_value>
-dwarf_location::deref (frame_info *frame, const property_addr_info *addr_info,
+dwarf_location::deref (frame_info_ptr frame, const property_addr_info *addr_info,
 		       struct type *type, size_t size) const
 {
   bool big_endian = type_byte_order (type) == BFD_ENDIAN_BIG;
@@ -674,7 +674,7 @@ dwarf_location::deref (frame_info *frame, const property_addr_info *addr_info,
 }
 
 void
-dwarf_location::read_from_gdb_value (frame_info *frame, struct value *value,
+dwarf_location::read_from_gdb_value (frame_info_ptr frame, struct value *value,
 				     int value_bit_offset,
 				     LONGEST bits_to_skip, size_t bit_size,
 				     size_t location_bit_limit)
@@ -699,7 +699,7 @@ dwarf_location::read_from_gdb_value (frame_info *frame, struct value *value,
 }
 
 void
-dwarf_location::write_to_gdb_value (frame_info *frame, struct value *value,
+dwarf_location::write_to_gdb_value (frame_info_ptr frame, struct value *value,
 				    int value_bit_offset,
 				    LONGEST bits_to_skip, size_t bit_size,
 				    size_t location_bit_limit)
@@ -795,7 +795,7 @@ public:
     return std::dynamic_pointer_cast<dwarf_value> (shared_from_this ());
   }
 
-  value *to_gdb_value (frame_info *frame, struct type *type,
+  value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
 
@@ -838,7 +838,7 @@ dwarf_value::to_location (gdbarch *arch)
 }
 
 value *
-dwarf_value::to_gdb_value (frame_info *frame, struct type *type,
+dwarf_value::to_gdb_value (frame_info_ptr frame, struct type *type,
 			   struct type *subobj_type,
 			   LONGEST subobj_offset)
 {
@@ -869,7 +869,7 @@ public:
     return std::make_shared<dwarf_undefined> (*this);
   }
 
-  void read (frame_info *frame, gdb_byte *buf, int buf_bit_offset,
+  void read (frame_info_ptr frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
 	     bool big_endian, int *optimized, int *unavailable) const override
   {
@@ -877,7 +877,7 @@ public:
     *optimized = 1;
   }
 
-  void write (frame_info *frame, const gdb_byte *buf, int buf_bit_offset,
+  void write (frame_info_ptr frame, const gdb_byte *buf, int buf_bit_offset,
 	      size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
 	      bool big_endian, int *optimized, int *unavailable) const override
   {
@@ -885,7 +885,7 @@ public:
     *optimized = 1;
   }
 
-  value *to_gdb_value (frame_info *frame, struct type *type,
+  value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override
   {
@@ -899,7 +899,7 @@ public:
     return retval;
   }
 
-  bool is_optimized_out (frame_info *frame, bool big_endian,
+  bool is_optimized_out (frame_info_ptr frame, bool big_endian,
 			 LONGEST bits_to_skip, size_t bit_size,
 			 size_t location_bit_limit) const override
   {
@@ -940,22 +940,22 @@ public:
 
   std::shared_ptr<dwarf_value> to_value (struct type *type) override;
 
-  void read (frame_info *frame, gdb_byte *buf, int buf_bit_offset,
+  void read (frame_info_ptr frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip,
 	     size_t location_bit_limit, bool big_endian,
 	     int *optimized, int *unavailable) const override;
 
-  void write (frame_info *frame, const gdb_byte *buf,
+  void write (frame_info_ptr frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
 	      int *optimized, int *unavailable) const override;
 
-  std::shared_ptr<dwarf_value> deref (frame_info *frame,
+  std::shared_ptr<dwarf_value> deref (frame_info_ptr frame,
 				      const property_addr_info *addr_info,
 				      struct type *type,
 				      size_t size = 0) const override;
 
-  value *to_gdb_value (frame_info *frame, struct type *type,
+  value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
 
@@ -977,7 +977,7 @@ dwarf_memory::to_value (struct type *type)
 }
 
 void
-dwarf_memory::read (frame_info *frame, gdb_byte *buf,
+dwarf_memory::read (frame_info_ptr frame, gdb_byte *buf,
 		    int buf_bit_offset, size_t bit_size,
 		    LONGEST bits_to_skip, size_t location_bit_limit,
 		    bool big_endian, int *optimized, int *unavailable) const
@@ -1021,7 +1021,7 @@ dwarf_memory::read (frame_info *frame, gdb_byte *buf,
 }
 
 void
-dwarf_memory::write (frame_info *frame, const gdb_byte *buf,
+dwarf_memory::write (frame_info_ptr frame, const gdb_byte *buf,
 		     int buf_bit_offset, size_t bit_size,
 		     LONGEST bits_to_skip, size_t location_bit_limit,
 		     bool big_endian, int *optimized, int *unavailable) const
@@ -1081,7 +1081,7 @@ dwarf_memory::write (frame_info *frame, const gdb_byte *buf,
 }
 
 std::shared_ptr<dwarf_value>
-dwarf_memory::deref (frame_info *frame, const property_addr_info *addr_info,
+dwarf_memory::deref (frame_info_ptr frame, const property_addr_info *addr_info,
 		     struct type *type, size_t size) const
 {
   bool big_endian = type_byte_order (type) == BFD_ENDIAN_BIG;
@@ -1147,7 +1147,7 @@ dwarf_memory::deref (frame_info *frame, const property_addr_info *addr_info,
 }
 
 value *
-dwarf_memory::to_gdb_value (frame_info *frame, struct type *type,
+dwarf_memory::to_gdb_value (frame_info_ptr frame, struct type *type,
 			    struct type *subobj_type,
 			    LONGEST subobj_offset)
 {
@@ -1195,20 +1195,20 @@ public:
     return std::make_shared<dwarf_register> (*this);
   }
 
-  void read (frame_info *frame, gdb_byte *buf, int buf_bit_offset,
+  void read (frame_info_ptr frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
 	     bool big_endian, int *optimized, int *unavailable) const override;
 
-  void write (frame_info *frame, const gdb_byte *buf,
+  void write (frame_info_ptr frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
 	      int *optimized, int *unavailable) const override;
 
-  value *to_gdb_value (frame_info *frame, struct type *type,
+  value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
 
-  bool is_optimized_out (frame_info *frame, bool big_endian,
+  bool is_optimized_out (frame_info_ptr frame, bool big_endian,
 			 LONGEST bits_to_skip, size_t bit_size,
 			 size_t location_bit_limit) const override;
 
@@ -1222,7 +1222,7 @@ private:
 };
 
 void
-dwarf_register::read (frame_info *frame, gdb_byte *buf,
+dwarf_register::read (frame_info_ptr frame, gdb_byte *buf,
 		      int buf_bit_offset, size_t bit_size,
 		      LONGEST bits_to_skip, size_t location_bit_limit,
 		      bool big_endian, int *optimized, int *unavailable) const
@@ -1266,7 +1266,7 @@ dwarf_register::read (frame_info *frame, gdb_byte *buf,
 }
 
 void
-dwarf_register::write (frame_info *frame, const gdb_byte *buf,
+dwarf_register::write (frame_info_ptr frame, const gdb_byte *buf,
 		       int buf_bit_offset, size_t bit_size,
 		       LONGEST bits_to_skip, size_t location_bit_limit,
 		       bool big_endian, int *optimized, int *unavailable) const
@@ -1316,7 +1316,7 @@ dwarf_register::write (frame_info *frame, const gdb_byte *buf,
 }
 
 value *
-dwarf_register::to_gdb_value (frame_info *frame, struct type *type,
+dwarf_register::to_gdb_value (frame_info_ptr frame, struct type *type,
 			      struct type *subobj_type,
 			      LONGEST subobj_offset)
 {
@@ -1366,7 +1366,7 @@ dwarf_register::to_gdb_value (frame_info *frame, struct type *type,
 }
 
 bool
-dwarf_register::is_optimized_out (frame_info *frame, bool big_endian,
+dwarf_register::is_optimized_out (frame_info_ptr frame, bool big_endian,
 				  LONGEST bits_to_skip, size_t bit_size,
 				  size_t location_bit_limit) const
 {
@@ -1418,11 +1418,11 @@ public:
     return std::make_shared<dwarf_implicit> (*this);
   }
 
-  void read (frame_info *frame, gdb_byte *buf, int buf_bit_offset,
+  void read (frame_info_ptr frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
 	     bool big_endian, int *optimized, int *unavailable) const override;
 
-  void write (frame_info *frame, const gdb_byte *buf,
+  void write (frame_info_ptr frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size,
 	      LONGEST bits_to_skip, size_t location_bit_limit,
 	      bool big_endian, int* optimized, int* unavailable) const override
@@ -1431,7 +1431,7 @@ public:
     *unavailable = 0;
   }
 
-  value *to_gdb_value (frame_info *frame, struct type *type,
+  value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
 
@@ -1447,7 +1447,7 @@ private:
 };
 
 void
-dwarf_implicit::read (frame_info *frame, gdb_byte *buf,
+dwarf_implicit::read (frame_info_ptr frame, gdb_byte *buf,
 		      int buf_bit_offset, size_t bit_size,
 		      LONGEST bits_to_skip, size_t location_bit_limit,
 		      bool big_endian, int *optimized, int *unavailable) const
@@ -1486,7 +1486,7 @@ dwarf_implicit::read (frame_info *frame, gdb_byte *buf,
 }
 
 value *
-dwarf_implicit::to_gdb_value (frame_info *frame, struct type *type,
+dwarf_implicit::to_gdb_value (frame_info_ptr frame, struct type *type,
 			      struct type *subobj_type,
 			      LONGEST subobj_offset)
 {
@@ -1543,11 +1543,11 @@ public:
     return std::make_shared<dwarf_implicit_pointer> (*this);
   }
 
-  void read (frame_info *frame, gdb_byte *buf, int buf_bit_offset,
+  void read (frame_info_ptr frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
 	     bool big_endian, int *optimized, int *unavailable) const override;
 
-  void write (frame_info *frame, const gdb_byte *buf,
+  void write (frame_info_ptr frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
 	      int* optimized, int* unavailable) const override
@@ -1558,7 +1558,7 @@ public:
 
   /* Reading from and writing to an implicit pointer is not meaningful,
      so we just skip them here.  */
-  void read_from_gdb_value (frame_info *frame, struct value *value,
+  void read_from_gdb_value (frame_info_ptr frame, struct value *value,
 			    int value_bit_offset,
 			    LONGEST bits_to_skip, size_t bit_size,
 			    size_t location_bit_limit) override
@@ -1566,7 +1566,7 @@ public:
     mark_value_bits_optimized_out (value, bits_to_skip, bit_size);
   }
 
-  void write_to_gdb_value (frame_info *frame, struct value *value,
+  void write_to_gdb_value (frame_info_ptr frame, struct value *value,
 			   int value_bit_offset,
 			   LONGEST bits_to_skip, size_t bit_size,
 			   size_t location_bit_limit) override
@@ -1577,12 +1577,12 @@ public:
      return true;
   }
 
-  value *indirect_implicit_ptr (frame_info *frame, struct type *type,
+  value *indirect_implicit_ptr (frame_info_ptr frame, struct type *type,
 				LONGEST pointer_offset = 0,
 				LONGEST bit_offset = 0,
 				int bit_length = 0) const override;
 
-  value *to_gdb_value (frame_info *frame, struct type *type,
+  value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
 
@@ -1601,13 +1601,13 @@ private:
 };
 
 void
-dwarf_implicit_pointer::read (frame_info *frame, gdb_byte *buf,
+dwarf_implicit_pointer::read (frame_info_ptr frame, gdb_byte *buf,
 			      int buf_bit_offset, size_t bit_size,
                               LONGEST bits_to_skip, size_t location_bit_limit,
 			      bool big_endian, int *optimized,
 			      int *unavailable) const
 {
-  frame_info *actual_frame = frame;
+  frame_info_ptr actual_frame = frame;
   LONGEST total_bits_to_skip = bits_to_skip + m_bit_suboffset;
 
   if (actual_frame == nullptr)
@@ -1639,7 +1639,7 @@ dwarf_implicit_pointer::read (frame_info *frame, gdb_byte *buf,
 }
 
 value *
-dwarf_implicit_pointer::indirect_implicit_ptr (frame_info *frame,
+dwarf_implicit_pointer::indirect_implicit_ptr (frame_info_ptr frame,
 					       struct type *type,
 					       LONGEST pointer_offset,
 					       LONGEST bit_offset,
@@ -1650,7 +1650,7 @@ dwarf_implicit_pointer::indirect_implicit_ptr (frame_info *frame,
 }
 
 value *
-dwarf_implicit_pointer::to_gdb_value (frame_info *frame, struct type *type,
+dwarf_implicit_pointer::to_gdb_value (frame_info_ptr frame, struct type *type,
 				      struct type *subobj_type,
 				      LONGEST subobj_offset)
 {
@@ -1715,37 +1715,37 @@ public:
     return m_completed;
   };
 
-  void read (frame_info *frame, gdb_byte *buf, int buf_bit_offset,
+  void read (frame_info_ptr frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
 	     bool big_endian, int *optimized, int *unavailable) const override;
 
-  void write (frame_info *frame, const gdb_byte *buf,
+  void write (frame_info_ptr frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
 	      int *optimized, int *unavailable) const override;
 
-  void read_from_gdb_value (frame_info *frame, struct value *value,
+  void read_from_gdb_value (frame_info_ptr frame, struct value *value,
 			    int value_bit_offset,
 			    LONGEST bits_to_skip, size_t bit_size,
 			    size_t location_bit_limit) override;
 
-  void write_to_gdb_value (frame_info *frame, struct value *value,
+  void write_to_gdb_value (frame_info_ptr frame, struct value *value,
 			   int value_bit_offset,
 			   LONGEST bits_to_skip, size_t bit_size,
 			   size_t location_bit_limit) override;
 
   bool is_implicit_ptr_at (LONGEST bit_offset, int bit_length) const override;
 
-  value *indirect_implicit_ptr (frame_info *frame, struct type *type,
+  value *indirect_implicit_ptr (frame_info_ptr frame, struct type *type,
 				LONGEST pointer_offset = 0,
 				LONGEST bit_offset = 0,
 				int bit_length = 0) const override;
 
-  value *to_gdb_value (frame_info *frame, struct type *type,
+  value *to_gdb_value (frame_info_ptr frame, struct type *type,
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override;
 
-  bool is_optimized_out (frame_info *frame, bool big_endian,
+  bool is_optimized_out (frame_info_ptr frame, bool big_endian,
 			 LONGEST bits_to_skip, size_t bit_size,
 			 size_t location_bit_limit) const override;
 
@@ -1834,7 +1834,7 @@ dwarf_composite::slice (LONGEST bit_offset, LONGEST bit_size) const
 }
 
 void
-dwarf_composite::read (frame_info *frame, gdb_byte *buf,
+dwarf_composite::read (frame_info_ptr frame, gdb_byte *buf,
 		       int buf_bit_offset, size_t bit_size,
 		       LONGEST bits_to_skip, size_t location_bit_limit,
 		       bool big_endian, int *optimized, int *unavailable) const
@@ -1881,7 +1881,7 @@ dwarf_composite::read (frame_info *frame, gdb_byte *buf,
 }
 
 void
-dwarf_composite::write (frame_info *frame, const gdb_byte *buf,
+dwarf_composite::write (frame_info_ptr frame, const gdb_byte *buf,
 			int buf_bit_offset, size_t bit_size,
 			LONGEST bits_to_skip, size_t location_bit_limit,
 			bool big_endian, int *optimized,
@@ -1929,7 +1929,7 @@ dwarf_composite::write (frame_info *frame, const gdb_byte *buf,
 }
 
 void
-dwarf_composite::read_from_gdb_value (frame_info *frame, struct value *value,
+dwarf_composite::read_from_gdb_value (frame_info_ptr frame, struct value *value,
 				      int value_bit_offset,
 				      LONGEST bits_to_skip, size_t bit_size,
 				      size_t location_bit_limit)
@@ -1972,7 +1972,7 @@ dwarf_composite::read_from_gdb_value (frame_info *frame, struct value *value,
 }
 
 void
-dwarf_composite::write_to_gdb_value (frame_info *frame, struct value *value,
+dwarf_composite::write_to_gdb_value (frame_info_ptr frame, struct value *value,
 				     int value_bit_offset,
 				     LONGEST bits_to_skip, size_t bit_size,
 				     size_t location_bit_limit)
@@ -2051,7 +2051,7 @@ dwarf_composite::is_implicit_ptr_at (LONGEST bit_offset, int bit_length) const
 }
 
 value *
-dwarf_composite::indirect_implicit_ptr (frame_info *frame, struct type *type,
+dwarf_composite::indirect_implicit_ptr (frame_info_ptr frame, struct type *type,
 					LONGEST pointer_offset,
 					LONGEST bit_offset,
 					int bit_length) const
@@ -2086,7 +2086,7 @@ dwarf_composite::indirect_implicit_ptr (frame_info *frame, struct type *type,
 }
 
 value *
-dwarf_composite::to_gdb_value (frame_info *frame, struct type *type,
+dwarf_composite::to_gdb_value (frame_info_ptr frame, struct type *type,
 			       struct type *subobj_type,
 			       LONGEST subobj_offset)
 {
@@ -2126,7 +2126,7 @@ dwarf_composite::to_gdb_value (frame_info *frame, struct type *type,
 }
 
 bool
-dwarf_composite::is_optimized_out (frame_info *frame, bool big_endian,
+dwarf_composite::is_optimized_out (frame_info_ptr frame, bool big_endian,
 				   LONGEST bits_to_skip, size_t bit_size,
 				   size_t location_bit_limit) const
 {
@@ -2319,7 +2319,7 @@ rw_closure_value (value *v, value *from)
   else
     max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
 
-  frame_info *frame = closure->get_frame ();
+  frame_info_ptr frame = closure->get_frame ();
 
   if (frame == NULL)
     frame = frame_find_by_id (closure->get_frame_id ());
@@ -2366,7 +2366,7 @@ is_optimized_out_closure_value (value *v)
   else
     max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
 
-  frame_info *frame = closure->get_frame ();
+  frame_info_ptr frame = closure->get_frame ();
 
   if (frame == NULL)
     frame = frame_find_by_id (closure->get_frame_id ());
@@ -2425,7 +2425,7 @@ indirect_closure_value (value *value)
   if (value_bitsize (value))
     bit_offset += value_bitpos (value);
 
-  frame_info *frame = get_selected_frame (_("No frame selected."));
+  frame_info_ptr frame = get_selected_frame (_("No frame selected."));
 
   /* This is an offset requested by GDB, such as value subscripts.
      However, due to how synthetic pointers are implemented, this is
@@ -2459,7 +2459,7 @@ coerce_closure_ref (const value *value)
     {
       computed_closure *closure
 	= (computed_closure *) value_computed_closure (value);
-      frame_info *frame = get_selected_frame (_("No frame selected."));
+      frame_info_ptr frame = get_selected_frame (_("No frame selected."));
 
       return closure->get_location ()->indirect_implicit_ptr (frame, type);
     }
@@ -2561,7 +2561,7 @@ sect_variable_value (sect_offset sect_off,
     }
 
   struct type *type = lookup_pointer_type (die_type);
-  frame_info *frame = get_selected_frame (_("No frame selected."));
+  frame_info_ptr frame = get_selected_frame (_("No frame selected."));
   return indirect_synthetic_pointer (sect_off, 0, per_cu, per_objfile, frame,
 				     type, true);
 }
@@ -2589,7 +2589,7 @@ struct dwarf_expr_context
      can be specified to override the range of memory addresses with
      the passed in buffer.  */
   struct value *evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			  dwarf2_per_cu_data *per_cu, frame_info *frame,
+			  dwarf2_per_cu_data *per_cu, frame_info_ptr frame,
 			  std::vector<value *> *init_values,
 			  const property_addr_info *addr_info,
 			  struct type *type, struct type *subobj_type,
@@ -2611,7 +2611,7 @@ private:
   dwarf2_per_objfile *m_per_objfile;
 
   /* Frame information used for the evaluation.  */
-  frame_info *m_frame = nullptr;
+  frame_info_ptr m_frame = nullptr;
 
   /* Compilation unit used for the evaluation.  */
   dwarf2_per_cu_data *m_per_cu = nullptr;
@@ -2821,7 +2821,7 @@ dwarf_expr_context::dwarf_call (cu_offset die_cu_off)
 {
   ensure_have_per_cu (this->m_per_cu, "DW_OP_call");
 
-  frame_info *frame = this->m_frame;
+  frame_info_ptr frame = this->m_frame;
 
   auto get_pc_from_frame = [frame] ()
     {
@@ -2848,7 +2848,7 @@ dwarf_expr_context::push_dwarf_reg_entry_value
 
   dwarf2_per_cu_data *caller_per_cu;
   dwarf2_per_objfile *caller_per_objfile;
-  struct frame_info *caller_frame = get_prev_frame (this->m_frame);
+  frame_info_ptr caller_frame = get_prev_frame (this->m_frame);
   struct call_site_parameter *parameter
     = dwarf_expr_reg_to_entry_parameter (this->m_frame, kind, kind_u,
 					 &caller_per_cu,
@@ -2911,7 +2911,7 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 
 value *
 dwarf_expr_context::evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			      dwarf2_per_cu_data *per_cu, frame_info *frame,
+			      dwarf2_per_cu_data *per_cu, frame_info_ptr frame,
 			      std::vector<value *> *init_values,
 			      const property_addr_info *addr_info,
 			      struct type *type, struct type *subobj_type,
@@ -4455,7 +4455,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 value *
 dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
 		 dwarf2_per_objfile *per_objfile, dwarf2_per_cu_data *per_cu,
-		 frame_info *frame, int addr_size,
+		 frame_info_ptr frame, int addr_size,
 		 std::vector<value *> *init_values,
 		 const property_addr_info *addr_info,
 		 struct type *type, struct type *subobj_type,
