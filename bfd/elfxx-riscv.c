@@ -1047,6 +1047,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"g", "zicsr",	check_implicit_always},
   {"g", "zifencei",	check_implicit_always},
   {"m", "zmmul",	check_implicit_always},
+  {"h", "zicsr",	check_implicit_always},
   {"q", "d",		check_implicit_always},
   {"v", "d",		check_implicit_always},
   {"v", "zve64d",	check_implicit_always},
@@ -1096,6 +1097,10 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zks", "zbkx",	check_implicit_always},
   {"zks", "zksed",	check_implicit_always},
   {"zks", "zksh",	check_implicit_always},
+  {"smepmp", "zicsr",		check_implicit_always},
+  {"smstateen", "zicsr",	check_implicit_always},
+  {"sscofpmf", "zicsr",		check_implicit_always},
+  {"sstc", "zicsr",		check_implicit_always},
   {NULL, NULL, NULL}
 };
 
@@ -2440,6 +2445,12 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
     {
     case INSN_CLASS_I:
       return "i";
+    case INSN_CLASS_ZICBOM:
+      return "zicbom";
+    case INSN_CLASS_ZICBOP:
+      return "zicbop";
+    case INSN_CLASS_ZICBOZ:
+      return "zicboz";
     case INSN_CLASS_ZICSR:
       return "zicsr";
     case INSN_CLASS_ZIFENCEI:

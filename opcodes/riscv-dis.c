@@ -32,10 +32,15 @@
 #include <stdint.h>
 #include <ctype.h>
 
-static enum riscv_spec_class default_isa_spec = ISA_SPEC_CLASS_DRAFT - 1;
-static enum riscv_spec_class default_priv_spec = PRIV_SPEC_CLASS_NONE;
+/* Current XLEN for the disassembler.  */
+static unsigned xlen = 0;
 
-unsigned xlen = 0;
+/* Default ISA specification version (constant as of now).  */
+static enum riscv_spec_class default_isa_spec = ISA_SPEC_CLASS_DRAFT - 1;
+
+/* Default privileged specification
+   (as specified by the ELF attributes or the `priv-spec' option).  */
+static enum riscv_spec_class default_priv_spec = PRIV_SPEC_CLASS_NONE;
 
 static riscv_subset_list_t riscv_subsets;
 static riscv_parse_subset_t riscv_rps_dis =
@@ -59,27 +64,32 @@ struct riscv_private_data
 /* Used for mapping symbols.  */
 static int last_map_symbol = -1;
 static bfd_vma last_stop_offset = 0;
-enum riscv_seg_mstate last_map_state;
 
+/* Register names as used by the disassembler.  */
 static const char * const *riscv_gpr_names;
 static const char * const *riscv_fpr_names;
 
 /* If set, disassemble as most general instruction.  */
-static int no_aliases;
+static bool no_aliases = false;
+
+
+/* Set default RISC-V disassembler options.  */
 
 static void
 set_default_riscv_dis_options (void)
 {
   riscv_gpr_names = riscv_gpr_names_abi;
   riscv_fpr_names = riscv_fpr_names_abi;
-  no_aliases = 0;
+  no_aliases = false;
 }
+
+/* Parse RISC-V disassembler option (without arguments).  */
 
 static bool
 parse_riscv_dis_option_without_args (const char *option)
 {
   if (strcmp (option, "no-aliases") == 0)
-    no_aliases = 1;
+    no_aliases = true;
   else if (strcmp (option, "numeric") == 0)
     {
       riscv_gpr_names = riscv_gpr_names_numeric;
@@ -89,6 +99,8 @@ parse_riscv_dis_option_without_args (const char *option)
     return false;
   return true;
 }
+
+/* Parse RISC-V disassembler option (possibly with arguments).  */
 
 static void
 parse_riscv_dis_option (const char *option)
@@ -143,6 +155,8 @@ parse_riscv_dis_option (const char *option)
     }
 }
 
+/* Parse RISC-V disassembler options.  */
+
 static void
 parse_riscv_dis_options (const char *opts_in)
 {
@@ -169,6 +183,8 @@ arg_print (struct disassemble_info *info, unsigned long val,
   const char *s = val >= size || array[val] == NULL ? "unknown" : array[val];
   (*info->fprintf_styled_func) (info->stream, dis_style_text, "%s", s);
 }
+
+/* If we need to print an address, set its value and state.  */
 
 static void
 maybe_print_address (struct riscv_private_data *pd, int base_reg, int offset,
@@ -628,7 +644,7 @@ static int
 riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 {
   const struct riscv_opcode *op;
-  static bool init = 0;
+  static bool init = false;
   static const struct riscv_opcode *riscv_hash[OP_MASK_OP + 1];
   struct riscv_private_data *pd;
   int insnlen;
@@ -642,7 +658,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	if (!riscv_hash[OP_HASH_IDX (op->match)])
 	  riscv_hash[OP_HASH_IDX (op->match)] = op;
 
-      init = 1;
+      init = true;
     }
 
   if (info->private_data == NULL)
@@ -697,8 +713,8 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	  xlen = ehdr->e_ident[EI_CLASS] == ELFCLASS64 ? 64 : 32;
 	}
 
-      /* If arch has ZFINX flags, use gpr for disassemble.  */
-      if(riscv_subset_supports (&riscv_rps_dis, "zfinx"))
+      /* If arch has the Zfinx extension, replace FPR with GPR.  */
+      if (riscv_subset_supports (&riscv_rps_dis, "zfinx"))
 	riscv_fpr_names = riscv_gpr_names;
 
       for (; op->name; op++)
@@ -712,7 +728,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	  /* Is this instruction restricted to a certain value of XLEN?  */
 	  if ((op->xlen_requirement != 0) && (op->xlen_requirement != xlen))
 	    continue;
-
+	  /* Is this instruction supported by the current architecture?  */
 	  if (!riscv_multi_subset_supports (&riscv_rps_dis, op->insn_class))
 	    continue;
 
@@ -1024,8 +1040,6 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
     set_default_riscv_dis_options ();
 
   mstate = riscv_search_mapping_symbol (memaddr, info);
-  /* Save the last mapping state.  */
-  last_map_state = mstate;
 
   /* Set the size to dump.  */
   if (mstate == MAP_DATA
