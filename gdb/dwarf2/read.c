@@ -3104,7 +3104,7 @@ dwarf2_gdb_index::dump (struct objfile *objfile)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
-  mapped_index *index = (static_cast<mapped_index *>
+  mapped_index *index = (gdb::checked_static_cast<mapped_index *>
 			 (per_objfile->per_bfd->index_table.get ()));
   gdb_printf (".gdb_index: version %d\n", index->version);
   gdb_printf ("\n");
@@ -3157,8 +3157,8 @@ dwarf2_gdb_index::expand_matching_symbols
   const block_enum block_kind = global ? GLOBAL_BLOCK : STATIC_BLOCK;
 
   mapped_index &index
-    = (static_cast<mapped_index &>
-       (*per_objfile->per_bfd->index_table.get ()));
+    = *(gdb::checked_static_cast<mapped_index *>
+	(per_objfile->per_bfd->index_table.get ()));
 
   const char *match_name = name.ada ().lookup_name ().c_str ();
   auto matcher = [&] (const char *symname)
@@ -4007,8 +4007,8 @@ dw2_expand_marked_cus
   offset_type vec_len, vec_idx;
   bool global_seen = false;
   mapped_index &index
-    = (static_cast<mapped_index &>
-       (*per_objfile->per_bfd->index_table.get ()));
+    = *(gdb::checked_static_cast<mapped_index *>
+	(per_objfile->per_bfd->index_table.get ()));
 
   offset_view vec (index.constant_pool.slice (index.symbol_vec_index (idx)));
   vec_len = vec[0];
@@ -4227,8 +4227,8 @@ dwarf2_gdb_index::expand_symtabs_matching
     }
 
   mapped_index &index
-    = (static_cast<mapped_index &>
-       (*per_objfile->per_bfd->index_table.get ()));
+    = *(gdb::checked_static_cast<mapped_index *>
+	(per_objfile->per_bfd->index_table.get ()));
 
   bool result
     = dw2_expand_symtabs_matching_symbol (index, *lookup_name,
@@ -5210,8 +5210,8 @@ dwarf2_debug_names_index::expand_matching_symbols
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
   mapped_debug_names &map
-    = (static_cast<mapped_debug_names &>
-       (*per_objfile->per_bfd->index_table.get ()));
+    = *(gdb::checked_static_cast<mapped_debug_names *>
+	(per_objfile->per_bfd->index_table.get ()));
   const block_search_flags block_flags
     = global ? SEARCH_GLOBAL_BLOCK : SEARCH_STATIC_BLOCK;
 
@@ -5272,8 +5272,8 @@ dwarf2_debug_names_index::expand_symtabs_matching
     }
 
   mapped_debug_names &map
-    = (static_cast<mapped_debug_names &>
-       (*per_objfile->per_bfd->index_table.get ()));
+    = *(gdb::checked_static_cast<mapped_debug_names *>
+	(per_objfile->per_bfd->index_table.get ()));
 
   bool result
     = dw2_expand_symtabs_matching_symbol (map, *lookup_name,
@@ -18594,11 +18594,11 @@ dwarf2_per_cu_data *
 cooked_index_functions::find_per_cu (dwarf2_per_bfd *per_bfd,
 				     CORE_ADDR adjusted_pc)
 {
-  cooked_index_vector *table
-    = (static_cast<cooked_index_vector *>
-       (per_bfd->index_table.get ()));
-  if (table == nullptr)
+  if (per_bfd->index_table == nullptr)
     return nullptr;
+  cooked_index_vector *table
+    = (gdb::checked_static_cast<cooked_index_vector *>
+       (per_bfd->index_table.get ()));
   return table->lookup (adjusted_pc);
 }
 
@@ -18615,7 +18615,7 @@ cooked_index_functions::find_compunit_symtab_by_address
 
   CORE_ADDR baseaddr = objfile->data_section_offset ();
   cooked_index_vector *table
-    = (static_cast<cooked_index_vector *>
+    = (gdb::checked_static_cast<cooked_index_vector *>
        (per_objfile->per_bfd->index_table.get ()));
   dwarf2_per_cu_data *per_cu = table->lookup (address - baseaddr);
   if (per_cu == nullptr)
@@ -18643,7 +18643,7 @@ cooked_index_functions::expand_matching_symbols
     = lang->get_symbol_name_matcher (lookup_name);
 
   cooked_index_vector *table
-    = (static_cast<cooked_index_vector *>
+    = (gdb::checked_static_cast<cooked_index_vector *>
        (per_objfile->per_bfd->index_table.get ()));
   for (const cooked_index_entry *entry : table->all_entries ())
     {
@@ -18675,7 +18675,7 @@ cooked_index_functions::expand_symtabs_matching
     return true;
 
   cooked_index_vector *table
-    = (static_cast<cooked_index_vector *>
+    = (gdb::checked_static_cast<cooked_index_vector *>
        (per_objfile->per_bfd->index_table.get ()));
   table->wait ();
 
