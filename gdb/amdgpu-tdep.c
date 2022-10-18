@@ -1372,6 +1372,11 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       if (!inserted.second)
 	continue;
 
+      /* Avoid creating a user reggroup with the same name as some built-in
+	 reggroup, such as "general", "system", "vector", etc.  */
+      if (reggroup_find (gdbarch, name.get ()) != nullptr)
+	continue;
+
       /* Allocate the reggroup in the gdbarch.  */
       auto *group = reggroup_gdbarch_new (gdbarch, name.get (), USER_REGGROUP);
       if (!group)
