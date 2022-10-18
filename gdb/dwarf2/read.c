@@ -17999,11 +17999,6 @@ tag_can_have_linkage_name (enum dwarf_tag tag)
 {
   switch (tag)
     {
-      /* We include types here because an anonymous C++ type might
-	 have a name for linkage purposes.  */
-    case DW_TAG_class_type:
-    case DW_TAG_structure_type:
-    case DW_TAG_union_type:
     case DW_TAG_variable:
     case DW_TAG_subprogram:
       return true;
@@ -18240,7 +18235,6 @@ cooked_indexer::scan_attributes (dwarf2_per_cu_data *scanning_per_cu,
 
 	  if (new_reader->cu == reader->cu
 	      && new_info_ptr > watermark_ptr
-	      && maybe_defer != nullptr
 	      && *parent_entry == nullptr)
 	    *maybe_defer = form_addr (origin_offset, origin_is_dwz);
 	  else if (*parent_entry == nullptr)

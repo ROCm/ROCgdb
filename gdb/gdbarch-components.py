@@ -614,7 +614,7 @@ frame.
 """,
     type="struct frame_id",
     name="dummy_id",
-    params=[("frame_info_ptr ", "this_frame")],
+    params=[("frame_info_ptr", "this_frame")],
     predefault="default_dummy_id",
     invalid=False,
 )
@@ -711,7 +711,7 @@ Return true if the code of FRAME is writable.
 """,
     type="int",
     name="code_of_frame_writable",
-    params=[("frame_info_ptr ", "frame")],
+    params=[("frame_info_ptr", "frame")],
     predefault="default_code_of_frame_writable",
     invalid=False,
 )
@@ -721,7 +721,7 @@ Method(
     name="print_registers_info",
     params=[
         ("struct ui_file *", "file"),
-        ("frame_info_ptr ", "frame"),
+        ("frame_info_ptr", "frame"),
         ("int", "regnum"),
         ("int", "all"),
     ],
@@ -734,7 +734,7 @@ Method(
     name="print_float_info",
     params=[
         ("struct ui_file *", "file"),
-        ("frame_info_ptr ", "frame"),
+        ("frame_info_ptr", "frame"),
         ("const char *", "args"),
     ],
     predefault="default_print_float_info",
@@ -746,7 +746,7 @@ Method(
     name="print_vector_info",
     params=[
         ("struct ui_file *", "file"),
-        ("frame_info_ptr ", "frame"),
+        ("frame_info_ptr", "frame"),
         ("const char *", "args"),
     ],
     predicate=True,
@@ -790,7 +790,7 @@ FRAME corresponds to the longjmp frame.
 """,
     type="int",
     name="get_longjmp_target",
-    params=[("frame_info_ptr ", "frame"), ("CORE_ADDR *", "pc")],
+    params=[("frame_info_ptr", "frame"), ("CORE_ADDR *", "pc")],
     predicate=True,
     invalid=True,
 )
@@ -813,7 +813,7 @@ Function(
     type="int",
     name="register_to_value",
     params=[
-        ("frame_info_ptr ", "frame"),
+        ("frame_info_ptr", "frame"),
         ("int", "regnum"),
         ("struct type *", "type"),
         ("gdb_byte *", "buf"),
@@ -827,7 +827,7 @@ Function(
     type="void",
     name="value_to_register",
     params=[
-        ("frame_info_ptr ", "frame"),
+        ("frame_info_ptr", "frame"),
         ("int", "regnum"),
         ("struct type *", "type"),
         ("const gdb_byte *", "buf"),
@@ -1178,7 +1178,7 @@ Value(
 Method(
     type="CORE_ADDR",
     name="unwind_pc",
-    params=[("frame_info_ptr ", "next_frame")],
+    params=[("frame_info_ptr", "next_frame")],
     predefault="default_unwind_pc",
     invalid=False,
 )
@@ -1186,7 +1186,7 @@ Method(
 Method(
     type="CORE_ADDR",
     name="unwind_sp",
-    params=[("frame_info_ptr ", "next_frame")],
+    params=[("frame_info_ptr", "next_frame")],
     predefault="default_unwind_sp",
     invalid=False,
 )
@@ -1198,7 +1198,7 @@ frame-base.  Enable frame-base before frame-unwind.
 """,
     type="int",
     name="frame_num_args",
-    params=[("frame_info_ptr ", "frame")],
+    params=[("frame_info_ptr", "frame")],
     predicate=True,
     invalid=True,
 )
@@ -1373,7 +1373,7 @@ further single-step is needed before the instruction finishes.
 """,
     type="int",
     name="single_step_through_delay",
-    params=[("frame_info_ptr ", "frame")],
+    params=[("frame_info_ptr", "frame")],
     predicate=True,
     invalid=True,
 )
@@ -1393,7 +1393,7 @@ disassembler.  Perhaps objdump can handle it?
 Function(
     type="CORE_ADDR",
     name="skip_trampoline_code",
-    params=[("frame_info_ptr ", "frame"), ("CORE_ADDR", "pc")],
+    params=[("frame_info_ptr", "frame"), ("CORE_ADDR", "pc")],
     predefault="generic_skip_trampoline_code",
     invalid=False,
 )
@@ -1616,7 +1616,7 @@ Fetch the pointer to the ith function argument.
     type="CORE_ADDR",
     name="fetch_pointer_argument",
     params=[
-        ("frame_info_ptr ", "frame"),
+        ("frame_info_ptr", "frame"),
         ("int", "argi"),
         ("struct type *", "type"),
     ],
@@ -2777,7 +2777,7 @@ Return a string containing any flags for the given PC in the given FRAME.
 """,
     type="std::string",
     name="get_pc_address_flags",
-    params=[("frame_info_ptr ", "frame"), ("CORE_ADDR", "pc")],
+    params=[("frame_info_ptr", "frame"), ("CORE_ADDR", "pc")],
     predefault="default_get_pc_address_flags",
     invalid=False,
 )
