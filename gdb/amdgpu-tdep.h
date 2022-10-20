@@ -56,16 +56,13 @@ struct amdgpu_gdbarch_tdep : gdbarch_tdep_base
   gdb::unique_xmalloc_ptr<gdb_byte> breakpoint_instruction_bytes;
   size_t breakpoint_instruction_size;
 
-  /* A vector of register_ids indexed by their equivalent gdb regnum.  */
-  std::vector<amd_dbgapi_register_id_t> register_ids;
-  /* A vector of register_properties indexed by their equivalent regnum.  */
-  std::vector<amd_dbgapi_register_properties_t> register_properties;
-  /* A vector of GDB register numbers indexed by DWARF register number.
+  /* A vector of register_ids indexed by their equivalent gdb regnum.
 
-     Unused DWARF register numbers map to value -1. */
-  std::vector<int> dwarf_regnum_to_gdb_regnum;
-  /* A vector of register names indexed by their equivalent gdb regnum.  */
-  std::vector<std::string> register_names;
+     This is not to improve performance (calling into the amd-dbgapi is not
+     that costly) but to reduce log pollution when running with amd-dbgapi
+     logging enabled.  */
+  std::vector<amd_dbgapi_register_id_t> register_ids;
+
   /* A map of gdb regnums keyed by they equivalent register_id.  */
   std::unordered_map<amd_dbgapi_register_id_t, int, register_id_hash,
 		     register_id_equal_to>
@@ -81,6 +78,22 @@ struct amdgpu_gdbarch_tdep : gdbarch_tdep_base
      This information is queried from dbgapi and cached here as an
      optimization.  */
   std::vector<arch_addr_space> address_spaces;
+
+  /* The following vectors store information that we could easily obtain
+     on-demand from amd-dbgapi.  This is not so much to improve performance
+     (calling into the amd-dbgapi is not that costly) but to reduce log
+     pollution when running with amd-dbgapi logging enabled.  */
+
+  /* A vector of register_properties indexed by their equivalent regnum.  */
+  std::vector<amd_dbgapi_register_properties_t> register_properties;
+
+  /* A vector of GDB register numbers indexed by DWARF register number.
+
+     Unused DWARF register numbers map to value -1.  */
+  std::vector<int> dwarf_regnum_to_gdb_regnum;
+
+  /* A vector of register names indexed by their equivalent gdb regnum.  */
+  std::vector<std::string> register_names;
 };
 
 /* Return true if GDBARCH is of an AMDGPU architecture.  */
