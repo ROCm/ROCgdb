@@ -191,6 +191,8 @@ coff_swap_filehdr_in (bfd * abfd, void * src, void * dst)
 
 #ifdef COFF_IMAGE_WITH_PE
 # define coff_swap_filehdr_out _bfd_XXi_only_swap_filehdr_out
+#elif defined COFF_WITH_peAArch64
+# define coff_swap_filehdr_out _bfd_XX_only_swap_filehdr_out
 #elif defined COFF_WITH_pex64
 # define coff_swap_filehdr_out _bfd_pex64_only_swap_filehdr_out
 #elif defined COFF_WITH_pep
@@ -1400,7 +1402,7 @@ pe_bfd_read_buildid (bfd *abfd)
 	  */
 	  if (_bfd_XXi_slurp_codeview_record (abfd,
 					      (file_ptr) idd.PointerToRawData,
-					      idd.SizeOfData, cvinfo))
+					      idd.SizeOfData, cvinfo, NULL))
 	    {
 	      struct bfd_build_id* build_id = bfd_alloc (abfd,
 			 sizeof (struct bfd_build_id) + cvinfo->SignatureLength);

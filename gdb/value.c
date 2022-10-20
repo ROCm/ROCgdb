@@ -2269,7 +2269,7 @@ value_of_internalvar (struct gdbarch *gdbarch, struct internalvar *var)
       break;
 
     default:
-      internal_error (__FILE__, __LINE__, _("bad kind"));
+      internal_error (_("bad kind"));
     }
 
   /* Change the VALUE_LVAL to lval_internalvar so that future operations
@@ -2363,7 +2363,7 @@ set_internalvar_component (struct internalvar *var,
 
     default:
       /* We can never get a component of any other kind.  */
-      internal_error (__FILE__, __LINE__, _("set_internalvar_component"));
+      internal_error (_("set_internalvar_component"));
     }
 }
 
@@ -4023,8 +4023,7 @@ value_fetch_lazy_register (struct value *val)
       if (VALUE_LVAL (new_val) == lval_register
 	  && value_lazy (new_val)
 	  && VALUE_NEXT_FRAME_ID (new_val) == next_frame_id)
-	internal_error (__FILE__, __LINE__,
-			_("infinite loop while fetching a register"));
+	internal_error (_("infinite loop while fetching a register"));
     }
 
   /* Check if NEW_VALUE is big enough to cover
@@ -4127,7 +4126,7 @@ value_fetch_lazy (struct value *val)
 	   && value_computed_funcs (val)->read != NULL)
     value_computed_funcs (val)->read (val);
   else
-    internal_error (__FILE__, __LINE__, _("Unexpected lazy value type."));
+    internal_error (_("Unexpected lazy value type."));
 
   set_value_lazy (val, 0);
 }

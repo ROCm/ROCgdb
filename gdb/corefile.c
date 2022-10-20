@@ -175,8 +175,7 @@ memory_error_message (enum target_xfer_status err,
       return string_printf (_("Memory at address %s unavailable."),
 			    paspace_and_addr (gdbarch, memaddr).c_str ());
     default:
-      internal_error (__FILE__, __LINE__,
-		      "unhandled target_xfer_status: %s (%s)",
+      internal_error ("unhandled target_xfer_status: %s (%s)",
 		      target_xfer_status_to_string (err),
 		      plongest (err));
     }

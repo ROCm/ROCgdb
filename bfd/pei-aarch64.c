@@ -21,7 +21,7 @@
 #include "sysdep.h"
 #include "bfd.h"
 
-#define TARGET_SYM		aarch64_pei_vec
+#define TARGET_SYM		aarch64_pei_le_vec
 #define TARGET_NAME		"pei-aarch64-little"
 #define TARGET_ARCHITECTURE	bfd_arch_aarch64
 #define TARGET_PAGESIZE		4096

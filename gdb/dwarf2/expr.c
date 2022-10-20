@@ -1252,7 +1252,7 @@ dwarf_register::read (frame_info_ptr frame, gdb_byte *buf,
     frame = get_prev_frame_always (frame);
 
   if (frame == NULL)
-    internal_error (__FILE__, __LINE__, _("invalid frame information"));
+    internal_error (_("invalid frame information"));
 
   /* Can only read from a register on byte granularity so an
      additional buffer is required.  */
@@ -1282,7 +1282,7 @@ dwarf_register::write (frame_info_ptr frame, const gdb_byte *buf,
     frame = get_prev_frame_always (frame);
 
   if (frame == NULL)
-    internal_error (__FILE__, __LINE__, _("invalid frame information"));
+    internal_error (_("invalid frame information"));
 
   if (big_endian)
     {
@@ -1330,7 +1330,7 @@ dwarf_register::to_gdb_value (frame_info_ptr frame, struct type *type,
     frame = get_prev_frame_always (frame);
 
   if (frame == NULL)
-    internal_error (__FILE__, __LINE__, _("invalid frame information"));
+    internal_error (_("invalid frame information"));
 
   /* Construct the value.  */
   value *retval
@@ -2259,7 +2259,7 @@ copy_value_closure (const value *v)
   computed_closure *closure = ((computed_closure*) value_computed_closure (v));
 
   if (closure == nullptr)
-    internal_error (__FILE__, __LINE__, _("invalid closure type"));
+    internal_error (_("invalid closure type"));
 
   closure->incref ();
   return closure;
@@ -2271,7 +2271,7 @@ free_value_closure (value *v)
   computed_closure *closure = ((computed_closure*) value_computed_closure (v));
 
   if (closure == nullptr)
-    internal_error (__FILE__, __LINE__, _("invalid closure type"));
+    internal_error (_("invalid closure type"));
 
   closure->decref ();
 
@@ -2295,8 +2295,7 @@ rw_closure_value (value *v, value *from)
   if (from == NULL)
     {
       if (value_type (v) != value_enclosing_type (v))
-        internal_error (__FILE__, __LINE__,
-			_("Should not be able to create a lazy value with "
+        internal_error (_("Should not be able to create a lazy value with "
 			  "an enclosing type"));
     }
 
@@ -2350,8 +2349,7 @@ is_optimized_out_closure_value (value *v)
   auto location = closure->get_location ();
 
   if (value_type (v) != value_enclosing_type (v))
-    internal_error (__FILE__, __LINE__,
-		    _("Should not be able to create a lazy value with "
+    internal_error (_("Should not be able to create a lazy value with "
 		      "an enclosing type"));
 
   ULONGEST bits_to_skip = HOST_CHAR_BIT * value_offset (v);
@@ -2518,13 +2516,13 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
 	auto location = closure->get_location ()->clone ()->to_location (arch);
 
 	if (location == nullptr)
-	  internal_error (__FILE__, __LINE__, _("invalid closure type"));
+	  internal_error (_("invalid closure type"));
 
 	location->add_bit_offset (offset * HOST_CHAR_BIT);
 	return location;
       }
     default:
-      internal_error (__FILE__, __LINE__, _("invalid location type"));
+      internal_error (_("invalid location type"));
   }
 }
 
@@ -4001,8 +3999,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 		  = std::make_shared<dwarf_value> (result, address_type);
 		break;
 	      default:
-		internal_error (__FILE__, __LINE__,
-				_("Can't be reached."));
+		internal_error (_("Can't be reached."));
 	      }
 	    result_entry = op_result;
 	  }

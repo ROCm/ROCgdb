@@ -4902,7 +4902,7 @@ add_defn_to_vec (std::vector<struct block_symbol> &result,
    global symbols are searched.  */
 
 struct bound_minimal_symbol
-ada_lookup_simple_minsym (const char *name)
+ada_lookup_simple_minsym (const char *name, struct objfile *objfile)
 {
   struct bound_minimal_symbol result;
 
@@ -4912,19 +4912,23 @@ ada_lookup_simple_minsym (const char *name)
   symbol_name_matcher_ftype *match_name
     = ada_get_symbol_name_matcher (lookup_name);
 
-  for (objfile *objfile : current_program_space->objfiles ())
-    {
-      for (minimal_symbol *msymbol : objfile->msymbols ())
-	{
-	  if (match_name (msymbol->linkage_name (), lookup_name, NULL)
-	      && msymbol->type () != mst_solib_trampoline)
-	    {
-	      result.minsym = msymbol;
-	      result.objfile = objfile;
-	      break;
-	    }
-	}
-    }
+  gdbarch_iterate_over_objfiles_in_search_order
+    (objfile != NULL ? objfile->arch () : target_gdbarch (),
+     [&result, lookup_name, match_name] (struct objfile *obj)
+       {
+	 for (minimal_symbol *msymbol : obj->msymbols ())
+	   {
+	     if (match_name (msymbol->linkage_name (), lookup_name, nullptr)
+		 && msymbol->type () != mst_solib_trampoline)
+	       {
+		 result.minsym = msymbol;
+		 result.objfile = obj;
+		 return 1;
+	       }
+	   }
+
+	 return 0;
+       }, objfile);
 
   return result;
 }
@@ -12002,7 +12006,7 @@ ada_exception_name_addr_1 (enum ada_exception_catchpoint_kind ex)
 	break;
 
       default:
-	internal_error (__FILE__, __LINE__, _("unexpected catchpoint type"));
+	internal_error (_("unexpected catchpoint type"));
 	break;
     }
 
@@ -12472,7 +12476,7 @@ ada_catchpoint::print_one (bp_location **last_loc) const
 	break;
 
       default:
-	internal_error (__FILE__, __LINE__, _("unexpected catchpoint type"));
+	internal_error (_("unexpected catchpoint type"));
 	break;
     }
 
@@ -12526,7 +12530,7 @@ ada_catchpoint::print_mention () const
 	break;
 
       default:
-	internal_error (__FILE__, __LINE__, _("unexpected catchpoint type"));
+	internal_error (_("unexpected catchpoint type"));
 	break;
     }
 }
@@ -12558,7 +12562,7 @@ ada_catchpoint::print_recreate (struct ui_file *fp) const
 	break;
 
       default:
-	internal_error (__FILE__, __LINE__, _("unexpected catchpoint type"));
+	internal_error (_("unexpected catchpoint type"));
     }
   print_recreate_thread (fp);
 }
@@ -12673,8 +12677,7 @@ ada_exception_sym_name (enum ada_exception_catchpoint_kind ex)
 	return (data->exception_info->catch_handlers_sym);
 	break;
       default:
-	internal_error (__FILE__, __LINE__,
-			_("unexpected catchpoint kind (%d)"), ex);
+	internal_error (_("unexpected catchpoint kind (%d)"), ex);
     }
 }
 
@@ -13021,15 +13024,29 @@ ada_add_standard_exceptions (compiled_regex *preg,
     {
       if (preg == NULL || preg->exec (name, 0, NULL, 0) == 0)
 	{
-	  struct bound_minimal_symbol msymbol
-	    = ada_lookup_simple_minsym (name);
+	  symbol_name_match_type match_type = name_match_type_from_name (name);
+	  lookup_name_info lookup_name (name, match_type);
 
-	  if (msymbol.minsym != NULL)
+	  symbol_name_matcher_ftype *match_name
+	    = ada_get_symbol_name_matcher (lookup_name);
+
+	  /* Iterate over all objfiles irrespective of scope or linker
+	     namespaces so we get all exceptions anywhere in the
+	     progspace.  */
+	  for (objfile *objfile : current_program_space->objfiles ())
 	    {
-	      struct ada_exc_info info
-		= {name, msymbol.value_address ()};
+	      for (minimal_symbol *msymbol : objfile->msymbols ())
+		{
+		  if (match_name (msymbol->linkage_name (), lookup_name,
+				  nullptr)
+		      && msymbol->type () != mst_solib_trampoline)
+		    {
+		      ada_exc_info info
+			= {name, msymbol->value_address (objfile)};
 
-	      exceptions->push_back (info);
+		      exceptions->push_back (info);
+		    }
+		}
 	    }
 	}
     }
@@ -13127,6 +13144,8 @@ ada_add_global_exceptions (compiled_regex *preg,
 			   SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
 			   VARIABLES_DOMAIN);
 
+  /* Iterate over all objfiles irrespective of scope or linker namespaces
+     so we get all exceptions anywhere in the progspace.  */
   for (objfile *objfile : current_program_space->objfiles ())
     {
       for (compunit_symtab *s : objfile->compunits ())
