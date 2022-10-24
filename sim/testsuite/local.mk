@@ -40,7 +40,9 @@ DO_RUNTEST = \
 
 # Ignore dirs that only contain configuration settings.
 check/./config/%.exp: ; @true
+check/config/%.exp: ; @true
 check/./lib/%.exp: ; @true
+check/lib/%.exp: ; @true
 
 check/%.exp:
 	$(AM_V_at)mkdir -p testsuite/$*
@@ -49,7 +51,7 @@ check/%.exp:
 check-DEJAGNU-parallel:
 	$(AM_V_at)( \
 	$(MAKE) -k \
-	  `cd $(srcdir)/testsuite && find . -name '*.exp' -printf 'check/%p '`; \
+	  `cd $(srcdir)/testsuite && find . -name '*.exp' -printf 'check/%P '`; \
 	ret=$$?; \
 	$(SHELL) $(srcroot)/contrib/dg-extract-results.sh \
 	  `find testsuite/ -maxdepth 4 -name testrun.sum | sort` > testrun.sum; \
