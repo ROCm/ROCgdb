@@ -549,7 +549,7 @@ make_mapping_symbol (enum riscv_seg_mstate state,
 void
 riscv_mapping_state (enum riscv_seg_mstate to_state,
 		     int max_chars,
-		     bool frag_align_code)
+		     bool fr_align_code)
 {
   enum riscv_seg_mstate from_state =
 	seg_info (now_seg)->tc_segment_info_data.map_state;
@@ -574,7 +574,7 @@ riscv_mapping_state (enum riscv_seg_mstate to_state,
     }
   else if (seg_arch_symbol != 0
 	   && to_state == MAP_INSN
-	   && !frag_align_code
+	   && !fr_align_code
 	   && strcmp (riscv_rps_as.subset_list->arch_str,
 		      S_GET_NAME (seg_arch_symbol) + 2) != 0)
     {
@@ -1194,7 +1194,8 @@ arg_lookup (char **s, const char *const *array, size_t size, unsigned *regnop)
 
 /* For consistency checking, verify that all bits are specified either
    by the match/mask part of the instruction definition, or by the
-   operand list. The `length` could be 0, 4 or 8, 0 for auto detection.  */
+   operand list. The `length` could be the actual instruction length or
+   0 for auto-detection.  */
 
 static bool
 validate_riscv_insn (const struct riscv_opcode *opc, int length)
@@ -1205,11 +1206,13 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
   insn_t required_bits;
 
   if (length == 0)
-    insn_width = 8 * riscv_insn_length (opc->match);
-  else
-    insn_width = 8 * length;
+    length = riscv_insn_length (opc->match);
+  /* We don't support instructions longer than 64-bits yet.  */
+  if (length > 8)
+    length = 8;
+  insn_width = 8 * length;
 
-  required_bits = ~0ULL >> (64 - insn_width);
+  required_bits = ((insn_t)~0ULL) >> (64 - insn_width);
 
   if ((used_bits & opc->match) != (opc->match & required_bits))
     {
@@ -1395,8 +1398,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
   if (used_bits != required_bits)
     {
       as_bad (_("internal: bad RISC-V opcode "
-		"(bits 0x%lx undefined): %s %s"),
-	      ~(unsigned long)(used_bits & required_bits),
+		"(bits %#llx undefined or invalid): %s %s"),
+	      (unsigned long long)(used_bits ^ required_bits),
 	      opc->name, opc->args);
       return false;
     }
@@ -3540,7 +3543,7 @@ md_assemble (char *str)
        return;
     }
 
-  riscv_mapping_state (MAP_INSN, 0, 0/* frag_align_code */);
+  riscv_mapping_state (MAP_INSN, 0, false/* fr_align_code */);
 
   const struct riscv_ip_error error = riscv_ip (str, &insn, &imm_expr,
 						&imm_reloc, op_hash);
@@ -4219,7 +4222,7 @@ riscv_frag_align_code (int n)
   fix_new_exp (frag_now, nops - frag_now->fr_literal, 0,
 	       &ex, false, BFD_RELOC_RISCV_ALIGN);
 
-  riscv_mapping_state (MAP_INSN, worst_case_bytes, 1/* frag_align_code */);
+  riscv_mapping_state (MAP_INSN, worst_case_bytes, true/* fr_align_code */);
 
   /* We need to start a new frag after the alignment which may be removed by
      the linker, to prevent the assembler from computing static offsets.
@@ -4293,10 +4296,10 @@ riscv_init_frag (fragS * fragP, int max_chars)
     case rs_fill:
     case rs_align:
     case rs_align_test:
-      riscv_mapping_state (MAP_DATA, max_chars, 0/* frag_align_code */);
+      riscv_mapping_state (MAP_DATA, max_chars, false/* fr_align_code */);
       break;
     case rs_align_code:
-      riscv_mapping_state (MAP_INSN, max_chars, 1/* frag_align_code */);
+      riscv_mapping_state (MAP_INSN, max_chars, true/* fr_align_code */);
       break;
     default:
       break;
@@ -4570,7 +4573,7 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   save_c = *input_line_pointer;
   *input_line_pointer = '\0';
 
-  riscv_mapping_state (MAP_INSN, 0, 0/* frag_align_code */);
+  riscv_mapping_state (MAP_INSN, 0, false/* fr_align_code */);
 
   struct riscv_ip_error error = riscv_ip (str, &insn, &imm_expr,
 				&imm_reloc, insn_type_hash);
