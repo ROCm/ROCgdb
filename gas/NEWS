@@ -4,6 +4,7 @@
 
 * gas now supports --compress-debug-sections=zstd to compress
   debug sections with zstd.
+
 * Add --enable-default-compressed-debug-sections-algorithm={zlib,zstd}
   that selects the default compression algorithm
   for --enable-compressed-debug-sections.
@@ -12,6 +13,8 @@
   XTheadCmo, XTheadCondMov, XTheadFMemIdx, XTheadMemIdx, XTheadMemPair,
   XTheadMac, and XTheadSync) from version 2.0 of the T-Head ISA manual, which
   are implemented in the Allwinner D1.
+
+* Add support for the RISC-V Zawrs extension, version 1.0-rc4.
 
 Changes in 2.39:
 
