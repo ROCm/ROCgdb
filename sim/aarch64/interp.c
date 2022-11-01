@@ -171,7 +171,7 @@ sim_create_inferior (SIM_DESC sd, struct bfd *abfd,
 /* Read the LENGTH bytes at BUF as a little-endian value.  */
 
 static bfd_vma
-get_le (unsigned char *buf, unsigned int length)
+get_le (const unsigned char *buf, unsigned int length)
 {
   bfd_vma acc = 0;
 
@@ -257,7 +257,7 @@ aarch64_reg_get (SIM_CPU *cpu, int regno, unsigned char *buf, int length)
 }
 
 static int
-aarch64_reg_set (SIM_CPU *cpu, int regno, unsigned char *buf, int length)
+aarch64_reg_set (SIM_CPU *cpu, int regno, const unsigned char *buf, int length)
 {
   size_t size;
   bfd_vma val;

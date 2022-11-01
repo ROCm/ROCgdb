@@ -245,6 +245,8 @@ static initializer cpu_flag_init[] =
     "CPU_AVX512F_FLAGS|CpuAVX512_BF16" },
   { "CPU_AVX512_FP16_FLAGS",
     "CPU_AVX512BW_FLAGS|CpuAVX512_FP16" },
+  { "CPU_PREFETCHI_FLAGS",
+    "CpuPREFETCHI"},
   { "CPU_IAMCU_FLAGS",
     "Cpu186|Cpu286|Cpu386|Cpu486|Cpu586|CpuIAMCU" },
   { "CPU_ADX_FLAGS",
@@ -537,8 +539,6 @@ static initializer operand_type_init[] =
     "Imm32|Imm32S|Imm64|Disp32" },
   { "OPERAND_TYPE_IMM32_32S_64_DISP32_64",
     "Imm32|Imm32S|Imm64|Disp32|Disp64" },
-  { "OPERAND_TYPE_ANYIMM",
-    "Imm1|Imm8|Imm8S|Imm16|Imm32|Imm32S|Imm64" },
 };
 
 typedef struct bitfield
@@ -642,6 +642,7 @@ static bitfield cpu_flags[] =
   BITFIELD (CpuTDX),
   BITFIELD (CpuAVX_VNNI),
   BITFIELD (CpuAVX512_FP16),
+  BITFIELD (CpuPREFETCHI),
   BITFIELD (CpuMWAITX),
   BITFIELD (CpuCLZERO),
   BITFIELD (CpuOSPKE),

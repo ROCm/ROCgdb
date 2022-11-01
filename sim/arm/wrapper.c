@@ -153,15 +153,16 @@ ARMul_ConsolePrint (ARMul_State * state,
 int
 sim_write (SIM_DESC sd ATTRIBUTE_UNUSED,
 	   SIM_ADDR addr,
-	   const unsigned char * buffer,
+	   const void * buffer,
 	   int size)
 {
   int i;
+  const unsigned char * data = buffer;
 
   init ();
 
   for (i = 0; i < size; i++)
-    ARMul_SafeWriteByte (state, addr + i, buffer[i]);
+    ARMul_SafeWriteByte (state, addr + i, data[i]);
 
   return size;
 }
@@ -169,15 +170,16 @@ sim_write (SIM_DESC sd ATTRIBUTE_UNUSED,
 int
 sim_read (SIM_DESC sd ATTRIBUTE_UNUSED,
 	  SIM_ADDR addr,
-	  unsigned char * buffer,
+	  void * buffer,
 	  int size)
 {
   int i;
+  unsigned char * data = buffer;
 
   init ();
 
   for (i = 0; i < size; i++)
-    buffer[i] = ARMul_SafeReadByte (state, addr + i);
+    data[i] = ARMul_SafeReadByte (state, addr + i);
 
   return size;
 }
@@ -395,7 +397,7 @@ sim_create_inferior (SIM_DESC sd ATTRIBUTE_UNUSED,
 }
 
 static int
-frommem (struct ARMul_State *state, unsigned char *memory)
+frommem (struct ARMul_State *state, const unsigned char *memory)
 {
   if (state->bigendSig == HIGH)
     return (memory[0] << 24) | (memory[1] << 16)
@@ -427,7 +429,7 @@ tomem (struct ARMul_State *state,
 }
 
 static int
-arm_reg_store (SIM_CPU *cpu, int rn, unsigned char *memory, int length)
+arm_reg_store (SIM_CPU *cpu, int rn, const unsigned char *memory, int length)
 {
   init ();
 

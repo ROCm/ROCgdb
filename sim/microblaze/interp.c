@@ -38,7 +38,7 @@
 #define target_big_endian (CURRENT_TARGET_BYTE_ORDER == BFD_ENDIAN_BIG)
 
 static unsigned long
-microblaze_extract_unsigned_integer (unsigned char *addr, int len)
+microblaze_extract_unsigned_integer (const unsigned char *addr, int len)
 {
   unsigned long retval;
   unsigned char *p;
@@ -321,7 +321,7 @@ sim_engine_run (SIM_DESC sd,
 }
 
 static int
-microblaze_reg_store (SIM_CPU *cpu, int rn, unsigned char *memory, int length)
+microblaze_reg_store (SIM_CPU *cpu, int rn, const unsigned char *memory, int length)
 {
   if (rn < NUM_REGS + NUM_SPECIAL && rn >= 0)
     {

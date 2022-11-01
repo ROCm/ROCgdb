@@ -159,7 +159,7 @@ sim_create_inferior (SIM_DESC sd, struct bfd * abfd,
 }
 
 int
-sim_read (SIM_DESC sd, SIM_ADDR mem, unsigned char *buf, int length)
+sim_read (SIM_DESC sd, SIM_ADDR mem, void *buf, int length)
 {
   check_desc (sd);
 
@@ -172,7 +172,7 @@ sim_read (SIM_DESC sd, SIM_ADDR mem, unsigned char *buf, int length)
 }
 
 int
-sim_write (SIM_DESC sd, SIM_ADDR mem, const unsigned char *buf, int length)
+sim_write (SIM_DESC sd, SIM_ADDR mem, const void *buf, int length)
 {
   check_desc (sd);
 
@@ -184,7 +184,7 @@ sim_write (SIM_DESC sd, SIM_ADDR mem, const unsigned char *buf, int length)
 
 /* Read the LENGTH bytes at BUF as an little-endian value.  */
 static DI
-get_le (unsigned char *buf, int length)
+get_le (const unsigned char *buf, int length)
 {
   DI acc = 0;
   while (--length >= 0)
@@ -403,7 +403,7 @@ sim_fetch_register (SIM_DESC sd, int regno, unsigned char *buf, int length)
 }
 
 int
-sim_store_register (SIM_DESC sd, int regno, unsigned char *buf, int length)
+sim_store_register (SIM_DESC sd, int regno, const unsigned char *buf, int length)
 {
   size_t size;
 

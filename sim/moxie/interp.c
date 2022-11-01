@@ -57,7 +57,7 @@ typedef unsigned int uword;
      + (sim_core_read_aligned_1 (scpu, cia, read_map, addr+1))) << 16) >> 16)
 
 static unsigned long
-moxie_extract_unsigned_integer (unsigned char *addr, int len)
+moxie_extract_unsigned_integer (const unsigned char *addr, int len)
 {
   unsigned long retval;
   unsigned char * p;
@@ -1132,7 +1132,7 @@ sim_engine_run (SIM_DESC sd,
 }
 
 static int
-moxie_reg_store (SIM_CPU *scpu, int rn, unsigned char *memory, int length)
+moxie_reg_store (SIM_CPU *scpu, int rn, const unsigned char *memory, int length)
 {
   if (rn < NUM_MOXIE_REGS && rn >= 0)
     {

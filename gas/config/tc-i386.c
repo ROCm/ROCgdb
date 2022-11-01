@@ -1095,6 +1095,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (uintr, UINTR, ANY_UINTR, false),
   SUBARCH (hreset, HRESET, ANY_HRESET, false),
   SUBARCH (avx512_fp16, AVX512_FP16, ANY_AVX512_FP16, false),
+  SUBARCH (prefetchi, PREFETCHI, PREFETCHI, false),
 };
 
 #undef SUBARCH
@@ -1906,7 +1907,6 @@ operand_type_xor (i386_operand_type x, i386_operand_type y)
 
 static const i386_operand_type disp16_32 = OPERAND_TYPE_DISP16_32;
 static const i386_operand_type anydisp = OPERAND_TYPE_ANYDISP;
-static const i386_operand_type anyimm = OPERAND_TYPE_ANYIMM;
 static const i386_operand_type regxmm = OPERAND_TYPE_REGXMM;
 static const i386_operand_type imm8 = OPERAND_TYPE_IMM8;
 static const i386_operand_type imm8s = OPERAND_TYPE_IMM8S;
@@ -4496,9 +4496,8 @@ load_insn_p (void)
 
   if (!any_vex_p)
     {
-      /* Anysize insns: lea, invlpg, clflush, prefetchnta, prefetcht0,
-	 prefetcht1, prefetcht2, prefetchtw, bndmk, bndcl, bndcu, bndcn,
-	 bndstx, bndldx, prefetchwt1, clflushopt, clwb, cldemote.  */
+      /* Anysize insns: lea, invlpg, clflush, prefetch*, bndmk, bndcl, bndcu,
+	 bndcn, bndstx, bndldx, clflushopt, clwb, cldemote.  */
       if (i.tm.opcode_modifier.anysize)
 	return 0;
 
@@ -5032,6 +5031,11 @@ md_assemble (char *line)
 
   if (!process_suffix ())
     return;
+
+  /* Check if IP-relative addressing requirements can be satisfied.  */
+  if (i.tm.cpu_flags.bitfield.cpuprefetchi
+      && !(i.base_reg && i.base_reg->reg_num == RegIP))
+    as_warn (_("'%s' only supports RIP-relative address"), i.tm.name);
 
   /* Update operand types and check extended states.  */
   for (j = 0; j < i.operands; j++)
@@ -5812,13 +5816,6 @@ optimize_imm (void)
 	      const insn_template *t = current_templates->start;
 
 	      operand_type_set (&mask, 0);
-	      allowed = t->operand_types[op];
-
-	      while (++t < current_templates->end)
-		{
-		  allowed = operand_type_and (allowed, anyimm);
-		  allowed = operand_type_or (allowed, t->operand_types[op]);
-		}
 	      switch (guess_suffix)
 		{
 		case QWORD_MNEM_SUFFIX:
@@ -5837,7 +5834,14 @@ optimize_imm (void)
 		default:
 		  break;
 		}
-	      allowed = operand_type_and (mask, allowed);
+
+	      allowed = operand_type_and (t->operand_types[op], mask);
+	      while (++t < current_templates->end)
+		{
+		  allowed = operand_type_or (allowed, t->operand_types[op]);
+		  allowed = operand_type_and (allowed, mask);
+		}
+
 	      if (!operand_type_all_zero (&allowed))
 		i.types[op] = operand_type_and (i.types[op], mask);
 	    }

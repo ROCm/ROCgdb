@@ -170,14 +170,14 @@ SIM_RC sim_create_inferior (SIM_DESC sd, struct bfd *abfd,
    at virtual address MEM and store in BUF.  Result is number of bytes
    read, or zero if error.  */
 
-int sim_read (SIM_DESC sd, SIM_ADDR mem, unsigned char *buf, int length);
+int sim_read (SIM_DESC sd, SIM_ADDR mem, void *buf, int length);
 
 
 /* Store LENGTH bytes from BUF into the simulated program's
    memory. Store bytes starting at virtual address MEM. Result is
    number of bytes write, or zero if error.  */
 
-int sim_write (SIM_DESC sd, SIM_ADDR mem, const unsigned char *buf, int length);
+int sim_write (SIM_DESC sd, SIM_ADDR mem, const void *buf, int length);
 
 
 /* Fetch register REGNO storing its raw (target endian) value in the
@@ -203,7 +203,8 @@ int sim_fetch_register (SIM_DESC sd, int regno, unsigned char *buf, int length);
    Return a LENGTH of 0 to indicate the register was not updated
    but no error has occurred. */
 
-int sim_store_register (SIM_DESC sd, int regno, unsigned char *buf, int length);
+int sim_store_register (SIM_DESC sd, int regno, const unsigned char *buf,
+			int length);
 
 
 /* Print whatever statistics the simulator has collected.

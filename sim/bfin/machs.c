@@ -1758,7 +1758,7 @@ bfin_model_init (SIM_CPU *cpu)
 }
 
 static bu32
-bfin_extract_unsigned_integer (unsigned char *addr, int len)
+bfin_extract_unsigned_integer (const unsigned char *addr, int len)
 {
   bu32 retval;
   unsigned char * p;
@@ -1881,7 +1881,7 @@ bfin_reg_fetch (SIM_CPU *cpu, int rn, unsigned char *buf, int len)
 }
 
 static int
-bfin_reg_store (SIM_CPU *cpu, int rn, unsigned char *buf, int len)
+bfin_reg_store (SIM_CPU *cpu, int rn, const unsigned char *buf, int len)
 {
   bu32 value, *reg;
 

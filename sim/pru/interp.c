@@ -45,12 +45,12 @@ enum {
 
 /* Extract (from PRU endianess) and return an integer in HOST's endianness.  */
 static uint32_t
-pru_extract_unsigned_integer (uint8_t *addr, size_t len)
+pru_extract_unsigned_integer (const uint8_t *addr, size_t len)
 {
   uint32_t retval;
-  uint8_t *p;
-  uint8_t *startaddr = addr;
-  uint8_t *endaddr = startaddr + len;
+  const uint8_t *p;
+  const uint8_t *startaddr = addr;
+  const uint8_t *endaddr = startaddr + len;
 
   /* Start at the most significant end of the integer, and work towards
      the least significant.  */
@@ -650,7 +650,7 @@ pru_pc_set (sim_cpu *cpu, sim_cia pc)
 
 /* Implement callback for standard CPU_REG_STORE routine.  */
 static int
-pru_store_register (SIM_CPU *cpu, int rn, unsigned char *memory, int length)
+pru_store_register (SIM_CPU *cpu, int rn, const unsigned char *memory, int length)
 {
   if (rn < NUM_REGS && rn >= 0)
     {
