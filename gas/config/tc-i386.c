@@ -1096,6 +1096,11 @@ static const arch_entry cpu_arch[] =
   SUBARCH (hreset, HRESET, ANY_HRESET, false),
   SUBARCH (avx512_fp16, AVX512_FP16, ANY_AVX512_FP16, false),
   SUBARCH (prefetchi, PREFETCHI, PREFETCHI, false),
+  SUBARCH (avx_ifma, AVX_IFMA, ANY_AVX_IFMA, false),
+  SUBARCH (avx_vnni_int8, AVX_VNNI_INT8, ANY_AVX_VNNI_INT8, false),
+  SUBARCH (cmpccxadd, CMPCCXADD, ANY_CMPCCXADD, false),
+  SUBARCH (wrmsrns, WRMSRNS, ANY_WRMSRNS, false),
+  SUBARCH (msrlist, MSRLIST, ANY_MSRLIST, false),
 };
 
 #undef SUBARCH
@@ -1616,6 +1621,10 @@ cpu_flags_all_zero (const union i386_cpu_flags *x)
 {
   switch (ARRAY_SIZE(x->array))
     {
+    case 5:
+      if (x->array[4])
+	return 0;
+      /* Fall through.  */
     case 4:
       if (x->array[3])
 	return 0;
@@ -1641,6 +1650,10 @@ cpu_flags_equal (const union i386_cpu_flags *x,
 {
   switch (ARRAY_SIZE(x->array))
     {
+    case 5:
+      if (x->array[4] != y->array[4])
+	return 0;
+      /* Fall through.  */
     case 4:
       if (x->array[3] != y->array[3])
 	return 0;
@@ -1673,6 +1686,9 @@ cpu_flags_and (i386_cpu_flags x, i386_cpu_flags y)
 {
   switch (ARRAY_SIZE (x.array))
     {
+    case 5:
+      x.array [4] &= y.array [4];
+      /* Fall through.  */
     case 4:
       x.array [3] &= y.array [3];
       /* Fall through.  */
@@ -1696,6 +1712,9 @@ cpu_flags_or (i386_cpu_flags x, i386_cpu_flags y)
 {
   switch (ARRAY_SIZE (x.array))
     {
+    case 5:
+      x.array [4] |= y.array [4];
+      /* Fall through.  */
     case 4:
       x.array [3] |= y.array [3];
       /* Fall through.  */
@@ -1719,6 +1738,9 @@ cpu_flags_and_not (i386_cpu_flags x, i386_cpu_flags y)
 {
   switch (ARRAY_SIZE (x.array))
     {
+    case 5:
+      x.array [4] &= ~y.array [4];
+      /* Fall through.  */
     case 4:
       x.array [3] &= ~y.array [3];
       /* Fall through.  */
@@ -8547,7 +8569,7 @@ build_modrm_byte (void)
 		 source operand is encoded in VEX prefix. */
 	      gas_assert (mem != (unsigned int) ~0);
 
-	      if (op > mem)
+	      if (op > mem || i.tm.cpu_flags.bitfield.cpucmpccxadd)
 		{
 		  vex_reg = op++;
 		  gas_assert (op < i.operands);

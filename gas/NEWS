@@ -1,5 +1,15 @@
 -*- text -*-
 
+* Add support for Intel MSRLIST instructions.
+
+* Add support for Intel WRMSRNS instructions.
+
+* Add support for Intel CMPccXADD instructions.
+
+* Add support for Intel AVX-VNNI-INT8 instructions.
+
+* Add support for Intel AVX-IFMA instructions.
+
 * Add support for Intel PREFETCHI instructions.
 
 * Add support for Intel AMX-FP16 instructions.
