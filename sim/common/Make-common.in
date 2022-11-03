@@ -206,10 +206,10 @@ CONFIG_CFLAGS = \
 	$(SIM_WARN_CFLAGS) \
 	$(SIM_WERROR_CFLAGS) \
 	$(SIM_HARDWARE)
-CSEARCH = -I. -I$(srcdir) -I../common -I$(srccom) \
-  -I../../include -I$(srcroot)/include \
+CSEARCH = -I. -I$(srcdir) -I$(srccom) \
+  -I$(srcroot)/include \
   -I../../bfd -I$(srcroot)/bfd \
-  -I../../opcodes -I$(srcroot)/opcodes \
+  -I$(srcroot)/opcodes \
   -I../.. \
   $(INTL_CFLAGS)
 ALL_CFLAGS = $(CONFIG_CFLAGS) $(CSEARCH) $(INCGNU) $(SIM_EXTRA_CFLAGS) $(CFLAGS)
@@ -238,7 +238,7 @@ COMMON_OBJS_NAMES = \
 	target-newlib-signal.o \
 	target-newlib-syscall.o \
 	version.o
-COMMON_OBJS = $(COMMON_OBJS_NAMES:%=../common/common_libcommon_a-%)
+COMMON_OBJS = $(COMMON_OBJS_NAMES:%=../common/%)
 
 LIB_OBJS = modules.o $(COMMON_OBJS) $(SIM_OBJS)
 
