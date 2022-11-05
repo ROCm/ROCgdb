@@ -114,7 +114,6 @@ print_options (void)
   printf_filtered ("WITH_TARGET_BYTE_ORDER   = %s\n", options_byte_order (WITH_TARGET_BYTE_ORDER));
   printf_filtered ("WITH_XOR_ENDIAN          = %d\n", WITH_XOR_ENDIAN);
   printf_filtered ("WITH_SMP                 = %d\n", WITH_SMP);
-  printf_filtered ("WITH_HOST_WORD_BITSIZE   = %d\n", WITH_HOST_WORD_BITSIZE);
   printf_filtered ("WITH_TARGET_WORD_BITSIZE = %d\n", WITH_TARGET_WORD_BITSIZE);
   printf_filtered ("WITH_ENVIRONMENT         = %s\n", options_env(WITH_ENVIRONMENT));
   printf_filtered ("WITH_EVENTS              = %d\n", WITH_EVENTS);
@@ -198,10 +197,6 @@ print_options (void)
 
 #ifdef HAVE_TERMIO_STRUCTURE
       "HAVE_TERMIO_STRUCTURE",
-#endif
-
-#ifdef HAVE_DEVZERO
-      "HAVE_DEVZERO",
 #endif
     };
 
