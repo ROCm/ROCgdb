@@ -27,7 +27,7 @@ srcroot = $(srcdir)/..
 SUBDIRS = @subdirs@ $(SIM_SUBDIRS)
 
 SIM_PRIMARY_TARGET = @SIM_PRIMARY_TARGET@
-AM_MAKEFLAGS = SIM_PRIMARY_TARGET=$(SIM_PRIMARY_TARGET)
+AM_MAKEFLAGS =
 
 ## We don't set some of these vars here, but we need to define them so they may
 ## be used consistently in local.mk files we include below.
@@ -188,10 +188,10 @@ endif
 ## have Makefiles in subdirs.
 
 %/libsim.a: | $(SIM_ALL_RECURSIVE_DEPS)
-	$(MAKE) -C $(@D) $(@F)
+	$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
 %/nrun.o: common/nrun.c | %/libsim.a $(SIM_ALL_RECURSIVE_DEPS)
-	$(MAKE) -C $(@D) $(@F)
+	$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
 all-recursive: $(SIM_ALL_RECURSIVE_DEPS)
 
