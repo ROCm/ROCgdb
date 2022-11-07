@@ -48,8 +48,13 @@ dnl used when installing files to see if they need to be suffixed.
 SIM_PRIMARY_TARGET=
 AC_SUBST(SIM_PRIMARY_TARGET)
 
+dnl Directories that we need to recurse into (i.e. add to $SUBDIRS).
 SIM_SUBDIRS=
 AC_SUBST(SIM_SUBDIRS)
+
+dnl List of enabled arch backends.
+SIM_ENABLED_ARCHES=
+AC_SUBST(SIM_ENABLED_ARCHES)
 
 dnl Used by common/Make-common.in to see which configure script created it.
 SIM_COMMON_BUILD_TRUE=
@@ -62,10 +67,10 @@ dnl Build a particular arch subdir.
 dnl arg[1] is the arch subdir name.
 dnl arg[2] is whether the arch has a dedicated configure script.
 m4_define([SIM_BUILD_TARGET], [dnl
+  AS_VAR_APPEND([SIM_ENABLED_ARCHES], [" $1"])
   m4_if($2, [true], [dnl
     AC_CONFIG_SUBDIRS($1)
   ], [dnl
-    AC_CONFIG_FILES($1/.gdbinit:common/gdbinit.in)
     AC_CONFIG_FILES($1/Makefile.sim:$1/Makefile.in)
     AC_CONFIG_COMMANDS([$1/Makefile],
 [sed -n \
@@ -82,6 +87,7 @@ m4_define([SIM_BUILD_TARGET], [dnl
 ])
     AS_VAR_APPEND([SIM_SUBDIRS], [" $1"])
   ])
+  AC_CONFIG_FILES($1/.gdbinit:common/gdbinit.in)
   dnl Create the depdirs for ports until we can convert them to automake.
   AC_CONFIG_COMMANDS([depdir-$1],
 		     [$SHELL $ac_aux_dir/mkinstalldirs $1/$DEPDIR],
@@ -123,7 +129,7 @@ if test "${enable_sim}" != no; then
     SIM_TARGET([arm*-*-*], [arm])
     SIM_TARGET([avr*-*-*], [avr])
     SIM_TARGET([bfin-*-*], [bfin])
-    SIM_TARGET([bpf-*-*], [bpf], [true])
+    SIM_TARGET([bpf-*-*], [bpf])
     SIM_TARGET([cr16*-*-*], [cr16])
     SIM_TARGET([cris-*-* | crisv32-*-*], [cris])
     SIM_TARGET([d10v-*-*], [d10v])
@@ -138,18 +144,18 @@ if test "${enable_sim}" != no; then
     SIM_TARGET([mcore-*-*], [mcore])
     SIM_TARGET([microblaze*-*-*], [microblaze])
     SIM_TARGET([mips*-*-*], [mips], [true], [sim_igen=yes])
-    SIM_TARGET([mn10300*-*-*], [mn10300], [true], [sim_igen=yes])
+    SIM_TARGET([mn10300*-*-*], [mn10300], [], [sim_igen=yes])
     SIM_TARGET([moxie-*-*], [moxie])
     SIM_TARGET([msp430*-*-*], [msp430])
-    SIM_TARGET([or1k*-*-*], [or1k], [true])
+    SIM_TARGET([or1k*-*-*], [or1k])
     SIM_TARGET([powerpc*-*-*], [ppc], [true])
     SIM_TARGET([pru*-*-*], [pru])
-    SIM_TARGET([riscv*-*-*], [riscv], [true])
+    SIM_TARGET([riscv*-*-*], [riscv])
     SIM_TARGET([rl78-*-*], [rl78])
     SIM_TARGET([rx-*-*], [rx])
     SIM_TARGET([sh*-*-*], [sh])
     SIM_TARGET([sparc-*-*], [erc32])
-    SIM_TARGET([v850*-*-*], [v850], [true], [sim_igen=yes])
+    SIM_TARGET([v850*-*-*], [v850], [], [sim_igen=yes])
   done
 
   if test "x${enable_example_sims}" = xyes; then
@@ -197,6 +203,7 @@ AC_SUBST(sim_float)
 
 dnl Some arches have unique configure flags.
 m4_include([frv/acinclude.m4])
+m4_include([riscv/acinclude.m4])
 m4_include([rx/acinclude.m4])
 
 dnl Hack to output an "include" statement in the Makefile so automake doesn't
