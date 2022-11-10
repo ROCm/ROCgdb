@@ -196,14 +196,14 @@ gen_spreg_c(spreg_table *table, lf *file)
 
   lf_printf(file, "\n");
   lf_printf(file, "typedef struct _spreg_info {\n");
-  lf_printf(file, "  char *name;\n");
+  lf_printf(file, "  const char *name;\n");
   lf_printf(file, "  int is_valid;\n");
   lf_printf(file, "  int length;\n");
   lf_printf(file, "  int is_readonly;\n");
   lf_printf(file, "  int index;\n");
   lf_printf(file, "} spreg_info;\n");
   lf_printf(file, "\n");
-  lf_printf(file, "static spreg_info spr_info[nr_of_sprs+1] = {\n");
+  lf_printf(file, "static const spreg_info spr_info[nr_of_sprs+1] = {\n");
   entry = table->sprs;
   for (spreg_nr = 0; spreg_nr < nr_of_sprs+1; spreg_nr++) {
     if (entry == NULL || spreg_nr < entry->spreg_nr)
@@ -238,19 +238,29 @@ gen_spreg_c(spreg_table *table, lf *file)
       spreg_table_entry *entry;
       lf_printf(file, "  switch (spr) {\n");
       for (entry = table->sprs; entry != NULL; entry = entry->next) {
-	lf_printf(file, "  case %d:\n", entry->spreg_nr);
-	if (strcmp(*attribute, "is_valid") == 0)
-	  lf_printf(file, "    return 1;\n");
-	else if (strcmp(*attribute, "is_readonly") == 0)
-	  lf_printf(file, "    return %d;\n", entry->is_readonly);
-	else if (strcmp(*attribute, "length") == 0)
-	  lf_printf(file, "    return %d;\n", entry->length);
-	else
+	if (strcmp(*attribute, "is_valid") == 0) {
+	  lf_printf(file, "  case %d:\n", entry->spreg_nr);
+	  /* No return -- see below.  */;
+	} else if (strcmp(*attribute, "is_readonly") == 0) {
+	  /* Since we return 0 by default, only output non-zero entries.  */
+	  if (entry->is_readonly) {
+	    lf_printf(file, "  case %d:\n", entry->spreg_nr);
+	    lf_printf(file, "    return %d;\n", entry->is_readonly);
+	  }
+	} else if (strcmp(*attribute, "length") == 0) {
+	  /* Since we return 0 by default, only output non-zero entries.  */
+	  if (entry->length) {
+	    lf_printf(file, "  case %d:\n", entry->spreg_nr);
+	    lf_printf(file, "    return %d;\n", entry->length);
+	  }
+	} else
 	  ASSERT(0);
       }
-      lf_printf(file, "  default:\n");
-      lf_printf(file, "    return 0;\n");
+      /* Output a single return for is_valid.  */
+      if (strcmp(*attribute, "is_valid") == 0)
+	lf_printf(file, "    return 1;\n");
       lf_printf(file, "  }\n");
+      lf_printf(file, "  return 0;\n");
     }
     lf_printf(file, "}\n");
   }
@@ -282,10 +292,9 @@ main(int argc,
     printf("-n <file-name>  Use this as cpp line numbering name\n");
     printf("-h  Output header file\n");
     printf("-p <spreg-file>  Output spreg.h(P) or spreg.c(p)\n");
-    printf("-L  Suppress cpp line numbering in output files\n");
   }
 
-  while ((ch = getopt_long (argc, argv, "hLsn:r:p:", longopts, NULL))
+  while ((ch = getopt_long (argc, argv, "hsn:r:p:", longopts, NULL))
 	 != -1)
   {
 #if 0  /* For debugging.  */
@@ -300,9 +309,6 @@ main(int argc,
       break;
     case 'n':
       real_file_name = strdup(optarg);
-      break;
-    case 'L':
-      file_references = lf_omit_references;
       break;
     case 'h':
       is_header = 1;
