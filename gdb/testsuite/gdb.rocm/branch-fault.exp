@@ -1,0 +1,59 @@
+# Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test debugging a program that branches to a bad address.  Check that
+# when GDB catches the fault, the PC points to the branch destination
+# address.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+if [skip_hipcc_tests] {
+    verbose "Skipping hip test: ${testfile}"
+    return
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test { } {
+    clean_restart $::binfile
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	set any "\[^\r\n\]*"
+
+	gdb_test "c" \
+	    [multi_line \
+		 "Thread $any received signal SIGSEGV, Segmentation fault\\." \
+		 "\\\[Switching to thread $::decimal, lane 0 \\(AMDGPU Lane $any/0 \\(0,0,0\\)\\\[0,0,0\\\]\\)\\\]" \
+		 "0x0000000000000100 in \\?\\? \\(\\)"] \
+	    "continue to bad branch fault"
+
+	# For completeness, print $pc explicitly, in case GDB ever
+	# incorrectly adjusts the PC after printing the above message.
+	gdb_test "p \$pc" \
+	    " = \\(void \\(\\*\\)\\(void\\)\\) 0x100"
+    }
+}
+
+do_test
