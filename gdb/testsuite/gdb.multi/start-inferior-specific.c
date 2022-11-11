@@ -1,10 +1,6 @@
-/* The IGEN simulator generator for GDB, the GNU Debugger.
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2002-2022 Free Software Foundation, Inc.
-
-   Contributed by Andrew Cagney.
-
-   This file is part of GDB.
+   Copyright 2022 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,10 +15,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include <unistd.h>
 
+__attribute__((constructor))
+static void
+ctor (void)
+{
+  sleep (4);
+}
 
-/* Output a table of all the instructions */
-
-extern void gen_itable_h (lf *file, const insn_table *table);
-
-extern void gen_itable_c (lf *file, const insn_table *table);
+int
+main ()
+{
+  return 0;
+}

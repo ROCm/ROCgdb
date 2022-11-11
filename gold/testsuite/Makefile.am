@@ -149,25 +149,25 @@ check_PROGRAMS += object_unittest
 object_unittest_SOURCES = object_unittest.cc
 object_unittest_LDFLAGS = $(THREADFLAGS)
 object_unittest_LDADD = libgoldtest.a ../libgold.a ../../libiberty/libiberty.a $(LIBINTL) \
-	$(THREADLIBS) $(LIBDL) $(ZLIB) $(JANSSON_LIBS)
+	$(THREADLIBS) $(LIBDL) $(ZLIB) $(ZSTD_LIBS) $(JANSSON_LIBS)
 
 check_PROGRAMS += binary_unittest
 binary_unittest_SOURCES = binary_unittest.cc
 binary_unittest_LDFLAGS = $(THREADFLAGS)
 binary_unittest_LDADD = libgoldtest.a ../libgold.a ../../libiberty/libiberty.a $(LIBINTL) \
-	$(THREADLIBS) $(LIBDL) $(ZLIB) $(JANSSON_LIBS)
+	$(THREADLIBS) $(LIBDL) $(ZLIB) $(ZSTD_LIBS) $(JANSSON_LIBS)
 
 check_PROGRAMS += leb128_unittest
 leb128_unittest_SOURCES = leb128_unittest.cc
 leb128_unittest_LDFLAGS = $(THREADFLAGS)
 leb128_unittest_LDADD = libgoldtest.a ../libgold.a ../../libiberty/libiberty.a $(LIBINTL) \
-	$(THREADLIBS) $(LIBDL) $(ZLIB) $(JANSSON_LIBS)
+	$(THREADLIBS) $(LIBDL) $(ZLIB) $(ZSTD_LIBS) $(JANSSON_LIBS)
 
 check_PROGRAMS += overflow_unittest
 overflow_unittest_SOURCES = overflow_unittest.cc
 overflow_unittest_LDFLAGS = $(THREADFLAGS)
 overflow_unittest_LDADD = libgoldtest.a ../libgold.a ../../libiberty/libiberty.a $(LIBINTL) \
-	$(THREADLIBS) $(LIBDL) $(ZLIB) $(JANSSON_LIBS)
+	$(THREADLIBS) $(LIBDL) $(ZLIB) $(ZSTD_LIBS) $(JANSSON_LIBS)
 overflow_unittest.o: overflow_unittest.cc
 	$(CXXCOMPILE) -O3 -c -o $@ $<
 
@@ -1766,6 +1766,13 @@ flagstest_compress_debug_sections_gabi.cmp: flagstest_compress_debug_sections_ga
 		flagstest_compress_debug_sections_none.stdout > $@.tmp
 	mv -f $@.tmp $@
 
+if HAVE_ZSTD
+check_PROGRAMS += flagstest_compress_debug_sections_zstd
+flagstest_compress_debug_sections_zstd: flagstest_debug.o gcctestdir/ld
+	$(CXXLINK) -o $@ $< -Wl,--compress-debug-sections=zstd
+	test -s $@
+endif
+
 # The specialfile output has a tricky case when we also compress debug
 # sections, because it requires output-file resizing.
 check_PROGRAMS += flagstest_o_specialfile_and_compress_debug_sections
@@ -3120,6 +3127,17 @@ gdb_index_test_2_gabi: gdb_index_test_cdebug_gabi.o gcctestdir/ld
 	$(CXXLINK) -Wl,--gdb-index $<
 gdb_index_test_2_gabi.stdout: gdb_index_test_2_gabi
 	$(TEST_READELF) --debug-dump=gdb_index $< > $@
+if HAVE_ZSTD
+check_SCRIPTS += gdb_index_test_2_zstd.sh
+check_DATA += gdb_index_test_2_zstd.stdout
+MOSTLYCLEANFILES += gdb_index_test_2_zstd.stdout gdb_index_test_2_zstd
+gdb_index_test_cdebug_zstd.o: gdb_index_test.cc
+	$(CXXCOMPILE) -O0 -g -Wa,--compress-debug-sections=zstd -c -o $@ $<
+gdb_index_test_2_zstd: gdb_index_test_cdebug_zstd.o gcctestdir/ld
+	$(CXXLINK) -Wl,--gdb-index $<
+gdb_index_test_2_zstd.stdout: gdb_index_test_2_zstd
+	$(TEST_READELF) --debug-dump=gdb_index $< > $@
+endif
 
 # Another simple C test (DW_AT_high_pc encoding) for --gdb-index.
 check_SCRIPTS += gdb_index_test_3.sh

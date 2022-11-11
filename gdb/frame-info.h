@@ -25,12 +25,6 @@
 
 struct frame_info;
 
-/* Forward declarations of functions, needed for the frame_info_ptr
-   to work correctly.  */
-extern void reinit_frame_cache ();
-extern struct frame_id get_frame_id (frame_info_ptr);
-extern frame_info_ptr frame_find_by_id (struct frame_id id);
-
 /* A wrapper for "frame_info *".  frame_info objects are invalidated
    whenever reinit_frame_cache is called.  This class arranges to
    invalidate the pointer when appropriate.  This is done to help
@@ -62,15 +56,21 @@ public:
   }
 
   frame_info_ptr (const frame_info_ptr &other)
-    : m_ptr (other.m_ptr), m_cached_id (other.m_cached_id)
+    : m_ptr (other.m_ptr),
+      m_cached_id (other.m_cached_id),
+      m_cached_level (other.m_cached_level)
   {
     frame_list.push_back (*this);
   }
 
   frame_info_ptr (frame_info_ptr &&other)
-    : m_ptr (other.m_ptr), m_cached_id (other.m_cached_id)
+    : m_ptr (other.m_ptr),
+      m_cached_id (other.m_cached_id),
+      m_cached_level (other.m_cached_level)
   {
     other.m_ptr = nullptr;
+    other.m_cached_id = null_frame_id;
+    other.m_cached_level = invalid_level;
     frame_list.push_back (*this);
   }
 
@@ -83,6 +83,7 @@ public:
   {
     m_ptr = other.m_ptr;
     m_cached_id = other.m_cached_id;
+    m_cached_level = other.m_cached_level;
     return *this;
   }
 
@@ -90,6 +91,7 @@ public:
   {
     m_ptr = nullptr;
     m_cached_id = null_frame_id;
+    m_cached_level = invalid_level;
     return *this;
   }
 
@@ -97,8 +99,10 @@ public:
   {
     m_ptr = other.m_ptr;
     m_cached_id = other.m_cached_id;
+    m_cached_level = other.m_cached_level;
     other.m_ptr = nullptr;
     other.m_cached_id = null_frame_id;
+    other.m_cached_level = invalid_level;
     return *this;
   }
 
@@ -135,28 +139,25 @@ public:
   }
 
   /* Cache the frame_id that the pointer will use to reinflate.  */
-  void prepare_reinflate ()
-  {
-    m_cached_id = get_frame_id (*this);
-  }
+  void prepare_reinflate ();
 
   /* Use the cached frame_id to reinflate the pointer.  */
-  void reinflate ()
-  {
-    gdb_assert (m_cached_id != null_frame_id);
-
-    if (m_ptr == nullptr)
-      m_ptr = frame_find_by_id (m_cached_id).get ();
-    gdb_assert (m_ptr != nullptr);
-  }
+  void reinflate ();
 
 private:
+  /* We sometimes need to construct frame_info_ptr objects around the
+     sentinel_frame, which has level -1.  Therefore, make the invalid frame
+     level value -2.  */
+  static constexpr int invalid_level = -2;
 
   /* The underlying pointer.  */
   frame_info *m_ptr = nullptr;
 
   /* The frame_id of the underlying pointer.  */
   frame_id m_cached_id = null_frame_id;
+
+  /* The frame level of the underlying pointer.  */
+  int m_cached_level = invalid_level;
 
   /* All frame_info_ptr objects are kept on an intrusive list.
      This keeps their construction and destruction costs

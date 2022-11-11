@@ -1048,6 +1048,8 @@ print_frame_info (const frame_print_options &fp_opts,
   int location_print;
   struct ui_out *uiout = current_uiout;
 
+  frame.prepare_reinflate ();
+
   if (!current_uiout->is_mi_like_p ()
       && fp_opts.print_frame_info != print_frame_info_auto)
     {
@@ -1682,8 +1684,12 @@ info_frame_command_core (frame_info_ptr fi, bool selected_frame_p)
 	    else
 	      gdb_printf (" %d args: ", numargs);
 	  }
+
+	fi.prepare_reinflate ();
 	print_frame_args (user_frame_print_options,
 			  func, fi, numargs, gdb_stdout);
+	fi.reinflate ();
+
 	gdb_puts ("\n");
       }
   }
@@ -2080,20 +2086,7 @@ backtrace_command_1 (const frame_print_options &fp_opts,
 
 	  print_frame_info (fp_opts, fi, 1, LOCATION, 1, 0);
 	  if ((flags & PRINT_LOCALS) != 0)
-	    {
-	      struct frame_id frame_id = get_frame_id (fi);
-
-	      print_frame_local_vars (fi, false, NULL, NULL, 1, gdb_stdout);
-
-	      /* print_frame_local_vars invalidates FI.  */
-	      fi = frame_find_by_id (frame_id);
-	      if (fi == NULL)
-		{
-		  trailing = NULL;
-		  warning (_("Unable to restore previously selected frame."));
-		  break;
-		}
-	    }
+	    print_frame_local_vars (fi, false, NULL, NULL, 1, gdb_stdout);
 
 	  /* Save the last frame to check for error conditions.  */
 	  fi.reinflate ();
