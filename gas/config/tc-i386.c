@@ -1041,7 +1041,6 @@ static const arch_entry cpu_arch[] =
   SUBARCH (padlock, PADLOCK, PADLOCK, false),
   SUBARCH (pacifica, SVME, SVME, true),
   SUBARCH (svme, SVME, SVME, false),
-  SUBARCH (sse4a, SSE4A, SSE4A, false),
   SUBARCH (abm, ABM, ABM, false),
   SUBARCH (bmi, BMI, BMI, false),
   SUBARCH (tbm, TBM, TBM, false),
@@ -11189,7 +11188,6 @@ i386_index_check (const char *operand_string)
   const insn_template *t = current_templates->start;
 
   if (t->opcode_modifier.isstring
-      && !t->cpu_flags.bitfield.cpupadlock
       && (current_templates->end[-1].opcode_modifier.isstring
 	  || i.mem_operands))
     {
