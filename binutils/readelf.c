@@ -9919,6 +9919,8 @@ decode_arm_unwind_bytecode (Filedata *                 filedata,
 	}
       else if (op == 0xb4)
 	printf (_("     pop {ra_auth_code}"));
+      else if (op == 0xb5)
+	printf (_("     vsp as modifier for PAC validation"));
       else if ((op & 0xf8) == 0xb8 || (op & 0xf8) == 0xd0)
 	{
 	  unsigned int count = op & 0x07;
