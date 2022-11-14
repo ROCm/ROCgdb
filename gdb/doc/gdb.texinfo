@@ -23400,6 +23400,13 @@ heterogeneous agent IDs using the qualified
 @var{inferior-num}.@var{agent-num} format.  Otherwise, only
 @var{agent-num} is shown.
 
+If @value{GDBN} cannot find a suitable name for an agent, one will be formed
+following the @samp{Device @var{VVVV}:@var{DDDD}} pattern where @var{VVVV} is
+the hexadecimal formatted PCI vendor ID of the agent, and @var{VVVV} is the
+hexadecimal formatted PCI device ID of the agent.  If such name appears, it is
+recommended to run the @command{update-pciids} command to update the database
+@value{GDBN} uses to retrieve device names.
+
 @item info queues @r{[}@var{queue-id-list}@r{]}
 @kindex info queues
 The @code{info queues} command lists the following information for
