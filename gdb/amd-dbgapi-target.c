@@ -952,7 +952,7 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 	  || amd_dbgapi_dwarf_address_space_to_address_space (
 	       architecture_id, dwarf_address_space, &address_space_id)
 	       != AMD_DBGAPI_STATUS_SUCCESS)
-	return TARGET_XFER_EOF;
+	return TARGET_XFER_E_IO;
 
       size_t len = requested_len;
       amd_dbgapi_status_t status;
@@ -970,7 +970,7 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 				     &len, writebuf);
 
       if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	return TARGET_XFER_EOF;
+	return TARGET_XFER_E_IO;
 
       *xfered_len = len;
       return TARGET_XFER_OK;
