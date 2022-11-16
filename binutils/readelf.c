@@ -63,6 +63,7 @@
 #include "demanguse.h"
 #include "dwarf.h"
 #include "ctf-api.h"
+#include "sframe-api.h"
 #include "demangle.h"
 
 #include "elf/common.h"
@@ -190,6 +191,7 @@ typedef struct elf_section_list
 #define STRING_DUMP     (1 << 3)	/* The -p command line switch.  */
 #define RELOC_DUMP      (1 << 4)	/* The -R command line switch.  */
 #define CTF_DUMP	(1 << 5)	/* The --ctf command line switch.  */
+#define SFRAME_DUMP	(1 << 6)	/* The --sframe command line switch.  */
 
 typedef unsigned char dump_type;
 
@@ -233,6 +235,7 @@ static bool do_version = false;
 static bool do_histogram = false;
 static bool do_debugging = false;
 static bool do_ctf = false;
+static bool do_sframe = false;
 static bool do_arch = false;
 static bool do_notes = false;
 static bool do_archive_index = false;
@@ -4607,6 +4610,7 @@ get_segment_type (Filedata * filedata, unsigned long p_type)
     case PT_GNU_STACK:	return "GNU_STACK";
     case PT_GNU_RELRO:  return "GNU_RELRO";
     case PT_GNU_PROPERTY: return "GNU_PROPERTY";
+    case PT_GNU_SFRAME: return "GNU_SFRAME";
 
     case PT_OPENBSD_RANDOMIZE: return "OPENBSD_RANDOMIZE";
     case PT_OPENBSD_WXNEEDED: return "OPENBSD_WXNEEDED";
@@ -5073,6 +5077,7 @@ enum long_option_values
   OPTION_CTF_PARENT,
   OPTION_CTF_SYMBOLS,
   OPTION_CTF_STRINGS,
+  OPTION_SFRAME_DUMP,
   OPTION_WITH_SYMBOL_VERSIONS,
   OPTION_RECURSE_LIMIT,
   OPTION_NO_RECURSE_LIMIT,
@@ -5135,6 +5140,7 @@ static struct option options[] =
   {"ctf-strings",      required_argument, 0, OPTION_CTF_STRINGS},
   {"ctf-parent",       required_argument, 0, OPTION_CTF_PARENT},
 #endif
+  {"sframe",	       optional_argument, 0, OPTION_SFRAME_DUMP},
   {"sym-base",	       optional_argument, 0, OPTION_SYM_BASE},
 
   {0,		       no_argument, 0, 0}
@@ -5275,6 +5281,8 @@ usage (FILE * stream)
   --ctf-strings=<number|name>\n\
                          Use section <number|name> as the CTF external strtab\n"));
 #endif
+  fprintf (stream, _("\
+  --sframe[=NAME]        Display SFrame info from section NAME, (default '.sframe')\n"));
 
 #ifdef SUPPORT_DISASSEMBLY
   fprintf (stream, _("\
@@ -5547,6 +5555,19 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	case OPTION_CTF_PARENT:
 	  free (dump_ctf_parent_name);
 	  dump_ctf_parent_name = strdup (optarg);
+	  break;
+	case OPTION_SFRAME_DUMP:
+	  do_sframe = true;
+	  /* Providing section name is optional.  request_dump (), however,
+	     thrives on non NULL optarg.  Handle it explicitly here.  */
+	  if (optarg != NULL)
+	    request_dump (dumpdata, SFRAME_DUMP);
+	  else
+	    {
+	      do_dump = true;
+	      const char *sframe_sec_name = strdup (".sframe");
+	      request_dump_byname (sframe_sec_name, SFRAME_DUMP);
+	    }
 	  break;
 	case OPTION_DYN_SYMS:
 	  do_dyn_syms = true;
@@ -15862,6 +15883,44 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
 #endif
 
 static bool
+dump_section_as_sframe (Elf_Internal_Shdr * section, Filedata * filedata)
+{
+  void *		  data = NULL;
+  sframe_decoder_ctx	  *sfd_ctx = NULL;
+  const char *print_name = printable_section_name (filedata, section);
+
+  bool ret = true;
+  size_t sf_size;
+  int err = 0;
+
+  if (strcmp (print_name, "") == 0)
+    {
+      error (_("Section name must be provided \n"));
+      ret = false;
+      return ret;
+    }
+
+  data = get_section_contents (section, filedata);
+  sf_size = section->sh_size;
+  /* Decode the contents of the section.  */
+  sfd_ctx = sframe_decode ((const char*)data, sf_size, &err);
+  if (!sfd_ctx)
+    {
+      ret = false;
+      error (_("SFrame decode failure: %s\n"), sframe_errmsg (err));
+      goto fail;
+    }
+
+  printf (_("Contents of the SFrame section %s:"), print_name);
+  /* Dump the contents as text.  */
+  dump_sframe (sfd_ctx, section->sh_addr);
+
+ fail:
+  free (data);
+  return ret;
+}
+
+static bool
 load_specific_debug_section (enum dwarf_section_display_enum  debug,
 			     const Elf_Internal_Shdr *        sec,
 			     void *                           data)
@@ -16367,6 +16426,11 @@ process_section_contents (Filedata * filedata)
 	    res = false;
 	}
 #endif
+      if (dump & SFRAME_DUMP)
+	{
+	  if (! dump_section_as_sframe (section, filedata))
+	    res = false;
+	}
     }
 
   if (! filedata->is_separate)
