@@ -9169,13 +9169,23 @@ gdb_caching_proc has_hw_wp_support {
     return $has_hw_wp_support
 }
 
-# Return a list of all the accepted values of the set command SET_CMD.
+# Return a list of all the accepted values of the set command
+# "SET_CMD SET_ARG".
+# For example get_set_option_choices "set architecture" "i386".
 
-proc get_set_option_choices {set_cmd} {
+proc get_set_option_choices { set_cmd {set_arg ""} } {
     set values {}
 
-    set cmd "complete $set_cmd "
-    set test "complete $set_cmd"
+    if { $set_arg == "" } {
+	# Add trailing space to signal that we need completion of the choices,
+	# not of set_cmd itself.
+	set cmd "complete $set_cmd "
+    } else {
+	set cmd "complete $set_cmd $set_arg"
+    }
+
+    # Set test name without trailing space.
+    set test [string trim $cmd]
 
     with_set max-completions unlimited {
 	gdb_test_multiple $cmd $test {
@@ -9312,6 +9322,28 @@ gdb_caching_proc have_epilogue_line_info {
 	    return False
 	}
     }
+}
+
+# Decompress file BZ2, and return it.
+
+proc decompress_bz2 { bz2 } {
+    set copy [standard_output_file [file tail $bz2]]
+    set copy [remote_download build $bz2 $copy]
+    if { $copy == "" } {
+	return $copy
+    }
+
+    set res [remote_exec build "bzip2" "-df $copy"]
+    if { [lindex $res 0] == -1 } {
+	return ""
+    }
+
+    set copy [regsub {.bz2$} $copy ""]
+    if { ![remote_file build exists $copy] } {
+	return ""
+    }
+
+    return $copy
 }
 
 # Always load compatibility stuff.
