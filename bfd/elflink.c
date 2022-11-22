@@ -9995,10 +9995,7 @@ elf_link_output_symstrtab (void *finf,
   if (ELF_ST_BIND (elfsym->st_info) == STB_GNU_UNIQUE)
     elf_tdata (flinfo->output_bfd)->has_gnu_osabi |= elf_gnu_osabi_unique;
 
-  if (name == NULL
-      || *name == '\0'
-      || (!bfd_link_relocatable (flinfo->info)
-	  && (input_sec->flags & SEC_EXCLUDE)))
+  if (name == NULL || *name == '\0')
     elfsym->st_name = (unsigned long) -1;
   else
     {
@@ -12877,8 +12874,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 
   /* If backend needs to output some local symbols not present in the hash
      table, do it now.  */
-  if (bed->elf_backend_output_arch_local_syms
-      && (info->strip != strip_all || emit_relocs))
+  if (bed->elf_backend_output_arch_local_syms)
     {
       if (! ((*bed->elf_backend_output_arch_local_syms)
 	     (abfd, info, &flinfo, elf_link_output_symstrtab)))

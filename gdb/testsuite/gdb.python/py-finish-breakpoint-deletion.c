@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2011-2022 Free Software Foundation, Inc.
+   Copyright 2022 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,21 +13,19 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see  <http://www.gnu.org/licenses/>.  */
 
-int value = 0xdeadf00d;
-int *ptr = &value;
-
-static void
-func (void)
+static int
+subroutine (int a)
 {
-  asm ("func_label: .globl func_label");
+  return a;
 }
 
 int
 main (void)
 {
-  asm ("main_label: .globl main_label");
-  func ();
+  int i;
+  for (i = 0; i < 5; i++)
+    subroutine (i);
   return 0;
 }

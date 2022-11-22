@@ -55,7 +55,7 @@ proc do_test { follow-exec-mode } {
 	# be on.
 	gdb_test_no_output "set follow-exec-mode ${follow-exec-mode}"
 	gdb_test "break second"
-	gdb_test "continue" "Breakpoint 1, main .*"
+	gdb_test "continue" "Breakpoint 1(\.$::decimal)?, main .*"
 	gdb_test "show amdgpu precise-memory" " is on.*" \
 	    "show amdgpu precise-memory after exec"
     }

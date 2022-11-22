@@ -818,6 +818,19 @@ get_breakpoint (int num)
   return nullptr;
 }
 
+/* Return TRUE if NUM refer to an existing breakpoint that has
+   multiple code locations.  */
+
+static bool
+has_multiple_locations (int num)
+{
+  for (breakpoint *b : all_breakpoints ())
+    if (b->number == num)
+      return b->loc != nullptr && b->loc->next != nullptr;
+
+  return false;
+}
+
 
 
 /* Mark locations as "conditions have changed" in case the target supports
@@ -4452,15 +4465,7 @@ bpstat_explains_signal (bpstat *bsp, enum gdb_signal sig)
   return false;
 }
 
-/* Put in *NUM the breakpoint number of the first breakpoint we are
-   stopped at.  *BSP upon return is a bpstat which points to the
-   remaining breakpoints stopped at (but which is not guaranteed to be
-   good for anything but further calls to bpstat_num).
-
-   Return 0 if passed a bpstat which does not indicate any breakpoints.
-   Return -1 if stopped at a breakpoint that has been deleted since
-   we set it.
-   Return 1 otherwise.  */
+/* See breakpoint.h.  */
 
 int
 bpstat_num (bpstat **bsp, int *num)
@@ -4480,6 +4485,57 @@ bpstat_num (bpstat **bsp, int *num)
 
   *num = b->number;		/* We have its number */
   return 1;
+}
+
+/* See breakpoint.h  */
+
+int
+bpstat_locno (const bpstat *bs)
+{
+  const struct breakpoint *b = bs->breakpoint_at;
+  const struct bp_location *bl = bs->bp_location_at.get ();
+
+  int locno = 0;
+
+  if (b != nullptr && b->loc != nullptr && b->loc->next != nullptr)
+    {
+      const bp_location *bl_i;
+
+      for (bl_i = b->loc;
+	   bl_i != bl && bl_i->next != nullptr;
+	   bl_i = bl_i->next)
+	locno++;
+
+      if (bl_i == bl)
+	locno++;
+      else
+	{
+	  warning (_("location number not found for breakpoint %d address %s."),
+		   b->number, paddress (bl->gdbarch, bl->address));
+	  locno = 0;
+	}
+    }
+
+  return locno;
+}
+
+/* See breakpoint.h.  */
+
+void
+print_num_locno (const bpstat *bs, struct ui_out *uiout)
+{
+  struct breakpoint *b = bs->breakpoint_at;
+
+  if (b == nullptr)
+    uiout->text (_("deleted breakpoint"));
+  else
+    {
+      uiout->field_signed ("bkptno", b->number);
+
+      int locno = bpstat_locno (bs);
+      if (locno != 0)
+	uiout->message (".%pF", signed_field ("locno", locno));
+    }
 }
 
 /* See breakpoint.h.  */
@@ -4529,6 +4585,19 @@ command_line_is_silent (struct command_line *cmd)
   return cmd && (strcmp ("silent", cmd->line) == 0);
 }
 
+/* Sets the $_hit_bpnum and $_hit_locno to bpnum and locno.
+   A locno 0 is changed to 1 to e.g. let the user do
+     (gdb) disable $_hit_bpnum.$_hit_locno
+   for a single location breakpoint.  */
+
+static void
+set_hit_convenience_vars (int bpnum, int locno)
+{
+  set_internalvar_integer (lookup_internalvar ("_hit_bpnum"), bpnum);
+  set_internalvar_integer (lookup_internalvar ("_hit_locno"),
+			   (locno > 0 ? locno : 1));
+}
+
 /* Execute all the commands associated with all the breakpoints at
    this location.  Any of these commands could cause the process to
    proceed beyond this point, etc.  We look out for such changes by
@@ -4557,6 +4626,14 @@ bpstat_do_actions_1 (bpstat **bsp)
   /* This pointer will iterate over the list of bpstat's.  */
   bs = *bsp;
 
+  /* The $_hit_* convenience variables are set before running the
+     commands of BS.  In case we have several bs, after the loop,
+     we set again the variables to the first printed bpnum and locno.
+     For multiple breakpoints, this ensures the variables are set to the
+     breakpoint printed for the user. */
+  int printed_hit_bpnum = -1;
+  int printed_hit_locno = -1;
+
   breakpoint_proceeded = 0;
 
   /* After all actions are done, restore the original SIMD lane.  */
@@ -4567,11 +4644,27 @@ bpstat_do_actions_1 (bpstat **bsp)
     {
       struct command_line *cmd = NULL;
 
+      /* Set the _hit_* convenience variables before running BS's commands.  */
+      {
+	const struct breakpoint *b = bs->breakpoint_at;
+	if (b != nullptr)
+	  {
+	    int locno = bpstat_locno (bs);
+
+	    set_hit_convenience_vars (b->number, locno);
+	    if (printed_hit_locno == -1 && bs->print)
+	      {
+		printed_hit_bpnum = b->number;
+		printed_hit_locno = locno;
+	      }
+	  }
+      }
+
       /* Take ownership of the BSP's command tree, if it has one.
 
 	 The command tree could legitimately contain commands like
 	 'step' and 'next', which call clear_proceed_status, which
-	 frees stop_bpstat's command tree.  To make sure this doesn't
+	 frees the bpstat BS and its command tree.  To make sure this doesn't
 	 free the tree we're executing out from under us, we need to
 	 take ownership of the tree ourselves.  Since a given bpstat's
 	 commands are only executed once, we don't need to copy it; we
@@ -4597,6 +4690,8 @@ bpstat_do_actions_1 (bpstat **bsp)
       while (cmd != NULL)
 	{
 	  execute_control_command (cmd);
+	  /* After execute_control_command, if breakpoint_proceeded is true,
+	     BS has been freed and cannot be accessed anymore.  */
 
 	  if (breakpoint_proceeded)
 	    break;
@@ -4629,6 +4724,12 @@ bpstat_do_actions_1 (bpstat **bsp)
 	  break;
 	}
     }
+
+  /* Now that we have executed the commands of all bs, set the _hit_*
+     convenience variables to the printed values.  */
+  if (printed_hit_locno != -1)
+    set_hit_convenience_vars (printed_hit_bpnum, printed_hit_locno);
+
   return again;
 }
 
@@ -4840,7 +4941,7 @@ bpstat_print (bpstat *bs, target_waitkind kind)
     {
       val = print_bp_stop_message (bs);
       if (val == PRINT_SRC_ONLY 
-	  || val == PRINT_SRC_AND_LOC 
+	  || val == PRINT_SRC_AND_LOC
 	  || val == PRINT_NOTHING)
 	return val;
     }
@@ -9269,7 +9370,7 @@ ranged_breakpoint::print_it (const bpstat *bs) const
 		      async_reason_lookup (EXEC_ASYNC_BREAKPOINT_HIT));
       uiout->field_string ("disp", bpdisp_text (disposition));
     }
-  uiout->field_signed ("bkptno", number);
+  print_num_locno (bs, uiout);
   uiout->text (", ");
 
   return PRINT_SRC_AND_LOC;
@@ -11690,12 +11791,14 @@ ordinary_breakpoint::print_it (const bpstat *bs) const
 			   async_reason_lookup (EXEC_ASYNC_BREAKPOINT_HIT));
       uiout->field_string ("disp", bpdisp_text (disposition));
     }
+
   if (bp_temp)
-    uiout->message ("Temporary breakpoint %pF, ",
-		    signed_field ("bkptno", number));
+    uiout->text ("Temporary breakpoint ");
   else
-    uiout->message ("Breakpoint %pF, ",
-		    signed_field ("bkptno", number));
+    uiout->text ("Breakpoint ");
+  print_num_locno (bs, uiout);
+  uiout->text (", ");
+
   if (bs->simd_lane_mask != 0)
     {
       if (inferior_thread ()->has_simd_lanes ())
@@ -13364,9 +13467,13 @@ enable_disable_command (const char *args, int from_tty, bool enable)
 	  extract_bp_number_and_location (num, bp_num_range, bp_loc_range);
 
 	  if (bp_loc_range.first == bp_loc_range.second
-	      && bp_loc_range.first == 0)
+	      && (bp_loc_range.first == 0
+		  || (bp_loc_range.first == 1
+		      && bp_num_range.first == bp_num_range.second
+		      && !has_multiple_locations (bp_num_range.first))))
 	    {
-	      /* Handle breakpoint ids with formats 'x' or 'x-z'.  */
+	      /* Handle breakpoint ids with formats 'x' or 'x-z'
+		 or 'y.1' where y has only one code location.  */
 	      map_breakpoint_number_range (bp_num_range,
 					   enable
 					   ? enable_breakpoint
