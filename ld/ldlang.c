@@ -169,12 +169,73 @@ stat_alloc (size_t size)
   return obstack_alloc (&stat_obstack, size);
 }
 
+/* Code for handling simple wildcards without going through fnmatch,
+   which can be expensive because of charset translations etc.  */
+
+/* A simple wild is a literal string followed by a single '*',
+   where the literal part is at least 4 characters long.  */
+
+static bool
+is_simple_wild (const char *name)
+{
+  size_t len = strcspn (name, "*?[");
+  return len >= 4 && name[len] == '*' && name[len + 1] == '\0';
+}
+
+static bool
+match_simple_wild (const char *pattern, const char *name)
+{
+  /* The first four characters of the pattern are guaranteed valid
+     non-wildcard characters.  So we can go faster.  */
+  if (pattern[0] != name[0] || pattern[1] != name[1]
+      || pattern[2] != name[2] || pattern[3] != name[3])
+    return false;
+
+  pattern += 4;
+  name += 4;
+  while (*pattern != '*')
+    if (*name++ != *pattern++)
+      return false;
+
+  return true;
+}
+
 static int
 name_match (const char *pattern, const char *name)
 {
+  if (is_simple_wild (pattern))
+    return !match_simple_wild (pattern, name);
   if (wildcardp (pattern))
     return fnmatch (pattern, name, 0);
   return strcmp (pattern, name);
+}
+
+/* Given an analyzed wildcard_spec SPEC, match it against NAME,
+   returns zero on a match, non-zero if there's no match.  */
+
+static int
+spec_match (const struct wildcard_spec *spec, const char *name)
+{
+  size_t nl = spec->namelen;
+  size_t pl = spec->prefixlen;
+  size_t sl = spec->suffixlen;
+  int r;
+  if (pl && (r = memcmp (spec->name, name, pl)))
+    return r;
+  if (sl)
+    {
+      size_t inputlen = strlen (name);
+      if (inputlen < sl)
+	return 1;
+      r = memcmp (spec->name + nl - sl, name + inputlen - sl, sl);
+      if (r)
+	return r;
+    }
+  if (nl == pl + sl + 1 && spec->name[pl] == '*')
+    return 0;
+  else if (nl > pl)
+    return fnmatch (spec->name + pl, name + pl, 0);
+  return name[nl];
 }
 
 static char *
@@ -349,7 +410,7 @@ walk_wild_section_general (lang_wild_statement_type *ptr,
 	    {
 	      const char *sname = bfd_section_name (s);
 
-	      skip = name_match (sec->spec.name, sname) != 0;
+	      skip = spec_match (&sec->spec, sname) != 0;
 	    }
 
 	  if (!skip)
@@ -395,37 +456,6 @@ find_section (lang_input_statement_type *file,
 			      section_iterator_callback, &cb_data);
   *multiple_sections_found = cb_data.multiple_sections_found;
   return cb_data.found_section;
-}
-
-/* Code for handling simple wildcards without going through fnmatch,
-   which can be expensive because of charset translations etc.  */
-
-/* A simple wild is a literal string followed by a single '*',
-   where the literal part is at least 4 characters long.  */
-
-static bool
-is_simple_wild (const char *name)
-{
-  size_t len = strcspn (name, "*?[");
-  return len >= 4 && name[len] == '*' && name[len + 1] == '\0';
-}
-
-static bool
-match_simple_wild (const char *pattern, const char *name)
-{
-  /* The first four characters of the pattern are guaranteed valid
-     non-wildcard characters.  So we can go faster.  */
-  if (pattern[0] != name[0] || pattern[1] != name[1]
-      || pattern[2] != name[2] || pattern[3] != name[3])
-    return false;
-
-  pattern += 4;
-  name += 4;
-  while (*pattern != '*')
-    if (*name++ != *pattern++)
-      return false;
-
-  return true;
 }
 
 /* Return the numerical value of the init_priority attribute from
@@ -526,30 +556,92 @@ compare_section (sort_type sort, asection *asec, asection *bsec)
   return ret;
 }
 
-/* Build a Binary Search Tree to sort sections, unlike insertion sort
-   used in wild_sort(). BST is considerably faster if the number of
-   of sections are large.  */
+/* PE puts the sort key in the input statement.  */
+
+static const char *
+sort_filename (bfd *abfd)
+{
+  lang_input_statement_type *is = bfd_usrdata (abfd);
+  if (is->sort_key)
+    return is->sort_key;
+  return bfd_get_filename (abfd);
+}
+
+/* Handle wildcard sorting.  This returns the place in a binary search tree
+   where this FILE:SECTION should be inserted for wild statement WILD where
+   the spec SEC was the matching one.  The tree is later linearized.  */
 
 static lang_section_bst_type **
-wild_sort_fast (lang_wild_statement_type *wild,
-		struct wildcard_list *sec,
-		lang_input_statement_type *file ATTRIBUTE_UNUSED,
-		asection *section)
+wild_sort (lang_wild_statement_type *wild,
+	   struct wildcard_list *sec,
+	   lang_input_statement_type *file,
+	   asection *section)
 {
   lang_section_bst_type **tree;
 
-  tree = &wild->tree;
   if (!wild->filenames_sorted
-      && (sec == NULL || sec->spec.sorted == none))
+      && (sec == NULL || sec->spec.sorted == none
+	  || sec->spec.sorted == by_none))
     {
-      /* Append at the right end of tree.  */
-      while (*tree)
-	tree = &((*tree)->right);
-      return tree;
+      /* We might be called even if _this_ spec doesn't need sorting,
+         in which case we simply append at the right end of tree.  */
+      return wild->rightmost;
     }
 
+  tree = &wild->tree;
   while (*tree)
     {
+      /* Sorting by filename takes precedence over sorting by section
+	 name.  */
+
+      if (wild->filenames_sorted)
+	{
+	  const char *fn, *ln;
+	  bool fa, la;
+	  int i;
+	  asection *lsec = (*tree)->section;
+
+	  /* The PE support for the .idata section as generated by
+	     dlltool assumes that files will be sorted by the name of
+	     the archive and then the name of the file within the
+	     archive.  */
+
+	  fa = file->the_bfd->my_archive != NULL;
+	  if (fa)
+	    fn = sort_filename (file->the_bfd->my_archive);
+	  else
+	    fn = sort_filename (file->the_bfd);
+
+	  la = lsec->owner->my_archive != NULL;
+	  if (la)
+	    ln = sort_filename (lsec->owner->my_archive);
+	  else
+	    ln = sort_filename (lsec->owner);
+
+	  i = filename_cmp (fn, ln);
+	  if (i > 0)
+	    { tree = &((*tree)->right); continue; }
+	  else if (i < 0)
+	    { tree = &((*tree)->left); continue; }
+
+	  if (fa || la)
+	    {
+	      if (fa)
+		fn = sort_filename (file->the_bfd);
+	      if (la)
+		ln = sort_filename (lsec->owner);
+
+	      i = filename_cmp (fn, ln);
+	      if (i > 0)
+		{ tree = &((*tree)->right); continue; }
+	      else if (i < 0)
+		{ tree = &((*tree)->left); continue; }
+	    }
+	}
+
+      /* Here either the files are not sorted by name, or we are
+	 looking at the sections for this file.  */
+
       /* Find the correct node to append this section.  */
       if (compare_section (sec->spec.sorted, section, (*tree)->section) < 0)
 	tree = &((*tree)->left);
@@ -560,10 +652,10 @@ wild_sort_fast (lang_wild_statement_type *wild,
   return tree;
 }
 
-/* Use wild_sort_fast to build a BST to sort sections.  */
+/* Use wild_sort to build a BST to sort sections.  */
 
 static void
-output_section_callback_fast (lang_wild_statement_type *ptr,
+output_section_callback_sort (lang_wild_statement_type *ptr,
 			      struct wildcard_list *sec,
 			      asection *section,
 			      lang_input_statement_type *file,
@@ -584,9 +676,13 @@ output_section_callback_fast (lang_wild_statement_type *ptr,
   node->section = section;
   node->pattern = ptr->section_list;
 
-  tree = wild_sort_fast (ptr, sec, file, section);
+  tree = wild_sort (ptr, sec, file, section);
   if (tree != NULL)
-    *tree = node;
+    {
+      *tree = node;
+      if (tree == ptr->rightmost)
+	ptr->rightmost = &node->right;
+    }
 }
 
 /* Convert a sorted sections' BST back to list form.  */
@@ -599,7 +695,8 @@ output_section_callback_tree_to_list (lang_wild_statement_type *ptr,
   if (tree->left)
     output_section_callback_tree_to_list (ptr, tree->left, output);
 
-  lang_add_section (&ptr->children, tree->section, tree->pattern, NULL,
+  lang_add_section (&ptr->children, tree->section, tree->pattern,
+		    ptr->section_flag_list,
 		    (lang_output_section_statement_type *) output);
 
   if (tree->right)
@@ -821,6 +918,24 @@ wild_spec_can_overlap (const char *name1, const char *name2)
   return memcmp (name1, name2, min_prefix_len) == 0;
 }
 
+/* Like strcspn() but start to look from the end to beginning of
+   S.  Returns the length of the suffix of S consisting entirely
+   of characters not in REJECT.  */
+
+static size_t
+rstrcspn (const char *s, const char *reject)
+{
+  size_t len = strlen (s), sufflen = 0;
+  while (len--)
+    {
+      char c = s[len];
+      if (strchr (reject, c) != 0)
+	break;
+      sufflen++;
+    }
+  return sufflen;
+}
+
 /* Select specialized code to handle various kinds of wildcard
    statements.  */
 
@@ -839,6 +954,20 @@ analyze_walk_wild_section_handler (lang_wild_statement_type *ptr)
   ptr->handler_data[2] = NULL;
   ptr->handler_data[3] = NULL;
   ptr->tree = NULL;
+  ptr->rightmost = &ptr->tree;
+
+  for (sec = ptr->section_list; sec != NULL; sec = sec->next)
+    {
+      if (sec->spec.name)
+	{
+	  sec->spec.namelen = strlen (sec->spec.name);
+	  sec->spec.prefixlen = strcspn (sec->spec.name, "?*[");
+	  sec->spec.suffixlen = rstrcspn (sec->spec.name + sec->spec.prefixlen,
+					  "?*]");
+	}
+      else
+	sec->spec.namelen = sec->spec.prefixlen = sec->spec.suffixlen = 0;
+    }
 
   /* Count how many wildcard_specs there are, and how many of those
      actually use wildcards in the name.  Also, bail out if any of the
@@ -2716,113 +2845,17 @@ lang_add_section (lang_statement_list_type *ptr,
   new_section->pattern = pattern;
 }
 
-/* PE puts the sort key in the input statement.  */
-
-static const char *
-sort_filename (bfd *abfd)
-{
-  lang_input_statement_type *is = bfd_usrdata (abfd);
-  if (is->sort_key)
-    return is->sort_key;
-  return bfd_get_filename (abfd);
-}
-
-/* Handle wildcard sorting.  This returns the lang_input_section which
-   should follow the one we are going to create for SECTION and FILE,
-   based on the sorting requirements of WILD.  It returns NULL if the
-   new section should just go at the end of the current list.  */
-
-static lang_statement_union_type *
-wild_sort (lang_wild_statement_type *wild,
-	   struct wildcard_list *sec,
-	   lang_input_statement_type *file,
-	   asection *section)
-{
-  lang_statement_union_type *l;
-
-  if (!wild->filenames_sorted
-      && (sec == NULL || sec->spec.sorted == none))
-    return NULL;
-
-  for (l = wild->children.head; l != NULL; l = l->header.next)
-    {
-      lang_input_section_type *ls;
-
-      if (l->header.type != lang_input_section_enum)
-	continue;
-      ls = &l->input_section;
-
-      /* Sorting by filename takes precedence over sorting by section
-	 name.  */
-
-      if (wild->filenames_sorted)
-	{
-	  const char *fn, *ln;
-	  bool fa, la;
-	  int i;
-
-	  /* The PE support for the .idata section as generated by
-	     dlltool assumes that files will be sorted by the name of
-	     the archive and then the name of the file within the
-	     archive.  */
-
-	  fa = file->the_bfd->my_archive != NULL;
-	  if (fa)
-	    fn = sort_filename (file->the_bfd->my_archive);
-	  else
-	    fn = sort_filename (file->the_bfd);
-
-	  la = ls->section->owner->my_archive != NULL;
-	  if (la)
-	    ln = sort_filename (ls->section->owner->my_archive);
-	  else
-	    ln = sort_filename (ls->section->owner);
-
-	  i = filename_cmp (fn, ln);
-	  if (i > 0)
-	    continue;
-	  else if (i < 0)
-	    break;
-
-	  if (fa || la)
-	    {
-	      if (fa)
-		fn = sort_filename (file->the_bfd);
-	      if (la)
-		ln = sort_filename (ls->section->owner);
-
-	      i = filename_cmp (fn, ln);
-	      if (i > 0)
-		continue;
-	      else if (i < 0)
-		break;
-	    }
-	}
-
-      /* Here either the files are not sorted by name, or we are
-	 looking at the sections for this file.  */
-
-      if (sec != NULL
-	  && sec->spec.sorted != none
-	  && sec->spec.sorted != by_none)
-	if (compare_section (sec->spec.sorted, section, ls->section) < 0)
-	  break;
-    }
-
-  return l;
-}
-
 /* Expand a wild statement for a particular FILE.  SECTION may be
-   NULL, in which case it is a wild card.  */
+   NULL, in which case it is a wild card.  This assumes that the
+   wild statement doesn't need any sorting (of filenames or sections).  */
 
 static void
-output_section_callback (lang_wild_statement_type *ptr,
-			 struct wildcard_list *sec,
-			 asection *section,
-			 lang_input_statement_type *file,
-			 void *output)
+output_section_callback_nosort (lang_wild_statement_type *ptr,
+			struct wildcard_list *sec ATTRIBUTE_UNUSED,
+			asection *section,
+			lang_input_statement_type *file ATTRIBUTE_UNUSED,
+			void *output)
 {
-  lang_statement_union_type *before;
   lang_output_section_statement_type *os;
 
   os = (lang_output_section_statement_type *) output;
@@ -2831,40 +2864,8 @@ output_section_callback (lang_wild_statement_type *ptr,
   if (unique_section_p (section, os))
     return;
 
-  before = wild_sort (ptr, sec, file, section);
-
-  /* Here BEFORE points to the lang_input_section which
-     should follow the one we are about to add.  If BEFORE
-     is NULL, then the section should just go at the end
-     of the current list.  */
-
-  if (before == NULL)
-    lang_add_section (&ptr->children, section, ptr->section_list,
-		      ptr->section_flag_list, os);
-  else
-    {
-      lang_statement_list_type list;
-      lang_statement_union_type **pp;
-
-      lang_list_init (&list);
-      lang_add_section (&list, section, ptr->section_list,
-			ptr->section_flag_list, os);
-
-      /* If we are discarding the section, LIST.HEAD will
-	 be NULL.  */
-      if (list.head != NULL)
-	{
-	  ASSERT (list.head->header.next == NULL);
-
-	  for (pp = &ptr->children.head;
-	       *pp != before;
-	       pp = &(*pp)->header.next)
-	    ASSERT (*pp != NULL);
-
-	  list.head->header.next = *pp;
-	  *pp = list.head;
-	}
-    }
+  lang_add_section (&ptr->children, section, ptr->section_list,
+		    ptr->section_flag_list, os);
 }
 
 /* Check if all sections in a wild statement for a particular FILE
@@ -3175,23 +3176,22 @@ wild (lang_wild_statement_type *s,
 {
   struct wildcard_list *sec;
 
-  if (s->handler_data[0]
-      && s->handler_data[0]->spec.sorted == by_name
-      && !s->filenames_sorted)
+  if (s->filenames_sorted || s->any_specs_sorted)
     {
       lang_section_bst_type *tree;
 
-      walk_wild (s, output_section_callback_fast, output);
+      walk_wild (s, output_section_callback_sort, output);
 
       tree = s->tree;
       if (tree)
 	{
 	  output_section_callback_tree_to_list (s, tree, output);
 	  s->tree = NULL;
+	  s->rightmost = &s->tree;
 	}
     }
   else
-    walk_wild (s, output_section_callback, output);
+    walk_wild (s, output_section_callback_nosort, output);
 
   if (default_common_section == NULL)
     for (sec = s->section_list; sec != NULL; sec = sec->next)
@@ -4149,22 +4149,25 @@ update_wild_statements (lang_statement_union_type *s)
 		/* Don't sort .init/.fini sections.  */
 		if (strcmp (sec->spec.name, ".init") != 0
 		    && strcmp (sec->spec.name, ".fini") != 0)
-		  switch (sec->spec.sorted)
-		    {
-		    case none:
-		      sec->spec.sorted = sort_section;
-		      break;
-		    case by_name:
-		      if (sort_section == by_alignment)
-			sec->spec.sorted = by_name_alignment;
-		      break;
-		    case by_alignment:
-		      if (sort_section == by_name)
-			sec->spec.sorted = by_alignment_name;
-		      break;
-		    default:
-		      break;
-		    }
+		  {
+		    switch (sec->spec.sorted)
+		      {
+			case none:
+			    sec->spec.sorted = sort_section;
+			    break;
+			case by_name:
+			    if (sort_section == by_alignment)
+			      sec->spec.sorted = by_name_alignment;
+			    break;
+			case by_alignment:
+			    if (sort_section == by_name)
+			      sec->spec.sorted = by_alignment_name;
+			    break;
+			default:
+			    break;
+		      }
+		    s->wild_statement.any_specs_sorted = true;
+		  }
 	      break;
 
 	    case lang_constructors_statement_enum:
@@ -8192,7 +8195,9 @@ lang_process (void)
 
   ldemul_after_check_relocs ();
 
-  /* Update wild statements.  */
+  /* Update wild statements in case the user gave --sort-section.
+     Note how the option might have come after the linker script and
+     so couldn't have been set when the wild statements were created.  */
   update_wild_statements (statement_list.head);
 
   /* Run through the contours of the script and attach input sections
@@ -8306,12 +8311,15 @@ lang_add_wild (struct wildcard_spec *filespec,
 {
   struct wildcard_list *curr, *next;
   lang_wild_statement_type *new_stmt;
+  bool any_specs_sorted = false;
 
   /* Reverse the list as the parser puts it back to front.  */
   for (curr = section_list, section_list = NULL;
        curr != NULL;
        section_list = curr, curr = next)
     {
+      if (curr->spec.sorted != none && curr->spec.sorted != by_none)
+	any_specs_sorted = true;
       next = curr->next;
       curr->next = section_list;
     }
@@ -8327,6 +8335,7 @@ lang_add_wild (struct wildcard_spec *filespec,
   new_stmt = new_stat (lang_wild_statement, stat_ptr);
   new_stmt->filename = NULL;
   new_stmt->filenames_sorted = false;
+  new_stmt->any_specs_sorted = any_specs_sorted;
   new_stmt->section_flag_list = NULL;
   new_stmt->exclude_name_list = NULL;
   if (filespec != NULL)

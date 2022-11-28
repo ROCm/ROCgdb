@@ -908,6 +908,15 @@ add_deprecated_target_alias (const target_info &tinfo, const char *alias)
 void
 target_kill (void)
 {
+
+  /* If the commit_resume_state of the to-be-killed-inferior's process stratum
+     is true, and this inferior is the last live inferior with resumed threads
+     of that target, then we want to leave commit_resume_state to false, as the
+     target won't have any resumed threads anymore.  We achieve this with
+     this scoped_disable_commit_resumed.  On construction, it will set the flag
+     to false.  On destruction, it will only set it to true if there are resumed
+     threads left.  */
+  scoped_disable_commit_resumed disable ("killing");
   current_inferior ()->top_target ()->kill ();
 }
 
@@ -2538,6 +2547,9 @@ target_preopen (int from_tty)
 void
 target_detach (inferior *inf, int from_tty)
 {
+  /* Thread's don't need to be resumed until the end of this function.  */
+  scoped_disable_commit_resumed disable_commit_resumed ("detaching");
+
   /* After we have detached, we will clear the register cache for this inferior
      by calling registers_changed_ptid.  We must save the pid_ptid before
      detaching, as the target detach method will clear inf->pid.  */
@@ -2570,6 +2582,8 @@ target_detach (inferior *inf, int from_tty)
      inferior_ptid matches save_pid_ptid, but in our case, it does not
      call it, as inferior_ptid has been reset.  */
   reinit_frame_cache ();
+
+  disable_commit_resumed.reset_and_commit ();
 }
 
 void
