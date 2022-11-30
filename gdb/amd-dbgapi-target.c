@@ -2227,10 +2227,19 @@ amd_dbgapi_target::update_thread_list ()
 	threads.emplace (wave_list[i].handle);
       xfree (wave_list);
 
-      /* Then prune the wave_ids that already have a thread_info.  */
-      for (thread_info *tp : inf->non_exited_threads ())
-	if (ptid_is_gpu (tp->ptid))
-	  threads.erase (tp->ptid.tid ());
+      /* Prune the wave_ids that already have a thread_info.  Any thread_info
+	 which does not have a corresponding wave_id represents a wave which
+	 is gone at this point and should be deleted.  */
+      for (thread_info *tp : inf->threads_safe ())
+	if (ptid_is_gpu (tp->ptid) && tp->state != THREAD_EXITED)
+	  {
+	    auto it = threads.find (tp->ptid.tid ());
+
+	    if (it == threads.end ())
+	      delete_thread (tp);
+	    else
+	      threads.erase (it);
+	  }
 
       /* The wave_ids that are left require a new thread_info.  */
       for (auto &&tid : threads)
