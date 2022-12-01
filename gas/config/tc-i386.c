@@ -80,9 +80,6 @@
 #define SHORT_MNEM_SUFFIX 's'
 #define LONG_MNEM_SUFFIX  'l'
 #define QWORD_MNEM_SUFFIX  'q'
-/* Intel Syntax.  Use a non-ascii letter since since it never appears
-   in instructions.  */
-#define LONG_DOUBLE_MNEM_SUFFIX '\1'
 
 #define END_OF_INSN '\0'
 
@@ -312,6 +309,9 @@ struct _i386_insn
 
     /* The operand to a branch insn indicates an absolute branch.  */
     bool jumpabsolute;
+
+    /* The operand to a branch insn indicates a far branch.  */
+    bool far_branch;
 
     /* There is a memory operand of (%dx) which should be only used
        with input/output instructions.  */
@@ -6461,7 +6461,6 @@ match_template (char mnem_suffix)
   i386_operand_type overlap0, overlap1, overlap2, overlap3;
   i386_operand_type overlap4;
   unsigned int found_reverse_match;
-  i386_opcode_modifier suffix_check;
   i386_operand_type operand_types [MAX_OPERANDS];
   int addr_prefix_disp;
   unsigned int j, size_match, check_register, errline = __LINE__;
@@ -6474,35 +6473,6 @@ match_template (char mnem_suffix)
 
   found_reverse_match = 0;
   addr_prefix_disp = -1;
-
-  /* Prepare for mnemonic suffix check.  */
-  memset (&suffix_check, 0, sizeof (suffix_check));
-  switch (mnem_suffix)
-    {
-    case BYTE_MNEM_SUFFIX:
-      suffix_check.no_bsuf = 1;
-      break;
-    case WORD_MNEM_SUFFIX:
-      suffix_check.no_wsuf = 1;
-      break;
-    case SHORT_MNEM_SUFFIX:
-      suffix_check.no_ssuf = 1;
-      break;
-    case LONG_MNEM_SUFFIX:
-      suffix_check.no_lsuf = 1;
-      break;
-    case QWORD_MNEM_SUFFIX:
-      suffix_check.no_qsuf = 1;
-      break;
-    default:
-      /* NB: In Intel syntax, normally we can check for memory operand
-	 size when there is no mnemonic suffix.  But jmp and call have
-	 2 different encodings with Dword memory operand size, one with
-	 No_ldSuf and the other without.  i.suffix is set to
-	 LONG_DOUBLE_MNEM_SUFFIX to skip the one with No_ldSuf.  */
-      if (i.suffix == LONG_DOUBLE_MNEM_SUFFIX)
-	suffix_check.no_ldsuf = 1;
-    }
 
   for (t = current_templates->start; t < current_templates->end; t++)
     {
@@ -6551,12 +6521,11 @@ match_template (char mnem_suffix)
 
       /* Check the suffix.  */
       specific_error = progress (invalid_instruction_suffix);
-      if ((t->opcode_modifier.no_bsuf && suffix_check.no_bsuf)
-	  || (t->opcode_modifier.no_wsuf && suffix_check.no_wsuf)
-	  || (t->opcode_modifier.no_lsuf && suffix_check.no_lsuf)
-	  || (t->opcode_modifier.no_ssuf && suffix_check.no_ssuf)
-	  || (t->opcode_modifier.no_qsuf && suffix_check.no_qsuf)
-	  || (t->opcode_modifier.no_ldsuf && suffix_check.no_ldsuf))
+      if ((t->opcode_modifier.no_bsuf && mnem_suffix == BYTE_MNEM_SUFFIX)
+	  || (t->opcode_modifier.no_wsuf && mnem_suffix == WORD_MNEM_SUFFIX)
+	  || (t->opcode_modifier.no_lsuf && mnem_suffix == LONG_MNEM_SUFFIX)
+	  || (t->opcode_modifier.no_ssuf && mnem_suffix == SHORT_MNEM_SUFFIX)
+	  || (t->opcode_modifier.no_qsuf && mnem_suffix == QWORD_MNEM_SUFFIX))
 	continue;
 
       specific_error = progress (operand_size_mismatch);
@@ -6572,6 +6541,15 @@ match_template (char mnem_suffix)
 	 a warning, issued further down).  */
       specific_error = progress (operand_type_mismatch);
       if (i.jumpabsolute && t->opcode_modifier.jump != JUMP_ABSOLUTE)
+	continue;
+
+      /* In Intel syntax, normally we can check for memory operand size when
+	 there is no mnemonic suffix.  But jmp and call have 2 different
+	 encodings with Dword memory operand size.  Skip the "near" one
+	 (permitting a register operand) when "far" was requested.  */
+      if (i.far_branch
+	  && t->opcode_modifier.jump == JUMP_ABSOLUTE
+	  && t->operand_types[0].bitfield.class == Reg)
 	continue;
 
       for (j = 0; j < MAX_OPERANDS; j++)
@@ -7249,8 +7227,6 @@ process_suffix (void)
 	suffixes |= 1 << 1;
       if (!i.tm.opcode_modifier.no_lsuf)
 	suffixes |= 1 << 2;
-      if (!i.tm.opcode_modifier.no_ldsuf)
-	suffixes |= 1 << 3;
       if (!i.tm.opcode_modifier.no_ssuf)
 	suffixes |= 1 << 4;
       if (flag_code == CODE_64BIT && !i.tm.opcode_modifier.no_qsuf)
