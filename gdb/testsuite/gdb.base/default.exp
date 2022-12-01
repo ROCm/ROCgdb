@@ -185,7 +185,7 @@ gdb_expect {
     }
     -re "exec-file.*A program is being debugged already.  Kill it. .y or n.*$" {
 	send_gdb "n\n"
-	if $verbose>1 then {
+	if {$verbose > 1} {
 	    send_user "\tDidn't kill program being debugged\n"
 	}
 	gdb_expect -re "$gdb_prompt $" { }
@@ -209,7 +209,7 @@ gdb_expect {
 	    { pass "file" }
     -re ".*A program is being debugged already.  Kill it. .y or n.*$" {
 	send_gdb "n\n"
-	if $verbose>1 then {
+	if {$verbose > 1} {
 	    send_user "\t\tDidn't kill program being debugged\n"
 	}
 	gdb_expect -re "$gdb_prompt $" { }
@@ -754,7 +754,7 @@ gdb_expect {
     -re "No core file specified..*$gdb_prompt $" { pass "target core" }
     -re ".*A program is being debugged already.  Kill it. .y or n.*$" {
 	send_gdb "n\n"
-	if $verbose>1 then {
+	if {$verbose > 1} {
 	    send_user "\t\tDidn't kill program being debugged\n"
 	}
 	gdb_expect -re "$gdb_prompt $" { }
@@ -772,7 +772,7 @@ gdb_expect {
 			{ pass "target exec" }
 	-re ".*A program is being debugged already.  Kill it. .y or n.*$" {
 	    send_gdb "n\n"
-	    if $verbose>1 then {
+	    if {$verbose > 1} {
 		send_user "\t\tDidn't kill program being debugged\n"
 	    }
 	    gdb_expect -re "$gdb_prompt $" { }
@@ -789,7 +789,7 @@ gdb_expect {
 	{ pass "target remote" }
     -re ".*A program is being debugged already.  Kill it. .y or n.*$" {
 	send_gdb "n\n"
-	if $verbose>1 then {
+	if {$verbose > 1} {
 	    send_user "\t\tDidn't kill program being debugged\n"
 	}
 	gdb_expect -re "$gdb_prompt $" { }

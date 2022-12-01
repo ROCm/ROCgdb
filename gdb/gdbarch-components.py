@@ -202,7 +202,7 @@ Value(
     name="bfloat16_format",
     postdefault="floatformats_bfloat16",
     invalid=True,
-    printer="pformat (gdbarch->bfloat16_format)",
+    printer="pformat (gdbarch, gdbarch->bfloat16_format)",
 )
 
 Value(
@@ -217,7 +217,7 @@ Value(
     name="half_format",
     postdefault="floatformats_ieee_half",
     invalid=True,
-    printer="pformat (gdbarch->half_format)",
+    printer="pformat (gdbarch, gdbarch->half_format)",
 )
 
 Value(
@@ -232,7 +232,7 @@ Value(
     name="float_format",
     postdefault="floatformats_ieee_single",
     invalid=True,
-    printer="pformat (gdbarch->float_format)",
+    printer="pformat (gdbarch, gdbarch->float_format)",
 )
 
 Value(
@@ -247,7 +247,7 @@ Value(
     name="double_format",
     postdefault="floatformats_ieee_double",
     invalid=True,
-    printer="pformat (gdbarch->double_format)",
+    printer="pformat (gdbarch, gdbarch->double_format)",
 )
 
 Value(
@@ -262,7 +262,7 @@ Value(
     name="long_double_format",
     postdefault="floatformats_ieee_double",
     invalid=True,
-    printer="pformat (gdbarch->long_double_format)",
+    printer="pformat (gdbarch, gdbarch->long_double_format)",
 )
 
 Value(

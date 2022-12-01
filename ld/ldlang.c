@@ -59,6 +59,7 @@
 /* Local variables.  */
 static struct obstack stat_obstack;
 static struct obstack map_obstack;
+static struct obstack pt_obstack;
 
 #define obstack_chunk_alloc xmalloc
 #define obstack_chunk_free free
@@ -80,6 +81,9 @@ static void exp_init_os (etree_type *);
 static lang_input_statement_type *lookup_name (const char *);
 static void insert_undefined (const char *);
 static bool sort_def_symbol (struct bfd_link_hash_entry *, void *);
+static lang_statement_union_type *new_statement (enum statement_enum type,
+						size_t size,
+						lang_statement_list_type *list);
 static void print_statement (lang_statement_union_type *,
 			     lang_output_section_statement_type *);
 static void print_statement_list (lang_statement_union_type *,
@@ -364,98 +368,84 @@ walk_wild_file_in_exclude_list (struct name_list *exclude_list,
   return false;
 }
 
-/* Try processing a section against a wildcard.  This just calls
-   the callback unless the filename exclusion list is present
-   and excludes the file.  It's hardly ever present so this
-   function is very fast.  */
+/* Add SECTION (from input FILE) to the list of matching sections
+   within PTR (the matching wildcard is SEC).  */
 
 static void
-walk_wild_consider_section (lang_wild_statement_type *ptr,
-			    lang_input_statement_type *file,
-			    asection *s,
-			    struct wildcard_list *sec,
-			    callback_t callback,
-			    void *data)
+add_matching_section (lang_wild_statement_type *ptr,
+		      struct wildcard_list *sec,
+		      asection *section,
+		      lang_input_statement_type *file)
 {
-  /* Don't process sections from files which were excluded.  */
-  if (walk_wild_file_in_exclude_list (sec->spec.exclude_name_list, file))
+  lang_input_matcher_type *new_section;
+  /* Add a section reference to the list.  */
+  new_section = new_stat (lang_input_matcher, &ptr->matching_sections);
+  new_section->section = section;
+  new_section->pattern = sec;
+  new_section->input_stmt = file;
+}
+
+/* Process section S (from input file FILE) in relation to wildcard
+   statement PTR.  We already know that a prefix of the name of S matches
+   some wildcard in PTR's wildcard list.  Here we check if the filename
+   matches as well (if it's specified) and if any of the wildcards in fact
+   does match.  */
+
+static void
+walk_wild_section_match (lang_wild_statement_type *ptr,
+			 lang_input_statement_type *file,
+			 asection *s)
+{
+  struct wildcard_list *sec;
+  const char *file_spec = ptr->filename;
+  char *p;
+
+  /* Check if filenames match.  */
+  if (file_spec == NULL)
+    ;
+  else if ((p = archive_path (file_spec)) != NULL)
+    {
+      if (!input_statement_is_archive_path (file_spec, p, file))
+	return;
+    }
+  else if (wildcardp (file_spec))
+    {
+      if (fnmatch (file_spec, file->filename, 0) != 0)
+	return;
+    }
+  else
+    {
+      lang_input_statement_type *f;
+      /* Perform the iteration over a single file.  */
+      f = lookup_name (file_spec);
+      if (f != file)
+	return;
+    }
+
+  /* If filename is excluded we're done.  */
+  if (walk_wild_file_in_exclude_list (ptr->exclude_name_list, file))
     return;
 
-  (*callback) (ptr, sec, s, file, data);
-}
-
-/* Lowest common denominator routine that can handle everything correctly,
-   but slowly.  */
-
-static void
-walk_wild_section_general (lang_wild_statement_type *ptr,
-			   lang_input_statement_type *file,
-			   callback_t callback,
-			   void *data)
-{
-  asection *s;
-  struct wildcard_list *sec;
-
-  for (s = file->the_bfd->sections; s != NULL; s = s->next)
+  /* Check section name against each wildcard spec.  If there's no
+     wildcard all sections match.  */
+  sec = ptr->section_list;
+  if (sec == NULL)
+    add_matching_section (ptr, sec, s, file);
+  else
     {
-      sec = ptr->section_list;
-      if (sec == NULL)
-	(*callback) (ptr, sec, s, file, data);
-
-      while (sec != NULL)
+      const char *sname = bfd_section_name (s);
+      for (; sec != NULL; sec = sec->next)
 	{
-	  bool skip = false;
+	  if (sec->spec.name != NULL
+	      && spec_match (&sec->spec, sname) != 0)
+	    continue;
 
-	  if (sec->spec.name != NULL)
-	    {
-	      const char *sname = bfd_section_name (s);
-
-	      skip = spec_match (&sec->spec, sname) != 0;
-	    }
-
-	  if (!skip)
-	    walk_wild_consider_section (ptr, file, s, sec, callback, data);
-
-	  sec = sec->next;
+	  /* Don't process sections from files which were excluded.  */
+	  if (!walk_wild_file_in_exclude_list (sec->spec.exclude_name_list,
+					       file))
+	    add_matching_section (ptr, sec, s, file);
 	}
     }
-}
-
-/* Routines to find a single section given its name.  If there's more
-   than one section with that name, we report that.  */
-
-typedef struct
-{
-  asection *found_section;
-  bool multiple_sections_found;
-} section_iterator_callback_data;
-
-static bool
-section_iterator_callback (bfd *abfd ATTRIBUTE_UNUSED, asection *s, void *data)
-{
-  section_iterator_callback_data *d = (section_iterator_callback_data *) data;
-
-  if (d->found_section != NULL)
-    {
-      d->multiple_sections_found = true;
-      return true;
-    }
-
-  d->found_section = s;
-  return false;
-}
-
-static asection *
-find_section (lang_input_statement_type *file,
-	      struct wildcard_list *sec,
-	      bool *multiple_sections_found)
-{
-  section_iterator_callback_data cb_data = { NULL, false };
-
-  bfd_get_section_by_name_if (file->the_bfd, sec->spec.name,
-			      section_iterator_callback, &cb_data);
-  *multiple_sections_found = cb_data.multiple_sections_found;
-  return cb_data.found_section;
 }
 
 /* Return the numerical value of the init_priority attribute from
@@ -705,217 +695,143 @@ output_section_callback_tree_to_list (lang_wild_statement_type *ptr,
   free (tree);
 }
 
-/* Specialized, optimized routines for handling different kinds of
-   wildcards */
+
+/* Sections are matched against wildcard statements via a prefix tree.
+   The prefix tree holds prefixes of all matching patterns (up to the first
+   wildcard character), and the wild statement from which those patterns
+   came.  When matching a section name against the tree we're walking through
+   the tree character by character.  Each statement we hit is one that
+   potentially matches.  This is checked by actually going through the
+   (glob) matching routines.
 
-static void
-walk_wild_section_specs1_wild0 (lang_wild_statement_type *ptr,
-				lang_input_statement_type *file,
-				callback_t callback,
-				void *data)
+   When the section name turns out to actually match we record that section
+   in the wild statements list of matching sections.  */
+
+/* A prefix can be matched by multiple statement, so we need a list of them.  */
+struct wild_stmt_list
 {
-  /* We can just do a hash lookup for the section with the right name.
-     But if that lookup discovers more than one section with the name
-     (should be rare), we fall back to the general algorithm because
-     we would otherwise have to sort the sections to make sure they
-     get processed in the bfd's order.  */
-  bool multiple_sections_found;
-  struct wildcard_list *sec0 = ptr->handler_data[0];
-  asection *s0 = find_section (file, sec0, &multiple_sections_found);
+  lang_wild_statement_type *stmt;
+  struct wild_stmt_list *next;
+};
 
-  if (multiple_sections_found)
-    walk_wild_section_general (ptr, file, callback, data);
-  else if (s0)
-    walk_wild_consider_section (ptr, file, s0, sec0, callback, data);
+/* The prefix tree itself.  */
+struct prefixtree
+{
+  /* The list of all children (linked via .next).  */
+  struct prefixtree *child;
+  struct prefixtree *next;
+  /* This tree node is responsible for the prefix of parent plus 'c'.  */
+  char c;
+  /* The statements that potentially can match this prefix.  */
+  struct wild_stmt_list *stmt;
+};
+
+/* We always have a root node in the prefix tree.  It corresponds to the
+   empty prefix.  E.g. a glob like "*" would sit in this root.  */
+static struct prefixtree the_root, *ptroot = &the_root;
+
+/* Given a prefix tree in *TREE, corresponding to prefix P, find or
+   INSERT the tree node corresponding to prefix P+C.  */
+
+static struct prefixtree *
+get_prefix_tree (struct prefixtree **tree, char c, bool insert)
+{
+  struct prefixtree *t;
+  for (t = *tree; t; t = t->next)
+    if (t->c == c)
+      return t;
+  if (!insert)
+    return NULL;
+  t = (struct prefixtree *) obstack_alloc (&pt_obstack, sizeof *t);
+  t->child = NULL;
+  t->next = *tree;
+  t->c = c;
+  t->stmt = NULL;
+  *tree = t;
+  return t;
 }
 
+/* Add STMT to the set of statements that can be matched by the prefix
+   corresponding to prefix tree T.  */
+
 static void
-walk_wild_section_specs1_wild1 (lang_wild_statement_type *ptr,
-				lang_input_statement_type *file,
-				callback_t callback,
-				void *data)
+pt_add_stmt (struct prefixtree *t, lang_wild_statement_type *stmt)
 {
-  asection *s;
-  struct wildcard_list *wildsec0 = ptr->handler_data[0];
-
-  for (s = file->the_bfd->sections; s != NULL; s = s->next)
-    {
-      const char *sname = bfd_section_name (s);
-      bool skip = !match_simple_wild (wildsec0->spec.name, sname);
-
-      if (!skip)
-	walk_wild_consider_section (ptr, file, s, wildsec0, callback, data);
-    }
+  struct wild_stmt_list *sl, **psl;
+  sl = (struct wild_stmt_list *) obstack_alloc (&pt_obstack, sizeof *sl);
+  sl->stmt = stmt;
+  sl->next = NULL;
+  psl = &t->stmt;
+  while (*psl)
+    psl = &(*psl)->next;
+  *psl = sl;
 }
 
-static void
-walk_wild_section_specs2_wild1 (lang_wild_statement_type *ptr,
-				lang_input_statement_type *file,
-				callback_t callback,
-				void *data)
-{
-  asection *s;
-  struct wildcard_list *sec0 = ptr->handler_data[0];
-  struct wildcard_list *wildsec1 = ptr->handler_data[1];
-  bool multiple_sections_found;
-  asection *s0 = find_section (file, sec0, &multiple_sections_found);
+/* Insert STMT into the global prefix tree.  */
 
-  if (multiple_sections_found)
+static void
+insert_prefix_tree (lang_wild_statement_type *stmt)
+{
+  struct wildcard_list *sec;
+  struct prefixtree *t;
+
+  if (!stmt->section_list)
     {
-      walk_wild_section_general (ptr, file, callback, data);
+      /* If we have no section_list (no wildcards in the wild STMT),
+	 then every section name will match, so add this to the root.  */
+      pt_add_stmt (ptroot, stmt);
       return;
     }
 
-  /* Note that if the section was not found, s0 is NULL and
-     we'll simply never succeed the s == s0 test below.  */
-  for (s = file->the_bfd->sections; s != NULL; s = s->next)
+  for (sec = stmt->section_list; sec; sec = sec->next)
     {
-      /* Recall that in this code path, a section cannot satisfy more
-	 than one spec, so if s == s0 then it cannot match
-	 wildspec1.  */
-      if (s == s0)
-	walk_wild_consider_section (ptr, file, s, sec0, callback, data);
-      else
+      const char *name = sec->spec.name ? sec->spec.name : "*";
+      char c;
+      t = ptroot;
+      for (; (c = *name); name++)
 	{
-	  const char *sname = bfd_section_name (s);
-	  bool skip = !match_simple_wild (wildsec1->spec.name, sname);
-
-	  if (!skip)
-	    walk_wild_consider_section (ptr, file, s, wildsec1, callback,
-					data);
+	  if (c == '*' || c == '[' || c == '?')
+	    break;
+	  t = get_prefix_tree (&t->child, c, true);
 	}
+      /* If we hit a glob character, the matching prefix is what we saw
+	 until now.  If we hit the end of pattern (hence it's no glob) then
+	 we can do better: we only need to record a match when a section name
+	 completely matches, not merely a prefix, so record the trailing 0
+	 as well.  */
+      if (!c)
+	t = get_prefix_tree (&t->child, 0, true);
+      pt_add_stmt (t, stmt);
     }
 }
 
+/* Dump T indented by INDENT spaces.  */
+
 static void
-walk_wild_section_specs3_wild2 (lang_wild_statement_type *ptr,
-				lang_input_statement_type *file,
-				callback_t callback,
-				void *data)
+debug_prefix_tree_rec (struct prefixtree *t, int indent)
 {
-  asection *s;
-  struct wildcard_list *sec0 = ptr->handler_data[0];
-  struct wildcard_list *wildsec1 = ptr->handler_data[1];
-  struct wildcard_list *wildsec2 = ptr->handler_data[2];
-  bool multiple_sections_found;
-  asection *s0 = find_section (file, sec0, &multiple_sections_found);
-
-  if (multiple_sections_found)
+  for (; t; t = t->next)
     {
-      walk_wild_section_general (ptr, file, callback, data);
-      return;
-    }
-
-  for (s = file->the_bfd->sections; s != NULL; s = s->next)
-    {
-      if (s == s0)
-	walk_wild_consider_section (ptr, file, s, sec0, callback, data);
-      else
+      struct wild_stmt_list *sl;
+      printf ("%*s %c", indent, "", t->c);
+      for (sl = t->stmt; sl; sl = sl->next)
 	{
-	  const char *sname = bfd_section_name (s);
-	  bool skip = !match_simple_wild (wildsec1->spec.name, sname);
-
-	  if (!skip)
-	    walk_wild_consider_section (ptr, file, s, wildsec1, callback, data);
-	  else
-	    {
-	      skip = !match_simple_wild (wildsec2->spec.name, sname);
-	      if (!skip)
-		walk_wild_consider_section (ptr, file, s, wildsec2, callback,
-					    data);
-	    }
+	  struct wildcard_list *curr;
+	  printf (" %p ", sl->stmt);
+	  for (curr = sl->stmt->section_list; curr; curr = curr->next)
+	    printf ("%s ", curr->spec.name ? curr->spec.name : "*");
 	}
+      printf ("\n");
+      debug_prefix_tree_rec (t->child, indent + 2);
     }
 }
+
+/* Dump the global prefix tree.  */
 
 static void
-walk_wild_section_specs4_wild2 (lang_wild_statement_type *ptr,
-				lang_input_statement_type *file,
-				callback_t callback,
-				void *data)
+debug_prefix_tree (void)
 {
-  asection *s;
-  struct wildcard_list *sec0 = ptr->handler_data[0];
-  struct wildcard_list *sec1 = ptr->handler_data[1];
-  struct wildcard_list *wildsec2 = ptr->handler_data[2];
-  struct wildcard_list *wildsec3 = ptr->handler_data[3];
-  bool multiple_sections_found;
-  asection *s0 = find_section (file, sec0, &multiple_sections_found), *s1;
-
-  if (multiple_sections_found)
-    {
-      walk_wild_section_general (ptr, file, callback, data);
-      return;
-    }
-
-  s1 = find_section (file, sec1, &multiple_sections_found);
-  if (multiple_sections_found)
-    {
-      walk_wild_section_general (ptr, file, callback, data);
-      return;
-    }
-
-  for (s = file->the_bfd->sections; s != NULL; s = s->next)
-    {
-      if (s == s0)
-	walk_wild_consider_section (ptr, file, s, sec0, callback, data);
-      else
-	if (s == s1)
-	  walk_wild_consider_section (ptr, file, s, sec1, callback, data);
-	else
-	  {
-	    const char *sname = bfd_section_name (s);
-	    bool skip = !match_simple_wild (wildsec2->spec.name, sname);
-
-	    if (!skip)
-	      walk_wild_consider_section (ptr, file, s, wildsec2, callback,
-					  data);
-	    else
-	      {
-		skip = !match_simple_wild (wildsec3->spec.name, sname);
-		if (!skip)
-		  walk_wild_consider_section (ptr, file, s, wildsec3,
-					      callback, data);
-	      }
-	  }
-    }
-}
-
-static void
-walk_wild_section (lang_wild_statement_type *ptr,
-		   lang_input_statement_type *file,
-		   callback_t callback,
-		   void *data)
-{
-  if (file->flags.just_syms)
-    return;
-
-  (*ptr->walk_wild_section_handler) (ptr, file, callback, data);
-}
-
-/* Returns TRUE when name1 is a wildcard spec that might match
-   something name2 can match.  We're conservative: we return FALSE
-   only if the prefixes of name1 and name2 are different up to the
-   first wildcard character.  */
-
-static bool
-wild_spec_can_overlap (const char *name1, const char *name2)
-{
-  size_t prefix1_len = strcspn (name1, "?*[");
-  size_t prefix2_len = strcspn (name2, "?*[");
-  size_t min_prefix_len;
-
-  /* Note that if there is no wildcard character, then we treat the
-     terminating 0 as part of the prefix.  Thus ".text" won't match
-     ".text." or ".text.*", for example.  */
-  if (name1[prefix1_len] == '\0')
-    prefix1_len++;
-  if (name2[prefix2_len] == '\0')
-    prefix2_len++;
-
-  min_prefix_len = prefix1_len < prefix2_len ? prefix1_len : prefix2_len;
-
-  return memcmp (name1, name2, min_prefix_len) == 0;
+  debug_prefix_tree_rec (ptroot, 2);
 }
 
 /* Like strcspn() but start to look from the end to beginning of
@@ -936,23 +852,14 @@ rstrcspn (const char *s, const char *reject)
   return sufflen;
 }
 
-/* Select specialized code to handle various kinds of wildcard
-   statements.  */
+/* Analyze the wildcards in wild statement PTR to setup various
+   things for quick matching.  */
 
 static void
 analyze_walk_wild_section_handler (lang_wild_statement_type *ptr)
 {
-  int sec_count = 0;
-  int wild_name_count = 0;
   struct wildcard_list *sec;
-  int signature;
-  int data_counter;
 
-  ptr->walk_wild_section_handler = walk_wild_section_general;
-  ptr->handler_data[0] = NULL;
-  ptr->handler_data[1] = NULL;
-  ptr->handler_data[2] = NULL;
-  ptr->handler_data[3] = NULL;
   ptr->tree = NULL;
   ptr->rightmost = &ptr->tree;
 
@@ -969,152 +876,92 @@ analyze_walk_wild_section_handler (lang_wild_statement_type *ptr)
 	sec->spec.namelen = sec->spec.prefixlen = sec->spec.suffixlen = 0;
     }
 
-  /* Count how many wildcard_specs there are, and how many of those
-     actually use wildcards in the name.  Also, bail out if any of the
-     wildcard names are NULL. (Can this actually happen?
-     walk_wild_section used to test for it.)  And bail out if any
-     of the wildcards are more complex than a simple string
-     ending in a single '*'.  */
-  for (sec = ptr->section_list; sec != NULL; sec = sec->next)
-    {
-      ++sec_count;
-      if (sec->spec.name == NULL)
-	return;
-      if (wildcardp (sec->spec.name))
-	{
-	  ++wild_name_count;
-	  if (!is_simple_wild (sec->spec.name))
-	    return;
-	}
-    }
-
-  /* The zero-spec case would be easy to optimize but it doesn't
-     happen in practice.  Likewise, more than 4 specs doesn't
-     happen in practice.  */
-  if (sec_count == 0 || sec_count > 4)
-    return;
-
-  /* Check that no two specs can match the same section.  */
-  for (sec = ptr->section_list; sec != NULL; sec = sec->next)
-    {
-      struct wildcard_list *sec2;
-      for (sec2 = sec->next; sec2 != NULL; sec2 = sec2->next)
-	{
-	  if (wild_spec_can_overlap (sec->spec.name, sec2->spec.name))
-	    return;
-	}
-    }
-
-  signature = (sec_count << 8) + wild_name_count;
-  switch (signature)
-    {
-    case 0x0100:
-      ptr->walk_wild_section_handler = walk_wild_section_specs1_wild0;
-      break;
-    case 0x0101:
-      ptr->walk_wild_section_handler = walk_wild_section_specs1_wild1;
-      break;
-    case 0x0201:
-      ptr->walk_wild_section_handler = walk_wild_section_specs2_wild1;
-      break;
-    case 0x0302:
-      ptr->walk_wild_section_handler = walk_wild_section_specs3_wild2;
-      break;
-    case 0x0402:
-      ptr->walk_wild_section_handler = walk_wild_section_specs4_wild2;
-      break;
-    default:
-      return;
-    }
-
-  /* Now fill the data array with pointers to the specs, first the
-     specs with non-wildcard names, then the specs with wildcard
-     names.  It's OK to process the specs in different order from the
-     given order, because we've already determined that no section
-     will match more than one spec.  */
-  data_counter = 0;
-  for (sec = ptr->section_list; sec != NULL; sec = sec->next)
-    if (!wildcardp (sec->spec.name))
-      ptr->handler_data[data_counter++] = sec;
-  for (sec = ptr->section_list; sec != NULL; sec = sec->next)
-    if (wildcardp (sec->spec.name))
-      ptr->handler_data[data_counter++] = sec;
+  insert_prefix_tree (ptr);
 }
 
-/* Handle a wild statement for a single file F.  */
+/* Match all sections from FILE against the global prefix tree,
+   and record them into each wild statement that has a match.  */
 
 static void
-walk_wild_file (lang_wild_statement_type *s,
-		lang_input_statement_type *f,
-		callback_t callback,
-		void *data)
+resolve_wild_sections (lang_input_statement_type *file)
 {
-  if (walk_wild_file_in_exclude_list (s->exclude_name_list, f))
+  asection *s;
+
+  if (file->flags.just_syms)
     return;
 
-  if (f->the_bfd == NULL
-      || !bfd_check_format (f->the_bfd, bfd_archive))
-    walk_wild_section (s, f, callback, data);
-  else
+  for (s = file->the_bfd->sections; s != NULL; s = s->next)
     {
-      bfd *member;
-
-      /* This is an archive file.  We must map each member of the
-	 archive separately.  */
-      member = bfd_openr_next_archived_file (f->the_bfd, NULL);
-      while (member != NULL)
+      const char *sname = bfd_section_name (s);
+      char c = 1;
+      struct prefixtree *t = ptroot;
+      //printf (" YYY consider %s of %s\n", sname, file->the_bfd->filename);
+      do
 	{
-	  /* When lookup_name is called, it will call the add_symbols
-	     entry point for the archive.  For each element of the
-	     archive which is included, BFD will call ldlang_add_file,
-	     which will set the usrdata field of the member to the
-	     lang_input_statement.  */
-	  if (bfd_usrdata (member) != NULL)
-	    walk_wild_section (s, bfd_usrdata (member), callback, data);
+	  if (t->stmt)
+	    {
+	      struct wild_stmt_list *sl;
+	      for (sl = t->stmt; sl; sl = sl->next)
+		{
+		  walk_wild_section_match (sl->stmt, file, s);
+		  //printf ("   ZZZ maybe place into %p\n", sl->stmt);
+		}
+	    }
+	  if (!c)
+	    break;
+	  c = *sname++;
+	  t = get_prefix_tree (&t->child, c, false);
+	}
+      while (t);
+    }
+}
 
-	  member = bfd_openr_next_archived_file (f->the_bfd, member);
+/* Match all sections from all input files against the global prefix tree.  */
+
+static void
+resolve_wilds (void)
+{
+  LANG_FOR_EACH_INPUT_STATEMENT (f)
+    {
+      //printf("XXX   %s\n", f->filename);
+      if (f->the_bfd == NULL
+	  || !bfd_check_format (f->the_bfd, bfd_archive))
+	resolve_wild_sections (f);
+      else
+	{
+	  bfd *member;
+
+	  /* This is an archive file.  We must map each member of the
+	     archive separately.  */
+	  member = bfd_openr_next_archived_file (f->the_bfd, NULL);
+	  while (member != NULL)
+	    {
+	      /* When lookup_name is called, it will call the add_symbols
+		 entry point for the archive.  For each element of the
+		 archive which is included, BFD will call ldlang_add_file,
+		 which will set the usrdata field of the member to the
+		 lang_input_statement.  */
+	      if (bfd_usrdata (member) != NULL)
+		resolve_wild_sections (bfd_usrdata (member));
+
+	      member = bfd_openr_next_archived_file (f->the_bfd, member);
+	    }
 	}
     }
 }
+
+/* For each input section that matches wild statement S calls
+   CALLBACK with DATA.  */
 
 static void
 walk_wild (lang_wild_statement_type *s, callback_t callback, void *data)
 {
-  const char *file_spec = s->filename;
-  char *p;
+  lang_statement_union_type *l;
 
-  if (file_spec == NULL)
+  for (l = s->matching_sections.head; l; l = l->header.next)
     {
-      /* Perform the iteration over all files in the list.  */
-      LANG_FOR_EACH_INPUT_STATEMENT (f)
-	{
-	  walk_wild_file (s, f, callback, data);
-	}
-    }
-  else if ((p = archive_path (file_spec)) != NULL)
-    {
-      LANG_FOR_EACH_INPUT_STATEMENT (f)
-	{
-	  if (input_statement_is_archive_path (file_spec, p, f))
-	    walk_wild_file (s, f, callback, data);
-	}
-    }
-  else if (wildcardp (file_spec))
-    {
-      LANG_FOR_EACH_INPUT_STATEMENT (f)
-	{
-	  if (fnmatch (file_spec, f->filename, 0) == 0)
-	    walk_wild_file (s, f, callback, data);
-	}
-    }
-  else
-    {
-      lang_input_statement_type *f;
-
-      /* Perform the iteration over a single file.  */
-      f = lookup_name (file_spec);
-      if (f)
-	walk_wild_file (s, f, callback, data);
+      (*callback) (s, l->input_matcher.pattern, l->input_matcher.section,
+		   l->input_matcher.input_stmt, data);
     }
 }
 
@@ -1421,6 +1268,7 @@ void
 lang_init (void)
 {
   obstack_begin (&stat_obstack, 1000);
+  obstack_init (&pt_obstack);
 
   stat_ptr = &statement_list;
 
@@ -1987,6 +1835,8 @@ insert_os_after (lang_output_section_statement_type *after)
 	case lang_group_statement_enum:
 	case lang_insert_statement_enum:
 	  continue;
+	case lang_input_matcher_enum:
+	  FAIL ();
 	}
       break;
     }
@@ -4352,6 +4202,8 @@ map_input_to_output_sections
 	  break;
 	case lang_insert_statement_enum:
 	  break;
+	case lang_input_matcher_enum:
+	  FAIL ();
 	}
     }
 }
@@ -7982,6 +7834,22 @@ lang_propagate_lma_regions (void)
     }
 }
 
+static void
+reset_one_wild (lang_statement_union_type *statement)
+{
+  if (statement->header.type == lang_wild_statement_enum)
+    {
+      lang_wild_statement_type *stmt = &statement->wild_statement;
+      lang_list_init (&stmt->matching_sections);
+    }
+}
+
+static void
+reset_resolved_wilds (void)
+{
+  lang_for_each_statement (reset_one_wild);
+}
+
 void
 lang_process (void)
 {
@@ -8185,6 +8053,11 @@ lang_process (void)
   /* Size up the common data.  */
   lang_common ();
 
+  if (0)
+    debug_prefix_tree ();
+
+  resolve_wilds ();
+
   /* Remove unreferenced sections if asked to.  */
   lang_gc_sections ();
 
@@ -8194,6 +8067,12 @@ lang_process (void)
   lang_check_relocs ();
 
   ldemul_after_check_relocs ();
+
+  /* There might have been new sections created (e.g. as result of
+     checking relocs to need a .got, or suchlike), so to properly order
+     them into our lists of matching sections reset them here.  */
+  reset_resolved_wilds ();
+  resolve_wilds ();
 
   /* Update wild statements in case the user gave --sort-section.
      Note how the option might have come after the linker script and
@@ -8348,7 +8227,15 @@ lang_add_wild (struct wildcard_spec *filespec,
   new_stmt->section_list = section_list;
   new_stmt->keep_sections = keep_sections;
   lang_list_init (&new_stmt->children);
+  lang_list_init (&new_stmt->matching_sections);
   analyze_walk_wild_section_handler (new_stmt);
+  if (0)
+    {
+      printf ("wild %s(", new_stmt->filename ? new_stmt->filename : "*");
+      for (curr = new_stmt->section_list; curr; curr = curr->next)
+	printf ("%s ", curr->spec.name ? curr->spec.name : "*");
+      printf (")\n");
+    }
 }
 
 void

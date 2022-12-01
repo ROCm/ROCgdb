@@ -32,6 +32,27 @@ public:
 		    bool debug_redirect) override;
   void pre_command_loop () override;
   bool supports_command_editing () override;
+
+private:
+  struct saved_output_files
+  {
+    /* Saved gdb_stdout, gdb_stderr, etc.  */
+    ui_file *out;
+    ui_file *err;
+    ui_file *log;
+    ui_file *targ;
+    ui_file *targerr;
+    /* When redirecting, some or all of these may be non-null
+       depending on the logging mode.  */
+    ui_file_up stdout_holder;
+    ui_file_up stderr_holder;
+    ui_file_up stdlog_holder;
+    ui_file_up logfile_holder;
+  };
+
+  /* These hold the pushed copies of the gdb output files.  If NULL
+     then nothing has yet been pushed.  */
+  std::unique_ptr<saved_output_files> m_saved_output;
 };
 
 /* Returns true if the current stop should be printed to

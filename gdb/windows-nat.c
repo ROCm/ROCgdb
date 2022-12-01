@@ -344,6 +344,9 @@ private:
   BOOL windows_continue (DWORD continue_status, int id, int killed,
 			 bool last_call = false);
 
+  /* Helper function to start process_thread.  */
+  static DWORD WINAPI process_thread_starter (LPVOID self);
+
   /* This function implements the background thread that starts
      inferiors and waits for events.  */
   void process_thread ();
@@ -404,13 +407,8 @@ windows_nat_target::windows_nat_target ()
     m_response_event (CreateEvent (nullptr, false, false, nullptr)),
     m_wait_event (make_serial_event ())
 {
-  auto fn = [] (LPVOID self) -> DWORD
-    {
-      ((windows_nat_target *) self)->process_thread ();
-      return 0;
-    };
-
-  HANDLE bg_thread = CreateThread (nullptr, 64 * 1024, fn, this, 0, nullptr);
+  HANDLE bg_thread = CreateThread (nullptr, 64 * 1024,
+				   process_thread_starter, this, 0, nullptr);
   CloseHandle (bg_thread);
 }
 
@@ -429,6 +427,8 @@ windows_nat_target::async (bool enable)
 		      nullptr, "windows_nat_target");
   else
     delete_file_handler (async_wait_fd ());
+
+  m_is_async = enable;
 }
 
 /* A wrapper for WaitForSingleObject that issues a warning if
@@ -451,6 +451,13 @@ wait_for_single (HANDLE handle, DWORD howlong)
 	warning ("unexpected result from WaitForSingleObject: %u",
 		 (unsigned) r);
     }
+}
+
+DWORD WINAPI
+windows_nat_target::process_thread_starter (LPVOID self)
+{
+  ((windows_nat_target *) self)->process_thread ();
+  return 0;
 }
 
 void
@@ -626,7 +633,7 @@ windows_nat_target::delete_thread (ptid_t ptid, DWORD exit_code,
 
   auto iter = std::find_if (windows_process.thread_list.begin (),
 			    windows_process.thread_list.end (),
-			    [=] (auto &th)
+			    [=] (std::unique_ptr<windows_thread_info> &th)
 			    {
 			      return th->tid == id;
 			    });
@@ -1817,7 +1824,6 @@ windows_nat_target::get_windows_debug_event
 			       windows_process.desired_stop_thread_id, 0));
     }
 
-out:
   if (thread_id == 0)
     return null_ptid;
   return ptid_t (windows_process.current_event.dwProcessId, thread_id, 0);
