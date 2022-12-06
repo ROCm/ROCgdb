@@ -3606,28 +3606,21 @@ siginfo_fixup (siginfo_t *siginfo, gdb_byte *inf_siginfo, int direction)
 }
 
 static enum target_xfer_status
-linux_xfer_siginfo (enum target_object object,
+linux_xfer_siginfo (ptid_t ptid, enum target_object object,
 		    const char *annex, gdb_byte *readbuf,
 		    const gdb_byte *writebuf, ULONGEST offset, ULONGEST len,
 		    ULONGEST *xfered_len)
 {
-  int pid;
   siginfo_t siginfo;
   gdb_byte inf_siginfo[sizeof (siginfo_t)];
 
   gdb_assert (object == TARGET_OBJECT_SIGNAL_INFO);
   gdb_assert (readbuf || writebuf);
 
-  pid = inferior_ptid.lwp ();
-  if (pid == 0)
-    pid = inferior_ptid.pid ();
-
   if (offset > sizeof (siginfo))
     return TARGET_XFER_E_IO;
 
-  errno = 0;
-  ptrace (PTRACE_GETSIGINFO, pid, (PTRACE_TYPE_ARG3) 0, &siginfo);
-  if (errno != 0)
+  if (!linux_nat_get_siginfo (ptid, &siginfo))
     return TARGET_XFER_E_IO;
 
   /* When GDB is built as a 64-bit application, ptrace writes into
@@ -3650,6 +3643,7 @@ linux_xfer_siginfo (enum target_object object,
       /* Convert back to ptrace layout before flushing it out.  */
       siginfo_fixup (&siginfo, inf_siginfo, 1);
 
+      int pid = get_ptrace_pid (ptid);
       errno = 0;
       ptrace (PTRACE_SETSIGINFO, pid, (PTRACE_TYPE_ARG3) 0, &siginfo);
       if (errno != 0)
@@ -3667,8 +3661,9 @@ linux_nat_xfer_osdata (enum target_object object,
 		       ULONGEST *xfered_len);
 
 static enum target_xfer_status
-linux_proc_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
-				ULONGEST offset, LONGEST len, ULONGEST *xfered_len);
+linux_proc_xfer_memory_partial (int pid, gdb_byte *readbuf,
+				const gdb_byte *writebuf, ULONGEST offset,
+				LONGEST len, ULONGEST *xfered_len);
 
 enum target_xfer_status
 linux_nat_target::xfer_partial (enum target_object object,
@@ -3677,7 +3672,7 @@ linux_nat_target::xfer_partial (enum target_object object,
 				ULONGEST offset, ULONGEST len, ULONGEST *xfered_len)
 {
   if (object == TARGET_OBJECT_SIGNAL_INFO)
-    return linux_xfer_siginfo (object, annex, readbuf, writebuf,
+    return linux_xfer_siginfo (inferior_ptid, object, annex, readbuf, writebuf,
 			       offset, len, xfered_len);
 
   /* The target is connected but no live inferior is selected.  Pass
@@ -3713,8 +3708,9 @@ linux_nat_target::xfer_partial (enum target_object object,
 	 space, while the core was trying to write to the pre-exec
 	 address space.  */
       if (proc_mem_file_is_writable ())
-	return linux_proc_xfer_memory_partial (readbuf, writebuf,
-					       offset, len, xfered_len);
+	return linux_proc_xfer_memory_partial (inferior_ptid.pid (), readbuf,
+					       writebuf, offset, len,
+					       xfered_len);
     }
 
   return inf_ptrace_target::xfer_partial (object, annex, readbuf, writebuf,
@@ -3941,12 +3937,10 @@ linux_proc_xfer_memory_partial_fd (int fd, int pid,
    threads.  */
 
 static enum target_xfer_status
-linux_proc_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
-				ULONGEST offset, LONGEST len,
-				ULONGEST *xfered_len)
+linux_proc_xfer_memory_partial (int pid, gdb_byte *readbuf,
+				const gdb_byte *writebuf, ULONGEST offset,
+				LONGEST len, ULONGEST *xfered_len)
 {
-  int pid = inferior_ptid.pid ();
-
   auto iter = proc_mem_file_map.find (pid);
   if (iter == proc_mem_file_map.end ())
     return TARGET_XFER_EOF;
@@ -4443,23 +4437,11 @@ linux_nat_target::linux_nat_target ()
 
 /* See linux-nat.h.  */
 
-int
+bool
 linux_nat_get_siginfo (ptid_t ptid, siginfo_t *siginfo)
 {
-  int pid;
-
-  pid = ptid.lwp ();
-  if (pid == 0)
-    pid = ptid.pid ();
-
-  errno = 0;
-  ptrace (PTRACE_GETSIGINFO, pid, (PTRACE_TYPE_ARG3) 0, siginfo);
-  if (errno != 0)
-    {
-      memset (siginfo, 0, sizeof (*siginfo));
-      return 0;
-    }
-  return 1;
+  int pid = get_ptrace_pid (ptid);
+  return ptrace (PTRACE_GETSIGINFO, pid, (PTRACE_TYPE_ARG3) 0, siginfo) == 0;
 }
 
 /* See nat/linux-nat.h.  */

@@ -26,6 +26,11 @@ import gdbcopyright
 components = []
 
 
+def indentation(n_columns):
+    """Return string with tabs and spaces to indent line to N_COLUMNS."""
+    return "\t" * (n_columns // 8) + " " * (n_columns % 8)
+
+
 def join_type_and_name(t, n):
     "Combine the type T and the name N into a C declaration."
     if t.endswith("*") or t.endswith("&"):
@@ -396,23 +401,21 @@ with open("gdbarch.c", "w") as f:
     print("  gdb_nm_file = GDB_NM_FILE;", file=f)
     print("#endif", file=f)
     print("  gdb_printf (file,", file=f)
-    print("""		      "gdbarch_dump: GDB_NM_FILE = %s\\n",""", file=f)
-    print("		      gdb_nm_file);", file=f)
+    print("""	      "gdbarch_dump: GDB_NM_FILE = %s\\n",""", file=f)
+    print("	      gdb_nm_file);", file=f)
     for c in components:
         if c.predicate:
             print("  gdb_printf (file,", file=f)
             print(
-                f"""                      "gdbarch_dump: gdbarch_{c.name}_p() = %d\\n",""",
+                f"""	      "gdbarch_dump: gdbarch_{c.name}_p() = %d\\n",""",
                 file=f,
             )
-            print(f"                      gdbarch_{c.name}_p (gdbarch));", file=f)
+            print(f"	      gdbarch_{c.name}_p (gdbarch));", file=f)
         if isinstance(c, Function):
             print("  gdb_printf (file,", file=f)
+            print(f"""	      "gdbarch_dump: {c.name} = <%s>\\n",""", file=f)
             print(
-                f"""                      "gdbarch_dump: {c.name} = <%s>\\n",""", file=f
-            )
-            print(
-                f"                      host_address_to_string (gdbarch->{c.name}));",
+                f"	      host_address_to_string (gdbarch->{c.name}));",
                 file=f,
             )
         else:
@@ -423,10 +426,8 @@ with open("gdbarch.c", "w") as f:
             else:
                 printer = f"plongest (gdbarch->{c.name})"
             print("  gdb_printf (file,", file=f)
-            print(
-                f"""                      "gdbarch_dump: {c.name} = %s\\n",""", file=f
-            )
-            print(f"                      {printer});", file=f)
+            print(f"""	      "gdbarch_dump: {c.name} = %s\\n",""", file=f)
+            print(f"	      {printer});", file=f)
     print("  if (gdbarch->dump_tdep != NULL)", file=f)
     print("    gdbarch->dump_tdep (gdbarch, file);", file=f)
     print("}", file=f)
@@ -478,11 +479,11 @@ with open("gdbarch.c", "w") as f:
             print("}", file=f)
             print(file=f)
             print("void", file=f)
-            print(f"set_gdbarch_{c.name} (struct gdbarch *gdbarch,", file=f)
-            print(
-                f"            {' ' * len(c.name)}  gdbarch_{c.name}_ftype {c.name})",
-                file=f,
-            )
+            setter_name = f"set_gdbarch_{c.name}"
+            ftype_name = f"gdbarch_{c.name}_ftype"
+            print(f"{setter_name} (struct gdbarch *gdbarch,", file=f)
+            indent_columns = len(f"{setter_name} (")
+            print(f"{indentation(indent_columns)}{ftype_name} {c.name})", file=f)
             print("{", file=f)
             print(f"  gdbarch->{c.name} = {c.name};", file=f)
             print("}", file=f)
@@ -509,8 +510,10 @@ with open("gdbarch.c", "w") as f:
             print("}", file=f)
             print(file=f)
             print("void", file=f)
-            print(f"set_gdbarch_{c.name} (struct gdbarch *gdbarch,", file=f)
-            print(f"            {' ' * len(c.name)}  {c.type} {c.name})", file=f)
+            setter_name = f"set_gdbarch_{c.name}"
+            print(f"{setter_name} (struct gdbarch *gdbarch,", file=f)
+            indent_columns = len(f"{setter_name} (")
+            print(f"{indentation(indent_columns)}{c.type} {c.name})", file=f)
             print("{", file=f)
             print(f"  gdbarch->{c.name} = {c.name};", file=f)
             print("}", file=f)

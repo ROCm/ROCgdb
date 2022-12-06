@@ -131,18 +131,18 @@ make_a_section_from_file (bfd *abfd,
 					 & flags))
     result = false;
 
-  return_section->flags = flags;
-
   /* At least on i386-coff, the line number count for a shared library
      section must be ignored.  */
-  if ((return_section->flags & SEC_COFF_SHARED_LIBRARY) != 0)
+  if ((flags & SEC_COFF_SHARED_LIBRARY) != 0)
     return_section->lineno_count = 0;
 
   if (hdr->s_nreloc != 0)
-    return_section->flags |= SEC_RELOC;
+    flags |= SEC_RELOC;
   /* FIXME: should this check 'hdr->s_size > 0'.  */
   if (hdr->s_scnptr != 0)
-    return_section->flags |= SEC_HAS_CONTENTS;
+    flags |= SEC_HAS_CONTENTS;
+
+  return_section->flags = flags;
 
   /* Compress/decompress DWARF debug sections with names: .debug_* and
      .zdebug_*, after the section flags is set.  */
@@ -161,7 +161,7 @@ make_a_section_from_file (bfd *abfd,
 	  if ((abfd->flags & BFD_DECOMPRESS))
 	    action = decompress;
 	}
-      else if (!bfd_is_section_compressed (abfd, return_section))
+      else
 	{
 	  /* Normal section.  Check if we should compress.  */
 	  if ((abfd->flags & BFD_COMPRESS) && return_section->size != 0)
@@ -177,23 +177,16 @@ make_a_section_from_file (bfd *abfd,
 	    {
 	      _bfd_error_handler
 		/* xgettext: c-format */
-		(_("%pB: unable to initialize compress status for section %s"),
+		(_("%pB: unable to compress section %s"),
 		 abfd, name);
 	      return false;
 	    }
-	  if (return_section->compress_status == COMPRESS_SECTION_DONE)
+	  if (return_section->compress_status == COMPRESS_SECTION_DONE
+	      && name[1] != 'z')
 	    {
-	      if (name[1] != 'z')
-		{
-		  unsigned int len = strlen (name);
-
-		  new_name = bfd_alloc (abfd, len + 2);
-		  if (new_name == NULL)
-		    return false;
-		  new_name[0] = '.';
-		  new_name[1] = 'z';
-		  memcpy (new_name + 2, name + 1, len);
-		}
+	      new_name = bfd_debug_name_to_zdebug (abfd, name);
+	      if (new_name == NULL)
+		return false;
 	    }
 	 break;
 	case decompress:
@@ -201,19 +194,15 @@ make_a_section_from_file (bfd *abfd,
 	    {
 	      _bfd_error_handler
 		/* xgettext: c-format */
-		(_("%pB: unable to initialize decompress status for section %s"),
+		(_("%pB: unable to decompress section %s"),
 		 abfd, name);
 	      return false;
 	    }
 	  if (name[1] == 'z')
 	    {
-	      unsigned int len = strlen (name);
-
-	      new_name = bfd_alloc (abfd, len);
+	      new_name = bfd_zdebug_name_to_debug (abfd, name);
 	      if (new_name == NULL)
 		return false;
-	      new_name[0] = '.';
-	      memcpy (new_name + 1, name + 2, len - 1);
 	    }
 	  break;
 	}

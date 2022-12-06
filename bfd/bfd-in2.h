@@ -921,9 +921,8 @@ typedef struct bfd_section
      executables or shared objects. This is for COFF only.  */
 #define SEC_COFF_SHARED             0x8000000
 
-  /* This section should be compressed.  This is for ELF linker
-     internal use only.  */
-#define SEC_ELF_COMPRESS            0x8000000
+  /* Indicate that section has the purecode flag set.  */
+#define SEC_ELF_PURECODE            0x8000000
 
   /* When a section with this flag is being linked, then if the size of
      the input section is less than a page, it should not cross a page
@@ -931,10 +930,6 @@ typedef struct bfd_section
      it should be aligned on a page boundary.  This is for TI
      TMS320C54X only.  */
 #define SEC_TIC54X_BLOCK           0x10000000
-
-  /* This section should be renamed.  This is for ELF linker
-     internal use only.  */
-#define SEC_ELF_RENAME             0x10000000
 
   /* Conditionally link this section; do not link if there are no
      references found to any symbol in the section.  This is for TI
@@ -952,9 +947,6 @@ typedef struct bfd_section
   /* Indicate that section has the no read flag set. This happens
      when memory read flag isn't set. */
 #define SEC_COFF_NOREAD            0x40000000
-
-  /* Indicate that section has the purecode flag set.  */
-#define SEC_ELF_PURECODE           0x80000000
 
   /*  End of section flags.  */
 
@@ -7289,24 +7281,6 @@ bfd_vma bfd_emul_get_commonpagesize (const char *);
 
 char *bfd_demangle (bfd *, const char *, int);
 
-void bfd_update_compression_header
-   (bfd *abfd, bfd_byte *contents, asection *sec);
-
-bool bfd_check_compression_header
-   (bfd *abfd, bfd_byte *contents, asection *sec,
-    unsigned int *ch_type,
-    bfd_size_type *uncompressed_size,
-    unsigned int *uncompressed_alignment_power);
-
-int bfd_get_compression_header_size (bfd *abfd, asection *sec);
-
-bfd_size_type bfd_convert_section_size
-   (bfd *ibfd, asection *isec, bfd *obfd, bfd_size_type size);
-
-bool bfd_convert_section_contents
-   (bfd *ibfd, asection *isec, bfd *obfd,
-    bfd_byte **ptr, bfd_size_type *ptr_size);
-
 /* Extracted from archive.c.  */
 symindex bfd_get_next_mapent
    (bfd *abfd, symindex previous, carsym **sym);
@@ -7966,6 +7940,51 @@ bfd_byte *bfd_simple_get_relocated_section_contents
    (bfd *abfd, asection *sec, bfd_byte *outbuf, asymbol **symbol_table);
 
 /* Extracted from compress.c.  */
+enum compression_type
+{
+  ch_none = 0,
+  ch_compress_zlib = 1 ,       /* Compressed with zlib.  */
+  ch_compress_zstd = 2         /* Compressed with zstd (www.zstandard.org).  */
+};
+
+static inline char *
+bfd_debug_name_to_zdebug (bfd *abfd, const char *name)
+{
+  size_t len = strlen (name);
+  char *new_name = (char *) bfd_alloc (abfd, len + 2);
+  if (new_name == NULL)
+    return NULL;
+  new_name[0] = '.';
+  new_name[1] = 'z';
+  memcpy (new_name + 2, name + 1, len);
+  return new_name;
+}
+
+static inline char *
+bfd_zdebug_name_to_debug (bfd *abfd, const char *name)
+{
+  size_t len = strlen (name);
+  char *new_name = (char *) bfd_alloc (abfd, len);
+  if (new_name == NULL)
+    return NULL;
+  new_name[0] = '.';
+  memcpy (new_name + 1, name + 2, len - 1);
+  return new_name;
+}
+
+void bfd_update_compression_header
+   (bfd *abfd, bfd_byte *contents, asection *sec);
+
+int bfd_get_compression_header_size (bfd *abfd, asection *sec);
+
+bool bfd_convert_section_setup
+   (bfd *ibfd, asection *isec, bfd *obfd,
+    const char **new_name, bfd_size_type *new_size);
+
+bool bfd_convert_section_contents
+   (bfd *ibfd, asection *isec, bfd *obfd,
+    bfd_byte **ptr, bfd_size_type *ptr_size);
+
 bool bfd_get_full_section_contents
    (bfd *abfd, asection *section, bfd_byte **ptr);
 
@@ -7974,7 +7993,7 @@ bool bfd_is_section_compressed_info
     int *compression_header_size_p,
     bfd_size_type *uncompressed_size_p,
     unsigned int *uncompressed_alignment_power_p,
-    unsigned int *ch_type);
+    enum compression_type *ch_type);
 
 bool bfd_is_section_compressed
    (bfd *abfd, asection *section);

@@ -16,6 +16,7 @@
 # Some coverage testing of DWARF operators for the compiler
 # integration.
 
+load_lib compile-support.exp
 load_lib dwarf.exp
 
 # This test can only be run on targets which support DWARF-2 and use gas.
@@ -417,8 +418,7 @@ if ![runto func] {
     return -1
 }
 
-if {[skip_compile_feature_tests]} {
-    untested "compile command not supported (could not find libcc1 shared library?)"
+if {[skip_compile_feature_untested]} {
     return -1
 }
 
