@@ -27,11 +27,30 @@
 #include "elf-bfd.h"
 #include "libbfd.h"
 #include "safe-ctype.h"
+#include "libiberty.h"
 
 #define MAX_COMPRESSION_HEADER_SIZE 24
 
 /*
 CODE_FRAGMENT
+.{* Types of compressed DWARF debug sections.  *}
+.enum compressed_debug_section_type
+.{
+.  COMPRESS_DEBUG_NONE = 0,
+.  COMPRESS_DEBUG_GNU_ZLIB = 1 << 1,
+.  COMPRESS_DEBUG_GABI_ZLIB = 1 << 2,
+.  COMPRESS_DEBUG_ZSTD = 1 << 3,
+.  COMPRESS_UNKNOWN = 1 << 4
+.};
+.
+.{* Tuple for compressed_debug_section_type and their name.  *}
+.struct compressed_type_tuple
+.{
+.  enum compressed_debug_section_type type;
+.  const char *name;
+.};
+.
+.{* Compression header ch_type values.  *}
 .enum compression_type
 .{
 .  ch_none = 0,
@@ -65,6 +84,54 @@ CODE_FRAGMENT
 .}
 .
 */
+
+/* Display texts for type of compressed DWARF debug sections.  */
+static const struct compressed_type_tuple compressed_debug_section_names[] =
+{
+  { COMPRESS_DEBUG_NONE, "none" },
+  { COMPRESS_DEBUG_GABI_ZLIB, "zlib" },
+  { COMPRESS_DEBUG_GNU_ZLIB, "zlib-gnu" },
+  { COMPRESS_DEBUG_GABI_ZLIB, "zlib-gabi" },
+  { COMPRESS_DEBUG_ZSTD, "zstd" },
+};
+
+/*
+FUNCTION
+	bfd_get_compression_algorithm
+SYNOPSIS
+	enum compressed_debug_section_type
+	  bfd_get_compression_algorithm (const char *name);
+DESCRIPTION
+	Return compressed_debug_section_type from a string representation.
+*/
+enum compressed_debug_section_type
+bfd_get_compression_algorithm (const char *name)
+{
+  for (unsigned i = 0; i < ARRAY_SIZE (compressed_debug_section_names); ++i)
+    if (strcasecmp (compressed_debug_section_names[i].name, name) == 0)
+      return compressed_debug_section_names[i].type;
+
+  return COMPRESS_UNKNOWN;
+}
+
+/*
+FUNCTION
+	bfd_get_compression_algorithm_name
+SYNOPSIS
+	const char *bfd_get_compression_algorithm_name
+	  (enum compressed_debug_section_type type);
+DESCRIPTION
+	Return compression algorithm name based on the type.
+*/
+const char *
+bfd_get_compression_algorithm_name (enum compressed_debug_section_type type)
+{
+  for (unsigned i = 0; i < ARRAY_SIZE (compressed_debug_section_names); ++i)
+    if (type == compressed_debug_section_names[i].type)
+      return compressed_debug_section_names[i].name;
+
+  return NULL;
+}
 
 /*
 FUNCTION
@@ -249,7 +316,7 @@ bfd_convert_section_setup (bfd *ibfd, asection *isec, bfd *obfd,
     {
       const char *name = *new_name;
 
-      if ((ibfd->flags & (BFD_DECOMPRESS | BFD_COMPRESS_GABI)) != 0)
+      if ((obfd->flags & (BFD_DECOMPRESS | BFD_COMPRESS_GABI)) != 0)
 	{
 	  /* When we decompress or compress with SHF_COMPRESSED,
 	     convert section name from .zdebug_* to .debug_*.  */
@@ -306,7 +373,7 @@ bfd_convert_section_setup (bfd *ibfd, asection *isec, bfd *obfd,
   if (hdr_size == sizeof (Elf32_External_Chdr))
     *new_size += sizeof (Elf64_External_Chdr) - sizeof (Elf32_External_Chdr);
   else
-    *new_size += sizeof (Elf32_External_Chdr) - sizeof (Elf64_External_Chdr);
+    *new_size -= sizeof (Elf64_External_Chdr) - sizeof (Elf32_External_Chdr);
   return true;
 }
 
@@ -615,7 +682,8 @@ bfd_compress_section_contents (bfd *abfd, sec_ptr sec)
   if (compressed_size >= uncompressed_size)
     {
       memcpy (buffer, input_buffer, uncompressed_size);
-      elf_section_flags (sec) &= ~SHF_COMPRESSED;
+      if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
+	elf_section_flags (sec) &= ~SHF_COMPRESSED;
       sec->compress_status = COMPRESS_SECTION_NONE;
     }
   else
