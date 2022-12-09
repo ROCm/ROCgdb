@@ -192,10 +192,10 @@ typedef struct sframe_func_desc_entry
 /* Macros to compose and decompose function info in FDE.  */
 
 #define SFRAME_V1_FUNC_INFO(fde_type, fre_enc_type) \
-  (((fde_type) & 0x1) << 4 | (fre_enc_type))
+  ((((fde_type) & 0x1) << 4) | ((fre_enc_type) & 0xf))
 
 #define SFRAME_V1_FUNC_FRE_TYPE(data)	  ((data) & 0xf)
-#define SFRAME_V1_FUNC_FDE_TYPE(data)	  ((data >> 4) & 0x1)
+#define SFRAME_V1_FUNC_FDE_TYPE(data)	  (((data) >> 4) & 0x1)
 
 /* Size of stack frame offsets in an SFrame Frame Row Entry.  A single
    SFrame FRE has all offsets of the same size.  Offset size may vary
@@ -240,7 +240,8 @@ typedef struct sframe_fre_info
 /* Macros to compose and decompose FRE info.  */
 
 #define SFRAME_V1_FRE_INFO(base_reg_id, offset_num, offset_size) \
-  ((offset_size << 5) | (offset_num << 1) | (base_reg_id))
+  ((((offset_size) & 0x3) << 5) | (((offset_num) & 0xf) << 1) | \
+   ((base_reg_id) & 0x1))
 
 #define SFRAME_V1_FRE_CFA_BASE_REG_ID(data)	  ((data) & 0x1)
 #define SFRAME_V1_FRE_OFFSET_COUNT(data)	  (((data) >> 1) & 0xf)
@@ -272,6 +273,7 @@ typedef struct sframe_fre_info
     fi
 */
 
+/* Used when SFRAME_FRE_TYPE_ADDR1 is specified as FRE type.  */
 typedef struct sframe_frame_row_entry_addr1
 {
   /* Start address of the frame row entry.  Encoded as an 1-byte unsigned
@@ -280,6 +282,11 @@ typedef struct sframe_frame_row_entry_addr1
   sframe_fre_info sfre_info;
 } ATTRIBUTE_PACKED sframe_frame_row_entry_addr1;
 
+/* Upper limit of start address in sframe_frame_row_entry_addr1
+   is 0x100 (not inclusive).  */
+#define SFRAME_FRE_TYPE_ADDR1_LIMIT  ((SFRAME_FRE_TYPE_ADDR1 + 1) * 8)
+
+/* Used when SFRAME_FRE_TYPE_ADDR2 is specified as FRE type.  */
 typedef struct sframe_frame_row_entry_addr2
 {
   /* Start address of the frame row entry.  Encoded as an 2-byte unsigned
@@ -288,6 +295,11 @@ typedef struct sframe_frame_row_entry_addr2
   sframe_fre_info sfre_info;
 } ATTRIBUTE_PACKED sframe_frame_row_entry_addr2;
 
+/* Upper limit of start address in sframe_frame_row_entry_addr2
+   is 0x10000 (not inclusive).  */
+#define SFRAME_FRE_TYPE_ADDR2_LIMIT  ((SFRAME_FRE_TYPE_ADDR2 * 2) * 8)
+
+/* Used when SFRAME_FRE_TYPE_ADDR4 is specified as FRE type.  */
 typedef struct sframe_frame_row_entry_addr4
 {
   /* Start address of the frame row entry.  Encoded as a 4-byte unsigned
@@ -295,6 +307,10 @@ typedef struct sframe_frame_row_entry_addr4
   uint32_t sfre_start_address;
   sframe_fre_info sfre_info;
 } ATTRIBUTE_PACKED sframe_frame_row_entry_addr4;
+
+/* Upper limit of start address in sframe_frame_row_entry_addr2
+   is 0x100000000 (not inclusive).  */
+#define SFRAME_FRE_TYPE_ADDR4_LIMIT  ((SFRAME_FRE_TYPE_ADDR4 * 2) * 8)
 
 #ifdef	__cplusplus
 }
