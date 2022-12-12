@@ -828,7 +828,7 @@ i386_intel_operand (char *operand_string, int got_a_float)
 		    continue;
 		  break;
 		case QWORD_MNEM_SUFFIX:
-		  if (t->opcode_modifier.no_qsuf)
+		  if (t->opcode_modifier.no_qsuf || !q_suffix_allowed (t))
 		    continue;
 		  break;
 		case SHORT_MNEM_SUFFIX:
@@ -1000,10 +1000,7 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	   || intel_state.is_mem)
     {
       /* Memory operand.  */
-      if (i.mem_operands == 1 && !maybe_adjust_templates ())
-	return 0;
-      if ((int) i.mem_operands
-	  >= 2 - !current_templates->start->opcode_modifier.isstring)
+      if (i.mem_operands)
 	{
 	  /* Handle
 
@@ -1048,10 +1045,6 @@ i386_intel_operand (char *operand_string, int got_a_float)
 		    }
 		}
 	    }
-
-	  as_bad (_("too many memory references for `%s'"),
-		  current_templates->start->name);
-	  return 0;
 	}
 
       /* Swap base and index in 16-bit memory operands like
@@ -1165,8 +1158,6 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	return 0;
 
       i.flags[this_operand] |= Operand_Mem;
-      if (i.mem_operands == 0)
-	i.memop1_string = xstrdup (operand_string);
       ++i.mem_operands;
     }
   else
