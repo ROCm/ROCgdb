@@ -1703,7 +1703,7 @@ process_i386_opcodes (FILE *table)
 {
   FILE *fp;
   char buf[2048];
-  unsigned int i, j;
+  unsigned int i, j, nr;
   char *str, *p, *last, *name;
   htab_t opcode_hash_table;
   struct opcode_hash_entry **opcode_array = NULL;
@@ -1718,7 +1718,7 @@ process_i386_opcodes (FILE *table)
 					 xcalloc, free);
 
   fprintf (table, "\n/* i386 opcode table.  */\n\n");
-  fprintf (table, "const insn_template i386_optab[] =\n{\n");
+  fprintf (table, "static const insn_template i386_optab[] =\n{\n");
 
   /* Put everything on opcode array.  */
   while (!feof (fp))
@@ -1818,15 +1818,25 @@ process_i386_opcodes (FILE *table)
 
   fclose (fp);
 
-  fprintf (table, "  { NULL, 0, 0, 0,\n");
+  fprintf (table, "};\n");
 
-  process_i386_opcode_modifier (table, "0", 0, 0, NULL, -1);
+  /* Generate opcode sets array.  */
+  fprintf (table, "\n/* i386 opcode sets table.  */\n\n");
+  fprintf (table, "static const insn_template *const i386_op_sets[] =\n{\n");
+  fprintf (table, "  i386_optab,\n");
 
-  process_i386_cpu_flag (table, "0", 0, ",", "    ", -1);
+  for (nr = j = 0; j < i; j++)
+    {
+      struct opcode_hash_entry *next = opcode_array[j];
 
-  fprintf (table, "    { ");
-  process_i386_operand_type (table, "0", stage_opcodes, "\t  ", -1);
-  fprintf (table, " } }\n");
+      do
+	{
+	  ++nr;
+	  next = next->next;
+	}
+      while (next);
+      fprintf (table, "  i386_optab + %u,\n", nr);
+    }
 
   fprintf (table, "};\n");
 }
@@ -1848,7 +1858,7 @@ process_i386_registers (FILE *table)
 	  xstrerror (errno));
 
   fprintf (table, "\n/* i386 register table.  */\n\n");
-  fprintf (table, "const reg_entry i386_regtab[] =\n{\n");
+  fprintf (table, "static const reg_entry i386_regtab[] =\n{\n");
 
   while (!feof (fp))
     {
@@ -1911,7 +1921,7 @@ process_i386_registers (FILE *table)
 
   fprintf (table, "};\n");
 
-  fprintf (table, "\nconst unsigned int i386_regtab_size = ARRAY_SIZE (i386_regtab);\n");
+  fprintf (table, "\nstatic const unsigned int i386_regtab_size = ARRAY_SIZE (i386_regtab);\n");
 }
 
 static void

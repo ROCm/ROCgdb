@@ -2961,6 +2961,8 @@ i386_mach (void)
     as_fatal (_("unknown architecture"));
 }
 
+#include "opcodes/i386-tbl.h"
+
 void
 md_begin (void)
 {
@@ -2971,32 +2973,16 @@ md_begin (void)
   op_hash = str_htab_create ();
 
   {
-    const insn_template *optab;
-    templates *core_optab;
+    const insn_template *const *sets = i386_op_sets;
+    const insn_template *const *end = sets + ARRAY_SIZE (i386_op_sets) - 1;
 
-    /* Setup for loop.  */
-    optab = i386_optab;
-    core_optab = notes_alloc (sizeof (*core_optab));
-    core_optab->start = optab;
-
-    while (1)
-      {
-	++optab;
-	if (optab->name == NULL
-	    || strcmp (optab->name, (optab - 1)->name) != 0)
-	  {
-	    /* different name --> ship out current template list;
-	       add to hash table; & begin anew.  */
-	    core_optab->end = optab;
-	    if (str_hash_insert (op_hash, (optab - 1)->name, core_optab, 0))
-	      as_fatal (_("duplicate %s"), (optab - 1)->name);
-
-	    if (optab->name == NULL)
-	      break;
-	    core_optab = notes_alloc (sizeof (*core_optab));
-	    core_optab->start = optab;
-	  }
-      }
+    /* Type checks to compensate for the conversion through void * which
+       occurs during hash table insertion / lookup.  */
+    (void)(sets == &current_templates->start);
+    (void)(end == &current_templates->end);
+    for (; sets < end; ++sets)
+      if (str_hash_insert (op_hash, (*sets)->name, sets, 0))
+	as_fatal (_("duplicate %s"), (*sets)->name);
   }
 
   /* Initialize reg_hash hash table.  */
