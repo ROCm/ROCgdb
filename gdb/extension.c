@@ -33,6 +33,7 @@
 #include "python/python.h"
 #include "guile/guile.h"
 #include <array>
+#include "inferior.h"
 
 static script_sourcer_func source_gdb_script;
 static objfile_script_sourcer_func source_gdb_objfile_script;
@@ -657,11 +658,11 @@ get_active_ext_lang (void)
 /* Install a SIGINT handler.  */
 
 static void
-install_sigint_handler (const struct signal_handler *handler_state)
+install_ext_sigint_handler (const struct signal_handler *handler_state)
 {
   gdb_assert (handler_state->handler_saved);
 
-  signal (SIGINT, handler_state->handler);
+  install_sigint_handler (handler_state->handler);
 }
 
 /* Install GDB's SIGINT handler, storing the previous version in *PREVIOUS.
@@ -675,7 +676,7 @@ install_gdb_sigint_handler (struct signal_handler *previous)
   /* Save here to simplify comparison.  */
   sighandler_t handle_sigint_for_compare = handle_sigint;
 
-  previous->handler = signal (SIGINT, handle_sigint);
+  previous->handler = install_sigint_handler (handle_sigint);
   if (previous->handler != handle_sigint_for_compare)
     previous->handler_saved = 1;
   else
@@ -756,7 +757,7 @@ restore_active_ext_lang (struct active_ext_lang_state *previous)
     {
       /* Restore the previous SIGINT handler if one was saved.  */
       if (previous->sigint_handler.handler_saved)
-	install_sigint_handler (&previous->sigint_handler);
+	install_ext_sigint_handler (&previous->sigint_handler);
 
       /* If there's a SIGINT recorded in the cooperative extension languages,
 	 move it to the new language, or save it in GDB's global flag if the
