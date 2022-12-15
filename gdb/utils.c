@@ -3101,35 +3101,7 @@ strcmp_iw_ordered (const char *string1, const char *string2)
     }
 }
 
-/* See utils.h.  */
-
-bool
-streq (const char *lhs, const char *rhs)
-{
-  return !strcmp (lhs, rhs);
-}
-
 
-
-/*
-   ** subset_compare()
-   **    Answer whether string_to_compare is a full or partial match to
-   **    template_string.  The partial match must be in sequence starting
-   **    at index 0.
- */
-int
-subset_compare (const char *string_to_compare, const char *template_string)
-{
-  int match;
-
-  if (template_string != NULL && string_to_compare != NULL
-      && strlen (string_to_compare) <= strlen (template_string))
-    match =
-      (startswith (template_string, string_to_compare));
-  else
-    match = 0;
-  return match;
-}
 
 static void
 show_debug_timestamp (struct ui_file *file, int from_tty,
