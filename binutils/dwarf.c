@@ -740,6 +740,13 @@ fetch_indexed_value (uint64_t idx,
       return -1;
     }
 
+  if (section->size < 4)
+    {
+      warn (_("Section %s is too small to contain an value indexed from another section!\n"),
+	    section->name);
+      return -1;
+    }
+
   uint32_t pointer_size, bias;
 
   if (byte_get (section->start, 4) == 0xffffffff)
@@ -7759,10 +7766,11 @@ display_debug_addr (struct dwarf_section *section,
 	  SAFE_BYTE_GET_AND_INC (length, curr_header, 4, entry);
 	  if (length == 0xffffffff)
 	    SAFE_BYTE_GET_AND_INC (length, curr_header, 8, entry);
-	  if (length > (size_t) (section->start + section->size - curr_header))
+	  if (length > (size_t) (section->start + section->size - curr_header)
+	      || length < (size_t) (entry - curr_header))
 	    {
 	      warn (_("Corrupt %s section: unit_length field of %#" PRIx64
-		      " too large\n"), section->name, length);
+		      " is invalid\n"), section->name, length);
 	      return 0;
 	    }
 	  end = curr_header + length;
@@ -7777,8 +7785,17 @@ display_debug_addr (struct dwarf_section *section,
 	}
       else
 	end = section->start + debug_addr_info [i + 1]->addr_base;
+
       header = end;
       idx = 0;
+
+      if (address_size < 1 || address_size > sizeof (uint64_t))
+	{
+	  warn (_("Corrupt %s section: address size (%x) is wrong"),
+		section->name, address_size);
+	  return 0;
+	}
+
       while ((size_t) (end - entry) >= address_size)
 	{
 	  uint64_t base = byte_get (entry, address_size);

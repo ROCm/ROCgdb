@@ -1,3 +1,20 @@
+2022-12-19  Tom Tromey  <tromey@adacore.com>
+
+	* dwarf-mode.el (dwarf-do-refresh): Avoid compiler warning.
+
+2022-12-19  Nick Clifton  <nickc@redhat.com>
+
+	PR 29914
+	* dwarf.c (fetch_indexed_value): Fail if the section is not big
+	enough to contain a header size field.
+	(display_debug_addr): Fail if the computed address size is too big
+	or too small.
+
+2022-12-16  Nick Clifton  <nickc@redhat.com>
+
+	PR 29908
+	* dwarf.c (display_debug_addr): Check for corrupt header lengths.
+
 2022-12-01  Nick Clifton  <nickc@redhat.com>
 
 	PR 25202

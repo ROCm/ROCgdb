@@ -2130,7 +2130,8 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  loc->gdbarch = value_type (v)->arch ();
 
 		  loc->pspace = frame_pspace;
-		  loc->address = address_significant (loc->gdbarch, addr);
+		  loc->address
+		    = gdbarch_remove_non_address_bits (loc->gdbarch, addr);
 
 		  if (bitsize != 0)
 		    {
@@ -5277,7 +5278,7 @@ bpstat_check_location (const struct bp_location *bl,
 }
 
 /* Determine if the watched values have actually changed, and we
-   should stop.  If not, set BS->stop to 0.  */
+   should stop.  If not, set BS->stop to false.  */
 
 static void
 bpstat_check_watchpoint (bpstat *bs)
@@ -5344,7 +5345,7 @@ bpstat_check_watchpoint (bpstat *bs)
 	      break;
 	    case WP_IGNORE:
 	      bs->print_it = print_it_noop;
-	      bs->stop = 0;
+	      bs->stop = false;
 	      break;
 	    case WP_VALUE_CHANGED:
 	      if (b->type == bp_read_watchpoint)
@@ -5411,7 +5412,7 @@ bpstat_check_watchpoint (bpstat *bs)
 			 updated it, so this trap must be for a write.
 			 Ignore it.  */
 		      bs->print_it = print_it_noop;
-		      bs->stop = 0;
+		      bs->stop = false;
 		    }
 		}
 	      break;
@@ -5422,7 +5423,7 @@ bpstat_check_watchpoint (bpstat *bs)
 		  /* Don't stop: write watchpoints shouldn't fire if
 		     the value hasn't changed.  */
 		  bs->print_it = print_it_noop;
-		  bs->stop = 0;
+		  bs->stop = false;
 		}
 	      /* Stop.  */
 	      break;
@@ -5438,7 +5439,7 @@ bpstat_check_watchpoint (bpstat *bs)
 	     watchpoint triggered after all.  So don't print
 	     anything for this watchpoint.  */
 	  bs->print_it = print_it_noop;
-	  bs->stop = 0;
+	  bs->stop = false;
 	}
     }
 }
@@ -5481,7 +5482,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
       infrun_debug_printf ("incorrect frame %s not %s, not stopping",
 			   get_stack_frame_id (get_current_frame ()).to_string ().c_str (),
 			   b->frame_id.to_string ().c_str ());
-      bs->stop = 0;
+      bs->stop = false;
       return;
     }
 
@@ -5505,7 +5506,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
       || (b->task != 0 && b->task != ada_get_task_number (thread)))
     {
       infrun_debug_printf ("incorrect thread or task, not stopping");
-      bs->stop = 0;
+      bs->stop = false;
       return;
     }
 
@@ -5615,7 +5616,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
   if (cond != nullptr && !condition_result)
     {
       infrun_debug_printf ("condition_result = false, not stopping");
-      bs->stop = 0;
+      bs->stop = false;
       return;
     }
   else if (b->ignore_count > 0)
@@ -5623,7 +5624,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
       infrun_debug_printf ("ignore count %d, not stopping",
 			   b->ignore_count);
       b->ignore_count--;
-      bs->stop = 0;
+      bs->stop = false;
       /* Increase the hit count even though we don't stop.  */
       ++(b->hit_count);
       gdb::observers::breakpoint_modified.notify (b);
@@ -5686,8 +5687,8 @@ build_bpstat_chain (const address_space *aspace, CORE_ADDR bp_addr,
 	  /* Assume we stop.  Should we find a watchpoint that is not
 	     actually triggered, or if the condition of the breakpoint
 	     evaluates as false, we'll reset 'stop' to 0.  */
-	  bs->stop = 1;
-	  bs->print = 1;
+	  bs->stop = true;
+	  bs->print = true;
 
 	  /* If this is a scope breakpoint, mark the associated
 	     watchpoint as triggered so that we will handle the
@@ -5713,8 +5714,8 @@ build_bpstat_chain (const address_space *aspace, CORE_ADDR bp_addr,
 	    {
 	      bpstat *bs = new bpstat (loc, &bs_link);
 	      /* For hits of moribund locations, we should just proceed.  */
-	      bs->stop = 0;
-	      bs->print = 0;
+	      bs->stop = false;
+	      bs->print = false;
 	      bs->print_it = print_it_noop;
 	    }
 	}
@@ -5791,11 +5792,11 @@ bpstat_stop_status (const address_space *aspace,
 		}
 	      gdb::observers::breakpoint_modified.notify (b);
 	      if (b->silent)
-		bs->print = 0;
+		bs->print = false;
 	      bs->commands = b->commands;
 	      if (command_line_is_silent (bs->commands
 					  ? bs->commands.get () : NULL))
-		bs->print = 0;
+		bs->print = false;
 
 	      b->after_condition_true (bs);
 	    }
@@ -7361,7 +7362,8 @@ adjust_breakpoint_address (struct gdbarch *gdbarch,
 	    = gdbarch_adjust_breakpoint_address (gdbarch, bpaddr);
 	}
 
-      adjusted_bpaddr = address_significant (gdbarch, adjusted_bpaddr);
+      adjusted_bpaddr
+	= gdbarch_remove_non_address_bits (gdbarch, adjusted_bpaddr);
 
       /* An adjusted breakpoint address can significantly alter
 	 a user's expectations.  Print a warning if an adjustment
@@ -11964,11 +11966,11 @@ internal_breakpoint::check_status (bpstat *bs)
 	 events.  This allows the user to get control and place
 	 breakpoints in initializer routines for dynamically loaded
 	 objects (among other things).  */
-      bs->stop = stop_on_solib_events;
-      bs->print = stop_on_solib_events;
+      bs->stop = stop_on_solib_events != 0;
+      bs->print = stop_on_solib_events != 0;
     }
   else
-    bs->stop = 0;
+    bs->stop = false;
 }
 
 enum print_stop_action
@@ -12215,7 +12217,7 @@ dprintf_breakpoint::after_condition_true (struct bpstat *bs)
   /* dprintf's never cause a stop.  This wasn't set in the
      check_status hook instead because that would make the dprintf's
      condition not be evaluated.  */
-  bs->stop = 0;
+  bs->stop = false;
 
   /* Run the command list here.  Take ownership of it instead of
      copying.  We never want these commands to run later in

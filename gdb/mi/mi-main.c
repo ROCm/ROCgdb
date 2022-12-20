@@ -1158,7 +1158,7 @@ output_register (frame_info_ptr frame, int regnum, int format,
   string_file stb;
 
   get_formatted_print_options (&opts, format);
-  opts.deref_ref = 1;
+  opts.deref_ref = true;
   common_val_print (val, &stb, 0, &opts, current_language);
   uiout->field_stream ("value", stb);
 }
@@ -1242,7 +1242,7 @@ mi_cmd_data_evaluate_expression (const char *command, char **argv, int argc)
 
   /* Print the result of the expression evaluation.  */
   get_user_print_options (&opts);
-  opts.deref_ref = 0;
+  opts.deref_ref = false;
   common_val_print (val, &stb, 0, &opts, current_language);
 
   uiout->field_stream ("value", stb);
@@ -1906,7 +1906,6 @@ captured_mi_execute_command (struct ui_out *uiout, struct mi_parse *context)
 
 	/* If we changed interpreters, DON'T print out anything.  */
 	if (current_interp_named_p (INTERP_MI)
-	    || current_interp_named_p (INTERP_MI1)
 	    || current_interp_named_p (INTERP_MI2)
 	    || current_interp_named_p (INTERP_MI3)
 	    || current_interp_named_p (INTERP_MI4))
@@ -2549,7 +2548,7 @@ print_variable_or_computed (const char *expression, enum print_values values)
 	  struct value_print_options opts;
 
 	  get_no_prettyformat_print_options (&opts);
-	  opts.deref_ref = 1;
+	  opts.deref_ref = true;
 	  common_val_print (val, &stb, 0, &opts, current_language);
 	  uiout->field_stream ("value", stb);
 	}
@@ -2559,7 +2558,7 @@ print_variable_or_computed (const char *expression, enum print_values values)
 	struct value_print_options opts;
 
 	get_no_prettyformat_print_options (&opts);
-	opts.deref_ref = 1;
+	opts.deref_ref = true;
 	common_val_print (val, &stb, 0, &opts, current_language);
 	uiout->field_stream ("value", stb);
       }

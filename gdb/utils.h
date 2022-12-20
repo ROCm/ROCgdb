@@ -265,9 +265,6 @@ extern void fputs_styled (const char *linebuffer,
 extern void fputs_highlighted (const char *str, const compiled_regex &highlight,
 			       struct ui_file *stream);
 
-/* Return the address only having significant bits.  */
-extern CORE_ADDR address_significant (gdbarch *gdbarch, CORE_ADDR addr);
-
 /* Convert CORE_ADDR address to string that includes the address space
    name of that address in platform-specific manner.  In the case of
    default address space, the address space name is omitted for
