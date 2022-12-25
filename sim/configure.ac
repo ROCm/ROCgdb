@@ -143,7 +143,7 @@ if test "${enable_sim}" != no; then
     SIM_TARGET([m68hc11-*-*|m6811-*-*], [m68hc11])
     SIM_TARGET([mcore-*-*], [mcore])
     SIM_TARGET([microblaze*-*-*], [microblaze])
-    SIM_TARGET([mips*-*-*], [mips], [true], [sim_igen=yes])
+    SIM_TARGET([mips*-*-*], [mips], [], [sim_igen=yes])
     SIM_TARGET([mn10300*-*-*], [mn10300], [], [sim_igen=yes])
     SIM_TARGET([moxie-*-*], [moxie])
     SIM_TARGET([msp430*-*-*], [msp430])
@@ -180,6 +180,7 @@ SIM_AC_OPTION_INLINE
 SIM_AC_OPTION_PROFILE
 SIM_AC_OPTION_RESERVED_BITS
 SIM_AC_OPTION_SCACHE
+SIM_AC_OPTION_SMP
 SIM_AC_OPTION_STDIO
 SIM_AC_OPTION_TRACE
 SIM_AC_OPTION_WARNINGS
@@ -203,6 +204,7 @@ AC_SUBST(sim_float)
 
 dnl Some arches have unique configure flags.
 m4_include([frv/acinclude.m4])
+m4_include([mips/acinclude.m4])
 m4_include([riscv/acinclude.m4])
 m4_include([rx/acinclude.m4])
 

@@ -36,11 +36,12 @@
 #include "armemu.h"
 #include "dbg_rdi.h"
 #include "ansidecl.h"
-#include "gdb/sim-arm.h"
+#include "sim/sim-arm.h"
 #include "gdb/signals.h"
 #include "libiberty.h"
 #include "iwmmxt.h"
 #include "maverick.h"
+#include "arm-sim.h"
 
 /* TODO: This should get pulled from the SIM_DESC.  */
 host_callback *sim_callback;
@@ -150,13 +151,13 @@ ARMul_ConsolePrint (ARMul_State * state,
     }
 }
 
-int
+uint64_t
 sim_write (SIM_DESC sd ATTRIBUTE_UNUSED,
-	   SIM_ADDR addr,
+	   uint64_t addr,
 	   const void * buffer,
-	   int size)
+	   uint64_t size)
 {
-  int i;
+  uint64_t i;
   const unsigned char * data = buffer;
 
   init ();
@@ -167,13 +168,13 @@ sim_write (SIM_DESC sd ATTRIBUTE_UNUSED,
   return size;
 }
 
-int
+uint64_t
 sim_read (SIM_DESC sd ATTRIBUTE_UNUSED,
-	  SIM_ADDR addr,
+	  uint64_t addr,
 	  void * buffer,
-	  int size)
+	  uint64_t size)
 {
-  int i;
+  uint64_t i;
   unsigned char * data = buffer;
 
   init ();
@@ -821,7 +822,7 @@ sim_open (SIM_OPEN_KIND kind,
   current_alignment = STRICT_ALIGNMENT;
 
   /* The cpu data is kept in a separately allocated chunk of memory.  */
-  if (sim_cpu_alloc_all (sd, 1) != SIM_RC_OK)
+  if (sim_cpu_alloc_all (sd, 0) != SIM_RC_OK)
     {
       free_state (sd);
       return 0;

@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 
-#include "gdb/sim-ft32.h"
+#include "sim/sim-ft32.h"
 
 #define FT32_HARD_FP 29
 #define FT32_HARD_CC 30
@@ -39,5 +39,7 @@ struct ft32_cpu_state {
   uint32_t pm_addr;
   int exception;
 };
+
+#define FT32_SIM_CPU(cpu) ((struct ft32_cpu_state *) CPU_ARCH_DATA (cpu))
 
 #endif  /* _FT32_SIM_H_ */

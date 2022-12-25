@@ -548,6 +548,11 @@ sframe_decoder_free (sframe_decoder_ctx **decoder)
 	  free (dctx->sfd_fres);
 	  dctx->sfd_fres = NULL;
 	}
+      if (dctx->sfd_buf != NULL)
+	{
+	  free (dctx->sfd_buf);
+	  dctx->sfd_buf = NULL;
+	}
 
       free (*decoder);
       *decoder = NULL;
@@ -824,6 +829,10 @@ sframe_decode (const char *sf_buf, size_t sf_size, int *errp)
 	  return sframe_ret_set_errno (errp, SFRAME_ERR_BUF_INVAL);
 	}
       frame_buf = tempbuf;
+      /* This buffer is malloc'd when endian flipping the contents of the input
+	 buffer are needed.  Keep a reference to it so it can be free'd up
+	 later in sframe_decoder_free ().  */
+      dctx->sfd_buf = tempbuf;
     }
   else
     frame_buf = (char *)sf_buf;
@@ -1493,6 +1502,39 @@ sframe_sort_funcdesc (sframe_encoder_ctx *encoder)
   return 0;
 }
 
+/* Write the SFrame FRE start address from the in-memory FRE_START_ADDR
+   to the buffer CONTENTS (on-disk format), given the FRE_TYPE and
+   FRE_START_ADDR_SZ.  */
+
+static int
+sframe_encoder_write_fre_start_addr (char *contents,
+				     uint32_t fre_start_addr,
+				     unsigned int fre_type,
+				     size_t fre_start_addr_sz)
+{
+  int err = 0;
+
+  if (fre_type == SFRAME_FRE_TYPE_ADDR1)
+    {
+      uint8_t uc = fre_start_addr;
+      memcpy (contents, &uc, fre_start_addr_sz);
+    }
+  else if (fre_type == SFRAME_FRE_TYPE_ADDR2)
+    {
+      uint16_t ust = fre_start_addr;
+      memcpy (contents, &ust, fre_start_addr_sz);
+    }
+  else if (fre_type == SFRAME_FRE_TYPE_ADDR4)
+    {
+      uint32_t uit = fre_start_addr;
+      memcpy (contents, &uit, fre_start_addr_sz);
+    }
+  else
+    return sframe_set_errno (&err, SFRAME_ERR_INVAL);
+
+  return 0;
+}
+
 /* Write a frame row entry pointed to by FREP into the buffer CONTENTS.  The
    size in bytes written out are updated in ESZ.
 
@@ -1520,9 +1562,8 @@ sframe_encoder_write_fre (char *contents, sframe_frame_row_entry *frep,
   uint64_t bitmask = SFRAME_BITMASK_OF_SIZE (fre_start_addr_sz);
   sframe_assert ((uint64_t)frep->fre_start_addr <= bitmask);
 
-  memcpy (contents,
-	  &frep->fre_start_addr,
-	  fre_start_addr_sz);
+  sframe_encoder_write_fre_start_addr (contents, frep->fre_start_addr,
+				       fre_type, fre_start_addr_sz);
   contents += fre_start_addr_sz;
 
   memcpy (contents,

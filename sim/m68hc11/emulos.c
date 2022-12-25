@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <unistd.h>
 #endif
 
+#include "m68hc11-sim.h"
+
 #ifndef WIN32
 #include <errno.h>
 #include <stdio.h>
@@ -104,7 +106,7 @@ emul_write (sim_cpu *cpu)
   if (addr + size > 0x0FFFF) {
     size = 0x0FFFF - addr;
   }
-  cpu->cpu_running = 0;
+  M68HC11_SIM_CPU (cpu)->cpu_running = 0;
   while (size)
     {
       uint8_t val = memory_read8 (cpu, addr);
@@ -132,7 +134,7 @@ emul_exit (sim_cpu *cpu)
 void
 emul_os (int code, sim_cpu *cpu)
 {
-  cpu->cpu_current_cycle = 8;
+  M68HC11_SIM_CPU (cpu)->cpu_current_cycle = 8;
   switch (code)
     {
     case 0x0:

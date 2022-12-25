@@ -24,19 +24,4 @@
 #include "sim-basics.h"
 #include "sim-base.h"
 
-struct _sim_cpu {
-  /* ... simulator specific members ... */
-  uint16_t regs[8];
-  sim_cia pc;
-
-  /* This isn't a real register, and the stack is not directly addressable,
-     so use memory outside of the 16-bit address space.  */
-  uint32_t sp;
-
-  sim_cpu_base base;
-};
-
-extern void step_once (SIM_CPU *);
-extern void initialize_cpu (SIM_DESC, SIM_CPU *);
-
 #endif

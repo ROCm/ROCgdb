@@ -127,87 +127,101 @@ EXTRA_PROGRAMS = $(am__EXEEXT_2) testsuite/common/bits-gen$(EXEEXT) \
 @ENABLE_SIM_TRUE@	$(srcroot)/include/sim/callback.h \
 @ENABLE_SIM_TRUE@	$(srcroot)/include/sim/sim.h
 
-@SIM_ENABLE_IGEN_TRUE@am__append_2 = $(IGEN)
-@SIM_ENABLE_IGEN_TRUE@am__append_3 = igen/libigen.a
-@SIM_ENABLE_IGEN_TRUE@am__append_4 = $(igen_IGEN_TOOLS)
-@SIM_ENABLE_IGEN_TRUE@am__append_5 = $(igen_IGEN_TOOLS)
+@SIM_ENABLE_HW_TRUE@am__append_2 = \
+@SIM_ENABLE_HW_TRUE@	$(SIM_COMMON_HW_OBJS) \
+@SIM_ENABLE_HW_TRUE@	$(SIM_HW_SOCKSER)
+
+@SIM_ENABLE_HW_TRUE@am__append_3 = SIM_HW_DEVICES_="$(SIM_HW_DEVICES)"
+@SIM_ENABLE_IGEN_TRUE@am__append_4 = $(IGEN)
+@SIM_ENABLE_IGEN_TRUE@am__append_5 = igen/libigen.a
+@SIM_ENABLE_IGEN_TRUE@am__append_6 = $(igen_IGEN_TOOLS)
+@SIM_ENABLE_IGEN_TRUE@am__append_7 = $(igen_IGEN_TOOLS)
 TESTS = testsuite/common/bits32m0$(EXEEXT) \
 	testsuite/common/bits32m31$(EXEEXT) \
 	testsuite/common/bits64m0$(EXEEXT) \
 	testsuite/common/bits64m63$(EXEEXT) \
 	testsuite/common/alu-tst$(EXEEXT)
-@SIM_ENABLE_ARCH_aarch64_TRUE@am__append_6 = aarch64/run
-@SIM_ENABLE_ARCH_arm_TRUE@am__append_7 = arm/run
-@SIM_ENABLE_ARCH_avr_TRUE@am__append_8 = avr/run
-@SIM_ENABLE_ARCH_bfin_TRUE@am__append_9 = bfin/run
-@SIM_ENABLE_ARCH_bpf_TRUE@am__append_10 = bpf/run
-@SIM_ENABLE_ARCH_bpf_TRUE@am__append_11 = $(bpf_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_bpf_TRUE@am__append_12 = $(bpf_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_cr16_TRUE@am__append_13 = cr16/run
-@SIM_ENABLE_ARCH_cr16_TRUE@am__append_14 = $(cr16_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_cr16_TRUE@am__append_15 = cr16/gencode
-@SIM_ENABLE_ARCH_cr16_TRUE@am__append_16 = $(cr16_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_cris_TRUE@am__append_17 = cris/run
-@SIM_ENABLE_ARCH_cris_TRUE@am__append_18 = cris/rvdummy
-@SIM_ENABLE_ARCH_cris_TRUE@am__append_19 = $(cris_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_cris_TRUE@am__append_20 = $(cris_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_d10v_TRUE@am__append_21 = d10v/run
-@SIM_ENABLE_ARCH_d10v_TRUE@am__append_22 = $(d10v_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_d10v_TRUE@am__append_23 = d10v/gencode
-@SIM_ENABLE_ARCH_d10v_TRUE@am__append_24 = $(d10v_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_erc32_TRUE@am__append_25 = erc32/run erc32/sis
-@SIM_ENABLE_ARCH_erc32_TRUE@am__append_26 = sim-%D-install-exec-local
-@SIM_ENABLE_ARCH_erc32_TRUE@am__append_27 = sim-erc32-uninstall-local
-@SIM_ENABLE_ARCH_examples_TRUE@am__append_28 = example-synacor/run
-@SIM_ENABLE_ARCH_frv_TRUE@am__append_29 = frv/run
-@SIM_ENABLE_ARCH_frv_TRUE@am__append_30 = $(frv_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_frv_TRUE@am__append_31 = $(frv_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_ft32_TRUE@am__append_32 = ft32/run
-@SIM_ENABLE_ARCH_h8300_TRUE@am__append_33 = h8300/run
-@SIM_ENABLE_ARCH_iq2000_TRUE@am__append_34 = iq2000/run
-@SIM_ENABLE_ARCH_iq2000_TRUE@am__append_35 = $(iq2000_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_iq2000_TRUE@am__append_36 = $(iq2000_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_lm32_TRUE@am__append_37 = lm32/run
-@SIM_ENABLE_ARCH_lm32_TRUE@am__append_38 = $(lm32_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_lm32_TRUE@am__append_39 = $(lm32_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_m32c_TRUE@am__append_40 = m32c/run
-@SIM_ENABLE_ARCH_m32c_TRUE@am__append_41 = $(m32c_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_m32c_TRUE@am__append_42 = m32c/opc2c
-@SIM_ENABLE_ARCH_m32c_TRUE@am__append_43 = \
+@SIM_ENABLE_ARCH_aarch64_TRUE@am__append_8 = aarch64/run
+@SIM_ENABLE_ARCH_arm_TRUE@am__append_9 = arm/run
+@SIM_ENABLE_ARCH_avr_TRUE@am__append_10 = avr/run
+@SIM_ENABLE_ARCH_bfin_TRUE@am__append_11 = bfin/run
+@SIM_ENABLE_ARCH_bfin_TRUE@am__append_12 = bfin_SIM_EXTRA_HW_DEVICES="$(bfin_SIM_EXTRA_HW_DEVICES)"
+@SIM_ENABLE_ARCH_bpf_TRUE@am__append_13 = bpf/run
+@SIM_ENABLE_ARCH_bpf_TRUE@am__append_14 = $(bpf_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_bpf_TRUE@am__append_15 = $(bpf_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_cr16_TRUE@am__append_16 = cr16/run
+@SIM_ENABLE_ARCH_cr16_TRUE@am__append_17 = $(cr16_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_cr16_TRUE@am__append_18 = cr16/gencode
+@SIM_ENABLE_ARCH_cr16_TRUE@am__append_19 = $(cr16_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_cris_TRUE@am__append_20 = cris/run
+@SIM_ENABLE_ARCH_cris_TRUE@am__append_21 = cris_SIM_EXTRA_HW_DEVICES="$(cris_SIM_EXTRA_HW_DEVICES)"
+@SIM_ENABLE_ARCH_cris_TRUE@am__append_22 = cris/rvdummy
+@SIM_ENABLE_ARCH_cris_TRUE@am__append_23 = $(cris_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_cris_TRUE@am__append_24 = $(cris_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_d10v_TRUE@am__append_25 = d10v/run
+@SIM_ENABLE_ARCH_d10v_TRUE@am__append_26 = $(d10v_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_d10v_TRUE@am__append_27 = d10v/gencode
+@SIM_ENABLE_ARCH_d10v_TRUE@am__append_28 = $(d10v_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_erc32_TRUE@am__append_29 = erc32/run erc32/sis
+@SIM_ENABLE_ARCH_erc32_TRUE@am__append_30 = sim-%D-install-exec-local
+@SIM_ENABLE_ARCH_erc32_TRUE@am__append_31 = sim-erc32-uninstall-local
+@SIM_ENABLE_ARCH_examples_TRUE@am__append_32 = example-synacor/run
+@SIM_ENABLE_ARCH_frv_TRUE@am__append_33 = frv/run
+@SIM_ENABLE_ARCH_frv_TRUE@am__append_34 = $(frv_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_frv_TRUE@am__append_35 = $(frv_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_ft32_TRUE@am__append_36 = ft32/run
+@SIM_ENABLE_ARCH_h8300_TRUE@am__append_37 = h8300/run
+@SIM_ENABLE_ARCH_iq2000_TRUE@am__append_38 = iq2000/run
+@SIM_ENABLE_ARCH_iq2000_TRUE@am__append_39 = $(iq2000_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_iq2000_TRUE@am__append_40 = $(iq2000_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_lm32_TRUE@am__append_41 = lm32/run
+@SIM_ENABLE_ARCH_lm32_TRUE@am__append_42 = lm32_SIM_EXTRA_HW_DEVICES="$(lm32_SIM_EXTRA_HW_DEVICES)"
+@SIM_ENABLE_ARCH_lm32_TRUE@am__append_43 = $(lm32_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_lm32_TRUE@am__append_44 = $(lm32_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_m32c_TRUE@am__append_45 = m32c/run
+@SIM_ENABLE_ARCH_m32c_TRUE@am__append_46 = $(m32c_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_m32c_TRUE@am__append_47 = m32c/opc2c
+@SIM_ENABLE_ARCH_m32c_TRUE@am__append_48 = \
 @SIM_ENABLE_ARCH_m32c_TRUE@	$(m32c_BUILD_OUTPUTS) \
 @SIM_ENABLE_ARCH_m32c_TRUE@	m32c/m32c.c.log \
 @SIM_ENABLE_ARCH_m32c_TRUE@	m32c/r8c.c.log
 
-@SIM_ENABLE_ARCH_m32r_TRUE@am__append_44 = m32r/run
-@SIM_ENABLE_ARCH_m32r_TRUE@am__append_45 = $(m32r_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_m32r_TRUE@am__append_46 = $(m32r_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_47 = m68hc11/run
-@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_48 = $(m68hc11_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_49 = m68hc11/gencode
-@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_50 = $(m68hc11_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_mcore_TRUE@am__append_51 = mcore/run
-@SIM_ENABLE_ARCH_microblaze_TRUE@am__append_52 = microblaze/run
-@SIM_ENABLE_ARCH_mips_TRUE@am__append_53 = mips/run
-@SIM_ENABLE_ARCH_mn10300_TRUE@am__append_54 = mn10300/run
-@SIM_ENABLE_ARCH_mn10300_TRUE@am__append_55 = $(mn10300_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_mn10300_TRUE@am__append_56 = $(mn10300_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_moxie_TRUE@am__append_57 = moxie/run
-@SIM_ENABLE_ARCH_msp430_TRUE@am__append_58 = msp430/run
-@SIM_ENABLE_ARCH_or1k_TRUE@am__append_59 = or1k/run
-@SIM_ENABLE_ARCH_or1k_TRUE@am__append_60 = $(or1k_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_or1k_TRUE@am__append_61 = $(or1k_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_ppc_TRUE@am__append_62 = ppc/run ppc/psim
-@SIM_ENABLE_ARCH_pru_TRUE@am__append_63 = pru/run
-@SIM_ENABLE_ARCH_riscv_TRUE@am__append_64 = riscv/run
-@SIM_ENABLE_ARCH_rl78_TRUE@am__append_65 = rl78/run
-@SIM_ENABLE_ARCH_rx_TRUE@am__append_66 = rx/run
-@SIM_ENABLE_ARCH_sh_TRUE@am__append_67 = sh/run
-@SIM_ENABLE_ARCH_sh_TRUE@am__append_68 = $(sh_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_sh_TRUE@am__append_69 = sh/gencode
-@SIM_ENABLE_ARCH_sh_TRUE@am__append_70 = $(sh_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_v850_TRUE@am__append_71 = v850/run
-@SIM_ENABLE_ARCH_v850_TRUE@am__append_72 = $(v850_BUILD_OUTPUTS)
-@SIM_ENABLE_ARCH_v850_TRUE@am__append_73 = $(v850_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_m32r_TRUE@am__append_49 = m32r/run
+@SIM_ENABLE_ARCH_m32r_TRUE@am__append_50 = m32r_SIM_EXTRA_HW_DEVICES="$(m32r_SIM_EXTRA_HW_DEVICES)"
+@SIM_ENABLE_ARCH_m32r_TRUE@am__append_51 = $(m32r_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_m32r_TRUE@am__append_52 = $(m32r_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_53 = m68hc11/run
+@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_54 = m68hc11_SIM_EXTRA_HW_DEVICES="$(m68hc11_SIM_EXTRA_HW_DEVICES)"
+@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_55 = $(m68hc11_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_56 = m68hc11/gencode
+@SIM_ENABLE_ARCH_m68hc11_TRUE@am__append_57 = $(m68hc11_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_mcore_TRUE@am__append_58 = mcore/run
+@SIM_ENABLE_ARCH_microblaze_TRUE@am__append_59 = microblaze/run
+@SIM_ENABLE_ARCH_mips_TRUE@am__append_60 = mips/run
+@SIM_ENABLE_ARCH_mips_TRUE@am__append_61 = $(IGEN)
+@SIM_ENABLE_ARCH_mips_TRUE@am__append_62 = mips_SIM_EXTRA_HW_DEVICES="$(mips_SIM_EXTRA_HW_DEVICES)"
+@SIM_ENABLE_ARCH_mips_TRUE@am__append_63 = mips/multi-include.h mips/multi-run.c
+@SIM_ENABLE_ARCH_mn10300_TRUE@am__append_64 = mn10300/run
+@SIM_ENABLE_ARCH_mn10300_TRUE@am__append_65 = mn10300_SIM_EXTRA_HW_DEVICES="$(mn10300_SIM_EXTRA_HW_DEVICES)"
+@SIM_ENABLE_ARCH_mn10300_TRUE@am__append_66 = $(mn10300_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_mn10300_TRUE@am__append_67 = $(mn10300_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_moxie_TRUE@am__append_68 = moxie/run
+@SIM_ENABLE_ARCH_msp430_TRUE@am__append_69 = msp430/run
+@SIM_ENABLE_ARCH_or1k_TRUE@am__append_70 = or1k/run
+@SIM_ENABLE_ARCH_or1k_TRUE@am__append_71 = $(or1k_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_or1k_TRUE@am__append_72 = $(or1k_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_ppc_TRUE@am__append_73 = ppc/run ppc/psim
+@SIM_ENABLE_ARCH_pru_TRUE@am__append_74 = pru/run
+@SIM_ENABLE_ARCH_riscv_TRUE@am__append_75 = riscv/run
+@SIM_ENABLE_ARCH_rl78_TRUE@am__append_76 = rl78/run
+@SIM_ENABLE_ARCH_rx_TRUE@am__append_77 = rx/run
+@SIM_ENABLE_ARCH_sh_TRUE@am__append_78 = sh/run
+@SIM_ENABLE_ARCH_sh_TRUE@am__append_79 = $(sh_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_sh_TRUE@am__append_80 = sh/gencode
+@SIM_ENABLE_ARCH_sh_TRUE@am__append_81 = $(sh_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_v850_TRUE@am__append_82 = v850/run
+@SIM_ENABLE_ARCH_v850_TRUE@am__append_83 = $(v850_BUILD_OUTPUTS)
+@SIM_ENABLE_ARCH_v850_TRUE@am__append_84 = $(v850_BUILD_OUTPUTS)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/../config/acx.m4 \
@@ -228,12 +242,13 @@ am__aclocal_m4_deps = $(top_srcdir)/../config/acx.m4 \
 	$(top_srcdir)/m4/sim_ac_option_profile.m4 \
 	$(top_srcdir)/m4/sim_ac_option_reserved_bits.m4 \
 	$(top_srcdir)/m4/sim_ac_option_scache.m4 \
+	$(top_srcdir)/m4/sim_ac_option_smp.m4 \
 	$(top_srcdir)/m4/sim_ac_option_stdio.m4 \
 	$(top_srcdir)/m4/sim_ac_option_trace.m4 \
 	$(top_srcdir)/m4/sim_ac_option_warnings.m4 \
 	$(top_srcdir)/m4/sim_ac_platform.m4 \
 	$(top_srcdir)/m4/sim_ac_toolchain.m4 \
-	$(top_srcdir)/frv/acinclude.m4 \
+	$(top_srcdir)/frv/acinclude.m4 $(top_srcdir)/mips/acinclude.m4 \
 	$(top_srcdir)/riscv/acinclude.m4 $(top_srcdir)/rx/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -255,15 +270,16 @@ CONFIG_CLEAN_FILES = Make-common.sim aarch64/Makefile.sim \
 	lm32/.gdbinit m32c/Makefile.sim m32c/.gdbinit \
 	m32r/Makefile.sim m32r/.gdbinit m68hc11/Makefile.sim \
 	m68hc11/.gdbinit mcore/Makefile.sim mcore/.gdbinit \
-	microblaze/Makefile.sim microblaze/.gdbinit mips/.gdbinit \
-	mn10300/Makefile.sim mn10300/.gdbinit moxie/Makefile.sim \
-	moxie/.gdbinit msp430/Makefile.sim msp430/.gdbinit \
-	or1k/Makefile.sim or1k/.gdbinit ppc/.gdbinit pru/Makefile.sim \
-	pru/.gdbinit riscv/Makefile.sim riscv/.gdbinit \
-	rl78/Makefile.sim rl78/.gdbinit rx/Makefile.sim rx/.gdbinit \
-	sh/Makefile.sim sh/.gdbinit erc32/Makefile.sim erc32/.gdbinit \
-	v850/Makefile.sim v850/.gdbinit example-synacor/Makefile.sim \
-	example-synacor/.gdbinit arch-subdir.mk .gdbinit
+	microblaze/Makefile.sim microblaze/.gdbinit mips/Makefile.sim \
+	mips/.gdbinit mn10300/Makefile.sim mn10300/.gdbinit \
+	moxie/Makefile.sim moxie/.gdbinit msp430/Makefile.sim \
+	msp430/.gdbinit or1k/Makefile.sim or1k/.gdbinit ppc/.gdbinit \
+	pru/Makefile.sim pru/.gdbinit riscv/Makefile.sim \
+	riscv/.gdbinit rl78/Makefile.sim rl78/.gdbinit rx/Makefile.sim \
+	rx/.gdbinit sh/Makefile.sim sh/.gdbinit erc32/Makefile.sim \
+	erc32/.gdbinit v850/Makefile.sim v850/.gdbinit \
+	example-synacor/Makefile.sim example-synacor/.gdbinit \
+	arch-subdir.mk .gdbinit
 CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
@@ -1007,6 +1023,7 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+IGEN_FLAGS_SMP = @IGEN_FLAGS_SMP@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -1093,6 +1110,18 @@ SIM_FRV_TRAPDUMP_FLAGS = @SIM_FRV_TRAPDUMP_FLAGS@
 SIM_HW_CFLAGS = @SIM_HW_CFLAGS@
 SIM_HW_SOCKSER = @SIM_HW_SOCKSER@
 SIM_INLINE = @SIM_INLINE@
+SIM_MIPS_BITSIZE = @SIM_MIPS_BITSIZE@
+SIM_MIPS_FPU_BITSIZE = @SIM_MIPS_FPU_BITSIZE@
+SIM_MIPS_GEN = @SIM_MIPS_GEN@
+SIM_MIPS_IGEN_FLAGS = @SIM_MIPS_IGEN_FLAGS@
+SIM_MIPS_M16_FLAGS = @SIM_MIPS_M16_FLAGS@
+SIM_MIPS_MICROMIPS16_FLAGS = @SIM_MIPS_MICROMIPS16_FLAGS@
+SIM_MIPS_MICROMIPS_FLAGS = @SIM_MIPS_MICROMIPS_FLAGS@
+SIM_MIPS_MULTI_FLAGS = @SIM_MIPS_MULTI_FLAGS@
+SIM_MIPS_MULTI_IGEN_CONFIGS = @SIM_MIPS_MULTI_IGEN_CONFIGS@
+SIM_MIPS_MULTI_OBJ = @SIM_MIPS_MULTI_OBJ@
+SIM_MIPS_MULTI_SRC = @SIM_MIPS_MULTI_SRC@
+SIM_MIPS_SUBTARGET = @SIM_MIPS_SUBTARGET@
 SIM_PRIMARY_TARGET = @SIM_PRIMARY_TARGET@
 SIM_RISCV_BITSIZE = @SIM_RISCV_BITSIZE@
 SIM_RX_CYCLE_ACCURATE_FLAGS = @SIM_RX_CYCLE_ACCURATE_FLAGS@
@@ -1170,20 +1199,25 @@ GNULIB_PARENT_DIR = ..
 srccom = $(srcdir)/common
 srcroot = $(srcdir)/..
 SUBDIRS = @subdirs@ $(SIM_SUBDIRS)
-AM_MAKEFLAGS = 
+AM_MAKEFLAGS = SIM_NEW_COMMON_OBJS_="$(SIM_NEW_COMMON_OBJS)" \
+	$(am__append_3) $(am__append_12) $(am__append_21) \
+	$(am__append_42) $(am__append_50) $(am__append_54) \
+	$(am__append_62) $(am__append_65)
 pkginclude_HEADERS = $(am__append_1)
-noinst_LIBRARIES = $(SIM_COMMON_LIB) $(am__append_3)
+noinst_LIBRARIES = $(SIM_COMMON_LIB) $(am__append_5)
 CLEANFILES = common/version.c common/version.c-stamp \
 	testsuite/common/bits-gen testsuite/common/bits32m0.c \
 	testsuite/common/bits32m31.c testsuite/common/bits64m0.c \
 	testsuite/common/bits64m63.c
-DISTCLEANFILES = 
-MOSTLYCLEANFILES = core $(am__append_5) site-sim-config.exp \
-	testrun.log testrun.sum $(am__append_12) $(am__append_16) \
-	$(am__append_20) $(am__append_24) $(am__append_31) \
-	$(am__append_36) $(am__append_39) $(am__append_43) \
-	$(am__append_46) $(am__append_50) $(am__append_56) \
-	$(am__append_61) $(am__append_70) $(am__append_73)
+DISTCLEANFILES = $(am__append_63)
+MOSTLYCLEANFILES = core $(common_HW_CONFIG_H_TARGETS) $(patsubst \
+	%,%/stamp-hw,$(SIM_ENABLED_ARCHES)) $(am__append_7) \
+	site-sim-config.exp testrun.log testrun.sum $(am__append_15) \
+	$(am__append_19) $(am__append_24) $(am__append_28) \
+	$(am__append_35) $(am__append_40) $(am__append_44) \
+	$(am__append_48) $(am__append_52) $(am__append_57) \
+	$(am__append_67) $(am__append_72) $(am__append_81) \
+	$(am__append_84)
 AM_CFLAGS = $(WERROR_CFLAGS) $(WARN_CFLAGS)
 AM_CPPFLAGS = $(INCGNU) -I$(srcroot)/include -I../bfd -I.. \
 	$(SIM_HW_CFLAGS) $(SIM_INLINE) -I$(srcdir)/common \
@@ -1192,15 +1226,16 @@ AM_CPPFLAGS_FOR_BUILD = -I$(srcroot)/include $(SIM_HW_CFLAGS) \
 	$(SIM_INLINE) -I$(srcdir)/common
 COMPILE_FOR_BUILD = $(CC_FOR_BUILD) $(AM_CPPFLAGS_FOR_BUILD) $(CPPFLAGS_FOR_BUILD) $(CFLAGS_FOR_BUILD)
 LINK_FOR_BUILD = $(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) -o $@
-SIM_ALL_RECURSIVE_DEPS = common/libcommon.a $(am__append_2) \
-	$(am__append_11) $(am__append_14) $(am__append_19) \
-	$(am__append_22) $(am__append_30) $(am__append_35) \
-	$(am__append_38) $(am__append_41) $(am__append_45) \
-	$(am__append_48) $(am__append_55) $(am__append_60) \
-	$(am__append_68) $(am__append_72)
+SIM_ALL_RECURSIVE_DEPS = common/libcommon.a \
+	$(common_HW_CONFIG_H_TARGETS) $(am__append_4) $(am__append_14) \
+	$(am__append_17) $(am__append_23) $(am__append_26) \
+	$(am__append_34) $(am__append_39) $(am__append_43) \
+	$(am__append_46) $(am__append_51) $(am__append_55) \
+	$(am__append_61) $(am__append_66) $(am__append_71) \
+	$(am__append_79) $(am__append_83)
 SIM_INSTALL_DATA_LOCAL_DEPS = 
-SIM_INSTALL_EXEC_LOCAL_DEPS = $(am__append_26)
-SIM_UNINSTALL_LOCAL_DEPS = $(am__append_27)
+SIM_INSTALL_EXEC_LOCAL_DEPS = $(am__append_30)
+SIM_UNINSTALL_LOCAL_DEPS = $(am__append_31)
 SIM_COMMON_LIB = common/libcommon.a
 common_libcommon_a_SOURCES = \
 	common/callback.c \
@@ -1213,6 +1248,27 @@ common_libcommon_a_SOURCES = \
 	common/target-newlib-syscall.c \
 	common/version.c
 
+SIM_COMMON_HW_OBJS = \
+	hw-alloc.o \
+	hw-base.o \
+	hw-device.o \
+	hw-events.o \
+	hw-handles.o \
+	hw-instances.o \
+	hw-ports.o \
+	hw-properties.o \
+	hw-tree.o \
+	sim-hw.o
+
+SIM_NEW_COMMON_OBJS = sim-arange.o sim-bits.o sim-close.o \
+	sim-command.o sim-config.o sim-core.o sim-cpu.o sim-endian.o \
+	sim-engine.o sim-events.o sim-fpu.o sim-hload.o sim-hrw.o \
+	sim-io.o sim-info.o sim-memopt.o sim-model.o sim-module.o \
+	sim-options.o sim-profile.o sim-reason.o sim-reg.o \
+	sim-signal.o sim-stop.o sim-syscall.o sim-trace.o sim-utils.o \
+	sim-watch.o $(am__append_2)
+SIM_HW_DEVICES = cfi core pal glue
+common_HW_CONFIG_H_TARGETS = $(patsubst %,%/hw-config.h,$(SIM_ENABLED_ARCHES))
 LIBIBERTY_LIB = ../libiberty/libiberty.a
 BFD_LIB = ../bfd/libbfd.la
 OPCODES_LIB = ../opcodes/libopcodes.la
@@ -1228,7 +1284,7 @@ SIM_COMMON_LIBS = \
 # igen leaks memory, and therefore makes AddressSanitizer unhappy.  Disable
 # leak detection while running it.
 @SIM_ENABLE_IGEN_TRUE@IGEN = igen/igen$(EXEEXT)
-@SIM_ENABLE_IGEN_TRUE@IGEN_RUN = ASAN_OPTIONS=detect_leaks=0 $(IGEN)
+@SIM_ENABLE_IGEN_TRUE@IGEN_RUN = ASAN_OPTIONS=detect_leaks=0 $(IGEN) $(IGEN_FLAGS_SMP)
 @SIM_ENABLE_IGEN_TRUE@igen_libigen_a_SOURCES = \
 @SIM_ENABLE_IGEN_TRUE@	igen/table.c \
 @SIM_ENABLE_IGEN_TRUE@	igen/lf.c \
@@ -1314,6 +1370,39 @@ testsuite_common_CPPFLAGS = \
 @SIM_ENABLE_ARCH_bfin_TRUE@	bfin/libsim.a \
 @SIM_ENABLE_ARCH_bfin_TRUE@	$(SIM_COMMON_LIBS)
 
+@SIM_ENABLE_ARCH_bfin_TRUE@bfin_SIM_EXTRA_HW_DEVICES = \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_cec \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_ctimer \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_dma \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_dmac \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_ebiu_amc \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_ebiu_ddrc \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_ebiu_sdc \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_emac \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_eppi \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_evt \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_gpio \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_gpio2 \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_gptimer \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_jtag \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_mmu \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_nfc \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_otp \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_pfmon \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_pint \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_pll \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_ppi \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_rtc \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_sic \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_spi \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_trace \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_twi \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_uart \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_uart2 \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_wdog \
+@SIM_ENABLE_ARCH_bfin_TRUE@	bfin_wp \
+@SIM_ENABLE_ARCH_bfin_TRUE@	eth_phy
+
 @SIM_ENABLE_ARCH_bpf_TRUE@bpf_run_SOURCES = 
 @SIM_ENABLE_ARCH_bpf_TRUE@bpf_run_LDADD = \
 @SIM_ENABLE_ARCH_bpf_TRUE@	bpf/nrun.o \
@@ -1347,6 +1436,7 @@ testsuite_common_CPPFLAGS = \
 @SIM_ENABLE_ARCH_cris_TRUE@	cris/libsim.a \
 @SIM_ENABLE_ARCH_cris_TRUE@	$(SIM_COMMON_LIBS)
 
+@SIM_ENABLE_ARCH_cris_TRUE@cris_SIM_EXTRA_HW_DEVICES = rv cris cris_900000xx
 @SIM_ENABLE_ARCH_cris_TRUE@cris_rvdummy_SOURCES = cris/rvdummy.c
 @SIM_ENABLE_ARCH_cris_TRUE@cris_rvdummy_LDADD = $(LIBIBERTY_LIB)
 @SIM_ENABLE_ARCH_cris_TRUE@cris_BUILD_OUTPUTS = \
@@ -1426,6 +1516,7 @@ testsuite_common_CPPFLAGS = \
 @SIM_ENABLE_ARCH_lm32_TRUE@	lm32/libsim.a \
 @SIM_ENABLE_ARCH_lm32_TRUE@	$(SIM_COMMON_LIBS)
 
+@SIM_ENABLE_ARCH_lm32_TRUE@lm32_SIM_EXTRA_HW_DEVICES = lm32cpu lm32timer lm32uart
 @SIM_ENABLE_ARCH_lm32_TRUE@lm32_BUILD_OUTPUTS = \
 @SIM_ENABLE_ARCH_lm32_TRUE@	lm32/eng.h \
 @SIM_ENABLE_ARCH_lm32_TRUE@	lm32/mloop.c \
@@ -1453,6 +1544,7 @@ testsuite_common_CPPFLAGS = \
 @SIM_ENABLE_ARCH_m32r_TRUE@	m32r/libsim.a \
 @SIM_ENABLE_ARCH_m32r_TRUE@	$(SIM_COMMON_LIBS)
 
+@SIM_ENABLE_ARCH_m32r_TRUE@m32r_SIM_EXTRA_HW_DEVICES = m32r_cache m32r_uart
 @SIM_ENABLE_ARCH_m32r_TRUE@m32r_BUILD_OUTPUTS = \
 @SIM_ENABLE_ARCH_m32r_TRUE@	m32r/eng.h \
 @SIM_ENABLE_ARCH_m32r_TRUE@	m32r/mloop.c \
@@ -1470,6 +1562,7 @@ testsuite_common_CPPFLAGS = \
 @SIM_ENABLE_ARCH_m68hc11_TRUE@	m68hc11/libsim.a \
 @SIM_ENABLE_ARCH_m68hc11_TRUE@	$(SIM_COMMON_LIBS)
 
+@SIM_ENABLE_ARCH_m68hc11_TRUE@m68hc11_SIM_EXTRA_HW_DEVICES = m68hc11 m68hc11sio m68hc11eepr m68hc11tim m68hc11spi nvram
 @SIM_ENABLE_ARCH_m68hc11_TRUE@m68hc11_BUILD_OUTPUTS = \
 @SIM_ENABLE_ARCH_m68hc11_TRUE@	m68hc11/gencode$(EXEEXT) \
 @SIM_ENABLE_ARCH_m68hc11_TRUE@	m68hc11/m68hc11int.c \
@@ -1494,12 +1587,14 @@ testsuite_common_CPPFLAGS = \
 @SIM_ENABLE_ARCH_mips_TRUE@	mips/libsim.a \
 @SIM_ENABLE_ARCH_mips_TRUE@	$(SIM_COMMON_LIBS)
 
+@SIM_ENABLE_ARCH_mips_TRUE@mips_SIM_EXTRA_HW_DEVICES = tx3904cpu tx3904irc tx3904tmr tx3904sio
 @SIM_ENABLE_ARCH_mn10300_TRUE@mn10300_run_SOURCES = 
 @SIM_ENABLE_ARCH_mn10300_TRUE@mn10300_run_LDADD = \
 @SIM_ENABLE_ARCH_mn10300_TRUE@	mn10300/nrun.o \
 @SIM_ENABLE_ARCH_mn10300_TRUE@	mn10300/libsim.a \
 @SIM_ENABLE_ARCH_mn10300_TRUE@	$(SIM_COMMON_LIBS)
 
+@SIM_ENABLE_ARCH_mn10300_TRUE@mn10300_SIM_EXTRA_HW_DEVICES = mn103cpu mn103int mn103tim mn103ser mn103iop
 @SIM_ENABLE_ARCH_mn10300_TRUE@mn10300_BUILT_SRC_FROM_IGEN = \
 @SIM_ENABLE_ARCH_mn10300_TRUE@	mn10300/icache.h \
 @SIM_ENABLE_ARCH_mn10300_TRUE@	mn10300/icache.c \
@@ -1756,6 +1851,8 @@ mcore/.gdbinit: $(top_builddir)/config.status $(top_srcdir)/common/gdbinit.in
 microblaze/Makefile.sim: $(top_builddir)/config.status $(top_srcdir)/microblaze/Makefile.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 microblaze/.gdbinit: $(top_builddir)/config.status $(top_srcdir)/common/gdbinit.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+mips/Makefile.sim: $(top_builddir)/config.status $(top_srcdir)/mips/Makefile.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 mips/.gdbinit: $(top_builddir)/config.status $(top_srcdir)/common/gdbinit.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
@@ -3089,6 +3186,23 @@ common/version.c-stamp: $(srcroot)/gdb/version.in $(srcroot)/bfd/version.h $(src
 	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change $@.tmp $(@:-stamp=)
 	$(AM_V_at)touch $@
 
+# FIXME This is one very simple-minded way of generating the file hw-config.h.
+%/hw-config.h: %/stamp-hw ; @true
+%/stamp-hw: Makefile
+	$(AM_V_GEN)set -e; \
+	( \
+	sim_hw="$(SIM_HW_DEVICES) $($(@D)_SIM_EXTRA_HW_DEVICES)" ; \
+	echo "/* generated by Makefile */" ; \
+	printf "extern const struct hw_descriptor dv_%s_descriptor[];\n" $$sim_hw ; \
+	echo "const struct hw_descriptor * const hw_descriptors[] = {" ; \
+	printf "  dv_%s_descriptor,\n" $$sim_hw ; \
+	echo "  NULL," ; \
+	echo "};" \
+	) > $@.tmp; \
+	$(SHELL) $(srcroot)/move-if-change $@.tmp $(@D)/hw-config.h; \
+	touch $@
+.PRECIOUS: %/stamp-hw
+
 # Alias for developers.
 @SIM_ENABLE_IGEN_TRUE@igen: $(IGEN)
 
@@ -3409,36 +3523,21 @@ testsuite/common/bits64m63.c: testsuite/common/bits-gen$(EXEEXT) testsuite/commo
 @SIM_ENABLE_ARCH_mn10300_TRUE@		-i $(mn10300_IGEN_INSN) \
 @SIM_ENABLE_ARCH_mn10300_TRUE@		-o $(mn10300_IGEN_DC) \
 @SIM_ENABLE_ARCH_mn10300_TRUE@		-x \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n icache.h    -hc mn10300/tmp-icache.h \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n icache.c    -c  mn10300/tmp-icache.c \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n semantics.h -hs mn10300/tmp-semantics.h \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n semantics.c -s  mn10300/tmp-semantics.c \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n idecode.h   -hd mn10300/tmp-idecode.h \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n idecode.c   -d  mn10300/tmp-idecode.c \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n model.h     -hm mn10300/tmp-model.h \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n model.c     -m  mn10300/tmp-model.c \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n support.h   -hf mn10300/tmp-support.h \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n support.c   -f  mn10300/tmp-support.c \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n itable.h    -ht mn10300/tmp-itable.h \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n itable.c    -t  mn10300/tmp-itable.c \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n engine.h    -he mn10300/tmp-engine.h \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n engine.c    -e  mn10300/tmp-engine.c \
-@SIM_ENABLE_ARCH_mn10300_TRUE@		-n irun.c      -r  mn10300/tmp-irun.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-icache.h mn10300/icache.h
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-icache.c mn10300/icache.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-idecode.h mn10300/idecode.h
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-idecode.c mn10300/idecode.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-semantics.h mn10300/semantics.h
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-semantics.c mn10300/semantics.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-model.h mn10300/model.h
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-model.c mn10300/model.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-support.h mn10300/support.h
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-support.c mn10300/support.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-itable.h mn10300/itable.h
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-itable.c mn10300/itable.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-engine.h mn10300/engine.h
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-engine.c mn10300/engine.c
-@SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change mn10300/tmp-irun.c mn10300/irun.c
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n icache.h    -hc mn10300/icache.h \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n icache.c    -c  mn10300/icache.c \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n semantics.h -hs mn10300/semantics.h \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n semantics.c -s  mn10300/semantics.c \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n idecode.h   -hd mn10300/idecode.h \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n idecode.c   -d  mn10300/idecode.c \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n model.h     -hm mn10300/model.h \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n model.c     -m  mn10300/model.c \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n support.h   -hf mn10300/support.h \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n support.c   -f  mn10300/support.c \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n itable.h    -ht mn10300/itable.h \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n itable.c    -t  mn10300/itable.c \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n engine.h    -he mn10300/engine.h \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n engine.c    -e  mn10300/engine.c \
+@SIM_ENABLE_ARCH_mn10300_TRUE@		-n irun.c      -r  mn10300/irun.c
 @SIM_ENABLE_ARCH_mn10300_TRUE@	$(AM_V_at)touch $@
 
 @SIM_ENABLE_ARCH_moxie_TRUE@moxie/moxie-gdb.dtb: @MAINT@ moxie/moxie-gdb.dts moxie/$(am__dirstamp)
@@ -3468,6 +3567,16 @@ testsuite/common/bits64m63.c: testsuite/common/bits-gen$(EXEEXT) testsuite/commo
 
 @SIM_ENABLE_ARCH_ppc_TRUE@ppc/%.o: ppc/%.c | ppc/libsim.a $(SIM_ALL_RECURSIVE_DEPS)
 @SIM_ENABLE_ARCH_ppc_TRUE@	$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+
+@SIM_ENABLE_ARCH_ppc_TRUE@ppc/spreg.c: @MAINT@ ppc/ppc-spr-table ppc/spreg-gen.py ppc/$(am__dirstamp)
+@SIM_ENABLE_ARCH_ppc_TRUE@	$(AM_V_GEN)$(srcdir)/ppc/spreg-gen.py --source $@.tmp
+@SIM_ENABLE_ARCH_ppc_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change $@.tmp $(srcdir)/ppc/spreg.c
+@SIM_ENABLE_ARCH_ppc_TRUE@	$(AM_V_at)touch $(srcdir)/ppc/spreg.c
+
+@SIM_ENABLE_ARCH_ppc_TRUE@ppc/spreg.h: @MAINT@ ppc/ppc-spr-table ppc/spreg-gen.py ppc/$(am__dirstamp)
+@SIM_ENABLE_ARCH_ppc_TRUE@	$(AM_V_GEN)$(srcdir)/ppc/spreg-gen.py --header $@.tmp
+@SIM_ENABLE_ARCH_ppc_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change $@.tmp $(srcdir)/ppc/spreg.h
+@SIM_ENABLE_ARCH_ppc_TRUE@	$(AM_V_at)touch $(srcdir)/ppc/spreg.h
 
 @SIM_ENABLE_ARCH_rl78_TRUE@rl78/%.o: rl78/%.c | rl78/libsim.a $(SIM_ALL_RECURSIVE_DEPS)
 @SIM_ENABLE_ARCH_rl78_TRUE@	$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
@@ -3501,36 +3610,21 @@ testsuite/common/bits64m63.c: testsuite/common/bits-gen$(EXEEXT) testsuite/commo
 @SIM_ENABLE_ARCH_v850_TRUE@		-i $(v850_IGEN_INSN) \
 @SIM_ENABLE_ARCH_v850_TRUE@		-o $(v850_IGEN_DC) \
 @SIM_ENABLE_ARCH_v850_TRUE@		-x \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n icache.h    -hc v850/tmp-icache.h \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n icache.c    -c  v850/tmp-icache.c \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n semantics.h -hs v850/tmp-semantics.h \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n semantics.c -s  v850/tmp-semantics.c \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n idecode.h   -hd v850/tmp-idecode.h \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n idecode.c   -d  v850/tmp-idecode.c \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n model.h     -hm v850/tmp-model.h \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n model.c     -m  v850/tmp-model.c \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n support.h   -hf v850/tmp-support.h \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n support.c   -f  v850/tmp-support.c \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n itable.h    -ht v850/tmp-itable.h \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n itable.c    -t  v850/tmp-itable.c \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n engine.h    -he v850/tmp-engine.h \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n engine.c    -e  v850/tmp-engine.c \
-@SIM_ENABLE_ARCH_v850_TRUE@		-n irun.c      -r  v850/tmp-irun.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-icache.h v850/icache.h
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-icache.c v850/icache.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-idecode.h v850/idecode.h
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-idecode.c v850/idecode.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-semantics.h v850/semantics.h
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-semantics.c v850/semantics.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-model.h v850/model.h
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-model.c v850/model.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-support.h v850/support.h
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-support.c v850/support.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-itable.h v850/itable.h
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-itable.c v850/itable.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-engine.h v850/engine.h
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-engine.c v850/engine.c
-@SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change v850/tmp-irun.c v850/irun.c
+@SIM_ENABLE_ARCH_v850_TRUE@		-n icache.h    -hc v850/icache.h \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n icache.c    -c  v850/icache.c \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n semantics.h -hs v850/semantics.h \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n semantics.c -s  v850/semantics.c \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n idecode.h   -hd v850/idecode.h \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n idecode.c   -d  v850/idecode.c \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n model.h     -hm v850/model.h \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n model.c     -m  v850/model.c \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n support.h   -hf v850/support.h \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n support.c   -f  v850/support.c \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n itable.h    -ht v850/itable.h \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n itable.c    -t  v850/itable.c \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n engine.h    -he v850/engine.h \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n engine.c    -e  v850/engine.c \
+@SIM_ENABLE_ARCH_v850_TRUE@		-n irun.c      -r  v850/irun.c
 @SIM_ENABLE_ARCH_v850_TRUE@	$(AM_V_at)touch $@
 
 %/libsim.a: | $(SIM_ALL_RECURSIVE_DEPS)

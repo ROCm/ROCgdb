@@ -1551,13 +1551,13 @@ dwarf2_per_objfile::set_symtab (const dwarf2_per_cu_data *per_cu,
    interposition is possible and so symbol values must follow copy
    relocation rules.  */
 
-int
+bool
 dwarf2_has_info (struct objfile *objfile,
 		 const struct dwarf2_debug_sections *names,
 		 bool can_copy)
 {
   if (objfile->flags & OBJF_READNEVER)
-    return 0;
+    return false;
 
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
@@ -9314,6 +9314,30 @@ using_directives (struct dwarf2_cu *cu)
     return cu->get_builder ()->get_local_using_directives ();
 }
 
+/* Read the DW_ATTR_decl_line attribute for the given DIE in the
+   given CU.  If the format is not recognized or the attribute is
+   not present, set it to 0.  */
+
+static unsigned int
+read_decl_line (struct die_info *die, struct dwarf2_cu *cu)
+{
+  struct attribute *decl_line = dwarf2_attr (die, DW_AT_decl_line, cu);
+  if (decl_line == nullptr)
+    return 0;
+  if (decl_line->form_is_constant ())
+    {
+      LONGEST val = decl_line->constant_value (0);
+      if (0 <= val && val <= UINT_MAX)
+	return (unsigned int) val;
+
+      complaint (_("Declared line for using directive is too large"));
+      return 0;
+    }
+
+  complaint (_("Declared line for using directive is of incorrect format"));
+  return 0;
+}
+
 /* Read the import statement specified by the given die and record it.  */
 
 static void
@@ -9456,6 +9480,7 @@ read_import_statement (struct die_info *die, struct dwarf2_cu *cu)
 		       import_alias,
 		       imported_declaration,
 		       excludes,
+		       read_decl_line (die, cu),
 		       0,
 		       &objfile->objfile_obstack);
 }
@@ -16093,7 +16118,9 @@ read_namespace (struct die_info *die, struct dwarf2_cu *cu)
 	  std::vector<const char *> excludes;
 	  add_using_directive (using_directives (cu),
 			       previous_prefix, type->name (), NULL,
-			       NULL, excludes, 0, &objfile->objfile_obstack);
+			       NULL, excludes,
+			       read_decl_line (die, cu),
+			       0, &objfile->objfile_obstack);
 	}
     }
 

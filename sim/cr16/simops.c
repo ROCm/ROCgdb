@@ -31,10 +31,14 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include "bfd.h"
+
 #include "sim-main.h"
 #include "sim-signal.h"
 #include "simops.h"
 #include "target-newlib-syscall.h"
+
+#include "cr16-sim.h"
 
 #ifdef HAVE_UTIME_H
 #include <utime.h>

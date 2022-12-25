@@ -20,24 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #define SIM_MAIN_H
 
 #include "sim-basics.h"
-
 #include "sim-base.h"
-
-struct _sim_cpu {
-  /* The only real register.  */
-  uint32_t pc;
-
-  /* We update a cycle counter.  */
-  uint32_t cycles;
-
-  sim_cpu_base base;
-};
-
-struct avr_sim_state {
-  /* If true, the pc needs more than 2 bytes.  */
-  int avr_pc22;
-};
-
-#define AVR_SIM_STATE(sd) ((struct avr_sim_state *) STATE_ARCH_DATA (sd))
 
 #endif

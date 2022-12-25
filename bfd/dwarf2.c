@@ -2047,7 +2047,8 @@ concat_filename (struct line_info_table *table, unsigned int file)
 
       if (table->files[file].dir
 	  /* PR 17512: file: 0317e960.  */
-	  && table->files[file].dir <= table->num_dirs
+	  && table->files[file].dir
+	  <= (table->use_dir_and_file_0 ? table->num_dirs - 1 : table->num_dirs)
 	  /* PR 17512: file: 7f3d2e4b.  */
 	  && table->dirs != NULL)
 	{
@@ -3441,7 +3442,6 @@ find_abstract_instance (struct comp_unit *unit,
   struct abbrev_info *abbrev;
   uint64_t die_ref = attr_ptr->u.val;
   struct attribute attr;
-  const char *name = NULL;
 
   if (recur_count == 100)
     {
@@ -3602,9 +3602,9 @@ find_abstract_instance (struct comp_unit *unit,
 		case DW_AT_name:
 		  /* Prefer DW_AT_MIPS_linkage_name or DW_AT_linkage_name
 		     over DW_AT_name.  */
-		  if (name == NULL && is_str_form (&attr))
+		  if (*pname == NULL && is_str_form (&attr))
 		    {
-		      name = attr.u.str;
+		      *pname = attr.u.str;
 		      if (mangle_style (unit->lang) == 0)
 			*is_linkage = true;
 		    }
@@ -3612,7 +3612,7 @@ find_abstract_instance (struct comp_unit *unit,
 		case DW_AT_specification:
 		  if (is_int_form (&attr)
 		      && !find_abstract_instance (unit, &attr, recur_count + 1,
-						  &name, is_linkage,
+						  pname, is_linkage,
 						  filename_ptr, linenumber_ptr))
 		    return false;
 		  break;
@@ -3622,7 +3622,7 @@ find_abstract_instance (struct comp_unit *unit,
 		     non-string forms into these attributes.  */
 		  if (is_str_form (&attr))
 		    {
-		      name = attr.u.str;
+		      *pname = attr.u.str;
 		      *is_linkage = true;
 		    }
 		  break;
@@ -3630,8 +3630,11 @@ find_abstract_instance (struct comp_unit *unit,
 		  if (!comp_unit_maybe_decode_line_info (unit))
 		    return false;
 		  if (is_int_form (&attr))
-		    *filename_ptr = concat_filename (unit->line_table,
-						     attr.u.val);
+		    {
+		      free (*filename_ptr);
+		      *filename_ptr = concat_filename (unit->line_table,
+						       attr.u.val);
+		    }
 		  break;
 		case DW_AT_decl_line:
 		  if (is_int_form (&attr))
@@ -3643,7 +3646,6 @@ find_abstract_instance (struct comp_unit *unit,
 	    }
 	}
     }
-  *pname = name;
   return true;
 }
 
@@ -4139,8 +4141,11 @@ scan_unit_for_symbols (struct comp_unit *unit)
 
 		case DW_AT_decl_file:
 		  if (is_int_form (&attr))
-		    func->file = concat_filename (unit->line_table,
-						  attr.u.val);
+		    {
+		      free (func->file);
+		      func->file = concat_filename (unit->line_table,
+						    attr.u.val);
+		    }
 		  break;
 
 		case DW_AT_decl_line:
@@ -4182,8 +4187,11 @@ scan_unit_for_symbols (struct comp_unit *unit)
 
 		case DW_AT_decl_file:
 		  if (is_int_form (&attr))
-		    var->file = concat_filename (unit->line_table,
-						 attr.u.val);
+		    {
+		      free (var->file);
+		      var->file = concat_filename (unit->line_table,
+						   attr.u.val);
+		    }
 		  break;
 
 		case DW_AT_decl_line:
@@ -4831,16 +4839,19 @@ find_debug_info (bfd *abfd, const struct dwarf_debug_section *debug_sections,
     {
       look = debug_sections[debug_info].uncompressed_name;
       msec = bfd_get_section_by_name (abfd, look);
-      if (msec != NULL)
+      /* Testing SEC_HAS_CONTENTS is an anti-fuzzer measure.  Of
+	 course debug sections always have contents.  */
+      if (msec != NULL && (msec->flags & SEC_HAS_CONTENTS) != 0)
 	return msec;
 
       look = debug_sections[debug_info].compressed_name;
       msec = bfd_get_section_by_name (abfd, look);
-      if (msec != NULL)
+      if (msec != NULL && (msec->flags & SEC_HAS_CONTENTS) != 0)
         return msec;
 
       for (msec = abfd->sections; msec != NULL; msec = msec->next)
-	if (startswith (msec->name, GNU_LINKONCE_INFO))
+	if ((msec->flags & SEC_HAS_CONTENTS) != 0
+	    && startswith (msec->name, GNU_LINKONCE_INFO))
 	  return msec;
 
       return NULL;
@@ -4848,6 +4859,9 @@ find_debug_info (bfd *abfd, const struct dwarf_debug_section *debug_sections,
 
   for (msec = after_sec->next; msec != NULL; msec = msec->next)
     {
+      if ((msec->flags & SEC_HAS_CONTENTS) == 0)
+	continue;
+
       look = debug_sections[debug_info].uncompressed_name;
       if (strcmp (msec->name, look) == 0)
 	return msec;

@@ -34,8 +34,11 @@
 #include "sim/callback.h"
 #include "gdb/signals.h"
 #include "sim-main.h"
+#include "sim-options.h"
 #include "sim-syscall.h"
 #include "sim-hw.h"
+
+#include "bfin-sim.h"
 
 /* The numbers here do not matter.  They just need to be unique.  They also
    need not be static across releases -- they're used internally only.  The
@@ -643,8 +646,6 @@ free_state (SIM_DESC sd)
 static void
 bfin_initialize_cpu (SIM_DESC sd, SIM_CPU *cpu)
 {
-  memset (&cpu->state, 0, sizeof (cpu->state));
-
   PROFILE_TOTAL_INSN_COUNT (CPU_PROFILE_DATA (cpu)) = 0;
 
   bfin_model_cpu_init (sd, cpu);
@@ -674,7 +675,8 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback,
   current_target_byte_order = BFD_ENDIAN_LITTLE;
 
   /* The cpu data is kept in a separately allocated chunk of memory.  */
-  if (sim_cpu_alloc_all (sd, 1) != SIM_RC_OK)
+  if (sim_cpu_alloc_all_extra (sd, 0, sizeof (struct bfin_cpu_state))
+      != SIM_RC_OK)
     {
       free_state (sd);
       return 0;
@@ -1119,7 +1121,7 @@ sim_create_inferior (SIM_DESC sd, struct bfd *abfd,
 {
   SIM_CPU *cpu = STATE_CPU (sd, 0);
   host_callback *cb = STATE_CALLBACK (sd);
-  SIM_ADDR addr;
+  bfd_vma addr;
 
   /* Set the PC.  */
   if (abfd != NULL)
