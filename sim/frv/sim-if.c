@@ -1,5 +1,5 @@
 /* Main simulator entry points specific to the FRV.
-   Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 1998-2023 Free Software Foundation, Inc.
    Contributed by Red Hat.
 
 This file is part of the GNU simulators.
@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "sim-options.h"
 #include "libiberty.h"
 #include "bfd.h"
-#include "elf-bfd.h"
+#include "bfd/elf-bfd.h"
 
 static void free_state (SIM_DESC);
 

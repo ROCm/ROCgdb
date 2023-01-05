@@ -1,5 +1,5 @@
 /* eBPF simulator main header
-   Copyright (C) 2020-2022 Free Software Foundation, Inc.
+   Copyright (C) 2020-2023 Free Software Foundation, Inc.
 
    This file is part of GDB, the GNU debugger.
 
@@ -20,8 +20,8 @@
 #define SIM_MAIN_H
 
 #include "sim-basics.h"
-#include "bpf-desc.h"
-#include "bpf-opc.h"
+#include "opcodes/bpf-desc.h"
+#include "opcodes/bpf-opc.h"
 #include "arch.h"
 #include "sim-base.h"
 #include "cgen-sim.h"

@@ -1,4 +1,4 @@
-dnl Copyright (C) 2005-2022 Free Software Foundation, Inc.
+dnl Copyright (C) 2005-2023 Free Software Foundation, Inc.
 dnl
 dnl This program is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -59,19 +59,19 @@ AC_MSG_RESULT([$SIM_MIPS_FPU_BITSIZE])
 AC_SUBST(SIM_MIPS_FPU_BITSIZE)
 
 dnl Select the IGEN architecture.
-SIM_MIPS_GEN=IGEN
-sim_mips_igen_machine="-M mipsIV"
+SIM_MIPS_GEN=SINGLE
+sim_mips_single_machine="-M mipsIV"
 sim_mips_m16_machine="-M mips16,mipsIII"
-sim_mips_igen_filter="32,64,f"
+sim_mips_single_filter="32,64,f"
 sim_mips_m16_filter="16"
 AS_CASE([${target}],
   [mips*tx39*], [dnl
-    SIM_MIPS_GEN=IGEN
-    sim_mips_igen_filter="32,f"
-    sim_mips_igen_machine="-M r3900"],
+    SIM_MIPS_GEN=SINGLE
+    sim_mips_single_filter="32,f"
+    sim_mips_single_machine="-M r3900"],
   [mips64vr41*], [dnl
     SIM_MIPS_GEN=M16
-    sim_mips_igen_machine="-M vr4100"
+    sim_mips_single_machine="-M vr4100"
     sim_mips_m16_machine="-M vr4100"],
   [mips64*], [dnl
     SIM_MIPS_GEN=MULTI
@@ -98,36 +98,36 @@ AS_CASE([${target}],
       mips32r2:mips32r2,mips3d,mips16,mips16e,mdmx,dsp,dsp2,smartmips:32,f:mipsisa32r2"
     sim_mips_multi_default=mipsisa32r2],
   [mipsisa32r6*], [dnl
-    SIM_MIPS_GEN=IGEN
-    sim_mips_igen_machine="-M mips32r6"
-    sim_mips_igen_filter="32,f"],
+    SIM_MIPS_GEN=SINGLE
+    sim_mips_single_machine="-M mips32r6"
+    sim_mips_single_filter="32,f"],
   [mipsisa32*], [dnl
     SIM_MIPS_GEN=M16
-    sim_mips_igen_machine="-M mips32,mips16,mips16e,smartmips"
+    sim_mips_single_machine="-M mips32,mips16,mips16e,smartmips"
     sim_mips_m16_machine="-M mips16,mips16e,mips32"
-    sim_mips_igen_filter="32,f"],
+    sim_mips_single_filter="32,f"],
   [mipsisa64r2*], [dnl
     SIM_MIPS_GEN=M16
-    sim_mips_igen_machine="-M mips64r2,mips3d,mips16,mips16e,mdmx,dsp,dsp2"
+    sim_mips_single_machine="-M mips64r2,mips3d,mips16,mips16e,mdmx,dsp,dsp2"
     sim_mips_m16_machine="-M mips16,mips16e,mips64r2"],
   [mipsisa64r6*], [dnl
-    SIM_MIPS_GEN=IGEN
-    sim_mips_igen_machine="-M mips64r6"],
+    SIM_MIPS_GEN=SINGLE
+    sim_mips_single_machine="-M mips64r6"],
   [mipsisa64sb1*], [dnl
-    SIM_MIPS_GEN=IGEN
-    sim_mips_igen_machine="-M mips64,mips3d,sb1"],
+    SIM_MIPS_GEN=SINGLE
+    sim_mips_single_machine="-M mips64,mips3d,sb1"],
   [mipsisa64*], [dnl
     SIM_MIPS_GEN=M16
-    sim_mips_igen_machine="-M mips64,mips3d,mips16,mips16e,mdmx"
+    sim_mips_single_machine="-M mips64,mips3d,mips16,mips16e,mdmx"
     sim_mips_m16_machine="-M mips16,mips16e,mips64"],
   [mips*lsi*], [dnl
     SIM_MIPS_GEN=M16
-    sim_mips_igen_machine="-M mipsIII,mips16"
+    sim_mips_single_machine="-M mipsIII,mips16"
     sim_mips_m16_machine="-M mips16,mipsIII"
-    sim_mips_igen_filter="32,f"],
+    sim_mips_single_filter="32,f"],
   [mips*], [dnl
-    SIM_MIPS_GEN=IGEN
-    sim_mips_igen_filter="32,f"])
+    SIM_MIPS_GEN=SINGLE
+    sim_mips_single_filter="32,f"])
 
 dnl The MULTI generator can combine several simulation engines into one.
 dnl executable.  A configuration which uses the MULTI should set two
@@ -153,7 +153,7 @@ dnl The simulator compares the bfd mach against BFDMACHS to decide
 dnl which engine to use.  Entries in BFDMACHS should be bfd_mach
 dnl values with "bfd_mach_" removed.  ${sim_mips_multi_default} says
 dnl which entry should be the default.
-SIM_MIPS_MULTI_FLAGS=
+SIM_MIPS_IGEN_ITABLE_FLAGS=
 SIM_MIPS_MULTI_SRC=
 SIM_MIPS_MULTI_OBJ=
 SIM_MIPS_MULTI_IGEN_CONFIGS=
@@ -169,7 +169,7 @@ AS_VAR_IF([SIM_MIPS_GEN], ["MULTI"], [dnl
 
   cat << __EOF__ > mips/multi-run.c
 /* Main entry point for MULTI simulators.
-   Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2003-2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -190,8 +190,8 @@ AS_VAR_IF([SIM_MIPS_GEN], ["MULTI"], [dnl
 
 #include "sim-main.h"
 #include "multi-include.h"
-#include "elf-bfd.h"
-#include "elfxx-mips.h"
+#include "bfd/elf-bfd.h"
+#include "bfd/elfxx-mips.h"
 #include "elf/mips.h"
 
 #define SD sd
@@ -233,7 +233,7 @@ __EOF__
 
     dnl Build the following lists:
     dnl
-    dnl   SIM_MIPS_MULTI_FLAGS: all -M and -F flags used by the simulator
+    dnl   SIM_MIPS_IGEN_ITABLE_FLAGS: all -M and -F flags used by the simulator
     dnl   SIM_MIPS_MULTI_SRC: all makefile-generated source files
     dnl   SIM_MIPS_MULTI_OBJ: the objects for ${SIM_MIPS_MULTI_SRC}
     dnl   SIM_MIPS_MULTI_IGEN_CONFIGS: igen configuration strings.
@@ -241,7 +241,7 @@ __EOF__
     dnl Each entry in ${SIM_MIPS_MULTI_IGEN_CONFIGS} is a prefix (m32
     dnl or m16) followed by the NAME, MACHINE and FILTER part of
     dnl the ${sim_mips_multi_configs} entry.
-    AS_VAR_APPEND([SIM_MIPS_MULTI_FLAGS], [" -F ${filter} -M ${machine}"])
+    AS_VAR_APPEND([SIM_MIPS_IGEN_ITABLE_FLAGS], [" -F ${filter} -M ${machine}"])
 
     dnl Check whether special handling is needed.
     AS_CASE([${c}],
@@ -254,7 +254,7 @@ __EOF__
 	dnl tmp-run-multi Makefile rule.
 	AS_VAR_APPEND([SIM_MIPS_MULTI_SRC], [" m16${name}_run.c"])
 	AS_VAR_APPEND([SIM_MIPS_MULTI_OBJ], [" m16${name}_run.o"])
-	AS_VAR_APPEND([SIM_MIPS_MULTI_FLAGS], [" -F 16"])
+	AS_VAR_APPEND([SIM_MIPS_IGEN_ITABLE_FLAGS], [" -F 16"])
 	],
       [*:*micromips32*:*], [dnl
 	dnl Run igen thrice, once for micromips32, once for micromips16,
@@ -266,7 +266,7 @@ __EOF__
 	dnl tmp-run-multi Makefile rule.
 	AS_VAR_APPEND([SIM_MIPS_MULTI_SRC], [" micromips${name}_run.c"])
 	AS_VAR_APPEND([SIM_MIPS_MULTI_OBJ], [" micromips${name}_run.o"])
-	AS_VAR_APPEND([SIM_MIPS_MULTI_FLAGS], [" -F 16,32"])
+	AS_VAR_APPEND([SIM_MIPS_IGEN_ITABLE_FLAGS], [" -F 16,32"])
 	],
       [*:*micromips64*:*], [dnl
 	dnl Run igen thrice, once for micromips64, once for micromips16,
@@ -278,7 +278,7 @@ __EOF__
 	dnl tmp-run-multi Makefile rule.
 	AS_VAR_APPEND([SIM_MIPS_MULTI_SRC], [" micromips${name}_run.c"])
 	AS_VAR_APPEND([SIM_MIPS_MULTI_OBJ], [" micromips${name}_run.o"])
-	AS_VAR_APPEND([SIM_MIPS_MULTI_FLAGS], [" -F 16,32,64"])
+	AS_VAR_APPEND([SIM_MIPS_IGEN_ITABLE_FLAGS], [" -F 16,32,64"])
 	],
       [ws=m32])
 
@@ -321,17 +321,18 @@ __EOF__
 ], [dnl
   dnl For clean-extra target.
   SIM_MIPS_MULTI_SRC=doesnt-exist.c
+  SIM_MIPS_IGEN_ITABLE_FLAGS='$(SIM_MIPS_SINGLE_FLAGS)'
+  AS_VAR_IF([SIM_MIPS_GEN], ["M16"], [AS_VAR_APPEND([SIM_MIPS_IGEN_ITABLE_FLAGS], [' $(SIM_MIPS_M16_FLAGS)'])])
 ])
-SIM_MIPS_IGEN_FLAGS="-F ${sim_mips_igen_filter} ${sim_mips_igen_machine}"
+SIM_MIPS_SINGLE_FLAGS="-F ${sim_mips_single_filter} ${sim_mips_single_machine}"
 SIM_MIPS_M16_FLAGS="-F ${sim_mips_m16_filter} ${sim_mips_m16_machine}"
-SIM_MIPS_MICROMIPS16_FLAGS="-F ${sim_mips_micromips16_filter} ${sim_mips_micromips16_machine}"
-SIM_MIPS_MICROMIPS_FLAGS="-F ${sim_mips_micromips_filter} ${sim_mips_micromips_machine}"
-AC_SUBST(SIM_MIPS_IGEN_FLAGS)
+AC_SUBST(SIM_MIPS_SINGLE_FLAGS)
 AC_SUBST(SIM_MIPS_M16_FLAGS)
-AC_SUBST(SIM_MIPS_MICROMIPS_FLAGS)
-AC_SUBST(SIM_MIPS_MICROMIPS16_FLAGS)
 AC_SUBST(SIM_MIPS_GEN)
-AC_SUBST(SIM_MIPS_MULTI_FLAGS)
+AC_SUBST(SIM_MIPS_IGEN_ITABLE_FLAGS)
 AC_SUBST(SIM_MIPS_MULTI_IGEN_CONFIGS)
 AC_SUBST(SIM_MIPS_MULTI_SRC)
 AC_SUBST(SIM_MIPS_MULTI_OBJ)
+AM_CONDITIONAL([SIM_MIPS_GEN_MODE_SINGLE], [test "$SIM_MIPS_GEN" = "SINGLE"])
+AM_CONDITIONAL([SIM_MIPS_GEN_MODE_M16], [test "$SIM_MIPS_GEN" = "M16"])
+AM_CONDITIONAL([SIM_MIPS_GEN_MODE_MULTI], [test "$SIM_MIPS_GEN" = "MULTI"])

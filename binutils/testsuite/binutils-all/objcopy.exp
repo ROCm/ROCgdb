@@ -1,4 +1,4 @@
-#   Copyright (C) 1994-2022 Free Software Foundation, Inc.
+#   Copyright (C) 1994-2023 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -130,7 +130,7 @@ setup_xfail "hppa*-*-*"
 setup_xfail "sh-*-coff*"
 setup_xfail "tic54x-*-*"
 clear_xfail "hppa*64*-*-hpux*" "hppa*-*-linux*" "hppa*-*-lites*"
-clear_xfail "hppa*-*-*n*bsd*" "hppa*-*-rtems*" "hppa*-*-*elf*"
+clear_xfail "hppa*-*-*n*bsd*" "hppa*-*-*elf*"
 objcopy_test "simple copy" bintest.s object "" ""
 
 # Test verilog data width
@@ -1220,7 +1220,7 @@ if [is_elf_format] {
     setup_xfail "sh-*-coff*"
     setup_xfail "tic54x-*-*"
     clear_xfail "hppa*64*-*-hpux*" "hppa*-*-linux*" "hppa*-*-lites*"
-    clear_xfail "hppa*-*-*n*bsd*" "hppa*-*-rtems*" "hppa*-*-*elf*"
+    clear_xfail "hppa*-*-*n*bsd*" "hppa*-*-*elf*"
     objcopy_test "ELF unknown section type" unknown.s object "" ""
 
     objcopy_test_readelf "ELF group 1" group.s
@@ -1464,7 +1464,7 @@ setup_xfail "hppa*-*-*"
 setup_xfail "sh-*-coff*"
 setup_xfail "spu-*-*"
 clear_xfail "hppa*64*-*-hpux*" "hppa*-*-linux*" "hppa*-*-lites*"
-clear_xfail "hppa*-*-*n*bsd*" "hppa*-*-rtems*" "hppa*-*-*elf*"
+clear_xfail "hppa*-*-*n*bsd*" "hppa*-*-*elf*"
 if { [istarget pdp11-*-*] } {
     set src "pr25662-pdp11.s"
 } else {

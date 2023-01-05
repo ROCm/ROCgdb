@@ -1,6 +1,6 @@
 /* Print in infix form a struct expression.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -68,7 +68,7 @@ void
 ATTRIBUTE_USED
 debug_exp (struct expression *exp)
 {
-  exp->op->dump (gdb_stdlog, 0);
+  exp->dump (gdb_stdlog);
   gdb_flush (gdb_stdlog);
 }
 

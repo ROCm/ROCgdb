@@ -1,6 +1,6 @@
 /* Common target dependent code for GDB on ARM systems.
 
-   Copyright (C) 1988-2022 Free Software Foundation, Inc.
+   Copyright (C) 1988-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -8939,6 +8939,9 @@ arm_return_in_memory (struct gdbarch *gdbarch, struct type *type)
       && TYPE_CODE_ARRAY != code && TYPE_CODE_COMPLEX != code)
     return 0;
 
+  if (TYPE_HAS_DYNAMIC_LENGTH (type))
+    return 1;
+
   if (TYPE_CODE_ARRAY == code && type->is_vector ())
     {
       /* Vector values should be returned using ARM registers if they
@@ -9138,7 +9141,7 @@ arm_store_return_value (struct type *type, struct regcache *regs,
 static enum return_value_convention
 arm_return_value (struct gdbarch *gdbarch, struct value *function,
 		  struct type *valtype, struct regcache *regcache,
-		  gdb_byte *readbuf, const gdb_byte *writebuf)
+		  struct value **read_value, const gdb_byte *writebuf)
 {
   arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
   struct type *func_type = function ? value_type (function) : NULL;
@@ -9151,6 +9154,14 @@ arm_return_value (struct gdbarch *gdbarch, struct value *function,
       int reg_char = arm_vfp_cprc_reg_char (vfp_base_type);
       int unit_length = arm_vfp_cprc_unit_length (vfp_base_type);
       int i;
+
+      gdb_byte *readbuf = nullptr;
+      if (read_value != nullptr)
+	{
+	  *read_value = allocate_value (valtype);
+	  readbuf = value_contents_raw (*read_value).data ();
+	}
+
       for (i = 0; i < vfp_base_count; i++)
 	{
 	  if (reg_char == 'q')
@@ -9202,12 +9213,12 @@ arm_return_value (struct gdbarch *gdbarch, struct value *function,
       if (tdep->struct_return == pcc_struct_return
 	  || arm_return_in_memory (gdbarch, valtype))
 	{
-	  if (readbuf)
+	  if (read_value != nullptr)
 	    {
 	      CORE_ADDR addr;
 
 	      regcache->cooked_read (ARM_A1_REGNUM, &addr);
-	      read_memory (addr, readbuf, valtype->length ());
+	      *read_value = value_at_non_lval (valtype, addr);
 	    }
 	  return RETURN_VALUE_ABI_RETURNS_ADDRESS;
 	}
@@ -9221,8 +9232,12 @@ arm_return_value (struct gdbarch *gdbarch, struct value *function,
   if (writebuf)
     arm_store_return_value (valtype, regcache, writebuf);
 
-  if (readbuf)
-    arm_extract_return_value (valtype, regcache, readbuf);
+  if (read_value != nullptr)
+    {
+      *read_value = allocate_value (valtype);
+      gdb_byte *readbuf = value_contents_raw (*read_value).data ();
+      arm_extract_return_value (valtype, regcache, readbuf);
+    }
 
   return RETURN_VALUE_REGISTER_CONVENTION;
 }
@@ -10675,7 +10690,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_register_name (gdbarch, arm_register_name);
 
   /* Returning results.  */
-  set_gdbarch_return_value (gdbarch, arm_return_value);
+  set_gdbarch_return_value_as_value (gdbarch, arm_return_value);
 
   /* Disassembly.  */
   set_gdbarch_print_insn (gdbarch, gdb_print_insn_arm);

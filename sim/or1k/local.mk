@@ -1,6 +1,6 @@
 ## See sim/Makefile.am
 ##
-## Copyright (C) 2017-2022 Free Software Foundation, Inc.
+## Copyright (C) 2017-2023 Free Software Foundation, Inc.
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -26,8 +26,9 @@ noinst_PROGRAMS += %D%/run
 %C%docdir = $(docdir)/%C%
 %C%doc_DATA = %D%/README
 
+## List all generated headers to help Automake dependency tracking.
+BUILT_SOURCES += %D%/eng.h
 %C%_BUILD_OUTPUTS = \
-	%D%/eng.h \
 	%D%/mloop.c \
 	%D%/stamp-mloop
 
@@ -46,3 +47,14 @@ SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
 	$(AM_V_at)touch $@
 
 MOSTLYCLEANFILES += $(%C%_BUILD_OUTPUTS)
+
+## Target that triggers all cgen targets that works when --disable-cgen-maint.
+%D%/cgen: %D%/cgen-arch %D%/cgen-cpu-decode
+
+%D%/cgen-arch:
+	$(AM_V_GEN)mach=or32,or32nd FLAGS="with-scache"; $(CGEN_GEN_ARCH)
+%D%/arch.h %D%/arch.c %D%/cpuall.h: @CGEN_MAINT@ %D%/cgen-arch
+
+%D%/cgen-cpu-decode:
+	$(AM_V_GEN)cpu=or1k32bf mach=or32,or32nd FLAGS="with-scache" EXTRAFILES="$(CGEN_CPU_SEM) $(CGEN_CPU_SEMSW)"; $(CGEN_GEN_CPU_DECODE)
+%D%/cpu.h %D%/cpu.c %D%/model.c %D%/sem.c %D%/sem-switch.c %D%/decode.c %D%/decode.h: @CGEN_MAINT@ %D%/cgen-cpu-decode

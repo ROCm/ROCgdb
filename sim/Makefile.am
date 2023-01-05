@@ -1,6 +1,6 @@
 ## Process this file with automake to generate Makefile.in
 ##
-#   Copyright (C) 1993-2022 Free Software Foundation, Inc.
+#   Copyright (C) 1993-2023 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ AUTOMAKE_OPTIONS = dejagnu foreign no-dist subdir-objects
 ACLOCAL_AMFLAGS = -Im4 -I.. -I../config
 
 GNULIB_PARENT_DIR = ..
-@include_makefile@ $(GNULIB_PARENT_DIR)/gnulib/Makefile.gnulib.inc
+@am__include@ @am__quote@$(GNULIB_PARENT_DIR)/gnulib/Makefile.gnulib.inc@am__quote@
 
 srccom = $(srcdir)/common
 srcroot = $(srcdir)/..
@@ -36,6 +36,7 @@ check_PROGRAMS =
 noinst_PROGRAMS =
 noinst_LIBRARIES =
 EXTRA_PROGRAMS =
+BUILT_SOURCES =
 
 CLEANFILES =
 DISTCLEANFILES =

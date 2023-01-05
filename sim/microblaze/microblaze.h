@@ -1,7 +1,7 @@
 #ifndef MICROBLAZE_H
 #define MICROBLAZE_H
 
-/* Copyright 2009-2022 Free Software Foundation, Inc.
+/* Copyright 2009-2023 Free Software Foundation, Inc.
 
    This file is part of the Xilinx MicroBlaze simulator.
 
@@ -18,7 +18,7 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, see <http://www.gnu.org/licenses/>.  */
 
-#include "../../opcodes/microblaze-opcm.h"
+#include "opcodes/microblaze-opcm.h"
 
 #define GET_RD	((inst & RD_MASK) >> RD_LOW)
 #define GET_RA	((inst & RA_MASK) >> RA_LOW)

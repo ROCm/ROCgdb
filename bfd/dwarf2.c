@@ -1,5 +1,5 @@
 /* DWARF 2 support.
-   Copyright (C) 1994-2022 Free Software Foundation, Inc.
+   Copyright (C) 1994-2023 Free Software Foundation, Inc.
 
    Adapted from gdb/dwarf2read.c by Gavin Koch of Cygnus Solutions
    (gavin@cygnus.com).
@@ -702,6 +702,14 @@ read_section (bfd *abfd,
 	  _bfd_error_handler (_("DWARF error: can't find %s section."),
 			      sec->uncompressed_name);
 	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
+
+      if ((msec->flags & SEC_HAS_CONTENTS) == 0)
+	{
+	  _bfd_error_handler (_("DWARF error: section %s has no contents"),
+			      section_name);
+	  bfd_set_error (bfd_error_no_contents);
 	  return false;
 	}
 
@@ -2044,19 +2052,16 @@ concat_filename (struct line_info_table *table, unsigned int file)
       char *subdir_name = NULL;
       char *name;
       size_t len;
+      unsigned int dir = table->files[file].dir;
 
-      if (table->files[file].dir
-	  /* PR 17512: file: 0317e960.  */
-	  && table->files[file].dir
-	  <= (table->use_dir_and_file_0 ? table->num_dirs - 1 : table->num_dirs)
-	  /* PR 17512: file: 7f3d2e4b.  */
-	  && table->dirs != NULL)
-	{
-	  if (table->use_dir_and_file_0)
-	    subdir_name = table->dirs[table->files[file].dir];
-	  else
-	    subdir_name = table->dirs[table->files[file].dir - 1];
-	}
+      if (!table->use_dir_and_file_0)
+	--dir;
+      /* Wrapping from 0 to -1u above gives the intended result with
+	 the test below of leaving subdir_name NULL for pre-DWARF5 dir
+	 of 0.  */
+      /* PR 17512: file: 0317e960, file: 7f3d2e4b.  */
+      if (dir < table->num_dirs)
+	subdir_name = table->dirs[dir];
 
       if (!subdir_name || !IS_ABSOLUTE_PATH (subdir_name))
 	dir_name = table->comp_dir;

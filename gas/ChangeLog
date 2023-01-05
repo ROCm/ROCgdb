@@ -1,3 +1,18 @@
+2023-01-03  Nick Clifton  <nickc@redhat.com>
+
+	PR 29952
+	* config/tc-i386.c (md_assemble): Avoid constructing translatable
+	strings.
+
+2023-01-03  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated French translation.
+	* po/uk.po: Updated Ukrainian translation.
+
+2022-12-31  Nick Clifton  <nickc@redhat.com>
+
+	* 2.40 branch created.
+
 2022-11-21  Nick Clifton  <nickc@redhat.com>
 
 	PR 29764
@@ -2754,7 +2769,7 @@
 
 For older changes see ChangeLog-2020
 
-Copyright (C) 2021-2022 Free Software Foundation, Inc.
+Copyright (C) 2021-2023 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

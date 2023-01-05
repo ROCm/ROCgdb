@@ -1,7 +1,7 @@
 /* Print values for GNU debugger GDB.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
-   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
+   Copyright (C) 2020-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1520,7 +1520,7 @@ set_command (const char *exp, int from_tty)
 {
   expression_up expr = parse_expression (exp);
 
-  switch (expr->op->opcode ())
+  switch (expr->first_opcode ())
     {
     case UNOP_PREINCREMENT:
     case UNOP_POSTINCREMENT:
@@ -2380,7 +2380,7 @@ clear_dangling_display_expressions (struct objfile *objfile)
 	}
 
       if (bl_objf == objfile
-	  || (d->exp != NULL && exp_uses_objfile (d->exp.get (), objfile)))
+	  || (d->exp != nullptr && d->exp->uses_objfile (objfile)))
 	{
 	  d->exp.reset ();
 	  d->block = NULL;

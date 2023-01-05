@@ -63,10 +63,12 @@ AC_SUBST(SIM_COMMON_BUILD_TRUE)
 AC_SUBST(SIM_COMMON_BUILD_FALSE)
 
 AC_CONFIG_FILES(Make-common.sim:common/Make-common.in)
+ENABLE_SIM=no
 dnl Build a particular arch subdir.
 dnl arg[1] is the arch subdir name.
 dnl arg[2] is whether the arch has a dedicated configure script.
 m4_define([SIM_BUILD_TARGET], [dnl
+  ENABLE_SIM=yes
   AS_VAR_APPEND([SIM_ENABLED_ARCHES], [" $1"])
   m4_if($2, [true], [dnl
     AC_CONFIG_SUBDIRS($1)
@@ -165,7 +167,7 @@ if test "${enable_sim}" != no; then
   AM_CONDITIONAL([SIM_ENABLE_ARCH_examples], [test "${enable_example_sims}" = "yes"])
 fi
 AM_CONDITIONAL([SIM_ENABLE_IGEN], [test "$sim_igen" = "yes"])
-AM_CONDITIONAL([ENABLE_SIM], [test -n "$SIM_SUBDIRS"])
+AM_CONDITIONAL([ENABLE_SIM], [test "$ENABLE_SIM" = "yes"])
 
 dnl Standard (and optional) simulator options.
 dnl Eventually all simulators will support these.
@@ -185,16 +187,6 @@ SIM_AC_OPTION_STDIO
 SIM_AC_OPTION_TRACE
 SIM_AC_OPTION_WARNINGS
 
-AC_MSG_CHECKING(for a known getopt prototype in unistd.h)
-AC_CACHE_VAL(sim_cv_decl_getopt_unistd_h,
-[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <unistd.h>], [extern int getopt (int, char *const*, const char *);])],
-sim_cv_decl_getopt_unistd_h=yes, sim_cv_decl_getopt_unistd_h=no)])
-AC_MSG_RESULT($sim_cv_decl_getopt_unistd_h)
-if test $sim_cv_decl_getopt_unistd_h = yes; then
-  AC_DEFINE([HAVE_DECL_GETOPT], 1,
-	    [Is the prototype for getopt in <unistd.h> in the expected format?])
-fi
-
 dnl These are unfortunate.  They are conditionally called by other sim macros
 dnl but always used by common/Make-common.in.  So we have to subst here even
 dnl when the rest of the code is in the respective macros.  Once we merge the
@@ -207,11 +199,6 @@ m4_include([frv/acinclude.m4])
 m4_include([mips/acinclude.m4])
 m4_include([riscv/acinclude.m4])
 m4_include([rx/acinclude.m4])
-
-dnl Hack to output an "include" statement in the Makefile so automake doesn't
-dnl try to follow it itself while processing Makefile.am.
-include_makefile="include"
-AC_SUBST(include_makefile)
 
 AC_CONFIG_FILES([arch-subdir.mk Makefile .gdbinit:gdbinit.in])
 AC_OUTPUT

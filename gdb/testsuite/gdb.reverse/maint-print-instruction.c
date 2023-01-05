@@ -1,6 +1,6 @@
-/* Copyright (C) 2007-2022 Free Software Foundation, Inc.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of BFD, the Binary File Descriptor library.
+   Copyright 2022-2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,15 +13,13 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <machine/param.h>
-#include <machine/vmparam.h>
-#define	HOST_PAGE_SIZE		(NBPG*CLSIZE)
-#define	HOST_MACHINE_ARCH	bfd_arch_vax
-
-#define	HOST_TEXT_START_ADDR	USRTEXT
-#define	HOST_STACK_END_ADDR	USRSTACK
-#undef	HOST_BIG_ENDIAN_P
+int
+main ()
+{
+  int x = 0;
+  x ++;
+  x --;
+  return x;
+}

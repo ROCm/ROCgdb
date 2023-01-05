@@ -1,5 +1,5 @@
 # Makefile fragment for common parts of all simulators.
-# Copyright 1997-2022 Free Software Foundation, Inc.
+# Copyright 1997-2023 Free Software Foundation, Inc.
 # Contributed by Cygnus Support.
 
 # This program is free software; you can redistribute it and/or modify
@@ -50,7 +50,6 @@ include $(srcroot)/gdb/silent-rules.mk
 
 ifeq ($(V),0)
 ECHO_STAMP = @echo "  GEN   "
-ECHO_IGEN  = @echo "  IGEN   $(<F)";
 else
 ECHO_STAMP = @:
 endif
@@ -79,11 +78,6 @@ COMPILE.post = -c -o $@
 COMPILE = $(ECHO_CC) $(COMPILE.pre) $(ALL_CFLAGS) $(COMPILE.post)
 POSTCOMPILE = @true
 
-# igen leaks memory, and therefore makes AddressSanitizer unhappy.  Disable
-# leak detection while running it.
-IGEN = ../igen/igen$(EXEEXT)
-IGEN_RUN = ASAN_OPTIONS=detect_leaks=0 $(IGEN) $(IGEN_FLAGS_SMP)
-
 # Each simulator's Makefile.in defines one or more of these variables
 # to override our settings as necessary.  There is no need to define these
 # in the simulator's Makefile.in if one is using the default value.  In fact
@@ -96,8 +90,6 @@ SIM_OBJS =
 SIM_EXTRA_DEPS =
 # List of flags to always pass to $(CC).
 SIM_EXTRA_CFLAGS =
-# List of extra libraries to link with.
-SIM_EXTRA_LIBS =
 # List of main object files for `run'.
 SIM_RUN_OBJS = nrun.o
 # Dependency of `clean' to clean any extra files.
@@ -126,8 +118,8 @@ CONFIG_CFLAGS = \
 	$(SIM_WERROR_CFLAGS)
 CSEARCH = -I. -I$(srcdir) -I$(srccom) \
   -I$(srcroot)/include \
-  -I../../bfd -I$(srcroot)/bfd \
-  -I$(srcroot)/opcodes \
+  -I../../bfd \
+  -I$(srcroot) \
   -I../..
 ALL_CFLAGS = $(CONFIG_CFLAGS) $(CSEARCH) $(INCGNU) $(SIM_EXTRA_CFLAGS) $(CFLAGS)
 BUILD_CFLAGS = $(CFLAGS_FOR_BUILD) $(CSEARCH)
@@ -142,7 +134,7 @@ BFD_LIB = ../../bfd/libbfd.la
 OPCODES_LIB = ../../opcodes/libopcodes.la
 LIBDEPS = $(BFD_LIB) $(OPCODES_LIB) $(LIBIBERTY_LIB)
 EXTRA_LIBS = $(BFD_LIB) $(OPCODES_LIB) $(LIBIBERTY_LIB) \
-	$(COMMON_LIBS) $(SIM_EXTRA_LIBS) $(LIBGNU) $(LIBGNU_EXTRA_LIBS)
+	$(COMMON_LIBS) $(LIBGNU) $(LIBGNU_EXTRA_LIBS)
 
 COMMON_OBJS_NAMES = \
 	callback.o \
@@ -271,8 +263,7 @@ TAGS: force
 mostlyclean clean: $(SIM_EXTRA_CLEAN)
 	rm -f *.[oa] *~ core \
 		run$(EXEEXT) libsim.a \
-		modules.c stamp-modules \
-		tmp-mloop.hin tmp-mloop.h tmp-mloop.cin tmp-mloop.c
+		modules.c stamp-modules
 
 distclean maintainer-clean realclean: clean
 	rm -f TAGS Makefile
@@ -291,73 +282,5 @@ Makefile: Makefile.in $(srccom)/Make-common.in $(config.status)
 
 @SIM_COMMON_BUILD_FALSE@config.status: configure
 @SIM_COMMON_BUILD_FALSE@	$(ECHO_GEN) $(SHELL) ./config.status --recheck
-
-
-# CGEN support
-
-GUILE = `if [ -f ../../guile/libguile/guile ]; then echo ../../guile/libguile/guile; else echo guile ; fi`
-CGEN = "$(GUILE) -l $(CGENDIR)/guile.scm -s"
-CGENFLAGS = -v
-CGEN_CPU_DIR = $(CGENDIR)/cpu
-
-# Most ports use the files here instead of cgen/cpu.
-CPU_DIR = $(srcroot)/cpu
-
-CGEN_READ_SCM = $(CGENDIR)/sim.scm
-CGEN_ARCH_SCM = $(CGENDIR)/sim-arch.scm
-CGEN_CPU_SCM = $(CGENDIR)/sim-cpu.scm $(CGENDIR)/sim-model.scm
-CGEN_DECODE_SCM = $(CGENDIR)/sim-decode.scm
-CGEN_DESC_SCM = $(CGENDIR)/desc.scm $(CGENDIR)/desc-cpu.scm
-
-# Various choices for which cpu specific files to generate.
-# These are passed to cgen.sh in the "extrafiles" argument.
-CGEN_CPU_EXTR = /extr/
-CGEN_CPU_READ = /read/
-CGEN_CPU_WRITE = /write/
-CGEN_CPU_SEM = /sem/
-CGEN_CPU_SEMSW = /semsw/
-
-CGEN_FLAGS_TO_PASS = \
-	CGEN='$(CGEN)' \
-	CGENFLAGS="$(CGENFLAGS)"
-
-# We store the generated files in the source directory until we decide to
-# ship a Scheme interpreter with gdb/binutils.  Maybe we never will.
-
-cgen-arch: force
-	$(SHELL) $(srccom)/cgen.sh arch $(srcdir) \
-		$(CGEN) $(CGENDIR) "$(CGENFLAGS)" \
-		$(arch) "$(FLAGS)" ignored "$(isa)" $(mach) ignored \
-		$(archfile) ignored
-
-cgen-cpu: force
-	$(SHELL) $(srccom)/cgen.sh cpu $(srcdir) \
-		$(CGEN) $(CGENDIR) "$(CGENFLAGS)" \
-		$(arch) "$(FLAGS)" $(cpu) "$(isa)" $(mach) "$(SUFFIX)" \
-		$(archfile) "$(EXTRAFILES)"
-
-cgen-defs: force
-	$(SHELL) $(srccom)/cgen.sh defs $(srcdir) \
-		$(CGEN) $(CGENDIR) "$(CGENFLAGS)" \
-		$(arch) "$(FLAGS)" $(cpu) "$(isa)" $(mach) "$(SUFFIX)" \
-		$(archfile) ignored
-
-cgen-decode: force
-	$(SHELL) $(srccom)/cgen.sh decode $(srcdir) \
-		$(CGEN) $(CGENDIR) "$(CGENFLAGS)" \
-		$(arch) "$(FLAGS)" $(cpu) "$(isa)" $(mach) "$(SUFFIX)" \
-		$(archfile) "$(EXTRAFILES)"
-
-cgen-cpu-decode: force
-	$(SHELL) $(srccom)/cgen.sh cpu-decode $(srcdir) \
-		$(CGEN) $(CGENDIR) "$(CGENFLAGS)" \
-		$(arch) "$(FLAGS)" $(cpu) "$(isa)" $(mach) "$(SUFFIX)" \
-		$(archfile) "$(EXTRAFILES)"
-
-cgen-desc: force
-	$(SHELL) $(srccom)/cgen.sh desc $(srcdir) \
-		$(CGEN) $(CGENDIR) "$(CGENFLAGS)" \
-		$(arch) "$(FLAGS)" $(cpu) "$(isa)" $(mach) "$(SUFFIX)" \
-		$(archfile) ignored $(opcfile)
 
 ## End COMMON_POST_CONFIG_FRAG

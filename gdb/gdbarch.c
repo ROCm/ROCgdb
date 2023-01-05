@@ -3,7 +3,7 @@
 
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 1998-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -125,6 +125,7 @@ struct gdbarch
   gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id = nullptr;
   gdbarch_address_scope_ftype *address_scope = nullptr;
   gdbarch_return_value_ftype *return_value = nullptr;
+  gdbarch_return_value_as_value_ftype *return_value_as_value = default_gdbarch_return_value;
   gdbarch_get_return_buf_addr_ftype *get_return_buf_addr = default_get_return_buf_addr;
   gdbarch_return_in_first_hidden_param_p_ftype *return_in_first_hidden_param_p = default_return_in_first_hidden_param_p;
   gdbarch_skip_prologue_ftype *skip_prologue = 0;
@@ -392,7 +393,9 @@ verify_gdbarch (struct gdbarch *gdbarch)
     gdbarch->dwarf_address_space_to_address_space_id = default_dwarf_address_space_to_address_space_id;
   if (gdbarch->address_scope == 0)
     gdbarch->address_scope = default_address_scope;
-  /* Skip verify of return_value, has predicate.  */
+  /* Skip verify of return_value, invalid_p == 0 */
+  if ((gdbarch->return_value_as_value == default_gdbarch_return_value) == (gdbarch->return_value == nullptr))
+    log.puts ("\n\treturn_value_as_value");
   /* Skip verify of get_return_buf_addr, invalid_p == 0 */
   /* Skip verify of return_in_first_hidden_param_p, invalid_p == 0 */
   if (gdbarch->skip_prologue == 0)
@@ -833,11 +836,11 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
 	      "gdbarch_dump: address_scope = <%s>\n",
 	      host_address_to_string (gdbarch->address_scope));
   gdb_printf (file,
-	      "gdbarch_dump: gdbarch_return_value_p() = %d\n",
-	      gdbarch_return_value_p (gdbarch));
-  gdb_printf (file,
 	      "gdbarch_dump: return_value = <%s>\n",
 	      host_address_to_string (gdbarch->return_value));
+  gdb_printf (file,
+	      "gdbarch_dump: return_value_as_value = <%s>\n",
+	      host_address_to_string (gdbarch->return_value_as_value));
   gdb_printf (file,
 	      "gdbarch_dump: get_return_buf_addr = <%s>\n",
 	      host_address_to_string (gdbarch->get_return_buf_addr));
@@ -2791,28 +2794,28 @@ set_gdbarch_address_scope (struct gdbarch *gdbarch,
   gdbarch->address_scope = address_scope;
 }
 
-bool
-gdbarch_return_value_p (struct gdbarch *gdbarch)
-{
-  gdb_assert (gdbarch != NULL);
-  return gdbarch->return_value != NULL;
-}
-
-enum return_value_convention
-gdbarch_return_value (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, gdb_byte *readbuf, const gdb_byte *writebuf)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->return_value != NULL);
-  if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_return_value called\n");
-  return gdbarch->return_value (gdbarch, function, valtype, regcache, readbuf, writebuf);
-}
-
 void
 set_gdbarch_return_value (struct gdbarch *gdbarch,
 			  gdbarch_return_value_ftype return_value)
 {
   gdbarch->return_value = return_value;
+}
+
+enum return_value_convention
+gdbarch_return_value_as_value (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, struct value **read_value, const gdb_byte *writebuf)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->return_value_as_value != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_return_value_as_value called\n");
+  return gdbarch->return_value_as_value (gdbarch, function, valtype, regcache, read_value, writebuf);
+}
+
+void
+set_gdbarch_return_value_as_value (struct gdbarch *gdbarch,
+				   gdbarch_return_value_as_value_ftype return_value_as_value)
+{
+  gdbarch->return_value_as_value = return_value_as_value;
 }
 
 CORE_ADDR

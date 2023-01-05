@@ -1,7 +1,7 @@
 /* Implementation of the GDB variable objects API.
 
-   Copyright (C) 1999-2022 Free Software Foundation, Inc.
-   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1999-2023 Free Software Foundation, Inc.
+   Copyright (C) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -2473,8 +2473,7 @@ varobj_invalidate_if_uses_objfile (struct objfile *objfile)
 	    }
 	}
 
-      if (var->root->exp != nullptr
-	  && exp_uses_objfile (var->root->exp.get (), objfile))
+      if (var->root->exp != nullptr && var->root->exp->uses_objfile (objfile))
 	{
 	  /* The varobj's current expression references the objfile.  For
 	     globals and floating, it is possible that when we try to

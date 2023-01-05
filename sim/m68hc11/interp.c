@@ -1,5 +1,5 @@
 /* interp.c -- Simulator for Motorola 68HC11/68HC12
-   Copyright (C) 1999-2022 Free Software Foundation, Inc.
+   Copyright (C) 1999-2023 Free Software Foundation, Inc.
    Written by Stephane Carrez (stcarrez@nerim.fr)
 
 This file is part of GDB, the GNU debugger.
@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "hw-tree.h"
 #include "hw-device.h"
 #include "hw-ports.h"
-#include "elf32-m68hc1x.h"
+#include "bfd/elf32-m68hc1x.h"
 
 #include "m68hc11-sim.h"
 

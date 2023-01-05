@@ -1,7 +1,7 @@
 /* Low level packing and unpacking of values for GDB, the GNU Debugger.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
-   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
+   Copyright (C) 2020-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -3979,8 +3979,8 @@ struct_return_convention (struct gdbarch *gdbarch,
     error (_("Function return type unknown."));
 
   /* Probe the architecture for the return-value convention.  */
-  return gdbarch_return_value (gdbarch, function, value_type,
-			       NULL, NULL, NULL);
+  return gdbarch_return_value_as_value (gdbarch, function, value_type,
+					NULL, NULL, NULL);
 }
 
 /* Return true if the function returning the specified type is using

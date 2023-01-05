@@ -1,3 +1,18 @@
+2023-01-03  Himal  <himalr@proton.me>
+
+	PR 29947
+	* bfdio.c (_bfd_real_fopen): Do not add a prefix to the Windows'
+	nul device filename.
+
+2023-01-03  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated French trabslation.
+	* po/uk.po: Updated Ukrainian trabslation.
+
+2022-12-31  Nick Clifton  <nickc@redhat.com>
+
+	* 2.40 branch created.
+
 2022-12-23  Nick Clifton  <nickc@redhat.com>
 
 	PR 29936
@@ -2548,7 +2563,7 @@
 
 For older changes see ChangeLog-2020
 
-Copyright (C) 2021-2022 Free Software Foundation, Inc.
+Copyright (C) 2021-2023 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

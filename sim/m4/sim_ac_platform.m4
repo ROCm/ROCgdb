@@ -1,4 +1,4 @@
-dnl Copyright (C) 1997-2022 Free Software Foundation, Inc.
+dnl Copyright (C) 1997-2023 Free Software Foundation, Inc.
 dnl
 dnl This program is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -201,4 +201,18 @@ else
 fi
 AC_SUBST(READLINE_LIB)
 AC_SUBST(READLINE_CFLAGS)
+
+dnl Determine whether we have a known getopt prototype in unistd.h
+dnl to make sure that we have correct getopt declaration on
+dnl include/getopt.h.  The purpose of this is to sync with other Binutils
+dnl components and this logic is copied from ld/configure.ac.
+AC_MSG_CHECKING(for a known getopt prototype in unistd.h)
+AC_CACHE_VAL(sim_cv_decl_getopt_unistd_h,
+[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <unistd.h>], [extern int getopt (int, char *const*, const char *);])],
+sim_cv_decl_getopt_unistd_h=yes, sim_cv_decl_getopt_unistd_h=no)])
+AC_MSG_RESULT($sim_cv_decl_getopt_unistd_h)
+if test $sim_cv_decl_getopt_unistd_h = yes; then
+  AC_DEFINE([HAVE_DECL_GETOPT], 1,
+	    [Is the prototype for getopt in <unistd.h> in the expected format?])
+fi
 ])

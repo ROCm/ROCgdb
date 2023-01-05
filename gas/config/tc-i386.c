@@ -1,5 +1,5 @@
 /* tc-i386.c -- Assemble code for the Intel 80386
-   Copyright (C) 1989-2022 Free Software Foundation, Inc.
+   Copyright (C) 1989-2023 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -5067,14 +5067,26 @@ md_assemble (char *line)
 	  return;
 	case unsupported_64bit:
 	  if (ISLOWER (mnem_suffix))
-	    as_bad (_("`%s%c' is %s supported in 64-bit mode"),
-		    pass1_mnem ? pass1_mnem : current_templates->start->name,
-		    mnem_suffix,
-		    flag_code == CODE_64BIT ? _("not") : _("only"));
+	    {
+	      if (flag_code == CODE_64BIT)
+		as_bad (_("`%s%c' is not supported in 64-bit mode"),
+			pass1_mnem ? pass1_mnem : current_templates->start->name,
+			mnem_suffix);
+	      else
+		as_bad (_("`%s%c' is only supported in 64-bit mode"),
+			pass1_mnem ? pass1_mnem : current_templates->start->name,
+			mnem_suffix);
+	    }
 	  else
-	    as_bad (_("`%s' is %s supported in 64-bit mode"),
-		    pass1_mnem ? pass1_mnem : current_templates->start->name,
-		    flag_code == CODE_64BIT ? _("not") : _("only"));
+	    {
+	      if (flag_code == CODE_64BIT)
+		as_bad (_("`%s' is not supported in 64-bit mode"),
+			pass1_mnem ? pass1_mnem : current_templates->start->name);
+	      else
+		as_bad (_("`%s' is only supported in 64-bit mode"),
+			pass1_mnem ? pass1_mnem : current_templates->start->name);
+	    }
+		  
 	  return;
 	case invalid_sib_address:
 	  err_msg = _("invalid SIB address");

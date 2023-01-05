@@ -1,6 +1,6 @@
 /* Intel 386 target-dependent stuff.
 
-   Copyright (C) 1988-2022 Free Software Foundation, Inc.
+   Copyright (C) 1988-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -3006,7 +3006,8 @@ i386_reg_struct_return_p (struct gdbarch *gdbarch, struct type *type)
 
   if (struct_convention == pcc_struct_convention
       || (struct_convention == default_struct_convention
-	  && tdep->struct_return == pcc_struct_return))
+	  && tdep->struct_return == pcc_struct_return)
+      || TYPE_HAS_DYNAMIC_LENGTH (type))
     return 0;
 
   /* Structures consisting of a single `float', `double' or 'long
@@ -3030,7 +3031,7 @@ i386_reg_struct_return_p (struct gdbarch *gdbarch, struct type *type)
 static enum return_value_convention
 i386_return_value (struct gdbarch *gdbarch, struct value *function,
 		   struct type *type, struct regcache *regcache,
-		   gdb_byte *readbuf, const gdb_byte *writebuf)
+		   struct value **read_value, const gdb_byte *writebuf)
 {
   enum type_code code = type->code ();
 
@@ -3061,12 +3062,12 @@ i386_return_value (struct gdbarch *gdbarch, struct value *function,
 	 a record, so the convention applied to records also applies
 	 to arrays.  */
 
-      if (readbuf)
+      if (read_value != nullptr)
 	{
 	  ULONGEST addr;
 
 	  regcache_raw_read_unsigned (regcache, I386_EAX_REGNUM, &addr);
-	  read_memory (addr, readbuf, type->length ());
+	  *read_value = value_at_non_lval (type, addr);
 	}
 
       return RETURN_VALUE_ABI_RETURNS_ADDRESS;
@@ -3081,13 +3082,21 @@ i386_return_value (struct gdbarch *gdbarch, struct value *function,
      here.  */
   if (code == TYPE_CODE_STRUCT && type->num_fields () == 1)
     {
-      type = check_typedef (type->field (0).type ());
-      return i386_return_value (gdbarch, function, type, regcache,
-				readbuf, writebuf);
+      struct type *inner_type = check_typedef (type->field (0).type ());
+      enum return_value_convention result
+	= i386_return_value (gdbarch, function, inner_type, regcache,
+			     read_value, writebuf);
+      if (read_value != nullptr)
+	deprecated_set_value_type (*read_value, type);
+      return result;
     }
 
-  if (readbuf)
-    i386_extract_return_value (gdbarch, type, regcache, readbuf);
+  if (read_value != nullptr)
+    {
+      *read_value = allocate_value (type);
+      i386_extract_return_value (gdbarch, type, regcache,
+				 value_contents_raw (*read_value).data ());
+    }
   if (writebuf)
     i386_store_return_value (gdbarch, type, regcache, writebuf);
 
@@ -8572,7 +8581,7 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_register_to_value (gdbarch,  i386_register_to_value);
   set_gdbarch_value_to_register (gdbarch, i386_value_to_register);
 
-  set_gdbarch_return_value (gdbarch, i386_return_value);
+  set_gdbarch_return_value_as_value (gdbarch, i386_return_value);
 
   set_gdbarch_skip_prologue (gdbarch, i386_skip_prologue);
 

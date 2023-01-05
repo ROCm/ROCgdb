@@ -1,5 +1,5 @@
 # Makefile template for configure for the or1k simulator
-# Copyright (C) 2017-2022 Free Software Foundation, Inc.
+# Copyright (C) 2017-2023 Free Software Foundation, Inc.
 #
 # This file is part of GDB, the GNU debugger.
 #
@@ -45,49 +45,3 @@ SIM_EXTRA_CFLAGS = -DWITH_TARGET_WORD_BITSIZE=32 -DWITH_TARGET_WORD_MSB=31
 ## COMMON_POST_CONFIG_FRAG
 
 arch = or1k
-
-or1k.o: or1k.c
-	$(COMPILE) $<
-	$(POSTCOMPILE)
-
-sim-if.o: sim-if.c
-	$(COMPILE) $<
-	$(POSTCOMPILE)
-
-traps.o: traps.c
-	$(COMPILE) $<
-	$(POSTCOMPILE)
-
-stamps: stamp-arch stamp-cpu
-
-# NOTE: Generated source files are specified as full paths,
-# e.g. $(srcdir)/arch.c, because make may decide the files live
-# in objdir otherwise.
-
-OR1K_CGEN_DEPS = \
-	$(CPU_DIR)/or1k.cpu \
-	$(CPU_DIR)/or1k.opc \
-	$(CPU_DIR)/or1kcommon.cpu \
-	$(CPU_DIR)/or1korbis.cpu \
-	$(CPU_DIR)/or1korfpx.cpu \
-	Makefile
-
-stamp-arch: $(CGEN_READ_SCM) $(CGEN_ARCH_SCM) $(OR1K_CGEN_DEPS)
-	$(MAKE) cgen-arch $(CGEN_FLAGS_TO_PASS) \
-	  mach=or32,or32nd \
-	  archfile=$(CPU_DIR)/or1k.cpu \
-	  FLAGS="with-scache"
-	$(SILENCE) touch $@
-$(srcdir)/arch.h $(srcdir)/arch.c $(srcdir)/cpuall.h: $(CGEN_MAINT) stamp-arch
-	@true
-
-stamp-cpu: $(CGEN_READ_SCM) $(CGEN_CPU_SCM) $(OR1K_CGEN_DEPS)
-	$(MAKE) cgen-cpu-decode $(CGEN_FLAGS_TO_PASS) \
-	  cpu=or1k32bf \
-	  mach=or32,or32nd \
-	  archfile=$(CPU_DIR)/or1k.cpu \
-	  FLAGS="with-scache" \
-	  EXTRAFILES="$(CGEN_CPU_SEM) $(CGEN_CPU_SEMSW)"
-	$(SILENCE) touch $@
-$(srcdir)/cpu.h $(srcdir)/cpu.c $(srcdir)/model.c $(srcdir)/sem.c $(srcdir)/sem-switch.c $(srcdir)/decode.c $(srcdir)/decode.h: $(CGEN_MAINT) stamp-cpu
-	@true

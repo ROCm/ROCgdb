@@ -1,6 +1,6 @@
 /* SystemTap probe support for GDB.
 
-   Copyright (C) 2012-2022 Free Software Foundation, Inc.
+   Copyright (C) 2012-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1618,6 +1618,9 @@ handle_stap_probe (struct objfile *objfile, struct sdt_note *el,
 	 it.  So we return.  */
       return;
     }
+
+  if (ignore_probe_p (provider, name, objfile_name (objfile), "SystemTap"))
+    return;
 
   stap_probe *ret = new stap_probe (std::string (name), std::string (provider),
 				    address, gdbarch, sem_addr, probe_args);

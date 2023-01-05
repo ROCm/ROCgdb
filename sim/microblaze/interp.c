@@ -1,5 +1,5 @@
 /* Simulator for Xilinx MicroBlaze processor
-   Copyright 2009-2022 Free Software Foundation, Inc.
+   Copyright 2009-2023 Free Software Foundation, Inc.
 
    This file is part of GDB, the GNU debugger.
 
@@ -34,7 +34,7 @@
 #include "sim-syscall.h"
 
 #include "microblaze-sim.h"
-#include "microblaze-dis.h"
+#include "opcodes/microblaze-dis.h"
 
 #define target_big_endian (CURRENT_TARGET_BYTE_ORDER == BFD_ENDIAN_BIG)
 

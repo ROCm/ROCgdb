@@ -1,5 +1,5 @@
 /* Main header for the CRIS simulator, based on the m32r header.
-   Copyright (C) 2004-2022 Free Software Foundation, Inc.
+   Copyright (C) 2004-2023 Free Software Foundation, Inc.
    Contributed by Axis Communications.
 
 This file is part of the GNU simulators.
@@ -30,8 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #define WITH_SCACHE_PBB 1
 
 #include "sim-basics.h"
-#include "cris-desc.h"
-#include "cris-opc.h"
+#include "opcodes/cris-desc.h"
+#include "opcodes/cris-opc.h"
 #include "arch.h"
 #include "sim-base.h"
 #include "cgen-sim.h"

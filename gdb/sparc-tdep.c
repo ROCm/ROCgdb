@@ -1,6 +1,6 @@
 /* Target-dependent code for SPARC.
 
-   Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2003-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1496,7 +1496,7 @@ sparc32_store_return_value (struct type *type, struct regcache *regcache,
 static enum return_value_convention
 sparc32_return_value (struct gdbarch *gdbarch, struct value *function,
 		      struct type *type, struct regcache *regcache,
-		      gdb_byte *readbuf, const gdb_byte *writebuf)
+		      struct value **read_value, const gdb_byte *writebuf)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
@@ -1512,11 +1512,11 @@ sparc32_return_value (struct gdbarch *gdbarch, struct value *function,
       ULONGEST sp;
       CORE_ADDR addr;
 
-      if (readbuf)
+      if (read_value != nullptr)
 	{
 	  regcache_cooked_read_unsigned (regcache, SPARC_SP_REGNUM, &sp);
 	  addr = read_memory_unsigned_integer (sp + 64, 4, byte_order);
-	  read_memory (addr, readbuf, type->length ());
+	  *read_value = value_at_non_lval (type, addr);
 	}
       if (writebuf)
 	{
@@ -1528,8 +1528,12 @@ sparc32_return_value (struct gdbarch *gdbarch, struct value *function,
       return RETURN_VALUE_ABI_PRESERVES_ADDRESS;
     }
 
-  if (readbuf)
-    sparc32_extract_return_value (type, regcache, readbuf);
+  if (read_value != nullptr)
+    {
+      *read_value = allocate_value (type);
+      gdb_byte *readbuf = value_contents_raw (*read_value).data ();
+      sparc32_extract_return_value (type, regcache, readbuf);
+    }
   if (writebuf)
     sparc32_store_return_value (type, regcache, writebuf);
 
@@ -1853,7 +1857,7 @@ sparc32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_push_dummy_code (gdbarch, sparc32_push_dummy_code);
   set_gdbarch_push_dummy_call (gdbarch, sparc32_push_dummy_call);
 
-  set_gdbarch_return_value (gdbarch, sparc32_return_value);
+  set_gdbarch_return_value_as_value (gdbarch, sparc32_return_value);
   set_gdbarch_stabs_argument_has_addr
     (gdbarch, sparc32_stabs_argument_has_addr);
 

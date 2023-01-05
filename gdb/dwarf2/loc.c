@@ -1,7 +1,7 @@
 /* DWARF 2 location expression support for GDB.
 
-   Copyright (C) 2003-2022 Free Software Foundation, Inc.
-   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2003-2023 Free Software Foundation, Inc.
+   Copyright (C) 2020-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Daniel Jacobowitz, MontaVista Software, Inc.
 
@@ -1646,6 +1646,11 @@ dwarf2_evaluate_property (const struct dynamic_prop *prop,
 {
   if (prop == NULL)
     return false;
+
+  /* Evaluating a property should not change the current language.
+     Without this here this could happen if the code below selects a
+     frame.  */
+  scoped_restore_current_language save_language;
 
   if (frame == NULL && has_stack_frames ())
     frame = get_selected_frame (NULL);

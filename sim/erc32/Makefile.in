@@ -1,5 +1,5 @@
 #    Makefile template for Configure for the erc32sim library.
-#    Copyright (C) 1993-2022 Free Software Foundation, Inc.
+#    Copyright (C) 1993-2023 Free Software Foundation, Inc.
 #    Written by Cygnus Support
 #    Modified by J.Gaisler ESA/ESTEC
 # 
@@ -23,11 +23,10 @@ READLINE_SRC = $(srcroot)/readline/readline
 SIM_OBJS = exec.o erc32.o func.o help.o float.o interf.o
 SIM_RUN_OBJS = sis.o
 SIM_EXTRA_CFLAGS = $(READLINE_CFLAGS)
-SIM_EXTRA_LIBS = $(READLINE_LIB) $(TERMCAP_LIB)
 
 # UARTS run at about 115200 baud (simulator time). Add -DFAST_UART to
 # CFLAGS if faster (infinite) UART speed is desired. Might affect the
 # behaviour of UART interrupt routines ...
-SIM_EXTRA_CFLAGS += -DFAST_UART -I$(srcroot)
+SIM_EXTRA_CFLAGS += -DFAST_UART
 
 ## COMMON_POST_CONFIG_FRAG

@@ -1,7 +1,7 @@
 /* Perform non-arithmetic operations on values, for GDB.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
-   Copyright (C) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
+   Copyright (C) 2019-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -1018,6 +1018,16 @@ struct value *
 value_at (struct type *type, CORE_ADDR addr)
 {
   return get_value_at (type, addr, 0);
+}
+
+/* See value.h.  */
+
+struct value *
+value_at_non_lval (struct type *type, CORE_ADDR addr)
+{
+  struct value *result = value_at (type, addr);
+  VALUE_LVAL (result) = not_lval;
+  return result;
 }
 
 /* Return a lazy value with type TYPE located at ADDR (cf. value_at).

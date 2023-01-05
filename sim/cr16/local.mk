@@ -1,6 +1,6 @@
 ## See sim/Makefile.am
 ##
-## Copyright (C) 2008-2022 Free Software Foundation, Inc.
+## Copyright (C) 2008-2023 Free Software Foundation, Inc.
 ## Contributed by M Ranga Swami Reddy <MR.Swami.Reddy@nsc.com>
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -24,9 +24,10 @@
 
 noinst_PROGRAMS += %D%/run
 
+## List all generated headers to help Automake dependency tracking.
+BUILT_SOURCES += %D%/simops.h
 %C%_BUILD_OUTPUTS = \
 	%D%/gencode$(EXEEXT) \
-	%D%/simops.h \
 	%D%/table.c
 
 ## This makes sure build tools are available before building the arch-subdirs.

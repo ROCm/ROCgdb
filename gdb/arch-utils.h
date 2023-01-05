@@ -1,7 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2022 Free Software Foundation, Inc.
-   Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1998-2023 Free Software Foundation, Inc.
+   Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -309,6 +309,11 @@ extern void default_read_core_file_mappings
 /* Default implementation of gdbarch default_get_return_buf_addr method.  */
 extern CORE_ADDR default_get_return_buf_addr (struct type *val_typegdbarch,
 					      frame_info_ptr cur_frame);
+
+extern enum return_value_convention default_gdbarch_return_value
+     (struct gdbarch *gdbarch, struct value *function, struct type *valtype,
+      struct regcache *regcache, struct value **read_value,
+      const gdb_byte *writebuf);
 
 /* Architecture address space handling.  */
 

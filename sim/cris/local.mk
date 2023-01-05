@@ -1,6 +1,6 @@
 ## See sim/Makefile.am
 ##
-## Copyright (C) 2004-2022 Free Software Foundation, Inc.
+## Copyright (C) 2004-2023 Free Software Foundation, Inc.
 ## Contributed by Axis Communications.
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -34,11 +34,13 @@ AM_MAKEFLAGS += %C%_SIM_EXTRA_HW_DEVICES="$(%C%_SIM_EXTRA_HW_DEVICES)"
 
 check_PROGRAMS += %D%/rvdummy
 
-%C%_BUILD_OUTPUTS = \
+## List all generated headers to help Automake dependency tracking.
+BUILT_SOURCES += \
 	%D%/engv10.h \
+	%D%/engv32.h
+%C%_BUILD_OUTPUTS = \
 	%D%/mloopv10f.c \
 	%D%/stamp-mloop-v10f \
-	%D%/engv32.h \
 	%D%/mloopv32f.c \
 	%D%/stamp-mloop-v32f
 
@@ -70,3 +72,20 @@ SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
 	$(AM_V_at)touch $@
 
 MOSTLYCLEANFILES += $(%C%_BUILD_OUTPUTS)
+
+## Target that triggers all cgen targets that works when --disable-cgen-maint.
+%D%/cgen: %D%/cgen-arch %D%/cgen-cpu-decode-v10f %D%/cgen-cpu-decode-v32f
+
+%D%/cgen-arch:
+	$(AM_V_GEN)mach=crisv10,crisv32 FLAGS="with-scache with-profile=fn"; $(CGEN_GEN_ARCH)
+%D%/arch.h %D%/arch.c %D%/cpuall.h: @CGEN_MAINT@ %D%/cgen-arch
+
+%D%/cgen-cpu-decode-v10f:
+	$(AM_V_GEN)cpu=crisv10f mach=crisv10 SUFFIX=v10 FLAGS="with-scache with-profile=fn" EXTRAFILES="$(CGEN_CPU_SEMSW)"; $(CGEN_GEN_CPU_DECODE)
+	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change $(srcdir)/%D%/semv10-switch.c $(srcdir)/%D%/semcrisv10f-switch.c
+%D%/cpuv10.h %D%/cpuv10.c %D%/semcrisv10f-switch.c %D%/modelv10.c %D%/decodev10.c %D%/decodev10.h: @CGEN_MAINT@ %D%/cgen-cpu-decode-v10f
+
+%D%/cgen-cpu-decode-v32f:
+	$(AM_V_GEN)cpu=crisv32f mach=crisv32 SUFFIX=v32 FLAGS="with-scache with-profile=fn" EXTRAFILES="$(CGEN_CPU_SEMSW)"; $(CGEN_GEN_CPU_DECODE)
+	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change $(srcdir)/%D%/semv32-switch.c $(srcdir)/%D%/semcrisv32f-switch.c
+%D%/cpuv32.h %D%/cpuv32.c %D%/semcrisv32f-switch.c %D%/modelv32.c %D%/decodev32.c %D%/decodev32.h: @CGEN_MAINT@ %D%/cgen-cpu-decode-v32f

@@ -1,6 +1,6 @@
 /* Definitions for expressions stored in reversed prefix form, for GDB.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -213,6 +213,11 @@ struct expression
   {
     op->dump (stream, 0);
   }
+
+  /* Return true if this expression uses OBJFILE (and will become
+     dangling when OBJFILE is unloaded), otherwise return false.
+     OBJFILE must not be a separate debug info file.  */
+  bool uses_objfile (struct objfile *objfile) const;
 
   /* Evaluate the expression.  EXPECT_TYPE is the context type of the
      expression; normally this should be nullptr.  NOSIDE controls how

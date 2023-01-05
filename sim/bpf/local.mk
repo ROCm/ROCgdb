@@ -1,6 +1,6 @@
 ## See sim/Makefile.am
 ##
-## Copyright (C) 2020-2022 Free Software Foundation, Inc.
+## Copyright (C) 2020-2023 Free Software Foundation, Inc.
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -23,11 +23,13 @@
 
 noinst_PROGRAMS += %D%/run
 
-%C%_BUILD_OUTPUTS = \
+## List all generated headers to help Automake dependency tracking.
+BUILT_SOURCES += \
 	%D%/eng-le.h \
+	%D%/eng-be.h
+%C%_BUILD_OUTPUTS = \
 	%D%/mloop-le.c \
 	%D%/stamp-mloop-le \
-	%D%/eng-be.h \
 	%D%/mloop-be.c \
 	%D%/stamp-mloop-be
 
@@ -55,3 +57,43 @@ SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
 	$(AM_V_at)touch $@
 
 MOSTLYCLEANFILES += $(%C%_BUILD_OUTPUTS)
+
+## Target that triggers all cgen targets that works when --disable-cgen-maint.
+%D%/cgen: %D%/cgen-arch %D%/cgen-cpu %D%/cgen-defs-le %D%/cgen-defs-be %D%/cgen-decode-le %D%/cgen-decode-be
+
+%D%/cgen-arch:
+	$(AM_V_GEN)mach=bpf cpu=bpfbf FLAGS="with-scache"; $(CGEN_GEN_ARCH)
+%D%/arch.h %D%/arch.c %D%/cpuall.h: @CGEN_MAINT@ %D%/cgen-arch
+
+%D%/cgen-cpu:
+	$(AM_V_GEN)isa=ebpfle,ebpfbe cpu=bpfbf mach=bpf FLAGS="with-multiple-isa with-scache"; $(CGEN_GEN_CPU)
+	$(AM_V_at)rm -f $(srcdir)/%D%/model.c
+%D%/cpu.h %D%/cpu.c %D%/model.c: @CGEN_MAINT@ %D%/cgen-cpu
+
+## We need to generate a group of files per ISA.
+## For eBPF little-endian:
+##    defs-le.h
+##    sem-le.c, decode-le.c, decode-le.h
+##    $(objdir)/mloop-le.c $(objdir)/eng-le.h
+## For eBPF big-endian:
+##    defs-be.h
+##    sem-be.c, decode-be.c, decode-be.h
+##    $(objdir)/mloop-be.c $(objdir)/eng-le.h
+##
+## The rules below take care of that.
+
+%D%/cgen-defs-le:
+	$(AM_V_GEN)isa=ebpfle cpu=bpfbf mach=bpf FLAGS="with-scache" SUFFIX="-le"; $(CGEN_GEN_DEFS)
+%D%/defs-le.h: @CGEN_MAINT@ %D%/cgen-defs-le
+
+%D%/cgen-defs-be:
+	$(AM_V_GEN)isa=ebpfbe cpu=bpfbf mach=bpf FLAGS="with-scache" SUFFIX="-be"; $(CGEN_GEN_DEFS)
+%D%/defs-be.h: @CGEN_MAINT@ %D%/cgen-defs-be
+
+%D%/cgen-decode-le:
+	$(AM_V_GEN)isa=ebpfle cpu=bpfbf mach=bpf FLAGS="with-scache" SUFFIX="-le" EXTRAFILES="$(CGEN_CPU_SEM)"; $(CGEN_GEN_DECODE)
+%D%/sem-le.c %D%/decode-le.c %D%/decode-le.h: @CGEN_MAINT@ %D%/cgen-decode-vle
+
+%D%/cgen-decode-be:
+	$(AM_V_GEN)isa=ebpfbe cpu=bpfbf mach=bpf FLAGS="with-scache" SUFFIX="-be" EXTRAFILES="$(CGEN_CPU_SEM)"; $(CGEN_GEN_DECODE)
+%D%/sem-be.c %D%/decode-be.c %D%/decode-be.h: @CGEN_MAINT@ %D%/cgen-decode-be

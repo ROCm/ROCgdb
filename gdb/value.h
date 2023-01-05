@@ -1,7 +1,7 @@
 /* Definitions for values of C expressions, for GDB.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
-   Copyright (C) 2020-2022 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
+   Copyright (C) 2020-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -713,6 +713,10 @@ extern struct value *value_from_component_bitsize (struct value *whole,
 
 extern struct value *value_at (struct type *type, CORE_ADDR addr);
 extern struct value *value_at_lazy (struct type *type, CORE_ADDR addr);
+
+/* Like value_at, but ensures that the result is marked not_lval.
+   This can be important if the memory is "volatile".  */
+extern struct value *value_at_non_lval (struct type *type, CORE_ADDR addr);
 
 extern struct value *value_from_contents_and_address_unresolved
      (struct type *, const gdb_byte *, CORE_ADDR);

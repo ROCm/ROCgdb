@@ -1,6 +1,6 @@
 /* Target-dependent code for AMD64.
 
-   Copyright (C) 2001-2022 Free Software Foundation, Inc.
+   Copyright (C) 2001-2023 Free Software Foundation, Inc.
 
    Contributed by Jiri Smid, SuSE Labs.
 
@@ -666,7 +666,8 @@ amd64_classify_aggregate (struct type *type, enum amd64_reg_class theclass[2])
 	loc_bitpos attributes, which will cause an assert to trigger within
 	the unaligned field check.  As classes with virtual bases are not
 	trivially copyable, checking that first avoids this problem.  */
-  if (type->length () > 16
+  if (TYPE_HAS_DYNAMIC_LENGTH (type)
+      || type->length () > 16
       || !language_pass_by_reference (type).trivially_copyable
       || amd64_has_unaligned_fields (type))
     {
@@ -788,7 +789,7 @@ amd64_classify (struct type *type, enum amd64_reg_class theclass[2])
 static enum return_value_convention
 amd64_return_value (struct gdbarch *gdbarch, struct value *function,
 		    struct type *type, struct regcache *regcache,
-		    gdb_byte *readbuf, const gdb_byte *writebuf)
+		    struct value **read_value, const gdb_byte *writebuf)
 {
   enum amd64_reg_class theclass[2];
   int len = type->length ();
@@ -798,7 +799,7 @@ amd64_return_value (struct gdbarch *gdbarch, struct value *function,
   int sse_reg = 0;
   int i;
 
-  gdb_assert (!(readbuf && writebuf));
+  gdb_assert (!(read_value && writebuf));
 
   /* 1. Classify the return type with the classification algorithm.  */
   amd64_classify (type, theclass);
@@ -816,15 +817,22 @@ amd64_return_value (struct gdbarch *gdbarch, struct value *function,
 	 can always find the return value just after the function has
 	 returned.  */
 
-      if (readbuf)
+      if (read_value != nullptr)
 	{
 	  ULONGEST addr;
 
 	  regcache_raw_read_unsigned (regcache, AMD64_RAX_REGNUM, &addr);
-	  read_memory (addr, readbuf, type->length ());
+	  *read_value = value_at_non_lval (type, addr);
 	}
 
       return RETURN_VALUE_ABI_RETURNS_ADDRESS;
+    }
+
+  gdb_byte *readbuf = nullptr;
+  if (read_value != nullptr)
+    {
+      *read_value = allocate_value (type);
+      readbuf = value_contents_raw (*read_value).data ();
     }
 
   /* 8. If the class is COMPLEX_X87, the real part of the value is
@@ -3235,7 +3243,7 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
   set_gdbarch_register_to_value (gdbarch, i387_register_to_value);
   set_gdbarch_value_to_register (gdbarch, i387_value_to_register);
 
-  set_gdbarch_return_value (gdbarch, amd64_return_value);
+  set_gdbarch_return_value_as_value (gdbarch, amd64_return_value);
 
   set_gdbarch_skip_prologue (gdbarch, amd64_skip_prologue);
 

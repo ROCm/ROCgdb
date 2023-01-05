@@ -1,6 +1,6 @@
 # configure.tgt
 #
-#   Copyright (C) 2013-2022 Free Software Foundation, Inc.
+#   Copyright (C) 2013-2023 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -374,22 +374,13 @@ i[3-7]86-*-linux-*)	targ_emul=elf_i386
 i[3-7]86-*-redox*)	targ_emul=elf_i386
 			targ_extra_emuls=elf_x86_64
 			;;
-i[3-7]86-*-sysv[45]*)	targ_emul=elf_i386
-			targ_extra_emuls=elf_iamcu
-			;;
 i[3-7]86-*-solaris2*)	targ_emul=elf_i386_sol2
 			targ_extra_emuls="elf_i386_ldso elf_i386 elf_iamcu elf_x86_64_sol2 elf_x86_64"
 			targ_extra_libpath=$targ_extra_emuls
 			;;
-i[3-7]86-*-unixware)	targ_emul=elf_i386
-			targ_extra_emuls=elf_iamcu
-			;;
 i[3-7]86-*-solaris*)	targ_emul=elf_i386_ldso
 			targ_extra_emuls="elf_i386"
 			targ_extra_libpath=$targ_extra_emuls
-			;;
-i[3-7]86-*-netbsdpe*)	targ_emul=i386pe
-			targ_extra_ofiles="deffilep.o pe-dll.o"
 			;;
 i[3-7]86-*-netbsd* | \
 i[3-7]86-*-netbsd*-gnu* | \
@@ -869,12 +860,6 @@ sh*eb-*-linux*)		targ_emul=shelf_linux
 sh*-*-linux*)		targ_emul=shlelf_linux
 			targ_extra_emuls="shlelf_fd"
 			;;
-sh*l*-*-netbsdaout*)	targ_emul=shl
-			targ_extra_emuls=sh
-			;;
-sh*-*-netbsdaout*)	targ_emul=sh
-			targ_extra_emuls=shl
-			;;
 sh*l*-*-netbsd*)	targ_emul=shlelf_nbsd
 			targ_extra_emuls=shelf_nbsd
 			;;
@@ -1057,6 +1042,11 @@ x86_64-*-cygwin)	targ_emul=i386pep ;
 x86_64-*-mingw*)	targ_emul=i386pep ;
 			targ_extra_emuls=i386pe
 			targ_extra_ofiles="deffilep.o pdb.o pep-dll.o pe-dll.o"
+			;;
+x86_64-*-gnu*)		targ_emul=elf_x86_64
+			targ_extra_emuls="elf32_x86_64 elf_iamcu elf_i386"
+			targ_extra_libpath="elf_i386 elf32_x86_64"
+			tdir_elf_i386=`echo ${targ_alias} | sed -e 's/x86_64/i386/'`
 			;;
 xgate-*-*)		targ_emul=xgateelf
 			targ_extra_ofiles=ldelfgen.o

@@ -1,6 +1,6 @@
 /* Evaluate expressions for GDB.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -86,6 +86,15 @@ parse_to_comma_and_eval (const char **expp)
   return evaluate_expression (expr.get ());
 }
 
+
+/* See expression.h.  */
+
+bool
+expression::uses_objfile (struct objfile *objfile) const
+{
+  gdb_assert (objfile->separate_debug_objfile_backlink == nullptr);
+  return op->uses_objfile (objfile);
+}
 
 /* See expression.h.  */
 

@@ -1,6 +1,6 @@
 ## See sim/Makefile.am
 ##
-## Copyright (C) 1996-2022 Free Software Foundation, Inc.
+## Copyright (C) 1996-2023 Free Software Foundation, Inc.
 ## Written by Cygnus Support.
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -27,6 +27,15 @@ noinst_PROGRAMS += %D%/run
 %C%_SIM_EXTRA_HW_DEVICES = mn103cpu mn103int mn103tim mn103ser mn103iop
 AM_MAKEFLAGS += %C%_SIM_EXTRA_HW_DEVICES="$(%C%_SIM_EXTRA_HW_DEVICES)"
 
+## List all generated headers to help Automake dependency tracking.
+BUILT_SOURCES += \
+	%D%/icache.h \
+	%D%/idecode.h \
+	%D%/semantics.h \
+	%D%/model.h \
+	%D%/support.h \
+	%D%/itable.h \
+	%D%/engine.h
 %C%_BUILT_SRC_FROM_IGEN = \
 	%D%/icache.h \
 	%D%/icache.c \
