@@ -16,10 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "hip/hip_runtime.h"
-#include "stdio.h"
+#include <stdio.h>
 #include <iostream>
-#include <hip/hip_runtime.h>
 #include <hip/hip_runtime.h>
 
 // Defining number of elements in Array

@@ -19,7 +19,7 @@
 
 #include <stdio.h>
 #include <iostream>
-#include "hip/hip_runtime.h"
+#include <hip/hip_runtime.h>
 
 #define CHECK(cmd)                                                                                 \
     {                                                                                              \
