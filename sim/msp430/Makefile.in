@@ -17,10 +17,4 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 ## COMMON_PRE_CONFIG_FRAG
-
-SIM_OBJS = \
-	$(SIM_NEW_COMMON_OBJS) \
-	msp430-sim.o \
-	sim-resume.o
-
 ## COMMON_POST_CONFIG_FRAG

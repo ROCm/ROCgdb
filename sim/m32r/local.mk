@@ -16,6 +16,63 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+## Some modules don't build cleanly yet.
+AM_CFLAGS_%C%_cpu.o = -Wno-error
+AM_CFLAGS_%C%_cpu2.o = -Wno-error
+AM_CFLAGS_%C%_cpux.o = -Wno-error
+AM_CFLAGS_%C%_m32r.o = -Wno-error
+AM_CFLAGS_%C%_m32r2.o = -Wno-error
+AM_CFLAGS_%C%_m32rx.o = -Wno-error
+AM_CFLAGS_%C%_mloop.o = -Wno-error
+AM_CFLAGS_%C%_mloop2.o = -Wno-error
+AM_CFLAGS_%C%_mloopx.o = -Wno-error
+AM_CFLAGS_%C%_sem.o = -Wno-error
+AM_CFLAGS_%C%_sim_if.o = -Wno-error
+AM_CFLAGS_%C%_traps.o = -Wno-error
+
+%C%_libsim_a_SOURCES =
+%C%_libsim_a_LIBADD = \
+	$(common_libcommon_a_OBJECTS) \
+	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
+	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
+	$(patsubst %,%D%/dv-%.o,$(%C%_SIM_EXTRA_HW_DEVICES)) \
+	%D%/modules.o \
+	\
+	%D%/cgen-run.o \
+	%D%/cgen-scache.o \
+	%D%/cgen-trace.o \
+	%D%/cgen-utils.o \
+	\
+	%D%/arch.o \
+	\
+	%D%/m32r.o \
+	%D%/cpu.o \
+	%D%/decode.o \
+	%D%/sem.o \
+	%D%/model.o \
+	%D%/mloop.o \
+	\
+	%D%/m32rx.o \
+	%D%/cpux.o \
+	%D%/decodex.o \
+	%D%/modelx.o \
+	%D%/mloopx.o \
+	\
+	%D%/m32r2.o \
+	%D%/cpu2.o \
+	%D%/decode2.o \
+	%D%/model2.o \
+	%D%/mloop2.o \
+	\
+	%D%/sim-if.o \
+	%D%/traps.o
+$(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
+
+noinst_LIBRARIES += %D%/libsim.a
+
+%D%/%.o: common/%.c ; $(SIM_COMPILE)
+-@am__include@ %D%/$(DEPDIR)/*.Po
+
 %C%_run_SOURCES =
 %C%_run_LDADD = \
 	%D%/nrun.o \
@@ -42,6 +99,7 @@ BUILT_SOURCES += \
 
 ## This makes sure build tools are available before building the arch-subdirs.
 SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+%D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 ## FIXME: Use of `mono' is wip.
 %D%/mloop.c %D%/eng.h: %D%/stamp-mloop ; @true

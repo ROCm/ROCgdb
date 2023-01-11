@@ -17,13 +17,6 @@ case ${target} in
     ;;
 esac
 
-case ${target} in
-  x86_64-*-mingw* | x86_64-*-pe | x86_64-*-pep | x86_64-*-cygwin | \
-  i[3-7]86-*-mingw32* | i[3-7]86-*-cygwin* | i[3-7]86-*-winnt | i[3-7]86-*-pe)
-    pdb_support=" ";;
-  *)
-esac
-
 rm -f e${EMULATION_NAME}.c
 (echo;echo;echo;echo;echo)>e${EMULATION_NAME}.c # there, now line numbers match ;-)
 fragment <<EOF
@@ -82,7 +75,18 @@ fragment <<EOF
 #include "ldctor.h"
 #include "ldbuildid.h"
 #include "coff/internal.h"
-${pdb_support+#include \"pdb.h\"}
+EOF
+
+case ${target} in
+  x86_64-*-mingw* | x86_64-*-pe | x86_64-*-pep | x86_64-*-cygwin | \
+  i[3-7]86-*-mingw32* | i[3-7]86-*-cygwin* | i[3-7]86-*-winnt | i[3-7]86-*-pe)
+fragment <<EOF
+#include "pdb.h"
+EOF
+    ;;
+esac
+
+fragment <<EOF
 
 /* FIXME: See bfd/peXXigen.c for why we include an architecture specific
    header in generic PE code.  */
@@ -117,7 +121,7 @@ ${pdb_support+#include \"pdb.h\"}
 #define PE_DEF_SECTION_ALIGNMENT ${OVERRIDE_SECTION_ALIGNMENT}
 #endif
 
-#ifdef TARGET_IS_i386pep
+#if defined(TARGET_IS_i386pep) || defined(COFF_WITH_peAArch64)
 #define DLL_SUPPORT
 #endif
 
@@ -126,7 +130,7 @@ ${pdb_support+#include \"pdb.h\"}
 					 | IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA \
   					 | IMAGE_DLL_CHARACTERISTICS_NX_COMPAT)
 
-#if defined(TARGET_IS_i386pep) || ! defined(DLL_SUPPORT)
+#if defined(TARGET_IS_i386pep) || defined(COFF_WITH_peAArch64) || ! defined(DLL_SUPPORT)
 #define	PE_DEF_SUBSYSTEM		3
 #undef NT_EXE_IMAGE_BASE
 #define NT_EXE_IMAGE_BASE \
@@ -1218,6 +1222,7 @@ make_import_fixup (arelent *rel, asection *s, char *name, const char *symname)
       else if (suc)
 	_addend = bfd_get_16 (s->owner, addend);
       break;
+    case 26:
     case 32:
       suc = bfd_get_section_contents (s->owner, s, addend, rel->address, 4);
       if (suc && rel->howto->pc_relative)
@@ -1519,7 +1524,7 @@ gld${EMULATION_NAME}_after_open (void)
 
   if (bfd_get_flavour (link_info.output_bfd) != bfd_target_coff_flavour
       || coff_data (link_info.output_bfd) == NULL
-      || coff_data (link_info.output_bfd)->pe == 0)
+      || !obj_pe (link_info.output_bfd))
     einfo (_("%F%P: cannot perform PE operations on non PE output file '%pB'\n"),
 	   link_info.output_bfd);
 
@@ -1573,14 +1578,14 @@ gld${EMULATION_NAME}_after_open (void)
   if (pep_enable_stdcall_fixup) /* -1=warn or 1=enable */
     pep_fixup_stdcalls ();
 
-#ifndef TARGET_IS_i386pep
+#if !defined(TARGET_IS_i386pep) && !defined(COFF_WITH_peAArch64)
   if (bfd_link_pic (&link_info))
 #else
   if (!bfd_link_relocatable (&link_info))
 #endif
     pep_dll_build_sections (link_info.output_bfd, &link_info);
 
-#ifndef TARGET_IS_i386pep
+#if !defined(TARGET_IS_i386pep) && !defined(COFF_WITH_peAArch64)
   else
     pep_exe_build_sections (link_info.output_bfd, &link_info);
 #endif
@@ -1876,6 +1881,8 @@ gld${EMULATION_NAME}_recognized_file (lang_input_statement_type *entry ATTRIBUTE
 #ifdef DLL_SUPPORT
 #ifdef TARGET_IS_i386pep
   pep_dll_id_target ("pei-x86-64");
+#elif defined(COFF_WITH_peAArch64)
+  pep_dll_id_target ("pei-aarch64-little");
 #endif
   if (pep_bfd_is_dll (entry->the_bfd))
     return pep_implied_import_dll (entry->filename);

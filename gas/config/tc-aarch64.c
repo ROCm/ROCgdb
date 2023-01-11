@@ -1889,10 +1889,9 @@ s_ltorg (int ignored ATTRIBUTE_UNUSED)
     }
 }
 
-#ifdef OBJ_ELF
+#if defined(OBJ_ELF) || defined(OBJ_COFF)
 /* Forward declarations for functions below, in the MD interface
    section.  */
-static fixS *fix_new_aarch64 (fragS *, int, short, expressionS *, int, int);
 static struct reloc_table_entry * find_reloc_table_entry (char **);
 
 /* Directives: Data.  */
@@ -1900,7 +1899,7 @@ static struct reloc_table_entry * find_reloc_table_entry (char **);
    implemented properly.  */
 
 static void
-s_aarch64_elf_cons (int nbytes)
+s_aarch64_cons (int nbytes)
 {
   expressionS exp;
 
@@ -1950,6 +1949,12 @@ s_aarch64_elf_cons (int nbytes)
   input_line_pointer--;
   demand_empty_rest_of_line ();
 }
+#endif
+
+#ifdef OBJ_ELF
+/* Forward declarations for functions below, in the MD interface
+   section.  */
+ static fixS *fix_new_aarch64 (fragS *, int, short, expressionS *, int, int);
 
 /* Mark symbol that it follows a variant PCS convention.  */
 
@@ -2092,6 +2097,38 @@ s_tlsdescldr (int ignored ATTRIBUTE_UNUSED)
 }
 #endif	/* OBJ_ELF */
 
+#ifdef TE_PE
+static void
+s_secrel (int dummy ATTRIBUTE_UNUSED)
+{
+  expressionS exp;
+
+  do
+    {
+      expression (&exp);
+      if (exp.X_op == O_symbol)
+	exp.X_op = O_secrel;
+
+      emit_expr (&exp, 4);
+    }
+  while (*input_line_pointer++ == ',');
+
+  input_line_pointer--;
+  demand_empty_rest_of_line ();
+}
+
+void
+tc_pe_dwarf2_emit_offset (symbolS *symbol, unsigned int size)
+{
+  expressionS exp;
+
+  exp.X_op = O_secrel;
+  exp.X_add_symbol = symbol;
+  exp.X_add_number = 0;
+  emit_expr (&exp, size);
+}
+#endif	/* TE_PE */
+
 static void s_aarch64_arch (int);
 static void s_aarch64_cpu (int);
 static void s_aarch64_arch_extension (int);
@@ -2119,11 +2156,16 @@ const pseudo_typeS md_pseudo_table[] = {
   {"tlsdescadd", s_tlsdescadd, 0},
   {"tlsdesccall", s_tlsdesccall, 0},
   {"tlsdescldr", s_tlsdescldr, 0},
-  {"word", s_aarch64_elf_cons, 4},
-  {"long", s_aarch64_elf_cons, 4},
-  {"xword", s_aarch64_elf_cons, 8},
-  {"dword", s_aarch64_elf_cons, 8},
   {"variant_pcs", s_variant_pcs, 0},
+#endif
+#if defined(OBJ_ELF) || defined(OBJ_COFF)
+  {"word", s_aarch64_cons, 4},
+  {"long", s_aarch64_cons, 4},
+  {"xword", s_aarch64_cons, 8},
+  {"dword", s_aarch64_cons, 8},
+#endif
+#ifdef TE_PE
+  {"secrel32", s_secrel, 0},
 #endif
   {"float16", float_cons, 'h'},
   {"bfloat16", float_cons, 'b'},
@@ -9260,6 +9302,10 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
       /* An error will already have been reported.  */
       break;
 
+    case BFD_RELOC_RVA:
+    case BFD_RELOC_32_SECREL:
+      break;
+
     default:
       as_bad_where (fixP->fx_file, fixP->fx_line,
 		    _("unexpected %s fixup"),
@@ -9343,27 +9389,39 @@ cons_fix_new_aarch64 (fragS * frag, int where, int size, expressionS * exp)
   bfd_reloc_code_real_type type;
   int pcrel = 0;
 
-  /* Pick a reloc.
-     FIXME: @@ Should look at CPU word size.  */
-  switch (size)
+#ifdef TE_PE
+  if (exp->X_op == O_secrel)
     {
-    case 1:
-      type = BFD_RELOC_8;
-      break;
-    case 2:
-      type = BFD_RELOC_16;
-      break;
-    case 4:
-      type = BFD_RELOC_32;
-      break;
-    case 8:
-      type = BFD_RELOC_64;
-      break;
-    default:
-      as_bad (_("cannot do %u-byte relocation"), size);
-      type = BFD_RELOC_UNUSED;
-      break;
+      exp->X_op = O_symbol;
+      type = BFD_RELOC_32_SECREL;
     }
+  else
+    {
+#endif
+    /* Pick a reloc.
+       FIXME: @@ Should look at CPU word size.  */
+    switch (size)
+      {
+      case 1:
+	type = BFD_RELOC_8;
+	break;
+      case 2:
+	type = BFD_RELOC_16;
+	break;
+      case 4:
+	type = BFD_RELOC_32;
+	break;
+      case 8:
+	type = BFD_RELOC_64;
+	break;
+      default:
+	as_bad (_("cannot do %u-byte relocation"), size);
+	type = BFD_RELOC_UNUSED;
+	break;
+      }
+#ifdef TE_PE
+    }
+#endif
 
   fix_new_exp (frag, where, (int) size, exp, pcrel, type);
 }

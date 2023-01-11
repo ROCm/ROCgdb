@@ -19,16 +19,4 @@
 ### along with the GNU simulators; if not, see <http://www.gnu.org/licenses/>.
 
 ## COMMON_PRE_CONFIG_FRAG
-
-SIM_RUN_OBJS = \
-	main.o
-
-SIM_OBJS = \
-	load.o \
-	mem.o \
-	cpu.o \
-	rl78.o \
-	gdb-if.o \
-	trace.o
-
 ## COMMON_POST_CONFIG_FRAG

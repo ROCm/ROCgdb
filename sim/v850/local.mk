@@ -16,6 +16,31 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+AM_CPPFLAGS_%C% = -DWITH_TARGET_WORD_BITSIZE=32 -DWITH_TARGET_WORD_MSB=31
+
+%C%_libsim_a_SOURCES =
+%C%_libsim_a_LIBADD = \
+	$(common_libcommon_a_OBJECTS) \
+	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
+	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
+	%D%/simops.o \
+	%D%/interp.o \
+	%D%/itable.o \
+	%D%/semantics.o \
+	%D%/idecode.o \
+	%D%/icache.o \
+	%D%/engine.o \
+	%D%/irun.o \
+	%D%/support.o \
+	%D%/modules.o \
+	%D%/sim-resume.o
+$(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
+
+noinst_LIBRARIES += %D%/libsim.a
+
+%D%/%.o: common/%.c ; $(SIM_COMPILE)
+-@am__include@ %D%/$(DEPDIR)/*.Po
+
 %C%_run_SOURCES =
 %C%_run_LDADD = \
 	%D%/nrun.o \
@@ -55,6 +80,7 @@ BUILT_SOURCES += \
 
 ## This makes sure build tools are available before building the arch-subdirs.
 SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+%D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 $(%C%_BUILT_SRC_FROM_IGEN): %D%/stamp-igen
 

@@ -27,6 +27,12 @@
 #include "poison.h"
 #include "gdb_string_view.h"
 
+#if defined HAVE_LIBXXHASH
+#  include <xxhash.h>
+#else
+#  include "hashtab.h"
+#endif
+
 /* xmalloc(), xrealloc() and xcalloc() have already been declared in
    "libiberty.h". */
 
@@ -187,5 +193,37 @@ extern int hex2bin (const char *hex, gdb_byte *bin, int count);
 
 /* Like the above, but return a gdb::byte_vector.  */
 gdb::byte_vector hex2bin (const char *hex);
+
+/* A fast hashing function.  This can be used to hash data in a fast way
+   when the length is known.  If no fast hashing library is available, falls
+   back to iterative_hash from libiberty.  START_VALUE can be set to
+   continue hashing from a previous value.  */
+
+static inline unsigned int
+fast_hash (const void *ptr, size_t len, unsigned int start_value = 0)
+{
+#if defined HAVE_LIBXXHASH
+  return XXH64 (ptr, len, start_value);
+#else
+  return iterative_hash (ptr, len, start_value);
+#endif
+}
+
+namespace gdb
+{
+
+/* Hash type for gdb::string_view.
+
+   Even after we switch to C++17 and dump our string_view implementation, we
+   might want to keep this hash implementation if it's faster than std::hash
+   for std::string_view.  */
+
+struct string_view_hash
+{
+  std::size_t operator() (gdb::string_view view) const
+  {  return fast_hash (view.data (), view.length ()); }
+};
+
+} /* namespace gdb */
 
 #endif /* COMMON_COMMON_UTILS_H */

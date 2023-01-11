@@ -292,6 +292,10 @@ pe_mkobject (bfd * abfd)
   pe->dos_message[15] = 0x0;
 
   memset (& pe->pe_opthdr, 0, sizeof pe->pe_opthdr);
+
+  bfd_coff_long_section_names (abfd)
+    = coff_backend_info (abfd)->_bfd_coff_long_section_names;
+
   return true;
 }
 
@@ -440,7 +444,7 @@ pe_bfd_copy_private_bfd_data (bfd *ibfd, bfd *obfd)
 #define SIZEOF_IDATA2		(5 * 4)
 
 /* For PEx64 idata4 & 5 have thumb size of 8 bytes.  */
-#ifdef COFF_WITH_pex64
+#if defined(COFF_WITH_pex64) || defined(COFF_WITH_peAArch64)
 #define SIZEOF_IDATA4		(2 * 4)
 #define SIZEOF_IDATA5		(2 * 4)
 #else
@@ -1086,7 +1090,7 @@ pe_ILF_build_a_bfd (bfd *	    abfd,
   if (bfd_coff_mkobject_hook (abfd, (void *) & internal_f, NULL) == NULL)
     goto error_return;
 
-  coff_data (abfd)->pe = 1;
+  obj_pe (abfd) = true;
 #ifdef THUMBPEMAGIC
   if (vars.magic == THUMBPEMAGIC)
     /* Stop some linker warnings about thumb code not supporting interworking.  */

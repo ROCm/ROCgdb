@@ -217,8 +217,8 @@ software in general.  We will miss him.
 * Trace File Format::		@value{GDBN} trace file format
 * Index Section Format::        .gdb_index section format
 * Debuginfod::                  Download debugging resources with @code{debuginfod}
-* Man Pages::			Manual pages
-* Copying::			GNU General Public License says
+* Man Pages::                   Manual pages
+* Copying::                     GNU General Public License says
                                 how you can copy and share @value{GDBN}
 * GNU Free Documentation License::  The license for this documentation
 * Concept Index::               Index of @value{GDBN} concepts
@@ -7042,11 +7042,11 @@ or while being stepped), all other threads in the program are also stopped by
 you examine the stopped thread in the debugger.
 
 @menu
-* All-Stop Mode::		All threads stop when GDB takes control
-* Non-Stop Mode::		Other threads continue to execute
-* Background Execution::	Running your program asynchronously
-* Thread-Specific Breakpoints::	Controlling breakpoints
-* Interrupted System Calls::	GDB may interfere with system calls
+* All-Stop Mode::               All threads stop when GDB takes control
+* Non-Stop Mode::               Other threads continue to execute
+* Background Execution::        Running your program asynchronously
+* Thread-Specific Breakpoints:: Controlling breakpoints
+* Interrupted System Calls::    GDB may interfere with system calls
 * Observer Mode::               GDB does not alter program behavior
 @end menu
 
@@ -9151,7 +9151,7 @@ prefer to use Emacs facilities to view source; see @ref{Emacs, ,Using
 * Search::                      Searching source files
 * Source Path::                 Specifying source directories
 * Machine Code::                Source and machine code
-* Disable Reading Source::	Disable Reading Source Code
+* Disable Reading Source::      Disable Reading Source Code
 @end menu
 
 @node List
@@ -24273,7 +24273,7 @@ configuration of @value{GDBN}; use @code{help target} to list them.
 @menu
 * Connecting::                  Connecting to a remote target
 * File Transfer::               Sending files to a remote system
-* Server::	                Using the gdbserver program
+* Server::                      Using the gdbserver program
 * Remote Configuration::        Remote configuration
 * Remote Stub::                 Implementing a remote stub
 @end menu
@@ -25849,13 +25849,13 @@ This section describes details specific to particular native
 configurations.
 
 @menu
-* BSD libkvm Interface::	Debugging BSD kernel memory images
+* BSD libkvm Interface::        Debugging BSD kernel memory images
 * Process Information::         Process information
 * DJGPP Native::                Features specific to the DJGPP port
-* Cygwin Native::		Features specific to the Cygwin port
+* Cygwin Native::               Features specific to the Cygwin port
 * Hurd Native::                 Features specific to @sc{gnu} Hurd
-* Darwin::			Features specific to Darwin
-* FreeBSD::			Features specific to FreeBSD
+* Darwin::                      Features specific to Darwin
+* FreeBSD::                     Features specific to FreeBSD
 @end menu
 
 @node BSD libkvm Interface
@@ -26797,7 +26797,7 @@ acceptable commands.
 * ARM::                         ARM
 * BPF::                         eBPF
 * M68K::                        Motorola M68K
-* MicroBlaze::			Xilinx MicroBlaze
+* MicroBlaze::                  Xilinx MicroBlaze
 * MIPS Embedded::               MIPS Embedded
 * OpenRISC 1000::               OpenRISC 1000 (or1k)
 * PowerPC Embedded::            PowerPC Embedded
@@ -31462,7 +31462,7 @@ This creates alias @samp{spe} of the command @samp{set print elements}.
 @end smallexample
 
 @menu
-* Command aliases default args::	Default arguments for aliases
+* Command aliases default args::        Default arguments for aliases
 @end menu
 
 @node Command aliases default args
@@ -31591,9 +31591,9 @@ Note that loading of this script file also requires accordingly configured
 @code{auto-load safe-path} (@pxref{Auto-loading safe path}).
 
 @menu
-* objfile-gdbdotext file::		The @file{@var{objfile}-gdb.@var{ext}} file
-* dotdebug_gdb_scripts section::	The @code{.debug_gdb_scripts} section
-* Which flavor to choose?::		Choosing between these approaches
+* objfile-gdbdotext file::              The @file{@var{objfile}-gdb.@var{ext}} file
+* dotdebug_gdb_scripts section::        The @code{.debug_gdb_scripts} section
+* Which flavor to choose?::             Choosing between these approaches
 @end menu
 
 @node objfile-gdbdotext file
@@ -33616,6 +33616,8 @@ The inferior returned from a system call.  This is reported when
 @item exec
 The inferior called @code{exec}.  This is reported when @code{catch exec}
 (@pxref{Set Catchpoints}) has been used.
+@item no-history
+There isn't enough history recorded to continue reverse execution.
 @end table
 
 The @var{tid} field identifies the global thread ID of the thread
@@ -51541,7 +51543,7 @@ with @code{elfutils}, starting with version 0.178.  See
 regarding @code{debuginfod}.
 
 @menu
-* Debuginfod Settings::		Configuring debuginfod with @value{GDBN}
+* Debuginfod Settings::         Configuring debuginfod with @value{GDBN}
 @end menu
 
 @node Debuginfod Settings

@@ -15,6 +15,46 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+AM_CPPFLAGS_%C% = -DWITH_TARGET_WORD_BITSIZE=64
+AM_CPPFLAGS_%C%_mloop_le.o = -DWANT_ISA_EBPFLE
+AM_CPPFLAGS_%C%_mloop_be.o = -DWANT_ISA_EBPFBE
+AM_CPPFLAGS_%C%_decode_le.o = -DWANT_ISA_EBPFLE
+AM_CPPFLAGS_%C%_decode_be.o = -DWANT_ISA_EBPFBE
+AM_CPPFLAGS_%C%_sem_le.o = -DWANT_ISA_EBPFLE
+AM_CPPFLAGS_%C%_sem_be.o = -DWANT_ISA_EBPFBE
+
+%C%_libsim_a_SOURCES =
+%C%_libsim_a_LIBADD = \
+	$(common_libcommon_a_OBJECTS) \
+	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
+	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
+	%D%/modules.o \
+	\
+	%D%/cgen-run.o \
+	%D%/cgen-scache.o \
+	%D%/cgen-trace.o \
+	%D%/cgen-utils.o \
+	\
+	%D%/arch.o \
+	%D%/cpu.o \
+	%D%/decode-le.o \
+	%D%/decode-be.o \
+	%D%/sem-le.o \
+	%D%/sem-be.o \
+	%D%/mloop-le.o \
+	%D%/mloop-be.o \
+	\
+	%D%/bpf.o \
+	%D%/bpf-helpers.o \
+	%D%/sim-if.o \
+	%D%/traps.o
+$(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
+
+noinst_LIBRARIES += %D%/libsim.a
+
+%D%/%.o: common/%.c ; $(SIM_COMPILE)
+-@am__include@ %D%/$(DEPDIR)/*.Po
+
 %C%_run_SOURCES =
 %C%_run_LDADD = \
 	%D%/nrun.o \
@@ -35,6 +75,7 @@ BUILT_SOURCES += \
 
 ## This makes sure build tools are available before building the arch-subdirs.
 SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+%D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 %D%/mloop-le.c %D%/eng-le.h: %D%/stamp-mloop-le ; @true
 %D%/stamp-mloop-le: $(srccom)/genmloop.sh %D%/mloop.in

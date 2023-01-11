@@ -16,6 +16,30 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+AM_CPPFLAGS_%C% = -DTIMER_A
+
+%C%_libsim_a_SOURCES =
+%C%_libsim_a_LIBADD = \
+	$(common_libcommon_a_OBJECTS) \
+	%D%/gdb-if.o \
+	%D%/int.o \
+	%D%/load.o \
+	%D%/m32c.o \
+	%D%/mem.o \
+	%D%/misc.o \
+	%D%/modules.o \
+	%D%/r8c.o \
+	%D%/reg.o \
+	%D%/srcdest.o \
+	%D%/syscalls.o \
+	%D%/trace.o
+$(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
+
+noinst_LIBRARIES += %D%/libsim.a
+
+%D%/%.o: common/%.c ; $(SIM_COMPILE)
+-@am__include@ %D%/$(DEPDIR)/*.Po
+
 %C%_run_SOURCES =
 %C%_run_LDADD = \
 	%D%/main.o \
@@ -24,10 +48,6 @@
 
 noinst_PROGRAMS += %D%/run
 
-## Helper targets for running make from the top-level due to run's main.o.
-%D%/%.o: %D%/%.c | %D%/libsim.a $(SIM_ALL_RECURSIVE_DEPS)
-	$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
-
 %C%_BUILD_OUTPUTS = \
 	%D%/opc2c$(EXEEXT) \
 	%D%/m32c.c \
@@ -35,6 +55,7 @@ noinst_PROGRAMS += %D%/run
 
 ## This makes sure build tools are available before building the arch-subdirs.
 SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+%D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 %C%_opc2c_SOURCES = %D%/opc2c.c
 

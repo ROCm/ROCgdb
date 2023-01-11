@@ -19,15 +19,4 @@
 
 arch = bfin
 
-SIM_OBJS = \
-	$(SIM_NEW_COMMON_OBJS) \
-	bfin-sim.o \
-	devices.o \
-	gui.o \
-	interp.o \
-	machs.o \
-	sim-resume.o
-
-SIM_EXTRA_CFLAGS = $(SDL_CFLAGS)
-
 ## COMMON_POST_CONFIG_FRAG

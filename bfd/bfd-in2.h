@@ -1,8 +1,8 @@
 /* DO NOT EDIT!  -*- buffer-read-only: t -*-  This file is automatically
-   generated from "bfd-in.h", "init.c", "opncls.c", "libbfd.c",
-   "bfdio.c", "bfdwin.c", "section.c", "archures.c", "reloc.c",
-   "syms.c", "bfd.c", "archive.c", "corefile.c", "targets.c", "format.c",
-   "linker.c", "simple.c" and "compress.c".
+   generated from "bfd-in.h", "opncls.c", "libbfd.c", "bfdio.c",
+   "bfdwin.c", "section.c", "archures.c", "reloc.c", "syms.c", "bfd.c",
+   "archive.c", "corefile.c", "targets.c", "format.c", "linker.c",
+   "simple.c" and "compress.c".
    Run "make headers" in your build bfd/ to regenerate.  */
 
 /* Main header file for the bfd library -- portable access to object files.
@@ -488,13 +488,6 @@ startswith (const char *str, const char *prefix)
 {
   return strncmp (str, prefix, strlen (prefix)) == 0;
 }
-/* Extracted from init.c.  */
-unsigned int bfd_init (void);
-
-
-/* Value returned by bfd_init.  */
-
-#define BFD_INIT_MAGIC (sizeof (struct bfd_section))
 /* Extracted from opncls.c.  */
 /* Set to N to open the next N BFDs using an alternate id space.  */
 extern unsigned int bfd_use_reserved_id;
@@ -7114,6 +7107,11 @@ typedef void (*bfd_assert_handler_type) (const char *bfd_formatmsg,
                                          int bfd_line);
 
 bfd_assert_handler_type bfd_set_assert_handler (bfd_assert_handler_type);
+
+unsigned int bfd_init (void);
+
+/* Value returned by bfd_init.  */
+#define BFD_INIT_MAGIC (sizeof (struct bfd_section))
 
 long bfd_get_reloc_upper_bound (bfd *abfd, asection *sect);
 

@@ -16,24 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ## COMMON_PRE_CONFIG_FRAG
-
-FRV_OBJS = frv.o cpu.o decode.o sem.o model.o mloop.o cgen-par.o
-
-SIM_OBJS = \
-	$(SIM_NEW_COMMON_OBJS) \
-	cgen-utils.o cgen-trace.o cgen-scache.o cgen-fpu.o cgen-accfp.o \
-	cgen-run.o \
-	sim-if.o arch.o \
-	$(FRV_OBJS) \
-	traps.o interrupts.o memory.o cache.o pipeline.o \
-	profile.o profile-fr400.o profile-fr450.o profile-fr500.o profile-fr550.o options.o \
-	reset.o registers.o
-
-SIM_EXTRA_CFLAGS = @SIM_FRV_TRAPDUMP_FLAGS@
-
-# Some modules don't build cleanly yet.
-memory.o sem.o: SIM_WERROR_CFLAGS =
-
 ## COMMON_POST_CONFIG_FRAG
 
 arch = frv

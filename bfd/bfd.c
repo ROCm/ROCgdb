@@ -643,7 +643,7 @@ CODE_FRAGMENT
 
 /*
 INODE
-Error reporting, Miscellaneous, typedef bfd, BFD front end
+Error reporting, Initialization, typedef bfd, BFD front end
 
 SECTION
 	Error reporting
@@ -696,9 +696,9 @@ CODE_FRAGMENT
 .
 */
 
-static bfd_error_type bfd_error = bfd_error_no_error;
-static bfd *input_bfd = NULL;
-static bfd_error_type input_error = bfd_error_no_error;
+static bfd_error_type bfd_error;
+static bfd *input_bfd;
+static bfd_error_type input_error;
 
 const char *const bfd_errmsgs[] =
 {
@@ -1628,10 +1628,44 @@ bfd_set_assert_handler (bfd_assert_handler_type pnew)
   _bfd_assert_handler = pnew;
   return pold;
 }
+
+/*
+INODE
+Initialization, Miscellaneous, Error reporting, BFD front end
+
+FUNCTION
+	bfd_init
+
+SYNOPSIS
+	unsigned int bfd_init (void);
+
+DESCRIPTION
+	This routine must be called before any other BFD function to
+	initialize magical internal data structures.
+	Returns a magic number, which may be used to check
+	that the bfd library is configured as expected by users.
+
+.{* Value returned by bfd_init.  *}
+.#define BFD_INIT_MAGIC (sizeof (struct bfd_section))
+.
+*/
+
+unsigned int
+bfd_init (void)
+{
+  bfd_error = bfd_error_no_error;
+  input_bfd = NULL;
+  input_error = bfd_error_no_error;
+  _bfd_error_program_name = NULL;
+  _bfd_error_internal = error_handler_fprintf;
+  _bfd_assert_handler = _bfd_default_assert_handler;
+
+  return BFD_INIT_MAGIC;
+}
 
 /*
 INODE
-Miscellaneous, Memory Usage, Error reporting, BFD front end
+Miscellaneous, Memory Usage, Initialization, BFD front end
 
 SECTION
 	Miscellaneous

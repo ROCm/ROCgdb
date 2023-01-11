@@ -314,4 +314,13 @@ extern void aarch64_handle_align (struct frag *);
 extern int tc_aarch64_regname_to_dw2regnum (char *regname);
 extern void tc_aarch64_frame_initial_instructions (void);
 
+#ifdef TE_PE
+
+#define O_secrel O_md1
+
+#define TC_DWARF2_EMIT_OFFSET  tc_pe_dwarf2_emit_offset
+void tc_pe_dwarf2_emit_offset (symbolS *, unsigned int);
+
+#endif /* TE_PE */
+
 #endif /* TC_AARCH64 */

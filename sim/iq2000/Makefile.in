@@ -16,16 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ## COMMON_PRE_CONFIG_FRAG
-
-IQ2000_OBJS = iq2000.o cpu.o decode.o sem.o model.o mloop.o
-
-SIM_OBJS = \
-	$(SIM_NEW_COMMON_OBJS) \
-	cgen-utils.o cgen-trace.o cgen-scache.o \
-	cgen-run.o \
-	sim-if.o arch.o \
-	$(IQ2000_OBJS)
-
 ## COMMON_POST_CONFIG_FRAG
 
 arch = iq2000

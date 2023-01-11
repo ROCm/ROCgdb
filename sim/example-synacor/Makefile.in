@@ -16,11 +16,4 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ## COMMON_PRE_CONFIG_FRAG
-
-SIM_OBJS = \
-	$(SIM_NEW_COMMON_OBJS) \
-	sim-resume.o \
-	interp.o \
-	sim-main.o
-
 ## COMMON_POST_CONFIG_FRAG

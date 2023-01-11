@@ -16,6 +16,34 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+%C%_libsim_a_SOURCES =
+%C%_libsim_a_LIBADD = \
+	$(common_libcommon_a_OBJECTS) \
+	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
+	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
+	%D%/modules.o \
+	\
+	%D%/cgen-run.o \
+	%D%/cgen-scache.o \
+	%D%/cgen-trace.o \
+	%D%/cgen-utils.o \
+	\
+	%D%/arch.o \
+	%D%/cpu.o \
+	%D%/decode.o \
+	%D%/iq2000.o \
+	%D%/sem.o \
+	%D%/mloop.o \
+	%D%/model.o \
+	\
+	%D%/sim-if.o
+$(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
+
+noinst_LIBRARIES += %D%/libsim.a
+
+%D%/%.o: common/%.c ; $(SIM_COMPILE)
+-@am__include@ %D%/$(DEPDIR)/*.Po
+
 %C%_run_SOURCES =
 %C%_run_LDADD = \
 	%D%/nrun.o \
@@ -32,6 +60,7 @@ BUILT_SOURCES += %D%/eng.h
 
 ## This makes sure build tools are available before building the arch-subdirs.
 SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+%D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 ## FIXME: Use of `mono' is wip.
 %D%/mloop.c %D%/eng.h: %D%/stamp-mloop ; @true

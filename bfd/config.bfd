@@ -247,9 +247,9 @@ case "${targ}" in
     targ_selvecs="aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec aarch64_pei_le_vec aarch64_pe_le_vec"
     want64=true
     ;;
-  aarch64-*-pe*)
+  aarch64-*-pe* | aarch64-*-mingw*)
     targ_defvec=aarch64_pe_le_vec
-    targ_selvecs="aarch64_pe_le_vec aarch64_pei_le_vec"
+    targ_selvecs="aarch64_pe_le_vec aarch64_pei_le_vec aarch64_elf64_le_vec aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec pdb_vec"
     want64=true
     targ_underscore=no
     ;;
@@ -1492,12 +1492,6 @@ case "${targ}" in
     exit 1
     ;;
 esac
-
-if test x"$targ_defvec" = x"aarch64-pe"; then
-  # Not currently complete (and probably not stable), warn user
-  echo "*** WARNING BFD aarch64-pe support not complete nor stable"
-  echo "*** Do not rely on this for production purposes"
-fi
 
 # All MIPS ELF targets need a 64-bit bfd_vma.
 case "${targ_defvec} ${targ_selvecs}" in

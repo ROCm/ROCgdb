@@ -1317,9 +1317,10 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   };
 
   /* Allocate space for the new architecture.  */
-  std::unique_ptr<amdgpu_gdbarch_tdep> tdep (new amdgpu_gdbarch_tdep);
-  std::unique_ptr<struct gdbarch, gdbarch_deleter> gdbarch_u (
-    gdbarch_alloc (&info, tdep.get ()));
+  std::unique_ptr<struct gdbarch, gdbarch_deleter> gdbarch_u
+    (gdbarch_alloc (&info, gdbarch_tdep_up (new amdgpu_gdbarch_tdep)));
+  amdgpu_gdbarch_tdep *tdep
+    = gdbarch_tdep<amdgpu_gdbarch_tdep> (gdbarch_u.get ());
 
   struct gdbarch *gdbarch = gdbarch_u.get ();
 
@@ -1585,7 +1586,6 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 					 std::move (address_space_name_holder));
     }
 
-  tdep.release ();
   gdbarch_u.release ();
 
   return gdbarch;

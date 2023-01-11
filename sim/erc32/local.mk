@@ -17,6 +17,31 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+READLINE_SRC = $(srcroot)/readline/readline
+AM_CPPFLAGS_%C% = $(READLINE_CFLAGS)
+
+## UARTS run at about 115200 baud (simulator time). Add -DFAST_UART to
+## CFLAGS if faster (infinite) UART speed is desired. Might affect the
+## behaviour of UART interrupt routines ...
+AM_CPPFLAGS_%C% += -DFAST_UART
+
+%C%_libsim_a_SOURCES =
+%C%_libsim_a_LIBADD = \
+	$(common_libcommon_a_OBJECTS) \
+	%D%/erc32.o \
+	%D%/exec.o \
+	%D%/float.o \
+	%D%/func.o \
+	%D%/help.o \
+	%D%/interf.o \
+	%D%/modules.o
+$(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
+
+noinst_LIBRARIES += %D%/libsim.a
+
+%D%/%.o: common/%.c ; $(SIM_COMPILE)
+-@am__include@ %D%/$(DEPDIR)/*.Po
+
 %C%_run_SOURCES =
 %C%_run_LDADD = \
 	%D%/sis.o \
@@ -25,10 +50,6 @@
 
 %D%/sis$(EXEEXT): %D%/run$(EXEEXT)
 	$(AM_V_GEN)ln $< $@ 2>/dev/null || $(LN_S) $< $@ 2>/dev/null || cp -p $< $@
-
-## Helper targets for running make from the top-level due to run's sis.o.
-%D%/%.o: %D%/%.c | %D%/libsim.a $(SIM_ALL_RECURSIVE_DEPS)
-	$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
 noinst_PROGRAMS += %D%/run %D%/sis
 
