@@ -573,6 +573,7 @@ coerce_unspec_val_to_type (struct value *val, struct type *type)
       set_value_bitpos (result, value_bitpos (val));
       if (VALUE_LVAL (result) == lval_memory)
 	set_value_address (result, value_address (val));
+      VALUE_CONTEXT (result) = VALUE_CONTEXT (val);
       return result;
     }
 }
@@ -2840,6 +2841,7 @@ ada_value_primitive_packed_val (struct value *obj, const gdb_byte *valaddr,
 	  set_value_bitpos (v, value_bitpos (v) - HOST_CHAR_BIT);
 	}
       set_value_offset (v, new_offset);
+      VALUE_CONTEXT (v) = VALUE_CONTEXT (obj);
 
       /* Also set the parent value.  This is needed when trying to
 	 assign a new value (in inferior memory).  */

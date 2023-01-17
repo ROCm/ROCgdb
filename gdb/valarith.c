@@ -95,6 +95,7 @@ value_ptradd (struct value *arg1, LONGEST arg2)
 			       value_as_address (arg1) + sz * arg2);
   if (VALUE_LVAL (result) != lval_internalvar)
     set_value_component_location (result, arg1);
+  VALUE_CONTEXT (result) = VALUE_CONTEXT (arg1);
   return result;
 }
 

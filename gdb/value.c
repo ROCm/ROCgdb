@@ -186,6 +186,7 @@ struct value
       initialized (1),
       stack (0),
       is_zero (false),
+      context ({null_frame_id, null_ptid, -1}),
       type (type_),
       enclosing_type (type_)
   {
@@ -246,16 +247,9 @@ struct value
     /* If lval == lval_memory, this is the address in the inferior  */
     CORE_ADDR address;
 
-    /*If lval == lval_register, the value is from a register.  */
-    struct
-    {
-      /* Register number.  */
-      int regnum;
-      /* Frame ID of "next" frame to which a register value is relative.
-	 If the register value is found relative to frame F, then the
-	 frame id of F->next will be stored in next_frame_id.  */
-      struct frame_id next_frame_id;
-    } reg;
+    /*If lval == lval_register, this is the register number of the
+      inferior.  */
+    int regnum;
 
     /* Pointer to internal variable.  */
     struct internalvar *internalvar;
@@ -275,6 +269,9 @@ struct value
       void *closure;
     } computed;
   } location {};
+
+  /* Evaluation context dependency of this value.  */
+  eval_context context;
 
   /* Describes offset of a value within lval of a structure in target
      addressable memory units.  Note also the member embedded_offset
@@ -1655,18 +1652,17 @@ deprecated_value_internalvar_hack (struct value *value)
   return &value->location.internalvar;
 }
 
-struct frame_id *
-deprecated_value_next_frame_id_hack (struct value *value)
+struct eval_context &
+value_context (struct value *value)
 {
-  gdb_assert (value->lval == lval_register);
-  return &value->location.reg.next_frame_id;
+  return value->context;
 }
 
 int *
 deprecated_value_regnum_hack (struct value *value)
 {
   gdb_assert (value->lval == lval_register);
-  return &value->location.reg.regnum;
+  return &value->location.regnum;
 }
 
 int
@@ -1807,6 +1803,9 @@ value_copy (const value *arg)
     }
 
   val->parent = arg->parent;
+
+  val->context = arg->context;
+
   if (VALUE_LVAL (val) == lval_computed)
     {
       const struct lval_funcs *funcs = val->location.computed.funcs;
@@ -3239,6 +3238,8 @@ value_primitive_field (struct value *arg1, LONGEST offset,
       v->offset = (value_offset (arg1) + offset
 		   + value_embedded_offset (arg1));
     }
+
+  v->context = arg1->context;
   set_value_component_location (v, arg1);
   return v;
 }
@@ -3840,6 +3841,7 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
     }
   v->offset = value_offset (whole) + offset + value_embedded_offset (whole);
   set_value_component_location (v, whole);
+  v->context = whole->context;
 
   return v;
 }
@@ -4066,7 +4068,7 @@ value_fetch_lazy_register (struct value *val)
 
   while (VALUE_LVAL (new_val) == lval_register && value_lazy (new_val))
     {
-      struct frame_id next_frame_id = VALUE_NEXT_FRAME_ID (new_val);
+      struct frame_id next_frame_id = new_val->context.next_frame_id;
 
       next_frame = frame_find_by_id (next_frame_id);
       regnum = VALUE_REGNUM (new_val);
@@ -4081,10 +4083,10 @@ value_fetch_lazy_register (struct value *val)
       gdb_assert (!gdbarch_convert_register_p (get_frame_arch (next_frame),
 					       regnum, type));
 
-      /* FRAME was obtained, above, via VALUE_NEXT_FRAME_ID.
-	 Since a "->next" operation was performed when setting
-	 this field, we do not need to perform a "next" operation
-	 again when unwinding the register.  That's why
+      /* FRAME was obtained, above, via next_frame_id in the value's
+	 context.  Since a "->next" operation was performed when
+	 setting this field, we do not need to perform a "next"
+	 operation again when unwinding the register.  That's why
 	 frame_unwind_register_value() is called here instead of
 	 get_frame_register_value().  */
       new_val = frame_unwind_register_value (next_frame, regnum);
@@ -4101,7 +4103,7 @@ value_fetch_lazy_register (struct value *val)
 	 in this situation.  */
       if (VALUE_LVAL (new_val) == lval_register
 	  && value_lazy (new_val)
-	  && VALUE_NEXT_FRAME_ID (new_val) == next_frame_id)
+	  && new_val->context.next_frame_id == next_frame_id)
 	internal_error (_("infinite loop while fetching a register"));
     }
 
@@ -4126,7 +4128,7 @@ value_fetch_lazy_register (struct value *val)
     {
       struct gdbarch *gdbarch;
       frame_info_ptr frame;
-      frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (val));
+      frame = frame_find_by_id (val->context.next_frame_id);
       frame = get_prev_frame_always (frame);
       regnum = VALUE_REGNUM (val);
       gdbarch = get_frame_arch (frame);

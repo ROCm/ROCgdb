@@ -120,6 +120,31 @@ struct value_ref_policy
 
 typedef gdb::ref_ptr<struct value, value_ref_policy> value_ref_ptr;
 
+/* Evaluation context dependency of a given struct value object.
+
+   If a struct value object is describing a location (non not_lval),
+   it might also be dependent on a specific evaluation context.  */
+
+struct eval_context
+{
+  /* Frame dependency, where value 'null_frame_id' means that an
+     evaluation was not dependent on a selected frame.
+
+     If specified, it contains Frame ID of the "next" frame to which a
+     location is relative to.  For example, if the location is
+     relative to a frame F, then the frame id of F->next will be stored
+     in next_frame_id.  */
+  struct frame_id next_frame_id = null_frame_id;
+
+  /* Focused thread dependency, where 'null_ptid' value means
+     that an evaluation was not dependent on a selected thread.  */
+  ptid_t thread_ptid = null_ptid;
+
+  /* Focused SIMD lane of a thread dependency, where '-1' value means
+     that an evaluation was not dependent on a selected SIMD lane.  */
+  int simd_lane = -1;
+};
+
 /* Values are stored in a chain, so that they can be deleted easily
    over calls to the inferior.  Values assigned to internal variables,
    put into the value history or exposed to Python are taken off this
@@ -458,12 +483,10 @@ extern void set_value_address (struct value *, CORE_ADDR);
 extern struct internalvar **deprecated_value_internalvar_hack (struct value *);
 #define VALUE_INTERNALVAR(val) (*deprecated_value_internalvar_hack (val))
 
-/* Frame ID of "next" frame to which a register value is relative.  A
-   register value is indicated by VALUE_LVAL being set to lval_register.
-   So, if the register value is found relative to frame F, then the
-   frame id of F->next will be stored in VALUE_NEXT_FRAME_ID.  */
-extern struct frame_id *deprecated_value_next_frame_id_hack (struct value *);
-#define VALUE_NEXT_FRAME_ID(val) (*deprecated_value_next_frame_id_hack (val))
+/* Context to which a location description is bound to.  A location
+   type is indicated by VALUE_LVAL not being set to not_lval.  */
+extern struct eval_context &value_context (struct value *);
+#define VALUE_CONTEXT(val) (value_context (val))
 
 /* Register number if the value is from a register.  */
 extern int *deprecated_value_regnum_hack (struct value *);
