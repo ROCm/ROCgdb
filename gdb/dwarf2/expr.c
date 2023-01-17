@@ -331,21 +331,15 @@ static const lval_funcs closure_value_funcs = {
   free_value_closure
 };
 
-/* Closure class that encapsulates a DWARF location description and a
-   frame information used when that location description was created.
+/* Closure class that encapsulates a DWARF location description.
+
    Used for lval_computed value abstraction.  */
 
 class computed_closure : public refcounted_object
 {
 public:
-  computed_closure (std::shared_ptr<dwarf_location> location,
-		    struct frame_id frame_id)
-    : m_location (location), m_frame_id (frame_id)
-  {}
-
-  computed_closure (std::shared_ptr<dwarf_location> location,
-		    frame_info_ptr frame)
-    : m_location (location), m_frame (frame)
+  explicit computed_closure (std::shared_ptr<dwarf_location> location)
+    : m_location (std::move (location))
   {}
 
   const std::shared_ptr<dwarf_location> get_location () const
@@ -353,27 +347,9 @@ public:
     return m_location;
   }
 
-  frame_id get_frame_id () const
-  {
-    return m_frame_id;
-  }
-
-  frame_info_ptr get_frame () const
-  {
-    return m_frame;
-  }
-
 private:
   /* Entry that this class encloses.  */
   std::shared_ptr<dwarf_location> m_location;
-
-  /* Frame ID context of the closure.  */
-  frame_id m_frame_id;
-
-  /* In the case of frame expression evaluator the frame_id
-     is not safe to use because the frame itself is being built.
-     Only in these cases we set and use frame info directly.  */
-  frame_info_ptr m_frame = NULL;
 };
 
 /* Base class that describes entries found on a DWARF expression
@@ -1658,8 +1634,7 @@ dwarf_implicit_pointer::to_gdb_value (frame_info_ptr frame, struct type *type,
     subobj_type = type;
 
   computed_closure *closure
-    = new computed_closure (std::make_shared<dwarf_implicit_pointer> (*this),
-			    get_frame_id (frame));
+    = new computed_closure (std::make_shared<dwarf_implicit_pointer> (*this));
   closure->incref ();
 
   value *retval
@@ -2117,15 +2092,7 @@ dwarf_composite::to_gdb_value (frame_info_ptr frame, struct type *type,
 
   computed_closure *closure;
 
-  /* If compilation unit information is not available
-     we are in a CFI context.  */
-  if (m_per_cu == nullptr)
-    closure = new computed_closure (std::make_shared<dwarf_composite> (*this),
-				    frame);
-  else
-    closure = new computed_closure (std::make_shared<dwarf_composite> (*this),
-				    get_frame_id (frame));
-
+  closure = new computed_closure (std::make_shared<dwarf_composite> (*this));
   closure->incref ();
 
   value *retval
@@ -2321,10 +2288,7 @@ rw_closure_value (value *v, value *from)
   else
     max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
 
-  frame_info_ptr frame = closure->get_frame ();
-
-  if (frame == NULL)
-    frame = frame_find_by_id (closure->get_frame_id ());
+  frame_info_ptr frame = VALUE_CONTEXT (v).frame ();
 
   if (from == NULL)
     {
@@ -2363,11 +2327,7 @@ is_optimized_out_closure_value (value *v)
   else
     max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
 
-  frame_info_ptr frame = closure->get_frame ();
-
-  if (frame == NULL)
-    frame = frame_find_by_id (closure->get_frame_id ());
-
+  frame_info_ptr frame = VALUE_CONTEXT (v).frame ();
   return location->is_optimized_out (frame, big_endian, bits_to_skip,
 				     max_bit_size, 0);
 }
@@ -2903,7 +2863,14 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
   else
     entry = entry->to_location (this->m_per_objfile->objfile->arch ());
 
-  return entry->to_gdb_value (this->m_frame, type, subobj_type, subobj_offset);
+  value *result = entry->to_gdb_value (this->m_frame, type,
+				       subobj_type, subobj_offset);
+
+  if (this->m_frame != nullptr
+      && !frame_id_p (VALUE_CONTEXT (result).next_frame_id))
+    VALUE_CONTEXT (result).next_frame_id
+      = get_frame_id (get_next_frame_sentinel_okay (this->m_frame));
+  return result;
 }
 
 value *
