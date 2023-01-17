@@ -131,6 +131,12 @@ typedef gdb::ref_ptr<struct value, value_ref_policy> value_ref_ptr;
 
 struct eval_context
 {
+  /* Return the context frame using the next_frame_id information.
+
+     In the case where the next_frame_id is a null_frame_id, function
+     returns nullptr.   */
+  frame_info_ptr frame () const;
+
   /* Frame dependency, where value 'null_frame_id' means that an
      evaluation was not dependent on a selected frame.
 
