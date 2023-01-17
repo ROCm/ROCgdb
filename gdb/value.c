@@ -1397,18 +1397,29 @@ value::set_address (CORE_ADDR addr)
   m_location.address = addr;
 }
 
-struct frame_id *
-value::deprecated_next_frame_id_hack ()
+void
+value::set_context (const eval_context &context)
 {
-  gdb_assert (m_lval == lval_register);
-  return &m_location.reg.next_frame_id;
+  m_context = context;
+}
+
+void
+value::context_add_next_frame_id (const struct frame_id next_frame_id)
+{
+  m_context.next_frame_id = next_frame_id;
+}
+
+const eval_context &
+value::context () const
+{
+  return m_context;
 }
 
 int *
 value::deprecated_regnum_hack ()
 {
   gdb_assert (m_lval == lval_register);
-  return &m_location.reg.regnum;
+  return &m_location.regnum;
 }
 
 
@@ -1539,6 +1550,8 @@ value::copy () const
 
       gdb::copy (arg_view, val_contents);
     }
+
+  val->m_context = m_context;
 
   if (val->lval () == lval_computed)
     {
@@ -3050,6 +3063,8 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
 	}
       v->set_offset (this->offset () + offset + embedded_offset ());
     }
+
+  v->m_context = m_context;
   v->set_component_location (this);
   return v;
 }
@@ -3679,7 +3694,7 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
     }
   v->set_offset (whole->offset () + offset + whole->embedded_offset ());
   v->set_component_location (whole);
-
+  v->set_context (whole->context ());
   return v;
 }
 
@@ -3901,7 +3916,7 @@ value::fetch_lazy_register ()
 
   while (new_val->lval () == lval_register && new_val->lazy ())
     {
-      struct frame_id next_frame_id = VALUE_NEXT_FRAME_ID (new_val);
+      struct frame_id next_frame_id = new_val->context ().next_frame_id;
 
       next_frame = frame_find_by_id (next_frame_id);
       regnum = VALUE_REGNUM (new_val);
@@ -3916,10 +3931,10 @@ value::fetch_lazy_register ()
       gdb_assert (!gdbarch_convert_register_p (get_frame_arch (next_frame),
 					       regnum, type));
 
-      /* FRAME was obtained, above, via VALUE_NEXT_FRAME_ID.
-	 Since a "->next" operation was performed when setting
-	 this field, we do not need to perform a "next" operation
-	 again when unwinding the register.  That's why
+      /* FRAME was obtained, above, via next_frame_id in the value's
+	 context.  Since a "->next" operation was performed when
+	 setting this field, we do not need to perform a "next"
+	 operation again when unwinding the register.  That's why
 	 frame_unwind_register_value() is called here instead of
 	 get_frame_register_value().  */
       new_val = frame_unwind_register_value (next_frame, regnum);
@@ -3936,7 +3951,7 @@ value::fetch_lazy_register ()
 	 in this situation.  */
       if (new_val->lval () == lval_register
 	  && new_val->lazy ()
-	  && VALUE_NEXT_FRAME_ID (new_val) == next_frame_id)
+	  && new_val->context ().next_frame_id == next_frame_id)
 	internal_error (_("infinite loop while fetching a register"));
     }
 
@@ -3959,8 +3974,8 @@ value::fetch_lazy_register ()
   if (frame_debug)
     {
       struct gdbarch *gdbarch;
-      frame_info_ptr frame;
-      frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (this));
+      frame_info_ptr frame
+	= frame_find_by_id (this->context ().next_frame_id);
       frame = get_prev_frame_always (frame);
       regnum = VALUE_REGNUM (this);
       gdbarch = get_frame_arch (frame);

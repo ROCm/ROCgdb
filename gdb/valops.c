@@ -1229,7 +1229,8 @@ value_assign (struct value *toval, struct value *fromval)
 	   Below we will call put_frame_register_bytes which requires that
 	   we pass it the actual frame in which the register value is
 	   valid, i.e. not the next frame.  */
-	frame_info_ptr frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (toval));
+	frame_info_ptr frame
+	  = frame_find_by_id (toval->context ().next_frame_id);
 	frame = get_prev_frame_always (frame);
 
 	if (!frame)
@@ -1453,14 +1454,12 @@ address_of_variable (struct symbol *var, const struct block *b)
     {
     case lval_register:
       {
-	frame_info_ptr frame;
-	const char *regname;
-
-	frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (val));
+	frame_info_ptr frame
+	  = frame_find_by_id (val->context ().next_frame_id);
 	gdb_assert (frame);
 
-	regname = gdbarch_register_name (get_frame_arch (frame),
-					 VALUE_REGNUM (val));
+	const char *regname = gdbarch_register_name (get_frame_arch (frame),
+						     VALUE_REGNUM (val));
 	gdb_assert (regname != nullptr && *regname != '\0');
 
 	error (_("Address requested for identifier "
@@ -4123,6 +4122,7 @@ value_slice (struct value *array, int lowbound, int length)
 
     slice->set_component_location (array);
     slice->set_offset (array->offset () + offset);
+    slice->set_context (array->context ());
   }
 
   return slice;

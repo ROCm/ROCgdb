@@ -124,6 +124,31 @@ struct value_ref_policy
 
 typedef gdb::ref_ptr<struct value, value_ref_policy> value_ref_ptr;
 
+/* Evaluation context dependency of a given struct value object.
+
+   If a struct value object is describing a location (non not_lval),
+   it might also be dependent on a specific evaluation context.  */
+
+struct eval_context
+{
+  /* Frame dependency, where value 'null_frame_id' means that an
+     evaluation was not dependent on a selected frame.
+
+     If specified, it contains Frame ID of the "next" frame to which a
+     location is relative to.  For example, if the location is
+     relative to a frame F, then the frame id of F->next will be stored
+     in next_frame_id.  */
+  struct frame_id next_frame_id = null_frame_id;
+
+  /* Focused thread dependency, where 'null_ptid' value means
+     that an evaluation was not dependent on a selected thread.  */
+  ptid_t thread_ptid = null_ptid;
+
+  /* Focused SIMD lane of a thread dependency, where '-1' value means
+     that an evaluation was not dependent on a selected SIMD lane.  */
+  int simd_lane = -1;
+};
+
 /* Note that the fields in this structure are arranged to save a bit
    of memory.  */
 
@@ -362,7 +387,13 @@ public:
   struct internalvar **deprecated_internalvar_hack ()
   { return &m_location.internalvar; }
 
-  struct frame_id *deprecated_next_frame_id_hack ();
+  /* Set context that the value is bound to.  */
+  void set_context (const eval_context &context);
+
+  /* Change only the next frame information of the value context.  */
+  void context_add_next_frame_id (const struct frame_id next_frame_id);
+
+  const eval_context &context () const;
 
   int *deprecated_regnum_hack ();
 
@@ -659,16 +690,9 @@ private:
     /* If lval == lval_memory, this is the address in the inferior  */
     CORE_ADDR address;
 
-    /*If lval == lval_register, the value is from a register.  */
-    struct
-    {
-      /* Register number.  */
-      int regnum;
-      /* Frame ID of "next" frame to which a register value is relative.
-	 If the register value is found relative to frame F, then the
-	 frame id of F->next will be stored in next_frame_id.  */
-      struct frame_id next_frame_id;
-    } reg;
+    /* If lval == lval_register, this is the register number
+       of the inferior.  */
+   int regnum;
 
     /* Pointer to internal variable.  */
     struct internalvar *internalvar;
@@ -688,6 +712,9 @@ private:
       void *closure;
     } computed;
   } m_location {};
+
+  /* Evaluation context dependency of this value.  */
+  eval_context m_context;
 
   /* Describes offset of a value within lval of a structure in target
      addressable memory units.  Note also the member embedded_offset
@@ -954,12 +981,6 @@ extern void error_value_optimized_out (void);
 
 /* Pointer to internal variable.  */
 #define VALUE_INTERNALVAR(val) (*((val)->deprecated_internalvar_hack ()))
-
-/* Frame ID of "next" frame to which a register value is relative.  A
-   register value is indicated by VALUE_LVAL being set to lval_register.
-   So, if the register value is found relative to frame F, then the
-   frame id of F->next will be stored in VALUE_NEXT_FRAME_ID.  */
-#define VALUE_NEXT_FRAME_ID(val) (*((val)->deprecated_next_frame_id_hack ()))
 
 /* Register number if the value is from a register.  */
 #define VALUE_REGNUM(val) (*((val)->deprecated_regnum_hack ()))
