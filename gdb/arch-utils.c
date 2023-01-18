@@ -1197,6 +1197,15 @@ default_update_call_site_pc (struct gdbarch *gdbarch, CORE_ADDR pc)
   return pc;
 }
 
+/* See arch-utils.h.  */
+std::vector<addr_range>
+default_get_watchable_aliases (struct gdbarch *gdbarch,
+			       ptid_t ptid, int simd_lane,
+			       addr_range range)
+{
+  return {range};
+}
+
 /* Non-zero if we want to trace architecture code.  */
 
 #ifndef GDBARCH_DEBUG
