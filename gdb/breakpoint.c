@@ -103,9 +103,6 @@ static void create_breakpoints_sal (struct gdbarch *,
 				    int,
 				    int, int, int, unsigned);
 
-static int can_use_hardware_watchpoint
-    (const std::vector<value_ref_ptr> &vals);
-
 static void mention (const breakpoint *);
 
 static breakpoint *add_to_breakpoint_chain (std::unique_ptr<breakpoint> &&b);
@@ -2073,10 +2070,33 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 	  b->val_valid = true;
 	}
 
+      int reg_cnt = 0;
+      bool use_hw_watchpoint = can_use_hw_watchpoints;
       frame_pspace = get_frame_program_space (get_selected_frame (NULL));
 
       /* Look at each value on the value chain.  */
       gdb_assert (!val_chain.empty ());
+
+      /* Make sure that the value of the expression depends only upon
+	 memory contents, and values computed from them within GDB.
+	 If we find any register references or function calls, we
+	 can't use a hardware watchpoint.
+
+	 The idea here is that evaluating an expression generates a
+	 series of values, one holding the value of every
+	 subexpression.  (The expression a*b+c has five subexpressions:
+	 a, b, a*b, c, and a*b+c.)  GDB's values hold almost enough
+	 information to establish the criteria given above --- they
+	 identify memory lvalues, register lvalues, computed values,
+	 etcetera.  So we can evaluate the expression, and then scan
+	 the chain of values that leaves behind to decide whether we
+	 can detect any possible change to the expression's final
+	 value using only hardware watchpoints.
+
+	 However, I don't think that the values returned by inferior
+	 function calls are special in any way.  So this function may
+	 not notice that an expression involving an inferior function
+	 call can't be watched with hardware watchpoints.  FIXME.  */
       for (const value_ref_ptr &iter : val_chain)
 	{
 	  v = iter.get ();
@@ -2098,7 +2118,6 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  || (vtype->code () != TYPE_CODE_STRUCT
 		      && vtype->code () != TYPE_CODE_ARRAY))
 		{
-		  CORE_ADDR addr;
 		  enum target_hw_bp_type type;
 		  int bitpos = 0, bitsize = 0;
 
@@ -2118,7 +2137,16 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		      bitsize = b->val_bitsize;
 		    }
 
-		  addr = v->address ();
+		  int length;
+		  if (bitsize != 0)
+		    {
+		      /* Just cover the bytes that make up the bitfield.  */
+		      length = ((bitpos % 8) + bitsize + 7) / 8;
+		    }
+		  else
+		    length = v->type ()->length ();
+
+		  CORE_ADDR addr = v->address ();
 
 		  /* Watchpoints for addresses that are not in the default
 		     address space are currently not supported.  */
@@ -2133,6 +2161,24 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		      addr += bitpos / 8;
 		    }
 
+		  if (use_hw_watchpoint)
+		    {
+		      int exact_watchpoint_len = length;
+
+		      if (target_exact_watchpoints
+			  && is_scalar_type_recursive (vtype))
+			exact_watchpoint_len = 1;
+
+		      int num_regs
+			= target_region_ok_for_hw_watchpoint
+			    (addr, exact_watchpoint_len);
+
+		      if (num_regs)
+			reg_cnt += num_regs;
+		      else
+			use_hw_watchpoint = false;
+		    }
+
 		  type = hw_write;
 		  if (b->type == bp_read_watchpoint)
 		    type = hw_read;
@@ -2144,18 +2190,17 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  loc->pspace = frame_pspace;
 		  loc->address
 		    = gdbarch_remove_non_address_bits (loc->gdbarch, addr);
-		  b->add_location (*loc);
-
-		  if (bitsize != 0)
-		    {
-		      /* Just cover the bytes that make up the bitfield.  */
-		      loc->length = ((bitpos % 8) + bitsize + 7) / 8;
-		    }
-		  else
-		    loc->length = v->type ()->length ();
-
+		  loc->length = length;
 		  loc->watchpoint_type = type;
+		  b->add_location (*loc);
 		}
+	    }
+	  else if (v->lval () == lval_register
+		   || (v->lval () != not_lval
+		       && !v->deprecated_modifiable ()))
+	    {
+	      use_hw_watchpoint = false;
+	      break;
 	    }
 	}
 
@@ -2179,12 +2224,9 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 	 free hardware slots.  Recheck the number of free hardware slots
 	 as the value chain may have changed.  */
 	{
-	  int reg_cnt;
 	  enum bp_loc_type loc_type;
 
-	  reg_cnt = can_use_hardware_watchpoint (val_chain);
-
-	  if (reg_cnt)
+	  if (use_hw_watchpoint && reg_cnt)
 	    {
 	      int i, target_resources_ok, other_type_used;
 	      enum bptype type;
@@ -10474,93 +10516,6 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   update_watchpoint (w.get (), true /* reparse */);
 
   install_breakpoint (internal, std::move (w), 1);
-}
-
-/* Return count of debug registers needed to watch the given expression.
-   If the watchpoint cannot be handled in hardware return zero.  */
-
-static int
-can_use_hardware_watchpoint (const std::vector<value_ref_ptr> &vals)
-{
-  int found_memory_cnt = 0;
-
-  /* Did the user specifically forbid us to use hardware watchpoints? */
-  if (!can_use_hw_watchpoints)
-    return 0;
-
-  gdb_assert (!vals.empty ());
-  struct value *head = vals[0].get ();
-
-  /* Make sure that the value of the expression depends only upon
-     memory contents, and values computed from them within GDB.  If we
-     find any register references or function calls, we can't use a
-     hardware watchpoint.
-
-     The idea here is that evaluating an expression generates a series
-     of values, one holding the value of every subexpression.  (The
-     expression a*b+c has five subexpressions: a, b, a*b, c, and
-     a*b+c.)  GDB's values hold almost enough information to establish
-     the criteria given above --- they identify memory lvalues,
-     register lvalues, computed values, etcetera.  So we can evaluate
-     the expression, and then scan the chain of values that leaves
-     behind to decide whether we can detect any possible change to the
-     expression's final value using only hardware watchpoints.
-
-     However, I don't think that the values returned by inferior
-     function calls are special in any way.  So this function may not
-     notice that an expression involving an inferior function call
-     can't be watched with hardware watchpoints.  FIXME.  */
-  for (const value_ref_ptr &iter : vals)
-    {
-      struct value *v = iter.get ();
-
-      if (v->lval () == lval_memory)
-	{
-	  if (v != head && v->lazy ())
-	    /* A lazy memory lvalue in the chain is one that GDB never
-	       needed to fetch; we either just used its address (e.g.,
-	       `a' in `a.b') or we never needed it at all (e.g., `a'
-	       in `a,b').  This doesn't apply to HEAD; if that is
-	       lazy then it was not readable, but watch it anyway.  */
-	    ;
-	  else
-	    {
-	      /* Ahh, memory we actually used!  Check if we can cover
-		 it with hardware watchpoints.  */
-	      struct type *vtype = check_typedef (v->type ());
-
-	      /* We only watch structs and arrays if user asked for it
-		 explicitly, never if they just happen to appear in a
-		 middle of some value chain.  */
-	      if (v == head
-		  || (vtype->code () != TYPE_CODE_STRUCT
-		      && vtype->code () != TYPE_CODE_ARRAY))
-		{
-		  CORE_ADDR vaddr = v->address ();
-		  int len;
-		  int num_regs;
-
-		  len = (target_exact_watchpoints
-			 && is_scalar_type_recursive (vtype))?
-		    1 : v->type ()->length ();
-
-		  num_regs = target_region_ok_for_hw_watchpoint (vaddr, len);
-		  if (!num_regs)
-		    return 0;
-		  else
-		    found_memory_cnt += num_regs;
-		}
-	    }
-	}
-      else if (v->lval () != not_lval && !v->deprecated_modifiable ())
-	return 0;	/* These are values from the history (e.g., $1).  */
-      else if (v->lval () == lval_register)
-	return 0;	/* Cannot watch a register with a HW watchpoint.  */
-    }
-
-  /* The expression itself looks suitable for using a hardware
-     watchpoint, but give the target machine a chance to reject it.  */
-  return found_memory_cnt;
 }
 
 void
