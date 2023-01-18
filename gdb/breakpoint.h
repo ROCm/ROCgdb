@@ -1034,6 +1034,11 @@ struct watchpoint : public breakpoint
      watchpoint should be evaluated in all threads.  */
   ptid_t watchpoint_thread;
 
+  /* Holds the SIMD lane that was in focus at the point when the
+     watchpoint was inserted, or `-1' if no SIMD lane was in focus
+     at that point or the WATCHPOINT_THREAD doesn't contain lanes.  */
+  int watchpoint_simd_lane;
+
   /* For hardware watchpoints, the triggered status according to the
      hardware.  */
   enum watchpoint_triggered watchpoint_triggered;

@@ -91,7 +91,7 @@ ensure_have_simd_lane (const char *op_name)
   ensure_have_thread (op_name);
 
   int current_simd_lane
-    = current_inferior ()->find_thread (inferior_ptid)->current_simd_lane ();
+    = inferior_thread ()->current_simd_lane ();
 
   if (current_simd_lane == -1)
     error (_("%s evaluation requires a SIMD lane to be in focus."), op_name);

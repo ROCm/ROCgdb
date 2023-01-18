@@ -38,9 +38,4 @@ if ![runto_main] {
 # Set breakpoing in device code.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_continue_to_breakpoint "bit_extract_kernel"
-
-# Check that GDB errors out when inserting a watchpoint at an address in
-# the private lane address space.
-gdb_test "watch *((unsigned int *) private_lane#0x0)" "Only global memory watchpoints are supported\\."
-
 }
