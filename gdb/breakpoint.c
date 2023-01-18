@@ -1814,22 +1814,38 @@ is_watchpoint (const struct breakpoint *bpt)
 	  || bpt->type == bp_watchpoint);
 }
 
-/* Returns true if the current thread and its running state are safe
-   to evaluate or update watchpoint B.  Watchpoints on local
-   expressions need to be evaluated in the context of the thread that
-   was current when the watchpoint was created, and, that thread needs
-   to be stopped to be able to select the correct frame context.
+/* Returns true if the current thread, its SIMD lane and its running
+   state are safe to evaluate or update watchpoint B.
+
+   Watchpoints on local expressions need to be evaluated in the context
+   that they were bound to on their creation.  This means that the
+   original thread needs to be stopped and in focus (together with the
+   original SIMD lane) for the needed evaluation context to be present.
+   Additional need to stop the thread is to be able to select the
+   correct frame context.
+
    Watchpoints on global expressions can be evaluated on any thread,
-   and in any state.  It is presently left to the target allowing
-   memory accesses when threads are running.  */
+   and in any state.
+
+   It is presently left to the target allowing memory accesses when
+   threads are running.  */
 
 static bool
-watchpoint_in_thread_scope (struct watchpoint *b)
+watchpoint_in_thread_and_simd_lane_scope (struct watchpoint *b)
 {
-  return (b->pspace == current_program_space
-	  && (b->watchpoint_thread == null_ptid
-	      || (inferior_ptid == b->watchpoint_thread
-		  && !inferior_thread ()->executing ())));
+  if (b->pspace != current_program_space)
+    return false;
+  else if (b->watchpoint_thread == null_ptid)
+    return true;
+  else if (inferior_ptid != b->watchpoint_thread
+	   || inferior_thread ()->executing ())
+    return false;
+  else if (b->watchpoint_simd_lane == -1)
+    return true;
+  else if (b->watchpoint_simd_lane != inferior_thread ()->current_simd_lane ())
+    return false;
+
+  return true;
 }
 
 /* Set watchpoint B to disp_del_at_next_stop, even including its possible
@@ -1946,7 +1962,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
   /* If this is a local watchpoint, we only want to check if the
      watchpoint frame is in scope if the current thread is the thread
      that was used to create the watchpoint.  */
-  if (!watchpoint_in_thread_scope (b))
+  if (!watchpoint_in_thread_and_simd_lane_scope (b))
     return;
 
   if (b->disposition == disp_del_at_next_stop)
@@ -2088,61 +2104,86 @@ update_watchpoint (struct watchpoint *b, bool reparse)
       for (const value_ref_ptr &iter : val_chain)
 	{
 	  v = iter.get ();
-
-	  /* If it's a memory location, and GDB actually needed
-	     its contents to evaluate the expression, then we
-	     must watch it.  If the first value returned is
-	     still lazy, that means an error occurred reading it;
-	     watch it anyway in case it becomes readable.  */
-	  if (VALUE_LVAL (v) == lval_memory
-	      && (v == val_chain[0] || ! value_lazy (v)))
+	  /* If the value returned is still lazy, that means an error
+	     occurred reading it, watch it anyway in case it becomes
+	     readable.  */
+	  if (v != val_chain[0] && value_lazy (v))
+	    continue;
+	  else if (VALUE_LVAL (v) == lval_register
+		   || (VALUE_LVAL (v) != not_lval
+		       && !deprecated_value_modifiable (v)))
 	    {
-	      struct type *vtype = check_typedef (value_type (v));
+	      use_hw_watchpoint = false;
+	      break;
+	    }
 
-	      /* We only watch structs and arrays if user asked
-		 for it explicitly, never if they just happen to
-		 appear in the middle of some value chain.  */
-	      if (v == result
-		  || (vtype->code () != TYPE_CODE_STRUCT
-		      && vtype->code () != TYPE_CODE_ARRAY))
+	  struct type *vtype = check_typedef (value_type (v));
+
+	  /* We only watch structs and arrays if user asked
+	     for it explicitly, never if they just happen to
+	     appear in the middle of some value chain.  */
+	  if (iter == result
+	      || (vtype->code () != TYPE_CODE_STRUCT
+		  && vtype->code () != TYPE_CODE_ARRAY))
+	    {
+	      int bitpos = 0, bitsize = 0;
+
+	      if (value_bitsize (v) != 0)
 		{
-		  enum target_hw_bp_type type;
-		  struct bp_location *loc, **tmp;
-		  int bitpos = 0, bitsize = 0;
+		  /* Extract the bit parameters out from the bitfield
+		     sub-expression.  */
+		  bitpos = value_bitpos (v);
+		  bitsize = value_bitsize (v);
+		}
+	      else if (iter == result && b->val_bitsize != 0)
+		{
+		 /* If VAL_BITSIZE != 0 then RESULT is actually a bitfield
+		    lvalue whose bit parameters are saved in the fields
+		    VAL_BITPOS and VAL_BITSIZE.  */
+		  bitpos = b->val_bitpos;
+		  bitsize = b->val_bitsize;
+		}
 
-		  if (value_bitsize (v) != 0)
+	      int length;
+	      if (bitsize != 0)
+		{
+		  /* Just cover the bytes that make up the bitfield.  */
+		  length = ((bitpos % 8) + bitsize + 7) / 8;
+		}
+	      else
+		length = value_type (v)->length ();
+
+	      /* Get address ranges to watch for this value.  */
+	      std::vector<addr_range> ranges;
+	      if (VALUE_LVAL (v) == lval_memory)
+		ranges.emplace_back (value_address (v), length);
+	      else if (VALUE_LVAL (v) == lval_computed)
+		{
+		  const struct lval_funcs *funcs = value_computed_funcs (v);
+
+		  if (funcs->mem_addr_ranges == nullptr
+		      || !funcs->mem_addr_ranges (v, ranges))
 		    {
-		      /* Extract the bit parameters out from the bitfield
-			 sub-expression.  */
-		      bitpos = value_bitpos (v);
-		      bitsize = value_bitsize (v);
-		    }
-		  else if (v == result && b->val_bitsize != 0)
-		    {
-		     /* If VAL_BITSIZE != 0 then RESULT is actually a bitfield
-			lvalue whose bit parameters are saved in the fields
-			VAL_BITPOS and VAL_BITSIZE.  */
-		      bitpos = b->val_bitpos;
-		      bitsize = b->val_bitsize;
+		      use_hw_watchpoint = false;
+		      break;
 		    }
 
-		  int length;
-		  if (bitsize != 0)
-		    {
-		      /* Just cover the bytes that make up the bitfield.  */
-		      length = ((bitpos % 8) + bitsize + 7) / 8;
-		    }
-		  else
-		    length = value_type (v)->length ();
+		}
 
-		  CORE_ADDR addr = value_address (v);
+	      gdbarch *arch = value_type (v)->arch ();
 
-		  /* Watchpoints for addresses that are not in the default
-		     address space are currently not supported.  */
-		  if (gdbarch_address_space_id_from_core_address
-			(value_type (v)->arch (), addr)
-		      != ARCH_ADDR_SPACE_ID_DEFAULT)
-		    error (_("Only global memory watchpoints are supported."));
+	      /* If there is a single address range that does not
+		 support hardware watchpoints we need to switch to
+		 software watchpoints.  */
+	      bool all_ranges_covered = true;
+
+	      /* Gather watchable aliases for addresses described
+		 by the value.  */
+	      std::vector<addr_range> watchable_ranges;
+
+	      for (auto range : ranges)
+		{
+		  CORE_ADDR addr = range.addr;
 
 		  if (bitsize != 0)
 		    {
@@ -2150,9 +2191,39 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		      addr += bitpos / 8;
 		    }
 
+		  /* Check if the target supports watchpoints
+		     on a given address.  */
+		  std::vector<addr_range> aliases
+		    = gdbarch_get_watchable_aliases (arch,
+						     b->watchpoint_thread,
+						     b->watchpoint_simd_lane,
+						     {addr, range.size});
+		  if (aliases.empty ())
+		    {
+		      all_ranges_covered = false;
+		      break;
+		    }
+
+		  watchable_ranges.insert (watchable_ranges.end (),
+					   aliases.begin (),
+					   aliases.end ());
+		}
+
+	      if (!all_ranges_covered)
+		{
+		  use_hw_watchpoint = false;
+		  break;
+		}
+
+	      /* Create watchpoint locations for all aliases.  */
+	      for (auto range : watchable_ranges)
+		{
+		  CORE_ADDR addr = range.addr;
+		  size_t size = range.size;
+
 		  if (use_hw_watchpoint)
 		    {
-		      int exact_watchpoint_len = length;
+		      int exact_watchpoint_len = size;
 
 		      if (target_exact_watchpoints
 			  && is_scalar_type_recursive (vtype))
@@ -2168,31 +2239,25 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 			use_hw_watchpoint = false;
 		    }
 
-		  type = hw_write;
+		  enum target_hw_bp_type type = hw_write;
 		  if (b->type == bp_read_watchpoint)
 		    type = hw_read;
 		  else if (b->type == bp_access_watchpoint)
 		    type = hw_access;
 
-		  loc = b->allocate_location ();
+		  bp_location *loc = b->allocate_location ();
+		  bp_location **tmp;
 		  for (tmp = &(b->loc); *tmp != NULL; tmp = &((*tmp)->next))
 		    ;
 		  *tmp = loc;
-		  loc->gdbarch = value_type (v)->arch ();
+		  loc->gdbarch = arch;
 
 		  loc->pspace = frame_pspace;
 		  loc->address
 		    = gdbarch_remove_non_address_bits (loc->gdbarch, addr);
-		  loc->length = length;
+		  loc->length = size;
 		  loc->watchpoint_type = type;
 		}
-	    }
-	  else if (VALUE_LVAL (v) == lval_register
-		   || (VALUE_LVAL (v) != not_lval
-		       && !deprecated_value_modifiable (v)))
-	    {
-	      use_hw_watchpoint = false;
-	      break;
 	    }
 	}
 
@@ -5180,7 +5245,7 @@ watchpoint_check (bpstat *bs)
   /* If this is a local watchpoint, we only want to check if the
      watchpoint frame is in scope if the current thread is the thread
      that was used to create the watchpoint.  */
-  if (!watchpoint_in_thread_scope (b))
+  if (!watchpoint_in_thread_and_simd_lane_scope (b))
     return WP_IGNORE;
 
   if (b->exp_valid_block == NULL)
@@ -10112,6 +10177,44 @@ is_masked_watchpoint (const struct breakpoint *b)
   return dynamic_cast<const masked_watchpoint *> (b) != nullptr;
 }
 
+/* Return the context that a given address is bound to and report an
+   error if the current execution state doesn't provide that context
+   in its totality.  */
+
+static void
+ensure_address_context (struct gdbarch *arch, CORE_ADDR addr,
+			ptid_t &thread_ptid, int &simd_lane)
+{
+  address_scope scope = gdbarch_address_scope (arch, addr);
+
+  if (scope == ADDRESS_SCOPE_LANE
+      || scope == ADDRESS_SCOPE_THREAD)
+    {
+      if (inferior_ptid == null_ptid)
+	error (_("Address %s requires a selected thread"),
+	       paspace_and_addr (arch, addr).c_str ());
+
+      thread_ptid = inferior_ptid;
+
+      if (scope == ADDRESS_SCOPE_LANE)
+	{
+	  int current_simd_lane = inferior_thread ()->current_simd_lane ();
+
+	  if (current_simd_lane == -1)
+	    error (_("Address %s requires a selected SIMD lane"),
+		   paspace_and_addr (arch, addr).c_str ());
+	  simd_lane = current_simd_lane;
+	}
+      else
+	simd_lane = -1;
+    }
+  else
+  {
+    thread_ptid = null_ptid;
+    simd_lane = -1;
+  }
+}
+
 /* accessflag:  hw_write:  watch write, 
 		hw_read:   watch read, 
 		hw_access: watch access (read or write) */
@@ -10271,7 +10374,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     }
 
   value_ref_ptr val;
-  struct frame_id next_frame_id = null_frame_id;
+  eval_context watchpoint_context;
   if (just_location)
     {
       int ret;
@@ -10280,10 +10383,14 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       val = release_value (value_addr (result));
       value_free_to_mark (mark);
 
+      CORE_ADDR addr = value_as_address (val.get ());
+      ensure_address_context (value_type (val.get ())->arch (), addr,
+			      watchpoint_context.thread_ptid,
+			      watchpoint_context.simd_lane);
+
       if (use_mask)
 	{
-	  ret = target_masked_watch_num_registers (value_as_address (val.get ()),
-						   mask);
+	  ret = target_masked_watch_num_registers (addr, mask);
 	  if (ret == -1)
 	    error (_("This target does not support masked watchpoints."));
 	  else if (ret == -2)
@@ -10295,11 +10402,37 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       /* Look at each value on the value chain for a frame context.  */
       gdb_assert (!val_chain.empty ());
       for (const value_ref_ptr &iter : val_chain)
-	if (frame_id_p (VALUE_CONTEXT (iter.get ()).next_frame_id))
-	  {
-	    next_frame_id = VALUE_CONTEXT (iter.get ()).next_frame_id;
+	{
+	  if (frame_id_p (VALUE_CONTEXT (iter.get ()).next_frame_id))
+	    watchpoint_context.next_frame_id = VALUE_CONTEXT (iter.get ()).next_frame_id;
+
+	  ptid_t thread_ptid = VALUE_CONTEXT (iter.get ()).thread_ptid;
+	  int simd_lane = VALUE_CONTEXT (iter.get ()).simd_lane;
+
+	  /* lval_computed values produced from DWARF always have their
+	     context set when we get here.  OTOH, for simplicity
+	     because they can be produced from several different
+	     sources, lval_memory values might not have a context set,
+	     and so it needs to be reconfirmed now.  */
+	  if (thread_ptid == null_ptid
+	      && VALUE_LVAL (iter.get ()) == lval_memory)
+	    ensure_address_context (value_type (iter.get ())->arch (),
+				    value_address (iter.get ()),
+				    thread_ptid, simd_lane);
+
+	  if (thread_ptid != null_ptid)
+	    watchpoint_context.thread_ptid = thread_ptid;
+
+	  if (simd_lane != -1)
+	    watchpoint_context.simd_lane = simd_lane;
+
+	  /* If the context is complete, there is no need to continue
+	     looking through the value chain.  */
+	  if (frame_id_p (watchpoint_context.next_frame_id)
+	      && watchpoint_context.thread_ptid != null_ptid
+	      && watchpoint_context.simd_lane != -1)
 	    break;
-	  }
+	}
 
       if (val_as_value != nullptr)
 	val = release_value (val_as_value);
@@ -10327,9 +10460,9 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     error (_("Junk at end of command."));
 
   frame_info_ptr wp_frame = nullptr;
-  if (frame_id_p (next_frame_id))
+  if (frame_id_p (watchpoint_context.next_frame_id))
     {
-      wp_frame = frame_find_by_id (next_frame_id);
+      wp_frame = frame_find_by_id (watchpoint_context.next_frame_id);
       if (wp_frame == nullptr)
 	internal_error (_("frame id without a valid frame"));
       wp_frame = get_prev_frame_always (wp_frame);
@@ -10436,16 +10569,9 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   else
     w->cond_string = 0;
 
-  if (frame_id_p (watchpoint_frame))
-    {
-      w->watchpoint_frame = watchpoint_frame;
-      w->watchpoint_thread = inferior_ptid;
-    }
-  else
-    {
-      w->watchpoint_frame = null_frame_id;
-      w->watchpoint_thread = null_ptid;
-    }
+  w->watchpoint_frame = watchpoint_frame;
+  w->watchpoint_thread = watchpoint_context.thread_ptid;
+  w->watchpoint_simd_lane = watchpoint_context.simd_lane;
 
   if (scope_breakpoint != NULL)
     {
