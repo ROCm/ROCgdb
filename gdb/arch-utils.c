@@ -1184,6 +1184,15 @@ default_get_return_buf_addr (struct type *val_type, frame_info_ptr cur_frame)
   return 0;
 }
 
+/* See arch-utils.h.  */
+std::vector<addr_range>
+default_get_watchable_aliases (struct gdbarch *gdbarch,
+			       ptid_t ptid, int simd_lane,
+			       addr_range range)
+{
+  return {range};
+}
+
 /* Non-zero if we want to trace architecture code.  */
 
 #ifndef GDBARCH_DEBUG

@@ -957,6 +957,30 @@ Return the address's scope.
 
 Method(
     comment="""
+Return preferred watchpoint locations for the given to-be-watched
+address range.
+
+For architectures that support address spaces, watchpoints might not
+be supported for all address spaces.  For an address range in such
+address space, there might be one or multiple aliasing address ranges
+in another address space which does support watchpoints.  Each range in
+that other address space, covers a portion of the original range.
+
+Return a vector of aliasing address ranges that support watchpoints.
+""",
+    type="std::vector<addr_range>",
+    name="get_watchable_aliases",
+    params=[
+        ("ptid_t", "ptid"),
+        ("int", "simd_lane"),
+        ("addr_range", "range"),
+    ],
+    predefault="default_get_watchable_aliases",
+    invalid=False,
+)
+
+Method(
+    comment="""
 Return the return-value convention that will be used by FUNCTION
 to return a value of type VALTYPE.  FUNCTION may be NULL in which
 case the return convention is computed based only on VALTYPE.

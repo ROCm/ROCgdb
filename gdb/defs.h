@@ -656,6 +656,20 @@ typedef uint64_t arch_addr_space_id;
    specified or the address spaces are not supported.  */
 constexpr arch_addr_space_id ARCH_ADDR_SPACE_ID_DEFAULT = 0;
 
+/* Address range.  */
+struct addr_range
+{
+  addr_range (CORE_ADDR addr, size_t size)
+    : addr (addr), size (size)
+  {}
+
+  /* Starting address.  */
+  CORE_ADDR addr;
+
+  /* Size.  */
+  size_t size;
+};
+
 /* Architecture address space descriptor.  */
 
 struct arch_addr_space

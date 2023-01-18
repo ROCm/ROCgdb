@@ -124,6 +124,7 @@ struct gdbarch
   gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address = nullptr;
   gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id = nullptr;
   gdbarch_address_scope_ftype *address_scope = nullptr;
+  gdbarch_get_watchable_aliases_ftype *get_watchable_aliases = default_get_watchable_aliases;
   gdbarch_return_value_ftype *return_value = nullptr;
   gdbarch_get_return_buf_addr_ftype *get_return_buf_addr = default_get_return_buf_addr;
   gdbarch_return_in_first_hidden_param_p_ftype *return_in_first_hidden_param_p = default_return_in_first_hidden_param_p;
@@ -392,6 +393,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
     gdbarch->dwarf_address_space_to_address_space_id = default_dwarf_address_space_to_address_space_id;
   if (gdbarch->address_scope == 0)
     gdbarch->address_scope = default_address_scope;
+  /* Skip verify of get_watchable_aliases, invalid_p == 0 */
   /* Skip verify of return_value, has predicate.  */
   /* Skip verify of get_return_buf_addr, invalid_p == 0 */
   /* Skip verify of return_in_first_hidden_param_p, invalid_p == 0 */
@@ -832,6 +834,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: address_scope = <%s>\n",
 	      host_address_to_string (gdbarch->address_scope));
+  gdb_printf (file,
+	      "gdbarch_dump: get_watchable_aliases = <%s>\n",
+	      host_address_to_string (gdbarch->get_watchable_aliases));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_return_value_p() = %d\n",
 	      gdbarch_return_value_p (gdbarch));
@@ -2789,6 +2794,23 @@ set_gdbarch_address_scope (struct gdbarch *gdbarch,
 			   gdbarch_address_scope_ftype address_scope)
 {
   gdbarch->address_scope = address_scope;
+}
+
+std::vector<addr_range>
+gdbarch_get_watchable_aliases (struct gdbarch *gdbarch, ptid_t ptid, int simd_lane, addr_range range)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->get_watchable_aliases != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_get_watchable_aliases called\n");
+  return gdbarch->get_watchable_aliases (gdbarch, ptid, simd_lane, range);
+}
+
+void
+set_gdbarch_get_watchable_aliases (struct gdbarch *gdbarch,
+				   gdbarch_get_watchable_aliases_ftype get_watchable_aliases)
+{
+  gdbarch->get_watchable_aliases = get_watchable_aliases;
 }
 
 bool

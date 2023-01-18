@@ -491,6 +491,21 @@ typedef enum address_scope (gdbarch_address_scope_ftype) (struct gdbarch *gdbarc
 extern enum address_scope gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address);
 extern void set_gdbarch_address_scope (struct gdbarch *gdbarch, gdbarch_address_scope_ftype *address_scope);
 
+/* Return preferred watchpoint locations for the given to-be-watched
+   address range.
+
+   For architectures that support address spaces, watchpoints might not
+   be supported for all address spaces.  For an address range in such
+   address space, there might be one or multiple aliasing address ranges
+   in another address space which does support watchpoints.  Each range in
+   that other address space, covers a portion of the original range.
+
+   Return a vector of aliasing address ranges that support watchpoints. */
+
+typedef std::vector<addr_range> (gdbarch_get_watchable_aliases_ftype) (struct gdbarch *gdbarch, ptid_t ptid, int simd_lane, addr_range range);
+extern std::vector<addr_range> gdbarch_get_watchable_aliases (struct gdbarch *gdbarch, ptid_t ptid, int simd_lane, addr_range range);
+extern void set_gdbarch_get_watchable_aliases (struct gdbarch *gdbarch, gdbarch_get_watchable_aliases_ftype *get_watchable_aliases);
+
 /* Return the return-value convention that will be used by FUNCTION
    to return a value of type VALTYPE.  FUNCTION may be NULL in which
    case the return convention is computed based only on VALTYPE.
