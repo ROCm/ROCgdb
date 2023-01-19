@@ -337,8 +337,9 @@ proc info_threads_get_wave_count { inf_num } {
 
 proc hip_device_supports_debug_multi_process {} {
     set target [hcc_amdgpu_target]
-    set supported_targets {gfx90a}
-    return [expr [lsearch -exact $supported_targets $target] >= 0]
+    set unsupported_targets \
+	{gfx900 gfx906 gfx908 gfx1010 gfx1011 gfx1012 gfx1030 gfx1031 gfx1032}
+    return [expr [lsearch -exact $unsupported_targets $target] == -1]
 }
 
 # Return true if the current device's version is less than VERSION.
