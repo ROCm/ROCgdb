@@ -88,7 +88,7 @@ lane_pc_test (unsigned gid, const int *in, struct test_struct *out)
     {
       elem = const_array[gid] + 1;		/* if_1_then */
       elem = const_array[gid] + 2;		/* if_1_then_2 */
-    }
+    }						/* if_1_then_3 */
   else
     {
       elem = const_array[gid] + 3;		/* if_1_else */

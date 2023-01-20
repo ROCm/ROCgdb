@@ -203,6 +203,8 @@ proc test_step {branch} {
 		"then lane active at if_1_then"
 
 	    do_step " if_1_then_2 "
+	    do_step " if_1_then_3 "
+
 	    do_step " if_2_cond "
 	    do_step " if_2_then "
 
@@ -312,6 +314,7 @@ proc test_next {branch} {
 		"then lane active at if_1_then"
 
 	    do_next " if_1_then_2 "
+	    do_next " if_1_then_3 "
 	    do_next " if_2_cond "
 	    do_next " if_2_then "
 	} else {
