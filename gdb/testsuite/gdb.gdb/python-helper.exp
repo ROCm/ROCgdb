@@ -24,6 +24,8 @@ if [target_info exists gdb,noinferiorio] {
     return
 }
 
+require allow_python_tests
+
 standard_testfile .cc
 
 if { [build_executable "failed to build" $testfile $srcfile {debug c++}] } {
@@ -37,14 +39,6 @@ if { ![file readable $py_helper_script] \
     untested "failed to find gdb-gdb.py helper script"
     return
 }
-
-# Start GDB and check that we have python support.
-gdb_start
-if { [skip_python_tests] } {
-    untested "skipped gdb-gdb.py tests due to lack of python support"
-    return
-}
-gdb_exit
 
 # The main test.  This is called by the self-test framework once GDB
 # has been started on a copy of itself.
@@ -92,13 +86,13 @@ proc test_python_helper {} {
     # stop is being detected from the inner GDB, hence the use of -i
     # here.
     gdb_test_multiple "continue" "start inner gdb" {
-	-i "$inferior_spawn_id"
 	-re "received signal SIGSEGV.* in GC_.*$outer_prompt_re" {
 	    # Some versions of the GC used by Guile cause a SEGV
 	    # during stack probing.  Ignore this and carry on.
 	    send_gdb "continue\n"
 	    exp_continue
 	}
+	-i "$inferior_spawn_id"
 	-re "\r\n$gdb_prompt $" {
 	    pass $gdb_test_name
 	}

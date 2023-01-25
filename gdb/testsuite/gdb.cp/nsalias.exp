@@ -19,13 +19,7 @@
 
 load_lib dwarf.exp
 
-if {![dwarf2_support]} {
-    return 0
-}
-
-if {[skip_cplus_tests]} {
-    return
-}
+require dwarf2_support allow_cplus_tests
 
 standard_testfile .cc nsalias-dw.S
 

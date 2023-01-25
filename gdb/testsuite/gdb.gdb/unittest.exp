@@ -15,14 +15,11 @@
 
 # Do not run if gdb debug is enabled as maintenance output will be
 # redirected to the log files.
-if [gdb_debug_enabled] {
-    untested "debug is enabled"
-    return 0
-}
+require !gdb_debug_enabled
 
 load_lib completion-support.exp
 
-set do_xml_test [expr ![gdb_skip_xml_test]]
+set do_xml_test [allow_xml_test]
 
 standard_testfile
 

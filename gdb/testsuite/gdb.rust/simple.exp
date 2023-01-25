@@ -16,9 +16,7 @@
 # Test expression parsing and evaluation that requires Rust compiler.
 
 load_lib rust-support.exp
-if {[skip_rust_tests]} {
-    return
-}
+require allow_rust_tests
 
 standard_testfile .rs
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug rust}]} {
@@ -388,7 +386,7 @@ gdb_test "print empty_enum_value.0" ""
 gdb_test "print empty_enum_value.something" ""
 
 load_lib gdb-python.exp
-if {[skip_python_tests]} {
+if {![allow_python_tests]} {
     return
 }
 

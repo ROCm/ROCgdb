@@ -17,9 +17,9 @@
 
 load_lib "ada.exp"
 
-if { [skip_ada_tests] } { return -1 }
+require allow_ada_tests
 
-if { [skip_hw_watchpoint_tests] } { return -1 }
+require allow_hw_watchpoint_tests
 
 standard_ada_testfile foo
 

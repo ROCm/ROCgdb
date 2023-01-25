@@ -30,13 +30,14 @@ AM_CFLAGS_%C%_sem.o = -Wno-error
 AM_CFLAGS_%C%_sim_if.o = -Wno-error
 AM_CFLAGS_%C%_traps.o = -Wno-error
 
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
 	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
 	$(patsubst %,%D%/dv-%.o,$(%C%_SIM_EXTRA_HW_DEVICES)) \
-	%D%/modules.o \
 	\
 	%D%/cgen-run.o \
 	%D%/cgen-scache.o \
@@ -70,6 +71,9 @@ $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
 
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
+
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po
 
@@ -82,7 +86,6 @@ noinst_LIBRARIES += %D%/libsim.a
 noinst_PROGRAMS += %D%/run
 
 %C%_SIM_EXTRA_HW_DEVICES = m32r_cache m32r_uart
-AM_MAKEFLAGS += %C%_SIM_EXTRA_HW_DEVICES="$(%C%_SIM_EXTRA_HW_DEVICES)"
 
 ## List all generated headers to help Automake dependency tracking.
 BUILT_SOURCES += \
@@ -97,8 +100,7 @@ BUILT_SOURCES += \
 	%D%/mloop2.c \
 	%D%/stamp-mloop-2
 
-## This makes sure build tools are available before building the arch-subdirs.
-SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+## Generating modules.c requires all sources to scan.
 %D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 ## FIXME: Use of `mono' is wip.
@@ -113,7 +115,7 @@ SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
 	$(AM_V_at)touch $@
 
 ## FIXME: Use of `mono' is wip.
-%D%/mloopx.c %D%/engx.h: %D%/stamp-mloop ; @true
+%D%/mloopx.c %D%/engx.h: %D%/stamp-mloop-x ; @true
 %D%/stamp-mloop-x: $(srccom)/genmloop.sh %D%/mloop.in
 	$(AM_V_GEN)$(SHELL) $(srccom)/genmloop.sh -shell $(SHELL) \
 		-mono -no-fast -pbb -parallel-write -switch semx-switch.c \
@@ -124,7 +126,7 @@ SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
 	$(AM_V_at)touch $@
 
 ## FIXME: Use of `mono' is wip.
-%D%/mloop2.c %D%/eng2.h: %D%/stamp-mloop ; @true
+%D%/mloop2.c %D%/eng2.h: %D%/stamp-mloop-2 ; @true
 %D%/stamp-mloop-2: $(srccom)/genmloop.sh %D%/mloop.in
 	$(AM_V_GEN)$(SHELL) $(srccom)/genmloop.sh -shell $(SHELL) \
 		-mono -no-fast -pbb -parallel-write -switch sem2-switch.c \

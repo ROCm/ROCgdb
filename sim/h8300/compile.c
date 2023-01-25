@@ -26,11 +26,11 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
+#include <sys/stat.h>
 
 #include "bfd.h"
 #include "sim-main.h"
 #include "sim/sim-h8300.h"
-#include "sys/stat.h"
 #include "sys/types.h"
 #include "sim-options.h"
 #include "sim-signal.h"
@@ -4489,7 +4489,7 @@ h8300_reg_fetch (SIM_CPU *cpu, int rn, void *buf, int length)
 }
 
 void
-sim_info (SIM_DESC sd, int verbose)
+sim_info (SIM_DESC sd, bool verbose)
 {
   sim_cpu *cpu = STATE_CPU (sd, 0);
   const struct h8300_sim_state *state = H8300_SIM_STATE (sd);

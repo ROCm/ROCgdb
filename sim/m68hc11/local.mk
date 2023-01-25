@@ -27,9 +27,11 @@ AM_CPPFLAGS_%C% = \
 	-DWITH_TARGET_ADDRESS_BITSIZE=32 \
 	-DWITH_TARGET_WORD_MSB=31
 
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	%D%/interp.o \
 	%D%/m68hc11int.o \
 	%D%/m68hc12int.o \
@@ -39,11 +41,13 @@ AM_CPPFLAGS_%C% = \
 	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
 	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
 	$(patsubst %,%D%/dv-%.o,$(%C%_SIM_EXTRA_HW_DEVICES)) \
-	%D%/modules.o \
 	%D%/sim-resume.o
 $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
+
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
 
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po
@@ -57,15 +61,13 @@ noinst_LIBRARIES += %D%/libsim.a
 noinst_PROGRAMS += %D%/run
 
 %C%_SIM_EXTRA_HW_DEVICES = m68hc11 m68hc11sio m68hc11eepr m68hc11tim m68hc11spi nvram
-AM_MAKEFLAGS += %C%_SIM_EXTRA_HW_DEVICES="$(%C%_SIM_EXTRA_HW_DEVICES)"
 
 %C%_BUILD_OUTPUTS = \
 	%D%/gencode$(EXEEXT) \
 	%D%/m68hc11int.c \
 	%D%/m68hc12int.c
 
-## This makes sure build tools are available before building the arch-subdirs.
-SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+## Generating modules.c requires all sources to scan.
 %D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 %C%_gencode_SOURCES = %D%/gencode.c

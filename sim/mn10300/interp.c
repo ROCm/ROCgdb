@@ -1,15 +1,16 @@
 /* This must come before any other includes.  */
 #include "defs.h"
 
-#include <signal.h>
-
 #include "sim-main.h"
 #include "sim-options.h"
 #include "sim-hw.h"
 
 #include "bfd.h"
 #include "sim-assert.h"
+#include "sim-fpu.h"
 #include "sim-signal.h"
+
+#include "mn10300-sim.h"
 
 #include <stdlib.h>
 #include <string.h>

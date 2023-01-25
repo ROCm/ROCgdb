@@ -27,13 +27,13 @@ srcroot = $(srcdir)/..
 SUBDIRS = @subdirs@
 
 SIM_PRIMARY_TARGET = @SIM_PRIMARY_TARGET@
-AM_MAKEFLAGS =
 
 ## We don't set some of these vars here, but we need to define them so they may
 ## be used consistently in local.mk files we include below.
 pkginclude_HEADERS =
 check_PROGRAMS =
 noinst_PROGRAMS =
+EXTRA_LIBRARIES =
 noinst_LIBRARIES =
 EXTRA_PROGRAMS =
 BUILT_SOURCES =
@@ -102,9 +102,7 @@ SIM_COMPILE = \
 	$(am__mv) $(SIM_DEPBASE).Tpo $(SIM_DEPBASE).Po
 
 include common/local.mk
-if SIM_ENABLE_IGEN
 include igen/local.mk
-endif
 include testsuite/local.mk
 
 ## Arch includes must come after common/local.mk.

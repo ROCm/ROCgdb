@@ -16,7 +16,6 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Parts of the common/ sim code that have been unified.
-## Most still lives in common/Make-common.in.
 
 AM_CPPFLAGS += \
 	-I$(srcdir)/%D% \
@@ -24,18 +23,15 @@ AM_CPPFLAGS += \
 AM_CPPFLAGS_%C% = -DSIM_COMMON_BUILD
 AM_CPPFLAGS_FOR_BUILD += -I$(srcdir)/%D%
 
-## This makes sure common parts are available before building the arch-subdirs
-## which will refer to these.
-SIM_ALL_RECURSIVE_DEPS += \
-	%D%/libcommon.a
-
 ## NB: libcommon.a isn't used directly by ports.  We need a target for common
 ## objects to be a part of, and ports use the individual objects directly.
+## We can delete this once ppc/Makefile.in is merged into ppc/local.mk.
 noinst_LIBRARIES += %D%/libcommon.a
 %C%_libcommon_a_SOURCES = \
 	%D%/callback.c \
 	%D%/portability.c \
 	%D%/sim-load.c \
+	%D%/sim-signal.c \
 	%D%/syscall.c \
 	%D%/target-newlib-errno.c \
 	%D%/target-newlib-open.c \
@@ -100,14 +96,11 @@ SIM_NEW_COMMON_OBJS = \
 	sim-profile.o \
 	sim-reason.o \
 	sim-reg.o \
-	sim-signal.o \
 	sim-stop.o \
 	sim-syscall.o \
 	sim-trace.o \
 	sim-utils.o \
 	sim-watch.o
-
-AM_MAKEFLAGS += SIM_NEW_COMMON_OBJS_="$(SIM_NEW_COMMON_OBJS)"
 
 SIM_HW_DEVICES = cfi core pal glue
 
@@ -115,8 +108,6 @@ if SIM_ENABLE_HW
 SIM_NEW_COMMON_OBJS += \
 	$(SIM_COMMON_HW_OBJS) \
 	$(SIM_HW_SOCKSER)
-
-AM_MAKEFLAGS += SIM_HW_DEVICES_="$(SIM_HW_DEVICES)"
 endif
 
 # FIXME This is one very simple-minded way of generating the file hw-config.h.
@@ -136,9 +127,7 @@ endif
 	touch $@
 .PRECIOUS: %/stamp-hw
 
-%C%_HW_CONFIG_H_TARGETS = $(patsubst %,%/hw-config.h,$(SIM_ENABLED_ARCHES))
-MOSTLYCLEANFILES += $(%C%_HW_CONFIG_H_TARGETS) $(patsubst %,%/stamp-hw,$(SIM_ENABLED_ARCHES))
-SIM_ALL_RECURSIVE_DEPS += $(%C%_HW_CONFIG_H_TARGETS)
+MOSTLYCLEANFILES += $(SIM_ENABLED_ARCHES:%=%/hw-config.h) $(SIM_ENABLED_ARCHES:%=%/stamp-hw)
 
 ## See sim_pre_argv_init and sim_module_install in sim-module.c for more details.
 ## TODO: Switch this to xxx_SOURCES once projects build objects in local.mk.
@@ -171,10 +160,7 @@ GEN_MODULES_C_SRCS = \
 .PRECIOUS: %/stamp-modules
 
 ## NB: The ppc port doesn't currently utilize the modules API, so skip it.
-%C%_GEN_MODULES_C_TARGETS = $(patsubst %,%/modules.c,$(filter-out ppc,$(SIM_ENABLED_ARCHES)))
-MOSTLYCLEANFILES += $(%C%_GEN_MODULES_C_TARGETS) $(patsubst %,%/stamp-modules,$(SIM_ENABLED_ARCHES))
-## TODO: Drop this once each port's local.mk:libsim.a depends on it themself.
-SIM_ALL_RECURSIVE_DEPS += $(%C%_GEN_MODULES_C_TARGETS)
+MOSTLYCLEANFILES += $(SIM_ENABLED_ARCHES:%=%/modules.c) $(SIM_ENABLED_ARCHES:%=%/stamp-modules)
 
 LIBIBERTY_LIB = ../libiberty/libiberty.a
 BFD_LIB = ../bfd/libbfd.la

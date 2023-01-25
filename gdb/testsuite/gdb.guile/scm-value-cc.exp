@@ -18,16 +18,13 @@
 
 load_lib gdb-guile.exp
 
-if { [skip_cplus_tests] } { continue }
+require allow_cplus_tests allow_guile_tests
 
 standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
     return
 }
-
-# Skip all tests if Guile scripting is not enabled.
-if { [skip_guile_tests] } { continue }
 
 if ![gdb_guile_runto_main] {
    return

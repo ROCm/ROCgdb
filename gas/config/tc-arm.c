@@ -8360,7 +8360,7 @@ static void
 do_scalar_fp16_v82_encode (void)
 {
   if (inst.cond < COND_ALWAYS)
-    as_warn (_("ARMv8.2 scalar fp16 instruction cannot be conditional,"
+    as_warn (_("scalar fp16 instruction cannot be conditional,"
 	       " the behaviour is UNPREDICTABLE"));
   constraint (!ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_fp16),
 	      _(BAD_FP16));
@@ -19187,16 +19187,6 @@ do_neon_cvt_1 (enum neon_cvt_mode mode)
       return;
     }
 
-  if ((rs == NS_FD || rs == NS_QQI) && mode == neon_cvt_mode_n
-      && ARM_CPU_HAS_FEATURE (cpu_variant, mve_ext))
-    {
-      /* We are dealing with vcvt with the 'ne' condition.  */
-      inst.cond = 0x1;
-      inst.instruction = N_MNEM_vcvt;
-      do_neon_cvt_1 (neon_cvt_mode_z);
-      return;
-    }
-
   /* VFP rather than Neon conversions.  */
   if (flavour >= neon_cvt_flavour_first_fp)
     {
@@ -20605,7 +20595,7 @@ do_neon_movhf (void)
     {
       if (thumb_mode)
 	{
-	  as_warn (_("ARMv8.2 scalar fp16 instruction cannot be conditional,"
+	  as_warn (_("scalar fp16 instruction cannot be conditional,"
 		     " the behaviour is UNPREDICTABLE"));
 	}
       else
@@ -22792,6 +22782,23 @@ opcode_lookup (char **str)
      cond = (const struct asm_cond *) str_hash_find_n (arm_vcond_hsh, affix, 1);
      opcode = (const struct asm_opcode *) str_hash_find_n (arm_ops_hsh, base,
 							   affix - base);
+
+     /* A known edge case is a conflict between an 'e' as a suffix for an
+	Else of a VPT predication block and an 'ne' suffix for an IT block.
+	If we detect that edge case here and we are not in a VPT VECTOR_PRED
+	block, reset opcode and cond, so that the 'ne' case can be detected
+	in the next section for 2-character conditional suffixes.
+	An example where this is a problem is between the MVE 'vcvtn' and the
+	non-MVE 'vcvt' instructions. */
+     if (cond && opcode
+	 && cond->template_name[0] == 'e'
+	 && opcode->template_name[affix - base - 1] == 'n'
+	 && now_pred.type != VECTOR_PRED)
+       {
+	 opcode = NULL;
+	 cond = NULL;
+       }
+
      /* If this opcode can not be vector predicated then don't accept it with a
 	vector predication code.  */
      if (opcode && !opcode->mayBeVecPred)

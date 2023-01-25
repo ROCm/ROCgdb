@@ -53,9 +53,11 @@ if SIM_MIPS_GEN_MODE_MULTI
 	%D%/itable.o \
 	%D%/multi-run.o
 endif
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	%D%/interp.o \
 	$(%C%_GEN_OBJ) \
 	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
@@ -64,7 +66,6 @@ endif
 	%D%/cp1.o \
 	%D%/dsp.o \
 	%D%/mdmx.o \
-	%D%/modules.o \
 	%D%/sim-main.o \
 	%D%/sim-resume.o
 ## Workaround Automake bug where $(SIM_MIPS_MULTI_OBJ) isn't copied from LIBADD
@@ -73,6 +74,9 @@ EXTRA_mips_libsim_a_DEPENDENCIES = $(SIM_MIPS_MULTI_OBJ)
 $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
+
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
 
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po
@@ -86,7 +90,6 @@ noinst_LIBRARIES += %D%/libsim.a
 noinst_PROGRAMS += %D%/run
 
 %C%_SIM_EXTRA_HW_DEVICES = tx3904cpu tx3904irc tx3904tmr tx3904sio
-AM_MAKEFLAGS += %C%_SIM_EXTRA_HW_DEVICES="$(%C%_SIM_EXTRA_HW_DEVICES)"
 
 ## List all generated headers to help Automake dependency tracking.
 BUILT_SOURCES += %D%/itable.h
@@ -155,8 +158,7 @@ if SIM_MIPS_GEN_MODE_MULTI
 	%D%/stamp-gen-mode-multi-run
 endif
 
-## This makes sure build tools are available before building the arch-subdirs.
-SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+## Generating modules.c requires all sources to scan.
 %D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 $(%C%_BUILT_SRC_FROM_IGEN_ITABLE): %D%/stamp-igen-itable

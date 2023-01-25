@@ -25,19 +25,23 @@ AM_CPPFLAGS_%C% = $(READLINE_CFLAGS)
 ## behaviour of UART interrupt routines ...
 AM_CPPFLAGS_%C% += -DFAST_UART
 
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	%D%/erc32.o \
 	%D%/exec.o \
 	%D%/float.o \
 	%D%/func.o \
 	%D%/help.o \
-	%D%/interf.o \
-	%D%/modules.o
+	%D%/interf.o
 $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
+
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
 
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po

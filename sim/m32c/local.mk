@@ -18,16 +18,17 @@
 
 AM_CPPFLAGS_%C% = -DTIMER_A
 
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	%D%/gdb-if.o \
 	%D%/int.o \
 	%D%/load.o \
 	%D%/m32c.o \
 	%D%/mem.o \
 	%D%/misc.o \
-	%D%/modules.o \
 	%D%/r8c.o \
 	%D%/reg.o \
 	%D%/srcdest.o \
@@ -36,6 +37,9 @@ AM_CPPFLAGS_%C% = -DTIMER_A
 $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
+
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
 
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po
@@ -53,8 +57,7 @@ noinst_PROGRAMS += %D%/run
 	%D%/m32c.c \
 	%D%/r8c.c
 
-## This makes sure build tools are available before building the arch-subdirs.
-SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+## Generating modules.c requires all sources to scan.
 %D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 %C%_opc2c_SOURCES = %D%/opc2c.c

@@ -18,20 +18,24 @@
 
 AM_CPPFLAGS_%C% = -DMODET
 
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	%D%/wrapper.o \
 	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
 	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
 	%D%/armemu.o \
 	%D%/armemu32.o %D%/arminit.o %D%/armos.o %D%/armsupp.o \
 	%D%/armvirt.o %D%/thumbemu.o \
-	%D%/armcopro.o %D%/maverick.o %D%/iwmmxt.o \
-	%D%/modules.o
+	%D%/armcopro.o %D%/maverick.o %D%/iwmmxt.o
 $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
+
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
 
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po

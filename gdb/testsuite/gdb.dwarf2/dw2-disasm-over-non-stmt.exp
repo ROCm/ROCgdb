@@ -25,14 +25,10 @@
 load_lib dwarf.exp
 
 # This test can only be run on targets which support DWARF-2 and use gas.
-if {![dwarf2_support]} {
-    return 0
-}
+require dwarf2_support
 
 # The .c files use __attribute__.
-if ![is_c_compiler_gcc] {
-    return 0
-}
+require is_c_compiler_gcc
 
 # Reuse many of the test source files from dw2-inline-header-1.exp.
 standard_testfile dw2-inline-header-lbls.c dw2-inline-header.S \

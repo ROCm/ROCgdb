@@ -16,16 +16,13 @@
 # This file is part of the GDB testsuite.  It tests the mechanism
 # exposing values to Python.
 
-if { [skip_cplus_tests] } { continue }
+require allow_cplus_tests allow_python_tests
 
 standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
     return -1
 }
-
-# Skip all tests if Python scripting is not enabled.
-if { [skip_python_tests] } { continue }
 
 if ![runto_main] {
    return -1
@@ -83,7 +80,8 @@ gdb_test "python print(b_td\[b_fields\[0\]\].type.target())" "A" \
 gdb_test "python print(b_td\[b_fields\[0\]\]\['a'\])" "100" \
   "b_td.A::a via field"
 
-gdb_test "python print(u\[u_fields\[0\]\])" "99.*" "u's first field via field"
+gdb_test "python print(hex(u\[u_fields\[0\]\]))" "0x63636363.*" \
+    "u's first field via field"
 gdb_test "python print(u\[u_fields\[1\]\])" "99.*" "u's second field via field"
 
 gdb_test "python print(len(x_fields))" "2" "number for fields in u"

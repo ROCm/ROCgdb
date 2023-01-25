@@ -7172,16 +7172,6 @@ dwarf2_build_psymtabs_hard (dwarf2_per_objfile *per_objfile)
     print_tu_stats (per_objfile);
 
   indexes.push_back (index_storage.release ());
-  /* Remove any NULL entries.  This might happen if parallel-for
-     decides to throttle the number of threads that were used.  */
-  indexes.erase
-    (std::remove_if (indexes.begin (),
-		     indexes.end (),
-		     [] (const std::unique_ptr<cooked_index> &entry)
-		     {
-		       return entry == nullptr;
-		     }),
-     indexes.end ());
   indexes.shrink_to_fit ();
 
   cooked_index_vector *vec = new cooked_index_vector (std::move (indexes));
@@ -18769,8 +18759,9 @@ cooked_index_functions::expand_symtabs_matching
     {
       std::vector<gdb::string_view> name_vec
 	= lookup_name_without_params.split_name (lang);
+      std::string last_name = gdb::to_string (name_vec.back ());
 
-      for (const cooked_index_entry *entry : table->find (name_vec.back (),
+      for (const cooked_index_entry *entry : table->find (last_name,
 							  completing))
 	{
 	  QUIT;

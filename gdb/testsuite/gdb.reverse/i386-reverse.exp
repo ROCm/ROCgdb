@@ -19,15 +19,7 @@
 # This test tests some i386 general instructions for reverse execution.
 #
 
-if ![supports_reverse] {
-    return
-}
-
-
-if {![is_x86_like_target]} {
-    verbose "Skipping i386 reverse tests."
-    return
-}
+require supports_reverse is_x86_like_target
 
 standard_testfile
 

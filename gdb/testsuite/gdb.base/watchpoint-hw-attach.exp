@@ -16,13 +16,9 @@
 # watchpoint-hw-attach.exp -- Test if hardware watchpoints are used
 # when attaching to a target.
 
-if {[skip_hw_watchpoint_tests]} {
-    return 0
-}
+require allow_hw_watchpoint_tests
 
-if {![can_spawn_for_attach]} {
-    return 0
-}
+require can_spawn_for_attach
 
 standard_testfile
 

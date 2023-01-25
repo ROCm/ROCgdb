@@ -16,12 +16,13 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
 	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
-	%D%/modules.o \
 	\
 	%D%/cgen-run.o \
 	%D%/cgen-scache.o \
@@ -41,6 +42,9 @@ $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
 
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
+
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po
 
@@ -58,8 +62,7 @@ BUILT_SOURCES += %D%/eng.h
 	%D%/mloop.c \
 	%D%/stamp-mloop
 
-## This makes sure build tools are available before building the arch-subdirs.
-SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+## Generating modules.c requires all sources to scan.
 %D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 ## FIXME: Use of `mono' is wip.

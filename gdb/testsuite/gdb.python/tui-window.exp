@@ -16,6 +16,7 @@
 # Test a TUI window implemented in Python.
 
 load_lib gdb-python.exp
+require allow_python_tests allow_tui_tests
 tuiterm_env
 
 # This test doesn't care about the inferior.
@@ -26,14 +27,8 @@ if {[build_executable "failed to prepare" ${testfile} ${srcfile}] == -1} {
 }
 
 clean_restart
-if {[skip_tui_tests]} {
-    return
-}
 
 Term::clean_restart 24 80 $testfile
-
-# Skip all tests if Python scripting is not enabled.
-if { [skip_python_tests] } { continue }
 
 set remote_python_file [gdb_remote_download host \
 			    ${srcdir}/${subdir}/${testfile}.py]

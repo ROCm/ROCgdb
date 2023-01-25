@@ -25,9 +25,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 # ifndef MAP_FAILED
@@ -40,9 +38,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
 #include <time.h>
 #include <sys/time.h>
 #ifdef HAVE_UTIME_H
@@ -2276,7 +2272,7 @@ sim_stop_reason (SIM_DESC sd, enum sim_stop *reason, int *sigrc)
 }
 
 void
-sim_info (SIM_DESC sd, int verbose)
+sim_info (SIM_DESC sd, bool verbose)
 {
   double timetaken = 
     (double) saved_state.asregs.ticks / (double) now_persec ();

@@ -30,10 +30,7 @@
 #   are using all-stop, or running, if we are using non-stop.
 
 # Do not run if gdb debug is enabled as it doesn't work for separate-mi-tty.
-if [gdb_debug_enabled] {
-    untested "debug is enabled"
-    return 0
-}
+require !gdb_debug_enabled
 
 load_lib mi-support.exp
 
@@ -41,10 +38,7 @@ standard_testfile
 
 # Multiple inferiors are needed, therefore only native gdb and extended
 # gdbserver modes are supported.
-if [use_gdb_stub] {
-    untested "using gdb stub"
-    return
-}
+require !use_gdb_stub
 
 set compile_options "debug pthreads"
 if {[build_executable $testfile.exp $testfile ${srcfile} ${compile_options}] == -1} {

@@ -95,8 +95,14 @@ static void val_print_type_code_flags (struct type *type,
 				       int embedded_offset,
 				       struct ui_file *stream);
 
-#define PRINT_MAX_DEFAULT 200	/* Start print_max off at this value.  */
-#define PRINT_MAX_DEPTH_DEFAULT 20	/* Start print_max_depth off at this value. */
+/* Start print_max at this value.  */
+#define PRINT_MAX_DEFAULT 200
+
+/* Start print_max_chars at this value (meaning follow print_max).  */
+#define PRINT_MAX_CHARS_DEFAULT PRINT_MAX_CHARS_ELEMENTS
+
+/* Start print_max_depth at this value. */
+#define PRINT_MAX_DEPTH_DEFAULT 20
 
 struct value_print_options user_print_options =
 {
@@ -109,6 +115,7 @@ struct value_print_options user_print_options =
   false,			/* nibblesprint */
   false,			/* objectprint */
   PRINT_MAX_DEFAULT,		/* print_max */
+  PRINT_MAX_CHARS_DEFAULT,	/* print_max_chars */
   10,				/* repeat_count_threshold */
   0,				/* output_format */
   0,				/* format */
@@ -150,16 +157,30 @@ get_formatted_print_options (struct value_print_options *opts,
   opts->format = format;
 }
 
+/* Implement 'show print elements'.  */
+
 static void
 show_print_max (struct ui_file *file, int from_tty,
 		struct cmd_list_element *c, const char *value)
 {
-  gdb_printf (file,
-	      _("Limit on string chars or array "
-		"elements to print is %s.\n"),
-	      value);
+  gdb_printf
+    (file,
+     (user_print_options.print_max_chars != PRINT_MAX_CHARS_ELEMENTS
+      ? _("Limit on array elements to print is %s.\n")
+      : _("Limit on string chars or array elements to print is %s.\n")),
+     value);
 }
 
+/* Implement 'show print characters'.  */
+
+static void
+show_print_max_chars (struct ui_file *file, int from_tty,
+		      struct cmd_list_element *c, const char *value)
+{
+  gdb_printf (file,
+	      _("Limit on string characters to print is %s.\n"),
+	      value);
+}
 
 /* Default input and output radixes, and output format letter.  */
 
@@ -2482,9 +2503,9 @@ print_converted_chars_to_obstack (struct obstack *obstack,
 /* Print the character string STRING, printing at most LENGTH
    characters.  LENGTH is -1 if the string is nul terminated.  TYPE is
    the type of each character.  OPTIONS holds the printing options;
-   printing stops early if the number hits print_max; repeat counts
-   are printed as appropriate.  Print ellipses at the end if we had to
-   stop before printing LENGTH characters, or if FORCE_ELLIPSES.
+   printing stops early if the number hits print_max_chars; repeat
+   counts are printed as appropriate.  Print ellipses at the end if we
+   had to stop before printing LENGTH characters, or if FORCE_ELLIPSES.
    QUOTE_CHAR is the character to print at each end of the string.  If
    C_STYLE_TERMINATOR is true, and the last character is 0, then it is
    omitted.  */
@@ -2538,7 +2559,8 @@ generic_printstr (struct ui_file *stream, struct type *type,
   /* Convert characters until the string is over or the maximum
      number of printed characters has been reached.  */
   i = 0;
-  while (i < options->print_max)
+  unsigned int print_max_chars = get_print_max_chars (options);
+  while (i < print_max_chars)
     {
       int r;
 
@@ -2590,7 +2612,7 @@ generic_printstr (struct ui_file *stream, struct type *type,
 /* Print a string from the inferior, starting at ADDR and printing up to LEN
    characters, of WIDTH bytes a piece, to STREAM.  If LEN is -1, printing
    stops at the first null byte, otherwise printing proceeds (including null
-   bytes) until either print_max or LEN characters have been printed,
+   bytes) until either print_max_chars or LEN characters have been printed,
    whichever is smaller.  ENCODING is the name of the string's
    encoding.  It can be NULL, in which case the target encoding is
    assumed.  */
@@ -2612,15 +2634,17 @@ val_print_string (struct type *elttype, const char *encoding,
   int width = elttype->length ();
 
   /* First we need to figure out the limit on the number of characters we are
-     going to attempt to fetch and print.  This is actually pretty simple.  If
-     LEN >= zero, then the limit is the minimum of LEN and print_max.  If
-     LEN is -1, then the limit is print_max.  This is true regardless of
-     whether print_max is zero, UINT_MAX (unlimited), or something in between,
-     because finding the null byte (or available memory) is what actually
-     limits the fetch.  */
+     going to attempt to fetch and print.  This is actually pretty simple.
+     If LEN >= zero, then the limit is the minimum of LEN and print_max_chars.
+     If LEN is -1, then the limit is print_max_chars.  This is true regardless
+     of whether print_max_chars is zero, UINT_MAX (unlimited), or something in
+     between, because finding the null byte (or available memory) is what
+     actually limits the fetch.  */
 
-  fetchlimit = (len == -1 ? options->print_max : std::min ((unsigned) len,
-							   options->print_max));
+  unsigned int print_max_chars = get_print_max_chars (options);
+  fetchlimit = (len == -1
+		? print_max_chars
+		: std::min ((unsigned) len, print_max_chars));
 
   err = target_read_string (addr, len, width, fetchlimit,
 			    &buffer, &bytes_read);
@@ -2862,8 +2886,17 @@ using boolean_option_def
   = gdb::option::boolean_option_def<value_print_options>;
 using uinteger_option_def
   = gdb::option::uinteger_option_def<value_print_options>;
-using zuinteger_unlimited_option_def
-  = gdb::option::zuinteger_unlimited_option_def<value_print_options>;
+using pinteger_option_def
+  = gdb::option::pinteger_option_def<value_print_options>;
+
+/* Extra literals supported with the `set print characters' and
+   `print -characters' commands.  */
+static const literal_def print_characters_literals[] =
+  {
+    { "elements", PRINT_MAX_CHARS_ELEMENTS },
+    { "unlimited", PRINT_MAX_CHARS_UNLIMITED, 0 },
+    { nullptr }
+  };
 
 /* Definitions of options for the "print" and "compile print"
    commands.  */
@@ -2906,17 +2939,32 @@ static const gdb::option::option_def value_print_option_defs[] = {
   },
 
   uinteger_option_def {
-    "elements",
-    [] (value_print_options *opt) { return &opt->print_max; },
-    show_print_max, /* show_cmd_cb */
-    N_("Set limit on string chars or array elements to print."),
-    N_("Show limit on string chars or array elements to print."),
-    N_("\"unlimited\" causes there to be no limit."),
+    "characters",
+    [] (value_print_options *opt) { return &opt->print_max_chars; },
+    print_characters_literals,
+    show_print_max_chars, /* show_cmd_cb */
+    N_("Set limit on string chars to print."),
+    N_("Show limit on string chars to print."),
+    N_("\"elements\" causes the array element limit to be used.\n"
+       "\"unlimited\" causes there to be no limit."),
   },
 
-  zuinteger_unlimited_option_def {
+  uinteger_option_def {
+    "elements",
+    [] (value_print_options *opt) { return &opt->print_max; },
+    uinteger_unlimited_literals,
+    show_print_max, /* show_cmd_cb */
+    N_("Set limit on array elements to print."),
+    N_("Show limit on array elements to print."),
+    N_("\"unlimited\" causes there to be no limit.\n"
+       "This setting also applies to string chars when \"print characters\"\n"
+       "is set to \"elements\"."),
+  },
+
+  pinteger_option_def {
     "max-depth",
     [] (value_print_options *opt) { return &opt->max_depth; },
+    pinteger_unlimited_literals,
     show_print_max_depth, /* show_cmd_cb */
     N_("Set maximum print depth for nested structures, unions and arrays."),
     N_("Show maximum print depth for nested structures, unions, and arrays."),
@@ -2976,6 +3024,7 @@ pretty-printers for that value.")
   uinteger_option_def {
     "repeats",
     [] (value_print_options *opt) { return &opt->repeat_count_threshold; },
+    uinteger_unlimited_literals,
     show_repeat_count_threshold, /* show_cmd_cb */
     N_("Set threshold for repeated print elements."),
     N_("Show threshold for repeated print elements."),

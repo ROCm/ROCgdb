@@ -21,12 +21,13 @@
 # mi_run_cmd, it ignores whatever target the rest of GDB testsuite is
 # using, and always tries to run natively.  So, don't do anything unless
 # we're actually testing native.
-if {!([isnative] && [istarget *-linux*])} {
+require isnative
+if {![istarget *-linux*]} {
   return
 }
 
 # Check if start command is supported.
-require use_gdb_stub 0
+require !use_gdb_stub
 
 # The plan is for async mode to become the default but toggle for now.
 set saved_gdbflags $GDBFLAGS

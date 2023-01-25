@@ -16,13 +16,14 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-%C%_libsim_a_SOURCES =
+nodist_%C%_libsim_a_SOURCES = \
+	%D%/modules.c
+%C%_libsim_a_SOURCES = \
+	$(common_libcommon_a_SOURCES)
 %C%_libsim_a_LIBADD = \
-	$(common_libcommon_a_OBJECTS) \
 	$(patsubst %,%D%/%,$(SIM_NEW_COMMON_OBJS)) \
 	$(patsubst %,%D%/dv-%.o,$(SIM_HW_DEVICES)) \
 	$(patsubst %,%D%/dv-%.o,$(%C%_SIM_EXTRA_HW_DEVICES)) \
-	%D%/modules.o \
 	\
 	%D%/cgen-run.o \
 	%D%/cgen-scache.o \
@@ -47,6 +48,9 @@ $(%C%_libsim_a_OBJECTS) $(%C%_libsim_a_LIBADD): %D%/hw-config.h
 
 noinst_LIBRARIES += %D%/libsim.a
 
+## Override wildcards that trigger common/modules.c to be (incorrectly) used.
+%D%/modules.o: %D%/modules.c
+
 %D%/%.o: common/%.c ; $(SIM_COMPILE)
 -@am__include@ %D%/$(DEPDIR)/*.Po
 
@@ -59,7 +63,6 @@ noinst_LIBRARIES += %D%/libsim.a
 noinst_PROGRAMS += %D%/run
 
 %C%_SIM_EXTRA_HW_DEVICES = rv cris cris_900000xx
-AM_MAKEFLAGS += %C%_SIM_EXTRA_HW_DEVICES="$(%C%_SIM_EXTRA_HW_DEVICES)"
 
 ## rvdummy is just used for testing -- it runs on the same host as `run`.
 ## It does nothing if --enable-sim-hardware isn't active.
@@ -78,8 +81,7 @@ BUILT_SOURCES += \
 	%D%/mloopv32f.c \
 	%D%/stamp-mloop-v32f
 
-## This makes sure build tools are available before building the arch-subdirs.
-SIM_ALL_RECURSIVE_DEPS += $(%C%_BUILD_OUTPUTS)
+## Generating modules.c requires all sources to scan.
 %D%/modules.c: | $(%C%_BUILD_OUTPUTS)
 
 ## FIXME: What is mono and what does "Use of `mono' is wip" mean (other

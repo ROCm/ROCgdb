@@ -21,13 +21,9 @@ load_lib gdbserver-support.exp
 
 standard_testfile
 
-if { [skip_gdbserver_tests] } {
-    return 0
-}
+require allow_gdbserver_tests
 
-if {![can_spawn_for_attach]} {
-    return 0
-}
+require can_spawn_for_attach
 
 # Start the test program, attach to it using gdbserver's --attach flag, connect
 # to it with GDB, check that what we see makes sense.

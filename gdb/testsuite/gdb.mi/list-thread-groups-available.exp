@@ -21,10 +21,7 @@ set MIFLAGS "-i=mi"
 standard_testfile
 
 # Support for XML is needed to run this test.
-if {[gdb_skip_xml_test]} {
-    unsupported "list-thread-groups-available.exp"
-    return -1
-}
+require allow_xml_test
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested "failed to compile"
@@ -35,9 +32,7 @@ if [mi_gdb_start] {
     return
 }
 
-if ![can_spawn_for_attach] {
-    return
-}
+require can_spawn_for_attach
 
 set string_re {(?:[^\\"]|\\.)*}
 

@@ -2380,59 +2380,58 @@ proc gdb_compile_test {src output} {
     fail "$msg"
 }
 
-# Return a 1 for configurations for which we don't even want to try to
-# test C++.
+# Return a 1 for configurations for which we want to try to test C++.
 
-proc skip_cplus_tests {} {
+proc allow_cplus_tests {} {
     if { [istarget "h8300-*-*"] } {
-	return 1
+	return 0
     }
 
     # The C++ IO streams are too large for HC11/HC12 and are thus not
     # available.  The gdb C++ tests use them and don't compile.
     if { [istarget "m6811-*-*"] } {
-	return 1
+	return 0
     }
     if { [istarget "m6812-*-*"] } {
-	return 1
+	return 0
     }
-    return 0
+    return 1
 }
 
-# Return a 1 for configurations for which don't have both C++ and the STL.
+# Return a 0 for configurations which are missing either C++ or the STL.
 
-proc skip_stl_tests {} {
-    return [skip_cplus_tests]
+proc allow_stl_tests {} {
+    return [allow_cplus_tests]
 }
 
-# Return a 1 if I don't even want to try to test FORTRAN.
+# Return a 1 if I want to try to test FORTRAN.
 
-proc skip_fortran_tests {} {
-    return 0
+proc allow_fortran_tests {} {
+    return 1
 }
 
-# Return a 1 if I don't even want to try to test ada.
+# Return a 1 if I want to try to test ada.
 
-proc skip_ada_tests {} {
-    return 0
+proc allow_ada_tests {} {
+    return 1
 }
 
-# Return a 1 if I don't even want to try to test GO.
+# Return a 1 if I want to try to test GO.
 
-proc skip_go_tests {} {
-    return 0
+proc allow_go_tests {} {
+    return 1
 }
 
-# Return a 1 if I don't even want to try to test D.
+# Return a 1 if I even want to try to test D.
 
-proc skip_d_tests {} {
-    return 0
+proc allow_d_tests {} {
+    return 1
 }
 
-# Return 1 to skip Rust tests, 0 to try them.
-proc skip_rust_tests {} {
+# Return 1 to try Rust tests, 0 to skip them.
+proc allow_rust_tests {} {
     if { ![isnative] } {
-	return 1
+	return 0
     }
 
     # The rust compiler does not support "-m32", skip.
@@ -2441,45 +2440,27 @@ proc skip_rust_tests {} {
     if {[board_info $board exists multilib_flags]} {
 	foreach flag [board_info $board multilib_flags] {
 	    if { $flag == "-m32" } {
-		return 1
+		return 0
 	    }
 	}
     }
 
-    return 0
+    return 1
 }
 
-# Return a 1 for configurations that do not support Python scripting.
-# PROMPT_REGEXP is the expected prompt.
+# Return a 1 for configurations that support Python scripting.
 
-proc skip_python_tests_prompt { prompt_regexp } {
-    gdb_test_multiple "python print ('test')" "verify python support" \
-	-prompt "$prompt_regexp" {
-	    -re "not supported.*$prompt_regexp" {
-		unsupported "Python support is disabled."
-		return 1
-	    }
-	    -re "$prompt_regexp" {}
-	}
-
-    return 0
+gdb_caching_proc allow_python_tests {
+    set output [remote_exec host $::GDB "$::INTERNAL_GDBFLAGS --configuration"]
+    return [expr {[string first "--with-python" $output] != -1}]
 }
 
-# Return a 1 for configurations that do not support Python scripting.
-# Note: This also sets various globals that specify which version of Python
-# is in use.  See skip_python_tests_prompt.
+# Return a 1 if we should run shared library tests.
 
-proc skip_python_tests {} {
-    global gdb_prompt
-    return [skip_python_tests_prompt "$gdb_prompt $"]
-}
-
-# Return a 1 if we should skip shared library tests.
-
-proc skip_shlib_tests {} {
+proc allow_shlib_tests {} {
     # Run the shared library tests on native systems.
     if {[isnative]} {
-	return 0
+	return 1
     }
 
     # An abbreviated list of remote targets where we should be able to
@@ -2490,23 +2471,23 @@ proc skip_shlib_tests {} {
 	 || [istarget *-*-mingw*]
 	 || [istarget *-*-cygwin*]
 	 || [istarget *-*-pe*])} {
-	return 0
-    }
-
-    return 1
-}
-
-# Return 1 if we should skip dlmopen tests, 0 if we should not.
-
-gdb_caching_proc skip_dlmopen_tests {
-    global srcdir subdir gdb_prompt inferior_exited_re
-
-    # We need shared library support.
-    if { [skip_shlib_tests] } {
 	return 1
     }
 
-    set me "skip_dlmopen_tests"
+    return 0
+}
+
+# Return 1 if we should run dlmopen tests, 0 if we should not.
+
+gdb_caching_proc allow_dlmopen_tests {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    # We need shared library support.
+    if { ![allow_shlib_tests] } {
+	return 0
+    }
+
+    set me "allow_dlmopen_tests"
     set lib {
 	int foo (void) {
 	    return 42;
@@ -2556,13 +2537,13 @@ gdb_caching_proc skip_dlmopen_tests {
 
     if { [gdb_compile_shlib $libsrc $libout {debug}] != "" } {
 	verbose -log "failed to build library"
-	return 1
+	return 0
     }
     if { ![gdb_simple_compile $me $src executable \
 	       [list shlib_load debug \
 		    additional_flags=-DDSO_NAME=\"$libout\"]] } {
 	verbose -log "failed to build executable"
-        return 1
+	return 0
     }
 
     gdb_exit
@@ -2572,40 +2553,31 @@ gdb_caching_proc skip_dlmopen_tests {
 
     if { [gdb_run_cmd] != 0 } {
 	verbose -log "failed to start skip test"
-	return 1
+	return 0
     }
     gdb_expect {
         -re "$inferior_exited_re normally.*${gdb_prompt} $" {
-            set skip_dlmopen_tests 0
+	    set allow_dlmopen_tests 1
         }
         -re "$inferior_exited_re with code.*${gdb_prompt} $" {
-            set skip_dlmopen_tests 1
+	    set allow_dlmopen_tests 0
         }
         default {
 	    warning "\n$me: default case taken"
-            set skip_dlmopen_tests 1
+	    set allow_dlmopen_tests 0
         }
     }
     gdb_exit
 
-    verbose "$me:  returning $skip_dlmopen_tests" 2
-    return $skip_dlmopen_tests
+    verbose "$me:  returning $allow_dlmopen_tests" 2
+    return $allow_dlmopen_tests
 }
 
-# Return 1 if we should skip tui related tests.
+# Return 1 if we should allow TUI-related tests.
 
-proc skip_tui_tests {} {
-    global gdb_prompt
-
-    gdb_test_multiple "help layout" "verify tui support" {
-	-re "Undefined command: \"layout\".*$gdb_prompt $" {
-	    return 1
-	}
-	-re "$gdb_prompt $" {
-	}
-    }
-
-    return 0
+gdb_caching_proc allow_tui_tests {
+    set output [remote_exec host $::GDB "$::INTERNAL_GDBFLAGS --configuration"]
+    return [expr {[string first "--enable-tui" $output] != -1}]
 }
 
 # Test files shall make sure all the test result lines in gdb.sum are
@@ -3669,13 +3641,13 @@ gdb_caching_proc skip_vsx_tests {
     return $skip_vsx_tests
 }
 
-# Run a test on the target to see if it supports TSX hardware.  Return 0 if so,
-# 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
+# Run a test on the target to see if it supports TSX hardware.  Return 1 if so,
+# 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc skip_tsx_tests {
+gdb_caching_proc allow_tsx_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_tsx_tests"
+    set me "allow_tsx_tests"
 
     # Compile a test program.
     set src {
@@ -3687,7 +3659,7 @@ gdb_caching_proc skip_tsx_tests {
         }
     }
     if {![gdb_simple_compile $me $src executable]} {
-        return 1
+	return 0
     }
 
     # No error message, compilation succeeded so now run it via gdb.
@@ -3700,34 +3672,34 @@ gdb_caching_proc skip_tsx_tests {
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
             verbose -log "$me:  TSX hardware not detected."
-            set skip_tsx_tests 1
+	    set allow_tsx_tests 0
         }
         -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "$me:  TSX hardware detected."
-            set skip_tsx_tests 0
+	    set allow_tsx_tests 1
         }
         default {
             warning "\n$me:  default case taken."
-            set skip_tsx_tests 1
+	    set allow_tsx_tests 0
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_tsx_tests" 2
-    return $skip_tsx_tests
+    verbose "$me:  returning $allow_tsx_tests" 2
+    return $allow_tsx_tests
 }
 
-# Run a test on the target to see if it supports avx512bf16.  Return 0 if so,
-# 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
+# Run a test on the target to see if it supports avx512bf16.  Return 1 if so,
+# 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc skip_avx512bf16_tests {
+gdb_caching_proc allow_avx512bf16_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_avx512bf16_tests"
+    set me "allow_avx512bf16_tests"
     if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
-        verbose "$me:  target does not support avx512bf16, returning 1" 2
-        return 1
+	verbose "$me:  target does not support avx512bf16, returning 0" 2
+	return 0
     }
 
     # Compile a test program.
@@ -3738,7 +3710,7 @@ gdb_caching_proc skip_avx512bf16_tests {
         }
     }
     if {![gdb_simple_compile $me $src executable]} {
-        return 1
+	return 0
     }
 
     # No error message, compilation succeeded so now run it via gdb.
@@ -3751,34 +3723,34 @@ gdb_caching_proc skip_avx512bf16_tests {
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
             verbose -log "$me:  avx512bf16 hardware not detected."
-            set skip_avx512bf16_tests 1
+	    set allow_avx512bf16_tests 0
         }
         -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "$me:  avx512bf16 hardware detected."
-            set skip_avx512bf16_tests 0
+	    set allow_avx512bf16_tests 1
         }
         default {
             warning "\n$me:  default case taken."
-            set skip_avx512bf16_tests 1
+	    set allow_avx512bf16_tests 0
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_avx512bf16_tests" 2
-    return $skip_avx512bf16_tests
+    verbose "$me:  returning $allow_avx512bf16_tests" 2
+    return $allow_avx512bf16_tests
 }
 
-# Run a test on the target to see if it supports avx512fp16.  Return 0 if so,
-# 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
+# Run a test on the target to see if it supports avx512fp16.  Return 1 if so,
+# 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc skip_avx512fp16_tests {
+gdb_caching_proc allow_avx512fp16_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_avx512fp16_tests"
+    set me "allow_avx512fp16_tests"
     if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
-        verbose "$me:  target does not support avx512fp16, returning 1" 2
-        return 1
+	verbose "$me:  target does not support avx512fp16, returning 0" 2
+	return 0
     }
 
     # Compile a test program.
@@ -3789,7 +3761,7 @@ gdb_caching_proc skip_avx512fp16_tests {
         }
     }
     if {![gdb_simple_compile $me $src executable]} {
-        return 1
+	return 0
     }
 
     # No error message, compilation succeeded so now run it via gdb.
@@ -3802,40 +3774,40 @@ gdb_caching_proc skip_avx512fp16_tests {
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
             verbose -log "$me:  avx512fp16 hardware not detected."
-            set skip_avx512fp16_tests 1
+	    set allow_avx512fp16_tests 0
         }
         -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "$me:  avx512fp16 hardware detected."
-            set skip_avx512fp16_tests 0
+	    set allow_avx512fp16_tests 1
         }
         default {
             warning "\n$me:  default case taken."
-            set skip_avx512fp16_tests 1
+	    set allow_avx512fp16_tests 0
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_avx512fp16_tests" 2
-    return $skip_avx512fp16_tests
+    verbose "$me:  returning $allow_avx512fp16_tests" 2
+    return $allow_avx512fp16_tests
 }
 
-# Run a test on the target to see if it supports btrace hardware.  Return 0 if so,
-# 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
+# Run a test on the target to see if it supports btrace hardware.  Return 1 if so,
+# 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc skip_btrace_tests {
+gdb_caching_proc allow_btrace_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_btrace_tests"
+    set me "allow_btrace_tests"
     if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
-        verbose "$me:  target does not support btrace, returning 1" 2
-        return 1
+	verbose "$me:  target does not support btrace, returning 0" 2
+	return 0
     }
 
     # Compile a test program.
     set src { int main() { return 0; } }
     if {![gdb_simple_compile $me $src executable]} {
-        return 1
+	return 0
     }
 
     # No error message, compilation succeeded so now run it via gdb.
@@ -3845,48 +3817,48 @@ gdb_caching_proc skip_btrace_tests {
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load $obj
     if ![runto_main] {
-        return 1
+	return 0
     }
     # In case of an unexpected output, we return 2 as a fail value.
-    set skip_btrace_tests 2
+    set allow_btrace_tests 2
     gdb_test_multiple "record btrace" "check btrace support" {
         -re "You can't do that when your target is.*\r\n$gdb_prompt $" {
-            set skip_btrace_tests 1
+	    set allow_btrace_tests 0
         }
         -re "Target does not support branch tracing.*\r\n$gdb_prompt $" {
-            set skip_btrace_tests 1
+	    set allow_btrace_tests 0
         }
         -re "Could not enable branch tracing.*\r\n$gdb_prompt $" {
-            set skip_btrace_tests 1
+	    set allow_btrace_tests 0
         }
         -re "^record btrace\r\n$gdb_prompt $" {
-            set skip_btrace_tests 0
+	    set allow_btrace_tests 1
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_btrace_tests" 2
-    return $skip_btrace_tests
+    verbose "$me:  returning $allow_btrace_tests" 2
+    return $allow_btrace_tests
 }
 
 # Run a test on the target to see if it supports btrace pt hardware.
-# Return 0 if so, 1 if it does not.  Based on 'check_vmx_hw_available'
+# Return 1 if so, 0 if it does not.  Based on 'check_vmx_hw_available'
 # from the GCC testsuite.
 
-gdb_caching_proc skip_btrace_pt_tests {
+gdb_caching_proc allow_btrace_pt_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_btrace_tests"
+    set me "allow_btrace_pt_tests"
     if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
-        verbose "$me:  target does not support btrace, returning 1" 2
-        return 1
+	verbose "$me:  target does not support btrace, returning 1" 2
+	return 0
     }
 
     # Compile a test program.
     set src { int main() { return 0; } }
     if {![gdb_simple_compile $me $src executable]} {
-        return 1
+	return 0
     }
 
     # No error message, compilation succeeded so now run it via gdb.
@@ -3896,44 +3868,44 @@ gdb_caching_proc skip_btrace_pt_tests {
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load $obj
     if ![runto_main] {
-        return 1
+	return 0
     }
     # In case of an unexpected output, we return 2 as a fail value.
-    set skip_btrace_tests 2
+    set allow_btrace_pt_tests 2
     gdb_test_multiple "record btrace pt" "check btrace pt support" {
         -re "You can't do that when your target is.*\r\n$gdb_prompt $" {
-            set skip_btrace_tests 1
+	    set allow_btrace_pt_tests 0
         }
         -re "Target does not support branch tracing.*\r\n$gdb_prompt $" {
-            set skip_btrace_tests 1
+	    set allow_btrace_pt_tests 0
         }
         -re "Could not enable branch tracing.*\r\n$gdb_prompt $" {
-            set skip_btrace_tests 1
+	    set allow_btrace_pt_tests 0
         }
         -re "support was disabled at compile time.*\r\n$gdb_prompt $" {
-            set skip_btrace_tests 1
+	    set allow_btrace_pt_tests 0
         }
         -re "^record btrace pt\r\n$gdb_prompt $" {
-            set skip_btrace_tests 0
+	    set allow_btrace_pt_tests 1
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_btrace_tests" 2
-    return $skip_btrace_tests
+    verbose "$me:  returning $allow_btrace_pt_tests" 2
+    return $allow_btrace_pt_tests
 }
 
 # Run a test on the target to see if it supports Aarch64 SVE hardware.
-# Return 0 if so, 1 if it does not.  Note this causes a restart of GDB.
+# Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
 
-gdb_caching_proc skip_aarch64_sve_tests {
+gdb_caching_proc allow_aarch64_sve_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "skip_aarch64_sve_tests"
 
     if { ![is_aarch64_target]} {
-	return 1
+	return 0
     }
 
     set compile_flags "{additional_flags=-march=armv8-a+sve}"
@@ -3946,7 +3918,7 @@ gdb_caching_proc skip_aarch64_sve_tests {
 	}
     }
     if {![gdb_simple_compile $me $src executable $compile_flags]} {
-        return 1
+        return 0
     }
 
     # Compilation succeeded so now run it via gdb.
@@ -3955,22 +3927,22 @@ gdb_caching_proc skip_aarch64_sve_tests {
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
             verbose -log "\n$me sve hardware not detected"
-            set skip_sve_tests 1
+            set allow_sve_tests 0
         }
         -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "\n$me: sve hardware detected"
-            set skip_sve_tests 0
+            set allow_sve_tests 1
         }
         default {
           warning "\n$me: default case taken"
-            set skip_sve_tests 1
+            set allow_sve_tests 0
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_sve_tests" 2
-    return $skip_sve_tests
+    verbose "$me:  returning $allow_sve_tests" 2
+    return $allow_sve_tests
 }
 
 
@@ -3992,17 +3964,17 @@ gdb_caching_proc has_int128_cxx {
     return [gdb_int128_helper c++]
 }
 
-# Return true if the IFUNC feature is unsupported.
-gdb_caching_proc skip_ifunc_tests {
+# Return true if the IFUNC feature is supported.
+gdb_caching_proc allow_ifunc_tests {
     if [gdb_can_simple_compile ifunc {
 	extern void f_ ();
 	typedef void F (void);
 	F* g (void) { return &f_; }
 	void f () __attribute__ ((ifunc ("g")));
     } object] {
-	return 0
-    } else {
 	return 1
+    } else {
+	return 0
     }
 }
 
@@ -4052,13 +4024,13 @@ proc skip_watchpoint_tests {} {
     return 0
 }
 
-# Return a 1 if we should skip tests that require hardware breakpoints
+# Return a 1 if we should run tests that require hardware breakpoints
 
-proc skip_hw_breakpoint_tests {} {
+proc allow_hw_breakpoint_tests {} {
     # Skip tests if requested by the board (note that no_hardware_watchpoints
     # disables both watchpoints and breakpoints)
     if { [target_info exists gdb,no_hardware_watchpoints]} {
-	return 1
+	return 0
     }
 
     # These targets support hardware breakpoints natively
@@ -4068,18 +4040,18 @@ proc skip_hw_breakpoint_tests {} {
 	 || [istarget "arm*-*-*"]
 	 || [istarget "aarch64*-*-*"]
 	 || [istarget "s390*-*-*"] } {
-	return 0
+	return 1
     }
 
-    return 1
+    return 0
 }
 
-# Return a 1 if we should skip tests that require hardware watchpoints
+# Return a 1 if we should run tests that require hardware watchpoints
 
-proc skip_hw_watchpoint_tests {} {
+proc allow_hw_watchpoint_tests {} {
     # Skip tests if requested by the board
     if { [target_info exists gdb,no_hardware_watchpoints]} {
-	return 1
+	return 0
     }
 
     # These targets support hardware watchpoints natively
@@ -4093,42 +4065,42 @@ proc skip_hw_watchpoint_tests {} {
 	 || [istarget "aarch64*-*-*"]
 	 || ([istarget "powerpc*-*-linux*"] && [has_hw_wp_support])
 	 || [istarget "s390*-*-*"] } {
+	return 1
+    }
+
+    return 0
+}
+
+# Return a 1 if we should run tests that require *multiple* hardware
+# watchpoints to be active at the same time
+
+proc allow_hw_watchpoint_multi_tests {} {
+    if { ![allow_hw_watchpoint_tests] } {
+	return 0
+    }
+
+    # These targets support just a single hardware watchpoint
+    if { [istarget "arm*-*-*"]
+	 || [istarget "powerpc*-*-linux*"] } {
 	return 0
     }
 
     return 1
 }
 
-# Return a 1 if we should skip tests that require *multiple* hardware
-# watchpoints to be active at the same time
+# Return a 1 if we should run tests that require read/access watchpoints
 
-proc skip_hw_watchpoint_multi_tests {} {
-    if { [skip_hw_watchpoint_tests] } {
-	return 1
-    }
-
-    # These targets support just a single hardware watchpoint
-    if { [istarget "arm*-*-*"]
-	 || [istarget "powerpc*-*-linux*"] } {
-	return 1
-    }
-
-    return 0
-}
-
-# Return a 1 if we should skip tests that require read/access watchpoints
-
-proc skip_hw_watchpoint_access_tests {} {
-    if { [skip_hw_watchpoint_tests] } {
-	return 1
+proc allow_hw_watchpoint_access_tests {} {
+    if { ![allow_hw_watchpoint_tests] } {
+	return 0
     }
 
     # These targets support just write watchpoints
     if { [istarget "s390*-*-*"] } {
-	return 1
+	return 0
     }
 
-    return 0
+    return 1
 }
 
 # Return 1 if we should skip tests that require the runtime unwinder
@@ -7011,17 +6983,16 @@ proc gdb_skip_bogus_test { msg } {
     return 0
 }
 
-# Return true if a test should be skipped due to lack of XML support
-# in the host GDB.
+# Return true if XML support is enabled in the host GDB.
 # NOTE: This must be called while gdb is *not* running.
 
-gdb_caching_proc gdb_skip_xml_test {
+gdb_caching_proc allow_xml_test {
     global gdb_spawn_id
     global gdb_prompt
     global srcdir
 
     if { [info exists gdb_spawn_id] } {
-        error "GDB must not be running in gdb_skip_xml_tests."
+	error "GDB must not be running in allow_xml_tests."
     }
 
     set xml_file [gdb_remote_download host "${srcdir}/gdb.xml/trivial.xml"]
@@ -7035,7 +7006,7 @@ gdb_caching_proc gdb_skip_xml_test {
 	-re ".*$gdb_prompt $" { }
     }
     gdb_exit
-    return $xml_missing
+    return [expr {!$xml_missing}]
 }
 
 # Return true if argv[0] is available.
@@ -8565,11 +8536,11 @@ proc cmp_binary_files { file1 file2 } {
 # flag?  If not then we should skip these tests.  We should also
 # skip them if libctf was explicitly disabled.
 
-gdb_caching_proc skip_ctf_tests {
+gdb_caching_proc allow_ctf_tests {
     global enable_libctf
 
     if {$enable_libctf eq "no"} {
-	return 1
+	return 0
     }
 
     set can_ctf [gdb_can_simple_compile ctfdebug {
@@ -8578,7 +8549,7 @@ gdb_caching_proc skip_ctf_tests {
 	}
     } executable "additional_flags=-gctf"]
 
-    return [expr {!$can_ctf}]
+    return $can_ctf
 }
 
 # Return 1 if compiler supports -gstatement-frontiers.  Otherwise,
@@ -9084,41 +9055,30 @@ gdb_caching_proc have_avx {
     return $status
 }
 
-# Called as either:
-# - require EXPR VAL
-# - require EXPR OP VAL
-# In the first case, OP is ==.
+# Called as
+# - require ARG...
 #
-# Require EXPR OP VAL, where EXPR is evaluated in caller context.  If not,
-# return in the caller's context.
+# ARG can either be a name, or of the form !NAME.
+#
+# Each name is a proc to evaluate in the caller's context.  It returns
+# a boolean, and a "!" means to invert the result.  If this is
+# nonzero, all is well.  If it is zero, an "untested" is emitted and
+# this proc causes the caller to return.
 
-proc require { fn arg1 {arg2 ""} } {
-    if { $arg2 == "" } {
-	set op ==
-	set val $arg1
-    } else {
-	set op $arg1
-	set val $arg2
-    }
-    set res [uplevel 1 $fn]
-    if { [expr $res $op $val] } {
-	return
-    }
-
-    switch "$fn $op $val" {
-	"gdb_skip_xml_test == 0" { set msg "missing xml support" }
-	"ensure_gdb_index $binfile != -1" -
-	"ensure_gdb_index $binfile -dwarf-5 != -1" {
-	    set msg "Couldn't ensure index in binfile"
+proc require { args } {
+    foreach arg $args {
+	if {[string index $arg 0] == "!"} {
+	    set ok 0
+	    set fn [string range $arg 1 end]
+	} else {
+	    set ok 1
+	    set fn $arg
 	}
-	"use_gdb_stub == 0" {
-	    set msg "Remote stub used"
+	if {$ok != !![uplevel 1 $fn]} {
+	    unsupported "require failed: $arg"
+	    return -code return 0
 	}
-	default { set msg "$fn != $val" }
     }
-
-    untested $msg
-    return -code return 0
 }
 
 # Wait up to ::TIMEOUT seconds for file PATH to exist on the target system.
