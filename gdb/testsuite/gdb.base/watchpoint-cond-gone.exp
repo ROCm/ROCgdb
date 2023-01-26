@@ -15,9 +15,7 @@
 
 standard_testfile .c watchpoint-cond-gone-stripped.c
 
-if {[skip_watchpoint_tests]} {
-    return
-}
+require allow_watchpoint_tests
 
 # We need to generate a function without DWARF to crash older GDB.
 # Stepping into a dynamic function trampoline or stepping out of MAIN may work
