@@ -26,9 +26,7 @@ set allow_hw_watchpoint_tests_p [allow_hw_watchpoint_tests]
 
 standard_testfile
 
-if {[skip_watchpoint_tests]} {
-    return
-}
+require allow_watchpoint_tests
 
 set wp_set 1
 

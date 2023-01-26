@@ -70,9 +70,7 @@
 
 standard_testfile
 
-if {[skip_watchpoint_tests]} {
-    return
-}
+require allow_watchpoint_tests
 
 # No use testing this if we can't use hardware watchpoints.
 require allow_hw_watchpoint_tests

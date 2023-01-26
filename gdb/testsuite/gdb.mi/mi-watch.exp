@@ -20,9 +20,7 @@
 # The goal is not to test gdb functionality, which is done by other
 # tests, but to verify the correct output response to MI operations.
 
-if {[skip_watchpoint_tests]} {
-    return
-}
+require allow_watchpoint_tests
 
 # The allow_hw_watchpoint_tests checks if watchpoints are supported by the
 # processor.  On PowerPC, the check runs a small test program under gdb
