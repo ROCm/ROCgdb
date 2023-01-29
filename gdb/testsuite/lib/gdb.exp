@@ -3168,7 +3168,7 @@ proc with_read1_timeout_factor { factor body } {
 
 gdb_caching_proc support_complex_tests {
 
-    if { [gdb_skip_float_test] } {
+    if { ![allow_float_test] } {
 	# If floating point is not supported, _Complex is not
 	# supported.
 	return 0
@@ -3415,6 +3415,11 @@ proc is_x86_like_target {} {
     return [expr [is_ilp32_target] && ![is_amd64_regs_target]]
 }
 
+# Return 1 if this target is an x86_64 with -m64.
+proc is_x86_64_m64_target {} {
+    return [expr [istarget x86_64-*-* ] && [is_lp64_target]]
+}
+
 # Return 1 if this target is an arm or aarch32 on aarch64.
 
 gdb_caching_proc is_aarch32_target {
@@ -3458,18 +3463,23 @@ proc support_displaced_stepping {} {
     return 0
 }
 
-# Run a test on the target to see if it supports vmx hardware.  Return 0 if so, 
-# 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
+# Run a test on the target to see if it supports vmx hardware.  Return 1 if so, 
+# 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc skip_altivec_tests {
+gdb_caching_proc allow_altivec_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_altivec_tests"
+    set me "allow_altivec_tests"
 
     # Some simulators are known to not support VMX instructions.
     if { [istarget powerpc-*-eabi] || [istarget powerpc*-*-eabispe] } {
-        verbose "$me:  target known to not support VMX, returning 1" 2
-        return 1
+	verbose "$me:  target known to not support VMX, returning 0" 2
+	return 0
+    }
+
+    if {![istarget powerpc*]} {
+	verbose "$me: PPC target required, returning 0" 2
+	return 0
     }
 
     # Make sure we have a compiler that understands altivec.
@@ -3478,8 +3488,8 @@ gdb_caching_proc skip_altivec_tests {
     } elseif [test_compiler_info xlc*] {
         set compile_flags "additional_flags=-qaltivec"
     } else {
-        verbose "Could not compile with altivec support, returning 1" 2
-        return 1
+	verbose "Could not compile with altivec support, returning 0" 2
+	return 0
     }
 
     # Compile a test program containing VMX instructions.
@@ -3494,7 +3504,7 @@ gdb_caching_proc skip_altivec_tests {
 	}
     }
     if {![gdb_simple_compile $me $src executable $compile_flags]} {
-        return 1
+	return 0
     }
 
     # Compilation succeeded so now run it via gdb.
@@ -3507,29 +3517,29 @@ gdb_caching_proc skip_altivec_tests {
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
             verbose -log "\n$me altivec hardware not detected" 
-            set skip_vmx_tests 1
+	    set allow_vmx_tests 0
         }
         -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "\n$me: altivec hardware detected" 
-            set skip_vmx_tests 0
+	    set allow_vmx_tests 1
         }
         default {
           warning "\n$me: default case taken"
-            set skip_vmx_tests 1
+	    set allow_vmx_tests 0
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_vmx_tests" 2
-    return $skip_vmx_tests
+    verbose "$me:  returning $allow_vmx_tests" 2
+    return $allow_vmx_tests
 }
 
 # Run a test on the power target to see if it supports ISA 3.1 instructions
-gdb_caching_proc skip_power_isa_3_1_tests {
+gdb_caching_proc allow_power_isa_3_1_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_power_isa_3_1_tests"
+    set me "allow_power_isa_3_1_tests"
 
     # Compile a test program containing ISA 3.1 instructions.
     set src {
@@ -3541,7 +3551,7 @@ gdb_caching_proc skip_power_isa_3_1_tests {
 	}
 
     if {![gdb_simple_compile $me $src executable ]} {
-        return 1
+	return 0
     }
 
     # No error message, compilation succeeded so now run it via gdb.
@@ -3554,37 +3564,37 @@ gdb_caching_proc skip_power_isa_3_1_tests {
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
             verbose -log "\n$me Power ISA 3.1 hardware not detected"
-            set skip_power_isa_3_1_tests 1
+	    set allow_power_isa_3_1_tests 0
         }
         -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "\n$me: Power ISA 3.1 hardware detected"
-            set skip_power_isa_3_1_tests 0
+	    set allow_power_isa_3_1_tests 1
         }
         default {
-          warning "\n$me: default case taken"
-            set skip_power_isa_3_1_tests 1
+	    warning "\n$me: default case taken"
+	    set allow_power_isa_3_1_tests 0
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_power_isa_3_1_tests" 2
-    return $skip_power_isa_3_1_tests
+    verbose "$me:  returning $allow_power_isa_3_1_tests" 2
+    return $allow_power_isa_3_1_tests
 }
 
-# Run a test on the target to see if it supports vmx hardware.  Return 0 if so,
-# 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
+# Run a test on the target to see if it supports vmx hardware.  Return 1 if so,
+# 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc skip_vsx_tests {
+gdb_caching_proc allow_vsx_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_vsx_tests"
+    set me "allow_vsx_tests"
 
     # Some simulators are known to not support Altivec instructions, so
     # they won't support VSX instructions as well.
     if { [istarget powerpc-*-eabi] || [istarget powerpc*-*-eabispe] } {
-        verbose "$me:  target known to not support VSX, returning 1" 2
-        return 1
+	verbose "$me:  target known to not support VSX, returning 0" 2
+	return 0
     }
 
     # Make sure we have a compiler that understands altivec.
@@ -3593,8 +3603,8 @@ gdb_caching_proc skip_vsx_tests {
     } elseif [test_compiler_info xlc*] {
         set compile_flags "additional_flags=-qasm=gcc"
     } else {
-        verbose "Could not compile with vsx support, returning 1" 2
-        return 1
+	verbose "Could not compile with vsx support, returning 0" 2
+	return 0
     }
 
     # Compile a test program containing VSX instructions.
@@ -3610,7 +3620,7 @@ gdb_caching_proc skip_vsx_tests {
 	}
     }
     if {![gdb_simple_compile $me $src executable $compile_flags]} {
-        return 1
+	return 0
     }
 
     # No error message, compilation succeeded so now run it via gdb.
@@ -3623,22 +3633,22 @@ gdb_caching_proc skip_vsx_tests {
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
             verbose -log "\n$me VSX hardware not detected"
-            set skip_vsx_tests 1
+	    set allow_vsx_tests 0
         }
         -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "\n$me: VSX hardware detected"
-            set skip_vsx_tests 0
+	    set allow_vsx_tests 1
         }
         default {
           warning "\n$me: default case taken"
-            set skip_vsx_tests 1
+	    set allow_vsx_tests 0
         }
     }
     gdb_exit
     remote_file build delete $obj
 
-    verbose "$me:  returning $skip_vsx_tests" 2
-    return $skip_vsx_tests
+    verbose "$me:  returning $allow_vsx_tests" 2
+    return $allow_vsx_tests
 }
 
 # Run a test on the target to see if it supports TSX hardware.  Return 1 if so,
@@ -3902,7 +3912,7 @@ gdb_caching_proc allow_btrace_pt_tests {
 gdb_caching_proc allow_aarch64_sve_tests {
     global srcdir subdir gdb_prompt inferior_exited_re
 
-    set me "skip_aarch64_sve_tests"
+    set me "allow_aarch64_sve_tests"
 
     if { ![is_aarch64_target]} {
 	return 0
@@ -4214,6 +4224,16 @@ proc gdb_is_target_native { } {
     global gdb_prompt
 
     return [gdb_is_target_1 "native" ".*native \\(Native process\\).*" "$gdb_prompt $"]
+}
+
+# Like istarget, but checks a list of targets.
+proc is_any_target {args} {
+    foreach targ $args {
+	if {[istarget $targ]} {
+	    return 1
+	}
+    }
+    return 0
 }
 
 # Return the effective value of use_gdb_stub.
@@ -6868,13 +6888,13 @@ proc exec_is_pie { executable } {
     return 0
 }
 
-# Return true if a test should be skipped due to lack of floating
+# Return false if a test should be skipped due to lack of floating
 # point support or GDB can't fetch the contents from floating point
 # registers.
 
-gdb_caching_proc gdb_skip_float_test {
+gdb_caching_proc allow_float_test {
     if [target_info exists gdb,skip_float_tests] {
-	return 1
+	return 0
     }
 
     # There is an ARM kernel ptrace bug that hardware VFP registers
@@ -6923,13 +6943,13 @@ gdb_caching_proc gdb_skip_float_test {
 
 	if {![string match "" $lines]} {
 	    verbose "testfile compilation failed, returning 1" 2
-	    return 0
+	    return 1
 	}
 
 	# No error message, compilation succeeded so now run it via gdb.
 	# Run the test up to 5 times to detect whether ptrace can
 	# correctly update VFP registers or not.
-	set skip_vfp_test 0
+	set allow_vfp_test 1
 	for {set i 0} {$i < 5} {incr i} {
 	    global gdb_prompt srcdir subdir
 
@@ -6953,7 +6973,7 @@ gdb_caching_proc gdb_skip_float_test {
 		-re "exited normally.*$gdb_prompt $" {
 		    # However, the exit code is 0.  That means something
 		    # wrong in setting VFP registers.
-		    set skip_vfp_test 1
+		    set allow_vfp_test 0
 		    break
 		}
 	    }
@@ -6962,9 +6982,9 @@ gdb_caching_proc gdb_skip_float_test {
 	gdb_exit
 	remote_file build delete $exe
 
-	return $skip_vfp_test
+	return $allow_vfp_test
     }
-    return 0
+    return 1
 }
 
 # Print a message and return true if a test should be skipped
@@ -7439,19 +7459,15 @@ proc build_executable { testname executable {sources ""} {options {debug}} } {
 }
 
 # Starts fresh GDB binary and loads an optional executable into GDB.
-# Usage: clean_restart [executable]
+# Usage: clean_restart [EXECUTABLE]
 # EXECUTABLE is the basename of the binary.
 # Return -1 if starting gdb or loading the executable failed.
 
-proc clean_restart { args } {
+proc clean_restart {{executable ""}} {
     global srcdir
     global subdir
     global errcnt
     global warncnt
-
-    if { [llength $args] > 1 } {
-	error "bad number of args: [llength $args]"
-    }
 
     gdb_exit
 
@@ -7472,8 +7488,7 @@ proc clean_restart { args } {
 
     gdb_reinitialize_dir $srcdir/$subdir
 
-    if { [llength $args] >= 1 } {
-	set executable [lindex $args 0]
+    if {$executable != ""} {
 	set binfile [standard_output_file ${executable}]
 	return [gdb_load ${binfile}]
     }

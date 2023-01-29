@@ -19,8 +19,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-
 #include "amdgpu-tdep.h"
+
+#include "amd-dbgapi-target.h"
 #include "arch-utils.h"
 #include "disasm.h"
 #include "dwarf2/frame.h"
@@ -29,11 +30,11 @@
 #include "gdbarch.h"
 #include "gdbsupport/gdb_unique_ptr.h"
 #include "inferior.h"
+#include "language.h"
 #include "objfiles.h"
 #include "osabi.h"
 #include "producer.h"
 #include "reggroups.h"
-#include "amd-dbgapi-target.h"
 
 #include <iterator>
 #include <regex>

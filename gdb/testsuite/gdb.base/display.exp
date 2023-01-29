@@ -52,10 +52,7 @@ if !$use_gdb_stub {
     gdb_test "kill" ".*" "kill again"
     gdb_test "detach" ".*" "detach again"
 
-    gdb_exit
-    gdb_start
-    gdb_reinitialize_dir $srcdir/$subdir
-    gdb_load ${binfile}
+    clean_restart $binfile
 }
 
 # Ok, on to real life
@@ -223,5 +220,3 @@ gdb_exit
 # Restore the preserved old timeout value.
 set timeout $oldtimeout
 verbose "Timeout is now $timeout seconds" 2
-
-return 0

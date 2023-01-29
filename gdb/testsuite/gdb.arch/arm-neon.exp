@@ -15,15 +15,9 @@
 
 # This file is part of the gdb testsuite.
 
-if {![istarget "aarch64*-*-*"] && ![istarget "arm*-*-*"]} {
-    verbose "Skipping ${gdb_test_file_name}."
-    return
-}
+require {is_any_target "aarch64*-*-*" "arm*-*-*"}
 
-if { [gdb_skip_float_test] } {
-    verbose "Skipping ${gdb_test_file_name}."
-    return
-}
+require allow_float_test
 
 standard_testfile
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug quiet}] } {

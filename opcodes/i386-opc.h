@@ -918,7 +918,7 @@ typedef union i386_operand_type
 typedef struct insn_template
 {
   /* instruction name sans width suffix ("mov" for movl insns) */
-  const char *name;
+  unsigned int mnem_off;
 
   /* Bitfield arrangement is such that individual fields can be easily
      extracted (in native builds at least) - either by at most a masking
@@ -931,8 +931,8 @@ typedef struct insn_template
 #define Opcode_D	0x2 /* Direction bit:
 			       set if Reg --> Regmem;
 			       unset if Regmem --> Reg. */
-#define Opcode_FloatR	0x8 /* Bit to swap src/dest for float insns. */
-#define Opcode_FloatD 0x400 /* Direction bit for float insns. */
+#define Opcode_FloatR	0x8 /* ModR/M bit to swap src/dest for float insns. */
+#define Opcode_FloatD   0x4 /* Direction bit for float insns. */
 #define Opcode_ExtD	0x1 /* Direction bit for extended opcode space insns. */
 #define Opcode_SIMD_IntD 0x10 /* Direction bit for SIMD int insns. */
 /* The next value is arbitrary, as long as it's non-zero and distinct
@@ -987,7 +987,7 @@ insn_template;
 /* these are for register name --> number & type hash lookup */
 typedef struct
 {
-  const char *reg_name;
+  char reg_name[8];
   i386_operand_type reg_type;
   unsigned char reg_flags;
 #define RegRex	    0x1  /* Extended register.  */

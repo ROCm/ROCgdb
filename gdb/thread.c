@@ -22,6 +22,8 @@
 
 #include "defs.h"
 #include "gdbthread.h"
+
+#include "language.h"
 #include "symtab.h"
 #include "frame.h"
 #include "inferior.h"
@@ -1053,7 +1055,7 @@ can_access_registers_thread (thread_info *thread)
   return true;
 }
 
-int
+bool
 pc_in_thread_step_range (CORE_ADDR pc, struct thread_info *thread)
 {
   return (pc >= thread->control.step_range_start

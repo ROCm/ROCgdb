@@ -19,15 +19,9 @@
 # This file is part of the gdb testsuite.
 
 
-if { ![istarget i?86-*-*] && ![istarget x86_64-*-* ] } {
-    verbose "Skipping x86 AVX tests."
-    return
-}
+require {is_any_target i?86-*-* x86_64-*-*}
 
-if { ![have_avx] } {
-    verbose "Skipping x86 AVX tests."
-    return
-}
+require have_avx
 
 standard_testfile .c
 

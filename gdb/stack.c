@@ -363,13 +363,11 @@ print_stack_frame (frame_info_ptr frame, int print_level,
   if (current_uiout->is_mi_like_p ())
     print_what = LOC_AND_ADDRESS;
 
-  frame.prepare_reinflate ();
   try
     {
       print_frame_info (user_frame_print_options,
 			frame, print_level, print_what, 1 /* print_args */,
 			set_current_sal);
-      frame.reinflate ();
       if (set_current_sal)
 	set_current_sal_from_frame (frame);
     }
@@ -745,11 +743,6 @@ print_frame_args (const frame_print_options &fp_opts,
     = (print_names
        && fp_opts.print_frame_arguments != print_frame_arguments_none);
 
-  /* If one of the arguments has a pretty printer that calls a
-     function of the inferior to print it, the pointer must be
-     reinflatable.  */
-  frame.prepare_reinflate ();
-
   /* Temporarily change the selected frame to the given FRAME.
      This allows routines that rely on the selected frame instead
      of being given a frame as parameter to use the correct frame.  */
@@ -910,7 +903,6 @@ print_frame_args (const frame_print_options &fp_opts,
 	    }
 
 	  first = 0;
-	  frame.reinflate ();
 	}
     }
 
@@ -1048,8 +1040,6 @@ print_frame_info (const frame_print_options &fp_opts,
   int location_print;
   struct ui_out *uiout = current_uiout;
 
-  frame.prepare_reinflate ();
-
   if (!current_uiout->is_mi_like_p ()
       && fp_opts.print_frame_info != print_frame_info_auto)
     {
@@ -1182,7 +1172,6 @@ print_frame_info (const frame_print_options &fp_opts,
 
 	  print_source_lines (sal.symtab, sal.line, sal.line + 1, 0);
 	}
-      frame.reinflate ();
 
       /* If disassemble-next-line is set to on and there is line debug
 	 messages, output assembly codes for next line.  */
@@ -1685,11 +1674,8 @@ info_frame_command_core (frame_info_ptr fi, bool selected_frame_p)
 	      gdb_printf (" %d args: ", numargs);
 	  }
 
-	fi.prepare_reinflate ();
 	print_frame_args (user_frame_print_options,
 			  func, fi, numargs, gdb_stdout);
-	fi.reinflate ();
-
 	gdb_puts ("\n");
       }
   }
@@ -2077,7 +2063,6 @@ backtrace_command_1 (const frame_print_options &fp_opts,
       for (fi = trailing; fi && count--; fi = get_prev_frame (fi))
 	{
 	  QUIT;
-	  fi.prepare_reinflate ();
 
 	  /* Don't use print_stack_frame; if an error() occurs it probably
 	     means further attempts to backtrace would fail (on the other
@@ -2089,7 +2074,6 @@ backtrace_command_1 (const frame_print_options &fp_opts,
 	    print_frame_local_vars (fi, false, NULL, NULL, 1, gdb_stdout);
 
 	  /* Save the last frame to check for error conditions.  */
-	  fi.reinflate ();
 	  trailing = fi;
 	}
 

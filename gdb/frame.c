@@ -20,7 +20,6 @@
 
 #include "defs.h"
 #include "frame.h"
-#include "frame-info.h"
 #include "target.h"
 #include "value.h"
 #include "inferior.h"	/* for inferior_ptid */
@@ -71,6 +70,7 @@ set_backtrace_options user_set_backtrace_options;
 
 static frame_info_ptr get_prev_frame_raw (frame_info_ptr this_frame);
 static const char *frame_stop_reason_symbol_string (enum unwind_stop_reason reason);
+static frame_info_ptr create_new_frame (frame_id id);
 
 /* Status of some values cached in the frame_info object.  */
 
@@ -241,6 +241,9 @@ frame_addr_hash (const void *ap)
   if (f_id.special_addr_p)
     hash = iterative_hash (&f_id.special_addr,
 			   sizeof (f_id.special_addr), hash);
+
+  char user_created_p = f_id.user_created_p;
+  hash = iterative_hash (&user_created_p, sizeof (user_created_p), hash);
 
   return hash;
 }
@@ -776,6 +779,8 @@ frame_id::operator== (const frame_id &r) const
     eq = false;
   else if (artificial_depth != r.artificial_depth)
     /* If artificial depths are different, the frames must be different.  */
+    eq = false;
+  else if (user_created_p != r.user_created_p)
     eq = false;
   else
     /* Frames are equal.  */
@@ -1690,9 +1695,12 @@ get_current_frame (void)
 
    If SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL are null_frame_id / -1,
    and the target has stack and is stopped, the selected frame is the
-   current (innermost) frame.  This means that SELECTED_FRAME_LEVEL is
-   never 0 and SELECTED_FRAME_ID is never the ID of the innermost
-   frame.
+   current (innermost) target frame.  SELECTED_FRAME_ID is never the ID
+   of the current (innermost) target frame.  SELECTED_FRAME_LEVEL may
+   only be 0 if the selected frame is a user-created one (created and
+   selected through the "select-frame view" command), in which case
+   SELECTED_FRAME_ID is the frame id derived from the user-provided
+   addresses.
 
    If SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL are null_frame_id / -1,
    and the target has no stack or is executing, then there's no
@@ -1720,9 +1728,9 @@ void
 restore_selected_frame (frame_id frame_id, int frame_level)
   noexcept
 {
-  /* save_selected_frame never returns level == 0, so we shouldn't see
-     it here either.  */
-  gdb_assert (frame_level != 0);
+  /* Unless it is a user-created frame, save_selected_frame never returns
+     level == 0, so we shouldn't see it here either.  */
+  gdb_assert (frame_level != 0 || frame_id.user_created_p);
 
   /* FRAME_ID can be null_frame_id only IFF frame_level is -1.  */
   gdb_assert ((frame_level == -1 && !frame_id_p (frame_id))
@@ -1753,6 +1761,15 @@ lookup_selected_frame (struct frame_id a_frame_id, int frame_level)
   if (frame_level == -1)
     {
       select_frame (get_current_frame ());
+      return;
+    }
+
+  /* This means the selected frame was a user-created one.  Create a new one
+     using the user-provided addresses, which happen to be in the frame id.  */
+  if (frame_level == 0)
+    {
+      gdb_assert (a_frame_id.user_created_p);
+      select_frame (create_new_frame (a_frame_id));
       return;
     }
 
@@ -1880,7 +1897,10 @@ select_frame (frame_info_ptr fi)
 
   selected_frame = fi;
   selected_frame_level = frame_relative_level (fi);
-  if (selected_frame_level == 0)
+
+  /* If the frame is a user-created one, save its level and frame id just like
+     any other non-level-0 frame.  */
+  if (selected_frame_level == 0 && !fi->this_id.value.user_created_p)
     {
       /* Treat the current frame especially -- we want to always
 	 save/restore it without warning, even if the frame ID changes
@@ -1950,14 +1970,23 @@ select_frame (frame_info_ptr fi)
 /* Create an arbitrary (i.e. address specified by user) or innermost frame.
    Always returns a non-NULL value.  */
 
-frame_info_ptr
-create_new_frame (CORE_ADDR addr, CORE_ADDR pc)
+static frame_info_ptr
+create_new_frame (frame_id id)
 {
-  frame_info *fi;
+  gdb_assert (id.user_created_p);
+  gdb_assert (id.stack_status == frame_id_stack_status::FID_STACK_VALID);
+  gdb_assert (id.code_addr_p);
 
-  frame_debug_printf ("addr=%s, pc=%s", hex_string (addr), hex_string (pc));
+  frame_debug_printf ("stack_addr=%s, core_addr=%s",
+		      hex_string (id.stack_addr), hex_string (id.code_addr));
 
-  fi = FRAME_OBSTACK_ZALLOC (struct frame_info);
+  /* Avoid creating duplicate frames, search for an existing frame with that id
+     in the stash.  */
+  frame_info_ptr frame = frame_stash_find (id);
+  if (frame != nullptr)
+    return frame;
+
+  frame_info *fi = FRAME_OBSTACK_ZALLOC (struct frame_info);
 
   fi->next = create_sentinel_frame (current_program_space,
 				    get_current_regcache ());
@@ -1966,7 +1995,7 @@ create_new_frame (CORE_ADDR addr, CORE_ADDR pc)
      Do this before looking for this frame's unwinder.  A sniffer is
      very likely to read this, and the corresponding unwinder is
      entitled to rely that the PC doesn't magically change.  */
-  fi->next->prev_pc.value = pc;
+  fi->next->prev_pc.value = id.code_addr;
   fi->next->prev_pc.status = CC_VALUE;
 
   /* We currently assume that frame chain's can't cross spaces.  */
@@ -1978,11 +2007,23 @@ create_new_frame (CORE_ADDR addr, CORE_ADDR pc)
   frame_unwind_find_by_frame (frame_info_ptr (fi), &fi->prologue_cache);
 
   fi->this_id.p = frame_id_status::COMPUTED;
-  fi->this_id.value = frame_id_build (addr, pc);
+  fi->this_id.value = id;
+
+  bool added = frame_stash_add (fi);
+  gdb_assert (added);
 
   frame_debug_printf ("  -> %s", fi->to_string ().c_str ());
 
   return frame_info_ptr (fi);
+}
+
+frame_info_ptr
+create_new_frame (CORE_ADDR stack, CORE_ADDR pc)
+{
+  frame_id id = frame_id_build (stack, pc);
+  id.user_created_p = 1;
+
+  return create_new_frame (id);
 }
 
 /* Return the frame that THIS_FRAME calls (NULL if THIS_FRAME is the
@@ -3193,6 +3234,62 @@ maintenance_print_frame_id (const char *args, int from_tty)
   gdb_printf ("frame-id for frame #%d: %s\n",
 	      frame_relative_level (frame),
 	      get_frame_id (frame).to_string ().c_str ());
+}
+
+/* See frame-info-ptr.h.  */
+
+intrusive_list<frame_info_ptr> frame_info_ptr::frame_list;
+
+/* See frame-info-ptr.h.  */
+
+frame_info_ptr::frame_info_ptr (struct frame_info *ptr)
+  : m_ptr (ptr)
+{
+  frame_list.push_back (*this);
+
+  if (m_ptr == nullptr)
+    return;
+
+  m_cached_level = ptr->level;
+
+  if (m_cached_level != 0 || m_ptr->this_id.value.user_created_p)
+    m_cached_id = m_ptr->this_id.value;
+}
+
+/* See frame-info-ptr.h.  */
+
+frame_info *
+frame_info_ptr::reinflate () const
+{
+  /* Ensure we have a valid frame level (sentinel frame or above).  */
+  gdb_assert (m_cached_level >= -1);
+
+  if (m_ptr != nullptr)
+    {
+      /* The frame_info wasn't invalidated, no need to reinflate.  */
+      return m_ptr;
+    }
+
+  if (m_cached_id.user_created_p)
+    m_ptr = create_new_frame (m_cached_id).get ();
+  else
+    {
+      /* Frame #0 needs special handling, see comment in select_frame.  */
+      if (m_cached_level == 0)
+	m_ptr = get_current_frame ().get ();
+      else
+	{
+	  /* If we reach here without a valid frame id, it means we are trying
+	     to reinflate a frame whose id was not know at construction time.
+	     We're probably trying to reinflate a frame while computing its id
+	     which is not possible, and would indicate a problem with GDB.  */
+	  gdb_assert (frame_id_p (m_cached_id));
+	  m_ptr = frame_find_by_id (m_cached_id).get ();
+	}
+    }
+
+  gdb_assert (m_ptr != nullptr);
+  return m_ptr;
 }
 
 void _initialize_frame ();

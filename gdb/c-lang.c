@@ -37,7 +37,6 @@
 #include <ctype.h>
 #include "gdbcore.h"
 #include "gdbarch.h"
-#include "compile/compile-internal.h"
 #include "c-exp.h"
 #include "arch-utils.h"
 

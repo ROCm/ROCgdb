@@ -19,9 +19,8 @@
 
 # This test only works on Linux
 require !use_gdb_stub isnative
-if { [is_remote host] || ![istarget *-linux*] } {
-    return
-}
+require {!is_remote host}
+require {istarget *-linux*}
 
 standard_testfile
 set escapedbinfile  [string_to_regexp $binfile]
@@ -33,11 +32,8 @@ remote_exec build "rm -f ${binfile}"
 #log_user 1
 
 proc corefunc { threadtype } {
-    global srcfile
     global binfile
     global escapedbinfile
-    global srcdir
-    global subdir
     global gdb_prompt
 
     set test_spawn_id [spawn_wait_for_attach $binfile]
@@ -46,11 +42,7 @@ proc corefunc { threadtype } {
     # Stop the program 
     remote_exec build "kill -s STOP ${testpid}"
 
-    # Start with clean gdb
-    gdb_exit
-    gdb_start
-    gdb_reinitialize_dir $srcdir/$subdir
-    gdb_load ${binfile}
+    clean_restart $binfile
 
     # Verify that we can attach to the stopped process.
        
@@ -97,5 +89,3 @@ if  { [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" execut
 }
 
 corefunc threaded
-
-return 0

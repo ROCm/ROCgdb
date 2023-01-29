@@ -23,6 +23,7 @@
 
 #include "gdbsupport/common-defs.h"
 #include "gdbsupport/traits.h"
+#include "gdbthread.h"
 
 #include <amd-dbgapi/amd-dbgapi.h>
 

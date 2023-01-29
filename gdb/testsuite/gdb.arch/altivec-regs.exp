@@ -21,11 +21,7 @@
 # This file uses altivec-regs.c for input.
 #
 
-
-if {![istarget "powerpc*"] || [skip_altivec_tests]} {
-    verbose "Skipping altivec register tests."
-    return
-}
+require allow_altivec_tests
 
 standard_testfile
 

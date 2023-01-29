@@ -363,13 +363,19 @@ show_tui_resize_message (struct ui_file *file, int from_tty,
 
 
 /* Generic window name completion function.  Complete window name pointed
-   to by TEXT and WORD.  If INCLUDE_NEXT_PREV_P is true then the special
-   window names 'next' and 'prev' will also be considered as possible
-   completions of the window name.  */
+   to by TEXT and WORD.
+
+   If EXCLUDE_CANNOT_FOCUS_P is true, then windows that can't take focus
+   will be excluded from the completions, otherwise they will be included.
+
+   If INCLUDE_NEXT_PREV_P is true then the special window names 'next' and
+   'prev' will also be considered as possible completions of the window
+   name.  This is independent of EXCLUDE_CANNOT_FOCUS_P.  */
 
 static void
 window_name_completer (completion_tracker &tracker,
-		       int include_next_prev_p,
+		       bool include_next_prev_p,
+		       bool exclude_cannot_focus_p,
 		       const char *text, const char *word)
 {
   std::vector<const char *> completion_name_vec;
@@ -378,8 +384,12 @@ window_name_completer (completion_tracker &tracker,
     {
       const char *completion_name = NULL;
 
-      /* We can't focus on an invisible window.  */
+      /* Don't include an invisible window.  */
       if (!win_info->is_visible ())
+	continue;
+
+      /* If requested, exclude windows that can't be focused.  */
+      if (exclude_cannot_focus_p && !win_info->can_focus ())
 	continue;
 
       completion_name = win_info->name ();
@@ -416,7 +426,7 @@ focus_completer (struct cmd_list_element *ignore,
 		 completion_tracker &tracker,
 		 const char *text, const char *word)
 {
-  window_name_completer (tracker, 1, text, word);
+  window_name_completer (tracker, true, true, text, word);
 }
 
 /* Complete possible window names for winheight command.  TEXT is the
@@ -433,7 +443,7 @@ winheight_completer (struct cmd_list_element *ignore,
   if (word != text)
     return;
 
-  window_name_completer (tracker, 0, text, word);
+  window_name_completer (tracker, false, false, text, word);
 }
 
 /* Update gdb's knowledge of the terminal size.  */
@@ -719,10 +729,52 @@ tui_set_focus_command (const char *arg, int from_tty)
   else
     win_info = tui_partial_win_by_name (arg);
 
-  if (win_info == NULL)
-    error (_("Unrecognized window name \"%s\""), arg);
-  if (!win_info->is_visible ())
-    error (_("Window \"%s\" is not visible"), arg);
+  if (win_info == nullptr)
+    {
+      /* When WIN_INFO is nullptr this can either mean that the window name
+	 is unknown to GDB, or that the window is not in the current
+	 layout.  To try and help the user, give a different error
+	 depending on which of these is the case.  */
+      std::string matching_window_name;
+      bool is_ambiguous = false;
+
+      for (const std::string &name : all_known_window_names ())
+	{
+	  /* Look through all windows in the current layout, if the window
+	     is in the current layout then we're not interested is it.  */
+	  for (tui_win_info *item : all_tui_windows ())
+	    if (item->name () == name)
+	      continue;
+
+	  if (startswith (name, arg))
+	    {
+	      if (matching_window_name.empty ())
+		matching_window_name = name;
+	      else
+		is_ambiguous = true;
+	    }
+	};
+
+      if (!matching_window_name.empty ())
+	{
+	  if (is_ambiguous)
+	    error (_("No windows matching \"%s\" in the current layout"),
+		   arg);
+	  else
+	    error (_("Window \"%s\" is not in the current layout"),
+		   matching_window_name.c_str ());
+	}
+      else
+	error (_("Unrecognized window name \"%s\""), arg);
+    }
+
+  /* If a window is part of the current layout then it will have a
+     tui_win_info associated with it and be visible, otherwise, there will
+     be no tui_win_info and the above error will have been raised.  */
+  gdb_assert (win_info->is_visible ());
+
+  if (!win_info->can_focus ())
+    error (_("Window \"%s\" cannot be focused"), arg);
 
   tui_set_win_focus_to (win_info);
   gdb_printf (_("Focus set to %s window.\n"),

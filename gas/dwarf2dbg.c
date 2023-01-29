@@ -1195,6 +1195,8 @@ dwarf2_directive_filename (void)
 	{
 	  dirname = filename;
 	  filename = demand_copy_C_string (&filename_len);
+	  if (filename == NULL)
+	    return NULL;
 	  SKIP_WHITESPACE ();
 	}
 
@@ -3094,6 +3096,8 @@ dwarf2_cleanup (void)
 {
   purge_generated_debug (true);
   free (files);
+  for (unsigned int i = 0; i < dirs_in_use; i++)
+    free (dirs[i]);
   free (dirs);
 }
 
