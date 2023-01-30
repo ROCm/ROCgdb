@@ -64,35 +64,47 @@ and with the Back-Cover Texts as in (a) below.
 this GNU Manual.  Buying copies from GNU Press supports the FSF in
 developing GNU and promoting software freedom.''
 
-@emph{Disclaimer}
+@emph{Legal Disclaimer and Copyright Information}
 
-The information contained herein is for informational purposes only,
-and is subject to change without notice.  While every precaution has
-been taken in the preparation of this document, it may contain
-technical inaccuracies, omissions and typographical errors, and AMD is
-under no obligation to update or otherwise correct this information.
-Advanced Micro Devices, Inc. makes no representations or warranties
-with respect to the accuracy or completeness of the contents of this
-document, and assumes no liability of any kind, including the implied
-warranties of noninfringement, merchantability or fitness for
-particular purposes, with respect to the operation or use of AMD
-hardware, software or other products described herein.  No license,
-including implied or arising by estoppel, to any intellectual property
-rights is granted by this document.  Terms and limitations applicable
-to the purchase or use of AMD’s products are as set forth in a signed
-agreement between the parties or in AMD's Standard Terms and
-Conditions of Sale.
+AMD ROCm software is made available by Advanced Micro Devices, Inc. under the
+open source license identified in the top-level directory for the library in
+the repository on @url{Github.com} (Portions of AMD ROCm software are
+licensed under MITx11 and UIL/NCSA. For more information on the license, review
+the @file{license.txt} in the top-level directory for the library on
+@url{Github.com}).  The additional terms and conditions below apply to your use
+of AMD ROCm technical documentation.
 
-AMD@registeredsymbol{}, the AMD Arrow logo, AMD Instinct@registeredsymbol{},
-Radeon@registeredsymbol{}, ROCm@registeredsymbol{} and combinations thereof are
-trademarks of Advanced Micro Devices, Inc.  Linux@registeredsymbol{} is the
-registered trademark of Linus Torvalds in the U.S. and other countries.
-PCIe@registeredsymbol{} is a registered trademark of PCI-SIG Corporation. Other
-product names used in this publication are for identification purposes only and
-may be trademarks of their respective companies.
+@copyright{}2019-2023 Advanced Micro Devices, Inc.  All rights reserved.
 
-Copyright @copyright{} 2019-2022 Advanced Micro Devices, Inc.  All
-rights reserved.
+The information presented in this document is for informational purposes only
+and may contain technical inaccuracies, omissions, and typographical errors.
+The information contained herein is subject to change and may be rendered
+inaccurate for many reasons, including but not limited to product and roadmap
+changes, component and motherboard version changes, new model and/or product
+releases, product differences between differing manufacturers, software
+changes, BIOS flashes, firmware upgrades, or the like.  Any computer system has
+risks of security vulnerabilities that cannot be completely prevented or
+mitigated.  AMD assumes no obligation to update or otherwise correct or revise
+this information.  However, AMD reserves the right to revise this information
+and to make changes from time to time to the content hereof without obligation
+of AMD to notify any person of such revisions or changes.
+
+THIS INFORMATION IS PROVIDED "AS IS."  AMD MAKES NO REPRESENTATIONS OR
+WARRANTIES WITH RESPECT TO THE CONTENTS HEREOF AND ASSUMES NO RESPONSIBILITY
+FOR ANY INACCURACIES, ERRORS, OR OMISSIONS THAT MAY APPEAR IN THIS INFORMATION.
+AMD SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT,
+MERCHANTABILITY, OR FITNESS FOR ANY PARTICULAR PURPOSE.  IN NO EVENT WILL AMD
+BE LIABLE TO ANY PERSON FOR ANY RELIANCE, DIRECT, INDIRECT, SPECIAL, OR OTHER
+CONSEQUENTIAL DAMAGES ARISING FROM THE USE OF ANY INFORMATION CONTAINED HEREIN,
+EVEN IF AMD IS EXPRESSLY ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+AMD, the AMD Arrow logo, AMD Instinct™, Radeon™, AMD ROCm™, and combinations
+thereof are trademarks of Advanced Micro Devices, Inc.
+Linux@registeredsymbol{} is the registered trademark of Linus Torvalds in the
+U.S. and other countries. PCIe@registeredsymbol{} is a registered trademark of
+PCI-SIG Corporation.  Other product names used in this publication are for
+identification purposes only and may be trademarks of their respective
+companies.
 @end copying
 
 @ifnottex
@@ -27283,6 +27295,18 @@ Displayed as @samp{navy_flounder} by @value{GDBN} and denoted as
 Displayed as @samp{dimgrey_cavefish} by @value{GDBN} and denoted as
 @samp{gfx1032} by the compiler.
 
+@item Plum Bonito
+Displayed as @samp{plum_bonito} by @value{GDBN} and denoted as
+@samp{gfx1100} by the compiler.
+
+@item Wheat Nas
+Displayed as @samp{wheat_nas} by @value{GDBN} and denoted as
+@samp{gfx1101} by the compiler.
+
+@item Hotpink Bonefish
+Displayed as @samp{hotpink_bonefish} by @value{GDBN} and denoted as
+@samp{gfx1102} by the compiler.
+
 @end table
 
 @subsubsection @acronym{AMD ROCm} Source Languages
@@ -28423,10 +28447,6 @@ available as part of releases before ROCm 3.5.
 @acronym{AMD GPU} target does not currently support the compiler
 address, memory, or thread sanitizers.
 
-@item
-@value{GDBN} support for @acronym{AMD GPU} devices is not currently
-available under virtualization.
-
 @anchor{AMD GPU Signal Restrictions}
 @item
 Supressing delivering some signals to a wavefront for some
@@ -28514,8 +28534,16 @@ reported as @code{SIGFPE} signals.  This happens if the
 
 @item
 @value{GDBN} does not support single root I/O virtualization (SR-IOV)
-on any AMD GPU architecture that supports it.  That includes
+on any @acronym{AMD GPU} architecture that supports it.  That includes
 @samp{gfx1030}, @samp{gfx1031}, and @samp{gfx1032}.
+
+@item
+@value{GDBN} does not support debugging programs that use cooperative
+groups or CU masking for @acronym{AMD GPU} architectures @samp{gfx1100},
+@samp{gfx1101}, and @samp{gfx11102}.  A restriction will be reported
+when attaching to a process that has already created cooperative group
+queues or CU masked queues.  Any attempt to create a cooperative queue
+or CU masked queue when @value{GDBN} is attached will fail.
 
 @end enumerate
 
