@@ -25310,8 +25310,14 @@ in @value{GDBN}.  You may want to report the problem to the
 @value{GDBN} developers.
 
 For each packet @var{name}, the command to enable or disable the
-packet is @code{set remote @var{name}-packet}.  The available settings
-are:
+packet is @code{set remote @var{name}-packet}.  If you configure a packet, the
+configuration will apply for all future remote targets if no target is selected.
+In case there is a target selected, only the configuration of the current target
+is changed.  All other existing remote targets' features are not affected.
+The command to print the current configuration of a packet is
+@code{show remote @var{name}-packet}.  It displays the current remote target's
+configuration.  If no remote target is selected, the default configuration for
+future connections is shown.  The available settings are:
 
 @multitable @columnfractions 0.28 0.32 0.25
 @item Command Name
@@ -25551,6 +25557,21 @@ are:
 @tab Tracking thread lifetime.
 
 @end multitable
+
+@cindex packet size, remote, configuring
+The number of bytes per memory-read or memory-write packet for a remote target
+can be configured using the commands
+@w{@code{set remote memory-read-packet-size}} and
+@w{@code{set remote memory-write-packet-size}}.  If set to @samp{0} (zero) the
+default packet size will be used.  The actual limit is further reduced depending
+on the target.  Specify @samp{fixed} to disable the target-dependent restriction
+and @samp{limit} to enable it.  Similar to the enabling and disabling of remote
+packets, the command applies to the currently selected target (if available).
+If no remote target is selected, it applies to all future remote connections.
+The configuration of the selected target can be displayed using the commands
+@w{@code{show remote memory-read-packet-size}} and
+@w{@code{show remote memory-write-packet-size}}.  If no remote target is
+selected, the default configuration for future connections is shown.
 
 @node Remote Stub
 @section Implementing a Remote Stub

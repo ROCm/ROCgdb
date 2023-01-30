@@ -4278,8 +4278,9 @@ dwarf2_base_index_functions::find_per_cu (dwarf2_per_bfd *per_bfd,
 {
   if (per_bfd->index_addrmap == nullptr)
     return nullptr;
-  return ((struct dwarf2_per_cu_data *)
-	  per_bfd->index_addrmap->find (adjusted_pc));
+
+  void *obj = per_bfd->index_addrmap->find (adjusted_pc);
+  return static_cast<dwarf2_per_cu_data *> (obj);
 }
 
 struct compunit_symtab *
@@ -18294,8 +18295,8 @@ cooked_indexer::scan_attributes (dwarf2_per_cu_data *scanning_per_cu,
 	  else if (*parent_entry == nullptr)
 	    {
 	      CORE_ADDR lookup = form_addr (origin_offset, origin_is_dwz);
-	      *parent_entry
-		= (cooked_index_entry *) m_die_range_map.find (lookup);
+	      void *obj = m_die_range_map.find (lookup);
+	      *parent_entry = static_cast <cooked_index_entry *> (obj);
 	    }
 
 	  unsigned int bytes_read;
@@ -18586,8 +18587,8 @@ cooked_indexer::make_index (cutu_reader *reader)
   for (const auto &entry : m_deferred_entries)
     {
       CORE_ADDR key = form_addr (entry.die_offset, m_per_cu->is_dwz);
-      cooked_index_entry *parent
-	= (cooked_index_entry *) m_die_range_map.find (key);
+      void *obj = m_die_range_map.find (key);
+      cooked_index_entry *parent = static_cast <cooked_index_entry *> (obj);
       m_index_storage->add (entry.die_offset, entry.tag, entry.flags,
 			    entry.name, parent, m_per_cu);
     }
@@ -20091,7 +20092,7 @@ private:
 
   CORE_ADDR m_address;
   linetable_entry_flags m_flags;
-  unsigned int m_discriminator;
+  unsigned int m_discriminator = 0;
 
   /* Additional bits of state we need to track.  */
 
@@ -20111,7 +20112,7 @@ private:
   bool m_stmt_at_address = false;
 
   /* When true, record the lines we decode.  */
-  bool m_currently_recording_lines = false;
+  bool m_currently_recording_lines = true;
 
   /* The last line number that was recorded, used to coalesce
      consecutive entries for the same line.  This can happen, for
@@ -20364,25 +20365,18 @@ lnp_state_machine::record_line (bool end_sequence)
 
 lnp_state_machine::lnp_state_machine (struct dwarf2_cu *cu, gdbarch *arch,
 				      line_header *lh)
+  : m_cu (cu),
+    m_gdbarch (arch),
+    m_line_header (lh),
+    /* Call `gdbarch_adjust_dwarf2_line' on the initial 0 address as
+       if there was a line entry for it so that the backend has a
+       chance to adjust it and also record it in case it needs it.
+       This is currently used by MIPS code,
+       cf. `mips_adjust_dwarf2_line'.  */
+    m_address (gdbarch_adjust_dwarf2_line (arch, 0, 0)),
+    m_flags (lh->default_is_stmt ? LEF_IS_STMT : (linetable_entry_flags) 0),
+    m_last_address (m_address)
 {
-  m_cu = cu;
-  m_gdbarch = arch;
-  m_line_header = lh;
-
-  m_currently_recording_lines = true;
-
-  /* Call `gdbarch_adjust_dwarf2_line' on the initial 0 address as if there
-     was a line entry for it so that the backend has a chance to adjust it
-     and also record it in case it needs it.  This is currently used by MIPS
-     code, cf. `mips_adjust_dwarf2_line'.  */
-  m_address = gdbarch_adjust_dwarf2_line (arch, 0, 0);
-  m_flags = 0;
-  if (lh->default_is_stmt)
-    m_flags |= LEF_IS_STMT;
-  m_discriminator = 0;
-
-  m_last_address = m_address;
-  m_stmt_at_address = false;
 }
 
 void
