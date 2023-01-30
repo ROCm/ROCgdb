@@ -1,6 +1,6 @@
 /* This test script is part of GDB, the GNU debugger.
 
-   Copyright 1999-2022 Free Software Foundation, Inc.
+   Copyright 1999-2023 Free Software Foundation, Inc.
    Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify

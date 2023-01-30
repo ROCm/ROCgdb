@@ -1,6 +1,6 @@
 /* Multi-process control for GDB, the GNU debugger.
 
-   Copyright (C) 2008-2022 Free Software Foundation, Inc.
+   Copyright (C) 2008-2023 Free Software Foundation, Inc.
    Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -487,8 +487,7 @@ uiout_field_connection (process_stratum_target *proc_target)
     return {};
   else
     {
-      std::string conn_str
-	= make_target_connection_string (proc_target).c_str ();
+      std::string conn_str = make_target_connection_string (proc_target);
       return string_printf ("%d (%s)", proc_target->connection_number,
 			    conn_str.c_str ());
     }

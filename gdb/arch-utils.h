@@ -1,6 +1,6 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 1998-2023 Free Software Foundation, Inc.
    Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -132,6 +132,10 @@ extern gdbarch_virtual_frame_pointer_ftype legacy_virtual_frame_pointer;
 extern const struct floatformat **
   default_floatformat_for_type (struct gdbarch *gdbarch,
 				const char *name, int len);
+
+/* Default implementation of gdbarch_remove_non_address_bits.  */
+CORE_ADDR default_remove_non_address_bits (struct gdbarch *gdbarch,
+					   CORE_ADDR pointer);
 
 /* Default implementation of gdbarch_memtag_to_string.  */
 extern std::string default_memtag_to_string (struct gdbarch *gdbarch,

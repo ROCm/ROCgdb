@@ -1,6 +1,6 @@
 /* General utility routines for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
    Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -3111,28 +3111,6 @@ show_debug_timestamp (struct ui_file *file, int from_tty,
 	      value);
 }
 
-
-/* See utils.h.  */
-
-CORE_ADDR
-address_significant (gdbarch *gdbarch, CORE_ADDR addr)
-{
-  /* Clear insignificant bits of a target address and sign extend resulting
-     address, avoiding shifts larger or equal than the width of a CORE_ADDR.
-     The local variable ADDR_BIT stops the compiler reporting a shift overflow
-     when it won't occur.  Skip updating of target address if current target
-     has not set gdbarch significant_addr_bit.  */
-  int addr_bit = gdbarch_significant_addr_bit (gdbarch);
-
-  if (addr_bit && (addr_bit < (sizeof (CORE_ADDR) * HOST_CHAR_BIT)))
-    {
-      CORE_ADDR sign = (CORE_ADDR) 1 << (addr_bit - 1);
-      addr &= ((CORE_ADDR) 1 << addr_bit) - 1;
-      addr = (addr ^ sign) - sign;
-    }
-
-  return addr;
-}
 
 std::string
 paspace_and_addr (struct gdbarch *gdbarch, CORE_ADDR addr)

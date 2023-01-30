@@ -1,5 +1,6 @@
-/* Copyright (C) 1986-2022 Free Software Foundation, Inc.
+/* Copyright (C) 1986-2023 Free Software Foundation, Inc.
    Copyright (C) 2021-2022 Advanced Micro Devices, Inc. All rights reserved.
+>>>>>>> origin/gdb-13-branch
 
    This file is part of GDB.
 

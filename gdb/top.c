@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -305,7 +305,7 @@ ui::ui (FILE *instream_, FILE *outstream_, FILE *errstream_)
     m_gdb_stdout (new pager_file (new stdio_file (outstream))),
     m_gdb_stdin (new stdio_file (instream)),
     m_gdb_stderr (new stderr_file (errstream)),
-    m_gdb_stdlog (m_gdb_stderr)
+    m_gdb_stdlog (new timestamped_file (m_gdb_stderr))
 {
   unbuffer_stream (instream_);
 
@@ -651,11 +651,6 @@ execute_command (const char *p, int from_tty)
 	    }
 	}
 
-      /* Remember name of the command.  This is needed later when
-	 executing command post-hooks to handle the case when command
-	 is redefined or removed during it's execution.  See below.  */
-      std::string c_name (c->name);
-
       /* If this command has been pre-hooked, run the hook first.  */
       execute_cmd_pre_hook (c);
 
@@ -698,7 +693,8 @@ execute_command (const char *p, int from_tty)
 	 We need to lookup the command again since during its execution,
 	 a command may redefine itself.  In this case, C pointer
 	 becomes invalid so we need to look it up again.  */
-      c = lookup_cmd_exact (c_name.c_str (), cmdlist);
+      const char *cmd2 = cmd_start;
+      c = lookup_cmd (&cmd2, cmdlist, "", nullptr, 1, 1);
       if (c != nullptr)
 	execute_cmd_post_hook (c);
 
@@ -1448,7 +1444,7 @@ print_gdb_version (struct ui_file *stream, bool interactive)
   /* Second line is a copyright notice.  */
 
   gdb_printf (stream,
-	      "Copyright (C) 2022 Free Software Foundation, Inc.\n");
+	      "Copyright (C) 2023 Free Software Foundation, Inc.\n");
 
   /* Following the copyright is a brief statement that the program is
      free software, that users are free to copy and change it on

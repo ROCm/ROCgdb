@@ -8,7 +8,8 @@
 ##
 ## .cfi_negate_ra_state CFI directive is used to convey this information.
 ##
-## SFrame does not have any means to represent this information at this time.
+## SFrame has support for this. This testcase ensures that the directive
+## is interpreted successfully.
 	.cfi_startproc
 	.long 0
 	.cfi_def_cfa_offset 16
