@@ -223,7 +223,7 @@ private:
   void write_scope (struct obstack *storage, const char *sep) const;
 };
 
-class cooked_index_vector;
+class cooked_index;
 
 /* An index of interesting DIEs.  This is "cooked", in contrast to a
    mapped .debug_names or .gdb_index, which are "raw".  An entry in
@@ -232,11 +232,11 @@ class cooked_index_vector;
    Operations on the index are described below.  They are chosen to
    make it relatively simple to implement the symtab "quick"
    methods.  */
-class cooked_index
+class cooked_index_shard
 {
 public:
-  cooked_index () = default;
-  DISABLE_COPY_AND_ASSIGN (cooked_index);
+  cooked_index_shard () = default;
+  DISABLE_COPY_AND_ASSIGN (cooked_index_shard);
 
   /* Create a new cooked_index_entry and register it with this object.
      Entries are owned by this object.  The new item is returned.  */
@@ -264,7 +264,7 @@ public:
     m_future.wait ();
   }
 
-  friend class cooked_index_vector;
+  friend class cooked_index;
 
   /* A simple range over part of m_entries.  */
   typedef iterator_range<std::vector<cooked_index_entry *>::const_iterator>
@@ -343,20 +343,20 @@ private:
 };
 
 /* The main index of DIEs.  The parallel DIE indexers create
-   cooked_index objects.  Then, these are all handled to a
-   cooked_index_vector for storage and final indexing.  The index is
+   cooked_index_shard objects.  Then, these are all handled to a
+   cooked_index for storage and final indexing.  The index is
    made by iterating over the entries previously created.  */
 
-class cooked_index_vector : public dwarf_scanner_base
+class cooked_index : public dwarf_scanner_base
 {
 public:
 
   /* A convenience typedef for the vector that is contained in this
      object.  */
-  typedef std::vector<std::unique_ptr<cooked_index>> vec_type;
+  using vec_type = std::vector<std::unique_ptr<cooked_index_shard>>;
 
-  explicit cooked_index_vector (vec_type &&vec);
-  DISABLE_COPY_AND_ASSIGN (cooked_index_vector);
+  explicit cooked_index (vec_type &&vec);
+  DISABLE_COPY_AND_ASSIGN (cooked_index);
 
   /* Wait until the finalization of the entire cooked_index_vector is
      done.  */
@@ -366,7 +366,7 @@ public:
       item->wait ();
   }
 
-  ~cooked_index_vector ()
+  ~cooked_index ()
   {
     /* The 'finalize' methods may be run in a different thread.  If
        this object is destroyed before these complete, then one will
@@ -378,7 +378,7 @@ public:
   }
 
   /* A range over a vector of subranges.  */
-  typedef range_chain<cooked_index::range> range;
+  using range = range_chain<cooked_index_shard::range>;
 
   /* Look up an entry by name.  Returns a range of all matching
      results.  If COMPLETING is true, then a larger range, suitable
@@ -388,7 +388,7 @@ public:
   /* Return a range of all the entries.  */
   range all_entries () const
   {
-    std::vector<cooked_index::range> result_range;
+    std::vector<cooked_index_shard::range> result_range;
     result_range.reserve (m_vector.size ());
     for (auto &entry : m_vector)
       result_range.push_back (entry->all_entries ());
@@ -408,7 +408,7 @@ public:
      "main".  This will return NULL if no such entry is available.  */
   const cooked_index_entry *get_main () const;
 
-  cooked_index_vector *index_for_writing () override
+  cooked_index *index_for_writing () override
   {
     return this;
   }
