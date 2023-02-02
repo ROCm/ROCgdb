@@ -33,7 +33,6 @@
 #define OUTPUT_FLAVOR bfd_target_elf_flavour
 #endif
 
-#define BYTES_IN_WORD 4		/* for now */
 #include "bfd/elf-bfd.h"
 
 #include "targ-cpu.h"
@@ -118,6 +117,11 @@ struct elf_section_match
 #define obj_begin() elf_begin ()
 #endif
 extern void elf_begin (void);
+
+#ifndef obj_end
+#define obj_end() elf_end ()
+#endif
+extern void elf_end (void);
 
 #ifndef LOCAL_LABEL_PREFIX
 #define LOCAL_LABEL_PREFIX '.'
