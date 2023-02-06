@@ -280,6 +280,7 @@ if test x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes \
 
   if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then
     TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o amdgpu-tdep.o solib-rocm.o"
+    AC_DEFINE(HAVE_AMD_DBGAPI, 1, [Define if amd-dbgapi is being linked in.])
   fi
 
   CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
