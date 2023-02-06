@@ -62,6 +62,11 @@ AX_CXX_COMPILE_STDCXX(11, , mandatory)
 ZW_CREATE_DEPDIR
 ZW_PROG_COMPILER_DEPENDENCIES([CC])
 
+# Since the first call to PKG_CHECK_MODULES may not happen (is guarded by
+# a condition), we must call PKG_PROG_PKG_CONFIG explicitly to probe for
+# pkg-config.
+PKG_PROG_PKG_CONFIG
+
 dnl List of object files and targets accumulated by configure.
 
 CONFIG_OBS=
@@ -242,54 +247,51 @@ if test x${all_targets} = xtrue; then
   fi
 fi
 
-# ROCm dbgapi support.
+# AMD debugger API support.
 
-AC_ARG_WITH(rocm-dbgapi,
-AS_HELP_STRING([--with-rocm-dbgapi=PATH],
-               [specify prefix directory for installed ROCm-dbgapi package]),,
-  [with_rocm_dbgapi=/opt/rocm])
+AC_ARG_WITH([amd-dbgapi],
+	    [AS_HELP_STRING([--with-amd-dbgapi],
+			    [support for the amd-dbgapi target (yes / no / auto)])],
+	    [GDB_CHECK_YES_NO_AUTO_VAL([$withval], [--with-amd-dbgapi])],
+	    [with_amd_dbgapi=auto])
 
-save_CPPFLAGS=${CPPFLAGS}
-CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
-AC_CHECK_HEADERS(amd-dbgapi/amd-dbgapi.h)
-
-if test x"$require_rocm_dbgapi" = xyes -a x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes; then
-  gdb_rocm_dbgapi_required_version_major=0
-  gdb_rocm_dbgapi_required_version_minor=68
-
-  AC_MSG_CHECKING([for the correct version of amd-dbgapi.h])
-  AC_TRY_COMPILE([#include "amd-dbgapi/amd-dbgapi.h"],[
-#if AMD_DBGAPI_VERSION_MAJOR != $gdb_rocm_dbgapi_required_version_major \
-    || AMD_DBGAPI_VERSION_MINOR < $gdb_rocm_dbgapi_required_version_minor
-# error
-#endif
-], [AC_MSG_RESULT([yes])], [AC_MSG_ERROR([amdgcn*-*-* requires version \
-$gdb_rocm_dbgapi_required_version_major.$gdb_rocm_dbgapi_required_version_minor+])])
+# If the user passes --without-amd-dbgapi but also explicitly enables a target
+# that requires amd-dbgapi, it is an error.
+if test "$with_amd_dbgapi" = no -a "$gdb_require_amd_dbgapi" = true; then
+  AC_MSG_ERROR([an explicitly enabled target requires amd-dbgapi, but amd-dbgapi is explicitly disabled])
 fi
-CPPFLAGS=${save_CPPFLAGS}
 
-save_LIBS=${LIBS}
-save_LDFLAGS=${LDFLAGS}
-LDFLAGS="${LDFLAGS} -L$with_rocm_dbgapi/lib"
-AC_CHECK_LIB(rocm-dbgapi,amd_dbgapi_initialize)
-LDFLAGS=${save_LDFLAGS}
-LIBS=${save_LIBS}
+# Look for amd-dbgapi if:
+#
+#   - a target architecture requiring it has explicitly been enabled, or
+#   - --enable-targets=all was provided and the user did not explicitly disable
+#     amd-dbgapi support
+if test "$gdb_require_amd_dbgapi" = true \
+     -o \( "$all_targets" = true -a "$with_amd_dbgapi" != no \); then
+  # amd-dbgapi version 0.68 is part of ROCm 5.4.  There is no guarantee of API
+  # stability until amd-dbgapi hits 1.0, but for convenience, still check for
+  # greater or equal that version.  It can be handy when testing with a newer
+  # version of the library.
+  PKG_CHECK_MODULES([AMD_DBGAPI], [amd-dbgapi >= 0.68.0],
+		    [has_amd_dbgapi=yes], [has_amd_dbgapi=no])
 
-if test x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes \
-    -a x"$ac_cv_lib_rocm_dbgapi_amd_dbgapi_initialize" = xyes; then
-
-  if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then
-    TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o amdgpu-tdep.o solib-rocm.o"
+  if test "$has_amd_dbgapi" = "yes"; then
     AC_DEFINE(HAVE_AMD_DBGAPI, 1, [Define if amd-dbgapi is being linked in.])
-  fi
+    TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o"
 
-  CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
-  ROCM_DBGAPI_LIBS="-Wl,--rpath,\$\${LD_RUN_PATH:-$with_rocm_dbgapi/lib} $with_rocm_dbgapi/lib/librocm-dbgapi.so"
-  AC_SUBST(ROCM_DBGAPI_LIBS)
-else
-  if test x"$require_rocm_dbgapi" = xyes; then
-    AC_MSG_ERROR([amdgcn*-*-* requires rocm-dbgapi to be installed, or use \
---with-rocm-dbgapi=PATH])
+    # If --enable-targets=all was provided, use the list of all files depending
+    # on amd-dbgapi that is hardcoded in the Makefile.  Else, the appropriate
+    # architecture entry in configure.tgt will have added the files to
+    # gdb_target_obs.
+    if test "$all_targets" = true; then
+      TARGET_OBS="$TARGET_OBS \$(ALL_AMD_DBGAPI_TARGET_OBS)"
+    fi
+  elif test "$gdb_require_amd_dbgapi" = true -o "$with_amd_dbgapi" = yes; then
+    # amd-dbgapi was not found and...
+    #
+    #   - a target requiring it was explicitly enabled, or
+    #   - the user explicitly wants to enable amd-dbgapi
+    AC_MSG_ERROR([amd-dbgapi is required, but cannot find an appropriate version: $AMD_DBGAPI_PKG_ERRORS])
   fi
 fi
 
