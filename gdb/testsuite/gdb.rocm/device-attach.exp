@@ -15,16 +15,12 @@
 
 load_lib rocm.exp
 
+require allow_hipcc_tests
+
 standard_testfile .cpp
 set escapedbinfile [string_to_regexp $binfile]
 
 if {![can_spawn_for_attach]} {
-    return 0
-}
-
-# Check if skip hip tests.
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
     return 0
 }
 

@@ -28,10 +28,7 @@
 
 load_lib rocm.exp
 
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test."
-    return 0
-}
+require allow_hipcc_tests
 
 if { [hip_device_is_less_than gfx90a] } {
     # Scheduler locking does not work in an intuitive manner before gfx90a due

@@ -149,8 +149,8 @@ proc skip_opencl_tests {} {
 # Yup, we don't want to run the gdb.rocm/ tests against this board.
 # That would be kind of recursive.  Those tests really expect that
 # "main()" is host code and start kernels themselves.
-proc skip_hipcc_tests {} {
-    return 1
+proc allow_hipcc_tests {} {
+    return 0
 }
 
 # Override this to fail faster.  If we let the default run, tests

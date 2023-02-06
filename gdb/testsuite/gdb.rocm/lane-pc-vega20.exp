@@ -20,6 +20,8 @@
 load_lib dwarf.exp
 load_lib rocm.exp
 
+require allow_hipcc_tests
+
 # Return the memory address of SYMBOL.
 
 proc gdb_symbol_address {symbol} {
@@ -104,12 +106,6 @@ if {![dwarf2_support]} {
 }
 
 standard_testfile .cpp
-
-# This test can only be run on amdgcn targets.
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: $gdb_test_file_name.exp"
-    return 0
-}
 
 set gpu_target [hcc_amdgpu_target]
 

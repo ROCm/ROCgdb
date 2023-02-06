@@ -20,16 +20,13 @@
 
 load_lib rocm.exp
 
+require allow_hipcc_tests
+
 if { ![istarget "*-linux*"] } then {
     continue
 }
 
 standard_testfile .cpp
-
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
-    return
-}
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
     return

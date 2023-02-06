@@ -19,6 +19,8 @@
 load_lib dwarf.exp
 load_lib rocm.exp
 
+require allow_hipcc_tests
+
 # This test can only be run on targets which support DWARF-2.
 if {![dwarf2_support]} {
     return 0
@@ -28,12 +30,6 @@ if {![dwarf2_support]} {
 set srcfile_base lane-pc-vega20
 
 standard_testfile ${srcfile_base}.cpp
-
-# This test can only be run on amdgcn targets.
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: $gdb_test_file_name.exp"
-    return 0
-}
 
 set gpu_target [hcc_amdgpu_target]
 

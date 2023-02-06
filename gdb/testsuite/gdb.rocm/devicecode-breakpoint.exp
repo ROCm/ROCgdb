@@ -18,14 +18,11 @@
 
 load_lib rocm.exp
 
+require allow_hipcc_tests
+
 standard_testfile .cpp
 
 set breakpoint_loc [gdb_get_line_number "location line"]
-
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
-    return 0
-}
 
 if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
     return -1

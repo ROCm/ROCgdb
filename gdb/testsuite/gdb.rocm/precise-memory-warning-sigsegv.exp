@@ -26,10 +26,7 @@ if { ![istarget "*-linux*"] } then {
 
 standard_testfile .cpp
 
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
-    return
-}
+require allow_hipcc_tests
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
     return

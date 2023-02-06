@@ -18,12 +18,9 @@
 
 load_lib rocm.exp
 
-standard_testfile .cpp
+require allow_hipcc_tests
 
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
-    return 0
-}
+standard_testfile .cpp
 
 if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
     return -1

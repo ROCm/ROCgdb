@@ -22,6 +22,8 @@
 
 load_lib rocm.exp
 
+require allow_hipcc_tests
+
 if { ![istarget "*-linux*"] } then {
     continue
 }
@@ -31,11 +33,6 @@ standard_testfile .c
 set testfile2 "bit-extract"
 set srcfile2 ${testfile2}.cpp
 set binfile2 [standard_output_file ${testfile2}]
-
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
-    return 0
-}
 
 if {[prepare_for_testing "failed to prepare ${testfile2}" $testfile2 $srcfile2 {debug hip}]} {
     return -1

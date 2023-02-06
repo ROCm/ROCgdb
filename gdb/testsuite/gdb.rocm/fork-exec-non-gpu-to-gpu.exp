@@ -19,12 +19,9 @@
 
 load_lib rocm.exp
 
-standard_testfile -execer.cpp -execee.cpp
+require allow_hipcc_tests
 
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
-    return 0
-}
+standard_testfile -execer.cpp -execee.cpp
 
 set srcfile_execer "$srcfile"
 set srcfile_execee "$srcfile2"

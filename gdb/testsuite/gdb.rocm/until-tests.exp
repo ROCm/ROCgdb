@@ -18,16 +18,13 @@
 
 load_lib rocm.exp
 
+require allow_hipcc_tests
+
 standard_testfile .cpp
 
 set breakpoint_loc [gdb_get_line_number "location line"]
 set threadid 16
 set num_waves 16
-
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test: ${testfile}."
-    return 0
-}
 
 # Some GPUs have 32 lanes per wave, while others have 64.  Use 32
 # threads per block so that we can control number of waves using the
