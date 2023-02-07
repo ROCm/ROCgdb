@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Support library for testing ROCm GDB features
+# Support library for testing ROCm (AMD GPU) GDB features.
 
 # Get the list of gpu targets to compile for.
 #
@@ -218,12 +218,10 @@ set gpu_lock_filename $objdir/gpu-parallel.lock
 # successfully created.
 
 proc lock_file_acquire {lockfile} {
-    global subdir gdb_test_file_name
-
-    verbose -log "acquiring lock file: $subdir/${gdb_test_file_name}.exp"
+    verbose -log "acquiring lock file: $::subdir/${::gdb_test_file_name}.exp"
     while {true} {
 	if {![catch {open $lockfile {WRONLY CREAT EXCL}} rc]} {
-	    set msg "locked by $subdir/${gdb_test_file_name}.exp"
+	    set msg "locked by $::subdir/${::gdb_test_file_name}.exp"
 	    verbose -log "lock file: $msg"
 	    # For debugging, put info in the lockfile about who owns
 	    # it.
@@ -238,9 +236,7 @@ proc lock_file_acquire {lockfile} {
 # Release a lock file.
 
 proc lock_file_release {info} {
-    global subdir gdb_test_file_name
-
-    verbose -log "releasing lock file: $subdir/${gdb_test_file_name}.exp"
+    verbose -log "releasing lock file: $::subdir/${::gdb_test_file_name}.exp"
 
     if {![catch {fconfigure [lindex $info 0]}]} {
 	if {![catch {
@@ -260,11 +256,8 @@ proc lock_file_release {info} {
 # the GPU lock.
 
 proc with_rocm_gpu_lock { body } {
-    global gpu_lock_filename
-    global GDB_PARALLEL
-
-    if {[info exists GDB_PARALLEL]} {
-	set lock_rc [lock_file_acquire $gpu_lock_filename]
+    if {[info exists ::GDB_PARALLEL]} {
+	set lock_rc [lock_file_acquire $::gpu_lock_filename]
     }
 
     set code [catch {uplevel 1 $body} result]
@@ -273,7 +266,7 @@ proc with_rocm_gpu_lock { body } {
     # left GDB running, debugging the GPU.
     gdb_exit
 
-    if {[info exists GDB_PARALLEL]} {
+    if {[info exists ::GDB_PARALLEL]} {
 	lock_file_release $lock_rc
     }
 

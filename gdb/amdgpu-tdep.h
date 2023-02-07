@@ -21,12 +21,10 @@
 #ifndef AMDGPU_TDEP_H
 #define AMDGPU_TDEP_H
 
-#include <gdbsupport/gdb_unique_ptr.h>
-#include <gdbarch.h>
-
-#include <unordered_map>
+#include "gdbarch.h"
 
 #include <amd-dbgapi/amd-dbgapi.h>
+#include <unordered_map>
 
 /* Provide std::unordered_map::Hash for amd_dbgapi_register_id_t.  */
 struct register_id_hash
@@ -98,6 +96,8 @@ struct amdgpu_gdbarch_tdep : gdbarch_tdep_base
 
 /* Return true if GDBARCH is of an AMDGPU architecture.  */
 bool is_amdgpu_arch (struct gdbarch *gdbarch);
+
+/* Return the amdgpu-specific data associated to ARCH.  */
 
 amdgpu_gdbarch_tdep *get_amdgpu_gdbarch_tdep (gdbarch *arch);
 
