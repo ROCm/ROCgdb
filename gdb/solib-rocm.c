@@ -20,43 +20,38 @@
 
 #include "defs.h"
 
-#include "arch-utils.h"
-#include "elf-bfd.h"
-#include "gdbcore.h"
-#include "inferior.h"
-#include "objfiles.h"
-#include "observable.h"
 #include "amd-dbgapi-target.h"
 #include "amdgpu-tdep.h"
-#include "solib-svr4.h"
+#include "arch-utils.h"
+#include "elf-bfd.h"
+#include "elf/amdgpu.h"
+#include "gdbsupport/fileio.h"
+#include "inferior.h"
+#include "observable.h"
 #include "solib.h"
+#include "solib-svr4.h"
 #include "solist.h"
 #include "symfile.h"
-#include "gdbsupport/fileio.h"
-
-#include <functional>
-#include <string>
-#include <unordered_map>
 
 /* ROCm-specific inferior data.  */
 
 struct solib_info
 {
   /* List of code objects loaded into the inferior.  */
-  struct so_list *solib_list;
+  so_list *solib_list;
 };
 
 /* Per-inferior data key.  */
 static const registry<inferior>::key<solib_info> rocm_solib_data;
 
-struct target_so_ops rocm_solib_ops;
+static target_so_ops rocm_solib_ops;
 
 /* Free the solib linked list.  */
 
 static void
 rocm_free_solib_list (struct solib_info *info)
 {
-  while (info->solib_list != NULL)
+  while (info->solib_list != nullptr)
     {
       struct so_list *next = info->solib_list->next;
 
@@ -64,7 +59,7 @@ rocm_free_solib_list (struct solib_info *info)
       info->solib_list = next;
     }
 
-  info->solib_list = NULL;
+  info->solib_list = nullptr;
 }
 
 /* Fetch the solib_info data for the current inferior.  */
@@ -108,7 +103,7 @@ rocm_solib_handle_event ()
      concerning host libraries.  We must therefore forward the call.  If the
      event was for a ROCm code object, it will be a no-op.  On the other hand,
      if the event was for host libraries, rocm_update_solib_list will be
-     essentially be a noop (it will reload the same code object list as was
+     essentially be a no-op (it will reload the same code object list as was
      previously loaded).  */
   svr4_so_ops.handle_event ();
 
@@ -117,13 +112,13 @@ rocm_solib_handle_event ()
 
 /* Make a deep copy of the solib linked list.  */
 
-static struct so_list *
-rocm_solib_copy_list (const struct so_list *src)
+static so_list *
+rocm_solib_copy_list (const so_list *src)
 {
-  struct so_list *dst = NULL;
+  struct so_list *dst = nullptr;
   struct so_list **link = &dst;
 
-  while (src != NULL)
+  while (src != nullptr)
     {
       struct so_list *newobj;
 
@@ -133,7 +128,7 @@ rocm_solib_copy_list (const struct so_list *src)
       lm_info_svr4 *src_li = (lm_info_svr4 *) src->lm_info;
       newobj->lm_info = new lm_info_svr4 (*src_li);
 
-      newobj->next = NULL;
+      newobj->next = nullptr;
       *link = newobj;
       link = &newobj->next;
 
@@ -147,24 +142,24 @@ rocm_solib_copy_list (const struct so_list *src)
    objects currently loaded in the inferior.  */
 
 static struct so_list *
-rocm_solib_current_sos (void)
+rocm_solib_current_sos ()
 {
   /* First, retrieve the host-side shared library list.  */
-  struct so_list *head = svr4_so_ops.current_sos ();
+  so_list *head = svr4_so_ops.current_sos ();
 
   /* Then, the device-side shared library list.  */
   struct so_list *list = get_solib_info ()->solib_list;
 
-  if (!list)
+  if (list == nullptr)
     return head;
 
   list = rocm_solib_copy_list (list);
 
-  if (!head)
+  if (head == nullptr)
     return list;
 
   /* Append our libraries to the end of the list.  */
-  struct so_list *tail;
+  so_list *tail;
   for (tail = head; tail->next; tail = tail->next)
     /* Nothing.  */;
   tail->next = list;
@@ -174,21 +169,23 @@ rocm_solib_current_sos (void)
 
 namespace {
 
-/* Interface to interact with a rocm code object stream.  */
+/* Interface to interact with a ROCm code object stream.  */
 
 struct rocm_code_object_stream
 {
   DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream);
 
   /* Copy SIZE bytes from the underlying objfile storage starting at OFFSET
-     into the user provided buffer BUF.  Return the number of bytes actually
-     copied (might be inferior to SIZE if the end of the stream is reached).
-   */
+     into the user provided buffer BUF.
+
+     Return the number of bytes actually copied (might be inferior to SIZE if
+     the end of the stream is reached).  */
   virtual file_ptr read (void *buf, file_ptr size, file_ptr offset) = 0;
 
-  /* Retrieve file information in SB.  Return 0 on success.  On failure,
-     set the bfd appropriate error number (using bfd_set_error) and return -1.
-   */
+  /* Retrieve file information in SB.
+
+     Return 0 on success.  On failure, set the appropriate bfd error number
+     (using bfd_set_error) and return -1.  */
   int stat (struct stat *sb);
 
   virtual ~rocm_code_object_stream () = default;
@@ -215,8 +212,8 @@ rocm_code_object_stream::stat (struct stat *sb)
   return 0;
 }
 
-/* Interface to a rocm object stream which is embedded in an ELF file
-   accessible to the debuggee.  */
+/* Interface to a ROCm object stream which is embedded in an ELF file
+   accessible to the debugger.  */
 
 struct rocm_code_object_stream_file final : rocm_code_object_stream
 {
@@ -245,7 +242,7 @@ protected:
 
 rocm_code_object_stream_file::rocm_code_object_stream_file
   (int fd, ULONGEST offset, ULONGEST size)
-     : m_fd { fd }, m_offset { offset }, m_size { size }
+  : m_fd (fd), m_offset (offset), m_size (size)
 {
 }
 
@@ -253,7 +250,7 @@ file_ptr
 rocm_code_object_stream_file::read (void *buf, file_ptr size,
 				    file_ptr offset)
 {
-  fileio_error target_error;
+  fileio_error target_errno;
   file_ptr nbytes = 0;
   while (size > 0)
     {
@@ -262,14 +259,14 @@ rocm_code_object_stream_file::read (void *buf, file_ptr size,
       file_ptr bytes_read
 	= target_fileio_pread (m_fd, static_cast<gdb_byte *> (buf) + nbytes,
 			       size, m_offset + offset + nbytes,
-			       &target_error);
+			       &target_errno);
 
       if (bytes_read == 0)
 	break;
 
       if (bytes_read < 0)
 	{
-	  errno = fileio_error_to_host (target_error);
+	  errno = fileio_error_to_host (target_errno);
 	  bfd_set_error (bfd_error_system_call);
 	  return -1;
 	}
@@ -286,11 +283,11 @@ rocm_code_object_stream_file::size ()
 {
   if (m_size == 0)
     {
-      fileio_error target_error;
+      fileio_error target_errno;
       struct stat stat;
-      if (target_fileio_fstat (m_fd, &stat, &target_error) < 0)
+      if (target_fileio_fstat (m_fd, &stat, &target_errno) < 0)
 	{
-	  errno = fileio_error_to_host (target_error);
+	  errno = fileio_error_to_host (target_errno);
 	  bfd_set_error (bfd_error_system_call);
 	  return -1;
 	}
@@ -310,8 +307,8 @@ rocm_code_object_stream_file::size ()
 
 rocm_code_object_stream_file::~rocm_code_object_stream_file ()
 {
-  fileio_error target_error;
-  target_fileio_close (m_fd, &target_error);
+  fileio_error target_errno;
+  target_fileio_close (m_fd, &target_errno);
 }
 
 /* Interface to a code object which lives in the inferior's memory.  */
@@ -320,7 +317,7 @@ struct rocm_code_object_stream_memory final : public rocm_code_object_stream
 {
   DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream_memory);
 
-  rocm_code_object_stream_memory (gdb::byte_vector &&buffer);
+  rocm_code_object_stream_memory (gdb::byte_vector buffer);
 
   file_ptr read (void *buf, file_ptr size, file_ptr offset) override;
 
@@ -338,8 +335,8 @@ protected:
 };
 
 rocm_code_object_stream_memory::rocm_code_object_stream_memory
-  (gdb::byte_vector &&buffer)
-     : m_objfile_image { std::move (buffer) }
+  (gdb::byte_vector buffer)
+  : m_objfile_image (std::move (buffer))
 {
 }
 
@@ -354,7 +351,7 @@ rocm_code_object_stream_memory::read (void *buf, file_ptr size,
   return size;
 }
 
-} // anonymous namespace
+} /* anonymous namespace */
 
 static void *
 rocm_bfd_iovec_open (bfd *abfd, void *inferior)
@@ -397,6 +394,7 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
       tokens.emplace_back (uri.substr (last, pos - last));
       last = pos + 1;
     }
+
   if (last != std::string::npos)
     tokens.emplace_back (uri.substr (last));
 
@@ -430,24 +428,23 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 
       if (protocol == "file")
 	{
-	  fileio_error target_error;
+	  fileio_error target_errno;
 	  int fd
 	    = target_fileio_open (static_cast<struct inferior *> (inferior),
 				  decoded_path.c_str (), FILEIO_O_RDONLY,
-				  false, 0, &target_error);
+				  false, 0, &target_errno);
 
 	  if (fd == -1)
 	    {
-	      /* FIXME: Should we set errno?  Move fileio_errno_to_host from
-		 gdb_bfd.c to fileio.cc  */
-	      /* errno = fileio_errno_to_host (target_errno); */
+	      errno = fileio_error_to_host (target_errno);
 	      bfd_set_error (bfd_error_system_call);
 	      return nullptr;
 	    }
 
 	  return new rocm_code_object_stream_file (fd, offset, size);
 	}
-      else if (protocol == "memory")
+
+      if (protocol == "memory")
 	{
 	  pid_t pid = std::stoul (path);
 	  if (pid != static_cast<struct inferior *> (inferior)->pid)
@@ -507,34 +504,34 @@ static gdb_bfd_ref_ptr
 rocm_solib_bfd_open (const char *pathname)
 {
   /* Handle regular files with SVR4 open.  */
-  if (!strstr (pathname, "://"))
+  if (strstr (pathname, "://") == nullptr)
     return svr4_so_ops.bfd_open (pathname);
 
-  gdb_bfd_ref_ptr abfd (
-    gdb_bfd_openr_iovec (pathname, "elf64-amdgcn", rocm_bfd_iovec_open,
-			 current_inferior (), rocm_bfd_iovec_pread,
-			 rocm_bfd_iovec_close, rocm_bfd_iovec_stat));
+  gdb_bfd_ref_ptr abfd
+    = gdb_bfd_openr_iovec (pathname, "elf64-amdgcn", rocm_bfd_iovec_open,
+			   current_inferior (), rocm_bfd_iovec_pread,
+			   rocm_bfd_iovec_close, rocm_bfd_iovec_stat);
 
   if (abfd == nullptr)
-    error (_ ("Could not open `%s' as an executable file: %s"), pathname,
+    error (_("Could not open `%s' as an executable file: %s"), pathname,
 	   bfd_errmsg (bfd_get_error ()));
 
   /* Check bfd format.  */
   if (!bfd_check_format (abfd.get (), bfd_object))
-    error (_ ("`%s': not in executable format: %s"),
+    error (_("`%s': not in executable format: %s"),
 	   bfd_get_filename (abfd.get ()), bfd_errmsg (bfd_get_error ()));
 
   unsigned char osabi = elf_elfheader (abfd)->e_ident[EI_OSABI];
   unsigned char osabiversion = elf_elfheader (abfd)->e_ident[EI_ABIVERSION];
 
-  /* Make a check if the code object in the elf is V3. ROCM-gdb has
-     support only for V3.  */
+  /* Check that the code object is using the HSA OS ABI.  */
   if (osabi != ELFOSABI_AMDGPU_HSA)
-    error (_ ("`%s': ELF file OS ABI invalid (%d)."),
+    error (_("`%s': ELF file OS ABI is not supported (%d)."),
 	   bfd_get_filename (abfd.get ()), osabi);
 
-  if (osabi == ELFOSABI_AMDGPU_HSA && osabiversion < 1)
-    error (_ ("`%s': ELF file ABI version (%d) is not supported."),
+  /* We support HSA code objects V3 and greater.  */
+  if (osabiversion < ELFABIVERSION_AMDGPU_HSA_V3)
+    error (_("`%s': ELF file HSA OS ABI version is not supported (%d)."),
 	   bfd_get_filename (abfd.get ()), osabiversion);
 
   return abfd;
@@ -556,7 +553,6 @@ rocm_update_solib_list ()
     return;
 
   solib_info *info = get_solib_info ();
-  amd_dbgapi_status_t status;
 
   rocm_free_solib_list (info);
   struct so_list **link = &info->solib_list;
@@ -564,12 +560,13 @@ rocm_update_solib_list ()
   amd_dbgapi_code_object_id_t *code_object_list;
   size_t count;
 
-  if ((status
-       = amd_dbgapi_process_code_object_list (process_id, &count,
-					      &code_object_list, nullptr))
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  amd_dbgapi_status_t status
+    = amd_dbgapi_process_code_object_list (process_id, &count,
+					   &code_object_list, nullptr);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
     {
-      warning (_ ("amd_dbgapi_code_object_list failed (%d)"), status);
+      warning (_("amd_dbgapi_process_code_object_list failed (%s)"),
+	       get_status_string (status));
       return;
     }
 
@@ -578,14 +575,16 @@ rocm_update_solib_list ()
       CORE_ADDR l_addr;
       char *uri_bytes;
 
-      if (amd_dbgapi_code_object_get_info (
-	    code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_LOAD_ADDRESS,
-	    sizeof (l_addr), &l_addr)
-	    != AMD_DBGAPI_STATUS_SUCCESS
-	  || amd_dbgapi_code_object_get_info (
-	       code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_URI_NAME,
-	       sizeof (uri_bytes), &uri_bytes)
-	       != AMD_DBGAPI_STATUS_SUCCESS)
+      status = amd_dbgapi_code_object_get_info
+	(code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_LOAD_ADDRESS,
+	 sizeof (l_addr), &l_addr);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	continue;
+
+      status = amd_dbgapi_code_object_get_info
+	(code_object_list[i], AMD_DBGAPI_CODE_OBJECT_INFO_URI_NAME,
+	 sizeof (uri_bytes), &uri_bytes);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
 	continue;
 
       struct so_list *so = XCNEW (struct so_list);
@@ -612,7 +611,7 @@ rocm_update_solib_list ()
 
   if (rocm_solib_ops.current_sos == NULL)
     {
-      /* Override what we need to */
+      /* Override what we need to.  */
       rocm_solib_ops = svr4_so_ops;
       rocm_solib_ops.current_sos = rocm_solib_current_sos;
       rocm_solib_ops.solib_create_inferior_hook
@@ -623,7 +622,7 @@ rocm_update_solib_list ()
       rocm_solib_ops.handle_event = rocm_solib_handle_event;
 
       /* Engage the ROCm so_ops.  */
-      set_gdbarch_so_ops (target_gdbarch (), &rocm_solib_ops);
+      set_gdbarch_so_ops (current_inferior ()->gdbarch, &rocm_solib_ops);
     }
 }
 

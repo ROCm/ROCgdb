@@ -21,8 +21,7 @@
 #ifndef AMD_DBGAPI_TARGET_H
 #define AMD_DBGAPI_TARGET_H 1
 
-#include "gdbsupport/common-defs.h"
-#include "gdbsupport/traits.h"
+#include "gdbsupport/observable.h"
 #include "gdbthread.h"
 
 #include <amd-dbgapi/amd-dbgapi.h>
@@ -49,6 +48,8 @@ using is_amd_dbgapi_handle
 	    std::is_same<T, amd_dbgapi_wave_id_t>>;
 
 } /* namespace detail */
+
+/* Comparison operators for amd-dbgapi handle types.  */
 
 template <typename T,
 	  typename = gdb::Requires<detail::is_amd_dbgapi_handle<T>>>
@@ -83,11 +84,13 @@ ptid_is_gpu (ptid_t ptid)
 extern amd_dbgapi_process_id_t
 get_amd_dbgapi_process_id (struct inferior *inferior = nullptr);
 
+/* Get the amd-dbgapi wave id for PTID.  */
+
 static inline amd_dbgapi_wave_id_t
 get_amd_dbgapi_wave_id (ptid_t ptid)
 {
   gdb_assert (ptid_is_gpu (ptid));
-  return amd_dbgapi_wave_id_t{
+  return amd_dbgapi_wave_id_t {
     static_cast<decltype (amd_dbgapi_wave_id_t::handle)> (ptid.tid ())
   };
 }
