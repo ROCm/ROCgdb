@@ -1550,6 +1550,9 @@ static void
 process_one_event (amd_dbgapi_event_id_t event_id,
 		   amd_dbgapi_event_kind_t event_kind)
 {
+  /* Automatically mark this event processed when going out of scope.  */
+  scoped_amd_dbgapi_event_processed mark_event_processed (event_id);
+
   amd_dbgapi_process_id_t process_id;
   amd_dbgapi_status_t status
     = amd_dbgapi_event_get_info (event_id, AMD_DBGAPI_EVENT_INFO_PROCESS,
@@ -1710,7 +1713,6 @@ process_one_event (amd_dbgapi_event_id_t event_id,
       error (_("event kind (%d) not supported"), event_kind);
     }
 
-  amd_dbgapi_event_processed (event_id);
 }
 
 /* Return a textual version of KIND.  */
