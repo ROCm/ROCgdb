@@ -2147,15 +2147,14 @@ amd_dbgapi_target::detach (inferior *inf, int from_tty)
 void
 amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 {
-  struct gdbarch *gdbarch = regcache->arch ();
-
-  /* delegate to the host routines when not on the device */
-
-  if (!is_amdgpu_arch (gdbarch))
+  if (!ptid_is_gpu (regcache->ptid ()))
     {
       beneath ()->fetch_registers (regcache, regno);
       return;
     }
+
+  struct gdbarch *gdbarch = regcache->arch ();
+  gdb_assert (is_amdgpu_arch (gdbarch));
 
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
@@ -2176,13 +2175,14 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 void
 amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
 {
-  struct gdbarch *gdbarch = regcache->arch ();
-
-  if (!is_amdgpu_arch (gdbarch))
+  if (!ptid_is_gpu (regcache->ptid ()))
     {
       beneath ()->store_registers (regcache, regno);
       return;
     }
+
+  struct gdbarch *gdbarch = regcache->arch ();
+  gdb_assert (is_amdgpu_arch (gdbarch));
 
   gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
   regcache->raw_collect (regno, &raw);
