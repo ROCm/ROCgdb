@@ -548,7 +548,9 @@ rocm_solib_create_inferior_hook (int from_tty)
 static void
 rocm_update_solib_list ()
 {
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
+  inferior *inf = current_inferior ();
+
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
   if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
     return;
 
