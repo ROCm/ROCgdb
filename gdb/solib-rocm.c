@@ -62,16 +62,14 @@ rocm_free_solib_list (struct solib_info *info)
   info->solib_list = nullptr;
 }
 
-/* Fetch the solib_info data for the current inferior.  */
+/* Fetch the solib_info data for INF.  */
 
 static struct solib_info *
-get_solib_info (inferior *inf = nullptr)
+get_solib_info (inferior *inf)
 {
-  if (!inf)
-    inf = current_inferior ();
+  solib_info *info = rocm_solib_data.get (inf);
 
-  struct solib_info *info = rocm_solib_data.get (inf);
-  if (info == NULL)
+  if (info == nullptr)
     info = rocm_solib_data.emplace (inf);
 
   return info;
@@ -148,7 +146,7 @@ rocm_solib_current_sos ()
   so_list *head = svr4_so_ops.current_sos ();
 
   /* Then, the device-side shared library list.  */
-  struct so_list *list = get_solib_info ()->solib_list;
+  so_list *list = get_solib_info (current_inferior ())->solib_list;
 
   if (list == nullptr)
     return head;
@@ -566,7 +564,7 @@ rocm_solib_bfd_open (const char *pathname)
 static void
 rocm_solib_create_inferior_hook (int from_tty)
 {
-  rocm_free_solib_list (get_solib_info ());
+  rocm_free_solib_list (get_solib_info (current_inferior ()));
 
   svr4_so_ops.solib_create_inferior_hook (from_tty);
 }
@@ -580,7 +578,7 @@ rocm_update_solib_list ()
   if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
     return;
 
-  solib_info *info = get_solib_info ();
+  solib_info *info = get_solib_info (inf);
 
   rocm_free_solib_list (info);
   struct so_list **link = &info->solib_list;
