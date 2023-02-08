@@ -68,8 +68,12 @@ struct amdgpu_gdbarch_tdep : gdbarch_tdep_base
   /* A map of register_class_ids keyed by their name.  */
   std::unordered_map<std::string, amd_dbgapi_register_class_id_t>
     register_class_map;
-  /* A cache of types created from the amd-dbgapi type strings.  */
-  std::unordered_map<std::string, struct type *> type_map;
+
+  /* A vector of register types created from the amd-dbgapi type strings,
+     indexed by their equivalent gdb regnum.  These are computed lazily by
+     amdgpu_register_type, entries that haven't been computed yet are
+     nullptr.  */
+  std::vector<type *> register_types;
 
   /* A vector of address spaces available in this architecture.
 
