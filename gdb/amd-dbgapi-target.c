@@ -937,59 +937,56 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 {
   gdb::optional<scoped_restore_current_thread> maybe_restore_thread;
 
-  if (ptid_is_gpu (inferior_ptid))
-    {
-      gdb_assert (requested_len && xfered_len && "checking invariants");
-
-      if (object != TARGET_OBJECT_MEMORY)
-	return TARGET_XFER_E_IO;
-
-      /* FIXME: We current have no way to specify the address space, so it is
-	 encoded in the "unused" bits of a canonical address.  */
-      uint64_t dwarf_address_space
-	= (uint64_t) amdgpu_address_space_id_from_core_address (offset);
-
-      amd_dbgapi_segment_address_t segment_address
-	= amdgpu_segment_address_from_core_address (offset);
-
-      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
-      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
-
-      amd_dbgapi_architecture_id_t architecture_id;
-      amd_dbgapi_address_space_id_t address_space_id;
-
-      if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
-				    sizeof (architecture_id), &architecture_id)
-	    != AMD_DBGAPI_STATUS_SUCCESS
-	  || amd_dbgapi_dwarf_address_space_to_address_space (
-	       architecture_id, dwarf_address_space, &address_space_id)
-	       != AMD_DBGAPI_STATUS_SUCCESS)
-	return TARGET_XFER_E_IO;
-
-      size_t len = requested_len;
-      amd_dbgapi_status_t status;
-      int current_lane = inferior_thread ()->current_simd_lane ();
-
-      if (readbuf)
-	status
-	  = amd_dbgapi_read_memory (process_id, wave_id, current_lane,
-				    address_space_id, segment_address,
-				    &len, readbuf);
-      else
-	status
-	  = amd_dbgapi_write_memory (process_id, wave_id, current_lane,
-				     address_space_id, segment_address,
-				     &len, writebuf);
-
-      if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	return TARGET_XFER_E_IO;
-
-      *xfered_len = len;
-      return TARGET_XFER_OK;
-    }
-  else
+  if (!ptid_is_gpu (inferior_ptid))
     return beneath ()->xfer_partial (object, annex, readbuf, writebuf, offset,
 				     requested_len, xfered_len);
+
+  gdb_assert (requested_len > 0);
+  gdb_assert (xfered_len != nullptr);
+
+  if (object != TARGET_OBJECT_MEMORY)
+    return TARGET_XFER_E_IO;
+
+  /* FIXME: We current have no way to specify the address space, so it is
+     encoded in the "unused" bits of a canonical address.  */
+  uint64_t dwarf_address_space
+    = (uint64_t) amdgpu_address_space_id_from_core_address (offset);
+
+  amd_dbgapi_segment_address_t segment_address
+    = amdgpu_segment_address_from_core_address (offset);
+
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
+
+  amd_dbgapi_architecture_id_t architecture_id;
+  amd_dbgapi_address_space_id_t address_space_id;
+
+  if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				sizeof (architecture_id), &architecture_id)
+	!= AMD_DBGAPI_STATUS_SUCCESS
+      || amd_dbgapi_dwarf_address_space_to_address_space (
+	   architecture_id, dwarf_address_space, &address_space_id)
+	   != AMD_DBGAPI_STATUS_SUCCESS)
+    return TARGET_XFER_E_IO;
+
+  size_t len = requested_len;
+  amd_dbgapi_status_t status;
+  int current_lane = inferior_thread ()->current_simd_lane ();
+
+  if (readbuf != nullptr)
+    status = amd_dbgapi_read_memory (process_id, wave_id, current_lane,
+				     address_space_id, segment_address, &len,
+				     readbuf);
+  else
+    status = amd_dbgapi_write_memory (process_id, wave_id, current_lane,
+				      address_space_id, segment_address, &len,
+				      writebuf);
+
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    return TARGET_XFER_E_IO;
+
+  *xfered_len = len;
+  return TARGET_XFER_OK;
 }
 
 static int
