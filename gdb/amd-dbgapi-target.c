@@ -2552,6 +2552,75 @@ amd_dbgapi_inferior_pre_detach (inferior *inf)
     detach_amd_dbgapi (inf);
 }
 
+/* get_os_pid callback.  */
+
+static amd_dbgapi_status_t
+amd_dbgapi_get_os_pid_callback
+  (amd_dbgapi_client_process_id_t client_process_id, pid_t *pid)
+{
+  inferior *inf = reinterpret_cast<inferior *> (client_process_id);
+
+  if (inf->pid == 0)
+    return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
+
+  *pid = inf->pid;
+  return AMD_DBGAPI_STATUS_SUCCESS;
+}
+
+/* insert_breakpoint callback.  */
+
+static amd_dbgapi_status_t
+amd_dbgapi_insert_breakpoint_callback
+  (amd_dbgapi_client_process_id_t client_process_id,
+   amd_dbgapi_global_address_t address,
+   amd_dbgapi_breakpoint_id_t breakpoint_id)
+{
+  inferior *inf = reinterpret_cast<inferior *> (client_process_id);
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
+
+  auto it = info->breakpoint_map.find (breakpoint_id.handle);
+  if (it != info->breakpoint_map.end ())
+    return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
+
+  /* We need to find the address in the given inferior's program space.  */
+  scoped_restore_current_thread restore_thread;
+  switch_to_inferior_no_thread (inf);
+
+  /* Create a new breakpoint.  */
+  struct obj_section *section = find_pc_section (address);
+  if (section == nullptr || section->objfile == nullptr)
+    return AMD_DBGAPI_STATUS_ERROR;
+
+  std::unique_ptr<breakpoint> bp_up
+    (new amd_dbgapi_target_breakpoint (section->objfile->arch (), address));
+
+  breakpoint *bp = install_breakpoint (true, std::move (bp_up), 1);
+
+  info->breakpoint_map.emplace (breakpoint_id.handle, bp);
+  return AMD_DBGAPI_STATUS_SUCCESS;
+}
+
+/* remove_breakpoint callback.  */
+
+static amd_dbgapi_status_t
+amd_dbgapi_remove_breakpoint_callback
+  (amd_dbgapi_client_process_id_t client_process_id,
+   amd_dbgapi_breakpoint_id_t breakpoint_id)
+{
+  inferior *inf = reinterpret_cast<inferior *> (client_process_id);
+  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
+
+  auto it = info->breakpoint_map.find (breakpoint_id.handle);
+  if (it == info->breakpoint_map.end ())
+    return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
+
+  delete_breakpoint (it->second);
+  info->breakpoint_map.erase (it);
+
+  return AMD_DBGAPI_STATUS_SUCCESS;
+}
+
+
 static void
 amd_dbgapi_target_signal_received (gdb_signal sig)
 {
@@ -2620,110 +2689,54 @@ static cli_style_option warning_style
 static cli_style_option trace_style
   ("amd_dbgapi_trace", ui_file_style::BLACK, ui_file_style::BOLD);
 
+/* log_message callback.  */
+
+static void
+amd_dbgapi_log_message_callback (amd_dbgapi_log_level_t level,
+				 const char *message)
+{
+  gdb::optional<target_terminal::scoped_restore_terminal_state> tstate;
+
+  if (target_supports_terminal_ours ())
+    {
+      tstate.emplace ();
+      target_terminal::ours_for_output ();
+    }
+
+  /* Error and warning messages are meant to be printed to the user.  */
+  if (level == AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR
+      || level == AMD_DBGAPI_LOG_LEVEL_WARNING)
+    {
+      begin_line ();
+      ui_file_style style = (level == AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR
+			     ? fatal_error_style : warning_style).style ();
+      gdb_printf (gdb_stderr, "%ps\n", styled_string (style, message));
+      return;
+    }
+
+  /* Print other messages as debug logs.  TRACE and VERBOSE messages are
+     very verbose, print them dark grey so it's easier to spot other messages
+     through the flood.  */
+  if (level >= AMD_DBGAPI_LOG_LEVEL_TRACE)
+    {
+      debug_prefixed_printf (amd_dbgapi_lib_debug_module (), nullptr, "%ps",
+			     styled_string (trace_style.style (), message));
+      return;
+    }
+
+  debug_prefixed_printf (amd_dbgapi_lib_debug_module (), nullptr, "%s",
+			 message);
+}
+
+/* Callbacks passed to amd_dbgapi_initialize.  */
+
 static amd_dbgapi_callbacks_t dbgapi_callbacks = {
-  /* allocate_memory.  */
   .allocate_memory = malloc,
-
-  /* deallocate_memory.  */
   .deallocate_memory = free,
-
-  /* get_os_pid.  */
-  .get_os_pid = [] (amd_dbgapi_client_process_id_t client_process_id,
-		    pid_t *pid) -> amd_dbgapi_status_t
-  {
-    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-
-    if (inf->pid == 0)
-      return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
-
-    *pid = inf->pid;
-    return AMD_DBGAPI_STATUS_SUCCESS;
-  },
-
-  /* set_breakpoint callback.  */
-  .insert_breakpoint =
-    [] (amd_dbgapi_client_process_id_t client_process_id,
-	amd_dbgapi_global_address_t address,
-	amd_dbgapi_breakpoint_id_t breakpoint_id)
-  {
-    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
-
-    auto it = info->breakpoint_map.find (breakpoint_id.handle);
-    if (it != info->breakpoint_map.end ())
-      return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
-
-    /* We need to find the address in the given inferior's program space.  */
-    scoped_restore_current_thread restore_thread;
-    switch_to_inferior_no_thread (inf);
-
-    /* Create a new breakpoint.  */
-    struct obj_section *section = find_pc_section (address);
-    if (!section || !section->objfile)
-      return AMD_DBGAPI_STATUS_ERROR;
-
-    std::unique_ptr<breakpoint> bp_up
-      (new amd_dbgapi_target_breakpoint (section->objfile->arch (),
-					 address));
-
-    breakpoint *bp = install_breakpoint (true, std::move (bp_up), 1);
-
-    info->breakpoint_map.emplace (breakpoint_id.handle, bp);
-    return AMD_DBGAPI_STATUS_SUCCESS;
-  },
-
-  /* remove_breakpoint callback.  */
-  .remove_breakpoint =
-    [] (amd_dbgapi_client_process_id_t client_process_id,
-	amd_dbgapi_breakpoint_id_t breakpoint_id)
-  {
-    inferior *inf = reinterpret_cast<inferior *> (client_process_id);
-    struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
-
-    auto it = info->breakpoint_map.find (breakpoint_id.handle);
-    if (it == info->breakpoint_map.end ())
-      return AMD_DBGAPI_STATUS_ERROR_INVALID_BREAKPOINT_ID;
-
-    delete_breakpoint (it->second);
-    info->breakpoint_map.erase (it);
-
-    return AMD_DBGAPI_STATUS_SUCCESS;
-  },
-
-  .log_message = [] (amd_dbgapi_log_level_t level, const char *message) -> void
-  {
-    gdb::optional<target_terminal::scoped_restore_terminal_state> tstate;
-
-    if (target_supports_terminal_ours ())
-      {
-	tstate.emplace ();
-	target_terminal::ours_for_output ();
-      }
-
-    /* Error and warning messages are meant to be printed to the user.  */
-    if (level == AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR
-	|| level == AMD_DBGAPI_LOG_LEVEL_WARNING)
-      {
-	begin_line ();
-	ui_file_style style = (level == AMD_DBGAPI_LOG_LEVEL_FATAL_ERROR
-			       ? fatal_error_style : warning_style).style ();
-	gdb_printf (gdb_stderr, "%ps\n", styled_string (style, message));
-	return;
-      }
-
-    /* Print other messages as debug logs.  TRACE and VERBOSE messages are
-       very verbose, print them dark grey so it's easier to spot other messages
-       through the flood.  */
-    if (level >= AMD_DBGAPI_LOG_LEVEL_TRACE)
-      {
-	debug_prefixed_printf (amd_dbgapi_lib_debug_module (), nullptr, "%ps",
-			       styled_string (trace_style.style (), message));
-	return;
-      }
-
-    debug_prefixed_printf (amd_dbgapi_lib_debug_module (), nullptr, "%s",
-			   message);
-  }
+  .get_os_pid = amd_dbgapi_get_os_pid_callback,
+  .insert_breakpoint = amd_dbgapi_insert_breakpoint_callback,
+  .remove_breakpoint = amd_dbgapi_remove_breakpoint_callback,
+  .log_message = amd_dbgapi_log_message_callback,
 };
 
 void
