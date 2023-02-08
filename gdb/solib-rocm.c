@@ -354,19 +354,18 @@ rocm_code_object_stream_memory::read (void *buf, file_ptr size,
 } /* anonymous namespace */
 
 static void *
-rocm_bfd_iovec_open (bfd *abfd, void *inferior)
+rocm_bfd_iovec_open (bfd *abfd, void *inferior_void)
 {
-  std::string uri (bfd_get_filename (abfd));
-
-  std::string protocol_delim ("://");
+  gdb::string_view uri (bfd_get_filename (abfd));
+  gdb::string_view protocol_delim = "://";
   size_t protocol_end = uri.find (protocol_delim);
-  std::string protocol = uri.substr (0, protocol_end);
+  std::string protocol = gdb::to_string (uri.substr (0, protocol_end));
   protocol_end += protocol_delim.length ();
 
   std::transform (protocol.begin (), protocol.end (), protocol.begin (),
 		  [] (unsigned char c) { return std::tolower (c); });
 
-  std::string path;
+  gdb::string_view path;
   size_t path_end = uri.find_first_of ("#?", protocol_end);
   if (path_end != std::string::npos)
     path = uri.substr (protocol_end, path_end++ - protocol_end);
@@ -377,17 +376,20 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
   std::string decoded_path;
   decoded_path.reserve (path.length ());
   for (size_t i = 0; i < path.length (); ++i)
-    if (path[i] == '%' && std::isxdigit (path[i + 1])
+    if (path[i] == '%'
+	&& i < path.length () - 2
+	&& std::isxdigit (path[i + 1])
 	&& std::isxdigit (path[i + 2]))
       {
-	decoded_path += std::stoi (path.substr (i + 1, 2), 0, 16);
+	gdb::string_view hex_digits = path.substr (i + 1, 2);
+	decoded_path += std::stoi (gdb::to_string (hex_digits), 0, 16);
 	i += 2;
       }
     else
       decoded_path += path[i];
 
   /* Tokenize the query/fragment.  */
-  std::vector<std::string> tokens;
+  std::vector<gdb::string_view> tokens;
   size_t pos, last = path_end;
   while ((pos = uri.find ('&', last)) != std::string::npos)
     {
@@ -399,32 +401,50 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
     tokens.emplace_back (uri.substr (last));
 
   /* Create a tag-value map from the tokenized query/fragment.  */
-  std::unordered_map<std::string, std::string> params;
-  std::for_each (tokens.begin (), tokens.end (),
-		 [&] (std::string &token)
-		 {
-		   size_t delim = token.find ('=');
-		   if (delim != std::string::npos)
-		     params.emplace (token.substr (0, delim),
-				     token.substr (delim + 1));
-		 });
+  std::unordered_map<gdb::string_view, gdb::string_view,
+		     gdb::string_view_hash> params;
+  for (gdb::string_view token : tokens)
+    {
+      size_t delim = token.find ('=');
+      if (delim != std::string::npos)
+	{
+	  gdb::string_view tag = token.substr (0, delim);
+	  gdb::string_view val = token.substr (delim + 1);
+	  params.emplace (tag, val);
+	}
+    }
 
   try
     {
       ULONGEST offset = 0;
       ULONGEST size = 0;
+      inferior *inferior = static_cast<struct inferior *> (inferior_void);
+
+      auto try_strtoulst = [] (gdb::string_view v)
+	{
+	  errno = 0;
+	  ULONGEST value = strtoulst (v.data (), nullptr, 0);
+	  if (errno != 0)
+	    {
+	      /* The actual message doesn't matter, the exception is caught
+		 below, transformed in a BFD error, and the message is lost.  */
+	      error (_("Failed to parse integer."));
+	    }
+
+	  return value;
+	};
 
       auto offset_it = params.find ("offset");
       if (offset_it != params.end ())
-	offset = std::stoul (offset_it->second, nullptr, 0);
+	offset = try_strtoulst (offset_it->second);
 
       auto size_it = params.find ("size");
       if (size_it != params.end ())
-	if (!(size = std::stoul (size_it->second, nullptr, 0)))
-	  {
-	    bfd_set_error (bfd_error_bad_value);
-	    return nullptr;
-	  }
+	{
+	  size = try_strtoulst (size_it->second);
+	  if (size == 0)
+	    error (_("Invalid size value"));
+	}
 
       if (protocol == "file")
 	{
@@ -446,11 +466,11 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 
       if (protocol == "memory")
 	{
-	  pid_t pid = std::stoul (path);
-	  if (pid != static_cast<struct inferior *> (inferior)->pid)
+	  ULONGEST pid = try_strtoulst (path);
+	  if (pid != inferior->pid)
 	    {
-	      warning (_ ("`%s': code object is from another inferior"),
-		       uri.c_str ());
+	      warning (_("`%s': code object is from another inferior"),
+		       gdb::to_string (uri).c_str ());
 	      bfd_set_error (bfd_error_bad_value);
 	      return nullptr;
 	    }
@@ -465,17 +485,23 @@ rocm_bfd_iovec_open (bfd *abfd, void *inferior)
 
 	  return new rocm_code_object_stream_memory (std::move (buffer));
 	}
+
+      warning (_("`%s': protocol not supported: %s"),
+	       gdb::to_string (uri).c_str (), protocol.c_str ());
+      bfd_set_error (bfd_error_bad_value);
+      return nullptr;
     }
-  catch (...)
+  catch (const gdb_exception_quit &ex)
+    {
+      set_quit_flag ();
+      bfd_set_error (bfd_error_bad_value);
+      return nullptr;
+    }
+  catch (const gdb_exception &ex)
     {
       bfd_set_error (bfd_error_bad_value);
       return nullptr;
     }
-
-  warning (_ ("`%s': protocol not supported: %s"), uri.c_str (),
-	   protocol.c_str ());
-  bfd_set_error (bfd_error_bad_value);
-  return nullptr;
 }
 
 static int
