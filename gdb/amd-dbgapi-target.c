@@ -712,9 +712,9 @@ require_forward_progress (ptid_t ptid, process_stratum_target *proc_target,
 /* See amd-dbgapi-target.h.  */
 
 amd_dbgapi_process_id_t
-get_amd_dbgapi_process_id (struct inferior *inferior)
+get_amd_dbgapi_process_id (inferior *inf)
 {
-  return get_amd_dbgapi_inferior_info (inferior)->process_id;
+  return get_amd_dbgapi_inferior_info (inf)->process_id;
 }
 
 /* A breakpoint dbgapi wants us to insert, to handle shared library
@@ -955,7 +955,8 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
   amd_dbgapi_segment_address_t segment_address
     = amdgpu_segment_address_from_core_address (offset);
 
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id ();
+  amd_dbgapi_process_id_t process_id
+    = get_amd_dbgapi_process_id (current_inferior ());
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
 
   amd_dbgapi_architecture_id_t architecture_id;

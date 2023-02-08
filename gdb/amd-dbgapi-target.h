@@ -26,6 +26,8 @@
 
 #include <amd-dbgapi/amd-dbgapi.h>
 
+struct inferior;
+
 namespace detail
 {
 
@@ -85,9 +87,9 @@ ptid_is_gpu (ptid_t ptid)
   return ptid.pid () != 1 && ptid.lwp () == 1;
 }
 
-/* Return the current inferior's amd_dbgapi process id.  */
-extern amd_dbgapi_process_id_t
-get_amd_dbgapi_process_id (struct inferior *inferior = nullptr);
+/* Return INF's amd_dbgapi process id.  */
+
+amd_dbgapi_process_id_t get_amd_dbgapi_process_id (inferior *inf);
 
 /* Get the amd-dbgapi wave id for PTID.  */
 
