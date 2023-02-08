@@ -188,10 +188,6 @@ static amd_dbgapi_event_id_t process_event_queue
   (amd_dbgapi_process_id_t process_id = AMD_DBGAPI_PROCESS_NONE,
    amd_dbgapi_event_kind_t until_event_kind = AMD_DBGAPI_EVENT_KIND_NONE);
 
-/* Return the inferior's amd_dbgapi_inferior_info struct.  */
-static struct amd_dbgapi_inferior_info *
-get_amd_dbgapi_inferior_info (struct inferior *inferior = nullptr);
-
 static const target_info amd_dbgapi_target_info = {
   "amd-dbgapi",
   N_("AMD Debugger API"),
@@ -661,12 +657,9 @@ async_event_handler_mark ()
 static struct amd_dbgapi_inferior_info *
 get_amd_dbgapi_inferior_info (struct inferior *inferior)
 {
-  if (!inferior)
-    inferior = current_inferior ();
-
   amd_dbgapi_inferior_info *info = amd_dbgapi_inferior_data.get (inferior);
 
-  if (!info)
+  if (info == nullptr)
     info = amd_dbgapi_inferior_data.emplace (inferior, inferior);
 
   return info;
@@ -749,7 +742,7 @@ void
 amd_dbgapi_target_breakpoint::check_status (struct bpstat *bs)
 {
   inferior *inf = current_inferior ();
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
   amd_dbgapi_status_t status;
 
   bs->stop = 0;
@@ -1056,7 +1049,8 @@ amd_dbgapi_target::insert_watchpoint (CORE_ADDR addr, int len,
 				    enum target_hw_bp_type type,
 				    struct expression *cond)
 {
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
 
   if (info->runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS
       && type != hw_write)
@@ -1083,7 +1077,8 @@ amd_dbgapi_target::remove_watchpoint (CORE_ADDR addr, int len,
 				    enum target_hw_bp_type type,
 				    struct expression *cond)
 {
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
 
   int ret = beneath ()->remove_watchpoint (addr, len, type, cond);
   if (info->runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
@@ -1129,7 +1124,8 @@ amd_dbgapi_target::stopped_by_watchpoint ()
 bool
 amd_dbgapi_target::stopped_data_address (CORE_ADDR *addr_p)
 {
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
 
   if (!ptid_is_gpu (inferior_ptid))
     return beneath ()->stopped_data_address (addr_p);
@@ -2557,7 +2553,8 @@ amd_dbgapi_inferior_pre_detach (inferior *inf)
 static void
 amd_dbgapi_target_signal_received (gdb_signal sig)
 {
-  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
 
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
@@ -2580,7 +2577,8 @@ amd_dbgapi_target_normal_stop (bpstat *bs_list, int print_frame)
   if (bs_list == nullptr || !print_frame)
     return;
 
-  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
 
   if (info->process_id == AMD_DBGAPI_PROCESS_NONE)
     return;
@@ -2780,7 +2778,8 @@ static void
 show_precise_memory_mode (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)
 {
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
 
   gdb_printf (file,
 	      _ ("AMDGPU precise memory access reporting is %s "
@@ -2792,7 +2791,8 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
 static void
 set_precise_memory_mode (bool value)
 {
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
 
   info->precise_memory.requested = value;
 
@@ -2813,14 +2813,16 @@ set_precise_memory_mode (bool value)
 static bool
 get_precise_memory_mode ()
 {
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
   return info->precise_memory.requested;
 }
 
 static bool
 get_effective_precise_memory_mode ()
 {
-  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info ();
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
   return info->precise_memory.enabled;
 };
 
