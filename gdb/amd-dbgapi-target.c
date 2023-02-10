@@ -120,6 +120,17 @@ amd_dbgapi_lib_debug_module ()
     scoped_debug_start_end (debug_infrun, amd_dbgapi_debug_module (), \
 			    fmt, ##__VA_ARGS__)
 
+/* inferior_created observer token.  */
+
+static gdb::observers::token amd_dbgapi_target_inferior_created_observer_token;
+
+const gdb::observers::token &
+get_amd_dbgapi_target_inferior_created_observer_token ()
+{
+  return amd_dbgapi_target_inferior_created_observer_token;
+}
+
+
 /* Big enough to hold the size of the largest register in bytes.  */
 #define AMDGPU_MAX_REGISTER_SIZE 256
 
@@ -4089,13 +4100,14 @@ _initialize_amd_dbgapi_target ()
   /* Install observers.  */
   gdb::observers::breakpoint_created.attach (amd_dbgapi_target_breakpoint_fixup,
 					     "amd-dbgapi");
-  gdb::observers::inferior_created.attach (amd_dbgapi_target_inferior_created,
-					   "amd-dbgapi");
   gdb::observers::inferior_cloned.attach (amd_dbgapi_target_inferior_cloned,
 					  "amd-dbgapi");
   gdb::observers::signal_received.attach (amd_dbgapi_target_signal_received,
 					  "amd-dbgapi");
   gdb::observers::normal_stop.attach (amd_dbgapi_target_normal_stop, "amd-dbgapi");
+  gdb::observers::inferior_created.attach
+    (amd_dbgapi_target_inferior_created,
+     amd_dbgapi_target_inferior_created_observer_token, "amd-dbgapi");
   gdb::observers::inferior_execd.attach (amd_dbgapi_inferior_execd, "amd-dbgapi");
   gdb::observers::inferior_forked.attach (amd_dbgapi_inferior_forked, "amd-dbgapi");
   gdb::observers::inferior_exit.attach (amd_dbgapi_inferior_exited, "amd-dbgapi");

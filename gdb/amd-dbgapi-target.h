@@ -49,6 +49,11 @@ using is_amd_dbgapi_handle
 
 } /* namespace detail */
 
+/* Get the token of amd-dbgapi's inferior_created observer.  */
+
+const gdb::observers::token &
+  get_amd_dbgapi_target_inferior_created_observer_token ();
+
 /* Comparison operators for amd-dbgapi handle types.  */
 
 template <typename T,
