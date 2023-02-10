@@ -643,8 +643,11 @@ extern initialize_file_ftype _initialize_rocm_solib;
 void
 _initialize_rocm_solib ()
 {
-  /* FIXME: remove this when we can clear the solist in
-     rocm_solib_create_inferior_hook.  */
-  gdb::observers::inferior_created.attach (rocm_solib_target_inferior_created,
-					   "solib-rocm");
+  /* The dependency on the amd-dbgapi exists because solib-rocm's
+     inferior_created observer needs amd-dbgapi to have attached the process,
+     which happens in amd_dbgapi_target's inferior_created observer.  */
+  gdb::observers::inferior_created.attach
+    (rocm_solib_target_inferior_created,
+     "solib-rocm",
+     { &get_amd_dbgapi_target_inferior_created_observer_token () });
 }
