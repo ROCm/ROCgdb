@@ -526,7 +526,6 @@ pe_ILF_save_relocs (pe_ILF_vars * vars,
     abort ();
 
   coff_section_data (vars->abfd, sec)->relocs = vars->int_reltab;
-  coff_section_data (vars->abfd, sec)->keep_relocs = true;
 
   sec->relocation  = vars->reltab;
   sec->reloc_count = vars->relcount;
@@ -1105,6 +1104,7 @@ pe_ILF_build_a_bfd (bfd *	    abfd,
   abfd->iovec = &_bfd_memory_iovec;
   abfd->where = 0;
   abfd->origin = 0;
+  abfd->size = 0;
   obj_sym_filepos (abfd) = 0;
 
   /* Now create a symbol describing the imported value.  */

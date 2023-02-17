@@ -597,6 +597,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
   else
     name = debug_info->ss + cur_fdr->issBase + sh->iss;
 
+  int section_index = -1;
   switch (sh->sc)
     {
     case scText:
@@ -607,20 +608,23 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	 The value of a stBlock symbol is the displacement from the
 	 procedure address.  */
       if (sh->st != stEnd && sh->st != stBlock)
-	sh->value += section_offsets[SECT_OFF_TEXT (objfile)];
+	section_index = SECT_OFF_TEXT (objfile);
       break;
     case scData:
     case scSData:
     case scRData:
     case scPData:
     case scXData:
-      sh->value += section_offsets[SECT_OFF_DATA (objfile)];
+      section_index = SECT_OFF_DATA (objfile);
       break;
     case scBss:
     case scSBss:
-      sh->value += section_offsets[SECT_OFF_BSS (objfile)];
+      section_index = SECT_OFF_BSS (objfile);
       break;
     }
+
+  if (section_index != -1)
+    sh->value += section_offsets[section_index];
 
   switch (sh->st)
     {
@@ -630,6 +634,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
     case stGlobal:		/* External symbol, goes into global block.  */
       b = top_stack->cur_st->compunit ()->blockvector ()->global_block ();
       s = new_symbol (name);
+      s->set_section_index (section_index);
       s->set_value_address (sh->value);
       add_data_symbol (sh, ax, bigend, s, LOC_STATIC, b, objfile, name);
       break;
@@ -647,7 +652,10 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	  global_sym_chain[bucket] = s;
 	}
       else
-	s->set_value_address (sh->value);
+	{
+	  s->set_section_index (section_index);
+	  s->set_value_address (sh->value);
+	}
       add_data_symbol (sh, ax, bigend, s, LOC_STATIC, b, objfile, name);
       break;
 
@@ -704,6 +712,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       s = new_symbol (name);
       s->set_domain (VAR_DOMAIN);	/* So that it can be used */
       s->set_aclass_index (LOC_LABEL);	/* but not misused.  */
+      s->set_section_index (section_index);
       s->set_value_address (sh->value);
       s->set_type (objfile_type (objfile)->builtin_int);
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
@@ -745,6 +754,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       s = new_symbol (name);
       s->set_domain (VAR_DOMAIN);
       s->set_aclass_index (LOC_BLOCK);
+      s->set_section_index (section_index);
       /* Type of the return value.  */
       if (SC_IS_UNDEF (sh->sc) || sh->sc == scNil)
 	t = objfile_type (objfile)->builtin_int;
@@ -3958,7 +3968,7 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 		    {
 		      valu += section_offsets[SECT_OFF_TEXT (objfile)];
 		      previous_stab_code = N_SO;
-		      cust = end_compunit_symtab (valu, SECT_OFF_TEXT (objfile));
+		      cust = end_compunit_symtab (valu);
 		      end_stabs ();
 		      last_symtab_ended = 1;
 		    }
@@ -4018,8 +4028,7 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 
       if (! last_symtab_ended)
 	{
-	  cust = end_compunit_symtab (pst->raw_text_high (),
-				      SECT_OFF_TEXT (objfile));
+	  cust = end_compunit_symtab (pst->raw_text_high ());
 	  end_stabs ();
 	}
 

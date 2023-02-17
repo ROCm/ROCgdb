@@ -746,6 +746,7 @@ LIBEXPAT
 HAVE_LIBEXPAT
 JIT_READER_DIR
 TARGET_PTR
+READLINE_DOC_SOURCE_INCLUDES
 READLINE_TEXI_INCFLAG
 READLINE_CFLAGS
 READLINE_DEPS
@@ -11443,7 +11444,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11442 "configure"
+#line 11447 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11549,7 +11550,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11548 "configure"
+#line 11553 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -18104,6 +18105,9 @@ if test x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes \
 
   if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then
     TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o amdgpu-tdep.o solib-rocm.o"
+
+$as_echo "#define HAVE_AMD_DBGAPI 1" >>confdefs.h
+
   fi
 
   CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
@@ -20756,12 +20760,15 @@ $as_echo "$gdb_cv_readline_ok" >&6; }
   READLINE_DEPS=
   READLINE_CFLAGS=
   READLINE_TEXI_INCFLAG=
+  READLINE_DOC_SOURCE_INCLUDES='$(READLINE_SYSTEM_DOC_INCLUDES)'
 else
   READLINE='$(READLINE_DIR)/libreadline.a'
   READLINE_DEPS='$(READLINE)'
   READLINE_CFLAGS='-I$(READLINE_SRC)/..'
   READLINE_TEXI_INCFLAG='-I $(READLINE_DIR)'
+  READLINE_DOC_SOURCE_INCLUDES='$(READLINE_INTREE_DOC_INCLUDES)'
 fi
+
 
 
 

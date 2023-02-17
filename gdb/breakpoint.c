@@ -1455,12 +1455,16 @@ breakpoint_set_silent (struct breakpoint *b, int silent)
     gdb::observers::breakpoint_modified.notify (b);
 }
 
-/* Set the thread for this breakpoint.  If THREAD is -1, make the
-   breakpoint work for any thread.  */
+/* See breakpoint.h.  */
 
 void
 breakpoint_set_thread (struct breakpoint *b, int thread)
 {
+  /* It is invalid to set the thread field to anything other than -1 (which
+     means no thread restriction) if a task restriction is already in
+     place.  */
+  gdb_assert (thread == -1 || b->task == -1);
+
   int old_thread = b->thread;
 
   b->thread = thread;
@@ -1468,12 +1472,16 @@ breakpoint_set_thread (struct breakpoint *b, int thread)
     gdb::observers::breakpoint_modified.notify (b);
 }
 
-/* Set the task for this breakpoint.  If TASK is 0, make the
-   breakpoint work for any task.  */
+/* See breakpoint.h.  */
 
 void
 breakpoint_set_task (struct breakpoint *b, int task)
 {
+  /* It is invalid to set the task field to anything other than -1 (which
+     means no task restriction) if a thread restriction is already in
+     place.  */
+  gdb_assert (task == -1 || b->thread == -1);
+
   int old_task = b->task;
 
   b->task = task;
@@ -5503,7 +5511,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
      evaluating the condition if this isn't the specified
      thread/task.  */
   if ((b->thread != -1 && b->thread != thread->global_num)
-      || (b->task != 0 && b->task != ada_get_task_number (thread)))
+      || (b->task != -1 && b->task != ada_get_task_number (thread)))
     {
       infrun_debug_printf ("incorrect thread or task, not stopping");
       bs->stop = false;
@@ -6526,20 +6534,19 @@ print_one_breakpoint_location (struct breakpoint *b,
       output_thread_groups (uiout, "thread-groups", inf_nums, mi_only);
     }
 
-  if (!part_of_multiple)
+  /* In the MI output, each location of a thread or task specific
+     breakpoint includes the relevant thread or task ID.  This is done for
+     backwards compatibility reasons.
+
+     For the CLI output, the thread/task information is printed on a
+     separate line, see the 'stop only in thread' and 'stop only in task'
+     output below.  */
+  if (!header_of_multiple && uiout->is_mi_like_p ())
     {
       if (b->thread != -1)
-	{
-	  /* FIXME: This seems to be redundant and lost here; see the
-	     "stop only in" line a little further down.  */
-	  uiout->text (" thread ");
-	  uiout->field_signed ("thread", b->thread);
-	}
-      else if (b->task != 0)
-	{
-	  uiout->text (" task ");
-	  uiout->field_signed ("task", b->task);
-	}
+	uiout->field_signed ("thread", b->thread);
+      else if (b->task != -1)
+	uiout->field_signed ("task", b->task);
     }
 
   uiout->text ("\n");
@@ -6594,7 +6601,14 @@ print_one_breakpoint_location (struct breakpoint *b,
 	}
       uiout->text ("\n");
     }
-  
+
+  if (!part_of_multiple && b->task != -1)
+    {
+      uiout->text ("\tstop only in task ");
+      uiout->field_signed ("task", b->task);
+      uiout->text ("\n");
+    }
+
   if (!part_of_multiple)
     {
       if (b->hit_count)
@@ -7097,7 +7111,12 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 	    if (b->thread == -1 && thread != -1)
 	      gdb_printf (" (all threads)");
 	    else if (b->thread != -1)
-	      gdb_printf (" (thread %d)", b->thread);
+	      {
+		struct thread_info *thr = find_thread_global_id (b->thread);
+		gdb_printf (" (thread %s)", print_thread_id (thr));
+	      }
+	    else if (b->task != -1)
+	      gdb_printf (" (task %d)", b->task);
 	    gdb_printf ("%s%s ",
 			((b->enable_state == bp_disabled
 			  || b->enable_state == bp_call_disabled)
@@ -8490,6 +8509,8 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
 
   gdb_assert (!sals.empty ());
 
+  /* At most one of thread or task can be set on any breakpoint.  */
+  gdb_assert (thread == -1 || task == -1);
   thread = thread_;
   task = task_;
 
@@ -8805,7 +8826,7 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
 {
   cond_string->reset ();
   *thread = -1;
-  *task = 0;
+  *task = -1;
   rest->reset ();
   bool force = false;
 
@@ -8855,6 +8876,12 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
 	  const char *tmptok;
 	  struct thread_info *thr;
 
+	  if (*thread != -1)
+	    error(_("You can specify only one thread."));
+
+	  if (*task != -1)
+	    error (_("You can specify only one of thread or task."));
+
 	  tok = end_tok + 1;
 	  thr = parse_thread_id (tok, &tmptok);
 	  if (tok == tmptok)
@@ -8865,6 +8892,12 @@ find_condition_and_thread (const char *tok, CORE_ADDR pc,
       else if (toklen >= 1 && strncmp (tok, "task", toklen) == 0)
 	{
 	  char *tmptok;
+
+	  if (*task != -1)
+	    error(_("You can specify only one task."));
+
+	  if (*thread != -1)
+	    error (_("You can specify only one of thread or task."));
 
 	  tok = end_tok + 1;
 	  *task = strtol (tok, &tmptok, 0);
@@ -8900,8 +8933,8 @@ find_condition_and_thread_for_sals (const std::vector<symtab_and_line> &sals,
   for (auto &sal : sals)
     {
       gdb::unique_xmalloc_ptr<char> cond;
-      int thread_id = 0;
-      int task_id = 0;
+      int thread_id = -1;
+      int task_id = -1;
       gdb::unique_xmalloc_ptr<char> remaining;
 
       /* Here we want to parse 'arg' to separate condition from thread
@@ -8915,6 +8948,8 @@ find_condition_and_thread_for_sals (const std::vector<symtab_and_line> &sals,
 	  find_condition_and_thread (input, sal.pc, &cond, &thread_id,
 				     &task_id, &remaining);
 	  *cond_string = std::move (cond);
+	  /* At most one of thread or task can be set.  */
+	  gdb_assert (thread_id == -1 || task_id == -1);
 	  *thread = thread_id;
 	  *task = task_id;
 	  *rest = std::move (remaining);
@@ -9016,7 +9051,7 @@ create_breakpoint (struct gdbarch *gdbarch,
 {
   struct linespec_result canonical;
   bool pending = false;
-  int task = 0;
+  int task = -1;
   int prev_bkpt_count = breakpoint_count;
 
   gdb_assert (ops != NULL);
@@ -9256,11 +9291,8 @@ resolve_sal_pc (struct symtab_and_line *sal)
 	{
 	  sym = block_linkage_function (b);
 	  if (sym != NULL)
-	    {
-	      fixup_symbol_section (sym, sal->symtab->compunit ()->objfile ());
-	      sal->section
-		= sym->obj_section (sal->symtab->compunit ()->objfile ());
-	    }
+	    sal->section
+	      = sym->obj_section (sal->symtab->compunit ()->objfile ());
 	  else
 	    {
 	      /* It really is worthwhile to have the section, so we'll
@@ -10088,7 +10120,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
      the hardware watchpoint.  */
   bool use_mask = false;
   CORE_ADDR mask = 0;
-  int task = 0;
+  int task = -1;
 
   /* Make sure that we actually have parameters to parse.  */
   if (arg != NULL && arg[0] != '\0')
@@ -10135,6 +10167,9 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 	      if (thread != -1)
 		error(_("You can specify only one thread."));
 
+	      if (task != -1)
+		error (_("You can specify only one of thread or task."));
+
 	      /* Extract the thread ID from the next token.  */
 	      thr = parse_thread_id (value_start, &endp);
 
@@ -10147,6 +10182,12 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 	  else if (toklen == 4 && startswith (tok, "task"))
 	    {
 	      char *tmp;
+
+	      if (task != -1)
+		error(_("You can specify only one task."));
+
+	      if (thread != -1)
+		error (_("You can specify only one of thread or task."));
 
 	      task = strtol (value_start, &tmp, 0);
 	      if (tmp == value_start)
@@ -10323,6 +10364,8 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   else
     w.reset (new watchpoint (nullptr, bp_type));
 
+  /* At most one of thread or task can be set on a watchpoint.  */
+  gdb_assert (thread == -1 || task == -1);
   w->thread = thread;
   w->task = task;
   w->disposition = disp_donttouch;
@@ -14183,7 +14226,7 @@ breakpoint::print_recreate_thread (struct ui_file *fp) const
   if (thread != -1)
     gdb_printf (fp, " thread %d", thread);
 
-  if (task != 0)
+  if (task != -1)
     gdb_printf (fp, " task %d", task);
 
   gdb_printf (fp, "\n");

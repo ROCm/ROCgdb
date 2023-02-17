@@ -994,45 +994,22 @@ dump_headers (bfd *abfd)
 static asymbol **
 slurp_symtab (bfd *abfd)
 {
-  asymbol **sy = NULL;
-  long storage;
-
+  symcount = 0;
   if (!(bfd_get_file_flags (abfd) & HAS_SYMS))
-    {
-      symcount = 0;
-      return NULL;
-    }
+    return NULL;
 
-  storage = bfd_get_symtab_upper_bound (abfd);
+  long storage = bfd_get_symtab_upper_bound (abfd);
   if (storage < 0)
     {
-      non_fatal (_("failed to read symbol table from: %s"), bfd_get_filename (abfd));
+      non_fatal (_("failed to read symbol table from: %s"),
+		 bfd_get_filename (abfd));
       bfd_fatal (_("error message was"));
     }
 
-  if (storage)
-    {
-      off_t filesize = bfd_get_file_size (abfd);
+  if (storage == 0)
+    return NULL;
 
-      /* qv PR 24707.  */
-      if (filesize > 0
-	  && filesize < storage
-	  /* The MMO file format supports its own special compression
-	     technique, so its sections can be larger than the file size.  */
-	  && bfd_get_flavour (abfd) != bfd_target_mmo_flavour)
-	{
-	  bfd_nonfatal_message (bfd_get_filename (abfd), abfd, NULL,
-				_("error: symbol table size (%#lx) "
-				  "is larger than filesize (%#lx)"),
-				storage, (long) filesize);
-	  exit_status = 1;
-	  symcount = 0;
-	  return NULL;
-	}
-
-      sy = (asymbol **) xmalloc (storage);
-    }
-
+  asymbol **sy = (asymbol **) xmalloc (storage);
   symcount = bfd_canonicalize_symtab (abfd, sy);
   if (symcount < 0)
     bfd_fatal (bfd_get_filename (abfd));
@@ -1044,26 +1021,24 @@ slurp_symtab (bfd *abfd)
 static asymbol **
 slurp_dynamic_symtab (bfd *abfd)
 {
-  asymbol **sy = NULL;
-  long storage;
-
-  storage = bfd_get_dynamic_symtab_upper_bound (abfd);
+  dynsymcount = 0;
+  long storage = bfd_get_dynamic_symtab_upper_bound (abfd);
   if (storage < 0)
     {
       if (!(bfd_get_file_flags (abfd) & DYNAMIC))
 	{
 	  non_fatal (_("%s: not a dynamic object"), bfd_get_filename (abfd));
 	  exit_status = 1;
-	  dynsymcount = 0;
 	  return NULL;
 	}
 
       bfd_fatal (bfd_get_filename (abfd));
     }
 
-  if (storage)
-    sy = (asymbol **) xmalloc (storage);
+  if (storage == 0)
+    return NULL;
 
+  asymbol **sy = (asymbol **) xmalloc (storage);
   dynsymcount = bfd_canonicalize_dynamic_symtab (abfd, sy);
   if (dynsymcount < 0)
     bfd_fatal (bfd_get_filename (abfd));
@@ -3710,15 +3685,18 @@ disassemble_section (bfd *abfd, asection *section, void *inf)
    next_sym
   } loop_until;
 
-  /* Sections that do not contain machine
-     code are not normally disassembled.  */
-  if (! disassemble_all
-      && only_list == NULL
-      && ((section->flags & (SEC_CODE | SEC_HAS_CONTENTS))
-	  != (SEC_CODE | SEC_HAS_CONTENTS)))
-    return;
+  if (only_list == NULL)
+    {
+      /* Sections that do not contain machine
+	 code are not normally disassembled.  */
+      if ((section->flags & SEC_HAS_CONTENTS) == 0)
+	return;
 
-  if (! process_section_p (section))
+      if (! disassemble_all
+	  && (section->flags & SEC_CODE) == 0)
+	return;
+    }
+  else if (!process_section_p (section))
     return;
 
   datasize = bfd_section_size (section);
@@ -4995,10 +4973,12 @@ dump_section (bfd *abfd, asection *section, void *dummy ATTRIBUTE_UNUSED)
   int count;
   int width;
 
-  if (! process_section_p (section))
-    return;
-
-  if ((section->flags & SEC_HAS_CONTENTS) == 0)
+  if (only_list == NULL)
+    {
+      if ((section->flags & SEC_HAS_CONTENTS) == 0)
+	return;
+    }
+  else if (!process_section_p (section))
     return;
 
   if ((datasize = bfd_section_size (section)) == 0)

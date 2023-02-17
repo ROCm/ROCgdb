@@ -105,16 +105,9 @@ static struct block_symbol
 
 struct main_info
 {
-  main_info () = default;
-
-  ~main_info ()
-  {
-    xfree (name_of_main);
-  }
-
   /* Name of "main".  */
 
-  char *name_of_main = nullptr;
+  std::string name_of_main;
 
   /* Language of "main".  */
 
@@ -343,8 +336,7 @@ compunit_symtab::find_call_site (CORE_ADDR pc) const
   if (m_call_site_htab == nullptr)
     return nullptr;
 
-  CORE_ADDR delta
-    = this->objfile ()->section_offsets[this->block_line_section ()];
+  CORE_ADDR delta = this->objfile ()->text_section_offset ();
   CORE_ADDR unrelocated_pc = pc - delta;
 
   struct call_site call_site_local (unrelocated_pc, nullptr, nullptr);
@@ -1703,13 +1695,39 @@ symtab_free_objfile_observer (struct objfile *objfile)
   symbol_cache_flush (objfile->pspace);
 }
 
-/* Debug symbols usually don't have section information.  We need to dig that
-   out of the minimal symbols and stash that in the debug symbol.  */
+/* See symtab.h.  */
 
 void
-fixup_section (struct general_symbol_info *ginfo,
-	       CORE_ADDR addr, struct objfile *objfile)
+fixup_symbol_section (struct symbol *sym, struct objfile *objfile)
 {
+  gdb_assert (sym != nullptr);
+  gdb_assert (sym->is_objfile_owned ());
+  gdb_assert (objfile != nullptr);
+  gdb_assert (sym->section_index () == -1);
+
+  /* Note that if this ends up as -1, fixup_section will handle that
+     reasonably well.  So, it's fine to use the objfile's section
+     index without doing the check that is done by the wrapper macros
+     like SECT_OFF_TEXT.  */
+  int fallback;
+  switch (sym->aclass ())
+    {
+    case LOC_STATIC:
+      fallback = objfile->sect_index_data;
+      break;
+
+    case LOC_LABEL:
+      fallback = objfile->sect_index_text;
+      break;
+
+    default:
+      /* Nothing else will be listed in the minsyms -- no use looking
+	 it up.  */
+      return;
+    }
+
+  CORE_ADDR addr = sym->value_address ();
+
   struct minimal_symbol *msym;
 
   /* First, check whether a minimal symbol with the same name exists
@@ -1717,10 +1735,10 @@ fixup_section (struct general_symbol_info *ginfo,
      e.g. on PowerPC64, where the minimal symbol for a function will
      point to the function descriptor, while the debug symbol will
      point to the actual function code.  */
-  msym = lookup_minimal_symbol_by_pc_name (addr, ginfo->linkage_name (),
+  msym = lookup_minimal_symbol_by_pc_name (addr, sym->linkage_name (),
 					   objfile);
   if (msym)
-    ginfo->set_section_index (msym->section_index ());
+    sym->set_section_index (msym->section_index ());
   else
     {
       /* Static, function-local variables do appear in the linker
@@ -1759,10 +1777,12 @@ fixup_section (struct general_symbol_info *ginfo,
 	 a search of the section table.  */
 
       struct obj_section *s;
-      int fallback = -1;
 
       ALL_OBJFILE_OSECTIONS (objfile, s)
 	{
+	  if ((bfd_section_flags (s->the_bfd_section) & SEC_ALLOC) == 0)
+	    continue;
+
 	  int idx = s - objfile->sections;
 	  CORE_ADDR offset = objfile->section_offsets[idx];
 
@@ -1771,7 +1791,7 @@ fixup_section (struct general_symbol_info *ginfo,
 
 	  if (s->addr () - offset <= addr && addr < s->endaddr () - offset)
 	    {
-	      ginfo->set_section_index (idx);
+	      sym->set_section_index (idx);
 	      return;
 	    }
 	}
@@ -1780,55 +1800,10 @@ fixup_section (struct general_symbol_info *ginfo,
 	 section.  If there is no allocated section, then it hardly
 	 matters what we pick, so just pick zero.  */
       if (fallback == -1)
-	ginfo->set_section_index (0);
+	sym->set_section_index (0);
       else
-	ginfo->set_section_index (fallback);
+	sym->set_section_index (fallback);
     }
-}
-
-struct symbol *
-fixup_symbol_section (struct symbol *sym, struct objfile *objfile)
-{
-  CORE_ADDR addr;
-
-  if (!sym)
-    return NULL;
-
-  if (!sym->is_objfile_owned ())
-    return sym;
-
-  /* We either have an OBJFILE, or we can get at it from the sym's
-     symtab.  Anything else is a bug.  */
-  gdb_assert (objfile || sym->symtab ());
-
-  if (objfile == NULL)
-    objfile = sym->objfile ();
-
-  if (sym->obj_section (objfile) != nullptr)
-    return sym;
-
-  /* We should have an objfile by now.  */
-  gdb_assert (objfile);
-
-  switch (sym->aclass ())
-    {
-    case LOC_STATIC:
-    case LOC_LABEL:
-      addr = sym->value_address ();
-      break;
-    case LOC_BLOCK:
-      addr = sym->value_block ()->entry_pc ();
-      break;
-
-    default:
-      /* Nothing else will be listed in the minsyms -- no use looking
-	 it up.  */
-      return sym;
-    }
-
-  fixup_section (sym, addr, objfile);
-
-  return sym;
 }
 
 /* See symtab.h.  */
@@ -2242,7 +2217,7 @@ lookup_symbol_in_block (const char *name, symbol_name_match_type match_type,
     {
       symbol_lookup_debug_printf_v ("lookup_symbol_in_block (...) = %s",
 				    host_address_to_string (sym));
-      return fixup_symbol_section (sym, NULL);
+      return sym;
     }
 
   symbol_lookup_debug_printf_v ("lookup_symbol_in_block (...) = NULL");
@@ -2327,7 +2302,6 @@ lookup_symbol_in_objfile_symtabs (struct objfile *objfile,
 	("lookup_symbol_in_objfile_symtabs (...) = %s (block %s)",
 	 host_address_to_string (other.symbol),
 	 host_address_to_string (other.block));
-      other.symbol = fixup_symbol_section (other.symbol, objfile);
       return other;
     }
 
@@ -2433,7 +2407,6 @@ lookup_symbol_via_quick_fns (struct objfile *objfile,
      host_address_to_string (result.symbol),
      host_address_to_string (block));
 
-  result.symbol = fixup_symbol_section (result.symbol, objfile);
   result.block = block;
   return result;
 }
@@ -2915,7 +2888,6 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 		  const struct block *b = bv->block (b_index);
 		  ALL_BLOCK_SYMBOLS (b, iter, sym)
 		    {
-		      fixup_symbol_section (sym, obj_file);
 		      if (matching_obj_sections (sym->obj_section (obj_file),
 						 section))
 			break;
@@ -3658,7 +3630,6 @@ find_function_start_sal (CORE_ADDR func_addr, obj_section *section,
 symtab_and_line
 find_function_start_sal (symbol *sym, bool funfirstline)
 {
-  fixup_symbol_section (sym, NULL);
   symtab_and_line sal
     = find_function_start_sal_1 (sym->value_block ()->entry_pc (),
 				 sym->obj_section (sym->objfile ()),
@@ -3786,8 +3757,6 @@ skip_prologue_sal (struct symtab_and_line *sal)
   sym = find_pc_sect_function (sal->pc, sal->section);
   if (sym != NULL)
     {
-      fixup_symbol_section (sym, NULL);
-
       objfile = sym->objfile ();
       pc = sym->value_block ()->entry_pc ();
       section = sym->obj_section (objfile);
@@ -6197,15 +6166,14 @@ set_main_name (const char *name, enum language lang)
 {
   struct main_info *info = get_main_info ();
 
-  if (info->name_of_main != NULL)
+  if (!info->name_of_main.empty ())
     {
-      xfree (info->name_of_main);
-      info->name_of_main = NULL;
+      info->name_of_main.clear ();
       info->language_of_main = language_unknown;
     }
   if (name != NULL)
     {
-      info->name_of_main = xstrdup (name);
+      info->name_of_main = name;
       info->language_of_main = lang;
     }
 }
@@ -6312,10 +6280,10 @@ main_name ()
 {
   struct main_info *info = get_main_info ();
 
-  if (info->name_of_main == NULL)
+  if (info->name_of_main.empty ())
     find_main_name ();
 
-  return info->name_of_main;
+  return info->name_of_main.c_str ();
 }
 
 /* Return the language of the main function.  If it is not known,
@@ -6326,7 +6294,7 @@ main_language (void)
 {
   struct main_info *info = get_main_info ();
 
-  if (info->name_of_main == NULL)
+  if (info->name_of_main.empty ())
     find_main_name ();
 
   return info->language_of_main;

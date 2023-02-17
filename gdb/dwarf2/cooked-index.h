@@ -259,10 +259,7 @@ public:
   void finalize ();
 
   /* Wait for this index's finalization to be complete.  */
-  void wait () const
-  {
-    m_future.wait ();
-  }
+  void wait (bool allow_quit = true) const;
 
   friend class cooked_index;
 
@@ -358,7 +355,7 @@ public:
   explicit cooked_index (vec_type &&vec);
   DISABLE_COPY_AND_ASSIGN (cooked_index);
 
-  /* Wait until the finalization of the entire cooked_index_vector is
+  /* Wait until the finalization of the entire cooked_index is
      done.  */
   void wait () const
   {
@@ -373,8 +370,10 @@ public:
        end up writing to freed memory.  Waiting for finalization to
        complete avoids this problem; and the cost seems ignorable
        because creating and immediately destroying the debug info is a
-       relatively rare thing to do.  */
-    wait ();
+       relatively rare thing to do.  Do not allow quitting from this
+       wait.  */
+    for (auto &item : m_vector)
+      item->wait (false);
   }
 
   /* A range over a vector of subranges.  */

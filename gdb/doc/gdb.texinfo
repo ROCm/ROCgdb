@@ -6833,13 +6833,14 @@ Set a catchpoint for the indicated signals.  @xref{Set Catchpoints},
 for details about this command.
 
 @kindex handle
-@item handle @var{signal} @r{[}@var{keywords}@dots{}@r{]}
-Change the way @value{GDBN} handles signal @var{signal}.  The @var{signal}
-can be the number of a signal or its name (with or without the
-@samp{SIG} at the beginning); a list of signal numbers of the form
-@samp{@var{low}-@var{high}}; or the word @samp{all}, meaning all the
-known signals.  Optional arguments @var{keywords}, described below,
-say what change to make.
+@item handle @var{signal} @r{[} @var{signal} @dots{} @r{]} @r{[}@var{keywords}@dots{}@r{]}
+Change the way @value{GDBN} handles each @var{signal}.  Each
+@var{signal} can be the number of a signal or its name (with or
+without the @samp{SIG} at the beginning); a list of signal numbers of
+the form @samp{@var{low}-@var{high}}; or the word @samp{all}, meaning
+all the known signals, except @code{SIGINT} and @code{SIGTRAP}, which
+are used by @value{GDBN}.  Optional argument @var{keywords}, described
+below, say what changes to make to all of the specified signals.
 @end table
 
 @c @group
@@ -11833,6 +11834,14 @@ When @value{GDBN} starts, this limit is set to 200.
 Setting @var{number-of-elements} to @code{unlimited} or zero means
 that the number of elements to print is unlimited.
 
+When printing very large arrays, whose size is greater than
+@code{max-value-size} (@pxref{set max-value-size,,max-value-size}),
+if the @code{print elements} is set such that the size of the elements
+being printed is less than or equal to @code{max-value-size}, then
+@value{GDBN} will print the array (up to the @code{print elements} limit),
+and only @code{max-value-size} worth of data will be added into the value
+history (@pxref{Value History, ,Value History}).
+
 @item show print elements
 Display the number of elements of a large array that @value{GDBN} will print.
 
@@ -14365,6 +14374,7 @@ may indicate a value that is incorrectly large, this in turn may cause
 @value{GDBN} to try and allocate an overly large amount of memory.
 
 @table @code
+@anchor{set max-value-size}
 @kindex set max-value-size
 @item set max-value-size @var{bytes}
 @itemx set max-value-size unlimited
@@ -43992,6 +44002,10 @@ with the DWARF frame unwinders enabled.
 
 If DWARF frame unwinders are not supported for a particular target
 architecture, then enabling this flag does not cause them to be used.
+
+@kindex maint info frame-unwinders
+@item maint info frame-unwinders
+List the frame unwinders currently in effect, starting with the highest priority.
 
 @kindex maint set worker-threads
 @kindex maint show worker-threads

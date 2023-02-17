@@ -1786,16 +1786,6 @@ struct compunit_symtab
     m_blockvector = blockvector;
   }
 
-  int block_line_section () const
-  {
-    return m_block_line_section;
-  }
-
-  void set_block_line_section (int block_line_section)
-  {
-    m_block_line_section = block_line_section;
-  }
-
   bool locations_valid () const
   {
     return m_locations_valid;
@@ -1883,10 +1873,6 @@ struct compunit_symtab
   /* List of all symbol scope blocks for this symtab.  It is shared among
      all symtabs in a given compilation unit.  */
   struct blockvector *m_blockvector;
-
-  /* Section in objfile->section_offsets for the blockvector and
-     the linetable.  Probably always SECT_OFF_TEXT.  */
-  int m_block_line_section;
 
   /* Symtab has been compiled with both optimizations and debug info so that
      GDB may stop skipping prologues as variables locations are valid already
@@ -2395,8 +2381,12 @@ extern void skip_prologue_sal (struct symtab_and_line *);
 extern CORE_ADDR skip_prologue_using_sal (struct gdbarch *gdbarch,
 					  CORE_ADDR func_addr);
 
-extern struct symbol *fixup_symbol_section (struct symbol *,
-					    struct objfile *);
+/* If SYM requires a section index, find it either via minimal symbols
+   or examining OBJFILE's sections.  Note that SYM's current address
+   must not have any runtime offsets applied.  */
+
+extern void fixup_symbol_section (struct symbol *sym,
+				  struct objfile *objfile);
 
 /* If MSYMBOL is an text symbol, look for a function debug symbol with
    the same address.  Returns NULL if not found.  This is necessary in
@@ -2607,9 +2597,6 @@ extern struct block_symbol
 /* Return 1 if the supplied producer string matches the ARM RealView
    compiler (armcc).  */
 bool producer_is_realview (const char *producer);
-
-void fixup_section (struct general_symbol_info *ginfo,
-		    CORE_ADDR addr, struct objfile *objfile);
 
 extern unsigned int symtab_create_debug;
 

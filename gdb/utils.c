@@ -616,42 +616,6 @@ add_internal_problem_command (struct internal_problem *problem)
     }
 }
 
-/* Return a newly allocated string, containing the PREFIX followed
-   by the system error message for errno (separated by a colon).  */
-
-static std::string
-perror_string (const char *prefix)
-{
-  const char *err = safe_strerror (errno);
-  return std::string (prefix) + ": " + err;
-}
-
-/* Print the system error message for errno, and also mention STRING
-   as the file name for which the error was encountered.  Use ERRCODE
-   for the thrown exception.  Then return to command level.  */
-
-static void ATTRIBUTE_NORETURN
-throw_perror_with_name (enum errors errcode, const char *string)
-{
-  std::string combined = perror_string (string);
-
-  /* I understand setting these is a matter of taste.  Still, some people
-     may clear errno but not know about bfd_error.  Doing this here is not
-     unreasonable.  */
-  bfd_set_error (bfd_error_no_error);
-  errno = 0;
-
-  throw_error (errcode, _("%s."), combined.c_str ());
-}
-
-/* See throw_perror_with_name, ERRCODE defaults here to GENERIC_ERROR.  */
-
-void
-perror_with_name (const char *string)
-{
-  throw_perror_with_name (GENERIC_ERROR, string);
-}
-
 /* Same as perror_with_name except that it prints a warning instead
    of throwing an error.  */
 
@@ -2404,7 +2368,31 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	  return 0;
 	}
       else
-	return (*string1 != '\0' && *string1 != '(');
+	{
+	  if (*string1 == '(')
+	    {
+	      int p_count = 0;
+
+	      do
+		{
+		  if (*string1 == '(')
+		    ++p_count;
+		  else if (*string1 == ')')
+		    --p_count;
+		  ++string1;
+		}
+	      while (*string1 != '\0' && p_count > 0);
+
+	      /* There maybe things like 'const' after the parameters,
+		 which we do want to ignore.  However, if there's an '@'
+		 then this likely indicates something like '@plt' which we
+		 should not ignore.  */
+	      return *string1 == '@';
+	    }
+
+	  return *string1 == '\0' ? 0 : 1;
+	}
+
     }
   else
     return 1;
@@ -2936,6 +2924,11 @@ strncmp_iw_with_mode_tests ()
   CHECK_MATCH ("foo[abi:a][abi:b](bar[abi:c][abi:d])", "foo[abi:a][abi:b](bar[abi:c][abi:d])",
 	       MATCH_PARAMS);
   CHECK_MATCH ("foo[abi:a][abi:b](bar[abi:c][abi:d])", "foo", MATCH_PARAMS);
+  CHECK_NO_MATCH ("foo(args)@plt", "foo", MATCH_PARAMS);
+  CHECK_NO_MATCH ("foo((())args(()))@plt", "foo", MATCH_PARAMS);
+  CHECK_MATCH ("foo((())args(()))", "foo", MATCH_PARAMS);
+  CHECK_MATCH ("foo(args) const", "foo", MATCH_PARAMS);
+  CHECK_MATCH ("foo(args)const", "foo", MATCH_PARAMS);
 
   /* strncmp_iw_with_mode also supports case insensitivity.  */
   {

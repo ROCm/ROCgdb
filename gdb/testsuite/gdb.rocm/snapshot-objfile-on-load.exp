@@ -33,12 +33,9 @@
 
 load_lib rocm.exp
 
-standard_testfile .cpp
+require allow_hipcc_tests
 
-if [skip_hipcc_tests] {
-  verbose "Skipping hip test: ${testfile}."
-  return 0
-}
+standard_testfile .cpp
 
 set hipmodule_path [standard_output_file ${testfile}.hipfb]
 

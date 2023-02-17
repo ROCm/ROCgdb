@@ -280,6 +280,7 @@ if test x"$ac_cv_header_amd_dbgapi_amd_dbgapi_h" = xyes \
 
   if test x"$require_rocm_dbgapi" = xyes -o x"$all_targets" = xtrue; then
     TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o amdgpu-tdep.o solib-rocm.o"
+    AC_DEFINE(HAVE_AMD_DBGAPI, 1, [Define if amd-dbgapi is being linked in.])
   fi
 
   CPPFLAGS="${CPPFLAGS} -I$with_rocm_dbgapi/include"
@@ -642,16 +643,19 @@ if test "$with_system_readline" = yes; then
   READLINE_DEPS=
   READLINE_CFLAGS=
   READLINE_TEXI_INCFLAG=
+  READLINE_DOC_SOURCE_INCLUDES='$(READLINE_SYSTEM_DOC_INCLUDES)'
 else
   READLINE='$(READLINE_DIR)/libreadline.a'
   READLINE_DEPS='$(READLINE)'
   READLINE_CFLAGS='-I$(READLINE_SRC)/..'
   READLINE_TEXI_INCFLAG='-I $(READLINE_DIR)'
+  READLINE_DOC_SOURCE_INCLUDES='$(READLINE_INTREE_DOC_INCLUDES)'
 fi
 AC_SUBST(READLINE)
 AC_SUBST(READLINE_DEPS)
 AC_SUBST(READLINE_CFLAGS)
 AC_SUBST(READLINE_TEXI_INCFLAG)
+AC_SUBST(READLINE_DOC_SOURCE_INCLUDES)
 
 # Generate jit-reader.h
 

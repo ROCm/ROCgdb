@@ -589,8 +589,6 @@ static void
 relocate_one_symbol (struct symbol *sym, struct objfile *objfile,
 		     const section_offsets &delta)
 {
-  fixup_symbol_section (sym, objfile);
-
   /* The RS6000 code from which this was taken skipped
      any symbols in STRUCT_DOMAIN or UNDEF_DOMAIN.
      But I'm leaving out that test, on the theory that
@@ -636,7 +634,7 @@ objfile_relocate1 (struct objfile *objfile,
 	    if (l)
 	      {
 		for (int i = 0; i < l->nitems; ++i)
-		  l->item[i].pc += delta[cust->block_line_section ()];
+		  l->item[i].pc += delta[SECT_OFF_TEXT (objfile)];
 	      }
 	  }
       }
@@ -644,7 +642,7 @@ objfile_relocate1 (struct objfile *objfile,
     for (compunit_symtab *cust : objfile->compunits ())
       {
 	struct blockvector *bv = cust->blockvector ();
-	int block_line_section = cust->block_line_section ();
+	int block_line_section = SECT_OFF_TEXT (objfile);
 
 	if (bv->map () != nullptr)
 	  bv->map ()->relocate (delta[block_line_section]);

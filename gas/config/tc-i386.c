@@ -2135,16 +2135,15 @@ operand_size_match (const insn_template *t)
     return match;
 
   /* Check reverse.  */
-  gas_assert ((i.operands >= 2 && i.operands <= 3)
-	      || t->opcode_modifier.vexsources);
+  gas_assert (i.operands >= 2);
 
   for (j = 0; j < i.operands; j++)
     {
       unsigned int given = i.operands - j - 1;
 
-      /* For 4- and 5-operand insns VEX.W controls just the first two
+      /* For FMA4 and XOP insns VEX.W controls just the first two
 	 register operands.  */
-      if (t->opcode_modifier.vexsources)
+      if (t->cpu_flags.bitfield.cpufma4 || t->cpu_flags.bitfield.cpuxop)
 	given = j < 2 ? 1 - j : j;
 
       if (t->operand_types[j].bitfield.class == Reg
@@ -3203,8 +3202,8 @@ pte (insn_template *t)
   fprintf (stdout, " %d operands ", t->operands);
   if (opc_pfx[t->opcode_modifier.opcodeprefix])
     fprintf (stdout, "pfx %x ", opc_pfx[t->opcode_modifier.opcodeprefix]);
-  if (opc_spc[t->opcode_modifier.opcodespace])
-    fprintf (stdout, "space %s ", opc_spc[t->opcode_modifier.opcodespace]);
+  if (opc_spc[t->opcode_space])
+    fprintf (stdout, "space %s ", opc_spc[t->opcode_space]);
   fprintf (stdout, "opcode %x ", t->base_opcode);
   if (t->extension_opcode != None)
     fprintf (stdout, "ext %x ", t->extension_opcode);
@@ -3487,8 +3486,7 @@ want_disp32 (const insn_template *t)
 {
   return flag_code != CODE_64BIT
 	 || i.prefix[ADDR_PREFIX]
-	 || (t->base_opcode == 0x8d
-	     && t->opcode_modifier.opcodespace == SPACE_BASE
+	 || (t->mnem_off == MN_lea
 	     && (!i.types[1].bitfield.qword
 		|| t->opcode_modifier.size == SIZE32));
 }
@@ -3588,7 +3586,7 @@ build_vex_prefix (const insn_template *t)
       && i.dir_encoding == dir_encoding_default
       && i.operands == i.reg_operands
       && operand_type_equal (&i.types[0], &i.types[i.operands - 1])
-      && i.tm.opcode_modifier.opcodespace == SPACE_0F
+      && i.tm.opcode_space == SPACE_0F
       && (i.tm.opcode_modifier.load || i.tm.opcode_modifier.d)
       && i.rex == REX_B)
     {
@@ -3624,7 +3622,8 @@ build_vex_prefix (const insn_template *t)
       && i.reg_operands == i.operands - i.imm_operands
       && i.tm.opcode_modifier.vex
       && i.tm.opcode_modifier.commutative
-      && (i.tm.opcode_modifier.sse2avx || optimize > 1)
+      && (i.tm.opcode_modifier.sse2avx
+	  || (optimize > 1 && !i.no_optimize))
       && i.rex == REX_B
       && i.vex.register_specifier
       && !(i.vex.register_specifier->reg_flags & RegRex))
@@ -3633,7 +3632,7 @@ build_vex_prefix (const insn_template *t)
       union i386_op temp_op;
       i386_operand_type temp_type;
 
-      gas_assert (i.tm.opcode_modifier.opcodespace == SPACE_0F);
+      gas_assert (i.tm.opcode_space == SPACE_0F);
       gas_assert (!i.tm.opcode_modifier.sae);
       gas_assert (operand_type_equal (&i.types[i.operands - 2],
                                       &i.types[i.operands - 3]));
@@ -3686,7 +3685,7 @@ build_vex_prefix (const insn_template *t)
   /* Use 2-byte VEX prefix if possible.  */
   if (w == 0
       && i.vec_encoding != vex_encoding_vex3
-      && i.tm.opcode_modifier.opcodespace == SPACE_0F
+      && i.tm.opcode_space == SPACE_0F
       && (i.rex & (REX_W | REX_X | REX_B)) == 0)
     {
       /* 2-byte VEX prefix.  */
@@ -3707,7 +3706,7 @@ build_vex_prefix (const insn_template *t)
       /* 3-byte VEX prefix.  */
       i.vex.length = 3;
 
-      switch (i.tm.opcode_modifier.opcodespace)
+      switch (i.tm.opcode_space)
 	{
 	case SPACE_0F:
 	case SPACE_0F38:
@@ -3725,7 +3724,7 @@ build_vex_prefix (const insn_template *t)
 
       /* The high 3 bits of the second VEX byte are 1's compliment
 	 of RXB bits from REX.  */
-      i.vex.bytes[1] = (~i.rex & 0x7) << 5 | i.tm.opcode_modifier.opcodespace;
+      i.vex.bytes[1] = (~i.rex & 0x7) << 5 | i.tm.opcode_space;
 
       i.vex.bytes[2] = (w << 7
 			| register_specifier << 3
@@ -3860,9 +3859,9 @@ build_evex_prefix (void)
 
   /* The high 3 bits of the second EVEX byte are 1's compliment of RXB
      bits from REX.  */
-  gas_assert (i.tm.opcode_modifier.opcodespace >= SPACE_0F);
-  gas_assert (i.tm.opcode_modifier.opcodespace <= SPACE_EVEXMAP6);
-  i.vex.bytes[1] = (~i.rex & 0x7) << 5 | i.tm.opcode_modifier.opcodespace;
+  gas_assert (i.tm.opcode_space >= SPACE_0F);
+  gas_assert (i.tm.opcode_space <= SPACE_EVEXMAP6);
+  i.vex.bytes[1] = (~i.rex & 0x7) << 5 | i.tm.opcode_space;
 
   /* The fifth bit of the second EVEX byte is 1's compliment of the
      REX_R bit in VREX.  */
@@ -4072,14 +4071,14 @@ encode_with_unaligned_vector_move (void)
     case 0x28:	/* Load instructions.  */
     case 0x29:	/* Store instructions.  */
       /* movaps/movapd/vmovaps/vmovapd.  */
-      if (i.tm.opcode_modifier.opcodespace == SPACE_0F
+      if (i.tm.opcode_space == SPACE_0F
 	  && i.tm.opcode_modifier.opcodeprefix <= PREFIX_0X66)
 	i.tm.base_opcode = 0x10 | (i.tm.base_opcode & 1);
       break;
     case 0x6f:	/* Load instructions.  */
     case 0x7f:	/* Store instructions.  */
       /* movdqa/vmovdqa/vmovdqa64/vmovdqa32. */
-      if (i.tm.opcode_modifier.opcodespace == SPACE_0F
+      if (i.tm.opcode_space == SPACE_0F
 	  && i.tm.opcode_modifier.opcodeprefix == PREFIX_0X66)
 	i.tm.opcode_modifier.opcodeprefix = PREFIX_0XF3;
       break;
@@ -4095,8 +4094,7 @@ optimize_encoding (void)
 {
   unsigned int j;
 
-  if (i.tm.opcode_modifier.opcodespace == SPACE_BASE
-      && i.tm.base_opcode == 0x8d)
+  if (i.tm.mnem_off == MN_lea)
     {
       /* Optimize: -O:
 	   lea symbol, %rN    -> mov $symbol, %rN
@@ -4222,7 +4220,7 @@ optimize_encoding (void)
 	    {
 	      if (flag_code != CODE_32BIT)
 		return;
-	      i.tm.opcode_modifier.opcodespace = SPACE_0F;
+	      i.tm.opcode_space = SPACE_0F;
 	      i.tm.base_opcode = 0xb7;
 	    }
 	  else
@@ -4244,15 +4242,12 @@ optimize_encoding (void)
     }
 
   if (optimize_for_space
-      && i.tm.opcode_modifier.opcodespace == SPACE_BASE
+      && i.tm.mnem_off == MN_test
       && i.reg_operands == 1
       && i.imm_operands == 1
       && !i.types[1].bitfield.byte
       && i.op[0].imms->X_op == O_constant
-      && fits_in_imm7 (i.op[0].imms->X_add_number)
-      && (i.tm.base_opcode == 0xa8
-	  || (i.tm.base_opcode == 0xf6
-	      && i.tm.extension_opcode == 0x0)))
+      && fits_in_imm7 (i.op[0].imms->X_add_number))
     {
       /* Optimize: -Os:
 	   test $imm7, %r64/%r32/%r16  -> test $imm7, %r8
@@ -4276,7 +4271,7 @@ optimize_encoding (void)
 	}
     }
   else if (flag_code == CODE_64BIT
-	   && i.tm.opcode_modifier.opcodespace == SPACE_BASE
+	   && i.tm.opcode_space == SPACE_BASE
 	   && ((i.types[1].bitfield.qword
 		&& i.reg_operands == 1
 		&& i.imm_operands == 1
@@ -4285,12 +4280,11 @@ optimize_encoding (void)
 		     && i.tm.extension_opcode == None
 		     && fits_in_unsigned_long (i.op[0].imms->X_add_number))
 		    || (fits_in_imm31 (i.op[0].imms->X_add_number)
-			&& ((i.tm.base_opcode == 0x24
-			     || i.tm.base_opcode == 0xa8)
+			&& (i.tm.base_opcode == 0x24
 			    || (i.tm.base_opcode == 0x80
 				&& i.tm.extension_opcode == 0x4)
-			    || ((i.tm.base_opcode == 0xf6
-				 || (i.tm.base_opcode | 1) == 0xc7)
+			    || i.tm.mnem_off == MN_test
+			    || ((i.tm.base_opcode | 1) == 0xc7
 				&& i.tm.extension_opcode == 0x0)))
 		    || (fits_in_imm7 (i.op[0].imms->X_add_number)
 			&& i.tm.base_opcode == 0x83
@@ -4298,11 +4292,9 @@ optimize_encoding (void)
 	       || (i.types[0].bitfield.qword
 		   && ((i.reg_operands == 2
 			&& i.op[0].regs == i.op[1].regs
-			&& (i.tm.base_opcode == 0x30
-			    || i.tm.base_opcode == 0x28))
-		       || (i.reg_operands == 1
-			   && i.operands == 1
-			   && i.tm.base_opcode == 0x30)))))
+			&& (i.tm.mnem_off == MN_xor
+			    || i.tm.mnem_off == MN_sub))
+		       || i.tm.mnem_off == MN_clr))))
     {
       /* Optimize: -O:
 	   andq $imm31, %r64   -> andl $imm31, %r32
@@ -4327,7 +4319,7 @@ optimize_encoding (void)
 	}
       i.types[1].bitfield.dword = 1;
       i.types[1].bitfield.qword = 0;
-      if (i.tm.base_opcode == 0xb8 || (i.tm.base_opcode | 1) == 0xc7)
+      if (i.tm.mnem_off == MN_mov || i.tm.mnem_off == MN_lea)
 	{
 	  /* Handle
 	       movq $imm31, %r64   -> movl $imm31, %r32
@@ -4350,11 +4342,9 @@ optimize_encoding (void)
     }
   else if (optimize > 1
 	   && !optimize_for_space
-	   && i.tm.opcode_modifier.opcodespace == SPACE_BASE
 	   && i.reg_operands == 2
 	   && i.op[0].regs == i.op[1].regs
-	   && ((i.tm.base_opcode & ~(Opcode_D | 1)) == 0x8
-	       || (i.tm.base_opcode & ~(Opcode_D | 1)) == 0x20)
+	   && (i.tm.mnem_off == MN_and || i.tm.mnem_off == MN_or)
 	   && (flag_code != CODE_64BIT || !i.types[0].bitfield.dword))
     {
       /* Optimize: -O2:
@@ -4383,7 +4373,7 @@ optimize_encoding (void)
 		       || i.tm.cpu_flags.bitfield.cpuavx512vl
 		       || (i.tm.operand_types[2].bitfield.zmmword
 			   && i.types[2].bitfield.ymmword))))
-	   && i.tm.opcode_modifier.opcodespace == SPACE_0F
+	   && i.tm.opcode_space == SPACE_0F
 	   && ((i.tm.base_opcode | 2) == 0x57
 	       || i.tm.base_opcode == 0xdf
 	       || i.tm.base_opcode == 0xef
@@ -4554,7 +4544,7 @@ load_insn_p (void)
 	return 1;
     }
 
-  if (i.tm.opcode_modifier.opcodespace == SPACE_BASE)
+  if (i.tm.opcode_space == SPACE_BASE)
     {
       /* popf, popa.   */
       if (i.tm.base_opcode == 0x9d
@@ -4579,19 +4569,13 @@ load_insn_p (void)
 
   if (any_vex_p)
     {
-      /* vldmxcsr.  */
-      if (i.tm.base_opcode == 0xae
-	  && i.tm.opcode_modifier.vex
-	  && i.tm.opcode_modifier.opcodespace == SPACE_0F
-	  && i.tm.opcode_modifier.opcodeprefix == PREFIX_NONE
-	  && i.tm.extension_opcode == 2)
+      if (i.tm.mnem_off == MN_vldmxcsr)
 	return 1;
     }
-  else if (i.tm.opcode_modifier.opcodespace == SPACE_BASE)
+  else if (i.tm.opcode_space == SPACE_BASE)
     {
       /* test, not, neg, mul, imul, div, idiv.  */
-      if ((i.tm.base_opcode == 0xf6 || i.tm.base_opcode == 0xf7)
-	  && i.tm.extension_opcode != 1)
+      if (base_opcode == 0xf7 && i.tm.extension_opcode != 1)
 	return 1;
 
       /* inc, dec.  */
@@ -4603,13 +4587,12 @@ load_insn_p (void)
 	return 1;
 
       /* rol, ror, rcl, rcr, shl/sal, shr, sar. */
-      if ((base_opcode == 0xc1
-	   || (i.tm.base_opcode >= 0xd0 && i.tm.base_opcode <= 0xd3))
+      if ((base_opcode == 0xc1 || (base_opcode | 2) == 0xd3)
 	  && i.tm.extension_opcode != 6)
 	return 1;
 
       /* Check for x87 instructions.  */
-      if (base_opcode >= 0xd8 && base_opcode <= 0xdf)
+      if ((base_opcode | 6) == 0xdf)
 	{
 	  /* Skip fst, fstp, fstenv, fstcw.  */
 	  if (i.tm.base_opcode == 0xd9
@@ -4648,11 +4631,11 @@ load_insn_p (void)
 	  return 1;
 	}
     }
-  else if (i.tm.opcode_modifier.opcodespace == SPACE_0F)
+  else if (i.tm.opcode_space == SPACE_0F)
     {
       /* bt, bts, btr, btc.  */
       if (i.tm.base_opcode == 0xba
-	  && (i.tm.extension_opcode >= 4 && i.tm.extension_opcode <= 7))
+	  && (i.tm.extension_opcode | 3) == 7)
 	return 1;
 
       /* cmpxchg8b, cmpxchg16b, xrstors, vmptrld.  */
@@ -4681,26 +4664,17 @@ load_insn_p (void)
 
   /* Check fake imm8 operand and 3 source operands.  */
   if ((i.tm.opcode_modifier.immext
-       || i.tm.opcode_modifier.vexsources == VEX3SOURCES)
+       || i.reg_operands + i.mem_operands == 4)
       && i.types[dest].bitfield.imm8)
     dest--;
 
   /* add, or, adc, sbb, and, sub, xor, cmp, test, xchg.  */
-  if (i.tm.opcode_modifier.opcodespace == SPACE_BASE
-      && (base_opcode == 0x1
-	  || base_opcode == 0x9
-	  || base_opcode == 0x11
-	  || base_opcode == 0x19
-	  || base_opcode == 0x21
-	  || base_opcode == 0x29
-	  || base_opcode == 0x31
-	  || base_opcode == 0x39
+  if (i.tm.opcode_space == SPACE_BASE
+      && ((base_opcode | 0x38) == 0x39
 	  || (base_opcode | 2) == 0x87))
     return 1;
 
-  /* xadd.  */
-  if (i.tm.opcode_modifier.opcodespace == SPACE_0F
-      && base_opcode == 0xc1)
+  if (i.tm.mnem_off == MN_xadd)
     return 1;
 
   /* Check for load instruction.  */
@@ -4724,8 +4698,7 @@ insert_lfence_after (void)
 	 chosen by the adversary using an LVI method,
 	 then this data-dependent behavior may leak some aspect
 	 of the secret.  */
-      if (((i.tm.base_opcode | 0x1) == 0xa7
-	   || (i.tm.base_opcode | 0x1) == 0xaf)
+      if (((i.tm.base_opcode | 0x9) == 0xaf)
 	  && i.prefix[REP_PREFIX])
 	{
 	    as_warn (_("`%s` changes flags which would affect control flow behavior"),
@@ -4745,7 +4718,7 @@ insert_lfence_before (void)
 {
   char *p;
 
-  if (i.tm.opcode_modifier.opcodespace != SPACE_BASE)
+  if (i.tm.opcode_space != SPACE_BASE)
     return;
 
   if (i.tm.base_opcode == 0xff
@@ -4795,8 +4768,7 @@ insert_lfence_before (void)
 
   /* Output or/not/shl and lfence before near ret.  */
   if (lfence_before_ret != lfence_before_ret_none
-      && (i.tm.base_opcode == 0xc2
-	  || i.tm.base_opcode == 0xc3))
+      && (i.tm.base_opcode | 1) == 0xc3)
     {
       if (last_insn.kind != last_insn_other
 	  && last_insn.seg == now_seg)
@@ -4868,9 +4840,9 @@ static INLINE bool may_need_pass2 (const insn_template *t)
   return t->opcode_modifier.sse2avx
 	 /* Note that all SSE2AVX templates have at least one operand.  */
 	 ? t->operand_types[t->operands - 1].bitfield.class == RegSIMD
-	 : (t->opcode_modifier.opcodespace == SPACE_0F
+	 : (t->opcode_space == SPACE_0F
 	    && (t->base_opcode | 1) == 0xbf)
-	   || (t->opcode_modifier.opcodespace == SPACE_BASE
+	   || (t->opcode_space == SPACE_BASE
 	       && t->base_opcode == 0x63);
 }
 
@@ -5143,8 +5115,8 @@ md_assemble (char *line)
   if (sse_check != check_none
       /* The opcode space check isn't strictly needed; it's there only to
 	 bypass the logic below when easily possible.  */
-      && t->opcode_modifier.opcodespace >= SPACE_0F
-      && t->opcode_modifier.opcodespace <= SPACE_0F3A
+      && t->opcode_space >= SPACE_0F
+      && t->opcode_space <= SPACE_0F3A
       && !i.tm.cpu_flags.bitfield.cpusse4a
       && !is_any_vex_encoding (t))
     {
@@ -5178,14 +5150,20 @@ md_assemble (char *line)
 
   /* Check for lock without a lockable instruction.  Destination operand
      must be memory unless it is xchg (0x86).  */
-  if (i.prefix[LOCK_PREFIX]
-      && (i.tm.opcode_modifier.prefixok < PrefixLock
+  if (i.prefix[LOCK_PREFIX])
+    {
+      if (i.tm.opcode_modifier.prefixok < PrefixLock
 	  || i.mem_operands == 0
 	  || (i.tm.base_opcode != 0x86
-	      && !(i.flags[i.operands - 1] & Operand_Mem))))
-    {
-      as_bad (_("expecting lockable instruction after `lock'"));
-      return;
+	      && !(i.flags[i.operands - 1] & Operand_Mem)))
+	{
+	  as_bad (_("expecting lockable instruction after `lock'"));
+	  return;
+	}
+
+      /* Zap the redundant prefix from XCHG when optimizing.  */
+      if (i.tm.base_opcode == 0x86 && optimize && !i.no_optimize)
+	i.prefix[LOCK_PREFIX] = 0;
     }
 
   if (is_any_vex_encoding (&i.tm)
@@ -5261,7 +5239,7 @@ md_assemble (char *line)
      instructions (base opcodes: 0x6c, 0x6e, 0xec, 0xee).  */
   if (i.input_output_operand
       && ((i.tm.base_opcode | 0x82) != 0xee
-	  || i.tm.opcode_modifier.opcodespace != SPACE_BASE))
+	  || i.tm.opcode_space != SPACE_BASE))
     {
       as_bad (_("input/output port address isn't allowed with `%s'"),
 	      insn_name (&i.tm));
@@ -5354,12 +5332,8 @@ md_assemble (char *line)
       i.rex &= REX_OPCODE;
     }
 
-  /* Handle conversion of 'int $3' --> special int3 insn.  XOP or FMA4
-     instructions may define INT_OPCODE as well, so avoid this corner
-     case for those instructions that use MODRM.  */
-  if (i.tm.opcode_modifier.opcodespace == SPACE_BASE
-      && i.tm.base_opcode == INT_OPCODE
-      && !i.tm.opcode_modifier.modrm
+  /* Handle conversion of 'int $3' --> special int3 insn.  */
+  if (i.tm.mnem_off == MN_int
       && i.op[0].imms->X_add_number == 3)
     {
       i.tm.base_opcode = INT3_OPCODE;
@@ -5466,13 +5440,10 @@ md_assemble (char *line)
 static INLINE bool q_suffix_allowed(const insn_template *t)
 {
   return flag_code == CODE_64BIT
-	 || (t->opcode_modifier.opcodespace == SPACE_BASE
+	 || (t->opcode_space == SPACE_BASE
 	     && t->base_opcode == 0xdf
 	     && (t->extension_opcode & 1)) /* fild / fistp / fisttp */
-	 || (t->opcode_modifier.opcodespace == SPACE_0F
-	     && t->base_opcode == 0xc7
-	     && t->opcode_modifier.opcodeprefix == PREFIX_NONE
-	     && t->extension_opcode == 1) /* cmpxchg8b */;
+	 || t->mnem_off == MN_cmpxchg8b;
 }
 
 static const char *
@@ -5706,7 +5677,7 @@ parse_insn (const char *line, char *mnemonic)
 		  if (current_templates != NULL
 		      /* MOVS or CMPS */
 		      && (current_templates->start->base_opcode | 2) == 0xa6
-		      && current_templates->start->opcode_modifier.opcodespace
+		      && current_templates->start->opcode_space
 			 == SPACE_BASE
 		      && mnem_p[-2] == 's')
 		    {
@@ -6881,14 +6852,15 @@ match_template (char mnem_suffix)
 	     zero-extend %eax to %rax.  */
 	  if (flag_code == CODE_64BIT
 	      && t->base_opcode == 0x90
-	      && t->opcode_modifier.opcodespace == SPACE_BASE
+	      && t->opcode_space == SPACE_BASE
 	      && i.types[0].bitfield.instance == Accum
 	      && i.types[0].bitfield.dword
 	      && i.types[1].bitfield.instance == Accum)
 	    continue;
 
 	  if (t->base_opcode == MOV_AX_DISP32
-	      && t->opcode_modifier.opcodespace == SPACE_BASE)
+	      && t->opcode_space == SPACE_BASE
+	      && t->mnem_off != MN_movabs)
 	    {
 	      /* Force 0x8b encoding for "mov foo@GOT, %eax".  */
 	      if (i.reloc[0] == BFD_RELOC_386_GOT32)
@@ -6960,7 +6932,8 @@ match_template (char mnem_suffix)
 	      if (!(size_match & MATCH_REVERSE))
 		continue;
 	      /* Try reversing direction of operands.  */
-	      j = t->opcode_modifier.vexsources ? 1 : i.operands - 1;
+	      j = t->cpu_flags.bitfield.cpufma4
+		  || t->cpu_flags.bitfield.cpuxop ? 1 : i.operands - 1;
 	      overlap0 = operand_type_and (i.types[0], operand_types[j]);
 	      overlap1 = operand_type_and (i.types[j], operand_types[0]);
 	      overlap2 = operand_type_and (i.types[1], operand_types[1]);
@@ -6994,13 +6967,14 @@ match_template (char mnem_suffix)
 		      && (intel_syntax || intel_mnemonic))
 		    found_reverse_match |= Opcode_FloatR;
 		}
-	      else if (t->opcode_modifier.vexsources)
+	      else if (t->cpu_flags.bitfield.cpufma4
+		       || t->cpu_flags.bitfield.cpuxop)
 		{
 		  found_reverse_match = Opcode_VexW;
 		  goto check_operands_345;
 		}
-	      else if (t->opcode_modifier.opcodespace != SPACE_BASE
-		       && (t->opcode_modifier.opcodespace != SPACE_0F
+	      else if (t->opcode_space != SPACE_BASE
+		       && (t->opcode_space != SPACE_0F
 			   /* MOV to/from CR/DR/TR, as an exception, follow
 			      the base opcode space encoding model.  */
 			   || (t->base_opcode | 7) != 0x27))
@@ -7193,7 +7167,7 @@ check_string (void)
 static int
 process_suffix (void)
 {
-  bool is_crc32 = false, is_movx = false;
+  bool is_movx = false;
 
   /* If matched instruction specifies an explicit instruction mnemonic
      suffix, use it.  */
@@ -7210,16 +7184,11 @@ process_suffix (void)
       unsigned int numop = i.operands;
 
       /* MOVSX/MOVZX */
-      is_movx = (i.tm.opcode_modifier.opcodespace == SPACE_0F
+      is_movx = (i.tm.opcode_space == SPACE_0F
 		 && (i.tm.base_opcode | 8) == 0xbe)
-		|| (i.tm.opcode_modifier.opcodespace == SPACE_BASE
+		|| (i.tm.opcode_space == SPACE_BASE
 		    && i.tm.base_opcode == 0x63
 		    && i.tm.cpu_flags.bitfield.cpu64);
-
-      /* CRC32 */
-      is_crc32 = (i.tm.base_opcode == 0xf0
-		  && i.tm.opcode_modifier.opcodespace == SPACE_0F38
-		  && i.tm.opcode_modifier.opcodeprefix == PREFIX_0XF2);
 
       /* movsx/movzx want only their source operand considered here, for the
 	 ambiguity checking below.  The suffix will be replaced afterwards
@@ -7228,7 +7197,7 @@ process_suffix (void)
 	--i.operands;
 
       /* crc32 needs REX.W set regardless of suffix / source operand size.  */
-      if (is_crc32 && i.tm.operand_types[1].bitfield.qword)
+      if (i.tm.mnem_off == MN_crc32 && i.tm.operand_types[1].bitfield.qword)
         i.rex |= REX_W;
 
       /* If there's no instruction mnemonic suffix we try to invent one
@@ -7239,7 +7208,7 @@ process_suffix (void)
 	     Destination register type is more significant than source
 	     register type.  crc32 in SSE4.2 prefers source register
 	     type. */
-	  unsigned int op = is_crc32 ? 1 : i.operands;
+	  unsigned int op = i.tm.mnem_off == MN_crc32 ? 1 : i.operands;
 
 	  while (op--)
 	    if (i.tm.operand_types[op].bitfield.instance == InstanceNone
@@ -7321,7 +7290,7 @@ process_suffix (void)
 	   && (i.tm.opcode_modifier.jump == JUMP_ABSOLUTE
 	       || i.tm.opcode_modifier.jump == JUMP_BYTE
 	       || i.tm.opcode_modifier.jump == JUMP_INTERSEGMENT
-	       || (i.tm.opcode_modifier.opcodespace == SPACE_0F
+	       || (i.tm.opcode_space == SPACE_0F
 		   && i.tm.base_opcode == 0x01 /* [ls][gi]dt */
 		   && i.tm.extension_opcode <= 3)))
     {
@@ -7543,7 +7512,7 @@ process_suffix (void)
 	     need rex64. */
 	  && ! (i.operands == 2
 		&& i.tm.base_opcode == 0x90
-		&& i.tm.opcode_modifier.opcodespace == SPACE_BASE
+		&& i.tm.opcode_space == SPACE_BASE
 		&& i.types[0].bitfield.instance == Accum
 		&& i.types[0].bitfield.qword
 		&& i.types[1].bitfield.instance == Accum))
@@ -7563,8 +7532,7 @@ process_suffix (void)
 		      /* InOutPortReg */
 		      || i.tm.operand_types[0].bitfield.instance == RegD
 		      || i.tm.operand_types[1].bitfield.instance == RegD
-		      /* CRC32 */
-		      || is_crc32))))
+		      || i.tm.mnem_off == MN_crc32))))
 	i.tm.base_opcode |= 1;
       break;
     }
@@ -7683,10 +7651,7 @@ check_byte_reg (void)
 	continue;
 
       /* crc32 only wants its source operand checked here.  */
-      if (i.tm.base_opcode == 0xf0
-	  && i.tm.opcode_modifier.opcodespace == SPACE_0F38
-	  && i.tm.opcode_modifier.opcodeprefix == PREFIX_0XF2
-	  && op != 0)
+      if (i.tm.mnem_off == MN_crc32 && op != 0)
 	continue;
 
       /* Any other register is bad.  */
@@ -7964,7 +7929,6 @@ process_operands (void)
       if (i.tm.operand_types[0].bitfield.instance == Accum
 	  && i.tm.operand_types[0].bitfield.xmmword)
 	{
-	  gas_assert (i.tm.opcode_modifier.vexsources == VEX3SOURCES);
 	  /* Keep xmm0 for instructions with VEX prefix and 3
 	     sources.  */
 	  i.tm.operand_types[0].bitfield.instance = InstanceNone;
@@ -7975,9 +7939,7 @@ process_operands (void)
 
       if (i.tm.opcode_modifier.operandconstraint == IMPLICIT_1ST_XMM0)
 	{
-	  gas_assert ((MAX_OPERANDS - 1) > dupl
-		      && (i.tm.opcode_modifier.vexsources
-			  == VEX3SOURCES));
+	  gas_assert ((MAX_OPERANDS - 1) > dupl);
 
 	  /* Add the implicit xmm0 for instructions with VEX prefix
 	     and 3 sources.  */
@@ -8119,14 +8081,14 @@ process_operands (void)
 	  return 0;
 	}
       if (i.op[0].regs->reg_num > 3
-	  && i.tm.opcode_modifier.opcodespace == SPACE_BASE )
+	  && i.tm.opcode_space == SPACE_BASE )
 	{
 	  i.tm.base_opcode ^= (POP_SEG_SHORT ^ POP_SEG386_SHORT) & 0xff;
-	  i.tm.opcode_modifier.opcodespace = SPACE_0F;
+	  i.tm.opcode_space = SPACE_0F;
 	}
       i.tm.base_opcode |= (i.op[0].regs->reg_num << 3);
     }
-  else if (i.tm.opcode_modifier.opcodespace == SPACE_BASE
+  else if (i.tm.opcode_space == SPACE_BASE
 	   && (i.tm.base_opcode & ~3) == MOV_AX_DISP32)
     {
       default_seg = reg_ds;
@@ -8152,13 +8114,11 @@ process_operands (void)
     }
 
   if ((i.seg[0] || i.prefix[SEG_PREFIX])
-      && i.tm.base_opcode == 0x8d /* lea */
-      && i.tm.opcode_modifier.opcodespace == SPACE_BASE
-      && !is_any_vex_encoding(&i.tm))
+      && i.tm.mnem_off == MN_lea)
     {
       if (!quiet_warnings)
 	as_warn (_("segment override on `%s' is ineffectual"), insn_name (&i.tm));
-      if (optimize)
+      if (optimize && !i.no_optimize)
 	{
 	  i.seg[0] = NULL;
 	  i.prefix[SEG_PREFIX] = 0;
@@ -8204,9 +8164,8 @@ build_modrm_byte (void)
 {
   const reg_entry *default_seg = NULL;
   unsigned int source, dest;
-  int vex_3_sources;
+  bool vex_3_sources = (i.reg_operands + i.mem_operands == 4);
 
-  vex_3_sources = i.tm.opcode_modifier.vexsources == VEX3SOURCES;
   if (vex_3_sources)
     {
       unsigned int nds, reg_slot;
@@ -8222,9 +8181,7 @@ build_modrm_byte (void)
 	 ZMM register.
 	 2. 4 operands: 4 register operands or 3 register operands
 	 plus 1 memory operand, with VexXDS.  */
-      gas_assert ((i.reg_operands == 4
-		   || (i.reg_operands == 3 && i.mem_operands == 1))
-		  && i.tm.opcode_modifier.vexvvvv == VEXXDS
+      gas_assert (i.tm.opcode_modifier.vexvvvv == VEXXDS
 		  && i.tm.opcode_modifier.vexw
 		  && i.tm.operand_types[dest].bitfield.class == RegSIMD);
 
@@ -8656,41 +8613,7 @@ build_modrm_byte (void)
       else
 	mem = ~0;
 
-      if (i.tm.opcode_modifier.vexsources == XOP2SOURCES)
-	{
-	  if (operand_type_check (i.types[0], imm))
-	    i.vex.register_specifier = NULL;
-	  else
-	    {
-	      /* VEX.vvvv encodes one of the sources when the first
-		 operand is not an immediate.  */
-	      if (i.tm.opcode_modifier.vexw == VEXW0)
-		i.vex.register_specifier = i.op[0].regs;
-	      else
-		i.vex.register_specifier = i.op[1].regs;
-	    }
-
-	  /* Destination is a XMM register encoded in the ModRM.reg
-	     and VEX.R bit.  */
-	  i.rm.reg = i.op[2].regs->reg_num;
-	  if ((i.op[2].regs->reg_flags & RegRex) != 0)
-	    i.rex |= REX_R;
-
-	  /* ModRM.rm and VEX.B encodes the other source.  */
-	  if (!i.mem_operands)
-	    {
-	      i.rm.mode = 3;
-
-	      if (i.tm.opcode_modifier.vexw == VEXW0)
-		i.rm.regmem = i.op[1].regs->reg_num;
-	      else
-		i.rm.regmem = i.op[0].regs->reg_num;
-
-	      if ((i.op[1].regs->reg_flags & RegRex) != 0)
-		i.rex |= REX_B;
-	    }
-	}
-      else if (i.tm.opcode_modifier.vexvvvv == VEXLWP)
+      if (i.tm.opcode_modifier.vexvvvv == VEXLWP)
 	{
 	  i.vex.register_specifier = i.op[2].regs;
 	  if (!i.mem_operands)
@@ -9081,7 +9004,7 @@ output_jump (void)
       break;
 
     case 2:
-      if (i.tm.base_opcode == 0xc7f8)
+      if (i.tm.mnem_off == MN_xbegin)
 	fixP->fx_signed = 1;
       break;
 
@@ -9363,7 +9286,7 @@ maybe_fused_with_jcc_p (enum mf_cmp_kind* mf_cmp_p)
     return 0;
 
   /* No opcodes outside of base encoding space.  */
-  if (i.tm.opcode_modifier.opcodespace != SPACE_BASE)
+  if (i.tm.opcode_space != SPACE_BASE)
     return 0;
 
   /* add, sub without add/sub m, imm.  */
@@ -9487,7 +9410,7 @@ add_branch_padding_frag_p (enum align_branch_kind *branch_p,
   if (!align_branch_power
       || now_seg == absolute_section
       || !cpu_arch_flags.bitfield.cpui386
-      || i.tm.opcode_modifier.opcodespace != SPACE_BASE)
+      || i.tm.opcode_space != SPACE_BASE)
     return 0;
 
   add_padding = 0;
@@ -9593,10 +9516,8 @@ output_insn (void)
 	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_X87;
 
       if ((i.xstate & xstate_mmx)
-	  || (i.tm.opcode_modifier.opcodespace == SPACE_0F
-	      && !is_any_vex_encoding (&i.tm)
-	      && (i.tm.base_opcode == 0x77 /* emms */
-		  || i.tm.base_opcode == 0x0e /* femms */)))
+	  || i.tm.mnem_off == MN_emms
+	  || i.tm.mnem_off == MN_femms)
 	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_MMX;
 
       if (i.index_reg)
@@ -9640,10 +9561,7 @@ output_insn (void)
       if (x86_feature_2_used
 	  || i.tm.cpu_flags.bitfield.cpucmov
 	  || i.tm.cpu_flags.bitfield.cpusyscall
-	  || (i.tm.opcode_modifier.opcodespace == SPACE_0F
-	      && i.tm.base_opcode == 0xc7
-	      && i.tm.opcode_modifier.opcodeprefix == PREFIX_NONE
-	      && i.tm.extension_opcode == 1) /* cmpxchg8b */)
+	  || i.tm.mnem_off == MN_cmpxchg8b)
 	x86_isa_1_used |= GNU_PROPERTY_X86_ISA_1_BASELINE;
       if (i.tm.cpu_flags.bitfield.cpusse3
 	  || i.tm.cpu_flags.bitfield.cpussse3
@@ -9654,7 +9572,7 @@ output_insn (void)
 	  /* LAHF-SAHF insns in 64-bit mode.  */
 	  || (flag_code == CODE_64BIT
 	      && (i.tm.base_opcode | 1) == 0x9f
-	      && i.tm.opcode_modifier.opcodespace == SPACE_BASE))
+	      && i.tm.opcode_space == SPACE_BASE))
 	x86_isa_1_used |= GNU_PROPERTY_X86_ISA_1_V2;
       if (i.tm.cpu_flags.bitfield.cpuavx
 	  || i.tm.cpu_flags.bitfield.cpuavx2
@@ -9913,7 +9831,7 @@ output_insn (void)
       /* Now the opcode; be careful about word order here!  */
       j = i.opcode_length;
       if (!i.vex.length)
-	switch (i.tm.opcode_modifier.opcodespace)
+	switch (i.tm.opcode_space)
 	  {
 	  case SPACE_BASE:
 	    break;
@@ -9938,11 +9856,11 @@ output_insn (void)
 	{
 	  p = frag_more (j);
 	  if (!i.vex.length
-	      && i.tm.opcode_modifier.opcodespace != SPACE_BASE)
+	      && i.tm.opcode_space != SPACE_BASE)
 	    {
 	      *p++ = 0x0f;
-	      if (i.tm.opcode_modifier.opcodespace != SPACE_0F)
-		*p++ = i.tm.opcode_modifier.opcodespace == SPACE_0F38
+	      if (i.tm.opcode_space != SPACE_0F)
+		*p++ = i.tm.opcode_space == SPACE_0F38
 		       ? 0x38 : 0x3a;
 	    }
 
@@ -10014,7 +9932,7 @@ output_insn (void)
 
 	      /* Count prefixes for extended opcode maps.  */
 	      if (!i.vex.length)
-		switch (i.tm.opcode_modifier.opcodespace)
+		switch (i.tm.opcode_space)
 		  {
 		  case SPACE_BASE:
 		    break;
@@ -10252,7 +10170,7 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 			  && i.rm.regmem == 5))
 		  && (i.rm.mode == 2
 		      || (i.rm.mode == 0 && i.rm.regmem == 5))
-		  && i.tm.opcode_modifier.opcodespace == SPACE_BASE
+		  && i.tm.opcode_space == SPACE_BASE
 		  && ((i.operands == 1
 		       && i.tm.base_opcode == 0xff
 		       && (i.rm.reg == 2 || i.rm.reg == 4))
@@ -11495,12 +11413,9 @@ i386_index_check (const char *operand_string)
 	    goto bad_address;
 
 	  /* bndmk, bndldx, bndstx and mandatory non-vector SIB have special restrictions. */
-	  if ((t->opcode_modifier.opcodeprefix == PREFIX_0XF3
-	       && t->opcode_modifier.opcodespace == SPACE_0F
-	       && t->base_opcode == 0x1b)
-	      || (t->opcode_modifier.opcodeprefix == PREFIX_NONE
-		  && t->opcode_modifier.opcodespace == SPACE_0F
-		  && (t->base_opcode & ~1) == 0x1a)
+	  if (t->mnem_off == MN_bndmk
+	      || t->mnem_off == MN_bndldx
+	      || t->mnem_off == MN_bndstx
 	      || t->opcode_modifier.sib == SIBMEM)
 	    {
 	      /* They cannot use RIP-relative addressing. */
@@ -11511,9 +11426,7 @@ i386_index_check (const char *operand_string)
 		}
 
 	      /* bndldx and bndstx ignore their scale factor. */
-	      if (t->opcode_modifier.opcodeprefix == PREFIX_NONE
-		  && t->opcode_modifier.opcodespace == SPACE_0F
-		  && (t->base_opcode & ~1) == 0x1a
+	      if ((t->mnem_off == MN_bndldx || t->mnem_off == MN_bndstx)
 		  && i.log2_scale_factor)
 		as_warn (_("register scaling is being ignored here"));
 	    }

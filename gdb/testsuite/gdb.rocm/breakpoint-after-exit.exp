@@ -24,10 +24,7 @@
 
 load_lib rocm.exp
 
-if [skip_hipcc_tests] {
-    verbose "Skipping hip test."
-    return 0
-}
+require allow_hipcc_tests
 
 standard_testfile .cpp
 

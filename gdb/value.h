@@ -506,7 +506,7 @@ extern int value_bits_synthetic_pointer (const struct value *value,
    byte is unavailable.  */
 
 extern int value_bytes_available (const struct value *value,
-				  LONGEST offset, LONGEST length);
+				  LONGEST offset, ULONGEST length);
 
 /* Given a value, determine whether the contents bits starting at
    OFFSET and extending for LENGTH bits are available.  This returns
@@ -514,7 +514,7 @@ extern int value_bytes_available (const struct value *value,
    bit is unavailable.  */
 
 extern int value_bits_available (const struct value *value,
-				 LONGEST offset, LONGEST length);
+				 LONGEST offset, ULONGEST length);
 
 /* Like value_bytes_available, but return false if any byte in the
    whole object is unavailable.  */
@@ -528,13 +528,13 @@ extern int value_entirely_unavailable (struct value *value);
    LENGTH bytes as unavailable.  */
 
 extern void mark_value_bytes_unavailable (struct value *value,
-					  LONGEST offset, LONGEST length);
+					  LONGEST offset, ULONGEST length);
 
 /* Mark VALUE's content bits starting at OFFSET and extending for
    LENGTH bits as unavailable.  */
 
 extern void mark_value_bits_unavailable (struct value *value,
-					 LONGEST offset, LONGEST length);
+					 LONGEST offset, ULONGEST length);
 
 /* Compare LENGTH bytes of VAL1's contents starting at OFFSET1 with
    LENGTH bytes of VAL2's contents starting at OFFSET2.
@@ -1230,5 +1230,22 @@ extern void finalize_values ();
 /* Convert VALUE to a gdb_mpq.  The caller must ensure that VALUE is
    of floating-point, fixed-point, or integer type.  */
 extern gdb_mpq value_to_gdb_mpq (struct value *value);
+
+/* While an instance of this class is live, and array values that are
+   created, that are larger than max_value_size, will be restricted in size
+   to a particular number of elements.  */
+
+struct scoped_array_length_limiting
+{
+  /* Limit any large array values to only contain ELEMENTS elements.  */
+  scoped_array_length_limiting (int elements);
+
+  /* Restore the previous array value limit.  */
+  ~scoped_array_length_limiting ();
+
+private:
+  /* Used to hold the previous array value element limit.  */
+  gdb::optional<int> m_old_value;
+};
 
 #endif /* !defined (VALUE_H) */
