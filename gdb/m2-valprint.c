@@ -164,8 +164,8 @@ m2_print_unbounded_array (struct value *value,
   LONGEST len;
   struct value *val;
 
-  struct type *type = check_typedef (value_type (value));
-  const gdb_byte *valaddr = value_contents_for_printing (value).data ();
+  struct type *type = check_typedef (value->type ());
+  const gdb_byte *valaddr = value->contents_for_printing ().data ();
 
   addr = unpack_pointer (type->field (0).type (),
 			 (type->field (0).loc_bitpos () / 8) +
@@ -260,7 +260,7 @@ m2_print_array_contents (struct value *val,
 			 const struct value_print_options *options,
 			 int len)
 {
-  struct type *type = check_typedef (value_type (val));
+  struct type *type = check_typedef (val->type ());
 
   if (type->length () > 0)
     {
@@ -270,7 +270,7 @@ m2_print_array_contents (struct value *val,
 	   || ((current_language->la_language == language_m2)
 	       && (type->code () == TYPE_CODE_CHAR)))
 	  && (options->format == 0 || options->format == 's'))
-	val_print_string (type, NULL, value_address (val), len+1, stream,
+	val_print_string (type, NULL, val->address (), len+1, stream,
 			  options);
       else
 	{
@@ -305,10 +305,10 @@ m2_language::value_print_inner (struct value *val, struct ui_file *stream,
   unsigned len;
   struct type *elttype;
   CORE_ADDR addr;
-  const gdb_byte *valaddr = value_contents_for_printing (val).data ();
-  const CORE_ADDR address = value_address (val);
+  const gdb_byte *valaddr = val->contents_for_printing ().data ();
+  const CORE_ADDR address = val->address ();
 
-  struct type *type = check_typedef (value_type (val));
+  struct type *type = check_typedef (val->type ());
   switch (type->code ())
     {
     case TYPE_CODE_ARRAY:

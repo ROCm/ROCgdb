@@ -267,7 +267,7 @@ frame_unwind_got_optimized (frame_info_ptr frame, int regnum)
   struct gdbarch *gdbarch = frame_unwind_arch (frame);
   struct type *type = register_type (gdbarch, regnum);
 
-  return allocate_optimized_out_value (type);
+  return value::allocate_optimized_out (type);
 }
 
 /* Return a value which indicates that FRAME copied REGNUM into
@@ -289,7 +289,7 @@ frame_unwind_got_memory (frame_info_ptr frame, int regnum, CORE_ADDR addr)
   struct gdbarch *gdbarch = frame_unwind_arch (frame);
   struct value *v = value_at_lazy (register_type (gdbarch, regnum), addr);
 
-  set_value_stack (v, 1);
+  v->set_stack (1);
   return v;
 }
 
@@ -304,8 +304,8 @@ frame_unwind_got_constant (frame_info_ptr frame, int regnum,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct value *reg_val;
 
-  reg_val = value_zero (register_type (gdbarch, regnum), not_lval);
-  store_unsigned_integer (value_contents_writeable (reg_val).data (),
+  reg_val = value::zero (register_type (gdbarch, regnum), not_lval);
+  store_unsigned_integer (reg_val->contents_writeable ().data (),
 			  register_size (gdbarch, regnum), byte_order, val);
   return reg_val;
 }
@@ -316,8 +316,8 @@ frame_unwind_got_bytes (frame_info_ptr frame, int regnum, const gdb_byte *buf)
   struct gdbarch *gdbarch = frame_unwind_arch (frame);
   struct value *reg_val;
 
-  reg_val = value_zero (register_type (gdbarch, regnum), not_lval);
-  memcpy (value_contents_raw (reg_val).data (), buf,
+  reg_val = value::zero (register_type (gdbarch, regnum), not_lval);
+  memcpy (reg_val->contents_raw ().data (), buf,
 	  register_size (gdbarch, regnum));
   return reg_val;
 }
@@ -333,8 +333,8 @@ frame_unwind_got_address (frame_info_ptr frame, int regnum,
   struct gdbarch *gdbarch = frame_unwind_arch (frame);
   struct value *reg_val;
 
-  reg_val = value_zero (register_type (gdbarch, regnum), not_lval);
-  pack_long (value_contents_writeable (reg_val).data (),
+  reg_val = value::zero (register_type (gdbarch, regnum), not_lval);
+  pack_long (reg_val->contents_writeable ().data (),
 	     register_type (gdbarch, regnum), addr);
   return reg_val;
 }

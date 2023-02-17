@@ -926,9 +926,9 @@ elf_gnu_ifunc_resolve_addr (struct gdbarch *gdbarch, CORE_ADDR pc)
   else
     name_at_pc = NULL;
 
-  function = allocate_value (func_func_type);
-  VALUE_LVAL (function) = lval_memory;
-  set_value_address (function, pc);
+  function = value::allocate (func_func_type);
+  function->set_lval (lval_memory);
+  function->set_address (pc);
 
   /* STT_GNU_IFUNC resolver functions usually receive the HWCAP vector as
      parameter.  FUNCTION is the function entry address.  ADDRESS may be a
@@ -1037,11 +1037,11 @@ elf_gnu_ifunc_resolver_return_stop (code_breakpoint *b)
   gdb_assert (b->type == bp_gnu_ifunc_resolver);
   gdb_assert (b->loc->next == NULL);
 
-  func_func = allocate_value (func_func_type);
-  VALUE_LVAL (func_func) = lval_memory;
-  set_value_address (func_func, b->loc->related_address);
+  func_func = value::allocate (func_func_type);
+  func_func->set_lval (lval_memory);
+  func_func->set_address (b->loc->related_address);
 
-  value = allocate_value (value_type);
+  value = value::allocate (value_type);
   gdbarch_return_value_as_value (gdbarch, func_func, value_type, regcache,
 				 &value, NULL);
   resolved_address = value_as_address (value);

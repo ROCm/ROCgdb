@@ -4006,10 +4006,10 @@ is_unique_ancestor (struct type *base, struct value *val)
 {
   int offset = -1;
 
-  return is_unique_ancestor_worker (base, value_type (val), &offset,
-				    value_contents_for_printing (val).data (),
-				    value_embedded_offset (val),
-				    value_address (val), val) == 1;
+  return is_unique_ancestor_worker (base, val->type (), &offset,
+				    val->contents_for_printing ().data (),
+				    val->embedded_offset (),
+				    val->address (), val) == 1;
 }
 
 /* See gdbtypes.h.  */
@@ -4177,7 +4177,7 @@ rank_function (gdb::array_view<type *> parms,
   size_t min_len = std::min (parms.size (), args.size ());
 
   for (size_t i = 0; i < min_len; i++)
-    bv.push_back (rank_one_type (parms[i], value_type (args[i]),
+    bv.push_back (rank_one_type (parms[i], args[i]->type (),
 				 args[i]));
 
   /* If more arguments than parameters, add dummy entries.  */
@@ -4541,7 +4541,7 @@ rank_one_type_parm_ptr (struct type *parm, struct type *arg, struct value *value
     case TYPE_CODE_FUNC:
       return rank_one_type (parm->target_type (), arg, NULL);
     case TYPE_CODE_INT:
-      if (value != NULL && value_type (value)->code () == TYPE_CODE_INT)
+      if (value != NULL && value->type ()->code () == TYPE_CODE_INT)
 	{
 	  if (value_as_long (value) == 0)
 	    {
@@ -4908,7 +4908,7 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
 
   if (TYPE_IS_REFERENCE (parm) && value != NULL)
     {
-      if (VALUE_LVAL (value) == not_lval)
+      if (value->lval () == not_lval)
 	{
 	  /* Rvalues should preferably bind to rvalue references or const
 	     lvalue references.  */

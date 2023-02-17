@@ -726,8 +726,8 @@ readable_regcache::cooked_read (int regnum, gdb_byte *buf)
 
       computed = gdbarch_pseudo_register_read_value (m_descr->gdbarch,
 						     this, regnum);
-      if (value_entirely_available (computed))
-	memcpy (buf, value_contents_raw (computed).data (),
+      if (computed->entirely_available ())
+	memcpy (buf, computed->contents_raw ().data (),
 		m_descr->sizeof_register[regnum]);
       else
 	{
@@ -754,17 +754,17 @@ readable_regcache::cooked_read_value (int regnum)
     {
       struct value *result;
 
-      result = allocate_value (register_type (m_descr->gdbarch, regnum));
-      VALUE_LVAL (result) = lval_register;
+      result = value::allocate (register_type (m_descr->gdbarch, regnum));
+      result->set_lval (lval_register);
       VALUE_REGNUM (result) = regnum;
 
       /* It is more efficient in general to do this delegation in this
 	 direction than in the other one, even though the value-based
 	 API is preferred.  */
       if (cooked_read (regnum,
-		       value_contents_raw (result).data ()) == REG_UNAVAILABLE)
-	mark_value_bytes_unavailable (result, 0,
-				      value_type (result)->length ());
+		       result->contents_raw ().data ()) == REG_UNAVAILABLE)
+	result->mark_bytes_unavailable (0,
+					result->type ()->length ());
 
       return result;
     }

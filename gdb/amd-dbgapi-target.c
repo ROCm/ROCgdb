@@ -2770,7 +2770,7 @@ amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 	}
     }
 
-  return allocate_value (builtin_type (gdbarch)->builtin_void);
+  return value::allocate (builtin_type (gdbarch)->builtin_void);
 }
 
 static const struct internalvar_funcs amd_dbgapi_wave_id_funcs

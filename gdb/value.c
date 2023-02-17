@@ -67,33 +67,6 @@ struct internal_function
   void *cookie;
 };
 
-/* Defines an [OFFSET, OFFSET + LENGTH) range.  */
-
-struct range
-{
-  /* Lowest offset in the range.  */
-  LONGEST offset;
-
-  /* Length of the range.  */
-  ULONGEST length;
-
-  /* Returns true if THIS is strictly less than OTHER, useful for
-     searching.  We keep ranges sorted by offset and coalesce
-     overlapping and contiguous ranges, so this just compares the
-     starting offset.  */
-
-  bool operator< (const range &other) const
-  {
-    return offset < other.offset;
-  }
-
-  /* Returns true if THIS is equal to OTHER.  */
-  bool operator== (const range &other) const
-  {
-    return offset == other.offset && length == other.length;
-  }
-};
-
 /* Returns true if the ranges defined by [offset1, offset1+len1) and
    [offset2, offset2+len2) overlap.  */
 
@@ -175,241 +148,43 @@ ranges_contain (const std::vector<range> &ranges, LONGEST offset,
 
 static struct cmd_list_element *functionlist;
 
-/* Note that the fields in this structure are arranged to save a bit
-   of memory.  */
-
-struct value
+value::~value ()
 {
-  explicit value (struct type *type_)
-    : m_modifiable (1),
-      m_lazy (1),
-      m_initialized (1),
-      m_stack (0),
-      m_is_zero (false),
-      m_in_history (false),
-      m_type (type_),
-      m_enclosing_type (type_)
-  {
-  }
-
-  ~value ()
-  {
-    if (VALUE_LVAL (this) == lval_computed)
-      {
-	const struct lval_funcs *funcs = m_location.computed.funcs;
-
-	if (funcs->free_closure)
-	  funcs->free_closure (this);
-      }
-    else if (VALUE_LVAL (this) == lval_xcallable)
-      delete m_location.xm_worker;
-  }
-
-  DISABLE_COPY_AND_ASSIGN (value);
-
-  /* Type of value; either not an lval, or one of the various
-     different possible kinds of lval.  */
-  enum lval_type m_lval = not_lval;
-
-  /* Is it modifiable?  Only relevant if lval != not_lval.  */
-  unsigned int m_modifiable : 1;
-
-  /* If zero, contents of this value are in the contents field.  If
-     nonzero, contents are in inferior.  If the lval field is lval_memory,
-     the contents are in inferior memory at location.address plus offset.
-     The lval field may also be lval_register.
-
-     WARNING: This field is used by the code which handles watchpoints
-     (see breakpoint.c) to decide whether a particular value can be
-     watched by hardware watchpoints.  If the lazy flag is set for
-     some member of a value chain, it is assumed that this member of
-     the chain doesn't need to be watched as part of watching the
-     value itself.  This is how GDB avoids watching the entire struct
-     or array when the user wants to watch a single struct member or
-     array element.  If you ever change the way lazy flag is set and
-     reset, be sure to consider this use as well!  */
-  unsigned int m_lazy : 1;
-
-  /* If value is a variable, is it initialized or not.  */
-  unsigned int m_initialized : 1;
-
-  /* If value is from the stack.  If this is set, read_stack will be
-     used instead of read_memory to enable extra caching.  */
-  unsigned int m_stack : 1;
-
-  /* True if this is a zero value, created by 'value_zero'; false
-     otherwise.  */
-  bool m_is_zero : 1;
-
-  /* True if this a value recorded in value history; false otherwise.  */
-  bool m_in_history : 1;
-
-  /* Location of value (if lval).  */
-  union
-  {
-    /* If lval == lval_memory, this is the address in the inferior  */
-    CORE_ADDR address;
-
-    /*If lval == lval_register, the value is from a register.  */
-    struct
+  if (this->lval () == lval_computed)
     {
-      /* Register number.  */
-      int regnum;
-      /* Frame ID of "next" frame to which a register value is relative.
-	 If the register value is found relative to frame F, then the
-	 frame id of F->next will be stored in next_frame_id.  */
-      struct frame_id next_frame_id;
-    } reg;
+      const struct lval_funcs *funcs = m_location.computed.funcs;
 
-    /* Pointer to internal variable.  */
-    struct internalvar *internalvar;
-
-    /* Pointer to xmethod worker.  */
-    struct xmethod_worker *xm_worker;
-
-    /* If lval == lval_computed, this is a set of function pointers
-       to use to access and describe the value, and a closure pointer
-       for them to use.  */
-    struct
-    {
-      /* Functions to call.  */
-      const struct lval_funcs *funcs;
-
-      /* Closure for those functions to use.  */
-      void *closure;
-    } computed;
-  } m_location {};
-
-  /* Describes offset of a value within lval of a structure in target
-     addressable memory units.  Note also the member embedded_offset
-     below.  */
-  LONGEST m_offset = 0;
-
-  /* Only used for bitfields; number of bits contained in them.  */
-  LONGEST m_bitsize = 0;
-
-  /* Only used for bitfields; position of start of field.  For
-     little-endian targets, it is the position of the LSB.  For
-     big-endian targets, it is the position of the MSB.  */
-  LONGEST m_bitpos = 0;
-
-  /* The number of references to this value.  When a value is created,
-     the value chain holds a reference, so REFERENCE_COUNT is 1.  If
-     release_value is called, this value is removed from the chain but
-     the caller of release_value now has a reference to this value.
-     The caller must arrange for a call to value_free later.  */
-  int m_reference_count = 1;
-
-  /* Only used for bitfields; the containing value.  This allows a
-     single read from the target when displaying multiple
-     bitfields.  */
-  value_ref_ptr m_parent;
-
-  /* Type of the value.  */
-  struct type *m_type;
-
-  /* If a value represents a C++ object, then the `type' field gives
-     the object's compile-time type.  If the object actually belongs
-     to some class derived from `type', perhaps with other base
-     classes and additional members, then `type' is just a subobject
-     of the real thing, and the full object is probably larger than
-     `type' would suggest.
-
-     If `type' is a dynamic class (i.e. one with a vtable), then GDB
-     can actually determine the object's run-time type by looking at
-     the run-time type information in the vtable.  When this
-     information is available, we may elect to read in the entire
-     object, for several reasons:
-
-     - When printing the value, the user would probably rather see the
-     full object, not just the limited portion apparent from the
-     compile-time type.
-
-     - If `type' has virtual base classes, then even printing `type'
-     alone may require reaching outside the `type' portion of the
-     object to wherever the virtual base class has been stored.
-
-     When we store the entire object, `enclosing_type' is the run-time
-     type -- the complete object -- and `embedded_offset' is the
-     offset of `type' within that larger type, in target addressable memory
-     units.  The value_contents() macro takes `embedded_offset' into account,
-     so most GDB code continues to see the `type' portion of the value, just
-     as the inferior would.
-
-     If `type' is a pointer to an object, then `enclosing_type' is a
-     pointer to the object's run-time type, and `pointed_to_offset' is
-     the offset in target addressable memory units from the full object
-     to the pointed-to object -- that is, the value `embedded_offset' would
-     have if we followed the pointer and fetched the complete object.
-     (I don't really see the point.  Why not just determine the
-     run-time type when you indirect, and avoid the special case?  The
-     contents don't matter until you indirect anyway.)
-
-     If we're not doing anything fancy, `enclosing_type' is equal to
-     `type', and `embedded_offset' is zero, so everything works
-     normally.  */
-  struct type *m_enclosing_type;
-  LONGEST m_embedded_offset = 0;
-  LONGEST m_pointed_to_offset = 0;
-
-  /* Actual contents of the value.  Target byte-order.
-
-     May be nullptr if the value is lazy or is entirely optimized out.
-     Guaranteed to be non-nullptr otherwise.  */
-  gdb::unique_xmalloc_ptr<gdb_byte> m_contents;
-
-  /* Unavailable ranges in CONTENTS.  We mark unavailable ranges,
-     rather than available, since the common and default case is for a
-     value to be available.  This is filled in at value read time.
-     The unavailable ranges are tracked in bits.  Note that a contents
-     bit that has been optimized out doesn't really exist in the
-     program, so it can't be marked unavailable either.  */
-  std::vector<range> m_unavailable;
-
-  /* Likewise, but for optimized out contents (a chunk of the value of
-     a variable that does not actually exist in the program).  If LVAL
-     is lval_register, this is a register ($pc, $sp, etc., never a
-     program variable) that has not been saved in the frame.  Not
-     saved registers and optimized-out program variables values are
-     treated pretty much the same, except not-saved registers have a
-     different string representation and related error strings.  */
-  std::vector<range> m_optimized_out;
-
-  /* This is only non-zero for values of TYPE_CODE_ARRAY and if the size of
-     the array in inferior memory is greater than max_value_size.  If these
-     conditions are met then, when the value is loaded from the inferior
-     GDB will only load a portion of the array into memory, and
-     limited_length will be set to indicate the length in octets that were
-     loaded from the inferior.  */
-  ULONGEST m_limited_length = 0;
-};
+      if (funcs->free_closure)
+	funcs->free_closure (this);
+    }
+  else if (this->lval () == lval_xcallable)
+    delete m_location.xm_worker;
+}
 
 /* See value.h.  */
 
 struct gdbarch *
-get_value_arch (const struct value *value)
+value::arch () const
 {
-  return value_type (value)->arch ();
+  return type ()->arch ();
 }
 
 int
-value_bits_available (const struct value *value,
-		      LONGEST offset, ULONGEST length)
+value::bits_available (LONGEST offset, ULONGEST length) const
 {
-  gdb_assert (!value->m_lazy);
+  gdb_assert (!m_lazy);
 
   /* Don't pretend we have anything available there in the history beyond
      the boundaries of the value recorded.  It's not like inferior memory
      where there is actual stuff underneath.  */
-  ULONGEST val_len = TARGET_CHAR_BIT * value_enclosing_type (value)->length ();
-  return !((value->m_in_history
+  ULONGEST val_len = TARGET_CHAR_BIT * enclosing_type ()->length ();
+  return !((m_in_history
 	    && (offset < 0 || offset + length > val_len))
-	   || ranges_contain (value->m_unavailable, offset, length));
+	   || ranges_contain (m_unavailable, offset, length));
 }
 
 int
-value_bytes_available (const struct value *value,
-		       LONGEST offset, ULONGEST length)
+value::bytes_available (LONGEST offset, ULONGEST length) const
 {
   ULONGEST sign = (1ULL << (sizeof (ULONGEST) * 8 - 1)) / TARGET_CHAR_BIT;
   ULONGEST mask = (sign << 1) - 1;
@@ -419,68 +194,50 @@ value_bytes_available (const struct value *value,
       || (length > 0 && (~offset & (offset + length - 1) & sign) != 0))
     error (_("Integer overflow in data location calculation"));
 
-  return value_bits_available (value,
-			       offset * TARGET_CHAR_BIT,
-			       length * TARGET_CHAR_BIT);
+  return bits_available (offset * TARGET_CHAR_BIT, length * TARGET_CHAR_BIT);
 }
 
 int
-value_bits_any_optimized_out (const struct value *value, int bit_offset, int bit_length)
+value::bits_any_optimized_out (int bit_offset, int bit_length) const
 {
-  gdb_assert (!value->m_lazy);
+  gdb_assert (!m_lazy);
 
-  return ranges_contain (value->m_optimized_out, bit_offset, bit_length);
+  return ranges_contain (m_optimized_out, bit_offset, bit_length);
 }
 
 int
-value_entirely_available (struct value *value)
+value::entirely_available ()
 {
   /* We can only tell whether the whole value is available when we try
      to read it.  */
-  if (value->m_lazy)
-    value_fetch_lazy (value);
+  if (m_lazy)
+    fetch_lazy ();
 
-  if (value->m_unavailable.empty ())
+  if (m_unavailable.empty ())
     return 1;
   return 0;
 }
 
-/* Returns true if VALUE is entirely covered by RANGES.  If the value
-   is lazy, it'll be read now.  Note that RANGE is a pointer to
-   pointer because reading the value might change *RANGE.  */
+/* See value.h.  */
 
-static int
-value_entirely_covered_by_range_vector (struct value *value,
-					const std::vector<range> &ranges)
+int
+value::entirely_covered_by_range_vector (const std::vector<range> &ranges)
 {
   /* We can only tell whether the whole value is optimized out /
      unavailable when we try to read it.  */
-  if (value->m_lazy)
-    value_fetch_lazy (value);
+  if (m_lazy)
+    fetch_lazy ();
 
   if (ranges.size () == 1)
     {
       const struct range &t = ranges[0];
 
       if (t.offset == 0
-	  && t.length == (TARGET_CHAR_BIT
-			  * value_enclosing_type (value)->length ()))
+	  && t.length == TARGET_CHAR_BIT * enclosing_type ()->length ())
 	return 1;
     }
 
   return 0;
-}
-
-int
-value_entirely_unavailable (struct value *value)
-{
-  return value_entirely_covered_by_range_vector (value, value->m_unavailable);
-}
-
-int
-value_entirely_optimized_out (struct value *value)
-{
-  return value_entirely_covered_by_range_vector (value, value->m_optimized_out);
 }
 
 /* Insert into the vector pointed to by VECTORP the bit range starting of
@@ -653,19 +410,16 @@ insert_into_bit_range_vector (std::vector<range> *vectorp,
 }
 
 void
-mark_value_bits_unavailable (struct value *value,
-			     LONGEST offset, ULONGEST length)
+value::mark_bits_unavailable (LONGEST offset, ULONGEST length)
 {
-  insert_into_bit_range_vector (&value->m_unavailable, offset, length);
+  insert_into_bit_range_vector (&m_unavailable, offset, length);
 }
 
 void
-mark_value_bytes_unavailable (struct value *value,
-			      LONGEST offset, ULONGEST length)
+value::mark_bytes_unavailable (LONGEST offset, ULONGEST length)
 {
-  mark_value_bits_unavailable (value,
-			       offset * TARGET_CHAR_BIT,
-			       length * TARGET_CHAR_BIT);
+  mark_bits_unavailable (offset * TARGET_CHAR_BIT,
+			 length * TARGET_CHAR_BIT);
 }
 
 /* Find the first range in RANGES that overlaps the range defined by
@@ -872,29 +626,28 @@ find_first_range_overlap_and_match (struct ranges_and_idx *rp1,
    with LENGTH bits of VAL2's contents starting at OFFSET2 bits.
    Return true if the available bits match.  */
 
-static bool
-value_contents_bits_eq (const struct value *val1, int offset1,
-			const struct value *val2, int offset2,
-			int length)
+bool
+value::contents_bits_eq (int offset1, const struct value *val2, int offset2,
+			 int length) const
 {
   /* Each array element corresponds to a ranges source (unavailable,
      optimized out).  '1' is for VAL1, '2' for VAL2.  */
   struct ranges_and_idx rp1[2], rp2[2];
 
   /* See function description in value.h.  */
-  gdb_assert (!val1->m_lazy && !val2->m_lazy);
+  gdb_assert (!m_lazy && !val2->m_lazy);
 
   /* We shouldn't be trying to compare past the end of the values.  */
   gdb_assert (offset1 + length
-	      <= val1->m_enclosing_type->length () * TARGET_CHAR_BIT);
+	      <= m_enclosing_type->length () * TARGET_CHAR_BIT);
   gdb_assert (offset2 + length
 	      <= val2->m_enclosing_type->length () * TARGET_CHAR_BIT);
 
   memset (&rp1, 0, sizeof (rp1));
   memset (&rp2, 0, sizeof (rp2));
-  rp1[0].ranges = &val1->m_unavailable;
+  rp1[0].ranges = &m_unavailable;
   rp2[0].ranges = &val2->m_unavailable;
-  rp1[1].ranges = &val1->m_optimized_out;
+  rp1[1].ranges = &m_optimized_out;
   rp2[1].ranges = &val2->m_optimized_out;
 
   while (length > 0)
@@ -922,7 +675,7 @@ value_contents_bits_eq (const struct value *val1, int offset1,
 	}
 
       /* Compare the available/valid contents.  */
-      if (memcmp_with_bit_offsets (val1->m_contents.get (), offset1,
+      if (memcmp_with_bit_offsets (m_contents.get (), offset1,
 				   val2->m_contents.get (), offset2, l) != 0)
 	return false;
 
@@ -934,26 +687,28 @@ value_contents_bits_eq (const struct value *val1, int offset1,
   return true;
 }
 
+/* See value.h.  */
+
 bool
-value_contents_eq (const struct value *val1, LONGEST offset1,
-		   const struct value *val2, LONGEST offset2,
-		   LONGEST length)
+value::contents_eq (LONGEST offset1,
+		    const struct value *val2, LONGEST offset2,
+		    LONGEST length) const
 {
-  return value_contents_bits_eq (val1, offset1 * TARGET_CHAR_BIT,
-				 val2, offset2 * TARGET_CHAR_BIT,
-				 length * TARGET_CHAR_BIT);
+  return contents_bits_eq (offset1 * TARGET_CHAR_BIT,
+			   val2, offset2 * TARGET_CHAR_BIT,
+			   length * TARGET_CHAR_BIT);
 }
 
 /* See value.h.  */
 
 bool
-value_contents_eq (const struct value *val1, const struct value *val2)
+value::contents_eq (const struct value *val2) const
 {
-  ULONGEST len1 = check_typedef (value_enclosing_type (val1))->length ();
-  ULONGEST len2 = check_typedef (value_enclosing_type (val2))->length ();
+  ULONGEST len1 = check_typedef (enclosing_type ())->length ();
+  ULONGEST len2 = check_typedef (val2->enclosing_type ())->length ();
   if (len1 != len2)
     return false;
-  return value_contents_eq (val1, 0, val2, 0, len1);
+  return contents_eq (0, val2, 0, len1);
 }
 
 /* The value-history records all the values printed by print commands
@@ -968,12 +723,10 @@ static std::vector<value_ref_ptr> value_history;
 
 static std::vector<value_ref_ptr> all_values;
 
-/* Allocate a lazy value for type TYPE.  Its actual content is
-   "lazily" allocated too: the content field of the return value is
-   NULL; it will be allocated when it is fetched from the target.  */
+/* See value.h.  */
 
 struct value *
-allocate_value_lazy (struct type *type)
+value::allocate_lazy (struct type *type)
 {
   struct value *val;
 
@@ -1127,39 +880,35 @@ calculate_limited_array_length (struct type *array_type)
   return len;
 }
 
-/* Try to limit ourselves to only fetching the limited number of
-   elements.  However, if this limited number of elements still
-   puts us over max_value_size, then we still refuse it and
-   return failure here, which will ultimately throw an error.  */
+/* See value.h.  */
 
-static bool
-set_limited_array_length (struct value *val)
+bool
+value::set_limited_array_length ()
 {
-  ULONGEST limit = val->m_limited_length;
-  ULONGEST len = value_type (val)->length ();
+  ULONGEST limit = m_limited_length;
+  ULONGEST len = type ()->length ();
 
   if (array_length_limiting_element_count.has_value ())
-    len = calculate_limited_array_length (value_type (val));
+    len = calculate_limited_array_length (type ());
 
   if (limit != 0 && len > limit)
     len = limit;
   if (len > max_value_size)
     return false;
 
-  val->m_limited_length = max_value_size;
+  m_limited_length = max_value_size;
   return true;
 }
 
-/* Allocate the contents of VAL if it has not been allocated yet.
-   If CHECK_SIZE is true, then apply the usual max-value-size checks.  */
+/* See value.h.  */
 
-static void
-allocate_value_contents (struct value *val, bool check_size)
+void
+value::allocate_contents (bool check_size)
 {
-  if (!val->m_contents)
+  if (!m_contents)
     {
-      struct type *enclosing_type = value_enclosing_type (val);
-      ULONGEST len = enclosing_type->length ();
+      struct type *enc_type = enclosing_type ();
+      ULONGEST len = enc_type->length ();
 
       if (check_size)
 	{
@@ -1168,28 +917,28 @@ allocate_value_contents (struct value *val, bool check_size)
 	     an element limit in effect, then we can possibly try
 	     to load only a sub-set of the array contents into
 	     GDB's memory.  */
-	  if (value_type (val) == enclosing_type
-	      && value_type (val)->code () == TYPE_CODE_ARRAY
+	  if (type () == enc_type
+	      && type ()->code () == TYPE_CODE_ARRAY
 	      && len > max_value_size
-	      && set_limited_array_length (val))
-	    len = val->m_limited_length;
+	      && set_limited_array_length ())
+	    len = m_limited_length;
 	  else
-	    check_type_length_before_alloc (enclosing_type);
+	    check_type_length_before_alloc (enc_type);
 	}
 
-      val->m_contents.reset ((gdb_byte *) xzalloc (len));
+      m_contents.reset ((gdb_byte *) xzalloc (len));
     }
 }
 
 /* Allocate a value and its contents for type TYPE.  If CHECK_SIZE is true,
    then apply the usual max-value-size checks.  */
 
-static struct value *
-allocate_value (struct type *type, bool check_size)
+struct value *
+value::allocate (struct type *type, bool check_size)
 {
-  struct value *val = allocate_value_lazy (type);
+  struct value *val = value::allocate_lazy (type);
 
-  allocate_value_contents (val, check_size);
+  val->allocate_contents (check_size);
   val->m_lazy = 0;
   return val;
 }
@@ -1197,9 +946,9 @@ allocate_value (struct type *type, bool check_size)
 /* Allocate a value and its contents for type TYPE.  */
 
 struct value *
-allocate_value (struct type *type)
+value::allocate (struct type *type)
 {
-  return allocate_value (type, true);
+  return allocate (type, true);
 }
 
 /* Allocate a  value  that has the correct length
@@ -1217,121 +966,56 @@ allocate_repeat_value (struct type *type, int count)
   struct type *array_type
     = lookup_array_range_type (type, low_bound, count + low_bound - 1);
 
-  return allocate_value (array_type);
+  return value::allocate (array_type);
 }
 
 struct value *
-allocate_computed_value (struct type *type,
-			 const struct lval_funcs *funcs,
-			 void *closure)
+value::allocate_computed (struct type *type,
+			  const struct lval_funcs *funcs,
+			  void *closure)
 {
-  struct value *v = allocate_value_lazy (type);
+  struct value *v = value::allocate_lazy (type);
 
-  VALUE_LVAL (v) = lval_computed;
+  v->set_lval (lval_computed);
   v->m_location.computed.funcs = funcs;
   v->m_location.computed.closure = closure;
 
   return v;
 }
 
-/* Allocate NOT_LVAL value for type TYPE being OPTIMIZED_OUT.  */
+/* See value.h.  */
 
 struct value *
-allocate_optimized_out_value (struct type *type)
+value::allocate_optimized_out (struct type *type)
 {
-  struct value *retval = allocate_value_lazy (type);
+  struct value *retval = value::allocate_lazy (type);
 
-  mark_value_bytes_optimized_out (retval, 0, type->length ());
-  set_value_lazy (retval, 0);
+  retval->mark_bytes_optimized_out (0, type->length ());
+  retval->set_lazy (0);
   return retval;
 }
 
 /* Accessor methods.  */
 
-struct type *
-value_type (const struct value *value)
-{
-  return value->m_type;
-}
-void
-deprecated_set_value_type (struct value *value, struct type *type)
-{
-  value->m_type = type;
-}
-
-LONGEST
-value_offset (const struct value *value)
-{
-  return value->m_offset;
-}
-void
-set_value_offset (struct value *value, LONGEST offset)
-{
-  value->m_offset = offset;
-}
-
-LONGEST
-value_bitpos (const struct value *value)
-{
-  return value->m_bitpos;
-}
-void
-set_value_bitpos (struct value *value, LONGEST bit)
-{
-  value->m_bitpos = bit;
-}
-
-LONGEST
-value_bitsize (const struct value *value)
-{
-  return value->m_bitsize;
-}
-void
-set_value_bitsize (struct value *value, LONGEST bit)
-{
-  value->m_bitsize = bit;
-}
-
-struct value *
-value_parent (const struct value *value)
-{
-  return value->m_parent.get ();
-}
-
-/* See value.h.  */
-
-void
-set_value_parent (struct value *value, struct value *parent)
-{
-  value->m_parent = value_ref_ptr::new_reference (parent);
-}
-
 gdb::array_view<gdb_byte>
-value_contents_raw (struct value *value)
+value::contents_raw ()
 {
-  struct gdbarch *arch = get_value_arch (value);
-  int unit_size = gdbarch_addressable_memory_unit_size (arch);
+  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
 
-  allocate_value_contents (value, true);
+  allocate_contents (true);
 
-  ULONGEST length = value_type (value)->length ();
+  ULONGEST length = type ()->length ();
   return gdb::make_array_view
-    (value->m_contents.get () + value->m_embedded_offset * unit_size, length);
+    (m_contents.get () + m_embedded_offset * unit_size, length);
 }
 
 gdb::array_view<gdb_byte>
-value_contents_all_raw (struct value *value)
+value::contents_all_raw ()
 {
-  allocate_value_contents (value, true);
+  allocate_contents (true);
 
-  ULONGEST length = value_enclosing_type (value)->length ();
-  return gdb::make_array_view (value->m_contents.get (), length);
-}
-
-struct type *
-value_enclosing_type (const struct value *value)
-{
-  return value->m_enclosing_type;
+  ULONGEST length = enclosing_type ()->length ();
+  return gdb::make_array_view (m_contents.get (), length);
 }
 
 /* Look at value.h for description.  */
@@ -1347,7 +1031,7 @@ value_actual_type (struct value *value, int resolve_simple_types,
 
   if (real_type_found)
     *real_type_found = 0;
-  result = value_type (value);
+  result = value->type ();
   if (opts.objectprint)
     {
       /* If result's target type is TYPE_CODE_STRUCT, proceed to
@@ -1355,7 +1039,7 @@ value_actual_type (struct value *value, int resolve_simple_types,
       if (result->is_pointer_or_reference ()
 	  && (check_typedef (result->target_type ())->code ()
 	      == TYPE_CODE_STRUCT)
-	  && !value_optimized_out (value))
+	  && !value->optimized_out ())
 	{
 	  struct type *real_type;
 
@@ -1371,7 +1055,7 @@ value_actual_type (struct value *value, int resolve_simple_types,
 	{
 	  if (real_type_found)
 	    *real_type_found = 1;
-	  result = value_enclosing_type (value);
+	  result = value->enclosing_type ();
 	}
     }
 
@@ -1384,12 +1068,12 @@ error_value_optimized_out (void)
   throw_error (OPTIMIZED_OUT_ERROR, _("value has been optimized out"));
 }
 
-static void
-require_not_optimized_out (const struct value *value)
+void
+value::require_not_optimized_out () const
 {
-  if (!value->m_optimized_out.empty ())
+  if (!m_optimized_out.empty ())
     {
-      if (value->m_lval == lval_register)
+      if (m_lval == lval_register)
 	throw_error (OPTIMIZED_OUT_ERROR,
 		     _("register has not been saved in frame"));
       else
@@ -1397,38 +1081,38 @@ require_not_optimized_out (const struct value *value)
     }
 }
 
-static void
-require_available (const struct value *value)
+void
+value::require_available () const
 {
-  if (!value->m_unavailable.empty ())
+  if (!m_unavailable.empty ())
     throw_error (NOT_AVAILABLE_ERROR, _("value is not available"));
 }
 
 gdb::array_view<const gdb_byte>
-value_contents_for_printing (struct value *value)
+value::contents_for_printing ()
 {
-  if (value->m_lazy)
-    value_fetch_lazy (value);
+  if (m_lazy)
+    fetch_lazy ();
 
-  ULONGEST length = value_enclosing_type (value)->length ();
-  return gdb::make_array_view (value->m_contents.get (), length);
+  ULONGEST length = enclosing_type ()->length ();
+  return gdb::make_array_view (m_contents.get (), length);
 }
 
 gdb::array_view<const gdb_byte>
-value_contents_for_printing_const (const struct value *value)
+value::contents_for_printing () const
 {
-  gdb_assert (!value->m_lazy);
+  gdb_assert (!m_lazy);
 
-  ULONGEST length = value_enclosing_type (value)->length ();
-  return gdb::make_array_view (value->m_contents.get (), length);
+  ULONGEST length = enclosing_type ()->length ();
+  return gdb::make_array_view (m_contents.get (), length);
 }
 
 gdb::array_view<const gdb_byte>
-value_contents_all (struct value *value)
+value::contents_all ()
 {
-  gdb::array_view<const gdb_byte> result = value_contents_for_printing (value);
-  require_not_optimized_out (value);
-  require_available (value);
+  gdb::array_view<const gdb_byte> result = contents_for_printing ();
+  require_not_optimized_out ();
+  require_available ();
   return result;
 }
 
@@ -1455,206 +1139,156 @@ ranges_copy_adjusted (std::vector<range> *dst_range, int dst_bit_offset,
     }
 }
 
-/* Copy the ranges metadata in SRC that overlaps [SRC_BIT_OFFSET,
-   SRC_BIT_OFFSET+BIT_LENGTH) into DST, adjusted.  */
+/* See value.h.  */
 
-static void
-value_ranges_copy_adjusted (struct value *dst, int dst_bit_offset,
-			    const struct value *src, int src_bit_offset,
-			    int bit_length)
+void
+value::ranges_copy_adjusted (struct value *dst, int dst_bit_offset,
+			     int src_bit_offset, int bit_length) const
 {
-  ranges_copy_adjusted (&dst->m_unavailable, dst_bit_offset,
-			src->m_unavailable, src_bit_offset,
-			bit_length);
-  ranges_copy_adjusted (&dst->m_optimized_out, dst_bit_offset,
-			src->m_optimized_out, src_bit_offset,
-			bit_length);
+  ::ranges_copy_adjusted (&dst->m_unavailable, dst_bit_offset,
+			  m_unavailable, src_bit_offset,
+			  bit_length);
+  ::ranges_copy_adjusted (&dst->m_optimized_out, dst_bit_offset,
+			  m_optimized_out, src_bit_offset,
+			  bit_length);
 }
 
-/* Copy LENGTH target addressable memory units of SRC value's (all) contents
-   (value_contents_all) starting at SRC_OFFSET, into DST value's (all)
-   contents, starting at DST_OFFSET.  If unavailable contents are
-   being copied from SRC, the corresponding DST contents are marked
-   unavailable accordingly.  Neither DST nor SRC may be lazy
-   values.
+/* See value.h.  */
 
-   It is assumed the contents of DST in the [DST_OFFSET,
-   DST_OFFSET+LENGTH) range are wholly available.  */
-
-static void
-value_contents_copy_raw (struct value *dst, LONGEST dst_offset,
-			 struct value *src, LONGEST src_offset,
-			 LONGEST src_bit_offset, LONGEST length)
+void
+value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
+			  LONGEST src_offset, LONGEST src_bit_offset,
+			  LONGEST length)
 {
   LONGEST src_total_bit_offset, dst_total_bit_offset, bit_length;
-  struct gdbarch *arch = get_value_arch (src);
-  int unit_size = gdbarch_addressable_memory_unit_size (arch);
+  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
 
   /* A lazy DST would make that this copy operation useless, since as
      soon as DST's contents were un-lazied (by a later value_contents
      call, say), the contents would be overwritten.  A lazy SRC would
      mean we'd be copying garbage.  */
-  gdb_assert (!dst->m_lazy && !src->m_lazy);
+  gdb_assert (!dst->m_lazy && !m_lazy);
 
   /* The overwritten DST range gets unavailability ORed in, not
      replaced.  Make sure to remember to implement replacing if it
      turns out actually necessary.  */
-  gdb_assert (value_bytes_available (dst, dst_offset, length));
-  gdb_assert (!value_bits_any_optimized_out (dst,
-					     TARGET_CHAR_BIT * dst_offset,
-					     TARGET_CHAR_BIT * length));
+  gdb_assert (dst->bytes_available (dst_offset, length));
+  gdb_assert (!dst->bits_any_optimized_out (TARGET_CHAR_BIT * dst_offset,
+					    TARGET_CHAR_BIT * length));
 
   bit_length = length * unit_size * HOST_CHAR_BIT;
 
   /* Copy the data.  */
   gdb::array_view<gdb_byte> dst_contents
-    = value_contents_all_raw (dst).slice (dst_offset * unit_size,
+    = dst->contents_all_raw ().slice (dst_offset * unit_size,
 					  length * unit_size);
   gdb::array_view<const gdb_byte> src_contents
-    = value_contents_all_raw (src).slice (src_offset * unit_size,
-					  length * unit_size);
+    = this->contents_all_raw ().slice (src_offset * unit_size,
+				       length * unit_size);
 
   if (src_bit_offset)
     {
-      bool big_endian = type_byte_order (value_type (dst)) == BFD_ENDIAN_BIG;
+      bool big_endian = type_byte_order (dst->type ()) == BFD_ENDIAN_BIG;
 
       copy_bitwise (dst_contents.data (), 0, src_contents.data (),
 		    src_bit_offset, bit_length, big_endian);
     }
   else
-    copy (src_contents, dst_contents);
+    gdb::copy (src_contents, dst_contents);
 
   /* Copy the meta-data, adjusted.  */
   src_total_bit_offset = src_offset * unit_size * HOST_CHAR_BIT
 			 + src_bit_offset;
   dst_total_bit_offset = dst_offset * unit_size * HOST_CHAR_BIT;
 
-  value_ranges_copy_adjusted (dst, dst_total_bit_offset,
-			      src, src_total_bit_offset,
-			      bit_length);
+  ranges_copy_adjusted (dst, dst_total_bit_offset, src_total_bit_offset,
+			bit_length);
 }
 
-/* A helper for value_from_component_bitsize that copies bits from SRC
-   to DEST.  */
+/* See value.h.  */
 
-static void
-value_contents_copy_raw_bitwise (struct value *dst, LONGEST dst_bit_offset,
-				 struct value *src, LONGEST src_bit_offset,
-				 LONGEST bit_length)
+void
+value::contents_copy_raw_bitwise (struct value *dst, LONGEST dst_bit_offset,
+				  LONGEST src_bit_offset,
+				  LONGEST bit_length)
 {
   /* A lazy DST would make that this copy operation useless, since as
      soon as DST's contents were un-lazied (by a later value_contents
      call, say), the contents would be overwritten.  A lazy SRC would
      mean we'd be copying garbage.  */
-  gdb_assert (!dst->m_lazy && !src->m_lazy);
+  gdb_assert (!dst->m_lazy && !m_lazy);
 
   /* The overwritten DST range gets unavailability ORed in, not
      replaced.  Make sure to remember to implement replacing if it
      turns out actually necessary.  */
   LONGEST dst_offset = dst_bit_offset / TARGET_CHAR_BIT;
   LONGEST length = bit_length / TARGET_CHAR_BIT;
-  gdb_assert (value_bytes_available (dst, dst_offset, length));
-  gdb_assert (!value_bits_any_optimized_out (dst, dst_bit_offset,
-					     bit_length));
+  gdb_assert (dst->bytes_available (dst_offset, length));
+  gdb_assert (!dst->bits_any_optimized_out (dst_bit_offset,
+					    bit_length));
 
   /* Copy the data.  */
-  gdb::array_view<gdb_byte> dst_contents = value_contents_all_raw (dst);
-  gdb::array_view<const gdb_byte> src_contents = value_contents_all_raw (src);
+  gdb::array_view<gdb_byte> dst_contents = dst->contents_all_raw ();
+  gdb::array_view<const gdb_byte> src_contents = contents_all_raw ();
   copy_bitwise (dst_contents.data (), dst_bit_offset,
 		src_contents.data (), src_bit_offset,
 		bit_length,
-		type_byte_order (value_type (src)) == BFD_ENDIAN_BIG);
+		type_byte_order (type ()) == BFD_ENDIAN_BIG);
 
   /* Copy the meta-data.  */
-  value_ranges_copy_adjusted (dst, dst_bit_offset,
-			      src, src_bit_offset,
-			      bit_length);
+  ranges_copy_adjusted (dst, dst_bit_offset, src_bit_offset, bit_length);
 }
 
-/* Copy LENGTH bytes of SRC value's (all) contents
-   (value_contents_all) starting at SRC_OFFSET byte, into DST value's
-   (all) contents, starting at DST_OFFSET.  If unavailable contents
-   are being copied from SRC, the corresponding DST contents are
-   marked unavailable accordingly.  DST must not be lazy.  If SRC is
-   lazy, it will be fetched now.
-
-   It is assumed the contents of DST in the [DST_OFFSET,
-   DST_OFFSET+LENGTH) range are wholly available.  */
+/* See value.h.  */
 
 void
-value_contents_copy (struct value *dst, LONGEST dst_offset,
-		     struct value *src, LONGEST src_offset,
-		     LONGEST src_bit_offset, LONGEST length)
+value::contents_copy (struct value *dst, LONGEST dst_offset, LONGEST src_offset,
+		      LONGEST src_bit_offset, LONGEST length)
 {
-  if (src->m_lazy)
-    value_fetch_lazy (src);
+  if (m_lazy)
+    fetch_lazy ();
 
-  value_contents_copy_raw (dst, dst_offset, src, src_offset,
-			   src_bit_offset, length);
-}
-
-int
-value_lazy (const struct value *value)
-{
-  return value->m_lazy;
-}
-
-void
-set_value_lazy (struct value *value, int val)
-{
-  value->m_lazy = val;
-}
-
-int
-value_stack (const struct value *value)
-{
-  return value->m_stack;
-}
-
-void
-set_value_stack (struct value *value, int val)
-{
-  value->m_stack = val;
+  contents_copy_raw (dst, dst_offset, src_offset, src_bit_offset, length);
 }
 
 gdb::array_view<const gdb_byte>
-value_contents (struct value *value)
+value::contents ()
 {
-  gdb::array_view<const gdb_byte> result = value_contents_writeable (value);
-  require_not_optimized_out (value);
-  require_available (value);
+  gdb::array_view<const gdb_byte> result = contents_writeable ();
+  require_not_optimized_out ();
+  require_available ();
   return result;
 }
 
 gdb::array_view<gdb_byte>
-value_contents_writeable (struct value *value)
+value::contents_writeable ()
 {
-  if (value->m_lazy)
-    value_fetch_lazy (value);
-  return value_contents_raw (value);
+  if (m_lazy)
+    fetch_lazy ();
+  return contents_raw ();
 }
 
 int
-value_optimized_out (struct value *value)
+value::optimized_out ()
 {
-  if (value->m_lazy)
+  if (m_lazy)
     {
       /* See if we can compute the result without fetching the
 	 value.  */
-      if (VALUE_LVAL (value) == lval_memory)
+      if (this->lval () == lval_memory)
 	return false;
-      else if (VALUE_LVAL (value) == lval_computed)
+      else if (this->lval () == lval_computed)
 	{
-	  const struct lval_funcs *funcs = value->m_location.computed.funcs;
+	  const struct lval_funcs *funcs = m_location.computed.funcs;
 
 	  if (funcs->is_optimized_out != nullptr)
-	    return funcs->is_optimized_out (value);
+	    return funcs->is_optimized_out (this);
 	}
 
       /* Fall back to fetching.  */
       try
 	{
-	  value_fetch_lazy (value);
+	  fetch_lazy ();
 	}
       catch (const gdb_exception_error &ex)
 	{
@@ -1673,149 +1307,98 @@ value_optimized_out (struct value *value)
 	}
     }
 
-  return !value->m_optimized_out.empty ();
+  return !m_optimized_out.empty ();
 }
 
 /* Mark contents of VALUE as optimized out, starting at OFFSET bytes, and
    the following LENGTH bytes.  */
 
 void
-mark_value_bytes_optimized_out (struct value *value, int offset, int length)
+value::mark_bytes_optimized_out (int offset, int length)
 {
-  mark_value_bits_optimized_out (value,
-				 offset * TARGET_CHAR_BIT,
-				 length * TARGET_CHAR_BIT);
+  mark_bits_optimized_out (offset * TARGET_CHAR_BIT,
+			   length * TARGET_CHAR_BIT);
 }
 
 /* See value.h.  */
 
 void
-mark_value_bits_optimized_out (struct value *value,
-			       LONGEST offset, LONGEST length)
+value::mark_bits_optimized_out (LONGEST offset, LONGEST length)
 {
-  insert_into_bit_range_vector (&value->m_optimized_out, offset, length);
+  insert_into_bit_range_vector (&m_optimized_out, offset, length);
 }
 
 int
-value_bits_synthetic_pointer (const struct value *value,
-			      LONGEST offset, LONGEST length)
+value::bits_synthetic_pointer (LONGEST offset, LONGEST length) const
 {
-  if (value->m_lval != lval_computed
-      || !value->m_location.computed.funcs->check_synthetic_pointer)
+  if (m_lval != lval_computed
+      || !m_location.computed.funcs->check_synthetic_pointer)
     return 0;
-  return value->m_location.computed.funcs->check_synthetic_pointer (value,
-								  offset,
-								  length);
-}
-
-LONGEST
-value_embedded_offset (const struct value *value)
-{
-  return value->m_embedded_offset;
-}
-
-void
-set_value_embedded_offset (struct value *value, LONGEST val)
-{
-  value->m_embedded_offset = val;
-}
-
-LONGEST
-value_pointed_to_offset (const struct value *value)
-{
-  return value->m_pointed_to_offset;
-}
-
-void
-set_value_pointed_to_offset (struct value *value, LONGEST val)
-{
-  value->m_pointed_to_offset = val;
+  return m_location.computed.funcs->check_synthetic_pointer (this, offset,
+							     length);
 }
 
 const struct lval_funcs *
-value_computed_funcs (const struct value *v)
+value::computed_funcs () const
 {
-  gdb_assert (value_lval_const (v) == lval_computed);
+  gdb_assert (m_lval == lval_computed);
 
-  return v->m_location.computed.funcs;
+  return m_location.computed.funcs;
 }
 
 void *
-value_computed_closure (const struct value *v)
+value::computed_closure () const
 {
-  gdb_assert (v->m_lval == lval_computed);
+  gdb_assert (m_lval == lval_computed);
 
-  return v->m_location.computed.closure;
-}
-
-enum lval_type *
-deprecated_value_lval_hack (struct value *value)
-{
-  return &value->m_lval;
-}
-
-enum lval_type
-value_lval_const (const struct value *value)
-{
-  return value->m_lval;
+  return m_location.computed.closure;
 }
 
 CORE_ADDR
-value_address (const struct value *value)
+value::address () const
 {
-  if (value->m_lval != lval_memory)
+  if (m_lval != lval_memory)
     return 0;
-  if (value->m_parent != NULL)
-    return value_address (value->m_parent.get ()) + value->m_offset;
-  if (NULL != TYPE_DATA_LOCATION (value_type (value)))
+  if (m_parent != NULL)
+    return m_parent->address () + m_offset;
+  if (NULL != TYPE_DATA_LOCATION (type ()))
     {
-      gdb_assert (PROP_CONST == TYPE_DATA_LOCATION_KIND (value_type (value)));
-      return TYPE_DATA_LOCATION_ADDR (value_type (value));
+      gdb_assert (PROP_CONST == TYPE_DATA_LOCATION_KIND (type ()));
+      return TYPE_DATA_LOCATION_ADDR (type ());
     }
 
-  return value->m_location.address + value->m_offset;
+  return m_location.address + m_offset;
 }
 
 CORE_ADDR
-value_raw_address (const struct value *value)
+value::raw_address () const
 {
-  if (value->m_lval != lval_memory)
+  if (m_lval != lval_memory)
     return 0;
-  return value->m_location.address;
+  return m_location.address;
 }
 
 void
-set_value_address (struct value *value, CORE_ADDR addr)
+value::set_address (CORE_ADDR addr)
 {
-  gdb_assert (value->m_lval == lval_memory);
-  value->m_location.address = addr;
-}
-
-struct internalvar **
-deprecated_value_internalvar_hack (struct value *value)
-{
-  return &value->m_location.internalvar;
+  gdb_assert (m_lval == lval_memory);
+  m_location.address = addr;
 }
 
 struct frame_id *
-deprecated_value_next_frame_id_hack (struct value *value)
+value::deprecated_next_frame_id_hack ()
 {
-  gdb_assert (value->m_lval == lval_register);
-  return &value->m_location.reg.next_frame_id;
+  gdb_assert (m_lval == lval_register);
+  return &m_location.reg.next_frame_id;
 }
 
 int *
-deprecated_value_regnum_hack (struct value *value)
+value::deprecated_regnum_hack ()
 {
-  gdb_assert (value->m_lval == lval_register);
-  return &value->m_location.reg.regnum;
+  gdb_assert (m_lval == lval_register);
+  return &m_location.reg.regnum;
 }
 
-int
-deprecated_value_modifiable (const struct value *value)
-{
-  return value->m_modifiable;
-}
 
 /* Return a mark in the value chain.  All values allocated after the
    mark is obtained (except for those released) are subject to being freed
@@ -1828,28 +1411,17 @@ value_mark (void)
   return all_values.back ().get ();
 }
 
-/* See value.h.  */
-
-void
-value_incref (struct value *val)
-{
-  val->m_reference_count++;
-}
-
 /* Release a reference to VAL, which was acquired with value_incref.
    This function is also called to deallocate values from the value
    chain.  */
 
 void
-value_decref (struct value *val)
+value::decref ()
 {
-  if (val != nullptr)
-    {
-      gdb_assert (val->m_reference_count > 0);
-      val->m_reference_count--;
-      if (val->m_reference_count == 0)
-	delete val;
-    }
+  gdb_assert (m_reference_count > 0);
+  m_reference_count--;
+  if (m_reference_count == 0)
+    delete this;
 }
 
 /* Free all values allocated since MARK was obtained by value_mark
@@ -1909,55 +1481,54 @@ value_release_to_mark (const struct value *mark)
   return result;
 }
 
-/* Return a copy of the value ARG.  It contains the same contents,
-   for the same memory address, but it's a different block of storage.  */
+/* See value.h.  */
 
 struct value *
-value_copy (const value *arg)
+value::copy () const
 {
-  struct type *encl_type = value_enclosing_type (arg);
+  struct type *encl_type = enclosing_type ();
   struct value *val;
 
-  val = allocate_value_lazy (encl_type);
-  val->m_type = arg->m_type;
-  VALUE_LVAL (val) = arg->m_lval;
-  val->m_location = arg->m_location;
-  val->m_offset = arg->m_offset;
-  val->m_bitpos = arg->m_bitpos;
-  val->m_bitsize = arg->m_bitsize;
-  val->m_lazy = arg->m_lazy;
-  val->m_embedded_offset = value_embedded_offset (arg);
-  val->m_pointed_to_offset = arg->m_pointed_to_offset;
-  val->m_modifiable = arg->m_modifiable;
-  val->m_stack = arg->m_stack;
-  val->m_is_zero = arg->m_is_zero;
-  val->m_in_history = arg->m_in_history;
-  val->m_initialized = arg->m_initialized;
-  val->m_unavailable = arg->m_unavailable;
-  val->m_optimized_out = arg->m_optimized_out;
-  val->m_parent = arg->m_parent;
-  val->m_limited_length = arg->m_limited_length;
+  val = value::allocate_lazy (encl_type);
+  val->m_type = m_type;
+  val->set_lval (m_lval);
+  val->m_location = m_location;
+  val->m_offset = m_offset;
+  val->m_bitpos = m_bitpos;
+  val->m_bitsize = m_bitsize;
+  val->m_lazy = m_lazy;
+  val->m_embedded_offset = embedded_offset ();
+  val->m_pointed_to_offset = m_pointed_to_offset;
+  val->m_modifiable = m_modifiable;
+  val->m_stack = m_stack;
+  val->m_is_zero = m_is_zero;
+  val->m_in_history = m_in_history;
+  val->m_initialized = m_initialized;
+  val->m_unavailable = m_unavailable;
+  val->m_optimized_out = m_optimized_out;
+  val->m_parent = m_parent;
+  val->m_limited_length = m_limited_length;
 
-  if (!value_lazy (val)
-      && !(value_entirely_optimized_out (val)
-	   || value_entirely_unavailable (val)))
+  if (!val->lazy ()
+      && !(val->entirely_optimized_out ()
+	   || val->entirely_unavailable ()))
     {
       ULONGEST length = val->m_limited_length;
       if (length == 0)
-	length = value_enclosing_type (val)->length ();
+	length = val->enclosing_type ()->length ();
 
-      gdb_assert (arg->m_contents != nullptr);
+      gdb_assert (m_contents != nullptr);
       const auto &arg_view
-	= gdb::make_array_view (arg->m_contents.get (), length);
+	= gdb::make_array_view (m_contents.get (), length);
 
-      allocate_value_contents (val, false);
+      val->allocate_contents (false);
       gdb::array_view<gdb_byte> val_contents
-	= value_contents_all_raw (val).slice (0, length);
+	= val->contents_all_raw ().slice (0, length);
 
-      copy (arg_view, val_contents);
+      gdb::copy (arg_view, val_contents);
     }
 
-  if (VALUE_LVAL (val) == lval_computed)
+  if (val->lval () == lval_computed)
     {
       const struct lval_funcs *funcs = val->m_location.computed.funcs;
 
@@ -1976,81 +1547,78 @@ value_copy (const value *arg)
 struct value *
 make_cv_value (int cnst, int voltl, struct value *v)
 {
-  struct type *val_type = value_type (v);
-  struct type *m_enclosing_type = value_enclosing_type (v);
-  struct value *cv_val = value_copy (v);
+  struct type *val_type = v->type ();
+  struct type *m_enclosing_type = v->enclosing_type ();
+  struct value *cv_val = v->copy ();
 
-  deprecated_set_value_type (cv_val,
-			     make_cv_type (cnst, voltl, val_type, NULL));
-  set_value_enclosing_type (cv_val,
-			    make_cv_type (cnst, voltl, m_enclosing_type, NULL));
+  cv_val->deprecated_set_type (make_cv_type (cnst, voltl, val_type, NULL));
+  cv_val->set_enclosing_type (make_cv_type (cnst, voltl, m_enclosing_type, NULL));
 
   return cv_val;
 }
 
-/* Return a version of ARG that is non-lvalue.  */
+/* See value.h.  */
 
 struct value *
-value_non_lval (struct value *arg)
+value::non_lval ()
 {
-  if (VALUE_LVAL (arg) != not_lval)
+  if (this->lval () != not_lval)
     {
-      struct type *enc_type = value_enclosing_type (arg);
-      struct value *val = allocate_value (enc_type);
+      struct type *enc_type = enclosing_type ();
+      struct value *val = value::allocate (enc_type);
 
-      copy (value_contents_all (arg), value_contents_all_raw (val));
-      val->m_type = arg->m_type;
-      set_value_embedded_offset (val, value_embedded_offset (arg));
-      set_value_pointed_to_offset (val, value_pointed_to_offset (arg));
+      gdb::copy (contents_all (), val->contents_all_raw ());
+      val->m_type = m_type;
+      val->set_embedded_offset (embedded_offset ());
+      val->set_pointed_to_offset (pointed_to_offset ());
       return val;
     }
-   return arg;
+  return this;
 }
 
-/* Write contents of V at ADDR and set its lval type to be LVAL_MEMORY.  */
+/* See value.h.  */
 
 void
-value_force_lval (struct value *v, CORE_ADDR addr)
+value::force_lval (CORE_ADDR addr)
 {
-  gdb_assert (VALUE_LVAL (v) == not_lval);
+  gdb_assert (this->lval () == not_lval);
 
-  write_memory (addr, value_contents_raw (v).data (), value_type (v)->length ());
-  v->m_lval = lval_memory;
-  v->m_location.address = addr;
+  write_memory (addr, contents_raw ().data (), type ()->length ());
+  m_lval = lval_memory;
+  m_location.address = addr;
 }
 
 void
-set_value_component_location (struct value *component,
-			      const struct value *whole)
+value::set_component_location (const struct value *whole)
 {
   struct type *type;
 
   gdb_assert (whole->m_lval != lval_xcallable);
 
   if (whole->m_lval == lval_internalvar)
-    VALUE_LVAL (component) = lval_internalvar_component;
+    m_lval = lval_internalvar_component;
   else
-    VALUE_LVAL (component) = whole->m_lval;
+    m_lval = whole->m_lval;
 
-  component->m_location = whole->m_location;
+  m_location = whole->m_location;
   if (whole->m_lval == lval_computed)
     {
       const struct lval_funcs *funcs = whole->m_location.computed.funcs;
 
       if (funcs->copy_closure)
-	component->m_location.computed.closure = funcs->copy_closure (whole);
+	m_location.computed.closure = funcs->copy_closure (whole);
     }
 
   /* If the WHOLE value has a dynamically resolved location property then
      update the address of the COMPONENT.  */
-  type = value_type (whole);
+  type = whole->type ();
   if (NULL != TYPE_DATA_LOCATION (type)
       && TYPE_DATA_LOCATION_KIND (type) == PROP_CONST)
-    set_value_address (component, TYPE_DATA_LOCATION_ADDR (type));
+    set_address (TYPE_DATA_LOCATION_ADDR (type));
 
   /* Similarly, if the COMPONENT value has a dynamically resolved location
      property then update its address.  */
-  type = value_type (component);
+  type = this->type ();
   if (NULL != TYPE_DATA_LOCATION (type)
       && TYPE_DATA_LOCATION_KIND (type) == PROP_CONST)
     {
@@ -2071,14 +1639,14 @@ set_value_component_location (struct value *component,
          carry around both the parent value contents, and the contents of
          any dynamic fields within the parent.  This is a substantial
          change to how values work in GDB.  */
-      if (VALUE_LVAL (component) == lval_internalvar_component)
+      if (this->lval () == lval_internalvar_component)
 	{
-	  gdb_assert (value_lazy (component));
-	  VALUE_LVAL (component) = lval_memory;
+	  gdb_assert (lazy ());
+	  m_lval = lval_memory;
 	}
       else
-	gdb_assert (VALUE_LVAL (component) == lval_memory);
-      set_value_address (component, TYPE_DATA_LOCATION_ADDR (type));
+	gdb_assert (this->lval () == lval_memory);
+      set_address (TYPE_DATA_LOCATION_ADDR (type));
     }
 }
 
@@ -2088,46 +1656,42 @@ set_value_component_location (struct value *component,
    Returns the absolute history index of the entry.  */
 
 int
-record_latest_value (struct value *val)
+value::record_latest ()
 {
-  struct type *enclosing_type = value_enclosing_type (val);
-  struct type *type = value_type (val);
-
   /* We don't want this value to have anything to do with the inferior anymore.
      In particular, "set $1 = 50" should not affect the variable from which
      the value was taken, and fast watchpoints should be able to assume that
      a value on the value history never changes.  */
-  if (value_lazy (val))
+  if (lazy ())
     {
       /* We know that this is a _huge_ array, any attempt to fetch this
 	 is going to cause GDB to throw an error.  However, to allow
 	 the array to still be displayed we fetch its contents up to
 	 `max_value_size' and mark anything beyond "unavailable" in
 	 the history.  */
-      if (type->code () == TYPE_CODE_ARRAY
-	  && type->length () > max_value_size
+      if (m_type->code () == TYPE_CODE_ARRAY
+	  && m_type->length () > max_value_size
 	  && array_length_limiting_element_count.has_value ()
-	  && enclosing_type == type
-	  && calculate_limited_array_length (type) <= max_value_size)
-	val->m_limited_length = max_value_size;
+	  && m_enclosing_type == m_type
+	  && calculate_limited_array_length (m_type) <= max_value_size)
+	m_limited_length = max_value_size;
 
-      value_fetch_lazy (val);
+      fetch_lazy ();
     }
 
-  ULONGEST limit = val->m_limited_length;
+  ULONGEST limit = m_limited_length;
   if (limit != 0)
-    mark_value_bytes_unavailable (val, limit,
-				  enclosing_type->length () - limit);
+    mark_bytes_unavailable (limit, m_enclosing_type->length () - limit);
 
   /* Mark the value as recorded in the history for the availability check.  */
-  val->m_in_history = true;
+  m_in_history = true;
 
   /* We preserve VALUE_LVAL so that the user can find out where it was fetched
      from.  This is a bit dubious, because then *&$1 does not just return $1
      but the current contents of that location.  c'est la vie...  */
-  val->m_modifiable = 0;
+  set_modifiable (0);
 
-  value_history.push_back (release_value (val));
+  value_history.push_back (release_value (this));
 
   return value_history.size ();
 }
@@ -2156,7 +1720,7 @@ access_value_history (int num)
 
   absnum--;
 
-  return value_copy (value_history[absnum].get ());
+  return value_history[absnum]->copy ();
 }
 
 /* See value.h.  */
@@ -2454,18 +2018,18 @@ value_of_internalvar (struct gdbarch *gdbarch, struct internalvar *var)
 	val = value_from_longest (builtin_type (gdbarch)->builtin_int64,
 				  tsv->value);
       else
-	val = allocate_value (builtin_type (gdbarch)->builtin_void);
+	val = value::allocate (builtin_type (gdbarch)->builtin_void);
       return val;
     }
 
   switch (var->kind)
     {
     case INTERNALVAR_VOID:
-      val = allocate_value (builtin_type (gdbarch)->builtin_void);
+      val = value::allocate (builtin_type (gdbarch)->builtin_void);
       break;
 
     case INTERNALVAR_FUNCTION:
-      val = allocate_value (builtin_type (gdbarch)->internal_fn);
+      val = value::allocate (builtin_type (gdbarch)->internal_fn);
       break;
 
     case INTERNALVAR_INTEGER:
@@ -2482,9 +2046,9 @@ value_of_internalvar (struct gdbarch *gdbarch, struct internalvar *var)
       break;
 
     case INTERNALVAR_VALUE:
-      val = value_copy (var->u.value);
-      if (value_lazy (val))
-	value_fetch_lazy (val);
+      val = var->u.value->copy ();
+      if (val->lazy ())
+	val->fetch_lazy ();
       break;
 
     case INTERNALVAR_MAKE_VALUE:
@@ -2514,9 +2078,9 @@ value_of_internalvar (struct gdbarch *gdbarch, struct internalvar *var)
      want.  */
 
   if (var->kind != INTERNALVAR_MAKE_VALUE
-      && val->m_lval != lval_computed)
+      && val->lval () != lval_computed)
     {
-      VALUE_LVAL (val) = lval_internalvar;
+      val->set_lval (lval_internalvar);
       VALUE_INTERNALVAR (val) = var;
     }
 
@@ -2534,7 +2098,7 @@ get_internalvar_integer (struct internalvar *var, LONGEST *result)
 
   if (var->kind == INTERNALVAR_VALUE)
     {
-      struct type *type = check_typedef (value_type (var->u.value));
+      struct type *type = check_typedef (var->u.value->type ());
 
       if (type->code () == TYPE_CODE_INT)
 	{
@@ -2567,22 +2131,22 @@ set_internalvar_component (struct internalvar *var,
 			   LONGEST bitsize, struct value *newval)
 {
   gdb_byte *addr;
-  struct gdbarch *arch;
+  struct gdbarch *gdbarch;
   int unit_size;
 
   switch (var->kind)
     {
     case INTERNALVAR_VALUE:
-      addr = value_contents_writeable (var->u.value).data ();
-      arch = get_value_arch (var->u.value);
-      unit_size = gdbarch_addressable_memory_unit_size (arch);
+      addr = var->u.value->contents_writeable ().data ();
+      gdbarch = var->u.value->arch ();
+      unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
 
       if (bitsize)
-	modify_field (value_type (var->u.value), addr + offset,
+	modify_field (var->u.value->type (), addr + offset,
 		      value_as_long (newval), bitpos, bitsize);
       else
-	memcpy (addr + offset * unit_size, value_contents (newval).data (),
-		value_type (newval)->length ());
+	memcpy (addr + offset * unit_size, newval->contents ().data (),
+		newval->type ()->length ());
       break;
 
     default:
@@ -2601,14 +2165,14 @@ set_internalvar (struct internalvar *var, struct value *val)
     error (_("Cannot overwrite convenience function %s"), var->name);
 
   /* Prepare new contents.  */
-  switch (check_typedef (value_type (val))->code ())
+  switch (check_typedef (val->type ())->code ())
     {
     case TYPE_CODE_VOID:
       new_kind = INTERNALVAR_VOID;
       break;
 
     case TYPE_CODE_INTERNAL_FUNCTION:
-      gdb_assert (VALUE_LVAL (val) == lval_internalvar);
+      gdb_assert (val->lval () == lval_internalvar);
       new_kind = INTERNALVAR_FUNCTION;
       get_internalvar_function (VALUE_INTERNALVAR (val),
 				&new_data.fn.function);
@@ -2617,14 +2181,14 @@ set_internalvar (struct internalvar *var, struct value *val)
 
     default:
       new_kind = INTERNALVAR_VALUE;
-      struct value *copy = value_copy (val);
-      copy->m_modifiable = 1;
+      struct value *copy = val->copy ();
+      copy->set_modifiable (1);
 
       /* Force the value to be fetched from the target now, to avoid problems
 	 later when this internalvar is referenced and the target is gone or
 	 has changed.  */
-      if (value_lazy (copy))
-	value_fetch_lazy (copy);
+      if (copy->lazy ())
+	copy->fetch_lazy ();
 
       /* Release the value from the value chain to prevent it from being
 	 deleted by free_all_values.  From here on this function should not
@@ -2638,7 +2202,7 @@ set_internalvar (struct internalvar *var, struct value *val)
 	 when accessing the value.
 	 If we keep it, we would still refer to the origin value.
 	 Remove the location property in case it exist.  */
-      value_type (new_data.value)->remove_dyn_prop (DYN_PROP_DATA_LOCATION);
+      new_data.value->type ()->remove_dyn_prop (DYN_PROP_DATA_LOCATION);
 
       break;
     }
@@ -2692,7 +2256,7 @@ clear_internalvar (struct internalvar *var)
   switch (var->kind)
     {
     case INTERNALVAR_VALUE:
-      value_decref (var->u.value);
+      var->u.value->decref ();
       break;
 
     case INTERNALVAR_STRING:
@@ -2731,7 +2295,7 @@ value_internal_function_name (struct value *val)
   struct internal_function *ifn;
   int result;
 
-  gdb_assert (VALUE_LVAL (val) == lval_internalvar);
+  gdb_assert (val->lval () == lval_internalvar);
   result = get_internalvar_function (VALUE_INTERNALVAR (val), &ifn);
   gdb_assert (result);
 
@@ -2746,7 +2310,7 @@ call_internal_function (struct gdbarch *gdbarch,
   struct internal_function *ifn;
   int result;
 
-  gdb_assert (VALUE_LVAL (func) == lval_internalvar);
+  gdb_assert (func->lval () == lval_internalvar);
   result = get_internalvar_function (VALUE_INTERNALVAR (func), &ifn);
   gdb_assert (result);
 
@@ -2802,19 +2366,14 @@ add_internal_function (gdb::unique_xmalloc_ptr<char> &&name,
   cmd->name_allocated = 1;
 }
 
-/* Update VALUE before discarding OBJFILE.  COPIED_TYPES is used to
-   prevent cycles / duplicates.  */
-
 void
-preserve_one_value (struct value *value, struct objfile *objfile,
-		    htab_t copied_types)
+value::preserve (struct objfile *objfile, htab_t copied_types)
 {
-  if (value->m_type->objfile_owner () == objfile)
-    value->m_type = copy_type_recursive (value->m_type, copied_types);
+  if (m_type->objfile_owner () == objfile)
+    m_type = copy_type_recursive (m_type, copied_types);
 
-  if (value->m_enclosing_type->objfile_owner () == objfile)
-    value->m_enclosing_type = copy_type_recursive (value->m_enclosing_type,
-						 copied_types);
+  if (m_enclosing_type->objfile_owner () == objfile)
+    m_enclosing_type = copy_type_recursive (m_enclosing_type, copied_types);
 }
 
 /* Likewise for internal variable VAR.  */
@@ -2833,7 +2392,7 @@ preserve_one_internalvar (struct internalvar *var, struct objfile *objfile,
       break;
 
     case INTERNALVAR_VALUE:
-      preserve_one_value (var->u.value, objfile, copied_types);
+      var->u.value->preserve (objfile, copied_types);
       break;
     }
 }
@@ -2854,7 +2413,7 @@ preserve_one_varobj (struct varobj *varobj, struct objfile *objfile,
     }
 
   if (varobj->value != nullptr)
-    preserve_one_value (varobj->value.get (), objfile, copied_types);
+    varobj->value->preserve (objfile, copied_types);
 }
 
 /* Update the internal variables and value history when OBJFILE is
@@ -2873,7 +2432,7 @@ preserve_values (struct objfile *objfile)
   htab_up copied_types = create_copied_types_hash ();
 
   for (const value_ref_ptr &item : value_history)
-    preserve_one_value (item.get (), objfile, copied_types.get ());
+    item->preserve (objfile, copied_types.get ());
 
   for (var = internalvars; var; var = var->next)
     preserve_one_internalvar (var, objfile, copied_types.get ());
@@ -2939,11 +2498,11 @@ show_convenience (const char *ignore, int from_tty)
 /* See value.h.  */
 
 struct value *
-value_from_xmethod (xmethod_worker_up &&worker)
+value::from_xmethod (xmethod_worker_up &&worker)
 {
   struct value *v;
 
-  v = allocate_value (builtin_type (target_gdbarch ())->xmethod);
+  v = value::allocate (builtin_type (target_gdbarch ())->xmethod);
   v->m_lval = lval_xcallable;
   v->m_location.xm_worker = worker.release ();
   v->m_modifiable = 0;
@@ -2951,26 +2510,26 @@ value_from_xmethod (xmethod_worker_up &&worker)
   return v;
 }
 
-/* Return the type of the result of TYPE_CODE_XMETHOD value METHOD.  */
+/* See value.h.  */
 
 struct type *
-result_type_of_xmethod (struct value *method, gdb::array_view<value *> argv)
+value::result_type_of_xmethod (gdb::array_view<value *> argv)
 {
-  gdb_assert (value_type (method)->code () == TYPE_CODE_XMETHOD
-	      && method->m_lval == lval_xcallable && !argv.empty ());
+  gdb_assert (type ()->code () == TYPE_CODE_XMETHOD
+	      && m_lval == lval_xcallable && !argv.empty ());
 
-  return method->m_location.xm_worker->get_result_type (argv[0], argv.slice (1));
+  return m_location.xm_worker->get_result_type (argv[0], argv.slice (1));
 }
 
-/* Call the xmethod corresponding to the TYPE_CODE_XMETHOD value METHOD.  */
+/* See value.h.  */
 
 struct value *
-call_xmethod (struct value *method, gdb::array_view<value *> argv)
+value::call_xmethod (gdb::array_view<value *> argv)
 {
-  gdb_assert (value_type (method)->code () == TYPE_CODE_XMETHOD
-	      && method->m_lval == lval_xcallable && !argv.empty ());
+  gdb_assert (type ()->code () == TYPE_CODE_XMETHOD
+	      && m_lval == lval_xcallable && !argv.empty ());
 
-  return method->m_location.xm_worker->invoke (argv[0], argv.slice (1));
+  return m_location.xm_worker->invoke (argv[0], argv.slice (1));
 }
 
 /* Extract a value as a C number (either long or double).
@@ -2985,7 +2544,7 @@ value_as_long (struct value *val)
      in disassemble_command).  It also dereferences references, which
      I suspect is the most logical thing to do.  */
   val = coerce_array (val);
-  return unpack_long (value_type (val), value_contents (val).data ());
+  return unpack_long (val->type (), val->contents ().data ());
 }
 
 /* Extract a value as a C pointer.  Does not deallocate the value.
@@ -2994,7 +2553,7 @@ value_as_long (struct value *val)
 CORE_ADDR
 value_as_address (struct value *val)
 {
-  struct gdbarch *gdbarch = value_type (val)->arch ();
+  struct gdbarch *gdbarch = val->type ()->arch ();
 
   /* Assume a CORE_ADDR can fit in a LONGEST (for now).  Not sure
      whether we want this to be true eventually.  */
@@ -3023,8 +2582,8 @@ value_as_address (struct value *val)
      cannot be modified.
 
      Upon entry to this function, if VAL is a value of type `function'
-     (that is, TYPE_CODE (VALUE_TYPE (val)) == TYPE_CODE_FUNC), then
-     value_address (val) is the address of the function.  This is what
+     (that is, TYPE_CODE (val->type ()) == TYPE_CODE_FUNC), then
+     val->address () is the address of the function.  This is what
      you'll get if you evaluate an expression like `main'.  The call
      to COERCE_ARRAY below actually does all the usual unary
      conversions, which includes converting values of type `function'
@@ -3042,9 +2601,9 @@ value_as_address (struct value *val)
 
      The following shortcut avoids this whole mess.  If VAL is a
      function, just return its address directly.  */
-  if (value_type (val)->code () == TYPE_CODE_FUNC
-      || value_type (val)->code () == TYPE_CODE_METHOD)
-    return value_address (val);
+  if (val->type ()->code () == TYPE_CODE_FUNC
+      || val->type ()->code () == TYPE_CODE_METHOD)
+    return val->address ();
 
   val = coerce_array (val);
 
@@ -3085,13 +2644,13 @@ value_as_address (struct value *val)
      converted to pointers; usually, the ABI doesn't either, but
      ABI-specific code is a more reasonable place to handle it.  */
 
-  if (!value_type (val)->is_pointer_or_reference ()
+  if (!val->type ()->is_pointer_or_reference ()
       && gdbarch_integer_to_address_p (gdbarch))
-    return gdbarch_integer_to_address (gdbarch, value_type (val),
-				       value_contents (val).data (),
+    return gdbarch_integer_to_address (gdbarch, val->type (),
+				       val->contents ().data (),
 				       ARCH_ADDR_SPACE_ID_DEFAULT);
 
-  return unpack_long (value_type (val), value_contents (val).data ());
+  return unpack_long (val->type (), val->contents ().data ());
 #endif
 }
 
@@ -3211,11 +2770,11 @@ unpack_pointer (struct type *type, const gdb_byte *valaddr)
 bool
 is_floating_value (struct value *val)
 {
-  struct type *type = check_typedef (value_type (val));
+  struct type *type = check_typedef (val->type ());
 
   if (is_floating_type (type))
     {
-      if (!target_float_is_valid (value_contents (val).data (), type))
+      if (!target_float_is_valid (val->contents ().data (), type))
 	error (_("Invalid floating value found in program."));
       return true;
     }
@@ -3259,7 +2818,7 @@ value_static_field (struct type *type, int fieldno)
 	  struct type *field_type = type->field (fieldno).type ();
 
 	  if (!msym.minsym)
-	    retval = allocate_optimized_out_value (field_type);
+	    retval = value::allocate_optimized_out (field_type);
 	  else
 	    retval = value_at_lazy (field_type, msym.value_address ());
 	}
@@ -3281,32 +2840,26 @@ value_static_field (struct type *type, int fieldno)
    data.  */
 
 void
-set_value_enclosing_type (struct value *val, struct type *new_encl_type)
+value::set_enclosing_type (struct type *new_encl_type)
 {
-  if (new_encl_type->length () > value_enclosing_type (val)->length ())
+  if (new_encl_type->length () > enclosing_type ()->length ())
     {
       check_type_length_before_alloc (new_encl_type);
-      val->m_contents
-	.reset ((gdb_byte *) xrealloc (val->m_contents.release (),
-				       new_encl_type->length ()));
+      m_contents.reset ((gdb_byte *) xrealloc (m_contents.release (),
+					       new_encl_type->length ()));
     }
 
-  val->m_enclosing_type = new_encl_type;
+  m_enclosing_type = new_encl_type;
 }
 
-/* Given a value ARG1 (offset by OFFSET bytes)
-   of a struct or union type ARG_TYPE,
-   extract and return the value of one of its (non-static) fields.
-   FIELDNO says which field.  */
+/* See value.h.  */
 
 struct value *
-value_primitive_field (struct value *arg1, LONGEST offset,
-		       int fieldno, struct type *arg_type)
+value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
 {
   struct value *v;
   struct type *type;
-  struct gdbarch *arch = get_value_arch (arg1);
-  int unit_size = gdbarch_addressable_memory_unit_size (arch);
+  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
 
   arg_type = check_typedef (arg_type);
   type = arg_type->field (fieldno).type ();
@@ -3333,19 +2886,19 @@ value_primitive_field (struct value *arg1, LONGEST offset,
       LONGEST bitpos = arg_type->field (fieldno).loc_bitpos ();
       LONGEST container_bitsize = type->length () * 8;
 
-      v = allocate_value_lazy (type);
-      v->m_bitsize = TYPE_FIELD_BITSIZE (arg_type, fieldno);
-      if ((bitpos % container_bitsize) + v->m_bitsize <= container_bitsize
+      v = value::allocate_lazy (type);
+      v->set_bitsize (TYPE_FIELD_BITSIZE (arg_type, fieldno));
+      if ((bitpos % container_bitsize) + v->bitsize () <= container_bitsize
 	  && type->length () <= (int) sizeof (LONGEST))
-	v->m_bitpos = bitpos % container_bitsize;
+	v->set_bitpos (bitpos % container_bitsize);
       else
-	v->m_bitpos = bitpos % 8;
-      v->m_offset = (value_embedded_offset (arg1)
-		   + offset
-		   + (bitpos - v->m_bitpos) / 8);
-      set_value_parent (v, arg1);
-      if (!value_lazy (arg1))
-	value_fetch_lazy (v);
+	v->set_bitpos (bitpos % 8);
+      v->set_offset ((embedded_offset ()
+		      + offset
+		      + (bitpos - v->bitpos ()) / 8));
+      v->set_parent (this);
+      if (!lazy ())
+	v->fetch_lazy ();
     }
   else if (fieldno < TYPE_N_BASECLASSES (arg_type))
     {
@@ -3355,32 +2908,31 @@ value_primitive_field (struct value *arg1, LONGEST offset,
       LONGEST boffset;
 
       /* Lazy register values with offsets are not supported.  */
-      if (VALUE_LVAL (arg1) == lval_register && value_lazy (arg1))
-	value_fetch_lazy (arg1);
+      if (this->lval () == lval_register && lazy ())
+	fetch_lazy ();
 
       /* We special case virtual inheritance here because this
 	 requires access to the contents, which we would rather avoid
 	 for references to ordinary fields of unavailable values.  */
       if (BASETYPE_VIA_VIRTUAL (arg_type, fieldno))
 	boffset = baseclass_offset (arg_type, fieldno,
-				    value_contents (arg1).data (),
-				    value_embedded_offset (arg1),
-				    value_address (arg1),
-				    arg1);
+				    contents ().data (),
+				    embedded_offset (),
+				    address (),
+				    this);
       else
 	boffset = arg_type->field (fieldno).loc_bitpos () / 8;
 
-      if (value_lazy (arg1))
-	v = allocate_value_lazy (value_enclosing_type (arg1));
+      if (lazy ())
+	v = value::allocate_lazy (enclosing_type ());
       else
 	{
-	  v = allocate_value (value_enclosing_type (arg1));
-	  value_contents_copy_raw (v, 0, arg1, 0, 0,
-				   value_enclosing_type (arg1)->length ());
+	  v = value::allocate (enclosing_type ());
+	  contents_copy_raw (v, 0, 0, 0, enclosing_type ()->length ());
 	}
-      v->m_type = type;
-      v->m_offset = value_offset (arg1);
-      v->m_embedded_offset = offset + value_embedded_offset (arg1) + boffset;
+      v->deprecated_set_type (type);
+      v->set_offset (this->offset ());
+      v->set_embedded_offset (offset + embedded_offset () + boffset);
     }
   else if (NULL != TYPE_DATA_LOCATION (type))
     {
@@ -3391,7 +2943,7 @@ value_primitive_field (struct value *arg1, LONGEST offset,
       gdb_assert (PROP_CONST == TYPE_DATA_LOCATION_KIND (type));
       /* For dynamic data types defer memory allocation
 	 until we actual access the value.  */
-      v = allocate_value_lazy (type);
+      v = value::allocate_lazy (type);
     }
   else
     {
@@ -3400,22 +2952,21 @@ value_primitive_field (struct value *arg1, LONGEST offset,
 		 / (HOST_CHAR_BIT * unit_size));
 
       /* Lazy register values with offsets are not supported.  */
-      if (VALUE_LVAL (arg1) == lval_register && value_lazy (arg1))
-	value_fetch_lazy (arg1);
+      if (this->lval () == lval_register && lazy ())
+	fetch_lazy ();
 
-      if (value_lazy (arg1))
-	v = allocate_value_lazy (type);
+      if (lazy ())
+	v = value::allocate_lazy (type);
       else
 	{
-	  v = allocate_value (type);
-	  value_contents_copy_raw (v, value_embedded_offset (v),
-				   arg1, value_embedded_offset (arg1) + offset,
-				   0, type_length_units (type));
+	  v = value::allocate (type);
+	  contents_copy_raw (v, v->embedded_offset (),
+			     embedded_offset () + offset, 0,
+			     type_length_units (type));
 	}
-      v->m_offset = (value_offset (arg1) + offset
-		   + value_embedded_offset (arg1));
+      v->set_offset (this->offset () + offset + embedded_offset ());
     }
-  set_value_component_location (v, arg1);
+  v->set_component_location (this);
   return v;
 }
 
@@ -3426,7 +2977,7 @@ value_primitive_field (struct value *arg1, LONGEST offset,
 struct value *
 value_field (struct value *arg1, int fieldno)
 {
-  return value_primitive_field (arg1, 0, fieldno, value_type (arg1));
+  return arg1->primitive_field (0, fieldno, arg1->type ());
 }
 
 /* Return a non-virtual function as a value.
@@ -3455,11 +3006,11 @@ value_fn_field (struct value **arg1p, struct fn_field *f,
 	return NULL;
     }
 
-  v = allocate_value (ftype);
-  VALUE_LVAL (v) = lval_memory;
+  v = value::allocate (ftype);
+  v->set_lval (lval_memory);
   if (sym)
     {
-      set_value_address (v, sym->value_block ()->entry_pc ());
+      v->set_address (sym->value_block ()->entry_pc ());
     }
   else
     {
@@ -3468,20 +3019,19 @@ value_fn_field (struct value **arg1p, struct fn_field *f,
       struct objfile *objfile = msym.objfile;
       struct gdbarch *gdbarch = objfile->arch ();
 
-      set_value_address (v,
-	gdbarch_convert_from_func_ptr_addr
-	   (gdbarch, msym.value_address (),
-	    current_inferior ()->top_target ()));
+      v->set_address (gdbarch_convert_from_func_ptr_addr
+		      (gdbarch, msym.value_address (),
+		       current_inferior ()->top_target ()));
     }
 
   if (arg1p)
     {
-      if (type != value_type (*arg1p))
+      if (type != (*arg1p)->type ())
 	*arg1p = value_ind (value_cast (lookup_pointer_type (type),
 					value_addr (*arg1p)));
 
       /* Move the `this' pointer according to the offset.
-	 VALUE_OFFSET (*arg1p) += offset; */
+	 (*arg1p)->offset () += offset; */
     }
 
   return v;
@@ -3563,8 +3113,8 @@ unpack_value_field_as_long (struct type *type, const gdb_byte *valaddr,
   gdb_assert (val != NULL);
 
   bit_offset = embedded_offset * TARGET_CHAR_BIT + bitpos;
-  if (value_bits_any_optimized_out (val, bit_offset, bitsize)
-      || !value_bits_available (val, bit_offset, bitsize))
+  if (val->bits_any_optimized_out (bit_offset, bitsize)
+      || !val->bits_available (bit_offset, bitsize))
     return 0;
 
   *result = unpack_bits_as_long (field_type, valaddr + embedded_offset,
@@ -3585,24 +3135,18 @@ unpack_field_as_long (struct type *type, const gdb_byte *valaddr, int fieldno)
   return unpack_bits_as_long (field_type, valaddr, bitpos, bitsize);
 }
 
-/* Unpack a bitfield of BITSIZE bits found at BITPOS in the object at
-   VALADDR + EMBEDDEDOFFSET that has the type of DEST_VAL and store
-   the contents in DEST_VAL, zero or sign extending if the type of
-   DEST_VAL is wider than BITSIZE.  VALADDR points to the contents of
-   VAL.  If the VAL's contents required to extract the bitfield from
-   are unavailable/optimized out, DEST_VAL is correspondingly
-   marked unavailable/optimized out.  */
+/* See value.h.  */
 
 void
-unpack_value_bitfield (struct value *dest_val,
-		       LONGEST bitpos, LONGEST bitsize,
-		       const gdb_byte *valaddr, LONGEST embedded_offset,
-		       const struct value *val)
+value::unpack_bitfield (struct value *dest_val,
+			LONGEST bitpos, LONGEST bitsize,
+			const gdb_byte *valaddr, LONGEST embedded_offset)
+  const
 {
   enum bfd_endian byte_order;
   int src_bit_offset;
   int dst_bit_offset;
-  struct type *field_type = value_type (dest_val);
+  struct type *field_type = dest_val->type ();
 
   byte_order = type_byte_order (field_type);
 
@@ -3610,14 +3154,14 @@ unpack_value_bitfield (struct value *dest_val,
      valid.  Optimized out/unavailable bits are read as zero, but
      that's OK, as they'll end up marked below.  If the VAL is
      wholly-invalid we may have skipped allocating its contents,
-     though.  See allocate_optimized_out_value.  */
+     though.  See value::allocate_optimized_out.  */
   if (valaddr != NULL)
     {
       LONGEST num;
 
       num = unpack_bits_as_long (field_type, valaddr + embedded_offset,
 				 bitpos, bitsize);
-      store_signed_integer (value_contents_raw (dest_val).data (),
+      store_signed_integer (dest_val->contents_raw ().data (),
 			    field_type->length (), byte_order, num);
     }
 
@@ -3628,8 +3172,7 @@ unpack_value_bitfield (struct value *dest_val,
     dst_bit_offset = field_type->length () * TARGET_CHAR_BIT - bitsize;
   else
     dst_bit_offset = 0;
-  value_ranges_copy_adjusted (dest_val, dst_bit_offset,
-			      val, src_bit_offset, bitsize);
+  ranges_copy_adjusted (dest_val, dst_bit_offset, src_bit_offset, bitsize);
 }
 
 /* Return a new value with type TYPE, which is FIELDNO field of the
@@ -3645,10 +3188,9 @@ value_field_bitfield (struct type *type, int fieldno,
 {
   int bitpos = type->field (fieldno).loc_bitpos ();
   int bitsize = TYPE_FIELD_BITSIZE (type, fieldno);
-  struct value *res_val = allocate_value (type->field (fieldno).type ());
+  struct value *res_val = value::allocate (type->field (fieldno).type ());
 
-  unpack_value_bitfield (res_val, bitpos, bitsize,
-			 valaddr, embedded_offset, val);
+  val->unpack_bitfield (res_val, bitpos, bitsize, valaddr, embedded_offset);
 
   return res_val;
 }
@@ -3804,15 +3346,14 @@ pack_unsigned_long (gdb_byte *buf, struct type *type, ULONGEST num)
     }
 }
 
-
-/* Create a value of type TYPE that is zero, and return it.  */
+/* See value.h.  */
 
 struct value *
-value_zero (struct type *type, enum lval_type lv)
+value::zero (struct type *type, enum lval_type lv)
 {
-  struct value *val = allocate_value_lazy (type);
+  struct value *val = value::allocate_lazy (type);
 
-  VALUE_LVAL (val) = (lv == lval_computed ? not_lval : lv);
+  val->set_lval (lv == lval_computed ? not_lval : lv);
   val->m_is_zero = true;
   return val;
 }
@@ -3822,9 +3363,9 @@ value_zero (struct type *type, enum lval_type lv)
 struct value *
 value_from_longest (struct type *type, LONGEST num)
 {
-  struct value *val = allocate_value (type);
+  struct value *val = value::allocate (type);
 
-  pack_long (value_contents_raw (val).data (), type, num);
+  pack_long (val->contents_raw ().data (), type, num);
   return val;
 }
 
@@ -3834,9 +3375,9 @@ value_from_longest (struct type *type, LONGEST num)
 struct value *
 value_from_ulongest (struct type *type, ULONGEST num)
 {
-  struct value *val = allocate_value (type);
+  struct value *val = value::allocate (type);
 
-  pack_unsigned_long (value_contents_raw (val).data (), type, num);
+  pack_unsigned_long (val->contents_raw ().data (), type, num);
 
   return val;
 }
@@ -3848,9 +3389,9 @@ value_from_ulongest (struct type *type, ULONGEST num)
 struct value *
 value_from_pointer (struct type *type, CORE_ADDR addr)
 {
-  struct value *val = allocate_value (type);
+  struct value *val = value::allocate (type);
 
-  store_typed_address (value_contents_raw (val).data (),
+  store_typed_address (val->contents_raw ().data (),
 		       check_typedef (type), addr);
   return val;
 }
@@ -3862,10 +3403,10 @@ value_from_pointer (struct type *type, CORE_ADDR addr)
 struct value *
 value_from_host_double (struct type *type, double d)
 {
-  struct value *value = allocate_value (type);
+  struct value *value = value::allocate (type);
   gdb_assert (type->code () == TYPE_CODE_FLT);
-  target_float_from_host_double (value_contents_raw (value).data (),
-				 value_type (value), d);
+  target_float_from_host_double (value->contents_raw ().data (),
+				 value->type (), d);
   return value;
 }
 
@@ -3884,11 +3425,11 @@ value_from_contents_and_address_unresolved (struct type *type,
   struct value *v;
 
   if (valaddr == NULL)
-    v = allocate_value_lazy (type);
+    v = value::allocate_lazy (type);
   else
     v = value_from_contents (type, valaddr);
-  VALUE_LVAL (v) = lval_memory;
-  set_value_address (v, address);
+  v->set_lval (lval_memory);
+  v->set_address (address);
   return v;
 }
 
@@ -3910,14 +3451,14 @@ value_from_contents_and_address (struct type *type,
   struct value *v;
 
   if (valaddr == NULL)
-    v = allocate_value_lazy (resolved_type);
+    v = value::allocate_lazy (resolved_type);
   else
     v = value_from_contents (resolved_type, valaddr);
   if (TYPE_DATA_LOCATION (resolved_type_no_typedef) != NULL
       && TYPE_DATA_LOCATION_KIND (resolved_type_no_typedef) == PROP_CONST)
     address = TYPE_DATA_LOCATION_ADDR (resolved_type_no_typedef);
-  VALUE_LVAL (v) = lval_memory;
-  set_value_address (v, address);
+  v->set_lval (lval_memory);
+  v->set_address (address);
   return v;
 }
 
@@ -3929,8 +3470,8 @@ value_from_contents (struct type *type, const gdb_byte *contents)
 {
   struct value *result;
 
-  result = allocate_value (type);
-  memcpy (value_contents_raw (result).data (), contents, type->length ());
+  result = value::allocate (type);
+  memcpy (result->contents_raw ().data (), contents, type->length ());
   return result;
 }
 
@@ -4005,17 +3546,17 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
 {
   struct value *v;
 
-  if (VALUE_LVAL (whole) == lval_memory && value_lazy (whole))
-    v = allocate_value_lazy (type);
+  if (whole->lval () == lval_memory && whole->lazy ())
+    v = value::allocate_lazy (type);
   else
     {
-      v = allocate_value (type);
-      value_contents_copy (v, value_embedded_offset (v),
-			   whole, value_embedded_offset (whole) + offset,
-			   0, type_length_units (type));
+      v = value::allocate (type);
+      whole->contents_copy (v, v->embedded_offset (),
+			    whole->embedded_offset () + offset,
+			    0, type_length_units (type));
     }
-  v->m_offset = value_offset (whole) + offset + value_embedded_offset (whole);
-  set_value_component_location (v, whole);
+  v->set_offset (whole->offset () + offset + whole->embedded_offset ());
+  v->set_component_location (whole);
 
   return v;
 }
@@ -4023,10 +3564,10 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
 /* See value.h.  */
 
 struct value *
-value_from_component_bitsize (struct value *whole, struct type *type,
-			      LONGEST bit_offset, LONGEST bit_length)
+value::from_component_bitsize (struct type *type,
+			       LONGEST bit_offset, LONGEST bit_length)
 {
-  gdb_assert (!value_lazy (whole));
+  gdb_assert (!lazy ());
 
   /* Preserve lvalue-ness if possible.  This is needed to avoid
      array-printing failures (including crashes) when printing Ada
@@ -4034,20 +3575,19 @@ value_from_component_bitsize (struct value *whole, struct type *type,
   if ((bit_offset % TARGET_CHAR_BIT) == 0
       && (bit_length % TARGET_CHAR_BIT) == 0
       && bit_length == TARGET_CHAR_BIT * type->length ())
-    return value_from_component (whole, type, bit_offset / TARGET_CHAR_BIT);
+    return value_from_component (this, type, bit_offset / TARGET_CHAR_BIT);
 
-  struct value *v = allocate_value (type);
+  struct value *v = value::allocate (type);
 
-  LONGEST dst_offset = TARGET_CHAR_BIT * value_embedded_offset (v);
+  LONGEST dst_offset = TARGET_CHAR_BIT * v->embedded_offset ();
   if (is_scalar_type (type) && type_byte_order (type) == BFD_ENDIAN_BIG)
     dst_offset += TARGET_CHAR_BIT * type->length () - bit_length;
 
-  value_contents_copy_raw_bitwise (v, dst_offset,
-				   whole,
-				   TARGET_CHAR_BIT
-				   * value_embedded_offset (whole)
-				   + bit_offset,
-				   bit_length);
+  contents_copy_raw_bitwise (v, dst_offset,
+			     TARGET_CHAR_BIT
+			     * embedded_offset ()
+			     + bit_offset,
+			     bit_length);
   return v;
 }
 
@@ -4056,13 +3596,13 @@ coerce_ref_if_computed (const struct value *arg)
 {
   const struct lval_funcs *funcs;
 
-  if (!TYPE_IS_REFERENCE (check_typedef (value_type (arg))))
+  if (!TYPE_IS_REFERENCE (check_typedef (arg->type ())))
     return NULL;
 
-  if (value_lval_const (arg) != lval_computed)
+  if (arg->lval () != lval_computed)
     return NULL;
 
-  funcs = value_computed_funcs (arg);
+  funcs = arg->computed_funcs ();
   if (funcs->coerce_ref == NULL)
     return NULL;
 
@@ -4086,11 +3626,11 @@ readjust_indirect_value_type (struct value *value, struct type *enc_type,
 			    original_value_address);
 
   /* Re-adjust type.  */
-  deprecated_set_value_type (value, resolved_original_target_type);
+  value->deprecated_set_type (resolved_original_target_type);
 
   /* Add embedding info.  */
-  set_value_enclosing_type (value, enc_type);
-  set_value_embedded_offset (value, value_pointed_to_offset (original_value));
+  value->set_enclosing_type (enc_type);
+  value->set_embedded_offset (original_value->pointed_to_offset ());
 
   /* We may be pointing to an object of some derived type.  */
   return value_full_object (value, NULL, 0, 0, 0);
@@ -4099,7 +3639,7 @@ readjust_indirect_value_type (struct value *value, struct type *enc_type,
 struct value *
 coerce_ref (struct value *arg)
 {
-  struct type *value_type_arg_tmp = check_typedef (value_type (arg));
+  struct type *value_type_arg_tmp = check_typedef (arg->type ());
   struct value *retval;
   struct type *enc_type;
 
@@ -4110,12 +3650,12 @@ coerce_ref (struct value *arg)
   if (!TYPE_IS_REFERENCE (value_type_arg_tmp))
     return arg;
 
-  enc_type = check_typedef (value_enclosing_type (arg));
+  enc_type = check_typedef (arg->enclosing_type ());
   enc_type = enc_type->target_type ();
 
-  CORE_ADDR addr = unpack_pointer (value_type (arg), value_contents (arg).data ());
+  CORE_ADDR addr = unpack_pointer (arg->type (), arg->contents ().data ());
   retval = value_at_lazy (enc_type, addr);
-  enc_type = value_type (retval);
+  enc_type = retval->type ();
   return readjust_indirect_value_type (retval, enc_type, value_type_arg_tmp,
 				       arg, addr);
 }
@@ -4126,7 +3666,7 @@ coerce_array (struct value *arg)
   struct type *type;
 
   arg = coerce_ref (arg);
-  type = check_typedef (value_type (arg));
+  type = check_typedef (arg->type ());
 
   switch (type->code ())
     {
@@ -4176,62 +3716,46 @@ using_struct_return (struct gdbarch *gdbarch,
 	  != RETURN_VALUE_REGISTER_CONVENTION);
 }
 
-/* Set the initialized field in a value struct.  */
+/* See value.h.  */
 
 void
-set_value_initialized (struct value *val, int status)
+value::fetch_lazy_bitfield ()
 {
-  val->m_initialized = status;
-}
-
-/* Return the initialized field in a value struct.  */
-
-int
-value_initialized (const struct value *val)
-{
-  return val->m_initialized;
-}
-
-/* Helper for value_fetch_lazy when the value is a bitfield.  */
-
-static void
-value_fetch_lazy_bitfield (struct value *val)
-{
-  gdb_assert (value_bitsize (val) != 0);
+  gdb_assert (bitsize () != 0);
 
   /* To read a lazy bitfield, read the entire enclosing value.  This
      prevents reading the same block of (possibly volatile) memory once
      per bitfield.  It would be even better to read only the containing
      word, but we have no way to record that just specific bits of a
      value have been fetched.  */
-  struct value *parent = value_parent (val);
+  struct value *parent = this->parent ();
 
-  if (value_lazy (parent))
-    value_fetch_lazy (parent);
+  if (parent->lazy ())
+    parent->fetch_lazy ();
 
-  unpack_value_bitfield (val, value_bitpos (val), value_bitsize (val),
-			 value_contents_for_printing (parent).data (),
-			 value_offset (val), parent);
+  parent->unpack_bitfield (this, bitpos (), bitsize (),
+			   parent->contents_for_printing ().data (),
+			   offset ());
 }
 
-/* Helper for value_fetch_lazy when the value is in memory.  */
+/* See value.h.  */
 
-static void
-value_fetch_lazy_memory (struct value *val)
+void
+value::fetch_lazy_memory ()
 {
-  gdb_assert (VALUE_LVAL (val) == lval_memory);
+  gdb_assert (m_lval == lval_memory);
 
-  CORE_ADDR addr = value_address (val);
-  struct type *type = check_typedef (value_enclosing_type (val));
+  CORE_ADDR addr = address ();
+  struct type *type = check_typedef (enclosing_type ());
 
   /* Figure out how much we should copy from memory.  Usually, this is just
      the size of the type, but, for arrays, we might only be loading a
      small part of the array (this is only done for very large arrays).  */
   int len = 0;
-  if (val->m_limited_length > 0)
+  if (m_limited_length > 0)
     {
-      gdb_assert (value_type (val)->code () == TYPE_CODE_ARRAY);
-      len = val->m_limited_length;
+      gdb_assert (this->type ()->code () == TYPE_CODE_ARRAY);
+      len = m_limited_length;
     }
   else if (type->length () > 0)
     len = type_length_units (type);
@@ -4239,21 +3763,21 @@ value_fetch_lazy_memory (struct value *val)
   gdb_assert (len >= 0);
 
   if (len > 0)
-    read_value_memory (val, value_bitpos (val), value_stack (val), addr,
-		       value_contents_all_raw (val).data (), len);
+    read_value_memory (this, bitpos (), stack (), addr,
+		       contents_all_raw ().data (), len);
 }
 
-/* Helper for value_fetch_lazy when the value is in a register.  */
+/* See value.h.  */
 
-static void
-value_fetch_lazy_register (struct value *val)
+void
+value::fetch_lazy_register ()
 {
   frame_info_ptr next_frame;
   int regnum;
-  struct type *type = check_typedef (value_type (val));
-  struct value *new_val = val, *mark = value_mark ();
+  struct type *type = check_typedef (this->type ());
+  struct value *new_val = this, *mark = value_mark ();
 
-  while (VALUE_LVAL (new_val) == lval_register && value_lazy (new_val))
+  while (new_val->lval () == lval_register && new_val->lazy ())
     {
       struct frame_id next_frame_id = VALUE_NEXT_FRAME_ID (new_val);
 
@@ -4288,36 +3812,35 @@ value_fetch_lazy_register (struct value *val)
 	 sniffer trying to unwind), bypassing its validations.  In
 	 any case, it should always be an internal error to end up
 	 in this situation.  */
-      if (VALUE_LVAL (new_val) == lval_register
-	  && value_lazy (new_val)
+      if (new_val->lval () == lval_register
+	  && new_val->lazy ()
 	  && VALUE_NEXT_FRAME_ID (new_val) == next_frame_id)
 	internal_error (_("infinite loop while fetching a register"));
     }
 
   /* Check if NEW_VALUE is big enough to cover
      the expected VAL type with an offset.  */
-  gdb_assert ((type->length () + value_offset (val))
-	      <= value_type (new_val)->length ());
+  gdb_assert ((type->length () + offset ()) <= new_val->type ()->length ());
 
   /* If it's still lazy (for instance, a saved register on the
      stack), fetch it.  */
-  if (value_lazy (new_val))
-    value_fetch_lazy (new_val);
+  if (new_val->lazy ())
+    new_val->fetch_lazy ();
 
   /* Copy the contents and the unavailability/optimized-out
      meta-data from NEW_VAL to VAL.  */
-  set_value_lazy (val, 0);
-  value_contents_copy (val, value_embedded_offset (val), new_val,
-		       value_embedded_offset (new_val) + value_offset (val),
-		       value_bitpos (val), type_length_units (type));
+  set_lazy (0);
+  new_val->contents_copy (this, embedded_offset (),
+			  new_val->embedded_offset () + offset (),
+			  bitpos (), type_length_units (type));
 
   if (frame_debug)
     {
       struct gdbarch *gdbarch;
       frame_info_ptr frame;
-      frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (val));
+      frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (this));
       frame = get_prev_frame_always (frame);
-      regnum = VALUE_REGNUM (val);
+      regnum = VALUE_REGNUM (this);
       gdbarch = get_frame_arch (frame);
 
       string_file debug_file;
@@ -4327,7 +3850,7 @@ value_fetch_lazy_register (struct value *val)
 		  user_reg_map_regnum_to_name (gdbarch, regnum));
 
       gdb_printf (&debug_file, "->");
-      if (value_optimized_out (new_val))
+      if (new_val->optimized_out ())
 	{
 	  gdb_printf (&debug_file, " ");
 	  val_print_optimized_out (new_val, &debug_file);
@@ -4335,15 +3858,15 @@ value_fetch_lazy_register (struct value *val)
       else
 	{
 	  int i;
-	  gdb::array_view<const gdb_byte> buf = value_contents (new_val);
+	  gdb::array_view<const gdb_byte> buf = new_val->contents ();
 
-	  if (VALUE_LVAL (new_val) == lval_register)
+	  if (new_val->lval () == lval_register)
 	    gdb_printf (&debug_file, " register=%d",
 			VALUE_REGNUM (new_val));
-	  else if (VALUE_LVAL (new_val) == lval_memory)
+	  else if (new_val->lval () == lval_memory)
 	    gdb_printf
 	      (&debug_file, " address=%s",
-	       paspace_and_addr (gdbarch, value_address (new_val)).c_str ());
+	       paspace_and_addr (gdbarch, new_val->address ()).c_str ());
 	  else
 	    gdb_printf (&debug_file, " computed");
 
@@ -4362,41 +3885,35 @@ value_fetch_lazy_register (struct value *val)
   value_free_to_mark (mark);
 }
 
-/* Load the actual content of a lazy value.  Fetch the data from the
-   user's process and clear the lazy flag to indicate that the data in
-   the buffer is valid.
-
-   If the value is zero-length, we avoid calling read_memory, which
-   would abort.  We mark the value as fetched anyway -- all 0 bytes of
-   it.  */
+/* See value.h.  */
 
 void
-value_fetch_lazy (struct value *val)
+value::fetch_lazy ()
 {
-  gdb_assert (value_lazy (val));
-  allocate_value_contents (val, true);
+  gdb_assert (lazy ());
+  allocate_contents (true);
   /* A value is either lazy, or fully fetched.  The
      availability/validity is only established as we try to fetch a
      value.  */
-  gdb_assert (val->m_optimized_out.empty ());
-  gdb_assert (val->m_unavailable.empty ());
-  if (val->m_is_zero)
+  gdb_assert (m_optimized_out.empty ());
+  gdb_assert (m_unavailable.empty ());
+  if (m_is_zero)
     {
       /* Nothing.  */
     }
-  else if (value_bitsize (val))
-    value_fetch_lazy_bitfield (val);
-  else if (VALUE_LVAL (val) == lval_memory)
-    value_fetch_lazy_memory (val);
-  else if (VALUE_LVAL (val) == lval_register)
-    value_fetch_lazy_register (val);
-  else if (VALUE_LVAL (val) == lval_computed
-	   && value_computed_funcs (val)->read != NULL)
-    value_computed_funcs (val)->read (val);
+  else if (bitsize ())
+    fetch_lazy_bitfield ();
+  else if (this->lval () == lval_memory)
+    fetch_lazy_memory ();
+  else if (this->lval () == lval_register)
+    fetch_lazy_register ();
+  else if (this->lval () == lval_computed
+	   && computed_funcs ()->read != NULL)
+    computed_funcs ()->read (this);
   else
     internal_error (_("Unexpected lazy value type."));
 
-  set_value_lazy (val, 0);
+  set_lazy (0);
 }
 
 /* Implementation of the convenience function $_isvoid.  */
@@ -4411,7 +3928,7 @@ isvoid_internal_fn (struct gdbarch *gdbarch,
   if (argc != 1)
     error (_("You must provide one argument for $_isvoid."));
 
-  ret = value_type (argv[0])->code () == TYPE_CODE_VOID;
+  ret = argv[0]->type ()->code () == TYPE_CODE_VOID;
 
   return value_from_longest (builtin_type (gdbarch)->builtin_int, ret);
 }
@@ -4428,7 +3945,7 @@ creal_internal_fn (struct gdbarch *gdbarch,
     error (_("You must provide one argument for $_creal."));
 
   value *cval = argv[0];
-  type *ctype = check_typedef (value_type (cval));
+  type *ctype = check_typedef (cval->type ());
   if (ctype->code () != TYPE_CODE_COMPLEX)
     error (_("expected a complex number"));
   return value_real_part (cval);
@@ -4447,7 +3964,7 @@ cimag_internal_fn (struct gdbarch *gdbarch,
     error (_("You must provide one argument for $_cimag."));
 
   value *cval = argv[0];
-  type *ctype = check_typedef (value_type (cval));
+  type *ctype = check_typedef (cval->type ());
   if (ctype->code () != TYPE_CODE_COMPLEX)
     error (_("expected a complex number"));
   return value_imaginary_part (cval);
@@ -4599,11 +4116,11 @@ test_value_copy ()
 
   /* Verify that we can copy an entirely optimized out value, that may not have
      its contents allocated.  */
-  value_ref_ptr val = release_value (allocate_optimized_out_value (type));
-  value_ref_ptr copy = release_value (value_copy (val.get ()));
+  value_ref_ptr val = release_value (value::allocate_optimized_out (type));
+  value_ref_ptr copy = release_value (val->copy ());
 
-  SELF_CHECK (value_entirely_optimized_out (val.get ()));
-  SELF_CHECK (value_entirely_optimized_out (copy.get ()));
+  SELF_CHECK (val->entirely_optimized_out ());
+  SELF_CHECK (copy->entirely_optimized_out ());
 }
 
 } /* namespace selftests */

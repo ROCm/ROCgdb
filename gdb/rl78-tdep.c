@@ -1340,13 +1340,13 @@ rl78_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* Push arguments in reverse order.  */
   for (i = nargs - 1; i >= 0; i--)
     {
-      struct type *value_type = value_enclosing_type (args[i]);
+      struct type *value_type = args[i]->enclosing_type ();
       int len = value_type->length ();
       int container_len = (len + 1) & ~1;
 
       sp -= container_len;
       write_memory (rl78_make_data_address (sp),
-		    value_contents_all (args[i]).data (), len);
+		    args[i]->contents_all ().data (), len);
     }
 
   /* Store struct value address.  */

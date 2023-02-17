@@ -656,7 +656,7 @@ msp430_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   msp430_gdbarch_tdep *tdep = gdbarch_tdep<msp430_gdbarch_tdep> (gdbarch);
   int code_model = tdep->code_model;
 
-  struct type *func_type = value_type (function);
+  struct type *func_type = function->type ();
 
   /* Dereference function pointer types.  */
   while (func_type->code () == TYPE_CODE_PTR)
@@ -689,8 +689,8 @@ msp430_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       for (i = 0; i < nargs; i++)
 	{
 	  struct value *arg = args[i];
-	  const gdb_byte *arg_bits = value_contents_all (arg).data ();
-	  struct type *arg_type = check_typedef (value_type (arg));
+	  const gdb_byte *arg_bits = arg->contents_all ().data ();
+	  struct type *arg_type = check_typedef (arg->type ());
 	  ULONGEST arg_size = arg_type->length ();
 	  int offset;
 	  int current_arg_on_stack;
@@ -703,7 +703,7 @@ msp430_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	    {
 	      /* Aggregates of any size are passed by reference.  */
 	      store_unsigned_integer (struct_addr_buf, 4, byte_order,
-				      value_address (arg));
+				      arg->address ());
 	      arg_bits = struct_addr_buf;
 	      arg_size = (code_model == MSP_LARGE_CODE_MODEL) ? 4 : 2;
 	    }

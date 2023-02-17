@@ -578,14 +578,14 @@ store_regs (struct type *regs_type, CORE_ADDR regs_base)
       regnum = compile_register_name_demangle (gdbarch, reg_name);
 
       regval = value_from_register (reg_type, regnum, get_current_frame ());
-      if (value_optimized_out (regval))
+      if (regval->optimized_out ())
 	error (_("Register \"%s\" is optimized out."), reg_name);
-      if (!value_entirely_available (regval))
+      if (!regval->entirely_available ())
 	error (_("Register \"%s\" is not available."), reg_name);
 
       inferior_addr = regs_base + reg_offset;
       if (0 != target_write_memory (inferior_addr,
-				    value_contents (regval).data (),
+				    regval->contents ().data (),
 				    reg_size))
 	error (_("Cannot write register \"%s\" to inferior memory at %s."),
 	       reg_name, paddress (gdbarch, inferior_addr));

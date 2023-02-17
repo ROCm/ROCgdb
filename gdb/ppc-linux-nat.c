@@ -2455,14 +2455,14 @@ ppc_linux_nat_target::num_memory_accesses (const std::vector<value_ref_ptr>
       struct value *v = iter.get ();
 
       /* Constants and values from the history are fine.  */
-      if (VALUE_LVAL (v) == not_lval || deprecated_value_modifiable (v) == 0)
+      if (v->lval () == not_lval || v->deprecated_modifiable () == 0)
 	continue;
-      else if (VALUE_LVAL (v) == lval_memory)
+      else if (v->lval () == lval_memory)
 	{
 	  /* A lazy memory lvalue is one that GDB never needed to fetch;
 	     we either just used its address (e.g., `a' in `a.b') or
 	     we never needed it at all (e.g., `a' in `a,b').  */
-	  if (!value_lazy (v))
+	  if (!v->lazy ())
 	    found_memory_cnt++;
 	}
       /* Other kinds of values are not fine.  */
@@ -2509,24 +2509,24 @@ ppc_linux_nat_target::check_condition (CORE_ADDR watch_addr,
     return 0;
 
   if (num_accesses_left == 1 && num_accesses_right == 0
-      && VALUE_LVAL (left_val) == lval_memory
-      && value_address (left_val) == watch_addr)
+      && left_val->lval () == lval_memory
+      && left_val->address () == watch_addr)
     {
       *data_value = value_as_long (right_val);
 
       /* DATA_VALUE is the constant in RIGHT_VAL, but actually has
 	 the same type as the memory region referenced by LEFT_VAL.  */
-      *len = check_typedef (value_type (left_val))->length ();
+      *len = check_typedef (left_val->type ())->length ();
     }
   else if (num_accesses_left == 0 && num_accesses_right == 1
-	   && VALUE_LVAL (right_val) == lval_memory
-	   && value_address (right_val) == watch_addr)
+	   && right_val->lval () == lval_memory
+	   && right_val->address () == watch_addr)
     {
       *data_value = value_as_long (left_val);
 
       /* DATA_VALUE is the constant in LEFT_VAL, but actually has
 	 the same type as the memory region referenced by RIGHT_VAL.  */
-      *len = check_typedef (value_type (right_val))->length ();
+      *len = check_typedef (right_val->type ())->length ();
     }
   else
     return 0;

@@ -250,7 +250,7 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
   value *init_value = value_at_lazy (init_type, initial);
   std::vector<value *> init_values;
 
-  set_value_stack (init_value, initial_in_stack_memory);
+  init_value->set_stack (initial_in_stack_memory);
   init_values.push_back (init_value);
 
   value *result_val
@@ -265,7 +265,7 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
   value_ref_ptr value_holder = value_ref_ptr::new_reference (result_val);
   free_values.free_to_mark ();
 
-  return value_copy (result_val);
+  return result_val->copy ();
 }
 
 
@@ -1038,7 +1038,7 @@ dwarf2_frame_cache (frame_info_ptr this_frame, void **this_cache)
 	      = execute_stack_op (fs.regs.cfa_exp, fs.regs.cfa_exp_len,
 				  cache->addr_size, this_frame, 0, 0,
 				  cache->per_objfile);
-	    cache->cfa = value_address (value);
+	    cache->cfa = value->address ();
 	  }
 
 	  break;

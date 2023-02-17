@@ -8120,7 +8120,7 @@ insert_exception_resume_breakpoint (struct thread_info *tp,
 					b, VAR_DOMAIN);
       value = read_var_value (vsym.symbol, vsym.block, frame);
       /* If the value was optimized out, revert to the old behavior.  */
-      if (! value_optimized_out (value))
+      if (! value->optimized_out ())
 	{
 	  handler = value_as_address (value);
 
@@ -9302,11 +9302,11 @@ siginfo_value_read (struct value *v)
     target_read (current_inferior ()->top_target (),
 		 TARGET_OBJECT_SIGNAL_INFO,
 		 nullptr,
-		 value_contents_all_raw (v).data (),
-		 value_offset (v),
-		 value_type (v)->length ());
+		 v->contents_all_raw ().data (),
+		 v->offset (),
+		 v->type ()->length ());
 
-  if (transferred != value_type (v)->length ())
+  if (transferred != v->type ()->length ())
     error (_("Unable to read siginfo"));
 }
 
@@ -9325,11 +9325,11 @@ siginfo_value_write (struct value *v, struct value *fromval)
   transferred = target_write (current_inferior ()->top_target (),
 			      TARGET_OBJECT_SIGNAL_INFO,
 			      nullptr,
-			      value_contents_all_raw (fromval).data (),
-			      value_offset (v),
-			      value_type (fromval)->length ());
+			      fromval->contents_all_raw ().data (),
+			      v->offset (),
+			      fromval->type ()->length ());
 
-  if (transferred != value_type (fromval)->length ())
+  if (transferred != fromval->type ()->length ())
     error (_("Unable to write siginfo"));
 }
 
@@ -9353,10 +9353,10 @@ siginfo_make_value (struct gdbarch *gdbarch, struct internalvar *var,
     {
       struct type *type = gdbarch_get_siginfo_type (gdbarch);
 
-      return allocate_computed_value (type, &siginfo_value_funcs, nullptr);
+      return value::allocate_computed (type, &siginfo_value_funcs, nullptr);
     }
 
-  return allocate_value (builtin_type (gdbarch)->builtin_void);
+  return value::allocate (builtin_type (gdbarch)->builtin_void);
 }
 
 

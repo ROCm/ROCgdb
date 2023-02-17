@@ -238,7 +238,7 @@ lm32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   for (i = 0; i < nargs; i++)
     {
       struct value *arg = args[i];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       gdb_byte *contents;
       ULONGEST val;
 
@@ -260,7 +260,7 @@ lm32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
       /* FIXME: Handle structures.  */
 
-      contents = (gdb_byte *) value_contents (arg).data ();
+      contents = (gdb_byte *) arg->contents ().data ();
       val = extract_unsigned_integer (contents, arg_type->length (),
 				      byte_order);
 

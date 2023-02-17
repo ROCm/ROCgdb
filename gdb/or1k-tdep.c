@@ -637,7 +637,7 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   or1k_gdbarch_tdep *tdep = gdbarch_tdep<or1k_gdbarch_tdep> (gdbarch);
   int bpa = tdep->bytes_per_address;
   int bpw = tdep->bytes_per_word;
-  struct type *func_type = value_type (function);
+  struct type *func_type = function->type ();
 
   /* Return address */
   regcache_cooked_write_unsigned (regcache, OR1K_LR_REGNUM, bp_addr);
@@ -661,7 +661,7 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       gdb_byte valbuf[sizeof (ULONGEST)];
 
       struct value *arg = args[argnum];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       int len = arg_type->length ();
       enum type_code typecode = arg_type->code ();
 
@@ -672,7 +672,7 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       if ((TYPE_CODE_STRUCT == typecode) || (TYPE_CODE_UNION == typecode)
 	  || (len > bpw * 2))
 	{
-	  CORE_ADDR valaddr = value_address (arg);
+	  CORE_ADDR valaddr = arg->address ();
 
 	  /* If the arg is fabricated (i.e. 3*i, instead of i) valaddr is
 	     undefined.  */
@@ -685,7 +685,7 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      heap_offset += align_up (len, bpw);
 	      valaddr = heap_sp + heap_offset;
 
-	      write_memory (valaddr, value_contents (arg).data (), len);
+	      write_memory (valaddr, arg->contents ().data (), len);
 	    }
 
 	  /* The ABI passes all structures by reference, so get its
@@ -697,7 +697,7 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       else
 	{
 	  /* Everything else, we just get the value.  */
-	  val = value_contents (arg).data ();
+	  val = arg->contents ().data ();
 	}
 
       /* Stick the value in a register.  */
@@ -751,7 +751,7 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   for (argnum = first_stack_arg; argnum < nargs; argnum++)
     {
       struct value *arg = args[argnum];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       int len = arg_type->length ();
       enum type_code typecode = arg_type->code ();
 
@@ -783,7 +783,7 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       gdb_byte valbuf[sizeof (ULONGEST)];
 
       struct value *arg = args[argnum];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       int len = arg_type->length ();
       enum type_code typecode = arg_type->code ();
       /* The EABI passes structures that do not fit in a register by
@@ -792,12 +792,12 @@ or1k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  || (len > bpw * 2))
 	{
 	  store_unsigned_integer (valbuf, bpa, byte_order,
-				  value_address (arg));
+				  arg->address ());
 	  len = bpa;
 	  val = valbuf;
 	}
       else
-	val = value_contents (arg).data ();
+	val = arg->contents ().data ();
 
       while (len > 0)
 	{

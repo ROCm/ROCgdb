@@ -183,13 +183,13 @@ i386_darwin_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
       for (i = 0; i < nargs; i++)
 	{
-	  struct type *arg_type = value_enclosing_type (args[i]);
+	  struct type *arg_type = args[i]->enclosing_type ();
 
 	  if (i386_m128_p (arg_type) && num_m128 < 4)
 	    {
 	      if (write_pass)
 		{
-		  const gdb_byte *val = value_contents_all (args[i]).data ();
+		  const gdb_byte *val = args[i]->contents_all ().data ();
 		  regcache->raw_write (I387_MM0_REGNUM(tdep) + num_m128, val);
 		}
 	      num_m128++;
@@ -200,7 +200,7 @@ i386_darwin_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 				     i386_darwin_arg_type_alignment (arg_type));
 	      if (write_pass)
 		write_memory (sp + args_space,
-			      value_contents_all (args[i]).data (),
+			      args[i]->contents_all ().data (),
 			      arg_type->length ());
 
 	      /* The System V ABI says that:

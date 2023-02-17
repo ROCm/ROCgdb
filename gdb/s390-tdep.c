@@ -1240,7 +1240,7 @@ s390_value_from_register (struct gdbarch *gdbarch, struct type *type,
        && type->length () < 8)
       || regnum_is_vxr_full (tdep, regnum)
       || (regnum >= S390_V16_REGNUM && regnum <= S390_V31_REGNUM))
-    set_value_offset (value, 0);
+    value->set_offset (0);
 
   return value;
 }
@@ -1749,7 +1749,7 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 		 s390_gdbarch_tdep *tdep, int word_size,
 		 enum bfd_endian byte_order, int is_unnamed)
 {
-  struct type *type = check_typedef (value_type (arg));
+  struct type *type = check_typedef (arg->type ());
   unsigned int length = type->length ();
   int write_mode = as->regcache != NULL;
 
@@ -1764,7 +1764,7 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 	     it occupies the leftmost bits.  */
 	  if (write_mode)
 	    as->regcache->cooked_write_part (S390_F0_REGNUM + as->fr, 0, length,
-					     value_contents (arg).data ());
+					     arg->contents ().data ());
 	  as->fr += 2;
 	}
       else
@@ -1773,7 +1773,7 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 	     it occupies the rightmost bits.  */
 	  as->argp = align_up (as->argp + length, word_size);
 	  if (write_mode)
-	    write_memory (as->argp - length, value_contents (arg).data (),
+	    write_memory (as->argp - length, arg->contents ().data (),
 			  length);
 	}
     }
@@ -1788,13 +1788,13 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 
 	  if (write_mode)
 	    as->regcache->cooked_write_part (regnum, 0, length,
-					     value_contents (arg).data ());
+					     arg->contents ().data ());
 	  as->vr++;
 	}
       else
 	{
 	  if (write_mode)
-	    write_memory (as->argp, value_contents (arg).data (), length);
+	    write_memory (as->argp, arg->contents ().data (), length);
 	  as->argp = align_up (as->argp + length, word_size);
 	}
     }
@@ -1809,9 +1809,9 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 	     memory word and sign- or zero-extend to full word size.
 	     This also applies to a struct or union.  */
 	  val = type->is_unsigned ()
-	    ? extract_unsigned_integer (value_contents (arg).data (),
+	    ? extract_unsigned_integer (arg->contents ().data (),
 					length, byte_order)
-	    : extract_signed_integer (value_contents (arg).data (),
+	    : extract_signed_integer (arg->contents ().data (),
 				      length, byte_order);
 	}
 
@@ -1838,10 +1838,10 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 	  if (write_mode)
 	    {
 	      as->regcache->cooked_write (S390_R0_REGNUM + as->gr,
-					  value_contents (arg).data ());
+					  arg->contents ().data ());
 	      as->regcache->cooked_write
 		(S390_R0_REGNUM + as->gr + 1,
-		 value_contents (arg).data () + word_size);
+		 arg->contents ().data () + word_size);
 	    }
 	  as->gr += 2;
 	}
@@ -1852,7 +1852,7 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 	  as->gr = 7;
 
 	  if (write_mode)
-	    write_memory (as->argp, value_contents (arg).data (), length);
+	    write_memory (as->argp, arg->contents ().data (), length);
 	  as->argp += length;
 	}
     }
@@ -1863,7 +1863,7 @@ s390_handle_arg (struct s390_arg_state *as, struct value *arg,
 	 alignment as a conservative assumption.  */
       as->copy = align_down (as->copy - length, 8);
       if (write_mode)
-	write_memory (as->copy, value_contents (arg).data (), length);
+	write_memory (as->copy, arg->contents ().data (), length);
 
       if (as->gr <= 6)
 	{
@@ -1911,7 +1911,7 @@ s390_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   int i;
   struct s390_arg_state arg_state, arg_prep;
   CORE_ADDR param_area_start, new_sp;
-  struct type *ftype = check_typedef (value_type (function));
+  struct type *ftype = check_typedef (function->type ());
 
   if (ftype->code () == TYPE_CODE_PTR)
     ftype = check_typedef (ftype->target_type ());
@@ -2199,7 +2199,7 @@ s390_unwind_pseudo_register (frame_info_ptr this_frame, int regnum)
       struct value *val;
 
       val = frame_unwind_register_value (this_frame, S390_PSWA_REGNUM);
-      if (!value_optimized_out (val))
+      if (!val->optimized_out ())
 	{
 	  LONGEST pswa = value_as_long (val);
 
@@ -2216,7 +2216,7 @@ s390_unwind_pseudo_register (frame_info_ptr this_frame, int regnum)
       struct value *val;
 
       val = frame_unwind_register_value (this_frame, S390_PSWM_REGNUM);
-      if (!value_optimized_out (val))
+      if (!val->optimized_out ())
 	{
 	  LONGEST pswm = value_as_long (val);
 
@@ -2235,11 +2235,11 @@ s390_unwind_pseudo_register (frame_info_ptr this_frame, int regnum)
       struct value *val;
 
       val = frame_unwind_register_value (this_frame, S390_R0_REGNUM + reg);
-      if (!value_optimized_out (val))
+      if (!val->optimized_out ())
 	return value_cast (type, val);
     }
 
-  return allocate_optimized_out_value (type);
+  return value::allocate_optimized_out (type);
 }
 
 /* Translate a .eh_frame register to DWARF register, or adjust a

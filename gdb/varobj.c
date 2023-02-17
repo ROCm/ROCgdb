@@ -388,7 +388,7 @@ varobj_create (const char *objname,
 	     right type.  */
 	  struct value *type_only_value = evaluate_type (var->root->exp.get ());
 
-	  var->type = value_type (type_only_value);
+	  var->type = type_only_value->type ();
 	}
 
       if (value != NULL)
@@ -515,7 +515,7 @@ varobj_set_display_format (struct varobj *var,
     }
 
   if (varobj_value_is_changeable_p (var) 
-      && var->value != nullptr && !value_lazy (var->value.get ()))
+      && var->value != nullptr && !var->value->lazy ())
     {
       var->print_value = varobj_value_get_print_value (var->value.get (),
 						       var->format, var);
@@ -1033,7 +1033,7 @@ varobj_set_value (struct varobj *var, const char *expression)
   gdb_assert (varobj_value_is_changeable_p (var));
 
   /* The value of a changeable variable object must not be lazy.  */
-  gdb_assert (!value_lazy (var->value.get ()));
+  gdb_assert (!var->value->lazy ());
 
   /* Need to coerce the input.  We want to check if the
      value of the variable object will be different
@@ -1273,7 +1273,7 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
      that is we'll be comparing values of this type, fetch the
      value now.  Otherwise, on the next update the old value
      will be lazy, which means we've lost that old value.  */
-  if (need_to_fetch && value && value_lazy (value))
+  if (need_to_fetch && value && value->lazy ())
     {
       const struct varobj *parent = var->parent;
       bool frozen = var->frozen;
@@ -1322,7 +1322,7 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
 		}
 
 	      if (value != nullptr)
-		value_fetch_lazy (value);
+		value->fetch_lazy ();
 	    }
 
 	  catch (const gdb_exception_error &except)
@@ -1346,7 +1346,7 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
      lazy -- if it is, the code above has decided that the value
      should not be fetched.  */
   std::string print_value;
-  if (value != NULL && !value_lazy (value)
+  if (value != NULL && !value->lazy ()
       && var->dynamic->pretty_printer == NULL)
     print_value = varobj_value_get_print_value (value, var->format, var);
 
@@ -1366,7 +1366,7 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
 	{
 	  /* Try to compare the values.  That requires that both
 	     values are non-lazy.  */
-	  if (var->not_fetched && value_lazy (var->value.get ()))
+	  if (var->not_fetched && var->value->lazy ())
 	    {
 	      /* This is a frozen varobj and the value was never read.
 		 Presumably, UI shows some "never read" indicator.
@@ -1384,8 +1384,8 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
 	    }
 	  else
 	    {
-	      gdb_assert (!value_lazy (var->value.get ()));
-	      gdb_assert (!value_lazy (value));
+	      gdb_assert (!var->value->lazy ());
+	      gdb_assert (!value->lazy ());
 
 	      gdb_assert (!var->print_value.empty () && !print_value.empty ());
 	      if (var->print_value != print_value)
@@ -1405,7 +1405,7 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
 
   /* We must always keep the new value, since children depend on it.  */
   var->value = value_holder;
-  if (value && value_lazy (value) && intentionally_not_fetched)
+  if (value && value->lazy () && intentionally_not_fetched)
     var->not_fetched = true;
   else
     var->not_fetched = false;
@@ -1424,7 +1424,7 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
     }
   var->print_value = print_value;
 
-  gdb_assert (var->value == nullptr || value_type (var->value.get ()));
+  gdb_assert (var->value == nullptr || var->value->type ());
 
   return changed;
 }
@@ -1604,7 +1604,7 @@ varobj_update (struct varobj **varp, bool is_explicit)
 	  if (update_type_if_necessary (v, newobj))
 	    r.type_changed = true;
 	  if (newobj)
-	    new_type = value_type (newobj);
+	    new_type = newobj->type ();
 	  else
 	    new_type = v->root->lang_ops->type_of_child (v->parent, v->index);
 
@@ -1940,7 +1940,7 @@ varobj_get_value_type (const struct varobj *var)
   struct type *type;
 
   if (var->value != nullptr)
-    type = value_type (var->value.get ());
+    type = var->value->type ();
   else
     type = var->type;
 
@@ -2159,7 +2159,7 @@ value_of_root (struct varobj **var_handle, bool *type_changed)
 	/* For root varobj-s, a NULL value indicates a scoping issue.
 	   So, nothing to do in terms of checking for mutations.  */
       }
-    else if (varobj_value_has_mutated (var, value, value_type (value)))
+    else if (varobj_value_has_mutated (var, value, value->type ()))
       {
 	/* The type has mutated, so the children are no longer valid.
 	   Just delete them, and tell our caller that the type has
@@ -2290,7 +2290,7 @@ varobj_value_get_print_value (struct value *value,
 
 			  thevalue = std::string (s.get ());
 			  len = thevalue.size ();
-			  gdbarch = value_type (value)->arch ();
+			  gdbarch = value->type ()->arch ();
 			  type = builtin_type (gdbarch)->builtin_char;
 
 			  if (!string_print)
@@ -2331,7 +2331,7 @@ varobj_editable_p (const struct varobj *var)
   struct type *type;
 
   if (!(var->root->is_valid && var->value != nullptr
-	&& VALUE_LVAL (var->value.get ())))
+	&& var->value->lval ()))
     return false;
 
   type = varobj_get_value_type (var);

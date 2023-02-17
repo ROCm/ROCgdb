@@ -2200,13 +2200,13 @@ setting_cmd (const char *fnname, struct cmd_list_element *showlist,
   if (argc != 1)
     error (_("You can only provide one argument to %s"), fnname);
 
-  struct type *type0 = check_typedef (value_type (argv[0]));
+  struct type *type0 = check_typedef (argv[0]->type ());
 
   if (type0->code () != TYPE_CODE_ARRAY
       && type0->code () != TYPE_CODE_STRING)
     error (_("First argument of %s must be a string."), fnname);
 
-  const char *a0 = (const char *) value_contents (argv[0]).data ();
+  const char *a0 = (const char *) argv[0]->contents ().data ();
   cmd_list_element *cmd = lookup_cmd (&a0, showlist, "", NULL, -1, 0);
 
   if (cmd == nullptr || cmd->type != show_cmd)
@@ -2241,7 +2241,7 @@ value_from_setting (const setting &var, struct gdbarch *gdbarch)
 		if (l->val.has_value ())
 		  value = *l->val;
 		else
-		  return allocate_value (builtin_type (gdbarch)->builtin_void);
+		  return value::allocate (builtin_type (gdbarch)->builtin_void);
 		break;
 	      }
 

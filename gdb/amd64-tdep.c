@@ -355,10 +355,10 @@ amd64_pseudo_register_read_value (struct gdbarch *gdbarch,
 {
   i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
 
-  value *result_value = allocate_value (register_type (gdbarch, regnum));
-  VALUE_LVAL (result_value) = lval_register;
+  value *result_value = value::allocate (register_type (gdbarch, regnum));
+  result_value->set_lval (lval_register);
   VALUE_REGNUM (result_value) = regnum;
-  gdb_byte *buf = value_contents_raw (result_value).data ();
+  gdb_byte *buf = result_value->contents_raw ().data ();
 
   if (i386_byte_regnum_p (gdbarch, regnum))
     {
@@ -375,8 +375,8 @@ amd64_pseudo_register_read_value (struct gdbarch *gdbarch,
 	  if (status == REG_VALID)
 	    memcpy (buf, raw_buf + 1, 1);
 	  else
-	    mark_value_bytes_unavailable (result_value, 0,
-					  value_type (result_value)->length ());
+	    result_value->mark_bytes_unavailable (0,
+						  result_value->type ()->length ());
 	}
       else
 	{
@@ -385,8 +385,8 @@ amd64_pseudo_register_read_value (struct gdbarch *gdbarch,
 	  if (status == REG_VALID)
 	    memcpy (buf, raw_buf, 1);
 	  else
-	    mark_value_bytes_unavailable (result_value, 0,
-					  value_type (result_value)->length ());
+	    result_value->mark_bytes_unavailable (0,
+						  result_value->type ()->length ());
 	}
     }
   else if (i386_dword_regnum_p (gdbarch, regnum))
@@ -398,8 +398,8 @@ amd64_pseudo_register_read_value (struct gdbarch *gdbarch,
       if (status == REG_VALID)
 	memcpy (buf, raw_buf, 4);
       else
-	mark_value_bytes_unavailable (result_value, 0,
-				      value_type (result_value)->length ());
+	result_value->mark_bytes_unavailable (0,
+					      result_value->type ()->length ());
     }
   else
     i386_pseudo_register_read_into_value (gdbarch, regcache, regnum,
@@ -831,8 +831,8 @@ amd64_return_value (struct gdbarch *gdbarch, struct value *function,
   gdb_byte *readbuf = nullptr;
   if (read_value != nullptr)
     {
-      *read_value = allocate_value (type);
-      readbuf = value_contents_raw (*read_value).data ();
+      *read_value = value::allocate (type);
+      readbuf = (*read_value)->contents_raw ().data ();
     }
 
   /* 8. If the class is COMPLEX_X87, the real part of the value is
@@ -962,7 +962,7 @@ if (return_method == return_method_struct)
 
   for (i = 0; i < nargs; i++)
     {
-      struct type *type = value_type (args[i]);
+      struct type *type = args[i]->type ();
       int len = type->length ();
       enum amd64_reg_class theclass[2];
       int needed_integer_regs = 0;
@@ -995,7 +995,7 @@ if (return_method == return_method_struct)
       else
 	{
 	  /* The argument will be passed in registers.  */
-	  const gdb_byte *valbuf = value_contents (args[i]).data ();
+	  const gdb_byte *valbuf = args[i]->contents ().data ();
 	  gdb_byte buf[8];
 
 	  gdb_assert (len <= 16);
@@ -1046,8 +1046,8 @@ if (return_method == return_method_struct)
   /* Write out the arguments to the stack.  */
   for (i = 0; i < num_stack_args; i++)
     {
-      struct type *type = value_type (stack_args[i]);
-      const gdb_byte *valbuf = value_contents (stack_args[i]).data ();
+      struct type *type = stack_args[i]->type ();
+      const gdb_byte *valbuf = stack_args[i]->contents ().data ();
       int len = type->length ();
 
       write_memory (sp + element * 8, valbuf, len);

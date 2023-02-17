@@ -956,7 +956,7 @@ gdbscm_apply_val_pretty_printer (const struct extension_language_defn *extlang,
 				 const struct value_print_options *options,
 				 const struct language_defn *language)
 {
-  struct type *type = value_type (value);
+  struct type *type = value->type ();
   struct gdbarch *gdbarch = type->arch ();
   SCM exception = SCM_BOOL_F;
   SCM printer = SCM_BOOL_F;
@@ -965,11 +965,11 @@ gdbscm_apply_val_pretty_printer (const struct extension_language_defn *extlang,
   enum ext_lang_rc result = EXT_LANG_RC_NOP;
   enum guile_string_repr_result print_result;
 
-  if (value_lazy (value))
-    value_fetch_lazy (value);
+  if (value->lazy ())
+    value->fetch_lazy ();
 
   /* No pretty-printer support for unavailable values.  */
-  if (!value_bytes_available (value, 0, type->length ()))
+  if (!value->bytes_available (0, type->length ()))
     return EXT_LANG_RC_NOP;
 
   if (!gdb_scheme_initialized)

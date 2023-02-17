@@ -400,11 +400,11 @@ static void
 tlb_value_read (struct value *val)
 {
   CORE_ADDR tlb;
-  struct type *type = check_typedef (value_type (val));
+  struct type *type = check_typedef (val->type ());
 
   if (!target_get_tib_address (inferior_ptid, &tlb))
     error (_("Unable to read tlb"));
-  store_typed_address (value_contents_raw (val).data (), type, tlb);
+  store_typed_address (val->contents_raw ().data (), type, tlb);
 }
 
 /* This function implements the lval_computed support for writing a
@@ -433,10 +433,10 @@ tlb_make_value (struct gdbarch *gdbarch, struct internalvar *var, void *ignore)
   if (target_has_stack () && inferior_ptid != null_ptid)
     {
       struct type *type = windows_get_tlb_type (gdbarch);
-      return allocate_computed_value (type, &tlb_value_funcs, NULL);
+      return value::allocate_computed (type, &tlb_value_funcs, NULL);
     }
 
-  return allocate_value (builtin_type (gdbarch)->builtin_void);
+  return value::allocate (builtin_type (gdbarch)->builtin_void);
 }
 
 

@@ -247,12 +247,12 @@ xstormy16_push_dummy_call (struct gdbarch *gdbarch,
      would fit in the remaining unused registers.  */
   for (i = 0; i < nargs && argreg <= E_LST_ARG_REGNUM; i++)
     {
-      typelen = value_enclosing_type (args[i])->length ();
+      typelen = args[i]->enclosing_type ()->length ();
       if (typelen > E_MAX_RETTYPE_SIZE (argreg))
 	break;
 
       /* Put argument into registers wordwise.  */
-      const gdb_byte *val = value_contents (args[i]).data ();
+      const gdb_byte *val = args[i]->contents ().data ();
       for (j = 0; j < typelen; j += xstormy16_reg_size)
 	{
 	  ULONGEST regval;
@@ -270,9 +270,9 @@ xstormy16_push_dummy_call (struct gdbarch *gdbarch,
      wordaligned.  */
   for (j = nargs - 1; j >= i; j--)
     {
-      const gdb_byte *bytes = value_contents (args[j]).data ();
+      const gdb_byte *bytes = args[j]->contents ().data ();
 
-      typelen = value_enclosing_type (args[j])->length ();
+      typelen = args[j]->enclosing_type ()->length ();
       slacklen = typelen & 1;
       gdb::byte_vector val (typelen + slacklen);
       memcpy (val.data (), bytes, typelen);

@@ -431,7 +431,7 @@ iterate_over_live_ada_tasks (ada_task_list_iterator_ftype iterator)
 static void
 value_as_string (char *dest, struct value *val, int length)
 {
-  memcpy (dest, value_contents (val).data (), length);
+  memcpy (dest, val->contents ().data (), length);
   dest[length] = '\0';
 }
 
@@ -458,7 +458,7 @@ read_fat_string_value (char *dest, struct value *val, int max_len)
      to extract the string from the fat string.  */
   if (initialize_fieldnos)
     {
-      struct type *type = value_type (val);
+      struct type *type = val->type ();
       struct type *bounds_type;
 
       array_fieldno = ada_get_field_index (type, "P_ARRAY", 0);
@@ -485,7 +485,7 @@ read_fat_string_value (char *dest, struct value *val, int max_len)
 
   /* Extract LEN characters from the fat string.  */
   array_val = value_ind (value_field (val, array_fieldno));
-  read_memory (value_address (array_val), (gdb_byte *) dest, len);
+  read_memory (array_val->address (), (gdb_byte *) dest, len);
 
   /* Add the NUL character to close the string.  */
   dest[len] = '\0';
@@ -785,7 +785,7 @@ read_atcb (CORE_ADDR task_id, struct ada_task_info *task_info)
 	value_subscript (entry_calls_value,
 			 value_as_long (atc_nesting_level_value));
       called_task_fieldno =
-	ada_get_field_index (value_type (entry_calls_value_element),
+	ada_get_field_index (entry_calls_value_element->type (),
 			     "called_task", 0);
       task_info->called_task =
 	value_as_address (value_field (entry_calls_value_element,

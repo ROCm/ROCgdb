@@ -1457,7 +1457,7 @@ get_return_value (struct symbol *func_symbol, struct value *function)
     = check_typedef (func_symbol->type ()->target_type ());
   gdb_assert (value_type->code () != TYPE_CODE_VOID);
 
-  if (is_nocall_function (check_typedef (::value_type (function))))
+  if (is_nocall_function (check_typedef (function->type ())))
     {
       warning (_("Function '%s' does not follow the target calling "
 		 "convention, cannot determine its returned value."),
@@ -1636,7 +1636,7 @@ finish_command_fsm::should_stop (struct thread_info *tp)
 	      rv->value = get_return_value (function, func);
 
 	  if (rv->value != nullptr)
-	    rv->value_history_index = record_latest_value (rv->value);
+	    rv->value_history_index = rv->value->record_latest ();
 	}
     }
   else if (tp->control.stop_step)
@@ -2137,7 +2137,7 @@ default_print_one_register_info (struct ui_file *file,
 				 const char *name,
 				 struct value *val)
 {
-  struct type *regtype = value_type (val);
+  struct type *regtype = val->type ();
   int print_raw_format;
   string_file format_stream;
   enum tab_stops
@@ -2151,8 +2151,8 @@ default_print_one_register_info (struct ui_file *file,
   format_stream.puts (name);
   pad_to_column (format_stream, value_column_1);
 
-  print_raw_format = (value_entirely_available (val)
-		      && !value_optimized_out (val));
+  print_raw_format = (val->entirely_available ()
+		      && !val->optimized_out ());
 
   /* If virtual format is floating, print it that way, and in raw
      hex.  */
@@ -2160,7 +2160,7 @@ default_print_one_register_info (struct ui_file *file,
       || regtype->code () == TYPE_CODE_DECFLOAT)
     {
       struct value_print_options opts;
-      const gdb_byte *valaddr = value_contents_for_printing (val).data ();
+      const gdb_byte *valaddr = val->contents_for_printing ().data ();
       enum bfd_endian byte_order = type_byte_order (regtype);
 
       get_user_print_options (&opts);

@@ -1376,7 +1376,7 @@ encode_actions_1 (struct command_line *action,
 		      {
 			/* Safe because we know it's a simple expression.  */
 			tempval = evaluate_expression (exp.get ());
-			addr = value_address (tempval);
+			addr = tempval->address ();
 			expr::unop_memval_operation *memop
 			  = (gdb::checked_static_cast<expr::unop_memval_operation *>
 			     (exp->op.get ()));
@@ -3777,12 +3777,12 @@ sdata_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 
       type = init_vector_type (builtin_type (gdbarch)->builtin_true_char,
 			       buf->size ());
-      v = allocate_value (type);
-      memcpy (value_contents_raw (v).data (), buf->data (), buf->size ());
+      v = value::allocate (type);
+      memcpy (v->contents_raw ().data (), buf->data (), buf->size ());
       return v;
     }
   else
-    return allocate_value (builtin_type (gdbarch)->builtin_void);
+    return value::allocate (builtin_type (gdbarch)->builtin_void);
 }
 
 #if !defined(HAVE_LIBEXPAT)

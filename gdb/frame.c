@@ -931,7 +931,7 @@ frame_find_by_id (struct frame_id id)
      and get_prev_frame performs a series of checks that are relatively
      expensive).  This optimization is particularly useful when this function
      is called from another function (such as value_fetch_lazy, case
-     VALUE_LVAL (val) == lval_register) which already loops over all frames,
+     val->lval () == lval_register) which already loops over all frames,
      making the overall behavior O(n^2).  */
   frame = frame_stash_find (id);
   if (frame)
@@ -1190,10 +1190,10 @@ frame_register_unwind (frame_info_ptr next_frame, int regnum,
 
   gdb_assert (value != NULL);
 
-  *optimizedp = value_optimized_out (value);
-  *unavailablep = !value_entirely_available (value);
-  *lvalp = VALUE_LVAL (value);
-  *addrp = value_address (value);
+  *optimizedp = value->optimized_out ();
+  *unavailablep = !value->entirely_available ();
+  *lvalp = value->lval ();
+  *addrp = value->address ();
   if (*lvalp == lval_register)
     *realnump = VALUE_REGNUM (value);
   else
@@ -1202,10 +1202,10 @@ frame_register_unwind (frame_info_ptr next_frame, int regnum,
   if (bufferp)
     {
       if (!*optimizedp && !*unavailablep)
-	memcpy (bufferp, value_contents_all (value).data (),
-		value_type (value)->length ());
+	memcpy (bufferp, value->contents_all ().data (),
+		value->type ()->length ());
       else
-	memset (bufferp, 0, value_type (value)->length ());
+	memset (bufferp, 0, value->type ()->length ());
     }
 
   /* Dispose of the new value.  This prevents watchpoints from
@@ -1285,29 +1285,29 @@ frame_unwind_register_value (frame_info_ptr next_frame, int regnum)
       string_file debug_file;
 
       gdb_printf (&debug_file, "  ->");
-      if (value_optimized_out (value))
+      if (value->optimized_out ())
 	{
 	  gdb_printf (&debug_file, " ");
 	  val_print_not_saved (&debug_file);
 	}
       else
 	{
-	  if (VALUE_LVAL (value) == lval_register)
+	  if (value->lval () == lval_register)
 	    gdb_printf (&debug_file, " register=%d",
 			VALUE_REGNUM (value));
-	  else if (VALUE_LVAL (value) == lval_memory)
+	  else if (value->lval () == lval_memory)
 	    gdb_printf
 	      (&debug_file, " address=%s",
-	       paspace_and_addr (gdbarch, value_address (value)).c_str ());
+	       paspace_and_addr (gdbarch, value->address ()).c_str ());
 	  else
 	    gdb_printf (&debug_file, " computed");
 
-	  if (value_lazy (value))
+	  if (value->lazy ())
 	    gdb_printf (&debug_file, " lazy");
 	  else
 	    {
 	      int i;
-	      gdb::array_view<const gdb_byte> buf = value_contents (value);
+	      gdb::array_view<const gdb_byte> buf = value->contents ();
 
 	      gdb_printf (&debug_file, " bytes=");
 	      gdb_printf (&debug_file, "[");
@@ -1338,18 +1338,18 @@ frame_unwind_register_signed (frame_info_ptr next_frame, int regnum)
 
   gdb_assert (value != NULL);
 
-  if (value_optimized_out (value))
+  if (value->optimized_out ())
     {
       throw_error (OPTIMIZED_OUT_ERROR,
 		   _("Register %d was not saved"), regnum);
     }
-  if (!value_entirely_available (value))
+  if (!value->entirely_available ())
     {
       throw_error (NOT_AVAILABLE_ERROR,
 		   _("Register %d is not available"), regnum);
     }
 
-  LONGEST r = extract_signed_integer (value_contents_all (value), byte_order);
+  LONGEST r = extract_signed_integer (value->contents_all (), byte_order);
 
   release_value (value);
   return r;
@@ -1371,18 +1371,18 @@ frame_unwind_register_unsigned (frame_info_ptr next_frame, int regnum)
 
   gdb_assert (value != NULL);
 
-  if (value_optimized_out (value))
+  if (value->optimized_out ())
     {
       throw_error (OPTIMIZED_OUT_ERROR,
 		   _("Register %d was not saved"), regnum);
     }
-  if (!value_entirely_available (value))
+  if (!value->entirely_available ())
     {
       throw_error (NOT_AVAILABLE_ERROR,
 		   _("Register %d is not available"), regnum);
     }
 
-  ULONGEST r = extract_unsigned_integer (value_contents_all (value).data (),
+  ULONGEST r = extract_unsigned_integer (value->contents_all ().data (),
 					 size, byte_order);
 
   release_value (value);
@@ -1401,14 +1401,14 @@ read_frame_register_unsigned (frame_info_ptr frame, int regnum,
 {
   struct value *regval = get_frame_register_value (frame, regnum);
 
-  if (!value_optimized_out (regval)
-      && value_entirely_available (regval))
+  if (!regval->optimized_out ()
+      && regval->entirely_available ())
     {
       struct gdbarch *gdbarch = get_frame_arch (frame);
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       int size = register_size (gdbarch, VALUE_REGNUM (regval));
 
-      *val = extract_unsigned_integer (value_contents (regval).data (), size,
+      *val = extract_unsigned_integer (regval->contents ().data (), size,
 				       byte_order);
       return true;
     }
@@ -1540,8 +1540,8 @@ get_frame_register_bytes (frame_info_ptr frame, int regnum,
 	    = frame_unwind_register_value (frame_info_ptr (frame->next),
 					   regnum);
 	  gdb_assert (value != NULL);
-	  *optimizedp = value_optimized_out (value);
-	  *unavailablep = !value_entirely_available (value);
+	  *optimizedp = value->optimized_out ();
+	  *unavailablep = !value->entirely_available ();
 
 	  if (*optimizedp || *unavailablep)
 	    {
@@ -1549,7 +1549,7 @@ get_frame_register_bytes (frame_info_ptr frame, int regnum,
 	      return false;
 	    }
 
-	  memcpy (myaddr, value_contents_all (value).data () + offset,
+	  memcpy (myaddr, value->contents_all ().data () + offset,
 		  curr_len);
 	  release_value (value);
 	}
@@ -1587,7 +1587,7 @@ put_frame_register_bytes (frame_info_ptr frame, int regnum,
       int curr_len = register_size (gdbarch, regnum) - offset;
       struct value *value
 	= frame_unwind_register_value (frame_info_ptr (frame->next), regnum);
-      LONGEST added_offset = value == NULL ? 0 : value_offset (value);
+      LONGEST added_offset = value == NULL ? 0 : value->offset ();
 
       if (curr_len > len)
 	curr_len = len;
@@ -1596,19 +1596,19 @@ put_frame_register_bytes (frame_info_ptr frame, int regnum,
       /*  Compute value is a special new case.  The problem is that
 	  the computed callback mechanism only supports a struct
 	  value arguments, so we need to make one.  */
-      if (value != NULL && VALUE_LVAL (value) == lval_computed)
+      if (value != NULL && value->lval () == lval_computed)
 	{
-	  const lval_funcs *funcs = value_computed_funcs (value);
+	  const lval_funcs *funcs = value->computed_funcs ();
 	  type * reg_type = register_type (gdbarch, regnum);
 
 	  if (funcs->write == NULL)
 	    error (_("Attempt to assign to an unmodifiable value."));
 
-	  struct value *from_value = allocate_value (reg_type);
-	  memcpy (value_contents_raw (from_value).data (), myaddr,
+	  struct value *from_value = value::allocate (reg_type);
+	  memcpy (from_value->contents_raw ().data (), myaddr,
 		  reg_type->length ());
 
-	  set_value_offset (value, added_offset + offset);
+	  value->set_offset (added_offset + offset);
 
 	  funcs->write (value, from_value);
 	  release_value (from_value);
@@ -1621,9 +1621,9 @@ put_frame_register_bytes (frame_info_ptr frame, int regnum,
 	{
 	  gdb_assert (value != NULL);
 
-	  memcpy ((char *) value_contents_writeable (value).data () + offset,
+	  memcpy ((char *) value->contents_writeable ().data () + offset,
 		  myaddr, curr_len);
-	  put_frame_register (frame, regnum, value_contents_raw (value).data (),
+	  put_frame_register (frame, regnum, value->contents_raw ().data (),
 			      added_offset);
 	}
 

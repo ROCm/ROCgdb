@@ -4554,7 +4554,7 @@ mips_eabi_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
      than necessary for EABI, because the first few arguments are
      passed in registers, but that's OK.  */
   for (argnum = 0; argnum < nargs; argnum++)
-    arg_space += align_up (value_type (args[argnum])->length (),
+    arg_space += align_up (args[argnum]->type ()->length (),
 			   abi_regsize);
   sp -= align_up (arg_space, 16);
 
@@ -4589,7 +4589,7 @@ mips_eabi_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	 reference.  */
       gdb_byte ref_valbuf[MAX_MIPS_ABI_REGSIZE];
       struct value *arg = args[argnum];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       int len = arg_type->length ();
       enum type_code typecode = arg_type->code ();
 
@@ -4605,7 +4605,7 @@ mips_eabi_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	{
 	  gdb_assert (abi_regsize <= ARRAY_SIZE (ref_valbuf));
 	  store_unsigned_integer (ref_valbuf, abi_regsize, byte_order,
-				  value_address (arg));
+				  arg->address ());
 	  typecode = TYPE_CODE_PTR;
 	  len = abi_regsize;
 	  val = ref_valbuf;
@@ -4613,7 +4613,7 @@ mips_eabi_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	    gdb_printf (gdb_stdlog, " push");
 	}
       else
-	val = value_contents (arg).data ();
+	val = arg->contents ().data ();
 
       /* 32-bit ABIs always start floating point arguments in an
 	 even-numbered floating point register.  Round the FP register
@@ -4948,7 +4948,7 @@ mips_n32n64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* Now make space on the stack for the args.  */
   for (argnum = 0; argnum < nargs; argnum++)
-    arg_space += align_up (value_type (args[argnum])->length (),
+    arg_space += align_up (args[argnum]->type ()->length (),
 			   MIPS64_REGSIZE);
   sp -= align_up (arg_space, 16);
 
@@ -4980,7 +4980,7 @@ mips_n32n64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     {
       const gdb_byte *val;
       struct value *arg = args[argnum];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       int len = arg_type->length ();
       enum type_code typecode = arg_type->code ();
 
@@ -4989,7 +4989,7 @@ mips_n32n64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		    "mips_n32n64_push_dummy_call: %d len=%d type=%d",
 		    argnum + 1, len, (int) typecode);
 
-      val = value_contents (arg).data ();
+      val = arg->contents ().data ();
 
       /* A 128-bit long double value requires an even-odd pair of
 	 floating-point registers.  */
@@ -5421,7 +5421,7 @@ mips_o32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* Now make space on the stack for the args.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
-      struct type *arg_type = check_typedef (value_type (args[argnum]));
+      struct type *arg_type = check_typedef (args[argnum]->type ());
 
       /* Align to double-word if necessary.  */
       if (mips_type_needs_double_align (arg_type))
@@ -5460,7 +5460,7 @@ mips_o32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     {
       const gdb_byte *val;
       struct value *arg = args[argnum];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       int len = arg_type->length ();
       enum type_code typecode = arg_type->code ();
 
@@ -5469,7 +5469,7 @@ mips_o32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		    "mips_o32_push_dummy_call: %d len=%d type=%d",
 		    argnum + 1, len, (int) typecode);
 
-      val = value_contents (arg).data ();
+      val = arg->contents ().data ();
 
       /* 32-bit ABIs always start floating point arguments in an
 	 even-numbered floating point register.  Round the FP register
@@ -5945,7 +5945,7 @@ mips_o64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* Now make space on the stack for the args.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
-      struct type *arg_type = check_typedef (value_type (args[argnum]));
+      struct type *arg_type = check_typedef (args[argnum]->type ());
 
       /* Allocate space on the stack.  */
       arg_space += align_up (arg_type->length (), MIPS64_REGSIZE);
@@ -5981,7 +5981,7 @@ mips_o64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     {
       const gdb_byte *val;
       struct value *arg = args[argnum];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
       int len = arg_type->length ();
       enum type_code typecode = arg_type->code ();
 
@@ -5990,7 +5990,7 @@ mips_o64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		    "mips_o64_push_dummy_call: %d len=%d type=%d",
 		    argnum + 1, len, (int) typecode);
 
-      val = value_contents (arg).data ();
+      val = arg->contents ().data ();
 
       /* Floating point arguments passed in registers have to be
 	 treated specially.  On 32-bit architectures, doubles are
@@ -6586,8 +6586,8 @@ print_gp_register_row (struct ui_file *file, frame_info_ptr frame,
 
       /* OK: get the data in raw format.  */
       value = get_frame_register_value (frame, regnum);
-      if (value_optimized_out (value)
-	|| !value_entirely_available (value))
+      if (value->optimized_out ()
+	  || !value->entirely_available ())
 	{
 	  gdb_printf (file, "%*s ",
 		      (int) mips_abi_regsize (gdbarch) * 2,
@@ -6596,7 +6596,7 @@ print_gp_register_row (struct ui_file *file, frame_info_ptr frame,
 	  col++;
 	  continue;
 	}
-      raw_buffer = value_contents_all (value).data ();
+      raw_buffer = value->contents_all ().data ();
       /* pad small registers */
       for (byte = 0;
 	   byte < (mips_abi_regsize (gdbarch)

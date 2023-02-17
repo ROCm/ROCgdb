@@ -1622,7 +1622,7 @@ pass_in_x (struct gdbarch *gdbarch, struct regcache *regcache,
   int len = type->length ();
   enum type_code typecode = type->code ();
   int regnum = AARCH64_X0_REGNUM + info->ngrn;
-  const bfd_byte *buf = value_contents (arg).data ();
+  const bfd_byte *buf = arg->contents ().data ();
 
   info->argnum++;
 
@@ -1692,7 +1692,7 @@ static void
 pass_on_stack (struct aarch64_call_info *info, struct type *type,
 	       struct value *arg)
 {
-  const bfd_byte *buf = value_contents (arg).data ();
+  const bfd_byte *buf = arg->contents ().data ();
   int len = type->length ();
   int align;
   stack_item_t item;
@@ -1769,12 +1769,12 @@ pass_in_v_vfp_candidate (struct gdbarch *gdbarch, struct regcache *regcache,
     case TYPE_CODE_FLT:
     case TYPE_CODE_DECFLOAT:
       return pass_in_v (gdbarch, regcache, info, arg_type->length (),
-			value_contents (arg).data ());
+			arg->contents ().data ());
       break;
 
     case TYPE_CODE_COMPLEX:
       {
-	const bfd_byte *buf = value_contents (arg).data ();
+	const bfd_byte *buf = arg->contents ().data ();
 	struct type *target_type = check_typedef (arg_type->target_type ());
 
 	if (!pass_in_v (gdbarch, regcache, info, target_type->length (),
@@ -1788,7 +1788,7 @@ pass_in_v_vfp_candidate (struct gdbarch *gdbarch, struct regcache *regcache,
     case TYPE_CODE_ARRAY:
       if (arg_type->is_vector ())
 	return pass_in_v (gdbarch, regcache, info, arg_type->length (),
-			  value_contents (arg).data ());
+			  arg->contents ().data ());
       /* fall through.  */
 
     case TYPE_CODE_STRUCT:
@@ -1799,8 +1799,8 @@ pass_in_v_vfp_candidate (struct gdbarch *gdbarch, struct regcache *regcache,
 	  if (field_is_static (&arg_type->field (i)))
 	    continue;
 
-	  struct value *field = value_primitive_field (arg, 0, i, arg_type);
-	  struct type *field_type = check_typedef (value_type (field));
+	  struct value *field = arg->primitive_field (0, i, arg_type);
+	  struct type *field_type = check_typedef (field->type ());
 
 	  if (!pass_in_v_vfp_candidate (gdbarch, regcache, info, field_type,
 					field))
@@ -1875,7 +1875,7 @@ aarch64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       struct type *arg_type, *fundamental_type;
       int len, elements;
 
-      arg_type = check_typedef (value_type (arg));
+      arg_type = check_typedef (arg->type ());
       len = arg_type->length ();
 
       /* If arg can be passed in v registers as per the AAPCS64, then do so if
@@ -1930,7 +1930,7 @@ aarch64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      sp = align_down (sp - len, 16);
 
 	      /* Write the real data into the stack.  */
-	      write_memory (sp, value_contents (arg).data (), len);
+	      write_memory (sp, arg->contents ().data (), len);
 
 	      /* Construct the indirection.  */
 	      arg_type = lookup_pointer_type (arg_type);
@@ -2492,9 +2492,9 @@ aarch64_return_value (struct gdbarch *gdbarch, struct value *func_value,
 
   if (read_value)
     {
-      *read_value = allocate_value (valtype);
+      *read_value = value::allocate (valtype);
       aarch64_extract_return_value (valtype, regcache,
-				    value_contents_raw (*read_value).data ());
+				    (*read_value)->contents_raw ().data ());
     }
 
   aarch64_debug_printf ("return value in registers");
@@ -2766,10 +2766,10 @@ aarch64_pseudo_read_value_1 (struct gdbarch *gdbarch,
   gdb_static_assert (AARCH64_V0_REGNUM == AARCH64_SVE_Z0_REGNUM);
 
   if (regcache->raw_read (v_regnum, reg_buf) != REG_VALID)
-    mark_value_bytes_unavailable (result_value, 0,
-				  value_type (result_value)->length ());
+    result_value->mark_bytes_unavailable (0,
+					  result_value->type ()->length ());
   else
-    memcpy (value_contents_raw (result_value).data (), reg_buf, regsize);
+    memcpy (result_value->contents_raw ().data (), reg_buf, regsize);
 
   return result_value;
  }
@@ -2781,9 +2781,9 @@ aarch64_pseudo_read_value (struct gdbarch *gdbarch, readable_regcache *regcache,
 			   int regnum)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
-  struct value *result_value = allocate_value (register_type (gdbarch, regnum));
+  struct value *result_value = value::allocate (register_type (gdbarch, regnum));
 
-  VALUE_LVAL (result_value) = lval_register;
+  result_value->set_lval (lval_register);
   VALUE_REGNUM (result_value) = regnum;
 
   if (is_w_pseudo_register (gdbarch, regnum))
@@ -2801,9 +2801,9 @@ aarch64_pseudo_read_value (struct gdbarch *gdbarch, readable_regcache *regcache,
 
       /* Read the bottom 4 bytes of X.  */
       if (regcache->raw_read_part (x_regnum, offset, 4, data) != REG_VALID)
-	mark_value_bytes_unavailable (result_value, 0, 4);
+	result_value->mark_bytes_unavailable (0, 4);
       else
-	memcpy (value_contents_raw (result_value).data (), data, 4);
+	memcpy (result_value->contents_raw ().data (), data, 4);
 
       return result_value;
     }

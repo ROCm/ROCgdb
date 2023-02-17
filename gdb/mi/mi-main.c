@@ -1030,8 +1030,8 @@ register_changed_p (int regnum, readonly_detached_regcache *prev_regs,
   gdb_assert (prev_value != NULL);
   gdb_assert (this_value != NULL);
 
-  auto ret = !value_contents_eq (prev_value, 0, this_value, 0,
-				 register_size (gdbarch, regnum));
+  auto ret = !prev_value->contents_eq (0, this_value, 0,
+				       register_size (gdbarch, regnum));
 
   release_value (prev_value);
   release_value (this_value);
@@ -1143,7 +1143,7 @@ output_register (frame_info_ptr frame, int regnum, int format,
   struct value *val = value_of_register (regnum, frame);
   struct value_print_options opts;
 
-  if (skip_unavailable && !value_entirely_available (val))
+  if (skip_unavailable && !val->entirely_available ())
     return;
 
   ui_out_emit_tuple tuple_emitter (uiout, NULL);
@@ -2538,8 +2538,8 @@ print_variable_or_computed (const char *expression, enum print_values values)
   switch (values)
     {
     case PRINT_SIMPLE_VALUES:
-      type = check_typedef (value_type (val));
-      type_print (value_type (val), "", &stb, -1);
+      type = check_typedef (val->type ());
+      type_print (val->type (), "", &stb, -1);
       uiout->field_stream ("type", stb);
       if (type->code () != TYPE_CODE_ARRAY
 	  && type->code () != TYPE_CODE_STRUCT

@@ -680,9 +680,9 @@ dwarf_location::read_from_gdb_value (frame_info_ptr frame, struct value *value,
 				     size_t location_bit_limit)
 {
   int optimized, unavailable;
-  bool big_endian = type_byte_order (value_type (value)) == BFD_ENDIAN_BIG;
+  bool big_endian = type_byte_order (value->type ()) == BFD_ENDIAN_BIG;
 
-  this->write (frame, value_contents (value).data (), value_bit_offset,
+  this->write (frame, value->contents ().data (), value_bit_offset,
 	       bit_size, bits_to_skip, location_bit_limit,
 	       big_endian, &optimized, &unavailable);
 
@@ -705,16 +705,16 @@ dwarf_location::write_to_gdb_value (frame_info_ptr frame, struct value *value,
 				    size_t location_bit_limit)
 {
   int optimized, unavailable;
-  bool big_endian = type_byte_order (value_type (value)) == BFD_ENDIAN_BIG;
+  bool big_endian = type_byte_order (value->type ()) == BFD_ENDIAN_BIG;
 
-  this->read (frame, value_contents_raw (value).data (), value_bit_offset,
+  this->read (frame, value->contents_raw ().data (), value_bit_offset,
 	      bit_size, bits_to_skip, location_bit_limit,
 	      big_endian, &optimized, &unavailable);
 
   if (optimized)
-    mark_value_bits_optimized_out (value, value_bit_offset, bit_size);
+    value->mark_bits_optimized_out (value_bit_offset, bit_size);
   if (unavailable)
-    mark_value_bits_unavailable (value, value_bit_offset, bit_size);
+    value->mark_bits_unavailable (value_bit_offset, bit_size);
 }
 
 /* Value entry found on a DWARF expression evaluation stack.  */
@@ -815,8 +815,8 @@ dwarf_value::convert_to_gdb_value (struct type *type, LONGEST offset) const
   if (offset + type_len > m_type->length ())
     invalid_synthetic_pointer ();
 
-  value *retval = allocate_value (type);
-  memcpy (value_contents_raw (retval).data (),
+  value *retval = value::allocate (type);
+  memcpy (retval->contents_raw ().data (),
 	  m_contents.get () + offset, type_len);
   return retval;
 }
@@ -889,13 +889,12 @@ public:
 		       struct type *subobj_type,
 		       LONGEST subobj_offset) override
   {
-    value *retval = allocate_value (subobj_type);
+    value *retval = value::allocate (subobj_type);
 
     if (subobj_type == nullptr)
       subobj_type = type;
 
-    mark_value_bytes_optimized_out (retval, subobj_offset,
-				    subobj_type->length ());
+    retval->mark_bytes_optimized_out (subobj_offset, subobj_type->length ());
     return retval;
   }
 
@@ -1167,8 +1166,8 @@ dwarf_memory::to_gdb_value (frame_info_ptr frame, struct type *type,
 
   address = value_as_address (value_from_pointer (ptr_type, address));
   value *retval = value_at_lazy (subobj_type, address + subobj_offset);
-  set_value_stack (retval, m_stack);
-  set_value_bitpos (retval, m_bit_suboffset);
+  retval->set_stack (m_stack);
+  retval->set_bitpos (m_bit_suboffset);
   return retval;
 }
 
@@ -1336,29 +1335,29 @@ dwarf_register::to_gdb_value (frame_info_ptr frame, struct type *type,
   value *retval
     = gdbarch_value_from_register (arch, type,
 				   gdb_regnum, get_frame_id (frame));
-  LONGEST retval_offset = value_offset (retval);
+  LONGEST retval_offset = retval->offset ();
 
   if (type_byte_order (type) == BFD_ENDIAN_BIG
       && type->length () + m_offset < retval_offset)
     /* Big-endian, and we want less than full size.  */
-    set_value_offset (retval, retval_offset - m_offset);
+    retval->set_offset (retval_offset - m_offset);
   else
-    set_value_offset (retval, retval_offset + m_offset);
+    retval->set_offset (retval_offset + m_offset);
 
-  set_value_bitpos (retval, m_bit_suboffset);
+  retval->set_bitpos (m_bit_suboffset);
 
   /* Get the data.  */
   read_frame_register_value (retval, frame);
 
-  if (value_optimized_out (retval))
+  if (retval->optimized_out ())
     {
       /* This means the register has undefined value / was not saved.
 	 As we're computing the location of some variable etc. in the
 	 program, not a value for inspecting a register ($pc, $sp, etc.),
 	 return a generic optimized out value instead, so that we show
 	 <optimized out> instead of <not saved>.  */
-      value *temp = allocate_value (subobj_type);
-      value_contents_copy (temp, 0, retval, 0, 0, subobj_type->length ());
+      value *temp = value::allocate (subobj_type);
+      retval->contents_copy (temp, 0, 0, 0, subobj_type->length ());
       retval = temp;
     }
 
@@ -1503,14 +1502,14 @@ dwarf_implicit::to_gdb_value (frame_info_ptr frame, struct type *type,
       && m_byte_order != BFD_ENDIAN_UNKNOWN)
     invalid_synthetic_pointer ();
 
-  value *retval = allocate_value (subobj_type);
+  value *retval = value::allocate (subobj_type);
 
   /* The given offset is relative to the actual object.  */
   if (m_byte_order == BFD_ENDIAN_BIG)
     subobj_offset += m_size - type_len;
 
-  memcpy ((void *)value_contents_raw (retval).data (),
-	  (void *)(m_contents.get () + subobj_offset), subtype_len);
+  memcpy (retval->contents_raw ().data (),
+	  (void *) (m_contents.get () + subobj_offset), subtype_len);
 
   return retval;
 }
@@ -1563,7 +1562,7 @@ public:
 			    LONGEST bits_to_skip, size_t bit_size,
 			    size_t location_bit_limit) override
   {
-    mark_value_bits_optimized_out (value, bits_to_skip, bit_size);
+    value->mark_bits_optimized_out (bits_to_skip, bit_size);
   }
 
   void write_to_gdb_value (frame_info_ptr frame, struct value *value,
@@ -1621,7 +1620,7 @@ dwarf_implicit_pointer::read (frame_info_ptr frame, gdb_byte *buf,
 				  m_per_objfile, actual_frame, type);
 
   gdb_byte *value_contents
-    = value_contents_raw (value).data () + total_bits_to_skip / HOST_CHAR_BIT;
+    = value->contents_raw ().data () + total_bits_to_skip / HOST_CHAR_BIT;
 
   if (total_bits_to_skip % HOST_CHAR_BIT == 0
       && bit_size % HOST_CHAR_BIT == 0
@@ -1663,8 +1662,8 @@ dwarf_implicit_pointer::to_gdb_value (frame_info_ptr frame, struct type *type,
   closure->incref ();
 
   value *retval
-    = allocate_computed_value (subobj_type, &closure_value_funcs, closure);
-  set_value_offset (retval, subobj_offset);
+    = value::allocate_computed (subobj_type, &closure_value_funcs, closure);
+  retval->set_offset (subobj_offset);
 
   return retval;
 }
@@ -2119,8 +2118,8 @@ dwarf_composite::to_gdb_value (frame_info_ptr frame, struct type *type,
   closure->incref ();
 
   value *retval
-    = allocate_computed_value (subobj_type, &closure_value_funcs, closure);
-  set_value_offset (retval, subobj_offset);
+    = value::allocate_computed (subobj_type, &closure_value_funcs, closure);
+  retval->set_offset (subobj_offset);
 
   return retval;
 }
@@ -2214,8 +2213,8 @@ dwarf_value_binary_op (std::shared_ptr<const dwarf_value> arg1,
   value *arg2_value = arg2->convert_to_gdb_value (arg2->get_type ());
   value *result = value_binop (arg1_value, arg2_value, op);
 
-  return std::make_shared<dwarf_value> (value_contents_raw (result).data (),
-				        value_type (result));
+  return std::make_shared<dwarf_value> (result->contents_raw ().data (),
+				        result->type ());
 }
 
 /* Apply a negation operation on ARG and return a new value entry
@@ -2226,8 +2225,8 @@ dwarf_value_negation_op (std::shared_ptr<const dwarf_value> arg)
 {
   value *result
     = value_neg (arg->convert_to_gdb_value (arg->get_type ()));
-  return std::make_shared<dwarf_value> (value_contents_raw (result).data (),
-					value_type (result));
+  return std::make_shared<dwarf_value> (result->contents_raw ().data (),
+					result->type ());
 }
 
 /* Apply a complement operation on ARG and return a new value entry
@@ -2238,8 +2237,8 @@ dwarf_value_complement_op (std::shared_ptr<const dwarf_value> arg)
 {
   value *result
     = value_complement (arg->convert_to_gdb_value (arg->get_type ()));
-  return std::make_shared<dwarf_value> (value_contents_raw (result).data (),
-					value_type (result));
+  return std::make_shared<dwarf_value> (result->contents_raw ().data (),
+					result->type ());
 }
 
 /* Apply a cast operation on ARG and return a new value entry
@@ -2250,13 +2249,13 @@ dwarf_value_cast_op (std::shared_ptr<const dwarf_value> arg, struct type *type)
 {
   value *result
     = value_cast (type, arg->convert_to_gdb_value (arg->get_type ()));
-  return std::make_shared<dwarf_value> (value_contents_raw (result).data (), type);
+  return std::make_shared<dwarf_value> (result->contents_raw ().data (), type);
 }
 
 static void *
 copy_value_closure (const value *v)
 {
-  computed_closure *closure = ((computed_closure*) value_computed_closure (v));
+  computed_closure *closure = ((computed_closure*) v->computed_closure ());
 
   if (closure == nullptr)
     internal_error (_("invalid closure type"));
@@ -2268,7 +2267,7 @@ copy_value_closure (const value *v)
 static void
 free_value_closure (value *v)
 {
-  computed_closure *closure = ((computed_closure*) value_computed_closure (v));
+  computed_closure *closure = ((computed_closure*) v->computed_closure ());
 
   if (closure == nullptr)
     internal_error (_("invalid closure type"));
@@ -2288,35 +2287,34 @@ static void
 rw_closure_value (value *v, value *from)
 {
   LONGEST bit_offset = 0, max_bit_size;
-  computed_closure *closure = (computed_closure*) value_computed_closure (v);
-  bool big_endian = type_byte_order (value_type (v)) == BFD_ENDIAN_BIG;
+  computed_closure *closure = (computed_closure*) v->computed_closure ();
+  bool big_endian = type_byte_order (v->type ()) == BFD_ENDIAN_BIG;
   auto location = closure->get_location ();
 
   if (from == NULL)
     {
-      if (value_type (v) != value_enclosing_type (v))
+      if (v->type () != v->enclosing_type ())
         internal_error (_("Should not be able to create a lazy value with "
 			  "an enclosing type"));
     }
 
-  ULONGEST bits_to_skip = HOST_CHAR_BIT * value_offset (v);
+  ULONGEST bits_to_skip = HOST_CHAR_BIT * v->offset ();
 
   /* If there are bits that don't complete a byte, count them in.  */
-  if (value_bitsize (v))
+  if (v->bitsize ())
     {
-      bits_to_skip += HOST_CHAR_BIT * value_offset (value_parent (v))
-		       + value_bitpos (v);
+      bits_to_skip += HOST_CHAR_BIT * v->parent ()->offset () + v->bitpos ();
       if (from != NULL && big_endian)
 	{
 	  /* Use the least significant bits of FROM.  */
-	  max_bit_size = HOST_CHAR_BIT * value_type (from)->length ();
-	  bit_offset = max_bit_size - value_bitsize (v);
+	  max_bit_size = HOST_CHAR_BIT * from->type ()->length ();
+	  bit_offset = max_bit_size - v->bitsize ();
 	}
       else
-	max_bit_size = value_bitsize (v);
+	max_bit_size = v->bitsize ();
     }
   else
-    max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
+    max_bit_size = HOST_CHAR_BIT * v->type ()->length ();
 
   frame_info_ptr frame = closure->get_frame ();
 
@@ -2344,25 +2342,24 @@ static bool
 is_optimized_out_closure_value (value *v)
 {
   LONGEST max_bit_size;
-  computed_closure *closure = (computed_closure*) value_computed_closure (v);
-  bool big_endian = type_byte_order (value_type (v)) == BFD_ENDIAN_BIG;
+  computed_closure *closure = (computed_closure*) v->computed_closure ();
+  bool big_endian = type_byte_order (v->type ()) == BFD_ENDIAN_BIG;
   auto location = closure->get_location ();
 
-  if (value_type (v) != value_enclosing_type (v))
+  if (v->type () != v->enclosing_type ())
     internal_error (_("Should not be able to create a lazy value with "
 		      "an enclosing type"));
 
-  ULONGEST bits_to_skip = HOST_CHAR_BIT * value_offset (v);
+  ULONGEST bits_to_skip = HOST_CHAR_BIT * v->offset ();
 
   /* If there are bits that don't complete a byte, count them in.  */
-  if (value_bitsize (v))
+  if (v->bitsize ())
     {
-      bits_to_skip += HOST_CHAR_BIT * value_offset (value_parent (v))
-		      + value_bitpos (v);
-      max_bit_size = value_bitsize (v);
+      bits_to_skip += HOST_CHAR_BIT * v->parent ()->offset () + v->bitpos ();
+      max_bit_size = v->bitsize ();
     }
   else
-    max_bit_size = HOST_CHAR_BIT * value_type (v)->length ();
+    max_bit_size = HOST_CHAR_BIT * v->type ()->length ();
 
   frame_info_ptr frame = closure->get_frame ();
 
@@ -2392,13 +2389,13 @@ static int
 check_synthetic_pointer (const value *value, LONGEST bit_offset,
 			 int bit_length)
 {
-  LONGEST total_bit_offset = bit_offset + HOST_CHAR_BIT * value_offset (value);
+  LONGEST total_bit_offset = bit_offset + HOST_CHAR_BIT * value->offset ();
 
-  if (value_bitsize (value))
-    total_bit_offset += value_bitpos (value);
+  if (value->bitsize ())
+    total_bit_offset += value->bitpos ();
 
   computed_closure *closure
-    = (computed_closure *) value_computed_closure (value);
+    = (computed_closure *) value->computed_closure ();
 
   return closure->get_location ()->is_implicit_ptr_at (total_bit_offset,
 						       bit_length);
@@ -2411,17 +2408,17 @@ static value *
 indirect_closure_value (value *value)
 {
   computed_closure *closure
-    = (computed_closure *) value_computed_closure (value);
+    = (computed_closure *) value->computed_closure ();
 
-  struct type *type = check_typedef (value_type (value));
+  struct type *type = check_typedef (value->type ());
   if (type->code () != TYPE_CODE_PTR)
     return NULL;
 
   LONGEST bit_length = HOST_CHAR_BIT * type->length ();
-  LONGEST bit_offset = HOST_CHAR_BIT * value_offset (value);
+  LONGEST bit_offset = HOST_CHAR_BIT * value->offset ();
 
-  if (value_bitsize (value))
-    bit_offset += value_bitpos (value);
+  if (value->bitsize ())
+    bit_offset += value->bitpos ();
 
   frame_info_ptr frame = get_selected_frame (_("No frame selected."));
 
@@ -2437,7 +2434,7 @@ indirect_closure_value (value *value)
      encode address spaces and other things in CORE_ADDR.  */
   bfd_endian byte_order = gdbarch_byte_order (get_frame_arch (frame));
   LONGEST pointer_offset
-    = extract_signed_integer (value_contents (value), byte_order);
+    = extract_signed_integer (value->contents (), byte_order);
 
   return closure->get_location ()->indirect_implicit_ptr (frame, type,
 							  pointer_offset,
@@ -2450,13 +2447,13 @@ indirect_closure_value (value *value)
 static value *
 coerce_closure_ref (const value *value)
 {
-  struct type *type = check_typedef (value_type (value));
+  struct type *type = check_typedef (value->type ());
 
-  if (value_bits_synthetic_pointer (value, value_embedded_offset (value),
-				    TARGET_CHAR_BIT * type->length ()))
+  if (value->bits_synthetic_pointer (value->embedded_offset (),
+				     TARGET_CHAR_BIT * type->length ()))
     {
       computed_closure *closure
-	= (computed_closure *) value_computed_closure (value);
+	= (computed_closure *) value->computed_closure ();
       frame_info_ptr frame = get_selected_frame (_("No frame selected."));
 
       return closure->get_location ()->indirect_implicit_ptr (frame, type);
@@ -2475,18 +2472,18 @@ coerce_closure_ref (const value *value)
 static std::shared_ptr<dwarf_entry>
 gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
 {
-  struct type *type = value_type (value);
+  struct type *type = value->type ();
 
-  LONGEST offset = value_offset (value);
+  LONGEST offset = value->offset ();
 
-  switch (value_lval_const (value))
+  switch (value->lval ())
     {
       /* We can only convert struct value to a location because
 	 we can't distinguish between the implicit value and
 	 not_lval.  */
     case not_lval:
       {
-	gdb_byte *contents_start = value_contents_raw (value).data () + offset;
+	gdb_byte *contents_start = value->contents_raw ().data () + offset;
 
 	return std::make_shared<dwarf_implicit> (arch, contents_start,
 						 type->length (),
@@ -2495,14 +2492,14 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
     case lval_memory:
       {
 	arch_addr_space_id address_space = ARCH_ADDR_SPACE_ID_DEFAULT;
-	CORE_ADDR address = value_address (value);
+	CORE_ADDR address = value->address ();
 
 	address_space
 	  = gdbarch_address_space_id_from_core_address (arch, address);
 	address = gdbarch_segment_address_from_core_address (arch, address);
 
 	return std::make_shared<dwarf_memory>
-	  (arch, address, 0, value_stack (value), address_space);
+	  (arch, address, 0, value->stack (), address_space);
       }
     case lval_register:
       return std::make_shared<dwarf_register> (arch, VALUE_REGNUM (value),
@@ -2512,7 +2509,7 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
 	/* Dwarf entry is enclosed by the closure anyway so we just
 	   need to unwrap it here.  */
 	computed_closure *closure
-	  = ((computed_closure *) value_computed_closure (value));
+	  = (computed_closure *) value->computed_closure ();
 	auto location = closure->get_location ()->clone ()->to_location (arch);
 
 	if (location == nullptr)
@@ -3815,7 +3812,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 		    = arg->convert_to_gdb_value (arg->get_type ());
 
 		  if (value_less (arg_value,
-				  value_zero (arg->get_type (), not_lval)))
+				  value::zero (arg->get_type (), not_lval)))
 		    arg = dwarf_value_negation_op (arg);
 		}
 		break;

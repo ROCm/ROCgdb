@@ -52,7 +52,7 @@ print_go_string (struct type *type,
      unpack_value_field_as_pointer.  Do this until we can get
      unpack_value_field_as_pointer.  */
   LONGEST addr;
-  const gdb_byte *valaddr = value_contents_for_printing (val).data ();
+  const gdb_byte *valaddr = val->contents_for_printing ().data ();
 
 
   if (! unpack_value_field_as_long (type, valaddr, embedded_offset, 0,
@@ -91,7 +91,7 @@ go_language::value_print_inner (struct value *val, struct ui_file *stream,
 				int recurse,
 				const struct value_print_options *options) const
 {
-  struct type *type = check_typedef (value_type (val));
+  struct type *type = check_typedef (val->type ());
 
   switch (type->code ())
     {
@@ -104,8 +104,8 @@ go_language::value_print_inner (struct value *val, struct ui_file *stream,
 	    case GO_TYPE_STRING:
 	      if (! options->raw)
 		{
-		  print_go_string (type, value_embedded_offset (val),
-				   value_address (val),
+		  print_go_string (type, val->embedded_offset (),
+				   val->address (),
 				   stream, recurse, val, options);
 		  return;
 		}

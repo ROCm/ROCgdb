@@ -269,11 +269,11 @@ public:
 	struct value *e_val = value_from_component (m_val, elt_type, elt_off);
 	struct value *e_prev = value_from_component (m_val, elt_type,
 						     elt_off_prev);
-	repeated = ((value_entirely_available (e_prev)
-		     && value_entirely_available (e_val)
-		     && value_contents_eq (e_prev, e_val))
-		    || (value_entirely_unavailable (e_prev)
-			&& value_entirely_unavailable (e_val)));
+	repeated = ((e_prev->entirely_available ()
+		     && e_val->entirely_available ()
+		     && e_prev->contents_eq (e_val))
+		    || (e_prev->entirely_unavailable ()
+			&& e_val->entirely_unavailable ()));
       }
 
     if (repeated)
@@ -376,11 +376,11 @@ private:
 	struct value *e_val1 = value_from_component (val, type, offset1);
 	struct value *e_val2 = value_from_component (val, type, offset2);
 
-	return ((value_entirely_available (e_val1)
-		 && value_entirely_available (e_val2)
-		 && value_contents_eq (e_val1, e_val2))
-		|| (value_entirely_unavailable (e_val1)
-		    && value_entirely_unavailable (e_val2)));
+	return ((e_val1->entirely_available ()
+		 && e_val2->entirely_available ()
+		 && e_val1->contents_eq (e_val2))
+		|| (e_val1->entirely_unavailable ()
+		    && e_val2->entirely_unavailable ()));
       }
   }
 
@@ -450,14 +450,14 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
 			       int recurse,
 			       const struct value_print_options *options) const
 {
-  struct type *type = check_typedef (value_type (val));
+  struct type *type = check_typedef (val->type ());
   struct gdbarch *gdbarch = type->arch ();
   int printed_field = 0; /* Number of fields printed.  */
   struct type *elttype;
   CORE_ADDR addr;
   int index;
-  const gdb_byte *valaddr = value_contents_for_printing (val).data ();
-  const CORE_ADDR address = value_address (val);
+  const gdb_byte *valaddr = val->contents_for_printing ().data ();
+  const CORE_ADDR address = val->address ();
 
   switch (type->code ())
     {

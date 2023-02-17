@@ -1330,7 +1330,7 @@ public:
     value *lhs
       = std::get<0> (this->m_storage)->evaluate (nullptr, exp, noside);
     value *rhs
-      = std::get<1> (this->m_storage)->evaluate (value_type (lhs), exp,
+      = std::get<1> (this->m_storage)->evaluate (lhs->type (), exp,
 						 noside);
     return FUNC (expect_type, exp, noside, OP, lhs, rhs);
   }
@@ -1613,12 +1613,12 @@ public:
 	    || sub_op == STRUCTOP_PTR
 	    || sub_op == OP_SCOPE)
 	  {
-	    struct type *type = value_type (result);
+	    struct type *type = result->type ();
 
 	    if (!TYPE_IS_REFERENCE (type))
 	      {
 		type = lookup_lvalue_reference_type (type);
-		result = allocate_value (type);
+		result = value::allocate (type);
 	      }
 	  }
 
@@ -1653,7 +1653,7 @@ public:
     value *result = std::get<0> (m_storage)->evaluate (nullptr, exp,
 						       sub_noside);
     if (noside != EVAL_NORMAL)
-      return allocate_value (cplus_typeid_type (exp->gdbarch));
+      return value::allocate (cplus_typeid_type (exp->gdbarch));
     return cplus_typeid (result);
   }
 
@@ -1804,7 +1804,7 @@ public:
     value *typeval
       = std::get<0> (m_storage)->evaluate (expect_type, exp,
 					   EVAL_AVOID_SIDE_EFFECTS);
-    struct type *type = value_type (typeval);
+    struct type *type = typeval->type ();
     value *val = std::get<1> (m_storage)->evaluate (expect_type, exp, noside);
     return eval_op_memval (expect_type, exp, noside, val, type);
   }
@@ -1889,9 +1889,9 @@ public:
        expected type.  This avoids a weird case where re-assigning a
        string or array to an internal variable could error with "Too
        many array elements".  */
-    struct type *xtype = (VALUE_LVAL (lhs) == lval_internalvar
+    struct type *xtype = (lhs->lval () == lval_internalvar
 			  ? nullptr
-			  : value_type (lhs));
+			  : lhs->type ());
     value *rhs = std::get<1> (m_storage)->evaluate (xtype, exp, noside);
 
     if (noside == EVAL_AVOID_SIDE_EFFECTS)
@@ -2030,7 +2030,7 @@ public:
   {
     value *val = std::get<0> (m_storage)->evaluate (nullptr, exp,
 						    EVAL_AVOID_SIDE_EFFECTS);
-    return std::get<1> (m_storage)->evaluate_for_cast (value_type (val),
+    return std::get<1> (m_storage)->evaluate_for_cast (val->type (),
 						       exp, noside);
   }
 
@@ -2064,7 +2064,7 @@ public:
   {
     value *val = std::get<0> (m_storage)->evaluate (nullptr, exp,
 						    EVAL_AVOID_SIDE_EFFECTS);
-    struct type *type = value_type (val);
+    struct type *type = val->type ();
     value *rhs = std::get<1> (m_storage)->evaluate (type, exp, noside);
     return FUNC (type, rhs);
   }

@@ -2971,7 +2971,7 @@ make_thread_string_value (struct gdbarch *gdbarch, internalvar *var,
 			      builtin_type (gdbarch)->builtin_char);
 
   /* Make sure GDB doesn't try to push the string to the inferior.  */
-  VALUE_LVAL (val) = lval_internalvar;
+  val->set_lval (lval_internalvar);
   return val;
 }
 

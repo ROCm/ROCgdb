@@ -8999,8 +8999,8 @@ dwarf2_compute_name (const char *name,
 						      baton->per_objfile);
 		      else if (bytes != NULL)
 			{
-			  v = allocate_value (type);
-			  memcpy (value_contents_writeable (v).data (), bytes,
+			  v = value::allocate (type);
+			  memcpy (v->contents_writeable ().data (), bytes,
 				  type->length ());
 			}
 		      else

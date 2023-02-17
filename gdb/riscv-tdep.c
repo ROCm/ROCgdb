@@ -1116,7 +1116,7 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
   try
     {
       val = value_of_register (regnum, frame);
-      regtype = value_type (val);
+      regtype = val->type ();
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1126,8 +1126,8 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
       return;
     }
 
-  print_raw_format = (value_entirely_available (val)
-		      && !value_optimized_out (val));
+  print_raw_format = (val->entirely_available ()
+		      && !val->optimized_out ());
 
   if (regtype->code () == TYPE_CODE_FLT
       || (regtype->code () == TYPE_CODE_UNION
@@ -1141,7 +1141,7 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
 	  && regtype->field (2).type ()->code () == TYPE_CODE_FLT))
     {
       struct value_print_options opts;
-      const gdb_byte *valaddr = value_contents_for_printing (val).data ();
+      const gdb_byte *valaddr = val->contents_for_printing ().data ();
       enum bfd_endian byte_order = type_byte_order (regtype);
 
       get_user_print_options (&opts);
@@ -3047,7 +3047,7 @@ riscv_push_dummy_call (struct gdbarch *gdbarch,
 
   CORE_ADDR osp = sp;
 
-  struct type *ftype = check_typedef (value_type (function));
+  struct type *ftype = check_typedef (function->type ());
 
   if (ftype->code () == TYPE_CODE_PTR)
     ftype = check_typedef (ftype->target_type ());
@@ -3063,14 +3063,14 @@ riscv_push_dummy_call (struct gdbarch *gdbarch,
       struct riscv_arg_info *info = &arg_info[i];
 
       arg_value = args[i];
-      arg_type = check_typedef (value_type (arg_value));
+      arg_type = check_typedef (arg_value->type ());
 
       riscv_arg_location (gdbarch, info, &call_info, arg_type,
 			  ftype->has_varargs () && i >= ftype->num_fields ());
 
       if (info->type != arg_type)
 	arg_value = value_cast (info->type, arg_value);
-      info->contents = value_contents (arg_value).data ();
+      info->contents = arg_value->contents ().data ();
     }
 
   /* Adjust the stack pointer and align it.  */
@@ -3277,8 +3277,8 @@ riscv_return_value (struct gdbarch  *gdbarch,
 						   arg_type->length ()),
 			     type_byte_order (arg_type),
 			     arg_type->is_unsigned ());
-	      abi_val = allocate_value (info.type);
-	      unscaled.write (value_contents_raw (abi_val),
+	      abi_val = value::allocate (info.type);
+	      unscaled.write (abi_val->contents_raw (),
 			      type_byte_order (info.type),
 			      info.type->is_unsigned ());
 	    }
@@ -3287,12 +3287,12 @@ riscv_return_value (struct gdbarch  *gdbarch,
 	      arg_val = value_from_contents (arg_type, writebuf);
 	      abi_val = value_cast (info.type, arg_val);
 	    }
-	  writebuf = value_contents_raw (abi_val).data ();
+	  writebuf = abi_val->contents_raw ().data ();
 	}
       else
 	{
-	  abi_val = allocate_value (info.type);
-	  readbuf = value_contents_raw (abi_val).data ();
+	  abi_val = value::allocate (info.type);
+	  readbuf = abi_val->contents_raw ().data ();
 	}
       arg_len = info.type->length ();
 
@@ -3380,7 +3380,7 @@ riscv_return_value (struct gdbarch  *gdbarch,
 		   type of ABI_VAL will differ from ARG_TYPE due to
 		   dynamic type resolution, and so will most likely
 		   fail.  */
-		arg_type = value_type (abi_val);
+		arg_type = abi_val->type ();
 	      }
 	    if (writebuf != nullptr)
 	      write_memory (addr, writebuf, info.length);
@@ -3405,11 +3405,11 @@ riscv_return_value (struct gdbarch  *gdbarch,
 		 is unscaled.  */
 	      gdb_mpz unscaled;
 
-	      unscaled.read (value_contents (abi_val),
+	      unscaled.read (abi_val->contents (),
 			     type_byte_order (info.type),
 			     info.type->is_unsigned ());
-	      *read_value = allocate_value (arg_type);
-	      unscaled.write (value_contents_raw (*read_value),
+	      *read_value = value::allocate (arg_type);
+	      unscaled.write ((*read_value)->contents_raw (),
 			      type_byte_order (arg_type),
 			      arg_type->is_unsigned ());
 	    }

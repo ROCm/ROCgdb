@@ -1712,7 +1712,7 @@ xtensa_push_dummy_call (struct gdbarch *gdbarch,
       for (int i = 0; i < nargs; i++)
 	{
 	  struct value *arg = args[i];
-	  struct type *arg_type = check_typedef (value_type (arg));
+	  struct type *arg_type = check_typedef (arg->type ());
 	  gdb_printf (gdb_stdlog, "%2d: %s %3s ", i,
 		      host_address_to_string (arg),
 		      pulongest (arg_type->length ()));
@@ -1729,7 +1729,7 @@ xtensa_push_dummy_call (struct gdbarch *gdbarch,
 	      break;
 	    }
 	  gdb_printf (gdb_stdlog, " %s\n",
-		      host_address_to_string (value_contents (arg).data ()));
+		      host_address_to_string (arg->contents ().data ()));
 	}
     }
 
@@ -1748,7 +1748,7 @@ xtensa_push_dummy_call (struct gdbarch *gdbarch,
     {
       struct argument_info *info = &arg_info[i];
       struct value *arg = args[i];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
 
       switch (arg_type->code ())
 	{
@@ -1785,7 +1785,7 @@ xtensa_push_dummy_call (struct gdbarch *gdbarch,
 	  break;
 	}
       info->length = arg_type->length ();
-      info->contents = value_contents (arg).data ();
+      info->contents = arg->contents ().data ();
 
       /* Align size and onstack_size.  */
       size = (size + info->align - 1) & ~(info->align - 1);

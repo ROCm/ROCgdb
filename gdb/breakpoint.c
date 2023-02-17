@@ -1866,14 +1866,13 @@ extract_bitfield_from_watchpoint_value (struct watchpoint *w, struct value *val)
   if (val == NULL)
     return NULL;
 
-  bit_val = allocate_value (value_type (val));
+  bit_val = value::allocate (val->type ());
 
-  unpack_value_bitfield (bit_val,
-			 w->val_bitpos,
-			 w->val_bitsize,
-			 value_contents_for_printing (val).data (),
-			 value_offset (val),
-			 val);
+  val->unpack_bitfield (bit_val,
+			w->val_bitpos,
+			w->val_bitsize,
+			val->contents_for_printing ().data (),
+			val->offset ());
 
   return bit_val;
 }
@@ -2077,10 +2076,10 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 	     must watch it.  If the first value returned is
 	     still lazy, that means an error occurred reading it;
 	     watch it anyway in case it becomes readable.  */
-	  if (VALUE_LVAL (v) == lval_memory
-	      && (v == val_chain[0] || ! value_lazy (v)))
+	  if (v->lval () == lval_memory
+	      && (v == val_chain[0] || ! v->lazy ()))
 	    {
-	      struct type *vtype = check_typedef (value_type (v));
+	      struct type *vtype = check_typedef (v->type ());
 
 	      /* We only watch structs and arrays if user asked
 		 for it explicitly, never if they just happen to
@@ -2094,12 +2093,12 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  struct bp_location *loc, **tmp;
 		  int bitpos = 0, bitsize = 0;
 
-		  if (value_bitsize (v) != 0)
+		  if (v->bitsize () != 0)
 		    {
 		      /* Extract the bit parameters out from the bitfield
 			 sub-expression.  */
-		      bitpos = value_bitpos (v);
-		      bitsize = value_bitsize (v);
+		      bitpos = v->bitpos ();
+		      bitsize = v->bitsize ();
 		    }
 		  else if (v == result && b->val_bitsize != 0)
 		    {
@@ -2110,12 +2109,12 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		      bitsize = b->val_bitsize;
 		    }
 
-		  addr = value_address (v);
+		  addr = v->address ();
 
 		  /* Watchpoints for addresses that are not in the default
 		     address space are currently not supported.  */
 		  if (gdbarch_address_space_id_from_core_address
-			(value_type (v)->arch (), addr)
+			(v->arch (), addr)
 		      != ARCH_ADDR_SPACE_ID_DEFAULT)
 		    error (_("Only global memory watchpoints are supported."));
 
@@ -2135,7 +2134,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  for (tmp = &(b->loc); *tmp != NULL; tmp = &((*tmp)->next))
 		    ;
 		  *tmp = loc;
-		  loc->gdbarch = value_type (v)->arch ();
+		  loc->gdbarch = v->type ()->arch ();
 
 		  loc->pspace = frame_pspace;
 		  loc->address
@@ -2147,7 +2146,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		      loc->length = ((bitpos % 8) + bitsize + 7) / 8;
 		    }
 		  else
-		    loc->length = value_type (v)->length ();
+		    loc->length = v->type ()->length ();
 
 		  loc->watchpoint_type = type;
 		}
@@ -4427,7 +4426,7 @@ bpstat::bpstat (const bpstat &other)
     simd_lane_mask (other.simd_lane_mask)
 {
   if (other.old_val != NULL)
-    old_val = release_value (value_copy (other.old_val.get ()));
+    old_val = release_value (other.old_val->copy ());
 }
 
 /* Return a copy of a bpstat.  Like "bs1 = bs2" but all storage that
@@ -10256,8 +10255,8 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 
   if (val_as_value != NULL && just_location)
     {
-      saved_bitpos = value_bitpos (val_as_value);
-      saved_bitsize = value_bitsize (val_as_value);
+      saved_bitpos = val_as_value->bitpos ();
+      saved_bitsize = val_as_value->bitsize ();
     }
 
   value_ref_ptr val;
@@ -10375,7 +10374,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   w->cond_exp_valid_block = cond_exp_valid_block;
   if (just_location)
     {
-      struct type *t = value_type (val.get ());
+      struct type *t = val->type ();
       CORE_ADDR addr = value_as_address (val.get ());
 
       w->exp_string_reparse
@@ -10471,9 +10470,9 @@ can_use_hardware_watchpoint (const std::vector<value_ref_ptr> &vals)
     {
       struct value *v = iter.get ();
 
-      if (VALUE_LVAL (v) == lval_memory)
+      if (v->lval () == lval_memory)
 	{
-	  if (v != head && value_lazy (v))
+	  if (v != head && v->lazy ())
 	    /* A lazy memory lvalue in the chain is one that GDB never
 	       needed to fetch; we either just used its address (e.g.,
 	       `a' in `a.b') or we never needed it at all (e.g., `a'
@@ -10484,7 +10483,7 @@ can_use_hardware_watchpoint (const std::vector<value_ref_ptr> &vals)
 	    {
 	      /* Ahh, memory we actually used!  Check if we can cover
 		 it with hardware watchpoints.  */
-	      struct type *vtype = check_typedef (value_type (v));
+	      struct type *vtype = check_typedef (v->type ());
 
 	      /* We only watch structs and arrays if user asked for it
 		 explicitly, never if they just happen to appear in a
@@ -10493,13 +10492,13 @@ can_use_hardware_watchpoint (const std::vector<value_ref_ptr> &vals)
 		  || (vtype->code () != TYPE_CODE_STRUCT
 		      && vtype->code () != TYPE_CODE_ARRAY))
 		{
-		  CORE_ADDR vaddr = value_address (v);
+		  CORE_ADDR vaddr = v->address ();
 		  int len;
 		  int num_regs;
 
 		  len = (target_exact_watchpoints
 			 && is_scalar_type_recursive (vtype))?
-		    1 : value_type (v)->length ();
+		    1 : v->type ()->length ();
 
 		  num_regs = target_region_ok_for_hw_watchpoint (vaddr, len);
 		  if (!num_regs)
@@ -10509,10 +10508,10 @@ can_use_hardware_watchpoint (const std::vector<value_ref_ptr> &vals)
 		}
 	    }
 	}
-      else if (VALUE_LVAL (v) != not_lval
-	       && deprecated_value_modifiable (v) == 0)
+      else if (v->lval () != not_lval
+	       && v->deprecated_modifiable () == 0)
 	return 0;	/* These are values from the history (e.g., $1).  */
-      else if (VALUE_LVAL (v) == lval_register)
+      else if (v->lval () == lval_register)
 	return 0;	/* Cannot watch a register with a HW watchpoint.  */
     }
 

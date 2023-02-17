@@ -241,8 +241,8 @@ alpha_register_to_value (frame_info_ptr frame, int regnum,
   struct value *value = get_frame_register_value (frame, regnum);
 
   gdb_assert (value != NULL);
-  *optimizedp = value_optimized_out (value);
-  *unavailablep = !value_entirely_available (value);
+  *optimizedp = value->optimized_out ();
+  *unavailablep = !value->entirely_available ();
 
   if (*optimizedp || *unavailablep)
     {
@@ -253,7 +253,7 @@ alpha_register_to_value (frame_info_ptr frame, int regnum,
   /* Convert to VALTYPE.  */
 
   gdb_assert (valtype->length () == 4);
-  alpha_sts (gdbarch, out, value_contents_all (value).data ());
+  alpha_sts (gdbarch, out, value->contents_all ().data ());
 
   release_value (value);
   return 1;
@@ -319,7 +319,7 @@ alpha_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   for (i = 0, m_arg = alpha_args; i < nargs; i++, m_arg++)
     {
       struct value *arg = args[i];
-      struct type *arg_type = check_typedef (value_type (arg));
+      struct type *arg_type = check_typedef (arg->type ());
 
       /* Cast argument to long if necessary as the compiler does it too.  */
       switch (arg_type->code ())
@@ -360,7 +360,7 @@ alpha_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      sp = (sp & -16) - 16;
 
 	      /* Write the real data into the stack.  */
-	      write_memory (sp, value_contents (arg).data (), 16);
+	      write_memory (sp, arg->contents ().data (), 16);
 
 	      /* Construct the indirection.  */
 	      arg_type = lookup_pointer_type (arg_type);
@@ -381,7 +381,7 @@ alpha_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      sp = (sp & -16) - 16;
 
 	      /* Write the real data into the stack.  */
-	      write_memory (sp, value_contents (arg).data (), 32);
+	      write_memory (sp, arg->contents ().data (), 32);
 
 	      /* Construct the indirection.  */
 	      arg_type = lookup_pointer_type (arg_type);
@@ -395,7 +395,7 @@ alpha_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       m_arg->len = arg_type->length ();
       m_arg->offset = accumulate_size;
       accumulate_size = (accumulate_size + m_arg->len + 7) & ~7;
-      m_arg->contents = value_contents (arg).data ();
+      m_arg->contents = arg->contents ().data ();
     }
 
   /* Determine required argument register loads, loading an argument register

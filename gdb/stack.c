@@ -468,7 +468,7 @@ print_frame_arg (const frame_print_options &fp_opts,
 		 because our standard indentation here is 4 spaces, and
 		 val_print indents 2 for each recurse.  */ 
 
-	      annotate_arg_value (value_type (arg->val));
+	      annotate_arg_value (arg->val->type ());
 
 	      /* Use the appropriate language to display our symbol, unless the
 		 user forced the language to a specific language.  */
@@ -551,7 +551,7 @@ read_frame_arg (const frame_print_options &fp_opts,
       && SYMBOL_COMPUTED_OPS (sym)->read_variable_at_entry != NULL
       && fp_opts.print_entry_values != print_entry_values_no
       && (fp_opts.print_entry_values != print_entry_values_if_needed
-	  || !val || value_optimized_out (val)))
+	  || !val || val->optimized_out ()))
     {
       try
 	{
@@ -569,7 +569,7 @@ read_frame_arg (const frame_print_options &fp_opts,
 	    }
 	}
 
-      if (entryval != NULL && value_optimized_out (entryval))
+      if (entryval != NULL && entryval->optimized_out ())
 	entryval = NULL;
 
       if (fp_opts.print_entry_values == print_entry_values_compact
@@ -579,14 +579,14 @@ read_frame_arg (const frame_print_options &fp_opts,
 
 	  if (val && entryval && !current_uiout->is_mi_like_p ())
 	    {
-	      struct type *type = value_type (val);
+	      struct type *type = val->type ();
 
-	      if (value_lazy (val))
-		value_fetch_lazy (val);
-	      if (value_lazy (entryval))
-		value_fetch_lazy (entryval);
+	      if (val->lazy ())
+		val->fetch_lazy ();
+	      if (entryval->lazy ())
+		entryval->fetch_lazy ();
 
-	      if (value_contents_eq (val, 0, entryval, 0, type->length ()))
+	      if (val->contents_eq (0, entryval, 0, type->length ()))
 		{
 		  /* Initialize it just to avoid a GCC false warning.  */
 		  struct value *val_deref = NULL, *entryval_deref;
@@ -600,20 +600,20 @@ read_frame_arg (const frame_print_options &fp_opts,
 		      struct type *type_deref;
 
 		      val_deref = coerce_ref (val);
-		      if (value_lazy (val_deref))
-			value_fetch_lazy (val_deref);
-		      type_deref = value_type (val_deref);
+		      if (val_deref->lazy ())
+			val_deref->fetch_lazy ();
+		      type_deref = val_deref->type ();
 
 		      entryval_deref = coerce_ref (entryval);
-		      if (value_lazy (entryval_deref))
-			value_fetch_lazy (entryval_deref);
+		      if (entryval_deref->lazy ())
+			entryval_deref->fetch_lazy ();
 
 		      /* If the reference addresses match but dereferenced
 			 content does not match print them.  */
 		      if (val != val_deref
-			  && value_contents_eq (val_deref, 0,
-						entryval_deref, 0,
-						type_deref->length ()))
+			  && val_deref->contents_eq (0,
+						     entryval_deref, 0,
+						     type_deref->length ()))
 			val_equal = 1;
 		    }
 		  catch (const gdb_exception_error &except)
@@ -673,16 +673,16 @@ read_frame_arg (const frame_print_options &fp_opts,
       if (fp_opts.print_entry_values == print_entry_values_only
 	  || fp_opts.print_entry_values == print_entry_values_both
 	  || (fp_opts.print_entry_values == print_entry_values_preferred
-	      && (!val || value_optimized_out (val))))
+	      && (!val || val->optimized_out ())))
 	{
-	  entryval = allocate_optimized_out_value (sym->type ());
+	  entryval = value::allocate_optimized_out (sym->type ());
 	  entryval_error = NULL;
 	}
     }
   if ((fp_opts.print_entry_values == print_entry_values_compact
        || fp_opts.print_entry_values == print_entry_values_if_needed
        || fp_opts.print_entry_values == print_entry_values_preferred)
-      && (!val || value_optimized_out (val)) && entryval != NULL)
+      && (!val || val->optimized_out ()) && entryval != NULL)
     {
       val = NULL;
       val_error = NULL;
@@ -1711,29 +1711,29 @@ info_frame_command_core (frame_info_ptr fi, bool selected_frame_p)
 	struct value *value = frame_unwind_register_value (fi, sp_regnum);
 	gdb_assert (value != NULL);
 
-	if (!value_optimized_out (value) && value_entirely_available (value))
+	if (!value->optimized_out () && value->entirely_available ())
 	  {
-	    if (VALUE_LVAL (value) == not_lval)
+	    if (value->lval () == not_lval)
 	      {
 		CORE_ADDR sp;
 		enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 		int sp_size = register_size (gdbarch, sp_regnum);
 
 		sp = extract_unsigned_integer
-		  (value_contents_all (value).data (), sp_size, byte_order);
+		  (value->contents_all ().data (), sp_size, byte_order);
 
 		gdb_printf (" Previous frame's sp is ");
 		gdb_puts (paddress (gdbarch, sp));
 		gdb_printf ("\n");
 	      }
-	    else if (VALUE_LVAL (value) == lval_memory)
+	    else if (value->lval () == lval_memory)
 	      {
 		gdb_printf (" Previous frame's sp at ");
 		gdb_puts (paspace_and_addr
-			    (gdbarch, value_address (value)).c_str ());
+			    (gdbarch, value->address ()).c_str ());
 		gdb_printf ("\n");
 	      }
-	    else if (VALUE_LVAL (value) == lval_register)
+	    else if (value->lval () == lval_register)
 	      gdb_printf (" Previous frame's sp in %s\n",
 			  gdbarch_register_name (gdbarch,
 						 VALUE_REGNUM (value)));
@@ -2744,15 +2744,15 @@ return_command (const char *retval_exp, int from_tty)
 	    error (_("Return value type not available for selected "
 		     "stack frame.\n"
 		     "Please use an explicit cast of the value to return."));
-	  return_type = value_type (return_value);
+	  return_type = return_value->type ();
 	}
       return_type = check_typedef (return_type);
       return_value = value_cast (return_type, return_value);
 
       /* Make sure the value is fully evaluated.  It may live in the
 	 stack frame we're about to pop.  */
-      if (value_lazy (return_value))
-	value_fetch_lazy (return_value);
+      if (return_value->lazy ())
+	return_value->fetch_lazy ();
 
       if (thisfun != NULL)
 	function = read_var_value (thisfun, NULL, thisframe);
@@ -2767,7 +2767,7 @@ return_command (const char *retval_exp, int from_tty)
 	return_value = NULL;
       else if (thisfun != NULL)
 	{
-	  if (is_nocall_function (check_typedef (value_type (function))))
+	  if (is_nocall_function (check_typedef (function->type ())))
 	    {
 	      query_prefix =
 		string_printf ("Function '%s' does not follow the target "
@@ -2819,7 +2819,7 @@ return_command (const char *retval_exp, int from_tty)
   /* Store RETURN_VALUE in the just-returned register set.  */
   if (return_value != NULL)
     {
-      struct type *return_type = value_type (return_value);
+      struct type *return_type = return_value->type ();
       struct gdbarch *cache_arch = get_current_regcache ()->arch ();
 
       gdb_assert (rv_conv != RETURN_VALUE_STRUCT_CONVENTION
@@ -2827,7 +2827,7 @@ return_command (const char *retval_exp, int from_tty)
       gdbarch_return_value_as_value
 	(cache_arch, function, return_type,
 	 get_current_regcache (), NULL /*read*/,
-	 value_contents (return_value).data () /*write*/);
+	 return_value->contents ().data () /*write*/);
     }
 
   /* If we are at the end of a call dummy now, pop the dummy frame
