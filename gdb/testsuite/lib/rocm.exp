@@ -509,7 +509,7 @@ proc rocm_generate_core_file { corefile_path } {
 
 proc get_section_offset {section file} {
     set objdump [gdb_find_objdump]
-    set cmd "$objdump --section=$section -h $file | grep $section | awk \"{print \\\$6}\""
+    set cmd "$objdump --section=$section -h $file 2>&1 | grep -v \"objdump: Warning\" | grep $section | awk \"{print \\\$6}\""
     verbose -log "executing: $cmd"
     set status [catch "exec $cmd" output]
 
