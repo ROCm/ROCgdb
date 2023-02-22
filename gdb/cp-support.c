@@ -1274,12 +1274,9 @@ add_symbol_overload_list_block (const char *name,
 				const struct block *block,
 				std::vector<symbol *> *overload_list)
 {
-  struct block_iterator iter;
-  struct symbol *sym;
-
   lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
 
-  ALL_BLOCK_SYMBOLS_WITH_NAME (block, lookup_name, iter, sym)
+  for (struct symbol *sym : block_iterator_range (block, &lookup_name))
     overload_list_add_symbol (sym, name, overload_list);
 }
 
@@ -1307,15 +1304,17 @@ add_symbol_overload_list_namespace (const char *func_name,
     }
 
   /* Look in the static block.  */
-  block = block_static_block (get_selected_block (0));
-  if (block)
-    add_symbol_overload_list_block (name, block, overload_list);
+  block = get_selected_block (0);
+  block = block == nullptr ? nullptr : block->static_block ();
+  if (block != nullptr)
+    {
+      add_symbol_overload_list_block (name, block, overload_list);
 
-  /* Look in the global block.  */
-  block = block_global_block (block);
-  if (block)
-    add_symbol_overload_list_block (name, block, overload_list);
-
+      /* Look in the global block.  */
+      block = block->global_block ();
+      if (block)
+	add_symbol_overload_list_block (name, block, overload_list);
+    }
 }
 
 /* Search the namespace of the given type and namespace of and public
@@ -1401,7 +1400,7 @@ add_symbol_overload_list_using (const char *func_name,
   for (block = get_selected_block (0);
        block != NULL;
        block = block->superblock ())
-    for (current = block_using (block);
+    for (current = block->get_using ();
 	current != NULL;
 	current = current->next)
       {
@@ -1456,13 +1455,16 @@ add_symbol_overload_list_qualified (const char *func_name,
        b = b->superblock ())
     add_symbol_overload_list_block (func_name, b, overload_list);
 
-  surrounding_static_block = block_static_block (get_selected_block (0));
+  surrounding_static_block = get_selected_block (0);
+  surrounding_static_block = (surrounding_static_block == nullptr
+			      ? nullptr
+			      : surrounding_static_block->static_block ());
 
   /* Go through the symtabs and check the externs and statics for
      symbols which match.  */
 
   const block *block = get_selected_block (0);
-  struct objfile *current_objfile = block ? block_objfile (block) : nullptr;
+  struct objfile *current_objfile = block ? block->objfile () : nullptr;
 
   gdbarch_iterate_over_objfiles_in_search_order
     (current_objfile ? current_objfile->arch () : target_gdbarch (),

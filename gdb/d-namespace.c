@@ -94,7 +94,7 @@ d_lookup_symbol (const struct language_defn *langdef,
       if (block == NULL)
 	gdbarch = target_gdbarch ();
       else
-	gdbarch = block_gdbarch (block);
+	gdbarch = block->gdbarch ();
       sym.symbol
 	= language_lookup_primitive_type_as_symbol (langdef, gdbarch, name);
       sym.block = NULL;
@@ -375,7 +375,7 @@ d_lookup_symbol_imports (const char *scope, const char *name,
      the module we're searching in, see if we can find a match by
      applying them.  */
 
-  for (current = block_using (block);
+  for (current = block->get_using ();
        current != NULL;
        current = current->next)
     {
@@ -511,7 +511,7 @@ d_lookup_symbol_nonlocal (const struct language_defn *langdef,
 			  const domain_enum domain)
 {
   struct block_symbol sym;
-  const char *scope = block_scope (block);
+  const char *scope = block == nullptr ? "" : block->scope ();
 
   sym = lookup_module_scope (langdef, name, block, domain, scope, 0);
   if (sym.symbol != NULL)

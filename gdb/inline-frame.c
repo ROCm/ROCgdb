@@ -228,7 +228,7 @@ inline_frame_sniffer (const struct frame_unwind *self,
   cur_block = frame_block;
   while (cur_block->superblock ())
     {
-      if (block_inlined_p (cur_block))
+      if (cur_block->inlined_p ())
 	depth++;
       else if (cur_block->function () != NULL)
 	break;
@@ -293,7 +293,7 @@ block_starting_point_at (CORE_ADDR pc, const struct block *block)
   if (new_block == NULL)
     return 1;
 
-  if (new_block == block || contained_in (new_block, block))
+  if (new_block == block || block->contains (new_block))
     return 0;
 
   /* The immediately preceding address belongs to a different block,
@@ -357,7 +357,7 @@ skip_inline_frames (thread_info *thread, bpstat *stop_chain)
       cur_block = frame_block;
       while (cur_block->superblock ())
 	{
-	  if (block_inlined_p (cur_block))
+	  if (cur_block->inlined_p ())
 	    {
 	      /* See comments in inline_frame_this_id about this use
 		 of BLOCK_ENTRY_PC.  */

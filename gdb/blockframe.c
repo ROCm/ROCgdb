@@ -72,7 +72,7 @@ get_frame_block (frame_info_ptr frame, CORE_ADDR *addr_in_block)
 
   while (inline_count > 0)
     {
-      if (block_inlined_p (bl))
+      if (bl->inlined_p ())
 	inline_count--;
 
       bl = bl->superblock ();
@@ -91,7 +91,7 @@ get_pc_function_start (CORE_ADDR pc)
   bl = block_for_pc (pc);
   if (bl)
     {
-      struct symbol *symbol = block_linkage_function (bl);
+      struct symbol *symbol = bl->linkage_function ();
 
       if (symbol)
 	{
@@ -139,7 +139,7 @@ find_pc_sect_function (CORE_ADDR pc, struct obj_section *section)
 
   if (b == 0)
     return 0;
-  return block_linkage_function (b);
+  return b->linkage_function ();
 }
 
 /* Return the function containing pc value PC.
@@ -162,7 +162,7 @@ find_pc_sect_containing_function (CORE_ADDR pc, struct obj_section *section)
   if (bl == nullptr)
     return nullptr;
 
-  return block_containing_function (bl);
+  return bl->containing_function ();
 }
 
 /* These variables are used to cache the most recent result of
@@ -469,7 +469,7 @@ block_innermost_frame (const struct block *block)
   while (frame != NULL)
     {
       const struct block *frame_block = get_frame_block (frame, NULL);
-      if (frame_block != NULL && contained_in (frame_block, block))
+      if (frame_block != NULL && block->contains (frame_block))
 	return frame;
 
       frame = get_prev_frame (frame);

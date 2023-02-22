@@ -236,7 +236,8 @@ static struct type *new_type (char *);
 
 enum block_type { FUNCTION_BLOCK, NON_FUNCTION_BLOCK };
 
-static struct block *new_block (enum block_type, enum language);
+static struct block *new_block (struct objfile *objfile,
+				enum block_type, enum language);
 
 static struct compunit_symtab *new_symtab (const char *, int, struct objfile *);
 
@@ -804,7 +805,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	s->type ()->set_is_prototyped (true);
 
       /* Create and enter a new lexical context.  */
-      b = new_block (FUNCTION_BLOCK, s->language ());
+      b = new_block (objfile, FUNCTION_BLOCK, s->language ());
       s->set_value_block (b);
       b->set_function (s);
       b->set_start (sh->value);
@@ -1135,7 +1136,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	}
 
       top_stack->blocktype = stBlock;
-      b = new_block (NON_FUNCTION_BLOCK, psymtab_language);
+      b = new_block (objfile, NON_FUNCTION_BLOCK, psymtab_language);
       b->set_start (sh->value + top_stack->procadr);
       b->set_superblock (top_stack->cur_block);
       top_stack->cur_block = b;
@@ -1193,19 +1194,16 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		 type.  Set that from the type of the parameter symbols.  */
 	      int nparams = top_stack->numargs;
 	      int iparams;
-	      struct symbol *sym;
 
 	      if (nparams > 0)
 		{
-		  struct block_iterator iter;
-
 		  ftype->set_num_fields (nparams);
 		  ftype->set_fields
 		    ((struct field *)
 		     TYPE_ALLOC (ftype, nparams * sizeof (struct field)));
 
 		  iparams = 0;
-		  ALL_BLOCK_SYMBOLS (cblock, iter, sym)
+		  for (struct symbol *sym : block_iterator_range (cblock))
 		    {
 		      if (iparams == nparams)
 			break;
@@ -4464,12 +4462,10 @@ static struct symbol *
 mylookup_symbol (const char *name, const struct block *block,
 		 domain_enum domain, enum address_class theclass)
 {
-  struct block_iterator iter;
   int inc;
-  struct symbol *sym;
 
   inc = name[0];
-  ALL_BLOCK_SYMBOLS (block, iter, sym)
+  for (struct symbol *sym : block_iterator_range (block))
     {
       if (sym->linkage_name ()[0] == inc
 	  && sym->domain () == domain
@@ -4636,8 +4632,8 @@ new_symtab (const char *name, int maxlines, struct objfile *objfile)
 
   /* All symtabs must have at least two blocks.  */
   bv = new_bvect (2);
-  bv->set_block (GLOBAL_BLOCK, new_block (NON_FUNCTION_BLOCK, lang));
-  bv->set_block (STATIC_BLOCK, new_block (NON_FUNCTION_BLOCK, lang));
+  bv->set_block (GLOBAL_BLOCK, new_block (objfile, NON_FUNCTION_BLOCK, lang));
+  bv->set_block (STATIC_BLOCK, new_block (objfile, NON_FUNCTION_BLOCK, lang));
   bv->static_block ()->set_superblock (bv->global_block ());
   cust->set_blockvector (bv);
 
@@ -4724,12 +4720,10 @@ new_bvect (int nblocks)
    linearly; otherwise, store them hashed.  */
 
 static struct block *
-new_block (enum block_type type, enum language language)
+new_block (struct objfile *objfile, enum block_type type,
+	   enum language language)
 {
-  /* FIXME: carlton/2003-09-11: This should use allocate_block to
-     allocate the block.  Which, in turn, suggests that the block
-     should be allocated on an obstack.  */
-  struct block *retval = XCNEW (struct block);
+  struct block *retval = new (&objfile->objfile_obstack) block;
 
   if (type == FUNCTION_BLOCK)
     retval->set_multidict (mdict_create_linear_expandable (language));

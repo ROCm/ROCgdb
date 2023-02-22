@@ -86,7 +86,7 @@ innermost_block_tracker::update (const struct block *b,
 {
   if ((m_types & t) != 0
       && (m_innermost_block == NULL
-	  || contained_in (b, m_innermost_block)))
+	  || m_innermost_block->contains (b)))
     m_innermost_block = b;
 }
 
@@ -488,7 +488,7 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
 	 the current frame language to parse the expression.  That's why
 	 we do the following language detection only if the context block
 	 has been specifically provided.  */
-      struct symbol *func = block_linkage_function (block);
+      struct symbol *func = block->linkage_function ();
 
       if (func != NULL)
 	lang = language_def (func->language ());

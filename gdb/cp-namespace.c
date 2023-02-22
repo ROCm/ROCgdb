@@ -143,7 +143,7 @@ cp_basic_lookup_symbol (const char *name, const struct block *block,
 	 but should be treated as local to a single file nonetheless.
 	 So we only search the current file's global block.  */
 
-      const struct block *global_block = block_global_block (block);
+      const struct block *global_block = block->global_block ();
 
       if (global_block != NULL)
 	{
@@ -199,7 +199,7 @@ cp_lookup_bare_symbol (const struct language_defn *langdef,
       if (block == NULL)
 	gdbarch = get_current_arch ();
       else
-	gdbarch = block_gdbarch (block);
+	gdbarch = block->gdbarch ();
       sym.symbol
 	= language_lookup_primitive_type_as_symbol (langdef, gdbarch, name);
       sym.block = NULL;
@@ -415,7 +415,7 @@ cp_lookup_symbol_via_imports (const char *scope,
   /* Go through the using directives.  If any of them add new names to
      the namespace we're searching in, see if we can find a match by
      applying them.  */
-  for (current = block_using (block);
+  for (current = block->get_using ();
        current != NULL;
        current = current->next)
     {
@@ -771,7 +771,7 @@ cp_lookup_symbol_nonlocal (const struct language_defn *langdef,
 			   const domain_enum domain)
 {
   struct block_symbol sym;
-  const char *scope = block_scope (block);
+  const char *scope = block == nullptr ? "" : block->scope ();
 
   symbol_lookup_debug_printf
     ("cp_lookup_symbol_non_local (%s, %s (scope %s), %s)",
@@ -1027,7 +1027,7 @@ cp_lookup_transparent_type (const char *name)
 
   /* If that doesn't work and we're within a namespace, look there
      instead.  */
-  scope = block_scope (get_selected_block (0));
+  scope = get_selected_block (0)->scope ();
 
   if (scope[0] == '\0')
     return NULL;

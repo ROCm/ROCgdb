@@ -5354,6 +5354,46 @@ whereas this will work:
 SECTIONS @{@ .text : @{@ *(.text) ; LONG(1) @}@ .data : @{@ *(.data) @}@ @}@
 @end smallexample
 
+@cindex output section strings
+@kindex ASCII (@var{expression}) ``@var{string}''
+@kindex ASCIZ ``@var{string}''
+You can include a zero-terminated string in an output section by using
+@code{ASCIZ}.  The keyword is followed by a string which is stored at
+the current value of the location counter including adding a zero byte
+at the end.  Any length of string is supported by this directive.
+
+You can include a fixed size string in an output section by using
+@code{ASCII}.  The keyword is followed by a size enclosed in
+parentheses and then a string.  The string is stored at the current
+value of the location counter and zero bytes are added at the end to
+fill up to the specified size.  Note the fill value is ignored for
+this padding.
+
+If the string is too long, a warning is issued and the string is
+truncated.  The string will still be zero-terminated in this case.
+
+If the expression evaluates to zero then the directive will be treated
+as if it were @code{ASCIZ} instead.
+
+If the string in an @code{ASCII} or @code{ASCIZ} command includes spaces
+it must be enclosed in double quotes.
+
+The string can have C escape characters like '\n', '\r', '\t' and
+octal numbers.  The '\"' escape is not supported.  Nor are escaped hex
+values.
+
+Example 1: This is string of 16 characters and will create a 32 byte
+area:
+@smallexample
+  ASCII (32) "This is 16 bytes"
+@end smallexample
+
+Example 2: This is a string of 16 characters and will create a 17 byte
+area:
+@smallexample
+  ASCIZ "This is 16 bytes"
+@end smallexample
+
 @kindex FILL(@var{expression})
 @cindex holes, filling
 @cindex unspecified memory
@@ -7202,6 +7242,9 @@ support is implemented with a linker plugin.
 
 Currently there is only one plugin shipped by default, but more may
 be added here later.
+
+Plugins are enabled via the use of the @option{-plugin @var{name}}
+command line option. @xref{Options}
 
 @menu
 * libdep Plugin::	Static Library Dependencies Plugin

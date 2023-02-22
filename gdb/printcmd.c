@@ -2159,8 +2159,8 @@ do_one_display (struct display *d)
   if (d->block)
     {
       if (d->pspace == current_program_space)
-	within_current_scope = contained_in (get_selected_block (0), d->block,
-					     true);
+	within_current_scope = d->block->contains (get_selected_block (0),
+						   true);
       else
 	within_current_scope = 0;
     }
@@ -2318,7 +2318,7 @@ Num Enb Expression\n"));
       else if (d->format.format)
 	gdb_printf ("/%c ", d->format.format);
       gdb_puts (d->exp_string.c_str ());
-      if (d->block && !contained_in (get_selected_block (0), d->block, true))
+      if (d->block && !d->block->contains (get_selected_block (0), true))
 	gdb_printf (_(" (cannot be evaluated in the current context)"));
       gdb_printf ("\n");
     }
@@ -2391,7 +2391,7 @@ clear_dangling_display_expressions (struct objfile *objfile)
       struct objfile *bl_objf = nullptr;
       if (d->block != nullptr)
 	{
-	  bl_objf = block_objfile (d->block);
+	  bl_objf = d->block->objfile ();
 	  if (bl_objf->separate_debug_objfile_backlink != nullptr)
 	    bl_objf = bl_objf->separate_debug_objfile_backlink;
 	}

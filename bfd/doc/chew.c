@@ -31,6 +31,9 @@
    You define new words thus:
    : <newword> <oldwords> ;
 
+   Variables are defined using:
+   variable NAME
+
 */
 
 /* Primitives provided by the program:
@@ -65,17 +68,18 @@
 	exit - fn chew_exit
 	swap
 	outputdots - strip out lines without leading dots
-	paramstuff - convert full declaration into "PARAMS" form if not already
 	maybecatstr - do catstr if internal_mode == internal_wanted, discard
 		value in any case
+	catstrif - do catstr if top of integer stack is nonzero
 	translatecomments - turn {* and *} into comment delimiters
 	kill_bogus_lines - get rid of extra newlines
 	indent
-	internalmode - pop from integer stack, set `internalmode' to that value
 	print_stack_level - print current stack depth to stderr
 	strip_trailing_newlines - go ahead, guess...
 	[quoted string] - push string onto string stack
 	[word starting with digit] - push atol(str) onto integer stack
+
+	internalmode - the internalmode variable (evaluates to address)
 
    A command must be all upper-case, and alone on a line.
 
@@ -86,6 +90,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #define DEF_SIZE 5000
 #define STACK 50
@@ -106,7 +111,7 @@ typedef union
   void (*f) (void);
   struct dict_struct *e;
   char *s;
-  long l;
+  intptr_t l;
 } pcu;
 
 typedef struct dict_struct
@@ -119,7 +124,7 @@ typedef struct dict_struct
 } dict_type;
 
 int internal_wanted;
-int internal_mode;
+intptr_t *internal_mode;
 
 int warning;
 
@@ -129,8 +134,8 @@ string_type *tos;
 unsigned int idx = 0; /* Pos in input buffer */
 string_type *ptr; /* and the buffer */
 
-long istack[STACK];
-long *isp = &istack[0];
+intptr_t istack[STACK];
+intptr_t *isp = &istack[0];
 
 dict_type *root;
 
@@ -376,6 +381,14 @@ push_number (void)
   pc++;
 }
 
+/* This is a wrapper for push_number just so we can correctly free the
+   variable at the end.  */
+static void
+push_variable (void)
+{
+  push_number ();
+}
+
 static void
 push_text (void)
 {
@@ -451,84 +464,6 @@ print_stack_level (void)
   fprintf (stderr, "current integer stack depth = %ld\n",
 	   (long) (isp - istack));
   pc++;
-}
-
-/* turn:
-     foobar name(stuff);
-   into:
-     foobar
-     name PARAMS ((stuff));
-   and a blank line.
- */
-
-static void
-paramstuff (void)
-{
-  unsigned int openp;
-  unsigned int fname;
-  unsigned int idx;
-  unsigned int len;
-  string_type out;
-  init_string (&out);
-
-#define NO_PARAMS 1
-
-  /* Make sure that it's not already param'd or proto'd.  */
-  if (NO_PARAMS
-      || find (tos, "PARAMS") || find (tos, "PROTO") || !find (tos, "("))
-    {
-      catstr (&out, tos);
-    }
-  else
-    {
-      /* Find the open paren.  */
-      for (openp = 0; at (tos, openp) != '(' && at (tos, openp); openp++)
-	;
-
-      fname = openp;
-      /* Step back to the fname.  */
-      fname--;
-      while (fname && isspace ((unsigned char) at (tos, fname)))
-	fname--;
-      while (fname
-	     && !isspace ((unsigned char) at (tos,fname))
-	     && at (tos,fname) != '*')
-	fname--;
-
-      fname++;
-
-      /* Output type, omitting trailing whitespace character(s), if
-         any.  */
-      for (len = fname; 0 < len; len--)
-	{
-	  if (!isspace ((unsigned char) at (tos, len - 1)))
-	    break;
-	}
-      for (idx = 0; idx < len; idx++)
-	catchar (&out, at (tos, idx));
-
-      cattext (&out, "\n");	/* Insert a newline between type and fnname */
-
-      /* Output function name, omitting trailing whitespace
-         character(s), if any.  */
-      for (len = openp; 0 < len; len--)
-	{
-	  if (!isspace ((unsigned char) at (tos, len - 1)))
-	    break;
-	}
-      for (idx = fname; idx < len; idx++)
-	catchar (&out, at (tos, idx));
-
-      cattext (&out, " PARAMS (");
-
-      for (idx = openp; at (tos, idx) && at (tos, idx) != ';'; idx++)
-	catchar (&out, at (tos, idx));
-
-      cattext (&out, ");\n\n");
-    }
-  overwrite_string (tos, &out);
-  pc++;
-
 }
 
 /* turn {*
@@ -1072,21 +1007,26 @@ skip_past_newline (void)
 }
 
 static void
-internalmode (void)
+maybecatstr (void)
 {
-  internal_mode = *(isp);
-  isp--;
-  icheck_range ();
+  if (internal_wanted == *internal_mode)
+    {
+      catstr (tos - 1, tos);
+    }
+  delete_string (tos);
+  tos--;
+  check_range ();
   pc++;
 }
 
 static void
-maybecatstr (void)
+catstrif (void)
 {
-  if (internal_wanted == internal_mode)
-    {
-      catstr (tos - 1, tos);
-    }
+  int cond = isp[0];
+  isp--;
+  icheck_range ();
+  if (cond)
+    catstr (tos - 1, tos);
   delete_string (tos);
   tos--;
   check_range ();
@@ -1216,6 +1156,11 @@ free_words (void)
 		free (ptr->code[i + 1].s - 1);
 		++i;
 	      }
+	    else if (ptr->code[i].f == push_variable)
+	      {
+		free ((void *) ptr->code[i + 1].l);
+		++i;
+	      }
 	  free (ptr->code);
 	}
       next = ptr->next;
@@ -1295,6 +1240,24 @@ add_intrinsic (char *name, void (*func) (void))
   add_to_definition (new_d, p);
 }
 
+static void
+add_variable (char *name, intptr_t *loc)
+{
+  dict_type *new_d = newentry (name);
+  pcu p = { push_variable };
+  add_to_definition (new_d, p);
+  p.l = (intptr_t) loc;
+  add_to_definition (new_d, p);
+  p.f = 0;
+  add_to_definition (new_d, p);
+}
+
+static void
+add_intrinsic_variable (const char *name, intptr_t *loc)
+{
+  add_variable (xstrdup (name), loc);
+}
+
 void
 compile (char *string)
 {
@@ -1368,6 +1331,17 @@ compile (char *string)
 	  free (word);
 	  string = nextword (string, &word);
 	}
+      else if (strcmp (word, "variable") == 0)
+	{
+	  free (word);
+	  string = nextword (string, &word);
+	  if (!string)
+	    continue;
+	  intptr_t *loc = xmalloc (sizeof (intptr_t));
+	  *loc = 0;
+	  add_variable (word, loc);
+	  string = nextword (string, &word);
+	}
       else
 	{
 	  fprintf (stderr, "syntax error at %s\n", string - 1);
@@ -1379,7 +1353,7 @@ compile (char *string)
 static void
 bang (void)
 {
-  *(long *) ((isp[0])) = isp[-1];
+  *(intptr_t *) ((isp[0])) = isp[-1];
   isp -= 2;
   icheck_range ();
   pc++;
@@ -1388,7 +1362,7 @@ bang (void)
 static void
 atsign (void)
 {
-  isp[0] = *(long *) (isp[0]);
+  isp[0] = *(intptr_t *) (isp[0]);
   pc++;
 }
 
@@ -1504,14 +1478,17 @@ main (int ac, char *av[])
   add_intrinsic ("exit", chew_exit);
   add_intrinsic ("swap", swap);
   add_intrinsic ("outputdots", outputdots);
-  add_intrinsic ("paramstuff", paramstuff);
   add_intrinsic ("maybecatstr", maybecatstr);
+  add_intrinsic ("catstrif", catstrif);
   add_intrinsic ("translatecomments", translatecomments);
   add_intrinsic ("kill_bogus_lines", kill_bogus_lines);
   add_intrinsic ("indent", indent);
-  add_intrinsic ("internalmode", internalmode);
   add_intrinsic ("print_stack_level", print_stack_level);
   add_intrinsic ("strip_trailing_newlines", strip_trailing_newlines);
+
+  internal_mode = xmalloc (sizeof (intptr_t));
+  *internal_mode = 0;
+  add_intrinsic_variable ("internalmode", internal_mode);
 
   /* Put a nl at the start.  */
   catchar (&buffer, '\n');

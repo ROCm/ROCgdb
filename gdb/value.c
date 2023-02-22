@@ -42,6 +42,7 @@
 #include "user-regs.h"
 #include <algorithm>
 #include <iterator>
+#include <map>
 #include <utility>
 #include <vector>
 #include "completer.h"
@@ -70,7 +71,7 @@ struct internal_function
 /* Returns true if the ranges defined by [offset1, offset1+len1) and
    [offset2, offset2+len2) overlap.  */
 
-static int
+static bool
 ranges_overlap (LONGEST offset1, ULONGEST len1,
 		LONGEST offset2, ULONGEST len2)
 {
@@ -84,7 +85,7 @@ ranges_overlap (LONGEST offset1, ULONGEST len1,
 /* Returns true if RANGES contains any range that overlaps [OFFSET,
    OFFSET+LENGTH).  */
 
-static int
+static bool
 ranges_contain (const std::vector<range> &ranges, LONGEST offset,
 		ULONGEST length)
 {
@@ -132,7 +133,7 @@ ranges_contain (const std::vector<range> &ranges, LONGEST offset,
       const struct range &bef = *(i - 1);
 
       if (ranges_overlap (bef.offset, bef.length, offset, length))
-	return 1;
+	return true;
     }
 
   if (i < ranges.end ())
@@ -140,10 +141,10 @@ ranges_contain (const std::vector<range> &ranges, LONGEST offset,
       const struct range &r = *i;
 
       if (ranges_overlap (r.offset, r.length, offset, length))
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 static struct cmd_list_element *functionlist;
@@ -169,7 +170,7 @@ value::arch () const
   return type ()->arch ();
 }
 
-int
+bool
 value::bits_available (LONGEST offset, ULONGEST length) const
 {
   gdb_assert (!m_lazy);
@@ -183,7 +184,7 @@ value::bits_available (LONGEST offset, ULONGEST length) const
 	   || ranges_contain (m_unavailable, offset, length));
 }
 
-int
+bool
 value::bytes_available (LONGEST offset, ULONGEST length) const
 {
   ULONGEST sign = (1ULL << (sizeof (ULONGEST) * 8 - 1)) / TARGET_CHAR_BIT;
@@ -197,7 +198,7 @@ value::bytes_available (LONGEST offset, ULONGEST length) const
   return bits_available (offset * TARGET_CHAR_BIT, length * TARGET_CHAR_BIT);
 }
 
-int
+bool
 value::bits_any_optimized_out (int bit_offset, int bit_length) const
 {
   gdb_assert (!m_lazy);
@@ -205,7 +206,7 @@ value::bits_any_optimized_out (int bit_offset, int bit_length) const
   return ranges_contain (m_optimized_out, bit_offset, bit_length);
 }
 
-int
+bool
 value::entirely_available ()
 {
   /* We can only tell whether the whole value is available when we try
@@ -214,13 +215,13 @@ value::entirely_available ()
     fetch_lazy ();
 
   if (m_unavailable.empty ())
-    return 1;
-  return 0;
+    return true;
+  return false;
 }
 
 /* See value.h.  */
 
-int
+bool
 value::entirely_covered_by_range_vector (const std::vector<range> &ranges)
 {
   /* We can only tell whether the whole value is optimized out /
@@ -234,10 +235,10 @@ value::entirely_covered_by_range_vector (const std::vector<range> &ranges)
 
       if (t.offset == 0
 	  && t.length == TARGET_CHAR_BIT * enclosing_type ()->length ())
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Insert into the vector pointed to by VECTORP the bit range starting of
@@ -939,7 +940,7 @@ value::allocate (struct type *type, bool check_size)
   struct value *val = value::allocate_lazy (type);
 
   val->allocate_contents (check_size);
-  val->m_lazy = 0;
+  val->m_lazy = false;
   return val;
 }
 
@@ -991,7 +992,7 @@ value::allocate_optimized_out (struct type *type)
   struct value *retval = value::allocate_lazy (type);
 
   retval->mark_bytes_optimized_out (0, type->length ());
-  retval->set_lazy (0);
+  retval->set_lazy (false);
   return retval;
 }
 
@@ -1268,7 +1269,7 @@ value::contents_writeable ()
   return contents_raw ();
 }
 
-int
+bool
 value::optimized_out ()
 {
   if (m_lazy)
@@ -1328,12 +1329,12 @@ value::mark_bits_optimized_out (LONGEST offset, LONGEST length)
   insert_into_bit_range_vector (&m_optimized_out, offset, length);
 }
 
-int
+bool
 value::bits_synthetic_pointer (LONGEST offset, LONGEST length) const
 {
   if (m_lval != lval_computed
       || !m_location.computed.funcs->check_synthetic_pointer)
-    return 0;
+    return false;
   return m_location.computed.funcs->check_synthetic_pointer (this, offset,
 							     length);
 }
@@ -1689,7 +1690,7 @@ value::record_latest ()
   /* We preserve VALUE_LVAL so that the user can find out where it was fetched
      from.  This is a bit dubious, because then *&$1 does not just return $1
      but the current contents of that location.  c'est la vie...  */
-  set_modifiable (0);
+  set_modifiable (false);
 
   value_history.push_back (release_value (this));
 
@@ -1842,19 +1843,25 @@ union internalvar_data
 
 struct internalvar
 {
-  struct internalvar *next;
-  char *name;
+  internalvar (std::string name)
+    : name (std::move (name))
+  {}
+
+  std::string name;
 
   /* We support various different kinds of content of an internal variable.
      enum internalvar_kind specifies the kind, and union internalvar_data
      provides the data associated with this particular kind.  */
 
-  enum internalvar_kind kind;
+  enum internalvar_kind kind = INTERNALVAR_VOID;
 
   union internalvar_data u;
 };
 
-static struct internalvar *internalvars;
+/* Use std::map, a sorted container, to make the order of iteration (and
+   therefore the output of "show convenience" stable).  */
+
+static std::map<std::string, internalvar> internalvars;
 
 /* If the variable does not already exist create it and give it the
    value given.  If no value is given then the default is zero.  */
@@ -1904,13 +1911,11 @@ init_if_undefined_command (const char* args, int from_tty)
 struct internalvar *
 lookup_only_internalvar (const char *name)
 {
-  struct internalvar *var;
+  auto it = internalvars.find (name);
+  if (it == internalvars.end ())
+    return nullptr;
 
-  for (var = internalvars; var; var = var->next)
-    if (strcmp (var->name, name) == 0)
-      return var;
-
-  return NULL;
+  return &it->second;
 }
 
 /* Complete NAME by comparing it to the names of internal
@@ -1919,29 +1924,29 @@ lookup_only_internalvar (const char *name)
 void
 complete_internalvar (completion_tracker &tracker, const char *name)
 {
-  struct internalvar *var;
-  int len;
+  int len = strlen (name);
 
-  len = strlen (name);
+  for (auto &pair : internalvars)
+    {
+      const internalvar &var = pair.second;
 
-  for (var = internalvars; var; var = var->next)
-    if (strncmp (var->name, name, len) == 0)
-      tracker.add_completion (make_unique_xstrdup (var->name));
+      if (var.name.compare (0, len, name) == 0)
+	tracker.add_completion (make_unique_xstrdup (var.name.c_str ()));
+    }
 }
 
 /* Create an internal variable with name NAME and with a void value.
-   NAME should not normally include a dollar sign.  */
+   NAME should not normally include a dollar sign.
+
+   An internal variable with that name must not exist already.  */
 
 struct internalvar *
 create_internalvar (const char *name)
 {
-  struct internalvar *var = XNEW (struct internalvar);
+  auto pair = internalvars.emplace (std::make_pair (name, internalvar (name)));
+  gdb_assert (pair.second);
 
-  var->name = xstrdup (name);
-  var->kind = INTERNALVAR_VOID;
-  var->next = internalvars;
-  internalvars = var;
-  return var;
+  return &pair.first->second;
 }
 
 /* Create an internal variable with name NAME and register FUN as the
@@ -2009,7 +2014,7 @@ value_of_internalvar (struct gdbarch *gdbarch, struct internalvar *var)
 
   /* If there is a trace state variable of the same name, assume that
      is what we really want to see.  */
-  tsv = find_trace_state_variable (var->name);
+  tsv = find_trace_state_variable (var->name.c_str ());
   if (tsv)
     {
       tsv->value_known = target_get_trace_state_variable_value (tsv->number,
@@ -2162,7 +2167,7 @@ set_internalvar (struct internalvar *var, struct value *val)
   union internalvar_data new_data = { 0 };
 
   if (var->kind == INTERNALVAR_FUNCTION && var->u.fn.canonical)
-    error (_("Cannot overwrite convenience function %s"), var->name);
+    error (_("Cannot overwrite convenience function %s"), var->name.c_str ());
 
   /* Prepare new contents.  */
   switch (check_typedef (val->type ())->code ())
@@ -2182,7 +2187,7 @@ set_internalvar (struct internalvar *var, struct value *val)
     default:
       new_kind = INTERNALVAR_VALUE;
       struct value *copy = val->copy ();
-      copy->set_modifiable (1);
+      copy->set_modifiable (true);
 
       /* Force the value to be fetched from the target now, to avoid problems
 	 later when this internalvar is referenced and the target is gone or
@@ -2274,7 +2279,7 @@ clear_internalvar (struct internalvar *var)
 const char *
 internalvar_name (const struct internalvar *var)
 {
-  return var->name;
+  return var->name.c_str ();
 }
 
 static struct internal_function *
@@ -2360,9 +2365,12 @@ add_internal_function (gdb::unique_xmalloc_ptr<char> &&name,
 {
   struct cmd_list_element *cmd
     = do_add_internal_function (name.get (), doc.get (), handler, cookie);
-  doc.release ();
+
+  /* Manually transfer the ownership of the doc and name strings to CMD by
+     setting the appropriate flags.  */
+  (void) doc.release ();
   cmd->doc_allocated = 1;
-  name.release ();
+  (void) name.release ();
   cmd->name_allocated = 1;
 }
 
@@ -2425,8 +2433,6 @@ preserve_one_varobj (struct varobj *varobj, struct objfile *objfile,
 void
 preserve_values (struct objfile *objfile)
 {
-  struct internalvar *var;
-
   /* Create the hash table.  We allocate on the objfile's obstack, since
      it is soon to be deleted.  */
   htab_up copied_types = create_copied_types_hash ();
@@ -2434,8 +2440,8 @@ preserve_values (struct objfile *objfile)
   for (const value_ref_ptr &item : value_history)
     item->preserve (objfile, copied_types.get ());
 
-  for (var = internalvars; var; var = var->next)
-    preserve_one_internalvar (var, objfile, copied_types.get ());
+  for (auto &pair : internalvars)
+    preserve_one_internalvar (&pair.second, objfile, copied_types.get ());
 
   /* For the remaining varobj, check that none has type owned by OBJFILE.  */
   all_root_varobjs ([&copied_types, objfile] (struct varobj *varobj)
@@ -2451,25 +2457,25 @@ static void
 show_convenience (const char *ignore, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
-  struct internalvar *var;
   int varseen = 0;
   struct value_print_options opts;
 
   get_user_print_options (&opts);
-  for (var = internalvars; var; var = var->next)
+  for (auto &pair : internalvars)
     {
+      internalvar &var = pair.second;
 
       if (!varseen)
 	{
 	  varseen = 1;
 	}
-      gdb_printf (("$%s = "), var->name);
+      gdb_printf (("$%s = "), var.name.c_str ());
 
       try
 	{
 	  struct value *val;
 
-	  val = value_of_internalvar (gdbarch, var);
+	  val = value_of_internalvar (gdbarch, &var);
 	  value_print (val, gdb_stdout, &opts);
 	}
       catch (const gdb_exception_error &ex)
@@ -2505,7 +2511,7 @@ value::from_xmethod (xmethod_worker_up &&worker)
   v = value::allocate (builtin_type (target_gdbarch ())->xmethod);
   v->m_lval = lval_xcallable;
   v->m_location.xm_worker = worker.release ();
-  v->m_modifiable = 0;
+  v->m_modifiable = false;
 
   return v;
 }
@@ -2803,8 +2809,7 @@ value_static_field (struct type *type, int fieldno)
       const struct block *block =  nullptr;
       if (target_has_stack ())
 	block
-	  = block_static_block (get_frame_block (get_selected_frame (nullptr),
-						 0));
+	  = get_frame_block (get_selected_frame (nullptr), 0)->static_block ();
 
       struct block_symbol sym = lookup_symbol (phys_name, block, VAR_DOMAIN,
 					       nullptr);
@@ -3829,7 +3834,7 @@ value::fetch_lazy_register ()
 
   /* Copy the contents and the unavailability/optimized-out
      meta-data from NEW_VAL to VAL.  */
-  set_lazy (0);
+  set_lazy (false);
   new_val->contents_copy (this, embedded_offset (),
 			  new_val->embedded_offset () + offset (),
 			  bitpos (), type_length_units (type));
@@ -3913,7 +3918,7 @@ value::fetch_lazy ()
   else
     internal_error (_("Unexpected lazy value type."));
 
-  set_lazy (0);
+  set_lazy (false);
 }
 
 /* Implementation of the convenience function $_isvoid.  */

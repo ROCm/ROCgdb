@@ -212,7 +212,6 @@ static void
 convert_symbol_sym (compile_c_instance *context, const char *identifier,
 		    struct block_symbol sym, domain_enum domain)
 {
-  const struct block *static_block;
   int is_local_symbol;
 
   /* If we found a symbol and it is not in the  static or global
@@ -227,7 +226,9 @@ convert_symbol_sym (compile_c_instance *context, const char *identifier,
      }
   */
 
-  static_block = block_static_block (sym.block);
+  const struct block *static_block = nullptr;
+  if (sym.block != nullptr)
+    static_block = sym.block->static_block ();
   /* STATIC_BLOCK is NULL if FOUND_BLOCK is the global block.  */
   is_local_symbol = (sym.block != static_block && static_block != NULL);
   if (is_local_symbol)
@@ -238,7 +239,7 @@ convert_symbol_sym (compile_c_instance *context, const char *identifier,
       /* If the outer symbol is in the static block, we ignore it, as
 	 it cannot be referenced.  */
       if (global_sym.symbol != NULL
-	  && global_sym.block != block_static_block (global_sym.block))
+	  && global_sym.block != global_sym.block->static_block ())
 	{
 	  if (compile_debug)
 	    gdb_printf (gdb_stdlog,
@@ -613,7 +614,10 @@ generate_c_for_variable_locations (compile_instance *compiler,
 				   const struct block *block,
 				   CORE_ADDR pc)
 {
-  const struct block *static_block = block_static_block (block);
+  if (block == nullptr)
+    return {};
+
+  const struct block *static_block = block->static_block ();
 
   /* If we're already in the static or global block, there is nothing
      to write.  */
@@ -629,14 +633,9 @@ generate_c_for_variable_locations (compile_instance *compiler,
 
   while (1)
     {
-      struct symbol *sym;
-      struct block_iterator iter;
-
       /* Iterate over symbols in this block, generating code to
 	 compute the location of each local variable.  */
-      for (sym = block_iterator_first (block, &iter);
-	   sym != NULL;
-	   sym = block_iterator_next (&iter))
+      for (struct symbol *sym : block_iterator_range (block))
 	{
 	  if (!symbol_seen (symhash.get (), sym))
 	    generate_c_for_for_one_variable (compiler, stream, gdbarch,

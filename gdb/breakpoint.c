@@ -5174,7 +5174,7 @@ watchpoint_check (bpstat *bs)
 
 	  function = get_frame_function (fr);
 	  if (function == NULL
-	      || !contained_in (b->exp_valid_block, function->value_block ()))
+	      || !function->value_block ()->contains (b->exp_valid_block))
 	    within_current_scope = false;
 	}
 
@@ -9288,7 +9288,7 @@ resolve_sal_pc (struct symtab_and_line *sal)
 				    sal->symtab->compunit ());
       if (bv != NULL)
 	{
-	  sym = block_linkage_function (b);
+	  sym = b->linkage_function ();
 	  if (sym != NULL)
 	    sal->section
 	      = sym->obj_section (sal->symtab->compunit ()->objfile ());
@@ -10508,8 +10508,7 @@ can_use_hardware_watchpoint (const std::vector<value_ref_ptr> &vals)
 		}
 	    }
 	}
-      else if (v->lval () != not_lval
-	       && v->deprecated_modifiable () == 0)
+      else if (v->lval () != not_lval && !v->deprecated_modifiable ())
 	return 0;	/* These are values from the history (e.g., $1).  */
       else if (v->lval () == lval_register)
 	return 0;	/* Cannot watch a register with a HW watchpoint.  */

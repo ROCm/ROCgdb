@@ -133,10 +133,10 @@ private:
 
   /* Values can only be created via "static constructors".  */
   explicit value (struct type *type_)
-    : m_modifiable (1),
-      m_lazy (1),
-      m_initialized (1),
-      m_stack (0),
+    : m_modifiable (true),
+      m_lazy (true),
+      m_initialized (true),
+      m_stack (false),
       m_is_zero (false),
       m_in_history (false),
       m_type (type_),
@@ -229,11 +229,11 @@ public:
   /* The comment from "struct value" reads: ``Is it modifiable?  Only
      relevant if lval != not_lval.''.  Shouldn't the value instead be
      not_lval and be done with it?  */
-  int deprecated_modifiable () const
+  bool deprecated_modifiable () const
   { return m_modifiable; }
 
   /* Set or clear the modifiable flag.  */
-  void set_modifiable (int val)
+  void set_modifiable (bool val)
   { m_modifiable = val; }
 
   LONGEST pointed_to_offset () const
@@ -248,8 +248,8 @@ public:
   void set_embedded_offset (LONGEST val)
   { m_embedded_offset = val; }
 
-  /* If zero, contents of this value are in the contents field.  If
-     nonzero, contents are in inferior.  If the lval field is lval_memory,
+  /* If false, contents of this value are in the contents field.  If
+     true, contents are in inferior.  If the lval field is lval_memory,
      the contents are in inferior memory at location.address plus offset.
      The lval field may also be lval_register.
 
@@ -263,10 +263,10 @@ public:
      element.  If you ever change the way lazy flag is set and reset, be
      sure to consider this use as well!  */
 
-  int lazy () const
+  bool lazy () const
   { return m_lazy; }
 
-  void set_lazy (int val)
+  void set_lazy (bool val)
   { m_lazy = val; }
 
   /* If a value represents a C++ object, then the `type' field gives the
@@ -315,10 +315,10 @@ public:
 
   void set_enclosing_type (struct type *new_type);
 
-  int stack () const
+  bool stack () const
   { return m_stack; }
 
-  void set_stack (int val)
+  void set_stack (bool val)
   { m_stack = val; }
 
   /* If this value is lval_computed, return its lval_funcs
@@ -339,11 +339,11 @@ public:
 
   /* Set or return field indicating whether a variable is initialized or
      not, based on debugging information supplied by the compiler.
-     1 = initialized; 0 = uninitialized.  */
-  int initialized () const
+     true = initialized; false = uninitialized.  */
+  bool initialized () const
   { return m_initialized; }
 
-  void set_initialized (int value)
+  void set_initialized (bool value)
   { m_initialized = value; }
 
   /* If lval == lval_memory, return the address in the inferior.  If
@@ -476,7 +476,7 @@ public:
   /* Given a value, determine whether the bits starting at OFFSET and
      extending for LENGTH bits are a synthetic pointer.  */
 
-  int bits_synthetic_pointer (LONGEST offset, LONGEST length) const;
+  bool bits_synthetic_pointer (LONGEST offset, LONGEST length) const;
 
   /* Increase this value's reference count.  */
   void incref ()
@@ -488,23 +488,23 @@ public:
 
   /* Given a value, determine whether the contents bytes starting at
      OFFSET and extending for LENGTH bytes are available.  This returns
-     nonzero if all bytes in the given range are available, zero if any
+     true if all bytes in the given range are available, false if any
      byte is unavailable.  */
-  int bytes_available (LONGEST offset, ULONGEST length) const;
+  bool bytes_available (LONGEST offset, ULONGEST length) const;
 
   /* Given a value, determine whether the contents bits starting at
      OFFSET and extending for LENGTH bits are available.  This returns
-     nonzero if all bits in the given range are available, zero if any
+     true if all bits in the given range are available, false if any
      bit is unavailable.  */
-  int bits_available (LONGEST offset, ULONGEST length) const;
+  bool bits_available (LONGEST offset, ULONGEST length) const;
 
   /* Like bytes_available, but return false if any byte in the
      whole object is unavailable.  */
-  int entirely_available ();
+  bool entirely_available ();
 
   /* Like entirely_available, but return false if any byte in the
      whole object is available.  */
-  int entirely_unavailable ()
+  bool entirely_unavailable ()
   { return entirely_covered_by_range_vector (m_unavailable); }
 
   /* Mark this value's content bytes starting at OFFSET and extending
@@ -515,19 +515,19 @@ public:
      for LENGTH bits as unavailable.  */
   void mark_bits_unavailable (LONGEST offset, ULONGEST length);
 
-  /* If nonzero, this is the value of a variable which does not actually
+  /* If true, this is the value of a variable which does not actually
      exist in the program, at least partially.  If the value is lazy,
      this may fetch it now.  */
-  int optimized_out ();
+  bool optimized_out ();
 
   /* Given a value, return true if any of the contents bits starting at
      OFFSET and extending for LENGTH bits is optimized out, false
      otherwise.  */
-  int bits_any_optimized_out (int bit_offset, int bit_length) const;
+  bool bits_any_optimized_out (int bit_offset, int bit_length) const;
 
   /* Like optimized_out, but return true iff the whole value is
      optimized out.  */
-  int entirely_optimized_out ()
+  bool entirely_optimized_out ()
   {
     return entirely_covered_by_range_vector (m_optimized_out);
   }
@@ -621,10 +621,10 @@ private:
   enum lval_type m_lval = not_lval;
 
   /* Is it modifiable?  Only relevant if lval != not_lval.  */
-  unsigned int m_modifiable : 1;
+  bool m_modifiable : 1;
 
-  /* If zero, contents of this value are in the contents field.  If
-     nonzero, contents are in inferior.  If the lval field is lval_memory,
+  /* If false, contents of this value are in the contents field.  If
+     true, contents are in inferior.  If the lval field is lval_memory,
      the contents are in inferior memory at location.address plus offset.
      The lval field may also be lval_register.
 
@@ -637,14 +637,14 @@ private:
      or array when the user wants to watch a single struct member or
      array element.  If you ever change the way lazy flag is set and
      reset, be sure to consider this use as well!  */
-  unsigned int m_lazy : 1;
+  bool m_lazy : 1;
 
   /* If value is a variable, is it initialized or not.  */
-  unsigned int m_initialized : 1;
+  bool m_initialized : 1;
 
   /* If value is from the stack.  If this is set, read_stack will be
      used instead of read_memory to enable extra caching.  */
-  unsigned int m_stack : 1;
+  bool m_stack : 1;
 
   /* True if this is a zero value, created by 'value::zero'; false
      otherwise.  */
@@ -831,7 +831,7 @@ private:
   /* Returns true if this value is entirely covered by RANGES.  If the
      value is lazy, it'll be read now.  Note that RANGE is a pointer
      to pointer because reading the value might change *RANGE.  */
-  int entirely_covered_by_range_vector (const std::vector<range> &ranges);
+  bool entirely_covered_by_range_vector (const std::vector<range> &ranges);
 
   /* Copy the ranges metadata from this value that overlaps
      [SRC_BIT_OFFSET, SRC_BIT_OFFSET+BIT_LENGTH) into DST,
@@ -927,8 +927,8 @@ struct lval_funcs
 
   /* If non-NULL, this is used to determine whether the indicated bits
      of VALUE are a synthetic pointer.  */
-  int (*check_synthetic_pointer) (const struct value *value,
-				  LONGEST offset, int length);
+  bool (*check_synthetic_pointer) (const struct value *value,
+				   LONGEST offset, int length);
 
   /* Return a duplicate of VALUE's closure, for use in a new value.
      This may simply return the same closure, if VALUE's is
@@ -1003,7 +1003,7 @@ extern struct value *coerce_array (struct value *value);
    whether the memory is known to be stack memory.  */
 
 extern void read_value_memory (struct value *val, LONGEST bit_offset,
-			       int stack, CORE_ADDR memaddr,
+			       bool stack, CORE_ADDR memaddr,
 			       gdb_byte *buffer, size_t length);
 
 /* Cast SCALAR_VALUE to the element type of VECTOR_TYPE, then replicate

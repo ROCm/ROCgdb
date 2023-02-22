@@ -373,7 +373,9 @@ rust_parser::crate_name (const std::string &name)
 std::string
 rust_parser::super_name (const std::string &ident, unsigned int n_supers)
 {
-  const char *scope = block_scope (pstate->expression_context_block);
+  const char *scope = "";
+  if (pstate->expression_context_block != nullptr)
+    scope = pstate->expression_context_block->scope ();
   int offset;
 
   if (scope[0] == '\0')
@@ -419,7 +421,7 @@ munge_name_and_block (const char **name, const struct block **block)
   if (startswith (*name, "::"))
     {
       *name += 2;
-      *block = block_static_block (*block);
+      *block = (*block)->static_block ();
     }
 }
 

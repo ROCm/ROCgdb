@@ -1042,7 +1042,7 @@ value_at_lazy (struct type *type, CORE_ADDR addr)
 
 void
 read_value_memory (struct value *val, LONGEST bit_offset,
-		   int stack, CORE_ADDR memaddr,
+		   bool stack, CORE_ADDR memaddr,
 		   gdb_byte *buffer, size_t length)
 {
   ULONGEST xfered_total = 0;
@@ -1377,7 +1377,7 @@ value_assign (struct value *toval, struct value *fromval)
      information, but its contents are updated from FROMVAL.  This
      implies the returned value is not lazy, even if TOVAL was.  */
   val = toval->copy ();
-  val->set_lazy (0);
+  val->set_lazy (false);
   copy (fromval->contents (), val->contents_raw ());
 
   /* We copy over the enclosing type and pointed-to offset from FROMVAL

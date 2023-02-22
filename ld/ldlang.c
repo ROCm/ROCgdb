@@ -8361,6 +8361,126 @@ lang_add_data (int type, union etree_union *exp)
   new_stmt->type = type;
 }
 
+/* Convert escape codes in S.
+   Supports \n, \r, \t and \NNN octals.
+   Returns a copy of S in a malloc'ed buffer.  */
+
+static char *
+convert_string (const char * s)
+{
+  size_t  len = strlen (s);
+  size_t  i;
+  bool    escape = false;
+  char *  buffer = malloc (len + 1);
+  char *  b;
+
+  for (i = 0, b = buffer; i < len; i++)
+    {
+      char c = *s++;
+
+      if (escape)
+	{
+	  switch (c)
+	    {
+	    default:
+	      /* Ignore the escape.  */
+	      break;
+
+	    case 'n': c = '\n'; break;
+	    case 'r': c = '\r'; break;
+	    case 't': c = '\t'; break;
+	  
+	    case '0':
+	    case '1':
+	    case '2':
+	    case '3':
+	    case '4':
+	    case '5':
+	    case '6':
+	    case '7':
+	      /* We have an octal number.  */
+	      {
+		unsigned int value = c - '0';
+
+		c = *s;
+		if ((c >= '0') && (c <= '7'))
+		  {
+		    value <<= 3;
+		    value += (c - '0');
+		    i++;
+		    s++;
+ 
+		    c = *s;
+		    if ((c >= '0') && (c <= '7'))
+		      {
+			value <<= 3;
+			value += (c - '0');
+			i++;
+			s++;
+		      }
+		  }
+
+		if (value > 0xff)
+		  {
+		    /* octal: \777 is treated as '\077' + '7' */
+		    value >>= 3;
+		    i--;
+		    s--;
+		  }
+		
+		c = value;
+	      }
+	      break;
+	    }
+	  escape = false;
+	}
+      else
+	{
+	  if (c == '\\')
+	    {
+	      escape = true;
+	      continue;
+	    }
+	}
+
+      * b ++ = c;
+    }
+
+  * b = 0;
+  return buffer;
+}
+
+void
+lang_add_string (size_t size, const char *s)
+{
+  size_t  len;
+  size_t  i;
+  char *  string;
+
+  string = convert_string (s);
+  len = strlen (string);
+
+  /* Check if it is ASCIZ command (len == 0) */
+  if (size == 0)
+    /* Make sure that we include the terminating nul byte.  */
+    size = len + 1;
+  else if (len >= size)
+    {
+      len = size - 1;
+
+      einfo (_("%P:%pS: warning: ASCII string does not fit in allocated space,"
+               " truncated\n"), NULL);
+    }
+
+  for (i = 0 ; i < len ; i++)
+    lang_add_data (BYTE, exp_intop (string[i]));
+
+  while (i++ < size)
+    lang_add_data (BYTE, exp_intop ('\0'));
+
+  free (string);
+}
+
 /* Create a new reloc statement.  RELOC is the BFD relocation type to
    generate.  HOWTO is the corresponding howto structure (we could
    look this up, but the caller has already done so).  SECTION is the

@@ -806,8 +806,8 @@ ada_update_initial_language (enum language lang)
    The result is good until the next call.  Return NULL if the main
    procedure doesn't appear to be in Ada.  */
 
-char *
-ada_main_name (void)
+const char *
+ada_main_name ()
 {
   struct bound_minimal_symbol msym;
   static gdb::unique_xmalloc_ptr<char> main_program_name;
@@ -5310,7 +5310,7 @@ remove_irrelevant_renamings (std::vector<struct block_symbol> *syms,
   if (current_block == NULL)
     return;
 
-  current_function = block_linkage_function (current_block);
+  current_function = current_block->linkage_function ();
   if (current_function == NULL)
     return;
 
@@ -5425,7 +5425,7 @@ ada_add_block_renamings (std::vector<struct block_symbol> &result,
   symbol_name_matcher_ftype *name_match
     = ada_get_symbol_name_matcher (lookup_name);
 
-  for (renaming = block_using (block);
+  for (renaming = block->get_using ();
        renaming != NULL;
        renaming = renaming->next)
     {
@@ -6071,18 +6071,14 @@ ada_add_block_symbols (std::vector<struct block_symbol> &result,
 		       const lookup_name_info &lookup_name,
 		       domain_enum domain, struct objfile *objfile)
 {
-  struct block_iterator iter;
   /* A matching argument symbol, if any.  */
   struct symbol *arg_sym;
   /* Set true when we find a matching non-argument symbol.  */
   bool found_sym;
-  struct symbol *sym;
 
   arg_sym = NULL;
   found_sym = false;
-  for (sym = block_iter_match_first (block, lookup_name, &iter);
-       sym != NULL;
-       sym = block_iter_match_next (lookup_name, &iter))
+  for (struct symbol *sym : block_iterator_range (block, &lookup_name))
     {
       if (symbol_matches_domain (sym->language (), sym->domain (), domain))
 	{
@@ -6117,7 +6113,7 @@ ada_add_block_symbols (std::vector<struct block_symbol> &result,
       const char *name = ada_lookup_name.c_str ();
       size_t name_len = ada_lookup_name.size ();
 
-      ALL_BLOCK_SYMBOLS (block, iter, sym)
+      for (struct symbol *sym : block_iterator_range (block))
       {
 	if (symbol_matches_domain (sym->language (),
 				   sym->domain (), domain))
@@ -11732,11 +11728,8 @@ ada_has_this_exception_support (const struct exception_support_info *einfo)
   /* Make sure that the symbol we found corresponds to a function.  */
 
   if (sym->aclass () != LOC_BLOCK)
-    {
-      error (_("Symbol \"%s\" is not a function (class = %d)"),
-	     sym->linkage_name (), sym->aclass ());
-      return 0;
-    }
+    error (_("Symbol \"%s\" is not a function (class = %d)"),
+	   sym->linkage_name (), sym->aclass ());
 
   sym = standard_lookup (einfo->catch_handlers_sym, NULL, VAR_DOMAIN);
   if (sym == NULL)
@@ -11755,11 +11748,8 @@ ada_has_this_exception_support (const struct exception_support_info *einfo)
   /* Make sure that the symbol we found corresponds to a function.  */
 
   if (sym->aclass () != LOC_BLOCK)
-    {
-      error (_("Symbol \"%s\" is not a function (class = %d)"),
-	     sym->linkage_name (), sym->aclass ());
-      return 0;
-    }
+    error (_("Symbol \"%s\" is not a function (class = %d)"),
+	   sym->linkage_name (), sym->aclass ());
 
   return 1;
 }
@@ -12784,7 +12774,7 @@ create_ada_exception_catchpoint (struct gdbarch *gdbarch,
 				 const std::string &excep_string,
 				 const std::string &cond_string,
 				 int tempflag,
-				 int disabled,
+				 int enabled,
 				 int from_tty)
 {
   std::string addr_string;
@@ -12792,7 +12782,7 @@ create_ada_exception_catchpoint (struct gdbarch *gdbarch,
 
   std::unique_ptr<ada_catchpoint> c
     (new ada_catchpoint (gdbarch, ex_kind, sal, addr_string.c_str (),
-			 tempflag, disabled, from_tty));
+			 tempflag, enabled, from_tty));
   c->excep_string = excep_string;
   create_excep_cond_exprs (c.get (), ex_kind);
   if (!cond_string.empty ())
@@ -13058,10 +13048,7 @@ ada_add_exceptions_from_frame (compiled_regex *preg,
 
   while (block != 0)
     {
-      struct block_iterator iter;
-      struct symbol *sym;
-
-      ALL_BLOCK_SYMBOLS (block, iter, sym)
+      for (struct symbol *sym : block_iterator_range (block))
 	{
 	  switch (sym->aclass ())
 	    {
@@ -13143,10 +13130,8 @@ ada_add_global_exceptions (compiled_regex *preg,
 	  for (i = GLOBAL_BLOCK; i <= STATIC_BLOCK; i++)
 	    {
 	      const struct block *b = bv->block (i);
-	      struct block_iterator iter;
-	      struct symbol *sym;
 
-	      ALL_BLOCK_SYMBOLS (b, iter, sym)
+	      for (struct symbol *sym : block_iterator_range (b))
 		if (ada_is_non_standard_exception_sym (sym)
 		    && name_matches_regex (sym->natural_name (), preg))
 		  {
@@ -13648,9 +13633,7 @@ public:
 					  const char *text, const char *word,
 					  enum type_code code) const override
   {
-    struct symbol *sym;
     const struct block *b, *surrounding_static_block = 0;
-    struct block_iterator iter;
 
     gdb_assert (code == TYPE_CODE_UNDEF);
 
@@ -13710,7 +13693,7 @@ public:
 	if (!b->superblock ())
 	  surrounding_static_block = b;   /* For elmin of dups */
 
-	ALL_BLOCK_SYMBOLS (b, iter, sym)
+	for (struct symbol *sym : block_iterator_range (b))
 	  {
 	    if (completion_skip_symbol (mode, sym))
 	      continue;
@@ -13731,7 +13714,7 @@ public:
 	  {
 	    QUIT;
 	    b = s->blockvector ()->global_block ();
-	    ALL_BLOCK_SYMBOLS (b, iter, sym)
+	    for (struct symbol *sym : block_iterator_range (b))
 	      {
 		if (completion_skip_symbol (mode, sym))
 		  continue;
@@ -13753,7 +13736,7 @@ public:
 	    /* Don't do this block twice.  */
 	    if (b == surrounding_static_block)
 	      continue;
-	    ALL_BLOCK_SYMBOLS (b, iter, sym)
+	    for (struct symbol *sym : block_iterator_range (b))
 	      {
 		if (completion_skip_symbol (mode, sym))
 		  continue;
@@ -13802,7 +13785,11 @@ public:
   {
     struct block_symbol sym;
 
-    sym = ada_lookup_symbol (name, block_static_block (block), domain);
+    sym = ada_lookup_symbol (name,
+			     (block == nullptr
+			      ? nullptr
+			      : block->static_block ()),
+			     domain);
     if (sym.symbol != NULL)
       return sym;
 
@@ -13825,7 +13812,7 @@ public:
 	if (block == NULL)
 	  gdbarch = target_gdbarch ();
 	else
-	  gdbarch = block_gdbarch (block);
+	  gdbarch = block->gdbarch ();
 	sym.symbol
 	  = language_lookup_primitive_type_as_symbol (this, gdbarch, name);
 	if (sym.symbol != NULL)

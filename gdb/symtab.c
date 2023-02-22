@@ -1971,7 +1971,7 @@ lookup_language_this (const struct language_defn *lang,
 
   symbol_lookup_debug_printf_v ("lookup_language_this (%s, %s (objfile %s))",
 				lang->name (), host_address_to_string (block),
-				objfile_debug_name (block_objfile (block)));
+				objfile_debug_name (block->objfile ()));
 
   while (block)
     {
@@ -2059,7 +2059,7 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
   if (symbol_lookup_debug)
     {
       struct objfile *objfile = (block == nullptr
-				 ? nullptr : block_objfile (block));
+				 ? nullptr : block->objfile ());
 
       symbol_lookup_debug_printf
 	("demangled symbol name = \"%s\", block @ %s (objfile %s)",
@@ -2156,13 +2156,15 @@ lookup_local_symbol (const char *name,
 		     const domain_enum domain,
 		     enum language language)
 {
-  struct symbol *sym;
-  const struct block *static_block = block_static_block (block);
-  const char *scope = block_scope (block);
-  
-  /* Check if either no block is specified or it's a global block.  */
+  if (block == nullptr)
+    return {};
 
-  if (static_block == NULL)
+  struct symbol *sym;
+  const struct block *static_block = block->static_block ();
+  const char *scope = block->scope ();
+  
+  /* Check if it's a global block.  */
+  if (static_block == nullptr)
     return {};
 
   while (block != static_block)
@@ -2181,7 +2183,7 @@ lookup_local_symbol (const char *name,
 	    return blocksym;
 	}
 
-      if (block->function () != NULL && block_inlined_p (block))
+      if (block->function () != NULL && block->inlined_p ())
 	break;
       block = block->superblock ();
     }
@@ -2203,7 +2205,7 @@ lookup_symbol_in_block (const char *name, symbol_name_match_type match_type,
   if (symbol_lookup_debug)
     {
       struct objfile *objfile
-	= block == nullptr ? nullptr : block_objfile (block);
+	= block == nullptr ? nullptr : block->objfile ();
 
       symbol_lookup_debug_printf_v
 	("lookup_symbol_in_block (%s, %s (objfile %s), %s)",
@@ -2441,7 +2443,7 @@ language_defn::lookup_symbol_nonlocal (const char *name,
       if (block == NULL)
 	gdbarch = get_current_arch ();
       else
-	gdbarch = block_gdbarch (block);
+	gdbarch = block->gdbarch ();
       result.symbol = language_lookup_primitive_type_as_symbol (this,
 								gdbarch, name);
       result.block = NULL;
@@ -2459,7 +2461,10 @@ lookup_symbol_in_static_block (const char *name,
 			       const struct block *block,
 			       const domain_enum domain)
 {
-  const struct block *static_block = block_static_block (block);
+  if (block == nullptr)
+    return {};
+
+  const struct block *static_block = block->static_block ();
   struct symbol *sym;
 
   if (static_block == NULL)
@@ -2468,7 +2473,7 @@ lookup_symbol_in_static_block (const char *name,
   if (symbol_lookup_debug)
     {
       struct objfile *objfile = (block == nullptr
-				 ? nullptr : block_objfile (block));
+				 ? nullptr : block->objfile ());
 
       symbol_lookup_debug_printf
 	("lookup_symbol_in_static_block (%s, %s (objfile %s), %s)",
@@ -2593,7 +2598,8 @@ lookup_global_symbol (const char *name,
   /* If a block was passed in, we want to search the corresponding
      global block first.  This yields "more expected" behavior, and is
      needed to support 'FILENAME'::VARIABLE lookups.  */
-  const struct block *global_block = block_global_block (block);
+  const struct block *global_block
+    = block == nullptr ? nullptr : block->global_block ();
   symbol *sym = NULL;
   if (global_block != nullptr)
     {
@@ -2607,7 +2613,7 @@ lookup_global_symbol (const char *name,
   struct objfile *objfile = nullptr;
   if (block != nullptr)
     {
-      objfile = block_objfile (block);
+      objfile = block->objfile ();
       if (objfile->separate_debug_objfile_backlink != nullptr)
 	objfile = objfile->separate_debug_objfile_backlink;
     }
@@ -2766,10 +2772,7 @@ iterate_over_symbols (const struct block *block,
 		      const domain_enum domain,
 		      gdb::function_view<symbol_found_callback_ftype> callback)
 {
-  struct block_iterator iter;
-  struct symbol *sym;
-
-  ALL_BLOCK_SYMBOLS_WITH_NAME (block, name, iter, sym)
+  for (struct symbol *sym : block_iterator_range (block, &name))
     {
       if (symbol_matches_domain (sym->language (), sym->domain (), domain))
 	{
@@ -2878,22 +2881,24 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 
 	  if (section != 0)
 	    {
-	      struct symbol *sym = NULL;
-	      struct block_iterator iter;
+	      struct symbol *found_sym = nullptr;
 
 	      for (int b_index = GLOBAL_BLOCK;
-		   b_index <= STATIC_BLOCK && sym == NULL;
+		   b_index <= STATIC_BLOCK && found_sym == nullptr;
 		   ++b_index)
 		{
 		  const struct block *b = bv->block (b_index);
-		  ALL_BLOCK_SYMBOLS (b, iter, sym)
+		  for (struct symbol *sym : block_iterator_range (b))
 		    {
 		      if (matching_obj_sections (sym->obj_section (obj_file),
 						 section))
-			break;
+			{
+			  found_sym = sym;
+			  break;
+			}
 		    }
 		}
-	      if (sym == NULL)
+	      if (found_sym == nullptr)
 		continue;		/* No symbol in this symtab matches
 					   section.  */
 	    }
@@ -2944,10 +2949,8 @@ find_symbol_at_address (CORE_ADDR address)
       for (int i = GLOBAL_BLOCK; i <= STATIC_BLOCK; ++i)
 	{
 	  const struct block *b = bv->block (i);
-	  struct block_iterator iter;
-	  struct symbol *sym;
 
-	  ALL_BLOCK_SYMBOLS (b, iter, sym)
+	  for (struct symbol *sym : block_iterator_range (b))
 	    {
 	      if (sym->aclass () == LOC_STATIC
 		  && sym->value_address () == addr)
@@ -3892,7 +3895,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
   function_block = NULL;
   while (b != NULL)
     {
-      if (b->function () != NULL && block_inlined_p (b))
+      if (b->function () != NULL && b->inlined_p ())
 	function_block = b;
       else if (b->function () != NULL)
 	break;
@@ -3988,7 +3991,7 @@ skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
 	  bl = block_for_pc (prologue_sal.end);
 	  while (bl)
 	    {
-	      if (block_inlined_p (bl))
+	      if (bl->inlined_p ())
 		break;
 	      if (bl->function ())
 		{
@@ -4707,11 +4710,9 @@ global_symbol_searcher::add_matching_symbols
 
       for (block_enum block : { GLOBAL_BLOCK, STATIC_BLOCK })
 	{
-	  struct block_iterator iter;
-	  struct symbol *sym;
 	  const struct block *b = bv->block (block);
 
-	  ALL_BLOCK_SYMBOLS (b, iter, sym)
+	  for (struct symbol *sym : block_iterator_range (b))
 	    {
 	      struct symtab *real_symtab = sym->symtab ();
 
@@ -5671,8 +5672,6 @@ add_symtab_completions (struct compunit_symtab *cust,
 			const char *text, const char *word,
 			enum type_code code)
 {
-  struct symbol *sym;
-  struct block_iterator iter;
   int i;
 
   if (cust == NULL)
@@ -5683,7 +5682,7 @@ add_symtab_completions (struct compunit_symtab *cust,
       QUIT;
 
       const struct block *b = cust->blockvector ()->block (i);
-      ALL_BLOCK_SYMBOLS (b, iter, sym)
+      for (struct symbol *sym : block_iterator_range (b))
 	{
 	  if (completion_skip_symbol (mode, sym))
 	    continue;
@@ -5709,10 +5708,8 @@ default_collect_symbol_completion_matches_break_on
      frees them.  I'm not going to worry about this; hopefully there
      won't be that many.  */
 
-  struct symbol *sym;
   const struct block *b;
   const struct block *surrounding_static_block, *surrounding_global_block;
-  struct block_iterator iter;
   /* The symbol we are completing on.  Points in same buffer as text.  */
   const char *sym_text;
 
@@ -5826,14 +5823,14 @@ default_collect_symbol_completion_matches_break_on
      visible from current context.  */
 
   b = get_selected_block (0);
-  surrounding_static_block = block_static_block (b);
-  surrounding_global_block = block_global_block (b);
+  surrounding_static_block = b == nullptr ? nullptr : b->static_block ();
+  surrounding_global_block = b == nullptr ? nullptr : b->global_block ();
   if (surrounding_static_block != NULL)
     while (b != surrounding_static_block)
       {
 	QUIT;
 
-	ALL_BLOCK_SYMBOLS (b, iter, sym)
+	for (struct symbol *sym : block_iterator_range (b))
 	  {
 	    if (code == TYPE_CODE_UNDEF)
 	      {
@@ -5851,7 +5848,7 @@ default_collect_symbol_completion_matches_break_on
 	/* Stop when we encounter an enclosing function.  Do not stop for
 	   non-inlined functions - the locals of the enclosing function
 	   are in scope for a nested function.  */
-	if (b->function () != NULL && block_inlined_p (b))
+	if (b->function () != NULL && b->inlined_p ())
 	  break;
 	b = b->superblock ();
       }
@@ -5861,12 +5858,12 @@ default_collect_symbol_completion_matches_break_on
   if (code == TYPE_CODE_UNDEF)
     {
       if (surrounding_static_block != NULL)
-	ALL_BLOCK_SYMBOLS (surrounding_static_block, iter, sym)
+	for (struct symbol *sym : block_iterator_range (surrounding_static_block))
 	  completion_list_add_fields (tracker, sym, lookup_name,
 				      sym_text, word);
 
       if (surrounding_global_block != NULL)
-	ALL_BLOCK_SYMBOLS (surrounding_global_block, iter, sym)
+	for (struct symbol *sym : block_iterator_range (surrounding_global_block))
 	  completion_list_add_fields (tracker, sym, lookup_name,
 				      sym_text, word);
     }

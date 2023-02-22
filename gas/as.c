@@ -1250,7 +1250,6 @@ perform_an_assembly_pass (int argc, char ** argv)
     {
       if (*argv)
 	{			/* Is it a file-name argument?  */
-	  PROGRESS (1);
 	  saw_a_file++;
 	  /* argv->"" if stdin desired, else->filename.  */
 	  read_a_source_file (*argv);
@@ -1301,7 +1300,6 @@ gas_early_init (int *argcp, char ***argvp)
   myname = **argvp;
   xmalloc_set_program_name (myname);
   bfd_set_error_program_name (myname);
-  START_PROGRESS (myname, 0);
 
   expandargv (argcp, argvp);
 
@@ -1314,10 +1312,10 @@ gas_early_init (int *argcp, char ***argvp)
 #endif
 }
 
-/* Init things that might depend on program args.  */
+/* The bulk of gas initialisation.  This is after args are parsed.  */
 
 static void
-gas_late_init (void)
+gas_init (void)
 {
   symbol_begin ();
   frag_init ();
@@ -1334,10 +1332,21 @@ gas_late_init (void)
 
   dwarf2_init ();
 
-  /* Somewhat arbitrary division into initialisation above that
-     doesn't need stdoutput open (even though it is open), and below
-     where things might be put on stdoutput memory, eg. symbols.  */
-  PROGRESS (1);
+  local_symbol_make (".gasversion.", absolute_section,
+		     &predefined_address_frag, BFD_VERSION / 10000UL);
+
+  /* Note: Put new initialisation calls that don't depend on stdoutput
+     being open above this point.  stdoutput must be open for anything
+     that might use stdoutput objalloc memory, eg. calling bfd_alloc
+     or creating global symbols (via bfd_make_empty_symbol).  */
+  xatexit (output_file_close);
+  output_file_create (out_file_name);
+  gas_assert (stdoutput != 0);
+
+  /* Must be called before output_file_close.  xexit calls the xatexit
+     list in reverse order.  */
+  if (flag_print_statistics)
+    xatexit (dump_statistics);
 
   dot_symbol_init ();
 
@@ -1346,9 +1355,6 @@ gas_late_init (void)
 #endif
 
   itbl_init ();
-
-  local_symbol_make (".gasversion.", absolute_section,
-		     &predefined_address_frag, BFD_VERSION / 10000UL);
 
   /* Now that we have fully initialized, and have created the output
      file, define any symbols requested by --defsym command line
@@ -1379,9 +1385,8 @@ main (int argc, char ** argv)
   struct stat sob;
 
   gas_early_init (&argc, &argv);
-  PROGRESS (1);
 
-  /* Call parse_args before gas_late_init so that switches like
+  /* Call parse_args before gas_init so that switches like
      --hash-size can be honored.  */
   parse_args (&argc, &argv);
 
@@ -1424,18 +1429,7 @@ main (int argc, char ** argv)
 	}
     }
 
-  /* It has to be called after dump_statistics ().  */
-  xatexit (output_file_close);
-
-  if (flag_print_statistics)
-    xatexit (dump_statistics);
-
-  output_file_create (out_file_name);
-  gas_assert (stdoutput != 0);
-
-  gas_late_init ();
-
-  PROGRESS (1);
+  gas_init ();
 
   /* Assemble it.  */
   perform_an_assembly_pass (argc, argv);
@@ -1511,8 +1505,6 @@ main (int argc, char ** argv)
 #endif
 
   input_scrub_end ();
-
-  END_PROGRESS (myname);
 
   /* Use xexit instead of return, because under VMS environments they
      may not place the same interpretation on the value given.  */

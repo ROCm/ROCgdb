@@ -2902,11 +2902,6 @@ static int
 amd64_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   gdb_byte insn;
-  struct compunit_symtab *cust;
-
-  cust = find_pc_compunit_symtab (pc);
-  if (cust != NULL && cust->epilogue_unwind_valid ())
-    return 0;
 
   if (target_read_memory (pc, &insn, 1))
     return 0;   /* Can't read memory at pc.  */
@@ -2918,15 +2913,54 @@ amd64_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 }
 
 static int
+amd64_epilogue_frame_sniffer_1 (const struct frame_unwind *self,
+				frame_info_ptr this_frame,
+				void **this_prologue_cache, bool override_p)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  CORE_ADDR pc = get_frame_pc (this_frame);
+
+  if (frame_relative_level (this_frame) != 0)
+    /* We're not in the inner frame, so assume we're not in an epilogue.  */
+    return 0;
+
+  bool unwind_valid_p
+    = compunit_epilogue_unwind_valid (find_pc_compunit_symtab (pc));
+  if (override_p)
+    {
+      if (unwind_valid_p)
+	/* Don't override the symtab unwinders, skip
+	   "amd64 epilogue override".  */
+	return 0;
+    }
+  else
+    {
+      if (!unwind_valid_p)
+	/* "amd64 epilogue override" unwinder already ran, skip
+	   "amd64 epilogue".  */
+	return 0;
+    }
+
+  /* Check whether we're in an epilogue.  */
+  return amd64_stack_frame_destroyed_p (gdbarch, pc);
+}
+
+static int
+amd64_epilogue_override_frame_sniffer (const struct frame_unwind *self,
+				       frame_info_ptr this_frame,
+				       void **this_prologue_cache)
+{
+  return amd64_epilogue_frame_sniffer_1 (self, this_frame, this_prologue_cache,
+					 true);
+}
+
+static int
 amd64_epilogue_frame_sniffer (const struct frame_unwind *self,
 			      frame_info_ptr this_frame,
 			      void **this_prologue_cache)
 {
-  if (frame_relative_level (this_frame) == 0)
-    return amd64_stack_frame_destroyed_p (get_frame_arch (this_frame),
-					  get_frame_pc (this_frame));
-  else
-    return 0;
+  return amd64_epilogue_frame_sniffer_1 (self, this_frame, this_prologue_cache,
+					 false);
 }
 
 static struct amd64_frame_cache *
@@ -2996,6 +3030,17 @@ amd64_epilogue_frame_this_id (frame_info_ptr this_frame,
   else
     (*this_id) = frame_id_build (cache->base + 16, cache->pc);
 }
+
+static const struct frame_unwind amd64_epilogue_override_frame_unwind =
+{
+  "amd64 epilogue override",
+  NORMAL_FRAME,
+  amd64_epilogue_frame_unwind_stop_reason,
+  amd64_epilogue_frame_this_id,
+  amd64_frame_prev_register,
+  NULL,
+  amd64_epilogue_override_frame_sniffer
+};
 
 static const struct frame_unwind amd64_epilogue_frame_unwind =
 {
@@ -3254,7 +3299,9 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
   /* Hook the function epilogue frame unwinder.  This unwinder is
      appended to the list first, so that it supercedes the other
      unwinders in function epilogues.  */
-  frame_unwind_prepend_unwinder (gdbarch, &amd64_epilogue_frame_unwind);
+  frame_unwind_prepend_unwinder (gdbarch, &amd64_epilogue_override_frame_unwind);
+
+  frame_unwind_append_unwinder (gdbarch, &amd64_epilogue_frame_unwind);
 
   /* Hook the prologue-based frame unwinders.  */
   frame_unwind_append_unwinder (gdbarch, &amd64_sigtramp_frame_unwind);

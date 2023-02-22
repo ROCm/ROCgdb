@@ -1,3 +1,58 @@
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* bfd.c, cache.c, compress.c, opncls.c: Remove RETURNS from
+	documentation comments.
+	* doc/doc.str, doc/proto.str (RETURNS): Remove.
+
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* syms.c (bfd_decode_symclass, bfd_is_undefined_symclass)
+	(bfd_symbol_info): Reorder documentation comment.
+	* doc/doc.str (synopsis_seen): New variable.
+	(SYNOPSIS): Set synopsis_seen.  Emit @deftypefn.
+	(DESCRIPTION): Use synopsis_seen.
+	* doc/chew.c (catstrif): New function.
+	(main): Add catstrif intrinsic.
+	(compile): Recognize "variable" command.
+
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* doc/proto.str (external, internal, ifinternal, ENUMEQ, ENUMDOC):
+	Update.
+	* doc/chew.c (internalmode): Remove.
+	(add_intrinsic_variable): New function.
+	(main): Add internalmode as intrinsic.
+	(internal_mode): Remove global.
+	(maybecatstr): Update.
+	(free_words): Free variables.
+
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* doc/chew.c (pcu) <l>: Now intptr_t.
+	(internal_mode, istack, isp): Likewise.
+	(bang, atsign): Use intptr_t.
+
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* doc/proto.str (SYNOPSIS): Don't use paramstuff.
+	* doc/chew.c (paramstuff): Remove.
+	(main): Don't add paramstuff intrinsic.
+
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* doc/doc.str, doc/proto.str: Add copyright header.
+
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* doc/webassembly.texi (File layout): Remove second argument from
+	@node.
+	* doc/bfd.texi: Use single-argument @node everywhere.
+
+2023-02-07  Tom Tromey  <tom@tromey.com>
+
+	* Makefile.in: Rebuild.
+	* doc/local.mk (%D%/chew.stamp): Don't use H_CFLAGS.
+
 2023-01-24  Nick Clifton  <nickc@redhat.com>
 
 	PR 29998

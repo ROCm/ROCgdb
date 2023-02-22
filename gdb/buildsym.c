@@ -211,9 +211,10 @@ buildsym_compunit::finish_block_internal
   struct pending_block *pblock;
   struct pending_block *opblock;
 
-  block = (is_global
-	   ? allocate_global_block (&m_objfile->objfile_obstack)
-	   : allocate_block (&m_objfile->objfile_obstack));
+  if (is_global)
+    block = new (&m_objfile->objfile_obstack) global_block;
+  else
+    block = new (&m_objfile->objfile_obstack) struct block;
 
   if (symbol)
     {
@@ -372,11 +373,10 @@ buildsym_compunit::finish_block_internal
       opblock = pblock;
     }
 
-  block_set_using (block,
-		   (is_global
-		    ? m_global_using_directives
-		    : m_local_using_directives),
-		   &m_objfile->objfile_obstack);
+  block->set_using ((is_global
+		     ? m_global_using_directives
+		     : m_local_using_directives),
+		    &m_objfile->objfile_obstack);
   if (is_global)
     m_global_using_directives = NULL;
   else
@@ -972,7 +972,7 @@ buildsym_compunit::end_compunit_symtab_with_blockvector
   {
     struct block *b = blockvector->global_block ();
 
-    set_block_compunit_symtab (b, cu);
+    b->set_compunit_symtab (cu);
   }
 
   cu->set_macro_table (release_macros ());
@@ -998,7 +998,7 @@ buildsym_compunit::end_compunit_symtab_with_blockvector
 
 	/* Note that we only want to fix up symbols from the local
 	   blocks, not blocks coming from included symtabs.  That is why
-	   we use ALL_DICT_SYMBOLS here and not ALL_BLOCK_SYMBOLS.  */
+	   we use ALL_DICT_SYMBOLS here and not a block iterator.  */
 	ALL_DICT_SYMBOLS (block->multidict (), miter, sym)
 	  if (sym->symtab () == NULL)
 	    sym->set_symtab (symtab);
