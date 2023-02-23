@@ -4499,7 +4499,7 @@ print_section_stabs (bfd *abfd,
   bfd_byte *stabp, *stabs_end;
 
   stabp = stabs;
-  stabs_end = stabp + stab_size;
+  stabs_end = PTR_ADD (stabp, stab_size);
 
   printf (_("Contents of %s section:\n\n"), sanitize_string (stabsect_name));
   printf ("Symnum n_type n_othr n_desc n_value  n_strx String\n");
@@ -4508,7 +4508,7 @@ print_section_stabs (bfd *abfd,
 
      We start the index at -1 because there is a dummy symbol on
      the front of stabs-in-{coff,elf} sections that supplies sizes.  */
-  for (i = -1; stabp <= stabs_end - STABSIZE; stabp += STABSIZE, i++)
+  for (i = -1; (size_t) (stabs_end - stabp) >= STABSIZE; stabp += STABSIZE, i++)
     {
       const char *name;
       unsigned long strx;

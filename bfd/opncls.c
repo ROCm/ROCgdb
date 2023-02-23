@@ -37,6 +37,14 @@
 #define S_IXOTH 0001	/* Execute by others.  */
 #endif
 
+/*
+SECTION
+	Opening and closing BFDs
+
+SUBSECTION
+	Functions for opening and closing
+*/
+
 /* Counters used to initialize the bfd identifier.  */
 
 static unsigned int bfd_id_counter = 0;
@@ -184,14 +192,6 @@ _bfd_free_cached_info (bfd *abfd)
 
   return true;
 }
-
-/*
-SECTION
-	Opening and closing BFDs
-
-SUBSECTION
-	Functions for opening and closing
-*/
 
 /*
 FUNCTION
@@ -1171,29 +1171,20 @@ bfd_calc_gnu_debuglink_crc32 (unsigned long crc,
 }
 
 
-/*
-INTERNAL_FUNCTION
-	bfd_get_debug_link_info_1
+/* Extracts the filename and CRC32 value for any separate debug
+   information file associated with @var{abfd}.
 
-SYNOPSIS
-	char *bfd_get_debug_link_info_1 (bfd *abfd, void *crc32_out);
+   The @var{crc32_out} parameter is an untyped pointer because
+   this routine is used as a @code{get_func_type} function, but it
+   is expected to be an unsigned long pointer.
 
-DESCRIPTION
-	Extracts the filename and CRC32 value for any separate debug
-	information file associated with @var{abfd}.
+   Returns the filename of the associated debug information file,
+   or NULL if there is no such file.  If the filename was found
+   then the contents of @var{crc32_out} are updated to hold the
+   corresponding CRC32 value for the file.
 
-	The @var{crc32_out} parameter is an untyped pointer because
-	this routine is used as a @code{get_func_type} function, but it
-	is expected to be an unsigned long pointer.
-
-	Returns the filename of the associated debug information file,
-	or NULL if there is no such file.  If the filename was found
-	then the contents of @var{crc32_out} are updated to hold the
-	corresponding CRC32 value for the file.
-
-	The returned filename is allocated with @code{malloc}; freeing
-	it is the responsibility of the caller.
-*/
+   The returned filename is allocated with @code{malloc}; freeing
+   it is the responsibility of the caller.  */
 
 static char *
 bfd_get_debug_link_info_1 (bfd *abfd, void *crc32_out)
@@ -1204,7 +1195,6 @@ bfd_get_debug_link_info_1 (bfd *abfd, void *crc32_out)
   unsigned int crc_offset;
   char *name;
   bfd_size_type size;
-  ufile_ptr file_size;
 
   BFD_ASSERT (abfd);
   BFD_ASSERT (crc32_out);
@@ -1215,10 +1205,9 @@ bfd_get_debug_link_info_1 (bfd *abfd, void *crc32_out)
     return NULL;
 
   size = bfd_section_size (sect);
-  file_size = bfd_get_size (abfd);
 
   /* PR 22794: Make sure that the section has a reasonable size.  */
-  if (size < 8 || (file_size != 0 && size >= file_size))
+  if (size < 8)
     return NULL;
 
   if (!bfd_malloc_and_get_section (abfd, sect, &contents))
@@ -1293,7 +1282,6 @@ bfd_get_alt_debug_link_info (bfd * abfd, bfd_size_type *buildid_len,
   unsigned int buildid_offset;
   char *name;
   bfd_size_type size;
-  ufile_ptr file_size;
 
   BFD_ASSERT (abfd);
   BFD_ASSERT (buildid_len);
@@ -1305,8 +1293,7 @@ bfd_get_alt_debug_link_info (bfd * abfd, bfd_size_type *buildid_len,
     return NULL;
 
   size = bfd_section_size (sect);
-  file_size = bfd_get_size (abfd);
-  if (size < 8 || (file_size != 0 && size >= file_size))
+  if (size < 8)
     return NULL;
 
   if (!bfd_malloc_and_get_section (abfd, sect, & contents))
@@ -1328,22 +1315,12 @@ bfd_get_alt_debug_link_info (bfd * abfd, bfd_size_type *buildid_len,
   return name;
 }
 
-/*
-INTERNAL_FUNCTION
-	separate_debug_file_exists
+/* Checks to see if @var{name} is a file and if its contents match
+   @var{crc32}, which is a pointer to an @code{unsigned long}
+   containing a CRC32.
 
-SYNOPSIS
-	bool separate_debug_file_exists
-	  (char *name, void *crc32_p);
-
-DESCRIPTION
-	Checks to see if @var{name} is a file and if its contents
-	match @var{crc32}, which is a pointer to an @code{unsigned
-	long} containing a CRC32.
-
-	The @var{crc32_p} parameter is an untyped pointer because
-	this routine is used as a @code{check_func_type} function.
-*/
+   The @var{crc32_p} parameter is an untyped pointer because this
+   routine is used as a @code{check_func_type} function.  */
 
 static bool
 separate_debug_file_exists (const char *name, void *crc32_p)
@@ -1371,17 +1348,7 @@ separate_debug_file_exists (const char *name, void *crc32_p)
   return crc == file_crc;
 }
 
-/*
-INTERNAL_FUNCTION
-	separate_alt_debug_file_exists
-
-SYNOPSIS
-	bool separate_alt_debug_file_exists
-	  (char *name, void *unused);
-
-DESCRIPTION
-	Checks to see if @var{name} is a file.
-*/
+/* Checks to see if @var{name} is a file.  */
 
 static bool
 separate_alt_debug_file_exists (const char *name, void *unused ATTRIBUTE_UNUSED)
@@ -1399,33 +1366,22 @@ separate_alt_debug_file_exists (const char *name, void *unused ATTRIBUTE_UNUSED)
   return true;
 }
 
-/*
-INTERNAL_FUNCTION
-	find_separate_debug_file
+/* Searches for a debug information file corresponding to @var{abfd}.
 
-SYNOPSIS
-	char *find_separate_debug_file
-	  (bfd *abfd, const char *dir, bool include_dirs,
-	   get_func_type get, check_func_type check, void *data);
+   The name of the separate debug info file is returned by the
+   @var{get} function.  This function scans various fixed locations
+   in the filesystem, including the file tree rooted at @var{dir}.
+   If the @var{include_dirs} parameter is true then the directory
+   components of @var{abfd}'s filename will be included in the
+   searched locations.
 
-DESCRIPTION
-	Searches for a debug information file corresponding to @var{abfd}.
+   @var{data} is passed unmodified to the @var{get} and @var{check}
+   functions.  It is generally used to implement build-id-like
+   matching in the callback functions.
 
-	The name of the separate debug info file is returned by the
-	@var{get} function.  This function scans various fixed locations
-	in the filesystem, including the file tree rooted at @var{dir}.
-	If the @var{include_dirs} parameter is true then the directory
-	components of @var{abfd}'s filename will be included in the
-	searched locations.
-
-	@var{data} is passed unmodified to the @var{get} and @var{check}
-	functions.  It is generally used to implement build-id-like
-	matching in the callback functions.
-
-	Returns the filename of the first file to be found which
-	receives a TRUE result from the @var{check} function.
-	Returns NULL if no valid file could be found.
-*/
+   Returns the filename of the first file to be found which
+   receives a TRUE result from the @var{check} function.
+   Returns NULL if no valid file could be found.  */
 
 typedef char * (*get_func_type) (bfd *, void *);
 typedef bool (*check_func_type) (const char *, void *);
@@ -1746,8 +1702,8 @@ SYNOPSIS
 DESCRIPTION
 	Takes a @var{BFD} and containing a .gnu_debuglink section @var{SECT}
 	and fills in the contents of the section to contain a link to the
-	specified @var{filename}.  The filename should be relative to the
-	current directory.
+	specified @var{filename}.  The filename should be absolute or
+	relative to the current directory.
 
 	<<TRUE>> is returned if all is ok.  Otherwise <<FALSE>> is returned
 	and bfd_error is set.
@@ -1773,12 +1729,7 @@ bfd_fill_in_gnu_debuglink_section (bfd *abfd,
       return false;
     }
 
-  /* Make sure that we can read the file.
-     XXX - Should we attempt to locate the debug info file using the same
-     algorithm as gdb ?  At the moment, since we are creating the
-     .gnu_debuglink section, we insist upon the user providing us with a
-     correct-for-section-creation-time path, but this need not conform to
-     the gdb location algorithm.  */
+  /* Open the linked file so that we can compute a CRC.  */
   handle = _bfd_real_fopen (filename, FOPEN_RB);
   if (handle == NULL)
     {
@@ -1824,23 +1775,14 @@ bfd_fill_in_gnu_debuglink_section (bfd *abfd,
   return true;
 }
 
-/*
-INTERNAL_FUNCTION
-	get_build_id
+/* Finds the build-id associated with @var{abfd}.  If the build-id is
+   extracted from the note section then a build-id structure is built
+   for it, using memory allocated to @var{abfd}, and this is then
+   attached to the @var{abfd}.
 
-SYNOPSIS
-	struct bfd_build_id * get_build_id (bfd *abfd);
-
-DESCRIPTION
-	Finds the build-id associated with @var{abfd}.  If the build-id is
-	extracted from the note section then a build-id structure is built
-	for it, using memory allocated to @var{abfd}, and this is then
-	attached to the @var{abfd}.
-
-	Returns a pointer to the build-id structure if a build-id could be
-	found.  If no build-id is found NULL is returned and error code is
-	set.
-*/
+   Returns a pointer to the build-id structure if a build-id could be
+   found.  If no build-id is found NULL is returned and error code is
+   set.  */
 
 static struct bfd_build_id *
 get_build_id (bfd *abfd)
@@ -1925,25 +1867,15 @@ get_build_id (bfd *abfd)
   return build_id;
 }
 
-/*
-INTERNAL_FUNCTION
-	get_build_id_name
+/* Searches @var{abfd} for a build-id, and then constructs a pathname
+   from it.  The path is computed as .build-id/NN/NN+NN.debug where
+   NNNN+NN is the build-id value as a hexadecimal string.
 
-SYNOPSIS
-	char * get_build_id_name (bfd *abfd, void *build_id_out_p)
-
-DESCRIPTION
-	Searches @var{abfd} for a build-id, and then constructs a pathname
-	from it.  The path is computed as .build-id/NN/NN+NN.debug where
-	NNNN+NN is the build-id value as a hexadecimal string.
-
-	Returns the constructed filename or NULL upon error.
-	It is the caller's responsibility to free the memory used to hold the
-	filename.
-	If a filename is returned then the @var{build_id_out_p}
-	parameter (which points to a @code{struct bfd_build_id}
-	pointer) is set to a pointer to the build_id structure.
-*/
+   Returns the constructed filename or NULL upon error.  It is the
+   caller's responsibility to free the memory used to hold the
+   filename.  If a filename is returned then the @var{build_id_out_p}
+   parameter (which points to a @code{struct bfd_build_id} pointer) is
+   set to a pointer to the build_id structure.  */
 
 static char *
 get_build_id_name (bfd *abfd, void *build_id_out_p)
@@ -1987,21 +1919,12 @@ get_build_id_name (bfd *abfd, void *build_id_out_p)
   return name;
 }
 
-/*
-INTERNAL_FUNCTION
-	check_build_id_file
+/* Checks to see if @var{name} is a readable file and if its build-id
+   matches @var{buildid}.
 
-SYNOPSIS
-	bool check_build_id_file (char *name, void *buildid_p);
-
-DESCRIPTION
-	Checks to see if @var{name} is a readable file and if its build-id
-	matches @var{buildid}.
-
-	Returns TRUE if the file exists, is readable, and contains a
-	build-id which matches the build-id pointed at by
-	@var{build_id_p} (which is really a @code{struct bfd_build_id **}).
-*/
+   Returns TRUE if the file exists, is readable, and contains a
+   build-id which matches the build-id pointed at by @var{build_id_p}
+   (which is really a @code{struct bfd_build_id **}).  */
 
 static bool
 check_build_id_file (const char *name, void *buildid_p)

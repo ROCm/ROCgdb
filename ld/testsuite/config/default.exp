@@ -383,6 +383,7 @@ proc compiler_supports { flag args } {
 	    append flags " [board_info [target_info name] ldflags]"
 	}
 	set fn "cs[pid].c"
+	set rfno "cs[pid].exe"
 	set f [open $fn "w"]
 	if { [llength $args] > 0 } {
 	    puts $f [lindex $args 0]
@@ -391,7 +392,8 @@ proc compiler_supports { flag args } {
 	}
 	close $f
 	set rfn [remote_download host $fn]
-	set avail [run_host_cmd_yesno "$CC_FOR_TARGET" "$flags $flag $rfn -o /dev/null"]
+	set avail [run_host_cmd_yesno "$CC_FOR_TARGET" "$flags $flag $rfn -o $rfno"]
+	remote_file host delete $rfno
 	remote_file host delete $rfn
 	file delete $fn
 	return $avail
@@ -471,7 +473,7 @@ if { [istarget alpha*-*-*vms*] } {
     close $f
     if { [ld_assemble $as $src tmpdir/empty.o]
 	 && ![ld_link $LD tmpdir/empty tmpdir/empty.o]
-	 && [regsub -all {[^\n]*: cannot find -l([^\n]*)} $exec_output {tmpdir/lib\1.a } missing_libs] } {
+	 && [regsub -all {[^\n]*: cannot find -l([^\n :]*)[^\n]*} $exec_output {tmpdir/lib\1.a } missing_libs] } {
 	regsub -all {\$} $missing_libs {\\\$} missing_libs
 	for { set i 0 } { $i < [llength $missing_libs] } { incr i } {
 	    set f [lindex $missing_libs $i]

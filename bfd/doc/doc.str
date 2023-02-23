@@ -55,8 +55,10 @@ variable synopsis_seen
 	"@deftypefn {Function} " catstr
 	get_stuff_in_command  
 	kill_bogus_lines
+	collapse_whitespace
 	indent
 	catstr
+	"\n" catstr
 	;
 
 : func
@@ -72,15 +74,7 @@ variable synopsis_seen
 	;
 
 : FUNCTION
-	"@findex "	- a
-	skip_past_newline
-	copy_past_newline
-	dup		- a x x 
-	"@subsubsection @code{" - a x x b 
-	swap
-	remchar
-	"}\n" - a x b x c
-	catstr 	catstr 	catstr 	catstr 	catstr 
+	func
 	;
 
 : bodytext

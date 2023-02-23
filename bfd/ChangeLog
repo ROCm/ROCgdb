@@ -1,3 +1,29 @@
+2023-02-21  Nick Clifton  <nickc@redhat.com>
+
+	* opncls.c (bfd_fill_in_gnu_debuglink_section): Update
+	description.
+
+2023-02-17  Tom Tromey  <tom@tromey.com>
+
+	* doc/doc.str (FUNCTION): Call func.
+
+2023-02-17  Tom Tromey  <tom@tromey.com>
+
+	* opncls.c: Hoist the SECTION comment.
+
+2023-02-17  Tom Tromey  <tom@tromey.com>
+
+	* opncls.c (bfd_get_debug_link_info_1, separate_debug_file_exists)
+	(separate_alt_debug_file_exists, find_separate_debug_file)
+	(get_build_id, get_build_id_name, check_build_id_file): Don't use
+	chew comments.
+
+2023-02-17  Tom Tromey  <tom@tromey.com>
+
+	* doc/doc.str (SYNOPSIS): Use collapse_whitespace.
+	* doc/chew.c (collapse_whitespace): New function.
+	(main): Register collapse_whitespace.
+
 2023-02-07  Tom Tromey  <tom@tromey.com>
 
 	* bfd.c, cache.c, compress.c, opncls.c: Remove RETURNS from
