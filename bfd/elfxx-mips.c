@@ -13975,8 +13975,9 @@ _bfd_mips_elf_relax_section (bfd *abfd, asection *sec,
      code section.  */
 
   if (bfd_link_relocatable (link_info)
-      || (sec->flags & SEC_RELOC) == 0
       || sec->reloc_count == 0
+      || (sec->flags & SEC_RELOC) == 0
+      || (sec->flags & SEC_HAS_CONTENTS) == 0
       || (sec->flags & SEC_CODE) == 0)
     return true;
 
@@ -16572,7 +16573,7 @@ _bfd_mips_elf_get_synthetic_symtab (bfd *abfd,
     return 0;
 
   plt = bfd_get_section_by_name (abfd, ".plt");
-  if (plt == NULL)
+  if (plt == NULL || (plt->flags & SEC_HAS_CONTENTS) == 0)
     return 0;
 
   slurp_relocs = get_elf_backend_data (abfd)->s->slurp_reloc_table;

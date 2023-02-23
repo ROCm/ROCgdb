@@ -2522,8 +2522,9 @@ elf32_avr_relax_section (bfd *abfd,
      this section does not have relocs, or if this is not a
      code section.  */
   if (bfd_link_relocatable (link_info)
-      || (sec->flags & SEC_RELOC) == 0
       || sec->reloc_count == 0
+      || (sec->flags & SEC_RELOC) == 0
+      || (sec->flags & SEC_HAS_CONTENTS) == 0
       || (sec->flags & SEC_CODE) == 0)
     return true;
 
@@ -4216,7 +4217,7 @@ avr_elf32_load_property_records (bfd *abfd)
 
   /* Find the '.avr.prop' section and load the contents into memory.  */
   sec = bfd_get_section_by_name (abfd, AVR_PROPERTY_RECORD_SECTION_NAME);
-  if (sec == NULL)
+  if (sec == NULL || (sec->flags & SEC_HAS_CONTENTS) == 0)
     return NULL;
   return avr_elf32_load_records_from_section (abfd, sec);
 }
