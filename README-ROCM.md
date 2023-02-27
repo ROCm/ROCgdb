@@ -91,10 +91,17 @@ cd build
 make
 ````
 
-Specify ``--with-rocm-dbgapi=PATH`` if the the AMD Debugger API Library
-(ROCdbgapi) is not installed in its default location.  The ``configure`` script
-looks in ``PATH/include`` and ``PATH/lib``. The default value for ``PATH`` is
-``/opt/rocm``.
+If the AMD Debugger API Library (ROCdbgapi) is not installed in the system
+default location, specify ``PKG_CONFIG_PATH`` so ``pkg-config` can gather the
+correct build configuration.  If ROCdbgapi is installed in
+``/opt/rocm-$ROCM_VERSION`` (the default for ROCm packages), use
+``PKG_CONFIG_PATH=/opt/rocm-$ROCM_VERSION/share/pkgconfig``.
+
+If the system's dynamic linker is not configured to locate ROCdbgapi where it is
+installed, ROCgdb can be configured and built using
+``LDFLAGS="-Wl,-rpath=/opt/rocm-$ROCM_VERSION/lib"``.  Alternatively,
+``LD_LIBRARY_PATH`` can be used at runtime to indicate where ROCdbgapi is
+installed.
 
 The built ROCgdb executable will be placed in:
 
