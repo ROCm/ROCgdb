@@ -1027,6 +1027,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (avx512dq, AVX512DQ, ANY_AVX512DQ, false),
   SUBARCH (avx512bw, AVX512BW, ANY_AVX512BW, false),
   SUBARCH (avx512vl, AVX512VL, ANY_AVX512VL, false),
+  SUBARCH (monitor, MONITOR, MONITOR, false),
   SUBARCH (vmx, VMX, ANY_VMX, false),
   SUBARCH (vmfunc, VMFUNC, ANY_VMFUNC, false),
   SUBARCH (smx, SMX, SMX, false),
@@ -1047,6 +1048,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (lwp, LWP, ANY_LWP, false),
   SUBARCH (movbe, MOVBE, MOVBE, false),
   SUBARCH (cx16, CX16, CX16, false),
+  SUBARCH (lahf_sahf, LAHF_SAHF, LAHF_SAHF, false),
   SUBARCH (ept, EPT, ANY_EPT, false),
   SUBARCH (lzcnt, LZCNT, LZCNT, false),
   SUBARCH (popcnt, POPCNT, POPCNT, false),
@@ -2373,7 +2375,8 @@ smallest_imm_type (offsetT num)
     }
   else if (fits_in_signed_byte (num))
     {
-      t.bitfield.imm8 = 1;
+      if (fits_in_unsigned_byte (num))
+	t.bitfield.imm8 = 1;
       t.bitfield.imm8s = 1;
       t.bitfield.imm16 = 1;
       t.bitfield.imm32 = 1;
@@ -6880,19 +6883,40 @@ match_template (char mnem_suffix)
 	case 1:
 	  if (!operand_type_match (overlap0, i.types[0]))
 	    continue;
+
+	  /* Allow the ModR/M encoding to be requested by using the {load} or
+	     {store} pseudo prefix on an applicable insn.  */
+	  if (!t->opcode_modifier.modrm
+	      && i.reg_operands == 1
+	      && ((i.dir_encoding == dir_encoding_load
+		   && t->mnem_off != MN_pop)
+		  || (i.dir_encoding == dir_encoding_store
+		      && t->mnem_off != MN_push))
+	      /* Avoid BSWAP.  */
+	      && t->mnem_off != MN_bswap)
+	    continue;
 	  break;
+
 	case 2:
 	  /* xchg %eax, %eax is a special case. It is an alias for nop
 	     only in 32bit mode and we can use opcode 0x90.  In 64bit
 	     mode, we can't use 0x90 for xchg %eax, %eax since it should
 	     zero-extend %eax to %rax.  */
-	  if (flag_code == CODE_64BIT
-	      && t->base_opcode == 0x90
-	      && t->opcode_space == SPACE_BASE
-	      && i.types[0].bitfield.instance == Accum
-	      && i.types[0].bitfield.dword
-	      && i.types[1].bitfield.instance == Accum)
-	    continue;
+	  if (t->base_opcode == 0x90
+	      && t->opcode_space == SPACE_BASE)
+	    {
+	      if (flag_code == CODE_64BIT
+		  && i.types[0].bitfield.instance == Accum
+		  && i.types[0].bitfield.dword
+		  && i.types[1].bitfield.instance == Accum)
+		continue;
+
+	      /* Allow the ModR/M encoding to be requested by using the
+		 {load} or {store} pseudo prefix.  */
+	      if (i.dir_encoding == dir_encoding_load
+		  || i.dir_encoding == dir_encoding_store)
+		continue;
+	    }
 
 	  if (t->base_opcode == MOV_AX_DISP32
 	      && t->opcode_space == SPACE_BASE
@@ -6905,6 +6929,38 @@ match_template (char mnem_suffix)
 	      /* xrelease mov %eax, <disp> is another special case. It must not
 		 match the accumulator-only encoding of mov.  */
 	      if (i.hle_prefix)
+		continue;
+
+	      /* Allow the ModR/M encoding to be requested by using a suitable
+		 {load} or {store} pseudo prefix.  */
+	      if (i.dir_encoding == (i.types[0].bitfield.instance == Accum
+				     ? dir_encoding_store
+				     : dir_encoding_load)
+		  && !i.types[0].bitfield.disp64
+		  && !i.types[1].bitfield.disp64)
+		continue;
+	    }
+
+	  /* Allow the ModR/M encoding to be requested by using the {load} or
+	     {store} pseudo prefix on an applicable insn.  */
+	  if (!t->opcode_modifier.modrm
+	      && i.reg_operands == 1
+	      && i.imm_operands == 1
+	      && (i.dir_encoding == dir_encoding_load
+		  || i.dir_encoding == dir_encoding_store)
+	      && t->opcode_space == SPACE_BASE)
+	    {
+	      if (t->base_opcode == 0xb0 /* mov $imm, %reg */
+		  && i.dir_encoding == dir_encoding_store)
+		continue;
+
+	      if ((t->base_opcode | 0x38) == 0x3c /* <alu> $imm, %acc */
+		  && (t->base_opcode != 0x3c /* cmp $imm, %acc */
+		      || i.dir_encoding == dir_encoding_load))
+		continue;
+
+	      if (t->base_opcode == 0xa8 /* test $imm, %acc */
+		  && i.dir_encoding == dir_encoding_load)
 		continue;
 	    }
 	  /* Fall through.  */
@@ -7829,6 +7885,18 @@ static int
 update_imm (unsigned int j)
 {
   i386_operand_type overlap = i.types[j];
+
+  if (i.tm.operand_types[j].bitfield.imm8
+      && i.tm.operand_types[j].bitfield.imm8s
+      && overlap.bitfield.imm8 && overlap.bitfield.imm8s)
+    {
+      /* This combination is used on 8-bit immediates where e.g. $~0 is
+	 desirable to permit.  We're past operand type matching, so simply
+	 put things back in the shape they were before introducing the
+	 distinction between Imm8, Imm8S, and Imm8|Imm8S.  */
+      overlap.bitfield.imm8s = 0;
+    }
+
   if (overlap.bitfield.imm8
       + overlap.bitfield.imm8s
       + overlap.bitfield.imm16
@@ -8318,6 +8386,7 @@ build_modrm_byte (void)
 		      || (i.tm.opcode_modifier.vexvvvv == VEXXDS
 			  && i.imm_operands == 1
 			  && (i.types[0].bitfield.imm8
+			      || i.types[0].bitfield.imm8s
 			      || i.types[i.operands - 1].bitfield.imm8)));
 	  if (i.imm_operands == 2)
 	    source = 2;

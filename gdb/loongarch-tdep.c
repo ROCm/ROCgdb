@@ -24,6 +24,7 @@
 #include "frame-unwind.h"
 #include "gdbcore.h"
 #include "loongarch-tdep.h"
+#include "reggroups.h"
 #include "target.h"
 #include "target-descriptions.h"
 #include "trad-frame.h"
@@ -384,6 +385,14 @@ loongarch_software_single_step (struct regcache *regcache)
   CORE_ADDR next_pc = loongarch_next_pc (regcache, cur_pc);
 
   return {next_pc};
+}
+
+/* Callback function for user_reg_add.  */
+
+static struct value *
+value_of_loongarch_user_reg (frame_info_ptr frame, const void *baton)
+{
+  return value_of_register ((long long) baton, frame);
 }
 
 /* Implement the frame_align gdbarch method.  */
@@ -1433,6 +1442,43 @@ loongarch_find_default_target_description (const struct gdbarch_info info)
   return loongarch_lookup_target_description (features);
 }
 
+static int
+loongarch_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
+			       const struct reggroup *group)
+{
+  if (gdbarch_register_name (gdbarch, regnum) == NULL
+      || *gdbarch_register_name (gdbarch, regnum) == '\0')
+    return 0;
+
+  int raw_p = regnum < gdbarch_num_regs (gdbarch);
+
+  if (group == save_reggroup || group == restore_reggroup)
+    return raw_p;
+
+  if (group == all_reggroup)
+    return 1;
+
+  if (0 <= regnum && regnum <= LOONGARCH_BADV_REGNUM)
+    return group == general_reggroup;
+
+  /* Only ORIG_A0, PC, BADV in general_reggroup */
+  if (group == general_reggroup)
+    return 0;
+
+  if (LOONGARCH_FIRST_FP_REGNUM <= regnum && regnum <= LOONGARCH_FCSR_REGNUM)
+    return group == float_reggroup;
+
+  /* Only $fx / $fccx / $fcsr in float_reggroup */
+  if (group == float_reggroup)
+    return 0;
+
+  int ret = tdesc_register_in_reggroup_p (gdbarch, regnum, group);
+  if (ret != -1)
+    return ret;
+
+  return default_register_reggroup_p (gdbarch, regnum, group);
+}
+
 /* Initialize the current architecture based on INFO  */
 
 static struct gdbarch *
@@ -1551,6 +1597,19 @@ loongarch_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   info.target_desc = tdesc;
   info.tdesc_data = tdesc_data.get ();
 
+  for (int i = 0; i < ARRAY_SIZE (loongarch_r_lp64_name); ++i)
+    if (loongarch_r_lp64_name[i][0] != '\0')
+      user_reg_add (gdbarch, loongarch_r_lp64_name[i] + 1,
+	value_of_loongarch_user_reg, (void *) (size_t) i);
+
+  for (int i = 0; i < ARRAY_SIZE (loongarch_f_lp64_name); ++i)
+    {
+      if (loongarch_f_lp64_name[i][0] != '\0')
+	user_reg_add (gdbarch, loongarch_f_lp64_name[i] + 1,
+		      value_of_loongarch_user_reg,
+		      (void *) (size_t) (LOONGARCH_FIRST_FP_REGNUM + i));
+    }
+
   /* Information about registers.  */
   set_gdbarch_num_regs (gdbarch, regnum);
   set_gdbarch_sp_regnum (gdbarch, LOONGARCH_SP_REGNUM);
@@ -1586,6 +1645,7 @@ loongarch_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Hook in OS ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);
+  set_gdbarch_register_reggroup_p (gdbarch, loongarch_register_reggroup_p);
 
   return gdbarch;
 }

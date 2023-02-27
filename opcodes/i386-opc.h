@@ -88,6 +88,8 @@ enum
   CpuLZCNT,
   /* POPCNT support required */
   CpuPOPCNT,
+  /* MONITOR support required */
+  CpuMONITOR,
   /* SSE4.1 support required */
   CpuSSE4_1,
   /* SSE4.2 support required */
@@ -137,6 +139,8 @@ enum
   CpuMovbe,
   /* CMPXCHG16B instruction support required.  */
   CpuCX16,
+  /* LAHF/SAHF instruction support required (in 64-bit mode).  */
+  CpuLAHF_SAHF,
   /* EPT Instructions required */
   CpuEPT,
   /* RDTSCP Instruction support required */
@@ -348,6 +352,7 @@ typedef union i386_cpu_flags
       unsigned int cpusse4a:1;
       unsigned int cpulzcnt:1;
       unsigned int cpupopcnt:1;
+      unsigned int cpumonitor:1;
       unsigned int cpusse4_1:1;
       unsigned int cpusse4_2:1;
       unsigned int cpuavx:1;
@@ -372,6 +377,7 @@ typedef union i386_cpu_flags
       unsigned int cputbm:1;
       unsigned int cpumovbe:1;
       unsigned int cpucx16:1;
+      unsigned int cpulahf_sahf:1;
       unsigned int cpuept:1;
       unsigned int cpurdtscp:1;
       unsigned int cpufsgsbase:1;

@@ -1170,6 +1170,11 @@ value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
      mean we'd be copying garbage.  */
   gdb_assert (!dst->m_lazy && !m_lazy);
 
+  ULONGEST copy_length = length;
+  ULONGEST limit = m_limited_length;
+  if (limit > 0 && src_offset + length > limit)
+    copy_length = src_offset > limit ? 0 : limit - src_offset;
+
   /* The overwritten DST range gets unavailability ORed in, not
      replaced.  Make sure to remember to implement replacing if it
      turns out actually necessary.  */
@@ -1177,15 +1182,15 @@ value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
   gdb_assert (!dst->bits_any_optimized_out (TARGET_CHAR_BIT * dst_offset,
 					    TARGET_CHAR_BIT * length));
 
-  bit_length = length * unit_size * HOST_CHAR_BIT;
+  bit_length = copy_length * unit_size * HOST_CHAR_BIT;
 
   /* Copy the data.  */
   gdb::array_view<gdb_byte> dst_contents
     = dst->contents_all_raw ().slice (dst_offset * unit_size,
-					  length * unit_size);
+				      copy_length * unit_size);
   gdb::array_view<const gdb_byte> src_contents
     = this->contents_all_raw ().slice (src_offset * unit_size,
-				       length * unit_size);
+				       copy_length * unit_size);
 
   if (src_bit_offset)
     {
@@ -1219,6 +1224,12 @@ value::contents_copy_raw_bitwise (struct value *dst, LONGEST dst_bit_offset,
      mean we'd be copying garbage.  */
   gdb_assert (!dst->m_lazy && !m_lazy);
 
+  ULONGEST copy_bit_length = bit_length;
+  ULONGEST bit_limit = m_limited_length * TARGET_CHAR_BIT;
+  if (bit_limit > 0 && src_bit_offset + bit_length > bit_limit)
+    copy_bit_length = (src_bit_offset > bit_limit ? 0
+		       : bit_limit - src_bit_offset);
+
   /* The overwritten DST range gets unavailability ORed in, not
      replaced.  Make sure to remember to implement replacing if it
      turns out actually necessary.  */
@@ -1233,7 +1244,7 @@ value::contents_copy_raw_bitwise (struct value *dst, LONGEST dst_bit_offset,
   gdb::array_view<const gdb_byte> src_contents = contents_all_raw ();
   copy_bitwise (dst_contents.data (), dst_bit_offset,
 		src_contents.data (), src_bit_offset,
-		bit_length,
+		copy_bit_length,
 		type_byte_order (type ()) == BFD_ENDIAN_BIG);
 
   /* Copy the meta-data.  */
@@ -1859,7 +1870,7 @@ struct internalvar
 };
 
 /* Use std::map, a sorted container, to make the order of iteration (and
-   therefore the output of "show convenience" stable).  */
+   therefore the output of "show convenience") stable.  */
 
 static std::map<std::string, internalvar> internalvars;
 
