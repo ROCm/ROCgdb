@@ -17,7 +17,7 @@ currently supported.
 
 For more information about AMD ROCm, see:
 
-- https://rocmdocs.amd.com/
+- https://docs.amd.com/
 
 You can use the standard GDB commands for both CPU and GPU code debugging.  For
 more information about ROCgdb, refer to the *ROCgdb User Guide* which is
