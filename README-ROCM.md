@@ -11,10 +11,6 @@ commercially available AMD GPU architectures supported by the AMD Debugger API
 Library (ROCdbgapi).  The AMD Debugger API Library (ROCdbgapi) is included with
 the AMD ROCm release.
 
-The current AMD ROCm Debugger (ROCgdb) is an initial prototype that focuses on
-source line debugging.  Symbolic variable debugging capabilities are not
-currently supported.
-
 For more information about AMD ROCm, see:
 
 - https://docs.amd.com/
