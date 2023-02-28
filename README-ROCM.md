@@ -19,8 +19,8 @@ You can use the standard GDB commands for both CPU and GPU code debugging.  For
 more information about ROCgdb, refer to the *ROCgdb User Guide* which is
 installed at:
 
-- ``/opt/rocm/share/info/gdb.info`` as a texinfo file
-- ``/opt/rocm/share/doc/gdb/gdb.pdf`` as a PDF file
+- ``/opt/rocm/share/info/rocgdb/gdb.info`` as a texinfo file
+- ``/opt/rocm/share/doc/rocgdb/rocgdb.pdf`` as a PDF file
 
 You can refer to the following chapters in the *ROCgdb User Guide* for more
 specific information about debugging heterogeneous programs on AMD ROCm:
