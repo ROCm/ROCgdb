@@ -152,10 +152,35 @@ show_step_stop_if_no_debug (struct ui_file *file, int from_tty,
 
 /* proceed and normal_stop use these to notify the user when the
    inferior stopped in a different thread/lane than it had been
-   running in.  */
+   running in.  The thread can also be used to find for which thread
+   normal_stop last reported a stop.  */
+static thread_info_ref previous_thread;
+static int previous_lane = -1;
 
-static ptid_t previous_inferior_ptid;
-static int previous_lane;
+/* See infrun.h.  */
+
+void
+update_previous_thread_and_lane ()
+{
+  if (inferior_ptid == null_ptid)
+    {
+      previous_thread = nullptr;
+      previous_lane = -1;
+    }
+  else
+    {
+      previous_thread = thread_info_ref::new_reference (inferior_thread ());
+      previous_lane = inferior_thread ()->current_simd_lane ();
+    }
+}
+
+/* See infrun.h.  */
+
+thread_info *
+get_previous_thread ()
+{
+  return previous_thread.get ();
+}
 
 /* If set (default for legacy reasons), when following a fork, GDB
    will detach from one of the fork branches, child or parent.
@@ -703,6 +728,15 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
   return false;
 }
 
+/* Set the last target status as TP having stopped.  */
+
+static void
+set_last_target_status_stopped (thread_info *tp)
+{
+  set_last_target_status (tp->inf->process_target (), tp->ptid,
+			  target_waitstatus {}.set_stopped (GDB_SIGNAL_0));
+}
+
 /* Tell the target to follow the fork we're stopped at.  Returns true
    if the inferior should be resumed; false, if the target for some
    reason decided it's best not to resume.  */
@@ -727,32 +761,76 @@ follow_fork ()
 
   if (!non_stop)
     {
-      process_stratum_target *wait_target;
-      ptid_t wait_ptid;
-      struct target_waitstatus wait_status;
+      thread_info *cur_thr = inferior_thread ();
 
-      /* Get the last target status returned by target_wait().  */
-      get_last_target_status (&wait_target, &wait_ptid, &wait_status);
+      ptid_t resume_ptid
+	= user_visible_resume_ptid (cur_thr->control.stepping_command);
+      process_stratum_target *resume_target
+	= user_visible_resume_target (resume_ptid);
 
-      /* If not stopped at a fork event, then there's nothing else to
-	 do.  */
-      if (wait_status.kind () != TARGET_WAITKIND_FORKED
-	  && wait_status.kind () != TARGET_WAITKIND_VFORKED)
-	return 1;
-
-      /* Check if we switched over from WAIT_PTID, since the event was
-	 reported.  */
-      if (wait_ptid != minus_one_ptid
-	  && (current_inferior ()->process_target () != wait_target
-	      || inferior_ptid != wait_ptid))
+      /* Check if there's a thread that we're about to resume, other
+	 than the current, with an unfollowed fork/vfork.  If so,
+	 switch back to it, to tell the target to follow it (in either
+	 direction).  We'll afterwards refuse to resume, and inform
+	 the user what happened.  */
+      for (thread_info *tp : all_non_exited_threads (resume_target,
+						     resume_ptid))
 	{
-	  /* We did.  Switch back to WAIT_PTID thread, to tell the
-	     target to follow it (in either direction).  We'll
-	     afterwards refuse to resume, and inform the user what
-	     happened.  */
-	  thread_info *wait_thread = find_thread_ptid (wait_target, wait_ptid);
-	  switch_to_thread (wait_thread);
-	  should_resume = false;
+	  if (tp == cur_thr)
+	    continue;
+
+	  /* follow_fork_inferior clears tp->pending_follow, and below
+	     we'll need the value after the follow_fork_inferior
+	     call.  */
+	  target_waitkind kind = tp->pending_follow.kind ();
+
+	  if (kind != TARGET_WAITKIND_SPURIOUS)
+	    {
+	      infrun_debug_printf ("need to follow-fork [%s] first",
+				   tp->ptid.to_string ().c_str ());
+
+	      switch_to_thread (tp);
+
+	      /* Set up inferior(s) as specified by the caller, and
+		 tell the target to do whatever is necessary to follow
+		 either parent or child.  */
+	      if (follow_child)
+		{
+		  /* The thread that started the execution command
+		     won't exist in the child.  Abort the command and
+		     immediately stop in this thread, in the child,
+		     inside fork.  */
+		  should_resume = false;
+		}
+	      else
+		{
+		  /* Following the parent, so let the thread fork its
+		     child freely, it won't influence the current
+		     execution command.  */
+		  if (follow_fork_inferior (follow_child, detach_fork))
+		    {
+		      /* Target refused to follow, or there's some
+			 other reason we shouldn't resume.  */
+		      switch_to_thread (cur_thr);
+		      set_last_target_status_stopped (cur_thr);
+		      return false;
+		    }
+
+		  /* If we're following a vfork, when we need to leave
+		     the just-forked thread as selected, as we need to
+		     solo-resume it to collect the VFORK_DONE event.
+		     If we're following a fork, however, switch back
+		     to the original thread that we continue stepping
+		     it, etc.  */
+		  if (kind != TARGET_WAITKIND_VFORKED)
+		    {
+		      gdb_assert (kind == TARGET_WAITKIND_FORKED);
+		      switch_to_thread (cur_thr);
+		    }
+		}
+
+	      break;
+	    }
 	}
     }
 
@@ -816,21 +894,16 @@ follow_fork ()
 	  }
 	else
 	  {
-	    /* This makes sure we don't try to apply the "Switched
-	       over from WAIT_PID" logic above.  */
-	    nullify_last_target_wait_ptid ();
-
 	    /* If we followed the child, switch to it...  */
 	    if (follow_child)
 	      {
-		thread_info *child_thr = find_thread_ptid (parent_targ, child);
-		switch_to_thread (child_thr);
+		tp = find_thread_ptid (parent_targ, child);
+		switch_to_thread (tp);
 
 		/* ... and preserve the stepping state, in case the
 		   user was stepping over the fork call.  */
 		if (should_resume)
 		  {
-		    tp = inferior_thread ();
 		    tp->control.step_resume_breakpoint
 		      = step_resume_breakpoint;
 		    tp->control.step_range_start = step_range_start;
@@ -869,6 +942,8 @@ follow_fork ()
       break;
     }
 
+  if (!should_resume)
+    set_last_target_status_stopped (tp);
   return should_resume;
 }
 
@@ -2220,6 +2295,29 @@ user_visible_resume_target (ptid_t resume_ptid)
 	  : current_inferior ()->process_target ());
 }
 
+/* Find a thread from the inferiors that we'll resume that is waiting
+   for a vfork-done event.  */
+
+static thread_info *
+find_thread_waiting_for_vfork_done ()
+{
+  gdb_assert (!target_is_non_stop_p ());
+
+  if (sched_multi)
+    {
+      for (inferior *inf : all_non_exited_inferiors ())
+	if (inf->thread_waiting_for_vfork_done != nullptr)
+	  return inf->thread_waiting_for_vfork_done;
+    }
+  else
+    {
+      inferior *cur_inf = current_inferior ();
+      if (cur_inf->thread_waiting_for_vfork_done != nullptr)
+	return cur_inf->thread_waiting_for_vfork_done;
+    }
+  return nullptr;
+}
+
 /* Return a ptid representing the set of threads that we will resume,
    in the perspective of the target, assuming run control handling
    does not require leaving some threads stopped (e.g., stepping past
@@ -2260,14 +2358,18 @@ internal_resume_ptid (int user_step)
      Since we don't have that flexibility (we can only pass one ptid), just
      resume the first thread waiting for a vfork-done event we find (e.g. thread
      2.1).  */
-  if (sched_multi)
+  thread_info *thr = find_thread_waiting_for_vfork_done ();
+  if (thr != nullptr)
     {
-      for (inferior *inf : all_non_exited_inferiors ())
-	if (inf->thread_waiting_for_vfork_done != nullptr)
-	  return inf->thread_waiting_for_vfork_done->ptid;
+      /* If we have a thread that is waiting for a vfork-done event,
+	 then we should have switched to it earlier.  Calling
+	 target_resume with thread scope is only possible when the
+	 current thread matches the thread scope.  */
+      gdb_assert (thr->ptid == inferior_ptid);
+      gdb_assert (thr->inf->process_target ()
+		  == inferior_thread ()->inf->process_target ());
+      return thr->ptid;
     }
-  else if (current_inferior ()->thread_waiting_for_vfork_done != nullptr)
-    return current_inferior ()->thread_waiting_for_vfork_done->ptid;
 
   return user_visible_resume_ptid (user_step);
 }
@@ -3196,8 +3298,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
     }
 
   /* We'll update these if & when we switch to a new thread/lane.  */
-  previous_inferior_ptid = inferior_ptid;
-  previous_lane = inferior_thread ()->current_simd_lane ();
+  update_previous_thread_and_lane ();
 
   regcache = get_current_regcache ();
   gdbarch = regcache->arch ();
@@ -3495,11 +3596,7 @@ init_wait_for_inferior (void)
 
   nullify_last_target_wait_ptid ();
 
-  previous_inferior_ptid = inferior_ptid;
-  if (inferior_ptid != null_ptid)
-    previous_lane = inferior_thread ()->current_simd_lane ();
-  else
-    previous_lane = -1;
+  update_previous_thread_and_lane ();
 }
 
 
@@ -3573,14 +3670,6 @@ infrun_thread_stop_requested (ptid_t ptid)
 	 do_target_wait.  */
       tp->set_resumed (true);
     }
-}
-
-static void
-infrun_thread_thread_exit (struct thread_info *tp, int silent)
-{
-  if (target_last_proc_target == tp->inf->process_target ()
-      && target_last_wait_ptid == tp->ptid)
-    nullify_last_target_wait_ptid ();
 }
 
 /* Delete the step resume, single-step and longjmp/exception resume
@@ -8843,41 +8932,43 @@ normal_stop ()
      the current thread back to the thread the user had selected right
      after this event is handled, so we're not really switching, only
      informing of a stop.  */
-  if (!non_stop
-      && target_has_execution ()
-      && last.kind () != TARGET_WAITKIND_SIGNALLED
-      && last.kind () != TARGET_WAITKIND_EXITED
-      && last.kind () != TARGET_WAITKIND_NO_RESUMED
-      && (previous_inferior_ptid != inferior_ptid
-	  || previous_lane != inferior_thread ()->current_simd_lane ()))
+  if (!non_stop)
     {
-      thread_info *thr = inferior_thread ();
 
-      SWITCH_THRU_ALL_UIS ()
+      if ((last.kind () != TARGET_WAITKIND_SIGNALLED
+	   && last.kind () != TARGET_WAITKIND_EXITED
+	   && last.kind () != TARGET_WAITKIND_NO_RESUMED)
+	  && target_has_execution ()
+	  && (previous_thread != inferior_thread ()
+	      || previous_lane != inferior_thread ()->current_simd_lane ()))
 	{
-	  target_terminal::ours_for_output ();
-
-	  if (thr->has_simd_lanes ())
+	  SWITCH_THRU_ALL_UIS ()
 	    {
-	      int lane = thr->current_simd_lane ();
+	      target_terminal::ours_for_output ();
 
-	      gdb_printf (_("[Switching to thread %s, lane %d (%s)]\n"),
-			  print_thread_id (thr), lane,
-			  target_lane_to_str (thr, lane).c_str ());
+	      thread_info *thr = inferior_thread ();
+
+	      if (thr->has_simd_lanes ())
+		{
+		  int lane = thr->current_simd_lane ();
+
+		  gdb_printf (_("[Switching to thread %s, lane %d (%s)]\n"),
+			      print_thread_id (thr), lane,
+			      target_lane_to_str (thr, lane).c_str ());
+		}
+	      else
+		{
+		  gdb_printf (_("[Switching to thread %s (%s)]\n"),
+			      print_thread_id (thr),
+			      target_pid_to_str (thr->ptid).c_str ());
+		}
+
+	      warn_if_current_lane_is_inactive ();
+	      annotate_thread_changed ();
 	    }
-	  else
-	    {
-	      gdb_printf (_("[Switching to thread %s (%s)]\n"),
-			  print_thread_id (thr),
-			  target_pid_to_str (thr->ptid).c_str ());
-	    }
-
-	  warn_if_current_lane_is_inactive ();
-
-	  annotate_thread_changed ();
 	}
-      previous_inferior_ptid = inferior_ptid;
-      previous_lane = thr->current_simd_lane ();
+
+      update_previous_thread_and_lane ();
     }
 
   if (last.kind () == TARGET_WAITKIND_NO_RESUMED)
@@ -8943,7 +9034,7 @@ normal_stop ()
     {
       execute_cmd_pre_hook (stop_command);
     }
-  catch (const gdb_exception &ex)
+  catch (const gdb_exception_error &ex)
     {
       exception_fprintf (gdb_stderr, ex,
 			 "Error while running hook_stop:\n");
@@ -10083,7 +10174,6 @@ enabled by default on some platforms."),
 					      "infrun");
   gdb::observers::thread_stop_requested.attach (infrun_thread_stop_requested,
 						"infrun");
-  gdb::observers::thread_exit.attach (infrun_thread_thread_exit, "infrun");
   gdb::observers::inferior_exit.attach (infrun_inferior_exit, "infrun");
   gdb::observers::inferior_execd.attach (infrun_inferior_execd, "infrun");
 

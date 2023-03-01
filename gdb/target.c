@@ -2472,6 +2472,8 @@ target_pre_inferior (int from_tty)
 
   current_inferior ()->highest_thread_num = 0;
 
+  update_previous_thread_and_lane ();
+
   agent_capability_invalidate ();
 }
 
@@ -2499,6 +2501,9 @@ target_preopen (int from_tty)
       else
 	error (_("Program not killed."));
     }
+
+  /* Release reference to old previous thread.  */
+  update_previous_thread_and_lane ();
 
   /* Calling target_kill may remove the target from the stack.  But if
      it doesn't (which seems like a win for UDI), remove it now.  */

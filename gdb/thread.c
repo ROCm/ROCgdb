@@ -1833,6 +1833,8 @@ show_inferior_qualified_tids (void)
 const char *
 print_thread_id (struct thread_info *thr)
 {
+  gdb_assert (thr != nullptr);
+
   char *s = get_print_cell ();
 
   if (show_inferior_qualified_tids ())

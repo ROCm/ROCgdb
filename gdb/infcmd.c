@@ -1564,7 +1564,7 @@ print_return_value (struct ui_out *uiout, struct return_value_info *rv)
 	 delete the breakpoint.  */
       print_return_value_1 (uiout, rv);
     }
-  catch (const gdb_exception &ex)
+  catch (const gdb_exception_error &ex)
     {
       exception_print (gdb_stdout, ex);
     }
@@ -1911,37 +1911,74 @@ finish_command (const char *arg, int from_tty)
 static void
 info_program_command (const char *args, int from_tty)
 {
-  bpstat *bs;
-  int num, stat;
-  ptid_t ptid;
-  process_stratum_target *proc_target;
+  scoped_restore_current_thread restore_thread;
 
-  if (!target_has_execution ())
-    {
-      gdb_printf (_("The program being debugged is not being run.\n"));
-      return;
-    }
+  thread_info *tp;
+
+  /* In non-stop, since every thread is controlled individually, we'll
+     show execution info about the current thread.  In all-stop, we'll
+     show execution info about the last stop.  */
 
   if (non_stop)
     {
-      ptid = inferior_ptid;
-      proc_target = current_inferior ()->process_target ();
+      if (!target_has_execution ())
+	{
+	  gdb_printf (_("The program being debugged is not being run.\n"));
+	  return;
+	}
+
+      if (inferior_ptid == null_ptid)
+	error (_("No selected thread."));
+
+      tp = inferior_thread ();
+
+      gdb_printf (_("Selected thread %s (%s).\n"),
+		  print_thread_id (tp),
+		  target_pid_to_str (tp->ptid).c_str ());
+
+      if (tp->state == THREAD_EXITED)
+	{
+	  gdb_printf (_("Selected thread has exited.\n"));
+	  return;
+	}
+      else if (tp->state == THREAD_RUNNING)
+	{
+	  gdb_printf (_("Selected thread is running.\n"));
+	  return;
+	}
     }
   else
-    get_last_target_status (&proc_target, &ptid, nullptr);
+    {
+      tp = get_previous_thread ();
 
-  if (ptid == null_ptid || ptid == minus_one_ptid)
-    error (_("No selected thread."));
+      if (tp == nullptr)
+	{
+	  gdb_printf (_("The program being debugged is not being run.\n"));
+	  return;
+	}
 
-  thread_info *tp = find_thread_ptid (proc_target, ptid);
+      switch_to_thread (tp);
 
-  if (tp->state == THREAD_EXITED)
-    error (_("Invalid selected thread."));
-  else if (tp->state == THREAD_RUNNING)
-    error (_("Selected thread is running."));
+      gdb_printf (_("Last stopped for thread %s (%s).\n"),
+		  print_thread_id (tp),
+		  target_pid_to_str (tp->ptid).c_str ());
 
-  bs = tp->control.stop_bpstat;
-  stat = bpstat_num (&bs, &num);
+      if (tp->state == THREAD_EXITED)
+	{
+	  gdb_printf (_("Thread has since exited.\n"));
+	  return;
+	}
+
+      if (tp->state == THREAD_RUNNING)
+	{
+	  gdb_printf (_("Thread is now running.\n"));
+	  return;
+	}
+    }
+
+  int num;
+  bpstat *bs = tp->control.stop_bpstat;
+  int stat = bpstat_num (&bs, &num);
 
   target_files_info ();
   gdb_printf (_("Program stopped at %s.\n"),
@@ -2430,6 +2467,8 @@ kill_command (const char *arg, int from_tty)
   target_kill ();
   bfd_cache_close_all ();
 
+  update_previous_thread_and_lane ();
+
   if (print_inferior_events)
     gdb_printf (_("[Inferior %d (%s) killed]\n"),
 		infnum, pid_str.c_str ());
@@ -2790,6 +2829,8 @@ detach_command (const char *args, int from_tty)
 
   target_detach (current_inferior (), from_tty);
 
+  update_previous_thread_and_lane ();
+
   /* The current inferior process was just detached successfully.  Get
      rid of breakpoints that no longer make sense.  Note we don't do
      this within target_detach because that is also used when
@@ -2828,6 +2869,7 @@ disconnect_command (const char *args, int from_tty)
   target_disconnect (args, from_tty);
   no_shared_libraries (nullptr, from_tty);
   init_thread_list ();
+  update_previous_thread_and_lane ();
   if (deprecated_detach_hook)
     deprecated_detach_hook ();
 }

@@ -18,14 +18,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-def copyright(tool, description):
+def copyright(tool: str, description: str):
     # Search the tool source itself for the correct copyright years.
     with open(tool, "r") as f:
         for line in f:
             if line.startswith("# Copyright (C) "):
                 dateline = line[1:].strip()
                 break
-    return f"""/* *INDENT-OFF* */ /* THIS FILE IS GENERATED -*- buffer-read-only: t -*- */
+    return f"""/* THIS FILE IS GENERATED -*- buffer-read-only: t -*- */
 /* vi:set ro: */
 
 /* {description}

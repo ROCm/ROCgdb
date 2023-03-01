@@ -1209,7 +1209,15 @@ async_sigterm_handler (gdb_client_data arg)
 }
 
 /* See defs.h.  */
-volatile int sync_quit_force_run;
+volatile bool sync_quit_force_run;
+
+/* See defs.h.  */
+void
+set_force_quit_flag ()
+{
+  sync_quit_force_run = true;
+  set_quit_flag ();
+}
 
 /* Quit GDB if SIGTERM is received.
    GDB would quit anyway, but this way it will clean up properly.  */
@@ -1218,8 +1226,7 @@ handle_sigterm (int sig)
 {
   signal (sig, handle_sigterm);
 
-  sync_quit_force_run = 1;
-  set_quit_flag ();
+  set_force_quit_flag ();
 
   mark_async_signal_handler (async_sigterm_token);
 }
@@ -1281,6 +1288,8 @@ async_disconnect (gdb_client_data arg)
       gdb_puts ("Could not kill the program being debugged",
 		gdb_stderr);
       exception_print (gdb_stderr, exception);
+      if (exception.reason == RETURN_FORCED_QUIT)
+	throw;
     }
 
   for (inferior *inf : all_inferiors ())

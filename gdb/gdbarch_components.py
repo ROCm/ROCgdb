@@ -118,6 +118,8 @@
 # * "implement" - optional, a boolean.  If True (the default), a
 # wrapper function for this function will be emitted.
 
+from gdbarch_types import Function, Info, Method, Value
+
 Info(
     type="const struct bfd_arch_info *",
     name="bfd_arch_info",
@@ -165,13 +167,14 @@ Number of bits in an int or unsigned int for the target machine.
     invalid=False,
 )
 
+long_bit_predefault = "4*TARGET_CHAR_BIT"
 long_bit = Value(
     comment="""
 Number of bits in a long or unsigned long for the target machine.
 """,
     type="int",
     name="long_bit",
-    predefault="4*TARGET_CHAR_BIT",
+    predefault=long_bit_predefault,
     invalid=False,
 )
 
@@ -182,7 +185,7 @@ machine.
 """,
     type="int",
     name="long_long_bit",
-    predefault="2*" + long_bit.predefault,
+    predefault="2*" + long_bit_predefault,
     invalid=False,
 )
 

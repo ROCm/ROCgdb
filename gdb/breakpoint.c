@@ -2850,7 +2850,7 @@ insert_bp_location (struct bp_location *bl,
 		  if (val)
 		    bp_excpt = gdb_exception {RETURN_ERROR, GENERIC_ERROR};
 		}
-	      catch (gdb_exception &e)
+	      catch (gdb_exception_error &e)
 		{
 		  rethrow_on_target_close_error (e);
 		  bp_excpt = std::move (e);
@@ -2948,8 +2948,6 @@ insert_bp_location (struct bp_location *bl,
     }
 
   else if (bl->loc_type == bp_loc_hardware_watchpoint
-	   /* NOTE drow/2003-09-08: This state only exists for removing
-	      watchpoints.  It's not clear that it's necessary...  */
 	   && bl->owner->disposition != disp_del_at_next_stop)
     {
       int val;
@@ -3261,14 +3259,10 @@ remove_threaded_breakpoints (struct thread_info *tp, int silent)
     {
       if (b->thread == tp->global_num && user_breakpoint_p (b))
 	{
-	  b->disposition = disp_del_at_next_stop;
-
 	  gdb_printf (_("\
 Thread-specific breakpoint %d deleted - thread %s no longer in the thread list.\n"),
 		      b->number, print_thread_id (tp));
-
-	  /* Hide it from the user.  */
-	  b->number = 0;
+	  delete_breakpoint (b);
        }
     }
 }
@@ -5327,7 +5321,7 @@ bpstat_check_watchpoint (bpstat *bs)
 	    {
 	      e = watchpoint_check (bs);
 	    }
-	  catch (const gdb_exception &ex)
+	  catch (const gdb_exception_error &ex)
 	    {
 	      exception_fprintf (gdb_stderr, ex,
 				 "Error evaluating expression "
@@ -5604,7 +5598,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
 	      condition_result = condition_mask != 0;
 	      bs->simd_lane_mask = condition_mask;
 	    }
-	  catch (const gdb_exception &ex)
+	  catch (const gdb_exception_error &ex)
 	    {
 	      exception_fprintf (gdb_stderr, ex,
 				 "Error in testing breakpoint condition:\n");
@@ -6540,7 +6534,7 @@ print_one_breakpoint_location (struct breakpoint *b,
      For the CLI output, the thread/task information is printed on a
      separate line, see the 'stop only in thread' and 'stop only in task'
      output below.  */
-  if (!header_of_multiple && uiout->is_mi_like_p ())
+  if (part_of_multiple && uiout->is_mi_like_p ())
     {
       if (b->thread != -1)
 	uiout->field_signed ("thread", b->thread);
@@ -13600,7 +13594,7 @@ enable_breakpoint_disp (struct breakpoint *bpt, enum bpdisp disposition,
 	  bpt->enable_state = bp_enabled;
 	  update_watchpoint (w, true /* reparse */);
 	}
-      catch (const gdb_exception &e)
+      catch (const gdb_exception_error &e)
 	{
 	  bpt->enable_state = orig_enable_state;
 	  exception_fprintf (gdb_stderr, e, _("Cannot enable watchpoint %d: "),

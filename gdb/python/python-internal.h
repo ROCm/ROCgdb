@@ -437,7 +437,6 @@ PyObject *symbol_to_symbol_object (struct symbol *sym);
 PyObject *block_to_block_object (const struct block *block,
 				 struct objfile *objfile);
 PyObject *value_to_value_object (struct value *v);
-PyObject *value_to_value_object_no_release (struct value *v);
 PyObject *type_to_type_object (struct type *);
 PyObject *frame_info_to_frame_object (frame_info_ptr frame);
 PyObject *symtab_to_linetable_object (PyObject *symtab);
@@ -778,6 +777,7 @@ extern const struct value_print_options *gdbpy_current_print_options;
 
 void bpfinishpy_pre_stop_hook (struct gdbpy_breakpoint_object *bp_obj);
 void bpfinishpy_post_stop_hook (struct gdbpy_breakpoint_object *bp_obj);
+void bpfinishpy_pre_delete_hook (struct gdbpy_breakpoint_object *bp_obj);
 
 extern PyObject *gdbpy_doc_cst;
 extern PyObject *gdbpy_children_cst;

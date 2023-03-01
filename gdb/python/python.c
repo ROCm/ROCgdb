@@ -621,31 +621,32 @@ static PyObject *
 execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
 {
   const char *arg;
-  PyObject *from_tty_obj = NULL, *to_string_obj = NULL;
-  int from_tty, to_string;
-  static const char *keywords[] = { "command", "from_tty", "to_string", NULL };
+  PyObject *from_tty_obj = nullptr;
+  PyObject *to_string_obj = nullptr;
+  static const char *keywords[] = { "command", "from_tty", "to_string",
+				    nullptr };
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!O!", keywords, &arg,
 					&PyBool_Type, &from_tty_obj,
 					&PyBool_Type, &to_string_obj))
-    return NULL;
+    return nullptr;
 
-  from_tty = 0;
-  if (from_tty_obj)
+  bool from_tty = false;
+  if (from_tty_obj != nullptr)
     {
       int cmp = PyObject_IsTrue (from_tty_obj);
       if (cmp < 0)
-	return NULL;
-      from_tty = cmp;
+	return nullptr;
+      from_tty = (cmp != 0);
     }
 
-  to_string = 0;
-  if (to_string_obj)
+  bool to_string = false;
+  if (to_string_obj != nullptr)
     {
       int cmp = PyObject_IsTrue (to_string_obj);
       if (cmp < 0)
-	return NULL;
-      to_string = cmp;
+	return nullptr;
+      to_string = (cmp != 0);
     }
 
   std::string to_string_res;
@@ -969,22 +970,24 @@ static PyObject *
 gdbpy_parse_and_eval (PyObject *self, PyObject *args)
 {
   const char *expr_str;
-  struct value *result = NULL;
 
   if (!PyArg_ParseTuple (args, "s", &expr_str))
     return NULL;
 
+  PyObject *result = nullptr;
   try
     {
       gdbpy_allow_threads allow_threads;
-      result = parse_and_eval (expr_str);
+      scoped_value_mark free_values;
+      struct value *val = parse_and_eval (expr_str);
+      result = value_to_value_object (val);
     }
   catch (const gdb_exception &except)
     {
       GDB_PY_HANDLE_EXCEPTION (except);
     }
 
-  return value_to_value_object (result);
+  return result;
 }
 
 /* Implementation of gdb.invalidate_cached_frames.  */

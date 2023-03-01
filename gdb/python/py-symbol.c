@@ -18,6 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "top.h"		/* For force_quit ().  */
 #include "block.h"
 #include "frame.h"
 #include "symtab.h"
@@ -267,7 +268,6 @@ sympy_value (PyObject *self, PyObject *args)
   struct symbol *symbol = NULL;
   frame_info_ptr frame_info = NULL;
   PyObject *frame_obj = NULL;
-  struct value *value = NULL;
 
   if (!PyArg_ParseTuple (args, "|O", &frame_obj))
     return NULL;
@@ -285,6 +285,7 @@ sympy_value (PyObject *self, PyObject *args)
       return NULL;
     }
 
+  PyObject *result = nullptr;
   try
     {
       if (frame_obj != NULL)
@@ -301,14 +302,16 @@ sympy_value (PyObject *self, PyObject *args)
 	 was found, so we have no block to pass to read_var_value.  This will
 	 yield an incorrect value when symbol is not local to FRAME_INFO (this
 	 can happen with nested functions).  */
-      value = read_var_value (symbol, NULL, frame_info);
+      scoped_value_mark free_values;
+      struct value *value = read_var_value (symbol, NULL, frame_info);
+      result = value_to_value_object (value);
     }
   catch (const gdb_exception &except)
     {
       GDB_PY_HANDLE_EXCEPTION (except);
     }
 
-  return value_to_value_object (value);
+  return result;
 }
 
 /* Given a symbol, and a symbol_object that has previously been
@@ -514,6 +517,10 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
       frame_info_ptr selected_frame
 	= get_selected_frame (_("No frame selected."));
       block = get_frame_block (selected_frame, NULL);
+    }
+  catch (const gdb_exception_forced_quit &e)
+    {
+      quit_force (NULL, 0);
     }
   catch (const gdb_exception &except)
     {

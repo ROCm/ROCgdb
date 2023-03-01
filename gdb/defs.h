@@ -1,5 +1,3 @@
-/* *INDENT-OFF* */ /* ATTRIBUTE_PRINTF confuses indent, avoid running it
-		      for now.  */
 /* Basic, host-specific, and target-specific definitions for GDB.
    Copyright (C) 1986-2023 Free Software Foundation, Inc.
    Copyright (C) 2019-2023 Advanced Micro Devices, Inc. All rights reserved.
@@ -174,7 +172,10 @@ extern quit_handler_ftype *quit_handler;
 extern void default_quit_handler (void);
 
 /* Flag that function quit should call quit_force.  */
-extern volatile int sync_quit_force_run;
+extern volatile bool sync_quit_force_run;
+
+/* Set sync_quit_force_run and also call set_quit_flag().  */
+extern void set_force_quit_flag ();
 
 extern void quit (void);
 
