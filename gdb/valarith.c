@@ -1102,7 +1102,7 @@ type_length_bits (type *type)
    false, or errors out.  Returns true if valid.  */
 
 static bool
-check_valid_shift_count (int op, type *result_type,
+check_valid_shift_count (enum exp_opcode op, type *result_type,
 			 type *shift_count_type, ULONGEST shift_count)
 {
   if (!shift_count_type->is_unsigned () && (LONGEST) shift_count < 0)
@@ -1884,7 +1884,7 @@ value_less (struct value *arg1, struct value *arg2)
     }
 }
 
-/* The unary operators +, - and ~.  They free the argument ARG1.  */
+/* See value.h.  */
 
 struct value *
 value_pos (struct value *arg1)
@@ -1901,6 +1901,8 @@ value_pos (struct value *arg1)
   else
     error (_("Argument to positive operation not a number."));
 }
+
+/* See value.h.  */
 
 struct value *
 value_neg (struct value *arg1)
@@ -1947,6 +1949,8 @@ value_neg (struct value *arg1)
   else
     error (_("Argument to negate operation not a number."));
 }
+
+/* See value.h.  */
 
 struct value *
 value_complement (struct value *arg1)

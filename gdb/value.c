@@ -1866,7 +1866,7 @@ struct internalvar
 
   enum internalvar_kind kind = INTERNALVAR_VOID;
 
-  union internalvar_data u;
+  union internalvar_data u {};
 };
 
 /* Use std::map, a sorted container, to make the order of iteration (and

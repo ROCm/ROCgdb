@@ -1,8 +1,6 @@
-/* Common internal types for the DWARF reader
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 2017-2023 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+   Copyright 2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,24 +15,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef DWARF2_TYPES_H
-#define DWARF2_TYPES_H
+int var_ctf = 2;
 
-#include "gdbsupport/offset-type.h"
-#include "gdbsupport/underlying.h"
-
-/* Offset relative to the start of its containing CU (compilation
-   unit).  */
-DEFINE_OFFSET_TYPE (cu_offset, unsigned int);
-
-/* Offset relative to the start of its .debug_info or .debug_types
-   section.  */
-DEFINE_OFFSET_TYPE (sect_offset, uint64_t);
-
-static inline char *
-sect_offset_str (sect_offset offset)
+int
+foo (void)
 {
-  return hex_string (to_underlying (offset));
+  return var_ctf;
 }
-
-#endif /* DWARF2_TYPES_H */

@@ -1120,7 +1120,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 	     then the actual stuff.  */
 	  sb_reset (&t);
 	  idx = get_token (idx, in, &t);
-	  if (in->ptr[idx] != '=')
+	  if (idx >= in->len || in->ptr[idx] != '=')
 	    {
 	      err = _("confusion in formal parameters");
 	      break;
@@ -1184,7 +1184,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 
 	  if (f->type != FORMAL_VARARG)
 	    idx = get_any_string (idx, in, &f->actual);
-	  else
+	  else if (idx < in->len)
 	    {
 	      sb_add_buffer (&f->actual, in->ptr + idx, in->len - idx);
 	      idx = in->len;
@@ -1202,9 +1202,9 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 	idx = sb_skip_comma (idx, in);
       else
 	{
-	  if (in->ptr[idx] == ',')
+	  if (idx < in->len && in->ptr[idx] == ',')
 	    ++idx;
-	  if (ISWHITE (in->ptr[idx]))
+	  if (idx < in->len && ISWHITE (in->ptr[idx]))
 	    break;
 	}
     }
@@ -1221,13 +1221,14 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 
       if (macro_mri)
 	{
-	  char buffer[20];
-
-	  sb_reset (&t);
-	  sb_add_string (&t, macro_strip_at ? "$NARG" : "NARG");
-	  ptr = str_hash_find (m->formal_hash, sb_terminate (&t));
-	  sprintf (buffer, "%d", narg);
-	  sb_add_string (&ptr->actual, buffer);
+	  ptr = str_hash_find (m->formal_hash,
+			       macro_strip_at ? "$NARG" : "NARG");
+	  if (ptr)
+	    {
+	      char buffer[20];
+	      sprintf (buffer, "%d", narg);
+	      sb_add_string (&ptr->actual, buffer);
+	    }
 	}
 
       err = macro_expand_body (&m->sub, out, m->formals, m->formal_hash, m);
