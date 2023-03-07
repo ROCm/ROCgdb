@@ -3,6 +3,11 @@
 
 *** Changes since GDB 13
 
+* Removed targets and native configurations
+
+  GDB no longer supports AIX 4.x, AIX 5.x and AIX 6.x.  The minimum supported
+  AIX version is now AIX 7.1.
+
 * Multi-target feature configuration
 
   GDB now supports the individual configuration of remote targets' feature
@@ -67,6 +72,9 @@ maintenance print record-instruction [ N ]
 maintenance info frame-unwinders
   List the frame unwinders currently in effect, starting with the highest
   priority.
+
+maintenance wait-for-index-cache
+  Wait until all pending writes to the index cache have completed.
 
 set always-read-ctf on|off
 show always-read-ctf
