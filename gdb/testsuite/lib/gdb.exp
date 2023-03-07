@@ -2449,7 +2449,7 @@ proc allow_rust_tests {} {
 
 # Return a 1 for configurations that support Python scripting.
 
-gdb_caching_proc allow_python_tests {
+gdb_caching_proc allow_python_tests {} {
     set output [remote_exec host $::GDB "$::INTERNAL_GDBFLAGS --configuration"]
     return [expr {[string first "--with-python" $output] != -1}]
 }
@@ -2478,7 +2478,7 @@ proc allow_shlib_tests {} {
 
 # Return 1 if we should run dlmopen tests, 0 if we should not.
 
-gdb_caching_proc allow_dlmopen_tests {
+gdb_caching_proc allow_dlmopen_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     # We need shared library support.
@@ -2574,7 +2574,7 @@ gdb_caching_proc allow_dlmopen_tests {
 
 # Return 1 if we should allow TUI-related tests.
 
-gdb_caching_proc allow_tui_tests {
+gdb_caching_proc allow_tui_tests {} {
     set output [remote_exec host $::GDB "$::INTERNAL_GDBFLAGS --configuration"]
     return [expr {[string first "--enable-tui" $output] != -1}]
 }
@@ -3165,7 +3165,7 @@ proc with_read1_timeout_factor { factor body } {
 
 # Return 1 if _Complex types are supported, otherwise, return 0.
 
-gdb_caching_proc support_complex_tests {
+gdb_caching_proc support_complex_tests {} {
 
     if { ![allow_float_test] } {
 	# If floating point is not supported, _Complex is not
@@ -3186,7 +3186,7 @@ gdb_caching_proc support_complex_tests {
 }
 
 # Return 1 if compiling go is supported.
-gdb_caching_proc support_go_compile {
+gdb_caching_proc support_go_compile {} {
 
     return [gdb_can_simple_compile go-hello {
 	package main
@@ -3210,7 +3210,7 @@ proc supports_get_siginfo_type {} {
 
 # Return 1 if memory tagging is supported at runtime, otherwise return 0.
 
-gdb_caching_proc supports_memtag {
+gdb_caching_proc supports_memtag {} {
     global gdb_prompt
 
     gdb_test_multiple "memory-tag check" "" {
@@ -3302,7 +3302,7 @@ proc readline_is_used { } {
 }
 
 # Return 1 if target is ELF.
-gdb_caching_proc is_elf_target {
+gdb_caching_proc is_elf_target {} {
     set me "is_elf_target"
 
     set src { int foo () {return 0;} }
@@ -3330,7 +3330,7 @@ gdb_caching_proc is_elf_target {
 
 # Return 1 if the memory at address zero is readable.
 
-gdb_caching_proc is_address_zero_readable {
+gdb_caching_proc is_address_zero_readable {} {
     global gdb_prompt
 
     set ret 0
@@ -3359,7 +3359,7 @@ proc gdb_produce_source { name sources } {
 # Return 1 if target is ILP32.
 # This cannot be decided simply from looking at the target string,
 # as it might depend on externally passed compiler options like -m64.
-gdb_caching_proc is_ilp32_target {
+gdb_caching_proc is_ilp32_target {} {
     return [gdb_can_simple_compile is_ilp32_target {
 	int dummy[sizeof (int) == 4
 		  && sizeof (void *) == 4
@@ -3370,7 +3370,7 @@ gdb_caching_proc is_ilp32_target {
 # Return 1 if target is LP64.
 # This cannot be decided simply from looking at the target string,
 # as it might depend on externally passed compiler options like -m64.
-gdb_caching_proc is_lp64_target {
+gdb_caching_proc is_lp64_target {} {
     return [gdb_can_simple_compile is_lp64_target {
 	int dummy[sizeof (int) == 4
 		  && sizeof (void *) == 8
@@ -3381,7 +3381,7 @@ gdb_caching_proc is_lp64_target {
 # Return 1 if target has 64 bit addresses.
 # This cannot be decided simply from looking at the target string,
 # as it might depend on externally passed compiler options like -m64.
-gdb_caching_proc is_64_target {
+gdb_caching_proc is_64_target {} {
     return [gdb_can_simple_compile is_64_target {
 	int function(void) { return 3; }
 	int dummy[sizeof (&function) == 8 ? 1 : -1];
@@ -3391,7 +3391,7 @@ gdb_caching_proc is_64_target {
 # Return 1 if target has x86_64 registers - either amd64 or x32.
 # x32 target identifies as x86_64-*-linux*, therefore it cannot be determined
 # just from the target string.
-gdb_caching_proc is_amd64_regs_target {
+gdb_caching_proc is_amd64_regs_target {} {
     if {![istarget "x86_64-*-*"] && ![istarget "i?86-*"]} {
 	return 0
     }
@@ -3421,7 +3421,7 @@ proc is_x86_64_m64_target {} {
 
 # Return 1 if this target is an arm or aarch32 on aarch64.
 
-gdb_caching_proc is_aarch32_target {
+gdb_caching_proc is_aarch32_target {} {
     if { [istarget "arm*-*-*"] } {
 	return 1
     }
@@ -3465,7 +3465,7 @@ proc support_displaced_stepping {} {
 # Run a test on the target to see if it supports vmx hardware.  Return 1 if so, 
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc allow_altivec_tests {
+gdb_caching_proc allow_altivec_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_altivec_tests"
@@ -3535,7 +3535,7 @@ gdb_caching_proc allow_altivec_tests {
 }
 
 # Run a test on the power target to see if it supports ISA 3.1 instructions
-gdb_caching_proc allow_power_isa_3_1_tests {
+gdb_caching_proc allow_power_isa_3_1_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_power_isa_3_1_tests"
@@ -3584,7 +3584,7 @@ gdb_caching_proc allow_power_isa_3_1_tests {
 # Run a test on the target to see if it supports vmx hardware.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc allow_vsx_tests {
+gdb_caching_proc allow_vsx_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_vsx_tests"
@@ -3653,7 +3653,7 @@ gdb_caching_proc allow_vsx_tests {
 # Run a test on the target to see if it supports TSX hardware.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc allow_tsx_tests {
+gdb_caching_proc allow_tsx_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_tsx_tests"
@@ -3702,7 +3702,7 @@ gdb_caching_proc allow_tsx_tests {
 # Run a test on the target to see if it supports avx512bf16.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc allow_avx512bf16_tests {
+gdb_caching_proc allow_avx512bf16_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_avx512bf16_tests"
@@ -3753,7 +3753,7 @@ gdb_caching_proc allow_avx512bf16_tests {
 # Run a test on the target to see if it supports avx512fp16.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc allow_avx512fp16_tests {
+gdb_caching_proc allow_avx512fp16_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_avx512fp16_tests"
@@ -3804,7 +3804,7 @@ gdb_caching_proc allow_avx512fp16_tests {
 # Run a test on the target to see if it supports btrace hardware.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
-gdb_caching_proc allow_btrace_tests {
+gdb_caching_proc allow_btrace_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_btrace_tests"
@@ -3855,7 +3855,7 @@ gdb_caching_proc allow_btrace_tests {
 # Return 1 if so, 0 if it does not.  Based on 'check_vmx_hw_available'
 # from the GCC testsuite.
 
-gdb_caching_proc allow_btrace_pt_tests {
+gdb_caching_proc allow_btrace_pt_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_btrace_pt_tests"
@@ -3908,7 +3908,7 @@ gdb_caching_proc allow_btrace_pt_tests {
 # Run a test on the target to see if it supports Aarch64 SVE hardware.
 # Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
 
-gdb_caching_proc allow_aarch64_sve_tests {
+gdb_caching_proc allow_aarch64_sve_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
     set me "allow_aarch64_sve_tests"
@@ -3964,17 +3964,17 @@ proc gdb_int128_helper {lang} {
 }
 
 # Return true if the C compiler understands the __int128 type.
-gdb_caching_proc has_int128_c {
+gdb_caching_proc has_int128_c {} {
     return [gdb_int128_helper c]
 }
 
 # Return true if the C++ compiler understands the __int128 type.
-gdb_caching_proc has_int128_cxx {
+gdb_caching_proc has_int128_cxx {} {
     return [gdb_int128_helper c++]
 }
 
 # Return true if the IFUNC feature is supported.
-gdb_caching_proc allow_ifunc_tests {
+gdb_caching_proc allow_ifunc_tests {} {
     if [gdb_can_simple_compile ifunc {
 	extern void f_ ();
 	typedef void F (void);
@@ -4261,7 +4261,7 @@ proc use_gdb_stub {} {
 # Return 1 if the current remote target is an instance of our GDBserver, 0
 # otherwise.  Return -1 if there was an error and we can't tell.
 
-gdb_caching_proc target_is_gdbserver {
+gdb_caching_proc target_is_gdbserver {} {
     global gdb_prompt
 
     set is_gdbserver -1
@@ -4540,7 +4540,7 @@ proc gdb_wrapper_init { args } {
 }
 
 # Determine options that we always want to pass to the compiler.
-gdb_caching_proc universal_compile_options {
+gdb_caching_proc universal_compile_options {} {
     set me "universal_compile_options"
     set options {}
 
@@ -6839,7 +6839,7 @@ proc exec_has_index_section { executable } {
 }
 
 # Return list with major and minor version of readelf, or an empty list.
-gdb_caching_proc readelf_version {
+gdb_caching_proc readelf_version {} {
     set readelf_program [gdb_find_readelf]
     set res [catch {exec $readelf_program --version} output]
     if { $res != 0 } {
@@ -6898,7 +6898,7 @@ proc exec_is_pie { executable } {
 # point support or GDB can't fetch the contents from floating point
 # registers.
 
-gdb_caching_proc allow_float_test {
+gdb_caching_proc allow_float_test {} {
     if [target_info exists gdb,skip_float_tests] {
 	return 0
     }
@@ -7011,7 +7011,7 @@ proc gdb_skip_bogus_test { msg } {
 # Return true if XML support is enabled in the host GDB.
 # NOTE: This must be called while gdb is *not* running.
 
-gdb_caching_proc allow_xml_test {
+gdb_caching_proc allow_xml_test {} {
     global gdb_spawn_id
     global gdb_prompt
     global srcdir
@@ -7036,7 +7036,7 @@ gdb_caching_proc allow_xml_test {
 
 # Return true if argv[0] is available.
 
-gdb_caching_proc gdb_has_argv0 {
+gdb_caching_proc gdb_has_argv0 {} {
     set result 0
 
     # Compile and execute a test program to check whether argv[0] is available.
@@ -7747,7 +7747,7 @@ proc get_endianness { } {
 }
 
 # Get the target's default endianness and return it.
-gdb_caching_proc target_endianness {
+gdb_caching_proc target_endianness {} {
     global gdb_prompt
 
     set me "target_endianness"
@@ -7956,7 +7956,7 @@ proc core_find {binfile {deletefiles {}} {arg ""}} {
 # the output from objdump to determine the prefix (such as underscore)
 # for linker symbol prefixes.
 
-gdb_caching_proc gdb_target_symbol_prefix {
+gdb_caching_proc gdb_target_symbol_prefix {} {
     # Compile a simple test program...
     set src { int main() { return 0; } }
     if {![gdb_simple_compile target_symbol_prefix $src executable]} {
@@ -7981,7 +7981,7 @@ gdb_caching_proc gdb_target_symbol_prefix {
 
 # Return 1 if target supports scheduler locking, otherwise return 0.
 
-gdb_caching_proc target_supports_scheduler_locking {
+gdb_caching_proc target_supports_scheduler_locking {} {
     global gdb_prompt
 
     set me "gdb_target_supports_scheduler_locking"
@@ -8040,7 +8040,7 @@ gdb_caching_proc target_supports_scheduler_locking {
 # Return 1 if compiler supports use of nested functions.  Otherwise,
 # return 0.
 
-gdb_caching_proc support_nested_function_tests {
+gdb_caching_proc support_nested_function_tests {} {
     # Compile a test program containing a nested function
     return [gdb_can_simple_compile nested_func {
 	int main () {
@@ -8568,7 +8568,7 @@ proc cmp_binary_files { file1 file2 } {
 # flag?  If not then we should skip these tests.  We should also
 # skip them if libctf was explicitly disabled.
 
-gdb_caching_proc allow_ctf_tests {
+gdb_caching_proc allow_ctf_tests {} {
     global enable_libctf
 
     if {$enable_libctf eq "no"} {
@@ -8587,7 +8587,7 @@ gdb_caching_proc allow_ctf_tests {
 # Return 1 if compiler supports -gstatement-frontiers.  Otherwise,
 # return 0.
 
-gdb_caching_proc supports_statement_frontiers {
+gdb_caching_proc supports_statement_frontiers {} {
     return [gdb_can_simple_compile supports_statement_frontiers {
 	int main () {
 	    return 0;
@@ -8598,7 +8598,7 @@ gdb_caching_proc supports_statement_frontiers {
 # Return 1 if compiler supports -mmpx -fcheck-pointer-bounds.  Otherwise,
 # return 0.
 
-gdb_caching_proc supports_mpx_check_pointer_bounds {
+gdb_caching_proc supports_mpx_check_pointer_bounds {} {
     set flags "additional_flags=-mmpx additional_flags=-fcheck-pointer-bounds"
     return [gdb_can_simple_compile supports_mpx_check_pointer_bounds {
 	int main () {
@@ -8610,7 +8610,7 @@ gdb_caching_proc supports_mpx_check_pointer_bounds {
 # Return 1 if compiler supports -fcf-protection=.  Otherwise,
 # return 0.
 
-gdb_caching_proc supports_fcf_protection {
+gdb_caching_proc supports_fcf_protection {} {
     return [gdb_can_simple_compile supports_fcf_protection {
 	int main () {
 	    return 0;
@@ -8882,7 +8882,7 @@ proc gdb_note { message } {
 }
 
 # Return 1 if compiler supports -fuse-ld=gold, otherwise return 0.
-gdb_caching_proc have_fuse_ld_gold {
+gdb_caching_proc have_fuse_ld_gold {} {
     set me "have_fuse_ld_gold"
     set flags "additional_flags=-fuse-ld=gold"
     set src { int main() { return 0; } }
@@ -8890,7 +8890,7 @@ gdb_caching_proc have_fuse_ld_gold {
 }
 
 # Return 1 if compiler supports fvar-tracking, otherwise return 0.
-gdb_caching_proc have_fvar_tracking {
+gdb_caching_proc have_fvar_tracking {} {
     set me "have_fvar_tracking"
     set flags "additional_flags=-fvar-tracking"
     set src { int main() { return 0; } }
@@ -8898,7 +8898,7 @@ gdb_caching_proc have_fvar_tracking {
 }
 
 # Return 1 if linker supports -Ttext-segment, otherwise return 0.
-gdb_caching_proc linker_supports_Ttext_segment_flag {
+gdb_caching_proc linker_supports_Ttext_segment_flag {} {
     set me "linker_supports_Ttext_segment_flag"
     set flags ldflags="-Wl,-Ttext-segment=0x7000000"
     set src { int main() { return 0; } }
@@ -8906,7 +8906,7 @@ gdb_caching_proc linker_supports_Ttext_segment_flag {
 }
 
 # Return 1 if linker supports -Ttext, otherwise return 0.
-gdb_caching_proc linker_supports_Ttext_flag {
+gdb_caching_proc linker_supports_Ttext_flag {} {
     set me "linker_supports_Ttext_flag"
     set flags ldflags="-Wl,-Ttext=0x7000000"
     set src { int main() { return 0; } }
@@ -8914,7 +8914,7 @@ gdb_caching_proc linker_supports_Ttext_flag {
 }
 
 # Return 1 if linker supports --image-base, otherwise 0.
-gdb_caching_proc linker_supports_image_base_flag {
+gdb_caching_proc linker_supports_image_base_flag {} {
     set me "linker_supports_image_base_flag"
     set flags ldflags="-Wl,--image-base=0x7000000"
     set src { int main() { return 0; } }
@@ -8924,7 +8924,7 @@ gdb_caching_proc linker_supports_image_base_flag {
 
 # Return 1 if compiler supports scalar_storage_order attribute, otherwise
 # return 0.
-gdb_caching_proc supports_scalar_storage_order_attribute {
+gdb_caching_proc supports_scalar_storage_order_attribute {} {
     set me "supports_scalar_storage_order_attribute"
     set src {
 	#include <string.h>
@@ -8958,7 +8958,7 @@ gdb_caching_proc supports_scalar_storage_order_attribute {
 }
 
 # Return 1 if compiler supports __GNUC__, otherwise return 0.
-gdb_caching_proc supports_gnuc {
+gdb_caching_proc supports_gnuc {} {
     set me "supports_gnuc"
     set src {
 	#ifndef __GNUC__
@@ -8969,7 +8969,7 @@ gdb_caching_proc supports_gnuc {
 }
 
 # Return 1 if target supports mpx, otherwise return 0.
-gdb_caching_proc have_mpx {
+gdb_caching_proc have_mpx {} {
     global srcdir
 
     set me "have_mpx"
@@ -9044,7 +9044,7 @@ gdb_caching_proc have_mpx {
 }
 
 # Return 1 if target supports avx, otherwise return 0.
-gdb_caching_proc have_avx {
+gdb_caching_proc have_avx {} {
     global srcdir
 
     set me "have_avx"
@@ -9128,7 +9128,7 @@ proc target_file_exists_with_timeout { path } {
     return 0
 }
 
-gdb_caching_proc has_hw_wp_support {
+gdb_caching_proc has_hw_wp_support {} {
     # Power 9, proc rev 2.2 does not support HW watchpoints due to HW bug.
     # Need to use a runtime test to determine if the Power processor has
     # support for HW watchpoints.
@@ -9236,7 +9236,7 @@ proc get_set_option_choices { set_cmd {set_arg ""} } {
 # set, use that.  If not, try a few common compiler names, making sure
 # that the executable they produce can run.
 
-gdb_caching_proc arm_cc_for_target {
+gdb_caching_proc arm_cc_for_target {} {
     if {[info exists ::ARM_CC_FOR_TARGET]} {
 	# If the user specified the compiler explicitly, then don't
 	# check whether the resulting binary runs outside GDB.  Assume
@@ -9345,7 +9345,7 @@ proc is_target_non_stop { {testname ""} } {
 #
 # Returns True if it is associated with the closing brace,
 # False if it is the last statement
-gdb_caching_proc have_epilogue_line_info {
+gdb_caching_proc have_epilogue_line_info {} {
 
     set main {
 	int
@@ -9412,7 +9412,7 @@ proc has_dependency { file dep } {
 # Detect linux kernel version and return as list of 3 numbers: major, minor,
 # and patchlevel.  On failure, return an empty list.
 
-gdb_caching_proc linux_kernel_version {
+gdb_caching_proc linux_kernel_version {} {
     if { ![istarget *-*-linux*] } {
 	return {}
     }
@@ -9445,7 +9445,7 @@ proc have_syscall { name } {
 
 # Return 1 if compile flag FLAG is supported.
 
-proc have_compile_flag { flag } {
+gdb_caching_proc have_compile_flag { flag } {
     set src { void foo () {} }
     return [gdb_can_simple_compile have_compile_flag_$flag $src object \
 		additional_flags=$flag]
