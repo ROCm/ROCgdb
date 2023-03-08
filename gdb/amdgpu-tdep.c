@@ -479,57 +479,64 @@ amdgcn_return_value_load_store (gdbarch *gdbarch, regcache *regcache,
    [1] https://llvm.org/docs/AMDGPUUsage.html#non-kernel-functions
 */
 static enum return_value_convention
-amdgpu_return_value (struct gdbarch *gdbarch, struct value *function,
-		     struct type *type, struct regcache *regcache,
-		     gdb_byte *readbuf, const gdb_byte *writebuf)
+amdgpu_return_value_as_value (gdbarch *arch, value *function, type *valtype,
+			      regcache *regcache, value **read_value,
+			      const gdb_byte *writebuf)
 {
-  gdb_assert (gdbarch_bfd_arch_info (gdbarch)->arch == bfd_arch_amdgcn);
+  gdb_assert (gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn);
+  gdb_byte *readbuf = nullptr;
 
-  type = check_typedef (type);
+  valtype = check_typedef (valtype);
+
+  if (read_value != nullptr)
+    {
+      *read_value = value::allocate (valtype);
+      readbuf = (*read_value)->contents_raw ().data ();
+    }
 
   /* Non-trivial objects are not returned by value.  */
-  if (!language_pass_by_reference (type).trivially_copyable)
+  if (!language_pass_by_reference (valtype).trivially_copyable)
     return RETURN_VALUE_STRUCT_CONVENTION;
 
   /* Struct with flexible array are never returned by value.  */
-  if (has_flexible_array_member (type))
+  if (has_flexible_array_member (valtype))
     return RETURN_VALUE_STRUCT_CONVENTION;
 
-  /* Nothing particular to do for empty strucs.  We still use
+  /* Nothing particular to do for empty structs.  We still use
      RETURN_VALUE_REGISTER_CONVENTION so GDB can display the (empty) value.  */
-  if (type->code () == TYPE_CODE_STRUCT)
+  if (valtype->code () == TYPE_CODE_STRUCT)
     {
       bool has_non_static_fields = false;
-      for (int i = 0; i < type->num_fields (); ++i)
+      for (int i = 0; i < valtype->num_fields (); ++i)
 	has_non_static_fields
-	  = has_non_static_fields || !field_is_static (&type->field (i));
+	  = has_non_static_fields || !field_is_static (&valtype->field (i));
 
       if (!has_non_static_fields)
 	return RETURN_VALUE_REGISTER_CONVENTION;
     }
 
   /* Types of size under 8 bytes are returned packed in v0-1.  */
-  if (type->length () <= 2 * AMDGCN_VGPR_LEN)
+  if (valtype->length () <= 2 * AMDGCN_VGPR_LEN)
     {
       if (regcache != nullptr)
 	{
 	  /* Pack aggregates, but not scalar types so sign extension can be
 	     done if necessary.  */
-	  const bool pack = (type->code () == TYPE_CODE_STRUCT
-			     ||type->code () == TYPE_CODE_ARRAY);
-	  const amdgcn_arg_placement alloc (type, pack);
+	  const bool pack = (valtype->code () == TYPE_CODE_STRUCT
+			     ||valtype->code () == TYPE_CODE_ARRAY);
+	  const amdgcn_arg_placement alloc (valtype, pack);
 
-	  amdgcn_return_value_load_store (gdbarch, regcache,
+	  amdgcn_return_value_load_store (arch, regcache,
 					  alloc, readbuf, writebuf);
 	}
       return RETURN_VALUE_REGISTER_CONVENTION;
     }
 
-  const amdgcn_arg_placement alloc (type, false);
+  const amdgcn_arg_placement alloc (valtype, false);
   if (alloc.allocation ().size () <= AMDGCN_MAX_NUM_REGS_FOR_ARGS_RET)
     {
       if (regcache != nullptr)
-	amdgcn_return_value_load_store (gdbarch, regcache, alloc,
+	amdgcn_return_value_load_store (arch, regcache, alloc,
 					readbuf, writebuf);
       return RETURN_VALUE_REGISTER_CONVENTION;
     }
@@ -1936,7 +1943,7 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, amdgpu_dwarf_reg_to_regnum);
 
-  set_gdbarch_return_value (gdbarch, amdgpu_return_value);
+  set_gdbarch_return_value_as_value (gdbarch, amdgpu_return_value_as_value);
 
   /* Register representation.  */
   set_gdbarch_register_name (gdbarch, amdgpu_register_name);
