@@ -28021,6 +28021,11 @@ Hotpink Bonefish devices.
 
 @end table
 
+You can consult the
+@url{https://llvm.org/docs/AMDGPUUsage.html#processors, LLVM
+documentation} for the correspondence between architecture names and
+examples of product names.
+
 @subsubsection @acronym{AMD ROCm} Source Languages
 
 @value{GDBN} supports the following source languages:
