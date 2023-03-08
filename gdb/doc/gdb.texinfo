@@ -27761,43 +27761,43 @@ The following @acronym{AMD GPU} architectures are supported:
 
 @table @emph
 
-@item @samp{gfx900}
+@item @code{gfx900}
 AMD Vega 10 devices.
 
-@item @samp{gfx906}
+@item @code{gfx906}
 AMD Vega 7nm devices.
 
-@item @samp{gfx908}
+@item @code{gfx908}
 AMD Instinct@registeredsymbol{} MI100 accelerator devices.
 
-@item @samp{gfx90a}
+@item @code{gfx90a}
 AMD Instinct@registeredsymbol{} MI200 Series accelerator devices.
 
-@item @samp{gfx1010}
+@item @code{gfx1010}
 Navi 10 devices.
 
-@item @samp{gfx1011}
+@item @code{gfx1011}
 Navi 12 devices.
 
-@item @samp{gfx1012}
+@item @code{gfx1012}
 Navi 14 devices.
 
-@item @samp{gfx1030}
+@item @code{gfx1030}
 Sienna Cichlid devices.
 
-@item @samp{gfx1031}
+@item @code{gfx1031}
 Navy Flounder devices.
 
-@item @samp{gfx1032}
+@item @code{gfx1032}
 Dimgrey Cavefish devices.
 
-@item @samp{gfx1100}
+@item @code{gfx1100}
 Plum Bonito devices.
 
-@item @samp{gfx1101}
+@item @code{gfx1101}
 Wheat Nas devices.
 
-@item @samp{gfx1102}
+@item @code{gfx1102}
 Hotpink Bonefish devices.
 
 @end table
