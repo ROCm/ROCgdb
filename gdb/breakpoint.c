@@ -6434,7 +6434,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 	 without a footnote.  On the CLI, for enabled locations whose
 	 breakpoint is disabled, display "y-".  */
       auto get_enable_state = [uiout, loc] () -> const char *
-        {
+	{
 	  if (uiout->is_mi_like_p ())
 	    {
 	      if (loc->disabled_by_cond)
@@ -6671,7 +6671,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 
       bool use_fixed_output =
 	(uiout->test_flags (fix_breakpoint_script_output)
-         || fix_breakpoint_script_output_globally);
+	 || fix_breakpoint_script_output_globally);
 
       gdb::optional<ui_out_emit_tuple> tuple_emitter;
       gdb::optional<ui_out_emit_list> list_emitter;
