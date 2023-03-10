@@ -165,7 +165,7 @@ static void swap_operands (void);
 static void swap_2_operands (unsigned int, unsigned int);
 static enum flag_code i386_addressing_mode (void);
 static void optimize_imm (void);
-static void optimize_disp (void);
+static bool optimize_disp (const insn_template *t);
 static const insn_template *match_template (char);
 static int check_string (void);
 static int process_suffix (void);
@@ -3743,8 +3743,7 @@ get_broadcast_bytes (const insn_template *t, bool diag)
   const i386_operand_type *types;
 
   if (i.broadcast.type)
-    return i.broadcast.bytes = ((1 << (t->opcode_modifier.broadcast - 1))
-				* i.broadcast.type);
+    return (1 << (t->opcode_modifier.broadcast - 1)) * i.broadcast.type;
 
   gas_assert (intel_syntax);
 
@@ -3928,7 +3927,8 @@ build_evex_prefix (void)
 		    i.tm.opcode_modifier.evex = EVEX128;
 		    break;
 		  }
-		else if (i.broadcast.bytes && op == i.broadcast.operand)
+		else if ((i.broadcast.type || i.broadcast.bytes)
+			 && op == i.broadcast.operand)
 		  {
 		    switch (get_broadcast_bytes (&i.tm, true))
 		      {
@@ -3972,7 +3972,7 @@ build_evex_prefix (void)
 	}
       i.vex.bytes[3] |= vec_length;
       /* Encode the broadcast bit.  */
-      if (i.broadcast.bytes)
+      if (i.broadcast.type || i.broadcast.bytes)
 	i.vex.bytes[3] |= 0x10;
     }
   else if (i.rounding.type != saeonly)
@@ -4473,6 +4473,7 @@ optimize_encoding (void)
 	   && !i.types[0].bitfield.zmmword
 	   && !i.types[1].bitfield.zmmword
 	   && !i.mask.reg
+	   && !i.broadcast.type
 	   && !i.broadcast.bytes
 	   && is_evex_encoding (&i.tm)
 	   && ((i.tm.base_opcode & ~Opcode_SIMD_IntD) == 0x6f
@@ -4966,42 +4967,8 @@ md_assemble (char *line)
   if (i.imm_operands)
     optimize_imm ();
 
-  if (i.disp_operands && !want_disp32 (t)
-      && (!t->opcode_modifier.jump
-	  || i.jumpabsolute || i.types[0].bitfield.baseindex))
-    {
-      for (j = 0; j < i.operands; ++j)
-	{
-	  const expressionS *exp = i.op[j].disps;
-
-	  if (!operand_type_check (i.types[j], disp))
-	    continue;
-
-	  if (exp->X_op != O_constant)
-	    continue;
-
-	  /* Since displacement is signed extended to 64bit, don't allow
-	     disp32 if it is out of range.  */
-	  if (fits_in_signed_long (exp->X_add_number))
-	    continue;
-
-	  i.types[j].bitfield.disp32 = 0;
-	  if (i.types[j].bitfield.baseindex)
-	    {
-	      as_bad (_("0x%" PRIx64 " out of range of signed 32bit displacement"),
-		      (uint64_t) exp->X_add_number);
-	      return;
-	    }
-	}
-    }
-
-  /* Don't optimize displacement for movabs since it only takes 64bit
-     displacement.  */
-  if (i.disp_operands
-      && i.disp_encoding <= disp_encoding_8bit
-      && (flag_code != CODE_64BIT
-	  || strcmp (mnemonic, "movabs") != 0))
-    optimize_disp ();
+  if (i.disp_operands && !optimize_disp (t))
+    return;
 
   /* Next, we find a template that matches the given insn,
      making sure the overlap of the given operands types is consistent
@@ -6130,12 +6097,47 @@ optimize_imm (void)
 }
 
 /* Try to use the smallest displacement type too.  */
-static void
-optimize_disp (void)
+static bool
+optimize_disp (const insn_template *t)
 {
-  int op;
+  unsigned int op;
 
-  for (op = i.operands; --op >= 0;)
+  if (!want_disp32 (t)
+      && (!t->opcode_modifier.jump
+	  || i.jumpabsolute || i.types[0].bitfield.baseindex))
+    {
+      for (op = 0; op < i.operands; ++op)
+	{
+	  const expressionS *exp = i.op[op].disps;
+
+	  if (!operand_type_check (i.types[op], disp))
+	    continue;
+
+	  if (exp->X_op != O_constant)
+	    continue;
+
+	  /* Since displacement is signed extended to 64bit, don't allow
+	     disp32 if it is out of range.  */
+	  if (fits_in_signed_long (exp->X_add_number))
+	    continue;
+
+	  i.types[op].bitfield.disp32 = 0;
+	  if (i.types[op].bitfield.baseindex)
+	    {
+	      as_bad (_("0x%" PRIx64 " out of range of signed 32bit displacement"),
+		      (uint64_t) exp->X_add_number);
+	      return false;
+	    }
+	}
+    }
+
+  /* Don't optimize displacement for movabs since it only takes 64bit
+     displacement.  */
+  if (i.disp_encoding > disp_encoding_8bit
+      || (flag_code == CODE_64BIT && t->mnem_off == MN_movabs))
+    return true;
+
+  for (op = i.operands; op-- > 0;)
     if (operand_type_check (i.types[op], disp))
       {
 	if (i.op[op].disps->X_op == O_constant)
@@ -6164,8 +6166,8 @@ optimize_disp (void)
 	    /* Optimize 64-bit displacement to 32-bit for 64-bit BFD.  */
 	    if ((flag_code != CODE_64BIT
 		 ? i.types[op].bitfield.disp32
-		 : want_disp32 (current_templates->start)
-		   && (!current_templates->start->opcode_modifier.jump
+		 : want_disp32 (t)
+		   && (!t->opcode_modifier.jump
 		       || i.jumpabsolute || i.types[op].bitfield.baseindex))
 		&& fits_in_unsigned_long (op_disp))
 	      {
@@ -6201,6 +6203,8 @@ optimize_disp (void)
 	  /* We only support 64bit displacement on constants.  */
 	  i.types[op].bitfield.disp64 = 0;
       }
+
+  return true;
 }
 
 /* Return 1 if there is a match in broadcast bytes between operand
@@ -6556,7 +6560,7 @@ check_VecOperands (const insn_template *t)
   if (t->opcode_modifier.disp8memshift
       && i.disp_encoding <= disp_encoding_8bit)
     {
-      if (i.broadcast.bytes)
+      if (i.broadcast.type || i.broadcast.bytes)
 	i.memshift = t->opcode_modifier.broadcast - 1;
       else if (t->opcode_modifier.disp8memshift != DISP8_SHIFT_VL)
 	i.memshift = t->opcode_modifier.disp8memshift;
@@ -7972,6 +7976,25 @@ finalize_imm (void)
   return 1;
 }
 
+static INLINE void set_rex_vrex (const reg_entry *r, unsigned int rex_bit,
+				 bool do_sse2avx)
+{
+  if (r->reg_flags & RegRex)
+    {
+      if (i.rex & rex_bit)
+	as_bad (_("same type of prefix used twice"));
+      i.rex |= rex_bit;
+    }
+  else if (do_sse2avx && (i.rex & rex_bit) && i.vex.register_specifier)
+    {
+      gas_assert (i.vex.register_specifier == r);
+      i.vex.register_specifier += 8;
+    }
+
+  if (r->reg_flags & RegVRex)
+    i.vrex |= rex_bit;
+}
+
 static int
 process_operands (void)
 {
@@ -8196,8 +8219,7 @@ process_operands (void)
 	r = i.op[1].regs;
       /* Register goes in low 3 bits of opcode.  */
       i.tm.base_opcode |= r->reg_num;
-      if ((r->reg_flags & RegRex) != 0)
-	i.rex |= REX_B;
+      set_rex_vrex (r, REX_B, false);
     }
 
   if ((i.seg[0] || i.prefix[SEG_PREFIX])
@@ -8225,25 +8247,6 @@ process_operands (void)
 	return 0;
     }
   return 1;
-}
-
-static INLINE void set_rex_vrex (const reg_entry *r, unsigned int rex_bit,
-				 bool do_sse2avx)
-{
-  if (r->reg_flags & RegRex)
-    {
-      if (i.rex & rex_bit)
-	as_bad (_("same type of prefix used twice"));
-      i.rex |= rex_bit;
-    }
-  else if (do_sse2avx && (i.rex & rex_bit) && i.vex.register_specifier)
-    {
-      gas_assert (i.vex.register_specifier == r);
-      i.vex.register_specifier += 8;
-    }
-
-  if (r->reg_flags & RegVRex)
-    i.vrex |= rex_bit;
 }
 
 static const reg_entry *
