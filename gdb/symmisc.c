@@ -237,7 +237,7 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
   struct objfile *objfile = symtab->compunit ()->objfile ();
   struct gdbarch *gdbarch = objfile->arch ();
   struct mdict_iterator miter;
-  struct linetable *l;
+  const struct linetable *l;
   struct symbol *sym;
   int depth;
 
@@ -263,7 +263,7 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
       for (int i = 0; i < len; i++)
 	{
 	  gdb_printf (outfile, " line %d at ", l->item[i].line);
-	  gdb_puts (paddress (gdbarch, l->item[i].pc), outfile);
+	  gdb_puts (paddress (gdbarch, l->item[i].pc (objfile)), outfile);
 	  if (l->item[i].is_stmt)
 	    gdb_printf (outfile, "\t(stmt)");
 	  gdb_printf (outfile, "\n");
@@ -948,7 +948,7 @@ block_depth (const struct block *block)
 static int
 maintenance_print_one_line_table (struct symtab *symtab, void *data)
 {
-  struct linetable *linetable;
+  const struct linetable *linetable;
   struct objfile *objfile;
 
   objfile = symtab->compunit ()->objfile ();
@@ -986,7 +986,7 @@ maintenance_print_one_line_table (struct symtab *symtab, void *data)
 
       for (int i = 0; i < linetable->nitems; ++i)
 	{
-	  struct linetable_entry *item;
+	  const linetable_entry *item;
 
 	  item = &linetable->item [i];
 	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
@@ -996,7 +996,7 @@ maintenance_print_one_line_table (struct symtab *symtab, void *data)
 	  else
 	    uiout->field_string ("line", _("END"));
 	  uiout->field_core_addr ("address", objfile->arch (),
-				  item->pc);
+				  item->raw_pc ());
 	  uiout->field_string ("is-stmt", item->is_stmt ? "Y" : "");
 	  uiout->field_string ("prologue-end", item->prologue_end ? "Y" : "");
 	  uiout->text ("\n");

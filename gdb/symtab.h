@@ -1547,18 +1547,42 @@ struct rust_vtable_symbol : public symbol
 
 struct linetable_entry
 {
+  /* Set the (unrelocated) PC for this entry.  */
+  void set_raw_pc (CORE_ADDR pc)
+  { m_pc = pc; }
+
+  /* Return the unrelocated PC for this entry.  */
+  CORE_ADDR raw_pc () const
+  { return m_pc; }
+
+  /* Return the relocated PC for this entry.  */
+  CORE_ADDR pc (const struct objfile *objfile) const;
+
+  bool operator< (const linetable_entry &other) const
+  {
+    if (m_pc == other.m_pc
+	&& (line != 0) != (other.line != 0))
+      return line == 0;
+    return m_pc < other.m_pc;
+  }
+
+  /* Two entries are equal if they have the same line and PC.  The
+     other members are ignored.  */
+  bool operator== (const linetable_entry &other) const
+  { return line == other.line && m_pc == other.m_pc; }
+
   /* The line number for this entry.  */
   int line;
 
   /* True if this PC is a good location to place a breakpoint for LINE.  */
-  unsigned is_stmt : 1;
+  bool is_stmt : 1;
 
   /* True if this location is a good location to place a breakpoint after a
      function prologue.  */
   bool prologue_end : 1;
 
   /* The address for this entry.  */
-  CORE_ADDR pc;
+  CORE_ADDR m_pc;
 };
 
 /* The order of entries in the linetable is significant.  They should
@@ -1611,12 +1635,12 @@ struct symtab
     m_compunit = compunit;
   }
 
-  struct linetable *linetable () const
+  const struct linetable *linetable () const
   {
     return m_linetable;
   }
 
-  void set_linetable (struct linetable *linetable)
+  void set_linetable (const struct linetable *linetable)
   {
     m_linetable = linetable;
   }
@@ -1643,7 +1667,7 @@ struct symtab
   /* Table mapping core addresses to line numbers for this file.
      Can be NULL if none.  Never shared between different symtabs.  */
 
-  struct linetable *m_linetable;
+  const struct linetable *m_linetable;
 
   /* Name of this source file, in a form appropriate to print to the user.
 
@@ -2674,7 +2698,7 @@ void iterate_over_symtabs (const char *name,
 
 
 std::vector<CORE_ADDR> find_pcs_for_symtab_line
-    (struct symtab *symtab, int line, struct linetable_entry **best_entry);
+    (struct symtab *symtab, int line, const linetable_entry **best_entry);
 
 /* Prototype for callbacks for LA_ITERATE_OVER_SYMBOLS.  The callback
    is called once per matching symbol SYM.  The callback should return
