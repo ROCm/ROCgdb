@@ -5274,7 +5274,12 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 	    }
 
 	  if (n_files > 0)
-	    printf (_("File name                            Line number    Starting address    View    Stmt\n"));
+	    {
+	      if (do_wide)
+		printf (_("File name                            Line number    Starting address    View    Stmt\n"));
+	      else
+		printf (_("File name                        Line number    Starting address    View    Stmt\n"));
+	    }
 	  else
 	    printf (_("CU: Empty file name table\n"));
 	  saved_linfo = linfo;
@@ -5600,23 +5605,23 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 		  if (linfo.li_max_ops_per_insn == 1)
 		    {
 		      if (xop == -DW_LNE_end_sequence)
-			printf ("%-35s  %11s  %#18" PRIx64,
+			printf ("%-31s  %11s  %#18" PRIx64,
 				newFileName, "-",
 				state_machine_regs.address);
 		      else
-			printf ("%-35s  %11d  %#18" PRIx64,
+			printf ("%-31s  %11d  %#18" PRIx64,
 				newFileName, state_machine_regs.line,
 				state_machine_regs.address);
 		    }
 		  else
 		    {
 		      if (xop == -DW_LNE_end_sequence)
-			printf ("%-35s  %11s  %#18" PRIx64 "[%d]",
+			printf ("%-31s  %11s  %#18" PRIx64 "[%d]",
 				newFileName, "-",
 				state_machine_regs.address,
 				state_machine_regs.op_index);
 		      else
-			printf ("%-35s  %11d  %#18" PRIx64 "[%d]",
+			printf ("%-31s  %11d  %#18" PRIx64 "[%d]",
 				newFileName, state_machine_regs.line,
 				state_machine_regs.address,
 				state_machine_regs.op_index);
@@ -10958,6 +10963,9 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
       if (nused == -1u
 	  || _mul_overflow ((size_t) ncols, 4, &temp)
 	  || _mul_overflow ((size_t) nused + 1, temp, &total)
+	  || total > (size_t) (limit - ppool)
+	  /* PR 30227: ncols could be 0.  */
+	  || _mul_overflow ((size_t) nused + 1, 4, &total)
 	  || total > (size_t) (limit - ppool))
 	{
 	  warn (_("Section %s too small for offset and size tables\n"),
