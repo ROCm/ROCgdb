@@ -691,8 +691,7 @@ c_string_operation::evaluate (struct type *expect_type,
 value *aspace_operation::evaluate (struct type *expect_type,
 				   struct expression *exp, enum noside noside)
 {
-  value *val = std::get<0> (m_storage)->evaluate (nullptr, exp,
-						  EVAL_AVOID_SIDE_EFFECTS);
+  value *val = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
   struct type *val_type = value_type (val);
 
   if (!is_integral_type (val_type))
