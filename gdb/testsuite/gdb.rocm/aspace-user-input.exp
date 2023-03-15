@@ -49,6 +49,16 @@ gdb_test "print private_lane#0xffffffff" " = \\(void \\*\\) private_lane#0xfffff
 gdb_test_no_output "set var \$addr = 0xffffffff"
 gdb_test "print private_lane#\$addr" " = \\(void \\*\\) private_lane#0xffffffff"
 
+# Save the register value, so we don't break the execution.
+gdb_test_no_output "set var \$temp = \$s32"
+
+gdb_test_no_output "set var \$s32 = 0x42"
+set reg_s32 [get_valueof "/x" "\$s32" "0x42"]
+gdb_test "print/x private_lane#\$s32" " = private_lane#$reg_s32"
+
+# Restore the register value.
+gdb_test_no_output "set var \$s32 = \$temp"
+
 # Cast to pointer type.
 gdb_test "print \(unsigned int \*\) private_lane#0x0" \
 	 " = \\(unsigned int \\*\\) private_lane#0x0"
