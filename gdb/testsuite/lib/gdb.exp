@@ -177,7 +177,7 @@ verbose "using GDB = $GDB" 2
 # we're testing a non-installed GDB in the build directory.  Users may
 # also explictly override the -data-directory from the command line.
 if ![info exists GDB_DATA_DIRECTORY] {
-    set GDB_DATA_DIRECTORY "[pwd]/../data-directory"
+    set GDB_DATA_DIRECTORY [file normalize "[pwd]/../data-directory"]
 }
 verbose "using GDB_DATA_DIRECTORY = $GDB_DATA_DIRECTORY" 2
 
@@ -4668,6 +4668,22 @@ proc gdb_can_simple_compile {name code {type object} {compile_flags ""}} {
 global gdb_saved_set_unbuffered_mode_obj
 set gdb_saved_set_unbuffered_mode_obj ""
 
+# Escape STR sufficiently for use on host commandline.
+
+proc escape_for_host { str } {
+    if { [is_remote host] } {
+	set map {
+	    {$} {\\$}
+       }
+    } else {
+	set map {
+	    {$} {\$}
+	}
+    }
+
+    return [string map $map $str]
+}
+
 # Compile source files specified by SOURCE into a binary of type TYPE at path
 # DEST.  gdb_compile is implemented using DejaGnu's target_compile, so the type
 # parameter and most options are passed directly to it.
@@ -4944,7 +4960,7 @@ proc gdb_compile {source dest type options} {
 	    if { $shlib_load } {
 		lappend new_options "libs=-ldl"
 	    }
-	    lappend new_options "ldflags=-Wl,-rpath,\\\$ORIGIN"
+	    lappend new_options [escape_for_host {ldflags=-Wl,-rpath,$ORIGIN}]
 	}
     }
     set options $new_options
@@ -5969,7 +5985,11 @@ proc gdb_remote_download {dest fromfile {tofile {}}} {
 # Copy shlib FILE to the target.
 
 proc gdb_download_shlib { file } {
-    return [gdb_remote_download target [shlib_target_file $file]]
+    set target_file [shlib_target_file $file]
+    if { [is_remote host] } {
+	remote_download host $target_file
+    }
+    return [gdb_remote_download target $target_file]
 }
 
 # Set solib-search-path to allow gdb to locate shlib FILE.
@@ -5981,16 +6001,26 @@ proc gdb_locate_shlib { file } {
 	perror "gdb_load_shlib: GDB is not running"
     }
 
-    # If the target is remote, we need to tell gdb where to find the
-    # libraries.
-    if { ![is_remote target] } {
+    if { [is_remote target] || [is_remote host] } {
+	# If the target or host is remote, we need to tell gdb where to find
+	# the libraries.
+    } else {
 	return
     }
 
     # We could set this even when not testing remotely, but a user
     # generally won't set it unless necessary.  In order to make the tests
     # more like the real-life scenarios, we don't set it for local testing.
-    gdb_test "set solib-search-path [file dirname $file]" "" \
+    if { [is_remote host] } {
+	set solib_search_path [board_info host remotedir]
+	if { $solib_search_path == "" } {
+	    set solib_search_path .
+	}
+    } else {
+	set solib_search_path [file dirname $file]
+    }
+
+    gdb_test_no_output "set solib-search-path $solib_search_path" \
 	"set solib-search-path for [file tail $file]"
 }
 
@@ -8989,7 +9019,8 @@ gdb_caching_proc supports_scalar_storage_order_attribute {} {
 	return 0
     }
 
-    set result [remote_exec target $obj]
+    set target_obj [gdb_remote_download target $obj]
+    set result [remote_exec target $target_obj]
     set status [lindex $result 0]
     set output [lindex $result 1]
     if { $output != "" } {
@@ -9049,7 +9080,8 @@ gdb_caching_proc have_mpx {} {
         return 0
     }
 
-    set result [remote_exec target $obj]
+    set target_obj [gdb_remote_download target $obj]
+    set result [remote_exec target $target_obj]
     set status [lindex $result 0]
     set output [lindex $result 1]
     if { $output != "" } {
@@ -9073,7 +9105,8 @@ gdb_caching_proc have_mpx {} {
         return 0
     }
 
-    set result [remote_exec target $obj]
+    set target_obj [gdb_remote_download target $obj]
+    set result [remote_exec target $target_obj]
     set status [lindex $result 0]
     set output [lindex $result 1]
     set status [expr ($status == 0) \
@@ -9116,7 +9149,8 @@ gdb_caching_proc have_avx {} {
         return 0
     }
 
-    set result [remote_exec target $obj]
+    set target_obj [gdb_remote_download target $obj]
+    set result [remote_exec target $target_obj]
     set status [lindex $result 0]
     set output [lindex $result 1]
     if { $output != "" } {
@@ -9313,7 +9347,8 @@ gdb_caching_proc arm_cc_for_target {} {
 		 $src \
 		 executable [list compiler=$compiler]]} {
 
-	    set result [remote_exec target $obj]
+	    set target_obj [gdb_remote_download target $obj]
+	    set result [remote_exec target $target_obj]
 	    set status [lindex $result 0]
 	    set output [lindex $result 1]
 
@@ -9491,6 +9526,22 @@ gdb_caching_proc have_compile_flag { flag } {
     set src { void foo () {} }
     return [gdb_can_simple_compile have_compile_flag_$flag $src object \
 		additional_flags=$flag]
+}
+
+
+# Handle include file FILE, and if necessary update compiler flags variable
+# FLAGS.
+
+proc lappend_include_file { flags file } {
+    upvar $flags up_flags
+    if { [is_remote host] } {
+	gdb_remote_download host $file
+    } else {
+	set dir [file dirname $file]
+	if { $dir != [file join $::srcdir $::subdir] } {
+	    lappend up_flags "additional_flags=-I$dir"
+	}
+    }
 }
 
 # Always load compatibility stuff.
