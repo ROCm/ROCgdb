@@ -125,8 +125,6 @@ static struct defsym_list *defsyms;
 
 static long start_time;
 
-static int flag_macro_alternate;
-
 
 #ifdef USE_EMULATIONS
 #define EMULATION_ENVIRON "AS_EMULATION"
@@ -1167,28 +1165,6 @@ dump_statistics (void)
   obj_print_statistics (stderr);
 #endif
 }
-
-/* The interface between the macro code and gas expression handling.  */
-
-static size_t
-macro_expr (const char *emsg, size_t idx, sb *in, offsetT *val)
-{
-  expressionS ex;
-
-  sb_terminate (in);
-
-  temp_ilp (in->ptr + idx);
-  expression_and_evaluate (&ex);
-  idx = input_line_pointer - in->ptr;
-  restore_ilp ();
-
-  if (ex.X_op != O_constant)
-    as_bad ("%s", emsg);
-
-  *val = ex.X_add_number;
-
-  return idx;
-}
 
 /* Here to attempt 1 pass over each input file.
    We scan argv[*] looking for filenames or exactly "" which is
@@ -1332,11 +1308,7 @@ gas_init (void)
   expr_begin ();
   eh_begin ();
 
-  int macro_strip_at = 0;
-#ifdef TC_I960
-  macro_strip_at = flag_mri;
-#endif
-  macro_init (flag_macro_alternate, flag_mri, macro_strip_at, macro_expr);
+  macro_init ();
 
   dwarf2_init ();
 

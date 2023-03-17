@@ -1616,7 +1616,7 @@ static void
 s_altmacro (int on)
 {
   demand_empty_rest_of_line ();
-  macro_set_alternate (on);
+  flag_macro_alternate = on;
 }
 
 /* Read a symbol name from input_line_pointer.
@@ -2784,7 +2784,6 @@ s_mri (int ignore ATTRIBUTE_UNUSED)
 #ifdef TC_M68K
       flag_m68k_mri = 1;
 #endif
-      macro_mri_mode (1);
     }
   else
     {
@@ -2792,7 +2791,6 @@ s_mri (int ignore ATTRIBUTE_UNUSED)
 #ifdef TC_M68K
       flag_m68k_mri = 0;
 #endif
-      macro_mri_mode (0);
     }
 
   /* Operator precedence changes in m68k MRI mode, so we need to

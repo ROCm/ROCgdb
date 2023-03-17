@@ -34,7 +34,7 @@
 #define ISSEP(x) \
  ((x) == ' ' || (x) == '\t' || (x) == ',' || (x) == '"' || (x) == ';' \
   || (x) == ')' || (x) == '(' \
-  || ((macro_alternate || macro_mri) && ((x) == '<' || (x) == '>')))
+  || ((flag_macro_alternate || flag_mri) && ((x) == '<' || (x) == '>')))
 
 #define ISBASE(x) \
   ((x) == 'b' || (x) == 'B' \
@@ -50,21 +50,9 @@ htab_t macro_hash;
 
 int macro_defined;
 
-/* Whether we are in alternate syntax mode.  */
-
-static int macro_alternate;
-
-/* Whether we are in MRI mode.  */
-
-static int macro_mri;
-
 /* Whether we should strip '@' characters.  */
 
-static int macro_strip_at;
-
-/* Function to use to parse an expression.  */
-
-static size_t (*macro_expr) (const char *, size_t, sb *, offsetT *);
+#define macro_strip_at false
 
 /* Number of macro expansions that have been done.  */
 
@@ -82,38 +70,17 @@ macro_del_f (void *ent)
 /* Initialize macro processing.  */
 
 void
-macro_init (int alternate, int mri, int strip_at,
-	    size_t (*exp) (const char *, size_t, sb *, offsetT *))
+macro_init (void)
 {
   macro_hash = htab_create_alloc (16, hash_string_tuple, eq_string_tuple,
 				  macro_del_f, notes_calloc, NULL);
   macro_defined = 0;
-  macro_alternate = alternate;
-  macro_mri = mri;
-  macro_strip_at = strip_at;
-  macro_expr = exp;
 }
 
 void
 macro_end (void)
 {
   htab_delete (macro_hash);
-}
-
-/* Switch in and out of alternate mode on the fly.  */
-
-void
-macro_set_alternate (int alternate)
-{
-  macro_alternate = alternate;
-}
-
-/* Switch in and out of MRI mode on the fly.  */
-
-void
-macro_mri_mode (int mri)
-{
-  macro_mri = mri;
 }
 
 /* Read input lines till we get to a TO string.
@@ -212,7 +179,7 @@ buffer_and_nest (const char *from, const char *to, sb *ptr,
 
       if (i < ptr->len && (ptr->ptr[i] == '.'
 			   || NO_PSEUDO_DOT
-			   || macro_mri))
+			   || flag_mri))
 	{
 	  if (! flag_m68k_mri && ptr->ptr[i] == '.')
 	    i++;
@@ -304,7 +271,7 @@ get_token (size_t idx, sb *in, sb *name)
 	}
     }
   /* Ignore trailing &.  */
-  if (macro_alternate && idx < in->len && in->ptr[idx] == '&')
+  if (flag_macro_alternate && idx < in->len && in->ptr[idx] == '&')
     idx++;
   return idx;
 }
@@ -316,8 +283,8 @@ getstring (size_t idx, sb *in, sb *acc)
 {
   while (idx < in->len
 	 && (in->ptr[idx] == '"'
-	     || (in->ptr[idx] == '<' && (macro_alternate || macro_mri))
-	     || (in->ptr[idx] == '\'' && macro_alternate)))
+	     || (in->ptr[idx] == '<' && (flag_macro_alternate || flag_mri))
+	     || (in->ptr[idx] == '\'' && flag_macro_alternate)))
     {
       if (in->ptr[idx] == '<')
 	{
@@ -356,7 +323,7 @@ getstring (size_t idx, sb *in, sb *acc)
 	      else
 		escaped = 0;
 
-	      if (macro_alternate && in->ptr[idx] == '!')
+	      if (flag_macro_alternate && in->ptr[idx] == '!')
 		{
 		  idx ++;
 
@@ -410,25 +377,30 @@ get_any_string (size_t idx, sb *in, sb *out)
 	  while (idx < in->len && !ISSEP (in->ptr[idx]))
 	    sb_add_char (out, in->ptr[idx++]);
 	}
-      else if (in->ptr[idx] == '%' && macro_alternate)
+      else if (in->ptr[idx] == '%' && flag_macro_alternate)
 	{
-	  offsetT val;
+	  /* Turn the following expression into a string.  */
+	  expressionS ex;
 	  char buf[64];
 
-	  /* Turns the next expression into a string.  */
-	  /* xgettext: no-c-format */
-	  idx = (*macro_expr) (_("% operator needs absolute expression"),
-			       idx + 1,
-			       in,
-			       &val);
-	  sprintf (buf, "%" PRId64, (int64_t) val);
+	  sb_terminate (in);
+
+	  temp_ilp (in->ptr + idx + 1);
+	  expression_and_evaluate (&ex);
+	  idx = input_line_pointer - in->ptr;
+	  restore_ilp ();
+
+	  if (ex.X_op != O_constant)
+	    as_bad (_("%% operator needs absolute expression"));
+
+	  sprintf (buf, "%" PRId64, (int64_t) ex.X_add_number);
 	  sb_add_string (out, buf);
 	}
       else if (in->ptr[idx] == '"'
-	       || (in->ptr[idx] == '<' && (macro_alternate || macro_mri))
-	       || (macro_alternate && in->ptr[idx] == '\''))
+	       || (in->ptr[idx] == '<' && (flag_macro_alternate || flag_mri))
+	       || (flag_macro_alternate && in->ptr[idx] == '\''))
 	{
-	  if (macro_alternate && ! macro_strip_at && in->ptr[idx] != '<')
+	  if (flag_macro_alternate && ! macro_strip_at && in->ptr[idx] != '<')
 	    {
 	      /* Keep the quotes.  */
 	      sb_add_char (out, '"');
@@ -452,7 +424,7 @@ get_any_string (size_t idx, sb *in, sb *out)
 			 && in->ptr[idx] != '\t'))
 		 && in->ptr[idx] != ','
 		 && (in->ptr[idx] != '<'
-		     || (! macro_alternate && ! macro_mri)))
+		     || (! flag_macro_alternate && ! flag_mri)))
 	    {
 	      char tchar = in->ptr[idx];
 
@@ -555,7 +527,7 @@ do_formals (macro_entry *macro, size_t idx, sb *in)
       idx = sb_skip_white (idx, in);
       /* This is a formal.  */
       name = sb_terminate (&formal->name);
-      if (! macro_mri
+      if (! flag_mri
 	  && idx < in->len
 	  && in->ptr[idx] == ':'
 	  && (! is_name_beginner (':')
@@ -627,7 +599,7 @@ do_formals (macro_entry *macro, size_t idx, sb *in)
 	}
     }
 
-  if (macro_mri)
+  if (flag_mri)
     {
       formal_entry *formal = new_formal ();
 
@@ -766,7 +738,7 @@ get_apost_token (size_t idx, sb *in, sb *name, int kind)
   idx = get_token (idx, in, name);
   if (idx < in->len
       && in->ptr[idx] == kind
-      && (! macro_mri || macro_strip_at)
+      && (! flag_mri || macro_strip_at)
       && (! macro_strip_at || kind == '@'))
     idx++;
   return idx;
@@ -840,7 +812,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
       if (in->ptr[src] == '&')
 	{
 	  sb_reset (&t);
-	  if (macro_mri)
+	  if (flag_mri)
 	    {
 	      if (src + 1 < in->len && in->ptr[src + 1] == '&')
 		src = sub_actual (src + 2, in, &t, formal_hash, '\'', out, 1);
@@ -889,7 +861,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	      sb_add_char (out, '&');
 	      src++;
 	    }
-	  else if (macro_mri && src < in->len && ISALNUM (in->ptr[src]))
+	  else if (flag_mri && src < in->len && ISALNUM (in->ptr[src]))
 	    {
 	      int ind;
 	      formal_entry *f;
@@ -919,7 +891,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	      src = sub_actual (src, in, &t, formal_hash, '\'', out, 0);
 	    }
 	}
-      else if ((macro_alternate || macro_mri)
+      else if ((flag_macro_alternate || flag_mri)
 	       && is_name_beginner (in->ptr[src])
 	       && (! inquote
 		   || ! macro_strip_at
@@ -972,7 +944,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	    }
 	}
       else if (in->ptr[src] == '"'
-	       || (macro_mri && in->ptr[src] == '\''))
+	       || (flag_mri && in->ptr[src] == '\''))
 	{
 	  inquote = !inquote;
 	  sb_add_char (out, in->ptr[src++]);
@@ -987,7 +959,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	      ++src;
 	    }
 	}
-      else if (macro_mri
+      else if (flag_mri
 	       && in->ptr[src] == '='
 	       && src + 1 < in->len
 	       && in->ptr[src + 1] == '=')
@@ -1072,7 +1044,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
   while (f != NULL && f->index < 0)
     f = f->next;
 
-  if (macro_mri)
+  if (flag_mri)
     {
       /* The macro may be called with an optional qualifier, which may
 	 be referred to in the macro body as \0.  */
@@ -1107,10 +1079,10 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
       scan = idx;
       while (scan < in->len
 	     && !ISSEP (in->ptr[scan])
-	     && !(macro_mri && in->ptr[scan] == '\'')
-	     && (!macro_alternate && in->ptr[scan] != '='))
+	     && !(flag_mri && in->ptr[scan] == '\'')
+	     && (!flag_macro_alternate && in->ptr[scan] != '='))
 	scan++;
-      if (scan < in->len && !macro_alternate && in->ptr[scan] == '=')
+      if (scan < in->len && !flag_macro_alternate && in->ptr[scan] == '=')
 	{
 	  is_keyword = 1;
 
@@ -1164,7 +1136,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 	      formal_entry **pf;
 	      int c;
 
-	      if (!macro_mri)
+	      if (!flag_mri)
 		{
 		  err = _("too many positional arguments");
 		  break;
@@ -1198,7 +1170,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 	  while (f != NULL && f->index < 0);
 	}
 
-      if (! macro_mri)
+      if (! flag_mri)
 	idx = sb_skip_comma (idx, in);
       else
 	{
@@ -1219,7 +1191,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 		    m->name);
 	}
 
-      if (macro_mri)
+      if (flag_mri)
 	{
 	  ptr = str_hash_find (m->formal_hash,
 			       macro_strip_at ? "$NARG" : "NARG");
@@ -1235,7 +1207,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
     }
 
   /* Discard any unnamed formal arguments.  */
-  if (macro_mri)
+  if (flag_mri)
     {
       formal_entry **pf;
 
@@ -1273,7 +1245,7 @@ check_macro (const char *line, sb *expand,
   sb line_sb;
 
   if (! is_name_beginner (*line)
-      && (! macro_mri || *line != '.'))
+      && (! flag_mri || *line != '.'))
     return 0;
 
   s = line + 1;
