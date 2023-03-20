@@ -281,18 +281,20 @@ build_m2_types (struct gdbarch *gdbarch)
 {
   struct builtin_m2_type *builtin_m2_type = new struct builtin_m2_type;
 
+  type_allocator alloc (gdbarch);
+
   /* Modula-2 "pervasive" types.  NOTE:  these can be redefined!!! */
   builtin_m2_type->builtin_int
-    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch), 0, "INTEGER");
+    = init_integer_type (alloc, gdbarch_int_bit (gdbarch), 0, "INTEGER");
   builtin_m2_type->builtin_card
-    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch), 1, "CARDINAL");
+    = init_integer_type (alloc, gdbarch_int_bit (gdbarch), 1, "CARDINAL");
   builtin_m2_type->builtin_real
-    = arch_float_type (gdbarch, gdbarch_float_bit (gdbarch), "REAL",
+    = init_float_type (alloc, gdbarch_float_bit (gdbarch), "REAL",
 		       gdbarch_float_format (gdbarch));
   builtin_m2_type->builtin_char
-    = arch_character_type (gdbarch, TARGET_CHAR_BIT, 1, "CHAR");
+    = init_character_type (alloc, TARGET_CHAR_BIT, 1, "CHAR");
   builtin_m2_type->builtin_bool
-    = arch_boolean_type (gdbarch, gdbarch_int_bit (gdbarch), 1, "BOOLEAN");
+    = init_boolean_type (alloc, gdbarch_int_bit (gdbarch), 1, "BOOLEAN");
 
   return builtin_m2_type;
 }

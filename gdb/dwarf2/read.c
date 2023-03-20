@@ -5862,8 +5862,9 @@ fixup_go_packaging (struct dwarf2_cu *cu)
     {
       struct objfile *objfile = cu->per_objfile->objfile;
       const char *saved_package_name = objfile->intern (package_name.get ());
-      struct type *type = init_type (objfile, TYPE_CODE_MODULE, 0,
-				     saved_package_name);
+      struct type *type
+	= type_allocator (objfile).new_type (TYPE_CODE_MODULE, 0,
+					     saved_package_name);
       struct symbol *sym;
 
       sym = new (&objfile->objfile_obstack) symbol;
@@ -6050,8 +6051,9 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       const char *dataless_name
 	= rust_fully_qualify (&objfile->objfile_obstack, type->name (),
 			      name);
-      struct type *dataless_type = init_type (objfile, TYPE_CODE_VOID, 0,
-					      dataless_name);
+      struct type *dataless_type
+	= type_allocator (objfile).new_type (TYPE_CODE_VOID, 0,
+					     dataless_name);
       type->field (2).set_type (dataless_type);
       /* NAME points into the original discriminant name, which
 	 already has the correct lifetime.  */
@@ -12155,7 +12157,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
       fnp->physname = physname ? physname : "";
     }
 
-  fnp->type = alloc_type (objfile);
+  fnp->type = type_allocator (objfile).new_type ();
   this_type = read_type_die (die, cu);
   if (this_type && this_type->code () == TYPE_CODE_FUNC)
     {
@@ -12377,7 +12379,7 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
     return;
 
   self_type = pfn_type->field (0).type ()->target_type ();
-  new_type = alloc_type (objfile);
+  new_type = type_allocator (objfile).new_type ();
   smash_to_method_type (new_type, self_type, pfn_type->target_type (),
 			pfn_type->fields (), pfn_type->num_fields (),
 			pfn_type->has_varargs ());
@@ -12616,7 +12618,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
       return set_die_type (die, type, cu);
     }
 
-  type = alloc_type (objfile);
+  type = type_allocator (objfile).new_type ();
   INIT_CPLUS_SPECIFIC (type);
 
   name = dwarf2_name (die, cu);
@@ -13223,7 +13225,7 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
       return set_die_type (die, type, cu);
     }
 
-  type = alloc_type (objfile);
+  type = type_allocator (objfile).new_type ();
 
   type->set_code (TYPE_CODE_ENUM);
   name = dwarf2_full_name (NULL, die, cu);
@@ -13553,7 +13555,8 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
       range_fields[i + 1].set_name (objfile->intern (name));
     }
 
-  struct type *bounds = alloc_type (objfile);
+  type_allocator alloc (objfile);
+  struct type *bounds = alloc.new_type ();
   bounds->set_code (TYPE_CODE_STRUCT);
 
   bounds->set_num_fields (range_fields.size ());
@@ -13577,11 +13580,11 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
       gdb_assert (iter->code () == TYPE_CODE_ARRAY);
       iter->main_type->dyn_prop_list = nullptr;
       iter->set_index_type
-	(create_static_range_type (NULL, bounds->field (i).type (), 1, 0));
+	(create_static_range_type (alloc, bounds->field (i).type (), 1, 0));
       iter = iter->target_type ();
     }
 
-  struct type *result = alloc_type (objfile);
+  struct type *result = type_allocator (objfile).new_type ();
   result->set_code (TYPE_CODE_STRUCT);
 
   result->set_num_fields (2);
@@ -13660,9 +13663,10 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
      arrays with unspecified length.  */
   if (die->child == NULL)
     {
-      index_type = objfile_type (objfile)->builtin_int;
-      range_type = create_static_range_type (NULL, index_type, 0, -1);
-      type = create_array_type_with_stride (NULL, element_type, range_type,
+      index_type = builtin_type (objfile)->builtin_int;
+      type_allocator alloc (objfile);
+      range_type = create_static_range_type (alloc, index_type, 0, -1);
+      type = create_array_type_with_stride (alloc, element_type, range_type,
 					    byte_stride_prop, bit_stride);
       return set_die_type (die, type, cu);
     }
@@ -13699,13 +13703,14 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 
   type = element_type;
 
+  type_allocator alloc (cu->per_objfile->objfile);
   if (read_array_order (die, cu) == DW_ORD_col_major)
     {
       int i = 0;
 
       while (i < range_types.size ())
 	{
-	  type = create_array_type_with_stride (NULL, type, range_types[i++],
+	  type = create_array_type_with_stride (alloc, type, range_types[i++],
 						byte_stride_prop, bit_stride);
 	  type->set_is_multi_dimensional (true);
 	  bit_stride = 0;
@@ -13717,7 +13722,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       size_t ndim = range_types.size ();
       while (ndim-- > 0)
 	{
-	  type = create_array_type_with_stride (NULL, type, range_types[ndim],
+	  type = create_array_type_with_stride (alloc, type, range_types[ndim],
 						byte_stride_prop, bit_stride);
 	  type->set_is_multi_dimensional (true);
 	  bit_stride = 0;
@@ -13828,7 +13833,8 @@ read_set_type (struct die_info *die, struct dwarf2_cu *cu)
   if (set_type)
     return set_type;
 
-  set_type = create_set_type (NULL, domain_type);
+  type_allocator alloc (cu->per_objfile->objfile);
+  set_type = create_set_type (alloc, domain_type);
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr && attr->form_is_unsigned ())
@@ -14008,7 +14014,7 @@ read_common_block (struct die_info *die, struct dwarf2_cu *cu)
 	    }
 	}
 
-      sym = new_symbol (die, objfile_type (objfile)->builtin_void, cu);
+      sym = new_symbol (die, builtin_type (objfile)->builtin_void, cu);
       sym->set_value_common_block (common_block);
     }
 }
@@ -14047,7 +14053,7 @@ read_namespace_type (struct die_info *die, struct dwarf2_cu *cu)
 			    previous_prefix, name, 0, cu);
 
   /* Create the type.  */
-  type = init_type (objfile, TYPE_CODE_NAMESPACE, 0, name);
+  type = type_allocator (objfile).new_type (TYPE_CODE_NAMESPACE, 0, name);
 
   return set_die_type (die, type, cu);
 }
@@ -14109,7 +14115,7 @@ read_module_type (struct die_info *die, struct dwarf2_cu *cu)
   struct type *type;
 
   module_name = dwarf2_name (die, cu);
-  type = init_type (objfile, TYPE_CODE_MODULE, 0, module_name);
+  type = type_allocator (objfile).new_type (TYPE_CODE_MODULE, 0, module_name);
 
   return set_die_type (die, type, cu);
 }
@@ -14263,7 +14269,8 @@ read_tag_ptr_to_member_type (struct die_info *die, struct dwarf2_cu *cu)
     type = lookup_methodptr_type (to_type);
   else if (check_typedef (to_type)->code () == TYPE_CODE_FUNC)
     {
-      struct type *new_type = alloc_type (cu->per_objfile->objfile);
+      struct type *new_type
+	= type_allocator (cu->per_objfile->objfile).new_type ();
 
       smash_to_method_type (new_type, domain, to_type->target_type (),
 			    to_type->fields (), to_type->num_fields (),
@@ -14500,18 +14507,19 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
       length = 1;
     }
 
-  index_type = objfile_type (objfile)->builtin_int;
+  index_type = builtin_type (objfile)->builtin_int;
+  type_allocator alloc (objfile);
   if (length_is_constant)
-    range_type = create_static_range_type (NULL, index_type, 1, length);
+    range_type = create_static_range_type (alloc, index_type, 1, length);
   else
     {
       struct dynamic_prop low_bound;
 
       low_bound.set_const_val (1);
-      range_type = create_range_type (NULL, index_type, &low_bound, &prop, 0);
+      range_type = create_range_type (alloc, index_type, &low_bound, &prop, 0);
     }
   char_type = language_string_char_type (cu->language_defn, gdbarch);
-  type = create_string_type (NULL, char_type, range_type);
+  type = create_string_type (alloc, char_type, range_type);
 
   return set_die_type (die, type, cu);
 }
@@ -14604,7 +14612,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 
   if (die->child != NULL)
     {
-      struct type *void_type = objfile_type (objfile)->builtin_void;
+      struct type *void_type = builtin_type (objfile)->builtin_void;
       struct die_info *child_die;
       int nparams, iparams;
 
@@ -14707,7 +14715,7 @@ read_typedef (struct die_info *die, struct dwarf2_cu *cu)
   struct type *this_type, *target_type;
 
   name = dwarf2_full_name (NULL, die, cu);
-  this_type = init_type (objfile, TYPE_CODE_TYPEDEF, 0, name);
+  this_type = type_allocator (objfile).new_type (TYPE_CODE_TYPEDEF, 0, name);
   this_type->set_target_is_stub (true);
   set_die_type (die, this_type, cu);
   target_type = die_type (die, cu);
@@ -15016,11 +15024,12 @@ dwarf2_init_float_type (struct objfile *objfile, int bits, const char *name,
   const struct floatformat **format;
   struct type *type;
 
+  type_allocator alloc (objfile);
   format = gdbarch_floatformat_for_type (gdbarch, name_hint, bits);
   if (format)
-    type = init_float_type (objfile, bits, name, format, byte_order);
+    type = init_float_type (alloc, bits, name, format, byte_order);
   else
-    type = init_type (objfile, TYPE_CODE_ERROR, bits, name);
+    type = alloc.new_type (TYPE_CODE_ERROR, bits, name);
 
   return type;
 }
@@ -15038,9 +15047,12 @@ dwarf2_init_integer_type (struct dwarf2_cu *cu, struct objfile *objfile,
      at least versions 14, 17, and 18.  */
   if (bits == 0 && producer_is_icc (cu) && name != nullptr
       && strcmp (name, "void") == 0)
-    type = objfile_type (objfile)->builtin_void;
+    type = builtin_type (objfile)->builtin_void;
   else
-    type = init_integer_type (objfile, bits, unsigned_p, name);
+    {
+      type_allocator alloc (objfile);
+      type = init_integer_type (alloc, bits, unsigned_p, name);
+    }
 
   return type;
 }
@@ -15224,15 +15236,16 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
+  type_allocator alloc (objfile);
   switch (encoding)
     {
       case DW_ATE_address:
 	/* Turn DW_ATE_address into a void * pointer.  */
-	type = init_type (objfile, TYPE_CODE_VOID, TARGET_CHAR_BIT, NULL);
-	type = init_pointer_type (objfile, bits, name, type);
+	type = alloc.new_type (TYPE_CODE_VOID, TARGET_CHAR_BIT, NULL);
+	type = init_pointer_type (alloc, bits, name, type);
 	break;
       case DW_ATE_boolean:
-	type = init_boolean_type (objfile, bits, 1, name);
+	type = init_boolean_type (alloc, bits, 1, name);
 	break;
       case DW_ATE_complex_float:
 	type = dwarf2_init_complex_target_type (cu, objfile, bits / 2, name,
@@ -15246,13 +15259,13 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 		name = obconcat (obstack, "_Complex ", type->name (),
 				 nullptr);
 	      }
-	    type = init_type (objfile, TYPE_CODE_ERROR, bits, name);
+	    type = alloc.new_type (TYPE_CODE_ERROR, bits, name);
 	  }
 	else
 	  type = init_complex_type (name, type);
 	break;
       case DW_ATE_decimal_float:
-	type = init_decfloat_type (objfile, bits, name);
+	type = init_decfloat_type (alloc, bits, name);
 	break;
       case DW_ATE_float:
 	type = dwarf2_init_float_type (objfile, bits, name, name, byte_order);
@@ -15264,7 +15277,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	if (cu->lang () == language_fortran
 	    && name
 	    && startswith (name, "character("))
-	  type = init_character_type (objfile, bits, 1, name);
+	  type = init_character_type (alloc, bits, 1, name);
 	else
 	  type = dwarf2_init_integer_type (cu, objfile, bits, 1, name);
 	break;
@@ -15273,7 +15286,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	    || cu->lang () == language_m2
 	    || cu->lang () == language_pascal
 	    || cu->lang () == language_fortran)
-	  type = init_character_type (objfile, bits, 0, name);
+	  type = init_character_type (alloc, bits, 0, name);
 	else
 	  type = dwarf2_init_integer_type (cu, objfile, bits, 0, name);
 	break;
@@ -15283,13 +15296,13 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	    || cu->lang () == language_pascal
 	    || cu->lang () == language_fortran
 	    || cu->lang () == language_rust)
-	  type = init_character_type (objfile, bits, 1, name);
+	  type = init_character_type (alloc, bits, 1, name);
 	else
 	  type = dwarf2_init_integer_type (cu, objfile, bits, 1, name);
 	break;
       case DW_ATE_UTF:
 	{
-	  type = init_character_type (objfile, bits, 1, name);
+	  type = init_character_type (alloc, bits, 1, name);
 	  return set_die_type (die, type, cu);
 	}
 	break;
@@ -15305,7 +15318,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
       default:
 	complaint (_("unsupported DW_AT_encoding: '%s'"),
 		   dwarf_type_encoding_name (encoding));
-	type = init_type (objfile, TYPE_CODE_ERROR, bits, name);
+	type = alloc.new_type (TYPE_CODE_ERROR, bits, name);
 	break;
     }
 
@@ -15707,6 +15720,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
+  type_allocator alloc (cu->per_objfile->objfile);
   if (attr_byte_stride != nullptr
       || attr_bit_stride != nullptr)
     {
@@ -15715,11 +15729,11 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 	= byte_stride_p ? &byte_stride_prop : &bit_stride_prop;
 
       range_type
-	= create_range_type_with_stride (NULL, orig_base_type, &low,
+	= create_range_type_with_stride (alloc, orig_base_type, &low,
 					 &high, bias, stride, byte_stride_p);
     }
   else
-    range_type = create_range_type (NULL, orig_base_type, &low, &high, bias);
+    range_type = create_range_type (alloc, orig_base_type, &low, &high, bias);
 
   if (high_bound_is_count)
     range_type->bounds ()->flag_upper_bound_is_count = 1;
@@ -15751,7 +15765,8 @@ read_unspecified_type (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct type *type;
 
-  type = init_type (cu->per_objfile->objfile, TYPE_CODE_VOID, 0, NULL);
+  type = (type_allocator (cu->per_objfile->objfile)
+	  .new_type (TYPE_CODE_VOID, 0, nullptr));
   type->set_name (dwarf2_name (die, cu));
 
   /* In Ada, an unspecified type is typically used when the description
@@ -18885,7 +18900,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	    }
 	  else
 	    sym->set_aclass_index (LOC_OPTIMIZED_OUT);
-	  sym->set_type (objfile_type (objfile)->builtin_core_addr);
+	  sym->set_type (builtin_type (objfile)->builtin_core_addr);
 	  sym->set_domain (LABEL_DOMAIN);
 	  add_symbol_to_list (sym, cu->list_in_scope);
 	  break;
@@ -18928,7 +18943,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	     variables with missing type entries.  Change the
 	     misleading `void' type to something sensible.  */
 	  if (sym->type ()->code () == TYPE_CODE_VOID)
-	    sym->set_type (objfile_type (objfile)->builtin_int);
+	    sym->set_type (builtin_type (objfile)->builtin_int);
 
 	  attr = dwarf2_attr (die, DW_AT_const_value, cu);
 	  /* In the case of DW_TAG_member, we should only be called for
@@ -19395,7 +19410,7 @@ die_type (struct die_info *die, struct dwarf2_cu *cu)
     {
       struct objfile *objfile = cu->per_objfile->objfile;
       /* A missing DW_AT_type represents a void type.  */
-      return objfile_type (objfile)->builtin_void;
+      return builtin_type (objfile)->builtin_void;
     }
 
   return lookup_die_type (die, type_attr, cu);
@@ -19478,7 +19493,7 @@ build_error_marker_type (struct dwarf2_cu *cu, struct die_info *die)
 		     sect_offset_str (die->sect_off));
   saved = obstack_strdup (&objfile->objfile_obstack, message);
 
-  return init_type (objfile, TYPE_CODE_ERROR, 0, saved);
+  return type_allocator (objfile).new_type (TYPE_CODE_ERROR, 0, saved);
 }
 
 /* Look up the type of DIE in CU using its type attribute ATTR.

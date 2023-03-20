@@ -2141,16 +2141,16 @@ ada_type_of_array (struct value *arr, int bounds)
 	return NULL;
       while (arity > 0)
 	{
-	  struct type *range_type = alloc_type_copy (arr->type ());
-	  struct type *array_type = alloc_type_copy (arr->type ());
+	  type_allocator alloc (arr->type ());
 	  struct value *low = desc_one_bound (descriptor, arity, 0);
 	  struct value *high = desc_one_bound (descriptor, arity, 1);
 
 	  arity -= 1;
-	  create_static_range_type (range_type, low->type (),
-				    longest_to_int (value_as_long (low)),
-				    longest_to_int (value_as_long (high)));
-	  elt_type = create_array_type (array_type, elt_type, range_type);
+	  struct type *range_type
+	    = create_static_range_type (alloc, low->type (),
+					longest_to_int (value_as_long (low)),
+					longest_to_int (value_as_long (high)));
+	  elt_type = create_array_type (alloc, elt_type, range_type);
 
 	  if (ada_is_unconstrained_packed_array_type (arr->type ()))
 	    {
@@ -2169,7 +2169,7 @@ ada_type_of_array (struct value *arr, int bounds)
 		  int array_bitsize =
 			(hi - lo + 1) * TYPE_FIELD_BITSIZE (elt_type, 0);
 
-		  array_type->set_length ((array_bitsize + 7) / 8);
+		  elt_type->set_length ((array_bitsize + 7) / 8);
 		}
 	    }
 	}
@@ -2383,11 +2383,11 @@ constrained_packed_array_type (struct type *type, long *elt_bits)
   else
     index_type = type->index_type ();
 
-  new_type = alloc_type_copy (type);
+  type_allocator alloc (type);
   new_elt_type =
     constrained_packed_array_type (ada_check_typedef (type->target_type ()),
 				   elt_bits);
-  create_array_type (new_type, new_elt_type, index_type);
+  new_type = create_array_type (alloc, new_elt_type, index_type);
   TYPE_FIELD_BITSIZE (new_type, 0) = *elt_bits;
   new_type->set_name (ada_type_name (type));
 
@@ -3094,10 +3094,11 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
 {
   struct type *type0 = ada_check_typedef (type);
   struct type *base_index_type = type0->index_type ()->target_type ();
+  type_allocator alloc (base_index_type);
   struct type *index_type
-    = create_static_range_type (NULL, base_index_type, low, high);
+    = create_static_range_type (alloc, base_index_type, low, high);
   struct type *slice_type = create_array_type_with_stride
-			      (NULL, type0->target_type (), index_type,
+			      (alloc, type0->target_type (), index_type,
 			       type0->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       TYPE_FIELD_BITSIZE (type0, 0));
   int base_low =  ada_discrete_type_low_bound (type0->index_type ());
@@ -3128,10 +3129,11 @@ ada_value_slice (struct value *array, int low, int high)
 {
   struct type *type = ada_check_typedef (array->type ());
   struct type *base_index_type = type->index_type ()->target_type ();
+  type_allocator alloc (type->index_type ());
   struct type *index_type
-    = create_static_range_type (NULL, type->index_type (), low, high);
+    = create_static_range_type (alloc, type->index_type (), low, high);
   struct type *slice_type = create_array_type_with_stride
-			      (NULL, type->target_type (), index_type,
+			      (alloc, type->target_type (), index_type,
 			       type->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       TYPE_FIELD_BITSIZE (type, 0));
   gdb::optional<LONGEST> low_pos, high_pos;
@@ -3400,13 +3402,14 @@ static struct value *
 empty_array (struct type *arr_type, int low, int high)
 {
   struct type *arr_type0 = ada_check_typedef (arr_type);
+  type_allocator alloc (arr_type0->index_type ()->target_type ());
   struct type *index_type
     = create_static_range_type
-	(NULL, arr_type0->index_type ()->target_type (), low,
+	(alloc, arr_type0->index_type ()->target_type (), low,
 	 high < low ? low - 1 : high);
   struct type *elt_type = ada_array_element_type (arr_type0, 1);
 
-  return value::allocate (create_array_type (NULL, elt_type, index_type));
+  return value::allocate (create_array_type (alloc, elt_type, index_type));
 }
 
 
@@ -7817,7 +7820,7 @@ variant_field_index (struct type *type)
 static struct type *
 empty_record (struct type *templ)
 {
-  struct type *type = alloc_type_copy (templ);
+  struct type *type = type_allocator (templ).new_type ();
 
   type->set_code (TYPE_CODE_STRUCT);
   INIT_NONE_SPECIFIC (type);
@@ -7873,7 +7876,7 @@ ada_template_to_fixed_record_type_1 (struct type *type,
 	nfields++;
     }
 
-  rtype = alloc_type_copy (type);
+  rtype = type_allocator (type).new_type ();
   rtype->set_code (TYPE_CODE_STRUCT);
   INIT_NONE_SPECIFIC (rtype);
   rtype->set_num_fields (nfields);
@@ -8124,7 +8127,7 @@ template_to_static_fixed_type (struct type *type0)
 	  /* Clone TYPE0 only the first time we get a new field type.  */
 	  if (type == type0)
 	    {
-	      type = alloc_type_copy (type0);
+	      type = type_allocator (type0).new_type ();
 	      type0->set_target_type (type);
 	      type->set_code (type0->code ());
 	      INIT_NONE_SPECIFIC (type);
@@ -8178,7 +8181,7 @@ to_record_with_fixed_variant_part (struct type *type, const gdb_byte *valaddr,
   else
     dval = dval0;
 
-  rtype = alloc_type_copy (type);
+  rtype = type_allocator (type).new_type ();
   rtype->set_code (TYPE_CODE_STRUCT);
   INIT_NONE_SPECIFIC (rtype);
   rtype->set_num_fields (nfields);
@@ -8471,8 +8474,10 @@ to_fixed_array_type (struct type *type0, struct value *dval,
       if (elt_type0 == elt_type && !constrained_packed_array_p)
 	result = type0;
       else
-	result = create_array_type (alloc_type_copy (type0),
-				    elt_type, type0->index_type ());
+	{
+	  type_allocator alloc (type0);
+	  result = create_array_type (alloc, elt_type, type0->index_type ());
+	}
     }
   else
     {
@@ -8503,8 +8508,8 @@ to_fixed_array_type (struct type *type0, struct value *dval,
 	  struct type *range_type =
 	    to_fixed_range_type (index_type_desc->field (i).type (), dval);
 
-	  result = create_array_type (alloc_type_copy (elt_type0),
-				      result, range_type);
+	  type_allocator alloc (elt_type0);
+	  result = create_array_type (alloc, result, range_type);
 	  elt_type0 = elt_type0->target_type ();
 	}
     }
@@ -11515,8 +11520,10 @@ to_fixed_range_type (struct type *raw_type, struct value *dval)
       if (L < INT_MIN || U > INT_MAX)
 	return raw_type;
       else
-	return create_static_range_type (alloc_type_copy (raw_type), raw_type,
-					 L, U);
+	{
+	  type_allocator alloc (raw_type);
+	  return create_static_range_type (alloc, raw_type, L, U);
+	}
     }
   else
     {
@@ -11567,8 +11574,8 @@ to_fixed_range_type (struct type *raw_type, struct value *dval)
 	    }
 	}
 
-      type = create_static_range_type (alloc_type_copy (raw_type),
-				       base_type, L, U);
+      type_allocator alloc (raw_type);
+      type = create_static_range_type (alloc, base_type, L, U);
       /* create_static_range_type alters the resulting type's length
 	 to match the size of the base_type, which is not what we want.
 	 Set it back to the original range type's length.  */
@@ -13556,36 +13563,37 @@ public:
       lai->add_primitive_type (t);
     };
 
-    add (arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+    type_allocator alloc (gdbarch);
+    add (init_integer_type (alloc, gdbarch_int_bit (gdbarch),
 			    0, "integer"));
-    add (arch_integer_type (gdbarch, gdbarch_long_bit (gdbarch),
+    add (init_integer_type (alloc, gdbarch_long_bit (gdbarch),
 			    0, "long_integer"));
-    add (arch_integer_type (gdbarch, gdbarch_short_bit (gdbarch),
+    add (init_integer_type (alloc, gdbarch_short_bit (gdbarch),
 			    0, "short_integer"));
-    struct type *char_type = arch_character_type (gdbarch, TARGET_CHAR_BIT,
+    struct type *char_type = init_character_type (alloc, TARGET_CHAR_BIT,
 						  1, "character");
     lai->set_string_char_type (char_type);
     add (char_type);
-    add (arch_character_type (gdbarch, 16, 1, "wide_character"));
-    add (arch_character_type (gdbarch, 32, 1, "wide_wide_character"));
-    add (arch_float_type (gdbarch, gdbarch_float_bit (gdbarch),
+    add (init_character_type (alloc, 16, 1, "wide_character"));
+    add (init_character_type (alloc, 32, 1, "wide_wide_character"));
+    add (init_float_type (alloc, gdbarch_float_bit (gdbarch),
 			  "float", gdbarch_float_format (gdbarch)));
-    add (arch_float_type (gdbarch, gdbarch_double_bit (gdbarch),
+    add (init_float_type (alloc, gdbarch_double_bit (gdbarch),
 			  "long_float", gdbarch_double_format (gdbarch)));
-    add (arch_integer_type (gdbarch, gdbarch_long_long_bit (gdbarch),
+    add (init_integer_type (alloc, gdbarch_long_long_bit (gdbarch),
 			    0, "long_long_integer"));
-    add (arch_float_type (gdbarch, gdbarch_long_double_bit (gdbarch),
+    add (init_float_type (alloc, gdbarch_long_double_bit (gdbarch),
 			  "long_long_float",
 			  gdbarch_long_double_format (gdbarch)));
-    add (arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+    add (init_integer_type (alloc, gdbarch_int_bit (gdbarch),
 			    0, "natural"));
-    add (arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+    add (init_integer_type (alloc, gdbarch_int_bit (gdbarch),
 			    0, "positive"));
     add (builtin->builtin_void);
 
     struct type *system_addr_ptr
-      = lookup_pointer_type (arch_type (gdbarch, TYPE_CODE_VOID, TARGET_CHAR_BIT,
-					"void"));
+      = lookup_pointer_type (alloc.new_type (TYPE_CODE_VOID, TARGET_CHAR_BIT,
+					     "void"));
     system_addr_ptr->set_name ("system__address");
     add (system_addr_ptr);
 
@@ -13593,7 +13601,7 @@ public:
        type.  This is a signed integral type whose size is the same as
        the size of addresses.  */
     unsigned int addr_length = system_addr_ptr->length ();
-    add (arch_integer_type (gdbarch, addr_length * HOST_CHAR_BIT, 0,
+    add (init_integer_type (alloc, addr_length * HOST_CHAR_BIT, 0,
 			    "storage_offset"));
 
     lai->set_bool_type (builtin->builtin_bool);

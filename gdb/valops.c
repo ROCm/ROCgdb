@@ -486,11 +486,12 @@ value_cast (struct type *type, struct value *arg2)
 		       "divide object size in cast"));
 	  /* FIXME-type-allocation: need a way to free this type when
 	     we are done with it.  */
-	  range_type = create_static_range_type (NULL,
+	  type_allocator alloc (range_type->target_type ());
+	  range_type = create_static_range_type (alloc,
 						 range_type->target_type (),
 						 low_bound,
 						 new_length + low_bound - 1);
-	  arg2->deprecated_set_type (create_array_type (NULL,
+	  arg2->deprecated_set_type (create_array_type (alloc,
 							element_type, 
 							range_type));
 	  return arg2;
@@ -4092,7 +4093,8 @@ value_slice (struct value *array, int lowbound, int length)
 
   /* FIXME-type-allocation: need a way to free this type when we are
      done with it.  */
-  slice_range_type = create_static_range_type (NULL,
+  type_allocator alloc (range_type->target_type ());
+  slice_range_type = create_static_range_type (alloc,
 					       range_type->target_type (),
 					       lowbound,
 					       lowbound + length - 1);
@@ -4102,7 +4104,7 @@ value_slice (struct value *array, int lowbound, int length)
     LONGEST offset
       = (lowbound - lowerbound) * check_typedef (element_type)->length ();
 
-    slice_type = create_array_type (NULL,
+    slice_type = create_array_type (alloc,
 				    element_type,
 				    slice_range_type);
     slice_type->set_code (array_type->code ());

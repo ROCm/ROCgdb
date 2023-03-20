@@ -132,12 +132,13 @@ fortran_bounds_all_dims (bool lbound_p,
   int ndimensions = calc_f77_array_dims (array_type);
 
   /* Allocate a result value of the correct type.  */
+  type_allocator alloc (gdbarch);
   struct type *range
-    = create_static_range_type (nullptr,
+    = create_static_range_type (alloc,
 				builtin_f_type (gdbarch)->builtin_integer,
 				1, ndimensions);
   struct type *elm_type = builtin_f_type (gdbarch)->builtin_integer;
-  struct type *result_type = create_array_type (nullptr, elm_type, range);
+  struct type *result_type = create_array_type (alloc, elm_type, range);
   struct value *result = value::allocate (result_type);
 
   /* Walk the array dimensions backwards due to the way the array will be
@@ -714,12 +715,13 @@ fortran_array_shape (struct gdbarch *gdbarch, const language_defn *lang,
     ndimensions = calc_f77_array_dims (val_type);
 
   /* Allocate a result value of the correct type.  */
+  type_allocator alloc (gdbarch);
   struct type *range
-    = create_static_range_type (nullptr,
+    = create_static_range_type (alloc,
 				builtin_type (gdbarch)->builtin_int,
 				1, ndimensions);
   struct type *elm_type = builtin_f_type (gdbarch)->builtin_integer;
-  struct type *result_type = create_array_type (nullptr, elm_type, range);
+  struct type *result_type = create_array_type (alloc, elm_type, range);
   struct value *result = value::allocate (result_type);
   LONGEST elm_len = elm_type->length ();
 
@@ -1393,13 +1395,14 @@ fortran_undetermined::value_subarray (value *array,
       p_high.set_const_val (d.high);
       p_stride.set_const_val (d.stride);
 
+      type_allocator alloc (d.index->target_type ());
       struct type *new_range
-	= create_range_type_with_stride ((struct type *) NULL,
+	= create_range_type_with_stride (alloc,
 					 d.index->target_type (),
 					 &p_low, &p_high, 0, &p_stride,
 					 true);
       array_slice_type
-	= create_array_type (nullptr, array_slice_type, new_range);
+	= create_array_type (alloc, array_slice_type, new_range);
     }
 
   if (fortran_array_slicing_debug)
@@ -1429,13 +1432,14 @@ fortran_undetermined::value_subarray (value *array,
 	  p_high.set_const_val (d.high);
 	  p_stride.set_const_val (repacked_array_type->length ());
 
+	  type_allocator alloc (d.index->target_type ());
 	  struct type *new_range
-	    = create_range_type_with_stride ((struct type *) NULL,
+	    = create_range_type_with_stride (alloc,
 					     d.index->target_type (),
 					     &p_low, &p_high, 0, &p_stride,
 					     true);
 	  repacked_array_type
-	    = create_array_type (nullptr, repacked_array_type, new_range);
+	    = create_array_type (alloc, repacked_array_type, new_range);
 	}
 
       /* Now copy the elements from the original ARRAY into the packed
@@ -1725,57 +1729,58 @@ build_fortran_types (struct gdbarch *gdbarch)
 {
   struct builtin_f_type *builtin_f_type = new struct builtin_f_type;
 
-  builtin_f_type->builtin_void
-    = arch_type (gdbarch, TYPE_CODE_VOID, TARGET_CHAR_BIT, "void");
+  builtin_f_type->builtin_void = builtin_type (gdbarch)->builtin_void;
+
+  type_allocator alloc (gdbarch);
 
   builtin_f_type->builtin_character
-    = arch_type (gdbarch, TYPE_CODE_CHAR, TARGET_CHAR_BIT, "character");
+    = alloc.new_type (TYPE_CODE_CHAR, TARGET_CHAR_BIT, "character");
 
   builtin_f_type->builtin_logical_s1
-    = arch_boolean_type (gdbarch, TARGET_CHAR_BIT, 1, "logical*1");
+    = init_boolean_type (alloc, TARGET_CHAR_BIT, 1, "logical*1");
 
   builtin_f_type->builtin_logical_s2
-    = arch_boolean_type (gdbarch, gdbarch_short_bit (gdbarch), 1, "logical*2");
+    = init_boolean_type (alloc, gdbarch_short_bit (gdbarch), 1, "logical*2");
 
   builtin_f_type->builtin_logical
-    = arch_boolean_type (gdbarch, gdbarch_int_bit (gdbarch), 1, "logical*4");
+    = init_boolean_type (alloc, gdbarch_int_bit (gdbarch), 1, "logical*4");
 
   builtin_f_type->builtin_logical_s8
-    = arch_boolean_type (gdbarch, gdbarch_long_long_bit (gdbarch), 1,
+    = init_boolean_type (alloc, gdbarch_long_long_bit (gdbarch), 1,
 			 "logical*8");
 
   builtin_f_type->builtin_integer_s1
-    = arch_integer_type (gdbarch, TARGET_CHAR_BIT, 0, "integer*1");
+    = init_integer_type (alloc, TARGET_CHAR_BIT, 0, "integer*1");
 
   builtin_f_type->builtin_integer_s2
-    = arch_integer_type (gdbarch, gdbarch_short_bit (gdbarch), 0, "integer*2");
+    = init_integer_type (alloc, gdbarch_short_bit (gdbarch), 0, "integer*2");
 
   builtin_f_type->builtin_integer
-    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch), 0, "integer*4");
+    = init_integer_type (alloc, gdbarch_int_bit (gdbarch), 0, "integer*4");
 
   builtin_f_type->builtin_integer_s8
-    = arch_integer_type (gdbarch, gdbarch_long_long_bit (gdbarch), 0,
+    = init_integer_type (alloc, gdbarch_long_long_bit (gdbarch), 0,
 			 "integer*8");
 
   builtin_f_type->builtin_real
-    = arch_float_type (gdbarch, gdbarch_float_bit (gdbarch),
+    = init_float_type (alloc, gdbarch_float_bit (gdbarch),
 		       "real*4", gdbarch_float_format (gdbarch));
 
   builtin_f_type->builtin_real_s8
-    = arch_float_type (gdbarch, gdbarch_double_bit (gdbarch),
+    = init_float_type (alloc, gdbarch_double_bit (gdbarch),
 		       "real*8", gdbarch_double_format (gdbarch));
 
   auto fmt = gdbarch_floatformat_for_type (gdbarch, "real(kind=16)", 128);
   if (fmt != nullptr)
     builtin_f_type->builtin_real_s16
-      = arch_float_type (gdbarch, 128, "real*16", fmt);
+      = init_float_type (alloc, 128, "real*16", fmt);
   else if (gdbarch_long_double_bit (gdbarch) == 128)
     builtin_f_type->builtin_real_s16
-      = arch_float_type (gdbarch, gdbarch_long_double_bit (gdbarch),
+      = init_float_type (alloc, gdbarch_long_double_bit (gdbarch),
 			 "real*16", gdbarch_long_double_format (gdbarch));
   else
     builtin_f_type->builtin_real_s16
-      = arch_type (gdbarch, TYPE_CODE_ERROR, 128, "real*16");
+      = alloc.new_type (TYPE_CODE_ERROR, 128, "real*16");
 
   builtin_f_type->builtin_complex
     = init_complex_type ("complex*4", builtin_f_type->builtin_real);
@@ -1785,7 +1790,7 @@ build_fortran_types (struct gdbarch *gdbarch)
 
   if (builtin_f_type->builtin_real_s16->code () == TYPE_CODE_ERROR)
     builtin_f_type->builtin_complex_s16
-      = arch_type (gdbarch, TYPE_CODE_ERROR, 256, "complex*16");
+      = alloc.new_type (TYPE_CODE_ERROR, 256, "complex*16");
   else
     builtin_f_type->builtin_complex_s16
       = init_complex_type ("complex*16", builtin_f_type->builtin_real_s16);

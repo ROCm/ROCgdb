@@ -570,7 +570,7 @@ add_data_symbol (SYMR *sh, union aux_ext *ax, int bigend,
   /* Type could be missing if file is compiled without debugging info.  */
   if (SC_IS_UNDEF (sh->sc)
       || sh->sc == scNil || sh->index == indexNil)
-    s->set_type (objfile_type (objfile)->nodebug_data_symbol);
+    s->set_type (builtin_type (objfile)->nodebug_data_symbol);
   else
     s->set_type (parse_type (cur_fd, ax, sh->index, 0, bigend, name));
   /* Value of a data symbol is its memory address.  */
@@ -715,7 +715,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       s->set_aclass_index (LOC_LABEL);	/* but not misused.  */
       s->set_section_index (section_index);
       s->set_value_address (sh->value);
-      s->set_type (objfile_type (objfile)->builtin_int);
+      s->set_type (builtin_type (objfile)->builtin_int);
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
       break;
 
@@ -758,7 +758,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
       s->set_section_index (section_index);
       /* Type of the return value.  */
       if (SC_IS_UNDEF (sh->sc) || sh->sc == scNil)
-	t = objfile_type (objfile)->builtin_int;
+	t = builtin_type (objfile)->builtin_int;
       else
 	{
 	  t = parse_type (cur_fd, ax, sh->index + 1, 0, bigend, name);
@@ -1167,7 +1167,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	  s = new_symbol (MDEBUG_EFI_SYMBOL_NAME);
 	  s->set_domain (LABEL_DOMAIN);
 	  s->set_aclass_index (LOC_CONST);
-	  s->set_type (objfile_type (mdebugread_objfile)->builtin_void);
+	  s->set_type (builtin_type (mdebugread_objfile)->builtin_void);
 	  e = OBSTACK_ZALLOC (&mdebugread_objfile->objfile_obstack,
 			      mdebug_extra_func_info);
 	  s->set_value_bytes ((gdb_byte *) e);
@@ -1386,57 +1386,59 @@ basic_type (int bt, struct objfile *objfile)
   if (map_bt[bt])
     return map_bt[bt];
 
+  type_allocator alloc (objfile);
+
   switch (bt)
     {
     case btNil:
-      tp = objfile_type (objfile)->builtin_void;
+      tp = builtin_type (objfile)->builtin_void;
       break;
 
     case btAdr:
-      tp = init_pointer_type (objfile, 32, "adr_32",
-			      objfile_type (objfile)->builtin_void);
+      tp = init_pointer_type (alloc, 32, "adr_32",
+			      builtin_type (objfile)->builtin_void);
       break;
 
     case btChar:
-      tp = init_integer_type (objfile, 8, 0, "char");
+      tp = init_integer_type (alloc, 8, 0, "char");
       tp->set_has_no_signedness (true);
       break;
 
     case btUChar:
-      tp = init_integer_type (objfile, 8, 1, "unsigned char");
+      tp = init_integer_type (alloc, 8, 1, "unsigned char");
       break;
 
     case btShort:
-      tp = init_integer_type (objfile, 16, 0, "short");
+      tp = init_integer_type (alloc, 16, 0, "short");
       break;
 
     case btUShort:
-      tp = init_integer_type (objfile, 16, 1, "unsigned short");
+      tp = init_integer_type (alloc, 16, 1, "unsigned short");
       break;
 
     case btInt:
-      tp = init_integer_type (objfile, 32, 0, "int");
+      tp = init_integer_type (alloc, 32, 0, "int");
       break;
 
    case btUInt:
-      tp = init_integer_type (objfile, 32, 1, "unsigned int");
+      tp = init_integer_type (alloc, 32, 1, "unsigned int");
       break;
 
     case btLong:
-      tp = init_integer_type (objfile, 32, 0, "long");
+      tp = init_integer_type (alloc, 32, 0, "long");
       break;
 
     case btULong:
-      tp = init_integer_type (objfile, 32, 1, "unsigned long");
+      tp = init_integer_type (alloc, 32, 1, "unsigned long");
       break;
 
     case btFloat:
-      tp = init_float_type (objfile, gdbarch_float_bit (gdbarch),
+      tp = init_float_type (alloc, gdbarch_float_bit (gdbarch),
 			    "float", gdbarch_float_format (gdbarch));
       break;
 
     case btDouble:
-      tp = init_float_type (objfile, gdbarch_double_bit (gdbarch),
+      tp = init_float_type (alloc, gdbarch_double_bit (gdbarch),
 			    "double", gdbarch_double_format (gdbarch));
       break;
 
@@ -1452,52 +1454,52 @@ basic_type (int bt, struct objfile *objfile)
       /* We use TYPE_CODE_INT to print these as integers.  Does this do any
 	 good?  Would we be better off with TYPE_CODE_ERROR?  Should
 	 TYPE_CODE_ERROR print things in hex if it knows the size?  */
-      tp = init_integer_type (objfile, gdbarch_int_bit (gdbarch), 0,
+      tp = init_integer_type (alloc, gdbarch_int_bit (gdbarch), 0,
 			      "fixed decimal");
       break;
 
     case btFloatDec:
-      tp = init_type (objfile, TYPE_CODE_ERROR,
-		      gdbarch_double_bit (gdbarch), "floating decimal");
+      tp = alloc.new_type (TYPE_CODE_ERROR,
+			   gdbarch_double_bit (gdbarch), "floating decimal");
       break;
 
     case btString:
       /* Is a "string" the way btString means it the same as TYPE_CODE_STRING?
 	 FIXME.  */
-      tp = init_type (objfile, TYPE_CODE_STRING, TARGET_CHAR_BIT, "string");
+      tp = alloc.new_type (TYPE_CODE_STRING, TARGET_CHAR_BIT, "string");
       break;
 
     case btVoid:
-      tp = objfile_type (objfile)->builtin_void;
+      tp = builtin_type (objfile)->builtin_void;
       break;
 
     case btLong64:
-      tp = init_integer_type (objfile, 64, 0, "long");
+      tp = init_integer_type (alloc, 64, 0, "long");
       break;
 
     case btULong64:
-      tp = init_integer_type (objfile, 64, 1, "unsigned long");
+      tp = init_integer_type (alloc, 64, 1, "unsigned long");
       break;
 
     case btLongLong64:
-      tp = init_integer_type (objfile, 64, 0, "long long");
+      tp = init_integer_type (alloc, 64, 0, "long long");
       break;
 
     case btULongLong64:
-      tp = init_integer_type (objfile, 64, 1, "unsigned long long");
+      tp = init_integer_type (alloc, 64, 1, "unsigned long long");
       break;
 
     case btAdr64:
-      tp = init_pointer_type (objfile, 64, "adr_64",
-			      objfile_type (objfile)->builtin_void);
+      tp = init_pointer_type (alloc, 64, "adr_64",
+			      builtin_type (objfile)->builtin_void);
       break;
 
     case btInt64:
-      tp = init_integer_type (objfile, 64, 0, "int");
+      tp = init_integer_type (alloc, 64, 0, "int");
       break;
 
     case btUInt64:
-      tp = init_integer_type (objfile, 64, 1, "unsigned int");
+      tp = init_integer_type (alloc, 64, 1, "unsigned int");
       break;
 
     default:
@@ -1573,6 +1575,8 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
 	}
     }
 
+  type_allocator alloc (mdebugread_objfile);
+
   /* Move on to next aux.  */
   ax++;
 
@@ -1647,7 +1651,7 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
       /* Try to cross reference this type, build new type on failure.  */
       ax += cross_ref (fd, ax, &tp, type_code, &name, bigend, sym_name);
       if (tp == NULL)
-	tp = init_type (mdebugread_objfile, type_code, 0, NULL);
+	tp = alloc.new_type (type_code, 0, NULL);
 
       /* DEC c89 produces cross references to qualified aggregate types,
 	 dereference them.  */
@@ -1705,7 +1709,7 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
       /* Try to cross reference this type, build new type on failure.  */
       ax += cross_ref (fd, ax, &tp, type_code, &name, bigend, sym_name);
       if (tp == NULL)
-	tp = init_type (mdebugread_objfile, type_code, 0, NULL);
+	tp = alloc.new_type (type_code, 0, NULL);
 
       /* Make sure that TYPE_CODE(tp) has an expected type code.
 	 Any type may be returned from cross_ref if file indirect entries
@@ -1847,7 +1851,7 @@ upgrade_type (int fd, struct type **tpp, int tq, union aux_ext *ax, int bigend,
 	{
 	  complaint (_("illegal array index type for %s, assuming int"),
 		     sym_name);
-	  indx = objfile_type (mdebugread_objfile)->builtin_int;
+	  indx = builtin_type (mdebugread_objfile)->builtin_int;
 	}
 
       /* Get the bounds, and create the array type.  */
@@ -1858,9 +1862,12 @@ upgrade_type (int fd, struct type **tpp, int tq, union aux_ext *ax, int bigend,
       ax++;
       rf = AUX_GET_WIDTH (bigend, ax);	/* bit size of array element */
 
-      range = create_static_range_type (NULL, indx, lower, upper);
+      {
+	type_allocator alloc (indx);
+	range = create_static_range_type (alloc, indx, lower, upper);
 
-      t = create_array_type (NULL, *tpp, range);
+	t = create_array_type (alloc, *tpp, range);
+      }
 
       /* We used to fill in the supplied array element bitsize
 	 here if the TYPE_LENGTH of the target type was zero.
@@ -1996,7 +2003,7 @@ parse_procedure (PDR *pr, struct compunit_symtab *search_symtab,
       SYMBOL_CLASS (s) = LOC_BLOCK;
       /* Don't know its type, hope int is ok.  */
       s->type ()
-	= lookup_function_type (objfile_type (pst->objfile)->builtin_int);
+	= lookup_function_type (builtin_type (pst->objfile)->builtin_int);
       add_symbol (s, top_stack->cur_st, top_stack->cur_block);
       /* Won't have symbols for this one.  */
       b = new_block (2);
@@ -2050,7 +2057,7 @@ parse_procedure (PDR *pr, struct compunit_symtab *search_symtab,
   if (processing_gcc_compilation == 0
       && found_ecoff_debugging_info == 0
       && s->type ()->target_type ()->code () == TYPE_CODE_VOID)
-    s->set_type (objfile_type (mdebugread_objfile)->nodebug_text_symbol);
+    s->set_type (builtin_type (mdebugread_objfile)->nodebug_text_symbol);
 }
 
 /* Parse the external symbol ES.  Just call parse_symbol() after
@@ -3965,7 +3972,7 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 
 		  s->set_domain (LABEL_DOMAIN);
 		  s->set_aclass_index (LOC_CONST);
-		  s->set_type (objfile_type (objfile)->builtin_void);
+		  s->set_type (builtin_type (objfile)->builtin_void);
 		  s->set_value_bytes ((gdb_byte *) e);
 		  e->pdr.framereg = -1;
 		  add_symbol_to_list (s, get_local_symbols ());
@@ -4266,13 +4273,15 @@ cross_ref (int fd, union aux_ext *ax, struct type **tpp,
       rf = rn->rfd;
     }
 
+  type_allocator alloc (mdebugread_objfile);
+
   /* mips cc uses a rf of -1 for opaque struct definitions.
      Set TYPE_STUB for these types so that check_typedef will
      resolve them if the struct gets defined in another compilation unit.  */
   if (rf == -1)
     {
       *pname = "<undefined>";
-      *tpp = init_type (mdebugread_objfile, type_code, 0, NULL);
+      *tpp = alloc.new_type (type_code, 0, NULL);
       (*tpp)->set_is_stub (true);
       return result;
     }
@@ -4358,7 +4367,7 @@ cross_ref (int fd, union aux_ext *ax, struct type **tpp,
 	  switch (tir.bt)
 	    {
 	    case btVoid:
-	      *tpp = init_type (mdebugread_objfile, type_code, 0, NULL);
+	      *tpp = alloc.new_type (type_code, 0, NULL);
 	      *pname = "<undefined>";
 	      break;
 
@@ -4392,7 +4401,7 @@ cross_ref (int fd, union aux_ext *ax, struct type **tpp,
 	    default:
 	      complaint (_("illegal bt %d in forward typedef for %s"), tir.bt,
 			 sym_name);
-	      *tpp = init_type (mdebugread_objfile, type_code, 0, NULL);
+	      *tpp = alloc.new_type (type_code, 0, NULL);
 	      break;
 	    }
 	  return result;
@@ -4420,7 +4429,7 @@ cross_ref (int fd, union aux_ext *ax, struct type **tpp,
 	     has not been parsed yet.
 	     Initialize the type only, it will be filled in when
 	     it's definition is parsed.  */
-	  *tpp = init_type (mdebugread_objfile, type_code, 0, NULL);
+	  *tpp = alloc.new_type (type_code, 0, NULL);
 	}
       add_pending (fh, esh, *tpp);
     }
@@ -4727,7 +4736,7 @@ new_type (char *name)
 {
   struct type *t;
 
-  t = alloc_type (mdebugread_objfile);
+  t = type_allocator (mdebugread_objfile).new_type ();
   t->set_name (name);
   INIT_CPLUS_SPECIFIC (t);
   return t;

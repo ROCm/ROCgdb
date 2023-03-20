@@ -276,9 +276,12 @@ address_type (gdbarch *arch, int addr_size)
 	   HOST_CHAR_BIT * addr_size);
 
   if (types->dw_types[ndx] == NULL)
-    types->dw_types[ndx]
-      = arch_integer_type (arch, HOST_CHAR_BIT * addr_size,
-			   0, "<signed DWARF address type>");
+    {
+      type_allocator alloc (arch);
+      types->dw_types[ndx]
+	= init_integer_type (alloc, HOST_CHAR_BIT * addr_size,
+			     0, "<signed DWARF address type>");
+    }
 
   return types->dw_types[ndx];
 }

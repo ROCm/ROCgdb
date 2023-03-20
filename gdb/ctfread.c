@@ -372,11 +372,12 @@ ctf_init_float_type (struct objfile *objfile,
   const struct floatformat **format;
   struct type *type;
 
+  type_allocator alloc (objfile);
   format = gdbarch_floatformat_for_type (gdbarch, name_hint, bits);
   if (format != nullptr)
-    type = init_float_type (objfile, bits, name, format);
+    type = init_float_type (alloc, bits, name, format);
   else
-    type = init_type (objfile, TYPE_CODE_ERROR, bits, name);
+    type = alloc.new_type (TYPE_CODE_ERROR, bits, name);
 
   return type;
 }
@@ -409,7 +410,7 @@ ctf_add_member_cb (const char *name,
       if (t == nullptr)
 	{
 	  complaint (_("ctf_add_member_cb: %s has NO type (%ld)"), name, tid);
-	  t = objfile_type (ccp->of)->builtin_error;
+	  t = builtin_type (ccp->of)->builtin_error;
 	  set_tid_type (ccp->of, tid, t);
 	}
     }
@@ -500,7 +501,7 @@ new_symbol (struct ctf_context *ccp, struct type *type, ctf_id_t tid)
 	    break;
 	  case CTF_K_CONST:
 	    if (sym->type ()->code () == TYPE_CODE_VOID)
-	      sym->set_type (objfile_type (objfile)->builtin_int);
+	      sym->set_type (builtin_type (objfile)->builtin_int);
 	    break;
 	  case CTF_K_TYPEDEF:
 	  case CTF_K_INTEGER:
@@ -554,6 +555,7 @@ read_base_type (struct ctf_context *ccp, ctf_id_t tid)
 		   ctf_errmsg (ctf_errno (fp)));
     }
 
+  type_allocator alloc (of);
   kind = ctf_type_kind (fp, tid);
   if (kind == CTF_K_INTEGER)
     {
@@ -564,9 +566,9 @@ read_base_type (struct ctf_context *ccp, ctf_id_t tid)
       ischar = cet.cte_format & CTF_INT_CHAR;
       isbool = cet.cte_format & CTF_INT_BOOL;
       if (ischar)
-	type = init_character_type (of, TARGET_CHAR_BIT, !issigned, name);
+	type = init_character_type (alloc, TARGET_CHAR_BIT, !issigned, name);
       else if (isbool)
-	type = init_boolean_type (of, gdbarch_int_bit (gdbarch),
+	type = init_boolean_type (alloc, gdbarch_int_bit (gdbarch),
 				  !issigned, name);
       else
 	{
@@ -575,7 +577,7 @@ read_base_type (struct ctf_context *ccp, ctf_id_t tid)
 	    bits = cet.cte_bits;
 	  else
 	    bits = gdbarch_int_bit (gdbarch);
-	  type = init_integer_type (of, bits, !issigned, name);
+	  type = init_integer_type (alloc, bits, !issigned, name);
 	}
     }
   else if (kind == CTF_K_FLOAT)
@@ -596,7 +598,7 @@ read_base_type (struct ctf_context *ccp, ctf_id_t tid)
   else
     {
       complaint (_("read_base_type: unsupported base kind (%d)"), kind);
-      type = init_type (of, TYPE_CODE_ERROR, cet.cte_bits, name);
+      type = alloc.new_type (TYPE_CODE_ERROR, cet.cte_bits, name);
     }
 
   if (name != nullptr && strcmp (name, "char") == 0)
@@ -629,7 +631,7 @@ read_structure_type (struct ctf_context *ccp, ctf_id_t tid)
   struct type *type;
   uint32_t kind;
 
-  type = alloc_type (of);
+  type = type_allocator (of).new_type ();
 
   const char *name = ctf_type_name_raw (fp, tid);
   if (name != nullptr && strlen (name) != 0)
@@ -688,7 +690,7 @@ read_func_kind_type (struct ctf_context *ccp, ctf_id_t tid)
   ctf_funcinfo_t cfi;
   uint32_t argc;
 
-  type = alloc_type (of);
+  type = type_allocator (of).new_type ();
 
   type->set_code (TYPE_CODE_FUNC);
   if (ctf_func_type_info (fp, tid, &cfi) < 0)
@@ -715,7 +717,7 @@ read_func_kind_type (struct ctf_context *ccp, ctf_id_t tid)
 
       type->set_fields
 	((struct field *) TYPE_ZALLOC (type, argc * sizeof (struct field)));
-      struct type *void_type = objfile_type (of)->builtin_void;
+      struct type *void_type = builtin_type (of)->builtin_void;
       /* If failed to find the argument type, fill it with void_type.  */
       for (int iparam = 0; iparam < argc; iparam++)
 	{
@@ -740,7 +742,7 @@ read_enum_type (struct ctf_context *ccp, ctf_id_t tid)
   ctf_dict_t *fp = ccp->fp;
   struct type *type;
 
-  type = alloc_type (of);
+  type = type_allocator (of).new_type ();
 
   const char *name = ctf_type_name_raw (fp, tid);
   if (name != nullptr && strlen (name) != 0)
@@ -827,10 +829,11 @@ read_array_type (struct ctf_context *ccp, ctf_id_t tid)
 
   idx_type = fetch_tid_type (ccp, ar.ctr_index);
   if (idx_type == nullptr)
-    idx_type = objfile_type (objfile)->builtin_int;
+    idx_type = builtin_type (objfile)->builtin_int;
 
-  range_type = create_static_range_type (NULL, idx_type, 0, ar.ctr_nelems - 1);
-  type = create_array_type (NULL, element_type, range_type);
+  type_allocator alloc (objfile);
+  range_type = create_static_range_type (alloc, idx_type, 0, ar.ctr_nelems - 1);
+  type = create_array_type (alloc, element_type, range_type);
   if (ar.ctr_nelems <= 1)	/* Check if undefined upper bound.  */
     {
       range_type->bounds ()->high.set_undefined ();
@@ -860,7 +863,7 @@ read_const_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
       if (base_type == nullptr)
 	{
 	  complaint (_("read_const_type: NULL base type (%ld)"), btid);
-	  base_type = objfile_type (objfile)->builtin_error;
+	  base_type = builtin_type (objfile)->builtin_error;
 	}
     }
   cv_type = make_cv_type (1, TYPE_VOLATILE (base_type), base_type, 0);
@@ -884,7 +887,7 @@ read_volatile_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
       if (base_type == nullptr)
 	{
 	  complaint (_("read_volatile_type: NULL base type (%ld)"), btid);
-	  base_type = objfile_type (objfile)->builtin_error;
+	  base_type = builtin_type (objfile)->builtin_error;
 	}
     }
 
@@ -910,7 +913,7 @@ read_restrict_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
       if (base_type == nullptr)
 	{
 	  complaint (_("read_restrict_type: NULL base type (%ld)"), btid);
-	  base_type = objfile_type (objfile)->builtin_error;
+	  base_type = builtin_type (objfile)->builtin_error;
 	}
     }
   cv_type = make_restrict_type (base_type);
@@ -928,7 +931,7 @@ read_typedef_type (struct ctf_context *ccp, ctf_id_t tid,
   struct type *this_type, *target_type;
 
   char *aname = obstack_strdup (&objfile->objfile_obstack, name);
-  this_type = init_type (objfile, TYPE_CODE_TYPEDEF, 0, aname);
+  this_type = type_allocator (objfile).new_type (TYPE_CODE_TYPEDEF, 0, aname);
   set_tid_type (objfile, tid, this_type);
   target_type = fetch_tid_type (ccp, btid);
   if (target_type != this_type)
@@ -956,7 +959,7 @@ read_pointer_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
       if (target_type == nullptr)
 	{
 	  complaint (_("read_pointer_type: NULL target type (%ld)"), btid);
-	  target_type = objfile_type (ccp->of)->builtin_error;
+	  target_type = builtin_type (ccp->of)->builtin_error;
 	}
     }
 
@@ -976,7 +979,7 @@ read_forward_type (struct ctf_context *ccp, ctf_id_t tid)
   struct type *type;
   uint32_t kind;
 
-  type = alloc_type (of);
+  type = type_allocator (of).new_type ();
 
   const char *name = ctf_type_name_raw (fp, tid);
   if (name != nullptr && strlen (name) != 0)
@@ -1164,7 +1167,7 @@ ctf_add_var_cb (const char *name, ctf_id_t id, void *arg)
 	if (type == nullptr)
 	  {
 	    complaint (_("ctf_add_var_cb: %s has NO type (%ld)"), name, id);
-	    type = objfile_type (ccp->of)->builtin_error;
+	    type = builtin_type (ccp->of)->builtin_error;
 	  }
 	sym = new (&ccp->of->objfile_obstack) symbol;
 	OBJSTAT (ccp->of, n_syms++);

@@ -939,7 +939,7 @@ rust_composite_type (struct type *original,
 		     const char *field1, struct type *type1,
 		     const char *field2, struct type *type2)
 {
-  struct type *result = alloc_type_copy (original);
+  struct type *result = type_allocator (original).new_type ();
   int i, nfields, bitpos;
 
   nfields = 0;
@@ -1594,27 +1594,28 @@ rust_language::language_arch_info (struct gdbarch *gdbarch,
     return t;
   };
 
+  type_allocator alloc (gdbarch);
   struct type *bool_type
-    = add (arch_boolean_type (gdbarch, 8, 1, "bool"));
-  add (arch_character_type (gdbarch, 32, 1, "char"));
-  add (arch_integer_type (gdbarch, 8, 0, "i8"));
+    = add (init_boolean_type (alloc, 8, 1, "bool"));
+  add (init_character_type (alloc, 32, 1, "char"));
+  add (init_integer_type (alloc, 8, 0, "i8"));
   struct type *u8_type
-    = add (arch_integer_type (gdbarch, 8, 1, "u8"));
-  add (arch_integer_type (gdbarch, 16, 0, "i16"));
-  add (arch_integer_type (gdbarch, 16, 1, "u16"));
-  add (arch_integer_type (gdbarch, 32, 0, "i32"));
-  add (arch_integer_type (gdbarch, 32, 1, "u32"));
-  add (arch_integer_type (gdbarch, 64, 0, "i64"));
-  add (arch_integer_type (gdbarch, 64, 1, "u64"));
+    = add (init_integer_type (alloc, 8, 1, "u8"));
+  add (init_integer_type (alloc, 16, 0, "i16"));
+  add (init_integer_type (alloc, 16, 1, "u16"));
+  add (init_integer_type (alloc, 32, 0, "i32"));
+  add (init_integer_type (alloc, 32, 1, "u32"));
+  add (init_integer_type (alloc, 64, 0, "i64"));
+  add (init_integer_type (alloc, 64, 1, "u64"));
 
   unsigned int length = 8 * builtin->builtin_data_ptr->length ();
-  add (arch_integer_type (gdbarch, length, 0, "isize"));
+  add (init_integer_type (alloc, length, 0, "isize"));
   struct type *usize_type
-    = add (arch_integer_type (gdbarch, length, 1, "usize"));
+    = add (init_integer_type (alloc, length, 1, "usize"));
 
-  add (arch_float_type (gdbarch, 32, "f32", floatformats_ieee_single));
-  add (arch_float_type (gdbarch, 64, "f64", floatformats_ieee_double));
-  add (arch_integer_type (gdbarch, 0, 1, "()"));
+  add (init_float_type (alloc, 32, "f32", floatformats_ieee_single));
+  add (init_float_type (alloc, 64, "f64", floatformats_ieee_double));
+  add (init_integer_type (alloc, 0, 1, "()"));
 
   struct type *tem = make_cv_type (1, 0, u8_type, NULL);
   add (rust_slice_type ("&str", tem, usize_type));

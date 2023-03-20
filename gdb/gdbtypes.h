@@ -2098,53 +2098,30 @@ struct builtin_type
 
   /* * This type is used to represent an xmethod.  */
   struct type *xmethod = nullptr;
+
+  /* * This type is used to represent symbol addresses.  */
+  struct type *builtin_core_addr = nullptr;
+
+  /* * This type represents a type that was unrecognized in symbol
+     read-in.  */
+  struct type *builtin_error = nullptr;
+
+  /* * Types used for symbols with no debug information.  */
+  struct type *nodebug_text_symbol = nullptr;
+  struct type *nodebug_text_gnu_ifunc_symbol = nullptr;
+  struct type *nodebug_got_plt_symbol = nullptr;
+  struct type *nodebug_data_symbol = nullptr;
+  struct type *nodebug_unknown_symbol = nullptr;
+  struct type *nodebug_tls_symbol = nullptr;
 };
 
 /* * Return the type table for the specified architecture.  */
 
 extern const struct builtin_type *builtin_type (struct gdbarch *gdbarch);
 
-/* * Per-objfile types used by symbol readers.  */
-
-struct objfile_type
-{
-  /* Basic types based on the objfile architecture.  */
-  struct type *builtin_void;
-  struct type *builtin_char;
-  struct type *builtin_short;
-  struct type *builtin_int;
-  struct type *builtin_long;
-  struct type *builtin_long_long;
-  struct type *builtin_signed_char;
-  struct type *builtin_unsigned_char;
-  struct type *builtin_unsigned_short;
-  struct type *builtin_unsigned_int;
-  struct type *builtin_unsigned_long;
-  struct type *builtin_unsigned_long_long;
-  struct type *builtin_half;
-  struct type *builtin_float;
-  struct type *builtin_double;
-  struct type *builtin_long_double;
-
-  /* * This type is used to represent symbol addresses.  */
-  struct type *builtin_core_addr;
-
-  /* * This type represents a type that was unrecognized in symbol
-     read-in.  */
-  struct type *builtin_error;
-
-  /* * Types used for symbols with no debug information.  */
-  struct type *nodebug_text_symbol;
-  struct type *nodebug_text_gnu_ifunc_symbol;
-  struct type *nodebug_got_plt_symbol;
-  struct type *nodebug_data_symbol;
-  struct type *nodebug_unknown_symbol;
-  struct type *nodebug_tls_symbol;
-};
-
 /* * Return the type table for the specified objfile.  */
 
-extern const struct objfile_type *objfile_type (struct objfile *objfile);
+extern const struct builtin_type *builtin_type (struct objfile *objfile);
  
 /* Explicit floating-point formats.  See "floatformat.h".  */
 extern const struct floatformat *floatformats_ieee_half[BFD_ENDIAN_UNKNOWN];
@@ -2186,15 +2163,6 @@ extern const struct floatformat *floatformats_bfloat16[BFD_ENDIAN_UNKNOWN];
 
 #define TYPE_ZALLOC(t,size) (memset (TYPE_ALLOC (t, size), 0, size))
 
-/* Use alloc_type to allocate a type owned by an objfile.  Use
-   alloc_type_arch to allocate a type owned by an architecture.  Use
-   alloc_type_copy to allocate a type with the same owner as a
-   pre-existing template type, no matter whether objfile or
-   gdbarch.  */
-extern struct type *alloc_type (struct objfile *);
-extern struct type *alloc_type_arch (struct gdbarch *);
-extern struct type *alloc_type_copy (const struct type *);
-
 /* * This returns the target type (or NULL) of TYPE, also skipping
    past typedefs.  */
 
@@ -2205,41 +2173,157 @@ extern struct type *get_target_type (struct type *type);
 
 extern unsigned int type_length_units (struct type *type);
 
-/* * Helper function to construct objfile-owned types.  */
+/* An object of this type is passed when allocating certain types.  It
+   determines where the new type is allocated.  Ultimately a type is
+   either allocated on a on an objfile obstack or on a gdbarch
+   obstack.  However, it's also possible to request that a new type be
+   allocated on the same obstack as some existing type, or that a
+   "new" type instead overwrite a supplied type object.  */
 
-extern struct type *init_type (struct objfile *, enum type_code, int,
-			       const char *);
-extern struct type *init_integer_type (struct objfile *, int, int,
-				       const char *);
-extern struct type *init_character_type (struct objfile *, int, int,
-					 const char *);
-extern struct type *init_boolean_type (struct objfile *, int, int,
-				       const char *);
-extern struct type *init_float_type (struct objfile *, int, const char *,
-				     const struct floatformat **,
-				     enum bfd_endian = BFD_ENDIAN_UNKNOWN);
-extern struct type *init_decfloat_type (struct objfile *, int, const char *);
+class type_allocator
+{
+public:
+
+  /* Create new types on OBJFILE.  */
+  explicit type_allocator (objfile *objfile)
+    : m_is_objfile (true)
+  {
+    m_data.objfile = objfile;
+  }
+
+  /* Create new types on GDBARCH.  */
+  explicit type_allocator (gdbarch *gdbarch)
+  {
+    m_data.gdbarch = gdbarch;
+  }
+
+  /* This determines whether a passed-in type should be rewritten in
+     place, or whether it should simply determine where the new type
+     is created.  */
+  enum type_allocator_kind
+  {
+    /* Allocate on same obstack as existing type.  */
+    SAME = 0,
+    /* Smash the existing type.  */
+    SMASH = 1,
+  };
+
+  /* Create new types either on the same obstack as TYPE; or if SMASH
+     is passed, overwrite TYPE.  */
+  explicit type_allocator (struct type *type,
+			   type_allocator_kind kind = SAME)
+  {
+    if (kind == SAME)
+      {
+	if (type->is_objfile_owned ())
+	  {
+	    m_data.objfile = type->objfile_owner ();
+	    m_is_objfile = true;
+	  }
+	else
+	  m_data.gdbarch = type->arch_owner ();
+      }
+    else
+      {
+	m_smash = true;
+	m_data.type = type;
+      }
+  }
+
+  /* Create new types on the same obstack as TYPE.  */
+  explicit type_allocator (const struct type *type)
+    : m_is_objfile (type->is_objfile_owned ())
+  {
+    if (type->is_objfile_owned ())
+      m_data.objfile = type->objfile_owner ();
+    else
+      m_data.gdbarch = type->arch_owner ();
+  }
+
+  /* Create a new type on the desired obstack.  Note that a "new" type
+     is not created if type-smashing was selected at construction.  */
+  type *new_type ();
+
+  /* Create a new type on the desired obstack, and fill in its code,
+     length, and name.  If NAME is non-null, it is copied to the
+     destination obstack first.  Note that a "new" type is not created
+     if type-smashing was selected at construction.  */
+  type *new_type (enum type_code code, int bit, const char *name);
+
+  /* Return the architecture associated with this allocator.  This
+     comes from whatever object was supplied to the constructor.  */
+  gdbarch *arch ();
+
+private:
+
+  /* Where the type should wind up.  */
+  union
+  {
+    struct objfile *objfile;
+    struct gdbarch *gdbarch;
+    struct type *type;
+  } m_data {};
+
+  /* True if this allocator uses the objfile field above.  */
+  bool m_is_objfile = false;
+  /* True if this allocator uses the type field above, indicating that
+     the "allocation" should be done in-place.  */
+  bool m_smash = false;
+};
+
+/* Allocate a TYPE_CODE_INT type structure using ALLOC.  BIT is the
+   type size in bits.  If UNSIGNED_P is non-zero, set the type's
+   TYPE_UNSIGNED flag.  NAME is the type name.  */
+
+extern struct type *init_integer_type (type_allocator &alloc, int bit,
+				       int unsigned_p, const char *name);
+
+/* Allocate a TYPE_CODE_CHAR type structure using ALLOC.  BIT is the
+   type size in bits.  If UNSIGNED_P is non-zero, set the type's
+   TYPE_UNSIGNED flag.  NAME is the type name.  */
+
+extern struct type *init_character_type (type_allocator &alloc, int bit,
+					 int unsigned_p, const char *name);
+
+/* Allocate a TYPE_CODE_BOOL type structure using ALLOC.  BIT is the
+   type size in bits.  If UNSIGNED_P is non-zero, set the type's
+   TYPE_UNSIGNED flag.  NAME is the type name.  */
+
+extern struct type *init_boolean_type (type_allocator &alloc, int bit,
+				       int unsigned_p, const char *name);
+
+/* Allocate a TYPE_CODE_FLT type structure using ALLOC.
+   BIT is the type size in bits; if BIT equals -1, the size is
+   determined by the floatformat.  NAME is the type name.  Set the
+   TYPE_FLOATFORMAT from FLOATFORMATS.  BYTE_ORDER is the byte order
+   to use.  If it is BFD_ENDIAN_UNKNOWN (the default), then the byte
+   order of the objfile's architecture is used.  */
+
+extern struct type *init_float_type
+     (type_allocator &alloc, int bit, const char *name,
+      const struct floatformat **floatformats,
+      enum bfd_endian byte_order = BFD_ENDIAN_UNKNOWN);
+
+/* Allocate a TYPE_CODE_DECFLOAT type structure using ALLOC.
+   BIT is the type size in bits.  NAME is the type name.  */
+
+extern struct type *init_decfloat_type (type_allocator &alloc, int bit,
+					const char *name);
+
 extern bool can_create_complex_type (struct type *);
 extern struct type *init_complex_type (const char *, struct type *);
-extern struct type *init_pointer_type (struct objfile *, int, const char *,
-				       struct type *);
+
+/* Allocate a TYPE_CODE_PTR type structure using ALLOC.
+   BIT is the pointer type size in bits.  NAME is the type name.
+   TARGET_TYPE is the pointer target type.  Always sets the pointer type's
+   TYPE_UNSIGNED flag.  */
+
+extern struct type *init_pointer_type (type_allocator &alloc, int bit,
+				       const char *name,
+				       struct type *target_type);
+
 extern struct type *init_fixed_point_type (struct objfile *, int, int,
 					   const char *);
-
-/* Helper functions to construct architecture-owned types.  */
-extern struct type *arch_type (struct gdbarch *, enum type_code, int,
-			       const char *);
-extern struct type *arch_integer_type (struct gdbarch *, int, int,
-				       const char *);
-extern struct type *arch_character_type (struct gdbarch *, int, int,
-					 const char *);
-extern struct type *arch_boolean_type (struct gdbarch *, int, int,
-				       const char *);
-extern struct type *arch_float_type (struct gdbarch *, int, const char *,
-				     const struct floatformat **);
-extern struct type *arch_decfloat_type (struct gdbarch *, int, const char *);
-extern struct type *arch_pointer_type (struct gdbarch *, int, const char *,
-				       struct type *);
 
 /* Helper functions to construct a struct or record type.  An
    initially empty type is created using arch_composite_type().
@@ -2366,39 +2450,82 @@ extern struct type *lookup_function_type_with_arguments (struct type *,
 							 int,
 							 struct type **);
 
-extern struct type *create_static_range_type (struct type *, struct type *,
-					      LONGEST, LONGEST);
+/* Create a range type using ALLOC.
 
+   Indices will be of type INDEX_TYPE, and will range from LOW_BOUND
+   to HIGH_BOUND, inclusive.  */
+
+extern struct type *create_static_range_type (type_allocator &alloc,
+					      struct type *index_type,
+					      LONGEST low_bound,
+					      LONGEST high_bound);
+
+/* Create an array type using ALLOC.
+
+   Elements will be of type ELEMENT_TYPE, the indices will be of type
+   RANGE_TYPE.
+
+   BYTE_STRIDE_PROP, when not NULL, provides the array's byte stride.
+   This byte stride property is added to the resulting array type
+   as a DYN_PROP_BYTE_STRIDE.  As a consequence, the BYTE_STRIDE_PROP
+   argument can only be used to create types that are objfile-owned
+   (see add_dyn_prop), meaning that either this function must be called
+   with an objfile-owned RESULT_TYPE, or an objfile-owned RANGE_TYPE.
+
+   BIT_STRIDE is taken into account only when BYTE_STRIDE_PROP is NULL.
+   If BIT_STRIDE is not zero, build a packed array type whose element
+   size is BIT_STRIDE.  Otherwise, ignore this parameter.  */
 
 extern struct type *create_array_type_with_stride
-  (struct type *, struct type *, struct type *,
-   struct dynamic_prop *, unsigned int);
+     (type_allocator &alloc, struct type *element_type,
+      struct type *range_type, struct dynamic_prop *byte_stride_prop,
+      unsigned int bit_stride);
 
-extern struct type *create_range_type (struct type *, struct type *,
-				       const struct dynamic_prop *,
-				       const struct dynamic_prop *,
-				       LONGEST);
+/* Create a range type using ALLOC with a dynamic range from LOW_BOUND
+   to HIGH_BOUND, inclusive.  INDEX_TYPE is the underlying type.  BIAS
+   is the bias to be applied when storing or retrieving values of this
+   type.  */
+
+extern struct type *create_range_type (type_allocator &alloc,
+				       struct type *index_type,
+				       const struct dynamic_prop *low_bound,
+				       const struct dynamic_prop *high_bound,
+				       LONGEST bias);
 
 /* Like CREATE_RANGE_TYPE but also sets up a stride.  When BYTE_STRIDE_P
    is true the value in STRIDE is a byte stride, otherwise STRIDE is a bit
    stride.  */
 
-extern struct type * create_range_type_with_stride
-  (struct type *result_type, struct type *index_type,
+extern struct type *create_range_type_with_stride
+  (type_allocator &alloc, struct type *index_type,
    const struct dynamic_prop *low_bound,
    const struct dynamic_prop *high_bound, LONGEST bias,
    const struct dynamic_prop *stride, bool byte_stride_p);
 
-extern struct type *create_array_type (struct type *, struct type *,
-				       struct type *);
+/* Same as create_array_type_with_stride but with no bit_stride
+   (BIT_STRIDE = 0), thus building an unpacked array.  */
+
+extern struct type *create_array_type (type_allocator &alloc,
+				       struct type *element_type,
+				       struct type *range_type);
 
 extern struct type *lookup_array_range_type (struct type *, LONGEST, LONGEST);
 
-extern struct type *create_string_type (struct type *, struct type *,
-					struct type *);
+/* Create a string type using ALLOC.  String types are similar enough
+   to array of char types that we can use create_array_type to build
+   the basic type and then bash it into a string type.
+
+   For fixed length strings, the range type contains 0 as the lower
+   bound and the length of the string minus one as the upper bound.  */
+
+extern struct type *create_string_type (type_allocator &alloc,
+					struct type *string_char_type,
+					struct type *range_type);
+
 extern struct type *lookup_string_range_type (struct type *, LONGEST, LONGEST);
 
-extern struct type *create_set_type (struct type *, struct type *);
+extern struct type *create_set_type (type_allocator &alloc,
+				     struct type *domain_type);
 
 extern struct type *lookup_unsigned_typename (const struct language_defn *,
 					      const char *);
