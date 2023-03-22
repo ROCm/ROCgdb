@@ -413,6 +413,14 @@ allocate_global_block (struct obstack *obstack)
 
 /* Set the compunit of the global block.  */
 
+bool block::is_global_or_static () const
+{
+  return (this->superblock () == nullptr
+	  || this->superblock ()->superblock () == nullptr);
+}
+
+/* See block.h.  */
+
 void
 set_block_compunit_symtab (struct block *block, struct compunit_symtab *cu)
 {

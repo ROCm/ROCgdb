@@ -1413,11 +1413,7 @@ value_repeat (struct value *arg1, int count)
 struct value *
 value_of_variable (struct symbol *var, const struct block *b)
 {
-  frame_info_ptr frame = NULL;
-
-  if (symbol_read_needs_frame (var))
-    frame = get_selected_frame (_("No frame selected."));
-
+  frame_info_ptr frame = deprecated_safe_get_selected_frame ();
   return read_var_value (var, b, frame);
 }
 

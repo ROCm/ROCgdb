@@ -204,10 +204,15 @@ struct block
       return this->ranges ()[0].start ();
   }
 
+  /* Check if block is either global or static.  */
+
+  bool is_global_or_static () const;
+
   /* Addresses in the executable code that are in this block.  */
 
   CORE_ADDR m_start;
   CORE_ADDR m_end;
+
 
   /* The symbol that names this block, if the block is the body of a
      function (real or inlined); otherwise, zero.  */

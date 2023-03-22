@@ -107,6 +107,14 @@ enum errors {
      "_ERROR" is appended to the name.  */
   MAX_COMPLETIONS_REACHED_ERROR,
 
+  /* At least one DWARF operation in the evaluated expression requires
+     a frame context to be present, but it is missing.  */
+  DWARF2_FRAME_CONTEXT_MISSING,
+
+  /* At least one DWARF operation in the evaluated expression requires
+     a thread context to be present, but it is missing.  */
+  DWARF2_THREAD_CONTEXT_MISSING,
+
   /* Add more errors here.  */
   NR_ERRORS
 };

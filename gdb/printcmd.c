@@ -2004,11 +2004,15 @@ display_command (const char *arg, int from_tty)
       fmt.raw = 0;
     }
 
+  const struct block *block = nullptr;
   innermost_block_tracker tracker;
   expression_up expr = parse_expression (exp, &tracker);
 
+  if (tracker.block () != nullptr && !tracker.block ()->is_global_or_static ())
+    block = tracker.block ();
+
   newobj = new display (exp, std::move (expr), fmt,
-			current_program_space, tracker.block ());
+			current_program_space, block);
   all_displays.emplace_back (newobj);
 
   if (from_tty)
@@ -2129,7 +2133,11 @@ do_one_display (struct display *d)
 	{
 	  innermost_block_tracker tracker;
 	  d->exp = parse_expression (d->exp_string.c_str (), &tracker);
-	  d->block = tracker.block ();
+	  if (tracker.block () != nullptr
+	      && !tracker.block ()->is_global_or_static ())
+	    d->block = tracker.block ();
+	  else
+	    d->block = nullptr;
 	}
       catch (const gdb_exception &ex)
 	{

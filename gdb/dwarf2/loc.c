@@ -4134,8 +4134,9 @@ loclist_read_variable (struct symbol *symbol, frame_info_ptr frame)
   struct value *val;
   const gdb_byte *data;
   size_t size;
-  CORE_ADDR pc = frame ? get_frame_address_in_block (frame) : 0;
+  ensure_have_frame (frame, "loclist");
 
+  CORE_ADDR pc = get_frame_address_in_block (frame);
   data = dwarf2_find_location_expression (dlbaton, &size, pc);
   val = dwarf2_evaluate_loc_desc (symbol->type (), frame, data, size,
 				  dlbaton->per_cu, dlbaton->per_objfile);
@@ -4160,7 +4161,9 @@ loclist_read_variable_at_entry (struct symbol *symbol, frame_info_ptr frame)
   size_t size;
   CORE_ADDR pc;
 
-  if (frame == NULL || !get_frame_func_if_available (frame, &pc))
+  ensure_have_frame (frame, "loclist at entry");
+
+  if (!get_frame_func_if_available (frame, &pc))
     return allocate_optimized_out_value (symbol->type ());
 
   data = dwarf2_find_location_expression (dlbaton, &size, pc);

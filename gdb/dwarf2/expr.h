@@ -131,4 +131,9 @@ extern const gdb_byte *safe_read_sleb128 (const gdb_byte *buf,
 extern const gdb_byte *safe_skip_leb128 (const gdb_byte *buf,
 					 const gdb_byte *buf_end);
 
+/* Ensure that a FRAME is defined, throw an exception with CONTEXT
+   otherwise.  */
+
+extern void ensure_have_frame (frame_info_ptr frame, const char *context);
+
 #endif /* DWARF2EXPR_H */
