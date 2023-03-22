@@ -100,7 +100,7 @@ if { [prepare_for_testing ${testfile}.exp ${testfile} \
 
 # The variable's location expression requires a frame,
 # so an error should be reported.
-gdb_test "print/d a" "No frame selected." "variable a can't be printed"
+gdb_test "print/d a" "Cannot read `a' without a frame" "variable a can't be printed"
 
 if ![runto_main] {
     return -1

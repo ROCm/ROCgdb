@@ -258,6 +258,10 @@ struct block : public allocate_on_obstack
 
   const struct block *global_block () const;
 
+  /* Check if block is either global or static.  */
+
+  bool is_global_or_static () const;
+
   /* Set the compunit of this block, which must be a global block.  */
 
   void set_compunit_symtab (struct compunit_symtab *);

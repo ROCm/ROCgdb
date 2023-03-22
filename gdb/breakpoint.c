@@ -1048,7 +1048,12 @@ set_breakpoint_condition (struct breakpoint *b, const char *exp,
 	    error (_("Junk at end of expression"));
 	  watchpoint *w = gdb::checked_static_cast<watchpoint *> (b);
 	  w->cond_exp = std::move (new_exp);
-	  w->cond_exp_valid_block = tracker.block ();
+
+	  if (tracker.block () != nullptr
+	      && !tracker.block ()->is_global_or_static ())
+	    w->cond_exp_valid_block = tracker.block ();
+	  else
+	    w->cond_exp_valid_block = nullptr;
 	}
       else
 	{
@@ -10258,11 +10263,15 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       error (_("Cannot watch constant value `%.*s'."), len, exp_start);
     }
 
-  exp_valid_block = tracker.block ();
+  if (tracker.block () != nullptr
+      && !tracker.block ()->is_global_or_static ())
+    exp_valid_block = tracker.block ();
+
+  std::vector<value_ref_ptr> val_chain;
   struct value *mark = value_mark ();
   struct value *val_as_value = nullptr;
-  fetch_subexp_value (exp.get (), exp->op.get (), &val_as_value, &result, NULL,
-		      just_location);
+  fetch_subexp_value (exp.get (), exp->op.get (), &val_as_value, &result,
+		      &val_chain, just_location);
 
   if (val_as_value != NULL && just_location)
     {
@@ -10271,6 +10280,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     }
 
   value_ref_ptr val;
+  struct frame_id next_frame_id = null_frame_id;
   if (just_location)
     {
       int ret;
@@ -10289,8 +10299,20 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 	    error (_("Invalid mask or memory region."));
 	}
     }
-  else if (val_as_value != NULL)
-    val = release_value (val_as_value);
+  else
+    {
+      /* Look at each value on the value chain for a frame context.  */
+      gdb_assert (!val_chain.empty ());
+      for (const value_ref_ptr &iter : val_chain)
+	if (frame_id_p (iter->context ().next_frame_id))
+	  {
+	    next_frame_id = iter->context ().next_frame_id;
+	    break;
+	  }
+
+      if (val_as_value != nullptr)
+	val = release_value (val_as_value);
+    }
 
   tok = skip_spaces (arg);
   end_tok = skip_to_space (tok);
@@ -10304,14 +10326,25 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 
       /* The watchpoint expression may not be local, but the condition
 	 may still be.  E.g.: `watch global if local > 0'.  */
-      cond_exp_valid_block = if_tracker.block ();
+      if (if_tracker.block () != nullptr
+	  && !if_tracker.block ()->is_global_or_static ())
+	cond_exp_valid_block = if_tracker.block ();
 
       cond_end = tok;
     }
   if (*tok)
     error (_("Junk at end of command."));
 
-  frame_info_ptr wp_frame = block_innermost_frame (exp_valid_block);
+  frame_info_ptr wp_frame = nullptr;
+  if (frame_id_p (next_frame_id))
+    {
+      wp_frame = frame_find_by_id (next_frame_id);
+      if (wp_frame == nullptr)
+	internal_error (_("frame id without a valid frame"));
+      wp_frame = get_prev_frame_always (wp_frame);
+    }
+  else
+    exp_valid_block = nullptr;
 
   /* Save this because create_internal_breakpoint below invalidates
      'wp_frame'.  */
@@ -10321,7 +10354,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
      breakpoint at the point where we've left the scope of the watchpoint
      expression.  Create the scope breakpoint before the watchpoint, so
      that we will encounter it first in bpstat_stop_status.  */
-  if (exp_valid_block != NULL && wp_frame != NULL)
+  if (exp_valid_block != nullptr)
     {
       frame_id caller_frame_id = frame_unwind_caller_id (wp_frame);
 

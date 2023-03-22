@@ -56,21 +56,21 @@ static void
 ensure_have_thread (const char *op_name)
 {
   if (inferior_ptid == null_ptid)
-    throw_error (GENERIC_ERROR,
+    throw_error (DWARF2_THREAD_CONTEXT_MISSING,
 		 _("%s evaluation requires a thread to be in focus."),
 		 op_name);
 }
 
-/* Ensure that a FRAME is defined, throw an exception otherwise.  */
+/* See expr.h.  */
 
-static void
-ensure_have_frame (frame_info_ptr frame, const char *op_name)
+void
+ensure_have_frame (frame_info_ptr frame, const char *context)
 {
   if (frame == nullptr)
-    throw_error (GENERIC_ERROR,
-		 _("%s evaluation requires a frame."), op_name);
+    throw_error (DWARF2_FRAME_CONTEXT_MISSING,
+		 _("%s evaluation requires a frame."), context);
 
-  ensure_have_thread (op_name);
+  ensure_have_thread (context);
 }
 
 /* Ensure that a PER_CU is defined and throw an exception otherwise.  */

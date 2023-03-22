@@ -348,8 +348,26 @@ address_to_signed_pointer (struct gdbarch *gdbarch, struct type *type,
 enum symbol_needs_kind
 symbol_read_needs (struct symbol *sym)
 {
+  /* For computed symbols, the context dependency can't always be
+     determined unless a full evaluation is attempted.  Because of
+     this, we have to do a full location evaluation.  */
   if (SYMBOL_COMPUTED_OPS (sym) != NULL)
-    return SYMBOL_COMPUTED_OPS (sym)->get_symbol_read_needs (sym);
+    {
+      try
+	{
+	  SYMBOL_COMPUTED_OPS (sym)->read_variable (sym, nullptr);
+	  return SYMBOL_NEEDS_NONE;
+	}
+      catch (const gdb_exception &except)
+	{
+	  if (except.error == DWARF2_FRAME_CONTEXT_MISSING)
+	    return SYMBOL_NEEDS_FRAME;
+	  else if (except.error == DWARF2_THREAD_CONTEXT_MISSING)
+	    return SYMBOL_NEEDS_REGISTERS;
+	  else
+	    throw;
+	}
+    }
 
   switch (sym->aclass ())
     {
@@ -461,8 +479,7 @@ get_hosting_frame (struct symbol *var, const struct block *var_block,
      tests that embed global/static symbols with null location lists.
      We want to get <optimized out> instead of <frame required> when evaluating
      them so return a frame instead of raising an error.  */
-  else if (var_block == var_block->global_block ()
-	   || var_block == var_block->static_block ())
+  else if (var_block->is_global_or_static ())
     return frame;
 
   /* We have to handle the "my_func::my_local_var" notation.  This requires us
@@ -566,17 +583,15 @@ language_defn::read_var_value (struct symbol *var,
      set the returned value type description correctly.  */
   check_typedef (type);
 
-  sym_need = symbol_read_needs (var);
-  if (sym_need == SYMBOL_NEEDS_FRAME)
-    gdb_assert (frame != NULL);
-  else if (sym_need == SYMBOL_NEEDS_REGISTERS && !target_has_registers ())
-    error (_("Cannot read `%s' without registers"), var->print_name ());
-
   if (frame != NULL)
     frame = get_hosting_frame (var, var_block, frame);
 
-  if (SYMBOL_COMPUTED_OPS (var) != NULL)
-    return SYMBOL_COMPUTED_OPS (var)->read_variable (var, frame);
+  sym_need = symbol_read_needs (var);
+
+  if (sym_need == SYMBOL_NEEDS_FRAME && frame == nullptr)
+    error (_("Cannot read `%s' without a frame"), var->print_name ());
+  else if (sym_need == SYMBOL_NEEDS_REGISTERS && !target_has_registers ())
+    error (_("Cannot read `%s' without registers"), var->print_name ());
 
   switch (var->aclass ())
     {
@@ -716,7 +731,7 @@ language_defn::read_var_value (struct symbol *var,
       break;
 
     case LOC_COMPUTED:
-      gdb_assert_not_reached ("LOC_COMPUTED variable missing a method");
+      return SYMBOL_COMPUTED_OPS (var)->read_variable (var, frame);
 
     case LOC_UNRESOLVED:
       {

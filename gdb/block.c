@@ -378,6 +378,14 @@ block::global_block () const
 
 /* See block.h.  */
 
+bool block::is_global_or_static () const
+{
+  return (this->superblock () == nullptr
+	  || this->superblock ()->superblock () == nullptr);
+}
+
+/* See block.h.  */
+
 void
 block::set_compunit_symtab (struct compunit_symtab *cu)
 {
