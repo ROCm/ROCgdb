@@ -1909,8 +1909,9 @@ see the comments in infrun.c.
         ("CORE_ADDR", "to"),
         ("struct regcache *", "regs"),
     ],
-    predicate=True,
+    predicate=False,
     predefault="NULL",
+    invalid="(gdbarch->displaced_step_copy_insn == nullptr) != (gdbarch->displaced_step_fixup == nullptr)",
 )
 
 Method(
