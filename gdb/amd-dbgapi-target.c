@@ -272,8 +272,8 @@ struct amd_dbgapi_target final : public target_ops
   displaced_step_prepare (thread_info *thread,
 			  CORE_ADDR &displaced_pc) override;
 
-  displaced_step_finish_status displaced_step_finish (thread_info *thread,
-						      gdb_signal sig) override;
+  displaced_step_finish_status displaced_step_finish
+    (thread_info *thread, const target_waitstatus &status) override;
 
   void prevent_new_threads (bool prevent) override;
 
@@ -2416,10 +2416,11 @@ amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
 }
 
 displaced_step_finish_status
-amd_dbgapi_target::displaced_step_finish (thread_info *thread, gdb_signal sig)
+amd_dbgapi_target::displaced_step_finish (thread_info *thread,
+					  const target_waitstatus &ws)
 {
   if (!ptid_is_gpu (thread->ptid))
-    return beneath ()->displaced_step_finish (thread, sig);
+    return beneath ()->displaced_step_finish (thread, ws);
 
   gdb_assert (thread->displaced_step_state.in_progress ());
 

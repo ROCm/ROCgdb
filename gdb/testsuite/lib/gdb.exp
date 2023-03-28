@@ -4715,6 +4715,19 @@ proc escape_for_host { str } {
     return [string map $map $str]
 }
 
+# Add double quotes around ARGS, sufficiently escaped for use on host
+# commandline.
+
+proc quote_for_host { args } {
+    set str [join $args]
+    if { [is_remote host] } {
+	set str [join [list {\"} $str {\"}] ""]
+    } else {
+	set str [join [list {"} $str {"}] ""]
+    }
+    return $str
+}
+
 # Compile source files specified by SOURCE into a binary of type TYPE at path
 # DEST.  gdb_compile is implemented using DejaGnu's target_compile, so the type
 # parameter and most options are passed directly to it.
@@ -6417,7 +6430,15 @@ proc standard_output_file {basename} {
 
 proc host_standard_output_file { basename } {
     if { [is_remote host] } {
-	return $basename
+	set remotedir [board_info host remotedir]
+	if { $remotedir == "" } {
+	    if { $basename == "" } {
+		return "."
+	    }
+	    return $basename
+	} else {
+	    return [join [list $remotedir $basename] "/"]
+	}
     } else {
 	return [standard_output_file $basename]
     }
@@ -8758,6 +8779,10 @@ proc readnow { } {
 # Otherwise, return "".
 
 proc have_index { objfile } {
+    # This proc is mostly used with $binfile, but that gives problems with
+    # remote host, while using $testfile would work.
+    # Fix this by reducing $binfile to $testfile.
+    set objfile [file tail $objfile]
 
     set res ""
     set cmd "maint print objfiles $objfile"

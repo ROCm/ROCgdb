@@ -245,4 +245,10 @@ target_debug_print_gdb_byte_vector_r (gdb::byte_vector &vector)
 {
   target_debug_print_const_gdb_byte_vector_r (vector);
 }
+
+static void
+target_debug_print_const_target_waitstatus_r (const target_waitstatus &status)
+{
+  gdb_printf (gdb_stdlog, "{%s}", status.to_string ().c_str ());
+}
 #endif /* TARGET_DEBUG_H */

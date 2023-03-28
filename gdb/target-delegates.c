@@ -203,7 +203,7 @@ struct dummy_target : public target_ops
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
   bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
-  displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
+  displaced_step_finish_status displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1) override;
 };
 
 struct debug_target : public target_ops
@@ -385,7 +385,7 @@ struct debug_target : public target_ops
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
   bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
-  displaced_step_finish_status displaced_step_finish (thread_info *arg0, gdb_signal arg1) override;
+  displaced_step_finish_status displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1) override;
 };
 
 void
@@ -4736,19 +4736,19 @@ debug_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
 }
 
 displaced_step_finish_status
-target_ops::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+target_ops::displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1)
 {
   return this->beneath ()->displaced_step_finish (arg0, arg1);
 }
 
 displaced_step_finish_status
-dummy_target::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+dummy_target::displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1)
 {
   return default_displaced_step_finish (this, arg0, arg1);
 }
 
 displaced_step_finish_status
-debug_target::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
+debug_target::displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1)
 {
   displaced_step_finish_status result;
   gdb_printf (gdb_stdlog, "-> %s->displaced_step_finish (...)\n", this->beneath ()->shortname ());
@@ -4756,7 +4756,7 @@ debug_target::displaced_step_finish (thread_info *arg0, gdb_signal arg1)
   gdb_printf (gdb_stdlog, "<- %s->displaced_step_finish (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (", ", gdb_stdlog);
-  target_debug_print_gdb_signal (arg1);
+  target_debug_print_const_target_waitstatus_r (arg1);
   gdb_puts (") = ", gdb_stdlog);
   target_debug_print_displaced_step_finish_status (result);
   gdb_puts ("\n", gdb_stdlog);

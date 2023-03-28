@@ -1353,7 +1353,8 @@ struct target_ops
 								  CORE_ADDR &displaced_pc)
       TARGET_DEFAULT_FUNC (default_displaced_step_prepare);
 
-    virtual displaced_step_finish_status displaced_step_finish (thread_info *thread, gdb_signal sig)
+    virtual displaced_step_finish_status displaced_step_finish
+      (thread_info *thread, const target_waitstatus &status)
       TARGET_DEFAULT_FUNC (default_displaced_step_finish);
   };
 
