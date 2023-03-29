@@ -44,24 +44,24 @@ struct partial_symbol
   }
 
   /* Return the unrelocated address of this partial symbol.  */
-  CORE_ADDR unrelocated_address () const
+  unrelocated_addr unrelocated_address () const
   {
-    return ginfo.value_address ();
+    return ginfo.unrelocated_address ();
   }
 
   /* Return the address of this partial symbol, relocated according to
      the offsets provided in OBJFILE.  */
   CORE_ADDR address (const struct objfile *objfile) const
   {
-    return (ginfo.value_address ()
+    return (CORE_ADDR (ginfo.unrelocated_address ())
 	    + objfile->section_offsets[ginfo.section_index ()]);
   }
 
   /* Set the address of this partial symbol.  The address must be
      unrelocated.  */
-  void set_unrelocated_address (CORE_ADDR addr)
+  void set_unrelocated_address (unrelocated_addr addr)
   {
-    ginfo.set_value_address (addr);
+    ginfo.set_unrelocated_address (addr);
   }
 
   /* Note that partial_symbol does not derive from general_symbol_info
@@ -130,7 +130,7 @@ struct partial_symtab
   partial_symtab (const char *filename,
 		  psymtab_storage *partial_symtabs,
 		  objfile_per_bfd_storage *objfile_per_bfd,
-		  CORE_ADDR addr)
+		  unrelocated_addr addr)
     ATTRIBUTE_NONNULL (2) ATTRIBUTE_NONNULL (3);
 
   virtual ~partial_symtab ()
@@ -171,14 +171,16 @@ struct partial_symtab
   virtual struct compunit_symtab *get_compunit_symtab
     (struct objfile *) const = 0;
 
-  /* Return the raw low text address of this partial_symtab.  */
-  CORE_ADDR raw_text_low () const
+  /* Return the unrelocated low text address of this
+     partial_symtab.  */
+  unrelocated_addr unrelocated_text_low () const
   {
     return m_text_low;
   }
 
-  /* Return the raw high text address of this partial_symtab.  */
-  CORE_ADDR raw_text_high () const
+  /* Return the unrelocated_addr high text address of this
+     partial_symtab.  */
+  unrelocated_addr unrelocated_text_high () const
   {
     return m_text_high;
   }
@@ -186,24 +188,24 @@ struct partial_symtab
   /* Return the relocated low text address of this partial_symtab.  */
   CORE_ADDR text_low (struct objfile *objfile) const
   {
-    return m_text_low + objfile->text_section_offset ();
+    return CORE_ADDR (m_text_low) + objfile->text_section_offset ();
   }
 
   /* Return the relocated high text address of this partial_symtab.  */
   CORE_ADDR text_high (struct objfile *objfile) const
   {
-    return m_text_high + objfile->text_section_offset ();
+    return CORE_ADDR (m_text_high) + objfile->text_section_offset ();
   }
 
   /* Set the low text address of this partial_symtab.  */
-  void set_text_low (CORE_ADDR addr)
+  void set_text_low (unrelocated_addr addr)
   {
     m_text_low = addr;
     text_low_valid = 1;
   }
 
-  /* Set the hight text address of this partial_symtab.  */
-  void set_text_high (CORE_ADDR addr)
+  /* Set the high text address of this partial_symtab.  */
+  void set_text_high (unrelocated_addr addr)
   {
     m_text_high = addr;
     text_high_valid = 1;
@@ -239,7 +241,7 @@ struct partial_symtab
 		    enum address_class theclass,
 		    short section,
 		    psymbol_placement where,
-		    CORE_ADDR coreaddr,
+		    unrelocated_addr coreaddr,
 		    enum language language,
 		    psymtab_storage *partial_symtabs,
 		    struct objfile *objfile);
@@ -283,8 +285,8 @@ struct partial_symtab
      fields; these are located later in this structure for better
      packing.  */
 
-  CORE_ADDR m_text_low = 0;
-  CORE_ADDR m_text_high = 0;
+  unrelocated_addr m_text_low {};
+  unrelocated_addr m_text_high {};
 
   /* If NULL, this is an ordinary partial symbol table.
 
@@ -372,7 +374,7 @@ struct standard_psymtab : public partial_symtab
   standard_psymtab (const char *filename,
 		    psymtab_storage *partial_symtabs,
 		    objfile_per_bfd_storage *objfile_per_bfd,
-		    CORE_ADDR addr)
+		    unrelocated_addr addr)
     : partial_symtab (filename, partial_symtabs, objfile_per_bfd, addr)
   {
   }
@@ -414,7 +416,7 @@ struct legacy_psymtab : public standard_psymtab
   legacy_psymtab (const char *filename,
 		  psymtab_storage *partial_symtabs,
 		  objfile_per_bfd_storage *objfile_per_bfd,
-		  CORE_ADDR addr)
+		  unrelocated_addr addr)
     : standard_psymtab (filename, partial_symtabs, objfile_per_bfd, addr)
   {
   }

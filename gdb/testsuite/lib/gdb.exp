@@ -2471,26 +2471,39 @@ gdb_caching_proc can_compile { lang } {
 	return [gdb_can_simple_compile can_compile_$lang $src executable {d}]
     }
 
+    if { $lang == "rust" } {
+	if { ![isnative] } {
+	    return 0
+	}
+
+	if { [is_remote host] } {
+	    # Proc find_rustc returns "" for remote host.
+	    return 0
+	}
+
+	# The rust compiler does not support "-m32", skip.
+	global board board_info
+	set board [target_info name]
+	if {[board_info $board exists multilib_flags]} {
+	    foreach flag [board_info $board multilib_flags] {
+		if { $flag == "-m32" } {
+		    return 0
+		}
+	    }
+	}
+
+	set src { fn main() {} }
+	# Drop nowarnings in default_compile_flags, it translates to -w which
+	# rustc doesn't support.
+	return [gdb_can_simple_compile can_compile_$lang $src executable \
+		    {rust} {debug quiet}]
+    }
+
     error "can_compile doesn't support lang: $lang"
 }
 
 # Return 1 to try Rust tests, 0 to skip them.
 proc allow_rust_tests {} {
-    if { ![isnative] } {
-	return 0
-    }
-
-    # The rust compiler does not support "-m32", skip.
-    global board board_info
-    set board [target_info name]
-    if {[board_info $board exists multilib_flags]} {
-	foreach flag [board_info $board multilib_flags] {
-	    if { $flag == "-m32" } {
-		return 0
-	    }
-	}
-    }
-
     return 1
 }
 
@@ -4630,11 +4643,12 @@ gdb_caching_proc universal_compile_options {} {
 }
 
 # Compile the code in $code to a file based on $name, using the flags
-# $compile_flag as well as debug, nowarning and quiet.
+# $compile_flag as well as debug, nowarning and quiet  (unless otherwise
+# specified in default_compile_flags).
 # Return 1 if code can be compiled
 # Leave the file name of the resulting object in the upvar object.
 
-proc gdb_simple_compile {name code {type object} {compile_flags {}} {object obj}} {
+proc gdb_simple_compile {name code {type object} {compile_flags {}} {object obj} {default_compile_flags {}}} {
     upvar $object obj
 
     switch -regexp -- $type {
@@ -4668,7 +4682,11 @@ proc gdb_simple_compile {name code {type object} {compile_flags {}} {object obj}
     }
     set src [standard_temp_file $name.$ext]
     set obj [standard_temp_file $name.$postfix]
-    set compile_flags [concat $compile_flags {debug nowarnings quiet}]
+    if { $default_compile_flags == "" } {
+	set compile_flags [concat $compile_flags {debug nowarnings quiet}]
+    } else {
+	set compile_flags [concat $compile_flags $default_compile_flags]
+    }
 
     gdb_produce_source $src $code
 
@@ -4685,12 +4703,14 @@ proc gdb_simple_compile {name code {type object} {compile_flags {}} {object obj}
 }
 
 # Compile the code in $code to a file based on $name, using the flags
-# $compile_flag as well as debug, nowarning and quiet.
+# $compile_flag as well as debug, nowarning and quiet (unless otherwise
+# specified in default_compile_flags).
 # Return 1 if code can be compiled
 # Delete all created files and objects.
 
-proc gdb_can_simple_compile {name code {type object} {compile_flags ""}} {
-    set ret [gdb_simple_compile $name $code $type $compile_flags temp_obj]
+proc gdb_can_simple_compile {name code {type object} {compile_flags ""} {default_compile_flags ""}} {
+    set ret [gdb_simple_compile $name $code $type $compile_flags temp_obj \
+		 $default_compile_flags]
     file delete $temp_obj
     return $ret
 }
@@ -9249,22 +9269,43 @@ gdb_caching_proc have_avx {} {
 #
 # ARG can either be a name, or of the form !NAME.
 #
-# Each name is a proc to evaluate in the caller's context.  It returns
-# a boolean, and a "!" means to invert the result.  If this is
-# nonzero, all is well.  If it is zero, an "untested" is emitted and
-# this proc causes the caller to return.
+# Each name is a proc to evaluate in the caller's context.  It can return a
+# boolean or a two element list with a boolean and a reason string.
+# A "!" means to invert the result.  If this is true, all is well.  If it is
+# false, an "unsupported" is emitted and this proc causes the caller to return.
+#
+# The reason string is used to provide some context about a require failure,
+# and is included in the "unsupported" message.
 
 proc require { args } {
     foreach arg $args {
 	if {[string index $arg 0] == "!"} {
-	    set ok 0
+	    set required_val 0
 	    set fn [string range $arg 1 end]
 	} else {
-	    set ok 1
+	    set required_val 1
 	    set fn $arg
 	}
-	if {$ok != !![uplevel 1 $fn]} {
-	    unsupported "require failed: $arg"
+
+	set result [uplevel 1 $fn]
+	set len [llength $result]
+	if { $len == 2 } {
+	    set actual_val [lindex $result 0]
+	    set msg [lindex $result 1]
+	} elseif { $len == 1 } {
+	    set actual_val $result
+	    set msg ""
+	} else {
+	    error "proc $fn returned a list of unexpected length $len"
+	}
+
+	if {$required_val != !!$actual_val} {
+	    if { [string length $msg] > 0 } {
+		unsupported "require failed: $arg ($msg)"
+	    } else {
+		unsupported "require failed: $arg"
+	    }
+
 	    return -code return 0
 	}
     }

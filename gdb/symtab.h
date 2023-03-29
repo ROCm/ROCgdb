@@ -58,6 +58,12 @@ class probe;
 struct lookup_name_info;
 struct code_breakpoint;
 
+/* Like a CORE_ADDR, but not directly convertible.  This is used to
+   represent an unrelocated CORE_ADDR.  DEFINE_OFFSET_TYPE is not used
+   here because there's no need to add or subtract values of this
+   type.  */
+enum class unrelocated_addr : CORE_ADDR { };
+
 /* How to match a lookup name against a symbol search name.  */
 enum class symbol_name_match_type
 {
@@ -524,6 +530,18 @@ struct general_symbol_info
     m_value.address = address;
   }
 
+  /* Return the unrelocated address of this symbol.  */
+  unrelocated_addr unrelocated_address () const
+  {
+    return m_value.unrel_addr;
+  }
+
+  /* Set the unrelocated address of this symbol.  */
+  void set_unrelocated_address (unrelocated_addr addr)
+  {
+    m_value.unrel_addr = addr;
+  }
+
   /* Name of the symbol.  This is a required field.  Storage for the
      name is allocated on the objfile_obstack for the associated
      objfile.  For languages like C++ that make a distinction between
@@ -547,6 +565,10 @@ struct general_symbol_info
     const gdb_byte *bytes;
 
     CORE_ADDR address;
+
+    /* The address, if unrelocated.  An unrelocated symbol does not
+       have the runtime section offset applied.  */
+    unrelocated_addr unrel_addr;
 
     /* A common block.  Used with LOC_COMMON_BLOCK.  */
 
@@ -732,10 +754,21 @@ struct minimal_symbol : public general_symbol_info
      offsets from OBJFILE.  */
   CORE_ADDR value_address (objfile *objfile) const;
 
+  /* It does not make sense to call this for minimal symbols, as they
+     are stored unrelocated.  */
+  CORE_ADDR value_address () const = delete;
+
   /* The unrelocated address of the minimal symbol.  */
-  CORE_ADDR value_raw_address () const
+  unrelocated_addr unrelocated_address () const
   {
-    return m_value.address;
+    return m_value.unrel_addr;
+  }
+
+  /* The unrelocated address just after the end of the the minimal
+     symbol.  */
+  unrelocated_addr unrelocated_end_address () const
+  {
+    return unrelocated_addr (CORE_ADDR (unrelocated_address ()) + size ());
   }
 
   /* Return this minimal symbol's type.  */
@@ -1536,12 +1569,6 @@ struct rust_vtable_symbol : public symbol
 };
 
 
-/* Like a CORE_ADDR, but not directly convertible.  This is used to
-   represent an unrelocated CORE_ADDR.  DEFINE_OFFSET_TYPE is not used
-   here because there's no need to add or subtract values of this
-   type.  */
-enum class unrelocated_addr : CORE_ADDR { };
-
 /* Each item represents a line-->pc (or the reverse) mapping.  This is
    somewhat more wasteful of space than one might wish, but since only
    the files which are actually debugged are read in to core, we don't

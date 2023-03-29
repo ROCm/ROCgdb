@@ -127,7 +127,7 @@ struct ctf_psymtab : public standard_psymtab
   ctf_psymtab (const char *filename,
 	       psymtab_storage *partial_symtabs,
 	       objfile_per_bfd_storage *objfile_per_bfd,
-	       CORE_ADDR addr)
+	       unrelocated_addr addr)
     : standard_psymtab (filename, partial_symtabs, objfile_per_bfd, addr)
   {
   }
@@ -1232,10 +1232,10 @@ add_stt_func (struct ctf_context *ccp)
   add_stt_entries (ccp, 1);
 }
 
-/* Get text segment base for OBJFILE, TSIZE contains the segment size.  */
+/* Get text section base for OBJFILE, TSIZE contains the size.  */
 
 static CORE_ADDR
-get_objfile_text_range (struct objfile *of, int *tsize)
+get_objfile_text_range (struct objfile *of, size_t *tsize)
 {
   bfd *abfd = of->obfd.get ();
   const asection *codes;
@@ -1291,7 +1291,8 @@ ctf_psymtab_add_enums (struct ctf_context *ccp, ctf_id_t tid)
       ccp->pst->add_psymbol (ename, true,
 			     VAR_DOMAIN, LOC_CONST, -1,
 			     psymbol_placement::GLOBAL,
-			     0, language_c, ccp->partial_symtabs, ccp->of);
+			     unrelocated_addr (0),
+			     language_c, ccp->partial_symtabs, ccp->of);
     }
   if (ctf_errno (ccp->fp) != ECTF_NEXT_END)
     complaint (_("ctf_enum_next ctf_psymtab_add_enums failed - %s"),
@@ -1336,7 +1337,8 @@ ctf_psymtab_add_stt_entries (ctf_dict_t *cfp, ctf_psymtab *pst,
       pst->add_psymbol (tname, true,
 			tdomain, aclass, -1,
 			psymbol_placement::GLOBAL,
-			0, language_c, pst->context.partial_symtabs, of);
+			unrelocated_addr (0),
+			language_c, pst->context.partial_symtabs, of);
     }
 }
 
@@ -1405,14 +1407,14 @@ ctf_psymtab::read_symtab (struct objfile *objfile)
 
       /* Start a symtab.  */
       CORE_ADDR offset;        /* Start of text segment.  */
-      int tsize;
+      size_t tsize;
 
       offset = get_objfile_text_range (objfile, &tsize);
       ctf_start_compunit_symtab (this, objfile, offset);
       expand_psymtab (objfile);
 
-      set_text_low (offset);
-      set_text_high (offset + tsize);
+      set_text_low (unrelocated_addr (0));
+      set_text_high (unrelocated_addr (tsize));
       compunit_symtab = ctf_end_compunit_symtab (this, offset + tsize);
 
       /* Finish up the debug error message.  */
@@ -1442,7 +1444,8 @@ create_partial_symtab (const char *name,
 {
   ctf_psymtab *pst;
 
-  pst = new ctf_psymtab (name, partial_symtabs, objfile->per_bfd, 0);
+  pst = new ctf_psymtab (name, partial_symtabs, objfile->per_bfd,
+			 unrelocated_addr (0));
 
   pst->context.arc = arc;
   pst->context.fp = cfp;
@@ -1512,7 +1515,8 @@ ctf_psymtab_type_cb (ctf_id_t tid, void *arg)
   ccp->pst->add_psymbol (name, false,
 			 domain, aclass, section,
 			 psymbol_placement::STATIC,
-			 0, language_c, ccp->partial_symtabs, ccp->of);
+			 unrelocated_addr (0),
+			 language_c, ccp->partial_symtabs, ccp->of);
 
   return 0;
 }
@@ -1527,7 +1531,8 @@ ctf_psymtab_var_cb (const char *name, ctf_id_t id, void *arg)
   ccp->pst->add_psymbol (name, true,
 			 VAR_DOMAIN, LOC_STATIC, -1,
 			 psymbol_placement::GLOBAL,
-			 0, language_c, ccp->partial_symtabs, ccp->of);
+			 unrelocated_addr (0),
+			 language_c, ccp->partial_symtabs, ccp->of);
   return 0;
 }
 

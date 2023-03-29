@@ -2235,7 +2235,7 @@ function_outside_compilation_unit_complaint (const char *arg1)
 
 static void
 record_minimal_symbol (minimal_symbol_reader &reader,
-		       const char *name, const CORE_ADDR address,
+		       const char *name, const unrelocated_addr address,
 		       enum minimal_symbol_type ms_type, int storage_class,
 		       struct objfile *objfile)
 {
@@ -2461,7 +2461,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
   for (; ext_in < ext_in_end; ext_in++)
     {
       enum minimal_symbol_type ms_type = mst_text;
-      CORE_ADDR svalue = ext_in->asym.value;
+      unrelocated_addr svalue = unrelocated_addr (ext_in->asym.value);
 
       /* The Irix 5 native tools seem to sometimes generate bogus
 	 external symbols.  */
@@ -2601,7 +2601,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
     {
       legacy_psymtab *save_pst;
       EXTR *ext_ptr;
-      CORE_ADDR textlow;
+      unrelocated_addr textlow;
 
       cur_fdr = fh = debug_info->fdr + f_idx;
 
@@ -2614,9 +2614,9 @@ parse_partial_symbols (minimal_symbol_reader &reader,
       /* Determine the start address for this object file from the
 	 file header and relocate it, except for Irix 5.2 zero fh->adr.  */
       if (fh->cpd)
-	textlow = fh->adr;
+	textlow = unrelocated_addr (fh->adr);
       else
-	textlow = 0;
+	textlow = unrelocated_addr (0);
       pst = new legacy_psymtab (fdr_name (fh), partial_symtabs,
 				objfile->per_bfd, textlow);
       pst->read_symtab_private = XOBNEW (&objfile->objfile_obstack, md_symloc);
@@ -2659,7 +2659,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 	psymtab_language = prev_language;
       PST_PRIVATE (pst)->pst_language = psymtab_language;
 
-      pst->set_text_high (pst->raw_text_low ());
+      pst->set_text_high (pst->unrelocated_text_low ());
 
       /* For stabs-in-ecoff files, the second symbol must be @stab.
 	 This symbol is emitted by mips-tfile to signal that the
@@ -2695,17 +2695,18 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 		{
 		  if (sh.st == stProc || sh.st == stStaticProc)
 		    {
-		      CORE_ADDR procaddr;
+		      unrelocated_addr procaddr;
 		      long isym;
 
 		      if (sh.st == stStaticProc)
 			{
 			  namestring = debug_info->ss + fh->issBase + sh.iss;
-			  record_minimal_symbol (reader, namestring, sh.value,
+			  record_minimal_symbol (reader, namestring,
+						 unrelocated_addr (sh.value),
 						 mst_file_text, sh.sc,
 						 objfile);
 			}
-		      procaddr = sh.value;
+		      procaddr = unrelocated_addr (sh.value);
 
 		      isym = AUX_GET_ISYM (fh->fBigendian,
 					   (debug_info->external_aux
@@ -2718,14 +2719,16 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 				      &sh);
 		      if (sh.st == stEnd)
 			{
-			  CORE_ADDR high = procaddr + sh.value;
+			  unrelocated_addr high
+			    = unrelocated_addr (CORE_ADDR (procaddr)
+						+ sh.value);
 
 			  /* Kludge for Irix 5.2 zero fh->adr.  */
 			  if (!relocatable
 			      && (!pst->text_low_valid
-				  || procaddr < pst->raw_text_low ()))
+				  || procaddr < pst->unrelocated_text_low ()))
 			    pst->set_text_low (procaddr);
-			  if (high > pst->raw_text_high ())
+			  if (high > pst->unrelocated_text_high ())
 			    pst->set_text_high (high);
 			}
 		    }
@@ -2745,7 +2748,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 			case scPData:
 			case scXData:
 			  namestring = debug_info->ss + fh->issBase + sh.iss;
-			  record_minimal_symbol (reader, namestring, sh.value,
+			  record_minimal_symbol (reader, namestring,
+						 unrelocated_addr (sh.value),
 						 mst_file_data, sh.sc,
 						 objfile);
 			  break;
@@ -2754,7 +2758,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 			  /* FIXME!  Shouldn't this use cases for bss, 
 			     then have the default be abs?  */
 			  namestring = debug_info->ss + fh->issBase + sh.iss;
-			  record_minimal_symbol (reader, namestring, sh.value,
+			  record_minimal_symbol (reader, namestring,
+						 unrelocated_addr (sh.value),
 						 mst_file_bss, sh.sc,
 						 objfile);
 			  break;
@@ -3054,7 +3059,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 					  true, VAR_DOMAIN, LOC_STATIC,
 					  SECT_OFF_DATA (objfile),
 					  psymbol_placement::STATIC,
-					  sh.value,
+					  unrelocated_addr (sh.value),
 					  psymtab_language,
 					  partial_symtabs, objfile);
 			continue;
@@ -3067,7 +3072,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 					  true, VAR_DOMAIN, LOC_STATIC,
 					  SECT_OFF_DATA (objfile),
 					  psymbol_placement::GLOBAL,
-					  sh.value,
+					  unrelocated_addr (sh.value),
 					  psymtab_language,
 					  partial_symtabs, objfile);
 			continue;
@@ -3086,7 +3091,9 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 			    pst->add_psymbol
 			      (gdb::string_view (namestring, p - namestring),
 			       true, STRUCT_DOMAIN, LOC_TYPEDEF, -1,
-			       psymbol_placement::STATIC, 0, psymtab_language,
+			       psymbol_placement::STATIC,
+			       unrelocated_addr (0),
+			       psymtab_language,
 			       partial_symtabs, objfile);
 			    if (p[2] == 't')
 			      {
@@ -3095,7 +3102,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 				  (gdb::string_view (namestring,
 						     p - namestring),
 				   true, VAR_DOMAIN, LOC_TYPEDEF, -1,
-				   psymbol_placement::STATIC, 0,
+				   psymbol_placement::STATIC,
+				   unrelocated_addr (0),
 				   psymtab_language,
 				   partial_symtabs, objfile);
 				p += 1;
@@ -3110,7 +3118,9 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 			      (gdb::string_view (namestring,
 						 p - namestring),
 			       true, VAR_DOMAIN, LOC_TYPEDEF, -1,
-			       psymbol_placement::STATIC, 0, psymtab_language,
+			       psymbol_placement::STATIC,
+			       unrelocated_addr (0),
+			       psymtab_language,
 			       partial_symtabs, objfile);
 			  }
 		      check_enum:
@@ -3177,7 +3187,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 						  true, VAR_DOMAIN,
 						  LOC_CONST, -1,
 						  psymbol_placement::STATIC,
-						  0, psymtab_language,
+						  unrelocated_addr (0),
+						  psymtab_language,
 						  partial_symtabs, objfile);
 				/* Point past the name.  */
 				p = q;
@@ -3196,7 +3207,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 							    p - namestring),
 					  true, VAR_DOMAIN, LOC_CONST, -1,
 					  psymbol_placement::STATIC,
-					  0, psymtab_language,
+					  unrelocated_addr (0),
+					  psymtab_language,
 					  partial_symtabs, objfile);
 			continue;
 
@@ -3212,7 +3224,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 					  true, VAR_DOMAIN, LOC_BLOCK,
 					  SECT_OFF_TEXT (objfile),
 					  psymbol_placement::STATIC,
-					  sh.value,
+					  unrelocated_addr (sh.value),
 					  psymtab_language,
 					  partial_symtabs, objfile);
 			continue;
@@ -3233,7 +3245,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 					  true, VAR_DOMAIN, LOC_BLOCK,
 					  SECT_OFF_TEXT (objfile),
 					  psymbol_placement::GLOBAL,
-					  sh.value,
+					  unrelocated_addr (sh.value),
 					  psymtab_language,
 					  partial_symtabs, objfile);
 			continue;
@@ -3304,8 +3316,12 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 		    continue;
 
 		  case N_RBRAC:
-		    if (sh.value > save_pst->raw_text_high ())
-		      save_pst->set_text_high (sh.value);
+		    {
+		      unrelocated_addr unrel_value
+			= unrelocated_addr (sh.value);
+		      if (unrel_value > save_pst->unrelocated_text_high ())
+			save_pst->set_text_high (unrel_value);
+		    }
 		    continue;
 		  case N_EINCL:
 		  case N_DSLINE:
@@ -3356,7 +3372,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 	    {
 	      char *sym_name;
 	      enum address_class theclass;
-	      CORE_ADDR minsym_value;
+	      unrelocated_addr minsym_value;
 	      short section = -1;
 
 	      (*swap_sym_in) (cur_bfd,
@@ -3383,7 +3399,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 
 	      sym_name = debug_info->ss + fh->issBase + sh.iss;
 
-	      minsym_value = sh.value;
+	      minsym_value = unrelocated_addr (sh.value);
 
 	      switch (sh.sc)
 		{
@@ -3409,8 +3425,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 
 	      switch (sh.st)
 		{
-		  CORE_ADDR high;
-		  CORE_ADDR procaddr;
+		  unrelocated_addr high;
+		  unrelocated_addr procaddr;
 		  int new_sdx;
 
 		case stStaticProc:
@@ -3469,17 +3485,19 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 				      VAR_DOMAIN, LOC_BLOCK,
 				      section,
 				      psymbol_placement::GLOBAL,
-				      sh.value, psymtab_language,
+				      unrelocated_addr (sh.value),
+				      psymtab_language,
 				      partial_symtabs, objfile);
 		  else
 		    pst->add_psymbol (sym_name, true,
 				      VAR_DOMAIN, LOC_BLOCK,
 				      section,
 				      psymbol_placement::STATIC,
-				      sh.value, psymtab_language,
+				      unrelocated_addr (sh.value),
+				      psymtab_language,
 				      partial_symtabs, objfile);
 
-		  procaddr = sh.value;
+		  procaddr = unrelocated_addr (sh.value);
 
 		  cur_sdx = new_sdx;
 		  (*swap_sym_in) (cur_bfd,
@@ -3493,11 +3511,11 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 		  /* Kludge for Irix 5.2 zero fh->adr.  */
 		  if (!relocatable
 		      && (!pst->text_low_valid
-			  || procaddr < pst->raw_text_low ()))
+			  || procaddr < pst->unrelocated_text_low ()))
 		    pst->set_text_low (procaddr);
 
-		  high = procaddr + sh.value;
-		  if (high > pst->raw_text_high ())
+		  high = unrelocated_addr (CORE_ADDR (procaddr) + sh.value);
+		  if (high > pst->unrelocated_text_high ())
 		    pst->set_text_high (high);
 		  continue;
 
@@ -3543,7 +3561,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 		      pst->add_psymbol (sym_name, true,
 					STRUCT_DOMAIN, LOC_TYPEDEF, -1,
 					psymbol_placement::STATIC,
-					0, psymtab_language,
+					unrelocated_addr (0),
+					psymtab_language,
 					partial_symtabs, objfile);
 		    }
 		  handle_psymbol_enumerators (objfile, partial_symtabs,
@@ -3585,7 +3604,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 	      pst->add_psymbol (sym_name, true,
 				VAR_DOMAIN, theclass, section,
 				psymbol_placement::STATIC,
-				sh.value, psymtab_language,
+				unrelocated_addr (sh.value),
+				psymtab_language,
 				partial_symtabs, objfile);
 	    skip:
 	      cur_sdx++;	/* Go to next file symbol.  */
@@ -3665,7 +3685,8 @@ parse_partial_symbols (minimal_symbol_reader &reader,
 				VAR_DOMAIN, theclass,
 				section,
 				psymbol_placement::GLOBAL,
-				svalue, psymtab_language,
+				unrelocated_addr (svalue),
+				psymtab_language,
 				partial_symtabs, objfile);
 	    }
 	}
@@ -3675,7 +3696,7 @@ parse_partial_symbols (minimal_symbol_reader &reader,
       fdr_to_pst[f_idx].pst
 	= dbx_end_psymtab (objfile, partial_symtabs, save_pst,
 			   psymtab_include_list, includes_used,
-			   -1, save_pst->raw_text_high (),
+			   -1, save_pst->unrelocated_text_high (),
 			   dependency_list, dependencies_used,
 			   textlow_not_set);
       includes_used = 0;
@@ -3799,7 +3820,8 @@ handle_psymbol_enumerators (struct objfile *objfile,
 	 in psymtabs, just in symtabs.  */
       pst->add_psymbol (name, true,
 			VAR_DOMAIN, LOC_CONST, -1,
-			psymbol_placement::STATIC, 0,
+			psymbol_placement::STATIC,
+			unrelocated_addr (0),
 			psymtab_language, partial_symtabs, objfile);
       ext_sym += external_sym_size;
     }
@@ -4005,7 +4027,7 @@ mdebug_expand_psymtab (legacy_psymtab *pst, struct objfile *objfile)
 
       if (! last_symtab_ended)
 	{
-	  cust = end_compunit_symtab (pst->raw_text_high ());
+	  cust = end_compunit_symtab (pst->text_high (objfile));
 	  end_stabs ();
 	}
 

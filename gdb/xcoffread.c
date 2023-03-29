@@ -840,7 +840,7 @@ enter_line_range (struct subfile *subfile, unsigned beginoffset,
 
 static void
 record_minimal_symbol (minimal_symbol_reader &reader,
-		       const char *name, CORE_ADDR address,
+		       const char *name, unrelocated_addr address,
 		       enum minimal_symbol_type ms_type,
 		       int n_scnum,
 		       struct objfile *objfile)
@@ -1875,7 +1875,8 @@ xcoff_start_psymtab (psymtab_storage *partial_symtabs,
 {
   /* We fill in textlow later.  */
   legacy_psymtab *result = new legacy_psymtab (filename, partial_symtabs,
-					       objfile->per_bfd, 0);
+					       objfile->per_bfd,
+					       unrelocated_addr (0));
 
   result->read_symtab_private =
     XOBNEW (&objfile->objfile_obstack, struct xcoff_symloc);
@@ -2054,7 +2055,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
   unsigned int ssymnum;
 
   const char *last_csect_name = NULL; /* Last seen csect's name and value.  */
-  CORE_ADDR last_csect_val = 0;
+  unrelocated_addr last_csect_val = unrelocated_addr (0);
   int last_csect_sec = 0;
   int misc_func_recorded = 0;	/* true if any misc. function.  */
   int textlow_not_set = 1;
@@ -2167,19 +2168,22 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				       || namestring[0] == '@'))
 		      {
 			last_csect_name = namestring;
-			last_csect_val = symbol.n_value;
+			last_csect_val = unrelocated_addr (symbol.n_value);
 			last_csect_sec = symbol.n_scnum;
 		      }
 		    if (pst != NULL)
 		      {
-			CORE_ADDR highval =
-			  symbol.n_value + CSECT_LEN (&csect_aux);
+			unrelocated_addr highval
+			  = unrelocated_addr (symbol.n_value
+					      + CSECT_LEN (&csect_aux));
 
-			if (highval > pst->raw_text_high ())
+			if (highval > pst->unrelocated_text_high ())
 			  pst->set_text_high (highval);
+			unrelocated_addr loval
+			  = unrelocated_addr (symbol.n_value);
 			if (!pst->text_low_valid
-			    || symbol.n_value < pst->raw_text_low ())
-			  pst->set_text_low (symbol.n_value);
+			    || loval < pst->unrelocated_text_low ())
+			  pst->set_text_low (loval);
 		      }
 		    misc_func_recorded = 0;
 		    break;
@@ -2190,7 +2194,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 		       table, except for section symbols.  */
 		    if (*namestring != '.')
 		      record_minimal_symbol
-			(reader, namestring, symbol.n_value,
+			(reader, namestring, unrelocated_addr (symbol.n_value),
 			 sclass == C_HIDEXT ? mst_file_data : mst_data,
 			 symbol.n_scnum, objfile);
 		    break;
@@ -2228,7 +2232,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 			main_aux[0].x_sym.x_fcnary.x_fcn.x_lnnoptr;
 
 		    record_minimal_symbol
-		      (reader, namestring, symbol.n_value,
+		      (reader, namestring, unrelocated_addr (symbol.n_value),
 		       sclass == C_HIDEXT ? mst_file_text : mst_text,
 		       symbol.n_scnum, objfile);
 		    misc_func_recorded = 1;
@@ -2243,7 +2247,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 		       symbols, we will choose mst_text over
 		       mst_solib_trampoline.  */
 		    record_minimal_symbol
-		      (reader, namestring, symbol.n_value,
+		      (reader, namestring, unrelocated_addr (symbol.n_value),
 		       mst_solib_trampoline, symbol.n_scnum, objfile);
 		    misc_func_recorded = 1;
 		    break;
@@ -2265,7 +2269,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 		       XMC_BS might be possible too.  */
 		    if (*namestring != '.')
 		      record_minimal_symbol
-			(reader, namestring, symbol.n_value,
+			(reader, namestring, unrelocated_addr (symbol.n_value),
 			 sclass == C_HIDEXT ? mst_file_data : mst_data,
 			 symbol.n_scnum, objfile);
 		    break;
@@ -2281,7 +2285,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 		       table, except for section symbols.  */
 		    if (*namestring != '.')
 		      record_minimal_symbol
-			(reader, namestring, symbol.n_value,
+			(reader, namestring, unrelocated_addr (symbol.n_value),
 			 sclass == C_HIDEXT ? mst_file_bss : mst_bss,
 			 symbol.n_scnum, objfile);
 		    break;
@@ -2496,7 +2500,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  true, VAR_DOMAIN, LOC_STATIC,
 				  SECT_OFF_DATA (objfile),
 				  psymbol_placement::STATIC,
-				  symbol.n_value,
+				  unrelocated_addr (symbol.n_value),
 				  psymtab_language,
 				  partial_symtabs, objfile);
 		continue;
@@ -2509,7 +2513,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  true, VAR_DOMAIN, LOC_STATIC,
 				  SECT_OFF_DATA (objfile),
 				  psymbol_placement::GLOBAL,
-				  symbol.n_value,
+				  unrelocated_addr (symbol.n_value),
 				  psymtab_language,
 				  partial_symtabs, objfile);
 		continue;
@@ -2529,7 +2533,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 							p - namestring),
 				      true, STRUCT_DOMAIN, LOC_TYPEDEF, -1,
 				      psymbol_placement::STATIC,
-				      0, psymtab_language,
+				      unrelocated_addr (0),
+				      psymtab_language,
 				      partial_symtabs, objfile);
 		    if (p[2] == 't')
 		      {
@@ -2538,7 +2543,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 							    p - namestring),
 					  true, VAR_DOMAIN, LOC_TYPEDEF, -1,
 					  psymbol_placement::STATIC,
-					  0, psymtab_language,
+					  unrelocated_addr (0),
+					  psymtab_language,
 					  partial_symtabs, objfile);
 			p += 1;
 		      }
@@ -2552,7 +2558,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 							p - namestring),
 				      true, VAR_DOMAIN, LOC_TYPEDEF, -1,
 				      psymbol_placement::STATIC,
-				      0, psymtab_language,
+				      unrelocated_addr (0),
+				      psymtab_language,
 				      partial_symtabs, objfile);
 		  }
 	      check_enum:
@@ -2615,7 +2622,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 			pst->add_psymbol (gdb::string_view (p, q - p), true,
 					  VAR_DOMAIN, LOC_CONST, -1,
 					  psymbol_placement::STATIC,
-					  0, psymtab_language,
+					  unrelocated_addr (0),
+					  psymtab_language,
 					  partial_symtabs, objfile);
 			/* Point past the name.  */
 			p = q;
@@ -2635,7 +2643,8 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 						    p - namestring),
 				  true, VAR_DOMAIN, LOC_CONST, -1,
 				  psymbol_placement::STATIC,
-				  0, psymtab_language,
+				  unrelocated_addr (0),
+				  psymtab_language,
 				  partial_symtabs, objfile);
 		continue;
 
@@ -2650,7 +2659,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  true, VAR_DOMAIN, LOC_BLOCK,
 				  SECT_OFF_TEXT (objfile),
 				  psymbol_placement::STATIC,
-				  symbol.n_value,
+				  unrelocated_addr (symbol.n_value),
 				  psymtab_language,
 				  partial_symtabs, objfile);
 		continue;
@@ -2677,7 +2686,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 				  true, VAR_DOMAIN, LOC_BLOCK,
 				  SECT_OFF_TEXT (objfile),
 				  psymbol_placement::GLOBAL,
-				  symbol.n_value,
+				  unrelocated_addr (symbol.n_value),
 				  psymtab_language,
 				  partial_symtabs, objfile);
 		continue;
