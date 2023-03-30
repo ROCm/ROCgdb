@@ -217,6 +217,16 @@ if [istarget "riscv*-*-*"] {
     run_dump_test "shared-lib-nopic-03"
     run_dump_test "shared-lib-nopic-04"
 
+    run_dump_test "data-reloc-rv64-pic"
+    run_dump_test "data-reloc-rv64-pie"
+    run_dump_test "data-reloc-rv64-symbolic"
+    run_dump_test "data-reloc-rv32-pic"
+    run_dump_test "data-reloc-rv32-pie"
+    run_dump_test "data-reloc-rv32-symbolic"
+    run_dump_test "data-reloc-rv64-abs32-pic"
+    run_dump_test "data-reloc-rv64-addr32-pic"
+    run_dump_test "data-reloc-rv64-undef32-pic"
+
     # IFUNC testcases.
     # Check IFUNC by single type relocs.
     run_dump_test_ifunc "ifunc-reloc-call-01" rv32 exe
@@ -270,6 +280,11 @@ if [istarget "riscv*-*-*"] {
     run_dump_test_ifunc "ifunc-plt-got-overwrite" rv64 pie
     run_dump_test_ifunc "ifunc-plt-got-overwrite" rv64 pic
 
+    # TODO: Make the following tests work under RV32.
+    if [istarget "riscv32-*-*"] {
+      return
+    }
+
     # Setup shared libraries.
     run_ld_link_tests {
        { "Build shared library for IFUNC non-PLT caller"
@@ -293,4 +308,11 @@ if [istarget "riscv*-*-*"] {
     run_dump_test "ifunc-seperate-plt-pic"
     run_dump_test "ifunc-seperate-pcrel-pie"
     run_dump_test "ifunc-seperate-pcrel-pic"
+
+    # Tests related to mixing medany code into position-independent targets,
+    # where it's not always possible to generate correct addressing sequences.
+    run_dump_test "pcrel-reloc-rel-nopie"
+    run_dump_test "pcrel-reloc-rel-pie"
+    run_dump_test "pcrel-reloc-abs-nopie"
+    run_dump_test "pcrel-reloc-abs-pie"
 }

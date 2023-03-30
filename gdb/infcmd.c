@@ -714,7 +714,6 @@ continue_command (const char *args, int from_tty)
 	}
     }
 
-  ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
 
   if (!non_stop || !all_threads_p)
