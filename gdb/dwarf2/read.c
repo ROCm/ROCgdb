@@ -5149,8 +5149,12 @@ dwarf2_build_psymtabs_hard (dwarf2_per_objfile *per_objfile)
   indexes.push_back (index_storage.release ());
   indexes.shrink_to_fit ();
 
-  cooked_index *vec = new cooked_index (std::move (indexes), per_bfd);
+  cooked_index *vec = new cooked_index (std::move (indexes));
   per_bfd->index_table.reset (vec);
+
+  /* Cannot start writing the index entry until after the
+     'index_table' member has been set.  */
+  vec->start_writing_index (per_bfd);
 
   const cooked_index_entry *main_entry = vec->get_main ();
   if (main_entry != nullptr)
@@ -10002,6 +10006,22 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
     compute_delayed_physnames (origin_cu);
 }
 
+/* Return TRUE if the given DIE is the program's "main".  DWARF 4 has
+   defined a dedicated DW_AT_main_subprogram attribute to indicate the
+   starting function of the program, however with older versions the
+   DW_CC_program value of the DW_AT_calling_convention attribute was
+   used instead as the only means available.  We handle both variants.  */
+
+static bool
+dwarf2_func_is_main_p (struct die_info *die, struct dwarf2_cu *cu)
+{
+  if (dwarf2_flag_true_p (die, DW_AT_main_subprogram, cu))
+    return true;
+  struct attribute *attr = dwarf2_attr (die, DW_AT_calling_convention, cu);
+  return (attr != nullptr
+	  && attr->constant_value (DW_CC_normal) == DW_CC_program);
+}
+
 static void
 read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 {
@@ -10092,7 +10112,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   newobj = cu->get_builder ()->push_context (0, lowpc);
   newobj->name = new_symbol (die, read_type_die (die, cu), cu, templ_func);
 
-  if (dwarf2_flag_true_p (die, DW_AT_main_subprogram, cu))
+  if (dwarf2_func_is_main_p (die, cu))
     set_objfile_main_name (objfile, newobj->name->linkage_name (),
 			   cu->lang ());
 
@@ -16154,8 +16174,18 @@ cooked_indexer::scan_attributes (dwarf2_per_cu_data *scanning_per_cu,
 	    }
 	  break;
 
+	/* DWARF 4 has defined a dedicated DW_AT_main_subprogram
+	   attribute to indicate the starting function of the program...  */
 	case DW_AT_main_subprogram:
 	  if (attr.as_boolean ())
+	    *flags |= IS_MAIN;
+	  break;
+
+	/* ... however with older versions the DW_CC_program value of
+	   the DW_AT_calling_convention attribute was used instead as
+	   the only means available.  We handle both variants then.  */
+	case DW_AT_calling_convention:
+	  if (attr.constant_value (DW_CC_normal) == DW_CC_program)
 	    *flags |= IS_MAIN;
 	  break;
 

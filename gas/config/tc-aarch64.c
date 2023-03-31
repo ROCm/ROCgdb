@@ -114,17 +114,6 @@ enum vector_el_type
   NT_merge
 };
 
-/* SME horizontal or vertical slice indicator, encoded in "V".
-   Values:
-     0 - Horizontal
-     1 - vertical
-*/
-enum sme_hv_slice
-{
-  HV_horizontal = 0,
-  HV_vertical = 1
-};
-
 /* Bits for DEFINED field in vector_type_el.  */
 #define NTA_HASTYPE     1
 #define NTA_HASINDEX    2
@@ -134,6 +123,7 @@ struct vector_type_el
 {
   enum vector_el_type type;
   unsigned char defined;
+  unsigned element_size;
   unsigned width;
   int64_t index;
 };
@@ -155,11 +145,7 @@ struct aarch64_instruction
   /* libopcodes structure for instruction intermediate representation.  */
   aarch64_inst base;
   /* Record assembly errors found during the parsing.  */
-  struct
-    {
-      enum aarch64_operand_error_kind kind;
-      const char *error;
-    } parsing_error;
+  aarch64_operand_error parsing_error;
   /* The condition that appears in the assembly line.  */
   int cond;
   /* Relocation information (including the GAS internal fixup).  */
@@ -174,6 +160,32 @@ static aarch64_instruction inst;
 
 static bool parse_operands (char *, const aarch64_opcode *);
 static bool programmer_friendly_fixup (aarch64_instruction *);
+
+/* If an AARCH64_OPDE_SYNTAX_ERROR has no error string, its first three
+   data fields contain the following information:
+
+   data[0].i:
+     A mask of register types that would have been acceptable as bare
+     operands, outside of a register list.  In addition, SEF_DEFAULT_ERROR
+     is set if a general parsing error occured for an operand (that is,
+     an error not related to registers, and having no error string).
+
+   data[1].i:
+     A mask of register types that would have been acceptable inside
+     a register list.  In addition, SEF_IN_REGLIST is set if the
+     operand contained a '{' and if we got to the point of trying
+     to parse a register inside a list.
+
+   data[2].i:
+     The mask associated with the register that was actually seen, or 0
+     if none.  A nonzero value describes a register inside a register
+     list if data[1].i & SEF_IN_REGLIST, otherwise it describes a bare
+     register.
+
+   The idea is that stringless errors from multiple opcode templates can
+   be ORed together to give a summary of the available alternatives.  */
+#define SEF_DEFAULT_ERROR (1U << 31)
+#define SEF_IN_REGLIST (1U << 31)
 
 /* Diagnostics inline function utilities.
 
@@ -195,8 +207,8 @@ static bool programmer_friendly_fixup (aarch64_instruction *);
 static inline void
 clear_error (void)
 {
+  memset (&inst.parsing_error, 0, sizeof (inst.parsing_error));
   inst.parsing_error.kind = AARCH64_OPDE_NIL;
-  inst.parsing_error.error = NULL;
 }
 
 static inline bool
@@ -205,21 +217,11 @@ error_p (void)
   return inst.parsing_error.kind != AARCH64_OPDE_NIL;
 }
 
-static inline const char *
-get_error_message (void)
-{
-  return inst.parsing_error.error;
-}
-
-static inline enum aarch64_operand_error_kind
-get_error_kind (void)
-{
-  return inst.parsing_error.kind;
-}
-
 static inline void
 set_error (enum aarch64_operand_error_kind kind, const char *error)
 {
+  memset (&inst.parsing_error, 0, sizeof (inst.parsing_error));
+  inst.parsing_error.index = -1;
   inst.parsing_error.kind = kind;
   inst.parsing_error.error = error;
 }
@@ -236,6 +238,14 @@ static inline void
 set_default_error (void)
 {
   set_error (AARCH64_OPDE_SYNTAX_ERROR, NULL);
+  inst.parsing_error.data[0].i = SEF_DEFAULT_ERROR;
+}
+
+static inline void
+set_expected_error (unsigned int flags)
+{
+  set_error (AARCH64_OPDE_SYNTAX_ERROR, NULL);
+  inst.parsing_error.data[0].i = flags;
 }
 
 static inline void
@@ -287,66 +297,88 @@ struct reloc_entry
   BASIC_REG_TYPE(R_64)	/* x[0-30] */	\
   BASIC_REG_TYPE(SP_32)	/* wsp     */	\
   BASIC_REG_TYPE(SP_64)	/* sp      */	\
-  BASIC_REG_TYPE(Z_32)	/* wzr     */	\
-  BASIC_REG_TYPE(Z_64)	/* xzr     */	\
+  BASIC_REG_TYPE(ZR_32)	/* wzr     */	\
+  BASIC_REG_TYPE(ZR_64)	/* xzr     */	\
   BASIC_REG_TYPE(FP_B)	/* b[0-31] *//* NOTE: keep FP_[BHSDQ] consecutive! */\
   BASIC_REG_TYPE(FP_H)	/* h[0-31] */	\
   BASIC_REG_TYPE(FP_S)	/* s[0-31] */	\
   BASIC_REG_TYPE(FP_D)	/* d[0-31] */	\
   BASIC_REG_TYPE(FP_Q)	/* q[0-31] */	\
-  BASIC_REG_TYPE(VN)	/* v[0-31] */	\
-  BASIC_REG_TYPE(ZN)	/* z[0-31] */	\
-  BASIC_REG_TYPE(PN)	/* p[0-15] */	\
-  BASIC_REG_TYPE(ZA)	/* za[0-15] */	\
-  BASIC_REG_TYPE(ZAH)	/* za[0-15]h */	\
-  BASIC_REG_TYPE(ZAV)	/* za[0-15]v */	\
+  BASIC_REG_TYPE(V)	/* v[0-31] */	\
+  BASIC_REG_TYPE(Z)	/* z[0-31] */	\
+  BASIC_REG_TYPE(P)	/* p[0-15] */	\
+  BASIC_REG_TYPE(PN)	/* pn[0-15] */	\
+  BASIC_REG_TYPE(ZA)	/* za */	\
+  BASIC_REG_TYPE(ZAT)	/* za[0-15] (ZA tile) */			\
+  BASIC_REG_TYPE(ZATH)	/* za[0-15]h (ZA tile horizontal slice) */ 	\
+  BASIC_REG_TYPE(ZATV)	/* za[0-15]v (ZA tile vertical slice) */	\
+  BASIC_REG_TYPE(ZT0)	/* zt0 */					\
   /* Typecheck: any 64-bit int reg         (inc SP exc XZR).  */	\
   MULTI_REG_TYPE(R64_SP, REG_TYPE(R_64) | REG_TYPE(SP_64))		\
   /* Typecheck: same, plus SVE registers.  */				\
   MULTI_REG_TYPE(SVE_BASE, REG_TYPE(R_64) | REG_TYPE(SP_64)		\
-		 | REG_TYPE(ZN))					\
+		 | REG_TYPE(Z))						\
   /* Typecheck: x[0-30], w[0-30] or [xw]zr.  */				\
-  MULTI_REG_TYPE(R_Z, REG_TYPE(R_32) | REG_TYPE(R_64)			\
-		 | REG_TYPE(Z_32) | REG_TYPE(Z_64))			\
+  MULTI_REG_TYPE(R_ZR, REG_TYPE(R_32) | REG_TYPE(R_64)			\
+		 | REG_TYPE(ZR_32) | REG_TYPE(ZR_64))			\
   /* Typecheck: same, plus SVE registers.  */				\
   MULTI_REG_TYPE(SVE_OFFSET, REG_TYPE(R_32) | REG_TYPE(R_64)		\
-		 | REG_TYPE(Z_32) | REG_TYPE(Z_64)			\
-		 | REG_TYPE(ZN))					\
+		 | REG_TYPE(ZR_32) | REG_TYPE(ZR_64)			\
+		 | REG_TYPE(Z))						\
   /* Typecheck: x[0-30], w[0-30] or {w}sp.  */				\
   MULTI_REG_TYPE(R_SP, REG_TYPE(R_32) | REG_TYPE(R_64)			\
 		 | REG_TYPE(SP_32) | REG_TYPE(SP_64))			\
   /* Typecheck: any int                    (inc {W}SP inc [WX]ZR).  */	\
-  MULTI_REG_TYPE(R_Z_SP, REG_TYPE(R_32) | REG_TYPE(R_64)		\
+  MULTI_REG_TYPE(R_ZR_SP, REG_TYPE(R_32) | REG_TYPE(R_64)		\
 		 | REG_TYPE(SP_32) | REG_TYPE(SP_64)			\
-		 | REG_TYPE(Z_32) | REG_TYPE(Z_64)) 			\
+		 | REG_TYPE(ZR_32) | REG_TYPE(ZR_64)) 			\
   /* Typecheck: any [BHSDQ]P FP.  */					\
   MULTI_REG_TYPE(BHSDQ, REG_TYPE(FP_B) | REG_TYPE(FP_H)			\
 		 | REG_TYPE(FP_S) | REG_TYPE(FP_D) | REG_TYPE(FP_Q))	\
   /* Typecheck: any int or [BHSDQ]P FP or V reg (exc SP inc [WX]ZR).  */ \
-  MULTI_REG_TYPE(R_Z_BHSDQ_V, REG_TYPE(R_32) | REG_TYPE(R_64)		\
-		 | REG_TYPE(Z_32) | REG_TYPE(Z_64) | REG_TYPE(VN)	\
+  MULTI_REG_TYPE(R_ZR_BHSDQ_V, REG_TYPE(R_32) | REG_TYPE(R_64)		\
+		 | REG_TYPE(ZR_32) | REG_TYPE(ZR_64) | REG_TYPE(V)	\
 		 | REG_TYPE(FP_B) | REG_TYPE(FP_H)			\
 		 | REG_TYPE(FP_S) | REG_TYPE(FP_D) | REG_TYPE(FP_Q))	\
   /* Typecheck: as above, but also Zn, Pn, and {W}SP.  This should only	\
      be used for SVE instructions, since Zn and Pn are valid symbols	\
      in other contexts.  */						\
-  MULTI_REG_TYPE(R_Z_SP_BHSDQ_VZP, REG_TYPE(R_32) | REG_TYPE(R_64)	\
+  MULTI_REG_TYPE(R_ZR_SP_BHSDQ_VZP, REG_TYPE(R_32) | REG_TYPE(R_64)	\
 		 | REG_TYPE(SP_32) | REG_TYPE(SP_64)			\
-		 | REG_TYPE(Z_32) | REG_TYPE(Z_64) | REG_TYPE(VN)	\
+		 | REG_TYPE(ZR_32) | REG_TYPE(ZR_64) | REG_TYPE(V)	\
 		 | REG_TYPE(FP_B) | REG_TYPE(FP_H)			\
 		 | REG_TYPE(FP_S) | REG_TYPE(FP_D) | REG_TYPE(FP_Q)	\
-		 | REG_TYPE(ZN) | REG_TYPE(PN))				\
+		 | REG_TYPE(Z) | REG_TYPE(P))				\
+  /* Likewise, but with predicate-as-counter registers added.  */	\
+  MULTI_REG_TYPE(R_ZR_SP_BHSDQ_VZP_PN, REG_TYPE(R_32) | REG_TYPE(R_64)	\
+		 | REG_TYPE(SP_32) | REG_TYPE(SP_64)			\
+		 | REG_TYPE(ZR_32) | REG_TYPE(ZR_64) | REG_TYPE(V)	\
+		 | REG_TYPE(FP_B) | REG_TYPE(FP_H)			\
+		 | REG_TYPE(FP_S) | REG_TYPE(FP_D) | REG_TYPE(FP_Q)	\
+		 | REG_TYPE(Z) | REG_TYPE(P) | REG_TYPE(PN))		\
   /* Any integer register; used for error messages only.  */		\
   MULTI_REG_TYPE(R_N, REG_TYPE(R_32) | REG_TYPE(R_64)			\
 		 | REG_TYPE(SP_32) | REG_TYPE(SP_64)			\
-		 | REG_TYPE(Z_32) | REG_TYPE(Z_64))			\
+		 | REG_TYPE(ZR_32) | REG_TYPE(ZR_64))			\
+  /* Any vector register.  */						\
+  MULTI_REG_TYPE(VZ, REG_TYPE(V) | REG_TYPE(Z))				\
+  /* An SVE vector or predicate register.  */				\
+  MULTI_REG_TYPE(ZP, REG_TYPE(Z) | REG_TYPE(P))				\
+  /* Any vector or predicate register.  */				\
+  MULTI_REG_TYPE(VZP, REG_TYPE(V) | REG_TYPE(Z) | REG_TYPE(P))		\
+  /* The whole of ZA or a single tile.  */				\
+  MULTI_REG_TYPE(ZA_ZAT, REG_TYPE(ZA) | REG_TYPE(ZAT))			\
+  /* A horizontal or vertical slice of a ZA tile.  */			\
+  MULTI_REG_TYPE(ZATHV, REG_TYPE(ZATH) | REG_TYPE(ZATV))		\
   /* Pseudo type to mark the end of the enumerator sequence.  */	\
-  BASIC_REG_TYPE(MAX)
+  END_REG_TYPE(MAX)
 
 #undef BASIC_REG_TYPE
 #define BASIC_REG_TYPE(T)	REG_TYPE_##T,
 #undef MULTI_REG_TYPE
 #define MULTI_REG_TYPE(T,V)	BASIC_REG_TYPE(T)
+#undef END_REG_TYPE
+#define END_REG_TYPE(T)		BASIC_REG_TYPE(T)
 
 /* Register type enumerators.  */
 typedef enum aarch64_reg_type_
@@ -361,6 +393,8 @@ typedef enum aarch64_reg_type_
 #define REG_TYPE(T)		(1 << REG_TYPE_##T)
 #undef MULTI_REG_TYPE
 #define MULTI_REG_TYPE(T,V)	V,
+#undef END_REG_TYPE
+#define END_REG_TYPE(T)		0
 
 /* Structure for a hash table entry for a register.  */
 typedef struct
@@ -380,84 +414,146 @@ static const unsigned reg_type_masks[] =
 #undef BASIC_REG_TYPE
 #undef REG_TYPE
 #undef MULTI_REG_TYPE
+#undef END_REG_TYPE
 #undef AARCH64_REG_TYPES
 
-/* Diagnostics used when we don't get a register of the expected type.
-   Note:  this has to synchronized with aarch64_reg_type definitions
-   above.  */
-static const char *
-get_reg_expected_msg (aarch64_reg_type reg_type)
-{
-  const char *msg;
+/* We expected one of the registers in MASK to be specified.  If a register
+   of some kind was specified, SEEN is a mask that contains that register,
+   otherwise it is zero.
 
-  switch (reg_type)
-    {
-    case REG_TYPE_R_32:
-      msg = N_("integer 32-bit register expected");
-      break;
-    case REG_TYPE_R_64:
-      msg = N_("integer 64-bit register expected");
-      break;
-    case REG_TYPE_R_N:
-      msg = N_("integer register expected");
-      break;
-    case REG_TYPE_R64_SP:
-      msg = N_("64-bit integer or SP register expected");
-      break;
-    case REG_TYPE_SVE_BASE:
-      msg = N_("base register expected");
-      break;
-    case REG_TYPE_R_Z:
-      msg = N_("integer or zero register expected");
-      break;
-    case REG_TYPE_SVE_OFFSET:
-      msg = N_("offset register expected");
-      break;
-    case REG_TYPE_R_SP:
-      msg = N_("integer or SP register expected");
-      break;
-    case REG_TYPE_R_Z_SP:
-      msg = N_("integer, zero or SP register expected");
-      break;
-    case REG_TYPE_FP_B:
-      msg = N_("8-bit SIMD scalar register expected");
-      break;
-    case REG_TYPE_FP_H:
-      msg = N_("16-bit SIMD scalar or floating-point half precision "
-	       "register expected");
-      break;
-    case REG_TYPE_FP_S:
-      msg = N_("32-bit SIMD scalar or floating-point single precision "
-	       "register expected");
-      break;
-    case REG_TYPE_FP_D:
-      msg = N_("64-bit SIMD scalar or floating-point double precision "
-	       "register expected");
-      break;
-    case REG_TYPE_FP_Q:
-      msg = N_("128-bit SIMD scalar or floating-point quad precision "
-	       "register expected");
-      break;
-    case REG_TYPE_R_Z_BHSDQ_V:
-    case REG_TYPE_R_Z_SP_BHSDQ_VZP:
-      msg = N_("register expected");
-      break;
-    case REG_TYPE_BHSDQ:	/* any [BHSDQ]P FP  */
-      msg = N_("SIMD scalar or floating-point register expected");
-      break;
-    case REG_TYPE_VN:		/* any V reg  */
-      msg = N_("vector register expected");
-      break;
-    case REG_TYPE_ZN:
-      msg = N_("SVE vector register expected");
-      break;
-    case REG_TYPE_PN:
-      msg = N_("SVE predicate register expected");
-      break;
-    default:
-      as_fatal (_("invalid register type %d"), reg_type);
-    }
-  return msg;
+   If it is possible to provide a relatively pithy message that describes
+   the error exactly, return a string that does so, reporting the error
+   against "operand %d".  Return null otherwise.
+
+   From a QoI perspective, any REG_TYPE_* that is passed as the first
+   argument to set_expected_reg_error should generally have its own message.
+   Providing messages for combinations of such REG_TYPE_*s can be useful if
+   it is possible to summarize the combination in a relatively natural way.
+   On the other hand, it seems better to avoid long lists of unrelated
+   things.  */
+
+static const char *
+get_reg_expected_msg (unsigned int mask, unsigned int seen)
+{
+  /* First handle messages that use SEEN.  */
+  if ((mask & reg_type_masks[REG_TYPE_ZAT])
+      && (seen & reg_type_masks[REG_TYPE_ZATHV]))
+    return N_("expected an unsuffixed ZA tile at operand %d");
+
+  if ((mask & reg_type_masks[REG_TYPE_ZATHV])
+      && (seen & reg_type_masks[REG_TYPE_ZAT]))
+    return N_("missing horizontal or vertical suffix at operand %d");
+
+  if ((mask & reg_type_masks[REG_TYPE_ZA])
+      && (seen & (reg_type_masks[REG_TYPE_ZAT]
+		  | reg_type_masks[REG_TYPE_ZATHV])))
+    return N_("expected 'za' rather than a ZA tile at operand %d");
+
+  if ((mask & reg_type_masks[REG_TYPE_PN])
+      && (seen & reg_type_masks[REG_TYPE_P]))
+    return N_("expected a predicate-as-counter rather than predicate-as-mask"
+	      " register at operand %d");
+
+  if ((mask & reg_type_masks[REG_TYPE_P])
+      && (seen & reg_type_masks[REG_TYPE_PN]))
+    return N_("expected a predicate-as-mask rather than predicate-as-counter"
+	      " register at operand %d");
+
+  /* Integer, zero and stack registers.  */
+  if (mask == reg_type_masks[REG_TYPE_R_64])
+    return N_("expected a 64-bit integer register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_R_ZR])
+    return N_("expected an integer or zero register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_R_SP])
+    return N_("expected an integer or stack pointer register at operand %d");
+
+  /* Floating-point and SIMD registers.  */
+  if (mask == reg_type_masks[REG_TYPE_BHSDQ])
+    return N_("expected a scalar SIMD or floating-point register"
+	      " at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_V])
+    return N_("expected an Advanced SIMD vector register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_Z])
+    return N_("expected an SVE vector register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_P]
+      || mask == (reg_type_masks[REG_TYPE_P] | reg_type_masks[REG_TYPE_PN]))
+    /* Use this error for "predicate-as-mask only" and "either kind of
+       predicate".  We report a more specific error if P is used where
+       PN is expected, and vice versa, so the issue at this point is
+       "predicate-like" vs. "not predicate-like".  */
+    return N_("expected an SVE predicate register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_PN])
+    return N_("expected an SVE predicate-as-counter register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_VZ])
+    return N_("expected a vector register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_ZP])
+    return N_("expected an SVE vector or predicate register at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_VZP])
+    return N_("expected a vector or predicate register at operand %d");
+
+  /* SME-related registers.  */
+  if (mask == reg_type_masks[REG_TYPE_ZA])
+    return N_("expected a ZA array vector at operand %d");
+  if (mask == (reg_type_masks[REG_TYPE_ZA_ZAT] | reg_type_masks[REG_TYPE_ZT0]))
+    return N_("expected ZT0 or a ZA mask at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_ZAT])
+    return N_("expected a ZA tile at operand %d");
+  if (mask == reg_type_masks[REG_TYPE_ZATHV])
+    return N_("expected a ZA tile slice at operand %d");
+
+  /* Integer and vector combos.  */
+  if (mask == (reg_type_masks[REG_TYPE_R_ZR] | reg_type_masks[REG_TYPE_V]))
+    return N_("expected an integer register or Advanced SIMD vector register"
+	      " at operand %d");
+  if (mask == (reg_type_masks[REG_TYPE_R_ZR] | reg_type_masks[REG_TYPE_Z]))
+    return N_("expected an integer register or SVE vector register"
+	      " at operand %d");
+  if (mask == (reg_type_masks[REG_TYPE_R_ZR] | reg_type_masks[REG_TYPE_VZ]))
+    return N_("expected an integer or vector register at operand %d");
+  if (mask == (reg_type_masks[REG_TYPE_R_ZR] | reg_type_masks[REG_TYPE_P]))
+    return N_("expected an integer or predicate register at operand %d");
+  if (mask == (reg_type_masks[REG_TYPE_R_ZR] | reg_type_masks[REG_TYPE_VZP]))
+    return N_("expected an integer, vector or predicate register"
+	      " at operand %d");
+
+  /* SVE and SME combos.  */
+  if (mask == (reg_type_masks[REG_TYPE_Z] | reg_type_masks[REG_TYPE_ZATHV]))
+    return N_("expected an SVE vector register or ZA tile slice"
+	      " at operand %d");
+
+  return NULL;
+}
+
+/* Record that we expected a register of type TYPE but didn't see one.
+   REG is the register that we actually saw, or null if we didn't see a
+   recognized register.  FLAGS is SEF_IN_REGLIST if we are parsing the
+   contents of a register list, otherwise it is zero.  */
+
+static inline void
+set_expected_reg_error (aarch64_reg_type type, const reg_entry *reg,
+			unsigned int flags)
+{
+  assert (flags == 0 || flags == SEF_IN_REGLIST);
+  set_error (AARCH64_OPDE_SYNTAX_ERROR, NULL);
+  if (flags & SEF_IN_REGLIST)
+    inst.parsing_error.data[1].i = reg_type_masks[type] | flags;
+  else
+    inst.parsing_error.data[0].i = reg_type_masks[type];
+  if (reg)
+    inst.parsing_error.data[2].i = reg_type_masks[reg->type];
+}
+
+/* Record that we expected a register list containing registers of type TYPE,
+   but didn't see the opening '{'.  If we saw a register instead, REG is the
+   register that we saw, otherwise it is null.  */
+
+static inline void
+set_expected_reglist_error (aarch64_reg_type type, const reg_entry *reg)
+{
+  set_error (AARCH64_OPDE_SYNTAX_ERROR, NULL);
+  inst.parsing_error.data[1].i = reg_type_masks[type];
+  if (reg)
+    inst.parsing_error.data[2].i = reg_type_masks[reg->type];
 }
 
 /* Some well known registers that we refer to directly elsewhere.  */
@@ -706,6 +802,81 @@ first_error_fmt (const char *format, ...)
     }
 }
 
+/* Internal helper routine converting a vector_type_el structure *VECTYPE
+   to a corresponding operand qualifier.  */
+
+static inline aarch64_opnd_qualifier_t
+vectype_to_qualifier (const struct vector_type_el *vectype)
+{
+  /* Element size in bytes indexed by vector_el_type.  */
+  const unsigned char ele_size[5]
+    = {1, 2, 4, 8, 16};
+  const unsigned int ele_base [5] =
+    {
+      AARCH64_OPND_QLF_V_4B,
+      AARCH64_OPND_QLF_V_2H,
+      AARCH64_OPND_QLF_V_2S,
+      AARCH64_OPND_QLF_V_1D,
+      AARCH64_OPND_QLF_V_1Q
+  };
+
+  if (!vectype->defined || vectype->type == NT_invtype)
+    goto vectype_conversion_fail;
+
+  if (vectype->type == NT_zero)
+    return AARCH64_OPND_QLF_P_Z;
+  if (vectype->type == NT_merge)
+    return AARCH64_OPND_QLF_P_M;
+
+  gas_assert (vectype->type >= NT_b && vectype->type <= NT_q);
+
+  if (vectype->defined & (NTA_HASINDEX | NTA_HASVARWIDTH))
+    {
+      /* Special case S_4B.  */
+      if (vectype->type == NT_b && vectype->width == 4)
+	return AARCH64_OPND_QLF_S_4B;
+
+      /* Special case S_2H.  */
+      if (vectype->type == NT_h && vectype->width == 2)
+	return AARCH64_OPND_QLF_S_2H;
+
+      /* Vector element register.  */
+      return AARCH64_OPND_QLF_S_B + vectype->type;
+    }
+  else
+    {
+      /* Vector register.  */
+      int reg_size = ele_size[vectype->type] * vectype->width;
+      unsigned offset;
+      unsigned shift;
+      if (reg_size != 16 && reg_size != 8 && reg_size != 4)
+	goto vectype_conversion_fail;
+
+      /* The conversion is by calculating the offset from the base operand
+	 qualifier for the vector type.  The operand qualifiers are regular
+	 enough that the offset can established by shifting the vector width by
+	 a vector-type dependent amount.  */
+      shift = 0;
+      if (vectype->type == NT_b)
+	shift = 3;
+      else if (vectype->type == NT_h || vectype->type == NT_s)
+	shift = 2;
+      else if (vectype->type >= NT_d)
+	shift = 1;
+      else
+	gas_assert (0);
+
+      offset = ele_base [vectype->type] + (vectype->width >> shift);
+      gas_assert (AARCH64_OPND_QLF_V_4B <= offset
+		  && offset <= AARCH64_OPND_QLF_V_1Q);
+      return offset;
+    }
+
+ vectype_conversion_fail:
+  first_error (_("bad vector arrangement type"));
+  return AARCH64_OPND_QLF_NIL;
+}
+
 /* Register parsing.  */
 
 /* Generic register parser which is called by other specialized
@@ -745,6 +916,38 @@ parse_reg (char **ccp)
   return reg;
 }
 
+/* Return the operand qualifier associated with all uses of REG, or
+   AARCH64_OPND_QLF_NIL if none.  AARCH64_OPND_QLF_NIL means either
+   that qualifiers don't apply to REG or that qualifiers are added
+   using suffixes.  */
+
+static aarch64_opnd_qualifier_t
+inherent_reg_qualifier (const reg_entry *reg)
+{
+  switch (reg->type)
+    {
+    case REG_TYPE_R_32:
+    case REG_TYPE_SP_32:
+    case REG_TYPE_ZR_32:
+      return AARCH64_OPND_QLF_W;
+
+    case REG_TYPE_R_64:
+    case REG_TYPE_SP_64:
+    case REG_TYPE_ZR_64:
+      return AARCH64_OPND_QLF_X;
+
+    case REG_TYPE_FP_B:
+    case REG_TYPE_FP_H:
+    case REG_TYPE_FP_S:
+    case REG_TYPE_FP_D:
+    case REG_TYPE_FP_Q:
+      return AARCH64_OPND_QLF_S_B + (reg->type - REG_TYPE_FP_B);
+
+    default:
+      return AARCH64_OPND_QLF_NIL;
+    }
+}
+
 /* Return TRUE if REG->TYPE is a valid type of TYPE; otherwise
    return FALSE.  */
 static bool
@@ -772,20 +975,8 @@ aarch64_addr_reg_parse (char **ccp, aarch64_reg_type reg_type,
 
   switch (reg->type)
     {
-    case REG_TYPE_R_32:
-    case REG_TYPE_SP_32:
-    case REG_TYPE_Z_32:
-      *qualifier = AARCH64_OPND_QLF_W;
-      break;
-
-    case REG_TYPE_R_64:
-    case REG_TYPE_SP_64:
-    case REG_TYPE_Z_64:
-      *qualifier = AARCH64_OPND_QLF_X;
-      break;
-
-    case REG_TYPE_ZN:
-      if ((reg_type_masks[reg_type] & (1 << REG_TYPE_ZN)) == 0
+    case REG_TYPE_Z:
+      if ((reg_type_masks[reg_type] & (1 << REG_TYPE_Z)) == 0
 	  || str[0] != '.')
 	return NULL;
       switch (TOLOWER (str[1]))
@@ -803,7 +994,10 @@ aarch64_addr_reg_parse (char **ccp, aarch64_reg_type reg_type,
       break;
 
     default:
-      return NULL;
+      if (!aarch64_check_reg_type (reg, REG_TYPE_R_ZR_SP))
+	return NULL;
+      *qualifier = inherent_reg_qualifier (reg);
+      break;
     }
 
   *ccp = str;
@@ -820,7 +1014,7 @@ aarch64_addr_reg_parse (char **ccp, aarch64_reg_type reg_type,
 static const reg_entry *
 aarch64_reg_parse_32_64 (char **ccp, aarch64_opnd_qualifier_t *qualifier)
 {
-  return aarch64_addr_reg_parse (ccp, REG_TYPE_R_Z_SP, qualifier);
+  return aarch64_addr_reg_parse (ccp, REG_TYPE_R_ZR_SP, qualifier);
 }
 
 /* Parse the qualifier of a vector register or vector element of type
@@ -843,7 +1037,7 @@ parse_vector_type_for_operand (aarch64_reg_type reg_type,
   gas_assert (*ptr == '.');
   ptr++;
 
-  if (reg_type == REG_TYPE_ZN || reg_type == REG_TYPE_PN || !ISDIGIT (*ptr))
+  if (reg_type != REG_TYPE_V || !ISDIGIT (*ptr))
     {
       width = 0;
       goto elt_size;
@@ -875,7 +1069,7 @@ parse_vector_type_for_operand (aarch64_reg_type reg_type,
       element_size = 64;
       break;
     case 'q':
-      if (reg_type == REG_TYPE_ZN || width == 1)
+      if (reg_type != REG_TYPE_V || width == 1)
 	{
 	  type = NT_q;
 	  element_size = 128;
@@ -903,6 +1097,7 @@ parse_vector_type_for_operand (aarch64_reg_type reg_type,
 
   parsed_type->type = type;
   parsed_type->width = width;
+  parsed_type->element_size = element_size;
 
   *str = ptr;
 
@@ -941,67 +1136,135 @@ parse_predication_for_operand (struct vector_type_el *parsed_type, char **str)
   return true;
 }
 
+/* Return true if CH is a valid suffix character for registers of
+   type TYPE.  */
+
+static bool
+aarch64_valid_suffix_char_p (aarch64_reg_type type, char ch)
+{
+  switch (type)
+    {
+    case REG_TYPE_V:
+    case REG_TYPE_Z:
+    case REG_TYPE_ZA:
+    case REG_TYPE_ZAT:
+    case REG_TYPE_ZATH:
+    case REG_TYPE_ZATV:
+      return ch == '.';
+
+    case REG_TYPE_P:
+    case REG_TYPE_PN:
+      return ch == '.' || ch == '/';
+
+    default:
+      return false;
+    }
+}
+
+/* Parse an index expression at *STR, storing it in *IMM on success.  */
+
+static bool
+parse_index_expression (char **str, int64_t *imm)
+{
+  expressionS exp;
+
+  aarch64_get_expression (&exp, str, GE_NO_PREFIX, REJECT_ABSENT);
+  if (exp.X_op != O_constant)
+    {
+      first_error (_("constant expression required"));
+      return false;
+    }
+  *imm = exp.X_add_number;
+  return true;
+}
+
 /* Parse a register of the type TYPE.
 
-   Return PARSE_FAIL if the string pointed by *CCP is not a valid register
+   Return null if the string pointed to by *CCP is not a valid register
    name or the parsed register is not of TYPE.
 
-   Otherwise return the register number, and optionally fill in the actual
-   type of the register in *RTYPE when multiple alternatives were given, and
-   return the register shape and element index information in *TYPEINFO.
+   Otherwise return the register, and optionally return the register
+   shape and element index information in *TYPEINFO.
 
-   IN_REG_LIST should be set with TRUE if the caller is parsing a register
-   list.  */
+   FLAGS includes PTR_IN_REGLIST if the caller is parsing a register list.
 
-static int
-parse_typed_reg (char **ccp, aarch64_reg_type type, aarch64_reg_type *rtype,
-		 struct vector_type_el *typeinfo, bool in_reg_list)
+   FLAGS includes PTR_FULL_REG if the function should ignore any potential
+   register index.
+
+   FLAGS includes PTR_GOOD_MATCH if we are sufficiently far into parsing
+   an operand that we can be confident that it is a good match.  */
+
+#define PTR_IN_REGLIST (1U << 0)
+#define PTR_FULL_REG (1U << 1)
+#define PTR_GOOD_MATCH (1U << 2)
+
+static const reg_entry *
+parse_typed_reg (char **ccp, aarch64_reg_type type,
+		 struct vector_type_el *typeinfo, unsigned int flags)
 {
   char *str = *ccp;
+  bool isalpha = ISALPHA (*str);
   const reg_entry *reg = parse_reg (&str);
   struct vector_type_el atype;
   struct vector_type_el parsetype;
   bool is_typed_vecreg = false;
+  unsigned int err_flags = (flags & PTR_IN_REGLIST) ? SEF_IN_REGLIST : 0;
 
   atype.defined = 0;
   atype.type = NT_invtype;
   atype.width = -1;
+  atype.element_size = 0;
   atype.index = 0;
 
   if (reg == NULL)
     {
       if (typeinfo)
 	*typeinfo = atype;
-      set_default_error ();
-      return PARSE_FAIL;
+      if (!isalpha && (flags & PTR_IN_REGLIST))
+	set_fatal_syntax_error (_("syntax error in register list"));
+      else if (flags & PTR_GOOD_MATCH)
+	set_fatal_syntax_error (NULL);
+      else
+	set_expected_reg_error (type, reg, err_flags);
+      return NULL;
     }
 
   if (! aarch64_check_reg_type (reg, type))
     {
       DEBUG_TRACE ("reg type check failed");
-      set_default_error ();
-      return PARSE_FAIL;
+      if (flags & PTR_GOOD_MATCH)
+	set_fatal_syntax_error (NULL);
+      else
+	set_expected_reg_error (type, reg, err_flags);
+      return NULL;
     }
   type = reg->type;
 
-  if ((type == REG_TYPE_VN || type == REG_TYPE_ZN || type == REG_TYPE_PN)
-      && (*str == '.' || (type == REG_TYPE_PN && *str == '/')))
+  if (aarch64_valid_suffix_char_p (reg->type, *str))
     {
       if (*str == '.')
 	{
 	  if (!parse_vector_type_for_operand (type, &parsetype, &str))
-	    return PARSE_FAIL;
+	    return NULL;
+	  if ((reg->type == REG_TYPE_ZAT
+	       || reg->type == REG_TYPE_ZATH
+	       || reg->type == REG_TYPE_ZATV)
+	      && reg->number * 8 >= parsetype.element_size)
+	    {
+	      set_syntax_error (_("ZA tile number out of range"));
+	      return NULL;
+	    }
 	}
       else
 	{
 	  if (!parse_predication_for_operand (&parsetype, &str))
-	    return PARSE_FAIL;
+	    return NULL;
 	}
 
       /* Register if of the form Vn.[bhsdq].  */
       is_typed_vecreg = true;
 
-      if (type == REG_TYPE_ZN || type == REG_TYPE_PN)
+      if (type != REG_TYPE_V)
 	{
 	  /* The width is always variable; we don't allow an integer width
 	     to be specified.  */
@@ -1021,47 +1284,41 @@ parse_typed_reg (char **ccp, aarch64_reg_type type, aarch64_reg_type *rtype,
       atype.width = parsetype.width;
     }
 
-  if (skip_past_char (&str, '['))
+  if (!(flags & PTR_FULL_REG) && skip_past_char (&str, '['))
     {
-      expressionS exp;
-
       /* Reject Sn[index] syntax.  */
-      if (!is_typed_vecreg)
+      if (reg->type != REG_TYPE_Z
+	  && reg->type != REG_TYPE_PN
+	  && reg->type != REG_TYPE_ZT0
+	  && !is_typed_vecreg)
 	{
 	  first_error (_("this type of register can't be indexed"));
-	  return PARSE_FAIL;
+	  return NULL;
 	}
 
-      if (in_reg_list)
+      if (flags & PTR_IN_REGLIST)
 	{
 	  first_error (_("index not allowed inside register list"));
-	  return PARSE_FAIL;
+	  return NULL;
 	}
 
       atype.defined |= NTA_HASINDEX;
 
-      aarch64_get_expression (&exp, &str, GE_NO_PREFIX, REJECT_ABSENT);
-
-      if (exp.X_op != O_constant)
-	{
-	  first_error (_("constant expression required"));
-	  return PARSE_FAIL;
-	}
+      if (!parse_index_expression (&str, &atype.index))
+	return NULL;
 
       if (! skip_past_char (&str, ']'))
-	return PARSE_FAIL;
-
-      atype.index = exp.X_add_number;
+	return NULL;
     }
-  else if (!in_reg_list && (atype.defined & NTA_HASINDEX) != 0)
+  else if (!(flags & PTR_IN_REGLIST) && (atype.defined & NTA_HASINDEX) != 0)
     {
       /* Indexed vector register expected.  */
       first_error (_("indexed vector register expected"));
-      return PARSE_FAIL;
+      return NULL;
     }
 
   /* A vector reg Vn should be typed or indexed.  */
-  if (type == REG_TYPE_VN && atype.defined == 0)
+  if (type == REG_TYPE_V && atype.defined == 0)
     {
       first_error (_("invalid use of vector register"));
     }
@@ -1069,53 +1326,43 @@ parse_typed_reg (char **ccp, aarch64_reg_type type, aarch64_reg_type *rtype,
   if (typeinfo)
     *typeinfo = atype;
 
-  if (rtype)
-    *rtype = type;
-
-  *ccp = str;
-
-  return reg->number;
-}
-
-/* Parse register.
-
-   Return the register number on success; return PARSE_FAIL otherwise.
-
-   If RTYPE is not NULL, return in *RTYPE the (possibly restricted) type of
-   the register (e.g. NEON double or quad reg when either has been requested).
-
-   If this is a NEON vector register with additional type information, fill
-   in the struct pointed to by VECTYPE (if non-NULL).
-
-   This parser does not handle register list.  */
-
-static int
-aarch64_reg_parse (char **ccp, aarch64_reg_type type,
-		   aarch64_reg_type *rtype, struct vector_type_el *vectype)
-{
-  struct vector_type_el atype;
-  char *str = *ccp;
-  int reg = parse_typed_reg (&str, type, rtype, &atype,
-			     /*in_reg_list= */ false);
-
-  if (reg == PARSE_FAIL)
-    return PARSE_FAIL;
-
-  if (vectype)
-    *vectype = atype;
-
   *ccp = str;
 
   return reg;
 }
 
+/* Parse register.
+
+   Return the register on success; return null otherwise.
+
+   If this is a NEON vector register with additional type information, fill
+   in the struct pointed to by VECTYPE (if non-NULL).
+
+   This parser does not handle register lists.  */
+
+static const reg_entry *
+aarch64_reg_parse (char **ccp, aarch64_reg_type type,
+		   struct vector_type_el *vectype)
+{
+  return parse_typed_reg (ccp, type, vectype, 0);
+}
+
 static inline bool
 eq_vector_type_el (struct vector_type_el e1, struct vector_type_el e2)
 {
-  return
-    e1.type == e2.type
-    && e1.defined == e2.defined
-    && e1.width == e2.width && e1.index == e2.index;
+  return (e1.type == e2.type
+	  && e1.defined == e2.defined
+	  && e1.width == e2.width
+	  && e1.element_size == e2.element_size
+	  && e1.index == e2.index);
+}
+
+/* Return the register number mask for registers of type REG_TYPE.  */
+
+static inline int
+reg_type_mask (aarch64_reg_type reg_type)
+{
+  return reg_type == REG_TYPE_P ? 15 : 31;
 }
 
 /* This function parses a list of vector registers of type TYPE.
@@ -1146,16 +1393,16 @@ parse_vector_reg_list (char **ccp, aarch64_reg_type type,
   char *str = *ccp;
   int nb_regs;
   struct vector_type_el typeinfo, typeinfo_first;
-  int val, val_range;
+  int val, val_range, mask;
   int in_range;
   int ret_val;
-  int i;
   bool error = false;
   bool expect_index = false;
+  unsigned int ptr_flags = PTR_IN_REGLIST;
 
   if (*str != '{')
     {
-      set_syntax_error (_("expecting {"));
+      set_expected_reglist_error (type, parse_reg (&str));
       return PARSE_FAIL;
     }
   str++;
@@ -1164,11 +1411,13 @@ parse_vector_reg_list (char **ccp, aarch64_reg_type type,
   typeinfo_first.defined = 0;
   typeinfo_first.type = NT_invtype;
   typeinfo_first.width = -1;
+  typeinfo_first.element_size = 0;
   typeinfo_first.index = 0;
   ret_val = 0;
   val = -1;
   val_range = -1;
   in_range = 0;
+  mask = reg_type_mask (type);
   do
     {
       if (in_range)
@@ -1176,16 +1425,17 @@ parse_vector_reg_list (char **ccp, aarch64_reg_type type,
 	  str++;		/* skip over '-' */
 	  val_range = val;
 	}
-      val = parse_typed_reg (&str, type, NULL, &typeinfo,
-			     /*in_reg_list= */ true);
-      if (val == PARSE_FAIL)
+      const reg_entry *reg = parse_typed_reg (&str, type, &typeinfo,
+					      ptr_flags);
+      if (!reg)
 	{
 	  set_first_syntax_error (_("invalid vector register in list"));
 	  error = true;
 	  continue;
 	}
+      val = reg->number;
       /* reject [bhsd]n */
-      if (type == REG_TYPE_VN && typeinfo.defined == 0)
+      if (type == REG_TYPE_V && typeinfo.defined == 0)
 	{
 	  set_first_syntax_error (_("invalid scalar register in list"));
 	  error = true;
@@ -1197,13 +1447,13 @@ parse_vector_reg_list (char **ccp, aarch64_reg_type type,
 
       if (in_range)
 	{
-	  if (val < val_range)
+	  if (val == val_range)
 	    {
 	      set_first_syntax_error
 		(_("invalid range in vector register list"));
 	      error = true;
 	    }
-	  val_range++;
+	  val_range = (val_range + 1) & mask;
 	}
       else
 	{
@@ -1218,12 +1468,16 @@ parse_vector_reg_list (char **ccp, aarch64_reg_type type,
 	    }
 	}
       if (! error)
-	for (i = val_range; i <= val; i++)
+	for (;;)
 	  {
-	    ret_val |= i << (5 * nb_regs);
+	    ret_val |= val_range << (5 * nb_regs);
 	    nb_regs++;
+	    if (val_range == val)
+	      break;
+	    val_range = (val_range + 1) & mask;
 	  }
       in_range = 0;
+      ptr_flags |= PTR_GOOD_MATCH;
     }
   while (skip_past_comma (&str) || (in_range = 1, *str == '-'));
 
@@ -1241,18 +1495,10 @@ parse_vector_reg_list (char **ccp, aarch64_reg_type type,
     {
       if (skip_past_char (&str, '['))
 	{
-	  expressionS exp;
-
-	  aarch64_get_expression (&exp, &str, GE_NO_PREFIX, REJECT_ABSENT);
-	  if (exp.X_op != O_constant)
-	    {
-	      set_first_syntax_error (_("constant expression required."));
-	      error = true;
-	    }
+	  if (!parse_index_expression (&str, &typeinfo_first.index))
+	    error = true;
 	  if (! skip_past_char (&str, ']'))
 	    error = true;
-	  else
-	    typeinfo_first.index = exp.X_add_number;
 	}
       else
 	{
@@ -2208,18 +2454,18 @@ const pseudo_typeS md_pseudo_table[] = {
 static bool
 reg_name_p (char *str, aarch64_reg_type reg_type)
 {
-  int reg;
+  const reg_entry *reg;
 
   /* Prevent the diagnostics state from being spoiled.  */
   if (error_p ())
     return false;
 
-  reg = aarch64_reg_parse (&str, reg_type, NULL, NULL);
+  reg = aarch64_reg_parse (&str, reg_type, NULL);
 
   /* Clear the parsing error that may be set by the reg parser.  */
   clear_error ();
 
-  if (reg == PARSE_FAIL)
+  if (!reg)
     return false;
 
   skip_whitespace (str);
@@ -3495,9 +3741,9 @@ parse_shifter_operand (char **str, aarch64_opnd_info *operand,
 	  return false;
 	}
 
-      if (!aarch64_check_reg_type (reg, REG_TYPE_R_Z))
+      if (!aarch64_check_reg_type (reg, REG_TYPE_R_ZR))
 	{
-	  set_syntax_error (_(get_reg_expected_msg (REG_TYPE_R_Z)));
+	  set_expected_reg_error (REG_TYPE_R_ZR, reg, 0);
 	  return false;
 	}
 
@@ -3742,10 +3988,18 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 
   /* [ */
 
+  bool alpha_base_p = ISALPHA (*p);
   reg = aarch64_addr_reg_parse (&p, base_type, base_qualifier);
   if (!reg || !aarch64_check_reg_type (reg, base_type))
     {
-      set_syntax_error (_(get_reg_expected_msg (base_type)));
+      if (reg
+	  && aarch64_check_reg_type (reg, REG_TYPE_R_SP)
+	  && *base_qualifier == AARCH64_OPND_QLF_W)
+	set_syntax_error (_("expected a 64-bit base register"));
+      else if (alpha_base_p)
+	set_syntax_error (_("invalid base register"));
+      else
+	set_syntax_error (_("expected a base register"));
       return false;
     }
   operand->addr.base_regno = reg->number;
@@ -3761,7 +4015,7 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 	{
 	  if (!aarch64_check_reg_type (reg, offset_type))
 	    {
-	      set_syntax_error (_(get_reg_expected_msg (offset_type)));
+	      set_syntax_error (_("invalid offset register"));
 	      return false;
 	    }
 
@@ -3897,7 +4151,7 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 	  /* [Xn],Xm */
 	  if (!aarch64_check_reg_type (reg, REG_TYPE_R_64))
 	    {
-	      set_syntax_error (_(get_reg_expected_msg (REG_TYPE_R_64)));
+	      set_syntax_error (_("invalid offset register"));
 	      return false;
 	    }
 
@@ -3963,7 +4217,7 @@ parse_address (char **str, aarch64_opnd_info *operand)
 {
   aarch64_opnd_qualifier_t base_qualifier, offset_qualifier;
   return parse_address_main (str, operand, &base_qualifier, &offset_qualifier,
-			     REG_TYPE_R64_SP, REG_TYPE_R_Z, SHIFTED_NONE);
+			     REG_TYPE_R64_SP, REG_TYPE_R_ZR, SHIFTED_NONE);
 }
 
 /* Parse an address in which SVE vector registers and MUL VL are allowed.
@@ -3987,7 +4241,7 @@ parse_x0_to_x30 (char **str, aarch64_opnd_info *operand)
   const reg_entry *reg = parse_reg (str);
   if (!reg || !aarch64_check_reg_type (reg, REG_TYPE_R_64))
     {
-      set_syntax_error (_(get_reg_expected_msg (REG_TYPE_R_64)));
+      set_expected_reg_error (REG_TYPE_R_64, reg, 0);
       return false;
     }
   operand->reg.regno = reg->number;
@@ -4084,8 +4338,10 @@ parse_adrp (char **str)
 
 /* Parse a symbolic operand such as "pow2" at *STR.  ARRAY is an array
    of SIZE tokens in which index I gives the token for field value I,
-   or is null if field value I is invalid.  REG_TYPE says which register
-   names should be treated as registers rather than as symbolic immediates.
+   or is null if field value I is invalid.  If the symbolic operand
+   can also be given as a 0-based integer, REG_TYPE says which register
+   names should be treated as registers rather than as symbolic immediates
+   while parsing that integer.  REG_TYPE is REG_TYPE_MAX otherwise.
 
    Return true on success, moving *STR past the operand and storing the
    field value in *VAL.  */
@@ -4112,6 +4368,9 @@ parse_enum_string (char **str, int64_t *val, const char *const *array,
 	*str = q;
 	return true;
       }
+
+  if (reg_type == REG_TYPE_MAX)
+    return false;
 
   if (!parse_immediate_expression (&p, &exp, reg_type))
     return false;
@@ -4253,108 +4512,29 @@ parse_bti_operand (char **str,
      REG_TYPE.QUALIFIER
 
    Side effect: Update STR with current parse position of success.
-*/
+
+   FLAGS is as for parse_typed_reg.  */
 
 static const reg_entry *
 parse_reg_with_qual (char **str, aarch64_reg_type reg_type,
-                     aarch64_opnd_qualifier_t *qualifier)
+		     aarch64_opnd_qualifier_t *qualifier, unsigned int flags)
 {
-  char *q;
+  struct vector_type_el vectype;
+  const reg_entry *reg = parse_typed_reg (str, reg_type, &vectype,
+					  PTR_FULL_REG | flags);
+  if (!reg)
+    return NULL;
 
-  reg_entry *reg = parse_reg (str);
-  if (reg != NULL && reg->type == reg_type)
+  if (vectype.type == NT_invtype)
+    *qualifier = AARCH64_OPND_QLF_NIL;
+  else
     {
-      if (!skip_past_char (str, '.'))
-        {
-          set_syntax_error (_("missing ZA tile element size separator"));
-          return NULL;
-        }
-
-      q = *str;
-      switch (TOLOWER (*q))
-        {
-        case 'b':
-          *qualifier = AARCH64_OPND_QLF_S_B;
-          break;
-        case 'h':
-          *qualifier = AARCH64_OPND_QLF_S_H;
-          break;
-        case 's':
-          *qualifier = AARCH64_OPND_QLF_S_S;
-          break;
-        case 'd':
-          *qualifier = AARCH64_OPND_QLF_S_D;
-          break;
-        case 'q':
-          *qualifier = AARCH64_OPND_QLF_S_Q;
-          break;
-        default:
-          return NULL;
-        }
-      q++;
-
-      *str = q;
-      return reg;
+      *qualifier = vectype_to_qualifier (&vectype);
+      if (*qualifier == AARCH64_OPND_QLF_NIL)
+	return NULL;
     }
 
-  return NULL;
-}
-
-/* Parse SME ZA tile encoded in <ZAda> assembler symbol.
-   Function return tile QUALIFIER on success.
-
-   Tiles are in example format: za[0-9]\.[bhsd]
-
-   Function returns <ZAda> register number or PARSE_FAIL.
-*/
-static int
-parse_sme_zada_operand (char **str, aarch64_opnd_qualifier_t *qualifier)
-{
-  int regno;
-  const reg_entry *reg = parse_reg_with_qual (str, REG_TYPE_ZA, qualifier);
-
-  if (reg == NULL)
-    return PARSE_FAIL;
-  regno = reg->number;
-
-  switch (*qualifier)
-    {
-    case AARCH64_OPND_QLF_S_B:
-      if (regno != 0x00)
-      {
-        set_syntax_error (_("invalid ZA tile register number, expected za0"));
-        return PARSE_FAIL;
-      }
-      break;
-    case AARCH64_OPND_QLF_S_H:
-      if (regno > 0x01)
-      {
-        set_syntax_error (_("invalid ZA tile register number, expected za0-za1"));
-        return PARSE_FAIL;
-      }
-      break;
-    case AARCH64_OPND_QLF_S_S:
-      if (regno > 0x03)
-      {
-        /* For the 32-bit variant: is the name of the ZA tile ZA0-ZA3.  */
-        set_syntax_error (_("invalid ZA tile register number, expected za0-za3"));
-        return PARSE_FAIL;
-      }
-      break;
-    case AARCH64_OPND_QLF_S_D:
-      if (regno > 0x07)
-      {
-        /* For the 64-bit variant: is the name of the ZA tile ZA0-ZA7  */
-        set_syntax_error (_("invalid ZA tile register number, expected za0-za7"));
-        return PARSE_FAIL;
-      }
-      break;
-    default:
-      set_syntax_error (_("invalid ZA tile element size, allowed b, h, s and d"));
-      return PARSE_FAIL;
-    }
-
-  return regno;
+  return reg;
 }
 
 /* Parse STR for unsigned, immediate (1-2 digits) in format:
@@ -4375,22 +4555,15 @@ parse_sme_immediate (char **str, int64_t *imm)
   return true;
 }
 
-/* Parse index with vector select register and immediate:
+/* Parse index with selection register and immediate offset:
 
    [<Wv>, <imm>]
    [<Wv>, #<imm>]
-   where <Wv> is in W12-W15 range and # is optional for immediate.
 
-   Function performs extra check for mandatory immediate value if REQUIRE_IMM
-   is set to true.
+   Return true on success, populating OPND with the parsed index.  */
 
-   On success function returns TRUE and populated VECTOR_SELECT_REGISTER and
-   IMM output.
-*/
 static bool
-parse_sme_za_hv_tiles_operand_index (char **str,
-                                     int *vector_select_register,
-                                     int64_t *imm)
+parse_sme_za_index (char **str, struct aarch64_indexed_za *opnd)
 {
   const reg_entry *reg;
 
@@ -4400,26 +4573,68 @@ parse_sme_za_hv_tiles_operand_index (char **str,
       return false;
     }
 
-  /* Vector select register W12-W15 encoded in the 2-bit Rv field.  */
+  /* The selection register, encoded in the 2-bit Rv field.  */
   reg = parse_reg (str);
-  if (reg == NULL || reg->type != REG_TYPE_R_32
-      || reg->number < 12 || reg->number > 15)
+  if (reg == NULL || reg->type != REG_TYPE_R_32)
     {
-      set_syntax_error (_("expected vector select register W12-W15"));
+      set_syntax_error (_("expected a 32-bit selection register"));
       return false;
     }
-  *vector_select_register = reg->number;
+  opnd->index.regno = reg->number;
 
-  if (!skip_past_char (str, ','))    /* Optional index offset immediate.  */
+  if (!skip_past_char (str, ','))
     {
-      set_syntax_error (_("expected ','"));
+      set_syntax_error (_("missing immediate offset"));
       return false;
     }
 
-  if (!parse_sme_immediate (str, imm))
+  if (!parse_sme_immediate (str, &opnd->index.imm))
     {
-      set_syntax_error (_("index offset immediate expected"));
+      set_syntax_error (_("expected a constant immediate offset"));
       return false;
+    }
+
+  if (skip_past_char (str, ':'))
+    {
+      int64_t end;
+      if (!parse_sme_immediate (str, &end))
+	{
+	  set_syntax_error (_("expected a constant immediate offset"));
+	  return false;
+	}
+      if (end < opnd->index.imm)
+	{
+	  set_syntax_error (_("the last offset is less than the"
+			      " first offset"));
+	  return false;
+	}
+      if (end == opnd->index.imm)
+	{
+	  set_syntax_error (_("the last offset is equal to the"
+			      " first offset"));
+	  return false;
+	}
+      opnd->index.countm1 = (uint64_t) end - opnd->index.imm;
+    }
+
+  opnd->group_size = 0;
+  if (skip_past_char (str, ','))
+    {
+      if (strncasecmp (*str, "vgx2", 4) == 0 && !ISALPHA ((*str)[4]))
+	{
+	  *str += 4;
+	  opnd->group_size = 2;
+	}
+      else if (strncasecmp (*str, "vgx4", 4) == 0 && !ISALPHA ((*str)[4]))
+	{
+	  *str += 4;
+	  opnd->group_size = 4;
+	}
+      else
+	{
+	  set_syntax_error (_("invalid vector group size"));
+	  return false;
+	}
     }
 
   if (!skip_past_char (str, ']'))
@@ -4431,133 +4646,63 @@ parse_sme_za_hv_tiles_operand_index (char **str,
   return true;
 }
 
-/* Parse SME ZA horizontal or vertical vector access to tiles.
-   Function extracts from STR to SLICE_INDICATOR <HV> horizontal (0) or
-   vertical (1) ZA tile vector orientation. VECTOR_SELECT_REGISTER
-   contains <Wv> select register and corresponding optional IMMEDIATE.
-   In addition QUALIFIER is extracted.
+/* Parse a register of type REG_TYPE that might have an element type
+   qualifier and that is indexed by two values: a 32-bit register,
+   followed by an immediate.  The ranges of the register and the
+   immediate vary by opcode and are checked in libopcodes.
+
+   Return true on success, populating OPND with information about
+   the operand and setting QUALIFIER to the register qualifier.
 
    Field format examples:
 
-   ZA0<HV>.B[<Wv>, #<imm>]
-   <ZAn><HV>.H[<Wv>, #<imm>]
-   <ZAn><HV>.S[<Wv>, #<imm>]
-   <ZAn><HV>.D[<Wv>, #<imm>]
-   <ZAn><HV>.Q[<Wv>, #<imm>]
+   <Pm>.<T>[<Wv>< #<imm>]
+   ZA[<Wv>, #<imm>]
+   <ZAn><HV>.<T>[<Wv>, #<imm>]
 
-   Function returns <ZAda> register number or PARSE_FAIL.
-*/
-static int
-parse_sme_za_hv_tiles_operand (char **str,
-                               enum sme_hv_slice *slice_indicator,
-                               int *vector_select_register,
-                               int *imm,
-                               aarch64_opnd_qualifier_t *qualifier)
+   FLAGS is as for parse_typed_reg.  */
+
+static bool
+parse_dual_indexed_reg (char **str, aarch64_reg_type reg_type,
+			struct aarch64_indexed_za *opnd,
+			aarch64_opnd_qualifier_t *qualifier,
+			unsigned int flags)
 {
-  char *qh, *qv;
-  int regno;
-  int regno_limit;
-  int64_t imm_limit;
-  int64_t imm_value;
-  const reg_entry *reg;
+  const reg_entry *reg = parse_reg_with_qual (str, reg_type, qualifier, flags);
+  if (!reg)
+    return false;
 
-  qh = qv = *str;
-  if ((reg = parse_reg_with_qual (&qh, REG_TYPE_ZAH, qualifier)) != NULL)
-    {
-      *slice_indicator = HV_horizontal;
-      *str = qh;
-    }
-  else if ((reg = parse_reg_with_qual (&qv, REG_TYPE_ZAV, qualifier)) != NULL)
-    {
-      *slice_indicator = HV_vertical;
-      *str = qv;
-    }
-  else
-    return PARSE_FAIL;
-  regno = reg->number;
+  opnd->v = aarch64_check_reg_type (reg, REG_TYPE_ZATV);
+  opnd->regno = reg->number;
 
-  switch (*qualifier)
-    {
-    case AARCH64_OPND_QLF_S_B:
-      regno_limit = 0;
-      imm_limit = 15;
-      break;
-    case AARCH64_OPND_QLF_S_H:
-      regno_limit = 1;
-      imm_limit = 7;
-      break;
-    case AARCH64_OPND_QLF_S_S:
-      regno_limit = 3;
-      imm_limit = 3;
-      break;
-    case AARCH64_OPND_QLF_S_D:
-      regno_limit = 7;
-      imm_limit = 1;
-      break;
-    case AARCH64_OPND_QLF_S_Q:
-      regno_limit = 15;
-      imm_limit = 0;
-      break;
-    default:
-      set_syntax_error (_("invalid ZA tile element size, allowed b, h, s, d and q"));
-      return PARSE_FAIL;
-    }
-
-  /* Check if destination register ZA tile vector is in range for given
-     instruction variant.  */
-  if (regno < 0 || regno > regno_limit)
-    {
-      set_syntax_error (_("ZA tile vector out of range"));
-      return PARSE_FAIL;
-    }
-
-  if (!parse_sme_za_hv_tiles_operand_index (str, vector_select_register,
-                                            &imm_value))
-    return PARSE_FAIL;
-
-  /* Check if optional index offset is in the range for instruction
-     variant.  */
-  if (imm_value < 0 || imm_value > imm_limit)
-    {
-      set_syntax_error (_("index offset out of range"));
-      return PARSE_FAIL;
-    }
-
-  *imm = imm_value;
-
-  return regno;
+  return parse_sme_za_index (str, opnd);
 }
 
+/* Like parse_sme_za_hv_tiles_operand, but expect braces around the
+   operand.  */
 
-static int
+static bool
 parse_sme_za_hv_tiles_operand_with_braces (char **str,
-                                           enum sme_hv_slice *slice_indicator,
-                                           int *vector_select_register,
-                                           int *imm,
+					   struct aarch64_indexed_za *opnd,
                                            aarch64_opnd_qualifier_t *qualifier)
 {
-  int regno;
-
   if (!skip_past_char (str, '{'))
     {
-      set_syntax_error (_("expected '{'"));
-      return PARSE_FAIL;
+      set_expected_reglist_error (REG_TYPE_ZATHV, parse_reg (str));
+      return false;
     }
 
-  regno = parse_sme_za_hv_tiles_operand (str, slice_indicator,
-                                         vector_select_register, imm,
-                                         qualifier);
-
-  if (regno == PARSE_FAIL)
-    return PARSE_FAIL;
+  if (!parse_dual_indexed_reg (str, REG_TYPE_ZATHV, opnd, qualifier,
+			       PTR_IN_REGLIST))
+    return false;
 
   if (!skip_past_char (str, '}'))
     {
       set_syntax_error (_("expected '}'"));
-      return PARSE_FAIL;
+      return false;
     }
 
-  return regno;
+  return true;
 }
 
 /* Parse list of up to eight 64-bit element tile names separated by commas in
@@ -4575,46 +4720,59 @@ parse_sme_zero_mask(char **str)
   char *q;
   int mask;
   aarch64_opnd_qualifier_t qualifier;
+  unsigned int ptr_flags = PTR_IN_REGLIST;
 
   mask = 0x00;
   q = *str;
   do
     {
-      const reg_entry *reg = parse_reg_with_qual (&q, REG_TYPE_ZA, &qualifier);
-      if (reg)
-        {
+      const reg_entry *reg = parse_reg_with_qual (&q, REG_TYPE_ZA_ZAT,
+						  &qualifier, ptr_flags);
+      if (!reg)
+	return PARSE_FAIL;
+
+      if (reg->type == REG_TYPE_ZA)
+	{
+	  if (qualifier != AARCH64_OPND_QLF_NIL)
+	    {
+	      set_syntax_error ("ZA should not have a size suffix");
+	      return PARSE_FAIL;
+	    }
+          /* { ZA } is assembled as all-ones immediate.  */
+          mask = 0xff;
+	}
+      else
+	{
           int regno = reg->number;
-          if (qualifier == AARCH64_OPND_QLF_S_B && regno == 0)
+          if (qualifier == AARCH64_OPND_QLF_S_B)
             {
               /* { ZA0.B } is assembled as all-ones immediate.  */
               mask = 0xff;
             }
-          else if (qualifier == AARCH64_OPND_QLF_S_H && regno < 2)
+          else if (qualifier == AARCH64_OPND_QLF_S_H)
             mask |= 0x55 << regno;
-          else if (qualifier == AARCH64_OPND_QLF_S_S && regno < 4)
+          else if (qualifier == AARCH64_OPND_QLF_S_S)
             mask |= 0x11 << regno;
-          else if (qualifier == AARCH64_OPND_QLF_S_D && regno < 8)
+          else if (qualifier == AARCH64_OPND_QLF_S_D)
             mask |= 0x01 << regno;
+	  else if (qualifier == AARCH64_OPND_QLF_S_Q)
+	    {
+              set_syntax_error (_("ZA tile masks do not operate at .Q"
+				  " granularity"));
+              return PARSE_FAIL;
+	    }
+	  else if (qualifier == AARCH64_OPND_QLF_NIL)
+	    {
+              set_syntax_error (_("missing ZA tile size"));
+              return PARSE_FAIL;
+	    }
           else
             {
-              set_syntax_error (_("wrong ZA tile element format"));
+              set_syntax_error (_("invalid ZA tile"));
               return PARSE_FAIL;
             }
-          continue;
         }
-      else if (strncasecmp (q, "za", 2) == 0
-               && !ISALNUM (q[2]))
-        {
-          /* { ZA } is assembled as all-ones immediate.  */
-          mask = 0xff;
-          q += 2;
-          continue;
-        }
-      else
-        {
-          set_syntax_error (_("wrong ZA tile element format"));
-          return PARSE_FAIL;
-        }
+      ptr_flags |= PTR_GOOD_MATCH;
     }
   while (skip_past_char (&q, ','));
 
@@ -4658,45 +4816,6 @@ parse_sme_list_of_64bit_tiles (char **str)
   return regno;
 }
 
-/* Parse ZA array operand used in e.g. STR and LDR instruction.
-   Operand format:
-
-   ZA[<Wv>, <imm>]
-   ZA[<Wv>, #<imm>]
-
-   Function returns <Wv> or PARSE_FAIL.
-*/
-static int
-parse_sme_za_array (char **str, int *imm)
-{
-  char *p, *q;
-  int regno;
-  int64_t imm_value;
-
-  p = q = *str;
-  while (ISALPHA (*q))
-    q++;
-
-  if ((q - p != 2) || strncasecmp ("za", p, q - p) != 0)
-    {
-      set_syntax_error (_("expected ZA array"));
-      return PARSE_FAIL;
-    }
-
-  if (! parse_sme_za_hv_tiles_operand_index (&q, &regno, &imm_value))
-    return PARSE_FAIL;
-
-  if (imm_value < 0 || imm_value > 15)
-    {
-      set_syntax_error (_("offset out of range"));
-      return PARSE_FAIL;
-    }
-
-  *imm = imm_value;
-  *str = q;
-  return regno;
-}
-
 /* Parse streaming mode operand for SMSTART and SMSTOP.
 
    {SM | ZA}
@@ -4721,65 +4840,6 @@ parse_sme_sm_za (char **str)
 
   *str = q;
   return TOLOWER (p[0]);
-}
-
-/* Parse the name of the source scalable predicate register, the index base
-   register W12-W15 and the element index. Function performs element index
-   limit checks as well as qualifier type checks.
-
-   <Pn>.<T>[<Wv>, <imm>]
-   <Pn>.<T>[<Wv>, #<imm>]
-
-   On success function sets <Wv> to INDEX_BASE_REG, <T> to QUALIFIER and
-   <imm> to IMM.
-   Function returns <Pn>, or PARSE_FAIL.
-*/
-static int
-parse_sme_pred_reg_with_index(char **str,
-                              int *index_base_reg,
-                              int *imm,
-                              aarch64_opnd_qualifier_t *qualifier)
-{
-  int regno;
-  int64_t imm_limit;
-  int64_t imm_value;
-  const reg_entry *reg = parse_reg_with_qual (str, REG_TYPE_PN, qualifier);
-
-  if (reg == NULL)
-    return PARSE_FAIL;
-  regno = reg->number;
-
-  switch (*qualifier)
-    {
-    case AARCH64_OPND_QLF_S_B:
-      imm_limit = 15;
-      break;
-    case AARCH64_OPND_QLF_S_H:
-      imm_limit = 7;
-      break;
-    case AARCH64_OPND_QLF_S_S:
-      imm_limit = 3;
-      break;
-    case AARCH64_OPND_QLF_S_D:
-      imm_limit = 1;
-      break;
-    default:
-      set_syntax_error (_("wrong predicate register element size, allowed b, h, s and d"));
-      return PARSE_FAIL;
-    }
-
-  if (! parse_sme_za_hv_tiles_operand_index (str, index_base_reg, &imm_value))
-    return PARSE_FAIL;
-
-  if (imm_value < 0 || imm_value > imm_limit)
-    {
-      set_syntax_error (_("element index out of range for given variant"));
-      return PARSE_FAIL;
-    }
-
-  *imm = imm_value;
-
-  return regno;
 }
 
 /* Parse a system register or a PSTATE field name for an MSR/MRS instruction.
@@ -4900,23 +4960,20 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs)
 } while (0)
 
 #define po_reg_or_fail(regtype) do {				\
-    val = aarch64_reg_parse (&str, regtype, &rtype, NULL);	\
-    if (val == PARSE_FAIL)					\
-      {								\
-	set_default_error ();					\
-	goto failure;						\
-      }								\
+    reg = aarch64_reg_parse (&str, regtype, NULL);		\
+    if (!reg)							\
+      goto failure;						\
   } while (0)
 
-#define po_int_reg_or_fail(reg_type) do {			\
-    reg = aarch64_reg_parse_32_64 (&str, &qualifier);		\
+#define po_int_fp_reg_or_fail(reg_type) do {			\
+    reg = parse_reg (&str);					\
     if (!reg || !aarch64_check_reg_type (reg, reg_type))	\
       {								\
-	set_default_error ();					\
+	set_expected_reg_error (reg_type, reg, 0);		\
 	goto failure;						\
       }								\
     info->reg.regno = reg->number;				\
-    info->qualifier = qualifier;				\
+    info->qualifier = inherent_reg_qualifier (reg);		\
   } while (0)
 
 #define po_imm_nc_or_fail() do {				\
@@ -4941,11 +4998,31 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs)
       goto failure;						\
   } while (0)
 
+#define po_strict_enum_or_fail(array) do {			\
+    if (!parse_enum_string (&str, &val, array,			\
+			    ARRAY_SIZE (array), REG_TYPE_MAX))	\
+      goto failure;						\
+  } while (0)
+
 #define po_misc_or_fail(expr) do {				\
     if (!expr)							\
       goto failure;						\
   } while (0)
 
+/* A primitive log calculator.  */
+
+static inline unsigned int
+get_log2 (unsigned int n)
+{
+  unsigned int count = 0;
+  while (n > 1)
+    {
+      n >>= 1;
+      count += 1;
+    }
+  return count;
+}
+
 /* encode the 12-bit imm field of Add/sub immediate */
 static inline uint32_t
 encode_addsub_imm (uint32_t imm)
@@ -5083,10 +5160,15 @@ const char* operand_mismatch_kind_names[] =
   "AARCH64_OPDE_SYNTAX_ERROR",
   "AARCH64_OPDE_FATAL_SYNTAX_ERROR",
   "AARCH64_OPDE_INVALID_VARIANT",
+  "AARCH64_OPDE_INVALID_VG_SIZE",
+  "AARCH64_OPDE_REG_LIST_LENGTH",
+  "AARCH64_OPDE_REG_LIST_STRIDE",
+  "AARCH64_OPDE_UNTIED_IMMS",
+  "AARCH64_OPDE_UNTIED_OPERAND",
   "AARCH64_OPDE_OUT_OF_RANGE",
   "AARCH64_OPDE_UNALIGNED",
-  "AARCH64_OPDE_REG_LIST",
   "AARCH64_OPDE_OTHER_ERROR",
+  "AARCH64_OPDE_INVALID_REGNO",
 };
 #endif /* DEBUG_AARCH64 */
 
@@ -5107,10 +5189,13 @@ operand_error_higher_severity_p (enum aarch64_operand_error_kind lhs,
   gas_assert (AARCH64_OPDE_SYNTAX_ERROR > AARCH64_OPDE_EXPECTED_A_AFTER_B);
   gas_assert (AARCH64_OPDE_FATAL_SYNTAX_ERROR > AARCH64_OPDE_SYNTAX_ERROR);
   gas_assert (AARCH64_OPDE_INVALID_VARIANT > AARCH64_OPDE_FATAL_SYNTAX_ERROR);
-  gas_assert (AARCH64_OPDE_OUT_OF_RANGE > AARCH64_OPDE_INVALID_VARIANT);
+  gas_assert (AARCH64_OPDE_INVALID_VG_SIZE > AARCH64_OPDE_INVALID_VARIANT);
+  gas_assert (AARCH64_OPDE_REG_LIST_LENGTH > AARCH64_OPDE_INVALID_VG_SIZE);
+  gas_assert (AARCH64_OPDE_REG_LIST_STRIDE > AARCH64_OPDE_REG_LIST_LENGTH);
+  gas_assert (AARCH64_OPDE_OUT_OF_RANGE > AARCH64_OPDE_REG_LIST_STRIDE);
   gas_assert (AARCH64_OPDE_UNALIGNED > AARCH64_OPDE_OUT_OF_RANGE);
-  gas_assert (AARCH64_OPDE_REG_LIST > AARCH64_OPDE_UNALIGNED);
-  gas_assert (AARCH64_OPDE_OTHER_ERROR > AARCH64_OPDE_REG_LIST);
+  gas_assert (AARCH64_OPDE_OTHER_ERROR > AARCH64_OPDE_REG_LIST_STRIDE);
+  gas_assert (AARCH64_OPDE_INVALID_REGNO > AARCH64_OPDE_OTHER_ERROR);
   return lhs > rhs;
 }
 
@@ -5508,6 +5593,64 @@ output_info (const char *format, ...)
   (void) putc ('\n', stderr);
 }
 
+/* See if the AARCH64_OPDE_SYNTAX_ERROR error described by DETAIL
+   relates to registers or register lists.  If so, return a string that
+   reports the error against "operand %d", otherwise return null.  */
+
+static const char *
+get_reg_error_message (const aarch64_operand_error *detail)
+{
+  /* Handle the case where we found a register that was expected
+     to be in a register list outside of a register list.  */
+  if ((detail->data[1].i & detail->data[2].i) != 0
+      && (detail->data[1].i & SEF_IN_REGLIST) == 0)
+    return _("missing braces at operand %d");
+
+  /* If some opcodes expected a register, and we found a register,
+     complain about the difference.  */
+  if (detail->data[2].i)
+    {
+      unsigned int expected = (detail->data[1].i & SEF_IN_REGLIST
+			       ? detail->data[1].i & ~SEF_IN_REGLIST
+			       : detail->data[0].i & ~SEF_DEFAULT_ERROR);
+      const char *msg = get_reg_expected_msg (expected, detail->data[2].i);
+      if (!msg)
+	msg = N_("unexpected register type at operand %d");
+      return msg;
+    }
+
+  /* Handle the case where we got to the point of trying to parse a
+     register within a register list, but didn't find a known register.  */
+  if (detail->data[1].i & SEF_IN_REGLIST)
+    {
+      unsigned int expected = detail->data[1].i & ~SEF_IN_REGLIST;
+      const char *msg = get_reg_expected_msg (expected, 0);
+      if (!msg)
+	msg = _("invalid register list at operand %d");
+      return msg;
+    }
+
+  /* Punt if register-related problems weren't the only errors.  */
+  if (detail->data[0].i & SEF_DEFAULT_ERROR)
+    return NULL;
+
+  /* Handle the case where the only acceptable things are registers.  */
+  if (detail->data[1].i == 0)
+    {
+      const char *msg = get_reg_expected_msg (detail->data[0].i, 0);
+      if (!msg)
+	msg = _("expected a register at operand %d");
+      return msg;
+    }
+
+  /* Handle the case where the only acceptable things are register lists,
+     and there was no opening '{'.  */
+  if (detail->data[0].i == 0)
+    return _("expected '{' at operand %d");
+
+  return _("expected a register or register list at operand %d");
+}
+
 /* Output one operand error record.  */
 
 static void
@@ -5521,6 +5664,7 @@ output_operand_error_record (const operand_error_record *record, char *str)
 
   typedef void (*handler_t)(const char *format, ...);
   handler_t handler = detail->non_fatal ? as_warn : as_bad;
+  const char *msg = detail->error;
 
   switch (detail->kind)
     {
@@ -5541,18 +5685,31 @@ output_operand_error_record (const operand_error_record *record, char *str)
       break;
 
     case AARCH64_OPDE_SYNTAX_ERROR:
+      if (!msg && idx >= 0)
+	{
+	  msg = get_reg_error_message (detail);
+	  if (msg)
+	    {
+	      char *full_msg = xasprintf (msg, idx + 1);
+	      handler (_("%s -- `%s'"), full_msg, str);
+	      free (full_msg);
+	      break;
+	    }
+	}
+      /* Fall through.  */
+
     case AARCH64_OPDE_RECOVERABLE:
     case AARCH64_OPDE_FATAL_SYNTAX_ERROR:
     case AARCH64_OPDE_OTHER_ERROR:
       /* Use the prepared error message if there is, otherwise use the
 	 operand description string to describe the error.  */
-      if (detail->error != NULL)
+      if (msg != NULL)
 	{
 	  if (idx < 0)
-	    handler (_("%s -- `%s'"), detail->error, str);
+	    handler (_("%s -- `%s'"), msg, str);
 	  else
 	    handler (_("%s at operand %d -- `%s'"),
-		     detail->error, idx + 1, str);
+		     msg, idx + 1, str);
 	}
       else
 	{
@@ -5670,26 +5827,59 @@ output_operand_error_record (const operand_error_record *record, char *str)
                detail->index + 1, str);
       break;
 
+    case AARCH64_OPDE_INVALID_REGNO:
+      handler (_("%s%d-%s%d expected at operand %d -- `%s'"),
+	       detail->data[0].s, detail->data[1].i,
+	       detail->data[0].s, detail->data[2].i, idx + 1, str);
+      break;
+
     case AARCH64_OPDE_OUT_OF_RANGE:
       if (detail->data[0].i != detail->data[1].i)
 	handler (_("%s out of range %d to %d at operand %d -- `%s'"),
-		 detail->error ? detail->error : _("immediate value"),
+		 msg ? msg : _("immediate value"),
 		 detail->data[0].i, detail->data[1].i, idx + 1, str);
       else
 	handler (_("%s must be %d at operand %d -- `%s'"),
-		 detail->error ? detail->error : _("immediate value"),
+		 msg ? msg : _("immediate value"),
 		 detail->data[0].i, idx + 1, str);
       break;
 
-    case AARCH64_OPDE_REG_LIST:
-      if (detail->data[0].i == 1)
-	handler (_("invalid number of registers in the list; "
-		   "only 1 register is expected at operand %d -- `%s'"),
+    case AARCH64_OPDE_INVALID_VG_SIZE:
+      if (detail->data[0].i == 0)
+	handler (_("unexpected vector group size at operand %d -- `%s'"),
 		 idx + 1, str);
       else
-	handler (_("invalid number of registers in the list; "
-		   "%d registers are expected at operand %d -- `%s'"),
-	       detail->data[0].i, idx + 1, str);
+	handler (_("operand %d must have a vector group size of %d -- `%s'"),
+		 idx + 1, detail->data[0].i, str);
+      break;
+
+    case AARCH64_OPDE_REG_LIST_LENGTH:
+      if (detail->data[0].i == (1 << 1))
+	handler (_("expected a single-register list at operand %d -- `%s'"),
+		 idx + 1, str);
+      else if ((detail->data[0].i & -detail->data[0].i) == detail->data[0].i)
+	handler (_("expected a list of %d registers at operand %d -- `%s'"),
+		 get_log2 (detail->data[0].i), idx + 1, str);
+      else if (detail->data[0].i == 0x14)
+	handler (_("expected a list of %d or %d registers at"
+		   " operand %d -- `%s'"),
+		 2, 4, idx + 1, str);
+      else
+	handler (_("invalid number of registers in the list"
+		   " at operand %d -- `%s'"), idx + 1, str);
+      break;
+
+    case AARCH64_OPDE_REG_LIST_STRIDE:
+      if (detail->data[0].i == (1 << 1))
+	handler (_("the register list must have a stride of %d"
+		   " at operand %d -- `%s'"), 1, idx + 1, str);
+      else if (detail->data[0].i == 0x12 || detail->data[0].i == 0x102)
+	handler (_("the register list must have a stride of %d or %d"
+		   " at operand %d -- `%s`"), 1,
+		 detail->data[0].i == 0x12 ? 4 : 8, idx + 1, str);
+      else
+	handler (_("invalid register stride at operand %d -- `%s'"),
+		 idx + 1, str);
       break;
 
     case AARCH64_OPDE_UNALIGNED:
@@ -5702,6 +5892,44 @@ output_operand_error_record (const operand_error_record *record, char *str)
       gas_assert (0);
       break;
     }
+}
+
+/* Return true if the presence of error A against an instruction means
+   that error B should not be reported.  This is only used as a first pass,
+   to pick the kind of error that we should report.  */
+
+static bool
+better_error_p (operand_error_record *a, operand_error_record *b)
+{
+  /* For errors reported during parsing, prefer errors that relate to
+     later operands, since that implies that the earlier operands were
+     syntactically valid.
+
+     For example, if we see a register R instead of an immediate in
+     operand N, we'll report that as a recoverable "immediate operand
+     required" error.  This is because there is often another opcode
+     entry that accepts a register operand N, and any errors about R
+     should be reported against the register forms of the instruction.
+     But if no such register form exists, the recoverable error should
+     still win over a syntax error against operand N-1.
+
+     For these purposes, count an error reported at the end of the
+     assembly string as equivalent to an error reported against the
+     final operand.  This means that opcode entries that expect more
+     operands win over "unexpected characters following instruction".  */
+  if (a->detail.kind <= AARCH64_OPDE_FATAL_SYNTAX_ERROR
+      && b->detail.kind <= AARCH64_OPDE_FATAL_SYNTAX_ERROR)
+    {
+      int a_index = (a->detail.index < 0
+		     ? aarch64_num_of_operands (a->opcode) - 1
+		     : a->detail.index);
+      int b_index = (b->detail.index < 0
+		     ? aarch64_num_of_operands (b->opcode) - 1
+		     : b->detail.index);
+      if (a_index != b_index)
+	return a_index > b_index;
+    }
+  return operand_error_higher_severity_p (a->detail.kind, b->detail.kind);
 }
 
 /* Process and output the error message about the operand mismatching.
@@ -5719,12 +5947,10 @@ output_operand_error_record (const operand_error_record *record, char *str)
 static void
 output_operand_error_report (char *str, bool non_fatal_only)
 {
-  int largest_error_pos;
-  const char *msg = NULL;
   enum aarch64_operand_error_kind kind;
   operand_error_record *curr;
   operand_error_record *head = operand_error_report.head;
-  operand_error_record *record = NULL;
+  operand_error_record *record;
 
   /* No error to report.  */
   if (head == NULL)
@@ -5748,20 +5974,38 @@ output_operand_error_report (char *str, bool non_fatal_only)
 
   /* Find the error kind of the highest severity.  */
   DEBUG_TRACE ("multiple opcode entries with error kind");
-  kind = AARCH64_OPDE_NIL;
+  record = NULL;
   for (curr = head; curr != NULL; curr = curr->next)
     {
       gas_assert (curr->detail.kind != AARCH64_OPDE_NIL);
-      DEBUG_TRACE ("\t%s", operand_mismatch_kind_names[curr->detail.kind]);
-      if (operand_error_higher_severity_p (curr->detail.kind, kind)
-	  && (!non_fatal_only || (non_fatal_only && curr->detail.non_fatal)))
-	kind = curr->detail.kind;
+      if (curr->detail.kind == AARCH64_OPDE_SYNTAX_ERROR)
+	{
+	  DEBUG_TRACE ("\t%s [%x, %x, %x]",
+		       operand_mismatch_kind_names[curr->detail.kind],
+		       curr->detail.data[0].i, curr->detail.data[1].i,
+		       curr->detail.data[2].i);
+	}
+      else if (curr->detail.kind == AARCH64_OPDE_REG_LIST_LENGTH
+	       || curr->detail.kind == AARCH64_OPDE_REG_LIST_STRIDE)
+	{
+	  DEBUG_TRACE ("\t%s [%x]",
+		       operand_mismatch_kind_names[curr->detail.kind],
+		       curr->detail.data[0].i);
+	}
+      else
+	{
+	  DEBUG_TRACE ("\t%s", operand_mismatch_kind_names[curr->detail.kind]);
+	}
+      if ((!non_fatal_only || curr->detail.non_fatal)
+	  && (!record || better_error_p (curr, record)))
+	record = curr;
     }
 
+  kind = (record ? record->detail.kind : AARCH64_OPDE_NIL);
   gas_assert (kind != AARCH64_OPDE_NIL || non_fatal_only);
 
   /* Pick up one of errors of KIND to report.  */
-  largest_error_pos = -2; /* Index can be -1 which means unknown index.  */
+  record = NULL;
   for (curr = head; curr != NULL; curr = curr->next)
     {
       /* If we don't want to print non-fatal errors then don't consider them
@@ -5773,13 +6017,35 @@ output_operand_error_report (char *str, bool non_fatal_only)
 	 mismatching operand index.  In the case of multiple errors with
 	 the equally highest operand index, pick up the first one or the
 	 first one with non-NULL error message.  */
-      if (curr->detail.index > largest_error_pos
-	  || (curr->detail.index == largest_error_pos && msg == NULL
-	      && curr->detail.error != NULL))
+      if (!record || curr->detail.index > record->detail.index)
+	record = curr;
+      else if (curr->detail.index == record->detail.index
+	       && !record->detail.error)
 	{
-	  largest_error_pos = curr->detail.index;
-	  record = curr;
-	  msg = record->detail.error;
+	  if (curr->detail.error)
+	    record = curr;
+	  else if (kind == AARCH64_OPDE_SYNTAX_ERROR)
+	    {
+	      record->detail.data[0].i |= curr->detail.data[0].i;
+	      record->detail.data[1].i |= curr->detail.data[1].i;
+	      record->detail.data[2].i |= curr->detail.data[2].i;
+	      DEBUG_TRACE ("\t--> %s [%x, %x, %x]",
+			   operand_mismatch_kind_names[kind],
+			   curr->detail.data[0].i, curr->detail.data[1].i,
+			   curr->detail.data[2].i);
+	    }
+	  else if (kind == AARCH64_OPDE_REG_LIST_LENGTH
+		   || kind == AARCH64_OPDE_REG_LIST_STRIDE)
+	    {
+	      record->detail.data[0].i |= curr->detail.data[0].i;
+	      DEBUG_TRACE ("\t--> %s [%x]",
+			   operand_mismatch_kind_names[kind],
+			   curr->detail.data[0].i);
+	    }
+	  /* Pick the variant with the cloest match.  */
+	  else if (kind == AARCH64_OPDE_INVALID_VARIANT
+		   && record->detail.data[0].i > curr->detail.data[0].i)
+	    record = curr;
 	}
     }
 
@@ -5794,9 +6060,9 @@ output_operand_error_report (char *str, bool non_fatal_only)
   if (non_fatal_only && !record)
     return;
 
-  gas_assert (largest_error_pos != -2 && record != NULL);
+  gas_assert (record);
   DEBUG_TRACE ("Pick up error kind %s to report",
-	       operand_mismatch_kind_names[record->detail.kind]);
+	       operand_mismatch_kind_names[kind]);
 
   /* Output.  */
   output_operand_error_record (record, str);
@@ -5921,81 +6187,6 @@ opcode_lookup (char *base, char *dot, char *end)
     }
 
   return NULL;
-}
-
-/* Internal helper routine converting a vector_type_el structure *VECTYPE
-   to a corresponding operand qualifier.  */
-
-static inline aarch64_opnd_qualifier_t
-vectype_to_qualifier (const struct vector_type_el *vectype)
-{
-  /* Element size in bytes indexed by vector_el_type.  */
-  const unsigned char ele_size[5]
-    = {1, 2, 4, 8, 16};
-  const unsigned int ele_base [5] =
-    {
-      AARCH64_OPND_QLF_V_4B,
-      AARCH64_OPND_QLF_V_2H,
-      AARCH64_OPND_QLF_V_2S,
-      AARCH64_OPND_QLF_V_1D,
-      AARCH64_OPND_QLF_V_1Q
-  };
-
-  if (!vectype->defined || vectype->type == NT_invtype)
-    goto vectype_conversion_fail;
-
-  if (vectype->type == NT_zero)
-    return AARCH64_OPND_QLF_P_Z;
-  if (vectype->type == NT_merge)
-    return AARCH64_OPND_QLF_P_M;
-
-  gas_assert (vectype->type >= NT_b && vectype->type <= NT_q);
-
-  if (vectype->defined & (NTA_HASINDEX | NTA_HASVARWIDTH))
-    {
-      /* Special case S_4B.  */
-      if (vectype->type == NT_b && vectype->width == 4)
-	return AARCH64_OPND_QLF_S_4B;
-
-      /* Special case S_2H.  */
-      if (vectype->type == NT_h && vectype->width == 2)
-	return AARCH64_OPND_QLF_S_2H;
-
-      /* Vector element register.  */
-      return AARCH64_OPND_QLF_S_B + vectype->type;
-    }
-  else
-    {
-      /* Vector register.  */
-      int reg_size = ele_size[vectype->type] * vectype->width;
-      unsigned offset;
-      unsigned shift;
-      if (reg_size != 16 && reg_size != 8 && reg_size != 4)
-	goto vectype_conversion_fail;
-
-      /* The conversion is by calculating the offset from the base operand
-	 qualifier for the vector type.  The operand qualifiers are regular
-	 enough that the offset can established by shifting the vector width by
-	 a vector-type dependent amount.  */
-      shift = 0;
-      if (vectype->type == NT_b)
-	shift = 3;
-      else if (vectype->type == NT_h || vectype->type == NT_s)
-	shift = 2;
-      else if (vectype->type >= NT_d)
-	shift = 1;
-      else
-	gas_assert (0);
-
-      offset = ele_base [vectype->type] + (vectype->width >> shift);
-      gas_assert (AARCH64_OPND_QLF_V_4B <= offset
-		  && offset <= AARCH64_OPND_QLF_V_1Q);
-      return offset;
-    }
-
- vectype_conversion_fail:
-  first_error (_("bad vector arrangement type"));
-  return AARCH64_OPND_QLF_NIL;
 }
 
 /* Process an optional operand that is found omitted from the assembly line.
@@ -6199,22 +6390,6 @@ process_movw_reloc_info (void)
   return true;
 }
 
-/* A primitive log calculator.  */
-
-static inline unsigned int
-get_logsz (unsigned int size)
-{
-  const unsigned char ls[16] =
-    {0, 1, -1, 2, -1, -1, -1, 3, -1, -1, -1, -1, -1, -1, -1, 4};
-  if (size > 16)
-    {
-      gas_assert (0);
-      return -1;
-    }
-  gas_assert (ls[size - 1] != (unsigned char)-1);
-  return ls[size - 1];
-}
-
 /* Determine and return the real reloc type code for an instruction
    with the pseudo reloc type code BFD_RELOC_AARCH64_LDST_LO12.  */
 
@@ -6279,7 +6454,7 @@ ldst_lo12_determine_real_reloc_type (void)
 				      1, opd0_qlf, 0);
   gas_assert (opd1_qlf != AARCH64_OPND_QLF_NIL);
 
-  logsz = get_logsz (aarch64_get_qualifier_esize (opd1_qlf));
+  logsz = get_log2 (aarch64_get_qualifier_esize (opd1_qlf));
 
   if (inst.reloc.type == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12
       || inst.reloc.type == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12_NC
@@ -6303,34 +6478,43 @@ ldst_lo12_determine_real_reloc_type (void)
   return reloc_ldst_lo12[inst.reloc.type - BFD_RELOC_AARCH64_LDST_LO12][logsz];
 }
 
-/* Check whether a register list REGINFO is valid.  The registers must be
-   numbered in increasing order (modulo 32), in increments of one or two.
+/* Check whether a register list REGINFO is valid.  The registers have type
+   REG_TYPE and must be numbered in increasing order (modulo the register
+   bank size).  They must have a consistent stride.
 
-   If ACCEPT_ALTERNATE is non-zero, the register numbers should be in
-   increments of two.
-
-   Return FALSE if such a register list is invalid, otherwise return TRUE.  */
+   Return true if the list is valid, describing it in LIST if so.  */
 
 static bool
-reg_list_valid_p (uint32_t reginfo, int accept_alternate)
+reg_list_valid_p (uint32_t reginfo, struct aarch64_reglist *list,
+		  aarch64_reg_type reg_type)
 {
-  uint32_t i, nb_regs, prev_regno, incr;
+  uint32_t i, nb_regs, prev_regno, incr, mask;
+  mask = reg_type_mask (reg_type);
 
   nb_regs = 1 + (reginfo & 0x3);
   reginfo >>= 2;
   prev_regno = reginfo & 0x1f;
-  incr = accept_alternate ? 2 : 1;
+  incr = 1;
+
+  list->first_regno = prev_regno;
+  list->num_regs = nb_regs;
 
   for (i = 1; i < nb_regs; ++i)
     {
-      uint32_t curr_regno;
+      uint32_t curr_regno, curr_incr;
       reginfo >>= 5;
       curr_regno = reginfo & 0x1f;
-      if (curr_regno != ((prev_regno + incr) & 0x1f))
+      curr_incr = (curr_regno - prev_regno) & mask;
+      if (curr_incr == 0)
+	return false;
+      else if (i == 1)
+	incr = curr_incr;
+      else if (curr_incr != incr)
 	return false;
       prev_regno = curr_regno;
     }
 
+  list->stride = incr;
   return true;
 }
 
@@ -6350,17 +6534,20 @@ parse_operands (char *str, const aarch64_opcode *opcode)
   clear_error ();
   skip_whitespace (str);
 
-  if (AARCH64_CPU_HAS_FEATURE (AARCH64_FEATURE_SVE, *opcode->avariant))
-    imm_reg_type = REG_TYPE_R_Z_SP_BHSDQ_VZP;
+  if (AARCH64_CPU_HAS_FEATURE (*opcode->avariant, AARCH64_FEATURE_SME2))
+    imm_reg_type = REG_TYPE_R_ZR_SP_BHSDQ_VZP_PN;
+  else if (AARCH64_CPU_HAS_ANY_FEATURES (*opcode->avariant,
+					 AARCH64_FEATURE_SVE
+					 | AARCH64_FEATURE_SVE2))
+    imm_reg_type = REG_TYPE_R_ZR_SP_BHSDQ_VZP;
   else
-    imm_reg_type = REG_TYPE_R_Z_BHSDQ_V;
+    imm_reg_type = REG_TYPE_R_ZR_BHSDQ_V;
 
   for (i = 0; operands[i] != AARCH64_OPND_NIL; i++)
     {
       int64_t val;
       const reg_entry *reg;
       int comma_skipped_p = 0;
-      aarch64_reg_type rtype;
       struct vector_type_el vectype;
       aarch64_opnd_qualifier_t qualifier, base_qualifier, offset_qualifier;
       aarch64_opnd_info *info = &inst.base.operands[i];
@@ -6401,7 +6588,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_Rt_SYS:
 	case AARCH64_OPND_PAIRREG:
 	case AARCH64_OPND_SVE_Rm:
-	  po_int_reg_or_fail (REG_TYPE_R_Z);
+	  po_int_fp_reg_or_fail (REG_TYPE_R_ZR);
 
 	  /* In LS64 load/store instructions Rt register number must be even
 	     and <=22.  */
@@ -6424,7 +6611,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_Rt_SP:
 	case AARCH64_OPND_SVE_Rn_SP:
 	case AARCH64_OPND_Rm_SP:
-	  po_int_reg_or_fail (REG_TYPE_R_SP);
+	  po_int_fp_reg_or_fail (REG_TYPE_R_SP);
 	  break;
 
 	case AARCH64_OPND_Rm_EXT:
@@ -6459,16 +6646,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Vd:
 	case AARCH64_OPND_SVE_Vm:
 	case AARCH64_OPND_SVE_Vn:
-	  val = aarch64_reg_parse (&str, REG_TYPE_BHSDQ, &rtype, NULL);
-	  if (val == PARSE_FAIL)
-	    {
-	      first_error (_(get_reg_expected_msg (REG_TYPE_BHSDQ)));
-	      goto failure;
-	    }
-	  gas_assert (rtype >= REG_TYPE_FP_B && rtype <= REG_TYPE_FP_Q);
-
-	  info->reg.regno = val;
-	  info->qualifier = AARCH64_OPND_QLF_S_B + (rtype - REG_TYPE_FP_B);
+	  po_int_fp_reg_or_fail (REG_TYPE_BHSDQ);
 	  break;
 
 	case AARCH64_OPND_SVE_Pd:
@@ -6480,7 +6658,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Pn:
 	case AARCH64_OPND_SVE_Pt:
 	case AARCH64_OPND_SME_Pm:
-	  reg_type = REG_TYPE_PN;
+	  reg_type = REG_TYPE_P;
 	  goto vector_reg;
 
 	case AARCH64_OPND_SVE_Za_5:
@@ -6490,28 +6668,38 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Zm_16:
 	case AARCH64_OPND_SVE_Zn:
 	case AARCH64_OPND_SVE_Zt:
-	  reg_type = REG_TYPE_ZN;
+	case AARCH64_OPND_SME_Zm:
+	  reg_type = REG_TYPE_Z;
+	  goto vector_reg;
+
+	case AARCH64_OPND_SVE_PNd:
+	case AARCH64_OPND_SVE_PNg4_10:
+	case AARCH64_OPND_SVE_PNn:
+	case AARCH64_OPND_SVE_PNt:
+	case AARCH64_OPND_SME_PNd3:
+	case AARCH64_OPND_SME_PNg3:
+	case AARCH64_OPND_SME_PNn:
+	  reg_type = REG_TYPE_PN;
 	  goto vector_reg;
 
 	case AARCH64_OPND_Va:
 	case AARCH64_OPND_Vd:
 	case AARCH64_OPND_Vn:
 	case AARCH64_OPND_Vm:
-	  reg_type = REG_TYPE_VN;
+	  reg_type = REG_TYPE_V;
 	vector_reg:
-	  val = aarch64_reg_parse (&str, reg_type, NULL, &vectype);
-	  if (val == PARSE_FAIL)
-	    {
-	      first_error (_(get_reg_expected_msg (reg_type)));
-	      goto failure;
-	    }
+	  reg = aarch64_reg_parse (&str, reg_type, &vectype);
+	  if (!reg)
+	    goto failure;
 	  if (vectype.defined & NTA_HASINDEX)
 	    goto failure;
 
-	  info->reg.regno = val;
-	  if ((reg_type == REG_TYPE_PN || reg_type == REG_TYPE_ZN)
+	  info->reg.regno = reg->number;
+	  if ((reg_type == REG_TYPE_P
+	       || reg_type == REG_TYPE_PN
+	       || reg_type == REG_TYPE_Z)
 	      && vectype.type == NT_invtype)
-	    /* Unqualified Pn and Zn registers are allowed in certain
+	    /* Unqualified P and Z registers are allowed in certain
 	       contexts.  Rely on F_STRICT qualifier checking to catch
 	       invalid uses.  */
 	    info->qualifier = AARCH64_OPND_QLF_NIL;
@@ -6525,19 +6713,16 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_VdD1:
 	case AARCH64_OPND_VnD1:
-	  val = aarch64_reg_parse (&str, REG_TYPE_VN, NULL, &vectype);
-	  if (val == PARSE_FAIL)
-	    {
-	      set_first_syntax_error (_(get_reg_expected_msg (REG_TYPE_VN)));
-	      goto failure;
-	    }
+	  reg = aarch64_reg_parse (&str, REG_TYPE_V, &vectype);
+	  if (!reg)
+	    goto failure;
 	  if (vectype.type != NT_d || vectype.index != 1)
 	    {
 	      set_fatal_syntax_error
 		(_("the top half of a 128-bit FP/SIMD register is expected"));
 	      goto failure;
 	    }
-	  info->reg.regno = val;
+	  info->reg.regno = reg->number;
 	  /* N.B: VdD1 and VnD1 are treated as an fp or advsimd scalar register
 	     here; it is correct for the purpose of encoding/decoding since
 	     only the register number is explicitly encoded in the related
@@ -6547,11 +6732,25 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_SVE_Zm3_INDEX:
 	case AARCH64_OPND_SVE_Zm3_22_INDEX:
+	case AARCH64_OPND_SVE_Zm3_19_INDEX:
 	case AARCH64_OPND_SVE_Zm3_11_INDEX:
 	case AARCH64_OPND_SVE_Zm4_11_INDEX:
 	case AARCH64_OPND_SVE_Zm4_INDEX:
 	case AARCH64_OPND_SVE_Zn_INDEX:
-	  reg_type = REG_TYPE_ZN;
+	case AARCH64_OPND_SME_Zm_INDEX1:
+	case AARCH64_OPND_SME_Zm_INDEX2:
+	case AARCH64_OPND_SME_Zm_INDEX3_1:
+	case AARCH64_OPND_SME_Zm_INDEX3_2:
+	case AARCH64_OPND_SME_Zm_INDEX3_10:
+	case AARCH64_OPND_SME_Zm_INDEX4_1:
+	case AARCH64_OPND_SME_Zm_INDEX4_10:
+	case AARCH64_OPND_SME_Zn_INDEX1_16:
+	case AARCH64_OPND_SME_Zn_INDEX2_15:
+	case AARCH64_OPND_SME_Zn_INDEX2_16:
+	case AARCH64_OPND_SME_Zn_INDEX3_14:
+	case AARCH64_OPND_SME_Zn_INDEX3_15:
+	case AARCH64_OPND_SME_Zn_INDEX4_14:
+	  reg_type = REG_TYPE_Z;
 	  goto vector_reg_index;
 
 	case AARCH64_OPND_Ed:
@@ -6559,47 +6758,64 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_Em:
 	case AARCH64_OPND_Em16:
 	case AARCH64_OPND_SM3_IMM2:
-	  reg_type = REG_TYPE_VN;
+	  reg_type = REG_TYPE_V;
 	vector_reg_index:
-	  val = aarch64_reg_parse (&str, reg_type, NULL, &vectype);
-	  if (val == PARSE_FAIL)
-	    {
-	      first_error (_(get_reg_expected_msg (reg_type)));
-	      goto failure;
-	    }
-	  if (vectype.type == NT_invtype || !(vectype.defined & NTA_HASINDEX))
+	  reg = aarch64_reg_parse (&str, reg_type, &vectype);
+	  if (!reg)
+	    goto failure;
+	  if (!(vectype.defined & NTA_HASINDEX))
 	    goto failure;
 
-	  info->reglane.regno = val;
+	  if (reg->type == REG_TYPE_Z && vectype.type == NT_invtype)
+	    /* Unqualified Zn[index] is allowed in LUTI2 instructions.  */
+	    info->qualifier = AARCH64_OPND_QLF_NIL;
+	  else
+	    {
+	      if (vectype.type == NT_invtype)
+		goto failure;
+	      info->qualifier = vectype_to_qualifier (&vectype);
+	      if (info->qualifier == AARCH64_OPND_QLF_NIL)
+		goto failure;
+	    }
+
+	  info->reglane.regno = reg->number;
 	  info->reglane.index = vectype.index;
-	  info->qualifier = vectype_to_qualifier (&vectype);
-	  if (info->qualifier == AARCH64_OPND_QLF_NIL)
-	    goto failure;
 	  break;
 
 	case AARCH64_OPND_SVE_ZnxN:
 	case AARCH64_OPND_SVE_ZtxN:
-	  reg_type = REG_TYPE_ZN;
+	case AARCH64_OPND_SME_Zdnx2:
+	case AARCH64_OPND_SME_Zdnx4:
+	case AARCH64_OPND_SME_Zmx2:
+	case AARCH64_OPND_SME_Zmx4:
+	case AARCH64_OPND_SME_Znx2:
+	case AARCH64_OPND_SME_Znx4:
+	case AARCH64_OPND_SME_Ztx2_STRIDED:
+	case AARCH64_OPND_SME_Ztx4_STRIDED:
+	  reg_type = REG_TYPE_Z;
+	  goto vector_reg_list;
+
+	case AARCH64_OPND_SME_Pdx2:
+	case AARCH64_OPND_SME_PdxN:
+	  reg_type = REG_TYPE_P;
 	  goto vector_reg_list;
 
 	case AARCH64_OPND_LVn:
 	case AARCH64_OPND_LVt:
 	case AARCH64_OPND_LVt_AL:
 	case AARCH64_OPND_LEt:
-	  reg_type = REG_TYPE_VN;
+	  reg_type = REG_TYPE_V;
 	vector_reg_list:
-	  if (reg_type == REG_TYPE_ZN
+	  if (reg_type == REG_TYPE_Z
 	      && get_opcode_dependent_value (opcode) == 1
 	      && *str != '{')
 	    {
-	      val = aarch64_reg_parse (&str, reg_type, NULL, &vectype);
-	      if (val == PARSE_FAIL)
-		{
-		  first_error (_(get_reg_expected_msg (reg_type)));
-		  goto failure;
-		}
-	      info->reglist.first_regno = val;
+	      reg = aarch64_reg_parse (&str, reg_type, &vectype);
+	      if (!reg)
+		goto failure;
+	      info->reglist.first_regno = reg->number;
 	      info->reglist.num_regs = 1;
+	      info->reglist.stride = 1;
 	    }
 	  else
 	    {
@@ -6607,21 +6823,18 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	      if (val == PARSE_FAIL)
 		goto failure;
 
-	      if (! reg_list_valid_p (val, /* accept_alternate */ 0))
+	      if (! reg_list_valid_p (val, &info->reglist, reg_type))
 		{
 		  set_fatal_syntax_error (_("invalid register list"));
 		  goto failure;
 		}
 
-	      if (vectype.width != 0 && *str != ',')
+	      if ((int) vectype.width > 0 && *str != ',')
 		{
 		  set_fatal_syntax_error
 		    (_("expected element type rather than vector type"));
 		  goto failure;
 		}
-
-	      info->reglist.first_regno = (val >> 2) & 0x1f;
-	      info->reglist.num_regs = (val & 0x3) + 1;
 	    }
 	  if (operands[i] == AARCH64_OPND_LEt)
 	    {
@@ -6636,7 +6849,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 		goto failure;
 	      if (!(vectype.defined & NTA_HASTYPE))
 		{
-		  if (reg_type == REG_TYPE_ZN)
+		  if (reg_type == REG_TYPE_Z || reg_type == REG_TYPE_P)
 		    set_fatal_syntax_error (_("missing type suffix"));
 		  goto failure;
 		}
@@ -6689,6 +6902,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_SHLIMM_PRED:
 	case AARCH64_OPND_SVE_SHLIMM_UNPRED:
 	case AARCH64_OPND_SVE_SHLIMM_UNPRED_22:
+	case AARCH64_OPND_SME_SHRIMM4:
+	case AARCH64_OPND_SME_SHRIMM5:
 	case AARCH64_OPND_SVE_SHRIMM_PRED:
 	case AARCH64_OPND_SVE_SHRIMM_UNPRED:
 	case AARCH64_OPND_SVE_SHRIMM_UNPRED_22:
@@ -6796,8 +7011,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_IMM_MOV:
 	  {
 	    char *saved = str;
-	    if (reg_name_p (str, REG_TYPE_R_Z_SP) ||
-		reg_name_p (str, REG_TYPE_VN))
+	    if (reg_name_p (str, REG_TYPE_R_ZR_SP)
+		|| reg_name_p (str, REG_TYPE_V))
 	      goto failure;
 	    str = saved;
 	    po_misc_or_fail (aarch64_get_expression (&inst.reloc.exp, &str,
@@ -7251,23 +7466,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_SME_PnT_Wm_imm:
-	  /* <Pn>.<T>[<Wm>, #<imm>]  */
-	  {
-	    int index_base_reg;
-	    int imm;
-	    val = parse_sme_pred_reg_with_index (&str,
-	                                         &index_base_reg,
-	                                         &imm,
-	                                         &qualifier);
-	    if (val == PARSE_FAIL)
-	        goto failure;
-
-	    info->za_tile_vector.regno = val;
-	    info->za_tile_vector.index.regno = index_base_reg;
-	    info->za_tile_vector.index.imm = imm;
-	    info->qualifier = qualifier;
-	    break;
-	  }
+	  if (!parse_dual_indexed_reg (&str, REG_TYPE_P,
+				       &info->indexed_za, &qualifier, 0))
+	    goto failure;
+	  info->qualifier = qualifier;
+	  break;
 
 	case AARCH64_OPND_SVE_ADDR_RI_S4x16:
 	case AARCH64_OPND_SVE_ADDR_RI_S4x32:
@@ -7570,10 +7773,66 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  inst.base.operands[i].prfop = aarch64_prfops + val;
 	  break;
 
+	case AARCH64_OPND_RPRFMOP:
+	  po_enum_or_fail (aarch64_rprfmop_array);
+	  info->imm.value = val;
+	  break;
+
 	case AARCH64_OPND_BARRIER_PSB:
 	  val = parse_barrier_psb (&str, &(info->hint_option));
 	  if (val == PARSE_FAIL)
 	    goto failure;
+	  break;
+
+	case AARCH64_OPND_SME_ZT0:
+	  po_reg_or_fail (REG_TYPE_ZT0);
+	  break;
+
+	case AARCH64_OPND_SME_ZT0_INDEX:
+	  reg = aarch64_reg_parse (&str, REG_TYPE_ZT0, &vectype);
+	  if (!reg || vectype.type != NT_invtype)
+	    goto failure;
+	  if (!(vectype.defined & NTA_HASINDEX))
+	    {
+	      set_syntax_error (_("missing register index"));
+	      goto failure;
+	    }
+	  info->imm.value = vectype.index;
+	  break;
+
+	case AARCH64_OPND_SME_ZT0_LIST:
+	  if (*str != '{')
+	    {
+	      set_expected_reglist_error (REG_TYPE_ZT0, parse_reg (&str));
+	      goto failure;
+	    }
+	  str++;
+	  if (!parse_typed_reg (&str, REG_TYPE_ZT0, &vectype, PTR_IN_REGLIST))
+	    goto failure;
+	  if (*str != '}')
+	    {
+	      set_syntax_error (_("expected '}' after ZT0"));
+	      goto failure;
+	    }
+	  str++;
+	  break;
+
+	case AARCH64_OPND_SME_PNn3_INDEX1:
+	case AARCH64_OPND_SME_PNn3_INDEX2:
+	  reg = aarch64_reg_parse (&str, REG_TYPE_PN, &vectype);
+	  if (!reg)
+	    goto failure;
+	  if (!(vectype.defined & NTA_HASINDEX))
+	    {
+	      set_syntax_error (_("missing register index"));
+	      goto failure;
+	    }
+	  info->reglane.regno = reg->number;
+	  info->reglane.index = vectype.index;
+	  if (vectype.type == NT_invtype)
+	    info->qualifier = AARCH64_OPND_QLF_NIL;
+	  else
+	    info->qualifier = vectype_to_qualifier (&vectype);
 	  break;
 
 	case AARCH64_OPND_BTI_TARGET:
@@ -7584,59 +7843,53 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_SME_ZAda_2b:
 	case AARCH64_OPND_SME_ZAda_3b:
-	  val = parse_sme_zada_operand (&str, &qualifier);
-	  if (val == PARSE_FAIL)
+	  reg = parse_reg_with_qual (&str, REG_TYPE_ZAT, &qualifier, 0);
+	  if (!reg)
 	    goto failure;
-	  info->reg.regno = val;
+	  info->reg.regno = reg->number;
 	  info->qualifier = qualifier;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_HV_idx_src:
+	case AARCH64_OPND_SME_ZA_HV_idx_srcxN:
 	case AARCH64_OPND_SME_ZA_HV_idx_dest:
+	case AARCH64_OPND_SME_ZA_HV_idx_destxN:
 	case AARCH64_OPND_SME_ZA_HV_idx_ldstr:
-	  {
-	    enum sme_hv_slice slice_indicator;
-	    int vector_select_register;
-	    int imm;
+	  if (operands[i] == AARCH64_OPND_SME_ZA_HV_idx_ldstr
+	      ? !parse_sme_za_hv_tiles_operand_with_braces (&str,
+							    &info->indexed_za,
+							    &qualifier)
+	      : !parse_dual_indexed_reg (&str, REG_TYPE_ZATHV,
+					 &info->indexed_za, &qualifier, 0))
+	    goto failure;
+	  info->qualifier = qualifier;
+	  break;
 
-	    if (operands[i] == AARCH64_OPND_SME_ZA_HV_idx_ldstr)
-	      val = parse_sme_za_hv_tiles_operand_with_braces (&str,
-	                                                       &slice_indicator,
-	                                                       &vector_select_register,
-	                                                       &imm,
-	                                                       &qualifier);
-	    else
-	      val = parse_sme_za_hv_tiles_operand (&str, &slice_indicator,
-	                                           &vector_select_register,
-	                                           &imm,
-	                                           &qualifier);
-	    if (val == PARSE_FAIL)
-	      goto failure;
-	    info->za_tile_vector.regno = val;
-	    info->za_tile_vector.index.regno = vector_select_register;
-	    info->za_tile_vector.index.imm = imm;
-	    info->za_tile_vector.v = slice_indicator;
-	    info->qualifier = qualifier;
-	    break;
-	  }
+	case AARCH64_OPND_SME_list_of_64bit_tiles:
+	  val = parse_sme_list_of_64bit_tiles (&str);
+	  if (val == PARSE_FAIL)
+	    goto failure;
+	  info->imm.value = val;
+	  break;
 
-	  case AARCH64_OPND_SME_list_of_64bit_tiles:
-	    val = parse_sme_list_of_64bit_tiles (&str);
-	    if (val == PARSE_FAIL)
-	      goto failure;
-	    info->imm.value = val;
-	    break;
+	case AARCH64_OPND_SME_ZA_array_off1x4:
+	case AARCH64_OPND_SME_ZA_array_off2x2:
+	case AARCH64_OPND_SME_ZA_array_off2x4:
+	case AARCH64_OPND_SME_ZA_array_off3_0:
+	case AARCH64_OPND_SME_ZA_array_off3_5:
+	case AARCH64_OPND_SME_ZA_array_off3x2:
+	case AARCH64_OPND_SME_ZA_array_off4:
+	  if (!parse_dual_indexed_reg (&str, REG_TYPE_ZA,
+				       &info->indexed_za, &qualifier, 0))
+	    goto failure;
+	  info->qualifier = qualifier;
+	  break;
 
-	  case AARCH64_OPND_SME_ZA_array:
-	    {
-	      int imm;
-	      val = parse_sme_za_array (&str, &imm);
-	      if (val == PARSE_FAIL)
-	        goto failure;
-	      info->za_tile_vector.index.regno = val;
-	      info->za_tile_vector.index.imm = imm;
-	      break;
-	    }
+	case AARCH64_OPND_SME_VLxN_10:
+	case AARCH64_OPND_SME_VLxN_13:
+	  po_strict_enum_or_fail (aarch64_sme_vlxn_array);
+	  info->imm.value = val;
+	  break;
 
 	case AARCH64_OPND_MOPS_ADDR_Rd:
 	case AARCH64_OPND_MOPS_ADDR_Rs:
@@ -7731,15 +7984,15 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
   if (error_p ())
     {
+      inst.parsing_error.index = i;
       DEBUG_TRACE ("parsing FAIL: %s - %s",
-		   operand_mismatch_kind_names[get_error_kind ()],
-		   get_error_message ());
+		   operand_mismatch_kind_names[inst.parsing_error.kind],
+		   inst.parsing_error.error);
       /* Record the operand error properly; this is useful when there
 	 are multiple instruction templates for a mnemonic name, so that
 	 later on, we can select the error that most closely describes
 	 the problem.  */
-      record_operand_error (opcode, i, get_error_kind (),
-			    get_error_message ());
+      record_operand_error_info (opcode, &inst.parsing_error);
       return false;
     }
   else
@@ -8120,8 +8373,7 @@ md_assemble (char *str)
 	  && do_encode (inst_base->opcode, &inst.base, &inst_base->value))
 	{
 	  /* Check that this instruction is supported for this CPU.  */
-	  if (!opcode->avariant
-	      || !AARCH64_CPU_HAS_ALL_FEATURES (cpu_variant, *opcode->avariant))
+	  if (!aarch64_cpu_supports_inst_p (cpu_variant, inst_base))
 	    {
 	      as_bad (_("selected processor does not support `%s'"), str);
 	      return;
@@ -8250,8 +8502,8 @@ static const reg_entry reg_names[] = {
   REGDEF (wsp, 31, SP_32), REGDEF (WSP, 31, SP_32),
   REGDEF (sp, 31, SP_64), REGDEF (SP, 31, SP_64),
 
-  REGDEF (wzr, 31, Z_32), REGDEF (WZR, 31, Z_32),
-  REGDEF (xzr, 31, Z_64), REGDEF (XZR, 31, Z_64),
+  REGDEF (wzr, 31, ZR_32), REGDEF (WZR, 31, ZR_32),
+  REGDEF (xzr, 31, ZR_64), REGDEF (XZR, 31, ZR_64),
 
   /* Floating-point single precision registers.  */
   REGSET (s, FP_S), REGSET (S, FP_S),
@@ -8269,22 +8521,32 @@ static const reg_entry reg_names[] = {
   REGSET (q, FP_Q), REGSET (Q, FP_Q),
 
   /* FP/SIMD registers.  */
-  REGSET (v, VN), REGSET (V, VN),
+  REGSET (v, V), REGSET (V, V),
 
   /* SVE vector registers.  */
-  REGSET (z, ZN), REGSET (Z, ZN),
+  REGSET (z, Z), REGSET (Z, Z),
 
-  /* SVE predicate registers.  */
-  REGSET16 (p, PN), REGSET16 (P, PN),
+  /* SVE predicate(-as-mask) registers.  */
+  REGSET16 (p, P), REGSET16 (P, P),
+
+  /* SVE predicate-as-counter registers.  */
+  REGSET16 (pn, PN), REGSET16 (PN, PN),
+
+  /* SME ZA.  We model this as a register because it acts syntactically
+     like ZA0H, supporting qualifier suffixes and indexing.  */
+  REGDEF (za, 0, ZA), REGDEF (ZA, 0, ZA),
 
   /* SME ZA tile registers.  */
-  REGSET16 (za, ZA), REGSET16 (ZA, ZA),
+  REGSET16 (za, ZAT), REGSET16 (ZA, ZAT),
 
   /* SME ZA tile registers (horizontal slice).  */
-  REGSET16S (za, h, ZAH), REGSET16S (ZA, H, ZAH),
+  REGSET16S (za, h, ZATH), REGSET16S (ZA, H, ZATH),
 
   /* SME ZA tile registers (vertical slice).  */
-  REGSET16S (za, v, ZAV), REGSET16S (ZA, V, ZAV)
+  REGSET16S (za, v, ZATV), REGSET16S (ZA, V, ZATV),
+
+  /* SME2 ZT0.  */
+  REGDEF (zt0, 0, ZT0), REGDEF (ZT0, 0, ZT0)
 };
 
 #undef REGDEF
@@ -10156,9 +10418,15 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sme",		AARCH64_FEATURE (AARCH64_FEATURE_SME, 0),
 			AARCH64_FEATURE (AARCH64_FEATURE_SVE2
 					 | AARCH64_FEATURE_BFLOAT16, 0)},
-  {"sme-f64",		AARCH64_FEATURE (AARCH64_FEATURE_SME_F64, 0),
+  {"sme-f64",		AARCH64_FEATURE (AARCH64_FEATURE_SME_F64F64, 0),
 			AARCH64_FEATURE (AARCH64_FEATURE_SME, 0)},
-  {"sme-i64",		AARCH64_FEATURE (AARCH64_FEATURE_SME_I64, 0),
+  {"sme-f64f64",	AARCH64_FEATURE (AARCH64_FEATURE_SME_F64F64, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_SME, 0)},
+  {"sme-i64",		AARCH64_FEATURE (AARCH64_FEATURE_SME_I16I64, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_SME, 0)},
+  {"sme-i16i64",	AARCH64_FEATURE (AARCH64_FEATURE_SME_I16I64, 0),
+			AARCH64_FEATURE (AARCH64_FEATURE_SME, 0)},
+  {"sme2",		AARCH64_FEATURE (AARCH64_FEATURE_SME2, 0),
 			AARCH64_FEATURE (AARCH64_FEATURE_SME, 0)},
   {"bf16",		AARCH64_FEATURE (AARCH64_FEATURE_BFLOAT16, 0),
 			AARCH64_FEATURE (AARCH64_FEATURE_FP, 0)},

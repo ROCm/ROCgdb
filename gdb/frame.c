@@ -2562,12 +2562,19 @@ inside_main_func (frame_info_ptr this_frame)
   if (current_program_space->symfile_object_file == nullptr)
     return false;
 
-  CORE_ADDR sym_addr;
+  CORE_ADDR sym_addr = 0;
   const char *name = main_name ();
   bound_minimal_symbol msymbol
     = lookup_minimal_symbol (name, NULL,
 			     current_program_space->symfile_object_file);
-  if (msymbol.minsym == nullptr)
+
+  if (msymbol.minsym != nullptr)
+    sym_addr = msymbol.value_address ();
+
+  /* Favor a full symbol in Fortran, for the case where the Fortran main
+     is also called "main".  */
+  if (msymbol.minsym == nullptr
+      || get_frame_language (this_frame) == language_fortran)
     {
       /* In some language (for example Fortran) there will be no minimal
 	 symbol with the name of the main function.  In this case we should
@@ -2582,28 +2589,27 @@ inside_main_func (frame_info_ptr this_frame)
       select_frame (this_frame);
 
       struct block_symbol bs = lookup_symbol (name, NULL, VAR_DOMAIN, 0);
-      if (bs.symbol == nullptr)
-	return false;
 
       /* We might have found some unrelated symbol.  For example, the
 	 Rust compiler can emit both a subprogram and a namespace with
 	 the same name in the same scope; and due to how gdb's symbol
 	 tables currently work, we can't request the one we'd
 	 prefer.  */
-      if (bs.symbol->aclass () != LOC_BLOCK)
+      if (bs.symbol != nullptr && bs.symbol->aclass () == LOC_BLOCK)
+	{
+	  const struct block *block = bs.symbol->value_block ();
+	  gdb_assert (block != nullptr);
+	  sym_addr = block->start ();
+	}
+      else if (msymbol.minsym == nullptr)
 	return false;
-
-      const struct block *block = bs.symbol->value_block ();
-      gdb_assert (block != nullptr);
-      sym_addr = block->start ();
     }
-  else
-    sym_addr = msymbol.value_address ();
 
   /* Convert any function descriptor addresses into the actual function
      code address.  */
-  sym_addr = gdbarch_convert_from_func_ptr_addr
-    (get_frame_arch (this_frame), sym_addr, current_inferior ()->top_target ());
+  sym_addr = (gdbarch_convert_from_func_ptr_addr
+	      (get_frame_arch (this_frame), sym_addr,
+	       current_inferior ()->top_target ()));
 
   return sym_addr == get_frame_func (this_frame);
 }

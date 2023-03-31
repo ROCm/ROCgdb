@@ -168,24 +168,35 @@ extract_fields (aarch64_insn code, aarch64_insn mask, ...)
   return value;
 }
 
-/* Extract the value of all fields in SELF->fields from instruction CODE.
-   The least significant bit comes from the final field.  */
+/* Extract the value of all fields in SELF->fields after START from
+   instruction CODE.  The least significant bit comes from the final field.  */
 
 static aarch64_insn
-extract_all_fields (const aarch64_operand *self, aarch64_insn code)
+extract_all_fields_after (const aarch64_operand *self, unsigned int start,
+			  aarch64_insn code)
 {
   aarch64_insn value;
   unsigned int i;
   enum aarch64_field_kind kind;
 
   value = 0;
-  for (i = 0; i < ARRAY_SIZE (self->fields) && self->fields[i] != FLD_NIL; ++i)
+  for (i = start;
+       i < ARRAY_SIZE (self->fields) && self->fields[i] != FLD_NIL; ++i)
     {
       kind = self->fields[i];
       value <<= fields[kind].width;
       value |= extract_field (kind, code, 0);
     }
   return value;
+}
+
+/* Extract the value of all fields in SELF->fields from instruction CODE.
+   The least significant bit comes from the final field.  */
+
+static aarch64_insn
+extract_all_fields (const aarch64_operand *self, aarch64_insn code)
+{
+  return extract_all_fields_after (self, 0, code);
 }
 
 /* Sign-extend bit I of VALUE.  */
@@ -253,8 +264,9 @@ get_expected_qualifier (const aarch64_inst *inst, int i)
   aarch64_opnd_qualifier_seq_t qualifiers;
   /* Should not be called if the qualifier is known.  */
   assert (inst->operands[i].qualifier == AARCH64_OPND_QLF_NIL);
+  int invalid_count;
   if (aarch64_find_best_match (inst, inst->opcode->qualifiers_list,
-			       i, qualifiers))
+			       i, qualifiers, &invalid_count))
     return qualifiers[i];
   else
     return AARCH64_OPND_QLF_NIL;
@@ -278,7 +290,8 @@ aarch64_ext_regno (const aarch64_operand *self, aarch64_opnd_info *info,
 		   const aarch64_inst *inst ATTRIBUTE_UNUSED,
 		   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  info->reg.regno = extract_field (self->fields[0], code, 0);
+  info->reg.regno = (extract_field (self->fields[0], code, 0)
+		     + get_operand_specific_data (self));
   return true;
 }
 
@@ -334,7 +347,7 @@ aarch64_ext_reglane (const aarch64_operand *self, aarch64_opnd_info *info,
 	  unsigned shift;
 	  /* index2 for e.g. INS <Vd>.<Ts>[<index1>], <Vn>.<Ts>[<index2>].  */
 	  assert (info->idx == 1);	/* Vn */
-	  aarch64_insn value = extract_field (FLD_imm4, code, 0);
+	  aarch64_insn value = extract_field (FLD_imm4_11, code, 0);
 	  /* Depend on AARCH64_OPND_Ed to determine the qualifier.  */
 	  info->qualifier = get_expected_qualifier (inst, info->idx);
 	  shift = get_logsz (aarch64_get_qualifier_esize (info->qualifier));
@@ -438,6 +451,7 @@ aarch64_ext_reglist (const aarch64_operand *self, aarch64_opnd_info *info,
   info->reglist.first_regno = extract_field (self->fields[0], code, 0);
   /* len */
   info->reglist.num_regs = extract_field (FLD_len, code, 0) + 1;
+  info->reglist.stride = 1;
   return true;
 }
 
@@ -481,6 +495,7 @@ aarch64_ext_ldst_reglist (const aarch64_operand *self ATTRIBUTE_UNUSED,
   if (expected_num != data[value].num_elements || data[value].is_reserved)
     return false;
   info->reglist.num_regs = data[value].num_regs;
+  info->reglist.stride = 1;
 
   return true;
 }
@@ -509,6 +524,7 @@ aarch64_ext_ldst_reglist_r (const aarch64_operand *self ATTRIBUTE_UNUSED,
   if (info->reglist.num_regs == 1 && value == (aarch64_insn) 1)
     info->reglist.num_regs = 2;
 
+  info->reglist.stride = 1;
   return true;
 }
 
@@ -572,6 +588,7 @@ aarch64_ext_ldst_elemlist (const aarch64_operand *self ATTRIBUTE_UNUSED,
 
   info->reglist.has_index = 1;
   info->reglist.num_regs = 0;
+  info->reglist.stride = 1;
   /* Number of registers is equal to the number of elements in
      each structure to be loaded/stored.  */
   info->reglist.num_regs = get_opcode_dependent_value (inst->opcode);
@@ -685,6 +702,8 @@ aarch64_ext_imm (const aarch64_operand *self, aarch64_opnd_info *info,
 
   if (operand_need_shift_by_two (self))
     imm <<= 2;
+  else if (operand_need_shift_by_three (self))
+    imm <<= 3;
   else if (operand_need_shift_by_four (self))
     imm <<= 4;
 
@@ -1390,7 +1409,7 @@ aarch64_ext_reg_extended (const aarch64_operand *self ATTRIBUTE_UNUSED,
   info->shifter.kind =
     aarch64_get_operand_modifier_from_value (value, true /* extend_p */);
   /* imm3 */
-  info->shifter.amount = extract_field (FLD_imm3, code,  0);
+  info->shifter.amount = extract_field (FLD_imm3_10, code,  0);
 
   /* This makes the constraint checking happy.  */
   info->shifter.operator_present = 1;
@@ -1429,7 +1448,7 @@ aarch64_ext_reg_shifted (const aarch64_operand *self ATTRIBUTE_UNUSED,
        instructions.  */
     return false;
   /* imm6 */
-  info->shifter.amount = extract_field (FLD_imm6, code,  0);
+  info->shifter.amount = extract_field (FLD_imm6_10, code,  0);
 
   /* This makes the constraint checking happy.  */
   info->shifter.operator_present = 1;
@@ -1507,7 +1526,7 @@ aarch64_ext_sve_addr_ri_s9xvl (const aarch64_operand *self,
 {
   int offset;
 
-  offset = extract_fields (code, 0, 2, FLD_SVE_imm6, FLD_imm3);
+  offset = extract_fields (code, 0, 2, FLD_SVE_imm6, FLD_imm3_10);
   offset = (((offset + 256) & 511) - 256);
   return aarch64_ext_sve_addr_reg_mul_vl (self, info, code, offset);
 }
@@ -1710,6 +1729,20 @@ aarch64_ext_sve_aimm (const aarch64_operand *self,
 	  && decode_sve_aimm (info, (uint8_t) info->imm.value));
 }
 
+bool
+aarch64_ext_sve_aligned_reglist (const aarch64_operand *self,
+				 aarch64_opnd_info *info, aarch64_insn code,
+				 const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				 aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  unsigned int num_regs = get_operand_specific_data (self);
+  unsigned int val = extract_field (self->fields[0], code, 0);
+  info->reglist.first_regno = val * num_regs;
+  info->reglist.num_regs = num_regs;
+  info->reglist.stride = 1;
+  return true;
+}
+
 /* Decode an SVE CPY/DUP immediate.  */
 bool
 aarch64_ext_sve_asimm (const aarch64_operand *self,
@@ -1785,44 +1818,65 @@ aarch64_ext_sme_za_hv_tiles (const aarch64_operand *self,
 
   /* Deduce qualifier encoded in size and Q fields.  */
   if (fld_size == 0)
-    info->qualifier = AARCH64_OPND_QLF_S_B;
-  else if (fld_size == 1)
-    info->qualifier = AARCH64_OPND_QLF_S_H;
-  else if (fld_size == 2)
-    info->qualifier = AARCH64_OPND_QLF_S_S;
-  else if (fld_size == 3 && fld_q == 0)
-    info->qualifier = AARCH64_OPND_QLF_S_D;
-  else if (fld_size == 3 && fld_q == 1)
-    info->qualifier = AARCH64_OPND_QLF_S_Q;
-
-  info->za_tile_vector.index.regno = fld_rv + 12;
-  info->za_tile_vector.v = fld_v;
-
-  switch (info->qualifier)
     {
-    case AARCH64_OPND_QLF_S_B:
-      info->za_tile_vector.regno = 0;
-      info->za_tile_vector.index.imm = fld_zan_imm;
-      break;
-    case AARCH64_OPND_QLF_S_H:
-      info->za_tile_vector.regno = fld_zan_imm >> 3;
-      info->za_tile_vector.index.imm = fld_zan_imm & 0x07;
-      break;
-    case AARCH64_OPND_QLF_S_S:
-      info->za_tile_vector.regno = fld_zan_imm >> 2;
-      info->za_tile_vector.index.imm = fld_zan_imm & 0x03;
-      break;
-    case AARCH64_OPND_QLF_S_D:
-      info->za_tile_vector.regno = fld_zan_imm >> 1;
-      info->za_tile_vector.index.imm = fld_zan_imm & 0x01;
-      break;
-    case AARCH64_OPND_QLF_S_Q:
-      info->za_tile_vector.regno = fld_zan_imm;
-      info->za_tile_vector.index.imm = 0;
-      break;
-    default:
-      return false;
+      info->indexed_za.regno = 0;
+      info->indexed_za.index.imm = fld_zan_imm;
     }
+  else if (fld_size == 1)
+    {
+      info->indexed_za.regno = fld_zan_imm >> 3;
+      info->indexed_za.index.imm = fld_zan_imm & 0x07;
+    }
+  else if (fld_size == 2)
+    {
+      info->indexed_za.regno = fld_zan_imm >> 2;
+      info->indexed_za.index.imm = fld_zan_imm & 0x03;
+    }
+  else if (fld_size == 3 && fld_q == 0)
+    {
+      info->indexed_za.regno = fld_zan_imm >> 1;
+      info->indexed_za.index.imm = fld_zan_imm & 0x01;
+    }
+  else if (fld_size == 3 && fld_q == 1)
+    {
+      info->indexed_za.regno = fld_zan_imm;
+      info->indexed_za.index.imm = 0;
+    }
+  else
+    return false;
+
+  info->indexed_za.index.regno = fld_rv + 12;
+  info->indexed_za.v = fld_v;
+
+  return true;
+}
+
+bool
+aarch64_ext_sme_za_hv_tiles_range (const aarch64_operand *self,
+				   aarch64_opnd_info *info, aarch64_insn code,
+				   const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				   aarch64_operand_error *errors
+				     ATTRIBUTE_UNUSED)
+{
+  int ebytes = aarch64_get_qualifier_esize (info->qualifier);
+  int range_size = get_opcode_dependent_value (inst->opcode);
+  int fld_v = extract_field (self->fields[0], code, 0);
+  int fld_rv = extract_field (self->fields[1], code, 0);
+  int fld_zan_imm = extract_field (self->fields[2], code, 0);
+  int max_value = 16 / range_size / ebytes;
+
+  if (max_value == 0)
+    max_value = 1;
+
+  int regno = fld_zan_imm / max_value;
+  if (regno >= ebytes)
+    return false;
+
+  info->indexed_za.regno = regno;
+  info->indexed_za.index.imm = (fld_zan_imm % max_value) * range_size;
+  info->indexed_za.index.countm1 = range_size - 1;
+  info->indexed_za.index.regno = fld_rv + 12;
+  info->indexed_za.v = fld_v;
 
   return true;
 }
@@ -1846,18 +1900,27 @@ aarch64_ext_sme_za_list (const aarch64_operand *self,
 }
 
 /* Decode ZA array vector select register (Rv field), optional vector and
-   memory offset (imm4 field).
+   memory offset (imm4_11 field).
 */
 bool
 aarch64_ext_sme_za_array (const aarch64_operand *self,
                           aarch64_opnd_info *info, aarch64_insn code,
-                          const aarch64_inst *inst ATTRIBUTE_UNUSED,
+                          const aarch64_inst *inst,
                           aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  int regno = extract_field (self->fields[0], code, 0) + 12;
+  int regno = extract_field (self->fields[0], code, 0);
+  if (info->type == AARCH64_OPND_SME_ZA_array_off4)
+    regno += 12;
+  else
+    regno += 8;
   int imm = extract_field (self->fields[1], code, 0);
-  info->za_tile_vector.index.regno = regno;
-  info->za_tile_vector.index.imm = imm;
+  int num_offsets = get_operand_specific_data (self);
+  if (num_offsets == 0)
+    num_offsets = 1;
+  info->indexed_za.index.regno = regno;
+  info->indexed_za.index.imm = imm * num_offsets;
+  info->indexed_za.index.countm1 = num_offsets - 1;
+  info->indexed_za.group_size = get_opcode_dependent_value (inst->opcode);
   return true;
 }
 
@@ -1911,33 +1974,21 @@ aarch64_ext_sme_pred_reg_with_index (const aarch64_operand *self,
   aarch64_insn fld_tszl = extract_field (self->fields[4], code, 0);
   int imm;
 
-  info->za_tile_vector.regno = fld_pn;
-  info->za_tile_vector.index.regno = fld_rm + 12;
+  info->indexed_za.regno = fld_pn;
+  info->indexed_za.index.regno = fld_rm + 12;
 
-  if (fld_tszh == 0x1 && fld_tszl == 0x0)
-    {
-      info->qualifier = AARCH64_OPND_QLF_S_D;
-      imm = fld_i1;
-    }
-  else if (fld_tszl == 0x4)
-    {
-      info->qualifier = AARCH64_OPND_QLF_S_S;
-      imm = (fld_i1 << 1) | fld_tszh;
-    }
-  else if ((fld_tszl & 0x3) == 0x2)
-    {
-      info->qualifier = AARCH64_OPND_QLF_S_H;
-      imm = (fld_i1 << 2) | (fld_tszh << 1) | (fld_tszl >> 2);
-    }
-  else if (fld_tszl & 0x1)
-    {
-      info->qualifier = AARCH64_OPND_QLF_S_B;
-      imm = (fld_i1 << 3) | (fld_tszh << 2) | (fld_tszl >> 1);
-    }
+  if (fld_tszl & 0x1)
+    imm = (fld_i1 << 3) | (fld_tszh << 2) | (fld_tszl >> 1);
+  else if (fld_tszl & 0x2)
+    imm = (fld_i1 << 2) | (fld_tszh << 1) | (fld_tszl >> 2);
+  else if (fld_tszl & 0x4)
+    imm = (fld_i1 << 1) | fld_tszh;
+  else if (fld_tszh)
+    imm = fld_i1;
   else
     return false;
 
-  info->za_tile_vector.index.imm = imm;
+  info->indexed_za.index.imm = imm;
   return true;
 }
 
@@ -2002,6 +2053,25 @@ aarch64_ext_sve_reglist (const aarch64_operand *self,
 {
   info->reglist.first_regno = extract_field (self->fields[0], code, 0);
   info->reglist.num_regs = get_opcode_dependent_value (inst->opcode);
+  info->reglist.stride = 1;
+  return true;
+}
+
+/* Decode a strided register list.  The first field holds the top bit
+   (0 or 16) and the second field holds the lower bits.  The stride is
+   16 divided by the list length.  */
+bool
+aarch64_ext_sve_strided_reglist (const aarch64_operand *self,
+				 aarch64_opnd_info *info, aarch64_insn code,
+				 const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				 aarch64_operand_error *errors
+				   ATTRIBUTE_UNUSED)
+{
+  unsigned int upper = extract_field (self->fields[0], code, 0);
+  unsigned int lower = extract_field (self->fields[1], code, 0);
+  info->reglist.first_regno = upper * 16 + lower;
+  info->reglist.num_regs = get_operand_specific_data (self);
+  info->reglist.stride = 16 / info->reglist.num_regs;
   return true;
 }
 
@@ -2072,6 +2142,33 @@ aarch64_ext_x0_to_x30 (const aarch64_operand *self, aarch64_opnd_info *info,
 {
   info->reg.regno = extract_field (self->fields[0], code, 0);
   return info->reg.regno <= 30;
+}
+
+/* Decode an indexed register, with the first field being the register
+   number and the remaining fields being the index.  */
+bool
+aarch64_ext_simple_index (const aarch64_operand *self, aarch64_opnd_info *info,
+			  const aarch64_insn code,
+			  const aarch64_inst *inst ATTRIBUTE_UNUSED,
+			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int bias = get_operand_specific_data (self);
+  info->reglane.regno = extract_field (self->fields[0], code, 0) + bias;
+  info->reglane.index = extract_all_fields_after (self, 1, code);
+  return true;
+}
+
+/* Decode a plain shift-right immediate, when there is only a single
+   element size.  */
+bool
+aarch64_ext_plain_shrimm (const aarch64_operand *self, aarch64_opnd_info *info,
+			  const aarch64_insn code,
+			  const aarch64_inst *inst ATTRIBUTE_UNUSED,
+			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  unsigned int base = 1 << get_operand_field_width (self, 0);
+  info->imm.value = base - extract_field (self->fields[0], code, 0);
+  return true;
 }
 
 /* Bitfields that are commonly used to encode certain operands' information
@@ -2689,7 +2786,7 @@ convert_csinc_to_cset (aarch64_inst *inst)
 
 /* MOV <Wd>, #<imm>
      is equivalent to:
-   MOVZ <Wd>, #<imm16>, LSL #<shift>.
+   MOVZ <Wd>, #<imm16_5>, LSL #<shift>.
 
    A disassembler may output ORR, MOVZ and MOVN as a MOV mnemonic, except when
    ORR has an immediate that could be generated by a MOVZ or MOVN instruction,
@@ -2975,6 +3072,57 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
   variant = 0;
   switch (inst->opcode->iclass)
     {
+    case sme_mov:
+      variant = extract_fields (inst->value, 0, 2, FLD_SME_Q, FLD_SME_size_22);
+      if (variant >= 4 && variant < 7)
+	return false;
+      if (variant == 7)
+	variant = 4;
+      break;
+
+    case sme_psel:
+      i = extract_fields (inst->value, 0, 2, FLD_SME_tszh, FLD_SME_tszl);
+      if (i == 0)
+	return false;
+      while ((i & 1) == 0)
+	{
+	  i >>= 1;
+	  variant += 1;
+	}
+      break;
+
+    case sme_shift:
+      i = extract_field (FLD_SVE_tszh, inst->value, 0);
+      goto sve_shift;
+
+    case sme_size_12_bhs:
+      variant = extract_field (FLD_SME_size_12, inst->value, 0);
+      if (variant >= 3)
+	return false;
+      break;
+
+    case sme_size_12_hs:
+      variant = extract_field (FLD_SME_size_12, inst->value, 0);
+      if (variant != 1 && variant != 2)
+	return false;
+      variant -= 1;
+      break;
+
+    case sme_size_22:
+      variant = extract_field (FLD_SME_size_22, inst->value, 0);
+      break;
+
+    case sme_size_22_hsd:
+      variant = extract_field (FLD_SME_size_22, inst->value, 0);
+      if (variant < 1)
+	return false;
+      variant -= 1;
+      break;
+
+    case sme_sz_23:
+      variant = extract_field (FLD_SME_sz_23, inst->value, 0);
+      break;
+
     case sve_cpy:
       variant = extract_fields (inst->value, 0, 2, FLD_size, FLD_SVE_M_14);
       break;
@@ -3002,8 +3150,14 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
 	variant = 3;
       break;
 
+    case sme2_mov:
+      /* .D is preferred over the other sizes in disassembly.  */
+      variant = 3;
+      break;
+
+    case sme_misc:
     case sve_misc:
-      /* sve_misc instructions have only a single variant.  */
+      /* These instructions have only a single variant.  */
       break;
 
     case sve_movprfx:
@@ -3047,6 +3201,8 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
       variant = i - 1;
       break;
 
+    case sme_fp_sd:
+    case sme_int_sd:
     case sve_size_bh:
     case sve_size_sd:
       variant = extract_field (FLD_SVE_sz, inst->value, 0);

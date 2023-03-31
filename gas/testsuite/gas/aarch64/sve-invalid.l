@@ -1,5 +1,5 @@
 [^:]*: Assembler messages:
-.*: Error: operand 2 must be an SVE predicate register -- `fmov z1,z2'
+.*: Error: expected an SVE predicate register at operand 2 -- `fmov z1,z2'
 .*: Error: operand mismatch -- `fmov z1,#1\.0'
 .*: Info:    did you mean this\?
 .*: Info:    	fmov z1\.h, #1\.000000000000000000e\+00
@@ -126,7 +126,7 @@
 .*: Info:    	movprfx z0\.s, p1/m, z1\.s
 .*: Info:    	movprfx z0\.d, p1/z, z1\.d
 .*: Info:    	movprfx z0\.d, p1/m, z1\.d
-.*: Error: operand 1 must be an SVE vector register -- `movprfx p0,p1'
+.*: Error: expected an SVE vector register at operand 1 -- `movprfx p0,p1'
 .*: Error: operand mismatch -- `ldr p0\.b,\[x1\]'
 .*: Info:    did you mean this\?
 .*: Info:    	ldr p0, \[x1\]
@@ -184,7 +184,7 @@
 .*: Info:    	add z0\.s, z0\.s, #1
 .*: Info:    	add z0\.d, z0\.d, #1
 .*: Error: constant expression required at operand 2 -- `mov z0\.b,z32\.b'
-.*: Error: operand 2 must be an SVE predicate register -- `mov p0\.b,p16\.b'
+.*: Error: expected an SVE predicate register at operand 2 -- `mov p0\.b,p16\.b'
 .*: Error: p0-p7 expected at operand 2 -- `cmpeq p0\.b,p8/z,z1\.b,z2\.b'
 .*: Error: p0-p7 expected at operand 2 -- `cmpeq p0\.b,p15/z,z1\.b,z2\.b'
 .*: Error: operand mismatch -- `ld1w z0\.s,p0,\[x0\]'
@@ -275,12 +275,12 @@
 .*: Error: missing type suffix at operand 1 -- `stnt1h {z0},p1/z,\[x1\]'
 .*: Error: missing type suffix at operand 1 -- `stnt1w {z0},p1/z,\[x1\]'
 .*: Error: missing type suffix at operand 1 -- `stnt1d {z0},p1/z,\[x1\]'
-.*: Error: operand 1 must be a list of SVE vector registers -- `ld1b {x0},p1/z,\[x1\]'
-.*: Error: operand 1 must be a list of SVE vector registers -- `ld1b {b0},p1/z,\[x1\]'
-.*: Error: operand 1 must be a list of SVE vector registers -- `ld1b {h0},p1/z,\[x1\]'
-.*: Error: operand 1 must be a list of SVE vector registers -- `ld1b {s0},p1/z,\[x1\]'
-.*: Error: operand 1 must be a list of SVE vector registers -- `ld1b {d0},p1/z,\[x1\]'
-.*: Error: operand 1 must be a list of SVE vector registers -- `ld1b {v0\.2s},p1/z,\[x1\]'
+.*: Error: expected an SVE vector register or ZA tile slice at operand 1 -- `ld1b {x0},p1/z,\[x1\]'
+.*: Error: expected an SVE vector register or ZA tile slice at operand 1 -- `ld1b {b0},p1/z,\[x1\]'
+.*: Error: expected an SVE vector register or ZA tile slice at operand 1 -- `ld1b {h0},p1/z,\[x1\]'
+.*: Error: expected an SVE vector register or ZA tile slice at operand 1 -- `ld1b {s0},p1/z,\[x1\]'
+.*: Error: expected an SVE vector register or ZA tile slice at operand 1 -- `ld1b {d0},p1/z,\[x1\]'
+.*: Error: expected an SVE vector register or ZA tile slice at operand 1 -- `ld1b {v0\.2s},p1/z,\[x1\]'
 .*: Error: type mismatch in vector register list at operand 1 -- `ld2b {z0\.b,z1},p1/z,\[x1\]'
 .*: Error: type mismatch in vector register list at operand 1 -- `ld2b {z0\.b,z1\.h},p1/z,\[x1\]'
 .*: Error: type mismatch in vector register list at operand 1 -- `ld2b {z0\.b,z1\.s},p1/z,\[x1\]'
@@ -859,7 +859,7 @@
 .*: Error: immediate value out of range 0 to 7 at operand 3 -- `lsl z0\.b,z0\.b,#-1'
 .*: Error: immediate value out of range 0 to 7 at operand 3 -- `lsl z0\.b,z0\.b,#8'
 .*: Error: immediate value out of range 0 to 7 at operand 3 -- `lsl z0\.b,z0\.b,#9'
-.*: Error: operand 3 must be an SVE vector register -- `lsl z0\.b,z0\.b,x0'
+.*: Error: expected an SVE vector register at operand 3 -- `lsl z0\.b,z0\.b,x0'
 .*: Error: immediate value out of range 0 to 15 at operand 3 -- `lsl z0\.h,z0\.h,#-1'
 .*: Error: immediate value out of range 0 to 15 at operand 3 -- `lsl z0\.h,z0\.h,#16'
 .*: Error: immediate value out of range 0 to 15 at operand 3 -- `lsl z0\.h,z0\.h,#17'
@@ -872,7 +872,7 @@
 .*: Error: immediate value out of range 0 to 7 at operand 4 -- `lsl z0\.b,p1/m,z0\.b,#-1'
 .*: Error: immediate value out of range 0 to 7 at operand 4 -- `lsl z0\.b,p1/m,z0\.b,#8'
 .*: Error: immediate value out of range 0 to 7 at operand 4 -- `lsl z0\.b,p1/m,z0\.b,#9'
-.*: Error: operand 4 must be an SVE vector register -- `lsl z0\.b,p1/m,z0\.b,x0'
+.*: Error: expected an SVE vector register at operand 4 -- `lsl z0\.b,p1/m,z0\.b,x0'
 .*: Error: immediate value out of range 0 to 15 at operand 4 -- `lsl z0\.h,p1/m,z0\.h,#-1'
 .*: Error: immediate value out of range 0 to 15 at operand 4 -- `lsl z0\.h,p1/m,z0\.h,#16'
 .*: Error: immediate value out of range 0 to 15 at operand 4 -- `lsl z0\.h,p1/m,z0\.h,#17'
@@ -885,7 +885,7 @@
 .*: Error: immediate value out of range 1 to 8 at operand 3 -- `lsr z0\.b,z0\.b,#-1'
 .*: Error: immediate value out of range 1 to 8 at operand 3 -- `lsr z0\.b,z0\.b,#0'
 .*: Error: immediate value out of range 1 to 8 at operand 3 -- `lsr z0\.b,z0\.b,#9'
-.*: Error: operand 3 must be an SVE vector register -- `lsr z0\.b,z0\.b,x0'
+.*: Error: expected an SVE vector register at operand 3 -- `lsr z0\.b,z0\.b,x0'
 .*: Error: immediate value out of range 1 to 16 at operand 3 -- `lsr z0\.h,z0\.h,#-1'
 .*: Error: immediate value out of range 1 to 16 at operand 3 -- `lsr z0\.h,z0\.h,#0'
 .*: Error: immediate value out of range 1 to 16 at operand 3 -- `lsr z0\.h,z0\.h,#17'
@@ -898,7 +898,7 @@
 .*: Error: immediate value out of range 1 to 8 at operand 4 -- `lsr z0\.b,p1/m,z0\.b,#-1'
 .*: Error: immediate value out of range 1 to 8 at operand 4 -- `lsr z0\.b,p1/m,z0\.b,#0'
 .*: Error: immediate value out of range 1 to 8 at operand 4 -- `lsr z0\.b,p1/m,z0\.b,#9'
-.*: Error: operand 4 must be an SVE vector register -- `lsr z0\.b,p1/m,z0\.b,x0'
+.*: Error: expected an SVE vector register at operand 4 -- `lsr z0\.b,p1/m,z0\.b,x0'
 .*: Error: immediate value out of range 1 to 16 at operand 4 -- `lsr z0\.h,p1/m,z0\.h,#-1'
 .*: Error: immediate value out of range 1 to 16 at operand 4 -- `lsr z0\.h,p1/m,z0\.h,#0'
 .*: Error: immediate value out of range 1 to 16 at operand 4 -- `lsr z0\.h,p1/m,z0\.h,#17'
@@ -914,8 +914,8 @@
 .*: Error: immediate value out of range -16 to 15 at operand 3 -- `index z0\.s,#0,#16'
 .*: Error: immediate value out of range -32 to 31 at operand 3 -- `addpl x0,sp,#-33'
 .*: Error: immediate value out of range -32 to 31 at operand 3 -- `addpl sp,x0,#32'
-.*: Error: operand 2 must be an integer register or SP -- `addpl x0,xzr,#1'
-.*: Error: operand 1 must be an integer or stack pointer register -- `addpl xzr,x0,#1'
+.*: Error: expected an integer or stack pointer register at operand 2 -- `addpl x0,xzr,#1'
+.*: Error: expected an integer or stack pointer register at operand 1 -- `addpl xzr,x0,#1'
 .*: Error: immediate value out of range -128 to 127 at operand 3 -- `mul z0\.b,z0\.b,#-129'
 .*: Error: immediate value out of range -128 to 127 at operand 3 -- `mul z0\.b,z0\.b,#128'
 .*: Error: immediate value out of range -128 to 127 at operand 3 -- `mul z0\.s,z0\.s,#-129'
@@ -932,6 +932,14 @@
 .*: Error: register element index out of range 0 to 63 at operand 2 -- `dup z0\.b,z1\.b\[-1\]'
 .*: Error: register element index out of range 0 to 63 at operand 2 -- `dup z0\.b,z1\.b\[64\]'
 .*: Error: constant expression required at operand 2 -- `dup z0\.b,z1\.b\[x0\]'
+.*: Error: operand mismatch -- `dup z0\.b,z1\[0\]'
+.*: Info:    did you mean this\?
+.*: Info:    	dup z0\.b, z1\.b\[0\]
+.*: Info:    other valid variant\(s\):
+.*: Info:    	dup z0\.h, z1\.h\[0\]
+.*: Info:    	dup z0\.s, z1\.s\[0\]
+.*: Info:    	dup z0\.d, z1\.d\[0\]
+.*: Info:    	dup z0\.q, z1\.q\[0\]
 .*: Error: register element index out of range 0 to 31 at operand 2 -- `dup z0\.h,z1\.h\[-1\]'
 .*: Error: register element index out of range 0 to 31 at operand 2 -- `dup z0\.h,z1\.h\[32\]'
 .*: Error: constant expression required at operand 2 -- `dup z0\.h,z1\.h\[x0\]'
@@ -1147,14 +1155,10 @@
 .*: Info:    	sdot z0\.d, z1\.h, z2\.h
 .*: Error: operand mismatch -- `sdot z0\.h,z1\.h,z2\.h'
 .*: Info:    did you mean this\?
-.*: Info:    	sdot z0\.d, z1\.h, z2\.h
-.*: Info:    other valid variant\(s\):
-.*: Info:    	sdot z0\.s, z1\.b, z2\.b
+.*: Info:    	sdot z0\.s, z1\.h, z2\.h
 .*: Error: operand mismatch -- `sdot z0\.s,z1\.s,z2\.s'
 .*: Info:    did you mean this\?
-.*: Info:    	sdot z0\.s, z1\.b, z2\.b
-.*: Info:    other valid variant\(s\):
-.*: Info:    	sdot z0\.d, z1\.h, z2\.h
+.*: Info:    	sdot z0\.s, z1\.h, z2\.h
 .*: Error: operand mismatch -- `sdot z0\.d,z1\.d,z2\.d'
 .*: Info:    did you mean this\?
 .*: Info:    	sdot z0\.d, z1\.h, z2\.h
@@ -1165,13 +1169,13 @@
 .*: Info:    	sdot z0\.s, z1\.b, z2\.b\[0\]
 .*: Error: operand mismatch -- `sdot z0\.h,z1\.h,z2\.h\[0\]'
 .*: Info:    did you mean this\?
-.*: Info:    	sdot z0\.s, z1\.b, z2\.b\[0\]
+.*: Info:    	sdot z0\.d, z1\.h, z2\.h\[0\]
 .*: Error: operand mismatch -- `sdot z0\.s,z1\.s,z2\.s\[0\]'
 .*: Info:    did you mean this\?
 .*: Info:    	sdot z0\.s, z1\.b, z2\.b\[0\]
 .*: Error: operand mismatch -- `sdot z0\.d,z1\.d,z2\.d\[0\]'
 .*: Info:    did you mean this\?
-.*: Info:    	sdot z0\.s, z1\.b, z2\.b\[0\]
+.*: Info:    	sdot z0\.d, z1\.h, z2\.h\[0\]
 .*: Error: operand mismatch -- `udot z0\.b,z1\.b,z2\.b'
 .*: Info:    did you mean this\?
 .*: Info:    	udot z0\.s, z1\.b, z2\.b
@@ -1179,14 +1183,10 @@
 .*: Info:    	udot z0\.d, z1\.h, z2\.h
 .*: Error: operand mismatch -- `udot z0\.h,z1\.h,z2\.h'
 .*: Info:    did you mean this\?
-.*: Info:    	udot z0\.d, z1\.h, z2\.h
-.*: Info:    other valid variant\(s\):
-.*: Info:    	udot z0\.s, z1\.b, z2\.b
+.*: Info:    	udot z0\.s, z1\.h, z2\.h
 .*: Error: operand mismatch -- `udot z0\.s,z1\.s,z2\.s'
 .*: Info:    did you mean this\?
-.*: Info:    	udot z0\.s, z1\.b, z2\.b
-.*: Info:    other valid variant\(s\):
-.*: Info:    	udot z0\.d, z1\.h, z2\.h
+.*: Info:    	udot z0\.s, z1\.h, z2\.h
 .*: Error: operand mismatch -- `udot z0\.d,z1\.d,z2\.d'
 .*: Info:    did you mean this\?
 .*: Info:    	udot z0\.d, z1\.h, z2\.h
@@ -1197,10 +1197,16 @@
 .*: Info:    	udot z0\.s, z1\.b, z2\.b\[0\]
 .*: Error: operand mismatch -- `udot z0\.h,z1\.h,z2\.h\[0\]'
 .*: Info:    did you mean this\?
-.*: Info:    	udot z0\.s, z1\.b, z2\.b\[0\]
+.*: Info:    	udot z0\.d, z1\.h, z2\.h\[0\]
 .*: Error: operand mismatch -- `udot z0\.s,z1\.s,z2\.s\[0\]'
 .*: Info:    did you mean this\?
 .*: Info:    	udot z0\.s, z1\.b, z2\.b\[0\]
 .*: Error: operand mismatch -- `udot z0\.d,z1\.d,z2\.d\[0\]'
 .*: Info:    did you mean this\?
-.*: Info:    	udot z0\.s, z1\.b, z2\.b\[0\]
+.*: Info:    	udot z0\.d, z1\.h, z2\.h\[0\]
+.*: Error: syntax error in register list at operand 1 -- `ld2b {},p0/z,\[x0\]'
+.*: Error: syntax error in register list at operand 1 -- `ld2b {.b},p0/z,\[x0\]'
+.*: Error: syntax error in register list at operand 1 -- `ld2b {z0.b-},p0/z,\[x0\]'
+.*: Error: syntax error in register list at operand 1 -- `ld2b {z0.b,},p0/z,\[x0\]'
+.*: Error: operand 1 must be a list of SVE vector registers -- `ld2b {z0\.b-z32\.b},p0/z,\[x0\]'
+.*: Error: operand 1 must be a list of SVE vector registers -- `ld2b {z0\.b-v1\.16b},p0/z,\[x0\]'

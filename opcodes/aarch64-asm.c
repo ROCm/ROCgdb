@@ -57,6 +57,25 @@ insert_fields (aarch64_insn *code, aarch64_insn value, aarch64_insn mask, ...)
   va_end (va);
 }
 
+/* Insert a raw field value VALUE into all fields in SELF->fields after START.
+   The least significant bit goes in the final field.  */
+
+static void
+insert_all_fields_after (const aarch64_operand *self, unsigned int start,
+			 aarch64_insn *code, aarch64_insn value)
+{
+  unsigned int i;
+  enum aarch64_field_kind kind;
+
+  for (i = ARRAY_SIZE (self->fields); i-- > start; )
+    if (self->fields[i] != FLD_NIL)
+      {
+	kind = self->fields[i];
+	insert_field (kind, code, value, 0);
+	value >>= fields[kind].width;
+      }
+}
+
 /* Insert a raw field value VALUE into all fields in SELF->fields.
    The least significant bit goes in the final field.  */
 
@@ -64,16 +83,7 @@ static void
 insert_all_fields (const aarch64_operand *self, aarch64_insn *code,
 		   aarch64_insn value)
 {
-  unsigned int i;
-  enum aarch64_field_kind kind;
-
-  for (i = ARRAY_SIZE (self->fields); i-- > 0; )
-    if (self->fields[i] != FLD_NIL)
-      {
-	kind = self->fields[i];
-	insert_field (kind, code, value, 0);
-	value >>= fields[kind].width;
-      }
+  return insert_all_fields_after (self, 0, code, value);
 }
 
 /* Operand inserters.  */
@@ -96,7 +106,8 @@ aarch64_ins_regno (const aarch64_operand *self, const aarch64_opnd_info *info,
 		   const aarch64_inst *inst ATTRIBUTE_UNUSED,
 		   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  insert_field (self->fields[0], code, info->reg.regno, 0);
+  int val = info->reg.regno - get_operand_specific_data (self);
+  insert_field (self->fields[0], code, val, 0);
   return true;
 }
 
@@ -120,7 +131,7 @@ aarch64_ins_reglane (const aarch64_operand *self, const aarch64_opnd_info *info,
 	  /* index2 for e.g. INS <Vd>.<Ts>[<index1>], <Vn>.<Ts>[<index2>].  */
 	  assert (info->idx == 1);	/* Vn */
 	  aarch64_insn value = info->reglane.index << pos;
-	  insert_field (FLD_imm4, code, value, 0);
+	  insert_field (FLD_imm4_11, code, value, 0);
 	}
       else
 	{
@@ -393,6 +404,8 @@ aarch64_ins_imm (const aarch64_operand *self, const aarch64_opnd_info *info,
   imm = info->imm.value;
   if (operand_need_shift_by_two (self))
     imm >>= 2;
+  if (operand_need_shift_by_three (self))
+    imm >>= 3;
   if (operand_need_shift_by_four (self))
     imm >>= 4;
   insert_all_fields (self, code, imm);
@@ -943,7 +956,7 @@ aarch64_ins_reg_extended (const aarch64_operand *self ATTRIBUTE_UNUSED,
       ? AARCH64_MOD_UXTW : AARCH64_MOD_UXTX;
   insert_field (FLD_option, code, aarch64_get_operand_modifier_value (kind), 0);
   /* imm3 */
-  insert_field (FLD_imm3, code, info->shifter.amount, 0);
+  insert_field (FLD_imm3_10, code, info->shifter.amount, 0);
 
   return true;
 }
@@ -962,7 +975,7 @@ aarch64_ins_reg_shifted (const aarch64_operand *self ATTRIBUTE_UNUSED,
   insert_field (FLD_shift, code,
 		aarch64_get_operand_modifier_value (info->shifter.kind), 0);
   /* imm6 */
-  insert_field (FLD_imm6, code, info->shifter.amount, 0);
+  insert_field (FLD_imm6_10, code, info->shifter.amount, 0);
 
   return true;
 }
@@ -1016,7 +1029,7 @@ aarch64_ins_sve_addr_ri_s9xvl (const aarch64_operand *self,
   int factor = 1 + get_operand_specific_data (self);
   insert_field (self->fields[0], code, info->addr.base_regno, 0);
   insert_fields (code, info->addr.offset.imm / factor, 0,
-		 2, FLD_imm3, FLD_SVE_imm6);
+		 2, FLD_imm3_10, FLD_SVE_imm6);
   return true;
 }
 
@@ -1167,6 +1180,19 @@ aarch64_ins_sve_aimm (const aarch64_operand *self,
   return true;
 }
 
+bool
+aarch64_ins_sve_aligned_reglist (const aarch64_operand *self,
+				 const aarch64_opnd_info *info,
+				 aarch64_insn *code,
+				 const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				 aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  unsigned int num_regs = get_operand_specific_data (self);
+  unsigned int val = info->reglist.first_regno;
+  insert_field (self->fields[0], code, val / num_regs, 0);
+  return true;
+}
+
 /* Encode an SVE CPY/DUP immediate.  */
 bool
 aarch64_ins_sve_asimm (const aarch64_operand *self,
@@ -1229,6 +1255,26 @@ aarch64_ins_sve_reglist (const aarch64_operand *self,
 			 aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
   insert_field (self->fields[0], code, info->reglist.first_regno, 0);
+  return true;
+}
+
+/* Encode a strided register list.  The first field holds the top bit
+   (0 or 16) and the second field holds the lower bits.  The stride is
+   16 divided by the list length.  */
+bool
+aarch64_ins_sve_strided_reglist (const aarch64_operand *self,
+				 const aarch64_opnd_info *info,
+				 aarch64_insn *code,
+				 const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				 aarch64_operand_error *errors
+				   ATTRIBUTE_UNUSED)
+{
+  unsigned int num_regs = get_operand_specific_data (self);
+  unsigned int mask = 16 | (16 / num_regs - 1);
+  unsigned int val = info->reglist.first_regno;
+  assert ((val & mask) == val);
+  insert_field (self->fields[0], code, val >> 4, 0);
+  insert_field (self->fields[1], code, val & 15, 0);
   return true;
 }
 
@@ -1340,10 +1386,10 @@ aarch64_ins_sme_za_hv_tiles (const aarch64_operand *self,
 {
   int fld_size;
   int fld_q;
-  int fld_v = info->za_tile_vector.v;
-  int fld_rv = info->za_tile_vector.index.regno - 12;
-  int fld_zan_imm = info->za_tile_vector.index.imm;
-  int regno = info->za_tile_vector.regno;
+  int fld_v = info->indexed_za.v;
+  int fld_rv = info->indexed_za.index.regno - 12;
+  int fld_zan_imm = info->indexed_za.index.imm;
+  int regno = info->indexed_za.regno;
 
   switch (info->qualifier)
     {
@@ -1384,6 +1430,35 @@ aarch64_ins_sme_za_hv_tiles (const aarch64_operand *self,
   return true;
 }
 
+bool
+aarch64_ins_sme_za_hv_tiles_range (const aarch64_operand *self,
+				   const aarch64_opnd_info *info,
+				   aarch64_insn *code,
+				   const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				   aarch64_operand_error *errors
+				     ATTRIBUTE_UNUSED)
+{
+  int ebytes = aarch64_get_qualifier_esize (info->qualifier);
+  int range_size = get_opcode_dependent_value (inst->opcode);
+  int fld_v = info->indexed_za.v;
+  int fld_rv = info->indexed_za.index.regno - 12;
+  int imm = info->indexed_za.index.imm;
+  int max_value = 16 / range_size / ebytes;
+
+  if (max_value == 0)
+    max_value = 1;
+
+  assert (imm % range_size == 0 && (imm / range_size) < max_value);
+  int fld_zan_imm = (info->indexed_za.regno * max_value) | (imm / range_size);
+  assert (fld_zan_imm < (range_size == 4 && ebytes < 8 ? 4 : 8));
+
+  insert_field (self->fields[0], code, fld_v, 0);
+  insert_field (self->fields[1], code, fld_rv, 0);
+  insert_field (self->fields[2], code, fld_zan_imm, 0);
+
+  return true;
+}
+
 /* Encode in SME instruction ZERO list of up to eight 64-bit element tile names
    separated by commas, encoded in the "imm8" field.
 
@@ -1410,10 +1485,12 @@ aarch64_ins_sme_za_array (const aarch64_operand *self,
                           const aarch64_inst *inst ATTRIBUTE_UNUSED,
                           aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  int regno = info->za_tile_vector.index.regno - 12;
-  int imm = info->za_tile_vector.index.imm;
+  int regno = info->indexed_za.index.regno & 3;
+  int imm = info->indexed_za.index.imm;
+  int countm1 = info->indexed_za.index.countm1;
+  assert (imm % (countm1 + 1) == 0);
   insert_field (self->fields[0], code, regno, 0);
-  insert_field (self->fields[1], code, imm, 0);
+  insert_field (self->fields[1], code, imm / (countm1 + 1), 0);
   return true;
 }
 
@@ -1464,9 +1541,9 @@ aarch64_ins_sme_pred_reg_with_index (const aarch64_operand *self,
                                      const aarch64_inst *inst ATTRIBUTE_UNUSED,
                                      aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  int fld_pn = info->za_tile_vector.regno;
-  int fld_rm = info->za_tile_vector.index.regno - 12;
-  int imm = info->za_tile_vector.index.imm;
+  int fld_pn = info->indexed_za.regno;
+  int fld_rm = info->indexed_za.index.regno - 12;
+  int imm = info->indexed_za.index.imm;
   int fld_i1, fld_tszh, fld_tshl;
 
   insert_field (self->fields[0], code, fld_rm, 0);
@@ -1529,6 +1606,34 @@ aarch64_ins_x0_to_x30 (const aarch64_operand *self,
 {
   assert (info->reg.regno <= 30);
   insert_field (self->fields[0], code, info->reg.regno, 0);
+  return true;
+}
+
+/* Insert an indexed register, with the first field being the register
+   number and the remaining fields being the index.  */
+bool
+aarch64_ins_simple_index (const aarch64_operand *self,
+			  const aarch64_opnd_info *info,
+			  aarch64_insn *code,
+			  const aarch64_inst *inst ATTRIBUTE_UNUSED,
+			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int bias = get_operand_specific_data (self);
+  insert_field (self->fields[0], code, info->reglane.regno - bias, 0);
+  insert_all_fields_after (self, 1, code, info->reglane.index);
+  return true;
+}
+
+/* Insert a plain shift-right immediate, when there is only a single
+   element size.  */
+bool
+aarch64_ins_plain_shrimm (const aarch64_operand *self,
+			  const aarch64_opnd_info *info, aarch64_insn *code,
+			  const aarch64_inst *inst ATTRIBUTE_UNUSED,
+			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  unsigned int base = 1 << get_operand_field_width (self, 0);
+  insert_field (self->fields[0], code, base - info->imm.value, 0);
   return true;
 }
 
@@ -1643,6 +1748,7 @@ do_misc_encoding (aarch64_inst *inst)
       encode_asisd_fcvtxn (inst);
       break;
     case OP_MOV_P_P:
+    case OP_MOV_PN_PN:
     case OP_MOVS_P_P:
       /* Copy Pn to Pm and Pg.  */
       value = extract_field (FLD_SVE_Pn, inst->value, 0);
@@ -1852,11 +1958,42 @@ aarch64_encode_variant_using_iclass (struct aarch64_inst *inst)
   int variant = 0;
   switch (inst->opcode->iclass)
     {
+    case sme_mov:
+    case sme_psel:
+      /* The variant is encoded as part of the immediate.  */
+      break;
+
+    case sme_size_12_bhs:
+      insert_field (FLD_SME_size_12, &inst->value,
+		    aarch64_get_variant (inst), 0);
+      break;
+
+    case sme_size_22:
+      insert_field (FLD_SME_size_22, &inst->value,
+		    aarch64_get_variant (inst), 0);
+      break;
+
+    case sme_size_22_hsd:
+      insert_field (FLD_SME_size_22, &inst->value,
+		    aarch64_get_variant (inst) + 1, 0);
+      break;
+
+    case sme_size_12_hs:
+      insert_field (FLD_SME_size_12, &inst->value,
+		    aarch64_get_variant (inst) + 1, 0);
+      break;
+
+    case sme_sz_23:
+      insert_field (FLD_SME_sz_23, &inst->value,
+		    aarch64_get_variant (inst), 0);
+      break;
+
     case sve_cpy:
       insert_fields (&inst->value, aarch64_get_variant (inst),
 		     0, 2, FLD_SVE_M_14, FLD_size);
       break;
 
+    case sme_shift:
     case sve_index:
     case sve_shift_pred:
     case sve_shift_unpred:
@@ -1867,13 +2004,15 @@ aarch64_encode_variant_using_iclass (struct aarch64_inst *inst)
       break;
 
     case sve_limm:
+    case sme2_mov:
       /* For sve_limm, the .B, .H, and .S forms are just a convenience
 	 and depend on the immediate.  They don't have a separate
 	 encoding.  */
       break;
 
+    case sme_misc:
     case sve_misc:
-      /* sve_misc instructions have only a single variant.  */
+      /* These instructions have only a single variant.  */
       break;
 
     case sve_movprfx:
@@ -1895,6 +2034,8 @@ aarch64_encode_variant_using_iclass (struct aarch64_inst *inst)
       insert_field (FLD_size, &inst->value, aarch64_get_variant (inst) % 3 + 1, 0);
       break;
 
+    case sme_fp_sd:
+    case sme_int_sd:
     case sve_size_bh:
     case sve_size_sd:
       insert_field (FLD_SVE_sz, &inst->value, aarch64_get_variant (inst), 0);

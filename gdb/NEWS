@@ -83,6 +83,9 @@ show always-read-ctf
   When off, CTF is only read if DWARF is not present.  When on, CTF is
   read regardless of whether DWARF is present.  Off by default.
 
+info main
+  Get main symbol to identify entry point into program.
+
 * New convenience function "$_shell", to execute a shell command and
   return the result.  This lets you run shell commands in expressions.
   Some examples:
@@ -105,6 +108,49 @@ show always-read-ctf
    for thread-specific breakpoints, or not at all for breakpoints
    without a thread restriction.  The same is also true for the 'task'
    field of an Ada task-specific breakpoint.
+
+* Python API
+
+  ** The gdb.unwinder.Unwinder.name attribute is now read-only.
+
+  ** The name argument passed to gdb.unwinder.Unwinder.__init__ must
+     now be of type 'str' otherwise a TypeError will be raised.
+
+  ** The gdb.unwinder.Unwinder.enabled attribute can now only accept
+     values of type 'bool'.  Changing this attribute will now
+     invalidate GDB's frame-cache, which means GDB will need to
+     rebuild its frame-cache when next required - either with, or
+     without the particular unwinder, depending on how 'enabled' was
+     changed.
+
+  ** New methods added to the gdb.PendingFrame class.  These methods
+     have the same behaviour as the corresponding methods on
+     gdb.Frame.  The new methods are:
+
+     - gdb.PendingFrame.name: Return the name for the frame's
+       function, or None.
+     - gdb.PendingFrame.is_valid: Return True if the pending frame
+       object is valid.
+     - gdb.PendingFrame.pc: Return the $pc register value for this
+       frame.
+     - gdb.PendingFrame.language: Return a string containing the
+       language for this frame, or None.
+     - gdb.PendingFrame.find_sal: Return a gdb.Symtab_and_line
+       object for the current location within the pending frame, or
+       None.
+     - gdb.PendingFrame.block: Return a gdb.Block for the current
+       pending frame, or None.
+     - gdb.PendingFrame.function: Return a gdb.Symbol for the
+       current pending frame, or None.
+
+  ** The frame-id passed to gdb.PendingFrame.create_unwind_info can
+     now use either an integer or a gdb.Value object for each of its
+     'sp', 'pc', and 'special' attributes.
+
+  ** A new class gdb.unwinder.FrameId has been added.  Instances of
+     this class are constructed with 'sp' (stack-pointer) and 'pc'
+     (program-counter) values, and can be used as the frame-id when
+     calling gdb.PendingFrame.create_unwind_info.
 
 *** Changes in GDB 13
 

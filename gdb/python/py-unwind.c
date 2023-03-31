@@ -28,6 +28,10 @@
 #include "regcache.h"
 #include "valprint.h"
 #include "user-regs.h"
+#include "stack.h"
+#include "charset.h"
+#include "block.h"
+
 
 /* Debugging of Python unwinders.  */
 
@@ -51,6 +55,17 @@ show_pyuw_debug (struct ui_file *file, int from_tty,
 
 #define PYUW_SCOPED_DEBUG_ENTER_EXIT \
   scoped_debug_enter_exit (pyuw_debug, "py-unwind")
+
+/* Require a valid pending frame.  */
+#define PENDING_FRAMEPY_REQUIRE_VALID(pending_frame)	     \
+  do {							     \
+    if ((pending_frame)->frame_info == nullptr)		     \
+      {							     \
+	PyErr_SetString (PyExc_ValueError,		     \
+			 _("gdb.PendingFrame is invalid.")); \
+	return nullptr;					     \
+      }							     \
+  } while (0)
 
 struct pending_frame_object
 {
@@ -117,58 +132,63 @@ extern PyTypeObject pending_frame_object_type
 extern PyTypeObject unwind_info_object_type
     CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("unwind_info_object");
 
-/* Convert gdb.Value instance to inferior's pointer.  Return 1 on success,
-   0 on failure.  */
+/* An enum returned by pyuw_object_attribute_to_pointer, a function which
+   is used to extract an attribute from a Python object.  */
 
-static int
-pyuw_value_obj_to_pointer (PyObject *pyo_value, CORE_ADDR *addr)
+enum class pyuw_get_attr_code
 {
-  int rc = 0;
-  struct value *value;
+  /* The attribute was present, and its value was successfully extracted.  */
+  ATTR_OK,
 
-  try
-    {
-      if ((value = value_object_to_value (pyo_value)) != NULL)
-	{
-	  *addr = unpack_pointer (value->type (),
-				  value->contents ().data ());
-	  rc = 1;
-	}
-    }
-  catch (const gdb_exception &except)
-    {
-      gdbpy_convert_exception (except);
-    }
-  return rc;
-}
+  /* The attribute was not present, or was present and its value was None.
+     No Python error has been set.  */
+  ATTR_MISSING,
 
-/* Get attribute from an object and convert it to the inferior's
-   pointer value.  Return 1 if attribute exists and its value can be
-   converted.  Otherwise, if attribute does not exist or its value is
-   None, return 0.  In all other cases set Python error and return
-   0.  */
+  /* The attribute was present, but there was some error while trying to
+     get the value from the attribute.  A Python error will be set when
+     this is returned.  */
+  ATTR_ERROR,
+};
 
-static int
+/* Get the attribute named ATTR_NAME from the object PYO and convert it to
+   an inferior pointer value, placing the pointer in *ADDR.
+
+   Return pyuw_get_attr_code::ATTR_OK if the attribute was present and its
+   value was successfully written into *ADDR.  For any other return value
+   the contents of *ADDR are undefined.
+
+   Return pyuw_get_attr_code::ATTR_MISSING if the attribute was not
+   present, or it was present but its value was None.  The contents of
+   *ADDR are undefined in this case.  No Python error will be set in this
+   case.
+
+   Return pyuw_get_attr_code::ATTR_ERROR if the attribute was present, but
+   there was some error while extracting the attribute's value.  A Python
+   error will be set in this case.  The contents of *ADDR are undefined.  */
+
+static pyuw_get_attr_code
 pyuw_object_attribute_to_pointer (PyObject *pyo, const char *attr_name,
 				  CORE_ADDR *addr)
 {
-  int rc = 0;
+  if (!PyObject_HasAttrString (pyo, attr_name))
+    return pyuw_get_attr_code::ATTR_MISSING;
 
-  if (PyObject_HasAttrString (pyo, attr_name))
+  gdbpy_ref<> pyo_value (PyObject_GetAttrString (pyo, attr_name));
+  if (pyo_value == nullptr)
     {
-      gdbpy_ref<> pyo_value (PyObject_GetAttrString (pyo, attr_name));
-
-      if (pyo_value != NULL && pyo_value != Py_None)
-	{
-	  rc = pyuw_value_obj_to_pointer (pyo_value.get (), addr);
-	  if (!rc)
-	    PyErr_Format (
-		PyExc_ValueError,
-		_("The value of the '%s' attribute is not a pointer."),
-		attr_name);
-	}
+      gdb_assert (PyErr_Occurred ());
+      return pyuw_get_attr_code::ATTR_ERROR;
     }
-  return rc;
+  if (pyo_value == Py_None)
+    return pyuw_get_attr_code::ATTR_MISSING;
+
+  if (get_addr_from_python (pyo_value.get (), addr) < 0)
+    {
+      gdb_assert (PyErr_Occurred ());
+      return pyuw_get_attr_code::ATTR_ERROR;
+    }
+
+  return pyuw_get_attr_code::ATTR_OK;
 }
 
 /* Called by the Python interpreter to obtain string representation
@@ -214,22 +234,53 @@ unwind_infopy_str (PyObject *self)
   return PyUnicode_FromString (stb.c_str ());
 }
 
+/* Implement UnwindInfo.__repr__().  */
+
+static PyObject *
+unwind_infopy_repr (PyObject *self)
+{
+  unwind_info_object *unwind_info = (unwind_info_object *) self;
+  pending_frame_object *pending_frame
+    = (pending_frame_object *) (unwind_info->pending_frame);
+  frame_info_ptr frame = pending_frame->frame_info;
+
+  if (frame == nullptr)
+    return PyUnicode_FromFormat ("<%s for an invalid frame>",
+				 Py_TYPE (self)->tp_name);
+
+  std::string saved_reg_names;
+  struct gdbarch *gdbarch = pending_frame->gdbarch;
+
+  for (const saved_reg &reg : *unwind_info->saved_regs)
+    {
+      const char *name = gdbarch_register_name (gdbarch, reg.number);
+      if (saved_reg_names.empty ())
+	saved_reg_names = name;
+      else
+	saved_reg_names = (saved_reg_names + ", ") + name;
+    }
+
+  return PyUnicode_FromFormat ("<%s frame #%d, saved_regs=(%s)>",
+			       Py_TYPE (self)->tp_name,
+			       frame_relative_level (frame),
+			       saved_reg_names.c_str ());
+}
+
 /* Create UnwindInfo instance for given PendingFrame and frame ID.
-   Sets Python error and returns NULL on error.  */
+   Sets Python error and returns NULL on error.
+
+   The PYO_PENDING_FRAME object must be valid.  */
 
 static PyObject *
 pyuw_create_unwind_info (PyObject *pyo_pending_frame,
 			 struct frame_id frame_id)
 {
-  unwind_info_object *unwind_info
-      = PyObject_New (unwind_info_object, &unwind_info_object_type);
+  gdb_assert (((pending_frame_object *) pyo_pending_frame)->frame_info
+	      != nullptr);
 
-  if (((pending_frame_object *) pyo_pending_frame)->frame_info == NULL)
-    {
-      PyErr_SetString (PyExc_ValueError,
-		       "Attempting to use stale PendingFrame");
-      return NULL;
-    }
+  unwind_info_object *unwind_info
+    = PyObject_New (unwind_info_object, &unwind_info_object_type);
+
   unwind_info->frame_id = frame_id;
   Py_INCREF (pyo_pending_frame);
   unwind_info->pending_frame = pyo_pending_frame;
@@ -358,6 +409,37 @@ pending_framepy_str (PyObject *self)
   return PyUnicode_FromFormat ("SP=%s,PC=%s", sp_str, pc_str);
 }
 
+/* Implement PendingFrame.__repr__().  */
+
+static PyObject *
+pending_framepy_repr (PyObject *self)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+  frame_info_ptr frame = pending_frame->frame_info;
+
+  if (frame == nullptr)
+    return PyUnicode_FromFormat ("<%s (invalid)>", Py_TYPE (self)->tp_name);
+
+  const char *sp_str = nullptr;
+  const char *pc_str = nullptr;
+
+  try
+    {
+      sp_str = core_addr_to_string_nz (get_frame_sp (frame));
+      pc_str = core_addr_to_string_nz (get_frame_pc (frame));
+    }
+  catch (const gdb_exception &except)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+
+  return PyUnicode_FromFormat ("<%s level=%d, sp=%s, pc=%s>",
+			       Py_TYPE (self)->tp_name,
+			       frame_relative_level (frame),
+			       sp_str,
+			       pc_str);
+}
+
 /* Implementation of gdb.PendingFrame.read_register (self, reg) -> gdb.Value.
    Returns the value of register REG as gdb.Value instance.  */
 
@@ -365,15 +447,11 @@ static PyObject *
 pending_framepy_read_register (PyObject *self, PyObject *args)
 {
   pending_frame_object *pending_frame = (pending_frame_object *) self;
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
   int regnum;
   PyObject *pyo_reg_id;
 
-  if (pending_frame->frame_info == NULL)
-    {
-      PyErr_SetString (PyExc_ValueError,
-		       "Attempting to read register from stale PendingFrame");
-      return NULL;
-    }
   if (!PyArg_UnpackTuple (args, "read_register", 1, 1, &pyo_reg_id))
     return NULL;
   if (!gdbpy_parse_register_id (pending_frame->gdbarch, pyo_reg_id, &regnum))
@@ -406,6 +484,200 @@ pending_framepy_read_register (PyObject *self, PyObject *args)
   return result;
 }
 
+/* Implement PendingFrame.is_valid().  Return True if this pending frame
+   object is still valid.  */
+
+static PyObject *
+pending_framepy_is_valid (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  if (pending_frame->frame_info == nullptr)
+    Py_RETURN_FALSE;
+
+  Py_RETURN_TRUE;
+}
+
+/* Implement PendingFrame.name().  Return a string that is the name of the
+   function for this frame, or None if the name can't be found.  */
+
+static PyObject *
+pending_framepy_name (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
+  gdb::unique_xmalloc_ptr<char> name;
+
+  try
+    {
+      enum language lang;
+      frame_info_ptr frame = pending_frame->frame_info;
+
+      name = find_frame_funname (frame, &lang, nullptr);
+    }
+  catch (const gdb_exception &except)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+
+  if (name != nullptr)
+    return PyUnicode_Decode (name.get (), strlen (name.get ()),
+			     host_charset (), nullptr);
+
+  Py_RETURN_NONE;
+}
+
+/* Implement gdb.PendingFrame.pc().  Returns an integer containing the
+   frame's current $pc value.  */
+
+static PyObject *
+pending_framepy_pc (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
+  CORE_ADDR pc = 0;
+
+  try
+    {
+      pc = get_frame_pc (pending_frame->frame_info);
+    }
+  catch (const gdb_exception &except)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+
+  return gdb_py_object_from_ulongest (pc).release ();
+}
+
+/* Implement gdb.PendingFrame.language().  Return the name of the language
+   for this frame.  */
+
+static PyObject *
+pending_framepy_language (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
+  try
+    {
+      frame_info_ptr fi = pending_frame->frame_info;
+
+      enum language lang = get_frame_language (fi);
+      const language_defn *lang_def = language_def (lang);
+
+      return host_string_to_python_string (lang_def->name ()).release ();
+    }
+  catch (const gdb_exception &except)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+
+  Py_RETURN_NONE;
+}
+
+/* Implement PendingFrame.find_sal().  Return the PendingFrame's symtab and
+   line.  */
+
+static PyObject *
+pending_framepy_find_sal (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
+  PyObject *sal_obj = nullptr;
+
+  try
+    {
+      frame_info_ptr frame = pending_frame->frame_info;
+
+      symtab_and_line sal = find_frame_sal (frame);
+      sal_obj = symtab_and_line_to_sal_object (sal);
+    }
+  catch (const gdb_exception &except)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+
+  return sal_obj;
+}
+
+/* Implement PendingFrame.block().  Return a gdb.Block for the pending
+   frame's code, or raise  RuntimeError if the block can't be found.  */
+
+static PyObject *
+pending_framepy_block (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
+  frame_info_ptr frame = pending_frame->frame_info;
+  const struct block *block = nullptr, *fn_block;
+
+  try
+    {
+      block = get_frame_block (frame, nullptr);
+    }
+  catch (const gdb_exception &except)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+
+  for (fn_block = block;
+       fn_block != nullptr && fn_block->function () == nullptr;
+       fn_block = fn_block->superblock ())
+    ;
+
+  if (block == nullptr
+      || fn_block == nullptr
+      || fn_block->function () == nullptr)
+    {
+      PyErr_SetString (PyExc_RuntimeError,
+		       _("Cannot locate block for frame."));
+      return nullptr;
+    }
+
+  return block_to_block_object (block, fn_block->function ()->objfile ());
+}
+
+/* Implement gdb.PendingFrame.function().  Return a gdb.Symbol
+   representing the function of this frame, or None if no suitable symbol
+   can be found.  */
+
+static PyObject *
+pending_framepy_function (PyObject *self, PyObject *args)
+{
+  pending_frame_object *pending_frame = (pending_frame_object *) self;
+
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
+  struct symbol *sym = nullptr;
+
+  try
+    {
+      enum language funlang;
+      frame_info_ptr frame = pending_frame->frame_info;
+
+      gdb::unique_xmalloc_ptr<char> funname
+	= find_frame_funname (frame, &funlang, &sym);
+    }
+  catch (const gdb_exception &except)
+    {
+      GDB_PY_HANDLE_EXCEPTION (except);
+    }
+
+  if (sym != nullptr)
+    return symbol_to_symbol_object (sym);
+
+  Py_RETURN_NONE;
+}
+
 /* Implementation of
    PendingFrame.create_unwind_info (self, frameId) -> UnwindInfo.  */
 
@@ -417,14 +689,21 @@ pending_framepy_create_unwind_info (PyObject *self, PyObject *args)
   CORE_ADDR pc;
   CORE_ADDR special;
 
+  PENDING_FRAMEPY_REQUIRE_VALID ((pending_frame_object *) self);
+
   if (!PyArg_ParseTuple (args, "O:create_unwind_info", &pyo_frame_id))
-      return NULL;
-  if (!pyuw_object_attribute_to_pointer (pyo_frame_id, "sp", &sp))
+    return nullptr;
+
+  pyuw_get_attr_code code
+    = pyuw_object_attribute_to_pointer (pyo_frame_id, "sp", &sp);
+  if (code == pyuw_get_attr_code::ATTR_MISSING)
     {
       PyErr_SetString (PyExc_ValueError,
 		       _("frame_id should have 'sp' attribute."));
-      return NULL;
+      return nullptr;
     }
+  else if (code == pyuw_get_attr_code::ATTR_ERROR)
+    return nullptr;
 
   /* The logic of building frame_id depending on the attributes of
      the frame_id object:
@@ -435,13 +714,20 @@ pending_framepy_create_unwind_info (PyObject *self, PyObject *args)
      Y       Y      N             frame_id_build (sp, pc)
      Y       Y      Y             frame_id_build_special (sp, pc, special)
   */
-  if (!pyuw_object_attribute_to_pointer (pyo_frame_id, "pc", &pc))
+  code = pyuw_object_attribute_to_pointer (pyo_frame_id, "pc", &pc);
+  if (code == pyuw_get_attr_code::ATTR_ERROR)
+    return nullptr;
+  else if (code == pyuw_get_attr_code::ATTR_MISSING)
     return pyuw_create_unwind_info (self, frame_id_build_wild (sp));
-  if (!pyuw_object_attribute_to_pointer (pyo_frame_id, "special", &special))
+
+  code = pyuw_object_attribute_to_pointer (pyo_frame_id, "special", &special);
+  if (code == pyuw_get_attr_code::ATTR_ERROR)
+    return nullptr;
+  else if (code == pyuw_get_attr_code::ATTR_MISSING)
     return pyuw_create_unwind_info (self, frame_id_build (sp, pc));
-  else
-    return pyuw_create_unwind_info (self,
-				    frame_id_build_special (sp, pc, special));
+
+  return pyuw_create_unwind_info (self,
+				  frame_id_build_special (sp, pc, special));
 }
 
 /* Implementation of PendingFrame.architecture (self) -> gdb.Architecture.  */
@@ -451,12 +737,8 @@ pending_framepy_architecture (PyObject *self, PyObject *args)
 {
   pending_frame_object *pending_frame = (pending_frame_object *) self;
 
-  if (pending_frame->frame_info == NULL)
-    {
-      PyErr_SetString (PyExc_ValueError,
-		       "Attempting to read register from stale PendingFrame");
-      return NULL;
-    }
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
   return gdbarch_to_arch_object (pending_frame->gdbarch);
 }
 
@@ -467,12 +749,8 @@ pending_framepy_level (PyObject *self, PyObject *args)
 {
   pending_frame_object *pending_frame = (pending_frame_object *) self;
 
-  if (pending_frame->frame_info == NULL)
-    {
-      PyErr_SetString (PyExc_ValueError,
-		       "Attempting to read stack level from stale PendingFrame");
-      return NULL;
-    }
+  PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
+
   int level = frame_relative_level (pending_frame->frame_info);
   return gdb_py_object_from_longest (level).release ();
 }
@@ -538,6 +816,7 @@ pyuw_sniffer (const struct frame_unwind *self, frame_info_ptr this_frame,
       return 0;
     }
   pfo->gdbarch = gdbarch;
+  pfo->frame_info = nullptr;
   scoped_restore invalidate_frame = make_scoped_restore (&pfo->frame_info,
 							 this_frame);
 
@@ -736,6 +1015,29 @@ static PyMethodDef pending_frame_object_methods[] =
     pending_framepy_architecture, METH_NOARGS,
     "architecture () -> gdb.Architecture\n"
     "The architecture for this PendingFrame." },
+  { "name",
+    pending_framepy_name, METH_NOARGS,
+    "name() -> String.\n\
+Return the function name of the frame, or None if it can't be determined." },
+  { "is_valid",
+    pending_framepy_is_valid, METH_NOARGS,
+    "is_valid () -> Boolean.\n\
+Return true if this PendingFrame is valid, false if not." },
+  { "pc",
+    pending_framepy_pc, METH_NOARGS,
+    "pc () -> Long.\n\
+Return the frame's resume address." },
+  { "language", pending_framepy_language, METH_NOARGS,
+    "The language of this frame." },
+  { "find_sal", pending_framepy_find_sal, METH_NOARGS,
+    "find_sal () -> gdb.Symtab_and_line.\n\
+Return the frame's symtab and line." },
+  { "block", pending_framepy_block, METH_NOARGS,
+    "block () -> gdb.Block.\n\
+Return the frame's code block." },
+  { "function", pending_framepy_function, METH_NOARGS,
+    "function () -> gdb.Symbol.\n\
+Returns the symbol for the function corresponding to this frame." },
   { "level", pending_framepy_level, METH_NOARGS,
     "The stack level of this frame." },
   {NULL}  /* Sentinel */
@@ -752,7 +1054,7 @@ PyTypeObject pending_frame_object_type =
   0,                              /* tp_getattr */
   0,                              /* tp_setattr */
   0,                              /* tp_compare */
-  0,                              /* tp_repr */
+  pending_framepy_repr,           /* tp_repr */
   0,                              /* tp_as_number */
   0,                              /* tp_as_sequence */
   0,                              /* tp_as_mapping */
@@ -802,7 +1104,7 @@ PyTypeObject unwind_info_object_type =
   0,                              /* tp_getattr */
   0,                              /* tp_setattr */
   0,                              /* tp_compare */
-  0,                              /* tp_repr */
+  unwind_infopy_repr,             /* tp_repr */
   0,                              /* tp_as_number */
   0,                              /* tp_as_sequence */
   0,                              /* tp_as_mapping */
@@ -812,7 +1114,7 @@ PyTypeObject unwind_info_object_type =
   0,                              /* tp_getattro */
   0,                              /* tp_setattro */
   0,                              /* tp_as_buffer */
-  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,  /* tp_flags */
+  Py_TPFLAGS_DEFAULT,             /* tp_flags */
   "GDB UnwindInfo object",        /* tp_doc */
   0,                              /* tp_traverse */
   0,                              /* tp_clear */

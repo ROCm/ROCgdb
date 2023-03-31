@@ -2783,6 +2783,7 @@ pointer, pointer-to-function, floating point or vector types.
 It also provides a factory method to create a @code{gdb.UnwindInfo}
 instance to be returned to @value{GDBN}:
 
+@anchor{gdb.PendingFrame.create_unwind_info}
 @defun PendingFrame.create_unwind_info (frame_id)
 Returns a new @code{gdb.UnwindInfo} instance identified by given
 @var{frame_id}.  The @var{frame_id} is used internally by @value{GDBN}
@@ -2816,7 +2817,12 @@ Inside gdb, this is called a ``wild frame''.  You will never need
 this.
 @end table
 
-Each attribute value should be an instance of @code{gdb.Value}.
+Each attribute value should either be an instance of @code{gdb.Value}
+or an integer.
+
+A helper class is provided in the @code{gdb.unwinder} module that can
+be used to represent a frame-id
+(@pxref{gdb.unwinder.FrameId}).
 
 @end defun
 
@@ -2831,6 +2837,46 @@ Return an integer, the stack frame level for this frame.
 @xref{Frames, ,Stack Frames}.
 @end defun
 
+@defun PendingFrame.name ()
+Returns the function name of this pending frame, or @code{None} if it
+can't be obtained.
+@end defun
+
+@defun PendingFrame.is_valid ()
+Returns true if the @code{gdb.PendingFrame} object is valid, false if
+not.  A pending frame object becomes invalid when the call to the
+unwinder, for which the pending frame was created, returns.
+
+All @code{gdb.PendingFrame} methods, except this one, will raise an
+exception if the pending frame object is invalid at the time the
+method is called.
+@end defun
+
+@defun PendingFrame.pc ()
+Returns the pending frame's resume address.
+@end defun
+
+@defun PendingFrame.block ()
+Return the pending frame's code block (@pxref{Blocks In Python}).  If
+the frame does not have a block -- for example, if there is no
+debugging information for the code in question -- then this will raise
+a @code{RuntimeError} exception.
+@end defun
+
+@defun PendingFrame.function ()
+Return the symbol for the function corresponding to this pending frame.
+@xref{Symbols In Python}.
+@end defun
+
+@defun PendingFrame.find_sal ()
+Return the pending frame's symtab and line object (@pxref{Symbol
+Tables In Python}).
+@end defun
+
+@defun PendingFrame.language ()
+Return the language of this frame, as a string, or None.
+@end defun
+
 @subheading Unwinder Output: UnwindInfo
 
 Use @code{PendingFrame.create_unwind_info} method described above to
@@ -2842,6 +2888,67 @@ specify caller registers that have been saved in this frame:
 values see @ref{gdbpy_frame_read_register,,Frame.read_register}.
 @var{value} is a register value (a @code{gdb.Value} object).
 @end defun
+
+@subheading The @code{gdb.unwinder} Module
+
+@value{GDBN} comes with a @code{gdb.unwinder} module which contains
+the following classes:
+
+@deftp {class} gdb.unwinder.Unwinder
+The @code{Unwinder} class is a base class from which user created
+unwinders can derive, though it is not required that unwinders derive
+from this class, so long as any user created unwinder has the required
+@code{name} and @code{enabled} attributes.
+
+@defun gdb.unwinder.Unwinder.__init__(@var{name})
+The @var{name} is a string used to reference this unwinder within some
+@value{GDBN} commands (@pxref{Managing Registered Unwinders}).
+@end defun
+
+@defvar gdb.unwinder.name
+A read-only attribute which is a string, the name of this unwinder.
+@end defvar
+
+@defvar gdb.unwinder.enabled
+A modifiable attribute containing a boolean; when @code{True}, the
+unwinder is enabled, and will be used by @value{GDBN}.  When
+@code{False}, the unwinder has been disabled, and will not be used.
+@end defvar
+@end deftp
+
+@anchor{gdb.unwinder.FrameId}
+@deftp {class} gdb.unwinder.FrameId
+This is a class suitable for being used as the frame-id when calling
+@code{gdb.PendingFrame.create_unwind_info}.  It is not required to use
+this class, any class with the required attribute
+(@pxref{gdb.PendingFrame.create_unwind_info}) will be accepted, but in
+most cases this class will be sufficient.
+
+@code{gdb.unwinder.FrameId} has the following method:
+
+@defun gdb.unwinder.FrameId.__init__(@var{sp}, @var{pc}, @var{special} = @code{None})
+The @var{sp} and @var{pc} arguments are required and should be either
+a @code{gdb.Value} object, or an integer.
+
+The @var{special} argument is optional; if specified, it should be a
+@code{gdb.Value} object, or an integer.
+@end defun
+
+@code{gdb.unwinder.FrameId} has the following read-only attributes:
+
+@defvar gdb.unwinder.sp
+The @var{sp} value passed to the constructor.
+@end defvar
+
+@defvar gdb.unwinder.pc
+The @var{pc} value passed to the constructor.
+@end defvar
+
+@defvar gdb.unwinder.special
+The @var{special} value passed to the constructor, or @code{None} if
+no such value was passed.
+@end defvar
+@end deftp
 
 @subheading Registering an Unwinder
 
@@ -2871,18 +2978,10 @@ builtin to @value{GDBN}.
 
 @subheading Unwinder Skeleton Code
 
-@value{GDBN} comes with the module containing the base @code{Unwinder}
-class.  Derive your unwinder class from it and structure the code as
-follows:
+Here is an example of how to structure a user created unwinder:
 
 @smallexample
-from gdb.unwinder import Unwinder
-
-class FrameId(object):
-    def __init__(self, sp, pc):
-        self.sp = sp
-        self.pc = pc
-
+from gdb.unwinder import Unwinder, FrameId
 
 class MyUnwinder(Unwinder):
     def __init__(self):
@@ -2908,6 +3007,36 @@ class MyUnwinder(Unwinder):
 
 gdb.unwinder.register_unwinder(<locus>, MyUnwinder(), <replace>)
 @end smallexample
+
+@anchor{Managing Registered Unwinders}
+@subheading Managing Registered Unwinders
+@value{GDBN} defines 3 commands to manage registered unwinders.  These
+are:
+
+@table @code
+@item info unwinder @r{[} @var{locus} @r{[} @var{name-regexp} @r{]} @r{]}
+Lists all registered unwinders.  Arguments @var{locus} and
+@var{name-regexp} are both optional and can be used to filter which
+unwinders are listed.
+
+The @var{locus} argument should be either @kbd{global},
+@kbd{progspace}, or the name of an object file.  Only unwinders
+registered for the specified locus will be listed.
+
+The @var{name-regexp} is a regular expression used to match against
+unwinder names.  When trying to match against unwinder names that
+include a string enclose @var{name-regexp} in quotes.
+@item disable unwinder @r{[} @var{locus} @r{[} @var{name-regexp} @r{]} @r{]}
+The @var{locus} and @var{name-regexp} are interpreted as in @kbd{info
+unwinder} above, but instead of listing the matching unwinders, all of
+the matching unwinders are disabled.  The @code{enabled} field of each
+matching unwinder is set to @code{False}.
+@item enable unwinder @r{[} @var{locus} @r{[} @var{name-regexp} @r{]} @r{]}
+The @var{locus} and @var{name-regexp} are interpreted as in @kbd{info
+unwinder} above, but instead of listing the matching unwinders, all of
+the matching unwinders are enabled.  The @code{enabled} field of each
+matching unwinder is set to @code{True}.
+@end table
 
 @node Xmethods In Python
 @subsubsection Xmethods In Python
