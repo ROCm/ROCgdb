@@ -8322,6 +8322,9 @@ insert_exception_resume_breakpoint (struct thread_info *tp,
 	  infrun_debug_printf ("exception resume at %lx",
 			       (unsigned long) handler);
 
+	  /* set_momentary_breakpoint_at_pc creates a thread-specific
+	     breakpoint for the current inferior thread.  */
+	  gdb_assert (tp == inferior_thread ());
 	  bp = set_momentary_breakpoint_at_pc (get_frame_arch (frame),
 					       handler,
 					       bp_exception_resume).release ();
@@ -8329,8 +8332,7 @@ insert_exception_resume_breakpoint (struct thread_info *tp,
 	  /* set_momentary_breakpoint_at_pc invalidates FRAME.  */
 	  frame = nullptr;
 
-	  bp->thread = tp->global_num;
-	  inferior_thread ()->control.exception_resume_breakpoint = bp;
+	  tp->control.exception_resume_breakpoint = bp;
 	}
     }
   catch (const gdb_exception_error &e)
@@ -8360,10 +8362,12 @@ insert_exception_resume_from_probe (struct thread_info *tp,
   infrun_debug_printf ("exception resume at %s",
 		       paddress (probe->objfile->arch (), handler));
 
+  /* set_momentary_breakpoint_at_pc creates a thread-specific breakpoint
+     for the current inferior thread.  */
+  gdb_assert (tp == inferior_thread ());
   bp = set_momentary_breakpoint_at_pc (get_frame_arch (frame),
 				       handler, bp_exception_resume).release ();
-  bp->thread = tp->global_num;
-  inferior_thread ()->control.exception_resume_breakpoint = bp;
+  tp->control.exception_resume_breakpoint = bp;
 }
 
 /* This is called when an exception has been intercepted.  Check to
