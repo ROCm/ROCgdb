@@ -991,6 +991,7 @@ process_abbrev_set (struct dwarf_section *section,
   list->first_abbrev = NULL;
   list->last_abbrev = NULL;
   list->raw = start;
+  list->next = NULL;
 
   while (start < end)
     {
@@ -1006,17 +1007,13 @@ process_abbrev_set (struct dwarf_section *section,
 	 the caller.  */
       if (start == end || entry == 0)
 	{
-	  list->next = NULL;
 	  list->start_of_next_abbrevs = start != end ? start : NULL;
 	  return list;
 	}
 
       READ_ULEB (tag, start, end);
       if (start == end)
-	{
-	  free (list);
-	  return NULL;
-	}
+	return free_abbrev_list (list);
 
       children = *start++;
 
@@ -1051,8 +1048,7 @@ process_abbrev_set (struct dwarf_section *section,
   /* Report the missing single zero which ends the section.  */
   error (_("%s section not zero terminated\n"), section->name);
 
-  free (list);
-  return NULL;
+  return free_abbrev_list (list);
 }
 
 /* Return a sequence of abbrevs in SECTION starting at ABBREV_BASE
