@@ -1,6 +1,13 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
+*** Changes since GDB 14
+
+* New commands
+
+maintenance info linux-lwps
+  List all LWPs under control of the linux-nat target.
+
 *** Changes since GDB 13
 
 * GDB now supports the AArch64 Scalable Matrix Extension 2 (SME2), which
