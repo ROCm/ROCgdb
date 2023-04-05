@@ -307,7 +307,7 @@ set_thread_exited (thread_info *tp, bool silent)
       clear_thread_inferior_resources (tp);
 
       /* Remove from the ptid_t map.  We don't want for
-	 find_thread_ptid to find exited threads.  Also, the target
+	 inferior::find_thread to find exited threads.  Also, the target
 	 may reuse the ptid for a new thread, and there can only be
 	 one value per key; adding a new thread with the same ptid_t
 	 would overwrite the exited thread's ptid entry.  */
@@ -361,7 +361,7 @@ add_thread_silent (process_stratum_target *targ, ptid_t ptid)
      If we do, it must be dead, otherwise we wouldn't be adding a new
      thread with the same id.  The OS is reusing this id --- delete
      the old thread, and create a new one.  */
-  thread_info *tp = find_thread_ptid (inf, ptid);
+  thread_info *tp = inf->find_thread (ptid);
   if (tp != nullptr)
     delete_thread (tp);
 
@@ -601,31 +601,6 @@ find_thread_id (struct inferior *inf, int thr_num)
 /* See gdbthread.h.  */
 
 struct thread_info *
-find_thread_ptid (process_stratum_target *targ, ptid_t ptid)
-{
-  inferior *inf = find_inferior_ptid (targ, ptid);
-  if (inf == NULL)
-    return NULL;
-  return find_thread_ptid (inf, ptid);
-}
-
-/* See gdbthread.h.  */
-
-struct thread_info *
-find_thread_ptid (inferior *inf, ptid_t ptid)
-{
-  gdb_assert (inf != nullptr);
-
-  auto it = inf->ptid_thread_map.find (ptid);
-  if (it != inf->ptid_thread_map.end ())
-    return it->second;
-  else
-    return nullptr;
-}
-
-/* See gdbthread.h.  */
-
-struct thread_info *
 find_thread_by_handle (gdb::array_view<const gdb_byte> handle,
 		       struct inferior *inf)
 {
@@ -698,7 +673,7 @@ valid_global_thread_id (int global_id)
 bool
 in_thread_list (process_stratum_target *targ, ptid_t ptid)
 {
-  return find_thread_ptid (targ, ptid) != nullptr;
+  return targ->find_thread (ptid) != nullptr;
 }
 
 /* Finds the first thread of the inferior.  */
@@ -888,7 +863,7 @@ thread_change_ptid (process_stratum_target *targ,
   inf = find_inferior_ptid (targ, old_ptid);
   inf->pid = new_ptid.pid ();
 
-  tp = find_thread_ptid (inf, old_ptid);
+  tp = inf->find_thread (old_ptid);
   gdb_assert (tp != nullptr);
 
   int num_erased = inf->ptid_thread_map.erase (old_ptid);
@@ -1072,7 +1047,7 @@ pc_in_thread_step_range (CORE_ADDR pc, struct thread_info *thread)
    and PID is not -1, then the thread is printed if it belongs to the
    specified process.  Otherwise, an error is raised.  */
 
-static int
+static bool
 should_print_thread (const char *requested_threads, int default_inf_num,
 		     int global_ids, int pid, struct thread_info *thr)
 {
@@ -1086,20 +1061,20 @@ should_print_thread (const char *requested_threads, int default_inf_num,
 	in_list = tid_is_in_list (requested_threads, default_inf_num,
 				  thr->inf->num, thr->per_inf_num);
       if (!in_list)
-	return 0;
+	return false;
     }
 
   if (pid != -1 && thr->ptid.pid () != pid)
     {
       if (requested_threads != NULL && *requested_threads != '\0')
 	error (_("Requested thread not found in requested process"));
-      return 0;
+      return false;
     }
 
   if (thr->state == THREAD_EXITED)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 /* Return the string to display in "info threads"'s "Target Id"
@@ -1737,7 +1712,7 @@ switch_to_thread (thread_info *thr)
 void
 switch_to_thread (process_stratum_target *proc_target, ptid_t ptid)
 {
-  thread_info *thr = find_thread_ptid (proc_target, ptid);
+  thread_info *thr = proc_target->find_thread (ptid);
   switch_to_thread (thr);
 }
 
