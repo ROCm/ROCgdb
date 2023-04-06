@@ -2757,11 +2757,11 @@ unwinding.
 An object passed to an unwinder (a @code{gdb.PendingFrame} instance)
 provides a method to read frame's registers:
 
-@defun PendingFrame.read_register (reg)
-This method returns the contents of the register @var{reg} in the
+@defun PendingFrame.read_register (register)
+This method returns the contents of @var{register} in the
 frame as a @code{gdb.Value} object.  For a description of the
-acceptable values of @var{reg} see
-@ref{gdbpy_frame_read_register,,Frame.read_register}.  If @var{reg}
+acceptable values of @var{register} see
+@ref{gdbpy_frame_read_register,,Frame.read_register}.  If @var{register}
 does not name a register for the current architecture, this method
 will throw an exception.
 
@@ -2883,8 +2883,8 @@ Use @code{PendingFrame.create_unwind_info} method described above to
 create a @code{gdb.UnwindInfo} instance.  Use the following method to
 specify caller registers that have been saved in this frame:
 
-@defun gdb.UnwindInfo.add_saved_register (reg, value)
-@var{reg} identifies the register, for a description of the acceptable
+@defun gdb.UnwindInfo.add_saved_register (register, value)
+@var{register} identifies the register, for a description of the acceptable
 values see @ref{gdbpy_frame_read_register,,Frame.read_register}.
 @var{value} is a register value (a @code{gdb.Value} object).
 @end defun

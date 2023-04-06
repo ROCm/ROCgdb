@@ -292,7 +292,7 @@ pyuw_create_unwind_info (PyObject *pyo_pending_frame,
    gdb.UnwindInfo.add_saved_register (REG, VALUE) -> None.  */
 
 static PyObject *
-unwind_infopy_add_saved_register (PyObject *self, PyObject *args)
+unwind_infopy_add_saved_register (PyObject *self, PyObject *args, PyObject *kw)
 {
   unwind_info_object *unwind_info = (unwind_info_object *) self;
   pending_frame_object *pending_frame
@@ -305,11 +305,15 @@ unwind_infopy_add_saved_register (PyObject *self, PyObject *args)
     {
       PyErr_SetString (PyExc_ValueError,
 		       "UnwindInfo instance refers to a stale PendingFrame");
-      return NULL;
+      return nullptr;
     }
-  if (!PyArg_UnpackTuple (args, "previous_frame_register", 2, 2,
-			  &pyo_reg_id, &pyo_reg_value))
-    return NULL;
+
+  static const char *keywords[] = { "register", "value", nullptr };
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "OO!", keywords,
+					&pyo_reg_id, &value_object_type,
+					&pyo_reg_value))
+    return nullptr;
+
   if (!gdbpy_parse_register_id (pending_frame->gdbarch, pyo_reg_id, &regnum))
     return nullptr;
 
@@ -332,43 +336,38 @@ unwind_infopy_add_saved_register (PyObject *self, PyObject *args)
 	}
     }
 
-  {
-    struct value *value;
-    size_t data_size;
+  /* The argument parsing above guarantees that PYO_REG_VALUE will be a
+     gdb.Value object, as a result the value_object_to_value call should
+     succeed.  */
+  gdb_assert (pyo_reg_value != nullptr);
+  struct value *value = value_object_to_value (pyo_reg_value);
+  gdb_assert (value != nullptr);
 
-    if (pyo_reg_value == NULL
-      || (value = value_object_to_value (pyo_reg_value)) == NULL)
-      {
-	PyErr_SetString (PyExc_ValueError, "Bad register value");
-	return NULL;
-      }
-    data_size = register_size (pending_frame->gdbarch, regnum);
-    if (data_size != value->type ()->length ())
-      {
-	PyErr_Format (
-	    PyExc_ValueError,
-	    "The value of the register returned by the Python "
-	    "sniffer has unexpected size: %u instead of %u.",
-	    (unsigned) value->type ()->length (),
-	    (unsigned) data_size);
-	return NULL;
-      }
-  }
-  {
-    gdbpy_ref<> new_value = gdbpy_ref<>::new_reference (pyo_reg_value);
-    bool found = false;
-    for (saved_reg &reg : *unwind_info->saved_regs)
-      {
-	if (regnum == reg.number)
-	  {
-	    found = true;
-	    reg.value = std::move (new_value);
-	    break;
-	  }
-      }
-    if (!found)
-      unwind_info->saved_regs->emplace_back (regnum, std::move (new_value));
-  }
+  ULONGEST reg_size = register_size (pending_frame->gdbarch, regnum);
+  if (reg_size != value->type ()->length ())
+    {
+      PyErr_Format (PyExc_ValueError,
+		    "The value of the register returned by the Python "
+		    "sniffer has unexpected size: %s instead of %s.",
+		    pulongest (value->type ()->length ()),
+		    pulongest (reg_size));
+      return nullptr;
+    }
+
+  gdbpy_ref<> new_value = gdbpy_ref<>::new_reference (pyo_reg_value);
+  bool found = false;
+  for (saved_reg &reg : *unwind_info->saved_regs)
+    {
+      if (regnum == reg.number)
+	{
+	  found = true;
+	  reg.value = std::move (new_value);
+	  break;
+	}
+    }
+  if (!found)
+    unwind_info->saved_regs->emplace_back (regnum, std::move (new_value));
+
   Py_RETURN_NONE;
 }
 
@@ -444,16 +443,17 @@ pending_framepy_repr (PyObject *self)
    Returns the value of register REG as gdb.Value instance.  */
 
 static PyObject *
-pending_framepy_read_register (PyObject *self, PyObject *args)
+pending_framepy_read_register (PyObject *self, PyObject *args, PyObject *kw)
 {
   pending_frame_object *pending_frame = (pending_frame_object *) self;
   PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
 
-  int regnum;
   PyObject *pyo_reg_id;
+  static const char *keywords[] = { "register", nullptr };
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O", keywords, &pyo_reg_id))
+    return nullptr;
 
-  if (!PyArg_UnpackTuple (args, "read_register", 1, 1, &pyo_reg_id))
-    return NULL;
+  int regnum;
   if (!gdbpy_parse_register_id (pending_frame->gdbarch, pyo_reg_id, &regnum))
     return nullptr;
 
@@ -682,7 +682,8 @@ pending_framepy_function (PyObject *self, PyObject *args)
    PendingFrame.create_unwind_info (self, frameId) -> UnwindInfo.  */
 
 static PyObject *
-pending_framepy_create_unwind_info (PyObject *self, PyObject *args)
+pending_framepy_create_unwind_info (PyObject *self, PyObject *args,
+				    PyObject *kw)
 {
   PyObject *pyo_frame_id;
   CORE_ADDR sp;
@@ -691,7 +692,9 @@ pending_framepy_create_unwind_info (PyObject *self, PyObject *args)
 
   PENDING_FRAMEPY_REQUIRE_VALID ((pending_frame_object *) self);
 
-  if (!PyArg_ParseTuple (args, "O:create_unwind_info", &pyo_frame_id))
+  static const char *keywords[] = { "frame_id", nullptr };
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O", keywords,
+					&pyo_frame_id))
     return nullptr;
 
   pyuw_get_attr_code code
@@ -1003,11 +1006,12 @@ gdbpy_initialize_unwind (void)
 
 static PyMethodDef pending_frame_object_methods[] =
 {
-  { "read_register", pending_framepy_read_register, METH_VARARGS,
+  { "read_register", (PyCFunction) pending_framepy_read_register,
+    METH_VARARGS | METH_KEYWORDS,
     "read_register (REG) -> gdb.Value\n"
     "Return the value of the REG in the frame." },
-  { "create_unwind_info",
-    pending_framepy_create_unwind_info, METH_VARARGS,
+  { "create_unwind_info", (PyCFunction) pending_framepy_create_unwind_info,
+    METH_VARARGS | METH_KEYWORDS,
     "create_unwind_info (FRAME_ID) -> gdb.UnwindInfo\n"
     "Construct UnwindInfo for this PendingFrame, using FRAME_ID\n"
     "to identify it." },
@@ -1087,7 +1091,8 @@ PyTypeObject pending_frame_object_type =
 static PyMethodDef unwind_info_object_methods[] =
 {
   { "add_saved_register",
-    unwind_infopy_add_saved_register, METH_VARARGS,
+    (PyCFunction) unwind_infopy_add_saved_register,
+    METH_VARARGS | METH_KEYWORDS,
     "add_saved_register (REG, VALUE) -> None\n"
     "Set the value of the REG in the previous frame to VALUE." },
   { NULL }  /* Sentinel */
