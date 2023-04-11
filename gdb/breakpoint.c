@@ -2153,6 +2153,21 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 	    }
 	}
 
+      /* Helper function to bundle possibly emitting a warning along with
+	 changing the type of B to bp_watchpoint.  */
+      auto change_type_to_bp_watchpoint = [] (breakpoint *bp)
+      {
+	/* Only warn for breakpoints that have been assigned a +ve number,
+	   anything else is either an internal watchpoint (which we don't
+	   currently create) or has not yet been finalized, in which case
+	   this change of type will be occurring before the user is told
+	   the type of this watchpoint.  */
+	if (bp->type == bp_hardware_watchpoint && bp->number > 0)
+	  warning (_("watchpoint %d downgraded to software watchpoint"),
+		   bp->number);
+	bp->type = bp_watchpoint;
+      };
+
       /* Change the type of breakpoint between hardware assisted or
 	 an ordinary watchpoint depending on the hardware support and
 	 free hardware slots.  Recheck the number of free hardware slots
@@ -2210,7 +2225,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 			     "resources for this watchpoint."));
 
 		  /* Downgrade to software watchpoint.  */
-		  b->type = bp_watchpoint;
+		  change_type_to_bp_watchpoint (b);
 		}
 	      else
 		{
@@ -2231,7 +2246,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 			 "read/access watchpoint."));
 	    }
 	  else
-	    b->type = bp_watchpoint;
+	    change_type_to_bp_watchpoint (b);
 
 	  loc_type = (b->type == bp_watchpoint? bp_loc_software_watchpoint
 		      : bp_loc_hardware_watchpoint);
@@ -6527,15 +6542,15 @@ print_one_breakpoint_location (struct breakpoint *b,
 	    inf_nums.push_back (inf->num);
 	}
 
-	/* For backward compatibility, don't display inferiors in CLI unless
-	   there are several.  Always display for MI. */
-	if (allflag
-	    || (!gdbarch_has_global_breakpoints (target_gdbarch ())
-		&& (program_spaces.size () > 1
-		    || number_of_inferiors () > 1)
-		/* LOC is for existing B, it cannot be in
-		   moribund_locations and thus having NULL OWNER.  */
-		&& loc->owner->type != bp_catchpoint))
+      /* For backward compatibility, don't display inferiors in CLI unless
+	 there are several.  Always display for MI. */
+      if (allflag
+	  || (!gdbarch_has_global_breakpoints (target_gdbarch ())
+	      && (program_spaces.size () > 1
+		  || number_of_inferiors () > 1)
+	      /* LOC is for existing B, it cannot be in
+		 moribund_locations and thus having NULL OWNER.  */
+	      && loc->owner->type != bp_catchpoint))
 	mi_only = 0;
       output_thread_groups (uiout, "thread-groups", inf_nums, mi_only);
     }

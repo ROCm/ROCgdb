@@ -2955,8 +2955,14 @@ read_and_display_attr_value (unsigned long attribute,
 		}
 	      else
 		{
-		  assert (debug_info_p->num_loc_views <= num);
-		  num = debug_info_p->num_loc_views;
+		  if (debug_info_p->num_loc_views > num)
+		    {
+		      warn (_("The number of views (%u) is greater than the number of locations (%u)\n"),
+			    debug_info_p->num_loc_views, num);
+		      debug_info_p->num_loc_views = num;
+		    }
+		  else
+		    num = debug_info_p->num_loc_views;
 		  if (num > debug_info_p->num_loc_offsets)
 		    warn (_("More DW_AT_GNU_locview attributes than location offset attributes\n"));
 		  else
@@ -5025,6 +5031,12 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 
 	      if (n_directories == 0)
 		directory_table = NULL;
+	      else if (n_directories > section->size)
+		{
+		  warn (_("number of directories (0x%x) exceeds size of section %s\n"),
+			n_directories, section->name);
+		  return 0;
+		}
 	      else
 		directory_table = (char **)
 		  xcalloc (n_directories, sizeof (unsigned char *));
@@ -5083,6 +5095,7 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 	      if (do_checks && format_count > 5)
 		warn (_("Unexpectedly large number of columns in the file name table (%u)\n"),
 		      format_count);
+
 	      format_start = data;
 	      for (formati = 0; formati < format_count; formati++)
 		{
@@ -5099,6 +5112,12 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 
 	      if (n_files == 0)
 		file_table = NULL;
+	      else if (n_files > section->size)
+		{
+		  warn (_("number of files (0x%x) exceeds size of section %s\n"),
+			n_files, section->name);
+		  return 0;
+		}
 	      else
 		file_table = (File_Entry *) xcalloc (n_files,
 						     sizeof (File_Entry));
@@ -10784,6 +10803,10 @@ display_gdb_index (struct dwarf_section *section,
 static void
 prealloc_cu_tu_list (unsigned int nshndx)
 {
+  if (nshndx == 0)
+    /* Always allocate at least one entry for the end-marker.  */
+    nshndx = 1;
+
   if (shndx_pool == NULL)
     {
       shndx_pool_size = nshndx;
@@ -10848,7 +10871,7 @@ get_DW_SECT_short_name (unsigned int dw_sect)
    These sections are extensions for Fission.
    See http://gcc.gnu.org/wiki/DebugFissionDWP.  */
 
-static int
+static bool
 process_cu_tu_index (struct dwarf_section *section, int do_display)
 {
   unsigned char *phdr = section->start;
@@ -10869,14 +10892,14 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
   if (phdr == NULL)
     {
       warn (_("Section %s is empty\n"), section->name);
-      return 0;
+      return false;
     }
   /* PR 17512: file: 002-376-0.004.  */
   if (section->size < 24)
     {
       warn (_("Section %s is too small to contain a CU/TU header\n"),
 	    section->name);
-      return 0;
+      return false;
     }
 
   phash = phdr;
@@ -10908,7 +10931,7 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
 		      "Section %s is too small for %u slots\n",
 		      nslots),
 	    section->name, nslots);
-      return 0;
+      return false;
     }
 
   if (version == 1)
@@ -10938,7 +10961,7 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
 		if (shndx_list < ppool)
 		  {
 		    warn (_("Section index pool located before start of section\n"));
-		    return 0;
+		    return false;
 		  }
 
 		printf (_("  [%3d] Signature:  %#" PRIx64 "  Sections: "),
@@ -10949,7 +10972,7 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
 		      {
 			warn (_("Section %s too small for shndx pool\n"),
 			      section->name);
-			return 0;
+			return false;
 		      }
 		    SAFE_BYTE_GET (shndx, shndx_list, 4, limit);
 		    if (shndx == 0)
@@ -10992,7 +11015,7 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
 	{
 	  warn (_("Section %s too small for offset and size tables\n"),
 		section->name);
-	  return 0;
+	  return false;
 	}
 
       if (do_display)
@@ -11040,7 +11063,7 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
 		{
 		  warn (_("Row index (%u) is larger than number of used entries (%u)\n"),
 			row, nused);
-		  return 0;
+		  return false;
 		}
 
 	      if (!do_display)
@@ -11125,7 +11148,7 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
 			printf ("\n");
 		      warn (_("Too many rows/columns in DWARF index section %s\n"),
 			    section->name);
-		      return 0;
+		      return false;
 		    }
 
 		  SAFE_BYTE_GET (val, p, 4, limit);
@@ -11157,7 +11180,7 @@ process_cu_tu_index (struct dwarf_section *section, int do_display)
   if (do_display)
       printf ("\n");
 
-  return 1;
+  return true;
 }
 
 static int cu_tu_indexes_read = -1; /* Tri-state variable.  */
