@@ -105,6 +105,7 @@ U.S. and other countries. PCIe@registeredsymbol{} is a registered trademark of
 PCI-SIG Corporation.  Other product names used in this publication are for
 identification purposes only and may be trademarks of their respective
 companies.
+@c man end
 @end copying
 
 @ifnottex
