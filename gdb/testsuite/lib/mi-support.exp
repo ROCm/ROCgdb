@@ -1271,7 +1271,7 @@ proc mi_expect_stop { reason func args file line extra test } {
 
     set r ""
     if { $reason != "" } {
-	if { [regexp {"} $reason] } {
+	if { [regexp "\"" $reason] } {
 	   set r "reason=$reason,"
 	} else {
 	   set r "reason=\"$reason\","
@@ -2688,7 +2688,8 @@ proc mi_make_breakpoint_multi {args} {
 
 proc mi_make_breakpoint_pending {args} {
     parse_args {{number .*} {type .*} {disp .*} {enabled .*}
-	{pending .*} {original-location .*} {thread ""} {cond ""}}
+	{pending .*} {original-location .*} {thread ""} {cond ""}
+	{script ""} {times .*}}
 
     set attr_list {}
     foreach attr [list number type disp enabled] {
@@ -2702,8 +2703,6 @@ proc mi_make_breakpoint_pending {args} {
     }
 
     set ignore 0
-    set times 0
-    set script ""
     set evaluated-by ""
 
     set result [mi_make_breakpoint_1 \
