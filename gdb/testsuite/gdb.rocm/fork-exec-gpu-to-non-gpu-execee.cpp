@@ -1,6 +1,6 @@
-/* Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2021-2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

@@ -2527,7 +2527,6 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 	  attach_amd_dbgapi (child_inf);
 	}
     }
-
 }
 
 /* inferior_exit observer.

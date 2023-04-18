@@ -1,6 +1,6 @@
-/* Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2021-2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -34,11 +34,11 @@ kernel2 ()
 }
 
 int
-main (int argc, char* argv[])
+main ()
 {
   /* Launch a first kernel to make sure the runtime is active by the time we
      call fork.  */
-  hipLaunchKernelGGL (kernel1, dim3 (1), dim3 (1), 0, 0);
+  kernel1<<<1, 1>>> ();
 
   /* fork + exec while the runtime is active.  */
   if (FORK () == 0)
@@ -48,7 +48,7 @@ main (int argc, char* argv[])
       abort ();
     }
 
-  hipLaunchKernelGGL (kernel2, dim3 (1), dim3 (1), 0, 0);
+  kernel2<<<1, 1>>> ();
 
   hipDeviceSynchronize ();
   return 0;

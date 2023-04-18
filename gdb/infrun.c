@@ -1337,7 +1337,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
   else
     {
       /* follow-exec-mode is "same", we continue execution in the execing
-         inferior.  */
+	 inferior.  */
       following_inferior = execing_inferior;
 
       /* The old description may no longer be fit for the new image.
@@ -4419,9 +4419,13 @@ fetch_inferior_event ()
 
     gdb_assert (ecs.ws.kind () != TARGET_WAITKIND_IGNORE);
 
-    /* Switch to the target that generated the event, so we can do
-       target calls.  */
-    switch_to_target_no_thread (ecs.target);
+    /* Switch to the inferior that generated the event, so we can do
+       target calls.  If the event was not associated to a ptid,  */
+    if (ecs.ptid != null_ptid
+	&& ecs.ptid != minus_one_ptid)
+      switch_to_inferior_no_thread (find_inferior_ptid (ecs.target, ecs.ptid));
+    else
+      switch_to_target_no_thread (ecs.target);
 
     if (debug_infrun)
       print_target_wait_results (minus_one_ptid, ecs.ptid, ecs.ws);
@@ -5879,7 +5883,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	       list yet at this point.  */
 
 	    child_regcache
-	      = get_thread_arch_aspace_regcache (parent_inf->process_target (),
+	      = get_thread_arch_aspace_regcache (parent_inf,
 						 ecs->ws.child_ptid (),
 						 gdbarch,
 						 parent_inf->aspace);

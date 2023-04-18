@@ -93,7 +93,7 @@ extern observable<> executable_changed;
 extern observable<inferior */* inferior */> inferior_created;
 
 /* The inferior EXEC_INF has exec'ed a new executable file.
-   
+
    Execution continues in FOLLOW_INF, which may or may not be the same as
    EXEC_INF, depending on "set follow-exec-mode".  */
 extern observable<inferior */* exec_inf */, inferior */* follow_inf */>

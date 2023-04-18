@@ -3287,7 +3287,7 @@ ada_array_bound_from_type (struct type *arr_type, int n, int which)
     arr_type = decode_constrained_packed_array_type (arr_type);
 
   if (arr_type == NULL || !ada_is_simple_array_type (arr_type))
-    return (LONGEST) - which;
+    return - which;
 
   if (arr_type->code () == TYPE_CODE_PTR)
     type = arr_type->target_type ();
@@ -3320,10 +3320,9 @@ ada_array_bound_from_type (struct type *arr_type, int n, int which)
       index_type = elt_type->index_type ();
     }
 
-  return
-    (LONGEST) (which == 0
-	       ? ada_discrete_type_low_bound (index_type)
-	       : ada_discrete_type_high_bound (index_type));
+  return (which == 0
+	  ? ada_discrete_type_low_bound (index_type)
+	  : ada_discrete_type_high_bound (index_type));
 }
 
 /* Given that arr is an array value, returns the lower bound of the
@@ -10114,7 +10113,7 @@ ada_unop_in_range (struct type *expect_type,
       lim_warning (_("Membership test incompletely implemented; "
 		     "always returns true"));
       type = language_bool_type (exp->language_defn, exp->gdbarch);
-      return value_from_longest (type, (LONGEST) 1);
+      return value_from_longest (type, 1);
 
     case TYPE_CODE_RANGE:
       arg2 = value_from_longest (type,
@@ -10224,7 +10223,7 @@ ada_equal_binop (struct type *expect_type,
   if (op == BINOP_NOTEQUAL)
     tem = !tem;
   struct type *type = language_bool_type (exp->language_defn, exp->gdbarch);
-  return value_from_longest (type, (LONGEST) tem);
+  return value_from_longest (type, tem);
 }
 
 /* A helper function for TERNOP_SLICE.  */
@@ -10591,10 +10590,10 @@ ada_char_operation::replace (operation_up &&owner,
 
   if (context_type != nullptr && context_type->code () == TYPE_CODE_ENUM)
     {
+      LONGEST val = as_longest ();
       gdb_assert (result.get () == this);
       std::get<0> (m_storage) = context_type;
-      std::get<1> (m_storage)
-	= convert_char_literal (context_type, std::get<1> (m_storage));
+      std::get<1> (m_storage) = convert_char_literal (context_type, val);
     }
 
   return result;
@@ -13545,6 +13544,8 @@ public:
 			  "long_float", gdbarch_double_format (gdbarch)));
     add (init_integer_type (alloc, gdbarch_long_long_bit (gdbarch),
 			    0, "long_long_integer"));
+    add (init_integer_type (alloc, 128, 0, "long_long_long_integer"));
+    add (init_integer_type (alloc, 128, 1, "unsigned_long_long_long_integer"));
     add (init_float_type (alloc, gdbarch_long_double_bit (gdbarch),
 			  "long_long_float",
 			  gdbarch_long_double_format (gdbarch)));
