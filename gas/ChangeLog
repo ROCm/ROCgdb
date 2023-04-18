@@ -1,3 +1,15 @@
+2023-04-18  mengqinggang  <mengqinggang@loongson.cn>
+
+	* config/tc-loongarch.c (loongarch_fix_adjustable): Symbols with
+	GOT relocatios do not fix adjustbale.
+	* testsuite/gas/loongarch/macro_op_large_abs.d: Regenerated.
+	* testsuite/gas/loongarch/macro_op_large_pc.d: Regenerated.
+
+2023-04-18  Thomas Koenig  <tkoenig@netcologne.de>
+
+	* doc/internals.texi (Relaxing with a table): Describe handling of
+	opcodes for relaxation a bit better.
+
 2023-04-13  Claudiu Zissulescu  <claziss@synopsys.com>
 
         * testsuite/gas/cfi/cfi-arc-1.s: Use baseline instructions.
