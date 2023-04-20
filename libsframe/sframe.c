@@ -201,7 +201,7 @@ flip_fde (sframe_func_desc_entry *fdep)
 
 /* Check if SFrame header has valid data.  */
 
-static int
+static bool
 sframe_header_sanity_check_p (sframe_header *hp)
 {
   unsigned char all_flags = SFRAME_F_FDE_SORTED | SFRAME_F_FRAME_POINTER;
@@ -209,13 +209,13 @@ sframe_header_sanity_check_p (sframe_header *hp)
   if ((hp->sfh_preamble.sfp_magic != SFRAME_MAGIC)
       || (hp->sfh_preamble.sfp_version != SFRAME_VERSION)
       || ((hp->sfh_preamble.sfp_flags | all_flags) != all_flags))
-    return 0;
+    return false;
 
   /* Check offsets are valid.  */
   if (hp->sfh_fdeoff > hp->sfh_freoff)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 /* Flip the start address pointed to by FP.  */
@@ -284,14 +284,14 @@ sframe_fre_start_addr_size (unsigned int fre_type)
 
 /* Check if the FREP has valid data.  */
 
-static int
+static bool
 sframe_fre_sanity_check_p (sframe_frame_row_entry *frep)
 {
   unsigned int offset_size, offset_cnt;
   unsigned int fre_info;
 
   if (frep == NULL)
-    return 0;
+    return false;
 
   fre_info = frep->fre_info;
   offset_size = sframe_fre_get_offset_size (fre_info);
@@ -299,13 +299,13 @@ sframe_fre_sanity_check_p (sframe_frame_row_entry *frep)
   if (offset_size != SFRAME_FRE_OFFSET_1B
       && offset_size != SFRAME_FRE_OFFSET_2B
       && offset_size != SFRAME_FRE_OFFSET_4B)
-    return 0;
+    return false;
 
   offset_cnt = sframe_fre_get_offset_count (fre_info);
   if (offset_cnt > 3)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 /* Get FRE_INFO's offset size in bytes.  */
@@ -469,14 +469,14 @@ bad:
 
 /* The SFrame Decoder.  */
 
-/* Get DECODER's SFrame header.  */
+/* Get SFrame header from the given decoder context DCTX.  */
 
 static sframe_header *
-sframe_decoder_get_header (sframe_decoder_ctx *decoder)
+sframe_decoder_get_header (sframe_decoder_ctx *dctx)
 {
   sframe_header *hp = NULL;
-  if (decoder != NULL)
-    hp = &decoder->sfd_header;
+  if (dctx != NULL)
+    hp = &dctx->sfd_header;
   return hp;
 }
 
@@ -534,11 +534,11 @@ sframe_get_fre_offset (sframe_frame_row_entry *fre, int idx, int *errp)
 /* Free the decoder context.  */
 
 void
-sframe_decoder_free (sframe_decoder_ctx **decoder)
+sframe_decoder_free (sframe_decoder_ctx **dctxp)
 {
-  if (decoder != NULL)
+  if (dctxp != NULL)
     {
-      sframe_decoder_ctx *dctx = *decoder;
+      sframe_decoder_ctx *dctx = *dctxp;
       if (dctx == NULL)
 	return;
 
@@ -558,8 +558,8 @@ sframe_decoder_free (sframe_decoder_ctx **decoder)
 	  dctx->sfd_buf = NULL;
 	}
 
-      free (*decoder);
-      *decoder = NULL;
+      free (*dctxp);
+      *dctxp = NULL;
     }
 }
 
@@ -970,7 +970,7 @@ sframe_get_funcdesc_with_addr (sframe_decoder_ctx *ctx,
       if (fdp[mid].sfde_func_start_address < addr)
 	{
 	  if (mid == (cnt - 1)) 	/* Check if it's the last one.  */
-	    return fdp + (cnt - 1) ;
+	    return fdp + (cnt - 1);
 	  else if (fdp[mid+1].sfde_func_start_address > addr)
 	    return fdp + mid;
 	  low = mid + 1;
@@ -1221,18 +1221,18 @@ sframe_encode (unsigned char ver, unsigned char flags, int abi_arch,
 	       int8_t fixed_fp_offset, int8_t fixed_ra_offset, int *errp)
 {
   sframe_header *hp;
-  sframe_encoder_ctx *fp;
+  sframe_encoder_ctx *encoder;
 
   if (ver != SFRAME_VERSION)
     return sframe_ret_set_errno (errp, SFRAME_ERR_VERSION_INVAL);
 
-  if ((fp = malloc (sizeof (sframe_encoder_ctx))) == NULL)
+  if ((encoder = malloc (sizeof (sframe_encoder_ctx))) == NULL)
     return sframe_ret_set_errno (errp, SFRAME_ERR_NOMEM);
 
-  memset (fp, 0, sizeof (sframe_encoder_ctx));
+  memset (encoder, 0, sizeof (sframe_encoder_ctx));
 
   /* Get the SFrame header and update it.  */
-  hp = sframe_encoder_get_header (fp);
+  hp = sframe_encoder_get_header (encoder);
   hp->sfh_preamble.sfp_version = ver;
   hp->sfh_preamble.sfp_magic = SFRAME_MAGIC;
   hp->sfh_preamble.sfp_flags = flags;
@@ -1241,7 +1241,7 @@ sframe_encode (unsigned char ver, unsigned char flags, int abi_arch,
   hp->sfh_cfa_fixed_fp_offset = fixed_fp_offset;
   hp->sfh_cfa_fixed_ra_offset = fixed_ra_offset;
 
-  return fp;
+  return encoder;
 }
 
 /* Free the encoder context.  */
@@ -1552,7 +1552,7 @@ static int
 sframe_encoder_write_fre (char *contents, sframe_frame_row_entry *frep,
 			  unsigned int fre_type, size_t *esz)
 {
-  size_t fre_size;
+  size_t fre_sz;
   size_t fre_start_addr_sz;
   size_t fre_stack_offsets_sz;
   int err = 0;
@@ -1572,23 +1572,19 @@ sframe_encoder_write_fre (char *contents, sframe_frame_row_entry *frep,
 				       fre_type, fre_start_addr_sz);
   contents += fre_start_addr_sz;
 
-  memcpy (contents,
-	  &frep->fre_info,
-	  sizeof (frep->fre_info));
+  memcpy (contents, &frep->fre_info, sizeof (frep->fre_info));
   contents += sizeof (frep->fre_info);
 
-  memcpy (contents,
-	  frep->fre_offsets,
-	  fre_stack_offsets_sz);
+  memcpy (contents, frep->fre_offsets, fre_stack_offsets_sz);
   contents+= fre_stack_offsets_sz;
 
-  fre_size = sframe_fre_entry_size (frep, fre_type);
+  fre_sz = sframe_fre_entry_size (frep, fre_type);
   /* Sanity checking.  */
   sframe_assert ((fre_start_addr_sz
-		     + sizeof (frep->fre_info)
-		     + fre_stack_offsets_sz) == fre_size);
+		  + sizeof (frep->fre_info)
+		  + fre_stack_offsets_sz) == fre_sz);
 
-  *esz = fre_size;
+  *esz = fre_sz;
 
   return 0;
 }
