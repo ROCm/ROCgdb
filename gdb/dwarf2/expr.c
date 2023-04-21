@@ -2294,13 +2294,6 @@ rw_closure_value (value *v, value *from)
   bool big_endian = type_byte_order (v->type ()) == BFD_ENDIAN_BIG;
   auto location = closure->get_location ();
 
-  if (from == NULL)
-    {
-      if (v->type () != v->enclosing_type ())
-        internal_error (_("Should not be able to create a lazy value with "
-			  "an enclosing type"));
-    }
-
   ULONGEST bits_to_skip = HOST_CHAR_BIT * v->offset ();
 
   /* If there are bits that don't complete a byte, count them in.  */
@@ -2348,10 +2341,6 @@ is_optimized_out_closure_value (value *v)
   computed_closure *closure = (computed_closure*) v->computed_closure ();
   bool big_endian = type_byte_order (v->type ()) == BFD_ENDIAN_BIG;
   auto location = closure->get_location ();
-
-  if (v->type () != v->enclosing_type ())
-    internal_error (_("Should not be able to create a lazy value with "
-		      "an enclosing type"));
 
   ULONGEST bits_to_skip = HOST_CHAR_BIT * v->offset ();
 
