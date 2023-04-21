@@ -350,6 +350,19 @@ compunit_symtab::find_call_site (CORE_ADDR pc) const
   struct call_site call_site_local (unrelocated_pc, nullptr, nullptr);
   void **slot
     = htab_find_slot (m_call_site_htab, &call_site_local, NO_INSERT);
+  if (slot != nullptr)
+    return (call_site *) *slot;
+
+  /* See if the arch knows another PC we should try.  On some
+     platforms, GCC emits a DWARF call site that is offset from the
+     actual return location.  */
+  struct gdbarch *arch = objfile ()->arch ();
+  CORE_ADDR new_pc = gdbarch_update_call_site_pc (arch, pc);
+  if (pc == new_pc)
+    return nullptr;
+
+  call_site new_call_site_local (new_pc - delta, nullptr, nullptr);
+  slot = htab_find_slot (m_call_site_htab, &new_call_site_local, NO_INSERT);
   if (slot == nullptr)
     return nullptr;
 
@@ -875,10 +888,7 @@ symbol_find_demangled_name (struct general_symbol_info *gsymbol,
   gdb::unique_xmalloc_ptr<char> demangled;
   int i;
 
-  if (gsymbol->language () == language_unknown)
-    gsymbol->m_language = language_auto;
-
-  if (gsymbol->language () != language_auto)
+  if (gsymbol->language () != language_unknown)
     {
       const struct language_defn *lang = language_def (gsymbol->language ());
 
@@ -1016,7 +1026,7 @@ general_symbol_info::compute_and_set_names (gdb::string_view linkage_name,
       (*slot)->demangled = std::move (demangled_name);
       (*slot)->language = language ();
     }
-  else if (language () == language_unknown || language () == language_auto)
+  else if (language () == language_unknown)
     m_language = (*slot)->language;
 
   m_name = (*slot)->mangled.data ();
