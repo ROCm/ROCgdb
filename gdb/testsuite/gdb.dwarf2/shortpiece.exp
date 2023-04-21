@@ -137,7 +137,7 @@ gdb_test "p s2" \
 # value's content.
 # This test verifies that GDB can print a pieced value casted to a
 # different type.
-gdb_test "p (int \[\]) s1" " = \\{1\\, 0\\}"
+gdb_test "p (int \[\]) s1" " = \\{1\\, <synthetic pointer>\\}"
 gdb_test "p (short \[\]) s1" " = \\{1\\, 0\\, 0\\, <synthetic pointer>\\}"
 
 # Test for correct output if the size of the original object is not a

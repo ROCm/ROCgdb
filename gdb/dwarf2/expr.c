@@ -2049,6 +2049,16 @@ dwarf_composite::is_implicit_ptr_at (LONGEST bit_offset, int bit_length) const
       total_bit_length -= read_bit_length;
     }
 
+    /* The case where the requested range goes outside of the
+       underlaying location range is currently described as a
+       access through a synthetic pointer.  Check for this kind
+       of access seems to be covered by the same closure hook as
+       the implicit pointer check.  This means that if the
+       composite location description doesn't describe the whole
+       requested range, true needs to be returned here.  */
+    if (total_bit_length != 0)
+      return true;
+
     return false;
 }
 
