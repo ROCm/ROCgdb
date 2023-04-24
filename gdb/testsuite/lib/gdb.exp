@@ -1517,6 +1517,21 @@ if { [tcl_version_at_least 8 5] == 0 } {
     }
 }
 
+if { [tcl_version_at_least 8 6] == 0 } {
+    # lmap was added in tcl 8.6.  Only add if missing.
+
+    # Note that we only implement the simple variant for now.
+    proc lmap { varname list body } {
+	set res {}
+	foreach val $list {
+	    uplevel 1 "set $varname $val"
+	    lappend res [uplevel 1 $body]
+	}
+
+	return $res
+    }
+}
+
 # gdb_test_no_output [-prompt PROMPT_REGEXP] [-nopass] COMMAND [MESSAGE]
 # Send a command to GDB and verify that this command generated no output.
 #
@@ -9668,6 +9683,14 @@ proc have_syscall { name } {
 gdb_caching_proc have_compile_flag { flag } {
     set src { void foo () {} }
     return [gdb_can_simple_compile have_compile_flag_$flag $src object \
+		additional_flags=$flag]
+}
+
+# Return 1 if we can create an executable using compile and link flag FLAG.
+
+gdb_caching_proc have_compile_and_link_flag { flag } {
+    set src { int main () { return 0; } }
+    return [gdb_can_simple_compile have_compile_and_link_flag_$flag $src executable \
 		additional_flags=$flag]
 }
 
