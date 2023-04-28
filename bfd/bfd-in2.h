@@ -122,10 +122,10 @@ typedef uint64_t symvalue;
 
 #else /* not BFD64  */
 
-typedef unsigned long bfd_vma;
-typedef long bfd_signed_vma;
-typedef unsigned long symvalue;
-typedef unsigned long bfd_size_type;
+typedef uint32_t bfd_vma;
+typedef int32_t bfd_signed_vma;
+typedef uint32_t bfd_size_type;
+typedef uint32_t symvalue;
 
 #endif /* not BFD64  */
 
@@ -142,8 +142,8 @@ extern void bfd_fprintf_vma (bfd *, void *, bfd_vma);
 
 #define bfd_printf_vma(abfd,x) bfd_fprintf_vma (abfd,stdout,x)
 
-typedef unsigned int flagword;	/* 32 bits of flags */
-typedef unsigned char bfd_byte;
+typedef uint32_t flagword;	/* 32 bits of flags */
+typedef uint8_t bfd_byte;
 
 /* File formats.  */
 
@@ -368,24 +368,6 @@ extern int bfd_seek (bfd *, file_ptr, int);
 extern file_ptr bfd_tell (bfd *);
 extern int bfd_flush (bfd *);
 extern int bfd_stat (bfd *, struct stat *);
-
-/* Deprecated old routines.  */
-#if __GNUC__
-#define bfd_read(BUF, ELTSIZE, NITEMS, ABFD)				\
-  (_bfd_warn_deprecated ("bfd_read", __FILE__, __LINE__, __func__),	\
-   bfd_bread ((BUF), (ELTSIZE) * (NITEMS), (ABFD)))
-#define bfd_write(BUF, ELTSIZE, NITEMS, ABFD)				\
-  (_bfd_warn_deprecated ("bfd_write", __FILE__, __LINE__, __func__),	\
-   bfd_bwrite ((BUF), (ELTSIZE) * (NITEMS), (ABFD)))
-#else
-#define bfd_read(BUF, ELTSIZE, NITEMS, ABFD)				\
-  (_bfd_warn_deprecated ("bfd_read", (const char *) 0, 0, (const char *) 0), \
-   bfd_bread ((BUF), (ELTSIZE) * (NITEMS), (ABFD)))
-#define bfd_write(BUF, ELTSIZE, NITEMS, ABFD)				\
-  (_bfd_warn_deprecated ("bfd_write", (const char *) 0, 0, (const char *) 0),\
-   bfd_bwrite ((BUF), (ELTSIZE) * (NITEMS), (ABFD)))
-#endif
-extern void _bfd_warn_deprecated (const char *, const char *, int, const char *);
 
 extern bool bfd_cache_close
   (bfd *abfd);

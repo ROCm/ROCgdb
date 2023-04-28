@@ -116,10 +116,9 @@ static bool MOVSXD_Fixup (instr_info *, int, int);
 static bool DistinctDest_Fixup (instr_info *, int, int);
 static bool PREFETCHI_Fixup (instr_info *, int, int);
 
-static void ATTRIBUTE_PRINTF_3 i386_dis_printf (const instr_info *,
+static void ATTRIBUTE_PRINTF_3 i386_dis_printf (const disassemble_info *,
 						enum disassembler_style,
 						const char *, ...);
-static const char *prefix_name (const instr_info *, int, int);
 
 /* This character is used to encode style information within the output
    buffers.  See oappend_insert_style for more details.  */
@@ -142,6 +141,8 @@ enum address_mode
   mode_32bit,
   mode_64bit
 };
+
+static const char *prefix_name (enum address_mode, int, int);
 
 enum x86_64_isa
 {
@@ -351,14 +352,15 @@ fetch_error (const instr_info *ins)
     return -1;
 
   if (ins->prefixes || ins->fwait_prefix >= 0 || (ins->rex & REX_OPCODE))
-    name = prefix_name (ins, priv->the_buffer[0], priv->orig_sizeflag);
+    name = prefix_name (ins->address_mode, priv->the_buffer[0],
+			priv->orig_sizeflag);
   if (name != NULL)
-    i386_dis_printf (ins, dis_style_mnemonic, "%s", name);
+    i386_dis_printf (ins->info, dis_style_mnemonic, "%s", name);
   else
     {
       /* Just print the first byte as a .byte instruction.  */
-      i386_dis_printf (ins, dis_style_assembler_directive, ".byte ");
-      i386_dis_printf (ins, dis_style_immediate, "%#x",
+      i386_dis_printf (ins->info, dis_style_assembler_directive, ".byte ");
+      i386_dis_printf (ins->info, dis_style_immediate, "%#x",
 		       (unsigned int) priv->the_buffer[0]);
     }
 
@@ -843,7 +845,7 @@ enum
   REG_VEX_0F72_M_0,
   REG_VEX_0F73_M_0,
   REG_VEX_0FAE,
-  REG_VEX_0F3849_X86_64_P_0_W_0_M_1,
+  REG_VEX_0F3849_X86_64_L_0_W_0_M_1_P_0,
   REG_VEX_0F38F3_L_0,
 
   REG_XOP_09_01_L_0,
@@ -971,20 +973,12 @@ enum
   MOD_VEX_0F382D,
   MOD_VEX_0F382E,
   MOD_VEX_0F382F,
-  MOD_VEX_0F3849_X86_64_P_0_W_0,
-  MOD_VEX_0F3849_X86_64_P_2_W_0,
-  MOD_VEX_0F3849_X86_64_P_3_W_0,
-  MOD_VEX_0F384B_X86_64_P_1_W_0,
-  MOD_VEX_0F384B_X86_64_P_2_W_0,
-  MOD_VEX_0F384B_X86_64_P_3_W_0,
+  MOD_VEX_0F3849_X86_64_L_0_W_0,
+  MOD_VEX_0F384B_X86_64_L_0_W_0,
   MOD_VEX_0F385A,
-  MOD_VEX_0F385C_X86_64_P_1_W_0,
-  MOD_VEX_0F385C_X86_64_P_3_W_0,
-  MOD_VEX_0F385E_X86_64_P_0_W_0,
-  MOD_VEX_0F385E_X86_64_P_1_W_0,
-  MOD_VEX_0F385E_X86_64_P_2_W_0,
-  MOD_VEX_0F385E_X86_64_P_3_W_0,
-  MOD_VEX_0F386C_X86_64_W_0,
+  MOD_VEX_0F385C_X86_64,
+  MOD_VEX_0F385E_X86_64,
+  MOD_VEX_0F386C_X86_64,
   MOD_VEX_0F388C,
   MOD_VEX_0F388E,
   MOD_VEX_0F3A30_L_0,
@@ -1024,7 +1018,8 @@ enum
   RM_0FAE_REG_7_MOD_3,
   RM_0F3A0F_P_1_MOD_3_REG_0,
 
-  RM_VEX_0F3849_X86_64_P_0_W_0_M_1_R_0
+  RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_0_R_0,
+  RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_3,
 };
 
 enum
@@ -1181,13 +1176,14 @@ enum
   PREFIX_VEX_0FD0,
   PREFIX_VEX_0FE6,
   PREFIX_VEX_0FF0,
-  PREFIX_VEX_0F3849_X86_64,
-  PREFIX_VEX_0F384B_X86_64,
+  PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_0,
+  PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_1,
+  PREFIX_VEX_0F384B_X86_64_L_0_W_0_M_0,
   PREFIX_VEX_0F3850_W_0,
   PREFIX_VEX_0F3851_W_0,
-  PREFIX_VEX_0F385C_X86_64,
-  PREFIX_VEX_0F385E_X86_64,
-  PREFIX_VEX_0F386C_X86_64_W_0_M_1_L_0,
+  PREFIX_VEX_0F385C_X86_64_M_1_L_0_W_0,
+  PREFIX_VEX_0F385E_X86_64_M_1_L_0_W_0,
+  PREFIX_VEX_0F386C_X86_64_M_1_L_0_W_0,
   PREFIX_VEX_0F3872,
   PREFIX_VEX_0F38B0_W_0,
   PREFIX_VEX_0F38B1_W_0,
@@ -1428,21 +1424,12 @@ enum
   VEX_LEN_0F381A_M_0,
   VEX_LEN_0F3836,
   VEX_LEN_0F3841,
-  VEX_LEN_0F3849_X86_64_P_0_W_0_M_0,
-  VEX_LEN_0F3849_X86_64_P_0_W_0_M_1_REG_0_RM_0,
-  VEX_LEN_0F3849_X86_64_P_2_W_0_M_0,
-  VEX_LEN_0F3849_X86_64_P_3_W_0_M_0,
-  VEX_LEN_0F384B_X86_64_P_1_W_0_M_0,
-  VEX_LEN_0F384B_X86_64_P_2_W_0_M_0,
-  VEX_LEN_0F384B_X86_64_P_3_W_0_M_0,
+  VEX_LEN_0F3849_X86_64,
+  VEX_LEN_0F384B_X86_64,
   VEX_LEN_0F385A_M_0,
-  VEX_LEN_0F385C_X86_64_P_1_W_0_M_0,
-  VEX_LEN_0F385C_X86_64_P_3_W_0_M_0,
-  VEX_LEN_0F385E_X86_64_P_0_W_0_M_0,
-  VEX_LEN_0F385E_X86_64_P_1_W_0_M_0,
-  VEX_LEN_0F385E_X86_64_P_2_W_0_M_0,
-  VEX_LEN_0F385E_X86_64_P_3_W_0_M_0,
-  VEX_LEN_0F386C_X86_64_W_0_M_1,
+  VEX_LEN_0F385C_X86_64_M_1,
+  VEX_LEN_0F385E_X86_64_M_1,
+  VEX_LEN_0F386C_X86_64_M_1,
   VEX_LEN_0F38DB,
   VEX_LEN_0F38F2,
   VEX_LEN_0F38F3,
@@ -1591,12 +1578,8 @@ enum
   VEX_W_0F382F_M_0,
   VEX_W_0F3836,
   VEX_W_0F3846,
-  VEX_W_0F3849_X86_64_P_0,
-  VEX_W_0F3849_X86_64_P_2,
-  VEX_W_0F3849_X86_64_P_3,
-  VEX_W_0F384B_X86_64_P_1,
-  VEX_W_0F384B_X86_64_P_2,
-  VEX_W_0F384B_X86_64_P_3,
+  VEX_W_0F3849_X86_64_L_0,
+  VEX_W_0F384B_X86_64_L_0,
   VEX_W_0F3850,
   VEX_W_0F3851,
   VEX_W_0F3852,
@@ -1604,13 +1587,9 @@ enum
   VEX_W_0F3858,
   VEX_W_0F3859,
   VEX_W_0F385A_M_0_L_0,
-  VEX_W_0F385C_X86_64_P_1,
-  VEX_W_0F385C_X86_64_P_3,
-  VEX_W_0F385E_X86_64_P_0,
-  VEX_W_0F385E_X86_64_P_1,
-  VEX_W_0F385E_X86_64_P_2,
-  VEX_W_0F385E_X86_64_P_3,
-  VEX_W_0F386C_X86_64,
+  VEX_W_0F385C_X86_64_M_1_L_0,
+  VEX_W_0F385E_X86_64_M_1_L_0,
+  VEX_W_0F386C_X86_64_M_1_L_0,
   VEX_W_0F3872_P_1,
   VEX_W_0F3878,
   VEX_W_0F3879,
@@ -2962,9 +2941,9 @@ static const struct dis386 reg_table[][8] = {
     { MOD_TABLE (MOD_VEX_0FAE_REG_2) },
     { MOD_TABLE (MOD_VEX_0FAE_REG_3) },
   },
-  /* REG_VEX_0F3849_X86_64_P_0_W_0_M_1 */
+  /* REG_VEX_0F3849_X86_64_L_0_W_0_M_1_P_0 */
   {
-    { RM_TABLE (RM_VEX_0F3849_X86_64_P_0_W_0_M_1_R_0) },
+    { RM_TABLE (RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_0_R_0) },
   },
   /* REG_VEX_0F38F3_L_0 */
   {
@@ -4118,20 +4097,27 @@ static const struct dis386 prefix_table[][4] = {
     { MOD_TABLE (MOD_VEX_0FF0_PREFIX_3) },
   },
 
-  /* PREFIX_VEX_0F3849_X86_64 */
+  /* PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_0 */
   {
-    { VEX_W_TABLE (VEX_W_0F3849_X86_64_P_0) },
+    { "ldtilecfg", { M }, 0 },
     { Bad_Opcode },
-    { VEX_W_TABLE (VEX_W_0F3849_X86_64_P_2) },
-    { VEX_W_TABLE (VEX_W_0F3849_X86_64_P_3) },
+    { "sttilecfg", { M }, 0 },
   },
 
-  /* PREFIX_VEX_0F384B_X86_64 */
+  /* PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_1 */
+  {
+    { REG_TABLE (REG_VEX_0F3849_X86_64_L_0_W_0_M_1_P_0) },
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { RM_TABLE (RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_3) },
+  },
+
+  /* PREFIX_VEX_0F384B_X86_64_L_0_W_0_M_0 */
   {
     { Bad_Opcode },
-    { VEX_W_TABLE (VEX_W_0F384B_X86_64_P_1) },
-    { VEX_W_TABLE (VEX_W_0F384B_X86_64_P_2) },
-    { VEX_W_TABLE (VEX_W_0F384B_X86_64_P_3) },
+    { "tilestored",	{ MVexSIBMEM, TMM }, 0 },
+    { "tileloaddt1",	{ TMM, MVexSIBMEM }, 0 },
+    { "tileloadd",	{ TMM, MVexSIBMEM }, 0 },
   },
 
   /* PREFIX_VEX_0F3850_W_0 */
@@ -4149,23 +4135,23 @@ static const struct dis386 prefix_table[][4] = {
     { "%XVvpdpbusds",	{ XM, Vex, EXx }, 0 },
     { "vpdpbssds",	{ XM, Vex, EXx }, 0 },
   },
-  /* PREFIX_VEX_0F385C_X86_64 */
+  /* PREFIX_VEX_0F385C_X86_64_M_1_L_0_W_0 */
   {
     { Bad_Opcode },
-    { VEX_W_TABLE (VEX_W_0F385C_X86_64_P_1) },
+    { "tdpbf16ps", { TMM, EXtmm, VexTmm }, 0 },
     { Bad_Opcode },
-    { VEX_W_TABLE (VEX_W_0F385C_X86_64_P_3) },
+    { "tdpfp16ps", { TMM, EXtmm, VexTmm }, 0 },
   },
 
-  /* PREFIX_VEX_0F385E_X86_64 */
+  /* PREFIX_VEX_0F385E_X86_64_M_1_L_0_W_0 */
   {
-    { VEX_W_TABLE (VEX_W_0F385E_X86_64_P_0) },
-    { VEX_W_TABLE (VEX_W_0F385E_X86_64_P_1) },
-    { VEX_W_TABLE (VEX_W_0F385E_X86_64_P_2) },
-    { VEX_W_TABLE (VEX_W_0F385E_X86_64_P_3) },
+    { "tdpbuud", {TMM, EXtmm, VexTmm }, 0 },
+    { "tdpbsud", {TMM, EXtmm, VexTmm }, 0 },
+    { "tdpbusd", {TMM, EXtmm, VexTmm }, 0 },
+    { "tdpbssd", {TMM, EXtmm, VexTmm }, 0 },
   },
 
-  /* PREFIX_VEX_0F386C_X86_64_W_0_M_1_L_0 */
+  /* PREFIX_VEX_0F386C_X86_64_M_1_L_0_W_0 */
   {
     { "tcmmrlfp16ps", { TMM, EXtmm, VexTmm }, 0 },
     { Bad_Opcode },
@@ -4518,31 +4504,31 @@ static const struct dis386 x86_64_table[][2] = {
   /* X86_64_VEX_0F3849 */
   {
     { Bad_Opcode },
-    { PREFIX_TABLE (PREFIX_VEX_0F3849_X86_64) },
+    { VEX_LEN_TABLE (VEX_LEN_0F3849_X86_64) },
   },
 
   /* X86_64_VEX_0F384B */
   {
     { Bad_Opcode },
-    { PREFIX_TABLE (PREFIX_VEX_0F384B_X86_64) },
+    { VEX_LEN_TABLE (VEX_LEN_0F384B_X86_64) },
   },
 
   /* X86_64_VEX_0F385C */
   {
     { Bad_Opcode },
-    { PREFIX_TABLE (PREFIX_VEX_0F385C_X86_64) },
+    { MOD_TABLE (MOD_VEX_0F385C_X86_64) },
   },
 
   /* X86_64_VEX_0F385E */
   {
     { Bad_Opcode },
-    { PREFIX_TABLE (PREFIX_VEX_0F385E_X86_64) },
+    { MOD_TABLE (MOD_VEX_0F385E_X86_64) },
   },
 
   /* X86_64_VEX_0F386C */
   {
     { Bad_Opcode },
-    { VEX_W_TABLE (VEX_W_0F386C_X86_64) },
+    { MOD_TABLE (MOD_VEX_0F386C_X86_64) },
   },
 
   /* X86_64_VEX_0F38E0 */
@@ -7170,38 +7156,14 @@ static const struct dis386 vex_len_table[][2] = {
     { "vphminposuw",	{ XM, EXx }, PREFIX_DATA },
   },
 
-   /* VEX_LEN_0F3849_X86_64_P_0_W_0_M_0 */
+  /* VEX_LEN_0F3849_X86_64 */
   {
-    { "ldtilecfg", { M }, 0 },
+    { VEX_W_TABLE (VEX_W_0F3849_X86_64_L_0) },
   },
 
-  /* VEX_LEN_0F3849_X86_64_P_0_W_0_M_1_REG_0_RM_0 */
+  /* VEX_LEN_0F384B_X86_64 */
   {
-    { "tilerelease", { Skip_MODRM }, 0 },
-  },
-
-  /* VEX_LEN_0F3849_X86_64_P_2_W_0_M_0 */
-  {
-    { "sttilecfg", { M }, 0 },
-  },
-
-  /* VEX_LEN_0F3849_X86_64_P_3_W_0_M_0 */
-  {
-    { "tilezero", { TMM, Skip_MODRM }, 0 },
-  },
-
-  /* VEX_LEN_0F384B_X86_64_P_1_W_0_M_0 */
-  {
-    { "tilestored", { MVexSIBMEM, TMM }, 0 },
-  },
-  /* VEX_LEN_0F384B_X86_64_P_2_W_0_M_0 */
-  {
-    { "tileloaddt1", { TMM, MVexSIBMEM }, 0 },
-  },
-
-  /* VEX_LEN_0F384B_X86_64_P_3_W_0_M_0 */
-  {
-    { "tileloadd", { TMM, MVexSIBMEM }, 0 },
+    { VEX_W_TABLE (VEX_W_0F384B_X86_64_L_0) },
   },
 
   /* VEX_LEN_0F385A_M_0 */
@@ -7210,39 +7172,19 @@ static const struct dis386 vex_len_table[][2] = {
     { VEX_W_TABLE (VEX_W_0F385A_M_0_L_0) },
   },
 
-  /* VEX_LEN_0F385C_X86_64_P_1_W_0_M_0 */
+  /* VEX_LEN_0F385C_X86_64_M_1 */
   {
-    { "tdpbf16ps", { TMM, EXtmm, VexTmm }, 0 },
+    { VEX_W_TABLE (VEX_W_0F385C_X86_64_M_1_L_0) },
   },
 
-  /* VEX_LEN_0F385C_X86_64_P_3_W_0_M_0 */
+  /* VEX_LEN_0F385E_X86_64_M_1 */
   {
-    { "tdpfp16ps", { TMM, EXtmm, VexTmm }, 0 },
+    { VEX_W_TABLE (VEX_W_0F385E_X86_64_M_1_L_0) },
   },
 
-  /* VEX_LEN_0F385E_X86_64_P_0_W_0_M_0 */
+  /* VEX_LEN_0F386C_X86_64_M_1 */
   {
-    { "tdpbuud", {TMM, EXtmm, VexTmm }, 0 },
-  },
-
-  /* VEX_LEN_0F385E_X86_64_P_1_W_0_M_0 */
-  {
-    { "tdpbsud", {TMM, EXtmm, VexTmm }, 0 },
-  },
-
-  /* VEX_LEN_0F385E_X86_64_P_2_W_0_M_0 */
-  {
-    { "tdpbusd", {TMM, EXtmm, VexTmm }, 0 },
-  },
-
-  /* VEX_LEN_0F385E_X86_64_P_3_W_0_M_0 */
-  {
-    { "tdpbssd", {TMM, EXtmm, VexTmm }, 0 },
-  },
-
-  /* VEX_LEN_0F386C_X86_64_W_0_M_1 */
-  {
-    { PREFIX_TABLE (PREFIX_VEX_0F386C_X86_64_W_0_M_1_L_0) },
+    { VEX_W_TABLE (VEX_W_0F386C_X86_64_M_1_L_0) },
   },
 
   /* VEX_LEN_0F38DB */
@@ -7838,28 +7780,12 @@ static const struct dis386 vex_w_table[][2] = {
     { "vpsravd",	{ XM, Vex, EXx }, PREFIX_DATA },
   },
   {
-    /* VEX_W_0F3849_X86_64_P_0 */
-    { MOD_TABLE (MOD_VEX_0F3849_X86_64_P_0_W_0) },
+    /* VEX_W_0F3849_X86_64_L_0 */
+    { MOD_TABLE (MOD_VEX_0F3849_X86_64_L_0_W_0) },
   },
   {
-    /* VEX_W_0F3849_X86_64_P_2 */
-    { MOD_TABLE (MOD_VEX_0F3849_X86_64_P_2_W_0) },
-  },
-  {
-    /* VEX_W_0F3849_X86_64_P_3 */
-    { MOD_TABLE (MOD_VEX_0F3849_X86_64_P_3_W_0) },
-  },
-  {
-    /* VEX_W_0F384B_X86_64_P_1 */
-    { MOD_TABLE (MOD_VEX_0F384B_X86_64_P_1_W_0) },
-  },
-  {
-    /* VEX_W_0F384B_X86_64_P_2 */
-    { MOD_TABLE (MOD_VEX_0F384B_X86_64_P_2_W_0) },
-  },
-  {
-    /* VEX_W_0F384B_X86_64_P_3 */
-    { MOD_TABLE (MOD_VEX_0F384B_X86_64_P_3_W_0) },
+    /* VEX_W_0F384B_X86_64_L_0 */
+    { MOD_TABLE (MOD_VEX_0F384B_X86_64_L_0_W_0) },
   },
   {
     /* VEX_W_0F3850 */
@@ -7890,32 +7816,16 @@ static const struct dis386 vex_w_table[][2] = {
     { "vbroadcasti128", { XM, Mxmm }, PREFIX_DATA },
   },
   {
-    /* VEX_W_0F385C_X86_64_P_1 */
-    { MOD_TABLE (MOD_VEX_0F385C_X86_64_P_1_W_0) },
+    /* VEX_W_0F385C_X86_64_M_1_L_0 */
+    { PREFIX_TABLE (PREFIX_VEX_0F385C_X86_64_M_1_L_0_W_0) },
   },
   {
-    /* VEX_W_0F385C_X86_64_P_3 */
-    { MOD_TABLE (MOD_VEX_0F385C_X86_64_P_3_W_0) },
+    /* VEX_W_0F385E_X86_64_M_1_L_0 */
+    { PREFIX_TABLE (PREFIX_VEX_0F385E_X86_64_M_1_L_0_W_0) },
   },
   {
-    /* VEX_W_0F385E_X86_64_P_0 */
-    { MOD_TABLE (MOD_VEX_0F385E_X86_64_P_0_W_0) },
-  },
-  {
-    /* VEX_W_0F385E_X86_64_P_1 */
-    { MOD_TABLE (MOD_VEX_0F385E_X86_64_P_1_W_0) },
-  },
-  {
-    /* VEX_W_0F385E_X86_64_P_2 */
-    { MOD_TABLE (MOD_VEX_0F385E_X86_64_P_2_W_0) },
-  },
-  {
-    /* VEX_W_0F385E_X86_64_P_3 */
-    { MOD_TABLE (MOD_VEX_0F385E_X86_64_P_3_W_0) },
-  },
-  {
-    /* VEX_W_0F386C_X86_64 */
-    { MOD_TABLE (MOD_VEX_0F386C_X86_64_W_0) },
+    /* VEX_W_0F386C_X86_64_M_1_L_0 */
+    { PREFIX_TABLE (PREFIX_VEX_0F386C_X86_64_M_1_L_0_W_0) },
   },
   {
     /* VEX_W_0F3872_P_1 */
@@ -8705,69 +8615,32 @@ static const struct dis386 mod_table[][2] = {
     { VEX_W_TABLE (VEX_W_0F382F_M_0) },
   },
   {
-    /* MOD_VEX_0F3849_X86_64_P_0_W_0 */
-    { VEX_LEN_TABLE (VEX_LEN_0F3849_X86_64_P_0_W_0_M_0) },
-    { REG_TABLE (REG_VEX_0F3849_X86_64_P_0_W_0_M_1) },
+    /* MOD_VEX_0F3849_X86_64_L_0_W_0 */
+    { PREFIX_TABLE (PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_0) },
+    { PREFIX_TABLE (PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_1) },
   },
   {
-    /* MOD_VEX_0F3849_X86_64_P_2_W_0 */
-    { VEX_LEN_TABLE (VEX_LEN_0F3849_X86_64_P_2_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F3849_X86_64_P_3_W_0 */
-    { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F3849_X86_64_P_3_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F384B_X86_64_P_1_W_0 */
-    { VEX_LEN_TABLE (VEX_LEN_0F384B_X86_64_P_1_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F384B_X86_64_P_2_W_0 */
-    { VEX_LEN_TABLE (VEX_LEN_0F384B_X86_64_P_2_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F384B_X86_64_P_3_W_0 */
-    { VEX_LEN_TABLE (VEX_LEN_0F384B_X86_64_P_3_W_0_M_0) },
+    /* MOD_VEX_0F384B_X86_64_L_0_W_0 */
+    { PREFIX_TABLE (PREFIX_VEX_0F384B_X86_64_L_0_W_0_M_0) },
   },
   {
     /* MOD_VEX_0F385A */
     { VEX_LEN_TABLE (VEX_LEN_0F385A_M_0) },
   },
   {
-    /* MOD_VEX_0F385C_X86_64_P_1_W_0 */
+    /* MOD_VEX_0F385C_X86_64 */
     { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F385C_X86_64_P_1_W_0_M_0) },
+    { VEX_LEN_TABLE (VEX_LEN_0F385C_X86_64_M_1) },
   },
   {
-    /* MOD_VEX_0F385C_X86_64_P_3_W_0 */
+    /* MOD_VEX_0F385E_X86_64 */
     { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F385C_X86_64_P_3_W_0_M_0) },
+    { VEX_LEN_TABLE (VEX_LEN_0F385E_X86_64_M_1) },
   },
   {
-    /* MOD_VEX_0F385E_X86_64_P_0_W_0 */
+    /* MOD_VEX_0F386C_X86_64 */
     { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F385E_X86_64_P_0_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F385E_X86_64_P_1_W_0 */
-    { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F385E_X86_64_P_1_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F385E_X86_64_P_2_W_0 */
-    { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F385E_X86_64_P_2_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F385E_X86_64_P_3_W_0 */
-    { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F385E_X86_64_P_3_W_0_M_0) },
-  },
-  {
-    /* MOD_VEX_0F386C_X86_64_W_0 */
-    { Bad_Opcode },
-    { VEX_LEN_TABLE (VEX_LEN_0F386C_X86_64_W_0_M_1) },
+    { VEX_LEN_TABLE (VEX_LEN_0F386C_X86_64_M_1) },
   },
   {
     /* MOD_VEX_0F388C */
@@ -8904,8 +8777,12 @@ static const struct dis386 rm_table[][8] = {
     { "hreset",		{ Skip_MODRM, Ib }, 0 },
   },
   {
-    /* RM_VEX_0F3849_X86_64_P_0_W_0_M_1_R_0 */
-    { VEX_LEN_TABLE (VEX_LEN_0F3849_X86_64_P_0_W_0_M_1_REG_0_RM_0) },
+    /* RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_0_R_0 */
+    { "tilerelease",	{ Skip_MODRM }, 0 },
+  },
+  {
+    /* RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_3 */
+    { "tilezero",	{ TMM, Skip_MODRM }, 0 },
   },
 };
 
@@ -9049,7 +8926,7 @@ ckprefix (instr_info *ins)
    prefix byte.  */
 
 static const char *
-prefix_name (const instr_info *ins, int pref, int sizeflag)
+prefix_name (enum address_mode mode, int pref, int sizeflag)
 {
   static const char *rexes [16] =
     {
@@ -9112,7 +8989,7 @@ prefix_name (const instr_info *ins, int pref, int sizeflag)
     case 0x66:
       return (sizeflag & DFLAG) ? "data16" : "data32";
     case 0x67:
-      if (ins->address_mode == mode_64bit)
+      if (mode == mode_64bit)
 	return (sizeflag & AFLAG) ? "addr32" : "addr64";
       else
 	return (sizeflag & AFLAG) ? "addr16" : "addr32";
@@ -9647,7 +9524,7 @@ oappend_register (instr_info *ins, const char *s)
    used in the next fprintf_styled_func call.  */
 
 static void ATTRIBUTE_PRINTF_3
-i386_dis_printf (const instr_info *ins, enum disassembler_style style,
+i386_dis_printf (const disassemble_info *info, enum disassembler_style style,
 		 const char *fmt, ...)
 {
   va_list ap;
@@ -9688,9 +9565,8 @@ i386_dis_printf (const instr_info *ins, enum disassembler_style style,
 	{
 	  /* Output content between our START position and CURR.  */
 	  int len = curr - start;
-	  int n = (*ins->info->fprintf_styled_func) (ins->info->stream,
-						     curr_style,
-						     "%.*s", len, start);
+	  int n = (*info->fprintf_styled_func) (info->stream, curr_style,
+						"%.*s", len, start);
 	  if (n < 0)
 	    break;
 
@@ -9842,7 +9718,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 
   if (ins.address_mode == mode_64bit && sizeof (bfd_vma) < 8)
     {
-      i386_dis_printf (&ins, dis_style_text, _("64-bit address is disabled"));
+      i386_dis_printf (info, dis_style_text, _("64-bit address is disabled"));
       return -1;
     }
 
@@ -9887,9 +9763,10 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
       for (i = 0;
 	   i < (int) ARRAY_SIZE (ins.all_prefixes) && ins.all_prefixes[i];
 	   i++)
-	i386_dis_printf (&ins, dis_style_mnemonic, "%s%s",
+	i386_dis_printf (info, dis_style_mnemonic, "%s%s",
 			 (i == 0 ? "" : " "),
-			 prefix_name (&ins, ins.all_prefixes[i], sizeflag));
+			 prefix_name (ins.address_mode, ins.all_prefixes[i],
+				      sizeflag));
       ret = i;
       goto out;
 
@@ -9915,9 +9792,10 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
       /* Handle ins.prefixes before fwait.  */
       for (i = 0; i < ins.fwait_prefix && ins.all_prefixes[i];
 	   i++)
-	i386_dis_printf (&ins, dis_style_mnemonic, "%s ",
-			 prefix_name (&ins, ins.all_prefixes[i], sizeflag));
-      i386_dis_printf (&ins, dis_style_mnemonic, "fwait");
+	i386_dis_printf (info, dis_style_mnemonic, "%s ",
+			 prefix_name (ins.address_mode, ins.all_prefixes[i],
+				      sizeflag));
+      i386_dis_printf (info, dis_style_mnemonic, "fwait");
       ret = i + 1;
       goto out;
     }
@@ -10064,7 +9942,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
      are all 0s in inverted form.  */
   if (ins.need_vex && ins.vex.register_specifier != 0)
     {
-      i386_dis_printf (&ins, dis_style_text, "(bad)");
+      i386_dis_printf (info, dis_style_text, "(bad)");
       ret = ins.end_codep - priv.the_buffer;
       goto out;
     }
@@ -10072,7 +9950,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
   /* If EVEX.z is set, there must be an actual mask register in use.  */
   if (ins.vex.zeroing && ins.vex.mask_register_specifier == 0)
     {
-      i386_dis_printf (&ins, dis_style_text, "(bad)");
+      i386_dis_printf (info, dis_style_text, "(bad)");
       ret = ins.end_codep - priv.the_buffer;
       goto out;
     }
@@ -10084,7 +9962,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	 the encoding invalid.  Most other PREFIX_OPCODE rules still apply.  */
       if (ins.need_vex ? !ins.vex.prefix : !(ins.prefixes & PREFIX_DATA))
 	{
-	  i386_dis_printf (&ins, dis_style_text, "(bad)");
+	  i386_dis_printf (info, dis_style_text, "(bad)");
 	  ret = ins.end_codep - priv.the_buffer;
 	  goto out;
 	}
@@ -10112,7 +9990,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	  || (ins.vex.evex && dp->prefix_requirement != PREFIX_DATA
 	      && !ins.vex.w != !(ins.used_prefixes & PREFIX_DATA)))
 	{
-	  i386_dis_printf (&ins, dis_style_text, "(bad)");
+	  i386_dis_printf (info, dis_style_text, "(bad)");
 	  ret = ins.end_codep - priv.the_buffer;
 	  goto out;
 	}
@@ -10158,18 +10036,19 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
   for (i = 0; i < (int) ARRAY_SIZE (ins.all_prefixes); i++)
     if (ins.all_prefixes[i])
       {
-	const char *name;
-	name = prefix_name (&ins, ins.all_prefixes[i], orig_sizeflag);
+	const char *name = prefix_name (ins.address_mode, ins.all_prefixes[i],
+					orig_sizeflag);
+
 	if (name == NULL)
 	  abort ();
 	prefix_length += strlen (name) + 1;
-	i386_dis_printf (&ins, dis_style_mnemonic, "%s ", name);
+	i386_dis_printf (info, dis_style_mnemonic, "%s ", name);
       }
 
   /* Check maximum code length.  */
   if ((ins.codep - ins.start_codep) > MAX_CODE_LENGTH)
     {
-      i386_dis_printf (&ins, dis_style_text, "(bad)");
+      i386_dis_printf (info, dis_style_text, "(bad)");
       ret = MAX_CODE_LENGTH;
       goto out;
     }
@@ -10194,7 +10073,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
     i = 0;
 
   /* Print the instruction mnemonic along with any trailing whitespace.  */
-  i386_dis_printf (&ins, dis_style_mnemonic, "%s%*s", ins.obuf, i, "");
+  i386_dis_printf (info, dis_style_mnemonic, "%s%*s", ins.obuf, i, "");
 
   /* The enter and bound instructions are printed with operands in the same
      order as the intel book; everything else is printed in reverse order.  */
@@ -10249,7 +10128,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	    break;
 	  }
 	if (needcomma)
-	  i386_dis_printf (&ins, dis_style_text, ",");
+	  i386_dis_printf (info, dis_style_text, ",");
 	if (ins.op_index[i] != -1 && !ins.op_riprel[i])
 	  {
 	    bfd_vma target = (bfd_vma) ins.op_address[ins.op_index[i]];
@@ -10265,14 +10144,14 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	    (*info->print_address_func) (target, info);
 	  }
 	else
-	  i386_dis_printf (&ins, dis_style_text, "%s", op_txt[i]);
+	  i386_dis_printf (info, dis_style_text, "%s", op_txt[i]);
 	needcomma = 1;
       }
 
   for (i = 0; i < MAX_OPERANDS; i++)
     if (ins.op_index[i] != -1 && ins.op_riprel[i])
       {
-	i386_dis_printf (&ins, dis_style_comment_start, "        # ");
+	i386_dis_printf (info, dis_style_comment_start, "        # ");
 	(*info->print_address_func)
 	  ((bfd_vma)(ins.start_pc + (ins.codep - ins.start_codep)
 		     + ins.op_address[ins.op_index[i]]),

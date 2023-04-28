@@ -1402,10 +1402,12 @@ proc gdb_test_multiline { name args } {
 #
 # COMMAND is the command to execute, send to GDB with send_gdb.  If
 #   this is the null string no command is sent.
-# PATTERN is the pattern to match for a PASS, and must NOT include
-#   the \r\n sequence immediately before the gdb prompt.  This argument
-#   may be omitted to just match the prompt, ignoring whatever output 
-#   precedes it.
+# PATTERN is the pattern to match for a PASS, and must NOT include the
+#   \r\n sequence immediately before the gdb prompt (see -nonl below).
+#   This argument may be omitted to just match the prompt, ignoring
+#   whatever output precedes it.  If PATTERN starts with '^' then
+#   PATTERN will be anchored such that it should match all output from
+#   COMMAND.
 # MESSAGE is an optional message to be printed.  If this is
 #   omitted, then the pass/fail messages use the command string as the
 #   message.  (If this is the empty string, then sometimes we don't
@@ -1455,13 +1457,25 @@ proc gdb_test { args } {
     }
 
     set prompt [fill_in_default_prompt $prompt [expr !${no-prompt-anchor}]]
-    set nl [expr ${nonl} ? {""} : {"\[\r\n\]+"}]
+    set nl [expr ${nonl} ? {""} : {"\r\n"}]
 
     set saw_question 0
 
+    # If the pattern starts with a '^' then we want to match all the
+    # output from COMMAND.  To support this, here we inject an
+    # additional pattern that matches the command immediately after
+    # the '^'.
+    if {[string range $pattern 0 0] eq "^"} {
+	set command_regex [string_to_regexp $command]
+	set pattern [string range $pattern 1 end]
+	if {$command_regex ne ""} {
+	    set pattern "^${command_regex}\r\n$pattern"
+	}
+    }
+
     set user_code {}
     lappend user_code {
-	-re "\[\r\n\]*(?:$pattern)$nl$prompt" {
+	-re "(?:$pattern)$nl$prompt" {
 	    if { $question != "" & !$saw_question} {
 		fail $message
 	    } elseif {!$nopass} {
@@ -1537,6 +1551,11 @@ if { [tcl_version_at_least 8 6] == 0 } {
 #
 # See gdb_test for a description of the -prompt, -no-prompt-anchor, -nopass,
 # COMMAND, and MESSAGE parameters.
+#
+# Returns:
+#    1 if the test failed,
+#    0 if the test passes,
+#   -1 if there was an internal error.
 
 proc gdb_test_no_output { args } {
     global gdb_prompt
@@ -1552,13 +1571,13 @@ proc gdb_test_no_output { args } {
     set prompt [fill_in_default_prompt $prompt [expr !${no-prompt-anchor}]]
 
     set command_regex [string_to_regexp $command]
-    gdb_test_multiple $command $message -prompt $prompt {
+    return [gdb_test_multiple $command $message -prompt $prompt {
 	-re "^$command_regex\r\n$prompt" {
 	    if {!$nopass} {
 		pass $gdb_test_name
 	    }
 	}
-    }
+    }]
 }
 
 # Send a command and then wait for a sequence of outputs.
