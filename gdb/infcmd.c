@@ -50,7 +50,7 @@
 #include "inf-loop.h"
 #include "linespec.h"
 #include "thread-fsm.h"
-#include "top.h"
+#include "ui.h"
 #include "interps.h"
 #include "skip.h"
 #include "gdbsupport/gdb_optional.h"
@@ -92,19 +92,23 @@ static bool finish_print = true;
 
 /* Setter for the "inferior-tty" setting.  */
 
+/* Store the new value passed to 'set inferior-tty'.  */
+
 static void
-set_inferior_tty (const std::string &value)
+set_tty_value (const std::string &tty)
 {
-  current_inferior ()->set_tty (value);
+  current_inferior ()->set_tty (tty);
 }
 
-/* Getter for the "inferior-tty" setting.  */
+/* Get the current 'inferior-tty' value.  */
 
 static const std::string &
-get_inferior_tty ()
+get_tty_value ()
 {
   return current_inferior ()->tty ();
 }
+
+/* Implement 'show inferior-tty' command.  */
 
 static void
 show_inferior_tty_command (struct ui_file *file, int from_tty,
@@ -115,28 +119,33 @@ show_inferior_tty_command (struct ui_file *file, int from_tty,
 	       "is \"%s\".\n"), value);
 }
 
-void
-set_inferior_args_vector (int argc, char **argv)
-{
-  gdb::array_view<char * const> args (argv, argc);
-  std::string n = construct_inferior_arguments (args);
-  current_inferior ()->set_args (std::move (n));
-}
-
-/* Setter for the "args" setting.  */
+/* Store the new value passed to 'set args'.  */
 
 static void
-set_args_command (const std::string &value)
+set_args_value (const std::string &args)
 {
-  current_inferior ()->set_args (std::move (value));
+  current_inferior ()->set_args (args);
 }
 
-/* Getter for the "args" setting.  */
+/* Return the value for 'show args' to display.  */
 
 static const std::string &
-get_args ()
+get_args_value ()
 {
   return current_inferior ()->args ();
+}
+
+/* Callback to implement 'show args' command.  */
+
+static void
+show_args_command (struct ui_file *file, int from_tty,
+		   struct cmd_list_element *c, const char *value)
+{
+  /* Ignore the passed in value, pull the argument directly from the
+     inferior.  However, these should always be the same.  */
+  gdb_printf (file, _("\
+Argument list to give program being debugged when it is started is \"%s\".\n"),
+	      current_inferior ()->args ().c_str ());
 }
 
 /* See gdbsupport/common-inferior.h.  */
@@ -147,12 +156,12 @@ get_inferior_cwd ()
   return current_inferior ()->cwd ();
 }
 
-/* Setter for the "cwd" setting.  */
+/* Store the new value passed to 'set cwd'.  */
 
 static void
-set_cwd (const std::string &value)
+set_cwd_value (const std::string &args)
 {
-  current_inferior ()->set_cwd (value);
+  current_inferior ()->set_cwd (args);
 }
 
 /* Handle the 'show cwd' command.  */
@@ -3117,56 +3126,47 @@ _initialize_infcmd ()
 {
   static struct cmd_list_element *info_proc_cmdlist;
   struct cmd_list_element *c = nullptr;
-  const char *cmd_name;
 
   /* Add the filename of the terminal connected to inferior I/O.  */
-  add_setshow_optional_filename_cmd ("inferior-tty", class_run,
-				     _("\
-Set terminal for future runs of program being debugged."), _("\
-Show terminal for future runs of program being debugged."), _("\
-Usage: set inferior-tty [TTY]\n\n\
-If TTY is omitted, the default behavior of using the same terminal as GDB\n\
+  auto tty_set_show
+    = add_setshow_optional_filename_cmd ("inferior-tty", class_run, _("\
+Set terminal for future runs of program being debugged."), _("		\
+Show terminal for future runs of program being debugged."), _("		\
+Usage: set inferior-tty [TTY]\n\n					\
+If TTY is omitted, the default behavior of using the same terminal as GDB\n \
 is restored."),
-				     set_inferior_tty,
-				     get_inferior_tty,
-				     show_inferior_tty_command,
-				     &setlist, &showlist);
-  cmd_name = "inferior-tty";
-  c = lookup_cmd (&cmd_name, setlist, "", nullptr, -1, 1);
-  gdb_assert (c != nullptr);
-  add_alias_cmd ("tty", c, class_run, 0, &cmdlist);
+					 set_tty_value,
+					 get_tty_value,
+					 show_inferior_tty_command,
+					 &setlist, &showlist);
+  add_alias_cmd ("tty", tty_set_show.set, class_run, 0, &cmdlist);
 
-  cmd_name = "args";
-  add_setshow_string_noescape_cmd (cmd_name, class_run, _("\
+  auto args_set_show
+    = add_setshow_string_noescape_cmd ("args", class_run, _("\
 Set argument list to give program being debugged when it is started."), _("\
 Show argument list to give program being debugged when it is started."), _("\
 Follow this command with any number of args, to be passed to the program."),
-				   set_args_command,
-				   get_args,
-				   nullptr,
-				   &setlist, &showlist);
-  c = lookup_cmd (&cmd_name, setlist, "", nullptr, -1, 1);
-  gdb_assert (c != nullptr);
-  set_cmd_completer (c, filename_completer);
+				       set_args_value,
+				       get_args_value,
+				       show_args_command,
+				       &setlist, &showlist);
+  set_cmd_completer (args_set_show.set, filename_completer);
 
-  cmd_name = "cwd";
-  add_setshow_string_noescape_cmd (cmd_name, class_run, _("\
-Set the current working directory to be used when the inferior is started.\n\
-Changing this setting does not have any effect on inferiors that are\n\
+  auto cwd_set_show
+    = add_setshow_string_noescape_cmd ("cwd", class_run, _("\
+Set the current working directory to be used when the inferior is started.\n \
+Changing this setting does not have any effect on inferiors that are\n	\
 already running."),
-				   _("\
+				       _("\
 Show the current working directory that is used when the inferior is started."),
-				   _("\
+				       _("\
 Use this command to change the current working directory that will be used\n\
 when the inferior is started.  This setting does not affect GDB's current\n\
 working directory."),
-				   set_cwd,
-				   get_inferior_cwd,
-				   show_cwd_command,
-				   &setlist, &showlist);
-  c = lookup_cmd (&cmd_name, setlist, "", nullptr, -1, 1);
-  gdb_assert (c != nullptr);
-  set_cmd_completer (c, filename_completer);
+				       set_cwd_value, get_inferior_cwd,
+				       show_cwd_command,
+				       &setlist, &showlist);
+  set_cmd_completer (cwd_set_show.set, filename_completer);
 
   c = add_cmd ("environment", no_class, environment_info, _("\
 The environment to give the program, or one variable's value.\n\

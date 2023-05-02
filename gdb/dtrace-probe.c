@@ -494,7 +494,7 @@ dtrace_process_dof_probe (struct objfile *objfile,
 	    }
 
 	  if (expr != NULL && expr->first_opcode () == OP_TYPE)
-	    type = evaluate_type (expr.get ())->type ();
+	    type = expr->evaluate_type ()->type ();
 
 	  args.emplace_back (type, std::move (type_str), std::move (expr));
 	}
@@ -714,7 +714,7 @@ dtrace_probe::evaluate_argument (unsigned n,
   struct dtrace_probe_arg *arg;
 
   arg = this->get_arg_by_number (n, gdbarch);
-  return evaluate_expression (arg->expr.get (), arg->type);
+  return arg->expr->evaluate (arg->type);
 }
 
 /* Implementation of the compile_to_ax method.  */

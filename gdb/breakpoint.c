@@ -54,6 +54,7 @@
 #include "memattr.h"
 #include "ada-lang.h"
 #include "top.h"
+#include "ui.h"
 #include "valprint.h"
 #include "jit.h"
 #include "parser-defs.h"
@@ -5007,7 +5008,7 @@ static bool
 breakpoint_cond_eval (expression *exp)
 {
   scoped_value_mark mark;
-  return value_true (evaluate_expression (exp));
+  return value_true (exp->evaluate ());
 }
 
 /* Allocate a new bpstat.  Link it to the FIFO list by BS_LINK_POINTER.  */

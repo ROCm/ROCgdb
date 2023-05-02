@@ -36,45 +36,10 @@
 #include "event-top.h"
 #include "interps.h"
 #include "completer.h"
-#include "top.h"		/* For command_loop.  */
+#include "ui.h"
 #include "main.h"
 #include "gdbsupport/buildargv.h"
 #include "gdbsupport/scope-exit.h"
-
-/* Each UI has its own independent set of interpreters.  */
-
-struct ui_interp_info
-{
-  ui_interp_info () = default;
-  DISABLE_COPY_AND_ASSIGN (ui_interp_info);
-
-  /* Each top level has its own independent set of interpreters.  */
-  interp *interp_list = nullptr;
-  interp *current_interpreter = nullptr;
-  interp *top_level_interpreter = nullptr;
-
-  /* The interpreter that is active while `interp_exec' is active, NULL
-     at all other times.  */
-  interp *command_interpreter = nullptr;
-};
-
-/* Get UI's ui_interp_info object.  */
-
-static ui_interp_info &
-get_interp_info (struct ui *ui)
-{
-  if (ui->interp_info == NULL)
-    ui->interp_info = new ui_interp_info;
-  return *ui->interp_info;
-}
-
-/* Get the current UI's ui_interp_info object.  */
-
-static ui_interp_info &
-get_current_interp_info (void)
-{
-  return get_interp_info (current_ui);
-}
 
 /* The magic initialization routine for this module.  */
 
@@ -128,12 +93,9 @@ interp_factory_register (const char *name, interp_factory_func func)
 static void
 interp_add (struct ui *ui, struct interp *interp)
 {
-  ui_interp_info &ui_interp = get_interp_info (ui);
-
   gdb_assert (interp_lookup_existing (ui, interp->name ()) == NULL);
 
-  interp->next = ui_interp.interp_list;
-  ui_interp.interp_list = interp;
+  ui->interp_list.push_back (*interp);
 }
 
 /* This sets the current interpreter to be INTERP.  If INTERP has not
@@ -150,13 +112,12 @@ interp_add (struct ui *ui, struct interp *interp)
 static void
 interp_set (struct interp *interp, bool top_level)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
-  struct interp *old_interp = ui_interp.current_interpreter;
+  struct interp *old_interp = current_ui->current_interpreter;
 
   /* If we already have an interpreter, then trying to
      set top level interpreter is kinda pointless.  */
-  gdb_assert (!top_level || !ui_interp.current_interpreter);
-  gdb_assert (!top_level || !ui_interp.top_level_interpreter);
+  gdb_assert (!top_level || !current_ui->current_interpreter);
+  gdb_assert (!top_level || !current_ui->top_level_interpreter);
 
   if (old_interp != NULL)
     {
@@ -164,9 +125,9 @@ interp_set (struct interp *interp, bool top_level)
       old_interp->suspend ();
     }
 
-  ui_interp.current_interpreter = interp;
+  current_ui->current_interpreter = interp;
   if (top_level)
-    ui_interp.top_level_interpreter = interp;
+    current_ui->top_level_interpreter = interp;
 
   if (interpreter_p != interp->name ())
     interpreter_p = interp->name ();
@@ -203,18 +164,11 @@ interp_set (struct interp *interp, bool top_level)
 static struct interp *
 interp_lookup_existing (struct ui *ui, const char *name)
 {
-  ui_interp_info &ui_interp = get_interp_info (ui);
-  struct interp *interp;
+  for (interp &interp : ui->interp_list)
+    if (strcmp (interp.name (), name) == 0)
+      return &interp;
 
-  for (interp = ui_interp.interp_list;
-       interp != NULL;
-       interp = interp->next)
-    {
-      if (strcmp (interp->name (), name) == 0)
-	return interp;
-    }
-
-  return NULL;
+  return nullptr;
 }
 
 /* See interps.h.  */
@@ -259,8 +213,7 @@ void
 current_interp_set_logging (ui_file_up logfile, bool logging_redirect,
 			    bool debug_redirect)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
-  struct interp *interp = ui_interp.current_interpreter;
+  struct interp *interp = current_ui->current_interpreter;
 
   interp->set_logging (std::move (logfile), logging_redirect, debug_redirect);
 }
@@ -269,12 +222,12 @@ current_interp_set_logging (ui_file_up logfile, bool logging_redirect,
 struct interp *
 scoped_restore_interp::set_interp (const char *name)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
   struct interp *interp = interp_lookup (current_ui, name);
-  struct interp *old_interp = ui_interp.current_interpreter;
+  struct interp *old_interp = current_ui->current_interpreter;
 
   if (interp)
-    ui_interp.current_interpreter = interp;
+    current_ui->current_interpreter = interp;
+
   return old_interp;
 }
 
@@ -282,8 +235,7 @@ scoped_restore_interp::set_interp (const char *name)
 int
 current_interp_named_p (const char *interp_name)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
-  struct interp *interp = ui_interp.current_interpreter;
+  interp *interp = current_ui->current_interpreter;
 
   if (interp != NULL)
     return (strcmp (interp->name (), interp_name) == 0);
@@ -304,12 +256,10 @@ current_interp_named_p (const char *interp_name)
 struct interp *
 command_interp (void)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
-
-  if (ui_interp.command_interpreter != NULL)
-    return ui_interp.command_interpreter;
+  if (current_ui->command_interpreter != nullptr)
+    return current_ui->command_interpreter;
   else
-    return ui_interp.current_interpreter;
+    return current_ui->current_interpreter;
 }
 
 /* See interps.h.  */
@@ -336,11 +286,9 @@ interp_supports_command_editing (struct interp *interp)
 void
 interp_exec (struct interp *interp, const char *command_str)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
-
   /* See `command_interp' for why we do this.  */
   scoped_restore save_command_interp
-    = make_scoped_restore (&ui_interp.command_interpreter, interp);
+    = make_scoped_restore (&current_ui->command_interpreter, interp);
 
   interp->exec (command_str);
 }
@@ -365,8 +313,7 @@ clear_interpreter_hooks (void)
 static void
 interpreter_exec_cmd (const char *args, int from_tty)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
-  struct interp *old_interp, *interp_to_use;
+  struct interp *interp_to_use;
   unsigned int nrules;
   unsigned int i;
 
@@ -387,7 +334,7 @@ interpreter_exec_cmd (const char *args, int from_tty)
   if (nrules < 2)
     error (_("Usage: interpreter-exec INTERPRETER COMMAND..."));
 
-  old_interp = ui_interp.current_interpreter;
+  interp *old_interp = current_ui->current_interpreter;
 
   interp_to_use = interp_lookup (current_ui, prules[0]);
   if (interp_to_use == NULL)
@@ -425,9 +372,7 @@ interpreter_completer (struct cmd_list_element *ignore,
 struct interp *
 top_level_interpreter (void)
 {
-  ui_interp_info &ui_interp = get_current_interp_info ();
-
-  return ui_interp.top_level_interpreter;
+  return current_ui->top_level_interpreter;
 }
 
 /* See interps.h.  */
@@ -435,9 +380,7 @@ top_level_interpreter (void)
 struct interp *
 current_interpreter (void)
 {
-  ui_interp_info &ui_interp = get_interp_info (current_ui);
-
-  return ui_interp.current_interpreter;
+  return current_ui->current_interpreter;
 }
 
 /* This just adds the "interpreter-exec" command.  */

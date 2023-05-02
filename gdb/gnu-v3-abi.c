@@ -1211,7 +1211,7 @@ gnuv3_get_type_from_type_info (struct value *type_info_ptr)
      internal form to reconstruct the type somehow.  */
   std::string type_name = gnuv3_get_typename_from_type_info (type_info_ptr);
   expression_up expr (parse_expression (type_name.c_str ()));
-  struct value *type_val = evaluate_type (expr.get ());
+  struct value *type_val = expr->evaluate_type ();
   return type_val->type ();
 }
 
@@ -1536,7 +1536,7 @@ gnuv3_pass_by_reference (struct type *type)
      about recursive loops here, since we are only looking at members
      of complete class type.  Also ignore any static members.  */
   for (fieldnum = 0; fieldnum < type->num_fields (); fieldnum++)
-    if (!field_is_static (&type->field (fieldnum)))
+    if (!type->field (fieldnum).is_static ())
       {
 	struct type *field_type = type->field (fieldnum).type ();
 

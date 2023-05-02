@@ -35,6 +35,7 @@
 #include "annotate.h"
 #include "symfile.h"
 #include "top.h"
+#include "ui.h"
 #include "inf-loop.h"
 #include "regcache.h"
 #include "value.h"

@@ -95,7 +95,7 @@ proc do_test {} {
 	# (the only printed line is the source line number and the source line).
 	set num_nexts 5
 	for {set i 0} {$i < 5} {incr i} {
-	    gdb_test "next" "^next\r\n${::decimal}\[^\r\n\]+" \
+	    gdb_test "next" "^${::decimal}\[^\r\n\]+" \
 		"next, iter $i"
 	}
 

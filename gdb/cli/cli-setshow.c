@@ -118,7 +118,7 @@ parse_cli_boolean_value (const char *arg)
 }
 
 
-void
+static void
 deprecated_show_value_hack (struct ui_file *file,
 			    int ignore_from_tty,
 			    struct cmd_list_element *c,

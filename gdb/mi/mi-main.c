@@ -26,6 +26,7 @@
 #include "inferior.h"
 #include "infrun.h"
 #include "top.h"
+#include "ui.h"
 #include "gdbthread.h"
 #include "mi-cmds.h"
 #include "mi-parse.h"
@@ -1236,7 +1237,7 @@ mi_cmd_data_evaluate_expression (const char *command, char **argv, int argc)
 
   expression_up expr = parse_expression (argv[0]);
 
-  val = evaluate_expression (expr.get ());
+  val = expr->evaluate ();
 
   string_file stb;
 
@@ -2530,9 +2531,9 @@ print_variable_or_computed (const char *expression, enum print_values values)
   expression_up expr = parse_expression (expression);
 
   if (values == PRINT_SIMPLE_VALUES)
-    val = evaluate_type (expr.get ());
+    val = expr->evaluate_type ();
   else
-    val = evaluate_expression (expr.get ());
+    val = expr->evaluate ();
 
   gdb::optional<ui_out_emit_tuple> tuple_emitter;
   if (values != PRINT_NO_VALUES)

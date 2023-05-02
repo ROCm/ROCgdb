@@ -19,6 +19,7 @@
 
 #include "defs.h"
 #include "top.h"
+#include "ui.h"
 #include "target.h"
 #include "inferior.h"
 #include "symfile.h"
@@ -1064,7 +1065,8 @@ captured_main_1 (struct captured_main_args *context)
       symarg = argv[optind];
       execarg = argv[optind];
       ++optind;
-      set_inferior_args_vector (argc - optind, &argv[optind]);
+      current_inferior ()->set_args
+	(gdb::array_view<char * const> (&argv[optind], argc - optind));
     }
   else
     {

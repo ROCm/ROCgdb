@@ -204,6 +204,7 @@ software in general.  We will miss him.
 * Emacs::                       Using @value{GDBN} under @sc{gnu} Emacs
 * GDB/MI::                      @value{GDBN}'s Machine Interface.
 * Annotations::                 @value{GDBN}'s annotation interface.
+* Debugger Adapter Protocol::	The Debugger Adapter Protocol.
 * JIT Interface::               Using the JIT debugging interface.
 * In-Process Agent::            In-Process Agent
 
@@ -32078,6 +32079,8 @@ the Debugger Adapter Protocol.  This protocol can be used by a
 debugger GUI or an IDE to communicate with @value{GDBN}.  This
 protocol is documented at
 @url{https://microsoft.github.io/debug-adapter-protocol/}.
+@xref{Debugger Adapter Protocol}, for information about @value{GDBN}
+extensions to the protocol.
 
 @item mi
 @cindex mi interpreter
@@ -34898,7 +34901,10 @@ all of the breakpoint locations.
 Initialize the @var{ignore-count}.
 @item -p @var{thread-id}
 Restrict the breakpoint to the thread with the specified global
-@var{thread-id}.
+@var{thread-id}.  @var{thread-id} must be a valid thread-id at the
+time the breakpoint is requested.  Breakpoints created with a
+@var{thread-id} will automatically be deleted when the corresponding
+thread exits.
 @item --qualified
 This option makes @value{GDBN} interpret a function name specified as
 a complete fully-qualified name.
@@ -41946,6 +41952,22 @@ line, or @samp{beg} if @var{addr} is at the beginning of the line, and
 source which is being displayed.  The @var{addr} is in the form @samp{0x}
 followed by one or more lowercase hex digits (note that this does not
 depend on the language).
+
+@node Debugger Adapter Protocol
+@chapter Debugger Adapter Protocol
+
+Generally, @value{GDBN} implements the Debugger Adapter Protocol as
+written.  However, in some cases, extensions are either needed or even
+expected.
+
+@value{GDBN} defines a parameter that can be passed to the
+@code{launch} request:
+
+@table @code
+@item program
+If provided, this is a string that specifies the program to use.  This
+corresponds to the @code{file} command.  @xref{Files}.
+@end table
 
 @node JIT Interface
 @chapter JIT Compilation Interface

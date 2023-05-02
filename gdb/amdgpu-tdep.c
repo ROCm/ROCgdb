@@ -343,7 +343,7 @@ amdgcn_arg_placement::alloc_for_struct (struct type *type, int offset)
 	  struct type *field_type = check_typedef (field.type ());
 
 	  /* Ignore static fields.  */
-	  if (!field_is_static (&type->field (field_num)))
+	  if (!type->field (field_num).is_static ())
 	    {
 	      has_non_static_fields = true;
 	      gdb_assert (field.loc_bitpos () % HOST_CHAR_BIT == 0);
@@ -509,7 +509,7 @@ amdgpu_return_value_as_value (gdbarch *arch, value *function, type *valtype,
       bool has_non_static_fields = false;
       for (int i = 0; i < valtype->num_fields (); ++i)
 	has_non_static_fields
-	  = has_non_static_fields || !field_is_static (&valtype->field (i));
+	  = has_non_static_fields || !valtype->field (i).is_static ();
 
       if (!has_non_static_fields)
 	return RETURN_VALUE_REGISTER_CONVENTION;

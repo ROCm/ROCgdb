@@ -375,18 +375,18 @@ varobj_create (const char *objname,
 	  select_frame (fi);	 
 	}
 
-      /* We definitely need to catch errors here.
-	 If evaluate_expression succeeds we got the value we wanted.
-	 But if it fails, we still go on with a call to evaluate_type().  */
+      /* We definitely need to catch errors here.  If evaluation of
+	 the expression succeeds, we got the value we wanted.  But if
+	 it fails, we still go on with a call to evaluate_type().  */
       try
 	{
-	  value = evaluate_expression (var->root->exp.get ());
+	  value = var->root->exp->evaluate ();
 	}
       catch (const gdb_exception_error &except)
 	{
 	  /* Error getting the value.  Try to at least get the
 	     right type.  */
-	  struct value *type_only_value = evaluate_type (var->root->exp.get ());
+	  struct value *type_only_value = var->root->exp->evaluate_type ();
 
 	  var->type = type_only_value->type ();
 	}
@@ -1005,7 +1005,7 @@ varobj_set_value (struct varobj *var, const char *expression)
   expression_up exp = parse_exp_1 (&s, 0, 0, 0);
   try
     {
-      value = evaluate_expression (exp.get ());
+      value = exp->evaluate ();
     }
 
   catch (const gdb_exception_error &except)
@@ -2056,7 +2056,7 @@ value_of_root_1 (struct varobj **var_handle)
 	 expression fails we want to just return NULL.  */
       try
 	{
-	  new_val = evaluate_expression (var->root->exp.get ());
+	  new_val = var->root->exp->evaluate ();
 	}
       catch (const gdb_exception_error &except)
 	{
