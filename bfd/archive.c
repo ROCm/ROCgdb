@@ -146,6 +146,37 @@ SUBSECTION
 extern int errno;
 #endif
 
+/*
+EXTERNAL
+.{* A canonical archive symbol.  *}
+.{* This is a type pun with struct symdef/struct ranlib on purpose!  *}
+.typedef struct carsym
+.{
+.  const char *name;
+.  file_ptr file_offset;	{* Look here to find the file.  *}
+.}
+.carsym;
+.
+.{* A count of carsyms (canonical archive symbols).  *}
+. typedef unsigned long symindex;
+.#define BFD_NO_MORE_SYMBOLS ((symindex) ~0)
+.
+
+INTERNAL
+.{* Used in generating armaps (archive tables of contents).  *}
+.struct orl		{* Output ranlib.  *}
+.{
+.  char **name;		{* Symbol name.  *}
+.  union
+.  {
+.    file_ptr pos;
+.    bfd *abfd;
+.  } u;			{* bfd* or file position.  *}
+.  int namidx;		{* Index into string table.  *}
+.};
+.
+*/
+
 /* We keep a cache of archive filepointers to archive elements to
    speed up searching the archive by filepos.  We only add an entry to
    the cache when we actually read one.  We also don't sort the cache;
@@ -2111,6 +2142,7 @@ _bfd_write_archive_contents (bfd *arch)
   bfd_size_type wrote;
   int tries;
   char *armag;
+  char *buffer = NULL;
 
   /* Verify the viability of all entries; if any of them live in the
      filesystem (as opposed to living in an archive open for input)
@@ -2191,16 +2223,23 @@ _bfd_write_archive_contents (bfd *arch)
 	}
     }
 
+#define AR_WRITE_BUFFERSIZE (DEFAULT_BUFFERSIZE * 1024)
+
+  /* FIXME: Find a way to test link_info.reduce_memory_overheads
+     and change the buffer size.  */
+  buffer = bfd_malloc (AR_WRITE_BUFFERSIZE);
+  if (buffer == NULL)
+    goto input_err;
+
   for (current = arch->archive_head;
        current != NULL;
        current = current->archive_next)
     {
-      char buffer[DEFAULT_BUFFERSIZE];
       bfd_size_type remaining = arelt_size (current);
 
       /* Write ar header.  */
       if (!_bfd_write_ar_hdr (arch, current))
-	return false;
+	goto input_err;
       if (bfd_is_thin_archive (arch))
 	continue;
       if (bfd_seek (current, (file_ptr) 0, SEEK_SET) != 0)
@@ -2208,7 +2247,7 @@ _bfd_write_archive_contents (bfd *arch)
 
       while (remaining)
 	{
-	  size_t amt = DEFAULT_BUFFERSIZE;
+	  size_t amt = AR_WRITE_BUFFERSIZE;
 
 	  if (amt > remaining)
 	    amt = remaining;
@@ -2216,16 +2255,18 @@ _bfd_write_archive_contents (bfd *arch)
 	  if (bfd_bread (buffer, amt, current) != amt)
 	    goto input_err;
 	  if (bfd_bwrite (buffer, amt, arch) != amt)
-	    return false;
+	    goto input_err;
 	  remaining -= amt;
 	}
 
       if ((arelt_size (current) % 2) == 1)
 	{
 	  if (bfd_bwrite (&ARFMAG[1], 1, arch) != 1)
-	    return false;
+	    goto input_err;
 	}
     }
+
+  free (buffer);
 
   if (makemap && hasobjects)
     {
@@ -2250,6 +2291,7 @@ _bfd_write_archive_contents (bfd *arch)
 
  input_err:
   bfd_set_input_error (current, bfd_get_error ());
+  free (buffer);
   return false;
 }
 

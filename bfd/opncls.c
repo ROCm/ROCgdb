@@ -51,16 +51,26 @@ static unsigned int bfd_id_counter = 0;
 static unsigned int bfd_reserved_id_counter = 0;
 
 /*
-CODE_FRAGMENT
+EXTERNAL
 .{* Set to N to open the next N BFDs using an alternate id space.  *}
 .extern unsigned int bfd_use_reserved_id;
+.
 */
 unsigned int bfd_use_reserved_id = 0;
 
 /* fdopen is a loser -- we should use stdio exclusively.  Unfortunately
    if we do that we can't use fcntl.  */
 
-/* Return a new BFD.  All BFD's are allocated through this routine.  */
+/*
+INTERNAL_FUNCTION
+	_bfd_new_bfd
+
+SYNOPSIS
+	bfd *_bfd_new_bfd (void);
+
+DESCRIPTION
+	Return a new BFD.  All BFD's are allocated through this routine.
+*/
 
 bfd *
 _bfd_new_bfd (void)
@@ -104,7 +114,16 @@ _bfd_new_bfd (void)
 
 static const struct bfd_iovec opncls_iovec;
 
-/* Allocate a new BFD as a member of archive OBFD.  */
+/*
+INTERNAL_FUNCTION
+	_bfd_new_bfd_contained_in
+
+SYNOPSIS
+	bfd *_bfd_new_bfd_contained_in (bfd *);
+
+DESCRIPTION
+	Allocate a new BFD as a member of archive OBFD.
+*/
 
 bfd *
 _bfd_new_bfd_contained_in (bfd *obfd)
@@ -149,7 +168,16 @@ _bfd_delete_bfd (bfd *abfd)
   free (abfd);
 }
 
-/* Free objalloc memory.  */
+/*
+INTERNAL_FUNCTION
+	_bfd_free_cached_info
+
+SYNOPSIS
+	bool _bfd_free_cached_info (bfd *);
+
+DESCRIPTION
+	Free objalloc memory.
+*/
 
 bool
 _bfd_free_cached_info (bfd *abfd)
@@ -760,6 +788,51 @@ bfd_openw (const char *filename, const char *target)
   return nbfd;
 }
 
+/*
+FUNCTION
+	bfd_elf_bfd_from_remote_memory
+
+SYNOPSIS
+	bfd *bfd_elf_bfd_from_remote_memory
+	  (bfd *templ, bfd_vma ehdr_vma, bfd_size_type size, bfd_vma *loadbasep,
+	   int (*target_read_memory)
+	     (bfd_vma vma, bfd_byte *myaddr, bfd_size_type len));
+
+DESCRIPTION
+	Create a new BFD as if by bfd_openr.  Rather than opening a
+	file, reconstruct an ELF file by reading the segments out of
+	remote memory based on the ELF file header at EHDR_VMA and the
+	ELF program headers it points to.  If non-zero, SIZE is the
+	known extent of the object.  If not null, *LOADBASEP is filled
+	in with the difference between the VMAs from which the
+	segments were read, and the VMAs the file headers (and hence
+	BFD's idea of each section's VMA) put them at.
+
+	The function TARGET_READ_MEMORY is called to copy LEN bytes
+	from the remote memory at target address VMA into the local
+	buffer at MYADDR; it should return zero on success or an
+	errno code on failure.  TEMPL must be a BFD for an ELF
+	target with the word size and byte order found in the remote
+	memory.
+*/
+
+bfd *
+bfd_elf_bfd_from_remote_memory
+  (bfd *templ,
+   bfd_vma ehdr_vma,
+   bfd_size_type size,
+   bfd_vma *loadbasep,
+   int (*target_read_memory) (bfd_vma, bfd_byte *, bfd_size_type))
+{
+  if (bfd_get_flavour (templ) != bfd_target_elf_flavour)
+    {
+      bfd_set_error (bfd_error_invalid_operation);
+      return NULL;
+    }
+  return (*get_elf_backend_data (templ)->elf_backend_bfd_from_remote_memory)
+    (templ, ehdr_vma, size, loadbasep, target_read_memory);
+}
+
 static inline void
 _maybe_make_executable (bfd * abfd)
 {
@@ -998,79 +1071,6 @@ bfd_make_readable (bfd *abfd)
 }
 
 /*
-FUNCTION
-	bfd_alloc
-
-SYNOPSIS
-	void *bfd_alloc (bfd *abfd, bfd_size_type wanted);
-
-DESCRIPTION
-	Allocate a block of @var{wanted} bytes of memory attached to
-	<<abfd>> and return a pointer to it.
-*/
-
-void *
-bfd_alloc (bfd *abfd, bfd_size_type size)
-{
-  void *ret;
-  unsigned long ul_size = (unsigned long) size;
-
-  if (size != ul_size
-      /* Note - although objalloc_alloc takes an unsigned long as its
-	 argument, internally the size is treated as a signed long.  This can
-	 lead to problems where, for example, a request to allocate -1 bytes
-	 can result in just 1 byte being allocated, rather than
-	 ((unsigned long) -1) bytes.  Also memory checkers will often
-	 complain about attempts to allocate a negative amount of memory.
-	 So to stop these problems we fail if the size is negative.  */
-      || ((signed long) ul_size) < 0)
-    {
-      bfd_set_error (bfd_error_no_memory);
-      return NULL;
-    }
-
-  ret = objalloc_alloc ((struct objalloc *) abfd->memory, ul_size);
-  if (ret == NULL)
-    bfd_set_error (bfd_error_no_memory);
-  else
-    abfd->alloc_size += size;
-  return ret;
-}
-
-/*
-FUNCTION
-	bfd_zalloc
-
-SYNOPSIS
-	void *bfd_zalloc (bfd *abfd, bfd_size_type wanted);
-
-DESCRIPTION
-	Allocate a block of @var{wanted} bytes of zeroed memory
-	attached to <<abfd>> and return a pointer to it.
-*/
-
-void *
-bfd_zalloc (bfd *abfd, bfd_size_type size)
-{
-  void *res;
-
-  res = bfd_alloc (abfd, size);
-  if (res)
-    memset (res, 0, (size_t) size);
-  return res;
-}
-
-/* Free a block allocated for a BFD.
-   Note:  Also frees all more recently allocated blocks!  */
-
-void
-bfd_release (bfd *abfd, void *block)
-{
-  objalloc_free_block ((struct objalloc *) abfd->memory, block);
-}
-
-
-/*
    GNU Extension: separate debug-info files
 
    The idea here is that a special section called .gnu_debuglink might be
@@ -1091,8 +1091,8 @@ FUNCTION
 	bfd_calc_gnu_debuglink_crc32
 
 SYNOPSIS
-	unsigned long bfd_calc_gnu_debuglink_crc32
-	  (unsigned long crc, const unsigned char *buf, bfd_size_type len);
+	uint32_t bfd_calc_gnu_debuglink_crc32
+	  (uint32_t crc, const bfd_byte *buf, bfd_size_type len);
 
 DESCRIPTION
 	Computes a CRC value as used in the .gnu_debuglink section.
@@ -1102,12 +1102,12 @@ DESCRIPTION
 	Return the updated CRC32 value.
 */
 
-unsigned long
-bfd_calc_gnu_debuglink_crc32 (unsigned long crc,
-			      const unsigned char *buf,
+uint32_t
+bfd_calc_gnu_debuglink_crc32 (uint32_t crc,
+			      const bfd_byte *buf,
 			      bfd_size_type len)
 {
-  static const unsigned long crc32_table[256] =
+  static const uint32_t crc32_table[256] =
     {
       0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419,
       0x706af48f, 0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4,
@@ -1162,7 +1162,7 @@ bfd_calc_gnu_debuglink_crc32 (unsigned long crc,
       0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b,
       0x2d02ef8d
     };
-  const unsigned char *end;
+  const bfd_byte *end;
 
   crc = ~crc & 0xffffffff;
   for (end = buf + len; buf < end; ++ buf)
@@ -1176,7 +1176,7 @@ bfd_calc_gnu_debuglink_crc32 (unsigned long crc,
 
    The @var{crc32_out} parameter is an untyped pointer because
    this routine is used as a @code{get_func_type} function, but it
-   is expected to be an unsigned long pointer.
+   is expected to be a uint32_t pointer.
 
    Returns the filename of the associated debug information file,
    or NULL if there is no such file.  If the filename was found
@@ -1190,7 +1190,7 @@ static char *
 bfd_get_debug_link_info_1 (bfd *abfd, void *crc32_out)
 {
   asection *sect;
-  unsigned long *crc32 = (unsigned long *) crc32_out;
+  uint32_t *crc32 = crc32_out;
   bfd_byte *contents;
   unsigned int crc_offset;
   char *name;
@@ -1234,7 +1234,7 @@ FUNCTION
 	bfd_get_debug_link_info
 
 SYNOPSIS
-	char *bfd_get_debug_link_info (bfd *abfd, unsigned long *crc32_out);
+	char *bfd_get_debug_link_info (bfd *abfd, uint32_t *crc32_out);
 
 DESCRIPTION
 	Extracts the filename and CRC32 value for any separate debug
@@ -1250,7 +1250,7 @@ DESCRIPTION
 */
 
 char *
-bfd_get_debug_link_info (bfd *abfd, unsigned long *crc32_out)
+bfd_get_debug_link_info (bfd *abfd, uint32_t *crc32_out)
 {
   return bfd_get_debug_link_info_1 (abfd, crc32_out);
 }
@@ -1313,7 +1313,7 @@ bfd_get_alt_debug_link_info (bfd * abfd, bfd_size_type *buildid_len,
 }
 
 /* Checks to see if @var{name} is a file and if its contents match
-   @var{crc32}, which is a pointer to an @code{unsigned long}
+   @var{crc32}, which is a pointer to a @code{uint32_t}
    containing a CRC32.
 
    The @var{crc32_p} parameter is an untyped pointer because this
@@ -1323,15 +1323,15 @@ static bool
 separate_debug_file_exists (const char *name, void *crc32_p)
 {
   unsigned char buffer[8 * 1024];
-  unsigned long file_crc = 0;
+  uint32_t file_crc = 0;
   FILE *f;
   bfd_size_type count;
-  unsigned long crc;
+  uint32_t crc;
 
   BFD_ASSERT (name);
   BFD_ASSERT (crc32_p);
 
-  crc = *(unsigned long *) crc32_p;
+  crc = *(uint32_t *) crc32_p;
 
   f = _bfd_real_fopen (name, FOPEN_RB);
   if (f == NULL)
@@ -1567,7 +1567,7 @@ DESCRIPTION
 char *
 bfd_follow_gnu_debuglink (bfd *abfd, const char *dir)
 {
-  unsigned long crc32;
+  uint32_t crc32;
 
   return find_separate_debug_file (abfd, dir, true,
 				   bfd_get_debug_link_info_1,
@@ -1712,7 +1712,7 @@ bfd_fill_in_gnu_debuglink_section (bfd *abfd,
 				   const char *filename)
 {
   bfd_size_type debuglink_size;
-  unsigned long crc32;
+  uint32_t crc32;
   char * contents;
   bfd_size_type crc_offset;
   FILE * handle;
