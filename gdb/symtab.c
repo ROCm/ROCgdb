@@ -1100,7 +1100,7 @@ struct obj_section *
 general_symbol_info::obj_section (const struct objfile *objfile) const
 {
   if (section_index () >= 0)
-    return &objfile->sections[section_index ()];
+    return &objfile->sections_start[section_index ()];
   return nullptr;
 }
 
@@ -1771,14 +1771,12 @@ fixup_symbol_section (struct symbol *sym, struct objfile *objfile)
 	 this reason, we still attempt a lookup by name prior to doing
 	 a search of the section table.  */
 
-      struct obj_section *s;
-
-      ALL_OBJFILE_OSECTIONS (objfile, s)
+      for (obj_section *s : objfile->sections ())
 	{
 	  if ((bfd_section_flags (s->the_bfd_section) & SEC_ALLOC) == 0)
 	    continue;
 
-	  int idx = s - objfile->sections;
+	  int idx = s - objfile->sections_start;
 	  CORE_ADDR offset = objfile->section_offsets[idx];
 
 	  if (fallback == -1)

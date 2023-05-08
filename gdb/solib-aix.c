@@ -400,7 +400,7 @@ solib_aix_get_section_offsets (struct objfile *objfile,
   if (objfile->sect_index_text != -1)
     {
       struct bfd_section *sect
-	= objfile->sections[objfile->sect_index_text].the_bfd_section;
+	= objfile->sections_start[objfile->sect_index_text].the_bfd_section;
 
       offsets[objfile->sect_index_text]
 	= info->text_addr + sect->filepos - bfd_section_vma (sect);
@@ -411,7 +411,7 @@ solib_aix_get_section_offsets (struct objfile *objfile,
   if (objfile->sect_index_data != -1)
     {
       struct bfd_section *sect
-	= objfile->sections[objfile->sect_index_data].the_bfd_section;
+	= objfile->sections_start[objfile->sect_index_data].the_bfd_section;
 
       offsets[objfile->sect_index_data]
 	= info->data_addr - bfd_section_vma (sect);
@@ -662,9 +662,7 @@ solib_aix_bfd_open (const char *pathname)
 static struct obj_section *
 data_obj_section_from_objfile (struct objfile *objfile)
 {
-  struct obj_section *osect;
-
-  ALL_OBJFILE_OSECTIONS (objfile, osect)
+  for (obj_section *osect : objfile->sections ())
     if (strcmp (bfd_section_name (osect->the_bfd_section), ".data") == 0)
       return osect;
 
