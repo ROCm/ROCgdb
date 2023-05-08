@@ -264,34 +264,38 @@ windows_nat_target::wait_for_debug_event_main_thread (DEBUG_EVENT *event)
 /* See nat/windows-nat.h.  */
 
 windows_thread_info *
-windows_per_inferior::thread_rec
-     (ptid_t ptid, thread_disposition_type disposition)
+windows_per_inferior::find_thread (ptid_t ptid)
 {
   for (auto &th : thread_list)
     if (th->tid == ptid.lwp ())
-      {
-	if (!th->suspended)
-	  {
-	    switch (disposition)
-	      {
-	      case DONT_INVALIDATE_CONTEXT:
-		/* Nothing.  */
-		break;
-	      case INVALIDATE_CONTEXT:
-		if (ptid.lwp () != current_event.dwThreadId)
-		  th->suspend ();
-		th->reload_context = true;
-		break;
-	      case DONT_SUSPEND:
-		th->reload_context = true;
-		th->suspended = -1;
-		break;
-	      }
-	  }
-	return th.get ();
-      }
+      return th.get ();
+  return nullptr;
+}
 
-  return NULL;
+/* See nat/windows-nat.h.  */
+
+windows_thread_info *
+windows_per_inferior::thread_rec (ptid_t ptid,
+				  thread_disposition_type disposition)
+{
+  windows_thread_info *th = find_thread (ptid);
+
+  if (th != nullptr && !th->suspended)
+    {
+      switch (disposition)
+	{
+	case INVALIDATE_CONTEXT:
+	  if (ptid.lwp () != current_event.dwThreadId)
+	    th->suspend ();
+	  th->reload_context = true;
+	  break;
+	case DONT_SUSPEND:
+	  th->reload_context = true;
+	  th->suspended = -1;
+	  break;
+	}
+    }
+  return th;
 }
 
 /* Add a thread to the thread list.
@@ -310,7 +314,7 @@ windows_nat_target::add_thread (ptid_t ptid, HANDLE h, void *tlb,
 
   gdb_assert (ptid.lwp () != 0);
 
-  if ((th = windows_process->thread_rec (ptid, DONT_INVALIDATE_CONTEXT)))
+  if ((th = windows_process->find_thread (ptid)))
     return th;
 
   CORE_ADDR base = (CORE_ADDR) (uintptr_t) tlb;
@@ -434,8 +438,7 @@ windows_nat_target::store_registers (struct regcache *regcache, int r)
 bool
 windows_nat_target::stopped_by_sw_breakpoint ()
 {
-  windows_thread_info *th
-    = windows_process->thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+  windows_thread_info *th = windows_process->find_thread (inferior_ptid);
   return th->stopped_at_software_breakpoint;
 }
 
@@ -843,7 +846,7 @@ windows_nat_target::resume (ptid_t ptid, int step, enum gdb_signal sig)
 	      ptid.pid (), (unsigned) ptid.lwp (), step, sig);
 
   /* Get context for currently selected thread.  */
-  th = windows_process->thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+  th = windows_process->find_thread (inferior_ptid);
   if (th != nullptr && step)
     {
       /* Single step by setting t bit.  */
@@ -2510,7 +2513,7 @@ windows_nat_target::get_tib_address (ptid_t ptid, CORE_ADDR *addr)
 {
   windows_thread_info *th;
 
-  th = windows_process->thread_rec (ptid, DONT_INVALIDATE_CONTEXT);
+  th = windows_process->find_thread (ptid);
   if (th == NULL)
     return false;
 
@@ -2531,9 +2534,7 @@ windows_nat_target::get_ada_task_ptid (long lwp, ULONGEST thread)
 const char *
 windows_nat_target::thread_name (struct thread_info *thr)
 {
-  windows_thread_info *th
-    = windows_process->thread_rec (thr->ptid,
-				  DONT_INVALIDATE_CONTEXT);
+  windows_thread_info *th = windows_process->find_thread (thr->ptid);
   return th->thread_name ();
 }
 
@@ -2634,8 +2635,7 @@ windows_nat_target::thread_alive (ptid_t ptid)
 {
   gdb_assert (ptid.lwp () != 0);
 
-  windows_thread_info *th
-    = windows_process->thread_rec (ptid, DONT_INVALIDATE_CONTEXT);
+  windows_thread_info *th = windows_process->find_thread (ptid);
   return WaitForSingleObject (th->h, 0) != WAIT_OBJECT_0;
 }
 

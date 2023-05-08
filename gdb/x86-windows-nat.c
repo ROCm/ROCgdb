@@ -307,8 +307,7 @@ cygwin_set_dr7 (unsigned long val)
 static CORE_ADDR
 cygwin_get_dr (int i)
 {
-  windows_thread_info *th
-    = windows_process->thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+  windows_thread_info *th = windows_process->find_thread (inferior_ptid);
 
   return windows_process->with_context (th, [&] (auto *context) -> CORE_ADDR
     {
@@ -443,7 +442,7 @@ display_selectors (const char * args, int from_tty)
     }
 
   windows_thread_info *current_windows_thread
-    = windows_process->thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+    = windows_process->find_thread (inferior_ptid);
 
   if (!args)
     {
