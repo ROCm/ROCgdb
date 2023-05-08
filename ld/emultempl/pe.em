@@ -1236,23 +1236,64 @@ pe_fixup_stdcalls (void)
       }
 }
 
+static bfd_vma
+read_addend (arelent *rel, asection *s)
+{
+  char buf[4];
+  bfd_vma addend = 0;
+
+  if (!bfd_get_section_contents (s->owner, s, buf, rel->address, sizeof (buf)))
+    einfo (_("%P: %C: cannot get section contents - auto-import exception\n"),
+	   s->owner, s, rel->address);
+  else
+    addend = bfd_get_32 (s->owner, buf);
+  return addend;
+}
+
 static void
 make_import_fixup (arelent *rel, asection *s, char *name, const char *symname)
 {
   struct bfd_symbol *sym = *rel->sym_ptr_ptr;
-  char addend[4];
-  bfd_vma _addend;
+  bfd_vma addend;
 
   if (pe_dll_extra_pe_debug)
     printf ("arelent: %s@%#lx: add=%li\n", sym->name,
 	    (unsigned long) rel->address, (long) rel->addend);
 
-  if (! bfd_get_section_contents (s->owner, s, addend, rel->address, sizeof (addend)))
-    einfo (_("%P: %C: cannot get section contents - auto-import exception\n"),
-	   s->owner, s, rel->address);
+  addend = read_addend (rel, s);
 
-  _addend = bfd_get_32 (s->owner, addend);
-  pe_create_import_fixup (rel, s, _addend, name, symname);
+  if (pe_dll_extra_pe_debug)
+    {
+      printf ("import of 0x%lx(0x%lx) sec_addr=0x%lx",
+	      (long) addend, (long) rel->addend, (long) rel->address);
+      if (rel->howto->pc_relative)
+	printf (" pcrel");
+      printf (" %d bit rel.\n", (int) rel->howto->bitsize);
+    }
+
+  pe_create_import_fixup (rel, s, addend, name, symname);
+}
+
+static void
+make_runtime_ref (void)
+{
+  const char *rr = U ("_pei386_runtime_relocator");
+  struct bfd_link_hash_entry *h
+    = bfd_wrapped_link_hash_lookup (link_info.output_bfd, &link_info,
+				    rr, true, false, true);
+  if (!h)
+    einfo (_("%F%P: bfd_link_hash_lookup failed: %E\n"));
+  else
+    {
+      if (h->type == bfd_link_hash_new)
+	{
+	  h->type = bfd_link_hash_undefined;
+	  h->u.undef.abfd = NULL;
+	  if (h->u.undef.next == NULL && h != link_info.hash->undefs_tail)
+	    bfd_link_add_undef (link_info.hash, h);
+	}
+      h->non_ir_ref_regular = true;
+    }
 }
 
 static bool
@@ -1457,6 +1498,16 @@ setup_build_id (bfd *ibfd)
   einfo (_("%P: warning: cannot create .buildid section,"
 	   " --build-id ignored\n"));
   return false;
+}
+
+static void
+gld${EMULATION_NAME}_before_plugin_all_symbols_read (void)
+{
+#ifdef DLL_SUPPORT
+  if (link_info.lto_plugin_active
+      && link_info.pei386_auto_import)
+    make_runtime_ref ();
+#endif
 }
 
 static void
@@ -2488,6 +2539,7 @@ EOF
 fi
 
 LDEMUL_AFTER_PARSE=gld${EMULATION_NAME}_after_parse
+LDEMUL_BEFORE_PLUGIN_ALL_SYMBOLS_READ=gld${EMULATION_NAME}_before_plugin_all_symbols_read
 LDEMUL_AFTER_OPEN=gld${EMULATION_NAME}_after_open
 LDEMUL_BEFORE_ALLOCATION=gld${EMULATION_NAME}_before_allocation
 LDEMUL_FINISH=gld${EMULATION_NAME}_finish
