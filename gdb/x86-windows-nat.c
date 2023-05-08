@@ -111,6 +111,7 @@ x86_windows_nat_target::fill_thread_context (windows_thread_info *th)
     {
       if (context->ContextFlags == 0)
 	{
+	  th->suspend ();
 	  context->ContextFlags = WindowsContext<decltype(context)>::all;
 	  CHECK (get_thread_context (th->h, context));
 	}
@@ -254,6 +255,7 @@ x86_windows_nat_target::store_one_register (const struct regcache *regcache,
 
   char *context_ptr = x86_windows_process.with_context (th, [] (auto *context)
     {
+      gdb_assert (context->ContextFlags != 0);
       return (char *) context;
     });
 

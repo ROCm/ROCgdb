@@ -185,6 +185,7 @@ aarch64_windows_nat_target::fill_thread_context (windows_thread_info *th)
 
   if (context->ContextFlags == 0)
     {
+      th->suspend ();
       context->ContextFlags = WindowsContext<decltype(context)>::all;
       CHECK (get_thread_context (th->h, context));
     }
@@ -285,6 +286,7 @@ aarch64_windows_nat_target::store_one_register (const struct regcache *regcache,
 						windows_thread_info *th, int r)
 {
   gdb_assert (r >= 0);
+  gdb_assert (th->context.ContextFlags != 0);
 
   char *context_ptr = (char *) &th->context;
 
