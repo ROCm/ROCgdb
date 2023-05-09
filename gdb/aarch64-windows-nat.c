@@ -185,7 +185,6 @@ aarch64_windows_nat_target::fill_thread_context (windows_thread_info *th)
 
   if (context->ContextFlags == 0)
     {
-      th->suspend ();
       context->ContextFlags = WindowsContext<decltype(context)>::all;
       CHECK (get_thread_context (th->h, context));
     }
