@@ -274,14 +274,6 @@ windows_per_inferior::find_thread (ptid_t ptid)
 
 /* See nat/windows-nat.h.  */
 
-windows_thread_info *
-windows_per_inferior::thread_rec (ptid_t ptid,
-				  thread_disposition_type disposition)
-{
-  windows_thread_info *th = find_thread (ptid);
-  return th;
-}
-
 /* Add a thread to the thread list.
 
    PTID is the ptid of the thread to be added.
