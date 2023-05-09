@@ -243,6 +243,9 @@ private:
   void delete_thread (ptid_t ptid, DWORD exit_code, bool main_thread_p);
   DWORD fake_create_process ();
 
+  void continue_one_thread (windows_thread_info *th,
+			    windows_continue_flags cont_flags);
+
   BOOL windows_continue (DWORD continue_status, int id,
 			 windows_continue_flags cont_flags = 0);
 

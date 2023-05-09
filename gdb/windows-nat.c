@@ -704,6 +704,15 @@ windows_per_inferior::handle_access_violation
   return false;
 }
 
+void
+windows_nat_target::continue_one_thread (windows_thread_info *th,
+					 windows_continue_flags cont_flags)
+{
+  bool killed = (cont_flags & WCONT_KILLED) != 0;
+  thread_context_continue (th, killed);
+  th->resume ();
+}
+
 /* Resume thread specified by ID, or all artificially suspended
    threads, if we are continuing execution.  See description of
    windows_continue_flags for CONT_FLAGS.  */
@@ -725,12 +734,7 @@ windows_nat_target::windows_continue (DWORD continue_status, int id,
 
   for (auto &th : windows_process->thread_list)
     if (id == -1 || id == (int) th->tid)
-      {
-	bool killed = (cont_flags & WCONT_KILLED) != 0;
-	thread_context_continue (th.get (), killed);
-
-	th->resume ();
-      }
+      continue_one_thread (th.get (), cont_flags);
 
   continue_last_debug_event_main_thread
     (_("Failed to resume program execution"), continue_status,
