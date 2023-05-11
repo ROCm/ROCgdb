@@ -7120,6 +7120,7 @@ locking the OS scheduler to allow only a single thread to run.
 
 @table @code
 @item set scheduler-locking @var{mode}
+@cindex scheduler-locking
 @cindex scheduler locking mode
 @cindex lock scheduler
 @anchor{set scheduler-locking}
