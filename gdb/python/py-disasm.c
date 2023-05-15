@@ -247,6 +247,21 @@ disasm_info_dealloc (PyObject *self)
   Py_TYPE (self)->tp_free (self);
 }
 
+/* Implement __repr__ for the DisassembleInfo type.  */
+
+static PyObject *
+disasmpy_info_repr (PyObject *self)
+{
+  disasm_info_object *obj = (disasm_info_object *) self;
+
+  const char *arch_name
+    = (gdbarch_bfd_arch_info (obj->gdbarch))->printable_name;
+  return PyUnicode_FromFormat ("<%s address=%s architecture=%s>",
+			       Py_TYPE (obj)->tp_name,
+			       core_addr_to_string_nz (obj->address),
+			       arch_name);
+}
+
 /* Implement DisassembleInfo.is_valid(), really just a wrapper around the
    disasm_info_object_is_valid function above.  */
 
@@ -593,6 +608,21 @@ gdbpy_disassembler::read_memory_func (bfd_vma memaddr, gdb_byte *buff,
   return 0;
 }
 
+/* Implement __str__ for the DisassemblerResult type.  */
+
+static PyObject *
+disasmpy_result_str (PyObject *self)
+{
+  disasm_result_object *obj = (disasm_result_object *) self;
+
+  gdb_assert (obj->content != nullptr);
+  gdb_assert (obj->content->size () > 0);
+  gdb_assert (obj->length > 0);
+  return PyUnicode_Decode (obj->content->c_str (),
+			   obj->content->size (),
+			   host_charset (), nullptr);
+}
+
 /* Implement DisassemblerResult.length attribute, return the length of the
    disassembled instruction.  */
 
@@ -609,14 +639,7 @@ disasmpy_result_length (PyObject *self, void *closure)
 static PyObject *
 disasmpy_result_string (PyObject *self, void *closure)
 {
-  disasm_result_object *obj = (disasm_result_object *) self;
-
-  gdb_assert (obj->content != nullptr);
-  gdb_assert (obj->content->size () > 0);
-  gdb_assert (obj->length > 0);
-  return PyUnicode_Decode (obj->content->c_str (),
-			   obj->content->size (),
-			   host_charset (), nullptr);
+  return disasmpy_result_str (self);
 }
 
 /* Implement DisassemblerResult.__init__.  Takes two arguments, an
@@ -651,6 +674,21 @@ disasmpy_result_init (PyObject *self, PyObject *args, PyObject *kwargs)
   disasmpy_init_disassembler_result (obj, length, std::string (string));
 
   return 0;
+}
+
+/* Implement __repr__ for the DisassemblerResult type.  */
+
+static PyObject *
+disasmpy_result_repr (PyObject *self)
+{
+  disasm_result_object *obj = (disasm_result_object *) self;
+
+  gdb_assert (obj->content != nullptr);
+
+  return PyUnicode_FromFormat ("<%s length=%d string=\"%s\">",
+			       Py_TYPE (obj)->tp_name,
+			       obj->length,
+			       obj->content->string ().c_str ());
 }
 
 /* Implement memory_error_func callback for disassemble_info.  Extract the
@@ -1069,7 +1107,7 @@ PyTypeObject disasm_info_object_type = {
   0,						/*tp_getattr*/
   0,						/*tp_setattr*/
   0,						/*tp_compare*/
-  0,						/*tp_repr*/
+  disasmpy_info_repr,				/*tp_repr*/
   0,						/*tp_as_number*/
   0,						/*tp_as_sequence*/
   0,						/*tp_as_mapping*/
@@ -1111,13 +1149,13 @@ PyTypeObject disasm_result_object_type = {
   0,						/*tp_getattr*/
   0,						/*tp_setattr*/
   0,						/*tp_compare*/
-  0,						/*tp_repr*/
+  disasmpy_result_repr,				/*tp_repr*/
   0,						/*tp_as_number*/
   0,						/*tp_as_sequence*/
   0,						/*tp_as_mapping*/
   0,						/*tp_hash */
   0,						/*tp_call*/
-  0,						/*tp_str*/
+  disasmpy_result_str,				/*tp_str*/
   0,						/*tp_getattro*/
   0,						/*tp_setattro*/
   0,						/*tp_as_buffer*/

@@ -2014,6 +2014,10 @@ dwarf_composite::write_to_gdb_value (frame_info_ptr frame, struct value *value,
       remaining_bit_size -= this_bit_size;
       total_bits_to_skip = 0;
     }
+
+  if (remaining_bit_size != 0)
+    value->mark_bits_optimized_out (bit_offset,
+				    bit_offset + remaining_bit_size);
 }
 
 bool

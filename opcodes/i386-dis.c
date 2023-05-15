@@ -45,13 +45,6 @@ static bool dofloat (instr_info *, int);
 static int putop (instr_info *, const char *, int);
 static void oappend_with_style (instr_info *, const char *,
 				enum disassembler_style);
-static void oappend (instr_info *, const char *);
-static void append_seg (instr_info *);
-static bool get32s (instr_info *, bfd_vma *);
-static bool get16 (instr_info *, bfd_vma *);
-static bool get16s (instr_info *, bfd_vma *);
-static bool get8s (instr_info *, bfd_vma *);
-static void set_op (instr_info *, bfd_vma, bool);
 
 static bool OP_E (instr_info *, int, int);
 static bool OP_E_memory (instr_info *, int, int);
@@ -93,8 +86,6 @@ static bool OP_VexI4 (instr_info *, int, int);
 static bool OP_0f07 (instr_info *, int, int);
 static bool OP_Monitor (instr_info *, int, int);
 static bool OP_Mwait (instr_info *, int, int);
-
-static bool BadOp (instr_info *);
 
 static bool PCLMUL_Fixup (instr_info *, int, int);
 static bool VPCMP_Fixup (instr_info *, int, int);
@@ -9508,7 +9499,15 @@ get_sib (instr_info *ins, int sizeflag)
   return true;
 }
 
-/* Like oappend (below), but S is a string starting with '%'.  In
+/* Like oappend_with_style (below) but always with text style.  */
+
+static void
+oappend (instr_info *ins, const char *s)
+{
+  oappend_with_style (ins, s, dis_style_text);
+}
+
+/* Like oappend (above), but S is a string starting with '%'.  In
    Intel syntax, the '%' is elided.  */
 
 static void
@@ -11205,14 +11204,6 @@ oappend_with_style (instr_info *ins, const char *s,
   ins->obufp = stpcpy (ins->obufp, s);
 }
 
-/* Like oappend_with_style but always with text style.  */
-
-static void
-oappend (instr_info *ins, const char *s)
-{
-  oappend_with_style (ins, s, dis_style_text);
-}
-
 /* Add a single character C to the buffer pointer to by INS->obufp, marking
    the style for the character as STYLE.  */
 
@@ -11712,6 +11703,97 @@ print_register (instr_info *ins, unsigned int reg, unsigned int rexmask,
       return;
     }
   oappend_register (ins, names[reg]);
+}
+
+static bool
+get8s (instr_info *ins, bfd_vma *res)
+{
+  if (!fetch_code (ins->info, ins->codep + 1))
+    return false;
+  *res = (((bfd_vma) *ins->codep++ & 0xff) ^ 0x80) - 0x80;
+  return true;
+}
+
+static bool
+get16 (instr_info *ins, bfd_vma *res)
+{
+  if (!fetch_code (ins->info, ins->codep + 2))
+    return false;
+  *res = (bfd_vma) *ins->codep++ & 0xff;
+  *res |= ((bfd_vma) *ins->codep++ & 0xff) << 8;
+  return true;
+}
+
+static bool
+get16s (instr_info *ins, bfd_vma *res)
+{
+  if (!get16 (ins, res))
+    return false;
+  *res = (*res ^ 0x8000) - 0x8000;
+  return true;
+}
+
+static bool
+get32 (instr_info *ins, bfd_vma *res)
+{
+  if (!fetch_code (ins->info, ins->codep + 4))
+    return false;
+  *res = *ins->codep++ & (bfd_vma) 0xff;
+  *res |= (*ins->codep++ & (bfd_vma) 0xff) << 8;
+  *res |= (*ins->codep++ & (bfd_vma) 0xff) << 16;
+  *res |= (*ins->codep++ & (bfd_vma) 0xff) << 24;
+  return true;
+}
+
+static bool
+get32s (instr_info *ins, bfd_vma *res)
+{
+  if (!get32 (ins, res))
+    return false;
+
+  *res = (*res ^ ((bfd_vma) 1 << 31)) - ((bfd_vma) 1 << 31);
+
+  return true;
+}
+
+static bool
+get64 (instr_info *ins, uint64_t *res)
+{
+  unsigned int a;
+  unsigned int b;
+
+  if (!fetch_code (ins->info, ins->codep + 8))
+    return false;
+  a = *ins->codep++ & 0xff;
+  a |= (*ins->codep++ & 0xff) << 8;
+  a |= (*ins->codep++ & 0xff) << 16;
+  a |= (*ins->codep++ & 0xffu) << 24;
+  b = *ins->codep++ & 0xff;
+  b |= (*ins->codep++ & 0xff) << 8;
+  b |= (*ins->codep++ & 0xff) << 16;
+  b |= (*ins->codep++ & 0xffu) << 24;
+  *res = a + ((uint64_t) b << 32);
+  return true;
+}
+
+static void
+set_op (instr_info *ins, bfd_vma op, bool riprel)
+{
+  ins->op_index[ins->op_ad] = ins->op_ad;
+  if (ins->address_mode == mode_64bit)
+    ins->op_address[ins->op_ad] = op;
+  else /* Mask to get a 32-bit address.  */
+    ins->op_address[ins->op_ad] = op & 0xffffffff;
+  ins->op_riprel[ins->op_ad] = riprel;
+}
+
+static bool
+BadOp (instr_info *ins)
+{
+  /* Throw away prefixes and 1st. opcode byte.  */
+  ins->codep = ins->insn_codep + 1;
+  ins->obufp = stpcpy (ins->obufp, "(bad)");
+  return true;
 }
 
 static bool
@@ -12247,88 +12329,6 @@ OP_G (instr_info *ins, int bytemode, int sizeflag)
   else
     print_register (ins, ins->modrm.reg, REX_R, bytemode, sizeflag);
   return true;
-}
-
-static bool
-get64 (instr_info *ins, uint64_t *res)
-{
-  unsigned int a;
-  unsigned int b;
-
-  if (!fetch_code (ins->info, ins->codep + 8))
-    return false;
-  a = *ins->codep++ & 0xff;
-  a |= (*ins->codep++ & 0xff) << 8;
-  a |= (*ins->codep++ & 0xff) << 16;
-  a |= (*ins->codep++ & 0xffu) << 24;
-  b = *ins->codep++ & 0xff;
-  b |= (*ins->codep++ & 0xff) << 8;
-  b |= (*ins->codep++ & 0xff) << 16;
-  b |= (*ins->codep++ & 0xffu) << 24;
-  *res = a + ((uint64_t) b << 32);
-  return true;
-}
-
-static bool
-get32 (instr_info *ins, bfd_vma *res)
-{
-  if (!fetch_code (ins->info, ins->codep + 4))
-    return false;
-  *res = *ins->codep++ & (bfd_vma) 0xff;
-  *res |= (*ins->codep++ & (bfd_vma) 0xff) << 8;
-  *res |= (*ins->codep++ & (bfd_vma) 0xff) << 16;
-  *res |= (*ins->codep++ & (bfd_vma) 0xff) << 24;
-  return true;
-}
-
-static bool
-get32s (instr_info *ins, bfd_vma *res)
-{
-  if (!get32 (ins, res))
-    return false;
-
-  *res = (*res ^ ((bfd_vma) 1 << 31)) - ((bfd_vma) 1 << 31);
-
-  return true;
-}
-
-static bool
-get16 (instr_info *ins, bfd_vma *res)
-{
-  if (!fetch_code (ins->info, ins->codep + 2))
-    return false;
-  *res = (bfd_vma) *ins->codep++ & 0xff;
-  *res |= ((bfd_vma) *ins->codep++ & 0xff) << 8;
-  return true;
-}
-
-static bool
-get16s (instr_info *ins, bfd_vma *res)
-{
-  if (!get16 (ins, res))
-    return false;
-  *res = (*res ^ 0x8000) - 0x8000;
-  return true;
-}
-
-static bool
-get8s (instr_info *ins, bfd_vma *res)
-{
-  if (!fetch_code (ins->info, ins->codep + 1))
-    return false;
-  *res = (((bfd_vma) *ins->codep++ & 0xff) ^ 0x80) - 0x80;
-  return true;
-}
-
-static void
-set_op (instr_info *ins, bfd_vma op, bool riprel)
-{
-  ins->op_index[ins->op_ad] = ins->op_ad;
-  if (ins->address_mode == mode_64bit)
-    ins->op_address[ins->op_ad] = op;
-  else /* Mask to get a 32-bit address.  */
-    ins->op_address[ins->op_ad] = op & 0xffffffff;
-  ins->op_riprel[ins->op_ad] = riprel;
 }
 
 static bool
@@ -13351,15 +13351,6 @@ OP_Monitor (instr_info *ins, int bytemode ATTRIBUTE_UNUSED,
   /* Skip mod/rm byte.  */
   MODRM_CHECK;
   ins->codep++;
-  return true;
-}
-
-static bool
-BadOp (instr_info *ins)
-{
-  /* Throw away prefixes and 1st. opcode byte.  */
-  ins->codep = ins->insn_codep + 1;
-  ins->obufp = stpcpy (ins->obufp, "(bad)");
   return true;
 }
 

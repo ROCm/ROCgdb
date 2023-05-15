@@ -1,4 +1,4 @@
---  Copyright 2008-2023 Free Software Foundation, Inc.
+--  Copyright 2023 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -14,23 +14,5 @@
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package Pck is
-
-   My_Global_Variable : Integer := 1;
-
-   Internal_Capitalized : Integer := 2;
-   pragma Export (C, Internal_Capitalized, "Exported_Capitalized");
-
-   Local_Identical_One : Integer := 4;
-   Local_Identical_Two : Integer := 8;
-
-   External_Identical_One : Integer := 19;
-
-   package Inner is
-      Inside_Variable : Integer := 3;
-   end Inner;
-
-   procedure Proc (I : Integer);
-
-   procedure Ambiguous_Func;
-
+   function Plus_One (A : Integer) return Integer;
 end Pck;

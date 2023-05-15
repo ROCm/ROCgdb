@@ -57,8 +57,7 @@ proc get_screen_width { } {
     set cmd "maint info screen"
     set re \
 	[multi_line \
-	     ^$cmd \
-	     $re1 \
+	     ^$re1 \
 	     $re2 \
 	     "(?:$re3" \
 	     ")?$re4" \
@@ -86,12 +85,6 @@ proc test_wrap { width_auto_detected } {
 	gdb_assert { $gdb_width == [expr $readline_width + 1] }
     }
 
-    if { $width_auto_detected && $::term == "ansi" } {
-	if { $gdb_width == [expr $env_width - 1] || $gdb_width == $env_width } {
-	    # Generate KFAIL or KPASS.
-	    setup_kfail "cli/30346" "*-*-*"
-	}
-    }
     gdb_assert { $gdb_width == $env_width } "width"
 
     # New prompt, but avoid emitting a pass in order to avoid ending the line
