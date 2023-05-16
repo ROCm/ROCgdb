@@ -27762,49 +27762,43 @@ The following @acronym{AMD GPU} architectures are supported:
 @table @emph
 
 @item @samp{gfx900}
-AMD Vega 10 devices, displayed as @samp{vega10} by @value{GDBN}.
+AMD Vega 10 devices.
 
 @item @samp{gfx906}
-AMD Vega 7nm devices, displayed as @samp{vega20} by @value{GDBN}.
+AMD Vega 7nm devices.
 
 @item @samp{gfx908}
-AMD Instinct@registeredsymbol{} MI100 accelerator devices, displayed as
-@samp{arcturus} by @value{GDBN}.
+AMD Instinct@registeredsymbol{} MI100 accelerator devices.
 
 @item @samp{gfx90a}
-AMD Instinct@registeredsymbol{} MI200 Series accelerator devices,
-displayed as @samp{aldebaran} by @value{GDBN}.
+AMD Instinct@registeredsymbol{} MI200 Series accelerator devices.
 
 @item @samp{gfx1010}
-Navi10 devices, displayed as @samp{navi10} by @value{GDBN}.
+Navi 10 devices.
 
 @item @samp{gfx1011}
-Navi12 devices, displayed as @samp{navi12} by @value{GDBN}.
+Navi 12 devices.
 
 @item @samp{gfx1012}
-Navi14 devices, displayed as @samp{navi14} by @value{GDBN}.
+Navi 14 devices.
 
 @item @samp{gfx1030}
-Sienna Cichlid devices, displayed as @samp{sienna_cichlid} by @value{GDBN}.
+Sienna Cichlid devices.
 
 @item @samp{gfx1031}
-Navy Flounder devices, displayed as @samp{navy_flounder} by @value{GDBN}.
+Navy Flounder devices.
 
 @item @samp{gfx1032}
-Dimgrey Cavefish devices, displayed as @samp{dimgrey_cavefish} by
-@value{GDBN}.
+Dimgrey Cavefish devices.
 
-@item Plum Bonito
-Displayed as @samp{plum_bonito} by @value{GDBN} and denoted as
-@samp{gfx1100} by the compiler.
+@item @samp{gfx1100}
+Plum Bonito devices.
 
-@item Wheat Nas
-Displayed as @samp{wheat_nas} by @value{GDBN} and denoted as
-@samp{gfx1101} by the compiler.
+@item @samp{gfx1101}
+Wheat Nas devices.
 
-@item Hotpink Bonefish
-Displayed as @samp{hotpink_bonefish} by @value{GDBN} and denoted as
-@samp{gfx1102} by the compiler.
+@item @samp{gfx1102}
+Hotpink Bonefish devices.
 
 @end table
 
