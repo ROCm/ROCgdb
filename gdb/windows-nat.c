@@ -712,6 +712,7 @@ windows_nat_target::continue_one_thread (windows_thread_info *th,
   bool killed = (cont_flags & WCONT_KILLED) != 0;
   thread_context_continue (th, killed);
   th->resume ();
+  th->last_sig = GDB_SIGNAL_0;
 }
 
 /* Resume thread specified by ID, or all artificially suspended
@@ -812,7 +813,7 @@ windows_nat_target::resume (ptid_t ptid, int step, enum gdb_signal sig)
 	  DEBUG_EXCEPT ("Cannot continue with signal %d here.  "
 			"Not stopped for EXCEPTION_DEBUG_EVENT", sig);
 	}
-      else if (sig == windows_process->last_sig)
+      else if (sig == th->last_sig)
 	continue_status = DBG_EXCEPTION_NOT_HANDLED;
       else
 #if 0
@@ -836,10 +837,8 @@ windows_nat_target::resume (ptid_t ptid, int step, enum gdb_signal sig)
 	}
 #endif
       DEBUG_EXCEPT ("Can only continue with received signal %d.",
-		    windows_process->last_sig);
+		    th->last_sig);
     }
-
-  windows_process->last_sig = GDB_SIGNAL_0;
 
   /* Get context for currently selected thread.  */
   if (step)
@@ -943,8 +942,6 @@ windows_nat_target::get_windows_debug_event
 	  return ptid;
 	}
     }
-
-  windows_process->last_sig = GDB_SIGNAL_0;
 
   if ((options & TARGET_WNOHANG) != 0 && !m_debug_event_pending)
     {
@@ -1263,7 +1260,6 @@ windows_nat_target::do_initial_windows_stuff (DWORD pid, bool attaching)
 
   initialize_windows_arch (attaching);
 
-  windows_process->last_sig = GDB_SIGNAL_0;
   windows_process->open_process_used = 0;
 #ifdef __CYGWIN__
   windows_process->cygwin_load_start = 0;
