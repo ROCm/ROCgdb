@@ -547,57 +547,65 @@ namespace eval Term {
 	}
     }
 
+    # Reset the attributes in attributes array UPVAR_NAME to the default values.
+    proc _reset_attrs { upvar_name } {
+	upvar $upvar_name var
+	array set var {
+	    intensity normal
+	    fg default
+	    bg default
+	    underline 0
+	    reverse 0
+	}
+    }
+
     # Select Graphic Rendition.
     #
     # https://vt100.net/docs/vt510-rm/SGR.html
     proc _csi_m {args} {
 	_log_cur "Select Graphic Rendition ([join $args {, }])" {
-	  variable _attrs
+	    variable _attrs
 
-	  foreach item $args {
-	      switch -exact -- $item {
-		  "" - 0 {
-		      set _attrs(intensity) normal
-		      set _attrs(fg) default
-		      set _attrs(bg) default
-		      set _attrs(underline) 0
-		      set _attrs(reverse) 0
-		  }
-		  1 {
-		      set _attrs(intensity) bold
-		  }
-		  2 {
-		      set _attrs(intensity) dim
-		  }
-		  4 {
-		      set _attrs(underline) 1
-		  }
-		  7 {
-		      set _attrs(reverse) 1
-		  }
-		  22 {
-		      set _attrs(intensity) normal
-		  }
-		  24 {
-		      set _attrs(underline) 0
-		  }
-		  27 {
-		      set _attrs(reverse) 1
-		  }
-		  30 - 31 - 32 - 33 - 34 - 35 - 36 - 37 {
-		      set _attrs(fg) $item
-		  }
-		  39 {
-		      set _attrs(fg) default
-		  }
-		  40 - 41 - 42 - 43 - 44 - 45 - 46 - 47 {
-		      set _attrs(bg) $item
-		  }
-		  49 {
-		      set _attrs(bg) default
-		  }
-	      }
-	  }
+	    foreach item $args {
+		switch -exact -- $item {
+		    "" - 0 {
+			_reset_attrs _attrs
+		    }
+		    1 {
+			set _attrs(intensity) bold
+		    }
+		    2 {
+			set _attrs(intensity) dim
+		    }
+		    4 {
+			set _attrs(underline) 1
+		    }
+		    7 {
+			set _attrs(reverse) 1
+		    }
+		    22 {
+			set _attrs(intensity) normal
+		    }
+		    24 {
+			set _attrs(underline) 0
+		    }
+		    27 {
+			set _attrs(reverse) 1
+		    }
+		    30 - 31 - 32 - 33 - 34 - 35 - 36 - 37 {
+			set _attrs(fg) $item
+		    }
+		    39 {
+			set _attrs(fg) default
+		    }
+		    40 - 41 - 42 - 43 - 44 - 45 - 46 - 47 {
+			set _attrs(bg) $item
+		    }
+		    49 {
+			set _attrs(bg) default
+		    }
+		}
+	    }
 	}
     }
 
@@ -614,7 +622,7 @@ namespace eval Term {
 	    variable _chars
 	    set lattr [array get _attrs]
 	    foreach char [split $str {}] {
-		  _log_cur "  Inserted char '$char'" {
+		_log_cur "  Inserted char '$char'" {
 		    set _chars($_cur_col,$_cur_row) [list $char $lattr]
 		    incr _cur_col
 		    if {$_cur_col >= $_cols} {
@@ -666,13 +674,7 @@ namespace eval Term {
 	set _cur_col 0
 	set _cur_row 0
 	set _resize_count 0
-	array set _attrs {
-	    intensity normal
-	    fg default
-	    bg default
-	    underline 0
-	    reverse 0
-	}
+	_reset_attrs _attrs
 
 	_clear_lines 0 $_rows
     }
@@ -739,7 +741,7 @@ namespace eval Term {
 	variable _cur_row
 
 	set fn "wait_for"
-	
+
 	set prompt_wait_for "$gdb_prompt \$"
 	debug_tui_matching "$fn: regexp: '$wait_for'"
 
@@ -873,10 +875,25 @@ namespace eval Term {
 	wait_for "^$str"
     }
 
-    # Return the text of screen line N, without attributes.  Lines are
-    # 0-based.  If C is given, stop before column C.  Columns are also
-    # zero-based.
-    proc get_line {n {c ""}} {
+    # Apply the attribute list in ATTRS to attributes array UPVAR_NAME.
+    # Return a string annotating the changed attributes.
+    proc apply_attrs { upvar_name attrs } {
+	set res ""
+	upvar $upvar_name var
+	foreach { attr val } $attrs {
+	    if { $var($attr) != $val } {
+		append res "<$attr:$val>"
+		set var($attr) $val
+	    }
+	}
+
+	return $res
+    }
+
+    # Return the text of screen line N.  Lines are 0-based.  If C is given,
+    # stop before column C.  Columns are also zero-based.  If ATTRS, annotate
+    # with attributes.
+    proc get_line_1 {n c attrs} {
 	variable _rows
 	# This can happen during resizing, if the cursor seems to
 	# temporarily be off-screen.
@@ -889,11 +906,35 @@ namespace eval Term {
 	variable _chars
 	set c [_default $c $_cols]
 	set x 0
+	if { $attrs } {
+	    _reset_attrs line_attrs
+	}
 	while {$x < $c} {
+	    if { $attrs } {
+		set char_attrs [lindex $_chars($x,$n) 1]
+		append result [apply_attrs line_attrs $char_attrs]
+	    }
 	    append result [lindex $_chars($x,$n) 0]
 	    incr x
 	}
+	if { $attrs } {
+	    _reset_attrs zero_attrs
+	    set char_attrs [array get zero_attrs]
+	    append result [apply_attrs line_attrs $char_attrs]
+	}
 	return $result
+    }
+
+    # Return the text of screen line N, without attributes.  Lines are
+    # 0-based.  If C is given, stop before column C.  Columns are also
+    # zero-based.
+    proc get_line {n {c ""} } {
+	return [get_line_1 $n $c 0]
+    }
+
+    # As get_line, but annotate with attributes.
+    proc get_line_with_attrs {n {c ""}} {
+	return [get_line_1 $n $c 1]
     }
 
     # Get just the character at (X, Y).
@@ -1004,6 +1045,14 @@ namespace eval Term {
 	gdb_assert {[regexp -- $regexp $contents]} $test_name
     }
 
+    # As check_contents, but check that the text contents of the terminal does
+    # not match the regular expression.
+    proc check_contents_not {test_name regexp} {
+	dump_screen
+	set contents [get_all_lines]
+	gdb_assert {![regexp -- $regexp $contents]} $test_name
+    }
+
     # Get the region of the screen described by X, Y, WIDTH,
     # and HEIGHT, and separate the lines using SEP.
     proc get_region { x y width height sep } {
@@ -1069,8 +1118,8 @@ namespace eval Term {
     }
 
     # A debugging function to dump the current screen, with line
-    # numbers.
-    proc dump_screen {} {
+    # numbers.  If ATTRS, annotate with attributes.
+    proc dump_screen { {attrs 0} } {
 	variable _rows
 	variable _cols
 	variable _cur_row
@@ -1080,8 +1129,13 @@ namespace eval Term {
 
 	for {set y 0} {$y < $_rows} {incr y} {
 	    set fmt [format %5d $y]
-	    verbose -log "$fmt [get_line $y]"
+	    verbose -log "$fmt [get_line_1 $y "" $attrs]"
 	}
+    }
+
+    # As dump_screen, but with attributes annotation.
+    proc dump_screen_with_attrs {} {
+	return [dump_screen 1]
     }
 
     # A debugging function to dump a box from the current screen, with line

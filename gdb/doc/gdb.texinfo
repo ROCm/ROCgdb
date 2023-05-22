@@ -37944,7 +37944,7 @@ objects.
 @end table
 
 In the future new values may be added to this list so the front should
-be prepared for this possibility.  @xref{GDB/MI Development and Front Ends, ,@sc{GDB/MI} Development and Front Ends}.
+be prepared for this possibility.  @xref{GDB/MI Development and Front Ends, ,@sc{gdb/mi} Development and Front Ends}.
 
 @item type_changed
 This is only present if the varobj is still valid.  If the type
