@@ -32,8 +32,6 @@ struct language_defn;
 struct internalvar;
 class innermost_block_tracker;
 
-extern bool parser_debug;
-
 /* A class that can be used to build a "struct expression".  */
 
 struct expr_builder
@@ -146,19 +144,19 @@ struct parser_state : public expr_builder
 		struct gdbarch *gdbarch,
 		const struct block *context_block,
 		CORE_ADDR context_pc,
-		int comma,
+		parser_flags flags,
 		const char *input,
 		bool completion,
-		innermost_block_tracker *tracker,
-		bool void_p)
+		innermost_block_tracker *tracker)
     : expr_builder (lang, gdbarch),
       expression_context_block (context_block),
       expression_context_pc (context_pc),
-      comma_terminates (comma),
       lexptr (input),
-      parse_completion (completion),
       block_tracker (tracker),
-      void_context_p (void_p)
+      comma_terminates ((flags & PARSER_COMMA_TERMINATES) != 0),
+      parse_completion (completion),
+      void_context_p ((flags & PARSER_VOID_CONTEXT) != 0),
+      debug ((flags & PARSER_DEBUG) != 0)
   {
   }
 
@@ -276,10 +274,6 @@ struct parser_state : public expr_builder
      point.  */
   const CORE_ADDR expression_context_pc;
 
-  /* Nonzero means stop parsing on first comma (if not within parentheses).  */
-
-  int comma_terminates;
-
   /* During parsing of a C expression, the pointer to the next character
      is in this variable.  */
 
@@ -293,17 +287,23 @@ struct parser_state : public expr_builder
 
   int arglist_len = 0;
 
-  /* True if parsing an expression to attempt completion.  */
-  bool parse_completion;
-
   /* Completion state is updated here.  */
   std::unique_ptr<expr_completion_base> m_completion_state;
 
   /* The innermost block tracker.  */
   innermost_block_tracker *block_tracker;
 
+  /* Nonzero means stop parsing on first comma (if not within parentheses).  */
+  bool comma_terminates;
+
+  /* True if parsing an expression to attempt completion.  */
+  bool parse_completion;
+
   /* True if no value is expected from the expression.  */
   bool void_context_p;
+
+  /* True if parser debugging should be enabled.  */
+  bool debug;
 
 private:
 
@@ -314,49 +314,6 @@ private:
 
   /* Stack of operations.  */
   std::vector<expr::operation_up> m_operations;
-};
-
-/* When parsing expressions we track the innermost block that was
-   referenced.  */
-
-class innermost_block_tracker
-{
-public:
-  innermost_block_tracker (innermost_block_tracker_types types
-			   = INNERMOST_BLOCK_FOR_SYMBOLS)
-    : m_types (types),
-      m_innermost_block (NULL)
-  { /* Nothing.  */ }
-
-  /* Update the stored innermost block if the new block B is more inner
-     than the currently stored block, or if no block is stored yet.  The
-     type T tells us whether the block B was for a symbol or for a
-     register.  The stored innermost block is only updated if the type T is
-     a type we are interested in, the types we are interested in are held
-     in M_TYPES and set during RESET.  */
-  void update (const struct block *b, innermost_block_tracker_types t);
-
-  /* Overload of main UPDATE method which extracts the block from BS.  */
-  void update (const struct block_symbol &bs)
-  {
-    update (bs.block, INNERMOST_BLOCK_FOR_SYMBOLS);
-  }
-
-  /* Return the stored innermost block.  Can be nullptr if no symbols or
-     registers were found during an expression parse, and so no innermost
-     block was defined.  */
-  const struct block *block () const
-  {
-    return m_innermost_block;
-  }
-
-private:
-  /* The type of innermost block being looked for.  */
-  innermost_block_tracker_types m_types;
-
-  /* The currently stored innermost block found while parsing an
-     expression.  */
-  const struct block *m_innermost_block;
 };
 
 /* A string token, either a char-string or bit-string.  Char-strings are

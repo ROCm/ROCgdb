@@ -20791,7 +20791,9 @@ an address of your own choosing, with the following commands:
 Resume execution at the address of the code location that results from
 resolving @var{locspec}.
 @xref{Location Specifications}, for a description of the different
-forms of @var{locspec}.  If @var{locspec} resolves to more than one
+forms of @var{locspec}.  If @var{locspec} resolves to more than one address,
+those outside the current compilation unit are ignored.  If considering just
+the addresses in the current compilation unit still doesn't yield a unique
 address, the command aborts before jumping.
 Execution stops again immediately if there is a breakpoint there.  It
 is common practice to use the @code{tbreak} command in conjunction
@@ -41967,10 +41969,21 @@ Generally, @value{GDBN} implements the Debugger Adapter Protocol as
 written.  However, in some cases, extensions are either needed or even
 expected.
 
-@value{GDBN} defines a parameter that can be passed to the
+@value{GDBN} defines some parameters that can be passed to the
 @code{launch} request:
 
 @table @code
+@item args
+If provided, this should be an array of strings.  These strings are
+provided as command-line arguments to the inferior, as if by
+@code{set args}.  @xref{Arguments}.
+
+@item env
+If provided, this should be an object.  Each key of the object will be
+used as the name of an environment variable; each value must be a
+string and will be the value of that variable.  The environment of the
+inferior will be set to exactly as passed in.  @xref{Environment}.
+
 @item program
 If provided, this is a string that specifies the program to use.  This
 corresponds to the @code{file} command.  @xref{Files}.

@@ -62,7 +62,7 @@ show_expressiondebug (struct ui_file *file, int from_tty,
 
 
 /* True if an expression parser should set yydebug.  */
-bool parser_debug;
+static bool parser_debug;
 
 static void
 show_parserdebug (struct ui_file *file, int from_tty,
@@ -71,12 +71,6 @@ show_parserdebug (struct ui_file *file, int from_tty,
   gdb_printf (file, _("Parser debugging is %s.\n"), value);
 }
 
-
-static expression_up parse_exp_in_context
-     (const char **, CORE_ADDR,
-      const struct block *, int,
-      bool, innermost_block_tracker *,
-      std::unique_ptr<expr_completion_base> *);
 
 /* Documented at it's declaration.  */
 
@@ -328,31 +322,13 @@ copy_name (struct stoken token)
 }
 
 
-/* Read an expression from the string *STRINGPTR points to,
-   parse it, and return a pointer to a struct expression that we malloc.
-   Use block BLOCK as the lexical context for variable names;
-   if BLOCK is zero, use the block of the selected stack frame.
-   Meanwhile, advance *STRINGPTR to point after the expression,
-   at the first nonwhite character that is not part of the expression
-   (possibly a null character).
-
-   If COMMA is nonzero, stop if a comma is reached.  */
-
-expression_up
-parse_exp_1 (const char **stringptr, CORE_ADDR pc, const struct block *block,
-	     int comma, innermost_block_tracker *tracker)
-{
-  return parse_exp_in_context (stringptr, pc, block, comma, false,
-			       tracker, nullptr);
-}
-
 /* As for parse_exp_1, except that if VOID_CONTEXT_P, then
    no value is expected from the expression.  */
 
 static expression_up
 parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
 		      const struct block *block,
-		      int comma, bool void_context_p,
+		      parser_flags flags,
 		      innermost_block_tracker *tracker,
 		      std::unique_ptr<expr_completion_base> *completer)
 {
@@ -368,26 +344,31 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
   if (tracker == nullptr)
     tracker = &local_tracker;
 
-  /* If no context specified, try using the current frame, if any.  */
-  if (!expression_context_block)
-    expression_context_block = get_selected_block (&expression_context_pc);
-  else if (pc == 0)
-    expression_context_pc = expression_context_block->entry_pc ();
-  else
-    expression_context_pc = pc;
-
-  /* Fall back to using the current source static context, if any.  */
-
-  if (!expression_context_block)
+  if ((flags & PARSER_LEAVE_BLOCK_ALONE) == 0)
     {
-      struct symtab_and_line cursal = get_current_source_symtab_and_line ();
-
-      if (cursal.symtab)
+      /* If no context specified, try using the current frame, if any.  */
+      if (!expression_context_block)
 	expression_context_block
-	  = cursal.symtab->compunit ()->blockvector ()->static_block ();
-
-      if (expression_context_block)
+	  = get_selected_block (&expression_context_pc);
+      else if (pc == 0)
 	expression_context_pc = expression_context_block->entry_pc ();
+      else
+	expression_context_pc = pc;
+
+      /* Fall back to using the current source static context, if any.  */
+
+      if (!expression_context_block)
+	{
+	  struct symtab_and_line cursal
+	    = get_current_source_symtab_and_line ();
+
+	  if (cursal.symtab)
+	    expression_context_block
+	      = cursal.symtab->compunit ()->blockvector ()->static_block ();
+
+	  if (expression_context_block)
+	    expression_context_pc = expression_context_block->entry_pc ();
+	}
     }
 
   if (language_mode == language_mode_auto && block != NULL)
@@ -422,8 +403,8 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
      to the value matching SELECTED_FRAME as set by get_current_arch.  */
 
   parser_state ps (lang, get_current_arch (), expression_context_block,
-		   expression_context_pc, comma, *stringptr,
-		   completer != nullptr, tracker, void_context_p);
+		   expression_context_pc, flags, *stringptr,
+		   completer != nullptr, tracker);
 
   scoped_restore_current_language lang_saver;
   set_language (lang->la_language);
@@ -453,19 +434,31 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
   return result;
 }
 
+/* Read an expression from the string *STRINGPTR points to,
+   parse it, and return a pointer to a struct expression that we malloc.
+   Use block BLOCK as the lexical context for variable names;
+   if BLOCK is zero, use the block of the selected stack frame.
+   Meanwhile, advance *STRINGPTR to point after the expression,
+   at the first nonwhite character that is not part of the expression
+   (possibly a null character).  FLAGS are passed to the parser.  */
+
+expression_up
+parse_exp_1 (const char **stringptr, CORE_ADDR pc, const struct block *block,
+	     parser_flags flags, innermost_block_tracker *tracker)
+{
+  return parse_exp_in_context (stringptr, pc, block, flags,
+			       tracker, nullptr);
+}
+
 /* Parse STRING as an expression, and complain if this fails to use up
    all of the contents of STRING.  TRACKER, if non-null, will be
-   updated by the parser.  VOID_CONTEXT_P should be true to indicate
-   that the expression may be expected to return a value with void
-   type.  Parsers are free to ignore this, or to use it to help with
-   overload resolution decisions.  */
+   updated by the parser.  FLAGS are passed to the parser.  */
 
 expression_up
 parse_expression (const char *string, innermost_block_tracker *tracker,
-		  bool void_context_p)
+		  parser_flags flags)
 {
-  expression_up exp = parse_exp_in_context (&string, 0, nullptr, 0,
-					    void_context_p,
+  expression_up exp = parse_exp_in_context (&string, 0, nullptr, flags,
 					    tracker, nullptr);
   if (*string)
     error (_("Junk after end of expression."));
@@ -501,7 +494,7 @@ parse_expression_for_completion
 
   try
     {
-      exp = parse_exp_in_context (&string, 0, 0, 0, false, nullptr, completer);
+      exp = parse_exp_in_context (&string, 0, 0, 0, nullptr, completer);
     }
   catch (const gdb_exception_error &except)
     {

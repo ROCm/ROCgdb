@@ -420,10 +420,15 @@ using the @code{gdb.Value} constructor.
 @end defun
 
 @findex gdb.parse_and_eval
-@defun gdb.parse_and_eval (expression)
+@defun gdb.parse_and_eval (expression @r{[}, global_context@r{]})
 Parse @var{expression}, which must be a string, as an expression in
 the current language, evaluate it, and return the result as a
 @code{gdb.Value}.
+
+@var{global_context}, if provided, is a boolean indicating whether the
+parsing should be done in the global context.  The default is
+@samp{False}, meaning that the current frame or current static context
+should be used.
 
 This function can be useful when implementing a new command
 (@pxref{CLI Commands In Python}, @pxref{GDB/MI Commands In Python}),
@@ -3447,8 +3452,28 @@ Boolean signaling whether the inferior was created using `attach', or
 started by @value{GDBN} itself.
 @end defvar
 
+@defvar Inferior.main_name
+A string holding the name of this inferior's ``main'' function, if it
+can be determined.  If the name of main is not known, this is
+@code{None}.
+@end defvar
+
 @defvar Inferior.progspace
 The inferior's program space.  @xref{Progspaces In Python}.
+@end defvar
+
+@defvar Inferior.arguments
+The inferior's command line arguments, if known.  This corresponds to
+the @code{set args} and @code{show args} commands.  @xref{Arguments}.
+
+When accessed, the value is a string holding all the arguments.  The
+contents are quoted as they would be when passed to the shell.  If
+there are no arguments, the value is @code{None}.
+
+Either a string or a sequence of strings can be assigned to this
+attribute.  When a string is assigned, it is assumed to have any
+necessary quoting for the shell; when a sequence is assigned, the
+quoting is applied by @value{GDBN}.
 @end defvar
 
 A @code{gdb.Inferior} object has the following methods:
@@ -3516,6 +3541,30 @@ library implementations.
 The function @code{Inferior.thread_from_thread_handle} provides
 the same functionality, but use of @code{Inferior.thread_from_thread_handle}
 is deprecated.
+@end defun
+
+
+The environment that will be passed to the inferior can be changed
+from Python by using the following methods.  These methods only take
+effect when the inferior is started -- they will not affect an
+inferior that is already executing.
+
+@findex Inferior.clear_env
+@defun Inferior.clear_env ()
+Clear the current environment variables that will be passed to this
+inferior.
+@end defun
+
+@findex Inferior.set_env
+@defun Inferior.set_env (name, value)
+Set the environment variable @var{name} to have the indicated value.
+Both parameters must be strings.
+@end defun
+
+@findex Inferior.unset_env
+@defun Inferior.unset_env (name)
+Unset the environment variable @var{name}.  @var{name} must be a
+string.
 @end defun
 
 @node Events In Python
@@ -4583,6 +4632,36 @@ commands have been added:
 -echo-string abc def ghi
 ^done,string="abc, def, ghi"
 (@value{GDBP})
+@end smallexample
+
+Conversely, it is possible to execute @sc{gdb/mi} commands from
+Python, with the results being a Python object and not a
+specially-formatted string.  This is done with the
+@code{gdb.execute_mi} function.
+
+@findex gdb.execute_mi
+@defun gdb.execute_mi (command @r{[}, arg @r{]}@dots{})
+Invoke a @sc{gdb/mi} command.  @var{command} is the name of the
+command, a string.  The arguments, @var{arg}, are passed to the
+command.  Each argument must also be a string.
+
+This function returns a Python dictionary whose contents reflect the
+corresponding @sc{GDB/MI} command's output.  Refer to the
+documentation for these commands for details.  Lists are represented
+as Python lists, and tuples are represented as Python dictionaries.
+
+If the command fails, it will raise a Python exception.
+@end defun
+
+Here is how this works using the commands from the example above:
+
+@smallexample
+(@value{GDBP}) python print(gdb.execute_mi("-echo-dict", "abc", "def", "ghi"))
+@{'dict': @{'argv': ['abc', 'def', 'ghi']@}@}
+(@value{GDBP}) python print(gdb.execute_mi("-echo-list", "abc", "def", "ghi"))
+@{'list': ['abc', 'def', 'ghi']@}
+(@value{GDBP}) python print(gdb.execute_mi("-echo-string", "abc", "def", "ghi"))
+@{'string': 'abc, def, ghi'@}
 @end smallexample
 
 @node Parameters In Python

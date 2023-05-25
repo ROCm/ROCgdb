@@ -67,9 +67,9 @@ parse_and_eval_long (const char *exp)
 }
 
 struct value *
-parse_and_eval (const char *exp)
+parse_and_eval (const char *exp, parser_flags flags)
 {
-  expression_up expr = parse_expression (exp);
+  expression_up expr = parse_expression (exp, nullptr, flags);
 
   return expr->evaluate ();
 }
@@ -81,7 +81,8 @@ parse_and_eval (const char *exp)
 struct value *
 parse_to_comma_and_eval (const char **expp)
 {
-  expression_up expr = parse_exp_1 (expp, 0, nullptr, 1);
+  expression_up expr = parse_exp_1 (expp, 0, nullptr,
+				    PARSER_COMMA_TERMINATES);
 
   return expr->evaluate ();
 }

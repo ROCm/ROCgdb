@@ -110,6 +110,7 @@
 typedef PY_LONG_LONG gdb_py_longest;
 typedef unsigned PY_LONG_LONG gdb_py_ulongest;
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLongLong
+#define gdb_py_long_as_long_and_overflow PyLong_AsLongLongAndOverflow
 
 #else /* HAVE_LONG_LONG */
 
@@ -118,6 +119,7 @@ typedef unsigned PY_LONG_LONG gdb_py_ulongest;
 typedef long gdb_py_longest;
 typedef unsigned long gdb_py_ulongest;
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLong
+#define gdb_py_long_as_long_and_overflow PyLong_AsLongAndOverflow
 
 #endif /* HAVE_LONG_LONG */
 
@@ -480,6 +482,9 @@ struct symtab *symtab_object_to_symtab (PyObject *obj);
 struct symtab_and_line *sal_object_to_symtab_and_line (PyObject *obj);
 frame_info_ptr frame_object_to_frame_info (PyObject *frame_obj);
 struct gdbarch *arch_object_to_gdbarch (PyObject *obj);
+
+extern PyObject *gdbpy_execute_mi_command (PyObject *self, PyObject *args,
+					   PyObject *kw);
 
 /* Convert Python object OBJ to a program_space pointer.  OBJ must be a
    gdb.Progspace reference.  Return nullptr if the gdb.Progspace is not

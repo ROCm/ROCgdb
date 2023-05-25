@@ -293,6 +293,21 @@ serialize_mi_result_1 (PyObject *result, const char *field_name)
     }
   else
     {
+      if (PyLong_Check (result))
+	{
+	  int overflow = 0;
+	  gdb_py_longest val = gdb_py_long_as_long_and_overflow (result,
+								 &overflow);
+	  if (PyErr_Occurred () != nullptr)
+	    gdbpy_handle_exception ();
+	  if (overflow == 0)
+	    {
+	      uiout->field_signed (field_name, val);
+	      return;
+	    }
+	  /* Fall through to the string case on overflow.  */
+	}
+
       gdb::unique_xmalloc_ptr<char> string (gdbpy_obj_to_string (result));
       if (string == nullptr)
 	gdbpy_handle_exception ();
@@ -340,10 +355,11 @@ mi_command_py::invoke (struct mi_parse *parse) const
 
   pymicmd_debug_printf ("this = %p, name = %s", this, name ());
 
-  mi_parse_argv (parse->args, parse);
+  parse->parse_argv ();
 
   if (parse->argv == nullptr)
-    error (_("Problem parsing arguments: %s %s"), parse->command, parse->args);
+    error (_("Problem parsing arguments: %s %s"), parse->command,
+	   parse->args ());
 
 
   gdbpy_enter enter_py;

@@ -192,6 +192,23 @@ info main
      - Changes are backwards compatible, the older API can still be
        used to disassemble instructions without styling.
 
+  ** New function gdb.execute_mi(COMMAND, [ARG]...), that invokes a
+     GDB/MI command and returns the output as a Python dictionary.
+
+  ** gdb.parse_and_eval now has a new "global_context" parameter.
+     This can be used to request that the parse only examine global
+     symbols.
+
+  ** gdb.Inferior now has a new "arguments" attribute.  This holds the
+     command-line arguments to the inferior, if known.
+
+  ** gdb.Inferior now has a new "main_name" attribute.  This holds the
+     name of the inferior's "main", if known.
+
+  ** gdb.Inferior now has new methods "clear_env", "set_env", and
+     "unset_env".  These can be used to modify the inferior's
+     environment before it is started.
+
 *** Changes in GDB 13
 
 * MI version 1 is deprecated, and will be removed in GDB 14.

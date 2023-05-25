@@ -1863,7 +1863,7 @@ captured_mi_execute_command (struct ui_out *uiout, struct mi_parse *context)
       if (mi_debug_p)
 	gdb_printf (gdb_stdlog,
 		    " token=`%s' command=`%s' args=`%s'\n",
-		    context->token, context->command, context->args);
+		    context->token, context->command, context->args ());
 
       mi_cmd_execute (context);
 
@@ -1969,7 +1969,7 @@ mi_execute_command (const char *cmd, int from_tty)
 
   try
     {
-      command = mi_parse (cmd, &token);
+      command = mi_parse::make (cmd, &token);
     }
   catch (const gdb_exception &exception)
     {
@@ -2013,6 +2013,21 @@ mi_execute_command (const char *cmd, int from_tty)
       bpstat_do_actions ();
 
     }
+}
+
+/* See mi-cmds.h.  */
+
+void
+mi_execute_command (mi_parse *context)
+{
+  if (context->op != MI_COMMAND)
+    error (_("Command is not an MI command"));
+
+  scoped_restore save_token = make_scoped_restore (&current_token,
+						   context->token);
+  scoped_restore save_debug = make_scoped_restore (&mi_debug_p, 0);
+
+  mi_cmd_execute (context);
 }
 
 /* Captures the current user selected context state, that is the current
