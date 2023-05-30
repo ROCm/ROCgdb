@@ -3,7 +3,7 @@
 Full documentation for ROCgdb is available at
 [docs.amd.com](https://docs.amd.com/bundle/rocgdb)
 
-## (Unreleased) ROCgdb-13
+## (Unreleased) ROCgdb-13.2
 ### Optimized
 - Improved performances when handling the end of a process with a large
   number of threads.
