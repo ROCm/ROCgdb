@@ -1168,7 +1168,7 @@ dwarf_memory::to_gdb_value (frame_info_ptr frame, struct type *type,
     ptr_type = builtin_type (m_arch)->builtin_func_ptr;
 
   address = value_as_address (value_from_pointer (ptr_type, address));
-  value *retval = value_at_lazy (subobj_type, address + subobj_offset);
+  value *retval = value_at_lazy (subobj_type, address + subobj_offset, frame);
   retval->set_stack (m_stack);
   retval->set_bitpos (m_bit_suboffset);
   return retval;
