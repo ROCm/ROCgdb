@@ -2056,14 +2056,24 @@ out:
   return ret;
 }
 
+/* Throw an error if we're already debugging a Windows process.  We
+   can only debug one at a time currently.  */
+
+static void
+ensure_only_one_process ()
+{
+  if (windows_process->process_id != 0)
+    error (_("Can only debug one process at a time."));
+}
+
 /* Attach to process PID, then initialize for debugging it.  */
 
 void
 windows_nat_target::attach (const char *args, int from_tty)
 {
-  DWORD pid;
+  ensure_only_one_process ();
 
-  pid = parse_pid_to_attach (args);
+  DWORD pid = parse_pid_to_attach (args);
 
   if (set_process_privilege (SE_DEBUG_NAME, TRUE) < 0)
     warning ("Failed to get SE_DEBUG_NAME privilege\n"
@@ -2414,6 +2424,8 @@ windows_nat_target::detach (inferior *inf, int from_tty)
   cleanup_windows_arch ();
   switch_to_no_thread ();
   detach_inferior (inf);
+
+  windows_process->process_id = 0;
 
   maybe_unpush_target ();
 }
@@ -2857,6 +2869,8 @@ windows_nat_target::create_inferior (const char *exec_file,
   DWORD flags = 0;
   const std::string &inferior_tty = current_inferior ()->tty ();
 
+  ensure_only_one_process ();
+
   if (!exec_file)
     error (_("No executable specified, use `target exec'."));
 
@@ -3166,6 +3180,7 @@ windows_nat_target::mourn_inferior ()
       CHECK (CloseHandle (windows_process->handle));
       windows_process->open_process_used = 0;
     }
+  windows_process->process_id = 0;
   inf_child_target::mourn_inferior ();
 }
 

@@ -175,6 +175,10 @@ proc_with_prefix do_attach_failure_tests {} {
 	    # Response expected when using gdbserver.
 	    pass "$test"
 	}
+	-re -wrap "Can only debug one process at a time\\." {
+	    # Response expected on Windows.
+	    pass "$test"
+	}
     }
 
     # To ensure the target is still alive and working after this, try to run
