@@ -4,6 +4,10 @@ Full documentation for ROCgdb is available at
 [docs.amd.com](https://docs.amd.com/bundle/rocgdb)
 
 ## (Unreleased) ROCgdb-13
+
+### Added
+- Support for watchppoints on scratch memory addresses.
+
 ### Optimized
 - Improved performances when handling the end of a process with a large
   number of threads.
