@@ -214,6 +214,17 @@ extern void set_step_info (thread_info *tp,
 			   frame_info_ptr frame,
 			   struct symtab_and_line sal);
 
+/* Notify interpreters and observers that the current inferior has stopped with
+   signal SIG.  */
+extern void notify_signal_received (gdb_signal sig);
+
+/* Notify interpreters and observers that the current inferior has stopped
+   normally.  */
+extern void notify_normal_stop (bpstat *bs, int print_frame);
+
+/* Notify interpreters and observers that the user focus has changed.  */
+extern void notify_user_selected_context_changed (user_selected_what selection);
+
 /* Several print_*_reason helper functions to print why the inferior
    has stopped to the passed in UIOUT.  */
 

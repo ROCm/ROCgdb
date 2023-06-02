@@ -760,6 +760,24 @@ solib_used (const struct so_list *const known)
   return false;
 }
 
+/* Notify interpreters and observers that solib SO has been loaded.  */
+
+static void
+notify_solib_loaded (so_list *so)
+{
+  interps_notify_solib_loaded (so);
+  gdb::observers::solib_loaded.notify (so);
+}
+
+/* Notify interpreters and observers that solib SO has been unloaded.  */
+
+static void
+notify_solib_unloaded (so_list *so)
+{
+  interps_notify_solib_unloaded (so);
+  gdb::observers::solib_unloaded.notify (so);
+}
+
 /* See solib.h.  */
 
 void
@@ -860,7 +878,7 @@ update_solib_list (int from_tty)
 	{
 	  /* Notify any observer that the shared object has been
 	     unloaded before we remove it from GDB's tables.  */
-	  gdb::observers::solib_unloaded.notify (gdb);
+	  notify_solib_unloaded (gdb);
 
 	  current_program_space->deleted_solibs.push_back (gdb->so_name);
 
@@ -920,7 +938,7 @@ update_solib_list (int from_tty)
 
 	  /* Notify any observer that the shared object has been
 	     loaded now that we've added it to GDB's tables.  */
-	  gdb::observers::solib_loaded.notify (i);
+	  notify_solib_loaded (i);
 	}
 
       /* If a library was not found, issue an appropriate warning
@@ -1228,7 +1246,7 @@ clear_solib (void)
       struct so_list *so = current_program_space->so_list;
 
       current_program_space->so_list = so->next;
-      gdb::observers::solib_unloaded.notify (so);
+      notify_solib_unloaded (so);
       current_program_space->remove_target_sections (so);
       free_so (so);
     }

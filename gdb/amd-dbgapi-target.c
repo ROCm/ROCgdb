@@ -2225,10 +2225,10 @@ amd_dbgapi_target_breakpoint_fixup (struct breakpoint *b)
 {
   if (b->locspec != nullptr
       && b->locspec->type () == ADDRESS_LOCATION_SPEC
-      && is_amdgpu_arch (b->loc->gdbarch)
+      && is_amdgpu_arch (b->locations ().begin ()->gdbarch)
       && !is_amdgpu_arch (b->gdbarch))
     {
-      b->gdbarch = b->loc->gdbarch;
+      b->gdbarch = b->locations ().begin ()->gdbarch;
     }
 }
 

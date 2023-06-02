@@ -39,6 +39,7 @@
 #include "progspace-and-thread.h"
 #include "gdbsupport/buildargv.h"
 #include "cli/cli-style.h"
+#include "interps.h"
 
 intrusive_list<inferior> inferior_list;
 static int highest_inferior_num;
@@ -190,6 +191,15 @@ inferior::do_all_continuations ()
     }
 }
 
+/* Notify interpreters and observers that inferior INF was added.  */
+
+static void
+notify_inferior_added (inferior *inf)
+{
+  interps_notify_inferior_added (inf);
+  gdb::observers::inferior_added.notify (inf);
+}
+
 struct inferior *
 add_inferior_silent (int pid)
 {
@@ -197,7 +207,7 @@ add_inferior_silent (int pid)
 
   inferior_list.push_back (*inf);
 
-  gdb::observers::inferior_added.notify (inf);
+  notify_inferior_added (inf);
 
   if (pid != 0)
     inferior_appeared (inf, pid);
@@ -251,6 +261,15 @@ inferior::clear_thread_list (bool silent)
   ptid_thread_map.clear ();
 }
 
+/* Notify interpreters and observers that inferior INF was removed.  */
+
+static void
+notify_inferior_removed (inferior *inf)
+{
+  interps_notify_inferior_removed (inf);
+  gdb::observers::inferior_removed.notify (inf);
+}
+
 void
 delete_inferior (struct inferior *inf)
 {
@@ -259,7 +278,7 @@ delete_inferior (struct inferior *inf)
   auto it = inferior_list.iterator_to (*inf);
   inferior_list.erase (it);
 
-  gdb::observers::inferior_removed.notify (inf);
+  notify_inferior_removed (inf);
 
   /* Pop all targets now, this ensures that inferior::unpush is called
      correctly.  As pop_all_targets ends up making a temporary switch to
@@ -274,6 +293,15 @@ delete_inferior (struct inferior *inf)
   delete inf;
 }
 
+/* Notify interpreters and observers that inferior INF disappeared.  */
+
+static void
+notify_inferior_disappeared (inferior *inf)
+{
+  interps_notify_inferior_disappeared (inf);
+  gdb::observers::inferior_exit.notify (inf);
+}
+
 /* If SILENT then be quiet -- don't announce a inferior exit, or the
    exit of its threads.  */
 
@@ -282,7 +310,7 @@ exit_inferior_1 (struct inferior *inf, int silent)
 {
   inf->clear_thread_list (silent);
 
-  gdb::observers::inferior_exit.notify (inf);
+  notify_inferior_disappeared (inf);
 
   inf->pid = 0;
   inf->fake_pid_p = false;
@@ -336,6 +364,15 @@ detach_inferior (inferior *inf)
 		target_pid_to_str (ptid_t (pid)).c_str ());
 }
 
+/* Notify interpreters and observers that inferior INF appeared.  */
+
+static void
+notify_inferior_appeared (inferior *inf)
+{
+  interps_notify_inferior_appeared (inf);
+  gdb::observers::inferior_appeared.notify (inf);
+}
+
 void
 inferior_appeared (struct inferior *inf, int pid)
 {
@@ -349,7 +386,7 @@ inferior_appeared (struct inferior *inf, int pid)
   inf->has_exit_code = false;
   inf->exit_code = 0;
 
-  gdb::observers::inferior_appeared.notify (inf);
+  notify_inferior_appeared (inf);
 }
 
 struct inferior *
@@ -746,7 +783,7 @@ inferior_command (const char *args, int from_tty)
 	      switch_to_thread (tp);
 	    }
 
-	  gdb::observers::user_selected_context_changed.notify
+	  notify_user_selected_context_changed
 	    (USER_SELECTED_INFERIOR
 	     | USER_SELECTED_THREAD
 	     | USER_SELECTED_FRAME);
@@ -755,7 +792,7 @@ inferior_command (const char *args, int from_tty)
 	{
 	  switch_to_inferior_no_thread (inf);
 
-	  gdb::observers::user_selected_context_changed.notify
+	  notify_user_selected_context_changed
 	    (USER_SELECTED_INFERIOR);
 	}
     }

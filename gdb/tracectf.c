@@ -1535,8 +1535,8 @@ ctf_get_traceframe_address (void)
       struct tracepoint *tp
 	= get_tracepoint_by_number_on_target (tpnum);
 
-      if (tp && tp->loc)
-	addr = tp->loc->address;
+      if (tp != nullptr && tp->has_locations ())
+	addr = tp->first_loc ().address;
     }
 
   /* Restore the position.  */

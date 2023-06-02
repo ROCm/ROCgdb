@@ -111,6 +111,25 @@
    || (bfd_link_pic (INFO) \
        && SYMBOL_REFERENCES_LOCAL ((INFO), (H))))
 
+/* Set NEED_RELOC to true if TLS GD/IE needs dynamic relocations, and INDX will
+   be the dynamic index.  PR22263, use the same check in allocate_dynrelocs and
+   riscv_elf_relocate_section for TLS GD/IE.  */
+#define RISCV_TLS_GD_IE_NEED_DYN_RELOC(INFO, DYN, H, INDX, NEED_RELOC) \
+  do \
+    { \
+      if ((H) != NULL \
+	  && (H)->dynindx != -1 \
+	  && WILL_CALL_FINISH_DYNAMIC_SYMBOL ((DYN), bfd_link_pic (INFO), (H)) \
+	  && (bfd_link_dll (INFO) || !SYMBOL_REFERENCES_LOCAL ((INFO), (H)))) \
+	(INDX) = (H)->dynindx; \
+      if ((bfd_link_dll (INFO) || (INDX) != 0) \
+	  && ((H) == NULL \
+	      || ELF_ST_VISIBILITY ((H)->other) == STV_DEFAULT \
+	      || (H)->root.type != bfd_link_hash_undefweak)) \
+	(NEED_RELOC) = true; \
+    } \
+  while (0)
+
 /* Internal relocations used exclusively by the relaxation pass.  */
 #define R_RISCV_DELETE (R_RISCV_max + 1)
 
@@ -824,7 +843,7 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  break;
 
 	case R_RISCV_TLS_GOT_HI20:
-	  if (bfd_link_pic (info))
+	  if (bfd_link_dll (info))
 	    info->flags |= DF_STATIC_TLS;
 	  if (!riscv_elf_record_got_reference (abfd, info, h, r_symndx)
 	      || !riscv_elf_record_tls_type (abfd, h, r_symndx, GOT_TLS_IE))
@@ -920,11 +939,12 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  goto static_reloc;
 
 	case R_RISCV_TPREL_HI20:
+	  /* This is not allowed in the pic, but okay in pie.  */
 	  if (!bfd_link_executable (info))
 	    return bad_static_reloc (abfd, r_type, h);
 	  if (h != NULL)
 	    riscv_elf_record_tls_type (abfd, h, r_symndx, GOT_TLS_LE);
-	  goto static_reloc;
+	  break;
 
 	case R_RISCV_HI20:
 	  if (bfd_link_pic (info))
@@ -1296,18 +1316,24 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
       dyn = htab->elf.dynamic_sections_created;
       if (tls_type & (GOT_TLS_GD | GOT_TLS_IE))
 	{
+	  int indx = 0;
+	  bool need_reloc = false;
+	  RISCV_TLS_GD_IE_NEED_DYN_RELOC(info, dyn, h, indx, need_reloc);
+
 	  /* TLS_GD needs two dynamic relocs and two GOT slots.  */
 	  if (tls_type & GOT_TLS_GD)
 	    {
 	      s->size += 2 * RISCV_ELF_WORD_BYTES;
-	      htab->elf.srelgot->size += 2 * sizeof (ElfNN_External_Rela);
+	      if (need_reloc)
+		htab->elf.srelgot->size += 2 * sizeof (ElfNN_External_Rela);
 	    }
 
 	  /* TLS_IE needs one dynamic reloc and one GOT slot.  */
 	  if (tls_type & GOT_TLS_IE)
 	    {
 	      s->size += RISCV_ELF_WORD_BYTES;
-	      htab->elf.srelgot->size += sizeof (ElfNN_External_Rela);
+	      if (need_reloc)
+		htab->elf.srelgot->size += sizeof (ElfNN_External_Rela);
 	    }
 	}
       else
@@ -2880,25 +2906,11 @@ riscv_elf_relocate_section (bfd *output_bfd,
 	      if (htab->elf.srelgot == NULL)
 		abort ();
 
-	      if (h != NULL)
-		{
-		  bool dyn, pic;
-		  dyn = htab->elf.dynamic_sections_created;
-		  pic = bfd_link_pic (info);
-
-		  if (WILL_CALL_FINISH_DYNAMIC_SYMBOL (dyn, pic, h)
-		      && (!pic || !SYMBOL_REFERENCES_LOCAL (info, h)))
-		    indx = h->dynindx;
-		}
+	      bool dyn = elf_hash_table (info)->dynamic_sections_created;
+	      RISCV_TLS_GD_IE_NEED_DYN_RELOC (info, dyn, h, indx, need_relocs);
 
 	      /* The GOT entries have not been initialized yet.  Do it
 		 now, and emit any relocations.  */
-	      if ((bfd_link_pic (info) || indx != 0)
-		  && (h == NULL
-		      || ELF_ST_VISIBILITY (h->other) == STV_DEFAULT
-		      || h->root.type != bfd_link_hash_undefweak))
-		    need_relocs = true;
-
 	      if (tls_type & GOT_TLS_GD)
 		{
 		  if (need_relocs)

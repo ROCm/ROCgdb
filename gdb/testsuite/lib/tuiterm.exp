@@ -115,8 +115,9 @@ namespace eval Term {
 		    for {set x 0} {$x < $_cols} {incr x} {
 			set _chars($x,$y) $_chars($x,$next_y)
 		    }
-		    incr _cur_row -1
 		}
+
+		incr _cur_row -1
 	    }
 	}
     }
@@ -556,6 +557,39 @@ namespace eval Term {
 	    bg default
 	    underline 0
 	    reverse 0
+	    invisible 0
+	    blinking 0
+	}
+    }
+
+    # Translate the color numbers as used in proc _csi_m to a name.
+    proc _color_attr { n } {
+	switch -exact -- $n {
+	    0 {
+		return black
+	    }
+	    1 {
+		return red
+	    }
+	    2 {
+		return green
+	    }
+	    3 {
+		return yellow
+	    }
+	    4 {
+		return blue
+	    }
+	    5 {
+		return magenta
+	    }
+	    6 {
+		return cyan
+	    }
+	    7 {
+		return white
+	    }
+	    default { error "unsupported color number: $n" }
 	}
     }
 
@@ -580,8 +614,14 @@ namespace eval Term {
 		    4 {
 			set _attrs(underline) 1
 		    }
+		    5 {
+			set _attrs(blinking) 1
+		    }
 		    7 {
 			set _attrs(reverse) 1
+		    }
+		    8 {
+			set _attrs(invisible) 1
 		    }
 		    22 {
 			set _attrs(intensity) normal
@@ -589,17 +629,23 @@ namespace eval Term {
 		    24 {
 			set _attrs(underline) 0
 		    }
+		    25 {
+			set _attrs(blinking) 0
+		    }
 		    27 {
-			set _attrs(reverse) 1
+			set _attrs(reverse) 0
+		    }
+		    28 {
+			set _attrs(invisible) 0
 		    }
 		    30 - 31 - 32 - 33 - 34 - 35 - 36 - 37 {
-			set _attrs(fg) $item
+			set _attrs(fg) [_color_attr [expr $item - 30]]
 		    }
 		    39 {
 			set _attrs(fg) default
 		    }
 		    40 - 41 - 42 - 43 - 44 - 45 - 46 - 47 {
-			set _attrs(bg) $item
+			set _attrs(bg) [_color_attr [expr $item - 40]]
 		    }
 		    49 {
 			set _attrs(bg) default

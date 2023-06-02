@@ -51,8 +51,7 @@
 #include "gdbsupport/gdb_optional.h"
 #include "inline-frame.h"
 #include "stack.h"
-#include "gdbarch.h"
-#include "arch-utils.h"
+#include "interps.h"
 
 /* See gdbthread.h.  */
 
@@ -276,6 +275,15 @@ clear_thread_inferior_resources (struct thread_info *tp)
   clear_inline_frame_state (tp);
 }
 
+/* Notify interpreters and observers that thread T has exited.  */
+
+static void
+notify_thread_exited (thread_info *t, int silent)
+{
+  interps_notify_thread_exited (t, silent);
+  gdb::observers::thread_exit.notify (t, silent);
+}
+
 /* See gdbthread.h.  */
 
 void
@@ -298,7 +306,7 @@ set_thread_exited (thread_info *tp, bool silent)
       if (proc_target != nullptr)
 	proc_target->maybe_remove_resumed_with_pending_wait_status (tp);
 
-      gdb::observers::thread_exit.notify (tp, silent);
+      notify_thread_exited (tp, silent);
 
       /* Tag it as exited.  */
       tp->state = THREAD_EXITED;
@@ -346,6 +354,15 @@ new_thread (struct inferior *inf, ptid_t ptid)
   return tp;
 }
 
+/* Notify interpreters and observers that thread T has been created.  */
+
+static void
+notify_new_thread (thread_info *t)
+{
+  interps_notify_new_thread (t);
+  gdb::observers::new_thread.notify (t);
+}
+
 struct thread_info *
 add_thread_silent (process_stratum_target *targ, ptid_t ptid)
 {
@@ -366,7 +383,7 @@ add_thread_silent (process_stratum_target *targ, ptid_t ptid)
     delete_thread (tp);
 
   tp = new_thread (inf, ptid);
-  gdb::observers::new_thread.notify (tp);
+  notify_new_thread (tp);
 
   return tp;
 }
@@ -912,13 +929,22 @@ set_running_thread (struct thread_info *tp, bool running)
   return started;
 }
 
+/* Notify interpreters and observers that the target was resumed.  */
+
+static void
+notify_target_resumed (ptid_t ptid)
+{
+  interps_notify_target_resumed (ptid);
+  gdb::observers::target_resumed.notify (ptid);
+}
+
 /* See gdbthread.h.  */
 
 void
 thread_info::set_running (bool running)
 {
   if (set_running_thread (this, running))
-    gdb::observers::target_resumed.notify (this->ptid);
+    notify_target_resumed (this->ptid);
 }
 
 void
@@ -935,7 +961,7 @@ set_running (process_stratum_target *targ, ptid_t ptid, bool running)
       any_started = true;
 
   if (any_started)
-    gdb::observers::target_resumed.notify (ptid);
+    notify_target_resumed (ptid);
 }
 
 void
@@ -983,7 +1009,7 @@ finish_thread_state (process_stratum_target *targ, ptid_t ptid)
       any_started = true;
 
   if (any_started)
-    gdb::observers::target_resumed.notify (ptid);
+    notify_target_resumed (ptid);
 }
 
 /* See gdbthread.h.  */
@@ -2467,10 +2493,8 @@ thread_command (const char *tidstr, int from_tty)
 				       | USER_SELECTED_FRAME);
 	}
       else
-	{
-	  gdb::observers::user_selected_context_changed.notify
-	    (USER_SELECTED_THREAD | USER_SELECTED_FRAME);
-	}
+	notify_user_selected_context_changed
+	  (USER_SELECTED_THREAD | USER_SELECTED_FRAME);
     }
 }
 
@@ -2540,7 +2564,7 @@ lane_command (const char *tidstr, int from_tty)
 
       switch_to_lane (lane);
 
-      gdb::observers::user_selected_context_changed.notify
+      notify_user_selected_context_changed
 	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
     }
 }

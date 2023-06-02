@@ -1,3 +1,36 @@
+2023-05-30  Nick Clifton  <nickc@redhat.com>
+
+	* od-pe.c (targ_info): New array.
+	(get_target_specific_info): New function
+	(decode_machine_number): Retire.  Use get_target_specific_info
+	instead.
+	(is_pe_object_magic): Likewise.
+	(dump_pe_file_header): Display more information.
+	Rework layout to be similar to that from 'objdump -p'.
+	Add code to handle larger than normnal AOUT headers.
+
+2023-05-30  Nick Clifton  <nickc@redhat.com>
+
+	* od-pe.c (decode_machine_number): Add ARMMAGIC value of 0xa00.
+	(is_pe_object_magic): Likewise.
+
+2023-05-26  Nick Clifton  <nickc@redhat.com>
+
+	* od-pe.c: New file: Dumps fields in PE format headers.
+	* configure.ac (od_vectors): Add objdump_private_desc_pe for PE
+	format targets.
+	(od_files): Add od-pe for PE format targets.
+	* configure: Regenerate.
+	* Makefile.am (CFILES): Add od-pe.c
+	(EXTRA_objdump_SOURCE): Likewise.
+	* Makefile.in: Generate.
+	* NEWS: Mention the new feature.
+	* doc/binutils.texi: Document the new support.
+	* objdump.c (wide_output): Change from local to global.
+	* objdump.h (wide_output): Prototype.
+	(objdump_private_desc_pe): Prototype.
+	* testsuite/binutils-all/objdump.exp: Add a test of the new feature.
+
 2023-05-09  Enze Li  <enze.li@gmx.com>
 
 	* README:  Correct a typo.

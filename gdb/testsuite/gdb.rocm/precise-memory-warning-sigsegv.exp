@@ -43,7 +43,7 @@ proc do_test { } {
 
 	gdb_test_no_output "set amdgpu precise-memory off"
 	gdb_test "continue" \
-	    "Warning: precise memory violation signal reporting is not enabled.*SIGSEGV, Segmentation fault.*"
+	    "SIGSEGV, Segmentation fault.*Warning: precise memory violation signal reporting is not enabled.*"
     }
 }
 

@@ -77,6 +77,7 @@
 #include "gdbsupport/buildargv.h"
 #include "extension.h"
 #include "disasm.h"
+#include "interps.h"
 
 /* Prototypes for local functions */
 
@@ -970,14 +971,14 @@ follow_inferior_reset_breakpoints (void)
   if (tp->control.step_resume_breakpoint)
     {
       breakpoint_re_set_thread (tp->control.step_resume_breakpoint);
-      tp->control.step_resume_breakpoint->loc->enabled = 1;
+      tp->control.step_resume_breakpoint->first_loc ().enabled = 1;
     }
 
   /* Treat exception_resume breakpoints like step_resume breakpoints.  */
   if (tp->control.exception_resume_breakpoint)
     {
       breakpoint_re_set_thread (tp->control.exception_resume_breakpoint);
-      tp->control.exception_resume_breakpoint->loc->enabled = 1;
+      tp->control.exception_resume_breakpoint->first_loc ().enabled = 1;
     }
 
   /* Reinsert all breakpoints in the child.  The user may have set
@@ -2597,7 +2598,8 @@ resume_1 (enum gdb_signal sig)
 		 user breakpoints at PC to trigger (again) when this
 		 hits.  */
 	      insert_hp_step_resume_breakpoint_at_frame (get_current_frame ());
-	      gdb_assert (tp->control.step_resume_breakpoint->loc->permanent);
+	      gdb_assert (tp->control.step_resume_breakpoint->first_loc ()
+			  .permanent);
 
 	      tp->step_after_step_resume_breakpoint = step;
 	    }
@@ -2938,6 +2940,16 @@ clear_proceed_status_thread (struct thread_info *tp)
   bpstat_clear (&tp->control.stop_bpstat);
 }
 
+/* Notify the current interpreter and observers that the target is about to
+   proceed.  */
+
+static void
+notify_about_to_proceed ()
+{
+  top_level_interpreter ()->on_about_to_proceed ();
+  gdb::observers::about_to_proceed.notify ();
+}
+
 void
 clear_proceed_status (int step)
 {
@@ -2980,7 +2992,7 @@ clear_proceed_status (int step)
       inferior->control.stop_soon = NO_STOP_QUIETLY;
     }
 
-  gdb::observers::about_to_proceed.notify ();
+  notify_about_to_proceed ();
 }
 
 /* Returns true if TP is still stopped at a breakpoint that needs
@@ -4266,7 +4278,7 @@ check_curr_ui_sync_execution_done (void)
       && !gdb_in_secondary_prompt_p (ui))
     {
       target_terminal::ours ();
-      gdb::observers::sync_execution_done.notify ();
+      top_level_interpreter ()->on_sync_execution_done ();
       ui->register_file_handler ();
     }
 }
@@ -5800,7 +5812,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	  /* Support the --return-child-result option.  */
 	  return_child_result_value = ecs->ws.exit_status ();
 
-	  gdb::observers::exited.notify (ecs->ws.exit_status ());
+	  interps_notify_exited (ecs->ws.exit_status ());
 	}
       else
 	{
@@ -5827,7 +5839,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 				   "signal number.");
 	    }
 
-	  gdb::observers::signal_exited.notify (ecs->ws.sig ());
+	  interps_notify_signal_exited (ecs->ws.sig ());
 	}
 
       gdb_flush (gdb_stdout);
@@ -6111,7 +6123,7 @@ handle_inferior_event (struct execution_control_state *ecs)
       if (handle_stop_requested (ecs))
 	return;
 
-      gdb::observers::no_history.notify ();
+      interps_notify_no_history ();
       stop_waiting (ecs);
       return;
     }
@@ -6341,6 +6353,32 @@ finish_step_over (struct execution_control_state *ecs)
     }
 
   return 0;
+}
+
+/* See infrun.h.  */
+
+void
+notify_signal_received (gdb_signal sig)
+{
+  interps_notify_signal_received (sig);
+  gdb::observers::signal_received.notify (sig);
+}
+
+/* See infrun.h.  */
+
+void
+notify_normal_stop (bpstat *bs, int print_frame)
+{
+  interps_notify_normal_stop (bs, print_frame);
+  gdb::observers::normal_stop.notify (bs, print_frame);
+}
+
+/* See infrun.h.  */
+
+void notify_user_selected_context_changed (user_selected_what selection)
+{
+  interps_notify_user_selected_context_changed (selection);
+  gdb::observers::user_selected_context_changed.notify (selection);
 }
 
 /* Come here when the program has stopped with a signal.  */
@@ -6766,7 +6804,7 @@ handle_signal_stop (struct execution_control_state *ecs)
 	{
 	  /* The signal table tells us to print about this signal.  */
 	  target_terminal::ours_for_output ();
-	  gdb::observers::signal_received.notify (ecs->event_thread->stop_signal ());
+	  notify_signal_received (ecs->event_thread->stop_signal ());
 	  target_terminal::inferior ();
 	}
 
@@ -7120,9 +7158,9 @@ process_event_stop_test (struct execution_control_state *ecs)
 	= ecs->event_thread->control.step_resume_breakpoint;
 
       if (sr_bp != nullptr
-	  && sr_bp->loc->permanent
+	  && sr_bp->first_loc ().permanent
 	  && sr_bp->type == bp_hp_step_resume
-	  && sr_bp->loc->address == ecs->event_thread->prev_pc)
+	  && sr_bp->first_loc ().address == ecs->event_thread->prev_pc)
 	{
 	  infrun_debug_printf ("stepped permanent breakpoint, stopped in handler");
 	  delete_step_resume_breakpoint (ecs->event_thread);
@@ -8963,7 +9001,7 @@ normal_stop ()
     switch_to_active_lane (inferior_thread ());
 
   if (last.kind () == TARGET_WAITKIND_STOPPED && stopped_by_random_signal)
-    gdb::observers::signal_received.notify (inferior_thread ()->stop_signal ());
+    notify_signal_received (inferior_thread ()->stop_signal ());
 
   /* As with the notification of thread events, we want to delay
      notifying the user that we've switched thread context until
@@ -9099,12 +9137,10 @@ normal_stop ()
 
   /* Notify observers about the stop.  This is where the interpreters
      print the stop event.  */
-  if (inferior_ptid != null_ptid)
-    gdb::observers::normal_stop.notify (inferior_thread ()->control.stop_bpstat,
-					stop_print_frame);
-  else
-    gdb::observers::normal_stop.notify (nullptr, stop_print_frame);
-
+  notify_normal_stop ((inferior_ptid != null_ptid
+		       ? inferior_thread ()->control.stop_bpstat
+		       : nullptr),
+		      stop_print_frame);
   annotate_stopped ();
 
   if (target_has_execution ())

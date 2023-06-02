@@ -56,7 +56,7 @@ struct solib_catchpoint : public catchpoint
 		      const target_waitstatus &ws) override;
   void check_status (struct bpstat *bs) override;
   enum print_stop_action print_it (const bpstat *bs) const override;
-  bool print_one (bp_location **) const override;
+  bool print_one (const bp_location **) const override;
   void print_mention () const override;
   void print_recreate (struct ui_file *fp) const override;
 
@@ -91,20 +91,20 @@ solib_catchpoint::breakpoint_hit (const struct bp_location *bl,
   if (ws.kind () == TARGET_WAITKIND_LOADED)
     return 1;
 
-  for (breakpoint *other : all_breakpoints ())
+  for (breakpoint &other : all_breakpoints ())
     {
-      if (other == bl->owner)
+      if (&other == bl->owner)
 	continue;
 
-      if (other->type != bp_shlib_event)
+      if (other.type != bp_shlib_event)
 	continue;
 
-      if (pspace != NULL && other->pspace != pspace)
+      if (pspace != NULL && other.pspace != pspace)
 	continue;
 
-      for (bp_location *other_bl : other->locations ())
+      for (bp_location &other_bl : other.locations ())
 	{
-	  if (other->breakpoint_hit (other_bl, aspace, bp_addr, ws))
+	  if (other.breakpoint_hit (&other_bl, aspace, bp_addr, ws))
 	    return 1;
 	}
     }
@@ -141,25 +141,24 @@ solib_catchpoint::check_status (struct bpstat *bs)
 enum print_stop_action
 solib_catchpoint::print_it (const bpstat *bs) const
 {
-  struct breakpoint *b = bs->breakpoint_at;
   struct ui_out *uiout = current_uiout;
 
-  annotate_catchpoint (b->number);
+  annotate_catchpoint (this->number);
   maybe_print_thread_hit_breakpoint (uiout);
-  if (b->disposition == disp_del)
+  if (this->disposition == disp_del)
     uiout->text ("Temporary catchpoint ");
   else
     uiout->text ("Catchpoint ");
-  uiout->field_signed ("bkptno", b->number);
+  uiout->field_signed ("bkptno", this->number);
   uiout->text ("\n");
   if (uiout->is_mi_like_p ())
-    uiout->field_string ("disp", bpdisp_text (b->disposition));
+    uiout->field_string ("disp", bpdisp_text (this->disposition));
   print_solib_event (true);
   return PRINT_SRC_AND_LOC;
 }
 
 bool
-solib_catchpoint::print_one (bp_location **locs) const
+solib_catchpoint::print_one (const bp_location **locs) const
 {
   struct value_print_options opts;
   struct ui_out *uiout = current_uiout;

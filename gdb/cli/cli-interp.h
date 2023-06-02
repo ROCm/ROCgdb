@@ -33,6 +33,15 @@ public:
   void pre_command_loop () override;
   bool supports_command_editing () override;
 
+  void on_signal_received (gdb_signal sig) override;
+  void on_signal_exited (gdb_signal sig) override;
+  void on_normal_stop (bpstat *bs, int print_frame) override;
+  void on_exited (int status) override;
+  void on_no_history () override;
+  void on_sync_execution_done () override;
+  void on_command_error () override;
+  void on_user_selected_context_changed (user_selected_what selection) override;
+
 private:
   struct saved_output_files
   {

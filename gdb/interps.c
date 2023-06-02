@@ -383,6 +383,223 @@ current_interpreter (void)
   return current_ui->current_interpreter;
 }
 
+/* Helper interps_notify_* functions.  Call METHOD on the top-level interpreter
+   of all UIs.  */
+
+template <typename ...Args>
+void
+interps_notify (void (interp::*method) (Args...), Args... args)
+{
+  SWITCH_THRU_ALL_UIS ()
+    {
+      interp *tli = top_level_interpreter ();
+      if (tli != nullptr)
+	(tli->*method) (args...);
+    }
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_signal_received (gdb_signal sig)
+{
+  interps_notify (&interp::on_signal_received, sig);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_signal_exited (gdb_signal sig)
+{
+  interps_notify (&interp::on_signal_exited, sig);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_no_history ()
+{
+  interps_notify (&interp::on_no_history);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_normal_stop (bpstat *bs, int print_frame)
+{
+  interps_notify (&interp::on_normal_stop, bs, print_frame);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_exited (int status)
+{
+  interps_notify (&interp::on_exited, status);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_user_selected_context_changed (user_selected_what selection)
+{
+  interps_notify (&interp::on_user_selected_context_changed, selection);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_new_thread (thread_info *t)
+{
+  interps_notify (&interp::on_new_thread, t);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_thread_exited (thread_info *t, int silent)
+{
+  interps_notify (&interp::on_thread_exited, t, silent);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_inferior_added (inferior *inf)
+{
+  interps_notify (&interp::on_inferior_added, inf);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_inferior_appeared (inferior *inf)
+{
+  interps_notify (&interp::on_inferior_appeared, inf);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_inferior_disappeared (inferior *inf)
+{
+  interps_notify (&interp::on_inferior_disappeared, inf);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_inferior_removed (inferior *inf)
+{
+  interps_notify (&interp::on_inferior_removed, inf);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_record_changed (inferior *inf, int started, const char *method,
+			       const char *format)
+{
+  interps_notify (&interp::on_record_changed, inf, started, method, format);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_target_resumed (ptid_t ptid)
+{
+  interps_notify (&interp::on_target_resumed, ptid);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_solib_loaded (so_list *so)
+{
+  interps_notify (&interp::on_solib_loaded, so);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_solib_unloaded (so_list *so)
+{
+  interps_notify (&interp::on_solib_unloaded, so);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_traceframe_changed (int tfnum, int tpnum)
+{
+  interps_notify (&interp::on_traceframe_changed, tfnum, tpnum);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_tsv_created (const trace_state_variable *tsv)
+{
+  interps_notify (&interp::on_tsv_created, tsv);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_tsv_deleted (const trace_state_variable *tsv)
+{
+  interps_notify (&interp::on_tsv_deleted, tsv);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_tsv_modified (const trace_state_variable *tsv)
+{
+  interps_notify (&interp::on_tsv_modified, tsv);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_breakpoint_created (breakpoint *b)
+{
+  interps_notify (&interp::on_breakpoint_created, b);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_breakpoint_deleted (breakpoint *b)
+{
+  interps_notify (&interp::on_breakpoint_deleted, b);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_breakpoint_modified (breakpoint *b)
+{
+  interps_notify (&interp::on_breakpoint_modified, b);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_param_changed (const char *param, const char *value)
+{
+  interps_notify (&interp::on_param_changed, param, value);
+}
+
+/* See interps.h.  */
+
+void
+interps_notify_memory_changed (CORE_ADDR addr, ssize_t len,
+			       const bfd_byte *data)
+{
+  interps_notify (&interp::on_memory_changed, addr, len, data);
+}
+
 /* This just adds the "interpreter-exec" command.  */
 void _initialize_interpreter ();
 void

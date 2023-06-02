@@ -14011,6 +14011,59 @@ target_specific_reloc_handling (Filedata *filedata,
 
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      {
+	switch (reloc_type)
+	  {
+	    /* For .uleb128 .LFE1-.LFB1, loongarch write 0 to object file
+	       at assembly time.  */
+	    case 107: /* R_LARCH_ADD_ULEB128.  */
+	    case 108: /* R_LARCH_SUB_ULEB128.  */
+	      {
+		uint64_t value;
+		unsigned int reloc_size = 0;
+		int leb_ret = 0;
+
+		value = read_leb128 (start + reloc->r_offset, end, false,
+			      &reloc_size, &leb_ret);
+		if (leb_ret != 0 || reloc_size == 0 || reloc_size > 8)
+		  error (_("LoongArch ULEB128 field at 0x%lx contains invalid "
+			   "ULEB128 value\n"),
+			 (long) reloc->r_offset);
+
+		else if (sym_index >= num_syms)
+		  error (_("%s reloc contains invalid symbol index "
+			   "%" PRIu64 "\n"),
+			 (reloc_type == 107
+			  ? "R_LARCH_ADD_ULEB128"
+			  : "R_LARCH_SUB_ULEB128"),
+			 sym_index);
+		else
+		  {
+		    if (reloc_type == 107)
+		      value += reloc->r_addend + symtab[sym_index].st_value;
+		    else
+		      value -= reloc->r_addend + symtab[sym_index].st_value;
+
+		    /* Write uleb128 value to p.  */
+		    bfd_byte *p = start + reloc->r_offset;
+		    do
+		      {
+			bfd_byte c = value & 0x7f;
+			value >>= 7;
+			if (--reloc_size != 0)
+			  c |= 0x80;
+			*p++ = c;
+		      }
+		    while (reloc_size);
+		  }
+
+		return true;
+	      }
+	  }
+	break;
+      }
+
     case EM_MSP430:
     case EM_MSP430_OLD:
       {
@@ -14033,8 +14086,8 @@ target_specific_reloc_handling (Filedata *filedata,
 	  case 23: /* R_MSP430X_GNU_SUB_ULEB128 */
 	    /* PR 21139.  */
 	    if (sym_index >= num_syms)
-	      error (_("MSP430 SYM_DIFF reloc contains invalid symbol index"
-		       " %" PRIu64 "\n"), sym_index);
+	      error (_("%s reloc contains invalid symbol index "
+		       "%" PRIu64 "\n"), "MSP430 SYM_DIFF", sym_index);
 	    else
 	      saved_sym = symtab + sym_index;
 	    return true;
@@ -14084,9 +14137,8 @@ target_specific_reloc_handling (Filedata *filedata,
 			   " contains invalid ULEB128 value\n"),
 			 reloc->r_offset);
 		else if (sym_index >= num_syms)
-		  error (_("MSP430 reloc contains invalid symbol index "
-			   "%" PRIu64 "\n"),
-			 sym_index);
+		  error (_("%s reloc contains invalid symbol index "
+			   "%" PRIu64 "\n"), "MSP430", sym_index);
 		else
 		  {
 		    value = reloc->r_addend + (symtab[sym_index].st_value
@@ -14131,9 +14183,8 @@ target_specific_reloc_handling (Filedata *filedata,
 	    return true;
 	  case 33: /* R_MN10300_SYM_DIFF */
 	    if (sym_index >= num_syms)
-	      error (_("MN10300_SYM_DIFF reloc contains invalid symbol index "
-		       "%" PRIu64 "\n"),
-		     sym_index);
+	      error (_("%s reloc contains invalid symbol index "
+		       "%" PRIu64 "\n"), "MN10300_SYM_DIFF", sym_index);
 	    else
 	      saved_sym = symtab + sym_index;
 	    return true;
@@ -14146,9 +14197,8 @@ target_specific_reloc_handling (Filedata *filedata,
 		uint64_t value;
 
 		if (sym_index >= num_syms)
-		  error (_("MN10300 reloc contains invalid symbol index "
-			   "%" PRIu64 "\n"),
-			 sym_index);
+		  error (_("%s reloc contains invalid symbol index "
+			   "%" PRIu64 "\n"), "MN10300", sym_index);
 		else
 		  {
 		    value = reloc->r_addend + (symtab[sym_index].st_value
@@ -14191,8 +14241,8 @@ target_specific_reloc_handling (Filedata *filedata,
 	  case 0x80: /* R_RL78_SYM.  */
 	    saved_sym1 = saved_sym2;
 	    if (sym_index >= num_syms)
-	      error (_("RL78_SYM reloc contains invalid symbol index "
-		       "%" PRIu64 "\n"), sym_index);
+	      error (_("%s reloc contains invalid symbol index "
+		       "%" PRIu64 "\n"), "RL78_SYM", sym_index);
 	    else
 	      {
 		saved_sym2 = symtab[sym_index].st_value;
@@ -14737,6 +14787,8 @@ is_32bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 50; /* R_LARCH_ADD32.  */
     case EM_RISCV:
       return reloc_type == 35; /* R_RISCV_ADD32.  */
     default:
@@ -14753,6 +14805,8 @@ is_32bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 55; /* R_LARCH_SUB32.  */
     case EM_RISCV:
       return reloc_type == 39; /* R_RISCV_SUB32.  */
     default:
@@ -14769,6 +14823,8 @@ is_64bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 51; /* R_LARCH_ADD64.  */
     case EM_RISCV:
       return reloc_type == 36; /* R_RISCV_ADD64.  */
     default:
@@ -14785,6 +14841,8 @@ is_64bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 56; /* R_LARCH_SUB64.  */
     case EM_RISCV:
       return reloc_type == 40; /* R_RISCV_SUB64.  */
     default:
@@ -14801,6 +14859,8 @@ is_16bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 48; /* R_LARCH_ADD16.  */
     case EM_RISCV:
       return reloc_type == 34; /* R_RISCV_ADD16.  */
     default:
@@ -14817,6 +14877,8 @@ is_16bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 53; /* R_LARCH_SUB16.  */
     case EM_RISCV:
       return reloc_type == 38; /* R_RISCV_SUB16.  */
     default:
@@ -14833,6 +14895,8 @@ is_8bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 47; /* R_LARCH_ADD8.  */
     case EM_RISCV:
       return reloc_type == 33; /* R_RISCV_ADD8.  */
     default:
@@ -14849,8 +14913,25 @@ is_8bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 52; /* R_LARCH_SUB8.  */
     case EM_RISCV:
       return reloc_type == 37; /* R_RISCV_SUB8.  */
+    default:
+      return false;
+    }
+}
+
+/* Like is_32bit_abs_reloc except that it returns TRUE iff RELOC_TYPE is
+   a 6-bit inplace add RELA relocation used in DWARF debug sections.  */
+
+static bool
+is_6bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
+{
+  switch (filedata->file_header.e_machine)
+    {
+    case EM_LOONGARCH:
+      return reloc_type == 105; /* R_LARCH_ADD6.  */
     default:
       return false;
     }
@@ -14864,6 +14945,8 @@ is_6bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
 {
   switch (filedata->file_header.e_machine)
     {
+    case EM_LOONGARCH:
+      return reloc_type == 106; /* R_LARCH_SUB6.  */
     case EM_RISCV:
       return reloc_type == 52; /* R_RISCV_SUB6.  */
     default:
@@ -15111,7 +15194,8 @@ apply_relocations (Filedata *filedata,
 	      reloc_inplace = true;
 	    }
 	  else if ((reloc_subtract = is_6bit_inplace_sub_reloc (filedata,
-								reloc_type)))
+								reloc_type))
+		   || is_6bit_inplace_add_reloc (filedata, reloc_type))
 	    {
 	      reloc_size = 1;
 	      reloc_inplace = true;
@@ -15203,7 +15287,8 @@ apply_relocations (Filedata *filedata,
 		        reloc_size);
 	    }
 	  else if (is_6bit_abs_reloc (filedata, reloc_type)
-		   || is_6bit_inplace_sub_reloc (filedata, reloc_type))
+		   || is_6bit_inplace_sub_reloc (filedata, reloc_type)
+		   || is_6bit_inplace_add_reloc (filedata, reloc_type))
 	    {
 	      if (reloc_subtract)
 		addend -= sym->st_value;

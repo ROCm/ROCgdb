@@ -58,21 +58,6 @@ extern observable<struct bpstat */* bs */, int /* print_frame */> normal_stop;
 /* The inferior was stopped by a signal.  */
 extern observable<enum gdb_signal /* siggnal */> signal_received;
 
-/* The inferior was terminated by a signal.  */
-extern observable<enum gdb_signal /* siggnal */> signal_exited;
-
-/* The inferior program is finished.  */
-extern observable<int /* exitstatus */> exited;
-
-/* Reverse execution: target ran out of history info.  */
-extern observable<> no_history;
-
-/* A synchronous command finished.  */
-extern observable<> sync_execution_done;
-
-/* An error was caught while executing a command.  */
-extern observable<> command_error;
-
 /* The target's register contents have changed.  */
 extern observable<struct target_ops */* target */> target_changed;
 
@@ -103,18 +88,6 @@ extern observable<inferior */* exec_inf */, inferior */* follow_inf */>
    FORK_KIND is TARGET_WAITKIND_FORKED or TARGET_WAITKIND_VFORKED.  */
 extern observable<inferior */* parent_inf */, inferior */* child_inf */,
 		  target_waitkind /* fork_kind */> inferior_forked;
-
-/* The status of process record for inferior inferior in gdb has
-   changed.  The process record is started if STARTED is true, and
-   the process record is stopped if STARTED is false.
-
-   When STARTED is true, METHOD indicates the short name of the
-   method used for recording.  If the method supports multiple
-   formats, FORMAT indicates which one is being used, otherwise it
-   is NULL.  When STARTED is false, they are both NULL.  */
-extern observable<struct inferior */* inferior */, int /* started */,
-		  const char */* method */, const char */* format */>
-    record_changed;
 
 /* The shared library specified by SOLIB has been loaded.  Note that
    when gdb calls this observer, the library's symbols probably
@@ -168,12 +141,6 @@ extern observable<struct breakpoint */* b */> breakpoint_deleted;
    is the modified breakpoint.  */
 extern observable<struct breakpoint */* b */> breakpoint_modified;
 
-/* The trace frame is changed to TFNUM (e.g., by using the 'tfind'
-   command).  If TFNUM is negative, it means gdb resumes live
-   debugging.  The number of the tracepoint associated with this
-   traceframe is TPNUM.  */
-extern observable<int /* tfnum */, int /* tpnum */> traceframe_changed;
-
 /* The current architecture has changed.  The argument NEWARCH is a
    pointer to the new architecture.  */
 extern observable<struct gdbarch */* newarch */> architecture_changed;
@@ -221,23 +188,6 @@ extern observable<const char */* current_prompt */> before_prompt;
 /* Variable gdb_datadir has been set.  The value may not necessarily
    change.  */
 extern observable<> gdb_datadir_changed;
-
-/* The parameter of some 'set' commands in console are changed.
-   This method is called after a command 'set param value'.  PARAM
-   is the parameter of 'set' command, and VALUE is the value of
-   changed parameter.  */
-extern observable<const char */* param */, const char */* value */>
-    command_param_changed;
-
-/* The new trace state variable TSV is created.  */
-extern observable<const struct trace_state_variable */* tsv */> tsv_created;
-
-/* The trace state variable TSV is deleted.  If TSV is NULL, all
-   trace state variables are deleted.  */
-extern observable<const struct trace_state_variable */* tsv */> tsv_deleted;
-
-/* The trace state value TSV is modified.  */
-extern observable<const struct trace_state_variable */* tsv */> tsv_modified;
 
 /* An inferior function at ADDRESS is about to be called in thread
    THREAD.  */

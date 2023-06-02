@@ -541,13 +541,13 @@ static char register_chars[256];
 static char operand_chars[256];
 
 /* Lexical macros.  */
-#define is_mnemonic_char(x) (mnemonic_chars[(unsigned char) x])
 #define is_operand_char(x) (operand_chars[(unsigned char) x])
 #define is_register_char(x) (register_chars[(unsigned char) x])
 #define is_space_char(x) ((x) == ' ')
 
-/* All non-digit non-letter characters that may occur in an operand.  */
-static char operand_special_chars[] = "%$-+(,)*._~/<>|&^!=:[@]";
+/* All non-digit non-letter characters that may occur in an operand and
+   which aren't already in extra_symbol_chars[].  */
+static const char operand_special_chars[] = "$+,)._~/<>|&^!=:@]";
 
 /* md_assemble() always leaves the strings it's passed unaltered.  To
    effect this we maintain a stack of saved characters that we've smashed
@@ -3070,7 +3070,7 @@ md_begin (void)
   /* Fill in lexical tables:  mnemonic_chars, operand_chars.  */
   {
     int c;
-    char *p;
+    const char *p;
 
     for (c = 0; c < 256; c++)
       {
@@ -3086,11 +3086,6 @@ md_begin (void)
 	    register_chars[c] = mnemonic_chars[c];
 	    operand_chars[c] = c;
 	  }
-	else if (c == '{' || c == '}')
-	  {
-	    mnemonic_chars[c] = c;
-	    operand_chars[c] = c;
-	  }
 #ifdef SVR4_COMMENT_CHARS
 	else if (c == '\\' && strchr (i386_comment_chars, '/'))
 	  operand_chars[c] = c;
@@ -3100,13 +3095,12 @@ md_begin (void)
 	  operand_chars[c] = c;
       }
 
-#ifdef LEX_QM
-    operand_chars['?'] = '?';
-#endif
     mnemonic_chars['_'] = '_';
     mnemonic_chars['-'] = '-';
     mnemonic_chars['.'] = '.';
 
+    for (p = extra_symbol_chars; *p != '\0'; p++)
+      operand_chars[(unsigned char) *p] = *p;
     for (p = operand_special_chars; *p != '\0'; p++)
       operand_chars[(unsigned char) *p] = *p;
   }
@@ -5481,6 +5475,12 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
   while (1)
     {
       mnem_p = mnemonic;
+      /* Pseudo-prefixes start with an opening figure brace.  */
+      if ((*mnem_p = *l) == '{')
+	{
+	  ++mnem_p;
+	  ++l;
+	}
       while ((*mnem_p = mnemonic_chars[(unsigned char) *l]) != 0)
 	{
 	  if (*mnem_p == '.')
@@ -5488,16 +5488,29 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	  mnem_p++;
 	  if (mnem_p >= mnemonic + MAX_MNEM_SIZE)
 	    {
+	    too_long:
 	      as_bad (_("no such instruction: `%s'"), token_start);
 	      return NULL;
 	    }
 	  l++;
 	}
-      if (!is_space_char (*l)
-	  && *l != END_OF_INSN
-	  && (intel_syntax
-	      || (*l != PREFIX_SEPARATOR
-		  && *l != ',')))
+      /* Pseudo-prefixes end with a closing figure brace.  */
+      if (*mnemonic == '{' && *l == '}')
+	{
+	  *mnem_p++ = *l++;
+	  if (mnem_p >= mnemonic + MAX_MNEM_SIZE)
+	    goto too_long;
+	  *mnem_p = '\0';
+
+	  /* Point l at the closing brace if there's no other separator.  */
+	  if (*l != END_OF_INSN && !is_space_char (*l)
+	      && *l != PREFIX_SEPARATOR)
+	    --l;
+	}
+      else if (!is_space_char (*l)
+	       && *l != END_OF_INSN
+	       && (intel_syntax
+		   || (*l != PREFIX_SEPARATOR && *l != ',')))
 	{
 	  if (prefix_only)
 	    break;
@@ -14175,7 +14188,21 @@ md_parse_option (int c, const char *arg)
 #endif
 
     case OPTION_32:
-      default_arch = "i386";
+      {
+	const char **list, **l;
+
+	list = bfd_target_list ();
+	for (l = list; *l != NULL; l++)
+	  if (strstr (*l, "-i386")
+	      || strstr (*l, "-go32"))
+	    {
+	      default_arch = "i386";
+	      break;
+	    }
+	if (*l == NULL)
+	  as_fatal (_("no compiled in support for ix86"));
+	free (list);
+      }
       break;
 
     case OPTION_DIVIDE:

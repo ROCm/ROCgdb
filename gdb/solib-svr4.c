@@ -2117,16 +2117,16 @@ svr4_update_solib_event_breakpoint (struct breakpoint *b)
       return false;
     }
 
-  for (bp_location *loc : b->locations ())
+  for (bp_location &loc : b->locations ())
     {
       struct svr4_info *info;
       struct probe_and_action *pa;
 
-      info = solib_svr4_pspace_data.get (loc->pspace);
+      info = solib_svr4_pspace_data.get (loc.pspace);
       if (info == NULL || info->probes_table == NULL)
 	continue;
 
-      pa = solib_event_probe_at (info, loc->address);
+      pa = solib_event_probe_at (info, loc.address);
       if (pa == NULL)
 	continue;
 
@@ -2151,8 +2151,8 @@ svr4_update_solib_event_breakpoint (struct breakpoint *b)
 static void
 svr4_update_solib_event_breakpoints (void)
 {
-  for (breakpoint *bp : all_breakpoints_safe ())
-    svr4_update_solib_event_breakpoint (bp);
+  for (breakpoint &bp : all_breakpoints_safe ())
+    svr4_update_solib_event_breakpoint (&bp);
 }
 
 /* Create and register solib event breakpoints.  PROBES is an array

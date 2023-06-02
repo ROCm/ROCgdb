@@ -24,10 +24,15 @@
 
 #include "gdbsupport/intrusive_list.h"
 
+struct bpstat;
 struct ui_out;
 struct interp;
 struct ui;
 class completion_tracker;
+struct thread_info;
+struct inferior;
+struct so_list;
+struct trace_state_variable;
 
 typedef struct interp *(*interp_factory_func) (const char *name);
 
@@ -81,6 +86,101 @@ public:
 
   const char *name () const
   { return m_name; }
+
+  /* Notify the interpreter that the current inferior has stopped with signal
+     SIG.  */
+  virtual void on_signal_received (gdb_signal sig) {}
+
+  /* Notify the interpreter that the current inferior has exited with signal
+     SIG. */
+  virtual void on_signal_exited (gdb_signal sig) {}
+
+  /* Notify the interpreter that the current inferior has stopped normally.  */
+  virtual void on_normal_stop (bpstat *bs, int print_frame) {}
+
+  /* Notify the intepreter that the current inferior has exited normally with
+     status STATUS.  */
+  virtual void on_exited (int status) {}
+
+  /* Notify the interpreter that the current inferior has stopped reverse
+     execution because there is no more history.  */
+  virtual void on_no_history () {}
+
+  /* Notify the interpreter that a synchronous command it started has
+     finished.  */
+  virtual void on_sync_execution_done () {}
+
+  /* Notify the interpreter that an error was caught while executing a
+     command on this interpreter.  */
+  virtual void on_command_error () {}
+
+  /* Notify the interpreter that the user focus has changed.  */
+  virtual void on_user_selected_context_changed (user_selected_what selection)
+    {}
+
+  /* Notify the interpreter that thread T has been created.  */
+  virtual void on_new_thread (thread_info *t) {}
+
+  /* Notify the interpreter that thread T has exited.  */
+  virtual void on_thread_exited (thread_info *, int silent) {}
+
+  /* Notify the interpreter that inferior INF was added.  */
+  virtual void on_inferior_added (inferior *inf) {}
+
+  /* Notify the interpreter that inferior INF was started or attached.  */
+  virtual void on_inferior_appeared (inferior *inf) {}
+
+  /* Notify the interpreter that inferior INF exited or was detached.  */
+  virtual void on_inferior_disappeared (inferior *inf) {}
+
+  /* Notify the interpreter that inferior INF was removed.  */
+  virtual void on_inferior_removed (inferior *inf) {}
+
+  /* Notify the interpreter that the status of process record for INF
+     changed.  */
+  virtual void on_record_changed (inferior *inf, int started,
+				  const char *method, const char *format) {}
+
+  /* Notify the interpreter that the target was resumed.  */
+  virtual void on_target_resumed (ptid_t ptid) {}
+
+  /* Notify the interpreter that solib SO has been loaded.  */
+  virtual void on_solib_loaded (so_list *so) {}
+
+  /* Notify the interpreter that solib SO has been unloaded.  */
+  virtual void on_solib_unloaded (so_list *so) {}
+
+  /* Notify the interpreter that a command it is executing is about to cause
+     the inferior to proceed.  */
+  virtual void on_about_to_proceed () {}
+
+  /* Notify the interpreter that the selected traceframe changed.  */
+  virtual void on_traceframe_changed (int tfnum, int tpnum) {}
+
+  /* Notify the interpreter that trace state variable TSV was created.  */
+  virtual void on_tsv_created (const trace_state_variable *tsv) {}
+
+  /* Notify the interpreter that trace state variable TSV was deleted.  */
+  virtual void on_tsv_deleted (const trace_state_variable *tsv) {}
+
+  /* Notify the interpreter that trace state variable TSV was modified.  */
+  virtual void on_tsv_modified (const trace_state_variable *tsv) {}
+
+  /* Notify the interpreter that breakpoint B was created.  */
+  virtual void on_breakpoint_created (breakpoint *b) {}
+
+  /* Notify the interpreter that breakpoint B was deleted.  */
+  virtual void on_breakpoint_deleted (breakpoint *b) {}
+
+  /* Notify the interpreter that breakpoint B was modified.  */
+  virtual void on_breakpoint_modified (breakpoint *b) {}
+
+  /* Notify the interpreter that parameter PARAM changed to VALUE.  */
+  virtual void on_param_changed (const char *param, const char *value) {}
+
+  /* Notify the interpreter that current inferior's memory was changed.  */
+  virtual void on_memory_changed (CORE_ADDR addr, ssize_t len,
+				  const bfd_byte *data) {}
 
 private:
   /* The memory for this is static, it comes from literal strings (e.g. "cli").  */
@@ -169,6 +269,103 @@ extern void interpreter_completer (struct cmd_list_element *ignore,
 				   completion_tracker &tracker,
 				   const char *text,
 				   const char *word);
+
+/* Notify all interpreters that the current inferior has stopped with signal
+   SIG.  */
+extern void interps_notify_signal_received (gdb_signal sig);
+
+/* Notify all interpreters that the current inferior has exited with signal
+   SIG.  */
+extern void interps_notify_signal_exited (gdb_signal sig);
+
+/* Notify all interpreters that the current inferior has stopped normally.  */
+extern void interps_notify_normal_stop (bpstat *bs, int print_frame);
+
+/* Notify all interpreters that the current inferior has stopped reverse
+   execution because there is no more history.  */
+extern void interps_notify_no_history ();
+
+/* Notify all interpreters that the current inferior has exited normally with
+   status STATUS.  */
+extern void interps_notify_exited (int status);
+
+/* Notify all interpreters that the user focus has changed.  */
+extern void interps_notify_user_selected_context_changed
+  (user_selected_what selection);
+
+/* Notify all interpreters that thread T has been created.  */
+extern void interps_notify_new_thread (thread_info *t);
+
+/* Notify all interpreters that thread T has exited.  */
+extern void interps_notify_thread_exited (thread_info *t, int silent);
+
+/* Notify all interpreters that inferior INF was added.  */
+extern void interps_notify_inferior_added (inferior *inf);
+
+/* Notify all interpreters that inferior INF was started or attached.  */
+extern void interps_notify_inferior_appeared (inferior *inf);
+
+/* Notify all interpreters that inferior INF exited or was detached.  */
+extern void interps_notify_inferior_disappeared (inferior *inf);
+
+/* Notify all interpreters that inferior INF was removed.  */
+extern void interps_notify_inferior_removed (inferior *inf);
+
+/* Notify all interpreters that the status of process record for INF changed.
+
+   The process record is started if STARTED is true, and the process record is
+   stopped if STARTED is false.
+
+   When STARTED is true, METHOD indicates the short name of the method used for
+   recording.  If the method supports multiple formats, FORMAT indicates which
+   one is being used, otherwise it is nullptr.  When STARTED is false, they are
+   both nullptr.  */
+extern void interps_notify_record_changed (inferior *inf, int started,
+					   const char *method,
+					   const char *format);
+
+/* Notify all interpreters that the target was resumed.  */
+extern void interps_notify_target_resumed (ptid_t ptid);
+
+/* Notify all interpreters that solib SO has been loaded.  */
+extern void interps_notify_solib_loaded (so_list *so);
+
+/* Notify all interpreters that solib SO has been unloaded.  */
+extern void interps_notify_solib_unloaded (so_list *so);
+
+/* Notify all interpreters that the selected traceframe changed.
+
+   The trace frame is changed to TFNUM (e.g., by using the 'tfind' command).
+   If TFNUM is negative, it means gdb resumed live debugging.  The number of
+   the tracepoint associated with this traceframe is TPNUM.  */
+extern void interps_notify_traceframe_changed (int tfnum, int tpnum);
+
+/* Notify all interpreters that trace state variable TSV was created.  */
+extern void interps_notify_tsv_created (const trace_state_variable *tsv);
+
+/* Notify all interpreters that trace state variable TSV was deleted.
+   
+   If TSV is nullptr, it means that all trace state variables were deleted.  */
+extern void interps_notify_tsv_deleted (const trace_state_variable *tsv);
+
+/* Notify all interpreters that trace state variable TSV was modified.  */
+extern void interps_notify_tsv_modified (const trace_state_variable *tsv);
+
+/* Notify all interpreters that breakpoint B was created.  */
+extern void interps_notify_breakpoint_created (breakpoint *b);
+
+/* Notify all interpreters that breakpoint B was deleted.  */
+extern void interps_notify_breakpoint_deleted (breakpoint *b);
+
+/* Notify all interpreters that breakpoint B was modified.  */
+extern void interps_notify_breakpoint_modified (breakpoint *b);
+
+/* Notify all interpreters that parameter PARAM changed to VALUE.  */
+extern void interps_notify_param_changed (const char *param, const char *value);
+
+/* Notify all interpreters that current inferior's memory was changed.  */
+extern void interps_notify_memory_changed (CORE_ADDR addr, ssize_t len,
+					   const bfd_byte *data);
 
 /* well-known interpreters */
 #define INTERP_CONSOLE		"console"

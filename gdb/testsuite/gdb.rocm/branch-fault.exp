@@ -42,6 +42,8 @@ proc do_test { } {
 	gdb_test "c" \
 	    [multi_line \
 		 "Thread $any received signal SIGSEGV, Segmentation fault\\." \
+		 "Warning: precise memory violation signal reporting is not enabled, reported" \
+		 "location may not be accurate.  See \"show amdgpu precise-memory\"\\." \
 		 "\\\[Switching to thread $::decimal, lane 0 \\(AMDGPU Lane $any/0 \\(0,0,0\\)\\\[0,0,0\\\]\\)\\\]" \
 		 "0x0000000000000100 in \\?\\? \\(\\)"] \
 	    "continue to bad branch fault"

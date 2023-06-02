@@ -59,6 +59,7 @@
 #include "cli/cli-style.h"
 #include "expop.h"
 #include "gdbsupport/buildargv.h"
+#include "interps.h"
 
 #include <unistd.h>
 
@@ -288,7 +289,7 @@ delete_trace_state_variable (const char *name)
   for (auto it = tvariables.begin (); it != tvariables.end (); it++)
     if (it->name == name)
       {
-	gdb::observers::tsv_deleted.notify (&*it);
+	interps_notify_tsv_deleted (&*it);
 	tvariables.erase (it);
 	return;
       }
@@ -360,7 +361,7 @@ trace_variable_command (const char *args, int from_tty)
       if (tsv->initial_value != initval)
 	{
 	  tsv->initial_value = initval;
-	  gdb::observers::tsv_modified.notify (tsv);
+	  interps_notify_tsv_modified (tsv);
 	}
       gdb_printf (_("Trace state variable $%s "
 		    "now has initial value %s.\n"),
@@ -372,7 +373,7 @@ trace_variable_command (const char *args, int from_tty)
   tsv = create_trace_state_variable (name.c_str ());
   tsv->initial_value = initval;
 
-  gdb::observers::tsv_created.notify (tsv);
+  interps_notify_tsv_created (tsv);
 
   gdb_printf (_("Trace state variable $%s "
 		"created, with initial value %s.\n"),
@@ -387,7 +388,7 @@ delete_trace_variable_command (const char *args, int from_tty)
       if (query (_("Delete all trace state variables? ")))
 	tvariables.clear ();
       dont_repeat ();
-      gdb::observers::tsv_deleted.notify (NULL);
+      interps_notify_tsv_deleted (nullptr);
       return;
     }
 
@@ -676,11 +677,11 @@ validate_actionline (const char *line, struct breakpoint *b)
 	      /* else fall thru, treat p as an expression and parse it!  */
 	    }
 	  tmp_p = p;
-	  for (bp_location *loc : t->locations ())
+	  for (bp_location &loc : t->locations ())
 	    {
 	      p = tmp_p;
-	      expression_up exp = parse_exp_1 (&p, loc->address,
-					       block_for_pc (loc->address),
+	      expression_up exp = parse_exp_1 (&p, loc.address,
+					       block_for_pc (loc.address),
 					       PARSER_COMMA_TERMINATES);
 
 	      if (exp->first_opcode () == OP_VAR_VALUE)
@@ -709,7 +710,7 @@ validate_actionline (const char *line, struct breakpoint *b)
 	      /* We have something to collect, make sure that the expr to
 		 bytecode translator can handle it and that it's not too
 		 long.  */
-	      agent_expr_up aexpr = gen_trace_for_expr (loc->address,
+	      agent_expr_up aexpr = gen_trace_for_expr (loc.address,
 							exp.get (),
 							trace_string);
 
@@ -727,19 +728,19 @@ validate_actionline (const char *line, struct breakpoint *b)
 	  p = skip_spaces (p);
 
 	  tmp_p = p;
-	  for (bp_location *loc : t->locations ())
+	  for (bp_location &loc : t->locations ())
 	    {
 	      p = tmp_p;
 
 	      /* Only expressions are allowed for this action.  */
-	      expression_up exp = parse_exp_1 (&p, loc->address,
-					       block_for_pc (loc->address),
+	      expression_up exp = parse_exp_1 (&p, loc.address,
+					       block_for_pc (loc.address),
 					       PARSER_COMMA_TERMINATES);
 
 	      /* We have something to evaluate, make sure that the expr to
 		 bytecode translator can handle it and that it's not too
 		 long.  */
-	      agent_expr_up aexpr = gen_eval_for_expr (loc->address, exp.get ());
+	      agent_expr_up aexpr = gen_eval_for_expr (loc.address, exp.get ());
 
 	      finalize_tracepoint_aexpr (aexpr.get ());
 	    }
@@ -1522,18 +1523,18 @@ process_tracepoint_on_disconnect (void)
 
   /* Check whether we still have pending tracepoint.  If we have, warn the
      user that pending tracepoint will no longer work.  */
-  for (breakpoint *b : all_tracepoints ())
+  for (breakpoint &b : all_tracepoints ())
     {
-      if (b->loc == NULL)
+      if (!b.has_locations ())
 	{
 	  has_pending_p = 1;
 	  break;
 	}
       else
 	{
-	  for (bp_location *loc1 : b->locations ())
+	  for (bp_location &loc1 : b.locations ())
 	    {
-	      if (loc1->shlib_disabled)
+	      if (loc1.shlib_disabled)
 		{
 		  has_pending_p = 1;
 		  break;
@@ -1573,18 +1574,18 @@ start_tracing (const char *notes)
   if (tracepoint_range.begin () == tracepoint_range.end ())
     error (_("No tracepoints defined, not starting trace"));
 
-  for (breakpoint *b : tracepoint_range)
+  for (breakpoint &b : tracepoint_range)
     {
-      if (b->enable_state == bp_enabled)
+      if (b.enable_state == bp_enabled)
 	any_enabled = 1;
 
-      if ((b->type == bp_fast_tracepoint
+      if ((b.type == bp_fast_tracepoint
 	   ? may_insert_fast_tracepoints
 	   : may_insert_tracepoints))
 	++num_to_download;
       else
 	warning (_("May not insert %stracepoints, skipping tracepoint %d"),
-		 (b->type == bp_fast_tracepoint ? "fast " : ""), b->number);
+		 (b.type == bp_fast_tracepoint ? "fast " : ""), b.number);
     }
 
   if (!any_enabled)
@@ -1604,43 +1605,42 @@ start_tracing (const char *notes)
 
   target_trace_init ();
 
-  for (breakpoint *b : tracepoint_range)
+  for (breakpoint &b : tracepoint_range)
     {
-      struct tracepoint *t = (struct tracepoint *) b;
+      tracepoint &t = gdb::checked_static_cast<tracepoint &> (b);
       int bp_location_downloaded = 0;
 
       /* Clear `inserted' flag.  */
-      for (bp_location *loc : b->locations ())
-	loc->inserted = 0;
+      for (bp_location &loc : b.locations ())
+	loc.inserted = 0;
 
-      if ((b->type == bp_fast_tracepoint
+      if ((b.type == bp_fast_tracepoint
 	   ? !may_insert_fast_tracepoints
 	   : !may_insert_tracepoints))
 	continue;
 
-      t->number_on_target = 0;
+      t.number_on_target = 0;
 
-      for (bp_location *loc : b->locations ())
+      for (bp_location &loc : b.locations ())
 	{
 	  /* Since tracepoint locations are never duplicated, `inserted'
 	     flag should be zero.  */
-	  gdb_assert (!loc->inserted);
+	  gdb_assert (!loc.inserted);
 
-	  target_download_tracepoint (loc);
+	  target_download_tracepoint (&loc);
 
-	  loc->inserted = 1;
+	  loc.inserted = 1;
 	  bp_location_downloaded = 1;
 	}
 
-      t->number_on_target = b->number;
+      t.number_on_target = b.number;
 
-      for (bp_location *loc : b->locations ())
-	if (loc->probe.prob != NULL)
-	  loc->probe.prob->set_semaphore (loc->probe.objfile,
-					  loc->gdbarch);
+      for (bp_location &loc : b.locations ())
+	if (loc.probe.prob != NULL)
+	  loc.probe.prob->set_semaphore (loc.probe.objfile, loc.gdbarch);
 
       if (bp_location_downloaded)
-	gdb::observers::breakpoint_modified.notify (b);
+	notify_breakpoint_modified (&b);
     }
 
   /* Send down all the trace state variables too.  */
@@ -1712,22 +1712,21 @@ stop_tracing (const char *note)
 
   target_trace_stop ();
 
-  for (breakpoint *t : all_tracepoints ())
+  for (breakpoint &t : all_tracepoints ())
     {
-      if ((t->type == bp_fast_tracepoint
+      if ((t.type == bp_fast_tracepoint
 	   ? !may_insert_fast_tracepoints
 	   : !may_insert_tracepoints))
 	continue;
 
-      for (bp_location *loc : t->locations ())
+      for (bp_location &loc : t.locations ())
 	{
 	  /* GDB can be totally absent in some disconnected trace scenarios,
 	     but we don't really care if this semaphore goes out of sync.
 	     That's why we are decrementing it here, but not taking care
 	     in other places.  */
-	  if (loc->probe.prob != NULL)
-	    loc->probe.prob->clear_semaphore (loc->probe.objfile,
-					      loc->gdbarch);
+	  if (loc.probe.prob != NULL)
+	    loc.probe.prob->clear_semaphore (loc.probe.objfile, loc.gdbarch);
 	}
     }
 
@@ -1891,8 +1890,8 @@ tstatus_command (const char *args, int from_tty)
 		(long int) (ts->stop_time % 1000000));
 
   /* Now report any per-tracepoint status available.  */
-  for (breakpoint *t : all_tracepoints ())
-    target_get_tracepoint_status (t, NULL);
+  for (breakpoint &t : all_tracepoints ())
+    target_get_tracepoint_status (&t, NULL);
 }
 
 /* Report the trace status to uiout, in a way suitable for MI, and not
@@ -2141,7 +2140,7 @@ tfind_1 (enum trace_find_type type, int num,
   set_tracepoint_num (tp ? tp->number : target_tracept);
 
   if (target_frameno != get_traceframe_number ())
-    gdb::observers::traceframe_changed.notify (target_frameno, tracepoint_number);
+    interps_notify_traceframe_changed (target_frameno, tracepoint_number);
 
   set_current_traceframe (target_frameno);
 
@@ -2742,17 +2741,17 @@ get_traceframe_location (int *stepping_frame_p)
      locations, assume it is a direct hit rather than a while-stepping
      frame.  (FIXME this is not reliable, should record each frame's
      type.)  */
-  for (bp_location *tloc : t->locations ())
-    if (tloc->address == regcache_read_pc (regcache))
+  for (bp_location &tloc : t->locations ())
+    if (tloc.address == regcache_read_pc (regcache))
       {
 	*stepping_frame_p = 0;
-	return tloc;
+	return &tloc;
       }
 
   /* If this is a stepping frame, we don't know which location
      triggered.  The first is as good (or bad) a guess as any...  */
   *stepping_frame_p = 1;
-  return t->loc;
+  return &t->first_loc ();
 }
 
 /* Return the default collect actions of a tracepoint T.  */
@@ -3046,26 +3045,22 @@ cond_string_is_same (char *str1, char *str2)
 static struct bp_location *
 find_matching_tracepoint_location (struct uploaded_tp *utp)
 {
-  struct bp_location *loc;
-
-  for (breakpoint *b : all_tracepoints ())
+  for (breakpoint &b : all_tracepoints ())
     {
-      struct tracepoint *t = (struct tracepoint *) b;
+      tracepoint &t = gdb::checked_static_cast<tracepoint &> (b);
 
-      if (b->type == utp->type
-	  && t->step_count == utp->step
-	  && t->pass_count == utp->pass
-	  && cond_string_is_same (t->cond_string.get (),
+      if (b.type == utp->type
+	  && t.step_count == utp->step
+	  && t.pass_count == utp->pass
+	  && cond_string_is_same (t.cond_string.get (),
 				  utp->cond_string.get ())
 	  /* FIXME also test actions.  */
 	  )
 	{
 	  /* Scan the locations for an address match.  */
-	  for (loc = b->loc; loc; loc = loc->next)
-	    {
-	      if (loc->address == utp->addr)
-		return loc;
-	    }
+	  for (bp_location &loc : b.locations ())
+	    if (loc.address == utp->addr)
+	      return &loc;
 	}
     }
   return NULL;
@@ -3139,7 +3134,7 @@ merge_uploaded_tracepoints (struct uploaded_tp **uploaded_tps)
   /* Notify 'breakpoint-modified' observer that at least one of B's
      locations was changed.  */
   for (breakpoint *b : modified_tp)
-    gdb::observers::breakpoint_modified.notify (b);
+    notify_breakpoint_modified (b);
 
   free_uploaded_tps (uploaded_tps);
 }
@@ -3185,7 +3180,7 @@ create_tsv_from_upload (struct uploaded_tsv *utsv)
   tsv->initial_value = utsv->initial_value;
   tsv->builtin = utsv->builtin;
 
-  gdb::observers::tsv_created.notify (tsv);
+  interps_notify_tsv_created (tsv);
 
   return tsv;
 }
