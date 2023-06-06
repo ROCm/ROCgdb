@@ -49,6 +49,8 @@
 #include "solib.h"
 #include "target.h"
 #include "tid-parse.h"
+#include "bfd/elf-bfd.h"
+#include "elf/amdgpu.h"
 
 #include <dlfcn.h>
 #include <map>
@@ -346,6 +348,9 @@ struct amd_dbgapi_target final : public target_ops
     (thread_info *thread, const target_waitstatus &status) override;
 
   void prevent_new_threads (bool prevent) override;
+
+  gdb::unique_xmalloc_ptr<char>
+  make_corefile_notes (bfd *obfd, int *note_size) override;
 
 private:
   /* True if we must report thread events.  */
@@ -3114,6 +3119,34 @@ amd_dbgapi_target::close ()
 {
   if (amd_dbgapi_async_event_handler != nullptr)
     delete_async_event_handler (&amd_dbgapi_async_event_handler);
+}
+
+gdb::unique_xmalloc_ptr<char>
+amd_dbgapi_target::make_corefile_notes (bfd *obfd, int *notes_size)
+{
+  auto notes_data = beneath ()->make_corefile_notes (obfd, notes_size);
+
+  struct amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  amd_dbgapi_core_state_data_t core_state_note;
+  if (amd_dbgapi_process_get_info
+	(info->process_id, AMD_DBGAPI_PROCESS_INFO_CORE_STATE,
+	 sizeof (amd_dbgapi_core_state_data_t), &core_state_note)
+	== AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      gdb::unique_xmalloc_ptr<void> snapshots_data
+	((void *) core_state_note.data);
+
+      if (core_state_note.endianness == (bfd_big_endian (obfd)
+					 ? AMD_DBGAPI_ENDIAN_BIG
+					 : AMD_DBGAPI_ENDIAN_LITTLE))
+	notes_data.reset
+	  (elfcore_write_note (obfd, notes_data.release (), notes_size,
+			       "AMDGPU", NT_AMDGPU_CORE_STATE,
+			       core_state_note.data, core_state_note.size));
+    }
+  return notes_data;
 }
 
 /* Implementation of `_wave_id' variable.  */
