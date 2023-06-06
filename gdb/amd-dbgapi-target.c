@@ -354,6 +354,9 @@ struct amd_dbgapi_target final : public target_ops
 
   int find_memory_regions (find_memory_region_ftype fun, void *arg) override;
 
+  void prepare_to_generate_core () override;
+  void done_generating_core () override;
+
 private:
   /* True if we must report thread events.  */
   bool m_report_thread_events = false;
@@ -3114,6 +3117,32 @@ amd_dbgapi_target::prevent_new_threads (bool prevent)
   beneath ()->prevent_new_threads (prevent);
 
   set_wave_creation_mode (prevent, current_inferior ());
+}
+
+void
+amd_dbgapi_target::prepare_to_generate_core ()
+{
+  amd_dbgapi_process_id_t process_id
+    = get_amd_dbgapi_process_id (current_inferior ());
+
+  amd_dbgapi_status_t status = amd_dbgapi_process_freeze (process_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to freeze process"));
+
+  beneath ()->prepare_to_generate_core ();
+}
+
+void
+amd_dbgapi_target::done_generating_core ()
+{
+  beneath ()->done_generating_core ();
+
+  amd_dbgapi_process_id_t process_id
+    = get_amd_dbgapi_process_id (current_inferior ());
+
+  amd_dbgapi_status_t status = amd_dbgapi_process_unfreeze (process_id);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    warning (_("amd-dbgapi failed to unfreeze process"));
 }
 
 void
