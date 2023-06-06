@@ -73,14 +73,7 @@ write_gcore_file_1 (bfd *obfd)
   asection *note_sec = NULL;
 
   /* An external target method must build the notes section.  */
-  /* FIXME: uweigand/2011-10-06: All architectures that support core file
-     generation should be converted to gdbarch_make_corefile_notes; at that
-     point, the target vector method can be removed.  */
-  if (!gdbarch_make_corefile_notes_p (target_gdbarch ()))
-    note_data = target_make_corefile_notes (obfd, &note_size);
-  else
-    note_data = gdbarch_make_corefile_notes (target_gdbarch (), obfd,
-					     &note_size);
+  note_data = target_make_corefile_notes (obfd, &note_size);
 
   if (note_data == NULL || note_size == 0)
     error (_("Target does not support core file generation."));

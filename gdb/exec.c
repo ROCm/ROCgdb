@@ -80,7 +80,6 @@ struct exec_target final : public target_ops
   void files_info () override;
 
   bool has_memory () override;
-  gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *) override;
 };
 
 static exec_target exec_ops;
@@ -1047,12 +1046,6 @@ exec_target::has_memory ()
   /* We can provide memory if we have any file/target sections to read
      from.  */
   return !current_program_space->target_sections ().empty ();
-}
-
-gdb::unique_xmalloc_ptr<char>
-exec_target::make_corefile_notes (bfd *obfd, int *note_size)
-{
-  error (_("Can't create a corefile"));
 }
 
 void _initialize_exec ();
