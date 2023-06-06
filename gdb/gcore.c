@@ -626,25 +626,13 @@ gcore_copy_memtag_section_callback (bfd *obfd, asection *osec)
 static int
 gcore_memory_sections (bfd *obfd)
 {
-  /* Try gdbarch method first, then fall back to target method.  */
-  if (!gdbarch_find_memory_regions_p (target_gdbarch ())
-      || gdbarch_find_memory_regions (target_gdbarch (),
-				      gcore_create_callback, obfd) != 0)
-    {
-      if (target_find_memory_regions (gcore_create_callback, obfd) != 0)
-	return 0;			/* FIXME: error return/msg?  */
-    }
+  if (target_find_memory_regions (gcore_create_callback, obfd) != 0)
+    return 0;			/* FIXME: error return/msg?  */
 
   /* Take care of dumping memory tags, if there are any.  */
-  if (!gdbarch_find_memory_regions_p (target_gdbarch ())
-      || gdbarch_find_memory_regions (target_gdbarch (),
-				      gcore_create_memtag_section_callback,
-				      obfd) != 0)
-    {
-      if (target_find_memory_regions (gcore_create_memtag_section_callback,
-				      obfd) != 0)
-	return 0;
-    }
+  if (target_find_memory_regions (gcore_create_memtag_section_callback,
+				  obfd) != 0)
+    return 0;
 
   /* Record phdrs for section-to-segment mapping.  */
   for (asection *sect : gdb_bfd_sections (obfd))

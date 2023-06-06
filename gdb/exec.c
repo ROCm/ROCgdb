@@ -81,7 +81,6 @@ struct exec_target final : public target_ops
 
   bool has_memory () override;
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *) override;
-  int find_memory_regions (find_memory_region_ftype func, void *data) override;
 };
 
 static exec_target exec_ops;
@@ -1054,12 +1053,6 @@ gdb::unique_xmalloc_ptr<char>
 exec_target::make_corefile_notes (bfd *obfd, int *note_size)
 {
   error (_("Can't create a corefile"));
-}
-
-int
-exec_target::find_memory_regions (find_memory_region_ftype func, void *data)
-{
-  return objfile_find_memory_regions (func, data);
 }
 
 void _initialize_exec ();
