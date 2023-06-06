@@ -29,6 +29,7 @@
 #include "bfd.h"
 #include "target.h"
 #include "process-stratum-target.h"
+#include "local-fileio-target.h"
 #include "gdbcore.h"
 #include "gdbthread.h"
 #include "regcache.h"
@@ -68,7 +69,7 @@ static const target_info core_target_info = {
 Specify the filename of the core file.")
 };
 
-class core_target final : public process_stratum_target
+class core_target final : public local_fileio_target<process_stratum_target>
 {
 public:
   core_target ();
