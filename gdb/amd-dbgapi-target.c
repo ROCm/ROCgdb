@@ -1721,8 +1721,13 @@ add_gpu_thread (inferior *inf, ptid_t wave_ptid)
   /* Create new GPU threads silently to avoid spamming the terminal
      with thousands of "[New Thread ...]" messages.  */
   thread_info *thread = add_thread_silent (proc_target, wave_ptid);
-  set_running (proc_target, wave_ptid, true);
-  set_executing (proc_target, wave_ptid, true);
+
+  /* When debugging a corefile, leave the threads marked as not executing.  */
+  if (inf->pspace->cbfd == nullptr)
+    {
+      set_running (proc_target, wave_ptid, true);
+      set_executing (proc_target, wave_ptid, true);
+    }
   return thread;
 }
 
