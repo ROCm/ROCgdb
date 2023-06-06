@@ -352,6 +352,8 @@ struct amd_dbgapi_target final : public target_ops
   gdb::unique_xmalloc_ptr<char>
   make_corefile_notes (bfd *obfd, int *note_size) override;
 
+  int find_memory_regions (find_memory_region_ftype fun, void *arg) override;
+
 private:
   /* True if we must report thread events.  */
   bool m_report_thread_events = false;
@@ -3119,6 +3121,28 @@ amd_dbgapi_target::close ()
 {
   if (amd_dbgapi_async_event_handler != nullptr)
     delete_async_event_handler (&amd_dbgapi_async_event_handler);
+}
+
+int
+amd_dbgapi_target::find_memory_regions (find_memory_region_ftype fun,
+					void *arg)
+{
+  int ret = beneath ()->find_memory_regions (fun, arg);
+
+  if (ret != 0)
+    return ret;
+
+  /* On Linux, all the GPU memory is mapped in the host process's address
+     space.  However, all the mappings of GPU memory are marked VM_IO by the
+     driver, so are ignored by linux_find_memory_regions (eventually called
+     by beneath ()->find_memory_regions (fun, arg) above).  In order to
+     capture those GPU memory mappings, use the rocm_find_memory_regions
+     gdbarch hook.  */
+  gdbarch *arch = current_inferior ()->arch ();
+  if (gdbarch_rocm_find_memory_regions_p (arch))
+    return gdbarch_rocm_find_memory_regions (arch, fun, arg);
+
+  return 0;
 }
 
 gdb::unique_xmalloc_ptr<char>
