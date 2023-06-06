@@ -2810,6 +2810,50 @@ amd_dbgapi_remove_breakpoint_callback
   return AMD_DBGAPI_STATUS_SUCCESS;
 }
 
+/* xfer_global_memory callback.  */
+
+static amd_dbgapi_status_t
+amd_dbgapi_xfer_global_memory_callback
+  (amd_dbgapi_client_process_id_t client_process_id,
+   amd_dbgapi_global_address_t global_address,
+   amd_dbgapi_size_t *value_size, void *read_buffer,
+   const void *write_buffer)
+{
+  if ((read_buffer != nullptr) == (write_buffer != nullptr))
+    return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT_COMPATIBILITY;
+
+  inferior *inf = reinterpret_cast<inferior *> (client_process_id);
+
+  /* We need to set inferior_ptid / current_inferior as those are
+     used by the target which will process the xfer_partial request.
+
+     Note that end up here when dbgapi tries to access device memory or
+     register content which are at this point mapped/saved in the host
+     process memory.  As a consequence, unwinding GPU frames will most
+     likely call into here.  If we used switch_to_thread to select a host
+     thread, this would implicitly call reinit_frame_cache.  We do not want
+     to clear the frame cache while trying to build it.  */
+  scoped_restore save_inferior_ptid = make_scoped_restore (&inferior_ptid);
+  scoped_restore_current_inferior restore_current_inferior;
+  inferior_ptid = ptid_t (inf->pid);
+  set_current_inferior (inf);
+
+  target_xfer_status status
+    = target_xfer_partial (inf->top_target (), TARGET_OBJECT_RAW_MEMORY,
+			   nullptr, static_cast<gdb_byte *> (read_buffer),
+			   static_cast<const gdb_byte *> (write_buffer),
+			   global_address, *value_size, value_size);
+
+  if (status == TARGET_XFER_EOF)
+    return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
+  else if (status == TARGET_XFER_UNAVAILABLE)
+    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+  else if (status != TARGET_XFER_OK)
+    return AMD_DBGAPI_STATUS_ERROR_MEMORY_ACCESS;
+
+  return AMD_DBGAPI_STATUS_SUCCESS;
+}
+
 /* signal_received observer.  */
 
 static void
@@ -2927,6 +2971,7 @@ static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   .get_os_pid = amd_dbgapi_get_os_pid_callback,
   .insert_breakpoint = amd_dbgapi_insert_breakpoint_callback,
   .remove_breakpoint = amd_dbgapi_remove_breakpoint_callback,
+  .xfer_global_memory = amd_dbgapi_xfer_global_memory_callback,
   .log_message = amd_dbgapi_log_message_callback,
 };
 
