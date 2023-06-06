@@ -20480,6 +20480,8 @@ get_amdgpu_elf_note_type (unsigned int e_type)
     {
     case NT_AMDGPU_METADATA:
       return _("NT_AMDGPU_METADATA (code object metadata)");
+    case NT_AMDGPU_CORE_STATE:
+      return _("NT_AMDGPU_CORE_STATE (core state)");
     default:
       {
 	static char buf[64];
@@ -22224,7 +22226,7 @@ dump_msgpack (const msgpack_unpacked *msg)
 #endif /* defined HAVE_MSGPACK */
 
 static bool
-print_amdgpu_note (Elf_Internal_Note *pnote)
+print_amdgpu_metadata_note (Elf_Internal_Note *pnote)
 {
 #if defined HAVE_MSGPACK
   /* If msgpack is available, decode and dump the note's content.  */
@@ -22261,6 +22263,108 @@ print_amdgpu_note (Elf_Internal_Note *pnote)
 }
 
 static bool
+print_amdgpu_core_state (Elf_Internal_Note *pnote)
+{
+  const unsigned char *head = (const unsigned char *) pnote->descdata;
+  unsigned long i, j;
+  uint64_t note_version;
+  uint32_t kfd_major, kfd_minor;
+  uint64_t runtime_snapshot_size;
+  uint32_t n_agents, agent_snapshot_size;
+  uint32_t n_queues, queues_snapshot_size;
+
+  /* The header of the node consist of:
+
+     u64 note_version
+     u32 kfd_major
+     u32 kfd_minor
+     u64 runtime_snapshot_size
+     u32 n_agents
+     u32 agent_snapshot_size
+     u32 n_queues
+     u32 queues_snapshot_size
+
+     so 40 bytes in total.  */
+  if (pnote->descsz < 40)
+    goto invalid_amdgpu_note;
+
+  note_version = byte_get (head, sizeof (note_version));
+  head += sizeof (note_version);
+  if (note_version != 1)
+    goto invalid_amdgpu_note;
+
+  kfd_major = byte_get (head, sizeof (kfd_major));
+  head += sizeof (kfd_major);
+  kfd_minor = byte_get (head, sizeof (kfd_minor));
+  head += sizeof (kfd_minor);
+  runtime_snapshot_size = byte_get (head, sizeof (runtime_snapshot_size));
+  head += sizeof (runtime_snapshot_size);
+  n_agents = byte_get (head, sizeof (n_agents));
+  head += sizeof (n_agents);
+  agent_snapshot_size = byte_get (head, sizeof (agent_snapshot_size));
+  head += sizeof (agent_snapshot_size);
+  n_queues = byte_get (head, sizeof (n_queues));
+  head += sizeof (n_queues);
+  queues_snapshot_size = byte_get (head, sizeof (queues_snapshot_size));
+  head += sizeof (queues_snapshot_size);
+
+  /* Ensure that the note is large enough to contain the advertised
+     information.  */
+  if (pnote->descsz != (40 + runtime_snapshot_size
+			+ n_agents * agent_snapshot_size
+			+ n_queues * queues_snapshot_size))
+    goto invalid_amdgpu_note;
+
+  printf (_("    KFD version: %u.%u\n"), kfd_major, kfd_minor);
+  printf (_("    Runtime snapshot: "));
+  for (i = 0; i < runtime_snapshot_size; ++i)
+    printf ("%02x%c", *++head & 0xff,
+	    i == runtime_snapshot_size - 1 ? '\n' : ' ');
+
+  /* Agents snapshots.  */
+  printf (_("    %u agent%s:\n"), n_agents, (n_agents > 1 ? "s" : ""));
+  for (i = 0; i < n_agents; ++i)
+    {
+      printf ("      ");
+      for (j = 0; j < agent_snapshot_size; ++j)
+	printf ("%02x ", *++head & 0xff);
+      printf ("\n");
+    }
+
+  /* Queues snapshots.  */
+  printf (_("    %u queue%s:\n"), n_queues, (n_queues > 1 ? "s" : ""));
+  for (i = 0; i < n_queues; ++i)
+    {
+      printf ("      ");
+      for (j = 0; j < queues_snapshot_size; ++j)
+	printf ("%02x ", *++head & 0xff);
+      printf ("\n");
+    }
+
+  return true;
+
+invalid_amdgpu_note:
+  printf (_("   invalid data: "));
+  for (i = 0; i < pnote->descsz; i++)
+    printf ("%02x ", pnote->descdata[i] & 0xff);
+  printf ("\n");
+  return false;
+}
+
+static bool
+print_amdgpu_note (Elf_Internal_Note *pnote)
+{
+  if (pnote->type == NT_AMDGPU_METADATA)
+    return print_amdgpu_metadata_note (pnote);
+  else if (pnote->type == NT_AMDGPU_CORE_STATE)
+    return print_amdgpu_core_state (pnote);
+
+  /* For unknown note types, just print the hex content.  */
+  print_note_contents_hex (pnote);
+  return true;
+}
+
+static bool
 print_qnx_note (Elf_Internal_Note *pnote)
 {
   switch (pnote->type)
@@ -22287,7 +22391,6 @@ desc_size_fail:
   error (_("corrupt QNX note: data size is too small\n"));
   return false;
 }
-
 
 /* Note that by the ELF standard, the name field is already null byte
    terminated, and namesz includes the terminating null byte.
@@ -22390,8 +22493,7 @@ process_note (Elf_Internal_Note *  pnote,
 	   && (pnote->type == NT_GNU_BUILD_ATTRIBUTE_OPEN
 	       || pnote->type == NT_GNU_BUILD_ATTRIBUTE_FUNC))
     return print_gnu_build_attribute_description (pnote, filedata);
-  else if (startswith (pnote->namedata, "AMDGPU")
-	   && pnote->type == NT_AMDGPU_METADATA)
+  else if (startswith (pnote->namedata, "AMDGPU"))
     return print_amdgpu_note (pnote);
   else if (startswith (pnote->namedata, "QNX"))
     return print_qnx_note (pnote);
