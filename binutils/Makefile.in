@@ -130,8 +130,8 @@ bin_PROGRAMS = $(am__EXEEXT_5) $(am__EXEEXT_6) $(am__EXEEXT_7) \
 	$(am__EXEEXT_8) $(am__EXEEXT_9) $(am__EXEEXT_10) \
 	@BUILD_SRCONV@ @BUILD_DLLTOOL@ @BUILD_WINDRES@ @BUILD_WINDMC@ \
 	$(am__EXEEXT_11) $(am__EXEEXT_12) $(am__EXEEXT_13) \
-	@BUILD_DLLWRAP@ $(am__empty)
-noinst_PROGRAMS = $(am__EXEEXT_17) $(am__EXEEXT_21) @BUILD_MISC@
+	$(am__EXEEXT_14) @BUILD_DLLWRAP@
+noinst_PROGRAMS = $(am__EXEEXT_18) $(am__EXEEXT_22) @BUILD_MISC@
 EXTRA_PROGRAMS = srconv$(EXEEXT) sysdump$(EXEEXT) coffdump$(EXEEXT) \
 	$(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 	$(am__EXEEXT_4)
@@ -188,16 +188,17 @@ am__EXEEXT_10 = objcopy$(EXEEXT)
 am__EXEEXT_11 = addr2line$(EXEEXT)
 am__EXEEXT_12 = readelf$(EXEEXT)
 am__EXEEXT_13 = elfedit$(EXEEXT)
+am__EXEEXT_14 = coremerge$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(infodir)" "$(DESTDIR)$(man1dir)"
-am__EXEEXT_14 = nm-new$(EXEEXT)
-am__EXEEXT_15 = strip-new$(EXEEXT)
-am__EXEEXT_16 = cxxfilt$(EXEEXT)
-am__EXEEXT_17 = $(am__EXEEXT_14) $(am__EXEEXT_15) $(am__EXEEXT_16)
-am__EXEEXT_18 = bfdtest1$(EXEEXT)
-am__EXEEXT_19 = bfdtest2$(EXEEXT)
-am__EXEEXT_20 = testsuite/gentestdlls$(EXEEXT)
-am__EXEEXT_21 = $(am__EXEEXT_18) $(am__EXEEXT_19) $(am__EXEEXT_20)
+am__EXEEXT_15 = nm-new$(EXEEXT)
+am__EXEEXT_16 = strip-new$(EXEEXT)
+am__EXEEXT_17 = cxxfilt$(EXEEXT)
+am__EXEEXT_18 = $(am__EXEEXT_15) $(am__EXEEXT_16) $(am__EXEEXT_17)
+am__EXEEXT_19 = bfdtest1$(EXEEXT)
+am__EXEEXT_20 = bfdtest2$(EXEEXT)
+am__EXEEXT_21 = testsuite/gentestdlls$(EXEEXT)
+am__EXEEXT_22 = $(am__EXEEXT_19) $(am__EXEEXT_20) $(am__EXEEXT_21)
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am__objects_1 = bucomm.$(OBJEXT) version.$(OBJEXT) filemode.$(OBJEXT)
 am_addr2line_OBJECTS = addr2line.$(OBJEXT) $(am__objects_1)
@@ -222,6 +223,8 @@ am_coffdump_OBJECTS = coffdump.$(OBJEXT) coffgrok.$(OBJEXT) \
 	$(am__objects_1)
 coffdump_OBJECTS = $(am_coffdump_OBJECTS)
 coffdump_LDADD = $(LDADD)
+am_coremerge_OBJECTS = coremerge.$(OBJEXT) $(am__objects_1)
+coremerge_OBJECTS = $(am_coremerge_OBJECTS)
 am_cxxfilt_OBJECTS = cxxfilt.$(OBJEXT) $(am__objects_1)
 cxxfilt_OBJECTS = $(am_cxxfilt_OBJECTS)
 cxxfilt_LDADD = $(LDADD)
@@ -371,12 +374,12 @@ am__v_YACC_ = $(am__v_YACC_@AM_DEFAULT_V@)
 am__v_YACC_0 = @echo "  YACC    " $@;
 am__v_YACC_1 = 
 SOURCES = $(addr2line_SOURCES) $(ar_SOURCES) $(EXTRA_ar_SOURCES) \
-	bfdtest1.c bfdtest2.c $(coffdump_SOURCES) $(cxxfilt_SOURCES) \
-	$(dlltool_SOURCES) $(dllwrap_SOURCES) $(elfedit_SOURCES) \
-	$(nm_new_SOURCES) $(objcopy_SOURCES) $(objdump_SOURCES) \
-	$(EXTRA_objdump_SOURCES) $(ranlib_SOURCES) $(readelf_SOURCES) \
-	$(size_SOURCES) $(srconv_SOURCES) $(strings_SOURCES) \
-	$(strip_new_SOURCES) $(sysdump_SOURCES) \
+	bfdtest1.c bfdtest2.c $(coffdump_SOURCES) $(coremerge_SOURCES) \
+	$(cxxfilt_SOURCES) $(dlltool_SOURCES) $(dllwrap_SOURCES) \
+	$(elfedit_SOURCES) $(nm_new_SOURCES) $(objcopy_SOURCES) \
+	$(objdump_SOURCES) $(EXTRA_objdump_SOURCES) $(ranlib_SOURCES) \
+	$(readelf_SOURCES) $(size_SOURCES) $(srconv_SOURCES) \
+	$(strings_SOURCES) $(strip_new_SOURCES) $(sysdump_SOURCES) \
 	testsuite/gentestdlls.c $(windmc_SOURCES) $(windres_SOURCES)
 AM_V_DVIPS = $(am__v_DVIPS_@AM_V@)
 am__v_DVIPS_ = $(am__v_DVIPS_@AM_DEFAULT_V@)
@@ -684,6 +687,7 @@ WINDRES_PROG = windres
 WINDMC_PROG = windmc
 DLLWRAP_PROG = dllwrap
 SRCONV_PROG = srconv$(EXEEXT) sysdump$(EXEEXT) coffdump$(EXEEXT)
+COREMERGE_PROC = coremerge
 bin_SCRIPTS = @BUILD_INSTALL_MISC@
 EXTRA_SCRIPTS = embedspu
 BFDTEST1_PROG = bfdtest1
@@ -722,7 +726,7 @@ CFILES = \
 	objcopy.c objdump.c prdbg.c \
 	od-elf32_avr.c od-macho.c od-pe.c od-xcoff.c \
 	rclex.c rdcoff.c rddbg.c readelf.c rename.c \
-	resbin.c rescoff.c resrc.c resres.c \
+	resbin.c rescoff.c resrc.c resres.c coremerge.c \
 	size.c srconv.c stabs.c strings.c sysdump.c \
 	syslex_wrap.c unwind-ia64.c elfedit.c version.c \
 	windres.c winduni.c wrstabs.c \
@@ -791,6 +795,7 @@ elfedit_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 dllwrap_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 bfdtest1_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 bfdtest2_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+coremerge_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL)
 size_SOURCES = size.c $(BULIBS)
 objcopy_SOURCES = objcopy.c not-strip.c rename.c $(WRITE_DEBUG_SRCS) $(BULIBS)
@@ -815,6 +820,8 @@ ranlib_SOURCES = ar.c is-ranlib.c arparse.y arlex.l arsup.c rename.c \
 
 ranlib_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
 addr2line_SOURCES = addr2line.c $(BULIBS)
+coremerge_SOURCES = coremerge.c $(BULIBS)
+coremerge_LDADD = $(BFDLIB) $(LIBIBERTY)  $(LIBINTL) -lm
 srconv_SOURCES = srconv.c coffgrok.c $(BULIBS)
 dlltool_SOURCES = dlltool.c defparse.y deflex.l $(BULIBS)
 dlltool_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
@@ -1020,6 +1027,10 @@ coffdump$(EXEEXT): $(coffdump_OBJECTS) $(coffdump_DEPENDENCIES) $(EXTRA_coffdump
 	@rm -f coffdump$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(coffdump_OBJECTS) $(coffdump_LDADD) $(LIBS)
 
+coremerge$(EXEEXT): $(coremerge_OBJECTS) $(coremerge_DEPENDENCIES) $(EXTRA_coremerge_DEPENDENCIES) 
+	@rm -f coremerge$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(coremerge_OBJECTS) $(coremerge_LDADD) $(LIBS)
+
 cxxfilt$(EXEEXT): $(cxxfilt_OBJECTS) $(cxxfilt_DEPENDENCIES) $(EXTRA_cxxfilt_DEPENDENCIES) 
 	@rm -f cxxfilt$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(cxxfilt_OBJECTS) $(cxxfilt_LDADD) $(LIBS)
@@ -1159,6 +1170,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bucomm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coffdump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coffgrok.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coremerge.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cxxfilt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/deflex.Po@am__quote@
