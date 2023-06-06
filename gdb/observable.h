@@ -254,6 +254,9 @@ extern observable <program_space */* pspace */> new_program_space;
 /* The program space PSPACE is about to be deleted.  */
 extern observable <program_space */* pspace */> free_program_space;
 
+/* Called when GDB has opened a core dump.  */
+extern observable <inferior * /* inf */ > core_opened;
+
 } /* namespace observers */
 
 } /* namespace gdb */
