@@ -1590,9 +1590,14 @@ dbgapi_notifier_handler (int err, gdb_client_data client_data)
 	  info->runtime_state = runtime_state;
 	  amd_dbgapi_debug_printf ("pushing amd-dbgapi target");
 	  info->inf->push_target (&the_amd_dbgapi_target);
-	  insert_initial_watchpoints (info);
 
-	  set_wave_creation_mode (info->inf->prevent_new_threads (), info->inf);
+	  if (info->inf->pspace->cbfd == nullptr)
+	    {
+	      insert_initial_watchpoints (info);
+
+	      set_wave_creation_mode (info->inf->prevent_new_threads (),
+				      info->inf);
+	    }
 
 	  /* The underlying target will already be async if we are running, but not if
 	     we are attaching.  */
@@ -2183,7 +2188,7 @@ attach_amd_dbgapi (inferior *inf)
   scoped_restore_current_thread restore_thread;
   switch_to_inferior_no_thread (inf);
 
-  if (!target_can_async_p ())
+  if (!target_can_async_p () && inf->pspace->cbfd == nullptr)
     {
       warning (_("The amd-dbgapi target requires the target beneath to be "
 		 "asynchronous, GPU debugging is disabled"));
@@ -2280,8 +2285,12 @@ detach_amd_dbgapi (inferior *inf)
     warning (_("amd-dbgapi: could not detach from process %d (%s)"),
 	     inf->pid, get_status_string (status));
 
-  gdb_assert (info->notifier != -1);
-  delete_file_handler (info->notifier);
+  /* When debugging a corefile, the notifier is not initialized.  */
+  if (info->notifier != -1)
+    {
+      delete_file_handler (info->notifier);
+      info->notifier = -1;
+    }
 
   /* This is a noop if the target is not pushed.  */
   inf->unpush_target (&the_amd_dbgapi_target);
@@ -2660,11 +2669,11 @@ static void
 amd_dbgapi_target_inferior_created (inferior *inf)
 {
   /* If the inferior is not running on the native target (e.g. it is running
-     on a remote target), we don't want to deal with it.  */
-  if (inf->process_target () != get_native_target ())
-    return;
-
-  attach_amd_dbgapi (inf);
+     on a remote target) or we are not dealing with a core dump, we don't
+     want to deal with it.  */
+  if (inf->process_target () == get_native_target ()
+      || inf->pspace->cbfd != nullptr)
+    attach_amd_dbgapi (inf);
 }
 
 /* Callback called when an inferior is cloned.  */
@@ -2780,7 +2789,39 @@ amd_dbgapi_client_process_get_info_callback
 	  return AMD_DBGAPI_STATUS_SUCCESS;
 	}
     case AMD_DBGAPI_CLIENT_PROCESS_INFO_CORE_STATE:
-      return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+	{
+	  if (inf->pspace->cbfd == nullptr)
+	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+
+	  const char *pseudo_sec_name = ".note.amdgpu.core_state";
+	  bfd_section *section
+	    = bfd_get_section_by_name (inf->pspace->cbfd.get (),
+				       pseudo_sec_name);
+
+	  if (section == nullptr)
+	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+
+	  bfd_size_type note_size = bfd_section_size (section);
+	  if (note_size == 0)
+	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+
+	  gdb::unique_xmalloc_ptr<char> contents
+	    ((char *) xmalloc (note_size));
+	  if (!bfd_get_section_contents (inf->pspace->cbfd.get (), section,
+					 contents.get (), (file_ptr) 0,
+					 note_size))
+	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+
+	  amd_dbgapi_core_state_data_t *data
+	    = reinterpret_cast<amd_dbgapi_core_state_data_t *> (value);
+	  data->endianness = (bfd_big_endian (inf->pspace->cbfd.get ())
+			      ? AMD_DBGAPI_ENDIAN_BIG
+			      : AMD_DBGAPI_ENDIAN_LITTLE);
+	  data->size = note_size;
+	  data->data = contents.release ();
+
+	  return AMD_DBGAPI_STATUS_SUCCESS;
+	}
     }
   return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
 }
