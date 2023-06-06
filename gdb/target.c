@@ -4322,6 +4322,12 @@ target_done_generating_core (void)
   current_inferior ()->top_target ()->done_generating_core ();
 }
 
+bool
+target_dump_thread_in_corefile (ptid_t ptid)
+{
+  return current_inferior ()->top_target ()->dump_thread_in_corefile (ptid);
+}
+
 
 
 static char targ_desc[] =

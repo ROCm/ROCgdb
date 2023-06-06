@@ -357,6 +357,8 @@ struct amd_dbgapi_target final : public target_ops
   void prepare_to_generate_core () override;
   void done_generating_core () override;
 
+  bool dump_thread_in_corefile (ptid_t ptid) override;
+
 private:
   /* True if we must report thread events.  */
   bool m_report_thread_events = false;
@@ -3143,6 +3145,14 @@ amd_dbgapi_target::done_generating_core ()
   amd_dbgapi_status_t status = amd_dbgapi_process_unfreeze (process_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     warning (_("amd-dbgapi failed to unfreeze process"));
+}
+
+bool
+amd_dbgapi_target::dump_thread_in_corefile (ptid_t ptid)
+{
+  if (ptid_is_gpu (ptid))
+    return false;
+  return beneath ()->dump_thread_in_corefile (ptid);
 }
 
 void

@@ -783,6 +783,11 @@ struct target_ops
     /* make_corefile_notes support method for gcore */
     virtual gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *)
       TARGET_DEFAULT_FUNC (dummy_make_corefile_notes);
+    /* Return true if gcore_elf_build_thread_register_notes should
+       describe the thread identified by PTID in the thread register
+       notes.  */
+    virtual bool dump_thread_in_corefile (ptid_t ptid)
+      TARGET_DEFAULT_RETURN (true);
     /* get_bookmark support method for bookmarks */
     virtual gdb_byte *get_bookmark (const char *, int)
       TARGET_DEFAULT_NORETURN (tcomplain ());
@@ -2638,5 +2643,8 @@ extern void target_prepare_to_generate_core (void);
 
 /* See to_done_generating_core.  */
 extern void target_done_generating_core (void);
+
+/* See dump_thread_in_corefile.  */
+extern bool target_dump_thread_in_corefile (ptid_t ptid);
 
 #endif /* !defined (TARGET_H) */
