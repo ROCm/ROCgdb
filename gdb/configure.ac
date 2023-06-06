@@ -279,7 +279,7 @@ if test "$gdb_require_amd_dbgapi" = true \
   # stability until amd-dbgapi hits 1.0, but for convenience, still check for
   # greater or equal that version.  It can be handy when testing with a newer
   # version of the library.
-  PKG_CHECK_MODULES([AMD_DBGAPI], [amd-dbgapi >= 0.72.0],
+  PKG_CHECK_MODULES([AMD_DBGAPI], [amd-dbgapi >= 0.74.0],
 		    [has_amd_dbgapi=yes], [has_amd_dbgapi=no])
 
   if test "$has_amd_dbgapi" = "yes"; then
