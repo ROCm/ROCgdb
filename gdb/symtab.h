@@ -58,12 +58,6 @@ class probe;
 struct lookup_name_info;
 struct code_breakpoint;
 
-/* Like a CORE_ADDR, but not directly convertible.  This is used to
-   represent an unrelocated CORE_ADDR.  DEFINE_OFFSET_TYPE is not used
-   here because there's no need to add or subtract values of this
-   type.  */
-enum class unrelocated_addr : CORE_ADDR { };
-
 /* How to match a lookup name against a symbol search name.  */
 enum class symbol_name_match_type
 {
@@ -1053,11 +1047,11 @@ enum address_class
      without possibly having its address available for LOC_STATIC.  Testcase
      is provided as `gdb.dwarf2/dw2-unresolved.exp'.
 
-     This is also used for thread local storage (TLS) variables.  In this case,
-     the address of the TLS variable must be determined when the variable is
-     referenced, from the MSYMBOL_VALUE_RAW_ADDRESS, which is the offset
-     of the TLS variable in the thread local storage of the shared
-     library/object.  */
+     This is also used for thread local storage (TLS) variables.  In
+     this case, the address of the TLS variable must be determined
+     when the variable is referenced, from the msymbol's address,
+     which is the offset of the TLS variable in the thread local
+     storage of the shared library/object.  */
 
   LOC_UNRESOLVED,
 
@@ -1583,11 +1577,11 @@ struct rust_vtable_symbol : public symbol
 struct linetable_entry
 {
   /* Set the (unrelocated) PC for this entry.  */
-  void set_raw_pc (unrelocated_addr pc)
+  void set_unrelocated_pc (unrelocated_addr pc)
   { m_pc = pc; }
 
   /* Return the unrelocated PC for this entry.  */
-  unrelocated_addr raw_pc () const
+  unrelocated_addr unrelocated_pc () const
   { return m_pc; }
 
   /* Return the relocated PC for this entry.  */
@@ -1615,6 +1609,8 @@ struct linetable_entry
   /* True if this location is a good location to place a breakpoint after a
      function prologue.  */
   bool prologue_end : 1;
+
+private:
 
   /* The address for this entry.  */
   unrelocated_addr m_pc;

@@ -1039,7 +1039,7 @@ May return 0 when unable to determine that address.""",
 )
 
 
-# The DWARF info currently does not distinquish between IEEE 128-bit floating
+# The DWARF info currently does not distinguish between IEEE 128-bit floating
 # point values and the IBM 128-bit floating point format.  GCC has an internal
 # hack to identify the IEEE 128-bit floating point value.  The long double is a
 # defined base type in C.  The GCC hack uses a typedef for long double to
@@ -1209,7 +1209,7 @@ Value(
 
 Value(
     comment="""
-A function can be addressed by either it's "pointer" (possibly a
+A function can be addressed by either its "pointer" (possibly a
 descriptor address) or "entry point" (first executable instruction).
 The method "convert_from_func_ptr_addr" converting the former to the
 latter.  gdbarch_deprecated_function_start_offset is being used to implement

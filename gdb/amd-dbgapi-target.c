@@ -2190,7 +2190,7 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
 
   /* If the register has read-only bits, invalidate the value in the regcache
-     as the value actualy written may differ.  */
+     as the value actually written may differ.  */
   if (tdep->register_properties[regno]
       & AMD_DBGAPI_REGISTER_PROPERTY_READONLY_BITS)
     regcache->invalidate (regno);
@@ -2778,7 +2778,7 @@ amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 	    = string_printf ("(%d,%d,%d)/%d", group_ids[0], group_ids[1],
 			     group_ids[2], wave_in_group);
 
-	  return value_cstring (wave_id_str.data (), wave_id_str.length () + 1,
+	  return value_cstring (wave_id_str.data (), wave_id_str.length (),
 				builtin_type (gdbarch)->builtin_char);
 	}
     }
