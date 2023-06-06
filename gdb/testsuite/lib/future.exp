@@ -188,6 +188,16 @@ proc gdb_find_eu-unstrip {} {
     return $eu_unstrip
 }
 
+proc gdb_find_coremerge {} {
+    global COREMERGE_FOR_TARGET
+    if [info exists COREMERGE_FOR_TARGET] {
+	set coremerge $COREMERGE_FOR_TARGET
+    } else {
+	set coremerge [transform coremerge]
+    }
+    return $coremerge
+}
+
 # Local version of default_target_compile, to be used for languages that
 # dejagnu's default_target_compile doesn't support.
 proc gdb_default_target_compile_1 {source destfile type options} {
