@@ -2341,18 +2341,32 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
-  gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
-  amd_dbgapi_status_t status
-    = amd_dbgapi_read_register (wave_id, tdep->register_ids[regno], 0,
-				register_type (gdbarch, regno)->length (),
-				raw);
 
-  if (status == AMD_DBGAPI_STATUS_SUCCESS)
-    regcache->raw_supply (regno, raw);
-  else if (status != AMD_DBGAPI_STATUS_ERROR_REGISTER_NOT_AVAILABLE)
-    warning (_("Couldn't read register %s (#%d) (%s)."),
-	     gdbarch_register_name (gdbarch, regno), regno,
-	     get_status_string (status));
+  auto fetch_reg
+    = [wave_id, tdep, gdbarch, regcache] (int reg, bool warn = false)
+      {
+	gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+
+	amd_dbgapi_status_t status
+	  = amd_dbgapi_read_register (wave_id, tdep->register_ids[reg], 0,
+				      register_type (gdbarch, reg)->length (),
+				      raw);
+
+	if (status == AMD_DBGAPI_STATUS_SUCCESS)
+	  regcache->raw_supply (reg, raw);
+	else if (status != AMD_DBGAPI_STATUS_ERROR_REGISTER_NOT_AVAILABLE
+		 && warn)
+	  warning (_ ("Couldn't read register %s (#%d)."),
+		   gdbarch_register_name (gdbarch, reg), reg);
+      };
+
+  if (regno == -1)
+    {
+      for (int i = 0; i < gdbarch_num_regs (gdbarch); i++)
+	fetch_reg (i, false);
+    }
+  else
+    fetch_reg (regno, true);
 }
 
 void
