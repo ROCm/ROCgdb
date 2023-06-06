@@ -509,8 +509,7 @@ gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 }
 
 int
-objfile_find_memory_regions (struct target_ops *self,
-			     find_memory_region_ftype func, void *obfd)
+objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 {
   /* Use objfile data to create memory sections.  */
   bfd_vma temp_bottom, temp_top;
