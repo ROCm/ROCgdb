@@ -116,6 +116,7 @@ struct dummy_target : public target_ops
   bool always_non_stop_p () override;
   int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *arg0, int *arg1) override;
+  bool dump_thread_in_corefile (ptid_t arg0) override;
   gdb_byte *get_bookmark (const char *arg0, int arg1) override;
   void goto_bookmark (const gdb_byte *arg0, int arg1) override;
   CORE_ADDR get_thread_local_address (ptid_t arg0, CORE_ADDR arg1, CORE_ADDR arg2) override;
@@ -300,6 +301,7 @@ struct debug_target : public target_ops
   bool always_non_stop_p () override;
   int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *arg0, int *arg1) override;
+  bool dump_thread_in_corefile (ptid_t arg0) override;
   gdb_byte *get_bookmark (const char *arg0, int arg1) override;
   void goto_bookmark (const gdb_byte *arg0, int arg1) override;
   CORE_ADDR get_thread_local_address (ptid_t arg0, CORE_ADDR arg1, CORE_ADDR arg2) override;
@@ -2547,6 +2549,32 @@ debug_target::make_corefile_notes (bfd *arg0, int *arg1)
   target_debug_print_int_p (arg1);
   gdb_puts (") = ", gdb_stdlog);
   target_debug_print_gdb_unique_xmalloc_ptr_char (result);
+  gdb_puts ("\n", gdb_stdlog);
+  return result;
+}
+
+bool
+target_ops::dump_thread_in_corefile (ptid_t arg0)
+{
+  return this->beneath ()->dump_thread_in_corefile (arg0);
+}
+
+bool
+dummy_target::dump_thread_in_corefile (ptid_t arg0)
+{
+  return true;
+}
+
+bool
+debug_target::dump_thread_in_corefile (ptid_t arg0)
+{
+  bool result;
+  gdb_printf (gdb_stdlog, "-> %s->dump_thread_in_corefile (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->dump_thread_in_corefile (arg0);
+  gdb_printf (gdb_stdlog, "<- %s->dump_thread_in_corefile (", this->beneath ()->shortname ());
+  target_debug_print_ptid_t (arg0);
+  gdb_puts (") = ", gdb_stdlog);
+  target_debug_print_bool (result);
   gdb_puts ("\n", gdb_stdlog);
   return result;
 }
