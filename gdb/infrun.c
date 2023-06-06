@@ -101,9 +101,6 @@ static void resume (gdb_signal sig);
 
 static void wait_for_inferior (inferior *inf);
 
-static void restart_threads (struct thread_info *event_thread,
-			     inferior *inf = nullptr);
-
 static bool start_step_over (void);
 
 static bool step_over_info_valid_p (void);
@@ -6606,18 +6603,15 @@ handle_inferior_event (struct execution_control_state *ecs)
     }
 }
 
-/* Restart threads back to what they were trying to do back when we
-   paused them (because of an in-line step-over or vfork, for example).
-   The EVENT_THREAD thread is ignored (not restarted).
+/* See infrun.h.  */
 
-   If INF is non-nullptr, only resume threads from INF.  */
-
-static void
+void
 restart_threads (struct thread_info *event_thread, inferior *inf)
 {
   INFRUN_SCOPED_DEBUG_START_END ("event_thread=%s, inf=%d",
-				 event_thread->ptid.to_string ().c_str (),
-				 inf != nullptr ? inf->num : -1);
+				 (event_thread != nullptr
+				  ? event_thread->ptid.to_string ().c_str ()
+				  : "None"), inf != nullptr ? inf->num : -1);
 
   gdb_assert (!step_over_info_valid_p ());
 

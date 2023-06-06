@@ -186,6 +186,15 @@ extern void nullify_last_target_wait_ptid ();
    all threads of all inferiors.  */
 extern void stop_all_threads (const char *reason, inferior *inf = nullptr);
 
+/* Restart threads back to what they were trying to do back when we
+   paused them (because of an in-line step-over or vfork, for example).
+   The EVENT_THREAD thread, if non-nullptr, is ignored (not restarted).
+
+   If INF is non-nullptr, only resume threads from INF.  */
+
+extern void restart_threads (struct thread_info *event_thread,
+			     inferior *inf = nullptr);
+
 extern void prepare_for_detach (void);
 
 extern void fetch_inferior_event ();

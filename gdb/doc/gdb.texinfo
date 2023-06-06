@@ -14058,6 +14058,11 @@ Produce a core dump of the inferior process.  The optional argument
 specified, the file name defaults to @file{core.@var{pid}}, where
 @var{pid} is the inferior process ID.
 
+@value{GDBN} ensures that all threads of the current inferior are
+stopped while generating the core dump.  If any of the inferior's threads
+are running when executing this command, @value{GDBN} stops the threads
+and resumes them when the command is done.
+
 Note that this command is implemented only for some systems (as of
 this writing, @sc{gnu}/Linux, FreeBSD, Solaris, and S390).
 
