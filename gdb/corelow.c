@@ -55,6 +55,7 @@
 #include "gdbcmd.h"
 #include "xml-tdesc.h"
 #include "memtag.h"
+#include "observable.h"
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -772,6 +773,15 @@ core_target_open (const char *arg, int from_tty)
       set_internalvar_integer (lookup_internalvar ("_exitsignal"),
 			       siggy);
     }
+
+  /* Notify any observers that the core dump has been opened.  This is not
+     done before printing the failing signal because it is expected that
+     observers can choose to select which thread ends up being selected.  When
+     dealing with heterogeneous systems, the selected thread's architecture
+     might not be the same as the host's arch.  As a consequence, calling
+     "gdbarch_gdb_signal_from_target (core_gdbarch, siggy)" would lead to
+     inconsistencies.  */
+  gdb::observers::core_opened.notify (current_inferior ());
 
   /* Fetch all registers from core file.  */
   target_fetch_registers (get_thread_regcache (inferior_thread ()), -1);
