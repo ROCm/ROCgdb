@@ -44,6 +44,7 @@ SECTION
 #include "libiberty.h"
 #include "safe-ctype.h"
 #include "elf-linux-core.h"
+#include "elf/amdgpu.h"
 
 #ifdef CORE_HEADER
 #include CORE_HEADER
@@ -11174,6 +11175,20 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 }
 
 static bool
+elfcore_grok_amdgpu_note (bfd *abfd, Elf_Internal_Note *note)
+{
+  switch (note->type)
+    {
+    case NT_AMDGPU_CORE_STATE:
+      return elfcore_make_note_pseudosection (abfd,
+					      ".note.amdgpu.core_state",
+					      note);
+    default:
+      return true;
+    }
+}
+
+static bool
 elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
 {
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
@@ -13431,7 +13446,8 @@ elf_parse_notes (bfd *abfd, char *buf, size_t size, file_ptr offset,
 	      GROKER_ELEMENT ("QNX", elfcore_grok_nto_note),
 	      GROKER_ELEMENT ("SPU/", elfcore_grok_spu_note),
 	      GROKER_ELEMENT ("GNU", elfobj_grok_gnu_note),
-	      GROKER_ELEMENT ("CORE", elfcore_grok_solaris_note)
+	      GROKER_ELEMENT ("CORE", elfcore_grok_solaris_note),
+	      GROKER_ELEMENT ("AMDGPU", elfcore_grok_amdgpu_note),
 	    };
 #undef GROKER_ELEMENT
 	    int i;
