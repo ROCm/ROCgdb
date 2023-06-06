@@ -3,6 +3,11 @@
 Full documentation for ROCgdb is available at
 [docs.amd.com](https://docs.amd.com/bundle/rocgdb)
 
+## (Unreleased) ROCgdb-14
+### Added
+- Introduce the `coremerge` utility to merge a host core dump and a GPU-only
+  AMDGPU core dump into a unified AMDGPU corefile.
+
 ## (Unreleased) ROCgdb-13
 
 ### Added

@@ -90,7 +90,9 @@ DLLWRAP_PROG=dllwrap
 
 SRCONV_PROG=srconv$(EXEEXT) sysdump$(EXEEXT) coffdump$(EXEEXT)
 
-bin_PROGRAMS = $(SIZE_PROG) $(OBJDUMP_PROG) $(AR_PROG) $(STRINGS_PROG) $(RANLIB_PROG) $(OBJCOPY_PROG) @BUILD_SRCONV@ @BUILD_DLLTOOL@ @BUILD_WINDRES@ @BUILD_WINDMC@ $(ADDR2LINE_PROG) $(READELF_PROG) $(ELFEDIT_PROG) @BUILD_DLLWRAP@
+COREMERGE_PROC=coremerge
+
+bin_PROGRAMS = $(SIZE_PROG) $(OBJDUMP_PROG) $(AR_PROG) $(STRINGS_PROG) $(RANLIB_PROG) $(OBJCOPY_PROG) @BUILD_SRCONV@ @BUILD_DLLTOOL@ @BUILD_WINDRES@ @BUILD_WINDMC@ $(ADDR2LINE_PROG) $(READELF_PROG) $(ELFEDIT_PROG) $(COREMERGE_PROC) @BUILD_DLLWRAP@
 
 bin_SCRIPTS = @BUILD_INSTALL_MISC@
 EXTRA_SCRIPTS = embedspu
@@ -142,7 +144,7 @@ CFILES = \
 	objcopy.c objdump.c prdbg.c \
 	od-elf32_avr.c od-macho.c od-pe.c od-xcoff.c \
 	rclex.c rdcoff.c rddbg.c readelf.c rename.c \
-	resbin.c rescoff.c resrc.c resres.c \
+	resbin.c rescoff.c resrc.c resres.c coremerge.c \
 	size.c srconv.c stabs.c strings.c sysdump.c \
 	syslex_wrap.c unwind-ia64.c elfedit.c version.c \
 	windres.c winduni.c wrstabs.c \
@@ -250,6 +252,7 @@ elfedit_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 dllwrap_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY)
 bfdtest1_DEPENDENCIES =  $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 bfdtest2_DEPENDENCIES =  $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+coremerge_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 
 LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL)
 
@@ -297,6 +300,9 @@ ranlib_SOURCES = ar.c is-ranlib.c arparse.y arlex.l arsup.c rename.c \
 ranlib_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
 
 addr2line_SOURCES = addr2line.c $(BULIBS)
+
+coremerge_SOURCES = coremerge.c $(BULIBS)
+coremerge_LDADD = $(BFDLIB) $(LIBIBERTY)  $(LIBINTL) -lm
 
 # The following is commented out for the conversion to automake.
 # This rule creates a single binary that switches between ar and ranlib
