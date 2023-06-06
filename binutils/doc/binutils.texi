@@ -9,6 +9,11 @@
 @c man end
 
 @copying
+@c man begin COPYRIGHT coremerge
+Copyright @copyright{} 2023 Advanced Micro Devices, Inc.
+
+@c man end
+
 @c man begin COPYRIGHT
 Copyright @copyright{} 1991-2023 Free Software Foundation, Inc.
 
@@ -43,6 +48,7 @@ section entitled ``GNU Free Documentation License''.
 * strings: (binutils)strings.     List printable strings from files.
 * strip: (binutils)strip.         Discard symbols.
 * elfedit: (binutils)elfedit.     Update ELF header and property of ELF files.
+* coremerge: (binutils)coremerge. Merge the CPU and AMDGPU parts of a coredump.
 * windmc: (binutils)windmc.	  Generator for Windows message resources.
 * windres: (binutils)windres.	  Manipulate Windows resources.
 @end direntry
@@ -85,6 +91,9 @@ version @value{VERSION}:
 @table @code
 @item ar
 Create, modify, and extract from archives
+
+@item coremerge
+Merge the CPU amd AMDGPU portions of a coredump
 
 @item nm
 List symbols from object files
@@ -152,6 +161,7 @@ in the section entitled ``GNU Free Documentation License''.
 * dlltool::			Create files needed to build and use DLLs
 * readelf::                     Display the contents of ELF format files
 * elfedit::                     Update ELF header and property of ELF files
+* coremerge::                   Merge the CPU and AMDGPU parts of a coredump
 * Common Options::              Command-line options for all utilities
 * Selecting the Target System:: How these utilities determine the target
 * debuginfod::                  Using binutils with debuginfod
@@ -5459,6 +5469,57 @@ Display the command-line options understood by @command{elfedit}.
 @ignore
 @c man begin SEEALSO elfedit
 readelf(1), and the Info entries for @file{binutils}.
+@c man end
+@end ignore
+
+@node coremerge
+@chapter coremerge
+@cindex AMDGPU coredump
+
+@c man title coremerge joins the CPU amd AMDGPU portions of a coredump
+
+@smallexample
+@c man begin SYNOPSIS coremerge
+coremerge [@option{-f}|@option{--force}]
+          [@option{-V}|@option{--verbose}]
+          [@option{-v}|@option{--versioan}]
+          [@option{-h}|@option{--help}]
+          @var{combined} @var{cpucore} @var{amdgpucore}
+@c man end
+@end smallexample
+
+@c man begin DESCRIPTION coremerge
+When an exception occurs on an AMDGPU device, the ROCr runtime produces
+a GPU core dump, and then the Linux kernel produces a host core dump.
+@command{coremerge} merges the GPU core dump @var{amdgpucore} and the
+corresponding @var{cpucore} host core dump into the unified core dump
+@var{combined}.
+@c man end
+
+@c man begin OPTIONS coremerge
+@table @env
+
+@item -V
+@itemx --verbose
+Produce verbose output.
+
+@item -f
+@item --force
+Override the file @var{combined} if it already exists.
+
+@item -v
+@itemx --version
+Display the version number of @command{coremerge}.
+
+@item -h
+@itemx --help
+Display the command-line options understood by @command{coremerge}.
+@end table
+@c man end
+
+@ignore
+@c man begin SEEALSO coremerge
+gdb(1).
 @c man end
 @end ignore
 

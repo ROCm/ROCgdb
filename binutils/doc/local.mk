@@ -44,6 +44,7 @@ man_MANS = \
 	%D%/elfedit.1 \
 	%D%/windres.1 \
 	%D%/windmc.1 \
+	%D%/coremerge.1 \
 	%D%/$(DEMANGLER_NAME).1
 
 info_TEXINFOS = %D%/binutils.texi
@@ -153,6 +154,13 @@ TEXI2DVI = texi2dvi -I "$(srcdir)/%D%" -I "$(top_srcdir)/../libiberty" \
 	$(AM_V_at)-($(POD2MAN) windmc.pod | sed -e '/^.if n .na/d' > $@.T$$$$ && \
 		mv -f $@.T$$$$ $@) || (rm -f $@.T$$$$ && exit 1)
 	$(AM_V_at)rm -f windmc.pod
+
+%D%/coremerge.1:	$(binutils_TEXI) doc/$(am__dirstamp)
+	$(AM_V_GEN)touch $@
+	$(AM_V_at)-$(TEXI2POD) $(MANCONF) -Dcoremerge < $(binutils_TEXI) > coremerge.pod
+	$(AM_V_at)-($(POD2MAN) coremerge.pod | sed -e '/^.if n .na/d' > $@.T$$$$ && \
+		mv -f $@.T$$$$ $@) || (rm -f $@.T$$$$ && exit 1)
+	$(AM_V_at)rm -f coremerge.pod
 
 %D%/cxxfilt.man:	$(binutils_TEXI) doc/$(am__dirstamp)
 	$(AM_V_GEN)touch $@
