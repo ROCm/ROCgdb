@@ -123,6 +123,18 @@ process_stratum_target::find_memory_regions (find_memory_region_ftype func,
 
 /* See process-stratum-target.h.  */
 
+gdb::unique_xmalloc_ptr<char>
+process_stratum_target::make_corefile_notes (bfd *obfd, int *notes_size)
+{
+  gdbarch *arch = current_inferior ()->arch ();
+  if (gdbarch_make_corefile_notes_p (arch))
+    return gdbarch_make_corefile_notes (arch, obfd, notes_size);
+
+  error (_("Can't create a corefile"));
+}
+
+/* See process-stratum-target.h.  */
+
 void
 process_stratum_target::maybe_add_resumed_with_pending_wait_status
   (thread_info *thread)
