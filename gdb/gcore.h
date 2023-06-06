@@ -26,8 +26,7 @@ struct thread_info;
 
 extern gdb_bfd_ref_ptr create_gcore_bfd (const char *filename);
 extern void write_gcore_file (bfd *obfd);
-extern int objfile_find_memory_regions (struct target_ops *self,
-					find_memory_region_ftype func,
+extern int objfile_find_memory_regions (find_memory_region_ftype func,
 					void *obfd);
 
 /* Find the signalled thread.  In case there's more than one signalled

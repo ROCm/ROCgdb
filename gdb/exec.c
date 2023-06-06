@@ -1059,7 +1059,7 @@ exec_target::make_corefile_notes (bfd *obfd, int *note_size)
 int
 exec_target::find_memory_regions (find_memory_region_ftype func, void *data)
 {
-  return objfile_find_memory_regions (this, func, data);
+  return objfile_find_memory_regions (func, data);
 }
 
 void _initialize_exec ();
