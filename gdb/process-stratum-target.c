@@ -21,6 +21,7 @@
 #include "process-stratum-target.h"
 #include "inferior.h"
 #include <algorithm>
+#include "gcore.h"
 
 process_stratum_target::~process_stratum_target ()
 {
@@ -105,6 +106,19 @@ process_stratum_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
       child_inf->push_target (this);
       add_thread_silent (this, child_ptid);
     }
+}
+
+/* See process-stratum-target.h.  */
+
+int
+process_stratum_target::find_memory_regions (find_memory_region_ftype func,
+					     void *arg)
+{
+  gdbarch *arch = current_inferior ()->arch ();
+  if (gdbarch_find_memory_regions_p (arch))
+    return gdbarch_find_memory_regions (arch, func, arg);
+
+  return objfile_find_memory_regions (func, arg);
 }
 
 /* See process-stratum-target.h.  */
