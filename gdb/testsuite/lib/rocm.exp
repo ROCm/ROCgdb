@@ -481,3 +481,47 @@ proc hip_device_is_less_than { version } {
 
   return $res
 }
+
+# Helper function for rocm_core_find.
+
+proc rocm_core_find_1 {coredir binfile {arg ""}} {
+    set destcore [core_find_1 $coredir $binfile $arg]
+    set gpucore "$binfile.gpucore"
+
+    # Search for a GPU core dump, if any.
+    set gpucore_list [glob -nocomplain -directory $coredir gpucore.*]
+    if {[llength $gpucore_list] == 1} {
+	remote_exec build "mv [lindex $gpucore_list 0] $gpucore"
+    } else {
+	return ""
+    }
+
+    # If we have both host and GPU cores, they need to be merged together.
+    if {[remote_file build exists $destcore]
+	    && [remote_file build exists $gpucore]} {
+	set coremerge [gdb_find_coremerge]
+	remote_exec build "mv $destcore $binfile.hostcore"
+	remote_exec build "$coremerge $destcore $binfile.hostcore $gpucore"
+
+	if {![remote_file build exists $destcore]} {
+	    warning "Could not join host and AMDGPU cores.  Check COREMERGE."
+	}
+    }
+
+    if {![remote_file build exists $destcore]} {
+	return ""
+    }
+    return $destcore
+}
+
+# Variant of the core_find proc for rocm.
+#
+# When using ROCm, if a fault is detected on the GPU, the runtime generates a
+# core dump containing all GPU related data, then aborts and let the kernel
+# generate a "regular" host-side core dump.  This proc looks for the GPU core
+# dump and merges it with the CPU core dump found by core_find.  If either
+# of the GPU and host core dump is missing, return an empty string.
+
+proc rocm_core_find {binfile {deletefiles {}} {arg ""}} {
+    return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg]
+}
