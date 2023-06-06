@@ -1125,6 +1125,7 @@ COMMON_SFILES = \
 	jit.c \
 	language.c \
 	linespec.c \
+	local-fileio-target.c \
 	location.c \
 	m2-lang.c \
 	m2-typeprint.c \
@@ -1394,6 +1395,7 @@ HFILES_NO_SRCDIR = \
 	linux-nat.h \
 	linux-record.h \
 	linux-tdep.h \
+	local-fileio-target.h \
 	location.h \
 	loongarch-tdep.h \
 	m2-lang.h \

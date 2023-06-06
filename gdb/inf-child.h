@@ -22,12 +22,14 @@
 
 #include "target.h"
 #include "process-stratum-target.h"
+#include "local-fileio-target.h"
 
 /* A prototype child target.  The client can override it with local
    methods.  */
 
 class inf_child_target
-  : public memory_breakpoint_target<process_stratum_target>
+  : public memory_breakpoint_target
+	<local_fileio_target<process_stratum_target>>
 {
 public:
   inf_child_target () = default;
@@ -73,21 +75,6 @@ public:
 
   const char *pid_to_exec_file (int pid) override;
 
-  int fileio_open (struct inferior *inf, const char *filename,
-		   int flags, int mode, int warn_if_slow,
-		   fileio_error *target_errno) override;
-  int fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
-		     ULONGEST offset, fileio_error *target_errno) override;
-  int fileio_pread (int fd, gdb_byte *read_buf, int len,
-		    ULONGEST offset, fileio_error *target_errno) override;
-  int fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno) override;
-  int fileio_close (int fd, fileio_error *target_errno) override;
-  int fileio_unlink (struct inferior *inf,
-		     const char *filename,
-		     fileio_error *target_errno) override;
-  std::optional<std::string> fileio_readlink (struct inferior *inf,
-					      const char *filename,
-					      fileio_error *target_errno) override;
   bool use_agent (bool use) override;
 
   bool can_use_agent () override;
