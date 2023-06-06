@@ -7,6 +7,7 @@ Full documentation for ROCgdb is available at
 ### Added
 - Introduce the `coremerge` utility to merge a host core dump and a GPU-only
   AMDGPU core dump into a unified AMDGPU corefile.
+- Support for generating and opening core files for heterogeneous processes.
 
 ## (Unreleased) ROCgdb-13
 
