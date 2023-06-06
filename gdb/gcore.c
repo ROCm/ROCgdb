@@ -34,6 +34,7 @@
 #include "regset.h"
 #include "gdb_bfd.h"
 #include "readline/tilde.h"
+#include "infrun.h"
 #include <algorithm>
 #include "gdbsupport/gdb_unlinker.h"
 #include "gdbsupport/byte-vector.h"
@@ -124,6 +125,28 @@ gcore_command (const char *args, int from_tty)
   if (!target_has_execution ())
     noprocess ();
 
+  scoped_restore_current_thread restore_current_thread;
+  scoped_disable_commit_resumed disable_commit_resume ("generating coredump");
+  struct inferior *inf = current_inferior ();
+  scoped_finish_thread_state finish_state (inf->process_target (),
+					   ptid_t (inf->pid));
+
+  bool all_stop_was_running = false;
+  if (exists_non_stop_target ())
+    stop_all_threads ("generating coredump", inf);
+  else
+    {
+      all_stop_was_running = any_thread_of_inferior (inf)->executing ();
+
+      if (all_stop_was_running)
+	{
+	  if (!may_stop)
+	    error (_("Cannot stop the target to generate the core dump."));
+
+	  target_stop_and_wait (ptid_t (inf->pid));
+	}
+    }
+
   if (args && *args)
     corefilename.reset (tilde_expand (args));
   else
@@ -154,6 +177,13 @@ gcore_command (const char *args, int from_tty)
     }
 
   gdb_printf ("Saved corefile %s\n", corefilename.get ());
+
+  if (exists_non_stop_target ())
+    restart_threads (nullptr, inf);
+  else if (all_stop_was_running)
+    target_resume (ptid_t (inf->pid), 0, GDB_SIGNAL_0);
+
+  disable_commit_resume.reset_and_commit ();
 }
 
 static enum bfd_architecture

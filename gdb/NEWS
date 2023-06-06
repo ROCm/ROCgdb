@@ -3,6 +3,14 @@
 
 *** Changes in GDB 14
 
+* Changed commands
+
+gcore
+generate-core-file
+  GDB now ensures that all threads of the current inferior are stopped
+  before generating a core dump.  At the end of the command, threads are
+  restored to their previous state.
+
 * New remote packets
 
 New stop reason: clone
