@@ -1829,8 +1829,13 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 
 	    /* If the wave is stopped because of a software breakpoint, the
 	       program counter needs to be adjusted so that it points to the
-	       breakpoint instruction.  */
-	    if ((stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0)
+	       breakpoint instruction.
+
+	       When dealing with a corefile, it is expected that the PC has
+	       been adjusted before generating the corefile, so no need to
+	       re-do it now.  */
+	    if ((stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0
+		&& inf->pspace->cbfd == nullptr)
 	      {
 		regcache *regcache = get_thread_regcache (thread);
 		gdbarch *gdbarch = regcache->arch ();
@@ -2169,6 +2174,44 @@ set_process_memory_precision (amd_dbgapi_inferior_info &info)
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_set_memory_precision failed (%s)"),
 	   get_status_string (status));
+}
+
+/* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
+
+static void
+amd_dbgapi_finalize_core_attach (inferior *inf)
+{
+  gdb_assert (inf->pspace->cbfd != nullptr);
+
+  /* If the rocm runtime is not active for this inferior, there's
+     nothing else to do.  */
+  if (!inf->target_is_pushed (&the_amd_dbgapi_target))
+    return;
+
+  auto *info = get_amd_dbgapi_inferior_info (inf);
+  process_event_queue (info->process_id);
+  thread_info *focus_thread = nullptr;
+
+  /* The core target is not async, so all the information process_event_queue
+     might have pulled from dbgapi is now stashed in the inferior info object.
+     Fetch the events and notify the user when appropriate.  */
+  std::pair<ptid_t, target_waitstatus> event;
+  while ((event = consume_one_event (inf->pid)).first != minus_one_ptid)
+    {
+      thread_info *thread = inf->find_thread (event.first);
+      if (event.second.kind () == TARGET_WAITKIND_STOPPED
+	  && event.second.sig () != GDB_SIGNAL_0)
+	{
+	  gdb_printf ("Thread %s (%s) stopped because of %s.\n",
+		      print_thread_id (thread),
+		      the_amd_dbgapi_target.pid_to_str (event.first).c_str (),
+		      gdb_signal_to_name (event.second.sig ()));
+	  focus_thread = thread;
+	}
+    }
+
+  if (focus_thread != nullptr)
+    switch_to_thread (focus_thread);
 }
 
 /* Make the amd-dbgapi library attach to the process behind INF.
@@ -4444,6 +4487,7 @@ _initialize_amd_dbgapi_target ()
   gdb::observers::inferior_exit.attach (amd_dbgapi_inferior_exited, "amd-dbgapi");
   gdb::observers::inferior_pre_detach.attach (amd_dbgapi_inferior_pre_detach, "amd-dbgapi");
   gdb::observers::thread_deleted.attach (amd_dbgapi_thread_deleted, "amd-dbgapi");
+  gdb::observers::core_opened.attach (amd_dbgapi_finalize_core_attach, "amd-dbgapi");
 
   create_internalvar_type_lazy ("_wave_id", &amd_dbgapi_wave_id_funcs, NULL);
 
