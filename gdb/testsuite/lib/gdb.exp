@@ -8487,7 +8487,29 @@ proc remove_core {pid {test ""}} {
     }
 }
 
-proc core_find {binfile {deletefiles {}} {arg ""}} {
+# Create a temporary directory whose name starts with PREFIX and call CB with
+# the path to the directory as first argument and ARGS as remaining arguments.
+# Accept a list DELETEFILES of files to remove from the temporary directory
+# after CB has executed and before deleting the temporary directory.
+# Return the value returned by CB.
+
+proc with_tmpdir {{prefix "tmp"} {deletefiles {}} cb args} {
+    set tmpname [standard_output_file $prefix.[getpid]]
+    file mkdir $tmpname
+
+    set result [$cb $tmpname {*}$args]
+
+    foreach deletefile $deletefiles {
+	remote_file build delete [file join $tmpname $deletefile]
+    }
+    remote_exec build "rmdir $tmpname"
+
+    return $result
+}
+
+# Helper function for core_find.
+
+proc core_find_1 {coredir binfile {arg ""}} {
     global objdir subdir
 
     set destcore "$binfile.core"
@@ -8507,8 +8529,6 @@ proc core_find {binfile {deletefiles {}} {arg ""}} {
     # could have many core files lying around, and it may be difficult to
     # tell which one is ours, so let's run the program in a subdirectory.
     set found 0
-    set coredir [standard_output_file coredir.[getpid]]
-    file mkdir $coredir
     catch "system \"(cd ${coredir}; ulimit -c unlimited; ${binfile} ${arg}; true) >/dev/null 2>&1\""
     #      remote_exec host "${binfile}"
     foreach i "${coredir}/core ${coredir}/core.coremaker.c ${binfile}.core" {
@@ -8543,17 +8563,20 @@ proc core_find {binfile {deletefiles {}} {arg ""}} {
 	}
     }
 
-    # Try to clean up after ourselves. 
-    foreach deletefile $deletefiles {
-	remote_file build delete [file join $coredir $deletefile]
-    }
-    remote_exec build "rmdir $coredir"
-	
     if { $found == 0  } {
 	warning "can't generate a core file - core tests suppressed - check ulimit -c"
 	return ""
     }
     return $destcore
+}
+
+# Run BINFILE with arguments ARG in a temporary directory, and return the path
+# to a core dump generated during execution if any, empty string otherwise.
+# DELETEFILES is a list of files that should be removed from the temporary
+# directory before deleting it.
+
+proc core_find {binfile {deletefiles {}} {arg ""}} {
+    return [with_tmpdir coredir $deletefiles core_find_1 $binfile $arg]
 }
 
 # gdb_target_symbol_prefix compiles a test program and then examines
