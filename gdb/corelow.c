@@ -233,6 +233,16 @@ core_target::build_file_mappings ()
 	   weed out non-file-backed mappings.  */
 	gdb_assert (filename != nullptr);
 
+	if (unavailable_paths.find (filename) != unavailable_paths.end ())
+	  {
+	    /* We have already seen some mapping for FILENAME but failed to
+	       find/open the file.  There is no point in trying the same
+	       thing again so just record that the range [start, end) is
+	       unavailable.  */
+	    m_core_unavailable_mappings.emplace_back (start, end - start);
+	    return;
+	  }
+
 	struct bfd *bfd = bfd_map[filename];
 	if (bfd == nullptr)
 	  {
@@ -250,32 +260,23 @@ core_target::build_file_mappings ()
 	    if (expanded_fname == nullptr)
 	      {
 		m_core_unavailable_mappings.emplace_back (start, end - start);
-		/* Print just one warning per path.  */
-		if (unavailable_paths.insert (filename).second)
-		  warning (_("Can't open file %s during file-backed mapping "
-			     "note processing"),
-			   filename);
+		unavailable_paths.insert (filename);
+		warning (_("Can't open file %s during file-backed mapping "
+			   "note processing"),
+			 filename);
 		return;
 	      }
 
-	    bfd = bfd_map[filename] = bfd_openr (expanded_fname.get (),
-						 "binary");
+	    bfd = bfd_openr (expanded_fname.get (), "binary");
 
 	    if (bfd == nullptr || !bfd_check_format (bfd, bfd_object))
 	      {
 		m_core_unavailable_mappings.emplace_back (start, end - start);
-		/* If we get here, there's a good chance that it's due to
-		   an internal error.  We issue a warning instead of an
-		   internal error because of the possibility that the
-		   file was removed in between checking for its
-		   existence during the expansion in exec_file_find()
-		   and the calls to bfd_openr() / bfd_check_format(). 
-		   Output both the path from the core file note along
-		   with its expansion to make debugging this problem
-		   easier.  */
+		unavailable_paths.insert (filename);
 		warning (_("Can't open file %s which was expanded to %s "
 			   "during file-backed mapping note processing"),
 			 filename, expanded_fname.get ());
+
 		if (bfd != nullptr)
 		  bfd_close (bfd);
 		return;
@@ -284,6 +285,7 @@ core_target::build_file_mappings ()
 	       This can be checked before/after a core file detach via
 	       "maint info bfds".  */
 	    gdb_bfd_record_inclusion (core_bfd, bfd);
+	    bfd_map[filename] = bfd;
 	  }
 
 	/* Make new BFD section.  All sections have the same name,
