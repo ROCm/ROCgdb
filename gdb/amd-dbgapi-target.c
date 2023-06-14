@@ -2750,19 +2750,39 @@ amd_dbgapi_inferior_pre_detach (inferior *inf)
     detach_amd_dbgapi (inf);
 }
 
-/* get_os_pid callback.  */
+/* client_process_get_info callback.  */
 
 static amd_dbgapi_status_t
-amd_dbgapi_get_os_pid_callback
-  (amd_dbgapi_client_process_id_t client_process_id, pid_t *pid)
+amd_dbgapi_client_process_get_info_callback
+  (amd_dbgapi_client_process_id_t client_process_id,
+   amd_dbgapi_client_process_info_t query, size_t value_size, void *value)
 {
   inferior *inf = reinterpret_cast<inferior *> (client_process_id);
 
   if (inf->pid == 0)
     return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
 
-  *pid = inf->pid;
-  return AMD_DBGAPI_STATUS_SUCCESS;
+  if (value == nullptr)
+    return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
+
+  switch (query)
+    {
+    case AMD_DBGAPI_CLIENT_PROCESS_INFO_OS_PID:
+	{
+	  /* Dbgapi expects AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE if the
+	     current inferior is an opened core dump.  */
+	  if (inf->pspace->cbfd != nullptr)
+	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+
+	  if (value_size != sizeof (amd_dbgapi_os_process_id_t))
+	    return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT_COMPATIBILITY;
+	  *static_cast<amd_dbgapi_os_process_id_t *> (value) = inf->pid;
+	  return AMD_DBGAPI_STATUS_SUCCESS;
+	}
+    case AMD_DBGAPI_CLIENT_PROCESS_INFO_CORE_STATE:
+      return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
+    }
+  return AMD_DBGAPI_STATUS_ERROR_INVALID_ARGUMENT;
 }
 
 /* insert_breakpoint callback.  */
@@ -2976,7 +2996,7 @@ amd_dbgapi_log_message_callback (amd_dbgapi_log_level_t level,
 static amd_dbgapi_callbacks_t dbgapi_callbacks = {
   .allocate_memory = malloc,
   .deallocate_memory = free,
-  .get_os_pid = amd_dbgapi_get_os_pid_callback,
+  .client_process_get_info = amd_dbgapi_client_process_get_info_callback,
   .insert_breakpoint = amd_dbgapi_insert_breakpoint_callback,
   .remove_breakpoint = amd_dbgapi_remove_breakpoint_callback,
   .xfer_global_memory = amd_dbgapi_xfer_global_memory_callback,
