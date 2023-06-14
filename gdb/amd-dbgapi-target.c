@@ -1748,16 +1748,19 @@ process_one_event (amd_dbgapi_event_id_t event_id,
     error (_("event_get_info for event_%ld failed (%s)"), event_id.handle,
 	   get_status_string (status));
 
-  amd_dbgapi_os_process_id_t pid;
-  status = amd_dbgapi_process_get_info (process_id,
-					AMD_DBGAPI_PROCESS_INFO_OS_ID,
-					sizeof (pid), &pid);
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("process_get_info for process_%ld failed (%s)"),
-	   process_id.handle, get_status_string (status));
+  inferior *inf = nullptr;
+  for (struct inferior *inferior : all_inferiors ())
+    {
+      amd_dbgapi_inferior_info *info
+	= amd_dbgapi_inferior_data.get (inferior);
+      if (info != nullptr && info->process_id == process_id)
+	inf = inferior;
+    }
+  if (inf == nullptr)
+    error (_("cannot find inferior associated with event event_%ld"),
+	   event_id.handle);
 
-  auto *proc_target = current_inferior ()->process_target ();
-  inferior *inf = find_inferior_pid (proc_target, pid);
+  auto *proc_target = inf->process_target ();
   gdb_assert (inf != nullptr);
   amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (inf);
 
@@ -1774,7 +1777,7 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 	  error (_("event_get_info for event_%ld failed (%s)"),
 		 event_id.handle, get_status_string (status));
 
-	ptid_t event_ptid = make_gpu_ptid (pid, wave_id);
+	ptid_t event_ptid = make_gpu_ptid (inf->pid, wave_id);
 	target_waitstatus ws;
 
 	amd_dbgapi_wave_stop_reasons_t stop_reason;
