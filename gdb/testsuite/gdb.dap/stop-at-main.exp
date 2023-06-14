@@ -13,13 +13,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from .startup import in_gdb_thread, exec_and_log, log
+# Test the stop-at-main extension.
 
+require allow_dap_tests
 
-@in_gdb_thread
-def set_thread(thread_id):
-    """Set the current thread to THREAD_ID."""
-    if thread_id == 0:
-        log("+++ Thread == 0 +++")
-    else:
-        exec_and_log("thread " + str(thread_id))
+load_lib dap-support.exp
+
+standard_testfile attach.c
+
+if {[build_executable ${testfile}.exp $testfile $srcfile] == -1} {
+    return
+}
+
+if {[dap_launch $testfile {} {} 1] == ""} {
+    return
+}
+
+dap_check_request_and_response "start inferior" configurationDone
+# We didn't explicitly set a breakpoint, so if we hit one, it worked.
+dap_wait_for_event_and_check "stopped at function breakpoint" stopped \
+    "body reason" breakpoint
+
+dap_shutdown

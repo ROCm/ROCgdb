@@ -16,6 +16,9 @@
 import gdb
 import os
 
+# These are deprecated in 3.9, but required in older versions.
+from typing import Optional, Sequence
+
 from .server import request, capability
 from .startup import send_gdb_with_response, in_gdb_thread
 
@@ -37,12 +40,11 @@ def breakpoint_descriptor(bp):
         # https://github.com/microsoft/debug-adapter-protocol/issues/13
         loc = bp.locations[0]
         (basename, line) = loc.source
-        return {
+        result = {
             "id": bp.number,
             "verified": True,
             "source": {
                 "name": os.path.basename(basename),
-                "path": loc.fullname,
                 # We probably don't need this but it doesn't hurt to
                 # be explicit.
                 "sourceReference": 0,
@@ -50,6 +52,10 @@ def breakpoint_descriptor(bp):
             "line": line,
             "instructionReference": hex(loc.address),
         }
+        path = loc.fullname
+        if path is not None:
+            result["source"]["path"] = path
+        return result
     else:
         return {
             "id": bp.number,
@@ -57,10 +63,19 @@ def breakpoint_descriptor(bp):
         }
 
 
+# Extract entries from a hash table and return a list of them.  Each
+# entry is a string.  If a key of that name appears in the hash table,
+# it is removed and pushed on the result list; if it does not appear,
+# None is pushed on the list.
+def _remove_entries(table, *names):
+    return [table.pop(name, None) for name in names]
+
+
 # Helper function to set some breakpoints according to a list of
-# specifications.
+# specifications and a callback function to do the work of creating
+# the breakpoint.
 @in_gdb_thread
-def _set_breakpoints(kind, specs):
+def _set_breakpoints_callback(kind, specs, creator):
     global breakpoint_map
     # Try to reuse existing breakpoints if possible.
     if kind in breakpoint_map:
@@ -71,11 +86,20 @@ def _set_breakpoints(kind, specs):
     result = []
     for spec in specs:
         keyspec = frozenset(spec.items())
+
+        (condition, hit_condition) = _remove_entries(spec, "condition", "hitCondition")
+
         if keyspec in saved_map:
             bp = saved_map.pop(keyspec)
         else:
             # FIXME handle exceptions here
-            bp = gdb.Breakpoint(**spec)
+            bp = creator(**spec)
+
+        if condition is not None:
+            bp.condition = condition
+        if hit_condition is not None:
+            bp.ignore_count = hit_condition
+
         breakpoint_map[kind][keyspec] = bp
         result.append(breakpoint_descriptor(bp))
     # Delete any breakpoints that were not reused.
@@ -84,18 +108,43 @@ def _set_breakpoints(kind, specs):
     return result
 
 
+# Helper function to set odinary breakpoints according to a list of
+# specifications.
+@in_gdb_thread
+def _set_breakpoints(kind, specs):
+    return _set_breakpoints_callback(kind, specs, gdb.Breakpoint)
+
+
+# Turn a DAP SourceBreakpoint, FunctionBreakpoint, or
+# InstructionBreakpoint into a "spec" that is used by
+# _set_breakpoints.  SPEC is a dictionary of parameters that is used
+# as the base of the result; it is modified in place.
+def _basic_spec(bp_info, spec):
+    for name in ("condition", "hitCondition"):
+        if name in bp_info:
+            spec[name] = bp_info[name]
+    return spec
+
+
+# FIXME we do not specify a type for 'source'.
+# FIXME 'breakpoints' is really a list[SourceBreakpoint].
 @request("setBreakpoints")
-def set_breakpoint(*, source, breakpoints=[], **args):
+@capability("supportsHitConditionalBreakpoints")
+@capability("supportsConditionalBreakpoints")
+def set_breakpoint(*, source, breakpoints: Sequence = (), **args):
     if "path" not in source:
         result = []
     else:
         specs = []
         for obj in breakpoints:
             specs.append(
-                {
-                    "source": source["path"],
-                    "line": obj["line"],
-                }
+                _basic_spec(
+                    obj,
+                    {
+                        "source": source["path"],
+                        "line": obj["line"],
+                    },
+                )
             )
         # Be sure to include the path in the key, so that we only
         # clear out breakpoints coming from this same source.
@@ -108,13 +157,16 @@ def set_breakpoint(*, source, breakpoints=[], **args):
 
 @request("setFunctionBreakpoints")
 @capability("supportsFunctionBreakpoints")
-def set_fn_breakpoint(*, breakpoints, **args):
+def set_fn_breakpoint(*, breakpoints: Sequence, **args):
     specs = []
     for bp in breakpoints:
         specs.append(
-            {
-                "function": bp["name"],
-            }
+            _basic_spec(
+                bp,
+                {
+                    "function": bp["name"],
+                },
+            )
         )
     result = send_gdb_with_response(lambda: _set_breakpoints("function", specs))
     return {
@@ -124,7 +176,9 @@ def set_fn_breakpoint(*, breakpoints, **args):
 
 @request("setInstructionBreakpoints")
 @capability("supportsInstructionBreakpoints")
-def set_insn_breakpoints(*, breakpoints, offset=None, **args):
+def set_insn_breakpoints(
+    *, breakpoints: Sequence, offset: Optional[int] = None, **args
+):
     specs = []
     for bp in breakpoints:
         # There's no way to set an explicit address breakpoint
@@ -133,11 +187,64 @@ def set_insn_breakpoints(*, breakpoints, offset=None, **args):
         if offset is not None:
             val = val + " + " + str(offset)
         specs.append(
-            {
-                "spec": val,
-            }
+            _basic_spec(
+                bp,
+                {
+                    "spec": val,
+                },
+            )
         )
     result = send_gdb_with_response(lambda: _set_breakpoints("instruction", specs))
+    return {
+        "breakpoints": result,
+    }
+
+
+@in_gdb_thread
+def _catch_exception(filterId, **args):
+    if filterId == "assert":
+        cmd = "-catch-assert"
+    elif filterId == "exception":
+        cmd = "-catch-exception"
+    else:
+        raise Exception(f"Invalid exception filterID: {filterId}")
+    result = gdb.execute_mi(cmd)
+    # A little lame that there's no more direct way.
+    for bp in gdb.breakpoints():
+        if bp.number == result["bkptno"]:
+            return bp
+    raise Exception("Could not find catchpoint after creating")
+
+
+@in_gdb_thread
+def _set_exception_catchpoints(filter_options):
+    return _set_breakpoints_callback("exception", filter_options, _catch_exception)
+
+
+@request("setExceptionBreakpoints")
+@capability("supportsExceptionFilterOptions")
+@capability(
+    "exceptionBreakpointFilters",
+    (
+        {
+            "filter": "assert",
+            "label": "Ada assertions",
+            "supportsCondition": True,
+        },
+        {
+            "filter": "exception",
+            "label": "Ada exceptions",
+            "supportsCondition": True,
+        },
+    ),
+)
+def set_exception_breakpoints(
+    *, filters: Sequence[str], filterOptions: Sequence = (), **args
+):
+    # Convert the 'filters' to the filter-options style.
+    options = [{"filterId": filter} for filter in filters]
+    options.extend(filterOptions)
+    result = send_gdb_with_response(lambda: _set_exception_catchpoints(options))
     return {
         "breakpoints": result,
     }

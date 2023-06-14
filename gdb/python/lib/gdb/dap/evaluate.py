@@ -16,8 +16,11 @@
 import gdb
 import gdb.printing
 
+# This is deprecated in 3.9, but required in older versions.
+from typing import Optional
+
 from .frames import frame_for_id
-from .server import request
+from .server import capability, request
 from .startup import send_gdb_with_response, in_gdb_thread
 from .varref import find_variable, VariableReference
 
@@ -40,6 +43,20 @@ def _evaluate(expr, frame_id):
     return ref.to_object()
 
 
+# Helper function to perform an assignment.
+@in_gdb_thread
+def _set_expression(expression, value, frame_id):
+    global_context = True
+    if frame_id is not None:
+        frame = frame_for_id(frame_id)
+        frame.select()
+        global_context = False
+    lhs = gdb.parse_and_eval(expression, global_context=global_context)
+    rhs = gdb.parse_and_eval(value, global_context=global_context)
+    lhs.assign(rhs)
+    return EvaluateResult(lhs).to_object()
+
+
 # Helper function to evaluate a gdb command in a certain frame.
 @in_gdb_thread
 def _repl(command, frame_id):
@@ -53,16 +70,21 @@ def _repl(command, frame_id):
     }
 
 
-# FIXME supportsVariableType handling
 @request("evaluate")
-def eval_request(*, expression, frameId=None, context="variables", **args):
+def eval_request(
+    *,
+    expression: str,
+    frameId: Optional[int] = None,
+    context: str = "variables",
+    **args,
+):
     if context in ("watch", "variables"):
         # These seem to be expression-like.
         return send_gdb_with_response(lambda: _evaluate(expression, frameId))
     elif context == "repl":
         return send_gdb_with_response(lambda: _repl(expression, frameId))
     else:
-        raise Exception(f'unknown evaluate context "{context}"')
+        raise Exception('unknown evaluate context "' + context + '"')
 
 
 @in_gdb_thread
@@ -75,8 +97,16 @@ def _variables(ref, start, count):
 @request("variables")
 # Note that we ignore the 'filter' field.  That seems to be
 # specific to javascript.
-def variables(*, variablesReference, start=0, count=0, **args):
+def variables(*, variablesReference: int, start: int = 0, count: int = 0, **args):
     result = send_gdb_with_response(
         lambda: _variables(variablesReference, start, count)
     )
     return {"variables": result}
+
+
+@capability("supportsSetExpression")
+@request("setExpression")
+def set_expression(
+    *, expression: str, value: str, frameId: Optional[int] = None, **args
+):
+    return send_gdb_with_response(lambda: _set_expression(expression, value, frameId))

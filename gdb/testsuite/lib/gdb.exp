@@ -4546,10 +4546,13 @@ proc get_compiler_info {{language "c"}} {
 	    # eval this line
 	    verbose "get_compiler_info: $cppline" 2
 	    eval "$cppline"
-	} elseif { [ regexp "flang.*warning.*'-fdiagnostics-color=never'" "$cppline"] } {
+	} elseif { [ regexp {[fc]lang.*warning.*'-fdiagnostics-color=never'} "$cppline"] } {
 	    # Both flang preprocessors (llvm flang and classic flang) print a
 	    # warning for the unused -fdiagnostics-color=never, so we skip this
 	    # output line here.
+	    # The armflang preprocessor has been observed to output the
+	    # warning prefixed with "clang", so the regex also accepts
+	    # this.
 	} else {
 	    # unknown line
 	    verbose -log "get_compiler_info: $cppline"
@@ -9077,6 +9080,22 @@ proc hex_in_list { val hexlist } {
     return [expr $index != -1]
 }
 
+# As info args, but also add the default values.
+
+proc info_args_with_defaults { name } {
+    set args {}
+
+    foreach arg [info args $name] {
+	if { [info default $name $arg default_value] } {
+	    lappend args [list $arg $default_value]
+	} else {
+	    lappend args $arg
+	}
+    }
+
+    return $args
+}
+
 # Override proc NAME to proc OVERRIDE for the duration of the execution of
 # BODY.
 
@@ -9096,7 +9115,7 @@ proc with_override { name override body } {
 
     # Save the old proc, if it exists.
     if { [info procs $name] != "" } {
-	set old_args [info args $name]
+	set old_args [info_args_with_defaults $name]
 	set old_body [info body $name]
 	set existed true
     } else {
@@ -9104,7 +9123,7 @@ proc with_override { name override body } {
     }
 
     # Install the override.
-    set new_args [info args $override]
+    set new_args [info_args_with_defaults $override]
     set new_body [info body $override]
     eval proc $name {$new_args} {$new_body}
 

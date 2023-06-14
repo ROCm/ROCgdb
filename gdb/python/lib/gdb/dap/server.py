@@ -25,6 +25,7 @@ from .startup import (
     log_stack,
     send_gdb_with_response,
 )
+from .typecheck import type_check
 
 
 # Map capability names to values.
@@ -164,23 +165,36 @@ def request(name):
 
     def wrap(func):
         global _commands
-        _commands[name] = func
         # All requests must run in the DAP thread.
-        return in_dap_thread(func)
+        # Also type-check the calls.
+        func = in_dap_thread(type_check(func))
+        _commands[name] = func
+        return func
 
     return wrap
 
 
-def capability(name):
+def capability(name, value=True):
     """A decorator that indicates that the wrapper function implements
     the DAP capability NAME."""
 
     def wrap(func):
         global _capabilities
-        _capabilities[name] = True
+        _capabilities[name] = value
         return func
 
     return wrap
+
+
+def client_bool_capability(name):
+    """Return the value of a boolean client capability.
+
+    If the capability was not specified, or did not have boolean type,
+    False is returned."""
+    global _server
+    if name in _server.config and isinstance(_server.config[name], bool):
+        return _server.config[name]
+    return False
 
 
 @request("initialize")
@@ -201,7 +215,7 @@ def terminate(**args):
 
 @request("disconnect")
 @capability("supportTerminateDebuggee")
-def disconnect(*, terminateDebuggee=False, **args):
+def disconnect(*, terminateDebuggee: bool = False, **args):
     if terminateDebuggee:
         terminate()
     _server.shutdown()

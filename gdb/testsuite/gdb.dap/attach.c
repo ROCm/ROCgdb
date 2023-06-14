@@ -1,6 +1,6 @@
-/* Copyright 2022-2023 Free Software Foundation, Inc.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2011-2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,38 +15,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-int global_variable = 23;
-
-void
-function_breakpoint_here ()
-{
-  ++global_variable;
-  ++global_variable;
-}
-
-void
-do_not_stop_here ()
-{
-  /* This exists to test that breakpoints are cleared.  */
-}
-
-void
-address_breakpoint_here ()
-{
-}
-
-int
-line_breakpoint_here ()
-{
-  do_not_stop_here ();		/* FIRST */
-  function_breakpoint_here ();
-  address_breakpoint_here ();
-  return 0;			/* BREAK */
-}
-
+#include <unistd.h>
 
 int
 main ()
 {
-  return line_breakpoint_here ();
+  sleep (600);
+  return 0;
 }

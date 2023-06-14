@@ -1,4 +1,4 @@
-/* Copyright 2022-2023 Free Software Foundation, Inc.
+/* Copyright 2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -15,38 +15,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-int global_variable = 23;
-
-void
-function_breakpoint_here ()
-{
-  ++global_variable;
-  ++global_variable;
-}
-
-void
-do_not_stop_here ()
-{
-  /* This exists to test that breakpoints are cleared.  */
-}
-
-void
-address_breakpoint_here ()
-{
-}
-
-int
-line_breakpoint_here ()
-{
-  do_not_stop_here ();		/* FIRST */
-  function_breakpoint_here ();
-  address_breakpoint_here ();
-  return 0;			/* BREAK */
-}
-
-
 int
 main ()
 {
-  return line_breakpoint_here ();
+  int acc = 0, i, j;
+  for (i = 0; i < 5; ++i)
+    for (j = 0; j < 5; ++j)
+      acc += i + j;		/* STOP */
+  return acc;
 }

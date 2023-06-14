@@ -230,7 +230,9 @@ proc _dap_initialize {name} {
     if {[dap_gdb_start]} {
 	return ""
     }
-    return [dap_check_request_and_response $name initialize]
+    return [dap_check_request_and_response $name initialize \
+		{o clientID [s "gdb testsuite"] \
+		     supportsVariableType [l true]}]
 }
 
 # Start gdb, send a DAP initialize request, and then a launch request
@@ -239,8 +241,9 @@ proc _dap_initialize {name} {
 # request.  If specified, ARGS is a list of command-line arguments,
 # and ENV is a list of pairs of the form {VAR VALUE} that is used to
 # populate the inferior's environment.  After this is called, gdb will
-# be ready to accept breakpoint requests.
-proc dap_launch {file {args {}} {env {}}} {
+# be ready to accept breakpoint requests.  If STOP_AT_MAIN is nonzero,
+# pass "stopAtBeginningOfMainSubprogram" to the launch request.
+proc dap_launch {file {args {}} {env {}} {stop_at_main 0}} {
     if {[_dap_initialize "startup - initialize"] == ""} {
 	return ""
     }
@@ -267,12 +270,40 @@ proc dap_launch {file {args {}} {env {}}} {
 	append params " \[o $envlist\]"
     }
 
+    if {$stop_at_main} {
+	append params { stopAtBeginningOfMainSubprogram [l true]}
+    }
+
     return [dap_check_request_and_response "startup - launch" launch $params]
 }
 
-# Cleanly shut down gdb.  NAME is used as the test name.
-proc dap_shutdown {{name shutdown}} {
-    dap_check_request_and_response $name disconnect
+# Start gdb, send a DAP initialize request, and then an attach request
+# specifying PID as the inferior process ID.  Returns the empty string
+# on failure, or the response object from the attach request.
+proc dap_attach {pid} {
+    if {[_dap_initialize "startup - initialize"] == ""} {
+	return ""
+    }
+    return [dap_check_request_and_response "startup - attach" attach \
+		[format {o pid [i %s]} $pid]]
+}
+
+# Start gdb, send a DAP initialize request, and then an attach request
+# specifying TARGET as the remote target.  Returns the empty string on
+# failure, or the response object from the attach request.
+proc dap_target_remote {target} {
+    if {[_dap_initialize "startup - initialize"] == ""} {
+	return ""
+    }
+    return [dap_check_request_and_response "startup - target" attach \
+		[format {o target [s %s]} $target]]
+}
+
+# Cleanly shut down gdb.  TERMINATE is passed as the terminateDebuggee
+# parameter to the request.
+proc dap_shutdown {{terminate false}} {
+    dap_check_request_and_response "shutdown" disconnect \
+	[format {o terminateDebuggee [l %s]} $terminate]
 }
 
 # Search the event list EVENTS for an output event matching the regexp

@@ -71,6 +71,21 @@ if {!$ok} {
     fail "check new breakpoint event"
 }
 
+# Check that there are breakpoint locations on each line between FIRST
+# and BREAK.
+set first_line [gdb_get_line_number "FIRST"]
+set last_line [expr {$line - 1}]
+set obj [dap_check_request_and_response "breakpoint locations" \
+	     breakpointLocations \
+	     [format {o source [o path [%s]] line [i %d] endLine [i %d]} \
+		  [list s $srcfile] $first_line $last_line]]
+# We know gdb returns the lines in sorted order.
+foreach entry [dict get [lindex $obj 0] body breakpoints] {
+    gdb_assert {[dict get $entry line] == $first_line} \
+	"line $first_line in result"
+    incr first_line
+}
+
 set obj [dap_check_request_and_response "reset breakpoint by line number" \
 	     setBreakpoints \
 	     [format {o source [o path [%s]] breakpoints [a [o line [i %d]]]} \
@@ -136,20 +151,34 @@ set obj [dap_check_request_and_response "evaluate global second time" \
 dap_match_values "global value after step" [lindex $obj 0] \
     "body result" 24
 
-dap_check_request_and_response "continue to address" continue
+dap_check_request_and_response "continue to address" continue \
+    {o threadId [i 1]}
 dap_wait_for_event_and_check "stopped at address breakpoint" stopped \
     "body reason" breakpoint \
     "body hitBreakpointIds" $insn_bpno
 
-dap_check_request_and_response "continue to line" continue
+dap_check_request_and_response "continue to line" continue \
+    {o threadId [i 1]}
 dap_wait_for_event_and_check "stopped at line breakpoint" stopped \
     "body reason" breakpoint \
-    "body hitBreakpointIds" $line_bpno
+    "body hitBreakpointIds" $line_bpno \
+    "body allThreadsStopped" true
+
+dap_check_request_and_response "return from function" stepOut \
+    {o threadId [i 1]}
+dap_wait_for_event_and_check "stopped after return" stopped \
+    "body reason" step
 
 set obj [dap_check_request_and_response "evaluate global in main" \
 	     evaluate {o expression [s global_variable]}]
 dap_match_values "global value in main" [lindex $obj 0] \
     "body result" 25
+
+set obj [dap_check_request_and_response "set global in main" \
+	     setExpression {o expression [s global_variable] value [s 23]}]
+dap_match_values "global value in main after set" [lindex $obj 0] \
+    "body result" 23 \
+    "body type" int
 
 set obj [dap_request_and_response \
 	     evaluate {o expression [s nosuchvariable]}]
