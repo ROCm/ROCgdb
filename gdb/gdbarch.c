@@ -384,14 +384,19 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of address_spaces, has predicate.  */
   if (gdbarch->address_space_id_from_core_address == 0)
     gdbarch->address_space_id_from_core_address = default_address_space_id_from_core_address;
+  /* Skip verify of address_space_id_from_core_address, invalid_p == 0 */
   if (gdbarch->segment_address_from_core_address == 0)
     gdbarch->segment_address_from_core_address = default_segment_address_from_core_address;
+  /* Skip verify of segment_address_from_core_address, invalid_p == 0 */
   if (gdbarch->segment_address_to_core_address == 0)
     gdbarch->segment_address_to_core_address = default_segment_address_to_core_address;
+  /* Skip verify of segment_address_to_core_address, invalid_p == 0 */
   if (gdbarch->dwarf_address_space_to_address_space_id == 0)
     gdbarch->dwarf_address_space_to_address_space_id = default_dwarf_address_space_to_address_space_id;
+  /* Skip verify of dwarf_address_space_to_address_space_id, invalid_p == 0 */
   if (gdbarch->address_scope == 0)
     gdbarch->address_scope = default_address_scope;
+  /* Skip verify of address_scope, invalid_p == 0 */
   /* Skip verify of get_watchable_aliases, invalid_p == 0 */
   /* Skip verify of return_value, invalid_p == 0 */
   if ((gdbarch->return_value_as_value == default_gdbarch_return_value) == (gdbarch->return_value == nullptr))

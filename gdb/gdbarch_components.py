@@ -885,7 +885,7 @@ is added and should not be pushed upstream.
     name="address_space_id_from_core_address",
     params=[("CORE_ADDR", "address")],
     postdefault="default_address_space_id_from_core_address",
-    invalid=True,
+    invalid=False,
 )
 
 Function(
@@ -898,7 +898,7 @@ is added and should not be pushed upstream.
     name="segment_address_from_core_address",
     params=[("CORE_ADDR", "address")],
     postdefault="default_segment_address_from_core_address",
-    invalid=True,
+    invalid=False,
 )
 
 Function(
@@ -911,7 +911,7 @@ is added and should not be pushed upstream.
     name="segment_address_to_core_address",
     params=[("arch_addr_space_id", "address_space_id"), ("CORE_ADDR", "address")],
     postdefault="default_segment_address_to_core_address",
-    invalid=True,
+    invalid=False,
 )
 
 Function(
@@ -924,7 +924,7 @@ is added and should not be pushed upstream.
     name="dwarf_address_space_to_address_space_id",
     params=[("LONGEST", "dwarf_addr_space")],
     postdefault="default_dwarf_address_space_to_address_space_id",
-    invalid=True,
+    invalid=False,
 )
 
 Method(
@@ -935,7 +935,7 @@ Return the address's scope.
     name="address_scope",
     params=[("CORE_ADDR", "address")],
     postdefault="default_address_scope",
-    invalid=True,
+    invalid=False,
 )
 
 Method(
