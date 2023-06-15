@@ -170,10 +170,6 @@ extern "C" {
 #define OP_MASK_SA3		0x7
 #define OP_SH_SA4		21
 #define OP_MASK_SA4		0xf
-#define OP_SH_SA5		21
-#define OP_MASK_SA5		0x1f
-#define OP_SH_SA5_D		11
-#define OP_MASK_SA5_D		0x1f
 #define OP_SH_IMM8		16
 #define OP_MASK_IMM8		0xff
 #define OP_SH_IMM10		16
@@ -194,10 +190,6 @@ extern "C" {
 #define OP_MASK_MTACC_T		0x3
 #define OP_SH_MTACC_D		13
 #define OP_MASK_MTACC_D		0x3
-#define OP_MASK_MT_RX		0x1f
-#define OP_SH_MT_RX		6
-#define OP_MASK_MT_SEL		0x7	/* The sel field of mftr and mttr.  */
-#define OP_SH_MT_SEL		0
 
 /* MIPS MCU ASE */
 #define OP_MASK_3BITPOS		0x7
@@ -898,7 +890,7 @@ mips_opcode_32bit_p (const struct mips_opcode *mo)
    "3" 3 bit unsigned immediate (OP_*_SA3)
    "4" 4 bit unsigned immediate (OP_*_SA4)
    "5" 8 bit unsigned immediate (OP_*_IMM8)
-   "6" 5 bit unsigned immediate (OP_*_SA5)
+   "6" 5 bit unsigned immediate (OP_*_RS)
    "7" 2 bit dsp accumulator register (OP_*_DSPACC)
    "8" 6 bit unsigned immediate (OP_*_WRDSP)
    "9" 2 bit dsp accumulator register (OP_*_DSPACC_S)
@@ -906,16 +898,14 @@ mips_opcode_32bit_p (const struct mips_opcode *mo)
    ":" 7 bit signed immediate (OP_*_DSPSFT_7)
    "'" 6 bit unsigned immediate (OP_*_RDDSP)
    "@" 10 bit signed immediate (OP_*_IMM10)
-   "^" 5 bit unsigned immediate (OP_*_SA5_D)
 
    MT ASE usage:
    "!" 1 bit usermode flag (OP_*_MT_U)
    "$" 1 bit load high flag (OP_*_MT_H)
    "*" 2 bit dsp/smartmips accumulator register (OP_*_MTACC_T)
    "&" 2 bit dsp/smartmips accumulator register (OP_*_MTACC_D)
-   "?" 3-bit MFTR and MTTR sel (OP_SH_MT_SEL)
    "y" 5 bit control target register (OP_*_RT)
-   "+t" 5 bit control rx register (OP_*_MT_RX)
+   "+t" 5 bit coprocessor 0 destination register (OP_*_RT)
 
    MCU ASE usage:
    "~" 12 bit offset (OP_*_OFFSET12)
@@ -1275,6 +1265,8 @@ static const unsigned int mips_isa_table[] = {
 #define INSN_XLR                 0x00000020
 /* Imagination interAptiv MR2.  */
 #define INSN_INTERAPTIV_MR2	  0x04000000
+/* Sony PSP Allegrex instruction.  */
+#define INSN_ALLEGREX		  0x08000000
 
 /* DSP ASE */
 #define ASE_DSP			0x00000001
@@ -1387,6 +1379,7 @@ static const unsigned int mips_isa_table[] = {
 #define CPU_MIPS64R3	66
 #define CPU_MIPS64R5	68
 #define CPU_MIPS64R6	69
+#define CPU_ALLEGREX	10111431	/* octal 'AL', 31. */
 #define CPU_SB1         12310201        /* octal 'SB', 01.  */
 #define CPU_LOONGSON_2E 3001
 #define CPU_LOONGSON_2F 3002
@@ -1468,6 +1461,9 @@ cpu_is_member (int cpu, unsigned int mask)
 
     case CPU_INTERAPTIV_MR2:
       return (mask & INSN_INTERAPTIV_MR2) != 0;
+
+    case CPU_ALLEGREX:
+      return (mask & INSN_ALLEGREX) != 0;
 
     default:
       return false;
@@ -2116,8 +2112,6 @@ extern const int bfd_mips16_num_opcodes;
 #define MICROMIPSOP_SH_SA3		13
 #define MICROMIPSOP_MASK_SA4		0xf
 #define MICROMIPSOP_SH_SA4		12
-#define MICROMIPSOP_MASK_SA5		0x1f
-#define MICROMIPSOP_SH_SA5		11
 #define MICROMIPSOP_MASK_IMM8		0xff
 #define MICROMIPSOP_SH_IMM8		13
 #define MICROMIPSOP_MASK_IMM10		0x3ff
@@ -2147,18 +2141,14 @@ extern const int bfd_mips16_num_opcodes;
 #define MICROMIPSOP_SH_DSPSFT_7	 	0
 #define MICROMIPSOP_MASK_RDDSP		0
 #define MICROMIPSOP_SH_RDDSP		0
-#define MICROMIPSOP_MASK_MT_U		0x1
-#define MICROMIPSOP_SH_MT_U		10
-#define MICROMIPSOP_MASK_MT_H		0x1
-#define MICROMIPSOP_SH_MT_H		9
-#define MICROMIPSOP_MASK_MTACC_T	0x3
-#define MICROMIPSOP_SH_MTACC_T		23
-#define MICROMIPSOP_MASK_MTACC_S	0x3
-#define MICROMIPSOP_SH_MTACC_S		18
-#define MICROMIPSOP_MASK_MT_SEL		0x7      /* The sel field of mftr and mttr.  */
-#define MICROMIPSOP_SH_MT_SEL		4
-#define MICROMIPSOP_MASK_MT_RX		0x1f
-#define MICROMIPSOP_SH_MT_RX		11
+#define MICROMIPSOP_MASK_MT_U		0
+#define MICROMIPSOP_SH_MT_U		0
+#define MICROMIPSOP_MASK_MT_H		0
+#define MICROMIPSOP_SH_MT_H		0
+#define MICROMIPSOP_MASK_MTACC_T	0
+#define MICROMIPSOP_SH_MTACC_T		0
+#define MICROMIPSOP_MASK_MTACC_D	0
+#define MICROMIPSOP_SH_MTACC_D		0
 #define MICROMIPSOP_MASK_BBITIND	0
 #define MICROMIPSOP_SH_BBITIND		0
 #define MICROMIPSOP_MASK_CINSPOS	0
@@ -2314,8 +2304,7 @@ extern const int bfd_mips16_num_opcodes;
    Coprocessor instructions:
    "E" 5-bit target register (MICROMIPSOP_*_RT)
    "G" 5-bit source register (MICROMIPSOP_*_RS)
-   "H" 3-bit sel field for (D)MTC* and (D)MFC* (MICROMIPSOP_*_SEL), not for MTTR and MFTR
-   "e" 5-bit control target register (MICROMIPSOP_*_RT)
+   "H" 3-bit sel field for (D)MTC* and (D)MFC* (MICROMIPSOP_*_SEL)
    "g" 5-bit control source register (MICROMIPSOP_*_RS)
 
    Macro instructions:
@@ -2336,7 +2325,7 @@ extern const int bfd_mips16_num_opcodes;
    "8" 6-bit unsigned immediate (MICROMIPSOP_*_WRDSP)
    "0" 6-bit signed immediate (MICROMIPSOP_*_DSPSFT)
    "@" 10-bit signed immediate (MICROMIPSOP_*_IMM10)
-   "^" 5-bit unsigned immediate (MICROMIPSOP_*_SA5)
+   "^" 5-bit unsigned immediate (MICROMIPSOP_*_RD)
 
    microMIPS Enhanced VA Scheme:
    "+j" 9-bit signed offset in bit 0 (OP_*_EVAOFFSET)
@@ -2367,14 +2356,6 @@ extern const int bfd_mips16_num_opcodes;
    "+&" 0 vector element index
    "+*" 5-bit register vector element index at bit 16
    "+|" 8-bit mask at bit 16
-
-   microMIPS MT ASE usage:
-   "!" 1-bit usermode flag (MICROMIPSOP_*_MT_U)
-   "$" 1-bit load high flag (MICROMIPSOP_*_MT_H)
-   "*" 2-bit dsp accumulator register (MICROMIPSOP_*_MTACC_T)
-   "&" 2-bit dsp accumulator register (MICROMIPSOP_*_MTACC_S)
-   "?" 3-bit MFTR and MTTR sel (MICROMIPSOP_SH_MT_SEL)
-   "+t" 5-bit control rx register (MICROMIPSOP_*_MT_RX)
 
    Other:
    "()" parens surrounding optional value

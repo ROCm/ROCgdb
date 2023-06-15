@@ -1,24 +1,21 @@
 #objdump: -sr
 #name: Compact EH EL #1 with personality ID and FDE data
 #source: compact-eh-1.s
-#as: -march=from-abi -EL -mno-pdr
+#as: -EL -mno-pdr
 
 .*:     file format.*
 
 
 RELOCATION RECORDS FOR \[.eh_frame_entry\]:
 OFFSET +TYPE +VALUE
-0+000000 R_MIPS_PC32       .text.*
-#?.*R_MIPS_NONE.*
-#?.*R_MIPS_NONE.*
+00000000 R_MIPS_PC32       .text.*
 
 
 Contents of section .text:
  0000 00000000.*
-Contents of section (.reginfo|.MIPS.options):
- 0000 0(000|128)0000 00000000 00000000 00000000  .*
- (0010 00000000 00000000                  |0010 00000000 00000000 00000000 00000000)  .*
-#? 0020 00000000 00000000                    .*
+Contents of section .reginfo:
+ 0000 00000000 00000000 00000000 00000000  .*
+ 0010 00000000 00000000                    .*
 Contents of section .MIPS.abiflags:
  .*
  .*

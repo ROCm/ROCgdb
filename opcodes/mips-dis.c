@@ -489,6 +489,9 @@ const struct mips_arch_choice mips_arch_choices[] =
   { "r4010",	1, bfd_mach_mips4010, CPU_R4010, ISA_MIPS2, 0,
     mips_cp0_names_numeric, NULL, 0, mips_cp1_names_mips,
     mips_hwr_names_numeric },
+  { "allegrex",	1, bfd_mach_mips_allegrex, CPU_ALLEGREX, ISA_MIPS2, 0,
+    mips_cp0_names_numeric, NULL, 0, mips_cp1_names_numeric,
+    mips_hwr_names_numeric },
   { "vr4100",	1, bfd_mach_mips4100, CPU_VR4100, ISA_MIPS3, 0,
     mips_cp0_names_numeric, NULL, 0, mips_cp1_names_mips,
     mips_hwr_names_numeric },
@@ -1921,7 +1924,7 @@ print_insn_args (struct disassemble_info *info,
 	    }
 	  else if (operand->type == OP_REG
 		   && s[1] == ','
-		   && (s[2] == 'H' || s[2] == '?')
+		   && s[2] == 'H'
 		   && opcode->name[strlen (opcode->name) - 1] == '0')
 	    {
 	      /* Coprocessor register 0 with sel field.  */
