@@ -2990,7 +2990,7 @@ make_thread_string_value (struct gdbarch *gdbarch, internalvar *var,
   if (inferior_ptid != null_ptid)
     pos = get_str ();
 
-  value *val = value_cstring (pos.c_str (), pos.size () + 1,
+  value *val = value_cstring (pos.c_str (), pos.size (),
 			      builtin_type (gdbarch)->builtin_char);
 
   /* Make sure GDB doesn't try to push the string to the inferior.  */
