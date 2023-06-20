@@ -216,8 +216,6 @@ mi_parse::parse_argv ()
 
 mi_parse::~mi_parse ()
 {
-  xfree (command);
-  xfree (token);
   freeargv (argv);
 }
 
@@ -301,7 +299,7 @@ mi_parse::set_language (const char *arg, const char **endp)
 }
 
 std::unique_ptr<struct mi_parse>
-mi_parse::make (const char *cmd, char **token)
+mi_parse::make (const char *cmd, std::string *token)
 {
   const char *chp;
 
@@ -313,15 +311,13 @@ mi_parse::make (const char *cmd, char **token)
   /* Find/skip any token and then extract it.  */
   for (chp = cmd; *chp >= '0' && *chp <= '9'; chp++)
     ;
-  *token = (char *) xmalloc (chp - cmd + 1);
-  memcpy (*token, cmd, (chp - cmd));
-  (*token)[chp - cmd] = '\0';
+  *token = std::string (cmd, chp - cmd);
 
   /* This wasn't a real MI command.  Return it as a CLI_COMMAND.  */
   if (*chp != '-')
     {
       chp = skip_spaces (chp);
-      parse->command = xstrdup (chp);
+      parse->command = make_unique_xstrdup (chp);
       parse->op = CLI_COMMAND;
 
       return parse;
@@ -333,16 +329,14 @@ mi_parse::make (const char *cmd, char **token)
 
     for (; *chp && !isspace (*chp); chp++)
       ;
-    parse->command = (char *) xmalloc (chp - tmp + 1);
-    memcpy (parse->command, tmp, chp - tmp);
-    parse->command[chp - tmp] = '\0';
+    parse->command = make_unique_xstrndup (tmp, chp - tmp);
   }
 
   /* Find the command in the MI table.  */
-  parse->cmd = mi_cmd_lookup (parse->command);
+  parse->cmd = mi_cmd_lookup (parse->command.get ());
   if (parse->cmd == NULL)
     throw_error (UNDEFINED_COMMAND_ERROR,
-		 _("Undefined MI command: %s"), parse->command);
+		 _("Undefined MI command: %s"), parse->command.get ());
 
   /* Skip white space following the command.  */
   chp = skip_spaces (chp);
@@ -442,19 +436,19 @@ mi_parse::make (gdb::unique_xmalloc_ptr<char> command,
 {
   std::unique_ptr<struct mi_parse> parse (new struct mi_parse);
 
-  parse->command = command.release ();
-  parse->token = xstrdup ("");
+  parse->command = std::move (command);
+  parse->token = "";
 
-  if (parse->command[0] != '-')
+  if (parse->command.get ()[0] != '-')
     throw_error (UNDEFINED_COMMAND_ERROR,
 		 _("MI command '%s' does not start with '-'"),
-		 parse->command);
+		 parse->command.get ());
 
   /* Find the command in the MI table.  */
-  parse->cmd = mi_cmd_lookup (parse->command + 1);
+  parse->cmd = mi_cmd_lookup (parse->command.get () + 1);
   if (parse->cmd == NULL)
     throw_error (UNDEFINED_COMMAND_ERROR,
-		 _("Undefined MI command: %s"), parse->command);
+		 _("Undefined MI command: %s"), parse->command.get ());
 
   /* This over-allocates slightly, but it seems unimportant.  */
   parse->argv = XCNEWVEC (char *, args.size () + 1);

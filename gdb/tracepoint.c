@@ -69,7 +69,7 @@
    the worst case of maximum length for each of the pieces of a
    continuation packet.
 
-   NOTE: expressions get mem2hex'ed otherwise this would be twice as
+   NOTE: expressions get bin2hex'ed otherwise this would be twice as
    large.  (400 - 31)/2 == 184 */
 #define MAX_AGENT_EXPR_LEN	184
 
@@ -156,7 +156,6 @@ static std::string trace_stop_notes;
 /* support routines */
 
 struct collection_list;
-static char *mem2hex (gdb_byte *, char *, int);
 
 static counted_command_line all_tracepoint_actions (struct breakpoint *);
 
@@ -619,7 +618,7 @@ finalize_tracepoint_aexpr (struct agent_expr *aexpr)
 {
   ax_reqs (aexpr);
 
-  if (aexpr->len > MAX_AGENT_EXPR_LEN)
+  if (aexpr->buf.size () > MAX_AGENT_EXPR_LEN)
     error (_("Expression is too complicated."));
 
   report_agent_reqs_errors (aexpr);
@@ -836,19 +835,13 @@ collection_list::add_remote_register (unsigned int regno)
 void
 collection_list::add_ax_registers (struct agent_expr *aexpr)
 {
-  if (aexpr->reg_mask_len > 0)
+  for (int ndx1 = 0; ndx1 < aexpr->reg_mask.size (); ndx1++)
     {
-      for (int ndx1 = 0; ndx1 < aexpr->reg_mask_len; ndx1++)
+      QUIT;	/* Allow user to bail out with ^C.  */
+      if (aexpr->reg_mask[ndx1])
 	{
-	  QUIT;	/* Allow user to bail out with ^C.  */
-	  if (aexpr->reg_mask[ndx1] != 0)
-	    {
-	      /* Assume chars have 8 bits.  */
-	      for (int ndx2 = 0; ndx2 < 8; ndx2++)
-		if (aexpr->reg_mask[ndx1] & (1 << ndx2))
-		  /* It's used -- record it.  */
-		  add_remote_register (ndx1 * 8 + ndx2);
-	    }
+	  /* It's used -- record it.  */
+	  add_remote_register (ndx1);
 	}
     }
 }
@@ -886,7 +879,7 @@ collection_list::add_local_register (struct gdbarch *gdbarch,
 	 corresponding raw registers in the ax mask, but if this isn't
 	 the case add the expression that is generated to the
 	 collection list.  */
-      if (aexpr->len > 0)
+      if (aexpr->buf.size () > 0)
 	add_aexpr (std::move (aexpr));
     }
 }
@@ -1216,18 +1209,19 @@ collection_list::stringify ()
   for (i = 0; i < m_aexprs.size (); i++)
     {
       QUIT;			/* Allow user to bail out with ^C.  */
-      if ((count + 10 + 2 * m_aexprs[i]->len) > MAX_AGENT_EXPR_LEN)
+      if ((count + 10 + 2 * m_aexprs[i]->buf.size ()) > MAX_AGENT_EXPR_LEN)
 	{
 	  str_list.emplace_back (temp_buf.data (), count);
 	  count = 0;
 	  end = temp_buf.data ();
 	}
-      sprintf (end, "X%08X,", m_aexprs[i]->len);
+      sprintf (end, "X%08X,", (int) m_aexprs[i]->buf.size ());
       end += 10;		/* 'X' + 8 hex digits + ',' */
       count += 10;
 
-      end = mem2hex (m_aexprs[i]->buf, end, m_aexprs[i]->len);
-      count += 2 * m_aexprs[i]->len;
+      end += 2 * bin2hex (m_aexprs[i]->buf.data (), end,
+			  m_aexprs[i]->buf.size ());
+      count += 2 * m_aexprs[i]->buf.size ();
     }
 
   if (count != 0)
@@ -2886,31 +2880,6 @@ set_trace_stop_notes (const char *args, int from_tty,
 
   if (!ret)
     warning (_("Target does not support trace notes, stop note ignored"));
-}
-
-/* Convert the memory pointed to by mem into hex, placing result in buf.
- * Return a pointer to the last char put in buf (null)
- * "stolen" from sparc-stub.c
- */
-
-static const char hexchars[] = "0123456789abcdef";
-
-static char *
-mem2hex (gdb_byte *mem, char *buf, int count)
-{
-  gdb_byte ch;
-
-  while (count-- > 0)
-    {
-      ch = *mem++;
-
-      *buf++ = hexchars[ch >> 4];
-      *buf++ = hexchars[ch & 0xf];
-    }
-
-  *buf = 0;
-
-  return buf;
 }
 
 int

@@ -79,7 +79,7 @@ static struct mi_timestamp *current_command_ts;
 
 static int do_timings = 0;
 
-char *current_token;
+const char *current_token;
 /* Few commands would like to know if options like --thread-group were
    explicitly specified.  This variable keeps the current parsed
    command including all option, and make it possible.  */
@@ -1860,7 +1860,7 @@ captured_mi_execute_command (struct ui_out *uiout, struct mi_parse *context)
     current_command_ts = context->cmd_start;
 
   scoped_restore save_token = make_scoped_restore (&current_token,
-						   context->token);
+						   context->token.c_str ());
 
   mi->running_result_record_printed = 0;
   mi->mi_proceeded = 0;
@@ -1871,7 +1871,8 @@ captured_mi_execute_command (struct ui_out *uiout, struct mi_parse *context)
       if (mi_debug_p)
 	gdb_printf (gdb_stdlog,
 		    " token=`%s' command=`%s' args=`%s'\n",
-		    context->token, context->command, context->args ());
+		    context->token.c_str (), context->command.get (),
+		    context->args ());
 
       mi_cmd_execute (context);
 
@@ -1883,10 +1884,10 @@ captured_mi_execute_command (struct ui_out *uiout, struct mi_parse *context)
 	 uiout will most likely crash in the mi_out_* routines.  */
       if (!mi->running_result_record_printed)
 	{
-	  gdb_puts (context->token, mi->raw_stdout);
+	  gdb_puts (context->token.c_str (), mi->raw_stdout);
 	  /* There's no particularly good reason why target-connect results
 	     in not ^done.  Should kill ^connected for MI3.  */
-	  gdb_puts (strcmp (context->command, "target-select") == 0
+	  gdb_puts (strcmp (context->command.get (), "target-select") == 0
 		    ? "^connected" : "^done", mi->raw_stdout);
 	  mi_out_put (uiout, mi->raw_stdout);
 	  mi_out_rewind (uiout);
@@ -1908,10 +1909,10 @@ captured_mi_execute_command (struct ui_out *uiout, struct mi_parse *context)
 	/* This "feature" will be removed as soon as we have a
 	   complete set of mi commands.  */
 	/* Echo the command on the console.  */
-	gdb_printf (gdb_stdlog, "%s\n", context->command);
+	gdb_printf (gdb_stdlog, "%s\n", context->command.get ());
 	/* Call the "console" interpreter.  */
 	argv[0] = INTERP_CONSOLE;
-	argv[1] = context->command;
+	argv[1] = context->command.get ();
 	mi_cmd_interpreter_exec ("-interpreter-exec", argv, 2);
 
 	/* If we changed interpreters, DON'T print out anything.  */
@@ -1922,7 +1923,7 @@ captured_mi_execute_command (struct ui_out *uiout, struct mi_parse *context)
 	  {
 	    if (!mi->running_result_record_printed)
 	      {
-		gdb_puts (context->token, mi->raw_stdout);
+		gdb_puts (context->token.c_str (), mi->raw_stdout);
 		gdb_puts ("^done", mi->raw_stdout);
 		mi_out_put (uiout, mi->raw_stdout);
 		mi_out_rewind (uiout);
@@ -1965,7 +1966,7 @@ mi_print_exception (const char *token, const struct gdb_exception &exception)
 void
 mi_execute_command (const char *cmd, int from_tty)
 {
-  char *token;
+  std::string token;
   std::unique_ptr<struct mi_parse> command;
 
   /* This is to handle EOF (^D). We just quit gdb.  */
@@ -1981,13 +1982,12 @@ mi_execute_command (const char *cmd, int from_tty)
     }
   catch (const gdb_exception &exception)
     {
-      mi_print_exception (token, exception);
-      xfree (token);
+      mi_print_exception (token.c_str (), exception);
     }
 
   if (command != NULL)
     {
-      command->token = token;
+      command->token = std::move (token);
 
       if (do_timings)
 	{
@@ -2010,7 +2010,7 @@ mi_execute_command (const char *cmd, int from_tty)
 
 	  /* The command execution failed and error() was called
 	     somewhere.  */
-	  mi_print_exception (command->token, result);
+	  mi_print_exception (command->token.c_str (), result);
 	  mi_out_rewind (current_uiout);
 
 	  /* Throw to a higher level catch for SIGTERM sent to GDB.  */
@@ -2032,7 +2032,7 @@ mi_execute_command (mi_parse *context)
     error (_("Command is not an MI command"));
 
   scoped_restore save_token = make_scoped_restore (&current_token,
-						   context->token);
+						   context->token.c_str ());
   scoped_restore save_debug = make_scoped_restore (&mi_debug_p, 0);
 
   mi_cmd_execute (context);
