@@ -3522,15 +3522,15 @@ info_agents_command (const char *args, int from_tty)
 	table_emitter.emplace (uiout, 9, n_agents, "InfoRocmAgentsTable");
 
 	uiout->table_header (1, ui_left, "current", "");
-	uiout->table_header (std::max (2ul, max_id_width), ui_left, "id",
-			     "Id");
+	uiout->table_header (std::max<size_t> (2, max_id_width), ui_left,
+			     "id", "Id");
 	uiout->table_header (5, ui_left, "state", "State");
-	uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
-			     "target-id", "Target Id");
-	uiout->table_header (std::max (12ul, max_architecture_width), ui_left,
-			     "architecture", "Architecture");
-	uiout->table_header (std::max (11ul, max_name_width), ui_left, "name",
-			     "Device Name");
+	uiout->table_header (std::max<size_t> (9, max_target_id_width),
+			     ui_left, "target-id", "Target Id");
+	uiout->table_header (std::max<size_t> (12, max_architecture_width),
+			     ui_left, "architecture", "Architecture");
+	uiout->table_header (std::max<size_t> (11, max_name_width), ui_left,
+			     "name", "Device Name");
 	uiout->table_header (5, ui_left, "cores", "Cores");
 	uiout->table_header (7, ui_left, "threads", "Threads");
 	uiout->table_header (8, ui_left, "location", "Location");
@@ -3783,8 +3783,8 @@ info_queues_command (const char *args, int from_tty)
 	uiout->table_header (1, ui_left, "current", "");
 	uiout->table_header (show_inferior_qualified_tids () ? 6 : 4, ui_left,
 			     "id", "Id");
-	uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
-			     "target-id", "Target Id");
+	uiout->table_header (std::max<size_t> (9, max_target_id_width),
+			     ui_left, "target-id", "Target Id");
 	uiout->table_header (12, ui_left, "type", "Type");
 	uiout->table_header (6, ui_left, "read", "Read");
 	uiout->table_header (6, ui_left, "write", "Write");
@@ -4198,22 +4198,23 @@ info_dispatches_command (const char *args, int from_tty)
 	uiout->table_header (1, ui_left, "current", "");
 	uiout->table_header (show_inferior_qualified_tids () ? 6 : 4, ui_left,
 			     "id", "Id");
-	uiout->table_header (std::max (9ul, max_target_id_width), ui_left,
-			     "target-id", "Target Id");
-	uiout->table_header (std::max (4ul, max_grid_width), ui_left, "grid",
-			     "Grid");
-	uiout->table_header (std::max (9ul, max_workgroup_width), ui_left,
-			     "workgroup", "Workgroup");
+	uiout->table_header (std::max<size_t> (9, max_target_id_width),
+			     ui_left, "target-id", "Target Id");
+	uiout->table_header (std::max<size_t> (4, max_grid_width), ui_left,
+			     "grid", "Grid");
+	uiout->table_header (std::max<size_t> (9, max_workgroup_width),
+			     ui_left, "workgroup", "Workgroup");
 	uiout->table_header (7, ui_left, "fence", "Fence");
 	if (opts.full)
 	  {
-	    uiout->table_header (std::max (14ul, max_address_spaces_width),
+	    uiout->table_header (std::max<size_t> (14,
+						   max_address_spaces_width),
 				 ui_left, "address-spaces", "Address Spaces");
-	    uiout->table_header (std::max (17ul, addr_width), ui_left,
+	    uiout->table_header (std::max<size_t> (17, addr_width), ui_left,
 				 "kernel-desc", "Kernel Descriptor");
-	    uiout->table_header (std::max (11ul, addr_width), ui_left,
+	    uiout->table_header (std::max<size_t> (11, addr_width), ui_left,
 				 "kernel-args", "Kernel Args");
-	    uiout->table_header (std::max (17ul, addr_width), ui_left,
+	    uiout->table_header (std::max<size_t> (17, addr_width), ui_left,
 				 "completion", "Completion Signal");
 	  }
 	uiout->table_header (1, ui_left, "kernel-function", "Kernel Function");
