@@ -302,6 +302,14 @@ solib_find_1 (const char *in_pathname, int *fd, bool is_solib)
   if (is_solib && found_file < 0 && ops->find_and_open_solib)
     found_file = ops->find_and_open_solib (in_pathname, O_RDONLY | O_BINARY,
 					   &temp_pathname);
+  for (const solib_ops *curr_ops : current_inferior ()->so_ops ())
+    {
+      if (is_solib && found_file < 0
+	  && curr_ops->find_and_open_solib != nullptr)
+	found_file = curr_ops->find_and_open_solib (in_pathname,
+						    O_RDONLY | O_BINARY,
+						    &temp_pathname);
+    }
 
   /* If not found, next search the inferior's $PATH environment variable.  */
   if (found_file < 0 && sysroot == NULL)
@@ -543,7 +551,8 @@ get_cbfd_soname_build_id (gdb_bfd_ref_ptr abfd, const char *soname)
 static int
 solib_map_sections (solib &so)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
+  const solib_ops *ops = (so.provider != nullptr ? so.provider
+			  : gdbarch_so_ops (current_inferior ()->arch ()));
 
   gdb::unique_xmalloc_ptr<char> filename (tilde_expand (so.so_name.c_str ()));
   gdb_bfd_ref_ptr abfd (ops->bfd_open (filename.get ()));
@@ -628,7 +637,9 @@ solib_map_sections (solib &so)
 void
 solib::clear ()
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
+  const solib_ops *ops = (provider == nullptr
+			  ? gdbarch_so_ops (current_inferior ()->arch ())
+			  : provider);
 
   this->sections.clear ();
   this->abfd = nullptr;
@@ -797,6 +808,10 @@ update_solib_list (int from_tty)
      contains only the new shared objects, which we then add.  */
 
   intrusive_list<solib> inferior = ops->current_sos ();
+  /* Append lists of all other providers.  */
+  for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+    inferior.splice (aux_ops->current_sos ());
+
   intrusive_list<solib>::iterator gdb_iter
     = current_program_space->so_list.begin ();
   while (gdb_iter != current_program_space->so_list.end ())
@@ -807,16 +822,21 @@ update_solib_list (int from_tty)
 	 the inferior's current list.  */
       for (; inferior_iter != inferior.end (); ++inferior_iter)
 	{
-	  if (ops->same)
+	  const solib_ops *ref_ops = (gdb_iter->provider != nullptr
+				      ? gdb_iter->provider : ops);
+	  if (gdb_iter->provider == inferior_iter->provider)
 	    {
-	      if (ops->same (*gdb_iter, *inferior_iter))
-		break;
-	    }
-	  else
-	    {
-	      if (!filename_cmp (gdb_iter->so_original_name.c_str (),
-				 inferior_iter->so_original_name.c_str ()))
-		break;
+	      if (ref_ops->same != nullptr)
+		{
+		  if (ref_ops->same (*gdb_iter, *inferior_iter))
+		    break;
+		}
+	      else
+		{
+		  if (!filename_cmp (gdb_iter->so_original_name.c_str (),
+				     inferior_iter->so_original_name.c_str ()))
+		    break;
+		}
 	    }
 	}
 
@@ -1177,10 +1197,18 @@ solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
 {
   const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
 
-  if (ops->keep_data_in_core)
-    return ops->keep_data_in_core (vaddr, size) != 0;
-  else
-    return false;
+  if (ops->keep_data_in_core != nullptr
+      && ops->keep_data_in_core (vaddr, size) != 0)
+    return true;
+
+  for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+    {
+      if (aux_ops->keep_data_in_core != nullptr
+	  && aux_ops->keep_data_in_core (vaddr, size) != 0)
+	return true;
+    }
+
+  return false;
 }
 
 /* See solib.h.  */
@@ -1200,6 +1228,12 @@ clear_solib (program_space *pspace)
 
   if (ops->clear_solib != nullptr)
     ops->clear_solib (pspace);
+
+  for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+    {
+      if (aux_ops->clear_solib != nullptr)
+	aux_ops->clear_solib (pspace);
+    }
 }
 
 /* Shared library startup support.  When GDB starts up the inferior,
@@ -1213,6 +1247,8 @@ solib_create_inferior_hook (int from_tty)
   const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
 
   ops->solib_create_inferior_hook (from_tty);
+  for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+    aux_ops->solib_create_inferior_hook (from_tty);
 }
 
 /* See solib.h.  */
@@ -1222,7 +1258,14 @@ in_solib_dynsym_resolve_code (CORE_ADDR pc)
 {
   const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
 
-  return ops->in_dynsym_resolve_code (pc) != 0;
+  if (ops->in_dynsym_resolve_code (pc) != 0)
+    return true;
+  for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+    {
+      if (aux_ops->in_dynsym_resolve_code (pc) != 0)
+	return true;
+    }
+  return false;
 }
 
 /* Implements the "sharedlibrary" command.  */
@@ -1258,8 +1301,14 @@ update_solib_breakpoints (void)
 {
   const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
 
-  if (ops->update_breakpoints != NULL)
+  if (ops->update_breakpoints != nullptr)
     ops->update_breakpoints ();
+
+  for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+    {
+      if (aux_ops->update_breakpoints != nullptr)
+	aux_ops->update_breakpoints ();
+    }
 }
 
 /* See solib.h.  */
@@ -1269,8 +1318,14 @@ handle_solib_event (void)
 {
   const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
 
-  if (ops->handle_event != NULL)
+  if (ops->handle_event != nullptr)
     ops->handle_event ();
+
+  for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+    {
+      if (aux_ops->handle_event != nullptr)
+	aux_ops->handle_event ();
+    }
 
   current_inferior ()->pspace->clear_solib_cache ();
 
@@ -1370,6 +1425,11 @@ reload_shared_libraries (const char *ignored, int from_tty,
 	 so_list entries.  */
       if (ops->clear_solib != nullptr)
 	ops->clear_solib (current_program_space);
+      for (const solib_ops *aux_ops : current_inferior ()->so_ops ())
+	{
+	  if (aux_ops->clear_solib != nullptr)
+	    aux_ops->clear_solib (current_program_space);
+	}
 
       /* Remove any previous solib event breakpoint.  This is usually
 	 done in common code, at breakpoint_init_inferior time, but

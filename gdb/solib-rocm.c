@@ -28,7 +28,6 @@
 #include "inferior.h"
 #include "observable.h"
 #include "solib.h"
-#include "solib-svr4.h"
 #include "solist.h"
 #include "symfile.h"
 
@@ -124,18 +123,58 @@ rocm_solib_fd_cache::close (int fd, fileio_error *target_errno)
 
 } /* Anonymous namespace.  */
 
+/* Forward declaration of methods.  */
+
+
+static void rocm_solib_relocate_section_addresses (solib &so,
+						   struct target_section *sec);
+static void rocm_solib_clear_so (const solib &so);
+static void rocm_solib_clear_solib (program_space *pspace);
+static void rocm_solib_create_inferior_hook (int from_tty);
+static intrusive_list<solib> rocm_solib_current_sos ();
+static int rocm_solib_open_symbol_file_object (int from_tty);
+static int rocm_solib_in_dynsym_resolve_code (CORE_ADDR pc);
+static gdb_bfd_ref_ptr rocm_solib_bfd_open (const char *pathname);
+static int rocm_solib_same (const solib &gdb, const solib &inferior);
+static int rocm_solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size);
+static void rocm_solib_handle_event ();
+
+static const solib_ops rocm_solib_ops =
+{
+  rocm_solib_relocate_section_addresses,
+  rocm_solib_clear_so,
+  rocm_solib_clear_solib,
+  rocm_solib_create_inferior_hook,
+  rocm_solib_current_sos,
+  rocm_solib_open_symbol_file_object,
+  rocm_solib_in_dynsym_resolve_code,
+  rocm_solib_bfd_open,
+  nullptr /* find_and_open_solib */,
+  rocm_solib_same,
+  rocm_solib_keep_data_in_core,
+  nullptr /* TODO update_breakpoints */,
+  rocm_solib_handle_event
+};
+
+struct lm_info_rocm : public lm_info
+{
+  CORE_ADDR l_addr = 0;
+};
+
+using lm_info_rocm_up = std::unique_ptr<lm_info_rocm>;
+
 /* ROCm-specific inferior data.  */
 
 struct rocm_so
 {
-  rocm_so (const char *name, std::string unique_name, lm_info_svr4_up lm_info)
+  rocm_so (const char *name, std::string unique_name, lm_info_rocm_up lm_info)
     : name (name),
       unique_name (std::move (unique_name)),
       lm_info (std::move (lm_info))
   {}
 
   std::string name, unique_name;
-  lm_info_svr4_up lm_info;
+  lm_info_rocm_up lm_info;
 };
 
 struct solib_info
@@ -153,8 +192,6 @@ struct solib_info
 
 /* Per-inferior data key.  */
 static const registry<inferior>::key<solib_info> rocm_solib_data;
-
-static solib_ops rocm_solib_ops;
 
 /* Fetch the solib_info data for INF.  */
 
@@ -175,31 +212,32 @@ static void
 rocm_solib_relocate_section_addresses (solib &so,
 				       struct target_section *sec)
 {
-  if (!is_amdgpu_arch (gdbarch_from_bfd (so.abfd.get ())))
-    {
-      svr4_so_ops.relocate_section_addresses (so, sec);
-      return;
-    }
+  gdb_assert (so.provider == &rocm_solib_ops);
+  gdb_assert (is_amdgpu_arch (gdbarch_from_bfd (so.abfd.get ())));
 
-  auto *li = gdb::checked_static_cast<lm_info_svr4 *> (so.lm_info.get ());
+  lm_info_rocm *li = static_cast<lm_info_rocm *> (so.lm_info.get ());
   sec->addr = sec->addr + li->l_addr;
   sec->endaddr = sec->endaddr + li->l_addr;
 }
 
-static void rocm_update_solib_list ();
+static void
+rocm_solib_clear_so (const solib &so)
+{
+  lm_info_rocm *li = static_cast<lm_info_rocm *> (so.lm_info.get ());
+  if (li != nullptr)
+    li->l_addr = 0;
+}
 
 static void
-rocm_solib_handle_event ()
+rocm_solib_clear_solib (program_space *pspace)
 {
-  /* Since we sit on top of svr4_so_ops, we might get called following an event
-     concerning host libraries.  We must therefore forward the call.  If the
-     event was for a ROCm code object, it will be a no-op.  On the other hand,
-     if the event was for host libraries, rocm_update_solib_list will be
-     essentially be a no-op (it will reload the same code object list as was
-     previously loaded).  */
-  svr4_so_ops.handle_event ();
-
-  rocm_update_solib_list ();
+  /* The rocm solib data is stored per inferior, make sure to clear all
+     inferiors bound to PSPACE.  */
+  for (struct inferior *inferior : all_inferiors ())
+    {
+      if (inferior->pspace == pspace)
+	get_solib_info (inferior)->solib_list.clear ();
+    }
 }
 
 /* Create so_list objects from rocm_so objects in SOS.  */
@@ -211,11 +249,11 @@ so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
 
   for (const rocm_so &so : sos)
     {
-      solib *newobj = new solib;
-      newobj->lm_info = std::make_unique<lm_info_svr4> (*so.lm_info);
-
+      struct solib *newobj = new struct solib;
+      newobj->lm_info = std::make_unique<lm_info_rocm> (*so.lm_info);
       newobj->so_name = so.name;
       newobj->so_original_name = so.unique_name;
+      newobj->provider = &rocm_solib_ops;
 
       dst.push_back (*newobj);
     }
@@ -229,24 +267,8 @@ so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
 static intrusive_list<solib>
 rocm_solib_current_sos ()
 {
-  /* First, retrieve the host-side shared library list.  */
-  intrusive_list<solib> sos = svr4_so_ops.current_sos ();
-
-  /* Then, the device-side shared library list.  */
-  std::vector<rocm_so> &dev_sos = get_solib_info (current_inferior ())->solib_list;
-
-  if (dev_sos.empty ())
-    return sos;
-
-  intrusive_list<solib> dev_so_list = so_list_from_rocm_sos (dev_sos);
-
-  if (sos.empty ())
-    return dev_so_list;
-
-  /* Append our libraries to the end of the list.  */
-  sos.splice (std::move (dev_so_list));
-
-  return sos;
+  return
+    so_list_from_rocm_sos (get_solib_info (current_inferior ())->solib_list);
 }
 
 namespace {
@@ -585,9 +607,8 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
 static gdb_bfd_ref_ptr
 rocm_solib_bfd_open (const char *pathname)
 {
-  /* Handle regular files with SVR4 open.  */
   if (strstr (pathname, "://") == nullptr)
-    return svr4_so_ops.bfd_open (pathname);
+    error ("Invalid ROCm solib path %s", pathname);
 
   auto open = [] (bfd *nbfd) -> gdb_bfd_iovec_base *
   {
@@ -675,8 +696,6 @@ static void
 rocm_solib_create_inferior_hook (int from_tty)
 {
   get_solib_info (current_inferior ())->solib_list.clear ();
-
-  svr4_so_ops.solib_create_inferior_hook (from_tty);
 }
 
 static void
@@ -725,7 +744,7 @@ rocm_update_solib_list ()
 
       gdb::unique_xmalloc_ptr<char> uri_bytes_holder (uri_bytes);
 
-      lm_info_svr4_up li = std::make_unique<lm_info_svr4> ();
+      lm_info_rocm_up li = std::make_unique<lm_info_rocm> ();
       li->l_addr = l_addr;
 
       /* Generate a unique name so that code objects with the same URI but
@@ -738,29 +757,57 @@ rocm_update_solib_list ()
     }
 
   xfree (code_object_list);
+}
 
-  if (rocm_solib_ops.current_sos == NULL)
-    {
-      /* Override what we need to.  */
-      rocm_solib_ops = svr4_so_ops;
-      rocm_solib_ops.current_sos = rocm_solib_current_sos;
-      rocm_solib_ops.solib_create_inferior_hook
-	= rocm_solib_create_inferior_hook;
-      rocm_solib_ops.bfd_open = rocm_solib_bfd_open;
-      rocm_solib_ops.relocate_section_addresses
-	= rocm_solib_relocate_section_addresses;
-      rocm_solib_ops.handle_event = rocm_solib_handle_event;
+static void
+rocm_solib_handle_event ()
+{
+  rocm_update_solib_list ();
+}
 
-      /* Engage the ROCm so_ops.  */
-      set_gdbarch_so_ops (current_inferior ()->arch (), &rocm_solib_ops);
-    }
+static int
+rocm_solib_open_symbol_file_object (int from_tty)
+{
+  /* This solist provider never provides the main entrypoint of the program.
+     */
+  gdb_assert (false);
+  return false;
+}
+
+static int
+rocm_solib_in_dynsym_resolve_code (CORE_ADDR pc)
+{
+  return false;
+}
+
+static int
+rocm_solib_same (const solib &gdb, const solib &inferior)
+{
+  gdb_assert (gdb.provider != inferior.provider);
+
+  /* The same code object can be loaded at different addresses (for different
+     agents), those should be considered different.  */
+  lm_info_rocm *gdb_li = static_cast<lm_info_rocm *> (gdb.lm_info.get ());
+  lm_info_rocm *inf_li = static_cast<lm_info_rocm *> (inferior.lm_info.get ());
+
+  return (gdb.so_original_name == inferior.so_original_name
+	  && gdb_li->l_addr == inf_li->l_addr);
+}
+
+static int
+rocm_solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
+{
+  return false;
 }
 
 static void
 rocm_solib_target_inferior_created (inferior *inf)
 {
-  get_solib_info (inf)->solib_list.clear ();
+  /* Ensure the ROCm so_ops is engaged.  This operation is a no-op if
+     already engaged.  */
+  inf->push_solib_ops (&rocm_solib_ops);
 
+  get_solib_info (current_inferior ())->solib_list.clear ();
   rocm_update_solib_list ();
 
   /* Force GDB to reload the solibs.  */

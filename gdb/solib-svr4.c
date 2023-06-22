@@ -3341,6 +3341,16 @@ svr4_iterate_over_objfiles_in_search_order
 	 executable, we assume that they were added to the initial
 	 namespace.  */
       const solib *solib = find_solib_for_objfile (objfile);
+
+       /* Skip solibs from other providers.  We assume that svr4 is always
+	  a main provider, so our solibs will have
+	  solib->provider == nullptr.  */
+      if (solib == nullptr)
+	continue;
+
+      if (solib->provider != nullptr)
+	continue;
+
       CORE_ADDR solib_base = find_debug_base_for_solib (solib);
       if (solib_base == 0)
 	solib_base = initial;

@@ -25,6 +25,8 @@
 #include "gdb_bfd.h"
 #include "target-section.h"
 
+struct solib_ops;
+
 /* Base class for target-specific link map information.  */
 
 struct lm_info
@@ -67,6 +69,10 @@ struct solib : intrusive_list_node<solib>
 
   /* Shared object file name, expanded to something GDB can open.  */
   std::string so_name;
+
+  /* The provider owning this solib.  If NULL, it is owned by the gdbarch's
+     so_ops.  */
+  const struct solib_ops *provider = nullptr;
 
   /* The following fields of the structure are built from
      information gathered from the shared object file itself, and
