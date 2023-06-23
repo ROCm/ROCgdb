@@ -4563,7 +4563,6 @@ set_target_permissions (const char *args, int from_tty,
     }
 
   /* Make the real values match the user-changed values.  */
-  may_write_registers = may_write_registers_1;
   may_insert_breakpoints = may_insert_breakpoints_1;
   may_insert_tracepoints = may_insert_tracepoints_1;
   may_insert_fast_tracepoints = may_insert_fast_tracepoints_1;
@@ -4571,14 +4570,15 @@ set_target_permissions (const char *args, int from_tty,
   update_observer_mode ();
 }
 
-/* Set memory write permission independently of observer mode.  */
+/* Set some permissions independently of observer mode.  */
 
 static void
-set_write_memory_permission (const char *args, int from_tty,
-			struct cmd_list_element *c)
+set_write_memory_registers_permission (const char *args, int from_tty,
+				       struct cmd_list_element *c)
 {
   /* Make the real values match the user-changed values.  */
   may_write_memory = may_write_memory_1;
+  may_write_registers = may_write_registers_1;
   update_observer_mode ();
 }
 
@@ -4647,7 +4647,7 @@ Set permission to write into registers."), _("\
 Show permission to write into registers."), _("\
 When this permission is on, GDB may write into the target's registers.\n\
 Otherwise, any sort of write attempt will result in an error."),
-			   set_target_permissions, NULL,
+			   set_write_memory_registers_permission, NULL,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("may-write-memory", class_support,
@@ -4656,7 +4656,7 @@ Set permission to write into target memory."), _("\
 Show permission to write into target memory."), _("\
 When this permission is on, GDB may write into the target's memory.\n\
 Otherwise, any sort of write attempt will result in an error."),
-			   set_write_memory_permission, NULL,
+			   set_write_memory_registers_permission, NULL,
 			   &setlist, &showlist);
 
   add_setshow_boolean_cmd ("may-insert-breakpoints", class_support,

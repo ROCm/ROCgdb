@@ -20,7 +20,7 @@ import gdb.printing
 from typing import Optional
 
 from .frames import frame_for_id
-from .server import capability, request
+from .server import capability, request, client_bool_capability
 from .startup import send_gdb_with_response, in_gdb_thread
 from .varref import find_variable, VariableReference
 
@@ -41,6 +41,16 @@ def _evaluate(expr, frame_id):
     val = gdb.parse_and_eval(expr, global_context=global_context)
     ref = EvaluateResult(val)
     return ref.to_object()
+
+
+# Like _evaluate but ensure that the expression cannot cause side
+# effects.
+@in_gdb_thread
+def _eval_for_hover(expr, frame_id):
+    with gdb.with_parameter("may-write-registers", "off"):
+        with gdb.with_parameter("may-write-memory", "off"):
+            with gdb.with_parameter("may-call-functions", "off"):
+                return _evaluate(expr, frame_id)
 
 
 # Helper function to perform an assignment.
@@ -71,6 +81,7 @@ def _repl(command, frame_id):
 
 
 @request("evaluate")
+@capability("supportsEvaluateForHovers")
 def eval_request(
     *,
     expression: str,
@@ -81,6 +92,8 @@ def eval_request(
     if context in ("watch", "variables"):
         # These seem to be expression-like.
         return send_gdb_with_response(lambda: _evaluate(expression, frameId))
+    elif context == "hover":
+        return send_gdb_with_response(lambda: _eval_for_hover(expression, frameId))
     elif context == "repl":
         return send_gdb_with_response(lambda: _repl(expression, frameId))
     else:
@@ -98,6 +111,11 @@ def _variables(ref, start, count):
 # Note that we ignore the 'filter' field.  That seems to be
 # specific to javascript.
 def variables(*, variablesReference: int, start: int = 0, count: int = 0, **args):
+    # This behavior was clarified here:
+    # https://github.com/microsoft/debug-adapter-protocol/pull/394
+    if not client_bool_capability("supportsVariablePaging"):
+        start = 0
+        count = 0
     result = send_gdb_with_response(
         lambda: _variables(variablesReference, start, count)
     )
