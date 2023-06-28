@@ -166,6 +166,8 @@ md_parse_option (int c, const char *arg)
 	{
 	  LARCH_opts.ase_ilp32 = 1;
 	  LARCH_opts.ase_lp64 = 1;
+	  LARCH_opts.ase_lsx = 1;
+	  LARCH_opts.ase_lasx = 1;
 	  LARCH_opts.ase_abi = lp64[suf[4]];
 	}
       else if (strncasecmp (arg, "ilp32", 5) == 0 && ilp32[suf[5]] != 0)
@@ -241,6 +243,8 @@ loongarch_after_parse_args ()
 	  LARCH_opts.ase_abi = EF_LOONGARCH_ABI_DOUBLE_FLOAT;
 	  LARCH_opts.ase_ilp32 = 1;
 	  LARCH_opts.ase_lp64 = 1;
+	  LARCH_opts.ase_lsx = 1;
+	  LARCH_opts.ase_lasx = 1;
 	}
       else if (strcmp (default_arch, "loongarch32") == 0)
 	{
@@ -650,7 +654,7 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 		      esc_ch1, esc_ch2, bit_field, arg);
 
 	  if (ip->reloc_info[0].type >= BFD_RELOC_LARCH_B16
-	      && ip->reloc_info[0].type < BFD_RELOC_LARCH_SUB_ULEB128)
+	      && ip->reloc_info[0].type < BFD_RELOC_LARCH_64_PCREL)
 	    {
 	      /* As we compact stack-relocs, it is no need for pop operation.
 		 But break out until here in order to check the imm field.
@@ -1230,8 +1234,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
        function. If only fx_addsy not null, we generate
        BFD_RELOC_LARCH_ADD24/16/8 only, then generate R_LARCH_24/16/8.
        To avoid R_LARCH_ADDxx add extra value, we write 0 first
-       (use md_number_to_chars (buf, 0, fixP->fx_size)).
-    */
+       (use md_number_to_chars (buf, 0, fixP->fx_size)).  */
     case BFD_RELOC_64:
     case BFD_RELOC_32:
       if (fixP->fx_r_type == BFD_RELOC_32
