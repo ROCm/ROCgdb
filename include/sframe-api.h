@@ -94,11 +94,11 @@ sframe_errmsg (int error);
 /* Create an FDE function info bye given an FRE_TYPE and an FDE_TYPE.  */
 
 extern unsigned char
-sframe_fde_create_func_info (unsigned int fre_type, unsigned int fde_type);
+sframe_fde_create_func_info (uint32_t fre_type, uint32_t fde_type);
 
 /* Gather the FRE type given the function size.  */
 
-extern unsigned int
+extern uint32_t
 sframe_calc_fre_type (size_t func_size);
 
 /* The SFrame Decoder.  */
@@ -117,12 +117,12 @@ extern unsigned int
 sframe_decoder_get_hdr_size (sframe_decoder_ctx *dctx);
 
 /* Get the SFrame's abi/arch info.  */
-extern unsigned char
+extern uint8_t
 sframe_decoder_get_abi_arch (sframe_decoder_ctx *dctx);
 
 /* Return the number of function descriptor entries in the SFrame decoder
    DCTX.  */
-extern unsigned int
+extern uint32_t
 sframe_decoder_get_num_fidx (sframe_decoder_ctx *dctx);
 
 /* Get the fixed FP offset from the decoder context DCTX.  */
@@ -133,10 +133,13 @@ sframe_decoder_get_fixed_fp_offset (sframe_decoder_ctx *dctx);
 extern int8_t
 sframe_decoder_get_fixed_ra_offset (sframe_decoder_ctx *dctx);
 
-/* Find the function descriptor entry which contains the specified address.  */
-extern sframe_func_desc_entry *
-sframe_get_funcdesc_with_addr (sframe_decoder_ctx *dctx,
-			       int32_t addr, int *errp);
+/* Find the function descriptor entry which contains the specified address.
+
+   Note: This function is deprecated and will be removed from future release
+   X+2 of the library.  */
+extern void *
+sframe_get_funcdesc_with_addr (sframe_decoder_ctx *dctx, int32_t addr,
+			       int *errp);
 
 /* Find the SFrame Frame Row Entry which contains the PC.  Returns
    SFRAME_ERR if failure.  */
@@ -170,7 +173,7 @@ extern void
 dump_sframe (sframe_decoder_ctx *decoder, uint64_t addr);
 
 /* Get the base reg id from the FRE info.  Sets errp if fails.  */
-extern unsigned int
+extern uint8_t
 sframe_fre_get_base_reg_id (sframe_frame_row_entry *fre, int *errp);
 
 /* Get the CFA offset from the FRE.  If the offset is invalid, sets errp.  */
@@ -199,7 +202,7 @@ sframe_fre_get_ra_mangled_p (sframe_decoder_ctx *dctx,
 /* Create an encoder context with the given SFrame format version VER, FLAGS
    and ABI information.  Sets errp if failure.  */
 extern sframe_encoder_ctx *
-sframe_encode (unsigned char ver, unsigned char flags, int abi,
+sframe_encode (uint8_t ver, uint8_t flags, uint8_t abi_arch,
 	       int8_t fixed_fp_offset, int8_t fixed_ra_offset, int *errp);
 
 /* Free the encoder context.  */
@@ -211,12 +214,12 @@ extern unsigned int
 sframe_encoder_get_hdr_size (sframe_encoder_ctx *encoder);
 
 /* Get the abi/arch info from the SFrame encoder context CTX.  */
-extern unsigned char
+extern uint8_t
 sframe_encoder_get_abi_arch (sframe_encoder_ctx *encoder);
 
 /* Return the number of function descriptor entries in the SFrame encoder
    ENCODER.  */
-extern unsigned int
+extern uint32_t
 sframe_encoder_get_num_fidx (sframe_encoder_ctx *encoder);
 
 /* Add an FRE to function at FUNC_IDX'th function descriptor index entry in

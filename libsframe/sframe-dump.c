@@ -32,9 +32,9 @@ is_sframe_abi_arch_aarch64 (sframe_decoder_ctx *sfd_ctx)
 {
   bool aarch64_p = false;
 
-  unsigned char abi_arch = sframe_decoder_get_abi_arch (sfd_ctx);
-  if ((abi_arch == SFRAME_ABI_AARCH64_ENDIAN_BIG)
-      || (abi_arch == SFRAME_ABI_AARCH64_ENDIAN_LITTLE))
+  uint8_t abi_arch = sframe_decoder_get_abi_arch (sfd_ctx);
+  if (abi_arch == SFRAME_ABI_AARCH64_ENDIAN_BIG
+      || abi_arch == SFRAME_ABI_AARCH64_ENDIAN_LITTLE)
     aarch64_p = true;
 
   return aarch64_p;
@@ -105,7 +105,7 @@ dump_sframe_func_with_fres (sframe_decoder_ctx *sfd_ctx,
   int32_t cfa_offset = 0;
   int32_t fp_offset = 0;
   int32_t ra_offset = 0;
-  unsigned int base_reg_id = 0;
+  uint8_t base_reg_id = 0;
   int err[3] = {0, 0, 0};
 
   sframe_frame_row_entry fre;
@@ -164,11 +164,15 @@ dump_sframe_func_with_fres (sframe_decoder_ctx *sfd_ctx,
 	strcpy (temp, "u");
       printf ("%-10s", temp);
 
-      /* Dump RA info.  */
-      if (err[2] == 0)
-	sprintf (temp, "c%+d", ra_offset);
-      else
+      /* Dump RA info.
+	 If an ABI does not track RA offset, e.g., AMD64, display a 'u',
+	 else display the offset d as 'c+-d'.  */
+      if (sframe_decoder_get_fixed_ra_offset(sfd_ctx)
+	  != SFRAME_CFA_FIXED_RA_INVALID)
 	strcpy (temp, "u");
+      else if (err[2] == 0)
+	sprintf (temp, "c%+d", ra_offset);
+
       /* Mark SFrame FRE's RA information with "[s]" if the RA is mangled
 	 with signature bits.  */
       const char *ra_mangled_p_str
