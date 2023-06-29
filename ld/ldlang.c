@@ -2538,6 +2538,10 @@ lang_discard_section_p (asection *section)
       && (flags & SEC_DEBUGGING) != 0)
     discard = true;
 
+  /* Discard non-alloc sections if we are stripping section headers.  */
+  else if (config.no_section_header && (flags & SEC_ALLOC) == 0)
+    discard = true;
+
   return discard;
 }
 
@@ -3434,6 +3438,10 @@ ldlang_open_output (lang_statement_union_type *statement)
 	link_info.output_bfd->flags |= BFD_TRADITIONAL_FORMAT;
       else
 	link_info.output_bfd->flags &= ~BFD_TRADITIONAL_FORMAT;
+      if (config.no_section_header)
+	link_info.output_bfd->flags |= BFD_NO_SECTION_HEADER;
+      else
+	link_info.output_bfd->flags &= ~BFD_NO_SECTION_HEADER;
       break;
 
     case lang_target_statement_enum:
