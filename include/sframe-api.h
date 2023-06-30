@@ -120,6 +120,10 @@ sframe_decoder_get_hdr_size (sframe_decoder_ctx *dctx);
 extern uint8_t
 sframe_decoder_get_abi_arch (sframe_decoder_ctx *dctx);
 
+/* Get the format version from the SFrame decoder context DCTX.  */
+extern uint8_t
+sframe_decoder_get_version (sframe_decoder_ctx *dctx);
+
 /* Return the number of function descriptor entries in the SFrame decoder
    DCTX.  */
 extern uint32_t
@@ -167,6 +171,19 @@ sframe_decoder_get_funcdesc (sframe_decoder_ctx *ctx,
 			     uint32_t *func_size,
 			     int32_t *func_start_address,
 			     unsigned char *func_info);
+
+/* Get the data (NUM_FRES, FUNC_SIZE, FUNC_START_ADDRESS, FUNC_INFO,
+   REP_BLOCK_SIZE) from the function descriptor entry at index I'th
+   in the decoder CTX.  If failed, return error code.
+   This API is only available from SFRAME_VERSION_2.  */
+extern int
+sframe_decoder_get_funcdesc_v2 (sframe_decoder_ctx *ctx,
+				unsigned int i,
+				uint32_t *num_fres,
+				uint32_t *func_size,
+				int32_t *func_start_address,
+				unsigned char *func_info,
+				uint8_t *rep_block_size);
 
 /* SFrame textual dump.  */
 extern void
@@ -217,6 +234,10 @@ sframe_encoder_get_hdr_size (sframe_encoder_ctx *encoder);
 extern uint8_t
 sframe_encoder_get_abi_arch (sframe_encoder_ctx *encoder);
 
+/* Get the format version from the SFrame encoder context ENCODER.  */
+extern uint8_t
+sframe_encoder_get_version (sframe_encoder_ctx *encoder);
+
 /* Return the number of function descriptor entries in the SFrame encoder
    ENCODER.  */
 extern uint32_t
@@ -237,6 +258,16 @@ sframe_encoder_add_funcdesc (sframe_encoder_ctx *encoder,
 			     uint32_t func_size,
 			     unsigned char func_info,
 			     uint32_t num_fres);
+
+/* Add a new function descriptor entry with START_ADDR, FUNC_SIZE, FUNC_INFO
+   and REP_BLOCK_SIZE to the encoder.  */
+extern int
+sframe_encoder_add_funcdesc_v2 (sframe_encoder_ctx *encoder,
+				int32_t start_addr,
+				uint32_t func_size,
+				unsigned char func_info,
+				uint8_t rep_block_size,
+				uint32_t num_fres);
 
 /* Serialize the contents of the encoder and return the buffer.  ENCODED_SIZE
    is updated to the size of the buffer.  Sets ERRP if failure.  */

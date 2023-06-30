@@ -45,14 +45,14 @@ const char *const loongarch_r_lp64_name[32] =
 {
   "$zero", "$ra", "$tp", "$sp", "$a0", "$a1", "$a2", "$a3",
   "$a4",   "$a5", "$a6", "$a7", "$t0", "$t1", "$t2", "$t3",
-  "$t4",   "$t5", "$t6", "$t7", "$t8", "$x",  "$fp", "$s0",
+  "$t4",   "$t5", "$t6", "$t7", "$t8", "$r21","$fp", "$s0",
   "$s1",   "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$s8",
 };
 
-const char *const loongarch_r_lp64_name1[32] =
+const char *const loongarch_r_lp64_name_deprecated[32] =
 {
   "", "", "", "", "$v0", "$v1", "", "", "", "", "", "", "", "", "", "",
-  "", "", "", "", "",    "",    "", "", "", "", "", "", "", "", "", "",
+  "", "", "", "", "",    "$x",  "", "", "", "", "", "", "", "", "", "",
 };
 
 const char *const loongarch_f_normal_name[32] =
@@ -71,7 +71,7 @@ const char *const loongarch_f_lp64_name[32] =
   "$fs0", "$fs1", "$fs2",  "$fs3",  "$fs4",  "$fs5",  "$fs6",  "$fs7",
 };
 
-const char *const loongarch_f_lp64_name1[32] =
+const char *const loongarch_f_lp64_name_deprecated[32] =
 {
   "$fv0", "$fv1", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
   "",     "",     "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -344,9 +344,29 @@ static struct loongarch_opcode loongarch_macro_opcodes[] =
   { 0, 0, 0, 0, 0, 0, 0, 0 } /* Terminate the list.  */
 };
 
+static struct loongarch_opcode loongarch_alias_opcodes[] =
+{
+  /* match,	mask,		name,		format,				macro,	include, exclude, pinfo.  */
+  { 0x00150000,	0xfffffc00,	"move",		"r0:5,r5:5",			0,	0, 0, INSN_DIS_ALIAS }, /* or rd, rj, zero */
+  { 0x02800000, 0xffc003e0,	"li.w",		"r0:5,s10:12",			0,	0, 0, INSN_DIS_ALIAS }, /* addi.w rd, zero, simm */
+  { 0x02c00000, 0xffc003e0,	"li.d",		"r0:5,s10:12",			0,	0, 0, INSN_DIS_ALIAS }, /* addi.d rd, zero, simm */
+  { 0x03400000,	0xffffffff,	"nop",		"",				0,	0, 0, INSN_DIS_ALIAS }, /* andi zero, zero, 0 */
+  { 0x03800000, 0xffc003e0,	"li.w",		"r0:5,u10:12",			0,	0, 0, INSN_DIS_ALIAS }, /* ori rd, zero, uimm */
+  /* ret must come before jr because it is more specific.  */
+  { 0x4c000020,	0xffffffff,	"ret",		"",				0,	0, 0, INSN_DIS_ALIAS }, /* jirl zero, ra, 0 */
+  { 0x4c000000,	0xfffffc1f,	"jr",		"r5:5",				0,	0, 0, INSN_DIS_ALIAS }, /* jirl zero, rj, 0 */
+  { 0x60000000,	0xfc00001f,	"bltz",		"r5:5,sb10:16<<2",		0,	0, 0, INSN_DIS_ALIAS }, /* blt rj, zero, offset */
+  { 0x60000000,	0xfc0003e0,	"bgtz",		"r0:5,sb10:16<<2",		0,	0, 0, INSN_DIS_ALIAS }, /* blt zero, rd, offset */
+  { 0x64000000,	0xfc00001f,	"bgez",		"r5:5,sb10:16<<2",		0,	0, 0, INSN_DIS_ALIAS }, /* bge rj, zero, offset */
+  { 0x64000000,	0xfc0003e0,	"blez",		"r0:5,sb10:16<<2",		0,	0, 0, INSN_DIS_ALIAS }, /* bge zero, rd, offset */
+  { 0 } /* Terminate the list.  */
+};
+
+
 static struct loongarch_opcode loongarch_fix_opcodes[] =
 {
   /* match,	mask,		name,		format,				macro,			include, exclude, pinfo.  */
+  { 0x0,	0x0,		"move",		"r,r",				"or %1,%2,$r0",		0,	0,	0 },
   { 0x00001000, 0xfffffc00,	"clo.w",	"r0:5,r5:5",			0,			0,	0,	0 },
   { 0x00001400, 0xfffffc00,	"clz.w",	"r0:5,r5:5",			0,			0,	0,	0 },
   { 0x00001800, 0xfffffc00,	"cto.w",	"r0:5,r5:5",			0,			0,	0,	0 },
@@ -367,8 +387,6 @@ static struct loongarch_opcode loongarch_fix_opcodes[] =
   { 0x00005400, 0xfffffc00,	"bitrev.d",	"r0:5,r5:5",			0,			0,	0,	0 },
   { 0x00005800, 0xfffffc00,	"ext.w.h",	"r0:5,r5:5",			0,			0,	0,	0 },
   { 0x00005c00, 0xfffffc00,	"ext.w.b",	"r0:5,r5:5",			0,			0,	0,	0 },
-  /* or %1,%2,$r0  */
-  { 0x00150000, 0xfffffc00,	"move",		"r0:5,r5:5",			0,			0,	0,	0 },
   { 0x00006000, 0xfffffc00,	"rdtimel.w",	"r0:5,r5:5",			0,			0,	0,	0 },
   { 0x00006400, 0xfffffc00,	"rdtimeh.w",	"r0:5,r5:5",			0,			0,	0,	0 },
   { 0x00006800, 0xfffffc00,	"rdtime.d",	"r0:5,r5:5",			0,			0,	0,	0 },
@@ -766,26 +784,26 @@ static struct loongarch_opcode loongarch_4opt_double_float_opcodes[] =
 static struct loongarch_opcode loongarch_load_store_opcodes[] =
 {
   /* match,	mask,		name,		format,				macro,			include, exclude, pinfo.  */
-  { 0x20000000, 0xff000000,	"ll.w",		"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x21000000, 0xff000000,	"sc.w",		"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x22000000, 0xff000000,	"ll.d",		"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x23000000, 0xff000000,	"sc.d",		"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x24000000, 0xff000000,	"ldptr.w",	"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x25000000, 0xff000000,	"stptr.w",	"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x26000000, 0xff000000,	"ldptr.d",	"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x27000000, 0xff000000,	"stptr.d",	"r0:5,r5:5,s10:14<<2",		0,			0,	0,	0 },
-  { 0x28000000, 0xffc00000,	"ld.b",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x28400000, 0xffc00000,	"ld.h",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x28800000, 0xffc00000,	"ld.w",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x28c00000, 0xffc00000,	"ld.d",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x29000000, 0xffc00000,	"st.b",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x29400000, 0xffc00000,	"st.h",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x29800000, 0xffc00000,	"st.w",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x29c00000, 0xffc00000,	"st.d",		"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x2a000000, 0xffc00000,	"ld.bu",	"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x2a400000, 0xffc00000,	"ld.hu",	"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x2a800000, 0xffc00000,	"ld.wu",	"r0:5,r5:5,s10:12",		0,			0,	0,	0 },
-  { 0x2ac00000, 0xffc00000,	"preld",	"u0:5,r5:5,s10:12",		0,			0,	0,	0 },
+  { 0x20000000, 0xff000000,	"ll.w",		"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x21000000, 0xff000000,	"sc.w",		"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x22000000, 0xff000000,	"ll.d",		"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x23000000, 0xff000000,	"sc.d",		"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x24000000, 0xff000000,	"ldptr.w",	"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x25000000, 0xff000000,	"stptr.w",	"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x26000000, 0xff000000,	"ldptr.d",	"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x27000000, 0xff000000,	"stptr.d",	"r0:5,r5:5,so10:14<<2",		0,			0,	0,	0 },
+  { 0x28000000, 0xffc00000,	"ld.b",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x28400000, 0xffc00000,	"ld.h",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x28800000, 0xffc00000,	"ld.w",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x28c00000, 0xffc00000,	"ld.d",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x29000000, 0xffc00000,	"st.b",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x29400000, 0xffc00000,	"st.h",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x29800000, 0xffc00000,	"st.w",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x29c00000, 0xffc00000,	"st.d",		"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x2a000000, 0xffc00000,	"ld.bu",	"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x2a400000, 0xffc00000,	"ld.hu",	"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x2a800000, 0xffc00000,	"ld.wu",	"r0:5,r5:5,so10:12",		0,			0,	0,	0 },
+  { 0x2ac00000, 0xffc00000,	"preld",	"u0:5,r5:5,so10:12",		0,			0,	0,	0 },
   { 0x38000000, 0xffff8000,	"ldx.b",	"r0:5,r5:5,r10:5",		0,			0,	0,	0 },
   { 0x38040000, 0xffff8000,	"ldx.h",	"r0:5,r5:5,r10:5",		0,			0,	0,	0 },
   { 0x38080000, 0xffff8000,	"ldx.w",	"r0:5,r5:5,r10:5",		0,			0,	0,	0 },
@@ -918,8 +936,8 @@ static struct loongarch_opcode loongarch_load_store_opcodes[] =
 static struct loongarch_opcode loongarch_single_float_load_store_opcodes[] =
 {
   /* match,	mask,		name,		format,				macro,	include,		exclude, pinfo.  */
-  { 0x2b000000, 0xffc00000,	"fld.s",	"f0:5,r5:5,s10:12",		0,	0,			0,	0 },
-  { 0x2b400000, 0xffc00000,	"fst.s",	"f0:5,r5:5,s10:12",		0,	0,			0,	0 },
+  { 0x2b000000, 0xffc00000,	"fld.s",	"f0:5,r5:5,so10:12",		0,	0,			0,	0 },
+  { 0x2b400000, 0xffc00000,	"fst.s",	"f0:5,r5:5,so10:12",		0,	0,			0,	0 },
   { 0x38300000, 0xffff8000,	"fldx.s",	"f0:5,r5:5,r10:5",		0,	&LARCH_opts.ase_lp64,	0,	0 },
   { 0x38380000, 0xffff8000,	"fstx.s",	"f0:5,r5:5,r10:5",		0,	&LARCH_opts.ase_lp64,	0,	0 },
   { 0x38740000, 0xffff8000,	"fldgt.s",	"f0:5,r5:5,r10:5",		0,	&LARCH_opts.ase_lp64,	0,	0 },
@@ -932,8 +950,8 @@ static struct loongarch_opcode loongarch_single_float_load_store_opcodes[] =
 static struct loongarch_opcode loongarch_double_float_load_store_opcodes[] =
 {
   /* match,	mask,		name,		format,				macro,	include,		exclude, pinfo.  */
-  { 0x2b800000, 0xffc00000,	"fld.d",	"f0:5,r5:5,s10:12",		0,	0,			0,	0 },
-  { 0x2bc00000, 0xffc00000,	"fst.d",	"f0:5,r5:5,s10:12",		0,	0,			0,	0 },
+  { 0x2b800000, 0xffc00000,	"fld.d",	"f0:5,r5:5,so10:12",		0,	0,			0,	0 },
+  { 0x2bc00000, 0xffc00000,	"fst.d",	"f0:5,r5:5,so10:12",		0,	0,			0,	0 },
   { 0x38340000, 0xffff8000,	"fldx.d",	"f0:5,r5:5,r10:5",		0,	&LARCH_opts.ase_lp64,	0,	0 },
   { 0x383c0000, 0xffff8000,	"fstx.d",	"f0:5,r5:5,r10:5",		0,	&LARCH_opts.ase_lp64,	0,	0 },
   { 0x38748000, 0xffff8000,	"fldgt.d",	"f0:5,r5:5,r10:5",		0,	&LARCH_opts.ase_lp64,	0,	0 },
@@ -959,7 +977,7 @@ static struct loongarch_opcode loongarch_jmp_opcodes[] =
   { 0x40000000, 0xfc000000,	"beqz",		"r5:5,sb0:5|10:16<<2",		0,				0, 0, 0 },
   { 0x0,	0x0,		"bnez",		"r,la",				"bnez %1,%%b21(%2)",		0, 0, 0 },
   { 0x44000000, 0xfc000000,	"bnez",		"r5:5,sb0:5|10:16<<2",		0,				0, 0, 0 },
-  { 0x4c000000, 0xfc000000,	"jirl",		"r0:5,r5:5,s10:16<<2",		0,				0, 0, 0 },
+  { 0x4c000000, 0xfc000000,	"jirl",		"r0:5,r5:5,so10:16<<2",		0,				0, 0, 0 },
   { 0x0,	0x0,		"b",		"la",				"b %%b26(%1)",			0, 0, 0 },
   { 0x50000000, 0xfc000000,	"b",		"sb0:10|10:16<<2",		0,				0, 0, 0 },
   { 0x0,	0x0,		"bl",		"la",				"bl %%b26(%1)",			0, 0, 0 },
@@ -2324,6 +2342,7 @@ static struct loongarch_opcode loongarch_lasx_opcodes[] =
 struct loongarch_ase loongarch_ASEs[] =
 {
   { &LARCH_opts.ase_ilp32, loongarch_macro_opcodes,		0, 0, { 0 }, 0, 0 },
+  { &LARCH_opts.ase_ilp32, loongarch_alias_opcodes,		0, 0, { 0 }, 0, 0 },
   { &LARCH_opts.ase_ilp32, loongarch_imm_opcodes,		0, 0, { 0 }, 0, 0 },
   { &LARCH_opts.ase_ilp32, loongarch_privilege_opcodes,		0, 0, { 0 }, 0, 0 },
   { &LARCH_opts.ase_ilp32, loongarch_load_store_opcodes,	0, 0, { 0 }, 0, 0 },

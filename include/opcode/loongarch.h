@@ -120,6 +120,8 @@ dec2 : [1-9][0-9]?
 
     const unsigned long pinfo;
 #define USELESS 0x0l
+/* Instruction is a simple alias only for disassembler use.  */
+#define INSN_DIS_ALIAS		0x00000001l
   };
 
   struct hash_control;
@@ -174,17 +176,12 @@ dec2 : [1-9][0-9]?
 
   extern void loongarch_eliminate_adjacent_repeat_char (char *dest, char c);
 
-  extern int loongarch_parse_dis_options (const char *opts_in);
-  extern void loongarch_disassemble_one (
-    int64_t pc, insn_t insn,
-    int (*fprintf_func) (void *stream, const char *format, ...), void *stream);
-
   extern const char *const loongarch_r_normal_name[32];
   extern const char *const loongarch_r_lp64_name[32];
-  extern const char *const loongarch_r_lp64_name1[32];
+  extern const char *const loongarch_r_lp64_name_deprecated[32];
   extern const char *const loongarch_f_normal_name[32];
   extern const char *const loongarch_f_lp64_name[32];
-  extern const char *const loongarch_f_lp64_name1[32];
+  extern const char *const loongarch_f_lp64_name_deprecated[32];
   extern const char *const loongarch_fc_normal_name[4];
   extern const char *const loongarch_fc_numeric_name[4];
   extern const char *const loongarch_c_normal_name[8];
