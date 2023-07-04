@@ -219,6 +219,9 @@ struct instr_info
 
   bool two_source_ops;
 
+  /* Record whether EVEX masking is used incorrectly.  */
+  bool illegal_masking;
+
   unsigned char op_ad;
   signed char op_index[MAX_OPERANDS];
   bool op_riprel[MAX_OPERANDS];
@@ -1803,7 +1806,7 @@ struct dis386 {
    'V' unused.
    'W' => print 'b', 'w' or 'l' ('d' in Intel mode)
    'X' => print 's', 'd' depending on data16 prefix (for XMM)
-   'Y' unused.
+   'Y' => no output, mark EVEX.aaa != 0 as bad.
    'Z' => print 'q' in 64bit mode and 'l' otherwise, if suffix_always is true.
    '!' => change condition from true to false or from false to true.
    '%' => add 1 upper case letter to the macro.
@@ -1825,6 +1828,8 @@ struct dis386 {
    "XV" => print "{vex} " pseudo prefix
    "XE" => print "{evex} " pseudo prefix if no EVEX-specific functionality is
 	   is used by an EVEX-encoded (AVX512VL) instruction.
+   "YK" keep unused, to avoid ambiguity with the combined use of Y and K.
+   "YX" keep unused, to avoid ambiguity with the combined use of Y and X.
    "LQ" => print 'l' ('d' in Intel mode) or 'q' for memory operand, cond
 	   being false, or no operand at all in 64bit mode, or if suffix_always
 	   is true.
@@ -3716,9 +3721,9 @@ static const struct dis386 prefix_table[][4] = {
   /* PREFIX_VEX_0F2A */
   {
     { Bad_Opcode },
-    { "%XEvcvtsi2ss{%LQ|}",	{ XMScalar, VexScalar, EXxEVexR, Edq }, 0 },
+    { "%XEvcvtsi2ssY{%LQ|}",	{ XMScalar, VexScalar, EXxEVexR, Edq }, 0 },
     { Bad_Opcode },
-    { "%XEvcvtsi2sd{%LQ|}",	{ XMScalar, VexScalar, EXxEVexR64, Edq }, 0 },
+    { "%XEvcvtsi2sdY{%LQ|}",	{ XMScalar, VexScalar, EXxEVexR64, Edq }, 0 },
   },
 
   /* PREFIX_VEX_0F2C */
@@ -3739,16 +3744,16 @@ static const struct dis386 prefix_table[][4] = {
 
   /* PREFIX_VEX_0F2E */
   {
-    { "%XEvucomisX",	{ XMScalar, EXd, EXxEVexS }, 0 },
+    { "%XEvucomisYX",	{ XMScalar, EXd, EXxEVexS }, 0 },
     { Bad_Opcode },
-    { "%XEvucomisX",	{ XMScalar, EXq, EXxEVexS }, 0 },
+    { "%XEvucomisYX",	{ XMScalar, EXq, EXxEVexS }, 0 },
   },
 
   /* PREFIX_VEX_0F2F */
   {
-    { "%XEvcomisX",	{ XMScalar, EXd, EXxEVexS }, 0 },
+    { "%XEvcomisYX",	{ XMScalar, EXd, EXxEVexS }, 0 },
     { Bad_Opcode },
-    { "%XEvcomisX",	{ XMScalar, EXq, EXxEVexS }, 0 },
+    { "%XEvcomisYX",	{ XMScalar, EXq, EXxEVexS }, 0 },
   },
 
   /* PREFIX_VEX_0F41_L_1_M_1_W_0 */
@@ -7001,32 +7006,32 @@ static const struct dis386 vex_table[][256] = {
 static const struct dis386 vex_len_table[][2] = {
   /* VEX_LEN_0F12_P_0_M_0 / VEX_LEN_0F12_P_2_M_0 */
   {
-    { "%XEvmovlpX",	{ XM, Vex, EXq }, 0 },
+    { "%XEvmovlpYX",	{ XM, Vex, EXq }, 0 },
   },
 
   /* VEX_LEN_0F12_P_0_M_1 */
   {
-    { "%XEvmovhlp%XS",	{ XM, Vex, EXq }, 0 },
+    { "%XEvmovhlpY%XS",	{ XM, Vex, EXq }, 0 },
   },
 
   /* VEX_LEN_0F13_M_0 */
   {
-    { "%XEvmovlpX",	{ EXq, XM }, PREFIX_OPCODE },
+    { "%XEvmovlpYX",	{ EXq, XM }, PREFIX_OPCODE },
   },
 
   /* VEX_LEN_0F16_P_0_M_0 / VEX_LEN_0F16_P_2_M_0 */
   {
-    { "%XEvmovhpX",	{ XM, Vex, EXq }, 0 },
+    { "%XEvmovhpYX",	{ XM, Vex, EXq }, 0 },
   },
 
   /* VEX_LEN_0F16_P_0_M_1 */
   {
-    { "%XEvmovlhp%XS",	{ XM, Vex, EXq }, 0 },
+    { "%XEvmovlhpY%XS",	{ XM, Vex, EXq }, 0 },
   },
 
   /* VEX_LEN_0F17_M_0 */
   {
-    { "%XEvmovhpX",	{ EXq, XM }, PREFIX_OPCODE },
+    { "%XEvmovhpYX",	{ EXq, XM }, PREFIX_OPCODE },
   },
 
   /* VEX_LEN_0F41 */
@@ -7078,7 +7083,7 @@ static const struct dis386 vex_len_table[][2] = {
 
   /* VEX_LEN_0F6E */
   {
-    { "%XEvmovK",	{ XMScalar, Edq }, PREFIX_DATA },
+    { "%XEvmovYK",	{ XMScalar, Edq }, PREFIX_DATA },
   },
 
   /* VEX_LEN_0F77 */
@@ -7089,7 +7094,7 @@ static const struct dis386 vex_len_table[][2] = {
 
   /* VEX_LEN_0F7E_P_1 */
   {
-    { "%XEvmovq",	{ XMScalar, EXq }, 0 },
+    { "%XEvmovqY",	{ XMScalar, EXq }, 0 },
   },
 
   /* VEX_LEN_0F7E_P_2 */
@@ -7139,7 +7144,7 @@ static const struct dis386 vex_len_table[][2] = {
 
   /* VEX_LEN_0FC4 */
   {
-    { "%XEvpinsrw",	{ XM, Vex, Edw, Ib }, PREFIX_DATA },
+    { "%XEvpinsrwY",	{ XM, Vex, Edw, Ib }, PREFIX_DATA },
   },
 
   /* VEX_LEN_0FC5 */
@@ -7149,7 +7154,7 @@ static const struct dis386 vex_len_table[][2] = {
 
   /* VEX_LEN_0FD6 */
   {
-    { "%XEvmovq",	{ EXqS, XMScalar }, PREFIX_DATA },
+    { "%XEvmovqY",	{ EXqS, XMScalar }, PREFIX_DATA },
   },
 
   /* VEX_LEN_0FF7 */
@@ -7299,17 +7304,17 @@ static const struct dis386 vex_len_table[][2] = {
 
   /* VEX_LEN_0F3A20 */
   {
-    { "%XEvpinsrb",	{ XM, Vex, Edb, Ib }, PREFIX_DATA },
+    { "%XEvpinsrbY",	{ XM, Vex, Edb, Ib }, PREFIX_DATA },
   },
 
   /* VEX_LEN_0F3A21 */
   {
-    { "%XEvinsertps",	{ XM, Vex, EXd, Ib }, PREFIX_DATA },
+    { "%XEvinsertpsY",	{ XM, Vex, EXd, Ib }, PREFIX_DATA },
   },
 
   /* VEX_LEN_0F3A22 */
   {
-    { "%XEvpinsrK",	{ XM, Vex, Edq, Ib }, PREFIX_DATA },
+    { "%XEvpinsrYK",	{ XM, Vex, Edq, Ib }, PREFIX_DATA },
   },
 
   /* VEX_LEN_0F3A30 */
@@ -9905,9 +9910,21 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 		      oappend (&ins, "{");
 		      oappend_register (&ins, reg_name);
 		      oappend (&ins, "}");
+
+		      if (ins.vex.zeroing)
+			oappend (&ins, "{z}");
 		    }
-		  if (ins.vex.zeroing)
-		    oappend (&ins, "{z}");
+		  else if (ins.vex.zeroing)
+		    {
+		      oappend (&ins, "{bad}");
+		      continue;
+		    }
+
+		  /* Instructions with a mask register destination allow for
+		     zeroing-masking only (if any masking at all), which is
+		     _not_ expressed by EVEX.z.  */
+		  if (ins.vex.zeroing && dp->op[0].bytemode == mask_mode)
+		    ins.illegal_masking = true;
 
 		  /* S/G insns require a mask and don't allow
 		     zeroing-masking.  */
@@ -9915,6 +9932,9 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 		       || dp->op[0].bytemode == vex_vsib_q_w_dq_mode)
 		      && (ins.vex.mask_register_specifier == 0
 			  || ins.vex.zeroing))
+		    ins.illegal_masking = true;
+
+		  if (ins.illegal_masking)
 		    oappend (&ins, "/(bad)");
 		}
 	    }
@@ -9979,14 +9999,6 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
   /* If VEX.vvvv and EVEX.vvvv are unused, they must be all 1s, which
      are all 0s in inverted form.  */
   if (ins.need_vex && ins.vex.register_specifier != 0)
-    {
-      i386_dis_printf (info, dis_style_text, "(bad)");
-      ret = ins.end_codep - priv.the_buffer;
-      goto out;
-    }
-
-  /* If EVEX.z is set, there must be an actual mask register in use.  */
-  if (ins.vex.zeroing && ins.vex.mask_register_specifier == 0)
     {
       i386_dis_printf (info, dis_style_text, "(bad)");
       ret = ins.end_codep - priv.the_buffer;
@@ -11116,7 +11128,12 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 	    *ins->obufp++ = 's';
 	  break;
 	case 'Y':
-	  if (l == 1 && last[0] == 'X')
+	  if (l == 0)
+	    {
+	      if (ins->vex.mask_register_specifier)
+		ins->illegal_masking = true;
+	    }
+	  else if (l == 1 && last[0] == 'X')
 	    {
 	      if (!ins->need_vex)
 		abort ();
@@ -11631,6 +11648,11 @@ print_register (instr_info *ins, unsigned int reg, unsigned int rexmask,
 {
   const char (*names)[8];
 
+  /* Masking is invalid for insns with GPR destination. Set the flag uniformly,
+     as the consumer will inspect it only for the destination operand.  */
+  if (bytemode != mask_mode && ins->vex.mask_register_specifier)
+    ins->illegal_masking = true;
+
   USED_REX (rexmask);
   if (ins->rex & rexmask)
     reg += 8;
@@ -11845,6 +11867,13 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
 
   if (ins->vex.evex)
     {
+
+      /* Zeroing-masking is invalid for memory destinations. Set the flag
+	 uniformly, as the consumer will inspect it only for the destination
+	 operand.  */
+      if (ins->vex.zeroing)
+	ins->illegal_masking = true;
+
       switch (bytemode)
 	{
 	case dw_mode:
@@ -12357,6 +12386,12 @@ OP_E (instr_info *ins, int bytemode, int sizeflag)
       print_register (ins, ins->modrm.rm, REX_B, bytemode, sizeflag);
       return true;
     }
+
+  /* Masking is invalid for insns with GPR-like memory destination. Set the
+     flag uniformly, as the consumer will inspect it only for the destination
+     operand.  */
+  if (ins->vex.mask_register_specifier)
+    ins->illegal_masking = true;
 
   return OP_E_memory (ins, bytemode, sizeflag);
 }
@@ -13140,10 +13175,14 @@ OP_XS (instr_info *ins, int bytemode, int sizeflag)
 static bool
 OP_M (instr_info *ins, int bytemode, int sizeflag)
 {
+  /* Skip mod/rm byte.  */
+  MODRM_CHECK;
+  ins->codep++;
+
   if (ins->modrm.mod == 3)
     /* bad bound,lea,lds,les,lfs,lgs,lss,cmpxchg8b,vmptrst modrm */
     return BadOp (ins);
-  return OP_E (ins, bytemode, sizeflag);
+  return OP_E_memory (ins, bytemode, sizeflag);
 }
 
 static bool
