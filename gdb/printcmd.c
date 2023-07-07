@@ -2475,7 +2475,7 @@ static void
 printf_c_string (struct ui_file *stream, const char *format,
 		 struct value *value)
 {
-  const gdb_byte *str;
+  gdb::byte_vector str;
 
   if (((value->type ()->code () != TYPE_CODE_PTR && value->lval () == lval_internalvar)
        || value->type ()->code () == TYPE_CODE_ARRAY)
@@ -2487,11 +2487,10 @@ printf_c_string (struct ui_file *stream, const char *format,
 	 character.  This protects against corrupted C-style strings that lack
 	 the terminating null char.  It also allows Ada-style strings (not
 	 null terminated) to be printed without problems.  */
-      gdb_byte *tem_str = (gdb_byte *) alloca (len + 1);
+      str.resize (len + 1);
 
-      memcpy (tem_str, value->contents ().data (), len);
-      tem_str [len] = 0;
-      str = tem_str;
+      memcpy (str.data (), value->contents ().data (), len);
+      str [len] = 0;
     }
   else
     {
@@ -2506,31 +2505,37 @@ printf_c_string (struct ui_file *stream, const char *format,
 	  return;
 	}
 
-      /* This is a %s argument.  Find the length of the string.  */
+      /* This is a %s argument.  Build the string in STR which is
+	 currently empty.  */
+      gdb_assert (str.size () == 0);
       size_t len;
-
       for (len = 0;; len++)
 	{
 	  gdb_byte c;
 
 	  QUIT;
+
 	  read_memory (tem + len, &c, 1);
+	  if (!exceeds_max_value_size (len + 1))
+	    str.push_back (c);
 	  if (c == 0)
 	    break;
 	}
 
-      /* Copy the string contents into a string inside GDB.  */
-      gdb_byte *tem_str = (gdb_byte *) alloca (len + 1);
+      if (exceeds_max_value_size (len + 1))
+	error (_("printed string requires %s bytes, which is more than "
+		 "max-value-size"), plongest (len + 1));
 
-      if (len != 0)
-	read_memory (tem, tem_str, len);
-      tem_str[len] = 0;
-      str = tem_str;
+      /* We will have passed through the above loop at least once, and will
+	 only exit the loop when we have pushed a zero byte onto the end of
+	 STR.  */
+      gdb_assert (str.size () > 0);
+      gdb_assert (str.back () == 0);
     }
 
   DIAGNOSTIC_PUSH
   DIAGNOSTIC_IGNORE_FORMAT_NONLITERAL
-    gdb_printf (stream, format, (char *) str);
+    gdb_printf (stream, format, (char *) str.data ());
   DIAGNOSTIC_POP
 }
 
@@ -2549,6 +2554,7 @@ printf_wide_c_string (struct ui_file *stream, const char *format,
   struct type *wctype = lookup_typename (current_language,
 					 "wchar_t", NULL, 0);
   int wcwidth = wctype->length ();
+  gdb::optional<gdb::byte_vector> tem_str;
 
   if (value->lval () == lval_internalvar
       && c_is_string_type_p (value->type ()))
@@ -2571,23 +2577,43 @@ printf_wide_c_string (struct ui_file *stream, const char *format,
 
       /* This is a %s argument.  Find the length of the string.  */
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-      gdb_byte *buf = (gdb_byte *) alloca (wcwidth);
+      tem_str.emplace ();
 
       for (len = 0;; len += wcwidth)
 	{
 	  QUIT;
-	  read_memory (tem + len, buf, wcwidth);
-	  if (extract_unsigned_integer (buf, wcwidth, byte_order) == 0)
+	  gdb_byte *dst;
+	  if (!exceeds_max_value_size (len + wcwidth))
+	    {
+	      tem_str->resize (tem_str->size () + wcwidth);
+	      dst = tem_str->data () + len;
+	    }
+	  else
+	    {
+	      /* We still need to check for the null-character, so we need
+		 somewhere to place the data read from the inferior.  We
+		 can't keep growing TEM_STR, it's gotten too big, so
+		 instead just read the new character into the start of
+		 TEMS_STR.  This will corrupt the previously read contents,
+		 but we're not going to print this string anyway, we just
+		 want to know how big it would have been so we can tell the
+		 user in the error message (see below).
+
+		 And we know there will be space in this buffer so long as
+		 WCWIDTH is smaller than our LONGEST type, the
+		 max-value-size can't be smaller than a LONGEST.  */
+	      dst = tem_str->data ();
+	    }
+	  read_memory (tem + len, dst, wcwidth);
+	  if (extract_unsigned_integer (dst, wcwidth, byte_order) == 0)
 	    break;
 	}
 
-      /* Copy the string contents into a string inside GDB.  */
-      gdb_byte *tem_str = (gdb_byte *) alloca (len + wcwidth);
+      if (exceeds_max_value_size (len + wcwidth))
+	error (_("printed string requires %s bytes, which is more than "
+		 "max-value-size"), plongest (len + wcwidth));
 
-      if (len != 0)
-	read_memory (tem, tem_str, len);
-      memset (&tem_str[len], 0, wcwidth);
-      str = tem_str;
+      str = tem_str->data ();
     }
 
   auto_obstack output;
@@ -2686,62 +2712,58 @@ printf_pointer (struct ui_file *stream, const char *format,
      modifier for %p is a width; extract that, and then
      handle %p as glibc would: %#x or a literal "(nil)".  */
 
-  const char *p;
-  char *fmt, *fmt_p;
 #ifdef PRINTF_HAS_LONG_LONG
   long long val = value_as_long (value);
 #else
   long val = value_as_long (value);
 #endif
 
-  fmt = (char *) alloca (strlen (format) + 5);
+  /* Build the new output format in FMT.  */
+  std::string fmt;
 
   /* Copy up to the leading %.  */
-  p = format;
-  fmt_p = fmt;
+  const char *p = format;
   while (*p)
     {
       int is_percent = (*p == '%');
 
-      *fmt_p++ = *p++;
+      fmt.push_back (*p++);
       if (is_percent)
 	{
 	  if (*p == '%')
-	    *fmt_p++ = *p++;
+	    fmt.push_back (*p++);
 	  else
 	    break;
 	}
     }
 
   if (val != 0)
-    *fmt_p++ = '#';
+    fmt.push_back ('#');
 
   /* Copy any width or flags.  Only the "-" flag is valid for pointers
      -- see the format_pieces constructor.  */
   while (*p == '-' || (*p >= '0' && *p < '9'))
-    *fmt_p++ = *p++;
+    fmt.push_back (*p++);
 
   gdb_assert (*p == 'p' && *(p + 1) == '\0');
   if (val != 0)
     {
 #ifdef PRINTF_HAS_LONG_LONG
-      *fmt_p++ = 'l';
+      fmt.push_back ('l');
 #endif
-      *fmt_p++ = 'l';
-      *fmt_p++ = 'x';
-      *fmt_p++ = '\0';
+      fmt.push_back ('l');
+      fmt.push_back ('x');
       DIAGNOSTIC_PUSH
       DIAGNOSTIC_IGNORE_FORMAT_NONLITERAL
-	gdb_printf (stream, fmt, val);
+	gdb_printf (stream, fmt.c_str (), val);
       DIAGNOSTIC_POP
     }
   else
     {
-      *fmt_p++ = 's';
-      *fmt_p++ = '\0';
+      fmt.push_back ('s');
       DIAGNOSTIC_PUSH
       DIAGNOSTIC_IGNORE_FORMAT_NONLITERAL
-	gdb_printf (stream, fmt, "(nil)");
+	gdb_printf (stream, fmt.c_str (), "(nil)");
       DIAGNOSTIC_POP
     }
 }
