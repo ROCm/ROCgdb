@@ -34,36 +34,6 @@
 #include "gdbsupport/filestuff.h"
 #include "gdbarch.h"
 
-/* The CTF target.  */
-
-static const target_info ctf_target_info = {
-  "ctf",
-  N_("CTF file"),
-  N_("(Use a CTF directory as a target.\n\
-Specify the filename of the CTF directory.")
-};
-
-class ctf_target final : public tracefile_target
-{
-public:
-  const target_info &info () const override
-  { return ctf_target_info; }
-
-  void close () override;
-  void fetch_registers (struct regcache *, int) override;
-  enum target_xfer_status xfer_partial (enum target_object object,
-						const char *annex,
-						gdb_byte *readbuf,
-						const gdb_byte *writebuf,
-						ULONGEST offset, ULONGEST len,
-						ULONGEST *xfered_len) override;
-  void files_info () override;
-  int trace_find (enum trace_find_type type, int num,
-			  CORE_ADDR addr1, CORE_ADDR addr2, int *tpp) override;
-  bool get_trace_state_variable_value (int tsv, LONGEST *val) override;
-  traceframe_info_up traceframe_info () override;
-};
-
 /* GDB saves trace buffers and other information (such as trace
    status) got from the remote target into Common Trace Format (CTF).
    The following types of information are expected to save in CTF:
@@ -854,15 +824,44 @@ ctf_trace_file_writer_new (void)
 #include <babeltrace/ctf/events.h>
 #include <babeltrace/ctf/iterator.h>
 
+/* The CTF target.  */
+
+static const target_info ctf_target_info = {
+  "ctf",
+  N_("CTF file"),
+  N_("(Use a CTF directory as a target.\n\
+Specify the filename of the CTF directory.")
+};
+
+class ctf_target final : public tracefile_target
+{
+public:
+  const target_info &info () const override
+  { return ctf_target_info; }
+
+  void close () override;
+  void fetch_registers (struct regcache *, int) override;
+  enum target_xfer_status xfer_partial (enum target_object object,
+						const char *annex,
+						gdb_byte *readbuf,
+						const gdb_byte *writebuf,
+						ULONGEST offset, ULONGEST len,
+						ULONGEST *xfered_len) override;
+  void files_info () override;
+  int trace_find (enum trace_find_type type, int num,
+			  CORE_ADDR addr1, CORE_ADDR addr2, int *tpp) override;
+  bool get_trace_state_variable_value (int tsv, LONGEST *val) override;
+  traceframe_info_up traceframe_info () override;
+};
+
 /* The struct pointer for current CTF directory.  */
-static int handle_id = -1;
 static struct bt_context *ctx = NULL;
 static struct bt_ctf_iter *ctf_iter = NULL;
 /* The position of the first packet containing trace frame.  */
 static struct bt_iter_pos *start_pos;
 
 /* The name of CTF directory.  */
-static char *trace_dirname;
+static gdb::unique_xmalloc_ptr<char> trace_dirname;
 
 static ctf_target ctf_ops;
 
@@ -895,7 +894,7 @@ ctf_open_dir (const char *dirname)
   ctx = bt_context_create ();
   if (ctx == NULL)
     error (_("Unable to create bt_context"));
-  handle_id = bt_context_add_trace (ctx, dirname, "ctf", NULL, NULL, NULL);
+  int handle_id = bt_context_add_trace (ctx, dirname, "ctf", NULL, NULL, NULL);
   if (handle_id < 0)
     {
       ctf_destroy ();
@@ -1164,7 +1163,7 @@ ctf_target_open (const char *dirname, int from_tty)
   start_pos = bt_iter_get_pos (bt_ctf_get_iter (ctf_iter));
   gdb_assert (start_pos->type == BT_SEEK_RESTORE);
 
-  trace_dirname = xstrdup (dirname);
+  trace_dirname = make_unique_xstrdup (dirname);
   current_inferior ()->push_target (&ctf_ops);
 
   inferior_appeared (current_inferior (), CTF_PID);
@@ -1185,8 +1184,7 @@ void
 ctf_target::close ()
 {
   ctf_destroy ();
-  xfree (trace_dirname);
-  trace_dirname = NULL;
+  trace_dirname.reset ();
 
   switch_to_no_thread ();	/* Avoid confusion from thread stuff.  */
   exit_inferior_silent (current_inferior ());
@@ -1200,7 +1198,7 @@ ctf_target::close ()
 void
 ctf_target::files_info ()
 {
-  gdb_printf ("\t`%s'\n", trace_dirname);
+  gdb_printf ("\t`%s'\n", trace_dirname.get ());
 }
 
 /* This is the implementation of target_ops method to_fetch_registers.
@@ -1358,10 +1356,9 @@ ctf_target::xfer_partial (enum target_object object,
 	    {
 	      const struct bt_definition *array
 		= bt_ctf_get_field (event, scope, "contents");
-	      gdb_byte *contents;
 	      int k;
 
-	      contents = (gdb_byte *) xmalloc (mlen);
+	      gdb::byte_vector contents (mlen);
 
 	      for (k = 0; k < mlen; k++)
 		{
@@ -1376,8 +1373,6 @@ ctf_target::xfer_partial (enum target_object object,
 		amt = len;
 
 	      memcpy (readbuf, &contents[offset - maddr], amt);
-
-	      xfree (contents);
 
 	      /* Restore the position.  */
 	      bt_iter_set_pos (bt_ctf_get_iter (ctf_iter), pos);
