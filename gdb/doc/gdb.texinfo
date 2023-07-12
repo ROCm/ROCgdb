@@ -28013,6 +28013,18 @@ Navy Flounder devices, displayed as @samp{navy_flounder} by @value{GDBN}.
 Dimgrey Cavefish devices, displayed as @samp{dimgrey_cavefish} by
 @value{GDBN}.
 
+@item Plum Bonito
+Displayed as @samp{plum_bonito} by @value{GDBN} and denoted as
+@samp{gfx1100} by the compiler.
+
+@item Wheat Nas
+Displayed as @samp{wheat_nas} by @value{GDBN} and denoted as
+@samp{gfx1101} by the compiler.
+
+@item Hotpink Bonefish
+Displayed as @samp{hotpink_bonefish} by @value{GDBN} and denoted as
+@samp{gfx1102} by the compiler.
+
 @end table
 
 @subsubsection @acronym{AMD ROCm} Source Languages
@@ -28637,6 +28649,7 @@ on supressing delivering signals to a wavefront (@pxref{AMD GPU Signal
 Restrictions, , @acronym{AMD GPU} Signal Restrictions}).
 
 @subsubsection @acronym{AMD GPU} Memory Violation Reporting
+@anchor{AMDGPU Memory Violation Reporting}
 
 A wavefront can report memory violation and address watch access
 events.  However, the program location at which they are reported may
@@ -29236,6 +29249,28 @@ reported as @code{SIGFPE} signals.  This happens if the
 @value{GDBN} does not support single root I/O virtualization (SR-IOV)
 on any @acronym{AMD GPU} architecture that supports it.  That includes
 @samp{gfx1030}, @samp{gfx1031}, and @samp{gfx1032}.
+
+@item
+@value{GDBN} does not support debugging programs that use cooperative
+groups or CU masking for @acronym{AMD GPU} architectures @samp{gfx1100},
+@samp{gfx1101}, and @samp{gfx11102}.  A restriction will be reported
+when attaching to a process that has already created cooperative group
+queues or CU masked queues.  Any attempt to create a cooperative queue
+or CU masked queue when @value{GDBN} is attached will fail.
+
+@item
+For @acronym{AMD GPU} architectures @samp{gfx1100}, @samp{gfx1101} and
+@samp{gfx1102}, @value{GDBN} cannot debug a program past a
+@samp{s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)} instruction.  If an
+asynchronous exception is reported after this instruction has been
+executed and the debugger is attached, the wave is killed, and the
+exception is only reported by the @acronym{AMD ROCm} runtime.  Note that
+on @acronym{AMD GPU} devices, memory errors are reported asynchronously
+so a memory fault caused by an instruction before the @samp{s_sendmsg}
+might be reported after it.  Enabling precise memory event reporting
+(@pxref{AMDGPU Memory Violation Reporting}) ensures that such memory
+fault would be reported before the @samp{s_sendmsg} instruction is
+executed.
 
 @end enumerate
 
