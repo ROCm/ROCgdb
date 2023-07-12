@@ -171,7 +171,7 @@ fi
 def_symbol()
 {
     if [ -z "${SYMBOL_ABI_ALIGNMENT}" ]; then
-	echo "${USER_LABEL_PREFIX}$1 =  . "
+	echo "${USER_LABEL_PREFIX}$1 = ."
     else
 	echo "${USER_LABEL_PREFIX}$1 = ALIGN(${SYMBOL_ABI_ALIGNMENT})"
     fi
@@ -342,9 +342,8 @@ STACK=".stack        ${RELOCATING-0}${RELOCATING+${STACK_ADDR}} :
 test "${HAVE_NOINIT}" = "yes" && NOINIT="
   /* This section contains data that is not initialized during load,
      or during the application's initialization sequence.  */
-  .noinit (NOLOAD) :
+  .noinit ${RELOCATING-0} (NOLOAD) : ${RELOCATING+ALIGN(${ALIGNMENT})}
   {
-    ${RELOCATING+. = ALIGN(${ALIGNMENT});}
     ${RELOCATING+PROVIDE (__noinit_start = .);}
     *(.noinit${RELOCATING+ .noinit.* .gnu.linkonce.n.*})
     ${RELOCATING+. = ALIGN(${ALIGNMENT});}
@@ -353,9 +352,8 @@ test "${HAVE_NOINIT}" = "yes" && NOINIT="
 test "${HAVE_PERSISTENT}" = "yes" && PERSISTENT="
   /* This section contains data that is initialized during load,
      but not during the application's initialization sequence.  */
-  .persistent :
+  .persistent ${RELOCATING-0} : ${RELOCATING+ALIGN(${ALIGNMENT})}
   {
-    ${RELOCATING+. = ALIGN(${ALIGNMENT});}
     ${RELOCATING+PROVIDE (__persistent_start = .);}
     *(.persistent${RELOCATING+ .persistent.* .gnu.linkonce.p.*})
     ${RELOCATING+. = ALIGN(${ALIGNMENT});}
@@ -688,6 +686,7 @@ cat <<EOF
   ${SDATA_GOT+${OTHER_GOT_SECTIONS}}
   ${DATA_SDATA-${SDATA}}
   ${DATA_SDATA-${OTHER_SDATA_SECTIONS}}
+  ${RELOCATING+${SYMBOL_ABI_ALIGNMENT+. = ALIGN(${SYMBOL_ABI_ALIGNMENT});}}
   ${RELOCATING+${DATA_END_SYMBOLS-${CREATE_SHLIB+PROVIDE (}$(def_symbol "_edata")${CREATE_SHLIB+)}; PROVIDE ($(def_symbol "edata"));}}
   ${PERSISTENT}
   ${RELOCATING+. = .;}
