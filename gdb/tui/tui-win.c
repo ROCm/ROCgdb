@@ -117,8 +117,7 @@ struct tui_translate
 };
 
 /* Translation table for border-mode variables.
-   The list of values must be terminated by a NULL.
-   After the NULL value, an entry defines the default.  */
+   The list of values must be terminated by a NULL.  */
 static struct tui_translate tui_border_mode_translate[] = {
   { "normal",		A_NORMAL },
   { "standout",		A_STANDOUT },
@@ -127,60 +126,27 @@ static struct tui_translate tui_border_mode_translate[] = {
   { "half-standout",	A_DIM | A_STANDOUT },
   { "bold",		A_BOLD },
   { "bold-standout",	A_BOLD | A_STANDOUT },
-  { 0, 0 },
-  { "normal",		A_NORMAL }
+  { 0, 0 }
 };
 
-/* Translation tables for border-kind, one for each border
-   character (see wborder, border curses operations).
-   -1 is used to indicate the ACS because ACS characters
-   are determined at run time by curses (depends on terminal).  */
+/* Translation tables for border-kind (acs excluded), one for vline, hline and
+   corners (see wborder, border curses operations).  */
 static struct tui_translate tui_border_kind_translate_vline[] = {
   { "space",    ' ' },
   { "ascii",    '|' },
-  { "acs",      -1 },
-  { 0, 0 },
-  { "ascii",    '|' }
+  { 0, 0 }
 };
 
 static struct tui_translate tui_border_kind_translate_hline[] = {
   { "space",    ' ' },
   { "ascii",    '-' },
-  { "acs",      -1 },
-  { 0, 0 },
-  { "ascii",    '-' }
+  { 0, 0 }
 };
 
-static struct tui_translate tui_border_kind_translate_ulcorner[] = {
+static struct tui_translate tui_border_kind_translate_corner[] = {
   { "space",    ' ' },
   { "ascii",    '+' },
-  { "acs",      -1 },
-  { 0, 0 },
-  { "ascii",    '+' }
-};
-
-static struct tui_translate tui_border_kind_translate_urcorner[] = {
-  { "space",    ' ' },
-  { "ascii",    '+' },
-  { "acs",      -1 },
-  { 0, 0 },
-  { "ascii",    '+' }
-};
-
-static struct tui_translate tui_border_kind_translate_llcorner[] = {
-  { "space",    ' ' },
-  { "ascii",    '+' },
-  { "acs",      -1 },
-  { 0, 0 },
-  { "ascii",    '+' }
-};
-
-static struct tui_translate tui_border_kind_translate_lrcorner[] = {
-  { "space",    ' ' },
-  { "ascii",    '+' },
-  { "acs",      -1 },
-  { 0, 0 },
-  { "ascii",    '+' }
+  { 0, 0 }
 };
 
 
@@ -258,21 +224,31 @@ chtype tui_border_lrcorner;
 int tui_border_attrs;
 int tui_active_border_attrs;
 
-/* Identify the item in the translation table.
-   When the item is not recognized, use the default entry.  */
-static struct tui_translate *
+/* Identify the item in the translation table, and return the corresponding value.  */
+static int
 translate (const char *name, struct tui_translate *table)
 {
   while (table->name)
     {
       if (name && strcmp (table->name, name) == 0)
-	return table;
+	return table->value;
       table++;
     }
 
-  /* Not found, return default entry.  */
-  table++;
-  return table;
+  gdb_assert_not_reached ("");
+}
+
+/* Translate NAME to a value.  If NAME is "acs", use ACS_CHAR.  Otherwise, use
+   translation table TABLE. */
+static int
+translate_acs (const char *name, struct tui_translate *table, int acs_char)
+{
+  /* The ACS characters are determined at run time by curses terminal
+     management.  */
+  if (strcmp (name, "acs") == 0)
+    return acs_char;
+
+  return translate (name, table);
 }
 
 /* Update the tui internal configuration according to gdb settings.
@@ -282,37 +258,39 @@ bool
 tui_update_variables ()
 {
   bool need_redraw = false;
-  struct tui_translate *entry;
+  int val;
 
-  entry = translate (tui_border_mode, tui_border_mode_translate);
-  need_redraw
-    |= assign_return_if_changed<int> (tui_border_attrs, entry->value);
+  val = translate (tui_border_mode, tui_border_mode_translate);
+  need_redraw |= assign_return_if_changed<int> (tui_border_attrs, val);
 
-  entry = translate (tui_active_border_mode, tui_border_mode_translate);
-  need_redraw
-    |= assign_return_if_changed<int> (tui_active_border_attrs, entry->value);
+  val = translate (tui_active_border_mode, tui_border_mode_translate);
+  need_redraw |= assign_return_if_changed<int> (tui_active_border_attrs, val);
 
-  /* If one corner changes, all characters are changed.
-     Only check the first one.  The ACS characters are determined at
-     run time by curses terminal management.  */
-  entry = translate (tui_border_kind, tui_border_kind_translate_lrcorner);
-  int val = (entry->value < 0) ? ACS_LRCORNER : entry->value;
+  /* If one corner changes, all characters are changed.  Only check the first
+     one.  */
+  val = translate_acs (tui_border_kind, tui_border_kind_translate_corner,
+		       ACS_LRCORNER);
   need_redraw |= assign_return_if_changed<chtype> (tui_border_lrcorner, val);
 
-  entry = translate (tui_border_kind, tui_border_kind_translate_llcorner);
-  tui_border_llcorner = (entry->value < 0) ? ACS_LLCORNER : entry->value;
+  tui_border_llcorner
+    = translate_acs (tui_border_kind, tui_border_kind_translate_corner,
+		     ACS_LLCORNER);
 
-  entry = translate (tui_border_kind, tui_border_kind_translate_ulcorner);
-  tui_border_ulcorner = (entry->value < 0) ? ACS_ULCORNER : entry->value;
+  tui_border_ulcorner
+    = translate_acs (tui_border_kind, tui_border_kind_translate_corner,
+		     ACS_ULCORNER);
 
-  entry = translate (tui_border_kind, tui_border_kind_translate_urcorner);
-  tui_border_urcorner = (entry->value < 0) ? ACS_URCORNER : entry->value;
+  tui_border_urcorner =
+    translate_acs (tui_border_kind, tui_border_kind_translate_corner,
+		   ACS_URCORNER);
 
-  entry = translate (tui_border_kind, tui_border_kind_translate_hline);
-  tui_border_hline = (entry->value < 0) ? ACS_HLINE : entry->value;
+  tui_border_hline
+    = translate_acs (tui_border_kind, tui_border_kind_translate_hline,
+		     ACS_HLINE);
 
-  entry = translate (tui_border_kind, tui_border_kind_translate_vline);
-  tui_border_vline = (entry->value < 0) ? ACS_VLINE : entry->value;
+  tui_border_vline
+    = translate_acs (tui_border_kind, tui_border_kind_translate_vline,
+		     ACS_VLINE);
 
   return need_redraw;
 }
