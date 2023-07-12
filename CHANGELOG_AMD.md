@@ -6,7 +6,7 @@ Full documentation for ROCgdb is available at
 ## (Unreleased) ROCgdb-13.2
 
 ### Added
-- Support for watchppoints on scratch memory addresses.
+- Support for watchpoints on scratch memory addresses.
 
 ### Optimized
 - Improved performances when handling the end of a process with a large
