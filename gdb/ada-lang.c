@@ -8770,35 +8770,6 @@ ada_to_fixed_value (struct value *val)
 
 /* Attributes */
 
-/* Table mapping attribute numbers to names.
-   NOTE: Keep up to date with enum ada_attribute definition in ada-lang.h.  */
-
-static const char * const attribute_names[] = {
-  "<?>",
-
-  "first",
-  "last",
-  "length",
-  "image",
-  "max",
-  "min",
-  "modulus",
-  "pos",
-  "size",
-  "tag",
-  "val",
-  0
-};
-
-static const char *
-ada_attribute_name (enum exp_opcode n)
-{
-  if (n >= OP_ATR_FIRST && n <= (int) OP_ATR_VAL)
-    return attribute_names[n - OP_ATR_FIRST + 1];
-  else
-    return attribute_names[0];
-}
-
 /* Evaluate the 'POS attribute applied to ARG.  */
 
 static LONGEST
@@ -8847,7 +8818,8 @@ val_atr (struct type *type, LONGEST val)
 }
 
 struct value *
-ada_val_atr (enum noside noside, struct type *type, struct value *arg)
+ada_val_atr (struct expression *exp, enum noside noside, struct type *type,
+	     struct value *arg)
 {
   if (noside == EVAL_AVOID_SIDE_EFFECTS)
     return value::zero (type, not_lval);
@@ -8859,6 +8831,52 @@ ada_val_atr (enum noside noside, struct type *type, struct value *arg)
 
   return val_atr (type, value_as_long (arg));
 }
+
+/* Implementation of the enum_rep attribute.  */
+struct value *
+ada_atr_enum_rep (struct expression *exp, enum noside noside, struct type *type,
+		  struct value *arg)
+{
+  struct type *inttype = builtin_type (exp->gdbarch)->builtin_int;
+  if (noside == EVAL_AVOID_SIDE_EFFECTS)
+    return value::zero (inttype, not_lval);
+
+  if (type->code () == TYPE_CODE_RANGE)
+    type = type->target_type ();
+  if (type->code () != TYPE_CODE_ENUM)
+    error (_("'Enum_Rep only defined on enum types"));
+  if (!types_equal (type, arg->type ()))
+    error (_("'Enum_Rep requires argument to have same type as enum"));
+
+  return value_cast (inttype, arg);
+}
+
+/* Implementation of the enum_val attribute.  */
+struct value *
+ada_atr_enum_val (struct expression *exp, enum noside noside, struct type *type,
+		  struct value *arg)
+{
+  struct type *original_type = type;
+  if (noside == EVAL_AVOID_SIDE_EFFECTS)
+    return value::zero (original_type, not_lval);
+
+  if (type->code () == TYPE_CODE_RANGE)
+    type = type->target_type ();
+  if (type->code () != TYPE_CODE_ENUM)
+    error (_("'Enum_Val only defined on enum types"));
+  if (!integer_type_p (arg->type ()))
+    error (_("'Enum_Val requires integral argument"));
+
+  LONGEST value = value_as_long (arg);
+  for (int i = 0; i < type->num_fields (); ++i)
+    {
+      if (type->field (i).loc_enumval () == value)
+	return value_from_longest (original_type, value);
+    }
+
+  error (_("value %s not found in enum"), plongest (value));
+}
+
 
 
 				/* Evaluation */
@@ -10274,6 +10292,12 @@ static value *
 ada_unop_atr (struct expression *exp, enum noside noside, enum exp_opcode op,
 	      struct value *arg1, struct type *type_arg, int tem)
 {
+  const char *attr_name = nullptr;
+  if (op == OP_ATR_FIRST)
+    attr_name = "first";
+  else if (op == OP_ATR_LAST)
+    attr_name = "last";
+
   if (noside == EVAL_AVOID_SIDE_EFFECTS)
     {
       if (type_arg == NULL)
@@ -10291,7 +10315,7 @@ ada_unop_atr (struct expression *exp, enum noside noside, enum exp_opcode op,
 	    case OP_ATR_FIRST:
 	    case OP_ATR_LAST:
 	      type_arg = ada_index_type (type_arg, tem,
-					 ada_attribute_name (op));
+					 attr_name);
 	      break;
 	    case OP_ATR_LENGTH:
 	      type_arg = builtin_type (exp->gdbarch)->builtin_int;
@@ -10314,7 +10338,7 @@ ada_unop_atr (struct expression *exp, enum noside noside, enum exp_opcode op,
       else
 	{
 	  type = ada_index_type (arg1->type (), tem,
-				 ada_attribute_name (op));
+				 attr_name);
 	  if (type == NULL)
 	    type = builtin_type (exp->gdbarch)->builtin_int;
 	}
@@ -10372,7 +10396,7 @@ ada_unop_atr (struct expression *exp, enum noside noside, enum exp_opcode op,
 	type = builtin_type (exp->gdbarch)->builtin_int;
       else
 	{
-	  type = ada_index_type (type_arg, tem, ada_attribute_name (op));
+	  type = ada_index_type (type_arg, tem, attr_name);
 	  if (type == NULL)
 	    type = builtin_type (exp->gdbarch)->builtin_int;
 	}
@@ -10943,15 +10967,6 @@ ada_var_value_operation::do_generate_ax (struct expression *exp,
     error (_("Dynamic types cannot be handled in agent expressions"));
 
   var_value_operation::do_generate_ax (exp, ax, value, cast_type);
-}
-
-value *
-ada_atr_val_operation::evaluate (struct type *expect_type,
-				 struct expression *exp,
-				 enum noside noside)
-{
-  value *arg = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
-  return ada_val_atr (noside, std::get<0> (m_storage), arg);
 }
 
 value *
