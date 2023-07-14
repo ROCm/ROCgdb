@@ -175,8 +175,8 @@ proc_with_prefix test_list_forward {} {
 	"list 25-34"
     gdb_test "list" "35\[ \t\]+foo \\(.*\\);.*${last_line_re}" \
 	"list 35-42"
-    gdb_test "list" "Line number 44 out of range; \[^\r\n\]+ has 43 lines\." \
-	"end of file error after \"list\" command"
+    gdb_test "list" "End of the file was already reached, use \"list .\" to list the current location again" \
+	"list past end of file"
 }
 
 # Test that repeating the list linenum command doesn't print the same
@@ -194,8 +194,8 @@ proc_with_prefix test_repeat_list_command {} {
 	"list 25-34"
     gdb_test " " "35\[ \t\]+foo \\(.*\\);.*${last_line_re}" \
 	"list 35-42"
-    gdb_test "list" "Line number 44 out of range; \[^\r\n\]+ has 43 lines\." \
-	"end of file error after using 'return' to repeat the list command"
+    gdb_test "list" "End of the file was already reached, use \"list .\" to list the current location again" \
+	"list past end of file"
 }
 
 proc_with_prefix test_list_backwards {} {
@@ -400,6 +400,42 @@ proc test_list_invalid_args {} {
 	"second use of \"list +INVALID\""
 }
 
+proc test_list_current_location {} {
+    global binfile
+    # If the first "list" command that GDB runs is "list ." GDB may be
+    # unable to recognize that the inferior isn't running, so we should
+    # reload the inferior to test that condition.
+    clean_restart
+    gdb_file_cmd ${binfile}
+
+    # Ensure that we are printing 10 lines
+    if {![set_listsize 10]} {
+	return
+    }
+
+    # First guarantee that GDB prints around the main function correctly
+    gdb_test "list ." \
+	"1.*\r\n2\[ \t\]+\r\n3\[ \t\]+int main \[)(\]+.*5\[ \t\]+int x;.*" \
+	"list . with inferior not running"
+
+    if {![runto_main]} {
+	warning "couldn't start inferior"
+	return
+    }
+
+    # Walk forward some lines
+    gdb_test "until 15" ".*15.*foo.*"
+
+    # Test that the correct location is printed and that
+    # using just "list" will print the following lines.
+    gdb_test "list ." ".*" "list current line after starting"
+    gdb_test "list" ".*" "confirm we are printing the following lines"
+
+    # Test that list . will reset to current location
+    gdb_test "list ." ".*" "list around current line again"
+    gdb_test " " ".*" "testing repeated invocations with GDB's auto-repeat"
+}
+
 clean_restart
 gdb_file_cmd ${binfile}
 
@@ -518,5 +554,8 @@ test_list "list -" 10 2 "7-8" "5-6"
 # starts showing the previous line immediately instead of repeating
 # the current line.
 test_list "list -" 10 1 "7" "6"
+
+# Test printing the location where the inferior is stopped.
+test_list_current_location
 
 remote_exec build "rm -f list0.h"

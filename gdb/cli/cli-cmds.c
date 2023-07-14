@@ -1201,6 +1201,28 @@ pipe_command_completer (struct cmd_list_element *ignore,
      we don't know how to complete.  */
 }
 
+/* Helper for the list_command function.  Prints the lines around (and
+   including) line stored in CURSAL.  ARG contains the arguments used in
+   the command invocation, and is used to determine a special case when
+   printing backwards.  */
+static void
+list_around_line (const char *arg, symtab_and_line cursal)
+{
+  int first;
+
+  first = std::max (cursal.line - get_lines_to_list () / 2, 1);
+
+  /* A small special case --- if listing backwards, and we
+     should list only one line, list the preceding line,
+     instead of the exact line we've just shown after e.g.,
+     stopping for a breakpoint.  */
+  if (arg != NULL && arg[0] == '-'
+      && get_lines_to_list () == 1 && first > 1)
+    first -= 1;
+
+  print_source_lines (cursal.symtab, source_lines_range (first), 0);
+}
+
 static void
 list_command (const char *arg, int from_tty)
 {
@@ -1213,34 +1235,31 @@ list_command (const char *arg, int from_tty)
   const char *p;
 
   /* Pull in the current default source line if necessary.  */
-  if (arg == NULL || ((arg[0] == '+' || arg[0] == '-') && arg[1] == '\0'))
+  if (arg == NULL || ((arg[0] == '+' || arg[0] == '-' || arg[0] == '.') && arg[1] == '\0'))
     {
       set_default_source_symtab_and_line ();
       symtab_and_line cursal = get_current_source_symtab_and_line ();
 
       /* If this is the first "list" since we've set the current
 	 source line, center the listing around that line.  */
-      if (get_first_line_listed () == 0)
+      if (get_first_line_listed () == 0 && (arg == nullptr || arg[0] != '.'))
 	{
-	  int first;
-
-	  first = std::max (cursal.line - get_lines_to_list () / 2, 1);
-
-	  /* A small special case --- if listing backwards, and we
-	     should list only one line, list the preceding line,
-	     instead of the exact line we've just shown after e.g.,
-	     stopping for a breakpoint.  */
-	  if (arg != NULL && arg[0] == '-'
-	      && get_lines_to_list () == 1 && first > 1)
-	    first -= 1;
-
-	  print_source_lines (cursal.symtab, source_lines_range (first), 0);
+	  list_around_line (arg, cursal);
 	}
 
-      /* "l" or "l +" lists next ten lines.  */
-      else if (arg == NULL || arg[0] == '+')
-	print_source_lines (cursal.symtab,
-			    source_lines_range (cursal.line), 0);
+      /* "l" and "l +" lists the next few lines, unless we're listing past
+	 the end of the file.  */
+      else if (arg == nullptr || arg[0] == '+')
+	{
+	  if (last_symtab_line (cursal.symtab) >= cursal.line)
+	    print_source_lines (cursal.symtab,
+				source_lines_range (cursal.line), 0);
+	  else
+	    {
+	      error (_("End of the file was already reached, use \"list .\" to"
+		       " list the current location again"));
+	    }
+	}
 
       /* "l -" lists previous ten lines, the ones before the ten just
 	 listed.  */
@@ -1252,6 +1271,32 @@ list_command (const char *arg, int from_tty)
 	  source_lines_range range (get_first_line_listed (),
 				    source_lines_range::BACKWARD);
 	  print_source_lines (cursal.symtab, range, 0);
+	}
+
+      /* "l ." lists the default location again.  */
+      else if (arg[0] == '.')
+	{
+	  try
+	    {
+	      /* Find the current line by getting the PC of the currently
+		 selected frame, and finding the line associated to it.  */
+	      frame_info_ptr frame = get_selected_frame (nullptr);
+	      CORE_ADDR curr_pc = get_frame_pc (frame);
+	      cursal = find_pc_line (curr_pc, 0);
+	    }
+	  catch (const gdb_exception &e)
+	    {
+	      /* If there was an exception above, it means the inferior
+		 is not running, so reset the current source location to
+		 the default.  */
+	      clear_current_source_symtab_and_line ();
+	      set_default_source_symtab_and_line ();
+	      cursal = get_current_source_symtab_and_line ();
+	    }
+	  list_around_line (arg, cursal);
+	  /* Advance argument so just pressing "enter" after using "list ."
+	     will print the following lines instead of the same lines again. */
+	  arg++;
 	}
 
       return;
@@ -2770,6 +2815,8 @@ and send its output to SHELL_COMMAND."));
     = add_com ("list", class_files, list_command, _("\
 List specified function or line.\n\
 With no argument, lists ten more lines after or around previous listing.\n\
+\"list .\" lists ten lines arond where the inferior is stopped.\n\
+\"list +\" lists the ten lines following a previous ten-line listing.\n\
 \"list -\" lists the ten lines before a previous ten-line listing.\n\
 One argument specifies a line, and ten lines are listed around that line.\n\
 Two arguments with comma between specify starting and ending lines to list.\n\
