@@ -455,6 +455,11 @@ show_follow_fork_mode_string (struct ui_file *file, int from_tty,
 static bool
 follow_fork_inferior (bool follow_child, bool detach_fork)
 {
+  INFRUN_SCOPED_DEBUG_ENTER_EXIT;
+
+  infrun_debug_printf ("follow_child = %d, detach_fork = %d",
+		       follow_child, detach_fork);
+
   target_waitkind fork_kind = inferior_thread ()->pending_follow.kind ();
   gdb_assert (fork_kind == TARGET_WAITKIND_FORKED
 	      || fork_kind == TARGET_WAITKIND_VFORKED);
@@ -563,6 +568,13 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	  parent_inf->thread_waiting_for_vfork_done
 	    = detach_fork ? inferior_thread () : nullptr;
 	  parent_inf->pspace->breakpoints_not_allowed = detach_fork;
+
+	  infrun_debug_printf
+	    ("parent_inf->thread_waiting_for_vfork_done == %s",
+	     (parent_inf->thread_waiting_for_vfork_done == nullptr
+	      ? "nullptr"
+	      : (parent_inf->thread_waiting_for_vfork_done
+		 ->ptid.to_string ().c_str ())));
 	}
     }
   else
@@ -747,6 +759,8 @@ set_last_target_status_stopped (thread_info *tp)
 static bool
 follow_fork ()
 {
+  INFRUN_SCOPED_DEBUG_ENTER_EXIT;
+
   bool follow_child = (follow_fork_mode_string == follow_fork_mode_child);
   bool should_resume = true;
 
@@ -1016,6 +1030,8 @@ proceed_after_vfork_done (thread_info *thread)
 static void
 handle_vfork_child_exec_or_exit (int exec)
 {
+  INFRUN_SCOPED_DEBUG_ENTER_EXIT;
+
   struct inferior *inf = current_inferior ();
 
   if (inf->vfork_parent)
@@ -1147,6 +1163,8 @@ handle_vfork_child_exec_or_exit (int exec)
 static void
 handle_vfork_done (thread_info *event_thread)
 {
+  INFRUN_SCOPED_DEBUG_ENTER_EXIT;
+
   /* We only care about this event if inferior::thread_waiting_for_vfork_done is
      set, that is if we are waiting for a vfork child not under our control
      (because we detached it) to exec or exit.
@@ -1161,8 +1179,6 @@ handle_vfork_done (thread_info *event_thread)
       infrun_debug_printf ("not waiting for a vfork-done event");
       return;
     }
-
-  INFRUN_SCOPED_DEBUG_ENTER_EXIT;
 
   /* We stopped all threads (other than the vforking thread) of the inferior in
      follow_fork and kept them stopped until now.  It should therefore not be
@@ -3314,6 +3330,105 @@ check_multi_target_resumption (process_stratum_target *resume_target)
     }
 }
 
+/* Helper function for `proceed`.  Check if thread TP is suitable for
+   resuming, and, if it is, switch to the thread and call
+   `keep_going_pass_signal`.  If TP is not suitable for resuming then this
+   function will just return without switching threads.  */
+
+static void
+proceed_resume_thread_checked (thread_info *tp)
+{
+  if (!tp->inf->has_execution ())
+    {
+      infrun_debug_printf ("[%s] target has no execution",
+			   tp->ptid.to_string ().c_str ());
+      return;
+    }
+
+  if (tp->resumed ())
+    {
+      infrun_debug_printf ("[%s] resumed",
+			   tp->ptid.to_string ().c_str ());
+      gdb_assert (tp->executing () || tp->has_pending_waitstatus ());
+      return;
+    }
+
+  if (thread_is_in_step_over_chain (tp))
+    {
+      infrun_debug_printf ("[%s] needs step-over",
+			   tp->ptid.to_string ().c_str ());
+      return;
+    }
+
+  /* When handling a vfork GDB removes all breakpoints from the program
+     space in which the vfork is being handled.  If we are following the
+     parent then GDB will set the thread_waiting_for_vfork_done member of
+     the parent inferior.  In this case we should take care to only resume
+     the vfork parent thread, the kernel will hold this thread suspended
+     until the vfork child has exited or execd, at which point the parent
+     will be resumed and a VFORK_DONE event sent to GDB.  */
+  if (tp->inf->thread_waiting_for_vfork_done != nullptr)
+    {
+      if (target_is_non_stop_p ())
+	{
+	  /* For non-stop targets, regardless of whether GDB is using
+	     all-stop or non-stop mode, threads are controlled
+	     individually.
+
+	     When a thread is handling a vfork, breakpoints are removed
+	     from the inferior (well, program space in fact), so it is
+	     critical that we don't try to resume any thread other than the
+	     vfork parent.  */
+	  if (tp != tp->inf->thread_waiting_for_vfork_done)
+	    {
+	      infrun_debug_printf ("[%s] thread %s of this inferior is "
+				   "waiting for vfork-done",
+				   tp->ptid.to_string ().c_str (),
+				   tp->inf->thread_waiting_for_vfork_done
+				     ->ptid.to_string ().c_str ());
+	      return;
+	    }
+	}
+      else
+	{
+	  /* For all-stop targets, when we attempt to resume the inferior,
+	     we will only resume the vfork parent thread, this is handled
+	     in internal_resume_ptid.
+
+	     Additionally, we will always be called with the vfork parent
+	     thread as the current thread (TP) thanks to follow_fork, as
+	     such the following assertion should hold.
+
+	     Beyond this there is nothing more that needs to be done
+	     here.  */
+	  gdb_assert (tp == tp->inf->thread_waiting_for_vfork_done);
+	}
+    }
+
+  /* When handling a vfork GDB removes all breakpoints from the program
+     space in which the vfork is being handled.  If we are following the
+     child then GDB will set vfork_child member of the vfork parent
+     inferior.  Once the child has either exited or execd then GDB will
+     detach from the parent process.  Until that point GDB should not
+     resume any thread in the parent process.  */
+  if (tp->inf->vfork_child != nullptr)
+    {
+      infrun_debug_printf ("[%s] thread is part of a vfork parent, child is %d",
+			   tp->ptid.to_string ().c_str (),
+			   tp->inf->vfork_child->pid);
+      return;
+    }
+
+  infrun_debug_printf ("resuming %s",
+		       tp->ptid.to_string ().c_str ());
+
+  execution_control_state ecs (tp);
+  switch_to_thread (tp);
+  keep_going_pass_signal (&ecs);
+  if (!ecs.wait_some_more)
+    error (_("Command aborted."));
+}
+
 /* Basic routine for continuing the program in various fashions.
 
    ADDR is the address to resume at, or -1 for resume where stopped.
@@ -3353,6 +3468,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   pc = regcache_read_pc_protected (regcache);
 
   thread_info *cur_thr = inferior_thread ();
+
+  infrun_debug_printf ("cur_thr = %s", cur_thr->ptid.to_string ().c_str ());
 
   /* Fill in with reasonable starting values.  */
   init_thread_stepping_state (cur_thr);
@@ -3410,8 +3527,10 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   if (!cur_thr->control.in_infcall)
     set_running (resume_target, resume_ptid, true);
 
-  infrun_debug_printf ("addr=%s, signal=%s", paddress (gdbarch, addr),
-		       gdb_signal_to_symbol_string (siggnal));
+  infrun_debug_printf ("addr=%s, signal=%s, resume_ptid=%s",
+		       paddress (gdbarch, addr),
+		       gdb_signal_to_symbol_string (siggnal),
+		       resume_ptid.to_string ().c_str ());
 
   annotate_starting ();
 
@@ -3502,67 +3621,11 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 						       resume_ptid))
 	  {
 	    switch_to_thread_no_regs (tp);
-
-	    if (!tp->inf->has_execution ())
-	      {
-		infrun_debug_printf ("[%s] target has no execution",
-				     tp->ptid.to_string ().c_str ());
-		continue;
-	      }
-
-	    if (tp->resumed ())
-	      {
-		infrun_debug_printf ("[%s] resumed",
-				     tp->ptid.to_string ().c_str ());
-		gdb_assert (tp->executing () || tp->has_pending_waitstatus ());
-		continue;
-	      }
-
-	    if (thread_is_in_step_over_chain (tp))
-	      {
-		infrun_debug_printf ("[%s] needs step-over",
-				     tp->ptid.to_string ().c_str ());
-		continue;
-	      }
-
-	    /* If a thread of that inferior is waiting for a vfork-done
-	       (for a detached vfork child to exec or exit), breakpoints are
-	       removed.  We must not resume any thread of that inferior, other
-	       than the one waiting for the vfork-done.  */
-	    if (tp->inf->thread_waiting_for_vfork_done != nullptr
-		&& tp != tp->inf->thread_waiting_for_vfork_done)
-	      {
-		infrun_debug_printf ("[%s] another thread of this inferior is "
-				     "waiting for vfork-done",
-				     tp->ptid.to_string ().c_str ());
-		continue;
-	      }
-
-	    infrun_debug_printf ("resuming %s",
-				 tp->ptid.to_string ().c_str ());
-
-	    execution_control_state ecs (tp);
-	    switch_to_thread (tp);
-	    keep_going_pass_signal (&ecs);
-	    if (!ecs.wait_some_more)
-	      error (_("Command aborted."));
+	    proceed_resume_thread_checked (tp);
 	  }
       }
-    else if (!cur_thr->resumed ()
-	     && !thread_is_in_step_over_chain (cur_thr)
-	     /* In non-stop, forbid resuming a thread if some other thread of
-		that inferior is waiting for a vfork-done event (this means
-		breakpoints are out for this inferior).  */
-	     && !(non_stop
-		  && cur_thr->inf->thread_waiting_for_vfork_done != nullptr))
-      {
-	/* The thread wasn't started, and isn't queued, run it now.  */
-	execution_control_state ecs (cur_thr);
-	switch_to_thread (cur_thr);
-	keep_going_pass_signal (&ecs);
-	if (!ecs.wait_some_more)
-	  error (_("Command aborted."));
-      }
+    else
+      proceed_resume_thread_checked (cur_thr);
 
     /* keep_going_pass_signal has inserted the breakpoints, it's now safe
        to allow the target to spawn new random threads.  Unless an in-line step
