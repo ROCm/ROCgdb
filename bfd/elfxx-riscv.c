@@ -1171,6 +1171,9 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvksg", "zvkg",	check_implicit_always},
   {"zvksc", "zvks",	check_implicit_always},
   {"zvksc", "zvbc",	check_implicit_always},
+  {"zcf", "zca",	check_implicit_always},
+  {"zcd", "zca",	check_implicit_always},
+  {"zcb", "zca",	check_implicit_always},
   {"smaia", "ssaia",		check_implicit_always},
   {"smstateen", "ssstateen",	check_implicit_always},
   {"smepmp", "zicsr",		check_implicit_always},
@@ -1304,6 +1307,10 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zvl32768b",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zvl65536b",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"ztso",		ISA_SPEC_CLASS_DRAFT,		0, 1,  0 },
+  {"zca",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zcb",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zcf",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zcd",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -2384,13 +2391,16 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
     case INSN_CLASS_Q:
       return riscv_subset_supports (rps, "q");
     case INSN_CLASS_C:
-      return riscv_subset_supports (rps, "c");
+      return (riscv_subset_supports (rps, "c")
+	      || riscv_subset_supports (rps, "zca"));
     case INSN_CLASS_F_AND_C:
       return (riscv_subset_supports (rps, "f")
-	      && riscv_subset_supports (rps, "c"));
+	      && (riscv_subset_supports (rps, "c")
+		  || riscv_subset_supports (rps, "zcf")));
     case INSN_CLASS_D_AND_C:
       return (riscv_subset_supports (rps, "d")
-	      && riscv_subset_supports (rps, "c"));
+	      && (riscv_subset_supports (rps, "c")
+		  || riscv_subset_supports (rps, "zcd")));
     case INSN_CLASS_F_INX:
       return (riscv_subset_supports (rps, "f")
 	      || riscv_subset_supports (rps, "zfinx"));
@@ -2486,6 +2496,17 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zvksed");
     case INSN_CLASS_ZVKSH:
       return riscv_subset_supports (rps, "zvksh");
+    case INSN_CLASS_ZCB:
+      return riscv_subset_supports (rps, "zcb");
+    case INSN_CLASS_ZCB_AND_ZBB:
+      return (riscv_subset_supports (rps, "zcb")
+	      && riscv_subset_supports (rps, "zbb"));
+    case INSN_CLASS_ZCB_AND_ZBA:
+      return (riscv_subset_supports (rps, "zcb")
+	      && riscv_subset_supports (rps, "zba"));
+    case INSN_CLASS_ZCB_AND_ZMMUL:
+      return (riscv_subset_supports (rps, "zcb")
+	      && riscv_subset_supports (rps, "zmmul"));
     case INSN_CLASS_SVINVAL:
       return riscv_subset_supports (rps, "svinval");
     case INSN_CLASS_H:
@@ -2565,21 +2586,27 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
     case INSN_CLASS_C:
       return "c";
     case INSN_CLASS_F_AND_C:
-      if (!riscv_subset_supports (rps, "f")
-	  && !riscv_subset_supports (rps, "c"))
-	return _("f' and `c");
-      else if (!riscv_subset_supports (rps, "f"))
-	return "f";
+      if (!riscv_subset_supports (rps, "f"))
+	{
+	  if (!riscv_subset_supports (rps, "c")
+	      && !riscv_subset_supports (rps, "zcf"))
+	    return _("f' and `c', or `f' and `zcf"); 
+	  else
+	    return "f";
+	}
       else
-	return "c";
+	return _("c' or `zcf");
     case INSN_CLASS_D_AND_C:
-      if (!riscv_subset_supports (rps, "d")
-	  && !riscv_subset_supports (rps, "c"))
-	return _("d' and `c");
-      else if (!riscv_subset_supports (rps, "d"))
-	return "d";
+      if (!riscv_subset_supports (rps, "d"))
+	{
+	  if (!riscv_subset_supports (rps, "c")
+	      && !riscv_subset_supports (rps, "zcd"))
+	    return _("d' and `c', or `d' and `zcd");
+	  else
+	    return "d";
+	}
       else
-	return "c";
+	return _("c' or `zcd");
     case INSN_CLASS_F_INX:
       return _("f' or `zfinx");
     case INSN_CLASS_D_INX:
@@ -2688,6 +2715,14 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return _("zvksed");
     case INSN_CLASS_ZVKSH:
       return _("zvksh");
+    case INSN_CLASS_ZCB:
+      return "zcb";
+    case INSN_CLASS_ZCB_AND_ZBA:
+      return _("zcb' and `zba");
+    case INSN_CLASS_ZCB_AND_ZBB:
+      return _("zcb' and `zbb");
+    case INSN_CLASS_ZCB_AND_ZMMUL:
+      return _("zcb' and `zmmul', or `zcb' and `m");
     case INSN_CLASS_SVINVAL:
       return "svinval";
     case INSN_CLASS_H:
