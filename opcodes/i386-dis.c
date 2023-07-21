@@ -867,8 +867,6 @@ enum
   MOD_0F01_REG_3,
   MOD_0F01_REG_5,
   MOD_0F01_REG_7,
-  MOD_0F02,
-  MOD_0F03,
   MOD_0F12_PREFIX_0,
   MOD_0F16_PREFIX_0,
   MOD_0F18_REG_0,
@@ -2018,8 +2016,8 @@ static const struct dis386 dis386_twobyte[] = {
   /* 00 */
   { REG_TABLE (REG_0F00 ) },
   { REG_TABLE (REG_0F01 ) },
-  { MOD_TABLE (MOD_0F02) },
-  { MOD_TABLE (MOD_0F03) },
+  { "larS",		{ Gv, Sv }, 0 },
+  { "lslS",		{ Gv, Sv }, 0 },
   { Bad_Opcode },
   { "syscall",		{ XX }, 0 },
   { "clts",		{ XX }, 0 },
@@ -2627,10 +2625,10 @@ static const struct dis386 reg_table[][8] = {
   {
     { "sldtD",	{ Sv }, 0 },
     { "strD",	{ Sv }, 0 },
-    { "lldt",	{ Ew }, 0 },
-    { "ltr",	{ Ew }, 0 },
-    { "verr",	{ Ew }, 0 },
-    { "verw",	{ Ew }, 0 },
+    { "lldtD",	{ Sv }, 0 },
+    { "ltrD",	{ Sv }, 0 },
+    { "verrD",	{ Sv }, 0 },
+    { "verwD",	{ Sv }, 0 },
     { X86_64_TABLE (X86_64_0F00_REG_6) },
     { Bad_Opcode },
   },
@@ -2877,7 +2875,7 @@ static const struct dis386 prefix_table[][4] = {
     { Bad_Opcode },
     { Bad_Opcode },
     { Bad_Opcode },
-    { "lkgs",  { Ew }, 0 },
+    { "lkgsD", { Sv }, 0 },
   },
 
   /* PREFIX_0F01_REG_0_MOD_3_RM_6 */
@@ -4019,7 +4017,7 @@ static const struct dis386 x86_64_table[][2] = {
 
   /* X86_64_63 */
   {
-    { "arpl", { Ew, Gw }, 0 },
+    { "arplS", { Sv, Gv }, 0 },
     { "movs", { Gv, { MOVSXD_Fixup, movsxd_mode } }, 0 },
   },
 
@@ -7893,16 +7891,6 @@ static const struct dis386 mod_table[][2] = {
     /* MOD_0F01_REG_7 */
     { "invlpg",		{ Mb }, 0 },
     { RM_TABLE (RM_0F01_REG_7_MOD_3) },
-  },
-  {
-    /* MOD_0F02 */
-    { "larS",		{ Gv, Mw }, 0 },
-    { "larS",		{ Gv, Ev }, 0 },
-  },
-  {
-    /* MOD_0F03 */
-    { "lslS",		{ Gv, Mw }, 0 },
-    { "lslS",		{ Gv, Ev }, 0 },
   },
   {
     /* MOD_0F12_PREFIX_0 */
