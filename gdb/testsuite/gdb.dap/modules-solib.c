@@ -1,9 +1,4 @@
-/* eBPF simulator main header
-   Copyright (C) 2023 Free Software Foundation, Inc.
-
-   Contributed by Oracle Inc.
-
-   This file is part of GDB, the GNU debugger.
+/* Copyright 2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,10 +13,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef SIM_MAIN_H
-#define SIM_MAIN_H
-
-#include "sim-basics.h"
-#include "sim-base.h"
-
-#endif /* ! SIM_MAIN_H */
+int
+call_me (void (*callee) (void))
+{
+  callee ();
+  return 0;
+}

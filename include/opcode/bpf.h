@@ -112,6 +112,7 @@ typedef uint64_t bpf_insn_word;
 #define BPF_MODE_IND  ((uint64_t)0x40 << 56)
 #define BPF_MODE_MEM  ((uint64_t)0x60 << 56)
 #define BPF_MODE_ATOMIC ((uint64_t)0xc0 << 56)
+#define BPF_MODE_SMEM ((uint64_t)0x80 << 56)
 
 #define BPF_SIZE_W  ((uint64_t)0x00 << 56)
 #define BPF_SIZE_H  ((uint64_t)0x08 << 56)
@@ -131,6 +132,9 @@ typedef uint64_t bpf_insn_word;
    even if these are multi-byte or infra-byte.  Bleh.  */
 
 #define BPF_OFFSET16_SDIVMOD ((uint64_t)0x1 << 32)
+#define BPF_OFFSET16_MOVS8 ((uint64_t)8 << 32)
+#define BPF_OFFSET16_MOVS16 ((uint64_t)16 << 32)
+#define BPF_OFFSET16_MOVS32 ((uint64_t)32 << 32)
 
 #define BPF_IMM32_END16 ((uint64_t)0x00000010)
 #define BPF_IMM32_END32 ((uint64_t)0x00000020)
@@ -162,6 +166,7 @@ enum bpf_insn_id
   BPF_INSN_ANDR, BPF_INSN_ANDI, BPF_INSN_XORR, BPF_INSN_XORI,
   BPF_INSN_NEGR, BPF_INSN_NEGI, BPF_INSN_LSHR, BPF_INSN_LSHI,
   BPF_INSN_RSHR, BPF_INSN_RSHI, BPF_INSN_ARSHR, BPF_INSN_ARSHI,
+  BPF_INSN_MOVS8R, BPF_INSN_MOVS16R, BPF_INSN_MOVS32R,
   BPF_INSN_MOVR, BPF_INSN_MOVI,
   /* ALU32 instructions.  */
   BPF_INSN_ADD32R, BPF_INSN_ADD32I, BPF_INSN_SUB32R, BPF_INSN_SUB32I,
@@ -171,6 +176,7 @@ enum bpf_insn_id
   BPF_INSN_AND32R, BPF_INSN_AND32I, BPF_INSN_XOR32R, BPF_INSN_XOR32I,
   BPF_INSN_NEG32R, BPF_INSN_NEG32I, BPF_INSN_LSH32R, BPF_INSN_LSH32I,
   BPF_INSN_RSH32R, BPF_INSN_RSH32I, BPF_INSN_ARSH32R, BPF_INSN_ARSH32I,
+  BPF_INSN_MOVS328R, BPF_INSN_MOVS3216R, BPF_INSN_MOVS3232R,
   BPF_INSN_MOV32R, BPF_INSN_MOV32I,
   /* Endianness conversion instructions.  */
   BPF_INSN_ENDLE16, BPF_INSN_ENDLE32, BPF_INSN_ENDLE64,
@@ -181,6 +187,8 @@ enum bpf_insn_id
   BPF_INSN_LDINDB, BPF_INSN_LDINDH, BPF_INSN_LDINDW, BPF_INSN_LDINDDW,
   /* Generic load instructions (to register.)  */
   BPF_INSN_LDXB, BPF_INSN_LDXH, BPF_INSN_LDXW, BPF_INSN_LDXDW,
+  /* Generic signed load instructions.  */
+  BPF_INSN_LDXSB, BPF_INSN_LDXSH, BPF_INSN_LDXSW, BPF_INSN_LDXSDW,
   /* Generic store instructions (from register.)  */
   BPF_INSN_STXBR, BPF_INSN_STXHR, BPF_INSN_STXWR, BPF_INSN_STXDWR,
   BPF_INSN_STXBI, BPF_INSN_STXHI, BPF_INSN_STXWI, BPF_INSN_STXDWI,

@@ -1,7 +1,4 @@
-/* Emulation of eBPF helpers.  Interface.
-   Copyright (C) 2020-2023 Free Software Foundation, Inc.
-
-   This file is part of GDB, the GNU debugger.
+/* Copyright 2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,18 +13,28 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef BPF_HELPERS_H
-#define BPF_HELPERS_H
+#include <dlfcn.h>
+#include <assert.h>
+#include <stddef.h>
 
-enum bpf_kernel_helper
-  {
-#define DEF_HELPER(kver, name, fn, types) name,
-#include "bpf-helpers.def"
-#undef DEF_HELPER
-  };
+void
+stop (void)
+{
+}
 
-int bpf_trace_printk (SIM_CPU *current_cpu);
+int
+main (void)
+{
+  void *handle;
+  int (*func)(void (*) (void));
 
-VOID bpfbf_breakpoint (SIM_CPU *current_cpu);
+  stop ();
 
-#endif /* ! BPF_HELPERS_H */
+  handle = dlopen (SHLIB_NAME, RTLD_LAZY);
+  assert (handle != NULL);
+
+  func = (int (*)(void (*) (void))) dlsym (handle, "call_me");
+  func (stop);
+
+  return 0;
+}
