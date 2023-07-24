@@ -8,6 +8,7 @@ Full documentation for ROCgdb is available at
 ### Added
 - Support for watchpoints on scratch memory addresses.
 - Add support for gfx1100, gfx1101, and gfx1102.
+- Added support for gfx940, gfx941 and gfx942.
 
 ### Optimized
 - Improved performances when handling the end of a process with a large
