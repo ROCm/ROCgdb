@@ -27992,6 +27992,15 @@ AMD Instinct@registeredsymbol{} MI100 accelerator devices.
 @item @code{gfx90a}
 AMD Instinct@registeredsymbol{} MI200 Series accelerator devices.
 
+@item @code{gfx940}
+Aqua Vanjaram devices.
+
+@item @code{gfx941}
+@samp{gfx941} devices.
+
+@item @code{gfx942}
+@samp{gfx942} devices.
+
 @item @code{gfx1010}
 Navi 10 devices.
 
@@ -28943,9 +28952,9 @@ Reduce the number of wavefronts when debugging if practical.
 @end itemize
 
 @item
-Some @acronym{AMD GPU} devices, such as @samp{gfx90a}, can be in use
-by multiple processes that are being debugged by @value{GDBN}.  For
-other devices the following warning message may be displayed.
+Some @acronym{AMD GPU} devices, such as @samp{gfx908}, cannot be in use by
+multiple processes that are being debugged by @value{GDBN}.  For such devices
+the following warning message may be displayed.
 
 @smallexample
 amd-dbgapi: warning: At least one agent is busy (debugging may be enabled by another process)
