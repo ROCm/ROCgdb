@@ -160,6 +160,9 @@ Signed 16-bit immediate representing an offset in bytes.
 @item disp16
 Signed 16-bit immediate representing a displacement to a target,
 measured in number of 64-bit words @emph{minus one}.
+@item disp32
+Signed 32-bit immediate representing a displacement to a target,
+measured in number of 64-bit words @emph{minus one}.
 @item imm32
 Signed 32-bit immediate.
 @item imm64
@@ -261,15 +264,15 @@ Move the 64-bit value of @code{rs} in @code{rd}, or load @code{imm32}
 in @code{rd}.
 
 @item movs rd, rs, 8
-@itemx rd s= (i8) rs
+@itemx rd = (s8) rs
 Move the sign-extended 8-bit value in @code{rs} to @code{rd}.
 
 @item movs rd, rs, 16
-@itemx rd s= (i16) rs
+@itemx rd = (s16) rs
 Move the sign-extended 16-bit value in @code{rs} to @code{rd}.
 
 @item movs rd, rs, 32
-@itemx rd s= (i32) rs
+@itemx rd = (s32) rs
 Move the sign-extended 32-bit value in @code{rs} to @code{rd}.
 @end table
 
@@ -368,15 +371,15 @@ Move the 32-bit value of @code{rs} in @code{rd}, or load @code{imm32}
 in @code{rd}.
 
 @item mov32s rd, rs, 8
-@itemx rd s= (i8) rs
+@itemx rd = (s8) rs
 Move the sign-extended 8-bit value in @code{rs} to @code{rd}.
 
 @item mov32s rd, rs, 16
-@itemx rd s= (i16) rs
+@itemx rd = (s16) rs
 Move the sign-extended 16-bit value in @code{rs} to @code{rd}.
 
 @item mov32s rd, rs, 32
-@itemx rd s= (i32) rs
+@itemx rd = (s32) rs
 Move the sign-extended 32-bit value in @code{rs} to @code{rd}.
 @end table
 
@@ -400,6 +403,26 @@ little-endian and store it back in @code{rd}.
 Convert the 16-bit, 32-bit or 64-bit value in @code{rd} to big-endian
 and store it back in @code{rd}.
 @end table
+
+@subsection Byte swap instructions
+
+@table @code
+@item bswap rd, 16
+@itemx rd = bswap16 rd
+Swap the least-significant 16-bit word in @code{rd} with the
+most-significant 16-bit word.
+
+@item bswap rd, 32
+@itemx rd = bswap32 rd
+Swap the least-significant 32-bit word in @code{rd} with the
+most-significant 32-bit word.
+
+@item bswap rd, 64
+@itemx rd = bswap64 rd
+Swap the least-significant 64-bit word in @code{rd} with the
+most-significant 64-bit word.
+@end table
+
 
 @subsection 64-bit load and pseudo maps
 
@@ -487,19 +510,19 @@ Signed load to register instructions:
 
 @table @code
 @item ldxsdw rd, [rs + offset16]
-@itemx rd = *(i64 *) (rs + offset16)
+@itemx rd = *(s64 *) (rs + offset16)
 Generic 64-bit signed load.
 
 @item ldxsw rd, [rs + offset16]
-@itemx rd = *(i32 *) (rs + offset16)
+@itemx rd = *(s32 *) (rs + offset16)
 Generic 32-bit signed load.
 
 @item ldxsh rd, [rs + offset16]
-@itemx rd = *(i16 *) (rs + offset16)
+@itemx rd = *(s16 *) (rs + offset16)
 Generic 16-bit signed load.
 
 @item ldxsb rd, [rs + offset16]
-@itemx rd = *(i8 *) (rs + offset16)
+@itemx rd = *(s8 *) (rs + offset16)
 Generic 8-bit signed load.
 @end table
 
@@ -554,6 +577,10 @@ holds true.
 @item ja disp16
 @itemx goto disp16
 Jump-always.
+
+@item jal disp32
+@itemx gotol disp32
+Jump-always, long range.
 
 @item jeq rd, rs, disp16
 @itemx jeq rd, imm32, disp16

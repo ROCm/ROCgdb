@@ -1538,7 +1538,7 @@ elfNN_allocate_ifunc_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 /* Allocate space in .plt, .got and associated reloc sections for
    ifunc dynamic relocs.  */
 
-static bool
+static int
 elfNN_allocate_local_ifunc_dynrelocs (void **slot, void *inf)
 {
   struct elf_link_hash_entry *h = (struct elf_link_hash_entry *) *slot;
@@ -1700,7 +1700,7 @@ loongarch_elf_size_dynamic_sections (bfd *output_bfd,
 
   /* Allocate .plt and .got entries, and space for local ifunc symbols.  */
   htab_traverse (htab->loc_hash_table,
-		 (void *) elfNN_allocate_local_ifunc_dynrelocs, info);
+		 elfNN_allocate_local_ifunc_dynrelocs, info);
 
   /* Don't allocate .got.plt section if there are no PLT.  */
   if (htab->elf.sgotplt && htab->elf.sgotplt->size == GOTPLT_HEADER_SIZE
@@ -2284,26 +2284,65 @@ loongarch_reloc_is_fatal (struct bfd_link_info *info,
   return fatal;
 }
 
+/* If lo12 immediate > 0x7ff, because sign-extend caused by addi.d/ld.d,
+   hi20 immediate need to add 0x1.
+   For example: pc 0x120000000, symbol 0x120000812
+   lo12 immediate is 0x812, 0x120000812 & 0xfff = 0x812
+   hi20 immediate is 1, because lo12 imm > 0x7ff, symbol need to add 0x1000
+   (((0x120000812 + 0x1000) & ~0xfff) - (0x120000000 & ~0xfff)) >> 12 = 0x1
+
+   At run:
+   pcalau12i $t0, hi20 (0x1)
+      $t0 = 0x120000000 + (0x1 << 12) = 0x120001000
+   addi.d $t0, $t0, lo12 (0x812)
+      $t0 = 0x120001000 + 0xfffffffffffff812 (-(0x1000 - 0x812) = -0x7ee)
+	  = 0x120001000 - 0x7ee (0x1000 - 0x7ee = 0x812)
+	  = 0x120000812
+    Without hi20 add 0x1000, the result 0x120000000 - 0x7ee = 0x11ffff812 is
+    error.
+    0x1000 + sign-extend-to64(0x8xx) = 0x8xx.  */
 #define RELOCATE_CALC_PC32_HI20(relocation, pc) 	\
   ({							\
     bfd_vma __lo = (relocation) & ((bfd_vma)0xfff);	\
-    pc = pc & (~(bfd_vma)0xfff);			\
+    relocation = (relocation & ~(bfd_vma)0xfff)		\
+		  - (pc & ~(bfd_vma)0xfff);		\
     if (__lo > 0x7ff)					\
-      {							\
 	relocation += 0x1000;				\
-      } 						\
-    relocation &= ~(bfd_vma)0xfff;			\
-    relocation -= pc;					\
   })
 
+/* For example: pc is 0x11000010000100, symbol is 0x1812348ffff812
+   offset = (0x1812348ffff812 & ~0xfff) - (0x11000010000100 & ~0xfff)
+	  = 0x712347ffff000
+   lo12: 0x1812348ffff812 & 0xfff = 0x812
+   hi20: 0x7ffff + 0x1(lo12 > 0x7ff) = 0x80000
+   lo20: 0x71234 - 0x1(lo12 > 0x7ff) + 0x1(hi20 > 0x7ffff)
+   hi12: 0x0
+
+   pcalau12i $t1, hi20 (0x80000)
+      $t1 = 0x11000010000100 + sign-extend(0x80000 << 12)
+	  = 0x11000010000100 + 0xffffffff80000000
+	  = 0x10ffff90000000
+   addi.d $t0, $zero, lo12 (0x812)
+      $t0 = 0xfffffffffffff812 (if lo12 > 0x7ff, because sign-extend,
+      lo20 need to sub 0x1)
+   lu32i.d $t0, lo12 (0x71234)
+      $t0 = {0x71234, 0xfffff812}
+	  = 0x71234fffff812
+   lu52i.d $t0, hi12 (0x0)
+      $t0 = {0x0, 0x71234fffff812}
+	  = 0x71234fffff812
+   add.d $t1, $t1, $t0
+      $t1 = 0x10ffff90000000 + 0x71234fffff812
+	  = 0x1812348ffff812.  */
 #define RELOCATE_CALC_PC64_HI32(relocation, pc)  	\
   ({							\
-    bfd_vma __lo = (relocation) & ((bfd_vma)0xfff);	\
+    bfd_vma __lo = (relocation & (bfd_vma)0xfff);	\
+    relocation = (relocation & ~(bfd_vma)0xfff)		\
+		  - (pc & ~(bfd_vma)0xfff);		\
     if (__lo > 0x7ff)					\
-      { 						\
-	relocation -= 0x100000000;      		\
-      }  						\
-    relocation -= (pc & ~(bfd_vma)0xffffffff);  	\
+	relocation += (0x1000 - 0x100000000);		\
+    if (relocation & 0x80000000)			\
+      relocation += 0x100000000;			\
   })
 
 static int
@@ -4001,12 +4040,6 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 {
   struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
   const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
-  asection *rela_dyn = bfd_get_section_by_name (output_bfd, ".rela.dyn");
-  struct bfd_link_order *lo = NULL;
-  Elf_Internal_Rela *slot = NULL, *last_slot = NULL;
-
-  if (rela_dyn)
-    lo = rela_dyn->map_head.link_order;
 
   if (h->plt.offset != MINUS_ONE)
     {
@@ -4016,7 +4049,6 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
       uint32_t plt_entry[PLT_ENTRY_INSNS];
       bfd_byte *loc;
       Elf_Internal_Rela rela;
-      asection *rela_sec = NULL;
 
       if (htab->elf.splt)
 	{
@@ -4074,26 +4106,7 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 			       + h->root.u.def.section->output_section->vma
 			       + h->root.u.def.section->output_offset);
 
-	  /* Find the space after dyn sort.  */
-	  while (slot == last_slot || slot->r_offset != 0)
-	    {
-	      if (slot != last_slot)
-		{
-		  slot++;
-		  continue;
-		}
-
-	      BFD_ASSERT (lo != NULL);
-	      rela_sec = lo->u.indirect.section;
-	      lo = lo->next;
-
-	      slot = (Elf_Internal_Rela *)rela_sec->contents;
-	      last_slot = (Elf_Internal_Rela *)(rela_sec->contents +
-						rela_sec->size);
-	    }
-
-	  bed->s->swap_reloca_out (output_bfd, &rela, (bfd_byte *)slot);
-	  rela_sec->reloc_count++;
+	  loongarch_elf_append_rela (output_bfd, relplt, &rela);
 	}
       else
 	{
@@ -4260,13 +4273,40 @@ loongarch_finish_dyn (bfd *output_bfd, struct bfd_link_info *info, bfd *dynobj,
 /* Finish up local dynamic symbol handling.  We set the contents of
    various dynamic sections here.  */
 
-static bool
+static int
 elfNN_loongarch_finish_local_dynamic_symbol (void **slot, void *inf)
 {
   struct elf_link_hash_entry *h = (struct elf_link_hash_entry *) *slot;
   struct bfd_link_info *info = (struct bfd_link_info *) inf;
 
   return loongarch_elf_finish_dynamic_symbol (info->output_bfd, info, h, NULL);
+}
+
+/* Value of struct elf_backend_data->elf_backend_output_arch_local_syms,
+   this function is called before elf_link_sort_relocs.
+   So relocation R_LARCH_IRELATIVE for local ifunc can be append to
+   .rela.dyn (.rela.got) by loongarch_elf_append_rela.  */
+
+static bool
+elf_loongarch_output_arch_local_syms
+  (bfd *output_bfd ATTRIBUTE_UNUSED,
+   struct bfd_link_info *info,
+   void *flaginfo ATTRIBUTE_UNUSED,
+   int (*func) (void *, const char *,
+		Elf_Internal_Sym *,
+		asection *,
+		struct elf_link_hash_entry *) ATTRIBUTE_UNUSED)
+{
+  struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
+  if (htab == NULL)
+    return false;
+
+  /* Fill PLT and GOT entries for local STT_GNU_IFUNC symbols.  */
+  htab_traverse (htab->loc_hash_table,
+		 elfNN_loongarch_finish_local_dynamic_symbol,
+		 info);
+
+  return true;
 }
 
 static bool
@@ -4346,10 +4386,6 @@ loongarch_elf_finish_dynamic_sections (bfd *output_bfd,
 
       elf_section_data (output_section)->this_hdr.sh_entsize = GOT_ENTRY_SIZE;
     }
-
-  /* Fill PLT and GOT entries for local STT_GNU_IFUNC symbols.  */
-  htab_traverse (htab->loc_hash_table,
-		 (void *) elfNN_loongarch_finish_local_dynamic_symbol, info);
 
   return true;
 }
@@ -4615,6 +4651,8 @@ elf_loongarch64_hash_symbol (struct elf_link_hash_entry *h)
 #define elf_backend_size_dynamic_sections loongarch_elf_size_dynamic_sections
 #define elf_backend_relocate_section loongarch_elf_relocate_section
 #define elf_backend_finish_dynamic_symbol loongarch_elf_finish_dynamic_symbol
+#define elf_backend_output_arch_local_syms \
+  elf_loongarch_output_arch_local_syms
 #define elf_backend_finish_dynamic_sections				   \
   loongarch_elf_finish_dynamic_sections
 #define elf_backend_object_p loongarch_elf_object_p

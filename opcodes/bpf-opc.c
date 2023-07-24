@@ -89,11 +89,11 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V1, BPF_CODE, BPF_CLASS_ALU64|BPF_CODE_ARSH|BPF_SRC_X},
   {BPF_INSN_ARSHI, "arsh%W%dr , %i32", "%dr%ws>>= %i32",
    BPF_V1, BPF_CODE, BPF_CLASS_ALU64|BPF_CODE_ARSH|BPF_SRC_K},
-  {BPF_INSN_MOVS8R, "movs%W%dr , %sr , 8", "%dr%ws=%w( i8 )%w%sr",
+  {BPF_INSN_MOVS8R, "movs%W%dr , %sr , 8", "%dr%w=%w( s8 )%w%sr",
    BPF_V4, BPF_CODE|BPF_OFFSET16, BPF_CLASS_ALU64|BPF_CODE_MOV|BPF_SRC_X|BPF_OFFSET16_MOVS8},
-  {BPF_INSN_MOVS16R, "movs%W%dr , %sr , 16", "%dr%ws=%w( i16 )%w%sr",
+  {BPF_INSN_MOVS16R, "movs%W%dr , %sr , 16", "%dr%w=%w( s16 )%w%sr",
    BPF_V4, BPF_CODE|BPF_OFFSET16, BPF_CLASS_ALU64|BPF_CODE_MOV|BPF_SRC_X|BPF_OFFSET16_MOVS16},
-  {BPF_INSN_MOVS32R, "movs%W%dr , %sr , 32", "%dr%ws=%w( i32 )%w%sr",
+  {BPF_INSN_MOVS32R, "movs%W%dr , %sr , 32", "%dr%w=%w( s32 )%w%sr",
    BPF_V4, BPF_CODE|BPF_OFFSET16, BPF_CLASS_ALU64|BPF_CODE_MOV|BPF_SRC_X|BPF_OFFSET16_MOVS32},
   {BPF_INSN_MOVR, "mov%W%dr , %sr", "%dr = %sr",
    BPF_V1, BPF_CODE, BPF_CLASS_ALU64|BPF_CODE_MOV|BPF_SRC_X},
@@ -157,11 +157,11 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V1, BPF_CODE, BPF_CLASS_ALU|BPF_CODE_ARSH|BPF_SRC_X},
   {BPF_INSN_ARSH32I, "arsh32%W%dr , %i32", "%dw%Ws>>= %i32",
    BPF_V1, BPF_CODE, BPF_CLASS_ALU|BPF_CODE_ARSH|BPF_SRC_K},
-  {BPF_INSN_MOVS328R, "movs32%W%dr , %sr , 8", "%dw%ws=%w( i8 )%w%sw",
+  {BPF_INSN_MOVS328R, "movs32%W%dr , %sr , 8", "%dw%w=%w( s8 )%w%sw",
    BPF_V4, BPF_CODE|BPF_OFFSET16, BPF_CLASS_ALU|BPF_CODE_MOV|BPF_SRC_X|BPF_OFFSET16_MOVS8},
-  {BPF_INSN_MOVS3216R, "movs32%W%dr , %sr , 16", "%dw%ws=%w( i16 )%w%sw",
+  {BPF_INSN_MOVS3216R, "movs32%W%dr , %sr , 16", "%dw%w=%w( s16 )%w%sw",
    BPF_V4, BPF_CODE|BPF_OFFSET16, BPF_CLASS_ALU|BPF_CODE_MOV|BPF_SRC_X|BPF_OFFSET16_MOVS16},
-  {BPF_INSN_MOVS3232R, "movs32%W%dr , %sr , 32", "%dw%ws=%w( i32 )%w%sw",
+  {BPF_INSN_MOVS3232R, "movs32%W%dr , %sr , 32", "%dw%w=%w( s32 )%w%sw",
    BPF_V4, BPF_CODE|BPF_OFFSET16, BPF_CLASS_ALU|BPF_CODE_MOV|BPF_SRC_X|BPF_OFFSET16_MOVS32},
   {BPF_INSN_MOV32R, "mov32%W%dr , %sr", "%dw = %sw",
    BPF_V1, BPF_CODE, BPF_CLASS_ALU|BPF_CODE_MOV|BPF_SRC_X},
@@ -181,6 +181,14 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V1, BPF_CODE|BPF_IMM32, BPF_CLASS_ALU|BPF_CODE_END|BPF_SRC_X|BPF_IMM32_END32},
   {BPF_INSN_ENDBE64, "endbe%W%dr , 64", "%dr = be64%w%dr",
    BPF_V1, BPF_CODE|BPF_IMM32, BPF_CLASS_ALU|BPF_CODE_END|BPF_SRC_X|BPF_IMM32_END64},
+
+  /* Byte-swap instructions.  */
+  {BPF_INSN_BSWAP16, "bswap%W%dr , 16", "%dr%w=%wbswap16%w%dr",
+   BPF_V4, BPF_CODE|BPF_IMM32, BPF_CLASS_ALU64|BPF_CODE_END|BPF_SRC_K|BPF_IMM32_BSWAP16},
+  {BPF_INSN_BSWAP32, "bswap%W%dr , 32", "%dr%w=%wbswap32%w%dr",
+   BPF_V4, BPF_CODE|BPF_IMM32, BPF_CLASS_ALU64|BPF_CODE_END|BPF_SRC_K|BPF_IMM32_BSWAP32},
+  {BPF_INSN_BSWAP64, "bswap%W%dr , 64", "%dr%w=%wbswap64%w%dr",
+   BPF_V4, BPF_CODE|BPF_IMM32, BPF_CLASS_ALU64|BPF_CODE_END|BPF_SRC_K|BPF_IMM32_BSWAP64},
 
   /* 64-bit load instruction.  */
   {BPF_INSN_LDDW, "lddw%W%dr , %i64", "%dr = %i64%wll",
@@ -218,13 +226,13 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V1, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_DW|BPF_MODE_MEM},
 
   /* Generic signed load instructions (to register.)  */
-  {BPF_INSN_LDXSB, "ldxsb%W%dr , [ %sr %o16 ]", "%dr = * ( i8 * ) ( %sr %o16 )",
+  {BPF_INSN_LDXSB, "ldxsb%W%dr , [ %sr %o16 ]", "%dr = * ( s8 * ) ( %sr %o16 )",
    BPF_V4, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_B|BPF_MODE_SMEM},
-  {BPF_INSN_LDXSH, "ldxsh%W%dr , [ %sr %o16 ]", "%dr = * ( i16 * ) ( %sr %o16 )",
+  {BPF_INSN_LDXSH, "ldxsh%W%dr , [ %sr %o16 ]", "%dr = * ( s16 * ) ( %sr %o16 )",
    BPF_V4, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_H|BPF_MODE_SMEM},
-  {BPF_INSN_LDXSW, "ldxsw%W%dr , [ %sr %o16 ]", "%dr = * ( i32 * ) ( %sr %o16 )",
+  {BPF_INSN_LDXSW, "ldxsw%W%dr , [ %sr %o16 ]", "%dr = * ( s32 * ) ( %sr %o16 )",
    BPF_V4, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_W|BPF_MODE_SMEM},
-  {BPF_INSN_LDXSDW, "ldxsdw%W%dr , [ %sr %o16 ]","%dr = * ( i64 * ) ( %sr %o16 )",
+  {BPF_INSN_LDXSDW, "ldxsdw%W%dr , [ %sr %o16 ]","%dr = * ( s64 * ) ( %sr %o16 )",
    BPF_V4, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_DW|BPF_MODE_SMEM},
 
   /* Generic store instructions (from register.)  */
@@ -302,6 +310,10 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V1, BPF_CODE, BPF_CLASS_JMP|BPF_CODE_JSET|BPF_SRC_K},
   {BPF_INSN_JNEI, "jne%W%dr , %i32 , %d16", "if%w%dr != %i32%wgoto%w%d16",
    BPF_V1, BPF_CODE, BPF_CLASS_JMP|BPF_CODE_JNE|BPF_SRC_K},
+
+  /* 32-bit jump-always.  */
+  {BPF_INSN_JAL, "jal%W%d32", "gotol%w%d32",
+   BPF_V4, BPF_CODE, BPF_CLASS_JMP32|BPF_CODE_JA|BPF_SRC_K},
 
   /* 32-bit compare-and-jump instructions (reg OP reg).  */
   {BPF_INSN_JEQ32R, "jeq32%W%dr , %sr , %d16", "if%w%dw == %sw%wgoto%w%d16",
