@@ -4762,4 +4762,3 @@ debug_target::displaced_step_finish (thread_info *arg0, const target_waitstatus 
   gdb_puts ("\n", gdb_stdlog);
   return result;
 }
-
