@@ -16,34 +16,8 @@
 import gdb
 
 
-class FrameDecorator(object):
-    """Basic implementation of a Frame Decorator"""
-
-    """ This base frame decorator decorates a frame or another frame
-    decorator, and provides convenience methods.  If this object is
-    wrapping a frame decorator, defer to that wrapped object's method
-    if it has one.  This allows for frame decorators that have
-    sub-classed FrameDecorator object, but also wrap other frame
-    decorators on the same frame to correctly execute.
-
-    E.g
-
-    If the result of frame filters running means we have one gdb.Frame
-    wrapped by multiple frame decorators, all sub-classed from
-    FrameDecorator, the resulting hierarchy will be:
-
-    Decorator1
-      -- (wraps) Decorator2
-        -- (wraps) FrameDecorator
-          -- (wraps) gdb.Frame
-
-    In this case we have two frame decorators, both of which are
-    sub-classed from FrameDecorator.  If Decorator1 just overrides the
-    'function' method, then all of the other methods are carried out
-    by the super-class FrameDecorator.  But Decorator2 may have
-    overriden other methods, so FrameDecorator will look at the
-    'base' parameter and defer to that class's methods.  And so on,
-    down the chain."""
+class _FrameDecoratorBase(object):
+    """Base class of frame decorators."""
 
     # 'base' can refer to a gdb.Frame or another frame decorator.  In
     # the latter case, the child class will have called the super
@@ -53,7 +27,7 @@ class FrameDecorator(object):
         self._base = base
 
     @staticmethod
-    def _is_limited_frame(frame):
+    def __is_limited_frame(frame):
         """Internal utility to determine if the frame is special or
         limited."""
         sal = frame.find_sal()
@@ -122,22 +96,6 @@ class FrameDecorator(object):
         frame = self.inferior_frame()
         return frame.pc()
 
-    def filename(self):
-        """Return the filename associated with this frame, detecting
-        and returning the appropriate library name is this is a shared
-        library."""
-
-        if hasattr(self._base, "filename"):
-            return self._base.filename()
-
-        frame = self.inferior_frame()
-        sal = frame.find_sal()
-        if not sal.symtab or not sal.symtab.filename:
-            pc = frame.pc()
-            return gdb.solib_name(pc)
-        else:
-            return sal.symtab.filename
-
     def frame_args(self):
         """Return an iterable of frame arguments for this frame, if
         any.  The iterable object contains objects conforming with the
@@ -148,7 +106,7 @@ class FrameDecorator(object):
             return self._base.frame_args()
 
         frame = self.inferior_frame()
-        if self._is_limited_frame(frame):
+        if self.__is_limited_frame(frame):
             return None
 
         args = FrameVars(frame)
@@ -164,7 +122,7 @@ class FrameDecorator(object):
             return self._base.frame_locals()
 
         frame = self.inferior_frame()
-        if self._is_limited_frame(frame):
+        if self.__is_limited_frame(frame):
             return None
 
         args = FrameVars(frame)
@@ -179,7 +137,7 @@ class FrameDecorator(object):
             return self._base.line()
 
         frame = self.inferior_frame()
-        if self._is_limited_frame(frame):
+        if self.__is_limited_frame(frame):
             return None
 
         sal = frame.find_sal()
@@ -196,6 +154,71 @@ class FrameDecorator(object):
         if hasattr(self._base, "inferior_frame"):
             return self._base.inferior_frame()
         return self._base
+
+
+class FrameDecorator(_FrameDecoratorBase):
+    """Basic implementation of a Frame Decorator
+
+    This base frame decorator decorates a frame or another frame
+    decorator, and provides convenience methods.  If this object is
+    wrapping a frame decorator, defer to that wrapped object's method
+    if it has one.  This allows for frame decorators that have
+    sub-classed FrameDecorator object, but also wrap other frame
+    decorators on the same frame to correctly execute.
+
+    E.g
+
+    If the result of frame filters running means we have one gdb.Frame
+    wrapped by multiple frame decorators, all sub-classed from
+    FrameDecorator, the resulting hierarchy will be:
+
+    Decorator1
+      -- (wraps) Decorator2
+        -- (wraps) FrameDecorator
+          -- (wraps) gdb.Frame
+
+    In this case we have two frame decorators, both of which are
+    sub-classed from FrameDecorator.  If Decorator1 just overrides the
+    'function' method, then all of the other methods are carried out
+    by the super-class FrameDecorator.  But Decorator2 may have
+    overriden other methods, so FrameDecorator will look at the
+    'base' parameter and defer to that class's methods.  And so on,
+    down the chain."""
+
+    def filename(self):
+        """Return the filename associated with this frame, detecting
+        and returning the appropriate library name is this is a shared
+        library."""
+
+        if hasattr(self._base, "filename"):
+            return self._base.filename()
+
+        frame = self.inferior_frame()
+        sal = frame.find_sal()
+        if not sal.symtab or not sal.symtab.filename:
+            pc = frame.pc()
+            return gdb.solib_name(pc)
+        else:
+            return sal.symtab.filename
+
+
+class DAPFrameDecorator(_FrameDecoratorBase):
+    """Like FrameDecorator, but has slightly different results
+    for the "filename" method."""
+
+    def filename(self):
+        """Return the filename associated with this frame, detecting
+        and returning the appropriate library name is this is a shared
+        library."""
+
+        if hasattr(self._base, "filename"):
+            return self._base.filename()
+
+        frame = self.inferior_frame()
+        sal = frame.find_sal()
+        if sal.symtab is not None:
+            return sal.symtab.fullname()
+        return None
 
 
 class SymValueWrapper(object):

@@ -1,6 +1,6 @@
-/* Copyright 2023 Free Software Foundation, Inc.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,13 +15,30 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <stdint.h>
-
-uint32_t thirty_two = 7;
-
-uint32_t *thirty_two_p = &thirty_two;
-
-int main ()
+int
+do_throw (int i)
 {
-  return 0;			/* BREAK */
+  throw i;
+}
+
+int
+catcher (int x)
+{
+  return x;
+}
+
+int main()
+{
+  try {
+    try {
+      do_throw (20);
+    }
+    catch (int x) {
+      catcher (x);
+      throw;
+    }
+  }
+  catch (int y) {
+    catcher (y);
+  }
 }

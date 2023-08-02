@@ -1,4 +1,4 @@
-# Copyright 2022-2023 Free Software Foundation, Inc.
+# Copyright 2023 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,9 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test the stop-at-main extension.
+# Test the cwd extension.
 
-require allow_dap_tests
+require allow_dap_tests {!is_remote host}
 
 load_lib dap-support.exp
 
@@ -25,7 +25,10 @@ if {[build_executable ${testfile}.exp $testfile $srcfile] == -1} {
     return
 }
 
-if {[dap_launch $testfile stop_at_main 1] == ""} {
+# Starting the inferior will fail if the change of cwd does not work.
+set the_dir [file dirname $testfile]
+set the_file [file tail $testfile]
+if {[dap_launch $the_file cwd $the_dir stop_at_main 1] == ""} {
     return
 }
 

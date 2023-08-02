@@ -17,12 +17,70 @@ import gdb
 import os
 import re
 
+from contextlib import contextmanager
+
 # These are deprecated in 3.9, but required in older versions.
 from typing import Optional, Sequence
 
 from .server import request, capability, send_event
+from .sources import make_source
 from .startup import send_gdb_with_response, in_gdb_thread, log_stack
 from .typecheck import type_check
+
+
+@in_gdb_thread
+def _bp_modified(event):
+    send_event(
+        "breakpoint",
+        {
+            "reason": "changed",
+            "breakpoint": _breakpoint_descriptor(event),
+        },
+    )
+
+
+# True when suppressing new breakpoint events.
+_suppress_bp = False
+
+
+@contextmanager
+def suppress_new_breakpoint_event():
+    """Return a new context manager that suppresses new breakpoint events."""
+    global _suppress_bp
+    _suppress_bp = True
+    try:
+        yield None
+    finally:
+        _suppress_bp = False
+
+
+@in_gdb_thread
+def _bp_created(event):
+    global _suppress_bp
+    if not _suppress_bp:
+        send_event(
+            "breakpoint",
+            {
+                "reason": "new",
+                "breakpoint": _breakpoint_descriptor(event),
+            },
+        )
+
+
+@in_gdb_thread
+def _bp_deleted(event):
+    send_event(
+        "breakpoint",
+        {
+            "reason": "removed",
+            "breakpoint": _breakpoint_descriptor(event),
+        },
+    )
+
+
+gdb.events.breakpoint_created.connect(_bp_created)
+gdb.events.breakpoint_modified.connect(_bp_modified)
+gdb.events.breakpoint_deleted.connect(_bp_deleted)
 
 
 # Map from the breakpoint "kind" (like "function") to a second map, of
@@ -34,7 +92,7 @@ breakpoint_map = {}
 
 
 @in_gdb_thread
-def breakpoint_descriptor(bp):
+def _breakpoint_descriptor(bp):
     "Return the Breakpoint object descriptor given a gdb Breakpoint."
     result = {
         "id": bp.number,
@@ -48,15 +106,10 @@ def breakpoint_descriptor(bp):
         # multiple locations.  See
         # https://github.com/microsoft/debug-adapter-protocol/issues/13
         loc = bp.locations[0]
-        (basename, line) = loc.source
+        (filename, line) = loc.source
         result.update(
             {
-                "source": {
-                    "name": os.path.basename(basename),
-                    # We probably don't need this but it doesn't hurt to
-                    # be explicit.
-                    "sourceReference": 0,
-                },
+                "source": make_source(filename, os.path.basename(filename)),
                 "line": line,
                 "instructionReference": hex(loc.address),
             }
@@ -103,7 +156,8 @@ def _set_breakpoints_callback(kind, specs, creator):
             if keyspec in saved_map:
                 bp = saved_map.pop(keyspec)
             else:
-                bp = creator(**spec)
+                with suppress_new_breakpoint_event():
+                    bp = creator(**spec)
 
             bp.condition = condition
             if hit_condition is None:
@@ -115,7 +169,7 @@ def _set_breakpoints_callback(kind, specs, creator):
 
             # Reaching this spot means success.
             breakpoint_map[kind][keyspec] = bp
-            result.append(breakpoint_descriptor(bp))
+            result.append(_breakpoint_descriptor(bp))
         # Exceptions other than gdb.error are possible here.
         except Exception as e:
             log_stack()
@@ -295,10 +349,8 @@ def set_insn_breakpoints(
 
 @in_gdb_thread
 def _catch_exception(filterId, **args):
-    if filterId == "assert":
-        cmd = "-catch-assert"
-    elif filterId == "exception":
-        cmd = "-catch-exception"
+    if filterId in ("assert", "exception", "throw", "rethrow", "catch"):
+        cmd = "-catch-" + filterId
     else:
         raise Exception(f"Invalid exception filterID: {filterId}")
     result = gdb.execute_mi(cmd)
@@ -344,6 +396,21 @@ def _rewrite_exception_breakpoint(
         {
             "filter": "exception",
             "label": "Ada exceptions",
+            "supportsCondition": True,
+        },
+        {
+            "filter": "throw",
+            "label": "C++ exceptions, when thrown",
+            "supportsCondition": True,
+        },
+        {
+            "filter": "rethrow",
+            "label": "C++ exceptions, when re-thrown",
+            "supportsCondition": True,
+        },
+        {
+            "filter": "catch",
+            "label": "C++ exceptions, when caught",
             "supportsCondition": True,
         },
     ),
