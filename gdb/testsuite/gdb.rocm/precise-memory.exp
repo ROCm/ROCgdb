@@ -42,7 +42,7 @@ proc do_test { } {
 	    "\\^done,value=\"off\",verbose=\"AMDGPU precise memory access reporting is off \\(currently disabled\\).\\\\n\",effective-value=\"off\"" \
 	    "show precise-memory setting in MI before"
 
-	if {[hip_device_supports_precise_memory]} {
+	if {[hip_devices_support_precise_memory]} {
 	    gdb_test_no_output "set amdgpu precise-memory on"
 	    set mi_effective_value "on"
 	    set cli_effective_value "enabled"
