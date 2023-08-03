@@ -3089,20 +3089,22 @@ gen_lib_file (int delay)
   if (dontdeltemps < 2)
     {
       char *name;
+      size_t stub_len = strlen (TMP_STUB);
 
-      name = xmalloc (strlen (TMP_STUB) + 10);
+      name = xmalloc (stub_len + 10);
+      memcpy (name, TMP_STUB, stub_len);
       for (i = 0; (exp = d_exports_lexically[i]); i++)
 	{
 	  /* Don't delete non-existent stubs for PRIVATE entries.  */
           if (exp->private)
 	    continue;
-	  sprintf (name, "%s%05d.o", TMP_STUB, i);
+	  sprintf (name + stub_len, "%05d.o", i);
 	  if (unlink (name) < 0)
 	    /* xgettext:c-format */
 	    non_fatal (_("cannot delete %s: %s"), name, strerror (errno));
 	  if (ext_prefix_alias)
 	    {
-	      sprintf (name, "%s%05d.o", TMP_STUB, i + PREFIX_ALIAS_BASE);
+	      sprintf (name + stub_len, "%05d.o", i + PREFIX_ALIAS_BASE);
 	      if (unlink (name) < 0)
 		/* xgettext:c-format */
 		non_fatal (_("cannot delete %s: %s"), name, strerror (errno));
@@ -4186,9 +4188,9 @@ look_for_prog (const char *prog_name, const char *prefix, int end_prefix)
 		 + strlen (EXECUTABLE_SUFFIX)
 #endif
 		 + 10);
-  strcpy (cmd, prefix);
+  memcpy (cmd, prefix, end_prefix);
 
-  sprintf (cmd + end_prefix, "%s", prog_name);
+  strcpy (cmd + end_prefix, prog_name);
 
   if (strchr (cmd, '/') != NULL)
     {
