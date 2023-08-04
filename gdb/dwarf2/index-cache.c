@@ -86,12 +86,13 @@ index_cache::disable ()
   m_enabled = false;
 }
 
-/* See dwarf-index-cache.h.  */
+ /* See index-cache.h.  */
 
-void
-index_cache::store (dwarf2_per_bfd *per_bfd)
+index_cache_store_context::index_cache_store_context (const index_cache &ic,
+						      dwarf2_per_bfd *per_bfd)
+  :  m_enabled (ic.enabled ())
 {
-  if (!enabled ())
+  if (!m_enabled)
     return;
 
   /* Get build id of objfile.  */
@@ -100,15 +101,13 @@ index_cache::store (dwarf2_per_bfd *per_bfd)
     {
       index_cache_debug ("objfile %s has no build id",
 			 bfd_get_filename (per_bfd->obfd));
+      m_enabled = false;
       return;
     }
-
-  std::string build_id_str = build_id_to_string (build_id);
+  build_id_str = build_id_to_string (build_id);
 
   /* Get build id of dwz file, if present.  */
-  gdb::optional<std::string> dwz_build_id_str;
   const dwz_file *dwz = dwarf2_get_dwz_file (per_bfd);
-  const char *dwz_build_id_ptr = NULL;
 
   if (dwz != nullptr)
     {
@@ -118,36 +117,61 @@ index_cache::store (dwarf2_per_bfd *per_bfd)
 	{
 	  index_cache_debug ("dwz objfile %s has no build id",
 			     dwz->filename ());
+	  m_enabled = false;
 	  return;
 	}
 
       dwz_build_id_str = build_id_to_string (dwz_build_id);
-      dwz_build_id_ptr = dwz_build_id_str->c_str ();
     }
 
-  if (m_dir.empty ())
+  if (ic.m_dir.empty ())
     {
       warning (_("The index cache directory name is empty, skipping store."));
+      m_enabled = false;
       return;
     }
 
   try
     {
       /* Try to create the containing directory.  */
-      if (!mkdir_recursive (m_dir.c_str ()))
+      if (!mkdir_recursive (ic.m_dir.c_str ()))
 	{
 	  warning (_("index cache: could not make cache directory: %s"),
 		   safe_strerror (errno));
+	  m_enabled = false;
 	  return;
 	}
+    }
+  catch (const gdb_exception_error &except)
+    {
+      index_cache_debug ("couldn't store index cache for objfile %s: %s",
+			 bfd_get_filename (per_bfd->obfd), except.what ());
+      m_enabled = false;
+    }
+}
 
+/* See dwarf-index-cache.h.  */
+
+void
+index_cache::store (dwarf2_per_bfd *per_bfd,
+		    const index_cache_store_context &ctx)
+{
+  if (!ctx.m_enabled)
+    return;
+
+  const char *dwz_build_id_ptr = (ctx.dwz_build_id_str.has_value ()
+				  ? ctx.dwz_build_id_str->c_str ()
+				  : nullptr);
+
+  try
+    {
       index_cache_debug ("writing index cache for objfile %s",
 			 bfd_get_filename (per_bfd->obfd));
 
       /* Write the index itself to the directory, using the build id as the
 	 filename.  */
       write_dwarf_index (per_bfd, m_dir.c_str (),
-			 build_id_str.c_str (), dwz_build_id_ptr,
+			 ctx.build_id_str.c_str (), dwz_build_id_ptr,
 			 dw_index_kind::GDB_INDEX);
     }
   catch (const gdb_exception_error &except)

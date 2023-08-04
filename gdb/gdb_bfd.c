@@ -565,6 +565,8 @@ gdb_bfd_open (const char *name, const char *target, int fd,
   if (abfd == NULL)
     return NULL;
 
+  bfd_set_cacheable (abfd, 1);
+
   bfd_cache_debug_printf ("Creating new bfd %s for %s",
 			  host_address_to_string (abfd),
 			  bfd_get_filename (abfd));
@@ -877,6 +879,9 @@ gdb_bfd_fopen (const char *filename, const char *target, const char *mode,
 	       int fd)
 {
   bfd *result = bfd_fopen (filename, target, mode, fd);
+
+  if (result != nullptr)
+    bfd_set_cacheable (result, 1);
 
   return gdb_bfd_ref_ptr::new_reference (result);
 }

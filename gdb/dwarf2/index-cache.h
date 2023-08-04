@@ -25,6 +25,7 @@
 #include "symfile.h"
 
 class dwarf2_per_bfd;
+class index_cache;
 
 /* Base of the classes used to hold the resources of the indices loaded from
    the cache (e.g. mmapped files).  */
@@ -34,10 +35,31 @@ struct index_cache_resource
   virtual ~index_cache_resource () = 0;
 };
 
+/* Information to be captured in the main thread, and to be used by worker
+   threads during store ().  */
+
+struct index_cache_store_context
+{
+  friend class index_cache;
+
+  index_cache_store_context (const index_cache &ic, dwarf2_per_bfd *per_bfd);
+
+private:
+  /* Captured value of enabled ().  */
+  bool m_enabled;
+
+  /* Captured value of build id.  */
+  std::string build_id_str;
+
+  /* Captured value of dwz build id.  */
+  gdb::optional<std::string> dwz_build_id_str;
+};
+
 /* Class to manage the access to the DWARF index cache.  */
 
 class index_cache
 {
+  friend struct index_cache_store_context;
 public:
   /* Change the directory used to save/load index files.  */
   void set_directory (std::string dir);
@@ -55,7 +77,8 @@ public:
   void disable ();
 
   /* Store an index for the specified object file in the cache.  */
-  void store (dwarf2_per_bfd *per_bfd);
+  void store (dwarf2_per_bfd *per_bfd,
+	      const index_cache_store_context &);
 
   /* Look for an index file matching BUILD_ID.  If found, return the contents
      as an array_view and store the underlying resources (allocated memory,
