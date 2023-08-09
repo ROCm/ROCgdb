@@ -231,10 +231,10 @@ DESCRIPTION
 
 /*
 FUNCTION
-	bfd_bread
+	bfd_read
 
 SYNOPSIS
-	bfd_size_type bfd_bread (void *, bfd_size_type, bfd *);
+	bfd_size_type bfd_read (void *, bfd_size_type, bfd *);
 
 DESCRIPTION
 	Attempt to read SIZE bytes from ABFD's iostream to PTR.
@@ -242,7 +242,7 @@ DESCRIPTION
 */
 
 bfd_size_type
-bfd_bread (void *ptr, bfd_size_type size, bfd *abfd)
+bfd_read (void *ptr, bfd_size_type size, bfd *abfd)
 {
   file_ptr nread;
   bfd *element_bfd = abfd;
@@ -279,6 +279,14 @@ bfd_bread (void *ptr, bfd_size_type size, bfd *abfd)
       return -1;
     }
 
+  if (abfd->last_io == bfd_io_write)
+    {
+      abfd->last_io = bfd_io_force;
+      if (bfd_seek (abfd, 0, SEEK_CUR) != 0)
+	return -1;
+    }
+  abfd->last_io = bfd_io_read;
+
   nread = abfd->iovec->bread (abfd, ptr, size);
   if (nread != -1)
     abfd->where += nread;
@@ -288,10 +296,10 @@ bfd_bread (void *ptr, bfd_size_type size, bfd *abfd)
 
 /*
 FUNCTION
-	bfd_bwrite
+	bfd_write
 
 SYNOPSIS
-	bfd_size_type bfd_bwrite (const void *, bfd_size_type, bfd *);
+	bfd_size_type bfd_write (const void *, bfd_size_type, bfd *);
 
 DESCRIPTION
 	Attempt to write SIZE bytes to ABFD's iostream from PTR.
@@ -299,7 +307,7 @@ DESCRIPTION
 */
 
 bfd_size_type
-bfd_bwrite (const void *ptr, bfd_size_type size, bfd *abfd)
+bfd_write (const void *ptr, bfd_size_type size, bfd *abfd)
 {
   file_ptr nwrote;
 
@@ -312,6 +320,14 @@ bfd_bwrite (const void *ptr, bfd_size_type size, bfd *abfd)
       bfd_set_error (bfd_error_invalid_operation);
       return -1;
     }
+
+  if (abfd->last_io == bfd_io_read)
+    {
+      abfd->last_io = bfd_io_force;
+      if (bfd_seek (abfd, 0, SEEK_CUR) != 0)
+	return -1;
+    }
+  abfd->last_io = bfd_io_write;
 
   nwrote = abfd->iovec->bwrite (abfd, ptr, size);
   if (nwrote != -1)
@@ -455,6 +471,13 @@ bfd_seek (bfd *abfd, file_ptr position, int direction)
 
   if (direction != SEEK_CUR)
     position += offset;
+
+  if (((direction == SEEK_CUR && position == 0)
+       || (direction == SEEK_SET && (ufile_ptr) position == abfd->where))
+      && abfd->last_io != bfd_io_force)
+    return 0;
+
+  abfd->last_io = bfd_io_seek;
 
   result = abfd->iovec->bseek (abfd, position, direction);
   if (result != 0)
