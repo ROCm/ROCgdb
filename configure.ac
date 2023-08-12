@@ -23,8 +23,8 @@ m4_include(config/acx.m4)
 m4_include(config/override.m4)
 m4_include(config/proginstall.m4)
 m4_include(config/elf.m4)
-m4_include(config/gcc-plugin.m4)
 m4_include(config/ax_cxx_compile_stdcxx.m4)
+m4_include(config/gcc-plugin.m4)
 m4_include([libtool.m4])
 m4_include([ltoptions.m4])
 m4_include([ltsugar.m4])
@@ -141,7 +141,7 @@ host_libs="intl libiberty opcodes bfd readline tcl tk itcl libgui zlib libbacktr
 # binutils, gas and ld appear in that order because it makes sense to run
 # "make check" in that particular order.
 # If --enable-gold is used, "gold" may replace "ld".
-host_tools="texinfo flex bison binutils gas ld fixincludes gcc cgen sid sim gdb gdbserver gprof etc expect dejagnu m4 utils guile fastjar gnattools libcc1 gotools c++tools"
+host_tools="texinfo flex bison binutils gas ld fixincludes gcc cgen sid sim gdb gdbserver gprof etc expect dejagnu m4 utils guile fastjar gnattools libcc1 gm2tools gotools c++tools"
 
 # these libraries are built for the target environment, and are built after
 # the host libraries and the host tools (which may be a cross compiler)
@@ -151,7 +151,6 @@ target_libraries="target-libgcc \
 		target-libgloss \
 		target-newlib \
 		target-libgomp \
-		target-liboffloadmic \
 		target-libatomic \
 		target-libitm \
 		target-libstdc++-v3 \
@@ -163,6 +162,7 @@ target_libraries="target-libgcc \
 		target-libffi \
 		target-libobjc \
 		target-libada \
+		target-libgm2 \
 		target-libgo \
 		target-libphobos \
 		target-zlib"
@@ -349,7 +349,7 @@ case "${ENABLE_GOLD}" in
       *-*-elf* | *-*-sysv4* | *-*-unixware* | *-*-eabi* | hppa*64*-*-hpux* \
       | *-*-linux* | *-*-gnu* | frv-*-uclinux* | *-*-irix5* | *-*-irix6* \
       | *-*-netbsd* | *-*-openbsd* | *-*-freebsd* | *-*-dragonfly* \
-      | *-*-solaris2* | *-*-nto* | *-*-nacl*)
+      | *-*-solaris2* | *-*-nto* | *-*-nacl* | *-*-haiku*)
         case "${target}" in
           *-*-linux*aout* | *-*-linux*oldld*)
             ;;
@@ -501,6 +501,14 @@ if test "${ENABLE_LIBADA}" != "yes" ; then
   noconfigdirs="$noconfigdirs gnattools"
 fi
 
+AC_ARG_ENABLE(libgm2,
+[AS_HELP_STRING([--enable-libgm2], [build libgm2 directory])],
+ENABLE_LIBGM2=$enableval,
+ENABLE_LIBGM2=no)
+if test "${ENABLE_LIBGM2}" != "yes" ; then
+  noconfigdirs="$noconfigdirs gm2tools"
+fi
+
 AC_ARG_ENABLE(libssp,
 [AS_HELP_STRING([--enable-libssp], [build libssp directory])],
 ENABLE_LIBSSP=$enableval,
@@ -514,42 +522,6 @@ ENABLE_LIBSTDCXX=default)
 [if test "${ENABLE_LIBSTDCXX}" = "no" ; then
   noconfigdirs="$noconfigdirs target-libstdc++-v3"
 fi]
-
-# If this is accelerator compiler and its target is intelmic we enable
-# target liboffloadmic by default.  If this is compiler with offloading
-# for intelmic we enable host liboffloadmic by default.  Otherwise
-# liboffloadmic is disabled by default.
-AC_ARG_ENABLE([liboffloadmic],
-AC_HELP_STRING([[--enable-liboffloadmic[=ARG]]],
-	       [build liboffloadmic @<:@ARG={no,host,target}@:>@]),
-[case "$enableval" in
-  no | host | target)
-    enable_liboffloadmic=$enableval ;;
-  *)
-    AC_MSG_ERROR([--enable-liboffloadmic=no/host/target]) ;;
-esac],
-[if test x"$enable_as_accelerator_for" != x; then
-  case "${target}" in
-    *-intelmic-* | *-intelmicemul-*)
-      enable_liboffloadmic=target
-      extra_liboffloadmic_configure_flags="--enable-liboffloadmic=target"
-      ;;
-    *)
-      enable_liboffloadmic=no
-      ;;
-  esac
-else
-  case "${enable_offload_targets}" in
-    *-intelmic-* | *-intelmicemul-*)
-      enable_liboffloadmic=host
-      extra_liboffloadmic_configure_flags="--enable-liboffloadmic=host"
-      ;;
-    *)
-      enable_liboffloadmic=no
-      ;;
-    esac
-fi])
-AC_SUBST(extra_liboffloadmic_configure_flags)
 
 # Enable libgomp by default on hosted POSIX systems, and a few others.
 if test x$enable_libgomp = x ; then
@@ -580,22 +552,6 @@ if test -d ${srcdir}/libatomic; then
 	then
 	    AC_MSG_RESULT([no])
 	    noconfigdirs="$noconfigdirs target-libatomic"
-	else
-	    AC_MSG_RESULT([yes])
-	fi
-    fi
-fi
-
-# Disable liboffloadmic on unsupported systems.
-if test -d ${srcdir}/liboffloadmic; then
-    if test x$enable_liboffloadmic != xno; then
-	AC_MSG_CHECKING([for liboffloadmic support])
-	if (srcdir=${srcdir}/liboffloadmic; \
-		. ${srcdir}/configure.tgt; \
-		test -n "$UNSUPPORTED")
-	then
-	    AC_MSG_RESULT([no])
-	    noconfigdirs="$noconfigdirs target-liboffloadmic"
 	else
 	    AC_MSG_RESULT([yes])
 	fi
@@ -1359,9 +1315,6 @@ case "${host}" in
   alpha*-linux*)
     host_makefile_frag="config/mh-alpha-linux"
     ;;
-  hppa*-hp-hpux10*)
-    host_makefile_frag="config/mh-pa-hpux10"
-    ;;
   hppa*-hp-hpux*)
     host_makefile_frag="config/mh-pa"
     ;;
@@ -1987,6 +1940,36 @@ AC_ARG_ENABLE(linker-plugin-flags,
   extra_linker_plugin_flags=)
 AC_SUBST(extra_linker_plugin_flags)
 
+# Handle --enable-host-pie
+# If host PIE executables are the default (or must be forced on) for some host,
+# we must pass that configuration to the gcc directory.
+gcc_host_pie=
+AC_ARG_ENABLE(host-pie,
+[AS_HELP_STRING([--enable-host-pie],
+		[build position independent host executables])],
+[host_pie=$enableval
+ case $host in
+   *-*-darwin2*)
+     if test x$host_pie != xyes ; then
+       # for Darwin20+ this is required.
+       AC_MSG_WARN([PIE executables are required for the configured host, host-pie setting ignored.])
+       host_pie=yes
+       gcc_host_pie=--enable-host-pie
+     fi ;;
+  *) ;;
+ esac],
+[case $host in
+  *-*-darwin2*)
+    # Default to PIE (mandatory for aarch64).
+    host_pie=yes
+    gcc_host_pie=--enable-host-pie
+    ;;
+  *) host_pie=no ;;
+ esac])
+
+AC_SUBST(host_pie)
+AC_SUBST(gcc_host_pie)
+
 # Enable --enable-host-shared.
 # Checked early to determine whether jit is an 'all' language
 AC_ARG_ENABLE(host-shared,
@@ -1997,16 +1980,55 @@ AC_ARG_ENABLE(host-shared,
    x86_64-*-darwin* | aarch64-*-darwin*)
      if test x$host_shared != xyes ; then
        # PIC is the default, and actually cannot be switched off.
-       echo configure.ac: warning: PIC code is required for the configured target, host-shared setting ignored. 1>&2
+       AC_MSG_WARN([PIC code is required for the configured host; host-shared setting ignored.])
+       host_shared=yes
+     fi ;;
+   *-*-darwin*)
+     if test x$host_pie = xyes -a x$host_shared != xyes ; then
+       AC_MSG_WARN([PIC code is required for PIE host executables host-shared setting ignored.])
        host_shared=yes
      fi ;;
   *) ;;
  esac],
 [case $host in
+  # 64B x86_64 and Aarch64 Darwin default to PIC.
   x86_64-*-darwin* | aarch64-*-darwin*) host_shared=yes ;;
-  *) host_shared=no ;;
+  # 32B and powerpc64 Darwin must use PIC to link PIE exes.
+  *-*-darwin*) host_shared=$host_pie ;;
+  *) host_shared=no;;
  esac])
+
 AC_SUBST(host_shared)
+
+if test x$host_shared = xyes; then
+  case $host in
+    *-*-darwin*)
+      # Since host shared is the default for 64b Darwin, and also enabled for
+      # host_pie, ensure that we present the PIE flag when host_pie is active.
+      if test x$host_pie = xyes; then
+        PICFLAG=-fPIE
+      fi
+      ;;
+    *)
+      PICFLAG=-fPIC
+      ;;
+  esac
+elif test x$host_pie = xyes; then
+  PICFLAG=-fPIE
+else
+  PICFLAG=
+fi
+
+AC_SUBST(PICFLAG)
+
+# If we are building PIC/PIE host executables, and we are building dependent
+# libs (e.g. GMP) in-tree those libs need to be configured to generate PIC
+# code.
+host_libs_picflag=
+if test "$host_shared" = "yes" -o "$host_pie" = "yes"; then
+host_libs_picflag='--with-pic'
+fi
+AC_SUBST(host_libs_picflag)
 
 # By default, C and C++ are the only stage 1 languages.
 stage1_languages=,c,
@@ -2419,7 +2441,7 @@ case ,${enable_languages},:${enable_objc_gc} in *,objc,*:yes|*,objc,*:auto)
   fi
 esac
 
-# Disable libitm, libsanitizer, libvtv, liboffloadmic if we're not building C++
+# Disable libitm, libsanitizer, libvtv if we're not building C++
 case ,${enable_languages}, in
   *,c++,*)
     # Disable libitm, libsanitizer if we're not building libstdc++
@@ -2431,7 +2453,7 @@ case ,${enable_languages}, in
     esac
     ;;
   *)
-    noconfigdirs="$noconfigdirs target-liboffloadmic target-libitm target-libsanitizer target-libvtv"
+    noconfigdirs="$noconfigdirs target-libitm target-libsanitizer target-libvtv"
     ;;
 esac
 
@@ -3157,7 +3179,9 @@ esac
 # These force 'configure's to be done one at a time, to avoid problems
 # with contention over a shared config.cache.
 rm -f serdep.tmp
+if test "x${enable_serial_build_configure}" = xyes || test "x${enable_serial_host_configure}" = xyes || test "x${enable_serial_target_configure}" = xyes; then
 echo '# serdep.tmp' > serdep.tmp
+fi
 olditem=
 test "x${enable_serial_build_configure}" = xyes &&
 for item in ${build_configdirs} ; do
@@ -3693,6 +3717,7 @@ AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
 AC_SUBST(GDC)
 AC_SUBST(GDCFLAGS)
+GDCFLAGS=${GDCFLAGS-${CFLAGS}}
 AC_SUBST(PKG_CONFIG_PATH)
 
 GCC_PLUGIN_OPTION(PLUGIN_OPTION)
@@ -3728,6 +3753,7 @@ NCN_STRICT_CHECK_TARGET_TOOLS(GCC_FOR_TARGET, gcc, ${CC_FOR_TARGET})
 NCN_STRICT_CHECK_TARGET_TOOLS(GFORTRAN_FOR_TARGET, gfortran)
 NCN_STRICT_CHECK_TARGET_TOOLS(GOC_FOR_TARGET, gccgo)
 NCN_STRICT_CHECK_TARGET_TOOLS(GDC_FOR_TARGET, gdc)
+NCN_STRICT_CHECK_TARGET_TOOLS(GM2_FOR_TARGET, gm2)
 
 ACX_CHECK_INSTALLED_TARGET_TOOL(AR_FOR_TARGET, ar)
 ACX_CHECK_INSTALLED_TARGET_TOOL(AS_FOR_TARGET, as)
@@ -3766,6 +3792,8 @@ GCC_TARGET_TOOL(gccgo, GOC_FOR_TARGET, GOC,
 		[gcc/gccgo -B$$r/$(HOST_SUBDIR)/gcc/], go)
 GCC_TARGET_TOOL(gdc, GDC_FOR_TARGET, GDC,
 		[gcc/gdc -B$$r/$(HOST_SUBDIR)/gcc/], d)
+GCC_TARGET_TOOL(gm2, GM2_FOR_TARGET, GM2,
+		[gcc/gm2 -B$$r/$(HOST_SUBDIR)/gcc/], m2)
 GCC_TARGET_TOOL(ld, LD_FOR_TARGET, LD, [ld/ld-new])
 GCC_TARGET_TOOL(lipo, LIPO_FOR_TARGET, LIPO)
 GCC_TARGET_TOOL(nm, NM_FOR_TARGET, NM, [binutils/nm-new])
@@ -3892,9 +3920,11 @@ AC_SUBST(stage2_werror_flag)
 # Specify what files to not compare during bootstrap.
 
 compare_exclusions="gcc/cc*-checksum\$(objext) | gcc/ada/*tools/*"
+compare_exclusions="$compare_exclusions | gcc/m2/gm2-compiler-boot/M2Version*"
+compare_exclusions="$compare_exclusions | gcc/m2/gm2-compiler-boot/SYSTEM*"
+compare_exclusions="$compare_exclusions | gcc/m2/gm2version*"
 case "$target" in
   hppa*64*-*-hpux*) ;;
-  hppa*-*-hpux*) compare_exclusions="$compare_exclusions | */libgcc/lib2funcs* | gcc/function-tests.o" ;;
   powerpc*-ibm-aix*) compare_exclusions="$compare_exclusions | *libgomp*\$(objext)" ;;
 esac
 AC_SUBST(compare_exclusions)
