@@ -898,14 +898,14 @@ parse_string_or_char (const char *tokptr, const char **outptr,
   return quote == '\'' ? CHAR : STRING;
 }
 
-struct token
+struct go_token
 {
   const char *oper;
   int token;
   enum exp_opcode opcode;
 };
 
-static const struct token tokentab3[] =
+static const struct go_token tokentab3[] =
   {
     {">>=", ASSIGN_MODIFY, BINOP_RSH},
     {"<<=", ASSIGN_MODIFY, BINOP_LSH},
@@ -913,7 +913,7 @@ static const struct token tokentab3[] =
     {"...", DOTDOTDOT, OP_NULL},
   };
 
-static const struct token tokentab2[] =
+static const struct go_token tokentab2[] =
   {
     {"+=", ASSIGN_MODIFY, BINOP_ADD},
     {"-=", ASSIGN_MODIFY, BINOP_SUB},
@@ -939,7 +939,7 @@ static const struct token tokentab2[] =
   };
 
 /* Identifier-like tokens.  */
-static const struct token ident_tokens[] =
+static const struct go_token ident_tokens[] =
   {
     {"true", TRUE_KEYWORD, OP_NULL},
     {"false", FALSE_KEYWORD, OP_NULL},
@@ -1245,7 +1245,7 @@ lex_one_token (struct parser_state *par_state)
 }
 
 /* An object of this type is pushed on a FIFO by the "outer" lexer.  */
-struct token_and_value
+struct go_token_and_value
 {
   int token;
   YYSTYPE value;
@@ -1253,7 +1253,7 @@ struct token_and_value
 
 /* A FIFO of tokens that have been read but not yet returned to the
    parser.  */
-static std::vector<token_and_value> token_fifo;
+static std::vector<go_token_and_value> token_fifo;
 
 /* Non-zero if the lexer should return tokens from the FIFO.  */
 static int popping;
@@ -1445,11 +1445,11 @@ classify_name (struct parser_state *par_state, const struct block *block)
 static int
 yylex (void)
 {
-  token_and_value current, next;
+  go_token_and_value current, next;
 
   if (popping && !token_fifo.empty ())
     {
-      token_and_value tv = token_fifo[0];
+      go_token_and_value tv = token_fifo[0];
       token_fifo.erase (token_fifo.begin ());
       yylval = tv.value;
       /* There's no need to fall through to handle package.name
@@ -1474,7 +1474,7 @@ yylex (void)
 
   if (next.token == '.')
     {
-      token_and_value name2;
+      go_token_and_value name2;
 
       name2.token = lex_one_token (pstate);
       name2.value = yylval;

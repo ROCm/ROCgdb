@@ -936,21 +936,21 @@ parse_string_or_char (const char *tokptr, const char **outptr,
   return quote == '\'' ? CHARACTER_LITERAL : STRING_LITERAL;
 }
 
-struct token
+struct d_token
 {
   const char *oper;
   int token;
   enum exp_opcode opcode;
 };
 
-static const struct token tokentab3[] =
+static const struct d_token tokentab3[] =
   {
     {"^^=", ASSIGN_MODIFY, BINOP_EXP},
     {"<<=", ASSIGN_MODIFY, BINOP_LSH},
     {">>=", ASSIGN_MODIFY, BINOP_RSH},
   };
 
-static const struct token tokentab2[] =
+static const struct d_token tokentab2[] =
   {
     {"+=", ASSIGN_MODIFY, BINOP_ADD},
     {"-=", ASSIGN_MODIFY, BINOP_SUB},
@@ -975,7 +975,7 @@ static const struct token tokentab2[] =
   };
 
 /* Identifier-like tokens.  */
-static const struct token ident_tokens[] =
+static const struct d_token ident_tokens[] =
   {
     {"is", IDENTITY, OP_NULL},
     {"!is", NOTIDENTITY, OP_NULL},
@@ -1307,7 +1307,7 @@ lex_one_token (struct parser_state *par_state)
 }
 
 /* An object of this type is pushed on a FIFO by the "outer" lexer.  */
-struct token_and_value
+struct d_token_and_value
 {
   int token;
   YYSTYPE value;
@@ -1316,7 +1316,7 @@ struct token_and_value
 
 /* A FIFO of tokens that have been read but not yet returned to the
    parser.  */
-static std::vector<token_and_value> token_fifo;
+static std::vector<d_token_and_value> token_fifo;
 
 /* Non-zero if the lexer should return tokens from the FIFO.  */
 static int popping;
@@ -1404,7 +1404,7 @@ classify_inner_name (struct parser_state *par_state,
 static int
 yylex (void)
 {
-  token_and_value current;
+  d_token_and_value current;
   int last_was_dot;
   struct type *context_type = NULL;
   int last_to_examine, next_to_examine, checkpoint;
@@ -1467,7 +1467,7 @@ yylex (void)
 
       while (next_to_examine <= last_to_examine)
 	{
-	  token_and_value next;
+	  d_token_and_value next;
 
 	  next = token_fifo[next_to_examine];
 	  ++next_to_examine;
@@ -1531,7 +1531,7 @@ yylex (void)
 
   while (next_to_examine <= last_to_examine)
     {
-      token_and_value next;
+      d_token_and_value next;
 
       next = token_fifo[next_to_examine];
       ++next_to_examine;

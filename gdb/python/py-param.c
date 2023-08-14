@@ -30,7 +30,7 @@
 
 /* Python parameter types as in PARM_CONSTANTS below.  */
 
-enum param_types
+enum py_param_types
 {
   param_boolean,
   param_auto_boolean,
@@ -44,8 +44,7 @@ enum param_types
   param_zuinteger,
   param_zuinteger_unlimited,
   param_enum,
-}
-param_types;
+};
 
 /* Translation from Python parameters to GDB variable types.  Keep in the
    same order as PARAM_TYPES due to C++'s lack of designated initializers.  */
