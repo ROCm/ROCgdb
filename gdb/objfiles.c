@@ -48,7 +48,6 @@
 #include "exec.h"
 #include "observable.h"
 #include "complaints.h"
-#include "psymtab.h"
 #include "solist.h"
 #include "gdb_bfd.h"
 #include "btrace.h"

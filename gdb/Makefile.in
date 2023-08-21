@@ -1440,7 +1440,6 @@ HFILES_NO_SRCDIR = \
 	progspace.h \
 	progspace-and-thread.h \
 	prologue-value.h \
-	psympriv.h \
 	psymtab.h \
 	ravenscar-thread.h \
 	record.h \
@@ -2513,6 +2512,7 @@ po/$(PACKAGE).pot: force
 	     -e 's/YY_NULL/YY_NULLPTR/g' \
 	     -e "s/YYSTYPE/$(subst -,_,$*)_YYSTYPE/g" \
 	     -e "s/yyalloc/$(subst -,_,$*)_yyalloc/g" \
+	     -e "s/yysymbol_kind_t/$(subst -,_,$*)_yysymbol_kind_t/g" \
 	  < $@.tmp > $@.new && \
 	  rm -f $@.tmp && \
 	  mv $@.new $@
