@@ -46,13 +46,12 @@ kvx_unsigned_overflow (bfd_vma value, unsigned int bits)
 static bfd_reloc_status_type
 kvx_signed_overflow (bfd_vma value, unsigned int bits)
 {
-  bfd_signed_vma svalue = (bfd_signed_vma) value;
-  bfd_signed_vma lim;
+  bfd_vma lim;
 
   if (bits >= sizeof (bfd_vma) * 8)
     return bfd_reloc_ok;
-  lim = (bfd_signed_vma) 1 << (bits - 1);
-  if (svalue < -lim || svalue >= lim)
+  lim = (bfd_vma) 1 << (bits - 1);
+  if (value + lim >= lim * 2)
     return bfd_reloc_overflow;
   return bfd_reloc_ok;
 }
@@ -61,8 +60,10 @@ kvx_signed_overflow (bfd_vma value, unsigned int bits)
    relocated.  */
 bfd_reloc_status_type
 _bfd_kvx_elf_put_addend (bfd *abfd,
-        bfd_byte *address, bfd_reloc_code_real_type r_type ATTRIBUTE_UNUSED,
-        reloc_howto_type *howto, bfd_signed_vma addend)
+			 bfd_byte *address,
+			 bfd_reloc_code_real_type r_type ATTRIBUTE_UNUSED,
+			 reloc_howto_type *howto,
+			 bfd_signed_vma addend)
 {
   bfd_reloc_status_type status = bfd_reloc_ok;
   bfd_vma contents;
@@ -95,11 +96,11 @@ _bfd_kvx_elf_put_addend (bfd *abfd,
       break;
     case complain_overflow_signed:
       status = kvx_signed_overflow (addend,
-					howto->bitsize + howto->rightshift);
+				    howto->bitsize + howto->rightshift);
       break;
     case complain_overflow_unsigned:
       status = kvx_unsigned_overflow (addend,
-					  howto->bitsize + howto->rightshift);
+				      howto->bitsize + howto->rightshift);
       break;
     case complain_overflow_bitfield:
     default:
@@ -146,14 +147,6 @@ _bfd_kvx_elf_put_addend (bfd *abfd,
     }
 
   return status;
-}
-
-bfd_vma
-_bfd_kvx_elf_resolve_relocation (bfd_reloc_code_real_type r_type ATTRIBUTE_UNUSED,
-        bfd_vma place ATTRIBUTE_UNUSED, bfd_vma value,
-        bfd_vma addend ATTRIBUTE_UNUSED, bool weak_undef_p ATTRIBUTE_UNUSED)
-{
-  return value;
 }
 
 bool

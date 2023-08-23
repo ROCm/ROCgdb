@@ -41,15 +41,13 @@
 
 static void supported_cores (char buf[], size_t buflen);
 
-#define O_pseudo_fixup (O_max + 1)
-
 #define NELEMS(a) ((int) (sizeof (a)/sizeof ((a)[0])))
 
 #define STREQ(x,y) !strcmp(((x) ? (x) : ""), ((y) ? (y) : ""))
 #define STRNEQ(x,y,n) !strncmp(((x) ? (x) : ""), ((y) ? (y) : ""),(n))
 
 /* The PARALLEL_BIT is set to 0 when an instruction is the last of a bundle. */
-#define PARALLEL_BIT (1 << 31)
+#define PARALLEL_BIT (1u << 31)
 
 /*TB begin*/
 int size_type_function = 1;
@@ -495,11 +493,7 @@ insert_operand (struct kvxinsn *insn, struct kvx_operand *opdef,
 
   /* try to resolve the value */
 
-  /* The cast is used to silence GCC about the abuse done with the enum.
-     O_pseudo_fixup is not part of the enum, so enum checks raise an error.
-   */
-
-  switch ((int) tok->category)
+  switch (tok->category)
     {
     case CAT_REGISTER:
       op = S_GET_VALUE (str_hash_find (env.reg_hash, tok->tok));
