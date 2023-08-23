@@ -298,12 +298,11 @@ mi_parse::set_language (const char *arg, const char **endp)
     *endp = arg;
 }
 
-std::unique_ptr<struct mi_parse>
-mi_parse::make (const char *cmd, std::string *token)
+/* See mi-parse.h.  */
+
+mi_parse::mi_parse (const char *cmd, std::string *token)
 {
   const char *chp;
-
-  std::unique_ptr<struct mi_parse> parse (new struct mi_parse);
 
   /* Before starting, skip leading white space.  */
   cmd = skip_spaces (cmd);
@@ -317,10 +316,10 @@ mi_parse::make (const char *cmd, std::string *token)
   if (*chp != '-')
     {
       chp = skip_spaces (chp);
-      parse->command = make_unique_xstrdup (chp);
-      parse->op = CLI_COMMAND;
+      this->command = make_unique_xstrdup (chp);
+      this->op = CLI_COMMAND;
 
-      return parse;
+      return;
     }
 
   /* Extract the command.  */
@@ -329,14 +328,14 @@ mi_parse::make (const char *cmd, std::string *token)
 
     for (; *chp && !isspace (*chp); chp++)
       ;
-    parse->command = make_unique_xstrndup (tmp, chp - tmp);
+    this->command = make_unique_xstrndup (tmp, chp - tmp);
   }
 
   /* Find the command in the MI table.  */
-  parse->cmd = mi_cmd_lookup (parse->command.get ());
-  if (parse->cmd == NULL)
+  this->cmd = mi_cmd_lookup (this->command.get ());
+  if (this->cmd == NULL)
     throw_error (UNDEFINED_COMMAND_ERROR,
-		 _("Undefined MI command: %s"), parse->command.get ());
+		 _("Undefined MI command: %s"), this->command.get ());
 
   /* Skip white space following the command.  */
   chp = skip_spaces (chp);
@@ -361,13 +360,13 @@ mi_parse::make (const char *cmd, std::string *token)
 
       if (strncmp (chp, "--all ", as) == 0)
 	{
-	  parse->all = 1;
+	  this->all = 1;
 	  chp += as;
 	}
       /* See if --all is the last token in the input.  */
       if (strcmp (chp, "--all") == 0)
 	{
-	  parse->all = 1;
+	  this->all = 1;
 	  chp += strlen (chp);
 	}
       if (strncmp (chp, "--thread-group ", tgs) == 0)
@@ -376,7 +375,7 @@ mi_parse::make (const char *cmd, std::string *token)
 
 	  option = "--thread-group";
 	  chp += tgs;
-	  parse->set_thread_group (chp, &endp);
+	  this->set_thread_group (chp, &endp);
 	  chp = endp;
 	}
       else if (strncmp (chp, "--thread ", ts) == 0)
@@ -385,7 +384,7 @@ mi_parse::make (const char *cmd, std::string *token)
 
 	  option = "--thread";
 	  chp += ts;
-	  parse->set_thread (chp, &endp);
+	  this->set_thread (chp, &endp);
 	  chp = endp;
 	}
       else if (strncmp (chp, "--lane ", lane_s) == 0)
@@ -394,7 +393,7 @@ mi_parse::make (const char *cmd, std::string *token)
 
 	  option = "--lane";
 	  chp += lane_s;
-	  parse->set_lane (chp, &endp);
+	  this->set_lane (chp, &endp);
 	  chp = endp;
 	}
       else if (strncmp (chp, "--frame ", fs) == 0)
@@ -403,14 +402,14 @@ mi_parse::make (const char *cmd, std::string *token)
 
 	  option = "--frame";
 	  chp += fs;
-	  parse->set_frame (chp, &endp);
+	  this->set_frame (chp, &endp);
 	  chp = endp;
 	}
       else if (strncmp (chp, "--language ", lang_s) == 0)
 	{
 	  option = "--language";
 	  chp += lang_s;
-	  parse->set_language (chp, &chp);
+	  this->set_language (chp, &chp);
 	}
       else
 	break;
@@ -421,37 +420,33 @@ mi_parse::make (const char *cmd, std::string *token)
     }
 
   /* Save the rest of the arguments for the command.  */
-  parse->m_args = chp;
+  this->m_args = chp;
 
   /* Fully parsed, flag as an MI command.  */
-  parse->op = MI_COMMAND;
-  return parse;
+  this->op = MI_COMMAND;
 }
 
 /* See mi-parse.h.  */
 
-std::unique_ptr<struct mi_parse>
-mi_parse::make (gdb::unique_xmalloc_ptr<char> command,
-		std::vector<gdb::unique_xmalloc_ptr<char>> args)
+mi_parse::mi_parse (gdb::unique_xmalloc_ptr<char> command,
+		    std::vector<gdb::unique_xmalloc_ptr<char>> args)
 {
-  std::unique_ptr<struct mi_parse> parse (new struct mi_parse);
+  this->command = std::move (command);
+  this->token = "";
 
-  parse->command = std::move (command);
-  parse->token = "";
-
-  if (parse->command.get ()[0] != '-')
+  if (this->command.get ()[0] != '-')
     throw_error (UNDEFINED_COMMAND_ERROR,
 		 _("MI command '%s' does not start with '-'"),
-		 parse->command.get ());
+		 this->command.get ());
 
   /* Find the command in the MI table.  */
-  parse->cmd = mi_cmd_lookup (parse->command.get () + 1);
-  if (parse->cmd == NULL)
+  this->cmd = mi_cmd_lookup (this->command.get () + 1);
+  if (this->cmd == NULL)
     throw_error (UNDEFINED_COMMAND_ERROR,
-		 _("Undefined MI command: %s"), parse->command.get ());
+		 _("Undefined MI command: %s"), this->command.get ());
 
   /* This over-allocates slightly, but it seems unimportant.  */
-  parse->argv = XCNEWVEC (char *, args.size () + 1);
+  this->argv = XCNEWVEC (char *, args.size () + 1);
 
   for (size_t i = 0; i < args.size (); ++i)
     {
@@ -460,50 +455,49 @@ mi_parse::make (gdb::unique_xmalloc_ptr<char> command,
       /* See if --all is the last token in the input.  */
       if (strcmp (chp, "--all") == 0)
 	{
-	  parse->all = 1;
+	  this->all = 1;
 	}
       else if (strcmp (chp, "--thread-group") == 0)
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--thread-group'");
-	  parse->set_thread_group (args[i].get (), nullptr);
+	  this->set_thread_group (args[i].get (), nullptr);
 	}
       else if (strcmp (chp, "--thread") == 0)
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--thread'");
-	  parse->set_thread (args[i].get (), nullptr);
+	  this->set_thread (args[i].get (), nullptr);
 	}
       else if (strcmp (chp, "--lane") == 0)
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--lane'");
-	  parse->set_lane (args[i].get (), nullptr);
+	  this->set_lane (args[i].get (), nullptr);
 	}
       else if (strcmp (chp, "--frame") == 0)
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--frame'");
-	  parse->set_frame (args[i].get (), nullptr);
+	  this->set_frame (args[i].get (), nullptr);
 	}
       else if (strcmp (chp, "--language") == 0)
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--language'");
-	  parse->set_language (args[i].get (), nullptr);
+	  this->set_language (args[i].get (), nullptr);
 	}
       else
-	parse->argv[parse->argc++] = args[i].release ();
+	this->argv[this->argc++] = args[i].release ();
     }
 
   /* Fully parsed, flag as an MI command.  */
-  parse->op = MI_COMMAND;
-  return parse;
+  this->op = MI_COMMAND;
 }
 
 enum print_values

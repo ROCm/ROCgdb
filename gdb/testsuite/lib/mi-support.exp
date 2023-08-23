@@ -2581,8 +2581,8 @@ proc mi_make_breakpoint_loc {args} {
 
 # Bits shared between mi_make_breakpoint and mi_make_breakpoint_multi.
 
-proc mi_make_breakpoint_1 {attr_list thread cond evaluated-by times \
-			   ignore script original-location} {
+proc mi_make_breakpoint_1 {attr_list thread inferior cond evaluated-by \
+			   times ignore script original-location} {
     set result "bkpt=\\\{[mi_build_kv_pairs $attr_list]"
 
     # There are always exceptions.
@@ -2591,6 +2591,12 @@ proc mi_make_breakpoint_1 {attr_list thread cond evaluated-by times \
     if {[string length $thread] > 0} {
 	append result ","
 	append result [mi_build_kv_pairs [list "thread" $thread]]
+    }
+
+    # If INFERIOR is not present, do not output it.
+    if {[string length $inferior] > 0} {
+	append result ","
+	append result [mi_build_kv_pairs [list "inferior" $inferior]]
     }
 
     # If COND is not present, do not output it.
@@ -2633,6 +2639,57 @@ proc mi_make_breakpoint_1 {attr_list thread cond evaluated-by times \
     return $result
 }
 
+# Construct a regexp to match against a frame description as returned by
+# -stack-info-frame.  Take a list of name value pairs.  Valid names are
+# -level, -addr, -func, -file, -fullname, line, and -arch, each takes a
+# regexp which is matched against the corresponding field in the
+# -stack-info-frame output.
+
+proc mi_make_info_frame_regexp {args} {
+    parse_args [list [list level "$::decimal"] [list addr "$::hex"] \
+		    {func .*} {file .*} {fullname .*} \
+		    [list line "$::decimal"] {arch .*}]
+
+    set attr_list {}
+    foreach attr {level addr func file fullname line arch} {
+	lappend attr_list $attr [set $attr]
+    }
+
+    set result "frame=\\\{"
+    append result [mi_build_kv_pairs $attr_list]
+    append result "\\\}"
+    return $result
+}
+
+# Run the -stack-info-frame command and match the result, return true if the
+# test passes, otherwise, return false.
+#
+# TEST is the name used for this test.
+#
+# ARGS is an optional list of name value pairs, the names -frame and -thread
+# if present, expect a decimal argument and control the frame and thread for
+# which -stack-info-frame is run.  If -frame is not given then the
+# -stack-info-frame will operate on the current frame.  If -thread is not
+# given then -stack-info-frame will operate on the current thread.
+#
+# The remaining arguments are passed to mi_make_frame_regexp and are used to
+# build the regexp for matching against the -stack-info-frame output.
+
+proc mi_info_frame { test args } {
+    parse_args {{frame ""} {thread ""}}
+
+    set re [eval mi_make_info_frame_regexp $args]
+
+    set cmd "235-stack-info-frame"
+    if {$frame ne ""} {
+	append cmd " --frame ${frame}"
+    }
+    if {$thread ne ""} {
+	append cmd " --thread ${thread}"
+    }
+
+    return [mi_gdb_test $cmd "235\\^done,$re" $test]
+}
 
 # Construct a breakpoint regexp, for a breakpoint with multiple
 # locations.  This may be used to test the output of -break-insert,
@@ -2670,15 +2727,9 @@ proc mi_make_breakpoint_multi {args} {
 
     lappend attr_list "addr" "<MULTIPLE>"
 
-    # Only include the inferior field if it was set.  This field is
-    # optional in the MI output.
-    if {$inferior ne ""} {
-	lappend attr_list "inferior" $inferior
-    }
-
     set result [mi_make_breakpoint_1 \
-		    $attr_list $thread $cond ${evaluated-by} $times \
-		    $ignore $script ${original-location}]
+		    $attr_list $thread $inferior $cond ${evaluated-by} \
+		    $times $ignore $script ${original-location}]
 
     append result ","
     append result [mi_build_kv_pairs [list "locations" $locations]]
@@ -2706,8 +2757,8 @@ proc mi_make_breakpoint_multi {args} {
 
 proc mi_make_breakpoint_pending {args} {
     parse_args {{number .*} {type .*} {disp .*} {enabled .*}
-	{pending .*} {original-location .*} {thread ""} {cond ""}
-	{script ""} {times .*}}
+	{pending .*} {original-location .*} {thread ""} {inferior ""}
+	{cond ""} {script ""} {times .*}}
 
     set attr_list {}
     foreach attr [list number type disp enabled] {
@@ -2724,8 +2775,8 @@ proc mi_make_breakpoint_pending {args} {
     set evaluated-by ""
 
     set result [mi_make_breakpoint_1 \
-		    $attr_list $thread $cond ${evaluated-by} $times \
-		    $ignore $script ${original-location}]
+		    $attr_list $thread $inferior $cond ${evaluated-by} \
+		    $times $ignore $script ${original-location}]
 
     append result "\\\}"
     return $result
@@ -2873,7 +2924,7 @@ proc mi_make_breakpoint {args} {
 	{func .*} {file .*} {fullname .*} {line .*}
 	{thread-groups \\\[.*\\\]} {times .*} {ignore 0}
 	{script ""} {original-location .*} {cond ""} {evaluated-by ""}
-	{thread ""}}
+	{thread ""} {inferior ""}}
 
     set attr_list {}
     foreach attr [list number type disp enabled addr func file \
@@ -2882,8 +2933,8 @@ proc mi_make_breakpoint {args} {
     }
 
     set result [mi_make_breakpoint_1 \
-		    $attr_list $thread $cond ${evaluated-by} $times \
-		    $ignore $script ${original-location}]
+		    $attr_list $thread $inferior $cond ${evaluated-by} \
+		    $times $ignore $script ${original-location}]
 
     append result "\\\}"
     return $result

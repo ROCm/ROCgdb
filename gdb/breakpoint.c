@@ -1577,7 +1577,7 @@ breakpoint_set_inferior (struct breakpoint *b, int inferior)
   int old_inferior = b->inferior;
   b->inferior = inferior;
   if (old_inferior != inferior)
-    gdb::observers::breakpoint_modified.notify (b);
+    notify_breakpoint_modified (b);
 }
 
 /* See breakpoint.h.  */
@@ -3483,7 +3483,9 @@ remove_breakpoints (void)
    that thread.  */
 
 static void
-remove_threaded_breakpoints (struct thread_info *tp, int silent)
+remove_threaded_breakpoints (thread_info *tp,
+			     gdb::optional<ULONGEST> /* exit_code */,
+			     int /* silent */)
 {
   for (breakpoint &b : all_breakpoints_safe ())
     {

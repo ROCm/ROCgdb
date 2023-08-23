@@ -496,9 +496,8 @@ public:
   /* Find (non-exited) thread PTID of this inferior.  */
   thread_info *find_thread (ptid_t ptid);
 
-  /* Delete all threads in the thread list.  If SILENT, exit threads
-     silently.  */
-  void clear_thread_list (bool silent);
+  /* Delete all threads in the thread list, silently.  */
+  void clear_thread_list ();
 
   /* Continuations-related methods.  A continuation is an std::function
      to be called to finish the execution of a command when running
@@ -724,11 +723,10 @@ extern void delete_inferior (struct inferior *todel);
 /* Delete an existing inferior list entry, due to inferior detaching.  */
 extern void detach_inferior (inferior *inf);
 
+/* Notify observers and interpreters that INF has gone away.  Reset the INF
+   object back to an default, empty, state.  Clear register and frame
+   caches.  */
 extern void exit_inferior (inferior *inf);
-
-extern void exit_inferior_silent (inferior *inf);
-
-extern void exit_inferior_num_silent (int num);
 
 extern void inferior_appeared (struct inferior *inf, int pid);
 

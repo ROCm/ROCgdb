@@ -248,13 +248,13 @@ inferior::find_thread (ptid_t ptid)
 /* See inferior.h.  */
 
 void
-inferior::clear_thread_list (bool silent)
+inferior::clear_thread_list ()
 {
   thread_list.clear_and_dispose ([=] (thread_info *thr)
     {
-      threads_debug_printf ("deleting thread %s, silent = %d",
-			    thr->ptid.to_string ().c_str (), silent);
-      set_thread_exited (thr, silent);
+      threads_debug_printf ("deleting thread %s",
+			    thr->ptid.to_string ().c_str ());
+      set_thread_exited (thr, {}, true /* silent */);
       if (thr->deletable ())
 	delete thr;
     });
@@ -273,7 +273,7 @@ notify_inferior_removed (inferior *inf)
 void
 delete_inferior (struct inferior *inf)
 {
-  inf->clear_thread_list (true);
+  inf->clear_thread_list ();
 
   auto it = inferior_list.iterator_to (*inf);
   inferior_list.erase (it);
@@ -302,13 +302,12 @@ notify_inferior_disappeared (inferior *inf)
   gdb::observers::inferior_exit.notify (inf);
 }
 
-/* If SILENT then be quiet -- don't announce a inferior exit, or the
-   exit of its threads.  */
+/* See inferior.h.  */
 
-static void
-exit_inferior_1 (struct inferior *inf, int silent)
+void
+exit_inferior (struct inferior *inf)
 {
-  inf->clear_thread_list (silent);
+  inf->clear_thread_list ();
 
   notify_inferior_disappeared (inf);
 
@@ -336,27 +335,15 @@ exit_inferior_1 (struct inferior *inf, int silent)
   reinit_frame_cache ();
 }
 
-void
-exit_inferior (inferior *inf)
-{
-  exit_inferior_1 (inf, 0);
-}
-
-void
-exit_inferior_silent (inferior *inf)
-{
-  exit_inferior_1 (inf, 1);
-}
-
 /* See inferior.h.  */
 
 void
 detach_inferior (inferior *inf)
 {
-  /* Save the pid, since exit_inferior_1 will reset it.  */
+  /* Save the pid, since exit_inferior will reset it.  */
   int pid = inf->pid;
 
-  exit_inferior_1 (inf, 0);
+  exit_inferior (inf);
 
   if (print_inferior_events)
     gdb_printf (_("[Inferior %d (%s) detached]\n"),

@@ -1984,7 +1984,7 @@ mi_execute_command (const char *cmd, int from_tty)
     = gdb::checked_static_cast<mi_interp *> (command_interp ());
   try
     {
-      command = mi_parse::make (cmd, &token);
+      command = gdb::make_unique<mi_parse> (cmd, &token);
     }
   catch (const gdb_exception &exception)
     {
@@ -2270,7 +2270,7 @@ mi_load_progress (const char *section_name,
      which means uiout may not be correct.  Fix it for the duration
      of this function.  */
 
-  std::unique_ptr<ui_out> uiout (mi_out_new (current_interpreter ()->name ()));
+  auto uiout = mi_out_new (current_interpreter ()->name ());
   if (uiout == nullptr)
     return;
 
