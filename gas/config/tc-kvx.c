@@ -458,7 +458,7 @@ static int
 insert_operand (struct kvxinsn *insn, struct kvx_operand *opdef,
 		struct token_list *tok)
 {
-  unsigned long long op = 0;
+  uint64_t op = 0;
   struct kvx_bitfield *bfields = opdef->bfield;
   int bf_nb = opdef->bitfields;
   int immx_ready = 0;
@@ -570,7 +570,7 @@ insert_operand (struct kvxinsn *insn, struct kvx_operand *opdef,
 	      {
 		/* This is a immediate: either a regular immediate, or an
 		   immediate that was saved in a variable through `.equ'.  */
-		unsigned long long sval = (long long) tok->val;
+		uint64_t sval = (int64_t) tok->val;
 		op = opdef->flags & kvxSIGNED ? sval : tok->val;
 		op >>= opdef->shift;
 	      }
@@ -661,8 +661,8 @@ insert_operand (struct kvxinsn *insn, struct kvx_operand *opdef,
 
   for (int bf_idx = 0; bf_idx < bf_nb; bf_idx++)
     {
-      unsigned long long value =
-	((unsigned long long) op >> bfields[bf_idx].from_offset);
+      uint64_t value =
+	((uint64_t) op >> bfields[bf_idx].from_offset);
       int j = 0;
       int to_offset = bfields[bf_idx].to_offset;
       value &= (1LL << bfields[bf_idx].size) - 1;
@@ -2205,7 +2205,6 @@ void
 kvx_end (void)
 {
   int newflags;
-  Elf_Internal_Ehdr *i_ehdrp;
 
   if (!env.params.core_set)
     env.params.core = kvx_core_info->elf_core;
@@ -2217,10 +2216,6 @@ kvx_end (void)
     newflags |= ELF_KVX_ABI_64B_ADDR_BIT;
 
   bfd_set_private_flags (stdoutput, newflags);
-
-  i_ehdrp = elf_elfheader (stdoutput);
-  i_ehdrp->e_ident[EI_ABIVERSION] = env.params.abi;
-  i_ehdrp->e_ident[EI_OSABI] = env.params.osabi;
 
   cleanup ();
 
@@ -2277,7 +2272,10 @@ kvx_type (int start ATTRIBUTE_UNUSED)
     type = BSF_ELF_COMMON;
   else if (strcmp (typename, "gnu_unique_object") == 0
 	   || strcmp (typename, "STB_GNU_UNIQUE") == 0)
-    type = BSF_OBJECT | BSF_GNU_UNIQUE;
+    {
+      elf_tdata (stdoutput)->has_gnu_osabi |= elf_gnu_osabi_unique;
+      type = BSF_OBJECT | BSF_GNU_UNIQUE;
+    }
   else if (strcmp (typename, "notype") == 0
 	   || strcmp (typename, "STT_NOTYPE") == 0)
     ;
