@@ -262,24 +262,6 @@ command_interp (void)
     return current_ui->current_interpreter;
 }
 
-/* See interps.h.  */
-
-void
-interp_pre_command_loop (struct interp *interp)
-{
-  gdb_assert (interp != NULL);
-
-  interp->pre_command_loop ();
-}
-
-/* See interp.h  */
-
-int
-interp_supports_command_editing (struct interp *interp)
-{
-  return interp->supports_command_editing ();
-}
-
 /* interp_exec - This executes COMMAND_STR in the current 
    interpreter.  */
 
