@@ -1034,9 +1034,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
 	t->set_code (type_code);
 	t->set_length (sh->value);
-	t->set_num_fields (nfields);
-	f = ((struct field *) TYPE_ALLOC (t, nfields * sizeof (struct field)));
-	t->set_fields (f);
+	t->alloc_fields (nfields);
 
 	if (type_code == TYPE_CODE_ENUM)
 	  {
@@ -1070,7 +1068,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		f->set_loc_enumval (tsym.value);
 		f->set_type (t);
 		f->set_name (debug_info->ss + cur_fdr->issBase + tsym.iss);
-		FIELD_BITSIZE (*f) = 0;
+		f->set_bitsize (0);
 
 		enum_sym = new (&mdebugread_objfile->objfile_obstack) symbol;
 		enum_sym->set_linkage_name
@@ -1197,10 +1195,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
 	      if (nparams > 0)
 		{
-		  ftype->set_num_fields (nparams);
-		  ftype->set_fields
-		    ((struct field *)
-		     TYPE_ALLOC (ftype, nparams * sizeof (struct field)));
+		  ftype->alloc_fields (nparams);
 
 		  iparams = 0;
 		  for (struct symbol *sym : block_iterator_range (cblock))
@@ -1211,7 +1206,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		      if (sym->is_argument ())
 			{
 			  ftype->field (iparams).set_type (sym->type ());
-			  TYPE_FIELD_ARTIFICIAL (ftype, iparams) = 0;
+			  ftype->field (iparams).set_is_artificial (false);
 			  iparams++;
 			}
 		    }
@@ -1252,7 +1247,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 	bitsize = 0;
 	f->set_type (parse_type (cur_fd, ax, sh->index, &bitsize, bigend,
 				 name));
-	FIELD_BITSIZE (*f) = bitsize;
+	f->set_bitsize (bitsize);
       }
       break;
 

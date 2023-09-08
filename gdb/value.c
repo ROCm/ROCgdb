@@ -2994,7 +2994,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
      description correctly.  */
   check_typedef (type);
 
-  if (TYPE_FIELD_BITSIZE (arg_type, fieldno))
+  if (arg_type->field (fieldno).bitsize ())
     {
       /* Handle packed fields.
 
@@ -3009,7 +3009,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
       LONGEST container_bitsize = type->length () * 8;
 
       v = value::allocate_lazy (type);
-      v->set_bitsize (TYPE_FIELD_BITSIZE (arg_type, fieldno));
+      v->set_bitsize (arg_type->field (fieldno).bitsize ());
       if ((bitpos % container_bitsize) + v->bitsize () <= container_bitsize
 	  && type->length () <= (int) sizeof (LONGEST))
 	v->set_bitpos (bitpos % container_bitsize);
@@ -3230,7 +3230,7 @@ unpack_value_field_as_long (struct type *type, const gdb_byte *valaddr,
 			    const struct value *val, LONGEST *result)
 {
   int bitpos = type->field (fieldno).loc_bitpos ();
-  int bitsize = TYPE_FIELD_BITSIZE (type, fieldno);
+  int bitsize = type->field (fieldno).bitsize ();
   struct type *field_type = type->field (fieldno).type ();
   int bit_offset;
 
@@ -3253,7 +3253,7 @@ LONGEST
 unpack_field_as_long (struct type *type, const gdb_byte *valaddr, int fieldno)
 {
   int bitpos = type->field (fieldno).loc_bitpos ();
-  int bitsize = TYPE_FIELD_BITSIZE (type, fieldno);
+  int bitsize = type->field (fieldno).bitsize ();
   struct type *field_type = type->field (fieldno).type ();
 
   return unpack_bits_as_long (field_type, valaddr, bitpos, bitsize);
@@ -3311,7 +3311,7 @@ value_field_bitfield (struct type *type, int fieldno,
 		      LONGEST embedded_offset, const struct value *val)
 {
   int bitpos = type->field (fieldno).loc_bitpos ();
-  int bitsize = TYPE_FIELD_BITSIZE (type, fieldno);
+  int bitsize = type->field (fieldno).bitsize ();
   struct value *res_val = value::allocate (type->field (fieldno).type ());
 
   val->unpack_bitfield (res_val, bitpos, bitsize, valaddr, embedded_offset);

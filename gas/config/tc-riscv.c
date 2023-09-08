@@ -74,6 +74,8 @@ enum riscv_csr_class
   CSR_CLASS_H_32,	/* hypervisor, rv32 only */
   CSR_CLASS_SMAIA,		/* Smaia */
   CSR_CLASS_SMAIA_32,		/* Smaia, rv32 only */
+  CSR_CLASS_SMCNTRPMF,		/* Smcntrpmf */
+  CSR_CLASS_SMCNTRPMF_32,	/* Smcntrpmf, rv32 only */
   CSR_CLASS_SMSTATEEN,		/* Smstateen only */
   CSR_CLASS_SMSTATEEN_32,	/* Smstateen RV32 only */
   CSR_CLASS_SSAIA,		/* Ssaia */
@@ -1052,6 +1054,13 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_SMAIA:
       extension = "smaia";
       break;
+    case CSR_CLASS_SMCNTRPMF_32:
+      is_rv32_only = true;
+      /* Fall through.  */
+    case CSR_CLASS_SMCNTRPMF:
+      need_check_version = true;
+      extension = "smcntrpmf";
+      break;
     case CSR_CLASS_SMSTATEEN_32:
       is_rv32_only = true;
       /* Fall through.  */
@@ -1391,23 +1400,23 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	case 'F': /* Funct for .insn directive.  */
 	  switch (*++oparg)
 	    {
-	      case '7': USE_BITS (OP_MASK_FUNCT7, OP_SH_FUNCT7); break;
-	      case '3': USE_BITS (OP_MASK_FUNCT3, OP_SH_FUNCT3); break;
-	      case '2': USE_BITS (OP_MASK_FUNCT2, OP_SH_FUNCT2); break;
-	      default:
-		goto unknown_validate_operand;
+	    case '7': USE_BITS (OP_MASK_FUNCT7, OP_SH_FUNCT7); break;
+	    case '3': USE_BITS (OP_MASK_FUNCT3, OP_SH_FUNCT3); break;
+	    case '2': USE_BITS (OP_MASK_FUNCT2, OP_SH_FUNCT2); break;
+	    default:
+	      goto unknown_validate_operand;
 	    }
 	  break;
 	case 'O': /* Opcode for .insn directive.  */
 	  switch (*++oparg)
 	    {
-	      case '4': USE_BITS (OP_MASK_OP, OP_SH_OP); break;
-	      case '2': USE_BITS (OP_MASK_OP2, OP_SH_OP2); break;
-	      default:
-		goto unknown_validate_operand;
+	    case '4': USE_BITS (OP_MASK_OP, OP_SH_OP); break;
+	    case '2': USE_BITS (OP_MASK_OP2, OP_SH_OP2); break;
+	    default:
+	      goto unknown_validate_operand;
 	    }
 	  break;
-	case 'W': /* Various operands.  */
+	case 'W': /* Various operands for standard z extensions.  */
 	  switch (*++oparg)
 	    {
 	    case 'i':
@@ -1442,33 +1451,39 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	      goto unknown_validate_operand;
 	    }
 	  break;
-	case 'X': /* Integer immediate.  */
-	  {
-	    size_t n;
-	    size_t s;
-
-	    switch (*++oparg)
+	case 'X': /* Vendor-specific operands.  */
+	  switch (*++oparg)
+	    {
+	    case 't': /* Vendor-specific (T-head) operands.  */
 	      {
-		case 'l': /* Literal.  */
-		  oparg += strcspn(oparg, ",") - 1;
-		  break;
-		case 's': /* 'XsN@S' ... N-bit signed immediate at bit S.  */
-		  goto use_imm;
-		case 'u': /* 'XuN@S' ... N-bit unsigned immediate at bit S.  */
-		  goto use_imm;
-		use_imm:
-		  n = strtol (oparg + 1, (char **)&oparg, 10);
-		  if (*oparg != '@')
-		    goto unknown_validate_operand;
-		  s = strtol (oparg + 1, (char **)&oparg, 10);
-		  oparg--;
+		size_t n;
+		size_t s;
+		switch (*++oparg)
+		  {
+		  case 'l': /* Integer immediate, literal.  */
+		    oparg += strcspn(oparg, ",") - 1;
+		    break;
+		  case 's': /* Integer immediate, 'XtsN@S' ... N-bit signed immediate at bit S.  */
+		    goto use_imm;
+		  case 'u': /* Integer immediate, 'XtuN@S' ... N-bit unsigned immediate at bit S.  */
+		    goto use_imm;
+		  use_imm:
+		    n = strtol (oparg + 1, (char **)&oparg, 10);
+		    if (*oparg != '@')
+		      goto unknown_validate_operand;
+		    s = strtol (oparg + 1, (char **)&oparg, 10);
+		    oparg--;
 
-		  USE_IMM (n, s);
-		  break;
-		default:
-		  goto unknown_validate_operand;
+		    USE_IMM (n, s);
+		    break;
+		  default:
+		    goto unknown_validate_operand;
+		  }
 	      }
-	  }
+	      break;
+	    default:
+	      goto unknown_validate_operand;
+	    }
 	  break;
 	default:
 	unknown_validate_operand:
@@ -1949,6 +1964,7 @@ vector_macro (struct riscv_cl_insn *ip)
   int vs2 = (ip->insn_opcode >> OP_SH_VS2) & OP_MASK_VS2;
   int vm = (ip->insn_opcode >> OP_SH_VMASK) & OP_MASK_VMASK;
   int vtemp = (ip->insn_opcode >> OP_SH_VFUNCT6) & OP_MASK_VFUNCT6;
+  const char *vmslt_vx = ip->insn_mo->match ? "vmsltu.vx" : "vmslt.vx";
   int mask = ip->insn_mo->mask;
 
   switch (mask)
@@ -1957,7 +1973,7 @@ vector_macro (struct riscv_cl_insn *ip)
       if (vm)
 	{
 	  /* Unmasked.  */
-	  macro_build (NULL, "vmslt.vx", "Vd,Vt,sVm", vd, vs2, vs1, -1);
+	  macro_build (NULL, vmslt_vx, "Vd,Vt,sVm", vd, vs2, vs1, -1);
 	  macro_build (NULL, "vmnand.mm", "Vd,Vt,Vs", vd, vd, vd);
 	  break;
 	}
@@ -1966,13 +1982,13 @@ vector_macro (struct riscv_cl_insn *ip)
 	  /* Masked.  Have vtemp to avoid overlap constraints.  */
 	  if (vd == vm)
 	    {
-	      macro_build (NULL, "vmslt.vx", "Vd,Vt,s", vtemp, vs2, vs1);
+	      macro_build (NULL, vmslt_vx, "Vd,Vt,sVm", vtemp, vs2, vs1, -1);
 	      macro_build (NULL, "vmandnot.mm", "Vd,Vt,Vs", vd, vm, vtemp);
 	    }
 	  else
 	    {
 	      /* Preserve the value of vd if not updating by vm.  */
-	      macro_build (NULL, "vmslt.vx", "Vd,Vt,s", vtemp, vs2, vs1);
+	      macro_build (NULL, vmslt_vx, "Vd,Vt,sVm", vtemp, vs2, vs1, -1);
 	      macro_build (NULL, "vmandnot.mm", "Vd,Vt,Vs", vtemp, vm, vtemp);
 	      macro_build (NULL, "vmandnot.mm", "Vd,Vt,Vs", vd, vd, vm);
 	      macro_build (NULL, "vmor.mm", "Vd,Vt,Vs", vd, vtemp, vd);
@@ -1981,42 +1997,7 @@ vector_macro (struct riscv_cl_insn *ip)
       else if (vd != vm)
 	{
 	  /* Masked.  This may cause the vd overlaps vs2, when LMUL > 1.  */
-	  macro_build (NULL, "vmslt.vx", "Vd,Vt,sVm", vd, vs2, vs1, vm);
-	  macro_build (NULL, "vmxor.mm", "Vd,Vt,Vs", vd, vd, vm);
-	}
-      else
-	as_bad (_("must provide temp if destination overlaps mask"));
-      break;
-
-    case M_VMSGEU:
-      if (vm)
-	{
-	  /* Unmasked.  */
-	  macro_build (NULL, "vmsltu.vx", "Vd,Vt,sVm", vd, vs2, vs1, -1);
-	  macro_build (NULL, "vmnand.mm", "Vd,Vt,Vs", vd, vd, vd);
-	  break;
-	}
-      if (vtemp != 0)
-	{
-	  /* Masked.  Have vtemp to avoid overlap constraints.  */
-	  if (vd == vm)
-	    {
-	      macro_build (NULL, "vmsltu.vx", "Vd,Vt,s", vtemp, vs2, vs1);
-	      macro_build (NULL, "vmandnot.mm", "Vd,Vt,Vs", vd, vm, vtemp);
-	    }
-	  else
-	    {
-	      /* Preserve the value of vd if not updating by vm.  */
-	      macro_build (NULL, "vmsltu.vx", "Vd,Vt,s", vtemp, vs2, vs1);
-	      macro_build (NULL, "vmandnot.mm", "Vd,Vt,Vs", vtemp, vm, vtemp);
-	      macro_build (NULL, "vmandnot.mm", "Vd,Vt,Vs", vd, vd, vm);
-	      macro_build (NULL, "vmor.mm", "Vd,Vt,Vs", vd, vtemp, vd);
-	    }
-	}
-      else if (vd != vm)
-	{
-	  /* Masked.  This may cause the vd overlaps vs2, when LMUL > 1.  */
-	  macro_build (NULL, "vmsltu.vx", "Vd,Vt,sVm", vd, vs2, vs1, vm);
+	  macro_build (NULL, vmslt_vx, "Vd,Vt,sVm", vd, vs2, vs1, vm);
 	  macro_build (NULL, "vmxor.mm", "Vd,Vt,Vs", vd, vd, vm);
 	}
       else
@@ -2171,7 +2152,6 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
       break;
 
     case M_VMSGE:
-    case M_VMSGEU:
       vector_macro (ip);
       break;
 
@@ -3515,7 +3495,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      imm_expr->X_op = O_absent;
 	      continue;
 
-	    case 'W': /* Various operands.  */
+	    case 'W': /* Various operands for standard z extensions.  */
 	      switch (*++oparg)
 		{
 		case 'i':
@@ -3542,6 +3522,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      goto unknown_riscv_ip_operand;
 		    }
 		  break;
+
 		case 'f':
 		  switch (*++oparg)
 		    {
@@ -3585,7 +3566,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			break;
 		      ip->insn_opcode |= ENCODE_ZCB_HALFWORD_UIMM (imm_expr->X_add_number);
 		      goto rvc_imm_done;
-
 		    case 'b': /* Immediate field for c.lbu/c.sb.  */
 		      /* Handle cases, such as c.lbu rd', (rs1').  */
 		      if (riscv_handle_implicit_zero_offset (imm_expr, asarg))
@@ -3596,7 +3576,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			break;
 		      ip->insn_opcode |= ENCODE_ZCB_BYTE_UIMM (imm_expr->X_add_number);
 		      goto rvc_imm_done;
-
 		    case 'f': /* Operand for matching immediate 255.  */
 		      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
 			  || imm_expr->X_op != O_constant
@@ -3607,66 +3586,73 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      asarg = expr_parse_end;
 		      imm_expr->X_op = O_absent;
 		      continue;
-
 		    default:
 		      goto unknown_riscv_ip_operand;
 		    }
 		  break;
+
 		default:
 		  goto unknown_riscv_ip_operand;
 		}
 	      break;
 
-	    case 'X': /* Integer immediate.  */
-	      {
-		size_t n;
-		size_t s;
-		bool sign;
-
-		switch (*++oparg)
+	    case 'X': /* Vendor-specific operands.  */
+	      switch (*++oparg)
+		{
+		case 't': /* Vendor-specific (T-head) operands.  */
 		  {
-		    case 'l': /* Literal.  */
-		      n = strcspn (++oparg, ",");
-		      if (strncmp (oparg, asarg, n))
-			as_bad (_("unexpected literal (%s)"), asarg);
-		      oparg += n - 1;
-		      asarg += n;
-		      continue;
-		    case 's': /* 'XsN@S' ... N-bit signed immediate at bit S.  */
-		      sign = true;
-		      goto parse_imm;
-		    case 'u': /* 'XuN@S' ... N-bit unsigned immediate at bit S.  */
-		      sign = false;
-		      goto parse_imm;
-		    parse_imm:
-		      n = strtol (oparg + 1, (char **)&oparg, 10);
-		      if (*oparg != '@')
-			goto unknown_riscv_ip_operand;
-		      s = strtol (oparg + 1, (char **)&oparg, 10);
-		      oparg--;
+		    size_t n;
+		    size_t s;
+		    bool sign;
+		    switch (*++oparg)
+		      {
+		      case 'l': /* Integer immediate, literal.  */
+			n = strcspn (++oparg, ",");
+			if (strncmp (oparg, asarg, n))
+			  as_bad (_("unexpected literal (%s)"), asarg);
+			oparg += n - 1;
+			asarg += n;
+			continue;
+		      case 's': /* Integer immediate, 'XsN@S' ... N-bit signed immediate at bit S.  */
+			sign = true;
+			goto parse_imm;
+		      case 'u': /* Integer immediate, 'XuN@S' ... N-bit unsigned immediate at bit S.  */
+			sign = false;
+			goto parse_imm;
+		      parse_imm:
+			n = strtol (oparg + 1, (char **)&oparg, 10);
+			if (*oparg != '@')
+			  goto unknown_riscv_ip_operand;
+			s = strtol (oparg + 1, (char **)&oparg, 10);
+			oparg--;
 
-		      my_getExpression (imm_expr, asarg);
-		      check_absolute_expr (ip, imm_expr, false);
-		      if (!sign)
-			{
-			  if (!VALIDATE_U_IMM (imm_expr->X_add_number, n))
-			    as_bad (_("improper immediate value (%"PRIu64")"),
-				    imm_expr->X_add_number);
-			}
-		      else
-			{
-			  if (!VALIDATE_S_IMM (imm_expr->X_add_number, n))
-			    as_bad (_("improper immediate value (%"PRIi64")"),
-				    imm_expr->X_add_number);
-			}
-		      INSERT_IMM (n, s, *ip, imm_expr->X_add_number);
-		      imm_expr->X_op = O_absent;
-		      asarg = expr_parse_end;
-		      continue;
-		    default:
-		      goto unknown_riscv_ip_operand;
+			my_getExpression (imm_expr, asarg);
+			check_absolute_expr (ip, imm_expr, false);
+			if (!sign)
+			  {
+			    if (!VALIDATE_U_IMM (imm_expr->X_add_number, n))
+			      as_bad (_("improper immediate value (%"PRIu64")"),
+				      imm_expr->X_add_number);
+			  }
+			else
+			  {
+			    if (!VALIDATE_S_IMM (imm_expr->X_add_number, n))
+			      as_bad (_("improper immediate value (%"PRIi64")"),
+				      imm_expr->X_add_number);
+			  }
+			INSERT_IMM (n, s, *ip, imm_expr->X_add_number);
+			imm_expr->X_op = O_absent;
+			asarg = expr_parse_end;
+			continue;
+		      default:
+			goto unknown_riscv_ip_operand;
+		      }
 		  }
-	      }
+		  break;
+
+		default:
+		  goto unknown_riscv_ip_operand;
+		}
 	      break;
 
 	    default:

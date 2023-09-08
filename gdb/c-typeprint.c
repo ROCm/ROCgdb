@@ -286,7 +286,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
 
       struct field arg = args[i];
       /* Skip any artificial arguments.  */
-      if (FIELD_ARTIFICIAL (arg))
+      if (arg.is_artificial ())
 	continue;
 
       if (printed_args > 0)
@@ -535,7 +535,7 @@ c_type_print_args (struct type *type, struct ui_file *stream,
     {
       struct type *param_type;
 
-      if (TYPE_FIELD_ARTIFICIAL (type, i) && linkage_name)
+      if (type->field (i).is_artificial () && linkage_name)
 	continue;
 
       if (printed_any)
@@ -1102,7 +1102,7 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 	     virtual table pointers are not specifically marked in
 	     the debug info, they should be artificial.  */
 	  if ((i == vptr_fieldno && type == basetype)
-	      || TYPE_FIELD_ARTIFICIAL (type, i))
+	      || type->field (i).is_artificial ())
 	    continue;
 
 	  if (need_access_label)
@@ -1154,15 +1154,14 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 			  stream, newshow, level + 4,
 			  language, &local_flags, &local_podata);
 
-	  if (!is_static && TYPE_FIELD_PACKED (type, i))
+	  if (!is_static && type->field (i).is_packed ())
 	    {
 	      /* It is a bitfield.  This code does not attempt
 		 to look at the bitpos and reconstruct filler,
 		 unnamed fields.  This would lead to misleading
 		 results if the compiler does not put out fields
 		 for such things (I don't know what it does).  */
-	      gdb_printf (stream, " : %d",
-			  TYPE_FIELD_BITSIZE (type, i));
+	      gdb_printf (stream, " : %d", type->field (i).bitsize ());
 	    }
 	  gdb_printf (stream, ";\n");
 	}
@@ -1591,11 +1590,11 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 				language, &local_flags, podata);
 		gdb_printf (stream, " @%s",
 			    plongest (type->field (i).loc_bitpos ()));
-		if (TYPE_FIELD_BITSIZE (type, i) > 1)
+		if (type->field (i).bitsize () > 1)
 		  {
 		    gdb_printf (stream, "-%s",
 				plongest (type->field (i).loc_bitpos ()
-					  + TYPE_FIELD_BITSIZE (type, i)
+					  + type->field (i).bitsize ()
 					  - 1));
 		  }
 		gdb_printf (stream, ";\n");

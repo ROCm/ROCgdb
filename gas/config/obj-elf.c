@@ -2525,27 +2525,25 @@ obj_elf_ident (int ignore ATTRIBUTE_UNUSED)
 /* The first entry in a .stabs section is special.  */
 
 void
-obj_elf_init_stab_section (segT seg)
+obj_elf_init_stab_section (segT stab, segT stabstr)
 {
   char *file;
   char *p;
-  char *stabstr_name;
   unsigned int stroff;
 
   /* Force the section to align to a longword boundary.  Without this,
      UnixWare ar crashes.  */
-  bfd_set_section_alignment (seg, 2);
+  bfd_set_section_alignment (stab, 2);
 
   /* Make space for this first symbol.  */
   p = frag_more (12);
   /* Zero it out.  */
   memset (p, 0, 12);
   file = remap_debug_filename (as_where (NULL));
-  stabstr_name = concat (segment_name (seg), "str", (char *) NULL);
-  stroff = get_stab_string_offset (file, stabstr_name, true);
+  stroff = get_stab_string_offset (file, stabstr);
   know (stroff == 1 || (stroff == 0 && file[0] == '\0'));
   md_number_to_chars (p, stroff, 4);
-  seg_info (seg)->stabu.p = p;
+  seg_info (stab)->stabu.p = p;
   free (file);
 }
 
@@ -3114,8 +3112,7 @@ elf_generate_asm_lineno (void)
 }
 
 static void
-elf_process_stab (segT sec ATTRIBUTE_UNUSED,
-		  int what ATTRIBUTE_UNUSED,
+elf_process_stab (int what ATTRIBUTE_UNUSED,
 		  const char *string ATTRIBUTE_UNUSED,
 		  int type ATTRIBUTE_UNUSED,
 		  int other ATTRIBUTE_UNUSED,
@@ -3123,7 +3120,7 @@ elf_process_stab (segT sec ATTRIBUTE_UNUSED,
 {
 #ifdef NEED_ECOFF_DEBUG
   if (ECOFF_DEBUGGING)
-    ecoff_stab (sec, what, string, type, other, desc);
+    ecoff_stab (what, string, type, other, desc);
 #endif
 }
 
@@ -3138,12 +3135,12 @@ elf_separate_stab_sections (void)
 }
 
 static void
-elf_init_stab_section (segT seg)
+elf_init_stab_section (segT stab, segT stabstr)
 {
 #ifdef NEED_ECOFF_DEBUG
   if (!ECOFF_DEBUGGING)
 #endif
-    obj_elf_init_stab_section (seg);
+    obj_elf_init_stab_section (stab, stabstr);
 }
 
 /* This is called when the assembler starts.  */

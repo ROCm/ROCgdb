@@ -303,7 +303,7 @@ amdgcn_arg_placement::alloc_for_struct (struct type *type, int offset)
   while (field_num < type->num_fields ())
     {
       /* Allocation units (which contains bitfields) are packed.  */
-      if (TYPE_FIELD_PACKED (type, field_num))
+      if (type->field (field_num).is_packed ())
 	{
 	  has_non_static_fields = true;
 	  /* The first element of the pack must be byte aligned.  */
@@ -315,9 +315,9 @@ amdgcn_arg_placement::alloc_for_struct (struct type *type, int offset)
 	  int pack_end = field_num;
 	  int pack_size = 0;
 	  while (pack_end < type->num_fields ()
-		 && TYPE_FIELD_PACKED (type, pack_end))
+		 && type->field (pack_end).is_packed ())
 	    {
-	      pack_size += type->field (pack_end).bitsize;
+	      pack_size += type->field (pack_end).bitsize ();
 	      pack_end++;
 	    }
 
@@ -1184,10 +1184,7 @@ amd_dbgapi_register_type_to_gdb_type (const amd_dbgapi_register_type &type,
 	     .new_type (TYPE_CODE_ENUM, enum_type.bit_size (),
 			enum_type.name ().c_str ()));
 
-	gdb_type->set_num_fields (enum_type.size ());
-	gdb_type->set_fields
-	  ((struct field *) TYPE_ZALLOC (gdb_type, (sizeof (struct field)
-						    * enum_type.size ())));
+	gdb_type->alloc_fields (enum_type.size ());
 	gdb_type->set_is_unsigned (true);
 
 	for (size_t i = 0; i < enum_type.size (); ++i)

@@ -6056,15 +6056,13 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
       /* Smash this type to be a structure type.  We have to do this
 	 because the type has already been recorded.  */
       type->set_code (TYPE_CODE_STRUCT);
-      type->set_num_fields (3);
       /* Save the field we care about.  */
       struct field saved_field = type->field (0);
-      type->set_fields
-	((struct field *) TYPE_ZALLOC (type, 3 * sizeof (struct field)));
+      type->alloc_fields (3);
 
       /* Put the discriminant at index 0.  */
       type->field (0).set_type (field_type);
-      TYPE_FIELD_ARTIFICIAL (type, 0) = 1;
+      type->field (0).set_is_artificial (true);
       type->field (0).set_name ("<<discriminant>>");
       type->field (0).set_loc_bitpos (bit_offset);
 
@@ -6162,7 +6160,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 
       /* Install the discriminant at index 0 in the union.  */
       type->field (0) = *disr_field;
-      TYPE_FIELD_ARTIFICIAL (type, 0) = 1;
+      type->field (0).set_is_artificial (true);
       type->field (0).set_name ("<<discriminant>>");
 
       /* We need a way to find the correct discriminant given a
@@ -7076,7 +7074,7 @@ dwarf2_compute_name (const char *name,
 		     artificial; there is no way to differentiate
 		     the two cases.  */
 		  if (type->num_fields () > 0
-		      && TYPE_FIELD_ARTIFICIAL (type, 0)
+		      && type->field (0).is_artificial ()
 		      && type->field (0).type ()->code () == TYPE_CODE_PTR
 		      && TYPE_CONST (type->field (0).type ()->target_type ()))
 		    buf.puts (" const");
@@ -11685,13 +11683,9 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       /* Get bit size of field (zero if none).  */
       attr = dwarf2_attr (die, DW_AT_bit_size, cu);
       if (attr != nullptr)
-	{
-	  FIELD_BITSIZE (*fp) = attr->constant_value (0);
-	}
+	fp->set_bitsize (attr->constant_value (0));
       else
-	{
-	  FIELD_BITSIZE (*fp) = 0;
-	}
+	fp->set_bitsize (0);
 
       /* Get bit offset of field.  */
       handle_member_location (die, cu, fp);
@@ -11736,7 +11730,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		}
 	      fp->set_loc_bitpos (fp->loc_bitpos ()
 				  + anonymous_size * bits_per_byte
-				  - bit_offset - FIELD_BITSIZE (*fp));
+				  - bit_offset - fp->bitsize ());
 	    }
 	}
 
@@ -11753,7 +11747,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 	 pointer or virtual base class pointer) to private.  */
       if (dwarf2_attr (die, DW_AT_artificial, cu))
 	{
-	  FIELD_ARTIFICIAL (*fp) = 1;
+	  fp->set_is_artificial (true);
 	  new_field->accessibility = DW_ACCESS_private;
 	  fip->non_public_fields = true;
 	}
@@ -11800,7 +11794,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
     {
       /* C++ base class field.  */
       handle_member_location (die, cu, fp);
-      FIELD_BITSIZE (*fp) = 0;
+      fp->set_bitsize (0);
       fp->set_type (die_type (die, cu));
       fp->set_name (fp->type ()->name ());
     }
@@ -12067,25 +12061,20 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
 
   /* Record the field count, allocate space for the array of fields,
      and create blank accessibility bitfields if necessary.  */
-  type->set_num_fields (nfields);
-  type->set_fields
-    ((struct field *) TYPE_ZALLOC (type, sizeof (struct field) * nfields));
+  type->alloc_fields (nfields);
 
   if (fip->non_public_fields && cu->lang () != language_ada)
     {
       ALLOCATE_CPLUS_STRUCT_TYPE (type);
 
       TYPE_FIELD_PRIVATE_BITS (type) =
-	(B_TYPE *) TYPE_ALLOC (type, B_BYTES (nfields));
-      B_CLRALL (TYPE_FIELD_PRIVATE_BITS (type), nfields);
+	(B_TYPE *) TYPE_ZALLOC (type, B_BYTES (nfields));
 
       TYPE_FIELD_PROTECTED_BITS (type) =
-	(B_TYPE *) TYPE_ALLOC (type, B_BYTES (nfields));
-      B_CLRALL (TYPE_FIELD_PROTECTED_BITS (type), nfields);
+	(B_TYPE *) TYPE_ZALLOC (type, B_BYTES (nfields));
 
       TYPE_FIELD_IGNORE_BITS (type) =
-	(B_TYPE *) TYPE_ALLOC (type, B_BYTES (nfields));
-      B_CLRALL (TYPE_FIELD_IGNORE_BITS (type), nfields);
+	(B_TYPE *) TYPE_ZALLOC (type, B_BYTES (nfields));
     }
 
   /* If the type has baseclasses, allocate and clear a bit vector for
@@ -12096,9 +12085,8 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
       unsigned char *pointer;
 
       ALLOCATE_CPLUS_STRUCT_TYPE (type);
-      pointer = (unsigned char *) TYPE_ALLOC (type, num_bytes);
+      pointer = (unsigned char *) TYPE_ZALLOC (type, num_bytes);
       TYPE_FIELD_VIRTUAL_BITS (type) = pointer;
-      B_CLRALL (TYPE_FIELD_VIRTUAL_BITS (type), fip->baseclasses.size ());
       TYPE_N_BASECLASSES (type) = fip->baseclasses.size ();
     }
 
@@ -12255,7 +12243,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
 	 parameter for non-static member functions (which is the this
 	 pointer) as artificial.  We obtain this information from
 	 read_subroutine_type via TYPE_FIELD_ARTIFICIAL.  */
-      if (nparams == 0 || TYPE_FIELD_ARTIFICIAL (this_type, 0) == 0)
+      if (nparams == 0 || this_type->field (0).is_artificial () == 0)
 	fnp->voffset = VOFFSET_STATIC;
     }
   else
@@ -12344,7 +12332,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
 		 we cannot actually find a base class context for the
 		 vtable!  */
 	      if (this_type->num_fields () == 0
-		  || !TYPE_FIELD_ARTIFICIAL (this_type, 0))
+		  || !this_type->field (0).is_artificial ())
 		{
 		  complaint (_("cannot determine context for virtual member "
 			       "function \"%s\" (offset %s)"),
@@ -12392,8 +12380,8 @@ dwarf2_attach_fn_fields_to_type (struct field_info *fip, struct type *type,
 
   ALLOCATE_CPLUS_STRUCT_TYPE (type);
   TYPE_FN_FIELDLISTS (type) = (struct fn_fieldlist *)
-    TYPE_ALLOC (type,
-		sizeof (struct fn_fieldlist) * fip->fnfieldlists.size ());
+    TYPE_ZALLOC (type,
+		 sizeof (struct fn_fieldlist) * fip->fnfieldlists.size ());
 
   for (int i = 0; i < fip->fnfieldlists.size (); i++)
     {
@@ -12402,6 +12390,8 @@ dwarf2_attach_fn_fields_to_type (struct field_info *fip, struct type *type,
 
       TYPE_FN_FIELDLIST_NAME (type, i) = nf.name;
       TYPE_FN_FIELDLIST_LENGTH (type, i) = nf.fnfields.size ();
+      /* No need to zero-initialize, initialization is done by the copy in
+	 the loop below.  */
       fn_flp->fn_fields = (struct fn_field *)
 	TYPE_ALLOC (type, sizeof (struct fn_field) * nf.fnfields.size ());
 
@@ -12498,12 +12488,7 @@ rewrite_array_type (struct type *type)
      updated.  Either way we want to copy the type and update
      everything.  */
   struct type *copy = copy_type (type);
-  int nfields = copy->num_fields ();
-  field *new_fields
-    = ((struct field *) TYPE_ZALLOC (copy,
-				     nfields * sizeof (struct field)));
-  memcpy (new_fields, copy->fields (), nfields * sizeof (struct field));
-  copy->set_fields (new_fields);
+  copy->copy_fields (type);
   if (new_target != nullptr)
     copy->set_target_type (new_target);
 
@@ -12704,7 +12689,14 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
     }
 
   type = type_allocator (objfile).new_type ();
-  INIT_CPLUS_SPECIFIC (type);
+  if (cu->lang () == language_rust)
+    {
+      /* This is currently only needed for types that might be
+	 slices.  */
+      INIT_RUST_SPECIFIC (type);
+    }
+  else
+    INIT_CPLUS_SPECIFIC (type);
 
   name = dwarf2_name (die, cu);
   if (name != NULL)
@@ -13109,6 +13101,8 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 	  int count = fi.typedef_field_list.size ();
 
 	  ALLOCATE_CPLUS_STRUCT_TYPE (type);
+	  /* No zero-initialization is needed, the elements are initialized by
+	     the copy in the loop below.  */
 	  TYPE_TYPEDEF_FIELD_ARRAY (type)
 	    = ((struct decl_field *)
 	       TYPE_ALLOC (type,
@@ -13127,6 +13121,8 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 	  int count = fi.nested_types_list.size ();
 
 	  ALLOCATE_CPLUS_STRUCT_TYPE (type);
+	  /* No zero-initialization is needed, the elements are initialized by
+	     the copy in the loop below.  */
 	  TYPE_NESTED_TYPES_ARRAY (type)
 	    = ((struct decl_field *)
 	       TYPE_ALLOC (type, sizeof (struct decl_field) * count));
@@ -13268,14 +13264,7 @@ update_enumeration_type_from_children (struct die_info *die,
     }
 
   if (!fields.empty ())
-    {
-      type->set_num_fields (fields.size ());
-      type->set_fields
-	((struct field *)
-	 TYPE_ALLOC (type, sizeof (struct field) * fields.size ()));
-      memcpy (type->fields (), fields.data (),
-	      sizeof (struct field) * fields.size ());
-    }
+    type->copy_fields (fields);
   else
     flag_enum = 0;
 
@@ -13538,7 +13527,7 @@ recognize_bound_expression (struct die_info *die, enum dwarf_attribute name,
 
   field->set_loc_bitpos (8 * offset);
   if (size != field->type ()->length ())
-    FIELD_BITSIZE (*field) = 8 * size;
+    field->set_bitsize (8 * size);
 
   return true;
 }
@@ -13610,10 +13599,10 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
 	  struct field &upper = range_fields[range_fields.size () - 1];
 
 	  lower.set_type (underlying);
-	  FIELD_ARTIFICIAL (lower) = 1;
+	  lower.set_is_artificial (true);
 
 	  upper.set_type (underlying);
-	  FIELD_ARTIFICIAL (upper) = 1;
+	  upper.set_is_artificial (true);
 
 	  if (!recognize_bound_expression (child_die, DW_AT_lower_bound,
 					   &bounds_offset, &lower, cu)
@@ -13644,12 +13633,7 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
   struct type *bounds = alloc.new_type ();
   bounds->set_code (TYPE_CODE_STRUCT);
 
-  bounds->set_num_fields (range_fields.size ());
-  bounds->set_fields
-    ((struct field *) TYPE_ALLOC (bounds, (bounds->num_fields ()
-					   * sizeof (struct field))));
-  memcpy (bounds->fields (), range_fields.data (),
-	  bounds->num_fields () * sizeof (struct field));
+  bounds->copy_fields (range_fields);
 
   int last_fieldno = range_fields.size () - 1;
   int bounds_size = (bounds->field (last_fieldno).loc_bitpos () / 8
@@ -13672,10 +13656,7 @@ quirk_ada_thick_pointer (struct die_info *die, struct dwarf2_cu *cu,
   struct type *result = type_allocator (objfile).new_type ();
   result->set_code (TYPE_CODE_STRUCT);
 
-  result->set_num_fields (2);
-  result->set_fields
-    ((struct field *) TYPE_ZALLOC (result, (result->num_fields ()
-					    * sizeof (struct field))));
+  result->alloc_fields (2);
 
   /* The names are chosen to coincide with what the compiler does with
      -fgnat-encodings=all, which the Ada code in gdb already
@@ -14717,9 +14698,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 	}
 
       /* Allocate storage for parameters and fill them in.  */
-      ftype->set_num_fields (nparams);
-      ftype->set_fields
-	((struct field *) TYPE_ZALLOC (ftype, nparams * sizeof (struct field)));
+      ftype->alloc_fields (nparams);
 
       /* TYPE_FIELD_TYPE must never be NULL.  Pre-fill the array to ensure it
 	 even if we error out during the parameters reading below.  */
@@ -14745,9 +14724,9 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 		 4.5 does not yet generate.  */
 	      attr = dwarf2_attr (child_die, DW_AT_artificial, cu);
 	      if (attr != nullptr)
-		TYPE_FIELD_ARTIFICIAL (ftype, iparams) = attr->as_boolean ();
+		ftype->field (iparams).set_is_artificial (attr->as_boolean ());
 	      else
-		TYPE_FIELD_ARTIFICIAL (ftype, iparams) = 0;
+		ftype->field (iparams).set_is_artificial (false);
 	      arg_type = die_type (child_die, cu);
 
 	      /* RealView does not mark THIS as const, which the testsuite
@@ -14755,7 +14734,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 		 but not in the class specifications (GCC PR 43053).  */
 	      if (cu->lang () == language_cplus
 		  && !TYPE_CONST (arg_type)
-		  && TYPE_FIELD_ARTIFICIAL (ftype, iparams))
+		  && ftype->field (iparams).is_artificial ())
 		{
 		  int is_this = 0;
 		  struct dwarf2_cu *arg_cu = cu;
@@ -19249,7 +19228,8 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      else
 		list_to_add = cu->list_in_scope;
 
-	      if (is_ada_import_or_export (cu, name, linkagename))
+	      if (list_to_add != nullptr
+		  && is_ada_import_or_export (cu, name, linkagename))
 		{
 		  /* This is a Pragma Export.  A Pragma Import won't
 		     be seen here, because it will not have a location
@@ -19394,15 +19374,11 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      }
 	  }
 	  break;
-	case DW_TAG_typedef:
-	  sym->set_aclass_index (LOC_TYPEDEF);
-	  sym->set_domain (VAR_DOMAIN);
-	  list_to_add = cu->list_in_scope;
-	  break;
 	case DW_TAG_unspecified_type:
 	  if (cu->lang () == language_ada)
 	    break;
 	  /* FALLTHROUGH */
+	case DW_TAG_typedef:
 	case DW_TAG_array_type:
 	case DW_TAG_base_type:
 	case DW_TAG_subrange_type:

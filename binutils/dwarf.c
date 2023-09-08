@@ -3590,7 +3590,10 @@ free_debug_information (debug_info *ent)
       free (ent->have_frame_base);
     }
   if (ent->max_range_lists)
-    free (ent->range_lists);
+    {
+      free (ent->range_versions);
+      free (ent->range_lists);
+    }
 }
 
 /* Process the contents of a .debug_info section.
@@ -4022,7 +4025,11 @@ process_debug_info (struct dwarf_section * section,
 		    }
 		}
 	      if (dwarf_start_die != 0 && level < saved_level)
-		return true;
+		{
+		  if (list != NULL)
+		    free_abbrev_list (list);
+		  return true;
+		}
 	      continue;
 	    }
 
@@ -4063,6 +4070,8 @@ process_debug_info (struct dwarf_section * section,
 		}
 	      warn (_("DIE at offset %#lx refers to abbreviation number %lu which does not exist\n"),
 		    die_offset, abbrev_number);
+	      if (list != NULL)
+		free_abbrev_list (list);
 	      return false;
 	    }
 

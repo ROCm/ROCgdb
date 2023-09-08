@@ -982,9 +982,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
 	    }
 
 	  /* Allocate parameter information fields and fill them in.  */
-	  ftype->set_fields
-	    ((struct field *)
-	     TYPE_ALLOC (ftype, nsemi * sizeof (struct field)));
+	  ftype->alloc_fields (nsemi);
 	  while (*p++ == ';')
 	    {
 	      struct type *ptype;
@@ -1004,7 +1002,8 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
 	      if (ptype->code () == TYPE_CODE_VOID)
 		ptype = builtin_type (objfile)->builtin_int;
 	      ftype->field (nparams).set_type (ptype);
-	      TYPE_FIELD_ARTIFICIAL (ftype, nparams++) = 0;
+	      ftype->field (nparams).set_is_artificial (false);
+	      nparams++;
 	    }
 	  ftype->set_num_fields (nparams);
 	  ftype->set_is_prototyped (true);
@@ -1826,10 +1825,7 @@ again:
 	    && arg_types->type->code () == TYPE_CODE_VOID)
 	  num_args = 0;
 
-	func_type->set_fields
-	  ((struct field *) TYPE_ALLOC (func_type,
-					num_args * sizeof (struct field)));
-	memset (func_type->fields (), 0, num_args * sizeof (struct field));
+	func_type->alloc_fields (num_args);
 	{
 	  int i;
 	  struct type_list *t;
@@ -2698,9 +2694,7 @@ read_member_functions (struct stab_field_info *fip, const char **pp,
     {
       ALLOCATE_CPLUS_STRUCT_TYPE (type);
       TYPE_FN_FIELDLISTS (type) = (struct fn_fieldlist *)
-	TYPE_ALLOC (type, sizeof (struct fn_fieldlist) * nfn_fields);
-      memset (TYPE_FN_FIELDLISTS (type), 0,
-	      sizeof (struct fn_fieldlist) * nfn_fields);
+	TYPE_ZALLOC (type, sizeof (struct fn_fieldlist) * nfn_fields);
       TYPE_NFN_FIELDS (type) = nfn_fields;
     }
 
@@ -2792,7 +2786,7 @@ read_cpp_abbrev (struct stab_field_info *fip, const char **pp,
 	  return 0;
       }
       /* This field is unpacked.  */
-      FIELD_BITSIZE (fip->list->field) = 0;
+      fip->list->field.set_bitsize (0);
       fip->list->visibility = VISIBILITY_PRIVATE;
     }
   else
@@ -2870,7 +2864,7 @@ read_one_struct_field (struct stab_field_info *fip, const char **pp,
 	stabs_general_complaint ("bad structure-type format");
 	return;
       }
-    FIELD_BITSIZE (fip->list->field) = read_huge_number (pp, ';', &nbits, 0);
+    fip->list->field.set_bitsize (read_huge_number (pp, ';', &nbits, 0));
     if (nbits != 0)
       {
 	stabs_general_complaint ("bad structure-type format");
@@ -2879,7 +2873,7 @@ read_one_struct_field (struct stab_field_info *fip, const char **pp,
   }
 
   if (fip->list->field.loc_bitpos () == 0
-      && FIELD_BITSIZE (fip->list->field) == 0)
+      && fip->list->field.bitsize () == 0)
     {
       /* This can happen in two cases: (1) at least for gcc 2.4.5 or so,
 	 it is a field which has been optimized out.  The correct stab for
@@ -2912,18 +2906,18 @@ read_one_struct_field (struct stab_field_info *fip, const char **pp,
 	  && field_type->code () != TYPE_CODE_BOOL
 	  && field_type->code () != TYPE_CODE_ENUM)
 	{
-	  FIELD_BITSIZE (fip->list->field) = 0;
+	  fip->list->field.set_bitsize (0);
 	}
-      if ((FIELD_BITSIZE (fip->list->field)
+      if ((fip->list->field.bitsize ()
 	   == TARGET_CHAR_BIT * field_type->length ()
 	   || (field_type->code () == TYPE_CODE_ENUM
-	       && FIELD_BITSIZE (fip->list->field)
-		  == gdbarch_int_bit (gdbarch))
+	       && (fip->list->field.bitsize ()
+		   == gdbarch_int_bit (gdbarch)))
 	  )
 	  &&
 	  fip->list->field.loc_bitpos () % 8 == 0)
 	{
-	  FIELD_BITSIZE (fip->list->field) = 0;
+	  fip->list->field.set_bitsize (0);
 	}
     }
 }
@@ -3074,18 +3068,16 @@ read_baseclasses (struct stab_field_info *fip, const char **pp,
   /* Some stupid compilers have trouble with the following, so break
      it up into simpler expressions.  */
   TYPE_FIELD_VIRTUAL_BITS (type) = (B_TYPE *)
-    TYPE_ALLOC (type, B_BYTES (TYPE_N_BASECLASSES (type)));
+    TYPE_ZALLOC (type, B_BYTES (TYPE_N_BASECLASSES (type)));
 #else
   {
     int num_bytes = B_BYTES (TYPE_N_BASECLASSES (type));
     char *pointer;
 
-    pointer = (char *) TYPE_ALLOC (type, num_bytes);
+    pointer = (char *) TYPE_ZALLOC (type, num_bytes);
     TYPE_FIELD_VIRTUAL_BITS (type) = (B_TYPE *) pointer;
   }
 #endif /* 0 */
-
-  B_CLRALL (TYPE_FIELD_VIRTUAL_BITS (type), TYPE_N_BASECLASSES (type));
 
   for (i = 0; i < TYPE_N_BASECLASSES (type); i++)
     {
@@ -3093,7 +3085,7 @@ read_baseclasses (struct stab_field_info *fip, const char **pp,
 
       newobj->next = fip->list;
       fip->list = newobj;
-      FIELD_BITSIZE (newobj->field) = 0;	/* This should be an unpacked
+      newobj->field.set_bitsize (0);	/* This should be an unpacked
 					   field!  */
 
       STABS_CONTINUE (pp, objfile);
@@ -3295,27 +3287,20 @@ attach_fields_to_type (struct stab_field_info *fip, struct type *type,
      non-public fields.  Record the field count, allocate space for the
      array of fields, and create blank visibility bitfields if necessary.  */
 
-  type->set_num_fields (nfields);
-  type->set_fields
-    ((struct field *)
-     TYPE_ALLOC (type, sizeof (struct field) * nfields));
-  memset (type->fields (), 0, sizeof (struct field) * nfields);
+  type->alloc_fields (nfields);
 
   if (non_public_fields)
     {
       ALLOCATE_CPLUS_STRUCT_TYPE (type);
 
       TYPE_FIELD_PRIVATE_BITS (type) =
-	(B_TYPE *) TYPE_ALLOC (type, B_BYTES (nfields));
-      B_CLRALL (TYPE_FIELD_PRIVATE_BITS (type), nfields);
+	(B_TYPE *) TYPE_ZALLOC (type, B_BYTES (nfields));
 
       TYPE_FIELD_PROTECTED_BITS (type) =
-	(B_TYPE *) TYPE_ALLOC (type, B_BYTES (nfields));
-      B_CLRALL (TYPE_FIELD_PROTECTED_BITS (type), nfields);
+	(B_TYPE *) TYPE_ZALLOC (type, B_BYTES (nfields));
 
       TYPE_FIELD_IGNORE_BITS (type) =
-	(B_TYPE *) TYPE_ALLOC (type, B_BYTES (nfields));
-      B_CLRALL (TYPE_FIELD_IGNORE_BITS (type), nfields);
+	(B_TYPE *) TYPE_ZALLOC (type, B_BYTES (nfields));
     }
 
   /* Copy the saved-up fields into the field vector.  Start from the
@@ -3644,11 +3629,7 @@ read_enum_type (const char **pp, struct type *type,
   type->set_is_stub (false);
   if (unsigned_enum)
     type->set_is_unsigned (true);
-  type->set_num_fields (nsyms);
-  type->set_fields
-    ((struct field *)
-     TYPE_ALLOC (type, sizeof (struct field) * nsyms));
-  memset (type->fields (), 0, sizeof (struct field) * nsyms);
+  type->alloc_fields (nsyms);
 
   /* Find the symbols for the values and put them into the type.
      The symbols can be found in the symlist that we put them on
@@ -3670,7 +3651,7 @@ read_enum_type (const char **pp, struct type *type,
 	  xsym->set_type (type);
 	  type->field (n).set_name (xsym->linkage_name ());
 	  type->field (n).set_loc_enumval (xsym->value_longest ());
-	  TYPE_FIELD_BITSIZE (type, n) = 0;
+	  type->field (n).set_bitsize (0);
 	}
       if (syms == osyms)
 	break;

@@ -43,6 +43,8 @@
 #include "f-lang.h"
 #include <algorithm>
 #include "gmp-utils.h"
+#include "rust-lang.h"
+#include "ada-lang.h"
 
 /* The value of an invalid conversion badness.  */
 #define INVALID_CONVERSION 100
@@ -597,9 +599,7 @@ lookup_function_type_with_arguments (struct type *type,
 	fn->set_is_prototyped (true);
     }
 
-  fn->set_num_fields (nparams);
-  fn->set_fields
-    ((struct field *) TYPE_ZALLOC (fn, nparams * sizeof (struct field)));
+  fn->alloc_fields (nparams);
   for (i = 0; i < nparams; ++i)
     fn->field (i).set_type (param_types[i]);
 
@@ -1319,12 +1319,12 @@ update_static_array_size (struct type *type)
       if (element_type->code () == TYPE_CODE_ARRAY
 	  && (stride != 0 || element_type->is_multi_dimensional ())
 	  && element_type->length () != 0
-	  && TYPE_FIELD_BITSIZE (element_type, 0) != 0
+	  && element_type->field (0).bitsize () != 0
 	  && get_array_bounds (element_type, &low_bound, &high_bound)
 	  && high_bound >= low_bound)
-	TYPE_FIELD_BITSIZE (type, 0)
-	  = ((high_bound - low_bound + 1)
-	     * TYPE_FIELD_BITSIZE (element_type, 0));
+	type->field (0).set_bitsize
+	  ((high_bound - low_bound + 1)
+	   * element_type->field (0).bitsize ());
 
       return true;
     }
@@ -1356,14 +1356,12 @@ create_array_type_with_stride (type_allocator &alloc,
   result_type->set_code (TYPE_CODE_ARRAY);
   result_type->set_target_type (element_type);
 
-  result_type->set_num_fields (1);
-  result_type->set_fields
-    ((struct field *) TYPE_ZALLOC (result_type, sizeof (struct field)));
+  result_type->alloc_fields (1);
   result_type->set_index_type (range_type);
   if (byte_stride_prop != NULL)
     result_type->add_dyn_prop (DYN_PROP_BYTE_STRIDE, *byte_stride_prop);
   else if (bit_stride > 0)
-    TYPE_FIELD_BITSIZE (result_type, 0) = bit_stride;
+    result_type->field (0).set_bitsize (bit_stride);
 
   if (!update_static_array_size (result_type))
     {
@@ -1442,9 +1440,7 @@ create_set_type (type_allocator &alloc, struct type *domain_type)
   struct type *result_type = alloc.new_type ();
 
   result_type->set_code (TYPE_CODE_SET);
-  result_type->set_num_fields (1);
-  result_type->set_fields
-    ((struct field *) TYPE_ZALLOC (result_type, sizeof (struct field)));
+  result_type->alloc_fields (1);
 
   if (!domain_type->is_stub ())
     {
@@ -1676,11 +1672,12 @@ struct type *
 lookup_unsigned_typename (const struct language_defn *language,
 			  const char *name)
 {
-  char *uns = (char *) alloca (strlen (name) + 10);
+  std::string uns;
+  uns.reserve (strlen (name) + strlen ("unsigned "));
+  uns = "unsigned ";
+  uns += name;
 
-  strcpy (uns, "unsigned ");
-  strcpy (uns + 9, name);
-  return lookup_typename (language, uns, NULL, 0);
+  return lookup_typename (language, uns.c_str (), NULL, 0);
 }
 
 struct type *
@@ -1766,16 +1763,14 @@ struct type *
 lookup_template_type (const char *name, struct type *type, 
 		      const struct block *block)
 {
-  struct symbol *sym;
-  char *nam = (char *) 
-    alloca (strlen (name) + strlen (type->name ()) + 4);
+  std::string nam;
+  nam.reserve (strlen (name) + strlen (type->name ()) + strlen ("< >"));
+  nam = name;
+  nam += "<";
+  nam += type->name ();
+  nam += " >"; /* FIXME, extra space still introduced in gcc?  */
 
-  strcpy (nam, name);
-  strcat (nam, "<");
-  strcat (nam, type->name ());
-  strcat (nam, " >");	/* FIXME, extra space still introduced in gcc?  */
-
-  sym = lookup_symbol (nam, block, VAR_DOMAIN, 0).symbol;
+  symbol *sym = lookup_symbol (nam.c_str (), block, VAR_DOMAIN, 0).symbol;
 
   if (sym == NULL)
     {
@@ -2336,7 +2331,7 @@ resolve_dynamic_array_or_string_1 (struct type *type,
 	}
     }
   else
-    bit_stride = TYPE_FIELD_BITSIZE (type, 0);
+    bit_stride = type->field (0).bitsize ();
 
   type_allocator alloc (type, type_allocator::SMASH);
   return create_array_type_with_stride (alloc, elt_type, range_type, NULL,
@@ -2452,13 +2447,7 @@ resolve_dynamic_union (struct type *type,
   gdb_assert (type->code () == TYPE_CODE_UNION);
 
   resolved_type = copy_type (type);
-  resolved_type->set_fields
-    ((struct field *)
-     TYPE_ALLOC (resolved_type,
-		 resolved_type->num_fields () * sizeof (struct field)));
-  memcpy (resolved_type->fields (),
-	  type->fields (),
-	  resolved_type->num_fields () * sizeof (struct field));
+  resolved_type->copy_fields (type);
   for (i = 0; i < resolved_type->num_fields (); ++i)
     {
       struct type *t;
@@ -2562,7 +2551,7 @@ compute_variant_fields_inner (struct type *type,
 			    + (type->field (idx).loc_bitpos ()
 			       / TARGET_CHAR_BIT));
 
-	  LONGEST bitsize = TYPE_FIELD_BITSIZE (type, idx);
+	  LONGEST bitsize = type->field (idx).bitsize ();
 	  LONGEST size = bitsize / 8;
 	  if (size == 0)
 	    size = type->field (idx).type ()->length ();
@@ -2618,12 +2607,10 @@ compute_variant_fields (struct type *type,
   for (const auto &part : parts)
     compute_variant_fields_inner (type, addr_stack, part, flags);
 
-  resolved_type->set_num_fields
-    (std::count (flags.begin (), flags.end (), true));
-  resolved_type->set_fields
-    ((struct field *)
-     TYPE_ALLOC (resolved_type,
-		 resolved_type->num_fields () * sizeof (struct field)));
+  unsigned int nfields = std::count (flags.begin (), flags.end (), true);
+  /* No need to zero-initialize the newly allocated fields, they'll be
+     initialized by the copy in the loop below.  */
+  resolved_type->alloc_fields (nfields, false);
 
   int out = 0;
   for (int i = 0; i < type->num_fields (); ++i)
@@ -2664,14 +2651,7 @@ resolve_dynamic_struct (struct type *type,
     }
   else
     {
-      resolved_type->set_fields
-	((struct field *)
-	 TYPE_ALLOC (resolved_type,
-		     resolved_type->num_fields () * sizeof (struct field)));
-      if (type->num_fields () > 0)
-	memcpy (resolved_type->fields (),
-		type->fields (),
-		resolved_type->num_fields () * sizeof (struct field));
+      resolved_type->copy_fields (type);
     }
 
   for (i = 0; i < resolved_type->num_fields (); ++i)
@@ -2725,8 +2705,8 @@ resolve_dynamic_struct (struct type *type,
 		  == FIELD_LOC_KIND_BITPOS);
 
       new_bit_length = resolved_type->field (i).loc_bitpos ();
-      if (TYPE_FIELD_BITSIZE (resolved_type, i) != 0)
-	new_bit_length += TYPE_FIELD_BITSIZE (resolved_type, i);
+      if (resolved_type->field (i).bitsize () != 0)
+	new_bit_length += resolved_type->field (i).bitsize ();
       else
 	{
 	  struct type *real_type
@@ -3228,7 +3208,7 @@ check_stub_method (struct type *type, int method_id, int signature_id)
   /* We need one extra slot, for the THIS pointer.  */
 
   argtypes = (struct field *)
-    TYPE_ALLOC (type, (argcount + 1) * sizeof (struct field));
+    TYPE_ZALLOC (type, (argcount + 1) * sizeof (struct field));
   p = argtypetext;
 
   /* Add THIS pointer for non-static methods.  */
@@ -3318,7 +3298,7 @@ allocate_cplus_struct_type (struct type *type)
 
   TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_CPLUS_STUFF;
   TYPE_RAW_CPLUS_SPECIFIC (type) = (struct cplus_struct_type *)
-    TYPE_ALLOC (type, sizeof (struct cplus_struct_type));
+    TYPE_ZALLOC (type, sizeof (struct cplus_struct_type));
   *(TYPE_RAW_CPLUS_SPECIFIC (type)) = cplus_struct_default;
   set_type_vptr_fieldno (type, -1);
 }
@@ -3335,7 +3315,7 @@ allocate_gnat_aux_type (struct type *type)
 {
   TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_GNAT_STUFF;
   TYPE_GNAT_SPECIFIC (type) = (struct gnat_aux_type *)
-    TYPE_ALLOC (type, sizeof (struct gnat_aux_type));
+    TYPE_ZALLOC (type, sizeof (struct gnat_aux_type));
   *(TYPE_GNAT_SPECIFIC (type)) = gnat_aux_default;
 }
 
@@ -3475,6 +3455,8 @@ init_complex_type (const char *name, struct type *target_type)
     {
       if (name == nullptr && target_type->name () != nullptr)
 	{
+	  /* No zero-initialization required, initialized by strcpy/strcat
+	     below.  */
 	  char *new_name
 	    = (char *) TYPE_ALLOC (target_type,
 				   strlen (target_type->name ())
@@ -4262,8 +4244,8 @@ check_types_equal (struct type *type1, struct type *type2,
 	  const struct field *field1 = &type1->field (i);
 	  const struct field *field2 = &type2->field (i);
 
-	  if (FIELD_ARTIFICIAL (*field1) != FIELD_ARTIFICIAL (*field2)
-	      || FIELD_BITSIZE (*field1) != FIELD_BITSIZE (*field2)
+	  if (field1->is_artificial () != field2->is_artificial ()
+	      || field1->bitsize () != field2->bitsize ()
 	      || field1->loc_kind () != field2->loc_kind ())
 	    return false;
 	  if (!compare_maybe_null_strings (field1->name (), field2->name ()))
@@ -5368,7 +5350,7 @@ recursive_dump_type (struct type *type, int spaces)
       else
 	gdb_printf ("%*s[%d] bitpos %s bitsize %d type ", spaces + 2, "",
 		    idx, plongest (type->field (idx).loc_bitpos ()),
-		    TYPE_FIELD_BITSIZE (type, idx));
+		    type->field (idx).bitsize ());
       gdb_printf ("%s name '%s' (%s)\n",
 		  host_address_to_string (type->field (idx).type ()),
 		  type->field (idx).name () != NULL
@@ -5401,6 +5383,10 @@ recursive_dump_type (struct type *type, int spaces)
       gdb_printf ("%*sgnat_stuff %s\n", spaces, "",
 		  host_address_to_string (TYPE_GNAT_SPECIFIC (type)));
       print_gnat_stuff (type, spaces);
+      break;
+
+    case TYPE_SPECIFIC_RUST_STUFF:
+      gdb_printf ("%*srust\n", spaces, "");
       break;
 
     case TYPE_SPECIFIC_FLOATFORMAT:
@@ -5556,15 +5542,13 @@ copy_type_recursive (struct type *type, htab_t copied_types)
       int i, nfields;
 
       nfields = type->num_fields ();
-      new_type->set_fields
-	((struct field *)
-	 TYPE_ZALLOC (new_type, nfields * sizeof (struct field)));
+      new_type->alloc_fields (type->num_fields ());
 
       for (i = 0; i < nfields; i++)
 	{
-	  TYPE_FIELD_ARTIFICIAL (new_type, i) = 
-	    TYPE_FIELD_ARTIFICIAL (type, i);
-	  TYPE_FIELD_BITSIZE (new_type, i) = TYPE_FIELD_BITSIZE (type, i);
+	  new_type->field (i).set_is_artificial
+	    (type->field (i).is_artificial ());
+	  new_type->field (i).set_bitsize (type->field (i).bitsize ());
 	  if (type->field (i).type ())
 	    new_type->field (i).set_type
 	      (copy_type_recursive (type->field (i).type (), copied_types));
@@ -5645,6 +5629,9 @@ copy_type_recursive (struct type *type, htab_t copied_types)
     case TYPE_SPECIFIC_GNAT_STUFF:
       INIT_GNAT_SPECIFIC (new_type);
       break;
+    case TYPE_SPECIFIC_RUST_STUFF:
+      INIT_RUST_SPECIFIC (new_type);
+      break;
     case TYPE_SPECIFIC_SELF_TYPE:
       set_type_self_type (new_type,
 			  copy_type_recursive (TYPE_SELF_TYPE (type),
@@ -5703,10 +5690,9 @@ arch_flags_type (struct gdbarch *gdbarch, const char *name, int bit)
 
   type = type_allocator (gdbarch).new_type (TYPE_CODE_FLAGS, bit, name);
   type->set_is_unsigned (true);
-  type->set_num_fields (0);
   /* Pre-allocate enough space assuming every field is one bit.  */
-  type->set_fields
-    ((struct field *) TYPE_ZALLOC (type, bit * sizeof (struct field)));
+  type->alloc_fields (bit);
+  type->set_num_fields (0);
 
   return type;
 }
@@ -5732,7 +5718,7 @@ append_flags_type_field (struct type *type, int start_bitpos, int nr_bits,
   type->field (field_nr).set_name (xstrdup (name));
   type->field (field_nr).set_type (field_type);
   type->field (field_nr).set_loc_bitpos (start_bitpos);
-  TYPE_FIELD_BITSIZE (type, field_nr) = nr_bits;
+  type->field (field_nr).set_bitsize (nr_bits);
 }
 
 /* Special version of append_flags_type_field to add a flag field.
@@ -5910,6 +5896,69 @@ type::fixed_point_scaling_factor ()
   struct type *type = this->fixed_point_type_base_type ();
 
   return type->fixed_point_info ().scaling_factor;
+}
+
+/* See gdbtypes.h.  */
+
+void
+type::alloc_fields (unsigned int nfields, bool init)
+{
+  this->set_num_fields (nfields);
+
+  if (nfields == 0)
+    {
+      this->main_type->flds_bnds.fields = nullptr;
+      return;
+    }
+
+  size_t size = nfields * sizeof (*this->fields ());
+  struct field *fields
+    = (struct field *) (init
+			? TYPE_ZALLOC (this, size)
+			: TYPE_ALLOC (this, size));
+
+  this->main_type->flds_bnds.fields = fields;
+}
+
+/* See gdbtypes.h.  */
+
+void
+type::copy_fields (struct type *src)
+{
+  unsigned int nfields = src->num_fields ();
+  alloc_fields (nfields, false);
+  if (nfields == 0)
+    return;
+
+  size_t size = nfields * sizeof (*this->fields ());
+  memcpy (this->fields (), src->fields (), size);
+}
+
+/* See gdbtypes.h.  */
+
+void
+type::copy_fields (std::vector<struct field> &src)
+{
+  unsigned int nfields = src.size ();
+  alloc_fields (nfields, false);
+  if (nfields == 0)
+    return;
+
+  size_t size = nfields * sizeof (*this->fields ());
+  memcpy (this->fields (), src.data (), size);
+}
+
+bool
+type::is_array_like ()
+{
+  if (code () == TYPE_CODE_ARRAY)
+    return true;
+  if (HAVE_GNAT_AUX_INFO (this))
+    return (ada_is_constrained_packed_array_type (this)
+	    || ada_is_array_descriptor_type (this));
+  if (HAVE_RUST_SPECIFIC (this))
+    return rust_slice_type_p (this);
+  return false;
 }
 
 

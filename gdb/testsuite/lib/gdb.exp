@@ -9954,6 +9954,8 @@ gdb_caching_proc host_locales { } {
 
     # Normalize items to lower-case.
     set l [lmap v $l { string tolower $v }]
+    # Normalize items to without dash.
+    set l [lmap v $l { string map { "-" "" } $v }]
 
     return $l
 }
@@ -9968,6 +9970,14 @@ proc have_host_locale { locale } {
 
     set idx [lsearch [host_locales] $locale]
     return [expr $idx != -1]
+}
+
+# Return 1 if we can use '#include <$file>' in source file.
+
+gdb_caching_proc have_system_header { file } {
+    set src "#include <$file>"
+    set name [string map { "/" "_sep_" } $file]
+    return [gdb_can_simple_compile have_system_header_$name $src object]
 }
 
 # Always load compatibility stuff.

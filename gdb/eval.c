@@ -1155,6 +1155,23 @@ string_operation::evaluate (struct type *expect_type,
   return value_string (str.c_str (), str.size (), type);
 }
 
+struct value *
+ternop_slice_operation::evaluate (struct type *expect_type,
+				  struct expression *exp,
+				  enum noside noside)
+{
+  struct value *array
+    = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
+  struct value *low
+    = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
+  struct value *upper
+    = std::get<2> (m_storage)->evaluate (nullptr, exp, noside);
+
+  int lowbound = value_as_long (low);
+  int upperbound = value_as_long (upper);
+  return value_slice (array, lowbound, upperbound - lowbound + 1);
+}
+
 } /* namespace expr */
 
 /* Helper function that implements the body of OP_OBJC_SELECTOR.  */
@@ -1167,18 +1184,6 @@ eval_op_objc_selector (struct type *expect_type, struct expression *exp,
   struct type *selector_type = builtin_type (exp->gdbarch)->builtin_data_ptr;
   return value_from_longest (selector_type,
 			     lookup_child_selector (exp->gdbarch, sel));
-}
-
-/* A helper function for TERNOP_SLICE.  */
-
-struct value *
-eval_op_ternop (struct type *expect_type, struct expression *exp,
-		enum noside noside,
-		struct value *array, struct value *low, struct value *upper)
-{
-  int lowbound = value_as_long (low);
-  int upperbound = value_as_long (upper);
-  return value_slice (array, lowbound, upperbound - lowbound + 1);
 }
 
 /* A helper function for STRUCTOP_STRUCT.  */
@@ -2378,7 +2383,7 @@ array_operation::evaluate_struct_tuple (struct value *struct_val,
       if (val->type () != field_type)
 	val = value_cast (field_type, val);
 
-      bitsize = TYPE_FIELD_BITSIZE (struct_type, fieldno);
+      bitsize = struct_type->field (fieldno).bitsize ();
       bitpos = struct_type->field (fieldno).loc_bitpos ();
       addr = struct_val->contents_writeable ().data () + bitpos / 8;
       if (bitsize)
@@ -2397,11 +2402,9 @@ array_operation::evaluate (struct type *expect_type,
 			   struct expression *exp,
 			   enum noside noside)
 {
-  int tem;
-  int tem2 = std::get<0> (m_storage);
-  int tem3 = std::get<1> (m_storage);
+  const int provided_low_bound = std::get<0> (m_storage);
   const std::vector<operation_up> &in_args = std::get<2> (m_storage);
-  int nargs = tem3 - tem2 + 1;
+  const int nargs = std::get<1> (m_storage) - provided_low_bound + 1;
   struct type *type = expect_type ? check_typedef (expect_type) : nullptr;
 
   if (expect_type != nullptr
@@ -2420,31 +2423,26 @@ array_operation::evaluate (struct type *expect_type,
       struct type *element_type = type->target_type ();
       struct value *array = value::allocate (expect_type);
       int element_size = check_typedef (element_type)->length ();
-      LONGEST low_bound, high_bound, index;
+      LONGEST low_bound, high_bound;
 
       if (!get_discrete_bounds (range_type, &low_bound, &high_bound))
 	{
 	  low_bound = 0;
 	  high_bound = (type->length () / element_size) - 1;
 	}
-      index = low_bound;
+      if (low_bound + nargs - 1 > high_bound)
+	error (_("Too many array elements"));
       memset (array->contents_raw ().data (), 0, expect_type->length ());
-      for (tem = nargs; --nargs >= 0;)
+      for (int idx = 0; idx < nargs; ++idx)
 	{
 	  struct value *element;
 
-	  element = in_args[index - low_bound]->evaluate (element_type,
-							  exp, noside);
+	  element = in_args[idx]->evaluate (element_type, exp, noside);
 	  if (element->type () != element_type)
 	    element = value_cast (element_type, element);
-	  if (index > high_bound)
-	    /* To avoid memory corruption.  */
-	    error (_("Too many array elements"));
-	  memcpy (array->contents_raw ().data ()
-		  + (index - low_bound) * element_size,
+	  memcpy (array->contents_raw ().data () + idx * element_size,
 		  element->contents ().data (),
 		  element_size);
-	  index++;
 	}
       return array;
     }
@@ -2466,14 +2464,13 @@ array_operation::evaluate (struct type *expect_type,
       if (!get_discrete_bounds (element_type, &low_bound, &high_bound))
 	error (_("(power)set type with unknown size"));
       memset (valaddr, '\0', type->length ());
-      int idx = 0;
-      for (tem = 0; tem < nargs; tem++)
+      for (int idx = 0; idx < nargs; idx++)
 	{
 	  LONGEST range_low, range_high;
 	  struct type *range_low_type, *range_high_type;
 	  struct value *elem_val;
 
-	  elem_val = in_args[idx++]->evaluate (element_type, exp, noside);
+	  elem_val = in_args[idx]->evaluate (element_type, exp, noside);
 	  range_low_type = range_high_type = elem_val->type ();
 	  range_low = range_high = value_as_long (elem_val);
 
@@ -2515,14 +2512,14 @@ array_operation::evaluate (struct type *expect_type,
       return set;
     }
 
-  value **argvec = XALLOCAVEC (struct value *, nargs);
-  for (tem = 0; tem < nargs; tem++)
+  std::vector<value *> argvec (nargs);
+  for (int tem = 0; tem < nargs; tem++)
     {
       /* Ensure that array expressions are coerced into pointer
 	 objects.  */
       argvec[tem] = in_args[tem]->evaluate_with_coercion (exp, noside);
     }
-  return value_array (tem2, tem3, argvec);
+  return value_array (provided_low_bound, argvec);
 }
 
 value *

@@ -1263,8 +1263,8 @@ inline struct value *value_string (const char *ptr, ssize_t count,
   return value_string ((const gdb_byte *) ptr, count, char_type);
 }
 
-extern struct value *value_array (int lowbound, int highbound,
-				  struct value **elemvec);
+extern struct value *value_array (int lowbound,
+				  gdb::array_view<struct value *> elemvec);
 
 extern struct value *value_concat (struct value *arg1, struct value *arg2);
 
@@ -1356,6 +1356,10 @@ extern struct value *value_one (struct type *type);
 extern struct value *value_repeat (struct value *arg1, int count);
 
 extern struct value *value_subscript (struct value *array, LONGEST index);
+
+/* Assuming VAL is array-like (see type::is_array_like), return an
+   array form of VAL.  */
+extern struct value *value_to_array (struct value *val);
 
 extern struct value *value_bitstring_subscript (struct type *type,
 						struct value *bitstring,

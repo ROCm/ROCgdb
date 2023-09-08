@@ -204,6 +204,7 @@ struct dummy_target : public target_ops
   bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1) override;
+  x86_xsave_layout fetch_x86_xsave_layout () override;
 };
 
 struct debug_target : public target_ops
@@ -386,6 +387,7 @@ struct debug_target : public target_ops
   bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1) override;
+  x86_xsave_layout fetch_x86_xsave_layout () override;
 };
 
 void
@@ -4759,6 +4761,31 @@ debug_target::displaced_step_finish (thread_info *arg0, const target_waitstatus 
   target_debug_print_const_target_waitstatus_r (arg1);
   gdb_puts (") = ", gdb_stdlog);
   target_debug_print_displaced_step_finish_status (result);
+  gdb_puts ("\n", gdb_stdlog);
+  return result;
+}
+
+x86_xsave_layout
+target_ops::fetch_x86_xsave_layout ()
+{
+  return this->beneath ()->fetch_x86_xsave_layout ();
+}
+
+x86_xsave_layout
+dummy_target::fetch_x86_xsave_layout ()
+{
+  return x86_xsave_layout ();
+}
+
+x86_xsave_layout
+debug_target::fetch_x86_xsave_layout ()
+{
+  x86_xsave_layout result;
+  gdb_printf (gdb_stdlog, "-> %s->fetch_x86_xsave_layout (...)\n", this->beneath ()->shortname ());
+  result = this->beneath ()->fetch_x86_xsave_layout ();
+  gdb_printf (gdb_stdlog, "<- %s->fetch_x86_xsave_layout (", this->beneath ()->shortname ());
+  gdb_puts (") = ", gdb_stdlog);
+  target_debug_print_x86_xsave_layout (result);
   gdb_puts ("\n", gdb_stdlog);
   return result;
 }

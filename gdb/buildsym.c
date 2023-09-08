@@ -264,10 +264,7 @@ buildsym_compunit::finish_block_internal
 	    }
 	  if (nparams > 0)
 	    {
-	      ftype->set_num_fields (nparams);
-	      ftype->set_fields
-		((struct field *)
-		 TYPE_ALLOC (ftype, nparams * sizeof (struct field)));
+	      ftype->alloc_fields (nparams);
 
 	      iparams = 0;
 	      /* Here we want to directly access the dictionary, because
@@ -280,7 +277,7 @@ buildsym_compunit::finish_block_internal
 		  if (sym->is_argument ())
 		    {
 		      ftype->field (iparams).set_type (sym->type ());
-		      TYPE_FIELD_ARTIFICIAL (ftype, iparams) = 0;
+		      ftype->field (iparams).set_is_artificial (false);
 		      iparams++;
 		    }
 		}

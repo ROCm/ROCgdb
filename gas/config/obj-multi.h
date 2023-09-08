@@ -145,17 +145,17 @@
 	 ? (*this_format->copy_symbol_attributes) (d, s) \
 	 : (void) 0)
 
-#define OBJ_PROCESS_STAB(SEG,W,S,T,O,D)			\
+#define OBJ_PROCESS_STAB(W,S,T,O,D)			\
 	(this_format->process_stab			\
-	 ? (*this_format->process_stab) (SEG,W,S,T,O,D)	\
+	 ? (*this_format->process_stab) (W,S,T,O,D)	\
 	 : (void) 0)
 
 #define SEPARATE_STAB_SECTIONS \
 	((*this_format->separate_stab_sections) ())
 
-#define INIT_STAB_SECTION(S)				\
+#define INIT_STAB_SECTION(STAB, STR)			\
 	(this_format->init_stab_section			\
-	 ? (*this_format->init_stab_section) (S)	\
+	 ? (*this_format->init_stab_section) (STAB, STR) \
 	 : (void) 0)
 
 #define EMIT_SECTION_SYMBOLS (this_format->emit_section_symbols)

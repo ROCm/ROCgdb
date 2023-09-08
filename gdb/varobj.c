@@ -169,8 +169,6 @@ create_child_with_value (struct varobj *parent, int index,
 
 /* Utility routines */
 
-static enum varobj_display_formats variable_default_display (struct varobj *);
-
 static bool update_type_if_necessary (struct varobj *var,
 				      struct value *new_value);
 
@@ -341,7 +339,7 @@ varobj_create (const char *objname,
 	  return NULL;
 	}
 
-      var->format = variable_default_display (var.get ());
+      var->format = FORMAT_NATURAL;
       var->root->valid_block =
 	var->root->floating ? NULL : tracker.block ();
       var->root->global
@@ -499,20 +497,7 @@ enum varobj_display_formats
 varobj_set_display_format (struct varobj *var,
 			   enum varobj_display_formats format)
 {
-  switch (format)
-    {
-    case FORMAT_NATURAL:
-    case FORMAT_BINARY:
-    case FORMAT_DECIMAL:
-    case FORMAT_HEXADECIMAL:
-    case FORMAT_OCTAL:
-    case FORMAT_ZHEXADECIMAL:
-      var->format = format;
-      break;
-
-    default:
-      var->format = variable_default_display (var);
-    }
+  var->format = format;
 
   if (varobj_value_is_changeable_p (var) 
       && var->value != nullptr && !var->value->lazy ())
@@ -1462,6 +1447,9 @@ varobj_set_visualizer (struct varobj *var, const char *visualizer)
   /* If there are any children now, wipe them.  */
   varobj_delete (var, 1 /* children only */);
   var->num_children = -1;
+
+  /* Also be sure to reset the print value.  */
+  varobj_set_display_format (var, var->format);
 #else
   error (_("Python support required"));
 #endif
@@ -1938,14 +1926,6 @@ varobj_get_value_type (const struct varobj *var)
   return type;
 }
 
-/* What is the default display for this variable? We assume that
-   everything is "natural".  Any exceptions?  */
-static enum varobj_display_formats
-variable_default_display (struct varobj *var)
-{
-  return FORMAT_NATURAL;
-}
-
 /*
  * Language-dependencies
  */
@@ -2178,6 +2158,9 @@ my_value_of_variable (struct varobj *var, enum varobj_display_formats format)
       if (var->dynamic->pretty_printer != NULL)
 	return varobj_value_get_print_value (var->value.get (), var->format,
 					     var);
+      else if (var->parent != nullptr && varobj_is_dynamic_p (var->parent))
+	return var->print_value;
+
       return (*var->root->lang_ops->value_of_variable) (var, format);
     }
   else
@@ -2292,6 +2275,12 @@ varobj_value_get_print_value (struct value *value,
 	      if (PyObject_HasAttr (value_formatter, gdbpy_children_cst))
 		return "{...}";
 	    }
+	}
+      else
+	{
+	  /* If we've made it here, we don't want a pretty-printer --
+	     if we had one, it would already have been used.  */
+	  opts.raw = true;
 	}
     }
 #endif

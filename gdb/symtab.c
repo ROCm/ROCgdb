@@ -436,7 +436,7 @@ compunit_symtab::language () const
 CORE_ADDR
 minimal_symbol::value_address (objfile *objfile) const
 {
-  if (this->maybe_copied)
+  if (this->maybe_copied (objfile))
     return get_msymbol_address (objfile, this);
   else
     return (CORE_ADDR (this->unrelocated_address ())
@@ -466,6 +466,16 @@ minimal_symbol::text_p () const
     || m_type == mst_slot_got_plt
     || m_type == mst_solib_trampoline
     || m_type == mst_file_text;
+}
+
+/* See symtab.h.  */
+
+bool
+minimal_symbol::maybe_copied (objfile *objfile) const
+{
+  return (objfile->object_format_has_copy_relocs
+	  && (objfile->flags & OBJF_MAINLINE) == 0
+	  && (m_type == mst_data || m_type == mst_bss));
 }
 
 /* See whether FILENAME matches SEARCH_NAME using the rule that we
@@ -566,6 +576,10 @@ iterate_over_some_symtabs (const char *name,
 
   for (cust = first; cust != NULL && cust != after_last; cust = cust->next)
     {
+      /* Skip included compunits.  */
+      if (cust->user != nullptr)
+	continue;
+
       for (symtab *s : cust->filetabs ())
 	{
 	  if (compare_filenames_for_search (s->filename, name))
@@ -2279,8 +2293,7 @@ lookup_symbol_in_objfile_symtabs (struct objfile *objfile,
 	  other = result;
 	  break;
 	}
-      if (symbol_matches_domain (result.symbol->language (),
-				 result.symbol->domain (), domain))
+      if (result.symbol->matches (domain))
 	{
 	  struct symbol *better
 	    = better_symbol (other.symbol, result.symbol, domain);
@@ -2667,9 +2680,10 @@ basic_lookup_transparent_type_quick (struct objfile *objfile,
 
   bv = cust->blockvector ();
   block = bv->block (block_index);
-  sym = block_find_symbol (block, name, STRUCT_DOMAIN,
-			   block_find_non_opaque_type, NULL);
-  if (sym == NULL)
+
+  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
+  sym = block_find_symbol (block, lookup_name, STRUCT_DOMAIN, nullptr);
+  if (sym == nullptr)
     error_in_psymtab_expansion (block_index, name, cust);
   gdb_assert (!TYPE_IS_OPAQUE (sym->type ()));
   return sym->type ();
@@ -2688,13 +2702,13 @@ basic_lookup_transparent_type_1 (struct objfile *objfile,
   const struct block *block;
   const struct symbol *sym;
 
+  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
   for (compunit_symtab *cust : objfile->compunits ())
     {
       bv = cust->blockvector ();
       block = bv->block (block_index);
-      sym = block_find_symbol (block, name, STRUCT_DOMAIN,
-			       block_find_non_opaque_type, NULL);
-      if (sym != NULL)
+      sym = block_find_symbol (block, lookup_name, STRUCT_DOMAIN, nullptr);
+      if (sym != nullptr)
 	{
 	  gdb_assert (!TYPE_IS_OPAQUE (sym->type ()));
 	  return sym->type ();
@@ -2768,7 +2782,7 @@ iterate_over_symbols (const struct block *block,
 {
   for (struct symbol *sym : block_iterator_range (block, &name))
     {
-      if (symbol_matches_domain (sym->language (), sym->domain (), domain))
+      if (sym->matches (domain))
 	{
 	  struct block_symbol block_sym = {sym, block};
 
@@ -6515,7 +6529,7 @@ get_symbol_address (const struct symbol *sym)
 CORE_ADDR
 get_msymbol_address (struct objfile *objf, const struct minimal_symbol *minsym)
 {
-  gdb_assert (minsym->maybe_copied);
+  gdb_assert (minsym->maybe_copied (objf));
   gdb_assert ((objf->flags & OBJF_MAINLINE) == 0);
 
   const char *linkage_name = minsym->linkage_name ();

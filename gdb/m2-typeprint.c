@@ -570,15 +570,14 @@ m2_record_fields (struct type *type, struct ui_file *stream, int show,
 	  m2_print_type (type->field (i).type (),
 			 "",
 			 stream, 0, level + 4, flags);
-	  if (TYPE_FIELD_PACKED (type, i))
+	  if (type->field (i).is_packed ())
 	    {
 	      /* It is a bitfield.  This code does not attempt
 		 to look at the bitpos and reconstruct filler,
 		 unnamed fields.  This would lead to misleading
 		 results if the compiler does not put out fields
 		 for such things (I don't know what it does).  */
-	      gdb_printf (stream, " : %d",
-			  TYPE_FIELD_BITSIZE (type, i));
+	      gdb_printf (stream, " : %d", type->field (i).bitsize ());
 	    }
 	  gdb_printf (stream, ";\n");
 	}
