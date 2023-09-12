@@ -19,6 +19,9 @@ QThreadOptions in qSupported
   QThreadOptions packet, and the qSupported response can contain the
   set of thread options the remote stub supports.
 
+* Building GDB and GDBserver now requires a C++17 compiler.
+  For example, GCC 9 or later.
+
 * GDB now supports the AArch64 Scalable Matrix Extension 2 (SME2), which
   includes a new 512 bit lookup table register named ZT0.
 
