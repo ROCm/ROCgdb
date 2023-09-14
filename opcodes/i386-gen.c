@@ -229,9 +229,12 @@ static const dependency isa_dependencies[] =
   { "GFNI",
     "SSE2" },
   { "VAES",
-    "AVX2" },
+    "AVX2|AES" },
   { "VPCLMULQDQ",
-    "AVX2" },
+    "AVX2|PCLMULQDQ" },
+  { "AVX10_1",
+    "AVX512VL|AVX512DQ|AVX512CD|AVX512VBMI|AVX512_VBMI2|AVX512IFMA"
+    "|AVX512_VNNI|AVX512_BF16|AVX512_FP16|AVX512_VPOPCNTDQ|AVX512_BITALG" },
   { "SEV_ES",
     "SVME" },
   { "SNP",
@@ -461,6 +464,7 @@ static bitfield opcode_modifiers[] =
   BITFIELD (StaticRounding),
   BITFIELD (SAE),
   BITFIELD (Disp8MemShift),
+  BITFIELD (Vsz),
   BITFIELD (Optimize),
   BITFIELD (ATTMnemonic),
   BITFIELD (ATTSyntax),
@@ -712,7 +716,8 @@ add_isa_dependencies (bitfield *flags, const char *f, int value,
   unsigned int i;
   char *str = NULL;
   const char *isa = f;
-  bool is_isa = false, is_avx = false;
+  static bool is_avx;
+  bool is_isa = false, orig_is_avx = is_avx;
 
   /* Need to find base entry for references to auxiliary ones.  */
   if (strchr (f, ':'))
@@ -732,7 +737,7 @@ add_isa_dependencies (bitfield *flags, const char *f, int value,
 	    && reverse > Cpu686)
 	  isa_reverse_deps[i][reverse] = 1;
 	is_isa = true;
-	if (i == CpuAVX || i == CpuXOP)
+	if (i == CpuAVX || i == CpuXOP || i == CpuVAES || i == CpuVPCLMULQDQ)
 	  is_avx = true;
 	break;
       }
@@ -740,7 +745,10 @@ add_isa_dependencies (bitfield *flags, const char *f, int value,
 
   /* Do not turn off dependencies.  */
   if (is_isa && !value)
-    return;
+    {
+      is_avx = orig_is_avx;
+      return;
+    }
 
   for (i = 0; i < ARRAY_SIZE (isa_dependencies); ++i)
     if (strcasecmp (isa_dependencies[i].name, f) == 0)
@@ -765,11 +773,14 @@ add_isa_dependencies (bitfield *flags, const char *f, int value,
 	if (reverse < ARRAY_SIZE (isa_reverse_deps[0]))
 	  isa_reverse_deps[reverse][reverse] = 1;
 
+	is_avx = orig_is_avx;
 	return;
       }
 
   if (!is_isa)
     fail ("unknown bitfield: %s\n", f);
+
+  is_avx = orig_is_avx;
 }
 
 static void
