@@ -35585,6 +35585,28 @@ If the @code{--skip-unavailable} option is specified, local variables
 and arguments that are not available are not listed.  Partially
 available arguments and local variables are still displayed, however.
 
+@smallexample
+@group
+1: int x = 3;
+2: @{
+3:       int x = 4;
+4:       int y = 5;
+5:       x = 99; // breakpoint-line
+6: @}
+@end group
+@group
+(gdb) -stack-list-variables 2
+^done,variables=[@{name="x",type="int",value="4",
+filename="name.c",fullname="/home/src/name.c",line="3"@},
+@{name="y",type="int",value="5"@},@{name="x",type="int",
+value="3",filename="name.c",fullname="/home/src/name.c",
+line="1",shadowed="true"@}]
+@end group
+@end smallexample
+
+The location information and @samp{shadowed} attributes are only added
+when variable shadowing is detected (@pxref{shadowed variables}).
+
 @subsubheading Example
 
 @smallexample
