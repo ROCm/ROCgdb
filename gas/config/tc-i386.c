@@ -1785,10 +1785,11 @@ cpu_flags_equal (const union i386_cpu_flags *x,
 }
 
 static INLINE int
-cpu_flags_check_cpu64 (i386_cpu_attr a)
+cpu_flags_check_cpu64 (const insn_template *t)
 {
-  return !((flag_code == CODE_64BIT && a.bitfield.cpuno64)
-	   || (flag_code != CODE_64BIT && a.bitfield.cpu64));
+  return flag_code == CODE_64BIT
+	 ? !t->cpu.bitfield.cpuno64
+	 : !t->cpu.bitfield.cpu64;
 }
 
 static INLINE i386_cpu_flags
@@ -1883,7 +1884,7 @@ static int
 cpu_flags_match (const insn_template *t)
 {
   i386_cpu_flags x = cpu_flags_from_attr (t->cpu);
-  int match = cpu_flags_check_cpu64 (t->cpu) ? CPU_FLAGS_64BIT_MATCH : 0;
+  int match = cpu_flags_check_cpu64 (t) ? CPU_FLAGS_64BIT_MATCH : 0;
 
   x.bitfield.cpu64 = 0;
   x.bitfield.cpuno64 = 0;
@@ -2609,37 +2610,24 @@ add_prefix (unsigned int prefix)
 static void
 update_code_flag (int value, int check)
 {
-  PRINTF_LIKE ((*as_error));
+  PRINTF_LIKE ((*as_error)) = check ? as_fatal : as_bad;
 
-  flag_code = (enum flag_code) value;
-  if (flag_code == CODE_64BIT)
+  if (value == CODE_64BIT && !cpu_arch_flags.bitfield.cpu64 )
     {
-      cpu_arch_flags.bitfield.cpu64 = 1;
-      cpu_arch_flags.bitfield.cpuno64 = 0;
+      as_error (_("64bit mode not supported on `%s'."),
+		cpu_arch_name ? cpu_arch_name : default_arch);
+      return;
     }
-  else
-    {
-      cpu_arch_flags.bitfield.cpu64 = 0;
-      cpu_arch_flags.bitfield.cpuno64 = 1;
-    }
-  if (value == CODE_64BIT && !cpu_arch_flags.bitfield.cpulm )
-    {
-      if (check)
-	as_error = as_fatal;
-      else
-	as_error = as_bad;
-      (*as_error) (_("64bit mode not supported on `%s'."),
-		   cpu_arch_name ? cpu_arch_name : default_arch);
-    }
+
   if (value == CODE_32BIT && !cpu_arch_flags.bitfield.cpui386)
     {
-      if (check)
-	as_error = as_fatal;
-      else
-	as_error = as_bad;
-      (*as_error) (_("32bit mode not supported on `%s'."),
-		   cpu_arch_name ? cpu_arch_name : default_arch);
+      as_error (_("32bit mode not supported on `%s'."),
+		cpu_arch_name ? cpu_arch_name : default_arch);
+      return;
     }
+
+  flag_code = (enum flag_code) value;
+
   stackop_size = '\0';
 }
 
@@ -2655,8 +2643,6 @@ set_16bit_gcc_code_flag (int new_code_flag)
   flag_code = (enum flag_code) new_code_flag;
   if (flag_code != CODE_16BIT)
     abort ();
-  cpu_arch_flags.bitfield.cpu64 = 0;
-  cpu_arch_flags.bitfield.cpuno64 = 1;
   stackop_size = LONG_MNEM_SUFFIX;
 }
 
@@ -2898,16 +2884,6 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	  free (cpu_sub_arch_name);
 	  cpu_sub_arch_name = NULL;
 	  cpu_arch_flags = cpu_unknown_flags;
-	  if (flag_code == CODE_64BIT)
-	    {
-	      cpu_arch_flags.bitfield.cpu64 = 1;
-	      cpu_arch_flags.bitfield.cpuno64 = 0;
-	    }
-	  else
-	    {
-	      cpu_arch_flags.bitfield.cpu64 = 0;
-	      cpu_arch_flags.bitfield.cpuno64 = 1;
-	    }
 	  cpu_arch_isa = PROCESSOR_UNKNOWN;
 	  cpu_arch_isa_flags = cpu_arch[flag_code == CODE_64BIT].enable;
 	  if (!cpu_arch_tune_set)
@@ -2931,20 +2907,28 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	    {
 	      check_cpu_arch_compatible (string, cpu_arch[j].enable);
 
+	      if (flag_code == CODE_64BIT && !cpu_arch[j].enable.bitfield.cpu64 )
+		{
+		  as_bad (_("64bit mode not supported on `%s'."),
+			  cpu_arch[j].name);
+		  (void) restore_line_pointer (e);
+		  ignore_rest_of_line ();
+		  return;
+		}
+
+	      if (flag_code == CODE_32BIT && !cpu_arch[j].enable.bitfield.cpui386)
+		{
+		  as_bad (_("32bit mode not supported on `%s'."),
+			  cpu_arch[j].name);
+		  (void) restore_line_pointer (e);
+		  ignore_rest_of_line ();
+		  return;
+		}
+
 	      cpu_arch_name = cpu_arch[j].name;
 	      free (cpu_sub_arch_name);
 	      cpu_sub_arch_name = NULL;
 	      cpu_arch_flags = cpu_arch[j].enable;
-	      if (flag_code == CODE_64BIT)
-		{
-		  cpu_arch_flags.bitfield.cpu64 = 1;
-		  cpu_arch_flags.bitfield.cpuno64 = 0;
-		}
-	      else
-		{
-		  cpu_arch_flags.bitfield.cpu64 = 0;
-		  cpu_arch_flags.bitfield.cpuno64 = 1;
-		}
 	      cpu_arch_isa = cpu_arch[j].type;
 	      cpu_arch_isa_flags = cpu_arch[j].enable;
 	      if (!cpu_arch_tune_set)
@@ -5726,7 +5710,7 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	  && current_templates
 	  && current_templates->start->opcode_modifier.isprefix)
 	{
-	  if (!cpu_flags_check_cpu64 (current_templates->start->cpu))
+	  if (!cpu_flags_check_cpu64 (current_templates->start))
 	    {
 	      as_bad ((flag_code != CODE_64BIT
 		       ? _("`%s' is only supported in 64-bit mode")
@@ -14002,7 +13986,7 @@ static bool check_register (const reg_entry *r)
     }
 
   if (((r->reg_flags & (RegRex64 | RegRex)) || r->reg_type.bitfield.qword)
-      && (!cpu_arch_flags.bitfield.cpulm
+      && (!cpu_arch_flags.bitfield.cpu64
 	  || r->reg_type.bitfield.class != RegCR
 	  || dot_insn ())
       && flag_code != CODE_64BIT)
