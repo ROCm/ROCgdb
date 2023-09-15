@@ -818,7 +818,8 @@ c_type_print_template_args (const struct type_print_options *flags,
       if (sym->loc_class () == LOC_TYPEDEF)
 	c_print_type (sym->type (), "", stream, -1, 0, language, flags);
       else
-	print_variable_value (sym, {}, stream, 0, language_def (language));
+	print_variable_value (sym, {}, stream, 0, language_def (language),
+			      var_shadowing::NONE);
     }
 
   gdb_puts (_("] "), stream);

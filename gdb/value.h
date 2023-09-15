@@ -1578,28 +1578,46 @@ extern int val_print_string (struct type *elttype, const char *encoding,
 			     struct ui_file *stream,
 			     const struct value_print_options *options);
 
+/* Track the shadowing status of a variable.  */
+enum class var_shadowing
+{
+  /* This variable is not shadowed, and not shadowing.  */
+  NONE,
+
+  /* This variable is shadowed by a later one.  */
+  SHADOWED,
+
+  /* This variable is shadowing an earlier one, and is not itself
+     shadowed.  */
+  SHADOWING
+};
+
 /* Print the value in stack frame FRAME of a variable specified by a
    struct symbol.  STREAM is the ui_file on which to print the value.
    INDENT specifies the number of indent levels to print before
    printing the variable name.  LANGUAGE is the language to use for
-   printing.  */
+   printing.  SHADOW_STATUS specifies the variable shadowing
+   information.  */
 
 extern void print_variable_value (symbol *var,
 				  const frame_info_ptr &frame,
 				  ui_file *stream, int indent,
-				  const language_defn *language);
+				  const language_defn *language,
+				  var_shadowing shadow_status);
 
 /* Print the value in stack frame FRAME of a variable specified by a
    struct symbol.  NAME is the name to print; if NULL then VAR's print
    name will be used.  STREAM is the ui_file on which to print the
    value.  INDENT specifies the number of indent levels to print
-   before printing the variable name.  */
+   before printing the variable name.  SHADOW_STATUS specifies the
+   variable shadowing information.  */
 
 extern void print_variable_and_value (const char *name,
 				      symbol *var,
 				      const frame_info_ptr &frame,
 				      ui_file *stream,
-				      int indent);
+				      int indent,
+				      var_shadowing shadow_status);
 
 extern void typedef_print (struct type *type, struct symbol *news,
 			   struct ui_file *stream);

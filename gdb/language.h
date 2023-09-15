@@ -83,6 +83,20 @@ enum macro_expansion
     macro_expansion_no, macro_expansion_c
   };
 
+/* How should shadowed, or shadowing, variables be printed.  */
+
+enum class lang_vars_shadowing
+  {
+    /* Adds shadowed information for such variables.  */
+    PRINT,
+
+    /* Does not print shadowed variables.  */
+    HIDE,
+
+    /* Print variables without shadow information.  */
+    NONE,
+  };
+
 
 /* Per architecture (OS/ABI) language information.  */
 
@@ -800,6 +814,10 @@ void c_get_string (struct value *value,
    may return an Ada matcher regardless of LANG.  */
 symbol_name_matcher_ftype *get_symbol_name_matcher
   (const language_defn *lang, const lookup_name_info &lookup_name);
+
+/* Returns the shadowing option supported for the input language.  */
+
+extern lang_vars_shadowing get_lang_vars_shadowing_option (enum language lang);
 
 /* Save the current language and restore it upon destruction.  */
 

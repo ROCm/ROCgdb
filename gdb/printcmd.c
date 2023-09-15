@@ -2377,7 +2377,8 @@ clear_dangling_display_expressions (struct objfile *objfile)
 void
 print_variable_value (symbol *var, const frame_info_ptr &frame,
 		      ui_file *stream, int indent,
-		      const language_defn *language)
+		      const language_defn *language,
+		      var_shadowing shadow_status)
 {
   try
     {
@@ -2392,6 +2393,41 @@ print_variable_value (symbol *var, const frame_info_ptr &frame,
       get_user_print_options (&opts);
       opts.deref_ref = true;
       common_val_print_checked (val, stream, indent, &opts, language);
+
+      /* Print <%line, shadowed> after the variable value only when it is
+	 variable shadowing case.  */
+      if (shadow_status != var_shadowing::NONE)
+	{
+	  /* Use lbasename instead of symtab_to_filename_for_display as the
+	     latter defaults to relative path while basename is preferred
+	     here.  */
+	  const char *file_name = (var->symtab () != nullptr
+				   && var->symtab ()->filename () != nullptr)
+				   ? lbasename (var->symtab ()->filename ())
+				   : "??";
+	  bool printed = (shadow_status == var_shadowing::SHADOWED);
+	  string_file out (current_uiout->can_emit_style_escape ());
+
+	  gdb_printf (&out, "\t<%ps:",
+		      styled_string (file_name_style.style (), file_name));
+
+	  if (var->line () > 0)
+	    gdb_printf (&out, "%ps",
+			styled_string (line_number_style.style (),
+				       pulongest (var->line ())));
+	  else
+	    gdb_puts ("No line number information available", &out);
+
+	  if (printed)
+	    {
+	      gdb_puts (", ", &out);
+	      fputs_styled ("shadowed", metadata_style.style (), &out);
+	    }
+
+	  gdb_puts (">", &out);
+
+	  gdb_puts (out.c_str (), stream);
+	}
     }
   catch (const gdb_exception_error &except)
     {
@@ -2406,7 +2442,8 @@ print_variable_value (symbol *var, const frame_info_ptr &frame,
 void
 print_variable_and_value (const char *name, symbol *var,
 			  const frame_info_ptr &frame,
-			  ui_file *stream, int indent)
+			  ui_file *stream, int indent,
+			  var_shadowing shadow_status)
 {
   if (name == nullptr)
     name = var->print_name ();
@@ -2414,7 +2451,8 @@ print_variable_and_value (const char *name, symbol *var,
   gdb_printf (stream, "%*s%ps = ", 2 * indent, "",
 	      styled_string (variable_name_style.style (), name));
 
-  print_variable_value (var, frame, stream, indent, current_language);
+  print_variable_value (var, frame, stream, indent, current_language,
+			shadow_status);
 
   gdb_printf (stream, "\n");
 }

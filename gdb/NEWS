@@ -201,6 +201,10 @@ New command class for help
   commands that we, as developers, believe would be close to a minimal
   set of commands for a new user of GDB.
 
+info locals
+  GDB now shows the "shadowed" annotation and the location information
+  for variables that are shadowed, or which are shadowing.
+
 * Removed commands
 
 target ctf

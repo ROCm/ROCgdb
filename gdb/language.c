@@ -1090,6 +1090,26 @@ language_lookup_primitive_type_as_symbol (const struct language_defn *la,
   return sym;
 }
 
+/* See language.h.  */
+
+lang_vars_shadowing get_lang_vars_shadowing_option (enum language lang)
+{
+  switch (lang)
+    {
+    case language_c:
+    case language_cplus:
+    case language_fortran:
+    case language_ada:
+      return lang_vars_shadowing::PRINT;
+
+    case language_rust:
+      return lang_vars_shadowing::HIDE;
+
+    default:
+      return lang_vars_shadowing::NONE;
+    }
+}
+
 /* Initialize the language routines.  */
 
 INIT_GDB_FILE (language)

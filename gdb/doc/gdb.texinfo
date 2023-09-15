@@ -9188,6 +9188,32 @@ The optional flag @samp{-q}, which stands for @samp{quiet}, disables
 printing header information and messages explaining why no local variables
 have been printed.
 
+@smallexample
+@group
+1: int x = 3;
+2: @{
+3:       int x = 4;
+4:       int y = 52;
+5:       x = 99; // breakpoint-line
+6: @}
+@end group
+@group
+(gdb) info locals
+x = 4	<file.c:3>
+y = 52
+x = 3	<file.c:1, shadowed>
+@end group
+@end smallexample
+
+@anchor{shadowed variables}
+@cindex shadowed variables
+A variable is @dfn{shadowed} when there's another variable with the
+same name which is declared within an inner scope (decision block,
+method, or inner class).  When shadowing is detected, location
+information is added to all instances of the shadowed variable name.
+The outermost instances are additionally followed by @samp{shadowed}
+to indicate that they are not the active variable.
+
 @item info locals [-q] [-t @var{type_regexp}] [@var{regexp}]
 Like @kbd{info locals}, but only print the local variables selected
 with the provided regexp(s).
