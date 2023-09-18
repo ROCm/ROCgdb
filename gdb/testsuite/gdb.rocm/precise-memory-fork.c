@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright 2021-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,12 +18,12 @@
 #include <unistd.h>
 
 static void
-parent ()
+parent (void)
 {
 }
 
 static void
-child ()
+child (void)
 {
 }
 
@@ -32,11 +32,10 @@ main (void)
 {
   int pid = fork ();
 
-  if (pid != 0) {
+  if (pid != 0)
     parent ();
-  } else {
+  else
     child ();
-  }
 
   return 0;
 }

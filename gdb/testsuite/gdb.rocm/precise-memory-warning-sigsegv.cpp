@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright 2021-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,15 +18,16 @@
 #include <hip/hip_runtime.h>
 
 __global__ void
-kernel () {
-    int *p = nullptr;
-    *p = 1;
+kernel ()
+{
+  int *p = nullptr;
+  *p = 1;
 }
 
 int
 main (int argc, char* argv[])
 {
-    hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
-    hipDeviceSynchronize ();
-    return 0;
+  kernel<<<1, 1>>> ();
+  hipDeviceSynchronize ();
+  return 0;
 }

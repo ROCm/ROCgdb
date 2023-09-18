@@ -1,3 +1,4 @@
+# Copyright 2022-2023 Free Software Foundation, Inc.
 # Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
@@ -59,9 +60,7 @@ proc do_test { } {
 	gdb_test "interpreter-exec mi \"-gdb-show amdgpu precise-memory\"" \
 	    "\\^done,value=\"on\",verbose=\"AMDGPU precise memory access reporting is on \\(currently ${cli_effective_value}\\).\\\\n\",effective-value=\"${mi_effective_value}\"" \
 	    "show precise-memory setting in MI after"
-
     }
 }
 
 do_test
-

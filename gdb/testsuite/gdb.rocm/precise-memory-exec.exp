@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright 2021-2023 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -15,16 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test that the "set amdgpu precise-memory" setting is inherited by a fork
-# child.
+# Test that the "set amdgpu precise-memory" setting is inherited by an inferior
+# created following an exec.
 
 load_lib rocm.exp
 
 require allow_hipcc_tests
-
-if { ![istarget "*-linux*"] } then {
-    continue
-}
 
 standard_testfile .c
 
@@ -33,11 +29,10 @@ if {[build_executable "failed to prepare $testfile" $testfile $srcfile {debug}]}
 }
 
 proc do_test { follow-exec-mode } {
-	clean_restart $::binfile
+    clean_restart $::binfile
 
     with_rocm_gpu_lock {
 	if ![runto_main] {
-	    fail "can't run to main"
 	    return
 	}
 

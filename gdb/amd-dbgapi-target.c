@@ -138,9 +138,12 @@ get_amd_dbgapi_target_inferior_created_observer_token ()
 
 struct amd_dbgapi_inferior_info
 {
-  explicit amd_dbgapi_inferior_info (inferior *inf)
+  explicit amd_dbgapi_inferior_info (inferior *inf,
+				     bool precise_memory_requested = false)
     : inf (inf)
-  {}
+  {
+    precise_memory.requested = precise_memory_requested;
+  }
 
   /* Backlink to inferior.  */
   inferior *inf;
@@ -164,9 +167,12 @@ struct amd_dbgapi_inferior_info
   struct
   {
     /* Whether precise memory reporting is requested.  */
-    bool requested{ false };
-    /* Precise memory was requested and successfully enabled by the dbgapi.  */
-    bool enabled{ false };
+    bool requested;
+
+    /* Whether precise memory was requested and successfully enabled by
+       dbgapi (it may not be available for the current hardware, for
+       instance).  */
+    bool enabled = false;
   } precise_memory;
 
   std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
@@ -1957,32 +1963,29 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
   return false;
 }
 
-/* Set the process's memory access reporting precision.
+/* Set the process' memory access reporting precision mode.
 
-   The precision can be ::AMD_DBGAPI_MEMORY_PRECISION_PRECISE (waves wait for
-   memory instructions to complete before executing further instructions), or
-   ::AMD_DBGAPI_MEMORY_PRECISION_NONE (memory instructions execute normally).
+   Warn if the requested mode is not supported on at least one agent in the
+   process.
 
-   Returns true if the precision is supported by the architecture of all agents
-   in the process, or false if at least one agent does not support the
-   requested precision.
+   Error out if setting the requested mode failed for some other reason.  */
 
-   An error is thrown if setting the precision results in a status other than
-   ::AMD_DBGAPI_STATUS_SUCCESS or ::AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED.  */
-static bool
-set_process_memory_precision (amd_dbgapi_process_id_t process_id,
-			      amd_dbgapi_memory_precision_t precision)
+static void
+set_process_memory_precision (amd_dbgapi_inferior_info &info)
 {
+  auto mode = (info.precise_memory.requested
+	       ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
+	       : AMD_DBGAPI_MEMORY_PRECISION_NONE);
   amd_dbgapi_status_t status
-    = amd_dbgapi_set_memory_precision (process_id, precision);
+    = amd_dbgapi_set_memory_precision (info.process_id, mode);
 
-  if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
-    return false;
+  if (status == AMD_DBGAPI_STATUS_SUCCESS)
+    info.precise_memory.enabled = info.precise_memory.requested;
+  else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
+    warning (_("AMDGPU precise memory access reporting could not be enabled."));
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_set_memory_precision failed (%s)"),
 	   get_status_string (status));
-
-  return true;
 }
 
 /* Make the amd-dbgapi library attach to the process behind INF.
@@ -2063,14 +2066,7 @@ attach_amd_dbgapi (inferior *inf)
   amd_dbgapi_debug_printf ("process_id = %" PRIu64 ", notifier fd = %d",
 			   info->process_id.handle, info->notifier);
 
-  amd_dbgapi_memory_precision_t memory_precision
-    = info->precise_memory.requested ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
-				     : AMD_DBGAPI_MEMORY_PRECISION_NONE;
-  if (set_process_memory_precision (info->process_id, memory_precision))
-    info->precise_memory.enabled = info->precise_memory.requested;
-  else
-    warning (
-      _ ("AMDGPU precise memory access reporting could not be enabled."));
+  set_process_memory_precision (*info);
 
   /* If GDB is attaching to a process that has the runtime loaded, there will
      already be a "runtime loaded" event available.  Consume it and push the
@@ -2117,9 +2113,7 @@ detach_amd_dbgapi (inferior *inf)
     delete_breakpoint (value.second);
 
   /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode.  */
-  bool precise_memory_requested = info->precise_memory.requested;
-  *info = amd_dbgapi_inferior_info (inf);
-  info->precise_memory.requested = precise_memory_requested;
+  *info = amd_dbgapi_inferior_info (inf, info->precise_memory.requested);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -2476,7 +2470,7 @@ amd_dbgapi_target_inferior_created (inferior *inf)
 
 static void
 amd_dbgapi_target_inferior_cloned (inferior *original_inferior,
-			     inferior *new_inferior)
+				   inferior *new_inferior)
 {
   auto *orig_info = get_amd_dbgapi_inferior_info (original_inferior);
   auto *new_info = get_amd_dbgapi_inferior_info (new_inferior);
@@ -2518,7 +2512,8 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
       /* Copy precise-memory requested value from parent to child.  */
       amd_dbgapi_inferior_info *parent_info
 	= get_amd_dbgapi_inferior_info (parent_inf);
-      amd_dbgapi_inferior_info *child_info = get_amd_dbgapi_inferior_info (child_inf);
+      amd_dbgapi_inferior_info *child_info
+	= get_amd_dbgapi_inferior_info (child_inf);
       child_info->precise_memory.requested
 	= parent_info->precise_memory.requested;
 
@@ -2622,6 +2617,7 @@ amd_dbgapi_remove_breakpoint_callback
   return AMD_DBGAPI_STATUS_SUCCESS;
 }
 
+/* signal_received observer.  */
 
 static void
 amd_dbgapi_target_signal_received (gdb_signal sig)
@@ -2639,9 +2635,9 @@ amd_dbgapi_target_signal_received (gdb_signal sig)
     return;
 
   if (!info->precise_memory.enabled)
-      gdb_printf ("\
+      gdb_printf (_("\
 Warning: precise memory violation signal reporting is not enabled, reported\n\
-location may not be accurate.  See \"show amdgpu precise-memory\".\n");
+location may not be accurate.  See \"show amdgpu precise-memory\".\n"));
 }
 
 static void
@@ -2675,9 +2671,9 @@ amd_dbgapi_target_normal_stop (bpstat *bs_list, int print_frame)
   if (!found_hardware_watchpoint)
     return;
 
-  gdb_printf ("\
+  gdb_printf (_("\
 Warning: precise memory signal reporting is not enabled, watchpoint stop\n\
-location may not be accurate.  See \"show amdgpu precise-memory\".\n");
+location may not be accurate.  See \"show amdgpu precise-memory\".\n"));
 }
 
 /* Style for some kinds of messages.  */
@@ -2791,6 +2787,8 @@ amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 static const struct internalvar_funcs amd_dbgapi_wave_id_funcs
   = { amd_dbgapi_wave_id_make_value, NULL };
 
+/* Callback for "show amdgpu precise-memory".  */
+
 static void
 show_precise_memory_mode (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)
@@ -2799,11 +2797,13 @@ show_precise_memory_mode (struct ui_file *file, int from_tty,
     = get_amd_dbgapi_inferior_info (current_inferior ());
 
   gdb_printf (file,
-	      _ ("AMDGPU precise memory access reporting is %s "
-		 "(currently %s).\n"),
+	      _("AMDGPU precise memory access reporting is %s "
+		"(currently %s).\n"),
 	      info->precise_memory.requested ? "on" : "off",
 	      info->precise_memory.enabled ? "enabled" : "disabled");
 }
+
+/* Callback for "set amdgpu precise-memory".  */
 
 static void
 set_precise_memory_mode (bool value)
@@ -2814,24 +2814,17 @@ set_precise_memory_mode (bool value)
   info->precise_memory.requested = value;
 
   if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
-    {
-      amd_dbgapi_memory_precision_t memory_precision
-	= info->precise_memory.requested ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
-					 : AMD_DBGAPI_MEMORY_PRECISION_NONE;
-
-      if (set_process_memory_precision (info->process_id, memory_precision))
-	info->precise_memory.enabled = info->precise_memory.requested;
-      else
-	warning (
-	  _ ("AMDGPU precise memory access reporting could not be enabled."));
-    }
+    set_process_memory_precision (*info);
 }
+
+/* Return whether precise-memory is requested for the current inferior.  */
 
 static bool
 get_precise_memory_mode ()
 {
   amd_dbgapi_inferior_info *info
     = get_amd_dbgapi_inferior_info (current_inferior ());
+
   return info->precise_memory.requested;
 }
 
@@ -4133,20 +4126,21 @@ _initialize_amd_dbgapi_target ()
   create_internalvar_type_lazy ("_wave_id", &amd_dbgapi_wave_id_funcs, NULL);
 
   add_basic_prefix_cmd ("amdgpu", no_class,
-			_ ("Generic command for setting amdgpu flags."),
+			_("Generic command for setting amdgpu flags."),
 			&set_amdgpu_list, 0, &setlist);
 
   add_show_prefix_cmd ("amdgpu", no_class,
-		       _ ("Generic command for showing amdgpu flags."),
+		       _("Generic command for showing amdgpu flags."),
 		       &show_amdgpu_list, 0, &showlist);
 
   set_show_commands cmds
     = add_setshow_boolean_cmd ("precise-memory", no_class,
-			       _ ("Set precise-memory mode."),
-			       _ ("Show precise-memory mode."), _ ("\
+			       _("Set precise-memory mode."),
+			       _("Show precise-memory mode."), _("\
 If on, precise memory reporting is enabled if/when the inferior is running.\n\
 If off (default), precise memory reporting is disabled."),
-			       set_precise_memory_mode, get_precise_memory_mode,
+			       set_precise_memory_mode,
+			       get_precise_memory_mode,
 			       show_precise_memory_mode,
 			       &set_amdgpu_list, &show_amdgpu_list);
 

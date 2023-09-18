@@ -28746,9 +28746,8 @@ can be used to control this behavior:
 @kindex set amdgpu precise-memory
 @cindex AMD GPU precise memory event reporting
 @item set amdgpu precise-memory @var{mode}
-@samp{set amdgpu precise-memory} controls how @acronym{AMD GPU}
-devices detect memory violations and address watch events.  Where
-@var{mode} can be:
+Controls how @acronym{AMD GPU} devices detect memory violations and address
+watch events, where @var{mode} can be:
 
 @table @code
 
@@ -28840,22 +28839,15 @@ AMDGPU precise memory access reporting is on (currently enabled)
 (@value{GDBP})
 @end smallexample
 
-The @code{set amdgpu precise-memory} parameter is per-inferior.  When an
-inferior forks and a child inferior is created as a result, the child inferior
-inherits the parameter value of the parent inferior.
+The @code{amdgpu precise-memory} parameter is per-inferior.  When an
+inferior forks or execs, or the user uses the @code{clone-inferior} command,
+and an inferior is created as a result, the newly created inferior inherits
+the parameter value of the original inferior.
 
 @kindex show amdgpu precise-memory
 @cindex AMD GPU precise memory event reporting
 @item show amdgpu precise-memory
-@samp{show amdgpu precise-memory} displays the currently requested AMD
-GPU precise memory setting.  If @samp{on} has been requested, the
-message also indicates if it is currently enabled.  For example:
-
-@smallexample
-(@value{GDBP}) show amdgpu precise-memory
-AMDGPU precise memory access reporting is on (currently disabled)
-(@value{GDBP})
-@end smallexample
+Displays the currently requested AMD GPU precise memory setting.
 
 @end table
 

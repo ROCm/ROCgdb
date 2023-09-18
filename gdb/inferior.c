@@ -1043,8 +1043,6 @@ clone_inferior_command (const char *args, int from_tty)
 	   : orginf->environment.user_unset_env ())
 	inf->environment.unset (unset_var.c_str ());
 
-      /* Notify that the inferior has been cloned so target dependent logic
-	 can be applied if necessary.  */
       gdb::observers::inferior_cloned.notify (orginf, inf);
     }
 }

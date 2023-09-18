@@ -173,9 +173,7 @@ extern observable<struct inferior */* inf */> inferior_exit;
    This method is called immediately before freeing INF.  */
 extern observable<struct inferior */* inf */> inferior_removed;
 
-/* The inferior CLONE has been created by cloning INF.
-   This method is called after all required operations for the clone have
-   been performed.  */
+/* The inferior CLONE has been created by cloning INF.  */
 extern observable<struct inferior */* inf */, struct inferior */* clone */>
     inferior_cloned;
 
