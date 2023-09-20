@@ -12206,7 +12206,7 @@ ada_catchpoint::allocate_location ()
 bool
 ada_catchpoint::should_stop_exception (const struct bp_location *bl) const
 {
-  struct ada_catchpoint *c = (struct ada_catchpoint *) bl->owner;
+  ada_catchpoint *c = gdb::checked_static_cast<ada_catchpoint *> (bl->owner);
   const struct ada_catchpoint_location *ada_loc
     = (const struct ada_catchpoint_location *) bl;
   bool stop;
@@ -13830,6 +13830,19 @@ public:
   {
     return ada_is_string_type (type);
   }
+
+  /* See language.h.  */
+
+  bool is_array_like (struct type *type) const override
+  {
+    return (ada_is_constrained_packed_array_type (type)
+	    || ada_is_array_descriptor_type (type));
+  }
+
+  /* See language.h.  */
+
+  struct value *to_array (struct value *val) const override
+  { return ada_coerce_to_simple_array (val); }
 
   /* See language.h.  */
 

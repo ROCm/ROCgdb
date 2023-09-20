@@ -1436,7 +1436,7 @@ validate_commands_for_breakpoint (struct breakpoint *b,
 {
   if (is_tracepoint (b))
     {
-      struct tracepoint *t = (struct tracepoint *) b;
+      tracepoint *t = gdb::checked_static_cast<tracepoint *> (b);
       struct command_line *c;
       struct command_line *while_stepping = 0;
 
@@ -1474,7 +1474,7 @@ validate_commands_for_breakpoint (struct breakpoint *b,
 		while_stepping = c;
 	    }
 
-	  validate_actionline (c->line, b);
+	  validate_actionline (c->line, t);
 	}
       if (while_stepping)
 	{
@@ -1648,7 +1648,9 @@ commands_command_1 (const char *arg, int from_tty,
 
 	       auto do_validate = [=] (const char *line)
 				  {
-				    validate_actionline (line, b);
+				    tracepoint *t
+				      = gdb::checked_static_cast<tracepoint *> (b);
+				    validate_actionline (line, t);
 				  };
 	       gdb::function_view<void (const char *)> validator;
 	       if (is_tracepoint (b))
@@ -5379,13 +5381,12 @@ enum wp_check_result
 static wp_check_result
 watchpoint_check (bpstat *bs)
 {
-  struct watchpoint *b;
   frame_info_ptr fr;
   bool within_current_scope;
 
   /* BS is built from an existing struct breakpoint.  */
   gdb_assert (bs->breakpoint_at != NULL);
-  b = (struct watchpoint *) bs->breakpoint_at;
+  watchpoint *b = gdb::checked_static_cast<watchpoint *> (bs->breakpoint_at);
 
   /* If this is a local watchpoint, we only want to check if the
      watchpoint frame is in scope if the current thread is the thread
@@ -5541,163 +5542,159 @@ static void
 bpstat_check_watchpoint (bpstat *bs)
 {
   const struct bp_location *bl;
-  struct watchpoint *b;
 
   /* BS is built for existing struct breakpoint.  */
   bl = bs->bp_location_at.get ();
   gdb_assert (bl != NULL);
-  b = (struct watchpoint *) bs->breakpoint_at;
-  gdb_assert (b != NULL);
+  watchpoint *b = gdb::checked_static_cast<watchpoint *> (bs->breakpoint_at);
 
+  bool must_check_value = false;
+
+  if (b->type == bp_watchpoint)
+    /* For a software watchpoint, we must always check the
+       watched value.  */
+    must_check_value = true;
+  else if (b->watchpoint_triggered == watch_triggered_yes)
+    /* We have a hardware watchpoint (read, write, or access)
+       and the target earlier reported an address watched by
+       this watchpoint.  */
+    must_check_value = true;
+  else if (b->watchpoint_triggered == watch_triggered_unknown
+	   && b->type == bp_hardware_watchpoint)
+    /* We were stopped by a hardware watchpoint, but the target could
+       not report the data address.  We must check the watchpoint's
+       value.  Access and read watchpoints are out of luck; without
+       a data address, we can't figure it out.  */
+    must_check_value = true;
+
+  if (must_check_value)
     {
-      bool must_check_value = false;
+      wp_check_result e;
 
-      if (b->type == bp_watchpoint)
-	/* For a software watchpoint, we must always check the
-	   watched value.  */
-	must_check_value = true;
-      else if (b->watchpoint_triggered == watch_triggered_yes)
-	/* We have a hardware watchpoint (read, write, or access)
-	   and the target earlier reported an address watched by
-	   this watchpoint.  */
-	must_check_value = true;
-      else if (b->watchpoint_triggered == watch_triggered_unknown
-	       && b->type == bp_hardware_watchpoint)
-	/* We were stopped by a hardware watchpoint, but the target could
-	   not report the data address.  We must check the watchpoint's
-	   value.  Access and read watchpoints are out of luck; without
-	   a data address, we can't figure it out.  */
-	must_check_value = true;
-
-      if (must_check_value)
+      try
 	{
-	  wp_check_result e;
+	  e = watchpoint_check (bs);
+	}
+      catch (const gdb_exception_error &ex)
+	{
+	  exception_fprintf (gdb_stderr, ex,
+			     "Error evaluating expression "
+			     "for watchpoint %d\n",
+			     b->number);
 
-	  try
+	  SWITCH_THRU_ALL_UIS ()
 	    {
-	      e = watchpoint_check (bs);
+	      gdb_printf (_("Watchpoint %d deleted.\n"),
+			  b->number);
 	    }
-	  catch (const gdb_exception_error &ex)
+	  watchpoint_del_at_next_stop (b);
+	  e = WP_DELETED;
+	}
+
+      switch (e)
+	{
+	case WP_DELETED:
+	  /* We've already printed what needs to be printed.  */
+	  bs->print_it = print_it_done;
+	  /* Stop.  */
+	  break;
+	case WP_IGNORE:
+	  bs->print_it = print_it_noop;
+	  bs->stop = false;
+	  break;
+	case WP_VALUE_CHANGED:
+	  if (b->type == bp_read_watchpoint)
 	    {
-	      exception_fprintf (gdb_stderr, ex,
-				 "Error evaluating expression "
-				 "for watchpoint %d\n",
-				 b->number);
+	      /* There are two cases to consider here:
 
-	      SWITCH_THRU_ALL_UIS ()
+		 1. We're watching the triggered memory for reads.
+		 In that case, trust the target, and always report
+		 the watchpoint hit to the user.  Even though
+		 reads don't cause value changes, the value may
+		 have changed since the last time it was read, and
+		 since we're not trapping writes, we will not see
+		 those, and as such we should ignore our notion of
+		 old value.
+
+		 2. We're watching the triggered memory for both
+		 reads and writes.  There are two ways this may
+		 happen:
+
+		 2.1. This is a target that can't break on data
+		 reads only, but can break on accesses (reads or
+		 writes), such as e.g., x86.  We detect this case
+		 at the time we try to insert read watchpoints.
+
+		 2.2. Otherwise, the target supports read
+		 watchpoints, but, the user set an access or write
+		 watchpoint watching the same memory as this read
+		 watchpoint.
+
+		 If we're watching memory writes as well as reads,
+		 ignore watchpoint hits when we find that the
+		 value hasn't changed, as reads don't cause
+		 changes.  This still gives false positives when
+		 the program writes the same value to memory as
+		 what there was already in memory (we will confuse
+		 it for a read), but it's much better than
+		 nothing.  */
+
+	      int other_write_watchpoint = 0;
+
+	      if (bl->watchpoint_type == hw_read)
 		{
-		  gdb_printf (_("Watchpoint %d deleted.\n"),
-			      b->number);
-		}
-	      watchpoint_del_at_next_stop (b);
-	      e = WP_DELETED;
-	    }
+		  for (breakpoint &other_b : all_breakpoints ())
+		    if (other_b.type == bp_hardware_watchpoint
+			|| other_b.type == bp_access_watchpoint)
+		      {
+			watchpoint &other_w =
+			  gdb::checked_static_cast<watchpoint &> (other_b);
 
-	  switch (e)
-	    {
-	    case WP_DELETED:
-	      /* We've already printed what needs to be printed.  */
-	      bs->print_it = print_it_done;
-	      /* Stop.  */
-	      break;
-	    case WP_IGNORE:
-	      bs->print_it = print_it_noop;
-	      bs->stop = false;
-	      break;
-	    case WP_VALUE_CHANGED:
-	      if (b->type == bp_read_watchpoint)
-		{
-		  /* There are two cases to consider here:
-
-		     1. We're watching the triggered memory for reads.
-		     In that case, trust the target, and always report
-		     the watchpoint hit to the user.  Even though
-		     reads don't cause value changes, the value may
-		     have changed since the last time it was read, and
-		     since we're not trapping writes, we will not see
-		     those, and as such we should ignore our notion of
-		     old value.
-
-		     2. We're watching the triggered memory for both
-		     reads and writes.  There are two ways this may
-		     happen:
-
-		     2.1. This is a target that can't break on data
-		     reads only, but can break on accesses (reads or
-		     writes), such as e.g., x86.  We detect this case
-		     at the time we try to insert read watchpoints.
-
-		     2.2. Otherwise, the target supports read
-		     watchpoints, but, the user set an access or write
-		     watchpoint watching the same memory as this read
-		     watchpoint.
-
-		     If we're watching memory writes as well as reads,
-		     ignore watchpoint hits when we find that the
-		     value hasn't changed, as reads don't cause
-		     changes.  This still gives false positives when
-		     the program writes the same value to memory as
-		     what there was already in memory (we will confuse
-		     it for a read), but it's much better than
-		     nothing.  */
-
-		  int other_write_watchpoint = 0;
-
-		  if (bl->watchpoint_type == hw_read)
-		    {
-		      for (breakpoint &other_b : all_breakpoints ())
-			if (other_b.type == bp_hardware_watchpoint
-			    || other_b.type == bp_access_watchpoint)
+			if (other_w.watchpoint_triggered
+			    == watch_triggered_yes)
 			  {
-			    watchpoint &other_w =
-			      gdb::checked_static_cast<watchpoint &> (other_b);
-
-			    if (other_w.watchpoint_triggered
-				== watch_triggered_yes)
-			      {
-				other_write_watchpoint = 1;
-				break;
-			      }
+			    other_write_watchpoint = 1;
+			    break;
 			  }
-		    }
-
-		  if (other_write_watchpoint
-		      || bl->watchpoint_type == hw_access)
-		    {
-		      /* We're watching the same memory for writes,
-			 and the value changed since the last time we
-			 updated it, so this trap must be for a write.
-			 Ignore it.  */
-		      bs->print_it = print_it_noop;
-		      bs->stop = false;
-		    }
+		      }
 		}
-	      break;
-	    case WP_VALUE_NOT_CHANGED:
-	      if (b->type == bp_hardware_watchpoint
-		  || b->type == bp_watchpoint)
+
+	      if (other_write_watchpoint
+		  || bl->watchpoint_type == hw_access)
 		{
-		  /* Don't stop: write watchpoints shouldn't fire if
-		     the value hasn't changed.  */
+		  /* We're watching the same memory for writes,
+		     and the value changed since the last time we
+		     updated it, so this trap must be for a write.
+		     Ignore it.  */
 		  bs->print_it = print_it_noop;
 		  bs->stop = false;
 		}
-	      /* Stop.  */
-	      break;
-	    default:
-	      /* Can't happen.  */
-	      break;
 	    }
+	  break;
+	case WP_VALUE_NOT_CHANGED:
+	  if (b->type == bp_hardware_watchpoint
+	      || b->type == bp_watchpoint)
+	    {
+	      /* Don't stop: write watchpoints shouldn't fire if
+		 the value hasn't changed.  */
+	      bs->print_it = print_it_noop;
+	      bs->stop = false;
+	    }
+	  /* Stop.  */
+	  break;
+	default:
+	  /* Can't happen.  */
+	  break;
 	}
-      else	/* !must_check_value */
-	{
-	  /* This is a case where some watchpoint(s) triggered, but
-	     not at the address of this watchpoint, or else no
-	     watchpoint triggered after all.  So don't print
-	     anything for this watchpoint.  */
-	  bs->print_it = print_it_noop;
-	  bs->stop = false;
-	}
+    }
+  else	/* !must_check_value */
+    {
+      /* This is a case where some watchpoint(s) triggered, but
+	 not at the address of this watchpoint, or else no
+	 watchpoint triggered after all.  So don't print
+	 anything for this watchpoint.  */
+      bs->print_it = print_it_noop;
+      bs->stop = false;
     }
 }
 
@@ -5774,7 +5771,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
 
   if (is_watchpoint (b))
     {
-      struct watchpoint *w = (struct watchpoint *) b;
+      watchpoint *w = gdb::checked_static_cast<watchpoint *> (b);
 
       cond = w->cond_exp.get ();
     }
@@ -5784,7 +5781,6 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
   if (cond != nullptr && b->disposition != disp_del_at_next_stop)
     {
       bool within_current_scope = true;
-      struct watchpoint * w;
 
       /* We use scoped_value_mark because it could be a long time
 	 before we return to the command level and call
@@ -5792,10 +5788,9 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
 	 might be in the middle of evaluating a function call.  */
       scoped_value_mark mark;
 
+      watchpoint *w = nullptr;
       if (is_watchpoint (b))
-	w = (struct watchpoint *) b;
-      else
-	w = NULL;
+	w = gdb::checked_static_cast<watchpoint *> (b);
 
       /* Need to select the frame, with all that implies so that
 	 the conditions will have the right context.  Because we
@@ -5963,7 +5958,8 @@ build_bpstat_chain (const address_space *aspace, CORE_ADDR bp_addr,
 	     iteration.  */
 	  if (b.type == bp_watchpoint_scope && b.related_breakpoint != &b)
 	    {
-	      struct watchpoint *w = (struct watchpoint *) b.related_breakpoint;
+	      watchpoint *w
+		= gdb::checked_static_cast<watchpoint *> (b.related_breakpoint);
 
 	      w->watchpoint_triggered = watch_triggered_yes;
 	    }
@@ -6087,7 +6083,8 @@ bpstat_stop_status (const address_space *aspace,
 	  && bs->breakpoint_at
 	  && is_hardware_watchpoint (bs->breakpoint_at))
 	{
-	  struct watchpoint *w = (struct watchpoint *) bs->breakpoint_at;
+	  watchpoint *w
+	    = gdb::checked_static_cast<watchpoint *> (bs->breakpoint_at);
 
 	  update_watchpoint (w, false /* don't reparse.  */);
 	  need_remove_insert = 1;
@@ -6342,10 +6339,12 @@ bpstat_run_callbacks (bpstat *bs_head)
 	  handle_jit_event (bs->bp_location_at->address);
 	  break;
 	case bp_gnu_ifunc_resolver:
-	  gnu_ifunc_resolver_stop ((code_breakpoint *) b);
+	  gnu_ifunc_resolver_stop
+	    (gdb::checked_static_cast<code_breakpoint *> (b));
 	  break;
 	case bp_gnu_ifunc_resolver_return:
-	  gnu_ifunc_resolver_return_stop ((code_breakpoint *) b);
+	  gnu_ifunc_resolver_return_stop
+	    (gdb::checked_static_cast<code_breakpoint *> (b));
 	  break;
 	}
     }
@@ -6737,7 +6736,7 @@ print_one_breakpoint_location (struct breakpoint *b,
     {
       if (is_watchpoint (b))
 	{
-	  struct watchpoint *w = (struct watchpoint *) b;
+	  watchpoint *w = gdb::checked_static_cast<watchpoint *> (b);
 
 	  /* Field 4, the address, is omitted (which makes the columns
 	     not line up too nicely with the headers, but the effect
@@ -6931,7 +6930,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 
   if (!part_of_multiple && is_tracepoint (b))
     {
-      struct tracepoint *tp = (struct tracepoint *) b;
+      tracepoint *tp = gdb::checked_static_cast<tracepoint *> (b);
 
       if (tp->traceframe_usage)
 	{
@@ -6963,7 +6962,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 
   if (is_tracepoint (b))
     {
-      struct tracepoint *t = (struct tracepoint *) b;
+      tracepoint *t = gdb::checked_static_cast<tracepoint *> (b);
 
       if (!part_of_multiple && t->pass_count)
 	{
@@ -6997,7 +6996,7 @@ print_one_breakpoint_location (struct breakpoint *b,
     {
       if (is_watchpoint (b))
 	{
-	  struct watchpoint *w = (struct watchpoint *) b;
+	  watchpoint *w = gdb::checked_static_cast<watchpoint *> (b);
 
 	  uiout->field_string ("original-location", w->exp_string.get ());
 	}
@@ -7426,8 +7425,8 @@ static bool
 watchpoint_locations_match (const struct bp_location *loc1,
 			    const struct bp_location *loc2)
 {
-  struct watchpoint *w1 = (struct watchpoint *) loc1->owner;
-  struct watchpoint *w2 = (struct watchpoint *) loc2->owner;
+  watchpoint *w1 = gdb::checked_static_cast<watchpoint *> (loc1->owner);
+  watchpoint *w2 = gdb::checked_static_cast<watchpoint *> (loc2->owner);
 
   /* Both of them must exist.  */
   gdb_assert (w1 != NULL);
@@ -8828,7 +8827,7 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
   if (type == bp_static_tracepoint
       || type == bp_static_marker_tracepoint)
     {
-      auto *t = gdb::checked_static_cast<struct tracepoint *> (this);
+      auto *t = gdb::checked_static_cast<tracepoint *> (this);
       struct static_tracepoint_marker marker;
 
       if (strace_marker_p (this))
@@ -9984,6 +9983,20 @@ break_range_command (const char *arg, int from_tty)
 			    std::move (end_locspec)));
 
   install_breakpoint (false, std::move (br), true);
+}
+
+/* See breakpoint.h.  */
+
+watchpoint::~watchpoint ()
+{
+  /* Make sure to unlink the destroyed watchpoint from the related
+     breakpoint ring.  */
+
+  breakpoint *bpt = this;
+  while (bpt->related_breakpoint != this)
+    bpt = bpt->related_breakpoint;
+
+  bpt->related_breakpoint = this->related_breakpoint;
 }
 
 /*  Return non-zero if EXP is verified as constant.  Returned zero
@@ -12798,9 +12811,9 @@ delete_breakpoint (struct breakpoint *bpt)
       struct watchpoint *w;
 
       if (bpt->type == bp_watchpoint_scope)
-	w = (struct watchpoint *) bpt->related_breakpoint;
+	w = gdb::checked_static_cast<watchpoint *> (bpt->related_breakpoint);
       else if (bpt->related_breakpoint->type == bp_watchpoint_scope)
-	w = (struct watchpoint *) bpt;
+	w = gdb::checked_static_cast<watchpoint *> (bpt);
       else
 	w = NULL;
       if (w != NULL)
@@ -13002,9 +13015,8 @@ ambiguous_names_p (const bp_location_range &locs)
    precisely because it confuses tools).  */
 
 static struct symtab_and_line
-update_static_tracepoint (struct breakpoint *b, struct symtab_and_line sal)
+update_static_tracepoint (tracepoint *tp, struct symtab_and_line sal)
 {
-  struct tracepoint *tp = (struct tracepoint *) b;
   struct static_tracepoint_marker marker;
   CORE_ADDR pc;
 
@@ -13016,7 +13028,7 @@ update_static_tracepoint (struct breakpoint *b, struct symtab_and_line sal)
     {
       if (tp->static_trace_marker_id != marker.str_id)
 	warning (_("static tracepoint %d changed probed marker from %s to %s"),
-		 b->number, tp->static_trace_marker_id.c_str (),
+		 tp->number, tp->static_trace_marker_id.c_str (),
 		 marker.str_id.c_str ());
 
       tp->static_trace_marker_id = std::move (marker.str_id);
@@ -13047,7 +13059,7 @@ update_static_tracepoint (struct breakpoint *b, struct symtab_and_line sal)
 
 	  warning (_("marker for static tracepoint %d (%s) not "
 		     "found at previous line number"),
-		   b->number, tp->static_trace_marker_id.c_str ());
+		   tp->number, tp->static_trace_marker_id.c_str ());
 
 	  symtab_and_line sal2 = find_pc_line (tpmarker->address, 0);
 	  sym = find_pc_sect_function (tpmarker->address, NULL);
@@ -13073,17 +13085,17 @@ update_static_tracepoint (struct breakpoint *b, struct symtab_and_line sal)
 	  uiout->field_signed ("line", sal2.line);
 	  uiout->text ("\n");
 
-	  b->first_loc ().line_number = sal2.line;
-	  b->first_loc ().symtab = sym != NULL ? sal2.symtab : NULL;
+	  tp->first_loc ().line_number = sal2.line;
+	  tp->first_loc ().symtab = sym != NULL ? sal2.symtab : NULL;
 
 	  std::unique_ptr<explicit_location_spec> els
 	    (new explicit_location_spec ());
 	  els->source_filename
 	    = xstrdup (symtab_to_filename_for_display (sal2.symtab));
-	  els->line_offset.offset = b->first_loc ().line_number;
+	  els->line_offset.offset = tp->first_loc ().line_number;
 	  els->line_offset.sign = LINE_OFFSET_NONE;
 
-	  b->locspec = std::move (els);
+	  tp->locspec = std::move (els);
 
 	  /* Might be nice to check if function changed, and warn if
 	     so.  */
@@ -13344,7 +13356,10 @@ code_breakpoint::location_spec_to_sals (location_spec *locspec,
 	}
 
       if (type == bp_static_tracepoint)
-	sals[0] = update_static_tracepoint (this, sals[0]);
+	{
+	  tracepoint *t = gdb::checked_static_cast<tracepoint *> (this);
+	  sals[0] = update_static_tracepoint (t, sals[0]);
+	}
 
       *found = 1;
     }
@@ -13964,7 +13979,7 @@ enable_breakpoint_disp (struct breakpoint *bpt, enum bpdisp disposition,
 
       try
 	{
-	  struct watchpoint *w = (struct watchpoint *) bpt;
+	  watchpoint *w = gdb::checked_static_cast<watchpoint *> (bpt);
 
 	  orig_enable_state = bpt->enable_state;
 	  bpt->enable_state = bp_enabled;
