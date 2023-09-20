@@ -56,7 +56,7 @@
 #include "dwarf2.h"
 #include "demangle.h"
 #include "gdb-demangle.h"
-#include "filenames.h"	/* for DOSish file names */
+#include "filenames.h"
 #include "language.h"
 #include "complaints.h"
 #include "dwarf2/expr.h"
@@ -71,7 +71,7 @@
 #include "c-lang.h"
 #include "go-lang.h"
 #include "valprint.h"
-#include "gdbcore.h" /* for gnutarget */
+#include "gdbcore.h"
 #include "gdb/gdb-index.h"
 #include "gdb_bfd.h"
 #include "f-lang.h"
@@ -5316,6 +5316,12 @@ create_all_units (dwarf2_per_objfile *per_objfile)
       dwz->line.read (objfile);
       read_comp_units_from_section (per_objfile, &dwz->info, &dwz->abbrev, 1,
 				    types_htab, rcuh_kind::COMPILE);
+
+      if (!dwz->types.empty ())
+	{
+	  /* See enhancement PR symtab/30838.  */
+	  error (_("Dwarf Error: .debug_types section not supported in dwz file"));
+	}
     }
 
   per_objfile->per_bfd->signatured_types = std::move (types_htab);

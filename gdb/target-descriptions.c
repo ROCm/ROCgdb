@@ -36,7 +36,7 @@
 #include "inferior.h"
 #include <algorithm>
 #include "completer.h"
-#include "readline/tilde.h" /* tilde_expand */
+#include "readline/tilde.h"
 
 /* Types.  */
 
