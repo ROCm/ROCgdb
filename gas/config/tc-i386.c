@@ -255,6 +255,7 @@ enum i386_error
     no_default_mask,
     unsupported_rc_sae,
     invalid_register_operand,
+    internal_error,
   };
 
 struct _i386_insn
@@ -436,6 +437,7 @@ struct _i386_insn
 	vex_encoding_vex,
 	vex_encoding_vex3,
 	vex_encoding_evex,
+	vex_encoding_evex512,
 	vex_encoding_error
       } vec_encoding;
 
@@ -814,9 +816,6 @@ static int cpu_arch_tune_set = 0;
 
 /* Cpu we are generating instructions for.  */
 enum processor_type cpu_arch_tune = PROCESSOR_UNKNOWN;
-
-/* CPU feature flags of cpu we are generating instructions for.  */
-static i386_cpu_flags cpu_arch_tune_flags;
 
 /* CPU instruction set architecture used.  */
 enum processor_type cpu_arch_isa = PROCESSOR_UNKNOWN;
@@ -1872,6 +1871,13 @@ cpu_flags_and_not (i386_cpu_flags x, i386_cpu_flags y)
 
 static const i386_cpu_flags avx512 = CPU_ANY_AVX512F_FLAGS;
 
+static INLINE bool need_evex_encoding (void)
+{
+  return i.vec_encoding == vex_encoding_evex
+	|| i.vec_encoding == vex_encoding_evex512
+	|| i.mask.reg;
+}
+
 #define CPU_FLAGS_ARCH_MATCH		0x1
 #define CPU_FLAGS_64BIT_MATCH		0x2
 
@@ -1899,6 +1905,31 @@ cpu_flags_match (const insn_template *t)
       /* This instruction is available only on some archs.  */
       i386_cpu_flags cpu = cpu_arch_flags;
 
+      /* Dual VEX/EVEX templates may need stripping of one of the flags.  */
+      if (t->opcode_modifier.vex && t->opcode_modifier.evex)
+	{
+	  /* Dual AVX/AVX512F templates need to retain AVX512F only if we already
+	     know that EVEX encoding will be needed.  */
+	  if ((x.bitfield.cpuavx || x.bitfield.cpuavx2)
+	      && x.bitfield.cpuavx512f)
+	    {
+	      if (need_evex_encoding ())
+		{
+		  x.bitfield.cpuavx = 0;
+		  x.bitfield.cpuavx2 = 0;
+		}
+	      /* need_evex_encoding() isn't reliable before operands were
+		 parsed.  */
+	      else if (i.operands)
+		{
+		  x.bitfield.cpuavx512f = 0;
+		  x.bitfield.cpuavx512vl = 0;
+		  if (x.bitfield.cpufma && !cpu.bitfield.cpufma)
+		    x.bitfield.cpuavx = 0;
+		}
+	    }
+	}
+
       /* AVX512VL is no standalone feature - match it and then strip it.  */
       if (x.bitfield.cpuavx512vl && !cpu.bitfield.cpuavx512vl)
 	return match;
@@ -1913,7 +1944,19 @@ cpu_flags_match (const insn_template *t)
       cpu = cpu_flags_and (x, cpu);
       if (!cpu_flags_all_zero (&cpu))
 	{
-	  if (x.bitfield.cpuavx)
+	  if (t->cpu.bitfield.cpuavx && t->cpu.bitfield.cpuavx512f)
+	    {
+	      if ((need_evex_encoding ()
+		   ? cpu.bitfield.cpuavx512f
+		   : cpu.bitfield.cpuavx)
+		  && (!x.bitfield.cpufma || cpu.bitfield.cpufma
+		      || cpu_arch_flags.bitfield.cpuavx512f)
+		  && (!x.bitfield.cpugfni || cpu.bitfield.cpugfni)
+		  && (!x.bitfield.cpuvaes || cpu.bitfield.cpuvaes)
+		  && (!x.bitfield.cpuvpclmulqdq || cpu.bitfield.cpuvpclmulqdq))
+		match |= CPU_FLAGS_ARCH_MATCH;
+	    }
+	  else if (x.bitfield.cpuavx)
 	    {
 	      /* We need to check a few extra flags with AVX.  */
 	      if (cpu.bitfield.cpuavx
@@ -1924,13 +1967,13 @@ cpu_flags_match (const insn_template *t)
 		  && (!x.bitfield.cpupclmulqdq || cpu.bitfield.cpupclmulqdq))
 		match |= CPU_FLAGS_ARCH_MATCH;
 	    }
+	  else if (x.bitfield.cpuavx2 && cpu.bitfield.cpuavx2)
+	    match |= CPU_FLAGS_ARCH_MATCH;
 	  else if (x.bitfield.cpuavx512f)
 	    {
 	      /* We need to check a few extra flags with AVX512F.  */
 	      if (cpu.bitfield.cpuavx512f
-		  && (!x.bitfield.cpugfni || cpu.bitfield.cpugfni)
-		  && (!x.bitfield.cpuvaes || cpu.bitfield.cpuvaes)
-		  && (!x.bitfield.cpuvpclmulqdq || cpu.bitfield.cpuvpclmulqdq))
+		  && (!x.bitfield.cpugfni || cpu.bitfield.cpugfni))
 		match |= CPU_FLAGS_ARCH_MATCH;
 	    }
 	  else
@@ -2763,13 +2806,41 @@ check_cpu_arch_compatible (const char *name ATTRIBUTE_UNUSED,
 }
 
 static void
-extend_cpu_sub_arch_name (const char *name)
+extend_cpu_sub_arch_name (const char *pfx, const char *name)
 {
   if (cpu_sub_arch_name)
     cpu_sub_arch_name = reconcat (cpu_sub_arch_name, cpu_sub_arch_name,
-				  ".", name, (const char *) NULL);
+				  pfx, name, (const char *) NULL);
   else
-    cpu_sub_arch_name = concat (".", name, (const char *) NULL);
+    cpu_sub_arch_name = concat (pfx, name, (const char *) NULL);
+}
+
+static void isa_enable (unsigned int idx)
+{
+  i386_cpu_flags flags = cpu_flags_or (cpu_arch_flags, cpu_arch[idx].enable);
+
+  if (!cpu_flags_equal (&flags, &cpu_arch_flags))
+    {
+      extend_cpu_sub_arch_name (".", cpu_arch[idx].name);
+      cpu_arch_flags = flags;
+    }
+
+  cpu_arch_isa_flags = cpu_flags_or (cpu_arch_isa_flags, cpu_arch[idx].enable);
+}
+
+static void isa_disable (unsigned int idx)
+{
+  i386_cpu_flags flags
+    = cpu_flags_and_not (cpu_arch_flags, cpu_arch[idx].disable);
+
+  if (!cpu_flags_equal (&flags, &cpu_arch_flags))
+    {
+      extend_cpu_sub_arch_name (".no", cpu_arch[idx].name);
+      cpu_arch_flags = flags;
+    }
+
+  cpu_arch_isa_flags
+    = cpu_flags_and_not (cpu_arch_isa_flags, cpu_arch[idx].disable);
 }
 
 static void
@@ -2793,7 +2864,6 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
   int e;
   const char *string;
   unsigned int j = 0;
-  i386_cpu_flags flags;
 
   SKIP_WHITESPACE ();
 
@@ -2887,10 +2957,7 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	  cpu_arch_isa = PROCESSOR_UNKNOWN;
 	  cpu_arch_isa_flags = cpu_arch[flag_code == CODE_64BIT].enable;
 	  if (!cpu_arch_tune_set)
-	    {
-	      cpu_arch_tune = cpu_arch_isa;
-	      cpu_arch_tune_flags = cpu_arch_isa_flags;
-	    }
+	    cpu_arch_tune = PROCESSOR_UNKNOWN;
 
 	  vector_size = VSZ_DEFAULT;
 
@@ -2932,10 +2999,7 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	      cpu_arch_isa = cpu_arch[j].type;
 	      cpu_arch_isa_flags = cpu_arch[j].enable;
 	      if (!cpu_arch_tune_set)
-		{
-		  cpu_arch_tune = cpu_arch_isa;
-		  cpu_arch_tune_flags = cpu_arch_isa_flags;
-		}
+		cpu_arch_tune = cpu_arch_isa;
 
 	      vector_size = VSZ_DEFAULT;
 
@@ -2946,17 +3010,7 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	  if (cpu_flags_all_zero (&cpu_arch[j].enable))
 	    continue;
 
-	  flags = cpu_flags_or (cpu_arch_flags, cpu_arch[j].enable);
-
-	  if (!cpu_flags_equal (&flags, &cpu_arch_flags))
-	    {
-	      extend_cpu_sub_arch_name (string + 1);
-	      cpu_arch_flags = flags;
-	      cpu_arch_isa_flags = flags;
-	    }
-	  else
-	    cpu_arch_isa_flags
-	      = cpu_flags_or (cpu_arch_isa_flags, cpu_arch[j].enable);
+	  isa_enable (j);
 
 	  (void) restore_line_pointer (e);
 
@@ -3003,13 +3057,7 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	if (cpu_arch[j].type == PROCESSOR_NONE
 	    && strcmp (string + 3, cpu_arch[j].name) == 0)
 	  {
-	    flags = cpu_flags_and_not (cpu_arch_flags, cpu_arch[j].disable);
-	    if (!cpu_flags_equal (&flags, &cpu_arch_flags))
-	      {
-		extend_cpu_sub_arch_name (string + 1);
-		cpu_arch_flags = flags;
-		cpu_arch_isa_flags = flags;
-	      }
+	    isa_disable (j);
 
 	    if (cpu_arch[j].vsz == vsz_set)
 	      vector_size = VSZ_DEFAULT;
@@ -3645,6 +3693,27 @@ install_template (const insn_template *t)
   unsigned int l;
 
   i.tm = *t;
+
+  /* Dual VEX/EVEX templates need stripping one of the possible variants.  */
+  if (t->opcode_modifier.vex && t->opcode_modifier.evex)
+  {
+      if ((is_cpu (t, CpuAVX) || is_cpu (t, CpuAVX2))
+	  && is_cpu (t, CpuAVX512F))
+	{
+	  if (need_evex_encoding ())
+	    {
+	      i.tm.opcode_modifier.vex = 0;
+	      i.tm.cpu.bitfield.cpuavx = 0;
+	      if (is_cpu (&i.tm, CpuAVX2))
+	        i.tm.cpu.bitfield.isa = 0;
+	    }
+	  else
+	    {
+	      i.tm.opcode_modifier.evex = 0;
+	      i.tm.cpu.bitfield.cpuavx512f = 0;
+	    }
+	}
+  }
 
   /* Note that for pseudo prefixes this produces a length of 1. But for them
      the length isn't interesting at all.  */
@@ -4553,6 +4622,8 @@ optimize_encoding (void)
 	      i.tm.opcode_modifier.vex = VEX128;
 	      i.tm.opcode_modifier.vexw = VEXW0;
 	      i.tm.opcode_modifier.evex = 0;
+	      i.vec_encoding = vex_encoding_vex;
+	      i.mask.reg = NULL;
 	    }
 	  else if (optimize > 1)
 	    i.tm.opcode_modifier.evex = EVEX128;
@@ -5293,6 +5364,9 @@ md_assemble (char *line)
 	case invalid_register_operand:
 	  err_msg = _("invalid register operand");
 	  break;
+	case internal_error:
+	  err_msg = _("internal error");
+	  break;
 	}
       as_bad (_("%s for `%s'"), err_msg,
 	      pass1_mnem ? pass1_mnem : insn_name (current_templates->start));
@@ -5438,6 +5512,11 @@ md_assemble (char *line)
   if (optimize && !i.no_optimize && i.tm.opcode_modifier.optimize)
     optimize_encoding ();
 
+  /* Past optimization there's no need to distinguish vex_encoding_evex and
+     vex_encoding_evex512 anymore.  */
+  if (i.vec_encoding == vex_encoding_evex512)
+    i.vec_encoding = vex_encoding_evex;
+
   if (use_unaligned_vector_move)
     encode_with_unaligned_vector_move ();
 
@@ -5467,6 +5546,7 @@ md_assemble (char *line)
 	  if (i.tm.operand_types[j].bitfield.tmmword)
 	    i.xstate |= xstate_tmm;
 	  else if (i.tm.operand_types[j].bitfield.zmmword
+		   && !i.tm.opcode_modifier.vex
 		   && vector_size >= VSZ512)
 	    i.xstate |= xstate_zmm;
 	  else if (i.tm.operand_types[j].bitfield.ymmword
@@ -6474,7 +6554,8 @@ check_VecOperands (const insn_template *t)
   cpu = cpu_flags_and (cpu_flags_from_attr (t->cpu), avx512);
   if (!cpu_flags_all_zero (&cpu)
       && !is_cpu (t, CpuAVX512VL)
-      && !cpu_arch_flags.bitfield.cpuavx512vl)
+      && !cpu_arch_flags.bitfield.cpuavx512vl
+      && (!t->opcode_modifier.vex || need_evex_encoding ()))
     {
       for (op = 0; op < t->operands; ++op)
 	{
@@ -6785,6 +6866,8 @@ check_VecOperands (const insn_template *t)
 
   /* Check vector Disp8 operand.  */
   if (t->opcode_modifier.disp8memshift
+      && (!t->opcode_modifier.vex
+          || need_evex_encoding ())
       && i.disp_encoding <= disp_encoding_8bit)
     {
       if (i.broadcast.type || i.broadcast.bytes)
@@ -6880,7 +6963,8 @@ VEX_check_encoding (const insn_template *t)
       return 1;
     }
 
-  if (i.vec_encoding == vex_encoding_evex)
+  if (i.vec_encoding == vex_encoding_evex
+      || i.vec_encoding == vex_encoding_evex512)
     {
       /* This instruction must be encoded with EVEX prefix.  */
       if (!is_evex_encoding (t))
@@ -7375,6 +7459,33 @@ match_template (char mnem_suffix)
 	{
 	  specific_error = progress (i.error);
 	  continue;
+	}
+
+      /* Check whether to use the shorter VEX encoding for certain insns where
+	 the EVEX enconding comes first in the table.  This requires the respective
+	 AVX-* feature to be explicitly enabled.  */
+      if (t == current_templates->start
+	  && t->opcode_modifier.disp8memshift
+	  && !t->opcode_modifier.vex
+	  && !need_evex_encoding ()
+	  && t + 1 < current_templates->end
+	  && t[1].opcode_modifier.vex)
+	{
+	  i386_cpu_flags cpu;
+	  unsigned int memshift = i.memshift;
+
+	  i.memshift = 0;
+	  cpu = cpu_flags_and (cpu_flags_from_attr (t[1].cpu), cpu_arch_isa_flags);
+	  if (!cpu_flags_all_zero (&cpu)
+	      && (!i.types[0].bitfield.disp8
+		  || !operand_type_check (i.types[0], disp)
+		  || i.op[0].disps->X_op != O_constant
+		  || fits_in_disp8 (i.op[0].disps->X_add_number)))
+	    {
+	      specific_error = progress (internal_error);
+	      continue;
+	    }
+	  i.memshift = memshift;
 	}
 
       /* We've found a match; break out of loop.  */
@@ -11219,6 +11330,10 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	  goto done;
 	}
 
+      /* No need to distinguish vex_encoding_evex and vex_encoding_evex512.  */
+      if (i.vec_encoding == vex_encoding_evex512)
+	i.vec_encoding = vex_encoding_evex;
+
       /* Are we to emit ModR/M encoding?  */
       if (!i.short_form
 	  && (i.mem_operands
@@ -11642,6 +11757,12 @@ RC_SAE_specifier (const char *pstr)
 	      return NULL;
 	    }
 
+	  if (i.vec_encoding == vex_encoding_default)
+	    i.vec_encoding = vex_encoding_evex512;
+	  else if (i.vec_encoding != vex_encoding_evex
+		   && i.vec_encoding != vex_encoding_evex512)
+	    return NULL;
+
 	  i.rounding.type = RC_NamesTable[j].type;
 
 	  return (char *)(pstr + RC_NamesTable[j].len);
@@ -11700,6 +11821,12 @@ check_VecOperations (char *op_string)
 		  return NULL;
 		}
 	      op_string++;
+
+	      if (i.vec_encoding == vex_encoding_default)
+		i.vec_encoding = vex_encoding_evex;
+	      else if (i.vec_encoding != vex_encoding_evex
+		       && i.vec_encoding != vex_encoding_evex512)
+		goto unknown_vec_op;
 
 	      i.broadcast.type = bcst_type;
 	      i.broadcast.operand = this_operand;
@@ -13962,8 +14089,17 @@ static bool check_register (const reg_entry *r)
 	}
     }
 
-  if (vector_size < VSZ512 && r->reg_type.bitfield.zmmword)
-    return false;
+  if (r->reg_type.bitfield.zmmword)
+    {
+      if (vector_size < VSZ512)
+	return false;
+
+      if (i.vec_encoding == vex_encoding_default)
+	i.vec_encoding = vex_encoding_evex512;
+      else if (i.vec_encoding != vex_encoding_evex
+	       && i.vec_encoding != vex_encoding_evex512)
+	i.vec_encoding = vex_encoding_error;
+    }
 
   if (vector_size < VSZ256 && r->reg_type.bitfield.ymmword)
     return false;
@@ -13988,7 +14124,8 @@ static bool check_register (const reg_entry *r)
 	  || flag_code != CODE_64BIT)
 	return false;
 
-      if (i.vec_encoding == vex_encoding_default)
+      if (i.vec_encoding == vex_encoding_default
+	  || i.vec_encoding == vex_encoding_evex512)
 	i.vec_encoding = vex_encoding_evex;
       else if (i.vec_encoding != vex_encoding_evex)
 	i.vec_encoding = vex_encoding_error;
@@ -14495,10 +14632,7 @@ md_parse_option (int c, const char *arg)
 		  cpu_arch_isa = cpu_arch[j].type;
 		  cpu_arch_isa_flags = cpu_arch[j].enable;
 		  if (!cpu_arch_tune_set)
-		    {
-		      cpu_arch_tune = cpu_arch_isa;
-		      cpu_arch_tune_flags = cpu_arch_isa_flags;
-		    }
+		    cpu_arch_tune = cpu_arch_isa;
 		  vector_size = VSZ_DEFAULT;
 		  break;
 		}
@@ -14507,21 +14641,7 @@ md_parse_option (int c, const char *arg)
 		       && !cpu_flags_all_zero (&cpu_arch[j].enable))
 		{
 		  /* ISA extension.  */
-		  i386_cpu_flags flags;
-
-		  flags = cpu_flags_or (cpu_arch_flags,
-					cpu_arch[j].enable);
-
-		  if (!cpu_flags_equal (&flags, &cpu_arch_flags))
-		    {
-		      extend_cpu_sub_arch_name (arch);
-		      cpu_arch_flags = flags;
-		      cpu_arch_isa_flags = flags;
-		    }
-		  else
-		    cpu_arch_isa_flags
-		      = cpu_flags_or (cpu_arch_isa_flags,
-				      cpu_arch[j].enable);
+		  isa_enable (j);
 
 		  switch (cpu_arch[j].vsz)
 		    {
@@ -14564,16 +14684,7 @@ md_parse_option (int c, const char *arg)
 		if (cpu_arch[j].type == PROCESSOR_NONE
 		    && strcmp (arch + 2, cpu_arch[j].name) == 0)
 		  {
-		    i386_cpu_flags flags;
-
-		    flags = cpu_flags_and_not (cpu_arch_flags,
-					       cpu_arch[j].disable);
-		    if (!cpu_flags_equal (&flags, &cpu_arch_flags))
-		      {
-			extend_cpu_sub_arch_name (arch);
-			cpu_arch_flags = flags;
-			cpu_arch_isa_flags = flags;
-		      }
+		    isa_disable (j);
 		    if (cpu_arch[j].vsz == vsz_set)
 		      vector_size = VSZ_DEFAULT;
 		    break;
@@ -14599,7 +14710,6 @@ md_parse_option (int c, const char *arg)
 	    {
 	      cpu_arch_tune_set = 1;
 	      cpu_arch_tune = cpu_arch [j].type;
-	      cpu_arch_tune_flags = cpu_arch[j].enable;
 	      break;
 	    }
 	}
@@ -15205,10 +15315,7 @@ i386_target_format (void)
 	  cpu_arch_isa = PROCESSOR_IAMCU;
 	  cpu_arch_isa_flags = iamcu_flags;
 	  if (!cpu_arch_tune_set)
-	    {
-	      cpu_arch_tune = cpu_arch_isa;
-	      cpu_arch_tune_flags = cpu_arch_isa_flags;
-	    }
+	    cpu_arch_tune = PROCESSOR_IAMCU;
 	}
       else if (cpu_arch_isa != PROCESSOR_IAMCU)
 	as_fatal (_("Intel MCU doesn't support `%s' architecture"),
@@ -15219,8 +15326,6 @@ i386_target_format (void)
 
   if (cpu_flags_all_zero (&cpu_arch_isa_flags))
     cpu_arch_isa_flags = cpu_arch[flag_code == CODE_64BIT].enable;
-  if (cpu_flags_all_zero (&cpu_arch_tune_flags))
-    cpu_arch_tune_flags = cpu_arch[flag_code == CODE_64BIT].enable;
 
   switch (OUTPUT_FLAVOR)
     {
