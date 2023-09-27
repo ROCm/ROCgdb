@@ -6212,9 +6212,15 @@ optimize_imm (void)
 	    break;
 	  }
     }
-  else if ((flag_code == CODE_16BIT) ^ (i.prefix[DATA_PREFIX] != 0))
+  else if ((flag_code == CODE_16BIT)
+	    ^ (i.prefix[DATA_PREFIX] != 0 && !(i.prefix[REX_PREFIX] & REX_W)))
     guess_suffix = WORD_MNEM_SUFFIX;
-  else if (flag_code != CODE_64BIT || !(i.prefix[REX_PREFIX] & REX_W))
+  else if (flag_code != CODE_64BIT
+	   || (!(i.prefix[REX_PREFIX] & REX_W)
+	       /* A more generic (but also more involved) way of dealing
+		  with the special case(s) would be to go look for
+		  DefaultSize attributes on any of the templates.  */
+	       && current_templates->start->mnem_off != MN_push))
     guess_suffix = LONG_MNEM_SUFFIX;
 
   for (op = i.operands; --op >= 0;)
@@ -8181,7 +8187,8 @@ update_imm (unsigned int j)
 	       || operand_type_equal (&overlap, &imm16_32)
 	       || operand_type_equal (&overlap, &imm16_32s))
 	{
-	  if ((flag_code == CODE_16BIT) ^ (i.prefix[DATA_PREFIX] != 0))
+	  if ((flag_code == CODE_16BIT)
+	      ^ (i.prefix[DATA_PREFIX] != 0 && !(i.prefix[REX_PREFIX] & REX_W)))
 	    overlap = imm16;
 	  else
 	    overlap = imm32s;
@@ -10421,6 +10428,7 @@ output_imm (fragS *insn_start_frag, offsetT insn_start_off)
 	      if (i.types[n].bitfield.imm32s
 		  && (i.suffix == QWORD_MNEM_SUFFIX
 		      || (!i.suffix && i.tm.opcode_modifier.no_lsuf)
+		      || (i.prefix[REX_PREFIX] & REX_W)
 		      || dot_insn ()))
 		sign = 1;
 	      else
@@ -11538,8 +11546,9 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	  ? i.broadcast.type || i.broadcast.bytes
 	    || i.rounding.type != rc_none
 	    || i.mask.reg
-	  : (i.broadcast.type || i.broadcast.bytes)
-	    && i.rounding.type != rc_none))
+	  : (i.mem_operands && i.rounding.type != rc_none)
+	    || ((i.broadcast.type || i.broadcast.bytes)
+		&& !(i.flags[i.broadcast.operand] & Operand_Mem))))
     {
       as_bad (_("conflicting .insn operands"));
       goto done;
