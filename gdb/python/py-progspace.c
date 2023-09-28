@@ -26,6 +26,8 @@
 #include "arch-utils.h"
 #include "solib.h"
 #include "block.h"
+#include "py-event.h"
+#include "observable.h"
 
 struct pspace_object
 {
@@ -108,6 +110,45 @@ pspy_get_filename (PyObject *self, void *closure)
 	return (host_string_to_python_string (objfile_name (objfile))
 		.release ());
     }
+  Py_RETURN_NONE;
+}
+
+/* Implement the gdb.Progspace.symbol_file attribute.  Retun the
+   gdb.Objfile corresponding to the currently loaded symbol-file, or None
+   if no symbol-file is loaded.  If the Progspace is invalid then raise an
+   exception.  */
+
+static PyObject *
+pspy_get_symbol_file (PyObject *self, void *closure)
+{
+  pspace_object *obj = (pspace_object *) self;
+
+  PSPY_REQUIRE_VALID (obj);
+
+  struct objfile *objfile = obj->pspace->symfile_object_file;
+
+  if (objfile != nullptr)
+    return objfile_to_objfile_object (objfile).release ();
+
+  Py_RETURN_NONE;
+}
+
+/* Implement the gdb.Progspace.executable_filename attribute.  Retun a
+   string containing the name of the current executable, or None if no
+   executable is currently set.  If the Progspace is invalid then raise an
+   exception.  */
+
+static PyObject *
+pspy_get_exec_file (PyObject *self, void *closure)
+{
+  pspace_object *obj = (pspace_object *) self;
+
+  PSPY_REQUIRE_VALID (obj);
+
+  const char *filename = obj->pspace->exec_filename.get ();
+  if (filename != nullptr)
+    return host_string_to_python_string (filename).release ();
+
   Py_RETURN_NONE;
 }
 
@@ -553,9 +594,61 @@ gdbpy_is_progspace (PyObject *obj)
   return PyObject_TypeCheck (obj, &pspace_object_type);
 }
 
+/* Emit an ExecutableChangedEvent event to REGISTRY.  Return 0 on success,
+   or a negative value on error.  PSPACE is the program_space in which the
+   current executable has changed, and RELOAD_P is true if the executable
+   path stayed the same, but the file on disk changed, or false if the
+   executable path actually changed.  */
+
+static int
+emit_executable_changed_event (eventregistry_object *registry,
+			       struct program_space *pspace, bool reload_p)
+{
+  gdbpy_ref<> event_obj
+    = create_event_object (&executable_changed_event_object_type);
+  if (event_obj == nullptr)
+    return -1;
+
+  gdbpy_ref<> py_pspace = pspace_to_pspace_object (pspace);
+  if (py_pspace == nullptr
+      || evpy_add_attribute (event_obj.get (), "progspace",
+			     py_pspace.get ()) < 0)
+    return -1;
+
+  gdbpy_ref<> py_reload_p (PyBool_FromLong (reload_p ? 1 : 0));
+  if (py_reload_p == nullptr
+      || evpy_add_attribute (event_obj.get (), "reload",
+			     py_reload_p.get ()) < 0)
+    return -1;
+
+  return evpy_emit_event (event_obj.get (), registry);
+}
+
+/* Listener for the executable_changed observable, this is called when the
+   current executable within PSPACE changes.  RELOAD_P is true if the
+   executable path stayed the same but the file changed on disk.  RELOAD_P
+   is false if the executable path was changed.  */
+
+static void
+gdbpy_executable_changed (struct program_space *pspace, bool reload_p)
+{
+  if (!gdb_python_initialized)
+    return;
+
+  gdbpy_enter enter_py;
+
+  if (!evregpy_no_listeners_p (gdb_py_events.executable_changed))
+    if (emit_executable_changed_event (gdb_py_events.executable_changed,
+				       pspace, reload_p) < 0)
+      gdbpy_print_stack ();
+}
+
 static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
 gdbpy_initialize_pspace (void)
 {
+  gdb::observers::executable_changed.attach (gdbpy_executable_changed,
+					     "py-progspace");
+
   if (PyType_Ready (&pspace_object_type) < 0)
     return -1;
 
@@ -572,7 +665,12 @@ static gdb_PyGetSetDef pspace_getset[] =
   { "__dict__", gdb_py_generic_dict, NULL,
     "The __dict__ for this progspace.", &pspace_object_type },
   { "filename", pspy_get_filename, NULL,
-    "The progspace's main filename, or None.", NULL },
+    "The filename of the progspace's main symbol file, or None.", nullptr },
+  { "symbol_file", pspy_get_symbol_file, nullptr,
+    "The gdb.Objfile for the progspace's main symbol file, or None.",
+    nullptr},
+  { "executable_filename", pspy_get_exec_file, nullptr,
+    "The filename for the progspace's executable, or None.", nullptr},
   { "pretty_printers", pspy_get_printers, pspy_set_printers,
     "Pretty printers.", NULL },
   { "frame_filters", pspy_get_frame_filters, pspy_set_frame_filters,

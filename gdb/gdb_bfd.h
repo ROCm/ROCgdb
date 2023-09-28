@@ -22,6 +22,7 @@
 
 #include "registry.h"
 #include "gdbsupport/byte-vector.h"
+#include "gdbsupport/function-view.h"
 #include "gdbsupport/gdb_ref_ptr.h"
 #include "gdbsupport/iterator-range.h"
 #include "gdbsupport/next-iterator.h"
@@ -150,23 +151,35 @@ gdb_bfd_ref_ptr gdb_bfd_openr (const char *, const char *);
 
 gdb_bfd_ref_ptr gdb_bfd_openw (const char *, const char *);
 
-/* A wrapper for bfd_openr_iovec that initializes the gdb-specific
-   reference count.  */
+/* The base class for BFD "iovec" implementations.  This is used by
+   gdb_bfd_openr_iovec and enables better type safety.  */
+
+class gdb_bfd_iovec_base
+{
+protected:
+
+  gdb_bfd_iovec_base () = default;
+
+public:
+
+  virtual ~gdb_bfd_iovec_base () = default;
+
+  /* The "read" callback.  */
+  virtual file_ptr read (bfd *abfd, void *buffer, file_ptr nbytes,
+			 file_ptr offset) = 0;
+
+  /* The "stat" callback.  */
+  virtual int stat (struct bfd *abfd, struct stat *sb) = 0;
+};
+
+/* The type of the function used to open a new iovec-based BFD.  */
+using gdb_iovec_opener_ftype
+     = gdb::function_view<gdb_bfd_iovec_base * (bfd *)>;
+
+/* A type-safe wrapper for bfd_openr_iovec.  */
 
 gdb_bfd_ref_ptr gdb_bfd_openr_iovec (const char *filename, const char *target,
-				     void *(*open_func) (struct bfd *nbfd,
-							 void *open_closure),
-				     void *open_closure,
-				     file_ptr (*pread_func) (struct bfd *nbfd,
-							     void *stream,
-							     void *buf,
-							     file_ptr nbytes,
-							     file_ptr offset),
-				     int (*close_func) (struct bfd *nbfd,
-							void *stream),
-				     int (*stat_func) (struct bfd *abfd,
-						       void *stream,
-						       struct stat *sb));
+				     gdb_iovec_opener_ftype open_fn);
 
 /* A wrapper for bfd_openr_next_archived_file that initializes the
    gdb-specific reference count.  */

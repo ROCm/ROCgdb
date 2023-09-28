@@ -3930,6 +3930,39 @@ This is emitted when @value{GDBN} removes a connection
 The @code{gdb.TargetConnection} that is being removed.
 @end defvar
 
+@item events.executable_changed
+Emits @code{gdb.ExecutableChangedEvent} which indicates that the
+@code{gdb.Progspace.executable_filename} has changed.
+
+This event is emitted when either the value of
+@code{gdb.Progspace.executable_filename } has changed to name a
+different file, or the executable file named by
+@code{gdb.Progspace.executable_filename} has changed on disk, and
+@value{GDBN} has therefore reloaded it.
+
+@defvar ExecutableChangedEvent.progspace
+The @code{gdb.Progspace} in which the current executable has changed.
+The file name of the updated executable will be visible in
+@code{gdb.Progspace.executable_filename} (@pxref{Progspaces In Python}).
+@end defvar
+@defvar ExecutableChangedEvent.reload
+This attribute will be @code{True} if the value of
+@code{gdb.Progspace.executable_filename} didn't change, but the file
+it names changed on disk instead, and @value{GDBN} reloaded it.
+
+When this attribute is @code{False}, the value in
+@code{gdb.Progspace.executable_filename} was changed to name a
+different file.
+@end defvar
+
+Remember that @value{GDBN} tracks the executable file and the symbol
+file separately, these are visible as
+@code{gdb.Progspace.executable_filename} and
+@code{gdb.Progspace.filename} respectively.  When using the @kbd{file}
+command, @value{GDBN} updates both of these fields, but the executable
+file is updated first, so when this event is emitted, the executable
+filename will have changed, but the symbol filename might still hold
+its previous value.
 @end table
 
 @node Threads In Python
@@ -5071,7 +5104,44 @@ Each progspace is represented by an instance of the @code{gdb.Progspace}
 class.
 
 @defvar Progspace.filename
-The file name of the progspace as a string.
+The file name, as a string, of the main symbol file (from which debug
+symbols have been loaded) for the progspace, e.g.@: the argument to
+the @kbd{symbol-file} or @kbd{file} commands.
+
+If there is no main symbol table currently loaded, then this attribute
+will be @code{None}.
+@end defvar
+
+@defvar Progspace.symbol_file
+The @code{gdb.Objfile} representing the main symbol file (from which
+debug symbols have been loaded) for the @code{gdb.Progspace}.  This is
+the symbol file set by the @kbd{symbol-file} or @kbd{file} commands.
+
+This will be the @code{gdb.Objfile} representing
+@code{Progspace.filename} when @code{Progspace.filename} is not
+@code{None}.
+
+If there is no main symbol table currently loaded, then this attribute
+will be @code{None}.
+
+If the @code{Progspace} is invalid, i.e.@:, when
+@code{Progspace.is_valid()} returns @code{False}, then attempting to
+access this attribute will raise a @code{RuntimeError} exception.
+@end defvar
+
+@defvar Progspace.executable_filename
+The file name, as a string, of the executable file in use by this
+program space.  The executable file is the file that @value{GDBN} will
+invoke in order to start an inferior when using a native target.  The
+file name within this attribute is updated by the @kbd{exec-file} and
+@kbd{file} commands.
+
+If no executable is currently set within this @code{Progspace} then
+this attribute contains @code{None}.
+
+If the @code{Progspace} is invalid, i.e.@:, when
+@code{Progspace.is_valid()} returns @code{False}, then attempting to
+access this attribute will raise a @code{RuntimeError} exception.
 @end defvar
 
 @defvar Progspace.pretty_printers
