@@ -1,8 +1,6 @@
-/* Handle shared libraries for GDB, the GNU Debugger.
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 2022-2023 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+   Copyright 2006-2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,11 +15,15 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef SOLIB_DSBT_H
-#define SOLIB_DSBT_H
+#include <threads.h>
+#include <pthread.h>
 
-struct target_so_ops;
+/* Note: thread_local requires C11 or later.  */
+extern thread_local int var;
 
-extern const struct target_so_ops dsbt_so_ops;
-
-#endif /* solib-dsbt.h */
+int main()
+{
+  /* Ensure we link against pthreads even with --as-needed.  */
+  pthread_testcancel();
+  return var;
+}
