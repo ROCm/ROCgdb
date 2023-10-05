@@ -35,7 +35,7 @@
 #include "arch/arm.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
-#include "nat/aarch64-sve-linux-ptrace.h"
+#include "nat/aarch64-scalable-linux-ptrace.h"
 
 #include "elf/external.h"
 #include "elf/common.h"
@@ -55,6 +55,7 @@
 #include "arch/aarch64-mte-linux.h"
 
 #include "nat/aarch64-mte-linux-ptrace.h"
+#include "arch/aarch64-scalable-linux.h"
 
 #include <string.h>
 
@@ -313,45 +314,97 @@ store_fpregs_to_thread (const struct regcache *regcache)
     }
 }
 
-/* Fill GDB's register array with the sve register values
-   from the current thread.  */
+/* Fill GDB's REGCACHE with the valid SVE register values from the thread
+   associated with REGCACHE.
+
+   This function handles reading data from SVE or SSVE states, depending
+   on which state is active at the moment.  */
 
 static void
 fetch_sveregs_from_thread (struct regcache *regcache)
 {
-  std::unique_ptr<gdb_byte[]> base
-    = aarch64_sve_get_sveregs (regcache->ptid ().lwp ());
-  aarch64_sve_regs_copy_to_reg_buf (regcache, base.get ());
+  /* Fetch SVE state from the thread and copy it into the register cache.  */
+  aarch64_sve_regs_copy_to_reg_buf (regcache->ptid ().lwp (), regcache);
 }
 
-/* Store to the current thread the valid sve register
-   values in the GDB's register array.  */
+/* Store the valid SVE register values from GDB's REGCACHE to the thread
+   associated with REGCACHE.
+
+   This function handles writing data to SVE or SSVE states, depending
+   on which state is active at the moment.  */
 
 static void
 store_sveregs_to_thread (struct regcache *regcache)
 {
-  int ret;
-  struct iovec iovec;
-  int tid = regcache->ptid ().lwp ();
+  /* Fetch SVE state from the register cache and update the thread TID with
+     it.  */
+  aarch64_sve_regs_copy_from_reg_buf (regcache->ptid ().lwp (), regcache);
+}
 
-  /* First store vector length to the thread.  This is done first to ensure the
-     ptrace buffers read from the kernel are the correct size.  */
-  if (!aarch64_sve_set_vq (tid, regcache))
-    perror_with_name (_("Unable to set VG register"));
+/* Fill GDB's REGCACHE with the ZA register set contents from the
+   thread associated with REGCACHE.  If there is no active ZA register state,
+   make the ZA register contents zero.  */
 
-  /* Obtain a dump of SVE registers from ptrace.  */
-  std::unique_ptr<gdb_byte[]> base = aarch64_sve_get_sveregs (tid);
+static void
+fetch_za_from_thread (struct regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
 
-  /* Overwrite with regcache state.  */
-  aarch64_sve_regs_copy_from_reg_buf (regcache, base.get ());
+  /* Read ZA state from the thread to the register cache.  */
+  aarch64_za_regs_copy_to_reg_buf (regcache->ptid ().lwp (),
+				   regcache,
+				   tdep->sme_za_regnum,
+				   tdep->sme_svg_regnum,
+				   tdep->sme_svcr_regnum);
+}
 
-  /* Write back to the kernel.  */
-  iovec.iov_base = base.get ();
-  iovec.iov_len = ((struct user_sve_header *) base.get ())->size;
-  ret = ptrace (PTRACE_SETREGSET, tid, NT_ARM_SVE, &iovec);
+/* Store the NT_ARM_ZA register set contents from GDB's REGCACHE to the thread
+   associated with REGCACHE.  */
 
-  if (ret < 0)
-    perror_with_name (_("Unable to store sve registers"));
+static void
+store_za_to_thread (struct regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  /* Write ZA state from the register cache to the thread.  */
+  aarch64_za_regs_copy_from_reg_buf (regcache->ptid ().lwp (),
+				     regcache,
+				     tdep->sme_za_regnum,
+				     tdep->sme_svg_regnum,
+				     tdep->sme_svcr_regnum);
+}
+
+/* Fill GDB's REGCACHE with the ZT register set contents from the
+   thread associated with REGCACHE.  If there is no active ZA register state,
+   make the ZT register contents zero.  */
+
+static void
+fetch_zt_from_thread (struct regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  /* Read ZT state from the thread to the register cache.  */
+  aarch64_zt_regs_copy_to_reg_buf (regcache->ptid ().lwp (),
+				   regcache,
+				   tdep->sme2_zt0_regnum);
+}
+
+/* Store the NT_ARM_ZT register set contents from GDB's REGCACHE to the
+   thread associated with REGCACHE.  */
+
+static void
+store_zt_to_thread (struct regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  /* Write ZT state from the register cache to the thread.  */
+  aarch64_zt_regs_copy_from_reg_buf (regcache->ptid ().lwp (),
+				     regcache,
+				     tdep->sme2_zt0_regnum);
 }
 
 /* Fill GDB's register array with the pointer authentication mask values from
@@ -504,10 +557,14 @@ aarch64_fetch_registers (struct regcache *regcache, int regno)
   aarch64_gdbarch_tdep *tdep
     = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
 
+  /* Do we need to fetch all registers?  */
   if (regno == -1)
     {
       fetch_gregs_from_thread (regcache);
-      if (tdep->has_sve ())
+
+      /* We attempt to fetch SVE registers if there is support for either
+	 SVE or SME (due to the SSVE state of SME).  */
+      if (tdep->has_sve () || tdep->has_sme ())
 	fetch_sveregs_from_thread (regcache);
       else
 	fetch_fpregs_from_thread (regcache);
@@ -520,29 +577,43 @@ aarch64_fetch_registers (struct regcache *regcache, int regno)
 
       if (tdep->has_tls ())
 	fetch_tlsregs_from_thread (regcache);
+
+      if (tdep->has_sme ())
+	fetch_za_from_thread (regcache);
+
+      if (tdep->has_sme2 ())
+	fetch_zt_from_thread (regcache);
     }
+  /* General purpose register?  */
   else if (regno < AARCH64_V0_REGNUM)
     fetch_gregs_from_thread (regcache);
-  else if (tdep->has_sve ())
+  /* SVE register?  */
+  else if ((tdep->has_sve () || tdep->has_sme ())
+	   && regno <= AARCH64_SVE_VG_REGNUM)
     fetch_sveregs_from_thread (regcache);
-  else
+  /* FPSIMD register?  */
+  else if (regno <= AARCH64_FPCR_REGNUM)
     fetch_fpregs_from_thread (regcache);
-
-  if (tdep->has_pauth ())
-    {
-      if (regno == AARCH64_PAUTH_DMASK_REGNUM (tdep->pauth_reg_base)
-	  || regno == AARCH64_PAUTH_CMASK_REGNUM (tdep->pauth_reg_base))
-	fetch_pauth_masks_from_thread (regcache);
-    }
-
-  /* Fetch individual MTE registers.  */
-  if (tdep->has_mte ()
-      && (regno == tdep->mte_reg_base))
+  /* PAuth register?  */
+  else if (tdep->has_pauth ()
+	   && (regno == AARCH64_PAUTH_DMASK_REGNUM (tdep->pauth_reg_base)
+	       || regno == AARCH64_PAUTH_CMASK_REGNUM (tdep->pauth_reg_base)))
+    fetch_pauth_masks_from_thread (regcache);
+  /* SME register?  */
+  else if (tdep->has_sme () && regno >= tdep->sme_reg_base
+	   && regno < tdep->sme_reg_base + 3)
+    fetch_za_from_thread (regcache);
+  /* SME2 register?  */
+  else if (tdep->has_sme2 () && regno == tdep->sme2_zt0_regnum)
+    fetch_zt_from_thread (regcache);
+  /* MTE register?  */
+  else if (tdep->has_mte ()
+	   && (regno == tdep->mte_reg_base))
     fetch_mteregs_from_thread (regcache);
-
-  if (tdep->has_tls ()
-      && regno >= tdep->tls_regnum_base
-      && regno < tdep->tls_regnum_base + tdep->tls_register_count)
+  /* TLS register?  */
+  else if (tdep->has_tls ()
+	   && regno >= tdep->tls_regnum_base
+	   && regno < tdep->tls_regnum_base + tdep->tls_register_count)
     fetch_tlsregs_from_thread (regcache);
 }
 
@@ -592,10 +663,14 @@ aarch64_store_registers (struct regcache *regcache, int regno)
   aarch64_gdbarch_tdep *tdep
     = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
 
+  /* Do we need to store all registers?  */
   if (regno == -1)
     {
       store_gregs_to_thread (regcache);
-      if (tdep->has_sve ())
+
+      /* We attempt to store SVE registers if there is support for either
+	 SVE or SME (due to the SSVE state of SME).  */
+      if (tdep->has_sve () || tdep->has_sme ())
 	store_sveregs_to_thread (regcache);
       else
 	store_fpregs_to_thread (regcache);
@@ -605,23 +680,40 @@ aarch64_store_registers (struct regcache *regcache, int regno)
 
       if (tdep->has_tls ())
 	store_tlsregs_to_thread (regcache);
+
+      if (tdep->has_sme ())
+	store_za_to_thread (regcache);
+
+      if (tdep->has_sme2 ())
+	store_zt_to_thread (regcache);
     }
+  /* General purpose register?  */
   else if (regno < AARCH64_V0_REGNUM)
     store_gregs_to_thread (regcache);
-  else if (tdep->has_sve ())
+  /* SVE register?  */
+  else if ((tdep->has_sve () || tdep->has_sme ())
+	   && regno <= AARCH64_SVE_VG_REGNUM)
     store_sveregs_to_thread (regcache);
-  else
+  /* FPSIMD register?  */
+  else if (regno <= AARCH64_FPCR_REGNUM)
     store_fpregs_to_thread (regcache);
-
-  /* Store MTE registers.  */
-  if (tdep->has_mte ()
-      && (regno == tdep->mte_reg_base))
+  /* SME register?  */
+  else if (tdep->has_sme () && regno >= tdep->sme_reg_base
+	   && regno < tdep->sme_reg_base + 3)
+    store_za_to_thread (regcache);
+  else if (tdep->has_sme2 () && regno == tdep->sme2_zt0_regnum)
+    store_zt_to_thread (regcache);
+  /* MTE register?  */
+  else if (tdep->has_mte ()
+	   && (regno == tdep->mte_reg_base))
     store_mteregs_to_thread (regcache);
-
-  if (tdep->has_tls ()
-      && regno >= tdep->tls_regnum_base
-      && regno < tdep->tls_regnum_base + tdep->tls_register_count)
+  /* TLS register?  */
+  else if (tdep->has_tls ()
+	   && regno >= tdep->tls_regnum_base
+	   && regno < tdep->tls_regnum_base + tdep->tls_register_count)
     store_tlsregs_to_thread (regcache);
+
+  /* PAuth registers are read-only.  */
 }
 
 /* A version of the "store_registers" target_ops method used when running
@@ -801,10 +893,19 @@ aarch64_linux_nat_target::read_description ()
   CORE_ADDR hwcap2 = linux_get_hwcap2 ();
 
   aarch64_features features;
+  /* SVE/SSVE check.  Reading VQ may return either the regular vector length
+     or the streaming vector length, depending on whether streaming mode is
+     active or not.  */
   features.vq = aarch64_sve_get_vq (tid);
   features.pauth = hwcap & AARCH64_HWCAP_PACA;
   features.mte = hwcap2 & HWCAP2_MTE;
   features.tls = aarch64_tls_register_count (tid);
+  /* SME feature check.  */
+  features.svq = aarch64_za_get_svq (tid);
+
+  /* Check for SME2 support.  */
+  if ((hwcap2 & HWCAP2_SME2) || (hwcap2 & HWCAP2_SME2P1))
+    features.sme2 = supports_zt_registers (tid);
 
   return aarch64_read_description (features);
 }
@@ -907,21 +1008,27 @@ aarch64_linux_nat_target::thread_architecture (ptid_t ptid)
   if (gdbarch_bfd_arch_info (inf->gdbarch)->bits_per_word == 32)
     return inf->gdbarch;
 
-  /* Only return it if the current vector length matches the one in the tdep.  */
+  /* Only return the inferior's gdbarch if both vq and svq match the ones in
+     the tdep.  */
   aarch64_gdbarch_tdep *tdep
     = gdbarch_tdep<aarch64_gdbarch_tdep> (inf->gdbarch);
   uint64_t vq = aarch64_sve_get_vq (ptid.lwp ());
-  if (vq == tdep->vq)
+  uint64_t svq = aarch64_za_get_svq (ptid.lwp ());
+  if (vq == tdep->vq && svq == tdep->sme_svq)
     return inf->gdbarch;
 
-  /* We reach here if the vector length for the thread is different from its
+  /* We reach here if any vector length for the thread is different from its
      value at process start.  Lookup gdbarch via info (potentially creating a
-     new one) by using a target description that corresponds to the new vq value
-     and the current architecture features.  */
+     new one) by using a target description that corresponds to the new vq/svq
+     value and the current architecture features.  */
 
   const struct target_desc *tdesc = gdbarch_target_desc (inf->gdbarch);
   aarch64_features features = aarch64_features_from_target_desc (tdesc);
   features.vq = vq;
+  features.svq = svq;
+
+  /* Check for the SME2 feature.  */
+  features.sme2 = supports_zt_registers (ptid.lwp ());
 
   struct gdbarch_info info;
   info.bfd_arch_info = bfd_lookup_arch (bfd_arch_aarch64, bfd_mach_aarch64);

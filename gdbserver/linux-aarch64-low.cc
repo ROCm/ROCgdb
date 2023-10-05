@@ -41,10 +41,11 @@
 #include "gdb_proc_service.h"
 #include "arch/aarch64.h"
 #include "arch/aarch64-mte-linux.h"
+#include "arch/aarch64-scalable-linux.h"
 #include "linux-aarch32-tdesc.h"
 #include "linux-aarch64-tdesc.h"
 #include "nat/aarch64-mte-linux-ptrace.h"
-#include "nat/aarch64-sve-linux-ptrace.h"
+#include "nat/aarch64-scalable-linux-ptrace.h"
 #include "tdesc.h"
 
 #ifdef HAVE_SYS_REG_H
@@ -719,9 +720,18 @@ aarch64_target::low_new_fork (process_info *parent,
 /* Wrapper for aarch64_sve_regs_copy_to_reg_buf.  */
 
 static void
-aarch64_sve_regs_copy_to_regcache (struct regcache *regcache, const void *buf)
+aarch64_sve_regs_copy_to_regcache (struct regcache *regcache,
+				   ATTRIBUTE_UNUSED const void *buf)
 {
-  return aarch64_sve_regs_copy_to_reg_buf (regcache, buf);
+  /* BUF is unused here since we collect the data straight from a ptrace
+     request in aarch64_sve_regs_copy_to_reg_buf, therefore bypassing
+     gdbserver's own call to ptrace.  */
+
+  int tid = lwpid_of (current_thread);
+
+  /* Update the register cache.  aarch64_sve_regs_copy_to_reg_buf handles
+     fetching the NT_ARM_SVE state from thread TID.  */
+  aarch64_sve_regs_copy_to_reg_buf (tid, regcache);
 }
 
 /* Wrapper for aarch64_sve_regs_copy_from_reg_buf.  */
@@ -729,7 +739,102 @@ aarch64_sve_regs_copy_to_regcache (struct regcache *regcache, const void *buf)
 static void
 aarch64_sve_regs_copy_from_regcache (struct regcache *regcache, void *buf)
 {
-  return aarch64_sve_regs_copy_from_reg_buf (regcache, buf);
+  int tid = lwpid_of (current_thread);
+
+  /* Update the thread SVE state.  aarch64_sve_regs_copy_from_reg_buf
+     handles writing the SVE/FPSIMD state back to thread TID.  */
+  aarch64_sve_regs_copy_from_reg_buf (tid, regcache);
+
+  /* We need to return the expected data in BUF, so copy whatever the kernel
+     already has to BUF.  */
+  gdb::byte_vector sve_state = aarch64_fetch_sve_regset (tid);
+  memcpy (buf, sve_state.data (), sve_state.size ());
+}
+
+/* Wrapper for aarch64_za_regs_copy_to_reg_buf, to help copying NT_ARM_ZA
+   state from the thread (BUF) to the register cache.  */
+
+static void
+aarch64_za_regs_copy_to_regcache (struct regcache *regcache,
+				  ATTRIBUTE_UNUSED const void *buf)
+{
+  /* BUF is unused here since we collect the data straight from a ptrace
+     request, therefore bypassing gdbserver's own call to ptrace.  */
+  int tid = lwpid_of (current_thread);
+
+  int za_regnum = find_regno (regcache->tdesc, "za");
+  int svg_regnum = find_regno (regcache->tdesc, "svg");
+  int svcr_regnum = find_regno (regcache->tdesc, "svcr");
+
+  /* Update the register cache.  aarch64_za_regs_copy_to_reg_buf handles
+     fetching the NT_ARM_ZA state from thread TID.  */
+  aarch64_za_regs_copy_to_reg_buf (tid, regcache, za_regnum, svg_regnum,
+				   svcr_regnum);
+}
+
+/* Wrapper for aarch64_za_regs_copy_from_reg_buf, to help copying NT_ARM_ZA
+   state from the register cache to the thread (BUF).  */
+
+static void
+aarch64_za_regs_copy_from_regcache (struct regcache *regcache, void *buf)
+{
+  int tid = lwpid_of (current_thread);
+
+  int za_regnum = find_regno (regcache->tdesc, "za");
+  int svg_regnum = find_regno (regcache->tdesc, "svg");
+  int svcr_regnum = find_regno (regcache->tdesc, "svcr");
+
+  /* Update the thread NT_ARM_ZA state.  aarch64_za_regs_copy_from_reg_buf
+     handles writing the ZA state back to thread TID.  */
+  aarch64_za_regs_copy_from_reg_buf (tid, regcache, za_regnum, svg_regnum,
+				     svcr_regnum);
+
+  /* We need to return the expected data in BUF, so copy whatever the kernel
+     already has to BUF.  */
+
+  /* Obtain a dump of ZA from ptrace.  */
+  gdb::byte_vector za_state = aarch64_fetch_za_regset (tid);
+  memcpy (buf, za_state.data (), za_state.size ());
+}
+
+/* Wrapper for aarch64_zt_regs_copy_to_reg_buf, to help copying NT_ARM_ZT
+   state from the thread (BUF) to the register cache.  */
+
+static void
+aarch64_zt_regs_copy_to_regcache (struct regcache *regcache,
+				  ATTRIBUTE_UNUSED const void *buf)
+{
+  /* BUF is unused here since we collect the data straight from a ptrace
+     request, therefore bypassing gdbserver's own call to ptrace.  */
+  int tid = lwpid_of (current_thread);
+
+  int zt_regnum = find_regno (regcache->tdesc, "zt0");
+
+  /* Update the register cache.  aarch64_zt_regs_copy_to_reg_buf handles
+     fetching the NT_ARM_ZT state from thread TID.  */
+  aarch64_zt_regs_copy_to_reg_buf (tid, regcache, zt_regnum);
+}
+
+/* Wrapper for aarch64_zt_regs_copy_from_reg_buf, to help copying NT_ARM_ZT
+   state from the register cache to the thread (BUF).  */
+
+static void
+aarch64_zt_regs_copy_from_regcache (struct regcache *regcache, void *buf)
+{
+  int tid = lwpid_of (current_thread);
+
+  int zt_regnum = find_regno (regcache->tdesc, "zt0");
+
+  /* Update the thread NT_ARM_ZT state.  aarch64_zt_regs_copy_from_reg_buf
+     handles writing the ZT state back to thread TID.  */
+  aarch64_zt_regs_copy_from_reg_buf (tid, regcache, zt_regnum);
+
+  /* We need to return the expected data in BUF, so copy whatever the kernel
+     already has to BUF.  */
+
+  /* Obtain a dump of NT_ARM_ZT from ptrace.  */
+  gdb::byte_vector zt_state = aarch64_fetch_zt_regset (tid);
+  memcpy (buf, zt_state.data (), zt_state.size ());
 }
 
 /* Array containing all the possible register sets for AArch64/Linux.  During
@@ -753,6 +858,16 @@ static struct regset_info aarch64_regsets[] =
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_SVE,
     0, EXTENDED_REGS,
     aarch64_sve_regs_copy_from_regcache, aarch64_sve_regs_copy_to_regcache
+  },
+  /* Scalable Matrix Extension (SME) ZA register.  */
+  { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_ZA,
+    0, EXTENDED_REGS,
+    aarch64_za_regs_copy_from_regcache, aarch64_za_regs_copy_to_regcache
+  },
+  /* Scalable Matrix Extension 2 (SME2) ZT registers.  */
+  { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_ZT,
+    0, EXTENDED_REGS,
+    aarch64_zt_regs_copy_from_regcache, aarch64_zt_regs_copy_to_regcache
   },
   /* PAC registers.  */
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_PAC_MASK,
@@ -821,6 +936,14 @@ aarch64_adjust_register_sets (const struct aarch64_features &features)
 	  if (features.tls > 0)
 	    regset->size = AARCH64_TLS_REGISTER_SIZE * features.tls;
 	  break;
+	case NT_ARM_ZA:
+	  if (features.svq > 0)
+	    regset->size = ZA_PT_SIZE (features.svq);
+	  break;
+	case NT_ARM_ZT:
+	  if (features.sme2)
+	    regset->size = AARCH64_SME2_ZT0_SIZE;
+	  break;
 	default:
 	  gdb_assert_not_reached ("Unknown register set found.");
 	}
@@ -854,6 +977,18 @@ aarch64_target::low_arch_setup ()
       /* A-profile MTE is 64-bit only.  */
       features.mte = linux_get_hwcap2 (pid, 8) & HWCAP2_MTE;
       features.tls = aarch64_tls_register_count (tid);
+
+      /* Scalable Matrix Extension feature and size check.  */
+      if (linux_get_hwcap2 (pid, 8) & HWCAP2_SME)
+	features.svq = aarch64_za_get_svq (tid);
+
+      /* Scalable Matrix Extension 2 feature check.  */
+      CORE_ADDR hwcap2 = linux_get_hwcap2 (pid, 8);
+      if ((hwcap2 & HWCAP2_SME2) || (hwcap2 & HWCAP2_SME2P1))
+	{
+	  /* Make sure ptrace supports NT_ARM_ZT.  */
+	  features.sme2 = supports_zt_registers (tid);
+	}
 
       current_process ()->tdesc = aarch64_linux_read_description (features);
 

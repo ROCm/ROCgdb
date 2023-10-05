@@ -24,6 +24,8 @@
 #include "../features/aarch64-sve.c"
 #include "../features/aarch64-pauth.c"
 #include "../features/aarch64-mte.c"
+#include "../features/aarch64-sme.c"
+#include "../features/aarch64-sme2.c"
 #include "../features/aarch64-tls.c"
 
 /* See arch/aarch64.h.  */
@@ -56,6 +58,13 @@ aarch64_create_target_description (const aarch64_features &features)
   /* TLS registers.  */
   if (features.tls > 0)
     regnum = create_feature_aarch64_tls (tdesc.get (), regnum, features.tls);
+
+  if (features.svq)
+    regnum = create_feature_aarch64_sme (tdesc.get (), regnum,
+					 sve_vl_from_vq (features.svq));
+
+  if (features.sme2)
+    regnum = create_feature_aarch64_sme2 (tdesc.get (), regnum);
 
   return tdesc.release ();
 }
