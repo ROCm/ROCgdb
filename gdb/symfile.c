@@ -2475,21 +2475,34 @@ reread_symbols (int from_tty)
       if (objfile->separate_debug_objfile_backlink)
 	continue;
 
-      /* If this object is from an archive (what you usually create with
-	 `ar', often called a `static library' on most systems, though
-	 a `shared library' on AIX is also an archive), then you should
-	 stat on the archive name, not member name.  */
-      int res;
+      /* When a in-memory BFD is initially created, it's mtime (as
+	 returned by bfd_get_mtime) is the creation time of the BFD.
+	 However, we call bfd_stat here as we want to see if the
+	 underlying file has changed, and in this case an in-memory BFD
+	 will return an st_mtime of zero, so it appears that the in-memory
+	 file has changed, which isn't what we want here -- this code is
+	 about reloading BFDs that changed on disk.
+
+	 Just skip any in-memory BFD.  */
+      if (objfile->obfd.get ()->flags & BFD_IN_MEMORY)
+	continue;
+
       struct stat new_statbuf;
-      if (objfile->obfd->my_archive)
-	res = stat (bfd_get_filename (objfile->obfd->my_archive), &new_statbuf);
-      else
-	res = stat (objfile_name (objfile), &new_statbuf);
+      int res = bfd_stat (objfile->obfd.get (), &new_statbuf);
       if (res != 0)
 	{
-	  /* FIXME, should use print_sys_errmsg but it's not filtered.  */
-	  gdb_printf (_("`%s' has disappeared; keeping its symbols.\n"),
-		      objfile_name (objfile));
+	  /* If this object is from an archive (what you usually create
+	     with `ar', often called a `static library' on most systems,
+	     though a `shared library' on AIX is also an archive), then you
+	     should stat on the archive name, not member name.  */
+	  const char *filename;
+	  if (objfile->obfd->my_archive)
+	    filename = bfd_get_filename (objfile->obfd->my_archive);
+	  else
+	    filename = objfile_name (objfile);
+
+	  warning (_("`%ps' has disappeared; keeping its symbols."),
+		   styled_string (file_name_style.style (), filename));
 	  continue;
 	}
       time_t new_modtime = new_statbuf.st_mtime;
@@ -2902,7 +2915,7 @@ clear_symtab_users (symfile_add_flags add_flags)
   clear_displays ();
   clear_last_displayed_sal ();
   clear_pc_function_cache ();
-  gdb::observers::new_objfile.notify (NULL);
+  gdb::observers::all_objfiles_removed.notify (current_program_space);
 
   /* Now that the various caches have been cleared, we can re_set
      our breakpoints without risking it using stale data.  */
@@ -3736,8 +3749,7 @@ static void
 symfile_free_objfile (struct objfile *objfile)
 {
   /* Remove the target sections owned by this objfile.  */
-  if (objfile != NULL)
-    current_program_space->remove_target_sections ((void *) objfile);
+  objfile->pspace->remove_target_sections (objfile);
 }
 
 /* Wrapper around the quick_symbol_functions expand_symtabs_matching "method".

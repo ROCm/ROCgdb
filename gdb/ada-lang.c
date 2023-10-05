@@ -4676,9 +4676,9 @@ make_array_descriptor (struct type *type, struct value *arr)
 /* Clear all entries from the symbol cache.  */
 
 static void
-ada_clear_symbol_cache ()
+ada_clear_symbol_cache (program_space *pspace)
 {
-  ada_pspace_data_handle.clear (current_program_space);
+  ada_pspace_data_handle.clear (pspace);
 }
 
 /* Search the symbol cache for an entry matching NAME and DOMAIN.
@@ -13887,7 +13887,7 @@ static struct cmd_list_element *show_ada_list;
 static void
 ada_new_objfile_observer (struct objfile *objfile)
 {
-  ada_clear_symbol_cache ();
+  ada_clear_symbol_cache (objfile->pspace);
 }
 
 /* This module's 'free_objfile' observer.  */
@@ -13895,7 +13895,7 @@ ada_new_objfile_observer (struct objfile *objfile)
 static void
 ada_free_objfile_observer (struct objfile *objfile)
 {
-  ada_clear_symbol_cache ();
+  ada_clear_symbol_cache (objfile->pspace);
 }
 
 /* Charsets known to GNAT.  */
@@ -14028,6 +14028,8 @@ DWARF attribute."),
 
   /* The ada-lang observers.  */
   gdb::observers::new_objfile.attach (ada_new_objfile_observer, "ada-lang");
+  gdb::observers::all_objfiles_removed.attach (ada_clear_symbol_cache,
+					       "ada-lang");
   gdb::observers::free_objfile.attach (ada_free_objfile_observer, "ada-lang");
   gdb::observers::inferior_exit.attach (ada_inferior_exit, "ada-lang");
 

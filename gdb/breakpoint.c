@@ -8234,9 +8234,6 @@ disable_breakpoints_in_unloaded_shlib (program_space *pspace, so_list *solib)
 static void
 disable_breakpoints_in_freed_objfile (struct objfile *objfile)
 {
-  if (objfile == NULL)
-    return;
-
   /* OBJF_SHARED|OBJF_USERLOADED objfiles are dynamic modules manually
      managed by the user with add-symbol-file/remove-symbol-file.
      Similarly to how breakpoints in shared libraries are handled in
