@@ -2969,7 +2969,9 @@ handle_v_run (char *own_buf)
   char *new_program_name = NULL;
   int i;
 
-  for (i = 0, p = own_buf + strlen ("vRun;"); *p; p = next_p, ++i)
+  for (i = 0, p = own_buf + strlen ("vRun;");
+       /* Exit condition is at the end of the loop.  */;
+       p = next_p + 1, ++i)
     {
       next_p = strchr (p, ';');
       if (next_p == NULL)
@@ -2987,59 +2989,22 @@ handle_v_run (char *own_buf)
 	}
       else
 	{
+	  /* The length of the decoded argument.  */
 	  size_t len = (next_p - p) / 2;
-	  /* ARG is the unquoted argument received via the RSP.  */
+
+	  /* Buffer to decode the argument into.  */
 	  char *arg = (char *) xmalloc (len + 1);
-	  /* FULL_ARGS will contain the quoted version of ARG.  */
-	  char *full_arg = (char *) xmalloc ((len + 1) * 2);
-	  /* These are pointers used to navigate the strings above.  */
-	  char *tmp_arg = arg;
-	  char *tmp_full_arg = full_arg;
-	  int need_quote = 0;
 
 	  hex2bin (p, (gdb_byte *) arg, len);
 	  arg[len] = '\0';
 
-	  while (*tmp_arg != '\0')
-	    {
-	      switch (*tmp_arg)
-		{
-		case '\n':
-		  /* Quote \n.  */
-		  *tmp_full_arg = '\'';
-		  ++tmp_full_arg;
-		  need_quote = 1;
-		  break;
-
-		case '\'':
-		  /* Quote single quote.  */
-		  *tmp_full_arg = '\\';
-		  ++tmp_full_arg;
-		  break;
-
-		default:
-		  break;
-		}
-
-	      *tmp_full_arg = *tmp_arg;
-	      ++tmp_full_arg;
-	      ++tmp_arg;
-	    }
-
-	  if (need_quote)
-	    *tmp_full_arg++ = '\'';
-
-	  /* Finish FULL_ARG and push it into the vector containing
-	     the argv.  */
-	  *tmp_full_arg = '\0';
 	  if (i == 0)
-	    new_program_name = full_arg;
+	    new_program_name = arg;
 	  else
-	    new_argv.push_back (full_arg);
-	  xfree (arg);
+	    new_argv.push_back (arg);
 	}
-      if (*next_p)
-	next_p++;
+      if (*next_p == '\0')
+	break;
     }
 
   if (new_program_name == NULL)
