@@ -6297,7 +6297,7 @@ find_main_name (void)
   /* Try to find language for main in psymtabs.  */
   bool symbol_found_p = false;
   gdbarch_iterate_over_objfiles_in_search_order
-    (target_gdbarch (),
+    (current_inferior ()->arch (),
      [&symbol_found_p, pspace] (objfile *obj)
        {
 	 language lang

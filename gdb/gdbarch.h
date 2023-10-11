@@ -74,21 +74,6 @@ struct gdbarch_tdep_base
 
 using gdbarch_tdep_up = std::unique_ptr<gdbarch_tdep_base>;
 
-/* The architecture associated with the inferior through the
-   connection to the target.
-
-   The architecture vector provides some information that is really a
-   property of the inferior, accessed through a particular target:
-   ptrace operations; the layout of certain RSP packets; the solib_ops
-   vector; etc.  To differentiate architecture accesses to
-   per-inferior/target properties from
-   per-thread/per-frame/per-objfile properties, accesses to
-   per-inferior/target properties should be made through this
-   gdbarch.  */
-
-/* This is a convenience wrapper for 'current_inferior ()->gdbarch'.  */
-extern struct gdbarch *target_gdbarch (void);
-
 /* Callback type for the 'iterate_over_objfiles_in_search_order'
    gdbarch  method.  */
 
@@ -296,6 +281,9 @@ extern void gdbarch_register (enum bfd_architecture architecture,
 			      gdbarch_dump_tdep_ftype *dump_tdep = nullptr,
 			      gdbarch_supports_arch_info_ftype *supports_arch_info = nullptr);
 
+/* Return true if ARCH is initialized.  */
+
+bool gdbarch_initialized_p (gdbarch *arch);
 
 /* Return a vector of the valid architecture names.  Since architectures are
    registered during the _initialize phase this function only returns useful
@@ -372,12 +360,6 @@ extern int gdbarch_update_p (struct gdbarch_info info);
    architecture was found.  */
 
 extern struct gdbarch *gdbarch_find_by_info (struct gdbarch_info info);
-
-
-/* Helper function.  Set the target gdbarch to "gdbarch".  */
-
-extern void set_target_gdbarch (struct gdbarch *gdbarch);
-
 
 /* A registry adaptor for gdbarch.  This arranges to store the
    registry in the gdbarch.  */

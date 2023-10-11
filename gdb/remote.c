@@ -370,9 +370,9 @@ struct packet_reg
   long regnum; /* GDB's internal register number.  */
   LONGEST pnum; /* Remote protocol register number.  */
   int in_g_packet; /* Always part of G packet.  */
-  /* long size in bytes;  == register_size (target_gdbarch (), regnum);
+  /* long size in bytes;  == register_size (arch, regnum);
      at present.  */
-  /* char *name; == gdbarch_register_name (target_gdbarch (), regnum);
+  /* char *name; == gdbarch_register_name (arch, regnum);
      at present.  */
 };
 
@@ -413,6 +413,49 @@ public:
 
   /* Get the remote arch state for GDBARCH.  */
   struct remote_arch_state *get_remote_arch_state (struct gdbarch *gdbarch);
+
+  void create_async_event_handler ()
+  {
+    gdb_assert (m_async_event_handler_token == nullptr);
+    m_async_event_handler_token
+      = ::create_async_event_handler ([] (gdb_client_data data)
+				      {
+					inferior_event_handler (INF_REG_EVENT);
+				      },
+				      nullptr, "remote");
+  }
+
+  void mark_async_event_handler ()
+  {
+    gdb_assert (this->is_async_p ());
+    ::mark_async_event_handler (m_async_event_handler_token);
+  }
+
+  void clear_async_event_handler ()
+  { ::clear_async_event_handler (m_async_event_handler_token); }
+
+  bool async_event_handler_marked () const
+  { return ::async_event_handler_marked (m_async_event_handler_token); }
+
+  void delete_async_event_handler ()
+  {
+    if (m_async_event_handler_token != nullptr)
+      ::delete_async_event_handler (&m_async_event_handler_token);
+  }
+
+  bool is_async_p () const
+  {
+    /* We're async whenever the serial device is.  */
+    gdb_assert (this->remote_desc != nullptr);
+    return serial_is_async_p (this->remote_desc);
+  }
+
+  bool can_async_p () const
+  {
+    /* We can async whenever the serial device can.  */
+    gdb_assert (this->remote_desc != nullptr);
+    return serial_can_async_p (this->remote_desc);
+  }
 
 public: /* data */
 
@@ -541,10 +584,6 @@ public: /* data */
      immediately, so queue is not needed for them.  */
   std::vector<stop_reply_up> stop_reply_queue;
 
-  /* Asynchronous signal handle registered as event loop source for
-     when we have pending events ready to be passed to the core.  */
-  struct async_event_handler *remote_async_inferior_event_token = nullptr;
-
   /* FIXME: cagney/1999-09-23: Even though getpkt was called with
      ``forever'' still use the normal timeout mechanism.  This is
      currently used by the ASYNC code to guarentee that target reads
@@ -555,6 +594,10 @@ public: /* data */
   bool wait_forever_enabled_p = true;
 
 private:
+  /* Asynchronous signal handle registered as event loop source for
+     when we have pending events ready to be passed to the core.  */
+  async_event_handler *m_async_event_handler_token = nullptr;
+
   /* Mapping of remote protocol data for each gdbarch.  Usually there
      is only one entry here, though we may see more with stubs that
      support multi-process.  */
@@ -1379,8 +1422,6 @@ static void show_remote_protocol_packet_cmd (struct ui_file *file,
 
 static ptid_t read_ptid (const char *buf, const char **obuf);
 
-static void remote_async_inferior_event_handler (gdb_client_data);
-
 static bool remote_read_description_p (struct target_ops *target);
 
 static void remote_console_output (const char *msg);
@@ -1579,7 +1620,8 @@ remote_target::remote_get_noisy_reply ()
 
 	  try
 	    {
-	      gdbarch_relocate_instruction (target_gdbarch (), &to, from);
+	      gdbarch_relocate_instruction (current_inferior ()->arch (),
+					    &to, from);
 	      relocated = 1;
 	    }
 	  catch (const gdb_exception &ex)
@@ -1652,7 +1694,7 @@ remote_target::get_remote_state ()
      function which calls getpkt also needs to be mindful of changes
      to rs->buf, but this call limits the number of places which run
      into trouble.  */
-  m_remote_state.get_remote_arch_state (target_gdbarch ());
+  m_remote_state.get_remote_arch_state (current_inferior ()->arch ());
 
   return &m_remote_state;
 }
@@ -1817,7 +1859,8 @@ long
 remote_target::get_remote_packet_size ()
 {
   struct remote_state *rs = get_remote_state ();
-  remote_arch_state *rsa = rs->get_remote_arch_state (target_gdbarch ());
+  remote_arch_state *rsa
+    = rs->get_remote_arch_state (current_inferior ()->arch ());
 
   if (rs->explicit_packet_size)
     return rs->explicit_packet_size;
@@ -1969,7 +2012,8 @@ long
 remote_target::get_memory_packet_size (struct memory_packet_config *config)
 {
   struct remote_state *rs = get_remote_state ();
-  remote_arch_state *rsa = rs->get_remote_arch_state (target_gdbarch ());
+  remote_arch_state *rsa
+    = rs->get_remote_arch_state (current_inferior ()->arch ());
 
   long what_they_get;
   if (config->fixed_p)
@@ -2659,7 +2703,7 @@ remote_target::remote_add_inferior (bool fake_pid_p, int pid, int attached,
   if (attached == -1)
     attached = remote_query_attached (pid);
 
-  if (gdbarch_has_global_solist (target_gdbarch ()))
+  if (gdbarch_has_global_solist (current_inferior ()->arch ()))
     {
       /* If the target shares code across all inferiors, then every
 	 attach adds a new inferior.  */
@@ -4383,8 +4427,7 @@ remote_target::~remote_target ()
      everything of this target.  */
   discard_pending_stop_replies_in_queue ();
 
-  if (rs->remote_async_inferior_event_token)
-    delete_async_event_handler (&rs->remote_async_inferior_event_token);
+  rs->delete_async_event_handler ();
 
   delete rs->notif_state;
 }
@@ -5006,7 +5049,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
 
   /* On OSs where the list of libraries is global to all
      processes, we fetch them early.  */
-  if (gdbarch_has_global_solist (target_gdbarch ()))
+  if (gdbarch_has_global_solist (current_inferior ()->arch ()))
     solib_add (NULL, from_tty, auto_solib_add);
 
   if (target_is_non_stop_p ())
@@ -5132,7 +5175,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
 	 supported for non-stop; it could be, but it is tricky if
 	 there are no stopped threads when we connect.  */
       if (remote_read_description_p (this)
-	  && gdbarch_target_desc (target_gdbarch ()) == NULL)
+	  && gdbarch_target_desc (current_inferior ()->arch ()) == NULL)
 	{
 	  target_clear_description ();
 	  target_find_description ();
@@ -5337,13 +5380,14 @@ remote_target::remote_check_symbols ()
 		   &reply[8]);
       else
 	{
-	  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+	  int addr_size = gdbarch_addr_bit (current_inferior ()->arch ()) / 8;
 	  CORE_ADDR sym_addr = sym.value_address ();
 
 	  /* If this is a function address, return the start of code
 	     instead of any data function descriptor.  */
 	  sym_addr = gdbarch_convert_from_func_ptr_addr
-	    (target_gdbarch (), sym_addr, current_inferior ()->top_target ());
+	    (current_inferior ()->arch (), sym_addr,
+	     current_inferior ()->top_target ());
 
 	  xsnprintf (msg.data (), get_remote_packet_size (), "qSymbol:%s:%s",
 		     phex_nz (sym_addr, addr_size), &reply[8]);
@@ -5983,9 +6027,8 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
   current_inferior ()->push_target (std::move (target_holder));
 
   /* Register extra event sources in the event loop.  */
-  rs->remote_async_inferior_event_token
-    = create_async_event_handler (remote_async_inferior_event_handler, nullptr,
-				  "remote");
+  rs->create_async_event_handler ();
+
   rs->notif_state = remote_notif_state_allocate (remote);
 
   /* Reset the target state; these things will be queried either by
@@ -6137,7 +6180,7 @@ remote_target::remote_detach_1 (inferior *inf, int from_tty)
 
   target_announce_detach (from_tty);
 
-  if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+  if (!gdbarch_has_global_breakpoints (current_inferior ()->arch ()))
     {
       /* If we're in breakpoints-always-inserted mode, or the inferior
 	 is running, we have to remove breakpoints before detaching.
@@ -6498,7 +6541,7 @@ remote_target::append_resumption (char *p, char *endp,
 
       if (tp->control.may_range_step)
 	{
-	  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+	  int addr_size = gdbarch_addr_bit (current_inferior ()->arch ()) / 8;
 
 	  p += xsnprintf (p, endp - p, ";r%s,%s",
 			  phex_nz (tp->control.step_range_start,
@@ -7080,7 +7123,7 @@ remote_target::has_pending_events ()
     {
       remote_state *rs = get_remote_state ();
 
-      if (async_event_handler_marked (rs->remote_async_inferior_event_token))
+      if (rs->async_event_handler_marked ())
 	return true;
 
       /* Note that BUFCNT can be negative, indicating sticky
@@ -7155,7 +7198,7 @@ remote_target::remote_stop_ns (ptid_t ptid)
 	    sr->ptid = tp->ptid;
 	    sr->rs = rs;
 	    sr->ws.set_stopped (GDB_SIGNAL_0);
-	    sr->arch = tp->inf->gdbarch;
+	    sr->arch = tp->inf->arch ();
 	    sr->stop_reason = TARGET_STOPPED_BY_NO_REASON;
 	    sr->watch_data_address = 0;
 	    sr->core = 0;
@@ -7414,7 +7457,7 @@ remote_notif_stop_can_get_pending_events (remote_target *remote,
      may exit and we have no chance to process them back in
      remote_wait_ns.  */
   remote_state *rs = remote->get_remote_state ();
-  mark_async_event_handler (rs->remote_async_inferior_event_token);
+  rs->mark_async_event_handler ();
   return 0;
 }
 
@@ -7622,7 +7665,7 @@ remote_target::queued_stop_reply (ptid_t ptid)
   if (!rs->stop_reply_queue.empty () && target_can_async_p ())
     {
       /* There's still at least an event left.  */
-      mark_async_event_handler (rs->remote_async_inferior_event_token);
+      rs->mark_async_event_handler ();
     }
 
   return r;
@@ -7649,7 +7692,7 @@ remote_target::push_stop_reply (struct stop_reply *new_event)
      enabled, and there are events in this queue, we will mark the event
      token at that point, see remote_target::async.  */
   if (target_is_async_p ())
-    mark_async_event_handler (rs->remote_async_inferior_event_token);
+    rs->mark_async_event_handler ();
 }
 
 /* Returns true if we have a stop reply for PTID.  */
@@ -7893,7 +7936,7 @@ Packet: '%s'\n"),
 			  continue;
 			}
 
-		      event->arch = inf->gdbarch;
+		      event->arch = inf->arch ();
 		      rsa = event->rs->get_remote_arch_state (event->arch);
 		    }
 
@@ -8509,10 +8552,9 @@ remote_target::wait (ptid_t ptid, struct target_waitstatus *status,
      we'll mark it again at the end if needed.  If the target is not in
      async mode then the async token should not be marked.  */
   if (target_is_async_p ())
-    clear_async_event_handler (rs->remote_async_inferior_event_token);
+    rs->clear_async_event_handler ();
   else
-    gdb_assert (!async_event_handler_marked
-		(rs->remote_async_inferior_event_token));
+    gdb_assert (!rs->async_event_handler_marked ());
 
   ptid_t event_ptid;
 
@@ -8527,7 +8569,7 @@ remote_target::wait (ptid_t ptid, struct target_waitstatus *status,
 	 notifications, then tell the event loop to call us again.  */
       if (!rs->stop_reply_queue.empty ()
 	  || rs->notif_state->pending_event[notif_client_stop.id] != nullptr)
-	mark_async_event_handler (rs->remote_async_inferior_event_token);
+	rs->mark_async_event_handler ();
     }
 
   return event_ptid;
@@ -8568,8 +8610,7 @@ remote_target::fetch_register_using_p (struct regcache *regcache,
       return 0;
     case PACKET_ERROR:
       error (_("Could not fetch register \"%s\"; remote failure reply '%s'"),
-	     gdbarch_register_name (regcache->arch (), 
-				    reg->regnum), 
+	     gdbarch_register_name (regcache->arch (), reg->regnum),
 	     buf);
     }
 
@@ -8915,7 +8956,7 @@ remote_target::store_registers_using_G (const struct regcache *regcache)
   putpkt (rs->buf);
   getpkt (&rs->buf);
   if (packet_check_result (rs->buf) == PACKET_ERROR)
-    error (_("Could not write registers; remote failure reply '%s'"), 
+    error (_("Could not write registers; remote failure reply '%s'"),
 	   rs->buf.data ());
 }
 
@@ -9018,7 +9059,7 @@ remote_address_masked (CORE_ADDR addr)
 
   /* If "remoteaddresssize" was not set, default to target address size.  */
   if (!address_size)
-    address_size = gdbarch_addr_bit (target_gdbarch ());
+    address_size = gdbarch_addr_bit (current_inferior ()->arch ());
 
   if (address_size > 0
       && address_size < (sizeof (ULONGEST) * 8))
@@ -9531,7 +9572,7 @@ static const int remote_flash_timeout = 1000;
 void
 remote_target::flash_erase (ULONGEST address, LONGEST length)
 {
-  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+  int addr_size = gdbarch_addr_bit (current_inferior ()->arch ()) / 8;
   enum packet_result ret;
   scoped_restore restore_timeout
     = make_scoped_restore (&remote_timeout, remote_flash_timeout);
@@ -10703,7 +10744,7 @@ remote_target::insert_breakpoint (struct gdbarch *gdbarch,
 
       /* Make sure the remote is pointing at the right process, if
 	 necessary.  */
-      if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+      if (!gdbarch_has_global_breakpoints (current_inferior ()->arch ()))
 	set_general_process ();
 
       rs = get_remote_state ();
@@ -10761,7 +10802,7 @@ remote_target::remove_breakpoint (struct gdbarch *gdbarch,
 
       /* Make sure the remote is pointing at the right process, if
 	 necessary.  */
-      if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+      if (!gdbarch_has_global_breakpoints (current_inferior ()->arch ()))
 	set_general_process ();
 
       *(p++) = 'z';
@@ -10815,7 +10856,7 @@ remote_target::insert_watchpoint (CORE_ADDR addr, int len,
 
   /* Make sure the remote is pointing at the right process, if
      necessary.  */
-  if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+  if (!gdbarch_has_global_breakpoints (current_inferior ()->arch ()))
     set_general_process ();
 
   xsnprintf (rs->buf.data (), endbuf - rs->buf.data (), "Z%x,", packet);
@@ -10865,7 +10906,7 @@ remote_target::remove_watchpoint (CORE_ADDR addr, int len,
 
   /* Make sure the remote is pointing at the right process, if
      necessary.  */
-  if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+  if (!gdbarch_has_global_breakpoints (current_inferior ()->arch ()))
     set_general_process ();
 
   xsnprintf (rs->buf.data (), endbuf - rs->buf.data (), "z%x,", packet);
@@ -11015,7 +11056,7 @@ remote_target::insert_hw_breakpoint (struct gdbarch *gdbarch,
 
   /* Make sure the remote is pointing at the right process, if
      necessary.  */
-  if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+  if (!gdbarch_has_global_breakpoints (current_inferior ()->arch ()))
     set_general_process ();
 
   rs = get_remote_state ();
@@ -11072,7 +11113,7 @@ remote_target::remove_hw_breakpoint (struct gdbarch *gdbarch,
 
   /* Make sure the remote is pointing at the right process, if
      necessary.  */
-  if (!gdbarch_has_global_breakpoints (target_gdbarch ()))
+  if (!gdbarch_has_global_breakpoints (current_inferior ()->arch ()))
     set_general_process ();
 
   *(p++) = 'z';
@@ -11196,12 +11237,12 @@ compare_sections_command (const char *args, int from_tty)
 
       if (res == -1)
 	error (_("target memory fault, section %s, range %s -- %s"), sectname,
-	       paddress (target_gdbarch (), lma),
-	       paddress (target_gdbarch (), lma + size));
+	       paddress (current_inferior ()->arch (), lma),
+	       paddress (current_inferior ()->arch (), lma + size));
 
       gdb_printf ("Section %s, range %s -- %s: ", sectname,
-		  paddress (target_gdbarch (), lma),
-		  paddress (target_gdbarch (), lma + size));
+		  paddress (current_inferior ()->arch (), lma),
+		  paddress (current_inferior ()->arch (), lma + size));
       if (res)
 	gdb_printf ("matched.\n");
       else
@@ -11231,20 +11272,20 @@ remote_target::remote_write_qxfer (const char *object_name,
   int i, buf_len;
   ULONGEST n;
   struct remote_state *rs = get_remote_state ();
-  int max_size = get_memory_write_packet_size (); 
+  int max_size = get_memory_write_packet_size ();
 
   if (m_features.packet_support (which_packet) == PACKET_DISABLE)
     return TARGET_XFER_E_IO;
 
   /* Insert header.  */
-  i = snprintf (rs->buf.data (), max_size, 
+  i = snprintf (rs->buf.data (), max_size,
 		"qXfer:%s:write:%s:%s:",
 		object_name, annex ? annex : "",
 		phex_nz (offset, sizeof offset));
   max_size -= (i + 1);
 
   /* Escape as much data as fits into rs->buf.  */
-  buf_len = remote_escape_output 
+  buf_len = remote_escape_output
     (writebuf, len, 1, (gdb_byte *) rs->buf.data () + i, &max_size, max_size);
 
   if (putpkt_binary (rs->buf.data (), i + buf_len) < 0
@@ -11359,7 +11400,8 @@ remote_target::xfer_partial (enum target_object object,
   int i;
   char *p2;
   char query_type;
-  int unit_size = gdbarch_addressable_memory_unit_size (target_gdbarch ());
+  int unit_size
+    = gdbarch_addressable_memory_unit_size (current_inferior ()->arch ());
 
   set_remote_traceframe ();
   set_general_thread (inferior_ptid);
@@ -11555,7 +11597,7 @@ remote_target::search_memory (CORE_ADDR start_addr, ULONGEST search_space_len,
 			      const gdb_byte *pattern, ULONGEST pattern_len,
 			      CORE_ADDR *found_addrp)
 {
-  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+  int addr_size = gdbarch_addr_bit (current_inferior ()->arch ()) / 8;
   struct remote_state *rs = get_remote_state ();
   int max_size = get_memory_write_packet_size ();
 
@@ -11600,7 +11642,7 @@ remote_target::search_memory (CORE_ADDR start_addr, ULONGEST search_space_len,
   set_general_process ();
 
   /* Insert header.  */
-  i = snprintf (rs->buf.data (), max_size, 
+  i = snprintf (rs->buf.data (), max_size,
 		"qSearch:memory:%s;%s;",
 		phex_nz (start_addr, addr_size),
 		phex_nz (search_space_len, sizeof (search_space_len)));
@@ -11682,7 +11724,7 @@ remote_target::rcmd (const char *command, struct ui_file *outbuf)
       QUIT;			/* Allow user to bail out with ^C.  */
       rs->buf[0] = '\0';
       if (getpkt (&rs->buf) == -1)
-	{ 
+	{
 	  /* Timeout.  Continue to (try to) read responses.
 	     This is better than stopping with an error, assuming the stub
 	     is still executing the (long) monitor command.
@@ -12145,7 +12187,7 @@ register_remote_g_packet_guess (struct gdbarch *gdbarch, int bytes,
 static bool
 remote_read_description_p (struct target_ops *target)
 {
-  struct remote_g_packet_data *data = get_g_packet_data (target_gdbarch ());
+  remote_g_packet_data *data = get_g_packet_data (current_inferior ()->arch ());
 
   return !data->guesses.empty ();
 }
@@ -12153,7 +12195,7 @@ remote_read_description_p (struct target_ops *target)
 const struct target_desc *
 remote_target::read_description ()
 {
-  struct remote_g_packet_data *data = get_g_packet_data (target_gdbarch ());
+  remote_g_packet_data *data = get_g_packet_data (current_inferior ()->arch ());
 
   /* Do not try this during initial connection, when we do not know
      whether there is a running but stopped thread.  */
@@ -13631,7 +13673,7 @@ remote_target::get_trace_status (struct trace_status *ts)
 
   /* FIXME we need to get register block size some other way.  */
   trace_regblock_size
-    = rs->get_remote_arch_state (target_gdbarch ())->sizeof_g_packet;
+    = rs->get_remote_arch_state (current_inferior ()->arch ())->sizeof_g_packet;
 
   putpkt ("qTStatus");
 
@@ -14827,16 +14869,14 @@ remote_target::can_async_p ()
   gdb_assert (target_async_permitted);
 
   /* We're async whenever the serial device can.  */
-  struct remote_state *rs = get_remote_state ();
-  return serial_can_async_p (rs->remote_desc);
+  return get_remote_state ()->can_async_p ();
 }
 
 bool
 remote_target::is_async_p ()
 {
   /* We're async whenever the serial device is.  */
-  struct remote_state *rs = get_remote_state ();
-  return serial_is_async_p (rs->remote_desc);
+  return get_remote_state ()->is_async_p ();
 }
 
 /* Pass the SERIAL event on and up to the client.  One day this code
@@ -14850,12 +14890,6 @@ remote_async_serial_handler (struct serial *scb, void *context)
 {
   /* Don't propogate error information up to the client.  Instead let
      the client find out about the error by querying the target.  */
-  inferior_event_handler (INF_REG_EVENT);
-}
-
-static void
-remote_async_inferior_event_handler (gdb_client_data data)
-{
   inferior_event_handler (INF_REG_EVENT);
 }
 
@@ -14878,7 +14912,8 @@ remote_target::async (bool enable)
       /* If there are pending events in the stop reply queue tell the
 	 event loop to process them.  */
       if (!rs->stop_reply_queue.empty ())
-	mark_async_event_handler (rs->remote_async_inferior_event_token);
+	rs->mark_async_event_handler ();
+
       /* For simplicity, below we clear the pending events token
 	 without remembering whether it is marked, so here we always
 	 mark it.  If there's actually no pending notification to
@@ -14893,7 +14928,8 @@ remote_target::async (bool enable)
       /* If the core is disabling async, it doesn't want to be
 	 disturbed with target events.  Clear all async event sources
 	 too.  */
-      clear_async_event_handler (rs->remote_async_inferior_event_token);
+      rs->clear_async_event_handler ();
+
       if (target_is_non_stop_p ())
 	clear_async_event_handler (rs->notif_state->get_pending_events_token);
     }
@@ -15023,7 +15059,7 @@ remote_new_objfile (struct objfile *objfile)
    data structures representing them.  We don't want to create real
    tracepoints yet, we don't want to mess up the user's existing
    collection.  */
-  
+
 int
 remote_target::upload_tracepoints (struct uploaded_tp **utpp)
 {
@@ -15136,7 +15172,7 @@ static void
 create_fetch_memtags_request (gdb::char_vector &packet, CORE_ADDR address,
 			      size_t len, int type)
 {
-  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+  int addr_size = gdbarch_addr_bit (current_inferior ()->arch ()) / 8;
 
   std::string request = string_printf ("qMemTags:%s,%s:%s",
 				       phex_nz (address, addr_size),
@@ -15170,7 +15206,7 @@ create_store_memtags_request (gdb::char_vector &packet, CORE_ADDR address,
 			      size_t len, int type,
 			      const gdb::byte_vector &tags)
 {
-  int addr_size = gdbarch_addr_bit (target_gdbarch ()) / 8;
+  int addr_size = gdbarch_addr_bit (current_inferior ()->arch ()) / 8;
 
   /* Put together the main packet, address and length.  */
   std::string request = string_printf ("QMemTags:%s,%s:%s:",

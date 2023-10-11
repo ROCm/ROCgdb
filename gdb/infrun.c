@@ -525,7 +525,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
 	  child_inf->attach_flag = parent_inf->attach_flag;
 	  copy_terminal_info (child_inf, parent_inf);
-	  child_inf->gdbarch = parent_inf->gdbarch;
+	  child_inf->set_arch (parent_inf->arch ());
 	  child_inf->tdesc_info = parent_inf->tdesc_info;
 
 	  child_inf->symfile_flags = SYMFILE_NO_READ;
@@ -600,7 +600,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
       child_inf->attach_flag = parent_inf->attach_flag;
       copy_terminal_info (child_inf, parent_inf);
-      child_inf->gdbarch = parent_inf->gdbarch;
+      child_inf->set_arch (parent_inf->arch ());
       child_inf->tdesc_info = parent_inf->tdesc_info;
 
       if (has_vforked)
@@ -5361,7 +5361,8 @@ handle_one (const wait_one_event &event)
 
 	  infrun_debug_printf ("saved stop_pc=%s for %s "
 			       "(currently_stepping=%d)",
-			       paddress (target_gdbarch (), t->stop_pc ()),
+			       paddress (current_inferior ()->arch (),
+					 t->stop_pc ()),
 			       t->ptid.to_string ().c_str (),
 			       currently_stepping (t));
 	}
@@ -5895,7 +5896,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	}
       else
 	{
-	  struct gdbarch *gdbarch = current_inferior ()->gdbarch;
+	  struct gdbarch *gdbarch = current_inferior ()->arch ();
 
 	  if (gdbarch_gdb_signal_to_target_p (gdbarch))
 	    {
@@ -6414,7 +6415,8 @@ finish_step_over (struct execution_control_state *ecs)
 
 	  infrun_debug_printf ("saved stop_pc=%s for %s "
 			       "(currently_stepping=%d)",
-			       paddress (target_gdbarch (), tp->stop_pc ()),
+			       paddress (current_inferior ()->arch (),
+					 tp->stop_pc ()),
 			       tp->ptid.to_string ().c_str (),
 			       currently_stepping (tp));
 
@@ -8145,8 +8147,9 @@ keep_going_stepped_thread (struct thread_info *tp)
       ptid_t resume_ptid;
 
       infrun_debug_printf ("expected thread advanced also (%s -> %s)",
-			   paddress (target_gdbarch (), tp->prev_pc),
-			   paddress (target_gdbarch (), tp->stop_pc ()));
+			   paddress (current_inferior ()->arch (), tp->prev_pc),
+			   paddress (current_inferior ()->arch (),
+				     tp->stop_pc ()));
 
       /* Clear the info of the previous step-over, as it's no longer
 	 valid (if the thread was trying to step over a breakpoint, it
@@ -10001,7 +10004,7 @@ namespace selftests
 static void
 infrun_thread_ptid_changed ()
 {
-  gdbarch *arch = current_inferior ()->gdbarch;
+  gdbarch *arch = current_inferior ()->arch ();
 
   /* The thread which inferior_ptid represents changes ptid.  */
   {

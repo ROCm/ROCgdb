@@ -34,6 +34,7 @@
 #include "buildsym.h"
 #include "language.h"
 #include "namespace.h"
+#include "inferior.h"
 #include <map>
 #include <string>
 #include <string.h>

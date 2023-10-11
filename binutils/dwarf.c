@@ -2798,7 +2798,9 @@ read_and_display_attr_value (unsigned long attribute,
 
 	  if (form == DW_FORM_loclistx)
 	    {
-	      if (dwo)
+	      if (debug_info_p == NULL )
+		idx = (uint64_t) -1;
+	      else if (dwo)
 		{
 		  idx = fetch_indexed_offset (uvalue, loclists_dwo,
 					      debug_info_p->loclists_base,
@@ -2806,7 +2808,7 @@ read_and_display_attr_value (unsigned long attribute,
 		  if (idx != (uint64_t) -1)
 		    idx += (offset_size == 8) ? 20 : 12;
 		}
-	      else if (debug_info_p == NULL || dwarf_version > 4)
+	      else if (dwarf_version > 4)
 		{
 		  idx = fetch_indexed_offset (uvalue, loclists,
 					      debug_info_p->loclists_base,
@@ -2831,21 +2833,12 @@ read_and_display_attr_value (unsigned long attribute,
 	    }
 	  else if (form == DW_FORM_rnglistx)
 	    {
-	      if (dwo)
-		{
-		  idx = fetch_indexed_offset (uvalue, rnglists,
-					      debug_info_p->rnglists_base,
-					      debug_info_p->offset_size);
-		}
+	      if (debug_info_p == NULL)
+		idx = (uint64_t) -1;
 	      else
-		{
-		  if (debug_info_p == NULL)
-		    base = 0;
-		  else
-		    base = debug_info_p->rnglists_base;
-		  idx = fetch_indexed_offset (uvalue, rnglists, base,
-					      debug_info_p->offset_size);
-		}
+		idx = fetch_indexed_offset (uvalue, rnglists,
+					    debug_info_p->rnglists_base,
+					    debug_info_p->offset_size);
 	    }
 	  else
 	    {

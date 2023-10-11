@@ -567,6 +567,13 @@ public:
     return m_prevent_new_threads;
   }
 
+  /* Set this inferior's arch.  */
+  void set_arch (gdbarch *arch);
+
+  /* Get this inferior's arch.  */
+  gdbarch *arch ()
+  { return m_gdbarch; }
+
   /* Convenient handle (GDB inferior id).  Unique across all
      inferiors.  */
   int num = 0;
@@ -662,19 +669,6 @@ public:
      user supplied description's filename, if any; etc.).  */
   target_desc_info tdesc_info;
 
-  /* The architecture associated with the inferior through the
-     connection to the target.
-
-     The architecture vector provides some information that is really
-     a property of the inferior, accessed through a particular target:
-     ptrace operations; the layout of certain RSP packets; the
-     solib_ops vector; etc.  To differentiate architecture accesses to
-     per-inferior/target properties from
-     per-thread/per-frame/per-objfile properties, accesses to
-     per-inferior/target properties should be made through
-     this gdbarch.  */
-  struct gdbarch *gdbarch = NULL;
-
   /* Data related to displaced stepping.  */
   displaced_step_inferior_state displaced_step_state;
 
@@ -706,6 +700,19 @@ private:
      with which target_prevent_new_threads was called with, for this
      inferior.  */
   bool m_prevent_new_threads = false;
+
+  /* The architecture associated with the inferior through the
+     connection to the target.
+
+     The architecture vector provides some information that is really
+     a property of the inferior, accessed through a particular target:
+     ptrace operations; the layout of certain RSP packets; the
+     solib_ops vector; etc.  To differentiate architecture accesses to
+     per-inferior/target properties from
+     per-thread/per-frame/per-objfile properties, accesses to
+     per-inferior/target properties should be made through
+     this gdbarch.  */
+  gdbarch *m_gdbarch = nullptr;
 };
 
 /* Add an inferior to the inferior list, print a message that a new

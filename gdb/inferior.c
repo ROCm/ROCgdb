@@ -175,6 +175,19 @@ inferior::set_args (gdb::array_view<char * const> args)
 }
 
 void
+inferior::set_arch (gdbarch *arch)
+{
+  gdb_assert (arch != nullptr);
+  gdb_assert (gdbarch_initialized_p (arch));
+  m_gdbarch = arch;
+  gdb::observers::architecture_changed.notify (this, arch);
+
+  process_stratum_target *proc_target = this->process_target ();
+  if (proc_target != nullptr)
+    registers_changed_ptid (proc_target, ptid_t (this->pid));
+}
+
+void
 inferior::add_continuation (std::function<void ()> &&cont)
 {
   m_continuations.emplace_front (std::move (cont));
@@ -848,10 +861,10 @@ add_inferior_with_spaces (void)
   /* Setup the inferior's initial arch, based on information obtained
      from the global "set ..." options.  */
   gdbarch_info info;
-  inf->gdbarch = gdbarch_find_by_info (info);
+  inf->set_arch (gdbarch_find_by_info (info));
   /* The "set ..." options reject invalid settings, so we should
      always have a valid arch by now.  */
-  gdb_assert (inf->gdbarch != NULL);
+  gdb_assert (inf->arch () != nullptr);
 
   return inf;
 }
@@ -1015,7 +1028,7 @@ clone_inferior_command (const char *args, int from_tty)
       inf = add_inferior (0);
       inf->pspace = pspace;
       inf->aspace = pspace->aspace;
-      inf->gdbarch = orginf->gdbarch;
+      inf->set_arch (orginf->arch ());
 
       switch_to_inferior_and_push_target (inf, no_connection, orginf);
 

@@ -1159,7 +1159,7 @@ jit_inferior_init (inferior *inf)
   struct jit_descriptor descriptor;
   struct jit_code_entry cur_entry;
   CORE_ADDR cur_entry_addr;
-  struct gdbarch *gdbarch = inf->gdbarch;
+  struct gdbarch *gdbarch = inf->arch ();
   program_space *pspace = inf->pspace;
 
   jit_debug_printf ("called");
@@ -1229,7 +1229,8 @@ jit_inferior_execd_hook (inferior *exec_inf, inferior *follow_inf)
 void
 jit_breakpoint_re_set (void)
 {
-  jit_breakpoint_re_set_internal (target_gdbarch (), current_program_space);
+  jit_breakpoint_re_set_internal (current_inferior ()->arch (),
+				  current_program_space);
 }
 
 /* This function cleans up any code entries left over when the

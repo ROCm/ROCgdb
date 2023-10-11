@@ -162,7 +162,7 @@ add_vsyscall_page (inferior *inf)
 {
   struct mem_range vsyscall_range;
 
-  if (gdbarch_vsyscall_range (inf->gdbarch, &vsyscall_range))
+  if (gdbarch_vsyscall_range (inf->arch (), &vsyscall_range))
     {
       struct bfd *bfd;
 
@@ -184,7 +184,7 @@ add_vsyscall_page (inferior *inf)
 	}
 
       std::string name = string_printf ("system-supplied DSO at %s",
-					paddress (target_gdbarch (),
+					paddress (current_inferior ()->arch (),
 						  vsyscall_range.start));
       try
 	{
