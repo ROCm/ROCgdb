@@ -17,6 +17,17 @@
 
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 typedef void (*func_ptr) ();
 
 __global__ void
@@ -30,6 +41,6 @@ int
 main (int argc, char* argv[])
 {
   hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
   return 0;
 }

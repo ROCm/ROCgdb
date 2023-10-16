@@ -76,10 +76,10 @@ main (int argc, char* argv[])
   /* Now that the module is submitted to the device, try to be the worst
      possible citizen by unloading the module and scrambling the underlying
      buffer.  */
-  hipModuleUnload (m);
+  CHECK (hipModuleUnload (m));
   std::fill (module_buffer.begin (), module_buffer.end (), 0);
   module_buffer.resize (0);
   module_buffer.shrink_to_fit ();
 
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 }

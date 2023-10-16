@@ -19,6 +19,17 @@
 
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 /* Kernel entry point. */
 __global__ void kernel ()
 {
@@ -33,7 +44,7 @@ main (int argc, char* argv[])
   hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1),
       0 /*dynamicShared*/, 0 /*stream*/);
 
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 
   return 0;
 }
