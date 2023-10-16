@@ -19,6 +19,17 @@
 
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 __global__ void
 kernel ()
 {
@@ -49,7 +60,7 @@ main (int argc, char **argv)
 		      0 /*stream*/);
 
   /* Wait until kernel finishes.  */
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 
   return 0;
 }

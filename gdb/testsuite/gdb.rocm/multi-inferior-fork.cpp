@@ -19,6 +19,17 @@
 #include <unistd.h>
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 __global__ void
 kernel ()
 {}
@@ -39,7 +50,7 @@ main ()
       /* Child.  */
       child_after_fork ();
       hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
-      hipDeviceSynchronize ();
+      CHECK (hipDeviceSynchronize ());
     }
 
   return 0;

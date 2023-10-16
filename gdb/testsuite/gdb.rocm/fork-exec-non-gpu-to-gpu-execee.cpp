@@ -28,7 +28,6 @@
       }                                                                      \
   }
 
-
 __device__ static void
 break_here_execee ()
 {}

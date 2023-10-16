@@ -18,6 +18,17 @@
 
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 int global_var;
 
 __device__ void
@@ -41,7 +52,7 @@ main ()
      local#0.  */
   hipLaunchKernelGGL (kernel, grid_dim, block_dim, 1024, 0);
 
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 
   return 0;
 }

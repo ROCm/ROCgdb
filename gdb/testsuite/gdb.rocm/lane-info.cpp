@@ -19,6 +19,17 @@
 #include <hip/hip_runtime.h>
 #include <unistd.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 /* The kernel never returns, via this sleep, so that the .exp file can
    test background execution (cont&).  */
 
@@ -63,7 +74,7 @@ main ()
   hipLaunchKernelGGL (kernel, dim3 (1), dim3 (64 + 5),
 		      0 /*dynamicShared*/, 0 /*stream*/);
 
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 
   return 0;
 }

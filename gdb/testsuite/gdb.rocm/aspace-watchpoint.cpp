@@ -26,6 +26,17 @@
 
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 __device__ void
 change_memory (char *private_ptr, int *global_ptr)
 {
@@ -74,11 +85,12 @@ int
 main (int argc, char* argv[])
 {
   int *global_ptr;
-  hipMalloc (&global_ptr, 4);
+  CHECK (hipMalloc (&global_ptr, 4));
   int init_value_h = 0;
-  hipMemcpy (global_ptr, &init_value_h, sizeof (init_value_h), hipMemcpyHostToDevice);
+  CHECK (hipMemcpy (global_ptr, &init_value_h, sizeof (init_value_h),
+		    hipMemcpyHostToDevice));
 
   kernel<<<1, 1, 0>>> (global_ptr);
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
   return 0;
 }

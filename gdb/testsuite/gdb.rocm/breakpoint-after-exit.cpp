@@ -19,6 +19,17 @@
 #include <unistd.h>
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 __global__ void
 the_kernel ()
 {}
@@ -27,7 +38,7 @@ int
 main ()
 {
   hipLaunchKernelGGL (the_kernel, dim3 (1), dim3 (1), 0, 0);
-  hipDeviceSynchronize (); /* set breakpoint here */
+  CHECK (hipDeviceSynchronize ()); /* set breakpoint here */
 
   return 0;
 }

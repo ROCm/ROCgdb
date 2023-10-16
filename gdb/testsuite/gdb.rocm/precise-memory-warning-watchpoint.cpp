@@ -18,6 +18,17 @@
 #include <hip/hip_runtime.h>
 #include <stdio.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 __device__ int global = 0;
 
 __global__ void
@@ -33,6 +44,6 @@ main (int argc, char* argv[])
 {
   printf("host global: %p\n", &global);
   hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
   return 0;
 }
