@@ -16,103 +16,89 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <stdio.h>
-#include <iostream>
+#include <cstdio>
 #include <hip/hip_runtime.h>
 
-// Number of elements in Array.
-#define N 64
+#if !defined(GRID_DIM)
+# error "Missing definition of GRID_DIM"
+#endif
+#if !defined(BLOCK_DIM)
+# error "Missing definition of BLOCK_DIM"
+#endif
 
-#define HIPCHECK(cmd)                                                          \
-do {                                                                           \
-  hipError_t error = (cmd);                                                    \
-  if (error != hipSuccess)                                                     \
-  {                                                                            \
-    std::cerr << "Encountered HIP error (" << error << ") at line "            \
-              << __LINE__ << " in file " << __FILE__ << "\n";                  \
-    exit(-1);                                                                  \
-  }                                                                            \
-} while (0)
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
 
-#define MAX_GPU 8
+/* Number of elements in Array.  */
+constexpr size_t N = 64;
 
-
-
-// Defining Kernel function for vector addition
-__global__ void VectorAdd(int *d_a, int *d_b, int *d_c)
+__global__ void
+VectorAdd (int *d_a, int *d_b, int *d_c)
 {
-  // Getting block index of current kernel
-  int tid = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+  size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < N)
     d_c[tid] = d_a[tid] + d_b[tid];
 }
 
-
-int main(void)
+int
+main ()
 {
-  // Defining host arrays
-  int h_a[N], h_b[N], h_c[N];
-  // Defining device pointers
-  int *d_a[N], *d_b[N], *d_c[N];
-  // allocate the memory
-  
-  hipStream_t stream[MAX_GPU];
+  int gpu_id;
+  CHECK (hipGetDevice (&gpu_id));
 
-  int nGpu = 1;
-  // To do
-  // In multi gpu scenario on running kernel on every GPU causing multiple
-  // failures in nonstop mode test cases, which need to investigate.
-  // HIPCHECK(hipGetDeviceCount(&nGpu));
-  for (int i = 0; i < nGpu; i ++) {
-    HIPCHECK(hipSetDevice(i));
-    hipDeviceProp_t prop;
-    HIPCHECK(hipGetDeviceProperties(&prop, i));
-    printf("#   device %d [0x%02x] %s\n",
-                    i, prop.pciBusID, prop.name);
-    //create stream
-    HIPCHECK(hipStreamCreate(&stream[i]));
+  hipDeviceProp_t prop;
+  CHECK (hipGetDeviceProperties (&prop, gpu_id));
+  printf ("#   device %d [%04x:%02x.%02x] %s\n", gpu_id, prop.pciDomainID,
+	  prop.pciBusID, prop.pciDeviceID, prop.name);
 
-    hipMalloc((void**)&d_a[i], N * sizeof(int));
-    hipMalloc((void**)&d_b[i], N * sizeof(int));
-    hipMalloc((void**)&d_c[i], N * sizeof(int));
-    // Initializing Arrays
-    for (int i = 0; i < N; i++) {
-      h_a[i] = 2*i;
-      h_b[i] = i ;
+  /* Host allocations.  */
+  int h_a[N] = {};
+  int h_b[N] = {};
+  int h_c[N] = {};
+  for (int i = 0; i < N; ++i)
+    {
+      h_a[i] = 2 * i;
+      h_b[i] = i;
     }
 
-    // Copy input arrays from host to device memory
-    hipMemcpyAsync(d_a[i], h_a, N * sizeof(int), hipMemcpyHostToDevice, stream[i]);
-    hipMemcpyAsync(d_b[i], h_b, N * sizeof(int), hipMemcpyHostToDevice, stream[i]);
-  }
-  
-  for (int i = 0; i < nGpu; i ++) {
-  HIPCHECK(hipSetDevice(i));
+  /* Device allocations.  */
+  int *d_a = nullptr;
+  int *d_b = nullptr;
+  int *d_c = nullptr;
 
-  hipLaunchKernelGGL(VectorAdd,
-		     dim3(GRID_DIM), dim3(BLOCK_DIM),
-		     0, stream[i], d_a[i], d_b[i], d_c[i]);
-  }
-  
-  for (int i = 0; i < nGpu; i ++) {
-    HIPCHECK(hipSetDevice(i));
-    // Copy result back to host memory from device memory
-    hipMemcpyAsync(h_c, d_c[i], N * sizeof(int), hipMemcpyDeviceToHost, stream[i]);
-    HIPCHECK(hipStreamSynchronize(stream[i]));
-    //printf("Vector addition on GPU \n");
-    // Printing result on console
-    for (int i = 0; i < N; i++) {
-      /*printf("Operation result of %d element is %d + %d = %d\n",
-         i, h_a[i], h_b[i],h_c[i]);*/
-      if(h_a[i]+h_b[i] !=h_c[i]) {
-        HIPCHECK(hipErrorUnknown); 
-      }
+  CHECK (hipMalloc (&d_a, sizeof (int) * N));
+  CHECK (hipMalloc (&d_b, sizeof (int) * N));
+  CHECK (hipMalloc (&d_c, sizeof (int) * N));
+
+  CHECK (hipMemcpy (d_a, h_a, sizeof (int) * N, hipMemcpyHostToDevice));
+  CHECK (hipMemcpy (d_b, h_b, sizeof (int) * N, hipMemcpyHostToDevice));
+
+  VectorAdd<<<dim3 (GRID_DIM), dim3 (BLOCK_DIM)>>> (d_a, d_b, d_c);
+
+  CHECK (hipMemcpy (h_c, d_c, sizeof (int) * N, hipMemcpyDeviceToHost));
+
+  CHECK (hipFree (d_a));
+  CHECK (hipFree (d_b));
+  CHECK (hipFree (d_c));
+
+  bool error_found = false;
+  for (int i = 0; i < N; ++i)
+    {
+      if (h_a[i] + h_b[i] != h_c[i])
+	{
+	  fprintf (stderr, "%d + %d != %d (at index %d)", h_a[i], h_b[i],
+		   h_c[i], i);
+	  error_found = true;
+	}
     }
-    // Free up memory
-    HIPCHECK(hipStreamDestroy(stream[i]));
-    hipFree(d_a[i]);
-    hipFree(d_b[i]);
-    hipFree(d_c[i]);
-  }
-  return 0;
+
+  return (error_found ? EXIT_FAILURE : EXIT_SUCCESS);
 }
