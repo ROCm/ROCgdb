@@ -160,7 +160,7 @@ main (int argc, char **argv, char **envp)
   CHECK (hipMemcpy (&exitcode_h, exitcode_d, sizeof (int), hipMemcpyDeviceToHost));
 
   /* Wait until kernel finishes.  */
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 
   return exitcode_h;
 }

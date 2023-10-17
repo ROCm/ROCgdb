@@ -17,6 +17,17 @@
 
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 __device__ void
 foo ()
 {
@@ -44,6 +55,6 @@ int
 main (int argc, char *argv[])
 {
   kern<<<2, 1>>> ();
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
   return 0;
 }

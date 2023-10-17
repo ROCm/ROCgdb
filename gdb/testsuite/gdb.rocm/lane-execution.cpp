@@ -137,7 +137,7 @@ main ()
 
   hipLaunchKernelGGL (kernel, grid_dim, block_dim, 0, 0, sInBuff, sOutBuff);
 
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 
   return 0;
 }

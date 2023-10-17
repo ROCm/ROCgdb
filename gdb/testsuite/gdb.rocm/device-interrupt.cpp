@@ -23,6 +23,17 @@
 #include <unistd.h>
 #include <hip/hip_runtime.h>
 
+#define CHECK(cmd)                                                           \
+  {                                                                          \
+    hipError_t error = cmd;                                                  \
+    if (error != hipSuccess)                                                 \
+      {                                                                      \
+	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
+		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
+	exit (EXIT_FAILURE);                                                 \
+      }                                                                      \
+  }
+
 /* Kernel entry point.  Loop forever, while avoiding to peg the
    GPU.  */
 
@@ -52,7 +63,7 @@ main (int argc, char **argv)
 
   /* Wait until kernel finishes.  In this case, this blocks
      "forever".  */
-  hipDeviceSynchronize ();
+  CHECK (hipDeviceSynchronize ());
 
   return 0;
 }
