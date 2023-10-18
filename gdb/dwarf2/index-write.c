@@ -1196,12 +1196,12 @@ write_cooked_index (cooked_index *table,
 /* Write shortcut information. */
 
 static void
-write_shortcuts_table (cooked_index *table, data_buf& shortcuts,
-		       data_buf& cpool)
+write_shortcuts_table (cooked_index *table, data_buf &shortcuts,
+		       data_buf &cpool)
 {
   const auto main_info = table->get_main ();
   size_t main_name_offset = 0;
-  dwarf_source_language dw_lang = (dwarf_source_language)0;
+  dwarf_source_language dw_lang = (dwarf_source_language) 0;
 
   if (main_info != nullptr)
     {
@@ -1217,7 +1217,7 @@ write_shortcuts_table (cooked_index *table, data_buf& shortcuts,
 	}
     }
 
-  shortcuts.append_uint (4, BFD_ENDIAN_LITTLE, dw_lang);
+  shortcuts.append_offset (dw_lang);
   shortcuts.append_offset (main_name_offset);
 }
 
@@ -1300,8 +1300,8 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   data_buf shortcuts;
   write_shortcuts_table (table, shortcuts, constant_pool);
 
-  write_gdbindex_1(out_file, objfile_cu_list, types_cu_list, addr_vec,
-		   symtab_vec, constant_pool, shortcuts);
+  write_gdbindex_1 (out_file, objfile_cu_list, types_cu_list, addr_vec,
+		    symtab_vec, constant_pool, shortcuts);
 
   if (dwz_out_file != NULL)
     write_gdbindex_1 (dwz_out_file, dwz_cu_list, {}, {}, {}, {}, {});
@@ -1575,7 +1575,7 @@ save_gdb_index_command (const char *arg, int from_tty)
 				 _("Error while writing index for `%s': "),
 				 objfile_name (objfile));
 	    }
-	    }
+	}
 
     }
 }
