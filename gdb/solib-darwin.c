@@ -75,19 +75,17 @@ struct darwin_info
 static const registry<program_space>::key<darwin_info>
   solib_darwin_pspace_data;
 
-/* Get the current darwin data.  If none is found yet, add it now.  This
+/* Get the darwin solib data for PSPACE.  If none is found yet, add it now.  This
    function always returns a valid object.  */
 
-static struct darwin_info *
-get_darwin_info (void)
+static darwin_info *
+get_darwin_info (program_space *pspace)
 {
-  struct darwin_info *info;
-
-  info = solib_darwin_pspace_data.get (current_program_space);
-  if (info != NULL)
+  darwin_info *info = solib_darwin_pspace_data.get (pspace);
+  if (info != nullptr)
     return info;
 
-  return solib_darwin_pspace_data.emplace (current_program_space);
+  return solib_darwin_pspace_data.emplace (pspace);
 }
 
 /* Return non-zero if the version in dyld_all_image is known.  */
@@ -137,7 +135,7 @@ darwin_load_image_infos (struct darwin_info *info)
 
 /* Link map info to include in an allocated so_list entry.  */
 
-struct lm_info_darwin : public lm_info_base
+struct lm_info_darwin final : public lm_info
 {
   /* The target location of lm.  */
   CORE_ADDR lm_addr = 0;
@@ -214,32 +212,31 @@ open_symbol_file_object (int from_tty)
 
 /* Build a list of currently loaded shared objects.  See solib-svr4.c.  */
 
-static struct so_list *
-darwin_current_sos (void)
+static intrusive_list<shobj>
+darwin_current_sos ()
 {
   type *ptr_type
     = builtin_type (current_inferior ()->arch ())->builtin_data_ptr;
   enum bfd_endian byte_order = type_byte_order (ptr_type);
   int ptr_len = ptr_type->length ();
   unsigned int image_info_size;
-  struct so_list *head = NULL;
-  struct so_list *tail = NULL;
-  int i;
-  struct darwin_info *info = get_darwin_info ();
+  darwin_info *info = get_darwin_info (current_program_space);
 
   /* Be sure image infos are loaded.  */
   darwin_load_image_infos (info);
 
   if (!darwin_dyld_version_ok (info))
-    return NULL;
+    return {};
 
   image_info_size = ptr_len * 3;
+
+  intrusive_list<shobj> sos;
 
   /* Read infos for each solib.
      The first entry was rumored to be the executable itself, but this is not
      true when a large number of shared libraries are used (table expanded ?).
      We now check all entries, but discard executable images.  */
-  for (i = 0; i < info->all_image.count; i++)
+  for (int i = 0; i < info->all_image.count; i++)
     {
       CORE_ADDR iinfo = info->all_image.info + i * image_info_size;
       gdb_byte buf[image_info_size];
@@ -274,25 +271,20 @@ darwin_current_sos (void)
       if (file_path == nullptr)
 	break;
 
-      /* Create and fill the new so_list element.  */
-      gdb::unique_xmalloc_ptr<struct so_list> newobj (XCNEW (struct so_list));
+      /* Create and fill the new struct shobj element.  */
+      shobj *newobj = new shobj;
 
-      lm_info_darwin *li = new lm_info_darwin;
-      newobj->lm_info = li;
+      auto li = gdb::make_unique<lm_info_darwin> ();
 
-      strncpy (newobj->so_name, file_path.get (), SO_NAME_MAX_PATH_SIZE - 1);
-      newobj->so_name[SO_NAME_MAX_PATH_SIZE - 1] = '\0';
-      strcpy (newobj->so_original_name, newobj->so_name);
+      newobj->so_name = file_path.get ();
+      newobj->so_original_name = newobj->so_name;
       li->lm_addr = load_addr;
 
-      if (head == NULL)
-	head = newobj.get ();
-      else
-	tail->next = newobj.get ();
-      tail = newobj.release ();
+      newobj->lm_info = std::move (li);
+      sos.push_back (*newobj);
     }
 
-  return head;
+  return sos;
 }
 
 /* Check LOAD_ADDR points to a Mach-O executable header.  Return LOAD_ADDR
@@ -506,7 +498,7 @@ darwin_solib_create_inferior_hook (int from_tty)
   if (!target_has_execution ())
     return;
 
-  struct darwin_info *info = get_darwin_info ();
+  darwin_info *info = get_darwin_info (current_program_space);
   CORE_ADDR load_addr;
 
   info->all_image_addr = 0;
@@ -601,45 +593,36 @@ darwin_solib_create_inferior_hook (int from_tty)
 }
 
 static void
-darwin_clear_solib (void)
+darwin_clear_solib (program_space *pspace)
 {
-  struct darwin_info *info = get_darwin_info ();
+  darwin_info *info = get_darwin_info (pspace);
 
   info->all_image_addr = 0;
   info->all_image.version = 0;
-}
-
-static void
-darwin_free_so (struct so_list *so)
-{
-  lm_info_darwin *li = (lm_info_darwin *) so->lm_info;
-
-  delete li;
 }
 
 /* The section table is built from bfd sections using bfd VMAs.
    Relocate these VMAs according to solib info.  */
 
 static void
-darwin_relocate_section_addresses (struct so_list *so,
-				   struct target_section *sec)
+darwin_relocate_section_addresses (shobj &so, target_section *sec)
 {
-  lm_info_darwin *li = (lm_info_darwin *) so->lm_info;
+  auto *li = gdb::checked_static_cast<lm_info_darwin *> (so.lm_info.get ());
 
   sec->addr += li->lm_addr;
   sec->endaddr += li->lm_addr;
 
   /* Best effort to set addr_high/addr_low.  This is used only by
      'info sharedlibary'.  */
-  if (so->addr_high == 0)
+  if (so.addr_high == 0)
     {
-      so->addr_low = sec->addr;
-      so->addr_high = sec->endaddr;
+      so.addr_low = sec->addr;
+      so.addr_high = sec->endaddr;
     }
-  if (sec->endaddr > so->addr_high)
-    so->addr_high = sec->endaddr;
-  if (sec->addr < so->addr_low)
-    so->addr_low = sec->addr;
+  if (sec->endaddr > so.addr_high)
+    so.addr_high = sec->endaddr;
+  if (sec->addr < so.addr_low)
+    so.addr_low = sec->addr;
 }
 
 static gdb_bfd_ref_ptr
@@ -675,7 +658,6 @@ darwin_bfd_open (const char *pathname)
 const struct target_so_ops darwin_so_ops =
 {
   darwin_relocate_section_addresses,
-  darwin_free_so,
   nullptr,
   darwin_clear_solib,
   darwin_solib_create_inferior_hook,

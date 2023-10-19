@@ -26,9 +26,9 @@
 #include "xcoffread.h"
 #include "observable.h"
 
-/* Our private data in struct so_list.  */
+/* Our private data in struct shobj.  */
 
-struct lm_info_aix : public lm_info_base
+struct lm_info_aix final : public lm_info
 {
   /* The name of the file mapped by the loader.  Apart from the entry
      for the main executable, this is usually a shared library (which,
@@ -311,13 +311,12 @@ solib_aix_bss_data_overlap (bfd *abfd)
 /* Implement the "relocate_section_addresses" target_so_ops method.  */
 
 static void
-solib_aix_relocate_section_addresses (struct so_list *so,
-				      struct target_section *sec)
+solib_aix_relocate_section_addresses (shobj &so, target_section *sec)
 {
   struct bfd_section *bfd_sect = sec->the_bfd_section;
   bfd *abfd = bfd_sect->owner;
   const char *section_name = bfd_section_name (bfd_sect);
-  lm_info_aix *info = (lm_info_aix *) so->lm_info;
+  auto *info = gdb::checked_static_cast<lm_info_aix *> (so.lm_info.get ());
 
   if (strcmp (section_name, ".text") == 0)
     {
@@ -359,26 +358,6 @@ solib_aix_relocate_section_addresses (struct so_list *so,
       sec->addr = bfd_section_vma (bfd_sect);
       sec->endaddr = sec->addr + bfd_section_size (bfd_sect);
     }
-}
-
-/* Implement the "free_so" target_so_ops method.  */
-
-static void
-solib_aix_free_so (struct so_list *so)
-{
-  lm_info_aix *li = (lm_info_aix *) so->lm_info;
-
-  solib_debug_printf ("%s", so->so_name);
-
-  delete li;
-}
-
-/* Implement the "clear_solib" target_so_ops method.  */
-
-static void
-solib_aix_clear_solib (void)
-{
-  /* Nothing needed.  */
 }
 
 /* Compute and return the OBJFILE's section_offset array, using
@@ -466,23 +445,22 @@ solib_aix_solib_create_inferior_hook (int from_tty)
 
 /* Implement the "current_sos" target_so_ops method.  */
 
-static struct so_list *
-solib_aix_current_sos (void)
+static intrusive_list<shobj>
+solib_aix_current_sos ()
 {
-  struct so_list *start = NULL, *last = NULL;
-  int ix;
-
   gdb::optional<std::vector<lm_info_aix>> &library_list
     = solib_aix_get_library_list (current_inferior (), NULL);
   if (!library_list.has_value ())
-    return NULL;
+    return {};
 
-  /* Build a struct so_list for each entry on the list.
+  intrusive_list<shobj> sos;
+
+  /* Build a struct shobj for each entry on the list.
      We skip the first entry, since this is the entry corresponding
      to the main executable, not a shared library.  */
-  for (ix = 1; ix < library_list->size (); ix++)
+  for (int ix = 1; ix < library_list->size (); ix++)
     {
-      struct so_list *new_solib = XCNEW (struct so_list);
+      shobj *new_solib = new shobj;
       std::string so_name;
 
       lm_info_aix &info = (*library_list)[ix];
@@ -503,24 +481,16 @@ solib_aix_current_sos (void)
 	 so_name = string_printf ("%s(%s)", info.filename.c_str (),
 				  info.member_name.c_str ());
 	}
-      strncpy (new_solib->so_original_name, so_name.c_str (),
-	       SO_NAME_MAX_PATH_SIZE - 1);
-      new_solib->so_name[SO_NAME_MAX_PATH_SIZE - 1] = '\0';
-      memcpy (new_solib->so_name, new_solib->so_original_name,
-	      SO_NAME_MAX_PATH_SIZE);
-      new_solib->lm_info = new lm_info_aix (info);
+
+      new_solib->so_original_name = so_name;
+      new_solib->so_name = so_name;
+      new_solib->lm_info = gdb::make_unique<lm_info_aix> (info);
 
       /* Add it to the list.  */
-      if (!start)
-	last = start = new_solib;
-      else
-	{
-	  last->next = new_solib;
-	  last = new_solib;
-	}
+      sos.push_back (*new_solib);
     }
 
-  return start;
+  return sos;
 }
 
 /* Implement the "open_symbol_file_object" target_so_ops method.  */
@@ -713,9 +683,8 @@ solib_aix_normal_stop_observer (struct bpstat *unused_1, int unused_2)
 const struct target_so_ops solib_aix_so_ops =
 {
   solib_aix_relocate_section_addresses,
-  solib_aix_free_so,
   nullptr,
-  solib_aix_clear_solib,
+  nullptr,
   solib_aix_solib_create_inferior_hook,
   solib_aix_current_sos,
   solib_aix_open_symbol_file_object,

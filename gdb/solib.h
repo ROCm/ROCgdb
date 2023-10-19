@@ -21,7 +21,7 @@
 #define SOLIB_H
 
 /* Forward decl's for prototypes */
-struct so_list;
+struct shobj;
 struct target_ops;
 struct target_so_ops;
 struct program_space;
@@ -50,7 +50,7 @@ extern void clear_solib (void);
 /* Called to add symbols from a shared library to gdb's symbol table.  */
 
 extern void solib_add (const char *, int, int);
-extern bool solib_read_symbols (struct so_list *, symfile_add_flags);
+extern bool solib_read_symbols (shobj &, symfile_add_flags);
 
 /* Function to be called when the inferior starts up, to discover the
    names of shared libraries that are dynamically linked, the base
@@ -65,7 +65,7 @@ extern const char *solib_name_from_address (struct program_space *, CORE_ADDR);
 
 /* Return true if ADDR lies within SOLIB.  */
 
-extern bool solib_contains_address_p (const struct so_list *, CORE_ADDR);
+extern bool solib_contains_address_p (const shobj &, CORE_ADDR);
 
 /* Return whether the data starting at VADDR, size SIZE, must be kept
    in a core file for shared libraries loaded before "gcore" is used
@@ -142,12 +142,5 @@ extern void handle_solib_event (void);
 extern void set_cbfd_soname_build_id (gdb_bfd_ref_ptr abfd,
 				      const char *soname,
 				      const bfd_build_id *build_id);
-
-/* If SONAME had a build-id associated with it in ABFD's registry by a
-   previous call to set_cbfd_soname_build_id then return the build-id
-   as a NULL-terminated hex string.  */
-
-extern gdb::unique_xmalloc_ptr<char> get_cbfd_soname_build_id
-  (gdb_bfd_ref_ptr abfd, const char *soname);
 
 #endif /* SOLIB_H */

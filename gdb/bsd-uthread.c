@@ -149,7 +149,7 @@ static int bsd_uthread_thread_next_offset = -1;
 static int bsd_uthread_thread_ctx_offset;
 
 /* Name of shared threads library.  */
-static const char *bsd_uthread_solib_name;
+static std::string bsd_uthread_solib_name;
 
 /* Non-zero if the thread stratum implemented by this module is active.  */
 static int bsd_uthread_active;
@@ -245,7 +245,7 @@ bsd_uthread_target::close ()
   bsd_uthread_thread_state_offset = 0;
   bsd_uthread_thread_next_offset = 0;
   bsd_uthread_thread_ctx_offset = 0;
-  bsd_uthread_solib_name = NULL;
+  bsd_uthread_solib_name.clear ();
 }
 
 /* Deactivate the thread stratum implemented by this module.  */
@@ -275,19 +275,19 @@ static const char * const bsd_uthread_solib_names[] =
 };
 
 static void
-bsd_uthread_solib_loaded (struct so_list *so)
+bsd_uthread_solib_loaded (shobj &so)
 {
   const char * const *names = bsd_uthread_solib_names;
 
   for (names = bsd_uthread_solib_names; *names; names++)
     {
-      if (startswith (so->so_original_name, *names))
+      if (startswith (so.so_original_name, *names))
 	{
 	  solib_read_symbols (so, 0);
 
-	  if (bsd_uthread_activate (so->objfile))
+	  if (bsd_uthread_activate (so.objfile))
 	    {
-	      bsd_uthread_solib_name = so->so_original_name;
+	      bsd_uthread_solib_name = so.so_original_name;
 	      return;
 	    }
 	}
@@ -295,12 +295,12 @@ bsd_uthread_solib_loaded (struct so_list *so)
 }
 
 static void
-bsd_uthread_solib_unloaded (program_space *pspace, so_list *so)
+bsd_uthread_solib_unloaded (program_space *pspace, const shobj &so)
 {
-  if (!bsd_uthread_solib_name)
+  if (bsd_uthread_solib_name.empty ())
     return;
 
-  if (strcmp (so->so_original_name, bsd_uthread_solib_name) == 0)
+  if (so.so_original_name == bsd_uthread_solib_name)
     bsd_uthread_deactivate ();
 }
 

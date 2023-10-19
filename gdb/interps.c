@@ -358,15 +358,15 @@ current_interpreter (void)
 /* Helper interps_notify_* functions.  Call METHOD on the top-level interpreter
    of all UIs.  */
 
-template <typename ...Args>
+template <typename MethodType, typename ...Args>
 void
-interps_notify (void (interp::*method) (Args...), Args... args)
+interps_notify (MethodType method, Args&&... args)
 {
   SWITCH_THRU_ALL_UIS ()
     {
       interp *tli = top_level_interpreter ();
       if (tli != nullptr)
-	(tli->*method) (args...);
+	(tli->*method) (std::forward<Args> (args)...);
     }
 }
 
@@ -488,7 +488,7 @@ interps_notify_target_resumed (ptid_t ptid)
 /* See interps.h.  */
 
 void
-interps_notify_solib_loaded (so_list *so)
+interps_notify_solib_loaded (const shobj &so)
 {
   interps_notify (&interp::on_solib_loaded, so);
 }
@@ -496,7 +496,7 @@ interps_notify_solib_loaded (so_list *so)
 /* See interps.h.  */
 
 void
-interps_notify_solib_unloaded (so_list *so)
+interps_notify_solib_unloaded (const shobj &so)
 {
   interps_notify (&interp::on_solib_unloaded, so);
 }

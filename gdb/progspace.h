@@ -28,6 +28,7 @@
 #include "solist.h"
 #include "gdbsupport/next-iterator.h"
 #include "gdbsupport/safe-iterator.h"
+#include "gdbsupport/intrusive_list.h"
 #include <list>
 #include <vector>
 
@@ -38,7 +39,7 @@ struct inferior;
 struct exec;
 struct address_space;
 struct program_space;
-struct so_list;
+struct shobj;
 
 typedef std::list<std::unique_ptr<objfile>> objfile_list;
 
@@ -253,12 +254,9 @@ struct program_space
      is outside all objfiles in this progspace.  */
   struct objfile *objfile_for_address (CORE_ADDR address);
 
-  /* Return a range adapter for iterating over all the solibs in this
-     program space.  Use it like:
-
-     for (so_list *so : pspace->solibs ()) { ... }  */
-  so_list_range solibs () const
-  { return so_list_range (this->so_list); }
+  /* Return the list of  all the solibs in this program space.  */
+  intrusive_list<shobj> &solibs ()
+  { return so_list; }
 
   /* Close and clear exec_bfd.  If we end up with no target sections
      to read memory from, this unpushes the exec_ops target.  */
@@ -286,12 +284,12 @@ struct program_space
   bool empty ();
 
   /* Remove all target sections owned by OWNER.  */
-  void remove_target_sections (void *owner);
+  void remove_target_sections (const void *owner);
 
   /* Add the sections array defined by SECTIONS to the
      current set of target sections.  */
-  void add_target_sections (void *owner,
-			    const target_section_table &sections);
+  void add_target_sections (const void *owner,
+			    const std::vector<target_section> &sections);
 
   /* Add the sections of OBJFILE to the current set of target
      sections.  They are given OBJFILE as the "owner".  */
@@ -304,7 +302,7 @@ struct program_space
   }
 
   /* Return a reference to the M_TARGET_SECTIONS table.  */
-  target_section_table &target_sections ()
+  std::vector<target_section> &target_sections ()
   {
     return m_target_sections;
   }
@@ -361,14 +359,14 @@ struct program_space
 
   /* List of shared objects mapped into this space.  Managed by
      solib.c.  */
-  struct so_list *so_list = NULL;
+  intrusive_list<shobj> so_list;
 
   /* Number of calls to solib_add.  */
   unsigned int solib_add_generation = 0;
 
   /* When an solib is added, it is also added to this vector.  This
      is so we can properly report solib changes to the user.  */
-  std::vector<struct so_list *> added_solibs;
+  std::vector<shobj *> added_solibs;
 
   /* When an solib is removed, its name is added to this vector.
      This is so we can properly report solib changes to the user.  */
@@ -380,7 +378,7 @@ struct program_space
 private:
   /* The set of target sections matching the sections mapped into
      this program space.  Managed by both exec_ops and solib.c.  */
-  target_section_table m_target_sections;
+  std::vector<target_section> m_target_sections;
 };
 
 /* An address space.  It is used for comparing if

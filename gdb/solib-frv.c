@@ -196,7 +196,7 @@ struct ext_link_map
 
 /* Link map info to include in an allocated so_list entry.  */
 
-struct lm_info_frv : public lm_info_base
+struct lm_info_frv final : public lm_info
 {
   ~lm_info_frv ()
   {
@@ -306,13 +306,12 @@ lm_base (void)
 
 /* Implement the "current_sos" target_so_ops method.  */
 
-static struct so_list *
-frv_current_sos (void)
+static intrusive_list<shobj>
+frv_current_sos ()
 {
   bfd_endian byte_order = gdbarch_byte_order (current_inferior ()->arch ());
   CORE_ADDR lm_addr, mgot;
-  struct so_list *sos_head = NULL;
-  struct so_list **sos_next_ptr = &sos_head;
+  intrusive_list<shobj> sos;
 
   /* Make sure that the main executable has been relocated.  This is
      required in order to find the address of the global offset table,
@@ -363,7 +362,6 @@ frv_current_sos (void)
       if (got_addr != mgot)
 	{
 	  struct int_elf32_fdpic_loadmap *loadmap;
-	  struct so_list *sop;
 	  CORE_ADDR addr;
 
 	  /* Fetch the load map address.  */
@@ -378,9 +376,8 @@ frv_current_sos (void)
 	      break;
 	    }
 
-	  sop = XCNEW (struct so_list);
-	  lm_info_frv *li = new lm_info_frv;
-	  sop->lm_info = li;
+	  shobj *sop = new shobj;
+	  auto li = gdb::make_unique<lm_info_frv> ();
 	  li->map = loadmap;
 	  li->got_value = got_addr;
 	  li->lm_addr = lm_addr;
@@ -397,14 +394,11 @@ frv_current_sos (void)
 	    warning (_("Can't read pathname for link map entry."));
 	  else
 	    {
-	      strncpy (sop->so_name, name_buf.get (),
-		       SO_NAME_MAX_PATH_SIZE - 1);
-	      sop->so_name[SO_NAME_MAX_PATH_SIZE - 1] = '\0';
-	      strcpy (sop->so_original_name, sop->so_name);
+	      sop->so_name = name_buf.get ();
+	      sop->so_original_name = sop->so_name;
 	    }
 
-	  *sos_next_ptr = sop;
-	  sos_next_ptr = &sop->next;
+	  sos.push_back (*sop);
 	}
       else
 	{
@@ -417,7 +411,7 @@ frv_current_sos (void)
 
   enable_break2 ();
 
-  return sos_head;
+  return sos;
 }
 
 
@@ -806,7 +800,7 @@ frv_solib_create_inferior_hook (int from_tty)
 }
 
 static void
-frv_clear_solib (void)
+frv_clear_solib (program_space *pspace)
 {
   lm_base_cache = 0;
   enable_break2_done = 0;
@@ -817,19 +811,10 @@ frv_clear_solib (void)
 }
 
 static void
-frv_free_so (struct so_list *so)
-{
-  lm_info_frv *li = (lm_info_frv *) so->lm_info;
-
-  delete li;
-}
-
-static void
-frv_relocate_section_addresses (struct so_list *so,
-				 struct target_section *sec)
+frv_relocate_section_addresses (shobj &so, target_section *sec)
 {
   int seg;
-  lm_info_frv *li = (lm_info_frv *) so->lm_info;
+  auto *li = gdb::checked_static_cast<lm_info_frv *> (so.lm_info.get ());
   int_elf32_fdpic_loadmap *map = li->map;
 
   for (seg = 0; seg < map->nsegs; seg++)
@@ -867,10 +852,10 @@ main_got (void)
 CORE_ADDR
 frv_fdpic_find_global_pointer (CORE_ADDR addr)
 {
-  for (struct so_list *so : current_program_space->solibs ())
+  for (const shobj &so : current_program_space->solibs ())
     {
       int seg;
-      lm_info_frv *li = (lm_info_frv *) so->lm_info;
+      auto *li = gdb::checked_static_cast<lm_info_frv *> (so.lm_info.get ());
       int_elf32_fdpic_loadmap *map = li->map;
 
       for (seg = 0; seg < map->nsegs; seg++)
@@ -924,12 +909,12 @@ frv_fdpic_find_canonical_descriptor (CORE_ADDR entry_point)
      in list of shared objects.  */
   if (addr == 0)
     {
-      for (struct so_list *so : current_program_space->solibs ())
+      for (const shobj &so : current_program_space->solibs ())
 	{
-	  lm_info_frv *li = (lm_info_frv *) so->lm_info;
+	  auto *li = gdb::checked_static_cast<lm_info_frv *> (so.lm_info.get ());
 
 	  addr = find_canonical_descriptor_in_load_object
-		   (entry_point, got_value, name, so->abfd, li);
+		   (entry_point, got_value, name, so.abfd.get(), li);
 
 	  if (addr != 0)
 	    break;
@@ -1076,11 +1061,11 @@ frv_fetch_objfile_link_map (struct objfile *objfile)
 
   /* The other link map addresses may be found by examining the list
      of shared libraries.  */
-  for (struct so_list *so : current_program_space->solibs ())
+  for (const shobj &so : current_program_space->solibs ())
     {
-      lm_info_frv *li = (lm_info_frv *) so->lm_info;
+      auto *li = gdb::checked_static_cast<lm_info_frv *> (so.lm_info.get ());
 
-      if (so->objfile == objfile)
+      if (so.objfile == objfile)
 	return li->lm_addr;
     }
 
@@ -1091,7 +1076,6 @@ frv_fetch_objfile_link_map (struct objfile *objfile)
 const struct target_so_ops frv_so_ops =
 {
   frv_relocate_section_addresses,
-  frv_free_so,
   nullptr,
   frv_clear_solib,
   frv_solib_create_inferior_hook,
