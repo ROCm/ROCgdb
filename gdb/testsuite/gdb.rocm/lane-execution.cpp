@@ -116,7 +116,7 @@ lane_pc_test (unsigned gid, const int *in, struct test_struct *out)
 __global__ void
 kernel (const int *in, struct test_struct *out)
 {
-  unsigned gid0 = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+  unsigned gid0 = blockIdx.x * blockDim.x + threadIdx.x;
   lane_pc_test (gid0, in, out);
 }
 
