@@ -1,0 +1,138 @@
+# Copyright 2023 Free Software Foundation, Inc.
+# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test dereferencing a pointer that points to private_lane memory (a
+# pointer whose target address has "lane" scope) from the context of
+# different lanes.  E.g.:
+#
+#  (gdb) lane apply all print *global_ptr
+#  Lane 0 (AMDGPU Lane 1:4:1:1/0 (0,0,0)[0,0,0]):
+#  $1 = 0
+#  Lane 1 (AMDGPU Lane 1:4:1:1/1 (0,0,0)[1,0,0]):
+#  $2 = 1
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Test printing PRINT_WHAT for each lane.  There are only two lanes in
+# the program; we only need to test more than one.  For each lane, the
+# value printed should be the same as the lane number.  If KFAIL is
+# true, expect a failure.
+proc test_print_each_lane {print_what {kfail 0}} {
+    for {set i 0} {$i < 2} {incr i} {
+	with_test_prefix "lane $i" {
+	    gdb_test "lane $i" "Switching to .* lane $i .*" "switch lane"
+
+	    if {$kfail} {
+		setup_kfail "*-*-*" "xxxx"
+	    }
+	    gdb_test "print $print_what" " = $i"
+	}
+    }
+}
+
+proc test {} {
+    clean_restart $::binfile
+
+    set loc [gdb_get_line_number "set breakpoint here"]
+
+    if ![runto "$::srcfile:$loc" allow-pending message] {
+	return
+    }
+
+    # The test program made 'global_ptr' point to the 'local_var'
+    # variable, which being a local variable should end up in the
+    # private_lane address space.  Iterating over lanes and
+    # dereferencing that pointer should print a different value per
+    # lane, just like the program itself does with printf.
+    with_test_prefix "global pointer set by program" {
+	# This currently yields:
+	#
+	#  (gdb) p global_ptr
+	#  $1 = (size_t *) 0x2000000000008
+	#
+	# But should instead yield:
+	#
+	#  (gdb) p global_ptr
+	#  $1 = (size_t *) generic#0x2000000000008
+	#
+	gdb_test_multiple "print global_ptr" "" {
+	    -re -wrap " = \\\(size_t \\\*\\\) generic#$::hex" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap " = \\\(size_t \\\*\\\) $::hex" {
+		# GDB is printing the generic address bytes raw?
+		setup_kfail "*-*-*" "xxxx"
+		fail $gdb_test_name
+	    }
+	}
+
+	# This is kfailed because it currently fails with:
+	#  print *global_ptr
+	#  Cannot access memory at address 0x2000000000008
+	#  (gdb)
+	test_print_each_lane "*global_ptr" 1
+    }
+
+    # Test the same, but write to a global pointer in GDB instead of
+    # using the pointer set by the program.
+    with_test_prefix "global pointer set by gdb" {
+	# GDB here should understand that 'global_ptr2' is a pointer
+	# to a generic address, and convert appropriately if
+	# necessary.
+	gdb_test_multiple "print global_ptr2 = &local_var" "" {
+	    -re -wrap " = \\\(size_t \\\*\\\) private_lane#$::hex" {
+		# GDB is printing 'global_ptr2' as if it were a
+		# private_lane pointer, which indicates it has failed
+		# to convert to generic address, and likely wrote its
+		# internal representation of a private_lane pointer
+		# over the generic address pointer bytes.
+		setup_kfail "*-*-*" "xxxx"
+		fail $gdb_test_name
+	    }
+	    -re -wrap " = \\\(size_t \\\*\\\) generic#$::hex" {
+		pass $gdb_test_name
+	    }
+	}
+	test_print_each_lane "*global_ptr2"
+    }
+
+    # Now use a convenience variable for the pointer instead of a
+    # global variable in the program.
+    with_test_prefix "convenience variable" {
+	gdb_test \
+	    "print \$conv_var = &local_var" \
+	    "\\\(size_t \\\*\\\) private_lane#$::hex"
+	test_print_each_lane "*\$conv_var"
+    }
+
+    # Both global_ptr and global_ptr2 should point to the same generic
+    # address, and thus the assertion in the program should not fail.
+    # However, currently it does fail.
+    setup_kfail "*-*-*" "xxxx"
+    gdb_continue_to_end "continue to end" "continue" 1
+}
+
+with_rocm_gpu_lock {
+    test
+}
