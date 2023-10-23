@@ -24,6 +24,7 @@
 #include "frame.h"
 #include "extension.h"
 #include "gdbsupport/gdb_ref_ptr.h"
+#include "location_scope.h"
 #include "gmp-utils.h"
 
 struct block;

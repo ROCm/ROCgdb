@@ -29,6 +29,7 @@
 #include "osabi.h"
 #include "displaced-stepping.h"
 #include "gdbsupport/gdb-checked-static-cast.h"
+#include "location_scope.h"
 #include "registry.h"
 #include "gdbtypes.h"
 #include "expression.h"
@@ -141,19 +142,6 @@ using read_core_file_mappings_loop_ftype =
 
 /* 64-bits is sufficient for all known architectures.  */
 typedef uint64_t simd_lanes_mask_t;
-
-/* The scope of a given address's address space.  */
-enum address_scope
-  {
-    /* The address is of an address space that is process-wide.  */
-    ADDRESS_SCOPE_PROCESS,
-
-    /* The address is of an address space that is thread-specific.  */
-    ADDRESS_SCOPE_THREAD,
-
-    /* The address is of an address space that is lane-specific.  */
-    ADDRESS_SCOPE_LANE,
-  };
 
 /* Possible values for gdbarch_call_dummy_location.  */
 enum call_dummy_location_type
