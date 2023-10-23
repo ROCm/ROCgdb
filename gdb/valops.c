@@ -1229,8 +1229,7 @@ value_assign (struct value *toval, struct value *fromval)
 	   Below we will call put_frame_register_bytes which requires that
 	   we pass it the actual frame in which the register value is
 	   valid, i.e. not the next frame.  */
-	frame_info_ptr frame
-	  = frame_find_by_id (toval->context ().next_frame_id);
+	frame_info_ptr frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (toval));
 	frame = get_prev_frame_always (frame);
 
 	if (!frame)
@@ -1450,8 +1449,7 @@ address_of_variable (struct symbol *var, const struct block *b)
     {
     case lval_register:
       {
-	frame_info_ptr frame
-	  = frame_find_by_id (val->context ().next_frame_id);
+	frame_info_ptr frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (val));
 	gdb_assert (frame);
 
 	const char *regname = gdbarch_register_name (get_frame_arch (frame),

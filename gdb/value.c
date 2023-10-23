@@ -1421,6 +1421,13 @@ value::set_address (CORE_ADDR addr)
   m_location.address = addr;
 }
 
+struct frame_id *
+value::deprecated_next_frame_id_hack ()
+{
+  gdb_assert (m_lval == lval_register);
+  return &m_location.reg.next_frame_id;
+}
+
 void
 value::set_context (const eval_context &context)
 {
@@ -1443,7 +1450,7 @@ int *
 value::deprecated_regnum_hack ()
 {
   gdb_assert (m_lval == lval_register);
-  return &m_location.regnum;
+  return &m_location.reg.regnum;
 }
 
 
@@ -3943,7 +3950,7 @@ value::fetch_lazy_register ()
 
   while (new_val->lval () == lval_register && new_val->lazy ())
     {
-      struct frame_id next_frame_id = new_val->context ().next_frame_id;
+      struct frame_id next_frame_id = VALUE_NEXT_FRAME_ID (new_val);
 
       next_frame = frame_find_by_id (next_frame_id);
       regnum = VALUE_REGNUM (new_val);
@@ -3958,10 +3965,10 @@ value::fetch_lazy_register ()
       gdb_assert (!gdbarch_convert_register_p (get_frame_arch (next_frame),
 					       regnum, type));
 
-      /* FRAME was obtained, above, via next_frame_id in the value's
-	 context.  Since a "->next" operation was performed when
-	 setting this field, we do not need to perform a "next"
-	 operation again when unwinding the register.  That's why
+      /* FRAME was obtained, above, via VALUE_NEXT_FRAME_ID.
+	 Since a "->next" operation was performed when setting
+	 this field, we do not need to perform a "next" operation
+	 again when unwinding the register.  That's why
 	 frame_unwind_register_value() is called here instead of
 	 get_frame_register_value().  */
       new_val = frame_unwind_register_value (next_frame, regnum);
@@ -3978,7 +3985,7 @@ value::fetch_lazy_register ()
 	 in this situation.  */
       if (new_val->lval () == lval_register
 	  && new_val->lazy ()
-	  && new_val->context ().next_frame_id == next_frame_id)
+	  && VALUE_NEXT_FRAME_ID (new_val) == next_frame_id)
 	internal_error (_("infinite loop while fetching a register"));
     }
 
@@ -4002,7 +4009,7 @@ value::fetch_lazy_register ()
     {
       struct gdbarch *gdbarch;
       frame_info_ptr frame
-	= frame_find_by_id (this->context ().next_frame_id);
+	= frame_find_by_id (VALUE_NEXT_FRAME_ID (this));
       frame = get_prev_frame_always (frame);
       regnum = VALUE_REGNUM (this);
       gdbarch = get_frame_arch (frame);

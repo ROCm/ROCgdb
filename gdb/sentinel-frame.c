@@ -54,6 +54,7 @@ sentinel_frame_prev_register (frame_info_ptr this_frame,
   gdb_assert (is_sentinel_frame_id (this_frame_id));
 
   value = cache->regcache->cooked_read_value (regnum);
+  VALUE_NEXT_FRAME_ID (value) = this_frame_id;
   value->context_add_next_frame_id (this_frame_id);
 
   return value;

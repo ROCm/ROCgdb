@@ -297,6 +297,7 @@ value_of_register_lazy (frame_info_ptr frame, int regnum)
   reg_val = value::allocate_lazy (register_type (gdbarch, regnum));
   reg_val->set_lval (lval_register);
   VALUE_REGNUM (reg_val) = regnum;
+  VALUE_NEXT_FRAME_ID (reg_val) = get_frame_id (next_frame);
   reg_val->context_add_next_frame_id (get_frame_id (next_frame));
 
   return reg_val;
@@ -781,6 +782,7 @@ default_value_from_register (struct gdbarch *gdbarch, struct type *type,
   else
     frame_id = get_frame_id (get_next_frame_sentinel_okay (frame));
 
+  VALUE_NEXT_FRAME_ID (value) = frame_id;
   value->context_add_next_frame_id (frame_id);
   VALUE_REGNUM (value) = regnum;
 
@@ -867,6 +869,8 @@ value_from_register (struct type *type, int regnum, frame_info_ptr frame)
 	 including the location.  */
       v = value::allocate (type);
       v->set_lval (lval_register);
+      VALUE_NEXT_FRAME_ID (v) =
+	get_frame_id (get_next_frame_sentinel_okay (frame));
       v->context_add_next_frame_id
 	   (get_frame_id (get_next_frame_sentinel_okay (frame)));
       VALUE_REGNUM (v) = regnum;
@@ -915,9 +919,8 @@ address_from_register (int regnum, frame_info_ptr frame)
      where the ID of FRAME is not yet known.  Calling value_from_register
      would therefore abort in get_frame_id.  However, since we only need
      a temporary value that is never used as lvalue, we actually do not
-     really need to set its next_frame_id in the value's context.
-     Therefore, we re-implement the core of value_from_register, but
-     use the null_frame_id.  */
+     really need to set its VALUE_NEXT_FRAME_ID.  Therefore, we re-implement
+     the core of value_from_register, but use the null_frame_id.  */
 
   /* Some targets require a special conversion routine even for plain
      pointer types.  Avoid constructing a value object in those cases.  */
