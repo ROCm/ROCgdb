@@ -931,7 +931,7 @@ Method(
     comment="""
 Return the address's scope.
 """,
-    type="enum address_scope",
+    type="location_scope",
     name="address_scope",
     params=[("CORE_ADDR", "address")],
     postdefault="default_address_scope",

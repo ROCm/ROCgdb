@@ -3555,17 +3555,17 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 	  address
 	    = gdbarch_segment_address_to_core_address (arch, address_space,
 						       address);
-	  address_scope scope = gdbarch_address_scope (arch, address);
+	  location_scope scope = gdbarch_address_scope (arch, address);
 
-	  if (scope == ADDRESS_SCOPE_THREAD)
-	    {
-	      ensure_have_thread ("DW_OP_LLVM_form_aspace_address");
-	      record_thread_context ();
-	    }
-	  else if (scope == ADDRESS_SCOPE_LANE)
+	  if (scope_matches (scope, LOCATION_SCOPE_LANE))
 	    {
 	      ensure_have_simd_lane ("DW_OP_LLVM_form_aspace_address");
 	      record_thread_and_simd_lane_context ();
+	    }
+	  else if (scope_matches (scope, LOCATION_SCOPE_THREAD))
+	    {
+	      ensure_have_thread ("DW_OP_LLVM_form_aspace_address");
+	      record_thread_context ();
 	    }
 
 	  result_entry
@@ -3709,12 +3709,12 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 	  CORE_ADDR address
 	    = gdbarch_segment_address_to_core_address
 		(arch, address_space, address_value->to_long ());
-	  address_scope scope = gdbarch_address_scope (arch, address);
+	  location_scope scope = gdbarch_address_scope (arch, address);
 
 	  /* Only need to check if there is a SIMD lane in focus,
 	     previous check ensured that there is a frame so there
 	     must also be a thread in focus too.  */
-	  if (scope == ADDRESS_SCOPE_LANE)
+	  if (scope_matches (scope, LOCATION_SCOPE_LANE))
 	    {
 	      ensure_have_simd_lane ("DW_OP_LLVM_aspace_bregx");
 	      record_full_context ();

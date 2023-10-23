@@ -1606,7 +1606,7 @@ amdgpu_address_spaces (struct gdbarch *gdbarch)
   return tdep->address_spaces;
 }
 
-static enum address_scope
+static location_scope
 amdgpu_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
 {
   amd_dbgapi_segment_address_dependency_t segment_address_dependency;
@@ -1639,19 +1639,19 @@ amdgpu_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
   switch (segment_address_dependency)
     {
     case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_LANE:
-      return ADDRESS_SCOPE_LANE;
+      return LOCATION_SCOPE_LANE;
 
     case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_WAVE:
-      return ADDRESS_SCOPE_THREAD;
+      return LOCATION_SCOPE_THREAD;
 
     case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_PROCESS:
-      return ADDRESS_SCOPE_PROCESS;
+      return LOCATION_SCOPE_INFERIOR;
 
     case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_WORKGROUP:
     case AMD_DBGAPI_SEGMENT_ADDRESS_DEPENDENCE_AGENT:
       /* GDB currently doesn't model workgroups or agents as first
 	 class citizens, so the mapping here isn't perfect.  */
-      return ADDRESS_SCOPE_PROCESS;
+      return LOCATION_SCOPE_INFERIOR;
 
     default:
       error (_("unhandled segment address dependency kind"));

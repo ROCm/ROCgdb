@@ -1162,10 +1162,10 @@ default_dwarf_address_space_to_address_space_id (LONGEST dwarf_addr_space)
 }
 
 /* See arch-utils.h.  */
-enum address_scope
+location_scope
 default_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
 {
-  return ADDRESS_SCOPE_PROCESS;
+  return LOCATION_SCOPE_INFERIOR;
 }
 
 /* See arch-utils.h.  */

@@ -2815,7 +2815,7 @@ set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch,
   gdbarch->dwarf_address_space_to_address_space_id = dwarf_address_space_to_address_space_id;
 }
 
-enum address_scope
+location_scope
 gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
 {
   gdb_assert (gdbarch != NULL);

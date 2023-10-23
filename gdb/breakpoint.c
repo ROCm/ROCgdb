@@ -10456,10 +10456,9 @@ static void
 ensure_address_context (struct gdbarch *arch, CORE_ADDR addr,
 			ptid_t &thread_ptid, int &simd_lane)
 {
-  address_scope scope = gdbarch_address_scope (arch, addr);
+  location_scope scope = gdbarch_address_scope (arch, addr);
 
-  if (scope == ADDRESS_SCOPE_LANE
-      || scope == ADDRESS_SCOPE_THREAD)
+  if (scope_matches (scope, LOCATION_SCOPE_THREAD))
     {
       if (inferior_ptid == null_ptid)
 	error (_("Address %s requires a selected thread"),
@@ -10467,7 +10466,7 @@ ensure_address_context (struct gdbarch *arch, CORE_ADDR addr,
 
       thread_ptid = inferior_ptid;
 
-      if (scope == ADDRESS_SCOPE_LANE)
+      if (scope_matches (scope, LOCATION_SCOPE_LANE))
 	{
 	  int current_simd_lane = inferior_thread ()->current_simd_lane ();
 
