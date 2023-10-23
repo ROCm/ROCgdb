@@ -393,6 +393,8 @@ public:
   struct internalvar **deprecated_internalvar_hack ()
   { return &m_location.internalvar; }
 
+  struct frame_id *deprecated_next_frame_id_hack ();
+
   /* Set context that the value is bound to.  */
   void set_context (const eval_context &context);
 
@@ -696,9 +698,17 @@ private:
     /* If lval == lval_memory, this is the address in the inferior  */
     CORE_ADDR address;
 
-    /* If lval == lval_register, this is the register number
-       of the inferior.  */
-   int regnum;
+    /*If lval == lval_register, the value is from a register.  */
+    struct
+    {
+      /* Register number.  */
+      int regnum;
+      /* Frame ID of "next" frame to which a register value is relative.
+	If the register value is found relative to frame F, then the
+	frame id of F->next will be stored in next_frame_id.  */
+      struct frame_id next_frame_id;
+    } reg;
+
 
     /* Pointer to internal variable.  */
     struct internalvar *internalvar;
@@ -993,6 +1003,12 @@ extern void error_value_optimized_out (void);
 
 /* Pointer to internal variable.  */
 #define VALUE_INTERNALVAR(val) (*((val)->deprecated_internalvar_hack ()))
+
+/* Frame ID of "next" frame to which a register value is relative.  A
+   register value is indicated by VALUE_LVAL being set to lval_register.
+   So, if the register value is found relative to frame F, then the
+   frame id of F->next will be stored in VALUE_NEXT_FRAME_ID.  */
+#define VALUE_NEXT_FRAME_ID(val) (*((val)->deprecated_next_frame_id_hack ()))
 
 /* Register number if the value is from a register.  */
 #define VALUE_REGNUM(val) (*((val)->deprecated_regnum_hack ()))
