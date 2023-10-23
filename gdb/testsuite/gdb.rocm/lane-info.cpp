@@ -54,7 +54,7 @@ bar ()
 __global__ void
 kernel ()
 {
-  int tid_x = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+  int tid_x = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (tid_x % 2)
     foo ();

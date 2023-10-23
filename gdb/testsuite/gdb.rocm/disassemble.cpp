@@ -33,7 +33,7 @@
 /* Kernel entry point. */
 __global__ void kernel ()
 {
-  int tid = hipThreadIdx_x;
+  int tid = threadIdx.x;
   tid += 1;
   tid += 1;
 }
