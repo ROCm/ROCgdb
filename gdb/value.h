@@ -125,37 +125,6 @@ struct value_ref_policy
 
 typedef gdb::ref_ptr<struct value, value_ref_policy> value_ref_ptr;
 
-/* Evaluation context dependency of a given struct value object.
-
-   If a struct value object is describing a location (non not_lval),
-   it might also be dependent on a specific evaluation context.  */
-
-struct eval_context
-{
-  /* Return the context frame using the next_frame_id information.
-
-     In the case where the next_frame_id is a null_frame_id, function
-     returns nullptr.   */
-  frame_info_ptr frame () const;
-
-  /* Frame dependency, where value 'null_frame_id' means that an
-     evaluation was not dependent on a selected frame.
-
-     If specified, it contains Frame ID of the "next" frame to which a
-     location is relative to.  For example, if the location is
-     relative to a frame F, then the frame id of F->next will be stored
-     in next_frame_id.  */
-  struct frame_id next_frame_id = null_frame_id;
-
-  /* Focused thread dependency, where 'null_ptid' value means
-     that an evaluation was not dependent on a selected thread.  */
-  ptid_t thread_ptid = null_ptid;
-
-  /* Focused SIMD lane of a thread dependency, where '-1' value means
-     that an evaluation was not dependent on a selected SIMD lane.  */
-  int simd_lane = -1;
-};
-
 /* Note that the fields in this structure are arranged to save a bit
    of memory.  */
 
