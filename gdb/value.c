@@ -149,22 +149,6 @@ ranges_contain (const std::vector<range> &ranges, LONGEST offset,
 
 static struct cmd_list_element *functionlist;
 
-/* See value.h.  */
-
-frame_info_ptr
-eval_context::frame () const
-{
-  frame_info_ptr frame = nullptr;
-  if (frame_id_p (next_frame_id))
-    {
-      frame = frame_find_by_id (next_frame_id);
-      if (frame == nullptr)
-	internal_error (_("frame id without a valid frame"));
-      frame = get_prev_frame_always (frame);
-    }
-  return frame;
-}
-
 value::~value ()
 {
   if (this->lval () == lval_computed)
