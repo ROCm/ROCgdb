@@ -397,12 +397,9 @@ public:
   struct frame_id *deprecated_next_frame_id_hack ();
 
   /* Set context that the value is bound to.  */
-  void set_context (const eval_context &context);
+  void set_scope (location_scope scope);
 
-  /* Change only the next frame information of the value context.  */
-  void context_add_next_frame_id (const struct frame_id next_frame_id);
-
-  const eval_context &context () const;
+  location_scope scope () const;
 
   int *deprecated_regnum_hack ();
 
@@ -730,8 +727,8 @@ private:
     } computed;
   } m_location {};
 
-  /* Evaluation context dependency of this value.  */
-  eval_context m_context;
+  /* Evaluation scope dependency of this value.  */
+  location_scope m_scope = LOCATION_SCOPE_INFERIOR;
 
   /* Describes offset of a value within lval of a structure in target
      addressable memory units.  Note also the member embedded_offset

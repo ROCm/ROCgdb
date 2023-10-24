@@ -707,7 +707,9 @@ value *aspace_operation::evaluate (struct type *expect_type,
   struct type *generic_ptr_type =
     lookup_pointer_type (builtin_type (exp->gdbarch)->builtin_void);
 
-  return value_from_pointer (generic_ptr_type, adddress);
+  val = value_from_pointer (generic_ptr_type, adddress);
+  val->set_scope (gdbarch_address_scope (exp->gdbarch, adddress));
+  return val;
 }
 
 } /* namespace expr */

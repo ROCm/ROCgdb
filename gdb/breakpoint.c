@@ -10448,43 +10448,6 @@ is_masked_watchpoint (const struct breakpoint *b)
   return dynamic_cast<const masked_watchpoint *> (b) != nullptr;
 }
 
-/* Return the context that a given address is bound to and report an
-   error if the current execution state doesn't provide that context
-   in its totality.  */
-
-static void
-ensure_address_context (struct gdbarch *arch, CORE_ADDR addr,
-			ptid_t &thread_ptid, int &simd_lane)
-{
-  location_scope scope = gdbarch_address_scope (arch, addr);
-
-  if (scope_matches (scope, LOCATION_SCOPE_THREAD))
-    {
-      if (inferior_ptid == null_ptid)
-	error (_("Address %s requires a selected thread"),
-	       paspace_and_addr (arch, addr).c_str ());
-
-      thread_ptid = inferior_ptid;
-
-      if (scope_matches (scope, LOCATION_SCOPE_LANE))
-	{
-	  int current_simd_lane = inferior_thread ()->current_simd_lane ();
-
-	  if (current_simd_lane == -1)
-	    error (_("Address %s requires a selected SIMD lane"),
-		   paspace_and_addr (arch, addr).c_str ());
-	  simd_lane = current_simd_lane;
-	}
-      else
-	simd_lane = -1;
-    }
-  else
-  {
-    thread_ptid = null_ptid;
-    simd_lane = -1;
-  }
-}
-
 /* accessflag:  hw_write:  watch write, 
 		hw_read:   watch read, 
 		hw_access: watch access (read or write) */
@@ -10663,7 +10626,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     }
 
   value_ref_ptr val;
-  eval_context watchpoint_context;
+  location_scope scope = LOCATION_SCOPE_INFERIOR;
   if (just_location)
     {
       int ret;
@@ -10673,9 +10636,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       value_free_to_mark (mark);
 
       CORE_ADDR addr = value_as_address (val.get ());
-      ensure_address_context (val->type ()->arch (), addr,
-			      watchpoint_context.thread_ptid,
-			      watchpoint_context.simd_lane);
+      scope = gdbarch_address_scope (val->type ()->arch (), addr);
 
       if (use_mask)
 	{
@@ -10692,39 +10653,48 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       gdb_assert (!val_chain.empty ());
       for (const value_ref_ptr &iter : val_chain)
 	{
-	  if (frame_id_p (iter->context ().next_frame_id))
-	    watchpoint_context.next_frame_id = iter->context ().next_frame_id;
-
-	  ptid_t thread_ptid = iter->context ().thread_ptid;
-	  int simd_lane = iter->context ().simd_lane;
-
 	  /* lval_computed values produced from DWARF always have their
 	     context set when we get here.  OTOH, for simplicity
 	     because they can be produced from several different
 	     sources, lval_memory values might not have a context set,
 	     and so it needs to be reconfirmed now.  */
-	  if (thread_ptid == null_ptid
-	      && iter->lval () == lval_memory)
-	    ensure_address_context (iter->type ()->arch (), iter->address (),
-				    thread_ptid, simd_lane);
-
-	  if (thread_ptid != null_ptid)
-	    watchpoint_context.thread_ptid = thread_ptid;
-
-	  if (simd_lane != -1)
-	    watchpoint_context.simd_lane = simd_lane;
-
-	  /* If the context is complete, there is no need to continue
-	     looking through the value chain.  */
-	  if (frame_id_p (watchpoint_context.next_frame_id)
-	      && watchpoint_context.thread_ptid != null_ptid
-	      && watchpoint_context.simd_lane != -1)
-	    break;
+	  if (iter->lval () == lval_memory)
+	    scope |= gdbarch_address_scope (iter->type ()->arch (),
+					    iter->address ());
+	  scope |= iter->scope ();
 	}
 
       if (val_as_value != nullptr)
 	val = release_value (val_as_value);
     }
+
+  ptid_t watchpoint_thread_ptid = null_ptid;
+  int watchpoint_simd_lane = -1;
+  frame_info_ptr wp_frame = nullptr;
+  if (scope_matches (scope, LOCATION_SCOPE_THREAD))
+    {
+      if (inferior_ptid == null_ptid)
+	error (_("Location requires a selected thread"));
+
+      watchpoint_thread_ptid = inferior_ptid;
+
+      if (scope_matches (scope, LOCATION_SCOPE_LANE))
+	{
+	  int current_simd_lane = inferior_thread ()->current_simd_lane ();
+
+	  if (current_simd_lane == -1)
+	    error (_("Location requires a selected SIMD lane"));
+
+	  watchpoint_simd_lane = current_simd_lane;
+	}
+
+      if (scope_matches (scope, LOCATION_SCOPE_FRAME))
+	wp_frame = get_selected_frame ("Location requires a selected frame");
+      else
+	exp_valid_block = nullptr;
+    }
+
+  frame_id watchpoint_frame_id = get_frame_id (wp_frame);
 
   tok = skip_spaces (arg);
   end_tok = skip_to_space (tok);
@@ -10746,21 +10716,6 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     }
   if (*tok)
     error (_("Junk at end of command."));
-
-  frame_info_ptr wp_frame = nullptr;
-  if (frame_id_p (watchpoint_context.next_frame_id))
-    {
-      wp_frame = frame_find_by_id (watchpoint_context.next_frame_id);
-      if (wp_frame == nullptr)
-	internal_error (_("frame id without a valid frame"));
-      wp_frame = get_prev_frame_always (wp_frame);
-    }
-  else
-    exp_valid_block = nullptr;
-
-  /* Save this because create_internal_breakpoint below invalidates
-     'wp_frame'.  */
-  frame_id watchpoint_frame = get_frame_id (wp_frame);
 
   /* If the expression is "local", then set up a "watchpoint scope"
      breakpoint at the point where we've left the scope of the watchpoint
@@ -10860,9 +10815,9 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   else
     w->cond_string = 0;
 
-  w->watchpoint_frame = watchpoint_frame;
-  w->watchpoint_thread = watchpoint_context.thread_ptid;
-  w->watchpoint_simd_lane = watchpoint_context.simd_lane;
+  w->watchpoint_frame = watchpoint_frame_id;
+  w->watchpoint_thread = watchpoint_thread_ptid;
+  w->watchpoint_simd_lane = watchpoint_simd_lane;
 
   if (scope_breakpoint != NULL)
     {

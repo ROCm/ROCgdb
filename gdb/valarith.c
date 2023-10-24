@@ -90,7 +90,7 @@ value_ptradd (struct value *arg1, LONGEST arg2)
 			       value_as_address (arg1) + sz * arg2);
   if (arg1->lval () != lval_internalvar)
     result->set_component_location (arg1);
-  result->set_context (arg1->context ());
+  result->set_scope (arg1->scope ());
   return result;
 }
 
