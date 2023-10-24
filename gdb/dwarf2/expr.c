@@ -2742,13 +2742,13 @@ private:
   /* Property address info used for the evaluation.  */
   const property_addr_info *m_addr_info = nullptr;
 
-  /* Context dependency of the evaluated expression.
+  /* Scope dependency of the evaluated expression.
 
-     A DWARF expression can be determined to be bound to a specific
-     context (frame, thread and SIMD lane).  That information is
+     A DWARF expression can be determined to be scope dependant
+     (frame, thread and SIMD lane).  That information is
      gathered here during the evaluation and recorded in the resulting
      struct value object.  */
-  eval_context m_context;
+  location_scope m_scope = LOCATION_SCOPE_INFERIOR;
 
   /* Evaluate the expression at ADDR (LEN bytes long).  */
   void eval (const gdb_byte *addr, size_t len);
@@ -2866,21 +2866,6 @@ private:
   void push_dwarf_reg_entry_value (enum call_site_parameter_kind kind,
 				   union call_site_parameter_u kind_u,
 				   int deref_size);
-
-  /* Record thread context used for the evaluation.  */
-  void record_thread_context ();
-
-  /* Record frame context used for the evaluation.  */
-  void record_frame_context ();
-
-  /* Record thread and frame context for the evaluation.  */
-  void record_thread_and_frame_context ();
-
-  /* Record thread and SIMD lane context for the evaluation.  */
-  void record_thread_and_simd_lane_context ();
-
-  /* Record thread, frame and SIMD lane context for the evaluation.  */
-  void record_full_context ();
 };
 
 /* Return the type used for DWARF operations where the type is
@@ -3035,49 +3020,6 @@ dwarf_expr_context::push_dwarf_reg_entry_value
   this->eval (data_src, size);
 }
 
-void
-dwarf_expr_context::record_thread_context ()
-{
-  /* We always expect a thread to be in focus at this point.  */
-  gdb_assert (inferior_ptid != null_ptid);
-  this->m_context.thread_ptid = inferior_ptid;
-}
-
-void
-dwarf_expr_context::record_frame_context ()
-{
-  /* We always expect to have a frame at this point.  */
-  gdb_assert (this->m_frame != nullptr);
-  this->m_context.next_frame_id
-    = get_frame_id (get_next_frame_sentinel_okay (this->m_frame));
-}
-
-void
-dwarf_expr_context::record_thread_and_frame_context ()
-{
-  record_thread_context ();
-  record_frame_context ();
-}
-
-void
-dwarf_expr_context::record_thread_and_simd_lane_context ()
-{
-  record_thread_context ();
-
-  int current_simd_lane = inferior_thread ()->current_simd_lane ();
-
-  /* We always expect to have a SIMD lane in focus at this point.  */
-  gdb_assert (current_simd_lane != -1);
-  this->m_context.simd_lane = current_simd_lane;
-}
-
-void
-dwarf_expr_context::record_full_context ()
-{
-  record_thread_and_simd_lane_context ();
-  record_frame_context ();
-}
-
 value *
 dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 				  LONGEST subobj_offset, bool as_lval)
@@ -3103,9 +3045,7 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
   value *result = entry->to_gdb_value (this->m_frame, type,
 				       subobj_type, subobj_offset);
 
-  if (frame_id_p (result->context ().next_frame_id))
-    this->m_context.next_frame_id = result->context ().next_frame_id;
-  result->set_context (this->m_context);
+  result->set_scope (this->m_scope | result->scope ());
   return result;
 }
 
@@ -3600,12 +3540,12 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 	  if (scope_matches (scope, LOCATION_SCOPE_LANE))
 	    {
 	      ensure_have_simd_lane ("DW_OP_LLVM_form_aspace_address");
-	      record_thread_and_simd_lane_context ();
+	      m_scope |= LOCATION_SCOPE_LANE;
 	    }
 	  else if (scope_matches (scope, LOCATION_SCOPE_THREAD))
 	    {
 	      ensure_have_thread ("DW_OP_LLVM_form_aspace_address");
-	      record_thread_context ();
+	      m_scope |= LOCATION_SCOPE_THREAD;
 	    }
 
 	  result_entry
@@ -3664,7 +3604,7 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 
 	result_entry
 	  = std::make_shared<dwarf_register> (arch, reg, true);
-	record_thread_and_frame_context ();
+	m_scope |= LOCATION_SCOPE_FRAME;
 	break;
 
       case DW_OP_LLVM_USER_undefined:
@@ -3757,10 +3697,10 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 	  if (scope_matches (scope, LOCATION_SCOPE_LANE))
 	    {
 	      ensure_have_simd_lane ("DW_OP_LLVM_aspace_bregx");
-	      record_full_context ();
+	      m_scope |= LOCATION_SCOPE_LANE;
 	    }
-	  else
-	    record_thread_and_frame_context ();
+
+	  m_scope |= LOCATION_SCOPE_FRAME;
 	}
 	break;
 
@@ -3769,7 +3709,7 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 	  ensure_have_simd_lane ("DW_OP_LLVM_push_lane");
 	  ULONGEST lane = inferior_thread ()->current_simd_lane ();
 	  result_entry = std::make_shared<dwarf_value> (lane, address_type);
-	  record_thread_and_simd_lane_context ();
+	  m_scope |= LOCATION_SCOPE_LANE;
 	}
 	break;
 
@@ -3982,7 +3922,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 	  result = op - DW_OP_reg0;
 	  result_entry = std::make_shared<dwarf_register> (arch, result);
-	  record_thread_and_frame_context ();
+	  m_scope |= LOCATION_SCOPE_FRAME;
 	  break;
 
 	case DW_OP_regx:
@@ -3991,7 +3931,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 	  result = reg;
 	  result_entry = std::make_shared<dwarf_register> (arch, reg);
-	  record_thread_and_frame_context ();
+	  m_scope |= LOCATION_SCOPE_FRAME;
 	  break;
 
 	case DW_OP_implicit_value:
@@ -4090,7 +4030,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    location = result_entry->to_location (arch);
 	    location->add_bit_offset (offset * HOST_CHAR_BIT);
 	    result_entry = location;
-	    record_thread_and_frame_context ();
+	    m_scope |= LOCATION_SCOPE_FRAME;
 	  }
 	  break;
 	case DW_OP_bregx:
@@ -4109,7 +4049,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    location = result_entry->to_location (arch);
 	    location->add_bit_offset (offset * HOST_CHAR_BIT);
 	    result_entry = location;
-	    record_thread_and_frame_context ();
+	    m_scope |= LOCATION_SCOPE_FRAME;
 	  }
 	  break;
 	case DW_OP_fbreg:
@@ -4153,7 +4093,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 	    /* Restore the content of the original stack.  */
 	    this->m_stack = std::move (saved_stack);
-	    record_thread_and_frame_context ();
+	    m_scope |= LOCATION_SCOPE_FRAME;
 	  }
 	  break;
 
@@ -4440,7 +4380,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	  result = dwarf2_frame_cfa (this->m_frame);
 	  result_entry
 	    = std::make_shared<dwarf_memory> (arch, result, 0, true);
-	  record_thread_and_frame_context ();
+	  m_scope |= LOCATION_SCOPE_FRAME;
 	  break;
 
 	case DW_OP_GNU_push_tls_address:
@@ -4459,7 +4399,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	  result = target_translate_tls_address (this->m_per_objfile->objfile,
 						 result);
 	  result_entry = std::make_shared<dwarf_memory> (arch, result);
-	  record_thread_context ();
+	  m_scope |= LOCATION_SCOPE_THREAD;
 	  break;
 
 	case DW_OP_skip:
@@ -4650,7 +4590,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	      = std::make_shared<dwarf_register> (arch, reg);
 	    result_entry
 	      = reg_loc->deref (this->m_frame, this->m_addr_info, type);
-	    record_thread_and_frame_context ();
+	    m_scope |= LOCATION_SCOPE_FRAME;
 	  }
 	  break;
 

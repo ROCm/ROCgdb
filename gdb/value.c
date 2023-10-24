@@ -1429,21 +1429,15 @@ value::deprecated_next_frame_id_hack ()
 }
 
 void
-value::set_context (const eval_context &context)
+value::set_scope (location_scope scope)
 {
-  m_context = context;
+  m_scope = scope;
 }
 
-void
-value::context_add_next_frame_id (const struct frame_id next_frame_id)
+location_scope
+value::scope () const
 {
-  m_context.next_frame_id = next_frame_id;
-}
-
-const eval_context &
-value::context () const
-{
-  return m_context;
+  return m_scope;
 }
 
 int *
@@ -1582,7 +1576,7 @@ value::copy () const
       gdb::copy (arg_view, val_contents);
     }
 
-  val->m_context = m_context;
+  val->m_scope = m_scope;
 
   if (val->lval () == lval_computed)
     {
@@ -3096,7 +3090,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
       v->set_offset (this->offset () + offset + embedded_offset ());
     }
 
-  v->m_context = m_context;
+  v->m_scope = m_scope;
   v->set_component_location (this);
   return v;
 }
@@ -3726,7 +3720,7 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
     }
   v->set_offset (whole->offset () + offset + whole->embedded_offset ());
   v->set_component_location (whole);
-  v->set_context (whole->context ());
+  v->set_scope (whole->scope ());
   return v;
 }
 

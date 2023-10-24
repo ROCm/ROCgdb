@@ -298,7 +298,7 @@ value_of_register_lazy (frame_info_ptr frame, int regnum)
   reg_val->set_lval (lval_register);
   VALUE_REGNUM (reg_val) = regnum;
   VALUE_NEXT_FRAME_ID (reg_val) = get_frame_id (next_frame);
-  reg_val->context_add_next_frame_id (get_frame_id (next_frame));
+  reg_val->set_scope (LOCATION_SCOPE_FRAME);
 
   return reg_val;
 }
@@ -783,7 +783,7 @@ default_value_from_register (struct gdbarch *gdbarch, struct type *type,
     frame_id = get_frame_id (get_next_frame_sentinel_okay (frame));
 
   VALUE_NEXT_FRAME_ID (value) = frame_id;
-  value->context_add_next_frame_id (frame_id);
+  value->set_scope (LOCATION_SCOPE_FRAME);
   VALUE_REGNUM (value) = regnum;
 
   /* Any structure stored in more than one register will always be
@@ -871,8 +871,7 @@ value_from_register (struct type *type, int regnum, frame_info_ptr frame)
       v->set_lval (lval_register);
       VALUE_NEXT_FRAME_ID (v) =
 	get_frame_id (get_next_frame_sentinel_okay (frame));
-      v->context_add_next_frame_id
-	   (get_frame_id (get_next_frame_sentinel_okay (frame)));
+      v->set_scope (LOCATION_SCOPE_FRAME);
       VALUE_REGNUM (v) = regnum;
       ok = gdbarch_register_to_value (gdbarch, frame, regnum, type1,
 				      v->contents_raw ().data (), &optim,
