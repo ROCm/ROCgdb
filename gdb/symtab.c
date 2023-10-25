@@ -440,7 +440,7 @@ CORE_ADDR
 minimal_symbol::value_address (objfile *objfile) const
 {
   if (this->maybe_copied (objfile))
-    return get_msymbol_address (objfile, this);
+    return this->get_maybe_copied_address (objfile);
   else
     return (CORE_ADDR (this->unrelocated_address ())
 	    + objfile->section_offsets[this->section_index ()]);
@@ -6517,34 +6517,34 @@ symbol::set_symtab (struct symtab *symtab)
 /* See symtab.h.  */
 
 CORE_ADDR
-get_symbol_address (const struct symbol *sym)
+symbol::get_maybe_copied_address () const
 {
-  gdb_assert (sym->maybe_copied);
-  gdb_assert (sym->aclass () == LOC_STATIC);
+  gdb_assert (this->maybe_copied);
+  gdb_assert (this->aclass () == LOC_STATIC);
 
-  const char *linkage_name = sym->linkage_name ();
+  const char *linkage_name = this->linkage_name ();
   bound_minimal_symbol minsym = lookup_minimal_symbol_linkage (linkage_name,
 							       false);
   if (minsym.minsym != nullptr)
     return minsym.value_address ();
-  return sym->m_value.address;
+  return this->m_value.address;
 }
 
 /* See symtab.h.  */
 
 CORE_ADDR
-get_msymbol_address (struct objfile *objf, const struct minimal_symbol *minsym)
+minimal_symbol::get_maybe_copied_address (objfile *objf) const
 {
-  gdb_assert (minsym->maybe_copied (objf));
+  gdb_assert (this->maybe_copied (objf));
   gdb_assert ((objf->flags & OBJF_MAINLINE) == 0);
 
-  const char *linkage_name = minsym->linkage_name ();
+  const char *linkage_name = this->linkage_name ();
   bound_minimal_symbol found = lookup_minimal_symbol_linkage (linkage_name,
 							      true);
   if (found.minsym != nullptr)
     return found.value_address ();
-  return (minsym->m_value.address
-	  + objf->section_offsets[minsym->section_index ()]);
+  return (this->m_value.address
+	  + objf->section_offsets[this->section_index ()]);
 }
 
 
