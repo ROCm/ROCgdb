@@ -50,9 +50,13 @@ proc test {schedlock interrupt_how} {
     gdb_continue_to_breakpoint "kernel"
     gdb_test_no_output "set scheduler-locking $schedlock"
 
-    # Until the issue is fixed, use a low timeout to avoid wasting
-    # much testing time.
-    set intr_timeout 1
+    if {$schedlock == "on"} {
+	# Until the issue is fixed, use a low timeout to avoid wasting
+	# much testing time.
+	set intr_timeout 1
+    } else {
+	set intr_timeout $::timeout
+    }
 
     proc maybe_kfail {schedlock} {
 	if {$schedlock == "on"} {
