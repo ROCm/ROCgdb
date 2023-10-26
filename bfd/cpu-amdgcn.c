@@ -58,7 +58,9 @@ static const bfd_arch_info_type arch_info_struct[] =
   N (bfd_mach_amdgcn_gfx1032, "amdgcn:gfx1032", false, NN (13)),
   N (bfd_mach_amdgcn_gfx1100, "amdgcn:gfx1100", false, NN (14)),
   N (bfd_mach_amdgcn_gfx1101, "amdgcn:gfx1101", false, NN (15)),
-  N (bfd_mach_amdgcn_gfx1102, "amdgcn:gfx1102", false, NULL)
+  N (bfd_mach_amdgcn_gfx1102, "amdgcn:gfx1102", false, NN (16)),
+  N (bfd_mach_amdgcn_gfx1200, "amdgcn:gfx1200", false, NN (17)),
+  N (bfd_mach_amdgcn_gfx1201, "amdgcn:gfx1201", false, NULL)
 };
 
 const bfd_arch_info_type bfd_amdgcn_arch =
