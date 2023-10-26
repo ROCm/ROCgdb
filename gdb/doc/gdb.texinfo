@@ -28659,6 +28659,12 @@ Wheat Nas devices.
 @item @code{gfx1102}
 Hotpink Bonefish devices.
 
+@item @code{gfx1200}
+Gfx1200 devices.
+
+@item @code{gfx1201}
+Gfx1201 devices.
+
 @end table
 
 You can consult the
@@ -29987,18 +29993,18 @@ queues or CU masked queues.  Any attempt to create a cooperative queue
 or CU masked queue when @value{GDBN} is attached will fail.
 
 @item
-For @acronym{AMD GPU} architectures @samp{gfx1100}, @samp{gfx1101} and
-@samp{gfx1102}, @value{GDBN} cannot debug a program past a
-@samp{s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)} instruction.  If an
-asynchronous exception is reported after this instruction has been
-executed and the debugger is attached, the wave is killed, and the
-exception is only reported by the @acronym{AMD ROCm} runtime.  Note that
-on @acronym{AMD GPU} devices, memory errors are reported asynchronously
-so a memory fault caused by an instruction before the @samp{s_sendmsg}
-might be reported after it.  Enabling precise memory event reporting
-(@pxref{AMDGPU Memory Violation Reporting}) ensures that such memory
-fault would be reported before the @samp{s_sendmsg} instruction is
-executed.
+For @acronym{AMD GPU} architectures @samp{gfx1100}, @samp{gfx1101},
+@samp{gfx1102}, @samp{gfx1200} and @samp{gfx1201}, @value{GDBN} cannot
+debug a program past a @samp{s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)}
+instruction.  If an asynchronous exception is reported after this
+instruction has been executed and the debugger is attached, the wave is
+killed, and the exception is only reported by the @acronym{AMD ROCm}
+runtime.  Note that on @acronym{AMD GPU} devices, memory errors are
+reported asynchronously so a memory fault caused by an instruction
+before the @samp{s_sendmsg} might be reported after it.  Enabling
+precise memory event reporting (@pxref{AMDGPU Memory Violation
+Reporting}) ensures that such memory fault would be reported before the
+@samp{s_sendmsg} instruction is executed.
 
 @item
 The @acronym{AMD ROCm} runtime cannot generate an @acronym{AMD GPU} core dump
