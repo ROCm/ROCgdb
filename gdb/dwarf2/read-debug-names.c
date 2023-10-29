@@ -19,6 +19,7 @@
 
 #include "defs.h"
 #include "read-debug-names.h"
+#include "dwarf2/aranges.h"
 
 #include "complaints.h"
 #include "cp-support.h"
@@ -166,6 +167,7 @@ create_addrmap_from_aranges (dwarf2_per_objfile *per_objfile,
 
   addrmap_mutable mutable_map;
 
+  section->read (per_objfile->objfile);
   if (read_addrmap_from_aranges (per_objfile, section, &mutable_map))
     per_bfd->index_addrmap
       = new (&per_bfd->obstack) addrmap_fixed (&per_bfd->obstack,
