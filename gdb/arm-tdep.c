@@ -4824,9 +4824,6 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	    {
 	      /* The argument is being passed in a general purpose
 		 register.  */
-	      if (byte_order == BFD_ENDIAN_BIG)
-		regval <<= (ARM_INT_REGISTER_SIZE - partial_len) * 8;
-
 	      arm_debug_printf ("arg %d in %s = 0x%s", argnum,
 				gdbarch_register_name (gdbarch, argreg),
 				phex (regval, ARM_INT_REGISTER_SIZE));
@@ -8918,6 +8915,9 @@ arm_extract_return_value (struct type *type, struct regcache *regs,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
 
+  while (type->code () == TYPE_CODE_RANGE)
+    type = check_typedef (type->target_type ());
+
   if (TYPE_CODE_FLT == type->code ())
     {
       switch (tdep->fp_model)
@@ -9132,6 +9132,9 @@ arm_store_return_value (struct type *type, struct regcache *regs,
   struct gdbarch *gdbarch = regs->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
+  while (type->code () == TYPE_CODE_RANGE)
+    type = check_typedef (type->target_type ());
+
   if (type->code () == TYPE_CODE_FLT)
     {
       gdb_byte buf[ARM_FP_REGISTER_SIZE];
@@ -9167,16 +9170,28 @@ arm_store_return_value (struct type *type, struct regcache *regs,
 	   || type->code () == TYPE_CODE_BOOL
 	   || type->code () == TYPE_CODE_PTR
 	   || TYPE_IS_REFERENCE (type)
-	   || type->code () == TYPE_CODE_ENUM)
+	   || type->code () == TYPE_CODE_ENUM
+	   || is_fixed_point_type (type))
     {
       if (type->length () <= 4)
 	{
 	  /* Values of one word or less are zero/sign-extended and
 	     returned in r0.  */
 	  bfd_byte tmpbuf[ARM_INT_REGISTER_SIZE];
-	  LONGEST val = unpack_long (type, valbuf);
 
-	  store_signed_integer (tmpbuf, ARM_INT_REGISTER_SIZE, byte_order, val);
+	  if (is_fixed_point_type (type))
+	    {
+	      gdb_mpz unscaled;
+	      unscaled.read (gdb::make_array_view (valbuf, type->length ()),
+			     byte_order, type->is_unsigned ());
+	      unscaled.write (gdb::make_array_view (tmpbuf, sizeof (tmpbuf)),
+			      byte_order, type->is_unsigned ());
+	    }
+	  else
+	    {
+	      LONGEST val = unpack_long (type, valbuf);
+	      store_signed_integer (tmpbuf, ARM_INT_REGISTER_SIZE, byte_order, val);
+	    }
 	  regs->cooked_write (ARM_A1_REGNUM, tmpbuf);
 	}
       else
@@ -9777,29 +9792,22 @@ arm_neon_quad_read (struct gdbarch *gdbarch, readable_regcache *regcache,
 {
   char name_buf[4];
   gdb_byte reg_buf[8];
-  int offset, double_regnum;
+  int double_regnum;
   enum register_status status;
 
   xsnprintf (name_buf, sizeof (name_buf), "d%d", regnum << 1);
   double_regnum = user_reg_map_name_to_regnum (gdbarch, name_buf,
 					       strlen (name_buf));
 
-  /* d0 is always the least significant half of q0.  */
-  if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
-    offset = 8;
-  else
-    offset = 0;
-
   status = regcache->raw_read (double_regnum, reg_buf);
   if (status != REG_VALID)
     return status;
-  memcpy (buf + offset, reg_buf, 8);
+  memcpy (buf, reg_buf, 8);
 
-  offset = 8 - offset;
   status = regcache->raw_read (double_regnum + 1, reg_buf);
   if (status != REG_VALID)
     return status;
-  memcpy (buf + offset, reg_buf, 8);
+  memcpy (buf + 8, reg_buf, 8);
 
   return REG_VALID;
 }
@@ -9874,21 +9882,14 @@ arm_neon_quad_write (struct gdbarch *gdbarch, struct regcache *regcache,
 		     int regnum, const gdb_byte *buf)
 {
   char name_buf[4];
-  int offset, double_regnum;
+  int double_regnum;
 
   xsnprintf (name_buf, sizeof (name_buf), "d%d", regnum << 1);
   double_regnum = user_reg_map_name_to_regnum (gdbarch, name_buf,
 					       strlen (name_buf));
 
-  /* d0 is always the least significant half of q0.  */
-  if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
-    offset = 8;
-  else
-    offset = 0;
-
-  regcache->raw_write (double_regnum, buf + offset);
-  offset = 8 - offset;
-  regcache->raw_write (double_regnum + 1, buf + offset);
+  regcache->raw_write (double_regnum, buf);
+  regcache->raw_write (double_regnum + 1, buf + 8);
 }
 
 /* Store the contents of BUF to the MVE pseudo register REGNUM.  */
