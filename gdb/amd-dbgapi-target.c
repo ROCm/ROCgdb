@@ -1044,8 +1044,8 @@ insert_initial_watchpoints (amd_dbgapi_inferior_info *info)
 	  && loc->pspace == info->inf->pspace)
 	{
 	  if (insert_one_watchpoint (info, loc->address, loc->length) != 0)
-	    warning (_ (
-	      "Failed to insert existing watchpoint after loading runtime."));
+	    warning (_("Failed to insert existing watchpoint after loading "
+		       "runtime."));
 	}
     };
 }
@@ -2368,7 +2368,7 @@ amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
   /* Read the instruction bytes overwritten by the breakpoint.   */
   int err = target_read_memory (original_pc, overwritten_bytes.get (), size);
   if (err != 0)
-    throw_error (MEMORY_ERROR, _ ("Error accessing memory address %s (%s)."),
+    throw_error (MEMORY_ERROR, _("Error accessing memory address %s (%s)."),
 		 paddress (arch, original_pc), safe_strerror (err));
 
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
@@ -2391,7 +2391,7 @@ amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
   if (!info->stepping_id_map.emplace (thread, stepping_id.handle).second)
     {
       amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
-      error (_ ("Could not insert the displaced stepping id in the map"));
+      error (_("Could not insert the displaced stepping id in the map"));
     }
 
   status = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_PC,
@@ -3046,9 +3046,9 @@ info_agents_command (const char *args, int from_tty)
 	if (!n_agents)
 	  {
 	    if (args == nullptr || *args == '\0')
-	      uiout->message (_ ("No agents are currently active.\n"));
+	      uiout->message (_("No agents are currently active.\n"));
 	    else
-	      uiout->message (_ ("No active agents match '%s'.\n"), args);
+	      uiout->message (_("No active agents match '%s'.\n"), args);
 	    return;
 	  }
 
@@ -3296,9 +3296,9 @@ info_queues_command (const char *args, int from_tty)
 	if (!n_queues)
 	  {
 	    if (args == nullptr || *args == '\0')
-	      uiout->message (_ ("No queues are currently active.\n"));
+	      uiout->message (_("No queues are currently active.\n"));
 	    else
-	      uiout->message (_ ("No active queues match '%s'.\n"), args);
+	      uiout->message (_("No active queues match '%s'.\n"), args);
 	    return;
 	  }
 
@@ -3444,11 +3444,11 @@ static void
 queue_find_command (const char *arg, int from_tty)
 {
   if (!arg || !*arg)
-    error (_ ("Command requires an argument."));
+    error (_("Command requires an argument."));
 
   const char *tmp = re_comp (arg);
   if (tmp)
-    error (_ ("Invalid regexp (%s): %s"), tmp, arg);
+    error (_("Invalid regexp (%s): %s"), tmp, arg);
 
   size_t matches = 0;
   for (inferior *inf : all_inferiors ())
@@ -3475,7 +3475,7 @@ queue_find_command (const char *arg, int from_tty)
 	  std::string target_id = queue_target_id_string (queue_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
-	      gdb_printf (_ ("Queue %ld has Target Id '%s'\n"),
+	      gdb_printf (_("Queue %ld has Target Id '%s'\n"),
 			  queue_id.handle, target_id.c_str ());
 	      ++matches;
 	    }
@@ -3483,7 +3483,7 @@ queue_find_command (const char *arg, int from_tty)
     }
 
   if (!matches)
-    gdb_printf (_ ("No queues match '%s'\n"), arg);
+    gdb_printf (_("No queues match '%s'\n"), arg);
 }
 
 template <typename T>
@@ -3532,7 +3532,7 @@ static const gdb::option::option_def info_dispatches_option_defs[] = {
   gdb::option::flag_option_def<info_dispatches_opts>{
     "full",
     [] (info_dispatches_opts *opts) { return &opts->full; },
-    N_ ("Display all fields."),
+    N_("Display all fields."),
   },
 };
 
@@ -3709,9 +3709,9 @@ info_dispatches_command (const char *args, int from_tty)
 	if (!n_dispatches)
 	  {
 	    if (args == nullptr || *args == '\0')
-	      uiout->message (_ ("No dispatches are currently active.\n"));
+	      uiout->message (_("No dispatches are currently active.\n"));
 	    else
-	      uiout->message (_ ("No active dispatches match '%s'.\n"), args);
+	      uiout->message (_("No active dispatches match '%s'.\n"), args);
 	    return;
 	  }
 
@@ -3990,11 +3990,11 @@ dispatch_find_command (const char *arg, int from_tty)
   amd_dbgapi_status_t status;
 
   if (!arg || !*arg)
-    error (_ ("Command requires an argument."));
+    error (_("Command requires an argument."));
 
   const char *tmp = re_comp (arg);
   if (tmp)
-    error (_ ("Invalid regexp (%s): %s"), tmp, arg);
+    error (_("Invalid regexp (%s): %s"), tmp, arg);
 
   /* We'll be switching inferiors temporarily below.  */
   scoped_restore_current_thread restore_thread;
@@ -4028,7 +4028,7 @@ dispatch_find_command (const char *arg, int from_tty)
 	  std::string target_id = dispatch_target_id_string (dispatch_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
-	      gdb_printf (_ ("Dispatch %ld has Target Id '%s'\n"),
+	      gdb_printf (_("Dispatch %ld has Target Id '%s'\n"),
 			  dispatch_id.handle, target_id.c_str ());
 	      ++matches;
 	    }
@@ -4046,7 +4046,7 @@ dispatch_find_command (const char *arg, int from_tty)
 	    = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
 	  if (msymbol.minsym && re_exec (msymbol.minsym->print_name ()))
 	    {
-	      gdb_printf (_ ("Dispatch %ld has Kernel Function '%s'\n"),
+	      gdb_printf (_("Dispatch %ld has Kernel Function '%s'\n"),
 			  dispatch_id.handle,
 			  msymbol.minsym->print_name ());
 	      ++matches;
@@ -4055,7 +4055,7 @@ dispatch_find_command (const char *arg, int from_tty)
     }
 
   if (!matches)
-    gdb_printf (_ ("No dispatches match '%s'\n"), arg);
+    gdb_printf (_("No dispatches match '%s'\n"), arg);
 }
 
 /* If the amd-dbgapi library is not attached to any process, finalize and
@@ -4190,7 +4190,7 @@ When on, print debug messages relating to the amd-dbgapi target."),
 
 
   add_cmd ("agents", class_info, info_agents_command,
-	   _ ("(Display currently active heterogeneous agents.\n\
+	   _("(Display currently active heterogeneous agents.\n\
 Usage: info agents [ID]...\n\
 \n\
 If ID is given, it is a space-separated list of IDs of agents to display.\n\
@@ -4198,17 +4198,17 @@ Otherwise, all agents are displayed."),
 	   &infolist);
 
   add_basic_prefix_cmd ("queue", class_run,
-			_ ("Commands that operate on heterogeneous queues."),
+			_("Commands that operate on heterogeneous queues."),
 			&queue_list, 0, &cmdlist);
 
-  add_cmd ("find", class_run, queue_find_command, _ ("\
+  add_cmd ("find", class_run, queue_find_command, _("\
 Find heterogeneous queues that match a regular expression.\n\
 Usage: queue find REGEXP\n\
 Will display queue IDs whose Target ID matches REGEXP."),
 	   &queue_list);
 
   add_cmd ("queues", class_info, info_queues_command,
-	   _ ("Display currently active heterogeneous queues.\n\
+	   _("Display currently active heterogeneous queues.\n\
 Usage: info queues [ID]...\n\
 \n\
 If ID is given, it is a space-separated list of IDs of queues to display.\n\
@@ -4216,11 +4216,11 @@ Otherwise, all queues are displayed."),
 	   &infolist);
 
   add_basic_prefix_cmd ("dispatch", class_run,
-			_ ("Commands that operate on heterogeneous "
-			   "dispatches."),
+			_("Commands that operate on heterogeneous "
+			  "dispatches."),
 			&dispatch_list, 0, &cmdlist);
 
-  add_cmd ("find", class_run, dispatch_find_command, _ ("\
+  add_cmd ("find", class_run, dispatch_find_command, _("\
 Find heterogeneous dispatches that match a regular expression.\n\
 Usage: dispatch find REGEXP\n\
 Will display dispatch IDs whose Target ID or Kernel Function matches REGEXP."),
@@ -4230,7 +4230,7 @@ Will display dispatch IDs whose Target ID or Kernel Function matches REGEXP."),
     = make_info_dispatches_options_def_group (nullptr);
 
   static std::string info_dispatches_help
-    = gdb::option::build_help (_ ("\
+    = gdb::option::build_help (_("\
 Display currently active heterogeneous dispatches.\n\
 Usage: info dispatches [ID]...\n\
 \n\
