@@ -50,6 +50,12 @@ kernel ()
   if (local_var == 0)
     global_ptr = &local_var;
 
+  /* Ensure thread 0 has assigned to global_ptr before the other
+     thread attempts to read it.  Even though the lanes are in the
+     same wave, this prevents the compiler from restructuring the
+     control flow graph in a way that would break the test.  */
+  __syncthreads ();
+
   /* This is just to confirm how dereferencing the pointer from
      different lanes yield a different value.  GDB should behave the
      same.  */
