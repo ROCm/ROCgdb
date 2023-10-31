@@ -40,22 +40,41 @@ struct arg_test_desc
 
 /* The list of tests.  */
 arg_test_desc desc[] = {
+  { "", {}, "" },
   { "abc", { "abc" }, "abc" },
   { "a b c", { "a", "b", "c" }, "a b c" },
   { "\"a b\" 'c d'", { "a b", "c d" }, "a\\ b c\\ d" },
   { "\\' \\\"", { "'", "\"" }, "\\' \\\"" },
-  { "'\\'", { "\\" }, "\\\\" },
-  { "\"\\\\\" \"\\\\\\\"\"", { "\\", "\\\"" }, "\\\\ \\\\\\\"" },
+  { "'\\'", { "\\\\" }, "\\\\" },
+  { "\"\\\\\" \"\\\\\\\"\"", { "\\\\", "\\\\\"" }, "\\\\ \\\\\\\"" },
   { "\\  \" \" ' '", { " ", " ", " "}, "\\  \\  \\ " },
   { "\"'\"", { "'" }, "\\'" },
-  { "'\"' '\\\"'", { "\"", "\\\"" } , "\\\" \\\\\\\""},
+  { "'\"' '\\\"'", { "\"", "\\\\\"" } , "\\\" \\\\\\\""},
   { "\"first arg\" \"\" \"third-arg\" \"'\" \"\\\"\" \"\\\\\\\"\" \" \" \"\"",
-    { "first arg", "", "third-arg", "'", "\"", "\\\""," ", "" },
+    { "first arg", "", "third-arg", "'", "\"", "\\\\\""," ", "" },
     "first\\ arg '' third-arg \\' \\\" \\\\\\\" \\  ''"},
   { "\"\\a\" \"\\&\" \"\\#\" \"\\<\" \"\\^\"",
-    { "\\a", "\\&", "\\#" , "\\<" , "\\^"},
+    { "\\\\a", "\\\\\\&", "\\\\\\#" , "\\\\\\<" , "\\\\\\^"},
+    "\\\\a \\\\\\& \\\\\\# \\\\\\< \\\\\\^" },
+  /* The following entry produces the same split output as the previous
+     one: inside double quotes, \x where x is not a special character, is
+     considered a literal backslash followed by a literal 'x', equivalent
+     to the explicitly escaped form \\x.  */
+  { "\"\\\\a\" \"\\\\&\" \"\\\\#\" \"\\\\<\" \"\\\\^\"",
+    { "\\\\a", "\\\\\\&", "\\\\\\#" , "\\\\\\<" , "\\\\\\^"},
     "\\\\a \\\\\\& \\\\\\# \\\\\\< \\\\\\^" },
   { "1 '\n' 3", { "1", "\n", "3" }, "1 '\n' 3" },
+  { "abc* abc\\* abc\\\\*", { "abc*", "abc\\*", "abc\\\\*" },
+    "abc* abc\\* abc\\\\*" },
+  { "\"ab\\ cd\" \"ef\\'gh\"", { "ab\\\\ cd", "ef\\\\'gh" },
+    "ab\\\\\\ cd ef\\\\\\'gh" },
+  { "\"$VAR\" \"ab`foo`cd\"", { "$VAR", "ab`foo`cd" }, "$VAR ab`foo`cd" },
+  { "'$VAR'", { "\\$VAR" }, "\\$VAR" },
+  /* Unterminated quotes are treated as extending to end-of-string.  */
+  { "\"abc", { "abc" }, "abc" },
+  { "'abc", { "abc" }, "abc" },
+  { "a \"b c", { "a", "b c" }, "a b\\ c" },
+  { "a 'b c", { "a", "b c" }, "a b\\ c" },
 };
 
 /* Run the remote argument passing self tests.  */

@@ -58,11 +58,8 @@ proc initial_setup_simple { startup_with_shell run_args } {
 # it to ON_RE if startup-with-shell is on, otherwise compare to
 # OFF_RE.
 #
-# If PROBLEMATIC_ON is true then when startup-with-shell is on we
-# expect the comparison to fail, so setup an xfail.
-#
 # TESTNAME is a string used in the test names.
-proc run_test { args on_re off_re testname { problematic_on false } } {
+proc run_test { args on_re off_re testname } {
     foreach startup_with_shell { "on" "off" } {
 	with_test_prefix "$testname, startup_with_shell: ${startup_with_shell}" {
 	    if {![initial_setup_simple $startup_with_shell $args]} {
@@ -71,14 +68,8 @@ proc run_test { args on_re off_re testname { problematic_on false } } {
 
 	    if { $startup_with_shell } {
 		set re $on_re
-		set problematic $problematic_on
 	    } else {
 		set re $off_re
-		set problematic false
-	    }
-
-	    if { $problematic } {
-		setup_xfail "*-*-*" gdb/28392
 	    }
 
 	    gdb_test "print argv\[1\]" "${::valnum_re} = $::hex $re" $testname
@@ -94,15 +85,14 @@ proc run_test_same { args re testname } {
 }
 
 # Run the actual tests
-proc run_all_tests { { is_remote_with_split_args false } } {
+proc run_all_tests { } {
     # The regexp to match a single '\' character.
     set bs "\\\\"
 
     run_test "$::unique_file_dir/*.unique-extension" \
 	"\"$::unique_file\"" \
 	"\"$::unique_file_dir/\\\*\.unique-extension\"" \
-	"arg is glob" \
-	$is_remote_with_split_args
+	"arg is glob"
 
     run_test_same "$::unique_file_dir/\\*.unique-extension" \
 	"\"$::unique_file_dir/\\\*\.unique-extension\"" \
@@ -113,8 +103,7 @@ proc run_all_tests { { is_remote_with_split_args false } } {
 	run_test "\$TEST" \
 	    "\"1234\"" \
 	    "\"\\\$TEST\"" \
-	    "arg is shell variable" \
-	    $is_remote_with_split_args
+	    "arg is shell variable"
 
 	run_test_same "\\\$TEST" \
 	    "\"\\\$TEST\"" \
@@ -124,14 +113,12 @@ proc run_all_tests { { is_remote_with_split_args false } } {
     run_test "\$(echo foo)" \
 	"\"foo\"" \
 	"\"\\\$\\(echo\"" \
-	"arg is parameter expansion, command execution" \
-	$is_remote_with_split_args
+	"arg is parameter expansion, command execution"
 
     run_test "\$((2 + 3))" \
 	"\"5\"" \
 	"\"\\\$\\(\\(2\"" \
-	"arg is parameter expansion, expression evaluation" \
-	$is_remote_with_split_args
+	"arg is parameter expansion, expression evaluation"
 
     run_test_same "\"\\a\"" \
 	"\"${bs}${bs}a\"" \
@@ -183,7 +170,7 @@ if {[target_info gdb_protocol] == "extended-remote"} {
     with_test_prefix "single-inferior-arg disabled" {
 	save_vars { GDBFLAGS } {
 	    append GDBFLAGS " -ex \"set remote single-inferior-argument-feature-packet off\""
-	    run_all_tests true
+	    run_all_tests
 	}
     }
 }

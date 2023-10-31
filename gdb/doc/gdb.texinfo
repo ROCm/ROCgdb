@@ -44169,6 +44169,19 @@ with @samp{single-inf-arg+}, then there will only be a single
 @var{argument} string, which includes all inferior arguments,
 separated with whitespace.
 
+If @value{GDBN} didn't send @samp{single-inf-arg}, or the remote
+didn't choose to use this feature, then @value{GDBN} will split the
+inferior arguments before passing them to the remote target.  Single
+and double quotes surrounding any argument will have been removed by
+@value{GDBN}.  Any special shell characters within each argument will
+have been escaped with a backslash character except for quote and
+whitespace characters.  These will not be escaped within the arguments;
+the remote target is expected to escape these characters itself.
+
+These slightly complex rules exist for backward compatibility reasons.
+When implementing a new remote target, it is suggested that the
+@samp{single-inf-arg} feature be supported.
+
 @c FIXME:  What about non-stop mode?
 
 This packet is only available in extended mode (@pxref{extended mode}).

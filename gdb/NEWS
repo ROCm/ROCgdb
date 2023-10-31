@@ -25,6 +25,14 @@
   support.  The AMX registers themselves are not yet readable, but
   other xsave state can be read.
 
+* There have been changes to how inferior arguments are passed to
+  remote targets.  When using the latest GDB and gdbserver the new
+  single-inf-arg feature will be used for argument passing.  When
+  using remote targets that don't support single-inf-arg, GDB will now
+  escape special shell characters (except for whitespace and quotes)
+  within arguments before passing them to the remote target.  Remote
+  targets will need updating to take this into account.
+
 * New targets
 
 i386 Windows/MSVC               i[34567]86-*-windows-msvc

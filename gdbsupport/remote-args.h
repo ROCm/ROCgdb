@@ -62,7 +62,7 @@ template<typename T>
 inline std::string
 join (const std::vector<T> &args)
 {
-  return construct_inferior_arguments (gdb::array_view<const T> (args), true);
+  return construct_inferior_arguments (gdb::array_view<const T> (args), false);
 }
 
 } /* namespace remote_args */
