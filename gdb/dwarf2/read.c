@@ -150,6 +150,8 @@ static int dwarf2_locexpr_block_index;
 static int dwarf2_loclist_block_index;
 static int ada_block_index;
 
+static bool producer_is_gas_lt_2_38 (struct dwarf2_cu *cu);
+
 /* Size of .debug_loclists section header for 32-bit DWARF format.  */
 #define LOCLIST_HEADER_SIZE32 12
 
@@ -7497,6 +7499,27 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
 
   file_and_directory &fnd = find_file_and_directory (die, cu);
 
+  /* GAS supports generating dwarf-5 info starting version 2.35.  Versions
+     2.35-2.37 generate an incorrect CU name attribute: it's relative,
+     implicitly prefixing it with the compilation dir.  Work around this by
+     prefixing it with the source dir instead.  */
+  if (cu->header.version == 5 && !IS_ABSOLUTE_PATH (fnd.get_name ())
+      && producer_is_gas_lt_2_38 (cu))
+    {
+      attr = dwarf2_attr (die, DW_AT_stmt_list, cu);
+      if (attr != nullptr && attr->form_is_unsigned ())
+	{
+	  sect_offset line_offset = (sect_offset) attr->as_unsigned ();
+	  line_header_up lh = dwarf_decode_line_header (line_offset, cu,
+							fnd.get_comp_dir ());
+	  if (lh->version == 5 && lh->is_valid_file_index (1))
+	    {
+	      std::string dir = lh->include_dir_at (1);
+	      fnd.set_comp_dir (std::move (dir));
+	    }
+	}
+    }
+
   cu->start_compunit_symtab (fnd.get_name (), fnd.intern_comp_dir (objfile),
 			     lowpc);
 
@@ -11258,8 +11281,11 @@ check_producer (struct dwarf2_cu *cu)
     cu->producer_is_codewarrior = true;
   else if (producer_is_clang (cu->producer, &major, &minor))
     cu->producer_is_clang = true;
-  else if (startswith (cu->producer, "GNU AS 2.39.0"))
-    cu->producer_is_gas_2_39 = true;
+  else if (producer_is_gas (cu->producer, &major, &minor))
+    {
+      cu->producer_is_gas_lt_2_38 = major < 2 || (major == 2 && minor < 38);
+      cu->producer_is_gas_2_39 = major == 2 && minor == 39;
+    }
   else
     {
       /* For other non-GCC compilers, expect their behavior is DWARF version
@@ -11293,6 +11319,15 @@ producer_is_codewarrior (struct dwarf2_cu *cu)
     check_producer (cu);
 
   return cu->producer_is_codewarrior;
+}
+
+static bool
+producer_is_gas_lt_2_38 (struct dwarf2_cu *cu)
+{
+  if (!cu->checked_producer)
+    check_producer (cu);
+
+  return cu->producer_is_gas_lt_2_38;
 }
 
 static bool
