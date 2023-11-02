@@ -157,11 +157,14 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_V8_8A,
   /* Common Short Sequence Compression instructions.  */
   AARCH64_FEATURE_CSSC,
+  /* Armv8.9-A processors.  */
+  AARCH64_FEATURE_V8_9A,
+  /* Check Feature Status Extension.  */
+  AARCH64_FEATURE_CHK,
+  /* Guarded Control Stack.  */
+  AARCH64_FEATURE_GCS,
   /* SME2.  */
   AARCH64_FEATURE_SME2,
-  DUMMY1,
-  DUMMY2,
-  DUMMY3,
   AARCH64_NUM_FEATURES
 };
 
@@ -182,7 +185,8 @@ enum aarch64_feature_bit {
 #define AARCH64_ARCH_V8A_FEATURES(X)	(AARCH64_FEATBIT (X, V8A)	\
 					 | AARCH64_FEATBIT (X, FP)	\
 					 | AARCH64_FEATBIT (X, RAS)	\
-					 | AARCH64_FEATBIT (X, SIMD))
+					 | AARCH64_FEATBIT (X, SIMD)	\
+					 | AARCH64_FEATBIT (X, CHK))
 #define AARCH64_ARCH_V8_1A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_1A)	\
 					 | AARCH64_FEATBIT (X, CRC)	\
 					 | AARCH64_FEATBIT (X, LSE)	\
@@ -216,6 +220,7 @@ enum aarch64_feature_bit {
 #define AARCH64_ARCH_V8_8A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_8A)	\
 					 | AARCH64_FEATBIT (X, MOPS)	\
 					 | AARCH64_FEATBIT (X, HBC))
+#define AARCH64_ARCH_V8_9A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_9A))
 
 #define AARCH64_ARCH_V9A_FEATURES(X)	(AARCH64_FEATBIT (X, V9A)	\
 					 | AARCH64_FEATBIT (X, F16)	\
@@ -224,6 +229,7 @@ enum aarch64_feature_bit {
 #define AARCH64_ARCH_V9_1A_FEATURES(X)	AARCH64_ARCH_V8_6A_FEATURES (X)
 #define AARCH64_ARCH_V9_2A_FEATURES(X)	AARCH64_ARCH_V8_7A_FEATURES (X)
 #define AARCH64_ARCH_V9_3A_FEATURES(X)	AARCH64_ARCH_V8_8A_FEATURES (X)
+#define AARCH64_ARCH_V9_4A_FEATURES(X)	AARCH64_ARCH_V8_9A_FEATURES (X)
 
 /* Architectures are the sum of the base and extensions.  */
 #define AARCH64_ARCH_V8A(X)	(AARCH64_FEATBIT (X, V8) \
@@ -244,6 +250,8 @@ enum aarch64_feature_bit {
 				 | AARCH64_ARCH_V8_7A_FEATURES (X))
 #define AARCH64_ARCH_V8_8A(X)	(AARCH64_ARCH_V8_7A (X)	\
 				 | AARCH64_ARCH_V8_8A_FEATURES (X))
+#define AARCH64_ARCH_V8_9A(X)	(AARCH64_ARCH_V8_8A (X)	\
+				 | AARCH64_ARCH_V8_9A_FEATURES (X))
 #define AARCH64_ARCH_V8R(X)	((AARCH64_ARCH_V8_4A (X)	\
 				  | AARCH64_FEATBIT (X, V8R))	\
 				 & ~AARCH64_FEATBIT (X, V8A)	\
@@ -257,6 +265,8 @@ enum aarch64_feature_bit {
 				 | AARCH64_ARCH_V9_2A_FEATURES (X))
 #define AARCH64_ARCH_V9_3A(X)	(AARCH64_ARCH_V9_2A (X) \
 				 | AARCH64_ARCH_V9_3A_FEATURES (X))
+#define AARCH64_ARCH_V9_4A(X)	(AARCH64_ARCH_V9_3A (X) \
+				 | AARCH64_ARCH_V9_4A_FEATURES (X))
 
 #define AARCH64_ARCH_NONE(X)	0
 
@@ -379,6 +389,7 @@ enum aarch64_opnd
   AARCH64_OPND_Rm,	/* Integer register as source.  */
   AARCH64_OPND_Rt,	/* Integer register used in ld/st instructions.  */
   AARCH64_OPND_Rt2,	/* Integer register used in ld/st pair instructions.  */
+  AARCH64_OPND_X16,	/* Integer register x16 in chkfeat instruction.  */
   AARCH64_OPND_Rt_LS64,	/* Integer register used in LS64 instructions.  */
   AARCH64_OPND_Rt_SP,	/* Integer Rt or SP used in STG instructions.  */
   AARCH64_OPND_Rs,	/* Integer register used in ld/st exclusive.  */
@@ -506,6 +517,7 @@ enum aarch64_opnd
   AARCH64_OPND_PRFOP,		/* Prefetch operation.  */
   AARCH64_OPND_RPRFMOP,		/* Range prefetch operation.  */
   AARCH64_OPND_BARRIER_PSB,	/* Barrier operand for PSB.  */
+  AARCH64_OPND_BARRIER_GCSB,	/* Barrier operand for GCSB.  */
   AARCH64_OPND_BTI_TARGET,	/* BTI {<target>}.  */
   AARCH64_OPND_SVE_ADDR_RI_S4x16,   /* SVE [<Xn|SP>, #<simm4>*16].  */
   AARCH64_OPND_SVE_ADDR_RI_S4x32,   /* SVE [<Xn|SP>, #<simm4>*32].  */
@@ -885,6 +897,7 @@ enum aarch64_insn_class
   dotproduct,
   bfloat16,
   cssc,
+  gcs,
 };
 
 /* Opcode enumerators.  */
@@ -1465,6 +1478,7 @@ struct aarch64_inst
 
 /* Defining the HINT #imm values for the aarch64_hint_options.  */
 #define HINT_OPD_CSYNC	0x11
+#define HINT_OPD_DSYNC	0x13
 #define HINT_OPD_C	0x22
 #define HINT_OPD_J	0x24
 #define HINT_OPD_JC	0x26

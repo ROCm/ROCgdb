@@ -34,7 +34,7 @@ Disassembly of section \.text:
 .*:	d503221f 	(hint	#0x10|esb)
 .*:	d503223f 	(hint	#0x11|psb	csync)
 .*:	d503225f 	(hint	#0x12|tsb	csync)
-.*:	d503227f 	hint	#0x13
+.*:	d503227f 	(hint	#0x13|gcsb	dsync)
 .*:	d503229f 	(hint	#0x14|csdb)
 .*:	d50322bf 	hint	#0x15
 .*:	d50322df 	(hint	#0x16|clearbhb)
@@ -55,7 +55,7 @@ Disassembly of section \.text:
 .*:	d50324bf 	hint	#0x25
 .*:	d50324df 	(hint	#0x26|bti	jc)
 .*:	d50324ff 	hint	#0x27
-.*:	d503251f 	hint	#0x28
+.*:	d503251f 	(hint	#0x28|chkfeat	x16)
 .*:	d503253f 	hint	#0x29
 .*:	d503255f 	hint	#0x2a
 .*:	d503257f 	hint	#0x2b

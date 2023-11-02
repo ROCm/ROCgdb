@@ -2572,6 +2572,10 @@ static const aarch64_feature_set aarch64_feature_hbc =
   AARCH64_FEATURE (HBC);
 static const aarch64_feature_set aarch64_feature_cssc =
   AARCH64_FEATURE (CSSC);
+static const aarch64_feature_set aarch64_feature_chk =
+  AARCH64_FEATURE (CHK);
+static const aarch64_feature_set aarch64_feature_gcs =
+  AARCH64_FEATURE (GCS);
 
 #define CORE		&aarch64_feature_v8
 #define FP		&aarch64_feature_fp
@@ -2630,6 +2634,8 @@ static const aarch64_feature_set aarch64_feature_cssc =
 #define MOPS_MEMTAG &aarch64_feature_mops_memtag
 #define HBC	  &aarch64_feature_hbc
 #define CSSC	  &aarch64_feature_cssc
+#define CHK	  &aarch64_feature_chk
+#define GCS	  &aarch64_feature_gcs
 
 #define CORE_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, CORE, OPS, QUALS, FLAGS, 0, 0, NULL }
@@ -2777,6 +2783,10 @@ static const aarch64_feature_set aarch64_feature_cssc =
   { NAME, OPCODE, MASK, CLASS, 0, HBC, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define CSSC_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, cssc, 0, CSSC, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define CHK_INSN(NAME, OPCODE, MASK, OPS, QUALS, FLAGS) \
+  { NAME, OPCODE, MASK, ic_system, 0, CHK, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define GCS_INSN(NAME, OPCODE, MASK, OPS, QUALS, FLAGS) \
+  { NAME, OPCODE, MASK, gcs, 0, GCS, OPS, QUALS, FLAGS, 0, 0, NULL }
 
 #define MOPS_CPY_OP1_OP2_PME_INSN(NAME, OPCODE, MASK, FLAGS, CONSTRAINTS) \
   MOPS_INSN (NAME, OPCODE, MASK, 0, \
@@ -4106,6 +4116,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   SME_INSN ("smstart", 0xd503417f, 0xfffff1ff, sme_start, 0, OP1 (SME_SM_ZA), {}, F_SYS_WRITE, 0),
   SME_INSN ("smstop",  0xd503407f, 0xfffff1ff, sme_stop,  0, OP1 (SME_SM_ZA), {}, F_SYS_WRITE, 0),
   /* System.  */
+  CHK_INSN ("chkfeat", 0xd503251f, 0xffffffff, OP1 (X16), QL_I1X, 0),
   CORE_INSN ("msr", 0xd500401f, 0xfff8f01f, ic_system, 0, OP2 (PSTATEFIELD, UIMM4), {}, F_SYS_WRITE),
   CORE_INSN ("hint",0xd503201f, 0xfffff01f, ic_system, 0, OP1 (UIMM7), {}, F_HAS_ALIAS),
   CORE_INSN ("nop", 0xd503201f, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
@@ -4135,6 +4146,17 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("dmb", 0xd50330bf, 0xfffff0ff, ic_system, 0, OP1 (BARRIER), {}, 0),
   CORE_INSN ("isb", 0xd50330df, 0xfffff0ff, ic_system, 0, OP1 (BARRIER_ISB), {}, F_OPD0_OPT | F_DEFAULT (0xF)),
   SB_INSN ("sb", 0xd50330ff, 0xffffffff, ic_system, OP0 (), {}, 0),
+  GCS_INSN ("gcspushx", 0xd508779f, 0xffffffff, OP0 (), {}, 0),
+  GCS_INSN ("gcspopx", 0xd50877df, 0xffffffff, OP0 (), {}, 0),
+  GCS_INSN ("gcspopcx", 0xd50877bf, 0xffffffff, OP0 (), {}, 0),
+  GCS_INSN ("gcsss1", 0xd50b7740, 0xffffffe0, OP1 (Rt), QL_I1X, 0),
+  GCS_INSN ("gcspushm", 0xd50b7700, 0xffffffe0, OP1 (Rt), QL_I1X, 0),
+  GCS_INSN ("gcsss2", 0xd52b7760, 0xffffffe0, OP1 (Rt), QL_I1X, 0),
+  GCS_INSN ("gcspopm", 0xd52b773f, 0xffffffff, OP0 (), {}, 0),
+  GCS_INSN ("gcspopm", 0xd52b7720, 0xffffffe0, OP1 (Rt), QL_I1X, 0),
+  GCS_INSN ("gcsstr", 0xd91f0c00, 0xfffffc00, OP2 (Rt, Rn_SP), QL_I2SAMEX, 0),
+  GCS_INSN ("gcssttr", 0xd91f1c00, 0xfffffc00, OP2 (Rt, Rn_SP), QL_I2SAMEX, 0),
+  CORE_INSN ("gcsb", 0xd503227f, 0xffffffff, ic_system, 0, OP1 (BARRIER_GCSB), {}, F_ALIAS),
   CORE_INSN ("sys", 0xd5080000, 0xfff80000, ic_system, 0, OP5 (UIMM3_OP1, CRn, CRm, UIMM3_OP2, Rt), QL_SYS, F_HAS_ALIAS | F_OPD4_OPT | F_DEFAULT (0x1F)),
   CORE_INSN ("at",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_AT, Rt), QL_SRC_X, F_ALIAS),
   CORE_INSN ("dc",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_DC, Rt), QL_SRC_X, F_ALIAS),
@@ -6092,6 +6114,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
     Y(INT_REG, regno, "Rm", 0, F(FLD_Rm), "an integer register")	\
     Y(INT_REG, regno, "Rt", 0, F(FLD_Rt), "an integer register")	\
     Y(INT_REG, regno, "Rt2", 0, F(FLD_Rt2), "an integer register")	\
+    Y(INT_REG, none, "X16", 0, F(), "X16")	\
     Y(INT_REG, regno, "Rt_LS64", 0, F(FLD_Rt), "an integer register")	\
     Y(INT_REG, regno, "Rt_SP", OPD_F_MAYBE_SP, F(FLD_Rt),		\
       "an integer or stack pointer register")				\
@@ -6278,7 +6301,9 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "a range prefetch operation specifier")				\
     Y(SYSTEM, none, "BARRIER_PSB", 0, F (),				\
       "the PSB/TSB option name CSYNC")					\
-    Y(SYSTEM, hint, "BTI", 0, F (),					\
+    Y(SYSTEM, none, "BARRIER_GCSB", 0, F (),				\
+      "the GCSB option name DSYNC")					\
+    Y(SYSTEM, hint, "BTI_TARGET", 0, F (),				\
       "BTI targets j/c/jc")						\
     Y(ADDRESS, sve_addr_ri_s4, "SVE_ADDR_RI_S4x16",			\
       4 << OPD_F_OD_LSB, F(FLD_Rn),					\

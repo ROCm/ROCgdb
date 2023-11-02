@@ -114,8 +114,8 @@ instruction which will not execute on the target architecture.  The
 following architecture names are recognized: @code{armv8-a},
 @code{armv8.1-a}, @code{armv8.2-a}, @code{armv8.3-a}, @code{armv8.4-a}
 @code{armv8.5-a}, @code{armv8.6-a}, @code{armv8.7-a}, @code{armv8.8-a},
-@code{armv8-r}, @code{armv9-a}, @code{armv9.1-a}, @code{armv9.2-a},
-and @code{armv9.3-a}.
+@code{armv8.9-a}, @code{armv8-r}, @code{armv9-a}, @code{armv9.1-a},
+@code{armv9.2-a}, @code{armv9.3-a} and @code{armv9.4-a}.
 
 If both @option{-mcpu} and @option{-march} are specified, the
 assembler will use the setting for @option{-mcpu}.  If neither are
@@ -259,6 +259,10 @@ automatically cause those extensions to be disabled.
  @tab Enable SVE2 SM4 Extension.  This implies @code{sm4} and @code{sve2}.
 @item @code{tme} @tab ARMv8-A @tab No
  @tab Enable Transactional Memory Extensions.
+@item @code{chk} @tab ARMv8-A @tab ARMv8-A
+ @tab Enable Check Feature Status Extension.
+@item @code{gcs} @tab N/A @tab No
+ @tab Enable Guarded Control Stack Extension.
 @end multitable
 
 @node AArch64 Syntax
