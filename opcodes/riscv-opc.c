@@ -154,6 +154,8 @@ const float riscv_fli_numval[32] =
 #define MASK_VS1 (OP_MASK_VS1 << OP_SH_VS1)
 #define MASK_VS2 (OP_MASK_VS2 << OP_SH_VS2)
 #define MASK_VMASK (OP_MASK_VMASK << OP_SH_VMASK)
+/* Vendor-specific (CORE-V) masks.  */
+#define MASK_CV_IS3_UIMM5 ENCODE_CV_IS3_UIMM5 (-1U)
 
 static int
 match_opcode (const struct riscv_opcode *op, insn_t insn)
@@ -2038,6 +2040,65 @@ const struct riscv_opcode riscv_opcodes[] =
 {"hsv.h",       0, INSN_CLASS_H, "t,0(s)", MATCH_HSV_H, MASK_HSV_H, match_opcode, INSN_DREF|INSN_2_BYTE },
 {"hsv.w",       0, INSN_CLASS_H, "t,0(s)", MATCH_HSV_W, MASK_HSV_W, match_opcode, INSN_DREF|INSN_4_BYTE },
 {"hsv.d",      64, INSN_CLASS_H, "t,0(s)", MATCH_HSV_D, MASK_HSV_D, match_opcode, INSN_DREF|INSN_8_BYTE },
+
+/* Vendor-specific (CORE-V) Xcvmac instructions.  */
+{"cv.mac",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MAC,      MASK_CV_MAC, match_opcode, 0},
+{"cv.msu",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MSU,      MASK_CV_MSU, match_opcode, 0},
+{"cv.mulsn",    0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULSN,    MASK_CV_MULSN, match_opcode, 0},
+{"cv.muls",     0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MULSN,    MASK_CV_MULSN|MASK_CV_IS3_UIMM5, match_opcode, INSN_ALIAS},
+{"cv.mulsrn",   0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULSRN,   MASK_CV_MULSRN, match_opcode, 0},
+{"cv.mulhhsn",  0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULHHSN,  MASK_CV_MULHHSN, match_opcode, 0},
+{"cv.mulhhs",   0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MULHHSN,  MASK_CV_MULHHSN|MASK_CV_IS3_UIMM5, match_opcode, INSN_ALIAS},
+{"cv.mulhhsrn", 0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULHHSRN, MASK_CV_MULHHSRN, match_opcode, 0},
+{"cv.mulun",    0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULUN,    MASK_CV_MULUN, match_opcode, 0},
+{"cv.mulu",     0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MULUN,    MASK_CV_MULUN|MASK_CV_IS3_UIMM5, match_opcode, INSN_ALIAS},
+{"cv.mulurn",   0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULURN,   MASK_CV_MULURN, match_opcode, 0},
+{"cv.mulhhun",  0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULHHUN,  MASK_CV_MULHHUN, match_opcode, 0},
+{"cv.mulhhu",   0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MULHHUN,  MASK_CV_MULHHUN|MASK_CV_IS3_UIMM5, match_opcode, INSN_ALIAS},
+{"cv.mulhhurn", 0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MULHHURN, MASK_CV_MULHHURN, match_opcode, 0},
+{"cv.macsn",    0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACSN,    MASK_CV_MACSN, match_opcode, 0},
+{"cv.machhsn",  0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACHHSN,  MASK_CV_MACHHSN, match_opcode, 0},
+{"cv.macsrn",   0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACSRN,   MASK_CV_MACSRN, match_opcode, 0},
+{"cv.machhsrn", 0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACHHSRN, MASK_CV_MACHHSRN, match_opcode, 0},
+{"cv.macun",    0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACUN,    MASK_CV_MACUN, match_opcode, 0},
+{"cv.machhun",  0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACHHUN,  MASK_CV_MACHHUN, match_opcode, 0},
+{"cv.macurn",   0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACURN,   MASK_CV_MACURN, match_opcode, 0},
+{"cv.machhurn", 0, INSN_CLASS_XCVMAC, "d,s,t,Xc3", MATCH_CV_MACHHURN, MASK_CV_MACHHURN, match_opcode, 0},
+
+/* Vendor-specific (CORE-V) Xcvalu instructions.  */
+{"cv.abs",     0, INSN_CLASS_XCVALU, "d,s",       MATCH_CV_ABS,     MASK_CV_ABS,  match_opcode, 0},
+{"cv.exths",   0, INSN_CLASS_XCVALU, "d,s",       MATCH_CV_EXTHS,   MASK_CV_EXTHS,  match_opcode, 0},
+{"cv.exthz",   0, INSN_CLASS_XCVALU, "d,s",       MATCH_CV_EXTHZ,   MASK_CV_EXTHZ,  match_opcode, 0},
+{"cv.extbs",   0, INSN_CLASS_XCVALU, "d,s",       MATCH_CV_EXTBS,   MASK_CV_EXTBS,  match_opcode, 0},
+{"cv.extbz",   0, INSN_CLASS_XCVALU, "d,s",       MATCH_CV_EXTBZ,   MASK_CV_EXTBZ,  match_opcode, 0},
+{"cv.sle",     0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SLE,     MASK_CV_SLE, match_opcode, 0},
+{"cv.slet",    0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SLET,    MASK_CV_SLET, match_opcode, INSN_ALIAS},
+{"cv.sleu",    0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SLEU,    MASK_CV_SLEU, match_opcode, 0},
+{"cv.sletu",   0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SLETU,   MASK_CV_SLETU, match_opcode, INSN_ALIAS},
+{"cv.min",     0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_MIN,     MASK_CV_MIN, match_opcode, 0},
+{"cv.minu",    0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_MINU,    MASK_CV_MINU, match_opcode, 0},
+{"cv.max",     0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_MAX,     MASK_CV_MAX, match_opcode, 0},
+{"cv.maxu",    0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_MAXU,    MASK_CV_MAXU, match_opcode, 0},
+{"cv.clip",    0, INSN_CLASS_XCVALU, "d,s,Xc2",   MATCH_CV_CLIP,    MASK_CV_CLIP, match_opcode, 0},
+{"cv.clipu",   0, INSN_CLASS_XCVALU, "d,s,Xc2",   MATCH_CV_CLIPU,   MASK_CV_CLIPU, match_opcode, 0},
+{"cv.clipr",   0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_CLIPR,   MASK_CV_CLIPR, match_opcode, 0},
+{"cv.clipur",  0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_CLIPUR,  MASK_CV_CLIPUR, match_opcode, 0},
+{"cv.addn",    0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_ADDN,    MASK_CV_ADDN, match_opcode, 0},
+{"cv.addun",   0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_ADDUN,   MASK_CV_ADDUN, match_opcode, 0},
+{"cv.addunr",  0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_ADDUNR,  MASK_CV_ADDUNR, match_opcode, 0},
+{"cv.addrn",   0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_ADDRN,   MASK_CV_ADDRN, match_opcode, 0},
+{"cv.addurn",  0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_ADDURN,  MASK_CV_ADDURN, match_opcode, 0},
+{"cv.addnr",   0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_ADDNR,   MASK_CV_ADDNR, match_opcode, 0},
+{"cv.addrnr",  0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_ADDRNR,  MASK_CV_ADDRNR, match_opcode, 0},
+{"cv.addurnr", 0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_ADDURNR, MASK_CV_ADDURNR, match_opcode, 0},
+{"cv.subn",    0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_SUBN,    MASK_CV_SUBN, match_opcode, 0},
+{"cv.subun",   0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_SUBUN,   MASK_CV_SUBUN, match_opcode, 0},
+{"cv.subrn",   0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_SUBRN,   MASK_CV_SUBRN, match_opcode, 0},
+{"cv.suburn",  0, INSN_CLASS_XCVALU, "d,s,t,Xc3", MATCH_CV_SUBURN,  MASK_CV_SUBURN, match_opcode, 0},
+{"cv.subnr",   0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SUBNR,   MASK_CV_SUBNR, match_opcode, 0},
+{"cv.subunr",  0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SUBUNR,  MASK_CV_SUBUNR, match_opcode, 0},
+{"cv.subrnr",  0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SUBRNR,  MASK_CV_SUBRNR, match_opcode, 0},
+{"cv.suburnr", 0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SUBURNR, MASK_CV_SUBURNR, match_opcode, 0},
 
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 {"th.addsl",    0, INSN_CLASS_XTHEADBA,    "d,s,t,Xtu2@25",   MATCH_TH_ADDSL,    MASK_TH_ADDSL,    match_opcode, 0},

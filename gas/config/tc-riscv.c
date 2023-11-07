@@ -1481,6 +1481,20 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		  }
 	      }
 	      break;
+	    case 'c': /* Vendor-specific (CORE-V) operands.  */
+	      switch (*++oparg)
+		{
+		  case '2':
+		    /* ls2[4:0] */
+		    used_bits |= ENCODE_CV_IS2_UIMM5 (-1U);
+		    break;
+		  case '3':
+		    used_bits |= ENCODE_CV_IS3_UIMM5 (-1U);
+		    break;
+		  default:
+		    goto unknown_validate_operand;
+		}
+	      break;
 	    default:
 	      goto unknown_validate_operand;
 	    }
@@ -3579,6 +3593,34 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			goto unknown_riscv_ip_operand;
 		      }
 		  }
+		  break;
+
+		case 'c': /* Vendor-specific (CORE-V) operands.  */
+		  switch (*++oparg)
+		    {
+		      case '2':
+			my_getExpression (imm_expr, asarg);
+			check_absolute_expr (ip, imm_expr, FALSE);
+			asarg = expr_parse_end;
+			if (imm_expr->X_add_number<0
+			    || imm_expr->X_add_number>31)
+			  break;
+			ip->insn_opcode
+			    |= ENCODE_CV_IS2_UIMM5 (imm_expr->X_add_number);
+			  continue;
+		      case '3':
+			my_getExpression (imm_expr, asarg);
+			check_absolute_expr (ip, imm_expr, FALSE);
+			asarg = expr_parse_end;
+			if (imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 31)
+			  break;
+			ip->insn_opcode
+			    |= ENCODE_CV_IS3_UIMM5 (imm_expr->X_add_number);
+			continue;
+		      default:
+			goto unknown_riscv_ip_operand;
+		    }
 		  break;
 
 		default:
