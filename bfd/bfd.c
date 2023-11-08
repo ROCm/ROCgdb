@@ -691,6 +691,8 @@ SECTION
 	The easiest way to report a BFD error to the user is to
 	use <<bfd_perror>>.
 
+	The BFD error is thread-local.
+
 SUBSECTION
 	Type <<bfd_error_type>>
 
@@ -726,16 +728,12 @@ CODE_FRAGMENT
 .}
 .bfd_error_type;
 .
-INTERNAL
-.{* A buffer that is freed on bfd_close.  *}
-.extern char *_bfd_error_buf;
-.
 */
 
-static bfd_error_type bfd_error;
-static bfd_error_type input_error;
-static bfd *input_bfd;
-char *_bfd_error_buf;
+static TLS bfd_error_type bfd_error;
+static TLS bfd_error_type input_error;
+static TLS bfd *input_bfd;
+static TLS char *_bfd_error_buf;
 
 const char *const bfd_errmsgs[] =
 {
@@ -823,8 +821,7 @@ bfd_set_input_error (bfd *input, bfd_error_type error_tag)
   /* This is an error that occurred during bfd_close when writing an
      archive, but on one of the input files.  */
   bfd_error = bfd_error_on_input;
-  free (_bfd_error_buf);
-  _bfd_error_buf = NULL;
+  _bfd_clear_error_data ();
   input_bfd = input;
   input_error = error_tag;
   if (input_error >= bfd_error_on_input)
@@ -898,6 +895,24 @@ bfd_perror (const char *message)
 
 /*
 INTERNAL_FUNCTION
+	_bfd_clear_error_data
+
+SYNOPSIS
+	void _bfd_clear_error_data (void);
+
+DESCRIPTION
+	Free any data associated with the BFD error.
+*/
+
+void
+_bfd_clear_error_data (void)
+{
+  free (_bfd_error_buf);
+  _bfd_error_buf = NULL;
+}
+
+/*
+INTERNAL_FUNCTION
 	bfd_asprintf
 
 SYNOPSIS
@@ -907,7 +922,7 @@ DESCRIPTION
 	Primarily for error reporting, this function is like
 	libiberty's xasprintf except that it can return NULL on no
 	memory and the returned string should not be freed.  Uses a
-	single malloc'd buffer managed by libbfd, _bfd_error_buf.
+	thread-local malloc'd buffer managed by libbfd, _bfd_error_buf.
 	Be aware that a call to this function frees the result of any
 	previous call.  bfd_errmsg (bfd_error_on_input) also calls
 	this function.
@@ -1701,7 +1716,7 @@ bfd_set_assert_handler (bfd_assert_handler_type pnew)
 
 /*
 INODE
-Initialization, Miscellaneous, Error reporting, BFD front end
+Initialization, Threading, Error reporting, BFD front end
 
 FUNCTION
 	bfd_init
@@ -1725,8 +1740,7 @@ bfd_init (void)
 {
   bfd_error = bfd_error_no_error;
   input_bfd = NULL;
-  free (_bfd_error_buf);
-  _bfd_error_buf = NULL;
+  _bfd_clear_error_data ();
   input_error = bfd_error_no_error;
   _bfd_error_program_name = NULL;
   _bfd_error_internal = error_handler_fprintf;
@@ -1735,9 +1749,136 @@ bfd_init (void)
   return BFD_INIT_MAGIC;
 }
 
+
 /*
 INODE
-Miscellaneous, Memory Usage, Initialization, BFD front end
+Threading, Miscellaneous, Initialization, BFD front end
+
+SECTION
+	Threading
+
+	BFD has limited support for thread-safety.  Most BFD globals
+	are protected by locks, while the error-related globals are
+	thread-local.  A given BFD cannot safely be used from two
+	threads at the same time; it is up to the application to do
+	any needed locking.  However, it is ok for different threads
+	to work on different BFD objects at the same time.
+
+SUBSECTION
+	Thread functions.
+
+CODE_FRAGMENT
+.typedef bool (*bfd_lock_unlock_fn_type) (void *);
+*/
+
+/* The lock and unlock functions, if set.  */
+static bfd_lock_unlock_fn_type lock_fn;
+static bfd_lock_unlock_fn_type unlock_fn;
+static void *lock_data;
+
+/*
+FUNCTION
+	bfd_thread_init
+
+SYNOPSIS
+	bool bfd_thread_init
+	  (bfd_lock_unlock_fn_type lock,
+	  bfd_lock_unlock_fn_type unlock,
+	  void *data);
+
+DESCRIPTION
+
+	Initialize BFD threading.  The functions passed in will be
+	used to lock and unlock global data structures.  This may only
+	be called a single time in a given process.  Returns true on
+	success and false on error.  DATA is passed verbatim to the
+	lock and unlock functions.  The lock and unlock functions
+	should return true on success, or set the BFD error and return
+	false on failure.
+*/
+
+bool
+bfd_thread_init (bfd_lock_unlock_fn_type lock, bfd_lock_unlock_fn_type unlock,
+		 void *data)
+{
+  /* Both functions must be set, and this cannot have been called
+     before.  */
+  if (lock == NULL || unlock == NULL || unlock_fn != NULL)
+    {
+      bfd_set_error (bfd_error_invalid_operation);
+      return false;
+    }
+
+  lock_fn = lock;
+  unlock_fn = unlock;
+  lock_data = data;
+  return true;
+}
+
+/*
+FUNCTION
+	bfd_thread_cleanup
+
+SYNOPSIS
+	void bfd_thread_cleanup (void);
+
+DESCRIPTION
+	Clean up any thread-local state.  This should be called by a
+	thread that uses any BFD functions, before the thread exits.
+	It is fine to call this multiple times, or to call it and then
+	later call BFD functions on the same thread again.
+*/
+
+void
+bfd_thread_cleanup (void)
+{
+  _bfd_clear_error_data ();
+}
+
+/*
+INTERNAL_FUNCTION
+	bfd_lock
+
+SYNOPSIS
+	bool bfd_lock (void);
+
+DESCRIPTION
+	Acquire the global BFD lock, if needed.  Returns true on
+	success, false on error.
+*/
+
+bool
+bfd_lock (void)
+{
+  if (lock_fn != NULL)
+    return lock_fn (lock_data);
+  return true;
+}
+
+/*
+INTERNAL_FUNCTION
+	bfd_unlock
+
+SYNOPSIS
+	bool bfd_unlock (void);
+
+DESCRIPTION
+	Release the global BFD lock, if needed.  Returns true on
+	success, false on error.
+*/
+
+bool
+bfd_unlock (void)
+{
+  if (unlock_fn != NULL)
+    return unlock_fn (lock_data);
+  return true;
+}
+
+
+/*
+INODE
+Miscellaneous, Memory Usage, Threading, BFD front end
 
 SECTION
 	Miscellaneous

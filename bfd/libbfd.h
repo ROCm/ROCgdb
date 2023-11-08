@@ -929,14 +929,17 @@ bool bfd_write_bigendian_4byte_int (bfd *, unsigned int) ATTRIBUTE_HIDDEN;
 unsigned int bfd_log2 (bfd_vma x) ATTRIBUTE_HIDDEN;
 
 /* Extracted from bfd.c.  */
-/* A buffer that is freed on bfd_close.  */
-extern char *_bfd_error_buf;
+void _bfd_clear_error_data (void) ATTRIBUTE_HIDDEN;
 
 char *bfd_asprintf (const char *fmt, ...) ATTRIBUTE_HIDDEN;
 
 bfd_error_handler_type _bfd_set_error_handler_caching (bfd *) ATTRIBUTE_HIDDEN;
 
 const char *_bfd_get_error_program_name (void) ATTRIBUTE_HIDDEN;
+
+bool bfd_lock (void) ATTRIBUTE_HIDDEN;
+
+bool bfd_unlock (void) ATTRIBUTE_HIDDEN;
 
 /* Extracted from bfdio.c.  */
 struct bfd_iovec

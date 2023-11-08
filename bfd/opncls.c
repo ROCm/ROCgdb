@@ -81,6 +81,8 @@ _bfd_new_bfd (void)
   if (nbfd == NULL)
     return NULL;
 
+  if (!bfd_lock ())
+    return NULL;
   if (bfd_use_reserved_id)
     {
       nbfd->id = --bfd_reserved_id_counter;
@@ -88,6 +90,11 @@ _bfd_new_bfd (void)
     }
   else
     nbfd->id = bfd_id_counter++;
+  if (!bfd_unlock ())
+    {
+      free (nbfd);
+      return NULL;
+    }
 
   nbfd->memory = objalloc_create ();
   if (nbfd->memory == NULL)
@@ -927,8 +934,7 @@ bfd_close_all_done (bfd *abfd)
     _maybe_make_executable (abfd);
 
   _bfd_delete_bfd (abfd);
-  free (_bfd_error_buf);
-  _bfd_error_buf = NULL;
+  _bfd_clear_error_data ();
 
   return ret;
 }
