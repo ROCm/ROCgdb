@@ -1,0 +1,145 @@
+# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that GDB sees a SIGFPE when an ALU exception is triggered on an
+# AMDGPU device.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare $testfile" $testfile $srcfile \
+	{debug hip}]} {
+    return
+}
+
+# Enable ALU exceptions for the currently selected wave.
+proc enable_alu_exception {excp_name} {
+    # ALU exceptions are not reported when the DX10_CLAMP bit is set.
+    # Clear it.
+    with_test_prefix "clear DX10_CLAMP" {
+	# The DX10_CLAMP bit is in the $mode register, find the bit offset
+	# rather than hard-coding it as it might change between generations.
+	set dx10_clamp_bit_offset ""
+	gdb_test_multiple "ptype \$mode" "" -lbl {
+	    -re " *bool \[^\r\n \]*DX10_CLAMP @(\[0-9\]+);" {
+		set dx10_clamp_bit_offset $expect_out(1,string)
+		exp_continue
+	    }
+	    -re -wrap "" {
+		gdb_assert {"$dx10_clamp_bit_offset" != ""} $gdb_test_name
+	    }
+	}
+	gdb_test \
+	    "p \$mode &= ~(1 << ${dx10_clamp_bit_offset})" \
+	    "(?!.*DX10_CLAMP).*" \
+	    "clear MODE.DX10_CLAMP"
+    }
+
+    set excp_name [string toupper $excp_name]
+
+    # The FLOAT_DIV0 flag is named EXCP_ENABLE.DIV0 (not to be confused with
+    # EXCP_EN.INT_DIV0).
+    if {$excp_name == "FLOAT_DIV0" } {
+	set excp_name "EXCP_EN.DIV0"
+    }
+
+    set bit_offset ""
+    gdb_test_multiple "ptype \$mode" "" -lbl {
+	-re " *bool \[^\r\n \]*[string_to_regexp $excp_name] @(\[0-9\]+);" {
+	    set bit_offset $expect_out(1,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	    gdb_assert {"$bit_offset" != ""} $gdb_test_name
+	}
+    }
+
+    gdb_test \
+	"p \$mode |= (1 << $bit_offset)" \
+	"= .*$excp_name.*"
+}
+
+proc do_test { exception_name } {
+    with_test_prefix $exception_name {
+	clean_restart $::binfile
+
+	with_rocm_gpu_lock {
+	    gdb_test_no_output "set args $exception_name"
+	    if ![runto_main] {
+		return
+	    }
+
+	    gdb_breakpoint "enable_alu_exceptions" "allow-pending"
+	    gdb_continue_to_breakpoint "enable_alu_exceptions"
+	    enable_alu_exception $exception_name
+
+	    set bp_line [gdb_get_line_number "Break here for $exception_name"]
+	    gdb_breakpoint $bp_line \
+		"break before exception"
+	    gdb_continue_to_breakpoint "$exception_name"
+
+	    set pc "invalid"
+	    gdb_test_multiple "display/x \$pc" "" {
+		-re "pc = ($::hex)" {
+		    set pc $expect_out(1,string)
+		    exp_continue
+		}
+		-re -wrap "" {
+		    gdb_assert {$pc != "invalid"} $gdb_test_name
+		}
+	    }
+
+	    set iter 0
+	    gdb_test_multiple "si" "step until exception" {
+		-re -wrap "Thread $::decimal \[^\r\n]*received signal SIGFPE, Arithmetic exception\..*" {
+		    pass $gdb_test_name
+		}
+		-re -wrap ".*pc = ($::hex).*" {
+		    incr iter
+		    set pc $expect_out(1,string)
+		    if {$iter < 150} {
+			send_gdb "si\n"
+			exp_continue
+		    } else {
+			fail $gdb_test_name
+		    }
+		}
+	    }
+
+	    gdb_test "x/2i $pc" \
+		[multi_line \
+		    "   $pc \[^\r\n\]*" \
+		    "=> $::hex \[^\r\n\]*"] \
+		"stopped after fault"
+
+	    gdb_test "continue" ".*HSA_STATUS_ERROR_EXCEPTION.*received signal SIGABRT, Aborted.*" \
+		"exception sent to runtime"
+	}
+    }
+}
+
+do_test invalid
+do_test denorm
+do_test overflow
+do_test underflow
+do_test inexact
+do_test float_div0
+do_test int_div0
