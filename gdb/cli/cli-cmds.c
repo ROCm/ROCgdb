@@ -1646,6 +1646,10 @@ disassemble_command (const char *arg, int from_tty)
       == (DISASSEMBLY_SOURCE_DEPRECATED | DISASSEMBLY_SOURCE))
     error (_("Cannot specify both /m and /s."));
 
+  if ((flags & (DISASSEMBLY_RAW_INSN | DISASSEMBLY_RAW_BYTES))
+      == (DISASSEMBLY_RAW_INSN | DISASSEMBLY_RAW_BYTES))
+    error (_("Cannot specify both /r and /b."));
+
   if (! p || ! *p)
     {
       flags |= DISASSEMBLY_OMIT_FNAME;
@@ -1702,6 +1706,20 @@ disassemble_command (const char *arg, int from_tty)
     }
 
   print_disassembly (gdbarch, name, low, high, block, flags);
+}
+
+/* Command completion for the disassemble command.  */
+
+static void
+disassemble_command_completer (struct cmd_list_element *ignore,
+			       completion_tracker &tracker,
+			       const char *text, const char * /* word */)
+{
+  if (skip_over_slash_fmt (tracker, &text))
+    return;
+
+  const char *word = advance_to_expression_complete_word_point (tracker, text);
+  expression_completer (ignore, tracker, text, word);
 }
 
 static void
@@ -2861,7 +2879,7 @@ Note that the address is interpreted as an expression, not as a location\n\
 like in the \"break\" command.\n\
 So, for example, if you want to disassemble function bar in file foo.c\n\
 you must type \"disassemble 'foo.c'::bar\" and not \"disassemble foo.c:bar\"."));
-  set_cmd_completer (c, location_completer);
+  set_cmd_completer_handle_brkchars (c, disassemble_command_completer);
 
   c = add_com ("make", class_support, make_command, _("\
 Run the ``make'' program using the rest of the line as arguments."));
