@@ -2908,6 +2908,8 @@ inferior_thread_count_make_value (struct gdbarch *gdbarch,
 {
   int int_val = 0;
 
+  update_thread_list ();
+
   if (inferior_ptid != null_ptid)
     int_val = current_inferior ()->non_exited_threads ().size ();
 
