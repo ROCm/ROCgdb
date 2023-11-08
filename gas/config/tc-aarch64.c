@@ -7863,6 +7863,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  po_char_or_fail ('!');
 	  break;
 
+	case AARCH64_OPND_LSE128_Rt:
+	case AARCH64_OPND_LSE128_Rt2:
+	  po_int_fp_reg_or_fail (REG_TYPE_R_64);
+	  break;
+
 	default:
 	  as_fatal (_("unhandled operand code %d"), operands[i]);
 	}
@@ -10234,6 +10239,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
 			AARCH64_FEATURE (SIMD)},
   {"fp",		AARCH64_FEATURE (FP), AARCH64_NO_FEATURES},
   {"lse",		AARCH64_FEATURE (LSE), AARCH64_NO_FEATURES},
+  {"lse128",		AARCH64_FEATURES (2, LSE, LSE128), AARCH64_NO_FEATURES},
   {"simd",		AARCH64_FEATURE (SIMD), AARCH64_FEATURE (FP)},
   {"pan",		AARCH64_FEATURE (PAN), AARCH64_NO_FEATURES},
   {"lor",		AARCH64_FEATURE (LOR), AARCH64_NO_FEATURES},
@@ -10285,6 +10291,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"cssc",		AARCH64_FEATURE (CSSC), AARCH64_NO_FEATURES},
   {"chk",		AARCH64_FEATURE (CHK), AARCH64_NO_FEATURES},
   {"gcs",		AARCH64_FEATURE (GCS), AARCH64_NO_FEATURES},
+  {"the",		AARCH64_FEATURE (THE), AARCH64_NO_FEATURES},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 

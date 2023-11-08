@@ -2470,6 +2470,8 @@ static const aarch64_feature_set aarch64_feature_crc =
   AARCH64_FEATURE (CRC);
 static const aarch64_feature_set aarch64_feature_lse =
   AARCH64_FEATURE (LSE);
+static const aarch64_feature_set aarch64_feature_lse128 =
+  AARCH64_FEATURES (2, LSE, LSE128);
 static const aarch64_feature_set aarch64_feature_lor =
   AARCH64_FEATURE (LOR);
 static const aarch64_feature_set aarch64_feature_rdma =
@@ -2576,12 +2578,15 @@ static const aarch64_feature_set aarch64_feature_chk =
   AARCH64_FEATURE (CHK);
 static const aarch64_feature_set aarch64_feature_gcs =
   AARCH64_FEATURE (GCS);
+static const aarch64_feature_set aarch64_feature_the =
+  AARCH64_FEATURE (THE);
 
 #define CORE		&aarch64_feature_v8
 #define FP		&aarch64_feature_fp
 #define SIMD		&aarch64_feature_simd
 #define CRC		&aarch64_feature_crc
 #define LSE		&aarch64_feature_lse
+#define LSE128		&aarch64_feature_lse128
 #define LOR		&aarch64_feature_lor
 #define RDMA		&aarch64_feature_rdma
 #define FP_F16		&aarch64_feature_fp_f16
@@ -2636,6 +2641,7 @@ static const aarch64_feature_set aarch64_feature_gcs =
 #define CSSC	  &aarch64_feature_cssc
 #define CHK	  &aarch64_feature_chk
 #define GCS	  &aarch64_feature_gcs
+#define THE	  &aarch64_feature_the
 
 #define CORE_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, CORE, OPS, QUALS, FLAGS, 0, 0, NULL }
@@ -2649,6 +2655,8 @@ static const aarch64_feature_set aarch64_feature_gcs =
   { NAME, OPCODE, MASK, CLASS, 0, CRC, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define _LSE_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, LSE, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define _LSE128_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, LSE128, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define _LOR_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, LOR, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define RDMA_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
@@ -4096,6 +4104,19 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   _LSE_INSN ("stuminlb", 0x3860701f, 0xffe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_W1_LDST_EXC, F_ALIAS),
   _LSE_INSN ("stuminlh", 0x7860701f, 0xffe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_W1_LDST_EXC, F_ALIAS),
   _LSE_INSN ("stuminl", 0xb860701f, 0xbfe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_R1NIL, F_LSE_SZ | F_ALIAS),
+  /* LSE128 extension (atomic).  */
+  _LSE128_INSN ("ldclrp", 0x19201000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("ldclrpa", 0x19a01000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("ldclrpal", 0x19e01000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("ldclrpl", 0x19601000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("ldsetp", 0x19203000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("ldsetpa", 0x19a03000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("ldsetpal", 0x19e03000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("ldsetpl", 0x19603000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("swpp", 0x19208000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("swppa", 0x19a08000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("swppal", 0x19e08000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSE128_INSN ("swppl", 0x19608000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
   /* Move wide (immediate).  */
   CORE_INSN ("movn", 0x12800000, 0x7f800000, movewide, OP_MOVN, OP2 (Rd, HALF), QL_DST_R, F_SF | F_HAS_ALIAS),
   CORE_INSN ("mov",  0x12800000, 0x7f800000, movewide, OP_MOV_IMM_WIDEN, OP2 (Rd, IMM_MOV), QL_DST_R, F_SF | F_ALIAS | F_CONV),
@@ -6305,6 +6326,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "the GCSB option name DSYNC")					\
     Y(SYSTEM, hint, "BTI_TARGET", 0, F (),				\
       "BTI targets j/c/jc")						\
+    Y(INT_REG, regno, "LSE128_Rt", 0, F(FLD_LSE128_Rt), "an integer register") \
+    Y(INT_REG, regno, "LSE128_Rt2", 0, F(FLD_LSE128_Rt2), "an integer register") \
     Y(ADDRESS, sve_addr_ri_s4, "SVE_ADDR_RI_S4x16",			\
       4 << OPD_F_OD_LSB, F(FLD_Rn),					\
       "an address with a 4-bit signed offset, multiplied by 16")	\
