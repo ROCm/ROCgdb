@@ -1,0 +1,68 @@
+# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that "s_trap 3" (llvm.debugtrap) is effectively a nop when the
+# program is executed freely but causes a SIGTRAP when executed under
+# the debugger.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare $testfile" $testfile $srcfile \
+	{debug hip}]} {
+    return
+}
+
+proc_with_prefix do_test_outside_debugger {} {
+  set status [remote_exec target $::binfile]
+  gdb_assert { [lindex $status 0] == 0 } "runs freely outside debugger"
+}
+
+proc_with_prefix do_test_under_debugger {} {
+    clean_restart $::binfile
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	gdb_test "continue" \
+	    "Thread $::decimal.*received signal SIGTRAP, Trace/breakpoint trap\..*" \
+	    "raises SIGTRAP"
+
+	# The __builtin_debugtrap intrinsic  is implemented using the
+	# 's_trap 3' instruction.  When SIGTRAP is raised, the PC should point
+	# to the instruction just after the s_trap, and not the s_trap
+	# directly.  This is so we can "continue" execution past this
+	# instruction.  Note that we know that 's_trap 3' is encoded as a
+	# 4 byte instruction which is the smallest encoding of the ISA (s_trap
+	# is also used to implement software breakpoints).
+	gdb_test "x/2i \$pc - 4" \
+	    [multi_line \
+		"   ${::hex}\[^\r\n\]*s_trap 3" \
+		"=> ${::hex}\[^\r\n\]*"]
+
+	gdb_continue_to_end "continue until exit" continue 1
+    }
+}
+
+do_test_outside_debugger
+do_test_under_debugger
