@@ -804,6 +804,9 @@ static char *cpu_sub_arch_name = NULL;
 /* CPU feature flags.  */
 i386_cpu_flags cpu_arch_flags = CPU_UNKNOWN_FLAGS;
 
+/* ISA extensions available in 64-bit mode only.  */
+static const i386_cpu_flags cpu_64_flags = CPU_ANY_64_FLAGS;
+
 /* If we have selected a cpu we are generating instructions for.  */
 static int cpu_arch_tune_set = 0;
 
@@ -1652,24 +1655,36 @@ operand_type_equal (const union i386_operand_type *x,
 }
 
 static INLINE bool
-is_cpu (const insn_template *t, enum i386_cpu cpu)
+_is_cpu (const i386_cpu_attr *a, enum i386_cpu cpu)
 {
   switch (cpu)
     {
-    case Cpu287:      return t->cpu.bitfield.cpu287;
-    case Cpu387:      return t->cpu.bitfield.cpu387;
-    case Cpu3dnow:    return t->cpu.bitfield.cpu3dnow;
-    case Cpu3dnowA:   return t->cpu.bitfield.cpu3dnowa;
-    case CpuAVX:      return t->cpu.bitfield.cpuavx;
-    case CpuHLE:      return t->cpu.bitfield.cpuhle;
-    case CpuAVX512F:  return t->cpu.bitfield.cpuavx512f;
-    case CpuAVX512VL: return t->cpu.bitfield.cpuavx512vl;
-    case Cpu64:       return t->cpu.bitfield.cpu64;
-    case CpuNo64:     return t->cpu.bitfield.cpuno64;
+    case Cpu287:      return a->bitfield.cpu287;
+    case Cpu387:      return a->bitfield.cpu387;
+    case Cpu3dnow:    return a->bitfield.cpu3dnow;
+    case Cpu3dnowA:   return a->bitfield.cpu3dnowa;
+    case CpuAVX:      return a->bitfield.cpuavx;
+    case CpuHLE:      return a->bitfield.cpuhle;
+    case CpuAVX512F:  return a->bitfield.cpuavx512f;
+    case CpuAVX512VL: return a->bitfield.cpuavx512vl;
+    case Cpu64:       return a->bitfield.cpu64;
+    case CpuNo64:     return a->bitfield.cpuno64;
     default:
       gas_assert (cpu < CpuAttrEnums);
     }
-  return t->cpu.bitfield.isa == cpu + 1u;
+  return a->bitfield.isa == cpu + 1u;
+}
+
+static INLINE bool
+is_cpu (const insn_template *t, enum i386_cpu cpu)
+{
+  return _is_cpu(&t->cpu, cpu);
+}
+
+static INLINE bool
+maybe_cpu (const insn_template *t, enum i386_cpu cpu)
+{
+  return _is_cpu(&t->cpu_any, cpu);
 }
 
 static i386_cpu_flags cpu_flags_from_attr (i386_cpu_attr a)
@@ -1860,91 +1875,68 @@ static INLINE bool need_evex_encoding (void)
 static int
 cpu_flags_match (const insn_template *t)
 {
-  i386_cpu_flags x = cpu_flags_from_attr (t->cpu);
+  i386_cpu_flags cpu, active, all = cpu_flags_from_attr (t->cpu);
+  i386_cpu_flags any = cpu_flags_from_attr (t->cpu_any);
   int match = cpu_flags_check_cpu64 (t) ? CPU_FLAGS_64BIT_MATCH : 0;
 
-  x.bitfield.cpu64 = 0;
-  x.bitfield.cpuno64 = 0;
+  all.bitfield.cpu64 = 0;
+  all.bitfield.cpuno64 = 0;
+  gas_assert (!any.bitfield.cpu64);
+  gas_assert (!any.bitfield.cpuno64);
 
-  if (cpu_flags_all_zero (&x))
+  if (cpu_flags_all_zero (&all) && cpu_flags_all_zero (&any))
     {
       /* This instruction is available on all archs.  */
-      match |= CPU_FLAGS_ARCH_MATCH;
+      return match | CPU_FLAGS_ARCH_MATCH;
     }
-  else
-    {
-      /* This instruction is available only on some archs.  */
-      i386_cpu_flags cpu = cpu_arch_flags;
 
-      /* Dual VEX/EVEX templates may need stripping of one of the flags.  */
-      if (t->opcode_modifier.vex && t->opcode_modifier.evex)
+  /* This instruction is available only on some archs.  */
+
+  /* Dual VEX/EVEX templates may need stripping of one of the flags.  */
+  if (t->opcode_modifier.vex && t->opcode_modifier.evex)
+    {
+      /* Dual AVX/AVX512 templates need to retain AVX512* only if we already
+	 know that EVEX encoding will be needed.  */
+      if ((any.bitfield.cpuavx || any.bitfield.cpuavx2 || any.bitfield.cpufma)
+	  && (any.bitfield.cpuavx512f || any.bitfield.cpuavx512vl))
 	{
-	  /* Dual AVX/AVX512F templates need to retain AVX512F only if we already
-	     know that EVEX encoding will be needed.  */
-	  if ((x.bitfield.cpuavx || x.bitfield.cpuavx2)
-	      && x.bitfield.cpuavx512f)
+	  if (need_evex_encoding ())
 	    {
-	      if (need_evex_encoding ())
-		{
-		  x.bitfield.cpuavx = 0;
-		  x.bitfield.cpuavx2 = 0;
-		}
-	      /* need_evex_encoding() isn't reliable before operands were
-		 parsed.  */
-	      else if (i.operands)
-		{
-		  x.bitfield.cpuavx512f = 0;
-		  x.bitfield.cpuavx512vl = 0;
-		  if (x.bitfield.cpufma && !cpu.bitfield.cpufma)
-		    x.bitfield.cpuavx = 0;
-		}
+	      any.bitfield.cpuavx = 0;
+	      any.bitfield.cpuavx2 = 0;
+	      any.bitfield.cpufma = 0;
+	    }
+	  /* need_evex_encoding() isn't reliable before operands were
+	     parsed.  */
+	  else if (i.operands)
+	    {
+	      any.bitfield.cpuavx512f = 0;
+	      any.bitfield.cpuavx512vl = 0;
 	    }
 	}
+    }
 
-      /* AVX512VL is no standalone feature - match it and then strip it.  */
-      if (x.bitfield.cpuavx512vl && !cpu.bitfield.cpuavx512vl)
-	return match;
-      x.bitfield.cpuavx512vl = 0;
-
+  if (flag_code != CODE_64BIT)
+    active = cpu_flags_and_not (cpu_arch_flags, cpu_64_flags);
+  else
+    active = cpu_arch_flags;
+  cpu = cpu_flags_and (all, active);
+  if (cpu_flags_equal (&cpu, &all))
+    {
       /* AVX and AVX2 present at the same time express an operand size
 	 dependency - strip AVX2 for the purposes here.  The operand size
 	 dependent check occurs in check_vecOperands().  */
-      if (x.bitfield.cpuavx && x.bitfield.cpuavx2)
-	x.bitfield.cpuavx2 = 0;
+      if (any.bitfield.cpuavx && any.bitfield.cpuavx2)
+	any.bitfield.cpuavx2 = 0;
 
-      cpu = cpu_flags_and (x, cpu);
-      if (!cpu_flags_all_zero (&cpu))
+      cpu = cpu_flags_and (any, active);
+      if (cpu_flags_all_zero (&any) || !cpu_flags_all_zero (&cpu))
 	{
-	  if (t->cpu.bitfield.cpuavx && t->cpu.bitfield.cpuavx512f)
+	  if (all.bitfield.cpuavx)
 	    {
-	      if ((need_evex_encoding ()
-		   ? cpu.bitfield.cpuavx512f
-		   : cpu.bitfield.cpuavx)
-		  && (!x.bitfield.cpufma || cpu.bitfield.cpufma
-		      || cpu_arch_flags.bitfield.cpuavx512f)
-		  && (!x.bitfield.cpugfni || cpu.bitfield.cpugfni)
-		  && (!x.bitfield.cpuvaes || cpu.bitfield.cpuvaes)
-		  && (!x.bitfield.cpuvpclmulqdq || cpu.bitfield.cpuvpclmulqdq))
-		match |= CPU_FLAGS_ARCH_MATCH;
-	    }
-	  else if (x.bitfield.cpuavx)
-	    {
-	      /* We need to check a few extra flags with AVX.  */
-	      if (cpu.bitfield.cpuavx
-		  && (!t->opcode_modifier.sse2avx
-		      || (sse2avx && !i.prefix[DATA_PREFIX]))
-		  && (!x.bitfield.cpuaes || cpu.bitfield.cpuaes)
-		  && (!x.bitfield.cpugfni || cpu.bitfield.cpugfni)
-		  && (!x.bitfield.cpupclmulqdq || cpu.bitfield.cpupclmulqdq))
-		match |= CPU_FLAGS_ARCH_MATCH;
-	    }
-	  else if (x.bitfield.cpuavx2 && cpu.bitfield.cpuavx2)
-	    match |= CPU_FLAGS_ARCH_MATCH;
-	  else if (x.bitfield.cpuavx512f)
-	    {
-	      /* We need to check a few extra flags with AVX512F.  */
-	      if (cpu.bitfield.cpuavx512f
-		  && (!x.bitfield.cpugfni || cpu.bitfield.cpugfni))
+	      /* We need to check SSE2AVX with AVX.  */
+	      if (!t->opcode_modifier.sse2avx
+		  || (sse2avx && !i.prefix[DATA_PREFIX]))
 		match |= CPU_FLAGS_ARCH_MATCH;
 	    }
 	  else
@@ -3671,20 +3663,25 @@ install_template (const insn_template *t)
   /* Dual VEX/EVEX templates need stripping one of the possible variants.  */
   if (t->opcode_modifier.vex && t->opcode_modifier.evex)
   {
-      if ((is_cpu (t, CpuAVX) || is_cpu (t, CpuAVX2))
-	  && is_cpu (t, CpuAVX512F))
+      if ((maybe_cpu (t, CpuAVX) || maybe_cpu (t, CpuAVX2)
+	   || maybe_cpu (t, CpuFMA))
+	  && (maybe_cpu (t, CpuAVX512F) || maybe_cpu (t, CpuAVX512VL)))
 	{
 	  if (need_evex_encoding ())
 	    {
 	      i.tm.opcode_modifier.vex = 0;
-	      i.tm.cpu.bitfield.cpuavx = 0;
-	      if (is_cpu (&i.tm, CpuAVX2))
-	        i.tm.cpu.bitfield.isa = 0;
+	      i.tm.cpu.bitfield.cpuavx512f = i.tm.cpu_any.bitfield.cpuavx512f;
+	      i.tm.cpu.bitfield.cpuavx512vl = i.tm.cpu_any.bitfield.cpuavx512vl;
 	    }
 	  else
 	    {
 	      i.tm.opcode_modifier.evex = 0;
-	      i.tm.cpu.bitfield.cpuavx512f = 0;
+	      if (i.tm.cpu_any.bitfield.cpuavx)
+		i.tm.cpu.bitfield.cpuavx = 1;
+	      else if (!i.tm.cpu.bitfield.isa)
+		i.tm.cpu.bitfield.isa = i.tm.cpu_any.bitfield.isa;
+	      else
+		gas_assert (i.tm.cpu.bitfield.isa == i.tm.cpu_any.bitfield.isa);
 	    }
 	}
   }
@@ -3863,17 +3860,9 @@ build_vex_prefix (const insn_template *t)
 }
 
 static INLINE bool
-is_evex_encoding (const insn_template *t)
-{
-  return t->opcode_modifier.evex || t->opcode_modifier.disp8memshift
-	 || t->opcode_modifier.broadcast || t->opcode_modifier.masking
-	 || t->opcode_modifier.sae;
-}
-
-static INLINE bool
 is_any_vex_encoding (const insn_template *t)
 {
-  return t->opcode_modifier.vex || is_evex_encoding (t);
+  return t->opcode_modifier.vex || t->opcode_modifier.evex;
 }
 
 static unsigned int
@@ -3893,8 +3882,7 @@ get_broadcast_bytes (const insn_template *t, bool diag)
 
   gas_assert (op < t->operands);
 
-  if (t->opcode_modifier.evex
-      && t->opcode_modifier.evex != EVEXDYN)
+  if (t->opcode_modifier.evex != EVEXDYN)
     switch (i.broadcast.bytes)
       {
       case 1:
@@ -4042,8 +4030,7 @@ build_evex_prefix (void)
       /* Encode the vector length.  */
       unsigned int vec_length;
 
-      if (!i.tm.opcode_modifier.evex
-	  || i.tm.opcode_modifier.evex == EVEXDYN)
+      if (i.tm.opcode_modifier.evex == EVEXDYN)
 	{
 	  unsigned int op;
 
@@ -4541,7 +4528,7 @@ optimize_encoding (void)
 	   && !i.types[2].bitfield.xmmword
 	   && (i.tm.opcode_modifier.vex
 	       || ((!i.mask.reg || i.mask.zeroing)
-		   && is_evex_encoding (&i.tm)
+		   && i.tm.opcode_modifier.evex
 		   && (i.vec_encoding != vex_encoding_evex
 		       || cpu_arch_isa_flags.bitfield.cpuavx512vl
 		       || is_cpu (&i.tm, CpuAVX512VL)
@@ -4590,7 +4577,7 @@ optimize_encoding (void)
 	     VEX VOP %kM, %kM, %kN
 	       -> VEX kandnw %kM, %kM, %kN
        */
-      if (is_evex_encoding (&i.tm))
+      if (i.tm.opcode_modifier.evex)
 	{
 	  if (i.vec_encoding != vex_encoding_evex)
 	    {
@@ -4626,7 +4613,7 @@ optimize_encoding (void)
 	   && !i.mask.reg
 	   && !i.broadcast.type
 	   && !i.broadcast.bytes
-	   && is_evex_encoding (&i.tm)
+	   && i.tm.opcode_modifier.evex
 	   && ((i.tm.base_opcode & ~Opcode_SIMD_IntD) == 0x6f
 	       || (i.tm.base_opcode & ~4) == 0xdb
 	       || (i.tm.base_opcode & ~4) == 0xeb)
@@ -4705,7 +4692,7 @@ optimize_encoding (void)
 	   && i.op[0].regs == i.op[1].regs
 	   && (!i.tm.opcode_modifier.vex
 	       || !(i.op[0].regs->reg_flags & RegRex))
-	   && !is_evex_encoding (&i.tm))
+	   && !i.tm.opcode_modifier.evex)
     {
       /* Optimize: -Os:
          pcmpeqq %xmmN, %xmmN          -> pcmpeqd %xmmN, %xmmN
@@ -4722,7 +4709,7 @@ optimize_encoding (void)
 		&& i.tm.opcode_space == SPACE_0F38))
 	   && i.operands == i.reg_operands
 	   && i.op[0].regs == i.op[1].regs
-	   && !is_evex_encoding (&i.tm))
+	   && !i.tm.opcode_modifier.evex)
     {
       /* Optimize: -O:
          pcmpgt[bwd] %mmN, %mmN             -> pxor %mmN, %mmN
@@ -5201,10 +5188,14 @@ md_assemble (char *line)
 	   && operand_type_check (i.types[1], imm)))
     swap_operands ();
 
-  /* The order of the immediates should be reversed
-     for 2 immediates extrq and insertq instructions */
-  if (i.imm_operands == 2
-      && (t->mnem_off == MN_extrq || t->mnem_off == MN_insertq))
+  /* The order of the immediates should be reversed for 2-immediates EXTRQ
+     and INSERTQ instructions.  Also UWRMSR wants its immediate to be in the
+     "canonical" place (first), despite it appearing last (in AT&T syntax, or
+     because of the swapping above) in the incoming set of operands.  */
+  if ((i.imm_operands == 2
+       && (t->mnem_off == MN_extrq || t->mnem_off == MN_insertq))
+      || (t->mnem_off == MN_uwrmsr && i.imm_operands
+	  && i.operands > i.imm_operands))
       swap_2_operands (0, 1);
 
   if (i.imm_operands)
@@ -6562,7 +6553,7 @@ check_VecOperands (const insn_template *t)
 
   /* Somewhat similarly, templates specifying both AVX and AVX2 are
      requiring AVX2 support if the actual operand size is YMMword.  */
-  if (is_cpu (t, CpuAVX) && is_cpu (t, CpuAVX2)
+  if (maybe_cpu (t, CpuAVX) && maybe_cpu (t, CpuAVX2)
       && !cpu_arch_flags.bitfield.cpuavx2)
     {
       for (op = 0; op < t->operands; ++op)
@@ -6958,7 +6949,7 @@ VEX_check_encoding (const insn_template *t)
       || i.vec_encoding == vex_encoding_evex512)
     {
       /* This instruction must be encoded with EVEX prefix.  */
-      if (!is_evex_encoding (t))
+      if (!t->opcode_modifier.evex)
 	{
 	  i.error = unsupported;
 	  return 1;
@@ -7557,17 +7548,6 @@ match_template (char mnem_suffix)
       break;
     }
 
-  /* This pattern aims to put the unusually placed imm operand to a usual
-     place. The constraints are currently only adapted to uwrmsr, and may
-     need further tweaking when new similar instructions become available.  */
-  if (i.imm_operands && i.imm_operands < i.operands
-      && operand_type_check (operand_types[i.operands - 1], imm))
-    {
-      i.tm.operand_types[0] = operand_types[i.operands - 1];
-      i.tm.operand_types[i.operands - 1] = operand_types[0];
-      swap_2_operands(0, i.operands - 1);
-    }
-
   return t;
 }
 
@@ -7788,27 +7768,22 @@ process_suffix (void)
 		    {
 		      i.tm.operand_types[op].bitfield.ymmword = 0;
 		      if (i.tm.operand_types[op].bitfield.xmmword
-			  && (i.tm.opcode_modifier.evex == EVEXDYN
-			      || (!i.tm.opcode_modifier.evex
-				  && is_evex_encoding (&i.tm))))
+			  && i.tm.opcode_modifier.evex == EVEXDYN)
 			i.tm.opcode_modifier.evex = EVEX128;
 		    }
 		  else if (i.tm.operand_types[op].bitfield.ymmword
 			   && !i.tm.operand_types[op].bitfield.xmmword
-			   && (i.tm.opcode_modifier.evex == EVEXDYN
-			       || (!i.tm.opcode_modifier.evex
-				   && is_evex_encoding (&i.tm))))
+			   && i.tm.opcode_modifier.evex == EVEXDYN)
 		    i.tm.opcode_modifier.evex = EVEX256;
 		}
-	      else if (is_evex_encoding (&i.tm)
+	      else if (i.tm.opcode_modifier.evex
 		       && !cpu_arch_flags.bitfield.cpuavx512vl)
 		{
 		  if (i.tm.operand_types[op].bitfield.ymmword)
 		    i.tm.operand_types[op].bitfield.xmmword = 0;
 		  if (i.tm.operand_types[op].bitfield.zmmword)
 		    i.tm.operand_types[op].bitfield.ymmword = 0;
-		  if (!i.tm.opcode_modifier.evex
-		      || i.tm.opcode_modifier.evex == EVEXDYN)
+		  if (i.tm.opcode_modifier.evex == EVEXDYN)
 		    i.tm.opcode_modifier.evex = EVEX512;
 		}
 
@@ -7836,7 +7811,7 @@ process_suffix (void)
 		    suffixes |= 1 << 7;
 		  if (i.tm.operand_types[op].bitfield.zmmword)
 		    suffixes |= 1 << 8;
-		  if (is_evex_encoding (&i.tm))
+		  if (i.tm.opcode_modifier.evex)
 		    evex = EVEX512;
 		}
 	    }
@@ -8730,7 +8705,7 @@ build_modrm_byte (void)
 	  exp = i.op[0].imms;
 	}
       exp->X_add_number |= register_number (i.op[reg_slot].regs)
-			   << (3 + !(is_evex_encoding (&i.tm)
+			   << (3 + !(i.tm.opcode_modifier.evex
 				     || i.vec_encoding == vex_encoding_evex));
     }
 

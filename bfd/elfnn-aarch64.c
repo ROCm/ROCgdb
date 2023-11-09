@@ -3675,7 +3675,7 @@ group_sections (struct elf_aarch64_link_hash_table *htab,
 /* True if the inserted stub does not break BTI compatibility.  */
 
 static bool
-aarch64_bti_stub_p (bfd *input_bfd,
+aarch64_bti_stub_p (struct bfd_link_info *info,
 		    struct elf_aarch64_stub_hash_entry *stub_entry)
 {
   /* Stubs without indirect branch are BTI compatible.  */
@@ -3685,12 +3685,22 @@ aarch64_bti_stub_p (bfd *input_bfd,
 
   /* Return true if the target instruction is compatible with BR x16.  */
 
+  struct elf_aarch64_link_hash_table *globals = elf_aarch64_hash_table (info);
   asection *section = stub_entry->target_section;
   bfd_byte loc[4];
   file_ptr off = stub_entry->target_value;
   bfd_size_type count = sizeof (loc);
 
-  if (!bfd_get_section_contents (input_bfd, section, loc, off, count))
+  /* PLT code is not generated yet, so treat it specially.
+     Note: Checking elf_aarch64_obj_tdata.plt_type & PLT_BTI is not
+     enough because it only implies BTI in the PLT0 and tlsdesc PLT
+     entries. Normal PLT entries don't have BTI in a shared library
+     (because such PLT is normally not called indirectly and adding
+     the BTI when a stub targets a PLT would change the PLT layout
+     and it's too late for that here).  */
+  if (section == globals->root.splt)
+    memcpy (loc, globals->plt_entry, count);
+  else if (!bfd_get_section_contents (section->owner, section, loc, off, count))
     return false;
 
   uint32_t insn = bfd_getl32 (loc);
@@ -4637,11 +4647,24 @@ _bfd_aarch64_add_call_stub_entries (bool *stub_changed, bfd *output_bfd,
 
 	      /* A stub with indirect jump may break BTI compatibility, so
 		 insert another stub with direct jump near the target then.  */
-	      if (need_bti && !aarch64_bti_stub_p (input_bfd, stub_entry))
+	      if (need_bti && !aarch64_bti_stub_p (info, stub_entry))
 		{
+		  id_sec_bti = htab->stub_group[sym_sec->id].link_sec;
+
+		  /* If the stub with indirect jump and the BTI stub are in
+		     the same stub group: change the indirect jump stub into
+		     a BTI stub since a direct branch can reach the target.
+		     The BTI landing pad is still needed in case another
+		     stub indirectly jumps to it.  */
+		  if (id_sec_bti == id_sec)
+		    {
+		      stub_entry->stub_type = aarch64_stub_bti_direct_branch;
+		      goto skip_double_stub;
+		    }
+
 		  stub_entry->double_stub = true;
 		  htab->has_double_stub = true;
-		  id_sec_bti = htab->stub_group[sym_sec->id].link_sec;
+
 		  stub_name_bti =
 		    elfNN_aarch64_stub_name (id_sec_bti, sym_sec, hash, irela);
 		  if (!stub_name_bti)
@@ -4653,33 +4676,41 @@ _bfd_aarch64_add_call_stub_entries (bool *stub_changed, bfd *output_bfd,
 		  stub_entry_bti =
 		    aarch64_stub_hash_lookup (&htab->stub_hash_table,
 					      stub_name_bti, false, false);
-		  if (stub_entry_bti == NULL)
-		    stub_entry_bti =
-		      _bfd_aarch64_add_stub_entry_in_group (stub_name_bti,
-							    sym_sec, htab);
-		  if (stub_entry_bti == NULL)
+		  if (stub_entry_bti != NULL)
+		    BFD_ASSERT (stub_entry_bti->stub_type
+				== aarch64_stub_bti_direct_branch);
+		  else
 		    {
-		      free (stub_name);
-		      free (stub_name_bti);
-		      goto error_ret_free_internal;
-		    }
+		      stub_entry_bti =
+			_bfd_aarch64_add_stub_entry_in_group (stub_name_bti,
+							      sym_sec, htab);
+		      if (stub_entry_bti == NULL)
+			{
+			  free (stub_name);
+			  free (stub_name_bti);
+			  goto error_ret_free_internal;
+			}
 
-		  stub_entry_bti->target_value = sym_value + irela->r_addend;
-		  stub_entry_bti->target_section = sym_sec;
-		  stub_entry_bti->stub_type = aarch64_stub_bti_direct_branch;
-		  stub_entry_bti->h = hash;
-		  stub_entry_bti->st_type = st_type;
+		      stub_entry_bti->target_value =
+			sym_value + irela->r_addend;
+		      stub_entry_bti->target_section = sym_sec;
+		      stub_entry_bti->stub_type =
+			aarch64_stub_bti_direct_branch;
+		      stub_entry_bti->h = hash;
+		      stub_entry_bti->st_type = st_type;
 
-		  len = sizeof (BTI_STUB_ENTRY_NAME) + strlen (sym_name);
-		  stub_entry_bti->output_name = bfd_alloc (htab->stub_bfd, len);
-		  if (stub_entry_bti->output_name == NULL)
-		    {
-		      free (stub_name);
-		      free (stub_name_bti);
-		      goto error_ret_free_internal;
+		      len = sizeof (BTI_STUB_ENTRY_NAME) + strlen (sym_name);
+		      stub_entry_bti->output_name = bfd_alloc (htab->stub_bfd,
+							       len);
+		      if (stub_entry_bti->output_name == NULL)
+			{
+			  free (stub_name);
+			  free (stub_name_bti);
+			  goto error_ret_free_internal;
+			}
+		      snprintf (stub_entry_bti->output_name, len,
+				BTI_STUB_ENTRY_NAME, sym_name);
 		    }
-		  snprintf (stub_entry_bti->output_name, len,
-			    BTI_STUB_ENTRY_NAME, sym_name);
 
 		  /* Update the indirect call stub to target the BTI stub.  */
 		  stub_entry->target_value = 0;
@@ -4688,7 +4719,7 @@ _bfd_aarch64_add_call_stub_entries (bool *stub_changed, bfd *output_bfd,
 		  stub_entry->h = NULL;
 		  stub_entry->st_type = STT_FUNC;
 		}
-
+skip_double_stub:
 	      *stub_changed = true;
 	    }
 
