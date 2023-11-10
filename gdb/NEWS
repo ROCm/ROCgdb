@@ -29,6 +29,20 @@ amd64 Windows/MSVC              x86_64-*-windows-msvc
 
 AArch64 Windows/MSVC            aarch64-*-windows-msvc
 
+* New commands
+
+set print shadowed on|off
+show print shadowed
+  This controls the output of the "info locals" command.  If the option is
+  "off", shadowed variables will be omitted from the output.  The default is
+  to print shadowed variables.
+
+* Changed commands
+
+info locals
+  The new "-shadowed on|off" option overrides the "set print shadowed"
+  setting for a single invocation of the command.
+
 *** Changes in GDB 18
 
 * Support for the Common Trace Format (CTF) has been removed.  GDB now

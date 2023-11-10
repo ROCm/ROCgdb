@@ -24,7 +24,7 @@ shadowing (void)
   a = 101;  /* bp for locals 1 */
   {
     unsigned int val2 = 3;		/* val2-d2 */
-    unsigned int val3 = 4;		/* val3-d1 */
+    double val3 = 4;			/* val3-d1 */
     a = 102;  /* bp for locals 2 */
     {
       unsigned int val1 = 5;		/* val1-d2 */

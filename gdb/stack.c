@@ -217,10 +217,48 @@ static const gdb::option::option_def backtrace_command_option_defs[] = {
   },
 };
 
+/* Option for printing shadowed variables.  */
+
+struct shadowed_print_options
+{
+  bool print_shadowed = true;
+};
+
+/* Store the user's "set print shadowed" setting.  It can be overridden
+   with "info locals -shadowed on|off".  */
+
+static shadowed_print_options user_shadowed_print_options;
+
+/* Implement "show print shadowed".  */
+
+static void
+show_print_shadowed (struct ui_file *file, int from_tty,
+		     struct cmd_list_element *c, const char *value)
+{
+  gdb_printf (file, _("Printing of shadowed variables is %s.\n"), value);
+}
+
+/* Option definitions for the shadowed variables setting.  */
+
+static const gdb::option::option_def shadowed_print_option_defs[] = {
+
+  gdb::option::boolean_option_def<shadowed_print_options> {
+    "shadowed",
+    [] (shadowed_print_options *opt) { return &opt->print_shadowed; },
+    show_print_shadowed, /* show_cmd_cb */
+    N_("Set printing of shadowed variables."),
+    N_("Show printing of shadowed variables."),
+    N_("When on, variables that are shadowed by a declaration in an inner\n\
+scope are printed, annotated with the location of their declaration.\n\
+When off, such variables are omitted."),
+  },
+};
+
 /* Prototypes for local functions.  */
 
 static void print_frame_local_vars (const frame_info_ptr &frame,
-				    bool quiet,
+				    bool quiet, bool print_shadowed,
+				    bool print_shadowed_msg,
 				    const char *regexp, const char *t_regexp,
 				    int num_tabs, struct ui_file *stream);
 
@@ -1982,7 +2020,9 @@ backtrace_command_1 (const frame_print_options &fp_opts,
 
 	  print_frame_info (fp_opts, fi, 1, LOCATION, 1, 0);
 	  if ((flags & PRINT_LOCALS) != 0)
-	    print_frame_local_vars (fi, false, NULL, NULL, 1, gdb_stdout);
+	    print_frame_local_vars (fi, false,
+				    user_shadowed_print_options.print_shadowed,
+				    false, NULL, NULL, 1, gdb_stdout);
 
 	  /* Save the last frame to check for error conditions.  */
 	  trailing = fi;
@@ -2255,6 +2295,9 @@ struct print_variable_and_value_data
   int num_tabs;
   struct ui_file *stream;
   int values_printed;
+  bool print_shadowed = true;
+  bool printed_shadowed_variables = false;
+  bool omitted_shadowed_variables = false;
 
   void operator() (const char *print_name, struct symbol *sym,
 		   var_shadowing shadow_status);
@@ -2278,6 +2321,12 @@ print_variable_and_value_data::operator() (const char *print_name,
   if (language_def (sym->language ())->symbol_printing_suppressed (sym))
     return;
 
+  if (!print_shadowed && shadow_status == var_shadowing::SHADOWED)
+    {
+      omitted_shadowed_variables = true;
+      return;
+    }
+
   frame = frame_find_by_id (frame_id);
   if (frame == NULL)
     {
@@ -2286,9 +2335,13 @@ print_variable_and_value_data::operator() (const char *print_name,
     }
 
   print_variable_and_value (print_name, sym, frame, stream, num_tabs,
-			    shadow_status);
+			    print_shadowed
+			    ? shadow_status : var_shadowing::NONE);
 
   values_printed = 1;
+
+  if (shadow_status == var_shadowing::SHADOWED)
+    printed_shadowed_variables = true;
 }
 
 /* Prepares the regular expression REG from REGEXP.
@@ -2309,6 +2362,9 @@ prepare_reg (const char *regexp, std::optional<compiled_regex> *reg)
 
 /* Print all variables from the innermost up to the function block of FRAME.
    Print them with values to STREAM indented by NUM_TABS.
+   PRINT_SHADOWED controls whether shadowed variables are printed.
+   PRINT_SHADOWED_MSG controls whether a trailing "set print shadowed" message
+   is printed.
    If REGEXP is not NULL, only print local variables whose name
    matches REGEXP.
    If T_REGEXP is not NULL, only print local variables whose type
@@ -2318,9 +2374,10 @@ prepare_reg (const char *regexp, std::optional<compiled_regex> *reg)
 
 static void
 print_frame_local_vars (const frame_info_ptr &frame,
-			bool quiet,
-			const char *regexp, const char *t_regexp,
-			int num_tabs, struct ui_file *stream)
+			bool quiet, bool print_shadowed,
+			bool print_shadowed_msg, const char *regexp,
+			const char *t_regexp, int num_tabs,
+			struct ui_file *stream)
 {
   struct print_variable_and_value_data cb_data;
   const struct block *block;
@@ -2348,6 +2405,7 @@ print_frame_local_vars (const frame_info_ptr &frame,
   cb_data.num_tabs = 4 * num_tabs;
   cb_data.stream = stream;
   cb_data.values_printed = 0;
+  cb_data.print_shadowed = print_shadowed;
 
   /* Temporarily change the selected frame to the given FRAME.
      This allows routines that rely on the selected frame instead
@@ -2357,13 +2415,31 @@ print_frame_local_vars (const frame_info_ptr &frame,
 
   iterate_over_block_local_vars_printing (block, cb_data);
 
-  if (!cb_data.values_printed && !quiet)
+  if (quiet)
+    return;
+
+  if (!cb_data.values_printed)
     {
       if (regexp == NULL && t_regexp == NULL)
 	gdb_printf (stream, _("No locals.\n"));
       else
 	gdb_printf (stream, _("No matching locals.\n"));
     }
+
+  if (!print_shadowed_msg)
+    return;
+
+  if (cb_data.printed_shadowed_variables)
+    gdb_printf (stream,
+		_("Use \"%ps\" to hide shadowed variables.\n"),
+		styled_string (command_style.style (),
+			       "set print shadowed off"));
+  else if (cb_data.omitted_shadowed_variables)
+    gdb_printf (stream,
+		_("Some shadowed variables were omitted, use \"%ps\" "
+		  "to include them.\n"),
+		styled_string (command_style.style (),
+			       "set print shadowed on"));
 }
 
 /* Structure to hold the values of the options used by the 'info
@@ -2394,24 +2470,51 @@ static const gdb::option::option_def info_print_options_defs[] = {
   }
 };
 
-/* Returns the option group used by 'info locals' and 'info args'
-   commands.  */
+/* Returns the option group used by the "info args" command.  */
 
 static gdb::option::option_def_group
-make_info_print_options_def_group (info_print_options *opts)
+make_info_args_options_def_group (info_print_options *opts)
 {
   return {{info_print_options_defs}, opts};
 }
 
-/* Command completer for 'info locals' and 'info args'.  */
+/* Returns the option groups used by the "info locals" command.  */
+
+static std::array<gdb::option::option_def_group, 2>
+make_info_locals_options_def_group (info_print_options *opts,
+				    shadowed_print_options *sh_opts)
+{
+  return {{
+    { {info_print_options_defs}, opts },
+    { {shadowed_print_option_defs}, sh_opts }
+  }};
+}
+
+/* Command completer for "info args".  */
 
 static void
-info_print_command_completer (struct cmd_list_element *ignore,
-			      completion_tracker &tracker,
-			      const char *text, const char * /* word */)
+info_args_command_completer (struct cmd_list_element *ignore,
+			     completion_tracker &tracker,
+			     const char *text, const char * /* word */)
 {
   const auto group
-    = make_info_print_options_def_group (nullptr);
+    = make_info_args_options_def_group (nullptr);
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group))
+    return;
+
+  const char *word = advance_to_expression_complete_word_point (tracker, text);
+  symbol_completer (ignore, tracker, text, word);
+}
+
+/* Command completer for "info locals".  */
+
+static void
+info_locals_command_completer (struct cmd_list_element *ignore,
+			       completion_tracker &tracker,
+			       const char *text, const char * /* word */)
+{
+  const auto group = make_info_locals_options_def_group (nullptr, nullptr);
   if (gdb::option::complete_options
       (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group))
     return;
@@ -2426,7 +2529,8 @@ void
 info_locals_command (const char *args, int from_tty)
 {
   info_print_options opts;
-  auto grp = make_info_print_options_def_group (&opts);
+  shadowed_print_options sh_opts = user_shadowed_print_options;
+  auto grp = make_info_locals_options_def_group (&opts, &sh_opts);
   gdb::option::process_options
     (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, grp);
   if (args != nullptr && *args == '\0')
@@ -2434,7 +2538,7 @@ info_locals_command (const char *args, int from_tty)
 
   print_frame_local_vars
     (get_selected_frame (_("No frame selected.")),
-     opts.quiet, args,
+     opts.quiet, sh_opts.print_shadowed, true, args,
      opts.type_regexp.empty () ? nullptr : opts.type_regexp.c_str (),
      0, gdb_stdout);
 }
@@ -2543,7 +2647,7 @@ void
 info_args_command (const char *args, int from_tty)
 {
   info_print_options opts;
-  auto grp = make_info_print_options_def_group (&opts);
+  auto grp = make_info_args_options_def_group (&opts);
   gdb::option::process_options
     (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, grp);
   if (args != nullptr && *args == '\0')
@@ -3505,11 +3609,13 @@ Usage: info frame level LEVEL"),
   cmd = add_info ("locals", info_locals_command,
 		  info_print_args_help (_("\
 All local variables of current stack frame or those matching REGEXPs.\n\
-Usage: info locals [-q] [-t TYPEREGEXP] [NAMEREGEXP]\n\
-Prints the local variables of the current stack frame.\n"),
+Usage: info locals [-q] [-shadowed [on|off]] [-t TYPEREGEXP] [NAMEREGEXP]\n\
+Prints the local variables of the current stack frame.\n\
+The -shadowed option overrides the \"set print shadowed\" setting for this\n\
+command.\n"),
 					_("local variables"),
 					false));
-  set_cmd_completer_handle_brkchars (cmd, info_print_command_completer);
+  set_cmd_completer_handle_brkchars (cmd, info_locals_command_completer);
   cmd = add_info ("args", info_args_command,
 		  info_print_args_help (_("\
 All argument variables of current stack frame or those matching REGEXPs.\n\
@@ -3517,7 +3623,7 @@ Usage: info args [-q] [-t TYPEREGEXP] [NAMEREGEXP]\n\
 Prints the argument variables of the current stack frame.\n"),
 					_("argument variables"),
 					false));
-  set_cmd_completer_handle_brkchars (cmd, info_print_command_completer);
+  set_cmd_completer_handle_brkchars (cmd, info_args_command_completer);
 
   /* Install "set print raw frame-arguments", a deprecated spelling of
      "set print raw-frame-arguments".  */
@@ -3557,4 +3663,8 @@ source line."),
   gdb::option::add_setshow_cmds_for_options
     (class_stack, &user_frame_print_options,
      frame_print_option_defs, &setprintlist, &showprintlist);
+
+  gdb::option::add_setshow_cmds_for_options
+    (class_support, &user_shadowed_print_options,
+     shadowed_print_option_defs, &setprintlist, &showprintlist);
 }
