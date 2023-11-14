@@ -1,0 +1,69 @@
+# Copyright (C) 2023 Free Software Foundation, Inc.
+# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Test software breakpoint on a register.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile bit-extract.cpp
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+if ![runto_main] {
+    fail "can't run to main"
+    return -1
+}
+
+set timeout 60
+
+# Set breakpoint in device code.
+gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_continue_to_breakpoint "bit_extract_kernel"
+
+# Set watchpoint on a stack pointer.
+gdb_test "watch \$s32" \
+	 "Watchpoint.*: \\\$s32.*" \
+	 "watchpoint on a stack pointer of the first wave"
+
+# Continue to the next wave hitting the breakpoint to make sure that
+# a watchpoint context is correctly set and CPU thread is skipped.
+gdb_test "continue" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
+
+delete_breakpoints
+
+# Register watchpoints are always software watchpoints, if scheduler
+# locking is not set it will take forever to execute.
+gdb_test_no_output "set scheduler-locking on" "enable scheduler locking"
+
+# Set watchpoint on a stack pointer.
+gdb_test "watch \$s32" \
+	 "Watchpoint.*: \\\$s32.*" \
+	 "watchpoint on a stack pointer of the second wave"
+
+# Continue until the watchpoint is triggered.
+set pattern ""
+gdb_test "continue" \
+	 "Continuing.*Watchpoint.*: \\\$s32.*" \
+	 "change stack pointer value"
+}
