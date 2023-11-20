@@ -22,4 +22,9 @@
 
 int my_execve (const char *file, char *argv[], char *envp[]);
 
+/* `exit` syscall, which makes the thread exit (as opposed to
+   `exit_group`, which makes the process exit).  */
+
+void my_exit (int code);
+
 #endif /* MY_SYSCALLS_H */

@@ -1,3 +1,30 @@
+2023-11-15  YunQiang Su  <yunqiang.su@cipunited.com>
+
+	* testsuite/gas/mips/mips.exp (mips_arch_create): Add "--defsym
+	r6=" to as_flags for r6 targets.
+
+2023-11-15  Arsen Arsenović  <arsen@aarsen.me>
+
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+	* po/Make-in ($(srcdir)/$(PACKAGE).pot): Output to a .pot
+	temporary file, to suppress xgettext checking charset names.
+
+2023-11-15  YunQiang Su  <yunqiang.su@cipunited.com>
+
+	* testsuite/gas/elf/elf.exp (section2): Add -mpdr option to
+	assembler command line for mips-irix targets.
+	* testsuite/gas/mips/elf-rel26.d: Add -mpdr command line option.
+	* testsuite/gas/mips/mips16-e.d: Likewise.
+	* testsuite/gas/mips/mips16-f.d: Likewise.
+	* testsuite/gas/mips/mips16-hilo-match.d: Likewise.
+	* testsuite/gas/mips/mips16-e-irix.d: Likewise.
+	* testsuite/gas/mips/call-nonpic-1.d: Adjust regexp to allow for
+	mips-irix targets.
+	* testsuite/gas/mips/irix-no-pdr.d: New test file.
+	* testsuite/gas/mips/mips.exp: Run new test for mips-irix
+	targets.
+
 2023-10-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
 
 	* testsuite/gas/bpf/alu-pseudoc.s: Add test to make sure C-like

@@ -82,6 +82,8 @@ public:
 
   void thread_events (int) override;
 
+  bool supports_set_thread_options (gdb_thread_options options) override;
+
   bool can_async_p () override;
 
   bool supports_non_stop () override;
@@ -128,6 +130,8 @@ public:
   void post_attach (int) override;
 
   void follow_fork (inferior *, ptid_t, target_waitkind, bool, bool) override;
+
+  void follow_clone (ptid_t) override;
 
   std::vector<static_tracepoint_marker>
     static_tracepoint_markers_by_strid (const char *id) override;

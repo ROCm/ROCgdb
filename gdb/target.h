@@ -658,6 +658,13 @@ struct target_ops
       TARGET_DEFAULT_RETURN (1);
     virtual void follow_fork (inferior *, ptid_t, target_waitkind, bool, bool)
       TARGET_DEFAULT_FUNC (default_follow_fork);
+
+    /* Add CHILD_PTID to the thread list, after handling a
+       TARGET_WAITKIND_THREAD_CLONE event for the clone parent.  The
+       parent is inferior_ptid.  */
+    virtual void follow_clone (ptid_t child_ptid)
+      TARGET_DEFAULT_FUNC (default_follow_clone);
+
     virtual int insert_exec_catchpoint (int)
       TARGET_DEFAULT_RETURN (1);
     virtual int remove_exec_catchpoint (int)
@@ -758,6 +765,10 @@ struct target_ops
       TARGET_DEFAULT_RETURN (false);
     virtual void thread_events (int)
       TARGET_DEFAULT_IGNORE ();
+    /* Returns true if the target supports setting thread options
+       OPTIONS, false otherwise.  */
+    virtual bool supports_set_thread_options (gdb_thread_options options)
+      TARGET_DEFAULT_RETURN (false);
     /* This method must be implemented in some situations.  See the
        comment on 'can_run'.  */
     virtual bool supports_non_stop ()
@@ -1928,6 +1939,10 @@ extern void target_async (bool enable);
 
 /* Enables/disables thread create and exit events.  */
 extern void target_thread_events (int enable);
+
+/* Returns true if the target supports setting thread options
+   OPTIONS.  */
+extern bool target_supports_set_thread_options (gdb_thread_options options);
 
 /* Whether support for controlling the target backends always in
    non-stop mode is enabled.  */

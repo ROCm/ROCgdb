@@ -254,6 +254,16 @@ struct block : public allocate_on_obstack
 
   const struct block *static_block () const;
 
+  /* Return true if this block is a static block.  */
+
+  bool is_static_block () const
+  {
+    const block *sup = superblock ();
+    if (sup == nullptr)
+      return false;
+    return sup->is_global_block ();
+  }
+
   /* Return the static block associated with block.  */
 
   const struct block *global_block () const;
@@ -261,6 +271,17 @@ struct block : public allocate_on_obstack
   /* Check if block is either global or static.  */
 
   bool is_global_or_static () const;
+
+  /* Return true if this block is a global block.  */
+
+  bool is_global_block () const
+  { return superblock () == nullptr; }
+
+  /* Return the function block for this block.  Returns nullptr if
+     there is no enclosing function, i.e., if this block is a static
+     or global block.  */
+
+  const struct block *function_block () const;
 
   /* Set the compunit of this block, which must be a global block.  */
 

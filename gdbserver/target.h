@@ -276,6 +276,9 @@ public:
   /* Returns true if vfork events are supported.  */
   virtual bool supports_vfork_events ();
 
+  /* Returns the set of supported thread options.  */
+  virtual gdb_thread_options supported_thread_options ();
+
   /* Returns true if exec events are supported.  */
   virtual bool supports_exec_events ();
 
@@ -315,6 +318,9 @@ public:
 
   /* Return true if THREAD is known to be stopped now.  */
   virtual bool thread_stopped (thread_info *thread);
+
+  /* Return true if any thread is known to be resumed.  */
+  virtual bool any_resumed ();
 
   /* Return true if the get_tib_address op is supported.  */
   virtual bool supports_get_tib_address ();
@@ -475,13 +481,15 @@ public:
   virtual bool thread_handle (ptid_t ptid, gdb_byte **handle,
 			      int *handle_len);
 
-  /* If THREAD is a fork child that was not reported to GDB, return its parent
-     else nullptr.  */
+  /* If THREAD is a fork/vfork/clone child that was not reported to
+     GDB, return its parent else nullptr.  */
   virtual thread_info *thread_pending_parent (thread_info *thread);
 
-  /* If THREAD is the parent of a fork child that was not reported to GDB,
-     return this child, else nullptr.  */
-  virtual thread_info *thread_pending_child (thread_info *thread);
+  /* If THREAD is the parent of a fork/vfork/clone child that was not
+     reported to GDB, return this child and fill in KIND with the
+     matching waitkind, otherwise nullptr.  */
+  virtual thread_info *thread_pending_child (thread_info *thread,
+					     target_waitkind *kind);
 
   /* Returns true if the target can software single step.  */
   virtual bool supports_software_single_step ();
@@ -530,6 +538,9 @@ int kill_inferior (process_info *proc);
 
 #define target_supports_vfork_events() \
   the_target->supports_vfork_events ()
+
+#define target_supported_thread_options(options) \
+  the_target->supported_thread_options (options)
 
 #define target_supports_exec_events() \
   the_target->supports_exec_events ()
@@ -675,6 +686,9 @@ target_read_btrace_conf (struct btrace_target_info *tinfo,
 #define target_supports_software_single_step() \
   the_target->supports_software_single_step ()
 
+#define target_any_resumed() \
+  the_target->any_resumed ()
+
 ptid_t mywait (ptid_t ptid, struct target_waitstatus *ourstatus,
 	       target_wait_flags options, int connected_wait);
 
@@ -694,9 +708,9 @@ target_thread_pending_parent (thread_info *thread)
 }
 
 static inline thread_info *
-target_thread_pending_child (thread_info *thread)
+target_thread_pending_child (thread_info *thread, target_waitkind *kind)
 {
-  return the_target->thread_pending_child (thread);
+  return the_target->thread_pending_child (thread, kind);
 }
 
 /* Read LEN bytes from MEMADDR in the buffer MYADDR.  Return 0 if the read

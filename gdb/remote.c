@@ -249,6 +249,9 @@ enum {
   /* Support for the QThreadEvents packet.  */
   PACKET_QThreadEvents,
 
+  /* Support for the QThreadOptions packet.  */
+  PACKET_QThreadOptions,
+
   /* Support for multi-process extensions.  */
   PACKET_multiprocess_feature,
 
@@ -530,6 +533,10 @@ public: /* data */
      the target know about program signals list changes.  */
   char *last_program_signals_packet = nullptr;
 
+  /* Similarly, the last QThreadEvents state we sent to the
+     target.  */
+  bool last_thread_events = false;
+
   gdb_signal last_sent_signal = GDB_SIGNAL_0;
 
   bool last_sent_step = false;
@@ -592,6 +599,10 @@ public: /* data */
      remote_wait()/wait_for_inferior() have gained a timeout parameter
      this can go away.  */
   bool wait_forever_enabled_p = true;
+
+  /* The set of thread options the target reported it supports, via
+     qSupported.  */
+  gdb_thread_options supported_thread_options = 0;
 
 private:
   /* Asynchronous signal handle registered as event loop source for
@@ -757,6 +768,8 @@ public:
   void detach (inferior *, int) override;
   void disconnect (const char *, int) override;
 
+  void commit_requested_thread_options ();
+
   void commit_resumed () override;
   void resume (ptid_t, int, enum gdb_signal) override;
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
@@ -882,6 +895,8 @@ public:
   int async_wait_fd () override;
 
   void thread_events (int) override;
+
+  bool supports_set_thread_options (gdb_thread_options) override;
 
   int can_do_single_step () override;
 
@@ -1020,6 +1035,7 @@ public:
   const struct btrace_config *btrace_conf (const struct btrace_target_info *) override;
   bool augmented_libraries_svr4_read () override;
   void follow_fork (inferior *, ptid_t, target_waitkind, bool, bool) override;
+  void follow_clone (ptid_t child_ptid) override;
   void follow_exec (inferior *, ptid_t, const char *) override;
   int insert_fork_catchpoint (int) override;
   int remove_fork_catchpoint (int) override;
@@ -1113,7 +1129,7 @@ public: /* Remote specific methods.  */
 
   void remote_btrace_maybe_reopen ();
 
-  void remove_new_fork_children (threads_listing_context *context);
+  void remove_new_children (threads_listing_context *context);
   void kill_new_fork_children (inferior *inf);
   void discard_pending_stop_replies (struct inferior *inf);
   int stop_reply_queue_length ();
@@ -1180,6 +1196,9 @@ public: /* Remote specific methods.  */
 
   void remote_packet_size (const protocol_feature *feature,
 			   packet_support support, const char *value);
+  void remote_supported_thread_options (const protocol_feature *feature,
+					enum packet_support support,
+					const char *value);
 
   void remote_serial_quit_handler ();
 
@@ -2786,10 +2805,8 @@ remote_target::remote_add_thread (ptid_t ptid, bool running, bool executing,
   else
     thread = add_thread (this, ptid);
 
-  /* We start by assuming threads are resumed.  That state then gets updated
-     when we process a matching stop reply.  */
-  get_remote_thread_info (thread)->set_resumed ();
-
+  if (executing)
+    get_remote_thread_info (thread)->set_resumed ();
   set_executing (this, ptid, executing);
   set_running (this, ptid, running);
 
@@ -4183,15 +4200,25 @@ remote_target::update_thread_list ()
 	      if (has_single_non_exited_thread (tp->inf))
 		continue;
 
+	      /* Do not remove the thread if we've requested to be
+		 notified of its exit.  For example, the thread may be
+		 displaced stepping, infrun will need to handle the
+		 exit event, and displaced stepping info is recorded
+		 in the thread object.  If we deleted the thread now,
+		 we'd lose that info.  */
+	      if ((tp->thread_options () & GDB_THREAD_OPTION_EXIT) != 0)
+		continue;
+
 	      /* Not found.  */
 	      delete_thread (tp);
 	    }
 	}
 
-      /* Remove any unreported fork child threads from CONTEXT so
-	 that we don't interfere with follow fork, which is where
-	 creation of such threads is handled.  */
-      remove_new_fork_children (&context);
+      /* Remove any unreported fork/vfork/clone child threads from
+	 CONTEXT so that we don't interfere with follow
+	 fork/vfork/clone, which is where creation of such threads is
+	 handled.  */
+      remove_new_children (&context);
 
       /* And now add threads we don't know about yet to our list.  */
       for (thread_item &item : context.items)
@@ -5155,6 +5182,8 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
 	    }
 	  else
 	    switch_to_thread (this->find_thread (curr_thread));
+
+	  get_remote_thread_info (inferior_thread ())->set_resumed ();
 	}
 
       /* init_wait_for_inferior should be called before get_offsets in order
@@ -5494,7 +5523,8 @@ remote_supported_packet (remote_target *remote,
 
 void
 remote_target::remote_packet_size (const protocol_feature *feature,
-				   enum packet_support support, const char *value)
+				   enum packet_support support,
+				   const char *value)
 {
   struct remote_state *rs = get_remote_state ();
 
@@ -5529,6 +5559,49 @@ remote_packet_size (remote_target *remote, const protocol_feature *feature,
 		    enum packet_support support, const char *value)
 {
   remote->remote_packet_size (feature, support, value);
+}
+
+void
+remote_target::remote_supported_thread_options (const protocol_feature *feature,
+						enum packet_support support,
+						const char *value)
+{
+  struct remote_state *rs = get_remote_state ();
+
+  m_features.m_protocol_packets[feature->packet].support = support;
+
+  if (support != PACKET_ENABLE)
+    return;
+
+  if (value == nullptr || *value == '\0')
+    {
+      warning (_("Remote target reported \"%s\" without supported options."),
+	       feature->name);
+      return;
+    }
+
+  ULONGEST options = 0;
+  const char *p = unpack_varlen_hex (value, &options);
+
+  if (*p != '\0')
+    {
+      warning (_("Remote target reported \"%s\" with "
+		 "bad thread options: \"%s\"."),
+	       feature->name, value);
+      return;
+    }
+
+  /* Record the set of supported options.  */
+  rs->supported_thread_options = (gdb_thread_option) options;
+}
+
+static void
+remote_supported_thread_options (remote_target *remote,
+				 const protocol_feature *feature,
+				 enum packet_support support,
+				 const char *value)
+{
+  remote->remote_supported_thread_options (feature, support, value);
 }
 
 static const struct protocol_feature remote_protocol_features[] = {
@@ -5633,6 +5706,8 @@ static const struct protocol_feature remote_protocol_features[] = {
     PACKET_Qbtrace_conf_pt_size },
   { "vContSupported", PACKET_DISABLE, remote_supported_packet, PACKET_vContSupported },
   { "QThreadEvents", PACKET_DISABLE, remote_supported_packet, PACKET_QThreadEvents },
+  { "QThreadOptions", PACKET_DISABLE, remote_supported_thread_options,
+    PACKET_QThreadOptions },
   { "no-resumed", PACKET_DISABLE, remote_supported_packet, PACKET_no_resumed },
   { "memory-tagging", PACKET_DISABLE, remote_supported_packet,
     PACKET_memory_tagging_feature },
@@ -5734,6 +5809,10 @@ remote_target::remote_query_supported ()
       if (m_features.packet_set_cmd_state (PACKET_QThreadEvents)
 	  != AUTO_BOOLEAN_FALSE)
 	remote_query_supported_append (&q, "QThreadEvents+");
+
+      if (m_features.packet_set_cmd_state (PACKET_QThreadOptions)
+	  != AUTO_BOOLEAN_FALSE)
+	remote_query_supported_append (&q, "QThreadOptions+");
 
       if (m_features.packet_set_cmd_state (PACKET_no_resumed)
 	  != AUTO_BOOLEAN_FALSE)
@@ -6114,18 +6193,41 @@ is_fork_status (target_waitkind kind)
 	  || kind == TARGET_WAITKIND_VFORKED);
 }
 
-/* Return THREAD's pending status if it is a pending fork parent, else
-   return nullptr.  */
+/* Return a reference to the field where a pending child status, if
+   there's one, is recorded.  If there's no child event pending, the
+   returned waitstatus has TARGET_WAITKIND_IGNORE kind.  */
+
+static const target_waitstatus &
+thread_pending_status (struct thread_info *thread)
+{
+  return (thread->has_pending_waitstatus ()
+	  ? thread->pending_waitstatus ()
+	  : thread->pending_follow);
+}
+
+/* Return THREAD's pending status if it is a pending fork/vfork (but
+   not clone) parent, else return nullptr.  */
 
 static const target_waitstatus *
 thread_pending_fork_status (struct thread_info *thread)
 {
-  const target_waitstatus &ws
-    = (thread->has_pending_waitstatus ()
-       ? thread->pending_waitstatus ()
-       : thread->pending_follow);
+  const target_waitstatus &ws = thread_pending_status (thread);
 
   if (!is_fork_status (ws.kind ()))
+    return nullptr;
+
+  return &ws;
+}
+
+/* Return THREAD's pending status if is is a pending fork/vfork/clone
+   event, else return nullptr.  */
+
+static const target_waitstatus *
+thread_pending_child_status (thread_info *thread)
+{
+  const target_waitstatus &ws = thread_pending_status (thread);
+
+  if (!is_new_child_status (ws.kind ()))
     return nullptr;
 
   return &ws;
@@ -6319,6 +6421,12 @@ remote_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 	  remote_detach_pid (child_ptid.pid ());
 	}
     }
+}
+
+void
+remote_target::follow_clone (ptid_t child_ptid)
+{
+  remote_add_thread (child_ptid, false, false, false);
 }
 
 /* Target follow-exec function for remote targets.  Save EXECD_PATHNAME
@@ -6802,6 +6910,8 @@ remote_target::resume (ptid_t scope_ptid, int step, enum gdb_signal siggnal)
       return;
     }
 
+  commit_requested_thread_options ();
+
   /* In all-stop, we can't mark REMOTE_ASYNC_GET_PENDING_EVENTS_TOKEN
      (explained in remote-notif.c:handle_notification) so
      remote_notif_process is not called.  We need find a place where
@@ -6964,6 +7074,8 @@ remote_target::commit_resumed ()
   if (!target_is_non_stop_p () || ::execution_direction == EXEC_REVERSE)
     return;
 
+  commit_requested_thread_options ();
+
   /* Try to send wildcard actions ("vCont;c" or "vCont;c:pPID.-1")
      instead of resuming all threads of each process individually.
      However, if any thread of a process must remain halted, we can't
@@ -7048,10 +7160,10 @@ remote_target::commit_resumed ()
       if (priv->get_resume_state () == resume_state::RESUMED_PENDING_VCONT)
 	any_pending_vcont_resume = true;
 
-      /* If a thread is the parent of an unfollowed fork, then we
-	 can't do a global wildcard, as that would resume the fork
-	 child.  */
-      if (thread_pending_fork_status (tp) != nullptr)
+      /* If a thread is the parent of an unfollowed fork/vfork/clone,
+	 then we can't do a global wildcard, as that would resume the
+	 pending child.  */
+      if (thread_pending_child_status (tp) != nullptr)
 	may_global_wildcard_vcont = false;
     }
 
@@ -7511,22 +7623,22 @@ const notif_client notif_client_stop =
   REMOTE_NOTIF_STOP,
 };
 
-/* If CONTEXT contains any fork child threads that have not been
-   reported yet, remove them from the CONTEXT list.  If such a
-   thread exists it is because we are stopped at a fork catchpoint
-   and have not yet called follow_fork, which will set up the
-   host-side data structures for the new process.  */
+/* If CONTEXT contains any fork/vfork/clone child threads that have
+   not been reported yet, remove them from the CONTEXT list.  If such
+   a thread exists it is because we are stopped at a fork/vfork/clone
+   catchpoint and have not yet called follow_fork/follow_clone, which
+   will set up the host-side data structures for the new child.  */
 
 void
-remote_target::remove_new_fork_children (threads_listing_context *context)
+remote_target::remove_new_children (threads_listing_context *context)
 {
   const notif_client *notif = &notif_client_stop;
 
-  /* For any threads stopped at a fork event, remove the corresponding
-     fork child threads from the CONTEXT list.  */
+  /* For any threads stopped at a (v)fork/clone event, remove the
+     corresponding child threads from the CONTEXT list.  */
   for (thread_info *thread : all_non_exited_threads (this))
     {
-      const target_waitstatus *ws = thread_pending_fork_status (thread);
+      const target_waitstatus *ws = thread_pending_child_status (thread);
 
       if (ws == nullptr)
 	continue;
@@ -7534,13 +7646,12 @@ remote_target::remove_new_fork_children (threads_listing_context *context)
       context->remove_thread (ws->child_ptid ());
     }
 
-  /* Check for any pending fork events (not reported or processed yet)
-     in process PID and remove those fork child threads from the
-     CONTEXT list as well.  */
+  /* Check for any pending (v)fork/clone events (not reported or
+     processed yet) in process PID and remove those child threads from
+     the CONTEXT list as well.  */
   remote_notif_get_pending_events (notif);
   for (auto &event : get_remote_state ()->stop_reply_queue)
-    if (event->ws.kind () == TARGET_WAITKIND_FORKED
-	|| event->ws.kind () == TARGET_WAITKIND_VFORKED)
+    if (is_new_child_status (event->ws.kind ()))
       context->remove_thread (event->ws.child_ptid ());
     else if (event->ws.kind () == TARGET_WAITKIND_THREAD_EXITED)
       context->remove_thread (event->ptid);
@@ -7871,6 +7982,8 @@ Packet: '%s'\n"),
 	    event->ws.set_forked (read_ptid (++p1, &p));
 	  else if (strprefix (p, p1, "vfork"))
 	    event->ws.set_vforked (read_ptid (++p1, &p));
+	  else if (strprefix (p, p1, "clone"))
+	    event->ws.set_thread_cloned (read_ptid (++p1, &p));
 	  else if (strprefix (p, p1, "vforkdone"))
 	    {
 	      event->ws.set_vfork_done ();
@@ -8305,6 +8418,11 @@ remote_target::process_stop_reply (struct stop_reply *stop_reply,
       /* Expedited registers.  */
       if (!stop_reply->regcache.empty ())
 	{
+	  /* 'w' stop replies don't cary expedited registers (which
+	     wouldn't make any sense for a thread that is gone
+	     already).  */
+	  gdb_assert (status->kind () != TARGET_WAITKIND_THREAD_EXITED);
+
 	  struct regcache *regcache
 	    = get_thread_arch_regcache (this, ptid, stop_reply->arch);
 
@@ -8489,7 +8607,7 @@ remote_target::wait_as (ptid_t ptid, target_waitstatus *status,
 	     again.  Keep waiting for events.  */
 	  rs->waiting_for_stop_reply = 1;
 	  break;
-	case 'N': case 'T': case 'S': case 'X': case 'W':
+	case 'N': case 'T': case 'S': case 'X': case 'W': case 'w':
 	  {
 	    /* There is a stop reply to handle.  */
 	    rs->waiting_for_stop_reply = 0;
@@ -14972,6 +15090,9 @@ remote_target::thread_events (int enable)
   if (m_features.packet_support (PACKET_QThreadEvents) == PACKET_DISABLE)
     return;
 
+  if (rs->last_thread_events == enable)
+    return;
+
   xsnprintf (rs->buf.data (), size, "QThreadEvents:%x", enable ? 1 : 0);
   putpkt (rs->buf);
   getpkt (&rs->buf);
@@ -14981,6 +15102,7 @@ remote_target::thread_events (int enable)
     case PACKET_OK:
       if (strcmp (rs->buf.data (), "OK") != 0)
 	error (_("Remote refused setting thread events: %s"), rs->buf.data ());
+      rs->last_thread_events = enable;
       break;
     case PACKET_ERROR:
       warning (_("Remote failure reply: %s"), rs->buf.data ());
@@ -14988,6 +15110,115 @@ remote_target::thread_events (int enable)
     case PACKET_UNKNOWN:
       break;
     }
+}
+
+/* Implementation of the supports_set_thread_options target
+   method.  */
+
+bool
+remote_target::supports_set_thread_options (gdb_thread_options options)
+{
+  remote_state *rs = get_remote_state ();
+  return (m_features.packet_support (PACKET_QThreadOptions) == PACKET_ENABLE
+	  && (rs->supported_thread_options & options) == options);
+}
+
+/* For coalescing reasons, actually sending the options to the target
+   happens at resume time, via this function.  See target_resume for
+   all-stop, and target_commit_resumed for non-stop.  */
+
+void
+remote_target::commit_requested_thread_options ()
+{
+  struct remote_state *rs = get_remote_state ();
+
+  if (m_features.packet_support (PACKET_QThreadOptions) != PACKET_ENABLE)
+    return;
+
+  char *p = rs->buf.data ();
+  char *endp = p + get_remote_packet_size ();
+
+  /* Clear options for all threads by default.  Note that unlike
+     vCont, the rightmost options that match a thread apply, so we
+     don't have to worry about whether we can use wildcard ptids.  */
+  strcpy (p, "QThreadOptions;0");
+  p += strlen (p);
+
+  /* Send the QThreadOptions packet stored in P.  */
+  auto flush = [&] ()
+    {
+      *p++ = '\0';
+
+      putpkt (rs->buf);
+      getpkt (&rs->buf, 0);
+
+      switch (m_features.packet_ok (rs->buf, PACKET_QThreadOptions))
+	{
+	case PACKET_OK:
+	  if (strcmp (rs->buf.data (), "OK") != 0)
+	    error (_("Remote refused setting thread options: %s"), rs->buf.data ());
+	  break;
+	case PACKET_ERROR:
+	  error (_("Remote failure reply: %s"), rs->buf.data ());
+	case PACKET_UNKNOWN:
+	  gdb_assert_not_reached ("PACKET_UNKNOWN");
+	  break;
+	}
+    };
+
+  /* Prepare P for another QThreadOptions packet.  */
+  auto restart = [&] ()
+    {
+      p = rs->buf.data ();
+      strcpy (p, "QThreadOptions");
+      p += strlen (p);
+    };
+
+  /* Now set non-zero options for threads that need them.  We don't
+     bother with the case of all threads of a process wanting the same
+     non-zero options as that's not an expected scenario.  */
+  for (thread_info *tp : all_non_exited_threads (this))
+    {
+      gdb_thread_options options = tp->thread_options ();
+
+      if (options == 0)
+	continue;
+
+      /* It might be possible to we have more threads with options
+	 than can fit a single QThreadOptions packet.  So build each
+	 options/thread pair in this separate buffer to make sure it
+	 fits.  */
+      constexpr size_t max_options_size = 100;
+      char obuf[max_options_size];
+      char *obuf_p = obuf;
+      char *obuf_endp = obuf + max_options_size;
+
+      *obuf_p++ = ';';
+      obuf_p += xsnprintf (obuf_p, obuf_endp - obuf_p, "%s",
+			   phex_nz (options, sizeof (options)));
+      if (tp->ptid != magic_null_ptid)
+	{
+	  *obuf_p++ = ':';
+	  obuf_p = write_ptid (obuf_p, obuf_endp, tp->ptid);
+	}
+
+      size_t osize = obuf_p - obuf;
+      if (osize > endp - p)
+	{
+	  /* This new options/thread pair doesn't fit the packet
+	     buffer.  Send what we have already.  */
+	  flush ();
+	  restart ();
+
+	  /* Should now fit.  */
+	  gdb_assert (osize <= endp - p);
+	}
+
+      memcpy (p, obuf, osize);
+      p += osize;
+    }
+
+  flush ();
 }
 
 static void
@@ -15737,6 +15968,9 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 
   add_packet_config_cmd (PACKET_QThreadEvents, "QThreadEvents", "thread-events",
 			 0);
+
+  add_packet_config_cmd (PACKET_QThreadOptions, "QThreadOptions",
+			 "thread-options", 0);
 
   add_packet_config_cmd (PACKET_no_resumed, "N stop reply",
 			 "no-resumed-stop-reply", 0);

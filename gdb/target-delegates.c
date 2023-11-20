@@ -77,6 +77,7 @@ struct dummy_target : public target_ops
   int insert_vfork_catchpoint (int arg0) override;
   int remove_vfork_catchpoint (int arg0) override;
   void follow_fork (inferior *arg0, ptid_t arg1, target_waitkind arg2, bool arg3, bool arg4) override;
+  void follow_clone (ptid_t arg0) override;
   int insert_exec_catchpoint (int arg0) override;
   int remove_exec_catchpoint (int arg0) override;
   void follow_exec (inferior *arg0, ptid_t arg1, const char *arg2) override;
@@ -110,6 +111,7 @@ struct dummy_target : public target_ops
   int async_wait_fd () override;
   bool has_pending_events () override;
   void thread_events (int arg0) override;
+  bool supports_set_thread_options (gdb_thread_options arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
   int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
@@ -260,6 +262,7 @@ struct debug_target : public target_ops
   int insert_vfork_catchpoint (int arg0) override;
   int remove_vfork_catchpoint (int arg0) override;
   void follow_fork (inferior *arg0, ptid_t arg1, target_waitkind arg2, bool arg3, bool arg4) override;
+  void follow_clone (ptid_t arg0) override;
   int insert_exec_catchpoint (int arg0) override;
   int remove_exec_catchpoint (int arg0) override;
   void follow_exec (inferior *arg0, ptid_t arg1, const char *arg2) override;
@@ -293,6 +296,7 @@ struct debug_target : public target_ops
   int async_wait_fd () override;
   bool has_pending_events () override;
   void thread_events (int arg0) override;
+  bool supports_set_thread_options (gdb_thread_options arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
   int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
@@ -1584,6 +1588,28 @@ debug_target::follow_fork (inferior *arg0, ptid_t arg1, target_waitkind arg2, bo
   gdb_puts (")\n", gdb_stdlog);
 }
 
+void
+target_ops::follow_clone (ptid_t arg0)
+{
+  this->beneath ()->follow_clone (arg0);
+}
+
+void
+dummy_target::follow_clone (ptid_t arg0)
+{
+  default_follow_clone (this, arg0);
+}
+
+void
+debug_target::follow_clone (ptid_t arg0)
+{
+  gdb_printf (gdb_stdlog, "-> %s->follow_clone (...)\n", this->beneath ()->shortname ());
+  this->beneath ()->follow_clone (arg0);
+  gdb_printf (gdb_stdlog, "<- %s->follow_clone (", this->beneath ()->shortname ());
+  target_debug_print_ptid_t (arg0);
+  gdb_puts (")\n", gdb_stdlog);
+}
+
 int
 target_ops::insert_exec_catchpoint (int arg0)
 {
@@ -2393,6 +2419,32 @@ debug_target::thread_events (int arg0)
   gdb_printf (gdb_stdlog, "<- %s->thread_events (", this->beneath ()->shortname ());
   target_debug_print_int (arg0);
   gdb_puts (")\n", gdb_stdlog);
+}
+
+bool
+target_ops::supports_set_thread_options (gdb_thread_options arg0)
+{
+  return this->beneath ()->supports_set_thread_options (arg0);
+}
+
+bool
+dummy_target::supports_set_thread_options (gdb_thread_options arg0)
+{
+  return false;
+}
+
+bool
+debug_target::supports_set_thread_options (gdb_thread_options arg0)
+{
+  gdb_printf (gdb_stdlog, "-> %s->supports_set_thread_options (...)\n", this->beneath ()->shortname ());
+  bool result
+    = this->beneath ()->supports_set_thread_options (arg0);
+  gdb_printf (gdb_stdlog, "<- %s->supports_set_thread_options (", this->beneath ()->shortname ());
+  target_debug_print_gdb_thread_options (arg0);
+  gdb_puts (") = ", gdb_stdlog);
+  target_debug_print_bool (result);
+  gdb_puts ("\n", gdb_stdlog);
+  return result;
 }
 
 bool

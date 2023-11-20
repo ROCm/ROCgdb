@@ -108,6 +108,8 @@ static bool start_step_over (void);
 
 static bool step_over_info_valid_p (void);
 
+static bool schedlock_applies (struct thread_info *tp);
+
 /* Asynchronous signal handler registered as event loop source for
    when we have pending events ready to be passed to the core.  */
 static struct async_event_handler *infrun_async_inferior_event_token;
@@ -1265,13 +1267,11 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
      some other thread does the exec, and even if the main thread was
      stopped or already gone.  We may still have non-leader threads of
      the process on our list.  E.g., on targets that don't have thread
-     exit events (like remote); or on native Linux in non-stop mode if
-     there were only two threads in the inferior and the non-leader
-     one is the one that execs (and nothing forces an update of the
-     thread list up to here).  When debugging remotely, it's best to
+     exit events (like remote) and nothing forces an update of the
+     thread list up to here.  When debugging remotely, it's best to
      avoid extra traffic, when possible, so avoid syncing the thread
      list with the target, and instead go ahead and delete all threads
-     of the process but one that reported the event.  Note this must
+     of the process but the one that reported the event.  Note this must
      be done before calling update_breakpoints_after_exec, as
      otherwise clearing the threads' resources would reference stale
      thread breakpoints -- it may have been one of these threads that
@@ -1973,6 +1973,53 @@ displaced_step_prepare (thread_info *thread)
   return status;
 }
 
+/* True if any thread of TARGET that matches RESUME_PTID requires
+   target_thread_events enabled.  This assumes TARGET does not support
+   target thread options.  */
+
+static bool
+any_thread_needs_target_thread_events (process_stratum_target *target,
+				       ptid_t resume_ptid)
+{
+  for (thread_info *tp : all_non_exited_threads (target, resume_ptid))
+    if (displaced_step_in_progress_thread (tp)
+	|| schedlock_applies (tp)
+	|| tp->thread_fsm () != nullptr)
+      return true;
+  return false;
+}
+
+/* Maybe disable thread-{cloned,created,exited} event reporting after
+   a step-over (either in-line or displaced) finishes.  */
+
+static void
+update_thread_events_after_step_over (thread_info *event_thread,
+				      const target_waitstatus &event_status)
+{
+  if (schedlock_applies (event_thread))
+    {
+      /* If scheduler-locking applies, continue reporting
+	 thread-created/thread-cloned events.  */
+      return;
+    }
+  else if (target_supports_set_thread_options (0))
+    {
+      /* We can control per-thread options.  Disable events for the
+	 event thread, unless the thread is gone.  */
+      if (event_status.kind () != TARGET_WAITKIND_THREAD_EXITED)
+	event_thread->set_thread_options (0);
+    }
+  else
+    {
+      /* We can only control the target-wide target_thread_events
+	 setting.  Disable it, but only if other threads in the target
+	 don't need it enabled.  */
+      process_stratum_target *target = event_thread->inf->process_target ();
+      if (!any_thread_needs_target_thread_events (target, minus_one_ptid))
+	target_thread_events (false);
+    }
+}
+
 /* If we displaced stepped an instruction successfully, adjust registers and
    memory to yield the same effect the instruction would have had if we had
    executed it at its original address, and return
@@ -1986,11 +2033,38 @@ static displaced_step_finish_status
 displaced_step_finish (thread_info *event_thread,
 		       const target_waitstatus &event_status)
 {
+  /* Check whether the parent is displaced stepping.  */
+  struct regcache *regcache = get_thread_regcache (event_thread);
+  struct gdbarch *gdbarch = regcache->arch ();
+  inferior *parent_inf = event_thread->inf;
+
+  /* If this was a fork/vfork/clone, this event indicates that the
+     displaced stepping of the syscall instruction has been done, so
+     we perform cleanup for parent here.  Also note that this
+     operation also cleans up the child for vfork, because their pages
+     are shared.  */
+
+  /* If this is a fork (child gets its own address space copy) and
+     some displaced step buffers were in use at the time of the fork,
+     restore the displaced step buffer bytes in the child process.
+
+     Architectures which support displaced stepping and fork events
+     must supply an implementation of
+     gdbarch_displaced_step_restore_all_in_ptid.  This is not enforced
+     during gdbarch validation to support architectures which support
+     displaced stepping but not forks.  */
+  if (event_status.kind () == TARGET_WAITKIND_FORKED
+      && target_supports_displaced_stepping (event_thread))
+    gdbarch_displaced_step_restore_all_in_ptid
+      (gdbarch, parent_inf, event_status.child_ptid ());
+
   displaced_step_thread_state *displaced = &event_thread->displaced_step_state;
 
   /* Was this thread performing a displaced step?  */
   if (!displaced->in_progress ())
     return DISPLACED_STEP_FINISH_STATUS_OK;
+
+  update_thread_events_after_step_over (event_thread, event_status);
 
   gdb_assert (event_thread->inf->displaced_step_state.in_progress_count > 0);
   event_thread->inf->displaced_step_state.in_progress_count--;
@@ -2005,9 +2079,39 @@ displaced_step_finish (thread_info *event_thread,
 
   /* Do the fixup, and release the resources acquired to do the displaced
      step. */
-  return
-    event_thread->inf->top_target ()->displaced_step_finish (event_thread,
-							     event_status);
+  displaced_step_finish_status status
+    = event_thread->inf->top_target ()->displaced_step_finish (event_thread,
+							       event_status);
+
+  if (event_status.kind () == TARGET_WAITKIND_FORKED
+      || event_status.kind () == TARGET_WAITKIND_VFORKED
+      || event_status.kind () == TARGET_WAITKIND_THREAD_CLONED)
+    {
+      /* Since the vfork/fork/clone syscall instruction was executed
+	 in the scratchpad, the child's PC is also within the
+	 scratchpad.  Set the child's PC to the parent's PC value,
+	 which has already been fixed up.  Note: we use the parent's
+	 aspace here, although we're touching the child, because the
+	 child hasn't been added to the inferior list yet at this
+	 point.  */
+
+      struct regcache *child_regcache
+	= get_thread_arch_aspace_regcache (parent_inf,
+					   event_status.child_ptid (),
+					   gdbarch,
+					   parent_inf->aspace);
+      /* Read PC value of parent.  */
+      CORE_ADDR parent_pc = regcache_read_pc (regcache);
+
+      displaced_debug_printf ("write child pc from %s to %s",
+			      paddress (gdbarch,
+					regcache_read_pc (child_regcache)),
+			      paddress (gdbarch, parent_pc));
+
+      regcache_write_pc (child_regcache, parent_pc);
+    }
+
+  return status;
 }
 
 /* Data to be passed around while handling an event.  This data is
@@ -2483,6 +2587,72 @@ do_target_resume (ptid_t resume_ptid, bool step, enum gdb_signal sig)
     target_pass_signals ({});
   else
     target_pass_signals (signal_pass);
+
+  /* Request that the target report thread-{created,cloned,exited}
+     events in the following situations:
+
+     - If we are performing an in-line step-over-breakpoint, then we
+       will remove a breakpoint from the target and only run the
+       current thread.  We don't want any new thread (spawned by the
+       step) to start running, as it might miss the breakpoint.  We
+       need to clear the step-over state if the stepped thread exits,
+       so we also enable thread-exit events.
+
+     - If we are stepping over a breakpoint out of line (displaced
+       stepping) then we won't remove a breakpoint from the target,
+       but, if the step spawns a new clone thread, then we will need
+       to fixup the $pc address in the clone child too, so we need it
+       to start stopped.  We need to release the displaced stepping
+       buffer if the stepped thread exits, so we also enable
+       thread-exit events.
+
+     - If scheduler-locking applies, threads that the current thread
+       spawns should remain halted.  It's not strictly necessary to
+       enable thread-exit events in this case, but it doesn't hurt.
+  */
+  if (step_over_info_valid_p ()
+      || displaced_step_in_progress_thread (tp)
+      || schedlock_applies (tp))
+    {
+      gdb_thread_options options
+	= GDB_THREAD_OPTION_CLONE | GDB_THREAD_OPTION_EXIT;
+      if (target_supports_set_thread_options (options))
+	tp->set_thread_options (options);
+      else
+	target_thread_events (true);
+    }
+  else if (tp->thread_fsm () != nullptr)
+    {
+      gdb_thread_options options = GDB_THREAD_OPTION_EXIT;
+      if (target_supports_set_thread_options (options))
+	tp->set_thread_options (options);
+      else
+	target_thread_events (true);
+    }
+  else
+    {
+      if (target_supports_set_thread_options (0))
+	tp->set_thread_options (0);
+      else
+	{
+	  process_stratum_target *resume_target = tp->inf->process_target ();
+	  if (!any_thread_needs_target_thread_events (resume_target,
+						      resume_ptid))
+	    target_thread_events (false);
+	}
+    }
+
+  /* If we're resuming more than one thread simultaneously, then any
+     thread other than the leader is being set to run free.  Clear any
+     previous thread option for those threads.  */
+  if (resume_ptid != inferior_ptid && target_supports_set_thread_options (0))
+    {
+      process_stratum_target *resume_target = tp->inf->process_target ();
+      for (thread_info *thr_iter : all_non_exited_threads (resume_target,
+							   resume_ptid))
+	if (thr_iter != tp)
+	  thr_iter->set_thread_options (0);
+    }
 
   infrun_debug_printf ("resume_ptid=%s, step=%d, sig=%s",
 		       resume_ptid.to_string ().c_str (),
@@ -4110,6 +4280,7 @@ struct wait_one_event
 };
 
 static bool handle_one (const wait_one_event &event);
+static int finish_step_over (struct execution_control_state *ecs);
 
 /* Prepare and stabilize the inferior for detaching it.  E.g.,
    detaching while a thread is displaced stepping is a recipe for
@@ -4299,7 +4470,12 @@ reinstall_readline_callback_handler_cleanup ()
 }
 
 /* Clean up the FSMs of threads that are now stopped.  In non-stop,
-   that's just the event thread.  In all-stop, that's all threads.  */
+   that's just the event thread.  In all-stop, that's all threads.  In
+   all-stop, threads that had a pending exit no longer have a reason
+   to be around, as their FSMs/commands are canceled, so we delete
+   them.  This avoids "info threads" listing such threads as if they
+   were alive (and failing to read their registers), the user being
+   able to select and resume them (and that failing), etc.  */
 
 static void
 clean_up_just_stopped_threads_fsms (struct execution_control_state *ecs)
@@ -4317,15 +4493,29 @@ clean_up_just_stopped_threads_fsms (struct execution_control_state *ecs)
     {
       scoped_restore_current_thread restore_thread;
 
-      for (thread_info *thr : all_non_exited_threads ())
+      for (thread_info *thr : all_threads_safe ())
 	{
-	  if (thr->thread_fsm () == nullptr)
+	  if (thr->state == THREAD_EXITED)
 	    continue;
+
 	  if (thr == ecs->event_thread)
 	    continue;
 
-	  switch_to_thread (thr);
-	  thr->thread_fsm ()->clean_up (thr);
+	  if (thr->thread_fsm () != nullptr)
+	    {
+	      switch_to_thread (thr);
+	      thr->thread_fsm ()->clean_up (thr);
+	    }
+
+	  /* As we are cancelling the command/FSM of this thread,
+	     whatever was the reason we needed to report a thread
+	     exited event to the user, that reason is gone.  Delete
+	     the thread, so that the user doesn't see it in the thread
+	     list, the next proceed doesn't try to resume it, etc.  */
+	  if (thr->has_pending_waitstatus ()
+	      && (thr->pending_waitstatus ().kind ()
+		  == TARGET_WAITKIND_THREAD_EXITED))
+	    delete_thread (thr);
 	}
     }
 }
@@ -5122,6 +5312,8 @@ wait_one ()
       if (nfds == 0)
 	{
 	  /* No waitable targets left.  All must be stopped.  */
+	  infrun_debug_printf ("no waitable targets left");
+
 	  target_waitstatus ws;
 	  ws.set_no_resumed ();
 	  return {nullptr, minus_one_ptid, std::move (ws)};
@@ -5295,6 +5487,16 @@ handle_one (const wait_one_event &event)
 				      event.ws);
 	  save_waitstatus (t, event.ws);
 	  t->stop_requested = false;
+
+	  if (event.ws.kind () == TARGET_WAITKIND_THREAD_EXITED)
+	    {
+	      if (displaced_step_finish (t, event.ws)
+		  != DISPLACED_STEP_FINISH_STATUS_OK)
+		{
+		  gdb_assert_not_reached ("displaced_step_finish on "
+					  "exited thread failed");
+		}
+	    }
 	}
     }
   else
@@ -5369,6 +5571,83 @@ handle_one (const wait_one_event &event)
     }
 
   return false;
+}
+
+/* Helper for stop_all_threads.  wait_one waits for events until it
+   sees a TARGET_WAITKIND_NO_RESUMED event.  When it sees one, it
+   disables target_async for the target to stop waiting for events
+   from it.  TARGET_WAITKIND_NO_RESUMED can be delayed though,
+   consider, debugging against gdbserver:
+
+    #1 - Threads 1-5 are running, and thread 1 hits a breakpoint.
+
+    #2 - gdb processes the breakpoint hit for thread 1, stops all
+	 threads, and steps thread 1 over the breakpoint.  while
+	 stopping threads, some other threads reported interesting
+	 events, which were left pending in the thread's objects
+	 (infrun's queue).
+
+    #2 - Thread 1 exits (it stepped an exit syscall), and gdbserver
+	 reports the thread exit for thread 1.	The event ends up in
+	 remote's stop reply queue.
+
+    #3 - That was the last resumed thread, so gdbserver reports
+	 no-resumed, and that event also ends up in remote's stop
+	 reply queue, queued after the thread exit from #2.
+
+    #4 - gdb processes the thread exit event, which finishes the
+	 step-over, and so gdb restarts all threads (threads with
+	 pending events are left marked resumed, but aren't set
+	 executing).  The no-resumed event is still left pending in
+	 the remote stop reply queue.
+
+    #5 - Since there are now resumed threads with pending breakpoint
+	 hits, gdb picks one at random to process next.
+
+    #5 - gdb picks the breakpoint hit for thread 2 this time, and that
+	 breakpoint also needs to be stepped over, so gdb stops all
+	 threads again.
+
+    #6 - stop_all_threads counts number of expected stops and calls
+	 wait_one once for each.
+
+    #7 - The first wait_one call collects the no-resumed event from #3
+	 above.
+
+    #9 - Seeing the no-resumed event, wait_one disables target async
+	 for the remote target, to stop waiting for events from it.
+	 wait_one from here on always return no-resumed directly
+	 without reaching the target.
+
+    #10 - stop_all_threads still hasn't seen all the stops it expects,
+	  so it does another pass.
+
+    #11 - Since the remote target is not async (disabled in #9),
+	  wait_one doesn't wait on it, so it won't see the expected
+	  stops, and instead returns no-resumed directly.
+
+    #12 - stop_all_threads still haven't seen all the stops, so it
+	  does another pass.  goto #11, looping forever.
+
+   To handle this, we explicitly (re-)enable target async on all
+   targets that can async every time stop_all_threads goes wait for
+   the expected stops.  */
+
+static void
+reenable_target_async ()
+{
+  for (inferior *inf : all_inferiors ())
+    {
+      process_stratum_target *target = inf->process_target ();
+      if (target != nullptr
+	  && target->threads_executing
+	  && target->can_async_p ()
+	  && !target->is_async_p ())
+	{
+	  switch_to_inferior_no_thread (inf);
+	  target_async (1);
+	}
+    }
 }
 
 /* See infrun.h.  */
@@ -5510,6 +5789,8 @@ stop_all_threads (const char *reason, inferior *inf)
 	  if (pass > 0)
 	    pass = -1;
 
+	  reenable_target_async ();
+
 	  for (int i = 0; i < waits_needed; i++)
 	    {
 	      wait_one_event event = wait_one ();
@@ -5520,7 +5801,9 @@ stop_all_threads (const char *reason, inferior *inf)
     }
 }
 
-/* Handle a TARGET_WAITKIND_NO_RESUMED event.  */
+/* Handle a TARGET_WAITKIND_NO_RESUMED event.  Return true if we
+   handled the event and should continue waiting.  Return false if we
+   should stop and report the event to the user.  */
 
 static bool
 handle_no_resumed (struct execution_control_state *ecs)
@@ -5648,6 +5931,139 @@ handle_no_resumed (struct execution_control_state *ecs)
   return false;
 }
 
+/* Handle a TARGET_WAITKIND_THREAD_EXITED event.  Return true if we
+   handled the event and should continue waiting.  Return false if we
+   should stop and report the event to the user.  */
+
+static bool
+handle_thread_exited (execution_control_state *ecs)
+{
+  context_switch (ecs);
+
+  /* Clear these so we don't re-start the thread stepping over a
+     breakpoint/watchpoint.  */
+  ecs->event_thread->stepping_over_breakpoint = 0;
+  ecs->event_thread->stepping_over_watchpoint = 0;
+
+  /* If the thread had an FSM, then abort the command.  But only after
+     finishing the step over, as in non-stop mode, aborting this
+     thread's command should not interfere with other threads.  We
+     must check this before finish_step over, however, which may
+     update the thread list and delete the event thread.  */
+  bool abort_cmd = (ecs->event_thread->thread_fsm () != nullptr);
+
+  /* Maybe the thread was doing a step-over, if so release
+     resources and start any further pending step-overs.
+
+     If we are on a non-stop target and the thread was doing an
+     in-line step, this also restarts the other threads.  */
+  int ret = finish_step_over (ecs);
+
+  /* finish_step_over returns true if it moves ecs' wait status
+     back into the thread, so that we go handle another pending
+     event before this one.  But we know it never does that if
+     the event thread has exited.  */
+  gdb_assert (ret == 0);
+
+  if (abort_cmd)
+    {
+      delete_thread (ecs->event_thread);
+      ecs->event_thread = nullptr;
+      return false;
+    }
+
+  /* If finish_step_over started a new in-line step-over, don't
+     try to restart anything else.  */
+  if (step_over_info_valid_p ())
+    {
+      delete_thread (ecs->event_thread);
+      return true;
+    }
+
+  /* Maybe we are on an all-stop target and we got this event
+     while doing a step-like command on another thread.  If so,
+     go back to doing that.  If this thread was stepping,
+     switch_back_to_stepped_thread will consider that the thread
+     was interrupted mid-step and will try keep stepping it.  We
+     don't want that, the thread is gone.  So clear the proceed
+     status so it doesn't do that.  */
+  clear_proceed_status_thread (ecs->event_thread);
+  if (switch_back_to_stepped_thread (ecs))
+    {
+      delete_thread (ecs->event_thread);
+      return true;
+    }
+
+  inferior *inf = ecs->event_thread->inf;
+  bool slock_applies = schedlock_applies (ecs->event_thread);
+
+  delete_thread (ecs->event_thread);
+  ecs->event_thread = nullptr;
+
+  /* Continue handling the event as if we had gotten a
+     TARGET_WAITKIND_NO_RESUMED.  */
+  auto handle_as_no_resumed = [ecs] ()
+  {
+    /* handle_no_resumed doesn't really look at the event kind, but
+       normal_stop does.  */
+    ecs->ws.set_no_resumed ();
+    ecs->event_thread = nullptr;
+    ecs->ptid = minus_one_ptid;
+
+    /* Re-record the last target status.  */
+    set_last_target_status (ecs->target, ecs->ptid, ecs->ws);
+
+    return handle_no_resumed (ecs);
+  };
+
+  /* If we are on an all-stop target, the target has stopped all
+     threads to report the event.  We don't actually want to
+     stop, so restart the threads.  */
+  if (!target_is_non_stop_p ())
+    {
+      if (slock_applies)
+	{
+	  /* Since the target is !non-stop, then everything is stopped
+	     at this point, and we can't assume we'll get further
+	     events until we resume the target again.  Handle this
+	     event like if it were a TARGET_WAITKIND_NO_RESUMED.  Note
+	     this refreshes the thread list and checks whether there
+	     are other resumed threads before deciding whether to
+	     print "no-unwaited-for left".  This is important because
+	     the user could have done:
+
+	      (gdb) set scheduler-locking on
+	      (gdb) thread 1
+	      (gdb) c&
+	      (gdb) thread 2
+	      (gdb) c
+
+	     ... and only one of the threads exited.  */
+	  return handle_as_no_resumed ();
+	}
+      else
+	{
+	  /* Switch to the first non-exited thread we can find, and
+	     resume.  */
+	  auto range = inf->non_exited_threads ();
+	  if (range.begin () == range.end ())
+	    {
+	      /* Looks like the target reported a
+		 TARGET_WAITKIND_THREAD_EXITED for its last known
+		 thread.  */
+	      return handle_as_no_resumed ();
+	    }
+	  thread_info *non_exited_thread = *range.begin ();
+	  switch_to_thread (non_exited_thread);
+	  insert_breakpoints ();
+	  resume (GDB_SIGNAL_0);
+	}
+    }
+
+  prepare_to_wait (ecs);
+  return true;
+}
+
 /* Given an execution control state that has been freshly filled in by
    an event from the inferior, figure out what it means and take
    appropriate action.
@@ -5686,12 +6102,6 @@ handle_inferior_event (struct execution_control_state *ecs)
       return;
     }
 
-  if (ecs->ws.kind () == TARGET_WAITKIND_THREAD_EXITED)
-    {
-      prepare_to_wait (ecs);
-      return;
-    }
-
   if (ecs->ws.kind () == TARGET_WAITKIND_NO_RESUMED
       && handle_no_resumed (ecs))
     return;
@@ -5706,7 +6116,6 @@ handle_inferior_event (struct execution_control_state *ecs)
     {
       /* No unwaited-for children left.  IOW, all resumed children
 	 have exited.  */
-      stop_print_frame = false;
       stop_waiting (ecs);
       return;
     }
@@ -5855,6 +6264,12 @@ handle_inferior_event (struct execution_control_state *ecs)
 	keep_going (ecs);
       return;
 
+    case TARGET_WAITKIND_THREAD_EXITED:
+      if (handle_thread_exited (ecs))
+	return;
+      stop_waiting (ecs);
+      break;
+
     case TARGET_WAITKIND_EXITED:
     case TARGET_WAITKIND_SIGNALLED:
       {
@@ -5930,67 +6345,13 @@ handle_inferior_event (struct execution_control_state *ecs)
 
     case TARGET_WAITKIND_FORKED:
     case TARGET_WAITKIND_VFORKED:
-      /* Check whether the inferior is displaced stepping.  */
-      {
-	struct regcache *regcache = get_thread_regcache (ecs->event_thread);
-	struct gdbarch *gdbarch = regcache->arch ();
-	inferior *parent_inf = find_inferior_ptid (ecs->target, ecs->ptid);
+    case TARGET_WAITKIND_THREAD_CLONED:
 
-	/* If this is a fork (child gets its own address space copy)
-	   and some displaced step buffers were in use at the time of
-	   the fork, restore the displaced step buffer bytes in the
-	   child process.
+      displaced_step_finish (ecs->event_thread, ecs->ws);
 
-	   Architectures which support displaced stepping and fork
-	   events must supply an implementation of
-	   gdbarch_displaced_step_restore_all_in_ptid.  This is not
-	   enforced during gdbarch validation to support architectures
-	   which support displaced stepping but not forks.  */
-	if (ecs->ws.kind () == TARGET_WAITKIND_FORKED
-	    && target_supports_displaced_stepping (ecs->event_thread))
-	  gdbarch_displaced_step_restore_all_in_ptid
-	    (gdbarch, parent_inf, ecs->ws.child_ptid ());
-
-	/* If displaced stepping is supported, and thread ecs->ptid is
-	   displaced stepping.  */
-	if (displaced_step_in_progress_thread (ecs->event_thread))
-	  {
-	    struct regcache *child_regcache;
-	    CORE_ADDR parent_pc;
-
-	    /* GDB has got TARGET_WAITKIND_FORKED or TARGET_WAITKIND_VFORKED,
-	       indicating that the displaced stepping of syscall instruction
-	       has been done.  Perform cleanup for parent process here.  Note
-	       that this operation also cleans up the child process for vfork,
-	       because their pages are shared.  */
-	    displaced_step_finish (ecs->event_thread, ecs->ws);
-	    /* Start a new step-over in another thread if there's one
-	       that needs it.  */
-	    start_step_over ();
-
-	    /* Since the vfork/fork syscall instruction was executed in the scratchpad,
-	       the child's PC is also within the scratchpad.  Set the child's PC
-	       to the parent's PC value, which has already been fixed up.
-	       FIXME: we use the parent's aspace here, although we're touching
-	       the child, because the child hasn't been added to the inferior
-	       list yet at this point.  */
-
-	    child_regcache
-	      = get_thread_arch_aspace_regcache (parent_inf,
-						 ecs->ws.child_ptid (),
-						 gdbarch,
-						 parent_inf->aspace);
-	    /* Read PC value of parent process.  */
-	    parent_pc = regcache_read_pc (regcache);
-
-	    displaced_debug_printf ("write child pc from %s to %s",
-				    paddress (gdbarch,
-					      regcache_read_pc (child_regcache)),
-				    paddress (gdbarch, parent_pc));
-
-	    regcache_write_pc (child_regcache, parent_pc);
-	  }
-      }
+      /* Start a new step-over in another thread if there's one that
+	 needs it.  */
+      start_step_over ();
 
       context_switch (ecs);
 
@@ -6006,7 +6367,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	 need to unpatch at follow/detach time instead to be certain
 	 that new breakpoints added between catchpoint hit time and
 	 vfork follow are detached.  */
-      if (ecs->ws.kind () != TARGET_WAITKIND_VFORKED)
+      if (ecs->ws.kind () == TARGET_WAITKIND_FORKED)
 	{
 	  /* This won't actually modify the breakpoint list, but will
 	     physically remove the breakpoints from the child.  */
@@ -6038,14 +6399,24 @@ handle_inferior_event (struct execution_control_state *ecs)
       if (!bpstat_causes_stop (ecs->event_thread->control.stop_bpstat))
 	{
 	  bool follow_child
-	    = (follow_fork_mode_string == follow_fork_mode_child);
+	    = (ecs->ws.kind () != TARGET_WAITKIND_THREAD_CLONED
+	       && follow_fork_mode_string == follow_fork_mode_child);
 
 	  ecs->event_thread->set_stop_signal (GDB_SIGNAL_0);
 
 	  process_stratum_target *targ
 	    = ecs->event_thread->inf->process_target ();
 
-	  bool should_resume = follow_fork ();
+	  bool should_resume;
+	  if (ecs->ws.kind () != TARGET_WAITKIND_THREAD_CLONED)
+	    should_resume = follow_fork ();
+	  else
+	    {
+	      should_resume = true;
+	      inferior *inf = ecs->event_thread->inf;
+	      inf->top_target ()->follow_clone (ecs->ws.child_ptid ());
+	      ecs->event_thread->pending_follow.set_spurious ();
+	    }
 
 	  /* Note that one of these may be an invalid pointer,
 	     depending on detach_fork.  */
@@ -6056,16 +6427,26 @@ handle_inferior_event (struct execution_control_state *ecs)
 	     child is marked stopped.  */
 
 	  /* If not resuming the parent, mark it stopped.  */
-	  if (follow_child && !detach_fork && !non_stop && !sched_multi)
+	  if (ecs->ws.kind () != TARGET_WAITKIND_THREAD_CLONED
+	      && follow_child && !detach_fork && !non_stop && !sched_multi)
 	    parent->set_running (false);
 
 	  /* If resuming the child, mark it running.  */
-	  if (follow_child || (!detach_fork && (non_stop || sched_multi)))
+	  if ((ecs->ws.kind () == TARGET_WAITKIND_THREAD_CLONED
+	       && !schedlock_applies (ecs->event_thread))
+	      || (ecs->ws.kind () != TARGET_WAITKIND_THREAD_CLONED
+		  && (follow_child
+		      || (!detach_fork && (non_stop || sched_multi)))))
 	    child->set_running (true);
 
 	  /* In non-stop mode, also resume the other branch.  */
-	  if (!detach_fork && (non_stop
-			       || (sched_multi && target_is_non_stop_p ())))
+	  if ((ecs->ws.kind () == TARGET_WAITKIND_THREAD_CLONED
+	       && target_is_non_stop_p ()
+	       && !schedlock_applies (ecs->event_thread))
+	      || (ecs->ws.kind () != TARGET_WAITKIND_THREAD_CLONED
+		  && (!detach_fork && (non_stop
+				       || (sched_multi
+					   && target_is_non_stop_p ())))))
 	    {
 	      if (follow_child)
 		switch_to_thread (parent);
@@ -6345,6 +6726,8 @@ finish_step_over (struct execution_control_state *ecs)
 	 back an event.  */
       gdb_assert (ecs->event_thread->control.trap_expected);
 
+      update_thread_events_after_step_over (ecs->event_thread, ecs->ws);
+
       clear_step_over_info ();
     }
 
@@ -6388,6 +6771,13 @@ finish_step_over (struct execution_control_state *ecs)
 	 clobber this info.  */
       if (ecs->event_thread->stepping_over_watchpoint)
 	return 0;
+
+      /* The code below is meant to avoid one thread hogging the event
+	 loop by doing constant in-line step overs.  If the stepping
+	 thread exited, there's no risk for this to happen, so we can
+	 safely let our caller process the event immediately.  */
+      if (ecs->ws.kind () == TARGET_WAITKIND_THREAD_EXITED)
+       return 0;
 
       pending = iterate_over_threads (resumed_thread_with_pending_status,
 				      nullptr);
@@ -9069,7 +9459,8 @@ normal_stop ()
       if (inferior_ptid != null_ptid)
 	finish_ptid = ptid_t (inferior_ptid.pid ());
     }
-  else if (last.kind () != TARGET_WAITKIND_NO_RESUMED)
+  else if (last.kind () != TARGET_WAITKIND_NO_RESUMED
+	   && last.kind () != TARGET_WAITKIND_THREAD_EXITED)
     finish_ptid = inferior_ptid;
 
   gdb::optional<scoped_finish_thread_state> maybe_finish_thread_state;
@@ -9119,7 +9510,8 @@ normal_stop ()
 
       if ((last.kind () != TARGET_WAITKIND_SIGNALLED
 	   && last.kind () != TARGET_WAITKIND_EXITED
-	   && last.kind () != TARGET_WAITKIND_NO_RESUMED)
+	   && last.kind () != TARGET_WAITKIND_NO_RESUMED
+	   && last.kind () != TARGET_WAITKIND_THREAD_EXITED)
 	  && target_has_execution ()
 	  && (previous_thread != inferior_thread ()
 	      || previous_lane != inferior_thread ()->current_simd_lane ()))
@@ -9153,13 +9545,21 @@ normal_stop ()
       update_previous_thread_and_lane ();
     }
 
-  if (last.kind () == TARGET_WAITKIND_NO_RESUMED)
+  if (last.kind () == TARGET_WAITKIND_NO_RESUMED
+      || last.kind () == TARGET_WAITKIND_THREAD_EXITED)
     {
+      stop_print_frame = false;
+
       SWITCH_THRU_ALL_UIS ()
 	if (current_ui->prompt_state == PROMPT_BLOCKED)
 	  {
 	    target_terminal::ours_for_output ();
-	    gdb_printf (_("No unwaited-for children left.\n"));
+	    if (last.kind () == TARGET_WAITKIND_NO_RESUMED)
+	      gdb_printf (_("No unwaited-for children left.\n"));
+	    else if (last.kind () == TARGET_WAITKIND_THREAD_EXITED)
+	      gdb_printf (_("Command aborted, thread exited.\n"));
+	    else
+	      gdb_assert_not_reached ("unhandled");
 	  }
     }
 
@@ -9242,7 +9642,8 @@ normal_stop ()
     {
       if (last.kind () != TARGET_WAITKIND_SIGNALLED
 	  && last.kind () != TARGET_WAITKIND_EXITED
-	  && last.kind () != TARGET_WAITKIND_NO_RESUMED)
+	  && last.kind () != TARGET_WAITKIND_NO_RESUMED
+	  && last.kind () != TARGET_WAITKIND_THREAD_EXITED)
 	/* Delete the breakpoint we stopped at, if it wants to be deleted.
 	   Delete any breakpoint that is to be deleted at the next stop.  */
 	breakpoint_auto_delete (inferior_thread ()->control.stop_bpstat);

@@ -2720,6 +2720,13 @@ default_follow_fork (struct target_ops *self, inferior *child_inf,
   internal_error (_("could not find a target to follow fork"));
 }
 
+static void
+default_follow_clone (struct target_ops *self, ptid_t child_ptid)
+{
+  /* Some target returned a clone event, but did not know how to follow it.  */
+  internal_error (_("could not find a target to follow clone"));
+}
+
 /* See target.h.  */
 
 void
@@ -4389,6 +4396,15 @@ void
 target_thread_events (int enable)
 {
   current_inferior ()->top_target ()->thread_events (enable);
+}
+
+/* See target.h.  */
+
+bool
+target_supports_set_thread_options (gdb_thread_options options)
+{
+  inferior *inf = current_inferior ();
+  return inf->top_target ()->supports_set_thread_options (options);
 }
 
 /* Controls if targets can report that they can/are async.  This is

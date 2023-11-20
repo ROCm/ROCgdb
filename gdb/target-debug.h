@@ -185,6 +185,8 @@
   target_debug_do_print (host_address_to_string (X))
 #define target_debug_print_displaced_step_prepare_status(X) \
   target_debug_do_print (host_address_to_string (X))
+#define target_debug_print_gdb_thread_options(X) \
+  target_debug_do_print (to_string (X).c_str ())
 
 static void
 target_debug_print_target_waitstatus_p (struct target_waitstatus *status)

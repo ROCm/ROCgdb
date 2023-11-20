@@ -532,6 +532,12 @@ process_stratum_target::supports_vfork_events ()
   return false;
 }
 
+gdb_thread_options
+process_stratum_target::supported_thread_options ()
+{
+  return 0;
+}
+
 bool
 process_stratum_target::supports_exec_events ()
 {
@@ -606,6 +612,12 @@ bool
 process_stratum_target::thread_stopped (thread_info *thread)
 {
   gdb_assert_not_reached ("target op thread_stopped not supported");
+}
+
+bool
+process_stratum_target::any_resumed ()
+{
+  return true;
 }
 
 bool
@@ -810,7 +822,8 @@ process_stratum_target::thread_pending_parent (thread_info *thread)
 }
 
 thread_info *
-process_stratum_target::thread_pending_child (thread_info *thread)
+process_stratum_target::thread_pending_child (thread_info *thread,
+					      target_waitkind *kind)
 {
   return nullptr;
 }

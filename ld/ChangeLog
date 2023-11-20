@@ -1,3 +1,26 @@
+2023-11-15  Arsen Arsenović  <arsen@aarsen.me>
+
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+	* po/Make-in ($(srcdir)/$(PACKAGE).pot): Output to a .pot
+	temporary file, to suppress xgettext checking charset names.
+
+2023-11-14  Nick Clifton  <nickc@redhat.com>
+
+	PR 28910
+	* lexsup.c (ld_options): Ensure that the --mri-script option is
+	correctly recognised.
+
+2023-11-13  Nick Clifton  <nickc@redhat.com>
+
+	PR 28910
+	* lexsup.c (ld_options): Ensure that the --format option is
+	correctly recognised.
+
+2023-11-13  Chung-Ju Wu  <jasonwucj@gmail.com>
+
+	* ld.texi: Fix redundant space typo.
+
 2023-11-10  Nick Clifton  <nickc@redhat.com>
 
 	* ldlex.h (enum option_values): Add OPTION_ERROR_EXECSTACK,
