@@ -5964,7 +5964,14 @@ handle_thread_exited (execution_control_state *ecs)
 
   if (abort_cmd)
     {
+      /* We're stopping for the thread exit event.  Switch to the
+	 event thread again, as finish_step_over may have switched
+	 threads.  */
+      switch_to_thread (ecs->event_thread);
+
+      /* Emit [Thread ... exited] notification.  */
       delete_thread (ecs->event_thread);
+
       ecs->event_thread = nullptr;
       return false;
     }
