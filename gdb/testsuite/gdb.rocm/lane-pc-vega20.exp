@@ -2043,7 +2043,7 @@ with_test_prefix "line 115" {
  20, 17, 14, 24, 13, 15, 14\\}\\}"
 
     # Step out from kernel and finish the test.
-    gdb_test "next" "exited normally.*" "next out of kernel"
+    gdb_test "next" "Command aborted, thread exited\\." "next out of kernel"
 }
 
 }

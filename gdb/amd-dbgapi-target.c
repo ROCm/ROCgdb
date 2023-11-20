@@ -1318,8 +1318,8 @@ amd_dbgapi_target::stop (ptid_t ptid)
 	  if (target_is_async_p ())
 	    async_event_handler_mark ();
 	}
-
-      delete_thread_silent (thread);
+      else
+	delete_thread_silent (thread);
     };
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
@@ -2427,6 +2427,15 @@ amd_dbgapi_target::displaced_step_finish (thread_info *thread,
 
   amd_dbgapi_displaced_stepping_id_t stepping_id{ it->second };
   info->stepping_id_map.erase (it);
+
+  /* If the thread exited while stepping, we are done.  The code above
+     cleared our associated resources.  We don't want to call dbgapi
+     below: since the thread is gone, we wouldn't be able to find the
+     necessary wave ID.  dbgapi already took care of releasing its
+     displaced-stepping-related resources when it deleted the
+     wave.  */
+  if (ws.kind () == TARGET_WAITKIND_THREAD_EXITED)
+    return DISPLACED_STEP_FINISH_STATUS_OK;
 
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
 
