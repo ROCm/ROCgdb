@@ -3044,6 +3044,64 @@ locexpr_must_disassemble (const gdb_byte *data, const gdb_byte *end,
   return false;
 }
 
+/* Disassemble a LLVM extension.  Returns a pointer to the next unread
+   byte in the input expression.  */
+
+static const gdb_byte *
+disassemble_llvm_user (ui_file *stream, gdbarch *arch,
+		       int indent, dwarf_llvm_user op, const gdb_byte *start,
+		       const gdb_byte *data, const gdb_byte *end)
+{
+  uint64_t ul;
+  int64_t l;
+
+  switch (op)
+    {
+    case DW_OP_LLVM_USER_offset_constu:
+      data = safe_read_uleb128 (data, end, &ul);
+      gdb_printf (stream, " %s", pulongest (ul));
+      break;
+
+    case DW_OP_LLVM_USER_select_bit_piece:
+      {
+	uint64_t count;
+
+	data = safe_read_uleb128 (data, end, &ul);
+	data = safe_read_uleb128 (data, end, &count);
+	gdb_printf (stream, " piece size %s (bits) pieces count %s",
+		    pulongest (ul), pulongest (count));
+      }
+      break;
+
+    case DW_OP_LLVM_USER_extend:
+      {
+	uint64_t count;
+
+	data = safe_read_uleb128 (data, end, &ul);
+	data = safe_read_uleb128 (data, end, &count);
+	gdb_printf (stream, " piece size %s (bits) pieces count %s",
+		    pulongest (ul), pulongest (count));
+      }
+      break;
+
+    case DW_OP_LLVM_USER_call_frame_entry_reg:
+      data = safe_read_uleb128 (data, end, &ul);
+      gdb_printf (stream, " register %s [$%s]",
+		  pulongest (ul), locexpr_regname (arch, (int) ul));
+      break;
+
+    case DW_OP_LLVM_USER_aspace_bregx:
+      data = safe_read_uleb128 (data, end, &ul);
+      data = safe_read_sleb128 (data, end, &l);
+      gdb_printf (stream, " register %s [$%s] offset %s",
+		  pulongest (ul), locexpr_regname (arch, (int) ul),
+		  plongest (l));
+      break;
+    }
+
+  return data;
+}
+
 /* Disassemble an expression, stopping at the end of a piece or at the
    end of the expression.  Returns a pointer to the next unread byte
    in the input expression.  If ALL is nonzero, then this function
@@ -3435,46 +3493,45 @@ disassemble_dwarf_expression (struct ui_file *stream,
 	  gdb_printf (stream, " offset %s", phex_nz (ul, offset_size));
 	  break;
 
+	case DW_OP_LLVM_user:
+	  {
+	    data = safe_read_uleb128 (data, end, &ul);
+	    const char *llvm_user_name = get_DW_OP_LLVM_USER_name (ul);
+
+	    if (!llvm_user_name)
+	      error (_("Unrecognized DWARF LLVM user opcode 0x%02lu at %ld"),
+		     ul, (long) (data - 1 - start));
+	    gdb_printf (stream, "  %*ld: %s", indent + 4,
+			(long) (data - 1 - start), llvm_user_name);
+
+	    data = disassemble_llvm_user (stream, arch, indent,
+					  (dwarf_llvm_user) ul,
+					  start, data, end);
+	  }
+	  break;
+
+	case DW_OP_LLVM_form_aspace_address:
+	case DW_OP_LLVM_offset:
 	case DW_OP_LLVM_offset_constu:
-	  data = safe_read_uleb128 (data, end, &ul);
-	  gdb_printf (stream, " %s", pulongest (ul));
-	  break;
-
-	case DW_OP_LLVM_select_bit_piece:
-	  {
-	    uint64_t count;
-
-	    data = safe_read_uleb128 (data, end, &ul);
-	    data = safe_read_uleb128 (data, end, &count);
-	    gdb_printf (stream, " piece size %s (bits) pieces count %s",
-			pulongest (ul), pulongest (count));
-	  }
-	  break;
-
-	case DW_OP_LLVM_extend:
-	  {
-	    uint64_t count;
-
-	    data = safe_read_uleb128 (data, end, &ul);
-	    data = safe_read_uleb128 (data, end, &count);
-	    gdb_printf (stream, " piece size %s (bits) pieces count %s",
-	                pulongest (ul), pulongest (count));
-	  }
-	  break;
-
+	case DW_OP_LLVM_bit_offset:
 	case DW_OP_LLVM_call_frame_entry_reg:
-	  data = safe_read_uleb128 (data, end, &ul);
-	  gdb_printf (stream, " register %s [$%s]",
-		      pulongest (ul), locexpr_regname (arch, (int) ul));
-	  break;
-
+	case DW_OP_LLVM_undefined:
+	case DW_OP_LLVM_piece_end:
+	case DW_OP_LLVM_select_bit_piece:
+	case DW_OP_LLVM_extend:
 	case DW_OP_LLVM_aspace_bregx:
-	  data = safe_read_uleb128 (data, end, &ul);
-	  data = safe_read_sleb128 (data, end, &l);
-	  gdb_printf (stream, " register %s [$%s] offset %s",
-			    pulongest (ul),
-			    locexpr_regname (arch, (int) ul),
-			    plongest (l));
+	case DW_OP_LLVM_push_lane:
+	  {
+	    unsigned int llvm_user_op = get_DW_OP_LLVM_USER (op);
+
+	    if (!llvm_user_op)
+	      error (_("Unrecognized DWARF LLVM user opcode 0x%02x at %ld"),
+		     llvm_user_op, (long) (data - 1 - start));
+
+	    data = disassemble_llvm_user (stream, arch, indent,
+					  (dwarf_llvm_user) llvm_user_op,
+					  start, data, end);
+	  }
 	  break;
 	}
 
