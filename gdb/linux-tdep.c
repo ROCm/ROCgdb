@@ -38,7 +38,7 @@
 #include "gdbcmd.h"
 #include "gdbsupport/gdb_regex.h"
 #include "gdbsupport/enum-flags.h"
-#include "gdbsupport/gdb_optional.h"
+#include <optional>
 #include "gcore.h"
 #include "gcore-elf.h"
 #include "solib-svr4.h"
@@ -229,7 +229,7 @@ struct linux_info
   int vsyscall_range_p = 0;
 
   /* Inferior's displaced step buffers.  */
-  gdb::optional<displaced_step_buffers> disp_step_bufs;
+  std::optional<displaced_step_buffers> disp_step_bufs;
 };
 
 /* Per-inferior data key.  */
@@ -457,13 +457,13 @@ struct mapping
 {
   ULONGEST addr;
   ULONGEST endaddr;
-  gdb::string_view permissions;
+  std::string_view permissions;
   ULONGEST offset;
-  gdb::string_view device;
+  std::string_view device;
   ULONGEST inode;
 
   /* This field is guaranteed to be NULL-terminated, hence it is not a
-     gdb::string_view.  */
+     std::string_view.  */
   const char *filename;
 };
 
@@ -589,7 +589,7 @@ struct mapping_regexes
 static int
 mapping_is_anonymous_p (const char *filename)
 {
-  static gdb::optional<mapping_regexes> regexes;
+  static std::optional<mapping_regexes> regexes;
   static int init_regex_p = 0;
 
   if (!init_regex_p)
@@ -873,7 +873,7 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
   if (cwd_f)
     {
       xsnprintf (filename, sizeof filename, "/proc/%ld/cwd", pid);
-      gdb::optional<std::string> contents
+      std::optional<std::string> contents
 	= target_fileio_readlink (NULL, filename, &target_errno);
       if (contents.has_value ())
 	gdb_printf ("cwd = '%s'\n", contents->c_str ());
@@ -883,7 +883,7 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
   if (exe_f)
     {
       xsnprintf (filename, sizeof filename, "/proc/%ld/exe", pid);
-      gdb::optional<std::string> contents
+      std::optional<std::string> contents
 	= target_fileio_readlink (NULL, filename, &target_errno);
       if (contents.has_value ())
 	gdb_printf ("exe = '%s'\n", contents->c_str ());
@@ -1384,7 +1384,7 @@ parse_smaps_data (const char *data,
 
       /* Decode permissions.  */
       auto has_perm = [&m] (char c)
-	{ return m.permissions.find (c) != gdb::string_view::npos; };
+	{ return m.permissions.find (c) != std::string_view::npos; };
       read = has_perm ('r');
       write = has_perm ('w');
       exec = has_perm ('x');
@@ -2108,7 +2108,7 @@ linux_make_corefile_notes (struct gdbarch *gdbarch, bfd *obfd, int *note_size)
     return NULL;
 
   /* Auxillary vector.  */
-  gdb::optional<gdb::byte_vector> auxv =
+  std::optional<gdb::byte_vector> auxv =
     target_read_alloc (current_inferior ()->top_target (),
 		       TARGET_OBJECT_AUXV, NULL);
   if (auxv && !auxv->empty ())
@@ -2675,7 +2675,7 @@ linux_displaced_step_restore_all_in_ptid (inferior *parent_inf, ptid_t ptid)
 /* Helper for linux_get_hwcap and linux_get_hwcap2.  */
 
 static CORE_ADDR
-linux_get_hwcap_helper (const gdb::optional<gdb::byte_vector> &auxv,
+linux_get_hwcap_helper (const std::optional<gdb::byte_vector> &auxv,
 			target_ops *target, gdbarch *gdbarch, CORE_ADDR match)
 {
   CORE_ADDR field;
@@ -2688,7 +2688,7 @@ linux_get_hwcap_helper (const gdb::optional<gdb::byte_vector> &auxv,
 /* See linux-tdep.h.  */
 
 CORE_ADDR
-linux_get_hwcap (const gdb::optional<gdb::byte_vector> &auxv,
+linux_get_hwcap (const std::optional<gdb::byte_vector> &auxv,
 		 target_ops *target, gdbarch *gdbarch)
 {
   return linux_get_hwcap_helper (auxv, target, gdbarch, AT_HWCAP);
@@ -2707,7 +2707,7 @@ linux_get_hwcap ()
 /* See linux-tdep.h.  */
 
 CORE_ADDR
-linux_get_hwcap2 (const gdb::optional<gdb::byte_vector> &auxv,
+linux_get_hwcap2 (const std::optional<gdb::byte_vector> &auxv,
 		  target_ops *target, gdbarch *gdbarch)
 {
   return linux_get_hwcap_helper (auxv, target, gdbarch, AT_HWCAP2);

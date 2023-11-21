@@ -127,7 +127,7 @@ struct literal_def
   LONGEST use;
 
   /* An optional number accepted that stands for the literal.  */
-  gdb::optional<LONGEST> val;
+  std::optional<LONGEST> val;
 };
 
 /* Return true if a setting of type VAR_TYPE is backed with type T.
@@ -367,7 +367,7 @@ struct setting
   }
 
   template<typename T>
-  gdb::optional<T> effective_value () const
+  std::optional<T> effective_value () const
   {
     if (m_effective_getter == nullptr)
       return {};

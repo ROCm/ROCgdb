@@ -40,11 +40,11 @@ static const char device_name[] = "main";
 
 /* These are global so that we're sure to compute strlen only
    once.  */
-static const gdb::string_view host_name_sv = host_name;
-static const gdb::string_view device_name_sv = device_name;
+static const std::string_view host_name_sv = host_name;
+static const std::string_view device_name_sv = device_name;
 
-gdb::string_view
-gdb_hip_test_mode_frob_names (struct objfile *objfile, gdb::string_view name)
+std::string_view
+gdb_hip_test_mode_frob_names (struct objfile *objfile, std::string_view name)
 {
   if (!gdb_hip_test_mode)
     return name;
@@ -68,7 +68,7 @@ gdb_hip_test_mode_frob_names (struct objfile *objfile, gdb::string_view name)
       /* Same, with uppercase "Main".  */
       return "_ZN3lld3elf12LinkerDriver4MainEN4llvm8ArrayRefIPKcEE";
     }
-  else if (name.find ("gdb_hip_test_main") != gdb::string_view::npos)
+  else if (name.find ("gdb_hip_test_main") != std::string_view::npos)
     {
       if (gdb_hip_test_mode > 1)
 	gdb_printf (gdb_stdlog, "frob: got %.*s\n",
@@ -84,7 +84,7 @@ gdb_hip_test_mode_frob_names (struct objfile *objfile, const char *name)
 {
   if (!gdb_hip_test_mode)
     return name;
-  return gdb_hip_test_mode_frob_names (objfile, gdb::string_view (name)).data ();
+  return gdb_hip_test_mode_frob_names (objfile, std::string_view (name)).data ();
 }
 
 void _initialize_gdb_hip_test_mode ();

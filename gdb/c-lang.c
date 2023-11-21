@@ -693,7 +693,7 @@ value *aspace_operation::evaluate (struct type *expect_type,
     error (_("Address space conversion is not supported by the architecture"));
 
   const std::string &name = std::get<1> (m_storage);
-  gdb::optional<arch_addr_space_id> address_space_id
+  std::optional<arch_addr_space_id> address_space_id
     = gdbarch_name_to_address_space_id (exp->gdbarch, name.c_str ());
 
   if (!address_space_id.has_value ())

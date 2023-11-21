@@ -655,14 +655,14 @@ show_setting_value (ui_file *out, int from_tty, cmd_list_element *c, const char 
     deprecated_show_value_hack (out, from_tty, c, val);
 }
 
-static gdb::optional<std::string>
+static std::optional<std::string>
 get_effective_value_string (const setting &var)
 {
   switch (var.type ())
     {
     case var_boolean:
       {
-	gdb::optional<bool> value = var.effective_value<bool> ();
+	std::optional<bool> value = var.effective_value<bool> ();
 
 	if (!value.has_value ())
 	  return {};
@@ -705,7 +705,7 @@ do_show_command (const char *arg, int from_tty, struct cmd_list_element *c)
       show_setting_value (&out, from_tty, c, val.c_str ());
       uiout->field_string ("verbose", out.string ());
 
-      gdb::optional<std::string> effective_value
+      std::optional<std::string> effective_value
 	= get_effective_value_string (*c->var);
       if (effective_value.has_value ())
 	uiout->field_string ("effective-value", *effective_value);

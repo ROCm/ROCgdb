@@ -1037,12 +1037,12 @@ find_case_fold_entry (uint32_t c)
    rather than emitting a warning.  Result good to next call.  */
 
 static const char *
-ada_fold_name (gdb::string_view name, bool throw_on_error = false)
+ada_fold_name (std::string_view name, bool throw_on_error = false)
 {
   static std::string fold_storage;
 
   if (!name.empty () && name[0] == '\'')
-    fold_storage = gdb::to_string (name.substr (1, name.size () - 2));
+    fold_storage = name.substr (1, name.size () - 2);
   else
     {
       /* Why convert to UTF-32 and implement our own case-folding,
@@ -1083,12 +1083,12 @@ ada_fold_name (gdb::string_view name, bool throw_on_error = false)
 	      warned = true;
 	      warning (_("could not convert '%s' from the host encoding (%s) to UTF-32.\n"
 			 "This normally should not happen, please file a bug report."),
-		       gdb::to_string (name).c_str (), host_charset ());
+		       std::string (name).c_str (), host_charset ());
 	    }
 
 	  /* We don't try to recover from errors; just return the
 	     original string.  */
-	  fold_storage = gdb::to_string (name);
+	  fold_storage = name;
 	  return fold_storage.c_str ();
 	}
 
@@ -1137,12 +1137,12 @@ ada_fold_name (gdb::string_view name, bool throw_on_error = false)
 	      warned = true;
 	      warning (_("could not convert the lower-cased variant of '%s'\n"
 			 "from UTF-32 to the host encoding (%s)."),
-		       gdb::to_string (name).c_str (), host_charset ());
+		       std::string (name).c_str (), host_charset ());
 	    }
 
 	  /* We don't try to recover from errors; just return the
 	     original string.  */
-	  fold_storage = gdb::to_string (name);
+	  fold_storage = name;
 	}
     }
 
@@ -3101,7 +3101,7 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
 			       type0->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       type0->field (0).bitsize ());
   int base_low =  ada_discrete_type_low_bound (type0->index_type ());
-  gdb::optional<LONGEST> base_low_pos, low_pos;
+  std::optional<LONGEST> base_low_pos, low_pos;
   CORE_ADDR base;
 
   low_pos = discrete_position (base_index_type, low);
@@ -3135,7 +3135,7 @@ ada_value_slice (struct value *array, int low, int high)
 			      (alloc, type->target_type (), index_type,
 			       type->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       type->field (0).bitsize ());
-  gdb::optional<LONGEST> low_pos, high_pos;
+  std::optional<LONGEST> low_pos, high_pos;
 
 
   low_pos = discrete_position (base_index_type, low);
@@ -8795,7 +8795,7 @@ pos_atr (struct value *arg)
   if (!discrete_type_p (type))
     error (_("'POS only defined on discrete types"));
 
-  gdb::optional<LONGEST> result = discrete_position (type, value_as_long (val));
+  std::optional<LONGEST> result = discrete_position (type, value_as_long (val));
   if (!result.has_value ())
     error (_("enumeration value is invalid: can't find 'POS"));
 
@@ -13253,16 +13253,14 @@ do_exact_match (const char *symbol_search_name,
 
 ada_lookup_name_info::ada_lookup_name_info (const lookup_name_info &lookup_name)
 {
-  gdb::string_view user_name = lookup_name.name ();
+  std::string_view user_name = lookup_name.name ();
 
   if (!user_name.empty () && user_name[0] == '<')
     {
       if (user_name.back () == '>')
-	m_encoded_name
-	  = gdb::to_string (user_name.substr (1, user_name.size () - 2));
+	m_encoded_name = user_name.substr (1, user_name.size () - 2);
       else
-	m_encoded_name
-	  = gdb::to_string (user_name.substr (1, user_name.size () - 1));
+	m_encoded_name = user_name.substr (1, user_name.size () - 1);
       m_encoded_p = true;
       m_verbatim_p = true;
       m_wild_match_p = false;
@@ -13272,17 +13270,17 @@ ada_lookup_name_info::ada_lookup_name_info (const lookup_name_info &lookup_name)
     {
       m_verbatim_p = false;
 
-      m_encoded_p = user_name.find ("__") != gdb::string_view::npos;
+      m_encoded_p = user_name.find ("__") != std::string_view::npos;
 
       if (!m_encoded_p)
 	{
 	  const char *folded = ada_fold_name (user_name);
 	  m_encoded_name = ada_encode_1 (folded, false);
 	  if (m_encoded_name.empty ())
-	    m_encoded_name = gdb::to_string (user_name);
+	    m_encoded_name = user_name;
 	}
       else
-	m_encoded_name = gdb::to_string (user_name);
+	m_encoded_name = user_name;
 
       /* Handle the 'package Standard' special case.  See description
 	 of m_standard_p.  */
@@ -13329,7 +13327,7 @@ literal_symbol_name_matcher (const char *symbol_search_name,
 			     const lookup_name_info &lookup_name,
 			     completion_match_result *comp_match_res)
 {
-  gdb::string_view name_view = lookup_name.name ();
+  std::string_view name_view = lookup_name.name ();
 
   if (lookup_name.completion_mode ()
       ? (strncmp (symbol_search_name, name_view.data (),

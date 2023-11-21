@@ -21,13 +21,13 @@
 #ifndef GDB_HIP_TEST_MODE_H
 #define GDB_HIP_TEST_MODE_H
 
-#include "gdbsupport/gdb_string_view.h"
+#include <string_view>
 
 struct objfile;
 
 const char *gdb_hip_test_mode_frob_names (struct objfile *objfile,
 					  const char *name);
-gdb::string_view gdb_hip_test_mode_frob_names (struct objfile *objfile,
-					       gdb::string_view name);
+std::string_view gdb_hip_test_mode_frob_names (struct objfile *objfile,
+					       std::string_view name);
 
 #endif

@@ -21,7 +21,7 @@
 #include <errno.h>
 #include "gdbsupport/scoped_fd.h"
 #include "debuginfod-support.h"
-#include "gdbsupport/gdb_optional.h"
+#include <optional>
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
 #include "cli-out.h"
@@ -246,11 +246,11 @@ debuginfod_is_enabled ()
       gdb_printf (_("\nThis GDB supports auto-downloading debuginfo " \
 		    "from the following URLs:\n"));
 
-      gdb::string_view url_view (urls);
+      std::string_view url_view (urls);
       while (true)
 	{
 	  size_t off = url_view.find_first_not_of (' ');
-	  if (off == gdb::string_view::npos)
+	  if (off == std::string_view::npos)
 	    break;
 	  url_view = url_view.substr (off);
 	  /* g++ 11.2.1 on s390x, g++ 11.3.1 on ppc64le and g++ 11 on
@@ -264,9 +264,8 @@ debuginfod_is_enabled ()
 	  gdb_printf
 	    (_("  <%ps>\n"),
 	     styled_string (file_name_style.style (),
-			    gdb::to_string (url_view.substr (0,
-							     off)).c_str ()));
-	  if (off == gdb::string_view::npos)
+			    std::string (url_view.substr (0, off)).c_str ()));
+	  if (off == std::string_view::npos)
 	    break;
 	  url_view = url_view.substr (off);
 	}
@@ -320,7 +319,7 @@ debuginfod_source_query (const unsigned char *build_id,
 
   char *dname = nullptr;
   scoped_fd fd;
-  gdb::optional<target_terminal::scoped_restore_terminal_state> term_state;
+  std::optional<target_terminal::scoped_restore_terminal_state> term_state;
 
   {
     user_data data ("source file", srcpath);
@@ -366,7 +365,7 @@ debuginfod_debuginfo_query (const unsigned char *build_id,
 
   char *dname = nullptr;
   scoped_fd fd;
-  gdb::optional<target_terminal::scoped_restore_terminal_state> term_state;
+  std::optional<target_terminal::scoped_restore_terminal_state> term_state;
 
   {
     user_data data ("separate debug info for", filename);
@@ -409,7 +408,7 @@ debuginfod_exec_query (const unsigned char *build_id,
 
   char *dname = nullptr;
   scoped_fd fd;
-  gdb::optional<target_terminal::scoped_restore_terminal_state> term_state;
+  std::optional<target_terminal::scoped_restore_terminal_state> term_state;
 
   {
     user_data data ("executable for", filename);
@@ -458,7 +457,7 @@ debuginfod_section_query (const unsigned char *build_id,
   char *dname = nullptr;
   std::string desc = std::string ("section ") + section_name + " for";
   scoped_fd fd;
-  gdb::optional<target_terminal::scoped_restore_terminal_state> term_state;
+  std::optional<target_terminal::scoped_restore_terminal_state> term_state;
 
   {
     user_data data (desc.c_str (), filename);

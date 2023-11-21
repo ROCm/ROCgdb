@@ -1096,7 +1096,7 @@ default_read_core_file_mappings
 }
 
 /* See arch-utils.h.  */
-gdb::optional<arch_addr_space_id>
+std::optional<arch_addr_space_id>
 gdbarch_name_to_address_space_id (struct gdbarch *gdbarch, const char *name)
 {
   if (!gdbarch_address_spaces_p (gdbarch))

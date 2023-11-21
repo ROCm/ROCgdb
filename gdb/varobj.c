@@ -264,7 +264,7 @@ varobj_create (const char *objname,
 	       const char *expression, CORE_ADDR frame, enum varobj_type type)
 {
   /* Fill out a varobj structure for the (root) variable being constructed.  */
-  auto var = gdb::make_unique<varobj> (new varobj_root);
+  auto var = std::make_unique<varobj> (new varobj_root);
 
   if (expression != NULL)
     {
@@ -1266,8 +1266,8 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
 	      /* If the value's address is of an address space that is
 		 thread or lane specific, we need to fetch the value
 		 in the context of the right thread/lane.  */
-	      gdb::optional<scoped_restore_current_thread> restore_thread;
-	      gdb::optional<scoped_restore_current_simd_lane> restore_lane;
+	      std::optional<scoped_restore_current_thread> restore_thread;
+	      std::optional<scoped_restore_current_simd_lane> restore_lane;
 
 	      if (var->root->thread_id > 0)
 		{
@@ -1999,7 +1999,7 @@ value_of_root_1 (struct varobj **var_handle)
     return NULL;
 
   scoped_restore_current_thread restore_thread;
-  gdb::optional<scoped_restore_current_simd_lane> restore_lane;
+  std::optional<scoped_restore_current_simd_lane> restore_lane;
 
   /* Determine whether the variable is still around.  */
   if (var->root->valid_block == NULL || var->root->floating)

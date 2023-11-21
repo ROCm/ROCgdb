@@ -934,7 +934,7 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 			       ULONGEST offset, ULONGEST requested_len,
 			       ULONGEST *xfered_len)
 {
-  gdb::optional<scoped_restore_current_thread> maybe_restore_thread;
+  std::optional<scoped_restore_current_thread> maybe_restore_thread;
 
   if (!ptid_is_gpu (inferior_ptid))
     return beneath ()->xfer_partial (object, annex, readbuf, writebuf, offset,
@@ -2702,7 +2702,7 @@ static void
 amd_dbgapi_log_message_callback (amd_dbgapi_log_level_t level,
 				 const char *message)
 {
-  gdb::optional<target_terminal::scoped_restore_terminal_state> tstate;
+  std::optional<target_terminal::scoped_restore_terminal_state> tstate;
 
   if (target_supports_terminal_ours ())
     {
@@ -2945,8 +2945,8 @@ info_agents_command (const char *args, int from_tty)
     current_agent_id = AMD_DBGAPI_AGENT_NONE;
 
   {
-    gdb::optional<ui_out_emit_list> list_emitter;
-    gdb::optional<ui_out_emit_table> table_emitter;
+    std::optional<ui_out_emit_list> list_emitter;
+    std::optional<ui_out_emit_table> table_emitter;
 
     std::vector<std::pair<inferior *, std::vector<amd_dbgapi_agent_id_t>>>
       all_filtered_agents;
@@ -3248,8 +3248,8 @@ info_queues_command (const char *args, int from_tty)
     current_queue_id = AMD_DBGAPI_QUEUE_NONE;
 
   {
-    gdb::optional<ui_out_emit_list> list_emitter;
-    gdb::optional<ui_out_emit_table> table_emitter;
+    std::optional<ui_out_emit_list> list_emitter;
+    std::optional<ui_out_emit_table> table_emitter;
 
     std::vector<std::pair<inferior *, std::vector<amd_dbgapi_queue_id_t>>>
       all_filtered_queues;
@@ -3597,8 +3597,8 @@ info_dispatches_command (const char *args, int from_tty)
     current_dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
 
   {
-    gdb::optional<ui_out_emit_list> list_emitter;
-    gdb::optional<ui_out_emit_table> table_emitter;
+    std::optional<ui_out_emit_list> list_emitter;
+    std::optional<ui_out_emit_table> table_emitter;
 
     std::vector<std::pair<inferior *, std::vector<amd_dbgapi_dispatch_id_t>>>
       all_filtered_dispatches;

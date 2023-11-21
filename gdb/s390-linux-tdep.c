@@ -332,7 +332,7 @@ s390_core_read_description (struct gdbarch *gdbarch,
 			    struct target_ops *target, bfd *abfd)
 {
   asection *section = bfd_get_section_by_name (abfd, ".reg");
-  gdb::optional<gdb::byte_vector> auxv = target_read_auxv_raw (target);
+  std::optional<gdb::byte_vector> auxv = target_read_auxv_raw (target);
   CORE_ADDR hwcap = linux_get_hwcap (auxv, target, gdbarch);
   bool high_gprs, v1, v2, te, vx, gs;
 
@@ -572,12 +572,21 @@ s390_linux_get_syscall_number (struct gdbarch *gdbarch,
      don't currently support SVC via EXECUTE. */
   regcache_cooked_read_unsigned (regs, tdep->pc_regnum, &pc);
   pc -= 2;
-  opcode = read_memory_unsigned_integer ((CORE_ADDR) pc, 1, byte_order);
+
+  ULONGEST val;
+  if (!safe_read_memory_unsigned_integer ((CORE_ADDR) pc, 1, byte_order,
+					  &val))
+    return -1;
+  opcode = val;
+
   if (opcode != op_svc)
     return -1;
 
-  svc_number = read_memory_unsigned_integer ((CORE_ADDR) pc + 1, 1,
-					     byte_order);
+  if (!safe_read_memory_unsigned_integer ((CORE_ADDR) pc + 1, 1, byte_order,
+					  &val))
+    return -1;
+  svc_number = val;
+
   if (svc_number == 0)
     regcache_cooked_read_unsigned (regs, S390_R1_REGNUM, &svc_number);
 

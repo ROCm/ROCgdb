@@ -470,7 +470,6 @@ SELFTESTS_SRCS = \
 	unittests/memrange-selftests.c \
 	unittests/offset-type-selftests.c \
 	unittests/observable-selftests.c \
-	unittests/optional-selftests.c \
 	unittests/packed-selftests.c \
 	unittests/parallel-for-selftests.c \
 	unittests/parse-connection-spec-selftests.c \
@@ -484,7 +483,6 @@ SELFTESTS_SRCS = \
 	unittests/scoped_mmap-selftests.c \
 	unittests/scoped_restore-selftests.c \
 	unittests/search-memory-selftests.c \
-	unittests/string_view-selftests.c \
 	unittests/style-selftests.c \
 	unittests/tracepoint-selftests.c \
 	unittests/tui-selftests.c \

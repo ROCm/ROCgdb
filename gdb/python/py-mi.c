@@ -145,7 +145,7 @@ private:
 
   /* If an error occurred, this holds the exception information for
      use by the 'release' method.  */
-  gdb::optional<gdbpy_err_fetch> m_error;
+  std::optional<gdbpy_err_fetch> m_error;
 
   /* Return a reference to the object under construction.  */
   object_desc &current ()
@@ -290,7 +290,7 @@ gdbpy_execute_mi_command (PyObject *self, PyObject *args, PyObject *kw)
   try
     {
       scoped_restore save_uiout = make_scoped_restore (&current_uiout, &uiout);
-      auto parser = gdb::make_unique<mi_parse> (std::move (mi_command),
+      auto parser = std::make_unique<mi_parse> (std::move (mi_command),
 						std::move (arg_strings));
       mi_execute_command (parser.get ());
     }

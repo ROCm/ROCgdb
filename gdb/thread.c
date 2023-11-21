@@ -48,7 +48,7 @@
 #include "thread-fsm.h"
 #include "tid-parse.h"
 #include <algorithm>
-#include "gdbsupport/gdb_optional.h"
+#include <optional>
 #include "inline-frame.h"
 #include "stack.h"
 #include "interps.h"
@@ -278,7 +278,7 @@ clear_thread_inferior_resources (struct thread_info *tp)
 /* Notify interpreters and observers that thread T has exited.  */
 
 static void
-notify_thread_exited (thread_info *t, gdb::optional<ULONGEST> exit_code,
+notify_thread_exited (thread_info *t, std::optional<ULONGEST> exit_code,
 		      int silent)
 {
   if (!silent && print_thread_events)
@@ -299,7 +299,7 @@ notify_thread_exited (thread_info *t, gdb::optional<ULONGEST> exit_code,
 /* See gdbthread.h.  */
 
 void
-set_thread_exited (thread_info *tp, gdb::optional<ULONGEST> exit_code,
+set_thread_exited (thread_info *tp, std::optional<ULONGEST> exit_code,
 		   bool silent)
 {
   /* Dead threads don't need to step-over.  Remove from chain.  */
@@ -588,7 +588,7 @@ global_thread_step_over_chain_remove (struct thread_info *tp)
 /* Helper for the different delete_thread variants.  */
 
 static void
-delete_thread_1 (thread_info *thr, gdb::optional<ULONGEST> exit_code,
+delete_thread_1 (thread_info *thr, std::optional<ULONGEST> exit_code,
 		 bool silent)
 {
   gdb_assert (thr != nullptr);
@@ -1200,8 +1200,8 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
     /* For backward compatibility, we make a list for MI.  A table is
        preferable for the CLI, though, because it shows table
        headers.  */
-    gdb::optional<ui_out_emit_list> list_emitter;
-    gdb::optional<ui_out_emit_table> table_emitter;
+    std::optional<ui_out_emit_list> list_emitter;
+    std::optional<ui_out_emit_table> table_emitter;
 
     /* We'll be switching threads temporarily below.  */
     scoped_restore_current_thread restore_thread;
@@ -1601,8 +1601,8 @@ print_lane_info_1 (struct ui_out *uiout, const char *requested_lanes,
        preferable for the CLI, though, because it shows table headers.
        XXX: Actually, there's no backward compatibility issue here,
        this is copied verbatim from the thread printing code.  */
-    gdb::optional<ui_out_emit_list> list_emitter;
-    gdb::optional<ui_out_emit_table> table_emitter;
+    std::optional<ui_out_emit_list> list_emitter;
+    std::optional<ui_out_emit_table> table_emitter;
 
     int n_lanes = 0;
 
@@ -1944,7 +1944,7 @@ tp_array_compar_descending (const thread_info_ref &a, const thread_info_ref &b)
 
 void
 thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
-			gdb::optional<int> ada_task, const char *cmd,
+			std::optional<int> ada_task, const char *cmd,
 			int from_tty, const qcs_flags &flags)
 {
   gdb_assert (is_current_thread (thr));

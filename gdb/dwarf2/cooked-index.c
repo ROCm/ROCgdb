@@ -266,9 +266,9 @@ cooked_index_shard::handle_gnat_encoded_entry (cooked_index_entry *entry,
   std::string canonical = ada_decode (entry->name, false, false);
   if (canonical.empty ())
     return {};
-  std::vector<gdb::string_view> names = split_name (canonical.c_str (),
+  std::vector<std::string_view> names = split_name (canonical.c_str (),
 						    split_style::DOT_STYLE);
-  gdb::string_view tail = names.back ();
+  std::string_view tail = names.back ();
   names.pop_back ();
 
   const cooked_index_entry *parent = nullptr;
@@ -333,7 +333,7 @@ cooked_index_shard::do_finalize ()
   auto eq_entry = [] (const void *a, const void *b) -> int
     {
       const cooked_index_entry *ae = (const cooked_index_entry *) a;
-      const gdb::string_view *sv = (const gdb::string_view *) b;
+      const std::string_view *sv = (const std::string_view *) b;
       return (strlen (ae->canonical) == sv->length ()
 	      && strncasecmp (ae->canonical, sv->data (), sv->length ()) == 0);
     };
@@ -466,12 +466,7 @@ cooked_index::start_writing_index (dwarf2_per_bfd *per_bfd)
      started, because it may call 'wait'.  */
   m_write_future
     = gdb::thread_pool::g_thread_pool->post_task ([this, per_bfd,
-#if __cplusplus >= 201402L
-						   ctx = std::move (ctx)
-#else
-						   ctx
-#endif
-						   ] ()
+						   ctx = std::move (ctx)] ()
 	{
 	  maybe_write_index (per_bfd, ctx);
 	});
