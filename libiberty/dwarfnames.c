@@ -1,5 +1,6 @@
 /* Names of various DWARF tags.
    Copyright (C) 2012-2023 Free Software Foundation, Inc.
+   Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 
 This file is part of GNU CC.
    
@@ -49,6 +50,13 @@ Boston, MA 02110-1301, USA.  */
   switch (op) { \
   DW_OP (name, value)
 #define DW_END_OP } return 0; }
+#define DW_BEGIN_OP_LLVM_USER(name, value) \
+  const char *get_DW_OP_LLVM_USER_name (unsigned int op) {	\
+  switch (op) { \
+  DW_OP_LLVM_USER (name, value)
+#define DW_END_OP_LLVM_USER } return 0; }
+#define DW_BEGIN_OP_TO_LLVM_USER(name, value)
+#define DW_END_OP_TO_LLVM_USER
 #define DW_FIRST_ATE(name, value)			\
   const char *get_DW_ATE_name (unsigned int enc) {	\
   switch (enc) { \
@@ -77,6 +85,8 @@ Boston, MA 02110-1301, USA.  */
 #define DW_AT_DUP(name, value)
 #define DW_OP(name, value) case name: return # name ;
 #define DW_OP_DUP(name, value)
+#define DW_OP_LLVM_USER(name, value) case name: return #name ;
+#define DW_OP_TO_LLVM_USER(name, value)
 #define DW_ATE(name, value) case name: return # name ;
 #define DW_ATE_DUP(name, value)
 #define DW_CFA(name, value) case name: return # name ;
@@ -95,6 +105,10 @@ Boston, MA 02110-1301, USA.  */
 #undef DW_END_AT
 #undef DW_FIRST_OP
 #undef DW_END_OP
+#undef DW_BEGIN_OP_LLVM_USER
+#undef DW_END_OP_LLVM_USER
+#undef DW_BEGIN_OP_TO_LLVM_USER
+#undef DW_END_OP_TO_LLVM_USER
 #undef DW_FIRST_ATE
 #undef DW_END_ATE
 #undef DW_FIRST_CFA
@@ -110,6 +124,8 @@ Boston, MA 02110-1301, USA.  */
 #undef DW_AT_DUP
 #undef DW_OP
 #undef DW_OP_DUP
+#undef DW_OP_LLVM_USER
+#undef DW_OP_TO_LLVM_USER
 #undef DW_ATE
 #undef DW_ATE_DUP
 #undef DW_CFA

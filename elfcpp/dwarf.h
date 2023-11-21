@@ -63,6 +63,15 @@ namespace elfcpp
 #define DW_OP_DUP(name, value) , name = value
 #define DW_END_OP };
 
+#define DW_BEGIN_OP_LLVM_USER(name, value) enum DW_OP_LLVM_USER { \
+  name = value
+#define DW_OP_LLVM_USER(name, value) , name = value
+#define DW_END_OP_LLVM_USER };
+
+#define DW_FIRST_OP_TO_LLVM_USER(name, value)
+#define DW_OP_TO_LLVM_USER(name, value)
+#define DW_END_OP_TO_LLVM_USER
+
 #define DW_FIRST_ATE(name, value) enum DW_ENCODING { \
   name = value
 #define DW_ATE(name, value) , name = value
@@ -106,6 +115,14 @@ namespace elfcpp
 #undef DW_OP
 #undef DW_OP_DUP
 #undef DW_END_OP
+
+#undef DW_BEGIN_OP_LLVM_USER
+#undef DW_OP_LLVM_USER
+#undef DW_END_OP_LLVM_USER
+
+#undef DW_BEGIN_OP_TO_LLVM_USER
+#undef DW_OP_TO_LLVM_USER
+#undef DW_END_OP_TO_LLVM_USER
 
 #undef DW_FIRST_ATE
 #undef DW_ATE
