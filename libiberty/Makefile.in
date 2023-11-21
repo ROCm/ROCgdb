@@ -2,6 +2,7 @@
 # Originally written by K. Richard Pixley <rich@cygnus.com>.
 #
 # Copyright (C) 1990-2023 Free Software Foundation, Inc.
+# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 #
 # This file is part of the libiberty library.
 # Libiberty is free software; you can redistribute it and/or
@@ -128,7 +129,7 @@ CFILES = alloca.c argv.c asprintf.c atexit.c				\
 	basename.c bcmp.c bcopy.c bsearch.c bsearch_r.c bzero.c		\
 	calloc.c choose-temp.c clock.c concat.c cp-demangle.c		\
 	 cp-demint.c cplus-dem.c crc32.c				\
-	d-demangle.c dwarfnames.c dyn-string.c				\
+	d-demangle.c dwarf-llvm-map.c dwarfnames.c dyn-string.c		\
 	fdmatch.c ffs.c fibheap.c filedescriptor.c filename_cmp.c floatformat.c		\
 	fnmatch.c fopen_unlocked.c					\
 	getcwd.c getopt.c getopt1.c getpagesize.c getpwd.c getruntime.c	\
@@ -172,8 +173,8 @@ REQUIRED_OFILES =							\
 	./bsearch_r.$(objext)						\
 	./choose-temp.$(objext) ./concat.$(objext)			\
 	./cp-demint.$(objext) ./crc32.$(objext) ./d-demangle.$(objext)	\
-	./dwarfnames.$(objext) ./dyn-string.$(objext)			\
-	./fdmatch.$(objext) ./fibheap.$(objext)				\
+	./dwarf-llvm-map.$(objext) ./dwarfnames.$(objext)		\
+	./dyn-string.$(objext) ./fdmatch.$(objext) ./fibheap.$(objext)	\
 	./filedescriptor.$(objext)	\
 	./filename_cmp.$(objext) ./floatformat.$(objext)		\
 	./fnmatch.$(objext) ./fopen_unlocked.$(objext)			\
@@ -748,8 +749,18 @@ $(CONFIGURED_OFILES): stamp-picdir stamp-noasandir
 	else true; fi
 	$(COMPILE.c) $(srcdir)/d-demangle.c $(OUTPUT_OPTION)
 
-./dwarfnames.$(objext): $(srcdir)/dwarfnames.c $(INCDIR)/dwarf2.def \
-	$(INCDIR)/dwarf2.h
+./dwarf-llvm-map.$(objext): $(srcdir)/dwarf-llvm-map.c \
+	$(INCDIR)/dwarf2.def $(INCDIR)/dwarf2.h
+	if [ x"$(PICFLAG)" != x ]; then \
+	  $(COMPILE.c) $(PICFLAG) $(srcdir)/dwarf-llvm-map.c -o pic/$@; \
+	else true; fi
+	if [ x"$(NOASANFLAG)" != x ]; then \
+	  $(COMPILE.c) $(PICFLAG) $(NOASANFLAG) $(srcdir)/dwarf-llvm-map.c -o noasan/$@; \
+	else true; fi
+	$(COMPILE.c) $(srcdir)/dwarf-llvm-map.c $(OUTPUT_OPTION)
+
+./dwarfnames.$(objext): $(srcdir)/dwarfnames.c \
+	$(INCDIR)/dwarf2.def $(INCDIR)/dwarf2.h
 	if [ x"$(PICFLAG)" != x ]; then \
 	  $(COMPILE.c) $(PICFLAG) $(srcdir)/dwarfnames.c -o pic/$@; \
 	else true; fi

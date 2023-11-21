@@ -720,7 +720,37 @@ DW_OP (DW_OP_LLVM_aspace_bregx, 0xe8)
 DW_OP (DW_OP_LLVM_piece_end, 0xea)
 DW_OP (DW_OP_LLVM_extend, 0xeb)
 DW_OP (DW_OP_LLVM_select_bit_piece, 0xec)
+DW_OP (DW_OP_LLVM_user, 0xfe)
 DW_END_OP
+
+/* LLVM extension opcodes in the DW_OP_LLVM_USER namespace.  */
+DW_BEGIN_OP_LLVM_USER (DW_OP_LLVM_USER_form_aspace_address, 0x02)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_push_lane, 0x03)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_offset, 0x04)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_offset_constu, 0x05)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_bit_offset, 0x06)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_call_frame_entry_reg, 0x07)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_undefined, 0x08)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_aspace_bregx, 0x09)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_piece_end, 0x0a)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_extend, 0x0b)
+DW_OP_LLVM_USER (DW_OP_LLVM_USER_select_bit_piece, 0x0c)
+DW_END_OP_LLVM_USER
+
+/* Mapping from DW_OP_LLVM_ namespace into DW_OP_LLVM_USER
+   namespace.  */
+DW_BEGIN_OP_TO_LLVM_USER (form_aspace_address, LLVM_form_aspace_address)
+DW_OP_TO_LLVM_USER (push_lane, LLVM_push_lane)
+DW_OP_TO_LLVM_USER (offset, LLVM_offset)
+DW_OP_TO_LLVM_USER (offset_constu, LLVM_offset_constu)
+DW_OP_TO_LLVM_USER (bit_offset, LLVM_bit_offset)
+DW_OP_TO_LLVM_USER (call_frame_entry_reg, LLVM_call_frame_entry_reg)
+DW_OP_TO_LLVM_USER (undefined, LLVM_undefined)
+DW_OP_TO_LLVM_USER (aspace_bregx, LLVM_aspace_bregx)
+DW_OP_TO_LLVM_USER (piece_end, LLVM_piece_end)
+DW_OP_TO_LLVM_USER (extend, LLVM_extend)
+DW_OP_TO_LLVM_USER (select_bit_piece, LLVM_select_bit_piece)
+DW_END_OP_TO_LLVM_USER
 
 DW_FIRST_ATE (DW_ATE_void, 0x0)
 DW_ATE (DW_ATE_address, 0x1)
