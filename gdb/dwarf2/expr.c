@@ -2779,6 +2779,12 @@ private:
   std::shared_ptr<dwarf_entry> create_extend_composite
     (ULONGEST piece_bit_size, ULONGEST pieces_count);
 
+  /* Evaluator for the LLVM extension opcodes.  Using the context in
+    this object, evaluate the following LLVM operation.  */
+  const gdb_byte *execute_llvm_stack_op (dwarf_llvm_user op,
+					 const gdb_byte *op_ptr,
+					 const gdb_byte *op_end);
+
   /* The engine for the expression evaluator.  Using the context in this
      object, evaluate the expression between OP_PTR and OP_END.  */
   void execute_stack_op (const gdb_byte *op_ptr, const gdb_byte *op_end);
@@ -3515,6 +3521,226 @@ dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
     return 0;
 
   return 1;
+}
+
+const gdb_byte *
+dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
+					   const gdb_byte *op_ptr,
+					   const gdb_byte *op_end)
+{
+  if (op == 0)
+    error (_("Unhandled DWARF expression LLVM user opcode 0x%x"), op);
+
+  gdbarch *arch = this->m_per_objfile->objfile->arch ();
+  type *address_type = this->address_type ();
+  uint64_t uoffset, reg;
+  int64_t offset;
+  std::shared_ptr<dwarf_entry> result_entry;
+
+  switch (op)
+    {
+      case DW_OP_LLVM_USER_form_aspace_address:
+	{
+	  auto aspace_value = fetch (0)->to_value (address_type);
+	  pop ();
+
+	  auto address_value = fetch (0)->to_value (address_type);
+	  pop ();
+
+	  dwarf_require_integral (aspace_value->get_type ());
+	  arch_addr_space_id address_space
+	    = gdbarch_dwarf_address_space_to_address_space_id
+		(arch, aspace_value->to_long ());
+	  CORE_ADDR address = address_value->to_long ();
+	  address
+	    = gdbarch_segment_address_to_core_address (arch, address_space,
+						       address);
+	  address_scope scope = gdbarch_address_scope (arch, address);
+
+	  if (scope == ADDRESS_SCOPE_THREAD)
+	    {
+	      ensure_have_thread ("DW_OP_LLVM_form_aspace_address");
+	      record_thread_context ();
+	    }
+	  else if (scope == ADDRESS_SCOPE_LANE)
+	    {
+	      ensure_have_simd_lane ("DW_OP_LLVM_form_aspace_address");
+	      record_thread_and_simd_lane_context ();
+	    }
+
+	  result_entry
+	    = std::make_shared<dwarf_memory> (arch,
+					      address_value->to_long (), 0,
+					      false, address_space);
+	}
+	break;
+
+      case DW_OP_LLVM_USER_offset:
+	{
+	  auto value = fetch (0)->to_value (address_type);
+	  pop ();
+
+	  dwarf_require_integral (value->get_type ());
+
+	  auto location = fetch (0)->to_location (arch);
+	  pop ();
+
+	  location->add_bit_offset (value->to_long () * HOST_CHAR_BIT);
+	  result_entry = location;
+	}
+	break;
+
+      case DW_OP_LLVM_USER_offset_constu:
+	{
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &uoffset);
+
+	  auto location = fetch (0)->to_location (arch);
+	  pop ();
+
+	  location->add_bit_offset (uoffset * HOST_CHAR_BIT);
+	  result_entry = location;
+	}
+	break;
+
+      case DW_OP_LLVM_USER_bit_offset:
+	{
+	  auto value = fetch (0)->to_value (address_type);
+	  pop ();
+
+	  dwarf_require_integral (value->get_type ());
+
+	  auto location = fetch (0)->to_location (arch);
+	  pop ();
+
+	  location->add_bit_offset (value->to_long ());
+	  result_entry = location;
+	}
+	break;
+
+      case DW_OP_LLVM_USER_call_frame_entry_reg:
+	op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
+
+	ensure_have_frame (this->m_frame, "DW_OP_LLVM_call_frame_entry_reg");
+
+	result_entry
+	  = std::make_shared<dwarf_register> (arch, reg, true);
+	record_thread_and_frame_context ();
+	break;
+
+      case DW_OP_LLVM_USER_undefined:
+	result_entry = std::make_shared<dwarf_undefined> (arch);
+	break;
+
+      case DW_OP_LLVM_USER_piece_end:
+	{
+	  auto entry = fetch (0);
+
+	  auto composite
+	    = std::dynamic_pointer_cast<dwarf_composite> (entry);
+
+	  if (composite == nullptr)
+	    ill_formed_expression ();
+
+	  if (composite->is_completed ())
+	    ill_formed_expression ();
+
+	  composite->set_completed (true);
+	  return op_ptr;
+	}
+
+      case DW_OP_LLVM_USER_select_bit_piece:
+	{
+	  uint64_t piece_bit_size, pieces_count;
+
+	  /* Record the piece.  */
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &piece_bit_size);
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &pieces_count);
+	  result_entry
+	    = create_select_composite (piece_bit_size, pieces_count);
+	}
+	break;
+
+      case DW_OP_LLVM_USER_extend:
+	{
+	  uint64_t piece_bit_size, pieces_count;
+
+	  /* Record the piece.  */
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &piece_bit_size);
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &pieces_count);
+	  result_entry
+	    = create_extend_composite (piece_bit_size, pieces_count);
+	}
+	break;
+
+      case DW_OP_LLVM_USER_aspace_bregx:
+	{
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
+	  op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
+
+	  ensure_have_frame (this->m_frame, "DW_OP_LLVM_aspace_bregx");
+
+	  int regnum = dwarf_reg_to_regnum_or_error (arch, reg);
+	  ULONGEST reg_size = register_size (arch, regnum);
+	  std::shared_ptr<dwarf_location> location
+	    = std::make_shared<dwarf_register> (arch, reg);
+	  std::shared_ptr<dwarf_value> address_value
+	    = location->deref (this->m_frame, this->m_addr_info,
+			       address_type, reg_size);
+	  location = address_value->to_location (arch);
+
+	  auto memory
+	    = std::dynamic_pointer_cast<dwarf_memory> (location);
+
+	  if (memory == nullptr)
+	    ill_formed_expression ();
+
+	  memory->add_bit_offset (offset * HOST_CHAR_BIT);
+
+	  auto aspace_value = fetch (0)->to_value (address_type);
+	  pop ();
+
+	  dwarf_require_integral (aspace_value->get_type ());
+	  arch_addr_space_id address_space
+	    = gdbarch_dwarf_address_space_to_address_space_id
+		(arch, aspace_value->to_long ());
+	  memory->set_address_space (address_space);
+	  result_entry = memory;
+
+	  CORE_ADDR address
+	    = gdbarch_segment_address_to_core_address
+		(arch, address_space, address_value->to_long ());
+	  address_scope scope = gdbarch_address_scope (arch, address);
+
+	  /* Only need to check if there is a SIMD lane in focus,
+	     previous check ensured that there is a frame so there
+	     must also be a thread in focus too.  */
+	  if (scope == ADDRESS_SCOPE_LANE)
+	    {
+	      ensure_have_simd_lane ("DW_OP_LLVM_aspace_bregx");
+	      record_full_context ();
+	    }
+	  else
+	    record_thread_and_frame_context ();
+	}
+	break;
+
+      case DW_OP_LLVM_USER_push_lane:
+	{
+	  ensure_have_simd_lane ("DW_OP_LLVM_push_lane");
+	  ULONGEST lane = inferior_thread ()->current_simd_lane ();
+	  result_entry = std::make_shared<dwarf_value> (lane, address_type);
+	  record_thread_and_simd_lane_context ();
+	}
+	break;
+
+      default:
+	return op_ptr;
+    }
+
+  /* Most things push a result value.  */
+  gdb_assert (result_entry != NULL);
+  push (result_entry);
+  return op_ptr;
 }
 
 void
@@ -4432,199 +4658,33 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    = std::make_shared<dwarf_memory> (arch, this->m_addr_info->addr);
 	  break;
 
+	case DW_OP_LLVM_user:
+	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &uoffset);
+	  op_ptr = execute_llvm_stack_op ((dwarf_llvm_user) uoffset,
+					  op_ptr, op_end);
+	  goto no_push;
+
 	case DW_OP_LLVM_form_aspace_address:
-	  {
-	    auto aspace_value = fetch (0)->to_value (address_type);
-	    pop ();
-
-	    auto address_value = fetch (0)->to_value (address_type);
-	    pop ();
-
-	    dwarf_require_integral (aspace_value->get_type ());
-	    arch_addr_space_id address_space
-	      = gdbarch_dwarf_address_space_to_address_space_id
-		  (arch, aspace_value->to_long ());
-	    CORE_ADDR address = address_value->to_long ();
-	    address
-	      = gdbarch_segment_address_to_core_address (arch, address_space,
-							 address);
-	    address_scope scope = gdbarch_address_scope (arch, address);
-
-	    if (scope == ADDRESS_SCOPE_THREAD)
-	      {
-		ensure_have_thread ("DW_OP_LLVM_form_aspace_address");
-		record_thread_context ();
-	      }
-	    else if (scope == ADDRESS_SCOPE_LANE)
-	      {
-		ensure_have_simd_lane ("DW_OP_LLVM_form_aspace_address");
-		record_thread_and_simd_lane_context ();
-	      }
-
-	    result_entry
-	      = std::make_shared<dwarf_memory> (arch,
-						address_value->to_long (), 0,
-						false, address_space);
-	  }
-	  break;
-
 	case DW_OP_LLVM_offset:
-	  {
-	    auto value = fetch (0)->to_value (address_type);
-	    pop ();
-
-	    dwarf_require_integral (value->get_type ());
-
-	    auto location = fetch (0)->to_location (arch);
-	    pop ();
-
-	    location->add_bit_offset (value->to_long () * HOST_CHAR_BIT);
-	    result_entry = location;
-	  }
-	  break;
-
 	case DW_OP_LLVM_offset_constu:
-	  {
-	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &uoffset);
-	    result = uoffset;
-
-	    auto location = fetch (0)->to_location (arch);
-	    pop ();
-
-	    location->add_bit_offset (result * HOST_CHAR_BIT);
-	    result_entry = location;
-	  }
-	  break;
-
 	case DW_OP_LLVM_bit_offset:
-	  {
-	    auto value = fetch (0)->to_value (address_type);
-	    pop ();
-
-	    dwarf_require_integral (value->get_type ());
-
-	    auto location = fetch (0)->to_location (arch);
-	    pop ();
-
-	    location->add_bit_offset (value->to_long ());
-	    result_entry = location;
-	  }
-	  break;
-
 	case DW_OP_LLVM_call_frame_entry_reg:
-	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
-
-	  ensure_have_frame (this->m_frame, "DW_OP_LLVM_call_frame_entry_reg");
-
-	  result_entry
-	    = std::make_shared<dwarf_register> (arch, reg, true);
-	  record_thread_and_frame_context ();
-	  break;
-
 	case DW_OP_LLVM_undefined:
-	  result_entry = std::make_shared<dwarf_undefined> (arch);
-	  break;
-
 	case DW_OP_LLVM_piece_end:
-	  {
-	    auto entry = fetch (0);
-
-	    auto composite
-	      = std::dynamic_pointer_cast<dwarf_composite> (entry);
-
-	    if (composite == nullptr)
-	      ill_formed_expression ();
-
-	    if (composite->is_completed ())
-	      ill_formed_expression ();
-
-	    composite->set_completed (true);
-	    goto no_push;
-	  }
-
 	case DW_OP_LLVM_select_bit_piece:
-	  {
-	    uint64_t piece_bit_size, pieces_count;
-
-	    /* Record the piece.  */
-	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &piece_bit_size);
-	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &pieces_count);
-	    result_entry
-	      = create_select_composite (piece_bit_size, pieces_count);
-	  }
-	  break;
-
 	case DW_OP_LLVM_extend:
-	  {
-	    uint64_t piece_bit_size, pieces_count;
-
-	    /* Record the piece.  */
-	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &piece_bit_size);
-	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &pieces_count);
-	    result_entry
-	      = create_extend_composite (piece_bit_size, pieces_count);
-	  }
-	  break;
-
 	case DW_OP_LLVM_aspace_bregx:
-	  {
-	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
-	    op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
-
-	    ensure_have_frame (this->m_frame, "DW_OP_LLVM_aspace_bregx");
-
-	    int regnum = dwarf_reg_to_regnum_or_error (arch, reg);
-	    ULONGEST reg_size = register_size (arch, regnum);
-	    std::shared_ptr<dwarf_location> location
-	      = std::make_shared<dwarf_register> (arch, reg);
-	    std::shared_ptr<dwarf_value> address_value
-	      = location->deref (this->m_frame, this->m_addr_info,
-				 address_type, reg_size);
-	    location = address_value->to_location (arch);
-
-	    auto memory
-	      = std::dynamic_pointer_cast<dwarf_memory> (location);
-
-	    if (memory == nullptr)
-	      ill_formed_expression ();
-
-	    memory->add_bit_offset (offset * HOST_CHAR_BIT);
-
-	    auto aspace_value = fetch (0)->to_value (address_type);
-	    pop ();
-
-	    dwarf_require_integral (aspace_value->get_type ());
-	    arch_addr_space_id address_space
-	      = gdbarch_dwarf_address_space_to_address_space_id
-		  (arch, aspace_value->to_long ());
-	    memory->set_address_space (address_space);
-	    result_entry = memory;
-
-	    CORE_ADDR address
-	      = gdbarch_segment_address_to_core_address
-		  (arch, address_space, address_value->to_long ());
-	    address_scope scope = gdbarch_address_scope (arch, address);
-
-	    /* Only need to check if there is a SIMD lane in focus,
-	       previous check ensured that there is a frame so there
-	       must also be a thread in focus too.  */
-	    if (scope == ADDRESS_SCOPE_LANE)
-	      {
-		ensure_have_simd_lane ("DW_OP_LLVM_aspace_bregx");
-		record_full_context ();
-	      }
-	    else
-	      record_thread_and_frame_context ();
-	  }
-	  break;
 	case DW_OP_LLVM_push_lane:
 	  {
-	    ensure_have_simd_lane ("DW_OP_LLVM_push_lane");
-	    ULONGEST lane = inferior_thread ()->current_simd_lane ();
-	    result_entry = std::make_shared<dwarf_value> (lane, address_type);
-	    record_thread_and_simd_lane_context ();
+	    unsigned int llvm_user_op = get_DW_OP_LLVM_USER (op);
+
+	    if (!llvm_user_op)
+	      error (_("Unhandled DWARF expression opcode 0x%x"), op);
+
+	    op_ptr = execute_llvm_stack_op ((dwarf_llvm_user) llvm_user_op,
+					    op_ptr, op_end);
 	  }
-	  break;
+	  goto no_push;
 
 	default:
 	  error (_("Unhandled dwarf expression opcode 0x%x"), op);
