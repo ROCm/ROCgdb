@@ -1124,7 +1124,6 @@ symbol_file_add_with_addrs (const gdb_bfd_ref_ptr &abfd, const char *name,
 
   gdb::observers::new_objfile.notify (objfile);
 
-  bfd_cache_close_all ();
   return objfile;
 }
 
@@ -2098,7 +2097,7 @@ generic_load (const char *args, int from_tty)
   uiout->text (", load size ");
   uiout->field_unsigned ("load-size", total_progress.data_count);
   uiout->text ("\n");
-  regcache_write_pc (get_current_regcache (), entry);
+  regcache_write_pc (get_thread_regcache (inferior_thread ()), entry);
 
   /* Reset breakpoints, now that we have changed the load image.  For
      instance, breakpoints may have been set (or reset, by

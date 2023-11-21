@@ -1867,7 +1867,7 @@ svr4_handle_solib_event (void)
   if (info->probes_table == NULL)
     return;
 
-  pc = regcache_read_pc (get_current_regcache ());
+  pc = regcache_read_pc (get_thread_regcache (inferior_thread ()));
   pa = solib_event_probe_at (info, pc);
   if (pa == nullptr)
     {
@@ -2399,9 +2399,8 @@ enable_break (struct svr4_info *info, int from_tty)
 	 most cases.  */
       if (!load_addr_found)
 	{
-	  struct regcache *regcache
-	    = get_thread_arch_regcache (current_inferior ()->process_target (),
-					inferior_ptid,
+	  regcache *regcache
+	    = get_thread_arch_regcache (current_inferior (), inferior_ptid,
 					current_inferior ()->arch ());
 
 	  load_addr = (regcache_read_pc (regcache)

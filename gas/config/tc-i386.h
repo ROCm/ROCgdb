@@ -141,8 +141,12 @@ int i386_validate_fix (struct fix *);
     if (!i386_validate_fix(FIX)) goto SKIP;      \
   } while (0)
 
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
 #define tc_fix_adjustable(X)  tc_i386_fix_adjustable(X)
 extern int tc_i386_fix_adjustable (struct fix *);
+#else
+#define tc_fix_adjustable(X)  ((void)(X), 1)
+#endif
 
 /* Values passed to md_apply_fix don't include the symbol value.  */
 #define MD_APPLY_SYM_VALUE(FIX) 0
@@ -150,11 +154,9 @@ extern int tc_i386_fix_adjustable (struct fix *);
 /* ELF wants external syms kept, as does PE COFF.  */
 #if defined (TE_PE) && defined (STRICT_PE_FORMAT)
 #define EXTERN_FORCE_RELOC				\
-  (OUTPUT_FLAVOR == bfd_target_elf_flavour		\
-   || OUTPUT_FLAVOR == bfd_target_coff_flavour)
+  (IS_ELF || OUTPUT_FLAVOR == bfd_target_coff_flavour)
 #else
-#define EXTERN_FORCE_RELOC				\
-  (OUTPUT_FLAVOR == bfd_target_elf_flavour)
+#define EXTERN_FORCE_RELOC	IS_ELF
 #endif
 
 /* This expression evaluates to true if the relocation is for a local
@@ -218,6 +220,10 @@ if ((n)									\
 
 extern void i386_cons_align (int);
 #define md_cons_align(nbytes) i386_cons_align (nbytes)
+
+#if !defined (OBJ_AOUT) && !defined (OBJ_MAYBE_AOUT)
+#define md_section_align(seg, value) ((void)(seg), (value))
+#endif
 
 void i386_print_statistics (FILE *);
 #define tc_print_statistics i386_print_statistics

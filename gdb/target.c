@@ -894,7 +894,7 @@ target_kill (void)
 void
 target_load (const char *arg, int from_tty)
 {
-  target_dcache_invalidate ();
+  target_dcache_invalidate (current_program_space->aspace);
   current_inferior ()->top_target ()->load (arg, from_tty);
 }
 
@@ -1474,10 +1474,10 @@ raw_memory_xfer_partial (struct target_ops *ops, gdb_byte *readbuf,
      that never made it to the target.  */
   if (writebuf != NULL
       && inferior_ptid != null_ptid
-      && target_dcache_init_p ()
+      && target_dcache_init_p (current_program_space->aspace)
       && (stack_cache_enabled_p () || code_cache_enabled_p ()))
     {
-      DCACHE *dcache = target_dcache_get ();
+      DCACHE *dcache = target_dcache_get (current_program_space->aspace);
 
       /* Note that writing to an area of memory which wasn't present
 	 in the cache doesn't cause it to be loaded in.  */
@@ -1560,7 +1560,8 @@ memory_xfer_partial_1 (struct target_ops *ops, enum target_object object,
 	  || (stack_cache_enabled_p () && object == TARGET_OBJECT_STACK_MEMORY)
 	  || (code_cache_enabled_p () && object == TARGET_OBJECT_CODE_MEMORY)))
     {
-      DCACHE *dcache = target_dcache_get_or_init ();
+      DCACHE *dcache
+	= target_dcache_get_or_init (current_program_space->aspace);
 
       return dcache_read_memory_partial (ops, dcache, memaddr, readbuf,
 					 reg_len, xfered_len);
@@ -2659,7 +2660,7 @@ target_resume (ptid_t scope_ptid, int step, enum gdb_signal signal)
   gdb_assert (inferior_ptid != null_ptid);
   gdb_assert (inferior_ptid.matches (scope_ptid));
 
-  target_dcache_invalidate ();
+  target_dcache_invalidate (current_program_space->aspace);
 
   current_inferior ()->top_target ()->resume (scope_ptid, step, signal);
 
@@ -2771,11 +2772,6 @@ target_mourn_inferior (ptid_t ptid)
 {
   gdb_assert (ptid.pid () == inferior_ptid.pid ());
   current_inferior ()->top_target ()->mourn_inferior ();
-
-  /* We no longer need to keep handles on any of the object files.
-     Make sure to release them to avoid unnecessarily locking any
-     of them while we're not actually debugging.  */
-  bfd_cache_close_all ();
 }
 
 /* Look for a target which can describe architectural features, starting
@@ -3032,19 +3028,6 @@ target_get_osdata (const char *type)
     return {};
 
   return target_read_stralloc (t, TARGET_OBJECT_OSDATA, type);
-}
-
-/* Determine the current address space of thread PTID.  */
-
-struct address_space *
-target_thread_address_space (ptid_t ptid)
-{
-  struct address_space *aspace;
-
-  aspace = current_inferior ()->top_target ()->thread_address_space (ptid);
-  gdb_assert (aspace != NULL);
-
-  return aspace;
 }
 
 /* See target.h.  */

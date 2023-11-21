@@ -575,24 +575,24 @@ const struct aarch64_name_value_pair aarch64_prfops[32] =
   { "pldl2strm", B(0, 2, 1) },
   { "pldl3keep", B(0, 3, 0) },
   { "pldl3strm", B(0, 3, 1) },
-  { NULL, 0x06 },
-  { NULL, 0x07 },
+  { "pldslckeep", B(0, 4, 0) },
+  { "pldslcstrm", B(0, 4, 1) },
   { "plil1keep", B(1, 1, 0) },
   { "plil1strm", B(1, 1, 1) },
   { "plil2keep", B(1, 2, 0) },
   { "plil2strm", B(1, 2, 1) },
   { "plil3keep", B(1, 3, 0) },
   { "plil3strm", B(1, 3, 1) },
-  { NULL, 0x0e },
-  { NULL, 0x0f },
+  { "plislckeep", B(1, 4, 0) },
+  { "plislcstrm", B(1, 4, 1) },
   { "pstl1keep", B(2, 1, 0) },
   { "pstl1strm", B(2, 1, 1) },
   { "pstl2keep", B(2, 2, 0) },
   { "pstl2strm", B(2, 2, 1) },
   { "pstl3keep", B(2, 3, 0) },
   { "pstl3strm", B(2, 3, 1) },
-  { NULL, 0x16 },
-  { NULL, 0x17 },
+  { "pstslckeep", B(2, 4, 0) },
+  { "pstslcstrm", B(2, 4, 1) },
   { NULL, 0x18 },
   { NULL, 0x19 },
   { NULL, 0x1a },
@@ -4810,6 +4810,9 @@ const aarch64_sys_ins_reg aarch64_sys_regs_at[] =
     { "s1e3w",      CPENS (6, C7, C8, 1), F_HASXT },
     { "s1e1rp",     CPENS (0, C7, C9, 0), F_HASXT | F_ARCHEXT },
     { "s1e1wp",     CPENS (0, C7, C9, 1), F_HASXT | F_ARCHEXT },
+    { "s1e1a",      CPENS (0, C7, C9, 2), F_HASXT | F_ARCHEXT },
+    { "s1e2a",      CPENS (4, C7, C9, 2), F_HASXT | F_ARCHEXT },
+    { "s1e3a",      CPENS (6, C7, C9, 2), F_HASXT | F_ARCHEXT },
     { 0,       CPENS(0,0,0,0), 0 }
 };
 
@@ -5039,6 +5042,12 @@ aarch64_sys_ins_reg_supported_p (const aarch64_feature_set features,
   if ((reg_value == CPENC (3,0,13,0,3)
        || reg_value == CPENC (3,0,13,0,6))
       && AARCH64_CPU_HAS_FEATURE (features, THE))
+    return true;
+
+  if ((reg_value == CPENS (0, C7, C9, 2)
+       || reg_value == CPENS (4, C7, C9, 2)
+       || reg_value == CPENS (6, C7, C9, 2))
+      && AARCH64_CPU_HAS_FEATURE (features, ATS1A))
     return true;
 
   return false;

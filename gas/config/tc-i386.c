@@ -242,6 +242,8 @@ enum i386_error
     unsupported,
     unsupported_on_arch,
     unsupported_64bit,
+    no_vex_encoding,
+    no_evex_encoding,
     invalid_sib_address,
     invalid_vsib_address,
     invalid_vector_register_set,
@@ -254,7 +256,7 @@ enum i386_error
     mask_not_on_destination,
     no_default_mask,
     unsupported_rc_sae,
-    invalid_register_operand,
+    unsupported_vector_size,
     internal_error,
   };
 
@@ -587,9 +589,7 @@ static int use_rela_relocations = 0;
 /* __tls_get_addr/___tls_get_addr symbol for TLS.  */
 static const char *tls_get_addr;
 
-#if ((defined (OBJ_MAYBE_COFF) && defined (OBJ_MAYBE_AOUT)) \
-     || defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF) \
-     || defined (TE_PE) || defined (TE_PEP) || defined (OBJ_MACH_O))
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
 
 /* The ELF ABI to use.  */
 enum x86_elf_abi
@@ -3065,8 +3065,7 @@ i386_arch (void)
 {
   if (cpu_arch_isa == PROCESSOR_IAMCU)
     {
-      if (OUTPUT_FLAVOR != bfd_target_elf_flavour
-	  || flag_code == CODE_64BIT)
+      if (!IS_ELF || flag_code == CODE_64BIT)
 	as_fatal (_("Intel MCU is 32bit ELF only"));
       return bfd_arch_iamcu;
     }
@@ -3089,7 +3088,7 @@ i386_mach (void)
     {
       if (cpu_arch_isa == PROCESSOR_IAMCU)
 	{
-	  if (OUTPUT_FLAVOR != bfd_target_elf_flavour)
+	  if (!IS_ELF)
 	    as_fatal (_("Intel MCU is 32bit ELF only"));
 	  return bfd_mach_i386_iamcu;
 	}
@@ -3527,15 +3526,15 @@ reloc (unsigned int size,
   return NO_RELOC;
 }
 
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
 /* Here we decide which fixups can be adjusted to make them relative to
    the beginning of the section instead of the symbol.  Basically we need
    to make sure that the dynamic relocations are done correctly, so in
    some cases we force the original symbol to be used.  */
 
 int
-tc_i386_fix_adjustable (fixS *fixP ATTRIBUTE_UNUSED)
+tc_i386_fix_adjustable (fixS *fixP)
 {
-#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
   if (!IS_ELF)
     return 1;
 
@@ -3586,9 +3585,9 @@ tc_i386_fix_adjustable (fixS *fixP ATTRIBUTE_UNUSED)
       || fixP->fx_r_type == BFD_RELOC_VTABLE_INHERIT
       || fixP->fx_r_type == BFD_RELOC_VTABLE_ENTRY)
     return 0;
-#endif
   return 1;
 }
+#endif
 
 static INLINE bool
 want_disp32 (const insn_template *t)
@@ -5307,6 +5306,12 @@ md_assemble (char *line)
 			pass1_mnem ? pass1_mnem : insn_name (current_templates->start));
 	    }
 	  return;
+	case no_vex_encoding:
+	  err_msg = _("no VEX/XOP encoding");
+	  break;
+	case no_evex_encoding:
+	  err_msg = _("no EVEX encoding");
+	  break;
 	case invalid_sib_address:
 	  err_msg = _("invalid SIB address");
 	  break;
@@ -5343,9 +5348,10 @@ md_assemble (char *line)
 	case unsupported_rc_sae:
 	  err_msg = _("unsupported static rounding/sae");
 	  break;
-	case invalid_register_operand:
-	  err_msg = _("invalid register operand");
-	  break;
+	case unsupported_vector_size:
+	  as_bad (_("vector size above %u required for `%s'"), 128u << vector_size,
+		  pass1_mnem ? pass1_mnem : insn_name (current_templates->start));
+	  return;
 	case internal_error:
 	  err_msg = _("internal error");
 	  break;
@@ -5772,12 +5778,21 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	  && current_templates
 	  && current_templates->start->opcode_modifier.isprefix)
 	{
-	  if (!cpu_flags_check_cpu64 (current_templates->start))
+	  supported = cpu_flags_match (current_templates->start);
+	  if (!(supported & CPU_FLAGS_64BIT_MATCH))
 	    {
 	      as_bad ((flag_code != CODE_64BIT
 		       ? _("`%s' is only supported in 64-bit mode")
 		       : _("`%s' is not supported in 64-bit mode")),
 		      insn_name (current_templates->start));
+	      return NULL;
+	    }
+	  if (supported != CPU_FLAGS_PERFECT_MATCH)
+	    {
+	      as_bad (_("`%s' is not supported on `%s%s'"),
+		      insn_name (current_templates->start),
+		      cpu_arch_name ? cpu_arch_name : default_arch,
+		      cpu_sub_arch_name ? cpu_sub_arch_name : "");
 	      return NULL;
 	    }
 	  /* If we are in 16-bit mode, do not allow addr16 or data16.
@@ -5881,16 +5896,32 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	 Check if we should swap operand or force 32bit displacement in
 	 encoding.  */
       if (mnem_p - 2 == dot_p && dot_p[1] == 's')
-	i.dir_encoding = dir_encoding_swap;
+	{
+	  if (i.dir_encoding == dir_encoding_default)
+	    i.dir_encoding = dir_encoding_swap;
+	  else
+	    as_warn (_("ignoring `.s' suffix due to earlier `{%s}'"),
+		     i.dir_encoding == dir_encoding_load ? "load" : "store");
+	}
       else if (mnem_p - 3 == dot_p
 	       && dot_p[1] == 'd'
 	       && dot_p[2] == '8')
-	i.disp_encoding = disp_encoding_8bit;
+	{
+	  if (i.disp_encoding == disp_encoding_default)
+	    i.disp_encoding = disp_encoding_8bit;
+	  else if (i.disp_encoding != disp_encoding_8bit)
+	    as_warn (_("ignoring `.d8' suffix due to earlier `{disp<N>}'"));
+	}
       else if (mnem_p - 4 == dot_p
 	       && dot_p[1] == 'd'
 	       && dot_p[2] == '3'
 	       && dot_p[3] == '2')
-	i.disp_encoding = disp_encoding_32bit;
+	{
+	  if (i.disp_encoding == disp_encoding_default)
+	    i.disp_encoding = disp_encoding_32bit;
+	  else if (i.disp_encoding != disp_encoding_32bit)
+	    as_warn (_("ignoring `.d32' suffix due to earlier `{disp<N>}'"));
+	}
       else
 	goto check_suffix;
       mnem_p = dot_p;
@@ -6545,7 +6576,7 @@ check_VecOperands (const insn_template *t)
 	      && (i.types[op].bitfield.ymmword
 		  || i.types[op].bitfield.xmmword))
 	    {
-	      i.error = unsupported;
+	      i.error = operand_size_mismatch;
 	      return 1;
 	    }
 	}
@@ -6561,7 +6592,7 @@ check_VecOperands (const insn_template *t)
 	  if (t->operand_types[op].bitfield.xmmword
 	      && i.types[op].bitfield.ymmword)
 	    {
-	      i.error = unsupported;
+	      i.error = operand_size_mismatch;
 	      return 1;
 	    }
 	}
@@ -6941,7 +6972,7 @@ VEX_check_encoding (const insn_template *t)
 	      || t->opcode_modifier.vex == VEX256
 	      || t->opcode_modifier.vsz >= VSZ256)))
     {
-      i.error = unsupported;
+      i.error = unsupported_vector_size;
       return 1;
     }
 
@@ -6951,7 +6982,7 @@ VEX_check_encoding (const insn_template *t)
       /* This instruction must be encoded with EVEX prefix.  */
       if (!t->opcode_modifier.evex)
 	{
-	  i.error = unsupported;
+	  i.error = no_evex_encoding;
 	  return 1;
 	}
       return 0;
@@ -6962,7 +6993,7 @@ VEX_check_encoding (const insn_template *t)
       /* This instruction template doesn't have VEX prefix.  */
       if (i.vec_encoding != vex_encoding_default)
 	{
-	  i.error = unsupported;
+	  i.error = no_vex_encoding;
 	  return 1;
 	}
       return 0;
@@ -8112,8 +8143,10 @@ check_long_reg (void)
 		i.suffix);
 	return 0;
       }
-    /* Error if the e prefix on a general reg is missing.  */
-    else if (i.types[op].bitfield.word
+    /* Error if the e prefix on a general reg is missing, or if the r
+       prefix on a general reg is present.  */
+    else if ((i.types[op].bitfield.word
+	      || i.types[op].bitfield.qword)
 	     && (i.tm.operand_types[op].bitfield.class == Reg
 		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && i.tm.operand_types[op].bitfield.dword)
@@ -8121,16 +8154,6 @@ check_long_reg (void)
 	as_bad (_("incorrect register `%s%s' used with `%c' suffix"),
 		register_prefix, i.op[op].regs->reg_name,
 		i.suffix);
-	return 0;
-      }
-    /* Warn if the r prefix on a general reg is present.  */
-    else if (i.types[op].bitfield.qword
-	     && (i.tm.operand_types[op].bitfield.class == Reg
-		 || i.tm.operand_types[op].bitfield.instance == Accum)
-	     && i.tm.operand_types[op].bitfield.dword)
-      {
-	as_bad (_("incorrect register `%s%s' used with `%c' suffix"),
-		register_prefix, i.op[op].regs->reg_name, i.suffix);
 	return 0;
       }
   return 1;
@@ -8151,7 +8174,8 @@ check_qword_reg (void)
 	     && (i.tm.operand_types[op].bitfield.class == Reg
 		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && (i.tm.operand_types[op].bitfield.word
-		 || i.tm.operand_types[op].bitfield.dword))
+		 || i.tm.operand_types[op].bitfield.dword
+		 || i.tm.operand_types[op].bitfield.qword))
       {
 	as_bad (_("`%s%s' not allowed with `%s%c'"),
 		register_prefix,
@@ -8160,7 +8184,7 @@ check_qword_reg (void)
 		i.suffix);
 	return 0;
       }
-    /* Warn if the r prefix on a general reg is missing.  */
+    /* Error if the r prefix on a general reg is missing.  */
     else if ((i.types[op].bitfield.word
 	      || i.types[op].bitfield.dword)
 	     && (i.tm.operand_types[op].bitfield.class == Reg
@@ -15271,10 +15295,12 @@ i386_target_format (void)
   if (startswith (default_arch, "x86_64"))
     {
       update_code_flag (CODE_64BIT, 1);
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
       if (default_arch[6] == '\0')
 	x86_elf_abi = X86_64_ABI;
       else
 	x86_elf_abi = X86_64_X32_ABI;
+#endif
     }
   else if (!strcmp (default_arch, "i386"))
     update_code_flag (CODE_32BIT, 1);
@@ -15406,12 +15432,12 @@ md_undefined_symbol (char *name)
   return 0;
 }
 
+#if defined (OBJ_AOUT) || defined (OBJ_MAYBE_AOUT)
 /* Round up a section size to the appropriate boundary.  */
 
 valueT
-md_section_align (segT segment ATTRIBUTE_UNUSED, valueT size)
+md_section_align (segT segment, valueT size)
 {
-#if (defined (OBJ_AOUT) || defined (OBJ_MAYBE_AOUT))
   if (OUTPUT_FLAVOR == bfd_target_aout_flavour)
     {
       /* For a.out, force the section size to be aligned.  If we don't do
@@ -15424,10 +15450,10 @@ md_section_align (segT segment ATTRIBUTE_UNUSED, valueT size)
       align = bfd_section_alignment (segment);
       size = ((size + (1 << align) - 1) & (-((valueT) 1 << align)));
     }
-#endif
 
   return size;
 }
+#endif
 
 /* On the i386, PC-relative offsets are relative to the start of the
    next instruction.  That is, the address of the offset, plus its
@@ -15871,6 +15897,20 @@ x86_dwarf2_addr_size (void)
   return bfd_arch_bits_per_address (stdoutput) / 8;
 }
 
+#ifdef TE_PE
+void
+tc_pe_dwarf2_emit_offset (symbolS *symbol, unsigned int size)
+{
+  expressionS exp;
+
+  exp.X_op = O_secrel;
+  exp.X_add_symbol = symbol;
+  exp.X_add_number = 0;
+  emit_expr (&exp, size);
+}
+#endif
+
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
 int
 i386_elf_section_type (const char *str, size_t len)
 {
@@ -15891,20 +15931,6 @@ i386_solaris_fix_up_eh_frame (segT sec)
 }
 #endif
 
-#ifdef TE_PE
-void
-tc_pe_dwarf2_emit_offset (symbolS *symbol, unsigned int size)
-{
-  expressionS exp;
-
-  exp.X_op = O_secrel;
-  exp.X_add_symbol = symbol;
-  exp.X_add_number = 0;
-  emit_expr (&exp, size);
-}
-#endif
-
-#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
 /* For ELF on x86-64, add support for SHF_X86_64_LARGE.  */
 
 bfd_vma

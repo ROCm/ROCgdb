@@ -163,12 +163,40 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_CHK,
   /* Guarded Control Stack.  */
   AARCH64_FEATURE_GCS,
+  /* SPE Call Return branch records.  */
+  AARCH64_FEATURE_SPE_CRR,
+  /* SPE Filter by data source.  */
+  AARCH64_FEATURE_SPE_FDS,
+  /* Additional SPE events.  */
+  AARCH64_FEATURE_SPEv1p4,
   /* SME2.  */
   AARCH64_FEATURE_SME2,
   /* Translation Hardening Extension.  */
   AARCH64_FEATURE_THE,
   /* LSE128.  */
   AARCH64_FEATURE_LSE128,
+  /* ARMv8.9-A RAS Extensions.  */
+  AARCH64_FEATURE_RASv2,
+  /* System Control Register2.  */
+  AARCH64_FEATURE_SCTLR2,
+  /* Fine Grained Traps.  */
+  AARCH64_FEATURE_FGT2,
+  /* Physical Fault Address.  */
+  AARCH64_FEATURE_PFAR,
+  /* Address Translate Stage 1.  */
+  AARCH64_FEATURE_ATS1A,
+  /* Memory Attribute Index Enhancement.  */
+  AARCH64_FEATURE_AIE,
+  /* Stage 1 Permission Indirection Extension.  */
+  AARCH64_FEATURE_S1PIE,
+  /* Stage 2 Permission Indirection Extension.  */
+  AARCH64_FEATURE_S2PIE,
+  /* Stage 1 Permission Overlay Extension.  */
+  AARCH64_FEATURE_S1POE,
+  /* Stage 2 Permission Overlay Extension.  */
+  AARCH64_FEATURE_S2POE,
+  /* Extension to Translation Control Registers.  */
+  AARCH64_FEATURE_TCR2,
   AARCH64_NUM_FEATURES
 };
 
@@ -224,7 +252,22 @@ enum aarch64_feature_bit {
 #define AARCH64_ARCH_V8_8A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_8A)	\
 					 | AARCH64_FEATBIT (X, MOPS)	\
 					 | AARCH64_FEATBIT (X, HBC))
-#define AARCH64_ARCH_V8_9A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_9A))
+#define AARCH64_ARCH_V8_9A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_9A)	\
+					 | AARCH64_FEATBIT (X, SPEv1p4) \
+					 | AARCH64_FEATBIT (X, SPE_CRR)	\
+					 | AARCH64_FEATBIT (X, SPE_FDS) \
+					 | AARCH64_FEATBIT (X, RASv2)	\
+					 | AARCH64_FEATBIT (X, SCTLR2)	\
+					 | AARCH64_FEATBIT (X, FGT2)	\
+					 | AARCH64_FEATBIT (X, PFAR)	\
+					 | AARCH64_FEATBIT (X, ATS1A)	\
+					 | AARCH64_FEATBIT (X, AIE)	\
+					 | AARCH64_FEATBIT (X, S1PIE)	\
+					 | AARCH64_FEATBIT (X, S2PIE)	\
+					 | AARCH64_FEATBIT (X, S1POE)	\
+					 | AARCH64_FEATBIT (X, S2POE)	\
+					 | AARCH64_FEATBIT (X, TCR2)	\
+					)
 
 #define AARCH64_ARCH_V9A_FEATURES(X)	(AARCH64_FEATBIT (X, V9A)	\
 					 | AARCH64_FEATBIT (X, F16)	\

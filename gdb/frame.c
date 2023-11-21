@@ -1165,7 +1165,7 @@ frame_pop (frame_info_ptr this_frame)
      definition can lead to targets writing back bogus values
      (arguably a bug in the target code mind).  */
   /* Now copy those saved registers into the current regcache.  */
-  get_current_regcache ()->restore (scratch.get ());
+  get_thread_regcache (inferior_thread ())->restore (scratch.get ());
 
   /* We've made right mess of GDB's local state, just discard
      everything.  */
@@ -1444,10 +1444,11 @@ put_frame_register (frame_info_ptr frame, int regnum,
       {
 	/* Register written can be bigger then the value we are writing.  */
 	gdb::byte_vector temp_buf (register_size (gdbarch, realnum));
-	get_current_regcache ()->cooked_read (realnum, temp_buf.data ());
+	regcache *regcache = get_thread_regcache (inferior_thread ());
+	regcache->cooked_read (realnum, temp_buf.data ());
 	memcpy ((char *) temp_buf.data () + offset, buf,
 		register_size (gdbarch, regnum));
-	get_current_regcache ()->cooked_write (realnum, temp_buf.data ());
+	regcache->cooked_write (realnum, temp_buf.data ());
 	break;
       }
     default:
@@ -1645,14 +1646,15 @@ put_frame_register_bytes (frame_info_ptr frame, int regnum,
    CODE_ADDR.  */
 
 static frame_info_ptr
-create_sentinel_frame (struct program_space *pspace, struct regcache *regcache,
-		       CORE_ADDR stack_addr, CORE_ADDR code_addr)
+create_sentinel_frame (program_space *pspace, address_space *aspace,
+		       regcache *regcache, CORE_ADDR stack_addr,
+		       CORE_ADDR code_addr)
 {
   frame_info *frame = FRAME_OBSTACK_ZALLOC (struct frame_info);
 
   frame->level = -1;
   frame->pspace = pspace;
-  frame->aspace = regcache->aspace ();
+  frame->aspace = aspace;
   /* Explicitly initialize the sentinel frame's cache.  Provide it
      with the underlying regcache.  In the future additional
      information, such as the frame's thread will be added.  */
@@ -1713,7 +1715,8 @@ get_current_frame (void)
 
   if (sentinel_frame == NULL)
     sentinel_frame =
-      create_sentinel_frame (current_program_space, get_current_regcache (),
+      create_sentinel_frame (current_program_space, current_inferior ()->aspace,
+			     get_thread_regcache (inferior_thread ()),
 			     0, 0).get ();
 
   /* Set the current frame before computing the frame id, to avoid
@@ -2047,7 +2050,8 @@ create_new_frame (frame_id id)
   frame_info *fi = FRAME_OBSTACK_ZALLOC (struct frame_info);
 
   fi->next = create_sentinel_frame (current_program_space,
-				    get_current_regcache (),
+				    current_inferior ()->aspace,
+				    get_thread_regcache (inferior_thread ()),
 				    id.stack_addr, id.code_addr).get ();
 
   /* Set/update this frame's cached PC value, found in the next frame.

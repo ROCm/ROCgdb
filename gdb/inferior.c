@@ -715,8 +715,6 @@ kill_inferior_command (const char *args, int from_tty)
 
       target_kill ();
     }
-
-  bfd_cache_close_all ();
 }
 
 /* See inferior.h.  */
