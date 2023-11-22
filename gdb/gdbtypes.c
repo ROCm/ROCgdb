@@ -4883,25 +4883,6 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
 
 /* End of functions for overload resolution.  */
 
-/* Routines to pretty-print types.  */
-
-static void
-print_bit_vector (B_TYPE *bits, int nbits)
-{
-  int bitno;
-
-  for (bitno = 0; bitno < nbits; bitno++)
-    {
-      if ((bitno % 8) == 0)
-	{
-	  gdb_puts (" ");
-	}
-      if (B_TST (bits, bitno))
-	gdb_printf (("1"));
-      else
-	gdb_printf (("0"));
-    }
-}
 
 /* Note the first arg should be the "this" pointer, we may not want to
    include it since we may get into a infinitely recursive
@@ -5004,40 +4985,6 @@ print_cplus_stuff (struct type *type, int spaces)
 	      TYPE_N_BASECLASSES (type));
   gdb_printf ("%*snfn_fields %d\n", spaces, "",
 	      TYPE_NFN_FIELDS (type));
-  if (TYPE_N_BASECLASSES (type) > 0)
-    {
-      gdb_printf
-	("%*svirtual_field_bits (%d bits at *%s)",
-	 spaces, "", TYPE_N_BASECLASSES (type),
-	 host_address_to_string (TYPE_FIELD_VIRTUAL_BITS (type)));
-
-      print_bit_vector (TYPE_FIELD_VIRTUAL_BITS (type),
-			TYPE_N_BASECLASSES (type));
-      gdb_puts ("\n");
-    }
-  if (type->num_fields () > 0)
-    {
-      if (TYPE_FIELD_PRIVATE_BITS (type) != NULL)
-	{
-	  gdb_printf
-	    ("%*sprivate_field_bits (%d bits at *%s)",
-	     spaces, "", type->num_fields (),
-	     host_address_to_string (TYPE_FIELD_PRIVATE_BITS (type)));
-	  print_bit_vector (TYPE_FIELD_PRIVATE_BITS (type),
-			    type->num_fields ());
-	  gdb_puts ("\n");
-	}
-      if (TYPE_FIELD_PROTECTED_BITS (type) != NULL)
-	{
-	  gdb_printf
-	    ("%*sprotected_field_bits (%d bits at *%s",
-	     spaces, "", type->num_fields (),
-	     host_address_to_string (TYPE_FIELD_PROTECTED_BITS (type)));
-	  print_bit_vector (TYPE_FIELD_PROTECTED_BITS (type),
-			    type->num_fields ());
-	  gdb_puts ("\n");
-	}
-    }
   if (TYPE_NFN_FIELDS (type) > 0)
     {
       dump_fn_fieldlists (type, spaces);
@@ -5099,6 +5046,23 @@ dump_dynamic_prop (dynamic_prop const& prop)
     }
 }
 
+/* Return a string that represents a type code.  */
+static const char *
+type_code_name (type_code code)
+{
+  switch (code)
+    {
+#define OP(X) case X: return # X;
+#include "type-codes.def"
+#undef OP
+
+    case TYPE_CODE_UNDEF:
+      return "TYPE_CODE_UNDEF";
+    }
+
+  gdb_assert_not_reached ("unhandled type_code");
+}
+
 void
 recursive_dump_type (struct type *type, int spaces)
 {
@@ -5136,87 +5100,7 @@ recursive_dump_type (struct type *type, int spaces)
 	      type->name () ? type->name () : "<NULL>",
 	      host_address_to_string (type->name ()));
   gdb_printf ("%*scode 0x%x ", spaces, "", type->code ());
-  switch (type->code ())
-    {
-    case TYPE_CODE_UNDEF:
-      gdb_printf ("(TYPE_CODE_UNDEF)");
-      break;
-    case TYPE_CODE_PTR:
-      gdb_printf ("(TYPE_CODE_PTR)");
-      break;
-    case TYPE_CODE_ARRAY:
-      gdb_printf ("(TYPE_CODE_ARRAY)");
-      break;
-    case TYPE_CODE_STRUCT:
-      gdb_printf ("(TYPE_CODE_STRUCT)");
-      break;
-    case TYPE_CODE_UNION:
-      gdb_printf ("(TYPE_CODE_UNION)");
-      break;
-    case TYPE_CODE_ENUM:
-      gdb_printf ("(TYPE_CODE_ENUM)");
-      break;
-    case TYPE_CODE_FLAGS:
-      gdb_printf ("(TYPE_CODE_FLAGS)");
-      break;
-    case TYPE_CODE_FUNC:
-      gdb_printf ("(TYPE_CODE_FUNC)");
-      break;
-    case TYPE_CODE_INT:
-      gdb_printf ("(TYPE_CODE_INT)");
-      break;
-    case TYPE_CODE_FLT:
-      gdb_printf ("(TYPE_CODE_FLT)");
-      break;
-    case TYPE_CODE_VOID:
-      gdb_printf ("(TYPE_CODE_VOID)");
-      break;
-    case TYPE_CODE_SET:
-      gdb_printf ("(TYPE_CODE_SET)");
-      break;
-    case TYPE_CODE_RANGE:
-      gdb_printf ("(TYPE_CODE_RANGE)");
-      break;
-    case TYPE_CODE_STRING:
-      gdb_printf ("(TYPE_CODE_STRING)");
-      break;
-    case TYPE_CODE_ERROR:
-      gdb_printf ("(TYPE_CODE_ERROR)");
-      break;
-    case TYPE_CODE_MEMBERPTR:
-      gdb_printf ("(TYPE_CODE_MEMBERPTR)");
-      break;
-    case TYPE_CODE_METHODPTR:
-      gdb_printf ("(TYPE_CODE_METHODPTR)");
-      break;
-    case TYPE_CODE_METHOD:
-      gdb_printf ("(TYPE_CODE_METHOD)");
-      break;
-    case TYPE_CODE_REF:
-      gdb_printf ("(TYPE_CODE_REF)");
-      break;
-    case TYPE_CODE_CHAR:
-      gdb_printf ("(TYPE_CODE_CHAR)");
-      break;
-    case TYPE_CODE_BOOL:
-      gdb_printf ("(TYPE_CODE_BOOL)");
-      break;
-    case TYPE_CODE_COMPLEX:
-      gdb_printf ("(TYPE_CODE_COMPLEX)");
-      break;
-    case TYPE_CODE_TYPEDEF:
-      gdb_printf ("(TYPE_CODE_TYPEDEF)");
-      break;
-    case TYPE_CODE_NAMESPACE:
-      gdb_printf ("(TYPE_CODE_NAMESPACE)");
-      break;
-    case TYPE_CODE_FIXED_POINT:
-      gdb_printf ("(TYPE_CODE_FIXED_POINT)");
-      break;
-    default:
-      gdb_printf ("(UNKNOWN TYPE CODE)");
-      break;
-    }
+  gdb_printf ("(%s)", type_code_name (type->code ()));
   gdb_puts ("\n");
   gdb_printf ("%*slength %s\n", spaces, "",
 	      pulongest (type->length ()));
@@ -5345,22 +5229,34 @@ recursive_dump_type (struct type *type, int spaces)
   gdb_printf ("%s\n", host_address_to_string (type->fields ()));
   for (idx = 0; idx < type->num_fields (); idx++)
     {
+      field &fld = type->field (idx);
       if (type->code () == TYPE_CODE_ENUM)
 	gdb_printf ("%*s[%d] enumval %s type ", spaces + 2, "",
-		    idx, plongest (type->field (idx).loc_enumval ()));
+		    idx, plongest (fld.loc_enumval ()));
       else
 	gdb_printf ("%*s[%d] bitpos %s bitsize %d type ", spaces + 2, "",
-		    idx, plongest (type->field (idx).loc_bitpos ()),
-		    type->field (idx).bitsize ());
-      gdb_printf ("%s name '%s' (%s)\n",
-		  host_address_to_string (type->field (idx).type ()),
-		  type->field (idx).name () != NULL
-		  ? type->field (idx).name ()
+		    idx, plongest (fld.loc_bitpos ()),
+		    fld.bitsize ());
+      gdb_printf ("%s name '%s' (%s)",
+		  host_address_to_string (fld.type ()),
+		  fld.name () != NULL
+		  ? fld.name ()
 		  : "<NULL>",
-		  host_address_to_string (type->field (idx).name ()));
-      if (type->field (idx).type () != NULL)
+		  host_address_to_string (fld.name ()));
+      if (fld.is_virtual ())
+	gdb_printf (" virtual");
+
+      if (fld.is_private ())
+	gdb_printf (" private");
+      else if (fld.is_protected ())
+	gdb_printf (" protected");
+      else if (fld.is_ignored ())
+	gdb_printf (" ignored");
+
+      gdb_printf ("\n");
+      if (fld.type () != NULL)
 	{
-	  recursive_dump_type (type->field (idx).type (), spaces + 4);
+	  recursive_dump_type (fld.type (), spaces + 4);
 	}
     }
   if (type->code () == TYPE_CODE_RANGE)
