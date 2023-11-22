@@ -1278,6 +1278,52 @@ namespace eval Dwarf {
 	}
     }
 
+    # Assembler for the DWARF LLVM extensions in the DW_OP_LLVM_USER_
+    # namespace.
+    #
+    # LINE contains a DWARF expression starting from a DW_OP_LLVM_USER_
+    # operation.
+    proc _llvm_user { line } {
+	variable _constants
+	array unset argvec *
+
+	set llvm_opcode [_map_name [lindex $line 0] _OP]
+	_op .uleb128 $_constants($llvm_opcode) $llvm_opcode
+
+	switch -exact -- $llvm_opcode {
+	    DW_OP_LLVM_USER_offset_constu {
+		_op .uleb128 [lindex $line 1]
+	    }
+
+	    DW_OP_LLVM_USER_extend {
+		_op .uleb128 [lindex $line 1]
+		_op .uleb128 [lindex $line 2]
+	    }
+
+	    DW_OP_LLVM_USER_select_bit_piece {
+		_op .uleb128 [lindex $line 1]
+		_op .uleb128 [lindex $line 2]
+	    }
+
+	    DW_OP_LLVM_USER_call_frame_entry_reg {
+		_get_args $line $llvm_opcode register
+		_op .uleb128 $argvec(register)
+	    }
+
+	    DW_OP_LLVM_USER_aspace_bregx {
+		_get_args $line $llvm_opcode register offset
+		_op .uleb128 $argvec(register)
+		_op .sleb128 $argvec(offset)
+	    }
+
+	    default {
+		if {[llength $line] > 1} {
+		    error "Unimplemented: LLVM user operands in location for $llvm_opcode"
+		}
+	    }
+	}
+    }
+
     # This is a miniature assembler for location expressions.  It is
     # suitable for use in the attributes to a DIE.  Its output is
     # prefixed with "=" to make it automatically use DW_FORM_block.
@@ -1489,6 +1535,11 @@ namespace eval Dwarf {
 		    _get_args $line $opcode register offset
 		    _op .uleb128 $argvec(register)
 		    _op .sleb128 $argvec(offset)
+		}
+
+		DW_OP_LLVM_user {
+		    set line [lreplace $line 0 0]
+		    _llvm_user $line
 		}
 
 		default {

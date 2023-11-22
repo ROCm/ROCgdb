@@ -58,13 +58,14 @@ Dwarf::assemble $asm_file {
     set main_result [function_range main ${srcdir}/${subdir}/${srcfile}]
     set main_start [lindex $main_result 0]
     set main_length [lindex $main_result 1]
+    set buf_var [gdb_target_symbol buf]
 
     cu {} {
 	DW_TAG_compile_unit {
 	    {DW_AT_name var-access.c}
 	    {DW_AT_comp_dir /tmp}
 	} {
-	    declare_labels int_type_label
+	    declare_labels int_type_label char_type_label
 
 	    # Define int type.
 	    int_type_label: DW_TAG_base_type {
@@ -73,12 +74,20 @@ Dwarf::assemble $asm_file {
 		{DW_AT_byte_size 4 DW_FORM_sdata}
 	    }
 
+	    # Define char type.
+	    char_type_label: DW_TAG_base_type {
+		{DW_AT_name "char"}
+		{DW_AT_encoding @DW_ATE_signed}
+		{DW_AT_byte_size 1 DW_FORM_sdata}
+	    }
+
 	    DW_TAG_subprogram {
 		{DW_AT_name main}
 		{DW_AT_low_pc $main_start addr}
 		{DW_AT_high_pc $main_length data8}
 	    } {
-		# Define variable 'a' with all extensions.
+		# Define variable 'a' with all extensions from
+		# DW_OP_LLVM_ namespace.
 		DW_TAG_variable {
 		    {DW_AT_name a}
 		    {DW_AT_type :$int_type_label}
@@ -123,6 +132,83 @@ Dwarf::assemble $asm_file {
 			DW_OP_piece 4
 		    } SPECIAL_expr}
 		}
+
+		# Define variable 'c' with the conceptually same location
+		# description as variable 'a', using the equivalent
+		# operations from DW_OP_LLVM_USER_ namespace.
+		DW_TAG_variable {
+		    {DW_AT_name c}
+		    {DW_AT_type :$int_type_label}
+		    {DW_AT_location {
+			# This is not a meaningful expression.  It's a
+			# list of all the opcodes we want to be sure we
+			# can dump with 'info address'.
+			DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
+			DW_OP_lit0
+			DW_OP_lit1
+			DW_OP_LLVM_user DW_OP_LLVM_USER_form_aspace_address
+			DW_OP_LLVM_user DW_OP_LLVM_USER_offset_constu 8
+			DW_OP_LLVM_user DW_OP_LLVM_USER_offset
+			DW_OP_LLVM_user DW_OP_LLVM_USER_bit_offset
+			DW_OP_LLVM_user DW_OP_LLVM_USER_undefined
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 64 64
+			DW_OP_LLVM_user DW_OP_LLVM_USER_select_bit_piece 64 64
+			DW_OP_LLVM_user DW_OP_LLVM_USER_piece_end
+			DW_OP_LLVM_user DW_OP_LLVM_USER_call_frame_entry_reg $dwarf_regnum
+			DW_OP_LLVM_user DW_OP_LLVM_USER_aspace_bregx $dwarf_regnum 0
+		    } SPECIAL_expr}
+		}
+
+		# Define variable 'd' with some extensions that can
+		# still be printed.
+		DW_TAG_variable {
+		    {DW_AT_name d}
+		    {DW_AT_type :$char_type_label}
+		    {DW_AT_location {
+			DW_OP_addr $buf_var
+			DW_OP_lit0
+			DW_OP_LLVM_form_aspace_address
+			DW_OP_LLVM_offset_constu 1
+			DW_OP_lit1
+			DW_OP_LLVM_offset
+			DW_OP_lit16
+			DW_OP_LLVM_bit_offset
+			DW_OP_LLVM_extend 8 2
+			DW_OP_LLVM_undefined
+			DW_OP_lit1
+			DW_OP_LLVM_select_bit_piece 8 2
+			DW_OP_lit4
+			DW_OP_LLVM_bit_offset
+			DW_OP_bit_piece 8 4
+			DW_OP_LLVM_piece_end
+		    } SPECIAL_expr}
+		}
+
+		# Define variable 'e' with the conceptually same location
+		# description as variable 'd', using the equivalent
+		# operations from DW_OP_LLVM_USER_ namespace.
+		DW_TAG_variable {
+		    {DW_AT_name e}
+		    {DW_AT_type :$char_type_label}
+		    {DW_AT_location {
+			DW_OP_addr $buf_var
+			DW_OP_lit0
+			DW_OP_LLVM_user DW_OP_LLVM_USER_form_aspace_address
+			DW_OP_LLVM_user DW_OP_LLVM_USER_offset_constu 1
+			DW_OP_lit1
+			DW_OP_LLVM_user DW_OP_LLVM_USER_offset
+			DW_OP_lit16
+			DW_OP_LLVM_user DW_OP_LLVM_USER_bit_offset
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 8 2
+			DW_OP_LLVM_user DW_OP_LLVM_USER_undefined
+			DW_OP_lit1
+			DW_OP_LLVM_user DW_OP_LLVM_USER_select_bit_piece 8 2
+			DW_OP_lit4
+			DW_OP_LLVM_user DW_OP_LLVM_USER_bit_offset
+			DW_OP_bit_piece 8 4
+			DW_OP_LLVM_user DW_OP_LLVM_USER_piece_end
+		    } SPECIAL_expr}
+		}
 	    }
 	}
     }
@@ -137,21 +223,21 @@ if ![runto_main] {
     return -1
 }
 
-# Test if all LLVM DWARF operations are printed correctly.
+# Test if all LLVM operations are printed correctly.
 gdb_test "info address a" \
-".*0\\: DW_OP_LLVM_push_lane.*\
-   1\\: DW_OP_lit0.*\
-   2\\: DW_OP_lit1.*\
-   3\\: DW_OP_LLVM_form_aspace_address.*\
-   4\\: DW_OP_LLVM_offset_constu 8.*\
-   6\\: DW_OP_LLVM_offset.*\
-   7\\: DW_OP_LLVM_bit_offset.*\
-   8\\: DW_OP_LLVM_undefined.*\
-   9\\: DW_OP_LLVM_extend piece size 64 \\(bits\\) pieces count 64.*\
-   12\\: DW_OP_LLVM_select_bit_piece piece size 64 \\(bits\\) pieces count 64.*\
-   15\\: DW_OP_LLVM_piece_end.*\
-   16\\: DW_OP_LLVM_call_frame_entry_reg register 0 \\\[\\$$regname\\\].*\
-   18\\: DW_OP_LLVM_aspace_bregx register 0 \\\[\\$$regname\\\] offset 0.*"
+".*\\: DW_OP_LLVM_push_lane.*\
+ .*\\: DW_OP_lit0.*\
+ .*\\: DW_OP_lit1.*\
+ .*\\: DW_OP_LLVM_form_aspace_address.*\
+ .*\\: DW_OP_LLVM_offset_constu 8.*\
+ .*\\: DW_OP_LLVM_offset.*\
+ .*\\: DW_OP_LLVM_bit_offset.*\
+ .*\\: DW_OP_LLVM_undefined.*\
+ .*\\: DW_OP_LLVM_extend piece size 64 \\(bits\\) pieces count 64.*\
+ .*\\: DW_OP_LLVM_select_bit_piece piece size 64 \\(bits\\) pieces count 64.*\
+ .*\\: DW_OP_LLVM_piece_end.*\
+ .*\\: DW_OP_LLVM_call_frame_entry_reg register 0 \\\[\\$$regname\\\].*\
+ .*\\: DW_OP_LLVM_aspace_bregx register 0 \\\[\\$$regname\\\] offset 0.*"
 
 # Test if "nice" printout is still backward compatible.
 gdb_test "info address b" \
@@ -160,3 +246,65 @@ gdb_test "info address b" \
  a variable at offset 0 from base reg .* \\\[4-byte piece\\\],\
  and the constant 1 \\\[4-byte piece\\\], and a thread-local variable at\
  offset 0x4 in the thread-local storage for.*\\\[4-byte piece\\\].*"
+
+# Test if all LLVM USER operations are printed correctly.
+gdb_test "info address c" \
+".*\\: DW_OP_LLVM_user.*1\\: DW_OP_LLVM_USER_push_lane.*\
+ .*\\: DW_OP_lit0.*\
+ .*\\: DW_OP_lit1.*\
+ .*\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_form_aspace_address.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_offset_constu 8.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_offset.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_bit_offset.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_undefined.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_extend piece size 64 \\(bits\\) pieces count 64.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_select_bit_piece piece size 64 \\(bits\\) pieces count 64.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_piece_end.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_call_frame_entry_reg register 0 \\\[\\$$regname\\\].*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_aspace_bregx register 0 \\\[\\$$regname\\\] offset 0.*"
+
+# Test if variable 'd' location description that uses operations
+# from DW_OP_LLVM_ namespace is printed correctly.
+gdb_test "info address d" \
+".*\\: DW_OP_addr.*\
+ .*\\: DW_OP_lit0.*\
+ .*\\: DW_OP_LLVM_form_aspace_address.*\
+ .*\\: DW_OP_LLVM_offset_constu 1.*\
+ .*\\: DW_OP_lit1.*\
+ .*\\: DW_OP_LLVM_offset.*\
+ .*\\: DW_OP_lit16.*\
+ .*\\: DW_OP_LLVM_bit_offset.*\
+ .*\\: DW_OP_LLVM_extend piece size 8 \\(bits\\) pieces count 2.*\
+ .*\\: DW_OP_LLVM_undefined.*\
+ .*\\: DW_OP_lit1.*\
+ .*\\: DW_OP_LLVM_select_bit_piece piece size 8 \\(bits\\) pieces count 2.*\
+ .*\\: DW_OP_lit4.*\
+ .*\\: DW_OP_LLVM_bit_offset.*\
+ .*\\: DW_OP_bit_piece size 8 offset 4 \\(bits\\).*\
+ .*\\: DW_OP_LLVM_piece_end.*"
+
+# Test if variable 'd' value is correct.
+gdb_test "print d" " = 4.*"
+
+# Test if variable 'e' location description that uses operations
+# from DW_OP_LLVM_USER_ namespace is printed correctly.
+gdb_test "info address e" \
+".*\\: DW_OP_addr.*\
+ .*\\: DW_OP_lit0.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_form_aspace_address.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_offset_constu 1.*\
+ .*\\: DW_OP_lit1.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_offset.*\
+ .*\\: DW_OP_lit16.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_bit_offset.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_extend piece size 8 \\(bits\\) pieces count 2.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_undefined.*\
+ .*\\: DW_OP_lit1.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_select_bit_piece piece size 8 \\(bits\\) pieces count 2.*\
+ .*\\: DW_OP_lit4.*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_bit_offset.*\
+ .*\\: DW_OP_bit_piece size 8 offset 4 \\(bits\\).*\
+ .*\\: DW_OP_LLVM_user.*\\: DW_OP_LLVM_USER_piece_end.*"
+
+# Test if variable 'e' value is correct.
+gdb_test "print e" " = 4.*"
