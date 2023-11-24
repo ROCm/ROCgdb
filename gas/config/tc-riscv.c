@@ -1960,16 +1960,9 @@ load_const (int reg, expressionS *ep)
 static void
 riscv_ext (int destreg, int srcreg, unsigned shift, bool sign)
 {
-  if (sign)
-    {
-      md_assemblef ("slli x%d, x%d, 0x%x", destreg, srcreg, shift);
-      md_assemblef ("srai x%d, x%d, 0x%x", destreg, destreg, shift);
-    }
-  else
-    {
-      md_assemblef ("slli x%d, x%d, 0x%x", destreg, srcreg, shift);
-      md_assemblef ("srli x%d, x%d, 0x%x", destreg, destreg, shift);
-    }
+  md_assemblef ("slli x%d, x%d, %#x", destreg, srcreg, shift);
+  md_assemblef ("sr%ci x%d, x%d, %#x",
+		sign ? 'a' : 'l', destreg, destreg, shift);
 }
 
 /* Expand RISC-V Vector macros into one or more instructions.  */
@@ -2093,8 +2086,8 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
       riscv_call (rd, rs1, imm_expr, *imm_reloc);
       break;
 
-    case M_ZEXTH:
-      riscv_ext (rd, rs1, xlen - 16, false);
+    case M_EXTH:
+      riscv_ext (rd, rs1, xlen - 16, *ip->insn_mo->name == 's');
       break;
 
     case M_ZEXTW:
@@ -2103,10 +2096,6 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
 
     case M_SEXTB:
       riscv_ext (rd, rs1, xlen - 8, true);
-      break;
-
-    case M_SEXTH:
-      riscv_ext (rd, rs1, xlen - 16, true);
       break;
 
     case M_VMSGE:
@@ -2531,11 +2520,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	  switch (*oparg)
 	    {
 	    case '\0': /* End of args.  */
+	      if (insn->match_func && !insn->match_func (insn, ip->insn_opcode))
+		break;
+
 	      if (insn->pinfo != INSN_MACRO)
 		{
-		  if (!insn->match_func (insn, ip->insn_opcode))
-		    break;
-
 		  /* For .insn, insn->match and insn->mask are 0.  */
 		  if (riscv_insn_length ((insn->match == 0 && insn->mask == 0)
 					 ? ip->insn_opcode
