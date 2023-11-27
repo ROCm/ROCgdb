@@ -90,7 +90,7 @@ main (int argc, char* argv[])
   CHECK (hipMemcpy (global_ptr, &init_value_h, sizeof (init_value_h),
 		    hipMemcpyHostToDevice));
 
-  kernel<<<1, 1, 0>>> (global_ptr);
+  kernel<<<2, 1, 0>>> (global_ptr);
   CHECK (hipDeviceSynchronize ());
   return 0;
 }
