@@ -415,6 +415,31 @@ proc info_threads_get_wave_count { inf_num } {
     return $wave_count
 }
 
+# Return a list of valid "AMDGPU Wave" thread IDs.
+
+proc info_thread_get_wave_list { } {
+    global gdb_prompt
+    global expect_out
+
+    set thr_list ""
+
+    gdb_test_multiple "info threads" "get AMDGPU waves list" -lbl {
+	-re "($::decimal) *AMDGPU Wave\[^\r\n\]+" {
+	    lappend thr_list $expect_out(1,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	    if { [llength $thr_list] != 0 } {
+		pass $gdb_test_name
+	    } else {
+		fail "$gdb_test_name (no waves)"
+	    }
+	}
+    }
+
+  return $thr_list
+}
+
 # Return true if all the devices support debugging multiple processes
 # using the GPU.
 

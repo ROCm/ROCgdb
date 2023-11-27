@@ -44,6 +44,8 @@ with_test_prefix "private lane watchpoints" {
     gdb_breakpoint "kernel" "allow-pending" "qualified"
     gdb_continue_to_breakpoint "kernel" ".*char array.*"
 
+    delete_breakpoints
+
     # Step over array initialization.
     gdb_test "next" ".*array\\\[3\\\] = \\\'b\\\'.*"
 
@@ -149,6 +151,8 @@ with_test_prefix "global memory watchpoint" {
     gdb_breakpoint "kernel" "allow-pending" "qualified"
     gdb_continue_to_breakpoint "kernel" ".*char array.*"
 
+    delete_breakpoints
+
     # Set watchpoint on the pointer to global memory value.
     gdb_test "watch *global_ptr" "Hardware watchpoint.*: \\\*global_ptr"
 
@@ -181,4 +185,58 @@ with_test_prefix "global memory watchpoint" {
 	    "#\[0-9\]  0x\[0-9a-fA-F\]+ in kernel.*"] \
 	"inside change_memory"
 }
+
+with_test_prefix "Watchpoint and thread scope change " {
+    if ![runto_main] {
+	fail "can't run to main"
+	return -1
+    }
+
+    # Set breakpoint in device code.
+    gdb_breakpoint "kernel" "allow-pending" "qualified"
+    gdb_continue_to_breakpoint "kernel" ".*char array.*"
+
+    delete_breakpoints
+
+    # Create convenience variable while focused on the first wave.
+    gdb_test_no_output "set var \$addr = &array"
+
+    set original_wave_id [get_integer_valueof "\$_thread" -1]
+    set wave_id_list [info_thread_get_wave_list]
+
+    # Find thread ID of some other wave.
+    set new_wave_id $original_wave_id
+
+    foreach iter [lrange $wave_id_list 1 end] {
+	if {$new_wave_id != $iter} {
+	    set new_wave_id $iter
+	    break
+	}
+    }
+
+    # There has to be more than one wave.
+    if {$new_wave_id == $original_wave_id} {
+	fail "only one wave found"
+	return -1
+    }
+
+    # Switch to a new wave before inserting a watchpoint.
+    gdb_test "thread $new_wave_id" "Switching to thread $new_wave_id.*"
+
+    # Step over array initialization.
+    gdb_test "next" ".*array\\\[3\\\] = \\\'b\\\'.*"
+
+    # Set watchpoint on the whole array.
+    gdb_test "watch *\$addr" "Hardware watchpoint.*: \\\*\\\$addr"
+
+    # Continue until the watchpoint is triggered by the first change.
+    gdb_test "continue" \
+	     ".*Hardware watchpoint.*\\\*\\\$addr.*Old value = \\\"aaaa\\\".*New value = \\\"aaab\\\".*" \
+	     "change an array element value from letter a to letter b"
+
+    # Check if the watchpoint is triggered in a correct thread scope
+    # of the new wave id.
+    gdb_assert { $new_wave_id == [get_integer_valueof "\$_thread" -1 "focused thread after stop"] } "watchpoint triggered by the expected wave"
+}
+
 }
