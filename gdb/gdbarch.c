@@ -184,6 +184,7 @@ struct gdbarch
   gdbarch_iterate_over_regset_sections_ftype *iterate_over_regset_sections = nullptr;
   gdbarch_make_corefile_notes_ftype *make_corefile_notes = nullptr;
   gdbarch_find_memory_regions_ftype *find_memory_regions = nullptr;
+  gdbarch_rocm_find_memory_regions_ftype *rocm_find_memory_regions = nullptr;
   gdbarch_create_memtag_section_ftype *create_memtag_section = nullptr;
   gdbarch_fill_memtag_section_ftype *fill_memtag_section = nullptr;
   gdbarch_decode_memtag_section_ftype *decode_memtag_section = nullptr;
@@ -467,6 +468,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of iterate_over_regset_sections, has predicate.  */
   /* Skip verify of make_corefile_notes, has predicate.  */
   /* Skip verify of find_memory_regions, has predicate.  */
+  /* Skip verify of rocm_find_memory_regions, has predicate.  */
   /* Skip verify of create_memtag_section, has predicate.  */
   /* Skip verify of fill_memtag_section, has predicate.  */
   /* Skip verify of decode_memtag_section, has predicate.  */
@@ -1093,6 +1095,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: find_memory_regions = <%s>\n",
 	      host_address_to_string (gdbarch->find_memory_regions));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_rocm_find_memory_regions_p() = %d\n",
+	      gdbarch_rocm_find_memory_regions_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: rocm_find_memory_regions = <%s>\n",
+	      host_address_to_string (gdbarch->rocm_find_memory_regions));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_create_memtag_section_p() = %d\n",
 	      gdbarch_create_memtag_section_p (gdbarch));
@@ -4027,6 +4035,30 @@ set_gdbarch_find_memory_regions (struct gdbarch *gdbarch,
 				 gdbarch_find_memory_regions_ftype find_memory_regions)
 {
   gdbarch->find_memory_regions = find_memory_regions;
+}
+
+bool
+gdbarch_rocm_find_memory_regions_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->rocm_find_memory_regions != NULL;
+}
+
+int
+gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->rocm_find_memory_regions != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_rocm_find_memory_regions called\n");
+  return gdbarch->rocm_find_memory_regions (gdbarch, func, data);
+}
+
+void
+set_gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch,
+				      gdbarch_rocm_find_memory_regions_ftype rocm_find_memory_regions)
+{
+  gdbarch->rocm_find_memory_regions = rocm_find_memory_regions;
 }
 
 bool

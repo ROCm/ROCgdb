@@ -1022,6 +1022,14 @@ typedef int (gdbarch_find_memory_regions_ftype) (struct gdbarch *gdbarch, find_m
 extern int gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
 extern void set_gdbarch_find_memory_regions (struct gdbarch *gdbarch, gdbarch_find_memory_regions_ftype *find_memory_regions);
 
+/* Find core file memory regions for the ROCm platform */
+
+extern bool gdbarch_rocm_find_memory_regions_p (struct gdbarch *gdbarch);
+
+typedef int (gdbarch_rocm_find_memory_regions_ftype) (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
+extern int gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
+extern void set_gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, gdbarch_rocm_find_memory_regions_ftype *rocm_find_memory_regions);
+
 /* Given a bfd OBFD, segment ADDRESS and SIZE, create a memory tag section to be dumped to a core file */
 
 extern bool gdbarch_create_memtag_section_p (struct gdbarch *gdbarch);
