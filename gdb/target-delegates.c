@@ -1895,9 +1895,9 @@ dummy_target::lane_to_str (thread_info *arg0, int arg1)
 std::string
 debug_target::lane_to_str (thread_info *arg0, int arg1)
 {
-  std::string result;
   gdb_printf (gdb_stdlog, "-> %s->lane_to_str (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->lane_to_str (arg0, arg1);
+  std::string result
+    = this->beneath ()->lane_to_str (arg0, arg1);
   gdb_printf (gdb_stdlog, "<- %s->lane_to_str (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (", ", gdb_stdlog);
@@ -1923,9 +1923,9 @@ dummy_target::dispatch_pos_str (thread_info *arg0)
 std::string
 debug_target::dispatch_pos_str (thread_info *arg0)
 {
-  std::string result;
   gdb_printf (gdb_stdlog, "-> %s->dispatch_pos_str (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->dispatch_pos_str (arg0);
+  std::string result
+    = this->beneath ()->dispatch_pos_str (arg0);
   gdb_printf (gdb_stdlog, "<- %s->dispatch_pos_str (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (") = ", gdb_stdlog);
@@ -1949,9 +1949,9 @@ dummy_target::thread_workgroup_pos_str (thread_info *arg0)
 std::string
 debug_target::thread_workgroup_pos_str (thread_info *arg0)
 {
-  std::string result;
   gdb_printf (gdb_stdlog, "-> %s->thread_workgroup_pos_str (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->thread_workgroup_pos_str (arg0);
+  std::string result
+    = this->beneath ()->thread_workgroup_pos_str (arg0);
   gdb_printf (gdb_stdlog, "<- %s->thread_workgroup_pos_str (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (") = ", gdb_stdlog);
@@ -1975,9 +1975,9 @@ dummy_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
 std::string
 debug_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
 {
-  std::string result;
   gdb_printf (gdb_stdlog, "-> %s->lane_workgroup_pos_str (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
+  std::string result
+    = this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
   gdb_printf (gdb_stdlog, "<- %s->lane_workgroup_pos_str (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (", ", gdb_stdlog);
@@ -4698,9 +4698,9 @@ dummy_target::supports_displaced_step (thread_info *arg0)
 bool
 debug_target::supports_displaced_step (thread_info *arg0)
 {
-  bool result;
   gdb_printf (gdb_stdlog, "-> %s->supports_displaced_step (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->supports_displaced_step (arg0);
+  bool result
+    = this->beneath ()->supports_displaced_step (arg0);
   gdb_printf (gdb_stdlog, "<- %s->supports_displaced_step (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (") = ", gdb_stdlog);
@@ -4724,9 +4724,9 @@ dummy_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
 displaced_step_prepare_status
 debug_target::displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1)
 {
-  displaced_step_prepare_status result;
   gdb_printf (gdb_stdlog, "-> %s->displaced_step_prepare (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->displaced_step_prepare (arg0, arg1);
+  displaced_step_prepare_status result
+    = this->beneath ()->displaced_step_prepare (arg0, arg1);
   gdb_printf (gdb_stdlog, "<- %s->displaced_step_prepare (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (", ", gdb_stdlog);
@@ -4752,9 +4752,9 @@ dummy_target::displaced_step_finish (thread_info *arg0, const target_waitstatus 
 displaced_step_finish_status
 debug_target::displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1)
 {
-  displaced_step_finish_status result;
   gdb_printf (gdb_stdlog, "-> %s->displaced_step_finish (...)\n", this->beneath ()->shortname ());
-  result = this->beneath ()->displaced_step_finish (arg0, arg1);
+  displaced_step_finish_status result
+    = this->beneath ()->displaced_step_finish (arg0, arg1);
   gdb_printf (gdb_stdlog, "<- %s->displaced_step_finish (", this->beneath ()->shortname ());
   target_debug_print_thread_info_p (arg0);
   gdb_puts (", ", gdb_stdlog);
