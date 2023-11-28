@@ -1685,6 +1685,38 @@ linux_find_memory_regions (struct gdbarch *gdbarch,
 					 &data);
 }
 
+/* Implement the rocm_find_memory_region gdbarch coolback for linux.
+
+   For a ROCm process on Linux, GPU memory is mapped in the process address
+   space via /proc/dri/renderDXXX nodes.  Make sure to include those mappings
+   when generating a ROCm core dump so we include GPU memory.  */
+
+static int
+linux_rocm_find_memory_regions (struct gdbarch *gdbarch,
+				find_memory_region_ftype func, void *obfd)
+{
+  struct linux_find_memory_regions_data data;
+
+  data.func = func;
+  data.obfd = obfd;
+
+  auto accept_dri_render_nodes
+    = [] (filter_flags filterflags, const struct smaps_vmflags *v,
+	  int maybe_private_p, int mapping_anon_p, int mapping_file_p,
+	  const char *filename, ULONGEST addr, ULONGEST offset) -> int
+      {
+	const char *render_node_name_prefix = "/dev/dri/renderD";
+	return (strncmp (filename,
+			render_node_name_prefix,
+			strlen (render_node_name_prefix)) == 0);
+      };
+
+  return linux_find_memory_regions_full (gdbarch,
+					 accept_dri_render_nodes,
+					 linux_find_memory_regions_thunk,
+					 &data);
+}
+
 /* This is used to pass information from
    linux_make_mappings_corefile_notes through
    linux_find_memory_regions_full.  */
@@ -2775,6 +2807,8 @@ linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
   set_gdbarch_core_xfer_siginfo (gdbarch, linux_core_xfer_siginfo);
   set_gdbarch_read_core_file_mappings (gdbarch, linux_read_core_file_mappings);
   set_gdbarch_find_memory_regions (gdbarch, linux_find_memory_regions);
+  set_gdbarch_rocm_find_memory_regions (gdbarch,
+					linux_rocm_find_memory_regions);
   set_gdbarch_make_corefile_notes (gdbarch, linux_make_corefile_notes);
   set_gdbarch_has_shared_address_space (gdbarch,
 					linux_has_shared_address_space);

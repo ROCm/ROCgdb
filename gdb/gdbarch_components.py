@@ -1754,6 +1754,16 @@ Find core file memory regions
 
 Method(
     comment="""
+Find core file memory regions for the ROCm platform
+""",
+    type="int",
+    name="rocm_find_memory_regions",
+    params=[("find_memory_region_ftype", "func"), ("void *", "data")],
+    predicate=True,
+)
+
+Method(
+    comment="""
 Given a bfd OBFD, segment ADDRESS and SIZE, create a memory tag section to be dumped to a core file
 """,
     type="asection *",
