@@ -50,10 +50,9 @@ show_serial_hwflow (struct ui_file *file, int from_tty,
 }
 #endif
 
-static int hardwire_open (struct serial *scb, const char *name);
 static void hardwire_raw (struct serial *scb);
 static int rate_to_code (int rate);
-static int hardwire_setbaudrate (struct serial *scb, int rate);
+static void hardwire_setbaudrate (struct serial *scb, int rate);
 static int hardwire_setparity (struct serial *scb, int parity);
 static void hardwire_close (struct serial *scb);
 static int get_tty_state (struct serial *scb,
@@ -67,19 +66,17 @@ static void hardwire_print_tty_state (struct serial *, serial_ttystate,
 static int hardwire_drain_output (struct serial *);
 static int hardwire_flush_output (struct serial *);
 static int hardwire_flush_input (struct serial *);
-static int hardwire_send_break (struct serial *);
+static void hardwire_send_break (struct serial *);
 static int hardwire_setstopbits (struct serial *, int);
 
 /* Open up a real live device for serial I/O.  */
 
-static int
+static void
 hardwire_open (struct serial *scb, const char *name)
 {
   scb->fd = gdb_open_cloexec (name, O_RDWR, 0).release ();
   if (scb->fd < 0)
-    return -1;
-
-  return 0;
+    perror_with_name ("could not open device");
 }
 
 static int
@@ -185,10 +182,11 @@ hardwire_flush_input (struct serial *scb)
   return tcflush (scb->fd, TCIFLUSH);
 }
 
-static int
+static void
 hardwire_send_break (struct serial *scb)
 {
-  return tcsendbreak (scb->fd, 0);
+  if (tcsendbreak (scb->fd, 0) == -1)
+    perror_with_name ("sending break");
 }
 
 static void
@@ -417,47 +415,38 @@ rate_to_code (int rate)
 	    {
 	      if (i)
 		{
-		  warning (_("Invalid baud rate %d.  "
-			     "Closest values are %d and %d."),
-			   rate, baudtab[i - 1].rate, baudtab[i].rate);
+		  error (_("Invalid baud rate %d.  "
+			   "Closest values are %d and %d."),
+			 rate, baudtab[i - 1].rate, baudtab[i].rate);
 		}
 	      else
 		{
-		  warning (_("Invalid baud rate %d.  Minimum value is %d."),
-			   rate, baudtab[0].rate);
+		  error (_("Invalid baud rate %d.  Minimum value is %d."),
+			 rate, baudtab[0].rate);
 		}
-	      return -1;
 	    }
 	}
     }
  
   /* The requested speed was too large.  */
-  warning (_("Invalid baud rate %d.  Maximum value is %d."),
-	    rate, baudtab[i - 1].rate);
-  return -1;
+  error (_("Invalid baud rate %d.  Maximum value is %d."),
+	 rate, baudtab[i - 1].rate);
 }
 
-static int
+static void
 hardwire_setbaudrate (struct serial *scb, int rate)
 {
   struct hardwire_ttystate state;
   int baud_code = rate_to_code (rate);
   
-  if (baud_code < 0)
-    {
-      /* The baud rate was not valid.
-	 A warning has already been issued.  */
-      errno = EINVAL;
-      return -1;
-    }
-
   if (get_tty_state (scb, &state))
-    return -1;
+    perror_with_name ("could not get tty state");
 
   cfsetospeed (&state.termios, baud_code);
   cfsetispeed (&state.termios, baud_code);
 
-  return set_tty_state (scb, &state);
+  if (set_tty_state (scb, &state))
+    perror_with_name ("could not set tty state");
 }
 
 static int
@@ -585,11 +574,17 @@ when debugging using remote targets."),
 int
 ser_unix_read_prim (struct serial *scb, size_t count)
 {
-  return read (scb->fd, scb->buf, count);
+  int result = recv (scb->fd, scb->buf, count, 0);
+  if (result == -1 && errno != EINTR)
+    perror_with_name ("error while reading");
+  return result;
 }
 
 int
 ser_unix_write_prim (struct serial *scb, const void *buf, size_t len)
 {
-  return write (scb->fd, buf, len);
+  int result = write (scb->fd, buf, len);
+  if (result == -1 && errno != EINTR)
+    perror_with_name ("error while writing");
+  return result;
 }
