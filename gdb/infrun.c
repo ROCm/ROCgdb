@@ -551,8 +551,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	    }
 	  else
 	    {
-	      child_inf->aspace = new address_space ();
-	      child_inf->pspace = new program_space (child_inf->aspace);
+	      child_inf->pspace = new program_space (new_address_space ());
+	      child_inf->aspace = child_inf->pspace->aspace;
 	      child_inf->removable = true;
 	      clone_program_space (child_inf->pspace, parent_inf->pspace);
 	    }
@@ -630,8 +630,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 
 	  child_inf->aspace = parent_inf->aspace;
 	  child_inf->pspace = parent_inf->pspace;
-	  parent_inf->aspace = new address_space ();
-	  parent_inf->pspace = new program_space (parent_inf->aspace);
+	  parent_inf->pspace = new program_space (new_address_space ());
+	  parent_inf->aspace = parent_inf->pspace->aspace;
 	  clone_program_space (parent_inf->pspace, child_inf->pspace);
 
 	  /* The parent inferior is still the current one, so keep things
@@ -640,8 +640,8 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 	}
       else
 	{
-	  child_inf->aspace = new address_space ();
-	  child_inf->pspace = new program_space (child_inf->aspace);
+	  child_inf->pspace = new program_space (new_address_space ());
+	  child_inf->aspace = child_inf->pspace->aspace;
 	  child_inf->removable = true;
 	  child_inf->symfile_flags = SYMFILE_NO_READ;
 	  clone_program_space (child_inf->pspace, parent_inf->pspace);
@@ -1051,7 +1051,6 @@ handle_vfork_child_exec_or_exit (int exec)
       if (vfork_parent->pending_detach)
 	{
 	  struct program_space *pspace;
-	  struct address_space *aspace;
 
 	  /* follow-fork child, detach-on-fork on.  */
 
@@ -1076,9 +1075,8 @@ handle_vfork_child_exec_or_exit (int exec)
 	     of" a hack.  */
 
 	  pspace = inf->pspace;
-	  aspace = inf->aspace;
-	  inf->aspace = nullptr;
 	  inf->pspace = nullptr;
+	  address_space_ref_ptr aspace = std::move (inf->aspace);
 
 	  if (print_inferior_events)
 	    {
@@ -1127,13 +1125,19 @@ handle_vfork_child_exec_or_exit (int exec)
 	     go ahead and create a new one for this exiting
 	     inferior.  */
 
-	  /* Switch to no-thread while running clone_program_space, so
-	     that clone_program_space doesn't want to read the
-	     selected frame of a dead process.  */
 	  scoped_restore_current_thread restore_thread;
-	  switch_to_no_thread ();
 
-	  inf->pspace = new program_space (maybe_new_address_space ());
+	  /* Temporarily switch to the vfork parent, to facilitate ptrace
+	     calls done during maybe_new_address_space.  */
+	  switch_to_thread (any_live_thread_of_inferior (vfork_parent));
+	  address_space_ref_ptr aspace = maybe_new_address_space ();
+
+	  /* Switch back to the vfork child inferior.  Switch to no-thread
+	     while running clone_program_space, so that clone_program_space
+	     doesn't want to read the selected frame of a dead process.  */
+	  switch_to_inferior_no_thread (inf);
+
+	  inf->pspace = new program_space (std::move (aspace));
 	  inf->aspace = inf->pspace->aspace;
 	  set_current_program_space (inf->pspace);
 	  inf->removable = true;
@@ -2747,7 +2751,7 @@ resume_1 (enum gdb_signal sig)
 		       inferior_ptid.to_string ().c_str (),
 		       paddress (gdbarch, pc));
 
-  const address_space *aspace = tp->inf->aspace;
+  const address_space *aspace = tp->inf->aspace.get ();
 
   /* Normally, by the time we reach `resume', the breakpoints are either
      removed or inserted, as appropriate.  The exception is if we're sitting
@@ -3191,7 +3195,7 @@ thread_still_needs_step_over_bp (struct thread_info *tp)
     {
       struct regcache *regcache = get_thread_regcache (tp);
 
-      if (breakpoint_here_p (tp->inf->aspace,
+      if (breakpoint_here_p (tp->inf->aspace.get (),
 			     regcache_read_pc (regcache))
 	  == ordinary_breakpoint_here)
 	return true;
@@ -3652,7 +3656,7 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
 
   if (addr == (CORE_ADDR) -1)
     {
-      const address_space *aspace = cur_thr->inf->aspace;
+      const address_space *aspace = cur_thr->inf->aspace.get ();
 
       if (cur_thr->stop_pc_p ()
 	  && pc == cur_thr->stop_pc ()
@@ -4097,7 +4101,7 @@ do_target_wait_1 (inferior *inf, ptid_t ptid,
 			       paddress (gdbarch, pc));
 	  discard = 1;
 	}
-      else if (!breakpoint_inserted_here_p (tp->inf->aspace, pc))
+      else if (!breakpoint_inserted_here_p (tp->inf->aspace.get (), pc))
 	{
 	  infrun_debug_printf ("previous breakpoint of %s, at %s gone",
 			       tp->ptid.to_string ().c_str (),
@@ -4994,7 +4998,7 @@ adjust_pc_after_break (struct thread_info *thread,
   if (decr_pc == 0)
     return;
 
-  const address_space *aspace = thread->inf->aspace;
+  const address_space *aspace = thread->inf->aspace.get ();
 
   /* Find the location where (if we've hit a breakpoint) the
      breakpoint would be.  */
@@ -5146,7 +5150,7 @@ handle_syscall_event (struct execution_control_state *ecs)
       infrun_debug_printf ("syscall number=%d", syscall_number);
 
       ecs->event_thread->control.stop_bpstat
-	= bpstat_stop_status_nowatch (ecs->event_thread->inf->aspace,
+	= bpstat_stop_status_nowatch (ecs->event_thread->inf->aspace.get (),
 				      ecs->event_thread->stop_pc (),
 				      ecs->event_thread, ecs->ws);
 
@@ -5345,7 +5349,7 @@ save_waitstatus (struct thread_info *tp, const target_waitstatus &ws)
       && ws.sig () == GDB_SIGNAL_TRAP)
     {
       struct regcache *regcache = get_thread_regcache (tp);
-      const address_space *aspace = tp->inf->aspace;
+      const address_space *aspace = tp->inf->aspace.get ();
       CORE_ADDR pc = regcache_read_pc (regcache);
 
       adjust_pc_after_break (tp, tp->pending_waitstatus ());
@@ -6165,7 +6169,7 @@ handle_inferior_event (struct execution_control_state *ecs)
     {
       struct regcache *regcache = get_thread_regcache (ecs->event_thread);
 
-      if (breakpoint_inserted_here_p (ecs->event_thread->inf->aspace,
+      if (breakpoint_inserted_here_p (ecs->event_thread->inf->aspace.get (),
 				      regcache_read_pc (regcache)))
 	{
 	  infrun_debug_printf ("Treating signal as SIGTRAP");
@@ -6197,8 +6201,9 @@ handle_inferior_event (struct execution_control_state *ecs)
 	    handle_solib_event ();
 
 	    ecs->event_thread->set_stop_pc (regcache_read_pc (regcache));
+	    address_space *aspace = ecs->event_thread->inf->aspace.get ();
 	    ecs->event_thread->control.stop_bpstat
-	      = bpstat_stop_status_nowatch (ecs->event_thread->inf->aspace,
+	      = bpstat_stop_status_nowatch (aspace,
 					    ecs->event_thread->stop_pc (),
 					    ecs->event_thread, ecs->ws);
 
@@ -6392,7 +6397,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	(regcache_read_pc (get_thread_regcache (ecs->event_thread)));
 
       ecs->event_thread->control.stop_bpstat
-	= bpstat_stop_status_nowatch (ecs->event_thread->inf->aspace,
+	= bpstat_stop_status_nowatch (ecs->event_thread->inf->aspace.get (),
 				      ecs->event_thread->stop_pc (),
 				      ecs->event_thread, ecs->ws);
 
@@ -6538,7 +6543,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 	(regcache_read_pc (get_thread_regcache (ecs->event_thread)));
 
       ecs->event_thread->control.stop_bpstat
-	= bpstat_stop_status_nowatch (ecs->event_thread->inf->aspace,
+	= bpstat_stop_status_nowatch (ecs->event_thread->inf->aspace.get (),
 				      ecs->event_thread->stop_pc (),
 				      ecs->event_thread, ecs->ws);
 
@@ -6970,7 +6975,7 @@ handle_signal_stop (struct execution_control_state *ecs)
       CORE_ADDR pc;
 
       regcache = get_thread_regcache (ecs->event_thread);
-      const address_space *aspace = ecs->event_thread->inf->aspace;
+      const address_space *aspace = ecs->event_thread->inf->aspace.get ();
 
       pc = regcache_read_pc (regcache);
 
@@ -7054,7 +7059,7 @@ handle_signal_stop (struct execution_control_state *ecs)
      inline function call sites).  */
   if (ecs->event_thread->control.step_range_end != 1)
     {
-      const address_space *aspace = ecs->event_thread->inf->aspace;
+      const address_space *aspace = ecs->event_thread->inf->aspace.get ();
 
       /* skip_inline_frames is expensive, so we avoid it if we can
 	 determine that the address is one where functions cannot have
@@ -7132,7 +7137,7 @@ handle_signal_stop (struct execution_control_state *ecs)
   /* See if there is a breakpoint/watchpoint/catchpoint/etc. that
      handles this event.  */
   ecs->event_thread->control.stop_bpstat
-    = bpstat_stop_status (ecs->event_thread->inf->aspace,
+    = bpstat_stop_status (ecs->event_thread->inf->aspace.get (),
 			  ecs->event_thread->stop_pc (),
 			  ecs->event_thread, ecs->ws, stop_chain);
 
@@ -9075,7 +9080,7 @@ keep_going_pass_signal (struct execution_control_state *ecs)
       if (remove_bp
 	  && (remove_wps || !use_displaced_stepping (ecs->event_thread)))
 	{
-	  set_step_over_info (ecs->event_thread->inf->aspace,
+	  set_step_over_info (ecs->event_thread->inf->aspace.get (),
 			      regcache_read_pc (regcache), remove_wps,
 			      ecs->event_thread->global_num);
 	}

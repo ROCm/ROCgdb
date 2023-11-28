@@ -39,6 +39,7 @@
 #include "objfiles.h"
 #include "ada-lang.h"
 #include "dwarf2/tag.h"
+#include "gdbsupport/gdb_tilde_expand.h"
 
 #include <algorithm>
 #include <cmath>
@@ -188,87 +189,211 @@ struct mapped_symtab
 {
   mapped_symtab ()
   {
-    data.resize (1024);
+    m_data.resize (1024);
   }
 
-  /* Minimize each entry in the symbol table, removing duplicates.  */
+  /* If there are no elements in the symbol table, then reduce the table
+     size to zero.  Otherwise call symtab_index_entry::minimize each entry
+     in the symbol table.  */
+
   void minimize ()
   {
-    for (symtab_index_entry &item : data)
+    if (m_element_count == 0)
+      m_data.resize (0);
+
+    for (symtab_index_entry &item : m_data)
       item.minimize ();
   }
 
-  offset_type n_elements = 0;
-  std::vector<symtab_index_entry> data;
+  /* Add an entry to SYMTAB.  NAME is the name of the symbol.  CU_INDEX is
+     the index of the CU in which the symbol appears.  IS_STATIC is one if
+     the symbol is static, otherwise zero (global).  */
+
+  void add_index_entry (const char *name, int is_static,
+			gdb_index_symbol_kind kind, offset_type cu_index);
+
+  /* When entries are originally added into the data hash the order will
+     vary based on the number of worker threads GDB is configured to use.
+     This function will rebuild the hash such that the final layout will be
+     deterministic regardless of the number of worker threads used.  */
+
+  void sort ();
+
+  /* Access the obstack.  */
+  struct obstack *obstack ()
+  { return &m_string_obstack; }
+
+private:
+
+  /* Find a slot in SYMTAB for the symbol NAME.  Returns a reference to
+     the slot.
+
+     Function is used only during write_hash_table so no index format
+     backward compatibility is needed.  */
+
+  symtab_index_entry &find_slot (const char *name);
+
+  /* Expand SYMTAB's hash table.  */
+
+  void hash_expand ();
+
+  /* Return true if the hash table in data needs to grow.  */
+
+  bool hash_needs_expanding () const
+  { return 4 * m_element_count / 3 >= m_data.size (); }
+
+  /* A vector that is used as a hash table.  */
+  std::vector<symtab_index_entry> m_data;
+
+  /* The number of elements stored in the m_data hash.  */
+  offset_type m_element_count = 0;
 
   /* Temporary storage for names.  */
   auto_obstack m_string_obstack;
+
+public:
+  using iterator = decltype (m_data)::iterator;
+  using const_iterator = decltype (m_data)::const_iterator;
+
+  iterator begin ()
+  { return m_data.begin (); }
+
+  iterator end ()
+  { return m_data.end (); }
+
+  const_iterator cbegin ()
+  { return m_data.cbegin (); }
+
+  const_iterator cend ()
+  { return m_data.cend (); }
 };
 
-/* Find a slot in SYMTAB for the symbol NAME.  Returns a reference to
-   the slot.
+/* See class definition.  */
 
-   Function is used only during write_hash_table so no index format backward
-   compatibility is needed.  */
-
-static symtab_index_entry &
-find_slot (struct mapped_symtab *symtab, const char *name)
+symtab_index_entry &
+mapped_symtab::find_slot (const char *name)
 {
   offset_type index, step, hash = mapped_index_string_hash (INT_MAX, name);
 
-  index = hash & (symtab->data.size () - 1);
-  step = ((hash * 17) & (symtab->data.size () - 1)) | 1;
+  index = hash & (m_data.size () - 1);
+  step = ((hash * 17) & (m_data.size () - 1)) | 1;
 
   for (;;)
     {
-      if (symtab->data[index].name == NULL
-	  || strcmp (name, symtab->data[index].name) == 0)
-	return symtab->data[index];
-      index = (index + step) & (symtab->data.size () - 1);
+      if (m_data[index].name == NULL
+	  || strcmp (name, m_data[index].name) == 0)
+	return m_data[index];
+      index = (index + step) & (m_data.size () - 1);
     }
 }
 
-/* Expand SYMTAB's hash table.  */
+/* See class definition.  */
 
-static void
-hash_expand (struct mapped_symtab *symtab)
+void
+mapped_symtab::hash_expand ()
 {
-  auto old_entries = std::move (symtab->data);
+  auto old_entries = std::move (m_data);
 
-  symtab->data.clear ();
-  symtab->data.resize (old_entries.size () * 2);
+  gdb_assert (m_data.size () == 0);
+  m_data.resize (old_entries.size () * 2);
 
   for (auto &it : old_entries)
     if (it.name != NULL)
       {
-	auto &ref = find_slot (symtab, it.name);
+	auto &ref = this->find_slot (it.name);
 	ref = std::move (it);
       }
 }
 
-/* Add an entry to SYMTAB.  NAME is the name of the symbol.
-   CU_INDEX is the index of the CU in which the symbol appears.
-   IS_STATIC is one if the symbol is static, otherwise zero (global).  */
+/* See mapped_symtab class declaration.  */
 
-static void
-add_index_entry (struct mapped_symtab *symtab, const char *name,
-		 int is_static, gdb_index_symbol_kind kind,
-		 offset_type cu_index)
+void mapped_symtab::sort ()
 {
-  offset_type cu_index_and_attrs;
+  /* Move contents out of this->data vector.  */
+  std::vector<symtab_index_entry> original_data = std::move (m_data);
 
-  ++symtab->n_elements;
-  if (4 * symtab->n_elements / 3 >= symtab->data.size ())
-    hash_expand (symtab);
+  /* Restore the size of m_data, this will avoid having to expand the hash
+     table (and rehash all elements) when we reinsert after sorting.
+     However, we do reset the element count, this allows for some sanity
+     checking asserts during the reinsert phase.  */
+  gdb_assert (m_data.size () == 0);
+  m_data.resize (original_data.size ());
+  m_element_count = 0;
 
-  symtab_index_entry &slot = find_slot (symtab, name);
-  if (slot.name == NULL)
+  /* Remove empty entries from ORIGINAL_DATA, this makes sorting quicker.  */
+  auto it = std::remove_if (original_data.begin (), original_data.end (),
+			    [] (const symtab_index_entry &entry) -> bool
+			    {
+			      return entry.name == nullptr;
+			    });
+  original_data.erase (it, original_data.end ());
+
+  /* Sort the existing contents.  */
+  std::sort (original_data.begin (), original_data.end (),
+	     [] (const symtab_index_entry &a,
+		 const symtab_index_entry &b) -> bool
+	     {
+	       /* Return true if A is before B.  */
+	       gdb_assert (a.name != nullptr);
+	       gdb_assert (b.name != nullptr);
+
+	       return strcmp (a.name, b.name) < 0;
+	     });
+
+  /* Re-insert each item from the sorted list.  */
+  for (auto &entry : original_data)
     {
-      slot.name = name;
+      /* We know that ORIGINAL_DATA contains no duplicates, this data was
+	 taken from a hash table that de-duplicated entries for us, so
+	 count this as a new item.
+
+	 As we retained the original size of m_data (see above) then we
+	 should never need to grow m_data_ during this re-insertion phase,
+	 assert that now.  */
+      ++m_element_count;
+      gdb_assert (!this->hash_needs_expanding ());
+
+      /* Lookup a slot.  */
+      symtab_index_entry &slot = this->find_slot (entry.name);
+
+      /* As discussed above, we should not find duplicates.  */
+      gdb_assert (slot.name == nullptr);
+
+      /* Move this item into the slot we found.  */
+      slot = std::move (entry);
+    }
+}
+
+/* See class definition.  */
+
+void
+mapped_symtab::add_index_entry (const char *name, int is_static,
+				gdb_index_symbol_kind kind,
+				offset_type cu_index)
+{
+  symtab_index_entry *slot = &this->find_slot (name);
+  if (slot->name == NULL)
+    {
+      /* This is a new element in the hash table.  */
+      ++this->m_element_count;
+
+      /* We might need to grow the hash table.  */
+      if (this->hash_needs_expanding ())
+	{
+	  this->hash_expand ();
+
+	  /* This element will have a different slot in the new table.  */
+	  slot = &this->find_slot (name);
+
+	  /* But it should still be a new element in the hash table.  */
+	  gdb_assert (slot->name == nullptr);
+	}
+
+      slot->name = name;
       /* index_offset is set later.  */
     }
 
-  cu_index_and_attrs = 0;
+  offset_type cu_index_and_attrs = 0;
   DW2_GDB_INDEX_CU_SET_VALUE (cu_index_and_attrs, cu_index);
   DW2_GDB_INDEX_SYMBOL_STATIC_SET_VALUE (cu_index_and_attrs, is_static);
   DW2_GDB_INDEX_SYMBOL_KIND_SET_VALUE (cu_index_and_attrs, kind);
@@ -280,7 +405,7 @@ add_index_entry (struct mapped_symtab *symtab, const char *name,
      the last entry pushed), but a symbol could have multiple kinds in one CU.
      To keep things simple we don't worry about the duplication here and
      sort and uniquify the list after we've processed all symbols.  */
-  slot.cu_indices.push_back (cu_index_and_attrs);
+  slot->cu_indices.push_back (cu_index_and_attrs);
 }
 
 /* See symtab_index_entry.  */
@@ -327,6 +452,11 @@ public:
   bool operator== (const c_str_view &other) const
   {
     return strcmp (m_cstr, other.m_cstr) == 0;
+  }
+
+  bool operator< (const c_str_view &other) const
+  {
+    return strcmp (m_cstr, other.m_cstr) < 0;
   }
 
   /* Return the underlying C string.  Note, the returned string is
@@ -379,7 +509,7 @@ write_hash_table (mapped_symtab *symtab, data_buf &output, data_buf &cpool)
 
     /* We add all the index vectors to the constant pool first, to
        ensure alignment is ok.  */
-    for (symtab_index_entry &entry : symtab->data)
+    for (symtab_index_entry &entry : *symtab)
       {
 	if (entry.name == NULL)
 	  continue;
@@ -408,7 +538,7 @@ write_hash_table (mapped_symtab *symtab, data_buf &output, data_buf &cpool)
 
   /* Now write out the hash table.  */
   std::unordered_map<c_str_view, offset_type, c_str_view_hasher> str_table;
-  for (const auto &entry : symtab->data)
+  for (const auto &entry : *symtab)
     {
       offset_type str_off, vec_off;
 
@@ -648,10 +778,18 @@ public:
       }
     for (size_t bucket_ix = 0; bucket_ix < bucket_hash.size (); ++bucket_ix)
       {
-	const std::forward_list<hash_it_pair> &hashitlist
-	  = bucket_hash[bucket_ix];
+	std::forward_list<hash_it_pair> &hashitlist = bucket_hash[bucket_ix];
 	if (hashitlist.empty ())
 	  continue;
+
+	/* Sort the items within each bucket.  This ensures that the
+	   generated index files will be the same no matter the order in
+	   which symbols were added into the index.  */
+	hashitlist.sort ([] (const hash_it_pair &a, const hash_it_pair &b)
+	{
+	  return a.it->first < b.it->first;
+	});
+
 	uint32_t &bucket_slot = m_bucket_table[bucket_ix];
 	/* The hashes array is indexed starting at 1.  */
 	store_unsigned_integer (reinterpret_cast<gdb_byte *> (&bucket_slot),
@@ -1149,7 +1287,7 @@ write_cooked_index (cooked_index *table,
       const auto it = cu_index_htab.find (entry->per_cu);
       gdb_assert (it != cu_index_htab.cend ());
 
-      const char *name = entry->full_name (&symtab->m_string_obstack);
+      const char *name = entry->full_name (symtab->obstack ());
 
       if (entry->per_cu->lang () == language_ada)
 	{
@@ -1157,8 +1295,7 @@ write_cooked_index (cooked_index *table,
 	     gdb, it has to use the encoded name, with any
 	     suffixes stripped.  */
 	  std::string encoded = ada_encode (name, false);
-	  name = obstack_strdup (&symtab->m_string_obstack,
-				 encoded.c_str ());
+	  name = obstack_strdup (symtab->obstack (), encoded.c_str ());
 	}
       else if (entry->per_cu->lang () == language_cplus
 	       && (entry->flags & IS_LINKAGE) != 0)
@@ -1189,8 +1326,8 @@ write_cooked_index (cooked_index *table,
       else
 	kind = GDB_INDEX_SYMBOL_KIND_TYPE;
 
-      add_index_entry (symtab, name, (entry->flags & IS_STATIC) != 0,
-		       kind, it->second);
+      symtab->add_index_entry (name, (entry->flags & IS_STATIC) != 0,
+			       kind, it->second);
     }
 }
 
@@ -1288,13 +1425,14 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   for (auto map : table->get_addrmaps ())
     write_address_map (map, addr_vec, cu_index_htab);
 
+  /* Ensure symbol hash is built domestically.  */
+  symtab.sort ();
+
   /* Now that we've processed all symbols we can shrink their cu_indices
      lists.  */
   symtab.minimize ();
 
   data_buf symtab_vec, constant_pool;
-  if (symtab.n_elements == 0)
-    symtab.data.resize (0);
 
   write_hash_table (&symtab, symtab_vec, constant_pool);
 
@@ -1522,6 +1660,48 @@ write_dwarf_index (dwarf2_per_bfd *per_bfd, const char *dir,
     dwz_index_wip->finalize ();
 }
 
+/* Options structure for the 'save gdb-index' command.  */
+
+struct save_gdb_index_options
+{
+  bool dwarf_5 = false;
+};
+
+/* The option_def list for the 'save gdb-index' command.  */
+
+static const gdb::option::option_def save_gdb_index_options_defs[] = {
+  gdb::option::boolean_option_def<save_gdb_index_options> {
+    "dwarf-5",
+    [] (save_gdb_index_options *opt) { return &opt->dwarf_5; },
+    nullptr, /* show_cmd_cb */
+    nullptr /* set_doc */
+  }
+};
+
+/* Create an options_def_group for the 'save gdb-index' command.  */
+
+static gdb::option::option_def_group
+make_gdb_save_index_options_def_group (save_gdb_index_options *opts)
+{
+  return {{save_gdb_index_options_defs}, opts};
+}
+
+/* Completer for the "save gdb-index" command.  */
+
+static void
+gdb_save_index_cmd_completer (struct cmd_list_element *ignore,
+			      completion_tracker &tracker,
+			      const char *text, const char *word)
+{
+  auto grp = make_gdb_save_index_options_def_group (nullptr);
+  if (gdb::option::complete_options
+      (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, grp))
+    return;
+
+  word = advance_to_filename_complete_word_point (tracker, text);
+  filename_completer (ignore, tracker, text, word);
+}
+
 /* Implementation of the `save gdb-index' command.
 
    Note that the .gdb_index file format used by this command is
@@ -1529,24 +1709,19 @@ write_dwarf_index (dwarf2_per_bfd *per_bfd, const char *dir,
    there.  */
 
 static void
-save_gdb_index_command (const char *arg, int from_tty)
+save_gdb_index_command (const char *args, int from_tty)
 {
-  const char dwarf5space[] = "-dwarf-5 ";
-  dw_index_kind index_kind = dw_index_kind::GDB_INDEX;
+  save_gdb_index_options opts;
+  const auto group = make_gdb_save_index_options_def_group (&opts);
+  gdb::option::process_options
+    (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, group);
 
-  if (!arg)
-    arg = "";
-
-  arg = skip_spaces (arg);
-  if (strncmp (arg, dwarf5space, strlen (dwarf5space)) == 0)
-    {
-      index_kind = dw_index_kind::DEBUG_NAMES;
-      arg += strlen (dwarf5space);
-      arg = skip_spaces (arg);
-    }
-
-  if (!*arg)
+  if (args == nullptr || *args == '\0')
     error (_("usage: save gdb-index [-dwarf-5] DIRECTORY"));
+
+  std::string directory (gdb_tilde_expand (args));
+  dw_index_kind index_kind
+    = (opts.dwarf_5 ? dw_index_kind::DEBUG_NAMES : dw_index_kind::GDB_INDEX);
 
   for (objfile *objfile : current_program_space->objfiles ())
     {
@@ -1567,8 +1742,8 @@ save_gdb_index_command (const char *arg, int from_tty)
 	      if (dwz != NULL)
 		dwz_basename = lbasename (dwz->filename ());
 
-	      write_dwarf_index (per_objfile->per_bfd, arg, basename,
-				 dwz_basename, index_kind);
+	      write_dwarf_index (per_objfile->per_bfd, directory.c_str (),
+				 basename, dwz_basename, index_kind);
 	    }
 	  catch (const gdb_exception_error &except)
 	    {
@@ -1672,5 +1847,5 @@ No options create one file with .gdb-index extension for pre-DWARF-5\n\
 compatible .gdb_index section.  With -dwarf-5 creates two files with\n\
 extension .debug_names and .debug_str for DWARF-5 .debug_names section."),
 	       &save_cmdlist);
-  set_cmd_completer (c, filename_completer);
+  set_cmd_completer_handle_brkchars (c, gdb_save_index_cmd_completer);
 }
