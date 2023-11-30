@@ -232,7 +232,7 @@ record_btrace_get_cpu (void)
 
     case CS_NONE:
       record_btrace_cpu.vendor = CV_UNKNOWN;
-      /* Fall through.  */
+      [[fallthrough]];
     case CS_CPU:
       return &record_btrace_cpu;
     }

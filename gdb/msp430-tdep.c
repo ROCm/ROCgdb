@@ -197,7 +197,7 @@ msp430_register_name (struct gdbarch *gdbarch, int regnr)
     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
   };
 
-  gdb_static_assert (ARRAY_SIZE (reg_names) == (MSP430_NUM_REGS
+  static_assert (ARRAY_SIZE (reg_names) == (MSP430_NUM_REGS
 						+ MSP430_NUM_PSEUDO_REGS));
   return reg_names[regnr];
 }
@@ -886,7 +886,7 @@ msp430_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	      break;
 	    }
 	}
-	/* Fall through.  */
+	[[fallthrough]];
       default:
 	error (_("Unknown msp430 isa"));
 	break;

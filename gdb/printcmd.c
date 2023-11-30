@@ -500,7 +500,7 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 			       byte_order);
 	  break;
 	}
-      /* FALLTHROUGH */
+      [[fallthrough]];
     case 'f':
       print_floating (valaddr, type, stream);
       break;

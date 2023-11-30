@@ -1759,7 +1759,7 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
 static simd_lanes_mask_t
 amdgpu_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
 {
-  gdb_static_assert (sizeof (simd_lanes_mask_t) >= sizeof (uint64_t));
+  static_assert (sizeof (simd_lanes_mask_t) >= sizeof (uint64_t));
 
   uint64_t exec_mask;
   if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_EXEC_MASK, exec_mask)

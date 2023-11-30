@@ -779,7 +779,7 @@ static int max_value_size = 65536; /* 64k bytes */
    is bigger than LONGEST on all GDB supported hosts we're fine.  */
 
 #define MIN_VALUE_FOR_MAX_VALUE_SIZE 16
-gdb_static_assert (sizeof (LONGEST) <= MIN_VALUE_FOR_MAX_VALUE_SIZE);
+static_assert (sizeof (LONGEST) <= MIN_VALUE_FOR_MAX_VALUE_SIZE);
 
 /* Implement the "set max-value-size" command.  */
 
@@ -3386,7 +3386,7 @@ pack_long (gdb_byte *buf, struct type *type, LONGEST num)
     {
     case TYPE_CODE_RANGE:
       num -= type->bounds ()->bias;
-      /* Fall through.  */
+      [[fallthrough]];
     case TYPE_CODE_INT:
     case TYPE_CODE_CHAR:
     case TYPE_CODE_ENUM:
