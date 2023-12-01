@@ -1,0 +1,165 @@
+# Copyright (C) 2023 Free Software Foundation, Inc.
+# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test stopping at and continuing from a s_endpgm instruction, with
+# and without stepping over a breakpoint on top of it.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hipcc_tests
+
+if { [build_executable "failed to prepare" \
+	  $testfile $srcfile {debug hip}] == -1 } {
+    return -1
+}
+
+# Test continuing from an s_endpgm instruction with multiple waves.
+#
+# STEP_OVER_MODE can be one of:
+#
+#   - none: don't put a breakpoint on the s_endpgm instruction.
+#
+#   - inline: put a breakpoint on the s_endpgm instruction, and use
+#     in-line stepping to step over it (disable displaced-stepping).
+#
+#   - displaced: same, but use displaced stepping.
+#
+# FINISH_HOW can be one of:
+#
+#   - second_kernel: stop at a breakpoint at "second_kernel" after the
+#     first kernel finishes.
+#
+#   - normal_exit: let the inferior exit normally after the first
+#     kernel finishes, without stopping at second_kernel.
+#
+proc do_test { step_over_mode finish_how } {
+    with_rocm_gpu_lock {
+	clean_restart $::binfile
+
+	if { $step_over_mode == "none" } {
+	    # Nothing to do.
+	} elseif { $step_over_mode == "inline" } {
+	    gdb_test_no_output "set displaced-stepping off"
+	} elseif { $step_over_mode == "displaced" } {
+	    gdb_test_no_output "set displaced-stepping on"
+	} else {
+	    error "Invalid step_over_mode value: $step_over_mode"
+	}
+
+	if ![runto_main] {
+	    fail "can't run to main"
+	    return -1
+	}
+
+	# Put a breakpoint on the s_endpgm instruction, and continue
+	# to it.  If testing a step-over is requested, leave the
+	# breakpoint inserted after the initial hit to force a
+	# step-over.
+	if { $step_over_mode != "none" } {
+	    gdb_breakpoint "s_endpgm_insn" allow-pending
+	    set bp_hits 10
+	} else {
+	    gdb_breakpoint "s_endpgm_insn" allow-pending temporary
+	    set bp_hits 0
+	}
+	gdb_continue_to_breakpoint "s_endpgm_insn"
+
+	gdb_test "x/i \$pc" \
+	    "$::hex <\[^\r\n\]*>:\[ \t\]+s_endpgm.*" \
+	    "stopped at s_endpgm"
+
+	if {$finish_how == "second_kernel"} {
+	    gdb_breakpoint "second_kernel"
+	}
+
+	for {set i 1} {$i < $bp_hits} {incr i} {
+	    with_test_prefix "iter $i" {
+		gdb_test_multiple "continue" "continue to s_endpgm" {
+		    -re -wrap "Continuing\\.\r\n.*hit Breakpoint $::decimal, .* kern .*\"s_endpgm_insn: .*" {
+			pass $gdb_test_name
+		    }
+		}
+	    }
+	}
+
+	# GDB used to mishandle wave exits resulting in
+	# WAVE_COMMAND_TERMINATED events being left in the
+	# amd-dbgapi-target's event queue _after_ the wave had already
+	# been removed from the GDB thread list.  That in turn would
+	# result in seeing already-dead waves re-added to GDB's thread
+	# list, and then immediately deleted, with these user
+	# notifications:
+	#
+	#  [New AMDGPU Wave ?:?:?:1 (?,?,?)/?]
+	#  [AMDGPU Wave ?:?:?:1 (?,?,?)/? exited]
+	#
+	# The test below fails if we see any "?" in the wave's target
+	# id.  It is written this way instead of a tighter match to
+	# increase the chances of the problem being caught if the GDB
+	# output ever changes.
+	#
+	# The bad thread additions mentioned above were done without
+	# adding the amd-dbgapi-target-specific wave info to the
+	# amd-dbgapi-target data structures, resulting in GDB
+	# assertion failures in the amd-dbgapi-target if GDB handled
+	# any other stop event after the first kernel finishes.  We
+	# exercise that with FINISH_HOW=second_kernel.
+
+	set bad_coords 0
+	set exited_normally 0
+	set second_kernel_breakpoint 0
+	gdb_test_multiple "continue" "last continue" -lbl {
+	    -re "AMDGPU Wave (\[^\r\n\]*)(?=\r\n)" {
+		set wave_coords $expect_out(1,string)
+		if {[string first "?" $wave_coords] != -1} {
+		    incr bad_coords
+		}
+		exp_continue
+	    }
+	    -re "Inferior 1 \\(process $::decimal\\) exited normally" {
+		incr exited_normally
+		exp_continue
+	    }
+	    -re "hit Breakpoint $::decimal, with lane 0, second_kernel " {
+		incr second_kernel_breakpoint
+		exp_continue
+	    }
+	    -re -wrap "" {
+		if {$bad_coords > 0} {
+		    fail "$gdb_test_name (bad coords)"
+		} elseif {[expr ($second_kernel_breakpoint + $exited_normally) > 1]} {
+		    fail "$gdb_test_name (bad finish)"
+		} elseif {$finish_how == "second_kernel" && $second_kernel_breakpoint != 1} {
+		    fail "$gdb_test_name (no second_kernel breakpoint)"
+		} elseif {$finish_how == "normal_exit" && $exited_normally != 1} {
+		    fail "$gdb_test_name (not normal exit)"
+		} else {
+		    pass $gdb_test_name
+		}
+	    }
+	}
+    }
+}
+
+foreach_with_prefix step_over_mode {none inline displaced} {
+    foreach_with_prefix finish_how {second_kernel normal_exit} {
+	do_test $step_over_mode $finish_how
+    }
+}
