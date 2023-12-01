@@ -702,6 +702,33 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		    goto undefined_modifier;
 		}
 	      break;
+	    case 's': /* Vendor-specific (SiFive) operands.  */
+	      switch (*++oparg)
+		{
+		/* SiFive vector coprocessor interface.  */
+		case 'd':
+		  print (info->stream, dis_style_register, "0x%x",
+			 (unsigned) EXTRACT_OPERAND (RD, l));
+		  break;
+		case 't':
+		  print (info->stream, dis_style_register, "0x%x",
+			 (unsigned) EXTRACT_OPERAND (RS2, l));
+		  break;
+		case 'O':
+		  switch (*++oparg)
+		    {
+		    case '2':
+		      print (info->stream, dis_style_register, "0x%x",
+			     (unsigned) EXTRACT_OPERAND (XSO2, l));
+		      break;
+		    case '1':
+		      print (info->stream, dis_style_register, "0x%x",
+			     (unsigned) EXTRACT_OPERAND (XSO1, l));
+		      break;
+		    }
+		  break;
+		}
+	      break;
 	    default:
 	      goto undefined_modifier;
 	    }
@@ -930,9 +957,7 @@ riscv_is_valid_mapping_symbol (int n,
     return false;
 
   name = bfd_asymbol_name(info->symtab[n]);
-  return (strcmp (name, "$x") == 0
-	  || strcmp (name, "$d") == 0
-	  || strncmp (name, "$xrv", 4) == 0);
+  return riscv_elf_is_mapping_symbols (name);
 }
 
 /* Check the sorted symbol table (sorted by the symbol value), find the

@@ -281,6 +281,23 @@ extern enum i386_flag_code {
 	CODE_64BIT
 } i386_flag_code;
 
+struct i386_segment_info {
+  /* Type of previous "instruction", e.g. .byte or stand-alone prefix.  */
+  struct last_insn {
+    const char *file;
+    const char *name;
+    unsigned int line;
+    enum last_insn_kind
+      {
+	last_insn_other = 0,
+	last_insn_directive,
+	last_insn_prefix
+      } kind;
+  } last_insn;
+};
+
+#define TC_SEGMENT_INFO_TYPE struct i386_segment_info
+
 struct i386_tc_frag_data
 {
   union
@@ -304,6 +321,7 @@ struct i386_tc_frag_data
   unsigned int branch_type : 3;
   unsigned int cpunop : 1;
   unsigned int isanop : 1;
+  unsigned int last_insn_normal : 1;
 };
 
 /* We need to emit the right NOP pattern in .align frags.  This is
@@ -330,7 +348,10 @@ struct i386_tc_frag_data
      (FRAGP)->tc_frag_data.cmp_size = 0;			\
      (FRAGP)->tc_frag_data.classified = 0;			\
      (FRAGP)->tc_frag_data.branch_type = 0;			\
-     (FRAGP)->tc_frag_data.mf_type = 0;			\
+     (FRAGP)->tc_frag_data.mf_type = 0;				\
+     (FRAGP)->tc_frag_data.last_insn_normal			\
+	= (seg_info(now_seg)->tc_segment_info_data.last_insn.kind \
+	   == last_insn_other);					\
    }								\
  while (0)
 

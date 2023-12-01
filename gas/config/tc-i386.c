@@ -178,7 +178,7 @@ static int check_word_reg (void);
 static int finalize_imm (void);
 static int process_operands (void);
 static const reg_entry *build_modrm_byte (void);
-static void output_insn (void);
+static void output_insn (const struct last_insn *);
 static void output_imm (fragS *, offsetT);
 static void output_disp (fragS *, offsetT);
 #ifndef I386COFF
@@ -676,21 +676,6 @@ static enum lfence_before_ret_kind
     lfence_before_ret_shl
   }
 lfence_before_ret;
-
-/* Types of previous instruction is .byte or prefix.  */
-static struct
-  {
-    segT seg;
-    const char *file;
-    const char *name;
-    unsigned int line;
-    enum last_insn_kind
-      {
-	last_insn_other = 0,
-	last_insn_directive,
-	last_insn_prefix
-      } kind;
-  } last_insn;
 
 /* 1 if the assembler should generate relax relocations.  */
 
@@ -1543,6 +1528,14 @@ i386_generate_nops (fragS *fragP, char *where, offsetT count, int limit)
     }
   else if (fragP->fr_type != rs_machine_dependent)
     fragP->fr_var = count;
+
+  /* Emit a plain NOP first when the last thing we saw may not have been
+     a proper instruction (e.g. a stand-alone prefix or .byte).  */
+  if (!fragP->tc_frag_data.last_insn_normal)
+    {
+      *where++ = 0x90;
+      --count;
+    }
 
   if ((count / max_single_nop_size) > max_number_of_nops)
     {
@@ -4971,7 +4964,7 @@ insert_lfence_after (void)
 /* Output lfence, 0xfaee8, before instruction.  */
 
 static void
-insert_lfence_before (void)
+insert_lfence_before (const struct last_insn *last_insn)
 {
   char *p;
 
@@ -5007,12 +5000,11 @@ insert_lfence_before (void)
       else
 	return;
 
-      if (last_insn.kind != last_insn_other
-	  && last_insn.seg == now_seg)
+      if (last_insn->kind != last_insn_other)
 	{
-	  as_warn_where (last_insn.file, last_insn.line,
+	  as_warn_where (last_insn->file, last_insn->line,
 			 _("`%s` skips -mlfence-before-indirect-branch on `%s`"),
-			 last_insn.name, insn_name (&i.tm));
+			 last_insn->name, insn_name (&i.tm));
 	  return;
 	}
 
@@ -5027,12 +5019,11 @@ insert_lfence_before (void)
   if (lfence_before_ret != lfence_before_ret_none
       && (i.tm.base_opcode | 1) == 0xc3)
     {
-      if (last_insn.kind != last_insn_other
-	  && last_insn.seg == now_seg)
+      if (last_insn->kind != last_insn_other)
 	{
-	  as_warn_where (last_insn.file, last_insn.line,
+	  as_warn_where (last_insn->file, last_insn->line,
 			 _("`%s` skips -mlfence-before-ret on `%s`"),
-			 last_insn.name, insn_name (&i.tm));
+			 last_insn->name, insn_name (&i.tm));
 	  return;
 	}
 
@@ -5129,11 +5120,18 @@ md_assemble (char *line)
   const char *end, *pass1_mnem = NULL;
   enum i386_error pass1_err = 0;
   const insn_template *t;
+  struct last_insn *last_insn
+    = &seg_info(now_seg)->tc_segment_info_data.last_insn;
 
   /* Initialize globals.  */
   current_templates.end = current_templates.start = NULL;
  retry:
   init_globals ();
+
+  /* Suppress optimization when the last thing we saw may not have been
+     a proper instruction (e.g. a stand-alone prefix or .byte).  */
+  if (last_insn->kind != last_insn_other)
+    i.no_optimize = true;
 
   /* First parse an instruction mnemonic & call i386_operand for the operands.
      We assume that the scrubber has arranged it so that line[0] is the valid
@@ -5682,23 +5680,21 @@ md_assemble (char *line)
   if (i.rex != 0)
     add_prefix (REX_OPCODE | i.rex);
 
-  insert_lfence_before ();
+  insert_lfence_before (last_insn);
 
   /* We are ready to output the insn.  */
-  output_insn ();
+  output_insn (last_insn);
 
   insert_lfence_after ();
 
-  last_insn.seg = now_seg;
-
   if (i.tm.opcode_modifier.isprefix)
     {
-      last_insn.kind = last_insn_prefix;
-      last_insn.name = insn_name (&i.tm);
-      last_insn.file = as_where (&last_insn.line);
+      last_insn->kind = last_insn_prefix;
+      last_insn->name = insn_name (&i.tm);
+      last_insn->file = as_where (&last_insn->line);
     }
   else
-    last_insn.kind = last_insn_other;
+    last_insn->kind = last_insn_other;
 }
 
 /* The Q suffix is generally valid only in 64-bit mode, with very few
@@ -9667,7 +9663,8 @@ maybe_fused_with_jcc_p (enum mf_cmp_kind* mf_cmp_p)
 /* Return 1 if a FUSED_JCC_PADDING frag should be generated.  */
 
 static int
-add_fused_jcc_padding_frag_p (enum mf_cmp_kind* mf_cmp_p)
+add_fused_jcc_padding_frag_p (enum mf_cmp_kind *mf_cmp_p,
+			      const struct last_insn *last_insn)
 {
   /* NB: Don't work with COND_JUMP86 without i386.  */
   if (!align_branch_power
@@ -9678,13 +9675,12 @@ add_fused_jcc_padding_frag_p (enum mf_cmp_kind* mf_cmp_p)
 
   if (maybe_fused_with_jcc_p (mf_cmp_p))
     {
-      if (last_insn.kind == last_insn_other
-	  || last_insn.seg != now_seg)
+      if (last_insn->kind == last_insn_other)
 	return 1;
       if (flag_debug)
-	as_warn_where (last_insn.file, last_insn.line,
+	as_warn_where (last_insn->file, last_insn->line,
 		       _("`%s` skips -malign-branch-boundary on `%s`"),
-		       last_insn.name, insn_name (&i.tm));
+		       last_insn->name, insn_name (&i.tm));
     }
 
   return 0;
@@ -9693,7 +9689,7 @@ add_fused_jcc_padding_frag_p (enum mf_cmp_kind* mf_cmp_p)
 /* Return 1 if a BRANCH_PREFIX frag should be generated.  */
 
 static int
-add_branch_prefix_frag_p (void)
+add_branch_prefix_frag_p (const struct last_insn *last_insn)
 {
   /* NB: Don't work with COND_JUMP86 without i386.  Don't add prefix
      to PadLock instructions since they include prefixes in opcode.  */
@@ -9709,14 +9705,13 @@ add_branch_prefix_frag_p (void)
   if (!i.operands || i.tm.opcode_modifier.isprefix)
     return 0;
 
-  if (last_insn.kind == last_insn_other
-      || last_insn.seg != now_seg)
+  if (last_insn->kind == last_insn_other)
     return 1;
 
   if (flag_debug)
-    as_warn_where (last_insn.file, last_insn.line,
+    as_warn_where (last_insn->file, last_insn->line,
 		   _("`%s` skips -malign-branch-boundary on `%s`"),
-		   last_insn.name, insn_name (&i.tm));
+		   last_insn->name, insn_name (&i.tm));
 
   return 0;
 }
@@ -9725,7 +9720,8 @@ add_branch_prefix_frag_p (void)
 
 static int
 add_branch_padding_frag_p (enum align_branch_kind *branch_p,
-			   enum mf_jcc_kind *mf_jcc_p)
+			   enum mf_jcc_kind *mf_jcc_p,
+			   const struct last_insn *last_insn)
 {
   int add_padding;
 
@@ -9799,13 +9795,12 @@ add_branch_padding_frag_p (enum align_branch_kind *branch_p,
     }
 
   if (add_padding
-      && last_insn.kind != last_insn_other
-      && last_insn.seg == now_seg)
+      && last_insn->kind != last_insn_other)
     {
       if (flag_debug)
-	as_warn_where (last_insn.file, last_insn.line,
+	as_warn_where (last_insn->file, last_insn->line,
 		       _("`%s` skips -malign-branch-boundary on `%s`"),
-		       last_insn.name, insn_name (&i.tm));
+		       last_insn->name, insn_name (&i.tm));
       return 0;
     }
 
@@ -9813,7 +9808,7 @@ add_branch_padding_frag_p (enum align_branch_kind *branch_p,
 }
 
 static void
-output_insn (void)
+output_insn (const struct last_insn *last_insn)
 {
   fragS *insn_start_frag;
   offsetT insn_start_off;
@@ -9943,7 +9938,7 @@ output_insn (void)
   insn_start_frag = frag_now;
   insn_start_off = frag_now_fix ();
 
-  if (add_branch_padding_frag_p (&branch, &mf_jcc))
+  if (add_branch_padding_frag_p (&branch, &mf_jcc, last_insn))
     {
       char *p;
       /* Branch can be 8 bytes.  Leave some room for prefixes.  */
@@ -10029,7 +10024,7 @@ output_insn (void)
       if (branch)
 	/* Skip if this is a branch.  */
 	;
-      else if (add_fused_jcc_padding_frag_p (&mf_cmp))
+      else if (add_fused_jcc_padding_frag_p (&mf_cmp, last_insn))
 	{
 	  /* Make room for padding.  */
 	  frag_grow (MAX_FUSED_JCC_PADDING_SIZE);
@@ -10045,7 +10040,7 @@ output_insn (void)
 	  fragP->tc_frag_data.branch_type = align_branch_fused;
 	  fragP->tc_frag_data.max_bytes = MAX_FUSED_JCC_PADDING_SIZE;
 	}
-      else if (add_branch_prefix_frag_p ())
+      else if (add_branch_prefix_frag_p (last_insn))
 	{
 	  unsigned int max_prefix_size = align_branch_prefix_size;
 
@@ -10948,6 +10943,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
   unsigned int j;
   valueT val;
   bool vex = false, xop = false, evex = false;
+  struct last_insn *last_insn;
 
   init_globals ();
 
@@ -11701,7 +11697,11 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
   else if (i.rex != 0)
     add_prefix (REX_OPCODE | i.rex);
 
-  output_insn ();
+  last_insn = &seg_info(now_seg)->tc_segment_info_data.last_insn;
+  output_insn (last_insn);
+  last_insn->kind = last_insn_directive;
+  last_insn->name = ".insn directive";
+  last_insn->file = as_where (&last_insn->line);
 
  done:
   *saved_ilp = saved_char;
@@ -15496,23 +15496,14 @@ s_bss (int ignore ATTRIBUTE_UNUSED)
 void
 i386_cons_align (int ignore ATTRIBUTE_UNUSED)
 {
-  if (last_insn.kind != last_insn_directive
-      && (bfd_section_flags (now_seg) & SEC_CODE))
+  struct last_insn *last_insn
+    = &seg_info(now_seg)->tc_segment_info_data.last_insn;
+
+  if (bfd_section_flags (now_seg) & SEC_CODE)
     {
-      last_insn.seg = now_seg;
-      last_insn.kind = last_insn_directive;
-      last_insn.name = "constant directive";
-      last_insn.file = as_where (&last_insn.line);
-      if (lfence_before_ret != lfence_before_ret_none)
-	{
-	  if (lfence_before_indirect_branch != lfence_branch_none)
-	    as_warn (_("constant directive skips -mlfence-before-ret "
-		       "and -mlfence-before-indirect-branch"));
-	  else
-	    as_warn (_("constant directive skips -mlfence-before-ret"));
-	}
-      else if (lfence_before_indirect_branch != lfence_branch_none)
-	as_warn (_("constant directive skips -mlfence-before-indirect-branch"));
+      last_insn->kind = last_insn_directive;
+      last_insn->name = "constant directive";
+      last_insn->file = as_where (&last_insn->line);
     }
 }
 

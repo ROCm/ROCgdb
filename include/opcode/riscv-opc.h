@@ -2121,7 +2121,7 @@
 #define MASK_VDOTUVV  0xfc00707f
 #define MATCH_VFDOTVV  0xe4001057
 #define MASK_VFDOTVV  0xfc00707f
-/* Zvbb instructions.  */
+/* Zvbb/Zvkb instructions.  */
 #define MATCH_VANDN_VV 0x4000057
 #define MASK_VANDN_VV 0xfc00707f
 #define MATCH_VANDN_VX 0x4004057
@@ -2974,6 +2974,63 @@
 #define MASK_VT_MASKC 0xfe00707f
 #define MATCH_VT_MASKCN 0x707b
 #define MASK_VT_MASKCN 0xfe00707f
+/* Vendor-specific (SiFive) vector coprocessor interface instructions.  */
+#define MATCH_SF_VC_X 0x0200405b
+#define MASK_SF_VC_X 0xf200707f
+#define MATCH_SF_VC_V_X 0x0000405b
+#define MASK_SF_VC_V_X 0xf200707f
+#define MATCH_SF_VC_I 0x0200305b
+#define MASK_SF_VC_I 0xf200707f
+#define MATCH_SF_VC_V_I 0x0000305b
+#define MASK_SF_VC_V_I 0xf200707f
+#define MATCH_SF_VC_VV 0x2200005b
+#define MASK_SF_VC_VV 0xf200707f
+#define MATCH_SF_VC_V_VV 0x2000005b
+#define MASK_SF_VC_V_VV 0xf200707f
+#define MATCH_SF_VC_XV 0x2200405b
+#define MASK_SF_VC_XV 0xf200707f
+#define MATCH_SF_VC_V_XV 0x2000405b
+#define MASK_SF_VC_V_XV 0xf200707f
+#define MATCH_SF_VC_IV 0x2200305b
+#define MASK_SF_VC_IV 0xf200707f
+#define MATCH_SF_VC_V_IV 0x2000305b
+#define MASK_SF_VC_V_IV 0xf200707f
+#define MATCH_SF_VC_FV 0x2a00505b
+#define MASK_SF_VC_FV 0xfa00707f
+#define MATCH_SF_VC_V_FV 0x2800505b
+#define MASK_SF_VC_V_FV 0xfa00707f
+#define MATCH_SF_VC_VVV 0xa200005b
+#define MASK_SF_VC_VVV 0xf200707f
+#define MATCH_SF_VC_V_VVV 0xa000005b
+#define MASK_SF_VC_V_VVV 0xf200707f
+#define MATCH_SF_VC_XVV 0xa200405b
+#define MASK_SF_VC_XVV 0xf200707f
+#define MATCH_SF_VC_V_XVV 0xa000405b
+#define MASK_SF_VC_V_XVV 0xf200707f
+#define MATCH_SF_VC_IVV 0xa200305b
+#define MASK_SF_VC_IVV 0xf200707f
+#define MATCH_SF_VC_V_IVV 0xa000305b
+#define MASK_SF_VC_V_IVV 0xf200707f
+#define MATCH_SF_VC_FVV 0xaa00505b
+#define MASK_SF_VC_FVV 0xfa00707f
+#define MATCH_SF_VC_V_FVV 0xa800505b
+#define MASK_SF_VC_V_FVV 0xfa00707f
+#define MATCH_SF_VC_VVW 0xf200005b
+#define MASK_SF_VC_VVW 0xf200707f
+#define MATCH_SF_VC_V_VVW 0xf000005b
+#define MASK_SF_VC_V_VVW 0xf200707f
+#define MATCH_SF_VC_XVW 0xf200405b
+#define MASK_SF_VC_XVW 0xf200707f
+#define MATCH_SF_VC_V_XVW 0xf000405b
+#define MASK_SF_VC_V_XVW 0xf200707f
+#define MATCH_SF_VC_IVW 0xf200305b
+#define MASK_SF_VC_IVW 0xf200707f
+#define MATCH_SF_VC_V_IVW 0xf000305b
+#define MASK_SF_VC_V_IVW 0xf200707f
+#define MATCH_SF_VC_FVW 0xfa00505b
+#define MASK_SF_VC_FVW 0xfa00707f
+#define MATCH_SF_VC_V_FVW 0xf800505b
+#define MASK_SF_VC_V_FVW 0xfa00707f
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01
@@ -3798,7 +3855,7 @@ DECLARE_INSN(c_ntl_all, MATCH_C_NTL_ALL, MASK_C_NTL_ALL)
 /* Zawrs instructions.  */
 DECLARE_INSN(wrs_nto, MATCH_WRS_NTO, MASK_WRS_NTO)
 DECLARE_INSN(wrs_sto, MATCH_WRS_STO, MASK_WRS_STO)
-/* Zvbb instructions.  */
+/* Zvbb/Zvkb instructions.  */
 DECLARE_INSN(vandn_vv, MATCH_VANDN_VV, MASK_VANDN_VV)
 DECLARE_INSN(vandn_vx, MATCH_VANDN_VX, MASK_VANDN_VX)
 DECLARE_INSN(vbrev8_v, MATCH_VBREV8_V, MASK_VBREV8_V)

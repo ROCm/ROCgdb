@@ -1170,10 +1170,11 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zks", "zbkx",	check_implicit_always},
   {"zks", "zksed",	check_implicit_always},
   {"zks", "zksh",	check_implicit_always},
+  {"zvbb", "zvkb",	check_implicit_always},
   {"zvkn", "zvkned",	check_implicit_always},
   {"zvkn", "zvknha",	check_implicit_always},
   {"zvkn", "zvknhb",	check_implicit_always},
-  {"zvkn", "zvbb",	check_implicit_always},
+  {"zvkn", "zvkb",	check_implicit_always},
   {"zvkn", "zvkt",	check_implicit_always},
   {"zvkng", "zvkn",	check_implicit_always},
   {"zvkng", "zvkg",	check_implicit_always},
@@ -1181,7 +1182,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvknc", "zvbc",	check_implicit_always},
   {"zvks", "zvksed",	check_implicit_always},
   {"zvks", "zvksh",	check_implicit_always},
-  {"zvks", "zvbb",	check_implicit_always},
+  {"zvks", "zvkb",	check_implicit_always},
   {"zvks", "zvkt",	check_implicit_always},
   {"zvksg", "zvks",	check_implicit_always},
   {"zvksg", "zvkg",	check_implicit_always},
@@ -1199,6 +1200,8 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"ssstateen", "zicsr",	check_implicit_always},
   {"sstc", "zicsr",		check_implicit_always},
   {"svadu", "zicsr",		check_implicit_always},
+
+  {"xsfvcp", "zve32x",  check_implicit_always},
   {NULL, NULL, NULL}
 };
 
@@ -1302,6 +1305,7 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zvbc",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zvfh",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zvfhmin",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zvkb",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zvkg",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zvkn",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zvkng",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
@@ -1376,6 +1380,7 @@ static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0},
   {NULL, 0, 0, 0, 0}
 };
 
@@ -2535,6 +2540,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zvbb");
     case INSN_CLASS_ZVBC:
       return riscv_subset_supports (rps, "zvbc");
+    case INSN_CLASS_ZVKB:
+      return riscv_subset_supports (rps, "zvkb");
     case INSN_CLASS_ZVKG:
       return riscv_subset_supports (rps, "zvkg");
     case INSN_CLASS_ZVKNED:
@@ -2595,6 +2602,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xtheadzvamo");
     case INSN_CLASS_XVENTANACONDOPS:
       return riscv_subset_supports (rps, "xventanacondops");
+    case INSN_CLASS_XSFVCP:
+      return riscv_subset_supports (rps, "xsfvcp");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2787,6 +2796,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return _("zvbb");
     case INSN_CLASS_ZVBC:
       return _("zvbc");
+    case INSN_CLASS_ZVKB:
+      return _("zvkb");
     case INSN_CLASS_ZVKG:
       return _("zvkg");
     case INSN_CLASS_ZVKNED:
