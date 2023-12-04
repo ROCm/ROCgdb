@@ -353,6 +353,6 @@ default_displaced_step_finish (target_ops *target,
 			       thread_info *thread,
 			       const target_waitstatus &status)
 {
-  gdbarch *arch = get_thread_regcache (thread)->arch ();
+  gdbarch *arch = thread->displaced_step_state.get_original_gdbarch ();
   return gdbarch_displaced_step_finish (arch, thread, status);
 }
