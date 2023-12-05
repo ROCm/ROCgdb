@@ -13,21 +13,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Test the handling of non-Value responses from 'children' method.
+
 require allow_dap_tests
 
 load_lib dap-support.exp
 
-standard_testfile .cc
+standard_testfile lazy-string.c
 
-if {[build_executable ${testfile}.exp $testfile $srcfile {debug c++}] == -1} {
+if {[build_executable ${testfile}.exp $testfile $srcfile] == -1} {
     return
 }
 
-if {[dap_launch $testfile] == ""} {
-    return
+set remote_python_file [gdb_remote_download host \
+			    ${srcdir}/${subdir}/${testfile}.py]
+
+save_vars GDBFLAGS {
+    append GDBFLAGS " -iex \"source $remote_python_file\""
+
+    if {[dap_launch $testfile] == ""} {
+	return
+    }
 }
 
-set line [gdb_get_line_number "BREAK"]
+set line [gdb_get_line_number "STOP"]
 set obj [dap_check_request_and_response "set breakpoint by line number" \
 	     setBreakpoints \
 	     [format {o source [o path [%s]] breakpoints [a [o line [i %d]]]} \
@@ -35,7 +44,6 @@ set obj [dap_check_request_and_response "set breakpoint by line number" \
 set line_bpno [dap_get_breakpoint_number $obj]
 
 dap_check_request_and_response "start inferior" configurationDone
-dap_wait_for_event_and_check "inferior started" thread "body reason" started
 
 dap_wait_for_event_and_check "stopped at line breakpoint" stopped \
     "body reason" breakpoint \
@@ -50,61 +58,61 @@ set scopes [dap_check_request_and_response "get scopes" scopes \
 		[format {o frameId [i %d]} $frame_id]]
 set scopes [dict get [lindex $scopes 0] body scopes]
 
-gdb_assert {[llength $scopes] == 2} "two scopes"
-
 lassign $scopes scope reg_scope
 gdb_assert {[dict get $scope name] == "Locals"} "scope is locals"
-
-gdb_assert {[dict get $scope namedVariables] == 4} "three vars in scope"
+gdb_assert {[dict get $scope namedVariables] == 1} "one var in scope"
 
 set num [dict get $scope variablesReference]
-set refs [lindex [dap_check_request_and_response "fetch variables" \
+set refs [lindex [dap_check_request_and_response "fetch variable" \
 		      "variables" \
-		      [format {o variablesReference [i %d] count [i 3]} \
+		      [format {o variablesReference [i %d] count [i 1]} \
 			   $num]] \
 	      0]
 
-proc fetch_pointer {name var} {
-    set num [dict get $var variablesReference]
-    set refs [lindex [dap_check_request_and_response "fetch children of $name" \
-			  "variables" \
-			  [format {o variablesReference [i %d] count [i 1]} \
-			       $num]] \
-		  0]
-    set var [lindex [dict get $refs body variables] 0]
-    gdb_assert {[dict get $var value] == 23} \
-	"value of child of $name"
-    gdb_assert {[dict get $var variablesReference] == 0} \
-	"no children for child of $name"
-}
+set vars [dict get $refs body variables]
+gdb_assert {[llength $vars] == 1} "just one variable"
 
+set var [lindex $vars 0]
+gdb_assert {[dict get $var name] == "the_string"} "variable name"
+gdb_assert {[dict get $var value] == "contents"} "variable value"
+gdb_assert {[dict get $var namedVariables] == 2} "variable has two children"
+
+set num [dict get $var variablesReference]
+set refs [lindex [dap_check_request_and_response "fetch children of variable" \
+		      "variables" \
+		      [format {o variablesReference [i %d] count [i 2]} \
+			   $num]] \
+	      0]
+
+set vars [dict get $refs body variables]
+gdb_assert {[llength $vars] == 2} "got two children of variable"
+
+set saw_first 0
+set saw_second 0
 foreach var [dict get $refs body variables] {
     set name [dict get $var name]
-
     switch $name {
-	"value" {
-	    gdb_assert {[dict get $var value] == "23"} "check value of value"
-	    gdb_assert {[dict get $var variablesReference] == 0} \
-		"$name does not have child"
+	"first" {
+	    gdb_assert {[dict get $var value] == 23} "value of first"
+	    incr saw_first
 	}
-	"ptr" -
-	"ref" {
-	    gdb_assert {[dict get $var variablesReference] != 0} \
-		"$name has children"
-	    # The implementation somewhat arbitrarily chooses "named"
-	    # children here.
-	    gdb_assert {[dict get $var namedVariables] == 1} \
-		"$name has exactly one child"
-	    fetch_pointer $name $var
+
+	"second" {
+	    # The result looks strange here, but only because TON does
+	    # not handle the backslash-quote sequence properly when
+	    # decoding the JSON.  The actual JSON is: "value":
+	    # "\"DEI\"".
+	    gdb_assert {[dict get $var value] == "\\\"DEI\\\""} \
+		"value of second"
+	    incr saw_second
 	}
-	"aggregate" {
-	    gdb_assert {[dict get $var variablesReference] != 0} \
-		"$name has children"
-	    # This should omit the static field.
-	    gdb_assert {[dict get $var namedVariables] == 2} \
-		"$name has exactly 2 children"
+
+	default {
+	    fail "unknown variable $name"
 	}
     }
 }
+
+gdb_assert {$saw_first == 1 && $saw_second == 1} "saw both children"
 
 dap_shutdown

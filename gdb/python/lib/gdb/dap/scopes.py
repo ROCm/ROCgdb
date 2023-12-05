@@ -16,9 +16,47 @@
 import gdb
 
 from .frames import frame_for_id
-from .startup import send_gdb_with_response, in_gdb_thread
+from .startup import in_gdb_thread
 from .server import request
 from .varref import BaseReference
+
+
+# Map DAP frame IDs to scopes.  This ensures that scopes are re-used.
+frame_to_scope = {}
+
+
+# When the inferior is re-started, we erase all scope references.  See
+# the section "Lifetime of Objects References" in the spec.
+@in_gdb_thread
+def clear_scopes(event):
+    global frame_to_scope
+    frame_to_scope = {}
+
+
+gdb.events.cont.connect(clear_scopes)
+
+
+# A helper function to compute the value of a symbol.  SYM is either a
+# gdb.Symbol, or an object implementing the SymValueWrapper interface.
+# FRAME is a frame wrapper, as produced by a frame filter.  Returns a
+# tuple of the form (NAME, VALUE), where NAME is the symbol's name and
+# VALUE is a gdb.Value.
+@in_gdb_thread
+def symbol_value(sym, frame):
+    inf_frame = frame.inferior_frame()
+    # Make sure to select the frame first.  Ideally this would not
+    # be needed, but this is a way to set the current language
+    # properly so that language-dependent APIs will work.
+    inf_frame.select()
+    name = str(sym.symbol())
+    val = sym.value()
+    if val is None:
+        # No synthetic value, so must read the symbol value
+        # ourselves.
+        val = sym.symbol().value(inf_frame)
+    elif not isinstance(val, gdb.Value):
+        val = gdb.Value(val)
+    return (name, val)
 
 
 class _ScopeReference(BaseReference):
@@ -44,26 +82,15 @@ class _ScopeReference(BaseReference):
             # FIXME construct a Source object
         return result
 
+    def has_children(self):
+        return True
+
     def child_count(self):
         return len(self.var_list)
 
     @in_gdb_thread
     def fetch_one_child(self, idx):
-        # Make sure to select the frame first.  Ideally this would not
-        # be needed, but this is a way to set the current language
-        # properly so that language-dependent APIs will work.
-        self.inf_frame.select()
-        # Here SYM will conform to the SymValueWrapper interface.
-        sym = self.var_list[idx]
-        name = str(sym.symbol())
-        val = sym.value()
-        if val is None:
-            # No synthetic value, so must read the symbol value
-            # ourselves.
-            val = sym.symbol().value(self.inf_frame)
-        elif not isinstance(val, gdb.Value):
-            val = gdb.Value(val)
-        return (name, val)
+        return symbol_value(self.var_list[idx], self.frame)
 
 
 class _RegisterReference(_ScopeReference):
@@ -83,19 +110,27 @@ class _RegisterReference(_ScopeReference):
 # Helper function to create a DAP scopes for a given frame ID.
 @in_gdb_thread
 def _get_scope(id):
-    frame = frame_for_id(id)
-    scopes = []
-    args = frame.frame_args()
-    if args:
-        scopes.append(_ScopeReference("Arguments", "arguments", frame, args))
-    locs = frame.frame_locals()
-    if locs:
-        scopes.append(_ScopeReference("Locals", "locals", frame, locs))
-    scopes.append(_RegisterReference("Registers", frame))
+    global frame_to_scope
+    if id in frame_to_scope:
+        scopes = frame_to_scope[id]
+    else:
+        frame = frame_for_id(id)
+        scopes = []
+        # Make sure to handle the None case as well as the empty
+        # iterator case.
+        args = tuple(frame.frame_args() or ())
+        if args:
+            scopes.append(_ScopeReference("Arguments", "arguments", frame, args))
+        # Make sure to handle the None case as well as the empty
+        # iterator case.
+        locs = tuple(frame.frame_locals() or ())
+        if locs:
+            scopes.append(_ScopeReference("Locals", "locals", frame, locs))
+        scopes.append(_RegisterReference("Registers", frame))
+        frame_to_scope[id] = scopes
     return [x.to_object() for x in scopes]
 
 
 @request("scopes")
 def scopes(*, frameId: int, **extra):
-    scopes = send_gdb_with_response(lambda: _get_scope(frameId))
-    return {"scopes": scopes}
+    return {"scopes": _get_scope(frameId)}

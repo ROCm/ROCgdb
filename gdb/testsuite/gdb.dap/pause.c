@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2023 Free Software Foundation, Inc.
+   Copyright 2011-2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,32 +15,30 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-struct some_struct
+#include <unistd.h>
+
+int
+do_nothing ()
 {
-  int x;
-  int y;
-
-  static int z;
-};
-
-int some_struct::z = 37;
-
-void
-func ()
-{
-  some_struct aggregate { 91, 87 };
-
-  int value = 23;
-
-  int *ptr = &value;
-  int &ref = value;
-
-  return;			/* BREAK */
+  return 91;
 }
 
 int
-main (int argc, char *argv[])
+return_false ()
 {
-  func ();
+  return 0;
+}
+
+void
+sleep_a_bit ()
+{
+  sleep (1);			/* STOP */
+}
+
+int
+main ()
+{
+  while (1)
+    sleep_a_bit ();
   return 0;
 }

@@ -1,7 +1,5 @@
-# Copyright (C) 2012-2023 Free Software Foundation, Inc.
-#
-# This file is part of GDB.
-#
+# Copyright (C) 2022-2023 Free Software Foundation, Inc.
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -15,8 +13,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Controls whether to enable development-mode features by default.
-development=false
 
-# Indicate whether this is a release branch.
-experimental=true
+import gdb
+
+
+class Printer(gdb.ValuePrinter):
+    """Pretty print a string"""
+
+    def __init__(self, val):
+        self._val = val
+
+    def to_string(self):
+        return self._val.lazy_string()
+
+
+def lookup_function(val):
+    typ = val.type
+    if typ.code == gdb.TYPE_CODE_PTR:
+        return Printer(val)
+    return None
+
+
+gdb.pretty_printers.append(lookup_function)

@@ -1,16 +1,7 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 14
-
-* New commands
-
-maintenance info linux-lwps
-  List all LWPs under control of the linux-nat target.
-
-set remote thread-options-packet
-show remote thread-options-packet
-  Set/show the use of the thread options packet.
+*** Changes in GDB 14
 
 * New remote packets
 
@@ -27,8 +18,6 @@ QThreadOptions in qSupported
   The qSupported packet allows GDB to inform the stub it supports the
   QThreadOptions packet, and the qSupported response can contain the
   set of thread options the remote stub supports.
-
-*** Changes since GDB 13
 
 * GDB now supports the AArch64 Scalable Matrix Extension 2 (SME2), which
   includes a new 512 bit lookup table register named ZT0.
@@ -168,6 +157,13 @@ QThreadOptions in qSupported
   the 'debug-file-directory' GDB parameter.
 
 * New commands
+
+maintenance info linux-lwps
+  List all LWPs under control of the linux-nat target.
+
+set remote thread-options-packet
+show remote thread-options-packet
+  Set/show the use of the thread options packet.
 
 set debug breakpoint on|off
   show debug breakpoint
@@ -374,6 +370,11 @@ show tui mouse-events
      types have a single 'progspace' attribute, which is the
      gdb.Progspace that is either being added to GDB, or removed from
      GDB.
+
+  ** gdb.LazyString now implements the __str__ method.
+
+  ** New method gdb.Frame.static_link that returns the outer frame
+     of a nested function frame.
 
 *** Changes in GDB 13
 

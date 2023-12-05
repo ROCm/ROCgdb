@@ -1,6 +1,6 @@
-/* This testcase is part of GDB, the GNU debugger.
+/* Copyright 2023 Free Software Foundation, Inc.
 
-   Copyright 2023 Free Software Foundation, Inc.
+   This file is part of GDB.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,32 +15,21 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-struct some_struct
+struct special_type
 {
-  int x;
-  int y;
-
-  static int z;
+  /* Discriminator used by the pretty-printer.  When zero, no fields
+     are shown; when non-zero, shows the datum.  */
+  int disc;
+  int datum;
 };
 
-int some_struct::z = 37;
-
-void
-func ()
-{
-  some_struct aggregate { 91, 87 };
-
-  int value = 23;
-
-  int *ptr = &value;
-  int &ref = value;
-
-  return;			/* BREAK */
-}
+struct special_type empty = { 0, 23 };
+struct special_type full = { 1, 23 };
 
 int
-main (int argc, char *argv[])
+main ()
 {
-  func ();
-  return 0;
+  struct special_type value = full;
+
+  return 0;			/* STOP */
 }

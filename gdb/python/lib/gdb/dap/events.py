@@ -17,12 +17,21 @@ import enum
 import gdb
 
 from .server import send_event
-from .startup import in_gdb_thread, Invoker, log
+from .startup import exec_and_log, in_gdb_thread, log
 from .modules import is_module, make_module
+
+
+# True when the inferior is thought to be running, False otherwise.
+# This may be accessed from any thread, which can be racy.  However,
+# this unimportant because this global is only used for the
+# 'notStopped' response, which itself is inherently racy.
+inferior_running = False
 
 
 @in_gdb_thread
 def _on_exit(event):
+    global inferior_running
+    inferior_running = False
     code = 0
     if hasattr(event, "exit_code"):
         code = event.exit_code
@@ -48,6 +57,8 @@ def thread_event(event, reason):
 
 @in_gdb_thread
 def _new_thread(event):
+    global inferior_running
+    inferior_running = True
     thread_event(event, "started")
 
 
@@ -85,6 +96,8 @@ _suppress_cont = False
 
 @in_gdb_thread
 def _cont(event):
+    global inferior_running
+    inferior_running = True
     global _suppress_cont
     if _suppress_cont:
         log("_suppress_cont case")
@@ -111,33 +124,21 @@ _expected_stop = None
 
 
 @in_gdb_thread
-def expect_stop(reason):
-    """Indicate that a stop is expected, for the reason given."""
+def exec_and_expect_stop(cmd, reason):
+    """Indicate that a stop is expected, then execute CMD"""
     global _expected_stop
     _expected_stop = reason
-
-
-# A wrapper for Invoker that also sets the expected stop.
-class ExecutionInvoker(Invoker):
-    """A subclass of Invoker that sets the expected stop.
-    Note that this assumes that the command will restart the inferior,
-    so it will also cause ContinuedEvents to be suppressed."""
-
-    def __init__(self, cmd, expected):
-        super().__init__(cmd)
-        self.expected = expected
-
-    @in_gdb_thread
-    def __call__(self):
-        expect_stop(self.expected)
+    if reason != StopKinds.PAUSE:
         global _suppress_cont
         _suppress_cont = True
-        # FIXME if the call fails should we clear _suppress_cont?
-        super().__call__()
+    # FIXME if the call fails should we clear _suppress_cont?
+    exec_and_log(cmd)
 
 
 @in_gdb_thread
 def _on_stop(event):
+    global inferior_running
+    inferior_running = False
     log("entering _on_stop: " + repr(event))
     global _expected_stop
     obj = {
@@ -156,6 +157,26 @@ def _on_stop(event):
     send_event("stopped", obj)
 
 
+# This keeps a bit of state between the start of an inferior call and
+# the end.  If the inferior was already running when the call started
+# (as can happen if a breakpoint condition calls a function), then we
+# do not want to emit 'continued' or 'stop' events for the call.  Note
+# that, for some reason, gdb.events.cont does not fire for an infcall.
+_infcall_was_running = False
+
+
+@in_gdb_thread
+def _on_inferior_call(event):
+    global _infcall_was_running
+    if isinstance(event, gdb.InferiorCallPreEvent):
+        _infcall_was_running = inferior_running
+        if not _infcall_was_running:
+            _cont(None)
+    else:
+        if not _infcall_was_running:
+            _on_stop(None)
+
+
 gdb.events.stop.connect(_on_stop)
 gdb.events.exited.connect(_on_exit)
 gdb.events.new_thread.connect(_new_thread)
@@ -163,3 +184,4 @@ gdb.events.thread_exited.connect(_thread_exited)
 gdb.events.cont.connect(_cont)
 gdb.events.new_objfile.connect(_new_objfile)
 gdb.events.free_objfile.connect(_objfile_removed)
+gdb.events.inferior_call.connect(_on_inferior_call)
