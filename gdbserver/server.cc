@@ -1143,14 +1143,15 @@ static void
 monitor_show_help (void)
 {
   monitor_output ("The following monitor commands are supported:\n");
-  monitor_output ("  set debug <0|1>\n");
+  monitor_output ("  set debug on\n");
   monitor_output ("    Enable general debugging messages\n");
+  monitor_output ("  set debug off\n");
+  monitor_output ("    Disable all debugging messages\n");
+  monitor_output ("  set debug COMPONENT <off|on>\n");
+  monitor_output ("    Enable debugging messages for COMPONENT, which is\n");
+  monitor_output ("    one of: all, threads, remote, event-loop.\n");
   monitor_output ("  set debug-hw-points <0|1>\n");
   monitor_output ("    Enable h/w breakpoint/watchpoint debugging messages\n");
-  monitor_output ("  set remote-debug <0|1>\n");
-  monitor_output ("    Enable remote protocol debugging messages\n");
-  monitor_output ("  set event-loop-debug <0|1>\n");
-  monitor_output ("    Enable event loop debugging messages\n");
   monitor_output ("  set debug-format option1[,option2,...]\n");
   monitor_output ("    Add additional information to debugging messages\n");
   monitor_output ("    Options: all, none, timestamp\n");
@@ -1457,20 +1458,268 @@ parse_debug_format_options (const char *arg, int is_monitor)
   return std::string ();
 }
 
+/* A wrapper to enable, or disable a debug flag.  These are debug flags
+   that control the debug output from gdbserver, that developers might
+   want, this is not something most end users will need.  */
+
+struct debug_opt
+{
+  /* NAME is the name of this debug option, this should be a simple string
+     containing no whitespace, starting with a letter from isalpha(), and
+     contain only isalnum() characters and '_' underscore and '-' hyphen.
+
+     SETTER is a callback function used to set the debug variable.  This
+     callback will be passed true to enable the debug setting, or false to
+     disable the debug setting.  */
+  debug_opt (const char *name, std::function<void (bool)> setter)
+    : m_name (name),
+      m_setter (setter)
+  {
+    gdb_assert (isalpha (*name));
+  }
+
+  /* Called to enable or disable the debug setting.  */
+  void set (bool enable) const
+  {
+    m_setter (enable);
+  }
+
+  /* Return the name of this debug option.  */
+  const char *name () const
+  { return m_name; }
+
+private:
+  /* The name of this debug option.  */
+  const char *m_name;
+
+  /* The callback to update the debug setting.  */
+  std::function<void (bool)> m_setter;
+};
+
+/* The set of all debug options that gdbserver supports.  These are the
+   options that can be passed to the command line '--debug=...' flag, or to
+   the monitor command 'monitor set debug ...'.  */
+
+static std::vector<debug_opt> all_debug_opt {
+  {"threads", [] (bool enable)
+  {
+    debug_threads = enable;
+  }},
+  {"remote", [] (bool enable)
+  {
+    remote_debug = enable;
+  }},
+  {"event-loop", [] (bool enable)
+  {
+    debug_event_loop = (enable ? debug_event_loop_kind::ALL
+			: debug_event_loop_kind::OFF);
+  }}
+};
+
+/* Parse the options to --debug=...
+
+   OPTIONS is the string of debug components which should be enabled (or
+   disabled), and must not be nullptr.  An empty OPTIONS string is valid,
+   in which case a default set of debug components will be enabled.
+
+   An unknown, or otherwise invalid debug component will result in an
+   exception being thrown.
+
+   OPTIONS can consist of multiple debug component names separated by a
+   comma.  Debugging for each component will be turned on.  The special
+   component 'all' can be used to enable debugging for all components.
+
+   A component can also be prefixed with '-' to disable debugging of that
+   component, so a user might use: '--debug=all,-remote', to enable all
+   debugging, except for the remote (protocol) component.  Components are
+   processed left to write in the OPTIONS list.  */
+
+static void
+parse_debug_options (const char *options)
+{
+  gdb_assert (options != nullptr);
+
+  /* Empty options means the "default" set.  This exists mostly for
+     backwards compatibility with gdbserver's legacy behaviour.  */
+  if (*options == '\0')
+    options = "+threads";
+
+  while (*options != '\0')
+    {
+      const char *end = strchrnul (options, ',');
+
+      bool enable = *options != '-';
+      if (*options == '-' || *options == '+')
+	++options;
+
+      std::string opt (options, end - options);
+
+      if (opt.size () == 0)
+	error ("invalid empty debug option");
+
+      bool is_opt_all = opt == "all";
+
+      bool found = false;
+      for (const auto &debug_opt : all_debug_opt)
+	if (is_opt_all || opt == debug_opt.name ())
+	  {
+	    debug_opt.set (enable);
+	    found = true;
+	    if (!is_opt_all)
+	      break;
+	  }
+
+      if (!found)
+	error ("unknown debug option '%s'", opt.c_str ());
+
+      options = (*end == ',') ? end + 1 : end;
+    }
+}
+
+/* Called from the 'monitor' command handler, to handle general 'set debug'
+   monitor commands with one of the formats:
+
+     set debug COMPONENT VALUE
+     set debug VALUE
+
+   In both of these command formats VALUE can be 'on', 'off', '1', or '0'
+   with 1/0 being equivalent to on/off respectively.
+
+   In the no-COMPONENT version of the command, if VALUE is 'on' (or '1')
+   then the component 'threads' is assumed, this is for backward
+   compatibility, but maybe in the future we might find a better "default"
+   set of debug flags to enable.
+
+   In the no-COMPONENT version of the command, if VALUE is 'off' (or '0')
+   then all debugging is turned off.
+
+   Otherwise, COMPONENT must be one of the known debug components, and that
+   component is either enabled or disabled as appropriate.
+
+   The string MON contains either 'COMPONENT VALUE' or just the 'VALUE' for
+   the second command format, the 'set debug ' has been stripped off
+   already.
+
+   Return a string containing an error message if something goes wrong,
+   this error can be returned as part of the monitor command output.  If
+   everything goes correctly then the debug global will have been updated,
+   and an empty string is returned.  */
+
+static std::string
+handle_general_monitor_debug (const char *mon)
+{
+  mon = skip_spaces (mon);
+
+  if (*mon == '\0')
+    return "No debug component name found.\n";
+
+  /* Find the first word within MON.  This is either the component name,
+     or the value if no component has been given.  */
+  const char *end = skip_to_space (mon);
+  std::string component (mon, end - mon);
+  if (component.find (',') != component.npos || component[0] == '-'
+      || component[0] == '+')
+    return "Invalid character found in debug component name.\n";
+
+  /* In ACTION_STR we create a string that will be passed to the
+     parse_debug_options string.  This will be either '+COMPONENT' or
+     '-COMPONENT' depending on whether we want to enable or disable
+     COMPONENT.  */
+  std::string action_str;
+
+  /* If parse_debug_options succeeds, then MSG will be returned to the user
+     as the output of the monitor command.  */
+  std::string msg;
+
+  /* Check for 'set debug off', this disables all debug output.  */
+  if (component == "0" || component == "off")
+    {
+      if (*skip_spaces (end) != '\0')
+	return string_printf
+	  ("Junk '%s' found at end of 'set debug %s' command.\n",
+	   skip_spaces (end), std::string (mon, end - mon).c_str ());
+
+      action_str = "-all";
+      msg = "All debug output disabled.\n";
+    }
+  /* Check for 'set debug on', this disables a general set of debug.  */
+  else if (component == "1" || component == "on")
+    {
+      if (*skip_spaces (end) != '\0')
+	return string_printf
+	  ("Junk '%s' found at end of 'set debug %s' command.\n",
+	   skip_spaces (end), std::string (mon, end - mon).c_str ());
+
+      action_str = "+threads";
+      msg = "General debug output enabled.\n";
+    }
+  /* Otherwise we should have 'set debug COMPONENT VALUE'.  Extract the two
+     parts and validate.  */
+  else
+    {
+      /* Figure out the value the user passed.  */
+      const char *value_start = skip_spaces (end);
+      if (*value_start == '\0')
+	return string_printf ("Missing value for 'set debug %s' command.\n",
+			      mon);
+
+      const char *after_value = skip_to_space (value_start);
+      if (*skip_spaces (after_value) != '\0')
+	return string_printf
+	  ("Junk '%s' found at end of 'set debug %s' command.\n",
+	   skip_spaces (after_value),
+	   std::string (mon, after_value - mon).c_str ());
+
+      std::string value (value_start, after_value - value_start);
+
+      /* Check VALUE to see if we are enabling, or disabling.  */
+      bool enable;
+      if (value == "0" || value == "off")
+	enable = false;
+      else if (value == "1" || value == "on")
+	enable = true;
+      else
+	return string_printf ("Invalid value '%s' for 'set debug %s'.\n",
+			      value.c_str (),
+			      std::string (mon, end - mon).c_str ());
+
+      action_str = std::string (enable ? "+" : "-") + component;
+      msg = string_printf ("Debug output for '%s' %s.\n", component.c_str (),
+			   enable ? "enabled" : "disabled");
+    }
+
+  gdb_assert (!msg.empty ());
+  gdb_assert (!action_str.empty ());
+
+  try
+    {
+      parse_debug_options (action_str.c_str ());
+      monitor_output (msg.c_str ());
+    }
+  catch (const gdb_exception_error &exception)
+    {
+      return string_printf ("Error: %s\n", exception.what ());
+    }
+
+  return {};
+}
+
 /* Handle monitor commands not handled by target-specific handlers.  */
 
 static void
 handle_monitor_command (char *mon, char *own_buf)
 {
-  if (strcmp (mon, "set debug 1") == 0)
+  if (startswith (mon, "set debug "))
     {
-      debug_threads = true;
-      monitor_output ("Debug output enabled.\n");
-    }
-  else if (strcmp (mon, "set debug 0") == 0)
-    {
-      debug_threads = false;
-      monitor_output ("Debug output disabled.\n");
+      std::string error_msg
+	= handle_general_monitor_debug (mon + sizeof ("set debug ") - 1);
+
+      if (!error_msg.empty ())
+	{
+	  monitor_output (error_msg.c_str ());
+	  monitor_show_help ();
+	  write_enn (own_buf);
+	}
     }
   else if (strcmp (mon, "set debug-hw-points 1") == 0)
     {
@@ -1481,26 +1730,6 @@ handle_monitor_command (char *mon, char *own_buf)
     {
       show_debug_regs = 0;
       monitor_output ("H/W point debugging output disabled.\n");
-    }
-  else if (strcmp (mon, "set remote-debug 1") == 0)
-    {
-      remote_debug = true;
-      monitor_output ("Protocol debug output enabled.\n");
-    }
-  else if (strcmp (mon, "set remote-debug 0") == 0)
-    {
-      remote_debug = false;
-      monitor_output ("Protocol debug output disabled.\n");
-    }
-  else if (strcmp (mon, "set event-loop-debug 1") == 0)
-    {
-      debug_event_loop = debug_event_loop_kind::ALL;
-      monitor_output ("Event loop debug output enabled.\n");
-    }
-  else if (strcmp (mon, "set event-loop-debug 0") == 0)
-    {
-      debug_event_loop = debug_event_loop_kind::OFF;
-      monitor_output ("Event loop debug output disabled.\n");
     }
   else if (startswith (mon, "set debug-format "))
     {
@@ -3583,15 +3812,19 @@ gdbserver_usage (FILE *stream)
 	   "\n"
 	   "Debug options:\n"
 	   "\n"
-	   "  --debug               Enable general debugging output.\n"
+	   "  --debug[=OPT1,OPT2,...]\n"
+	   "                        Enable debugging output.\n"
+	   "                          Options:\n"
+	   "                            all, threads, event-loop, remote\n"
+	   "                          With no options, 'threads' is assumed.\n"
+	   "                          Prefix an option with '-' to disable\n"
+	   "                          debugging of that component.\n"
 	   "  --debug-format=OPT1[,OPT2,...]\n"
 	   "                        Specify extra content in debugging output.\n"
 	   "                          Options:\n"
 	   "                            all\n"
 	   "                            none\n"
 	   "                            timestamp\n"
-	   "  --remote-debug        Enable remote protocol debugging output.\n"
-	   "  --event-loop-debug    Enable event loop debugging output.\n"
 	   "  --disable-packet=OPT1[,OPT2,...]\n"
 	   "                        Disable support for RSP packets or features.\n"
 	   "                          Options:\n"
@@ -3870,8 +4103,32 @@ captured_main (int argc, char *argv[])
 	  /* Consume the "--".  */
 	  *next_arg = NULL;
 	}
+      else if (startswith (*next_arg, "--debug="))
+	{
+	  try
+	    {
+	      parse_debug_options ((*next_arg) + sizeof ("--debug=") - 1);
+	    }
+	  catch (const gdb_exception_error &exception)
+	    {
+	      fflush (stdout);
+	      fprintf (stderr, "gdbserver: %s\n", exception.what ());
+	      exit (1);
+	    }
+	}
       else if (strcmp (*next_arg, "--debug") == 0)
-	debug_threads = true;
+	{
+	  try
+	    {
+	      parse_debug_options ("");
+	    }
+	  catch (const gdb_exception_error &exception)
+	    {
+	      fflush (stdout);
+	      fprintf (stderr, "gdbserver: %s\n", exception.what ());
+	      exit (1);
+	    }
+	}
       else if (startswith (*next_arg, "--debug-format="))
 	{
 	  std::string error_msg
@@ -3884,10 +4141,6 @@ captured_main (int argc, char *argv[])
 	      exit (1);
 	    }
 	}
-      else if (strcmp (*next_arg, "--remote-debug") == 0)
-	remote_debug = true;
-      else if (strcmp (*next_arg, "--event-loop-debug") == 0)
-	debug_event_loop = debug_event_loop_kind::ALL;
       else if (startswith (*next_arg, "--debug-file="))
 	debug_set_output ((*next_arg) + sizeof ("--debug-file=") -1);
       else if (strcmp (*next_arg, "--disable-packet") == 0)
