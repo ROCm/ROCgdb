@@ -665,6 +665,17 @@ this an easy-to-use drop-in replacement for creating threads that will
 work well in @value{GDBN}.
 @end deftp
 
+@defun gdb.interrupt ()
+This causes @value{GDBN} to react as if the user had typed a control-C
+character at the terminal.  That is, if the inferior is running, it is
+interrupted; if a @value{GDBN} command is executing, it is stopped;
+and if a Python command is running, @code{KeyboardInterrupt} will be
+raised.
+
+Unlike most Python APIs in @value{GDBN}, @code{interrupt} is
+thread-safe.
+@end defun
+
 @defun gdb.post_event (event)
 Put @var{event}, a callable object taking no arguments, into
 @value{GDBN}'s internal event queue.  This callable will be invoked at
@@ -3750,6 +3761,17 @@ registry extend @code{gdb.StopEvent}.  As a child of
 @code{gdb.ThreadEvent}, @code{gdb.StopEvent} will indicate the stopped
 thread when @value{GDBN} is running in non-stop mode.  Refer to
 @code{gdb.ThreadEvent} above for more details.
+
+@code{gdb.StopEvent} has the following additional attributes:
+
+@defvar StopEvent.details
+A dictionary holding any details relevant to the stop.  The exact keys
+and values depend on the type of stop, but are identical to the
+corresponding MI output (@pxref{GDB/MI Async Records}).
+
+A dictionary was used for this (rather than adding attributes directly
+to the event object) so that the MI keys could be used unchanged.
+@end defvar
 
 Emits @code{gdb.SignalEvent}, which extends @code{gdb.StopEvent}.
 

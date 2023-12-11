@@ -14,8 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import functools
+import gdb
+import heapq
 import inspect
 import json
+import threading
 
 from .io import start_json_writer, read_json
 from .startup import (
@@ -42,6 +45,58 @@ _commands = {}
 _server = None
 
 
+# A subclass of Exception that is used solely for reporting that a
+# request needs the inferior to be stopped, but it is not stopped.
+class NotStoppedException(Exception):
+    pass
+
+
+# This is used to handle cancellation requests.  It tracks all the
+# needed state, so that we can cancel both requests that are in flight
+# as well as queued requests.
+class CancellationHandler:
+    def __init__(self):
+        # Methods on this class acquire this lock before proceeding.
+        self.lock = threading.Lock()
+        # The request currently being handled, or None.
+        self.in_flight = None
+        self.reqs = []
+
+    def starting(self, req):
+        """Call at the start of the given request.
+
+        Throws the appropriate exception if the request should be
+        immediately cancelled."""
+        with self.lock:
+            self.in_flight = req
+            while len(self.reqs) > 0 and self.reqs[0] <= req:
+                if heapq.heappop(self.reqs) == req:
+                    raise KeyboardInterrupt()
+
+    def done(self, req):
+        """Indicate that the request is done."""
+        with self.lock:
+            self.in_flight = None
+
+    def cancel(self, req):
+        """Call to cancel a request.
+
+        If the request has already finished, this is ignored.
+        If the request is in flight, it is interrupted.
+        If the request has not yet been seen, the cancellation is queued."""
+        with self.lock:
+            if req == self.in_flight:
+                gdb.interrupt()
+            else:
+                # We don't actually ignore the request here, but in
+                # the 'starting' method.  This way we don't have to
+                # track as much state.  Also, this implementation has
+                # the weird property that a request can be cancelled
+                # before it is even sent.  It didn't seem worthwhile
+                # to try to check for this.
+                heapq.heappush(self.reqs, req)
+
+
 class Server:
     """The DAP server class."""
 
@@ -54,7 +109,11 @@ class Server:
         # DAP client.  Writing is done in a separate thread to avoid
         # blocking the read loop.
         self.write_queue = DAPQueue()
+        # Reading is also done in a separate thread, and a queue of
+        # requests is kept.
+        self.read_queue = DAPQueue()
         self.done = False
+        self.canceller = CancellationHandler()
         global _server
         _server = self
 
@@ -62,13 +121,14 @@ class Server:
     # PARAMS is just a dictionary from the JSON.
     @in_dap_thread
     def _handle_command(self, params):
-        # We don't handle 'cancel' for now.
+        req = params["seq"]
         result = {
-            "request_seq": params["seq"],
+            "request_seq": req,
             "type": "response",
             "command": params["command"],
         }
         try:
+            self.canceller.starting(req)
             if "arguments" in params:
                 args = params["arguments"]
             else:
@@ -78,10 +138,18 @@ class Server:
             if body is not None:
                 result["body"] = body
             result["success"] = True
+        except NotStoppedException:
+            result["success"] = False
+            result["message"] = "notStopped"
+        except KeyboardInterrupt:
+            # This can only happen when a request has been canceled.
+            result["success"] = False
+            result["message"] = "cancelled"
         except BaseException as e:
             log_stack()
             result["success"] = False
             result["message"] = str(e)
+        self.canceller.done(req)
         return result
 
     # Read inferior output and sends OutputEvents to the client.  It
@@ -102,6 +170,28 @@ class Server:
         log("WROTE: <<<" + json.dumps(obj) + ">>>")
         self.write_queue.put(obj)
 
+    # This is run in a separate thread and simply reads requests from
+    # the client and puts them into a queue.  A separate thread is
+    # used so that 'cancel' requests can be handled -- the DAP thread
+    # will normally block, waiting for each request to complete.
+    def _reader_thread(self):
+        while True:
+            cmd = read_json(self.in_stream)
+            log("READ: <<<" + json.dumps(cmd) + ">>>")
+            # Be extra paranoid about the form here.  If anything is
+            # missing, it will be put in the queue and then an error
+            # issued by ordinary request processing.
+            if (
+                "command" in cmd
+                and cmd["command"] == "cancel"
+                and "arguments" in cmd
+                # gdb does not implement progress, so there's no need
+                # to check for progressId.
+                and "requestId" in cmd["arguments"]
+            ):
+                self.canceller.cancel(cmd["arguments"]["requestId"])
+            self.read_queue.put(cmd)
+
     @in_dap_thread
     def main_loop(self):
         """The main loop of the DAP server."""
@@ -109,9 +199,9 @@ class Server:
         # client, and the thread that reads output from the inferior.
         start_thread("output reader", self._read_inferior_output)
         start_json_writer(self.out_stream, self.write_queue)
+        start_thread("JSON reader", self._reader_thread)
         while not self.done:
-            cmd = read_json(self.in_stream)
-            log("READ: <<<" + json.dumps(cmd) + ">>>")
+            cmd = self.read_queue.get()
             result = self._handle_command(cmd)
             self._send_json(result)
             events = self.delayed_events
@@ -169,7 +259,7 @@ def _check_not_running(func):
         from .events import inferior_running
 
         if inferior_running:
-            raise Exception("notStopped")
+            raise NotStoppedException()
         return func(*args, **kwargs)
 
     return check
@@ -296,3 +386,18 @@ def disconnect(*, terminateDebuggee: bool = False, **args):
     if terminateDebuggee:
         send_gdb_with_response("kill")
     _server.shutdown()
+
+
+@request("cancel", on_dap_thread=True, expect_stopped=False)
+@capability("supportsCancelRequest")
+def cancel(**args):
+    # If a 'cancel' request can actually be satisfied, it will be
+    # handled specially in the reader thread.  However, in order to
+    # construct a proper response, the request is also added to the
+    # command queue and so ends up here.  Additionally, the spec says:
+    #    The cancel request may return an error if it could not cancel
+    #    an operation but a client should refrain from presenting this
+    #    error to end users.
+    # ... which gdb takes to mean that it is fine for all cancel
+    # requests to report success.
+    return None
