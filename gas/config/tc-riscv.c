@@ -59,6 +59,9 @@ struct riscv_cl_insn
   fixS *fixp;
 };
 
+/* The identifier of the assembler macro we are expanding, if any. */
+static int source_macro = -1;
+
 /* All RISC-V CSR belong to one of these classes.  */
 enum riscv_csr_class
 {
@@ -1587,6 +1590,55 @@ init_opcode_hash (const struct riscv_opcode *opcodes,
   return hash;
 }
 
+/* Record all PC-relative high-part relocation that we have encountered to
+   help us resolve the corresponding low-part relocation later.  */
+typedef struct
+{
+  bfd_vma address;
+  symbolS *symbol;
+  bfd_vma target;
+} riscv_pcrel_hi_fixup;
+
+/* Handle of the pcrel_hi hash table.  */
+static htab_t riscv_pcrel_hi_fixup_hash;
+
+/* Get the key of a entry from the pcrel_hi hash table.  */
+
+static hashval_t
+riscv_pcrel_fixup_hash (const void *entry)
+{
+  const riscv_pcrel_hi_fixup *e = entry;
+  return (hashval_t) (e->address);
+}
+
+/* Compare the keys between two entries fo the pcrel_hi hash table.  */
+
+static int
+riscv_pcrel_fixup_eq (const void *entry1, const void *entry2)
+{
+  const riscv_pcrel_hi_fixup *e1 = entry1, *e2 = entry2;
+  return e1->address == e2->address;
+}
+
+/* Record the pcrel_hi relocation.  */
+
+static bool
+riscv_record_pcrel_fixup (htab_t p, bfd_vma address, symbolS *symbol,
+			  bfd_vma target)
+{
+  riscv_pcrel_hi_fixup entry = {address, symbol, target};
+  riscv_pcrel_hi_fixup **slot =
+	(riscv_pcrel_hi_fixup **) htab_find_slot (p, &entry, INSERT);
+  if (slot == NULL)
+    return false;
+
+  *slot = (riscv_pcrel_hi_fixup *) xmalloc (sizeof (riscv_pcrel_hi_fixup));
+  if (*slot == NULL)
+    return false;
+  **slot = entry;
+  return true;
+}
+
 /* This function is called once, at assembler startup time.  It should set up
    all the tables, etc. that the MD part of the assembler will need.  */
 
@@ -1622,6 +1674,11 @@ md_begin (void)
 
   opcode_names_hash = str_htab_create ();
   init_opcode_names_hash ();
+
+  /* Create pcrel_hi hash table to resolve the relocation while with
+     -mno-relax.  */
+  riscv_pcrel_hi_fixup_hash = htab_create (1024, riscv_pcrel_fixup_hash,
+					   riscv_pcrel_fixup_eq, free);
 
   /* Set the default alignment for the text section.  */
   record_alignment (text_section, riscv_opts.rvc ? 1 : 2);
@@ -1695,6 +1752,7 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 				  address_expr, false, reloc_type);
 
 	  ip->fixp->fx_tcbit = riscv_opts.relax;
+	  ip->fixp->tc_fix_data.source_macro = source_macro;
 	}
     }
 
@@ -2049,6 +2107,8 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
   int rs2 = (ip->insn_opcode >> OP_SH_RS2) & OP_MASK_RS2;
   int mask = ip->insn_mo->mask;
 
+  source_macro = mask;
+
   switch (mask)
     {
     case M_LI:
@@ -2124,6 +2184,8 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
       as_bad (_("internal: macro %s not implemented"), ip->insn_mo->name);
       break;
     }
+
+  source_macro = -1;
 }
 
 static const struct percent_op_match percent_op_utype[] =
@@ -4085,6 +4147,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       break;
 
     case BFD_RELOC_RISCV_GOT_HI20:
+      /* R_RISCV_GOT_HI20 and the following R_RISCV_LO12_I are relaxable
+	 only if it is created as a result of la or lga assembler macros. */
+      if (fixP->tc_fix_data.source_macro == M_LA
+	  || fixP->tc_fix_data.source_macro == M_LGA)
+	relaxable = true;
+      break;
+
     case BFD_RELOC_RISCV_ADD8:
     case BFD_RELOC_RISCV_ADD16:
     case BFD_RELOC_RISCV_ADD32:
@@ -4281,8 +4350,54 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       break;
 
     case BFD_RELOC_RISCV_PCREL_HI20:
+      /* Record and evaluate the pcrel_hi relocation with local symbol.
+	 Fill in a tentative value to improve objdump readability for -mrelax,
+	 and set fx_done for -mno-relax.  */
+      if (fixP->fx_addsy
+	  && S_IS_LOCAL (fixP->fx_addsy)
+	  && S_GET_SEGMENT (fixP->fx_addsy) == seg)
+	{
+	  bfd_vma target = S_GET_VALUE (fixP->fx_addsy) + *valP;
+	  bfd_vma value = target - md_pcrel_from (fixP);
+
+	  /* Record PCREL_HI20.  */
+	  if (!riscv_record_pcrel_fixup (riscv_pcrel_hi_fixup_hash,
+					 md_pcrel_from (fixP),
+					 fixP->fx_addsy,
+					 target))
+	    as_warn (_("too many pcrel_hi"));
+
+	  bfd_putl32 (bfd_getl32 (buf)
+		      | ENCODE_UTYPE_IMM (RISCV_CONST_HIGH_PART (value)),
+		      buf);
+	  if (!riscv_opts.relax)
+	    fixP->fx_done = 1;
+	}
+      relaxable = true;
+      break;
+
     case BFD_RELOC_RISCV_PCREL_LO12_S:
     case BFD_RELOC_RISCV_PCREL_LO12_I:
+      /* Resolve the pcrel_lo relocation with local symbol.
+	 Fill in a tentative value to improve objdump readability for -mrelax,
+	 and set fx_done for -mno-relax.  */
+      {
+	bfd_vma location_pcrel_hi = S_GET_VALUE (fixP->fx_addsy) + *valP;
+	riscv_pcrel_hi_fixup search = {location_pcrel_hi, 0, 0};
+	riscv_pcrel_hi_fixup *entry = htab_find (riscv_pcrel_hi_fixup_hash,
+						 &search);
+	if (entry && entry->symbol
+	    && S_IS_LOCAL (entry->symbol)
+	    && S_GET_SEGMENT (entry->symbol) == seg)
+	  {
+	    bfd_vma target = entry->target;
+	    bfd_vma value = target - entry->address;
+	    bfd_putl32 (bfd_getl32 (buf) | ENCODE_ITYPE_IMM (value), buf);
+	    /* Relaxations should never be enabled by `.option relax'.  */
+	    if (!riscv_opts.relax)
+	      fixP->fx_done = 1;
+	  }
+      }
       relaxable = true;
       break;
 
@@ -5048,6 +5163,14 @@ riscv_md_finish (void)
   riscv_set_public_attributes ();
   if (riscv_opts.relax)
     bfd_map_over_sections (stdoutput, riscv_insert_uleb128_fixes, NULL);
+}
+
+/* Called just before the assembler exits.  */
+
+void
+riscv_md_end (void)
+{
+  htab_delete (riscv_pcrel_hi_fixup_hash);
 }
 
 /* Adjust the symbol table.  */
