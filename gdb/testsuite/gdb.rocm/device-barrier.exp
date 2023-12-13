@@ -1,0 +1,83 @@
+# Copyright 2023-2024 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that the debugger can interrupt multiple waves when some have reached a
+# barrier (__syncthreads) and others have not.  The test also ensures that
+# correct execution happens when resuming from this state.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test {} {
+    clean_restart $::binfile
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	gdb_breakpoint [gdb_get_line_number "Break here"] allow-pending
+
+	gdb_test "continue" \
+	    "Thread $::decimal \[^\r\n\]* hit Breakpoint 2.*"
+
+	set first_wave [get_valueof "/d" "\$_thread" 0]
+
+	# Identify the AMDGPU threads, and make sure that those other than
+	# the current one are stopped at the __syncthreads barrier.
+	set other_waves [list]
+	gdb_test_multiple "info threads" "" {
+	    -re "\\* $first_wave *AMDGPU Wave\[^\r\n\]*" {
+		exp_continue
+	    }
+	    -re "  ($::decimal) *AMDGPU Wave\[^\r\n\]*" {
+		lappend other_waves $expect_out(1,string)
+		exp_continue
+	    }
+	    -re -wrap "" {
+		gdb_assert {[llength $other_waves] >= 1} $gdb_test_name
+	    }
+	}
+
+	for { set i 0 } { $i < [llength $other_waves] } { incr i } {
+	    with_test_prefix "thread_on_barrier\[$i\]" {
+		set thread_on_barrier [lindex $other_waves $i]
+		gdb_test \
+		    "thread $thread_on_barrier" \
+		    "Switching to thread $thread_on_barrier.*" \
+		    "thread \$thread_on_barrier\[\$i\]"
+
+		# Ideally, we would check that the current instruction is
+		# "s_barrier", but the instruction name might change at some point
+		# so instead check that we are within the __syncthreads call.
+		gdb_test "bt" " __syncthreads .*"
+	    }
+	}
+
+	# Check that execution can resume to the end of the program.
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+do_test
