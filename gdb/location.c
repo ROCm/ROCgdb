@@ -83,13 +83,8 @@ linespec_location_spec::linespec_location_spec
 	 breakpoint setting code, where spec_string being nullptr means
 	 to use the default breakpoint location.  */
       if ((p - orig) > 0)
-	spec_string = savestring (orig, p - orig);
+	spec_string.reset (savestring (orig, p - orig));
     }
-}
-
-linespec_location_spec::~linespec_location_spec ()
-{
-  xfree (spec_string);
 }
 
 location_spec_up
@@ -108,7 +103,7 @@ linespec_location_spec::linespec_location_spec
   (const linespec_location_spec &other)
   : location_spec (other),
     match_type (other.match_type),
-    spec_string (maybe_xstrdup (other.spec_string))
+    spec_string (maybe_xstrdup (other.spec_string.get ()))
 {
 }
 
@@ -118,9 +113,9 @@ linespec_location_spec::compute_string () const
   if (spec_string != nullptr)
     {
       if (match_type == symbol_name_match_type::FULL)
-	return std::string ("-qualified ") + spec_string;
+	return std::string ("-qualified ") + spec_string.get ();
       else
-	return spec_string;
+	return spec_string.get ();
     }
   return {};
 }
@@ -161,25 +156,19 @@ address_location_spec::compute_string () const
   return std::string ("*") + addr_string;
 }
 
-explicit_location_spec::explicit_location_spec ()
-  : location_spec (EXPLICIT_LOCATION_SPEC)
+explicit_location_spec::explicit_location_spec (const char *function_name)
+  : location_spec (EXPLICIT_LOCATION_SPEC),
+    function_name (maybe_xstrdup (function_name))
 {
-}
-
-explicit_location_spec::~explicit_location_spec ()
-{
-  xfree (source_filename);
-  xfree (function_name);
-  xfree (label_name);
 }
 
 explicit_location_spec::explicit_location_spec
   (const explicit_location_spec &other)
   : location_spec (other),
-    source_filename (maybe_xstrdup (other.source_filename)),
-    function_name (maybe_xstrdup (other.function_name)),
+    source_filename (maybe_xstrdup (other.source_filename.get ())),
+    function_name (maybe_xstrdup (other.function_name.get ())),
     func_name_match_type (other.func_name_match_type),
-    label_name (maybe_xstrdup (other.label_name)),
+    label_name (maybe_xstrdup (other.label_name.get ())),
     line_offset (other.line_offset)
 {
 }
@@ -296,7 +285,7 @@ explicit_to_string_internal (bool as_linespec,
     {
       if (!as_linespec)
 	buf.puts ("-source ");
-      buf.puts (explicit_loc->source_filename);
+      buf.puts (explicit_loc->source_filename.get ());
       need_space = true;
     }
 
@@ -308,7 +297,7 @@ explicit_to_string_internal (bool as_linespec,
 	buf.puts ("-qualified ");
       if (!as_linespec)
 	buf.puts ("-function ");
-      buf.puts (explicit_loc->function_name);
+      buf.puts (explicit_loc->function_name.get ());
       need_space = true;
     }
 
@@ -318,7 +307,7 @@ explicit_to_string_internal (bool as_linespec,
 	buf.putc (space);
       if (!as_linespec)
 	buf.puts ("-label ");
-      buf.puts (explicit_loc->label_name);
+      buf.puts (explicit_loc->label_name.get ());
       need_space = true;
     }
 
@@ -710,13 +699,13 @@ string_to_explicit_location_spec (const char **argp,
 	{
 	  set_oarg (explicit_location_spec_lex_one (argp, language,
 						    completion_info));
-	  locspec->source_filename = oarg.release ();
+	  locspec->source_filename = std::move (oarg);
 	}
       else if (strncmp (opt.get (), "-function", len) == 0)
 	{
 	  set_oarg (explicit_location_spec_lex_one_function (argp, language,
 							     completion_info));
-	  locspec->function_name = oarg.release ();
+	  locspec->function_name = std::move (oarg);
 	}
       else if (strncmp (opt.get (), "-qualified", len) == 0)
 	{
@@ -736,7 +725,7 @@ string_to_explicit_location_spec (const char **argp,
 	{
 	  set_oarg (explicit_location_spec_lex_one (argp, language,
 						    completion_info));
-	  locspec->label_name = oarg.release ();
+	  locspec->label_name = std::move (oarg);
 	}
       /* Only emit an "invalid argument" error for options
 	 that look like option strings.  */

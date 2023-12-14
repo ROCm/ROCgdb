@@ -9004,7 +9004,8 @@ parse_breakpoint_sals (location_spec *locspec,
 
   if (locspec->type () == LINESPEC_LOCATION_SPEC)
     {
-      const char *spec = as_linespec_location_spec (locspec)->spec_string;
+      const char *spec
+	= as_linespec_location_spec (locspec)->spec_string.get ();
 
       if (spec == NULL)
 	{
@@ -9055,7 +9056,7 @@ parse_breakpoint_sals (location_spec *locspec,
       const char *spec = NULL;
 
       if (locspec->type () == LINESPEC_LOCATION_SPEC)
-	spec = as_linespec_location_spec (locspec)->spec_string;
+	spec = as_linespec_location_spec (locspec)->spec_string.get ();
 
       if (!cursal.symtab
 	  || (spec != NULL
@@ -12622,7 +12623,7 @@ strace_marker_create_sals_from_location_spec (location_spec *locspec,
   struct linespec_sals lsal;
   const char *arg_start, *arg;
 
-  arg = arg_start = as_linespec_location_spec (locspec)->spec_string;
+  arg = arg_start = as_linespec_location_spec (locspec)->spec_string.get ();
   lsal.sals = decode_static_tracepoint_spec (&arg);
 
   std::string str (arg_start, arg - arg_start);
@@ -12689,7 +12690,7 @@ std::vector<symtab_and_line>
 static_marker_tracepoint::decode_location_spec (location_spec *locspec,
 						program_space *search_pspace)
 {
-  const char *s = as_linespec_location_spec (locspec)->spec_string;
+  const char *s = as_linespec_location_spec (locspec)->spec_string.get ();
 
   std::vector<symtab_and_line> sals = decode_static_tracepoint_spec (&s);
   if (sals.size () > static_trace_marker_id_idx)
@@ -13037,9 +13038,8 @@ update_static_tracepoint (tracepoint *tp, struct symtab_and_line sal)
 	  tp->first_loc ().symtab = sym != NULL ? sal2.symtab : NULL;
 
 	  std::unique_ptr<explicit_location_spec> els
-	    (new explicit_location_spec ());
-	  els->source_filename
-	    = xstrdup (symtab_to_filename_for_display (sal2.symtab));
+	    (new explicit_location_spec
+	     (symtab_to_filename_for_display (sal2.symtab)));
 	  els->line_offset.offset = tp->first_loc ().line_number;
 	  els->line_offset.sign = LINE_OFFSET_NONE;
 
