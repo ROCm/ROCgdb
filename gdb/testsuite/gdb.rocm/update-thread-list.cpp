@@ -19,18 +19,18 @@
 #include <stdio.h>
 #include <hip/hip_runtime.h>
 
-#define CHECK(cmd)                                                            \
-  {                                                                           \
-    hipError_t error = cmd;                                                   \
-    if (error != hipSuccess)                                                  \
-      {                                                                       \
-	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                        \
-		 hipGetErrorString (error), error,                            \
-		__FILE__, __LINE__);                                          \
-	exit (EXIT_FAILURE);                                                  \
-      }                                                                       \
-  } while (0)
-
+#define CHECK(cmd)							\
+  do									\
+    {									\
+      hipError_t error = cmd;						\
+      if (error != hipSuccess)						\
+	{								\
+	  fprintf (stderr, "error: '%s'(%d) at %s:%d\n",		\
+		   hipGetErrorString (error), error,			\
+		   __FILE__, __LINE__);					\
+	  exit (EXIT_FAILURE);						\
+	}								\
+    } while (0)
 
 __global__ void
 kern ()
