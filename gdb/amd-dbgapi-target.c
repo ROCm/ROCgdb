@@ -4716,8 +4716,6 @@ Otherwise, all dispatches are displayed."),
 
   add_cmd ("address-spaces", class_maintenance,
 	   maintenance_print_address_spaces, _("\
-Displays the address space names supported by \
-each target architecture.\n\
-Takes an optional file parameter."),
+Displays the address space names supported by the current architecture."),
 	   &maintenanceprintlist);
 }
