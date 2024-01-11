@@ -161,6 +161,13 @@ public:
   /* Allocate a value and its contents for type TYPE.  */
   static struct value *allocate (struct type *type);
 
+  /* Allocate a non-lazy value representing register RENUM in the frame previous
+     to NEXT_FRAME.  The type of the value is found using `register_type`.
+
+     The caller is responsible for filling the value's contents.  */
+  static struct value *allocate_register (frame_info_ptr next_frame,
+					  int regnum);
+
   /* Create a computed lvalue, with type TYPE, function pointers
      FUNCS, and closure CLOSURE.  */
   static struct value *allocate_computed (struct type *type,
@@ -1144,9 +1151,14 @@ extern struct value *value_of_variable (struct symbol *var,
 extern struct value *address_of_variable (struct symbol *var,
 					  const struct block *b);
 
-extern struct value *value_of_register (int regnum, frame_info_ptr frame);
+/* Return a value with the contents of register REGNUM as found in the frame
+   previous to NEXT_FRAME.  */
 
-struct value *value_of_register_lazy (frame_info_ptr frame, int regnum);
+extern value *value_of_register (int regnum, frame_info_ptr next_frame);
+
+/* Same as the above, but the value is not fetched.  */
+
+extern value *value_of_register_lazy (frame_info_ptr next_frame, int regnum);
 
 /* Return the symbol's reading requirement.  */
 
@@ -1658,5 +1670,53 @@ private:
   /* Used to hold the previous array value element limit.  */
   std::optional<int> m_old_value;
 };
+
+/* Helpers for building pseudo register values from raw registers.  */
+
+/* Create a value for pseudo register PSEUDO_REG_NUM by using bytes from
+   raw register RAW_REG_NUM starting at RAW_OFFSET.
+
+   The size of the pseudo register specifies how many bytes to use.  The
+   offset plus the size must not overflow the raw register's size.  */
+
+value *pseudo_from_raw_part (frame_info_ptr next_frame, int pseudo_reg_num,
+			     int raw_reg_num, int raw_offset);
+
+/* Write PSEUDO_BUF, the contents of a pseudo register, to part of raw register
+   RAW_REG_NUM starting at RAW_OFFSET.  */
+
+void pseudo_to_raw_part (frame_info_ptr next_frame,
+			 gdb::array_view<const gdb_byte> pseudo_buf,
+			 int raw_reg_num, int raw_offset);
+
+/* Create a value for pseudo register PSEUDO_REG_NUM by concatenating raw
+   registers RAW_REG_1_NUM and RAW_REG_2_NUM.
+
+   The sum of the sizes of raw registers must be equal to the size of the
+   pseudo register.  */
+
+value *pseudo_from_concat_raw (frame_info_ptr next_frame, int pseudo_reg_num,
+			       int raw_reg_1_num, int raw_reg_2_num);
+
+/* Write PSEUDO_BUF, the contents of a pseudo register, to the two raw registers
+   RAW_REG_1_NUM and RAW_REG_2_NUM.  */
+
+void pseudo_to_concat_raw (frame_info_ptr next_frame,
+			   gdb::array_view<const gdb_byte> pseudo_buf,
+			   int raw_reg_1_num, int raw_reg_2_num);
+
+/* Same as the above, but with three raw registers.  */
+
+value *pseudo_from_concat_raw (frame_info_ptr next_frame, int pseudo_reg_num,
+			       int raw_reg_1_num, int raw_reg_2_num,
+			       int raw_reg_3_num);
+
+/* Write PSEUDO_BUF, the contents of a pseudo register, to the three raw
+   registers RAW_REG_1_NUM, RAW_REG_2_NUM and RAW_REG_3_NUM.  */
+
+void pseudo_to_concat_raw (frame_info_ptr next_frame,
+			   gdb::array_view<const gdb_byte> pseudo_buf,
+			   int raw_reg_1_num, int raw_reg_2_num,
+			   int raw_reg_3_num);
 
 #endif /* !defined (VALUE_H) */

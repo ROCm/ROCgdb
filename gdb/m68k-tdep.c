@@ -216,11 +216,11 @@ m68k_register_to_value (frame_info_ptr frame, int regnum,
   gdb_assert (type->code () == TYPE_CODE_FLT);
 
   /* Convert to TYPE.  */
-  if (!get_frame_register_bytes (frame, regnum, 0,
-				 gdb::make_array_view (from,
-						       register_size (gdbarch,
-								      regnum)),
-				 optimizedp, unavailablep))
+  auto from_view
+    = gdb::make_array_view (from, register_size (gdbarch, regnum));
+  frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
+  if (!get_frame_register_bytes (next_frame, regnum, 0, from_view, optimizedp,
+				 unavailablep))
     return 0;
 
   target_float_convert (from, fpreg_type, to, type);
@@ -236,8 +236,8 @@ m68k_value_to_register (frame_info_ptr frame, int regnum,
 			struct type *type, const gdb_byte *from)
 {
   gdb_byte to[M68K_MAX_REGISTER_SIZE];
-  struct type *fpreg_type = register_type (get_frame_arch (frame),
-					   M68K_FP0_REGNUM);
+  gdbarch *arch = get_frame_arch (frame);
+  struct type *fpreg_type = register_type (arch, M68K_FP0_REGNUM);
 
   /* We only support floating-point values.  */
   if (type->code () != TYPE_CODE_FLT)
@@ -249,7 +249,8 @@ m68k_value_to_register (frame_info_ptr frame, int regnum,
 
   /* Convert from TYPE.  */
   target_float_convert (from, type, to, fpreg_type);
-  put_frame_register (frame, regnum, to);
+  auto to_view = gdb::make_array_view (to, fpreg_type->length ());
+  put_frame_register (get_next_frame_sentinel_okay (frame), regnum, to_view);
 }
 
 

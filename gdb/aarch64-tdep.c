@@ -3104,33 +3104,21 @@ aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
 /* Helper for aarch64_pseudo_read_value.  */
 
-static struct value *
-aarch64_pseudo_read_value_1 (struct gdbarch *gdbarch,
-			     readable_regcache *regcache, int regnum_offset,
-			     int regsize, struct value *result_value)
+static value *
+aarch64_pseudo_read_value_1 (frame_info_ptr next_frame,
+			     const int pseudo_reg_num, int raw_regnum_offset)
 {
-  unsigned v_regnum = AARCH64_V0_REGNUM + regnum_offset;
+  unsigned v_regnum = AARCH64_V0_REGNUM + raw_regnum_offset;
 
-  /* Enough space for a full vector register.  */
-  gdb_byte reg_buf[register_size (gdbarch, AARCH64_V0_REGNUM)];
-  static_assert (AARCH64_V0_REGNUM == AARCH64_SVE_Z0_REGNUM);
-
-  if (regcache->raw_read (v_regnum, reg_buf) != REG_VALID)
-    result_value->mark_bytes_unavailable (0,
-					  result_value->type ()->length ());
-  else
-    memcpy (result_value->contents_raw ().data (), reg_buf, regsize);
-
-  return result_value;
- }
+  return pseudo_from_raw_part (next_frame, pseudo_reg_num, v_regnum, 0);
+}
 
 /* Helper function for reading/writing ZA pseudo-registers.  Given REGNUM,
-   a ZA pseudo-register number, return, in OFFSETS, the information on positioning
-   of the bytes that must be read from/written to.  */
+   a ZA pseudo-register number, return the information on positioning of the
+   bytes that must be read from/written to.  */
 
-static void
-aarch64_za_offsets_from_regnum (struct gdbarch *gdbarch, int regnum,
-				struct za_offsets &offsets)
+static za_offsets
+aarch64_za_offsets_from_regnum (struct gdbarch *gdbarch, int regnum)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
@@ -3146,6 +3134,7 @@ aarch64_za_offsets_from_regnum (struct gdbarch *gdbarch, int regnum,
 
   /* Fetch the streaming vector length.  */
   size_t svl = sve_vl_from_vq (tdep->sme_svq);
+  za_offsets offsets;
 
   if (is_sme_tile_slice_pseudo_register (gdbarch, regnum))
     {
@@ -3201,58 +3190,53 @@ aarch64_za_offsets_from_regnum (struct gdbarch *gdbarch, int regnum,
       /* The chunk size is always svl bytes.  */
       offsets.chunk_size = svl;
     }
+
+  return offsets;
 }
 
 /* Given REGNUM, a SME pseudo-register number, return its value in RESULT.  */
 
-static struct value *
-aarch64_sme_pseudo_register_read (struct gdbarch *gdbarch,
-				  readable_regcache *regcache, int regnum,
-				  struct value *result)
+static value *
+aarch64_sme_pseudo_register_read (gdbarch *gdbarch, frame_info_ptr next_frame,
+				  const int pseudo_reg_num)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
   gdb_assert (tdep->has_sme ());
   gdb_assert (tdep->sme_svq > 0);
-  gdb_assert (tdep->sme_pseudo_base <= regnum);
-  gdb_assert (regnum < tdep->sme_pseudo_base + tdep->sme_pseudo_count);
+  gdb_assert (tdep->sme_pseudo_base <= pseudo_reg_num);
+  gdb_assert (pseudo_reg_num < tdep->sme_pseudo_base + tdep->sme_pseudo_count);
 
   /* Fetch the offsets that we need in order to read from the correct blocks
      of ZA.  */
-  struct za_offsets offsets;
-  aarch64_za_offsets_from_regnum (gdbarch, regnum, offsets);
+  za_offsets offsets
+    = aarch64_za_offsets_from_regnum (gdbarch, pseudo_reg_num);
 
   /* Fetch the contents of ZA.  */
-  size_t svl = sve_vl_from_vq (tdep->sme_svq);
-  gdb::byte_vector za (std::pow (svl, 2));
-  regcache->raw_read (tdep->sme_za_regnum, za.data ());
+  value *za_value = value_of_register (tdep->sme_za_regnum, next_frame);
+  value *result = value::allocate_register (next_frame, pseudo_reg_num);
 
   /* Copy the requested data.  */
   for (int chunks = 0; chunks < offsets.chunks; chunks++)
     {
-      const gdb_byte *source
-	= za.data () + offsets.starting_offset + chunks * offsets.stride_size;
-      gdb_byte *destination
-	= result->contents_raw ().data () + chunks * offsets.chunk_size;
-
-      memcpy (destination, source, offsets.chunk_size);
+      int src_offset = offsets.starting_offset + chunks * offsets.stride_size;
+      int dst_offset = chunks * offsets.chunk_size;
+      za_value->contents_copy (result, dst_offset, src_offset, 0,
+			       offsets.chunk_size);
     }
+
   return result;
 }
 
 /* Implement the "pseudo_register_read_value" gdbarch method.  */
 
-static struct value *
-aarch64_pseudo_read_value (struct gdbarch *gdbarch, readable_regcache *regcache,
-			   int regnum)
+static value *
+aarch64_pseudo_read_value (gdbarch *gdbarch, frame_info_ptr next_frame,
+			   const int pseudo_reg_num)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
-  struct value *result_value = value::allocate (register_type (gdbarch, regnum));
 
-  result_value->set_lval (lval_register);
-  VALUE_REGNUM (result_value) = regnum;
-
-  if (is_w_pseudo_register (gdbarch, regnum))
+  if (is_w_pseudo_register (gdbarch, pseudo_reg_num))
     {
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       /* Default offset for little endian.  */
@@ -3262,53 +3246,49 @@ aarch64_pseudo_read_value (struct gdbarch *gdbarch, readable_regcache *regcache,
 	offset = 4;
 
       /* Find the correct X register to extract the data from.  */
-      int x_regnum = AARCH64_X0_REGNUM + (regnum - tdep->w_pseudo_base);
-      gdb_byte data[4];
+      int x_regnum
+	= AARCH64_X0_REGNUM + (pseudo_reg_num - tdep->w_pseudo_base);
 
       /* Read the bottom 4 bytes of X.  */
-      if (regcache->raw_read_part (x_regnum, offset, 4, data) != REG_VALID)
-	result_value->mark_bytes_unavailable (0, 4);
-      else
-	memcpy (result_value->contents_raw ().data (), data, 4);
-
-      return result_value;
+      return pseudo_from_raw_part (next_frame, pseudo_reg_num, x_regnum,
+				   offset);
     }
-  else if (is_sme_pseudo_register (gdbarch, regnum))
-    return aarch64_sme_pseudo_register_read (gdbarch, regcache, regnum,
-					     result_value);
+  else if (is_sme_pseudo_register (gdbarch, pseudo_reg_num))
+    return aarch64_sme_pseudo_register_read (gdbarch, next_frame,
+					     pseudo_reg_num);
 
-  regnum -= gdbarch_num_regs (gdbarch);
+  /* Offset in the "pseudo-register space".  */
+  int pseudo_offset = pseudo_reg_num - gdbarch_num_regs (gdbarch);
 
-  if (regnum >= AARCH64_Q0_REGNUM && regnum < AARCH64_Q0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (gdbarch, regcache,
-					regnum - AARCH64_Q0_REGNUM,
-					Q_REGISTER_SIZE, result_value);
+  if (pseudo_offset >= AARCH64_Q0_REGNUM
+      && pseudo_offset < AARCH64_Q0_REGNUM + 32)
+    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					pseudo_offset - AARCH64_Q0_REGNUM);
 
-  if (regnum >= AARCH64_D0_REGNUM && regnum < AARCH64_D0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (gdbarch, regcache,
-					regnum - AARCH64_D0_REGNUM,
-					D_REGISTER_SIZE, result_value);
+  if (pseudo_offset >= AARCH64_D0_REGNUM
+      && pseudo_offset < AARCH64_D0_REGNUM + 32)
+    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					pseudo_offset - AARCH64_D0_REGNUM);
 
-  if (regnum >= AARCH64_S0_REGNUM && regnum < AARCH64_S0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (gdbarch, regcache,
-					regnum - AARCH64_S0_REGNUM,
-					S_REGISTER_SIZE, result_value);
+  if (pseudo_offset >= AARCH64_S0_REGNUM
+      && pseudo_offset < AARCH64_S0_REGNUM + 32)
+    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					pseudo_offset - AARCH64_S0_REGNUM);
 
-  if (regnum >= AARCH64_H0_REGNUM && regnum < AARCH64_H0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (gdbarch, regcache,
-					regnum - AARCH64_H0_REGNUM,
-					H_REGISTER_SIZE, result_value);
+  if (pseudo_offset >= AARCH64_H0_REGNUM
+      && pseudo_offset < AARCH64_H0_REGNUM + 32)
+    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					pseudo_offset - AARCH64_H0_REGNUM);
 
-  if (regnum >= AARCH64_B0_REGNUM && regnum < AARCH64_B0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (gdbarch, regcache,
-					regnum - AARCH64_B0_REGNUM,
-					B_REGISTER_SIZE, result_value);
+  if (pseudo_offset >= AARCH64_B0_REGNUM
+      && pseudo_offset < AARCH64_B0_REGNUM + 32)
+    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					pseudo_offset - AARCH64_B0_REGNUM);
 
-  if (tdep->has_sve () && regnum >= AARCH64_SVE_V0_REGNUM
-      && regnum < AARCH64_SVE_V0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (gdbarch, regcache,
-					regnum - AARCH64_SVE_V0_REGNUM,
-					V_REGISTER_SIZE, result_value);
+  if (tdep->has_sve () && pseudo_offset >= AARCH64_SVE_V0_REGNUM
+      && pseudo_offset < AARCH64_SVE_V0_REGNUM + 32)
+    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					pseudo_offset - AARCH64_SVE_V0_REGNUM);
 
   gdb_assert_not_reached ("regnum out of bound");
 }
@@ -3316,32 +3296,35 @@ aarch64_pseudo_read_value (struct gdbarch *gdbarch, readable_regcache *regcache,
 /* Helper for aarch64_pseudo_write.  */
 
 static void
-aarch64_pseudo_write_1 (struct gdbarch *gdbarch, struct regcache *regcache,
-			int regnum_offset, int regsize, const gdb_byte *buf)
+aarch64_pseudo_write_1 (gdbarch *gdbarch, frame_info_ptr next_frame,
+			int regnum_offset,
+			gdb::array_view<const gdb_byte> buf)
 {
-  unsigned v_regnum = AARCH64_V0_REGNUM + regnum_offset;
+  unsigned raw_regnum = AARCH64_V0_REGNUM + regnum_offset;
 
   /* Enough space for a full vector register.  */
-  gdb_byte reg_buf[register_size (gdbarch, AARCH64_V0_REGNUM)];
+  int raw_reg_size = register_size (gdbarch, raw_regnum);
+  gdb_byte raw_buf[raw_reg_size];
   static_assert (AARCH64_V0_REGNUM == AARCH64_SVE_Z0_REGNUM);
 
   /* Ensure the register buffer is zero, we want gdb writes of the
      various 'scalar' pseudo registers to behavior like architectural
      writes, register width bytes are written the remainder are set to
      zero.  */
-  memset (reg_buf, 0, register_size (gdbarch, AARCH64_V0_REGNUM));
+  memset (raw_buf, 0, register_size (gdbarch, AARCH64_V0_REGNUM));
 
-  memcpy (reg_buf, buf, regsize);
-  regcache->raw_write (v_regnum, reg_buf);
+  gdb::array_view<gdb_byte> raw_view (raw_buf, raw_reg_size);
+  copy (buf, raw_view.slice (0, buf.size ()));
+  put_frame_register (next_frame, raw_regnum, raw_view);
 }
 
 /* Given REGNUM, a SME pseudo-register number, store the bytes from DATA to the
    pseudo-register.  */
 
 static void
-aarch64_sme_pseudo_register_write (struct gdbarch *gdbarch,
-				   struct regcache *regcache,
-				   int regnum, const gdb_byte *data)
+aarch64_sme_pseudo_register_write (gdbarch *gdbarch, frame_info_ptr next_frame,
+				   const int regnum,
+				   gdb::array_view<const gdb_byte> data)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
@@ -3352,36 +3335,42 @@ aarch64_sme_pseudo_register_write (struct gdbarch *gdbarch,
 
   /* Fetch the offsets that we need in order to write to the correct blocks
      of ZA.  */
-  struct za_offsets offsets;
-  aarch64_za_offsets_from_regnum (gdbarch, regnum, offsets);
+  za_offsets offsets = aarch64_za_offsets_from_regnum (gdbarch, regnum);
 
   /* Fetch the contents of ZA.  */
-  size_t svl = sve_vl_from_vq (tdep->sme_svq);
-  gdb::byte_vector za (std::pow (svl, 2));
+  value *za_value = value_of_register (tdep->sme_za_regnum, next_frame);
 
-  /* Copy the requested data.  */
-  for (int chunks = 0; chunks < offsets.chunks; chunks++)
-    {
-      const gdb_byte *source = data + chunks * offsets.chunk_size;
-      gdb_byte *destination
-	= za.data () + offsets.starting_offset + chunks * offsets.stride_size;
+  {
+    /* Create a view only on the portion of za we want to write.  */
+    gdb::array_view<gdb_byte> za_view
+      = za_value->contents_writeable ().slice (offsets.starting_offset);
 
-      memcpy (destination, source, offsets.chunk_size);
-    }
+    /* Copy the requested data.  */
+    for (int chunks = 0; chunks < offsets.chunks; chunks++)
+      {
+	gdb::array_view<const gdb_byte> src
+	  = data.slice (chunks * offsets.chunk_size, offsets.chunk_size);
+	gdb::array_view<gdb_byte> dst
+	  = za_view.slice (chunks * offsets.stride_size, offsets.chunk_size);
+	copy (src, dst);
+      }
+  }
 
   /* Write back to ZA.  */
-  regcache->raw_write (tdep->sme_za_regnum, za.data ());
+  put_frame_register (next_frame, tdep->sme_za_regnum,
+		      za_value->contents_raw ());
 }
 
 /* Implement the "pseudo_register_write" gdbarch method.  */
 
 static void
-aarch64_pseudo_write (struct gdbarch *gdbarch, struct regcache *regcache,
-		      int regnum, const gdb_byte *buf)
+aarch64_pseudo_write (gdbarch *gdbarch, frame_info_ptr next_frame,
+		      const int pseudo_reg_num,
+		      gdb::array_view<const gdb_byte> buf)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
-  if (is_w_pseudo_register (gdbarch, regnum))
+  if (is_w_pseudo_register (gdbarch, pseudo_reg_num))
     {
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       /* Default offset for little endian.  */
@@ -3391,53 +3380,56 @@ aarch64_pseudo_write (struct gdbarch *gdbarch, struct regcache *regcache,
 	offset = 4;
 
       /* Find the correct X register to extract the data from.  */
-      int x_regnum = AARCH64_X0_REGNUM + (regnum - tdep->w_pseudo_base);
+      int x_regnum = AARCH64_X0_REGNUM + (pseudo_reg_num - tdep->w_pseudo_base);
 
       /* First zero-out the contents of X.  */
-      ULONGEST zero = 0;
-      regcache->raw_write (x_regnum, zero);
+      gdb_byte bytes[8] {};
+      gdb::array_view<gdb_byte> bytes_view (bytes);
+      copy (buf, bytes_view.slice (offset, 4));
+
       /* Write to the bottom 4 bytes of X.  */
-      regcache->raw_write_part (x_regnum, offset, 4, buf);
+      put_frame_register (next_frame, x_regnum, bytes_view);
       return;
     }
-  else if (is_sme_pseudo_register (gdbarch, regnum))
+  else if (is_sme_pseudo_register (gdbarch, pseudo_reg_num))
     {
-      aarch64_sme_pseudo_register_write (gdbarch, regcache, regnum, buf);
+      aarch64_sme_pseudo_register_write (gdbarch, next_frame, pseudo_reg_num,
+					 buf);
       return;
     }
 
-  regnum -= gdbarch_num_regs (gdbarch);
+  /* Offset in the "pseudo-register space".  */
+  int pseudo_offset = pseudo_reg_num - gdbarch_num_regs (gdbarch);
 
-  if (regnum >= AARCH64_Q0_REGNUM && regnum < AARCH64_Q0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, regcache,
-				   regnum - AARCH64_Q0_REGNUM, Q_REGISTER_SIZE,
-				   buf);
+  if (pseudo_offset >= AARCH64_Q0_REGNUM
+      && pseudo_offset < AARCH64_Q0_REGNUM + 32)
+    return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				   pseudo_offset - AARCH64_Q0_REGNUM, buf);
 
-  if (regnum >= AARCH64_D0_REGNUM && regnum < AARCH64_D0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, regcache,
-				   regnum - AARCH64_D0_REGNUM, D_REGISTER_SIZE,
-				   buf);
+  if (pseudo_offset >= AARCH64_D0_REGNUM
+      && pseudo_offset < AARCH64_D0_REGNUM + 32)
+    return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				   pseudo_offset - AARCH64_D0_REGNUM, buf);
 
-  if (regnum >= AARCH64_S0_REGNUM && regnum < AARCH64_S0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, regcache,
-				   regnum - AARCH64_S0_REGNUM, S_REGISTER_SIZE,
-				   buf);
+  if (pseudo_offset >= AARCH64_S0_REGNUM
+      && pseudo_offset < AARCH64_S0_REGNUM + 32)
+    return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				   pseudo_offset - AARCH64_S0_REGNUM, buf);
 
-  if (regnum >= AARCH64_H0_REGNUM && regnum < AARCH64_H0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, regcache,
-				   regnum - AARCH64_H0_REGNUM, H_REGISTER_SIZE,
-				   buf);
+  if (pseudo_offset >= AARCH64_H0_REGNUM
+      && pseudo_offset < AARCH64_H0_REGNUM + 32)
+    return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				   pseudo_offset - AARCH64_H0_REGNUM, buf);
 
-  if (regnum >= AARCH64_B0_REGNUM && regnum < AARCH64_B0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, regcache,
-				   regnum - AARCH64_B0_REGNUM, B_REGISTER_SIZE,
-				   buf);
+  if (pseudo_offset >= AARCH64_B0_REGNUM
+      && pseudo_offset < AARCH64_B0_REGNUM + 32)
+    return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				   pseudo_offset - AARCH64_B0_REGNUM, buf);
 
-  if (tdep->has_sve () && regnum >= AARCH64_SVE_V0_REGNUM
-      && regnum < AARCH64_SVE_V0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, regcache,
-				   regnum - AARCH64_SVE_V0_REGNUM,
-				   V_REGISTER_SIZE, buf);
+  if (tdep->has_sve () && pseudo_offset >= AARCH64_SVE_V0_REGNUM
+      && pseudo_offset < AARCH64_SVE_V0_REGNUM + 32)
+    return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				   pseudo_offset - AARCH64_SVE_V0_REGNUM, buf);
 
   gdb_assert_not_reached ("regnum out of bound");
 }
@@ -3449,9 +3441,8 @@ value_of_aarch64_user_reg (frame_info_ptr frame, const void *baton)
 {
   const int *reg_p = (const int *) baton;
 
-  return value_of_register (*reg_p, frame);
+  return value_of_register (*reg_p, get_next_frame_sentinel_okay (frame));
 }
-
 
 /* Implement the "software_single_step" gdbarch method, needed to
    single step through atomic sequences on AArch64.  */

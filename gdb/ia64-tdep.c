@@ -1227,11 +1227,10 @@ ia64_register_to_value (frame_info_ptr frame, int regnum,
   gdb_byte in[IA64_FP_REGISTER_SIZE];
 
   /* Convert to TYPE.  */
-  if (!get_frame_register_bytes (frame, regnum, 0,
-				 gdb::make_array_view (in,
-						       register_size (gdbarch,
-								      regnum)),
-				 optimizedp, unavailablep))
+  auto in_view = gdb::make_array_view (in, register_size (gdbarch, regnum));
+  frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
+  if (!get_frame_register_bytes (next_frame, regnum, 0, in_view, optimizedp,
+				 unavailablep))
     return 0;
 
   target_float_convert (in, ia64_ext_type (gdbarch), out, valtype);
@@ -1245,8 +1244,10 @@ ia64_value_to_register (frame_info_ptr frame, int regnum,
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   gdb_byte out[IA64_FP_REGISTER_SIZE];
-  target_float_convert (in, valtype, out, ia64_ext_type (gdbarch));
-  put_frame_register (frame, regnum, out);
+  type *to_type = ia64_ext_type (gdbarch);
+  target_float_convert (in, valtype, out, to_type);
+  auto out_view = gdb::make_array_view (out, to_type->length ());
+  put_frame_register (get_next_frame_sentinel_okay (frame), regnum, out_view);
 }
 
 
@@ -3958,7 +3959,8 @@ ia64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_register_type (gdbarch, ia64_register_type);
 
   set_gdbarch_pseudo_register_read (gdbarch, ia64_pseudo_register_read);
-  set_gdbarch_pseudo_register_write (gdbarch, ia64_pseudo_register_write);
+  set_gdbarch_deprecated_pseudo_register_write (gdbarch,
+						ia64_pseudo_register_write);
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, ia64_dwarf_reg_to_regnum);
   set_gdbarch_register_reggroup_p (gdbarch, ia64_register_reggroup_p);
   set_gdbarch_convert_register_p (gdbarch, ia64_convert_register_p);

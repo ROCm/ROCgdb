@@ -2713,11 +2713,11 @@ rs6000_register_to_value (frame_info_ptr frame,
      fpr to vsr.  */
   regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
 
-  if (!get_frame_register_bytes (frame, regnum, 0,
-				 gdb::make_array_view (from,
-						       register_size (gdbarch,
-								      regnum)),
-				 optimizedp, unavailablep))
+  auto from_view
+    = gdb::make_array_view (from, register_size (gdbarch, regnum));
+  frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
+  if (!get_frame_register_bytes (frame, regnum, 0, from_view, optimizedp,
+				 unavailablep))
     return 0;
 
   target_float_convert (from, builtin_type (gdbarch)->builtin_double,
@@ -2741,9 +2741,10 @@ rs6000_value_to_register (frame_info_ptr frame,
      fpr to vsr.  */
   regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
 
-  target_float_convert (from, type,
-			to, builtin_type (gdbarch)->builtin_double);
-  put_frame_register (frame, regnum, to);
+  struct type *to_type = builtin_type (gdbarch)->builtin_double;
+  target_float_convert (from, type, to, to_type);
+  auto to_view = gdb::make_array_view (to, to_type->length ());
+  put_frame_register (get_next_frame_sentinel_okay (frame), regnum, to_view);
 }
 
 static struct value *
@@ -8352,8 +8353,8 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       || have_vsx || have_htm_fpu || have_htm_vsx)
     {
       set_gdbarch_pseudo_register_read (gdbarch, rs6000_pseudo_register_read);
-      set_gdbarch_pseudo_register_write (gdbarch,
-					 rs6000_pseudo_register_write);
+      set_gdbarch_deprecated_pseudo_register_write
+	(gdbarch, rs6000_pseudo_register_write);
       set_gdbarch_ax_pseudo_register_collect (gdbarch,
 	      rs6000_ax_pseudo_register_collect);
     }

@@ -1109,9 +1109,9 @@ get_frame_func (frame_info_ptr this_frame)
 std::unique_ptr<readonly_detached_regcache>
 frame_save_as_regcache (frame_info_ptr this_frame)
 {
-  auto cooked_read = [this_frame] (int regnum, gdb_byte *buf)
+  auto cooked_read = [this_frame] (int regnum, gdb::array_view<gdb_byte> buf)
     {
-      if (!deprecated_frame_register_read (this_frame, regnum, buf))
+      if (!deprecated_frame_register_read (this_frame, regnum, buf.data ()))
 	return REG_UNAVAILABLE;
       else
 	return REG_VALID;
@@ -1216,26 +1216,6 @@ frame_register_unwind (frame_info_ptr next_frame, int regnum,
 }
 
 void
-frame_register (frame_info_ptr frame, int regnum,
-		int *optimizedp, int *unavailablep, enum lval_type *lvalp,
-		CORE_ADDR *addrp, int *realnump, gdb_byte *bufferp)
-{
-  /* Require all but BUFFERP to be valid.  A NULL BUFFERP indicates
-     that the value proper does not need to be fetched.  */
-  gdb_assert (optimizedp != NULL);
-  gdb_assert (lvalp != NULL);
-  gdb_assert (addrp != NULL);
-  gdb_assert (realnump != NULL);
-  /* gdb_assert (bufferp != NULL); */
-
-  /* Obtain the register value by unwinding the register from the next
-     (more inner frame).  */
-  gdb_assert (frame != NULL && frame->next != NULL);
-  frame_register_unwind (frame_info_ptr (frame->next), regnum, optimizedp,
-			 unavailablep, lvalp, addrp, realnump, bufferp);
-}
-
-void
 frame_unwind_register (frame_info_ptr next_frame, int regnum, gdb_byte *buf)
 {
   int optimized;
@@ -1278,9 +1258,39 @@ frame_unwind_register_value (frame_info_ptr next_frame, int regnum)
     frame_unwind_find_by_frame (next_frame, &next_frame->prologue_cache);
 
   /* Ask this frame to unwind its register.  */
-  value *value = next_frame->unwind->prev_register (next_frame,
-						    &next_frame->prologue_cache,
-						    regnum);
+  value *value
+    = next_frame->unwind->prev_register (next_frame,
+					 &next_frame->prologue_cache, regnum);
+  if (value == nullptr)
+    {
+      if (gdbarch_pseudo_register_read_value_p (gdbarch))
+	{
+	  /* This is a pseudo register, we don't know how how what raw registers
+	     this pseudo register is made of.  Ask the gdbarch to read the
+	     value, it will itself ask the next frame to unwind the values of
+	     the raw registers it needs to compose the value of the pseudo
+	     register.  */
+	  value = gdbarch_pseudo_register_read_value
+	    (gdbarch, next_frame, regnum);
+	}
+      else if (gdbarch_pseudo_register_read_p (gdbarch))
+	{
+	  value = value::allocate_register (next_frame, regnum);
+
+	  /* Passing the current regcache is known to be broken, the pseudo
+	     register value will be constructed using the current raw registers,
+	     rather than reading them using NEXT_FRAME.  Architectures should be
+	     migrated to gdbarch_pseudo_register_read_value.  */
+	  register_status status = gdbarch_pseudo_register_read
+	    (gdbarch, get_thread_regcache (inferior_thread ()), regnum,
+	     value->contents_writeable ().data ());
+	  if (status == REG_UNAVAILABLE)
+	    value->mark_bytes_unavailable (0, value->type ()->length ());
+	}
+      else
+	error (_("Can't unwind value of register %d (%s)"), regnum,
+	       user_reg_map_regnum_to_name (gdbarch, regnum));
+    }
 
   if (frame_debug)
     {
@@ -1419,38 +1429,53 @@ read_frame_register_unsigned (frame_info_ptr frame, int regnum,
 }
 
 void
-put_frame_register (frame_info_ptr frame, int regnum,
-		    const gdb_byte *buf, LONGEST offset)
+put_frame_register (frame_info_ptr next_frame, int regnum,
+		    gdb::array_view<const gdb_byte> src, LONGEST offset)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
+  gdbarch *gdbarch = frame_unwind_arch (next_frame);
   int realnum;
   int optim;
   int unavail;
   enum lval_type lval;
   CORE_ADDR addr;
+  int reg_size = register_size (gdbarch, regnum);
 
-  frame_register (frame, regnum, &optim, &unavail,
-		  &lval, &addr, &realnum, NULL);
+  frame_register_unwind (next_frame, regnum, &optim, &unavail, &lval, &addr,
+			 &realnum, nullptr);
   if (optim)
     error (_("Attempt to assign to a register that was not saved."));
   switch (lval)
     {
     case lval_memory:
       {
-	write_memory (addr + offset, buf, register_size (gdbarch, regnum));
+	write_memory (addr + offset, src.data (), src.size ());
 	break;
       }
+
     case lval_register:
       {
-	/* Register written can be bigger then the value we are writing.  */
-	gdb::byte_vector temp_buf (register_size (gdbarch, realnum));
+	gdb::byte_vector tmp_buf;
 	regcache *regcache = get_thread_regcache (inferior_thread ());
-	regcache->cooked_read (realnum, temp_buf.data ());
-	memcpy ((char *) temp_buf.data () + offset, buf,
-		register_size (gdbarch, regnum));
-	regcache->cooked_write (realnum, temp_buf.data ());
+
+	if (src.size () < reg_size)
+	  {
+	    /* This is a partial write, do a read-modify-write.  */
+	    tmp_buf.resize (reg_size);
+	    regcache->cooked_read (realnum, tmp_buf);
+	    auto dst = gdb::array_view<gdb_byte> (tmp_buf).slice (offset,
+								  src.size ());
+	    copy (src, dst);
+	    src = tmp_buf;
+	  }
+
+	if (realnum < gdbarch_num_regs (gdbarch)
+	    || !gdbarch_pseudo_register_write_p (gdbarch))
+	  regcache->cooked_write (realnum, src);
+	else
+	  gdbarch_pseudo_register_write (gdbarch, next_frame, realnum, src);
 	break;
       }
+
     default:
       error (_("Attempt to assign to an unmodifiable value."));
     }
@@ -1474,22 +1499,19 @@ deprecated_frame_register_read (frame_info_ptr frame, int regnum,
   CORE_ADDR addr;
   int realnum;
 
-  frame_register (frame, regnum, &optimized, &unavailable,
-		  &lval, &addr, &realnum, myaddr);
+  frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
+			 &optimized, &unavailable, &lval, &addr, &realnum,
+			 myaddr);
 
   return !optimized && !unavailable;
 }
 
 bool
-get_frame_register_bytes (frame_info_ptr frame, int regnum,
-			  CORE_ADDR offset,
-			  gdb::array_view<gdb_byte> buffer,
+get_frame_register_bytes (frame_info_ptr next_frame, int regnum,
+			  CORE_ADDR offset, gdb::array_view<gdb_byte> buffer,
 			  int *optimizedp, int *unavailablep)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
-  int i;
-  int maxsize;
-  int numregs;
+  gdbarch *gdbarch = frame_unwind_arch (next_frame);
 
   /* Skip registers wholly inside of OFFSET.  */
   while (offset >= register_size (gdbarch, regnum))
@@ -1500,9 +1522,9 @@ get_frame_register_bytes (frame_info_ptr frame, int regnum,
 
   /* Ensure that we will not read beyond the end of the register file.
      This can only ever happen if the debug information is bad.  */
-  maxsize = -offset;
-  numregs = gdbarch_num_cooked_regs (gdbarch);
-  for (i = regnum; i < numregs; i++)
+  int maxsize = -offset;
+  int numregs = gdbarch_num_cooked_regs (gdbarch);
+  for (int i = regnum; i < numregs; i++)
     {
       int thissize = register_size (gdbarch, i);
 
@@ -1511,20 +1533,15 @@ get_frame_register_bytes (frame_info_ptr frame, int regnum,
       maxsize += thissize;
     }
 
-  int len = buffer.size ();
-  if (len > maxsize)
+  if (buffer.size () > maxsize)
     error (_("Bad debug information detected: "
-	     "Attempt to read %d bytes from registers."), len);
+	     "Attempt to read %zu bytes from registers."), buffer.size ());
 
   /* Copy the data.  */
-  while (len > 0)
+  while (!buffer.empty ())
     {
-      int curr_len = register_size (gdbarch, regnum) - offset;
-
-      if (curr_len > len)
-	curr_len = len;
-
-      gdb_byte *myaddr = buffer.data ();
+      int curr_len = std::min<int> (register_size (gdbarch, regnum) - offset,
+				    buffer.size ());
 
       if (curr_len == register_size (gdbarch, regnum))
 	{
@@ -1532,16 +1549,14 @@ get_frame_register_bytes (frame_info_ptr frame, int regnum,
 	  CORE_ADDR addr;
 	  int realnum;
 
-	  frame_register (frame, regnum, optimizedp, unavailablep,
-			  &lval, &addr, &realnum, myaddr);
+	  frame_register_unwind (next_frame, regnum, optimizedp, unavailablep,
+				 &lval, &addr, &realnum, buffer.data ());
 	  if (*optimizedp || *unavailablep)
 	    return false;
 	}
       else
 	{
-	  struct value *value
-	    = frame_unwind_register_value (frame_info_ptr (frame->next),
-					   regnum);
+	  value *value = frame_unwind_register_value (next_frame, regnum);
 	  gdb_assert (value != NULL);
 	  *optimizedp = value->optimized_out ();
 	  *unavailablep = !value->entirely_available ();
@@ -1552,13 +1567,12 @@ get_frame_register_bytes (frame_info_ptr frame, int regnum,
 	      return false;
 	    }
 
-	  memcpy (myaddr, value->contents_all ().data () + offset,
-		  curr_len);
+	  copy (value->contents_all ().slice (offset, curr_len),
+		buffer.slice (0, curr_len));
 	  release_value (value);
 	}
 
-      myaddr += curr_len;
-      len -= curr_len;
+      buffer = buffer.slice (curr_len);
       offset = 0;
       regnum++;
     }
@@ -1570,11 +1584,11 @@ get_frame_register_bytes (frame_info_ptr frame, int regnum,
 }
 
 void
-put_frame_register_bytes (frame_info_ptr frame, int regnum,
+put_frame_register_bytes (frame_info_ptr next_frame, int regnum,
 			  CORE_ADDR offset,
-			  gdb::array_view<const gdb_byte> buffer)
+			  gdb::array_view<const gdb_byte> src)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
+  gdbarch *gdbarch = frame_unwind_arch (next_frame);
 
   /* Skip registers wholly inside of OFFSET.  */
   while (offset >= register_size (gdbarch, regnum))
@@ -1583,58 +1597,46 @@ put_frame_register_bytes (frame_info_ptr frame, int regnum,
       regnum++;
     }
 
-  int len = buffer.size ();
   /* Copy the data.  */
-  while (len > 0)
+  while (!src.empty ())
     {
-      int curr_len = register_size (gdbarch, regnum) - offset;
-      struct value *value
-	= frame_unwind_register_value (frame_info_ptr (frame->next), regnum);
-      LONGEST added_offset = value == NULL ? 0 : value->offset ();
+      int curr_len
+	= std::min (register_size (gdbarch, regnum) - offset, src.size ());
+      auto curr_src = src.slice (0, curr_len);
+      value *dst_value = frame_unwind_register_value (next_frame, regnum);
 
-      if (curr_len > len)
-	curr_len = len;
+      /* There are two offsets at play here:
 
-      const gdb_byte *myaddr = buffer.data ();
-      /*  Compute value is a special new case.  The problem is that
+	    - the offset from where we want to start writing within REGNUM,
+	      that's `offset`
+	    - the offset in the lval where REGNUM is located currently, that's
+	      `dst_value->offset ()`.  */
+
+      /*  Computed value is a special case.  The problem is that
 	  the computed callback mechanism only supports a struct
 	  value arguments, so we need to make one.  */
-      if (value != NULL && value->lval () == lval_computed)
+      if (dst_value->lval () == lval_computed)
 	{
-	  const lval_funcs *funcs = value->computed_funcs ();
-	  type * reg_type = register_type (gdbarch, regnum);
+	  const lval_funcs *funcs = dst_value->computed_funcs ();
+	  type *reg_type = register_type (gdbarch, regnum);
 
-	  if (funcs->write == NULL)
+	  if (funcs->write == nullptr)
 	    error (_("Attempt to assign to an unmodifiable value."));
 
-	  struct value *from_value = value::allocate (reg_type);
-	  memcpy (from_value->contents_raw ().data (), myaddr,
-		  reg_type->length ());
-
-	  value->set_offset (added_offset + offset);
-
-	  funcs->write (value, from_value);
-	  release_value (from_value);
+	  value *from_value = value_from_contents (reg_type, curr_src.data ());
+	  dst_value->set_offset (offset + dst_value->offset ());
+	  funcs->write (dst_value, from_value);
 	}
       else if (curr_len == register_size (gdbarch, regnum))
-	{
-	  put_frame_register (frame, regnum, myaddr, added_offset);
-	}
+	put_frame_register (next_frame, regnum, curr_src,  dst_value->offset ());
       else
 	{
-	  gdb_assert (value != NULL);
-
-	  memcpy ((char *) value->contents_writeable ().data () + offset,
-		  myaddr, curr_len);
-	  put_frame_register (frame, regnum, value->contents_raw ().data (),
-			      added_offset);
+	  copy (curr_src, dst_value->contents_writeable ().slice (offset, curr_len));
+	  put_frame_register (next_frame, regnum, dst_value->contents (),
+			      dst_value->offset ());
 	}
 
-      if (value != NULL)
-	release_value (value);
-
-      myaddr += curr_len;
-      len -= curr_len;
+      src = src.slice (curr_len);
       offset = 0;
       regnum++;
     }

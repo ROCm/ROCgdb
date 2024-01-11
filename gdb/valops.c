@@ -1231,14 +1231,14 @@ value_assign (struct value *toval, struct value *fromval)
 	   Below we will call put_frame_register_bytes which requires that
 	   we pass it the actual frame in which the register value is
 	   valid, i.e. not the next frame.  */
-	frame_info_ptr frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (toval));
-	frame = get_prev_frame_always (frame);
+	frame_info_ptr next_frame = frame_find_by_id (VALUE_NEXT_FRAME_ID (toval));
 
-	if (!frame)
+	int value_reg = VALUE_REGNUM (toval);
+
+	if (next_frame == nullptr)
 	  error (_("Value being assigned to is no longer active."));
 
-	gdbarch *arch = get_frame_arch (frame);
-	int value_reg = VALUE_REGNUM (toval);
+	gdbarch *gdbarch = frame_unwind_arch (next_frame);
 	LONGEST bitpos = toval->bitpos ();
 	LONGEST bitsize = toval->bitsize ();
 	LONGEST offset = toval->offset ();
@@ -1271,7 +1271,7 @@ value_assign (struct value *toval, struct value *fromval)
 	    gdb::byte_vector buffer (changed_len);
 	    int optim, unavail;
 
-	    if (!get_frame_register_bytes (frame, value_reg, offset,
+	    if (!get_frame_register_bytes (next_frame, value_reg, offset,
 					   buffer, &optim, &unavail))
 	      {
 		if (optim)
@@ -1285,24 +1285,28 @@ value_assign (struct value *toval, struct value *fromval)
 	    copy_bitwise (buffer.data (), bitpos, fromval->contents ().data (),
 			  0, bitsize, big_endian);
 
-	    put_frame_register_bytes (frame, value_reg, offset, buffer);
+	    put_frame_register_bytes (next_frame, value_reg, offset, buffer);
 	  }
 	else
 	  {
-	    if (gdbarch_convert_register_p (arch, VALUE_REGNUM (toval), type))
+	    if (gdbarch_convert_register_p (gdbarch, VALUE_REGNUM (toval),
+					    type))
 	      {
 		/* If TOVAL is a special machine register requiring
 		   conversion of program values to a special raw
 		   format.  */
-		gdbarch_value_to_register (arch, frame, VALUE_REGNUM (toval),
-					   type, fromval->contents ().data ());
+		gdbarch_value_to_register (gdbarch,
+					   get_prev_frame_always (next_frame),
+					   VALUE_REGNUM (toval), type,
+					   fromval->contents ().data ());
 	      }
 	    else
-	      put_frame_register_bytes (frame, value_reg,
-					offset, fromval->contents ());
+	      put_frame_register_bytes (next_frame, value_reg, offset,
+					fromval->contents ());
 	  }
 
-	gdb::observers::register_changed.notify (frame, value_reg);
+	gdb::observers::register_changed.notify
+	  (get_prev_frame_always (next_frame), value_reg);
 	break;
       }
 
@@ -3254,6 +3258,7 @@ find_oload_champ (gdb::array_view<value *> args,
     {
       int jj;
       int static_offset = 0;
+      bool varargs = false;
       std::vector<type *> parm_types;
 
       if (xmethods != NULL)
@@ -3266,9 +3271,13 @@ find_oload_champ (gdb::array_view<value *> args,
 	    {
 	      nparms = TYPE_FN_FIELD_TYPE (methods, ix)->num_fields ();
 	      static_offset = oload_method_static_p (methods, ix);
+	      varargs = TYPE_FN_FIELD_TYPE (methods, ix)->has_varargs ();
 	    }
 	  else
-	    nparms = functions[ix]->type ()->num_fields ();
+	    {
+	      nparms = functions[ix]->type ()->num_fields ();
+	      varargs = functions[ix]->type ()->has_varargs ();
+	    }
 
 	  parm_types.reserve (nparms);
 	  for (jj = 0; jj < nparms; jj++)
@@ -3283,7 +3292,8 @@ find_oload_champ (gdb::array_view<value *> args,
       /* Compare parameter types to supplied argument types.  Skip
 	 THIS for static methods.  */
       bv = rank_function (parm_types,
-			  args.slice (static_offset));
+			  args.slice (static_offset),
+			  varargs);
 
       if (overload_debug)
 	{

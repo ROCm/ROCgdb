@@ -3395,18 +3395,15 @@ i386_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
    the MMX registers need to be mapped onto floating point registers.  */
 
 static int
-i386_mmx_regnum_to_fp_regnum (readable_regcache *regcache, int regnum)
+i386_mmx_regnum_to_fp_regnum (frame_info_ptr next_frame, int regnum)
 {
-  gdbarch *arch = regcache->arch ();
+  gdbarch *arch = frame_unwind_arch (next_frame);
   i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (arch);
-  int mmxreg, fpreg;
-  ULONGEST fstat;
-  int tos;
-
-  mmxreg = regnum - tdep->mm0_regnum;
-  regcache->raw_read (I387_FSTAT_REGNUM (tdep), &fstat);
-  tos = (fstat >> 11) & 0x7;
-  fpreg = (mmxreg + tos) % 8;
+  ULONGEST fstat
+    = frame_unwind_register_unsigned (next_frame, I387_FSTAT_REGNUM (tdep));
+  int tos = (fstat >> 11) & 0x7;
+  int mmxreg = regnum - tdep->mm0_regnum;
+  int fpreg = (mmxreg + tos) % 8;
 
   return (I387_ST0_REGNUM (tdep) + fpreg);
 }
@@ -3415,318 +3412,197 @@ i386_mmx_regnum_to_fp_regnum (readable_regcache *regcache, int regnum)
    amd64_pseudo_register_read_value.  It does all the work but reads
    the data into an already-allocated value.  */
 
-void
-i386_pseudo_register_read_into_value (struct gdbarch *gdbarch,
-				      readable_regcache *regcache,
-				      int regnum,
-				      struct value *result_value)
+value *
+i386_pseudo_register_read_value (gdbarch *gdbarch, frame_info_ptr next_frame,
+				 const int pseudo_reg_num)
 {
-  gdb_byte raw_buf[I386_MAX_REGISTER_SIZE];
-  enum register_status status;
-  gdb_byte *buf = result_value->contents_raw ().data ();
-
-  if (i386_mmx_regnum_p (gdbarch, regnum))
+  if (i386_mmx_regnum_p (gdbarch, pseudo_reg_num))
     {
-      int fpnum = i386_mmx_regnum_to_fp_regnum (regcache, regnum);
+      int fpnum = i386_mmx_regnum_to_fp_regnum (next_frame, pseudo_reg_num);
 
       /* Extract (always little endian).  */
-      status = regcache->raw_read (fpnum, raw_buf);
-      if (status != REG_VALID)
-	result_value->mark_bytes_unavailable (0,
-					      result_value->type ()->length ());
-      else
-	memcpy (buf, raw_buf, register_size (gdbarch, regnum));
+      return pseudo_from_raw_part (next_frame, pseudo_reg_num, fpnum, 0);
     }
   else
     {
       i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
-      if (i386_bnd_regnum_p (gdbarch, regnum))
+      if (i386_bnd_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  regnum -= tdep->bnd0_regnum;
+	  int i = pseudo_reg_num - tdep->bnd0_regnum;
 
 	  /* Extract (always little endian).  Read lower 128bits.  */
-	  status = regcache->raw_read (I387_BND0R_REGNUM (tdep) + regnum,
-				       raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (0, 16);
-	  else
+	  value *bndr_value
+	    = value_of_register (I387_BND0R_REGNUM (tdep) + i, next_frame);
+	  int size = builtin_type (gdbarch)->builtin_data_ptr->length ();
+	  value *result
+	    = value::allocate_register (next_frame, pseudo_reg_num);
+
+	  /* Copy the lower. */
+	  bndr_value->contents_copy (result, 0, 0, 0, size);
+
+	  /* Copy the upper.  */
+	  bndr_value->contents_copy (result, size, 8, 0, size);
+
+	  /* If upper bytes are available, compute ones' complement.  */
+	  if (result->bytes_available (size, size))
 	    {
 	      bfd_endian byte_order
-		= gdbarch_byte_order (current_inferior ()->arch ());
-	      LONGEST upper, lower;
-	      int size = builtin_type (gdbarch)->builtin_data_ptr->length ();
-
-	      lower = extract_unsigned_integer (raw_buf, 8, byte_order);
-	      upper = extract_unsigned_integer (raw_buf + 8, 8, byte_order);
+		= gdbarch_byte_order (frame_unwind_arch (next_frame));
+	      gdb::array_view<gdb_byte> upper_bytes
+		= result->contents_raw ().slice (size, size);
+	      ULONGEST upper
+		= extract_unsigned_integer (upper_bytes, byte_order);
 	      upper = ~upper;
-
-	      memcpy (buf, &lower, size);
-	      memcpy (buf + size, &upper, size);
+	      store_unsigned_integer (upper_bytes, byte_order, upper);
 	    }
+
+	  return result;
 	}
-      else if (i386_k_regnum_p (gdbarch, regnum))
+      else if (i386_zmm_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  regnum -= tdep->k0_regnum;
+	  /* Which register is it, relative to zmm0.  */
+	  int i_0 = pseudo_reg_num - tdep->zmm0_regnum;
 
-	  /* Extract (always little endian).  */
-	  status = regcache->raw_read (tdep->k0_regnum + regnum, raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (0, 8);
-	  else
-	    memcpy (buf, raw_buf, 8);
-	}
-      else if (i386_zmm_regnum_p (gdbarch, regnum))
-	{
-	  regnum -= tdep->zmm0_regnum;
-
-	  if (regnum < num_lower_zmm_regs)
-	    {
-	      /* Extract (always little endian).  Read lower 128bits.  */
-	      status = regcache->raw_read (I387_XMM0_REGNUM (tdep) + regnum,
-					   raw_buf);
-	      if (status != REG_VALID)
-		result_value->mark_bytes_unavailable (0, 16);
-	      else
-		memcpy (buf, raw_buf, 16);
-
-	      /* Extract (always little endian).  Read upper 128bits.  */
-	      status = regcache->raw_read (tdep->ymm0h_regnum + regnum,
-					   raw_buf);
-	      if (status != REG_VALID)
-		result_value->mark_bytes_unavailable (16, 16);
-	      else
-		memcpy (buf + 16, raw_buf, 16);
-	    }
+	  if (i_0 < num_lower_zmm_regs)
+	    return pseudo_from_concat_raw (next_frame, pseudo_reg_num,
+					   I387_XMM0_REGNUM (tdep) + i_0,
+					   tdep->ymm0h_regnum + i_0,
+					   tdep->zmm0h_regnum + i_0);
 	  else
 	    {
-	      /* Extract (always little endian).  Read lower 128bits.  */
-	      status = regcache->raw_read (I387_XMM16_REGNUM (tdep) + regnum
-					   - num_lower_zmm_regs,
-					   raw_buf);
-	      if (status != REG_VALID)
-		result_value->mark_bytes_unavailable (0, 16);
-	      else
-		memcpy (buf, raw_buf, 16);
+	      /* Which register is it, relative to zmm16.  */
+	      int i_16 = i_0 - num_lower_zmm_regs;
 
-	      /* Extract (always little endian).  Read upper 128bits.  */
-	      status = regcache->raw_read (I387_YMM16H_REGNUM (tdep) + regnum
-					   - num_lower_zmm_regs,
-					   raw_buf);
-	      if (status != REG_VALID)
-		result_value->mark_bytes_unavailable (16, 16);
-	      else
-		memcpy (buf + 16, raw_buf, 16);
+	      return pseudo_from_concat_raw (next_frame, pseudo_reg_num,
+					     I387_XMM16_REGNUM (tdep) + i_16,
+					     I387_YMM16H_REGNUM (tdep) + i_16,
+					     tdep->zmm0h_regnum + i_0);
 	    }
+	}
+      else if (i386_ymm_regnum_p (gdbarch, pseudo_reg_num))
+	{
+	  int i = pseudo_reg_num - tdep->ymm0_regnum;
 
-	  /* Read upper 256bits.  */
-	  status = regcache->raw_read (tdep->zmm0h_regnum + regnum,
-				       raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (32, 32);
-	  else
-	    memcpy (buf + 32, raw_buf, 32);
+	  return pseudo_from_concat_raw (next_frame, pseudo_reg_num,
+					 I387_XMM0_REGNUM (tdep) + i,
+					 tdep->ymm0h_regnum + i);
 	}
-      else if (i386_ymm_regnum_p (gdbarch, regnum))
+      else if (i386_ymm_avx512_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  regnum -= tdep->ymm0_regnum;
+	  int i = pseudo_reg_num - tdep->ymm16_regnum;
 
-	  /* Extract (always little endian).  Read lower 128bits.  */
-	  status = regcache->raw_read (I387_XMM0_REGNUM (tdep) + regnum,
-				       raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (0, 16);
-	  else
-	    memcpy (buf, raw_buf, 16);
-	  /* Read upper 128bits.  */
-	  status = regcache->raw_read (tdep->ymm0h_regnum + regnum,
-				       raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (16, 32);
-	  else
-	    memcpy (buf + 16, raw_buf, 16);
+	  return pseudo_from_concat_raw (next_frame, pseudo_reg_num,
+					 I387_XMM16_REGNUM (tdep) + i,
+					 tdep->ymm16h_regnum + i);
 	}
-      else if (i386_ymm_avx512_regnum_p (gdbarch, regnum))
+      else if (i386_word_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  regnum -= tdep->ymm16_regnum;
-	  /* Extract (always little endian).  Read lower 128bits.  */
-	  status = regcache->raw_read (I387_XMM16_REGNUM (tdep) + regnum,
-				       raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (0, 16);
-	  else
-	    memcpy (buf, raw_buf, 16);
-	  /* Read upper 128bits.  */
-	  status = regcache->raw_read (tdep->ymm16h_regnum + regnum,
-				       raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (16, 16);
-	  else
-	    memcpy (buf + 16, raw_buf, 16);
-	}
-      else if (i386_word_regnum_p (gdbarch, regnum))
-	{
-	  int gpnum = regnum - tdep->ax_regnum;
+	  int gpnum = pseudo_reg_num - tdep->ax_regnum;
 
 	  /* Extract (always little endian).  */
-	  status = regcache->raw_read (gpnum, raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (0,
-						  result_value->type ()->length ());
-	  else
-	    memcpy (buf, raw_buf, 2);
+	  return pseudo_from_raw_part (next_frame, pseudo_reg_num, gpnum, 0);
 	}
-      else if (i386_byte_regnum_p (gdbarch, regnum))
+      else if (i386_byte_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  int gpnum = regnum - tdep->al_regnum;
+	  int gpnum = pseudo_reg_num - tdep->al_regnum;
 
 	  /* Extract (always little endian).  We read both lower and
 	     upper registers.  */
-	  status = regcache->raw_read (gpnum % 4, raw_buf);
-	  if (status != REG_VALID)
-	    result_value->mark_bytes_unavailable (0,
-						  result_value->type ()->length ());
-	  else if (gpnum >= 4)
-	    memcpy (buf, raw_buf + 1, 1);
-	  else
-	    memcpy (buf, raw_buf, 1);
+	  return pseudo_from_raw_part (next_frame, pseudo_reg_num, gpnum % 4,
+				       gpnum >= 4 ? 1 : 0);
 	}
       else
 	internal_error (_("invalid regnum"));
     }
 }
 
-static struct value *
-i386_pseudo_register_read_value (struct gdbarch *gdbarch,
-				 readable_regcache *regcache,
-				 int regnum)
-{
-  struct value *result;
-
-  result = value::allocate (register_type (gdbarch, regnum));
-  result->set_lval (lval_register);
-  VALUE_REGNUM (result) = regnum;
-
-  i386_pseudo_register_read_into_value (gdbarch, regcache, regnum, result);
-
-  return result;
-}
-
 void
-i386_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
-			    int regnum, const gdb_byte *buf)
+i386_pseudo_register_write (gdbarch *gdbarch, frame_info_ptr next_frame,
+			    const int pseudo_reg_num,
+			    gdb::array_view<const gdb_byte> buf)
 {
-  gdb_byte raw_buf[I386_MAX_REGISTER_SIZE];
-
-  if (i386_mmx_regnum_p (gdbarch, regnum))
+  if (i386_mmx_regnum_p (gdbarch, pseudo_reg_num))
     {
-      int fpnum = i386_mmx_regnum_to_fp_regnum (regcache, regnum);
+      int fpnum = i386_mmx_regnum_to_fp_regnum (next_frame, pseudo_reg_num);
 
-      /* Read ...  */
-      regcache->raw_read (fpnum, raw_buf);
-      /* ... Modify ... (always little endian).  */
-      memcpy (raw_buf, buf, register_size (gdbarch, regnum));
-      /* ... Write.  */
-      regcache->raw_write (fpnum, raw_buf);
+      pseudo_to_raw_part (next_frame, buf, fpnum, 0);
     }
   else
     {
       i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
 
-      if (i386_bnd_regnum_p (gdbarch, regnum))
+      if (i386_bnd_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  ULONGEST upper, lower;
 	  int size = builtin_type (gdbarch)->builtin_data_ptr->length ();
 	  bfd_endian byte_order
 	    = gdbarch_byte_order (current_inferior ()->arch ());
 
 	  /* New values from input value.  */
-	  regnum -= tdep->bnd0_regnum;
-	  lower = extract_unsigned_integer (buf, size, byte_order);
-	  upper = extract_unsigned_integer (buf + size, size, byte_order);
+	  int reg_index = pseudo_reg_num - tdep->bnd0_regnum;
+	  int raw_regnum = I387_BND0R_REGNUM (tdep) + reg_index;
 
-	  /* Fetching register buffer.  */
-	  regcache->raw_read (I387_BND0R_REGNUM (tdep) + regnum,
-			      raw_buf);
+	  value *bndr_value = value_of_register (raw_regnum, next_frame);
+	  gdb::array_view<gdb_byte> bndr_view
+	    = bndr_value->contents_writeable ();
 
+	  /* Copy lower bytes directly.  */
+	  copy (buf.slice (0, size), bndr_view.slice (0, size));
+
+	  /* Convert and then copy upper bytes.  */
+	  ULONGEST upper
+	    = extract_unsigned_integer (buf.slice (size, size), byte_order);
 	  upper = ~upper;
+	  store_unsigned_integer (bndr_view.slice (8, size), byte_order,
+				  upper);
 
-	  /* Set register bits.  */
-	  memcpy (raw_buf, &lower, 8);
-	  memcpy (raw_buf + 8, &upper, 8);
-
-	  regcache->raw_write (I387_BND0R_REGNUM (tdep) + regnum, raw_buf);
+	  put_frame_register (next_frame, raw_regnum, bndr_view);
 	}
-      else if (i386_k_regnum_p (gdbarch, regnum))
+      else if (i386_zmm_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  regnum -= tdep->k0_regnum;
+	  /* Which register is it, relative to zmm0.  */
+	  int reg_index_0 = pseudo_reg_num - tdep->zmm0_regnum;
 
-	  regcache->raw_write (tdep->k0_regnum + regnum, buf);
-	}
-      else if (i386_zmm_regnum_p (gdbarch, regnum))
-	{
-	  regnum -= tdep->zmm0_regnum;
-
-	  if (regnum < num_lower_zmm_regs)
-	    {
-	      /* Write lower 128bits.  */
-	      regcache->raw_write (I387_XMM0_REGNUM (tdep) + regnum, buf);
-	      /* Write upper 128bits.  */
-	      regcache->raw_write (I387_YMM0_REGNUM (tdep) + regnum, buf + 16);
-	    }
+	  if (reg_index_0 < num_lower_zmm_regs)
+	    pseudo_to_concat_raw (next_frame, buf,
+				  I387_XMM0_REGNUM (tdep) + reg_index_0,
+				  I387_YMM0_REGNUM (tdep) + reg_index_0,
+				  tdep->zmm0h_regnum + reg_index_0);
 	  else
 	    {
-	      /* Write lower 128bits.  */
-	      regcache->raw_write (I387_XMM16_REGNUM (tdep) + regnum
-				   - num_lower_zmm_regs, buf);
-	      /* Write upper 128bits.  */
-	      regcache->raw_write (I387_YMM16H_REGNUM (tdep) + regnum
-				   - num_lower_zmm_regs, buf + 16);
+	      /* Which register is it, relative to zmm16.  */
+	      int reg_index_16 = reg_index_0 - num_lower_zmm_regs;
+
+	      pseudo_to_concat_raw (next_frame, buf,
+				    I387_XMM16_REGNUM (tdep) + reg_index_16,
+				    I387_YMM16H_REGNUM (tdep) + reg_index_16,
+				    tdep->zmm0h_regnum + +reg_index_0);
 	    }
-	  /* Write upper 256bits.  */
-	  regcache->raw_write (tdep->zmm0h_regnum + regnum, buf + 32);
 	}
-      else if (i386_ymm_regnum_p (gdbarch, regnum))
+      else if (i386_ymm_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  regnum -= tdep->ymm0_regnum;
+	  int i = pseudo_reg_num - tdep->ymm0_regnum;
 
-	  /* ... Write lower 128bits.  */
-	  regcache->raw_write (I387_XMM0_REGNUM (tdep) + regnum, buf);
-	  /* ... Write upper 128bits.  */
-	  regcache->raw_write (tdep->ymm0h_regnum + regnum, buf + 16);
+	  pseudo_to_concat_raw (next_frame, buf, I387_XMM0_REGNUM (tdep) + i,
+				tdep->ymm0h_regnum + i);
 	}
-      else if (i386_ymm_avx512_regnum_p (gdbarch, regnum))
+      else if (i386_ymm_avx512_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  regnum -= tdep->ymm16_regnum;
+	  int i = pseudo_reg_num - tdep->ymm16_regnum;
 
-	  /* ... Write lower 128bits.  */
-	  regcache->raw_write (I387_XMM16_REGNUM (tdep) + regnum, buf);
-	  /* ... Write upper 128bits.  */
-	  regcache->raw_write (tdep->ymm16h_regnum + regnum, buf + 16);
+	  pseudo_to_concat_raw (next_frame, buf, I387_XMM16_REGNUM (tdep) + i,
+				tdep->ymm16h_regnum + i);
 	}
-      else if (i386_word_regnum_p (gdbarch, regnum))
+      else if (i386_word_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  int gpnum = regnum - tdep->ax_regnum;
+	  int gpnum = pseudo_reg_num - tdep->ax_regnum;
 
-	  /* Read ...  */
-	  regcache->raw_read (gpnum, raw_buf);
-	  /* ... Modify ... (always little endian).  */
-	  memcpy (raw_buf, buf, 2);
-	  /* ... Write.  */
-	  regcache->raw_write (gpnum, raw_buf);
+	  pseudo_to_raw_part (next_frame, buf, gpnum, 0);
 	}
-      else if (i386_byte_regnum_p (gdbarch, regnum))
+      else if (i386_byte_regnum_p (gdbarch, pseudo_reg_num))
 	{
-	  int gpnum = regnum - tdep->al_regnum;
+	  int gpnum = pseudo_reg_num - tdep->al_regnum;
 
-	  /* Read ...  We read both lower and upper registers.  */
-	  regcache->raw_read (gpnum % 4, raw_buf);
-	  /* ... Modify ... (always little endian).  */
-	  if (gpnum >= 4)
-	    memcpy (raw_buf + 1, buf, 1);
-	  else
-	    memcpy (raw_buf, buf, 1);
-	  /* ... Write.  */
-	  regcache->raw_write (gpnum % 4, raw_buf);
+	  pseudo_to_raw_part (next_frame, buf, gpnum % 4, gpnum >= 4 ? 1 : 0);
 	}
       else
 	internal_error (_("invalid regnum"));
@@ -3756,12 +3632,6 @@ i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
     {
       regnum -= tdep->bnd0_regnum;
       ax_reg_mask (ax, I387_BND0R_REGNUM (tdep) + regnum);
-      return 0;
-    }
-  else if (i386_k_regnum_p (gdbarch, regnum))
-    {
-      regnum -= tdep->k0_regnum;
-      ax_reg_mask (ax, tdep->k0_regnum + regnum);
       return 0;
     }
   else if (i386_zmm_regnum_p (gdbarch, regnum))
@@ -3900,10 +3770,10 @@ i386_register_to_value (frame_info_ptr frame, int regnum,
       gdb_assert (regnum != -1);
       gdb_assert (register_size (gdbarch, regnum) == 4);
 
-      if (!get_frame_register_bytes (frame, regnum, 0,
-				     gdb::make_array_view (to,
-							register_size (gdbarch,
-								       regnum)),
+      auto to_view
+	= gdb::make_array_view (to, register_size (gdbarch, regnum));
+      frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
+      if (!get_frame_register_bytes (next_frame, regnum, 0, to_view,
 				     optimizedp, unavailablep))
 	return 0;
 
@@ -3940,7 +3810,9 @@ i386_value_to_register (frame_info_ptr frame, int regnum,
       gdb_assert (regnum != -1);
       gdb_assert (register_size (get_frame_arch (frame), regnum) == 4);
 
-      put_frame_register (frame, regnum, from);
+      auto from_view = gdb::make_array_view (from, 4);
+      put_frame_register (get_next_frame_sentinel_okay (frame), regnum,
+			  from_view);
       regnum = i386_next_regnum (regnum);
       len -= 4;
       from += 4;

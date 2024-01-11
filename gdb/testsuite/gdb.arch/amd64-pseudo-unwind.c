@@ -1,6 +1,4 @@
-/* Cache and manage the values of registers for GDB, the GNU debugger.
-
-   Copyright (C) 2015-2023 Free Software Foundation, Inc.
+/* Copyright 2018-2023 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,20 +15,19 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "common-defs.h"
-#include "common-regcache.h"
+#include <stdint.h>
 
-/* Return the register's value or throw if it's not available.  */
+uint64_t caller (void);
 
-ULONGEST
-regcache_raw_get_unsigned (reg_buffer_common *regcache, int regnum)
+static void
+break_here_c (uint64_t value)
 {
-  ULONGEST value;
-  enum register_status status;
+}
 
-  status = regcache_raw_read_unsigned (regcache, regnum, &value);
-  if (status == REG_UNAVAILABLE)
-    throw_error (NOT_AVAILABLE_ERROR,
-		 _("Register %d is not available"), regnum);
-  return value;
+int
+main (void)
+{
+  uint64_t value = caller ();
+  break_here_c (value);
+  return 0;
 }

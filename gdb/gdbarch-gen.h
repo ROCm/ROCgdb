@@ -196,15 +196,35 @@ extern void set_gdbarch_pseudo_register_read (struct gdbarch *gdbarch, gdbarch_p
 
 extern bool gdbarch_pseudo_register_read_value_p (struct gdbarch *gdbarch);
 
-typedef struct value * (gdbarch_pseudo_register_read_value_ftype) (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum);
-extern struct value * gdbarch_pseudo_register_read_value (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum);
+typedef struct value * (gdbarch_pseudo_register_read_value_ftype) (struct gdbarch *gdbarch, frame_info_ptr next_frame, int cookednum);
+extern struct value * gdbarch_pseudo_register_read_value (struct gdbarch *gdbarch, frame_info_ptr next_frame, int cookednum);
 extern void set_gdbarch_pseudo_register_read_value (struct gdbarch *gdbarch, gdbarch_pseudo_register_read_value_ftype *pseudo_register_read_value);
+
+/* Write bytes in BUF to pseudo register with number PSEUDO_REG_NUM.
+
+   Raw registers backing the pseudo register should be written to using
+   NEXT_FRAME. */
 
 extern bool gdbarch_pseudo_register_write_p (struct gdbarch *gdbarch);
 
-typedef void (gdbarch_pseudo_register_write_ftype) (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, const gdb_byte *buf);
-extern void gdbarch_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, const gdb_byte *buf);
+typedef void (gdbarch_pseudo_register_write_ftype) (struct gdbarch *gdbarch, frame_info_ptr next_frame, int pseudo_reg_num, gdb::array_view<const gdb_byte> buf);
+extern void gdbarch_pseudo_register_write (struct gdbarch *gdbarch, frame_info_ptr next_frame, int pseudo_reg_num, gdb::array_view<const gdb_byte> buf);
 extern void set_gdbarch_pseudo_register_write (struct gdbarch *gdbarch, gdbarch_pseudo_register_write_ftype *pseudo_register_write);
+
+/* Write bytes to a pseudo register.
+
+   This is marked as deprecated because it gets passed a regcache for
+   implementations to write raw registers in.  This doesn't work for unwound
+   frames, where the raw registers backing the pseudo registers may have been
+   saved elsewhere.
+
+   Implementations should be migrated to implement pseudo_register_write instead. */
+
+extern bool gdbarch_deprecated_pseudo_register_write_p (struct gdbarch *gdbarch);
+
+typedef void (gdbarch_deprecated_pseudo_register_write_ftype) (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, const gdb_byte *buf);
+extern void gdbarch_deprecated_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, const gdb_byte *buf);
+extern void set_gdbarch_deprecated_pseudo_register_write (struct gdbarch *gdbarch, gdbarch_deprecated_pseudo_register_write_ftype *deprecated_pseudo_register_write);
 
 extern int gdbarch_num_regs (struct gdbarch *gdbarch);
 extern void set_gdbarch_num_regs (struct gdbarch *gdbarch, int num_regs);

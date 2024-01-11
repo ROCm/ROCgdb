@@ -948,17 +948,18 @@ mips_register_to_value (frame_info_ptr frame, int regnum,
 			int *optimizedp, int *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
 
   if (mips_convert_register_float_case_p (gdbarch, regnum, type))
     {
       get_frame_register (frame, regnum + 0, to + 4);
       get_frame_register (frame, regnum + 1, to + 0);
 
-      if (!get_frame_register_bytes (frame, regnum + 0, 0, {to + 4, 4},
+      if (!get_frame_register_bytes (next_frame, regnum + 0, 0, { to + 4, 4 },
 				     optimizedp, unavailablep))
 	return 0;
 
-      if (!get_frame_register_bytes (frame, regnum + 1, 0, {to + 0, 4},
+      if (!get_frame_register_bytes (next_frame, regnum + 1, 0, { to + 0, 4 },
 				     optimizedp, unavailablep))
 	return 0;
       *optimizedp = *unavailablep = 0;
@@ -970,7 +971,7 @@ mips_register_to_value (frame_info_ptr frame, int regnum,
       CORE_ADDR offset;
 
       offset = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG ? 8 - len : 0;
-      if (!get_frame_register_bytes (frame, regnum, offset, {to, len},
+      if (!get_frame_register_bytes (next_frame, regnum, offset, { to, len },
 				     optimizedp, unavailablep))
 	return 0;
 
@@ -991,14 +992,17 @@ mips_value_to_register (frame_info_ptr frame, int regnum,
 
   if (mips_convert_register_float_case_p (gdbarch, regnum, type))
     {
-      put_frame_register (frame, regnum + 0, from + 4);
-      put_frame_register (frame, regnum + 1, from + 0);
+      auto from_view = gdb::make_array_view (from, 8);
+      frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
+      put_frame_register (next_frame, regnum, from_view.slice (4));
+      put_frame_register (next_frame, regnum + 1, from_view.slice (0, 4));
     }
   else if (mips_convert_register_gpreg_case_p (gdbarch, regnum, type))
     {
       gdb_byte fill[8];
       size_t len = type->length ();
-      
+      frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
+
       /* Sign extend values, irrespective of type, that are stored to 
 	 a 64-bit general purpose register.  (32-bit unsigned values
 	 are stored as signed quantities within a 64-bit register.
@@ -1011,8 +1015,8 @@ mips_value_to_register (frame_info_ptr frame, int regnum,
 	    store_signed_integer (fill, 8, BFD_ENDIAN_BIG, -1);
 	  else
 	    store_signed_integer (fill, 8, BFD_ENDIAN_BIG, 0);
-	  put_frame_register_bytes (frame, regnum, 0, {fill, 8 - len});
-	  put_frame_register_bytes (frame, regnum, 8 - len, {from, len});
+	  put_frame_register_bytes (next_frame, regnum, 0, {fill, 8 - len});
+	  put_frame_register_bytes (next_frame, regnum, 8 - len, {from, len});
 	}
       else
 	{
@@ -1020,8 +1024,8 @@ mips_value_to_register (frame_info_ptr frame, int regnum,
 	    store_signed_integer (fill, 8, BFD_ENDIAN_LITTLE, -1);
 	  else
 	    store_signed_integer (fill, 8, BFD_ENDIAN_LITTLE, 0);
-	  put_frame_register_bytes (frame, regnum, 0, {from, len});
-	  put_frame_register_bytes (frame, regnum, len, {fill, 8 - len});
+	  put_frame_register_bytes (next_frame, regnum, 0, {from, len});
+	  put_frame_register_bytes (next_frame, regnum, len, {fill, 8 - len});
 	}
     }
   else
@@ -8075,7 +8079,7 @@ static struct value *
 value_of_mips_user_reg (frame_info_ptr frame, const void *baton)
 {
   const int *reg_p = (const int *) baton;
-  return value_of_register (*reg_p, frame);
+  return value_of_register (*reg_p, get_next_frame_sentinel_okay (frame));
 }
 
 static struct gdbarch *
@@ -8516,7 +8520,8 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_double_bit (gdbarch, 64);
   set_gdbarch_register_reggroup_p (gdbarch, mips_register_reggroup_p);
   set_gdbarch_pseudo_register_read (gdbarch, mips_pseudo_register_read);
-  set_gdbarch_pseudo_register_write (gdbarch, mips_pseudo_register_write);
+  set_gdbarch_deprecated_pseudo_register_write (gdbarch,
+						mips_pseudo_register_write);
 
   set_gdbarch_ax_pseudo_register_collect (gdbarch,
 					  mips_ax_pseudo_register_collect);

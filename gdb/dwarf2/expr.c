@@ -148,8 +148,9 @@ read_from_register (frame_info_ptr frame, int regnum,
   CORE_ADDR address;
   int realnum;
 
-  frame_register (frame, regnum, optimized, unavailable,
-		  &lval, &address, &realnum, temp_buf.data ());
+  frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
+			 optimized, unavailable, &lval, &address, &realnum,
+			 temp_buf.data ());
 
   if (!*optimized && !*unavailable)
      memcpy (buf.data (), (char *) temp_buf.data () + offset, length);
@@ -191,14 +192,15 @@ write_to_register (frame_info_ptr frame, int regnum,
   CORE_ADDR address;
   int realnum;
 
-  frame_register (frame, regnum, optimized, unavailable,
-		  &lval, &address, &realnum, temp_buf.data ());
+  frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
+			 optimized, unavailable, &lval, &address, &realnum,
+			 temp_buf.data ());
 
   if (!*optimized && !*unavailable)
     {
       memcpy ((char *) temp_buf.data () + offset, buf.data (), length);
 
-      put_frame_register (frame, regnum, temp_buf.data ());
+      put_frame_register (frame, regnum, temp_buf);
     }
 
   return;
