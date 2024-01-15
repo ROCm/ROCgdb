@@ -869,7 +869,6 @@ address_from_register (int regnum, frame_info_ptr frame)
   /* FIXME: Here we need a way for an arch to give back the
 	    matching pointer type depending on the address space.  */
   type *type = register_type (get_frame_arch (frame), regnum);
-  //type *type = builtin_type (get_frame_arch (frame))->builtin_data_ptr;
   value_ref_ptr v = release_value (value_from_register (type, regnum, frame));
 
   if (v->optimized_out ())
