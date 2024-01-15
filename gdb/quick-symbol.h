@@ -185,17 +185,12 @@ struct quick_symbol_functions
 	gdb::function_view<symbol_filename_ftype> fun,
 	bool need_fullname) = 0;
 
-  /* Return true if this class can lazily read the symbols.  This may
-     only return true if there are in fact symbols to be read, because
-     this is used in the implementation of 'has_partial_symbols'.  */
-  virtual bool can_lazily_read_symbols ()
-  {
-    return false;
-  }
-
-  /* Read the partial symbols for OBJFILE.  This will only ever be
-     called if can_lazily_read_symbols returns true.  */
-  virtual void read_partial_symbols (struct objfile *objfile)
+  /* Compute the name and language of the main function for the given
+     objfile.  Normally this is done during symbol reading, but this
+     method exists in case this work is done in a worker thread and
+     must be waited for.  The implementation can call
+     set_objfile_main_name if results are found.  */
+  virtual void compute_main_name (struct objfile *objfile)
   {
   }
 };

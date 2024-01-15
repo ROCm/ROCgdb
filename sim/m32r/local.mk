@@ -16,9 +16,6 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-## Some modules don't build cleanly yet.
-AM_CFLAGS_%C%_traps.o = -Wno-error
-
 nodist_%C%_libsim_a_SOURCES = \
 	%D%/modules.c
 %C%_libsim_a_SOURCES = \
@@ -122,6 +119,7 @@ BUILT_SOURCES += \
 	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change %D%/mloop2.cin %D%/mloop2.c
 	$(AM_V_at)touch $@
 
+CLEANFILES += %D%/eng.h %D%/engx.h %D%/eng2.h
 MOSTLYCLEANFILES += $(%C%_BUILD_OUTPUTS)
 
 ## Target that triggers all cgen targets that works when --disable-cgen-maint.

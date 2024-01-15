@@ -1,4 +1,4 @@
-@c Copyright (C) 1991-2023 Free Software Foundation, Inc.
+@c Copyright (C) 1991-2024 Free Software Foundation, Inc.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
 @c man end
@@ -125,6 +125,7 @@ processor names are recognized:
 @code{znver2},
 @code{znver3},
 @code{znver4},
+@code{znver5},
 @code{btver1},
 @code{btver2},
 @code{generic32} and
@@ -217,6 +218,7 @@ accept various extension mnemonics.  For example,
 @code{avx10.1/256},
 @code{avx10.1/128},
 @code{user_msr},
+@code{apx_f},
 @code{amx_int8},
 @code{amx_bf16},
 @code{amx_fp16},
@@ -984,6 +986,10 @@ instructions (x86-64 only).  Note that this differs from the @samp{rex}
 prefix which generates REX prefix unconditionally.
 
 @item
+@samp{@{rex2@}} -- prefer REX2 prefix for integer and legacy vector
+instructions (APX_F only).
+
+@item
 @samp{@{nooptimize@}} -- disable instruction size optimization.
 @end itemize
 
@@ -1627,7 +1633,8 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{k6} @tab @samp{k6_2} @tab @samp{athlon} @tab @samp{k8}
 @item @samp{amdfam10} @tab @samp{bdver1} @tab @samp{bdver2} @tab @samp{bdver3}
 @item @samp{bdver4} @tab @samp{znver1} @tab @samp{znver2} @tab @samp{znver3}
-@item @samp{znver4} @tab @samp{btver1} @tab @samp{btver2} @tab @samp{generic32}
+@item @samp{znver4} @tab @samp{znver5} @tab @samp{btver1} @tab @samp{btver2}
+@item @samp{generic32}
 @item @samp{generic64} @tab @samp{.cmov} @tab @samp{.fxsr} @tab @samp{.mmx}
 @item @samp{.sse} @tab @samp{.sse2} @tab @samp{.sse3} @tab @samp{.sse4a}
 @item @samp{.ssse3} @tab @samp{.sse4.1} @tab @samp{.sse4.2} @tab @samp{.sse4}
@@ -1663,7 +1670,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.lwp} @tab @samp{.fma4} @tab @samp{.xop} @tab @samp{.cx16}
 @item @samp{.padlock} @tab @samp{.clzero} @tab @samp{.mwaitx} @tab @samp{.rdpru}
 @item @samp{.mcommit} @tab @samp{.sev_es} @tab @samp{.snp} @tab @samp{.invlpgb}
-@item @samp{.tlbsync}
+@item @samp{.tlbsync} @tab @samp{.apx_f}
 @end multitable
 
 Apart from the warning, there are only two other effects on
@@ -1722,7 +1729,7 @@ syntax.
 
 @item @samp{lfs}, @samp{lgs}, and @samp{lss} similarly allow for 16-
 and 32-bit operand size (32- and 48-bit memory operand) in both ISAs,
-while Intel64 additionally supports 64-bit operand sise (80-bit memory
+while Intel64 additionally supports 64-bit operand size (80-bit memory
 operands).
 
 @end itemize

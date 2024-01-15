@@ -356,6 +356,10 @@ struct thread_object
 
   /* The Inferior object to which this thread belongs.  */
   PyObject *inf_obj;
+
+  /* Dictionary holding user-added attributes.  This is the __dict__
+     attribute of the object.  */
+  PyObject *dict;
 };
 
 struct inferior_object;
@@ -896,6 +900,15 @@ PyObject *gdb_py_generic_dict (PyObject *self, void *closure);
 int gdb_pymodule_addobject (PyObject *module, const char *name,
 			    PyObject *object)
   CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+
+
+/* Return a Python string (str) object that represents SELF.  SELF can be
+   any object type, but should be in an "invalid" state.  What "invalid"
+   means is up to the caller.  The returned string will take the form
+   "<TYPENAME (invalid)>", without the quotes, and with TYPENAME replaced
+   with the type of SELF.  */
+
+PyObject *gdb_py_invalid_object_repr (PyObject *self);
 
 struct varobj_iter;
 struct varobj;

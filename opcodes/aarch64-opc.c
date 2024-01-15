@@ -1,5 +1,5 @@
 /* aarch64-opc.c -- AArch64 opcode support.
-   Copyright (C) 2009-2023 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of the GNU opcodes library.
@@ -1693,10 +1693,24 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
   switch (aarch64_operands[type].op_class)
     {
     case AARCH64_OPND_CLASS_INT_REG:
-      /* Check pair reg constraints for cas* instructions.  */
-      if (type == AARCH64_OPND_PAIRREG)
+      /* Check for pair of xzr registers.  */
+      if (type == AARCH64_OPND_PAIRREG_OR_XZR
+	  && opnds[idx - 1].reg.regno == 0x1f)
 	{
-	  assert (idx == 1 || idx == 3);
+	  if (opnds[idx].reg.regno != 0x1f)
+	    {
+	      set_syntax_error (mismatch_detail, idx - 1,
+				_("second reg in pair should be xzr if first is"
+				  " xzr"));
+	      return 0;
+	    }
+	}
+      /* Check pair reg constraints for instructions taking a pair of
+	 consecutively-numbered general-purpose registers.  */
+      else if (type == AARCH64_OPND_PAIRREG
+	       || type == AARCH64_OPND_PAIRREG_OR_XZR)
+	{
+	  assert (idx == 1 || idx == 2 || idx == 3 || idx == 5);
 	  if (opnds[idx - 1].reg.regno % 2 != 0)
 	    {
 	      set_syntax_error (mismatch_detail, idx - 1,
@@ -3771,6 +3785,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_Rt_LS64:
     case AARCH64_OPND_Rt_SYS:
     case AARCH64_OPND_PAIRREG:
+    case AARCH64_OPND_PAIRREG_OR_XZR:
     case AARCH64_OPND_SVE_Rm:
     case AARCH64_OPND_LSE128_Rt:
     case AARCH64_OPND_LSE128_Rt2:
@@ -4499,6 +4514,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_SYSREG:
+    case AARCH64_OPND_SYSREG128:
       for (i = 0; aarch64_sys_regs[i].name; ++i)
 	{
 	  const aarch64_sys_reg *sr = aarch64_sys_regs + i;
@@ -4709,6 +4725,12 @@ aarch64_sys_reg_deprecated_p (const uint32_t reg_flags)
 }
 
 bool
+aarch64_sys_reg_128bit_p (const uint32_t reg_flags)
+{
+  return (reg_flags & F_REG_128) != 0;
+}
+
+bool
 aarch64_sys_reg_alias_p (const uint32_t reg_flags)
 {
   return (reg_flags & F_REG_ALIAS) != 0;
@@ -4904,6 +4926,67 @@ const aarch64_sys_ins_reg aarch64_sys_regs_tlbi[] =
     { "paallos",    CPENS (6, C8, C1, 4), 0},
     { "paall",      CPENS (6, C8, C7, 4), 0},
 
+    { "vae1osnxs",      CPENS (0, C9, C1, 1), F_HASXT | F_ARCHEXT },
+    { "vaae1osnxs",     CPENS (0, C9, C1, 3), F_HASXT | F_ARCHEXT },
+    { "vale1osnxs",     CPENS (0, C9, C1, 5), F_HASXT | F_ARCHEXT },
+    { "vaale1osnxs",    CPENS (0, C9, C1, 7), F_HASXT | F_ARCHEXT },
+    { "rvae1isnxs",     CPENS (0, C9, C2, 1), F_HASXT | F_ARCHEXT },
+    { "rvaae1isnxs",    CPENS (0, C9, C2, 3), F_HASXT | F_ARCHEXT },
+    { "rvale1isnxs",    CPENS (0, C9, C2, 5), F_HASXT | F_ARCHEXT },
+    { "rvaale1isnxs",   CPENS (0, C9, C2, 7), F_HASXT | F_ARCHEXT },
+    { "vae1isnxs",      CPENS (0, C9, C3, 1), F_HASXT },
+    { "vaae1isnxs",     CPENS (0, C9, C3, 3), F_HASXT },
+    { "vale1isnxs",     CPENS (0, C9, C3, 5), F_HASXT },
+    { "vaale1isnxs",    CPENS (0, C9, C3, 7), F_HASXT },
+    { "rvae1osnxs",     CPENS (0, C9, C5, 1), F_HASXT | F_ARCHEXT },
+    { "rvaae1osnxs",    CPENS (0, C9, C5, 3), F_HASXT | F_ARCHEXT },
+    { "rvale1osnxs",    CPENS (0, C9, C5, 5), F_HASXT | F_ARCHEXT },
+    { "rvaale1osnxs",   CPENS (0, C9, C5, 7), F_HASXT | F_ARCHEXT },
+    { "rvae1nxs",       CPENS (0, C9, C6, 1), F_HASXT | F_ARCHEXT },
+    { "rvaae1nxs",      CPENS (0, C9, C6, 3), F_HASXT | F_ARCHEXT },
+    { "rvale1nxs",      CPENS (0, C9, C6, 5), F_HASXT | F_ARCHEXT },
+    { "rvaale1nxs",     CPENS (0, C9, C6, 7), F_HASXT | F_ARCHEXT },
+    { "vae1nxs",        CPENS (0, C9, C7, 1), F_HASXT },
+    { "vaae1nxs",       CPENS (0, C9, C7, 3), F_HASXT },
+    { "vale1nxs",       CPENS (0, C9, C7, 5), F_HASXT },
+    { "vaale1nxs",      CPENS (0, C9, C7, 7), F_HASXT },
+    { "ipas2e1isnxs",   CPENS (4, C9, C0, 1), F_HASXT },
+    { "ripas2e1isnxs",  CPENS (4, C9, C0, 2), F_HASXT | F_ARCHEXT },
+    { "ipas2le1isnxs",  CPENS (4, C9, C0, 5), F_HASXT },
+    { "ripas2le1isnxs", CPENS (4, C9, C0, 6), F_HASXT | F_ARCHEXT },
+    { "vae2osnxs",      CPENS (4, C9, C1, 1), F_HASXT | F_ARCHEXT },
+    { "vale2osnxs",     CPENS (4, C9, C1, 5), F_HASXT | F_ARCHEXT },
+    { "rvae2isnxs",     CPENS (4, C9, C2, 1), F_HASXT | F_ARCHEXT },
+    { "rvale2isnxs",    CPENS (4, C9, C2, 5), F_HASXT | F_ARCHEXT },
+    { "vae2isnxs",      CPENS (4, C9, C3, 1), F_HASXT },
+    { "vale2isnxs",     CPENS (4, C9, C3, 5), F_HASXT },
+    { "ipas2e1osnxs",   CPENS (4, C9, C4, 0), F_HASXT | F_ARCHEXT },
+    { "ipas2e1nxs",     CPENS (4, C9, C4, 1), F_HASXT },
+    { "ripas2e1nxs",    CPENS (4, C9, C4, 2), F_HASXT | F_ARCHEXT },
+    { "ripas2e1osnxs",  CPENS (4, C9, C4, 3), F_HASXT | F_ARCHEXT },
+    { "ipas2le1osnxs",  CPENS (4, C9, C4, 4), F_HASXT | F_ARCHEXT },
+    { "ipas2le1nxs",    CPENS (4, C9, C4, 5), F_HASXT },
+    { "ripas2le1nxs",   CPENS (4, C9, C4, 6), F_HASXT | F_ARCHEXT },
+    { "ripas2le1osnxs", CPENS (4, C9, C4, 7), F_HASXT | F_ARCHEXT },
+    { "rvae2osnxs",     CPENS (4, C9, C5, 1), F_HASXT | F_ARCHEXT },
+    { "rvale2osnxs",    CPENS (4, C9, C5, 5), F_HASXT | F_ARCHEXT },
+    { "rvae2nxs",       CPENS (4, C9, C6, 1), F_HASXT | F_ARCHEXT },
+    { "rvale2nxs",      CPENS (4, C9, C6, 5), F_HASXT | F_ARCHEXT },
+    { "vae2nxs",        CPENS (4, C9, C7, 1), F_HASXT },
+    { "vale2nxs",       CPENS (4, C9, C7, 5), F_HASXT },
+    { "vae3osnxs",      CPENS (6, C9, C1, 1), F_HASXT | F_ARCHEXT },
+    { "vale3osnxs",     CPENS (6, C9, C1, 5), F_HASXT | F_ARCHEXT },
+    { "rvae3isnxs",     CPENS (6, C9, C2, 1), F_HASXT | F_ARCHEXT },
+    { "rvale3isnxs",    CPENS (6, C9, C2, 5), F_HASXT | F_ARCHEXT },
+    { "vae3isnxs",      CPENS (6, C9, C3, 1), F_HASXT },
+    { "vale3isnxs",     CPENS (6, C9, C3, 5), F_HASXT },
+    { "rvae3osnxs",     CPENS (6, C9, C5, 1), F_HASXT | F_ARCHEXT },
+    { "rvale3osnxs",    CPENS (6, C9, C5, 5), F_HASXT | F_ARCHEXT },
+    { "rvae3nxs",       CPENS (6, C9, C6, 1), F_HASXT | F_ARCHEXT },
+    { "rvale3nxs",      CPENS (6, C9, C6, 5), F_HASXT | F_ARCHEXT },
+    { "vae3nxs",        CPENS (6, C9, C7, 1), F_HASXT },
+    { "vale3nxs",       CPENS (6, C9, C7, 5), F_HASXT },
+
     { 0,       CPENS(0,0,0,0), 0 }
 };
 
@@ -5026,6 +5109,69 @@ aarch64_sys_ins_reg_supported_p (const aarch64_feature_set features,
        || reg_value == CPENS (3, C7, C14, 5)
        || reg_value == CPENS (3, C7, C4, 4))
       && AARCH64_CPU_HAS_FEATURE (features, MEMTAG))
+    return true;
+
+  if ((reg_value == CPENS (0, C9, C1, 1)
+       || reg_value == CPENS (0, C9, C1, 3)
+       || reg_value == CPENS (0, C9, C1, 5)
+       || reg_value == CPENS (0, C9, C1, 7)
+       || reg_value == CPENS (0, C9, C2, 1)
+       || reg_value == CPENS (0, C9, C2, 3)
+       || reg_value == CPENS (0, C9, C2, 5)
+       || reg_value == CPENS (0, C9, C2, 7)
+       || reg_value == CPENS (0, C9, C3, 1)
+       || reg_value == CPENS (0, C9, C3, 3)
+       || reg_value == CPENS (0, C9, C3, 5)
+       || reg_value == CPENS (0, C9, C3, 7)
+       || reg_value == CPENS (0, C9, C5, 1)
+       || reg_value == CPENS (0, C9, C5, 3)
+       || reg_value == CPENS (0, C9, C5, 5)
+       || reg_value == CPENS (0, C9, C5, 7)
+       || reg_value == CPENS (0, C9, C6, 1)
+       || reg_value == CPENS (0, C9, C6, 3)
+       || reg_value == CPENS (0, C9, C6, 5)
+       || reg_value == CPENS (0, C9, C6, 7)
+       || reg_value == CPENS (0, C9, C7, 1)
+       || reg_value == CPENS (0, C9, C7, 3)
+       || reg_value == CPENS (0, C9, C7, 5)
+       || reg_value == CPENS (0, C9, C7, 7)
+       || reg_value == CPENS (4, C9, C0, 1)
+       || reg_value == CPENS (4, C9, C0, 2)
+       || reg_value == CPENS (4, C9, C0, 5)
+       || reg_value == CPENS (4, C9, C0, 6)
+       || reg_value == CPENS (4, C9, C1, 1)
+       || reg_value == CPENS (4, C9, C1, 5)
+       || reg_value == CPENS (4, C9, C2, 1)
+       || reg_value == CPENS (4, C9, C2, 5)
+       || reg_value == CPENS (4, C9, C3, 1)
+       || reg_value == CPENS (4, C9, C3, 5)
+       || reg_value == CPENS (4, C9, C4, 0)
+       || reg_value == CPENS (4, C9, C4, 1)
+       || reg_value == CPENS (4, C9, C4, 2)
+       || reg_value == CPENS (4, C9, C4, 3)
+       || reg_value == CPENS (4, C9, C4, 4)
+       || reg_value == CPENS (4, C9, C4, 5)
+       || reg_value == CPENS (4, C9, C4, 6)
+       || reg_value == CPENS (4, C9, C4, 7)
+       || reg_value == CPENS (4, C9, C5, 1)
+       || reg_value == CPENS (4, C9, C5, 5)
+       || reg_value == CPENS (4, C9, C6, 1)
+       || reg_value == CPENS (4, C9, C6, 5)
+       || reg_value == CPENS (4, C9, C7, 1)
+       || reg_value == CPENS (4, C9, C7, 5)
+       || reg_value == CPENS (6, C9, C1, 1)
+       || reg_value == CPENS (6, C9, C1, 5)
+       || reg_value == CPENS (6, C9, C2, 1)
+       || reg_value == CPENS (6, C9, C2, 5)
+       || reg_value == CPENS (6, C9, C3, 1)
+       || reg_value == CPENS (6, C9, C3, 5)
+       || reg_value == CPENS (6, C9, C5, 1)
+       || reg_value == CPENS (6, C9, C5, 5)
+       || reg_value == CPENS (6, C9, C6, 1)
+       || reg_value == CPENS (6, C9, C6, 5)
+       || reg_value == CPENS (6, C9, C7, 1)
+       || reg_value == CPENS (6, C9, C7, 5))
+      && AARCH64_CPU_HAS_FEATURE (features, XS))
     return true;
 
   /* AT S1E1RP, AT S1E1WP.  Values are from aarch64_sys_regs_at.  */

@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2023 Free Software Foundation, Inc.
+# Copyright (C) 2012-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -204,6 +204,7 @@ if [gas_32_check] then {
     run_dump_test "arch-13-znver2"
     run_dump_test "arch-14-znver3"
     run_dump_test "arch-14-znver4"
+    run_dump_test "arch-15-znver5"
     run_dump_test "arch-10-btver1"
     run_dump_test "arch-10-btver2"
     run_list_test "arch-10-1" "-march=generic32 -I${srcdir}/$subdir -al"
@@ -217,6 +218,7 @@ if [gas_32_check] then {
     run_dump_test "arch-13"
     run_dump_test "arch-14"
     run_dump_test "arch-14-1"
+    run_dump_test "arch-15"
     run_list_test "arch-dflt" "-march=generic32 -al"
     run_list_test "arch-stk" "-march=generic32 -al"
     run_dump_test "8087"
@@ -511,6 +513,7 @@ if [gas_32_check] then {
     run_dump_test "sm4-intel"
     run_list_test "pbndkb-inval"
     run_list_test "user_msr-inval"
+    run_list_test "apx-push2pop2-inval"
     run_list_test "sg"
     run_dump_test "clzero"
     run_dump_test "invlpgb"

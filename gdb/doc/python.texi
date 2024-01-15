@@ -3668,6 +3668,49 @@ Unset the environment variable @var{name}.  @var{name} must be a
 string.
 @end defun
 
+One may add arbitrary attributes to @code{gdb.Inferior} objects in the
+usual Python way.  This is useful if, for example, one needs to do
+some extra record keeping associated with the inferior.
+
+@anchor{choosing attribute names}
+When selecting a name for a new attribute, avoid starting the new
+attribute name with a lower case letter; future attributes added by
+@value{GDBN} will start with a lower case letter.  Additionally, avoid
+starting attribute names with two underscore characters, as these
+could clash with Python builtin attribute names.
+
+In this contrived example we record the time when an inferior last
+stopped:
+
+@smallexample
+@group
+(@value{GDBP}) python
+import datetime
+
+def thread_stopped(event):
+    if event.inferior_thread is not None:
+        thread = event.inferior_thread
+    else:
+        thread = gdb.selected_thread()
+    inferior = thread.inferior
+    inferior._last_stop_time = datetime.datetime.today()
+
+gdb.events.stop.connect(thread_stopped)
+@end group
+@group
+(@value{GDBP}) file /tmp/hello
+Reading symbols from /tmp/hello...
+(@value{GDBP}) start
+Temporary breakpoint 1 at 0x401198: file /tmp/hello.c, line 18.
+Starting program: /tmp/hello
+
+Temporary breakpoint 1, main () at /tmp/hello.c:18
+18	  printf ("Hello World\n");
+(@value{GDBP}) python print(gdb.selected_inferior()._last_stop_time)
+2024-01-04 14:48:41.347036
+@end group
+@end smallexample
+
 @node Events In Python
 @subsubsection Events In Python
 @cindex inferior events in Python
@@ -4085,6 +4128,13 @@ Either the LWPID or TID may be 0, which indicates that the operating system
 does not  use that identifier.
 @end defvar
 
+@defvar InferiorThread.ptid_string
+This read-only attribute contains a string representing
+@code{InferiorThread.ptid}.  This is the string that @value{GDBN} uses
+in the @samp{Target Id} column in the @kbd{info threads} output
+(@pxref{info_threads,,@samp{info threads}}).
+@end defvar
+
 @defvar InferiorThread.inferior
 The inferior this thread belongs to.  This attribute is represented as
 a @code{gdb.Inferior} object.  This attribute is not writable.
@@ -4141,6 +4191,44 @@ constructed via @code{gdb.Value(bufobj, type)} where @var{bufobj} is
 the Python @code{bytes} representation of the handle and @var{type} is
 a @code{gdb.Type} for the handle type.
 @end defun
+
+One may add arbitrary attributes to @code{gdb.InferiorThread} objects
+in the usual Python way.  This is useful if, for example, one needs to
+do some extra record keeping associated with the thread.
+
+@xref{choosing attribute names}, for guidance on selecting a suitable
+name for new attributes.
+
+In this contrived example we record the time when a thread last
+stopped:
+
+@smallexample
+@group
+(@value{GDBP}) python
+import datetime
+
+def thread_stopped(event):
+    if event.inferior_thread is not None:
+        thread = event.inferior_thread
+    else:
+        thread = gdb.selected_thread()
+    thread._last_stop_time = datetime.datetime.today()
+
+gdb.events.stop.connect(thread_stopped)
+@end group
+@group
+(@value{GDBP}) file /tmp/hello
+Reading symbols from /tmp/hello...
+(@value{GDBP}) start
+Temporary breakpoint 1 at 0x401198: file /tmp/hello.c, line 18.
+Starting program: /tmp/hello
+
+Temporary breakpoint 1, main () at /tmp/hello.c:18
+18	  printf ("Hello World\n");
+(@value{GDBP}) python print(gdb.selected_thread()._last_stop_time)
+2024-01-04 14:48:41.347036
+@end group
+@end smallexample
 
 @node Recordings In Python
 @subsubsection Recordings In Python
@@ -5326,6 +5414,9 @@ in the usual Python way.
 This is useful if, for example, one needs to do some extra record keeping
 associated with the program space.
 
+@xref{choosing attribute names}, for guidance on selecting a suitable
+name for new attributes.
+
 In this contrived example, we want to perform some processing when
 an objfile with a certain symbol is loaded, but we only want to do
 this once because it is expensive.  To achieve this we record the results
@@ -5333,13 +5424,16 @@ with the program space because we can't predict when the desired objfile
 will be loaded.
 
 @smallexample
-(gdb) python
+(@value{GDBP}) python
+@group
 def clear_objfiles_handler(event):
     event.progspace.expensive_computation = None
 def expensive(symbol):
     """A mock routine to perform an "expensive" computation on symbol."""
     print ("Computing the answer to the ultimate question ...")
     return 42
+@end group
+@group
 def new_objfile_handler(event):
     objfile = event.new_objfile
     progspace = objfile.progspace
@@ -5354,15 +5448,18 @@ def new_objfile_handler(event):
 gdb.events.clear_objfiles.connect(clear_objfiles_handler)
 gdb.events.new_objfile.connect(new_objfile_handler)
 end
-(gdb) file /tmp/hello
+@end group
+@group
+(@value{GDBP}) file /tmp/hello
 Reading symbols from /tmp/hello...
 Computing the answer to the ultimate question ...
-(gdb) python print gdb.current_progspace().expensive_computation
+(@value{GDBP}) python print(gdb.current_progspace().expensive_computation)
 42
-(gdb) run
+(@value{GDBP}) run
 Starting program: /tmp/hello
 Hello.
 [Inferior 1 (process 4242) exited normally]
+@end group
 @end smallexample
 
 @node Objfiles In Python
@@ -5486,21 +5583,28 @@ in the usual Python way.
 This is useful if, for example, one needs to do some extra record keeping
 associated with the objfile.
 
+@xref{choosing attribute names}, for guidance on selecting a suitable
+name for new attributes.
+
 In this contrived example we record the time when @value{GDBN}
 loaded the objfile.
 
 @smallexample
-(gdb) python
+@group
+(@value{GDBP}) python
 import datetime
 def new_objfile_handler(event):
     # Set the time_loaded attribute of the new objfile.
     event.new_objfile.time_loaded = datetime.datetime.today()
 gdb.events.new_objfile.connect(new_objfile_handler)
 end
-(gdb) file ./hello
+@end group
+@group
+(@value{GDBP}) file ./hello
 Reading symbols from ./hello...
-(gdb) python print gdb.objfiles()[0].time_loaded
+(@value{GDBP}) python print(gdb.objfiles()[0].time_loaded)
 2014-10-09 11:41:36.770345
+@end group
 @end smallexample
 
 A @code{gdb.Objfile} object has the following methods:

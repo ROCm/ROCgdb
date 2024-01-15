@@ -38,6 +38,7 @@ struct symtab;
 #include "displaced-stepping.h"
 #include "gdbsupport/intrusive_list.h"
 #include "thread-fsm.h"
+#include "language.h"
 
 struct inferior;
 struct process_stratum_target;
@@ -949,7 +950,7 @@ private:
   /* Save/restore the language as well, because selecting a frame
      changes the current language to the frame's language if "set
      language auto".  */
-  enum language m_lang;
+  scoped_restore_current_language m_lang;
 };
 
 /* Save/restore current lane.  */

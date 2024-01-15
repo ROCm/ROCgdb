@@ -1,5 +1,5 @@
 /* X86-64 specific support for ELF
-   Copyright (C) 2000-2023 Free Software Foundation, Inc.
+   Copyright (C) 2000-2024 Free Software Foundation, Inc.
    Contributed by Jan Hubicka <jh@suse.cz>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -170,12 +170,21 @@ static reloc_howto_type x86_64_elf_howto_table[] =
   HOWTO(R_X86_64_REX_GOTPCRELX, 0, 4, 32, true, 0, complain_overflow_signed,
 	bfd_elf_generic_reloc, "R_X86_64_REX_GOTPCRELX", false, 0, 0xffffffff,
 	true),
+  HOWTO(R_X86_64_CODE_4_GOTPCRELX, 0, 4, 32, true, 0, complain_overflow_signed,
+	bfd_elf_generic_reloc, "R_X86_64_CODE_4_GOTPCRELX", false, 0, 0xffffffff,
+	true),
+  HOWTO(R_X86_64_CODE_4_GOTTPOFF, 0, 4, 32, true, 0, complain_overflow_signed,
+	bfd_elf_generic_reloc, "R_X86_64_CODE_4_GOTTPOFF", false, 0, 0xffffffff,
+	true),
+  HOWTO(R_X86_64_CODE_4_GOTPC32_TLSDESC, 0, 4, 32, true, 0,
+	complain_overflow_bitfield, bfd_elf_generic_reloc,
+	"R_X86_64_CODE_4_GOTPC32_TLSDESC", false, 0, 0xffffffff, true),
 
   /* We have a gap in the reloc numbers here.
      R_X86_64_standard counts the number up to this point, and
      R_X86_64_vt_offset is the value to subtract from a reloc type of
      R_X86_64_GNU_VT* to form an index into this table.  */
-#define R_X86_64_standard (R_X86_64_REX_GOTPCRELX + 1)
+#define R_X86_64_standard (R_X86_64_CODE_4_GOTPC32_TLSDESC + 1)
 #define R_X86_64_vt_offset (R_X86_64_GNU_VTINHERIT - R_X86_64_standard)
 
 /* GNU extension to record C++ vtable hierarchy.  */
@@ -244,6 +253,9 @@ static const struct elf_reloc_map x86_64_reloc_map[] =
   { BFD_RELOC_X86_64_PLT32_BND,	R_X86_64_PLT32_BND, },
   { BFD_RELOC_X86_64_GOTPCRELX, R_X86_64_GOTPCRELX, },
   { BFD_RELOC_X86_64_REX_GOTPCRELX, R_X86_64_REX_GOTPCRELX, },
+  { BFD_RELOC_X86_64_CODE_4_GOTPCRELX, R_X86_64_CODE_4_GOTPCRELX, },
+  { BFD_RELOC_X86_64_CODE_4_GOTTPOFF, R_X86_64_CODE_4_GOTTPOFF, },
+  { BFD_RELOC_X86_64_CODE_4_GOTPC32_TLSDESC, R_X86_64_CODE_4_GOTPC32_TLSDESC, },
   { BFD_RELOC_VTABLE_INHERIT,	R_X86_64_GNU_VTINHERIT, },
   { BFD_RELOC_VTABLE_ENTRY,	R_X86_64_GNU_VTENTRY, },
 };
@@ -1258,6 +1270,19 @@ elf_x86_64_check_tls_transition (bfd *abfd,
 	    return (r_type == R_X86_64_PC32 || r_type == R_X86_64_PLT32);
 	}
 
+    case R_X86_64_CODE_4_GOTTPOFF:
+      /* Check transition from IE access model:
+		mov foo@gottpoff(%rip), %reg
+		add foo@gottpoff(%rip), %reg
+		where reg is one of r16 to r31.  */
+
+      if (offset < 4
+	  || (offset + 4) > sec->size
+	  || contents[offset - 4] != 0xd5)
+	return false;
+
+      goto check_gottpoff;
+
     case R_X86_64_GOTTPOFF:
       /* Check transition from IE access model:
 		mov foo@gottpoff(%rip), %reg
@@ -1284,12 +1309,25 @@ elf_x86_64_check_tls_transition (bfd *abfd,
 	    return false;
 	}
 
+ check_gottpoff:
       val = bfd_get_8 (abfd, contents + offset - 2);
       if (val != 0x8b && val != 0x03)
 	return false;
 
       val = bfd_get_8 (abfd, contents + offset - 1);
       return (val & 0xc7) == 5;
+
+    case R_X86_64_CODE_4_GOTPC32_TLSDESC:
+      /* Check transition from GDesc access model:
+		lea x@tlsdesc(%rip), %reg
+	 where reg is one of r16 to r31.  */
+
+      if (offset < 4
+	  || (offset + 4) > sec->size
+	  || contents[offset - 4] != 0xd5)
+	return false;
+
+      goto check_tlsdesc;
 
     case R_X86_64_GOTPC32_TLSDESC:
       /* Check transition from GDesc access model:
@@ -1308,6 +1346,7 @@ elf_x86_64_check_tls_transition (bfd *abfd,
       if (val != 0x48 && (ABI_64_P (abfd) || val != 0x40))
 	return false;
 
+ check_tlsdesc:
       if (bfd_get_8 (abfd, contents + offset - 2) != 0x8d)
 	return false;
 
@@ -1374,8 +1413,10 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
     {
     case R_X86_64_TLSGD:
     case R_X86_64_GOTPC32_TLSDESC:
+    case R_X86_64_CODE_4_GOTPC32_TLSDESC:
     case R_X86_64_TLSDESC_CALL:
     case R_X86_64_GOTTPOFF:
+    case R_X86_64_CODE_4_GOTTPOFF:
       if (bfd_link_executable (info))
 	{
 	  if (h == NULL)
@@ -1395,6 +1436,7 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
 
 	  if (to_type == R_X86_64_TLSGD
 	      || to_type == R_X86_64_GOTPC32_TLSDESC
+	      || to_type == R_X86_64_CODE_4_GOTPC32_TLSDESC
 	      || to_type == R_X86_64_TLSDESC_CALL)
 	    {
 	      if (tls_type == GOT_TLS_IE)
@@ -1420,7 +1462,9 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
     }
 
   /* Return TRUE if there is no transition.  */
-  if (from_type == to_type)
+  if (from_type == to_type
+      || (from_type == R_X86_64_CODE_4_GOTTPOFF
+	  && to_type == R_X86_64_GOTTPOFF))
     return true;
 
   /* Check if the transition can be performed.  */
@@ -1586,7 +1630,8 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
   bfd_vma roff = irel->r_offset;
   bfd_vma abs_relocation;
 
-  if (roff < (r_type == R_X86_64_REX_GOTPCRELX ? 3 : 2))
+  if (roff < (r_type == R_X86_64_CODE_4_GOTPCRELX
+	      ? 4 : (r_type == R_X86_64_REX_GOTPCRELX ? 3 : 2)))
     return true;
 
   raddend = irel->r_addend;
@@ -1597,8 +1642,18 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
   htab = elf_x86_hash_table (link_info, X86_64_ELF_DATA);
   is_pic = bfd_link_pic (link_info);
 
-  relocx = (r_type == R_X86_64_GOTPCRELX
-	    || r_type == R_X86_64_REX_GOTPCRELX);
+  if (r_type == R_X86_64_CODE_4_GOTPCRELX)
+    {
+      /* Skip if this isn't a REX2 instruction.  */
+      opcode = bfd_get_8 (abfd, contents + roff - 4);
+      if (opcode != 0xd5)
+	return true;
+
+      relocx = true;
+    }
+  else
+    relocx = (r_type == R_X86_64_GOTPCRELX
+	      || r_type == R_X86_64_REX_GOTPCRELX);
 
   /* TRUE if --no-relax is used.  */
   no_overflow = link_info->disable_target_specific_optimizations > 1;
@@ -1610,9 +1665,9 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
   /* Convert mov to lea since it has been done for a while.  */
   if (opcode != 0x8b)
     {
-      /* Only convert R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX
-	 for call, jmp or one of adc, add, and, cmp, or, sbb, sub,
-	 test, xor instructions.  */
+      /* Only convert R_X86_64_GOTPCRELX, R_X86_64_REX_GOTPCRELX
+	 and R_X86_64_CODE_4_GOTPCRELX for call, jmp or one of adc,
+	 add, and, cmp, or, sbb, sub, test, xor instructions.  */
       if (!relocx)
 	return true;
     }
@@ -1797,13 +1852,22 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
     }
   else
     {
-      unsigned int rex;
+      unsigned int rex = 0;
       unsigned int rex_mask = REX_R;
+      unsigned int rex2 = 0;
+      unsigned int rex2_mask = REX_R | REX_R << 4;
+      bool rex_w = false;
 
-      if (r_type == R_X86_64_REX_GOTPCRELX)
-	rex = bfd_get_8 (abfd, contents + roff - 3);
-      else
-	rex = 0;
+      if (r_type == R_X86_64_CODE_4_GOTPCRELX)
+	{
+	  rex2 = bfd_get_8 (abfd, contents + roff - 3);
+	  rex_w = (rex2 & REX_W) != 0;
+	}
+      else if (r_type == R_X86_64_REX_GOTPCRELX)
+	{
+	  rex = bfd_get_8 (abfd, contents + roff - 3);
+	  rex_w = (rex & REX_W) != 0;
+	}
 
       if (opcode == 0x8b)
 	{
@@ -1824,8 +1888,7 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 	      opcode = 0xc7;
 	      modrm = bfd_get_8 (abfd, contents + roff - 1);
 	      modrm = 0xc0 | (modrm & 0x38) >> 3;
-	      if ((rex & REX_W) != 0
-		  && ABI_64_P (link_info->output_bfd))
+	      if (rex_w && ABI_64_P (link_info->output_bfd))
 		{
 		  /* Keep the REX_W bit in REX byte for LP64.  */
 		  r_type = R_X86_64_32S;
@@ -1837,8 +1900,9 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 		     use R_X86_64_32 and clear the W bit to avoid
 		     sign-extend imm32 to imm64.  */
 		  r_type = R_X86_64_32;
-		  /* Clear the W bit in REX byte.  */
+		  /* Clear the W bit in REX byte and REX2 payload.  */
 		  rex_mask |= REX_W;
+		  rex2_mask |= REX_W;
 		  goto rewrite_modrm_rex;
 		}
 	    }
@@ -1867,7 +1931,7 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 
 	  /* Use R_X86_64_32 with 32-bit operand to avoid relocation
 	     overflow when sign-extending imm32 to imm64.  */
-	  r_type = (rex & REX_W) != 0 ? R_X86_64_32S : R_X86_64_32;
+	  r_type = rex_w ? R_X86_64_32S : R_X86_64_32;
 
 	rewrite_modrm_rex:
 	  if (abs_relocation)
@@ -1892,6 +1956,13 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 	      /* Move the R bit to the B bit in REX byte.  */
 	      rex = (rex & ~rex_mask) | (rex & REX_R) >> 2;
 	      bfd_put_8 (abfd, rex, contents + roff - 3);
+	    }
+	  else if (rex2)
+	    {
+	      /* Move the R bits to the B bits in REX2 payload byte.  */
+	      rex2 = ((rex2 & ~rex2_mask)
+		      | (rex2 & (REX_R | REX_R << 4)) >> 2);
+	      bfd_put_8 (abfd, rex2, contents + roff - 3);
 	    }
 
 	  /* No addend for R_X86_64_32/R_X86_64_32S relocations.  */
@@ -1968,6 +2039,10 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 
       r_symndx = htab->r_sym (rel->r_info);
       r_type = ELF32_R_TYPE (rel->r_info);
+
+      /* Don't check R_X86_64_NONE.  */
+      if (r_type == R_X86_64_NONE)
+	continue;
 
       if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
 	{
@@ -2058,7 +2133,8 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
       converted_reloc = false;
       if ((r_type == R_X86_64_GOTPCREL
 	   || r_type == R_X86_64_GOTPCRELX
-	   || r_type == R_X86_64_REX_GOTPCRELX)
+	   || r_type == R_X86_64_REX_GOTPCRELX
+	   || r_type == R_X86_64_CODE_4_GOTPCRELX)
 	  && (h == NULL || h->type != STT_GNU_IFUNC))
 	{
 	  Elf_Internal_Rela *irel = (Elf_Internal_Rela *) rel;
@@ -2100,6 +2176,7 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	  break;
 
 	case R_X86_64_GOTTPOFF:
+	case R_X86_64_CODE_4_GOTTPOFF:
 	  if (!bfd_link_executable (info))
 	    info->flags |= DF_STATIC_TLS;
 	  /* Fall through */
@@ -2108,11 +2185,13 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_X86_64_GOTPCREL:
 	case R_X86_64_GOTPCRELX:
 	case R_X86_64_REX_GOTPCRELX:
+	case R_X86_64_CODE_4_GOTPCRELX:
 	case R_X86_64_TLSGD:
 	case R_X86_64_GOT64:
 	case R_X86_64_GOTPCREL64:
 	case R_X86_64_GOTPLT64:
 	case R_X86_64_GOTPC32_TLSDESC:
+	case R_X86_64_CODE_4_GOTPC32_TLSDESC:
 	case R_X86_64_TLSDESC_CALL:
 	  /* This symbol requires a global offset table entry.	*/
 	  {
@@ -2134,9 +2213,11 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 		tls_type = GOT_TLS_GD;
 		break;
 	      case R_X86_64_GOTTPOFF:
+	      case R_X86_64_CODE_4_GOTTPOFF:
 		tls_type = GOT_TLS_IE;
 		break;
 	      case R_X86_64_GOTPC32_TLSDESC:
+	      case R_X86_64_CODE_4_GOTPC32_TLSDESC:
 	      case R_X86_64_TLSDESC_CALL:
 		tls_type = GOT_TLS_GDESC;
 		break;
@@ -2710,6 +2791,7 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	    case R_X86_64_GOTPCREL:
 	    case R_X86_64_GOTPCRELX:
 	    case R_X86_64_REX_GOTPCRELX:
+	    case R_X86_64_CODE_4_GOTPCRELX:
 	    case R_X86_64_GOTPCREL64:
 	      base_got = htab->elf.sgot;
 	      off = h->got.offset;
@@ -2935,6 +3017,7 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	case R_X86_64_GOTPCREL:
 	case R_X86_64_GOTPCRELX:
 	case R_X86_64_REX_GOTPCRELX:
+	case R_X86_64_CODE_4_GOTPCRELX:
 	case R_X86_64_GOTPCREL64:
 	  /* Use global offset table entry as symbol value.  */
 	case R_X86_64_GOTPLT64:
@@ -3025,7 +3108,8 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 		      && !(sym->st_shndx == SHN_ABS
 			   && (r_type == R_X86_64_GOTPCREL
 			       || r_type == R_X86_64_GOTPCRELX
-			       || r_type == R_X86_64_REX_GOTPCRELX)))
+			       || r_type == R_X86_64_REX_GOTPCRELX
+			       || r_type == R_X86_64_CODE_4_GOTPCRELX)))
 		    relative_reloc = true;
 		}
 	    }
@@ -3063,6 +3147,7 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	  if (r_type != R_X86_64_GOTPCREL
 	      && r_type != R_X86_64_GOTPCRELX
 	      && r_type != R_X86_64_REX_GOTPCRELX
+	      && r_type != R_X86_64_CODE_4_GOTPCRELX
 	      && r_type != R_X86_64_GOTPCREL64)
 	    relocation -= htab->elf.sgotplt->output_section->vma
 			  - htab->elf.sgotplt->output_offset;
@@ -3481,8 +3566,10 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 
 	case R_X86_64_TLSGD:
 	case R_X86_64_GOTPC32_TLSDESC:
+	case R_X86_64_CODE_4_GOTPC32_TLSDESC:
 	case R_X86_64_TLSDESC_CALL:
 	case R_X86_64_GOTTPOFF:
+	case R_X86_64_CODE_4_GOTTPOFF:
 	  tls_type = GOT_UNKNOWN;
 	  if (h == NULL && local_got_offsets)
 	    tls_type = elf_x86_local_got_tls_type (input_bfd) [r_symndx];
@@ -3614,6 +3701,37 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 		  val = bfd_get_8 (input_bfd, contents + roff - 1);
 		  bfd_put_8 (output_bfd,
 			     (type & 0x48) | ((type >> 2) & 1),
+			     contents + roff - 3);
+		  bfd_put_8 (output_bfd, 0xc7, contents + roff - 2);
+		  bfd_put_8 (output_bfd, 0xc0 | ((val >> 3) & 7),
+			     contents + roff - 1);
+		  bfd_put_32 (output_bfd,
+			      elf_x86_64_tpoff (info, relocation),
+			      contents + roff);
+		  continue;
+		}
+	      else if (r_type == R_X86_64_CODE_4_GOTPC32_TLSDESC)
+		{
+		  /* GDesc -> LE transition.
+		     It's originally something like:
+		     lea x@tlsdesc(%rip), %reg
+
+		     Change it to:
+		     mov $x@tpoff, %reg
+		     where reg is one of r16 to r31.  */
+
+		  unsigned int val, rex2;
+		  unsigned int rex2_mask = REX_R | REX_R << 4;
+
+		  if (roff < 4)
+		    goto corrupt_input;
+		  rex2 = bfd_get_8 (input_bfd, contents + roff - 3);
+		  val = bfd_get_8 (input_bfd, contents + roff - 1);
+		  /* Move the R bits to the B bits in REX2 payload
+		     byte.  */
+		  bfd_put_8 (output_bfd,
+			     ((rex2 & ~rex2_mask)
+			      | (rex2 & rex2_mask) >> 2),
 			     contents + roff - 3);
 		  bfd_put_8 (output_bfd, 0xc7, contents + roff - 2);
 		  bfd_put_8 (output_bfd, 0xc0 | ((val >> 3) & 7),
@@ -3762,6 +3880,46 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 			      contents + roff);
 		  continue;
 		}
+	      else if (r_type == R_X86_64_CODE_4_GOTTPOFF)
+		{
+		  /* IE->LE transition:
+		     Originally it can be one of:
+		     mov foo@gottpoff(%rip), %reg
+		     add foo@gottpoff(%rip), %reg
+		     We change it into:
+		     mov $foo@tpoff, %reg
+		     add $foo@tpoff, %reg
+		     where reg is one of r16 to r31.  */
+
+		  unsigned int rex2, type, reg;
+		  unsigned int rex2_mask = REX_R | REX_R << 4;
+
+		  if (roff < 4)
+		    goto corrupt_input;
+
+		  rex2 = bfd_get_8 (input_bfd, contents + roff - 3);
+		  type = bfd_get_8 (input_bfd, contents + roff - 2);
+		  reg = bfd_get_8 (input_bfd, contents + roff - 1);
+		  reg >>= 3;
+		  /* Move the R bits to the B bits in REX2 payload
+		     byte.  */
+		  if (type == 0x8b)
+		    type = 0xc7;
+		  else
+		    type = 0x81;
+		  bfd_put_8 (output_bfd,
+			     ((rex2 & ~rex2_mask)
+			      | (rex2 & rex2_mask) >> 2),
+			     contents + roff - 3);
+		  bfd_put_8 (output_bfd, type,
+			     contents + roff - 2);
+		  bfd_put_8 (output_bfd, 0xc0 | reg,
+			     contents + roff - 1);
+		  bfd_put_32 (output_bfd,
+			      elf_x86_64_tpoff (info, relocation),
+			      contents + roff);
+		  continue;
+		}
 	      else
 		BFD_ASSERT (false);
 	    }
@@ -3868,6 +4026,7 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 	  if (r_type_tls == r_type)
 	    {
 	      if (r_type == R_X86_64_GOTPC32_TLSDESC
+		  || r_type == R_X86_64_CODE_4_GOTPC32_TLSDESC
 		  || r_type == R_X86_64_TLSDESC_CALL)
 		relocation = htab->elf.sgotplt->output_section->vma
 		  + htab->elf.sgotplt->output_offset
@@ -3963,7 +4122,8 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 		  wrel++;
 		  continue;
 		}
-	      else if (r_type == R_X86_64_GOTPC32_TLSDESC)
+	      else if (r_type == R_X86_64_GOTPC32_TLSDESC
+		       || r_type == R_X86_64_CODE_4_GOTPC32_TLSDESC)
 		{
 		  /* GDesc -> IE transition.
 		     It's originally something like:
@@ -5412,6 +5572,31 @@ elf_x86_64_link_setup_gnu_properties (struct bfd_link_info *info)
   return _bfd_x86_elf_link_setup_gnu_properties (info, &init_table);
 }
 
+static void
+elf_x86_64_add_glibc_version_dependency
+  (struct elf_find_verdep_info *rinfo)
+{
+  unsigned int i = 0;
+  const char *version[3] = { NULL, NULL, NULL };
+  struct elf_x86_link_hash_table *htab;
+
+  if (rinfo->info->enable_dt_relr)
+    {
+      version[i] = "GLIBC_ABI_DT_RELR";
+      i++;
+    }
+
+  htab = elf_x86_hash_table (rinfo->info, X86_64_ELF_DATA);
+  if (htab != NULL && htab->params->mark_plt)
+    {
+      version[i] = "GLIBC_2.36";
+      i++;
+    }
+
+  if (i != 0)
+    _bfd_elf_link_add_glibc_version_dependency (rinfo, version);
+}
+
 static const struct bfd_elf_special_section
 elf_x86_64_special_sections[]=
 {
@@ -5496,6 +5681,8 @@ elf_x86_64_special_sections[]=
   elf_x86_64_link_setup_gnu_properties
 #define elf_backend_hide_symbol \
   _bfd_x86_elf_hide_symbol
+#define elf_backend_add_glibc_version_dependency \
+  elf_x86_64_add_glibc_version_dependency
 
 #undef	elf64_bed
 #define elf64_bed elf64_x86_64_bed

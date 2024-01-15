@@ -1,5 +1,5 @@
 \input texinfo @c                               -*-Texinfo-*-
-@c  Copyright (C) 1991-2023 Free Software Foundation, Inc.
+@c  Copyright (C) 1991-2024 Free Software Foundation, Inc.
 @c UPDATE!!  On future updates--
 @c   (1)   check for new machine-dep cmdline options in
 @c         md_parse_option definitions in config/tc-*.c
@@ -100,7 +100,7 @@
 This file documents the GNU Assembler "@value{AS}".
 
 @c man begin COPYRIGHT
-Copyright @copyright{} 1991-2023 Free Software Foundation, Inc.
+Copyright @copyright{} 1991-2024 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -149,7 +149,7 @@ done.
 @end tex
 
 @vskip 0pt plus 1filll
-Copyright @copyright{} 1991-2023 Free Software Foundation, Inc.
+Copyright @copyright{} 1991-2024 Free Software Foundation, Inc.
 
       Permission is granted to copy, distribute and/or modify this document
       under the terms of the GNU Free Documentation License, Version 1.3
@@ -838,7 +838,7 @@ suffix.
 
 @item --gdwarf-cie-version=@var{version}
 Control which version of DWARF Common Information Entries (CIEs) are produced.
-When this flag is not specificed the default is version 1, though some targets
+When this flag is not specified the default is version 1, though some targets
 can modify this default.  Other possible values for @var{version} are 3 or 4.
 
 @ifset ELF
@@ -4456,7 +4456,12 @@ Some machine configurations provide additional directives.
 * Asciz::                       @code{.asciz "@var{string}"}@dots{}
 * Attach_to_group::             @code{.attach_to_group @var{name}}
 * Balign::                      @code{.balign [@var{abs-expr}[, @var{abs-expr}]]}
+@ifset ELF
 * Bss::                         @code{.bss @var{subsection}}
+@end ifset
+@ifclear ELF
+* Bss::                         @code{.bss}
+@end ifclear
 * Bundle directives::           @code{.bundle_align_mode @var{abs-expr}}, etc
 * Byte::                        @code{.byte @var{expressions}}
 * CFI directives::		@code{.cfi_startproc [simple]}, @code{.cfi_endproc}, etc.
@@ -4801,14 +4806,20 @@ filled in with the value 0x368d (the exact placement of the bytes depends upon
 the endianness of the processor).  If it skips 1 or 3 bytes, the fill value is
 undefined.
 
+@ifset ELF
 @node Bss
 @section @code{.bss @var{subsection}}
+@end ifset
+@ifclear ELF
+@node Bss
+@section @code{.bss}
+@end ifclear
 @cindex @code{bss} directive
 
 @code{.bss} tells @command{@value{AS}} to assemble the following statements
 onto the end of the bss section.
 @ifset ELF
-For ELF based targets an optional @var{subsection} expression (which must
+For most ELF based targets an optional @var{subsection} expression (which must
 evaluate to a positive integer) can be provided.  In this case the statements
 are appended to the end of the indicated bss subsection.
 @end ifset
@@ -5507,7 +5518,7 @@ With this version a separate directory name is allowed, although if this is
 used then @var{filename} should not contain any directory component, except
 for @var{fileno} equal to 0: in this case, @var{dirname} is expected to be
 the current directory and @var{filename} the currently processed file, and
-the latter need not be located in the former. In addtion an MD5 hash value
+the latter need not be located in the former. In addition an MD5 hash value
 of the contents of @var{filename} can be provided. This will be stored in
 the the file table as well, and can be used by tools reading the debug
 information to verify that the contents of the source file match the
@@ -6909,7 +6920,7 @@ must be present along with an additional field like this:
 
 The @var{SymbolName} field specifies the symbol name which the section
 references.  Alternatively a numeric @var{SectionIndex} can be provided.  This
-is not generally a good idea as section indicies are rarely known at assembly
+is not generally a good idea as section indices are rarely known at assembly
 time, but the facility is provided for testing purposes.  An index of zero is
 allowed.  It indicates that the linked-to section has already been discarded.
 

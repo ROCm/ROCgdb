@@ -1,5 +1,5 @@
 /* write.c - emit .o file
-   Copyright (C) 1986-2023 Free Software Foundation, Inc.
+   Copyright (C) 1986-2024 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -169,6 +169,7 @@ fix_new_internal (fragS *frag,		/* Which frag?  */
   fixP->fx_addnumber = 0;
   fixP->fx_tcbit = 0;
   fixP->fx_tcbit2 = 0;
+  fixP->fx_tcbit3 = 0;
   fixP->fx_done = 0;
   fixP->fx_no_overflow = 0;
   fixP->fx_signed = 0;

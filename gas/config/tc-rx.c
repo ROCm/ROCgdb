@@ -1,5 +1,5 @@
 /* tc-rx.c -- Assembler for the Renesas RX
-   Copyright (C) 2008-2023 Free Software Foundation, Inc.
+   Copyright (C) 2008-2024 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -219,16 +219,6 @@ md_show_usage (FILE * stream)
   fprintf (stream, _("  --mint-register=<value>\n"));
   fprintf (stream, _("  --mcpu=<rx100|rx200|rx600|rx610|rxv2|rxv3|rxv3-dfpu>\n"));
   fprintf (stream, _("  --mno-allow-string-insns"));
-}
-
-static void
-s_bss (int ignore ATTRIBUTE_UNUSED)
-{
-  int temp;
-
-  temp = get_absolute_expression ();
-  subseg_set (bss_section, (subsegT) temp);
-  demand_empty_rest_of_line ();
 }
 
 static void
@@ -650,7 +640,6 @@ const pseudo_typeS md_pseudo_table[] =
 
   /* Our "standard" pseudos. */
   { "double",   rx_float_cons,  0 },
-  { "bss",	s_bss, 		0 },
   { "3byte",	cons,		3 },
   { "int",	cons,		4 },
   { "word",	cons,		4 },

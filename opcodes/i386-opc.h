@@ -1,5 +1,5 @@
 /* Declarations for Intel 80386 opcode table
-   Copyright (C) 2007-2023 Free Software Foundation, Inc.
+   Copyright (C) 2007-2024 Free Software Foundation, Inc.
 
    This file is part of the GNU opcodes library.
 
@@ -319,6 +319,8 @@ enum i386_cpu
   CpuAVX512F,
   /* Intel AVX-512 VL Instructions support required.  */
   CpuAVX512VL,
+  /* Intel APX_F Instructions support required.  */
+  CpuAPX_F,
   /* Not supported in the 64bit mode  */
   CpuNo64,
 
@@ -354,6 +356,7 @@ enum i386_cpu
 		   cpuhle:1, \
 		   cpuavx512f:1, \
 		   cpuavx512vl:1, \
+		   cpuapx_f:1, \
       /* NOTE: This field needs to remain last. */ \
 		   cpuno64:1
 
@@ -576,6 +579,8 @@ enum
   /* Instrucion requires that destination must be distinct from source
      registers.  */
 #define DISTINCT_DEST 9
+  /* Instrucion requires REX2 prefix.  */
+#define REX2_REQUIRED 10
   OperandConstraint,
   /* instruction ignores operand size prefix and in Intel mode ignores
      mnemonic size suffix check.  */
@@ -635,8 +640,10 @@ enum
   Vex,
   /* How to encode VEX.vvvv:
      0: VEX.vvvv must be 1111b.
-     1: VEX.vvvv encodes one of the register operands.
+     1: VEX.vvvv encodes one of the src register operands.
+     2: VEX.vvvv encodes the dest register operand.
    */
+#define VexVVVV_DST   2
   VexVVVV,
   /* How the VEX.W bit is used:
      0: Set by the REX.W bit.
@@ -735,6 +742,14 @@ enum
 #define INTEL64		2
 #define INTEL64ONLY	3
   ISA64,
+
+  /* egprs (r16-r31) on instruction illegal. We also use it to judge
+     whether the instruction supports pseudo-prefix {rex2}.  */
+  NoEgpr,
+
+  /* No CSPAZO flags update indication.  */
+  NF,
+
   /* The last bitfield in i386_opcode_modifier.  */
   Opcode_Modifier_Num
 };
@@ -765,7 +780,7 @@ typedef struct i386_opcode_modifier
   unsigned int immext:1;
   unsigned int norex64:1;
   unsigned int vex:2;
-  unsigned int vexvvvv:1;
+  unsigned int vexvvvv:2;
   unsigned int vexw:2;
   unsigned int opcodeprefix:2;
   unsigned int sib:3;
@@ -779,6 +794,8 @@ typedef struct i386_opcode_modifier
   unsigned int optimize:1;
   unsigned int dialect:2;
   unsigned int isa64:2;
+  unsigned int noegpr:1;
+  unsigned int nf:1;
 } i386_opcode_modifier;
 
 /* Operand classes.  */
@@ -954,6 +971,7 @@ typedef struct insn_template
      1: 0F opcode prefix / space.
      2: 0F38 opcode prefix / space.
      3: 0F3A opcode prefix / space.
+     4: EVEXMAP4 opcode prefix / space.
      5: EVEXMAP5 opcode prefix / space.
      6: EVEXMAP6 opcode prefix / space.
      7: VEXMAP7 opcode prefix / space.
@@ -965,6 +983,7 @@ typedef struct insn_template
 #define SPACE_0F	1
 #define SPACE_0F38	2
 #define SPACE_0F3A	3
+#define SPACE_EVEXMAP4	4
 #define SPACE_EVEXMAP5	5
 #define SPACE_EVEXMAP6	6
 #define SPACE_VEXMAP7	7
@@ -993,7 +1012,8 @@ typedef struct insn_template
 #define Prefix_VEX3		6	/* {vex3} */
 #define Prefix_EVEX		7	/* {evex} */
 #define Prefix_REX		8	/* {rex} */
-#define Prefix_NoOptimize	9	/* {nooptimize} */
+#define Prefix_REX2		9	/* {rex2} */
+#define Prefix_NoOptimize	10	/* {nooptimize} */
 
   /* the bits in opcode_modifier are used to generate the final opcode from
      the base_opcode.  These bits also are used to detect alternate forms of
@@ -1020,6 +1040,7 @@ typedef struct
 #define RegRex	    0x1  /* Extended register.  */
 #define RegRex64    0x2  /* Extended 8 bit register.  */
 #define RegVRex	    0x4  /* Extended vector register.  */
+#define RegRex2	    0x8  /* Extended GPRs R16–R31 register.  */
   unsigned char reg_num;
 #define RegIP	((unsigned char ) ~0)
 /* EIZ and RIZ are fake index registers.  */

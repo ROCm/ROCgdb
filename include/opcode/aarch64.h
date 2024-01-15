@@ -1,6 +1,6 @@
 /* AArch64 assembler/disassembler support.
 
-   Copyright (C) 2009-2023 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GNU Binutils.
@@ -97,8 +97,12 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SVE,
   /* RCPC instructions.  */
   AARCH64_FEATURE_RCPC,
+  /* RCPC2 instructions.  */
+  AARCH64_FEATURE_RCPC2,
   /* Complex # instructions.  */
   AARCH64_FEATURE_COMPNUM,
+  /* JavaScript conversion instructions.  */
+  AARCH64_FEATURE_JSCVT,
   /* Dot Product instructions.  */
   AARCH64_FEATURE_DOTPROD,
   /* SM3 & SM4 instructions.  */
@@ -137,6 +141,10 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_MEMTAG,
   /* Transactional Memory Extension.  */
   AARCH64_FEATURE_TME,
+  /* XS memory attribute.  */
+  AARCH64_FEATURE_XS,
+  /* WFx instructions with timeout.  */
+  AARCH64_FEATURE_WFXT,
   /* Standardization of memory operations.  */
   AARCH64_FEATURE_MOPS,
   /* Hinted conditional branches.  */
@@ -201,6 +209,19 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_PREDRES2,
   /* Instrumentation Extension.  */
   AARCH64_FEATURE_ITE,
+  /* 128-bit page table descriptor, system registers
+     and isntructions.  */
+  AARCH64_FEATURE_D128,
+  /* Armv8.9-A/Armv9.4-A architecture Debug extension.  */
+  AARCH64_FEATURE_DEBUGv8p9,
+  /* Performance Monitors Extension.  */
+  AARCH64_FEATURE_PMUv3p9,
+  /* Performance Monitors Snapshots Extension.  */
+  AARCH64_FEATURE_PMUv3_SS,
+  /* Performance Monitors Instruction Counter Extension.  */
+  AARCH64_FEATURE_PMUv3_ICNTR,
+  /* Performance Monitors Synchronous-Exception-Based Event Extension.  */
+  AARCH64_FEATURE_SEBEP,
   AARCH64_NUM_FEATURES
 };
 
@@ -233,8 +254,10 @@ enum aarch64_feature_bit {
 #define AARCH64_ARCH_V8_3A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_3A)	\
 					 | AARCH64_FEATBIT (X, PAC)	\
 					 | AARCH64_FEATBIT (X, RCPC)	\
-					 | AARCH64_FEATBIT (X, COMPNUM))
+					 | AARCH64_FEATBIT (X, COMPNUM) \
+					 | AARCH64_FEATBIT (X, JSCVT))
 #define AARCH64_ARCH_V8_4A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_4A)	\
+					 | AARCH64_FEATBIT (X, RCPC2)	\
 					 | AARCH64_FEATBIT (X, DOTPROD)	\
 					 | AARCH64_FEATBIT (X, FLAGM)	\
 					 | AARCH64_FEATBIT (X, F16_FML))
@@ -252,6 +275,8 @@ enum aarch64_feature_bit {
 					 | AARCH64_FEATBIT (X, BFLOAT16) \
 					 | AARCH64_FEATBIT (X, I8MM))
 #define AARCH64_ARCH_V8_7A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_7A)	\
+					 | AARCH64_FEATBIT (X, XS)      \
+					 | AARCH64_FEATBIT (X, WFXT)    \
 					 | AARCH64_FEATBIT (X, LS64))
 #define AARCH64_ARCH_V8_8A_FEATURES(X)	(AARCH64_FEATBIT (X, V8_8A)	\
 					 | AARCH64_FEATBIT (X, MOPS)	\
@@ -271,6 +296,11 @@ enum aarch64_feature_bit {
 					 | AARCH64_FEATBIT (X, S1POE)	\
 					 | AARCH64_FEATBIT (X, S2POE)	\
 					 | AARCH64_FEATBIT (X, TCR2)	\
+					 | AARCH64_FEATBIT (X, DEBUGv8p9) \
+					 | AARCH64_FEATBIT (X, PMUv3p9)	\
+					 | AARCH64_FEATBIT (X, PMUv3_SS) \
+					 | AARCH64_FEATBIT (X, PMUv3_ICNTR) \
+					 | AARCH64_FEATBIT (X, SEBEP) \
 					)
 
 #define AARCH64_ARCH_V9A_FEATURES(X)	(AARCH64_FEATBIT (X, V9A)	\
@@ -452,6 +482,7 @@ enum aarch64_opnd
   AARCH64_OPND_Rn_SP,	/* Integer Rn or SP.  */
   AARCH64_OPND_Rm_SP,	/* Integer Rm or SP.  */
   AARCH64_OPND_PAIRREG,	/* Paired register operand.  */
+  AARCH64_OPND_PAIRREG_OR_XZR,	/* Paired register operand, optionally xzr.  */
   AARCH64_OPND_Rm_EXT,	/* Integer Rm extended.  */
   AARCH64_OPND_Rm_SFT,	/* Integer Rm shifted.  */
 
@@ -557,11 +588,13 @@ enum aarch64_opnd
   AARCH64_OPND_SIMD_ADDR_POST,	/* Address of ld/st multiple post-indexed.  */
 
   AARCH64_OPND_SYSREG,		/* System register operand.  */
+  AARCH64_OPND_SYSREG128,	/* 128-bit system register operand.  */
   AARCH64_OPND_PSTATEFIELD,	/* PSTATE field name operand.  */
   AARCH64_OPND_SYSREG_AT,	/* System register <at_op> operand.  */
   AARCH64_OPND_SYSREG_DC,	/* System register <dc_op> operand.  */
   AARCH64_OPND_SYSREG_IC,	/* System register <ic_op> operand.  */
   AARCH64_OPND_SYSREG_TLBI,	/* System register <tlbi_op> operand.  */
+  AARCH64_OPND_SYSREG_TLBIP,	/* System register <tlbip_op> operand.  */
   AARCH64_OPND_SYSREG_SR,	/* System register RCTX operand.  */
   AARCH64_OPND_BARRIER,		/* Barrier operand.  */
   AARCH64_OPND_BARRIER_DSB_NXS,	/* Barrier operand for DSB nXS variant.  */
@@ -953,6 +986,7 @@ enum aarch64_insn_class
   bfloat16,
   cssc,
   gcs,
+  the,
 };
 
 /* Opcode enumerators.  */
@@ -1072,7 +1106,7 @@ enum err_type
 };
 
 /* Maximum number of operands an instruction can have.  */
-#define AARCH64_MAX_OPND_NUM 6
+#define AARCH64_MAX_OPND_NUM 7
 /* Maximum number of qualifier sequences an instruction can have.  */
 #define AARCH64_MAX_QLF_SEQ_NUM 10
 /* Operand qualifier typedef; optimized for the size.  */
@@ -1216,7 +1250,16 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* This instruction has an extra constraint on it that imposes a requirement on
    subsequent instructions.  */
 #define F_SCAN (1ULL << 31)
-/* Next bit is 32.  */
+/* Instruction takes a pair of optional operands.  If we specify the Nth operand
+   to be optional, then we also implicitly specify (N+1)th operand to also be
+   optional.  */
+#define F_OPD_PAIR_OPT (1ULL << 32)
+/* This instruction does not allow the full range of values that the
+   width of fields in the assembler instruction would theoretically
+   allow.  This impacts the constraintts on assembly but yelds no
+   impact on disassembly.  */
+#define F_OPD_NARROW (1ULL << 33)
+/* Next bit is 34.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
@@ -1255,9 +1298,15 @@ pseudo_opcode_p (const aarch64_opcode *opcode)
   return (opcode->flags & F_PSEUDO) != 0lu;
 }
 
+/* Deal with two possible scenarios: If F_OP_PAIR_OPT not set, as is the case
+   by default, F_OPDn_OPT must equal IDX + 1, else F_OPDn_OPT must be in range
+   [IDX, IDX + 1].  */
 static inline bool
 optional_operand_p (const aarch64_opcode *opcode, unsigned int idx)
 {
+  if (opcode->flags & F_OPD_PAIR_OPT)
+    return (((opcode->flags >> 12) & 0x7) == idx
+	    || ((opcode->flags >> 12) & 0x7) == idx + 1);
   return ((opcode->flags >> 12) & 0x7) == idx + 1;
 }
 
@@ -1308,6 +1357,7 @@ typedef struct
 extern const aarch64_sys_reg aarch64_sys_regs [];
 extern const aarch64_sys_reg aarch64_pstatefields [];
 extern bool aarch64_sys_reg_deprecated_p (const uint32_t);
+extern bool aarch64_sys_reg_128bit_p (const uint32_t);
 extern bool aarch64_sys_reg_alias_p (const uint32_t);
 extern bool aarch64_pstatefield_supported_p (const aarch64_feature_set,
 					     const aarch64_sys_reg *);

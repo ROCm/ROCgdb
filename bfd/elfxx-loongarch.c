@@ -1,5 +1,5 @@
 /* LoongArch-specific support for ELF.
-   Copyright (C) 2021-2023 Free Software Foundation, Inc.
+   Copyright (C) 2021-2024 Free Software Foundation, Inc.
    Contributed by Loongson Ltd.
 
    Based on RISC-V target.
@@ -293,8 +293,40 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 NULL,				  /* adjust_reloc_bits */
 	 NULL),				  /* larch_reloc_type_name */
 
-  LOONGARCH_EMPTY_HOWTO (13),
-  LOONGARCH_EMPTY_HOWTO (14),
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC32,	  /* type (13).  */
+	 0,				  /* rightshift.  */
+	 4,				  /* size.  */
+	 32,				  /* bitsize.  */
+	 false,				  /* pc_relative.  */
+	 0,				  /* bitpos.  */
+	 complain_overflow_dont,	  /* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,		  /* special_function.  */
+	 "R_LARCH_TLS_DESC32",		  /* name.  */
+	 false,				  /* partial_inplace.  */
+	 0,				  /* src_mask.  */
+	 ALL_ONES,		  	  /* dst_mask.  */
+	 false,				  /* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC32,	  /* bfd_reloc_code_real_type.  */
+	 NULL,				  /* adjust_reloc_bits.  */
+	 NULL),				  /* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC64,	  /* type (14).  */
+	 0,				  /* rightshift.  */
+	 4,				  /* size.  */
+	 64,				  /* bitsize.  */
+	 false,				  /* pc_relative.  */
+	 0,				  /* bitpos.  */
+	 complain_overflow_dont,	  /* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,		  /* special_function.  */
+	 "R_LARCH_TLS_DESC64",		  /* name.  */
+	 false,				  /* partial_inplace.  */
+	 0,				  /* src_mask.  */
+	 ALL_ONES,			  /* dst_mask.  */
+	 false,				  /* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC64,	  /* bfd_reloc_code_real_type.  */
+	 NULL,				  /* adjust_reloc_bits.  */
+	 NULL),				  /* larch_reloc_type_name.  */
+
   LOONGARCH_EMPTY_HOWTO (15),
   LOONGARCH_EMPTY_HOWTO (16),
   LOONGARCH_EMPTY_HOWTO (17),
@@ -1569,22 +1601,295 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 BFD_RELOC_LARCH_CALL36,		/* bfd_reloc_code_real_type.  */
 	 reloc_sign_bits,			/* adjust_reloc_bits.  */
 	 "call36"),				/* larch_reloc_type_name.  */
+
+  /* TLS_DESC PCREL.  */
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC_PC_HI20,	/* type (111).  */
+	 12,					/* rightshift.  */
+	 4,					/* size.  */
+	 20,					/* bitsize.  */
+	 true,					/* pc_relative.  */
+	 5,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_DESC_PC_HI20",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x1ffffe0,				/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC_PC_HI20,	/* bfd_reloc_code_real_type.  */
+	 reloc_bits,				/* adjust_reloc_bits.  */
+	 "desc_pc_hi20"),			/* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC_PC_LO12,	/* type (112).  */
+	 0,					/* rightshift.  */
+	 4,					/* size.  */
+	 12,					/* bitsize.  */
+	 true,					/* pc_relative.  */
+	 10,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_DESC_PC_LO12",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x3ffc00,				/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC_PC_LO12,	/* bfd_reloc_code_real_type.  */
+	 reloc_bits,				/* adjust_reloc_bits.  */
+	 "desc_pc_lo12"),			/* larch_reloc_type_name.  */
+
+  /* TLS_DESC64 LARGE PCREL.  */
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_PC_LO20, /* type (113).  */
+	32,				       /* rightshift.  */
+	8,				       /* size.  */
+	20,				       /* bitsize.  */
+	true,				       /* pc_relative.  */
+	5,				       /* bitpos.  */
+	complain_overflow_signed,	       /* complain_on_overflow.  */
+	bfd_elf_generic_reloc,		       /* special_function.  */
+	"R_LARCH_TLS_DESC64_PC_LO20",	       /* name.  */
+	false,				       /* partial_inplace.  */
+	0,				       /* src_mask.  */
+	0x1ffffe0,			       /* dst_mask.  */
+	false,				       /* pcrel_offset.  */
+	BFD_RELOC_LARCH_TLS_DESC64_PC_LO20,    /* bfd_reloc_code_real_type.  */
+	reloc_bits,			       /* adjust_reloc_bits.  */
+	"desc64_pc_lo20"),		       /* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_PC_HI12, /* type (114).  */
+	52,				       /* rightshift.  */
+	8,				       /* size.  */
+	12,				       /* bitsize.  */
+	true,				       /* pc_relative.  */
+	10,				       /* bitpos.  */
+	complain_overflow_signed,	       /* complain_on_overflow.  */
+	bfd_elf_generic_reloc,		       /* special_function.  */
+	"R_LARCH_TLS_DESC64_PC_HI12",	       /* name.  */
+	false,				       /* partial_inplace.  */
+	0,				       /* src_mask.  */
+	0x3ffc00,			       /* dst_mask.  */
+	false,				       /* pcrel_offset.  */
+	BFD_RELOC_LARCH_TLS_DESC64_PC_HI12,    /* bfd_reloc_code_real_type.  */
+	reloc_bits,			       /* adjust_reloc_bits.  */
+	"desc64_pc_hi12"),		       /* larch_reloc_type_name.  */
+
+  /* TLS_DESC ABS.  */
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC_HI20,	/* type (115).  */
+	 12,					/* rightshift.  */
+	 4,					/* size.  */
+	 20,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 5,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_DESC_HI20",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x1ffffe0,				/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC_HI20,		/* bfd_reloc_code_real_type.  */
+	 reloc_bits,				/* adjust_reloc_bits.  */
+	 "desc_hi20"),				/* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC_LO12,	/* type (116).  */
+	 0,					/* rightshift.  */
+	 4,					/* size.  */
+	 12,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 10,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_DESC_LO12",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x3ffc00,				/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC_LO12,		/* bfd_reloc_code_real_type.  */
+	 reloc_bits,				/* adjust_reloc_bits.  */
+	 "desc_lo12"),				/* larch_reloc_type_name.  */
+
+  /* TLS_DESC64 LARGE ABS.  */
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_LO20,    /* type (117).  */
+	32,				       /* rightshift.  */
+	8,				       /* size.  */
+	20,				       /* bitsize.  */
+	false,				       /* pc_relative.  */
+	5,				       /* bitpos.  */
+	complain_overflow_signed,	       /* complain_on_overflow.  */
+	bfd_elf_generic_reloc,		       /* special_function.  */
+	"R_LARCH_TLS_DESC64_LO20",	       /* name.  */
+	false,				       /* partial_inplace.  */
+	0,				       /* src_mask.  */
+	0x1ffffe0,			       /* dst_mask.  */
+	false,				       /* pcrel_offset.  */
+	BFD_RELOC_LARCH_TLS_DESC64_LO20,       /* bfd_reloc_code_real_type.  */
+	reloc_bits,			       /* adjust_reloc_bits.  */
+	"desc64_lo20"),			       /* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_HI12,    /* type (118).  */
+	52,				       /* rightshift.  */
+	8,				       /* size.  */
+	12,				       /* bitsize.  */
+	false,				       /* pc_relative.  */
+	10,				       /* bitpos.  */
+	complain_overflow_signed,	       /* complain_on_overflow.  */
+	bfd_elf_generic_reloc,		       /* special_function.  */
+	"R_LARCH_TLS_DESC64_HI12",	       /* name.  */
+	false,				       /* partial_inplace.  */
+	0,				       /* src_mask.  */
+	0x3ffc00,			       /* dst_mask.  */
+	false,				       /* pcrel_offset.  */
+	BFD_RELOC_LARCH_TLS_DESC64_HI12,       /* bfd_reloc_code_real_type.  */
+	reloc_bits,			       /* adjust_reloc_bits.  */
+	"desc64_hi12"),			       /* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC_LD,		/* type (119).  */
+	 0,					/* rightshift.  */
+	 4,					/* size.  */
+	 0,					/* bitsize.  */
+	 true,					/* pc_relative.  */
+	 0,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_DESC_LD",			/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0,					/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC_LD,		/* bfd_reloc_code_real_type.  */
+	 NULL,					/* adjust_reloc_bits.  */
+	 "desc_ld"),				/* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC_CALL,	/* type (120).  */
+	 0,					/* rightshift.  */
+	 4,					/* size.  */
+	 0,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 0,					/* bitpos.  */
+	 complain_overflow_dont,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_DESC_CALL",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0,					/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC_CALL,		/* bfd_reloc_code_real_type.  */
+	 NULL,					/* adjust_reloc_bits.  */
+	 "desc_call"),				/* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_LE_HI20_R,	/* type (121).  */
+	 12,					/* rightshift.  */
+	 4,					/* size.  */
+	 20,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 5,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_LE_HI20_R",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x1ffffe0,				/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_LE_HI20_R,		/* bfd_reloc_code_real_type.  */
+	 reloc_bits,				/* adjust_reloc_bits.  */
+	 "le_hi20_r"),				/* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_LE_ADD_R,	/* type (122).  */
+	 0,					/* rightshift.  */
+	 0,					/* size.  */
+	 0,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 0,					/* bitpos.  */
+	 complain_overflow_dont,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_LE_ADD_R",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0,					/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_LE_ADD_R,		/* bfd_reloc_code_real_type.  */
+	 NULL,					/* adjust_reloc_bits.  */
+	 "le_add_r"),				/* larch_reloc_type_name.  */
+
+  LOONGARCH_HOWTO (R_LARCH_TLS_LE_LO12_R,	/* type (123).  */
+	 0,					/* rightshift.  */
+	 4,					/* size.  */
+	 12,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 10,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_LE_LO12_R",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x3ffc00,				/* dst_mask.  */
+	 false,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_LE_LO12_R,		/* bfd_reloc_code_real_type.  */
+	 reloc_bits,				/* adjust_reloc_bits.  */
+	 "le_lo12_r"),				/* larch_reloc_type_name.  */
+
+  /* For pcaddi, ld_pc_hi20 + ld_pc_lo12 can relax to ld_pcrel20_s2.  */
+  LOONGARCH_HOWTO (R_LARCH_TLS_LD_PCREL20_S2,	/* type (124).  */
+	 2,					/* rightshift.  */
+	 4,					/* size.  */
+	 20,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 5,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_LD_PCREL20_S2",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x1ffffe0,				/* dst_mask.  */
+	 true,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_LD_PCREL20_S2,	/* bfd_reloc_code_real_type.  */
+	 reloc_sign_bits,			/* adjust_reloc_bits.  */
+	 "ld_pcrel_20"),			/* larch_reloc_type_name.  */
+
+  /* For pcaddi, gd_pc_hi20 + gd_pc_lo12 can relax to gd_pcrel20_s2.  */
+  LOONGARCH_HOWTO (R_LARCH_TLS_GD_PCREL20_S2,	/* type (125).  */
+	 2,					/* rightshift.  */
+	 4,					/* size.  */
+	 20,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 5,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_GD_PCREL20_S2",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x1ffffe0,				/* dst_mask.  */
+	 true,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_GD_PCREL20_S2,	/* bfd_reloc_code_real_type.  */
+	 reloc_sign_bits,			/* adjust_reloc_bits.  */
+	 "gd_pcrel_20"),			/* larch_reloc_type_name.  */
+
+  /* For pcaddi, desc_pc_hi20 + desc_pc_lo12 can relax to desc_pcrel20_s2.  */
+  LOONGARCH_HOWTO (R_LARCH_TLS_DESC_PCREL20_S2,	/* type (126).  */
+	 2,					/* rightshift.  */
+	 4,					/* size.  */
+	 20,					/* bitsize.  */
+	 false,					/* pc_relative.  */
+	 5,					/* bitpos.  */
+	 complain_overflow_signed,		/* complain_on_overflow.  */
+	 bfd_elf_generic_reloc,			/* special_function.  */
+	 "R_LARCH_TLS_DESC_PCREL20_S2",		/* name.  */
+	 false,					/* partial_inplace.  */
+	 0,					/* src_mask.  */
+	 0x1ffffe0,				/* dst_mask.  */
+	 true,					/* pcrel_offset.  */
+	 BFD_RELOC_LARCH_TLS_DESC_PCREL20_S2,	/* bfd_reloc_code_real_type.  */
+	 reloc_sign_bits,			/* adjust_reloc_bits.  */
+	 "desc_pcrel_20"),			/* larch_reloc_type_name.  */
 };
 
 reloc_howto_type *
 loongarch_elf_rtype_to_howto (bfd *abfd, unsigned int r_type)
 {
-  if(r_type < R_LARCH_count)
+  if (r_type < R_LARCH_count)
     {
-      /* For search table fast.  */
       BFD_ASSERT (ARRAY_SIZE (loongarch_howto_table) == R_LARCH_count);
-
-      if (loongarch_howto_table[r_type].howto.type == r_type)
-	return (reloc_howto_type *)&loongarch_howto_table[r_type];
-
-      for (size_t i = 0; i < ARRAY_SIZE (loongarch_howto_table); i++)
-	if (loongarch_howto_table[i].howto.type == r_type)
-	  return (reloc_howto_type *)&loongarch_howto_table[i];
+      BFD_ASSERT (loongarch_howto_table[r_type].howto.type == r_type);
+      return &loongarch_howto_table[r_type].howto;
     }
 
   (*_bfd_error_handler) (_("%pB: unsupported relocation type %#x"),
@@ -1596,17 +1901,14 @@ loongarch_elf_rtype_to_howto (bfd *abfd, unsigned int r_type)
 reloc_howto_type *
 loongarch_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED, const char *r_name)
 {
-  BFD_ASSERT (ARRAY_SIZE (loongarch_howto_table) == R_LARCH_count);
-
   for (size_t i = 0; i < ARRAY_SIZE (loongarch_howto_table); i++)
     if (loongarch_howto_table[i].howto.name
 	&& strcasecmp (loongarch_howto_table[i].howto.name, r_name) == 0)
-      return (reloc_howto_type *)&loongarch_howto_table[i];
+      return &loongarch_howto_table[i].howto;
 
   (*_bfd_error_handler) (_("%pB: unsupported relocation type %s"),
 			 abfd, r_name);
   bfd_set_error (bfd_error_bad_value);
-
   return NULL;
 }
 
@@ -1622,20 +1924,19 @@ loongarch_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     {
       BFD_ASSERT (BFD_RELOC_LARCH_RELAX - BFD_RELOC_LARCH_B16
 		  == R_LARCH_RELAX - R_LARCH_B16);
-      loongarch_reloc_howto_type *ht = NULL;
+      loongarch_reloc_howto_type *ht;
       ht = &loongarch_howto_table[code - BFD_RELOC_LARCH_B16 + R_LARCH_B16];
       BFD_ASSERT (ht->bfd_type == code);
-      return (reloc_howto_type *)ht;
+      return &ht->howto;
     }
 
   for (size_t i = 0; i < ARRAY_SIZE (loongarch_howto_table); i++)
     if (loongarch_howto_table[i].bfd_type == code)
-      return (reloc_howto_type *)&loongarch_howto_table[i];
+      return &loongarch_howto_table[i].howto;
 
   (*_bfd_error_handler) (_("%pB: unsupported bfd relocation type %#x"),
 			 abfd, code);
   bfd_set_error (bfd_error_bad_value);
-
   return NULL;
 }
 

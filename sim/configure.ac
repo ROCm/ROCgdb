@@ -20,6 +20,9 @@ dnl Set the 'development' global before loading the SIM macros.
 SIM_AC_TOOLCHAIN
 SIM_AC_PLATFORM
 
+m4_include([../gdbsupport/libiberty.m4])
+libiberty_INIT
+
 AM_MAINTAINER_MODE
 AM_INIT_AUTOMAKE
 AM_SILENT_RULES([yes])
@@ -58,19 +61,14 @@ AC_SUBST(SIM_ENABLED_ARCHES)
 ENABLE_SIM=no
 dnl Build a particular arch subdir.
 dnl arg[1] is the arch subdir name.
-dnl arg[2] is whether the arch has a dedicated configure script.
 m4_define([SIM_BUILD_TARGET], [dnl
   ENABLE_SIM=yes
   AS_VAR_APPEND([SIM_ENABLED_ARCHES], [" $1"])
-  m4_if($2, [true], [dnl
-    AC_CONFIG_SUBDIRS($1)
-  ])
   AC_CONFIG_FILES($1/.gdbinit:common/gdbinit.in)
 ])
 dnl Enable a particular arch subdir.
 dnl arg[1] is the matching target triple.
 dnl arg[2] is the arch subdir name.
-dnl arg[3] is whether the arch has a dedicated configure script.
 m4_define([SIM_TARGET], [dnl
   sim_enable_arch_$2=false
   case "${targ}" in
@@ -78,7 +76,7 @@ m4_define([SIM_TARGET], [dnl
       if test "${targ}" = "${target}"; then
         SIM_PRIMARY_TARGET=$2
       fi
-      SIM_BUILD_TARGET($2, $3)
+      SIM_BUILD_TARGET($2)
       sim_enable_arch_$2=true
       ;;
   esac
@@ -96,37 +94,39 @@ dnl in sync with that file.
 if test "${enable_sim}" != no; then
   for targ in `echo $target $enable_targets | sed 's/,/ /g'`
   do
-    SIM_TARGET([aarch64*-*-*], [aarch64])
-    SIM_TARGET([arm*-*-*], [arm])
-    SIM_TARGET([avr*-*-*], [avr])
-    SIM_TARGET([bfin-*-*], [bfin])
-    SIM_TARGET([bpf-*-*], [bpf])
-    SIM_TARGET([cr16*-*-*], [cr16])
-    SIM_TARGET([cris-*-* | crisv32-*-*], [cris])
-    SIM_TARGET([d10v-*-*], [d10v])
-    SIM_TARGET([frv-*-*], [frv])
-    SIM_TARGET([ft32-*-*], [ft32])
-    SIM_TARGET([h8300*-*-*], [h8300])
-    SIM_TARGET([iq2000-*-*], [iq2000])
-    SIM_TARGET([lm32-*-*], [lm32])
-    SIM_TARGET([m32c-*-*], [m32c])
-    SIM_TARGET([m32r-*-*], [m32r])
-    SIM_TARGET([m68hc11-*-*|m6811-*-*], [m68hc11])
-    SIM_TARGET([mcore-*-*], [mcore])
-    SIM_TARGET([microblaze*-*-*], [microblaze])
-    SIM_TARGET([mips*-*-*], [mips])
-    SIM_TARGET([mn10300*-*-*], [mn10300])
-    SIM_TARGET([moxie-*-*], [moxie])
-    SIM_TARGET([msp430*-*-*], [msp430])
-    SIM_TARGET([or1k*-*-*], [or1k])
-    SIM_TARGET([powerpc*-*-*], [ppc], [true])
-    SIM_TARGET([pru*-*-*], [pru])
-    SIM_TARGET([riscv*-*-*], [riscv])
-    SIM_TARGET([rl78-*-*], [rl78])
-    SIM_TARGET([rx-*-*], [rx])
-    SIM_TARGET([sh*-*-*], [sh])
-    SIM_TARGET([sparc-*-*], [erc32])
-    SIM_TARGET([v850*-*-*], [v850])
+    m4_map([SIM_TARGET], [
+      [[aarch64*-*-*], [aarch64]],
+      [[arm*-*-*], [arm]],
+      [[avr*-*-*], [avr]],
+      [[bfin-*-*], [bfin]],
+      [[bpf-*-*], [bpf]],
+      [[cr16*-*-*], [cr16]],
+      [[cris-*-* | crisv32-*-*], [cris]],
+      [[d10v-*-*], [d10v]],
+      [[frv-*-*], [frv]],
+      [[ft32-*-*], [ft32]],
+      [[h8300*-*-*], [h8300]],
+      [[iq2000-*-*], [iq2000]],
+      [[lm32-*-*], [lm32]],
+      [[m32c-*-*], [m32c]],
+      [[m32r-*-*], [m32r]],
+      [[m68hc11-*-*|m6811-*-*], [m68hc11]],
+      [[mcore-*-*], [mcore]],
+      [[microblaze*-*-*], [microblaze]],
+      [[mips*-*-*], [mips]],
+      [[mn10300*-*-*], [mn10300]],
+      [[moxie-*-*], [moxie]],
+      [[msp430*-*-*], [msp430]],
+      [[or1k*-*-*], [or1k]],
+      [[powerpc*-*-*], [ppc]],
+      [[pru*-*-*], [pru]],
+      [[riscv*-*-*], [riscv]],
+      [[rl78-*-*], [rl78]],
+      [[rx-*-*], [rx]],
+      [[sh*-*-*], [sh]],
+      [[sparc-*-*], [erc32]],
+      [[v850*-*-*], [v850]],
+    ])
   done
 
   if test "x${enable_example_sims}" = xyes; then
@@ -158,8 +158,9 @@ SIM_AC_OPTION_WARNINGS
 dnl Some arches have unique configure flags.
 m4_include([frv/acinclude.m4])
 m4_include([mips/acinclude.m4])
+m4_include([ppc/acinclude.m4])
 m4_include([riscv/acinclude.m4])
 m4_include([rx/acinclude.m4])
 
-AC_CONFIG_FILES([arch-subdir.mk Makefile .gdbinit:gdbinit.in])
+AC_CONFIG_FILES([Makefile .gdbinit:gdbinit.in])
 AC_OUTPUT

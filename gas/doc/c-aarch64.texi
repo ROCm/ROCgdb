@@ -1,4 +1,4 @@
-@c Copyright (C) 2009-2023 Free Software Foundation, Inc.
+@c Copyright (C) 2009-2024 Free Software Foundation, Inc.
 @c Contributed by ARM Ltd.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
@@ -274,6 +274,8 @@ automatically cause those extensions to be disabled.
  @tab Enable Prediction instructions.
 @item @code{ite} @tab N/A @tab no
  @tab Enable TRCIT instruction.
+@item @code{d128} @tab Armv9.4-A @tab No
+ @tab Enable the 128-bit Page Descriptor Extension.  This implies @code{lse128}.
 @end multitable
 
 @node AArch64 Syntax
@@ -394,11 +396,6 @@ extensions by the @option{-mcpu} command-line option.
 incrementally to the architecture being compiled for.
 
 @c BBBBBBBBBBBBBBBBBBBBBBBBBB
-
-@cindex @code{.bss} directive, AArch64
-@item .bss
-This directive switches to the @code{.bss} section.
-
 @c CCCCCCCCCCCCCCCCCCCCCCCCCC
 
 @cindex @code{.cpu} directive, AArch64

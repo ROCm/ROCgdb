@@ -1,5 +1,9 @@
 -*- text -*-
 
+* Add support for 'armv8.9-a' and 'armv9.4-a' for -march in Arm GAS.
+
+* Initial support for Intel APX: 32 GPRs, NDD, PUSH2/POP2 and PUSHP/POPP.
+
 * On RISC-V macro instructions expanding to AUIPC and a load, store, or branch
   no longer accept x0 as an intermediate and/or destination register.
 
@@ -1088,7 +1092,7 @@ Changes in 1.93.01:
   of new CPUs and formats, lots of bugs fixed.
 
 
-Copyright (C) 2012-2023 Free Software Foundation, Inc.
+Copyright (C) 2012-2024 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

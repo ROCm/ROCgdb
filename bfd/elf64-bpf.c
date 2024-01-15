@@ -1,5 +1,5 @@
 /* Linux bpf specific support for 64-bit ELF
-   Copyright (C) 2019-2023 Free Software Foundation, Inc.
+   Copyright (C) 2019-2024 Free Software Foundation, Inc.
    Contributed by Oracle Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -276,6 +276,7 @@ bpf_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
           }
 	case R_BPF_64_ABS64:
 	case R_BPF_64_ABS32:
+	case R_BPF_64_NODYLD32:
 	  {
 	    addend = bfd_get (howto->bitsize, input_bfd, where);
 	    relocation += addend;

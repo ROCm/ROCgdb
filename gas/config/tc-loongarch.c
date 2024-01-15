@@ -1,6 +1,6 @@
 /* tc-loongarch.c -- Assemble for the LoongArch ISA
 
-   Copyright (C) 2021-2023 Free Software Foundation, Inc.
+   Copyright (C) 2021-2024 Free Software Foundation, Inc.
    Contributed by Loongson Ltd.
 
    This file is part of GAS.
@@ -636,6 +636,30 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 	  break;
 	}
       break;
+    /* This is used for TLS, where the fourth operand is %le_add_r,
+       to get a relocation applied to an add instruction, for relaxation to use.
+       Two conditions, ip->match_now and reloc_num, are used to check tls insn
+       to prevent cases like add.d $a0,$a0,$a0,8.  */
+    case 't':
+      ip->match_now = loongarch_parse_expr (arg, ip->reloc_info + ip->reloc_num,
+				reloc_num_we_have, &reloc_num, &imm) == 0;
+
+      if (!ip->match_now)
+	break;
+
+      bfd_reloc_code_real_type tls_reloc_type = BFD_RELOC_LARCH_TLS_LE_ADD_R;
+
+      if (reloc_num
+	  && (ip->reloc_info[ip->reloc_num].type == tls_reloc_type))
+	{
+	  ip->reloc_num += reloc_num;
+	  ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
+	  ip->reloc_info[ip->reloc_num].value = const_0;
+	  ip->reloc_num++;
+	}
+      else
+	ip->match_now = 0;
+      break;
     case 's':
     case 'u':
       ip->match_now =
@@ -682,7 +706,7 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 		      esc_ch1, esc_ch2, bit_field, arg);
 
 	  if (ip->reloc_info[0].type >= BFD_RELOC_LARCH_B16
-	      && ip->reloc_info[0].type < BFD_RELOC_UNUSED)
+	      && ip->reloc_info[0].type <= BFD_RELOC_LARCH_TLS_DESC_PCREL20_S2)
 	    {
 	      /* As we compact stack-relocs, it is no need for pop operation.
 		 But break out until here in order to check the imm field.
@@ -690,11 +714,23 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 	      ip->reloc_num += reloc_num;
 	      reloc_type = ip->reloc_info[0].type;
 
+	      if (LARCH_opts.relax
+		    && (BFD_RELOC_LARCH_TLS_LE_HI20_R == reloc_type
+			|| BFD_RELOC_LARCH_TLS_LE_LO12_R == reloc_type))
+		{
+		  ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
+		  ip->reloc_info[ip->reloc_num].value = const_0;
+		  ip->reloc_num++;
+		}
 	      if (LARCH_opts.relax && ip->macro_id
 		    && (BFD_RELOC_LARCH_PCALA_HI20 == reloc_type
 			|| BFD_RELOC_LARCH_PCALA_LO12 == reloc_type
 			|| BFD_RELOC_LARCH_GOT_PC_HI20 == reloc_type
-			|| BFD_RELOC_LARCH_GOT_PC_LO12 == reloc_type))
+			|| BFD_RELOC_LARCH_GOT_PC_LO12 == reloc_type
+			|| BFD_RELOC_LARCH_TLS_LD_PC_HI20 == reloc_type
+			|| BFD_RELOC_LARCH_TLS_GD_PC_HI20 == reloc_type
+			|| BFD_RELOC_LARCH_TLS_DESC_PC_HI20 == reloc_type
+			|| BFD_RELOC_LARCH_TLS_DESC_PC_LO12 == reloc_type))
 		{
 		  ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
 		  ip->reloc_info[ip->reloc_num].value = const_0;
@@ -1274,6 +1310,14 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_LARCH_TLS_LD_HI20:
     case BFD_RELOC_LARCH_TLS_GD_PC_HI20:
     case BFD_RELOC_LARCH_TLS_GD_HI20:
+    case BFD_RELOC_LARCH_TLS_DESC_PC_HI20:
+    case BFD_RELOC_LARCH_TLS_DESC_PC_LO12:
+    case BFD_RELOC_LARCH_TLS_DESC64_PC_LO20:
+    case BFD_RELOC_LARCH_TLS_DESC64_PC_HI12:
+    case BFD_RELOC_LARCH_TLS_DESC_HI20:
+    case BFD_RELOC_LARCH_TLS_DESC_LO12:
+    case BFD_RELOC_LARCH_TLS_DESC64_LO20:
+    case BFD_RELOC_LARCH_TLS_DESC64_HI12:
       /* Add tls lo (got_lo reloc type).  */
       if (fixP->fx_addsy == NULL)
 	as_bad_where (fixP->fx_file, fixP->fx_line,
@@ -1292,6 +1336,10 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 		     - (fixP->fx_where + fixP->fx_frag->fr_address));
       else
 	stack_top = 0;
+      break;
+
+    case BFD_RELOC_LARCH_TLS_DESC_LD:
+    case BFD_RELOC_LARCH_TLS_DESC_CALL:
       break;
 
     case BFD_RELOC_LARCH_SOP_POP_32_S_10_5:

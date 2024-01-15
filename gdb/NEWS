@@ -9,6 +9,10 @@
 * GDB index now contains information about the main function.  This speeds up
   startup when it is being used for some large binaries.
 
+* On hosts where threading is available, DWARF reading is now done in
+  the background, resulting in faster startup.  This can be controlled
+  using "maint set dwarf synchronous".
+
 * Changed commands
 
 disassemble
@@ -22,6 +26,10 @@ generate-core-file
   before generating a core dump.  At the end of the command, threads are
   restored to their previous state.
 
+maintenance info line-table
+  Add an EPILOGUE-BEGIN column to the output of the command.  It indicates
+  if the line is considered the start of the epilgoue, and thus a point at
+  which the frame can be considered destroyed.
 
 * New commands
 
@@ -88,6 +96,23 @@ show remote thread-options-packet
 
   ** New function gdb.interrupt(), that interrupts GDB as if the user
      typed control-c.
+
+  ** New gdb.InferiorThread.ptid_string attribute.  This read-only
+     attribute contains the string that appears in the 'Target Id'
+     column of the 'info threads' command output.
+
+  ** It is no longer possible to create new gdb.Progspace object using
+     'gdb.Progspace()', this will result in a TypeError.  Progspace
+     objects can still be obtained through calling other API
+     functions, for example 'gdb.current_progspace()'.
+
+  ** User defined attributes can be added to a gdb.Inferior object,
+     these will be stored in the object's new Inferior.__dict__
+     attribute.
+
+  ** User defined attributes can be added to a gdb.InferiorThread
+     object, these will be stored in the object's new
+     InferiorThread.__dict__ attribute.
 
 * Debugger Adapter Protocol changes
 

@@ -152,6 +152,7 @@ struct parser_state : public expr_builder
       expression_context_block (context_block),
       expression_context_pc (context_pc),
       lexptr (input),
+      start_of_input (input),
       block_tracker (tracker),
       comma_terminates ((flags & PARSER_COMMA_TERMINATES) != 0),
       parse_completion (completion),
@@ -262,6 +263,11 @@ struct parser_state : public expr_builder
     push (expr::make_operation<T> (std::move (lhs), std::move (rhs)));
   }
 
+  /* Function called from the various parsers' yyerror functions to throw
+     an error.  The error will include a message identifying the location
+     of the error within the current expression.  */
+  void parse_error (const char *msg);
+
   /* If this is nonzero, this block is used as the lexical context for
      symbol names.  */
 
@@ -282,6 +288,9 @@ struct parser_state : public expr_builder
   /* After a token has been recognized, this variable points to it.
      Currently used only for error reporting.  */
   const char *prev_lexptr = nullptr;
+
+  /* A pointer to the start of the full input, used for error reporting.  */
+  const char *start_of_input = nullptr;
 
   /* Number of arguments seen so far in innermost function call.  */
 

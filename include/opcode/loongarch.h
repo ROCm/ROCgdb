@@ -1,6 +1,6 @@
 /* LoongArch assembler/disassembler support.
 
-   Copyright (C) 2021-2023 Free Software Foundation, Inc.
+   Copyright (C) 2021-2024 Free Software Foundation, Inc.
    Contributed by Loongson Ltd.
 
    This file is part of GNU Binutils.
@@ -41,6 +41,12 @@ extern "C"
   #define OUT_OF_RANGE(value, bits, align)	\
     ((value) < (-(1 << ((bits) - 1) << align)) 	\
       || (value) > ((((1 << ((bits) - 1)) - 1) << align)))
+
+  #define LARCH_LU12I_W 0x14000000
+  #define LARCH_ORI 0x03800000
+  #define LARCH_LD_D 0x28c00000
+  #define LARCH_RD_A0 0x04
+  #define LARCH_RD_RJ_A0 0x084
 
   typedef uint32_t insn_t;
 

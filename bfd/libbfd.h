@@ -7,7 +7,7 @@
 /* libbfd.h -- Declarations used by bfd library *implementation*.
    (This include file is not for users of the library.)
 
-   Copyright (C) 1990-2023 Free Software Foundation, Inc.
+   Copyright (C) 1990-2024 Free Software Foundation, Inc.
 
    Written by Cygnus Support.
 
@@ -1460,6 +1460,9 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
   "BFD_RELOC_X86_64_PLT32_BND",
   "BFD_RELOC_X86_64_GOTPCRELX",
   "BFD_RELOC_X86_64_REX_GOTPCRELX",
+  "BFD_RELOC_X86_64_CODE_4_GOTPCRELX",
+  "BFD_RELOC_X86_64_CODE_4_GOTTPOFF",
+  "BFD_RELOC_X86_64_CODE_4_GOTPC32_TLSDESC",
   "BFD_RELOC_NS32K_IMM_8",
   "BFD_RELOC_NS32K_IMM_16",
   "BFD_RELOC_NS32K_IMM_32",
@@ -3516,6 +3519,8 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
   "BFD_RELOC_LARCH_TLS_DTPREL64",
   "BFD_RELOC_LARCH_TLS_TPREL32",
   "BFD_RELOC_LARCH_TLS_TPREL64",
+  "BFD_RELOC_LARCH_TLS_DESC32",
+  "BFD_RELOC_LARCH_TLS_DESC64",
   "BFD_RELOC_LARCH_MARK_LA",
   "BFD_RELOC_LARCH_MARK_PCREL",
   "BFD_RELOC_LARCH_SOP_PUSH_PCREL",
@@ -3600,6 +3605,22 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
   "BFD_RELOC_LARCH_SUB_ULEB128",
   "BFD_RELOC_LARCH_64_PCREL",
   "BFD_RELOC_LARCH_CALL36",
+  "BFD_RELOC_LARCH_TLS_DESC_PC_HI20",
+  "BFD_RELOC_LARCH_TLS_DESC_PC_LO12",
+  "BFD_RELOC_LARCH_TLS_DESC64_PC_LO20",
+  "BFD_RELOC_LARCH_TLS_DESC64_PC_HI12",
+  "BFD_RELOC_LARCH_TLS_DESC_HI20",
+  "BFD_RELOC_LARCH_TLS_DESC_LO12",
+  "BFD_RELOC_LARCH_TLS_DESC64_LO20",
+  "BFD_RELOC_LARCH_TLS_DESC64_HI12",
+  "BFD_RELOC_LARCH_TLS_DESC_LD",
+  "BFD_RELOC_LARCH_TLS_DESC_CALL",
+  "BFD_RELOC_LARCH_TLS_LE_HI20_R",
+  "BFD_RELOC_LARCH_TLS_LE_ADD_R",
+  "BFD_RELOC_LARCH_TLS_LE_LO12_R",
+  "BFD_RELOC_LARCH_TLS_LD_PCREL20_S2",
+  "BFD_RELOC_LARCH_TLS_GD_PCREL20_S2",
+  "BFD_RELOC_LARCH_TLS_DESC_PCREL20_S2",
  "@@overflow: BFD_RELOC_UNUSED@@",
 };
 #endif

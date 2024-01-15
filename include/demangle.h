@@ -1,5 +1,5 @@
 /* Defs for interface to demanglers.
-   Copyright (C) 1992-2023 Free Software Foundation, Inc.
+   Copyright (C) 1992-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public License
@@ -448,6 +448,8 @@ enum demangle_component_type
   DEMANGLE_COMPONENT_TRANSACTION_SAFE,
   /* A cloned function.  */
   DEMANGLE_COMPONENT_CLONE,
+  /* A member-like friend function.  */
+  DEMANGLE_COMPONENT_FRIEND,
   DEMANGLE_COMPONENT_NOEXCEPT,
   DEMANGLE_COMPONENT_THROW_SPEC,
 
@@ -463,6 +465,8 @@ enum demangle_component_type
   DEMANGLE_COMPONENT_TEMPLATE_NON_TYPE_PARM,
   DEMANGLE_COMPONENT_TEMPLATE_TEMPLATE_PARM,
   DEMANGLE_COMPONENT_TEMPLATE_PACK_PARM,
+
+  DEMANGLE_COMPONENT_CONSTRAINTS,
 
   /* A builtin type with argument.  This holds the builtin type
      information.  */

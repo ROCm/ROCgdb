@@ -1,5 +1,5 @@
 /* ELF support for BFD.
-   Copyright (C) 1991-2023 Free Software Foundation, Inc.
+   Copyright (C) 1991-2024 Free Software Foundation, Inc.
 
    Written by Fred Fish @ Cygnus Support, from information published
    in "UNIX System V Release 4, Programmers Guide: ANSI C and
@@ -644,6 +644,9 @@
 #define NT_X86_XSTATE	0x202		/* x86 XSAVE extended state */
 					/*   note name must be "LINUX".  */
 #define NT_X86_CET	0x203		/* x86 CET state.  */
+					/*   note name must be "LINUX".  */
+#define NT_X86_SHSTK	0x204		/* x86 SHSTK state.  */
+					/* This replaces NT_X86_CET (0x203).  */
 					/*   note name must be "LINUX".  */
 #define NT_S390_HIGH_GPRS 0x300		/* S/390 upper halves of GPRs  */
 					/*   note name must be "LINUX".  */

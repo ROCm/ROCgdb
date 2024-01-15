@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script
 dnl
-dnl   Copyright (C) 2012-2023 Free Software Foundation, Inc.
+dnl   Copyright (C) 2012-2024 Free Software Foundation, Inc.
 dnl
 dnl This file is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -211,6 +211,16 @@ AC_ARG_ENABLE(separate-code,
 [case "${enableval}" in
   yes) ac_default_ld_z_separate_code=1 ;;
   no) ac_default_ld_z_separate_code=0 ;;
+esac])
+
+# Decide if -z mark-plt should be enabled in ELF x86-64 linker by default.
+ac_default_ld_z_mark_plt=unset
+AC_ARG_ENABLE(mark-plt,
+	      AS_HELP_STRING([--enable-mark-plt],
+	      [enable -z mark-plt in ELF x86-64 linker by default]),
+[case "${enableval}" in
+  yes) ac_default_ld_z_mark_plt=1 ;;
+  no) ac_default_ld_z_mark_plt=0 ;;
 esac])
 
 
@@ -561,6 +571,13 @@ fi
 AC_DEFINE_UNQUOTED(DEFAULT_LD_Z_SEPARATE_CODE,
   $ac_default_ld_z_separate_code,
   [Define to 1 if you want to enable -z separate-code in ELF linker by default.])
+
+if test "${ac_default_ld_z_mark_plt}" = unset; then
+  ac_default_ld_z_mark_plt=0
+fi
+AC_DEFINE_UNQUOTED(DEFAULT_LD_Z_MARK_PLT,
+  $ac_default_ld_z_mark_plt,
+  [Define to 1 if you want to enable -z mark-plt in ELF x86-64 linker by default.])
 
 
 AC_DEFINE_UNQUOTED(DEFAULT_LD_WARN_EXECSTACK,

@@ -1,6 +1,6 @@
 # config.bfd
 #
-#   Copyright (C) 2012-2023 Free Software Foundation, Inc.
+#   Copyright (C) 2012-2024 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -284,7 +284,7 @@ case "${targ}" in
     targ_selvecs="aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec"
     want64=true
     ;;
-  aarch64-*-linux* | aarch64-*-netbsd* | aarch64-*-nto*)
+  aarch64-*-linux* | aarch64-*-netbsd* | aarch64-*-nto* | aarch64-*-gnu*)
     targ_defvec=aarch64_elf64_le_vec
     targ_selvecs="aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec aarch64_pei_le_vec aarch64_pe_le_vec"
     want64=true

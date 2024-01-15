@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2023 Free Software Foundation, Inc.
+# Copyright (C) 2012-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -194,6 +194,10 @@ if { [is_elf_format] } then {
 	}
     }
     run_dump_test "pseudo"
+    run_dump_test "text-prev" $dump_opts
+    run_dump_test "text-subsect" $dump_opts
+    run_dump_test "data-prev" $dump_opts
+    run_dump_test "data-subsect" $dump_opts
     run_dump_test "section0"
     run_dump_test "section1"
     # The h8300 port issues a warning message for
@@ -336,6 +340,13 @@ if { [is_elf_format] } then {
 
     run_dump_test "pr25917"
     run_dump_test "bss"
+    # Some targets treat .bss similar to .lcomm.
+    if { ![istarget "csky-*-*"]
+	 && ![istarget "mcore-*-*"]
+	 && ![istarget "spu-*-*"] } then {
+	run_dump_test "bss-prev" $dump_opts
+	run_dump_test "bss-subsect" $dump_opts
+    }
     run_dump_test "bad-bss"
     run_dump_test "bad-section-flag"
     run_dump_test "bad-size"

@@ -74,6 +74,7 @@
 #include <string_view>
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/common-utils.h"
+#include <optional>
 
 /* Forward declarations for local functions.  */
 
@@ -3318,6 +3319,55 @@ find_pc_line (CORE_ADDR pc, int notcurrent)
   return sal;
 }
 
+/* Compare two symtab_and_line entries.  Return true if both have
+   the same line number and the same symtab pointer.  That means we
+   are dealing with two entries from the same line and from the same
+   source file.
+
+   Return false otherwise.  */
+
+static bool
+sal_line_symtab_matches_p (const symtab_and_line &sal1,
+			   const symtab_and_line &sal2)
+{
+  return sal1.line == sal2.line && sal1.symtab == sal2.symtab;
+}
+
+/* See symtah.h.  */
+
+std::optional<CORE_ADDR>
+find_line_range_start (CORE_ADDR pc)
+{
+  struct symtab_and_line current_sal = find_pc_line (pc, 0);
+
+  if (current_sal.line == 0)
+    return {};
+
+  struct symtab_and_line prev_sal = find_pc_line (current_sal.pc - 1, 0);
+
+  /* If the previous entry is for a different line, that means we are already
+     at the entry with the start PC for this line.  */
+  if (!sal_line_symtab_matches_p (prev_sal, current_sal))
+    return current_sal.pc;
+
+  /* Otherwise, keep looking for entries for the same line but with
+     smaller PC's.  */
+  bool done = false;
+  CORE_ADDR prev_pc;
+  while (!done)
+    {
+      prev_pc = prev_sal.pc;
+
+      prev_sal = find_pc_line (prev_pc - 1, 0);
+
+      /* Did we notice a line change?  If so, we are done searching.  */
+      if (!sal_line_symtab_matches_p (prev_sal, current_sal))
+	done = true;
+    }
+
+  return prev_pc;
+}
+
 /* See symtab.h.  */
 
 struct symtab *
@@ -4065,6 +4115,47 @@ skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
   else
     /* Don't return END_PC, which is past the end of the function.  */
     return prologue_sal.pc;
+}
+
+/* See symtab.h.  */
+
+std::optional<CORE_ADDR>
+find_epilogue_using_linetable (CORE_ADDR func_addr)
+{
+  CORE_ADDR start_pc, end_pc;
+
+  if (!find_pc_partial_function (func_addr, nullptr, &start_pc, &end_pc))
+    return {};
+
+  const struct symtab_and_line sal = find_pc_line (start_pc, 0);
+  if (sal.symtab != nullptr && sal.symtab->language () != language_asm)
+    {
+      struct objfile *objfile = sal.symtab->compunit ()->objfile ();
+      unrelocated_addr unrel_start
+	= unrelocated_addr (start_pc - objfile->text_section_offset ());
+      unrelocated_addr unrel_end
+	= unrelocated_addr (end_pc - objfile->text_section_offset ());
+
+      const linetable *linetable = sal.symtab->linetable ();
+      /* This should find the last linetable entry of the current function.
+	 It is probably where the epilogue begins, but since the DWARF 5
+	 spec doesn't guarantee it, we iterate backwards through the function
+	 until we either find it or are sure that it doesn't exist.  */
+      auto it = std::lower_bound
+	(linetable->item, linetable->item + linetable->nitems, unrel_end,
+	 [] (const linetable_entry &lte, unrelocated_addr pc)
+	 {
+	   return lte.unrelocated_pc () < pc;
+	 });
+
+      while (it->unrelocated_pc () >= unrel_start)
+      {
+	if (it->epilogue_begin)
+	  return {it->pc (objfile)};
+	it --;
+      }
+    }
+  return {};
 }
 
 /* See symtab.h.  */
@@ -6244,6 +6335,8 @@ find_main_name (void)
      accurate.  */
   for (objfile *objfile : current_program_space->objfiles ())
     {
+      objfile->compute_main_name ();
+
       if (objfile->per_bfd->name_of_main != NULL)
 	{
 	  set_main_name (pspace,

@@ -1,5 +1,5 @@
 /* RISC-V ELF specific backend routines.
-   Copyright (C) 2011-2023 Free Software Foundation, Inc.
+   Copyright (C) 2011-2024 Free Software Foundation, Inc.
 
    Contributed by Andrew Waterman (andrew@sifive.com).
    Based on MIPS target.
@@ -31,6 +31,8 @@ struct riscv_elf_params
 {
   /* Whether to relax code sequences to GP-relative addressing.  */
   bool relax_gp;
+  /* Whether to check if SUB_ULEB128 relocation has non-zero addend.  */
+  bool check_uleb128;
 };
 
 extern void riscv_elf32_set_options (struct bfd_link_info *,

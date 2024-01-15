@@ -790,8 +790,6 @@ read_symbols (struct objfile *objfile, symfile_add_flags add_flags)
 				    add_flags | SYMFILE_NOT_FILENAME, objfile);
 	}
     }
-  if ((add_flags & SYMFILE_NO_READ) == 0)
-    objfile->require_partial_symbols (false);
 }
 
 /* Initialize entry point information for this objfile.  */
@@ -1686,13 +1684,11 @@ symbol_file_command (const char *args, int from_tty)
     }
 }
 
-/* Set the initial language.  */
+/* Lazily set the initial language.  */
 
-void
-set_initial_language (void)
+static void
+set_initial_language_callback ()
 {
-  if (language_mode == language_mode_manual)
-    return;
   enum language lang = main_language ();
   /* Make C the default language.  */
   enum language default_lang = language_c;
@@ -1715,6 +1711,16 @@ set_initial_language (void)
 
   set_language (lang);
   expected_language = current_language; /* Don't warn the user.  */
+}
+
+/* Set the initial language.  */
+
+void
+set_initial_language (void)
+{
+  if (language_mode == language_mode_manual)
+    return;
+  lazily_set_language (set_initial_language_callback);
 }
 
 /* Open the file specified by NAME and hand it off to BFD for
@@ -2621,8 +2627,6 @@ reread_symbols (int from_tty)
 
 	  (*objfile->sf->sym_init) (objfile);
 	  clear_complaints ();
-
-	  objfile->flags &= ~OBJF_PSYMTABS_READ;
 
 	  /* We are about to read new symbols and potentially also
 	     DWARF information.  Some targets may want to pass addresses

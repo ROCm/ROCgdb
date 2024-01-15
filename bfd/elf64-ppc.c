@@ -1,5 +1,5 @@
 /* PowerPC64-specific support for 64-bit ELF.
-   Copyright (C) 1999-2023 Free Software Foundation, Inc.
+   Copyright (C) 1999-2024 Free Software Foundation, Inc.
    Written by Linus Nordberg, Swox AB <info@swox.com>,
    based on elf32-ppc.c by Ian Lance Taylor.
    Largely rewritten by Alan Modra.
@@ -4498,7 +4498,7 @@ ppc64_elf_before_check_relocs (bfd *ibfd, struct bfd_link_info *info)
     {
       /* For input files without an explicit abiversion in e_flags
 	 we should have flagged any with symbol st_other bits set
-	 as ELFv1 and above flagged those with .opd as ELFv2.
+	 as ELFv2 and above flagged those with .opd as ELFv1.
 	 Set the output abiversion if not yet set, and for any input
 	 still ambiguous, take its abiversion from the output.
 	 Differences in ABI are reported later.  */

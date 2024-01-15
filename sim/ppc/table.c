@@ -24,10 +24,10 @@
 #include <fcntl.h>
 #include <ctype.h>
 
-#include "build-config.h"
 #include "misc.h"
 #include "lf.h"
 #include "table.h"
+#include "dumpf.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -99,7 +99,7 @@ table_push (table *root,
       /* free (dup_name); */
       if (include->next == NULL)
 	{
-	  error ("Problem opening file `%s'\n", file_name);
+	  ERROR ("Problem opening file `%s'\n", file_name);
 	  perror (file_name);
 	  exit (1);
 	}
@@ -341,7 +341,7 @@ extern void
 table_entry_print_cpp_line_nr(lf *file,
 			      table_entry *entry)
 {
-  lf_print__external_reference(file, entry->line_nr, entry->file_name);
+  lf_print__external_ref(file, entry->line_nr, entry->file_name);
 }
 
 

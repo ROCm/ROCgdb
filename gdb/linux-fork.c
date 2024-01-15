@@ -227,6 +227,8 @@ fork_load_infrun_state (struct fork_info *fp)
 
   inferior_thread ()->set_stop_pc
     (regcache_read_pc (get_thread_regcache (inferior_thread ())));
+  inferior_thread ()->set_executing (false);
+  inferior_thread ()->set_resumed (false);
   nullify_last_target_wait_ptid ();
 
   /* Now restore the file positions of open file descriptors.  */
@@ -537,6 +539,17 @@ Please switch to another checkpoint before deleting the current one"));
 
   delete_fork (ptid);
 
+  if (pptid == null_ptid)
+    {
+      int status;
+      /* Wait to collect the inferior's exit status.  Do not check whether
+	 this succeeds though, since we may be dealing with a process that we
+	 attached to.  Such a process will only report its exit status to its
+	 original parent.  */
+      waitpid (ptid.pid (), &status, 0);
+      return;
+    }
+
   /* If fi->parent_ptid is not a part of lwp but it's a part of checkpoint
      list, waitpid the ptid.
      If fi->parent_ptid is a part of lwp and it is stopped, waitpid the
@@ -583,7 +596,7 @@ info_checkpoints_command (const char *arg, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
   int requested = -1;
-  const fork_info *printed = NULL;
+  bool printed = false;
 
   if (arg && *arg)
     requested = (int) parse_and_eval_long (arg);
@@ -592,18 +605,29 @@ info_checkpoints_command (const char *arg, int from_tty)
     {
       if (requested > 0 && fi.num != requested)
 	continue;
+      printed = true;
 
-      printed = &fi;
-      if (fi.ptid == inferior_ptid)
+      bool is_current = fi.ptid == inferior_ptid;
+      if (is_current)
 	gdb_printf ("* ");
       else
 	gdb_printf ("  ");
 
-      ULONGEST pc = fi.pc;
       gdb_printf ("%d %s", fi.num, target_pid_to_str (fi.ptid).c_str ());
       if (fi.num == 0)
 	gdb_printf (_(" (main process)"));
+
+      if (is_current && inferior_thread ()->state == THREAD_RUNNING)
+	{
+	  gdb_printf (_(" <running>\n"));
+	  continue;
+	}
+
       gdb_printf (_(" at "));
+      ULONGEST pc
+	= (is_current
+	   ? regcache_read_pc (get_thread_regcache (inferior_thread ()))
+	   : fi.pc);
       gdb_puts (paddress (gdbarch, pc));
 
       symtab_and_line sal = find_pc_line (pc, 0);
@@ -623,7 +647,8 @@ info_checkpoints_command (const char *arg, int from_tty)
 
       gdb_putc ('\n');
     }
-  if (printed == NULL)
+
+  if (!printed)
     {
       if (requested > 0)
 	gdb_printf (_("No checkpoint number %d.\n"), requested);

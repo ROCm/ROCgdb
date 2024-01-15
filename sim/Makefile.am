@@ -24,8 +24,6 @@ GNULIB_PARENT_DIR = ..
 srccom = $(srcdir)/common
 srcroot = $(srcdir)/..
 
-SUBDIRS = @subdirs@
-
 SIM_PRIMARY_TARGET = @SIM_PRIMARY_TARGET@
 
 ## We don't set some of these vars here, but we need to define them so they may
@@ -69,12 +67,9 @@ AM_CPPFLAGS_FOR_BUILD = \
 	-I$(srcroot)/include \
 	$(SIM_HW_CFLAGS) \
 	$(SIM_INLINE)
-COMPILE_FOR_BUILD = $(CC_FOR_BUILD) $(AM_CPPFLAGS_FOR_BUILD) $(CPPFLAGS_FOR_BUILD) $(CFLAGS_FOR_BUILD)
+COMPILE_FOR_BUILD = $(CC_FOR_BUILD) $(AM_CPPFLAGS_FOR_BUILD) $(CPPFLAGS_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(BUILD_WERROR_CFLAGS) $(BUILD_WARN_CFLAGS)
 LINK_FOR_BUILD = $(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) -o $@
 
-## Deps to add to the all-recursive target.  These are built before descending
-## into any subdirs.
-SIM_ALL_RECURSIVE_DEPS =
 ## Deps to add to the install-data-local target.
 SIM_INSTALL_DATA_LOCAL_DEPS =
 ## Deps to add to the install-exec-local target.
@@ -204,11 +199,6 @@ endif
 if SIM_ENABLE_ARCH_v850
 include v850/local.mk
 endif
-
-## Helper targets for running make from the top-level when some subdirs still
-## have Makefiles in subdirs.
-
-all-recursive: $(SIM_ALL_RECURSIVE_DEPS)
 
 install-data-local: installdirs $(SIM_INSTALL_DATA_LOCAL_DEPS)
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(libdir)

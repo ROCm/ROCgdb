@@ -1,6 +1,7 @@
 	th.vsetvl a0, a1, a2
 	th.vsetvli a0, a1, 0
 	th.vsetvli a0, a1, 0x7ff
+	th.vsetvli a0, a1, e16,m2,d4
 
 	th.vlb.v v4, (a0)
 	th.vlb.v v4, 0(a0)
@@ -1006,6 +1007,10 @@
 	th.vlseg8eff.v v4, 0(a0)
 	th.vlseg8eff.v v4, (a0), v0.t
 
+        # Aliases
+	th.vneg.v v4, v8
+	th.vneg.v v4, v8, v0.t
+
 	th.vadd.vv v4, v8, v12
 	th.vadd.vx v4, v8, a1
 	th.vadd.vi v4, v8, 15
@@ -1130,6 +1135,10 @@
 	th.vsra.vx v4, v8, a1, v0.t
 	th.vsra.vi v4, v8, 1, v0.t
 	th.vsra.vi v4, v8, 31, v0.t
+
+	# Aliases
+	th.vncvt.x.x.v v4, v8
+	th.vncvt.x.x.v v4, v8, v0.t
 
 	th.vnsrl.vv v4, v8, v12
 	th.vnsrl.vx v4, v8, a1
@@ -1539,6 +1548,12 @@
 	th.vfmax.vv v4, v8, v12, v0.t
 	th.vfmax.vf v4, v8, fa2, v0.t
 
+        # Aliases
+	th.vfneg.v v4, v8
+	th.vfneg.v v4, v8, v0.t
+	th.vfabs.v v4, v8
+	th.vfabs.v v4, v8, v0.t
+
 	th.vfsgnj.vv v4, v8, v12
 	th.vfsgnj.vf v4, v8, fa2
 	th.vfsgnjn.vv v4, v8, v12
@@ -1658,6 +1673,7 @@
 	th.vfwredsum.vs v4, v8, v12, v0.t
 
 	# Aliases
+	th.vmmv.m v4, v8
 	th.vmcpy.m v4, v8
 	th.vmclr.m v4
 	th.vmset.m v4

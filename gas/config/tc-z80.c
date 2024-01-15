@@ -1,5 +1,5 @@
 /* tc-z80.c -- Assemble code for the Zilog Z80, Z180, EZ80 and ASCII R800
-   Copyright (C) 2005-2023 Free Software Foundation, Inc.
+   Copyright (C) 2005-2024 Free Software Foundation, Inc.
    Contributed by Arnold Metselaar <arnold_m@operamail.com>
 
    This file is part of GAS, the GNU Assembler.
@@ -3483,15 +3483,6 @@ area (int arg)
     psect (arg);
 }
 
-/* Handle the .bss pseudo-op.  */
-
-static void
-s_bss (int ignore ATTRIBUTE_UNUSED)
-{
-  subseg_set (bss_section, 0);
-  demand_empty_rest_of_line ();
-}
-
 /* Port specific pseudo ops.  */
 const pseudo_typeS md_pseudo_table[] =
 {
@@ -3507,7 +3498,6 @@ const pseudo_typeS md_pseudo_table[] =
   { ".hd64", set_inss, INS_Z180},
   { ".z80", set_inss, INS_Z80},
   { ".z80n", set_inss, INS_Z80N},
-  { "bss", s_bss, 0},
   { "db" , emit_data, 1},
   { "d24", z80_cons, 3},
   { "d32", z80_cons, 4},

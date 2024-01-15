@@ -1,5 +1,5 @@
 # Expect script for ld-x86_64 tests
-#   Copyright (C) 2002-2023 Free Software Foundation, Inc.
+#   Copyright (C) 2002-2024 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -49,6 +49,7 @@ set x86_64tests {
      "--64" {tlslib.s} {} "libtlslib.so"}
     {"TLS -fpic and -fno-pic exec transitions"
      "-melf_x86_64 tmpdir/libtlslib.so --no-ld-generated-unwind-info \
+      -z nomark-plt \
       -z noseparate-code -z max-page-size=0x200000 --hash-style=sysv" ""
      "--64" {tlsbinpic.s tlsbin.s}
      {{readelf -WSsrl tlsbin.rd} {objdump -drj.text tlsbin.dd}
@@ -70,6 +71,7 @@ set x86_64tests {
       "tlsbindesc"}
     {"TLS with global dynamic and descriptors"
      "-shared -melf_x86_64 --no-ld-generated-unwind-info \
+      -z nomark-plt \
       -z noseparate-code -z max-page-size=0x200000 --hash-style=sysv" ""
      "--64" {tlsgdesc.s}
      {{readelf -WSsrl tlsgdesc.rd} {objdump -drj.text\ -Mintel64 tlsgdesc.dd}}
@@ -222,6 +224,7 @@ run_ld_link_tests [list \
     [list \
 	"TLS -fpic -shared transitions" \
 	"-shared -melf_x86_64 --no-ld-generated-unwind-info \
+	 -z nomark-plt \
 	 -z noseparate-code -z max-page-size=0x200000 --hash-style=sysv \
 	 $NO_DT_RELR_LDFLAGS" \
 	"" "--64" \
@@ -235,6 +238,7 @@ run_ld_link_tests [list \
     [list \
 	"TLS -fpic -shared transitions with r15 as GOT base" \
 	"-shared -melf_x86_64 --no-ld-generated-unwind-info \
+	 -z nomark-plt \
 	 -z noseparate-code -z max-page-size=0x200000 --hash-style=sysv \
 	 $NO_DT_RELR_LDFLAGS" \
 	 "" "--64 -mrelax-relocations=yes" \
@@ -248,6 +252,7 @@ run_ld_link_tests [list \
     [list \
 	"TLS descriptor -fpic -shared transitions" \
 	"-shared -melf_x86_64 --no-ld-generated-unwind-info \
+	 -z nomark-plt \
 	 -z noseparate-code -z max-page-size=0x200000 --hash-style=sysv \
 	 $NO_DT_RELR_LDFLAGS" \
 	"" "--64" \
@@ -506,6 +511,8 @@ run_dump_test "dt-relr-1a-x32"
 run_dump_test "dt-relr-1b"
 run_dump_test "dt-relr-1b-x32"
 run_dump_test "pr30787"
+run_dump_test "pr31047"
+run_dump_test "pr31047-x32"
 
 if { ![skip_sframe_tests] } {
     run_dump_test "sframe-simple-1"
@@ -605,6 +612,10 @@ run_dump_test "load1a"
 run_dump_test "load1b"
 run_dump_test "load1c"
 run_dump_test "load1d"
+run_dump_test "apx-load1a"
+run_dump_test "apx-load1b"
+run_dump_test "apx-load1c"
+run_dump_test "apx-load1d"
 run_dump_test "load2"
 run_dump_test "call1a"
 run_dump_test "call1b"
@@ -2092,6 +2103,7 @@ run_ld_link_tests [list \
     [list \
 	"basic PLT generation (-z now)" \
 	"-z now -melf_x86_64 --hash-style=sysv tmpdir/libpltlib.so \
+	 -z nomark-plt \
 	 -z noseparate-code -z max-page-size=0x200000" \
 	"" \
 	"--64" \
@@ -2246,5 +2258,19 @@ run_dump_test "mark-plt-1a-x32"
 run_dump_test "mark-plt-1b-x32"
 run_dump_test "mark-plt-1c-x32"
 run_dump_test "mark-plt-1d-x32"
+
+if { [check_compiler_available] } {
+    run_cc_link_tests [list \
+	[list \
+	    "Build mark-plt-1.so" \
+	    "-shared -Wl,-z,mark-plt,-z,pack-relative-relocs" \
+	    "-fPIC" \
+	    { mark-plt-1.s } \
+	    {{readelf {-W --version-info} mark-plt-1a.rd} \
+	     {readelf {-W --version-info} mark-plt-1b.rd}} \
+	    "mark-plt-1.so" \
+	] \
+    ]
+}
 
 set ASFLAGS "$saved_ASFLAGS"

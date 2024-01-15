@@ -1,4 +1,4 @@
-@c Copyright (C) 2023-2023 Free Software Foundation, Inc.
+@c Copyright (C) 2023-2024 Free Software Foundation, Inc.
 @c Contributed by Kalray SA.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
@@ -98,8 +98,8 @@ Print succinct diagnostics on one line.
 @table @code
 
 @cindex @code{.align} directive, KVX
-@item .align ALIGNEMENT
-Pad with NOPs until the next boundary with the required ALIGNEMENT.
+@item .align ALIGNMENT
+Pad with NOPs until the next boundary with the required ALIGNMENT.
 
 @cindex @code{.dword} directive, KVX
 @item .dword
@@ -131,7 +131,7 @@ This directive is only supported when producing ELF files.
 
 @cindex @code{.loc} directive, KVX
 @item .loc FILENO LINENO
-This directive is only supported when producting ELF files.
+This directive is only supported when producing ELF files.
 @pxref{Line,,@code{.line}} for details.
 
 @cindex @code{.proc} directive, KVX

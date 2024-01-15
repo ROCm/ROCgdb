@@ -1,5 +1,5 @@
 /* RISC-V opcode list
-   Copyright (C) 2011-2023 Free Software Foundation, Inc.
+   Copyright (C) 2011-2024 Free Software Foundation, Inc.
 
    Contributed by Andrew Waterman (andrew@sifive.com).
    Based on MIPS target.
@@ -108,6 +108,18 @@ const char * const riscv_vta[2] =
 const char * const riscv_vma[2] =
 {
   "mu", "ma"
+};
+
+/* XTheadVector, List of vsetvli vlmul constants.  */
+const char * const riscv_th_vlen[4] =
+{
+    "m1", "m2", "m4", "m8"
+};
+
+/* XTheadVector, List of vsetvli vediv constants.  */
+const char * const riscv_th_vediv[4] =
+{
+    "d1", "d2", "d4", "d8"
 };
 
 /* The FLI.[HSDQ] symbolic constants (NULL for numeric constant).  */
@@ -2236,7 +2248,7 @@ const struct riscv_opcode riscv_opcodes[] =
 
 /* Vendor-specific (T-Head) XTheadVector instructions.  */
 {"th.vsetvl",     0, INSN_CLASS_XTHEADVECTOR,  "d,s,t", MATCH_VSETVL, MASK_VSETVL, match_opcode, 0},
-{"th.vsetvli",    0, INSN_CLASS_XTHEADVECTOR,  "d,s,Vc", MATCH_VSETVLI, MASK_VSETVLI, match_opcode, 0},
+{"th.vsetvli",    0, INSN_CLASS_XTHEADVECTOR,  "d,s,XtVc", MATCH_VSETVLI, MASK_VSETVLI, match_opcode, 0},
 {"th.vlb.v",      0, INSN_CLASS_XTHEADVECTOR,  "Vd,0(s)Vm", MATCH_TH_VLBV, MASK_TH_VLBV, match_opcode, INSN_DREF },
 {"th.vlh.v",      0, INSN_CLASS_XTHEADVECTOR,  "Vd,0(s)Vm", MATCH_TH_VLHV, MASK_TH_VLHV, match_opcode, INSN_DREF },
 {"th.vlw.v",      0, INSN_CLASS_XTHEADVECTOR,  "Vd,0(s)Vm", MATCH_TH_VLWV, MASK_TH_VLWV, match_opcode, INSN_DREF },
@@ -2579,6 +2591,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vamominud.v",  0, INSN_CLASS_XTHEADZVAMO,  "Ve,Vt,(s),VfVm", MATCH_TH_VAMOMINUDV, MASK_TH_VAMOMINUDV, match_opcode, INSN_DREF},
 {"th.vamomaxuw.v",  0, INSN_CLASS_XTHEADZVAMO,  "Ve,Vt,(s),VfVm", MATCH_TH_VAMOMAXUWV, MASK_TH_VAMOMAXUWV, match_opcode, INSN_DREF},
 {"th.vamomaxud.v",  0, INSN_CLASS_XTHEADZVAMO,  "Ve,Vt,(s),VfVm", MATCH_TH_VAMOMAXUDV, MASK_TH_VAMOMAXUDV, match_opcode, INSN_DREF},
+{"th.vneg.v",     0, INSN_CLASS_XTHEADVECTOR,  "Vd,VtVm",  MATCH_VRSUBVX, MASK_VRSUBVX | MASK_RS1, match_opcode, INSN_ALIAS },
 {"th.vadd.vv",    0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,VsVm", MATCH_VADDVV, MASK_VADDVV, match_opcode, 0 },
 {"th.vadd.vx",    0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,sVm", MATCH_VADDVX, MASK_VADDVX, match_opcode, 0 },
 {"th.vadd.vi",    0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,ViVm", MATCH_VADDVI, MASK_VADDVI, match_opcode, 0 },
@@ -2633,6 +2646,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vsra.vv",    0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,VsVm", MATCH_VSRAVV, MASK_VSRAVV, match_opcode, 0 },
 {"th.vsra.vx",    0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,sVm", MATCH_VSRAVX, MASK_VSRAVX, match_opcode, 0 },
 {"th.vsra.vi",    0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,VjVm", MATCH_VSRAVI, MASK_VSRAVI, match_opcode, 0 },
+{"th.vncvt.x.x.v",0, INSN_CLASS_XTHEADVECTOR,  "Vd,VtVm", MATCH_VNCVTXXW, MASK_VNCVTXXW, match_opcode, INSN_ALIAS },
 {"th.vnsrl.vv",   0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,VsVm", MATCH_VNSRLWV, MASK_VNSRLWV, match_opcode, 0 },
 {"th.vnsrl.vx",   0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,sVm", MATCH_VNSRLWX, MASK_VNSRLWX, match_opcode, 0 },
 {"th.vnsrl.vi",   0, INSN_CLASS_XTHEADVECTOR,  "Vd,Vt,VjVm", MATCH_VNSRLWI, MASK_VNSRLWI, match_opcode, 0 },
@@ -2807,6 +2821,8 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vfmin.vf",   0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,SVm", MATCH_VFMINVF, MASK_VFMINVF, match_opcode, 0},
 {"th.vfmax.vv",   0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,VsVm", MATCH_VFMAXVV, MASK_VFMAXVV, match_opcode, 0},
 {"th.vfmax.vf",   0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,SVm", MATCH_VFMAXVF, MASK_VFMAXVF, match_opcode, 0},
+{"th.vfneg.v",    0, INSN_CLASS_XTHEADVECTOR, "Vd,VuVm", MATCH_VFSGNJNVV, MASK_VFSGNJNVV, match_vs1_eq_vs2, INSN_ALIAS },
+{"th.vfabs.v",    0, INSN_CLASS_XTHEADVECTOR, "Vd,VuVm", MATCH_VFSGNJXVV, MASK_VFSGNJXVV, match_vs1_eq_vs2, INSN_ALIAS },
 {"th.vfsgnj.vv",  0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,VsVm", MATCH_VFSGNJVV, MASK_VFSGNJVV, match_opcode, 0},
 {"th.vfsgnj.vf",  0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,SVm", MATCH_VFSGNJVF, MASK_VFSGNJVF, match_opcode, 0},
 {"th.vfsgnjn.vv", 0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,VsVm", MATCH_VFSGNJNVV, MASK_VFSGNJNVV, match_opcode, 0},
@@ -2861,6 +2877,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vfwredosum.vs",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,VsVm", MATCH_VFWREDOSUMVS, MASK_VFWREDOSUMVS, match_opcode, 0},
 {"th.vfwredsum.vs", 0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,VsVm", MATCH_VFWREDUSUMVS, MASK_VFWREDUSUMVS, match_opcode, 0},
 {"th.vmcpy.m",    0, INSN_CLASS_XTHEADVECTOR, "Vd,Vu", MATCH_VMANDMM, MASK_VMANDMM, match_vs1_eq_vs2, INSN_ALIAS},
+{"th.vmmv.m",     0, INSN_CLASS_XTHEADVECTOR, "Vd,Vu", MATCH_VMANDMM, MASK_VMANDMM, match_vs1_eq_vs2, INSN_ALIAS},
 {"th.vmclr.m",    0, INSN_CLASS_XTHEADVECTOR, "Vv", MATCH_VMXORMM, MASK_VMXORMM, match_vd_eq_vs1_eq_vs2, INSN_ALIAS},
 {"th.vmset.m",    0, INSN_CLASS_XTHEADVECTOR, "Vv", MATCH_VMXNORMM, MASK_VMXNORMM, match_vd_eq_vs1_eq_vs2, INSN_ALIAS},
 {"th.vmnot.m",    0, INSN_CLASS_XTHEADVECTOR, "Vd,Vu", MATCH_VMNANDMM, MASK_VMNANDMM, match_vs1_eq_vs2, INSN_ALIAS},

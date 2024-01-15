@@ -1,6 +1,6 @@
 // x86_64.cc -- x86_64 target support for gold.
 
-// Copyright (C) 2006-2023 Free Software Foundation, Inc.
+// Copyright (C) 2006-2024 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -1053,8 +1053,9 @@ class Target_x86_64 : public Sized_target<size, false>
     gold_assert(gsym != NULL);
     // We cannot do the conversion unless it's one of these relocations.
     if (r_type != elfcpp::R_X86_64_GOTPCREL
-        && r_type != elfcpp::R_X86_64_GOTPCRELX
-        && r_type != elfcpp::R_X86_64_REX_GOTPCRELX)
+	&& r_type != elfcpp::R_X86_64_GOTPCRELX
+	&& r_type != elfcpp::R_X86_64_REX_GOTPCRELX
+	&& r_type != elfcpp::R_X86_64_CODE_4_GOTPCRELX)
       return false;
     // We cannot convert references to IFUNC symbols, or to symbols that
     // are not local to the current module.
@@ -1109,7 +1110,8 @@ class Target_x86_64 : public Sized_target<size, false>
   // Adjust TLS relocation type based on the options and whether this
   // is a local symbol.
   static tls::Tls_optimization
-  optimize_tls_reloc(bool is_final, int r_type);
+  optimize_tls_reloc(bool is_final, int r_type, size_t r_offset,
+		     const unsigned char* reloc_view);
 
   // Get the GOT section, creating it if necessary.
   Output_data_got<64, false>*
@@ -2877,11 +2879,13 @@ Target_x86_64<size>::got_mod_index_entry(Symbol_table* symtab, Layout* layout,
 
 // Optimize the TLS relocation type based on what we know about the
 // symbol.  IS_FINAL is true if the final address of this symbol is
-// known at link time.
+// known at link time.  RELOC_VIEW points to the relocation offset.
 
 template<int size>
 tls::Tls_optimization
-Target_x86_64<size>::optimize_tls_reloc(bool is_final, int r_type)
+Target_x86_64<size>::optimize_tls_reloc(bool is_final, int r_type,
+					size_t r_offset,
+					const unsigned char* reloc_view)
 {
   // If we are generating a shared library, then we can't do anything
   // in the linker.
@@ -2890,6 +2894,10 @@ Target_x86_64<size>::optimize_tls_reloc(bool is_final, int r_type)
 
   switch (r_type)
     {
+    case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
+      if (r_offset <= 4 || *(reloc_view - 4) != 0xd5)
+	return tls::TLSOPT_NONE;
+      // Fall through.
     case elfcpp::R_X86_64_TLSGD:
     case elfcpp::R_X86_64_GOTPC32_TLSDESC:
     case elfcpp::R_X86_64_TLSDESC_CALL:
@@ -2912,6 +2920,10 @@ Target_x86_64<size>::optimize_tls_reloc(bool is_final, int r_type)
       // Another Local-Dynamic reloc.
       return tls::TLSOPT_TO_LE;
 
+    case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
+      if (r_offset <= 4 || *(reloc_view - 4) != 0xd5)
+	return tls::TLSOPT_NONE;
+      // Fall through.
     case elfcpp::R_X86_64_GOTTPOFF:
       // These are Initial-Exec relocs which get the thread offset
       // from the GOT.  If we know that we are linking against the
@@ -2971,17 +2983,20 @@ Target_x86_64<size>::Scan::get_reference_flags(unsigned int r_type)
     case elfcpp::R_X86_64_GOTPCREL:
     case elfcpp::R_X86_64_GOTPCRELX:
     case elfcpp::R_X86_64_REX_GOTPCRELX:
+    case elfcpp::R_X86_64_CODE_4_GOTPCRELX:
     case elfcpp::R_X86_64_GOTPLT64:
       // Absolute in GOT.
       return Symbol::ABSOLUTE_REF;
 
     case elfcpp::R_X86_64_TLSGD:            // Global-dynamic
     case elfcpp::R_X86_64_GOTPC32_TLSDESC:  // Global-dynamic (from ~oliva url)
+    case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
     case elfcpp::R_X86_64_TLSDESC_CALL:
     case elfcpp::R_X86_64_TLSLD:            // Local-dynamic
     case elfcpp::R_X86_64_DTPOFF32:
     case elfcpp::R_X86_64_DTPOFF64:
     case elfcpp::R_X86_64_GOTTPOFF:         // Initial-exec
+    case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
     case elfcpp::R_X86_64_TPOFF32:          // Local-exec
       return Symbol::TLS_REF;
 
@@ -3146,6 +3161,8 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
       target->make_local_ifunc_plt_entry(symtab, layout, object, r_sym);
     }
 
+  const unsigned char* reloc_view = NULL;
+
   switch (r_type)
     {
     case elfcpp::R_X86_64_NONE:
@@ -3251,6 +3268,7 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
     case elfcpp::R_X86_64_GOTPCREL:
     case elfcpp::R_X86_64_GOTPCRELX:
     case elfcpp::R_X86_64_REX_GOTPCRELX:
+    case elfcpp::R_X86_64_CODE_4_GOTPCRELX:
     case elfcpp::R_X86_64_GOTPLT64:
       {
 	// The symbol requires a GOT section.
@@ -3261,20 +3279,29 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
 	// mov foo@GOTPCREL(%rip), %reg
 	// to lea foo(%rip), %reg.
 	// in Relocate::relocate.
+	size_t r_offset = reloc.get_r_offset();
 	if (!parameters->incremental()
-	    && (r_type == elfcpp::R_X86_64_GOTPCREL
-		|| r_type == elfcpp::R_X86_64_GOTPCRELX
-		|| r_type == elfcpp::R_X86_64_REX_GOTPCRELX)
+	    && (((r_type == elfcpp::R_X86_64_GOTPCREL
+		  || r_type == elfcpp::R_X86_64_GOTPCRELX
+		  || r_type == elfcpp::R_X86_64_REX_GOTPCRELX)
+		 && r_offset >= 2)
+		|| (r_type == elfcpp::R_X86_64_CODE_4_GOTPCRELX
+		    && r_offset >= 4))
 	    && reloc.get_r_addend() == -4
-	    && reloc.get_r_offset() >= 2
 	    && !is_ifunc)
 	  {
 	    section_size_type stype;
 	    const unsigned char* view = object->section_contents(data_shndx,
 								 &stype, true);
-	    if (view[reloc.get_r_offset() - 2] == 0x8b)
+	    if (r_type == elfcpp::R_X86_64_CODE_4_GOTPCRELX
+		&& view[r_offset - 4] != 0xd5)
+	      goto need_got;
+
+	    if (view[r_offset - 2] == 0x8b)
 	      break;
 	  }
+
+need_got:
 
 	// The symbol requires a GOT entry.
 	unsigned int r_sym = elfcpp::elf_r_sym<size>(reloc.get_r_info());
@@ -3333,6 +3360,13 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
       break;
 
       // These are initial tls relocs, which are expected when linking
+    case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
+    case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
+      {
+	section_size_type stype;
+	reloc_view = object->section_contents(data_shndx, &stype, true);
+      }
+      // Fall through.
     case elfcpp::R_X86_64_TLSGD:            // Global-dynamic
     case elfcpp::R_X86_64_GOTPC32_TLSDESC:  // Global-dynamic (from ~oliva url)
     case elfcpp::R_X86_64_TLSDESC_CALL:
@@ -3343,9 +3377,11 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
     case elfcpp::R_X86_64_TPOFF32:          // Local-exec
       {
 	bool output_is_shared = parameters->options().shared();
+	size_t r_offset = reloc.get_r_offset();
 	const tls::Tls_optimization optimized_type
 	    = Target_x86_64<size>::optimize_tls_reloc(!output_is_shared,
-						      r_type);
+						      r_type, r_offset,
+						      reloc_view + r_offset);
 	switch (r_type)
 	  {
 	  case elfcpp::R_X86_64_TLSGD:       // General-dynamic
@@ -3374,6 +3410,7 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
 	    break;
 
 	  case elfcpp::R_X86_64_GOTPC32_TLSDESC:
+	  case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
 	    target->define_tls_base_symbol(symtab, layout);
 	    if (optimized_type == tls::TLSOPT_NONE)
 	      {
@@ -3426,6 +3463,7 @@ Target_x86_64<size>::Scan::local(Symbol_table* symtab,
 	    break;
 
 	  case elfcpp::R_X86_64_GOTTPOFF:    // Initial-exec
+	  case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
 	    layout->set_has_static_tls();
 	    if (optimized_type == tls::TLSOPT_NONE)
 	      {
@@ -3498,6 +3536,7 @@ Target_x86_64<size>::Scan::possible_function_pointer_reloc(
     case elfcpp::R_X86_64_GOTPCREL:
     case elfcpp::R_X86_64_GOTPCRELX:
     case elfcpp::R_X86_64_REX_GOTPCRELX:
+    case elfcpp::R_X86_64_CODE_4_GOTPCRELX:
     case elfcpp::R_X86_64_GOTPLT64:
       {
 	return true;
@@ -3601,6 +3640,8 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
   if (gsym->type() == elfcpp::STT_GNU_IFUNC
       && this->reloc_needs_plt_for_ifunc(object, r_type))
     target->make_plt_entry(symtab, layout, gsym);
+
+  const unsigned char *reloc_view = NULL;
 
   switch (r_type)
     {
@@ -3714,6 +3755,7 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
     case elfcpp::R_X86_64_GOTPCREL:
     case elfcpp::R_X86_64_GOTPCRELX:
     case elfcpp::R_X86_64_REX_GOTPCRELX:
+    case elfcpp::R_X86_64_CODE_4_GOTPCRELX:
     case elfcpp::R_X86_64_GOTPLT64:
       {
 	// The symbol requires a GOT entry.
@@ -3736,8 +3778,12 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
         size_t r_offset = reloc.get_r_offset();
         if (!parameters->incremental()
 	    && reloc.get_r_addend() == -4
-	    && r_offset >= 2
-            && Target_x86_64<size>::can_convert_mov_to_lea(gsym, r_type,
+	    && ((r_type != elfcpp::R_X86_64_CODE_4_GOTPCRELX
+		 && r_offset >= 2)
+		|| (r_type == elfcpp::R_X86_64_CODE_4_GOTPCRELX
+		    && r_offset >= 4
+		    && view[r_offset - 4] == 0xd5))
+	    && Target_x86_64<size>::can_convert_mov_to_lea(gsym, r_type,
                                                            r_offset, &view))
           break;
 
@@ -3854,6 +3900,13 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
       break;
 
       // These are initial tls relocs, which are expected for global()
+    case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
+    case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
+      {
+	section_size_type stype;
+	reloc_view = object->section_contents(data_shndx, &stype, true);
+      }
+      // Fall through.
     case elfcpp::R_X86_64_TLSGD:            // Global-dynamic
     case elfcpp::R_X86_64_GOTPC32_TLSDESC:  // Global-dynamic (from ~oliva url)
     case elfcpp::R_X86_64_TLSDESC_CALL:
@@ -3866,11 +3919,15 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 	// For the Initial-Exec model, we can treat undef symbols as final
 	// when building an executable.
 	const bool is_final = (gsym->final_value_is_known() ||
-			       (r_type == elfcpp::R_X86_64_GOTTPOFF &&
+			       ((r_type == elfcpp::R_X86_64_GOTTPOFF ||
+				 r_type == elfcpp::R_X86_64_CODE_4_GOTTPOFF) &&
 			        gsym->is_undefined() &&
 				parameters->options().output_is_executable()));
+	size_t r_offset = reloc.get_r_offset();
 	const tls::Tls_optimization optimized_type
-	    = Target_x86_64<size>::optimize_tls_reloc(is_final, r_type);
+	    = Target_x86_64<size>::optimize_tls_reloc(is_final, r_type,
+						      r_offset,
+						      reloc_view + r_offset);
 	switch (r_type)
 	  {
 	  case elfcpp::R_X86_64_TLSGD:       // General-dynamic
@@ -3899,6 +3956,7 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 	    break;
 
 	  case elfcpp::R_X86_64_GOTPC32_TLSDESC:
+	  case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
 	    target->define_tls_base_symbol(symtab, layout);
 	    if (optimized_type == tls::TLSOPT_NONE)
 	      {
@@ -3947,6 +4005,7 @@ Target_x86_64<size>::Scan::global(Symbol_table* symtab,
 	    break;
 
 	  case elfcpp::R_X86_64_GOTTPOFF:    // Initial-exec
+	  case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
 	    layout->set_has_static_tls();
 	    if (optimized_type == tls::TLSOPT_NONE)
 	      {
@@ -4420,6 +4479,7 @@ Target_x86_64<size>::Relocate::relocate(
     case elfcpp::R_X86_64_GOTPCREL:
     case elfcpp::R_X86_64_GOTPCRELX:
     case elfcpp::R_X86_64_REX_GOTPCRELX:
+    case elfcpp::R_X86_64_CODE_4_GOTPCRELX:
       {
       bool converted_p = false;
 
@@ -4541,11 +4601,13 @@ Target_x86_64<size>::Relocate::relocate(
       // These are initial tls relocs, which are expected when linking
     case elfcpp::R_X86_64_TLSGD:            // Global-dynamic
     case elfcpp::R_X86_64_GOTPC32_TLSDESC:  // Global-dynamic (from ~oliva url)
+    case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
     case elfcpp::R_X86_64_TLSDESC_CALL:
     case elfcpp::R_X86_64_TLSLD:            // Local-dynamic
     case elfcpp::R_X86_64_DTPOFF32:
     case elfcpp::R_X86_64_DTPOFF64:
     case elfcpp::R_X86_64_GOTTPOFF:         // Initial-exec
+    case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
     case elfcpp::R_X86_64_TPOFF32:          // Local-exec
       this->relocate_tls(relinfo, target, relnum, rela, r_type, gsym, psymval,
 			 view, address, view_size);
@@ -4617,8 +4679,10 @@ Target_x86_64<size>::Relocate::relocate_tls(
   const bool is_final = (gsym == NULL
 			 ? !parameters->options().shared()
 			 : gsym->final_value_is_known());
+  size_t r_offset = rela.get_r_offset();
   tls::Tls_optimization optimized_type
-      = Target_x86_64<size>::optimize_tls_reloc(is_final, r_type);
+      = Target_x86_64<size>::optimize_tls_reloc(is_final, r_type,
+						r_offset, view);
   switch (r_type)
     {
     case elfcpp::R_X86_64_TLSGD:            // Global-dynamic
@@ -4685,6 +4749,7 @@ Target_x86_64<size>::Relocate::relocate_tls(
       break;
 
     case elfcpp::R_X86_64_GOTPC32_TLSDESC:  // Global-dynamic (from ~oliva url)
+    case elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC:
     case elfcpp::R_X86_64_TLSDESC_CALL:
       if (!is_executable && optimized_type == tls::TLSOPT_TO_LE)
 	{
@@ -4710,7 +4775,8 @@ Target_x86_64<size>::Relocate::relocate_tls(
 				   ? GOT_TYPE_TLS_OFFSET
 				   : GOT_TYPE_TLS_DESC);
 	  unsigned int got_offset = 0;
-	  if (r_type == elfcpp::R_X86_64_GOTPC32_TLSDESC
+	  if ((r_type == elfcpp::R_X86_64_GOTPC32_TLSDESC
+	       || r_type == elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC)
 	      && optimized_type == tls::TLSOPT_NONE)
 	    {
 	      // We created GOT entries in the .got.tlsdesc portion of
@@ -4741,7 +4807,8 @@ Target_x86_64<size>::Relocate::relocate_tls(
 	    }
 	  else if (optimized_type == tls::TLSOPT_NONE)
 	    {
-	      if (r_type == elfcpp::R_X86_64_GOTPC32_TLSDESC)
+	      if (r_type == elfcpp::R_X86_64_GOTPC32_TLSDESC
+		  || r_type == elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC)
 		{
 		  // Relocate the field with the offset of the pair of GOT
 		  // entries.
@@ -4826,6 +4893,7 @@ Target_x86_64<size>::Relocate::relocate_tls(
       break;
 
     case elfcpp::R_X86_64_GOTTPOFF:         // Initial-exec
+    case elfcpp::R_X86_64_CODE_4_GOTTPOFF:
       if (gsym != NULL
 	  && gsym->is_undefined()
 	  && parameters->options().output_is_executable())
@@ -5032,7 +5100,8 @@ Target_x86_64<size>::Relocate::tls_desc_gd_to_ie(
     typename elfcpp::Elf_types<size>::Elf_Addr address,
     section_size_type view_size)
 {
-  if (r_type == elfcpp::R_X86_64_GOTPC32_TLSDESC)
+  if (r_type == elfcpp::R_X86_64_GOTPC32_TLSDESC
+      || r_type == elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC)
     {
       // LP64: leaq foo@tlsdesc(%rip), %rax
       //       ==> movq foo@gottpoff(%rip), %rax
@@ -5041,7 +5110,8 @@ Target_x86_64<size>::Relocate::tls_desc_gd_to_ie(
       tls::check_range(relinfo, relnum, rela.get_r_offset(), view_size, -3);
       tls::check_range(relinfo, relnum, rela.get_r_offset(), view_size, 4);
       tls::check_tls(relinfo, relnum, rela.get_r_offset(),
-		     (((view[-3] & 0xfb) == 0x48
+		     ((r_type == elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC
+		       || (view[-3] & 0xfb) == 0x48
 		       || (size == 32 && (view[-3] & 0xfb) == 0x40))
 		      && view[-2] == 0x8d
 		      && (view[-1] & 0xc7) == 0x05));
@@ -5108,6 +5178,22 @@ Target_x86_64<size>::Relocate::tls_desc_gd_to_le(
 		      && view[-2] == 0x8d
 		      && (view[-1] & 0xc7) == 0x05));
       view[-3] = (view[-3] & 0x48) | ((view[-3] >> 2) & 1);
+      view[-2] = 0xc7;
+      view[-1] = 0xc0 | ((view[-1] >> 3) & 7);
+      value -= tls_segment->memsz();
+      Relocate_functions<size, false>::rela32(view, value, 0);
+    }
+  else if (r_type == elfcpp::R_X86_64_CODE_4_GOTPC32_TLSDESC)
+    {
+      // REX2: lea foo@tlsdesc(%rip), %reg
+      //       ==> mov foo@tpoff, %reg
+      tls::check_range(relinfo, relnum, rela.get_r_offset(), view_size, -3);
+      tls::check_range(relinfo, relnum, rela.get_r_offset(), view_size, 4);
+      tls::check_tls(relinfo, relnum, rela.get_r_offset(),
+		     (view[-2] == 0x8d
+		      && (view[-1] & 0xc7) == 0x05));
+      unsigned char rex2_mask = 4 | 4 << 4;
+      view[-3] = (view[-3] & ~rex2_mask) | ((view[-3] & rex2_mask) >> 2);
       view[-2] = 0xc7;
       view[-1] = 0xc0 | ((view[-1] >> 3) & 7);
       value -= tls_segment->memsz();
@@ -5212,7 +5298,7 @@ Target_x86_64<size>::Relocate::tls_ie_to_le(
     size_t relnum,
     Output_segment* tls_segment,
     const elfcpp::Rela<size, false>& rela,
-    unsigned int,
+    unsigned int r_type,
     typename elfcpp::Elf_types<size>::Elf_Addr value,
     unsigned char* view,
     section_size_type view_size)
@@ -5231,35 +5317,50 @@ Target_x86_64<size>::Relocate::tls_ie_to_le(
   unsigned char op3 = view[-1];
   unsigned char reg = op3 >> 3;
 
-  if (op2 == 0x8b)
+  if (r_type == elfcpp::R_X86_64_GOTTPOFF)
     {
-      // movq
-      if (op1 == 0x4c)
-	view[-3] = 0x49;
-      else if (size == 32 && op1 == 0x44)
-	view[-3] = 0x41;
-      view[-2] = 0xc7;
-      view[-1] = 0xc0 | reg;
-    }
-  else if (reg == 4)
-    {
-      // Special handling for %rsp.
-      if (op1 == 0x4c)
-	view[-3] = 0x49;
-      else if (size == 32 && op1 == 0x44)
-	view[-3] = 0x41;
-      view[-2] = 0x81;
-      view[-1] = 0xc0 | reg;
+      if (op2 == 0x8b)
+	{
+	  // movq
+	  if (op1 == 0x4c)
+	    view[-3] = 0x49;
+	  else if (size == 32 && op1 == 0x44)
+	    view[-3] = 0x41;
+	  view[-2] = 0xc7;
+	  view[-1] = 0xc0 | reg;
+	}
+      else if (reg == 4)
+	{
+	  // Special handling for %rsp.
+	  if (op1 == 0x4c)
+	    view[-3] = 0x49;
+	  else if (size == 32 && op1 == 0x44)
+	    view[-3] = 0x41;
+	  view[-2] = 0x81;
+	  view[-1] = 0xc0 | reg;
+	}
+      else
+	{
+	  // addq
+	  if (op1 == 0x4c)
+	    view[-3] = 0x4d;
+	  else if (size == 32 && op1 == 0x44)
+	    view[-3] = 0x45;
+	  view[-2] = 0x8d;
+	  view[-1] = 0x80 | reg | (reg << 3);
+	}
     }
   else
     {
-      // addq
-      if (op1 == 0x4c)
-	view[-3] = 0x4d;
-      else if (size == 32 && op1 == 0x44)
-	view[-3] = 0x45;
-      view[-2] = 0x8d;
-      view[-1] = 0x80 | reg | (reg << 3);
+      if (op2 == 0x8b)
+	op2 = 0xc7;
+      else
+	op2 = 0x81;
+
+      unsigned char rex2_mask = 4 | 4 << 4;
+      view[-3] = (view[-3] & ~rex2_mask) | ((view[-3] & rex2_mask) >> 2);
+      view[-2] = op2;
+      view[-1] = 0xc0 | reg;
     }
 
   if (tls_segment != NULL)

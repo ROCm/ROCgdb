@@ -114,6 +114,8 @@ static struct async_event_handler *infrun_async_inferior_event_token;
 /* Stores whether infrun_async was previously enabled or disabled.
    Starts off as -1, indicating "never enabled/disabled".  */
 static int infrun_is_async = -1;
+static CORE_ADDR update_line_range_start (CORE_ADDR pc,
+					  struct execution_control_state *ecs);
 
 /* See infrun.h.  */
 
@@ -7400,6 +7402,27 @@ switch_to_active_lane (thread_info *thr)
     }
 }
 
+/* Return the address for the beginning of the line.  */
+
+CORE_ADDR
+update_line_range_start (CORE_ADDR pc, struct execution_control_state *ecs)
+{
+  /* The line table may have multiple entries for the same source code line.
+     Given the PC, check the line table and return the PC that corresponds
+     to the line table entry for the source line that PC is in.  */
+  CORE_ADDR start_line_pc = ecs->event_thread->control.step_range_start;
+  std::optional<CORE_ADDR> real_range_start;
+
+  /* Call find_line_range_start to get the smallest address in the
+     linetable for multiple Line X entries in the line table.  */
+  real_range_start = find_line_range_start (pc);
+
+  if (real_range_start.has_value ())
+    start_line_pc = *real_range_start;
+
+  return start_line_pc;
+}
+
 /* Come here when we've got some debug event / signal we can explain
    (IOW, not a random signal), and test whether it should cause a
    stop, or whether we should resume the inferior (transparently).
@@ -8229,6 +8252,29 @@ process_event_stop_test (struct execution_control_state *ecs)
 
       if (stop_pc_sal.is_stmt)
 	{
+	  if (execution_direction == EXEC_REVERSE)
+	    {
+	      /* We are stepping backwards make sure we have reached the
+		 beginning of the line.  */
+	      CORE_ADDR stop_pc = ecs->event_thread->stop_pc ();
+	      CORE_ADDR start_line_pc
+		= update_line_range_start (stop_pc, ecs);
+
+	      if (stop_pc != start_line_pc)
+		{
+		  /* Have not reached the beginning of the source code line.
+		     Set a step range.  Execution should stop in any function
+		     calls we execute back into before reaching the beginning
+		     of the line.  */
+		  ecs->event_thread->control.step_range_start
+		    = start_line_pc;
+		  ecs->event_thread->control.step_range_end = stop_pc;
+		  set_step_info (ecs->event_thread, frame, stop_pc_sal);
+		  keep_going (ecs);
+		  return;
+		}
+	    }
+
 	  /* We are at the start of a statement.
 
 	     So stop.  Note that we don't stop if we step into the middle of a
@@ -8303,6 +8349,17 @@ process_event_stop_test (struct execution_control_state *ecs)
     set_step_info (ecs->event_thread, frame, stop_pc_sal);
 
   infrun_debug_printf ("keep going");
+
+  if (execution_direction == EXEC_REVERSE)
+    {
+      CORE_ADDR stop_pc = ecs->event_thread->stop_pc ();
+
+      /* Make sure the stop_pc is set to the beginning of the line.  */
+      if (stop_pc != ecs->event_thread->control.step_range_start)
+	ecs->event_thread->control.step_range_start
+	  = update_line_range_start (stop_pc, ecs);
+    }
+
   keep_going (ecs);
 }
 

@@ -1,5 +1,5 @@
 /* LoongArch opcode support.
-   Copyright (C) 2021-2023 Free Software Foundation, Inc.
+   Copyright (C) 2021-2024 Free Software Foundation, Inc.
    Contributed by Loongson Ltd.
 
    This file is part of the GNU opcodes library.
@@ -267,7 +267,12 @@ disassemble_one (insn_t insn, struct disassemble_info *info)
     }
 
   info->insn_type = dis_nonbranch;
-  info->fprintf_styled_func (info->stream, dis_style_mnemonic, "%-12s", opc->name);
+  if (opc->format == NULL || opc->format[0] == '\0')
+    info->fprintf_styled_func (info->stream, dis_style_mnemonic,
+				"%s", opc->name);
+  else
+    info->fprintf_styled_func (info->stream, dis_style_mnemonic,
+				"%-12s", opc->name);
 
   {
     char *fake_args = xmalloc (strlen (opc->format) + 1);

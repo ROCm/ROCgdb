@@ -1,5 +1,5 @@
 /* tc-score7.c -- Assembler for Score7
-   Copyright (C) 2009-2023 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
    Contributed by:
    Brain.lin (brain.lin@sunplusct.com)
    Mei Ligang (ligang@sunnorth.com.cn)
@@ -5366,21 +5366,6 @@ s7_build_reg_hsh (struct s7_reg_map *map)
 }
 
 
-
-/* If we change section we must dump the literal pool first.  */
-static void
-s7_s_score_bss (int ignore ATTRIBUTE_UNUSED)
-{
-  subseg_set (bss_section, (subsegT) get_absolute_expression ());
-  demand_empty_rest_of_line ();
-}
-
-static void
-s7_s_score_text (int ignore)
-{
-  obj_elf_text (ignore);
-  record_alignment (now_seg, 2);
-}
 
 static void
 s7_s_section (int ignore)
