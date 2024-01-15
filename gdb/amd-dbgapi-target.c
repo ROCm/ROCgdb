@@ -141,9 +141,9 @@ struct wave_coordinates
 
   /* All these fields are initialized here to a value that is printed
      as "?".  */
-  amd_dbgapi_dispatch_id_t dispatch_id {};
-  amd_dbgapi_queue_id_t queue_id {};
-  amd_dbgapi_agent_id_t agent_id {};
+  amd_dbgapi_dispatch_id_t dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
+  amd_dbgapi_queue_id_t queue_id = AMD_DBGAPI_QUEUE_NONE;
+  amd_dbgapi_agent_id_t agent_id = AMD_DBGAPI_AGENT_NONE;
   uint32_t group_ids[3] {UINT32_MAX, UINT32_MAX, UINT32_MAX};
   uint32_t wave_in_group = UINT32_MAX;
 
@@ -406,15 +406,15 @@ wave_coordinates::to_string () const
 {
   std::string str = "AMDGPU Wave";
 
-  str += (agent_id.handle != 0
+  str += (agent_id != AMD_DBGAPI_AGENT_NONE
 	  ? string_printf (" %ld", agent_id.handle)
 	  : " ?");
 
-  str += (queue_id.handle != 0
+  str += (queue_id != AMD_DBGAPI_QUEUE_NONE
 	  ? string_printf (":%ld", queue_id.handle)
 	  : ":?");
 
-  str += (dispatch_id.handle != 0
+  str += (dispatch_id != AMD_DBGAPI_DISPATCH_NONE
 	  ? string_printf (":%ld", dispatch_id.handle)
 	  : ":?");
 
@@ -431,6 +431,8 @@ wave_coordinates::to_string () const
 
   return str;
 }
+
+/* Read in wave_info for WAVE_ID.  */
 
 void
 wave_coordinates::fetch ()
@@ -1382,12 +1384,18 @@ amd_dbgapi_target::commit_resumed ()
 }
 
 /* Return a string version of RESUME_MODE, for debug log purposes.  */
+
 static const char *
 resume_mode_to_string (amd_dbgapi_resume_mode_t resume_mode)
 {
-  return (resume_mode == AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
-	  ? "step"
-	  : "normal");
+  switch (resume_mode)
+    {
+    case AMD_DBGAPI_RESUME_MODE_NORMAL:
+      return "normal";
+    case AMD_DBGAPI_RESUME_MODE_SINGLE_STEP:
+      return "step";
+    }
+  gdb_assert_not_reached ("invalid amd_dbgapi_resume_mode_t");
 }
 
 void

@@ -2518,6 +2518,8 @@ static const aarch64_feature_set aarch64_feature_sb =
   AARCH64_FEATURE (SB);
 static const aarch64_feature_set aarch64_feature_predres =
   AARCH64_FEATURE (PREDRES);
+static const aarch64_feature_set aarch64_feature_predres2 =
+  AARCH64_FEATURES (2, PREDRES, PREDRES2);
 static const aarch64_feature_set aarch64_feature_memtag =
   AARCH64_FEATURE (MEMTAG);
 static const aarch64_feature_set aarch64_feature_bfloat16 =
@@ -2578,6 +2580,8 @@ static const aarch64_feature_set aarch64_feature_chk =
   AARCH64_FEATURE (CHK);
 static const aarch64_feature_set aarch64_feature_gcs =
   AARCH64_FEATURE (GCS);
+static const aarch64_feature_set aarch64_feature_ite =
+  AARCH64_FEATURE (ITE);
 
 #define CORE		&aarch64_feature_v8
 #define FP		&aarch64_feature_fp
@@ -2608,6 +2612,7 @@ static const aarch64_feature_set aarch64_feature_gcs =
 #define FRINTTS		&aarch64_feature_frintts
 #define SB		&aarch64_feature_sb
 #define PREDRES		&aarch64_feature_predres
+#define PREDRES2	&aarch64_feature_predres2
 #define MEMTAG		&aarch64_feature_memtag
 #define TME		&aarch64_feature_tme
 #define SVE2		&aarch64_feature_sve2
@@ -2639,6 +2644,7 @@ static const aarch64_feature_set aarch64_feature_gcs =
 #define CSSC	  &aarch64_feature_cssc
 #define CHK	  &aarch64_feature_chk
 #define GCS	  &aarch64_feature_gcs
+#define ITE	  &aarch64_feature_ite
 
 #define CORE_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, CORE, OPS, QUALS, FLAGS, 0, 0, NULL }
@@ -2840,6 +2846,12 @@ static const aarch64_feature_set aarch64_feature_gcs =
   MOPS_SET_OP1_OP2_INSN (NAME, "t", OPCODE | 0x1000, MASK, ISA), \
   MOPS_SET_OP1_OP2_INSN (NAME, "n", OPCODE | 0x2000, MASK, ISA), \
   MOPS_SET_OP1_OP2_INSN (NAME, "tn", OPCODE | 0x3000, MASK, ISA)
+
+#define PREDRES2_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, PREDRES2, OPS, QUALS, FLAGS, 0, 0, NULL }
+
+#define ITE_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, ITE, OPS, QUALS, FLAGS, 0, 0, NULL }
 
 const struct aarch64_opcode aarch64_opcode_table[] =
 {
@@ -4185,6 +4197,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   PREDRES_INSN ("cfp", 0xd50b7380, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),
   PREDRES_INSN ("dvp", 0xd50b73a0, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),
   PREDRES_INSN ("cpp", 0xd50b73e0, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),
+  PREDRES2_INSN ("cosp", 0xd50b73c0, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),
   /* Armv8.4-a flag setting instruction, However this encoding has an encoding clash with the msr
      below it.  Usually we can resolve this by setting an alias condition on the flags, however that
      depends on the disassembly masks to be able to quickly find the alias.  The problem is the
@@ -4666,7 +4679,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   _SVE_INSN ("ldff1sw", 0xc540a000, 0xffe0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_RZ), OP_SVE_DZD, F_OD(1), 0),
   _SVE_INSN ("ldff1sw", 0xc560a000, 0xffe0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_RZ_LSL2), OP_SVE_DZD, F_OD(1), 0),
   _SVE_INSN ("ldff1sw", 0xc520a000, 0xffe0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_ZI_U5x4), OP_SVE_DZD, F_OD(1), 0),
-  
+
   _SVE_INSN ("ldff1w", 0x85006000, 0xffa0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_RZ_XTW_22), OP_SVE_SZS, F_OD(1), 0),
   _SVE_INSN ("ldff1w", 0x85206000, 0xffa0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_RZ_XTW2_22), OP_SVE_SZS, F_OD(1), 0),
   _SVE_INSN ("ldff1w", 0xa5406000, 0xffe0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_RR_LSL2), OP_SVE_SZU, F_OD(1), 0),
@@ -6105,6 +6118,12 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CSSC_INSN ("umax", 0x1ac06400, 0x7fe0fc00, OP3 (Rd, Rn, Rm), QL_I3SAMER, F_SF),
   CSSC_INSN ("smin", 0x1ac06800, 0x7fe0fc00, OP3 (Rd, Rn, Rm), QL_I3SAMER, F_SF),
   CSSC_INSN ("umin", 0x1ac06c00, 0x7fe0fc00, OP3 (Rd, Rn, Rm), QL_I3SAMER, F_SF),
+
+  /* FEAT_CLRBHB part of the hint space and available without special
+     command-line flags.  */
+  CORE_INSN ("clrbhb", 0xd50322df, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
+
+  ITE_INSN ("trcit", 0xd50b72e0, 0xffffffe0, ic_system, OP1 (Rt), QL_I1X, F_ALIAS),
 
   {0, 0, 0, 0, 0, 0, {}, {}, 0, 0, 0, NULL},
 };

@@ -1064,7 +1064,6 @@ bfd_make_readable (bfd *abfd)
   abfd->section_count = 0;
   abfd->usrdata = NULL;
   abfd->cacheable = false;
-  abfd->flags |= BFD_IN_MEMORY;
   abfd->mtime_set = false;
 
   abfd->target_defaulted = true;

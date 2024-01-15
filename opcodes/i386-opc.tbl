@@ -86,6 +86,10 @@
 #define SwapSources       OperandConstraint=SWAP_SOURCES
 #define Ugh               OperandConstraint=UGH
 
+#define ATTSyntax         Dialect=ATT_SYNTAX
+#define ATTMnemonic       Dialect=ATT_MNEMONIC
+#define IntelSyntax       Dialect=INTEL_SYNTAX
+
 #define IgnoreSize	MnemonicSize=IGNORESIZE
 #define DefaultSize	MnemonicSize=DEFAULTSIZE
 
@@ -134,9 +138,6 @@
 #define EVexDYN EVex=EVEXDYN
 
 #define Disp8ShiftVL Disp8MemShift=DISP8_SHIFT_VL
-
-#define Vsz256 Vsz=VSZ256
-#define Vsz512 Vsz=VSZ512
 
 // The EVEX purpose of StaticRounding appears only together with SAE. Re-use
 // the bit to mark commutative VEX encodings where swapping the source
@@ -704,14 +705,13 @@ faddp, 0xdec1, FP, NoSuf, {}
 fsub, 0xd8/4, FP, Modrm|NoSuf, { FloatReg }
 fsub, 0xd8/4, FP, D|Modrm|NoSuf, { FloatReg, FloatAcc }
 // alias for fsubp
-fsub, 0xdee1, FP, NoSuf|Ugh|ATTMnemonic|ATTSyntax, {}
-fsub, 0xdee9, FP, NoSuf|Ugh|ATTMnemonic, {}
+fsub, 0xdee1, FP, NoSuf|Ugh|ATTMnemonic, {}
 fsub, 0xd8/4, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Dword|Qword|Unspecified|BaseIndex }
 fisub, 0xde/4, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Word|Dword|Unspecified|BaseIndex }
 
-fsubp, 0xde/4, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatAcc, FloatReg }
-fsubp, 0xde/4, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatReg }
-fsubp, 0xdee1, FP, NoSuf|ATTMnemonic|ATTSyntax, {}
+fsubp, 0xde/4, FP, Modrm|NoSuf|ATTMnemonic, { FloatAcc, FloatReg }
+fsubp, 0xde/4, FP, Modrm|NoSuf|ATTMnemonic, { FloatReg }
+fsubp, 0xdee1, FP, NoSuf|ATTMnemonic, {}
 fsubp, 0xde/5, FP, Modrm|NoSuf, { FloatAcc, FloatReg }
 fsubp, 0xde/5, FP, Modrm|NoSuf, { FloatReg }
 fsubp, 0xdee9, FP, NoSuf, {}
@@ -720,14 +720,13 @@ fsubp, 0xdee9, FP, NoSuf, {}
 fsubr, 0xd8/5, FP, Modrm|NoSuf, { FloatReg }
 fsubr, 0xd8/5, FP, D|Modrm|NoSuf, { FloatReg, FloatAcc }
 // alias for fsubrp
-fsubr, 0xdee9, FP, NoSuf|Ugh|ATTMnemonic|ATTSyntax, {}
-fsubr, 0xdee1, FP, NoSuf|Ugh|ATTMnemonic, {}
+fsubr, 0xdee9, FP, NoSuf|Ugh|ATTMnemonic, {}
 fsubr, 0xd8/5, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Dword|Qword|Unspecified|BaseIndex }
 fisubr, 0xde/5, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Word|Dword|Unspecified|BaseIndex }
 
-fsubrp, 0xde/5, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatAcc, FloatReg }
-fsubrp, 0xde/5, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatReg }
-fsubrp, 0xdee9, FP, NoSuf|ATTMnemonic|ATTSyntax, {}
+fsubrp, 0xde/5, FP, Modrm|NoSuf|ATTMnemonic, { FloatAcc, FloatReg }
+fsubrp, 0xde/5, FP, Modrm|NoSuf|ATTMnemonic, { FloatReg }
+fsubrp, 0xdee9, FP, NoSuf|ATTMnemonic, {}
 fsubrp, 0xde/4, FP, Modrm|NoSuf, { FloatAcc, FloatReg }
 fsubrp, 0xde/4, FP, Modrm|NoSuf, { FloatReg }
 fsubrp, 0xdee1, FP, NoSuf, {}
@@ -749,14 +748,13 @@ fmulp, 0xdec9, FP, NoSuf, {}
 fdiv, 0xd8/6, FP, Modrm|NoSuf, { FloatReg }
 fdiv, 0xd8/6, FP, D|Modrm|NoSuf, { FloatReg, FloatAcc }
 // alias for fdivp
-fdiv, 0xdef1, FP, NoSuf|Ugh|ATTMnemonic|ATTSyntax, {}
-fdiv, 0xdef9, FP, NoSuf|Ugh|ATTMnemonic, {}
+fdiv, 0xdef1, FP, NoSuf|Ugh|ATTMnemonic, {}
 fdiv, 0xd8/6, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Dword|Qword|Unspecified|BaseIndex }
 fidiv, 0xde/6, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Word|Dword|Unspecified|BaseIndex }
 
-fdivp, 0xde/6, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatAcc, FloatReg }
-fdivp, 0xde/6, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatReg }
-fdivp, 0xdef1, FP, NoSuf|ATTMnemonic|ATTSyntax, {}
+fdivp, 0xde/6, FP, Modrm|NoSuf|ATTMnemonic, { FloatAcc, FloatReg }
+fdivp, 0xde/6, FP, Modrm|NoSuf|ATTMnemonic, { FloatReg }
+fdivp, 0xdef1, FP, NoSuf|ATTMnemonic, {}
 fdivp, 0xde/7, FP, Modrm|NoSuf, { FloatAcc, FloatReg }
 fdivp, 0xde/7, FP, Modrm|NoSuf, { FloatReg }
 fdivp, 0xdef9, FP, NoSuf, {}
@@ -765,14 +763,13 @@ fdivp, 0xdef9, FP, NoSuf, {}
 fdivr, 0xd8/7, FP, Modrm|NoSuf, { FloatReg }
 fdivr, 0xd8/7, FP, D|Modrm|NoSuf, { FloatReg, FloatAcc }
 // alias for fdivrp
-fdivr, 0xdef9, FP, NoSuf|Ugh|ATTMnemonic|ATTSyntax, {}
-fdivr, 0xdef1, FP, NoSuf|Ugh|ATTMnemonic, {}
+fdivr, 0xdef9, FP, NoSuf|Ugh|ATTMnemonic, {}
 fdivr, 0xd8/7, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Dword|Qword|Unspecified|BaseIndex }
 fidivr, 0xde/7, FP, Modrm|FloatMF|No_bSuf|No_wSuf|No_qSuf, { Word|Dword|Unspecified|BaseIndex }
 
-fdivrp, 0xde/7, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatAcc, FloatReg }
-fdivrp, 0xde/7, FP, Modrm|NoSuf|ATTMnemonic|ATTSyntax, { FloatReg }
-fdivrp, 0xdef9, FP, NoSuf|ATTMnemonic|ATTSyntax, {}
+fdivrp, 0xde/7, FP, Modrm|NoSuf|ATTMnemonic, { FloatAcc, FloatReg }
+fdivrp, 0xde/7, FP, Modrm|NoSuf|ATTMnemonic, { FloatReg }
+fdivrp, 0xdef9, FP, NoSuf|ATTMnemonic, {}
 fdivrp, 0xde/6, FP, Modrm|NoSuf, { FloatAcc, FloatReg }
 fdivrp, 0xde/6, FP, Modrm|NoSuf, { FloatReg }
 fdivrp, 0xdef1, FP, NoSuf, {}
@@ -996,9 +993,9 @@ pause, 0xf390, i186, NoSuf, {}
     b:0:VexW0:Byte:AVX512DQ:66:AVX512VBMI, +
     w:1:VexW1:Word:AVX512F::AVX512BW>
 
-<dq:opc:vexw:vexw64:elem:cpu64:gpr:kpfx:kvsz, +
-    d:0:VexW0::Dword::Reg32:66:Vsz256, +
-    q:1:VexW1:VexW1:Qword:x64:Reg64::Vsz512>
+<dq:opc:vexw:vexw64:elem:cpu64:gpr:kpfx, +
+    d:0:VexW0::Dword::Reg32:66, +
+    q:1:VexW1:VexW1:Qword:x64:Reg64:>
 
 emms, 0xf77, MMX, NoSuf, {}
 // These really shouldn't allow for Reg64 (movq is the right mnemonic for
@@ -2590,22 +2587,22 @@ vpmovzxdq, 0x6635, AVX512VL, Modrm|EVex=3|Masking|Space0F38|VexW=1|Disp8MemShift
 
 // AVX512BW instructions.
 
-kadd<dq>, 0x<dq:kpfx>4a, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|<dq:kvsz>|NoSuf, { RegMask, RegMask, RegMask }
-kand<dq>, 0x<dq:kpfx>41, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|<dq:kvsz>|NoSuf, { RegMask, RegMask, RegMask }
-kandn<dq>, 0x<dq:kpfx>42, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|<dq:kvsz>|NoSuf|Optimize, { RegMask, RegMask, RegMask }
-kmov<dq>, 0x<dq:kpfx>90, AVX512BW, Modrm|Vex128|Space0F|VexW1|<dq:kvsz>|NoSuf, { RegMask|<dq:elem>|Unspecified|BaseIndex, RegMask }
-kmov<dq>, 0x<dq:kpfx>91, AVX512BW, Modrm|Vex128|Space0F|VexW1|<dq:kvsz>|NoSuf, { RegMask, <dq:elem>|Unspecified|BaseIndex }
-kmov<dq>, 0xf292, AVX512BW, D|Modrm|Vex128|Space0F|<dq:vexw64>|<dq:kvsz>|NoSuf, { <dq:gpr>, RegMask }
-knot<dq>, 0x<dq:kpfx>44, AVX512BW, Modrm|Vex128|Space0F|VexW1|<dq:kvsz>|NoSuf, { RegMask, RegMask }
-kor<dq>, 0x<dq:kpfx>45, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|<dq:kvsz>|NoSuf, { RegMask, RegMask, RegMask }
-kortest<dq>, 0x<dq:kpfx>98, AVX512BW, Modrm|Vex128|Space0F|VexW1|<dq:kvsz>|NoSuf, { RegMask, RegMask }
-ktest<dq>, 0x<dq:kpfx>99, AVX512BW, Modrm|Vex128|Space0F|VexW1|<dq:kvsz>|NoSuf, { RegMask, RegMask }
-kxnor<dq>, 0x<dq:kpfx>46, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|<dq:kvsz>|NoSuf, { RegMask, RegMask, RegMask }
-kxor<dq>, 0x<dq:kpfx>47, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|<dq:kvsz>|NoSuf|Optimize, { RegMask, RegMask, RegMask }
-kunpckdq, 0x4B, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|Vsz512|NoSuf, { RegMask, RegMask, RegMask }
-kunpckwd, 0x4B, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW0|Vsz256|NoSuf, { RegMask, RegMask, RegMask }
-kshiftl<dq>, 0x6633, AVX512BW, Modrm|Vex128|Space0F3A|<dq:vexw>|<dq:kvsz>|NoSuf, { Imm8, RegMask, RegMask }
-kshiftr<dq>, 0x6631, AVX512BW, Modrm|Vex128|Space0F3A|<dq:vexw>|<dq:kvsz>|NoSuf, { Imm8, RegMask, RegMask }
+kadd<dq>, 0x<dq:kpfx>4a, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|NoSuf, { RegMask, RegMask, RegMask }
+kand<dq>, 0x<dq:kpfx>41, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|NoSuf, { RegMask, RegMask, RegMask }
+kandn<dq>, 0x<dq:kpfx>42, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|NoSuf|Optimize, { RegMask, RegMask, RegMask }
+kmov<dq>, 0x<dq:kpfx>90, AVX512BW, Modrm|Vex128|Space0F|VexW1|NoSuf, { RegMask|<dq:elem>|Unspecified|BaseIndex, RegMask }
+kmov<dq>, 0x<dq:kpfx>91, AVX512BW, Modrm|Vex128|Space0F|VexW1|NoSuf, { RegMask, <dq:elem>|Unspecified|BaseIndex }
+kmov<dq>, 0xf292, AVX512BW, D|Modrm|Vex128|Space0F|<dq:vexw64>|NoSuf, { <dq:gpr>, RegMask }
+knot<dq>, 0x<dq:kpfx>44, AVX512BW, Modrm|Vex128|Space0F|VexW1|NoSuf, { RegMask, RegMask }
+kor<dq>, 0x<dq:kpfx>45, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|NoSuf, { RegMask, RegMask, RegMask }
+kortest<dq>, 0x<dq:kpfx>98, AVX512BW, Modrm|Vex128|Space0F|VexW1|NoSuf, { RegMask, RegMask }
+ktest<dq>, 0x<dq:kpfx>99, AVX512BW, Modrm|Vex128|Space0F|VexW1|NoSuf, { RegMask, RegMask }
+kxnor<dq>, 0x<dq:kpfx>46, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|NoSuf, { RegMask, RegMask, RegMask }
+kxor<dq>, 0x<dq:kpfx>47, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|NoSuf|Optimize, { RegMask, RegMask, RegMask }
+kunpckdq, 0x4B, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW1|NoSuf, { RegMask, RegMask, RegMask }
+kunpckwd, 0x4B, AVX512BW, Modrm|Vex256|Space0F|VexVVVV|VexW0|NoSuf, { RegMask, RegMask, RegMask }
+kshiftl<dq>, 0x6633, AVX512BW, Modrm|Vex128|Space0F3A|<dq:vexw>|NoSuf, { Imm8, RegMask, RegMask }
+kshiftr<dq>, 0x6631, AVX512BW, Modrm|Vex128|Space0F3A|<dq:vexw>|NoSuf, { Imm8, RegMask, RegMask }
 
 vdbpsadbw, 0x6642, AVX512BW, Modrm|Masking|Space0F3A|VexVVVV|VexW0|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8|Imm8S, RegXMM|RegYMM|RegZMM|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
 
@@ -3359,9 +3356,9 @@ eretu, 0xf30f01ca, FRED, NoSuf, {}
 
 // USER_MSR instructions.
 
-urdmsr, 0xf20f38f8, USER_MSR, RegMem|NoSuf|NoRex64, { Reg32|Reg64, Reg64 }
+urdmsr, 0xf20f38f8, USER_MSR, RegMem|NoSuf|NoRex64, { Reg64, Reg64 }
 urdmsr, 0xf2f8/0, USER_MSR, Modrm|Vex128|VexMap7|VexW0|NoSuf, { Imm32, Reg64 }
-uwrmsr, 0xf30f38f8, USER_MSR, Modrm|NoSuf|NoRex64, { Reg64, Reg32|Reg64 }
+uwrmsr, 0xf30f38f8, USER_MSR, Modrm|NoSuf|NoRex64, { Reg64, Reg64 }
 // Immediates want to be first; md_assemble() takes care of swapping operands
 // accordingly.
 uwrmsr, 0xf3f8/0, USER_MSR, Modrm|Vex128|VexMap7|VexW0|NoSuf, { Imm32, Reg64 }

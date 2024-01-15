@@ -181,7 +181,7 @@ static const reg_entry *build_modrm_byte (void);
 static void output_insn (const struct last_insn *);
 static void output_imm (fragS *, offsetT);
 static void output_disp (fragS *, offsetT);
-#ifndef I386COFF
+#ifdef OBJ_AOUT
 static void s_bss (int);
 #endif
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
@@ -823,6 +823,9 @@ static unsigned int sse2avx;
 static unsigned int use_unaligned_vector_move;
 
 /* Maximum permitted vector size. */
+#define VSZ128 0
+#define VSZ256 1
+#define VSZ512 2
 #define VSZ_DEFAULT VSZ512
 static unsigned int vector_size = VSZ_DEFAULT;
 
@@ -1201,9 +1204,10 @@ const pseudo_typeS md_pseudo_table[] =
   {"align", s_align_ptwo, 0},
 #endif
   {"arch", set_cpu_arch, 0},
-#ifndef I386COFF
+#ifdef OBJ_AOUT
   {"bss", s_bss, 0},
-#else
+#endif
+#ifdef I386COFF
   {"lcomm", pe_lcomm, 1},
 #endif
   {"ffloat", float_cons, 'f'},
@@ -6967,12 +6971,10 @@ VEX_check_encoding (const insn_template *t)
 
   /* Vector size restrictions.  */
   if ((vector_size < VSZ512
-       && (t->opcode_modifier.evex == EVEX512
-	   || t->opcode_modifier.vsz >= VSZ512))
+       && t->opcode_modifier.evex == EVEX512)
       || (vector_size < VSZ256
 	  && (t->opcode_modifier.evex == EVEX256
-	      || t->opcode_modifier.vex == VEX256
-	      || t->opcode_modifier.vsz >= VSZ256)))
+	      || t->opcode_modifier.vex == VEX256)))
     {
       i.error = unsupported_vector_size;
       return 1;
@@ -7052,13 +7054,15 @@ match_template (char mnem_suffix)
 
       /* Check AT&T mnemonic.   */
       specific_error = progress (unsupported_with_intel_mnemonic);
-      if (intel_mnemonic && t->opcode_modifier.attmnemonic)
+      if (!intel_syntax && intel_mnemonic
+	  && t->opcode_modifier.dialect == ATT_MNEMONIC)
 	continue;
 
       /* Check AT&T/Intel syntax.  */
       specific_error = progress (unsupported_syntax);
-      if ((intel_syntax && t->opcode_modifier.attsyntax)
-	  || (!intel_syntax && t->opcode_modifier.intelsyntax))
+      if (intel_syntax
+	   ? t->opcode_modifier.dialect >= ATT_SYNTAX
+	   : t->opcode_modifier.dialect == INTEL_SYNTAX)
 	continue;
 
       /* Check Intel64/AMD64 ISA.   */
@@ -15223,7 +15227,7 @@ md_show_usage (FILE *stream)
   else
     fprintf (stream, _("(default: intel)\n"));
   fprintf (stream, _("\
-                          use AT&T/Intel mnemonic\n"));
+                          use AT&T/Intel mnemonic (AT&T syntax only)\n"));
   fprintf (stream, _("\
   -msyntax=[att|intel] (default: att)\n\
                           use AT&T/Intel syntax\n"));
@@ -15475,17 +15479,13 @@ md_pcrel_from (fixS *fixP)
   return fixP->fx_size + fixP->fx_where + fixP->fx_frag->fr_address;
 }
 
-#ifndef I386COFF
+#ifdef OBJ_AOUT
 
 static void
 s_bss (int ignore ATTRIBUTE_UNUSED)
 {
   int temp;
 
-#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
-  if (IS_ELF)
-    obj_elf_section_change_hook ();
-#endif
   temp = get_absolute_expression ();
   subseg_set (bss_section, (subsegT) temp);
   demand_empty_rest_of_line ();
@@ -15921,6 +15921,39 @@ i386_elf_section_type (const char *str, size_t len)
     return SHT_X86_64_UNWIND;
 
   return -1;
+}
+
+void
+i386_elf_section_change_hook (void)
+{
+  struct i386_segment_info *info = &seg_info(now_seg)->tc_segment_info_data;
+  struct i386_segment_info *curr, *prev;
+
+  if (info->subseg == now_subseg)
+    return;
+
+  /* Find the (or make a) list entry to save state into.  */
+  for (prev = info; (curr = prev->next) != NULL; prev = curr)
+    if (curr->subseg == info->subseg)
+      break;
+  if (!curr)
+    {
+      curr = XNEW (struct i386_segment_info);
+      curr->subseg = info->subseg;
+      curr->next = NULL;
+      prev->next = curr;
+    }
+  curr->last_insn = info->last_insn;
+
+  /* Find the list entry to load state from.  */
+  for (curr = info->next; curr; curr = curr->next)
+    if (curr->subseg == now_subseg)
+      break;
+  if (curr)
+    info->last_insn = curr->last_insn;
+  else
+    memset (&info->last_insn, 0, sizeof (info->last_insn));
+  info->subseg = now_subseg;
 }
 
 #ifdef TE_SOLARIS

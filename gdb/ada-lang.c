@@ -3933,11 +3933,37 @@ ada_resolve_variable (struct symbol *sym, const struct block *block,
   return candidates[i];
 }
 
-/* Return non-zero if formal type FTYPE matches actual type ATYPE.  */
-/* The term "match" here is rather loose.  The match is heuristic and
-   liberal.  */
+static bool ada_type_match (struct type *ftype, struct type *atype);
 
-static int
+/* Helper for ada_type_match that checks that two array types are
+   compatible.  As with that function, FTYPE is the formal type and
+   ATYPE is the actual type.  */
+
+static bool
+ada_type_match_arrays (struct type *ftype, struct type *atype)
+{
+  if (ftype->code () != TYPE_CODE_ARRAY
+      && !ada_is_array_descriptor_type (ftype))
+    return false;
+  if (atype->code () != TYPE_CODE_ARRAY
+      && !ada_is_array_descriptor_type (atype))
+    return false;
+
+  if (ada_array_arity (ftype) != ada_array_arity (atype))
+    return false;
+
+  struct type *f_elt_type = ada_array_element_type (ftype, -1);
+  struct type *a_elt_type = ada_array_element_type (atype, -1);
+  return ada_type_match (f_elt_type, a_elt_type);
+}
+
+/* Return non-zero if formal type FTYPE matches actual type ATYPE.
+   The term "match" here is rather loose.  The match is heuristic and
+   liberal -- while it tries to reject matches that are obviously
+   incorrect, it may still let through some that do not strictly
+   correspond to Ada rules.  */
+
+static bool
 ada_type_match (struct type *ftype, struct type *atype)
 {
   ftype = ada_check_typedef (ftype);
@@ -3954,11 +3980,11 @@ ada_type_match (struct type *ftype, struct type *atype)
       return ftype->code () == atype->code ();
     case TYPE_CODE_PTR:
       if (atype->code () != TYPE_CODE_PTR)
-	return 0;
+	return false;
       atype = atype->target_type ();
       /* This can only happen if the actual argument is 'null'.  */
       if (atype->code () == TYPE_CODE_INT && atype->length () == 0)
-	return 1;
+	return true;
       return ada_type_match (ftype->target_type (), atype);
     case TYPE_CODE_INT:
     case TYPE_CODE_ENUM:
@@ -3968,22 +3994,19 @@ ada_type_match (struct type *ftype, struct type *atype)
 	case TYPE_CODE_INT:
 	case TYPE_CODE_ENUM:
 	case TYPE_CODE_RANGE:
-	  return 1;
+	  return true;
 	default:
-	  return 0;
+	  return false;
 	}
 
-    case TYPE_CODE_ARRAY:
-      return (atype->code () == TYPE_CODE_ARRAY
-	      || ada_is_array_descriptor_type (atype));
-
     case TYPE_CODE_STRUCT:
-      if (ada_is_array_descriptor_type (ftype))
-	return (atype->code () == TYPE_CODE_ARRAY
-		|| ada_is_array_descriptor_type (atype));
-      else
+      if (!ada_is_array_descriptor_type (ftype))
 	return (atype->code () == TYPE_CODE_STRUCT
 		&& !ada_is_array_descriptor_type (atype));
+
+      [[fallthrough]];
+    case TYPE_CODE_ARRAY:
+      return ada_type_match_arrays (ftype, atype);
 
     case TYPE_CODE_UNION:
     case TYPE_CODE_FLT:

@@ -39,7 +39,7 @@ dnl NB: Kept somewhat in sync with gdbsupport/warnings.m4.
 build_warnings="-Wall -Wpointer-arith
 -Wno-unused -Wunused-value -Wunused-function
 -Wno-switch -Wno-char-subscripts
--Wempty-body -Wunused-but-set-parameter
+-Wempty-body -Wunused-but-set-parameter -Wunused-but-set-variable
 -Wno-sign-compare -Wno-error=maybe-uninitialized
 dnl C++ -Wno-mismatched-tags
 -Wno-error=deprecated-register
@@ -58,12 +58,15 @@ build_warnings="$build_warnings
 -Wimplicit-int
 -Wincompatible-function-pointer-types
 -Wincompatible-pointer-types
+-Wint-conversion
 -Wmisleading-indentation
 -Wmissing-parameter-type
 -Wmissing-prototypes
 -Wold-style-declaration
 -Wold-style-definition
 -Wpointer-sign
+-WWreturn-mismatch
+-Wstrict-prototypes
 dnl The cgen virtual insn logic involves enum conversions.
 dnl Disable until we can figure out how to make this work.
 -Wno-enum-conversion

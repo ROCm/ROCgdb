@@ -2055,8 +2055,9 @@ displaced_step_finish (thread_info *event_thread,
   if (event_status.kind () == TARGET_WAITKIND_FORKED
       && target_supports_displaced_stepping (event_thread))
     {
-      struct regcache *regcache = get_thread_regcache (event_thread);
-      struct gdbarch *gdbarch = regcache->arch ();
+      struct regcache *parent_regcache = get_thread_regcache (event_thread);
+      struct gdbarch *gdbarch = parent_regcache->arch ();
+
       gdbarch_displaced_step_restore_all_in_ptid
 	(gdbarch, parent_inf, event_status.child_ptid ());
     }

@@ -824,7 +824,8 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	      unsigned int op = t->operands - 1 - this_operand;
 
 	      /* Easy checks to skip templates which won't match anyway.  */
-	      if (this_operand >= t->operands || t->opcode_modifier.attsyntax)
+	      if (this_operand >= t->operands
+		  || t->opcode_modifier.dialect >= ATT_SYNTAX)
 		continue;
 
 	      switch (suffix)

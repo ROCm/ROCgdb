@@ -1191,7 +1191,7 @@ parse_typed_reg (char **ccp, aarch64_reg_type type,
 		 struct vector_type_el *typeinfo, unsigned int flags)
 {
   char *str = *ccp;
-  bool isalpha = ISALPHA (*str);
+  bool is_alpha = ISALPHA (*str);
   const reg_entry *reg = parse_reg (&str);
   struct vector_type_el atype;
   struct vector_type_el parsetype;
@@ -1208,7 +1208,7 @@ parse_typed_reg (char **ccp, aarch64_reg_type type,
     {
       if (typeinfo)
 	*typeinfo = atype;
-      if (!isalpha && (flags & PTR_IN_REGLIST))
+      if (!is_alpha && (flags & PTR_IN_REGLIST))
 	set_fatal_syntax_error (_("syntax error in register list"));
       else if (flags & PTR_GOOD_MATCH)
 	set_fatal_syntax_error (NULL);
@@ -1237,7 +1237,7 @@ parse_typed_reg (char **ccp, aarch64_reg_type type,
 	  if ((reg->type == REG_TYPE_ZAT
 	       || reg->type == REG_TYPE_ZATH
 	       || reg->type == REG_TYPE_ZATV)
-	      && reg->number * 8 >= parsetype.element_size)
+	      && reg->number * 8U >= parsetype.element_size)
 	    {
 	      set_syntax_error (_("ZA tile number out of range"));
 	      return NULL;
@@ -10189,6 +10189,8 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
 					      SSBS, PROFILE), "Cortex-X1"},
   {"cortex-x2",		AARCH64_CPU_FEATURES (V9A, 4, BFLOAT16, I8MM, MEMTAG,
 					      SVE2_BITPERM), "Cortex-X2"},
+  {"cortex-x3",		AARCH64_CPU_FEATURES (V9A, 4, BFLOAT16, I8MM, MEMTAG,
+					      SVE2_BITPERM), "Cortex-X3"},
   {"cortex-x4",         AARCH64_CPU_FEATURES (V9_2A, 3, MEMTAG, PROFILE,
                                               SVE2_BITPERM), "Cortex-X4"},
   {"generic",		AARCH64_ARCH_FEATURES (V8A), NULL},
@@ -10257,6 +10259,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sha2",		AARCH64_FEATURE (SHA2), AARCH64_FEATURE (FP)},
   {"sb",		AARCH64_FEATURE (SB), AARCH64_NO_FEATURES},
   {"predres",		AARCH64_FEATURE (PREDRES), AARCH64_NO_FEATURES},
+  {"predres2",		AARCH64_FEATURE (PREDRES2), AARCH64_FEATURE (PREDRES)},
   {"aes",		AARCH64_FEATURE (AES), AARCH64_FEATURE (SIMD)},
   {"sm4",		AARCH64_FEATURE (SM4), AARCH64_FEATURE (SIMD)},
   {"sha3",		AARCH64_FEATURE (SHA3), AARCH64_FEATURE (SHA2)},
@@ -10293,6 +10296,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"gcs",		AARCH64_FEATURE (GCS), AARCH64_NO_FEATURES},
   {"the",		AARCH64_FEATURE (THE), AARCH64_NO_FEATURES},
   {"rasv2",		AARCH64_FEATURE (RASv2), AARCH64_FEATURE (RAS)},
+  {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 
