@@ -1,5 +1,5 @@
 /* Mapping between DWARF LLVM tags and LLVM USER tags.
-   Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
 This file is part of GNU CC.
 

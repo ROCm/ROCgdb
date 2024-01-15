@@ -1,6 +1,6 @@
 \input texinfo      @c -*-texinfo-*-
 @c Copyright (C) 1988--2024 Free Software Foundation, Inc.
-@c Copyright (C) 2020--2023 Advanced Micro Devices, Inc. All rights reserved.
+@c Copyright (C) 2020--2024 Advanced Micro Devices, Inc. All rights reserved.
 @c
 @c %**start of header
 @c makeinfo ignores cmds prev to setfilename, so its arg cannot make use
@@ -74,7 +74,7 @@ the @file{license.txt} in the top-level directory for the library on
 @url{Github.com}).  The additional terms and conditions below apply to your use
 of AMD ROCm technical documentation.
 
-@copyright{}2019-2023 Advanced Micro Devices, Inc.  All rights reserved.
+@copyright{}2019-2024 Advanced Micro Devices, Inc.  All rights reserved.
 
 The information presented in this document is for informational purposes only
 and may contain technical inaccuracies, omissions, and typographical errors.

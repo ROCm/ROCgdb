@@ -1,7 +1,7 @@
 /* Select target systems and architectures at runtime for GDB.
 
    Copyright (C) 1990-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.
 

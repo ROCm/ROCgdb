@@ -1,6 +1,6 @@
 /*
-  Copyright 1992-2023 Free Software Foundation, Inc.
-  Copyright (C) 2021-2023 Advanced Micro Devices, Inc. All rights reserved.
+  Copyright 1992-2024 Free Software Foundation, Inc.
+  Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
 */
 #include <stdio.h>
 #include <unistd.h>

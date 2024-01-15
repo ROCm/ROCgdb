@@ -1,7 +1,7 @@
 /* Helper to give local IO capabilities to a target.
 
-   Copyright (C) 2023 Free Software Foundation, Inc.
-   Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2023-2024 Free Software Foundation, Inc.
+   Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
