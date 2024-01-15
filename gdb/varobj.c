@@ -1,6 +1,6 @@
 /* Implementation of the GDB variable objects API.
 
-   Copyright (C) 1999-2023 Free Software Foundation, Inc.
+   Copyright (C) 1999-2024 Free Software Foundation, Inc.
    Copyright (C) 2022-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify

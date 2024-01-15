@@ -1,6 +1,6 @@
 /* Ada language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2023 Free Software Foundation, Inc.
+   Copyright (C) 1992-2024 Free Software Foundation, Inc.
    Copyright (C) 2019-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.

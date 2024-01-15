@@ -1,6 +1,6 @@
 /* GDB target debugging macros
 
-   Copyright (C) 2014-2023 Free Software Foundation, Inc.
+   Copyright (C) 2014-2024 Free Software Foundation, Inc.
    Copyright (C) 2020-2023 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
