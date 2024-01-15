@@ -1293,7 +1293,7 @@ amd_dbgapi_target::resume (ptid_t scope_ptid, int step, enum gdb_signal signo)
       switch (signo)
 	{
 	case GDB_SIGNAL_BUS:
-	  exception = AMD_DBGAPI_EXCEPTION_WAVE_APERTURE_VIOLATION;
+	  exception = AMD_DBGAPI_EXCEPTION_WAVE_ADDRESS_ERROR;
 	  break;
 	case GDB_SIGNAL_SEGV:
 	  exception = AMD_DBGAPI_EXCEPTION_WAVE_MEMORY_VIOLATION;
@@ -1806,7 +1806,7 @@ process_one_event (amd_dbgapi_event_id_t event_id,
 	  ws.set_thread_exited (0);
 	else if (status == AMD_DBGAPI_STATUS_SUCCESS)
 	  {
-	    if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_APERTURE_VIOLATION)
+	    if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ADDRESS_ERROR)
 	      ws.set_stopped (GDB_SIGNAL_BUS);
 	    else if (stop_reason
 		     & AMD_DBGAPI_WAVE_STOP_REASON_MEMORY_VIOLATION)
