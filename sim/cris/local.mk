@@ -17,8 +17,10 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Some CGEN kludges are causing build-time warnings.  See cris.cpu for details.
-AM_CFLAGS_%C%_mloopv10f.o = -Wno-unused-but-set-variable
-AM_CFLAGS_%C%_mloopv32f.o = -Wno-unused-but-set-variable
+AM_CFLAGS_%C%_mloopv10f.o = $(SIM_CFLAG_WNO_UNUSED_BUT_SET_VARIABLE)
+AM_CFLAGS_%C%_mloopv32f.o = $(SIM_CFLAG_WNO_UNUSED_BUT_SET_VARIABLE)
+## Some CGEN assignments use variable names that are nested & repeated.
+AM_CFLAGS_%C%_mloopv10f.o += $(SIM_CFLAG_WNO_SHADOW_LOCAL)
 
 nodist_%C%_libsim_a_SOURCES = \
 	%D%/modules.c
@@ -91,11 +93,10 @@ BUILT_SOURCES += \
 ## FIXME: What is mono and what does "Use of `mono' is wip" mean (other
 ## than the apparent; some "mono" feature is work in progress)?
 %D%/mloopv10f.c %D%/engv10.h: %D%/stamp-mloop-v10f ; @true
-%D%/stamp-mloop-v10f: $(srccom)/genmloop.sh %D%/mloop.in
-	$(AM_V_GEN)$(SHELL) $(srccom)/genmloop.sh -shell $(SHELL) \
+%D%/stamp-mloop-v10f: %D%/mloop.in $(srccom)/genmloop.sh
+	$(AM_V_GEN)$(CGEN_GEN_MLOOP) \
 		-mono -no-fast -pbb -switch semcrisv10f-switch.c \
-		-cpu crisv10f \
-		-infile $(srcdir)/%D%/mloop.in -outfile-prefix %D%/ -outfile-suffix -v10f
+		-cpu crisv10f -outfile-suffix -v10f
 	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change %D%/eng-v10f.hin %D%/engv10.h
 	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change %D%/mloop-v10f.cin %D%/mloopv10f.c
 	$(AM_V_at)touch $@
@@ -103,11 +104,10 @@ BUILT_SOURCES += \
 ## FIXME: What is mono and what does "Use of `mono' is wip" mean (other
 ## than the apparent; some "mono" feature is work in progress)?
 %D%/mloopv32f.c %D%/engv32.h: %D%/stamp-mloop-v32f ; @true
-%D%/stamp-mloop-v32f: $(srccom)/genmloop.sh %D%/mloop.in
-	$(AM_V_GEN)$(SHELL) $(srccom)/genmloop.sh -shell $(SHELL) \
+%D%/stamp-mloop-v32f: %D%/mloop.in $(srccom)/genmloop.sh
+	$(AM_V_GEN)$(CGEN_GEN_MLOOP) \
 		-mono -no-fast -pbb -switch semcrisv32f-switch.c \
-		-cpu crisv32f \
-		-infile $(srcdir)/%D%/mloop.in -outfile-prefix %D%/ -outfile-suffix -v32f
+		-cpu crisv32f -outfile-suffix -v32f
 	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change %D%/eng-v32f.hin %D%/engv32.h
 	$(AM_V_at)$(SHELL) $(srcroot)/move-if-change %D%/mloop-v32f.cin %D%/mloopv32f.c
 	$(AM_V_at)touch $@

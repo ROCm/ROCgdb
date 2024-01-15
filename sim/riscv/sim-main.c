@@ -48,10 +48,9 @@ static const struct riscv_opcode *riscv_hash[OP_MASK_OP + 1];
   do { \
     if (RISCV_XLEN (cpu) != 32) \
       { \
-	SIM_DESC sd = CPU_STATE (cpu); \
 	TRACE_INSN (cpu, "RV32I-only " fmt, ## args); \
-	sim_engine_halt (sd, cpu, NULL, sim_pc_get (cpu), sim_signalled, \
-			 SIM_SIGILL); \
+	sim_engine_halt (CPU_STATE (cpu), cpu, NULL, sim_pc_get (cpu), \
+			 sim_signalled, SIM_SIGILL); \
       } \
   } while (0)
 
@@ -59,10 +58,9 @@ static const struct riscv_opcode *riscv_hash[OP_MASK_OP + 1];
   do { \
     if (RISCV_XLEN (cpu) != 64) \
       { \
-	SIM_DESC sd = CPU_STATE (cpu); \
 	TRACE_INSN (cpu, "RV64I-only " fmt, ## args); \
-	sim_engine_halt (sd, cpu, NULL, sim_pc_get (cpu), sim_signalled, \
-			 SIM_SIGILL); \
+	sim_engine_halt (CPU_STATE (cpu), cpu, NULL, sim_pc_get (cpu), \
+			 sim_signalled, SIM_SIGILL); \
       } \
   } while (0)
 
@@ -126,6 +124,7 @@ store_csr (SIM_CPU *cpu, const char *name, int csr, unsigned_word *reg,
     case CSR_INSTRETH:
     case CSR_TIMEH:
       RISCV_ASSERT_RV32 (cpu, "CSR: %s", name);
+      ATTRIBUTE_FALLTHROUGH;
 
     /* All the rest are immutable.  */
     default:

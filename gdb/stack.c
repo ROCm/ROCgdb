@@ -1726,9 +1726,10 @@ info_frame_command_core (frame_info_ptr fi, bool selected_frame_p)
 		gdb_printf ("\n");
 	      }
 	    else if (value->lval () == lval_register)
-	      gdb_printf (" Previous frame's sp in %s\n",
-			  gdbarch_register_name (gdbarch,
-						 VALUE_REGNUM (value)));
+	      {
+		gdb_printf (" Previous frame's sp in %s\n",
+			    gdbarch_register_name (gdbarch, value->regnum ()));
+	      }
 
 	    release_value (value);
 	    need_nl = 0;

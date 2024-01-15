@@ -24,7 +24,7 @@ from typing import Optional, Sequence
 
 from .server import request, capability, send_event
 from .sources import make_source
-from .startup import in_gdb_thread, log_stack
+from .startup import in_gdb_thread, log_stack, parse_and_eval, LogLevel, DAPException
 from .typecheck import type_check
 
 
@@ -168,7 +168,7 @@ def _set_breakpoints_callback(kind, specs, creator):
                 bp.ignore_count = 0
             else:
                 bp.ignore_count = int(
-                    gdb.parse_and_eval(hit_condition, global_context=True)
+                    parse_and_eval(hit_condition, global_context=True)
                 )
 
             # Reaching this spot means success.
@@ -176,7 +176,9 @@ def _set_breakpoints_callback(kind, specs, creator):
             result.append(_breakpoint_descriptor(bp))
         # Exceptions other than gdb.error are possible here.
         except Exception as e:
-            log_stack()
+            # Don't normally want to see this, as it interferes with
+            # the test suite.
+            log_stack(LogLevel.FULL)
             # Maybe the breakpoint was made but setting an attribute
             # failed.  We still want this to fail.
             if bp is not None:
@@ -212,6 +214,7 @@ class _PrintBreakpoint(gdb.Breakpoint):
                 # have already been stripped by the placement of the
                 # regex capture in the 'split' call.
                 try:
+                    # No real need to use the DAP parse_and_eval here.
                     val = gdb.parse_and_eval(item)
                     output += str(val)
                 except Exception as e:
@@ -360,12 +363,13 @@ def _catch_exception(filterId, **args):
     if filterId in ("assert", "exception", "throw", "rethrow", "catch"):
         cmd = "-catch-" + filterId
     else:
-        raise Exception("Invalid exception filterID: " + str(filterId))
+        raise DAPException("Invalid exception filterID: " + str(filterId))
     result = gdb.execute_mi(cmd)
     # A little lame that there's no more direct way.
     for bp in gdb.breakpoints():
         if bp.number == result["bkptno"]:
             return bp
+    # Not a DAPException because this is definitely unexpected.
     raise Exception("Could not find catchpoint after creating")
 
 

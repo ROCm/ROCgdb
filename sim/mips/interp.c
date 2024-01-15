@@ -184,7 +184,7 @@ mips_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt, char *arg,
 	 etc.). */
       for (cpu_nr = 0; cpu_nr < MAX_NR_PROCESSORS; cpu_nr++)
 	{
-	  sim_cpu *cpu = STATE_CPU (sd, cpu_nr);
+	  cpu = STATE_CPU (sd, cpu_nr);
 	  if (arg == NULL)
 	    STATE |= simTRACE;
 	  else if (strcmp (arg, "yes") == 0)
@@ -448,8 +448,6 @@ sim_open (SIM_OPEN_KIND kind, host_callback *cb,
   else if (board != NULL
 	   && (strcmp(board, BOARD_BSP) == 0))
     {
-      int i;
-
       STATE_ENVIRONMENT (sd) = OPERATING_ENVIRONMENT;
 
       /* ROM: 0x9FC0_0000 - 0x9FFF_FFFF and 0xBFC0_0000 - 0xBFFF_FFFF */
@@ -481,7 +479,6 @@ sim_open (SIM_OPEN_KIND kind, host_callback *cb,
 	       strcmp(board, BOARD_JMR3904_DEBUG) == 0))
     {
       /* match VIRTUAL memory layout of JMR-TX3904 board */
-      int i;
 
       /* --- disable monitor unless forced on by user --- */
 
@@ -805,7 +802,7 @@ sim_open (SIM_OPEN_KIND kind, host_callback *cb,
   /* CPU specific initialization.  */
   for (i = 0; i < MAX_NR_PROCESSORS; ++i)
     {
-      SIM_CPU *cpu = STATE_CPU (sd, i);
+      cpu = STATE_CPU (sd, i);
 
       CPU_REG_FETCH (cpu) = mips_reg_fetch;
       CPU_REG_STORE (cpu) = mips_reg_store;
@@ -1247,7 +1244,7 @@ sim_monitor (SIM_DESC sd,
 	if (A0 == 0)	/* waitflag == NOWAIT */
 	  V0 = (unsigned_word)-1;
       }
-     /* Drop through to case 11 */
+     ATTRIBUTE_FALLTHROUGH;
 
     case 11: /* char inbyte(void) */
       {
@@ -1904,6 +1901,7 @@ signal_exception (SIM_DESC sd,
 	 }
        /* else fall through to normal exception processing */
        sim_io_eprintf(sd,"ReservedInstruction at PC = 0x%s\n", pr_addr (cia));
+       ATTRIBUTE_FALLTHROUGH;
      }
 
     default:
@@ -2329,6 +2327,7 @@ decode_coproc (SIM_DESC sd,
 				  "Warning: PC 0x%lx:interp.c decode_coproc DEADC0DE\n",
 				  (unsigned long)cia);
 		GPR[rt] = 0xDEADC0DE; /* CPR[0,rd] */
+		ATTRIBUTE_FALLTHROUGH;
 		/* CPR[0,rd] = GPR[rt]; */
 	      default:
 		if (op == cp0_mfc0 || op == cp0_dmfc0)
@@ -2498,7 +2497,8 @@ mips_core_signal (SIM_DESC sd,
 		      (unsigned long) addr, (unsigned long) ip);
       COP0_BADVADDR = addr;
       SignalExceptionDataReference();
-      break;
+      /* Shouldn't actually be reached.  */
+      abort ();
 
     case sim_core_unaligned_signal:
       sim_io_eprintf (sd, "mips-core: %d byte %s to unaligned address 0x%lx at 0x%lx\n",
@@ -2509,7 +2509,8 @@ mips_core_signal (SIM_DESC sd,
 	SignalExceptionAddressLoad();
       else
 	SignalExceptionAddressStore();
-      break;
+      /* Shouldn't actually be reached.  */
+      abort ();
 
     default:
       sim_engine_abort (sd, cpu, cia,

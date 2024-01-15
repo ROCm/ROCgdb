@@ -962,16 +962,43 @@ value::allocate (struct type *type)
 
 /* See value.h  */
 
-struct value *
-value::allocate_register (frame_info_ptr next_frame, int regnum)
+value *
+value::allocate_register_lazy (frame_info_ptr next_frame, int regnum,
+			       struct type *type)
 {
-  value *result
-    = value::allocate (register_type (frame_unwind_arch (next_frame), regnum));
+  if (type == nullptr)
+    type = register_type (frame_unwind_arch (next_frame), regnum);
+
+  value *result = value::allocate_lazy (type);
 
   result->set_lval (lval_register);
-  VALUE_REGNUM (result) = regnum;
-  VALUE_NEXT_FRAME_ID (result) = get_frame_id (next_frame);
+  result->m_location.reg.regnum = regnum;
 
+  /* If this register value is created during unwind (while computing a frame
+     id), and NEXT_FRAME is a frame inlined in the frame being unwound, then
+     NEXT_FRAME will not have a valid frame id yet.  Find the next non-inline
+     frame (possibly the sentinel frame).  This is where registers are unwound
+     from anyway.  */
+  while (get_frame_type (next_frame) == INLINE_FRAME)
+    next_frame = get_next_frame_sentinel_okay (next_frame);
+
+  result->m_location.reg.next_frame_id = get_frame_id (next_frame);
+  result->set_scope (LOCATION_SCOPE_FRAME);
+
+  /* We should have a next frame with a valid id.  */
+  gdb_assert (frame_id_p (result->m_location.reg.next_frame_id));
+
+  return result;
+}
+
+/* See value.h  */
+
+value *
+value::allocate_register (frame_info_ptr next_frame, int regnum,
+			  struct type *type)
+{
+  value *result = value::allocate_register_lazy (next_frame, regnum, type);
+  result->set_lazy (false);
   return result;
 }
 
@@ -1418,13 +1445,6 @@ value::set_address (CORE_ADDR addr)
 {
   gdb_assert (m_lval == lval_memory);
   m_location.address = addr;
-}
-
-struct frame_id *
-value::deprecated_next_frame_id_hack ()
-{
-  gdb_assert (m_lval == lval_register);
-  return &m_location.reg.next_frame_id;
 }
 
 void
@@ -3949,8 +3969,6 @@ value::fetch_lazy_memory ()
 void
 value::fetch_lazy_register ()
 {
-  frame_info_ptr next_frame;
-  int regnum;
   struct type *type = check_typedef (this->type ());
   struct value *new_val = this;
 
@@ -3958,12 +3976,11 @@ value::fetch_lazy_register ()
 
   while (new_val->lval () == lval_register && new_val->lazy ())
     {
-      struct frame_id next_frame_id = VALUE_NEXT_FRAME_ID (new_val);
-
-      next_frame = frame_find_by_id (next_frame_id);
-      regnum = VALUE_REGNUM (new_val);
-
+      frame_id next_frame_id = new_val->next_frame_id ();
+      frame_info_ptr next_frame = frame_find_by_id (next_frame_id);
       gdb_assert (next_frame != NULL);
+
+      int regnum = new_val->regnum ();
 
       /* Convertible register routines are used for multi-register
 	 values and for interpretation in different types
@@ -3973,12 +3990,6 @@ value::fetch_lazy_register ()
       gdb_assert (!gdbarch_convert_register_p (get_frame_arch (next_frame),
 					       regnum, type));
 
-      /* FRAME was obtained, above, via VALUE_NEXT_FRAME_ID.
-	 Since a "->next" operation was performed when setting
-	 this field, we do not need to perform a "next" operation
-	 again when unwinding the register.  That's why
-	 frame_unwind_register_value() is called here instead of
-	 get_frame_register_value().  */
       new_val = frame_unwind_register_value (next_frame, regnum);
 
       /* If we get another lazy lval_register value, it means the
@@ -3993,7 +4004,7 @@ value::fetch_lazy_register ()
 	 in this situation.  */
       if (new_val->lval () == lval_register
 	  && new_val->lazy ()
-	  && VALUE_NEXT_FRAME_ID (new_val) == next_frame_id)
+	  && new_val->next_frame_id () == next_frame_id)
 	internal_error (_("infinite loop while fetching a register"));
     }
 
@@ -4015,12 +4026,10 @@ value::fetch_lazy_register ()
 
   if (frame_debug)
     {
-      struct gdbarch *gdbarch;
-      frame_info_ptr frame
-	= frame_find_by_id (VALUE_NEXT_FRAME_ID (this));
+      frame_info_ptr frame = frame_find_by_id (this->next_frame_id ());
       frame = get_prev_frame_always (frame);
-      regnum = VALUE_REGNUM (this);
-      gdbarch = get_frame_arch (frame);
+      int regnum = this->regnum ();
+      gdbarch *gdbarch = get_frame_arch (frame);
 
       string_file debug_file;
       gdb_printf (&debug_file,
@@ -4040,8 +4049,7 @@ value::fetch_lazy_register ()
 	  gdb::array_view<const gdb_byte> buf = new_val->contents ();
 
 	  if (new_val->lval () == lval_register)
-	    gdb_printf (&debug_file, " register=%d",
-			VALUE_REGNUM (new_val));
+	    gdb_printf (&debug_file, " register=%d", new_val->regnum ());
 	  else if (new_val->lval () == lval_memory)
 	    gdb_printf
 	      (&debug_file, " address=%s",

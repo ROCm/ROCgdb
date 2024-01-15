@@ -1394,8 +1394,7 @@ dwarf_register::to_gdb_value (frame_info_ptr frame, struct type *type,
 
   /* Construct the value.  */
   value *retval
-    = gdbarch_value_from_register (arch, type,
-				   gdb_regnum, get_frame_id (frame));
+    = gdbarch_value_from_register (arch, type, gdb_regnum, frame);
   LONGEST retval_offset = retval->offset ();
 
   if (type_byte_order (type) == BFD_ENDIAN_BIG
@@ -1408,7 +1407,7 @@ dwarf_register::to_gdb_value (frame_info_ptr frame, struct type *type,
   retval->set_bitpos (m_bit_suboffset);
 
   /* Get the data.  */
-  read_frame_register_value (retval, frame);
+  read_frame_register_value (retval);
 
   if (retval->optimized_out ())
     {
@@ -2632,7 +2631,7 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
 	  (arch, address, 0, value->stack (), address_space);
       }
     case lval_register:
-      return std::make_shared<dwarf_register> (arch, VALUE_REGNUM (value),
+      return std::make_shared<dwarf_register> (arch, value->regnum (),
 					       false, offset);
     case lval_computed:
       {

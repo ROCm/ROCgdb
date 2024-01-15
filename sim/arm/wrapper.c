@@ -251,7 +251,7 @@ sim_create_inferior (SIM_DESC sd ATTRIBUTE_UNUSED,
 	(sim_callback,
 	 "Unknown machine type '%d'; please update sim_create_inferior.\n",
 	 mach);
-      /* fall through */
+      ATTRIBUTE_FALLTHROUGH;
 
     case 0:
       /* We wouldn't set the machine type with earlier toolchains, so we
@@ -310,7 +310,7 @@ sim_create_inferior (SIM_DESC sd ATTRIBUTE_UNUSED,
 	  ARMul_SelectProcessor (state, ARM_v5_Prop | ARM_v5e_Prop | ARM_XScale_Prop);
 	  break;
 	}
-      /* Otherwise drop through.  */
+      ATTRIBUTE_FALLTHROUGH;
 
     case bfd_mach_arm_5T:
       ARMul_SelectProcessor (state, ARM_v5_Prop);
@@ -746,14 +746,14 @@ sim_target_parse_command_line (int argc, char ** argv)
 
       while (* ptr)
 	{
-	  int i;
+	  int o;
 
-	  for (i = ARRAY_SIZE (options); i--;)
-	    if (strncmp (ptr, options[i].swi_option,
-			 strlen (options[i].swi_option)) == 0)
+	  for (o = ARRAY_SIZE (options); o--;)
+	    if (strncmp (ptr, options[o].swi_option,
+			 strlen (options[o].swi_option)) == 0)
 	      {
-		swi_mask |= options[i].swi_mask;
-		ptr += strlen (options[i].swi_option);
+		swi_mask |= options[o].swi_mask;
+		ptr += strlen (options[o].swi_option);
 
 		if (* ptr == ',')
 		  ++ ptr;
@@ -761,7 +761,7 @@ sim_target_parse_command_line (int argc, char ** argv)
 		break;
 	      }
 
-	  if (i < 0)
+	  if (o < 0)
 	    break;
 	}
 
@@ -884,8 +884,6 @@ sim_open (SIM_OPEN_KIND kind,
 
   if (argv_copy[1] != NULL)
     {
-      int i;
-
       /* Scan for memory-size switches.  */
       for (i = 0; (argv_copy[i] != NULL) && (argv_copy[i][0] != 0); i++)
 	if (argv_copy[i][0] == '-' && argv_copy[i][1] == 'm')

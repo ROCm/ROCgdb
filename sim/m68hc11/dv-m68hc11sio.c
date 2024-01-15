@@ -227,7 +227,7 @@ m68hc11sio_port_event (struct hw *me,
            simulate some initial setup by the internal rom.  */
         if (((m68hc11_cpu->ios[M6811_HPRIO]) & (M6811_SMOD | M6811_MDA)) == M6811_SMOD)
           {
-            unsigned char val = 0x33;
+            val = 0x33;
             
             m68hc11sio_io_write_buffer (me, &val, io_map,
                                         (unsigned_word) M6811_BAUD, 1);
@@ -523,6 +523,7 @@ m68hc11sio_io_read_buffer (struct hw *me,
     case M6811_SCSR:
       controller->rx_clear_scsr = m68hc11_cpu->ios[M6811_SCSR]
         & (M6811_RDRF | M6811_IDLE | M6811_OR | M6811_NF | M6811_FE);
+      ATTRIBUTE_FALLTHROUGH;
       
     case M6811_BAUD:
     case M6811_SCCR1:

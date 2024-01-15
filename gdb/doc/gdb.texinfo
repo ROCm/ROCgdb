@@ -42676,11 +42676,20 @@ the same approach as the @code{start} command.  @xref{Starting}.
 @end table
 
 @value{GDBN} defines some parameters that can be passed to the
-@code{attach} request.  One of these must be specified.
+@code{attach} request.  Either @code{pid} or @code{target} must be
+specified, but if both are specified then @code{target} will be
+ignored.
 
 @table @code
 @item pid
 The process ID to which @value{GDBN} should attach.  @xref{Attach}.
+
+@item program
+If provided, this is a string that specifies the program to use.  This
+corresponds to the @code{file} command.  @xref{Files}.  In some cases,
+@value{GDBN} can automatically determine which program is running.
+However, for many remote targets, this is not the case, and so this
+should be supplied.
 
 @item target
 The target to which @value{GDBN} should connect.  This is a string and
@@ -42707,6 +42716,24 @@ computation.
 Evaluations like this can be interrupted using the DAP @code{cancel}
 request.  (In fact, @code{cancel} should work for any request, but it
 is unlikely to be useful for most of them.)
+
+@value{GDBN} provides a couple of logging settings that can be used in
+DAP mode.  These can be set on the command line using the @code{-iex}
+option (@pxref{File Options}).
+
+@table @code
+@item set debug dap-log-file @r{[}@var{filename}@r{]}
+Enable DAP logging.  Logs are written to @var{filename}.  If no
+@var{filename} is given, logging is stopped.
+
+@item set debug dap-log-level @var{level}
+Set the DAP logging level.  The default is @samp{1}, which logs the
+DAP protocol, whatever debug messages the developers thought were
+useful, and unexpected exceptions.  Level @samp{2} can be used to log
+all exceptions, including ones that are considered to be expected.
+For example, a failure to parse an expression would be considered a
+normal exception and not normally be logged.
+@end table
 
 @node JIT Interface
 @chapter JIT Compilation Interface

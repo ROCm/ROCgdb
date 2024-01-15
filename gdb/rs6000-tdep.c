@@ -2716,7 +2716,7 @@ rs6000_register_to_value (frame_info_ptr frame,
   auto from_view
     = gdb::make_array_view (from, register_size (gdbarch, regnum));
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
-  if (!get_frame_register_bytes (frame, regnum, 0, from_view, optimizedp,
+  if (!get_frame_register_bytes (next_frame, regnum, 0, from_view, optimizedp,
 				 unavailablep))
     return 0;
 
@@ -2747,36 +2747,26 @@ rs6000_value_to_register (frame_info_ptr frame,
   put_frame_register (get_next_frame_sentinel_okay (frame), regnum, to_view);
 }
 
-static struct value *
-rs6000_value_from_register (struct gdbarch *gdbarch, struct type *type,
-			    int regnum, struct frame_id frame_id)
+static value *
+rs6000_value_from_register (gdbarch *gdbarch, type *type, int regnum,
+			    const frame_info_ptr &this_frame)
 {
-  int len = type->length ();
-  struct value *value = value::allocate (type);
-
   /* We have an IEEE 128-bit float -- need to change regnum mapping from
      fpr to vsr.  */
   regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
 
-  value->set_lval (lval_register);
-  frame_info_ptr frame = frame_find_by_id (frame_id);
-
-  if (frame == NULL)
-    frame_id = null_frame_id;
-  else
-    frame_id = get_frame_id (get_next_frame_sentinel_okay (frame));
-
-  VALUE_NEXT_FRAME_ID (value) = frame_id;
-  VALUE_REGNUM (value) = regnum;
+  value *value
+    = value::allocate_register (get_next_frame_sentinel_okay (this_frame),
+				regnum, type);
 
   /* Any structure stored in more than one register will always be
      an integral number of registers.  Otherwise, you need to do
      some fiddling with the last register copied here for little
      endian machines.  */
   if (type_byte_order (type) == BFD_ENDIAN_BIG
-      && len < register_size (gdbarch, regnum))
+      && type->length () < register_size (gdbarch, regnum))
     /* Big-endian, and we want less than full size.  */
-    value->set_offset (register_size (gdbarch, regnum) - len);
+    value->set_offset (register_size (gdbarch, regnum) - type->length ());
   else
     value->set_offset (0);
 

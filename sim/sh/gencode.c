@@ -2012,8 +2012,10 @@ static op ppi_tab[] =
     "ADD_SUB_GE;",
   },
   { "","", "pwsb Sx,Sy,Dz",	"10100100....zzzz",
+    "return;",
   },
   { "","", "pwad Sx,Sy,Dz",	"10110100....zzzz",
+    "return;",
   },
   { "","", "(if cc) pabs Sx,Dz",	"100010ccxx01zzzz",
     "/* FIXME: duplicate code pabs.  */",
@@ -2439,7 +2441,7 @@ static op ppi_tab[] =
     "if (0xa05f >> z & 1)",
     "  RAISE_EXCEPTION (SIGILL);",
     "else",
-    "  MACL = DSP_R (z) = res;",
+    "  MACL = DSP_R (z);",
     "return;",
   },
   /* sh4a */
@@ -3296,6 +3298,7 @@ ppi_gensim (void)
 	    case 'c':
 	      printf ("      if ((((iword >> 8) ^ DSR) & 1) == 0)\n");
 	      printf ("\treturn;\n");
+	      printf ("      ATTRIBUTE_FALLTHROUGH;\n");
 	      printf ("    }\n");
 	      printf ("  case %d:\n", p->index + 1);
 	      printf ("    {\n");
@@ -3359,16 +3362,22 @@ ppi_gensim (void)
   printf ("    {\n");
   printf ("    case 0: /* Carry Mode */\n");
   printf ("      DSR |= carry;\n");
+  printf ("      break;\n");
   printf ("    case 1: /* Negative Value Mode */\n");
   printf ("      DSR |= res_grd >> 7 & 1;\n");
+  printf ("      break;\n");
   printf ("    case 2: /* Zero Value Mode */\n");
   printf ("      DSR |= DSR >> 6 & 1;\n");
+  printf ("      break;\n");
   printf ("    case 3: /* Overflow mode */\n");
   printf ("      DSR |= overflow >> 4;\n");
+  printf ("      break;\n");
   printf ("    case 4: /* Signed Greater Than Mode */\n");
   printf ("      DSR |= DSR >> 7 & 1;\n");
+  printf ("      break;\n");
   printf ("    case 5: /* Signed Greater Than Or Equal Mode */\n");
   printf ("      DSR |= greater_equal >> 7;\n");
+  printf ("      break;\n");
   printf ("    }\n");
   printf (" assign_z:\n");
   printf ("  if (0xa05f >> z & 1)\n");

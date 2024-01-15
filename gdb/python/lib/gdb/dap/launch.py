@@ -18,14 +18,19 @@ import gdb
 # These are deprecated in 3.9, but required in older versions.
 from typing import Mapping, Optional, Sequence
 
-from .events import exec_and_expect_stop, expect_process
+from .events import exec_and_expect_stop, expect_process, suppress_stop
 from .server import request, capability
-from .startup import exec_and_log
+from .startup import exec_and_log, DAPException
 
 
 # The program being launched, or None.  This should only be accessed
 # from the gdb thread.
 _program = None
+
+
+# True if the program was attached, False otherwise.  This should only
+# be accessed from the gdb thread.
+_attach = False
 
 
 # Any parameters here are necessarily extensions -- DAP requires this
@@ -43,6 +48,8 @@ def launch(
 ):
     global _program
     _program = program
+    global _attach
+    _attach = False
     if cwd is not None:
         exec_and_log("cd " + cwd)
     if program is not None:
@@ -60,24 +67,35 @@ def launch(
 
 
 @request("attach")
-def attach(*, pid: Optional[int] = None, target: Optional[str] = None, **args):
+def attach(
+    *,
+    program: Optional[str] = None,
+    pid: Optional[int] = None,
+    target: Optional[str] = None,
+    **args,
+):
     # Ensure configurationDone does not try to run.
+    global _attach
+    _attach = True
     global _program
-    _program = None
+    _program = program
+    if program is not None:
+        exec_and_log("file " + program)
     if pid is not None:
         cmd = "attach " + str(pid)
     elif target is not None:
         cmd = "target remote " + target
     else:
-        raise Exception("attach requires either 'pid' or 'target'")
+        raise DAPException("attach requires either 'pid' or 'target'")
     expect_process("attach")
+    suppress_stop()
     exec_and_log(cmd)
 
 
 @capability("supportsConfigurationDoneRequest")
 @request("configurationDone", response=False)
 def config_done(**args):
-    global _program
-    if _program is not None:
+    global _attach
+    if not _attach:
         expect_process("process")
         exec_and_expect_stop("run")

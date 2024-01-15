@@ -341,7 +341,7 @@ typedef struct {
 } RX_Data;
 
 #define rx_abort() _rx_abort(__FILE__, __LINE__)
-static void
+static void ATTRIBUTE_NORETURN
 _rx_abort (const char *file, int line)
 {
   if (strrchr (file, '/'))
@@ -411,7 +411,7 @@ get_op (const RX_Opcode_Decoded *rd, int i)
 
     case RX_Operand_Predec:	/* [-Rn] */
       put_reg (o->reg, get_reg (o->reg) - size2bytes[o->size]);
-      /* fall through */
+      ATTRIBUTE_FALLTHROUGH;
     case RX_Operand_Postinc:	/* [Rn+] */
     case RX_Operand_Zero_Indirect:	/* [Rn + 0] */
     case RX_Operand_Indirect:	/* [Rn + addend] */
@@ -583,7 +583,7 @@ put_op (const RX_Opcode_Decoded *rd, int i, int v)
 
     case RX_Operand_Predec:	/* [-Rn] */
       put_reg (o->reg, get_reg (o->reg) - size2bytes[o->size]);
-      /* fall through */
+      ATTRIBUTE_FALLTHROUGH;
     case RX_Operand_Postinc:	/* [Rn+] */
     case RX_Operand_Zero_Indirect:	/* [Rn + 0] */
     case RX_Operand_Indirect:	/* [Rn + addend] */

@@ -271,24 +271,7 @@ value_of_register_lazy (frame_info_ptr next_frame, int regnum)
   gdb_assert (regnum < gdbarch_num_cooked_regs (gdbarch));
   gdb_assert (next_frame != nullptr);
 
-  /* In some cases NEXT_FRAME may not have a valid frame-id yet.  This can
-     happen if we end up trying to unwind a register as part of the frame
-     sniffer.  The only time that we get here without a valid frame-id is
-     if NEXT_FRAME is an inline frame.  If this is the case then we can
-     avoid getting into trouble here by skipping past the inline frames.  */
-  while (get_frame_type (next_frame) == INLINE_FRAME)
-    next_frame = get_next_frame_sentinel_okay (next_frame);
-
-  /* We should have a valid next frame.  */
-  gdb_assert (frame_id_p (get_frame_id (next_frame)));
-
-  value *reg_val = value::allocate_lazy (register_type (gdbarch, regnum));
-  reg_val->set_lval (lval_register);
-  VALUE_REGNUM (reg_val) = regnum;
-  VALUE_NEXT_FRAME_ID (reg_val) = get_frame_id (next_frame);
-  reg_val->set_scope (LOCATION_SCOPE_FRAME);
-
-  return reg_val;
+  return value::allocate_register_lazy (next_frame, regnum);
 }
 
 /* Given a pointer of type TYPE in target form in BUF, return the
@@ -765,59 +748,44 @@ read_var_value (struct symbol *var, const struct block *var_block,
 
 /* Install default attributes for register values.  */
 
-struct value *
-default_value_from_register (struct gdbarch *gdbarch, struct type *type,
-			     int regnum, struct frame_id frame_id)
+value *
+default_value_from_register (gdbarch *gdbarch, type *type, int regnum,
+			     const frame_info_ptr &this_frame)
 {
-  int len = type->length ();
-  struct value *value = value::allocate (type);
-  frame_info_ptr frame;
-
-  value->set_lval (lval_register);
-  frame = frame_find_by_id (frame_id);
-
-  if (frame == NULL)
-    frame_id = null_frame_id;
-  else
-    frame_id = get_frame_id (get_next_frame_sentinel_okay (frame));
-
-  VALUE_NEXT_FRAME_ID (value) = frame_id;
-  value->set_scope (LOCATION_SCOPE_FRAME);
-  VALUE_REGNUM (value) = regnum;
+  value *value
+    = value::allocate_register (get_next_frame_sentinel_okay (this_frame),
+				regnum, type);
 
   /* Any structure stored in more than one register will always be
      an integral number of registers.  Otherwise, you need to do
      some fiddling with the last register copied here for little
      endian machines.  */
   if (type_byte_order (type) == BFD_ENDIAN_BIG
-      && len < register_size (gdbarch, regnum))
+      && type->length () < register_size (gdbarch, regnum))
     /* Big-endian, and we want less than full size.  */
-    value->set_offset (register_size (gdbarch, regnum) - len);
+    value->set_offset (register_size (gdbarch, regnum) - type->length ());
   else
     value->set_offset (0);
 
   return value;
 }
 
-/* VALUE must be an lval_register value.  If regnum is the value's
-   associated register number, and len the length of the values type,
-   read one or more registers in FRAME, starting with register REGNUM,
-   until we've read LEN bytes.
-
-   If any of the registers we try to read are optimized out, then mark the
-   complete resulting value as optimized out.  */
+/* See value.h.  */
 
 void
-read_frame_register_value (struct value *value, frame_info_ptr frame)
+read_frame_register_value (value *value)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
+  gdb_assert (value->lval () == lval_register);
+
+  frame_info_ptr next_frame = frame_find_by_id (value->next_frame_id ());
+  gdb_assert (next_frame != nullptr);
+
+  gdbarch *gdbarch = frame_unwind_arch (next_frame);
   LONGEST offset = 0;
   LONGEST reg_offset = value->offset ();
   LONGEST bit_offset = value->bitpos ();
-  int regnum = VALUE_REGNUM (value);
+  int regnum = value->regnum ();
   int len = type_length_units (check_typedef (value->type ()));
-
-  gdb_assert (value->lval () == lval_register);
 
   /* Skip registers wholly inside of REG_OFFSET.  */
   while (reg_offset >= register_size (gdbarch, regnum))
@@ -829,7 +797,7 @@ read_frame_register_value (struct value *value, frame_info_ptr frame)
   /* Copy the data.  */
   while (len > 0)
     {
-      struct value *regval = get_frame_register_value (frame, regnum);
+      struct value *regval = frame_unwind_register_value (next_frame, regnum);
       int reg_len = type_length_units (regval->type ()) - reg_offset;
 
       /* If the register length is larger than the number of bytes
@@ -866,12 +834,8 @@ value_from_register (struct type *type, int regnum, frame_info_ptr frame)
 	 the corresponding [integer] type (see Alpha).  The assumption
 	 is that gdbarch_register_to_value populates the entire value
 	 including the location.  */
-      v = value::allocate (type);
-      v->set_lval (lval_register);
-      VALUE_NEXT_FRAME_ID (v) =
-	get_frame_id (get_next_frame_sentinel_okay (frame));
-      v->set_scope (LOCATION_SCOPE_FRAME);
-      VALUE_REGNUM (v) = regnum;
+      v = value::allocate_register (get_next_frame_sentinel_okay (frame),
+				    regnum, type);
       ok = gdbarch_register_to_value (gdbarch, frame, regnum, type1,
 				      v->contents_raw ().data (), &optim,
 				      &unavail);
@@ -887,11 +851,10 @@ value_from_register (struct type *type, int regnum, frame_info_ptr frame)
   else
     {
       /* Construct the value.  */
-      v = gdbarch_value_from_register (gdbarch, type,
-				       regnum, get_frame_id (frame));
+      v = gdbarch_value_from_register (gdbarch, type, regnum, frame);
 
       /* Get the data.  */
-      read_frame_register_value (v, frame);
+      read_frame_register_value (v);
     }
 
   return v;
@@ -903,52 +866,13 @@ value_from_register (struct type *type, int regnum, frame_info_ptr frame)
 CORE_ADDR
 address_from_register (int regnum, frame_info_ptr frame)
 {
-  struct gdbarch *gdbarch = get_frame_arch (frame);
-  struct type *type = builtin_type (gdbarch)->builtin_data_ptr;
-  struct value *value;
-  CORE_ADDR result;
-  int regnum_max_excl = gdbarch_num_cooked_regs (gdbarch);
-
-  if (regnum < 0 || regnum >= regnum_max_excl)
-    error (_("Invalid register #%d, expecting 0 <= # < %d"), regnum,
-	   regnum_max_excl);
-
-  /* This routine may be called during early unwinding, at a time
-     where the ID of FRAME is not yet known.  Calling value_from_register
-     would therefore abort in get_frame_id.  However, since we only need
-     a temporary value that is never used as lvalue, we actually do not
-     really need to set its VALUE_NEXT_FRAME_ID.  Therefore, we re-implement
-     the core of value_from_register, but use the null_frame_id.  */
-
-  /* Some targets require a special conversion routine even for plain
-     pointer types.  Avoid constructing a value object in those cases.  */
-  if (gdbarch_convert_register_p (gdbarch, regnum, type))
-    {
-      gdb_byte *buf = (gdb_byte *) alloca (type->length ());
-      int optim, unavail, ok;
-
-      ok = gdbarch_register_to_value (gdbarch, frame, regnum, type,
-				      buf, &optim, &unavail);
-      if (!ok)
-	{
-	  /* This function is used while computing a location expression.
-	     Complain about the value being optimized out, rather than
-	     letting value_as_address complain about some random register
-	     the expression depends on not being saved.  */
-	  error_value_optimized_out ();
-	}
-
-      return unpack_long (type, buf);
-    }
-
   /* FIXME: Here we need a way for an arch to give back the
 	    matching pointer type depending on the address space.  */
-  type = register_type (gdbarch, regnum);
+  type *type = register_type (get_frame_arch (frame), regnum);
+  //type *type = builtin_type (get_frame_arch (frame))->builtin_data_ptr;
+  value_ref_ptr v = release_value (value_from_register (type, regnum, frame));
 
-  value = gdbarch_value_from_register (gdbarch, type, regnum, null_frame_id);
-  read_frame_register_value (value, frame);
-
-  if (value->optimized_out ())
+  if (v->optimized_out ())
     {
       /* This function is used while computing a location expression.
 	 Complain about the value being optimized out, rather than
@@ -957,10 +881,7 @@ address_from_register (int regnum, frame_info_ptr frame)
       error_value_optimized_out ();
     }
 
-  result = value_as_address (value);
-  release_value (value);
-
-  return result;
+  return value_as_address (v.get ());
 }
 
 #if GDB_SELF_TEST
