@@ -4492,6 +4492,7 @@ parse_sme_immediate (char **str, int64_t *imm)
 
    [<Wv>, <imm>]
    [<Wv>, #<imm>]
+   [<Ws>, <offsf>:<offsl>]
 
    Return true on success, populating OPND with the parsed index.  */
 
@@ -4592,6 +4593,7 @@ parse_sme_za_index (char **str, struct aarch64_indexed_za *opnd)
    <Pm>.<T>[<Wv>< #<imm>]
    ZA[<Wv>, #<imm>]
    <ZAn><HV>.<T>[<Wv>, #<imm>]
+   <ZAn><HV>.<T>[<Ws>, <offsf>:<offsl>]
 
    FLAGS is as for parse_typed_reg.  */
 
@@ -4834,8 +4836,7 @@ parse_sys_reg (char **str, htab_t sys_regs,
 		  "name '%s'"), buf);
       if (!pstatefield_p
 	  && !aarch64_sys_ins_reg_supported_p (cpu_variant, o->name,
-					       o->value, o->flags,
-					       &o->features))
+					       o->flags, &o->features))
 	as_bad (_("selected processor does not support system register "
 		  "name '%s'"), buf);
       if (sysreg128_p && !aarch64_sys_reg_128bit_p (o->flags))
@@ -4857,7 +4858,7 @@ parse_sys_reg (char **str, htab_t sys_regs,
    for the option, or NULL.  */
 
 static const aarch64_sys_ins_reg *
-parse_sys_ins_reg (char **str, htab_t sys_ins_regs)
+parse_sys_ins_reg (char **str, htab_t sys_ins_regs, bool sysreg128_p)
 {
   char *p, *q;
   char buf[AARCH64_MAX_SYSREG_NAME_LEN];
@@ -4876,11 +4877,11 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs)
     return NULL;
 
   o = str_hash_find (sys_ins_regs, buf);
-  if (!o)
+  if (!o || (sysreg128_p && !aarch64_sys_reg_128bit_p (o->flags)))
     return NULL;
 
   if (!aarch64_sys_ins_reg_supported_p (cpu_variant,
-					o->name, o->value, o->flags, 0))
+					o->name, o->flags, &o->features))
     as_bad (_("selected processor does not support system register "
 	      "name '%s'"), buf);
   if (aarch64_sys_reg_deprecated_p (o->flags))
@@ -6696,6 +6697,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Zm4_11_INDEX:
 	case AARCH64_OPND_SVE_Zm4_INDEX:
 	case AARCH64_OPND_SVE_Zn_INDEX:
+	case AARCH64_OPND_SVE_Zm_imm4:
+	case AARCH64_OPND_SVE_Zn_5_INDEX:
 	case AARCH64_OPND_SME_Zm_INDEX1:
 	case AARCH64_OPND_SME_Zm_INDEX2:
 	case AARCH64_OPND_SME_Zm_INDEX3_1:
@@ -6745,6 +6748,9 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_ZtxN:
 	case AARCH64_OPND_SME_Zdnx2:
 	case AARCH64_OPND_SME_Zdnx4:
+	case AARCH64_OPND_SME_Zt2:
+	case AARCH64_OPND_SME_Zt3:
+	case AARCH64_OPND_SME_Zt4:
 	case AARCH64_OPND_SME_Zmx2:
 	case AARCH64_OPND_SME_Zmx4:
 	case AARCH64_OPND_SME_Znx2:
@@ -7263,7 +7269,52 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	      inst.reloc.pc_rel = 1;
 	    }
 	  break;
+	case AARCH64_OPND_RCPC3_ADDR_PREIND_WB:
+	case AARCH64_OPND_RCPC3_ADDR_POSTIND:
+	  po_misc_or_fail (parse_address (&str, info));
+	  if (info->addr.writeback)
+	    {
+	      assign_imm_if_const_or_fixup_later (&inst.reloc, info,
+						  /* addr_off_p */ 1,
+						  /* need_libopcodes_p */ 1,
+						  /* skip_p */ 0);
+	      break;
+	    }
+	  set_syntax_error (_("invalid addressing mode"));
+	  goto failure;
+	case AARCH64_OPND_RCPC3_ADDR_OPT_PREIND_WB:
+	case AARCH64_OPND_RCPC3_ADDR_OPT_POSTIND:
+	  {
+	    char *start = str;
+	    /* First use the normal address-parsing routines, to get
+	       the usual syntax errors.  */
+	    po_misc_or_fail (parse_address (&str, info));
+	    if ((operands[i] == AARCH64_OPND_RCPC3_ADDR_OPT_PREIND_WB
+		 && info->addr.writeback && info->addr.preind)
+		 || (operands[i] == AARCH64_OPND_RCPC3_ADDR_OPT_POSTIND
+		     && info->addr.writeback && info->addr.postind))
+	      {
+		assign_imm_if_const_or_fixup_later (&inst.reloc, info,
+						    /* addr_off_p */ 1,
+						    /* need_libopcodes_p */ 1,
+						    /* skip_p */ 0);
 
+	      break;
+	      }
+	    if (info->addr.pcrel || info->addr.offset.is_reg
+		|| !info->addr.preind || info->addr.postind
+		|| info->addr.writeback)
+	      {
+		set_syntax_error (_("invalid addressing mode"));
+		goto failure;
+	      }
+	    /* Then retry, matching the specific syntax of these addresses.  */
+	    str = start;
+	    po_char_or_fail ('[');
+	    po_reg_or_fail (REG_TYPE_R64_SP);
+	    po_char_or_fail (']');
+	    break;
+	  }
 	case AARCH64_OPND_ADDR_SIMPLE:
 	case AARCH64_OPND_SIMD_ADDR_SIMPLE:
 	  {
@@ -7369,6 +7420,26 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  po_misc_or_fail (parse_address (&str, info));
 	  if (info->addr.pcrel || info->addr.offset.is_reg
 	      || !info->addr.preind || info->addr.postind)
+	    {
+	      set_syntax_error (_("invalid addressing mode"));
+	      goto failure;
+	    }
+	  if (inst.reloc.type != BFD_RELOC_UNUSED)
+	    {
+	      set_syntax_error (_("relocation not allowed"));
+	      goto failure;
+	    }
+	  assign_imm_if_const_or_fixup_later (&inst.reloc, info,
+					      /* addr_off_p */ 1,
+					      /* need_libopcodes_p */ 1,
+					      /* skip_p */ 0);
+	  break;
+
+	case AARCH64_OPND_RCPC3_ADDR_OFFSET:
+	  po_misc_or_fail (parse_address (&str, info));
+	  if (info->addr.pcrel || info->addr.offset.is_reg
+	      || !info->addr.preind || info->addr.postind
+	      || info->addr.writeback)
 	    {
 	      set_syntax_error (_("invalid addressing mode"));
 	      goto failure;
@@ -7652,28 +7723,32 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_SYSREG_IC:
 	  inst.base.operands[i].sysins_op =
-	    parse_sys_ins_reg (&str, aarch64_sys_regs_ic_hsh);
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_ic_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_DC:
 	  inst.base.operands[i].sysins_op =
-	    parse_sys_ins_reg (&str, aarch64_sys_regs_dc_hsh);
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_dc_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_AT:
 	  inst.base.operands[i].sysins_op =
-	    parse_sys_ins_reg (&str, aarch64_sys_regs_at_hsh);
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_at_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_SR:
 	  inst.base.operands[i].sysins_op =
-	    parse_sys_ins_reg (&str, aarch64_sys_regs_sr_hsh);
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_sr_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_TLBI:
+	  inst.base.operands[i].sysins_op =
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, false);
+	  goto sys_reg_ins;
+
 	case AARCH64_OPND_SYSREG_TLBIP:
 	  inst.base.operands[i].sysins_op =
-	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh);
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, true);
 	sys_reg_ins:
 	  if (inst.base.operands[i].sysins_op == NULL)
 	    {
@@ -7864,6 +7939,21 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    goto failure;
 	  info->qualifier = qualifier;
 	  break;
+
+	case AARCH64_OPND_SME_ZA_array_vrsb_1:
+	case AARCH64_OPND_SME_ZA_array_vrsh_1:
+	case AARCH64_OPND_SME_ZA_array_vrss_1:
+	case AARCH64_OPND_SME_ZA_array_vrsd_1:
+	case AARCH64_OPND_SME_ZA_array_vrsb_2:
+	case AARCH64_OPND_SME_ZA_array_vrsh_2:
+	case AARCH64_OPND_SME_ZA_array_vrss_2:
+	case AARCH64_OPND_SME_ZA_array_vrsd_2:
+	  if (!parse_dual_indexed_reg (&str, REG_TYPE_ZATHV,
+				       &info->indexed_za, &qualifier, 0))
+	    goto failure;
+	  info->qualifier = qualifier;
+	  break;
+
 
 	case AARCH64_OPND_SME_VLxN_10:
 	case AARCH64_OPND_SME_VLxN_13:
@@ -10335,6 +10425,10 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
   {"d128",		AARCH64_FEATURE (D128),
 			AARCH64_FEATURE (LSE128)},
+  {"b16b16",		AARCH64_FEATURE (B16B16), AARCH64_FEATURE (SVE2)},
+  {"sme2p1",		AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SME2)},
+  {"sve2p1",		AARCH64_FEATURE (SVE2p1), AARCH64_FEATURE (SVE2)},
+  {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 

@@ -93,6 +93,7 @@ AARCH64_DECL_OPD_INSERTER (ins_sve_float_half_one);
 AARCH64_DECL_OPD_INSERTER (ins_sve_float_half_two);
 AARCH64_DECL_OPD_INSERTER (ins_sve_float_zero_one);
 AARCH64_DECL_OPD_INSERTER (ins_sve_index);
+AARCH64_DECL_OPD_INSERTER (ins_sve_index_imm);
 AARCH64_DECL_OPD_INSERTER (ins_sve_limm_mov);
 AARCH64_DECL_OPD_INSERTER (ins_sve_quad_index);
 AARCH64_DECL_OPD_INSERTER (ins_sve_reglist);
@@ -100,6 +101,8 @@ AARCH64_DECL_OPD_INSERTER (ins_sve_strided_reglist);
 AARCH64_DECL_OPD_INSERTER (ins_sve_scale);
 AARCH64_DECL_OPD_INSERTER (ins_sve_shlimm);
 AARCH64_DECL_OPD_INSERTER (ins_sve_shrimm);
+AARCH64_DECL_OPD_INSERTER (ins_sme_za_vrs1);
+AARCH64_DECL_OPD_INSERTER (ins_sme_za_vrs2);
 AARCH64_DECL_OPD_INSERTER (ins_sme_za_hv_tiles);
 AARCH64_DECL_OPD_INSERTER (ins_sme_za_hv_tiles_range);
 AARCH64_DECL_OPD_INSERTER (ins_sme_za_list);
@@ -112,6 +115,8 @@ AARCH64_DECL_OPD_INSERTER (ins_imm_rotate2);
 AARCH64_DECL_OPD_INSERTER (ins_x0_to_x30);
 AARCH64_DECL_OPD_INSERTER (ins_simple_index);
 AARCH64_DECL_OPD_INSERTER (ins_plain_shrimm);
+AARCH64_DECL_OPD_INSERTER (ins_rcpc3_addr_opt_offset);
+AARCH64_DECL_OPD_INSERTER (ins_rcpc3_addr_offset);
 
 #undef AARCH64_DECL_OPD_INSERTER
 

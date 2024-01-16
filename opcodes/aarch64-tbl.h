@@ -1487,6 +1487,10 @@
    - P: the operand has a /[ZM] suffix and the choice of suffix is not
      the same for all variants.
 
+   - v: the operand has a V_[16B|8H|4S|2D] qualifier and the choice of
+     qualifier suffix is not the same for all variants.  This is used for
+     the same kinds of operands as [BHSD] above.
+
    The _<sizes>, if present, give the subset of [BHSD] that are accepted
    by the V entries in <operands>.  */
 #define OP_SVE_B                                        \
@@ -1496,6 +1500,10 @@
 #define OP_SVE_BB                                       \
 {                                                       \
   QLF2(S_B,S_B),                                        \
+}
+#define OP_SVE_HH					\
+{							\
+  QLF2(S_H,S_H),					\
 }
 #define OP_SVE_BBU                                      \
 {                                                       \
@@ -1761,6 +1769,10 @@
 {                                                       \
   QLF3(S_S,NIL,S_S),                                    \
 }
+#define OP_SVE_SMSS				     \
+{						       \
+  QLF4(S_H,P_M,S_H,S_H),				\
+}
 #define OP_SVE_SUU                                      \
 {                                                       \
   QLF3(S_S,NIL,NIL),                                    \
@@ -1768,6 +1780,14 @@
 #define OP_SVE_SZS                                      \
 {                                                       \
   QLF3(S_S,P_Z,S_S),                                    \
+}
+#define OP_SVE_SZS_QD                                   \
+{                                                       \
+  QLF3(S_Q,P_Z,S_D),                                    \
+}
+#define OP_SVE_SUS_QD                                   \
+{                                                       \
+  QLF3(S_Q,NIL,S_D),                                    \
 }
 #define OP_SVE_SBB                                      \
 {                                                       \
@@ -1902,6 +1922,19 @@
   QLF3(S_H,S_B,NIL),                                    \
   QLF3(S_S,S_H,NIL),                                    \
   QLF3(S_D,S_S,NIL),                                    \
+}
+#define OP_SVE_vUS_BHSD_BHSD				\
+{							\
+  QLF3(V_16B,NIL,S_B),					\
+  QLF3(V_8H,NIL,S_H),					\
+  QLF3(V_4S,NIL,S_S),					\
+  QLF3(V_2D,NIL,S_D),					\
+}
+#define OP_SVE_vUS_HSD_HSD				\
+{							\
+  QLF3(V_8H,NIL,S_H),					\
+  QLF3(V_4S,NIL,S_S),					\
+  QLF3(V_2D,NIL,S_D),					\
 }
 #define OP_SVE_VMV_SD                                   \
 {                                                       \
@@ -2608,6 +2641,15 @@ static const aarch64_feature_set aarch64_feature_the =
   AARCH64_FEATURE (THE);
 static const aarch64_feature_set aarch64_feature_d128_the =
   AARCH64_FEATURES (2, D128, THE);
+static const aarch64_feature_set aarch64_feature_b16b16 =
+  AARCH64_FEATURE (B16B16);
+static const aarch64_feature_set aarch64_feature_sme2p1 =
+  AARCH64_FEATURE (SME2p1);
+static const aarch64_feature_set aarch64_feature_sve2p1 =
+  AARCH64_FEATURE (SVE2p1);
+static const aarch64_feature_set aarch64_feature_rcpc3 =
+  AARCH64_FEATURE (RCPC3);
+
 
 #define CORE		&aarch64_feature_v8
 #define FP		&aarch64_feature_fp
@@ -2670,6 +2712,10 @@ static const aarch64_feature_set aarch64_feature_d128_the =
 #define D128	  &aarch64_feature_d128
 #define THE	  &aarch64_feature_the
 #define D128_THE  &aarch64_feature_d128_the
+#define B16B16  &aarch64_feature_b16b16
+#define SME2p1  &aarch64_feature_sme2p1
+#define SVE2p1  &aarch64_feature_sve2p1
+#define RCPC3	  &aarch64_feature_rcpc3
 
 #define CORE_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, CORE, OPS, QUALS, FLAGS, 0, 0, NULL }
@@ -2736,8 +2782,23 @@ static const aarch64_feature_set aarch64_feature_d128_the =
 #define SVE2_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
   { NAME, OPCODE, MASK, CLASS, OP, SVE2, OPS, QUALS, \
     FLAGS | F_STRICT, 0, TIED, NULL }
+#define SME2p1_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
+  { NAME, OPCODE, MASK, CLASS, OP, SME2p1, OPS, QUALS, \
+    FLAGS | F_STRICT, 0, TIED, NULL }
 #define SVE2_INSNC(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,CONSTRAINTS,TIED) \
   { NAME, OPCODE, MASK, CLASS, OP, SVE2, OPS, QUALS, \
+    FLAGS | F_STRICT, CONSTRAINTS, TIED, NULL }
+#define B16B16_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
+  { NAME, OPCODE, MASK, CLASS, OP, B16B16, OPS, QUALS, \
+    FLAGS | F_STRICT, 0, TIED, NULL }
+#define B16B16_INSNC(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,CONSTRAINTS,TIED) \
+  { NAME, OPCODE, MASK, CLASS, OP, B16B16, OPS, QUALS, \
+    FLAGS | F_STRICT, CONSTRAINTS, TIED, NULL }
+#define SVE2p1_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
+  { NAME, OPCODE, MASK, CLASS, OP, SVE2p1, OPS, QUALS, \
+    FLAGS | F_STRICT, 0, TIED, NULL }
+#define SVE2p1_INSNC(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,CONSTRAINTS,TIED) \
+  { NAME, OPCODE, MASK, CLASS, OP, SVE2p1, OPS, QUALS, \
     FLAGS | F_STRICT, CONSTRAINTS, TIED, NULL }
 #define SVE2AES_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
   { NAME, OPCODE, MASK, CLASS, OP, SVE2_AES, OPS, QUALS, \
@@ -2825,6 +2886,8 @@ static const aarch64_feature_set aarch64_feature_d128_the =
   { NAME, OPCODE, MASK, the, 0, THE, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define D128_THE_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, the, 0, D128_THE, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define RCPC3_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, RCPC3, OPS, QUALS, FLAGS, 0, 0, NULL }
 
 #define MOPS_CPY_OP1_OP2_PME_INSN(NAME, OPCODE, MASK, FLAGS, CONSTRAINTS) \
   MOPS_INSN (NAME, OPCODE, MASK, 0, \
@@ -4153,6 +4216,15 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   _LSE128_INSN ("swppa", 0x19a08000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
   _LSE128_INSN ("swppal", 0x19e08000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
   _LSE128_INSN ("swppl", 0x19608000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+  /* RCPC3 extension.  */
+  RCPC3_INSN ("ldiapp", 0x19400800, 0x3fe0ec00, rcpc3, OP3 (Rt, Rs, RCPC3_ADDR_OPT_POSTIND), QL_R2NIL, F_RCPC3_SIZE),
+  RCPC3_INSN ("stilp",  0x19000800, 0x3fe0ec00, rcpc3, OP3 (Rt, Rs, RCPC3_ADDR_OPT_PREIND_WB), QL_R2NIL, F_RCPC3_SIZE),
+  RCPC3_INSN ("ldapr", 0x19c00800, 0x3ffffc00, rcpc3, OP2 (Rt, RCPC3_ADDR_POSTIND), QL_R1NIL, F_RCPC3_SIZE),
+  RCPC3_INSN ("stlr", 0x19800800, 0x3ffffc00, rcpc3, OP2 (Rt, RCPC3_ADDR_PREIND_WB), QL_R1NIL, F_RCPC3_SIZE),
+  RCPC3_INSN ("stl1", 0x0d018400, 0xbffffc00, rcpc3, OP2 (LEt, SIMD_ADDR_SIMPLE), QL_SIMD_IMM_D, F_OD(1)),
+  RCPC3_INSN ("ldap1", 0x0d418400, 0xbffffc00, rcpc3, OP2 (LEt, SIMD_ADDR_SIMPLE), QL_SIMD_IMM_D, F_OD(1)),
+  RCPC3_INSN ("ldapur", 0x1d400800, 0x3f600C00, rcpc3, OP2 (Ft, RCPC3_ADDR_OFFSET), QL_LDST_FP, F_RCPC3_SIZE),
+  RCPC3_INSN ("stlur", 0x1d000800, 0x3f600C00, rcpc3, OP2 (Ft, RCPC3_ADDR_OFFSET), QL_LDST_FP, F_RCPC3_SIZE),
   /* Move wide (immediate).  */
   CORE_INSN ("movn", 0x12800000, 0x7f800000, movewide, OP_MOVN, OP2 (Rd, HALF), QL_DST_R, F_SF | F_HAS_ALIAS),
   CORE_INSN ("mov",  0x12800000, 0x7f800000, movewide, OP_MOV_IMM_WIDEN, OP2 (Rd, IMM_MOV), QL_DST_R, F_SF | F_ALIAS | F_CONV),
@@ -6258,6 +6330,68 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   D128_THE_INSN("rcwsswppal", 0x59e0a000, 0xffe0fc00, OP3 (Rt, Rs, ADDR_SIMPLE), QL_X2NIL, 0),
   D128_THE_INSN("rcwsswppl", 0x5960a000, 0xffe0fc00, OP3 (Rt, Rs, ADDR_SIMPLE), QL_X2NIL, 0),
 
+/* BFloat16 SVE Instructions.  */
+  B16B16_INSNC("bfadd", 0x65008000, 0xffffe000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zd, SVE_Zm_5), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSNC("bfmax", 0x65068000, 0xffffe000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zd, SVE_Zm_5), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSNC("bfmaxnm", 0x65048000, 0xffffe000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zd, SVE_Zm_5), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSNC("bfmin", 0x65078000, 0xffffe000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zd, SVE_Zm_5), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSNC("bfminnm", 0x65058000, 0xffffe000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zd, SVE_Zm_5), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSNC("bfmla", 0x65200000, 0xffe0e000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zn, SVE_Zm_16), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSNC("bfmls", 0x65202000, 0xffe0e000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zn, SVE_Zm_16), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSN("bfadd", 0x65000000, 0xffe0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_HHH, 0, 0),
+  B16B16_INSN("bfclamp", 0x64202400, 0xffe0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_HHH, 0, 0),
+  B16B16_INSNC("bfmul", 0x65028000, 0xffffe000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zd, SVE_Zm_5), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSN("bfmul", 0x65000800, 0xffe0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_HHH, 0, 0),
+  B16B16_INSNC("bfsub", 0x65018000, 0xffffe000, sve_misc, 0, OP4 (SVE_Zd, SVE_Pg3, SVE_Zd, SVE_Zm_5), OP_SVE_SMSS, 0, C_SCAN_MOVPRFX, 0),
+  B16B16_INSN("bfsub", 0x65000400, 0xffe0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_HHH, 0, 0),
+  B16B16_INSN("bfmla", 0x64200800, 0xffa0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm3_11_INDEX), OP_SVE_VVV_H, 0, 0),
+  B16B16_INSN("bfmls", 0x64200c00, 0xffa0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm3_11_INDEX), OP_SVE_VVV_H, 0, 0),
+  B16B16_INSN("bfmul", 0x64202800, 0xffa0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm3_11_INDEX), OP_SVE_VVV_H, 0, 0),
+
+/* SME2.1 movaz instructions.  */
+  SME2p1_INSN ("movaz", 0xc0060600, 0xffff1f83, sme2_movaz, 0, OP2 (SME_Zdnx4, SME_ZA_array_vrsb_2), OP_SVE_BB, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0460600, 0xffff1f83, sme2_movaz, 0, OP2 (SME_Zdnx4, SME_ZA_array_vrsh_2), OP_SVE_HH, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0860600, 0xffff1f83, sme2_movaz, 0, OP2 (SME_Zdnx4, SME_ZA_array_vrss_2), OP_SVE_SS, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0c60600, 0xffff1f03, sme2_movaz, 0, OP2 (SME_Zdnx4, SME_ZA_array_vrsd_2), OP_SVE_DD, 0, 0),
+
+  SME2p1_INSN ("movaz", 0xc0060200, 0xffff1f01, sme2_movaz, 0, OP2 (SME_Zdnx2, SME_ZA_array_vrsb_1), OP_SVE_BB, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0460200, 0xffff1f01, sme2_movaz, 0, OP2 (SME_Zdnx2, SME_ZA_array_vrsh_1), OP_SVE_HH, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0860200, 0xffff1f01, sme2_movaz, 0, OP2 (SME_Zdnx2, SME_ZA_array_vrss_1), OP_SVE_SS, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0c60200, 0xffff1f01, sme2_movaz, 0, OP2 (SME_Zdnx2, SME_ZA_array_vrsd_1), OP_SVE_DD, 0, 0),
+
+/* SVE2p1 Instructions.  */
+  SVE2p1_INSNC("addqv",0x04052000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("andqv",0x041e2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("smaxqv",0x040c2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("sminqv",0x040e2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("umaxqv",0x040d2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("uminqv",0x040f2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("eorqv",0x041d2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+
+  SVE2p1_INSNC("faddqv",0x6410a000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_HSD_HSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("fmaxnmqv",0x6414a000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_HSD_HSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("fmaxqv",0x6416a000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_HSD_HSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("fminnmqv",0x6415a000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_HSD_HSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("fminqv",0x6417a000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_HSD_HSD, F_OPD_SIZE, C_SCAN_MOVPRFX, 0),
+
+  SVE2p1_INSN("dupq",0x05202400, 0xffe0fc00, sve_index1, 0, OP2 (SVE_Zd, SVE_Zn_5_INDEX), OP_SVE_VV_BHSD, 0, 0),
+  SVE2p1_INSN("extq",0x05602400, 0xfff0fc00, sve_misc, 0, OP3 (SVE_Zd, SVE_Zd, SVE_Zm_imm4), OP_SVE_BBB, 0, 0),
+  SVE2p1_INSNC("ld1q",0xc400a000, 0xffe0e000, sve_misc, 0, OP3 (SVE_Zt, SVE_Pg3, SVE_ADDR_ZX), OP_SVE_SZS_QD, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("ld2q",0xa490e000, 0xfff0e000, sve_misc, 0, OP3 (SME_Zt2, SVE_Pg3, SVE_ADDR_RI_S4x2xVL), OP_SVE_QZU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("ld3q",0xa510e000, 0xfff0e000, sve_misc, 0, OP3 (SME_Zt3, SVE_Pg3, SVE_ADDR_RI_S4x2xVL), OP_SVE_QZU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("ld4q",0xa590e000, 0xfff0e000, sve_misc, 0, OP3 (SME_Zt4, SVE_Pg3, SVE_ADDR_RI_S4x2xVL), OP_SVE_QZU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("ld2q",0xa4a0e000, 0xffe0e000, sve_misc, 0, OP3 (SME_Zt2, SVE_Pg3, SVE_ADDR_RR_LSL4), OP_SVE_QZU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("ld3q",0xa5208000, 0xffe0e000, sve_misc, 0, OP3 (SME_Zt3, SVE_Pg3, SVE_ADDR_RR_LSL4), OP_SVE_QZU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("ld4q",0xa5a08000, 0xffe0e000, sve_misc, 0, OP3 (SME_Zt4, SVE_Pg3, SVE_ADDR_RR_LSL4), OP_SVE_QZU, 0, C_SCAN_MOVPRFX, 0),
+
+  SVE2p1_INSNC("st1q",0xe4202000, 0xffe0e000, sve_misc, 0, OP3 (SVE_Zt, SVE_Pg3, SVE_ADDR_ZX), OP_SVE_SUS_QD, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("st2q",0xe4400000, 0xfff0e000, sve_misc, 0, OP3 (SME_Zt2, SVE_Pg3, SVE_ADDR_RI_S4x2xVL), OP_SVE_QUU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("st3q",0xe4800000, 0xfff0e000, sve_misc, 0, OP3 (SME_Zt3, SVE_Pg3, SVE_ADDR_RI_S4x2xVL), OP_SVE_QUU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("st4q",0xe4c00000, 0xfff0e000, sve_misc, 0, OP3 (SME_Zt4, SVE_Pg3, SVE_ADDR_RI_S4x2xVL), OP_SVE_QUU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("st2q",0xe4600000, 0xffe0e000, sve_misc, 0, OP3 (SME_Zt2, SVE_Pg3, SVE_ADDR_RR_LSL4), OP_SVE_QUU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("st3q",0xe4a00000, 0xffe0e000, sve_misc, 0, OP3 (SME_Zt3, SVE_Pg3, SVE_ADDR_RR_LSL4), OP_SVE_QUU, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_INSNC("st4q",0xe4e00000, 0xffe0e000, sve_misc, 0, OP3 (SME_Zt4, SVE_Pg3, SVE_ADDR_RR_LSL4), OP_SVE_QUU, 0, C_SCAN_MOVPRFX, 0),
+
   {0, 0, 0, 0, 0, 0, {}, {}, 0, 0, 0, NULL},
 };
 
@@ -6695,6 +6829,22 @@ const struct aarch64_opcode aarch64_opcode_table[] =
     Y(SIMD_REG, regno, "SVE_Vd", 0, F(FLD_SVE_Vd), "a SIMD register")	\
     Y(SIMD_REG, regno, "SVE_Vm", 0, F(FLD_SVE_Vm), "a SIMD register")	\
     Y(SIMD_REG, regno, "SVE_Vn", 0, F(FLD_SVE_Vn), "a SIMD register")	\
+    Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrsb_1", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_off3), "ZA0 tile")			\
+    Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrsh_1", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_1,FLD_off2), "1 bit ZA tile")	\
+    Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrss_1", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_2,FLD_ol), "2 ZA tile")		\
+    Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrsd_1", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_3), "3 ZA tile")			\
+    Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrsb_2", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_off2), "ZA0 tile")			\
+    Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrsh_2", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn,FLD_ol), "1 bit ZA tile")		\
+    Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrss_2", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_off2), "2 bit ZA tile")		\
+    Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrsd_2", 0,			\
+      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_3), "3 bit ZA tile")		\
     Y(SVE_REG, regno, "SVE_Za_5", 0, F(FLD_SVE_Za_5),			\
       "an SVE vector register")						\
     Y(SVE_REG, regno, "SVE_Za_16", 0, F(FLD_SVE_Za_16),			\
@@ -6720,11 +6870,17 @@ const struct aarch64_opcode aarch64_opcode_table[] =
     Y(SVE_REG, sve_quad_index, "SVE_Zm4_11_INDEX", 			\
       4 << OPD_F_OD_LSB, F(FLD_SVE_i2h, FLD_SVE_i3l, FLD_SVE_imm4),     \
       "an indexed SVE vector register")					\
+    Y(SVE_REG, sve_quad_index, "SVE_Zm_imm4",				\
+      5 << OPD_F_OD_LSB, F(FLD_SVE_Zm_5, FLD_SVE_imm4),			\
+      "an 4bit indexed SVE vector register")				\
     Y(SVE_REG, sve_quad_index, "SVE_Zm4_INDEX", 			\
       4 << OPD_F_OD_LSB, F(FLD_SVE_Zm_16),				\
       "an indexed SVE vector register")					\
     Y(SVE_REG, regno, "SVE_Zn", 0, F(FLD_SVE_Zn),			\
       "an SVE vector register")						\
+    Y(SVE_REG, sve_index_imm, "SVE_Zn_5_INDEX", 0,			\
+      F(FLD_SVE_Zn, FLD_SVE_i2h, FLD_SVE_tsz),				\
+      "a 5 bit idexed SVE vector register")				\
     Y(SVE_REG, sve_index, "SVE_Zn_INDEX", 0, F(FLD_SVE_Zn),		\
       "an indexed SVE vector register")					\
     Y(SVE_REGLIST, sve_reglist, "SVE_ZnxN", 0, F(FLD_SVE_Zn),		\
@@ -6871,4 +7027,27 @@ const struct aarch64_opcode aarch64_opcode_table[] =
     Y(IMMEDIATE, imm, "CSSC_SIMM8", OPD_F_SEXT, F(FLD_CSSC_imm8),	\
       "an 8-bit signed immediate")					\
     Y(IMMEDIATE, imm, "CSSC_UIMM8", 0, F(FLD_CSSC_imm8),		\
-      "an 8-bit unsigned immediate")
+      "an 8-bit unsigned immediate")					\
+    X(SVE_REGLIST, ins_sve_reglist, ext_sve_reglist_zt, "SME_Zt2",	\
+      2 << OPD_F_OD_LSB, F(FLD_SVE_Zt),					\
+      "a list of 2 SVE vector registers")				\
+    X(SVE_REGLIST, ins_sve_reglist, ext_sve_reglist_zt, "SME_Zt3",	\
+      3 << OPD_F_OD_LSB, F(FLD_SVE_Zt),					\
+      "a list of 3 SVE vector registers")				\
+    X(SVE_REGLIST, ins_sve_reglist, ext_sve_reglist_zt, "SME_Zt4",	\
+      4 << OPD_F_OD_LSB, F(FLD_SVE_Zt),					\
+      "a list of 4 SVE vector registers")				\
+    X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,		\
+      "RCPC3_ADDR_OPT_POSTIND", 0, F(FLD_opc2),				\
+      "an address with post-incrementing by ammount of loaded bytes") \
+    X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,	\
+      "RCPC3_ADDR_OPT_PREIND_WB", 0, F(FLD_opc2),			\
+      "an address with pre-incrementing with write-back by ammount of stored bytes") \
+    X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,	\
+      "RCPC3_ADDR_POSTIND", 0, F(),					\
+      "an address with post-incrementing by ammount of loaded bytes") \
+    X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,	\
+      "RCPC3_ADDR_PREIND_WB", 0, F(),					\
+      "an address with pre-incrementing with write-back by ammount of stored bytes") \
+    Y(ADDRESS, rcpc3_addr_offset, "RCPC3_ADDR_OFFSET", 0, F(FLD_Rn,FLD_imm9), \
+      "an address with an optional 8-bit signed immediate offset")

@@ -38,9 +38,11 @@
 #include "obstack.h"
 #include "ecoff.h"
 #include "dw2gencfi.h"
+#include "scfidw2gen.h"
 #include "codeview.h"
 #include "wchar.h"
 #include "filenames.h"
+#include "ginsn.h"
 
 #include <limits.h>
 
@@ -587,6 +589,10 @@ pop_insert (const pseudo_typeS *table)
 #define cfi_pop_insert()	pop_insert(cfi_pseudo_table)
 #endif
 
+#ifndef scfi_pop_insert
+#define scfi_pop_insert()	pop_insert(scfi_pseudo_table)
+#endif
+
 static void
 pobegin (void)
 {
@@ -607,8 +613,18 @@ pobegin (void)
   pop_insert (potable);
 
   /* Now CFI ones.  */
-  pop_table_name = "cfi";
-  cfi_pop_insert ();
+#if defined (TARGET_USE_SCFI) && defined (TARGET_USE_GINSN)
+  if (flag_synth_cfi)
+    {
+      pop_table_name = "scfi";
+      scfi_pop_insert ();
+    }
+  else
+#endif
+    {
+      pop_table_name = "cfi";
+      cfi_pop_insert ();
+    }
 }
 
 static void
@@ -1368,6 +1384,9 @@ read_a_source_file (const char *name)
       bundle_lock_depth = 0;
     }
 #endif
+
+  if (flag_synth_cfi)
+    ginsn_data_end (symbol_temp_new_now ());
 
 #ifdef md_cleanup
   md_cleanup ();
@@ -4183,6 +4202,12 @@ cons_worker (int nbytes,	/* 1=.byte, 2=.word, 4=.long.  */
 
   if (flag_mri)
     mri_comment_end (stop, stopc);
+
+  /* Disallow hand-crafting instructions using .byte.  FIXME - what about
+     .word, .long etc ?  */
+  if (flag_synth_cfi && frchain_now && frchain_now->frch_ginsn_data
+      && nbytes == 1)
+    as_bad (_("SCFI: hand-crafting instructions not supported"));
 }
 
 void

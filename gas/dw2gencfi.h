@@ -25,8 +25,27 @@
 #include "dwarf2.h"
 
 struct symbol;
+struct fde_entry;
+
+extern int all_cfi_sections;
 
 extern const pseudo_typeS cfi_pseudo_table[];
+
+#ifndef tc_cfi_frame_initial_instructions
+#define tc_cfi_frame_initial_instructions() ((void)0)
+#endif
+
+#ifndef tc_cfi_startproc
+# define tc_cfi_startproc() ((void)0)
+#endif
+
+#ifndef tc_cfi_endproc
+# define tc_cfi_endproc(fde) ((void) (fde))
+#endif
+
+/* Parse CFI assembler directive .cfi_sections.  This is an external function
+   because SCFI functionality also uses the same implementation.  */
+extern void dot_cfi_sections (int);
 
 /* cfi_finish() is called at the end of file. It will complain if
    the last CFI wasn't properly closed by .cfi_endproc.  */
@@ -35,6 +54,7 @@ extern void cfi_finish (void);
 /* Entry points for backends to add unwind information.  */
 extern void cfi_new_fde (struct symbol *);
 extern void cfi_end_fde (struct symbol *);
+extern void cfi_set_last_fde (struct fde_entry *fde);
 extern void cfi_set_return_column (unsigned);
 extern void cfi_set_sections (void);
 extern void cfi_add_advance_loc (struct symbol *);

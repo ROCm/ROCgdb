@@ -64,18 +64,6 @@
 #define EH_FRAME_ALIGNMENT (bfd_get_arch_size (stdoutput) == 64 ? 3 : 2)
 #endif
 
-#ifndef tc_cfi_frame_initial_instructions
-#define tc_cfi_frame_initial_instructions() ((void)0)
-#endif
-
-#ifndef tc_cfi_startproc
-# define tc_cfi_startproc() ((void)0)
-#endif
-
-#ifndef tc_cfi_endproc
-# define tc_cfi_endproc(fde) ((void) (fde))
-#endif
-
 #define EH_FRAME_LINKONCE (SUPPORT_FRAME_LINKONCE || compact_eh \
 			   || TARGET_MULTIPLE_EH_FRAME_SECTIONS)
 
@@ -481,6 +469,13 @@ cfi_end_fde (symbolS *label)
   frchain_now->frch_cfi_data = NULL;
 }
 
+/* Set the last FDE  .*/
+void
+cfi_set_last_fde (struct fde_entry *fde)
+{
+  last_fde = fde;
+}
+
 /* Set the return column for the current FDE.  */
 
 void
@@ -492,6 +487,7 @@ cfi_set_return_column (unsigned regno)
 void
 cfi_set_sections (void)
 {
+  all_cfi_sections |= cfi_sections;
   frchain_now->frch_cfi_data->cur_fde_data->sections = all_cfi_sections;
   cfi_sections_set = true;
 }
@@ -691,7 +687,6 @@ cfi_add_CFA_restore_state (void)
 
 static void dot_cfi (int);
 static void dot_cfi_escape (int);
-static void dot_cfi_sections (int);
 static void dot_cfi_startproc (int);
 static void dot_cfi_endproc (int);
 static void dot_cfi_fde_data (int);
@@ -1210,7 +1205,7 @@ dot_cfi_label (int ignored ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
-static void
+void
 dot_cfi_sections (int ignored ATTRIBUTE_UNUSED)
 {
   int sections = 0;
@@ -1309,14 +1304,13 @@ dot_cfi_startproc (int ignored ATTRIBUTE_UNUSED)
     }
   demand_empty_rest_of_line ();
 
-  cfi_sections_set = true;
-  all_cfi_sections |= cfi_sections;
   cfi_set_sections ();
+
   frchain_now->frch_cfi_data->cur_cfa_offset = 0;
   if (!simple)
     tc_cfi_frame_initial_instructions ();
 
-  if ((cfi_sections & CFI_EMIT_target) != 0)
+  if ((all_cfi_sections & CFI_EMIT_target) != 0)
     tc_cfi_startproc ();
 }
 
@@ -1330,14 +1324,13 @@ dot_cfi_endproc (int ignored ATTRIBUTE_UNUSED)
       return;
     }
 
-  last_fde = frchain_now->frch_cfi_data->cur_fde_data;
+  cfi_set_last_fde (frchain_now->frch_cfi_data->cur_fde_data);
 
   cfi_end_fde (symbol_temp_new_now ());
 
   demand_empty_rest_of_line ();
 
-  cfi_sections_set = true;
-  if ((cfi_sections & CFI_EMIT_target) != 0)
+  if ((all_cfi_sections & CFI_EMIT_target) != 0)
     tc_cfi_endproc (last_fde);
 }
 
@@ -1416,11 +1409,10 @@ dot_cfi_fde_data (int ignored ATTRIBUTE_UNUSED)
       return;
     }
 
-  last_fde = frchain_now->frch_cfi_data->cur_fde_data;
+  cfi_set_last_fde (frchain_now->frch_cfi_data->cur_fde_data);
 
-  cfi_sections_set = true;
-  if ((cfi_sections & CFI_EMIT_target) != 0
-      || (cfi_sections & CFI_EMIT_eh_frame_compact) != 0)
+  if ((all_cfi_sections & CFI_EMIT_target) != 0
+      || (all_cfi_sections & CFI_EMIT_eh_frame_compact) != 0)
     {
       struct cfi_escape_data *head, **tail, *e;
       int num_ops = 0;
@@ -1570,7 +1562,7 @@ dot_cfi_inline_lsda (int ignored ATTRIBUTE_UNUSED)
   if (last_fde->eh_header_type == EH_COMPACT_HAS_LSDA)
     output_compact_unwind_data (last_fde, align);
 
-  last_fde = NULL;
+  cfi_set_last_fde (NULL);
 
   return;
 }
@@ -2315,7 +2307,6 @@ cfi_finish (void)
   if (all_fde_data == 0)
     return;
 
-  cfi_sections_set = true;
   if ((all_cfi_sections & CFI_EMIT_eh_frame) != 0
       || (all_cfi_sections & CFI_EMIT_eh_frame_compact) != 0)
     {
@@ -2502,7 +2493,6 @@ cfi_finish (void)
       flag_traditional_format = save_flag_traditional_format;
     }
 
-  cfi_sections_set = true;
   /* Generate SFrame section if the user specifies:
 	- the command line option to gas, or
 	- .sframe in the .cfi_sections directive.  */
@@ -2524,7 +2514,6 @@ cfi_finish (void)
 	as_bad (_(".sframe not supported for target"));
     }
 
-  cfi_sections_set = true;
   if ((all_cfi_sections & CFI_EMIT_debug_frame) != 0)
     {
       int alignment = ffs (DWARF2_ADDR_SIZE (stdoutput)) - 1;

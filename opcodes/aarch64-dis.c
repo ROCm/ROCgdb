@@ -1032,6 +1032,70 @@ aarch64_ext_addr_simple (const aarch64_operand *self ATTRIBUTE_UNUSED,
   return true;
 }
 
+/* Decode the address operand for rcpc3 instructions with optional load/store
+   datasize offset, e.g. STILPP <Xs>, <Xt>, [<Xn|SP>{,#-16}]! and
+   LIDAP <Xs>, <Xt>, [<Xn|SP>]{,#-16}.  */
+bool
+aarch64_ext_rcpc3_addr_opt_offset (const aarch64_operand *self ATTRIBUTE_UNUSED,
+				   aarch64_opnd_info *info,
+				   aarch64_insn code,
+				   const aarch64_inst *inst ATTRIBUTE_UNUSED,
+				   aarch64_operand_error *err ATTRIBUTE_UNUSED)
+{
+  info->addr.base_regno = extract_field (FLD_Rn, code, 0);
+  if (!extract_field (FLD_opc2, code, 0))
+    {
+      info->addr.writeback = 1;
+
+      enum aarch64_opnd type;
+      for (int i = 0; i < AARCH64_MAX_OPND_NUM; i++)
+	{
+	  aarch64_opnd_info opnd = info[i];
+	  type = opnd.type;
+	  if (aarch64_operands[type].op_class == AARCH64_OPND_CLASS_ADDRESS)
+	    break;
+	}
+
+      assert (aarch64_operands[type].op_class == AARCH64_OPND_CLASS_ADDRESS);
+      int offset = calc_ldst_datasize (inst->operands);
+
+      switch (type)
+	{
+	case AARCH64_OPND_RCPC3_ADDR_OPT_PREIND_WB:
+	case AARCH64_OPND_RCPC3_ADDR_PREIND_WB:
+	  info->addr.offset.imm = -offset;
+	  info->addr.preind = 1;
+	  break;
+	case AARCH64_OPND_RCPC3_ADDR_OPT_POSTIND:
+	case AARCH64_OPND_RCPC3_ADDR_POSTIND:
+	  info->addr.offset.imm = offset;
+	  info->addr.postind = 1;
+	  break;
+	default:
+	  return false;
+	}
+    }
+  return true;
+}
+
+bool
+aarch64_ext_rcpc3_addr_offset (const aarch64_operand *self ATTRIBUTE_UNUSED,
+			       aarch64_opnd_info *info,
+			       aarch64_insn code,
+			       const aarch64_inst *inst ATTRIBUTE_UNUSED,
+			       aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  info->qualifier = get_expected_qualifier (inst, info->idx);
+
+  /* Rn */
+  info->addr.base_regno = extract_field (self->fields[0], code, 0);
+
+  /* simm9 */
+  aarch64_insn imm = extract_fields (code, 0, 1, self->fields[1]);
+  info->addr.offset.imm = sign_extend (imm, 8);
+  return true;
+}
+
 /* Decode the address operand for e.g.
      stlur <Xt>, [<Xn|SP>{, <amount>}].  */
 bool
@@ -1302,6 +1366,7 @@ aarch64_ext_sysins_op (const aarch64_operand *self ATTRIBUTE_UNUSED,
     case AARCH64_OPND_SYSREG_DC: sysins_ops = aarch64_sys_regs_dc; break;
     case AARCH64_OPND_SYSREG_IC: sysins_ops = aarch64_sys_regs_ic; break;
     case AARCH64_OPND_SYSREG_TLBI: sysins_ops = aarch64_sys_regs_tlbi; break;
+    case AARCH64_OPND_SYSREG_TLBIP: sysins_ops = aarch64_sys_regs_tlbi; break;
     case AARCH64_OPND_SYSREG_SR:
 	sysins_ops = aarch64_sys_regs_sr;
 	 /* Let's remove op2 for rctx.  Refer to comments in the definition of
@@ -1929,6 +1994,84 @@ aarch64_ext_sme_za_array (const aarch64_operand *self,
   return true;
 }
 
+/* Decode two ZA tile slice (V, Rv, off3| ZAn ,off2 | ZAn, ol| ZAn) feilds.  */
+bool
+aarch64_ext_sme_za_vrs1 (const aarch64_operand *self,
+			  aarch64_opnd_info *info, aarch64_insn code,
+			  const aarch64_inst *inst,
+			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int v = extract_field (self->fields[0], code, 0);
+  int regno = 12 + extract_field (self->fields[1], code, 0);
+  int imm, za_reg, num_offset = 2;
+
+  switch (info->qualifier)
+    {
+    case AARCH64_OPND_QLF_S_B:
+      imm = extract_field (self->fields[2], code, 0);
+      info->indexed_za.index.imm = imm * num_offset;
+      break;
+    case AARCH64_OPND_QLF_S_H:
+    case AARCH64_OPND_QLF_S_S:
+      za_reg = extract_field (self->fields[2], code, 0);
+      imm = extract_field (self->fields[3], code, 0);
+      info->indexed_za.index.imm = imm * num_offset;
+      info->indexed_za.regno = za_reg;
+      break;
+    case AARCH64_OPND_QLF_S_D:
+      za_reg = extract_field (self->fields[2], code, 0);
+      info->indexed_za.regno = za_reg;
+      break;
+    default:
+      return false;
+    }
+
+  info->indexed_za.index.regno = regno;
+  info->indexed_za.index.countm1 = num_offset - 1;
+  info->indexed_za.v = v;
+  info->indexed_za.group_size = get_opcode_dependent_value (inst->opcode);
+  return true;
+}
+
+/* Decode four ZA tile slice (V, Rv, off3| ZAn ,off2 | ZAn, ol| ZAn) feilds.  */
+bool
+aarch64_ext_sme_za_vrs2 (const aarch64_operand *self,
+			  aarch64_opnd_info *info, aarch64_insn code,
+			  const aarch64_inst *inst,
+			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int v = extract_field (self->fields[0], code, 0);
+  int regno = 12 + extract_field (self->fields[1], code, 0);
+  int imm, za_reg, num_offset =4;
+
+  switch (info->qualifier)
+    {
+    case AARCH64_OPND_QLF_S_B:
+      imm = extract_field (self->fields[2], code, 0);
+      info->indexed_za.index.imm = imm * num_offset;
+      break;
+    case AARCH64_OPND_QLF_S_H:
+      za_reg = extract_field (self->fields[2], code, 0);
+      imm = extract_field (self->fields[3], code, 0);
+      info->indexed_za.index.imm = imm * num_offset;
+      info->indexed_za.regno = za_reg;
+      break;
+    case AARCH64_OPND_QLF_S_S:
+    case AARCH64_OPND_QLF_S_D:
+      za_reg = extract_field (self->fields[2], code, 0);
+      info->indexed_za.regno = za_reg;
+      break;
+    default:
+      return false;
+    }
+
+  info->indexed_za.index.regno = regno;
+  info->indexed_za.index.countm1 = num_offset - 1;
+  info->indexed_za.v = v;
+  info->indexed_za.group_size = get_opcode_dependent_value (inst->opcode);
+  return true;
+}
+
 bool
 aarch64_ext_sme_addr_ri_u4xvl (const aarch64_operand *self,
                                aarch64_opnd_info *info, aarch64_insn code,
@@ -2019,6 +2162,26 @@ aarch64_ext_sve_index (const aarch64_operand *self,
   return true;
 }
 
+/* Decode Zn.<T>[<imm>], where <imm> is an immediate with range of 0 to one less
+   than the number of elements in 128 bit, which can encode il:tsz.  */
+bool
+aarch64_ext_sve_index_imm (const aarch64_operand *self,
+			   aarch64_opnd_info *info, aarch64_insn code,
+			   const aarch64_inst *inst ATTRIBUTE_UNUSED,
+			   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  int val;
+
+  info->reglane.regno = extract_field (self->fields[0], code, 0);
+  val = extract_fields (code, 0, 2, self->fields[2], self->fields[1]);
+  if ((val & 15) == 0)
+    return 0;
+  while ((val & 1) == 0)
+    val /= 2;
+  info->reglane.index = val / 2;
+  return true;
+}
+
 /* Decode a logical immediate for the MOV alias of SVE DUPM.  */
 bool
 aarch64_ext_sve_limm_mov (const aarch64_operand *self,
@@ -2058,6 +2221,21 @@ aarch64_ext_sve_reglist (const aarch64_operand *self,
 {
   info->reglist.first_regno = extract_field (self->fields[0], code, 0);
   info->reglist.num_regs = get_opcode_dependent_value (inst->opcode);
+  info->reglist.stride = 1;
+  return true;
+}
+
+/* Decode {Zn.<T> , Zm.<T>}.  The fields array specifies which field
+   to use for Zn.  The opcode-dependent value specifies the number
+   of registers in the list.  */
+bool
+aarch64_ext_sve_reglist_zt (const aarch64_operand *self,
+			    aarch64_opnd_info *info, aarch64_insn code,
+			    const aarch64_inst *inst ATTRIBUTE_UNUSED,
+			    aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  info->reglist.first_regno = extract_field (self->fields[0], code, 0);
+  info->reglist.num_regs = get_operand_specific_data (self);
   info->reglist.stride = 1;
   return true;
 }
@@ -2465,6 +2643,26 @@ do_special_decoding (aarch64_inst *inst)
       value = extract_field (FLD_lse_sz, inst->value, 0);
       inst->operands[idx].qualifier = get_greg_qualifier_from_value (value);
     }
+  /* rcpc3 'size' field.  */
+  if (inst->opcode->flags & F_RCPC3_SIZE)
+    {
+      value = extract_field (FLD_rcpc3_size, inst->value, 0);
+      for (int i = 0;
+	   aarch64_operands[inst->operands[i].type].op_class != AARCH64_OPND_CLASS_ADDRESS;
+	   i++)
+	{
+	  if (aarch64_operands[inst->operands[i].type].op_class
+	      == AARCH64_OPND_CLASS_INT_REG)
+	    inst->operands[i].qualifier = get_greg_qualifier_from_value (value & 1);
+	  else if (aarch64_operands[inst->operands[i].type].op_class
+	      == AARCH64_OPND_CLASS_FP_REG)
+	    {
+	      value += (extract_field (FLD_opc1, inst->value, 0) << 2);
+	      inst->operands[i].qualifier = get_sreg_qualifier_from_value (value);
+	    }
+	}
+    }
+
   /* size:Q fields.  */
   if (inst->opcode->flags & F_SIZEQ)
     return decode_sizeq (inst);
@@ -2529,6 +2727,16 @@ do_special_decoding (aarch64_inst *inst)
       Q = (unsigned) extract_field (FLD_Q, inst->value, inst->opcode->mask);
       inst->operands[0].qualifier =
 	get_vreg_qualifier_from_value ((num << 1) | Q);
+    }
+
+  if ((inst->opcode->flags & F_OPD_SIZE) && inst->opcode->iclass == sve2_urqvs)
+    {
+      unsigned size;
+      size = (unsigned) extract_field (FLD_size, inst->value,
+				       inst->opcode->mask);
+      inst->operands[0].qualifier
+	= get_vreg_qualifier_from_value (1 + (size << 1));
+      inst->operands[2].qualifier = get_sreg_qualifier_from_value (size);
     }
 
   if (inst->opcode->flags & F_GPRSIZE_IN_Q)
@@ -3143,6 +3351,17 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
 	}
       break;
 
+    case sve_index1:
+      i = extract_fields (inst->value, 0, 2, FLD_SVE_tsz, FLD_SVE_i2h);
+      if ((i & 15) == 0)
+	return false;
+      while ((i & 1) == 0)
+	{
+	  i >>= 1;
+	  variant += 1;
+	}
+      break;
+
     case sve_limm:
       /* Pick the smallest applicable element size.  */
       if ((inst->value & 0x20600) == 0x600)
@@ -3160,6 +3379,7 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
       variant = 3;
       break;
 
+    case sme2_movaz:
     case sme_misc:
     case sve_misc:
       /* These instructions have only a single variant.  */

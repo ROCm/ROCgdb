@@ -129,8 +129,6 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_CVADP,
   /* Random Number instructions.  */
   AARCH64_FEATURE_RNG,
-  /* BTI instructions.  */
-  AARCH64_FEATURE_BTI,
   /* SCXTNUM_ELx.  */
   AARCH64_FEATURE_SCXTNUM,
   /* ID_PFR2 instructions.  */
@@ -222,6 +220,14 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_PMUv3_ICNTR,
   /* Performance Monitors Synchronous-Exception-Based Event Extension.  */
   AARCH64_FEATURE_SEBEP,
+  /* SVE2.1 and SME2.1 non-widening BFloat16 instructions.  */
+  AARCH64_FEATURE_B16B16,
+  /* SME2.1 instructions.  */
+  AARCH64_FEATURE_SME2p1,
+  /* SVE2.1 instructions.  */
+  AARCH64_FEATURE_SVE2p1,
+  /* RCPC3 instructions.  */
+  AARCH64_FEATURE_RCPC3,
   AARCH64_NUM_FEATURES
 };
 
@@ -267,7 +273,6 @@ enum aarch64_feature_bit {
 					 | AARCH64_FEATBIT (X, SB)	\
 					 | AARCH64_FEATBIT (X, PREDRES)	\
 					 | AARCH64_FEATBIT (X, CVADP)	\
-					 | AARCH64_FEATBIT (X, BTI)	\
 					 | AARCH64_FEATBIT (X, SCXTNUM)	\
 					 | AARCH64_FEATBIT (X, ID_PFR2)	\
 					 | AARCH64_FEATBIT (X, SSBS))
@@ -703,6 +708,14 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_Vd,		/* Scalar SIMD&FP register in Vd.  */
   AARCH64_OPND_SVE_Vm,		/* Scalar SIMD&FP register in Vm.  */
   AARCH64_OPND_SVE_Vn,		/* Scalar SIMD&FP register in Vn.  */
+  AARCH64_OPND_SME_ZA_array_vrsb_1, /* Tile to vector, two registers (B).  */
+  AARCH64_OPND_SME_ZA_array_vrsh_1, /* Tile to vector, two registers (H).  */
+  AARCH64_OPND_SME_ZA_array_vrss_1, /* Tile to vector, two registers (S).  */
+  AARCH64_OPND_SME_ZA_array_vrsd_1, /* Tile to vector, two registers (D).  */
+  AARCH64_OPND_SME_ZA_array_vrsb_2, /* Tile to vector, four registers (B).  */
+  AARCH64_OPND_SME_ZA_array_vrsh_2, /* Tile to vector, four registers (H).  */
+  AARCH64_OPND_SME_ZA_array_vrss_2, /* Tile to vector, four registers (S). */
+  AARCH64_OPND_SME_ZA_array_vrsd_2, /* Tile to vector, four registers (D).  */
   AARCH64_OPND_SVE_Za_5,	/* SVE vector register in Za, bits [9,5].  */
   AARCH64_OPND_SVE_Za_16,	/* SVE vector register in Za, bits [20,16].  */
   AARCH64_OPND_SVE_Zd,		/* SVE vector register in Zd.  */
@@ -713,8 +726,10 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_Zm3_19_INDEX, /* z0-z7[0-3] in Zm3_INDEX plus bit 19.  */
   AARCH64_OPND_SVE_Zm3_22_INDEX, /* z0-z7[0-7] in Zm3_INDEX plus bit 22.  */
   AARCH64_OPND_SVE_Zm4_11_INDEX, /* z0-z15[0-3] in Zm plus bit 11.  */
+  AARCH64_OPND_SVE_Zm_imm4,     /* SVE vector register with 4bit index.  */
   AARCH64_OPND_SVE_Zm4_INDEX,	/* z0-z15[0-1] in Zm, bits [20,16].  */
   AARCH64_OPND_SVE_Zn,		/* SVE vector register in Zn.  */
+  AARCH64_OPND_SVE_Zn_5_INDEX,	/* Indexed SVE vector register, for DUPQ.  */
   AARCH64_OPND_SVE_Zn_INDEX,	/* Indexed SVE vector register, for DUP.  */
   AARCH64_OPND_SVE_ZnxN,	/* SVE vector register list in Zn.  */
   AARCH64_OPND_SVE_Zt,		/* SVE vector register in Zt.  */
@@ -781,6 +796,14 @@ enum aarch64_opnd
   AARCH64_OPND_MOPS_WB_Rn,	/* Rn!, in bits [5, 9].  */
   AARCH64_OPND_CSSC_SIMM8,	/* CSSC signed 8-bit immediate.  */
   AARCH64_OPND_CSSC_UIMM8,	/* CSSC unsigned 8-bit immediate.  */
+  AARCH64_OPND_SME_Zt2,		/* Qobule SVE vector register list.  */
+  AARCH64_OPND_SME_Zt3,		/* Trible SVE vector register list.  */
+  AARCH64_OPND_SME_Zt4,		/* Quad SVE vector register list.  */
+  AARCH64_OPND_RCPC3_ADDR_OPT_POSTIND,   /* [<Xn|SP>]{, #<imm>}.  */
+  AARCH64_OPND_RCPC3_ADDR_OPT_PREIND_WB, /* [<Xn|SP>] or [<Xn|SP>, #<imm>]!.  */
+  AARCH64_OPND_RCPC3_ADDR_POSTIND,	 /* [<Xn|SP>], #<imm>.  */
+  AARCH64_OPND_RCPC3_ADDR_PREIND_WB, 	 /* [<Xn|SP>, #<imm>]!.  */
+  AARCH64_OPND_RCPC3_ADDR_OFFSET
 };
 
 /* Qualifier constrains an operand.  It either specifies a variant of an
@@ -960,6 +983,7 @@ enum aarch64_insn_class
   sme_start,
   sme_stop,
   sme2_mov,
+  sme2_movaz,
   sve_cpy,
   sve_index,
   sve_limm,
@@ -987,6 +1011,9 @@ enum aarch64_insn_class
   cssc,
   gcs,
   the,
+  sve2_urqvs,
+  sve_index1,
+  rcpc3
 };
 
 /* Opcode enumerators.  */
@@ -1259,7 +1286,11 @@ extern const aarch64_opcode aarch64_opcode_table[];
    allow.  This impacts the constraintts on assembly but yelds no
    impact on disassembly.  */
 #define F_OPD_NARROW (1ULL << 33)
-/* Next bit is 34.  */
+/* For the instruction with size[22:23] field.  */
+#define F_OPD_SIZE (1ULL << 34)
+/* RCPC3 instruction has the field of 'size'.  */
+#define F_RCPC3_SIZE (1ULL << 35)
+/* Next bit is 36.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
@@ -1326,7 +1357,8 @@ static inline bool
 opcode_has_special_coder (const aarch64_opcode *opcode)
 {
   return (opcode->flags & (F_SF | F_LSE_SZ | F_SIZEQ | F_FPTYPE | F_SSIZE | F_T
-	  | F_GPRSIZE_IN_Q | F_LDS_SIZE | F_MISC | F_N | F_COND)) != 0;
+	  | F_GPRSIZE_IN_Q | F_LDS_SIZE | F_MISC | F_N | F_COND
+	  | F_OPD_SIZE | F_RCPC3_SIZE)) != 0;
 }
 
 struct aarch64_name_value_pair
@@ -1367,12 +1399,16 @@ typedef struct
   const char *name;
   uint32_t value;
   uint32_t flags ;
+
+  /* A set of features, all of which are required for this system instruction to be
+     available.  */
+  aarch64_feature_set features;
 } aarch64_sys_ins_reg;
 
 extern bool aarch64_sys_ins_reg_has_xt (const aarch64_sys_ins_reg *);
 extern bool
 aarch64_sys_ins_reg_supported_p (const aarch64_feature_set,
-				 const char *reg_name, aarch64_insn,
+				 const char *reg_name,
 				 uint32_t, const aarch64_feature_set *);
 
 extern const aarch64_sys_ins_reg aarch64_sys_regs_ic [];
@@ -1829,6 +1865,9 @@ aarch64_sve_dupm_mov_immediate_p (uint64_t, int);
 
 extern bool
 aarch64_cpu_supports_inst_p (aarch64_feature_set, aarch64_inst *);
+
+extern int
+calc_ldst_datasize (const aarch64_opnd_info *opnds);
 
 #ifdef DEBUG_AARCH64
 extern int debug_dump;

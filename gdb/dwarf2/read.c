@@ -909,7 +909,7 @@ static enum pc_bounds_kind dwarf2_get_pc_bounds (struct die_info *,
 						 unrelocated_addr *,
 						 unrelocated_addr *,
 						 struct dwarf2_cu *,
-						 addrmap *,
+						 addrmap_mutable *,
 						 void *);
 
 static void get_scope_pc_bounds (struct die_info *,
@@ -11021,7 +11021,7 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
 static int
 dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 		    unrelocated_addr *high_return, struct dwarf2_cu *cu,
-		    addrmap *map, void *datum, dwarf_tag tag)
+		    addrmap_mutable *map, void *datum, dwarf_tag tag)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   int low_set = 0;
@@ -11131,7 +11131,7 @@ dwarf2_get_pc_bounds_entry_point (die_info *die, unrelocated_addr *low,
 static pc_bounds_kind
 dwarf_get_pc_bounds_ranges_or_highlow_pc (die_info *die, unrelocated_addr *low,
 					  unrelocated_addr *high, dwarf2_cu *cu,
-					  addrmap *map, void *datum)
+					  addrmap_mutable *map, void *datum)
 {
   gdb_assert (low != nullptr);
   gdb_assert (high != nullptr);
@@ -11200,7 +11200,7 @@ dwarf_get_pc_bounds_ranges_or_highlow_pc (die_info *die, unrelocated_addr *low,
 static enum pc_bounds_kind
 dwarf2_get_pc_bounds (struct die_info *die, unrelocated_addr *lowpc,
 		      unrelocated_addr *highpc, struct dwarf2_cu *cu,
-		      addrmap *map, void *datum)
+		      addrmap_mutable *map, void *datum)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
 
