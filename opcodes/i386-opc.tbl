@@ -1790,6 +1790,10 @@ vrcpps, 0x53, AVX, Modrm|Vex|Space0F|VexWIG|CheckOperandSize|NoSuf, { Unspecifie
 vrcpss, 0xf353, AVX, Modrm|Vex=3|Space0F|VexVVVV|VexWIG|NoSuf, { Dword|Unspecified|BaseIndex|RegXMM, RegXMM, RegXMM }
 vroundp<sd>, 0x6608 | <sd:opc>, AVX, Modrm|Vex|Space0F3A|VexWIG|CheckOperandSize|NoSuf, { Imm8, Unspecified|BaseIndex|RegXMM|RegYMM, RegXMM|RegYMM }
 vrounds<sd>, 0x660a | <sd:opc>, AVX, Modrm|VexLIG|Space0F3A|VexVVVV|VexWIG|NoSuf, { Imm8, <sd:elem>|Unspecified|BaseIndex|RegXMM, RegXMM, RegXMM }
+// These are really clones of VRNDSCALE{P,S}{S,D}, with broadcast, masking, SAE,
+// 512-bit operand size, and register sources dropped.
+vroundp<sd>, 0x6608 | <sd:opc>, APX_F, Modrm|Space0F3A|<sd:vexw>|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8, Xmmword|Ymmword|Unspecified|BaseIndex, RegXMM|RegYMM }
+vrounds<sd>, 0x660a | <sd:opc>, APX_F, Modrm|EVexLIG|Space0F3A|VexVVVV|<sd:vexw>|Disp8MemShift|NoSuf, { Imm8, <sd:elem>|Unspecified|BaseIndex, RegXMM, RegXMM }
 vrsqrtps, 0x52, AVX, Modrm|Vex|Space0F|VexWIG|CheckOperandSize|NoSuf, { Unspecified|BaseIndex|RegXMM|RegYMM, RegXMM|RegYMM }
 vrsqrtss, 0xf352, AVX, Modrm|Vex=3|Space0F|VexVVVV|VexWIG|NoSuf, { Dword|Unspecified|BaseIndex|RegXMM, RegXMM, RegXMM }
 vshufp<sd>, 0x<sd:ppfx>c6, AVX, Modrm|Vex|Space0F|VexVVVV|VexWIG|CheckOperandSize|NoSuf, { Imm8|Imm8S, Unspecified|BaseIndex|RegXMM|RegYMM, RegXMM|RegYMM, RegXMM|RegYMM }
@@ -3482,19 +3486,21 @@ eretu, 0xf30f01ca, FRED, NoSuf, {}
 // USER_MSR instructions.
 
 urdmsr, 0xf20f38f8, USER_MSR, RegMem|NoSuf|NoRex64, { Reg64, Reg64 }
-urdmsr, 0xf2f8/0, USER_MSR, Modrm|Vex128|VexMap7|VexW0|NoSuf, { Imm32, Reg64 }
+urdmsr, 0xf2f8, USER_MSR&APX_F, RegMem|EVexMap4|VexW0|NoSuf, { Reg64, Reg64 }
+urdmsr, 0xf2f8/0, APX_F(USER_MSR), Modrm|Vex128|VexMap7|EVex128|VexW0|NoSuf, { Imm32, Reg64 }
 uwrmsr, 0xf30f38f8, USER_MSR, Modrm|NoSuf|NoRex64, { Reg64, Reg64 }
+uwrmsr, 0xf3f8, USER_MSR&APX_F, Modrm||EVexMap4|VexW0|NoSuf, { Reg64, Reg64 }
 // Immediates want to be first; md_assemble() takes care of swapping operands
 // accordingly.
-uwrmsr, 0xf3f8/0, USER_MSR, Modrm|Vex128|VexMap7|VexW0|NoSuf, { Imm32, Reg64 }
+uwrmsr, 0xf3f8/0, APX_F(USER_MSR), Modrm|Vex128|VexMap7|EVex128|VexW0|NoSuf, { Imm32, Reg64 }
 
 // USER_MSR instructions end.
 
 // APX Push2/Pop2 instructions.
 
-push2, 0xff/6, APX_F, Modrm|VexW0|EVex128|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
-push2p, 0xff/6, APX_F, Modrm|VexW1|EVex128|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
-pop2, 0x8f/0, APX_F, Modrm|VexW0|EVex128|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
-pop2p, 0x8f/0, APX_F, Modrm|VexW1|EVex128|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
+push2, 0xff/6, APX_F, Modrm|VexW0|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
+push2p, 0xff/6, APX_F, Modrm|VexW1|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
+pop2, 0x8f/0, APX_F, Modrm|VexW0|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
+pop2p, 0x8f/0, APX_F, Modrm|VexW1|EVexMap4|VexVVVV|ImplicitStackOp|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg64, Reg64 }
 
 // APX Push2/Pop2 instructions end.

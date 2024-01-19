@@ -950,6 +950,9 @@ enum
   MOD_0F38F8,
 
   MOD_VEX_0F3849_X86_64_L_0_W_0,
+
+  MOD_EVEX_MAP4_F8_P_1,
+  MOD_EVEX_MAP4_F8_P_3,
 };
 
 enum
@@ -1356,6 +1359,7 @@ enum
   EVEX_MAP4,
   EVEX_MAP5,
   EVEX_MAP6,
+  EVEX_MAP7,
 };
 
 enum
@@ -1765,7 +1769,7 @@ struct dis386 {
 };
 
 /* Upper case letters in the instruction names here are macros.
-   'A' => print 'b' if no register operands or suffix_always is true
+   'A' => print 'b' if no (suitable) register operand or suffix_always is true
    'B' => print 'b' if suffix_always is true
    'C' => print 's' or 'l' ('w' or 'd' in Intel mode) depending on operand
 	  size prefix
@@ -1784,8 +1788,8 @@ struct dis386 {
    'O' => print 'd' or 'o' (or 'q' in Intel mode)
    'P' => behave as 'T' except with register operand outside of suffix_always
 	  mode
-   'Q' => print 'w', 'l' or 'q' for memory operand or suffix_always
-	  is true
+   'Q' => print 'w', 'l' or 'q' if no (suitable) register operand or
+	  suffix_always is true
    'R' => print 'w', 'l' or 'q' ('d' for 'l' and 'e' in Intel mode)
    'S' => print 'w', 'l' or 'q' if suffix_always is true
    'T' => print 'w', 'l'/'d', or 'q' if instruction has an operand size
@@ -9090,6 +9094,9 @@ get_valid_dis386 (const struct dis386 *dp, instr_info *ins)
 	case 0x6:
 	  vex_table_index = EVEX_MAP6;
 	  break;
+	case 0x7:
+	  vex_table_index = EVEX_MAP7;
+	  break;
 	}
 
       /* The second byte after 0x62.  */
@@ -9159,7 +9166,12 @@ get_valid_dis386 (const struct dis386 *dp, instr_info *ins)
 
       ins->codep++;
       vindex = *ins->codep++;
-      dp = &evex_table[vex_table_index][vindex];
+      if (vex_table_index != EVEX_MAP7)
+	dp = &evex_table[vex_table_index][vindex];
+      else if (vindex == 0xf8)
+	dp = &map7_f8_opcode;
+      else
+	dp = &bad_opcode;
       ins->end_codep = ins->codep;
       if (!fetch_modrm (ins))
 	return &err_opcode;
@@ -10404,7 +10416,7 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 	case 'A':
 	  if (ins->intel_syntax)
 	    break;
-	  if ((ins->need_modrm && ins->modrm.mod != 3)
+	  if ((ins->need_modrm && ins->modrm.mod != 3 && !ins->vex.nd)
 	      || (sizeflag & SUFFIX_ALWAYS))
 	    *ins->obufp++ = 'b';
 	  break;
@@ -10703,7 +10715,7 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 	      if (ins->intel_syntax && !alt)
 		break;
 	      USED_REX (REX_W);
-	      if ((ins->need_modrm && ins->modrm.mod != 3)
+	      if ((ins->need_modrm && ins->modrm.mod != 3 && !ins->vex.nd)
 		  || (sizeflag & SUFFIX_ALWAYS))
 		{
 		  if (ins->rex & REX_W)
