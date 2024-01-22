@@ -1127,13 +1127,19 @@ extern struct value *value_from_contents (struct type *, const gdb_byte *);
 extern struct value *default_value_from_register (struct gdbarch *gdbarch,
 						  struct type *type,
 						  int regnum,
-						  struct frame_id frame_id);
+						  struct frame_id frame_id,
+						  ULONGEST offset,
+						  ULONGEST bit_offset);
 
 extern void read_frame_register_value (struct value *value,
 				       frame_info_ptr frame);
 
-extern struct value *value_from_register (struct type *type, int regnum,
-					  frame_info_ptr frame);
+/* Return a value of type TYPE, stored at offset (OFFSET, BIT_OFFSET) of
+   register REGNUM, in frame FRAME.  */
+
+extern value *value_from_register (type *type, int regnum,
+				   frame_info_ptr frame, ULONGEST offset = 0,
+				   ULONGEST bit_offset = 0);
 
 extern CORE_ADDR address_from_register (int regnum,
 					frame_info_ptr frame);

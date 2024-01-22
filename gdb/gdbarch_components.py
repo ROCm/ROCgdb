@@ -832,6 +832,8 @@ allocate and return a struct value with all value attributes
         ("struct type *", "type"),
         ("int", "regnum"),
         ("struct frame_id", "frame_id"),
+        ("ULONGEST", "offset"),
+        ("ULONGEST", "bit_offset"),
     ],
     predefault="default_value_from_register",
     invalid=False,
