@@ -1394,20 +1394,7 @@ dwarf_register::to_gdb_value (frame_info_ptr frame, struct type *type,
 
   /* Construct the value.  */
   value *retval
-    = gdbarch_value_from_register (arch, type, gdb_regnum, frame);
-  LONGEST retval_offset = retval->offset ();
-
-  if (type_byte_order (type) == BFD_ENDIAN_BIG
-      && type->length () + m_offset < retval_offset)
-    /* Big-endian, and we want less than full size.  */
-    retval->set_offset (retval_offset - m_offset);
-  else
-    retval->set_offset (retval_offset + m_offset);
-
-  retval->set_bitpos (m_bit_suboffset);
-
-  /* Get the data.  */
-  read_frame_register_value (retval);
+    = value_from_register (type, gdb_regnum, frame, m_offset, m_bit_suboffset);
 
   if (retval->optimized_out ())
     {

@@ -1238,18 +1238,19 @@ regnum_is_vxr_full (s390_gdbarch_tdep *tdep, int regnum)
 
 static value *
 s390_value_from_register (gdbarch *gdbarch, type *type, int regnum,
-			  const frame_info_ptr &this_frame)
+			  const frame_info_ptr &this_frame, ULONGEST offset,
+			  ULONGEST bit_offset)
 {
   s390_gdbarch_tdep *tdep = gdbarch_tdep<s390_gdbarch_tdep> (gdbarch);
-  value *value
-    = default_value_from_register (gdbarch, type, regnum, this_frame);
+  value *value = default_value_from_register (gdbarch, type, regnum,
+					      this_frame, offset, bit_offset);
   check_typedef (type);
 
   if ((regnum >= S390_F0_REGNUM && regnum <= S390_F15_REGNUM
        && type->length () < 8)
       || regnum_is_vxr_full (tdep, regnum)
       || (regnum >= S390_V16_REGNUM && regnum <= S390_V31_REGNUM))
-    value->set_offset (0);
+    value->set_offset (offset);
 
   return value;
 }

@@ -2749,28 +2749,14 @@ rs6000_value_to_register (frame_info_ptr frame,
 
 static value *
 rs6000_value_from_register (gdbarch *gdbarch, type *type, int regnum,
-			    const frame_info_ptr &this_frame)
+			    const frame_info_ptr &this_frame, ULONGEST offset,
+			    ULONGEST bit_offset)
 {
   /* We have an IEEE 128-bit float -- need to change regnum mapping from
      fpr to vsr.  */
   regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
-
-  value *value
-    = value::allocate_register (get_next_frame_sentinel_okay (this_frame),
-				regnum, type);
-
-  /* Any structure stored in more than one register will always be
-     an integral number of registers.  Otherwise, you need to do
-     some fiddling with the last register copied here for little
-     endian machines.  */
-  if (type_byte_order (type) == BFD_ENDIAN_BIG
-      && type->length () < register_size (gdbarch, regnum))
-    /* Big-endian, and we want less than full size.  */
-    value->set_offset (register_size (gdbarch, regnum) - type->length ());
-  else
-    value->set_offset (0);
-
-  return value;
+  return default_value_from_register (gdbarch, type, regnum, this_frame,
+				      offset, bit_offset);
 }
 
  /* The type of a function that moves the value of REG between CACHE

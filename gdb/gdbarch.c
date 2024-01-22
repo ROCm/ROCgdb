@@ -2689,13 +2689,13 @@ set_gdbarch_value_to_register (struct gdbarch *gdbarch,
 }
 
 struct value *
-gdbarch_value_from_register (struct gdbarch *gdbarch, struct type *type, int regnum, const frame_info_ptr &this_frame)
+gdbarch_value_from_register (struct gdbarch *gdbarch, struct type *type, int regnum, const frame_info_ptr &this_frame, ULONGEST offset, ULONGEST bit_offset)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->value_from_register != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_value_from_register called\n");
-  return gdbarch->value_from_register (gdbarch, type, regnum, this_frame);
+  return gdbarch->value_from_register (gdbarch, type, regnum, this_frame, offset, bit_offset);
 }
 
 void

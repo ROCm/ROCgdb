@@ -644,7 +644,7 @@ language_defn::read_var_value (struct symbol *var,
 
 	if (var->aclass () == LOC_REGPARM_ADDR)
 	  addr = value_as_address
-	   (value_from_register (lookup_pointer_type (type), regno, frame));
+	    (value_from_register (lookup_pointer_type (type), regno, frame));
 	else
 	  return value_from_register (type, regno, frame);
       }
@@ -738,7 +738,8 @@ read_var_value (struct symbol *var, const struct block *var_block,
 
 value *
 default_value_from_register (gdbarch *gdbarch, type *type, int regnum,
-			     const frame_info_ptr &this_frame)
+			     const frame_info_ptr &this_frame, ULONGEST offset,
+			     ULONGEST bit_offset)
 {
   value *value
     = value::allocate_register (get_next_frame_sentinel_okay (this_frame),
@@ -748,12 +749,16 @@ default_value_from_register (gdbarch *gdbarch, type *type, int regnum,
      an integral number of registers.  Otherwise, you need to do
      some fiddling with the last register copied here for little
      endian machines.  */
-  if (type_byte_order (type) == BFD_ENDIAN_BIG
-      && type->length () < register_size (gdbarch, regnum))
+  if (type_byte_order (type) == BFD_ENDIAN_BIG)
+   {
     /* Big-endian, and we want less than full size.  */
-    value->set_offset (register_size (gdbarch, regnum) - type->length ());
+    value->set_offset (register_size (gdbarch, regnum) - type->length ()
+		       - offset);
+   }
   else
-    value->set_offset (0);
+    value->set_offset (offset);
+
+  value->set_bitpos (bit_offset);
 
   return value;
 }
@@ -802,10 +807,11 @@ read_frame_register_value (value *value)
     }
 }
 
-/* Return a value of type TYPE, stored in register REGNUM, in frame FRAME.  */
+/* See value.h.  */
 
-struct value *
-value_from_register (struct type *type, int regnum, frame_info_ptr frame)
+value *
+value_from_register (type *type, int regnum, frame_info_ptr frame,
+		     ULONGEST offset, ULONGEST bit_offset)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct type *type1 = check_typedef (type);
@@ -814,6 +820,13 @@ value_from_register (struct type *type, int regnum, frame_info_ptr frame)
   if (gdbarch_convert_register_p (gdbarch, regnum, type1))
     {
       int optim, unavail, ok;
+
+      /* It's not clear what an offset would mean for registers that require
+	 special handling.  Is the offset applied on the raw value
+	 pre-conversion?  On the value post-conversion?  Defer that to until
+	 this situation actually arises (if ever).  */
+      gdb_assert (offset == 0);
+      gdb_assert (bit_offset == 0);
 
       /* The ISA/ABI need to something weird when obtaining the
 	 specified value from this register.  It might need to
@@ -839,7 +852,8 @@ value_from_register (struct type *type, int regnum, frame_info_ptr frame)
   else
     {
       /* Construct the value.  */
-      v = gdbarch_value_from_register (gdbarch, type, regnum, frame);
+      v = gdbarch_value_from_register (gdbarch, type, regnum, frame, offset,
+				       bit_offset);
 
       /* Get the data.  */
       read_frame_register_value (v);
