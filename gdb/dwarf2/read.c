@@ -1282,10 +1282,7 @@ dwarf2_per_bfd::~dwarf2_per_bfd ()
     index_table->wait_completely ();
 
   for (auto &per_cu : all_units)
-    {
-      per_cu->imported_symtabs_free ();
-      per_cu->free_cached_file_names ();
-    }
+    per_cu->free_cached_file_names ();
 
   /* Everything else should be on this->obstack.  */
 }
@@ -6105,13 +6102,10 @@ recursively_compute_inclusions (std::vector<compunit_symtab *> *result,
 	}
     }
 
-  if (!per_cu->imported_symtabs_empty ())
-    for (dwarf2_per_cu_data *ptr : *per_cu->imported_symtabs)
-      {
-	recursively_compute_inclusions (result, all_children,
-					all_type_symtabs, ptr, per_objfile,
-					cust);
-      }
+  for (dwarf2_per_cu_data *ptr : per_cu->imported_symtabs)
+    recursively_compute_inclusions (result, all_children,
+				    all_type_symtabs, ptr, per_objfile,
+				    cust);
 }
 
 /* Compute the compunit_symtab 'includes' fields for the compunit_symtab of
@@ -6123,7 +6117,7 @@ compute_compunit_symtab_includes (dwarf2_per_cu_data *per_cu,
 {
   gdb_assert (! per_cu->is_debug_types);
 
-  if (!per_cu->imported_symtabs_empty ())
+  if (!per_cu->imported_symtabs.empty ())
     {
       int len;
       std::vector<compunit_symtab *> result_symtabs;
@@ -6140,12 +6134,10 @@ compute_compunit_symtab_includes (dwarf2_per_cu_data *per_cu,
 						   htab_eq_pointer,
 						   NULL, xcalloc, xfree));
 
-      for (dwarf2_per_cu_data *ptr : *per_cu->imported_symtabs)
-	{
-	  recursively_compute_inclusions (&result_symtabs, all_children.get (),
-					  all_type_symtabs.get (), ptr,
-					  per_objfile, cust);
-	}
+      for (dwarf2_per_cu_data *ptr : per_cu->imported_symtabs)
+	recursively_compute_inclusions (&result_symtabs, all_children.get (),
+					all_type_symtabs.get (), ptr,
+					per_objfile, cust);
 
       /* Now we have a transitive closure of all the included symtabs.  */
       len = result_symtabs.size ();
@@ -6393,7 +6385,7 @@ process_imported_unit_die (struct die_info *die, struct dwarf2_cu *cu)
 	load_full_comp_unit (per_cu, per_objfile, per_objfile->get_cu (per_cu),
 			     false, cu->lang ());
 
-      cu->per_cu->imported_symtabs_push (per_cu);
+      cu->per_cu->imported_symtabs.push_back (per_cu);
     }
 }
 
@@ -9659,7 +9651,7 @@ queue_and_load_dwo_tu (void **slot, void *info)
       if (maybe_queue_comp_unit (NULL, sig_type, cu->per_objfile,
 				 cu->lang ()))
 	load_full_type_unit (sig_type, cu->per_objfile);
-      cu->per_cu->imported_symtabs_push (sig_type);
+      cu->per_cu->imported_symtabs.push_back (sig_type);
     }
 
   return 1;
@@ -18711,7 +18703,7 @@ var_decode_location (struct attribute *attr, struct symbol *sym,
 
   dwarf2_symbol_mark_computed (attr, sym, cu, 0);
 
-  if (SYMBOL_COMPUTED_OPS (sym)->location_has_loclist)
+  if (sym->computed_ops ()->location_has_loclist)
     cu->has_loclist = true;
 }
 
@@ -20723,9 +20715,7 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
 	 http://sourceware.org/bugzilla/show_bug.cgi?id=15021.  */
       if (per_objfile->per_bfd->index_table != NULL
 	  && !per_objfile->per_bfd->index_table->version_check ())
-	{
-	  (*ref_cu)->per_cu->imported_symtabs_push (sig_cu->per_cu);
-	}
+	(*ref_cu)->per_cu->imported_symtabs.push_back (sig_cu->per_cu);
 
       *ref_cu = sig_cu;
       return die;

@@ -322,11 +322,12 @@ symbol_read_needs (struct symbol *sym)
   /* For computed symbols, the context dependency can't always be
      determined unless a full evaluation is attempted.  Because of
      this, we have to do a full location evaluation.  */
-  if (SYMBOL_COMPUTED_OPS (sym) != NULL)
+  if (const symbol_computed_ops *computed_ops = sym->computed_ops ();
+      computed_ops != nullptr)
     {
       try
 	{
-	  SYMBOL_COMPUTED_OPS (sym)->read_variable (sym, nullptr);
+	  computed_ops->read_variable (sym, nullptr);
 	  return SYMBOL_NEEDS_NONE;
 	}
       catch (const gdb_exception &except)
@@ -638,8 +639,8 @@ language_defn::read_var_value (struct symbol *var,
     case LOC_REGISTER:
     case LOC_REGPARM_ADDR:
       {
-	int regno = SYMBOL_REGISTER_OPS (var)
-		      ->register_number (var, get_frame_arch (frame));
+	const symbol_register_ops *reg_ops = var->register_ops ();
+	int regno = reg_ops->register_number (var, get_frame_arch (frame));
 
 	if (var->aclass () == LOC_REGPARM_ADDR)
 	  addr = value_as_address
@@ -650,7 +651,11 @@ language_defn::read_var_value (struct symbol *var,
       break;
 
     case LOC_COMPUTED:
-      return SYMBOL_COMPUTED_OPS (var)->read_variable (var, frame);
+      {
+	const symbol_computed_ops *computed_ops = var->computed_ops ();
+	gdb_assert (computed_ops != nullptr);
+	return computed_ops->read_variable (var, frame);
+      }
 
     case LOC_UNRESOLVED:
       {
