@@ -2963,8 +2963,8 @@ value_static_field (struct type *type, int fieldno)
 	block
 	  = get_frame_block (get_selected_frame (nullptr), 0)->static_block ();
 
-      struct block_symbol sym = lookup_symbol (phys_name, block, VAR_DOMAIN,
-					       nullptr);
+      struct block_symbol sym = lookup_symbol (phys_name, block,
+					       SEARCH_VAR_DOMAIN, nullptr);
 
       if (sym.symbol == NULL)
 	{
@@ -3157,7 +3157,8 @@ value_fn_field (struct value **arg1p, struct fn_field *f,
   struct symbol *sym;
   struct bound_minimal_symbol msym;
 
-  sym = lookup_symbol (physname, 0, VAR_DOMAIN, 0).symbol;
+  sym = lookup_symbol (physname, nullptr, SEARCH_FUNCTION_DOMAIN,
+		       nullptr).symbol;
   if (sym == nullptr)
     {
       msym = lookup_bound_minimal_symbol (physname);

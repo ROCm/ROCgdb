@@ -198,6 +198,18 @@ test_compare ()
 
 /* See cooked-index.h.  */
 
+bool
+cooked_index_entry::matches (domain_search_flags kind) const
+{
+  /* Just reject type declarations.  */
+  if ((flags & IS_TYPE_DECLARATION) != 0)
+    return false;
+
+  return tag_matches_domain (tag, kind, lang);
+}
+
+/* See cooked-index.h.  */
+
 const char *
 cooked_index_entry::full_name (struct obstack *storage, bool for_main) const
 {

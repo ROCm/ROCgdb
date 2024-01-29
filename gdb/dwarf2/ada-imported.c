@@ -94,7 +94,7 @@ ada_alias_get_block_value (const struct symbol *sym)
 {
   const char *name = get_imported_name (sym);
   block_symbol real_symbol = lookup_global_symbol (name, nullptr,
-						   VAR_DOMAIN);
+						   SEARCH_FUNCTION_DOMAIN);
   if (real_symbol.symbol == nullptr)
     error (_("could not find alias '%s' for function '%s'"),
 	   name, sym->print_name ());

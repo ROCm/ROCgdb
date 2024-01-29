@@ -1697,8 +1697,8 @@ set_initial_language_callback ()
     {
       const char *name = main_name ();
       struct symbol *sym
-	= lookup_symbol_in_language (name, NULL, VAR_DOMAIN, default_lang,
-				     NULL).symbol;
+	= lookup_symbol_in_language (name, nullptr, SEARCH_FUNCTION_DOMAIN,
+				     default_lang, nullptr).symbol;
 
       if (sym != NULL)
 	lang = sym->language ();
@@ -3769,7 +3769,7 @@ expand_symtabs_matching
    gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
    block_search_flags search_flags,
-   enum search_domain kind)
+   domain_search_flags domain)
 {
   for (objfile *objfile : current_program_space->objfiles ())
     if (!objfile->expand_symtabs_matching (file_matcher,
@@ -3777,8 +3777,7 @@ expand_symtabs_matching
 					   symbol_matcher,
 					   expansion_notify,
 					   search_flags,
-					   UNDEF_DOMAIN,
-					   kind))
+					   domain))
       return false;
   return true;
 }

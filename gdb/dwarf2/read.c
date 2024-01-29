@@ -1639,8 +1639,7 @@ struct readnow_functions : public dwarf2_base_index_functions
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
      block_search_flags search_flags,
-     domain_enum domain,
-     enum search_domain kind) override
+     domain_search_flags domain) override
   {
     return true;
   }
@@ -5687,9 +5686,7 @@ fixup_go_packaging (struct dwarf2_cu *cu)
       sym = new (&objfile->objfile_obstack) symbol;
       sym->set_language (language_go, &objfile->objfile_obstack);
       sym->compute_and_set_names (saved_package_name, false, objfile->per_bfd);
-      /* This is not VAR_DOMAIN because we want a way to ensure a lookup of,
-	 e.g., "main" finds the "main" module and not C's main().  */
-      sym->set_domain (STRUCT_DOMAIN);
+      sym->set_domain (TYPE_DOMAIN);
       sym->set_aclass_index (LOC_TYPEDEF);
       sym->set_type (type);
 
@@ -6494,6 +6491,7 @@ process_die (struct die_info *die, struct dwarf2_cu *cu)
     case DW_TAG_subrange_type:
     case DW_TAG_generic_subrange:
     case DW_TAG_typedef:
+    case DW_TAG_unspecified_type:
       /* Add a typedef symbol for the type definition, if it has a
 	 DW_AT_name.  */
       new_symbol (die, read_type_die (die, cu), cu);
@@ -16344,6 +16342,12 @@ cooked_indexer::scan_attributes (dwarf2_per_cu_data *scanning_per_cu,
 	      || abbrev->tag == DW_TAG_enumeration_type
 	      || abbrev->tag == DW_TAG_enumerator))
 	*flags &= ~IS_STATIC;
+
+      /* Keep in sync with new_symbol.  */
+      if (abbrev->tag == DW_TAG_subprogram
+	  && (m_language == language_ada
+	      || m_language == language_fortran))
+	*flags &= ~IS_STATIC;
     }
 
   return info_ptr;
@@ -16460,6 +16464,13 @@ cooked_indexer::index_dies (cutu_reader *reader,
 				  info_ptr, abbrev, &name, &linkage_name,
 				  &flags, &sibling, &this_parent_entry,
 				  &defer, &is_enum_class, false);
+      /* A DW_TAG_entry_point inherits its static/extern property from
+	 the enclosing subroutine.  */
+      if (abbrev->tag == DW_TAG_entry_point)
+	{
+	  flags &= ~IS_STATIC;
+	  flags |= parent_entry->flags & IS_STATIC;
+	}
 
       if (abbrev->tag == DW_TAG_namespace
 	  && m_language == language_cplus
@@ -16628,8 +16639,7 @@ cooked_index_functions::expand_symtabs_matching
       gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
       gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
       block_search_flags search_flags,
-      domain_enum domain,
-      enum search_domain kind)
+      domain_search_flags domain)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
@@ -16692,8 +16702,7 @@ cooked_index_functions::expand_symtabs_matching
 
 	  /* See if the symbol matches the type filter.  */
 	  if (!entry->matches (search_flags)
-	      || !entry->matches (domain)
-	      || !entry->matches (kind))
+	      || !entry->matches (domain))
 	    continue;
 
 	  /* We've found the base name of the symbol; now walk its
@@ -18835,7 +18844,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 
       /* Default assumptions.
 	 Use the passed type or decode it from the die.  */
-      sym->set_domain (VAR_DOMAIN);
+      sym->set_domain (UNDEF_DOMAIN);
       sym->set_aclass_index (LOC_OPTIMIZED_OUT);
       if (type != NULL)
 	sym->set_type (type);
@@ -18882,11 +18891,12 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	    sym->set_aclass_index (LOC_OPTIMIZED_OUT);
 	  sym->set_type (builtin_type (objfile)->builtin_core_addr);
 	  sym->set_domain (LABEL_DOMAIN);
-	  add_symbol_to_list (sym, cu->list_in_scope);
+	  list_to_add = cu->list_in_scope;
 	  break;
 	case DW_TAG_entry_point:
 	  /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
 	     finish_block.  */
+	  sym->set_domain (FUNCTION_DOMAIN);
 	  sym->set_aclass_index (LOC_BLOCK);
 	  /* DW_TAG_entry_point provides an additional entry_point to an
 	     existing sub_program.  Therefore, we inherit the "external"
@@ -18901,6 +18911,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	case DW_TAG_subprogram:
 	  /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
 	     finish_block.  */
+	  sym->set_domain (FUNCTION_DOMAIN);
 	  sym->set_aclass_index (LOC_BLOCK);
 	  attr2 = dwarf2_attr (die, DW_AT_external, cu);
 	  if ((attr2 != nullptr && attr2->as_boolean ())
@@ -18945,6 +18956,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	case DW_TAG_inlined_subroutine:
 	  /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
 	     finish_block.  */
+	  sym->set_domain (FUNCTION_DOMAIN);
 	  sym->set_aclass_index (LOC_BLOCK);
 	  sym->set_is_inlined (1);
 	  list_to_add = cu->list_in_scope;
@@ -18955,6 +18967,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	case DW_TAG_constant:
 	case DW_TAG_variable:
 	case DW_TAG_member:
+	  sym->set_domain (VAR_DOMAIN);
 	  /* Compilation with minimal debug info may result in
 	     variables with missing type entries.  Change the
 	     misleading `void' type to something sensible.  */
@@ -19103,6 +19116,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	       when we do not have enough information to show inlined frames;
 	       pretend it's a local variable in that case so that the user can
 	       still see it.  */
+	    sym->set_domain (VAR_DOMAIN);
 	    struct context_stack *curr
 	      = cu->get_builder ()->get_current_context_stack ();
 	    if (curr != nullptr && curr->name != nullptr)
@@ -19141,10 +19155,24 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      sym->set_aclass_index (LOC_STATIC);
 	      sym->set_domain (VAR_DOMAIN);
 	    }
-	  else
+	  else if (cu->lang () == language_c
+		   || cu->lang () == language_cplus
+		   || cu->lang () == language_objc
+		   || cu->lang () == language_opencl
+		   || cu->lang () == language_minimal)
 	    {
+	      /* These languages have a tag namespace.  Note that
+		 there's a special hack for C++ in the matching code,
+		 so we don't need to enter a separate typedef for the
+		 tag.  */
 	      sym->set_aclass_index (LOC_TYPEDEF);
 	      sym->set_domain (STRUCT_DOMAIN);
+	    }
+	  else
+	    {
+	      /* Other languages don't have a tag namespace.  */
+	      sym->set_aclass_index (LOC_TYPEDEF);
+	      sym->set_domain (TYPE_DOMAIN);
 	    }
 
 	  /* NOTE: carlton/2003-11-10: C++ class symbols shouldn't
@@ -19189,10 +19217,11 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	case DW_TAG_subrange_type:
 	case DW_TAG_generic_subrange:
 	  sym->set_aclass_index (LOC_TYPEDEF);
-	  sym->set_domain (VAR_DOMAIN);
+	  sym->set_domain (TYPE_DOMAIN);
 	  list_to_add = cu->list_in_scope;
 	  break;
 	case DW_TAG_enumerator:
+	  sym->set_domain (VAR_DOMAIN);
 	  attr = dwarf2_attr (die, DW_AT_const_value, cu);
 	  if (attr != nullptr)
 	    {
@@ -19210,6 +19239,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	  break;
 	case DW_TAG_imported_declaration:
 	case DW_TAG_namespace:
+	  sym->set_domain (TYPE_DOMAIN);
 	  sym->set_aclass_index (LOC_TYPEDEF);
 	  list_to_add = cu->get_builder ()->get_global_symbols ();
 	  break;
@@ -19221,7 +19251,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	case DW_TAG_common_block:
 	  sym->set_aclass_index (LOC_COMMON_BLOCK);
 	  sym->set_domain (COMMON_BLOCK_DOMAIN);
-	  add_symbol_to_list (sym, cu->list_in_scope);
+	  list_to_add = cu->list_in_scope;
 	  break;
 	default:
 	  /* Not a tag we recognize.  Hopefully we aren't processing

@@ -562,7 +562,7 @@ public:
      contains !TYPE_OPAQUE symbol prefer its compunit.  If it contains
      only TYPE_OPAQUE symbol(s), return at least that compunit.  */
   struct compunit_symtab *lookup_symbol (block_enum kind, const char *name,
-					 domain_enum domain);
+					 domain_search_flags domain);
 
   /* See quick_symbol_functions.  */
   void print_stats (bool print_bcache);
@@ -591,8 +591,7 @@ public:
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
      block_search_flags search_flags,
-     domain_enum domain,
-     enum search_domain kind);
+     domain_search_flags domain);
 
   /* See quick_symbol_functions.  */
   struct compunit_symtab *find_pc_sect_compunit_symtab
@@ -613,7 +612,7 @@ public:
 
   /* See quick_symbol_functions.  */
   enum language lookup_global_symbol_language (const char *name,
-					       domain_enum domain,
+					       domain_search_flags domain,
 					       bool *symbol_found_p);
 
   /* Return the relocation offset applied to SECTION.  */

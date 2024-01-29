@@ -432,8 +432,8 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
 
   try
     {
-      symbol = lookup_symbol (name, block, (domain_enum) domain,
-			      &is_a_field_of_this).symbol;
+      domain_search_flags flags = from_scripting_domain (domain);
+      symbol = lookup_symbol (name, block, flags, &is_a_field_of_this).symbol;
     }
   catch (const gdb_exception &except)
     {
@@ -481,7 +481,8 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
 
   try
     {
-      symbol = lookup_global_symbol (name, NULL, (domain_enum) domain).symbol;
+      domain_search_flags flags = from_scripting_domain (domain);
+      symbol = lookup_global_symbol (name, NULL, flags).symbol;
     }
   catch (const gdb_exception &except)
     {
@@ -542,13 +543,14 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
 
   try
     {
+      domain_search_flags flags = from_scripting_domain (domain);
+
       if (block != nullptr)
 	symbol
-	  = lookup_symbol_in_static_block (name, block,
-					   (domain_enum) domain).symbol;
+	  = lookup_symbol_in_static_block (name, block, flags).symbol;
 
       if (symbol == nullptr)
-	symbol = lookup_static_symbol (name, (domain_enum) domain).symbol;
+	symbol = lookup_static_symbol (name, flags).symbol;
     }
   catch (const gdb_exception &except)
     {
@@ -592,11 +594,13 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 
   try
     {
+      domain_search_flags flags = from_scripting_domain (domain);
+
       /* Expand any symtabs that contain potentially matching symbols.  */
       lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
       expand_symtabs_matching (NULL, lookup_name, NULL, NULL,
 			       SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-			       ALL_DOMAIN);
+			       SEARCH_ALL);
 
       for (objfile *objfile : current_program_space->objfiles ())
 	{
@@ -613,7 +617,7 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 	      if (block != nullptr)
 		{
 		  symbol *symbol = lookup_symbol_in_static_block
-		    (name, block, (domain_enum) domain).symbol;
+		    (name, block, flags).symbol;
 
 		  if (symbol != nullptr)
 		    {
@@ -670,34 +674,17 @@ gdbpy_initialize_symbols (void)
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_COMMON_BLOCK",
 				  LOC_COMMON_BLOCK) < 0
       || PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_REGPARM_ADDR",
-				  LOC_REGPARM_ADDR) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_UNDEF_DOMAIN",
-				  UNDEF_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_VAR_DOMAIN",
-				  VAR_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_STRUCT_DOMAIN",
-				  STRUCT_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_LABEL_DOMAIN",
-				  LABEL_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_MODULE_DOMAIN",
-				  MODULE_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_COMMON_BLOCK_DOMAIN",
-				  COMMON_BLOCK_DOMAIN) < 0)
+				  LOC_REGPARM_ADDR) < 0)
     return -1;
 
-  /* These remain defined for compatibility, but as they were never
-     correct, they are no longer documented.  Eventually we can remove
-     them.  These exist because at one time, enum search_domain and
-     enum domain_enum_tag were combined -- but different values were
-     used differently.  Here we try to give them values that will make
-     sense if they are passed to gdb.lookup_symbol.  */
-  if (PyModule_AddIntConstant (gdb_module, "SYMBOL_VARIABLES_DOMAIN",
-			       VAR_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_FUNCTIONS_DOMAIN",
-				  VAR_DOMAIN) < 0
-      || PyModule_AddIntConstant (gdb_module, "SYMBOL_TYPES_DOMAIN",
-				  VAR_DOMAIN) < 0)
+#define SYM_DOMAIN(X)							\
+  if (PyModule_AddIntConstant (gdb_module, "SYMBOL_" #X "_DOMAIN",	\
+			       to_scripting_domain (X ## _DOMAIN)) < 0	\
+      || PyModule_AddIntConstant (gdb_module, "SEARCH_" #X "_DOMAIN",	\
+				  to_scripting_domain (SEARCH_ ## X ## _DOMAIN)) < 0) \
     return -1;
+#include "sym-domains.def"
+#undef SYM_DOMAIN
 
   return gdb_pymodule_addobject (gdb_module, "Symbol",
 				 (PyObject *) &symbol_object_type);
