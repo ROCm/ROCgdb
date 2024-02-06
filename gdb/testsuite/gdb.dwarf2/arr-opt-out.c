@@ -1,6 +1,4 @@
-/* Copyright (C) 2013-2024 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+/* Copyright 2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,12 +13,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef SOLIB_AIX_H
-#define SOLIB_AIX_H
+int global_array[] = {0, 0};
 
-struct solib_ops;
-extern const solib_ops solib_aix_so_ops;
-
-extern CORE_ADDR solib_aix_get_toc_value (CORE_ADDR pc);
-
-#endif
+int
+main (void)
+{
+  return 0;
+}

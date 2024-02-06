@@ -26,7 +26,7 @@
 #include "xcoffread.h"
 #include "observable.h"
 
-/* Our private data in struct shobj.  */
+/* Our private data in struct solib.  */
 
 struct lm_info_aix final : public lm_info
 {
@@ -308,10 +308,10 @@ solib_aix_bss_data_overlap (bfd *abfd)
   return 0;
 }
 
-/* Implement the "relocate_section_addresses" target_so_ops method.  */
+/* Implement the "relocate_section_addresses" solib_ops method.  */
 
 static void
-solib_aix_relocate_section_addresses (shobj &so, target_section *sec)
+solib_aix_relocate_section_addresses (solib &so, target_section *sec)
 {
   struct bfd_section *bfd_sect = sec->the_bfd_section;
   bfd *abfd = bfd_sect->owner;
@@ -412,7 +412,7 @@ solib_aix_get_section_offsets (struct objfile *objfile,
   return offsets;
 }
 
-/* Implement the "solib_create_inferior_hook" target_so_ops method.  */
+/* Implement the "solib_create_inferior_hook" solib_ops method.  */
 
 static void
 solib_aix_solib_create_inferior_hook (int from_tty)
@@ -443,9 +443,9 @@ solib_aix_solib_create_inferior_hook (int from_tty)
     }
 }
 
-/* Implement the "current_sos" target_so_ops method.  */
+/* Implement the "current_sos" solib_ops method.  */
 
-static intrusive_list<shobj>
+static intrusive_list<solib>
 solib_aix_current_sos ()
 {
   std::optional<std::vector<lm_info_aix>> &library_list
@@ -453,14 +453,14 @@ solib_aix_current_sos ()
   if (!library_list.has_value ())
     return {};
 
-  intrusive_list<shobj> sos;
+  intrusive_list<solib> sos;
 
-  /* Build a struct shobj for each entry on the list.
+  /* Build a struct solib for each entry on the list.
      We skip the first entry, since this is the entry corresponding
      to the main executable, not a shared library.  */
   for (int ix = 1; ix < library_list->size (); ix++)
     {
-      shobj *new_solib = new shobj;
+      solib *new_solib = new solib;
       std::string so_name;
 
       lm_info_aix &info = (*library_list)[ix];
@@ -493,7 +493,7 @@ solib_aix_current_sos ()
   return sos;
 }
 
-/* Implement the "open_symbol_file_object" target_so_ops method.  */
+/* Implement the "open_symbol_file_object" solib_ops method.  */
 
 static int
 solib_aix_open_symbol_file_object (int from_tty)
@@ -501,7 +501,7 @@ solib_aix_open_symbol_file_object (int from_tty)
   return 0;
 }
 
-/* Implement the "in_dynsym_resolve_code" target_so_ops method.  */
+/* Implement the "in_dynsym_resolve_code" solib_ops method.  */
 
 static int
 solib_aix_in_dynsym_resolve_code (CORE_ADDR pc)
@@ -509,7 +509,7 @@ solib_aix_in_dynsym_resolve_code (CORE_ADDR pc)
   return 0;
 }
 
-/* Implement the "bfd_open" target_so_ops method.  */
+/* Implement the "bfd_open" solib_ops method.  */
 
 static gdb_bfd_ref_ptr
 solib_aix_bfd_open (const char *pathname)
@@ -679,8 +679,8 @@ solib_aix_normal_stop_observer (struct bpstat *unused_1, int unused_2)
   data->library_list.reset ();
 }
 
-/* The target_so_ops for AIX targets.  */
-const struct target_so_ops solib_aix_so_ops =
+/* The solib_ops for AIX targets.  */
+const solib_ops solib_aix_so_ops =
 {
   solib_aix_relocate_section_addresses,
   nullptr,

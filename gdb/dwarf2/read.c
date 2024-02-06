@@ -26,8 +26,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* FIXME: Various die-reading functions need to be more careful with
-   reading off the end of the section.
-   E.g., load_partial_dies, read_partial_die.  */
+   reading off the end of the section.  */
 
 #include "defs.h"
 #include "gdb-hip-test-mode.h"
@@ -15379,24 +15378,23 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
       baton->locexpr.per_cu = cu->per_cu;
       baton->locexpr.per_objfile = per_objfile;
 
-      struct dwarf_block *block;
+      struct dwarf_block block;
       if (attr->form == DW_FORM_data16)
 	{
 	  size_t data_size = 16;
-	  block = XOBNEW (obstack, struct dwarf_block);
-	  block->size = (data_size
-			 + 2 /* Extra bytes for DW_OP and arg.  */);
-	  gdb_byte *data = XOBNEWVEC (obstack, gdb_byte, block->size);
+	  block.size = (data_size
+			+ 2 /* Extra bytes for DW_OP and arg.  */);
+	  gdb_byte *data = XOBNEWVEC (obstack, gdb_byte, block.size);
 	  data[0] = DW_OP_implicit_value;
 	  data[1] = data_size;
 	  memcpy (&data[2], attr->as_block ()->data, data_size);
-	  block->data = data;
+	  block.data = data;
 	}
       else
-	block = attr->as_block ();
+	block = *attr->as_block ();
 
-      baton->locexpr.size = block->size;
-      baton->locexpr.data = block->data;
+      baton->locexpr.size = block.size;
+      baton->locexpr.data = block.data;
       switch (attr->name)
 	{
 	case DW_AT_string_length:
@@ -21498,7 +21496,7 @@ dwarf2_find_containing_comp_unit (sect_offset sect_off,
   if (this_cu->is_dwz != offset_in_dwz || this_cu->sect_off > sect_off)
     {
       if (low == 0 || this_cu->is_dwz != offset_in_dwz)
-	error (_("Dwarf Error: could not find partial DIE containing "
+	error (_("Dwarf Error: could not find CU containing "
 	       "offset %s [in module %s]"),
 	       sect_offset_str (sect_off),
 	       bfd_get_filename (per_bfd->obfd));
