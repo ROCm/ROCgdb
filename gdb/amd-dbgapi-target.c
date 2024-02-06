@@ -3184,7 +3184,14 @@ amd_dbgapi_target::find_memory_regions (find_memory_region_ftype fun,
      driver, so are ignored by linux_find_memory_regions (eventually called
      by beneath ()->find_memory_regions (fun, arg) above).  In order to
      capture those GPU memory mappings, use the rocm_find_memory_regions
-     gdbarch hook.  */
+     gdbarch hook.
+
+     It could be possible to skip this if the call to
+     amd_dbgapi_process_get_info (AMD_DBGAPI_PROCESS_INFO_CORE_STATE) fails
+     (this call can return AMD_DBGAPI_STATUS_ERROR_RESTRICTION to indicate
+     that a reliable core dump cannot be produced), but there can still be
+     value to capture GPU memory just in case the host keeps some reference to
+     it.  */
   gdbarch *arch = current_inferior ()->arch ();
   if (gdbarch_rocm_find_memory_regions_p (arch))
     return gdbarch_rocm_find_memory_regions (arch, fun, arg);
