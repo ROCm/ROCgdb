@@ -236,6 +236,7 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	i386/32bit-avx512.xml \
 	i386/32bit-segments.xml \
 	i386/32bit-ssp.xml \
+	i386/64bit-apx.xml \
 	i386/64bit-avx512.xml \
 	i386/64bit-core.xml \
 	i386/64bit-segments.xml \

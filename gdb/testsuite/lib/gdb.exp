@@ -4802,6 +4802,64 @@ gdb_caching_proc allow_lam_tests {} {
     return $allow_lam_tests
 }
 
+# Run a test on the target to see if it supports APX.  Return 1 if so,
+# 0 if it does not.
+
+gdb_caching_proc allow_apx_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_apx_tests"
+    if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
+	verbose "$me:  target does not support apx, returning 0" 2
+	return 0
+    }
+
+    # Compile a test program.
+    set src {
+	int data[] = {12345};
+
+	int
+	main (int argc, char **argv)
+	  {
+	    asm ("mov 0(%0), %%r30\n\t"
+		 :  /* no output operands */
+		 : "r" (data));
+	    return 0;
+	  }
+    }
+    set compile_flags "{additional_flags=-mapxf}"
+    if { ![gdb_simple_compile $me $src executable $compile_flags] } {
+	return 0
+    }
+
+    # No error message, compilation succeeded so now run it via gdb.
+
+    gdb_exit
+    gdb_start
+    gdb_reinitialize_dir $srcdir/$subdir
+    gdb_load "$obj"
+    gdb_run_cmd
+    gdb_expect {
+	-re ".*Illegal instruction.*${gdb_prompt} $" {
+	    verbose -log "$me:  apx hardware not detected."
+	    set allow_apx_tests 0
+	}
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "$me:  apx hardware detected."
+	    set allow_apx_tests 1
+	}
+	default {
+	    warning "\n$me:  default case taken."
+	    set allow_apx_tests 0
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_apx_tests" 2
+    return $allow_apx_tests
+}
+
 # Run a test on the target to see if it supports btrace hardware.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 

@@ -108,6 +108,9 @@ struct i386_gdbarch_tdep : gdbarch_tdep_base
      value >= 0.  */
   int al_regnum = -1;
 
+  /* Number of pseudo lower byte registers.  Only used for AMD64.  */
+  int num_lower_byte_regs = 0;
+
   /* Number of pseudo word registers.  */
   int num_word_regs = 0;
 
@@ -121,8 +124,15 @@ struct i386_gdbarch_tdep : gdbarch_tdep_base
      registers are supported.  */
   int eax_regnum = -1;
 
+  /* Register number for %eip.  Set this to a value >= 0 in case of %eip
+     support.  Only used for AMD64.  */
+  int eip_regnum = -1;
+
   /* Number of core registers.  */
   int num_core_regs = 0;
+
+  /* Number of registers added in APX.  Only used for AMD64.  */
+  int num_apx_regs = 0;
 
   /* Number of SSE registers.  */
   int num_xmm_regs = 0;
@@ -159,6 +169,15 @@ struct i386_gdbarch_tdep : gdbarch_tdep_base
      supported.  */
   int ymm0h_regnum = -1;
 
+  /* Byte register names.  */
+  const char * const *byte_names = nullptr;
+
+  /* Word register names.  */
+  const char * const *word_names = nullptr;
+
+  /* Dword register names.  Only used for AMD64.  */
+  const char * const *dword_names = nullptr;
+
   /* Upper YMM register names.  Only used for tdesc_numbered_register.  */
   const char * const *ymmh_register_names = nullptr;
 
@@ -172,6 +191,13 @@ struct i386_gdbarch_tdep : gdbarch_tdep_base
   /* Register number for %zmm0h.  Set this to a value >= 0 if ZMM_HI256
      registers are supported.  */
   int zmm0h_regnum = -1;
+
+  /* Register number for %r16.  Set this to a value >= 0 if r16-r31
+     registers are supported.  Only used for AMD64.  */
+  int r16_regnum = -1;
+
+  /* r16-r31 register names.  Only used for tdesc_numbered_register.  */
+  const char * const *apx_register_names = nullptr;
 
   /* OpMask register names.  */
   const char * const *k_register_names = nullptr;

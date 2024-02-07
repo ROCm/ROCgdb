@@ -56,6 +56,7 @@ x86_fetch_xsave_layout (uint64_t xcr0, int len)
   x86_xsave_layout layout;
   layout.sizeof_xsave = len;
   layout.avx_offset = xsave_feature_offset (xcr0, X86_XSTATE_AVX_ID);
+  layout.apx_offset = xsave_feature_offset (xcr0, X86_XSTATE_APX_F_ID);
   layout.k_offset = xsave_feature_offset (xcr0, X86_XSTATE_K_ID);
   layout.zmm_h_offset = xsave_feature_offset (xcr0, X86_XSTATE_ZMM_H_ID);
   layout.zmm_offset = xsave_feature_offset (xcr0, X86_XSTATE_ZMM_ID);

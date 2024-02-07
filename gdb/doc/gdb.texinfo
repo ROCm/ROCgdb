@@ -50879,6 +50879,11 @@ amd64, 32 bits on amd64 with 32-bit pointer size (X32) and 32 bits on i386.
 Following the restriction of the Linux kernel, only @value{GDBN} for amd64
 targets makes use of this feature for now.
 
+The @samp{org.gnu.gdb.i386.apx} feature is optional.  It should describe
+16 Extended General Purpose registers (@acronym{EGPRs})
+@samp{r16} - @samp{r31} with 64 bits each.  All Intel @acronym{APX}
+registers are valid only on amd64.
+
 @node LoongArch Features
 @subsection LoongArch Features
 @cindex target descriptions, LoongArch Features

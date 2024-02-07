@@ -61,6 +61,36 @@
 
 /* Register information.  */
 
+/* Number of general purpose registers without APX.  */
+#define AMD64_NUM_GPRS 16
+
+/* Number of lower byte registers without APX.  */
+#define AMD64_NUM_LOWER_BYTE_REGS AMD64_NUM_GPRS
+
+/* Number of byte registers without APX.  */
+#define AMD64_NUM_BYTE_REGS (AMD64_NUM_LOWER_BYTE_REGS + 4)
+
+/* Number of word registers without APX.  */
+#define AMD64_NUM_WORD_REGS AMD64_NUM_GPRS
+
+/* Number of dword registers without APX.  */
+#define AMD64_NUM_DWORD_REGS AMD64_NUM_GPRS
+
+/* Number of general purpose registers with APX.  */
+#define AMD64_APX_NUM_GPRS 32
+
+/* Number of APX lower byte registers.  */
+#define AMD64_APX_NUM_LOWER_BYTE_REGS AMD64_APX_NUM_GPRS
+
+/* Number of APX byte registers.  */
+#define AMD64_APX_NUM_BYTE_REGS (AMD64_APX_NUM_LOWER_BYTE_REGS + 4)
+
+/* Number of APX word registers.  */
+#define AMD64_APX_NUM_WORD_REGS AMD64_APX_NUM_GPRS
+
+/* Number of APX dword registers.  */
+#define AMD64_APX_NUM_DWORD_REGS AMD64_APX_NUM_GPRS
+
 static const char * const amd64_register_names[] =
 {
   "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp",
@@ -85,6 +115,12 @@ static const char * const amd64_ymm_names[] =
   "ymm4", "ymm5", "ymm6", "ymm7",
   "ymm8", "ymm9", "ymm10", "ymm11",
   "ymm12", "ymm13", "ymm14", "ymm15"
+};
+
+static const char * const amd64_apx_names[] =
+{
+  "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
+  "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31"
 };
 
 static const char * const amd64_ymm_avx512_names[] =
@@ -252,7 +288,20 @@ static int amd64_dwarf_regmap[] =
   AMD64_K0_REGNUM + 0, AMD64_K0_REGNUM + 1,
   AMD64_K0_REGNUM + 2, AMD64_K0_REGNUM + 3,
   AMD64_K0_REGNUM + 4, AMD64_K0_REGNUM + 5,
-  AMD64_K0_REGNUM + 6, AMD64_K0_REGNUM + 7
+  AMD64_K0_REGNUM + 6, AMD64_K0_REGNUM + 7,
+
+  /* Reserved.  */
+  -1, -1, -1, -1,
+
+  /* r16-r31.  */
+  AMD64_R16_REGNUM + 0, AMD64_R16_REGNUM + 1,
+  AMD64_R16_REGNUM + 2, AMD64_R16_REGNUM + 3,
+  AMD64_R16_REGNUM + 4, AMD64_R16_REGNUM + 5,
+  AMD64_R16_REGNUM + 6, AMD64_R16_REGNUM + 7,
+  AMD64_R16_REGNUM + 8, AMD64_R16_REGNUM + 9,
+  AMD64_R16_REGNUM + 10, AMD64_R16_REGNUM + 11,
+  AMD64_R16_REGNUM + 12, AMD64_R16_REGNUM + 13,
+  AMD64_R16_REGNUM + 14, AMD64_R16_REGNUM + 15
 };
 
 static const int amd64_dwarf_regmap_len =
@@ -322,8 +371,19 @@ static const char * const amd64_byte_names[] =
   "ah", "bh", "ch", "dh"
 };
 
-/* Number of lower byte registers.  */
-#define AMD64_NUM_LOWER_BYTE_REGS 16
+static_assert (ARRAY_SIZE (amd64_byte_names) == AMD64_NUM_BYTE_REGS);
+
+static const char * const amd64_apx_byte_names[] =
+{
+  "al", "bl", "cl", "dl", "sil", "dil", "bpl", "spl",
+  "r8l", "r9l", "r10l", "r11l", "r12l", "r13l", "r14l", "r15l",
+  "r16l", "r17l", "r18l", "r19l", "r20l", "r21l", "r22l", "r23l",
+  "r24l", "r25l", "r26l", "r27l", "r28l", "r29l", "r30l", "r31l",
+  "ah", "bh", "ch", "dh"
+};
+
+static_assert (ARRAY_SIZE (amd64_apx_byte_names)
+	       == AMD64_APX_NUM_BYTE_REGS);
 
 /* Register names for word pseudo-registers.  */
 
@@ -332,6 +392,19 @@ static const char * const amd64_word_names[] =
   "ax", "bx", "cx", "dx", "si", "di", "bp", "",
   "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w"
 };
+
+static_assert (ARRAY_SIZE (amd64_word_names) == AMD64_NUM_WORD_REGS);
+
+static const char * const amd64_apx_word_names[] =
+{
+  "ax", "bx", "cx", "dx", "si", "di", "bp", "",
+  "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w",
+  "r16w", "r17w", "r18w", "r19w", "r20w", "r21w", "r22w", "r23w",
+  "r24w", "r25w", "r26w", "r27w", "r28w", "r29w", "r30w", "r31w"
+};
+
+static_assert (ARRAY_SIZE (amd64_apx_word_names)
+	       == AMD64_APX_NUM_WORD_REGS);
 
 /* Register names for dword pseudo-registers.  */
 
@@ -342,26 +415,88 @@ static const char * const amd64_dword_names[] =
   "eip"
 };
 
+static_assert (ARRAY_SIZE (amd64_dword_names) == AMD64_NUM_DWORD_REGS + 1);
+
+static const char * const amd64_apx_dword_names[] =
+{
+  "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp",
+  "r8d", "r9d", "r10d", "r11d", "r12d", "r13d", "r14d", "r15d",
+  "r16d", "r17d", "r18d", "r19d", "r20d", "r21d", "r22d", "r23d",
+  "r24d", "r25d", "r26d", "r27d", "r28d", "r29d", "r30d", "r31d",
+  "eip"
+};
+
+static_assert (ARRAY_SIZE (amd64_apx_dword_names)
+	       == AMD64_APX_NUM_DWORD_REGS + 1);
+
 /* Return the name of register REGNUM.  */
 
 static const char *
 amd64_pseudo_register_name (struct gdbarch *gdbarch, int regnum)
 {
   i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
-  if (i386_byte_regnum_p (gdbarch, regnum))
-    return amd64_byte_names[regnum - tdep->al_regnum];
-  else if (i386_zmm_regnum_p (gdbarch, regnum))
+  if (i386_zmm_regnum_p (gdbarch, regnum))
     return amd64_zmm_names[regnum - tdep->zmm0_regnum];
   else if (i386_ymm_regnum_p (gdbarch, regnum))
     return amd64_ymm_names[regnum - tdep->ymm0_regnum];
   else if (i386_ymm_avx512_regnum_p (gdbarch, regnum))
     return amd64_ymm_avx512_names[regnum - tdep->ymm16_regnum];
-  else if (i386_word_regnum_p (gdbarch, regnum))
-    return amd64_word_names[regnum - tdep->ax_regnum];
   else if (i386_dword_regnum_p (gdbarch, regnum))
-    return amd64_dword_names[regnum - tdep->eax_regnum];
+    return tdep->dword_names[regnum - tdep->eax_regnum];
   else
     return i386_pseudo_register_name (gdbarch, regnum);
+}
+
+/* Return the raw byte register number.  *PART is set to 1 for high
+   byte register and 0 otherwise.  */
+
+static int
+amd64_raw_byte_register (i386_gdbarch_tdep *tdep, int regnum, int *part)
+{
+  int gpnum = regnum - tdep->al_regnum;
+
+  /* Extract (always little endian).  */
+  if (gpnum >= tdep->num_lower_byte_regs)
+    {
+      /* Special handling for AH, BH, CH, DH.  */
+      *part = 1;
+      gpnum -= tdep->num_lower_byte_regs;
+    }
+  else
+    {
+      *part = 0;
+      if (gpnum >= AMD64_NUM_GPRS)
+	{
+	  gdb_assert (tdep->r16_regnum != -1);
+	  gpnum += tdep->r16_regnum - AMD64_NUM_GPRS;
+	}
+    }
+  return gpnum;
+}
+
+/* Return the raw word register number.  */
+
+static int
+amd64_raw_word_register (i386_gdbarch_tdep *tdep, int regnum)
+{
+  int gpnum = regnum - tdep->ax_regnum;
+  if (gpnum >= AMD64_NUM_GPRS)
+    gpnum += tdep->r16_regnum - AMD64_NUM_GPRS;
+  return gpnum;
+}
+
+/* Return the raw dword register number.  For x32, the last dword
+   register is EIP.  */
+
+static int
+amd64_raw_dword_register (i386_gdbarch_tdep *tdep, int regnum)
+{
+  int gpnum = regnum - tdep->eax_regnum;
+  if (tdep->eip_regnum == gpnum)
+    return AMD64_RIP_REGNUM;
+  if (gpnum >= AMD64_NUM_GPRS)
+    gpnum += tdep->r16_regnum - AMD64_NUM_GPRS;
+  return gpnum;
 }
 
 static value *
@@ -372,23 +507,18 @@ amd64_pseudo_register_read_value (gdbarch *gdbarch, const frame_info_ptr &next_f
 
   if (i386_byte_regnum_p (gdbarch, regnum))
     {
-      int gpnum = regnum - tdep->al_regnum;
-
-      /* Extract (always little endian).  */
-      if (gpnum >= AMD64_NUM_LOWER_BYTE_REGS)
-	{
-	  gpnum -= AMD64_NUM_LOWER_BYTE_REGS;
-
-	  /* Special handling for AH, BH, CH, DH.  */
-	  return pseudo_from_raw_part (next_frame, regnum, gpnum, 1);
-	}
-      else
-	return pseudo_from_raw_part (next_frame, regnum, gpnum, 0);
+      int part;
+      const int gpnum = amd64_raw_byte_register (tdep, regnum, &part);
+      return pseudo_from_raw_part (next_frame, regnum, gpnum, part);
+    }
+  else if (i386_word_regnum_p (gdbarch, regnum))
+    {
+      const int gpnum = amd64_raw_word_register (tdep, regnum);
+      return pseudo_from_raw_part (next_frame, regnum, gpnum, 0);
     }
   else if (i386_dword_regnum_p (gdbarch, regnum))
     {
-      int gpnum = regnum - tdep->eax_regnum;
-
+      const int gpnum = amd64_raw_dword_register (tdep, regnum);
       return pseudo_from_raw_part (next_frame, regnum, gpnum, 0);
     }
   else
@@ -403,19 +533,18 @@ amd64_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 
   if (i386_byte_regnum_p (gdbarch, regnum))
     {
-      int gpnum = regnum - tdep->al_regnum;
-
-      if (gpnum >= AMD64_NUM_LOWER_BYTE_REGS)
-	{
-	  gpnum -= AMD64_NUM_LOWER_BYTE_REGS;
-	  pseudo_to_raw_part (next_frame, buf, gpnum, 1);
-	}
-      else
-	pseudo_to_raw_part (next_frame, buf, gpnum, 0);
+      int part;
+      const int gpnum = amd64_raw_byte_register (tdep, regnum, &part);
+      pseudo_to_raw_part (next_frame, buf, gpnum, part);
+    }
+  else if (i386_word_regnum_p (gdbarch, regnum))
+    {
+      const int gpnum = amd64_raw_word_register (tdep, regnum);
+      pseudo_to_raw_part (next_frame, buf, gpnum, 0);
     }
   else if (i386_dword_regnum_p (gdbarch, regnum))
     {
-      int gpnum = regnum - tdep->eax_regnum;
+      const int gpnum = amd64_raw_dword_register (tdep, regnum);
       pseudo_to_raw_part (next_frame, buf, gpnum, 0);
     }
   else
@@ -432,17 +561,18 @@ amd64_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 
   if (i386_byte_regnum_p (gdbarch, regnum))
     {
-      int gpnum = regnum - tdep->al_regnum;
-
-      if (gpnum >= AMD64_NUM_LOWER_BYTE_REGS)
-	ax_reg_mask (ax, gpnum - AMD64_NUM_LOWER_BYTE_REGS);
-      else
-	ax_reg_mask (ax, gpnum);
+      int part;
+      const int gpnum = amd64_raw_byte_register (tdep, regnum, &part);
+      ax_reg_mask (ax, gpnum);
+    }
+  else if (i386_word_regnum_p (gdbarch, regnum))
+    {
+      const int gpnum = amd64_raw_word_register (tdep, regnum);
+      ax_reg_mask (ax, gpnum);
     }
   else if (i386_dword_regnum_p (gdbarch, regnum))
     {
-      int gpnum = regnum - tdep->eax_regnum;
-
+      const int gpnum = amd64_raw_dword_register (tdep, regnum);
       ax_reg_mask (ax, gpnum);
     }
   else
@@ -3552,9 +3682,30 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
   if (tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pl3_ssp") != nullptr)
     tdep->ssp_regnum = AMD64_PL3_SSP_REGNUM;
 
-  tdep->num_byte_regs = 20;
-  tdep->num_word_regs = 16;
-  tdep->num_dword_regs = 16;
+  if (tdesc_find_feature (tdesc, "org.gnu.gdb.i386.apx") != nullptr)
+    {
+      tdep->apx_register_names = amd64_apx_names;
+      tdep->num_apx_regs = 16;
+      tdep->r16_regnum = AMD64_R16_REGNUM;
+      tdep->byte_names = amd64_apx_byte_names;
+      tdep->word_names = amd64_apx_word_names;
+      tdep->dword_names = amd64_apx_dword_names;
+      tdep->num_lower_byte_regs = AMD64_APX_NUM_LOWER_BYTE_REGS;
+      tdep->num_byte_regs = AMD64_APX_NUM_BYTE_REGS;
+      tdep->num_word_regs = AMD64_APX_NUM_WORD_REGS;
+      tdep->num_dword_regs = AMD64_APX_NUM_DWORD_REGS;
+    }
+  else
+    {
+      tdep->byte_names = amd64_byte_names;
+      tdep->word_names = amd64_word_names;
+      tdep->dword_names = amd64_dword_names;
+      tdep->num_lower_byte_regs = AMD64_NUM_LOWER_BYTE_REGS;
+      tdep->num_byte_regs = AMD64_NUM_BYTE_REGS;
+      tdep->num_word_regs = AMD64_NUM_WORD_REGS;
+      tdep->num_dword_regs = AMD64_NUM_DWORD_REGS;
+    }
+
   /* Avoid wiring in the MMX registers for now.  */
   tdep->num_mmx_regs = 0;
 
@@ -3663,15 +3814,13 @@ static struct type *
 amd64_x32_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
 {
   i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
+  const int gpnum = regnum - tdep->eax_regnum;
 
-  switch (regnum - tdep->eax_regnum)
-    {
-    case AMD64_RBP_REGNUM:	/* %ebp */
-    case AMD64_RSP_REGNUM:	/* %esp */
-      return builtin_type (gdbarch)->builtin_data_ptr;
-    case AMD64_RIP_REGNUM:	/* %eip */
-      return builtin_type (gdbarch)->builtin_func_ptr;
-    }
+  if (gpnum == tdep->eip_regnum)		/* %eip.  */
+    return builtin_type (gdbarch)->builtin_func_ptr;
+  else if (gpnum == AMD64_RBP_REGNUM		/* %ebp.  */
+	   || gpnum == AMD64_RSP_REGNUM)	/* %esp.  */
+    return builtin_type (gdbarch)->builtin_data_ptr;
 
   return i386_pseudo_register_type (gdbarch, regnum);
 }
@@ -3684,7 +3833,10 @@ amd64_x32_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
 
   amd64_init_abi (info, gdbarch, default_tdesc);
 
-  tdep->num_dword_regs = 17;
+  /* Set %eip to the last dword register.  */
+  tdep->eip_regnum = tdep->num_dword_regs;
+  /* Increment 1 for %eip.  */
+  tdep->num_dword_regs += 1;
   set_tdesc_pseudo_register_type (gdbarch, amd64_x32_pseudo_register_type);
 
   set_gdbarch_long_bit (gdbarch, 32);
@@ -3706,12 +3858,14 @@ const struct target_desc *
 amd64_target_description (uint64_t xstate_bv, bool segments)
 {
   static const_target_desc_up amd64_tdescs \
-    [2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*CET_U*/][2/*segments*/] = {};
+    [2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*CET_U*/][2/*APX*/] \
+    [2/*segments*/] = {};
   const_target_desc_up &tdesc
     = amd64_tdescs[(xstate_bv & X86_XSTATE_AVX) ? 1 : 0]
 		  [(xstate_bv & X86_XSTATE_AVX512) ? 1 : 0]
 		  [(xstate_bv & X86_XSTATE_PKRU) ? 1 : 0]
 		  [(xstate_bv & X86_XSTATE_CET_U) ? 1 : 0]
+		  [(xstate_bv & X86_XSTATE_APX_F) ? 1 : 0]
 		  [segments ? 1 : 0];
 
   if (tdesc == nullptr)
