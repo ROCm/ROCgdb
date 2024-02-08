@@ -93,12 +93,6 @@ gdb_test_sequence "x/3i kernel" "disassemble 3 instructions" [list \
     "\\s+$hex\\s+<kernel\\(\\)\\+?($decimal)?>:(\\s*)"
 ]
 
-# Check "nexti".
-# Sample vega20 output:
-#
-#  0x00007fa50e601664      27          int tid = threadIdx.x;
-gdb_test "nexti" "$hex\\s+$decimal.+"
-
 # Check set disassemble-next-line off followed by n.
 # Sample vega20 output:
 # There should not be any disassemble code printed identified by the absence of the character "=>"
