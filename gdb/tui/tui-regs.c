@@ -96,30 +96,20 @@ tui_register_format (frame_info_ptr frame, int regnum)
   /* Remove the possible \n.  */
   std::string str = stream.release ();
   if (!str.empty () && str.back () == '\n')
-    str.resize (str.size () - 1);
+    str.pop_back ();
 
   return str;
 }
 
-/* Get the register value from the given frame and format it for the
-   display.  When changedp is set, check if the new register value has
-   changed with respect to the previous call.  */
-static void
-tui_get_register (frame_info_ptr frame,
-		  struct tui_data_item_window *data, 
-		  int regnum, bool *changedp)
+/* Compute the register value from the given frame and format it for
+   the display.  update 'content' and set 'highlight' if the contents
+   changed.  */
+void
+tui_register_info::update (const frame_info_ptr &frame)
 {
-  if (changedp)
-    *changedp = false;
-  if (target_has_registers ())
-    {
-      std::string new_content = tui_register_format (frame, regnum);
-
-      if (changedp != NULL && data->content != new_content)
-	*changedp = true;
-
-      data->content = std::move (new_content);
-    }
+  std::string new_content = tui_register_format (frame, m_regno);
+  highlight = content != new_content;
+  content = std::move (new_content);
 }
 
 /* See tui-regs.h.  */
@@ -171,93 +161,65 @@ tui_data_window::first_reg_element_no_inline (int line_no) const
 /* Show the registers of the given group in the data window
    and refresh the window.  */
 void
-tui_data_window::show_registers (const reggroup *group)
+tui_data_window::set_register_group (const reggroup *group)
 {
-  if (group == 0)
-    group = general_reggroup;
-
-  if (target_has_registers () && target_has_stack () && target_has_memory ())
-    {
-      show_register_group (group, get_selected_frame (NULL),
-			   group == m_current_group);
-
-      /* Clear all notation of changed values.  */
-      for (auto &&data_item_win : m_regs_content)
-	data_item_win.highlight = false;
-      m_current_group = group;
-    }
-  else
-    {
-      m_current_group = 0;
-      m_regs_content.clear ();
-    }
-
-  rerender (false);
+  update_register_data (group);
+  rerender ();
 }
 
-
 /* Set the data window to display the registers of the register group
-   using the given frame.  Values are refreshed only when
-   refresh_values_only is true.  */
+   using the given frame.  */
 
 void
-tui_data_window::show_register_group (const reggroup *group,
-				      frame_info_ptr frame, 
-				      bool refresh_values_only)
+tui_data_window::update_register_data (const reggroup *group)
 {
+  if (group == nullptr)
+    group = general_reggroup;
+
+  if (!target_has_registers ()
+      || !target_has_stack ()
+      || !target_has_memory ())
+    {
+      set_title (_("Registers"));
+      m_current_group = nullptr;
+      m_gdbarch = nullptr;
+      m_regs_content.clear ();
+      return;
+    }
+
+  frame_info_ptr frame = get_selected_frame (nullptr);
   struct gdbarch *gdbarch = get_frame_arch (frame);
-  int nr_regs;
-  int regnum, pos;
+
+  if (m_current_group == group && m_gdbarch == gdbarch)
+    {
+      /* Nothing to do here.  */
+      return;
+    }
+
+  m_current_group = group;
+  m_gdbarch = gdbarch;
 
   /* Make a new title showing which group we display.  */
   this->set_title (string_printf ("Register group: %s", group->name ()));
 
-  /* See how many registers must be displayed.  */
-  nr_regs = 0;
-  for (regnum = 0; regnum < gdbarch_num_cooked_regs (gdbarch); regnum++)
-    {
-      const char *name;
+  /* Create the registers.  */
+  m_regs_content.clear ();
 
+  for (int regnum = 0;
+       regnum < gdbarch_num_cooked_regs (gdbarch);
+       regnum++)
+    {
       /* Must be in the group.  */
       if (!gdbarch_register_reggroup_p (gdbarch, regnum, group))
 	continue;
 
       /* If the register name is empty, it is undefined for this
 	 processor, so don't display anything.  */
-      name = gdbarch_register_name (gdbarch, regnum);
+      const char *name = gdbarch_register_name (gdbarch, regnum);
       if (*name == '\0')
 	continue;
 
-      nr_regs++;
-    }
-
-  m_regs_content.resize (nr_regs);
-
-  /* Now set the register names and values.  */
-  pos = 0;
-  for (regnum = 0; regnum < gdbarch_num_cooked_regs (gdbarch); regnum++)
-    {
-      struct tui_data_item_window *data_item_win;
-      const char *name;
-
-      /* Must be in the group.  */
-      if (!gdbarch_register_reggroup_p (gdbarch, regnum, group))
-	continue;
-
-      /* If the register name is empty, it is undefined for this
-	 processor, so don't display anything.  */
-      name = gdbarch_register_name (gdbarch, regnum);
-      if (*name == '\0')
-	continue;
-
-      data_item_win = &m_regs_content[pos];
-      if (!refresh_values_only)
-	{
-	  data_item_win->regno = regnum;
-	  data_item_win->highlight = false;
-	}
-      tui_get_register (frame, data_item_win, regnum, 0);
-      pos++;
+      m_regs_content.emplace_back (regnum, frame);
     }
 }
 
@@ -266,6 +228,13 @@ tui_data_window::show_register_group (const reggroup *group,
 void
 tui_data_window::display_registers_from (int start_element_no)
 {
+  werase (handle.get ());
+  check_and_display_highlight_if_needed ();
+
+  /* In case the regs window is not boxed, we'll write the last char in the
+     last line here, causing a scroll, so prevent that.  */
+  scrollok (handle.get (), FALSE);
+
   int max_len = 0;
   for (auto &&data_item_win : m_regs_content)
     {
@@ -298,7 +267,6 @@ tui_data_window::display_registers_from (int start_element_no)
 	  /* Create the window if necessary.  */
 	  m_regs_content[i].x = box_width () + (m_item_width * j);
 	  m_regs_content[i].y = cur_y;
-	  m_regs_content[i].visible = true;
 	  m_regs_content[i].rerender (handle.get (), m_item_width);
 	  i++;		/* Next register.  */
 	}
@@ -376,63 +344,39 @@ tui_data_window::first_data_item_displayed ()
 {
   for (int i = 0; i < m_regs_content.size (); i++)
     {
-      if (m_regs_content[i].visible)
+      if (m_regs_content[i].visible ())
 	return i;
     }
 
   return -1;
 }
 
-/* See tui-regs.h.  */
-
 void
-tui_data_window::delete_data_content_windows ()
-{
-  for (auto &win : m_regs_content)
-    win.visible = false;
-}
-
-
-void
-tui_data_window::erase_data_content (const char *prompt)
+tui_data_window::erase_data_content ()
 {
   werase (handle.get ());
   check_and_display_highlight_if_needed ();
-  if (prompt != NULL)
-    {
-      int half_width = (width - box_size ()) / 2;
-      int x_pos;
 
-      if (strlen (prompt) >= half_width)
-	x_pos = 1;
-      else
-	x_pos = half_width - strlen (prompt);
-      display_string (height / 2, x_pos, prompt);
-    }
-  tui_wrefresh (handle.get ());
+  const char *prompt = _("[ Register Values Unavailable ]");
+  int half_width = (width - box_size ()) / 2;
+  int x_pos;
+  if (strlen (prompt) >= half_width)
+    x_pos = 1;
+  else
+    x_pos = half_width - strlen (prompt);
+  display_string (height / 2, x_pos, prompt);
 }
 
 /* See tui-regs.h.  */
 
 void
-tui_data_window::rerender (bool toplevel)
+tui_data_window::rerender ()
 {
   if (m_regs_content.empty ())
-    {
-      if (toplevel && has_stack_frames ())
-	{
-	  frame_info_ptr fi = get_selected_frame (NULL);
-	  check_register_values (fi);
-	}
-      else
-	erase_data_content (_("[ Register Values Unavailable ]"));
-    }
+    erase_data_content ();
   else
-    {
-      erase_data_content (NULL);
-      delete_data_content_windows ();
-      display_registers_from (0);
-    }
+    display_registers_from (0);
+  tui_wrefresh (handle.get ());
 }
 
 
@@ -454,8 +398,6 @@ tui_data_window::do_scroll_vertical (int num_to_scroll)
   if (first_line >= 0)
     {
       first_line += num_to_scroll;
-      erase_data_content (NULL);
-      delete_data_content_windows ();
       display_registers_from_line (first_line);
     }
 }
@@ -466,39 +408,38 @@ tui_data_window::do_scroll_vertical (int num_to_scroll)
 void
 tui_data_window::check_register_values (frame_info_ptr frame)
 {
-  if (m_regs_content.empty ())
-    show_registers (m_current_group);
+  if (frame == nullptr)
+    set_register_group (nullptr);
   else
     {
-      for (auto &&data_item_win : m_regs_content)
+      /* If the frame architecture changed, we need to reset the
+	 register group.  */
+      struct gdbarch *gdbarch = get_frame_arch (frame);
+      if (gdbarch != m_gdbarch)
+	set_register_group (nullptr);
+      else
 	{
-	  int was_hilighted;
+	  for (tui_register_info &data_item_win : m_regs_content)
+	    {
+	      bool was_hilighted = data_item_win.highlight;
 
-	  was_hilighted = data_item_win.highlight;
+	      data_item_win.update (frame);
 
-	  tui_get_register (frame, &data_item_win,
-			    data_item_win.regno,
-			    &data_item_win.highlight);
-
-	  /* Register windows whose y == 0 are outside the visible area.  */
-	  if ((data_item_win.highlight || was_hilighted)
-	      && data_item_win.y > 0)
-	    data_item_win.rerender (handle.get (), m_item_width);
+	      /* Register windows whose y == 0 are outside the visible area.  */
+	      if ((data_item_win.highlight || was_hilighted)
+		  && data_item_win.visible ())
+		data_item_win.rerender (handle.get (), m_item_width);
+	    }
 	}
+      tui_wrefresh (handle.get ());
     }
-
-  tui_wrefresh (handle.get ());
 }
 
 /* Display a register in a window.  If hilite is TRUE, then the value
    will be displayed in reverse video.  */
 void
-tui_data_item_window::rerender (WINDOW *handle, int field_width)
+tui_register_info::rerender (WINDOW *handle, int field_width)
 {
-  /* In case the regs window is not boxed, we'll write the last char in the
-     last line here, causing a scroll, so prevent that.  */
-  scrollok (handle, FALSE);
-
   if (highlight)
     /* We ignore the return value, casting it to void in order to avoid
        a compiler warning.  The warning itself was introduced by a patch
@@ -613,7 +554,7 @@ tui_reg_command (const char *args, int from_tty)
       if (match == NULL)
 	error (_("unknown register group '%s'"), args);
 
-      TUI_DATA_WIN->show_registers (match);
+      TUI_DATA_WIN->set_register_group (match);
     }
   else
     {
