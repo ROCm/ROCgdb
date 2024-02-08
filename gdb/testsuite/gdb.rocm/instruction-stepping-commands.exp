@@ -1,0 +1,80 @@
+# Copyright (C) 2024 Free Software Foundation, Inc.
+# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Basic test for the instruction stepping commands: stepi/nexti.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Issue CMD repeatedly until UNTIL_REGEXP matches the GDB output.  CMD
+# can be either "stepi" or "nexti".
+proc test_step_until {cmd until_regexp} {
+
+    if ![runto kernel allow-pending qualified message] {
+	return
+    }
+
+    # Number of instructions we've single-stepped.
+    set insn_count 0
+
+    # A reasonable limit, so that we don't loop forever if something
+    # goes wrong.
+    set insn_count_max 100
+
+    gdb_test_multiple $cmd "" {
+	-re -wrap "$::hex\\s+$::decimal.+" {
+	    send_gdb "$cmd\n"
+	    incr insn_count
+	    verbose -log "insn_count = $insn_count"
+
+	    if {$insn_count >= $insn_count_max} {
+		fail "$gdb_test_name (too many steps)"
+	    } else {
+		exp_continue
+	    }
+	}
+	-re -wrap "$until_regexp" {
+	    # We should have seen at least one instruction being
+	    # single-stepped.
+	    gdb_assert {$insn_count > 0} $gdb_test_name
+	}
+    }
+}
+
+with_rocm_gpu_lock {
+
+# With stepi, stepping eventually stops at the start of the function
+# called by the kernel entry point.
+with_test_prefix "stepi" {
+    test_step_until "stepi" "^return_zero.*"
+}
+
+# With nexti, stepping steps over function calls, and eventually stops
+# at the next line.
+with_test_prefix "nexti" {
+    test_step_until "nexti" "^$::decimal\\s+.*next line.*"
+}
+
+}
