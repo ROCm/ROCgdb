@@ -45,13 +45,13 @@ proc test_step_until {cmd until_regexp} {
 
     gdb_test_multiple $cmd "" {
 	-re -wrap "$::hex\\s+$::decimal.+" {
-	    send_gdb "$cmd\n"
 	    incr insn_count
 	    verbose -log "insn_count = $insn_count"
 
 	    if {$insn_count >= $insn_count_max} {
 		fail "$gdb_test_name (too many steps)"
 	    } else {
+		send_gdb "$cmd\n"
 		exp_continue
 	    }
 	}
