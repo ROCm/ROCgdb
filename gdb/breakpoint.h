@@ -1528,7 +1528,17 @@ extern struct breakpoint *clone_momentary_breakpoint (struct breakpoint *bpkt);
 
 extern void set_ignore_count (int, int, int);
 
-extern void breakpoint_init_inferior (enum inf_context);
+/* Clear the "inserted" flag in all breakpoint locations of INF's program space
+   and delete any breakpoints which should go away between runs of the program.
+
+   Plus other such housekeeping that has to be done for breakpoints
+   between runs.
+
+   Note: this function gets called at the end of a run (by
+   generic_mourn_inferior) and when a run begins (by
+   init_wait_for_inferior).  */
+
+extern void breakpoint_init_inferior (inferior *inf, inf_context context);
 
 extern void breakpoint_auto_delete (bpstat *);
 
@@ -1779,8 +1789,9 @@ extern void breakpoint_set_inferior (struct breakpoint *b, int inferior);
 
 extern void breakpoint_set_task (struct breakpoint *b, int task);
 
-/* Clear the "inserted" flag in all breakpoints.  */
-extern void mark_breakpoints_out (void);
+/* Clear the "inserted" flag in all breakpoints locations in PSPACE.  */
+
+extern void mark_breakpoints_out (program_space *pspace);
 
 extern struct breakpoint *create_jit_event_breakpoint (struct gdbarch *,
 						       CORE_ADDR);
@@ -1806,7 +1817,10 @@ extern void remove_solib_event_breakpoints (void);
    delete at next stop disposition.  */
 extern void remove_solib_event_breakpoints_at_next_stop (void);
 
-extern void disable_breakpoints_in_shlibs (void);
+/* Disable any breakpoints that are on code in shared libraries in PSPACE.
+   Only apply to enabled breakpoints, disabled ones can just stay disabled.  */
+
+extern void disable_breakpoints_in_shlibs (program_space *pspace);
 
 /* This function returns true if B is a catchpoint.  */
 

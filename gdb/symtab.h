@@ -2417,10 +2417,6 @@ extern bool find_line_pc_range (struct symtab_and_line, CORE_ADDR *,
 
 extern void resolve_sal_pc (struct symtab_and_line *);
 
-/* solib.c */
-
-extern void clear_solib (void);
-
 /* The reason we're calling into a completion match list collector
    function.  */
 enum class complete_symbol_mode
