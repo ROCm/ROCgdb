@@ -7884,6 +7884,10 @@ remote_target::remote_stop_ns (ptid_t ptid)
 	  }
       }
 
+  /* Skip 'vCont' packet if there are no threads to be stopped.  */
+  if (all_non_exited_threads (this, ptid).empty ())
+    return;
+
   if (!rs->supports_vCont.t)
     error (_("Remote server does not support stopping threads"));
 
