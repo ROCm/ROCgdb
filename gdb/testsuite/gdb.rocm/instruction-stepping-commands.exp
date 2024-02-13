@@ -44,7 +44,11 @@ proc test_step_until {cmd until_regexp} {
     set insn_count_max 100
 
     gdb_test_multiple $cmd "" {
-	-re -wrap "$::hex\\s+$::decimal.+" {
+	-re -wrap "$::hex\\s+$::decimal\\s+int var = return_zero \\(\\);" {
+	    # Note: we expect to see a leading PC address as we're
+	    # stopping at instructions that map to the middle of a
+	    # source line.
+
 	    incr insn_count
 	    verbose -log "insn_count = $insn_count"
 
