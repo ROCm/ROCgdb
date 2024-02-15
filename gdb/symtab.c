@@ -2024,13 +2024,14 @@ lookup_language_this (const struct language_defn *lang,
 				lang->name (), host_address_to_string (block),
 				objfile_debug_name (block->objfile ()));
 
+  lookup_name_info this_name (lang->name_of_this (),
+			      symbol_name_match_type::SEARCH_NAME);
+
   while (block)
     {
       struct symbol *sym;
 
-      sym = block_lookup_symbol (block, lang->name_of_this (),
-				 symbol_name_match_type::SEARCH_NAME,
-				 SEARCH_VFT);
+      sym = block_lookup_symbol (block, this_name, SEARCH_VFT);
       if (sym != NULL)
 	{
 	  symbol_lookup_debug_printf_v
@@ -2265,7 +2266,8 @@ lookup_symbol_in_block (const char *name, symbol_name_match_type match_type,
 	 domain_name (domain).c_str ());
     }
 
-  sym = block_lookup_symbol (block, name, match_type, domain);
+  lookup_name_info lookup_name (name, match_type);
+  sym = block_lookup_symbol (block, lookup_name, domain);
   if (sym)
     {
       symbol_lookup_debug_printf_v ("lookup_symbol_in_block (...) = %s",
@@ -2439,7 +2441,8 @@ lookup_symbol_via_quick_fns (struct objfile *objfile,
      block_index == GLOBAL_BLOCK ? "GLOBAL_BLOCK" : "STATIC_BLOCK",
      name, domain_name (domain).c_str ());
 
-  cust = objfile->lookup_symbol (block_index, name, domain);
+  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
+  cust = objfile->lookup_symbol (block_index, lookup_name, domain);
   if (cust == NULL)
     {
       symbol_lookup_debug_printf_v
@@ -2449,8 +2452,7 @@ lookup_symbol_via_quick_fns (struct objfile *objfile,
 
   bv = cust->blockvector ();
   block = bv->block (block_index);
-  result.symbol = block_lookup_symbol (block, name,
-				       symbol_name_match_type::FULL, domain);
+  result.symbol = block_lookup_symbol (block, lookup_name, domain);
   if (result.symbol == NULL)
     error_in_psymtab_expansion (block_index, name, cust);
 
@@ -2704,7 +2706,7 @@ lookup_transparent_type (const char *name)
 static struct type *
 basic_lookup_transparent_type_quick (struct objfile *objfile,
 				     enum block_enum block_index,
-				     const char *name)
+				     const lookup_name_info &name)
 {
   struct compunit_symtab *cust;
   const struct blockvector *bv;
@@ -2718,10 +2720,9 @@ basic_lookup_transparent_type_quick (struct objfile *objfile,
   bv = cust->blockvector ();
   block = bv->block (block_index);
 
-  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
-  sym = block_find_symbol (block, lookup_name, SEARCH_STRUCT_DOMAIN, nullptr);
+  sym = block_find_symbol (block, name, SEARCH_STRUCT_DOMAIN, nullptr);
   if (sym == nullptr)
-    error_in_psymtab_expansion (block_index, name, cust);
+    error_in_psymtab_expansion (block_index, name.c_str (), cust);
   gdb_assert (!TYPE_IS_OPAQUE (sym->type ()));
   return sym->type ();
 }
@@ -2733,19 +2734,17 @@ basic_lookup_transparent_type_quick (struct objfile *objfile,
 static struct type *
 basic_lookup_transparent_type_1 (struct objfile *objfile,
 				 enum block_enum block_index,
-				 const char *name)
+				 const lookup_name_info &name)
 {
   const struct blockvector *bv;
   const struct block *block;
   const struct symbol *sym;
 
-  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
   for (compunit_symtab *cust : objfile->compunits ())
     {
       bv = cust->blockvector ();
       block = bv->block (block_index);
-      sym = block_find_symbol (block, lookup_name, SEARCH_STRUCT_DOMAIN,
-			       nullptr);
+      sym = block_find_symbol (block, name, SEARCH_STRUCT_DOMAIN, nullptr);
       if (sym != nullptr)
 	{
 	  gdb_assert (!TYPE_IS_OPAQUE (sym->type ()));
@@ -2767,6 +2766,8 @@ basic_lookup_transparent_type (const char *name)
 {
   struct type *t;
 
+  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
+
   /* Now search all the global symbols.  Do the symtab's first, then
      check the psymtab's.  If a psymtab indicates the existence
      of the desired name as a global, then do psymtab-to-symtab
@@ -2774,14 +2775,16 @@ basic_lookup_transparent_type (const char *name)
 
   for (objfile *objfile : current_program_space->objfiles ())
     {
-      t = basic_lookup_transparent_type_1 (objfile, GLOBAL_BLOCK, name);
+      t = basic_lookup_transparent_type_1 (objfile, GLOBAL_BLOCK,
+					   lookup_name);
       if (t)
 	return t;
     }
 
   for (objfile *objfile : current_program_space->objfiles ())
     {
-      t = basic_lookup_transparent_type_quick (objfile, GLOBAL_BLOCK, name);
+      t = basic_lookup_transparent_type_quick (objfile, GLOBAL_BLOCK,
+					       lookup_name);
       if (t)
 	return t;
     }
@@ -2795,14 +2798,16 @@ basic_lookup_transparent_type (const char *name)
 
   for (objfile *objfile : current_program_space->objfiles ())
     {
-      t = basic_lookup_transparent_type_1 (objfile, STATIC_BLOCK, name);
+      t = basic_lookup_transparent_type_1 (objfile, STATIC_BLOCK,
+					   lookup_name);
       if (t)
 	return t;
     }
 
   for (objfile *objfile : current_program_space->objfiles ())
     {
-      t = basic_lookup_transparent_type_quick (objfile, STATIC_BLOCK, name);
+      t = basic_lookup_transparent_type_quick (objfile, STATIC_BLOCK,
+					       lookup_name);
       if (t)
 	return t;
     }
