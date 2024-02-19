@@ -1232,6 +1232,9 @@ value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
   gdb_assert (!dst->bits_any_optimized_out (TARGET_CHAR_BIT * dst_offset,
 					    TARGET_CHAR_BIT * length));
 
+  if ((src_offset + copy_length) * unit_size > enclosing_type ()-> length ())
+    error (_("access outside bounds of object"));
+
   bit_length = length * unit_size * HOST_CHAR_BIT;
 
   /* Copy the data.  */
