@@ -936,8 +936,11 @@ riscv_elf_copy_indirect_symbol (struct bfd_link_info *info,
 }
 
 static char
-riscv_elf_tls_type_from_hi_reloc (unsigned int r_type)
+riscv_elf_tls_type_from_hi_reloc (struct bfd_link_info *info,
+				  unsigned int r_type,
+				  struct elf_link_hash_entry *h)
 {
+  bool local_exec = SYMBOL_REFERENCES_LOCAL (info, h);
   switch (r_type)
     {
       case R_RISCV_TLS_GD_HI20:
@@ -945,7 +948,12 @@ riscv_elf_tls_type_from_hi_reloc (unsigned int r_type)
       case R_RISCV_TLS_GOT_HI20:
 	return GOT_TLS_IE;
       case R_RISCV_TLSDESC_HI20:
-	return GOT_TLSDESC;
+	/* In an executable the sequence always becomes IE or LE, either
+	   by relaxation or by a rewrite in place.  */
+	if (!bfd_link_executable (info))
+	  return GOT_TLSDESC;
+	else
+	  return local_exec ? GOT_TLS_LE : GOT_TLS_IE;
       case R_RISCV_TPREL_HI20:
 	return GOT_TLS_LE;
       default:
@@ -1140,7 +1148,7 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  case R_RISCV_TLSDESC_HI20:
 	  case R_RISCV_TPREL_HI20:
 	    {
-	      char tls_type = riscv_elf_tls_type_from_hi_reloc (r_type);
+	      char tls_type = riscv_elf_tls_type_from_hi_reloc (info, r_type, h);
 
 	      /* Local exec is only allowed for executables.  */
 	      if (tls_type == GOT_TLS_LE && !bfd_link_executable (info))
@@ -2488,6 +2496,8 @@ perform_relocation (const reloc_howto_type *howto,
     case R_RISCV_TLS_GOT_HI20:
     case R_RISCV_TLS_GD_HI20:
     case R_RISCV_TLSDESC_HI20:
+    case R_RISCV_TLSDESC_LE_HI:
+    case R_RISCV_TLSDESC_IE_HI:
       if (ARCH_SIZE > 32 && !VALID_UTYPE_IMM (RISCV_CONST_HIGH_PART (value)))
 	return bfd_reloc_overflow;
       value = ENCODE_UTYPE_IMM (RISCV_CONST_HIGH_PART (value));
@@ -2500,6 +2510,8 @@ perform_relocation (const reloc_howto_type *howto,
     case R_RISCV_PCREL_LO12_I:
     case R_RISCV_TLSDESC_LOAD_LO12:
     case R_RISCV_TLSDESC_ADD_LO12:
+    case R_RISCV_TLSDESC_LE_LO:
+    case R_RISCV_TLSDESC_IE_LO:
       value = ENCODE_ITYPE_IMM (value);
       break;
 
@@ -2664,6 +2676,9 @@ typedef struct
   int type;
   /* True if changed to R_RISCV_HI20.  */
   bool absolute;
+  /* For a TLSDESC sequence rewritten to IE in place, the PC of the new
+     auipc, or 0 if not known yet.  */
+  bfd_vma tlsdesc_auipc;
 } riscv_pcrel_hi_reloc;
 
 typedef struct riscv_pcrel_lo_reloc
@@ -2694,6 +2709,9 @@ typedef struct
   htab_t hi_relocs;
   /* Linked list for riscv_pcrel_lo_reloc.  */
   riscv_pcrel_lo_reloc *lo_relocs;
+  /* Linked list of the lo relocs of TLSDESC sequences that are rewritten
+     in place.  */
+  riscv_pcrel_lo_reloc *tlsdesc_lo_relocs;
 } riscv_pcrel_relocs;
 
 static hashval_t
@@ -2714,22 +2732,28 @@ static bool
 riscv_init_pcrel_relocs (riscv_pcrel_relocs *p)
 {
   p->lo_relocs = NULL;
+  p->tlsdesc_lo_relocs = NULL;
   p->hi_relocs = htab_create (1024, riscv_pcrel_reloc_hash,
 			      riscv_pcrel_reloc_eq, free);
   return p->hi_relocs != NULL;
 }
 
 static void
-riscv_free_pcrel_relocs (riscv_pcrel_relocs *p)
+riscv_free_lo_relocs (riscv_pcrel_lo_reloc *cur)
 {
-  riscv_pcrel_lo_reloc *cur = p->lo_relocs;
-
   while (cur != NULL)
     {
       riscv_pcrel_lo_reloc *next = cur->next;
       free (cur);
       cur = next;
     }
+}
+
+static void
+riscv_free_pcrel_relocs (riscv_pcrel_relocs *p)
+{
+  riscv_free_lo_relocs (p->lo_relocs);
+  riscv_free_lo_relocs (p->tlsdesc_lo_relocs);
 
   htab_delete (p->hi_relocs);
 }
@@ -2785,7 +2809,7 @@ riscv_record_pcrel_hi_reloc (riscv_pcrel_relocs *p,
 			     bool absolute)
 {
   bfd_vma offset = absolute ? value : value - addr;
-  riscv_pcrel_hi_reloc entry = {addr, offset, type, absolute};
+  riscv_pcrel_hi_reloc entry = {addr, offset, type, absolute, 0};
   riscv_pcrel_hi_reloc **slot =
     (riscv_pcrel_hi_reloc **) htab_find_slot (p->hi_relocs, &entry, INSERT);
 
@@ -2816,6 +2840,123 @@ riscv_record_pcrel_lo_reloc (riscv_pcrel_relocs *p,
   return true;
 }
 
+/* Record a lo reloc of a TLSDESC sequence that is rewritten in place.
+   ADDR is the PC of its %tlsdesc_hi.  */
+
+static bool
+riscv_record_tlsdesc_lo_reloc (riscv_pcrel_relocs *p,
+			       bfd_vma addr,
+			       Elf_Internal_Rela *reloc,
+			       asection *input_section,
+			       struct bfd_link_info *info,
+			       bfd_byte *contents)
+{
+  riscv_pcrel_lo_reloc *entry;
+  entry = (riscv_pcrel_lo_reloc *) bfd_malloc (sizeof (riscv_pcrel_lo_reloc));
+  if (entry == NULL)
+    return false;
+  *entry = (riscv_pcrel_lo_reloc) {addr, reloc, input_section, info,
+				   NULL, contents, p->tlsdesc_lo_relocs};
+  p->tlsdesc_lo_relocs = entry;
+  return true;
+}
+
+/* Rewrite the TLSDESC sequences that were not relaxed.  In an executable
+   check_relocs always picks IE or LE for them, so turn
+
+     auipc tX, %tlsdesc_hi(sym)		nop
+     l[dw] tY, %tlsdesc_load_lo(.L)(tX)	nop
+     addi  a0, tX, %tlsdesc_add_lo(.L)	auipc a0, <hi>    / lui  a0, <hi>
+     jalr  t0, tY, %tlsdesc_call(.L)	l[dw] a0, <lo>(a0) / addi a0, a0, <lo>
+
+   for IE / LE, without changing the code size.  The %tlsdesc_hi was
+   recorded with the address of the IE GOT entry, or the TP offset.  The
+   IE auipc is at the %tlsdesc_add_lo, so do those first: the
+   %tlsdesc_call needs its PC.  */
+
+static bool
+riscv_resolve_tlsdesc_lo_relocs (riscv_pcrel_relocs *p)
+{
+  for (int pass = 0; pass < 2; pass++)
+    for (riscv_pcrel_lo_reloc *r = p->tlsdesc_lo_relocs; r != NULL;
+	 r = r->next)
+      {
+	bfd *input_bfd = r->input_section->owner;
+	int type = ELFNN_R_TYPE (r->reloc->r_info);
+	bfd_vma pc = sec_addr (r->input_section) + r->reloc->r_offset;
+	const char *msg = NULL;
+	bfd_vma insn, value;
+	bool le;
+
+	if ((type == R_RISCV_TLSDESC_CALL) != (pass == 1))
+	  continue;
+
+	riscv_pcrel_hi_reloc search = {r->address, 0, 0, 0, 0};
+	riscv_pcrel_hi_reloc *entry = htab_find (p->hi_relocs, &search);
+	if (entry == NULL
+	    || (entry->type != R_RISCV_TLSDESC_IE_HI
+		&& entry->type != R_RISCV_TLSDESC_LE_HI))
+	  msg = _("%tlsdesc_lo missing matching %tlsdesc_hi");
+	else
+	  {
+	    le = entry->type == R_RISCV_TLSDESC_LE_HI;
+	    switch (type)
+	      {
+	      case R_RISCV_TLSDESC_LOAD_LO12:
+		insn = RISCV_NOP;
+		break;
+
+	      case R_RISCV_TLSDESC_ADD_LO12:
+		value = entry->value;
+		if (!le)
+		  {
+		    entry->tlsdesc_auipc = pc;
+		    value -= pc;
+		  }
+		if (ARCH_SIZE > 32
+		    && !VALID_UTYPE_IMM (RISCV_CONST_HIGH_PART (value)))
+		  {
+		    msg = _("%tlsdesc_hi overflow when rewritten in place");
+		    break;
+		  }
+		insn = ((le ? MATCH_LUI : MATCH_AUIPC) | (X_A0 << OP_SH_RD)
+			| ENCODE_UTYPE_IMM (RISCV_CONST_HIGH_PART (value)));
+		break;
+
+	      case R_RISCV_TLSDESC_CALL:
+		value = entry->value;
+		if (!le)
+		  {
+		    if (entry->tlsdesc_auipc == 0)
+		      {
+			msg = _("%tlsdesc_call missing matching "
+				"%tlsdesc_add_lo");
+			break;
+		      }
+		    value -= entry->tlsdesc_auipc;
+		  }
+		insn = ((le ? MATCH_ADDI : MATCH_LREG) | (X_A0 << OP_SH_RD)
+			| (X_A0 << OP_SH_RS1) | ENCODE_ITYPE_IMM (value));
+		break;
+
+	      default:
+		abort ();
+	      }
+	  }
+
+	if (msg != NULL)
+	  {
+	    r->info->callbacks->reloc_dangerous
+	      (r->info, msg, input_bfd, r->input_section, r->reloc->r_offset);
+	    return true;
+	  }
+
+	bfd_putl32 (insn, r->contents + r->reloc->r_offset);
+      }
+
+  return true;
+}
+
 static bool
 riscv_resolve_pcrel_lo_relocs (riscv_pcrel_relocs *p)
 {
@@ -2825,7 +2966,7 @@ riscv_resolve_pcrel_lo_relocs (riscv_pcrel_relocs *p)
     {
       bfd *input_bfd = r->input_section->owner;
 
-      riscv_pcrel_hi_reloc search = {r->address, 0, 0, 0};
+      riscv_pcrel_hi_reloc search = {r->address, 0, 0, 0, 0};
       riscv_pcrel_hi_reloc *entry = htab_find (p->hi_relocs, &search);
       /* There may be a risk if the %pcrel_lo with addend refers to
 	 an IFUNC symbol.  The %pcrel_hi has been relocated to plt,
@@ -3272,7 +3413,6 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 	case R_RISCV_NONE:
 	case R_RISCV_RELAX:
 	case R_RISCV_TPREL_ADD:
-	case R_RISCV_TLSDESC_CALL:
 	case R_RISCV_COPY:
 	case R_RISCV_JUMP_SLOT:
 	case R_RISCV_RELATIVE:
@@ -3564,6 +3704,32 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 	    r = bfd_reloc_overflow;
 	  break;
 
+	case R_RISCV_TLSDESC_IE_LO:
+	  {
+	    bfd_vma insn = MATCH_LREG | (X_A0 << OP_SH_RD) | (X_A0 << OP_SH_RS1);
+	    bfd_putl32 (insn, contents + rel->r_offset);
+	    if (riscv_record_pcrel_lo_reloc (&pcrel_relocs, relocation, rel,
+					     input_section, info, howto,
+					     contents))
+	      continue;
+	    r = bfd_reloc_overflow;
+	    break;
+	  }
+	case R_RISCV_TLSDESC_LE_HI:
+	  {
+	    bfd_vma insn = MATCH_LUI | (X_A0 << OP_SH_RD);
+	    relocation = tpoff (info, relocation);
+	    bfd_putl32 (insn, contents + rel->r_offset);
+	    break;
+	  }
+	case R_RISCV_TLSDESC_LE_LO:
+	  {
+	    bfd_vma insn = MATCH_ADDI | (X_A0 << OP_SH_RD) | (X_A0 << OP_SH_RS1);
+	    relocation = tpoff (info, relocation);
+	    bfd_putl32 (insn, contents + rel->r_offset);
+	    break;
+	  }
+
 	case R_RISCV_GPREL_I:
 	case R_RISCV_GPREL_S:
 	  {
@@ -3630,12 +3796,26 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 
 	case R_RISCV_TLSDESC_LOAD_LO12:
 	case R_RISCV_TLSDESC_ADD_LO12:
+	case R_RISCV_TLSDESC_CALL:
 	  if (rel->r_addend)
 	    {
 	      msg = _("%tlsdesc_lo with addend");
 	      r = bfd_reloc_dangerous;
 	      break;
 	    }
+
+	  if (bfd_link_executable (info))
+	    {
+	      if (riscv_record_tlsdesc_lo_reloc (&pcrel_relocs, relocation, rel,
+						 input_section, info,
+						 contents))
+		continue;
+	      r = bfd_reloc_overflow;
+	      break;
+	    }
+
+	  if (r_type == R_RISCV_TLSDESC_CALL)
+	    continue;
 
 	  if (riscv_record_pcrel_lo_reloc (&pcrel_relocs, relocation, rel,
 					   input_section, info, howto,
@@ -3719,8 +3899,32 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_RISCV_TLSDESC_HI20:
-	  is_desc = true;
-	  goto tls;
+	  if (!bfd_link_executable (info))
+	    {
+	      is_desc = true;
+	      goto tls;
+	    }
+	  /* Not relaxed, so rewrite it in place to IE or LE, as
+	     check_relocs picked.  See riscv_resolve_tlsdesc_lo_relocs.  */
+	  bfd_putl32 (RISCV_NOP, contents + rel->r_offset);
+	  if (!SYMBOL_REFERENCES_LOCAL (info, h))
+	    {
+	      is_ie = true;
+	      goto tls;
+	    }
+	  if (!riscv_record_pcrel_hi_reloc (&pcrel_relocs, pc,
+					    tpoff (info, relocation)
+					    + rel->r_addend,
+					    R_RISCV_TLSDESC_LE_HI, true))
+	    {
+	      r = bfd_reloc_overflow;
+	      break;
+	    }
+	  continue;
+
+	case R_RISCV_TLSDESC_IE_HI:
+	  bfd_putl32 (MATCH_AUIPC | (X_A0 << OP_SH_RD), contents + rel->r_offset);
+	  /* Fall through.  */
 
 	case R_RISCV_TLS_GOT_HI20:
 	  is_ie = true;
@@ -3858,11 +4062,21 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 	    relocation += ie_off;
 	  else if (is_desc)
 	    relocation += desc_off;
+	  unresolved_reloc = false;
+	  if (r_type == R_RISCV_TLSDESC_HI20 && is_ie)
+	    {
+	      /* Rewritten in place to IE; the auipc moves to the
+		 %tlsdesc_add_lo, so record the GOT address itself.  */
+	      if (riscv_record_pcrel_hi_reloc (&pcrel_relocs, pc, relocation,
+					       R_RISCV_TLSDESC_IE_HI, true))
+		continue;
+	      r = bfd_reloc_overflow;
+	      break;
+	    }
 	  if (!riscv_record_pcrel_hi_reloc (&pcrel_relocs, pc,
 					    relocation, r_type,
 					    false))
 	    r = bfd_reloc_overflow;
-	  unresolved_reloc = false;
 	  break;
 
 	default:
@@ -3944,7 +4158,8 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
       goto out;
     }
 
-  ret = riscv_resolve_pcrel_lo_relocs (&pcrel_relocs);
+  ret = (riscv_resolve_tlsdesc_lo_relocs (&pcrel_relocs)
+	 && riscv_resolve_pcrel_lo_relocs (&pcrel_relocs));
  out:
   riscv_free_pcrel_relocs (&pcrel_relocs);
   return ret;
@@ -5216,6 +5431,109 @@ _bfd_riscv_relax_tls_le (bfd *abfd,
     }
 }
 
+/* Relax TLSDESC (global-dynamic) references to TLS IE or LE references. */
+
+static bool
+_bfd_riscv_relax_tlsdesc (bfd *abfd,
+			  asection *sec,
+			  asection *sym_sec,
+			  struct bfd_link_info *link_info,
+			  struct elf_link_hash_entry *h,
+			  Elf_Internal_Rela *rel,
+			  bfd_vma symval,
+			  bfd_vma max_alignment ATTRIBUTE_UNUSED,
+			  bfd_vma reserve_size ATTRIBUTE_UNUSED,
+			  bool *again,
+			  riscv_pcgp_relocs *pcgp_relocs,
+			  bool undefined_weak)
+{
+  BFD_ASSERT (rel->r_offset + 4 <= sec->size);
+  BFD_ASSERT (bfd_link_executable (link_info));
+  riscv_pcgp_hi_reloc *hi = NULL;
+  bool local_exec;
+  unsigned sym;
+
+  /* Chain the _LO relocs to their corresponding _HI reloc to compute the
+     actual target address.  */
+  switch (ELFNN_R_TYPE (rel->r_info)) {
+    case R_RISCV_TLSDESC_HI20: {
+      /* If the corresponding lo relocation has already been seen then it's not
+	 safe to relax this relocation.  */
+      if (riscv_find_pcgp_lo_reloc (pcgp_relocs, rel->r_offset))
+	return true;
+      riscv_record_pcgp_hi_reloc (pcgp_relocs,
+				  rel->r_offset,
+				  rel->r_addend,
+				  symval,
+				  ELFNN_R_SYM (rel->r_info),
+				  sym_sec,
+				  h,
+				  undefined_weak);
+      sym = ELFNN_R_SYM (rel->r_info);
+      break;
+    }
+
+    case R_RISCV_TLSDESC_LOAD_LO12:
+    case R_RISCV_TLSDESC_ADD_LO12:
+    case R_RISCV_TLSDESC_CALL: {
+      bfd_vma hi_sec_off = symval - sec_addr (sym_sec);
+      hi = riscv_find_pcgp_hi_reloc (pcgp_relocs, hi_sec_off);
+      if (hi == NULL) {
+	riscv_record_pcgp_lo_reloc (pcgp_relocs, hi_sec_off);
+	return true;
+      }
+      sym = hi->hi_sym;
+      symval = hi->hi_addr;
+      sym_sec = hi->sym_sec;
+      h = hi->h;
+      break;
+    }
+    default:
+      abort ();
+  }
+
+  local_exec = SYMBOL_REFERENCES_LOCAL (link_info, h);
+
+  switch (ELFNN_R_TYPE (rel->r_info)) {
+    case R_RISCV_TLSDESC_HI20:
+      *again = true;
+      riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4, link_info,
+				pcgp_relocs, rel, false);
+      break;
+    case R_RISCV_TLSDESC_LOAD_LO12:
+      riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 4, link_info,
+				pcgp_relocs, rel, false);
+      break;
+    case R_RISCV_TLSDESC_ADD_LO12:
+      if (local_exec)
+	{
+	  rel->r_info = ELFNN_R_INFO (sym, R_RISCV_TLSDESC_LE_HI);
+	  rel->r_addend += hi->hi_addend;
+	}
+      else
+	rel->r_info = ELFNN_R_INFO (sym, R_RISCV_TLSDESC_IE_HI);
+      break;
+    case R_RISCV_TLSDESC_CALL:
+      if (local_exec)
+	{
+	  rel->r_info = ELFNN_R_INFO (sym, R_RISCV_TLSDESC_LE_LO);
+	  rel->r_addend += hi->hi_addend;
+	}
+      else
+	/* Keep the label symbol.  The auipc and load at the label are
+	   deleted, so it now points to the IE auipc, and this reloc pairs
+	   with it like a %pcrel_lo.  */
+	rel->r_info = ELFNN_R_INFO (ELFNN_R_SYM (rel->r_info),
+				    R_RISCV_TLSDESC_IE_LO);
+      break;
+    default:
+      abort ();
+  }
+
+  return true;
+}
+
+
 /* Implement R_RISCV_ALIGN by deleting excess alignment NOPs.
    Once we've handled an R_RISCV_ALIGN, we can't relax anything else.  */
 
@@ -5511,6 +5829,12 @@ riscv_relax_select_shorten (bfd *abfd ATTRIBUTE_UNUSED, asection *sec,
 	   || type == R_RISCV_TPREL_LO12_I
 	   || type == R_RISCV_TPREL_LO12_S)
     f = _bfd_riscv_relax_tls_le;
+  else if (bfd_link_executable (info)
+	   && (type == R_RISCV_TLSDESC_HI20
+	       || type == R_RISCV_TLSDESC_LOAD_LO12
+	       || type == R_RISCV_TLSDESC_ADD_LO12
+	       || type == R_RISCV_TLSDESC_CALL))
+    f = _bfd_riscv_relax_tlsdesc;
   else if (!bfd_link_pic (info)
 	   && (type == R_RISCV_PCREL_HI20
 	       || type == R_RISCV_PCREL_LO12_I
@@ -5790,6 +6114,15 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
 	    {
 	      symval = h->root.u.def.value;
 	      sym_sec = h->root.u.def.section;
+	    }
+	  else if (relax_func == _bfd_riscv_relax_tlsdesc)
+	    {
+	      /* The symbol is not defined in a regular object, e.g. it comes
+		 from a shared library.  TLSDESC relaxation does not use its
+		 value, but must still run, since check_relocs has already
+		 picked IE for it.  */
+	      symval = 0;
+	      sym_sec = bfd_und_section_ptr;
 	    }
 	  else
 	    continue;

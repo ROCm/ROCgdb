@@ -405,8 +405,24 @@ if [istarget "riscv*-*-*"] {
        { "Build shared library for TLS runtime"
 	 "-shared" "" "" {tlslib.s}
 	 {} "tlslib.so" }
+       { "Build shared library with a TLS var"
+	 "-shared" "" "" {tlsdesc-lib.s}
+	 {} "tlsdesc-lib.so" }
+       { "Build RV32 shared library with a TLS var"
+	 "-shared -melf32lriscv" "" "-march=rv32i -mabi=ilp32" {tlsdesc-lib.s}
+	 {} "tlsdesc-lib32.so" }
     }
     run_dump_test "tls"
     run_dump_test "tlsbin"
+    run_dump_test "tlsdesc-ie"
+    run_dump_test "tlsdesc-ie-dyn"
+    run_dump_test "tlsdesc-ie-32"
+    run_dump_test "tlsdesc-ie-32-dyn"
+    run_dump_test "tlsdesc-ie-32-norelax"
+    run_dump_test "tlsdesc-ie-norelax"
+    run_dump_test "tlsdesc-le"
+    run_dump_test "tlsdesc-le-norelax"
+    run_dump_test "tlsdesc-unrelaxed"
+    run_dump_test "tlsdesc-unrelaxed-le"
     run_dump_test "absolute-no-relative"
 }

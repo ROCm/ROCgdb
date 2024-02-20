@@ -106,6 +106,10 @@ END_RELOC_NUMBERS (R_RISCV_max)
 #define R_RISCV_TPREL_I           (R_RISCV_max + 5)
 #define R_RISCV_TPREL_S           (R_RISCV_max + 6)
 #define R_RISCV_TABLE_JUMP        (R_RISCV_max + 7)
+#define R_RISCV_TLSDESC_IE_HI     (R_RISCV_max + 8)
+#define R_RISCV_TLSDESC_IE_LO     (R_RISCV_max + 9)
+#define R_RISCV_TLSDESC_LE_HI     (R_RISCV_max + 10)
+#define R_RISCV_TLSDESC_LE_LO     (R_RISCV_max + 11)
 
 /* Processor specific flags for the ELF header e_flags field.  */
 
