@@ -1740,7 +1740,7 @@ finish_backward (struct finish_command_fsm *sm)
    frame that called the function we're about to step out of.  */
 
 static void
-finish_forward (struct finish_command_fsm *sm, frame_info_ptr frame)
+finish_forward (struct finish_command_fsm *sm, const frame_info_ptr &frame)
 {
   struct frame_id frame_id = get_frame_id (frame);
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -1765,9 +1765,10 @@ finish_forward (struct finish_command_fsm *sm, frame_info_ptr frame)
 /* Skip frames for "finish".  */
 
 static frame_info_ptr
-skip_finish_frames (frame_info_ptr frame)
+skip_finish_frames (const frame_info_ptr &initial_frame)
 {
   frame_info_ptr start;
+  frame_info_ptr frame = initial_frame;
 
   do
     {
@@ -2253,7 +2254,7 @@ default_print_one_register_info (struct ui_file *file,
 void
 default_print_registers_info (struct gdbarch *gdbarch,
 			      struct ui_file *file,
-			      frame_info_ptr frame,
+			      const frame_info_ptr &frame,
 			      int regnum, int print_all)
 {
   int i;
@@ -2413,7 +2414,7 @@ info_registers_command (const char *addr_exp, int from_tty)
 
 static void
 print_vector_info (struct ui_file *file,
-		   frame_info_ptr frame, const char *args)
+		   const frame_info_ptr &frame, const char *args)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
 
@@ -2950,7 +2951,7 @@ interrupt_command (const char *args, int from_tty)
 
 void
 default_print_float_info (struct gdbarch *gdbarch, struct ui_file *file,
-			  frame_info_ptr frame, const char *args)
+			  const frame_info_ptr &frame, const char *args)
 {
   int regnum;
   int printed_something = 0;

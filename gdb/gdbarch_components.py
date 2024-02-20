@@ -415,7 +415,7 @@ never be called.
 """,
     type="struct value *",
     name="pseudo_register_read_value",
-    params=[("frame_info_ptr", "next_frame"), ("int", "cookednum")],
+    params=[("const frame_info_ptr &", "next_frame"), ("int", "cookednum")],
     predicate=True,
 )
 
@@ -429,7 +429,7 @@ NEXT_FRAME.
     type="void",
     name="pseudo_register_write",
     params=[
-        ("frame_info_ptr", "next_frame"),
+        ("const frame_info_ptr &", "next_frame"),
         ("int", "pseudo_reg_num"),
         ("gdb::array_view<const gdb_byte>", "buf"),
     ],
@@ -629,7 +629,7 @@ frame.
 """,
     type="struct frame_id",
     name="dummy_id",
-    params=[("frame_info_ptr", "this_frame")],
+    params=[("const frame_info_ptr &", "this_frame")],
     predefault="default_dummy_id",
     invalid=False,
 )
@@ -724,7 +724,7 @@ Return true if the code of FRAME is writable.
 """,
     type="int",
     name="code_of_frame_writable",
-    params=[("frame_info_ptr", "frame")],
+    params=[("const frame_info_ptr &", "frame")],
     predefault="default_code_of_frame_writable",
     invalid=False,
 )
@@ -734,7 +734,7 @@ Method(
     name="print_registers_info",
     params=[
         ("struct ui_file *", "file"),
-        ("frame_info_ptr", "frame"),
+        ("const frame_info_ptr &", "frame"),
         ("int", "regnum"),
         ("int", "all"),
     ],
@@ -747,7 +747,7 @@ Method(
     name="print_float_info",
     params=[
         ("struct ui_file *", "file"),
-        ("frame_info_ptr", "frame"),
+        ("const frame_info_ptr &", "frame"),
         ("const char *", "args"),
     ],
     predefault="default_print_float_info",
@@ -759,7 +759,7 @@ Method(
     name="print_vector_info",
     params=[
         ("struct ui_file *", "file"),
-        ("frame_info_ptr", "frame"),
+        ("const frame_info_ptr &", "frame"),
         ("const char *", "args"),
     ],
     predicate=True,
@@ -802,7 +802,7 @@ FRAME corresponds to the longjmp frame.
 """,
     type="int",
     name="get_longjmp_target",
-    params=[("frame_info_ptr", "frame"), ("CORE_ADDR *", "pc")],
+    params=[("const frame_info_ptr &", "frame"), ("CORE_ADDR *", "pc")],
     predicate=True,
 )
 
@@ -824,7 +824,7 @@ Function(
     type="int",
     name="register_to_value",
     params=[
-        ("frame_info_ptr", "frame"),
+        ("const frame_info_ptr &", "frame"),
         ("int", "regnum"),
         ("struct type *", "type"),
         ("gdb_byte *", "buf"),
@@ -838,7 +838,7 @@ Function(
     type="void",
     name="value_to_register",
     params=[
-        ("frame_info_ptr", "frame"),
+        ("const frame_info_ptr &", "frame"),
         ("int", "regnum"),
         ("struct type *", "type"),
         ("const gdb_byte *", "buf"),
@@ -1062,7 +1062,7 @@ convention".
 May return 0 when unable to determine that address.""",
     type="CORE_ADDR",
     name="get_return_buf_addr",
-    params=[("struct type *", "val_type"), ("frame_info_ptr", "cur_frame")],
+    params=[("struct type *", "val_type"), ("const frame_info_ptr &", "cur_frame")],
     predefault="default_get_return_buf_addr",
     invalid=False,
 )
@@ -1296,7 +1296,7 @@ Value(
 Method(
     type="CORE_ADDR",
     name="unwind_pc",
-    params=[("frame_info_ptr", "next_frame")],
+    params=[("const frame_info_ptr &", "next_frame")],
     predefault="default_unwind_pc",
     invalid=False,
 )
@@ -1304,7 +1304,7 @@ Method(
 Method(
     type="CORE_ADDR",
     name="unwind_sp",
-    params=[("frame_info_ptr", "next_frame")],
+    params=[("const frame_info_ptr &", "next_frame")],
     predefault="default_unwind_sp",
     invalid=False,
 )
@@ -1316,7 +1316,7 @@ frame-base.  Enable frame-base before frame-unwind.
 """,
     type="int",
     name="frame_num_args",
-    params=[("frame_info_ptr", "frame")],
+    params=[("const frame_info_ptr &", "frame")],
     predicate=True,
 )
 
@@ -1496,7 +1496,7 @@ further single-step is needed before the instruction finishes.
 """,
     type="int",
     name="single_step_through_delay",
-    params=[("frame_info_ptr", "frame")],
+    params=[("const frame_info_ptr &", "frame")],
     predicate=True,
 )
 
@@ -1515,7 +1515,7 @@ disassembler.  Perhaps objdump can handle it?
 Function(
     type="CORE_ADDR",
     name="skip_trampoline_code",
-    params=[("frame_info_ptr", "frame"), ("CORE_ADDR", "pc")],
+    params=[("const frame_info_ptr &", "frame"), ("CORE_ADDR", "pc")],
     predefault="generic_skip_trampoline_code",
     invalid=False,
 )
@@ -1735,7 +1735,7 @@ Fetch the pointer to the ith function argument.
     type="CORE_ADDR",
     name="fetch_pointer_argument",
     params=[
-        ("frame_info_ptr", "frame"),
+        ("const frame_info_ptr &", "frame"),
         ("int", "argi"),
         ("struct type *", "type"),
     ],
@@ -2893,7 +2893,7 @@ Return a string containing any flags for the given PC in the given FRAME.
 """,
     type="std::string",
     name="get_pc_address_flags",
-    params=[("frame_info_ptr", "frame"), ("CORE_ADDR", "pc")],
+    params=[("const frame_info_ptr &", "frame"), ("CORE_ADDR", "pc")],
     predefault="default_get_pc_address_flags",
     invalid=False,
 )

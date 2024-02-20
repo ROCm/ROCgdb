@@ -64,7 +64,7 @@ ensure_have_thread (const char *op_name)
 /* See expr.h.  */
 
 void
-ensure_have_frame (frame_info_ptr frame, const char *context)
+ensure_have_frame (const frame_info_ptr &frame, const char *context)
 {
   if (frame == nullptr)
     throw_error (DWARF2_FRAME_CONTEXT_MISSING,
@@ -2700,7 +2700,8 @@ struct dwarf_expr_context
      can be specified to override the range of memory addresses with
      the passed in buffer.  */
   struct value *evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			  dwarf2_per_cu_data *per_cu, frame_info_ptr frame,
+			  dwarf2_per_cu_data *per_cu,
+			  const frame_info_ptr &frame,
 			  std::vector<value *> *init_values,
 			  const property_addr_info *addr_info,
 			  struct type *type, struct type *subobj_type,
@@ -3039,7 +3040,8 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 
 value *
 dwarf_expr_context::evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			      dwarf2_per_cu_data *per_cu, frame_info_ptr frame,
+			      dwarf2_per_cu_data *per_cu,
+			      const frame_info_ptr &frame,
 			      std::vector<value *> *init_values,
 			      const property_addr_info *addr_info,
 			      struct type *type, struct type *subobj_type,
@@ -4674,7 +4676,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 value *
 dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
 		 dwarf2_per_objfile *per_objfile, dwarf2_per_cu_data *per_cu,
-		 frame_info_ptr frame, int addr_size,
+		 const frame_info_ptr &frame, int addr_size,
 		 std::vector<value *> *init_values,
 		 const property_addr_info *addr_info,
 		 struct type *type, struct type *subobj_type,
