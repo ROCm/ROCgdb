@@ -936,12 +936,14 @@ riscv_elf_copy_indirect_symbol (struct bfd_link_info *info,
 }
 
 static bool
-riscv_elf_record_tls_type (bfd *abfd, struct elf_link_hash_entry *h,
+riscv_elf_record_tls_type (bfd *abfd, struct bfd_link_info *info,
+			   struct elf_link_hash_entry *h,
 			   unsigned long symndx, char tls_type)
 {
   char *new_tls_type = &_bfd_riscv_elf_tls_type (abfd, h, symndx);
 
   *new_tls_type |= tls_type;
+
   if ((*new_tls_type & GOT_NORMAL) && (*new_tls_type & ~GOT_NORMAL))
     {
       (*_bfd_error_handler)
@@ -949,6 +951,10 @@ riscv_elf_record_tls_type (bfd *abfd, struct elf_link_hash_entry *h,
 	 abfd, h ? h->root.root.string : "<local>");
       return false;
     }
+
+  if ((*new_tls_type & GOT_TLS_IE) && bfd_link_dll (info))
+    info->flags |= DF_STATIC_TLS;
+
   return true;
 }
 
@@ -1113,27 +1119,29 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	{
 	case R_RISCV_TLS_GD_HI20:
 	  if (!riscv_elf_record_got_reference (abfd, info, h, r_symndx)
-	      || !riscv_elf_record_tls_type (abfd, h, r_symndx, GOT_TLS_GD))
+	      || !riscv_elf_record_tls_type (abfd, info, h, r_symndx,
+					     GOT_TLS_GD))
 	    return false;
 	  break;
 
 	case R_RISCV_TLS_GOT_HI20:
-	  if (bfd_link_dll (info))
-	    info->flags |= DF_STATIC_TLS;
 	  if (!riscv_elf_record_got_reference (abfd, info, h, r_symndx)
-	      || !riscv_elf_record_tls_type (abfd, h, r_symndx, GOT_TLS_IE))
+	      || !riscv_elf_record_tls_type (abfd, info, h, r_symndx,
+					     GOT_TLS_IE))
 	    return false;
 	  break;
 
 	case R_RISCV_GOT_HI20:
 	  if (!riscv_elf_record_got_reference (abfd, info, h, r_symndx)
-	      || !riscv_elf_record_tls_type (abfd, h, r_symndx, GOT_NORMAL))
+	      || !riscv_elf_record_tls_type (abfd, info, h, r_symndx,
+					     GOT_NORMAL))
 	    return false;
 	  break;
 
 	case R_RISCV_TLSDESC_HI20:
 	  if (!riscv_elf_record_got_reference (abfd, info, h, r_symndx)
-	      || !riscv_elf_record_tls_type (abfd, h, r_symndx, GOT_TLSDESC))
+	      || !riscv_elf_record_tls_type (abfd, info, h, r_symndx,
+					     GOT_TLSDESC))
 	    return false;
 	  break;
 
@@ -1223,8 +1231,9 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  /* This is not allowed in the pic, but okay in pie.  */
 	  if (!bfd_link_executable (info))
 	    return bad_static_reloc (abfd, r_type, h);
-	  if (h != NULL)
-	    riscv_elf_record_tls_type (abfd, h, r_symndx, GOT_TLS_LE);
+	  if (h != NULL
+	      && !riscv_elf_record_tls_type (abfd, info, h, r_symndx, GOT_TLS_LE))
+	    return false;
 	  break;
 
 	case R_RISCV_HI20:
