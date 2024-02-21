@@ -5909,12 +5909,12 @@ stop_all_threads (const char *reason, inferior *inf)
 	{
 	  int waits_needed = 0;
 
-	  for (auto *target : all_non_exited_process_targets ())
+	  for (auto *this_inf : all_non_exited_inferiors ())
 	    {
-	      if (inf != nullptr && inf->process_target () != target)
+	      if (inf != nullptr && inf != this_inf)
 		continue;
 
-	      switch_to_target_no_thread (target);
+	      switch_to_inferior_no_thread (this_inf);
 	      update_thread_list ();
 	    }
 
