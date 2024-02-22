@@ -20,6 +20,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <unistd.h>
 
 #define CHECK(cmd)                                                           \
   do                                                                         \
@@ -86,6 +87,10 @@ enum testcase_t
 int
 main (int argc, char **argv)
 {
+  /* Make sure that the process terminates if the exception is not caught by
+     the ROCr runtime.  */
+  alarm (30);
+
   if (argc != 2)
     {
       std::cerr
