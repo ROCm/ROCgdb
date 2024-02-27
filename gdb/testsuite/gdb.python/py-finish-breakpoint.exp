@@ -73,7 +73,8 @@ with_test_prefix "normal conditions" {
 	"check MyFinishBreakpoint hit"
     gdb_test "python print (finishbp.return_value)" "-5.*" "check return_value"
 
-    gdb_test "python print (finishbp_default.hit_count)" "1.*" "check finishBP on default frame has been hit"
+    gdb_test "python print (finishbp_default.is_valid())" "False" \
+	"check finishBP on default frame has been hit"
     gdb_test "python print (finishbp.is_valid())" "False.*"\
 	"ensure that finish bp is invalid afer normal hit"
 
@@ -81,7 +82,7 @@ with_test_prefix "normal conditions" {
 
     gdb_test "finish" "main.*" "return to main()"
     gdb_test "python MyFinishBreakpoint (None, gdb.selected_frame ())" \
-	"ValueError: \"FinishBreakpoint\" not meaningful in the outermost frame..*" \
+	"ValueError.*: \"FinishBreakpoint\" not meaningful in the outermost frame..*" \
 	"check FinishBP not allowed in main"
 }
 
