@@ -1368,6 +1368,8 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 
   for (p = h->dyn_relocs; p != NULL; p = p->next)
     {
+      if (discarded_section (p->sec))
+	continue;
       asection *sreloc = elf_section_data (p->sec)->sreloc;
       sreloc->size += p->count * sizeof (ElfNN_External_Rela);
     }
@@ -2866,14 +2868,7 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      else if (resolved_dynly)
 		{
 		  if (h->dynindx == -1)
-		    {
-		      if (h->root.type == bfd_link_hash_undefined)
-			(*info->callbacks->undefined_symbol)
-			  (info, name, input_bfd, input_section,
-			   rel->r_offset, true);
-
-		      outrel.r_info = ELFNN_R_INFO (0, r_type);
-		    }
+		    outrel.r_info = ELFNN_R_INFO (0, r_type);
 		  else
 		    outrel.r_info = ELFNN_R_INFO (h->dynindx, r_type);
 
