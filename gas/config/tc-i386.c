@@ -439,9 +439,6 @@ struct _i386_insn
     /* Prefer the REX2 prefix in encoding.  */
     bool rex2_encoding;
 
-    /* Need to use an Egpr capable encoding (REX2 or EVEX).  */
-    bool has_egpr;
-
     /* Disable instruction size optimization.  */
     bool no_optimize;
 
@@ -451,6 +448,7 @@ struct _i386_insn
 	encoding_default = 0,
 	encoding_vex,
 	encoding_vex3,
+	encoding_egpr, /* REX2 or EVEX.  */
 	encoding_evex,
 	encoding_evex512,
 	encoding_error
@@ -1887,7 +1885,7 @@ static INLINE bool need_evex_encoding (const insn_template *t)
 {
   return i.encoding == encoding_evex
 	|| i.encoding == encoding_evex512
-	|| (t->opcode_modifier.vex && i.has_egpr)
+	|| (t->opcode_modifier.vex && i.encoding == encoding_egpr)
 	|| i.mask.reg;
 }
 
@@ -2489,7 +2487,8 @@ static INLINE int
 fits_in_imm4 (offsetT num)
 {
   /* Despite the name, check for imm3 if we're dealing with EVEX.  */
-  return (num & (i.encoding != encoding_evex ? 0xf : 7)) == num;
+  return (num & (i.encoding != encoding_evex
+		 && i.encoding != encoding_egpr ? 0xf : 7)) == num;
 }
 
 static i386_operand_type
@@ -3276,7 +3275,7 @@ md_begin (void)
       operand_chars[(unsigned char) *p] = *p;
   }
 
-  if (flag_code == CODE_64BIT)
+  if (object_64bit)
     {
 #if defined (OBJ_COFF) && defined (TE_PE)
       x86_dwarf2_return_column = (OUTPUT_FLAVOR == bfd_target_coff_flavour
@@ -4695,6 +4694,34 @@ optimize_encoding (void)
 	    }
 	}
     }
+  else if (i.reg_operands == 3
+	   && i.op[0].regs == i.op[1].regs
+	   && i.encoding != encoding_evex
+	   && (i.tm.mnem_off == MN_xor
+	       || i.tm.mnem_off == MN_sub))
+    {
+      /* Optimize: -O:
+	   xorb %rNb, %rNb, %rMb  -> xorl %rMd, %rMd
+	   xorw %rNw, %rNw, %rMw  -> xorl %rMd, %rMd
+	   xorl %rNd, %rNd, %rMd  -> xorl %rMd, %rMd
+	   xorq %rN,  %rN,  %rM   -> xorl %rMd, %rMd
+	   subb %rNb, %rNb, %rMb  -> subl %rMd, %rMd
+	   subw %rNw, %rNw, %rMw  -> subl %rMd, %rMd
+	   subl %rNd, %rNd, %rMd  -> subl %rMd, %rMd
+	   subq %rN,  %rN,  %rM   -> subl %rMd, %rMd
+        */
+      i.tm.opcode_space = SPACE_BASE;
+      i.tm.opcode_modifier.evex = 0;
+      i.tm.opcode_modifier.size = SIZE32;
+      i.types[0].bitfield.byte = 0;
+      i.types[0].bitfield.word = 0;
+      i.types[0].bitfield.dword = 1;
+      i.types[0].bitfield.qword = 0;
+      i.op[0].regs = i.op[2].regs;
+      i.types[1] = i.types[0];
+      i.op[1].regs = i.op[2].regs;
+      i.reg_operands = 2;
+    }
   else if (optimize > 1
 	   && !optimize_for_space
 	   && i.reg_operands == 2
@@ -4838,6 +4865,7 @@ optimize_encoding (void)
 	  }
     }
   else if (i.encoding != encoding_evex
+	   && i.encoding != encoding_egpr
 	   && !i.types[0].bitfield.zmmword
 	   && !i.types[1].bitfield.zmmword
 	   && !i.mask.reg
@@ -5410,7 +5438,7 @@ ginsn_dw2_regnum (const reg_entry *ireg)
   if (ireg->reg_num == RegIP || ireg->reg_num == RegIZ)
     return GINSN_DW2_REGNUM_RSI_DUMMY;
 
-  dwarf_reg = ireg->dw2_regnum[flag_code >> 1];
+  dwarf_reg = ireg->dw2_regnum[object_64bit];
 
   if (dwarf_reg == Dw2Inval)
     {
@@ -6872,10 +6900,13 @@ md_assemble (char *line)
   if (optimize && !i.no_optimize && i.tm.opcode_modifier.optimize)
     optimize_encoding ();
 
-  /* Past optimization there's no need to distinguish encoding_evex and
-     encoding_evex512 anymore.  */
+  /* Past optimization there's no need to distinguish encoding_evex,
+     encoding_evex512, and encoding_egpr anymore.  */
   if (i.encoding == encoding_evex512)
     i.encoding = encoding_evex;
+  else if (i.encoding == encoding_egpr)
+    i.encoding = is_any_vex_encoding (&i.tm) ? encoding_evex
+					     : encoding_default;
 
   if (use_unaligned_vector_move)
     encode_with_unaligned_vector_move ();
@@ -8310,27 +8341,42 @@ VEX_check_encoding (const insn_template *t)
       return 1;
     }
 
-  if (i.encoding == encoding_evex
-      || i.encoding == encoding_evex512)
+  switch (i.encoding)
     {
+    case encoding_default:
+      break;
+
+    case encoding_vex:
+    case encoding_vex3:
+      /* This instruction must be encoded with VEX prefix.  */
+      if (!t->opcode_modifier.vex)
+	{
+	  i.error = no_vex_encoding;
+	  return 1;
+	}
+      break;
+
+    case encoding_evex:
+    case encoding_evex512:
       /* This instruction must be encoded with EVEX prefix.  */
       if (!t->opcode_modifier.evex)
 	{
 	  i.error = no_evex_encoding;
 	  return 1;
 	}
-      return 0;
-    }
+      break;
 
-  if (!t->opcode_modifier.vex)
-    {
-      /* This instruction template doesn't have VEX prefix.  */
-      if (i.encoding != encoding_default)
+    case encoding_egpr:
+      /* This instruction must be encoded with REX2 or EVEX prefix.  */
+      if (t->opcode_modifier.vex && !t->opcode_modifier.evex)
 	{
-	  i.error = no_vex_encoding;
+	  i.error = no_evex_encoding;
 	  return 1;
 	}
-      return 0;
+      break;
+
+    default:
+      abort ();
     }
 
   return 0;
@@ -9089,6 +9135,15 @@ match_template (char mnem_suffix)
   if (addr_prefix_disp != -1)
     i.tm.operand_types[addr_prefix_disp]
       = operand_types[addr_prefix_disp];
+
+  /* APX insns acting on byte operands are WIG, yet that can't be expressed
+     in the templates (they're also covering word/dword/qword operands).  */
+  if (t->opcode_space == SPACE_EVEXMAP4 && !t->opcode_modifier.vexw &&
+      i.types[i.operands - 1].bitfield.byte)
+    {
+      gas_assert (t->opcode_modifier.w);
+      i.tm.opcode_modifier.vexw = VEXWIG;
+    }
 
   switch (found_reverse_match)
     {
@@ -12904,46 +12959,9 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	}
     }
 
-  /* Trim off encoding space.  */
-  if (j > 1 && !i.insn_opcode_space && (val >> ((j - 1) * 8)) == 0x0f)
-    {
-      uint8_t byte = val >> ((--j - 1) * 8);
-
-      i.insn_opcode_space = SPACE_0F;
-      switch (byte & -(j > 1))
-	{
-	case 0x38:
-	  i.insn_opcode_space = SPACE_0F38;
-	  --j;
-	  break;
-	case 0x3a:
-	  i.insn_opcode_space = SPACE_0F3A;
-	  --j;
-	  break;
-	}
-      i.tm.opcode_space = i.insn_opcode_space;
-      val &= ((uint64_t)1 << (j * 8)) - 1;
-    }
-  if (!i.tm.opcode_space && (vex || evex))
-    /* Arrange for build_vex_prefix() to properly emit 0xC4/0xC5.
-       Also avoid hitting abort() there or in build_evex_prefix().  */
-    i.tm.opcode_space = i.insn_opcode_space == SPACE_0F ? SPACE_0F
-						   : SPACE_0F38;
-
-  if (j > 2)
-    {
-      as_bad (_("opcode residual (%#"PRIx64") too wide"), (uint64_t) val);
-      goto bad;
-    }
-  i.opcode_length = j;
-
-  /* Handle operands, if any.  */
+  /* Parse operands, if any, before evaluating encoding space.  */
   if (*line == ',')
     {
-      i386_operand_type combined;
-      expressionS *disp_exp = NULL;
-      bool changed;
-
       i.memshift = -1;
 
       ptr = parse_operands (line + 1, &i386_mnemonics[MN__insn]);
@@ -12968,6 +12986,61 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
       /* No need to distinguish encoding_evex and encoding_evex512.  */
       if (i.encoding == encoding_evex512)
 	i.encoding = encoding_evex;
+    }
+
+  /* Trim off encoding space.  */
+  if (j > 1 && !i.insn_opcode_space && (val >> ((j - 1) * 8)) == 0x0f)
+    {
+      uint8_t byte = val >> ((--j - 1) * 8);
+
+      i.insn_opcode_space = SPACE_0F;
+      switch (byte & -(j > 1 && !i.rex2_encoding
+		       && (i.encoding != encoding_egpr || evex)))
+	{
+	case 0x38:
+	  i.insn_opcode_space = SPACE_0F38;
+	  --j;
+	  break;
+	case 0x3a:
+	  i.insn_opcode_space = SPACE_0F3A;
+	  --j;
+	  break;
+	}
+      i.tm.opcode_space = i.insn_opcode_space;
+      val &= ((uint64_t)1 << (j * 8)) - 1;
+    }
+  if (!i.tm.opcode_space && (vex || evex))
+    /* Arrange for build_vex_prefix() to properly emit 0xC4/0xC5.
+       Also avoid hitting abort() there or in build_evex_prefix().  */
+    i.tm.opcode_space = i.insn_opcode_space == SPACE_0F ? SPACE_0F
+						   : SPACE_0F38;
+
+  if (j > 2)
+    {
+      as_bad (_("opcode residual (%#"PRIx64") too wide"), (uint64_t) val);
+      goto done;
+    }
+  i.opcode_length = j;
+
+  /* Handle operands, if any.  */
+  if (i.operands)
+    {
+      i386_operand_type combined;
+      expressionS *disp_exp = NULL;
+      bool changed;
+
+      if (i.encoding == encoding_egpr)
+	{
+	  if (vex || xop)
+	    {
+	      as_bad (_("eGPR use conflicts with encoding specifier"));
+	      goto done;
+	    }
+	  if (evex)
+	    i.encoding = encoding_evex;
+	  else
+	    i.encoding = encoding_default;
+	}
 
       /* Are we to emit ModR/M encoding?  */
       if (!i.short_form
@@ -13413,11 +13486,18 @@ RC_SAE_specifier (const char *pstr)
 	      return NULL;
 	    }
 
-	  if (i.encoding == encoding_default)
-	    i.encoding = encoding_evex512;
-	  else if (i.encoding != encoding_evex
-		   && i.encoding != encoding_evex512)
-	    return NULL;
+	  switch (i.encoding)
+	    {
+	    case encoding_default:
+	    case encoding_egpr:
+	      i.encoding = encoding_evex512;
+	      break;
+	    case encoding_evex:
+	    case encoding_evex512:
+	      break;
+	    default:
+	      return NULL;
+	    }
 
 	  i.rounding.type = RC_NamesTable[j].type;
 
@@ -13478,11 +13558,18 @@ check_VecOperations (char *op_string)
 		}
 	      op_string++;
 
-	      if (i.encoding == encoding_default)
-		i.encoding = encoding_evex;
-	      else if (i.encoding != encoding_evex
-		       && i.encoding != encoding_evex512)
-		goto unknown_vec_op;
+	      switch (i.encoding)
+		{
+		case encoding_default:
+		case encoding_egpr:
+		  i.encoding = encoding_evex;
+		  break;
+		case encoding_evex:
+		case encoding_evex512:
+		  break;
+		default:
+		  goto unknown_vec_op;
+		}
 
 	      i.broadcast.type = bcst_type;
 	      i.broadcast.operand = this_operand;
@@ -15750,11 +15837,19 @@ static bool check_register (const reg_entry *r)
       if (vector_size < VSZ512)
 	return false;
 
-      if (i.encoding == encoding_default)
-	i.encoding = encoding_evex512;
-      else if (i.encoding != encoding_evex
-	       && i.encoding != encoding_evex512)
-	i.encoding = encoding_error;
+      switch (i.encoding)
+	{
+	case encoding_default:
+	case encoding_egpr:
+	  i.encoding = encoding_evex512;
+	  break;
+	case encoding_evex:
+	case encoding_evex512:
+	  break;
+	default:
+	  i.encoding = encoding_error;
+	  break;
+	}
     }
 
   if (vector_size < VSZ256 && r->reg_type.bitfield.ymmword)
@@ -15780,11 +15875,19 @@ static bool check_register (const reg_entry *r)
 	  || flag_code != CODE_64BIT)
 	return false;
 
-      if (i.encoding == encoding_default
-	  || i.encoding == encoding_evex512)
-	i.encoding = encoding_evex;
-      else if (i.encoding != encoding_evex)
-	i.encoding = encoding_error;
+      switch (i.encoding)
+	{
+	  case encoding_default:
+	  case encoding_egpr:
+	  case encoding_evex512:
+	    i.encoding = encoding_evex;
+	    break;
+	  case encoding_evex:
+	    break;
+	  default:
+	    i.encoding = encoding_error;
+	    break;
+	}
     }
 
   if (r->reg_flags & RegRex2)
@@ -15793,7 +15896,19 @@ static bool check_register (const reg_entry *r)
 	  || flag_code != CODE_64BIT)
 	return false;
 
-      i.has_egpr = true;
+      switch (i.encoding)
+	{
+	case encoding_default:
+	  i.encoding = encoding_egpr;
+	  break;
+	case encoding_egpr:
+	case encoding_evex:
+	case encoding_evex512:
+	  break;
+	default:
+	  i.encoding = encoding_error;
+	  break;
+	}
     }
 
   if (((r->reg_flags & (RegRex64 | RegRex)) || r->reg_type.bitfield.qword)
@@ -17548,7 +17663,7 @@ tc_x86_parse_to_dw2regnum (expressionS *exp)
       if ((addressT) exp->X_add_number < i386_regtab_size)
 	{
 	  exp->X_add_number = i386_regtab[exp->X_add_number]
-			      .dw2_regnum[flag_code >> 1];
+			      .dw2_regnum[object_64bit];
 	  if (exp->X_add_number != Dw2Inval)
 	    exp->X_op = O_constant;
 	}
@@ -17558,22 +17673,7 @@ tc_x86_parse_to_dw2regnum (expressionS *exp)
 void
 tc_x86_frame_initial_instructions (void)
 {
-  static unsigned int sp_regno[2];
-
-  if (!sp_regno[flag_code >> 1])
-    {
-      char *saved_input = input_line_pointer;
-      char sp[][4] = {"esp", "rsp"};
-      expressionS exp;
-
-      input_line_pointer = sp[flag_code >> 1];
-      tc_x86_parse_to_dw2regnum (&exp);
-      gas_assert (exp.X_op == O_constant);
-      sp_regno[flag_code >> 1] = exp.X_add_number;
-      input_line_pointer = saved_input;
-    }
-
-  cfi_add_CFA_def_cfa (sp_regno[flag_code >> 1], -x86_cie_data_alignment);
+  cfi_add_CFA_def_cfa (object_64bit ? REG_SP : 4, -x86_cie_data_alignment);
   cfi_add_CFA_offset (x86_dwarf2_return_column, x86_cie_data_alignment);
 }
 

@@ -150,8 +150,8 @@ struct s390_cond_ext_format
    the '*' tag.  */
 #define NUM_COND_EXTENSIONS 20
 const struct s390_cond_ext_format s390_cond_extensions[NUM_COND_EXTENSIONS] =
-{ { '1', "o", "on overflow / if ones"},		/* jump on overflow / if ones */
-  { '2', "h", "on A high"},			/* jump on A high */
+{ { '1', "o", "on overflow / if ones" },	/* jump on overflow / if ones */
+  { '2', "h", "on A high" },			/* jump on A high */
   { '2', "p", "on plus" },			/* jump on plus */
   { '3', "nle", "on not low or equal" },	/* jump on not low or equal */
   { '4', "l", "on A low" },			/* jump on A low */
@@ -162,7 +162,7 @@ const struct s390_cond_ext_format s390_cond_extensions[NUM_COND_EXTENSIONS] =
   { '7', "nz", "on not zero / if not zeros" },	/* jump on not zero / if not zeros */
   { '8', "e", "on A equal B" },			/* jump on A equal B */
   { '8', "z", "on zero / if zeros" },		/* jump on zero / if zeros */
-  { '9', "nlh", "on not low or high " },	/* jump on not low or high */
+  { '9', "nlh", "on not low or high" },		/* jump on not low or high */
   { 'a', "he", "on high or equal" },		/* jump on high or equal */
   { 'b', "nl", "on A not low" },		/* jump on A not low */
   { 'b', "nm", "on not minus / if not mixed" },	/* jump on not minus / if not mixed */
@@ -491,15 +491,15 @@ main (void)
 		       && (str[2] == 0 || str[2] == ',')) {
 	      flag_bits |= S390_INSTR_FLAG_VX;
 	      str += 2;
-	    } else if (strncmp (str, "jump", 7) == 0
+	    } else if (strncmp (str, "jump", 4) == 0
 		&& (str[4] == 0 || str[4] == ',')) {
 	      flag_bits |= S390_INSTR_FLAGS_CLASS_JUMP;
 	      str += 4;
-	    } else if (strncmp (str, "condjump", 7) == 0
+	    } else if (strncmp (str, "condjump", 8) == 0
 		&& (str[8] == 0 || str[8] == ',')) {
 	      flag_bits |= S390_INSTR_FLAGS_CLASS_CONDJUMP;
 	      str += 8;
-	    } else if (strncmp (str, "jumpsr", 7) == 0
+	    } else if (strncmp (str, "jumpsr", 6) == 0
 		&& (str[6] == 0 || str[6] == ',')) {
 	      flag_bits |= S390_INSTR_FLAGS_CLASS_JUMPSR;
 	      str += 6;
