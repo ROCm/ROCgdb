@@ -19,6 +19,7 @@ import heapq
 import inspect
 import json
 import threading
+from contextlib import contextmanager
 
 from .io import start_json_writer, read_json
 from .startup import (
@@ -27,8 +28,6 @@ from .startup import (
     DAPQueue,
     in_dap_thread,
     in_gdb_thread,
-    send_gdb,
-    send_gdb_with_response,
     start_thread,
     log,
     log_stack,
@@ -61,24 +60,19 @@ class CancellationHandler:
         # Methods on this class acquire this lock before proceeding.
         self.lock = threading.Lock()
         # The request currently being handled, or None.
-        self.in_flight = None
+        self.in_flight_dap_thread = None
+        self.in_flight_gdb_thread = None
         self.reqs = []
 
     def starting(self, req):
-        """Call at the start of the given request.
-
-        Throws the appropriate exception if the request should be
-        immediately cancelled."""
+        """Call at the start of the given request."""
         with self.lock:
-            self.in_flight = req
-            while len(self.reqs) > 0 and self.reqs[0] <= req:
-                if heapq.heappop(self.reqs) == req:
-                    raise KeyboardInterrupt()
+            self.in_flight_dap_thread = req
 
     def done(self, req):
         """Indicate that the request is done."""
         with self.lock:
-            self.in_flight = None
+            self.in_flight_dap_thread = None
 
     def cancel(self, req):
         """Call to cancel a request.
@@ -87,7 +81,7 @@ class CancellationHandler:
         If the request is in flight, it is interrupted.
         If the request has not yet been seen, the cancellation is queued."""
         with self.lock:
-            if req == self.in_flight:
+            if req == self.in_flight_gdb_thread:
                 gdb.interrupt()
             else:
                 # We don't actually ignore the request here, but in
@@ -97,6 +91,29 @@ class CancellationHandler:
                 # before it is even sent.  It didn't seem worthwhile
                 # to try to check for this.
                 heapq.heappush(self.reqs, req)
+
+    @contextmanager
+    def interruptable_region(self, req):
+        """Return a new context manager that sets in_flight_gdb_thread to
+        REQ."""
+        if req is None:
+            # No request is handled in the region, just execute the region.
+            yield
+            return
+        try:
+            with self.lock:
+                # If the request is cancelled, don't execute the region.
+                while len(self.reqs) > 0 and self.reqs[0] <= req:
+                    if heapq.heappop(self.reqs) == req:
+                        raise KeyboardInterrupt()
+                # Request is being handled by the gdb thread.
+                self.in_flight_gdb_thread = req
+            # Execute region.  This may be interrupted by gdb.interrupt.
+            yield
+        finally:
+            with self.lock:
+                # Request is no longer handled by the gdb thread.
+                self.in_flight_gdb_thread = None
 
 
 class Server:
@@ -422,3 +439,76 @@ def cancel(**args):
     # ... which gdb takes to mean that it is fine for all cancel
     # requests to report success.
     return None
+
+
+class Invoker(object):
+    """A simple class that can invoke a gdb command."""
+
+    def __init__(self, cmd):
+        self.cmd = cmd
+
+    # This is invoked in the gdb thread to run the command.
+    @in_gdb_thread
+    def __call__(self):
+        exec_and_log(self.cmd)
+
+
+class Cancellable(object):
+
+    def __init__(self, fn, result_q=None):
+        self.fn = fn
+        self.result_q = result_q
+        with _server.canceller.lock:
+            self.req = _server.canceller.in_flight_dap_thread
+
+    # This is invoked in the gdb thread to run self.fn.
+    @in_gdb_thread
+    def __call__(self):
+        try:
+            with _server.canceller.interruptable_region(self.req):
+                val = self.fn()
+                if self.result_q is not None:
+                    self.result_q.put(val)
+        except (Exception, KeyboardInterrupt) as e:
+            if self.result_q is not None:
+                # Pass result or exception to caller.
+                self.result_q.put(e)
+            elif isinstance(e, KeyboardInterrupt):
+                # Fn was cancelled.
+                pass
+            else:
+                # Exception happened.  Ignore and log it.
+                err_string = "%s, %s" % (err, type(err))
+                thread_log("caught exception: " + err_string)
+                log_stack()
+
+
+def send_gdb(cmd):
+    """Send CMD to the gdb thread.
+    CMD can be either a function or a string.
+    If it is a string, it is passed to gdb.execute."""
+    if isinstance(cmd, str):
+        cmd = Invoker(cmd)
+
+    # Post the event and don't wait for the result.
+    gdb.post_event(Cancellable(cmd))
+
+
+def send_gdb_with_response(fn):
+    """Send FN to the gdb thread and return its result.
+    If FN is a string, it is passed to gdb.execute and None is
+    returned as the result.
+    If FN throws an exception, this function will throw the
+    same exception in the calling thread.
+    """
+    if isinstance(fn, str):
+        fn = Invoker(fn)
+
+    # Post the event and wait for the result in result_q.
+    result_q = DAPQueue()
+    gdb.post_event(Cancellable(fn, result_q))
+    val = result_q.get()
+
+    if isinstance(val, (Exception, KeyboardInterrupt)):
+        raise val
+    return val
