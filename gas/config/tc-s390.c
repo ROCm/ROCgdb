@@ -47,7 +47,7 @@ static unsigned int current_flags = S390_INSTR_FLAG_FACILITY_MASK;
 static unsigned int current_mode_mask = 0;
 
 /* Set to TRUE if the highgprs flag in the ELF header needs to be set
-   for the output file.  */
+   for the output file. The default is picked in init_default_arch().  */
 static bool set_highgprs_p = false;
 
 /* Whether to use user friendly register names. Default is TRUE.  */
@@ -59,6 +59,20 @@ static bool reg_names_p = TARGET_REG_NAMES_P;
 
 /* Set to TRUE if we want to warn about zero base/index registers.  */
 static bool warn_areg_zero = false;
+
+/* Whether to warn about register name type check mismatches.  */
+#ifndef S390_REGTYPE_CHECK
+#define S390_REGTYPE_CHECK S390_REGTYPE_CHECK_RELAXED
+#endif
+
+enum s390_regtype_check {
+  S390_REGTYPE_CHECK_NONE = 0,	/* No register name type checks.  */
+  S390_REGTYPE_CHECK_RELAXED,	/* Relaxed register name type checks.  */
+  S390_REGTYPE_CHECK_STRICT	/* Strict register name type checks.  */
+};
+
+/* Whether to warn about register name type check mismatches.  */
+static enum s390_regtype_check warn_regtype_mismatch = S390_REGTYPE_CHECK;
 
 /* Generic assembler global variables which must be defined by all
    targets.  */
@@ -109,6 +123,16 @@ const pseudo_typeS md_pseudo_table[] =
   { "machinemode",  s390_machinemode,   0 },
   { NULL,	    NULL,		0 }
 };
+
+/* Register types.  */
+enum s390_register_type
+  {
+    S390_REGTYPE_AR,	/* Access register.  */
+    S390_REGTYPE_CR,	/* Control register.  */
+    S390_REGTYPE_FPR,	/* Floating-point register.  */
+    S390_REGTYPE_GR,	/* General register.  */
+    S390_REGTYPE_VR,	/* Vector register.  */
+  };
 
 /* Given NAME, find the register number associated with that name, return
    the integer value associated with the given name or -1 on failure.  */
@@ -180,6 +204,26 @@ register_name (expressionS *expressionP)
     {
       expressionP->X_op = O_register;
       expressionP->X_add_number = reg_number;
+      switch (name[0])
+	{
+	  case 'a':
+	    expressionP->X_md = S390_REGTYPE_AR;
+	    break;
+	  case 'c':
+	    expressionP->X_md = S390_REGTYPE_CR;
+	    break;
+	  case 'f':
+	    expressionP->X_md = S390_REGTYPE_FPR;
+	    break;
+	  case 'r':
+	    expressionP->X_md = S390_REGTYPE_GR;
+	    break;
+	  case 'v':
+	    expressionP->X_md = S390_REGTYPE_VR;
+	    break;
+	  default:
+	    expressionP->X_md = 0;
+	}
 
       /* Make the rest nice.  */
       expressionP->X_add_symbol = NULL;
@@ -221,6 +265,7 @@ size_t md_longopts_size = sizeof (md_longopts);
 static void
 init_default_arch (void)
 {
+  /* Default architecture size.  */
   if (strcmp (default_arch, "s390") == 0)
     {
       if (s390_arch_size == 0)
@@ -234,6 +279,7 @@ init_default_arch (void)
   else
     as_fatal (_("Invalid default architecture, broken assembler."));
 
+  /* Default current architecture mode.  */
   if (current_mode_mask == 0)
     {
       /* Default to z/Architecture mode if the CPU supports it.  */
@@ -242,6 +288,10 @@ init_default_arch (void)
       else
 	current_mode_mask = 1 << S390_OPCODE_ZARCH;
     }
+
+  /* Determine whether the highgprs flag in the ELF header needs to be set.  */
+  if ((s390_arch_size == 32) && (current_mode_mask & (1 << S390_OPCODE_ZARCH)))
+    set_highgprs_p = true;
 }
 
 /* Called by TARGET_FORMAT.  */
@@ -409,6 +459,18 @@ md_parse_option (int c, const char *arg)
       else if (arg != NULL && strcmp (arg, "warn-areg-zero") == 0)
 	warn_areg_zero = true;
 
+      else if (arg != NULL && strcmp (arg, "warn-regtype-mismatch=strict") == 0)
+	warn_regtype_mismatch = S390_REGTYPE_CHECK_STRICT;
+
+      else if (arg != NULL && strcmp (arg, "warn-regtype-mismatch=relaxed") == 0)
+	warn_regtype_mismatch = S390_REGTYPE_CHECK_RELAXED;
+
+      else if (arg != NULL && strcmp (arg, "warn-regtype-mismatch=no") == 0)
+	warn_regtype_mismatch = S390_REGTYPE_CHECK_NONE;
+
+      else if (arg != NULL && strcmp (arg, "no-warn-regtype-mismatch") == 0)
+	warn_regtype_mismatch = S390_REGTYPE_CHECK_NONE;
+
       else if (arg != NULL && strcmp (arg, "31") == 0)
 	s390_arch_size = 32;
 
@@ -419,11 +481,7 @@ md_parse_option (int c, const char *arg)
 	current_mode_mask = 1 << S390_OPCODE_ESA;
 
       else if (arg != NULL && strcmp (arg, "zarch") == 0)
-	{
-	  if (s390_arch_size == 32)
-	    set_highgprs_p = true;
-	  current_mode_mask = 1 << S390_OPCODE_ZARCH;
-	}
+	current_mode_mask = 1 << S390_OPCODE_ZARCH;
 
       else if (arg != NULL && startswith (arg, "arch="))
 	{
@@ -473,15 +531,30 @@ void
 md_show_usage (FILE *stream)
 {
   fprintf (stream, _("\
-        S390 options:\n\
-        -mregnames        Allow symbolic names for registers\n\
-        -mwarn-areg-zero  Warn about zero base/index registers\n\
-        -mno-regnames     Do not allow symbolic names for registers\n\
-        -m31              Set file format to 31 bit format\n\
-        -m64              Set file format to 64 bit format\n"));
+S390 options:\n\
+  -m31                    generate 31-bit file format (31/32 bit word size)\n\
+  -m64                    generate 64-bit file format (64 bit word size)\n\
+  -mesa                   assemble for Enterprise System Architecture/390\n\
+  -mzarch                 assemble for z/Architecture\n\
+  -march=<processor>      assemble for processor <processor>\n\
+  -mregnames              allow symbolic names for registers\n\
+  -mno-regnames           do not allow symbolic names for registers\n\
+  -mwarn-areg-zero        warn about base/index register zero\n\
+  -mwarn-regtype-mismatch=strict\n\
+                          warn about register name type mismatches\n\
+  -mwarn-regtype-mismatch=relaxed\n\
+                          warn about register name type mismatches,\n\
+                          but allow FPR and VR to be used interchangeably\n\
+  -mno-warn-regtype-mismatch\n\
+                          do not warn about register name type mismatches\n\
+"));
   fprintf (stream, _("\
-        -V                print assembler version number\n\
-        -Qy, -Qn          ignored\n"));
+  -V                      print assembler version number\n\
+  -Qy, -Qn                ignored\n"));
+  fprintf (stream, _("\
+Deprecated S390 options:\n\
+  -Aesa                   assemble for processor IBM S/390 G5 (g5/arch3)\n\
+  -Aesame                 assemble for processor IBM zSeries 900 (z900/arch5)\n"));
 }
 
 /* Generate the hash table mapping mnemonics to struct s390_opcode.
@@ -555,9 +628,9 @@ md_begin (void)
   const struct s390_opcode *op;
   const struct s390_opcode *op_end;
 
-  /* Give a warning if the combination -m64-bit and -Aesa is used.  */
+  /* Give a warning if the combination -m64 and -Aesa is used.  */
   if (s390_arch_size == 64 && current_cpu < S390_OPCODE_Z900)
-    as_warn (_("The 64 bit file format is used without esame instructions."));
+    as_warn (_("The 64-bit file format is used without z/Architecture instructions."));
 
   s390_cie_data_alignment = -s390_arch_size / 8;
 
@@ -590,6 +663,41 @@ s390_md_finish (void)
     bfd_set_arch_mach (stdoutput, bfd_arch_s390, bfd_mach_s390_31);
 }
 
+static void
+s390_bad_operand_out_of_range (int operand_number,
+			       offsetT value,
+			       offsetT min,
+			       offsetT max,
+			       const char *file,
+			       unsigned line)
+{
+  const char * err;
+
+  if (operand_number > 0)
+    {
+      /* xgettext:c-format.  */
+      err =_("operand %d: operand out of range (%" PRId64
+	     " is not between %" PRId64 " and %" PRId64 ")");
+      if (file)
+	as_bad_where (file, line, err, operand_number,
+		      (int64_t) value, (int64_t) min, (int64_t) max);
+      else
+	as_bad (err, operand_number,
+		(int64_t) value, (int64_t) min, (int64_t) max);
+    }
+  else
+    {
+      /* xgettext:c-format.  */
+      err = _("operand out of range (%" PRId64
+	      " is not between %" PRId64 " and %" PRId64 ")");
+      if (file)
+	as_bad_where (file, line, err,
+		      (int64_t) value, (int64_t) min, (int64_t) max);
+      else
+	as_bad (err, (int64_t) value, (int64_t) min, (int64_t) max);
+    }
+}
+
 /* Insert an operand value into an instruction.  */
 
 static void
@@ -597,7 +705,8 @@ s390_insert_operand (unsigned char *insn,
 		     const struct s390_operand *operand,
 		     offsetT val,
 		     const char *file,
-		     unsigned int line)
+		     unsigned int line,
+		     int operand_number)
 {
   addressT uval;
   int offset;
@@ -614,21 +723,16 @@ s390_insert_operand (unsigned char *insn,
       /* Check for underflow / overflow.  */
       if (val < min || val > max)
 	{
-	  const char *err =
-	    _("operand out of range (%" PRId64 " not between %" PRId64
-	      " and %" PRId64 ")");
-
 	  if (operand->flags & S390_OPERAND_PCREL)
 	    {
 	      val = (offsetT) ((addressT) val << 1);
 	      min = (offsetT) ((addressT) min << 1);
 	      max = (offsetT) ((addressT) max << 1);
 	    }
-	  if (file == (char *) NULL)
-	    as_bad (err, (int64_t) val, (int64_t) min, (int64_t) max);
-	  else
-	    as_bad_where (file, line,
-			  err, (int64_t) val, (int64_t) min, (int64_t) max);
+
+	  s390_bad_operand_out_of_range (operand_number, val, min, max,
+					 file, line);
+
 	  return;
 	}
       /* val is ok, now restrict it to operand->bits bits.  */
@@ -663,7 +767,8 @@ s390_insert_operand (unsigned char *insn,
 	      max++;
 	    }
 
-	  as_bad_value_out_of_range (_("operand"), uval, (offsetT) min, (offsetT) max, file, line);
+	  s390_bad_operand_out_of_range (operand_number, val, min, max,
+					 file, line);
 
 	  return;
 	}
@@ -1224,6 +1329,41 @@ s390_elf_cons (int nbytes /* 1=.byte, 2=.word, 4=.long */)
   demand_empty_rest_of_line ();
 }
 
+static const char *
+operand_type_str(const struct s390_operand * operand)
+{
+  if (operand->flags & S390_OPERAND_BASE)
+    return _("base register");
+  else if (operand->flags & S390_OPERAND_DISP)
+    return _("displacement");
+  else if (operand->flags & S390_OPERAND_INDEX)
+    {
+      if (operand->flags & S390_OPERAND_VR)
+	return _("vector index register");
+      else
+	return _("index register");
+    }
+  else if (operand->flags & S390_OPERAND_LENGTH)
+    return _("length");
+  else if (operand->flags & S390_OPERAND_AR)
+    return _("access register");
+  else if (operand->flags & S390_OPERAND_CR)
+    return _("control register");
+  else if (operand->flags & S390_OPERAND_FPR)
+    return _("floating-point register");
+  else if (operand->flags & S390_OPERAND_GPR)
+    return _("general-purpose register");
+  else if (operand->flags & S390_OPERAND_VR)
+    return _("vector register");
+  else
+    {
+      if (operand->flags & S390_OPERAND_SIGNED)
+	return _("signed number");
+      else
+	return _("unsigned number");
+    }
+}
+
 /* Return true if all remaining operands in the opcode with
    OPCODE_FLAGS can be skipped.  */
 static bool
@@ -1268,16 +1408,17 @@ md_gather_operands (char *str,
   expressionS ex;
   elf_suffix_type suffix;
   bfd_reloc_code_real_type reloc;
-  int skip_optional;
+  int omitted_base_or_index;
+  int operand_number;
   char *f;
   int fc, i;
 
   while (ISSPACE (*str))
     str++;
 
-  skip_optional = 0;
-
   /* Gather the operands.  */
+  omitted_base_or_index = 0;	/* Whether B in D(L,B) or X in D(X,B) were omitted.  */
+  operand_number = 1;		/* Current operand number in e.g. R1,I2,M3,D4(B4).  */
   fc = 0;
   for (opindex_ptr = opcode->operands; *opindex_ptr != 0; opindex_ptr++)
     {
@@ -1290,17 +1431,17 @@ md_gather_operands (char *str,
 	{
 	  /* Optional parameters might need to be ORed with a
 	     value so calling s390_insert_operand is needed.  */
-	  s390_insert_operand (insn, operand, 0, NULL, 0);
+	  s390_insert_operand (insn, operand, 0, NULL, 0, operand_number);
 	  break;
 	}
 
-      if (skip_optional && (operand->flags & S390_OPERAND_INDEX))
+      if (omitted_base_or_index && (operand->flags & S390_OPERAND_INDEX))
 	{
-	  /* We do an early skip. For D(X,B) constructions the index
-	     register is skipped (X is optional). For D(L,B) the base
-	     register will be the skipped operand, because L is NOT
-	     optional.  */
-	  skip_optional = 0;
+	  /* Skip omitted optional index register operand in D(X,B) due to
+	     D(,B) or D(B). Skip comma, if D(,B).  */
+	  if (*str == ',')
+	    str++;
+	  omitted_base_or_index = 0;
 	  continue;
 	}
 
@@ -1320,12 +1461,13 @@ md_gather_operands (char *str,
 
       /* Write the operand to the insn.  */
       if (ex.X_op == O_illegal)
-	as_bad (_("illegal operand"));
+	as_bad (_("operand %d: illegal operand"), operand_number);
       else if (ex.X_op == O_absent)
 	{
 	  if (opindex_ptr[0] == '\0')
 	    break;
-	  as_bad (_("missing operand"));
+	  as_bad (_("operand %d: missing %s operand"), operand_number,
+		  operand_type_str(operand));
 	}
       else if (ex.X_op == O_register || ex.X_op == O_constant)
 	{
@@ -1336,7 +1478,7 @@ md_gather_operands (char *str,
 	      /* We need to generate a fixup for the
 		 expression returned by s390_lit_suffix.  */
 	      if (fc >= MAX_INSN_FIXUPS)
-		as_fatal (_("too many fixups"));
+		as_fatal (_("operand %d: too many fixups"), operand_number);
 	      fixups[fc].exp = ex;
 	      fixups[fc].opindex = *opindex_ptr;
 	      fixups[fc].reloc = BFD_RELOC_UNUSED;
@@ -1346,30 +1488,71 @@ md_gather_operands (char *str,
 	    {
 	      if ((operand->flags & S390_OPERAND_LENGTH)
 		  && ex.X_op != O_constant)
-		as_fatal (_("invalid length field specified"));
+		as_bad (_("operand %d: invalid length field specified"),
+			operand_number);
 	      if ((operand->flags & S390_OPERAND_INDEX)
 		  && ex.X_add_number == 0
 		  && warn_areg_zero)
-		as_warn (_("index register specified but zero"));
+		as_warn (_("operand %d: index register specified but zero"),
+			 operand_number);
 	      if ((operand->flags & S390_OPERAND_BASE)
 		  && ex.X_add_number == 0
 		  && warn_areg_zero)
-		as_warn (_("base register specified but zero"));
+		as_warn (_("operand %d: base register specified but zero"),
+			 operand_number);
 	      if ((operand->flags & S390_OPERAND_GPR)
 		  && (operand->flags & S390_OPERAND_REG_PAIR)
 		  && (ex.X_add_number & 1))
-		as_fatal (_("odd numbered general purpose register specified as "
-			    "register pair"));
+		as_bad (_("operand %d: odd numbered general purpose register "
+			  "specified as register pair"), operand_number);
 	      if ((operand->flags & S390_OPERAND_FPR)
 		  && (operand->flags & S390_OPERAND_REG_PAIR)
 		  && ex.X_add_number != 0 && ex.X_add_number != 1
 		  && ex.X_add_number != 4 && ex.X_add_number != 5
 		  && ex.X_add_number != 8 && ex.X_add_number != 9
 		  && ex.X_add_number != 12 && ex.X_add_number != 13)
-		as_fatal (_("invalid floating point register pair.  Valid fp "
-			    "register pair operands are 0, 1, 4, 5, 8, 9, "
-			    "12 or 13."));
-	      s390_insert_operand (insn, operand, ex.X_add_number, NULL, 0);
+		as_bad (_("operand %d: invalid floating-point register (FPR) "
+			  "pair (valid FPR pair operands are 0, 1, 4, 5, 8, 9, "
+			  "12 or 13)"), operand_number);
+	      if (warn_regtype_mismatch && ex.X_op == O_register
+		  && !(opcode->flags & S390_INSTR_FLAG_PSEUDO_MNEMONIC))
+		{
+		  const char *expected_regtype = NULL;
+
+		  if ((operand->flags & S390_OPERAND_AR)
+		      && ex.X_md != S390_REGTYPE_AR)
+		    expected_regtype = _("access register");
+		  else if ((operand->flags & S390_OPERAND_CR)
+			   && ex.X_md != S390_REGTYPE_CR)
+		    expected_regtype = _("control register");
+		  else if ((operand->flags & S390_OPERAND_FPR)
+			   && ex.X_md != S390_REGTYPE_FPR
+			   && (warn_regtype_mismatch == S390_REGTYPE_CHECK_STRICT
+			       || (ex.X_md != S390_REGTYPE_VR)))
+		    expected_regtype = _("floating-point register");
+		  else if ((operand->flags & S390_OPERAND_GPR)
+			   && ex.X_md != S390_REGTYPE_GR)
+		    expected_regtype = _("general register");
+		  else if ((operand->flags & S390_OPERAND_VR)
+			   && ex.X_md != S390_REGTYPE_VR
+			   && (warn_regtype_mismatch == S390_REGTYPE_CHECK_STRICT
+			       || (ex.X_md != S390_REGTYPE_FPR)))
+		    expected_regtype = _("vector register");
+
+		  if (expected_regtype)
+		    {
+		      if (operand->flags & S390_OPERAND_BASE)
+			as_warn (_("operand %d: expected %s name as base register"),
+				 operand_number, expected_regtype);
+		      else if (operand->flags & S390_OPERAND_INDEX)
+			as_warn (_("operand %d: expected %s name as index register"),
+				 operand_number, expected_regtype);
+		      else
+			as_warn (_("operand %d: expected %s name"),
+				 operand_number, expected_regtype);
+		    }
+		}
+	      s390_insert_operand (insn, operand, ex.X_add_number, NULL, 0, operand_number);
 	    }
 	}
       else
@@ -1455,11 +1638,11 @@ md_gather_operands (char *str,
 	    }
 
 	  if (suffix != ELF_SUFFIX_NONE && reloc == BFD_RELOC_UNUSED)
-	    as_bad (_("invalid operand suffix"));
+	    as_bad (_("operand %d: invalid operand suffix"), operand_number);
 	  /* We need to generate a fixup of type 'reloc' for this
 	     expression.  */
 	  if (fc >= MAX_INSN_FIXUPS)
-	    as_fatal (_("too many fixups"));
+	    as_fatal (_("operand %d: too many fixups"), operand_number);
 	  fixups[fc].exp = ex;
 	  fixups[fc].opindex = *opindex_ptr;
 	  fixups[fc].reloc = reloc;
@@ -1473,17 +1656,21 @@ md_gather_operands (char *str,
 	  /* After a displacement a block in parentheses can start.  */
 	  if (*str != '(')
 	    {
-	      /* Check if parenthesized block can be skipped. If the next
-		 operand is neither an optional operand nor a base register
-		 then we have a syntax error.  */
+	      /* There is no opening parentheses. Check if operands of
+		 parenthesized block can be skipped. Only index and base
+		 register operands as well as optional operands may be
+		 skipped. A length operand may not be skipped.  */
 	      operand = s390_operands + *(++opindex_ptr);
 	      if (!(operand->flags & (S390_OPERAND_INDEX|S390_OPERAND_BASE)))
-		as_bad (_("syntax error; missing '(' after displacement"));
+		as_bad (_("operand %d: syntax error; missing '(' after displacement"),
+			operand_number);
 
 	      /* Ok, skip all operands until S390_OPERAND_BASE.  */
 	      while (!(operand->flags & S390_OPERAND_BASE))
 		operand = s390_operands + *(++opindex_ptr);
 
+	      /* If there is no further input and the remaining operands are
+	         optional then have these optional operands processed.  */
 	      if (*str == '\0' && skip_optargs_p (opcode->flags, &opindex_ptr[1]))
 		continue;
 
@@ -1492,15 +1679,21 @@ md_gather_operands (char *str,
 		{
 		  if (*str != ',')
 		    {
+		      /* There is no comma. Skip all operands and stop.  */
 		      while (opindex_ptr[1] != '\0')
 			{
 			  operand = s390_operands + *(++opindex_ptr);
-			  as_bad (_("syntax error; expected ','"));
+			  as_bad (_("operand %d: syntax error; expected ','"),
+				  operand_number);
 			  break;
 			}
 		    }
 		  else
-		    str++;
+		    {
+		      /* Comma.  */
+		      str++;
+		      operand_number++;
+		    }
 		}
 	    }
 	  else
@@ -1510,26 +1703,33 @@ md_gather_operands (char *str,
 	      for (f = str; *f != '\0'; f++)
 		if (*f == ',' || *f == ')')
 		  break;
-	      /* If there is no comma until the closing parentheses OR
-		 there is a comma right after the opening parentheses,
-		 we have to skip optional operands.  */
+	      /* If there is no comma until the closing parenthesis ')' or
+		 there is a comma right after the opening parenthesis '(',
+		 we have to skip the omitted optional index or base register
+		 operand:
+		 - Index X in D(X,B), when D(,B) or D(B)
+		 - Base B in D(L,B), when D(L)  */
 	      if (*f == ',' && f == str)
 		{
-		  /* comma directly after '(' ? */
-		  skip_optional = 1;
-		  str++;
+		  /* Comma directly after opening parenthesis '(' ? */
+		  omitted_base_or_index = 1;
 		}
 	      else
-		skip_optional = (*f != ',');
+		omitted_base_or_index = (*f != ',');
 	    }
 	}
       else if (operand->flags & S390_OPERAND_BASE)
 	{
 	  /* After the base register the parenthesised block ends.  */
-	  if (*str++ != ')')
-	    as_bad (_("syntax error; missing ')' after base register"));
-	  skip_optional = 0;
+	  if (*str != ')')
+	    as_bad (_("operand %d: syntax error; missing ')' after base register"),
+		    operand_number);
+	  else
+	    str++;
+	  omitted_base_or_index = 0;
 
+	  /* If there is no further input and the remaining operands are
+	     optional then have these optional operands processed.  */
 	  if (*str == '\0' && skip_optargs_p (opcode->flags, &opindex_ptr[1]))
 	    continue;
 
@@ -1538,30 +1738,43 @@ md_gather_operands (char *str,
 	    {
 	      if (*str != ',')
 		{
+		  /* There is no comma. Skip all operands and stop.  */
 		  while (opindex_ptr[1] != '\0')
 		    {
 		      operand = s390_operands + *(++opindex_ptr);
-		      as_bad (_("syntax error; expected ','"));
+		      as_bad (_("operand %d: syntax error; expected ','"),
+			      operand_number);
 		      break;
 		    }
 		}
 	      else
-		str++;
+		{
+		  /* Comma.  */
+		  str++;
+		  operand_number++;
+		}
 	    }
 	}
       else
 	{
 	  /* We can find an 'early' closing parentheses in e.g. D(L) instead
-	     of D(L,B).  In this case the base register has to be skipped.  */
-	  if (*str == ')')
+	     of D(L,B). In this case the base register has to be skipped.
+	     Same if the base register has been explicilty omitted in e.g.
+	     D(X,) or D(L,).  */
+	  if (*str == ')' || (str[0] == ',' && str[1] == ')'))
 	    {
 	      operand = s390_operands + *(++opindex_ptr);
 
 	      if (!(operand->flags & S390_OPERAND_BASE))
-		as_bad (_("syntax error; ')' not allowed here"));
+		as_bad (_("operand %d: syntax error; '%c' not allowed here"),
+			operand_number, *str);
+	      if (*str == ',')
+		str++;
 	      str++;
 	    }
 
+	  /* If there is no further input and the remaining operands are
+	     optional then have these optional operands processed.  */
 	  if (*str == '\0' && skip_optargs_p (opcode->flags, &opindex_ptr[1]))
 	    continue;
 
@@ -1570,21 +1783,29 @@ md_gather_operands (char *str,
 	    {
 	      if (*str != ',')
 		{
+		  /* There is no comma. Skip all operands and stop.  */
 		  while (opindex_ptr[1] != '\0')
 		    {
 		      operand = s390_operands + *(++opindex_ptr);
-		      as_bad (_("syntax error; expected ','"));
+		      as_bad (_("operand %d: syntax error; expected ','"),
+			      operand_number);
 		      break;
 		    }
 		}
 	      else
-		str++;
+		{
+		  /* Comma.  */
+		  str++;
+		  if (!(operand->flags & (S390_OPERAND_INDEX
+					  | S390_OPERAND_LENGTH)))
+		    operand_number++;
+		}
 	    }
 	}
     }
 
   while (ISSPACE (*str))
-    ++str;
+    str++;
 
   /* Check for tls instruction marker.  */
   reloc = s390_tls_suffix (&str, &ex);
@@ -2275,7 +2496,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	{
 	  /* Insert the fully resolved operand value.  */
 	  s390_insert_operand ((unsigned char *) where, operand,
-			       (offsetT) value, fixP->fx_file, fixP->fx_line);
+			       (offsetT) value, fixP->fx_file, fixP->fx_line, 0);
 	  return;
 	}
 
