@@ -82,7 +82,7 @@ llvm_user_stack_depth (dwarf_llvm_user op, const gdb_byte *op_ptr,
 
     case DW_OP_LLVM_USER_call_frame_entry_reg:
     case DW_OP_LLVM_USER_undefined:
-    case DW_OP_LLVM_push_lane:
+    case DW_OP_LLVM_USER_push_lane:
       ++stack_depth;
       break;
 
