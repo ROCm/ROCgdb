@@ -3285,8 +3285,8 @@ md_begin (void)
 #endif
       x86_cie_data_alignment = -8;
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
-      x86_sframe_cfa_sp_reg = 7;
-      x86_sframe_cfa_fp_reg = 6;
+      x86_sframe_cfa_sp_reg = REG_SP;
+      x86_sframe_cfa_fp_reg = REG_FP;
 #endif
     }
   else
@@ -6761,7 +6761,8 @@ md_assemble (char *line)
       && !is_cpu (&i.tm, CpuSSE4a)
       && !is_any_vex_encoding (t))
     {
-      bool simd = false;
+      /* Some KL and all WideKL insns have only implicit %xmm operands.  */
+      bool simd = is_cpu (t, CpuKL) || is_cpu (t, CpuWideKL);
 
       for (j = 0; j < t->operands; ++j)
 	{
@@ -8230,7 +8231,9 @@ check_VecOperands (const insn_template *t)
 
   /* Check the special Imm4 cases; must be the first operand.  */
   if ((is_cpu (t, CpuXOP) && t->operands == 5)
-      || (is_cpu (t, CpuAPX_F) && t->opcode_space == SPACE_0F3A))
+      || (t->opcode_space == SPACE_0F3A
+	  && (t->base_opcode | 3) == 0x0b
+	  && is_cpu (t, CpuAPX_F)))
     {
       if (i.op[0].imms->X_op != O_constant
 	  || !fits_in_imm4 (i.op[0].imms->X_add_number))
