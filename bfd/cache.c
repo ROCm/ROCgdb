@@ -45,10 +45,6 @@ SUBSECTION
 #include "libbfd.h"
 #include "libiberty.h"
 
-#ifdef HAVE_MMAP
-#include <sys/mman.h>
-#endif
-
 static FILE *_bfd_open_file_unlocked (bfd *abfd);
 
 /* In some cases we can optimize cache operation when reopening files.
@@ -482,14 +478,14 @@ cache_bstat (struct bfd *abfd, struct stat *sb)
 static void *
 cache_bmmap (struct bfd *abfd ATTRIBUTE_UNUSED,
 	     void *addr ATTRIBUTE_UNUSED,
-	     bfd_size_type len ATTRIBUTE_UNUSED,
+	     size_t len ATTRIBUTE_UNUSED,
 	     int prot ATTRIBUTE_UNUSED,
 	     int flags ATTRIBUTE_UNUSED,
 	     file_ptr offset ATTRIBUTE_UNUSED,
 	     void **map_addr ATTRIBUTE_UNUSED,
-	     bfd_size_type *map_len ATTRIBUTE_UNUSED)
+	     size_t *map_len ATTRIBUTE_UNUSED)
 {
-  void *ret = (void *) -1;
+  void *ret = MAP_FAILED;
 
   if (!bfd_lock ())
     return ret;
@@ -518,7 +514,7 @@ cache_bmmap (struct bfd *abfd ATTRIBUTE_UNUSED,
       pg_len = (len + (offset - pg_offset) + pagesize_m1) & ~pagesize_m1;
 
       ret = mmap (addr, pg_len, prot, flags, fileno (f), pg_offset);
-      if (ret == (void *) -1)
+      if (ret == MAP_FAILED)
 	bfd_set_error (bfd_error_system_call);
       else
 	{
@@ -530,7 +526,7 @@ cache_bmmap (struct bfd *abfd ATTRIBUTE_UNUSED,
 #endif
 
   if (!bfd_unlock ())
-    return (void *) -1;
+    return MAP_FAILED;
   return ret;
 }
 
