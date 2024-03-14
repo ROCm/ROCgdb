@@ -525,3 +525,27 @@ proc rocm_core_find_1 {coredir binfile {arg ""}} {
 proc rocm_core_find {binfile {deletefiles {}} {arg ""}} {
     return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg]
 }
+
+# Helper function calling "generate-core-file COREFILE_PATH".
+#
+# If an AMDGPU core dump is successfuly generated, issue a PASS and return 1.
+# If a configuration limitation is detected preventing the creation of an
+# AMDGPU core dump, issue an UNSUPPORTED, and return 0.  If any other error is
+# detected, issue a FAIL and return 0.
+
+proc rocm_generate_core_file { corefile_path } {
+    # On some configurations, creating the core dump can take a significant
+    # amount of time.  Make sure to use an appropriate timeout value.
+    with_timeout_factor 5 {
+	gdb_test_multiple "generate-core-file $corefile_path" "generate core" {
+	    -re -wrap "Cannot create an AMDGPU core dump.*" {
+		unsupported $gdb_test_name
+	     }
+	    -re -wrap "Saved corefile .*" {
+		pass $gdb_test_name
+		return 1
+	    }
+	}
+    }
+    return 0
+}

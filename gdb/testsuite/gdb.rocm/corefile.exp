@@ -75,9 +75,8 @@ proc do_test {} {
   }
 
   set corefile_path [standard_output_file "generated-core"]
-  with_timeout_factor 5 {
-    gdb_test "generate-core-file $corefile_path" "Saved corefile .*" \
-      "generate corefile"
+  if {![rocm_generate_core_file $corefile_path]} {
+    return
   }
 
   # Reload the corefile.
