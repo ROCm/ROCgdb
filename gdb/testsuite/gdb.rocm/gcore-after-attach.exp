@@ -72,16 +72,8 @@ proc do_test {} {
     [has_wave_coordinates "coordinates known after attach"]
 
   set corefile_path $::binfile.core
-  with_timeout_factor 5 {
-    gdb_test_multiple "generate-core-file $corefile_path" "generate core" {
-      -re -wrap "Cannot create an AMDGPU core dump.*" {
-	unsupported $gdb_test_name
-	return
-      }
-      -re -wrap "Saved corefile .*" {
-	pass $gdb_test_name
-      }
-    }
+  if {![rocm_generate_core_file $corefile_path]} {
+    return
   }
 
   # Reload the corefile.
