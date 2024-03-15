@@ -43,7 +43,7 @@ raise_invalid ()
 {
   enable_alu_exceptions ();
   volatile float a = -1;
-  sqrt (a); /* Break here for invalid.  */
+  float b = sqrt (a); /* Break here for invalid.  */
 }
 
 __global__ void
