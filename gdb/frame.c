@@ -1316,9 +1316,7 @@ frame_unwind_register_value (const frame_info_ptr &next_frame, int regnum)
 
 	  if (value->lazy ())
 	    gdb_printf (&debug_file, " lazy");
-	  else if (!value->entirely_available ())
-	    gdb_printf (&debug_file, " unavailable");
-	  else
+	  else if (value->entirely_available ())
 	    {
 	      int i;
 	      gdb::array_view<const gdb_byte> buf = value->contents ();
@@ -1329,6 +1327,10 @@ frame_unwind_register_value (const frame_info_ptr &next_frame, int regnum)
 		gdb_printf (&debug_file, "%02x", buf[i]);
 	      gdb_printf (&debug_file, "]");
 	    }
+	  else if (value->entirely_unavailable ())
+	    gdb_printf (&debug_file, " unavailable");
+	  else
+	    gdb_printf (&debug_file, " partly unavailable");
 	}
 
       frame_debug_printf ("%s", debug_file.c_str ());
