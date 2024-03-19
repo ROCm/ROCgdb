@@ -2695,9 +2695,9 @@ symbol::matches (domain_search_flags flags) const
 /* See symtab.h.  */
 
 struct type *
-lookup_transparent_type (const char *name)
+lookup_transparent_type (const char *name, domain_search_flags flags)
 {
-  return current_language->lookup_transparent_type (name);
+  return current_language->lookup_transparent_type (name, flags);
 }
 
 /* A helper for basic_lookup_transparent_type that interfaces with the
@@ -2706,6 +2706,7 @@ lookup_transparent_type (const char *name)
 static struct type *
 basic_lookup_transparent_type_quick (struct objfile *objfile,
 				     enum block_enum block_index,
+				     domain_search_flags flags,
 				     const lookup_name_info &name)
 {
   struct compunit_symtab *cust;
@@ -2713,14 +2714,14 @@ basic_lookup_transparent_type_quick (struct objfile *objfile,
   const struct block *block;
   struct symbol *sym;
 
-  cust = objfile->lookup_symbol (block_index, name, SEARCH_STRUCT_DOMAIN);
+  cust = objfile->lookup_symbol (block_index, name, flags);
   if (cust == NULL)
     return NULL;
 
   bv = cust->blockvector ();
   block = bv->block (block_index);
 
-  sym = block_find_symbol (block, name, SEARCH_STRUCT_DOMAIN, nullptr);
+  sym = block_find_symbol (block, name, flags, nullptr);
   if (sym == nullptr)
     error_in_psymtab_expansion (block_index, name.c_str (), cust);
   gdb_assert (!TYPE_IS_OPAQUE (sym->type ()));
@@ -2734,6 +2735,7 @@ basic_lookup_transparent_type_quick (struct objfile *objfile,
 static struct type *
 basic_lookup_transparent_type_1 (struct objfile *objfile,
 				 enum block_enum block_index,
+				 domain_search_flags flags,
 				 const lookup_name_info &name)
 {
   const struct blockvector *bv;
@@ -2744,7 +2746,7 @@ basic_lookup_transparent_type_1 (struct objfile *objfile,
     {
       bv = cust->blockvector ();
       block = bv->block (block_index);
-      sym = block_find_symbol (block, name, SEARCH_STRUCT_DOMAIN, nullptr);
+      sym = block_find_symbol (block, name, flags, nullptr);
       if (sym != nullptr)
 	{
 	  gdb_assert (!TYPE_IS_OPAQUE (sym->type ()));
@@ -2762,7 +2764,7 @@ basic_lookup_transparent_type_1 (struct objfile *objfile,
    global blocks.  */
 
 struct type *
-basic_lookup_transparent_type (const char *name)
+basic_lookup_transparent_type (const char *name, domain_search_flags flags)
 {
   struct type *t;
 
@@ -2776,7 +2778,7 @@ basic_lookup_transparent_type (const char *name)
   for (objfile *objfile : current_program_space->objfiles ())
     {
       t = basic_lookup_transparent_type_1 (objfile, GLOBAL_BLOCK,
-					   lookup_name);
+					   flags, lookup_name);
       if (t)
 	return t;
     }
@@ -2784,7 +2786,7 @@ basic_lookup_transparent_type (const char *name)
   for (objfile *objfile : current_program_space->objfiles ())
     {
       t = basic_lookup_transparent_type_quick (objfile, GLOBAL_BLOCK,
-					       lookup_name);
+					       flags, lookup_name);
       if (t)
 	return t;
     }
@@ -2799,7 +2801,7 @@ basic_lookup_transparent_type (const char *name)
   for (objfile *objfile : current_program_space->objfiles ())
     {
       t = basic_lookup_transparent_type_1 (objfile, STATIC_BLOCK,
-					   lookup_name);
+					   flags, lookup_name);
       if (t)
 	return t;
     }
@@ -2807,7 +2809,7 @@ basic_lookup_transparent_type (const char *name)
   for (objfile *objfile : current_program_space->objfiles ())
     {
       t = basic_lookup_transparent_type_quick (objfile, STATIC_BLOCK,
-					       lookup_name);
+					       flags, lookup_name);
       if (t)
 	return t;
     }

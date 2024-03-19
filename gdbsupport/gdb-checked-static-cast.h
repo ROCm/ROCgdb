@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef COMMON_GDB_CHECKED_DYNAMIC_CAST_H
-#define COMMON_GDB_CHECKED_DYNAMIC_CAST_H
+#ifndef COMMON_GDB_CHECKED_STATIC_CAST_H
+#define COMMON_GDB_CHECKED_STATIC_CAST_H
 
 #include "gdbsupport/traits.h"
 
@@ -54,16 +54,12 @@ checked_static_cast (V *v)
 		 "types must be related");
 
 #ifdef DEVELOPMENT
-  if (v == nullptr)
-    return nullptr;
-
-  T result = dynamic_cast<T> (v);
-  gdb_assert (result != nullptr);
-#else
-  T result = static_cast<T> (v);
+  gdb_assert (v == nullptr || dynamic_cast<T> (v) != nullptr);
 #endif
 
-  return result;
+  /* If a base class of V is virtual then the dynamic_cast above will
+     succeed, but this static_cast will fail.  */
+  return static_cast<T> (v);
 }
 
 /* Same as the above, but to cast from a reference type to another.  */
@@ -84,4 +80,4 @@ checked_static_cast (V &v)
 
 }
 
-#endif /* COMMON_GDB_CHECKED_DYNAMIC_CAST_H */
+#endif /* COMMON_GDB_CHECKED_STATIC_CAST_H */
