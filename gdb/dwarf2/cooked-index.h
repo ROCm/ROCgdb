@@ -104,7 +104,7 @@ extern bool language_requires_canonicalization (enum language lang);
    This is an "open" class and the members are all directly
    accessible.  It is read-only after the index has been fully read
    and processed.  */
-struct cooked_index_entry : public allocate_on_obstack
+struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
 {
   cooked_index_entry (sect_offset die_offset_, enum dwarf_tag tag_,
 		      cooked_index_flag flags_,
@@ -362,7 +362,7 @@ private:
   cooked_index_entry *m_main = nullptr;
   /* The addrmap.  This maps address ranges to dwarf2_per_cu_data
      objects.  */
-  addrmap *m_addrmap = nullptr;
+  addrmap_fixed *m_addrmap = nullptr;
   /* Storage for canonical names.  */
   std::vector<gdb::unique_xmalloc_ptr<char>> m_names;
 };

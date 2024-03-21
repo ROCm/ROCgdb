@@ -44,8 +44,6 @@ using addrmap_foreach_const_fn
 /* The base class for addrmaps.  */
 struct addrmap
 {
-  virtual ~addrmap () = default;
-
   /* Return the object associated with ADDR in MAP.  */
   const void *find (CORE_ADDR addr) const
   { return this->do_find (addr); }
@@ -68,6 +66,9 @@ struct addrmap
   { return this->do_foreach (fn); }
 
 
+protected:
+  ~addrmap () = default;
+
 private:
   /* Worker for find, implemented by sub-classes.  */
   virtual void *do_find (CORE_ADDR addr) const = 0;
@@ -80,7 +81,7 @@ struct addrmap_mutable;
 
 /* Fixed address maps.  */
 struct addrmap_fixed : public addrmap,
-		       public allocate_on_obstack
+		       public allocate_on_obstack<addrmap_fixed>
 {
 public:
 
