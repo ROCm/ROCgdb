@@ -14055,6 +14055,9 @@ stopped while generating the core dump.  If any of the inferior's threads
 are running when executing this command, @value{GDBN} stops the threads
 and resumes them when the command is done.
 
+If supported by the filesystem where the core is written to,
+@value{GDBN} generates a sparse core dump file.
+
 Note that this command is implemented only for some systems (as of
 this writing, @sc{gnu}/Linux, FreeBSD, Solaris, and S390).
 
