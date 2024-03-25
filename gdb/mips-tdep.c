@@ -214,7 +214,7 @@ struct target_desc *mips_tdesc_gp32;
 struct target_desc *mips_tdesc_gp64;
 
 /* The current set of options to be passed to the disassembler.  */
-static char *mips_disassembler_options;
+static std::string mips_disassembler_options;
 
 /* Implicit disassembler options for individual ABIs.  These tell
    libopcodes to use general-purpose register names corresponding
@@ -8738,14 +8738,14 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_print_insn (gdbarch, gdb_print_insn_mips);
   if (mips_abi == MIPS_ABI_N64)
-    set_gdbarch_disassembler_options_implicit
-      (gdbarch, (const char *) mips_disassembler_options_n64);
+    set_gdbarch_disassembler_options_implicit (gdbarch,
+					       mips_disassembler_options_n64);
   else if (mips_abi == MIPS_ABI_N32)
-    set_gdbarch_disassembler_options_implicit
-      (gdbarch, (const char *) mips_disassembler_options_n32);
+    set_gdbarch_disassembler_options_implicit (gdbarch,
+					       mips_disassembler_options_n32);
   else
-    set_gdbarch_disassembler_options_implicit
-      (gdbarch, (const char *) mips_disassembler_options_o32);
+    set_gdbarch_disassembler_options_implicit (gdbarch,
+					       mips_disassembler_options_o32);
   set_gdbarch_disassembler_options (gdbarch, &mips_disassembler_options);
   set_gdbarch_valid_disassembler_options (gdbarch,
 					  disassembler_options_mips ());

@@ -1250,11 +1250,11 @@ pstring (const char *string)
 }
 
 static const char *
-pstring_ptr (char **string)
+pstring_ptr (std::string *string)
 {
-  if (string == NULL || *string == NULL)
+  if (string == nullptr)
     return "(null)";
-  return *string;
+  return string->c_str ();
 }
 
 /* Helper function to print a list of strings, represented as "const

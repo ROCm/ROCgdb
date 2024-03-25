@@ -2860,7 +2860,7 @@ Functions for allowing a target to modify its disassembler options.
 )
 
 Value(
-    type="char **",
+    type="std::string *",
     name="disassembler_options",
     invalid=False,
     printer="pstring_ptr (gdbarch->disassembler_options)",
