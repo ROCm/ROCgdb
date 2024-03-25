@@ -46,6 +46,13 @@
 
 #include "completer.h"
 
+/* Forward declarations.  */
+static const char *completion_find_completion_word (completion_tracker &tracker,
+						    const char *text,
+						    int *quote_char);
+
+static void set_rl_completer_word_break_characters (const char *break_chars);
+
 /* See completer.h.  */
 
 class completion_tracker::completion_hash_entry
@@ -176,18 +183,16 @@ static const char gdb_completer_file_name_break_characters[] =
   " \t\n*|\"';:?><";
 #endif
 
-/* Characters that can be used to quote completion strings.  Note that
-   we can't include '"' because the gdb C parser treats such quoted
+/* Characters that can be used to quote expressions.  Note that we can't
+   include '"' (double quote) because the gdb C parser treats such quoted
    sequences as strings.  */
-static const char gdb_completer_quote_characters[] = "'";
-
-/* Accessor for some completer data that may interest other files.  */
+static const char gdb_completer_expression_quote_characters[] = "'";
 
-const char *
-get_gdb_completer_quote_characters (void)
-{
-  return gdb_completer_quote_characters;
-}
+/* Characters that can be used to quote file names.  We do allow '"'
+   (double quotes) in this set as file names are not passed through the C
+   expression parser.  */
+static const char gdb_completer_file_name_quote_characters[] = "'\"";
+
 
 /* This can be used for functions which don't want to complete on
    symbols but don't want to complete on anything else either.  */
@@ -206,13 +211,13 @@ filename_completer (struct cmd_list_element *ignore,
 		    completion_tracker &tracker,
 		    const char *text, const char *word)
 {
-  int subsequent_name;
+  rl_completer_quote_characters = gdb_completer_file_name_quote_characters;
 
-  subsequent_name = 0;
+  int subsequent_name = 0;
   while (1)
     {
       gdb::unique_xmalloc_ptr<char> p_rl
-	(rl_filename_completion_function (text, subsequent_name));
+	(rl_filename_completion_function (word, subsequent_name));
       if (p_rl == NULL)
 	break;
       /* We need to set subsequent_name to a non-zero value before the
@@ -241,16 +246,8 @@ filename_completer (struct cmd_list_element *ignore,
 	}
 
       tracker.add_completion
-	(make_completion_match_str (std::move (p_rl), text, word));
+	(make_completion_match_str (std::move (p_rl), word, word));
     }
-#if 0
-  /* There is no way to do this just long enough to affect quote
-     inserting without also affecting the next completion.  This
-     should be fixed in readline.  FIXME.  */
-  /* Ensure that readline does the right thing
-     with respect to inserting quotes.  */
-  rl_completer_word_break_characters = "";
-#endif
 }
 
 /* The corresponding completer_handle_brkchars
@@ -263,6 +260,8 @@ filename_completer_handle_brkchars (struct cmd_list_element *ignore,
 {
   set_rl_completer_word_break_characters
     (gdb_completer_file_name_break_characters);
+
+  rl_completer_quote_characters = gdb_completer_file_name_quote_characters;
 }
 
 /* Find the bounds of the current word for completion purposes, and
@@ -408,12 +407,13 @@ gdb_rl_find_completion_word (struct gdb_rl_completion_word_info *info,
 static const char *
 advance_to_completion_word (completion_tracker &tracker,
 			    const char *word_break_characters,
+			    const char *quote_characters,
 			    const char *text)
 {
   gdb_rl_completion_word_info info;
 
   info.word_break_characters = word_break_characters;
-  info.quote_characters = gdb_completer_quote_characters;
+  info.quote_characters = quote_characters;
   info.basic_quote_characters = rl_basic_quote_characters;
 
   int delimiter;
@@ -438,7 +438,8 @@ advance_to_expression_complete_word_point (completion_tracker &tracker,
 					   const char *text)
 {
   const char *brk_chars = current_language->word_break_characters ();
-  return advance_to_completion_word (tracker, brk_chars, text);
+  const char *quote_chars = gdb_completer_expression_quote_characters;
+  return advance_to_completion_word (tracker, brk_chars, quote_chars, text);
 }
 
 /* See completer.h.  */
@@ -448,7 +449,8 @@ advance_to_filename_complete_word_point (completion_tracker &tracker,
 					 const char *text)
 {
   const char *brk_chars = gdb_completer_file_name_break_characters;
-  return advance_to_completion_word (tracker, brk_chars, text);
+  const char *quote_chars = gdb_completer_file_name_quote_characters;
+  return advance_to_completion_word (tracker, brk_chars, quote_chars, text);
 }
 
 /* See completer.h.  */
@@ -1113,9 +1115,12 @@ expression_completer (struct cmd_list_element *ignore,
   complete_expression (tracker, text, word);
 }
 
-/* See definition in completer.h.  */
+/* Set the word break characters array to BREAK_CHARS.  This function is
+   useful as const-correct alternative to direct assignment to
+   rl_completer_word_break_characters, which is "char *", not "const
+   char *".  */
 
-void
+static void
 set_rl_completer_word_break_characters (const char *break_chars)
 {
   rl_completer_word_break_characters = (char *) break_chars;
@@ -1198,23 +1203,6 @@ complete_line_internal_normal_command (completion_tracker &tracker,
 				       complete_line_internal_reason reason,
 				       struct cmd_list_element *c)
 {
-  const char *p = cmd_args;
-
-  if (c->completer == filename_completer)
-    {
-      /* Many commands which want to complete on file names accept
-	 several file names, as in "run foo bar >>baz".  So we don't
-	 want to complete the entire text after the command, just the
-	 last word.  To this end, we need to find the beginning of the
-	 file name by starting at `word' and going backwards.  */
-      for (p = word;
-	   p > command
-	     && strchr (gdb_completer_file_name_break_characters,
-			p[-1]) == NULL;
-	   p--)
-	;
-    }
-
   if (reason == handle_brkchars)
     {
       completer_handle_brkchars_ftype *brkchars_fn;
@@ -1228,11 +1216,11 @@ complete_line_internal_normal_command (completion_tracker &tracker,
 	       (c->completer));
 	}
 
-      brkchars_fn (c, tracker, p, word);
+      brkchars_fn (c, tracker, cmd_args, word);
     }
 
   if (reason != handle_brkchars && c->completer != NULL)
-    (*c->completer) (c, tracker, p, word);
+    (*c->completer) (c, tracker, cmd_args, word);
 }
 
 /* Internal function used to handle completions.
@@ -1268,6 +1256,11 @@ complete_line_internal_1 (completion_tracker &tracker,
      commands.  */
   set_rl_completer_word_break_characters
     (current_language->word_break_characters ());
+
+  /* Likewise for the quote characters.  If we later find out that we are
+     completing file names then we can switch to the file name quote
+     character set (i.e., both single- and double-quotes).  */
+  rl_completer_quote_characters = gdb_completer_expression_quote_characters;
 
   /* Decide whether to complete on a list of gdb commands or on
      symbols.  */
@@ -1952,8 +1945,12 @@ gdb_completion_word_break_characters_throw ()
   return (char *) rl_completer_word_break_characters;
 }
 
-char *
-gdb_completion_word_break_characters ()
+/* Get the list of chars that are considered as word breaks for the current
+   command.  This function does not throw any exceptions and is called from
+   readline.  See gdb_completion_word_break_characters_throw for details.  */
+
+static char *
+gdb_completion_word_break_characters () noexcept
 {
   /* New completion starting.  */
   current_completion.aborted = false;
@@ -1972,9 +1969,14 @@ gdb_completion_word_break_characters ()
   return NULL;
 }
 
-/* See completer.h.  */
+/* Find the bounds of the word in TEXT for completion purposes, and return
+   a pointer to the end of the word.  Calls the completion machinery for a
+   handle_brkchars phase (using TRACKER) to figure out the right work break
+   characters for the command in TEXT.  QUOTE_CHAR, if non-null, is set to
+   the opening quote character if we found an unclosed quoted substring,
+   '\0' otherwise.  */
 
-const char *
+static const char *
 completion_find_completion_word (completion_tracker &tracker, const char *text,
 				 int *quote_char)
 {
@@ -1992,7 +1994,7 @@ completion_find_completion_word (completion_tracker &tracker, const char *text,
   gdb_rl_completion_word_info info;
 
   info.word_break_characters = rl_completer_word_break_characters;
-  info.quote_characters = gdb_completer_quote_characters;
+  info.quote_characters = rl_completer_quote_characters;
   info.basic_quote_characters = rl_basic_quote_characters;
 
   return gdb_rl_find_completion_word (&info, quote_char, NULL, text);
@@ -2343,7 +2345,7 @@ gdb_rl_attempted_completion_function_throw (const char *text, int start, int end
    hook.  Wrapper around gdb_rl_attempted_completion_function_throw
    that catches C++ exceptions, which can't cross readline.  */
 
-char **
+static char **
 gdb_rl_attempted_completion_function (const char *text, int start, int end)
 {
   /* Restore globals that might have been tweaked in
@@ -2369,61 +2371,6 @@ gdb_rl_attempted_completion_function (const char *text, int start, int end)
     }
 
   return NULL;
-}
-
-/* Skip over the possibly quoted word STR (as defined by the quote
-   characters QUOTECHARS and the word break characters BREAKCHARS).
-   Returns pointer to the location after the "word".  If either
-   QUOTECHARS or BREAKCHARS is NULL, use the same values used by the
-   completer.  */
-
-const char *
-skip_quoted_chars (const char *str, const char *quotechars,
-		   const char *breakchars)
-{
-  char quote_char = '\0';
-  const char *scan;
-
-  if (quotechars == NULL)
-    quotechars = gdb_completer_quote_characters;
-
-  if (breakchars == NULL)
-    breakchars = current_language->word_break_characters ();
-
-  for (scan = str; *scan != '\0'; scan++)
-    {
-      if (quote_char != '\0')
-	{
-	  /* Ignore everything until the matching close quote char.  */
-	  if (*scan == quote_char)
-	    {
-	      /* Found matching close quote.  */
-	      scan++;
-	      break;
-	    }
-	}
-      else if (strchr (quotechars, *scan))
-	{
-	  /* Found start of a quoted string.  */
-	  quote_char = *scan;
-	}
-      else if (strchr (breakchars, *scan))
-	{
-	  break;
-	}
-    }
-
-  return (scan);
-}
-
-/* Skip over the possibly quoted word STR (as defined by the quote
-   characters and word break characters used by the completer).
-   Returns pointer to the location after the "word".  */
-
-const char *
-skip_quoted (const char *str)
-{
-  return skip_quoted_chars (str, NULL, NULL);
 }
 
 /* Return a message indicating that the maximum number of completions
@@ -3066,6 +3013,11 @@ void _initialize_completer ();
 void
 _initialize_completer ()
 {
+  /* Setup some readline completion globals.  */
+  rl_completion_word_break_hook = gdb_completion_word_break_characters;
+  rl_attempted_completion_function = gdb_rl_attempted_completion_function;
+  set_rl_completer_word_break_characters (default_word_break_characters ());
+
   add_setshow_zuinteger_unlimited_cmd ("max-completions", no_class,
 				       &max_completions, _("\
 Set maximum number of completion candidates."), _("\

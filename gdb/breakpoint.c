@@ -5814,6 +5814,8 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
 	{
 	  try
 	    {
+	      scoped_restore reset_in_cond_eval
+		= make_scoped_restore (&thread->control.in_cond_eval, true);
 	      scoped_restore_current_simd_lane restore_lane {thread};
 	      simd_lanes_mask_t condition_mask = 0;
 

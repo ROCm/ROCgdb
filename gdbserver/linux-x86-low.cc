@@ -27,6 +27,7 @@
 #include "gdbsupport/x86-xstate.h"
 #include "nat/x86-xstate.h"
 #include "nat/gdb_ptrace.h"
+#include "nat/x86-linux.h"
 
 #ifdef __x86_64__
 #include "nat/amd64-linux-siginfo.h"
@@ -46,7 +47,7 @@
 #include "nat/linux-nat.h"
 #include "nat/x86-linux.h"
 #include "nat/x86-linux-dregs.h"
-#include "linux-x86-tdesc.h"
+#include "nat/x86-linux-tdesc.h"
 
 #ifdef __x86_64__
 static target_desc_up tdesc_amd64_linux_no_xml;
@@ -832,27 +833,6 @@ x86_target::low_siginfo_fixup (siginfo_t *ptrace, gdb_byte *inf, int direction)
 
 static int use_xml;
 
-/* Format of XSAVE extended state is:
-	struct
-	{
-	  fxsave_bytes[0..463]
-	  sw_usable_bytes[464..511]
-	  xstate_hdr_bytes[512..575]
-	  avx_bytes[576..831]
-	  future_state etc
-	};
-
-  Same memory layout will be used for the coredump NT_X86_XSTATE
-  representing the XSAVE extended state registers.
-
-  The first 8 bytes of the sw_usable_bytes[464..467] is the OS enabled
-  extended state mask, which is the same as the extended control register
-  0 (the XFEATURE_ENABLED_MASK register), XCR0.  We can use this mask
-  together with the mask saved in the xstate_hdr_bytes to determine what
-  states the processor/OS supports and what state, used or initialized,
-  the process/thread is in.  */
-#define I386_LINUX_XSAVE_XCR0_OFFSET 464
-
 /* Does the current host support the GETFPXREGS request?  The header
    file may or may not define it, and even if it is defined, the
    kernel will return EIO if it's running on a pre-SSE processor.  */
@@ -864,133 +844,77 @@ int have_ptrace_getfpxregs =
 #endif
 ;
 
+/* Cached xcr0 value.  This is initialised the first time
+   x86_linux_read_description is called.  */
+
+static uint64_t xcr0_storage;
+
 /* Get Linux/x86 target description from running target.  */
 
 static const struct target_desc *
 x86_linux_read_description (void)
 {
-  unsigned int machine;
-  int is_elf64;
-  int xcr0_features;
-  int tid;
-  static uint64_t xcr0;
-  static int xsave_len;
-  struct regset_info *regset;
+  int tid = lwpid_of (current_thread);
 
-  tid = lwpid_of (current_thread);
+  const char *error_msg
+    = _("Can't debug 64-bit process with 32-bit GDBserver");
 
-  is_elf64 = linux_pid_exe_is_elf_64_file (tid, &machine);
+  /* If we are not allowed to send an XML target description then we need
+     to use the hard-wired target descriptions.  This corresponds to GDB's
+     default machine for x86.
 
-  if (sizeof (void *) == 4)
-    {
-      if (is_elf64 > 0)
-       error (_("Can't debug 64-bit process with 32-bit GDBserver"));
-#ifndef __x86_64__
-      else if (machine == EM_X86_64)
-       error (_("Can't debug x86-64 process with 32-bit GDBserver"));
-#endif
-    }
-
-#if !defined __x86_64__ && defined HAVE_PTRACE_GETFPXREGS
-  if (machine == EM_386 && have_ptrace_getfpxregs == -1)
-    {
-      elf_fpxregset_t fpxregs;
-
-      if (ptrace (PTRACE_GETFPXREGS, tid, 0, (long) &fpxregs) < 0)
-	{
-	  have_ptrace_getfpxregs = 0;
-	  have_ptrace_getregset = 0;
-	  return i386_linux_read_description (X86_XSTATE_X87);
-	}
-      else
-	have_ptrace_getfpxregs = 1;
-    }
-#endif
-
+     This check needs to occur before any returns statements that might
+     generate some alternative target descriptions.  */
   if (!use_xml)
     {
-      /* Don't use XML.  */
+      x86_linux_arch_size arch_size = x86_linux_ptrace_get_arch_size (tid);
+      bool is_64bit = arch_size.is_64bit ();
+      bool is_x32 = arch_size.is_x32 ();
+
+      if (sizeof (void *) == 4 && is_64bit && !is_x32)
+	error ("%s", error_msg);
+
 #ifdef __x86_64__
-      if (machine == EM_X86_64)
+      if (is_64bit && !is_x32)
 	return tdesc_amd64_linux_no_xml.get ();
       else
 #endif
 	return tdesc_i386_linux_no_xml.get ();
     }
 
-  if (have_ptrace_getregset == -1)
+  /* Callback that is triggered the first time x86_linux_tdesc_for_tid
+     reads the xcr0 register.  Setup other bits of state */
+  auto cb = [] (uint64_t xcr0)
+  {
+    i387_set_xsave_mask (xcr0, x86_xsave_length ());
+  };
+
+  /* If have_ptrace_getregset is changed to true by calling
+     x86_linux_tdesc_for_tid then we will perform some additional
+     initialisation.  */
+  bool have_ptrace_getregset_is_unknown
+    = have_ptrace_getregset == TRIBOOL_UNKNOWN;
+
+  const target_desc *tdesc
+    = x86_linux_tdesc_for_tid (tid, &have_ptrace_getregset, cb, error_msg,
+			       &xcr0_storage);
+
+  if (have_ptrace_getregset_is_unknown
+      && have_ptrace_getregset == TRIBOOL_TRUE)
     {
-      uint64_t xstateregs[(X86_XSTATE_SSE_SIZE / sizeof (uint64_t))];
-      struct iovec iov;
+      int xsave_len = x86_xsave_length ();
 
-      iov.iov_base = xstateregs;
-      iov.iov_len = sizeof (xstateregs);
-
-      /* Check if PTRACE_GETREGSET works.  */
-      if (ptrace (PTRACE_GETREGSET, tid,
-		  (unsigned int) NT_X86_XSTATE, (long) &iov) < 0)
-	have_ptrace_getregset = 0;
-      else
-	{
-	  have_ptrace_getregset = 1;
-
-	  /* Get XCR0 from XSAVE extended state.  */
-	  xcr0 = xstateregs[(I386_LINUX_XSAVE_XCR0_OFFSET
-			     / sizeof (uint64_t))];
-
-	  /* No MPX on x32.  */
-	  if (machine == EM_X86_64 && !is_elf64)
-	    xcr0 &= ~X86_XSTATE_MPX;
-
-	  xsave_len = x86_xsave_length ();
-
-	  /* Use PTRACE_GETREGSET if it is available.  */
-	  for (regset = x86_regsets;
-	       regset->fill_function != NULL; regset++)
-	    if (regset->get_request == PTRACE_GETREGSET)
-	      regset->size = xsave_len;
-	    else if (regset->type != GENERAL_REGS)
-	      regset->size = 0;
-	}
+      /* Use PTRACE_GETREGSET if it is available.  */
+      for (regset_info *regset = x86_regsets;
+	   regset->fill_function != nullptr;
+	   regset++)
+	if (regset->get_request == PTRACE_GETREGSET)
+	  regset->size = xsave_len;
+	else if (regset->type != GENERAL_REGS)
+	  regset->size = 0;
     }
 
-  /* Check the native XCR0 only if PTRACE_GETREGSET is available.  */
-  xcr0_features = (have_ptrace_getregset
-		   && (xcr0 & X86_XSTATE_ALL_MASK));
-
-  if (xcr0_features)
-    i387_set_xsave_mask (xcr0, xsave_len);
-
-  if (machine == EM_X86_64)
-    {
-#ifdef __x86_64__
-      const target_desc *tdesc = NULL;
-
-      if (xcr0_features)
-	{
-	  tdesc = amd64_linux_read_description (xcr0 & X86_XSTATE_ALL_MASK,
-						!is_elf64);
-	}
-
-      if (tdesc == NULL)
-	tdesc = amd64_linux_read_description (X86_XSTATE_SSE_MASK, !is_elf64);
-      return tdesc;
-#endif
-    }
-  else
-    {
-      const target_desc *tdesc = NULL;
-
-      if (xcr0_features)
-	  tdesc = i386_linux_read_description (xcr0 & X86_XSTATE_ALL_MASK);
-
-      if (tdesc == NULL)
-	tdesc = i386_linux_read_description (X86_XSTATE_SSE);
-
-      return tdesc;
-    }
-
-  gdb_assert_not_reached ("failed to return tdesc");
+  return tdesc;
 }
 
 /* Update all the target description of all processes; a new GDB
@@ -2967,14 +2891,17 @@ x86_target::get_ipa_tdesc_idx ()
   struct regcache *regcache = get_thread_regcache (current_thread, 0);
   const struct target_desc *tdesc = regcache->tdesc;
 
+  if (!use_xml)
+    {
+      if (tdesc == tdesc_i386_linux_no_xml.get ()
 #ifdef __x86_64__
-  return amd64_get_ipa_tdesc_idx (tdesc);
-#endif
+	  || tdesc == tdesc_amd64_linux_no_xml.get ()
+#endif /* __x86_64__ */
+	  )
+	return x86_linux_xcr0_to_tdesc_idx (X86_XSTATE_SSE_MASK);
+    }
 
-  if (tdesc == tdesc_i386_linux_no_xml.get ())
-    return X86_TDESC_SSE;
-
-  return i386_get_ipa_tdesc_idx (tdesc);
+  return x86_linux_xcr0_to_tdesc_idx (xcr0_storage);
 }
 
 /* The linux target ops object.  */

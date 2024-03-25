@@ -21112,7 +21112,7 @@ value history.
 It is possible for the function you call via the @code{print} or
 @code{call} command to generate a signal (e.g., if there's a bug in
 the function, or if you passed it incorrect arguments).  What happens
-in that case is controlled by the @code{set unwindonsignal} command.
+in that case is controlled by the @code{set unwind-on-signal} command.
 
 Similarly, with a C@t{++} program it is possible for the function you
 call via the @code{print} or @code{call} command to generate an
@@ -21126,7 +21126,8 @@ in that case is controlled by the
 
 @anchor{stack unwind settings}
 @table @code
-@item set unwindonsignal
+@item set unwind-on-signal
+@kindex set unwind-on-signal
 @kindex set unwindonsignal
 @cindex unwind stack in called functions
 @cindex call dummy stack unwinding
@@ -21137,10 +21138,17 @@ the context to what it was before the call.  If set to off (the
 default), @value{GDBN} stops in the frame where the signal was
 received.
 
-@item show unwindonsignal
+The command @code{set unwindonsignal} is an alias for this command,
+and is maintained for backward compatibility.
+
+@item show unwind-on-signal
+@kindex show unwind-on-signal
 @kindex show unwindonsignal
 Show the current setting of stack unwinding in the functions called by
 @value{GDBN}.
+
+The command @code{show unwindonsignal} is an alias for this command,
+and is maintained for backward compatibility.
 
 @item set unwind-on-terminating-exception
 @kindex set unwind-on-terminating-exception
@@ -21157,6 +21165,22 @@ the default C@t{++} exception handler and the inferior terminated.
 @kindex show unwind-on-terminating-exception
 Show the current setting of stack unwinding in the functions called by
 @value{GDBN}.
+
+@anchor{set unwind-on-timeout}
+@item set unwind-on-timeout
+@kindex set unwind-on-timeout
+@cindex unwind stack in called functions when timing out
+@cindex call dummy stack unwinding on timeout.
+Set unwinding of the stack if a function called from @value{GDBN}
+times out.  If set to @code{off} (the default), @value{GDBN} stops in
+the frame where the timeout occurred.  If set to @code{on},
+@value{GDBN} unwinds the stack it created for the call and restores
+the context to what it was before the call.
+
+@item show unwind-on-timeout
+@kindex show unwind-on-timeout
+Show whether @value{GDBN} will unwind the stack if a function called
+from @value{GDBN} times out.
 
 @item set may-call-functions
 @kindex set may-call-functions
@@ -21189,11 +21213,11 @@ call by typing the interrupt character (often @kbd{Ctrl-c}).
 
 If a called function is interrupted for any reason, including hitting
 a breakpoint, or triggering a watchpoint, and the stack is not unwound
-due to @code{set unwind-on-terminating-exception on} or @code{set
-unwindonsignal on} (@pxref{stack unwind settings}),
-then the dummy-frame, created by @value{GDBN} to facilitate the call
-to the program function, will be visible in the backtrace, for example
-frame @code{#3} in the following backtrace:
+due to @code{set unwind-on-terminating-exception on}, @code{set
+unwind-on-timeout on}, or @code{set unwind-on-signal on} (@pxref{stack
+unwind settings}), then the dummy-frame, created by @value{GDBN} to
+facilitate the call to the program function, will be visible in the
+backtrace, for example frame @code{#3} in the following backtrace:
 
 @smallexample
 (@value{GDBP}) backtrace
@@ -21212,6 +21236,77 @@ Depending on why the function was interrupted then it may be possible
 to resume the inferior (using commands like @code{continue},
 @code{step}, etc).  In this case, when the inferior finally returns to
 the dummy-frame, @value{GDBN} will once again halt the inferior.
+
+On targets that support asynchronous execution (@pxref{Background
+Execution}) @value{GDBN} can place a timeout on any functions called
+from @value{GDBN}.  If the timeout expires and the function call is
+still ongoing, then @value{GDBN} will interrupt the program.
+
+If a function called from @value{GDBN} is interrupted by a timeout,
+then by default the inferior is left in the frame where the timeout
+occurred, this behaviour can be adjusted with @samp{set
+unwind-on-timeout} (@pxref{set unwind-on-timeout}).
+
+For targets that don't support asynchronous execution
+(@pxref{Background Execution}) then timeouts for functions called from
+@value{GDBN} are not supported, the timeout settings described below
+will be treated as @code{unlimited}, meaning @value{GDBN} will wait
+indefinitely for function call to complete, unless interrupted by the
+user using @kbd{Ctrl-C}.
+
+@table @code
+@item set direct-call-timeout @var{seconds}
+@kindex set direct-call-timeout
+@cindex timeout for called functions
+Set the timeout used when calling functions in the program to
+@var{seconds}, which should be an integer greater than zero, or the
+special value @code{unlimited}, which indicates no timeout should be
+used.  The default for this setting is @code{unlimited}.
+
+This setting is used when the user calls a function directly from the
+command prompt, for example with a @code{call} or @code{print}
+command.
+
+This setting only works for targets that support asynchronous
+execution (@pxref{Background Execution}), for any other target the
+setting is treated as @code{unlimited}.
+
+@item show direct-call-timeout
+@kindex show direct-call-timeout
+@cindex timeout for called functions
+Show the timeout used when calling functions in the program with a
+@code{call} or @code{print} command.
+@end table
+
+It is also possible to call functions within the program from the
+condition of a conditional breakpoint (@pxref{Conditions, ,Break
+Conditions}).  A different setting controls the timeout used for
+function calls made from a breakpoint condition.
+
+@table @code
+@item set indirect-call-timeout @var{seconds}
+@kindex set indirect-call-timeout
+@cindex timeout for called functions
+Set the timeout used when calling functions in the program from a
+breakpoint or watchpoint condition to @var{seconds}, which should be
+an integer greater than zero, or the special value @code{unlimited},
+which indicates no timeout should be used.  The default for this
+setting is @code{30} seconds.
+
+This setting only works for targets that support asynchronous
+execution (@pxref{Background Execution}), for any other target the
+setting is treated as @code{unlimited}.
+
+If a function called from a breakpoint or watchpoint condition times
+out, then @value{GDBN} will stop at the point where the timeout
+occurred.  The breakpoint condition evaluation will be abandoned.
+
+@item show indirect-call-timeout
+@kindex show indirect-call-timeout
+@cindex timeout for called functions
+Show the timeout used when calling functions in the program from a
+breakpoint or watchpoint condition.
+@end table
 
 @subsection Calling functions with no debug info
 

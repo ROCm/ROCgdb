@@ -36,6 +36,10 @@ maintenance info line-table
   if the line is considered the start of the epilgoue, and thus a point at
   which the frame can be considered destroyed.
 
+set unwindonsignal on|off
+show unwindonsignal
+  These commands are now aliases for the new set/show unwind-on-signal.
+
 * New commands
 
 info missing-debug-handler
@@ -57,6 +61,38 @@ maintenance info linux-lwps
 set remote thread-options-packet
 show remote thread-options-packet
   Set/show the use of the thread options packet.
+
+set direct-call-timeout SECONDS
+show direct-call-timeout
+set indirect-call-timeout SECONDS
+show indirect-call-timeout
+  These new settings can be used to limit how long GDB will wait for
+  an inferior function call to complete.  The direct timeout is used
+  for inferior function calls from e.g. 'call' and 'print' commands,
+  while the indirect timeout is used for inferior function calls from
+  within a conditional breakpoint expression.
+
+  The default for the direct timeout is unlimited, while the default
+  for the indirect timeout is 30 seconds.
+
+  These timeouts will only have an effect for targets that are
+  operating in async mode.  For non-async targets the timeouts are
+  ignored, GDB will wait indefinitely for an inferior function to
+  complete, unless interrupted by the user using Ctrl-C.
+
+set unwind-on-timeout on|off
+show unwind-on-timeout
+  These commands control whether GDB should unwind the stack when a
+  timeout occurs during an inferior function call.  The default is
+  off, in which case the inferior will remain in the frame where the
+  timeout occurred.  When on, GDB will unwind the stack removing the
+  dummy frame that was added for the inferior call, and restoring the
+  inferior state to how it was before the inferior call started.
+
+set unwind-on-signal on|off
+show unwind-on-signal
+  These new commands replaces the existing set/show unwindonsignal.  The
+  old command is maintained as an alias.
 
 * New features in the GDB remote stub, GDBserver
 

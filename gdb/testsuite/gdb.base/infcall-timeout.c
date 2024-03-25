@@ -1,6 +1,4 @@
-/* GNU/Linux/x86-64 specific target description, for the remote server
-   for GDB.
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+/* Copyright 2022-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,21 +15,22 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "server.h"
-#include "tdesc.h"
-#include "x86-tdesc.h"
-#include "nat/x86-linux-tdesc.h"
+#include <unistd.h>
 
-/* See nat/x86-linux-tdesc.h.  */
-
-void
-x86_linux_post_init_tdesc (target_desc *tdesc, bool is_64bit)
+/* This function is called from GDB.  */
+int
+function_that_never_returns ()
 {
-#ifdef __x86_64__
-  if (is_64bit)
-    init_target_desc (tdesc, amd64_expedite_regs);
-  else
-#endif
-    init_target_desc (tdesc, i386_expedite_regs);
+  while (1)
+    sleep (1);
+
+  return 0;
 }
 
+int
+main ()
+{
+  alarm (300);
+
+  return 0;
+}

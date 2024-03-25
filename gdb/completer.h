@@ -556,17 +556,6 @@ extern void complete_line (completion_tracker &tracker,
 extern completion_result
   complete (const char *line, char const **word, int *quote_char);
 
-/* Find the bounds of the word in TEXT for completion purposes, and
-   return a pointer to the end of the word.  Calls the completion
-   machinery for a handle_brkchars phase (using TRACKER) to figure out
-   the right work break characters for the command in TEXT.
-   QUOTE_CHAR, if non-null, is set to the opening quote character if
-   we found an unclosed quoted substring, '\0' otherwise.  */
-extern const char *completion_find_completion_word (completion_tracker &tracker,
-						    const char *text,
-						    int *quote_char);
-
-
 /* Assuming TEXT is an expression in the current language, find the
    completion word point for TEXT, emulating the algorithm readline
    uses to find the word point, using the current language's word
@@ -579,9 +568,6 @@ const char *advance_to_expression_complete_word_point
    point.  */
 extern const char *advance_to_filename_complete_word_point
   (completion_tracker &tracker, const char *text);
-
-extern char **gdb_rl_attempted_completion_function (const char *text,
-						    int start, int end);
 
 extern void noop_completer (struct cmd_list_element *,
 			    completion_tracker &tracker,
@@ -619,16 +605,6 @@ extern void reggroup_completer (struct cmd_list_element *,
 				completion_tracker &tracker,
 				const char *, const char *);
 
-extern const char *get_gdb_completer_quote_characters (void);
-
-extern char *gdb_completion_word_break_characters (void);
-
-/* Set the word break characters array to BREAK_CHARS.  This function
-   is useful as const-correct alternative to direct assignment to
-   rl_completer_word_break_characters, which is "char *",
-   not "const char *".  */
-extern void set_rl_completer_word_break_characters (const char *break_chars);
-
 /* Get the matching completer_handle_brkchars_ftype function for FN.
    FN is one of the core completer functions above (filename,
    location, symbol, etc.).  This function is useful for cases when
@@ -661,11 +637,6 @@ extern void complete_expression (completion_tracker &tracker,
    does the right thing and show the print options.  */
 extern void complete_nested_command_line (completion_tracker &tracker,
 					  const char *text);
-
-extern const char *skip_quoted_chars (const char *, const char *,
-				      const char *);
-
-extern const char *skip_quoted (const char *);
 
 /* Called from command completion function to skip over /FMT
    specifications, allowing the rest of the line to be completed.  Returns
