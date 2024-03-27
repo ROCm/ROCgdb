@@ -187,11 +187,13 @@ struct wave_info
 
 struct amd_dbgapi_inferior_info
 {
-  explicit amd_dbgapi_inferior_info (inferior *inf,
-				     bool precise_memory_requested = false)
+  explicit amd_dbgapi_inferior_info
+    (inferior *inf, bool precise_memory_requested = false,
+     bool precise_alu_exceptions_requested = false)
     : inf (inf)
   {
     precise_memory.requested = precise_memory_requested;
+    precise_alu_exceptions.requested = precise_alu_exceptions_requested;
   }
 
   /* Backlink to inferior.  */
@@ -213,16 +215,23 @@ struct amd_dbgapi_inferior_info
      Initialized to true, since that's the default in amd-dbgapi too.  */
   bool forward_progress_required = true;
 
-  struct
+  struct dbgapi_feature_request
   {
-    /* Whether precise memory reporting is requested.  */
+    /* Whether the feature is requested.  */
     bool requested;
 
-    /* Whether precise memory was requested and successfully enabled by
+    /* Whether feature was requested and successfully enabled by
        dbgapi (it may not be available for the current hardware, for
        instance).  */
     bool enabled = false;
-  } precise_memory;
+  };
+
+  /* Track the status of precise memory request and enablement.  */
+  struct dbgapi_feature_request precise_memory;
+
+  /* Track the status of precise ALU exception reporting request and
+     enablement.  */
+  struct dbgapi_feature_request precise_alu_exceptions;
 
   std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
 		     struct breakpoint *>
@@ -2189,6 +2198,31 @@ set_process_memory_precision (amd_dbgapi_inferior_info &info)
 	   get_status_string (status));
 }
 
+/* Set the process' alu exception reporting precision mode.
+
+   Warn if the requested mode is not supported by at least one of the agents
+   in the process.  */
+
+static void
+set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
+{
+  auto mode = (info.precise_alu_exceptions.requested
+	       ? AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_PRECISE
+	       : AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_NONE);
+
+  amd_dbgapi_status_t status
+    = amd_dbgapi_set_alu_exceptions_precision (info.process_id, mode);
+
+  if (status == AMD_DBGAPI_STATUS_SUCCESS)
+    info.precise_alu_exceptions.enabled
+      = info.precise_alu_exceptions.requested;
+  else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
+    warning (_("AMDGPU precise ALU exceptions reporting could not be enabled."));
+  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_set_alu_exceptions_precision failed (%s)"),
+	   get_status_string (status));
+}
+
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
 
 static void
@@ -2306,6 +2340,7 @@ attach_amd_dbgapi (inferior *inf)
 			   info->process_id.handle, info->notifier);
 
   set_process_memory_precision (*info);
+  set_process_alu_exceptions_precision (*info);
 
   /* If GDB is attaching to a process that has the runtime loaded, there will
      already be a "runtime loaded" event available.  Consume it and push the
@@ -2355,8 +2390,10 @@ detach_amd_dbgapi (inferior *inf)
   for (auto &&value : info->breakpoint_map)
     delete_breakpoint (value.second);
 
-  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode.  */
-  *info = amd_dbgapi_inferior_info (inf, info->precise_memory.requested);
+  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode and
+     precise_alu_exceptions.  */
+  *info = amd_dbgapi_inferior_info (inf, info->precise_memory.requested,
+				    info->precise_alu_exceptions.requested);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -2760,6 +2797,8 @@ amd_dbgapi_target_inferior_cloned (inferior *original_inferior,
      starts.  */
   gdb_assert (new_info->process_id == AMD_DBGAPI_PROCESS_NONE);
   new_info->precise_memory.requested = orig_info->precise_memory.requested;
+  new_info->precise_alu_exceptions.requested
+    = orig_info->precise_alu_exceptions.requested;
 }
 
 /* inferior_execd observer.  */
@@ -2777,6 +2816,9 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
      inferior, so this is a no-op).  */
   get_amd_dbgapi_inferior_info (follow_inf)->precise_memory.requested
     = get_amd_dbgapi_inferior_info (exec_inf)->precise_memory.requested;
+  get_amd_dbgapi_inferior_info (follow_inf)->precise_alu_exceptions.requested
+    = get_amd_dbgapi_inferior_info (exec_inf)
+	->precise_alu_exceptions.requested;
 
   attach_amd_dbgapi (follow_inf);
 }
@@ -2796,6 +2838,8 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 	= get_amd_dbgapi_inferior_info (child_inf);
       child_info->precise_memory.requested
 	= parent_info->precise_memory.requested;
+      child_info->precise_alu_exceptions.requested
+	= parent_info->precise_alu_exceptions.requested;
 
       if (fork_kind != TARGET_WAITKIND_VFORKED)
 	{
@@ -3005,13 +3049,28 @@ amd_dbgapi_target_signal_received (gdb_signal sig)
   if (!ptid_is_gpu (inferior_thread ()->ptid))
     return;
 
-  if (sig != GDB_SIGNAL_SEGV && sig != GDB_SIGNAL_BUS)
-    return;
-
-  if (!info->precise_memory.enabled)
-      gdb_printf (_("\
+  switch (sig)
+    {
+    case GDB_SIGNAL_FPE:
+      if (!info->precise_alu_exceptions.enabled)
+	{
+	  gdb_printf (_("\
+Warning: precise ALU exception reporting is not enabled, reported location\n\
+may not be accurate.  See \"show amdgpu precise-alu-exceptions\".\n"));
+	}
+      return;
+    case GDB_SIGNAL_SEGV:
+    case GDB_SIGNAL_BUS:
+      if (!info->precise_memory.enabled)
+	{
+	gdb_printf (_("\
 Warning: precise memory violation signal reporting is not enabled, reported\n\
 location may not be accurate.  See \"show amdgpu precise-memory\".\n"));
+	}
+      return;
+    default:
+      return;
+    }
 }
 
 static void
@@ -3301,6 +3360,56 @@ get_effective_precise_memory_mode ()
     = get_amd_dbgapi_inferior_info (current_inferior ());
   return info->precise_memory.enabled;
 };
+
+/* Callback for "show amdgpu precise-alu-exceptions".  */
+
+static void
+show_precise_alu_exceptions_mode (struct ui_file *file, int from_tty,
+				  struct cmd_list_element *c, const char *value)
+{
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  gdb_printf (file,
+	      _("AMDGPU precise ALU exceptions reporting is %s "
+		"(currently %s).\n"),
+	      info->precise_alu_exceptions.requested ? "on" : "off",
+	      info->precise_alu_exceptions.enabled ? "enabled" : "disabled");
+}
+
+/* Callback for "set amdgpu precise-alu-exceptions".  */
+
+static void
+set_precise_alu_exceptions_mode (bool value)
+{
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  info->precise_alu_exceptions.requested = value;
+
+  if (info->process_id != AMD_DBGAPI_PROCESS_NONE)
+    set_process_alu_exceptions_precision (*info);
+}
+
+/* Get the precise ALU exception reporting precision requested mode.  */
+
+static bool
+get_precise_alu_exceptions_mode ()
+{
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+  return info->precise_alu_exceptions.requested;
+}
+
+/* Get the precise ALU exception reporting precision effective mode.  */
+
+static bool
+get_effective_precise_alu_exception_mode ()
+{
+  amd_dbgapi_inferior_info *info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+  return info->precise_alu_exceptions.enabled;
+}
 
 static const char *
 get_dbgapi_library_file_path ()
@@ -4624,6 +4733,19 @@ If off (default), precise memory reporting is disabled."),
 
   cmds.show->var->set_effective_value_getter<bool>
     (get_effective_precise_memory_mode);
+
+  cmds = add_setshow_boolean_cmd ("precise-alu-exceptions", no_class,
+				  _("Set precise-alu-exceptions mode."),
+				  _("Show precise-alu-exceptions mode."), _("\
+If on, precise ALU exceptions reporting is enabled if/when the inferior is\n\
+running.  If off (default), precise ALU exceptions reporting is disabled."),
+				  set_precise_alu_exceptions_mode,
+				  get_precise_alu_exceptions_mode,
+				  show_precise_alu_exceptions_mode,
+				  &set_amdgpu_list, &show_amdgpu_list);
+
+  cmds.show->var->set_effective_value_getter<bool>
+    (get_effective_precise_alu_exception_mode);
 
   add_cmd ("version", no_set_class, show_dbgapi_version,
 	   _("Show the ROCdbgapi library version and build information."),

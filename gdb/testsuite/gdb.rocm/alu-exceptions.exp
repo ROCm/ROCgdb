@@ -99,8 +99,9 @@ proc enable_alu_exception {excp_name} {
 	"= .*$excp_name.*"
 }
 
-proc do_test { exception_name } {
-    with_test_prefix $exception_name {
+proc do_test { exception_name precise_alu_exceptions_supported } {
+    set location_where_excp_reported {}
+    with_test_prefix "$exception_name, precise=off" {
 	clean_restart $::binfile
 
 	with_rocm_gpu_lock {
@@ -152,16 +153,72 @@ proc do_test { exception_name } {
 		    "=> $::hex \[^\r\n\]*"] \
 		"stopped after fault"
 
+	    # Capture where we are in the shader program, so we can later ensure
+	    # that when the program runs free (i.e. not single stepping) and precise
+	    # ALU exceptions reporting is enabled, the stop location is the same.
+	    gdb_test_multiple "x/i \$pc" "capture exception_location" {
+		-re -wrap "=> $::hex <(\[a-zA-Z_+0-9\]*)>:.*" {
+		    set location_where_excp_reported $expect_out(1,string)
+		    pass $gdb_test_name
+		}
+	    }
+
+	    gdb_test "continue" ".*HSA_STATUS_ERROR_EXCEPTION.*received signal SIGABRT, Aborted.*" \
+		"exception sent to runtime"
+	}
+    }
+
+    if {!$precise_alu_exceptions_supported} {
+	unsupported "$exception_name, precise=on"
+	return
+    }
+
+    # Re run the test, but this time do not single step through the program.
+    # Instead continue and check that we stopped at the same point.
+    with_test_prefix "$exception_name, precise=on" {
+	clean_restart $::binfile
+
+	with_rocm_gpu_lock {
+	    gdb_test_no_output "set args $exception_name"
+	    gdb_test_no_output "set amdgpu precise-alu-exceptions on"
+	    if ![runto_main] {
+		return
+	    }
+
+	    gdb_breakpoint "enable_alu_exceptions" "allow-pending"
+	    gdb_continue_to_breakpoint "enable_alu_exceptions"
+	    enable_alu_exception $exception_name
+
+	    gdb_test "continue" "Thread $::decimal \[^\r\n]*received signal SIGFPE, Arithmetic exception\..*"
+	    gdb_test "x/i \$pc" "=> $::hex <[string_to_regexp $location_where_excp_reported]>:.*" "precise location"
+
 	    gdb_test "continue" ".*HSA_STATUS_ERROR_EXCEPTION.*received signal SIGABRT, Aborted.*" \
 		"exception sent to runtime"
 	}
     }
 }
 
-do_test invalid
-do_test denorm
-do_test overflow
-do_test underflow
-do_test inexact
-do_test float_div0
-do_test int_div0
+set precise_alu_exceptions_supported false
+with_test_prefix "check_precise_alu_support" {
+    clean_restart $::binfile
+
+    with_rocm_gpu_lock {
+	gdb_test_no_output "set amdgpu precise-alu-exceptions on"
+	if ![runto_main] {
+	    return
+	}
+
+	gdb_test_multiple "show amdgpu precise-alu-exceptions" "" {
+	    -re -wrap "AMDGPU precise ALU exceptions reporting is on \\(currently (enabled|disabled)\\).*" {
+		if {$expect_out(1,string) == "enabled"} {
+			set precise_alu_exceptions_supported true
+		}
+		pass $gdb_test_name
+	    }
+	}
+    }
+}
+
+foreach test {invalid denorm overflow underflow inexact float_div0 int_div0} {
+    do_test $test $precise_alu_exceptions_supported
+}
