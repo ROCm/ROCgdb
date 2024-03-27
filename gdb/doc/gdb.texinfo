@@ -3495,12 +3495,13 @@ use @code{run} to spawn a local program, etc.
 Adds @var{n} inferiors ready to execute the same program as inferior
 @var{infno}; @var{n} defaults to 1, and @var{infno} defaults to the
 number of the current inferior.  This command copies the values of the
-@var{args}, @w{@var{inferior-tty}}, @var{cwd} and @w{@code{amdgpu
-precise-memory}} properties from the current inferior to the new one.
-It also propagates changes the user made to environment variables using
-the @w{@code{set environment}} and @w{@code{unset environment}} commands.
-This is a convenient command when you want to run another instance of the
-inferior you are debugging.
+@var{args}, @w{@var{inferior-tty}}, @var{cwd}, @w{@code{amdgpu
+precise-memory}} and @w{@code{amdgpu precise-alu-exceptions}} properties
+from the current inferior to the new one.  It also propagates changes
+the user made to environment variables using the @w{@code{set
+environment}} and @w{@code{unset environment}} commands.  This is a
+convenient command when you want to run another instance of the inferior
+you are debugging.
 
 @smallexample
 (@value{GDBP}) info inferiors
@@ -29413,6 +29414,66 @@ the parameter value of the original inferior.
 @cindex AMD GPU precise memory event reporting
 @item show amdgpu precise-memory
 Displays the currently requested AMD GPU precise memory setting.
+
+@end table
+
+@subsubsection @acronym{AMD GPU} ALU Exception Reporting
+
+A wavefront can report ALU exceptions.  However, the program location at
+which they are reported may be after the machine instruction that caused
+them.  This can result in the reported source statement being incorrect.
+
+The following commands can be used to control ALU exception reporting
+precision:
+
+@table @code
+
+@kindex set amdgpu precise-alu-exceptions
+@cindex AMD GPU precise ALU exceptions reporting
+@item set amdgpu plecise-alu-exceptions @var{mode}
+Controls how @acronym{AMD GPU} devices report ALU exceptions:
+
+@table @code
+
+@item off
+The program location may not be immediately after the instruction that
+caused the ALU exception.  This is the default.
+
+@item on
+Request that the program location will be immediately after the
+instruction that caused the ALU exception.  Enabling this mode may make
+the @acronym{AMD GPU} device execution significantly slower as it has
+to wait for the ALU instruction to complete before executing the next
+instruction.
+
+The precise ALU exception reporting mode can be changed at any time in
+the life of the program.  If the precise ALU exception reporting mode is
+updated before the inferior is started, the update request is recorded
+and applies as soon as possible.  For example:
+
+@smallexample
+ set amdgpu precise-alu-exceptions on
+(@value{GDBP}) set amdgpu precise-alu-exceptions on
+(@value{GDBP}) show amdgpu precise-alu-exceptions
+AMDGPU precise ALU exceptions reporting is on (currently disabled).
+(@value{GDBP}) start
+Temporary breakpoint 1 at 0x218cc9: file /tmp/alu-exceptions.cpp, line 100.
+Starting program: /tmp/a.out
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Temporary breakpoint 1, main (argc=1, argv=0x7fffffffe628) at /tmp/alu-exceptions.cpp:100
+100	  if (argc != 2)
+(@value{GDBP}) show amdgpu precise-alu-exceptions
+AMDGPU precise ALU exceptions reporting is on (currently enabled).
+@end smallexample
+@end table
+
+@kindex show amdgpu precise-alu-exceptions
+@cindex AMD GPU precise ALU exceptions reporting
+@item show amdgpu precise-alu-exceptions
+Display the currently requested and effective @acronym{AMD GPU} precise
+ALU exceptions setting.
 
 @end table
 
