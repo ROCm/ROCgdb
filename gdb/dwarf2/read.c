@@ -28,7 +28,6 @@
 /* FIXME: Various die-reading functions need to be more careful with
    reading off the end of the section.  */
 
-#include "defs.h"
 #include "gdb-hip-test-mode.h"
 #include "dwarf2/read.h"
 #include "dwarf2/abbrev.h"

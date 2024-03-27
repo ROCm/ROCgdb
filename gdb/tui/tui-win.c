@@ -25,7 +25,6 @@
 
    Author: Susan B. Macchia  */
 
-#include "defs.h"
 #include "command.h"
 #include "symtab.h"
 #include "breakpoint.h"

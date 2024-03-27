@@ -69,9 +69,12 @@ COMPILE.pre = $(CXX) $(CXX_DIALECT)
 COMPILE.post = -c -o $@
 POSTCOMPILE = @true
 
+INCLUDE_SERVER_H = -include $(srcdir)/server.h
+
 # CXXFLAGS is at the very end on purpose, so that user-supplied flags can
 # override internal flags.
-COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(CXXFLAGS) $(COMPILE.post)
+COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(INCLUDE_SERVER_H) \
+	$(CXXFLAGS) $(COMPILE.post)
 
 # It is also possible that you will need to add -I/usr/include/sys to the
 # CFLAGS section if your system doesn't have fcntl.h in /usr/include (which
@@ -114,7 +117,9 @@ INTL = @LIBINTL@
 INTL_DEPS = @LIBINTL_DEP@
 INTL_CFLAGS = @INCINTL@
 
-INCSUPPORT = -I$(srcdir)/.. -I..
+INCSUPPORT = \
+	-I$(srcdir)/.. \
+	-I..
 
 # All the includes used for CFLAGS and for lint.
 # -I. for config files.
@@ -125,9 +130,15 @@ INCSUPPORT = -I$(srcdir)/.. -I..
 # in those directories should be included with the subdirectory.
 # e.g.: "target/wait.h".
 #
-INCLUDE_CFLAGS = -I. -I${srcdir} \
-	-I$(srcdir)/../gdb/regformats -I$(srcdir)/.. -I$(INCLUDE_DIR) \
-	-I$(srcdir)/../gdb $(INCGNU) $(INCSUPPORT) \
+INCLUDE_CFLAGS = \
+	-I. \
+	-I${srcdir} \
+	-I$(srcdir)/../gdb/regformats \
+	-I$(srcdir)/.. \
+	-I$(INCLUDE_DIR) \
+	-I$(srcdir)/../gdb \
+	$(INCGNU) \
+	$(INCSUPPORT) \
 	$(INTL_CFLAGS)
 
 # M{H,T}_CFLAGS, if defined, has host- and target-dependent CFLAGS
@@ -155,10 +166,15 @@ WIN32APILIBS = @WIN32APILIBS@
 MAYBE_LIBICONV = @MAYBE_LIBICONV@
 
 # INTERNAL_CFLAGS is the aggregate of all other *CFLAGS macros.
-INTERNAL_CFLAGS_BASE = ${GLOBAL_CFLAGS} \
-	${PROFILE_CFLAGS} ${INCLUDE_CFLAGS} ${CPPFLAGS} $(PTHREAD_CFLAGS)
-INTERNAL_WARN_CFLAGS = ${INTERNAL_CFLAGS_BASE} $(WARN_CFLAGS)
-INTERNAL_CFLAGS = ${INTERNAL_WARN_CFLAGS} $(WERROR_CFLAGS) -DGDBSERVER
+INTERNAL_CFLAGS = \
+	${GLOBAL_CFLAGS} \
+	${PROFILE_CFLAGS} \
+	${INCLUDE_CFLAGS} \
+	${CPPFLAGS} \
+	$(PTHREAD_CFLAGS) \
+	$(WARN_CFLAGS) \
+	$(WERROR_CFLAGS) \
+	-DGDBSERVER
 
 # LDFLAGS is specifically reserved for setting from the command line
 # when running make.
@@ -472,24 +488,32 @@ MAKEOVERRIDES =
 
 regdat_sh = $(srcdir)/../gdb/regformats/regdat.sh
 
-UST_CFLAGS = $(ustinc) -DCONFIG_UST_GDB_INTEGRATION
+UST_CFLAGS = \
+	$(ustinc) \
+	-DCONFIG_UST_GDB_INTEGRATION
 
 # Undo gnulib replacements for the IPA shared library build.
 # The gnulib headers are still needed, but gnulib is not linked
 # into the IPA lib so replacement apis don't work.
-UNDO_GNULIB_CFLAGS = -Drpl_strerror_r=strerror_r -Drpl_free=free \
-	-Drpl_malloc=malloc -Drpl_realloc=realloc
+UNDO_GNULIB_CFLAGS = \
+	-Drpl_strerror_r=strerror_r \
+	-Drpl_free=free \
+	-Drpl_malloc=malloc \
+	-Drpl_realloc=realloc
 
 # Note, we only build the IPA if -fvisibility=hidden is supported in
 # the first place.
-IPAGENT_CFLAGS = $(INTERNAL_CFLAGS) $(UST_CFLAGS) \
+IPAGENT_CFLAGS = \
+	$(INTERNAL_CFLAGS) \
+	$(UST_CFLAGS) \
 	$(UNDO_GNULIB_CFLAGS) \
 	-fPIC -DIN_PROCESS_AGENT \
 	-fvisibility=hidden
 
 # CXXFLAGS is at the very end on purpose, so that user-supplied flags can
 # override internal flags.
-IPAGENT_COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(IPAGENT_CFLAGS) $(CXXFLAGS) $(COMPILE.post)
+IPAGENT_COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(IPAGENT_CFLAGS) \
+	$(INCLUDE_SERVER_H) $(CXXFLAGS) $(COMPILE.post)
 
 # Rules for special cases.
 
@@ -568,6 +592,12 @@ target/%.o: ../gdb/target/%.c
 
 %-generated.cc: ../gdb/regformats/rs6000/%.dat $(regdat_sh)
 	$(ECHO_REGDAT) $(SHELL) $(regdat_sh) $< $@
+
+# Rule for gdbreplay.o.  This is the same as COMPILE, but includes common-defs.h
+# instead of server.h.
+gdbreplay.o: gdbreplay.cc
+	$(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(CXXFLAGS) \
+		-include gdbsupport/common-defs.h $(COMPILE.post) $<
 
 #
 # Dependency tracking.
