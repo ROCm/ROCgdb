@@ -7,6 +7,11 @@ Full documentation for ROCgdb is available at
 ### Added
 - 'info agents' now prints the agent location as "DDD:BB:DD.F", where
   "DDDD" is the agent's PCI domain.
+- Add support for precise ALU exception reporting for architectures that
+  supports it.  Precise-alu exceptions is controlled with the following
+  commands:
+  - set amdgpu precise-alu-exceptions
+  - show amdgpu precise-alu-exceptions
 
 ## (Unreleased) ROCgdb-14
 ### Added
