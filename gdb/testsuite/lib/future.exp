@@ -190,9 +190,9 @@ proc gdb_find_eu-unstrip {} {
 
 proc gdb_find_coremerge {} {
     global GDB
-    global COREMERGE_FOR_TARGET
-    if [info exists COREMERGE_FOR_TARGET] {
-	return $COREMERGE_FOR_TARGET
+    global COREMERGE
+    if [info exists COREMERGE] {
+	return $COREMERGE
     }
 
     set toplevel [file join [file dirname $GDB] .. binutils]
