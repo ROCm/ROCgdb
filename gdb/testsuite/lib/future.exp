@@ -189,12 +189,31 @@ proc gdb_find_eu-unstrip {} {
 }
 
 proc gdb_find_coremerge {} {
+    global GDB
     global COREMERGE_FOR_TARGET
     if [info exists COREMERGE_FOR_TARGET] {
-	set coremerge $COREMERGE_FOR_TARGET
-    } else {
-	set coremerge [transform coremerge]
+	return $COREMERGE_FOR_TARGET
     }
+
+    set toplevel [file join [file dirname $GDB] .. binutils]
+    set coremerge [file join $toplevel [transform coremerge]]
+    if { [file executable $coremerge] } {
+	return $coremerge
+    }
+
+    # If GDB points to an installed version of GDB, coremerge might live
+    # next to it.  Try to account for the cases where both have been built
+    # with --with-program-prefix, which is usual when building ROCgdb.
+    set path_components [file split $GDB]
+    set gdbname [lindex $path_components [expr [llength $path_components] - 1]]
+    set prefix [string trim $gdbname gdb]
+    set coremerge [file join [file dirname $GDB] "${prefix}coremerge"]
+    if { [file executable $coremerge] } {
+	return $coremerge
+    }
+
+    # Fallback.
+    set coremerge [transform coremerge]
     return $coremerge
 }
 
