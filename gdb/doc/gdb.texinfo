@@ -30010,6 +30010,11 @@ to be generated, then the @acronym{AMD ROCm} runtime does not produce the
 @acronym{AMD GPU} core file.  Only the host side of the process is captured in
 the file produced by the Linux kernel.
 
+@item
+For @acronym{AMD GPU} architectures @samp{gfx1100}, @samp{gfx1101} and
+@samp{gfx1102}, the @acronym{AMD ROCm} runtime cannot create a
+@acronym{AMD GPU} core dump (@pxref{AMD GPU core dumps}).
+
 @end enumerate
 
 @node Controlling GDB
