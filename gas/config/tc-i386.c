@@ -1980,17 +1980,7 @@ cpu_flags_match (const insn_template *t)
 
       cpu = cpu_flags_and (any, active);
       if (cpu_flags_all_zero (&any) || !cpu_flags_all_zero (&cpu))
-	{
-	  if (all.bitfield.cpuavx)
-	    {
-	      /* We need to check SSE2AVX with AVX.  */
-	      if (!t->opcode_modifier.sse2avx
-		  || (sse2avx && !i.prefix[DATA_PREFIX]))
-		match |= CPU_FLAGS_ARCH_MATCH;
-	    }
-	  else
-	    match |= CPU_FLAGS_ARCH_MATCH;
-	}
+	match |= CPU_FLAGS_ARCH_MATCH;
     }
   return match;
 }
@@ -3885,7 +3875,7 @@ build_vex_prefix (const insn_template *t)
   /* Check the REX.W bit and VEXW.  */
   if (i.tm.opcode_modifier.vexw == VEXWIG)
     w = (vexwig == vexw1 || (i.rex & REX_W)) ? 1 : 0;
-  else if (i.tm.opcode_modifier.vexw)
+  else if (i.tm.opcode_modifier.vexw && !(i.rex & REX_W))
     w = i.tm.opcode_modifier.vexw == VEXW1 ? 1 : 0;
   else
     w = (flag_code == CODE_64BIT ? i.rex & REX_W : vexwig == vexw1) ? 1 : 0;
@@ -8413,7 +8403,7 @@ check_EgprOperands (const insn_template *t)
     }
 
   /* Check if pseudo prefix {rex2} is valid.  */
-  if (i.rex2_encoding)
+  if (i.rex2_encoding && !t->opcode_modifier.sse2avx)
     {
       i.error = invalid_pseudo_prefix;
       return true;
@@ -8541,6 +8531,15 @@ match_template (char mnem_suffix)
       /* Must have right number of operands.  */
       if (i.operands != t->operands)
 	continue;
+
+      /* Skip SSE2AVX templates when inapplicable.  */
+      if (t->opcode_modifier.sse2avx
+	  && (!sse2avx || i.prefix[DATA_PREFIX]))
+	{
+	  /* Another non-SSE2AVX template has to follow.  */
+	  gas_assert (t + 1 < current_templates.end);
+	  continue;
+	}
 
       /* Check processor support.  */
       specific_error = progress (unsupported);
@@ -10031,6 +10030,7 @@ process_operands (void)
       i.rex |= i.prefix[REX_PREFIX] & (REX_W | REX_R | REX_X | REX_B);
       i.prefix[REX_PREFIX] = 0;
       i.rex_encoding = 0;
+      i.rex2_encoding = 0;
     }
   /* ImmExt should be processed after SSE2AVX.  */
   else if (i.tm.opcode_modifier.immext)
