@@ -8695,11 +8695,15 @@ bp_loc_is_permanent (struct bp_location *loc)
 static void
 update_dprintf_command_list (struct breakpoint *b)
 {
+  gdb_assert (b->type == bp_dprintf);
+  gdb_assert (b->extra_string != nullptr);
+
   const char *dprintf_args = b->extra_string.get ();
   gdb::unique_xmalloc_ptr<char> printf_line = nullptr;
 
-  if (!dprintf_args)
-    return;
+  /* Trying to create a dprintf breakpoint without a format and args
+     string should be detected at creation time.  */
+  gdb_assert (dprintf_args != nullptr);
 
   dprintf_args = skip_spaces (dprintf_args);
 
@@ -8863,19 +8867,14 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
       /* Do not set breakpoint locations conditions yet.  As locations
 	 are inserted, they get sorted based on their addresses.  Let
 	 the list stabilize to have reliable location numbers.  */
-
-      /* Dynamic printf requires and uses additional arguments on the
-	 command line, otherwise it's an error.  */
-      if (type == bp_dprintf)
-	{
-	  if (extra_string != nullptr)
-	    update_dprintf_command_list (this);
-	  else
-	    error (_("Format string required"));
-	}
-      else if (extra_string != nullptr)
-	error (_("Garbage '%s' at end of command"), extra_string.get ());
     }
+
+  /* Dynamic printf requires and uses additional arguments on the
+     command line, otherwise it's an error.  */
+  if (type == bp_dprintf)
+    update_dprintf_command_list (this);
+  else if (extra_string != nullptr)
+    error (_("Garbage '%s' at end of command"), extra_string.get ());
 
   /* The order of the locations is now stable.  Set the location
      condition using the location's number.  */
@@ -9389,11 +9388,27 @@ create_breakpoint (struct gdbarch *gdbarch,
   gdb_assert (inferior == -1 || inferior > 0);
   gdb_assert (thread == -1 || inferior == -1);
 
+  /* If PARSE_EXTRA is true then the thread and inferior details will be
+     parsed from the EXTRA_STRING, the THREAD and INFERIOR arguments
+     should be -1.  */
+  gdb_assert (!parse_extra || thread == -1);
+  gdb_assert (!parse_extra || inferior == -1);
+
   gdb_assert (ops != NULL);
 
   /* If extra_string isn't useful, set it to NULL.  */
   if (extra_string != NULL && *extra_string == '\0')
     extra_string = NULL;
+
+  /* A bp_dprintf must always have an accompanying EXTRA_STRING containing
+     the dprintf format and arguments -- PARSE_EXTRA should always be false
+     in this case.
+
+     For all other breakpoint types, EXTRA_STRING should be nullptr unless
+     PARSE_EXTRA is true.  */
+  gdb_assert ((type_wanted == bp_dprintf)
+	      ? (extra_string != nullptr && !parse_extra)
+	      : (extra_string == nullptr || parse_extra));
 
   try
     {
@@ -9458,6 +9473,8 @@ create_breakpoint (struct gdbarch *gdbarch,
 
       if (parse_extra)
 	{
+	  gdb_assert (type_wanted != bp_dprintf);
+
 	  gdb::unique_xmalloc_ptr<char> rest;
 	  gdb::unique_xmalloc_ptr<char> cond;
 
@@ -9466,15 +9483,15 @@ create_breakpoint (struct gdbarch *gdbarch,
 	  find_condition_and_thread_for_sals (lsal.sals, extra_string,
 					      &cond, &thread, &inferior,
 					      &task, &rest);
+
+	  if (rest.get () != nullptr && *(rest.get ()) != '\0')
+	    error (_("Garbage '%s' at end of command"), rest.get ());
+
 	  cond_string_copy = std::move (cond);
 	  extra_string_copy = std::move (rest);
 	}
       else
 	{
-	  if (type_wanted != bp_dprintf
-	      && extra_string != NULL && *extra_string != '\0')
-		error (_("Garbage '%s' at end of location"), extra_string);
-
 	  /* Check the validity of the condition.  We should error out
 	     if the condition is invalid at all of the locations and
 	     if it is not forced.  In the PARSE_EXTRA case above, this
@@ -9685,21 +9702,18 @@ dprintf_command (const char *arg, int from_tty)
 
   /* If non-NULL, ARG should have been advanced past the location;
      the next character must be ','.  */
-  if (arg != NULL)
+  if (arg == nullptr || arg[0] != ',' || arg[1] == '\0')
+    error (_("Format string required"));
+  else
     {
-      if (arg[0] != ',' || arg[1] == '\0')
-	error (_("Format string required"));
-      else
-	{
-	  /* Skip the comma.  */
-	  ++arg;
-	}
+      /* Skip the comma.  */
+      ++arg;
     }
 
   create_breakpoint (get_current_arch (),
 		     locspec.get (),
 		     NULL, -1, -1,
-		     arg, false, 1 /* parse arg */,
+		     arg, false, 0 /* parse arg */,
 		     0, bp_dprintf,
 		     0 /* Ignore count */,
 		     pending_break_support,
@@ -12552,9 +12566,6 @@ dprintf_breakpoint::re_set ()
 {
   re_set_default ();
 
-  /* extra_string should never be non-NULL for dprintf.  */
-  gdb_assert (extra_string != NULL);
-
   /* 1 - connect to target 1, that can run breakpoint commands.
      2 - create a dprintf, which resolves fine.
      3 - disconnect from target 1
@@ -12565,8 +12576,7 @@ dprintf_breakpoint::re_set ()
      answers for target_can_run_breakpoint_commands().
      Given absence of finer grained resetting, we get to do
      it all the time.  */
-  if (extra_string != NULL)
-    update_dprintf_command_list (this);
+  update_dprintf_command_list (this);
 }
 
 /* Implement the "print_recreate" method for dprintf.  */
@@ -14283,6 +14293,12 @@ create_tracepoint_from_upload (struct uploaded_tp *utp)
 
   location_spec_up locspec = string_to_location_spec (&addr_str,
 						      current_language);
+
+
+  gdb_assert (addr_str != nullptr);
+  if (*addr_str != '\0')
+    error (_("Garbage '%s' at end of location"), addr_str);
+
   if (!create_breakpoint (get_current_arch (),
 			  locspec.get (),
 			  utp->cond_string.get (), -1, -1, addr_str,
