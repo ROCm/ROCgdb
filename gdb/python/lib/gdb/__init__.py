@@ -13,12 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import signal
+import sys
 import threading
 import traceback
-import os
-import sys
-import _gdb
 from contextlib import contextmanager
 
 # Python 3 moved "reload"
@@ -27,7 +26,12 @@ if sys.version_info >= (3, 4):
 else:
     from imp import reload
 
-from _gdb import *
+import _gdb
+
+# Note that two indicators are needed here to silence flake8.
+from _gdb import *  # noqa: F401,F403
+
+# isort: split
 
 # Historically, gdb.events was always available, so ensure it's
 # still available without an explicit import.
@@ -56,15 +60,14 @@ class _GdbFile(object):
             self.write(line)
 
     def flush(self):
-        flush(stream=self.stream)
+        _gdb.flush(stream=self.stream)
 
     def write(self, s):
-        write(s, stream=self.stream)
+        _gdb.write(s, stream=self.stream)
 
 
-sys.stdout = _GdbFile(STDOUT)
-
-sys.stderr = _GdbFile(STDERR)
+sys.stdout = _GdbFile(_gdb.STDOUT)
+sys.stderr = _GdbFile(_gdb.STDERR)
 
 # Default prompt hook does nothing.
 prompt_hook = None
@@ -158,7 +161,7 @@ def _auto_load_packages():
                         reload(__import__(modname))
                     else:
                         __import__(modname)
-                except:
+                except Exception:
                     sys.stderr.write(traceback.format_exc() + "\n")
 
 
@@ -185,7 +188,7 @@ def GdbSetPythonDirectory(dir):
 
 def current_progspace():
     "Return the current Progspace."
-    return selected_inferior().progspace
+    return _gdb.selected_inferior().progspace
 
 
 def objfiles():
@@ -222,14 +225,14 @@ def set_parameter(name, value):
             value = "on"
         else:
             value = "off"
-    execute("set " + name + " " + str(value), to_string=True)
+    _gdb.execute("set " + name + " " + str(value), to_string=True)
 
 
 @contextmanager
 def with_parameter(name, value):
     """Temporarily set the GDB parameter NAME to VALUE.
     Note that this is a context manager."""
-    old_value = parameter(name)
+    old_value = _gdb.parameter(name)
     set_parameter(name, value)
     try:
         # Nothing that useful to return.

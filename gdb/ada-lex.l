@@ -59,9 +59,7 @@ DIAGNOSTIC_IGNORE_DEPRECATED_REGISTER
 #define NUMERAL_WIDTH 256
 #define LONGEST_SIGN ((ULONGEST) 1 << (sizeof(LONGEST) * HOST_CHAR_BIT - 1))
 
-/* Temporary staging for numeric literals.  */
-static char numbuf[NUMERAL_WIDTH];
- static void canonicalizeNumeral (char *s1, const char *);
+static void canonicalizeNumeral (char *s1, const char *);
 static struct stoken processString (const char*, int);
 static int processInt (struct parser_state *, const char *, const char *,
 		       const char *);
@@ -78,13 +76,6 @@ static void rewind_to_char (int);
    Defining YY_NO_INPUT comments it out.  */
 #define YY_NO_INPUT
 
-/* When completing, we'll return a special character at the end of the
-   input, to signal the completion position to the lexer.  This is
-   done because flex does not have a generally useful way to detect
-   EOF in a pattern.  This variable records whether the special
-   character has been emitted.  */
-static bool returned_complete = false;
-
 /* The character we use to represent the completion point.  */
 #define COMPLETE_CHAR '\001'
 
@@ -92,9 +83,9 @@ static bool returned_complete = false;
 #define YY_INPUT(BUF, RESULT, MAX_SIZE)					\
   if ( *pstate->lexptr == '\000' )					\
     {									\
-      if (pstate->parse_completion && !returned_complete)		\
+      if (pstate->parse_completion && !ada_parser->returned_complete)	\
 	{								\
-	  returned_complete = true;					\
+	  ada_parser->returned_complete = true;				\
 	  *(BUF) = COMPLETE_CHAR;					\
 	  (RESULT) = 1;							\
 	}								\
@@ -107,9 +98,6 @@ static bool returned_complete = false;
       (RESULT) = 1;							\
       pstate->lexptr += 1;						\
     }
-
-/* Depth of parentheses.  */
-static int paren_depth;
 
 %}
 
@@ -124,6 +112,7 @@ static int paren_depth;
 "--".*		 { yyterminate(); }
 
 {NUM10}{POSEXP}  {
+		   char numbuf[NUMERAL_WIDTH];
 		   canonicalizeNumeral (numbuf, yytext);
 		   char *e_ptr = strrchr (numbuf, 'e');
 		   *e_ptr = '\0';
@@ -131,11 +120,13 @@ static int paren_depth;
 		 }
 
 {NUM10}          {
+		   char numbuf[NUMERAL_WIDTH];
 		   canonicalizeNumeral (numbuf, yytext);
 		   return processInt (pstate, NULL, numbuf, NULL);
 		 }
 
 {NUM10}"#"{HEXDIG}({HEXDIG}|_)*"#"{POSEXP} {
+		   char numbuf[NUMERAL_WIDTH];
 		   canonicalizeNumeral (numbuf, yytext);
 		   char *e_ptr = strrchr (numbuf, 'e');
 		   *e_ptr = '\0';
@@ -149,23 +140,27 @@ static int paren_depth;
 	   floating-point number is formed by reinterpreting the
 	   bytes, allowing direct control over the bits.  */
 {NUM10}(l{0,2}f)?"#"{HEXDIG}({HEXDIG}|_)*"#" {
+		   char numbuf[NUMERAL_WIDTH];
 		   canonicalizeNumeral (numbuf, yytext);
 		   return processInt (pstate, numbuf, strchr (numbuf, '#') + 1,
 				      NULL);
 		 }
 
 "0x"{HEXDIG}+	{
+		  char numbuf[NUMERAL_WIDTH];
 		  canonicalizeNumeral (numbuf, yytext+2);
 		  return processInt (pstate, "16#", numbuf, NULL);
 		}
 
 
 {NUM10}"."{NUM10}{EXP} {
+		   char numbuf[NUMERAL_WIDTH];
 		   canonicalizeNumeral (numbuf, yytext);
 		   return processReal (pstate, numbuf);
 		}
 
 {NUM10}"."{NUM10} {
+		   char numbuf[NUMERAL_WIDTH];
 		   canonicalizeNumeral (numbuf, yytext);
 		   return processReal (pstate, numbuf);
 		}
@@ -227,6 +222,7 @@ abs		{ return ABS; }
 and		{ return _AND_; }
 delta		{ return DELTA; }
 else		{ return ELSE; }
+for		{ return FOR; }
 in		{ return IN; }
 mod		{ return MOD; }
 new		{ return NEW; }
@@ -267,7 +263,7 @@ false		{ return FALSEKEYWORD; }
 
 [-&*+{}@/:<>=|;\[\]] { return yytext[0]; }
 
-","		{ if (paren_depth == 0 && pstate->comma_terminates)
+","		{ if (ada_parser->paren_depth == 0 && pstate->comma_terminates)
 		    {
 		      rewind_to_char (',');
 		      return 0;
@@ -276,15 +272,15 @@ false		{ return FALSEKEYWORD; }
 		    return ',';
 		}
 
-"("		{ paren_depth += 1; return '('; }
-")"		{ if (paren_depth == 0)
+"("		{ ada_parser->paren_depth += 1; return '('; }
+")"		{ if (ada_parser->paren_depth == 0)
 		    {
 		      rewind_to_char (')');
 		      return 0;
 		    }
 		  else
  		    {
-		      paren_depth -= 1;
+		      ada_parser->paren_depth -= 1;
 		      return ')';
 		    }
 		}
@@ -348,8 +344,6 @@ static void
 lexer_init (FILE *inp)
 {
   BEGIN INITIAL;
-  paren_depth = 0;
-  returned_complete = false;
   yyrestart (inp);
 }
 
@@ -464,8 +458,7 @@ processInt (struct parser_state *par_state, const char *base0,
       return FLOAT;
     }
 
-  const gdb_mpz *value
-    = int_storage.emplace_back (new gdb_mpz (std::move (result))).get ();
+  const gdb_mpz *value = ada_parser->push_integer (std::move (result));
 
   int int_bits = gdbarch_int_bit (par_state->gdbarch ());
   int long_bits = gdbarch_long_bit (par_state->gdbarch ());
@@ -531,7 +524,7 @@ processReal (struct parser_state *par_state, const char *num0)
 static struct stoken
 processId (const char *name0, int len)
 {
-  char *name = (char *) obstack_alloc (&temp_parse_space, len + 11);
+  char *name = (char *) obstack_alloc (&ada_parser->temp_space, len + 11);
   int i0, i;
   struct stoken result;
 
@@ -593,7 +586,7 @@ processString (const char *text, int len)
   const char *lim = text + len;
   struct stoken result;
 
-  q = (char *) obstack_alloc (&temp_parse_space, len);
+  q = (char *) obstack_alloc (&ada_parser->temp_space, len);
   result.ptr = q;
   p = text;
   while (p < lim)
@@ -669,7 +662,7 @@ subseqMatch (const char *subseq, const char *str)
 }
 
 
-static struct { const char *name; int code; }
+static const struct { const char *name; int code; }
 attributes[] = {
   { "address", TICK_ADDRESS },
   { "unchecked_access", TICK_ACCESS },
@@ -706,7 +699,8 @@ processAttribute (const char *str)
     {
       /* This is enforced by YY_INPUT.  */
       gdb_assert (pstate->parse_completion);
-      yylval.sval.ptr = obstack_strndup (&temp_parse_space, str, len - 1);
+      yylval.sval.ptr = obstack_strndup (&ada_parser->temp_space,
+					 str, len - 1);
       yylval.sval.length = len - 1;
       return TICK_COMPLETE;
     }
