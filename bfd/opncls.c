@@ -163,6 +163,27 @@ _bfd_new_bfd_contained_in (bfd *obfd)
 static void
 _bfd_delete_bfd (bfd *abfd)
 {
+#ifdef USE_MMAP
+  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
+    {
+      asection *sec;
+      for (sec = abfd->sections; sec != NULL; sec = sec->next)
+	if (sec->mmapped_p)
+	  munmap (elf_section_data (sec)->contents_addr,
+		  elf_section_data (sec)->contents_size);
+    }
+
+  struct bfd_mmapped *mmapped, *next;
+  for (mmapped = abfd->mmapped; mmapped != NULL; mmapped = next)
+    {
+      struct bfd_mmapped_entry *entries = mmapped->entries;
+      next = mmapped->next;
+      for (unsigned int i = 0; i < mmapped->next_entry; i++)
+	munmap (entries[i].addr, entries[i].size);
+      munmap (mmapped, _bfd_pagesize);
+    }
+#endif
+
   /* Give the target _bfd_free_cached_info a chance to free memory.  */
   if (abfd->memory && abfd->xvec)
     bfd_free_cached_info (abfd);

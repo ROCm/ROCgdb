@@ -49,6 +49,53 @@ struct elf_info_failed
 static bool _bfd_elf_fix_symbol_flags
   (struct elf_link_hash_entry *, struct elf_info_failed *);
 
+/* Return false if linker should avoid caching relocation information
+   and symbol tables of input files in memory.  */
+
+static bool
+_bfd_elf_link_keep_memory (struct bfd_link_info *info)
+{
+#ifdef USE_MMAP
+  /* Don't cache symbol nor relocation tables if they are mapped in.
+     NB: Since the --no-keep-memory linker option causes:
+
+     https://sourceware.org/bugzilla/show_bug.cgi?id=31458
+
+     this is opt-in by each backend.  */
+  const struct elf_backend_data *bed
+    = get_elf_backend_data (info->output_bfd);
+  if (bed->use_mmap)
+    return false;
+#endif
+  bfd *abfd;
+  bfd_size_type size;
+
+  if (!info->keep_memory)
+    return false;
+
+  if (info->max_cache_size == (bfd_size_type) -1)
+    return true;
+
+  abfd = info->input_bfds;
+  size = info->cache_size;
+  do
+    {
+      if (size >= info->max_cache_size)
+	{
+	  /* Over the limit.  Reduce the memory usage.  */
+	  info->keep_memory = false;
+	  return false;
+	}
+      if (!abfd)
+	break;
+      size += abfd->alloc_size;
+      abfd = abfd->link.next;
+    }
+  while (1);
+
+  return true;
+}
+
 asection *
 _bfd_elf_section_for_symbol (struct elf_reloc_cookie *cookie,
 			     unsigned long r_symndx,
@@ -549,22 +596,24 @@ bfd_elf_link_record_dynamic_symbol (struct bfd_link_info *info,
 	    return false;
 	}
 
+      char *unversioned_name = NULL;
+
       /* We don't put any version information in the dynamic string
 	 table.  */
       name = h->root.root.string;
       p = strchr (name, ELF_VER_CHR);
       if (p != NULL)
-	/* We know that the p points into writable memory.  In fact,
-	   there are only a few symbols that have read-only names, being
-	   those like _GLOBAL_OFFSET_TABLE_ that are created specially
-	   by the backends.  Most symbols will have names pointing into
-	   an ELF string table read from a file, or to objalloc memory.  */
-	*p = 0;
+	{
+	  unversioned_name = bfd_malloc (p - name + 1);
+	  memcpy (unversioned_name, name, p - name);
+	  unversioned_name[p - name] = 0;
+	  name = unversioned_name;
+	}
 
       indx = _bfd_elf_strtab_add (dynstr, name, p != NULL);
 
       if (p != NULL)
-	*p = ELF_VER_CHR;
+	free (unversioned_name);
 
       if (indx == (size_t) -1)
 	return false;
@@ -2642,8 +2691,11 @@ _bfd_elf_link_assign_sym_version (struct elf_link_hash_entry *h, void *data)
    may be either a REL or a RELA section.  The relocations are
    translated into RELA relocations and stored in INTERNAL_RELOCS,
    which should have already been allocated to contain enough space.
-   The EXTERNAL_RELOCS are a buffer where the external form of the
-   relocations should be stored.
+   The *EXTERNAL_RELOCS_P are a buffer where the external form of the
+   relocations should be stored.  If *EXTERNAL_RELOCS_ADDR is NULL,
+   *EXTERNAL_RELOCS_ADDR and *EXTERNAL_RELOCS_SIZE returns the mmap
+   memory address and size.  Otherwise, *EXTERNAL_RELOCS_ADDR is
+   unchanged and *EXTERNAL_RELOCS_SIZE returns 0.
 
    Returns FALSE if something goes wrong.  */
 
@@ -2651,7 +2703,8 @@ static bool
 elf_link_read_relocs_from_section (bfd *abfd,
 				   const asection *sec,
 				   Elf_Internal_Shdr *shdr,
-				   void *external_relocs,
+				   void **external_relocs_addr,
+				   size_t *external_relocs_size,
 				   Elf_Internal_Rela *internal_relocs)
 {
   const struct elf_backend_data *bed;
@@ -2661,13 +2714,17 @@ elf_link_read_relocs_from_section (bfd *abfd,
   Elf_Internal_Rela *irela;
   Elf_Internal_Shdr *symtab_hdr;
   size_t nsyms;
+  void *external_relocs = *external_relocs_addr;
 
   /* Position ourselves at the start of the section.  */
   if (bfd_seek (abfd, shdr->sh_offset, SEEK_SET) != 0)
     return false;
 
   /* Read the relocations.  */
-  if (bfd_read (external_relocs, shdr->sh_size, abfd) != shdr->sh_size)
+  *external_relocs_size = shdr->sh_size;
+  if (!_bfd_mmap_read_temporary (&external_relocs,
+				 external_relocs_size,
+				 external_relocs_addr, abfd, true))
     return false;
 
   symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
@@ -2752,6 +2809,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
 				bool keep_memory)
 {
   void *alloc1 = NULL;
+  size_t alloc1_size;
   Elf_Internal_Rela *alloc2 = NULL;
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
   struct bfd_elf_section_data *esdo = elf_section_data (o);
@@ -2780,26 +2838,12 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
 	goto error_return;
     }
 
-  if (external_relocs == NULL)
-    {
-      bfd_size_type size = 0;
-
-      if (esdo->rel.hdr)
-	size += esdo->rel.hdr->sh_size;
-      if (esdo->rela.hdr)
-	size += esdo->rela.hdr->sh_size;
-
-      alloc1 = bfd_malloc (size);
-      if (alloc1 == NULL)
-	goto error_return;
-      external_relocs = alloc1;
-    }
-
+  alloc1 = external_relocs;
   internal_rela_relocs = internal_relocs;
   if (esdo->rel.hdr)
     {
       if (!elf_link_read_relocs_from_section (abfd, o, esdo->rel.hdr,
-					      external_relocs,
+					      &alloc1, &alloc1_size,
 					      internal_relocs))
 	goto error_return;
       external_relocs = (((bfd_byte *) external_relocs)
@@ -2810,7 +2854,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
 
   if (esdo->rela.hdr
       && (!elf_link_read_relocs_from_section (abfd, o, esdo->rela.hdr,
-					      external_relocs,
+					      &alloc1, &alloc1_size,
 					      internal_rela_relocs)))
     goto error_return;
 
@@ -2818,7 +2862,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
   if (keep_memory)
     esdo->relocs = internal_relocs;
 
-  free (alloc1);
+  _bfd_munmap_readonly_temporary (alloc1, alloc1_size);
 
   /* Don't free alloc2, since if it was allocated we are passing it
      back (under the name of internal_relocs).  */
@@ -2826,7 +2870,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
   return internal_relocs;
 
  error_return:
-  free (alloc1);
+  _bfd_munmap_readonly_temporary (alloc1, alloc1_size);
   if (alloc2 != NULL)
     {
       if (keep_memory)
@@ -4185,10 +4229,9 @@ _bfd_elf_link_iterate_on_relocs
 	      || bfd_is_abs_section (o->output_section))
 	    continue;
 
-	  internal_relocs = _bfd_elf_link_info_read_relocs (abfd, info,
-							    o, NULL,
-							    NULL,
-							    _bfd_link_keep_memory (info));
+	  internal_relocs = _bfd_elf_link_info_read_relocs
+	    (abfd, info, o, NULL, NULL,
+	     _bfd_elf_link_keep_memory (info));
 	  if (internal_relocs == NULL)
 	    return false;
 
@@ -4424,10 +4467,10 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	  unsigned int elfsec;
 	  unsigned long shlink;
 
-	  if (!bfd_malloc_and_get_section (abfd, s, &dynbuf))
+	  if (!_bfd_elf_mmap_section_contents (abfd, s, &dynbuf))
 	    {
 	    error_free_dyn:
-	      free (dynbuf);
+	      _bfd_elf_munmap_section_contents (s, dynbuf);
 	      goto error_return;
 	    }
 
@@ -4533,7 +4576,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 		elf_tdata (abfd)->is_pie = (dyn.d_un.d_val & DF_1_PIE) != 0;
 	    }
 
-	  free (dynbuf);
+	  _bfd_elf_munmap_section_contents (s, dynbuf);
 	}
 
       /* DT_RUNPATH overrides DT_RPATH.  Do _NOT_ bfd_release, as that
@@ -5554,10 +5597,9 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 		  && (s->flags & SEC_DEBUGGING) != 0))
 	    continue;
 
-	  internal_relocs = _bfd_elf_link_info_read_relocs (abfd, info,
-							    s, NULL,
-							    NULL,
-							    _bfd_link_keep_memory (info));
+	  internal_relocs = _bfd_elf_link_info_read_relocs
+	    (abfd, info, s, NULL, NULL,
+	     _bfd_elf_link_keep_memory (info));
 	  if (internal_relocs == NULL)
 	    goto error_free_vers;
 
@@ -8280,7 +8322,7 @@ bfd_elf_get_bfd_needed_list (bfd *abfd,
   if (s == NULL || s->size == 0 || (s->flags & SEC_HAS_CONTENTS) == 0)
     return true;
 
-  if (!bfd_malloc_and_get_section (abfd, s, &dynbuf))
+  if (!_bfd_elf_mmap_section_contents (abfd, s, &dynbuf))
     goto error_return;
 
   elfsec = _bfd_elf_section_from_bfd_section (abfd, s);
@@ -8326,12 +8368,12 @@ bfd_elf_get_bfd_needed_list (bfd *abfd,
 	}
     }
 
-  free (dynbuf);
+  _bfd_elf_munmap_section_contents (s, dynbuf);
 
   return true;
 
  error_return:
-  free (dynbuf);
+  _bfd_elf_munmap_section_contents (s, dynbuf);
   return false;
 }
 
@@ -11444,7 +11486,8 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
       else
 	{
 	  contents = flinfo->contents;
-	  if (! bfd_get_full_section_contents (input_bfd, o, &contents))
+	  if (! _bfd_elf_link_mmap_section_contents (input_bfd, o,
+						     &contents))
 	    return false;
 	}
 
@@ -12005,6 +12048,9 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 	  }
 	  break;
 	}
+
+      /* Munmap the section contents for each input section.  */
+      _bfd_elf_link_munmap_section_contents (o);
     }
 
   return true;
@@ -12443,8 +12489,19 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
   /* Count up the number of relocations we will output for each output
      section, so that we know the sizes of the reloc sections.  We
      also figure out some maximum sizes.  */
+#ifdef USE_MMAP
+  /* Mmap is used only if section size >= the minimum mmap section
+     size.  The initial max_contents_size value covers all sections
+     smaller than the minimum mmap section size.  It may be increased
+     for compressed or linker created sections or sections whose
+     rawsize != size.  max_external_reloc_size covers all relocation
+     sections smaller than the minimum mmap section size.  */
+  max_contents_size = _bfd_minimum_mmap_size;
+  max_external_reloc_size = _bfd_minimum_mmap_size;
+#else
   max_contents_size = 0;
   max_external_reloc_size = 0;
+#endif
   max_internal_reloc_count = 0;
   max_sym_count = 0;
   max_sym_shndx_count = 0;
@@ -12478,10 +12535,19 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	      if (sec->flags & SEC_MERGE)
 		merged = true;
 
-	      if (sec->rawsize > max_contents_size)
-		max_contents_size = sec->rawsize;
-	      if (sec->size > max_contents_size)
-		max_contents_size = sec->size;
+#ifdef USE_MMAP
+	      /* Mmap is used only on non-compressed, non-linker created
+		 sections whose rawsize == size.  */
+	      if (sec->compress_status != COMPRESS_SECTION_NONE
+		 || (sec->flags & SEC_LINKER_CREATED) != 0
+		 || sec->rawsize != sec->size)
+#endif
+		{
+		  if (sec->rawsize > max_contents_size)
+		    max_contents_size = sec->rawsize;
+		  if (sec->size > max_contents_size)
+		    max_contents_size = sec->size;
+		}
 
 	      if (bfd_get_flavour (sec->owner) == bfd_target_elf_flavour
 		  && (sec->owner->flags & DYNAMIC) == 0)
@@ -12533,8 +12599,10 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 		      if (esdi->rela.hdr != NULL)
 			ext_size += esdi->rela.hdr->sh_size;
 
+#ifndef USE_MMAP
 		      if (ext_size > max_external_reloc_size)
 			max_external_reloc_size = ext_size;
+#endif
 		      if (sec->reloc_count > max_internal_reloc_count)
 			max_internal_reloc_count = sec->reloc_count;
 		    }
@@ -13572,7 +13640,8 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 
 static bool
 init_reloc_cookie (struct elf_reloc_cookie *cookie,
-		   struct bfd_link_info *info, bfd *abfd)
+		   struct bfd_link_info *info, bfd *abfd,
+		   bool keep_memory)
 {
   Elf_Internal_Shdr *symtab_hdr;
   const struct elf_backend_data *bed;
@@ -13610,7 +13679,7 @@ init_reloc_cookie (struct elf_reloc_cookie *cookie,
 	  info->callbacks->einfo (_("%P%X: can not read symbols: %E\n"));
 	  return false;
 	}
-      if (_bfd_link_keep_memory (info) )
+      if (keep_memory || _bfd_elf_link_keep_memory (info))
 	{
 	  symtab_hdr->contents = (bfd_byte *) cookie->locsyms;
 	  info->cache_size += (cookie->locsymcount
@@ -13638,7 +13707,7 @@ fini_reloc_cookie (struct elf_reloc_cookie *cookie, bfd *abfd)
 static bool
 init_reloc_cookie_rels (struct elf_reloc_cookie *cookie,
 			struct bfd_link_info *info, bfd *abfd,
-			asection *sec)
+			asection *sec, bool keep_memory)
 {
   if (sec->reloc_count == 0)
     {
@@ -13647,9 +13716,9 @@ init_reloc_cookie_rels (struct elf_reloc_cookie *cookie,
     }
   else
     {
-      cookie->rels = _bfd_elf_link_info_read_relocs (abfd, info, sec,
-						     NULL, NULL,
-						     _bfd_link_keep_memory (info));
+      cookie->rels = _bfd_elf_link_info_read_relocs
+	(abfd, info, sec, NULL, NULL,
+	 keep_memory || _bfd_elf_link_keep_memory (info));
       if (cookie->rels == NULL)
 	return false;
       cookie->rel = cookie->rels;
@@ -13675,11 +13744,12 @@ fini_reloc_cookie_rels (struct elf_reloc_cookie *cookie,
 static bool
 init_reloc_cookie_for_section (struct elf_reloc_cookie *cookie,
 			       struct bfd_link_info *info,
-			       asection *sec)
+			       asection *sec, bool keep_memory)
 {
-  if (!init_reloc_cookie (cookie, info, sec->owner))
+  if (!init_reloc_cookie (cookie, info, sec->owner, keep_memory))
     goto error1;
-  if (!init_reloc_cookie_rels (cookie, info, sec->owner, sec))
+  if (!init_reloc_cookie_rels (cookie, info, sec->owner, sec,
+			       keep_memory))
     goto error2;
   return true;
 
@@ -13890,7 +13960,7 @@ _bfd_elf_gc_mark (struct bfd_link_info *info,
     {
       struct elf_reloc_cookie cookie;
 
-      if (!init_reloc_cookie_for_section (&cookie, info, sec))
+      if (!init_reloc_cookie_for_section (&cookie, info, sec, false))
 	ret = false;
       else
 	{
@@ -13908,7 +13978,14 @@ _bfd_elf_gc_mark (struct bfd_link_info *info,
     {
       struct elf_reloc_cookie cookie;
 
-      if (!init_reloc_cookie_for_section (&cookie, info, eh_frame))
+      /* NB: When --no-keep-memory is used, the symbol table and
+	 relocation info for eh_frame are freed after they are retrieved
+	 for each text section in the input object.  If an input object
+	 has many text sections, the same data is retrieved and freed
+	 many times which can take a very long time.  Always keep the
+	 symbol table and relocation info for eh_frame to avoid it.  */
+      if (!init_reloc_cookie_for_section (&cookie, info, eh_frame,
+					  true))
 	ret = false;
       else
 	{
@@ -14348,13 +14425,14 @@ bfd_elf_parse_eh_frame_entries (bfd *abfd ATTRIBUTE_UNUSED,
       if (sec == NULL || sec->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
 	continue;
 
-      if (!init_reloc_cookie (&cookie, info, ibfd))
+      if (!init_reloc_cookie (&cookie, info, ibfd, false))
 	return false;
 
       for (sec = ibfd->sections; sec; sec = sec->next)
 	{
 	  if (startswith (bfd_section_name (sec), ".eh_frame_entry")
-	      && init_reloc_cookie_rels (&cookie, info, ibfd, sec))
+	      && init_reloc_cookie_rels (&cookie, info, ibfd, sec,
+					 false))
 	    {
 	      _bfd_elf_parse_eh_frame_entry (info, sec, &cookie);
 	      fini_reloc_cookie_rels (&cookie, sec);
@@ -14399,7 +14477,8 @@ bfd_elf_gc_sections (bfd *abfd, struct bfd_link_info *info)
       if (sec == NULL || sec->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
 	continue;
       sec = bfd_get_section_by_name (sub, ".eh_frame");
-      while (sec && init_reloc_cookie_for_section (&cookie, info, sec))
+      while (sec && init_reloc_cookie_for_section (&cookie, info, sec,
+						   false))
 	{
 	  _bfd_elf_parse_eh_frame (sub, info, sec, &cookie);
 	  if (elf_section_data (sec)->sec_info
@@ -14911,7 +14990,7 @@ bfd_elf_discard_info (bfd *output_bfd, struct bfd_link_info *info)
 	  if (bfd_get_flavour (abfd) != bfd_target_elf_flavour)
 	    continue;
 
-	  if (!init_reloc_cookie_for_section (&cookie, info, i))
+	  if (!init_reloc_cookie_for_section (&cookie, info, i, false))
 	    return -1;
 
 	  if (_bfd_discard_section_stabs (abfd, i,
@@ -14942,7 +15021,7 @@ bfd_elf_discard_info (bfd *output_bfd, struct bfd_link_info *info)
 	  if (bfd_get_flavour (abfd) != bfd_target_elf_flavour)
 	    continue;
 
-	  if (!init_reloc_cookie_for_section (&cookie, info, i))
+	  if (!init_reloc_cookie_for_section (&cookie, info, i, false))
 	    return -1;
 
 	  _bfd_elf_parse_eh_frame (abfd, info, i, &cookie);
@@ -15007,7 +15086,7 @@ bfd_elf_discard_info (bfd *output_bfd, struct bfd_link_info *info)
 	  if (bfd_get_flavour (abfd) != bfd_target_elf_flavour)
 	    continue;
 
-	  if (!init_reloc_cookie_for_section (&cookie, info, i))
+	  if (!init_reloc_cookie_for_section (&cookie, info, i, false))
 	    return -1;
 
 	  if (_bfd_elf_parse_sframe (abfd, info, i, &cookie))
@@ -15043,7 +15122,7 @@ bfd_elf_discard_info (bfd *output_bfd, struct bfd_link_info *info)
 
       if (bed->elf_backend_discard_info != NULL)
 	{
-	  if (!init_reloc_cookie (&cookie, info, abfd))
+	  if (!init_reloc_cookie (&cookie, info, abfd, false))
 	    return -1;
 
 	  if ((*bed->elf_backend_discard_info) (abfd, &cookie, info))

@@ -689,6 +689,9 @@ typedef struct bfd_section
   /* Nonzero if this section uses RELA relocations, rather than REL.  */
   unsigned int use_rela_p:1;
 
+  /* Nonzero if this section contents are mmapped, rather than malloced.  */
+  unsigned int mmapped_p:1;
+
   /* Bits used by various backends.  The generic code doesn't touch
      these fields.  */
 
@@ -976,8 +979,8 @@ discarded_section (const asection *sec)
   /* linker_mark, linker_has_input, gc_mark, decompress_status,     */ \
      0,           0,                1,       0,                        \
 								       \
-  /* segment_mark, sec_info_type, use_rela_p,                       */ \
-     0,            0,             0,                                   \
+  /* segment_mark, sec_info_type, use_rela_p, mmapped_p,           */  \
+     0,            0,             0,          0,                       \
 								       \
   /* sec_flg0, sec_flg1, sec_flg2, sec_flg3, sec_flg4, sec_flg5,    */ \
      0,        0,        0,        0,        0,        0,              \
@@ -1965,6 +1968,20 @@ enum bfd_lto_object_type
     lto_fat_ir_object          /* A fat LTO IR object.  */
   };
 
+struct bfd_mmapped_entry
+  {
+    void *addr;
+    size_t size;
+  };
+
+struct bfd_mmapped
+  {
+    struct bfd_mmapped *next;
+    unsigned int max_entry;
+    unsigned int next_entry;
+    struct bfd_mmapped_entry entries[1];
+  };
+
 struct bfd
 {
   /* The filename the application opened the BFD with.  */
@@ -2294,6 +2311,9 @@ struct bfd
 
   /* For input BFDs, the build ID, if the object has one. */
   const struct bfd_build_id *build_id;
+
+  /* For input BFDs, mmapped entries. */
+  struct bfd_mmapped *mmapped;
 };
 
 static inline const char *
