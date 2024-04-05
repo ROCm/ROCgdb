@@ -1072,18 +1072,15 @@ static void *
 bfd_mmap_local (bfd *abfd, size_t rsize, int prot, void **map_addr,
 		size_t *map_size)
 {
-  if (!_bfd_constant_p (rsize))
+  ufile_ptr filesize = bfd_get_file_size (abfd);
+  ufile_ptr offset = bfd_tell (abfd);
+  if (filesize < offset || filesize - offset < rsize)
     {
-      ufile_ptr filesize = bfd_get_file_size (abfd);
-      if (filesize != 0 && rsize > filesize)
-	{
-	  bfd_set_error (bfd_error_file_truncated);
-	  return NULL;
-	}
+      bfd_set_error (bfd_error_file_truncated);
+      return NULL;
     }
 
   void *mem;
-  ufile_ptr offset = bfd_tell (abfd);
   mem = bfd_mmap (abfd, NULL, rsize, prot, MAP_PRIVATE, offset,
 		  map_addr, map_size);
   return mem;
@@ -1205,12 +1202,18 @@ _bfd_mmap_read_temporary (void **data_p, size_t *size_p,
 		 && (abfd->flags & BFD_PLUGIN) == 0);
   if (use_mmmap)
     {
-      data = _bfd_mmap_readonly_temporary (abfd, size, mmap_base,
-					   size_p);
-      if (data == NULL || data == MAP_FAILED)
-	abort ();
-      *data_p = data;
-      return true;
+      void *mmaped = _bfd_mmap_readonly_temporary (abfd, size,
+						   mmap_base,
+						   size_p);
+      /* MAP_FAILED is returned when called from GDB on an object with
+	 opncls_iovec.  Use bfd_read in this case.  */
+      if (mmaped != MAP_FAILED)
+	{
+	  if (mmaped == NULL)
+	    abort ();
+	  *data_p = mmaped;
+	  return true;
+	}
     }
 #endif
 
