@@ -1942,7 +1942,7 @@ generated_files = \
 # Flags needed to compile Python code
 PYTHON_CFLAGS = @PYTHON_CFLAGS@
 
-all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.py gdb-gdb.gdb
+all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.py gdb-gdb.gdb gcore
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
 
 # Rule for compiling .c files in the top-level gdb directory.
@@ -2311,34 +2311,45 @@ subdir_do: force
 	done
 
 Makefile: Makefile.in config.status
-	$(SHELL) config.status $@
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
 
 .PHONY: run
 run: Makefile
 	./gdb$(EXEEXT) --data-directory=`pwd`/data-directory $(GDBFLAGS)
 
-jit-reader.h: $(srcdir)/jit-reader.in
-	$(SHELL) config.status $@
+jit-reader.h: $(srcdir)/jit-reader.in config.status
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
 
-gcore: $(srcdir)/gcore.in
-	$(SHELL) config.status $@
+gcore: $(srcdir)/gcore.in config.status
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
 
-gdb-gdb.py: $(srcdir)/gdb-gdb.py.in
-	$(SHELL) config.status $@
+gdb-gdb.py: $(srcdir)/gdb-gdb.py.in config.status
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
 
-gdb-gdb.gdb: $(srcdir)/gdb-gdb.gdb.in
-	$(SHELL) config.status $@
+gdb-gdb.gdb: $(srcdir)/gdb-gdb.gdb.in config.status
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
 
 config.h: stamp-h ; @true
 stamp-h: $(srcdir)/config.in config.status
-	$(SHELL) config.status config.h
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) config.h
 
 nm.h: stamp-nmh ; @true
 stamp-nmh: config.status
-	$(SHELL) config.status nm.h
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) nm.h
 
-config.status: $(srcdir)/configure configure.nat configure.tgt configure.host ../bfd/development.sh
-	$(SHELL) config.status --recheck
+# Files included from config.status or the configure script.  When
+# these change the configure script doesn't need regenerating, but its
+# output (and so that of config.status) might change.
+config_status_deps = \
+	$(srcdir)/configure \
+	$(srcdir)/configure.nat \
+	$(srcdir)/configure.tgt \
+	$(srcdir)/configure.host \
+	$(srcdir)/../bfd/development.sh \
+	$(srcdir)/../bfd/config.bfd
+
+config.status: $(config_status_deps)
+	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) --recheck
 
 ACLOCAL = aclocal
 
