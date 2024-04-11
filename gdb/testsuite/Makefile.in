@@ -106,6 +106,7 @@ INFODIRS=doc
 info:
 install-info:
 dvi:
+install-dvi:
 pdf:
 install-pdf:
 html:
