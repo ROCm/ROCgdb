@@ -188,12 +188,15 @@ typedef struct elf_section_list
 
 /* Flag bits indicating particular types of dump.  */
 #define HEX_DUMP	(1 << 0)	/* The -x command line switch.  */
+#ifdef SUPPORT_DISASSEMBLY
 #define DISASS_DUMP	(1 << 1)	/* The -i command line switch.  */
+#endif
 #define DEBUG_DUMP	(1 << 2)	/* The -w command line switch.  */
 #define STRING_DUMP     (1 << 3)	/* The -p command line switch.  */
 #define RELOC_DUMP      (1 << 4)	/* The -R command line switch.  */
 #define CTF_DUMP	(1 << 5)	/* The --ctf command line switch.  */
 #define SFRAME_DUMP	(1 << 6)	/* The --sframe command line switch.  */
+#define AUTO_DUMP       (1 << 7)        /* The -j command line switch.  */
 
 typedef unsigned char dump_type;
 
@@ -335,6 +338,7 @@ typedef enum print_mode
   PREFIX_HEX_5,
   FULL_HEX,
   LONG_HEX,
+  ZERO_HEX,
   OCTAL,
   OCTAL_5
 }
@@ -401,6 +405,9 @@ fseek64 (FILE *stream, int64_t offset, int whence)
 static const char * get_symbol_version_string
   (Filedata *, bool, const char *, size_t, unsigned,
    Elf_Internal_Sym *, enum versioned_symbol_info *, unsigned short *);
+
+static bool process_notes_at
+  (Filedata *, Elf_Internal_Shdr *, uint64_t, uint64_t, uint64_t);
 
 #define UNKNOWN -1
 
@@ -574,6 +581,11 @@ print_vma (uint64_t vma, print_mode mode)
 	return nc + printf ("%16.16" PRIx64, vma);
       return nc + printf ("%8.8" PRIx64, vma);
 
+    case ZERO_HEX:
+      if (is_32bit_elf)
+	return printf ("%08" PRIx64, vma);
+      return printf ("%016" PRIx64, vma);
+      
     case DEC_5:
       if (vma <= 99999)
 	return printf ("%5" PRId64, vma);
@@ -1103,6 +1115,26 @@ find_section_by_type (Filedata * filedata, unsigned int type)
   return NULL;
 }
 
+static Elf_Internal_Shdr *
+find_section_by_name (Filedata * filedata, const char * name)
+{
+  unsigned int i;
+
+  if (filedata->section_headers == NULL || filedata->string_table_length == 0)
+    return NULL;
+
+  for (i = 0; i < filedata->file_header.e_shnum; i++)
+    {
+      Elf_Internal_Shdr *sec = filedata->section_headers + i;
+
+      if (sec->sh_name < filedata->string_table_length
+	  && streq (name, filedata->string_table + sec->sh_name))
+	return sec;
+    }
+
+  return NULL;
+}
+
 /* Return a pointer to section NAME, or NULL if no such section exists,
    restricted to the list of sections given in SET.  */
 
@@ -1461,76 +1493,6 @@ slurp_rel_relocs (Filedata *filedata,
   return true;
 }
 
-static bool
-slurp_relr_relocs (Filedata *filedata,
-		   uint64_t relr_offset,
-		   uint64_t relr_size,
-		   uint64_t **relrsp,
-		   uint64_t *nrelrsp)
-{
-  void *relrs;
-  size_t size = 0, nentries, i;
-  uint64_t base = 0, addr, entry;
-
-  relrs = get_data (NULL, filedata, relr_offset, 1, relr_size,
-		    _("RELR relocation data"));
-  if (!relrs)
-    return false;
-
-  if (is_32bit_elf)
-    nentries = relr_size / sizeof (Elf32_External_Relr);
-  else
-    nentries = relr_size / sizeof (Elf64_External_Relr);
-  for (i = 0; i < nentries; i++)
-    {
-      if (is_32bit_elf)
-	entry = BYTE_GET (((Elf32_External_Relr *)relrs)[i].r_data);
-      else
-	entry = BYTE_GET (((Elf64_External_Relr *)relrs)[i].r_data);
-      if ((entry & 1) == 0)
-	size++;
-      else
-	while ((entry >>= 1) != 0)
-	  if ((entry & 1) == 1)
-	    size++;
-    }
-
-  *relrsp = malloc (size * sizeof (**relrsp));
-  if (*relrsp == NULL)
-    {
-      free (relrs);
-      error (_("out of memory parsing relocs\n"));
-      return false;
-    }
-
-  size = 0;
-  for (i = 0; i < nentries; i++)
-    {
-      const uint64_t entry_bytes = is_32bit_elf ? 4 : 8;
-
-      if (is_32bit_elf)
-	entry = BYTE_GET (((Elf32_External_Relr *)relrs)[i].r_data);
-      else
-	entry = BYTE_GET (((Elf64_External_Relr *)relrs)[i].r_data);
-      if ((entry & 1) == 0)
-	{
-	  (*relrsp)[size++] = entry;
-	  base = entry + entry_bytes;
-	}
-      else
-	{
-	  for (addr = base; (entry >>= 1) != 0; addr += entry_bytes)
-	    if ((entry & 1) != 0)
-	      (*relrsp)[size++] = addr;
-	  base += entry_bytes * (entry_bytes * CHAR_BIT - 1);
-	}
-    }
-
-  *nrelrsp = size;
-  free (relrs);
-  return true;
-}
-
 /* Returns the reloc type extracted from the reloc info field.  */
 
 static unsigned int
@@ -1572,19 +1534,227 @@ uses_msp430x_relocs (Filedata * filedata)
 	|| (filedata->file_header.e_ident[EI_OSABI] == ELFOSABI_NONE));
 }
 
+
+static const char *
+get_symbol_at (Elf_Internal_Sym *  symtab,
+	       uint64_t            nsyms,
+	       char *              strtab,
+	       uint64_t            strtablen,
+	       uint64_t            where,
+	       uint64_t *          offset_return)
+{
+  Elf_Internal_Sym *  beg = symtab;
+  Elf_Internal_Sym *  end = symtab + nsyms;
+  Elf_Internal_Sym *  best = NULL;
+  uint64_t            dist = 0x100000;
+
+  /* FIXME: Since this function is likely to be called repeatedly with
+     slightly increasing addresses each time, we could speed things up by
+     caching the last returned value and starting our search from there.  */
+  while (beg < end)
+    {
+      Elf_Internal_Sym *  sym;
+      uint64_t            value;
+
+      sym = beg + (end - beg) / 2;
+
+      value = sym->st_value;
+
+      if (sym->st_name != 0
+	  && where >= value
+	  && where - value < dist)
+	{
+	  best = sym;
+	  dist = where - value;
+	  if (dist == 0)
+	    break;
+	}
+
+      if (where < value)
+	end = sym;
+      else
+	beg = sym + 1;
+    }
+
+  if (best == NULL)
+    return NULL;
+
+  if (best->st_name >= strtablen)
+    return NULL;
+
+  if (offset_return != NULL)
+    * offset_return = dist;
+
+  return strtab + best->st_name;
+}
+
+static void
+print_relr_addr_and_sym (Elf_Internal_Sym *  symtab,
+			 uint64_t            nsyms,
+			 char *              strtab,
+			 uint64_t            strtablen,
+			 uint64_t            where)
+{
+  const char * symname = NULL;
+  uint64_t     offset = 0;
+
+  print_vma (where, ZERO_HEX);
+  printf ("  ");
+
+  symname = get_symbol_at (symtab, nsyms, strtab, strtablen, where, & offset);
+
+  if (symname == NULL)
+    printf ("<no sym>");
+  else if (offset == 0)
+    print_symbol_name (38, symname);
+  else
+    {
+      print_symbol_name (28, symname);
+      printf (" + ");
+      print_vma (offset, PREFIX_HEX);
+    }
+}
+
+static /* signed */ int
+symcmp (const void *p, const void *q)
+{
+  Elf_Internal_Sym *sp = (Elf_Internal_Sym *) p;
+  Elf_Internal_Sym *sq = (Elf_Internal_Sym *) q;
+
+  return sp->st_value > sq->st_value ? 1 : (sp->st_value < sq->st_value ? -1 : 0);
+}
+
+static bool
+dump_relr_relocations (Filedata *          filedata,
+		       Elf_Internal_Shdr * section,
+		       Elf_Internal_Sym *  symtab,
+		       uint64_t            nsyms,
+		       char *              strtab,
+		       uint64_t            strtablen)
+{
+  uint64_t *  relrs;
+  uint64_t    nentries, i;
+  uint64_t    relr_size = section->sh_size;
+  int         relr_entsize = section->sh_entsize;
+  uint64_t    relr_offset = section->sh_offset;
+  uint64_t    where = 0;
+  int         num_bits_in_entry;
+
+  relrs = get_data (NULL, filedata, relr_offset, 1, relr_size, _("RELR relocation data"));
+  if (relrs == NULL)
+    return false;
+
+  if (relr_entsize == 0)
+    relr_entsize = is_32bit_elf ? 4 : 8;
+
+  nentries = relr_size / relr_entsize;
+
+  if (relr_entsize == sizeof (Elf32_External_Relr))
+    num_bits_in_entry = 31;
+  else if (relr_entsize == sizeof (Elf64_External_Relr))
+    num_bits_in_entry = 63;
+  else
+    {
+      warn (_("Unexpected entsize for RELR section\n"));
+      return false;
+    }
+  
+  /* Symbol tables are not sorted on address, but we want a quick lookup
+     for the symbol associated with each address computed below, so sort
+     the table now.  FIXME: This assumes that the symbol table will not
+     be used later on for some other purpose.  */
+  qsort (symtab, nsyms, sizeof (Elf_Internal_Sym), symcmp);
+
+  if (do_wide)
+    {
+      if (relr_entsize == 4)
+	printf (_("Index: Entry:   Address  Symbolic Address     Notes\n"));
+      else
+	printf (_("Index: Entry:           Address relocated Symbolic Address        Notes\n"));
+    }
+  else
+    {
+      if (relr_entsize == 4)
+	printf (_("Index: Entry:   Address  Symbolic Address\n"));
+      else
+	printf (_("Index: Entry:           Address relocated Symbolic Address\n"));
+    }
+
+  for (i = 0; i < nentries; i++)
+    {
+      uint64_t entry;
+
+      if (relr_entsize == 4)
+	entry = BYTE_GET (((Elf32_External_Relr *)relrs)[i].r_data);
+      else
+	entry = BYTE_GET (((Elf64_External_Relr *)relrs)[i].r_data);
+
+      /* We assume that there will never be more than 9999 entries.  */
+      printf (_("%04u:  "), (unsigned int) i);
+      print_vma (entry, ZERO_HEX);
+      printf (" ");
+
+      if ((entry & 1) == 0)
+	{
+	  where = entry;
+	  print_relr_addr_and_sym (symtab, nsyms, strtab, strtablen, where);
+	  if (do_wide)
+	    printf (_(" (new starting address)"));
+	  printf ("\n");
+	  where += relr_entsize;
+	}
+      else
+	{
+	  bool first = true;
+	  int j;
+
+	  /* The least significant bit is ignored.  */
+	  if (entry == 1)
+	    warn (_("Malformed RELR bitmap - no significant bits are set\n"));
+	  else if (i == 0)
+	    warn (_("Unusual RELR bitmap - no previous entry to set the base address\n"));
+
+	  for (j = 0; entry >>= 1; j++)
+	    if ((entry & 1) == 1)
+	      {
+		uint64_t addr = where + (j * relr_entsize);
+		
+		if (first)
+		  {
+		    print_relr_addr_and_sym (symtab, nsyms, strtab, strtablen, addr);
+		    if (do_wide)
+		      printf (_(" (start of bitmap)"));
+		    first = false;
+		  }
+		else
+		  {
+		    printf (_("\n%*s "), relr_entsize == 4 ? 15 : 23, " ");
+		    print_relr_addr_and_sym (symtab, nsyms, strtab, strtablen, addr);
+		  }
+	      }
+
+	  printf ("\n");
+	  where += num_bits_in_entry * relr_entsize;
+	}
+    }
+
+  free (relrs);
+  return true;
+}
+		       
 /* Display the contents of the relocation data found at the specified
    offset.  */
 
 static bool
-dump_relocations (Filedata *filedata,
-		  uint64_t rel_offset,
-		  uint64_t rel_size,
-		  Elf_Internal_Sym *symtab,
-		  uint64_t nsyms,
-		  char *strtab,
-		  uint64_t strtablen,
-		  relocation_type rel_type,
-		  bool is_dynsym)
+dump_relocations (Filedata *          filedata,
+		  uint64_t            rel_offset,
+		  uint64_t            rel_size,
+		  Elf_Internal_Sym *  symtab,
+		  uint64_t            nsyms,
+		  char *              strtab,
+		  uint64_t            strtablen,
+		  relocation_type     rel_type,
+		  bool                is_dynsym)
 {
   size_t i;
   Elf_Internal_Rela * rels;
@@ -1605,21 +1775,8 @@ dump_relocations (Filedata *filedata,
     }
   else if (rel_type == reltype_relr)
     {
-      uint64_t * relrs;
-      const char *format
-	= is_32bit_elf ? "%08" PRIx64 "\n" : "%016" PRIx64 "\n";
-
-      if (!slurp_relr_relocs (filedata, rel_offset, rel_size, &relrs,
-			      &rel_size))
-	return false;
-
-      printf (ngettext ("  %" PRIu64 " offset\n",
-			"  %" PRIu64 " offsets\n", rel_size),
-	      rel_size);
-      for (i = 0; i < rel_size; i++)
-	printf (format, relrs[i]);
-      free (relrs);
-      return true;
+      /* This should have been handled by display_relocations().  */
+      return false;
     }
 
   if (is_32bit_elf)
@@ -5416,7 +5573,6 @@ get_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_SYMTAB:		return "SYMTAB";
     case SHT_STRTAB:		return "STRTAB";
     case SHT_RELA:		return "RELA";
-    case SHT_RELR:		return "RELR";
     case SHT_HASH:		return "HASH";
     case SHT_DYNAMIC:		return "DYNAMIC";
     case SHT_NOTE:		return "NOTE";
@@ -5424,20 +5580,27 @@ get_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_REL:		return "REL";
     case SHT_SHLIB:		return "SHLIB";
     case SHT_DYNSYM:		return "DYNSYM";
+      /* 12 and 13 are not defined.  */
     case SHT_INIT_ARRAY:	return "INIT_ARRAY";
     case SHT_FINI_ARRAY:	return "FINI_ARRAY";
     case SHT_PREINIT_ARRAY:	return "PREINIT_ARRAY";
-    case SHT_GNU_HASH:		return "GNU_HASH";
     case SHT_GROUP:		return "GROUP";
     case SHT_SYMTAB_SHNDX:	return "SYMTAB SECTION INDICES";
+    case SHT_RELR:		return "RELR";
+      /* End of generic section types.  */
+
+      /* OS specific section types:  */
     case SHT_GNU_verdef:	return "VERDEF";
     case SHT_GNU_verneed:	return "VERNEED";
     case SHT_GNU_versym:	return "VERSYM";
+    case SHT_GNU_INCREMENTAL_INPUTS: return "GNU_INCREMENTAL_INPUTS";
     case 0x6ffffff0:		return "VERSYM";
+    case SHT_GNU_ATTRIBUTES:	return "GNU_ATTRIBUTES";
+    case SHT_GNU_HASH:		return "GNU_HASH";
+    case SHT_GNU_LIBLIST:	return "GNU_LIBLIST";
     case 0x6ffffffc:		return "VERDEF";
     case 0x7ffffffd:		return "AUXILIARY";
     case 0x7fffffff:		return "FILTER";
-    case SHT_GNU_LIBLIST:	return "GNU_LIBLIST";
 
     default:
       if ((sh_type >= SHT_LOPROC) && (sh_type <= SHT_HIPROC))
@@ -5597,6 +5760,7 @@ static struct option options[] =
   {"help",	       no_argument, 0, 'H'},
   {"file-header",      no_argument, 0, 'h'},
   {"histogram",	       no_argument, 0, 'I'},
+  {"display-section",  required_argument, 0, 'j'},
   {"lint",             no_argument, 0, 'L'},
   {"enable-checks",    no_argument, 0, 'L'},
   {"program-headers",  no_argument, 0, 'l'},
@@ -5731,6 +5895,9 @@ usage (FILE * stream)
                          Dump the relocated contents of section <number|name>\n"));
   fprintf (stream, _("\
   -z --decompress        Decompress section before dumping it\n"));
+  fprintf (stream, _("\n\
+  -j --display-section=<name|number>\n\
+		         Display the contents of the indicated section.  Can be repeated\n"));
   fprintf (stream, _("\
   -w --debug-dump[a/=abbrev, A/=addr, r/=aranges, c/=cu_index, L/=decodedline,\n\
                   f/=frames, F/=frames-interp, g/=gdb_index, i/=info, o/=loc,\n\
@@ -5895,7 +6062,7 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
     usage (stderr);
 
   while ((c = getopt_long
-	  (argc, argv, "ACDHILNPR:STU:VWXacdeghi:lnp:rstuvw::x:z", options, NULL)) != EOF)
+	  (argc, argv, "ACDHILNPR:STU:VWXacdeghi:j:lnp:rstuvw::x:z", options, NULL)) != EOF)
     {
       switch (c)
 	{
@@ -5977,6 +6144,9 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	  process_links = true;
 	  do_follow_links = true;
 	  dump_any_debugging = true;
+	  break;
+	case 'j':
+	  request_dump (dumpdata, AUTO_DUMP);
 	  break;
 	case 'x':
 	  request_dump (dumpdata, HEX_DUMP);
@@ -7979,6 +8149,7 @@ process_section_headers (Filedata * filedata)
       switch (section->sh_type)
 	{
 	case SHT_REL:
+	case SHT_RELR:
 	case SHT_RELA:
 	  if (section->sh_link == 0
 	      && (filedata->file_header.e_type == ET_EXEC
@@ -8332,9 +8503,12 @@ process_section_headers (Filedata * filedata)
 }
 
 static bool
-get_symtab (Filedata *filedata, Elf_Internal_Shdr *symsec,
-	    Elf_Internal_Sym **symtab, uint64_t *nsyms,
-	    char **strtab, uint64_t *strtablen)
+get_symtab (Filedata *           filedata,
+	    Elf_Internal_Shdr *  symsec,
+	    Elf_Internal_Sym **  symtab,
+	    uint64_t *           nsyms,
+	    char **              strtab,
+	    uint64_t *           strtablen)
 {
   *strtab = NULL;
   *strtablen = 0;
@@ -8879,6 +9053,96 @@ static struct
   { "PLT", DT_JMPREL, DT_PLTRELSZ, reltype_unknown }
 };
 
+static relocation_type
+rel_type_from_sh_type (unsigned int sh_type)
+{
+  switch (sh_type)
+    {
+    case SHT_RELA: return reltype_rela;
+    case SHT_REL:  return reltype_rel;
+    case SHT_RELR: return reltype_relr;
+    default:       return reltype_unknown;
+    }
+}
+
+static bool
+display_relocations (Elf_Internal_Shdr *  section,
+		     Filedata *           filedata)
+{
+  relocation_type rel_type = rel_type_from_sh_type (section->sh_type);
+
+  if (rel_type == reltype_unknown)
+    return false;
+
+  uint64_t rel_size = section->sh_size;
+
+  if (rel_size == 0)
+    return false;
+
+  if (filedata->is_separate)
+    printf (_("\nIn linked file '%s' relocation section "),
+	    filedata->file_name);
+  else
+    printf (_("\nRelocation section "));
+
+  if (filedata->string_table == NULL)
+    printf ("%d", section->sh_name);
+  else
+    printf ("'%s'", printable_section_name (filedata, section));
+
+  uint64_t num_rela = rel_size / section->sh_entsize;
+  uint64_t rel_offset = section->sh_offset;
+
+  printf (ngettext (" at offset %#" PRIx64
+		    " contains %" PRIu64 " entry:\n",
+		    " at offset %#" PRIx64
+		    " contains %" PRId64 " entries:\n",
+		    num_rela),
+	  rel_offset, num_rela);
+
+  Elf_Internal_Shdr * symsec;
+  Elf_Internal_Sym *  symtab = NULL;
+  uint64_t            nsyms = 0;
+  uint64_t            strtablen = 0;
+  char *              strtab = NULL;
+
+  if (section->sh_link == 0
+      || section->sh_link >= filedata->file_header.e_shnum)
+    {
+      /* Symbol data not available.
+	 This can happen, especially with RELR relocs.
+	 See if there is a .symtab section present.
+	 If so then use it.  */
+      symsec = find_section_by_name (filedata, ".symtab");
+    }
+  else
+    {
+      symsec = filedata->section_headers + section->sh_link;
+
+      if (symsec->sh_type != SHT_SYMTAB
+	  && symsec->sh_type != SHT_DYNSYM)
+	return false;
+    }
+
+  if (symsec != NULL
+      && !get_symtab (filedata, symsec, &symtab, &nsyms, &strtab, &strtablen))
+    return false;
+
+  bool res;
+
+  if (rel_type == reltype_relr)
+    res = dump_relr_relocations (filedata, section, symtab, nsyms, strtab, strtablen);
+  else
+    res = dump_relocations (filedata, rel_offset, rel_size,
+			    symtab, nsyms, strtab, strtablen,
+			    rel_type,
+			    symsec == NULL ? false : symsec->sh_type == SHT_DYNSYM);
+  free (strtab);
+  free (symtab);
+
+  return res;
+}
+
 /* Process the reloc section.  */
 
 static bool
@@ -8970,72 +9234,8 @@ process_relocs (Filedata * filedata)
 	   i < filedata->file_header.e_shnum;
 	   i++, section++)
 	{
-	  if (   section->sh_type != SHT_RELA
-	      && section->sh_type != SHT_REL
-	      && section->sh_type != SHT_RELR)
-	    continue;
-
-	  rel_offset = section->sh_offset;
-	  rel_size   = section->sh_size;
-
-	  if (rel_size)
-	    {
-	      relocation_type rel_type;
-	      uint64_t num_rela;
-
-	      if (filedata->is_separate)
-		printf (_("\nIn linked file '%s' relocation section "),
-			filedata->file_name);
-	      else
-		printf (_("\nRelocation section "));
-
-	      if (filedata->string_table == NULL)
-		printf ("%d", section->sh_name);
-	      else
-		printf ("'%s'", printable_section_name (filedata, section));
-
-	      num_rela = rel_size / section->sh_entsize;
-	      printf (ngettext (" at offset %#" PRIx64
-				" contains %" PRIu64 " entry:\n",
-				" at offset %#" PRIx64
-				" contains %" PRId64 " entries:\n",
-				num_rela),
-		      rel_offset, num_rela);
-
-	      rel_type = section->sh_type == SHT_RELA ? reltype_rela :
-		section->sh_type == SHT_REL ? reltype_rel : reltype_relr;
-
-	      if (section->sh_link != 0
-		  && section->sh_link < filedata->file_header.e_shnum)
-		{
-		  Elf_Internal_Shdr *symsec;
-		  Elf_Internal_Sym *symtab;
-		  uint64_t nsyms;
-		  uint64_t strtablen = 0;
-		  char *strtab = NULL;
-
-		  symsec = filedata->section_headers + section->sh_link;
-		  if (symsec->sh_type != SHT_SYMTAB
-		      && symsec->sh_type != SHT_DYNSYM)
-                    continue;
-
-		  if (!get_symtab (filedata, symsec,
-				   &symtab, &nsyms, &strtab, &strtablen))
-		    continue;
-
-		  dump_relocations (filedata, rel_offset, rel_size,
-				    symtab, nsyms, strtab, strtablen,
-				    rel_type,
-				    symsec->sh_type == SHT_DYNSYM);
-		  free (strtab);
-		  free (symtab);
-		}
-	      else
-		dump_relocations (filedata, rel_offset, rel_size,
-				  NULL, 0, NULL, 0, rel_type, false /* is_dynamic */);
-
-	      found = true;
-	    }
+	  if (display_relocations (section, filedata))
+	    found = true;
 	}
 
       if (! found)
@@ -9138,15 +9338,6 @@ find_symbol_for_address (Filedata *filedata,
 
   *symname = NULL;
   *offset = addr.offset;
-}
-
-static /* signed */ int
-symcmp (const void *p, const void *q)
-{
-  Elf_Internal_Sym *sp = (Elf_Internal_Sym *) p;
-  Elf_Internal_Sym *sq = (Elf_Internal_Sym *) q;
-
-  return sp->st_value > sq->st_value ? 1 : (sp->st_value < sq->st_value ? -1 : 0);
 }
 
 /* Process the unwind section.  */
@@ -14100,6 +14291,77 @@ print_symbol_table_heading (void)
     }
 }
 
+static bool
+dump_symbol_section (Elf_Internal_Shdr *  section,
+		     Filedata *           filedata)
+{
+  if (section->sh_entsize == 0)
+    {
+      printf (_("\nSymbol table '%s' has a sh_entsize of zero!\n"),
+	      printable_section_name (filedata, section));
+      return false;
+    }
+
+  uint64_t num_syms = section->sh_size / section->sh_entsize;
+
+  if (filedata->is_separate)
+    printf (ngettext ("\nIn linked file '%s' symbol section '%s'"
+		      " contains %" PRIu64 " entry:\n",
+		      "\nIn linked file '%s' symbol section '%s'"
+		      " contains %" PRIu64 " entries:\n",
+		      num_syms),
+	    filedata->file_name,
+	    printable_section_name (filedata, section),
+	    num_syms);
+  else
+    printf (ngettext ("\nSymbol table '%s' contains %" PRIu64
+		      " entry:\n",
+		      "\nSymbol table '%s' contains %" PRIu64
+		      " entries:\n",
+		      num_syms),
+	    printable_section_name (filedata, section),
+	    num_syms);
+
+  print_symbol_table_heading ();
+
+  Elf_Internal_Sym * symtab = get_elf_symbols (filedata, section, & num_syms);
+  if (symtab == NULL)
+    /* An error message will have already been displayed.  */
+    return false;
+
+  char * strtab = NULL;
+  uint64_t strtab_size = 0;
+
+  if (section->sh_link == filedata->file_header.e_shstrndx)
+    {
+      strtab = filedata->string_table;
+      strtab_size = filedata->string_table_length;
+    }
+  else if (section->sh_link < filedata->file_header.e_shnum)
+    {
+      Elf_Internal_Shdr * string_sec;
+
+      string_sec = filedata->section_headers + section->sh_link;
+
+      strtab = (char *) get_data (NULL, filedata, string_sec->sh_offset,
+				  1, string_sec->sh_size,
+				  _("string table"));
+      strtab_size = strtab != NULL ? string_sec->sh_size : 0;
+    }
+
+  uint64_t si;
+
+  for (si = 0; si < num_syms; si++)
+    print_symbol (filedata, si, symtab, section, strtab, strtab_size);
+
+  free (symtab);
+
+  if (strtab != filedata->string_table)
+    free (strtab);
+
+  return true;
+}
+
 /* Dump the symbol table.  */
 
 static bool
@@ -14154,74 +14416,13 @@ process_symbol_table (Filedata * filedata)
 	   i < filedata->file_header.e_shnum;
 	   i++, section++)
 	{
-	  char * strtab = NULL;
-	  uint64_t strtab_size = 0;
-	  Elf_Internal_Sym * symtab;
-	  uint64_t si, num_syms;
-
 	  if ((section->sh_type != SHT_SYMTAB
 	       && section->sh_type != SHT_DYNSYM)
 	      || (!do_syms
 		  && section->sh_type == SHT_SYMTAB))
 	    continue;
 
-	  if (section->sh_entsize == 0)
-	    {
-	      printf (_("\nSymbol table '%s' has a sh_entsize of zero!\n"),
-		      printable_section_name (filedata, section));
-	      continue;
-	    }
-
-	  num_syms = section->sh_size / section->sh_entsize;
-
-	  if (filedata->is_separate)
-	    printf (ngettext ("\nIn linked file '%s' symbol section '%s'"
-			      " contains %" PRIu64 " entry:\n",
-			      "\nIn linked file '%s' symbol section '%s'"
-			      " contains %" PRIu64 " entries:\n",
-			      num_syms),
-		    filedata->file_name,
-		    printable_section_name (filedata, section),
-		    num_syms);
-	  else
-	    printf (ngettext ("\nSymbol table '%s' contains %" PRIu64
-			      " entry:\n",
-			      "\nSymbol table '%s' contains %" PRIu64
-			      " entries:\n",
-			      num_syms),
-		    printable_section_name (filedata, section),
-		    num_syms);
-
-	  print_symbol_table_heading ();
-
-	  symtab = get_elf_symbols (filedata, section, & num_syms);
-	  if (symtab == NULL)
-	    continue;
-
-	  if (section->sh_link == filedata->file_header.e_shstrndx)
-	    {
-	      strtab = filedata->string_table;
-	      strtab_size = filedata->string_table_length;
-	    }
-	  else if (section->sh_link < filedata->file_header.e_shnum)
-	    {
-	      Elf_Internal_Shdr * string_sec;
-
-	      string_sec = filedata->section_headers + section->sh_link;
-
-	      strtab = (char *) get_data (NULL, filedata, string_sec->sh_offset,
-                                          1, string_sec->sh_size,
-                                          _("string table"));
-	      strtab_size = strtab != NULL ? string_sec->sh_size : 0;
-	    }
-
-	  for (si = 0; si < num_syms; si++)
-	    print_symbol (filedata, si, symtab, section,
-			  strtab, strtab_size);
-
-	  free (symtab);
-	  if (strtab != filedata->string_table)
-	    free (strtab);
+	  dump_symbol_section (section, filedata);
 	}
     }
   else if (do_syms)
@@ -17018,6 +17219,65 @@ process_section_contents (Filedata * filedata)
       if (filedata->is_separate && ! process_links)
 	dump &= DEBUG_DUMP;
 
+      if (dump & AUTO_DUMP)
+	{
+	  switch (section->sh_type)
+	    {
+	    case SHT_PROGBITS:
+	      /* FIXME: There are lots of different type of section that have
+		 SHT_PROGBITS set in their header - code, debug info, etc.  So
+		 we should check the section's name and interpret its contents
+		 that way, rather than just defaulting to a byte dump.  */
+#ifdef SUPPORT_DISASSEMBLY
+	      res &= disassemble_section (section, filedata);
+#else
+	      res &= dump_section_as_bytes (section, filedata, false);
+#endif
+	      break;
+
+	    case SHT_DYNSYM:
+	    case SHT_SYMTAB:
+	      res &= dump_symbol_section (section, filedata);
+	      break;
+
+	    case SHT_STRTAB:
+	      res &= dump_section_as_strings (section, filedata);
+	      break;
+
+	    case SHT_RELA:
+	    case SHT_REL:
+	    case SHT_RELR:
+	      res &= display_relocations (section, filedata);
+	      break;
+
+	    case SHT_NOTE:
+	      res &= process_notes_at (filedata, section, section->sh_offset,
+				       section->sh_size, section->sh_addralign);
+	      break;
+
+	    case SHT_NULL:
+	      inform (_("Unable to display section %d - it has a NULL type\n"), i);
+	      break;
+
+	    case SHT_NOBITS:
+	      inform (_("Unable to display section %d - it has no contents\n"), i);
+	      break;
+
+	    case SHT_HASH:
+	    case SHT_DYNAMIC:
+	    case SHT_GROUP:
+	    case SHT_GNU_ATTRIBUTES:
+	      /* FIXME: Implement these.  */
+	      /* Fall through.  */
+	    default:
+	      /* FIXME: Add Proc and OS specific section types ?  */
+	      warn (_("Unable to determine how to dump section %d (type %#x)\n"),
+		    i, section->sh_type);
+	      res = false;
+	      break;
+	    }
+	}
+
 #ifdef SUPPORT_DISASSEMBLY
       if (dump & DISASS_DUMP)
 	{
@@ -17624,7 +17884,8 @@ display_arm_attribute (unsigned char * p,
 
 static unsigned char *
 display_gnu_attribute (unsigned char * p,
-		       unsigned char * (* display_proc_gnu_attribute) (unsigned char *, unsigned int, const unsigned char * const),
+		       unsigned char * (* display_proc_gnu_attribute)
+		       (unsigned char *, unsigned int, const unsigned char * const),
 		       const unsigned char * const end)
 {
   unsigned int tag;
