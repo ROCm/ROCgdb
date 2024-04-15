@@ -623,9 +623,7 @@ execute_i (SIM_CPU *cpu, unsigned_word iw, const struct riscv_opcode *op)
       break;
     case MATCH_EBREAK:
       TRACE_INSN (cpu, "ebreak;");
-      /* GDB expects us to step over EBREAK.  */
-      sim_engine_halt (sd, cpu, NULL, riscv_cpu->pc + 4, sim_stopped,
-		       SIM_SIGTRAP);
+      sim_engine_halt (sd, cpu, NULL, riscv_cpu->pc, sim_stopped, SIM_SIGTRAP);
       break;
     case MATCH_ECALL:
       TRACE_INSN (cpu, "ecall;");
@@ -1016,9 +1014,9 @@ execute_c (SIM_CPU *cpu, unsigned_word iw, const struct riscv_opcode *op)
       TRACE_BRANCH (cpu, "to %#" PRIxTW, pc);
       break;
     case MATCH_C_JAL | MATCH_C_ADDIW:
-      /* JAL and ADDIW have the same mask but are only available on RV64 or
-	 RV32 respectively.  */
-      if (RISCV_XLEN (cpu) == 64)
+      /* JAL and ADDIW have the same mask but are only available on RV32 or
+	 RV64 respectively.  */
+      if (RISCV_XLEN (cpu) == 32)
 	{
 	  imm = EXTRACT_CJTYPE_IMM (iw);
 	  TRACE_INSN (cpu, "c.jal %" PRIxTW,
@@ -1027,7 +1025,7 @@ execute_c (SIM_CPU *cpu, unsigned_word iw, const struct riscv_opcode *op)
 	  pc = riscv_cpu->pc + imm;
 	  TRACE_BRANCH (cpu, "to %#" PRIxTW, pc);
 	}
-      else if (RISCV_XLEN (cpu) == 32)
+      else if (RISCV_XLEN (cpu) == 64)
 	{
 	  imm = EXTRACT_CITYPE_IMM (iw);
 	  TRACE_INSN (cpu, "c.addiw %s, %s, %#" PRIxTW ";  // %s += %#" PRIxTW,
@@ -1577,6 +1575,8 @@ initialize_env (SIM_DESC sd, const char * const *argv, const char * const *env)
   sp = sp_flat - ((argc + 1 + envc + 1) * sizeof (address_word));
   /* Then the argc.  */
   sp -= sizeof (unsigned_word);
+  /* Align to 16 bytes.  */
+  sp = align_down (sp, 16);
 
   /* Set up the regs the libgloss crt0 expects.  */
   riscv_cpu->a0 = argc;
