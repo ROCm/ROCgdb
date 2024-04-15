@@ -2173,7 +2173,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
     {
       std::vector<value_ref_ptr> val_chain;
       struct value *v, *result;
-      struct program_space *frame_pspace;
+      struct program_space *wp_pspace;
 
       fetch_subexp_value (b->exp.get (), b->exp->op.get (), &v, &result,
 			  &val_chain, false);
@@ -2194,7 +2194,10 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 
       int reg_cnt = 0;
       bool use_hw_watchpoint = can_use_hw_watchpoints;
-      frame_pspace = get_frame_program_space (get_selected_frame (NULL));
+      if (b->exp_valid_block == nullptr)
+	wp_pspace = current_program_space;
+      else
+	wp_pspace = get_frame_program_space (get_selected_frame (NULL));
 
       /* Look at each value on the value chain.  */
       gdb_assert (!val_chain.empty ());
@@ -2364,7 +2367,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 
 		  bp_location *loc = b->allocate_location ();
 		  loc->gdbarch = arch;
-		  loc->pspace = frame_pspace;
+		  loc->pspace = wp_pspace;
 		  loc->address
 		    = gdbarch_remove_non_address_bits (loc->gdbarch, addr);
 		  loc->length = size;
@@ -2478,7 +2481,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 	 bpstat_stop_status requires a location to be able to report
 	 stops, so make sure there's at least a dummy one.  */
       if (b->type == bp_watchpoint && !b->has_locations ())
-	add_dummy_location (b, frame_pspace);
+	add_dummy_location (b, wp_pspace);
     }
   else if (!within_current_scope)
     {
