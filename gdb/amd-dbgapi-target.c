@@ -1039,9 +1039,28 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 {
   std::optional<scoped_restore_current_thread> maybe_restore_thread;
 
-  if (!ptid_is_gpu (inferior_ptid))
-    return beneath ()->xfer_partial (object, annex, readbuf, writebuf, offset,
-				     requested_len, xfered_len);
+  /* We want to handle most of the memory requests using amd_dbgapi.  This is
+     because on Windows, memory allocated on the GPUs cannot be accessed using
+     the windows_nat_target.  Even if the currently thread is a host thread, we
+     might still need to access some memory on the GPU, for example to access
+     code objects loaded on the device to place breakpoints.
+
+     For everything that is available on the host address space, amd_dbgapi
+     will use the amd_dbgapi_xfer_global_memory_callback callback to do the
+     xfer operation, which will call into whatever is beneath us on the target
+     stack.
+
+     There is one case where we do not want to use dbgapi to perform the memory
+     operations: when removing breakpoints from the child process after a fork.
+     When this happens, the child does not have an inferior of its own, so
+     instead current_inferior () refers to the parent and inferior_ptid has the
+     child's PID.  We can use the parent's process_stratum_target (the one
+     below us) to do the memory operation, but dbgapi knows nothing about the
+     child and would try to update the parent's memory.  */
+  if ((!ptid_is_gpu (inferior_ptid) && object != TARGET_OBJECT_MEMORY)
+      || inferior_ptid.pid () != current_inferior ()->pid)
+    return beneath ()->xfer_partial (object, annex, readbuf, writebuf,
+				     offset, requested_len, xfered_len);
 
   gdb_assert (requested_len > 0);
   gdb_assert (xfered_len != nullptr);
@@ -1059,22 +1078,29 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 
   amd_dbgapi_process_id_t process_id
     = get_amd_dbgapi_process_id (current_inferior ());
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
+  amd_dbgapi_wave_id_t wave_id = (ptid_is_gpu (inferior_ptid)
+				  ? get_amd_dbgapi_wave_id (inferior_ptid)
+				  : AMD_DBGAPI_WAVE_NONE);
+  amd_dbgapi_address_space_id_t address_space_id
+    = AMD_DBGAPI_ADDRESS_SPACE_GLOBAL;
+  amd_dbgapi_lane_id_t current_lane
+    = (ptid_is_gpu (inferior_ptid)
+       ? inferior_thread ()->current_simd_lane () : AMD_DBGAPI_LANE_NONE);
 
-  amd_dbgapi_architecture_id_t architecture_id;
-  amd_dbgapi_address_space_id_t address_space_id;
-
-  if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
-				sizeof (architecture_id), &architecture_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_dwarf_address_space_to_address_space (
-	   architecture_id, dwarf_address_space, &address_space_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS)
-    return TARGET_XFER_E_IO;
+  if (wave_id != AMD_DBGAPI_WAVE_NONE)
+    {
+      amd_dbgapi_architecture_id_t architecture_id;
+      if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				    sizeof (architecture_id), &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS
+	  || amd_dbgapi_dwarf_address_space_to_address_space
+	    (architecture_id, dwarf_address_space, &address_space_id)
+	    != AMD_DBGAPI_STATUS_SUCCESS)
+	return TARGET_XFER_E_IO;
+    }
 
   size_t len = requested_len;
   amd_dbgapi_status_t status;
-  int current_lane = inferior_thread ()->current_simd_lane ();
 
   if (readbuf != nullptr)
     status = amd_dbgapi_read_memory (process_id, wave_id, current_lane,
@@ -2973,9 +2999,13 @@ amd_dbgapi_xfer_global_memory_callback
   inferior_ptid = ptid_t (inf->pid);
   set_current_inferior (inf);
 
+  target_ops *handler = (inf->target_is_pushed (&the_amd_dbgapi_target)
+			 ? inf->find_target_beneath (&the_amd_dbgapi_target)
+			 : inf->top_target ());
+
   target_xfer_status status
-    = target_xfer_partial (inf->top_target (), TARGET_OBJECT_RAW_MEMORY,
-			   nullptr, static_cast<gdb_byte *> (read_buffer),
+    = target_xfer_partial (handler, TARGET_OBJECT_RAW_MEMORY, nullptr,
+			   static_cast<gdb_byte *> (read_buffer),
 			   static_cast<const gdb_byte *> (write_buffer),
 			   global_address, *value_size, value_size);
 
