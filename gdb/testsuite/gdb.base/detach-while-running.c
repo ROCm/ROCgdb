@@ -1,8 +1,6 @@
-/* Common target-dependent functionality for CSKY
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 2022-2024 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+   Copyright 2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,13 +15,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef ARCH_CSKY_H
-#define ARCH_CSKY_H
+#include <unistd.h>
 
-#include "gdbsupport/tdesc.h"
+int
+main (int argc, char **argv)
+{
+  for (int i = 0; i < 30; i++)
+    sleep (1);
 
-/* Used for gdbserver.  */
-
-target_desc_up csky_create_target_description (void);
-
-#endif /* ARCH_CSKY_H */
+  return 0;
+}
