@@ -2985,8 +2985,6 @@ amd_dbgapi_xfer_global_memory_callback
 
   if (status == TARGET_XFER_EOF)
     return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
-  else if (status == TARGET_XFER_UNAVAILABLE)
-    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
   else if (status != TARGET_XFER_OK)
     return AMD_DBGAPI_STATUS_ERROR_MEMORY_ACCESS;
 
