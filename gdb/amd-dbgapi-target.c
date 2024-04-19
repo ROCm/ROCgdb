@@ -319,6 +319,7 @@ struct amd_dbgapi_target final : public target_ops
   void detach (inferior *inf, int from_tty) override;
 
   void async (bool enable) override;
+  bool is_async_p () override;
   std::vector<int> async_wait_fds () override;
 
   bool has_pending_events () override;
@@ -2023,6 +2024,13 @@ amd_dbgapi_target::async (bool enable)
 
       delete_async_event_handler (&amd_dbgapi_async_event_handler);
     }
+}
+
+bool
+amd_dbgapi_target::is_async_p ()
+{
+  return (amd_dbgapi_async_event_handler != nullptr
+	  || this->beneath ()->is_async_p ());
 }
 
 /* Make a ptid for a GPU wave.  See comment on ptid_is_gpu for more details.  */
