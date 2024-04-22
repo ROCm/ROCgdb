@@ -2451,17 +2451,13 @@ aarch64_mte_get_atag (CORE_ADDR address)
 /* Implement the tagged_address_p gdbarch method.  */
 
 static bool
-aarch64_linux_tagged_address_p (struct gdbarch *gdbarch, struct value *address)
+aarch64_linux_tagged_address_p (struct gdbarch *gdbarch, CORE_ADDR address)
 {
-  gdb_assert (address != nullptr);
-
-  CORE_ADDR addr = value_as_address (address);
-
   /* Remove the top byte for the memory range check.  */
-  addr = gdbarch_remove_non_address_bits (gdbarch, addr);
+  address = gdbarch_remove_non_address_bits (gdbarch, address);
 
   /* Check if the page that contains ADDRESS is mapped with PROT_MTE.  */
-  if (!linux_address_in_memtag_page (addr))
+  if (!linux_address_in_memtag_page (address))
     return false;
 
   /* We have a valid tag in the top byte of the 64-bit address.  */
@@ -2475,10 +2471,6 @@ aarch64_linux_memtag_matches_p (struct gdbarch *gdbarch,
 				struct value *address)
 {
   gdb_assert (address != nullptr);
-
-  /* Make sure we are dealing with a tagged address to begin with.  */
-  if (!aarch64_linux_tagged_address_p (gdbarch, address))
-    return true;
 
   CORE_ADDR addr = value_as_address (address);
 
@@ -2524,10 +2516,6 @@ aarch64_linux_set_memtags (struct gdbarch *gdbarch, struct value *address,
     {
       /* Remove the top byte.  */
       addr = gdbarch_remove_non_address_bits (gdbarch, addr);
-
-      /* Make sure we are dealing with a tagged address to begin with.  */
-      if (!aarch64_linux_tagged_address_p (gdbarch, address))
-	return false;
 
       /* With G being the number of tag granules and N the number of tags
 	 passed in, we can have the following cases:
@@ -2575,10 +2563,6 @@ aarch64_linux_get_memtag (struct gdbarch *gdbarch, struct value *address,
     tag = aarch64_mte_get_ltag (addr);
   else
     {
-      /* Make sure we are dealing with a tagged address to begin with.  */
-      if (!aarch64_linux_tagged_address_p (gdbarch, address))
-	return nullptr;
-
       /* Remove the top byte.  */
       addr = gdbarch_remove_non_address_bits (gdbarch, addr);
       std::optional<CORE_ADDR> atag = aarch64_mte_get_atag (addr);

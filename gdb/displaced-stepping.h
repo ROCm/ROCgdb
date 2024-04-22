@@ -50,6 +50,22 @@ enum displaced_step_prepare_status
   DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE,
 };
 
+/* Return a string representation of STATUS.  */
+static inline const char *
+displaced_step_prepare_status_str (displaced_step_prepare_status status)
+{
+  switch (status)
+  {
+  case DISPLACED_STEP_PREPARE_STATUS_OK:
+    return "OK";
+  case DISPLACED_STEP_PREPARE_STATUS_CANT:
+    return "CANT";
+  case DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE:
+    return "UNAVAILABLE";
+  }
+  gdb_assert_not_reached ("invalid displaced_step_prepare_status value");
+}
+
 enum displaced_step_finish_status
 {
   /* Either the instruction was stepped and fixed up, or the specified thread
@@ -60,6 +76,20 @@ enum displaced_step_finish_status
   /* The thread started a displaced step, but didn't complete it.  */
   DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED,
 };
+
+/* Return a string representation of STATUS.  */
+static inline const char *
+displaced_step_finish_status_str (displaced_step_finish_status status)
+{
+  switch (status)
+  {
+  case DISPLACED_STEP_FINISH_STATUS_OK:
+    return "OK";
+  case DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED:
+    return "NOT_EXECUTED";
+  }
+  gdb_assert_not_reached ("invalid displaced_step_finish_status value");
+}
 
 /* Data returned by a gdbarch displaced_step_copy_insn method, to be passed to
    the matching displaced_step_fixup method.  */

@@ -274,9 +274,7 @@ def write_debugmethod(
     debugname = "debug_target::" + name
     names = write_function_header(f, False, debugname, return_type, argtypes)
     print(
-        '  gdb_printf (gdb_stdlog, "-> %s->'
-        + name
-        + ' (...)\\n", this->beneath ()->shortname ());',
+        f'  target_debug_printf_nofunc ("-> %s->{name} (...)", this->beneath ()->shortname ());',
         file=f,
     )
 
@@ -290,25 +288,31 @@ def write_debugmethod(
     print(", ".join(names), file=f, end="")
     print(");", file=f)
 
-    # Now print the arguments.
+    # Generate the debug printf call.
+    args_fmt = ", ".join(["%s"] * len(argtypes))
+    args = "".join(
+        [
+            (",\n\t      {printer} (arg{i}).c_str ()").format(
+                printer=munge_type(t), i=i
+            )
+            for i, t in enumerate(argtypes)
+        ]
+    )
+
+    if return_type != "void":
+        ret_fmt = " = %s"
+        ret = ",\n\t      {printer} (result).c_str ()".format(
+            printer=munge_type(return_type)
+        )
+    else:
+        ret_fmt = ""
+        ret = ""
+
     print(
-        '  gdb_printf (gdb_stdlog, "<- %s->'
-        + name
-        + ' (", this->beneath ()->shortname ());',
+        f'  target_debug_printf_nofunc ("<- %s->{name} ({args_fmt}){ret_fmt}",\n'
+        f"\t      this->beneath ()->shortname (){args}{ret});",
         file=f,
     )
-    for i in range(len(argtypes)):
-        if i > 0:
-            print('  gdb_puts (", ", gdb_stdlog);', file=f)
-        printer = munge_type(argtypes[i])
-        print("  " + printer + " (" + names[i] + ");", file=f)
-    if return_type != "void":
-        print('  gdb_puts (") = ", gdb_stdlog);', file=f)
-        printer = munge_type(return_type)
-        print("  " + printer + " (result);", file=f)
-        print('  gdb_puts ("\\n", gdb_stdlog);', file=f)
-    else:
-        print('  gdb_puts (")\\n", gdb_stdlog);', file=f)
 
     if return_type != "void":
         print("  return result;", file=f)
