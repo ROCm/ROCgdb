@@ -20,6 +20,7 @@
 
 
 #include <ctype.h>
+#include "event-top.h"
 #include "extract-store-integer.h"
 #include "gdbsupport/gdb_regex.h"
 #include "frame.h"

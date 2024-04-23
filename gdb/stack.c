@@ -18,6 +18,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "event-top.h"
 #include "extract-store-integer.h"
 #include "value.h"
 #include "symtab.h"
@@ -229,14 +230,6 @@ static void print_frame (struct ui_out *uiout,
 
 static frame_info_ptr find_frame_for_function (const char *);
 static frame_info_ptr find_frame_for_address (CORE_ADDR);
-
-/* Zero means do things normally; we are interacting directly with the
-   user.  One means print the full filename and linenumber when a
-   frame is printed, and do so in a format emacs18/emacs19.22 can
-   parse.  Two means print similar annotations, but in many more
-   cases and in a slightly different syntax.  */
-
-int annotation_level = 0;
 
 /* Class used to manage tracking the last symtab we displayed.  */
 

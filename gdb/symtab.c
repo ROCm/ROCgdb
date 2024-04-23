@@ -20,6 +20,7 @@
 
 #include "dwarf2/call-site.h"
 #include "symtab.h"
+#include "event-top.h"
 #include "gdbtypes.h"
 #include "gdbcore.h"
 #include "frame.h"

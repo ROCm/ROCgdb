@@ -663,7 +663,7 @@ static std::recursive_mutex ext_lang_mutex;
 /* This flag tracks quit requests when we haven't called out to an
    extension language.  it also holds quit requests when we transition to
    an extension language that doesn't have cooperative SIGINT handling.  */
-static int quit_flag;
+static bool quit_flag;
 
 /* The current extension language we've called out to, or
    extension_language_gdb if there isn't one.
@@ -863,16 +863,10 @@ restore_active_ext_lang (struct active_ext_lang_state *previous)
   xfree (previous);
 }
 
-/* Set the quit flag.
-   This only sets the flag in the currently active extension language.
-   If the currently active extension language does not have cooperative
-   SIGINT handling, then GDB's global flag is set, and it is up to the
-   extension language to call check_quit_flag.  The extension language
-   is free to install its own SIGINT handler, but we still need to handle
-   the transition.  */
+/* See extension.h.  */
 
 void
-set_quit_flag (void)
+set_quit_flag ()
 {
 #if CXX_STD_THREAD
   std::lock_guard guard (ext_lang_mutex);
@@ -883,7 +877,7 @@ set_quit_flag (void)
     active_ext_lang->ops->set_quit_flag (active_ext_lang);
   else
     {
-      quit_flag = 1;
+      quit_flag = true;
 
       /* Now wake up the event loop, or any interruptible_select.  Do
 	 this after setting the flag, because signals on Windows
@@ -894,26 +888,23 @@ set_quit_flag (void)
     }
 }
 
-/* Return true if the quit flag has been set, false otherwise.
-   Note: The flag is cleared as a side-effect.
-   The flag is checked in all extension languages that support cooperative
-   SIGINT handling, not just the current one.  This simplifies transitions.  */
+/* See extension.h.  */
 
-int
-check_quit_flag (void)
+bool
+check_quit_flag ()
 {
 #if CXX_STD_THREAD
   std::lock_guard guard (ext_lang_mutex);
 #endif /* CXX_STD_THREAD */
 
-  int result = 0;
+  bool result = false;
 
   for (const struct extension_language_defn *extlang : extension_languages)
     {
       if (extlang->ops != nullptr
 	  && extlang->ops->check_quit_flag != NULL)
-	if (extlang->ops->check_quit_flag (extlang) != 0)
-	  result = 1;
+	if (extlang->ops->check_quit_flag (extlang))
+	  result = true;
     }
 
   /* This is written in a particular way to avoid races.  */
@@ -923,8 +914,8 @@ check_quit_flag (void)
 	 interruptible_select.  The caller handles the quit
 	 request.  */
       quit_serial_event_clear ();
-      quit_flag = 0;
-      result = 1;
+      quit_flag = false;
+      result = true;
     }
 
   return result;
