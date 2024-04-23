@@ -20,6 +20,7 @@
 
 #include <signal.h>
 #include <fcntl.h>
+#include "extract-store-integer.h"
 #include "inferior.h"
 #include "symtab.h"
 #include "command.h"

@@ -23,6 +23,7 @@
 /* Portions of this file were taken from the original gdb-4.18 patch developed
    by Denis Chertykov, denisc@overta.ru */
 
+#include "extract-store-integer.h"
 #include "frame.h"
 #include "frame-unwind.h"
 #include "frame-base.h"

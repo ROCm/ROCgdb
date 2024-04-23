@@ -34,6 +34,7 @@
 #include "observable.h"
 #include "producer.h"
 #include "reggroups.h"
+#include "extract-store-integer.h"
 
 #include <regex>
 
