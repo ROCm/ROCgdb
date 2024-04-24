@@ -58,7 +58,7 @@ proc has_wave_coordinates {testname} {
   return $ttmp_initialized
 }
 
-proc do_test {} {
+proc do_test {debug_enabled} {
   set spawn_id [spawn_wait_for_attach $::binfile]
   set prog_pid [spawn_id_get_pid $spawn_id]
 
@@ -70,6 +70,10 @@ proc do_test {} {
 
   set coord_known_after_attach \
     [has_wave_coordinates "coordinates known after attach"]
+  if { $debug_enabled } {
+    gdb_assert $coord_known_after_attach \
+      "coordinates known when debug enabled"
+  }
 
   set corefile_path $::binfile.core
   if {![rocm_generate_core_file $corefile_path]} {
@@ -88,7 +92,16 @@ proc do_test {} {
     "identical coordinates"
 }
 
-with_rocm_gpu_lock {
-  do_test
-}
+foreach_with_prefix enable_debug {on off} {
+  save_vars { ::env(HSA_ENABLE_DEBUG) } {
+    if { $enable_debug } {
+      setenv HSA_ENABLE_DEBUG 1
+    } else {
+      unset -nocomplain ::env(HSA_ENABLE_DEBUG)
+    }
 
+    with_rocm_gpu_lock {
+      do_test $enable_debug
+    }
+  }
+}
