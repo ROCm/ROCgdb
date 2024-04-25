@@ -683,7 +683,14 @@ loongarch_can_trans_tls (bfd *input_bfd,
   if (! IS_LOONGARCH_TLS_TRANS_RELOC (r_type))
     return false;
 
-  symbol_tls_type = _bfd_loongarch_elf_tls_type (input_bfd, h, r_symndx);
+  /* Obtaining tls got type here may occur before
+     loongarch_elf_record_tls_and_got_reference, so it is necessary
+     to ensure that tls got type has been initialized, otherwise it
+     is set to GOT_UNKNOWN.  */
+  symbol_tls_type = GOT_UNKNOWN;
+  if (_bfd_loongarch_elf_local_got_tls_type (input_bfd) || h)
+    symbol_tls_type = _bfd_loongarch_elf_tls_type (input_bfd, h, r_symndx);
+
   reloc_got_type = loongarch_reloc_got_type (r_type);
 
   if (symbol_tls_type == GOT_TLS_IE && GOT_TLS_GD_ANY_P (reloc_got_type))
@@ -752,6 +759,33 @@ loongarch_tls_transition (bfd *input_bfd,
 /* Look through the relocs for a section during the first phase, and
    allocate space in the global offset table or procedure linkage
    table.  */
+
+static bool
+bad_static_reloc (bfd *abfd, const Elf_Internal_Rela *rel, asection *sec,
+		  unsigned r_type, struct elf_link_hash_entry *h,
+		  Elf_Internal_Sym *isym)
+{
+  /* We propably can improve the information to tell users that they should
+     be recompile the code with -fPIC or -fPIE, just like what x86 does.  */
+  reloc_howto_type * r = loongarch_elf_rtype_to_howto (abfd, r_type);
+  const char *name = NULL;
+
+  if (h)
+    name = h->root.root.string;
+  else if (isym)
+    name = bfd_elf_string_from_elf_section (abfd,
+					    elf_symtab_hdr (abfd).sh_link,
+					    isym->st_name);
+  if (name == NULL || *name == '\0')
+    name ="<nameless>";
+
+  (*_bfd_error_handler)
+   (_("%pB:(%pA+%#lx): relocation %s against `%s` can not be used when making "
+      "a shared object; recompile with -fPIC"),
+    abfd, sec, rel->r_offset, r ? r->name : _("<unknown>"), name);
+  bfd_set_error (bfd_error_bad_value);
+  return false;
+}
 
 static bool
 loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
@@ -897,7 +931,7 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_LARCH_TLS_LE_HI20_R:
 	case R_LARCH_SOP_PUSH_TLS_TPREL:
 	  if (!bfd_link_executable (info))
-	    return false;
+	    return bad_static_reloc (abfd, rel, sec, r_type, h, isym);
 
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
@@ -915,6 +949,9 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	case R_LARCH_ABS_HI20:
 	case R_LARCH_SOP_PUSH_ABSOLUTE:
+	  if (bfd_link_pic (info))
+	    return bad_static_reloc (abfd, rel, sec, r_type, h, isym);
+
 	  if (h != NULL)
 	    /* If this reloc is in a read-only section, we might
 	       need a copy reloc.  We can't check reliably at this
@@ -3391,7 +3428,6 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	case R_LARCH_ABS_LO12:
 	case R_LARCH_ABS64_LO20:
 	case R_LARCH_ABS64_HI12:
-	  BFD_ASSERT (!is_pic);
 
 	  if (is_undefweak)
 	    {
