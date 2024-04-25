@@ -35,7 +35,7 @@
 #include "frame-unwind.h"
 #include "frame-base.h"
 #include "command.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "observable.h"
 #include "objfiles.h"
 #include "gdbthread.h"

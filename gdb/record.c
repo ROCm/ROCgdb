@@ -17,7 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "completer.h"
 #include "record.h"
 #include "observable.h"
@@ -26,6 +26,7 @@
 #include "cli/cli-utils.h"
 #include "disasm.h"
 #include "interps.h"
+#include "top.h"
 
 #include <ctype.h>
 

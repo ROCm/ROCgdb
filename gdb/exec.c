@@ -21,7 +21,7 @@
 #include "frame.h"
 #include "inferior.h"
 #include "target.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "language.h"
 #include "filenames.h"
 #include "symfile.h"

@@ -25,7 +25,6 @@
 #include "test-target.h"
 #include "scoped-mock-context.h"
 #include "gdbarch.h"
-#include "gdbcmd.h"
 #include "regcache.h"
 #include "reggroups.h"
 #include "observable.h"

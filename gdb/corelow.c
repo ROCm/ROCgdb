@@ -51,7 +51,7 @@
 #include "debuginfod-support.h"
 #include <unordered_map>
 #include <unordered_set>
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "xml-tdesc.h"
 #include "memtag.h"
 #include "observable.h"

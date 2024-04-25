@@ -28,7 +28,6 @@
 #include "value.h"
 #include "symfile.h"
 #include "objfiles.h"
-#include "gdbcmd.h"
 #include "gdbsupport/gdb_regex.h"
 #include "expression.h"
 #include "language.h"

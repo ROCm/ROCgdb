@@ -34,7 +34,6 @@
 #include "top.h"
 #include "source.h"
 #include "gdbsupport/event-loop.h"
-#include "gdbcmd.h"
 #include "async-event.h"
 #include "utils.h"
 

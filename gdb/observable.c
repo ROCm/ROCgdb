@@ -20,7 +20,7 @@
 
 #include "observable.h"
 #include "command.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 
 namespace gdb
 {

@@ -64,7 +64,7 @@
 #include "cp-support.h"
 #include "hashtab.h"
 #include "command.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "block.h"
 #include "addrmap.h"
 #include "typeprint.h"
