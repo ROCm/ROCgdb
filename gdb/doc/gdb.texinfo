@@ -1802,6 +1802,7 @@ show you the alternatives available, if there is more than one possibility).
 * Command Syntax::              How to give commands to @value{GDBN}
 * Command Settings::            How to change default behavior of commands
 * Completion::                  Command completion
+* Filename Arguments::		Filenames As Command Arguments
 * Command Options::             Command options
 * Help::                        How to ask @value{GDBN} for help
 @end menu
@@ -2172,6 +2173,68 @@ struct ui_file
    void *to_data;
 @}
 @end smallexample
+
+@node Filename Arguments
+@section Filenames As Command Arguments
+@cindex file names, quoting and escaping
+
+When passing filenames (or directory names) as arguments to a command,
+if the filename argument does not include any whitespace, double
+quotes, or single quotes, then for all commands the filename can be
+written as a simple string, for example:
+
+@smallexample
+(@value{GDBP}) file /path/to/some/file
+@end smallexample
+
+If the filename does include whitespace, double quotes, or single
+quotes, then @value{GDBN} has two approaches for how these filenames
+should be formatted; which format to use depends on which command is
+being used.
+
+Most @value{GDBN} commands don't require, or support, quoting and
+escaping.  These commands treat any text after the command name, that
+is not a command option (@pxref{Command Options}), as the filename,
+even if the filename contains whitespace or quote characters.  In the
+following example the user is adding @w{@file{/path/that contains/two
+spaces/}} to the auto-load safe-path (@pxref{add-auto-load-safe-path}):
+
+@smallexample
+(@value{GDBP}) add-auto-load-safe-path /path/that contains/two spaces/
+@end smallexample
+
+A small number of commands require that filenames containing
+whitespace or quote characters are either quoted, or have the special
+characters escaped with a backslash.  Commands that support this style
+are marked as such in the manual, any command not marked as accepting
+quoting and escaping of its filename argument, does not accept this
+filename argument style.
+
+For example, to load the file @w{@file{/path/with spaces/to/a file}}
+with the @code{file} command (@pxref{Files, ,Commands to Specify
+Files}), you can escape the whitespace characters with a backslash:
+
+@smallexample
+(@value{GDBP}) file /path/with\ spaces/to/a\ file
+@end smallexample
+
+Alternatively the entire filename can be wrapped in either single or
+double quotes, in which case no backlsashes are needed, for example:
+
+@smallexample
+(@value{GDBP}) symbol-file "/path/with spaces/to/a file"
+(@value{GDBP}) exec-file '/path/with spaces/to/a file'
+@end smallexample
+
+It is possible to include a quote character within a quoted filename
+by escaping it with a backslash, for example, within a filename
+surrounded by double quotes, a double quote character should be
+escaped with a backslash, but a single quote character should not be
+escaped.  Within a single quoted string a single quote character needs
+to be escaped, but a double quote character does not.
+
+A literal backslash character can also be included by escaping it with
+a backslash.
 
 @node Command Options
 @section Command options
@@ -21824,6 +21887,9 @@ directories to search, just as the shell does when looking for a program
 to run.  You can change the value of this variable, for both @value{GDBN}
 and your program, using the @code{path} command.
 
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
+
 @cindex unlinked object files
 @cindex patching object files
 You can load unlinked object @file{.o} files into @value{GDBN} using
@@ -21845,6 +21911,9 @@ Specify that the program to be run (but not the symbol table) is found
 in @var{filename}.  @value{GDBN} searches the environment variable @env{PATH}
 if necessary to locate your program.  Omitting @var{filename} means to
 discard information on the executable file.
+
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 
 @kindex symbol-file
 @item symbol-file @r{[} @var{filename} @r{[} -o @var{offset} @r{]]}
@@ -21868,6 +21937,9 @@ which are part of the old symbol table data being discarded inside
 
 @code{symbol-file} does not repeat if you press @key{RET} again after
 executing it once.
+
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 
 When @value{GDBN} is configured for a particular environment, it
 understands debugging information in whatever format is the standard
@@ -21963,6 +22035,9 @@ originally read with the @code{symbol-file} command.  You can use the
 @code{add-symbol-file} command any number of times; the new symbol data
 thus read is kept in addition to the old.
 
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
+
 Changes can be reverted using the command @code{remove-symbol-file}.
 
 @cindex relocatable object files, reading symbols from
@@ -22021,6 +22096,9 @@ Remove symbol table from file "/home/user/gdb/mylib.so"? (y or n) y
 
 
 @code{remove-symbol-file} does not repeat if you press @key{RET} after using it.
+
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 
 @kindex add-symbol-file-from-memory
 @cindex @code{syscall DSO}
@@ -43315,8 +43393,6 @@ The @var{gdb_jump_pad_head} is updated head of jumppad.  Both of
 @var{target_address} and @var{gdb_jump_pad_head} are 8-byte long.
 The @var{fjump} contains a sequence of instructions jump to jumppad entry.
 The @var{fjump_size}, 4-byte long, is the size of @var{fjump}.
-@item E @var{NN}
-for an error
 
 @end table
 
@@ -43335,8 +43411,6 @@ Asks in-process agent to probe the marker at @var{address}.
 
 Replies:
 @table @samp
-@item E @var{NN}
-for an error
 @end table
 @item unprobe_marker_at:@var{address}
 Asks in-process agent to unprobe the marker at @var{address}.
@@ -45448,6 +45522,7 @@ Show the current setting of the target wait timeout.
 
 @menu
 * Overview::
+* Standard Replies::
 * Packets::
 * Stop Reply Packets::
 * General Query Packets::
@@ -45588,14 +45663,24 @@ seven repeats (@samp{$}) can be expanded using a repeat count of only
 five (@samp{"}).  For example, @samp{00000000} can be encoded as
 @samp{0*"00}.
 
-The error response returned for some packets includes a two character
-error number.  That number is not well defined.
+@xref{Standard Replies} for standard error responses, and how to
+respond indicating a command is not supported.
 
-@cindex empty response, for unsupported packets
-For any @var{command} not supported by the stub, an empty response
-(@samp{$#00}) should be returned.  That way it is possible to extend the
-protocol.  A newer @value{GDBN} can tell if a packet is supported based
-on that response.
+In describing packets (commands and responses), each description has a
+template showing the overall syntax, followed by an explanation of the
+packet's meaning.  We include spaces in some of the templates for
+clarity; these are not part of the packet's syntax.  No @value{GDBN}
+packet uses spaces to separate its components.  For example, a
+template like @samp{foo @var{bar} @var{baz}} describes a packet
+beginning with the three ASCII bytes @samp{foo}, followed by a
+@var{bar}, followed directly by a @var{baz}.  @value{GDBN} does not
+transmit a space character between the @samp{foo} and the @var{bar},
+or between the @var{bar} and the @var{baz}.
+
+We place optional portions of a packet in [square brackets];
+for example, a template like @samp{c @r{[}@var{addr}@r{]}} describes a
+packet beginning with the single ASCII character @samp{c}, possibly
+followed by an @var{addr}.
 
 At a minimum, a stub is required to support the @samp{?} command to
 tell @value{GDBN} the reason for halting, @samp{g} and @samp{G}
@@ -45606,6 +45691,38 @@ the target architecture supports hardware-assisted single-stepping,
 the @samp{s} (step) command.  Stubs that support multi-threading
 targets should support the @samp{vCont} command.  All other commands
 are optional.
+
+@node Standard Replies
+@section Standard Replies
+@cindex standard responses for remote packets
+@cindex remote packets, standard replies
+
+The remote protocol specifies a few standard replies.  All commands
+support these, except as noted in the individual command descriptions.
+
+@table @asis
+
+@item empty response
+
+@cindex empty response, for unsupported packets
+@cindex unsupported packets, empty response for
+An empty response (raw character sequence @samp{$#00}) means the
+@var{command} is not supported by the stub.  This way it is possible
+to extend the protocol.  A newer @value{GDBN} can tell if a command is
+supported based on that response (but see also @ref{qSupported}).
+
+@item @samp{E @var{xx}}
+An error has occurred; @var{xx} is a two-digit hexadecimal error
+number.  In almost all cases, the protocol does not specify the
+meaning of the error numbers; @value{GDBN} usually ignores the
+numbers, or displays them to the user without further interpretation.
+
+@anchor{textual error reply}
+@item @samp{E.@var{errtext}}
+An error has occurred; @var{errtext} is the textual error message,
+encoded in @sc{ascii}.
+
+@end table
 
 @node Packets
 @section Packets
@@ -45694,8 +45811,6 @@ Reply:
 @table @samp
 @item OK
 The arguments were set.
-@item E @var{NN}
-An error occurred.
 @end table
 
 @item b @var{baud}
@@ -45784,8 +45899,6 @@ Reply:
 @table @samp
 @item OK
 for success
-@item E @var{NN}
-for an error
 @end table
 
 @item F @var{RC},@var{EE},@var{CF};@var{XX}
@@ -45832,8 +45945,6 @@ are available, and both have zero value:
 <- @code{xxxxxxxx00000000xxxxxxxx00000000}
 @end smallexample
 
-@item E @var{NN}
-for an error.
 @end table
 
 @item G @var{XX@dots{}}
@@ -45845,8 +45956,6 @@ Reply:
 @table @samp
 @item OK
 for success
-@item E @var{NN}
-for an error
 @end table
 
 @item H @var{op} @var{thread-id}
@@ -45863,8 +45972,6 @@ Reply:
 @table @samp
 @item OK
 for success
-@item E @var{NN}
-for an error
 @end table
 
 @c FIXME: JTC:
@@ -45939,9 +46046,11 @@ Reply:
 Memory contents; each byte is transmitted as a two-digit hexadecimal number.
 The reply may contain fewer addressable memory units than requested if the
 server was able to read only part of the region of memory.
-@item E @var{NN}
-@var{NN} is errno
 @end table
+
+Unlike most packets, this packet does not support
+@samp{E.@var{errtext}}-style textual error replies (@pxref{textual
+error reply}).
 
 @item M @var{addr},@var{length}:@var{XX@dots{}}
 @cindex @samp{M} packet
@@ -45952,10 +46061,8 @@ byte is transmitted as a two-digit hexadecimal number.
 Reply:
 @table @samp
 @item OK
-for success
-@item E @var{NN}
-for an error (this includes the case where only part of the data was
-written).
+All the data was written successfully.  (If only part of the data was
+written, this command returns an error.)
 @end table
 
 @item p @var{n}
@@ -45968,10 +46075,6 @@ Reply:
 @table @samp
 @item @var{XX@dots{}}
 the register's value
-@item E @var{NN}
-for an error
-@item @w{}
-Indicating an unrecognized @var{query}.
 @end table
 
 @item P @var{n@dots{}}=@var{r@dots{}}
@@ -45985,8 +46088,6 @@ Reply:
 @table @samp
 @item OK
 for success
-@item E @var{NN}
-for an error
 @end table
 
 @item q @var{name} @var{params}@dots{}
@@ -46046,8 +46147,6 @@ Reply:
 @table @samp
 @item OK
 thread is still alive
-@item E @var{NN}
-thread is dead
 @end table
 
 @item v
@@ -46075,8 +46174,6 @@ This packet is only available in extended mode (@pxref{extended mode}).
 
 Reply:
 @table @samp
-@item E @var{nn}
-for an error
 @item @r{Any stop packet}
 for success in all-stop mode (@pxref{Stop Reply Packets})
 @item OK
@@ -46165,8 +46262,6 @@ Reply:
 @item vCont@r{[};@var{action}@dots{}@r{]}
 The @samp{vCont} packet is supported.  Each @var{action} is a supported
 command in the @samp{vCont} packet.
-@item @w{}
-The @samp{vCont} packet is not supported.
 @end table
 
 @anchor{vCtrlC packet}
@@ -46181,8 +46276,6 @@ variant.
 
 Reply:
 @table @samp
-@item E @var{nn}
-for an error
 @item OK
 for success
 @end table
@@ -46207,8 +46300,6 @@ Reply:
 @table @samp
 @item OK
 for success
-@item E @var{NN}
-for an error
 @end table
 
 @item vFlashWrite:@var{addr}:@var{XX@dots{}}
@@ -46231,8 +46322,6 @@ Reply:
 for success
 @item E.memtype
 for vFlashWrite addressing non-flash memory
-@item E @var{NN}
-for an error
 @end table
 
 @item vFlashDone
@@ -46254,8 +46343,6 @@ supported; see @ref{multiprocess extensions}.
 
 Reply:
 @table @samp
-@item E @var{nn}
-for an error
 @item OK
 for success
 @end table
@@ -46287,8 +46374,6 @@ This packet is only available in extended mode (@pxref{extended mode}).
 
 Reply:
 @table @samp
-@item E @var{nn}
-for an error
 @item @r{Any stop packet}
 for success (@pxref{Stop Reply Packets})
 @end table
@@ -46309,8 +46394,6 @@ Reply:
 @table @samp
 @item OK
 for success
-@item E @var{NN}
-for an error
 @end table
 
 @item z @var{type},@var{addr},@var{kind}
@@ -46391,10 +46474,6 @@ Reply:
 @table @samp
 @item OK
 success
-@item @w{}
-not supported
-@item E @var{NN}
-for an error
 @end table
 
 @item z1,@var{addr},@var{kind}
@@ -46416,10 +46495,6 @@ Reply:
 @table @samp
 @item OK
 success
-@item @w{}
-not supported
-@item E @var{NN}
-for an error
 @end table
 
 @item z2,@var{addr},@var{kind}
@@ -46433,10 +46508,6 @@ Reply:
 @table @samp
 @item OK
 success
-@item @w{}
-not supported
-@item E @var{NN}
-for an error
 @end table
 
 @item z3,@var{addr},@var{kind}
@@ -46450,10 +46521,6 @@ Reply:
 @table @samp
 @item OK
 success
-@item @w{}
-not supported
-@item E @var{NN}
-for an error
 @end table
 
 @item z4,@var{addr},@var{kind}
@@ -46467,10 +46534,6 @@ Reply:
 @table @samp
 @item OK
 success
-@item @w{}
-not supported
-@item E @var{NN}
-for an error
 @end table
 
 @end table
@@ -46840,8 +46903,6 @@ detect trailing zeros.
 
 Reply:
 @table @samp
-@item E @var{NN}
-An error (such as memory fault)
 @item C @var{crc32}
 The specified memory region's checksum is @var{crc32}.
 @end table
@@ -46864,13 +46925,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{QDisableRandomization} is not supported
-by the stub.
 @end table
 
 This packet is not probed by default; the remote stub must request it,
@@ -46899,9 +46953,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
 @end table
 
 This packet is not probed by default; the remote stub must request it,
@@ -47091,12 +47142,6 @@ Reply:
 @item @var{XX}@dots{}
 Hex encoded (big endian) bytes representing the address of the thread
 local storage requested.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{qGetTLSAddr} is not supported by the stub.
 @end table
 
 @item qGetTIBAddr:@var{thread-id}
@@ -47111,13 +47156,6 @@ Reply:
 @item @var{XX}@dots{}
 Hex encoded (big endian) bytes representing the linear address of the
 thread information block.
-
-@item E @var{nn}
-An error occurred.  This means that either the thread was not found, or the
-address could not be retrieved.
-
-@item @w{}
-An empty reply indicates that @samp{qGetTIBAddr} is not supported by the stub.
 @end table
 
 @item qL @var{startflag} @var{threadcount} @var{nextthread}
@@ -47157,20 +47195,15 @@ is architecture-specific.
 @var{type} is the type of tag the request wants to fetch.  The type is a signed
 integer.
 
+@value{GDBN} will only send this packet if the stub has advertised
+support for memory tagging via @samp{qSupported}.
+
 Reply:
 @table @samp
 @item @var{mxx}@dots{}
 Hex encoded sequence of uninterpreted bytes, @var{xx}@dots{}, representing the
 tags found in the requested memory range.
 
-@item E @var{nn}
-An error occurred.  This means that fetching of memory tags failed for some
-reason.
-
-@item @w{}
-An empty reply indicates that @samp{qMemTags} is not supported by the stub,
-although this should not happen given @value{GDBN} will only send this packet
-if the stub has advertised support for memory tagging via @samp{qSupported}.
 @end table
 
 @cindex check if a given address is in a memory tagged region
@@ -47192,14 +47225,6 @@ Address @var{address} is tagged.
 
 @item @samp{00}
 Address @var{address} is not tagged.
-
-@item E @var{nn}
-An error occurred whose code is @var{nn}.  This means that address could not
-be checked for some reason.
-
-@item @w{}
-An empty reply indicates that @samp{qIsAddressTagged} is not supported by the
-stub.
 @end table
 
 @item QMemTags:@var{start address},@var{length}:@var{type}:@var{tag bytes}
@@ -47235,20 +47260,14 @@ integer.
 interpreted by the target.  Each pair of hex digits is interpreted as a
 single byte.
 
+@value{GDBN} will only send this packet if the stub has advertised
+support for memory tagging via @samp{qSupported}.
+
 Reply:
 @table @samp
 @item OK
 The request was successful and the memory tag granules were modified
 accordingly.
-
-@item E @var{nn}
-An error occurred.  This means that modifying the memory tag granules failed
-for some reason.
-
-@item @w{}
-An empty reply indicates that @samp{QMemTags} is not supported by the stub,
-although this should not happen given @value{GDBN} will only send this packet
-if the stub has advertised support for memory tagging via @samp{qSupported}.
 @end table
 
 @item qOffsets
@@ -47305,13 +47324,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{QNonStop} is not supported by
-the stub.
 @end table
 
 This packet is not probed by default; the remote stub must request it,
@@ -47348,13 +47360,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  @var{nn} are hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{QCatchSyscalls} is not supported by
-the stub.
 @end table
 
 Use of this packet is controlled by the @code{set remote catch-syscalls}
@@ -47380,13 +47385,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{QPassSignals} is not supported by
-the stub.
 @end table
 
 Use of this packet is controlled by the @code{set remote pass-signals}
@@ -47422,13 +47420,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{QProgramSignals} is not supported
-by the stub.
 @end table
 
 Use of this packet is controlled by the @code{set remote program-signals}
@@ -47462,13 +47453,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{QThreadEvents} is not supported by
-the stub.
 @end table
 
 Use of this packet is controlled by the @code{set remote thread-events}
@@ -47551,13 +47535,6 @@ Reply:
 @table @samp
 @item OK
 The request succeeded.
-
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-
-@item @w{}
-An empty reply indicates that @samp{QThreadOptions} is not supported by
-the stub.
 @end table
 
 Use of this packet is controlled by the @code{set remote thread-options}
@@ -47579,12 +47556,11 @@ Reply:
 A command response with no output.
 @item @var{OUTPUT}
 A command response with the hex encoded output string @var{OUTPUT}.
-@item E @var{NN}
-Indicate a badly formed request.  The error number @var{NN} is given as
-hex digits.
-@item @w{}
-An empty reply indicates that @samp{qRcmd} is not recognized.
 @end table
+
+Unlike most packets, this packet does not support
+@samp{E.@var{errtext}}-style textual error replies (@pxref{textual
+error reply}).
 
 (Note that the @code{qRcmd} packet's name is separated from the
 command by a @samp{,}, not a @samp{:}, contrary to the naming
@@ -47608,10 +47584,6 @@ Reply:
 The pattern was not found.
 @item 1,address
 The pattern was found at @var{address}.
-@item E @var{NN}
-A badly formed request or an error was encountered while searching memory.
-@item @w{}
-An empty reply indicates that @samp{qSearch:memory} is not recognized.
 @end table
 
 @item QStartNoAckMode
@@ -47627,8 +47599,6 @@ The stub has switched to no-acknowledgment mode.
 @value{GDBN} acknowledges this response,
 but neither the stub nor @value{GDBN} shall send or expect further
 @samp{+}/@samp{-} acknowledgments in the current connection.
-@item @w{}
-An empty reply indicates that the stub does not support no-acknowledgment mode.
 @end table
 
 @item qSupported @r{[}:@var{gdbfeature} @r{[};@var{gdbfeature}@r{]}@dots{} @r{]}
@@ -47657,9 +47627,6 @@ Reply:
 The stub supports or does not support each returned @var{stubfeature},
 depending on the form of each @var{stubfeature} (see below for the
 possible forms).
-@item @w{}
-An empty reply indicates that @samp{qSupported} is not recognized,
-or that no features needed to be reported to @value{GDBN}.
 @end table
 
 The allowed forms for each feature (either a @var{gdbfeature} in the
@@ -48380,17 +48347,6 @@ have fewer bytes than the @var{length} in the request.
 @item l
 The @var{offset} in the request is at the end of the data.
 There is no more data to be read.
-
-@item E00
-The request was malformed, or @var{annex} was invalid.
-
-@item E @var{nn}
-The offset was invalid, or there was an error encountered reading the data.
-The @var{nn} part is a hex-encoded @code{errno} value.
-
-@item @w{}
-An empty reply indicates the @var{object} string was not recognized by
-the stub, or that the object does not support reading.
 @end table
 
 Here are the specific requests of this form defined so far.  All the
@@ -48609,17 +48565,6 @@ Reply:
 @item @var{nn}
 @var{nn} (hex encoded) is the number of bytes written.
 This may be fewer bytes than supplied in the request.
-
-@item E00
-The request was malformed, or @var{annex} was invalid.
-
-@item E @var{nn}
-The offset was invalid, or there was an error encountered writing the data.
-The @var{nn} part is a hex-encoded @code{errno} value.
-
-@item @w{}
-An empty reply indicates the @var{object} string was not
-recognized by the stub, or that the object does not support writing.
 @end table
 
 Here are the specific requests of this form defined so far.  All the
@@ -48664,8 +48609,6 @@ Reply:
 The remote server attached to an existing process.
 @item 0
 The remote server created a new process.
-@item E @var{NN}
-A badly formed request or an error was encountered.
 @end table
 
 @item Qbtrace:bts
@@ -48675,8 +48618,6 @@ Reply:
 @table @samp
 @item OK
 Branch tracing has been enabled.
-@item E.errtext
-A badly formed request or an error was encountered.
 @end table
 
 @item Qbtrace:pt
@@ -48686,8 +48627,6 @@ Reply:
 @table @samp
 @item OK
 Branch tracing has been enabled.
-@item E.errtext
-A badly formed request or an error was encountered.
 @end table
 
 @item Qbtrace:off
@@ -48697,8 +48636,6 @@ Reply:
 @table @samp
 @item OK
 Branch tracing has been disabled.
-@item E.errtext
-A badly formed request or an error was encountered.
 @end table
 
 @item Qbtrace-conf:bts:size=@var{value}
@@ -48709,8 +48646,6 @@ Reply:
 @table @samp
 @item OK
 The ring buffer size has been set.
-@item E.errtext
-A badly formed request or an error was encountered.
 @end table
 
 @item Qbtrace-conf:pt:size=@var{value}
@@ -48721,8 +48656,6 @@ Reply:
 @table @samp
 @item OK
 The ring buffer size has been set.
-@item E.errtext
-A badly formed request or an error was encountered.
 @end table
 
 @end table
@@ -48869,8 +48802,6 @@ Replies:
 The packet was understood and carried out.
 @item qRelocInsn
 @xref{Tracepoint Packets,,Relocate instruction reply packet}.
-@item  @w{}
-The packet was not recognized.
 @end table
 
 @item QTDP:-@var{n}:@var{addr}:@r{[}S@r{]}@var{action}@dots{}@r{[}-@r{]}
@@ -48935,8 +48866,6 @@ Replies:
 The packet was understood and carried out.
 @item qRelocInsn
 @xref{Tracepoint Packets,,Relocate instruction reply packet}.
-@item  @w{}
-The packet was not recognized.
 @end table
 
 @item QTDPsrc:@var{n}:@var{addr}:@var{type}:@var{start}:@var{slen}:@var{bytes}
@@ -49053,8 +48982,6 @@ of 1 means that a fast tracepoint may be placed on any instruction
 regardless of size.
 @item E
 An error has occurred.
-@item @w{}
-An empty reply indicates that the request is not supported by the stub.
 @end table
 
 @item QTStart
@@ -49263,11 +49190,6 @@ A single marker
 a comma-separated list of markers
 @item l
 (lower case letter @samp{L}) denotes end of list.
-@item E @var{nn}
-An error occurred.  The error number @var{nn} is given as hex digits.
-@item @w{}
-An empty reply indicates that the request is not supported by the
-stub.
 @end table
 
 The @var{address} is encoded in hex;
@@ -49356,9 +49278,6 @@ Replies:
 @item qRelocInsn:@var{adjusted_size}
 Informs the stub the relocation is complete.  The @var{adjusted_size} is
 the length in bytes of resulting relocated instruction sequence.
-@item E @var{NN}
-A badly formed request was detected, or an error was encountered while
-relocating the instruction.
 @end table
 
 @node Host I/O Packets

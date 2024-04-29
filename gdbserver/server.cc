@@ -3294,29 +3294,39 @@ static void
 handle_v_attach (char *own_buf)
 {
   client_state &cs = get_client_state ();
-  int pid;
 
-  pid = strtol (own_buf + 8, NULL, 16);
-  if (pid != 0 && attach_inferior (pid) == 0)
+  int pid = strtol (own_buf + 8, NULL, 16);
+
+  try
     {
-      /* Don't report shared library events after attaching, even if
-	 some libraries are preloaded.  GDB will always poll the
-	 library list.  Avoids the "stopped by shared library event"
-	 notice on the GDB side.  */
-      current_process ()->dlls_changed = false;
-
-      if (non_stop)
+      if (attach_inferior (pid) == 0)
 	{
-	  /* In non-stop, we don't send a resume reply.  Stop events
-	     will follow up using the normal notification
-	     mechanism.  */
-	  write_ok (own_buf);
+	  /* Don't report shared library events after attaching, even if
+	     some libraries are preloaded.  GDB will always poll the
+	     library list.  Avoids the "stopped by shared library event"
+	     notice on the GDB side.  */
+	  current_process ()->dlls_changed = false;
+
+	  if (non_stop)
+	    {
+	      /* In non-stop, we don't send a resume reply.  Stop events
+		 will follow up using the normal notification
+		 mechanism.  */
+	      write_ok (own_buf);
+	    }
+	  else
+	    prepare_resume_reply (own_buf, cs.last_ptid, cs.last_status);
 	}
       else
-	prepare_resume_reply (own_buf, cs.last_ptid, cs.last_status);
+	{
+	  /* Not supported.  */
+	  own_buf[0] = 0;
+	}
     }
-  else
-    write_enn (own_buf);
+  catch (const gdb_exception_error &exception)
+    {
+      sprintf (own_buf, "E.%s", exception.what ());
+    }
 }
 
 /* Decode an argument from the vRun packet buffer.  PTR points to the
@@ -3427,7 +3437,15 @@ handle_v_run (char *own_buf)
   free_vector_argv (program_args);
   program_args = new_argv;
 
-  target_create_inferior (program_path.get (), program_args);
+  try
+    {
+      target_create_inferior (program_path.get (), program_args);
+    }
+  catch (const gdb_exception_error &exception)
+    {
+      sprintf (own_buf, "E.%s", exception.what ());
+      return;
+    }
 
   if (cs.last_status.kind () == TARGET_WAITKIND_STOPPED)
     {
