@@ -47,6 +47,8 @@ struct x86_windows_per_inferior : public windows_per_inferior
   /* The function to use in order to determine whether a register is
      a segment register or not.  */
   segment_register_p_ftype *segment_register_p = nullptr;
+
+  void invalidate_thread_context (windows_thread_info *th) override;
 };
 
 struct x86_windows_nat_target final : public x86_nat_target<windows_nat_target>
@@ -107,8 +109,22 @@ x86_windows_nat_target::fill_thread_context (windows_thread_info *th)
 {
   x86_windows_process.with_context (th, [&] (auto *context)
     {
-      context->ContextFlags = WindowsContext<decltype(context)>::all;
-      CHECK (get_thread_context (th->h, context));
+      if (context->ContextFlags == 0)
+	{
+	  context->ContextFlags = WindowsContext<decltype(context)>::all;
+	  CHECK (get_thread_context (th->h, context));
+	}
+    });
+}
+
+/* See nat/windows-nat.h.  */
+
+void
+x86_windows_per_inferior::invalidate_thread_context (windows_thread_info *th)
+{
+  x86_windows_process.with_context (th, [&] (auto *context)
+    {
+      context->ContextFlags = 0;
     });
 }
 
@@ -170,7 +186,6 @@ x86_windows_nat_target::fetch_one_register (struct regcache *regcache,
 					    windows_thread_info *th, int r)
 {
   gdb_assert (r >= 0);
-  gdb_assert (!th->reload_context);
 
   char *context_ptr = x86_windows_process.with_context (th, [] (auto *context)
     {

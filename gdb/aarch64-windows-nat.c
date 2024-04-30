@@ -29,6 +29,8 @@ using namespace windows_nat;
 struct aarch64_windows_per_inferior : public windows_per_inferior
 {
   aarch64_debug_reg_state dr_state;
+
+  void invalidate_thread_context (windows_thread_info *th) override;
 };
 
 struct aarch64_windows_nat_target final
@@ -181,8 +183,20 @@ aarch64_windows_nat_target::fill_thread_context (windows_thread_info *th)
 {
   CONTEXT *context = &th->context;
 
-  context->ContextFlags = WindowsContext<decltype(context)>::all;
-  CHECK (get_thread_context (th->h, context));
+  if (context->ContextFlags == 0)
+    {
+      context->ContextFlags = WindowsContext<decltype(context)>::all;
+      CHECK (get_thread_context (th->h, context));
+    }
+}
+
+/* See windows-nat.h.  */
+
+void
+aarch64_windows_per_inferior::invalidate_thread_context (windows_thread_info *th)
+{
+  CONTEXT *context = &th->context;
+  context->ContextFlags = 0;
 }
 
 /* See windows-nat.h.  */

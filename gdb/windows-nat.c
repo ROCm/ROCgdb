@@ -287,11 +287,11 @@ windows_per_inferior::thread_rec (ptid_t ptid,
 	case INVALIDATE_CONTEXT:
 	  if (ptid.lwp () != current_event.dwThreadId)
 	    th->suspend ();
-	  th->reload_context = true;
+	  invalidate_thread_context (th);
 	  break;
 	case DONT_SUSPEND:
-	  th->reload_context = true;
 	  th->suspended = -1;
+	  invalidate_thread_context (th);
 	  break;
 	}
     }
@@ -400,12 +400,7 @@ windows_nat_target::fetch_registers (struct regcache *regcache, int r)
   if (th == NULL)
     return;
 
-  if (th->reload_context)
-    {
-      fill_thread_context (th);
-
-      th->reload_context = false;
-    }
+  fill_thread_context (th);
 
   if (r < 0)
     for (r = 0; r < gdbarch_num_regs (regcache->arch()); r++)
@@ -938,10 +933,7 @@ windows_nat_target::get_windows_debug_event
       *ourstatus = stop->status;
 
       ptid_t ptid (windows_process->current_event.dwProcessId, thread_id);
-      windows_thread_info *th
-	= windows_process->thread_rec (ptid, INVALIDATE_CONTEXT);
-      th->reload_context = true;
-
+      windows_process->thread_rec (ptid, INVALIDATE_CONTEXT);
       return ptid;
     }
 

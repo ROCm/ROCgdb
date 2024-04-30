@@ -55,6 +55,9 @@ struct windows_per_inferior : public windows_nat::windows_process_info
   void handle_unload_dll () override;
   bool handle_access_violation (const EXCEPTION_RECORD *rec) override;
 
+  /* Invalidate the thread context.  */
+  virtual void invalidate_thread_context (windows_thread_info *th) = 0;
+
   int windows_initialization_done = 0;
 
   std::vector<std::unique_ptr<windows_thread_info>> thread_list;
