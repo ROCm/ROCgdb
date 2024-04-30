@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include "gdbsupport/filestuff.h"
 #include <algorithm>
+#include "linux-procfs.h"
 
 #define NAMELEN(dirent) strlen ((dirent)->d_name)
 
@@ -52,46 +53,17 @@ typedef long long TIME_T;
 
 #define MAX_PID_T_STRLEN  (sizeof ("-9223372036854775808") - 1)
 
-/* Returns the CPU core that thread PTID is currently running on.  */
-
-/* Compute and return the processor core of a given thread.  */
+/* See linux-osdata.h.  */
 
 int
 linux_common_core_of_thread (ptid_t ptid)
 {
-  char filename[sizeof ("/proc//task//stat") + 2 * MAX_PID_T_STRLEN];
+  std::optional<std::string> field
+    = linux_proc_get_stat_field (ptid, LINUX_PROC_STAT_PROCESSOR);
   int core;
 
-  sprintf (filename, "/proc/%lld/task/%lld/stat",
-	   (PID_T) ptid.pid (), (PID_T) ptid.lwp ());
-
-  std::optional<std::string> content = read_text_file_to_string (filename);
-  if (!content.has_value ())
+  if (!field.has_value () || sscanf (field->c_str (), "%d", &core) == 0)
     return -1;
-
-  /* ps command also relies on no trailing fields ever contain ')'.  */
-  std::string::size_type pos = content->find_last_of (')');
-  if (pos == std::string::npos)
-    return -1;
-
-  /* If the first field after program name has index 0, then core number is
-     the field with index 36 (so, the 37th).  There's no constant for that
-     anywhere.  */
-  for (int i = 0; i < 37; ++i)
-    {
-      /* Find separator.  */
-      pos = content->find_first_of (' ', pos);
-      if (pos == std::string::npos)
-	return {};
-
-      /* Find beginning of field.  */
-      pos = content->find_first_not_of (' ', pos);
-      if (pos == std::string::npos)
-	return {};
-    }
-
-  if (sscanf (&(*content)[pos], "%d", &core) == 0)
-    core = -1;
 
   return core;
 }
