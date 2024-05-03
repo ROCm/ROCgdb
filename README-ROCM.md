@@ -41,8 +41,8 @@ in this folder or check the GNU Debugger (GDB) web site at:
 Build the AMD ROCm Debugger
 ---------------------------
 
-ROCgdb can be built on Ubuntu 18.04, Ubuntu 20.04, Centos 8.1, RHEL 8.1, and SLES
-15 Service Pack 1.
+ROCgdb can be built on Ubuntu 20.04, Ubuntu 22.04, Centos 8.1, RHEL 8.1, RHEL
+9.1 and SLES 15 Service Pack 1.
 
 Building ROCgdb has the following prerequisites:
 
@@ -51,20 +51,21 @@ Building ROCgdb has the following prerequisites:
 2. AMD Debugger API Library (ROCdbgapi) which can be installed as part of the
    AMD ROCm release by the ``rocm-dbgapi`` package.
 
-3. For Ubuntu 18.04 and Ubuntu 20.04 the following adds the needed packages:
+3. For Ubuntu 20.04 and Ubuntu 22.04 the following adds the needed packages:
 
    ````shell
    apt install bison flex gcc make ncurses-dev texinfo g++ zlib1g-dev \
-     libexpat-dev python3-dev liblzma-dev libgmp-dev libbabeltrace-dev \
-     libbabeltrace-ctf-dev
+     libexpat-dev python3-dev liblzma-dev libgmp-dev libmpfr-dev \
+     libbabeltrace-dev libbabeltrace-ctf-dev
    ````
 
-4. For CentOS 8.1 and RHEL 8.1 the following adds the needed packages:
+4. For CentOS 8.1, RHEL 8.1 and RHEL 9.1 the following adds the needed
+   packages:
 
    ````shell
    yum install -y epel-release centos-release-scl bison flex gcc make \
      texinfo texinfo-tex gcc-c++ zlib-devel expat-devel python3-devel \
-     xz-devel gmp-devel libbabeltrace-devel ncurses-devel
+     xz-devel gmp-devel mpfr-devel libbabeltrace-devel ncurses-devel
    wget http://repo.okay.com.mx/centos/8/x86_64/release/libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm \
    && rpm -ivh --nodeps libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm
    ````
@@ -73,7 +74,7 @@ Building ROCgdb has the following prerequisites:
 
    ````shell
    zypper in bison flex gcc make texinfo gcc-c++ zlib-devel libexpat-devel \
-     python3-devel xz-devel gmp-devel babeltrace-devel ncurses-devel
+     python3-devel xz-devel gmp-devel mpfr-devel babeltrace-devel ncurses-devel
    ````
 
 An example command-line to build ROCgdb on Linux is:
