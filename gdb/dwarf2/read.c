@@ -1212,17 +1212,6 @@ dwarf2_invalid_attrib_class_complaint (const char *arg1, const char *arg2)
 
 /* See read.h.  */
 
-unrelocated_addr
-dwarf2_per_objfile::adjust (unrelocated_addr addr)
-{
-  CORE_ADDR baseaddr = objfile->text_section_offset ();
-  CORE_ADDR tem = (CORE_ADDR) addr + baseaddr;
-  tem = gdbarch_adjust_dwarf2_addr (objfile->arch (), tem);
-  return (unrelocated_addr) (tem - baseaddr);
-}
-
-/* See read.h.  */
-
 CORE_ADDR
 dwarf2_per_objfile::relocate (unrelocated_addr addr)
 {
@@ -10239,7 +10228,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 		 sect_offset_str (die->sect_off), objfile_name (objfile));
       return;
     }
-  unrelocated_addr pc = per_objfile->adjust (attr->as_address ());
+  unrelocated_addr pc = attr->as_address ();
 
   if (cu->call_site_htab == NULL)
     cu->call_site_htab = htab_create_alloc_ex (16, call_site::hash,
@@ -10414,10 +10403,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 			 "low pc, for referencing DIE %s [in module %s]"),
 		       sect_offset_str (die->sect_off), objfile_name (objfile));
 	  else
-	    {
-	      lowpc = per_objfile->adjust (lowpc);
-	      call_site->target.set_loc_physaddr (lowpc);
-	    }
+	    call_site->target.set_loc_physaddr (lowpc);
 	}
     }
   else
@@ -10927,7 +10913,6 @@ dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 		    unrelocated_addr *high_return, struct dwarf2_cu *cu,
 		    addrmap_mutable *map, void *datum, dwarf_tag tag)
 {
-  dwarf2_per_objfile *per_objfile = cu->per_objfile;
   int low_set = 0;
   unrelocated_addr low = {};
   unrelocated_addr high = {};
@@ -10938,13 +10923,10 @@ dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
     {
       if (map != nullptr)
 	{
-	  unrelocated_addr lowpc;
-	  unrelocated_addr highpc;
-
-	  lowpc = per_objfile->adjust (range_beginning);
-	  highpc = per_objfile->adjust (range_end);
 	  /* addrmap only accepts CORE_ADDR, so we must cast here.  */
-	  map->set_empty ((CORE_ADDR) lowpc, (CORE_ADDR) highpc - 1, datum);
+	  map->set_empty ((CORE_ADDR) range_beginning,
+			  (CORE_ADDR) range_end - 1,
+			  datum);
 	}
 
       /* FIXME: This is recording everything as a low-high
@@ -16004,14 +15986,11 @@ cooked_indexer::check_bounds (cutu_reader *reader)
 			    cu, m_index_storage->get_addrmap (), cu->per_cu);
   if (cu_bounds_kind == PC_BOUNDS_HIGH_LOW && best_lowpc < best_highpc)
     {
-      dwarf2_per_objfile *per_objfile = cu->per_objfile;
-      unrelocated_addr low = per_objfile->adjust (best_lowpc);
-      unrelocated_addr high = per_objfile->adjust (best_highpc);
       /* Store the contiguous range if it is not empty; it can be
 	 empty for CUs with no code.  addrmap requires CORE_ADDR, so
 	 we cast here.  */
-      m_index_storage->get_addrmap ()->set_empty ((CORE_ADDR) low,
-						  (CORE_ADDR) high - 1,
+      m_index_storage->get_addrmap ()->set_empty ((CORE_ADDR) best_lowpc,
+						  (CORE_ADDR) best_highpc - 1,
 						  cu->per_cu);
 
       cu->per_cu->addresses_seen = true;
@@ -16327,13 +16306,10 @@ cooked_indexer::scan_attributes (dwarf2_per_cu_data *scanning_per_cu,
 
 	  if (*high_pc > *low_pc)
 	    {
-	      dwarf2_per_objfile *per_objfile = reader->cu->per_objfile;
-	      unrelocated_addr lo = per_objfile->adjust (*low_pc);
-	      unrelocated_addr hi = per_objfile->adjust (*high_pc);
 	      /* Need CORE_ADDR casts for addrmap.  */
-	      m_index_storage->get_addrmap ()->set_empty ((CORE_ADDR) lo,
-							  (CORE_ADDR) hi - 1,
-							  scanning_per_cu);
+	      m_index_storage->get_addrmap ()->set_empty
+		((CORE_ADDR) *low_pc, (CORE_ADDR) *high_pc - 1,
+		 scanning_per_cu);
 	    }
 	}
 
@@ -17041,7 +17017,6 @@ read_attribute_value (const struct die_reader_specs *reader,
       {
 	unrelocated_addr addr = cu_header->read_address (abfd, info_ptr,
 							 &bytes_read);
-	addr = per_objfile->adjust (addr);
 	attr->set_address (addr);
 	info_ptr += bytes_read;
       }
