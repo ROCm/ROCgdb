@@ -386,7 +386,7 @@ windows_nat_target::fetch_registers (struct regcache *regcache, int r)
   if (th == NULL)
     return;
 
-  fill_thread_context (th);
+  windows_process->fill_thread_context (th);
 
   if (r < 0)
     for (r = 0; r < gdbarch_num_regs (regcache->arch()); r++)

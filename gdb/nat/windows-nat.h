@@ -174,6 +174,12 @@ struct windows_process_info
      This function must be supplied by the embedding application.  */
   virtual windows_thread_info *find_thread (ptid_t ptid) = 0;
 
+  /* Fill in the thread's CONTEXT/WOW64_CONTEXT, if it wasn't filled
+     in yet.
+
+     This function must be supplied by the embedding application.  */
+  virtual void fill_thread_context (windows_thread_info *th) = 0;
+
   /* Handle OUTPUT_DEBUG_STRING_EVENT from child process.  Updates
      OURSTATUS and returns the thread id if this represents a thread
      change (this is specific to Cygwin), otherwise 0.

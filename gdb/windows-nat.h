@@ -226,9 +226,6 @@ protected:
   /* Cleanup arch-specific data after inferior exit.  */
   virtual void cleanup_windows_arch () = 0;
 
-  /* Reload the thread context.  */
-  virtual void fill_thread_context (windows_thread_info *th) = 0;
-
   /* Prepare the thread context for continuing.  */
   virtual void thread_context_continue (windows_thread_info *th,
 					int killed) = 0;

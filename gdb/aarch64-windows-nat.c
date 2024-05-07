@@ -30,6 +30,7 @@ struct aarch64_windows_per_inferior : public windows_per_inferior
 {
   aarch64_debug_reg_state dr_state;
 
+  void fill_thread_context (windows_thread_info *th) override;
   void invalidate_thread_context (windows_thread_info *th) override;
 };
 
@@ -41,8 +42,6 @@ struct aarch64_windows_nat_target final
 
   void initialize_windows_arch (bool attaching) override;
   void cleanup_windows_arch () override;
-
-  void fill_thread_context (windows_thread_info *th) override;
 
   void thread_context_continue (windows_thread_info *th, int killed) override;
   void thread_context_step (windows_thread_info *th) override;
@@ -176,10 +175,10 @@ aarch64_windows_nat_target::cleanup_windows_arch ()
   aarch64_remove_debug_reg_state (inferior_ptid.pid ());
 }
 
-/* See windows-nat.h.  */
+/* See nat/windows-nat.h.  */
 
 void
-aarch64_windows_nat_target::fill_thread_context (windows_thread_info *th)
+aarch64_windows_per_inferior::fill_thread_context (windows_thread_info *th)
 {
   CONTEXT *context = &th->context;
 
